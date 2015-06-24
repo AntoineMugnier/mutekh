@@ -194,10 +194,7 @@ const struct driver_s button_set_drv =
   .f_init = &button_set_init,
   .f_cleanup = &button_set_cleanup,
   .classes = {
-    &(const struct driver_valio_s){
-      .class_       = DRIVER_CLASS_VALIO,
-      .f_request    = &button_set_request,
-    },
+    DRIVER_VALIO_METHODS(button_set), 
     0
   }
 };

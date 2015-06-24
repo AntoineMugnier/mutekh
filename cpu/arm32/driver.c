@@ -111,12 +111,7 @@ static DEV_ICU_ENABLE_IRQ(arm_icu_enable_irq)
   return 1;
 }
 
-const struct driver_icu_s  arm_icu_drv =
-{
-  .class_          = DRIVER_CLASS_ICU,
-  .f_get_endpoint  = arm_icu_get_endpoint,
-  .f_enable_irq    = arm_icu_enable_irq,
-};
+#define arm_icu_disable_irq (dev_icu_disable_irq_t*)dev_driver_notsup_fcn
 
 #endif
 
@@ -195,15 +190,6 @@ static DEV_CPU_GET_NODE(arm_cpu_get_node)
   return &pv->node;
 }
 #endif
-
-const struct driver_cpu_s  arm_cpu_drv =
-{
-  .class_          = DRIVER_CLASS_CPU,
-  .f_reg_init      = arm_cpu_reg_init,
-#ifdef CONFIG_ARCH_SMP
-  .f_get_node   = arm_cpu_get_node,
-#endif
-};
 
 /************************************************************************
         Timer driver part
@@ -284,14 +270,8 @@ static DEV_TIMER_CONFIG(arm_timer_config)
   return err;
 }
 
-static const struct driver_timer_s  arm_timer_drv =
-{
-  .class_          = DRIVER_CLASS_TIMER,
-  .f_get_value     = arm_timer_get_value,
-  .f_config        = arm_timer_config,
-  .f_request       = (dev_timer_request_t*)&dev_driver_notsup_fcn,
-  .f_cancel        = (dev_timer_request_t*)&dev_driver_notsup_fcn,
-};
+#define arm_timer_request (dev_timer_request_t*)dev_driver_notsup_fcn
+#define arm_timer_cancel (dev_timer_request_t*)dev_driver_notsup_fcn
 
 #endif
 
@@ -359,12 +339,12 @@ const struct driver_s  arm32_drv =
   .f_use          = arm_use,
 
   .classes        = {
-    &arm_cpu_drv,
+    DRIVER_CPU_METHODS(arm_cpu),
 #ifdef CONFIG_DEVICE_IRQ
-    &arm_icu_drv,
+    DRIVER_ICU_METHODS(arm_icu),
 #endif
 #ifdef CONFIG_CPU_ARM32_TIMER_CYCLECOUNTER
-    &arm_timer_drv,
+    DRIVER_TIMER_METHODS(arm_timer),
 #endif
     0
   }

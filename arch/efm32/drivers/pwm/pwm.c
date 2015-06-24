@@ -296,12 +296,6 @@ end:
   return err;
 }
 
-static const struct driver_pwm_s efm32_pwm_pwm_drv =
-{
-  .class_   = DRIVER_CLASS_PWM,
-  .f_config = efm32_pwm_config,
-};
-
 /************************************************************************/
 
 static DEV_INIT(efm32_pwm_init);
@@ -315,9 +309,9 @@ const struct driver_s efm32_pwm_drv =
   .f_cleanup = efm32_pwm_cleanup,
   .f_use     = efm32_pwm_use,
   .classes   = {
-    &efm32_pwm_pwm_drv,
-    0
-  }
+    DRIVER_PWM_METHODS(efm32_pwm),
+    0,
+  },
 };
 
 REGISTER_DRIVER(efm32_pwm_drv);

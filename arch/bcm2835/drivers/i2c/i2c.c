@@ -507,13 +507,6 @@ DEV_I2C_REQUEST(bcm2835_i2c_request)
 
 }
 
-static const struct driver_i2c_s bcm2835_i2c_mst_drv =
-{
-  .class_       = DRIVER_CLASS_I2C,
-  .f_config     = &bcm2835_i2c_config,
-  .f_request    = &bcm2835_i2c_request,
-};
-
 static DEV_INIT(bcm2835_i2c_init);
 static DEV_CLEANUP(bcm2835_i2c_cleanup);
 
@@ -524,7 +517,7 @@ const struct driver_s bcm2835_i2c_drv =
   .f_cleanup    = &bcm2835_i2c_cleanup,
   .classes      =
   {
-    &bcm2835_i2c_mst_drv,
+    DRIVER_I2C_METHODS(bcm2835_i2c),
     0
   }
 };

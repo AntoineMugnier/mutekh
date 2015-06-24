@@ -214,14 +214,6 @@ static DEV_IRQ_EP_PROCESS(pl390_icu_source_process)
     }
 }
 
-const struct driver_icu_s  pl390_icu_icu_drv =
-{
-  .class_         = DRIVER_CLASS_ICU,
-  .f_get_endpoint = pl390_icu_icu_get_endpoint,
-  .f_enable_irq   = pl390_icu_icu_enable_irq,
-  .f_disable_irq  = pl390_icu_icu_disable_irq,
-};
-
 static const struct dev_enum_ident_s  pl390_icu_ids[] =
 {
   DEV_ENUM_FDTNAME_ENTRY("pl390"),
@@ -240,7 +232,7 @@ const struct driver_s  pl390_icu_drv =
   .f_cleanup      = pl390_icu_cleanup,
 
   .classes        = {
-    &pl390_icu_icu_drv,
+    DRIVER_ICU_METHODS(pl390_icu_icu),
     0
   }
 };

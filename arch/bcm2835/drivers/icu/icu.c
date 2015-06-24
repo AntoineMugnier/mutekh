@@ -181,14 +181,6 @@ static DEV_IRQ_EP_PROCESS(bcm2835_icu_source_process)
     }
 }
 
-const struct driver_icu_s  bcm2835_icu_icu_drv =
-{
-  .class_         = DRIVER_CLASS_ICU,
-  .f_get_endpoint = bcm2835_icu_icu_get_endpoint,
-  .f_enable_irq   = bcm2835_icu_icu_enable_irq,
-  .f_disable_irq  = bcm2835_icu_icu_disable_irq,
-};
-
 static const struct dev_enum_ident_s  bcm2835_icu_ids[] =
 {
   DEV_ENUM_FDTNAME_ENTRY("bcm2835_icu"),
@@ -207,9 +199,9 @@ const struct driver_s  bcm2835_icu_drv =
   .f_cleanup      = bcm2835_icu_cleanup,
 
   .classes        = {
-    &bcm2835_icu_icu_drv,
-    0
-  }
+    DRIVER_ICU_METHODS(bcm2835_icu_icu),
+    0,
+  },
 };
 
 static DEV_INIT(bcm2835_icu_init)

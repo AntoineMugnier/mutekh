@@ -36,7 +36,7 @@
 
 #define XICU_RR_COUNT 5
 
-static DEV_ICU_GET_ENDPOINT(soclib_xicu_icu_get_endpoint)
+DEV_ICU_GET_ENDPOINT(soclib_xicu_icu_get_endpoint)
 {
   struct device_s *dev = accessor->dev;
   struct soclib_xicu_private_s *pv = dev->drv_pv;
@@ -84,7 +84,7 @@ static void soclib_xicu_rr_mask(struct soclib_xicu_private_s *pv, struct soclib_
 #endif
 }
 
-static DEV_ICU_ENABLE_IRQ(soclib_xicu_icu_enable_irq)
+DEV_ICU_ENABLE_IRQ(soclib_xicu_icu_enable_irq)
 {
   struct device_s *dev = accessor->dev;
   struct soclib_xicu_private_s *pv = dev->drv_pv;
@@ -126,7 +126,7 @@ static DEV_ICU_ENABLE_IRQ(soclib_xicu_icu_enable_irq)
   return 1;
 }
 
-static DEV_ICU_DISABLE_IRQ(soclib_xicu_icu_disable_irq)
+DEV_ICU_DISABLE_IRQ(soclib_xicu_icu_disable_irq)
 {
   struct device_s *dev = accessor->dev;
   struct soclib_xicu_private_s *pv = dev->drv_pv;
@@ -183,12 +183,4 @@ DEV_IRQ_EP_PROCESS(soclib_xicu_source_process)
 
   } while (!done);
 }
-
-const struct driver_icu_s  soclib_xicu_icu_drv =
-{
-  .class_         = DRIVER_CLASS_ICU,
-  .f_get_endpoint = soclib_xicu_icu_get_endpoint,
-  .f_disable_irq  = soclib_xicu_icu_disable_irq,
-  .f_enable_irq   = soclib_xicu_icu_enable_irq,
-};
 

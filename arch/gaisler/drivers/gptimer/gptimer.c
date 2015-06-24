@@ -504,15 +504,6 @@ static DEV_TIMER_CONFIG(gptimer_config)
   return err;
 }
 
-const struct driver_timer_s  gptimer_timer_drv =
-{
-  .class_         = DRIVER_CLASS_TIMER,
-  .f_cancel       = gptimer_cancel,
-  .f_request      = gptimer_request,
-  .f_get_value    = gptimer_get_value,
-  .f_config       = gptimer_config,
-};
-
 /************************************************************************/
 
 static const struct dev_enum_ident_s  gptimer_ids[] =
@@ -531,11 +522,10 @@ const struct driver_s  gptimer_drv =
   .f_init         = gptimer_init,
   .f_cleanup      = gptimer_cleanup,
   .f_use          = gptimer_use,
-
   .classes        = {
-    &gptimer_timer_drv,
-    0
-  }
+    DRIVER_TIMER_METHODS(gptimer), 
+    0,
+  },
 };
 
 

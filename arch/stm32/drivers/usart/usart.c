@@ -316,12 +316,6 @@ DEV_IRQ_EP_PROCESS(stm32_usart_irq)
 
 #endif
 
-static const struct driver_char_s stm32_usart_char_cls =
-{
-  .class_    = DRIVER_CLASS_CHAR,
-  .f_request = stm32_usart_request
-};
-
 static
 error_t stm32_usart_check_config(struct dev_uart_config_s *cfg)
 {
@@ -462,12 +456,6 @@ DEV_UART_CONFIG(stm32_usart_config)
   return err;
 }
 
-static const struct driver_uart_s stm32_usart_uart_cls =
-{
-  .class_   = DRIVER_CLASS_UART,
-  .f_config = &stm32_usart_config
-};
-
 static DEV_INIT(stm32_usart_init);
 static DEV_CLEANUP(stm32_usart_cleanup);
 
@@ -477,10 +465,10 @@ const struct driver_s stm32_usart_drv =
   .f_init    = stm32_usart_init,
   .f_cleanup = stm32_usart_cleanup,
   .classes   = {
-    &stm32_usart_char_cls,
-    &stm32_usart_uart_cls,
-    0
-  }
+    DRIVER_CHAR_METHODS(stm32_usart),
+    DRIVER_UART_METHODS(stm32_usart),
+    0,
+  },
 };
 
 REGISTER_DRIVER(stm32_usart_drv);

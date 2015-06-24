@@ -279,12 +279,6 @@ static const struct dev_enum_ident_s	pl011uart_ids[] =
   { 0 }
 };
 
-static const struct driver_char_s	pl011uart_char_drv =
-{
-  .class_		= DRIVER_CLASS_CHAR,
-  .f_request		= pl011uart_request,
-};
-
 static DEV_INIT(pl011uart_init);
 static DEV_CLEANUP(pl011uart_cleanup);
 
@@ -294,7 +288,10 @@ const struct driver_s	pl011uart_drv =
   .id_table		= pl011uart_ids,
   .f_init		= pl011uart_init,
   .f_cleanup		= pl011uart_cleanup,
-  .classes              = { &pl011uart_char_drv, 0 }
+  .classes              = {
+    DRIVER_CHAR_METHODS(pl011uart),
+    0,
+  },
 };
 
 REGISTER_DRIVER(pl011uart_drv);

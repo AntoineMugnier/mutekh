@@ -281,15 +281,6 @@ static DEV_GPIO_GET_INPUT(bcm2835_gpio_get_input)
   return 0;
 }
 
-static const struct driver_gpio_s bcm2835_gpio_gpio_drv =
-  {
-    .class_         = DRIVER_CLASS_GPIO,
-    .f_set_mode     = bcm2835_gpio_set_mode,
-    .f_set_output   = bcm2835_gpio_set_output,
-    .f_get_input    = bcm2835_gpio_get_input,
-    .f_request      = dev_gpio_request_async_to_sync,
-  };
-
 /********************** iomux controller driver part *********************/
 
 #ifdef CONFIG_DEVICE_IOMUX
@@ -329,12 +320,6 @@ static DEV_IOMUX_SETUP(bcm2835_gpio_iomux_setup)
 
   return 0;
 }
-
-static const struct driver_iomux_s bcm2835_gpio_iomux_drv =
-  {
-    .class_         = DRIVER_CLASS_IOMUX,
-    .f_setup        = bcm2835_gpio_iomux_setup,
-  };
 
 #endif
 
@@ -549,15 +534,10 @@ static DEV_IRQ_EP_PROCESS(bcm2835_gpio_source_process)
     }
 }
 
-const struct driver_icu_s bcm2835_gpio_icu_drv =
-  {
-    .class_         = DRIVER_CLASS_ICU,
-    .f_get_endpoint = bcm2835_gpio_icu_get_endpoint,
-    .f_enable_irq   = bcm2835_gpio_icu_enable_irq,
-    .f_disable_irq  = bcm2835_gpio_icu_disable_irq,
-  };
-
 #endif
+
+#define bcm2835_gpio_request dev_gpio_request_async_to_sync
+#define bcm2835_gpio_input_irq_range (dev_gpio_input_irq_range_t*)dev_driver_notsup_fcn
 
 /***********************************************************************/
 
@@ -570,15 +550,15 @@ const struct driver_s bcm2835_gpio_drv =
     .f_init     = bcm2835_gpio_init,
     .f_cleanup  = bcm2835_gpio_cleanup,
     .classes    = {
-      &bcm2835_gpio_gpio_drv,
+      DRIVER_GPIO_METHODS(bcm2835_gpio),
 #ifdef CONFIG_DEVICE_IOMUX
-      &bcm2835_gpio_iomux_drv,
+      DRIVER_IOMUX_METHODS(bcm2835_gpio_iomux),
 #endif
 #ifdef CONFIG_DRIVER_BCM2835_GPIO_ICU
-      &bcm2835_gpio_icu_drv,
+      DRIVER_ICU_METHODS(bcm2835_gpio_icu),
 #endif
-      NULL
-    }
+      0,
+    },
   };
 
 REGISTER_DRIVER(bcm2835_gpio_drv);

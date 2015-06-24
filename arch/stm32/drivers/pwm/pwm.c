@@ -282,12 +282,6 @@ error_t stm32_pwm_start_stop(struct device_s *dev,
   return 0;
 }
 
-static const struct driver_pwm_s stm32_pwm_pwm_drv =
-{
-  .class_   = DRIVER_CLASS_PWM,
-  .f_config = stm32_pwm_config,
-};
-
 static inline
 void stm32_pwm_clock_init(struct stm32_pwm_private_s *pv)
 {
@@ -343,9 +337,9 @@ const struct driver_s stm32_pwm_drv =
   .f_cleanup = stm32_pwm_cleanup,
   .f_use     = stm32_pwm_use,
   .classes   = {
-    &stm32_pwm_pwm_drv,
-    0
-  }
+    DRIVER_PWM_METHODS(stm32_pwm),
+    0,
+  },
 };
 
 REGISTER_DRIVER(stm32_pwm_drv);

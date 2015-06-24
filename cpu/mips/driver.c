@@ -119,7 +119,9 @@ static DEV_ICU_ENABLE_IRQ(mips_icu_enable_irq)
   return 1;
 }
 
-# ifndef CONFIG_ARCH_SMP
+# ifdef CONFIG_ARCH_SMP
+#  define mips_icu_disable_irq (dev_icu_disable_irq_t*)dev_driver_notsup_fcn
+# else
 /* Disable irq line. On SMP platforms, all lines must remain enabled. */
 static DEV_ICU_DISABLE_IRQ(mips_icu_disable_irq)
 {
@@ -132,16 +134,6 @@ static DEV_ICU_DISABLE_IRQ(mips_icu_disable_irq)
   cpu_mips_mtc0(CPU_MIPS_STATUS, 0, status);
 }
 # endif
-
-static const struct driver_icu_s  mips_icu_drv =
-{
-  .class_          = DRIVER_CLASS_ICU,
-  .f_get_endpoint  = mips_icu_get_endpoint,
-  .f_enable_irq   = mips_icu_enable_irq,
-# ifndef CONFIG_ARCH_SMP
-  .f_disable_irq   = mips_icu_disable_irq,
-# endif
-};
 
 #endif
 
@@ -201,15 +193,6 @@ static DEV_CPU_GET_NODE(mips_cpu_get_node)
 }
 #endif
 
-
-static const struct driver_cpu_s  mips_cpu_drv =
-{
-  .class_          = DRIVER_CLASS_CPU,
-  .f_reg_init      = mips_cpu_reg_init,
-#ifdef CONFIG_ARCH_SMP
-  .f_get_node   = mips_cpu_get_node,
-#endif
-};
 
 /************************************************************************
         Timer driver part
@@ -274,15 +257,6 @@ static DEV_TIMER_CONFIG(mips_timer_config)
   return err;
 }
 
-static const struct driver_timer_s  mips_timer_drv =
-{
-  .class_          = DRIVER_CLASS_TIMER,
-  .f_get_value     = mips_timer_get_value,
-  .f_config        = mips_timer_config,
-  .f_request       = (dev_timer_request_t*)&dev_driver_notsup_fcn,
-  .f_cancel        = (dev_timer_request_t*)&dev_driver_notsup_fcn,
-};
-
 #endif
 
 /************************************************************************/
@@ -345,6 +319,9 @@ static const struct dev_enum_ident_s  mips_ids[] =
   { 0 }
 };
 
+#define mips_timer_request (dev_timer_request_t*)&dev_driver_notsup_fcn
+#define mips_timer_cancel  (dev_timer_request_t*)&dev_driver_notsup_fcn
+
 const struct driver_s  mips_drv =
 {
   .desc           = "Mips processor",
@@ -355,12 +332,12 @@ const struct driver_s  mips_drv =
   .f_use          = mips_use,
 
   .classes        = {
-    &mips_cpu_drv,
+    DRIVER_CPU_METHODS(mips_cpu),
 #ifdef CONFIG_DEVICE_IRQ
-    &mips_icu_drv,
+    DRIVER_ICU_METHODS(mips_icu),
 #endif
 #ifdef CONFIG_CPU_MIPS_TIMER_CYCLECOUNTER
-    &mips_timer_drv,
+    DRIVER_TIMER_METHODS(mips_timer),
 #endif
     0
   }

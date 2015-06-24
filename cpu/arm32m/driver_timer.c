@@ -88,7 +88,7 @@ void arm_timer_systick_irq(struct device_s *dev)
 }
 #endif
 
-static DEV_TIMER_REQUEST(arm_timer_request)
+DEV_TIMER_REQUEST(arm_timer_request)
 {
   struct device_s *dev = accessor->dev;
   __unused__ struct arm_dev_private_s *pv = dev->drv_pv;
@@ -150,7 +150,7 @@ static DEV_TIMER_REQUEST(arm_timer_request)
   return err;
 }
 
-static DEV_TIMER_CANCEL(arm_timer_cancel)
+DEV_TIMER_CANCEL(arm_timer_cancel)
 {
   struct device_s *dev = accessor->dev;
   __unused__ struct arm_dev_private_s *pv = dev->drv_pv;
@@ -297,7 +297,7 @@ DEV_USE(arm_timer_systick_use)
   return err;
 }
 
-static DEV_TIMER_GET_VALUE(arm_timer_get_value)
+DEV_TIMER_GET_VALUE(arm_timer_get_value)
 {
   struct device_s *dev = accessor->dev;
   __unused__ struct arm_dev_private_s *pv = dev->drv_pv;
@@ -365,7 +365,7 @@ static DEV_TIMER_GET_VALUE(arm_timer_get_value)
   return err;
 }
 
-static DEV_TIMER_CONFIG(arm_timer_config)
+DEV_TIMER_CONFIG(arm_timer_config)
 {
   struct device_s *dev = accessor->dev;
   __unused__ struct arm_dev_private_s *pv = dev->drv_pv;
@@ -463,13 +463,4 @@ static DEV_TIMER_CONFIG(arm_timer_config)
 
   return err;
 }
-
-const struct driver_timer_s  arm_m_timer_drv =
-{
-  .class_          = DRIVER_CLASS_TIMER,
-  .f_request       = arm_timer_request,
-  .f_cancel        = arm_timer_cancel,
-  .f_get_value     = arm_timer_get_value,
-  .f_config        = arm_timer_config,
-};
 

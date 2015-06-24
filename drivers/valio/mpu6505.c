@@ -623,11 +623,8 @@ const struct driver_s mpu6505_drv = {
   .f_cleanup = mpu6505_cleanup,
   .f_use = mpu6505_use,
   .classes = {
-    &(const struct driver_valio_s){
-      .class_ = DRIVER_CLASS_VALIO,
-      .f_request = &mpu6505_request,
-    },
-    0
+    DRIVER_VALIO_METHODS(mpu6505), 
+    0,
   },
 };
 

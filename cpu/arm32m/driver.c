@@ -105,14 +105,6 @@ static DEV_ICU_DISABLE_IRQ(arm_icu_disable_irq)
     ARMV7M_NVIC_ICER_CLRENA(icu_in_id % 32));
 }
 
-const struct driver_icu_s  arm_icu_drv =
-{
-  .class_          = DRIVER_CLASS_ICU,
-  .f_get_endpoint  = arm_icu_get_endpoint,
-  .f_enable_irq    = arm_icu_enable_irq,
-  .f_disable_irq    = arm_icu_disable_irq,
-};
-
 #endif
 
 /************************************************************************
@@ -179,12 +171,6 @@ static DEV_CPU_REG_INIT(arm_cpu_reg_init)
 #endif
 }
 
-const struct driver_cpu_s  arm_cpu_drv =
-{
-  .class_          = DRIVER_CLASS_CPU,
-  .f_reg_init      = arm_cpu_reg_init,
-};
-
 /************************************************************************/
 
 static DEV_USE(arm_use)
@@ -237,14 +223,14 @@ const struct driver_s  arm32m_drv =
   .f_use          = arm_use,
 
   .classes        = {
-    &arm_cpu_drv,
+    DRIVER_CPU_METHODS(arm_cpu),
 #ifdef CONFIG_DEVICE_IRQ
-    &arm_icu_drv,
+    DRIVER_ICU_METHODS(arm_icu),
 #endif
 #if defined(CONFIG_CPU_ARM32M_TIMER_SYSTICK) || defined(CONFIG_CPU_ARM32M_TIMER_DWTCYC)
-    &arm_m_timer_drv,
+    DRIVER_TIMER_METHODS(arm_timer),
 #endif
-    0
+    0,
   }
 };
 

@@ -128,13 +128,6 @@ static DEV_ICU_ENABLE_IRQ(x86_icu_enable_irq)
   return 0;
 }
 
-static const struct driver_icu_s  x86_icu_drv =
-{
-  .class_          = DRIVER_CLASS_ICU,
-  .f_get_endpoint  = x86_icu_get_endpoint,
-  .f_enable_irq    = x86_icu_enable_irq,
-};
-
 #endif
 
 /************************************************************************
@@ -200,15 +193,6 @@ static DEV_CPU_GET_NODE(x86_cpu_get_node)
 }
 #endif
 
-
-static const struct driver_cpu_s  x86_cpu_drv =
-{
-  .class_          = DRIVER_CLASS_CPU,
-  .f_reg_init      = x86_cpu_reg_init,
-#ifdef CONFIG_ARCH_SMP
-  .f_get_node   = x86_cpu_get_node,
-#endif
-};
 
 /************************************************************************
         Timer driver part
@@ -276,15 +260,6 @@ static DEV_TIMER_CONFIG(x86_timer_config)
   return err;
 }
 
-static const struct driver_timer_s  x86_timer_drv =
-{
-  .class_          = DRIVER_CLASS_TIMER,
-  .f_get_value     = x86_timer_get_value,
-  .f_config        = x86_timer_config,
-  .f_request       = (dev_timer_request_t*)&dev_driver_notsup_fcn,
-  .f_cancel        = (dev_timer_request_t*)&dev_driver_notsup_fcn,
-};
-
 #endif
 
 /************************************************************************/
@@ -340,6 +315,9 @@ static const struct dev_enum_ident_s  x86_ids[] =
   { 0 }
 };
 
+#define x86_timer_request (dev_timer_request_t*)&dev_driver_notsup_fcn
+#define x86_timer_cancel  (dev_timer_request_t*)&dev_driver_notsup_fcn
+
 const struct driver_s  x86_drv =
 {
   .desc           = "x86 32-bits processor",
@@ -350,15 +328,15 @@ const struct driver_s  x86_drv =
   .f_use          = x86_use,
 
   .classes        = {
-    &x86_cpu_drv,
+    DRIVER_CPU_METHODS(x86_cpu),
 #ifdef CONFIG_DEVICE_IRQ
-    &x86_icu_drv,
+    DRIVER_ICU_METHODS(x86_icu),
 #endif
 #ifdef CONFIG_CPU_X86_TIMER_CYCLECOUNTER
-    &x86_timer_drv,
+    DRIVER_TIMER_METHODS(x86_timer),
 #endif
-    0
-  }
+    0,
+  },
 };
 
 REGISTER_DRIVER(x86_drv);

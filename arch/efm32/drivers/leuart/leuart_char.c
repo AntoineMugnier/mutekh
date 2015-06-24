@@ -276,12 +276,6 @@ static DEV_IRQ_EP_PROCESS(efm32_leuart_irq)
 
 #endif
 
-static const struct driver_char_s	efm32_leuart_char_drv =
-{
-  .class_		= DRIVER_CLASS_CHAR,
-  .f_request		= efm32_leuart_request,
-};
-
 static DEV_INIT(efm32_leuart_init);
 static DEV_CLEANUP(efm32_leuart_cleanup);
 
@@ -290,7 +284,10 @@ const struct driver_s	efm32_leuart_drv =
   .desc                 = "EFM32 Low Energy UART",
   .f_init		= efm32_leuart_init,
   .f_cleanup		= efm32_leuart_cleanup,
-  .classes              = { &efm32_leuart_char_drv, 0 }
+  .classes              = {
+    DRIVER_CHAR_METHODS(efm32_leuart),
+    0,
+  },
 };
 
 REGISTER_DRIVER(efm32_leuart_drv);

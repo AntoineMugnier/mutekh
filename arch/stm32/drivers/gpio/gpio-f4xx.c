@@ -361,17 +361,6 @@ DEV_GPIO_GET_INPUT(stm32_gpio_gpio_get_input)
   return 0;
 }
 
-
-static const struct driver_gpio_s stm32_gpio_gpio_cls =
-{
-  .class_       = DRIVER_CLASS_GPIO,
-  .f_set_mode   = &stm32_gpio_gpio_set_mode,
-  .f_set_output = &stm32_gpio_gpio_set_output,
-  .f_get_input  = &stm32_gpio_gpio_get_input,
-  .f_request     = dev_gpio_request_async_to_sync,
-};
-
-
 /********************************* IOMUX class. **********/
 
 static
@@ -431,14 +420,6 @@ DEV_IOMUX_SETUP(stm32_gpio_iomux_setup)
 
   return 0;
 }
-
-
-static const struct driver_iomux_s stm32_gpio_iomux_cls =
-{
-  .class_  = DRIVER_CLASS_IOMUX,
-  .f_setup = &stm32_gpio_iomux_setup,
-};
-
 
 /********************************* ICU class. **********/
 
@@ -604,14 +585,6 @@ DEV_ICU_DISABLE_IRQ(stm32_gpio_icu_disable_irq)
   DEVICE_REG_FIELD_IDX_CLR(EXTI, , IMR, MR, io_in_bank);
 }
 
-static const struct driver_icu_s stm32_gpio_icu_cls =
-  {
-    .class_         = DRIVER_CLASS_ICU,
-    .f_get_endpoint = &stm32_gpio_icu_get_endpoint,
-    .f_enable_irq   = &stm32_gpio_icu_enable_irq,
-    .f_disable_irq  = &stm32_gpio_icu_disable_irq,
-  };
-
 static
 DEV_IRQ_EP_PROCESS(stm32_gpio_irq)
 {
@@ -651,16 +624,19 @@ DEV_IRQ_EP_PROCESS(stm32_gpio_irq)
 static DEV_INIT(stm32_gpio_init);
 static DEV_CLEANUP(stm32_gpio_cleanup);
 
+#define stm32_gpio_gpio_request dev_gpio_request_async_to_sync
+#define stm32_gpio_gpio_input_irq_range (dev_gpio_input_irq_range_t*)dev_driver_notsup_fcn
+
 const struct driver_s stm32_gpio_drv =
   {
     .desc      = "STM32 GPIO",
     .f_init    = &stm32_gpio_init,
     .f_cleanup = &stm32_gpio_cleanup,
     .classes   = {
-      &stm32_gpio_gpio_cls,
-      &stm32_gpio_iomux_cls,
+      DRIVER_GPIO_METHODS(stm32_gpio_gpio),
+      DRIVER_IOMUX_METHODS(stm32_gpio_iomux),
 #if defined(CONFIG_DRIVER_STM32_GPIO_ICU)
-      &stm32_gpio_icu_cls,
+      DRIVER_ICU_METHODS(stm32_gpio_icu),
 #endif
       0
     },

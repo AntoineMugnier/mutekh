@@ -255,17 +255,12 @@ static DEV_GPIO_REQUEST(pca9557_request)
     LOCK_RELEASE_IRQ(&dev->lock);
 }
 
-const struct driver_gpio_s pca9557_gpio_drv =
-{
-    .class_         = DRIVER_CLASS_GPIO,
-    .f_set_mode     = (dev_gpio_set_mode_t*)dev_driver_notsup_fcn,
-    .f_set_output   = (dev_gpio_set_output_t*)dev_driver_notsup_fcn,
-    .f_get_input    = (dev_gpio_get_input_t*)dev_driver_notsup_fcn,
-    .f_request      = pca9557_request,
-};
-
 static DEV_INIT(pca9557_init);
 static DEV_CLEANUP(pca9557_cleanup);
+
+#define pca9557_set_mode   (dev_gpio_set_mode_t*)dev_driver_notsup_fcn
+#define pca9557_set_output (dev_gpio_set_output_t*)dev_driver_notsup_fcn
+#define pca9557_get_input  (dev_gpio_get_input_t*)dev_driver_notsup_fcn
 
 struct driver_s pca9557_drv =
 {
@@ -273,9 +268,9 @@ struct driver_s pca9557_drv =
     .f_init     = pca9557_init,
     .f_cleanup  = pca9557_cleanup,
     .classes    = {
-        &pca9557_gpio_drv,
-        NULL
-    }
+        DRIVER_GPIO_METHODS(pca9557),
+        0,
+    },
 };
 
 REGISTER_DRIVER(pca9557_drv);

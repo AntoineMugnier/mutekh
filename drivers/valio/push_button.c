@@ -225,12 +225,6 @@ static DEV_VALIO_REQUEST(push_button_request)
     kroutine_exec(&req->base.kr, cpu_is_interruptible());
 }
 
-static const struct driver_valio_s push_button_valio_drv =
-{
-  .class_       = DRIVER_CLASS_VALIO,
-  .f_request    = &push_button_request,
-};
-
 static DEV_INIT(push_button_init);
 static DEV_CLEANUP(push_button_cleanup);
 
@@ -241,7 +235,7 @@ const struct driver_s push_button_drv =
   .f_cleanup    = &push_button_cleanup,
   .classes      =
   {
-    &push_button_valio_drv,
+    DRIVER_VALIO_METHODS(push_button),
     0
   }
 };

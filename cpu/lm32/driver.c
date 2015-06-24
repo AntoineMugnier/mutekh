@@ -128,16 +128,6 @@ static DEV_ICU_DISABLE_IRQ(lm32_icu_disable_irq)
 }
 # endif
 
-const struct driver_icu_s  lm32_icu_drv =
-{
-  .class_          = DRIVER_CLASS_ICU,
-  .f_get_endpoint  = lm32_icu_get_endpoint,
-  .f_enable_irq   = lm32_icu_enable_irq,
-# ifndef CONFIG_ARCH_SMP
-  .f_disable_irq   = lm32_icu_disable_irq,
-# endif
-};
-
 #endif
 
 /************************************************************************
@@ -173,15 +163,6 @@ static DEV_CPU_GET_NODE(lm32_cpu_get_node)
   return &pv->node;
 }
 #endif
-
-const struct driver_cpu_s  lm32_cpu_drv =
-{
-  .class_          = DRIVER_CLASS_CPU,
-  .f_reg_init      = lm32_cpu_reg_init,
-#ifdef CONFIG_ARCH_SMP
-  .f_get_node   = lm32_cpu_get_node,
-#endif
-};
 
 /************************************************************************
         Timer driver part
@@ -248,15 +229,6 @@ static DEV_TIMER_CONFIG(lm32_timer_config)
   return err;
 }
 
-static const struct driver_timer_s  lm32_timer_drv =
-{
-  .class_          = DRIVER_CLASS_TIMER,
-  .f_get_value     = lm32_timer_get_value,
-  .f_config        = lm32_timer_config,
-  .f_request       = (dev_timer_request_t*)&dev_driver_notsup_fcn,
-  .f_cancel        = (dev_timer_request_t*)&dev_driver_notsup_fcn,
-};
-
 #endif
 
 /************************************************************************/
@@ -311,6 +283,9 @@ static const struct dev_enum_ident_s  lm32_ids[] =
   { 0 }
 };
 
+#define lm32_timer_request (dev_timer_request_t*)&dev_driver_notsup_fcn
+#define lm32_timer_cancel  (dev_timer_request_t*)&dev_driver_notsup_fcn
+
 const struct driver_s  lm32_drv =
 {
   .desc           = "LM32 processor",
@@ -321,12 +296,12 @@ const struct driver_s  lm32_drv =
   .f_use          = lm32_use,
 
   .classes        = {
-    &lm32_cpu_drv,
+    DRIVER_CPU_METHODS(lm32_cpu),
 #ifdef CONFIG_DEVICE_IRQ
-    &lm32_icu_drv,
+    DRIVER_ICU_METHODS(lm32_icu),
 #endif
 #ifdef CONFIG_CPU_LM32_TIMER_CYCLECOUNTER
-    &lm32_timer_drv,
+    DRIVER_TIMER_METHODS(lm32_timer),
 #endif
     0
   }

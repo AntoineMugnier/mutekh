@@ -130,16 +130,6 @@ static DEV_ICU_DISABLE_IRQ(avr32_icu_disable_irq)
 }
 # endif
 
-const struct driver_icu_s  avr32_icu_drv =
-{
-  .class_          = DRIVER_CLASS_ICU,
-  .f_get_endpoint  = avr32_icu_get_endpoint,
-  .f_enable_irq   = avr32_icu_enable_irq,
-# ifndef CONFIG_ARCH_SMP
-  .f_disable_irq   = avr32_icu_disable_irq,
-# endif
-};
-
 #endif
 
 /************************************************************************
@@ -178,15 +168,6 @@ static DEV_CPU_GET_NODE(avr32_cpu_get_node)
   return &pv->node;
 }
 #endif
-
-const struct driver_cpu_s  avr32_cpu_drv =
-{
-  .class_          = DRIVER_CLASS_CPU,
-  .f_reg_init      = avr32_cpu_reg_init,
-#ifdef CONFIG_ARCH_SMP
-  .f_get_node   = avr32_cpu_get_node,
-#endif
-};
 
 /************************************************************************
         Timer driver part
@@ -253,15 +234,6 @@ static DEV_TIMER_CONFIG(arv32_timer_config)
   return err;
 }
 
-static const struct driver_timer_s  avr32_timer_drv =
-{
-  .class_          = DRIVER_CLASS_TIMER,
-  .f_get_value     = avr32_timer_get_value,
-  .f_config        = avr32_timer_config,
-  .f_request       = (dev_timer_request_t*)&dev_driver_notsup_fcn,
-  .f_cancel        = (dev_timer_request_t*)&dev_driver_notsup_fcn,
-};
-
 #endif
 
 /************************************************************************/
@@ -316,6 +288,9 @@ static const struct dev_enum_ident_s  avr32_ids[] =
   { 0 }
 };
 
+#define avr32_timer_request (dev_timer_request_t*)&dev_driver_notsup_fcn
+#define avr32_timer_cancel  (dev_timer_request_t*)&dev_driver_notsup_fcn
+
 const struct driver_s  avr32_drv =
 {
   .desc           = "AVR32 processor",
@@ -325,12 +300,12 @@ const struct driver_s  avr32_drv =
   .f_cleanup      = avr32_cleanup,
 
   .classes        = {
-    &avr32_cpu_drv,
+    DRIVER_CPU_METHODS(avr32_cpu),
 #ifdef CONFIG_DEVICE_IRQ
-    &avr32_icu_drv,
+    DRIVER_ICU_METHODS(avr32_icu),
 #endif
 #ifdef CONFIG_CPU_AVR32_TIMER_CYCLECOUNTER
-    &avr32_timer_drv,
+    DRIVER_TIMER_METHODS(avr32_timer),
 #endif
     0
   }

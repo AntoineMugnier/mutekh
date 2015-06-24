@@ -264,12 +264,6 @@ static const struct dev_enum_ident_s	cadence_uart_ids[] =
   { 0 }
 };
 
-static const struct driver_char_s	cadence_uart_char_drv =
-{
-  .class_		= DRIVER_CLASS_CHAR,
-  .f_request		= cadence_uart_request,
-};
-
 static DEV_INIT(cadence_uart_init);
 static DEV_CLEANUP(cadence_uart_cleanup);
 
@@ -279,7 +273,10 @@ const struct driver_s	cadence_uart_drv =
   .id_table		= cadence_uart_ids,
   .f_init		= cadence_uart_init,
   .f_cleanup		= cadence_uart_cleanup,
-  .classes              = { &cadence_uart_char_drv, 0 }
+  .classes              = {
+    DRIVER_CHAR_METHODS(cadence_uart),
+    0,
+  },
 };
 
 REGISTER_DRIVER(cadence_uart_drv);

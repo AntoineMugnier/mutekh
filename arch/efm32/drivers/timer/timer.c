@@ -449,15 +449,6 @@ static DEV_TIMER_CONFIG(efm32_timer_config)
   return err;
 }
 
-const struct driver_timer_s  efm32_timer_timer_drv =
-{
-  .class_         = DRIVER_CLASS_TIMER,
-  .f_request      = efm32_timer_request,
-  .f_cancel       = efm32_timer_cancel,
-  .f_get_value    = efm32_timer_get_value,
-  .f_config       = efm32_timer_config,
-};
-
 /************************************************************************/
 
 static DEV_INIT(efm32_timer_init);
@@ -469,11 +460,10 @@ const struct driver_s  efm32_timer_drv =
   .f_init         = efm32_timer_init,
   .f_cleanup      = efm32_timer_cleanup,
   .f_use          = efm32_timer_use,
-
   .classes        = {
-    &efm32_timer_timer_drv,
-    0
-  }
+    DRIVER_TIMER_METHODS(efm32_timer),
+    0,
+  },
 };
 
 static DEV_INIT(efm32_timer_init)

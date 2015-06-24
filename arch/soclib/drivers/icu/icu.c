@@ -123,14 +123,6 @@ static DEV_IRQ_EP_PROCESS(soclib_icu_source_process)
     }
 }
 
-const struct driver_icu_s  soclib_icu_icu_drv =
-{
-  .class_         = DRIVER_CLASS_ICU,
-  .f_get_endpoint = soclib_icu_icu_get_endpoint,
-  .f_enable_irq   = soclib_icu_icu_enable_irq,
-  .f_disable_irq  = soclib_icu_icu_disable_irq,
-};
-
 static const struct dev_enum_ident_s  soclib_icu_ids[] =
 {
   DEV_ENUM_FDTNAME_ENTRY("soclib:icu"),
@@ -149,9 +141,9 @@ const struct driver_s  soclib_icu_drv =
   .f_cleanup      = soclib_icu_cleanup,
 
   .classes        = {
-    &soclib_icu_icu_drv,
-    0
-  }
+    DRIVER_ICU_METHODS(soclib_icu_icu),
+    0,
+  },
 };
 
 static DEV_INIT(soclib_icu_init)

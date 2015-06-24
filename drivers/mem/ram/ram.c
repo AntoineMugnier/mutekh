@@ -88,13 +88,6 @@ static DEV_MEM_REQUEST(ram_request)
   kroutine_exec(&rq->base.kr, cpu_is_interruptible());
 }
 
-static const struct driver_mem_s	ram_mem_drv =
-{
-  .class_		= DRIVER_CLASS_MEM,
-  .f_info               = ram_info,
-  .f_request		= ram_request,
-};
-
 static DEV_INIT(ram_init);
 static DEV_CLEANUP(ram_cleanup);
 
@@ -110,7 +103,10 @@ const struct driver_s	ram_drv =
   .id_table		= ram_ids,
   .f_init		= ram_init,
   .f_cleanup		= ram_cleanup,
-  .classes              = { &ram_mem_drv, 0 }
+  .classes              = {
+    DRIVER_MEM_METHODS(ram),
+    0,
+  },
 };
 
 REGISTER_DRIVER(ram_drv);
