@@ -148,6 +148,9 @@ struct net_layer_handler_s
   void (*unbound)(
     struct net_layer_s *layer,
     struct net_layer_s *child);
+
+  uint32_t type;
+  bool_t use_timer;
 };
 
 #define GCT_CONTAINER_ALGO_net_layer_list CLIST
@@ -168,8 +171,6 @@ struct net_layer_s
   const struct net_layer_handler_s *handler;
   struct net_layer_s *parent;
   struct net_layer_context_s context;
-
-  uint32_t type;
 
   // Rest is done through derivation
 } *, entry);
@@ -243,7 +244,6 @@ void net_layer_context_changed(struct net_layer_s *layer);
 error_t net_layer_init(
   struct net_layer_s *layer,
   const struct net_layer_handler_s *handler,
-  struct net_scheduler_s *scheduler,
-  uint32_t type);
+  struct net_scheduler_s *scheduler);
 
 #endif

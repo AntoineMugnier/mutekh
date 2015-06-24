@@ -118,6 +118,9 @@ void net_scheduler_cleanup(
 struct net_task_s *net_scheduler_task_alloc(
   struct net_scheduler_s *sched);
 
+void net_scheduler_timer_use(struct net_scheduler_s *sched);
+void net_scheduler_timer_release(struct net_scheduler_s *sched);
+
 /**
    @this frees a task allocated from @ref {net_scheduler_task_alloc}.
  */
