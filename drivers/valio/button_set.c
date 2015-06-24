@@ -225,7 +225,7 @@ static DEV_INIT(button_set_init)
   if (err)
     goto free_pv;
 
-  err = device_get_param_io(dev, 0, &first, &last);
+  err = device_res_get_io(dev, 0, &first, &last);
   if (err)
     goto put_gpio;
 
