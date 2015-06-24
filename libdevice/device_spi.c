@@ -728,8 +728,8 @@ void dev_spi_request_cleanup(struct dev_spi_ctrl_request_s *rq)
 
 static KROUTINE_EXEC(dev_request_spi_wait_done)
 {
-  struct dev_request_s *rq = KROUTINE_CONTAINER(kr, *rq, kr);
-  struct dev_request_status_s *status = rq->pvdata;
+  struct dev_spi_ctrl_transfer_s *tr = KROUTINE_CONTAINER(kr, *tr, kr);
+  struct dev_request_status_s *status = tr->pvdata;
 
   LOCK_SPIN_IRQ(&status->lock);
   if (status->ctx != NULL)
