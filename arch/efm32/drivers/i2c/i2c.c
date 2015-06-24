@@ -364,13 +364,6 @@ DEV_I2C_REQUEST(efm32_i2c_request)
   LOCK_RELEASE_IRQ(&dev->lock);
 }
 
-static const struct driver_i2c_s efm32_i2c_mst_drv =
-{
-  .class_       = DRIVER_CLASS_I2C,
-  .f_config     = &efm32_i2c_config,
-  .f_request    = &efm32_i2c_request,
-};
-
 static DEV_INIT(efm32_i2c_init);
 static DEV_CLEANUP(efm32_i2c_cleanup);
 
@@ -381,9 +374,9 @@ const struct driver_s efm32_i2c_drv =
   .f_cleanup    = &efm32_i2c_cleanup,
   .classes      =
   {
-    &efm32_i2c_mst_drv,
-    0
-  }
+    DRIVER_I2C_METHODS(efm32_i2c),
+    0,
+  },
 };
 
 REGISTER_DRIVER(efm32_i2c_drv);

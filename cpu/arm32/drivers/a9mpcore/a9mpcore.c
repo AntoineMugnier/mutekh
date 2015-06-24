@@ -59,18 +59,15 @@ static DEV_ENUM_MATCH_DRIVER(a9mpcore_match_driver)
 static DEV_CLEANUP(a9mpcore_cleanup);
 static DEV_INIT(a9mpcore_init);
 
-static const struct driver_enum_s a9mpcore_enum_drv =
-{
-  .class_	= DRIVER_CLASS_ENUM,
-  .f_match_driver = a9mpcore_match_driver,
-};
-
 const struct driver_s	a9mpcore_drv =
 {
   .desc         = "ARM Cortex-A9 MPCore",
   .f_init	= a9mpcore_init,
   .f_cleanup	= a9mpcore_cleanup,
-  .classes	= { &a9mpcore_enum_drv, 0 }
+  .classes	= {
+    DRIVER_ENUM_METHODS(a9mpcore),
+    0,
+  },
 };
 
 REGISTER_DRIVER(a9mpcore_drv);

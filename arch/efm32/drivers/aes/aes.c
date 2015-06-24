@@ -255,13 +255,6 @@ static DEVCRYPTO_REQUEST(efm32_aes_request)
                            &pv->queue, dev_crypto_rq_s_base(rq), 1);
 }
 
-static const struct driver_crypto_s efm32_aes_crypto_drv =
-{
-  .class_         = DRIVER_CLASS_CRYPTO,
-  .f_info         = efm32_aes_info,
-  .f_request      = efm32_aes_request,
-};
-
 static DEV_INIT(efm32_aes_init);
 static DEV_CLEANUP(efm32_aes_cleanup);
 
@@ -271,9 +264,9 @@ const struct driver_s efm32_aes_drv =
   .f_init     = efm32_aes_init,
   .f_cleanup  = efm32_aes_cleanup,
   .classes    = {
-    &efm32_aes_crypto_drv,
-    NULL
-  }
+    DRIVER_CRYPTO_METHODS(efm32_aes),
+    0,
+  },
 };
 
 REGISTER_DRIVER(efm32_aes_drv);

@@ -208,18 +208,15 @@ static void ahbctrl_scan(struct device_s *dev, uintptr_t begin, uintptr_t end)
 static DEV_CLEANUP(ahbctrl_cleanup);
 static DEV_INIT(ahbctrl_init);
 
-static const struct driver_enum_s ahbctrl_enum_drv =
-{
-  .class_	= DRIVER_CLASS_ENUM,
-  .f_match_driver = ahbctrl_match_driver,
-};
-
 const struct driver_s	ahbctrl_drv =
 {
   .desc         = "Gaisler AHB controller",
   .f_init	= ahbctrl_init,
   .f_cleanup	= ahbctrl_cleanup,
-  .classes	= { &ahbctrl_enum_drv, 0 }
+  .classes	= {
+    DRIVER_ENUM_METHODS(ahbctrl),
+    0,
+  },
 };
 
 REGISTER_DRIVER(ahbctrl_drv);

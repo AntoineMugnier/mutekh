@@ -335,12 +335,6 @@ static DEV_IRQ_EP_PROCESS(mtch6102_irq)
     lock_release(&dev->lock);
 }
 
-static const struct driver_valio_s mtch6102_valio_drv =
-{
-    .class_ = DRIVER_CLASS_VALIO,
-    .f_request = mtch6102_request,
-};
-
 static DEV_INIT(mtch6102_init);
 static DEV_CLEANUP(mtch6102_cleanup);
 
@@ -350,8 +344,9 @@ const struct driver_s mtch6102_drv =
     .f_init = mtch6102_init,
     .f_cleanup = mtch6102_cleanup,
     .classes = {
-        &mtch6102_valio_drv,
-        0 },
+      DRIVER_VALIO_METHODS(mtch6102),
+      0,
+    },
 };
 
 static DEV_INIT(mtch6102_init)

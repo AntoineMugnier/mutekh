@@ -375,12 +375,6 @@ static DEV_IRQ_EP_PROCESS(efm32_dma_irq)
   lock_release(&dev->lock);
 }
 
-static const struct driver_dma_s efm32_dma_ctrl_drv =
-{
-  .class_ 	  = DRIVER_CLASS_DMA,
-  .f_request	= efm32_dma_request,
-};
-
 static DEV_INIT(efm32_dma_init);
 static DEV_CLEANUP(efm32_dma_cleanup);
 
@@ -389,7 +383,10 @@ const struct driver_s	efm32_dma_drv =
   .desc       = "EFM32 DMA driver",
   .f_init     = efm32_dma_init,
   .f_cleanup  = efm32_dma_cleanup,
-  .classes    = { &efm32_dma_ctrl_drv, 0 }
+  .classes    = {
+    DRIVER_DMA_METHODS(efm32_dma),
+    0,
+  },
 };
 
 REGISTER_DRIVER(efm32_dma_drv);

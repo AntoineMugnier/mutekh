@@ -164,6 +164,12 @@ DRIVER_CLASS_TYPES(char,
                    dev_char_request_t *f_request;
                    );
 
+#define DRIVER_CHAR_METHODS(prefix)                                \
+  &(const struct driver_char_s){                                   \
+    .class_ = DRIVER_CLASS_CHAR,                                   \
+    .f_request = prefix ## _request,                               \
+  }
+
 
 inline ssize_t dev_char_spin_request(
     const struct device_char_s *accessor,

@@ -278,13 +278,6 @@ out:
     kroutine_exec(&rq->base.kr, cpu_is_interruptible());
 }
 
-static const struct driver_mem_s    i2c_eeprom_mem_drv =
-{
-    .class_     = DRIVER_CLASS_MEM,
-    .f_info     = i2c_eeprom_info,
-    .f_request  = i2c_eeprom_request,
-};
-
 static DEV_INIT(i2c_eeprom_init);
 static DEV_CLEANUP(i2c_eeprom_cleanup);
 
@@ -294,8 +287,8 @@ const struct driver_s i2c_eeprom_drv =
     .f_init      = i2c_eeprom_init,
     .f_cleanup   = i2c_eeprom_cleanup,
     .classes     = {
-        &i2c_eeprom_mem_drv,
-        0,
+      DRIVER_MEM_METHODS(i2c_eeprom),
+      0,
     }
 };
 

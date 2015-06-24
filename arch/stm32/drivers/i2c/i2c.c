@@ -622,14 +622,6 @@ DEV_I2C_REQUEST(stm32_i2c_request)
     kroutine_exec(&req->base.kr, 0);
 }
 
-
-static const struct driver_i2c_s stm32_i2c_cls =
-{
-  .class_    = DRIVER_CLASS_I2C,
-  .f_config  = &stm32_i2c_config,
-  .f_request = &stm32_i2c_request,
-};
-
 static DEV_INIT(stm32_i2c_init);
 static DEV_CLEANUP(stm32_i2c_cleanup);
 
@@ -640,9 +632,9 @@ const struct driver_s stm32_i2c_ctrl_drv =
   .f_cleanup = &stm32_i2c_cleanup,
   .classes   =
     {
-      &stm32_i2c_cls,
-      0
-    }
+      DRIVER_I2C_METHODS(stm32_i2c),
+      0,
+    },
 };
 
 REGISTER_DRIVER(stm32_i2c_ctrl_drv);

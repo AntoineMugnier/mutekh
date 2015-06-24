@@ -303,17 +303,6 @@ static DEV_SPI_CTRL_QUEUE(soclib_spi_queue)
 
 #endif
 
-static const struct driver_spi_ctrl_s	soclib_spi_ctrl_drv =
-{
-  .class_		= DRIVER_CLASS_SPI_CTRL,
-  .f_config		= soclib_spi_config,
-  .f_select		= soclib_spi_select,
-  .f_transfer		= soclib_spi_transfer,
-#ifdef CONFIG_DEVICE_SPI_REQUEST
-  .f_queue		= soclib_spi_queue,
-#endif
-};
-
 /****************************************************** GPIO */
 
 #ifdef CONFIG_DRIVER_SOCLIB_SPI_GPIO
@@ -370,15 +359,6 @@ static DEV_GPIO_GET_INPUT(soclib_spi_gpio_get_input)
 
   return 0;
 }
-
-const struct driver_gpio_s  soclib_spi_gpio_drv =
-{
-  .class_         = DRIVER_CLASS_GPIO,
-  .f_set_mode     = soclib_spi_gpio_set_mode,
-  .f_set_output   = soclib_spi_gpio_set_output,
-  .f_get_input    = soclib_spi_gpio_get_input,
-  .f_request      = dev_gpio_request_async_to_sync,
-};
 
 #endif
 
@@ -480,14 +460,6 @@ static DEV_ICU_DISABLE_IRQ(soclib_spi_icu_disable_irq)
   LOCK_RELEASE_IRQ(&dev->lock);
 }
 
-const struct driver_icu_s  soclib_spi_icu_drv =
-{
-  .class_         = DRIVER_CLASS_ICU,
-  .f_get_endpoint = soclib_spi_icu_get_endpoint,
-  .f_enable_irq   = soclib_spi_icu_enable_irq,
-  .f_disable_irq  = soclib_spi_icu_disable_irq,
-};
-
 #endif
 
 /*******************************************************/
@@ -498,6 +470,9 @@ static const struct dev_enum_ident_s  soclib_spi_ids[] =
   { 0 }
 };
 
+#define soclib_spi_gpio_request dev_gpio_request_async_to_sync
+#define soclib_spi_gpio_input_irq_range (dev_gpio_input_irq_range_t*)dev_driver_notsup_fcn
+
 static DEV_INIT(soclib_spi_init);
 static DEV_CLEANUP(soclib_spi_cleanup);
 
@@ -507,14 +482,16 @@ const struct driver_s	soclib_spi_drv =
   .id_table             = soclib_spi_ids,
   .f_init		= soclib_spi_init,
   .f_cleanup		= soclib_spi_cleanup,
-  .classes              = { &soclib_spi_ctrl_drv,
-#ifdef CONFIG_DRIVER_SOCLIB_SPI_ICU
-                            &soclib_spi_icu_drv,
-#endif
+  .classes              = {
+    DRIVER_SPI_CTRL_METHODS(soclib_spi),
 #ifdef CONFIG_DRIVER_SOCLIB_SPI_GPIO
-                            &soclib_spi_gpio_drv,
+    DRIVER_GPIO_METHODS(soclib_spi_gpio),
 #endif
-                            0 }
+#ifdef CONFIG_DRIVER_SOCLIB_SPI_ICU
+    DRIVER_ICU_METHODS(soclib_spi_icu),
+#endif
+    0,
+  },
 };
 
 #ifdef CONFIG_DEVICE_IRQ

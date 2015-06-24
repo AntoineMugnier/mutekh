@@ -422,15 +422,6 @@ static DEV_TIMER_CONFIG(stm32_timer_config)
   return err;
 }
 
-const struct driver_timer_s  stm32_timer_timer_drv =
-{
-  .class_         = DRIVER_CLASS_TIMER,
-  .f_request      = stm32_timer_request,
-  .f_cancel       = stm32_timer_cancel,
-  .f_get_value    = stm32_timer_get_value,
-  .f_config       = stm32_timer_config,
-};
-
 /************************************************************************/
 
 static DEV_INIT(stm32_timer_init);
@@ -444,9 +435,9 @@ const struct driver_s  stm32_timer_drv =
   .f_use          = stm32_timer_use,
 
   .classes        = {
-    &stm32_timer_timer_drv,
-    0
-  }
+    DRIVER_TIMER_METHODS(stm32_timer),
+    0,
+  },
 };
 
 static inline

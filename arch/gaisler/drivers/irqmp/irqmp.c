@@ -233,17 +233,6 @@ static DEV_IRQ_EP_PROCESS(gaisler_irqmp_source_process)
     }
 }
 
-const struct driver_icu_s  gaisler_irqmp_icu_drv =
-{
-  .class_         = DRIVER_CLASS_ICU,
-  .f_get_endpoint = gaisler_irqmp_icu_get_endpoint,
-  .f_enable_irq = gaisler_irqmp_icu_enable_irq,
-  .f_disable_irq = gaisler_irqmp_icu_disable_irq,
-# ifdef CONFIG_HEXO_IPI
-  .f_setup_ipi_ep = gaisler_irqmp_icu_setup_ipi_ep,
-# endif
-};
-
 #endif /*  CONFIG_DRIVER_GAISLER_IRQMP_ICU */
 
 static const struct dev_enum_ident_s	gaisler_irqmp_ids[] =
@@ -265,10 +254,10 @@ const struct driver_s  gaisler_irqmp_drv =
 
   .classes        = {
 #ifdef CONFIG_DRIVER_GAISLER_IRQMP_ICU
-    &gaisler_irqmp_icu_drv,
+    DRIVER_ICU_METHODS(gaisler_irqmp_icu),
 #endif
-    0
-  }
+    0,
+  },
 };
 
 REGISTER_DRIVER(gaisler_irqmp_drv);

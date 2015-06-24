@@ -59,6 +59,7 @@ enum mpu6505_power_mode_e
 
 #define STREAMING_FPS 16
 #define GYRO_AUTO (STREAMING_FPS)
+#define GYRO_AUTO_TIME (GYRO_AUTO * 4)
 #define WOM_AUTO (STREAMING_FPS * 10)
 
 struct mpu6505_private_s
@@ -73,7 +74,7 @@ struct mpu6505_private_s
   struct mpu6505_sensor_block_s last_data;
   dev_request_queue_root_t queue;
 
-  uint16_t offset[VALIO_MS_GYRO_Z + 1];
+  int16_t offset[VALIO_MS_GYRO_Z + 1];
   int32_t gyro_auto[3];
   uint8_t gyro_auto_left;
   uint8_t wom_auto_left;
@@ -263,15 +264,20 @@ KROUTINE_EXEC(mpu6505_sensor_read_done)
 
   if (!(pv->last_data.it & REG_INT_ENABLE_WOM)) {
     if (pv->gyro_auto_left) {
-      pv->gyro_auto[0] += (int16_t)endian_be16(pv->last_data.gyro[0]);
-      pv->gyro_auto[1] += (int16_t)endian_be16(pv->last_data.gyro[1]);
-      pv->gyro_auto[2] += (int16_t)endian_be16(pv->last_data.gyro[2]);
+      pv->gyro_auto[0] += (int16_t)endian_be16(pv->last_data.gyro[0]) - pv->gyro_auto[0] / GYRO_AUTO;
+      pv->gyro_auto[1] += (int16_t)endian_be16(pv->last_data.gyro[1]) - pv->gyro_auto[1] / GYRO_AUTO;
+      pv->gyro_auto[2] += (int16_t)endian_be16(pv->last_data.gyro[2]) - pv->gyro_auto[2] / GYRO_AUTO;
       pv->gyro_auto_left--;
       if (!pv->gyro_auto_left) {
-        pv->offset[3] -= pv->gyro_auto[0] / GYRO_AUTO;
-        pv->offset[4] -= pv->gyro_auto[1] / GYRO_AUTO;
-        pv->offset[5] -= pv->gyro_auto[2] / GYRO_AUTO;
+        pv->offset[VALIO_MS_GYRO_X] += pv->gyro_auto[0] / GYRO_AUTO;
+        pv->offset[VALIO_MS_GYRO_Y] += pv->gyro_auto[1] / GYRO_AUTO;
+        pv->offset[VALIO_MS_GYRO_Z] += pv->gyro_auto[2] / GYRO_AUTO;
         pv->power_mode = MPU6505_ACCEL_CALIBRATED;
+
+        dprintk("Gyro offsets: %d %d %d\n",
+               pv->offset[VALIO_MS_GYRO_X],
+               pv->offset[VALIO_MS_GYRO_Y],
+               pv->offset[VALIO_MS_GYRO_Z]);
       }
     }
 
@@ -340,14 +346,14 @@ bool_t mpu6505_switch_mode(struct device_s *dev, enum mpu6505_power_mode_e mode)
     REG_ACCEL_CONFIG_8G,
     REG_ACCEL_CONFIG2_184HZ,
     REG_LP_ACCEL_ODR_15_63HZ,
-    REG_WOM_THR_MG(30),
+    REG_WOM_THR_MG(40),
 
     2, REG_FIFO_EN,
     0,
   };
   static const uint8_t poweroff[] = {
-    2, REG_PWR_MGMT_2,
-    0x70,
+    2, REG_PWR_MGMT_1,
+    REG_PWR_MGMT_1_SLEEP,
   };
   static const uint8_t wom[] = {
     2, REG_INT_ENABLE,
@@ -400,7 +406,7 @@ bool_t mpu6505_switch_mode(struct device_s *dev, enum mpu6505_power_mode_e mode)
     mpu6505_do_write_sequence(dev, pv->tmp, 8);
     pv->power_mode = MPU6505_ACCEL_CALIBRATED;
 
-    pv->gyro_auto_left = GYRO_AUTO * 2;
+    pv->gyro_auto_left = GYRO_AUTO_TIME;
     pv->gyro_auto[0] = 0;
     pv->gyro_auto[1] = 0;
     pv->gyro_auto[2] = 0;
@@ -410,12 +416,12 @@ bool_t mpu6505_switch_mode(struct device_s *dev, enum mpu6505_power_mode_e mode)
   case MPU6505_ACCEL_CALIBRATED:
     pv->tmp[0] = 7;
     pv->tmp[1] = REG_XG_OFFSET_H;
-    pv->tmp[2] = (pv->offset[VALIO_MS_GYRO_X] >> 8) & 0xff;
-    pv->tmp[3] = (pv->offset[VALIO_MS_GYRO_X]) & 0xff;
-    pv->tmp[4] = (pv->offset[VALIO_MS_GYRO_Y] >> 8) & 0xff;
-    pv->tmp[5] = (pv->offset[VALIO_MS_GYRO_Y]) & 0xff;
-    pv->tmp[6] = (pv->offset[VALIO_MS_GYRO_Z] >> 8) & 0xff;
-    pv->tmp[7] = (pv->offset[VALIO_MS_GYRO_Z]) & 0xff;
+    pv->tmp[2] = ((-pv->offset[VALIO_MS_GYRO_X] * 2) >> 8) & 0xff;
+    pv->tmp[3] = ((-pv->offset[VALIO_MS_GYRO_X] * 2)) & 0xff;
+    pv->tmp[4] = ((-pv->offset[VALIO_MS_GYRO_Y] * 2) >> 8) & 0xff;
+    pv->tmp[5] = ((-pv->offset[VALIO_MS_GYRO_Y] * 2)) & 0xff;
+    pv->tmp[6] = ((-pv->offset[VALIO_MS_GYRO_Z] * 2) >> 8) & 0xff;
+    pv->tmp[7] = ((-pv->offset[VALIO_MS_GYRO_Z] * 2)) & 0xff;
     mpu6505_do_write_sequence(dev, pv->tmp, 8);
     pv->power_mode = MPU6505_GYRO_CALIBRATED;
     return 1;
@@ -617,11 +623,8 @@ const struct driver_s mpu6505_drv = {
   .f_cleanup = mpu6505_cleanup,
   .f_use = mpu6505_use,
   .classes = {
-    &(const struct driver_valio_s){
-      .class_ = DRIVER_CLASS_VALIO,
-      .f_request = &mpu6505_request,
-    },
-    0
+    DRIVER_VALIO_METHODS(mpu6505), 
+    0,
   },
 };
 
@@ -663,6 +666,9 @@ static DEV_INIT(mpu6505_init)
   dev->drv = &mpu6505_drv;
   dev->status = DEVICE_DRIVER_INIT_DONE;
   pv->timer_req.rq.pvdata = dev;
+  pv->power_mode = -1;
+
+  mpu6505_switch_mode(dev, MPU6505_POWER_OFF);
 
   return 0;
 

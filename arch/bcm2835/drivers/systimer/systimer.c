@@ -258,15 +258,6 @@ static DEV_TIMER_CONFIG(bcm2835_systimer_config)
   return err;
 }
 
-const struct driver_timer_s  bcm2835_systimer_timer_drv =
-{
-  .class_         = DRIVER_CLASS_TIMER,
-  .f_request      = bcm2835_systimer_request,
-  .f_cancel       = bcm2835_systimer_cancel,
-  .f_get_value    = bcm2835_systimer_get_value,
-  .f_config       = bcm2835_systimer_config,
-};
-
 /************************************************************************/
 
 static DEV_USE(bcm2835_systimer_use)
@@ -287,9 +278,9 @@ const struct driver_s  bcm2835_systimer_drv =
   .f_use          = bcm2835_systimer_use,
 
   .classes        = {
-    &bcm2835_systimer_timer_drv,
-    0
-  }
+    DRIVER_TIMER_METHODS(bcm2835_systimer),
+    0,
+  },
 };
 
 static DEV_INIT(bcm2835_systimer_init)

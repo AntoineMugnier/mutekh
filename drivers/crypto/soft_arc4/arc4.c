@@ -204,13 +204,6 @@ static DEVCRYPTO_REQUEST(soft_arc4_request)
                            &pv->queue, dev_crypto_rq_s_base(rq), 0);
 }
 
-static const struct driver_crypto_s soft_arc4_crypto_drv =
-  {
-    .class_         = DRIVER_CLASS_CRYPTO,
-    .f_info         = soft_arc4_info,
-    .f_request      = soft_arc4_request,
-  };
-
 static DEV_INIT(soft_arc4_init);
 static DEV_CLEANUP(soft_arc4_cleanup);
 
@@ -220,9 +213,9 @@ const struct driver_s soft_arc4_drv =
     .f_init     = soft_arc4_init,
     .f_cleanup  = soft_arc4_cleanup,
     .classes    = {
-      &soft_arc4_crypto_drv,
-      NULL
-    }
+      DRIVER_CRYPTO_METHODS(soft_arc4),
+      0,
+    },
   };
 
 REGISTER_DRIVER(soft_arc4_drv);

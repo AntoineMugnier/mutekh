@@ -372,10 +372,7 @@ const struct driver_s matrix_keyboard_drv =
   .f_init = &matrix_keyboard_init,
   .f_cleanup = &matrix_keyboard_cleanup,
   .classes = {
-    &(const struct driver_valio_s){
-      .class_       = DRIVER_CLASS_VALIO,
-      .f_request    = &matrix_keyboard_request,
-    },
+    DRIVER_VALIO_METHODS(matrix_keyboard), 
     0
   }
 };

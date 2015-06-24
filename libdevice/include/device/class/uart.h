@@ -93,6 +93,12 @@ DRIVER_CLASS_TYPES(uart,
                    dev_uart_config_t *f_config;
                   );
 
+#define DRIVER_UART_METHODS(prefix)                            \
+  &(const struct driver_uart_s){                               \
+    .class_ = DRIVER_CLASS_UART,                               \
+    .f_config = prefix ## _config,                             \
+  }
+
 
 /** @this helper configures the @tt accessor uart device with the given
     configuration @tt cfg (and returns 0) or returns a negative error code.

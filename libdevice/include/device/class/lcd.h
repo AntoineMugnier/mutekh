@@ -145,6 +145,13 @@ DRIVER_CLASS_TYPES(lcd,
                     );
 
 
+#define DRIVER_LCD_METHODS(prefix)                               \
+  &(const struct driver_lcd_s){                                  \
+    .class_ = DRIVER_CLASS_LCD,                                  \
+    .f_request = prefix ## _request,                             \
+    .f_getinfo = prefix ## _getinfo,                             \
+  }
+
 ssize_t dev_lcd_set_palette(struct device_lcd_s *accessor, struct lcd_pal_s *palette, size_t count);
 
 /**

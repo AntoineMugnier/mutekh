@@ -394,15 +394,6 @@ static DEV_TIMER_CONFIG(enst_rttimer_config)
   return err;
 }
 
-const struct driver_timer_s  enst_rttimer_timer_drv =
-{
-  .class_         = DRIVER_CLASS_TIMER,
-  .f_request      = enst_rttimer_request,
-  .f_cancel       = enst_rttimer_cancel,
-  .f_get_value    = enst_rttimer_get_value,
-  .f_config       = enst_rttimer_config,
-};
-
 /************************************************************************/
 
 static const struct dev_enum_ident_s  enst_rttimer_ids[] =
@@ -426,11 +417,10 @@ const struct driver_s  enst_rttimer_drv =
   .f_init         = enst_rttimer_init,
   .f_cleanup      = enst_rttimer_cleanup,
   .f_use          = enst_rttimer_use,
-
   .classes        = {
-    &enst_rttimer_timer_drv,
-    0
-  }
+    DRIVER_TIMER_METHODS(enst_rttimer),
+    0,
+  },
 };
 
 

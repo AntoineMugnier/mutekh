@@ -281,15 +281,6 @@ DEV_GPIO_GET_INPUT(stm32_gpio_gpio_get_input)
   return 0;
 }
 
-static const struct driver_gpio_s stm32_gpio_gpio_drv =
-{
-  .class_        = DRIVER_CLASS_GPIO,
-  .f_set_mode    = &stm32_gpio_gpio_set_mode,
-  .f_set_output  = &stm32_gpio_gpio_set_output,
-  .f_get_input   = &stm32_gpio_gpio_get_input,
-  .f_request     = dev_gpio_request_async_to_sync,
-};
-
 /********************************* IOMUX class. **********/
 
 static
@@ -351,16 +342,13 @@ DEV_IOMUX_SETUP(stm32_gpio_iomux_setup)
 }
 
 
-static const struct driver_iomux_s stm32_gpio_iomux_drv =
-{
-  .class_  = DRIVER_CLASS_IOMUX,
-  .f_setup = &stm32_gpio_iomux_setup,
-};
-
 /********************************* DRIVER */
 
 static DEV_INIT(stm32_gpio_init);
 static DEV_CLEANUP(stm32_gpio_cleanup);
+
+#define stm32_gpio_gpio_request dev_gpio_request_async_to_sync
+#define stm32_gpio_gpio_input_irq_range (dev_gpio_input_irq_range_t*)dev_driver_notsup_fcn
 
 const struct driver_s stm32_gpio_drv =
   {
@@ -368,8 +356,8 @@ const struct driver_s stm32_gpio_drv =
     .f_init    = &stm32_gpio_init,
     .f_cleanup = &stm32_gpio_cleanup,
     .classes   = {
-      &stm32_gpio_gpio_drv,
-      &stm32_gpio_iomux_drv,
+      DRIVER_GPIO_METHODS(stm32_gpio_gpio),
+      DRIVER_IOMUX_METHODS(stm32_gpio_iomux),
       0
     },
   };

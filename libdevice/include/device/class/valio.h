@@ -132,6 +132,11 @@ DRIVER_CLASS_TYPES(valio,
     dev_valio_request_t *f_request;
 );
 
+#define DRIVER_VALIO_METHODS(prefix)                            \
+  &(const struct driver_valio_s){                               \
+    .class_ = DRIVER_CLASS_VALIO,                               \
+    .f_request = prefix ## _request,                            \
+  }
 
 inline error_t dev_valio_spin_request(
     const struct device_valio_s *accessor,

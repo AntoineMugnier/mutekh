@@ -233,13 +233,6 @@ static DEVCRYPTO_REQUEST(soft_md5_request)
                            &pv->queue, dev_crypto_rq_s_base(rq), 0);
 }
 
-static const struct driver_crypto_s soft_md5_crypto_drv =
-  {
-    .class_         = DRIVER_CLASS_CRYPTO,
-    .f_info         = soft_md5_info,
-    .f_request      = soft_md5_request,
-  };
-
 static DEV_INIT(soft_md5_init);
 static DEV_CLEANUP(soft_md5_cleanup);
 
@@ -249,9 +242,9 @@ const struct driver_s soft_md5_drv =
     .f_init     = soft_md5_init,
     .f_cleanup  = soft_md5_cleanup,
     .classes    = {
-      &soft_md5_crypto_drv,
-      NULL
-    }
+      DRIVER_CRYPTO_METHODS(soft_md5),
+      0,
+    },
   };
 
 REGISTER_DRIVER(soft_md5_drv);

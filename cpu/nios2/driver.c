@@ -130,16 +130,6 @@ static DEV_ICU_DISABLE_IRQ(nios2_icu_disable_irq)
 }
 # endif
 
-const struct driver_icu_s  nios2_icu_drv =
-{
-  .class_          = DRIVER_CLASS_ICU,
-  .f_get_endpoint  = nios2_icu_get_endpoint,
-  .f_enable_irq    = nios2_icu_enable_irq,
-# ifndef CONFIG_ARCH_SMP
-  .f_disable_irq   = nios2_icu_disable_irq,
-# endif
-};
-
 #endif
 
 /************************************************************************
@@ -184,15 +174,6 @@ static DEV_CPU_GET_NODE(nios2_cpu_get_node)
   return &pv->node;
 }
 #endif
-
-const struct driver_cpu_s  nios2_cpu_drv =
-{
-  .class_          = DRIVER_CLASS_CPU,
-  .f_reg_init      = nios2_cpu_reg_init,
-#ifdef CONFIG_ARCH_SMP
-  .f_get_node   = nios2_cpu_get_node,
-#endif
-};
 
 /************************************************************************
         Timer driver part
@@ -257,15 +238,6 @@ static DEV_TIMER_CONFIG(nios2_timer_config)
   return err;
 }
 
-static const struct driver_timer_s  nios2_timer_drv =
-{
-  .class_          = DRIVER_CLASS_TIMER,
-  .f_get_value     = nios2_timer_get_value,
-  .f_config        = nios2_timer_config,
-  .f_request       = (dev_timer_request_t*)&dev_driver_notsup_fcn,
-  .f_cancel        = (dev_timer_request_t*)&dev_driver_notsup_fcn,
-};
-
 #endif
 
 /************************************************************************/
@@ -320,6 +292,9 @@ static const struct dev_enum_ident_s  nios2_ids[] =
   { 0 }
 };
 
+#define nios2_timer_request (dev_timer_request_t*)dev_driver_notsup_fcn
+#define nios2_timer_cancel  (dev_timer_request_t*)dev_driver_notsup_fcn
+
 const struct driver_s  nios2_drv =
 {
   .desc           = "Nios II processor",
@@ -330,12 +305,12 @@ const struct driver_s  nios2_drv =
   .f_use          = nios2_use,
 
   .classes        = {
-    &nios2_cpu_drv,
+    DRIVER_CPU_METHODS(nios2_cpu),
 #ifdef CONFIG_DEVICE_IRQ
-    &nios2_icu_drv,
+    DRIVER_ICU_METHODS(nios2_icu),
 #endif
 #ifdef CONFIG_CPU_NIOS_TIMER_CYCLECOUNTER
-    &nios2_timer_drv,
+    DRIVER_TIMER_METHODS(nios2_timer),
 #endif
     0
   }

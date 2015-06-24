@@ -430,15 +430,6 @@ static DEV_TIMER_CONFIG(efm32_rtc_config)
   return err;
 }
 
-const struct driver_timer_s efm32_rtc_timer_drv =
-{
-  .class_         = DRIVER_CLASS_TIMER,
-  .f_request      = efm32_rtc_request,
-  .f_cancel       = efm32_rtc_cancel,
-  .f_get_value    = efm32_rtc_get_value,
-  .f_config       = efm32_rtc_config,
-};
-
 /************************************************************************/
 
 static DEV_INIT(efm32_rtc_init);
@@ -450,13 +441,11 @@ const struct driver_s efm32_rtc_drv =
   .f_init         = efm32_rtc_init,
   .f_cleanup      = efm32_rtc_cleanup,
   .f_use          = efm32_rtc_use,
-
   .classes        = {
-    &efm32_rtc_timer_drv,
-    0
-  }
+    DRIVER_TIMER_METHODS(efm32_rtc),
+    0,
+  },
 };
-
 
 static DEV_INIT(efm32_rtc_init)
 {

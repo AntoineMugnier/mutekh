@@ -69,6 +69,14 @@ static const struct dev_enum_ident_s  soclib_xicu_ids[] =
 static DEV_INIT(soclib_xicu_init);
 static DEV_CLEANUP(soclib_xicu_cleanup);
 
+extern DEV_ICU_GET_ENDPOINT(soclib_xicu_icu_get_endpoint);
+extern DEV_ICU_ENABLE_IRQ(soclib_xicu_icu_enable_irq);
+extern DEV_ICU_DISABLE_IRQ(soclib_xicu_icu_disable_irq);
+extern DEV_TIMER_REQUEST(soclib_xicu_timer_request);
+extern DEV_TIMER_CANCEL(soclib_xicu_timer_cancel);
+extern DEV_TIMER_GET_VALUE(soclib_xicu_timer_get_value);
+extern DEV_TIMER_CONFIG(soclib_xicu_timer_config);
+
 const struct driver_s  soclib_xicu_drv =
 {
   .desc           = "Soclib VciXicu",
@@ -80,10 +88,10 @@ const struct driver_s  soclib_xicu_drv =
 
   .classes        = {
 #ifdef CONFIG_DRIVER_SOCLIB_XICU_ICU
-    &soclib_xicu_icu_drv,
+    DRIVER_ICU_METHODS(soclib_xicu_icu),
 #endif
 #ifdef CONFIG_DRIVER_SOCLIB_XICU_TIMER
-    &soclib_xicu_timer_drv,
+    DRIVER_TIMER_METHODS(soclib_xicu_timer),
 #endif
     0
   }

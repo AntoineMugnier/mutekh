@@ -37,8 +37,6 @@
 
 DEV_IRQ_EP_PROCESS(soclib_xicu_source_process);
 
-extern const struct driver_icu_s  soclib_xicu_icu_drv;
-
 struct soclib_xicu_sink_s
 {
   struct dev_irq_ep_s sink;
@@ -56,8 +54,6 @@ void soclib_xicu_pti_irq_process(struct device_s *dev, uint_fast8_t number);
 
 # define SOCLIB_XICU_PTI_MIN_PERIOD 2000
 # define SOCLIB_XICU_PTI_DEFAULT_PERIOD 250000
-
-extern const struct driver_timer_s  soclib_xicu_timer_drv;
 
 struct soclib_xicu_pti_s
 {

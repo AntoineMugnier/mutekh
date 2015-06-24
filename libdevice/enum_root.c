@@ -27,7 +27,7 @@
 
 DEV_ENUM_MATCH_DRIVER(device_enum_root_match_driver)
 {
-	return 0;
+  return 0;
 }
 
 static DEV_INIT(device_enum_root_init);
@@ -36,25 +36,21 @@ static DEV_CLEANUP(device_enum_root_cleanup)
 {
 }
 
-static const struct driver_enum_s device_enum_root_enum_drv =
+const struct driver_s   device_enum_root_drv =
 {
-	.class_		= DRIVER_CLASS_ENUM,
-	.f_match_driver	= &device_enum_root_match_driver,
-};
-
-const struct driver_s	device_enum_root_drv =
-{
-	.desc		= "MutekH root enumerator",
-	.f_init		= &device_enum_root_init,
-	.f_cleanup	= &device_enum_root_cleanup,
-	.classes	= { &device_enum_root_enum_drv, 0 }
+  .desc         = "MutekH root enumerator",
+  .f_init       = &device_enum_root_init,
+  .f_cleanup    = &device_enum_root_cleanup,
+  .classes      = {
+    DRIVER_ENUM_METHODS(device_enum_root),
+    0,
+  }
 };
 
 static DEV_INIT(device_enum_root_init)
 {
-	dev->drv = &device_enum_root_drv;
-	dev->status = DEVICE_DRIVER_INIT_DONE;
+  dev->drv = &device_enum_root_drv;
+  dev->status = DEVICE_DRIVER_INIT_DONE;
 
-	return 0;
+  return 0;
 }
-

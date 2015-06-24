@@ -72,7 +72,11 @@ struct arm_dev_private_s
 void arm_timer_systick_irq(struct device_s *dev);
 DEV_USE(arm_timer_systick_use);
 
-extern const struct driver_timer_s  arm_m_timer_drv;
+extern DEV_TIMER_REQUEST(arm_timer_request);
+extern DEV_TIMER_CANCEL(arm_timer_cancel);
+extern DEV_USE(arm_timer_systick_use);
+extern DEV_TIMER_GET_VALUE(arm_timer_get_value);
+extern DEV_TIMER_CONFIG(arm_timer_config);
 
 #endif /* !defined(__MUTEK_ASM__) */
 

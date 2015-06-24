@@ -192,12 +192,6 @@ static DEV_VALIO_REQUEST(ds3231_request)
     }
 }
 
-static const struct driver_valio_s ds3231_valio_drv =
-{
-    .class_ = DRIVER_CLASS_VALIO,
-    .f_request = ds3231_request,
-};
-
 static DEV_INIT(ds3231_init);
 static DEV_CLEANUP(ds3231_cleanup);
 
@@ -207,8 +201,9 @@ const struct driver_s ds3231_drv =
     .f_init = ds3231_init,
     .f_cleanup = ds3231_cleanup,
     .classes = {
-        &ds3231_valio_drv,
-        0 },
+        DRIVER_VALIO_METHODS(ds3231),
+        0,
+    },
 };
 
 static DEV_INIT(ds3231_init)

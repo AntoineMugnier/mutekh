@@ -95,16 +95,6 @@ static DEV_CPU_GET_NODE(x86_64_emu_cpu_get_node)
 }
 #endif
 
-
-static const struct driver_cpu_s  x86_64_emu_cpu_drv =
-{
-  .class_          = DRIVER_CLASS_CPU,
-  .f_reg_init      = x86_64_emu_cpu_reg_init,
-#ifdef CONFIG_ARCH_SMP
-  .f_get_node   = x86_64_emu_cpu_get_node,
-#endif
-};
-
 /************************************************************************/
 
 static DEV_CLEANUP(x86_64_emu_cleanup);
@@ -118,9 +108,9 @@ const struct driver_s emu_cpu_drv =
   .f_cleanup      = x86_64_emu_cleanup,
 
   .classes        = {
-    &x86_64_emu_cpu_drv,
-    0
-  }
+    DRIVER_CPU_METHODS(x86_64_emu_cpu),
+    0,
+  },
 };
 
 REGISTER_DRIVER(emu_cpu_drv);

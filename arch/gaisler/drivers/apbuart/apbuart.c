@@ -214,19 +214,16 @@ static const struct dev_enum_ident_s	gaisler_apbuart_ids[] =
 	{ 0 }
 };
 
-static const struct driver_char_s	gaisler_apbuart_char_drv =
-{
-  .class_		= DRIVER_CLASS_CHAR,
-  .f_request		= gaisler_apbuart_request,
-};
-
 const struct driver_s	gaisler_apbuart_drv =
 {
   .desc                 = "Gaisler APB UART",
   .id_table		= gaisler_apbuart_ids,
   .f_init		= gaisler_apbuart_init,
   .f_cleanup		= gaisler_apbuart_cleanup,
-  .classes              = { &gaisler_apbuart_char_drv, 0 }
+  .classes              = {
+    DRIVER_CHAR_METHODS(gaisler_apbuart),
+    0,
+  },
 };
 
 REGISTER_DRIVER(gaisler_apbuart_drv);

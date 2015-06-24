@@ -170,12 +170,6 @@ static const struct dev_enum_ident_s	tty_soclib_ids[] =
 	{ 0 }
 };
 
-static const struct driver_char_s	tty_soclib_char_drv =
-{
-  .class_		= DRIVER_CLASS_CHAR,
-  .f_request		= tty_soclib_request,
-};
-
 static DEV_INIT(tty_soclib_init);
 static DEV_CLEANUP(tty_soclib_cleanup);
 
@@ -185,7 +179,10 @@ const struct driver_s	tty_soclib_drv =
   .id_table		= tty_soclib_ids,
   .f_init		= tty_soclib_init,
   .f_cleanup		= tty_soclib_cleanup,
-  .classes              = { &tty_soclib_char_drv, 0 }
+  .classes              = {
+    DRIVER_CHAR_METHODS(tty_soclib),
+    0,
+  }
 };
 
 REGISTER_DRIVER(tty_soclib_drv);

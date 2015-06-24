@@ -48,5 +48,11 @@ DRIVER_CLASS_TYPES(enum,
                    dev_enum_match_driver_t *f_match_driver;
                    );
 
+#define DRIVER_ENUM_METHODS(prefix)                               \
+  &(const struct driver_enum_s){                                  \
+    .class_ = DRIVER_CLASS_ENUM,                                  \
+    .f_match_driver = prefix ## _match_driver,                    \
+  }
+
 #endif
 

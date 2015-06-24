@@ -266,19 +266,16 @@ static const struct dev_enum_ident_s	gaisler_apbctrl_ids[] =
   { 0 }
 };
 
-static const struct driver_enum_s apbctrl_enum_drv =
-{
-  .class_	= DRIVER_CLASS_ENUM,
-  .f_match_driver = apbctrl_match_driver,
-};
-
 const struct driver_s	apbctrl_drv =
 {
   .desc         = "Gaisler APB bus controller",
   .id_table	= gaisler_apbctrl_ids,
   .f_init	= apbctrl_init,
   .f_cleanup	= apbctrl_cleanup,
-  .classes	= { &apbctrl_enum_drv, 0 }
+  .classes	= {
+    DRIVER_ENUM_METHODS(apbctrl),
+    0,
+  }
 };
 
 REGISTER_DRIVER(apbctrl_drv);

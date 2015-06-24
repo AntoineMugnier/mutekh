@@ -230,14 +230,6 @@ static DEV_CLOCK_GET_ENDPOINT(stm32_rcc_get_endpoint)
     }
 }
 
-static const struct driver_clock_s stm32_rcc_drv_cls =
-  {
-    .class_         = DRIVER_CLASS_CLOCK,
-    .f_gating       = stm32_rcc_gating,
-    .f_set_config   = stm32_rcc_set_config,
-    .f_get_endpoint = stm32_rcc_get_endpoint,
-  };
-
 static DEV_INIT(stm32_rcc_init);
 static DEV_CLEANUP(stm32_rcc_cleanup);
 
@@ -248,9 +240,9 @@ const struct driver_s stm32_rcc_drv =
     .f_cleanup = stm32_rcc_cleanup,
     .classes   =
       {
-        &stm32_rcc_drv_cls,
-        0
-      }
+        DRIVER_CLOCK_METHODS(stm32_rcc),
+        0,
+      },
   };
 
 static DEV_INIT(stm32_rcc_init)

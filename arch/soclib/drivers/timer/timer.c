@@ -460,15 +460,6 @@ static DEV_TIMER_CONFIG(soclib_timer_config)
   return err;
 }
 
-const struct driver_timer_s  soclib_timer_timer_drv =
-{
-  .class_         = DRIVER_CLASS_TIMER,
-  .f_request      = soclib_timer_request,
-  .f_cancel       = soclib_timer_cancel,
-  .f_get_value    = soclib_timer_get_value,
-  .f_config       = soclib_timer_config,
-};
-
 /************************************************************************/
 
 static const struct dev_enum_ident_s  soclib_timer_ids[] =
@@ -487,13 +478,11 @@ const struct driver_s  soclib_timer_drv =
   .f_init         = soclib_timer_init,
   .f_cleanup      = soclib_timer_cleanup,
   .f_use          = soclib_timer_use,
-
   .classes        = {
-    &soclib_timer_timer_drv,
+    DRIVER_TIMER_METHODS(soclib_timer),
     0
   }
 };
-
 
 static DEV_INIT(soclib_timer_init)
 {

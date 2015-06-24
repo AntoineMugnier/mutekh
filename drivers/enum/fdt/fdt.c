@@ -496,12 +496,6 @@ DEV_ENUM_MATCH_DRIVER(enum_fdt_match_driver)
   return 0;
 }
 
-static const struct driver_enum_s enum_fdt_enum_drv =
-{
-  .class_	= DRIVER_CLASS_ENUM,
-  .f_match_driver = enum_fdt_match_driver,
-};
-
 static DEV_CLEANUP(enum_fdt_cleanup);
 static DEV_INIT(enum_fdt_init);
 
@@ -510,7 +504,10 @@ const struct driver_s	enum_fdt_drv =
   .desc         = "Flat Device Tree enumerator",
   .f_init	= enum_fdt_init,
   .f_cleanup	= enum_fdt_cleanup,
-  .classes	= { &enum_fdt_enum_drv, 0 }
+  .classes	= {
+    DRIVER_ENUM_METHODS(enum_fdt),
+    0,
+  },
 };
 
 static void resolve_dev_links(struct device_s *root, struct device_s *dev)

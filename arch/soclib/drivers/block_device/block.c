@@ -337,13 +337,6 @@ static const struct dev_enum_ident_s	soclib_block_ids[] =
   { 0 }
 };
 
-static const struct driver_mem_s	soclib_block_mem_drv =
-{
-  .class_		= DRIVER_CLASS_MEM,
-  .f_info               = soclib_block_info,
-  .f_request		= soclib_block_request,
-};
-
 static DEV_INIT(soclib_block_init);
 static DEV_CLEANUP(soclib_block_cleanup);
 
@@ -353,7 +346,7 @@ const struct driver_s	soclib_block_drv =
   .id_table		= soclib_block_ids,
   .f_init		= soclib_block_init,
   .f_cleanup		= soclib_block_cleanup,
-  .classes              = { &soclib_block_mem_drv, 0 }
+  .classes              = { DRIVER_MEM_METHODS(soclib_block), 0 }
 };
 
 REGISTER_DRIVER(soclib_block_drv);

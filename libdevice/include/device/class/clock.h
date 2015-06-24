@@ -281,6 +281,15 @@ DRIVER_CLASS_TYPES(clock,
                    dev_clock_rollback_t    *f_rollback;
                    );
 
+#define DRIVER_CLOCK_METHODS(prefix)                                \
+  &(const struct driver_clock_s){                                   \
+    .class_ = DRIVER_CLASS_CLOCK,                                   \
+    .f_node_info = prefix ## _node_info,                            \
+    .f_config_node = prefix ## _config_node,                        \
+    .f_commit = prefix ## _commit,                                  \
+    .f_rollback = prefix ## _rollback,                              \
+  }
+
 /** @This increases the clock source use count. If @tt synchronous is
     true, the function spins until the clock is ready. */
 config_depend(CONFIG_DEVICE_CLOCK)

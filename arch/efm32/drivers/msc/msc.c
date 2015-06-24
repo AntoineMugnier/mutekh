@@ -169,13 +169,6 @@ static DEV_MEM_REQUEST(efm32_msc_request)
   kroutine_exec(&rq->base.kr, cpu_is_interruptible());
 }
 
-static const struct driver_mem_s	efm32_msc_mem_drv =
-{
-  .class_		= DRIVER_CLASS_MEM,
-  .f_info               = efm32_msc_info,
-  .f_request		= efm32_msc_request,
-};
-
 static DEV_INIT(efm32_msc_init);
 static DEV_CLEANUP(efm32_msc_cleanup);
 
@@ -184,7 +177,10 @@ const struct driver_s	efm32_msc_drv =
   .desc                 = "EFM32 Memory System Controller",
   .f_init		= efm32_msc_init,
   .f_cleanup		= efm32_msc_cleanup,
-  .classes              = { &efm32_msc_mem_drv, 0 }
+  .classes              = {
+    DRIVER_MEM_METHODS(efm32_msc),
+    0,
+  },
 };
 
 REGISTER_DRIVER(efm32_msc_drv);

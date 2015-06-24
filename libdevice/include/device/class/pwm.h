@@ -172,6 +172,12 @@ DRIVER_CLASS_TYPES(pwm,
                    dev_pwm_config_t *f_config;
                   );
 
+#define DRIVER_PWM_METHODS(prefix)                            \
+  &(const struct driver_pwm_s){                               \
+    .class_ = DRIVER_CLASS_PWM,                               \
+    .f_config = prefix ## _config,                            \
+  }
+
 
 /** @This configures the PWM devices and blocks until the configuration is
     effective or an error occured.

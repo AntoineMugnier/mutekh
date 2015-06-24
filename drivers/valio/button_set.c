@@ -51,6 +51,7 @@ struct bs_context_s
 
   uint8_t first, last, range_id, count, state_size;
   bool_t active_low;
+  bool_t changed;
 };
 
 static void bs_notif_disable(struct bs_context_s *pv)
@@ -99,6 +100,8 @@ static bool_t bs_read_or_update(struct bs_context_s *pv,
     button++;
   }
 
+  pv->changed = 0;
+
   if (rq->type == DEVICE_VALIO_WAIT_UPDATE
       && !memcmp(pv->cur_state, pv->last_read_state, pv->state_size))
     return 0;
@@ -116,8 +119,12 @@ static DEV_IRQ_EP_PROCESS(bs_irq)
   struct bs_context_s *pv = dev->drv_pv;
   struct dev_valio_rq_s *rq;
 
+  dprintk("%s\n", __FUNCTION__);
+
   LOCK_SPIN_IRQ(&dev->lock);
   rq = dev_valio_rq_s_from_base(dev_request_queue_head(&pv->queue));
+
+  pv->changed = 1;
 
   while (rq) {
     if (bs_read_or_update(pv, rq) == 1) {
@@ -146,6 +153,8 @@ static DEV_VALIO_REQUEST(button_set_request)
   struct bs_context_s *pv = dev->drv_pv;
   req->error = 0;
 
+  dprintk("%s\n", __FUNCTION__);
+
   if (req->attribute != VALIO_KEYBOARD_MAP) {
     req->error = -EINVAL;
     goto done;
@@ -156,17 +165,19 @@ static DEV_VALIO_REQUEST(button_set_request)
     req->error = -ENOTSUP;
     goto done;
 
+  case DEVICE_VALIO_WAIT_UPDATE:
+    if (!pv->changed) {
+      LOCK_SPIN_IRQ(&dev->lock);
+      dev_request_queue_pushback(&pv->queue, &req->base);
+      bs_notif_enable(pv);
+      LOCK_RELEASE_IRQ(&dev->lock);
+      return;
+    }
+
   case DEVICE_VALIO_READ:
-    memcpy(req->data, pv->cur_state, pv->state_size);
+    bs_read_or_update(pv, req);
     req->error = 0;
     goto done;
-
-  case DEVICE_VALIO_WAIT_UPDATE:
-    LOCK_SPIN_IRQ(&dev->lock);
-    dev_request_queue_pushback(&pv->queue, &req->base);
-    bs_notif_enable(pv);
-    LOCK_RELEASE_IRQ(&dev->lock);
-    return;
   }
 
  done:
@@ -183,10 +194,7 @@ const struct driver_s button_set_drv =
   .f_init = &button_set_init,
   .f_cleanup = &button_set_cleanup,
   .classes = {
-    &(const struct driver_valio_s){
-      .class_       = DRIVER_CLASS_VALIO,
-      .f_request    = &button_set_request,
-    },
+    DRIVER_VALIO_METHODS(button_set), 
     0
   }
 };

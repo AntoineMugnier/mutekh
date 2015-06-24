@@ -1,3 +1,4 @@
+/* -*- c -*- */
 /*
     This file is part of MutekH.
 
@@ -544,12 +545,6 @@ static KROUTINE_EXEC(spi_rq_done)
     lock_release_irq2(&dev->lock, &pv->irq_save);
 }
 
-static const struct driver_valio_s	adxl362_motion_drv =
-{
-  .class_		 = DRIVER_CLASS_VALIO,
-  .f_request = adxl362_request,
-};
-
 static DEV_INIT(adxl362_init);
 static DEV_CLEANUP(adxl362_cleanup);
 
@@ -558,7 +553,10 @@ const struct driver_s adxl362_drv =
     .desc       = "ADXL362 motion",
     .f_init     = &adxl362_init,
     .f_cleanup  = &adxl362_cleanup,
-    .classes    = {&adxl362_motion_drv, NULL}
+    .classes    = {
+      DRIVER_VALIO_METHODS(adxl362),
+      0,
+    },
   };
 
 REGISTER_DRIVER(adxl362_drv);
@@ -652,4 +650,3 @@ static DEV_CLEANUP(adxl362_cleanup)
 
   mem_free(pv);
 }
-

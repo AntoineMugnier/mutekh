@@ -146,12 +146,6 @@ static const struct dev_enum_ident_s	dma_soclib_ids[] =
 	{ 0 }
 };
 
-static const struct driver_dma_s	dma_soclib_dma_drv =
-{
-  .class_		= DRIVER_CLASS_DMA,
-  .f_request		= dma_soclib_request,
-};
-
 static DEV_INIT(dma_soclib_init);
 static DEV_CLEANUP(dma_soclib_cleanup);
 
@@ -161,7 +155,10 @@ const struct driver_s	dma_soclib_drv =
   .id_table		= dma_soclib_ids,
   .f_init		  = dma_soclib_init,
   .f_cleanup	= dma_soclib_cleanup,
-  .classes    = { &dma_soclib_dma_drv, 0 }
+  .classes    = {
+    DRIVER_DMA_METHODS(dma_soclib),
+    0,
+  },
 };
 
 REGISTER_DRIVER(dma_soclib_drv);

@@ -162,12 +162,7 @@ static DEV_ICU_ENABLE_IRQ(sparc_icu_enable_irq)
   return 1;
 }
 
-const struct driver_icu_s  sparc_icu_drv =
-{
-  .class_          = DRIVER_CLASS_ICU,
-  .f_get_endpoint  = sparc_icu_get_endpoint,
-  .f_enable_irq    = sparc_icu_enable_irq,
-};
+#define sparc_icu_disable_irq (dev_icu_disable_irq_t*)dev_driver_notsup_fcn
 
 #endif
 
@@ -251,15 +246,6 @@ static DEV_CPU_GET_NODE(sparc_cpu_get_node)
 }
 #endif
 
-const struct driver_cpu_s  sparc_cpu_drv =
-{
-  .class_          = DRIVER_CLASS_CPU,
-  .f_reg_init      = sparc_cpu_reg_init,
-#ifdef CONFIG_ARCH_SMP
-  .f_get_node   = sparc_cpu_get_node,
-#endif
-};
-
 /************************************************************************/
 
 static DEV_CLEANUP(sparc_cleanup);
@@ -286,9 +272,9 @@ const struct driver_s  sparc_drv =
   .f_cleanup      = sparc_cleanup,
 
   .classes        = {
-    &sparc_cpu_drv,
+    DRIVER_CPU_METHODS(sparc_cpu),
 #ifdef CONFIG_DEVICE_IRQ
-    &sparc_icu_drv,
+    DRIVER_ICU_METHODS(sparc_icu),
 #endif
     0
   }

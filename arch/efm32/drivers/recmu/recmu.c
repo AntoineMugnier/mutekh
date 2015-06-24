@@ -1288,15 +1288,6 @@ static DEV_CLOCK_SRC_USE(efm32_recmu_ep_use)
   return 0;
 }
 
-static const struct driver_clock_s efm32_recmu_clock_drv =
-{
-  .class_          = DRIVER_CLASS_CLOCK,
-  .f_config_node   = efm32_recmu_config_node,
-  .f_commit        = efm32_recmu_commit,
-  .f_rollback      = efm32_recmu_rollback,
-  .f_node_info     = efm32_recmu_node_info,
-};
-
 static DEV_INIT(efm32_recmu_init);
 static DEV_CLEANUP(efm32_recmu_cleanup);
 
@@ -1306,9 +1297,9 @@ const struct driver_s efm32_recmu_drv =
     .f_init     = efm32_recmu_init,
     .f_cleanup  = efm32_recmu_cleanup,
     .classes    = {
-      &efm32_recmu_clock_drv,
-      NULL
-    }
+      DRIVER_CLOCK_METHODS(efm32_recmu),
+      0,
+    },
   };
 
 REGISTER_DRIVER(efm32_recmu_drv);

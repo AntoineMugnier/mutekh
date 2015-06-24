@@ -245,6 +245,23 @@ DRIVER_CLASS_TYPES(spi_ctrl,
 		   );
 
 #ifdef CONFIG_DEVICE_SPI_REQUEST
+# define DRIVER_SPI_CTRL_METHODS(prefix)                      \
+  &(const struct driver_spi_ctrl_s){                          \
+    .f_config = prefix ## _config,                            \
+    .f_select = prefix ## _select,                            \
+    .f_transfer = prefix ## _transfer,                        \
+    .f_queue = prefix ## _queue,                              \
+  }
+#else
+# define DRIVER_SPI_CTRL_METHODS(prefix)                      \
+  &(const struct driver_spi_ctrl_s){                          \
+    .f_config = prefix ## _config,                            \
+    .f_select = prefix ## _select,                            \
+    .f_transfer = prefix ## _transfer,                        \
+  }
+#endif
+
+#ifdef CONFIG_DEVICE_SPI_REQUEST
 
 /***************************************** request */
 
