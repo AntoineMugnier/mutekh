@@ -289,7 +289,7 @@ static const struct dev_enum_ident_s  avr32_ids[] =
 };
 
 #define avr32_timer_request (dev_timer_request_t*)&dev_driver_notsup_fcn
-#define avr32_timer_cancel  (dev_timer_request_t*)&dev_driver_notsup_fcn
+#define avr32_timer_cancel  (dev_timer_cancel_t*)&dev_driver_notsup_fcn
 
 const struct driver_s  avr32_drv =
 {
