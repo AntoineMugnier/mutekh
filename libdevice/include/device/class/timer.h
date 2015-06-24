@@ -328,6 +328,15 @@ DRIVER_CLASS_TYPES(timer,
                    dev_timer_config_t *f_config;
                    );
 
+#define DRIVER_TIMER_METHODS(prefix)                            \
+  &(const struct driver_timer_s){                               \
+    .class_ = DRIVER_CLASS_TIMER,                               \
+    .f_request = prefix ## _request,                            \
+    .f_cancel = prefix ## _cancel,                              \
+    .f_get_value = prefix ## _get_value,                        \
+    .f_config = prefix ## _config,                              \
+  }
+
 /** @This initializes a timer delay from the given delay value in
     seconds unit. The delay is specified in seconds when r_unit is 1,
     in msec when r_unit is 1000 and so on. Actual delay in timer units

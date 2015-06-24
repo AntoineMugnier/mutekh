@@ -249,6 +249,13 @@ DRIVER_CLASS_TYPES(persist,
                    devpersist_request_t *f_request;
                    );
 
+#define DRIVER_PERSIST_METHODS(prefix)                            \
+  &(const struct driver_persist_s){                               \
+    .class_ = DRIVER_CLASS_PERSIST,                               \
+    .f_info = prefix ## _info,                                    \
+    .f_request = prefix ## _request,                              \
+  }
+
 config_depend(CONFIG_DEVICE_PERSIST)
 inline error_t
 dev_persist_spin_op(struct device_persist_s *accessor,

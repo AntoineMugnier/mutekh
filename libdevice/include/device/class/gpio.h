@@ -289,6 +289,15 @@ DRIVER_CLASS_TYPES(gpio,
                    dev_gpio_request_t *f_request;
   );
 
+#define DRIVER_GPIO_METHODS(prefix)                               \
+  &(const struct driver_gpio_s){                                  \
+    .class_ = DRIVER_CLASS_GPIO,                                  \
+    .f_set_mode = prefix ## _set_mode,                            \
+    .f_set_output = prefix ## _set_output,                        \
+    .f_get_input = prefix ## _get_input,                          \
+    .f_input_irq_range = prefix ## _input_irq_range,              \
+    .f_request = prefix ## _request,                              \
+  }
 
 /** Synchronous gpio device request function. This function use a
     busy wait loop during the request. @see dev_gpio_wait_rq */

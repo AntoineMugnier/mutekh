@@ -114,5 +114,14 @@ DRIVER_CLASS_TYPES(net,
                    dev_net_getopt_t *f_getopt;
                    );
 
+#define DRIVER_NET_METHODS(prefix)                               \
+  &(const struct driver_net_s){                                  \
+    .class_ = DRIVER_CLASS_NET,                                  \
+    .f_preparepkt = prefix ## _preparepkt,                       \
+    .f_sendpkt = prefix ## _sendpkt,                             \
+    .f_setopt = prefix ## _setopt,                               \
+    .f_getopt = prefix ## _getopt,                               \
+  }
+
 #endif
 
