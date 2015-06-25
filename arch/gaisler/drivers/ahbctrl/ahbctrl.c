@@ -41,21 +41,20 @@
 
 static DEV_ENUM_MATCH_DRIVER(ahbctrl_match_driver)
 {
-  const struct dev_enum_ident_s *ident = drv->id_table;
+  size_t i;
 
-  if (!ident)
-    return 0;
-
-  for ( ; ident->type != 0; ident++ )
+  for (i ; i < count; i++)
     {
-      if (ident->type != DEV_ENUM_TYPE_GAISLER)
+      const struct dev_enum_ident_s *id = ident + i;
+
+      if (id->type != DEV_ENUM_TYPE_GAISLER)
         continue;
 
       const struct dev_resource_s *rp = device_res_get(dev, DEV_RES_PRODUCT, 0);
       const struct dev_resource_s *rv = device_res_get(dev, DEV_RES_VENDOR, 0);
 
-      if (rv && rp && rv->u.vendor.id == ident->grlib.vendor &&
-                      rp->u.product.id == ident->grlib.device)
+      if (rv && rp && rv->u.vendor.id == id->grlib.vendor &&
+                      rp->u.product.id == id->grlib.device)
         return 1;
     }
 
@@ -208,18 +207,12 @@ static void ahbctrl_scan(struct device_s *dev, uintptr_t begin, uintptr_t end)
 static DEV_CLEANUP(ahbctrl_cleanup);
 static DEV_INIT(ahbctrl_init);
 
-const struct driver_s	ahbctrl_drv =
-{
-  .desc         = "Gaisler AHB controller",
-  .f_init	= ahbctrl_init,
-  .f_cleanup	= ahbctrl_cleanup,
-  .classes	= {
-    DRIVER_ENUM_METHODS(ahbctrl),
-    0,
-  },
-};
+#define ahbctrl_use dev_use_generic
 
-REGISTER_DRIVER(ahbctrl_drv);
+DRIVER_DECLARE(ahbctrl_drv, "Gaisler AHB controller", ahbctrl,
+               DRIVER_ENUM_METHODS(ahbctrl));
+
+DRIVER_REGISTER(ahbctrl_drv);
 
 static DEV_INIT(ahbctrl_init)
 {

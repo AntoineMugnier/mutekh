@@ -111,19 +111,7 @@ static DEV_CHAR_REQUEST(emu_tty_request)
   kroutine_exec(&rq->base.kr, cpu_is_interruptible());
 }
 
-static DEV_INIT(emu_tty_init);
-static DEV_CLEANUP(emu_tty_cleanup);
-
-const struct driver_s   emu_tty_drv =
-{
-  .desc                 = "Unix TTY",
-  .f_init               = emu_tty_init,
-  .f_cleanup            = emu_tty_cleanup,
-  .classes              = {
-    DRIVER_CHAR_METHODS(emu_tty),
-    0,
-  },
-};
+const struct driver_s emu_tty_drv;
 
 static DEV_INIT(emu_tty_init)
 {
@@ -135,3 +123,10 @@ static DEV_INIT(emu_tty_init)
 static DEV_CLEANUP(emu_tty_cleanup)
 {
 }
+
+#define emu_tty_use dev_use_generic
+
+DRIVER_DECLARE(emu_tty_drv, "Emu TTY", emu_tty,
+               DRIVER_CHAR_METHODS(emu_tty));
+
+DRIVER_REGISTER(emu_tty_drv);

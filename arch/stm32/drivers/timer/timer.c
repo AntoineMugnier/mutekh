@@ -427,18 +427,10 @@ static DEV_TIMER_CONFIG(stm32_timer_config)
 static DEV_INIT(stm32_timer_init);
 static DEV_CLEANUP(stm32_timer_cleanup);
 
-const struct driver_s  stm32_timer_drv =
-{
-  .desc           = "stm32 Timer",
-  .f_init         = stm32_timer_init,
-  .f_cleanup      = stm32_timer_cleanup,
-  .f_use          = stm32_timer_use,
+DRIVER_DECLARE(stm32_timer_drv, "STM32 Timer", stm32_timer,
+               DRIVER_TIMER_METHODS(stm32_timer));
 
-  .classes        = {
-    DRIVER_TIMER_METHODS(stm32_timer),
-    0,
-  },
-};
+DRIVER_REGISTER(stm32_timer_drv);
 
 static inline
 void stm32_timer_clock_init(struct device_s *dev)
@@ -600,6 +592,4 @@ static DEV_CLEANUP(stm32_timer_cleanup)
 
   mem_free(pv);
 }
-
-REGISTER_DRIVER(stm32_timer_drv);
 

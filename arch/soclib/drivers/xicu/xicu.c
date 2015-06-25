@@ -60,12 +60,6 @@ static DEV_USE(soclib_xicu_use)
     }
 }
 
-static const struct dev_enum_ident_s  soclib_xicu_ids[] =
-{
-  DEV_ENUM_FDTNAME_ENTRY("soclib:xicu"),
-  { 0 }
-};
-
 static DEV_INIT(soclib_xicu_init);
 static DEV_CLEANUP(soclib_xicu_cleanup);
 
@@ -77,25 +71,17 @@ extern DEV_TIMER_CANCEL(soclib_xicu_timer_cancel);
 extern DEV_TIMER_GET_VALUE(soclib_xicu_timer_get_value);
 extern DEV_TIMER_CONFIG(soclib_xicu_timer_config);
 
-const struct driver_s  soclib_xicu_drv =
-{
-  .desc           = "Soclib VciXicu",
-  .id_table       = soclib_xicu_ids,
-
-  .f_init         = soclib_xicu_init,
-  .f_cleanup      = soclib_xicu_cleanup,
-  .f_use          = soclib_xicu_use,
-
-  .classes        = {
+DRIVER_DECLARE(soclib_xicu_drv, "Soclib Xicu", soclib_xicu
 #ifdef CONFIG_DRIVER_SOCLIB_XICU_ICU
-    DRIVER_ICU_METHODS(soclib_xicu_icu),
+               , DRIVER_ICU_METHODS(soclib_xicu_icu)
 #endif
 #ifdef CONFIG_DRIVER_SOCLIB_XICU_TIMER
-    DRIVER_TIMER_METHODS(soclib_xicu_timer),
+               , DRIVER_TIMER_METHODS(soclib_xicu_timer)
 #endif
-    0
-  }
-};
+               );
+
+DRIVER_REGISTER(soclib_xicu_drv,
+                DEV_ENUM_FDTNAME_ENTRY("soclib:xicu"));
 
 static DEV_INIT(soclib_xicu_init)
 {
@@ -243,6 +229,4 @@ static DEV_CLEANUP(soclib_xicu_cleanup)
 
   mem_free(pv);
 }
-
-REGISTER_DRIVER(soclib_xicu_drv);
 

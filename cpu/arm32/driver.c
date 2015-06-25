@@ -321,36 +321,17 @@ static DEV_USE(arm_use)
   return -ENOTSUP;
 }
 
-static const struct dev_enum_ident_s  arm_ids[] =
-{
-#ifdef CONFIG_LIBFDT
-  DEV_ENUM_FDTNAME_ENTRY("cpu:arm"),
-#endif
-  { 0 }
-};
-
-const struct driver_s  arm32_drv =
-{
-  .desc           = "Arm processor",
-  .id_table       = arm_ids,
-
-  .f_init         = arm_init,
-  .f_cleanup      = arm_cleanup,
-  .f_use          = arm_use,
-
-  .classes        = {
-    DRIVER_CPU_METHODS(arm_cpu),
+DRIVER_DECLARE(arm32_drv, "Arm processor", arm,
 #ifdef CONFIG_DEVICE_IRQ
-    DRIVER_ICU_METHODS(arm_icu),
+               DRIVER_ICU_METHODS(arm_icu),
 #endif
 #ifdef CONFIG_CPU_ARM32_TIMER_CYCLECOUNTER
-    DRIVER_TIMER_METHODS(arm_timer),
+               DRIVER_TIMER_METHODS(arm_timer),
 #endif
-    0
-  }
-};
+               DRIVER_CPU_METHODS(arm_cpu));
 
-REGISTER_DRIVER(arm32_drv);
+DRIVER_REGISTER(arm32_drv,
+                DEV_ENUM_FDTNAME_ENTRY("cpu:arm"));
 
 static DEV_INIT(arm_init)
 {

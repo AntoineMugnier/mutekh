@@ -109,17 +109,12 @@ DEV_CLEANUP(block_file_emu_cleanup)
   mem_free(pv);
 }
 
-const struct driver_s	block_file_emu_drv =
-{
-  .class		= device_class_block,
-  .f_init		= block_file_emu_init,
-  .f_cleanup		= block_file_emu_cleanup,
-  .f.blk = {
-    .f_request		= block_file_emu_request,
-    .f_getparams	= block_file_emu_getparams,
-    .f_getrqsize	= block_file_emu_getrqsize,
-  }
-};
+#define block_file_emu_use dev_use_generic
+
+DRIVER_DECLARE(block_file_emu_drv, "File -> Block", block_file_emu,
+               DRIVER_MEM_METHODS(block_file_emu));
+
+DRIVER_REGISTER(block_file_emu_drv);
 
 DEV_INIT(block_file_emu_init)
 {

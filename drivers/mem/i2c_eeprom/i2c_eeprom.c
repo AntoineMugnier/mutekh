@@ -281,18 +281,12 @@ out:
 static DEV_INIT(i2c_eeprom_init);
 static DEV_CLEANUP(i2c_eeprom_cleanup);
 
-const struct driver_s i2c_eeprom_drv =
-{
-    .desc        = "I2C eeprom",
-    .f_init      = i2c_eeprom_init,
-    .f_cleanup   = i2c_eeprom_cleanup,
-    .classes     = {
-      DRIVER_MEM_METHODS(i2c_eeprom),
-      0,
-    }
-};
+#define i2c_eeprom_use dev_use_generic
 
-REGISTER_DRIVER(i2c_eeprom_drv);
+DRIVER_DECLARE(i2c_eeprom_drv, "I2C eeprom", i2c_eeprom,
+               DRIVER_MEM_METHODS(i2c_eeprom));
+
+DRIVER_REGISTER(i2c_eeprom_drv);
 
 static DEV_INIT(i2c_eeprom_init)
 {

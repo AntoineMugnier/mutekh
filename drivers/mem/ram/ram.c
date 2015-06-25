@@ -91,25 +91,13 @@ static DEV_MEM_REQUEST(ram_request)
 static DEV_INIT(ram_init);
 static DEV_CLEANUP(ram_cleanup);
 
-static const struct dev_enum_ident_s	ram_ids[] =
-{
-  DEV_ENUM_FDTNAME_ENTRY("generic:ram"),
-  { 0 }
-};
+#define ram_use dev_use_generic
 
-const struct driver_s	ram_drv =
-{
-  .desc                 = "Generic RAM driver",
-  .id_table		= ram_ids,
-  .f_init		= ram_init,
-  .f_cleanup		= ram_cleanup,
-  .classes              = {
-    DRIVER_MEM_METHODS(ram),
-    0,
-  },
-};
+DRIVER_DECLARE(ram_drv, "Generic RAM", ram,
+               DRIVER_MEM_METHODS(ram));
 
-REGISTER_DRIVER(ram_drv);
+DRIVER_REGISTER(ram_drv,
+                DEV_ENUM_FDTNAME_ENTRY("generic:ram"));
 
 static DEV_INIT(ram_init)
 {

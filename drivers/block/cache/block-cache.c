@@ -372,16 +372,10 @@ DEV_CREATE(block_cache_create)
   return 1;
 }
 
+#define block_cache_use dev_use_generic
 
-const struct driver_s block_cache_drv =
-{
-  .class		= device_class_block,
-  .f_create		= block_cache_create,
-  .f_cleanup		= block_cache_cleanup,
-  .f.blk = {
-    .f_request		= block_cache_request,
-    .f_getparams	= block_cache_getparams,
-    .f_getrqsize	= block_cache_getrqsize,
-  }
-};
+DRIVER_DECLARE(block_cache_drv, "Block Cache", block_cache,
+               DRIVER_MEM_METHODS(block_cache));
+
+DRIVER_REGISTER(block_cache_drv);
 

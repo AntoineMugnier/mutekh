@@ -441,18 +441,12 @@ static DEVCRYPTO_REQUEST(soft_salsa_request)
 static DEV_INIT(soft_salsa_init);
 static DEV_CLEANUP(soft_salsa_cleanup);
 
-const struct driver_s soft_salsa_drv =
-  {
-    .desc       = "Software Salsa family of ciphers",
-    .f_init     = soft_salsa_init,
-    .f_cleanup  = soft_salsa_cleanup,
-    .classes    = {
-      DRIVER_CRYPTO_METHODS(soft_salsa),
-      0,
-    },
-  };
+#define soft_salsa_use dev_use_generic
 
-REGISTER_DRIVER(soft_salsa_drv);
+DRIVER_DECLARE(soft_salsa_drv, "Software Salsa family of ciphers", soft_salsa,
+               DRIVER_CRYPTO_METHODS(soft_salsa));
+
+DRIVER_REGISTER(soft_salsa_drv);
 
 DEV_DECLARE_STATIC(soft_salsa_dev, "salsa_soft", 0, soft_salsa_drv);
 

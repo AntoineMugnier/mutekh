@@ -314,29 +314,15 @@ static DEV_SPI_CTRL_QUEUE(bcm2835_spi_queue)
 
 #endif
 
-static const struct driver_spi_ctrl_s	bcm2835_spi_ctrl_drv =
-{
-  .class_		= DRIVER_CLASS_SPI_CTRL,
-  .f_config		= bcm2835_spi_config,
-  .f_select		= bcm2835_spi_select,
-  .f_transfer		= bcm2835_spi_transfer,
-#ifdef CONFIG_DEVICE_SPI_REQUEST
-  .f_queue		= bcm2835_spi_queue,
-#endif
-};
-
 static DEV_INIT(bcm2835_spi_init);
 static DEV_CLEANUP(bcm2835_spi_cleanup);
 
-const struct driver_s	bcm2835_spi_drv =
-{
-  .desc                 = "BCM2835 SPI",
-  .f_init		= bcm2835_spi_init,
-  .f_cleanup		= bcm2835_spi_cleanup,
-  .classes              = { &bcm2835_spi_ctrl_drv, 0 }
-};
+#define bcm2835_spi_use dev_use_generic
 
-REGISTER_DRIVER(bcm2835_spi_drv);
+DRIVER_DECLARE(bcm2835_spi_drv, "BCM2835 SPI", bcm2835_spi,
+               DRIVER_SPI_CTRL_METHODS(bcm2835_spi));
+
+DRIVER_REGISTER(bcm2835_spi_drv);
 
 static DEV_INIT(bcm2835_spi_init)
 {

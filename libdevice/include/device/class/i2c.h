@@ -288,11 +288,11 @@ DRIVER_CLASS_TYPES(i2c,
 );
 
 #define DRIVER_I2C_METHODS(prefix)                               \
-  &(const struct driver_i2c_s){                                  \
+  (&(const struct driver_i2c_s){                                 \
     .class_ = DRIVER_CLASS_I2C,                                  \
     .f_config = prefix ## _config,                               \
     .f_request = prefix ## _request,                             \
-  }
+  })
 
 /** @this reconfigures the i2c controller configuration.
 

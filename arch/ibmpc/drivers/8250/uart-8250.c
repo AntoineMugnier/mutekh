@@ -216,7 +216,11 @@ DEV_IRQ(uart_8250_irq)
  * device open operation
  */
 
-#ifdef CONFIG_DRIVER_ENUM_FDT
+#define uart_8250_use dev_use_generic
+
+DRIVER_DECLARE(uart_8250_drv, "i8250", uart_8250,
+               DRIVER_CHAR_METHODS(uart_8250));
+
 static const struct driver_param_binder_s binder[] =
 {
     PARAM_BIND(struct uart_8250_param_s, crystal_hz, PARAM_DATATYPE_INT),
@@ -224,33 +228,11 @@ static const struct driver_param_binder_s binder[] =
     { 0 }
 };
 
-static const struct dev_enum_ident_s	uart_8250_ids[] =
-{
-    DEV_ENUM_FDTNAME_ENTRY("uart8250", sizeof(struct uart_8250_param_s), binder),
-    DEV_ENUM_FDTNAME_ENTRY("uart8250", 0, 0),
-    DEV_ENUM_FDTNAME_ENTRY("uart16550", sizeof(struct uart_8250_param_s), binder),
-    DEV_ENUM_FDTNAME_ENTRY("uart16550", 0, 0),
-    { 0 }
-};
-#endif
-
-const struct driver_s	uart_8250_drv =
-{
-    .class		= device_class_char,
-#ifdef CONFIG_DRIVER_ENUM_FDT
-    .id_table     = uart_8250_ids,
-#endif
-    .f_init		= uart_8250_init,
-    .f_cleanup		= uart_8250_cleanup,
-    .f_irq		= uart_8250_irq,
-    .f.chr = {
-        .f_request		= uart_8250_request,
-    }
-};
-
-#ifdef CONFIG_DRIVER_ENUM_FDT
-REGISTER_DRIVER(uart_8250_drv);
-#endif
+DRIVER_REGISTER(uart_8250_drv,
+                DEV_ENUM_FDTNAME_ENTRY("uart8250", sizeof(struct uart_8250_param_s), binder),
+                DEV_ENUM_FDTNAME_ENTRY("uart8250", 0, 0),
+                DEV_ENUM_FDTNAME_ENTRY("uart16550", sizeof(struct uart_8250_param_s), binder),
+                DEV_ENUM_FDTNAME_ENTRY("uart16550", 0, 0));
 
 DEV_INIT(uart_8250_init)
 {

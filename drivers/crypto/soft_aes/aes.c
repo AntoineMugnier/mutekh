@@ -154,18 +154,12 @@ static DEVCRYPTO_REQUEST(soft_aes_request)
 static DEV_INIT(soft_aes_init);
 static DEV_CLEANUP(soft_aes_cleanup);
 
-const struct driver_s soft_aes_drv =
-{
-  .desc       = "Software AES cipher",
-  .f_init     = soft_aes_init,
-  .f_cleanup  = soft_aes_cleanup,
-  .classes    = {
-    DRIVER_CRYPTO_METHODS(soft_aes),
-    0,
-  },
-};
+#define soft_aes_use dev_use_generic
 
-REGISTER_DRIVER(soft_aes_drv);
+DRIVER_DECLARE(soft_aes_drv, "Software AES cipher", soft_aes,
+               DRIVER_CRYPTO_METHODS(soft_aes));
+
+DRIVER_REGISTER(soft_aes_drv);
 
 DEV_DECLARE_STATIC(soft_aes_dev, "aes_soft", 0, soft_aes_drv);
 

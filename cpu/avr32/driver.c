@@ -280,38 +280,20 @@ static DEV_USE(arv32_use)
   return -ENOTSUP;
 }
 
-static const struct dev_enum_ident_s  avr32_ids[] =
-{
-#ifdef CONFIG_FDT
-  DEV_ENUM_FDTNAME_ENTRY("cpu:avr32"),
-#endif
-  { 0 }
-};
-
 #define avr32_timer_request (dev_timer_request_t*)&dev_driver_notsup_fcn
 #define avr32_timer_cancel  (dev_timer_cancel_t*)&dev_driver_notsup_fcn
 
-const struct driver_s  avr32_drv =
-{
-  .desc           = "AVR32 processor",
-  .id_table       = avr32_ids,
-
-  .f_init         = avr32_init,
-  .f_cleanup      = avr32_cleanup,
-
-  .classes        = {
-    DRIVER_CPU_METHODS(avr32_cpu),
+DRIVER_DECLARE(avr32_drv, "AVR32 processor", avr32,
 #ifdef CONFIG_DEVICE_IRQ
-    DRIVER_ICU_METHODS(avr32_icu),
+               DRIVER_ICU_METHODS(avr32_icu),
 #endif
 #ifdef CONFIG_CPU_AVR32_TIMER_CYCLECOUNTER
-    DRIVER_TIMER_METHODS(avr32_timer),
+               DRIVER_TIMER_METHODS(avr32_timer),
 #endif
-    0
-  }
-};
+               DRIVER_CPU_METHODS(avr32_cpu));
 
-REGISTER_DRIVER(avr32_drv);
+DRIVER_REGISTER(avr32_drv,
+                DEV_ENUM_FDTNAME_ENTRY("cpu:avr32"));
 
 static DEV_INIT(avr32_init)
 {

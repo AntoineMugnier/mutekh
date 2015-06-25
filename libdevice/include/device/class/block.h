@@ -140,11 +140,11 @@ DRIVER_CLASS_TYPES(block,
                    );
 
 #define DRIVER_BLOCK_METHODS(prefix)                                    \
-  &(const struct driver_block_s){                                       \
+  (&(const struct driver_block_s){                                      \
     .class_ = DRIVER_CLASS_BLOCK,                                       \
     .f_request = prefix ## _request,                                    \
     .f_getparams = prefix ## _getparams,                                \
-  }
+  })
 
 /** Synchronous helper read function. This function use the scheduler
     api to put current context in wait state if no data is available

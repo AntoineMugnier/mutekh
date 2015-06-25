@@ -548,18 +548,12 @@ static KROUTINE_EXEC(spi_rq_done)
 static DEV_INIT(adxl362_init);
 static DEV_CLEANUP(adxl362_cleanup);
 
-const struct driver_s adxl362_drv =
-  {
-    .desc       = "ADXL362 motion",
-    .f_init     = &adxl362_init,
-    .f_cleanup  = &adxl362_cleanup,
-    .classes    = {
-      DRIVER_VALIO_METHODS(adxl362),
-      0,
-    },
-  };
+#define adxl362_use dev_use_generic
 
-REGISTER_DRIVER(adxl362_drv);
+DRIVER_DECLARE(adxl362_drv, "ADXL362 motion", adxl362,
+               DRIVER_VALIO_METHODS(adxl362));
+
+DRIVER_REGISTER(adxl362_drv);
 
 static DEV_INIT(adxl362_init)
 {

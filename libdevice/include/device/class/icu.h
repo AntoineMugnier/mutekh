@@ -130,12 +130,12 @@ DRIVER_CLASS_TYPES(icu,
                    );
 
 #define DRIVER_ICU_METHODS(prefix)                               \
-  &(const struct driver_icu_s){                                  \
+  (&(const struct driver_icu_s){                                 \
     .class_ = DRIVER_CLASS_ICU,                                  \
     .f_get_endpoint = prefix ## _get_endpoint,                   \
     .f_enable_irq = prefix ## _enable_irq,                       \
     .f_disable_irq = prefix ## _disable_irq,                     \
-  }
+  })
 
 /** @This is used to propagate interrupt enabling along the irq
     routing path between device and processor(s). @see

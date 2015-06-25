@@ -66,15 +66,12 @@ DEV_CLEANUP(dev_null_cleanup)
  * device open operation
  */
 
-const struct driver_s	dev_null_drv =
-{
-  .class		= device_class_char,
-  .f_init		= dev_null_init,
-  .f_cleanup		= dev_null_cleanup,
-  .f.chr = {
-    .f_request		= dev_null_request,
-  }
-};
+#define dev_null_use dev_use_generic
+
+DRIVER_DECLARE(dev_null_drv, "dev-null", dev_null,
+               DRIVER_CHAR_METHODS(dev_null));
+
+DRIVER_REGISTER(dev_null_drv);
 
 DEV_INIT(dev_null_init)
 {

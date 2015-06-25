@@ -275,39 +275,20 @@ static DEV_USE(lm32_use)
   return -ENOTSUP;
 }
 
-static const struct dev_enum_ident_s  lm32_ids[] =
-{
-#ifdef CONFIG_LIBFDT
-  DEV_ENUM_FDTNAME_ENTRY("cpu:lm32"),
-#endif
-  { 0 }
-};
-
 #define lm32_timer_request (dev_timer_request_t*)&dev_driver_notsup_fcn
 #define lm32_timer_cancel  (dev_timer_cancel_t*)&dev_driver_notsup_fcn
 
-const struct driver_s  lm32_drv =
-{
-  .desc           = "LM32 processor",
-  .id_table       = lm32_ids,
-
-  .f_init         = lm32_init,
-  .f_cleanup      = lm32_cleanup,
-  .f_use          = lm32_use,
-
-  .classes        = {
-    DRIVER_CPU_METHODS(lm32_cpu),
+DRIVER_DECLARE(lm32_drv, "LM32 processor", lm32,
 #ifdef CONFIG_DEVICE_IRQ
-    DRIVER_ICU_METHODS(lm32_icu),
+               DRIVER_ICU_METHODS(lm32_icu),
 #endif
 #ifdef CONFIG_CPU_LM32_TIMER_CYCLECOUNTER
-    DRIVER_TIMER_METHODS(lm32_timer),
+               DRIVER_TIMER_METHODS(lm32_timer),
 #endif
-    0
-  }
-};
+               DRIVER_CPU_METHODS(lm32_cpu));
 
-REGISTER_DRIVER(lm32_drv);
+DRIVER_REGISTER(lm32_drv,
+                DEV_ENUM_FDTNAME_ENTRY("cpu:lm32"));
 
 static DEV_INIT(lm32_init)
 {

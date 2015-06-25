@@ -488,22 +488,16 @@ static DEV_IRQ_EP_PROCESS(efm32_gpio_source_process)
 static DEV_INIT(efm32_gpio_init);
 static DEV_CLEANUP(efm32_gpio_cleanup);
 
-const struct driver_s efm32_gpio_drv =
-  {
-    .desc       = "EFM32 GPIO",
-    .f_init     = efm32_gpio_init,
-    .f_cleanup  = efm32_gpio_cleanup,
-    .classes    = {
-      DRIVER_GPIO_METHODS(efm32_gpio),
-      DRIVER_IOMUX_METHODS(efm32_gpio_iomux),
-#ifdef CONFIG_DRIVER_EFM32_GPIO_ICU
-      DRIVER_ICU_METHODS(efm32_gpio_icu),
-#endif
-      NULL
-    }
-  };
+#define efm32_gpio_use dev_use_generic
 
-REGISTER_DRIVER(efm32_gpio_drv);
+DRIVER_DECLARE(efm32_gpio_drv, "EFM32 GPIO", efm32_gpio,
+               DRIVER_GPIO_METHODS(efm32_gpio),
+#ifdef CONFIG_DRIVER_EFM32_GPIO_ICU
+               DRIVER_ICU_METHODS(efm32_gpio_icu),
+#endif
+               DRIVER_IOMUX_METHODS(efm32_gpio_iomux));
+
+DRIVER_REGISTER(efm32_gpio_drv);
 
 static DEV_INIT(efm32_gpio_init)
 {

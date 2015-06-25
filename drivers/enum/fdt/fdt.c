@@ -474,14 +474,13 @@ static FDT_ON_MEM_RESERVE_FUNC(enum_fdt_mem_reserve)
 
 DEV_ENUM_MATCH_DRIVER(enum_fdt_match_driver)
 {
-  const struct dev_enum_ident_s *ident = drv->id_table;
+  size_t i;
 
-  if (!ident)
-    return 0;
-
-  for ( ; ident->type != 0; ident++ )
+  for (i ; i < count; i++)
     {
-      if (ident->type != DEV_ENUM_TYPE_FDTNAME)
+      const struct dev_enum_ident_s *id = ident + i;
+
+      if (id->type != DEV_ENUM_TYPE_FDTNAME)
         continue;
 
       const struct dev_resource_s *r = device_res_get(dev, DEV_RES_PRODUCT, 0);
@@ -489,7 +488,7 @@ DEV_ENUM_MATCH_DRIVER(enum_fdt_match_driver)
       if (!r || !r->u.product.name)
         continue;
 
-      if (!strcmp(ident->fdtname.name, r->u.product.name))
+      if (!strcmp(id->fdtname.name, r->u.product.name))
         return 1;
     }
 
@@ -499,16 +498,12 @@ DEV_ENUM_MATCH_DRIVER(enum_fdt_match_driver)
 static DEV_CLEANUP(enum_fdt_cleanup);
 static DEV_INIT(enum_fdt_init);
 
-const struct driver_s	enum_fdt_drv =
-{
-  .desc         = "Flat Device Tree enumerator",
-  .f_init	= enum_fdt_init,
-  .f_cleanup	= enum_fdt_cleanup,
-  .classes	= {
-    DRIVER_ENUM_METHODS(enum_fdt),
-    0,
-  },
-};
+#define enum_fdt_use dev_use_generic
+
+DRIVER_DECLARE(enum_fdt_drv, "FDT Enumerator", enum_fdt,
+               DRIVER_ENUM_METHODS(enum_fdt));
+
+DRIVER_REGISTER(enum_fdt_drv);
 
 static void resolve_dev_links(struct device_s *root, struct device_s *dev)
 {

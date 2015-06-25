@@ -164,28 +164,16 @@ static DEV_IRQ_EP_PROCESS(tty_soclib_irq)
 
 #endif
 
-static const struct dev_enum_ident_s	tty_soclib_ids[] =
-{
-	DEV_ENUM_FDTNAME_ENTRY("soclib:multi_tty"),
-	{ 0 }
-};
-
 static DEV_INIT(tty_soclib_init);
 static DEV_CLEANUP(tty_soclib_cleanup);
 
-const struct driver_s	tty_soclib_drv =
-{
-  .desc                 = "SoCLib VciMultiTty",
-  .id_table		= tty_soclib_ids,
-  .f_init		= tty_soclib_init,
-  .f_cleanup		= tty_soclib_cleanup,
-  .classes              = {
-    DRIVER_CHAR_METHODS(tty_soclib),
-    0,
-  }
-};
+#define tty_soclib_use dev_use_generic
 
-REGISTER_DRIVER(tty_soclib_drv);
+DRIVER_DECLARE(tty_soclib_drv, "Soclib Tty", tty_soclib,
+               DRIVER_CHAR_METHODS(tty_soclib));
+
+DRIVER_REGISTER(tty_soclib_drv,
+                DEV_ENUM_FDTNAME_ENTRY("soclib:multi_tty"));
 
 static DEV_INIT(tty_soclib_init)
 {

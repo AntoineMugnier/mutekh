@@ -61,18 +61,12 @@ DEV_FB_GETBUFFER(fb_vga_getbuffer)
  * device open operation
  */
 
-const struct driver_s	fb_vga_drv =
-{
-  .class		= device_class_fb,
-  .f_init		= fb_vga_init,
-  .f_cleanup		= fb_vga_cleanup,
-  .f.fb = {
-    .f_setmode		= fb_vga_setmode,
-    .f_getbuffer	= fb_vga_getbuffer,
-    .f_flippage		= fb_vga_flippage,
-    .f_setpalette	= fb_vga_setpalette,
-  }
-};
+#define fb_vga_use dev_use_generic
+
+DRIVER_DECLARE(fb_vga_drv, "VGA FB", fb_vga,
+               DRIVER_FB_METHODS(fb_vga));
+
+DRIVER_REGISTER(fb_vga_drv);
 
 DEV_INIT(fb_vga_init)
 {

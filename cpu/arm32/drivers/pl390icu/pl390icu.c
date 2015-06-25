@@ -214,19 +214,12 @@ static DEV_IRQ_EP_PROCESS(pl390_icu_source_process)
     }
 }
 
-static const struct dev_enum_ident_s  pl390_icu_ids[] =
-{
-  DEV_ENUM_FDTNAME_ENTRY("pl390"),
-  { 0 }
-};
-
 static DEV_INIT(pl390_icu_init);
 static DEV_CLEANUP(pl390_icu_cleanup);
 
 const struct driver_s  pl390_icu_drv =
 {
   .desc           = "PL390 ARM generic interrupts controller",
-  .id_table       = pl390_icu_ids,
 
   .f_init         = pl390_icu_init,
   .f_cleanup      = pl390_icu_cleanup,
@@ -236,6 +229,9 @@ const struct driver_s  pl390_icu_drv =
     0
   }
 };
+
+DRIVER_REGISTER(pl390_icu_drv,
+                DEV_ENUM_FDTNAME_ENTRY("pl390"));
 
 void pl390_icu_cpu_init(struct device_s *dev)
 {
@@ -370,6 +366,4 @@ static DEV_CLEANUP(pl390_icu_cleanup)
 
   mem_free(pv);
 }
-
-REGISTER_DRIVER(pl390_icu_drv);
 

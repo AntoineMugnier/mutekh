@@ -359,7 +359,11 @@ DEV_LCD_GETINFO(s1d15g00_getinfo)
  * device open operation
  */
 
-#ifdef CONFIG_DRIVER_ENUM_FDT
+#define s1d15g00_use dev_use_generic
+
+DRIVER_DECLARE(s1d15g00_drv, "S1D15G00", s1d15g00,
+               DRIVER_LCD_METHODS(s1d15g00));
+
 static const struct driver_param_binder_s s1d15g00_binder[] =
 {
 	PARAM_BIND(struct s1d15g00_param_s, spi_dev, PARAM_DATATYPE_DEVICE_PTR),
@@ -369,31 +373,8 @@ static const struct driver_param_binder_s s1d15g00_binder[] =
 	{ 0 }
 };
 
-static const struct dev_enum_ident_s	s1d15g00_ids[] =
-{
-	DEV_ENUM_FDTNAME_ENTRY("s1d15g00", sizeof(struct s1d15g00_param_s), s1d15g00_binder),
-	{ 0 }
-};
-#endif
-
-const struct driver_s	s1d15g00_drv =
-{
-	.class		= device_class_lcd,
-#ifdef CONFIG_DRIVER_ENUM_FDT
-    .id_table   = s1d15g00_ids,
-#endif
-	.f_init		= s1d15g00_init,
-	.f_cleanup		= s1d15g00_cleanup,
-	.f.lcd = {
-		.f_request      = s1d15g00_request,
-		.f_getinfo      = s1d15g00_getinfo,
-	}
-};
-
-#ifdef CONFIG_DRIVER_ENUM_FDT
-REGISTER_DRIVER(s1d15g00_drv);
-#endif
-
+DRIVER_REGISTER(s1d15g00_drv,
+                DEV_ENUM_FDTNAME_ENTRY("s1d15g00", sizeof(struct s1d15g00_param_s), s1d15g00_binder));
 
 DEV_INIT(s1d15g00_init)
 {

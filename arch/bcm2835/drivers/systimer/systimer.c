@@ -270,18 +270,10 @@ static DEV_USE(bcm2835_systimer_use)
 static DEV_INIT(bcm2835_systimer_init);
 static DEV_CLEANUP(bcm2835_systimer_cleanup);
 
-const struct driver_s  bcm2835_systimer_drv =
-{
-  .desc           = "BCM2835 system timer",
-  .f_init         = bcm2835_systimer_init,
-  .f_cleanup      = bcm2835_systimer_cleanup,
-  .f_use          = bcm2835_systimer_use,
+DRIVER_DECLARE(bcm2835_systimer_drv, "BCM2835 system timer", bcm2835_systimer,
+               DRIVER_TIMER_METHODS(bcm2835_systimer));
 
-  .classes        = {
-    DRIVER_TIMER_METHODS(bcm2835_systimer),
-    0,
-  },
-};
+DRIVER_REGISTER(bcm2835_systimer_drv);
 
 static DEV_INIT(bcm2835_systimer_init)
 {
@@ -337,6 +329,4 @@ static DEV_CLEANUP(bcm2835_systimer_cleanup)
 
   mem_free(pv);
 }
-
-REGISTER_DRIVER(bcm2835_systimer_drv);
 

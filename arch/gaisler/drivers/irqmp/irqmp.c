@@ -235,32 +235,16 @@ static DEV_IRQ_EP_PROCESS(gaisler_irqmp_source_process)
 
 #endif /*  CONFIG_DRIVER_GAISLER_IRQMP_ICU */
 
-static const struct dev_enum_ident_s	gaisler_irqmp_ids[] =
-{
-  DEV_ENUM_GAISLER_ENTRY(0x01, 0x00d),
-  { 0 }
-};
-
 static DEV_CLEANUP(gaisler_irqmp_cleanup);
 static DEV_INIT(gaisler_irqmp_init);
 
-const struct driver_s  gaisler_irqmp_drv =
-{
-  .desc           = "Gaisler IRQMP irq controller",
-  .id_table       = gaisler_irqmp_ids,
+#define gaisler_irqmp_use dev_use_generic
 
-  .f_init         = gaisler_irqmp_init,
-  .f_cleanup      = gaisler_irqmp_cleanup,
+DRIVER_DECLARE(gaisler_irqmp_drv, "Gaisler IRQMP irq controller", gaisler_irqmp,
+               DRIVER_ICU_METHODS(gaisler_irqmp_icu));
 
-  .classes        = {
-#ifdef CONFIG_DRIVER_GAISLER_IRQMP_ICU
-    DRIVER_ICU_METHODS(gaisler_irqmp_icu),
-#endif
-    0,
-  },
-};
-
-REGISTER_DRIVER(gaisler_irqmp_drv);
+DRIVER_REGISTER(gaisler_irqmp_drv,
+                DEV_ENUM_GAISLER_ENTRY(0x01, 0x00d));
 
 static DEV_INIT(gaisler_irqmp_init)
 {

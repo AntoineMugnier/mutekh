@@ -258,15 +258,10 @@ DEV_BLOCK_GETRQSIZE(block_partition_getrqsize)
   return dev_block_getrqsize(dev->parent);
 }
 
-const struct driver_s block_partition_drv =
-{
-  .class		= device_class_block,
-  .f_create		= block_partition_create,
-  .f_cleanup		= block_partition_cleanup,
-  .f.blk = {
-    .f_request		= block_partition_request,
-    .f_getparams	= block_partition_getparams,
-    .f_getrqsize	= block_partition_getrqsize,
-  }
-};
+#define block_partition_use dev_use_generic
+
+DRIVER_DECLARE(block_partition_drv, "Partition", block_partition,
+               DRIVER_MEM_METHODS(block_partition));
+
+DRIVER_REGISTER(block_partition_drv);
 

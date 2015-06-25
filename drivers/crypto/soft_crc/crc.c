@@ -372,18 +372,12 @@ static DEVCRYPTO_REQUEST(soft_crc_request)
 static DEV_INIT(soft_crc_init);
 static DEV_CLEANUP(soft_crc_cleanup);
 
-const struct driver_s soft_crc_drv =
-  {
-    .desc       = "Software CRC hash",
-    .f_init     = soft_crc_init,
-    .f_cleanup  = soft_crc_cleanup,
-    .classes    = {
-      DRIVER_CRYPTO_METHODS(soft_crc),
-      0,
-    },
-  };
+#define soft_crc_use dev_use_generic
 
-REGISTER_DRIVER(soft_crc_drv);
+DRIVER_DECLARE(soft_crc_drv, "Software CRC hash", soft_crc,
+               DRIVER_CRYPTO_METHODS(soft_crc));
+
+DRIVER_REGISTER(soft_crc_drv);
 
 DEV_DECLARE_STATIC(soft_crc_dev, "crc_soft", 0, soft_crc_drv);
 

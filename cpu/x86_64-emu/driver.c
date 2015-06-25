@@ -113,8 +113,6 @@ const struct driver_s emu_cpu_drv =
   },
 };
 
-REGISTER_DRIVER(emu_cpu_drv);
-
 static DEV_INIT(x86_64_emu_init)
 {
   struct x86_64_emu_dev_private_s  *pv;

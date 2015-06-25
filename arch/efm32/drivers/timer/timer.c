@@ -454,17 +454,10 @@ static DEV_TIMER_CONFIG(efm32_timer_config)
 static DEV_INIT(efm32_timer_init);
 static DEV_CLEANUP(efm32_timer_cleanup);
 
-const struct driver_s  efm32_timer_drv =
-{
-  .desc           = "EFM32 Timer",
-  .f_init         = efm32_timer_init,
-  .f_cleanup      = efm32_timer_cleanup,
-  .f_use          = efm32_timer_use,
-  .classes        = {
-    DRIVER_TIMER_METHODS(efm32_timer),
-    0,
-  },
-};
+DRIVER_DECLARE(efm32_timer_drv, "EFM32 Timer", efm32_timer,
+               DRIVER_TIMER_METHODS(efm32_timer));
+
+DRIVER_REGISTER(efm32_timer_drv);
 
 static DEV_INIT(efm32_timer_init)
 {
@@ -594,6 +587,4 @@ static DEV_CLEANUP(efm32_timer_cleanup)
 
   mem_free(pv);
 }
-
-REGISTER_DRIVER(efm32_timer_drv);
 

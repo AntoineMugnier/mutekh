@@ -331,25 +331,16 @@ static DEV_IRQ_EP_PROCESS(soclib_block_irq)
   lock_release(&dev->lock);
 }
 
-static const struct dev_enum_ident_s	soclib_block_ids[] =
-{
-  DEV_ENUM_FDTNAME_ENTRY("soclib:block_device"),
-  { 0 }
-};
-
 static DEV_INIT(soclib_block_init);
 static DEV_CLEANUP(soclib_block_cleanup);
 
-const struct driver_s	soclib_block_drv =
-{
-  .desc                 = "SoCLib VciBlockDevice",
-  .id_table		= soclib_block_ids,
-  .f_init		= soclib_block_init,
-  .f_cleanup		= soclib_block_cleanup,
-  .classes              = { DRIVER_MEM_METHODS(soclib_block), 0 }
-};
+#define soclib_block_use dev_use_generic
 
-REGISTER_DRIVER(soclib_block_drv);
+DRIVER_DECLARE(soclib_block_drv, "Soclib Block Device", soclib_block,
+               DRIVER_MEM_METHODS(soclib_block));
+
+DRIVER_REGISTER(soclib_block_drv,
+                DEV_ENUM_FDTNAME_ENTRY("soclib:block_device"));
 
 static DEV_INIT(soclib_block_init)
 {

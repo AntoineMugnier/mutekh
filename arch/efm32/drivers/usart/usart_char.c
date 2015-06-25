@@ -274,19 +274,12 @@ static DEV_IRQ_EP_PROCESS(efm32_usart_irq)
 
 static DEV_INIT(efm32_usart_char_init);
 static DEV_CLEANUP(efm32_usart_char_cleanup);
+#define efm32_usart_char_use dev_use_generic
 
-const struct driver_s	efm32_usart_drv =
-{
-  .desc                 = "EFM32 UART and USART (char)",
-  .f_init		= efm32_usart_char_init,
-  .f_cleanup		= efm32_usart_char_cleanup,
-  .classes              = {
-    DRIVER_CHAR_METHODS(efm32_usart),
-    0,
-  },
-};
+DRIVER_DECLARE(efm32_usart_drv, "EFM32 USART (char)", efm32_usart_char,
+               DRIVER_CHAR_METHODS(efm32_usart));
 
-REGISTER_DRIVER(efm32_usart_drv);
+DRIVER_REGISTER(efm32_usart_drv);
 
 #ifdef CONFIG_DEVICE_CLOCK
 static DEV_CLOCK_SINK_CHANGED(efm32_usart_char_clk_changed)

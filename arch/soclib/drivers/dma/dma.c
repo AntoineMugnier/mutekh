@@ -140,28 +140,15 @@ static DEV_IRQ_EP_PROCESS(dma_soclib_irq)
  * device open operation
  */
 
-static const struct dev_enum_ident_s	dma_soclib_ids[] =
-{
-	DEV_ENUM_FDTNAME_ENTRY("soclib:dma"),
-	{ 0 }
-};
-
 static DEV_INIT(dma_soclib_init);
 static DEV_CLEANUP(dma_soclib_cleanup);
+#define dma_soclib_use dev_use_generic
 
-const struct driver_s	dma_soclib_drv =
-{
-  .desc       = "SoCLib VciDma",
-  .id_table		= dma_soclib_ids,
-  .f_init		  = dma_soclib_init,
-  .f_cleanup	= dma_soclib_cleanup,
-  .classes    = {
-    DRIVER_DMA_METHODS(dma_soclib),
-    0,
-  },
-};
+DRIVER_DECLARE(dma_soclib_drv, "Soclib Dma", dma_soclib,
+               DRIVER_DMA_METHODS(dma_soclib));
 
-REGISTER_DRIVER(dma_soclib_drv);
+DRIVER_REGISTER(dma_soclib_drv,
+                DEV_ENUM_FDTNAME_ENTRY("soclib:dma"));
 
 static DEV_INIT(dma_soclib_init)
 {

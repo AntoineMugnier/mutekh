@@ -272,11 +272,11 @@ DRIVER_CLASS_TYPES(mem,
                    );
 
 #define DRIVER_MEM_METHODS(prefix)                               \
-  &(const struct driver_mem_s){                                  \
+  (&(const struct driver_mem_s){                                 \
     .class_ = DRIVER_CLASS_MEM,                                  \
     .f_info = prefix ## _info,                                   \
     .f_request = prefix ## _request,                             \
-  }
+  })
 
 /** Synchronous memory device operation function. This function use a
     busy wait loop during the request. @see dev_mem_wait_op */

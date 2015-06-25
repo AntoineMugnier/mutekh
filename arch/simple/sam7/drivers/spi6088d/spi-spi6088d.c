@@ -429,39 +429,19 @@ DEV_SPI_SET_DATA_FORMAT(spi_spi6088d_set_data_format)
 	return 0;
 }
 
-#ifdef CONFIG_DRIVER_ENUM_FDT
+#define spi_spi6088d_use dev_use_generic
+
+DRIVER_DECLARE(spi_6088d_drv, "SPI 6088d", spi_spi6088d,
+               DRIVER_TIMER_METHODS(spi_6088d));
+
 static const struct driver_param_binder_s spi_spi6088d_param_binder[] =
 {
 	PARAM_BIND(struct spi_spi6088d_param_s, lun_count, PARAM_DATATYPE_INT),
 	{ 0 }
 };
 
-static const struct dev_enum_ident_s	spi_spi6088d_ids[] =
-{
-	DEV_ENUM_FDTNAME_ENTRY("spi6088d", sizeof(struct spi_spi6088d_param_s), spi_spi6088d_param_binder),
-	{ 0 }
-};
-#endif
-
-const struct driver_s   spi_spi6088d_drv =
-{
-    .class      = device_class_spi,
-#ifdef CONFIG_DRIVER_ENUM_FDT
-    .id_table   = spi_spi6088d_ids,
-#endif
-    .f_init     = spi_spi6088d_init,
-    .f_cleanup  = spi_spi6088d_cleanup,
-    .f_irq      = spi_spi6088d_irq,
-	.f.spi = {
-		.f_request = spi_spi6088d_request,
-		.f_set_baudrate = spi_spi6088d_set_baudrate,
-		.f_set_data_format = spi_spi6088d_set_data_format,
-	},
-};
-
-#ifdef CONFIG_DRIVER_ENUM_FDT
-REGISTER_DRIVER(spi_spi6088d_drv);
-#endif
+DRIVER_REGISTER(spi_spi6088d_drv,
+                DEV_ENUM_FDTNAME_ENTRY("spi6088d", sizeof(struct spi_spi6088d_param_s), spi_spi6088d_param_binder));
 
 DEV_INIT(spi_spi6088d_init)
 {

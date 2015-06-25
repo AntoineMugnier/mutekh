@@ -195,16 +195,12 @@ static DEV_VALIO_REQUEST(ds3231_request)
 static DEV_INIT(ds3231_init);
 static DEV_CLEANUP(ds3231_cleanup);
 
-const struct driver_s ds3231_drv =
-{
-    .desc = "DS3231 Calendar Clock",
-    .f_init = ds3231_init,
-    .f_cleanup = ds3231_cleanup,
-    .classes = {
-        DRIVER_VALIO_METHODS(ds3231),
-        0,
-    },
-};
+#define ds3231_use dev_use_generic
+
+DRIVER_DECLARE(ds3231_drv, "DS3231 Calendar Clock", ds3231,
+               DRIVER_VALIO_METHODS(ds3231));
+
+DRIVER_REGISTER(ds3231_drv);
 
 static DEV_INIT(ds3231_init)
 {

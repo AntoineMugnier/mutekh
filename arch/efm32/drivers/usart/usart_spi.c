@@ -408,29 +408,15 @@ static DEV_SPI_CTRL_QUEUE(efm32_usart_spi_queue)
 
 #endif
 
-static const struct driver_spi_ctrl_s	efm32_usart_spi_ctrl_drv =
-{
-  .class_		= DRIVER_CLASS_SPI_CTRL,
-  .f_config		= efm32_usart_spi_config,
-  .f_select		= efm32_usart_spi_select,
-  .f_transfer		= efm32_usart_spi_transfer,
-#ifdef CONFIG_DEVICE_SPI_REQUEST
-  .f_queue		= efm32_usart_spi_queue,
-#endif
-};
-
 static DEV_INIT(efm32_usart_spi_init);
 static DEV_CLEANUP(efm32_usart_spi_cleanup);
 
-const struct driver_s	efm32_usart_spi_drv =
-{
-  .desc       = "EFM32 USART (SPI)",
-  .f_init		  = efm32_usart_spi_init,
-  .f_cleanup	= efm32_usart_spi_cleanup,
-  .classes    = { &efm32_usart_spi_ctrl_drv, 0 }
-};
+#define efm32_usart_spi_use dev_use_generic
 
-REGISTER_DRIVER(efm32_usart_spi_drv);
+DRIVER_DECLARE(efm32_usart_spi_drv, "EFM32 USART (SPI)", efm32_usart_spi,
+               DRIVER_SPI_CTRL_METHODS(efm32_usart_spi));
+
+DRIVER_REGISTER(efm32_usart_spi_drv);
 
 #ifdef CONFIG_DEVICE_CLOCK
 static DEV_CLOCK_SINK_CHANGED(efm32_usart_spi_clk_changed)

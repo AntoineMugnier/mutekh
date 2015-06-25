@@ -307,39 +307,20 @@ static DEV_USE(x86_use)
   return -ENOTSUP;
 }
 
-static const struct dev_enum_ident_s  x86_ids[] =
-{
-#ifdef CONFIG_LIBFDT
-  DEV_ENUM_FDTNAME_ENTRY("cpu:x86"),
-#endif
-  { 0 }
-};
-
 #define x86_timer_request (dev_timer_request_t*)&dev_driver_notsup_fcn
 #define x86_timer_cancel  (dev_timer_cancel_t*)&dev_driver_notsup_fcn
 
-const struct driver_s  x86_drv =
-{
-  .desc           = "x86 32-bits processor",
-  .id_table       = x86_ids,
-
-  .f_init         = x86_init,
-  .f_cleanup      = x86_cleanup,
-  .f_use          = x86_use,
-
-  .classes        = {
-    DRIVER_CPU_METHODS(x86_cpu),
+DRIVER_DECLARE(x86_drv, "x86 32-bit processor", x86,
 #ifdef CONFIG_DEVICE_IRQ
-    DRIVER_ICU_METHODS(x86_icu),
+               DRIVER_ICU_METHODS(x86_icu),
 #endif
 #ifdef CONFIG_CPU_X86_TIMER_CYCLECOUNTER
-    DRIVER_TIMER_METHODS(x86_timer),
+               DRIVER_TIMER_METHODS(x86_timer),
 #endif
-    0,
-  },
-};
+               DRIVER_CPU_METHODS(x86_cpu));
 
-REGISTER_DRIVER(x86_drv);
+DRIVER_REGISTER(x86_drv,
+                DEV_ENUM_FDTNAME_ENTRY("cpu:x86"));
 
 static DEV_INIT(x86_init)
 {

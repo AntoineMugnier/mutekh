@@ -210,23 +210,12 @@ DEV_CLEANUP(icu_8259_cleanup)
   mem_free(pv);
 }
 
+#define icu_8259_use dev_use_generic
 
-const struct driver_s	icu_8259_drv =
-{
-  .class		= device_class_icu,
-  .f_init		= icu_8259_init,
-#ifdef CONFIG_DRIVER_ICU_APIC
-  .f_irq                = icu_8259_handler,
-#else
-  .f_irq                = (dev_irq_t *)icu_8259_cpu_handler,
-#endif
-  .f_cleanup		= icu_8259_cleanup,
-  .f.icu = {
-    .f_enable		= icu_8259_enable,
-    .f_sethndl		= icu_8259_sethndl,
-    .f_delhndl		= icu_8259_delhndl,
-  }
-};
+DRIVER_DECLARE(icu_8259_drv, "i8259", icu_8259,
+               DRIVER_ICU_METHODS(icu_8259));
+
+DRIVER_REGISTER(icu_8259_drv);
 
 DEV_INIT(icu_8259_init)
 {

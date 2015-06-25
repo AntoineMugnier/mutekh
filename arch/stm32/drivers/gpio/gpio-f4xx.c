@@ -627,22 +627,16 @@ static DEV_CLEANUP(stm32_gpio_cleanup);
 #define stm32_gpio_gpio_request dev_gpio_request_async_to_sync
 #define stm32_gpio_gpio_input_irq_range (dev_gpio_input_irq_range_t*)dev_driver_notsup_fcn
 
-const struct driver_s stm32_gpio_drv =
-  {
-    .desc      = "STM32 GPIO",
-    .f_init    = &stm32_gpio_init,
-    .f_cleanup = &stm32_gpio_cleanup,
-    .classes   = {
-      DRIVER_GPIO_METHODS(stm32_gpio_gpio),
-      DRIVER_IOMUX_METHODS(stm32_gpio_iomux),
-#if defined(CONFIG_DRIVER_STM32_GPIO_ICU)
-      DRIVER_ICU_METHODS(stm32_gpio_icu),
-#endif
-      0
-    },
-  };
+#define stm32_gpio_use dev_use_generic
 
-REGISTER_DRIVER(stm32_gpio_drv);
+DRIVER_DECLARE(stm32_gpio_drv, "STM32 GPIO", stm32_gpio,
+               DRIVER_GPIO_METHODS(stm32_gpio_gpio),
+#if defined(CONFIG_DRIVER_STM32_GPIO_ICU)
+               DRIVER_ICU_METHODS(stm32_gpio_icu),
+#endif
+               DRIVER_IOMUX_METHODS(stm32_gpio_iomux));
+
+DRIVER_REGISTER(stm32_gpio_drv);
 
 static
 DEV_INIT(stm32_gpio_init)

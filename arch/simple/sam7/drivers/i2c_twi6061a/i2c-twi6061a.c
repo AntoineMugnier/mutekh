@@ -280,32 +280,13 @@ DEV_I2C_SET_BAUDRATE(i2c_twi6061a_set_baudrate)
 	return MCK/2/((br<<exp) + 3);
 }
 
-#ifdef CONFIG_DRIVER_ENUM_FDT
-static const struct dev_enum_ident_s	i2c_twi6061a_ids[] =
-{
-	DEV_ENUM_FDTNAME_ENTRY("twi6061a", 0, 0),
-	{ 0 }
-};
-#endif
+#define twi_6061a_use dev_use_generic
 
-const struct driver_s   i2c_twi6061a_drv =
-{
-    .class      = device_class_i2c,
-#ifdef CONFIG_DRIVER_ENUM_FDT
-    .id_table   = i2c_twi6061a_ids,
-#endif
-    .f_init     = i2c_twi6061a_init,
-    .f_cleanup  = i2c_twi6061a_cleanup,
-    .f_irq      = i2c_twi6061a_irq,
-	.f.i2c = {
-		.f_request = i2c_twi6061a_request,
-		.f_set_baudrate = i2c_twi6061a_set_baudrate,
-	},
-};
+DRIVER_DECLARE(twi_6061a_drv, "TWI 6061a", twi_6061a,
+               DRIVER_TIMER_METHODS(twi_6061a));
 
-#ifdef CONFIG_DRIVER_ENUM_FDT
-REGISTER_DRIVER(i2c_twi6061a_drv);
-#endif
+DRIVER_REGISTER(i2c_twi6061a_drv,
+                DEV_ENUM_FDTNAME_ENTRY("twi6061a", 0, 0));
 
 DEV_INIT(i2c_twi6061a_init)
 {

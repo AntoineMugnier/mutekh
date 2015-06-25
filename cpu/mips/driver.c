@@ -303,47 +303,31 @@ static DEV_USE(mips_use)
   return -ENOTSUP;
 }
 
-static const struct dev_enum_ident_s  mips_ids[] =
-{
-#ifdef CONFIG_LIBFDT
-  DEV_ENUM_FDTNAME_ENTRY("cpu:mips"),
-# ifdef CONFIG_CPU_ENDIAN_LITTLE
-  DEV_ENUM_FDTNAME_ENTRY("cpu:mipsel"),
-  DEV_ENUM_FDTNAME_ENTRY("cpu:mips32el"),
-# endif
-# ifdef CONFIG_CPU_ENDIAN_BIG
-  DEV_ENUM_FDTNAME_ENTRY("cpu:mipseb"),
-  DEV_ENUM_FDTNAME_ENTRY("cpu:mips32eb"),
-# endif
-#endif
-  { 0 }
-};
-
 #define mips_timer_request (dev_timer_request_t*)&dev_driver_notsup_fcn
 #define mips_timer_cancel  (dev_timer_cancel_t*)&dev_driver_notsup_fcn
 
-const struct driver_s  mips_drv =
-{
-  .desc           = "Mips processor",
-  .id_table       = mips_ids,
-
-  .f_init         = mips_init,
-  .f_cleanup      = mips_cleanup,
-  .f_use          = mips_use,
-
-  .classes        = {
-    DRIVER_CPU_METHODS(mips_cpu),
+DRIVER_DECLARE(mips_drv, "MIPS processor", mips,
 #ifdef CONFIG_DEVICE_IRQ
-    DRIVER_ICU_METHODS(mips_icu),
+               DRIVER_ICU_METHODS(mips_icu),
 #endif
 #ifdef CONFIG_CPU_MIPS_TIMER_CYCLECOUNTER
-    DRIVER_TIMER_METHODS(mips_timer),
+               DRIVER_TIMER_METHODS(mips_timer),
 #endif
-    0
-  }
-};
+               DRIVER_CPU_METHODS(mips_cpu));
 
-REGISTER_DRIVER(mips_drv);
+DRIVER_REGISTER(mips_drv
+#ifdef CONFIG_LIBFDT
+                ,DEV_ENUM_FDTNAME_ENTRY("cpu:mips")
+# ifdef CONFIG_CPU_ENDIAN_LITTLE
+                ,DEV_ENUM_FDTNAME_ENTRY("cpu:mipsel")
+                ,DEV_ENUM_FDTNAME_ENTRY("cpu:mips32el")
+# endif
+# ifdef CONFIG_CPU_ENDIAN_BIG
+                ,DEV_ENUM_FDTNAME_ENTRY("cpu:mipseb")
+                ,DEV_ENUM_FDTNAME_ENTRY("cpu:mips32eb")
+# endif
+#endif
+                );
 
 static DEV_INIT(mips_init)
 {

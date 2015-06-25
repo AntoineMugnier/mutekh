@@ -69,15 +69,12 @@ DEV_CLEANUP(dev_zero_cleanup)
  * device open operation
  */
 
-const struct driver_s	dev_zero_drv =
-{
-  .class		= device_class_char,
-  .f_init		= dev_zero_init,
-  .f_cleanup		= dev_zero_cleanup,
-  .f.chr = {
-    .f_request		= dev_zero_request,
-  }
-};
+#define dev_zero_use dev_use_generic
+
+DRIVER_DECLARE(dev_zero_drv, "dev-zero", dev_zero,
+               DRIVER_CHAR_METHODS(dev_zero));
+
+DRIVER_REGISTER(dev_zero_drv);
 
 DEV_INIT(dev_zero_init)
 {

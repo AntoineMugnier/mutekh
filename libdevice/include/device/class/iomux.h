@@ -60,10 +60,10 @@ DRIVER_CLASS_TYPES(iomux,
 		   );
 
 #define DRIVER_IOMUX_METHODS(prefix)                               \
-  &(const struct driver_iomux_s){                                  \
+  (&(const struct driver_iomux_s){                                 \
     .class_ = DRIVER_CLASS_IOMUX,                                  \
     .f_setup = prefix ## _setup,                                   \
-  }
+  })
 
 /**
    @This sets the muxing configuration of IOs whose names are listed

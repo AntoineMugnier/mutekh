@@ -510,19 +510,12 @@ DEV_I2C_REQUEST(bcm2835_i2c_request)
 static DEV_INIT(bcm2835_i2c_init);
 static DEV_CLEANUP(bcm2835_i2c_cleanup);
 
-const struct driver_s bcm2835_i2c_drv =
-{
-  .desc         = "BCM2835 Master Inter-Integrated Circuit Interface (I2C)",
-  .f_init       = &bcm2835_i2c_init,
-  .f_cleanup    = &bcm2835_i2c_cleanup,
-  .classes      =
-  {
-    DRIVER_I2C_METHODS(bcm2835_i2c),
-    0
-  }
-};
+#define bcm2835_i2c_use dev_use_generic
 
-REGISTER_DRIVER(bcm2835_i2c_drv);
+DRIVER_DECLARE(bcm2835_i2c_drv, "BCM2835 I2C Master", bcm2835_i2c,
+               DRIVER_I2C_METHODS(bcm2835_i2c));
+
+DRIVER_REGISTER(bcm2835_i2c_drv);
 
 static DEV_INIT(bcm2835_i2c_init)
 {

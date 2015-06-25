@@ -258,18 +258,12 @@ static DEVCRYPTO_REQUEST(efm32_aes_request)
 static DEV_INIT(efm32_aes_init);
 static DEV_CLEANUP(efm32_aes_cleanup);
 
-const struct driver_s efm32_aes_drv =
-{
-  .desc       = "EFM32 AES",
-  .f_init     = efm32_aes_init,
-  .f_cleanup  = efm32_aes_cleanup,
-  .classes    = {
-    DRIVER_CRYPTO_METHODS(efm32_aes),
-    0,
-  },
-};
+#define efm32_aes_use dev_use_generic
 
-REGISTER_DRIVER(efm32_aes_drv);
+DRIVER_DECLARE(efm32_aes_drv, "EFM32 AES", efm32_aes,
+               DRIVER_CRYPTO_METHODS(efm32_aes));
+
+DRIVER_REGISTER(efm32_aes_drv);
 
 static DEV_INIT(efm32_aes_init)
 {

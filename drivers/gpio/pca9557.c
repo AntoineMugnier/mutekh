@@ -273,8 +273,6 @@ struct driver_s pca9557_drv =
     },
 };
 
-REGISTER_DRIVER(pca9557_drv);
-
 static DEV_INIT(pca9557_init)
 {
     struct pca9557_private_s *pv;

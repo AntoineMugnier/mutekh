@@ -123,28 +123,16 @@ static DEV_IRQ_EP_PROCESS(soclib_icu_source_process)
     }
 }
 
-static const struct dev_enum_ident_s  soclib_icu_ids[] =
-{
-  DEV_ENUM_FDTNAME_ENTRY("soclib:icu"),
-  { 0 }
-};
-
 static DEV_INIT(soclib_icu_init);
 static DEV_CLEANUP(soclib_icu_cleanup);
 
-const struct driver_s  soclib_icu_drv =
-{
-  .desc           = "Soclib VciIcu",
-  .id_table       = soclib_icu_ids,
+#define soclib_icu_use dev_use_generic
 
-  .f_init         = soclib_icu_init,
-  .f_cleanup      = soclib_icu_cleanup,
+DRIVER_DECLARE(soclib_icu_drv, "Soclib Icu", soclib_icu,
+               DRIVER_ICU_METHODS(soclib_icu_icu));
 
-  .classes        = {
-    DRIVER_ICU_METHODS(soclib_icu_icu),
-    0,
-  },
-};
+DRIVER_REGISTER(soclib_icu_drv,
+                DEV_ENUM_FDTNAME_ENTRY("soclib:icu"));
 
 static DEV_INIT(soclib_icu_init)
 {
@@ -203,6 +191,4 @@ static DEV_CLEANUP(soclib_icu_cleanup)
 
   mem_free(pv);
 }
-
-REGISTER_DRIVER(soclib_icu_drv);
 

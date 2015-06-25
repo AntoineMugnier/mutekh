@@ -165,21 +165,12 @@ static CPU_INTERRUPT_HANDLER(icu_emu_cpu_handler)
     }
 }
 
-const struct driver_s	icu_emu_drv =
-{
-  .class		= device_class_icu,
-  .f_init		= icu_emu_init,
-  .f_cleanup		= icu_emu_cleanup,
-  .f.icu = {
-    .f_enable		= icu_emu_enable,
-    .f_sethndl		= icu_emu_sethndl,
-    .f_delhndl		= icu_emu_delhndl,
-#ifdef CONFIG_HEXO_IPI
-    .f_sendipi          = icu_emu_sendipi,
-    .f_setup_ipi_ep     = icu_emu_setup_ipi_ep,
-#endif
-  }
-};
+#define icu_emu_use dev_use_generic
+
+DRIVER_DECLARE(icu_emu_drv, "Emu ICU", icu_emu,
+               DRIVER_ICU_METHODS(icu_emu));
+
+DRIVER_REGISTER(icu_emu_drv);
 
 DEV_CLEANUP(icu_emu_cleanup)
 {

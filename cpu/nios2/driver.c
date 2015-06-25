@@ -284,39 +284,20 @@ static DEV_USE(nios2_use)
   return -ENOTSUP;
 }
 
-static const struct dev_enum_ident_s  nios2_ids[] =
-{
-#ifdef CONFIG_LIBFDT
-  DEV_ENUM_FDTNAME_ENTRY("cpu:nios2"),
-#endif
-  { 0 }
-};
-
 #define nios2_timer_request (dev_timer_request_t*)dev_driver_notsup_fcn
 #define nios2_timer_cancel  (dev_timer_cancel_t*)dev_driver_notsup_fcn
 
-const struct driver_s  nios2_drv =
-{
-  .desc           = "Nios II processor",
-  .id_table       = nios2_ids,
-
-  .f_init         = nios2_init,
-  .f_cleanup      = nios2_cleanup,
-  .f_use          = nios2_use,
-
-  .classes        = {
-    DRIVER_CPU_METHODS(nios2_cpu),
+DRIVER_DECLARE(nios2_drv, "Nios II processor", nios2,
 #ifdef CONFIG_DEVICE_IRQ
-    DRIVER_ICU_METHODS(nios2_icu),
+               DRIVER_ICU_METHODS(nios2_icu),
 #endif
 #ifdef CONFIG_CPU_NIOS_TIMER_CYCLECOUNTER
-    DRIVER_TIMER_METHODS(nios2_timer),
+               DRIVER_TIMER_METHODS(nios2_timer),
 #endif
-    0
-  }
-};
+               DRIVER_CPU_METHODS(nios2_cpu));
 
-REGISTER_DRIVER(nios2_drv);
+DRIVER_REGISTER(nios2_drv,
+                DEV_ENUM_FDTNAME_ENTRY("cpu:nios2"));
 
 static DEV_INIT(nios2_init)
 {

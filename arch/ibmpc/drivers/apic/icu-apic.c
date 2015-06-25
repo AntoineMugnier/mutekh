@@ -237,23 +237,12 @@ static void icu_apic_setup(struct device_s *dev)
   cpu_mem_write_32(dev->addr[0] + APIC_REG_SPURIOUS_INT, APIC_SPUR_APIC_ENABLE);
 }
 
-const struct driver_s	icu_apic_drv =
-{
-  .class		= device_class_icu,
-  .f_init		= icu_apic_init,
-  .f_cleanup		= icu_apic_cleanup,
-  .f.icu = {
-#ifdef CONFIG_HEXO_IRQ
-    .f_enable		= icu_apic_enable,
-    .f_sethndl		= icu_apic_sethndl,
-    .f_delhndl		= icu_apic_delhndl,
-#endif
-#ifdef CONFIG_HEXO_IPI
-    .f_sendipi          = icu_apic_sendipi,
-    .f_setup_ipi_ep     = icu_apic_setup_ipi_ep,
-#endif
-  }
-};
+#define icu_apic_use dev_use_generic
+
+DRIVER_DECLARE(icu_apic_drv, "APIC", icu_apic,
+               DRIVER_ICU_METHODS(icu_apic));
+
+DRIVER_REGISTER(icu_apic_drv);
 
 DEV_CLEANUP(icu_apic_cleanup)
 {

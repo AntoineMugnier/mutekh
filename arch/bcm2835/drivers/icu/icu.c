@@ -181,28 +181,16 @@ static DEV_IRQ_EP_PROCESS(bcm2835_icu_source_process)
     }
 }
 
-static const struct dev_enum_ident_s  bcm2835_icu_ids[] =
-{
-  DEV_ENUM_FDTNAME_ENTRY("bcm2835_icu"),
-  { 0 }
-};
-
 static DEV_INIT(bcm2835_icu_init);
 static DEV_CLEANUP(bcm2835_icu_cleanup);
 
-const struct driver_s  bcm2835_icu_drv =
-{
-  .desc           = "BCM2835 irq controller",
-  .id_table       = bcm2835_icu_ids,
+#define bcm2835_icu_use dev_use_generic
 
-  .f_init         = bcm2835_icu_init,
-  .f_cleanup      = bcm2835_icu_cleanup,
+DRIVER_DECLARE(bcm2835_icu_drv, "BCM2835 irq controller", bcm2835_icu,
+               DRIVER_ICU_METHODS(bcm2835_icu_icu));
 
-  .classes        = {
-    DRIVER_ICU_METHODS(bcm2835_icu_icu),
-    0,
-  },
-};
+DRIVER_REGISTER(bcm2835_icu_drv,
+                DEV_ENUM_FDTNAME_ENTRY("bcm2835_icu"));
 
 static DEV_INIT(bcm2835_icu_init)
 {
@@ -263,6 +251,4 @@ static DEV_CLEANUP(bcm2835_icu_cleanup)
 
   mem_free(pv);
 }
-
-REGISTER_DRIVER(bcm2835_icu_drv);
 

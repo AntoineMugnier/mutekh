@@ -278,19 +278,12 @@ static DEV_IRQ_EP_PROCESS(efm32_leuart_irq)
 
 static DEV_INIT(efm32_leuart_init);
 static DEV_CLEANUP(efm32_leuart_cleanup);
+#define efm32_leuart_use dev_use_generic
 
-const struct driver_s	efm32_leuart_drv =
-{
-  .desc                 = "EFM32 Low Energy UART",
-  .f_init		= efm32_leuart_init,
-  .f_cleanup		= efm32_leuart_cleanup,
-  .classes              = {
-    DRIVER_CHAR_METHODS(efm32_leuart),
-    0,
-  },
-};
+DRIVER_DECLARE(efm32_leuart_drv, "EFM32 Low Energy UART", efm32_leuart,
+               DRIVER_CHAR_METHODS(efm32_leuart));
 
-REGISTER_DRIVER(efm32_leuart_drv);
+DRIVER_REGISTER(efm32_leuart_drv);
 
 #ifdef CONFIG_DEVICE_CLOCK
 static DEV_CLOCK_SINK_CHANGED(efm32_leuart_char_clk_changed)

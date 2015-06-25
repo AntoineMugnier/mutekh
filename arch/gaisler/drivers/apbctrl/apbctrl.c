@@ -42,21 +42,20 @@
 
 static DEV_ENUM_MATCH_DRIVER(apbctrl_match_driver)
 {
-  const struct dev_enum_ident_s *ident = drv->id_table;
+  size_t i;
 
-  if (!ident)
-    return 0;
-
-  for ( ; ident->type != 0; ident++ )
+  for (i ; i < count; i++)
     {
-      if (ident->type != DEV_ENUM_TYPE_GAISLER)
+      const struct dev_enum_ident_s *id = ident + i;
+
+      if (id->type != DEV_ENUM_TYPE_GAISLER)
         continue;
 
       const struct dev_resource_s *rp = device_res_get(dev, DEV_RES_PRODUCT, 0);
       const struct dev_resource_s *rv = device_res_get(dev, DEV_RES_VENDOR, 0);
 
-      if (rv && rp && rv->u.vendor.id == ident->grlib.vendor &&
-                      rp->u.product.id == ident->grlib.device)
+      if (rv && rp && rv->u.vendor.id == id->grlib.vendor &&
+                      rp->u.product.id == id->grlib.device)
         return 1;
     }
 
@@ -260,25 +259,13 @@ static void apbctrl_scan(struct device_s *dev, uintptr_t begin)
 DEV_CLEANUP(apbctrl_cleanup);
 DEV_INIT(apbctrl_init);
 
-static const struct dev_enum_ident_s	gaisler_apbctrl_ids[] =
-{
-  DEV_ENUM_GAISLER_ENTRY(GAISLER_VENDOR_GAISLER, GAISLER_DEVICE_APBMST),
-  { 0 }
-};
+#define apbctrl_use dev_use_generic
 
-const struct driver_s	apbctrl_drv =
-{
-  .desc         = "Gaisler APB bus controller",
-  .id_table	= gaisler_apbctrl_ids,
-  .f_init	= apbctrl_init,
-  .f_cleanup	= apbctrl_cleanup,
-  .classes	= {
-    DRIVER_ENUM_METHODS(apbctrl),
-    0,
-  }
-};
+DRIVER_DECLARE(apbctrl_drv, "Gaisler APB bus controller", apbctrl,
+               DRIVER_ENUM_METHODS(apbctrl));
 
-REGISTER_DRIVER(apbctrl_drv);
+DRIVER_REGISTER(apbctrl_drv,
+                DEV_ENUM_GAISLER_ENTRY(GAISLER_VENDOR_GAISLER, GAISLER_DEVICE_APBMST));
 
 DEV_INIT(apbctrl_init)
 {

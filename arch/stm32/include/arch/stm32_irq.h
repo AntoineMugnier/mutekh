@@ -68,6 +68,7 @@
 #define STM32_IRQ_DMA2_CHANNEL4_5       59
 
 #endif
+#endif
 
 #if CONFIG_STM32_FAMILY == 4
 
@@ -139,4 +140,3 @@
 #endif // CONFIG_STM32_FAMILY == 4
 
 #endif
-

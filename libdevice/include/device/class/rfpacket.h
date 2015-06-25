@@ -383,13 +383,13 @@ DRIVER_CLASS_TYPES(rfpacket,
                   );
 
 #define DRIVER_RFPACKET_METHODS(prefix)                            \
-  &(const struct driver_rfpacket_s){                               \
+  (&(const struct driver_rfpacket_s){                              \
     .class_ = DRIVER_CLASS_RFPACKET,                               \
     .f_request = prefix ## _request,                               \
     .f_receive = prefix ## _receive,                               \
     .f_stats = prefix ## _stats,                                   \
     .f_get_timer_skew = prefix ## _get_timer_skew,                 \
-  }
+  })
 
 inline error_t dev_rfpacket_spin_send_packet(
        const struct device_rfpacket_s *accessor,

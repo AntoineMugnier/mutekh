@@ -534,18 +534,12 @@ static DEVCRYPTO_REQUEST(soft_sha2_request)
 static DEV_INIT(soft_sha2_init);
 static DEV_CLEANUP(soft_sha2_cleanup);
 
-const struct driver_s soft_sha2_drv =
-  {
-    .desc       = "Software SHA2 hashes",
-    .f_init     = soft_sha2_init,
-    .f_cleanup  = soft_sha2_cleanup,
-    .classes    = {
-      DRIVER_CRYPTO_METHODS(soft_sha2),
-      0,
-    },
-  };
+#define soft_sha2_use dev_use_generic
 
-REGISTER_DRIVER(soft_sha2_drv);
+DRIVER_DECLARE(soft_sha2_drv, "Software SHA2 hashes", soft_sha2,
+               DRIVER_CRYPTO_METHODS(soft_sha2));
+
+DRIVER_REGISTER(soft_sha2_drv);
 
 DEV_DECLARE_STATIC(soft_sha2_dev, "sha2_soft", 0, soft_sha2_drv);
 

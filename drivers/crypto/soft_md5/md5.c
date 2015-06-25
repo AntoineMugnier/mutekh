@@ -236,18 +236,12 @@ static DEVCRYPTO_REQUEST(soft_md5_request)
 static DEV_INIT(soft_md5_init);
 static DEV_CLEANUP(soft_md5_cleanup);
 
-const struct driver_s soft_md5_drv =
-  {
-    .desc       = "Software MD5 hash",
-    .f_init     = soft_md5_init,
-    .f_cleanup  = soft_md5_cleanup,
-    .classes    = {
-      DRIVER_CRYPTO_METHODS(soft_md5),
-      0,
-    },
-  };
+#define soft_md5_use dev_use_generic
 
-REGISTER_DRIVER(soft_md5_drv);
+DRIVER_DECLARE(soft_md5_drv, "Software MD5 hash", soft_md5,
+               DRIVER_CRYPTO_METHODS(soft_md5));
+
+DRIVER_REGISTER(soft_md5_drv);
 
 DEV_DECLARE_STATIC(soft_md5_dev, "md5_soft", 0, soft_md5_drv);
 

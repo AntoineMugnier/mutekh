@@ -228,19 +228,12 @@ static DEV_VALIO_REQUEST(push_button_request)
 static DEV_INIT(push_button_init);
 static DEV_CLEANUP(push_button_cleanup);
 
-const struct driver_s push_button_drv =
-{
-  .desc         = "Push button",
-  .f_init       = &push_button_init,
-  .f_cleanup    = &push_button_cleanup,
-  .classes      =
-  {
-    DRIVER_VALIO_METHODS(push_button),
-    0
-  }
-};
+#define push_button_use dev_use_generic
 
-REGISTER_DRIVER(push_button_drv);
+DRIVER_DECLARE(push_button_drv, "Push-button", push_button,
+               DRIVER_VALIO_METHODS(push_button));
+
+DRIVER_REGISTER(push_button_drv);
 
 static DEV_INIT(push_button_init)
 {

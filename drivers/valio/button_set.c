@@ -188,18 +188,12 @@ static DEV_VALIO_REQUEST(button_set_request)
 static DEV_INIT(button_set_init);
 static DEV_CLEANUP(button_set_cleanup);
 
-const struct driver_s button_set_drv =
-{
-  .desc = "Button-set keyboard",
-  .f_init = &button_set_init,
-  .f_cleanup = &button_set_cleanup,
-  .classes = {
-    DRIVER_VALIO_METHODS(button_set), 
-    0
-  }
-};
+#define button_set_use dev_use_generic
 
-REGISTER_DRIVER(button_set_drv);
+DRIVER_DECLARE(button_set_drv, "Button-set keyboard", button_set,
+               DRIVER_VALIO_METHODS(button_set));
+
+DRIVER_REGISTER(button_set_drv);
 
 static DEV_INIT(button_set_init)
 {

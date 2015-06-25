@@ -1290,19 +1290,12 @@ static DEV_CLOCK_SRC_USE(efm32_recmu_ep_use)
 
 static DEV_INIT(efm32_recmu_init);
 static DEV_CLEANUP(efm32_recmu_cleanup);
+#define efm32_recmu_use dev_use_generic
 
-const struct driver_s efm32_recmu_drv =
-  {
-    .desc       = "EFM32 Reset, Energy and Clock management units",
-    .f_init     = efm32_recmu_init,
-    .f_cleanup  = efm32_recmu_cleanup,
-    .classes    = {
-      DRIVER_CLOCK_METHODS(efm32_recmu),
-      0,
-    },
-  };
+DRIVER_DECLARE(efm32_recmu_drv, "EFM32 Reset, Energy and Clock management units", efm32_recmu,
+               DRIVER_CLOCK_METHODS(efm32_recmu));
 
-REGISTER_DRIVER(efm32_recmu_drv);
+DRIVER_REGISTER(efm32_recmu_drv);
 
 static DEV_INIT(efm32_recmu_init)
 {

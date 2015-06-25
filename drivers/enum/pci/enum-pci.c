@@ -204,15 +204,12 @@ pci_enum_probe(struct device_s *dev)
  * device open operation
  */
 
-const struct driver_s	enum_pci_drv =
-{
-  .class		= driver_class_enum,
-  .f_init		= enum_pci_init,
-  .f_cleanup		= enum_pci_cleanup,
-  .f.denum = {
-    .f_lookup		= enum_pci_lookup,
-  }
-};
+#define enum_pci_use dev_use_generic
+
+DRIVER_DECLARE(enum_pci_drv, "PCI Enumerator", enum_pci,
+               DRIVER_ENUM_METHODS(enum_pci));
+
+DRIVER_REGISTER(enum_pci_drv);
 
 DEV_INIT(enum_pci_init)
 {

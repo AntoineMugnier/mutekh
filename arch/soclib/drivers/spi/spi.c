@@ -464,35 +464,25 @@ static DEV_ICU_DISABLE_IRQ(soclib_spi_icu_disable_irq)
 
 /*******************************************************/
 
-static const struct dev_enum_ident_s  soclib_spi_ids[] =
-{
-  DEV_ENUM_FDTNAME_ENTRY("soclib:spi"),
-  { 0 }
-};
-
 #define soclib_spi_gpio_request dev_gpio_request_async_to_sync
 #define soclib_spi_gpio_input_irq_range (dev_gpio_input_irq_range_t*)dev_driver_notsup_fcn
 
 static DEV_INIT(soclib_spi_init);
 static DEV_CLEANUP(soclib_spi_cleanup);
 
-const struct driver_s	soclib_spi_drv =
-{
-  .desc                 = "Soclib VciSpi",
-  .id_table             = soclib_spi_ids,
-  .f_init		= soclib_spi_init,
-  .f_cleanup		= soclib_spi_cleanup,
-  .classes              = {
-    DRIVER_SPI_CTRL_METHODS(soclib_spi),
+#define soclib_spi_use dev_use_generic
+
+DRIVER_DECLARE(soclib_spi_drv, "Soclib Spi", soclib_spi,
 #ifdef CONFIG_DRIVER_SOCLIB_SPI_GPIO
-    DRIVER_GPIO_METHODS(soclib_spi_gpio),
+               DRIVER_GPIO_METHODS(soclib_spi_gpio),
 #endif
 #ifdef CONFIG_DRIVER_SOCLIB_SPI_ICU
-    DRIVER_ICU_METHODS(soclib_spi_icu),
+               DRIVER_ICU_METHODS(soclib_spi_icu),
 #endif
-    0,
-  },
-};
+               DRIVER_SPI_CTRL_METHODS(soclib_spi));
+
+DRIVER_REGISTER(soclib_spi_drv,
+                DEV_ENUM_FDTNAME_ENTRY("soclib:spi"));
 
 #ifdef CONFIG_DEVICE_IRQ
 
@@ -540,8 +530,6 @@ static DEV_IRQ_EP_PROCESS(soclib_spi_irq)
 }
 
 #endif
-
-REGISTER_DRIVER(soclib_spi_drv);
 
 static DEV_INIT(soclib_spi_init)
 {

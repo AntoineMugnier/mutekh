@@ -499,14 +499,15 @@ static TERMUI_CON_COMMAND_PROTOTYPE(dev_shell_tree)
 
 static TERMUI_CON_COMMAND_PROTOTYPE(dev_shell_drivers)
 {
-  extern const struct driver_s * dev_drivers_table[];
-  extern const struct driver_s * dev_drivers_table_end[];
+  extern const struct driver_registry_s driver_registry_table[];
+  extern const struct driver_registry_s driver_registry_table_end[];
 
-  const struct driver_s *d, **drv = dev_drivers_table;
+  const struct driver_registry_s *reg = driver_registry_table;
 
-  for ( ; drv < dev_drivers_table_end ; drv++ )
+  for ( ; reg < driver_registry_table_end ; reg++ )
     {
-      d = *drv;
+      const struct driver_s *d = reg->driver;
+      size_t i;
       if (!d)
         continue;
 
@@ -515,30 +516,28 @@ static TERMUI_CON_COMMAND_PROTOTYPE(dev_shell_drivers)
       dev_shell_dump_drv_class(con, d);
       termui_con_printf(con, "\n");
 
-      const struct dev_enum_ident_s *id = d->id_table;
-
-      if (id)
-        while (id->type)
-          {
-            termui_con_printf(con, "    Id: ");
-            termui_con_print_enum(con, dev_enum_type_e, id->type);
-            switch (id->type)
-              {
-              case DEV_ENUM_TYPE_GENERIC:
-                termui_con_printf(con, ", vendor %04x, device %04x, rev %u.%u\n",
-                                  id->generic.vendor, id->generic.device,
-                                  id->generic.rev_major,
-                                  id->generic.rev_minor);
-                break;
-              case DEV_ENUM_TYPE_FDTNAME:
-                termui_con_printf(con, ", name `%s'\n", id->fdtname.name);
-                break;
-              default:
-                termui_con_printf(con, "\n");
-                break;
-              }
-            id++;
-          }
+      for (i = 0; i < reg->id_count; ++i)
+        {
+          const struct dev_enum_ident_s *id = reg->id_table + i;
+          
+          termui_con_printf(con, "    Id: ");
+          termui_con_print_enum(con, dev_enum_type_e, id->type);
+          switch (id->type)
+            {
+            case DEV_ENUM_TYPE_GENERIC:
+              termui_con_printf(con, ", vendor %04x, device %04x, rev %u.%u\n",
+                                id->generic.vendor, id->generic.device,
+                                id->generic.rev_major,
+                                id->generic.rev_minor);
+              break;
+            case DEV_ENUM_TYPE_FDTNAME:
+              termui_con_printf(con, ", name `%s'\n", id->fdtname.name);
+              break;
+            default:
+              termui_con_printf(con, "\n");
+              break;
+            }
+        }
     }
 
   return 0;

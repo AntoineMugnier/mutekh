@@ -169,31 +169,13 @@ DEV_IRQ(uart_us6089c_irq)
  * device open operation
  */
 
-#ifdef CONFIG_DRIVER_ENUM_FDT
-static const struct dev_enum_ident_s	uart_us6089c_ids[] =
-{
-	DEV_ENUM_FDTNAME_ENTRY("us6889c", 0, 0),
-	{ 0 }
-};
-#endif
+#define uart_us6089c_use dev_use_generic
 
-const struct driver_s	uart_us6089c_drv =
-{
-    .class      = device_class_char,
-#ifdef CONFIG_DRIVER_ENUM_FDT
-    .id_table   = uart_us6089c_ids,
-#endif
-    .f_init     = uart_us6089c_init,
-    .f_cleanup  = uart_us6089c_cleanup,
-    .f_irq      = uart_us6089c_irq,
-    .f.chr = {
-        .f_request = uart_us6089c_request,
-    }
-};
+DRIVER_DECLARE(uart_6089c_drv, "us6089c", uart_us6089c,
+               DRIVER_TIMER_METHODS(uart_6089c));
 
-#ifdef CONFIG_DRIVER_ENUM_FDT
-REGISTER_DRIVER(uart_us6089c_drv);
-#endif
+DRIVER_REGISTER(uart_us6089c_drv,
+                DEV_ENUM_FDTNAME_ENTRY("us6889c", 0, 0));
 
 DEV_INIT(uart_us6089c_init)
 {

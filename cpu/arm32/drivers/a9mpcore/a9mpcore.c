@@ -70,8 +70,6 @@ const struct driver_s	a9mpcore_drv =
   },
 };
 
-REGISTER_DRIVER(a9mpcore_drv);
-
 static DEV_INIT(a9mpcore_init)
 {
   struct a9mpcore_private_s *pv;

@@ -347,18 +347,12 @@ DEV_CLEANUP(input_8042_cleanup)
  * device open operation
  */
 
-const struct driver_s	input_8042_drv =
-{
-  .class		= device_class_input,
-  .f_init		= input_8042_init,
-  .f_cleanup		= input_8042_cleanup,
-  .f_irq		= input_8042_irq,
-  .f.input = {
-    .f_info		= input_8042_info,
-    .f_read		= input_8042_read,
-    .f_setcallback	= input_8042_setcallback,
-  }
-};
+#define input_8042_use dev_use_generic
+
+DRIVER_DECLARE(input_8042_drv, "i8042", input_8042,
+               DRIVER_INPUT_METHODS(input_8042));
+
+DRIVER_REGISTER(input_8042_drv);
 
 DEV_INIT(input_8042_init)
 {

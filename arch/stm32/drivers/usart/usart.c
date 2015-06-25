@@ -459,19 +459,13 @@ DEV_UART_CONFIG(stm32_usart_config)
 static DEV_INIT(stm32_usart_init);
 static DEV_CLEANUP(stm32_usart_cleanup);
 
-const struct driver_s stm32_usart_drv =
-{
-  .desc      = "STM32 USART",
-  .f_init    = stm32_usart_init,
-  .f_cleanup = stm32_usart_cleanup,
-  .classes   = {
-    DRIVER_CHAR_METHODS(stm32_usart),
-    DRIVER_UART_METHODS(stm32_usart),
-    0,
-  },
-};
+#define stm32_usart_use dev_use_generic
 
-REGISTER_DRIVER(stm32_usart_drv);
+DRIVER_DECLARE(stm32_usart_drv, "STM32 USART", stm32_usart,
+               DRIVER_CHAR_METHODS(stm32_usart),
+               DRIVER_UART_METHODS(stm32_usart));
+
+DRIVER_REGISTER(stm32_usart_drv);
 
 /* ****************************************************************************
  *

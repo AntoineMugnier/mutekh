@@ -207,18 +207,12 @@ static DEVCRYPTO_REQUEST(soft_arc4_request)
 static DEV_INIT(soft_arc4_init);
 static DEV_CLEANUP(soft_arc4_cleanup);
 
-const struct driver_s soft_arc4_drv =
-  {
-    .desc       = "Software ARC4 cipher",
-    .f_init     = soft_arc4_init,
-    .f_cleanup  = soft_arc4_cleanup,
-    .classes    = {
-      DRIVER_CRYPTO_METHODS(soft_arc4),
-      0,
-    },
-  };
+#define soft_arc4_use dev_use_generic
 
-REGISTER_DRIVER(soft_arc4_drv);
+DRIVER_DECLARE(soft_arc4_drv, "Software ARC4 cipher", soft_arc4,
+               DRIVER_CRYPTO_METHODS(soft_arc4));
+
+DRIVER_REGISTER(soft_arc4_drv);
 
 DEV_DECLARE_STATIC(soft_arc4_dev, "arc4_soft", 0, soft_arc4_drv);
 

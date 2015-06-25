@@ -506,28 +506,14 @@ static DEV_TIMER_CONFIG(gptimer_config)
 
 /************************************************************************/
 
-static const struct dev_enum_ident_s  gptimer_ids[] =
-{
-  DEV_ENUM_GAISLER_ENTRY(0x1, 0x011),
-  { 0 }
-};
-
 static DEV_INIT(gptimer_init);
 static DEV_CLEANUP(gptimer_cleanup);
 
-const struct driver_s  gptimer_drv =
-{
-  .desc           = "Gaisler GPTIMER",
-  .id_table       = gptimer_ids,
-  .f_init         = gptimer_init,
-  .f_cleanup      = gptimer_cleanup,
-  .f_use          = gptimer_use,
-  .classes        = {
-    DRIVER_TIMER_METHODS(gptimer), 
-    0,
-  },
-};
+DRIVER_DECLARE(gptimer_drv, "Gaisler GPTIMER", gptimer,
+               DRIVER_TIMER_METHODS(gptimer));
 
+DRIVER_REGISTER(gptimer_drv,
+                DEV_ENUM_GAISLER_ENTRY(0x1, 0x011));
 
 static DEV_INIT(gptimer_init)
 {
@@ -625,6 +611,4 @@ static DEV_CLEANUP(gptimer_cleanup)
 
   mem_free(pv);
 }
-
-REGISTER_DRIVER(gptimer_drv);
 

@@ -127,19 +127,12 @@ DEV_CLEANUP(timer_8253_cleanup)
  * device open operation
  */
 
-const struct driver_s	timer_8253_drv =
-{
-  .class		= device_class_timer,
-  .f_init		= timer_8253_init,
-  .f_cleanup		= timer_8253_cleanup,
-  .f_irq		= timer_8253_irq,
-  .f.timer = {
-    .f_setcallback	= timer_8253_setcallback,
-    .f_setperiod	= timer_8253_setperiod,
-    .f_setvalue		= timer_8253_setvalue,
-    .f_getvalue		= timer_8253_getvalue,
-  }
-};
+#define timer_8253_use dev_use_generic
+
+DRIVER_DECLARE(timer_8253_drv, "i8253", timer_8253,
+               DRIVER_TIMER_METHODS(timer_8253));
+
+DRIVER_REGISTER(timer_8253_drv);
 
 DEV_INIT(timer_8253_init)
 {

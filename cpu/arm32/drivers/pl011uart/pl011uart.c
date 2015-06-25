@@ -273,19 +273,12 @@ static DEV_IRQ_EP_PROCESS(pl011uart_irq)
 
 #endif
 
-static const struct dev_enum_ident_s	pl011uart_ids[] =
-{
-  DEV_ENUM_FDTNAME_ENTRY("pl011"),
-  { 0 }
-};
-
 static DEV_INIT(pl011uart_init);
 static DEV_CLEANUP(pl011uart_cleanup);
 
 const struct driver_s	pl011uart_drv =
 {
   .desc                 = "ARM PrimeCell pl011 uart",
-  .id_table		= pl011uart_ids,
   .f_init		= pl011uart_init,
   .f_cleanup		= pl011uart_cleanup,
   .classes              = {
@@ -294,7 +287,8 @@ const struct driver_s	pl011uart_drv =
   },
 };
 
-REGISTER_DRIVER(pl011uart_drv);
+DRIVER_REGISTER(pl011uart_drv,
+                DEV_ENUM_FDTNAME_ENTRY("pl011"));
 
 static DEV_INIT(pl011uart_init)
 {

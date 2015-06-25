@@ -261,40 +261,24 @@ static DEV_USE(ppc_use)
   return -ENOTSUP;
 }
 
-static const struct dev_enum_ident_s  ppc_ids[] =
-{
-#ifdef CONFIG_LIBFDT
-  DEV_ENUM_FDTNAME_ENTRY("cpu:ppc"),
-  DEV_ENUM_FDTNAME_ENTRY("cpu:powerpc"),
-#endif
-  { 0 }
-};
-
 #define ppc_timer_request (dev_timer_request_t*)&dev_driver_notsup_fcn
 #define ppc_timer_cancel  (dev_timer_cancel_t*)&dev_driver_notsup_fcn
 
-const struct driver_s  ppc_drv =
-{
-  .desc           = "PowerPC processor",
-  .id_table       = ppc_ids,
-
-  .f_init         = ppc_init,
-  .f_cleanup      = ppc_cleanup,
-  .f_use          = ppc_use,
-
-  .classes        = {
-    DRIVER_CPU_METHODS(ppc_cpu),
+DRIVER_DECLARE(ppc_drv, "PowerPC processor", ppc,
 #ifdef CONFIG_DEVICE_IRQ
-    DRIVER_ICU_METHODS(ppc_icu),
+               DRIVER_ICU_METHODS(ppc_icu),
 #endif
 #ifdef CONFIG_CPU_PPC_TIMER_CYCLECOUNTER
-    DRIVER_TIMER_METHODS(ppc_icu),
+               DRIVER_TIMER_METHODS(ppc_timer),
 #endif
-    0,
-  },
-};
+               DRIVER_CPU_METHODS(ppc_cpu));
 
-REGISTER_DRIVER(ppc_drv);
+DRIVER_REGISTER(ppc_drv,
+#ifdef CONFIG_LIBFDT
+                ,DEV_ENUM_FDTNAME_ENTRY("cpu:ppc")
+                ,DEV_ENUM_FDTNAME_ENTRY("cpu:powerpc")
+#endif
+                );
 
 static DEV_INIT(ppc_init)
 {

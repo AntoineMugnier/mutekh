@@ -396,32 +396,20 @@ static DEV_TIMER_CONFIG(enst_rttimer_config)
 
 /************************************************************************/
 
-static const struct dev_enum_ident_s  enst_rttimer_ids[] =
-{
-#ifdef CONFIG_ARCH_SOCLIB
-  DEV_ENUM_FDTNAME_ENTRY("soclib:rttimer"),
-#endif
-#ifdef CONFIG_ARCH_GAISLER
-  DEV_ENUM_GAISLER_ENTRY(0x09, 0x003),
-#endif
-  { 0 }
-};
-
 static DEV_INIT(enst_rttimer_init);
 static DEV_CLEANUP(enst_rttimer_cleanup);
 
-const struct driver_s  enst_rttimer_drv =
-{
-  .desc           = "Telecom ParisTech Real-time Timer",
-  .id_table       = enst_rttimer_ids,
-  .f_init         = enst_rttimer_init,
-  .f_cleanup      = enst_rttimer_cleanup,
-  .f_use          = enst_rttimer_use,
-  .classes        = {
-    DRIVER_TIMER_METHODS(enst_rttimer),
-    0,
-  },
-};
+DRIVER_DECLARE(enst_rttimer_drv, "Telecom ParisTech Real-time Timer", enst_rttimer,
+               DRIVER_TIMER_METHODS(enst_rttimer));
+
+DRIVER_REGISTER(enst_rttimer_drv
+#ifdef CONFIG_ARCH_SOCLIB
+                , DEV_ENUM_FDTNAME_ENTRY("soclib:rttimer")
+#endif
+#ifdef CONFIG_ARCH_GAISLER
+                , DEV_ENUM_GAISLER_ENTRY(0x09, 0x003)
+#endif
+                );
 
 
 static DEV_INIT(enst_rttimer_init)
@@ -531,6 +519,4 @@ static DEV_CLEANUP(enst_rttimer_cleanup)
 
   mem_free(pv);
 }
-
-REGISTER_DRIVER(enst_rttimer_drv);
 

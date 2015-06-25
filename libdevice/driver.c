@@ -101,8 +101,8 @@ error_t device_get_accessor_by_path(void *accessor, struct device_node_s *root,
 
 static bool_t device_find_driver_r(struct device_node_s *node)
 {
-  extern const struct driver_s * dev_drivers_table[];
-  extern const struct driver_s * dev_drivers_table_end[];
+  extern const struct driver_registry_s driver_registry_table[];
+  extern const struct driver_registry_s driver_registry_table_end[];
 
   bool_t done = 0;
 
@@ -113,8 +113,7 @@ static bool_t device_find_driver_r(struct device_node_s *node)
       switch (dev->status)
         {
         case DEVICE_NO_DRIVER: {
-          const struct driver_s **drv = dev_drivers_table;
-
+          const struct driver_registry_s *reg;
           struct device_enum_s e;
 
           /* get associated enumerator device */
@@ -124,16 +123,18 @@ static bool_t device_find_driver_r(struct device_node_s *node)
             break;
 
           /* iterate over available drivers */
-          for ( ; drv < dev_drivers_table_end ; drv++ )
+          for (reg = driver_registry_table;
+               reg < driver_registry_table_end;
+               reg++)
             {
               /* driver entry may be NULL on heterogeneous systems */
-              if (!*drv)
+              if (!reg->driver || !reg->id_table || !reg->id_count)
                 continue;
 
               /* use enumerator to decide if driver is appropriate for this device */
-              if (DEVICE_OP(&e, match_driver, *drv, dev))
+              if (DEVICE_OP(&e, match_driver, reg->id_table, reg->id_count, dev))
                 {
-                  device_bind_driver(dev, *drv);
+                  device_bind_driver(dev, reg->driver);
                   done = 1;
                   break;
                 }
@@ -220,5 +221,10 @@ error_t device_init_driver(struct device_s *dev)
 error_t dev_driver_notsup_fcn()
 {
   return -ENOTSUP;
+}
+
+DEV_USE(dev_use_generic)
+{
+  return 0;
 }
 

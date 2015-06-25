@@ -663,7 +663,11 @@ DEV_BLOCK_GETRQSIZE(sd_mmc_get_rqsize)
   return sizeof(struct dev_block_rq_s);
 }
 
-#ifdef CONFIG_DRIVER_ENUM_FDT
+#define sd_mmc_use dev_use_generic
+
+DRIVER_DECLARE(sd_mmc_drv, "SD/MMC block", sd_mmc,
+               DRIVER_MEM_METHODS(sd_mmc));
+
 static const struct driver_param_binder_s sd_mmc_binder[] =
 {
     PARAM_BIND(struct sd_mmc_param_s, spi, PARAM_DATATYPE_DEVICE_PTR),
@@ -671,31 +675,8 @@ static const struct driver_param_binder_s sd_mmc_binder[] =
     { 0 }
 };
 
-static const struct dev_enum_ident_s sdmmc_ids[] =
-{
-    DEV_ENUM_FDTNAME_ENTRY("sdmmc_spi", sizeof(struct sd_mmc_param_s), sd_mmc_binder),
-    { 0 }
-};
-#endif
-
-const struct driver_s   sd_mmc_drv =
-{
-    .class      = device_class_block,
-#ifdef CONFIG_DRIVER_ENUM_FDT
-    .id_table   = sdmmc_ids,
-#endif
-    .f_init     = sd_mmc_init,
-    .f_cleanup      = sd_mmc_cleanup,
-    .f.blk = {
-        .f_request      = sd_mmc_request,
-        .f_getparams    = sd_mmc_get_params,
-        .f_getrqsize    = sd_mmc_get_rqsize,
-    },
-};
-
-#ifdef CONFIG_DRIVER_ENUM_FDT
-REGISTER_DRIVER(sd_mmc_drv);
-#endif
+DRIVER_REGISTER(sd_mmc_drv,
+                DEV_ENUM_FDTNAME_ENTRY("sdmmc_spi", sizeof(struct sd_mmc_param_s), sd_mmc_binder));
 
 DEV_INIT(sd_mmc_init)
 {

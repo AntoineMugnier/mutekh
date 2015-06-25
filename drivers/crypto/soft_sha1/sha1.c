@@ -223,18 +223,12 @@ static DEVCRYPTO_REQUEST(soft_sha1_request)
 static DEV_INIT(soft_sha1_init);
 static DEV_CLEANUP(soft_sha1_cleanup);
 
-const struct driver_s soft_sha1_drv =
-  {
-    .desc       = "Software SHA1 hash",
-    .f_init     = soft_sha1_init,
-    .f_cleanup  = soft_sha1_cleanup,
-    .classes    = {
-      DRIVER_CRYPTO_METHODS(soft_sha1),
-      0,
-    },
-  };
+#define soft_sha1_use dev_use_generic
 
-REGISTER_DRIVER(soft_sha1_drv);
+DRIVER_DECLARE(soft_sha1_drv, "Software SHA1 hash", soft_sha1,
+               DRIVER_CRYPTO_METHODS(soft_sha1));
+
+DRIVER_REGISTER(soft_sha1_drv);
 
 DEV_DECLARE_STATIC(soft_sha1_dev, "sha1_soft", 0, soft_sha1_drv);
 

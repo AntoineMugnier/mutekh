@@ -191,37 +191,13 @@ DEV_IRQ(gpio_sam7_irq)
 	return 1;
 }
 
+#define gpio_sam7_use dev_use_generic
 
-#ifdef CONFIG_DRIVER_ENUM_FDT
-static const struct dev_enum_ident_s	gpio_sam7_ids[] =
-{
-	DEV_ENUM_FDTNAME_ENTRY("sam7:gpio", 0, 0),
-	{ 0 }
-};
-#endif
+DRIVER_DECLARE(gpio_sam7_drv, "GPIO Sam7", gpio_sam7,
+               DRIVER_TIMER_METHODS(gpio_sam7));
 
-const struct driver_s   gpio_sam7_drv =
-{
-    .class      = device_class_gpio,
-#ifdef CONFIG_DRIVER_ENUM_FDT
-    .id_table   = gpio_sam7_ids,
-#endif
-    .f_init     = gpio_sam7_init,
-    .f_cleanup  = gpio_sam7_cleanup,
-    .f_irq      = gpio_sam7_irq,
-	.f.gpio = {
-		.f_set_way = gpio_sam7_set_way,
-		.f_set_value = gpio_sam7_set_value,
-		.f_set_pullup = gpio_sam7_set_pullup,
-		.f_assign_to_peripheral = gpio_sam7_assign_to_peripheral,
-		.f_get_value = gpio_sam7_get_value,
-		.f_register_irq = gpio_sam7_register_irq,
-	},
-};
-
-#ifdef CONFIG_DRIVER_ENUM_FDT
-REGISTER_DRIVER(gpio_sam7_drv);
-#endif
+DRIVER_REGISTER(gpio_sam7_drv,
+                DEV_ENUM_FDTNAME_ENTRY("sam7:gpio", 0, 0));
 
 DEV_INIT(gpio_sam7_init)
 {

@@ -172,18 +172,12 @@ static DEV_MEM_REQUEST(efm32_msc_request)
 static DEV_INIT(efm32_msc_init);
 static DEV_CLEANUP(efm32_msc_cleanup);
 
-const struct driver_s	efm32_msc_drv =
-{
-  .desc                 = "EFM32 Memory System Controller",
-  .f_init		= efm32_msc_init,
-  .f_cleanup		= efm32_msc_cleanup,
-  .classes              = {
-    DRIVER_MEM_METHODS(efm32_msc),
-    0,
-  },
-};
+#define efm32_msc_use dev_use_generic
 
-REGISTER_DRIVER(efm32_msc_drv);
+DRIVER_DECLARE(efm32_msc_drv, "EFM32 Memory System Controller", efm32_msc,
+               DRIVER_MEM_METHODS(efm32_msc));
+
+DRIVER_REGISTER(efm32_msc_drv);
 
 static DEV_INIT(efm32_msc_init)
 {

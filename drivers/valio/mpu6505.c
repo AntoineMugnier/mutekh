@@ -617,16 +617,10 @@ static DEV_INIT(mpu6505_init);
 static DEV_CLEANUP(mpu6505_cleanup);
 static DEV_USE(mpu6505_use);
 
-const struct driver_s mpu6505_drv = {
-  .desc = "MPU6505 Accelerometer",
-  .f_init = mpu6505_init,
-  .f_cleanup = mpu6505_cleanup,
-  .f_use = mpu6505_use,
-  .classes = {
-    DRIVER_VALIO_METHODS(mpu6505), 
-    0,
-  },
-};
+DRIVER_DECLARE(mpu6505_drv, "MPU6505 motion", mpu6505,
+               DRIVER_VALIO_METHODS(mpu6505));
+
+DRIVER_REGISTER(mpu6505_drv);
 
 static DEV_INIT(mpu6505_init)
 {
@@ -707,5 +701,3 @@ static DEV_USE(mpu6505_use)
 
   return 0;
 }
-
-REGISTER_DRIVER(mpu6505_drv);

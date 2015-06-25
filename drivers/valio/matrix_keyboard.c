@@ -366,18 +366,12 @@ static DEV_VALIO_REQUEST(matrix_keyboard_request)
 static DEV_INIT(matrix_keyboard_init);
 static DEV_CLEANUP(matrix_keyboard_cleanup);
 
-const struct driver_s matrix_keyboard_drv =
-{
-  .desc = "Matrix keyboard",
-  .f_init = &matrix_keyboard_init,
-  .f_cleanup = &matrix_keyboard_cleanup,
-  .classes = {
-    DRIVER_VALIO_METHODS(matrix_keyboard), 
-    0
-  }
-};
+#define matrix_keyboard_use dev_use_generic
 
-REGISTER_DRIVER(matrix_keyboard_drv);
+DRIVER_DECLARE(matrix_keyboard_drv, "Matrix-keyboard", matrix_keyboard,
+               DRIVER_VALIO_METHODS(matrix_keyboard));
+
+DRIVER_REGISTER(matrix_keyboard_drv);
 
 static error_t mxk_range_init(struct device_s *dev,
                                           uint8_t id,

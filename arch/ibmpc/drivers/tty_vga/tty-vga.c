@@ -490,18 +490,12 @@ DEV_CLEANUP(tty_vga_cleanup)
  * device open operation
  */
 
-const struct driver_s	tty_vga_drv =
-{
-  .class		= device_class_char,
-  .f_init		= tty_vga_init,
-  .f_cleanup		= tty_vga_cleanup,
-#ifdef CONFIG_DRIVER_CHAR_VGATTY_KEYBOARD
-  .f_irq		= tty_vga_irq,
-#endif
-  .f.chr = {
-    .f_request		= tty_vga_request,
-  }
-};
+#define tty_vga_use dev_use_generic
+
+DRIVER_DECLARE(tty_vga_drv, "VGA TTY", tty_vga,
+               DRIVER_CHAR_METHODS(tty_vga));
+
+DRIVER_REGISTER(tty_vga_drv);
 
 DEV_INIT(tty_vga_init)
 {

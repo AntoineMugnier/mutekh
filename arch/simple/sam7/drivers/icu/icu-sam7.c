@@ -120,20 +120,14 @@ DEV_CLEANUP(icu_sam7_cleanup)
 	mem_free(pv);
 }
 
-#ifdef CONFIG_DRIVER_ENUM_FDT
-static const struct dev_enum_ident_s	icu_sam7_ids[] =
-{
-	DEV_ENUM_FDTNAME_ENTRY("sam7:icu", 0, 0),
-	{ 0 }
-};
-#endif
+#define spi_spi6088d_use dev_use_generic
+
+DRIVER_DECLARE(spi_6088d_drv, "SPI 6088d", spi_spi6088d,
+               DRIVER_TIMER_METHODS(spi_6088d));
 
 const struct driver_s	icu_sam7_drv =
 {
     .class      = device_class_icu,
-#ifdef CONFIG_DRIVER_ENUM_FDT
-    .id_table   = icu_sam7_ids,
-#endif
     .f_init     = icu_sam7_init,
     .f_cleanup  = icu_sam7_cleanup,
     .f_irq      = icu_sam7_handler,
@@ -144,9 +138,8 @@ const struct driver_s	icu_sam7_drv =
     }
 };
 
-#ifdef CONFIG_DRIVER_ENUM_FDT
-REGISTER_DRIVER(icu_sam7_drv);
-#endif
+DRIVER_REGISTER(icu_sam7_drv,
+                DEV_ENUM_FDTNAME_ENTRY("sam7:icu", 0, 0));
 
 #if defined(CONFIG_CPU_ARM_CUSTOM_IRQ_HANDLER)
 struct device_s	*sam7_c_irq_dev;

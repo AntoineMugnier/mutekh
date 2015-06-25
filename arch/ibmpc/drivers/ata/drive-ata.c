@@ -289,15 +289,12 @@ DEV_CLEANUP(drive_ata_cleanup)
   mem_free(pv);
 }
 
-const struct driver_s	drive_ata_drv =
-{
-  .class		= device_class_block,
-  .f_cleanup		= drive_ata_cleanup,
-  .f.blk = {
-    .f_request		= drive_ata_request,
-    .f_getparams	= drive_ata_getparams,
-  }
-};
+#define drive_ata_use dev_use_generic
+
+DRIVER_DECLARE(drive_ata_drv, "ATA Drive", drive_ata,
+               DRIVER_MEM_METHODS(drive_ata));
+
+DRIVER_REGISTER(drive_ata_drv);
 
 error_t drive_ata_init(struct device_s *dev, bool_t slave)
 {

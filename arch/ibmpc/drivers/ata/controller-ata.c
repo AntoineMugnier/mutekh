@@ -82,26 +82,14 @@ DEV_IRQ(controller_ata_irq)
   return res;
 }
 
-/*
- * PCI identifiers of compatible cards.
- */
+#define controller_ata_use dev_use_generic
 
-static const struct dev_enum_ident_s	controller_ata_ids[] =
-  {
-	  DEV_ENUM_PCI_ENTRY(-1, -1, 0x0101), /* PCI IDE controller */
-	  { 0 },
-  };
+DRIVER_DECLARE(controller_ata_drv, "ATA Controller", controller_ata,
+               DRIVER_ENUM_METHODS(controller_ata));
 
-const struct driver_s	controller_ata_drv =
-{
-  .class		= driver_class_enum,
-  .id_table		= controller_ata_ids,
-  .f_irq		= controller_ata_irq,
-  .f_init		= controller_ata_init,
-  .f_cleanup		= controller_ata_cleanup,
-};
-
-//REGISTER_DRIVER(controller_ata_drv);
+DRIVER_REGISTER(controller_ata_drv,
+                /* PCI IDE controller */
+                DEV_ENUM_PCI_ENTRY(-1, -1, 0x0101));
 
 bool_t controller_ata_waitbusy(struct device_s *dev)
 {

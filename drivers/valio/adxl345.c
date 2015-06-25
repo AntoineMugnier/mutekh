@@ -335,17 +335,10 @@ static DEV_INIT(adxl345_init);
 static DEV_CLEANUP(adxl345_cleanup);
 static DEV_USE(adxl345_use);
 
-const struct driver_s adxl345_drv =
-{
-    .desc      = "ADXL345 Accelerometer",
-    .f_init    = &adxl345_init,
-    .f_cleanup = &adxl345_cleanup,
-    .f_use     = &adxl345_use,
-    .classes   = {
-        DRIVER_VALIO_METHODS(adxl345),
-        0,
-    },
-};
+DRIVER_DECLARE(adxl345_drv, "ADXL345 accelerometer", adxl345,
+               DRIVER_VALIO_METHODS(adxl345));
+
+DRIVER_REGISTER(adxl345_drv);
 
 static
 DEV_INIT(adxl345_init)
@@ -429,6 +422,4 @@ DEV_USE(adxl345_use)
 
     return 0;
 }
-
-REGISTER_DRIVER(adxl345_drv);
 

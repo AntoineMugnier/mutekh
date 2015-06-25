@@ -545,39 +545,19 @@ DEV_SPI_SET_DATA_FORMAT(spi_oc_spi_controller_set_data_format)
 	return 0;
 }
 
-#ifdef CONFIG_DRIVER_ENUM_FDT
+#define spi_oc_spi_controller_use dev_use_generic
+
+DRIVER_DECLARE(spi_oc_spi_controller_drv, "OpenCores SPI controller", spi_oc_spi_controller,
+               DRIVER_SPI_CTRL_METHODS(spi_oc_spi_controller));
+
 static const struct driver_param_binder_s spi_oc_spi_controller_param_binder[] =
 {
 	PARAM_BIND(struct spi_oc_spi_controller_param_s, lun_count, PARAM_DATATYPE_INT),
 	{ 0 }
 };
 
-static const struct dev_enum_ident_s	spi_oc_spi_controller_ids[] =
-{
-	DEV_ENUM_FDTNAME_ENTRY("oc_spi_controller", sizeof(struct spi_oc_spi_controller_param_s), spi_oc_spi_controller_param_binder),
-	{ 0 }
-};
-#endif
-
-const struct driver_s   spi_oc_spi_controller_drv =
-{
-    .class      = device_class_spi,
-#ifdef CONFIG_DRIVER_ENUM_FDT
-    .id_table   = spi_oc_spi_controller_ids,
-#endif
-    .f_init     = spi_oc_spi_controller_init,
-    .f_cleanup  = spi_oc_spi_controller_cleanup,
-    .f_irq      = spi_oc_spi_controller_irq,
-	.f.spi = {
-		.f_request = spi_oc_spi_controller_request,
-		.f_set_baudrate = spi_oc_spi_controller_set_baudrate,
-		.f_set_data_format = spi_oc_spi_controller_set_data_format,
-	},
-};
-
-#ifdef CONFIG_DRIVER_ENUM_FDT
-REGISTER_DRIVER(spi_oc_spi_controller_drv);
-#endif
+DRIVER_REGISTER(spi_oc_spi_controller_drv,
+                DEV_ENUM_FDTNAME_ENTRY("oc_spi_controller", sizeof(struct spi_oc_spi_controller_param_s), spi_oc_spi_controller_param_binder));
 
 DEV_INIT(spi_oc_spi_controller_init)
 {

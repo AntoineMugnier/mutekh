@@ -259,15 +259,12 @@ struct device_accessor_s;
 */
 typedef DEV_USE(dev_use_t);
 
-
+extern DEV_USE(dev_use_generic);
 
 /** device driver object structure */
 
 struct driver_s
 {
-  /** device identifier table for detection (optional) */
-  const struct dev_enum_ident_s	*id_table;
-
   /** driver description string */
   const char *desc;
 
@@ -279,18 +276,47 @@ struct driver_s
   const void	*classes[];
 };
 
+#define DRIVER_DECLARE(symbol_, pretty_, prefix_, ...) \
+  const struct driver_s symbol_ = {                    \
+    .desc = pretty_,                                   \
+    .f_init = prefix_ ## _init,                        \
+    .f_cleanup = prefix_ ## _cleanup,                  \
+    .f_use = prefix_ ## _use,                          \
+    .classes = { __VA_ARGS__, 0 },                     \
+  }
+
+struct driver_registry_s
+{
+  const struct driver_s *driver;  
+  const struct dev_enum_ident_s	*id_table;
+  size_t id_count;
+};
+
 /**
-   Registers a driver (struct driver_s) in the dev_drivers_table
+   Registers a driver (struct driver_s) in the driver_registry_table
    table.
  */
 #if defined(CONFIG_ARCH_EMU_DARWIN)
-#define REGISTER_DRIVER(name) \
-	const __attribute__((section ("__DATA, __drivers."#name))) \
-	const struct driver_s *name##_drv_ptr = &name
+# define DRIVER_REGISTRY_SECTION(x) __attribute__((section ("__DATA, __drivers")))
 #else
-#define REGISTER_DRIVER(name) \
-	const __attribute__((section (".drivers."#name))) \
-	const struct driver_s *name##_drv_ptr = &name
+# define DRIVER_REGISTRY_SECTION(x) __attribute__((section (".drivers."#x)))
+#endif
+
+#if defined(CONFIG_DEVICE_ENUM)
+# define DRIVER_REGISTER(driver_, ...)                             \
+  DRIVER_REGISTRY_SECTION(driver_)                                 \
+  const struct driver_registry_s driver_##_driver_registry = {     \
+    .driver = &driver_,                                            \
+    .id_count = ARRAY_SIZE(((const struct dev_enum_ident_s[]){     \
+      __VA_ARGS__                                                  \
+    })),                                                           \
+    .id_table = (const struct dev_enum_ident_s[]){                 \
+      __VA_ARGS__                                                  \
+    },                                                             \
+  }
+#else
+# define DRIVER_REGISTER(driver_, ...)                             \
+  __attribute__((used)) const struct driver_s driver_
 #endif
 
 /**

@@ -462,27 +462,14 @@ static DEV_TIMER_CONFIG(soclib_timer_config)
 
 /************************************************************************/
 
-static const struct dev_enum_ident_s  soclib_timer_ids[] =
-{
-  DEV_ENUM_FDTNAME_ENTRY("soclib:timer"),
-  { 0 }
-};
-
 static DEV_INIT(soclib_timer_init);
 static DEV_CLEANUP(soclib_timer_cleanup);
 
-const struct driver_s  soclib_timer_drv =
-{
-  .desc           = "Soclib VciTimer",
-  .id_table       = soclib_timer_ids,
-  .f_init         = soclib_timer_init,
-  .f_cleanup      = soclib_timer_cleanup,
-  .f_use          = soclib_timer_use,
-  .classes        = {
-    DRIVER_TIMER_METHODS(soclib_timer),
-    0
-  }
-};
+DRIVER_DECLARE(soclib_timer_drv, "Soclib Timer", soclib_timer,
+               DRIVER_TIMER_METHODS(soclib_timer));
+
+DRIVER_REGISTER(soclib_timer_drv,
+                DEV_ENUM_FDTNAME_ENTRY("soclib:timer"));
 
 static DEV_INIT(soclib_timer_init)
 {
@@ -571,6 +558,4 @@ static DEV_CLEANUP(soclib_timer_cleanup)
 
   mem_free(pv);
 }
-
-REGISTER_DRIVER(soclib_timer_drv);
 

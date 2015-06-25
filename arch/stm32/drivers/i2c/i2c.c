@@ -625,19 +625,12 @@ DEV_I2C_REQUEST(stm32_i2c_request)
 static DEV_INIT(stm32_i2c_init);
 static DEV_CLEANUP(stm32_i2c_cleanup);
 
-const struct driver_s stm32_i2c_ctrl_drv =
-{
-  .desc      = "STM32 I2C Master",
-  .f_init    = &stm32_i2c_init,
-  .f_cleanup = &stm32_i2c_cleanup,
-  .classes   =
-    {
-      DRIVER_I2C_METHODS(stm32_i2c),
-      0,
-    },
-};
+#define stm32_i2c_use dev_use_generic
 
-REGISTER_DRIVER(stm32_i2c_ctrl_drv);
+DRIVER_DECLARE(stm32_i2c_ctrl_drv, "STM32 I2C Master", stm32_i2c,
+               DRIVER_I2C_METHODS(stm32_i2c));
+
+DRIVER_REGISTER(stm32_i2c_ctrl_drv);
 
 static DEV_INIT(stm32_i2c_init)
 {

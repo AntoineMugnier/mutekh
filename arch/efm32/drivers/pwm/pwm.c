@@ -302,19 +302,10 @@ static DEV_INIT(efm32_pwm_init);
 static DEV_CLEANUP(efm32_pwm_cleanup);
 static DEV_USE(efm32_pwm_use);
 
-const struct driver_s efm32_pwm_drv =
-{
-  .desc      = "EFM32 PWM",
-  .f_init    = efm32_pwm_init,
-  .f_cleanup = efm32_pwm_cleanup,
-  .f_use     = efm32_pwm_use,
-  .classes   = {
-    DRIVER_PWM_METHODS(efm32_pwm),
-    0,
-  },
-};
+DRIVER_DECLARE(efm32_pwm_drv, "EFM32 PWM", efm32_pwm,
+               DRIVER_PWM_METHODS(efm32_pwm));
 
-REGISTER_DRIVER(efm32_pwm_drv);
+DRIVER_REGISTER(efm32_pwm_drv);
 
 static DEV_INIT(efm32_pwm_init)
 {

@@ -22,9 +22,9 @@ SECTIONS
                         KEEP(*(.devices .devices.*))
                         dev_devices_table_end = .;
 
-			dev_drivers_table = .;
+			driver_registry_table = .;
 			KEEP(*(.drivers .drivers.*))
-			dev_drivers_table_end = .;
+			driver_registry_table_end = .;
 #endif
 #ifdef CONFIG_MUTEK_SHELL
                         shell_cmd_table = .;

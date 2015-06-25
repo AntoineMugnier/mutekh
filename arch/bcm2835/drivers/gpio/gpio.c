@@ -544,24 +544,19 @@ static DEV_IRQ_EP_PROCESS(bcm2835_gpio_source_process)
 static DEV_INIT(bcm2835_gpio_init);
 static DEV_CLEANUP(bcm2835_gpio_cleanup);
 
-const struct driver_s bcm2835_gpio_drv =
-  {
-    .desc       = "BCM2835 GPIO",
-    .f_init     = bcm2835_gpio_init,
-    .f_cleanup  = bcm2835_gpio_cleanup,
-    .classes    = {
-      DRIVER_GPIO_METHODS(bcm2835_gpio),
+#define bcm2835_gpio_use dev_use_generic
+
+DRIVER_DECLARE(bcm2835_gpio_drv, "BCM2835 GPIO", bcm2835_gpio
+               , DRIVER_GPIO_METHODS(bcm2835_gpio)
 #ifdef CONFIG_DEVICE_IOMUX
-      DRIVER_IOMUX_METHODS(bcm2835_gpio_iomux),
+               , DRIVER_IOMUX_METHODS(bcm2835_gpio_iomux)
 #endif
 #ifdef CONFIG_DRIVER_BCM2835_GPIO_ICU
-      DRIVER_ICU_METHODS(bcm2835_gpio_icu),
+               , DRIVER_ICU_METHODS(bcm2835_gpio_icu)
 #endif
-      0,
-    },
-  };
+               );
 
-REGISTER_DRIVER(bcm2835_gpio_drv);
+DRIVER_REGISTER(bcm2835_gpio_drv);
 
 static DEV_INIT(bcm2835_gpio_init)
 {

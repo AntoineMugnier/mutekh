@@ -105,24 +105,13 @@ int32_t soclib_fdaccess_rq(struct device_s *dev,
   return rq->retval;
 }
 
-static const struct dev_enum_ident_s	soclib_fdaccess_ids[] =
-{
-  DEV_ENUM_FDTNAME_ENTRY("soclib:fdaccess", 0, 0),
-  { 0 }
-};
+#define soclib_fdaccess_use dev_use_generic
 
-const struct driver_s	soclib_fdaccess_drv =
-{
-  .class		= device_class_none,
-  .id_table		= soclib_fdaccess_ids,
-  .f_init		= soclib_fdaccess_init,
-  .f_cleanup		= soclib_fdaccess_cleanup,
-#ifdef CONFIG_HEXO_IRQ
-  .f_irq		= soclib_fdaccess_irq,
-#endif
-};
+DRIVER_DECLARE(soclib_fdaccess_drv, "SoCLib FDAccess", soclib_fdaccess,
+               DRIVER_MEM_METHODS(soclib_fdaccess));
 
-REGISTER_DRIVER(soclib_fdaccess_drv);
+DRIVER_REGISTER(soclib_fdaccess_drv,
+                DEV_ENUM_FDTNAME_ENTRY("soclib:fdaccess", 0, 0));
 
 #ifdef CONFIG_HEXO_IRQ
 DEV_IRQ(soclib_fdaccess_irq)

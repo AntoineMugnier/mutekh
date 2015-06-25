@@ -208,25 +208,13 @@ static DEV_IRQ_EP_PROCESS(gaisler_apbuart_irq)
 
 #endif
 
-static const struct dev_enum_ident_s	gaisler_apbuart_ids[] =
-{
-	DEV_ENUM_GAISLER_ENTRY(0x1, 0x00c),
-	{ 0 }
-};
+#define gaisler_apbuart_use dev_use_generic
 
-const struct driver_s	gaisler_apbuart_drv =
-{
-  .desc                 = "Gaisler APB UART",
-  .id_table		= gaisler_apbuart_ids,
-  .f_init		= gaisler_apbuart_init,
-  .f_cleanup		= gaisler_apbuart_cleanup,
-  .classes              = {
-    DRIVER_CHAR_METHODS(gaisler_apbuart),
-    0,
-  },
-};
+DRIVER_DECLARE(gaisler_apbuart_drv, "Gaisler APB UART", gaisler_apbuart,
+               DRIVER_CHAR_METHODS(gaisler_apbuart));
 
-REGISTER_DRIVER(gaisler_apbuart_drv);
+DRIVER_REGISTER(gaisler_apbuart_drv,
+                DEV_ENUM_GAISLER_ENTRY(0x1, 0x00c));
 
 DEV_INIT(gaisler_apbuart_init)
 {

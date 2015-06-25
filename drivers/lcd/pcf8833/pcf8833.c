@@ -266,16 +266,12 @@ DEV_LCD_GETINFO(pcf8833_getinfo)
  * device open operation
  */
 
-const struct driver_s	pcf8833_drv =
-{
-	.class		= device_class_lcd,
-	.f_init		= pcf8833_init,
-	.f_cleanup		= pcf8833_cleanup,
-	.f.lcd = {
-		.f_request      = pcf8833_request,
-		.f_getinfo      = pcf8833_getinfo,
-	}
-};
+#define pcf8833_use dev_use_generic
+
+DRIVER_DECLARE(pcf8833_drv, "PCF8833", pcf8833,
+               DRIVER_LCD_METHODS(pcf8833));
+
+DRIVER_REGISTER(pcf8833_drv);
 
 DEV_INIT(pcf8833_init)
 {

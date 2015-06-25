@@ -233,17 +233,12 @@ static DEV_CLOCK_GET_ENDPOINT(stm32_rcc_get_endpoint)
 static DEV_INIT(stm32_rcc_init);
 static DEV_CLEANUP(stm32_rcc_cleanup);
 
-const struct driver_s stm32_rcc_drv =
-  {
-    .desc      = "STM32 RCC",
-    .f_init    = stm32_rcc_init,
-    .f_cleanup = stm32_rcc_cleanup,
-    .classes   =
-      {
-        DRIVER_CLOCK_METHODS(stm32_rcc),
-        0,
-      },
-  };
+#define stm32_rcc_use dev_use_generic
+
+DRIVER_DECLARE(stm32_rcc_drv, "STM32 RCC", stm32_rcc,
+               DRIVER_CLOCK_METHODS(stm32_rcc));
+
+DRIVER_REGISTER(stm32_rcc_drv);
 
 static DEV_INIT(stm32_rcc_init)
 {

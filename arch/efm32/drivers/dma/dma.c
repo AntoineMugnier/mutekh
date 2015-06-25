@@ -378,6 +378,13 @@ static DEV_IRQ_EP_PROCESS(efm32_dma_irq)
 static DEV_INIT(efm32_dma_init);
 static DEV_CLEANUP(efm32_dma_cleanup);
 
+#define efm32_dma_use dev_use_generic
+
+DRIVER_DECLARE(efm32_dma_drv, "EFM32 DMA", efm32_dma,
+               DRIVER_DMA_METHODS(efm32_dma));
+
+DRIVER_REGISTER(efm32_dma_drv);
+
 const struct driver_s	efm32_dma_drv =
 {
   .desc       = "EFM32 DMA driver",
@@ -388,8 +395,6 @@ const struct driver_s	efm32_dma_drv =
     0,
   },
 };
-
-REGISTER_DRIVER(efm32_dma_drv);
 
 static DEV_INIT(efm32_dma_init)
 {

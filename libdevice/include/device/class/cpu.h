@@ -70,17 +70,17 @@ DRIVER_CLASS_TYPES(cpu,
 
 #ifdef CONFIG_ARCH_SMP
 # define DRIVER_CPU_METHODS(prefix)                               \
-  &(const struct driver_cpu_s){                                   \
+  (&(const struct driver_cpu_s){                                  \
     .class_ = DRIVER_CLASS_CPU,                                   \
     .f_reg_init = prefix ## _reg_init,                            \
     .f_get_node = prefix ## _get_node,                            \
-  }
+  })
 #else
 # define DRIVER_CPU_METHODS(prefix)                               \
-  &(const struct driver_cpu_s){                                   \
+  (&(const struct driver_cpu_s){                                  \
     .class_ = DRIVER_CLASS_CPU,                                   \
     .f_reg_init = prefix ## _reg_init,                            \
-  }
+  })
 #endif
 
 #endif

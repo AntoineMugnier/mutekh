@@ -330,19 +330,10 @@ static DEV_INIT(stm32_pwm_init);
 static DEV_CLEANUP(stm32_pwm_cleanup);
 static DEV_USE(stm32_pwm_use);
 
-const struct driver_s stm32_pwm_drv =
-{
-  .desc      = "STM32 PWM",
-  .f_init    = stm32_pwm_init,
-  .f_cleanup = stm32_pwm_cleanup,
-  .f_use     = stm32_pwm_use,
-  .classes   = {
-    DRIVER_PWM_METHODS(stm32_pwm),
-    0,
-  },
-};
+DRIVER_DECLARE(stm32_pwm_drv, "STM32 PWM", stm32_pwm,
+               DRIVER_PWM_METHODS(stm32_pwm));
 
-REGISTER_DRIVER(stm32_pwm_drv);
+DRIVER_REGISTER(stm32_pwm_drv);
 
 static
 DEV_INIT(stm32_pwm_init)

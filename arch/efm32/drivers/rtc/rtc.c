@@ -435,17 +435,10 @@ static DEV_TIMER_CONFIG(efm32_rtc_config)
 static DEV_INIT(efm32_rtc_init);
 static DEV_CLEANUP(efm32_rtc_cleanup);
 
-const struct driver_s efm32_rtc_drv =
-{
-  .desc           = "EFM32 RTC",
-  .f_init         = efm32_rtc_init,
-  .f_cleanup      = efm32_rtc_cleanup,
-  .f_use          = efm32_rtc_use,
-  .classes        = {
-    DRIVER_TIMER_METHODS(efm32_rtc),
-    0,
-  },
-};
+DRIVER_DECLARE(efm32_rtc_drv, "EFM32 RTC", efm32_rtc,
+               DRIVER_TIMER_METHODS(efm32_rtc));
+
+DRIVER_REGISTER(efm32_rtc_drv);
 
 static DEV_INIT(efm32_rtc_init)
 {
@@ -563,6 +556,4 @@ static DEV_CLEANUP(efm32_rtc_cleanup)
 
   mem_free(pv);
 }
-
-REGISTER_DRIVER(efm32_rtc_drv);
 

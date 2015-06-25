@@ -338,16 +338,12 @@ static DEV_IRQ_EP_PROCESS(mtch6102_irq)
 static DEV_INIT(mtch6102_init);
 static DEV_CLEANUP(mtch6102_cleanup);
 
-const struct driver_s mtch6102_drv =
-{
-    .desc = "MTCH6102 Touchpad",
-    .f_init = mtch6102_init,
-    .f_cleanup = mtch6102_cleanup,
-    .classes = {
-      DRIVER_VALIO_METHODS(mtch6102),
-      0,
-    },
-};
+#define mtch6102_use dev_use_generic
+
+DRIVER_DECLARE(mtch6102_drv, "MTCH6102 Touchpad", mtch6102,
+               DRIVER_VALIO_METHODS(mtch6102));
+
+DRIVER_REGISTER(mtch6102_drv);
 
 static DEV_INIT(mtch6102_init)
 {

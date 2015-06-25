@@ -251,22 +251,9 @@ static DEV_CPU_GET_NODE(sparc_cpu_get_node)
 static DEV_CLEANUP(sparc_cleanup);
 static DEV_INIT(sparc_init);
 
-static const struct dev_enum_ident_s  sparc_ids[] =
-{
-#ifdef CONFIG_LIBFDT
-  DEV_ENUM_FDTNAME_ENTRY("cpu:sparc"),
-#endif
-#ifdef CONFIG_ARCH_GAISLER
-  DEV_ENUM_GAISLER_ENTRY(0x1, 0x003), /* leon 3 */
-  DEV_ENUM_GAISLER_ENTRY(0x1, 0x048), /* leon 4 */
-#endif
-  { 0 }
-};
-
 const struct driver_s  sparc_drv =
 {
   .desc           = "Sparc processor",
-  .id_table       = sparc_ids,
 
   .f_init         = sparc_init,
   .f_cleanup      = sparc_cleanup,
@@ -280,7 +267,15 @@ const struct driver_s  sparc_drv =
   }
 };
 
-REGISTER_DRIVER(sparc_drv);
+DRIVER_REGISTER(sparc_drv
+#ifdef CONFIG_LIBFDT
+                ,DEV_ENUM_FDTNAME_ENTRY("cpu:sparc")
+#endif
+#ifdef CONFIG_ARCH_GAISLER
+                ,DEV_ENUM_GAISLER_ENTRY(0x1, 0x003) /* leon 3 */
+                ,DEV_ENUM_GAISLER_ENTRY(0x1, 0x048) /* leon 4 */
+#endif
+                );
 
 static DEV_INIT(sparc_init)
 {
