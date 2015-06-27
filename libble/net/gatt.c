@@ -36,6 +36,7 @@
 #include <ble/gatt/client.h>
 
 #define dprintk(...) do{}while(0)
+//#define dprintk printk
 
 static enum ble_att_error_e gatt_read_by_group_type(
   struct ble_gatt_s *gatt,
@@ -75,6 +76,12 @@ static enum ble_att_error_e gatt_read_by_type(
   struct buffer_s *rsp,
   uint16_t start, uint16_t end,
   const struct ble_uuid_s *type);
+
+static enum ble_att_error_e gatt_find_by_type_value(
+  struct ble_gatt_s *gatt,
+  struct buffer_s *rsp,
+  uint16_t start, uint16_t end, uint16_t type,
+  const void *value, size_t size);
 
 static
 void ble_gatt_destroyed(struct net_layer_s *layer)
@@ -157,6 +164,17 @@ static void gatt_command_handle(struct ble_gatt_s *gatt, struct net_task_s *task
 
     goto send;
 
+  case BLE_ATT_FIND_BY_TYPE_VALUE_RQT:
+    handle = endian_le16_na_load(data + 1);
+    err = gatt_find_by_type_value(gatt, rsp, handle,
+                                  endian_le16_na_load(data + 3),
+                                  endian_le16_na_load(data + 5),
+                                  data + 7, size - 7);
+    if (err)
+      goto error;
+
+    goto send;
+
   case BLE_ATT_READ_RQT:
     if (size < 3) {
       err = BLE_ATT_ERR_INVALID_PDU;
@@ -231,7 +249,7 @@ static void gatt_command_handle(struct ble_gatt_s *gatt, struct net_task_s *task
 
   case BLE_ATT_READ_BY_TYPE_RQT:
     if (size == 21)
-      memcpy(&type, data + 5, 16);
+      memrevcpy(&type, data + 5, 16);
     else if (size == 7)
       ble_uuid_bluetooth_based(&type, endian_le16_na_load(data + 5));
     else {
@@ -337,9 +355,22 @@ void ble_gatt_att_value_changed(struct ble_gatt_client_s *client,
   buffer_refdec(pkt);
 }
 
+static bool_t ble_gatt_context_updated(
+    struct net_layer_s *layer,
+    const struct net_layer_context_s *parent_context)
+{
+  struct ble_gatt_s *gatt = ble_gatt_s_from_layer(layer);
+
+  gatt->layer.context = *parent_context;
+  gatt->client.encrypted = parent_context->addr.secure;
+
+  return 1;
+}
+
 static const struct net_layer_handler_s gatt_handler = {
   .destroyed = ble_gatt_destroyed,
   .task_handle = ble_gatt_task_handle,
+  .context_updated = ble_gatt_context_updated,
   .type = BLE_LAYER_TYPE_ATT,
 };
 
@@ -552,6 +583,57 @@ static enum ble_att_error_e gatt_find_information(
   }
 
   return err;
+}
+
+static enum ble_att_error_e gatt_find_by_type_value(
+  struct ble_gatt_s *gatt,
+  struct buffer_s *rsp,
+  uint16_t start, uint16_t end, uint16_t type,
+  const void *value, size_t size)
+{
+  enum ble_att_error_e err;
+  const struct ble_uuid_s *tmp;
+  int16_t available = gatt->server_mtu - 1;
+  uint8_t *tmp_data = alloca(size + 1);
+
+  rsp->data[rsp->begin] = BLE_ATT_FIND_BY_TYPE_VALUE_RSP;
+  rsp->end = rsp->begin + 1;
+
+  assert(buffer_available(rsp) >= available);
+
+  for (err = ble_gatt_client_seek(&gatt->client, start);
+       err == 0 && available >= 4 && ble_gatt_client_tell(&gatt->client) <= end;
+       err = ble_gatt_client_next(&gatt->client)) {
+    size_t rsize = size + 1;
+
+    err = ble_gatt_client_type_get(&gatt->client, &tmp);
+    if (err)
+      break;
+
+    if (!ble_uuid_is_uuid16(tmp) || ble_uuid_uuid16_get(tmp) != type)
+      continue;
+
+    err = ble_gatt_client_read(&gatt->client, 0, tmp_data, &rsize);
+    if (err || size != rsize || memcmp(tmp_data, value, size))
+      continue;
+
+    dprintk("%s at %d -> %d, %d available\n", __FUNCTION__,
+           ble_gatt_client_tell(&gatt->client),
+            gatt->client.cursor.service->start_handle
+            + gatt->client.cursor.service->handle_count - 1, available);
+
+    endian_le16_na_store(rsp->data + rsp->end, ble_gatt_client_tell(&gatt->client));
+    endian_le16_na_store(rsp->data + rsp->end + 2,
+                         gatt->client.cursor.service->start_handle
+                         + gatt->client.cursor.service->handle_count - 1);
+    rsp->end += 4;
+    available -= 4;
+  }
+
+  if (rsp->end == rsp->begin + 1)
+    return BLE_ATT_ERR_ATTRIBUTE_NOT_FOUND;
+  else
+    return 0;
 }
 
 static enum ble_att_error_e gatt_read_by_type(
