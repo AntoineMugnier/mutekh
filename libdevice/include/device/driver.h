@@ -210,9 +210,12 @@ typedef DEV_INIT(dev_init_t);
 
 
 
-
 /** Common device class cleanup() function template. */
+#if defined(CONFIG_DEVICE_DRIVER_CLEANUP)
 #define DEV_CLEANUP(n)	void    (n) (struct device_s *dev)
+#else
+#define DEV_CLEANUP(n)	__attribute__((unused)) void    (n) (struct device_s *dev)
+#endif
 
 /**
    @This is device cleanup() function type. Free all ressources
@@ -271,7 +274,9 @@ struct driver_s
 #endif
 
   dev_init_t	*f_init;
+#if defined(CONFIG_DEVICE_DRIVER_CLEANUP)
   dev_cleanup_t	*f_cleanup;
+#endif
   dev_use_t     *f_use;
 
   /** NULL terminated array of pointers to driver classes structs */
@@ -284,11 +289,17 @@ struct driver_s
 # define DRIVER_DECLARE_DESC(x)
 #endif
 
+#if defined(CONFIG_DEVICE_DRIVER_CLEANUP)
+# define DRIVER_DECLARE_CLEANUP(x) .f_cleanup = (x),
+#else
+# define DRIVER_DECLARE_CLEANUP(x)
+#endif
+
 #define DRIVER_DECLARE(symbol_, pretty_, prefix_, ...) \
   const struct driver_s symbol_ = {                    \
     DRIVER_DECLARE_DESC(pretty_)                       \
     .f_init = prefix_ ## _init,                        \
-    .f_cleanup = prefix_ ## _cleanup,                  \
+    DRIVER_DECLARE_CLEANUP(prefix_ ## _cleanup)        \
     .f_use = prefix_ ## _use,                          \
     .classes = { __VA_ARGS__, 0 },                     \
   }

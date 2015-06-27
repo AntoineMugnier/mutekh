@@ -265,6 +265,7 @@ struct device_s *device_alloc(size_t resources);
     been allocated using the @ref device_alloc function. The device
     must not be attached or have attached children and its reference
     count must be zero when this function is called. */
+config_depend(CONFIG_DEVICE_DRIVER_CLEANUP)
 void device_cleanup(struct device_s *dev);
 
 /** @This reduces resource slots count to number of used slots
