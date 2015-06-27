@@ -38,15 +38,6 @@ void ble_gap_destroyed(struct net_layer_s *layer)
   gap->handler->destroyed(gap);
 }
 
-static void gap_cu_later(struct ble_gap_s *gap)
-{
-  struct net_task_s *task = net_scheduler_task_alloc(gap->layer.scheduler);
-
-  net_task_timeout_push(task, &gap->layer,
-                        net_scheduler_time_get(gap->layer.scheduler) + 32768 * 10,
-                        0);
-}
-
 static
 void ble_gap_task_handle(struct net_layer_s *layer,
                          struct net_task_header_s *header)
@@ -66,21 +57,6 @@ void ble_gap_task_handle(struct net_layer_s *layer,
     break;
 
   case NET_TASK_TIMEOUT: {
-    struct ble_signalling_conn_params_update_task_s *upd = malloc(sizeof(*upd));
-    dev_timer_value_t now = net_scheduler_time_get(gap->layer.scheduler);
-
-    upd->interval_min = (now & 0x1f) + 16;
-    upd->interval_max = upd->interval_min + 16;
-    upd->slave_latency = __MIN((now / 2) & 0x3f,
-                               1600 / (upd->interval_max + 1));
-    upd->timeout = 500;
-
-    upd->task.header.destroy_func = (void*)memory_allocator_push;
-    upd->task.header.allocator_data = NULL;
-
-    net_task_query_push(&upd->task, gap->sig, &gap->layer, BLE_SIG_CONN_PARAMS_UPDATE);
-
-    gap_cu_later(gap);
     break;
   }
   }
@@ -88,9 +64,33 @@ void ble_gap_task_handle(struct net_layer_s *layer,
   net_task_cleanup(task);
 }
 
+static bool_t ble_gap_context_updated(
+    struct net_layer_s *layer,
+    const struct net_layer_context_s *parent_context)
+{
+  struct ble_gap_s *gap = ble_gap_s_from_layer(layer);
+
+  if (parent_context->addr.secure) {
+    struct ble_signalling_conn_params_update_task_s *upd = malloc(sizeof(*upd));
+
+    upd->interval_min = 8;
+    upd->interval_max = 12;
+    upd->slave_latency = 100;
+    upd->timeout = 500;
+
+    upd->task.header.destroy_func = (void*)memory_allocator_push;
+    upd->task.header.allocator_data = NULL;
+
+    net_task_query_push(&upd->task, gap->sig, &gap->layer, BLE_SIG_CONN_PARAMS_UPDATE);
+  }
+
+  return 1;
+}
+
 static const struct net_layer_handler_s gap_handler = {
   .destroyed = ble_gap_destroyed,
   .task_handle = ble_gap_task_handle,
+  .context_updated = ble_gap_context_updated,
   .type = BLE_LAYER_TYPE_GAP,
   .use_timer = 1,
 };
@@ -107,8 +107,6 @@ error_t ble_gap_init(
 
   gap->sig = net_layer_refinc(sig);
   gap->handler = handler;
-
-  gap_cu_later(gap);
 
   return 0;
 }
