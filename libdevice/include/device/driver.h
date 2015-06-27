@@ -265,8 +265,10 @@ extern DEV_USE(dev_use_generic);
 
 struct driver_s
 {
+#if defined(CONFIG_DEVICE_DRIVER_DESC)
   /** driver description string */
   const char *desc;
+#endif
 
   dev_init_t	*f_init;
   dev_cleanup_t	*f_cleanup;
@@ -276,9 +278,15 @@ struct driver_s
   const void	*classes[];
 };
 
+#if defined(CONFIG_DEVICE_DRIVER_DESC)
+# define DRIVER_DECLARE_DESC(x) .desc = (x),
+#else
+# define DRIVER_DECLARE_DESC(x)
+#endif
+
 #define DRIVER_DECLARE(symbol_, pretty_, prefix_, ...) \
   const struct driver_s symbol_ = {                    \
-    .desc = pretty_,                                   \
+    DRIVER_DECLARE_DESC(pretty_)                       \
     .f_init = prefix_ ## _init,                        \
     .f_cleanup = prefix_ ## _cleanup,                  \
     .f_use = prefix_ ## _use,                          \

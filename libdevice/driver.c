@@ -205,8 +205,16 @@ error_t device_init_driver(struct device_s *dev)
         }
   });
 
-  printk("device: initialization of device %p `%s' using driver %p `%s'\n",
-         dev, dev->node.name, drv, drv->desc);
+  printk("device: initialization of device %p `%s' using driver %p"
+#if defined(CONFIG_DEVICE_DRIVER_DESC)
+         " `%s'"
+#endif
+         "\n",
+         dev, dev->node.name, drv
+#if defined(CONFIG_DEVICE_DRIVER_DESC)
+         , drv->desc
+#endif
+         );
 
   /* device init */
   error_t err = drv->f_init(dev);
