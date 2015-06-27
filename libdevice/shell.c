@@ -297,7 +297,11 @@ dev_shell_dump_device(struct termui_console_s *con, struct device_s *dev, uint_f
     {
       for (i = 0; i < indent + 1; i++)
         termui_con_printf(con, "  ");
+#if defined(CONFIG_DEVICE_DRIVER_DESC)
       termui_con_printf(con, "Driver: %p `%s'\n", dev->drv, dev->drv->desc);
+#else
+      termui_con_printf(con, "Driver: %p\n", dev->drv);
+#endif
       for (i = 0; i < indent + 2; i++)
         termui_con_printf(con, "  ");
       termui_con_printf(con, "Classes: ");
@@ -511,8 +515,12 @@ static TERMUI_CON_COMMAND_PROTOTYPE(dev_shell_drivers)
       if (!d)
         continue;
 
-      termui_con_printf(con, "\n  Driver %p `%s'\n"
-                        "    Classes: ", d, d->desc);
+#if defined(CONFIG_DEVICE_DRIVER_DESC)
+      termui_con_printf(con, "\n  Driver %p `%s'", dev->drv, dev->drv->desc);
+#else
+      termui_con_printf(con, "\n  Driver %p", dev->drv);
+#endif
+      termui_con_printf(con, "\n    Classes: ");
       dev_shell_dump_drv_class(con, d);
       termui_con_printf(con, "\n");
 
