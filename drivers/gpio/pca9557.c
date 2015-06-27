@@ -261,17 +261,10 @@ static DEV_CLEANUP(pca9557_cleanup);
 #define pca9557_set_mode   (dev_gpio_set_mode_t*)dev_driver_notsup_fcn
 #define pca9557_set_output (dev_gpio_set_output_t*)dev_driver_notsup_fcn
 #define pca9557_get_input  (dev_gpio_get_input_t*)dev_driver_notsup_fcn
+#define pca9557_use dev_use_generic
 
-struct driver_s pca9557_drv =
-{
-    .desc       = "pca9557",
-    .f_init     = pca9557_init,
-    .f_cleanup  = pca9557_cleanup,
-    .classes    = {
-        DRIVER_GPIO_METHODS(pca9557),
-        0,
-    },
-};
+DRIVER_DECLARE(pca9557_drv, "pca9557", pca9557,
+               DRIVER_GPIO_METHODS(pca9557));
 
 static DEV_INIT(pca9557_init)
 {

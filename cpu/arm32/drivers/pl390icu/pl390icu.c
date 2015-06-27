@@ -216,19 +216,10 @@ static DEV_IRQ_EP_PROCESS(pl390_icu_source_process)
 
 static DEV_INIT(pl390_icu_init);
 static DEV_CLEANUP(pl390_icu_cleanup);
+#define pl390_icu_use dev_use_generic
 
-const struct driver_s  pl390_icu_drv =
-{
-  .desc           = "PL390 ARM generic interrupts controller",
-
-  .f_init         = pl390_icu_init,
-  .f_cleanup      = pl390_icu_cleanup,
-
-  .classes        = {
-    DRIVER_ICU_METHODS(pl390_icu_icu),
-    0
-  }
-};
+DRIVER_DECLARE(pl390_icu_drv, "PL390 ARM generic interrupts controller", pl390_icu,
+               DRIVER_ICU_METHODS(pl390_icu_icu));
 
 DRIVER_REGISTER(pl390_icu_drv,
                 DEV_ENUM_FDTNAME_ENTRY("pl390"));
