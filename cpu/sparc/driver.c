@@ -250,22 +250,13 @@ static DEV_CPU_GET_NODE(sparc_cpu_get_node)
 
 static DEV_CLEANUP(sparc_cleanup);
 static DEV_INIT(sparc_init);
+#define sparc_use dev_use_generic
 
-const struct driver_s  sparc_drv =
-{
-  .desc           = "Sparc processor",
-
-  .f_init         = sparc_init,
-  .f_cleanup      = sparc_cleanup,
-
-  .classes        = {
-    DRIVER_CPU_METHODS(sparc_cpu),
+DRIVER_DECLARE(sparc_drv, "Sparc processor", sparc,
 #ifdef CONFIG_DEVICE_IRQ
-    DRIVER_ICU_METHODS(sparc_icu),
+               DRIVER_ICU_METHODS(sparc_icu),
 #endif
-    0
-  }
-};
+               DRIVER_CPU_METHODS(sparc_cpu));
 
 DRIVER_REGISTER(sparc_drv
 #ifdef CONFIG_LIBFDT

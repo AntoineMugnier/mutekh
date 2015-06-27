@@ -100,19 +100,12 @@ static DEV_CPU_GET_NODE(x86_emu_cpu_get_node)
 
 static DEV_CLEANUP(x86_emu_cleanup);
 static DEV_INIT(x86_emu_init);
+#define x86_emu_use dev_use_generic
 
-const struct driver_s emu_cpu_drv =
-{
-  .desc           = "x86 32-bits UNIX process cpu",
+DRIVER_DECLARE(emu_cpu_drv, "x86 32-bits UNIX process cpu", x86_emu,
+               DRIVER_CPU_METHODS(x86_emu_cpu));
 
-  .f_init         = x86_emu_init,
-  .f_cleanup      = x86_emu_cleanup,
-
-  .classes        = {
-    DRIVER_CPU_METHODS(x86_emu_cpu),
-    0,
-  },
-};
+DRIVER_REGISTER(emu_cpu_drv);
 
 static DEV_INIT(x86_emu_init)
 {

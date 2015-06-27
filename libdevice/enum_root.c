@@ -36,16 +36,10 @@ static DEV_CLEANUP(device_enum_root_cleanup)
 {
 }
 
-const struct driver_s   device_enum_root_drv =
-{
-  .desc         = "MutekH root enumerator",
-  .f_init       = &device_enum_root_init,
-  .f_cleanup    = &device_enum_root_cleanup,
-  .classes      = {
-    DRIVER_ENUM_METHODS(device_enum_root),
-    0,
-  }
-};
+#define device_enum_root_use dev_use_generic
+
+DRIVER_DECLARE(device_enum_root_drv, "MutekH root enumerator", device_enum_root,
+               DRIVER_ENUM_METHODS(device_enum_root));
 
 static DEV_INIT(device_enum_root_init)
 {
