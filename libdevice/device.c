@@ -137,6 +137,7 @@ struct device_s *device_alloc(size_t resources)
   return dev;
 }
 
+#if defined(CONFIG_DEVICE_DRIVER_CLEANUP)
 void device_cleanup(struct device_s *dev)
 {
 #ifdef CONFIG_DEVICE_TREE
@@ -174,6 +175,7 @@ void device_cleanup(struct device_s *dev)
   if (dev->node.flags & DEVICE_FLAG_ALLOCATED)
     mem_free(dev);
 }
+#endif
 
 static void device_res_shrink(struct dev_resource_table_s **tbl_,
                               size_t header)
