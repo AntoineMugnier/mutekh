@@ -24,7 +24,7 @@
 /**
    @file
    @module {Hexo}
-   @short nRF51 peripheral access
+   @short nRF51/nRF52 peripheral access
 
    Inside a device register map, there are tasks, events, shorts,
    interrupt handling, and then configuration registers.
