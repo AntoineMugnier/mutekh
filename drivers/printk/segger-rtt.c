@@ -23,6 +23,7 @@
 #include <hexo/iospace.h>
 #include <stdlib.h>
 #include <string.h>
+#include <assert.h>
 
 #include "segger-rtt.h"
 
@@ -36,7 +37,7 @@ uint32_t rtt_ringbuffer_write(
   wptr = cpu_mem_read_32((uintptr_t)&ring->write_ptr);
   rptr = cpu_mem_read_32((uintptr_t)&ring->read_ptr);
 
-  if (wptr <= rptr)
+  if (wptr < rptr)
     available = rptr - wptr - 1;
   else
     available = ring->buffer_size - 1 - wptr + rptr;
@@ -59,6 +60,8 @@ uint32_t rtt_ringbuffer_write(
     if (wptr == ring->buffer_size)
       wptr = 0;
   }
+
+  assert(wptr < ring->buffer_size);
 
   cpu_mem_write_32((uintptr_t)&ring->write_ptr, wptr);
 
