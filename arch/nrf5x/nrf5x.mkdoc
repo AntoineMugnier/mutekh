@@ -178,6 +178,11 @@ arch/nrf5x/peripheral.h
     are left to user code.
   @end section
 
+  @section {nRF52-Preview-DK}
+    PCA10036 board definition declares buttons.  All other IOs are
+    left to the user.
+  @end section
+
 @end section
 
 @section {Implementation notes}
