@@ -76,5 +76,18 @@ void nrf52_init(void)
     nrf_event_clear(clock, NRF_CLOCK_DONE);
     nrf_event_clear(clock, NRF_CLOCK_CTTO);
   }
+
+# if defined(CONFIG_NRF52_SWO)
+  cpu_mem_write_32(demcr, cpu_mem_read_32(demcr) | 0x01000000);
+
+  nrf_reg_set(clock, NRF_CLOCK_TRACECONFIG, 0
+              | NRF_CLOCK_TRACECONFIG_TRACEPORTSPEED_4MHZ
+              | NRF_CLOCK_TRACECONFIG_TRACEMUX_SERIAL);
+
+  nrf_reg_set(NRF5X_GPIO_ADDR, NRF_GPIO_PIN_CNF(18), 0
+              | NRF_GPIO_PIN_CNF_DIR_OUTPUT
+              | NRF_GPIO_PIN_CNF_DRIVE_H0H1
+              );
+# endif
 }
 #endif
