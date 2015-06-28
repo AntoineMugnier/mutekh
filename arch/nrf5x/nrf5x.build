@@ -7,6 +7,9 @@
 %section nrf51-??ac
   %inherit nrf5x-51822-256-32
 
+%section nrf52-??aa
+  %inherit nrf5x-52832-512-32
+
 %section nrf5x-*-*-*
   %types architecture
 
@@ -58,6 +61,16 @@
     CONFIG_CPU_ARM32M_CORTEXM0
     CONFIG_CPU_ARM32M_TIMER_SYSTICK undefined
     CONFIG_CPU_ARM32M_M_IRQ_COUNT 31
+  %end
+
+  %subsection nrf5x-52832-*-*
+    %types family
+    %set BUILD_NAME nrf52832
+
+    CONFIG_ARCH_NRF52
+    CONFIG_CPU_ARM32M_CORTEXM4
+    CONFIG_CPU_ARM32M_TIMER_SYSTICK undefined
+    CONFIG_CPU_ARM32M_M_IRQ_COUNT 37
   %end
 
   %subsection nrf5x-*-128-*

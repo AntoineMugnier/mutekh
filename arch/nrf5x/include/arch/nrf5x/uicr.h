@@ -23,13 +23,22 @@
 
 #define NRF_UICR_BASE           0x10001000
 
-#define NRF_UICR_CLENR0         0x10001000
-#define NRF_UICR_RBPCONF        0x10001004
-#define NRF_UICR_XTALFREQ       0x10001008
-#define NRF_UICR_FWID           0x10001010
+#if defined(CONFIG_ARCH_NRF52)
+# define NRF_UICR_CLENR0         0x10001000
+# define NRF_UICR_RBPCONF        0x10001004
+# define NRF_UICR_XTALFREQ       0x10001008
+# define NRF_UICR_FWID           0x10001010
+#endif
+
 #define NRF_UICR_BOOTLOADERADDR 0x10001014
 #define NRF_UICR_NRFFW(x)       (0x10001014 + 4 * (x))
 #define NRF_UICR_NRFHW(x)       (0x10001050 + 4 * (x))
 #define NRF_UICR_CUSTOMER(x)    (0x10001080 + 4 * (x))
+
+#if defined(CONFIG_ARCH_NRF52)
+# define NRF_UICR_PSELRESET(x) (0x10001200 + 4 * (x))
+# define NRF_UICR_APPROTECT 0x10001208
+# define NRF_UICR_NFCPINS 0x1000120C
+#endif
 
 #endif
