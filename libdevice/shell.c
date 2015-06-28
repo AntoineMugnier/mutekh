@@ -269,8 +269,7 @@ dev_shell_dump_drv_class(struct termui_console_s *con, const struct driver_s *dr
   for (i = 0; (c = drv->classes[i]); i++)
     {
       if (i > 0)
-        termui_con_printf(con, ", ");
-      termui_con_print_enum(con, driver_class_e, c->class_);
+        termui_con_printf(con, ", %N", c->class_, driver_class_e);
     }
 }
 
@@ -289,9 +288,7 @@ dev_shell_dump_device(struct termui_console_s *con, struct device_s *dev, uint_f
 
   for (i = 0; i < indent; i++)
     termui_con_printf(con, "  ");
-  termui_con_printf(con, "  status: ");
-  termui_con_print_enum(con, device_status_e, dev->status);
-  termui_con_printf(con, ", use: %i\n", dev->ref_count);
+  termui_con_printf(con, "  status: %N, use: %u\n", dev->status, device_status_e, dev->ref_count);
 
   if (dev->drv)
     {
@@ -528,8 +525,7 @@ static TERMUI_CON_COMMAND_PROTOTYPE(dev_shell_drivers)
         {
           const struct dev_enum_ident_s *id = reg->id_table + i;
           
-          termui_con_printf(con, "    Id: ");
-          termui_con_print_enum(con, dev_enum_type_e, id->type);
+          termui_con_printf(con, "    Id: %N", id->type, dev_enum_type_e);
           switch (id->type)
             {
             case DEV_ENUM_TYPE_GENERIC:
@@ -542,7 +538,7 @@ static TERMUI_CON_COMMAND_PROTOTYPE(dev_shell_drivers)
               termui_con_printf(con, ", name `%s'\n", id->fdtname.name);
               break;
             default:
-              termui_con_printf(con, "\n");
+              termui_con_printf(con, ", %P\n", id, sizeof(*id));
               break;
             }
         }
