@@ -83,5 +83,57 @@ void nrf52_init(void)
     nrf_event_clear(clock, NRF_CLOCK_DONE);
     nrf_event_clear(clock, NRF_CLOCK_CTTO);
   }
+
+#if defined(CONFIG_CPU_ARM32M_TRACE)
+  uint32_t traceconfig = 0;
+
+# if CONFIG_CPU_ARM32M_TRACE_CLKIN_RATE == 32000000
+  traceconfig |= NRF_CLOCK_TRACECONFIG_TRACEPORTSPEED_32MHZ;
+# elif CONFIG_CPU_ARM32M_TRACE_CLKIN_RATE == 16000000
+  traceconfig |= NRF_CLOCK_TRACECONFIG_TRACEPORTSPEED_16MHZ;
+# elif CONFIG_CPU_ARM32M_TRACE_CLKIN_RATE == 8000000
+  traceconfig |= NRF_CLOCK_TRACECONFIG_TRACEPORTSPEED_8MHZ;
+# elif CONFIG_CPU_ARM32M_TRACE_CLKIN_RATE == 4000000
+  traceconfig |= NRF_CLOCK_TRACECONFIG_TRACEPORTSPEED_4MHZ;
+# else
+#  error Unable to set TRACE CLOCK speed
+# endif
+
+#if CONFIG_CPU_ARM32M_TRACE_PARALLEL == 0
+  traceconfig |= NRF_CLOCK_TRACECONFIG_TRACEMUX_SERIAL;
+#else
+  traceconfig |= NRF_CLOCK_TRACECONFIG_TRACEMUX_PARALLEL;
+#endif
+
+  nrf_reg_set(NRF_PERIPHERAL_ADDR(NRF5X_CLOCK), NRF_CLOCK_TRACECONFIG, traceconfig);
+
+    nrf_reg_set(NRF5X_GPIO_ADDR, NRF_GPIO_PIN_CNF(18), 0
+                | NRF_GPIO_PIN_CNF_DIR_OUTPUT
+                | NRF_GPIO_PIN_CNF_DRIVE_H0H1
+                );
+#if CONFIG_CPU_ARM32M_TRACE_PARALLEL > 0
+    nrf_reg_set(NRF5X_GPIO_ADDR, NRF_GPIO_PIN_CNF(20), 0
+                | NRF_GPIO_PIN_CNF_DIR_OUTPUT
+                | NRF_GPIO_PIN_CNF_DRIVE_H0H1
+                );
+#if CONFIG_CPU_ARM32M_TRACE_PARALLEL > 1
+    nrf_reg_set(NRF5X_GPIO_ADDR, NRF_GPIO_PIN_CNF(16), 0
+                | NRF_GPIO_PIN_CNF_DIR_OUTPUT
+                | NRF_GPIO_PIN_CNF_DRIVE_H0H1
+                );
+#if CONFIG_CPU_ARM32M_TRACE_PARALLEL > 2
+    nrf_reg_set(NRF5X_GPIO_ADDR, NRF_GPIO_PIN_CNF(15), 0
+                | NRF_GPIO_PIN_CNF_DIR_OUTPUT
+                | NRF_GPIO_PIN_CNF_DRIVE_H0H1
+                );
+    nrf_reg_set(NRF5X_GPIO_ADDR, NRF_GPIO_PIN_CNF(14), 0
+                | NRF_GPIO_PIN_CNF_DIR_OUTPUT
+                | NRF_GPIO_PIN_CNF_DRIVE_H0H1
+                );
+#endif
+#endif
+#endif
+#endif
 }
 #endif
+
