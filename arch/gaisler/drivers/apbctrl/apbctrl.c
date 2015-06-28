@@ -44,7 +44,7 @@ static DEV_ENUM_MATCH_DRIVER(apbctrl_match_driver)
 {
   size_t i;
 
-  for (i ; i < count; i++)
+  for (i = 0; i < count; i++)
     {
       const struct dev_enum_ident_s *id = ident + i;
 
