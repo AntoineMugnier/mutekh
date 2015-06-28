@@ -109,7 +109,7 @@ DEV_DECLARE_STATIC(usart1_dev, "spi1", 0, efm32_usart_spi_drv,
                    DEV_STATIC_RES_IOMUX("cs",   EFM32_LOC1, EFM32_PD3, 0, 0),
 #endif
 
-#ifdef CONFIG_DRIVER_EFM32_TIMER
+#ifdef CONFIG_DRIVER_EFM32_RTC
                    DEV_STATIC_RES_DEV_PARAM("spi-timer", "/rtc")
 #endif
                    );
