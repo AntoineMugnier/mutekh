@@ -105,14 +105,16 @@ struct dev_resource_s
 
     /** @see #DEV_STATIC_RES_IRQ @see device_res_add_irq */
     struct {
-      const char                *icu;
-      /** id of physical irq link going out of the device */
-      uintptr_t                 dev_out_id:CONFIG_DEVICE_IRQ_MAX_OUTPUT_ID;
-      /** id of physical irq link going into the interrupt controller */
-      uintptr_t                 icu_in_id:CONFIG_DEVICE_IRQ_MAX_INPUT_ID;
-      /** logical irq id, used when multiple irqs are multiplexed on one physical link */
+      /** id of irq source end-point of the device */
+      uintptr_t                 src_id:CONFIG_DEVICE_IRQ_MAX_OUTPUT_ID;
+      /** id of irq sink end-point of interrupt controller */
+      uintptr_t                 sink_id:CONFIG_DEVICE_IRQ_MAX_INPUT_ID;
+      /** initial irq trigger mode, @see dev_irq_sense_modes_e */
+      uintptr_t                 trig_mode:8;
+      /** logical irq id, used when @tt trig_mode is @ref DEV_IRQ_SENSE_ID_BUS */
       uintptr_t                 irq_id:CONFIG_DEVICE_IRQ_MAX_LOGICAL_ID;
-      /** device tree path to interrupt controller, relative to device */
+      /** specifies source end-points of the controller that can be used to forward this irq. */
+      uintptr_t                 route_mask:CONFIG_DEVICE_IRQ_MAX_ROUTES;
     }                           irq;
 
     /** @see #DEV_STATIC_RES_GPIO @see device_res_add_gpio */
@@ -476,66 +478,6 @@ ALWAYS_INLINE error_t device_res_get_mem(const struct device_s *dev,
 {
   return device_res_get_uint(dev, DEV_RES_MEM, id, start, end);
 }
-
-
-/** @This adds an IRQ binding to the device resources list.
-
-    The entry specifies how the physical output irq link of the device
-    must be connected to the specified input link of the given
-    interrupt controller and gives the logical irq number associated
-    to the device. The logical irq number is used when the link is a
-    bus carrying an interrupt identifier; zero is used if the link is a
-    single wire.
-
-    A device tree path to the interrupt controller relative to @tt dev
-    is expected for the @tt icu parameter. The path string will be
-    duplicated.
-
-    @see #DEV_STATIC_RES_IRQ
-*/
-ALWAYS_INLINE error_t device_res_add_irq(struct device_s *dev, uint_fast8_t dev_out_id,
-					 uint_fast8_t icu_in_id, uint_fast16_t irq_id,
-					 const char *icu)
-{
-#ifdef CONFIG_DEVICE_IRQ
-  struct dev_resource_s *r;
-  error_t err = device_res_alloc_str(dev, DEV_RES_IRQ, icu, NULL, &r);
-  if (err)
-    return err;
-
-  r->flags |= DEVICE_RES_FLAGS_DEPEND;
-
-  r->u.irq.dev_out_id = dev_out_id;
-  r->u.irq.icu_in_id = icu_in_id;
-  r->u.irq.irq_id = irq_id;
-
-  return 0;
-#else
-  return -EINVAL;
-#endif
-}
-
-#ifdef CONFIG_DEVICE_IRQ
-/** @This can be used to include an irq resource entry in a static
-    device resources table declaration. The icu path name must be a static
-    string. @see device_res_add_irq @see #DEV_DECLARE_STATIC_RESOURCES */
-# define DEV_STATIC_RES_IRQ(dev_out_id_, icu_in_id_, irq_id_, icu_)     \
-  {                                                                     \
-    .flags = DEVICE_RES_FLAGS_DEPEND,                                   \
-      .type = DEV_RES_IRQ,                                              \
-      .u = { .irq = {                                                   \
-        .icu = (icu_),                                                  \
-        .dev_out_id = (dev_out_id_),                                    \
-        .icu_in_id = (icu_in_id_),                                      \
-        .irq_id = (irq_id_),                                            \
-      } }                                                               \
-  }
-#else
-# define DEV_STATIC_RES_IRQ(dev_out_id_, icu_in_id_, irq_id_, icu_)     \
-  {                                                                     \
-    .type = DEV_RES_UNUSED,                                             \
-  }
-#endif
 
 
 /**

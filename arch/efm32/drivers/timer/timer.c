@@ -55,7 +55,7 @@ struct efm32_timer_private_s
   /* Timer Software value */
   uint64_t swvalue;
   /* Interrupt end-point */
-  struct dev_irq_ep_s irq_eps;
+  struct dev_irq_src_s irq_eps;
   /* Request queue */
   dev_request_pqueue_root_t queue;
 #endif
@@ -163,9 +163,9 @@ static inline void efm32_timer_raise_irq(struct efm32_timer_private_s *pv)
                    endian_le32(EFM32_TIMER_IF_CC(EFM32_TIMER_CHANNEL)));
 }
 
-static DEV_IRQ_EP_PROCESS(efm32_timer_irq)
+static DEV_IRQ_SRC_PROCESS(efm32_timer_irq)
 {
-  struct device_s *dev = ep->dev;
+  struct device_s *dev = ep->base.dev;
   struct efm32_timer_private_s *pv = dev->drv_pv;
 
   lock_spin(&dev->lock);
@@ -505,8 +505,7 @@ static DEV_INIT(efm32_timer_init)
 #ifdef CONFIG_DEVICE_IRQ
   pv->cap |= DEV_TIMER_CAP_REQUEST;
 
-  device_irq_source_init(dev, &pv->irq_eps, 1,
-                         efm32_timer_irq, DEV_IRQ_SENSE_HIGH_LEVEL);
+  device_irq_source_init(dev, &pv->irq_eps, 1, efm32_timer_irq);
 
   if (device_irq_source_link(dev, &pv->irq_eps, 1, 1))
     goto err_clk;

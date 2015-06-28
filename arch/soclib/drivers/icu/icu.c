@@ -49,66 +49,43 @@ struct soclib_icu_private_s
   uintptr_t addr;
   uintptr_t nirq;
 
-  struct dev_irq_ep_s *sinks;
-  struct dev_irq_ep_s src;
+  struct dev_irq_sink_s *sinks;
+  struct dev_irq_src_s src;
 };
 
-static DEV_ICU_GET_ENDPOINT(soclib_icu_icu_get_endpoint)
+static DEV_ICU_GET_SINK(soclib_icu_icu_get_sink)
 {
   struct device_s *dev = accessor->dev;
   struct soclib_icu_private_s *pv = dev->drv_pv;
 
-  switch (type)
+  if (id < pv->nirq)
+    return pv->sinks + id;
+  return NULL;
+}
+
+#define soclib_icu_icu_link device_icu_dummy_link
+
+static DEV_IRQ_SINK_UPDATE(soclib_icu_icu_sink_update)
+{
+  struct device_s *dev = sink->base.dev;
+  struct soclib_icu_private_s *pv = dev->drv_pv;
+  uint_fast8_t sink_id = sink - pv->sinks;
+
+  switch (sense)
     {
-    case DEV_IRQ_EP_SINK:
-      if (id < pv->nirq)
-        return pv->sinks + id;
-      return NULL;
-
-    case DEV_IRQ_EP_SOURCE:
-      if (id < 1)
-        return &pv->src;
-
+    case DEV_IRQ_SENSE_NONE:
+      cpu_mem_write_32(pv->addr + ICU_SOCLIB_REG_IER_CLR, endian_le32(1 << sink_id));
+      break;
+    case DEV_IRQ_SENSE_HIGH_LEVEL:
+      cpu_mem_write_32(pv->addr + ICU_SOCLIB_REG_IER_SET, endian_le32(1 << sink_id));
     default:
-      return NULL;
+      break;
     }
 }
 
-static DEV_ICU_ENABLE_IRQ(soclib_icu_icu_enable_irq)
+static DEV_IRQ_SRC_PROCESS(soclib_icu_source_process)
 {
-  struct device_s *dev = accessor->dev;
-  struct soclib_icu_private_s *pv = dev->drv_pv;
-  uint_fast8_t icu_in_id = sink - pv->sinks;
-
-  if (irq_id > 0)
-    {
-      printk("icu %p: single wire IRQ must use 0 as logical IRQ id for %p device\n", dev, dev_ep->dev);
-      return 0;
-    }
-
-  if (!device_icu_irq_enable(&pv->src, 0, NULL, dev_ep))
-    {
-      printk("icu: source end-point can not relay interrupt for %p device\n", dev_ep->dev);
-      return 0;
-    }
-
-  cpu_mem_write_32(pv->addr + ICU_SOCLIB_REG_IER_SET, endian_le32(1 << icu_in_id));
-
-  return 1;
-}
-
-static DEV_ICU_DISABLE_IRQ(soclib_icu_icu_disable_irq)
-{
-  struct device_s *dev = accessor->dev;
-  struct soclib_icu_private_s *pv = dev->drv_pv;
-  uint_fast8_t icu_in_id = sink - pv->sinks;
-
-  cpu_mem_write_32(pv->addr + ICU_SOCLIB_REG_IER_CLR, endian_le32(1 << icu_in_id));
-}
-
-static DEV_IRQ_EP_PROCESS(soclib_icu_source_process)
-{
-  struct device_s *dev = ep->dev;
+  struct device_s *dev = ep->base.dev;
   struct soclib_icu_private_s *pv = dev->drv_pv;
 
   while (1)
@@ -118,8 +95,8 @@ static DEV_IRQ_EP_PROCESS(soclib_icu_source_process)
       if (prio > pv->nirq)
         break;
 
-      struct dev_irq_ep_s *sink = pv->sinks + prio;
-      sink->process(sink, id);
+      struct dev_irq_sink_s *sink = pv->sinks + prio;
+      device_irq_sink_process(sink, 0);
     }
 }
 
@@ -152,8 +129,7 @@ static DEV_INIT(soclib_icu_init)
 
   device_get_param_uint_default(dev, "nirq", &pv->nirq, ICU_SOCLIB_MAX_VECTOR);
 
-  device_irq_source_init(dev, &pv->src, 1,
-                         &soclib_icu_source_process, DEV_IRQ_SENSE_HIGH_LEVEL);
+  device_irq_source_init(dev, &pv->src, 1, &soclib_icu_source_process);
   if (device_irq_source_link(dev, &pv->src, 1, 0))
     goto err_mem;
 
@@ -162,7 +138,9 @@ static DEV_INIT(soclib_icu_init)
   if (!pv->sinks)
     goto err_unlink;
 
-  device_irq_sink_init(dev, pv->sinks, pv->nirq, DEV_IRQ_SENSE_HIGH_LEVEL);
+  device_irq_sink_init(dev, pv->sinks, pv->nirq,
+                       &soclib_icu_icu_sink_update,
+                       DEV_IRQ_SENSE_HIGH_LEVEL);
 
   dev->drv = &soclib_icu_drv;
   dev->status = DEVICE_DRIVER_INIT_DONE;

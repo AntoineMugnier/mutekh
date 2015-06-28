@@ -194,9 +194,9 @@ DEV_CHAR_REQUEST(gaisler_apbuart_request)
 
 #ifdef CONFIG_DEVICE_IRQ
 
-static DEV_IRQ_EP_PROCESS(gaisler_apbuart_irq)
+static DEV_IRQ_SRC_PROCESS(gaisler_apbuart_irq)
 {
-  struct device_s *dev = ep->dev;
+  struct device_s *dev = ep->base.dev;
 
   lock_spin(&dev->lock);
 
@@ -255,7 +255,7 @@ DEV_INIT(gaisler_apbuart_init)
 
   uart_fifo_init(&pv->write_fifo);
 
-  device_irq_source_init(dev, &pv->irq_ep, 1, &gaisler_apbuart_irq, DEV_IRQ_SENSE_RISING_EDGE);
+  device_irq_source_init(dev, &pv->irq_ep, 1, &gaisler_apbuart_irq);
 
   if (device_irq_source_link(dev, &pv->irq_ep, 1, 1))
     goto err_fifo;

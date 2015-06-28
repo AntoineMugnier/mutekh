@@ -61,7 +61,7 @@ struct pl011uart_context_s
 #endif
 
 #ifdef CONFIG_DEVICE_IRQ
-  struct dev_irq_ep_s           irq_ep;
+  struct dev_irq_src_s           irq_ep;
 #endif
 
   bool_t                        read_started:1;
@@ -235,9 +235,9 @@ DEV_CHAR_REQUEST(pl011uart_request)
 
 #ifdef CONFIG_DEVICE_IRQ
 
-static DEV_IRQ_EP_PROCESS(pl011uart_irq)
+static DEV_IRQ_SRC_PROCESS(pl011uart_irq)
 {
-  struct device_s *dev = ep->dev;
+  struct device_s *dev = ep->base.dev;
   struct pl011uart_context_s	*pv = dev->drv_pv;
 
   lock_spin(&dev->lock);
@@ -324,8 +324,7 @@ static DEV_INIT(pl011uart_init)
   uart_fifo_init(&pv->write_fifo);
 # endif
 
-  device_irq_source_init(dev, &pv->irq_ep, 1,
-                         &pl011uart_irq, DEV_IRQ_SENSE_HIGH_LEVEL);
+  device_irq_source_init(dev, &pv->irq_ep, 1, &pl011uart_irq);
 
   if (device_irq_source_link(dev, &pv->irq_ep, 1, 1))
     goto err_fifo;

@@ -76,7 +76,7 @@ struct mtch6102_priv_s
     uint8_t rdata[4];
     struct device_i2c_s i2c;
     uint8_t saddr;
-    struct dev_irq_ep_s irq;
+    struct dev_irq_src_s irq;
     struct dev_valio_rq_s *pending;
     uint8_t width, height;
 
@@ -321,9 +321,9 @@ static DEV_VALIO_REQUEST(mtch6102_request)
     }
 }
 
-static DEV_IRQ_EP_PROCESS(mtch6102_irq)
+static DEV_IRQ_SRC_PROCESS(mtch6102_irq)
 {
-    struct device_s *dev = ep->dev;
+    struct device_s *dev = ep->base.dev;
     struct mtch6102_priv_s *pv = dev->drv_pv;
 
     dprintk("%s\n", __FUNCTION__);
@@ -383,7 +383,7 @@ static DEV_INIT(mtch6102_init)
 
     device_irq_source_init(
         dev, &pv->irq, 1,
-        &mtch6102_irq, DEV_IRQ_SENSE_LOW_LEVEL);
+        &mtch6102_irq /*, DEV_IRQ_SENSE_LOW_LEVEL*/);
 
     if (device_irq_source_link(dev, &pv->irq, 1, -1))
         goto err_pv;

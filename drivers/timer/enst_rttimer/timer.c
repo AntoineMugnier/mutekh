@@ -42,10 +42,8 @@
 #define RT_TIMER_REG_ADDR(a, r, n)  ((a) + (r) + (n) * 0x10)
 
 #if defined(CONFIG_ARCH_SOCLIB)
-# define RT_TIMER_IRQ_SENSE_MODE DEV_IRQ_SENSE_HIGH_LEVEL
 # define RT_TIMER_ENDIAN32(x) endian_le32(x)
 #elif defined(CONFIG_ARCH_GAISLER)
-# define RT_TIMER_IRQ_SENSE_MODE DEV_IRQ_SENSE_RISING_EDGE
 # define RT_TIMER_ENDIAN32(x) endian_be32(x)
 #else
 # error
@@ -65,7 +63,7 @@ struct enst_rttimer_private_s
   uint32_t start_count;
   dev_timer_cfgrev_t rev;
 #ifdef CONFIG_DEVICE_IRQ
-  struct dev_irq_ep_s *irq_eps;
+  struct dev_irq_src_s *irq_eps;
 #endif
   struct enst_rttimer_state_s t[0];
 };
@@ -105,9 +103,9 @@ static inline void enst_rttimer_irq_process(struct device_s *dev, uint_fast8_t n
     }
 }
 
-static DEV_IRQ_EP_PROCESS(enst_rttimer_irq_single)
+static DEV_IRQ_SRC_PROCESS(enst_rttimer_irq_single)
 {
-  struct device_s *dev = ep->dev;
+  struct device_s *dev = ep->base.dev;
   struct enst_rttimer_private_s *pv = dev->drv_pv;
 
   lock_spin(&dev->lock);
@@ -136,9 +134,9 @@ static DEV_IRQ_EP_PROCESS(enst_rttimer_irq_single)
   lock_release(&dev->lock);
 }
 
-static DEV_IRQ_EP_PROCESS(enst_rttimer_irq_separate)
+static DEV_IRQ_SRC_PROCESS(enst_rttimer_irq_separate)
 {
-  struct device_s *dev = ep->dev;
+  struct device_s *dev = ep->base.dev;
   struct enst_rttimer_private_s *pv = dev->drv_pv;
   uint_fast8_t number = ep - pv->irq_eps;
 
@@ -433,7 +431,7 @@ static DEV_INIT(enst_rttimer_init)
 
   size_t s = sizeof (*pv) + t_count * sizeof(struct enst_rttimer_state_s)
 #ifdef CONFIG_DEVICE_IRQ
-    + irq_count * sizeof(struct dev_irq_ep_s)
+    + irq_count * sizeof(struct dev_irq_src_s)
 #endif
     ;
 
@@ -463,12 +461,10 @@ static DEV_INIT(enst_rttimer_init)
 
   if (RT_TIMER_CFG_SI_GET(cfg))
     device_irq_source_init(dev, pv->irq_eps, irq_count,
-                           enst_rttimer_irq_separate,
-                           RT_TIMER_IRQ_SENSE_MODE);
+                           enst_rttimer_irq_separate);
   else
     device_irq_source_init(dev, pv->irq_eps, 1,
-                           enst_rttimer_irq_single,
-                           RT_TIMER_IRQ_SENSE_MODE);
+                           enst_rttimer_irq_single);
 
   if (device_irq_source_link(dev, pv->irq_eps, irq_count, -1))
     goto err_mem;

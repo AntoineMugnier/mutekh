@@ -78,7 +78,7 @@ struct stm32_usart_context_s
 #endif
 
   /* interrupt end-points (TX and RX on the same wire). */
-  struct dev_irq_ep_s   irq_ep[1];
+  struct dev_irq_src_s   irq_ep[1];
 
   bool_t                read_started:1;
   bool_t                write_started:1;
@@ -280,9 +280,9 @@ DEV_CHAR_REQUEST(stm32_usart_request)
 #if defined(CONFIG_DEVICE_IRQ)
 
 static
-DEV_IRQ_EP_PROCESS(stm32_usart_irq)
+DEV_IRQ_SRC_PROCESS(stm32_usart_irq)
 {
-  struct device_s              *dev = ep->dev;
+  struct device_s              *dev = ep->base.dev;
   struct stm32_usart_context_s *pv = dev->drv_pv;
 
   lock_spin(&dev->lock);

@@ -49,10 +49,8 @@
 
 struct gaisler_irqmp_sink_s
 {
-  struct dev_irq_ep_s sink;
-  uint32_t     affinity;
-  uint_fast8_t current;
-  uint_fast8_t counter;
+  struct dev_irq_sink_s sink;
+  uint_fast8_t          affinity;
 };
 
 #endif
@@ -63,7 +61,7 @@ struct gaisler_irqmp_private_s
 
 #ifdef CONFIG_DRIVER_GAISLER_IRQMP_ICU
   struct gaisler_irqmp_sink_s *sinks;
-  struct dev_irq_ep_s *srcs;
+  struct dev_irq_src_s *srcs;
   uint_fast8_t srcs_count;
   uint_fast8_t eirq;
 #endif
@@ -71,165 +69,127 @@ struct gaisler_irqmp_private_s
 
 #ifdef CONFIG_DRIVER_GAISLER_IRQMP_ICU
 
-static DEV_ICU_GET_ENDPOINT(gaisler_irqmp_icu_get_endpoint)
+static DEV_ICU_GET_SINK(gaisler_irqmp_icu_get_sink)
 {
   struct device_s *dev = accessor->dev;
   struct gaisler_irqmp_private_s *pv = dev->drv_pv;
 
-  switch (type)
-    {
-    case DEV_IRQ_EP_SINK:
-      if (id < GAISLER_IRQMP_SINKS_COUNT)
-        return &pv->sinks[id].sink;
-      return NULL;
-
-    case DEV_IRQ_EP_SOURCE:
-      if (id < pv->srcs_count)
-        return pv->srcs + id;
-
-    default:
-      return NULL;
-    }
+  if (id < GAISLER_IRQMP_SINKS_COUNT)
+    return &pv->sinks[id].sink;
+  return NULL;
 };
 
-static DEV_ICU_ENABLE_IRQ(gaisler_irqmp_icu_enable_irq)
+static DEV_ICU_LINK(gaisler_irqmp_icu_link)
 {
-  struct device_s *dev = accessor->dev;
-  struct gaisler_irqmp_private_s *pv = dev->drv_pv;
-  struct gaisler_irqmp_sink_s *xsink = (struct gaisler_irqmp_sink_s*)sink;
-  uint_fast8_t icu_in_id = xsink - pv->sinks;
-
-  if (irq_id > 0) // inputs are single wire, logical irq id must be 0
+  if (!route_mask || *bypass)
     return 0;
 
-#ifdef CONFIG_CPU_SPARC
-  if (icu_in_id == 14)
-    {
-      printk("irqmp: won't enable non maskable irq (line 15)\n");
-      return 0;
-    }
-#endif
-
-  if (pv->eirq && icu_in_id == pv->eirq - 1)
-    {
-      printk("irqmp: can't use eirq line as regular irq line\n");
-      return 0;
-    }
-
-#ifdef CONFIG_DRIVER_GAISLER_IRQMP_EIRQ
-  if (icu_in_id >= 31 || (icu_in_id >= 15 && !pv->eirq))
-#else
-  if (icu_in_id >= 15)
-#endif
-    return 0;  
-
-  uint32_t affinity = 0;
-  uint_fast8_t i;
-
-  for (i = 0; i < pv->srcs_count; i++)
-    {
-      struct dev_irq_ep_s *irqmp_src = pv->srcs + i;
-
-      if (icu_in_id >= 15)
-#ifdef CONFIG_DRIVER_GAISLER_IRQMP_EIRQ
-        {
-          /* irqmp can not be bypassed when using extended interrupt
-             line because we need to read a register to find the
-             actual raised irq line. eirq processor interrupt must be enabled. */
-          if (!device_icu_irq_enable(irqmp_src, pv->eirq - 1, irqmp_src, dev_ep))
-            continue;
-        }
-      else
-#endif
-        {
-          /* request bypassing of irqmp, irq may be handled by src end-point directly. */
-          if (!device_icu_irq_enable(irqmp_src, icu_in_id, src, dev_ep))
-            continue;
-        }
-
-      affinity |= (1 << i);
-    }
-
-  if (!affinity)
-    {
-      printk("irqmp: found no source end-point which can relay interrupt for %p device\n", dev_ep->dev);
-      return 0;
-    }
-  else if (xsink->affinity && affinity != xsink->affinity)
-    { 
-      xsink->affinity |= affinity;
-      printk("irqmp: shared interrupt on sink %u will change affinity\n", icu_in_id);
-    }
-  else
-    {
-      xsink->affinity = affinity;
-    }
-
-#warning add IRQ load balance policy
-  /* enable hwi on first affinity source */
-  uint_fast8_t first = ffs(affinity) - 1;
-  uintptr_t ra = pv->addr + 0x40 + 4 * first; // source mask register
-  cpu_mem_write_32(ra, cpu_mem_read_32(ra) | endian_be32(2 << icu_in_id));
-
-  return 1;
-}
-
-static DEV_ICU_DISABLE_IRQ(gaisler_irqmp_icu_disable_irq)
-{
   struct device_s *dev = accessor->dev;
   struct gaisler_irqmp_private_s *pv = dev->drv_pv;
   struct gaisler_irqmp_sink_s *xsink = (struct gaisler_irqmp_sink_s*)sink;
-  uint_fast8_t icu_in_id = xsink - pv->sinks;
+  uint_fast8_t sink_id = xsink - pv->sinks;
 
-  uint_fast8_t first = ffs(xsink->affinity) - 1;
-  uintptr_t ra = pv->addr + 0x40 + 4 * first; // source mask register
-  cpu_mem_write_32(ra, cpu_mem_read_32(ra) & ~endian_be32(2 << icu_in_id));
+#ifdef CONFIG_CPU_SPARC
+  if (sink_id == 14)
+    {
+      printk("irqmp: won't enable non maskable irq (line 15)\n");
+      return -EINVAL;
+    }
+#endif
+
+  if (pv->eirq && sink_id == pv->eirq - 1)
+    {
+      printk("irqmp: can't use eirq line as regular irq line\n");
+      return -EINVAL;
+    }
+
+  uint_fast8_t i = ffs(*route_mask) - 1;
+  xsink->affinity = i;
+
+  if (sink_id >= 15)
+    {
+#ifdef CONFIG_DRIVER_GAISLER_IRQMP_EIRQ
+      if (!pv->eirq)
+#endif
+        return -ENOTSUP;
+    }
+
+  return 0;
+}
+
+static DEV_IRQ_SINK_UPDATE(gaisler_irqmp_sink_update)
+{
+  struct device_s *dev = sink->base.dev;
+  struct gaisler_irqmp_private_s *pv = dev->drv_pv;
+  struct gaisler_irqmp_sink_s *xsink = (struct gaisler_irqmp_sink_s*)sink;
+  uint_fast8_t sink_id = xsink - pv->sinks;
+
+  uintptr_t a = pv->addr + 0x40;
+#ifdef CONFIG_ARCH_SMP
+  a += 4 * xsink->affinity; // source mask register
+#endif
+
+  uint32_t x = cpu_mem_read_32(a);
+
+  switch (sense)
+    {
+    case DEV_IRQ_SENSE_NONE:
+      x &= ~endian_be32(2 << sink_id);
+      break;
+    case DEV_IRQ_SENSE_RISING_EDGE:
+      x |= endian_be32(2 << sink_id);
+      break;
+    default:
+      return;
+    }
+
+  cpu_mem_write_32(a, x);
 }
 
 #ifdef CONFIG_DRIVER_GAISLER_IRQMP_EIRQ
-static DEV_IRQ_EP_PROCESS(gaisler_irqmp_source_process_eirq)
+static DEV_IRQ_SRC_PROCESS(gaisler_irqmp_source_process_eirq)
 {
-  struct device_s *dev = ep->dev;
+  struct device_s *dev = ep->base.dev;
   struct gaisler_irqmp_private_s *pv = dev->drv_pv;
-  uint_fast8_t irq = *id;
 
 #ifdef CONFIG_ARCH_SMP
-  struct dev_irq_ep_s  *src = ep;
+  struct dev_irq_src_s  *src = ep;
   uint_fast8_t cpu = src - pv->srcs;
   assert(cpu < pv->srcs_count);
 #else
   uint_fast8_t cpu = 0;
 #endif
 
-  if (irq < 15)
+  if (id < 15)
     {
       struct gaisler_irqmp_sink_s *xsink;
-      uint32_t eack = endian_be32(cpu_mem_read_32(pv->addr + 0xc0 + cpu * 4)) & 0x1f;
 
-      if (eack)
-        xsink = pv->sinks + eack - 1;
+      if (pv->eirq - 1 == id)
+        {
+          uint32_t eack = endian_be32(cpu_mem_read_32(pv->addr + 0xc0 + cpu * 4)) & 0x1f;
+          xsink = pv->sinks + eack - 1;
+        }
       else
-        xsink = pv->sinks + irq;
+        {
+          xsink = pv->sinks + id;
+        }
 
-      struct dev_irq_ep_s *sink = &xsink->sink;
-      int_fast16_t next_id = 0;
-      sink->process(sink, &next_id);
+      struct dev_irq_sink_s *sink = &xsink->sink;
+      device_irq_sink_process(sink, 0);
     }
 }
 #endif
 
-static DEV_IRQ_EP_PROCESS(gaisler_irqmp_source_process)
+static DEV_IRQ_SRC_PROCESS(gaisler_irqmp_source_process)
 {
-  struct device_s *dev = ep->dev;
+  struct device_s *dev = ep->base.dev;
   struct gaisler_irqmp_private_s *pv = dev->drv_pv;
-  uint_fast8_t irq = *id;
 
-  if (irq < GAISLER_IRQMP_SINKS_COUNT)
+  if (id < 15)
     {
-      struct gaisler_irqmp_sink_s *xsink = pv->sinks + irq;
-      struct dev_irq_ep_s *sink = &xsink->sink;
-      int_fast16_t next_id = 0;
-      sink->process(sink, &next_id);
+      struct gaisler_irqmp_sink_s *xsink = pv->sinks + id;
+      struct dev_irq_sink_s *sink = &xsink->sink;
+      device_irq_sink_process(sink, 0);
     }
 }
 
@@ -245,6 +205,13 @@ DRIVER_DECLARE(gaisler_irqmp_drv, "Gaisler IRQMP irq controller", gaisler_irqmp,
 
 DRIVER_REGISTER(gaisler_irqmp_drv,
                 DEV_ENUM_GAISLER_ENTRY(0x01, 0x00d));
+
+static void gaisler_irqmp_disable_irqs(struct gaisler_irqmp_private_s *pv)
+{
+  uint_fast8_t i;
+  for (i = 0; i < pv->srcs_count; i++)
+    cpu_mem_write_32(pv->addr + 0x40 + 4 * i, 0);
+}
 
 static DEV_INIT(gaisler_irqmp_init)
 {
@@ -291,11 +258,13 @@ static DEV_INIT(gaisler_irqmp_init)
 
   if (pv->eirq)
     device_irq_source_init(dev, pv->srcs, pv->srcs_count,
-                           &gaisler_irqmp_source_process_eirq, DEV_IRQ_SENSE_ID_BUS);
+                           &gaisler_irqmp_source_process_eirq);
   else
 # endif
     device_irq_source_init(dev, pv->srcs, pv->srcs_count,
-                           &gaisler_irqmp_source_process, DEV_IRQ_SENSE_ID_BUS);
+                           &gaisler_irqmp_source_process);
+
+  //  gaisler_irqmp_disable_irqs(pv);
 
   cpu_mem_write_32(pv->addr + 0, 0);  // set level register
 
@@ -310,7 +279,8 @@ static DEV_INIT(gaisler_irqmp_init)
   uint_fast8_t i;
   for (i = 0; i < GAISLER_IRQMP_SINKS_COUNT; i++)
     {
-      device_irq_sink_init(dev, &pv->sinks[i].sink, 1, DEV_IRQ_SENSE_RISING_EDGE);
+      device_irq_sink_init(dev, &pv->sinks[i].sink, 1, &gaisler_irqmp_sink_update,
+                           DEV_IRQ_SENSE_RISING_EDGE);
       pv->sinks[i].affinity = 0;
     }
 #endif
@@ -334,6 +304,8 @@ static DEV_INIT(gaisler_irqmp_init)
 static DEV_CLEANUP(gaisler_irqmp_cleanup)
 {
   struct gaisler_irqmp_private_s *pv = dev->drv_pv;
+
+  gaisler_irqmp_disable_irqs(pv);
 
 #ifdef CONFIG_DRIVER_GAISLER_IRQMP_ICU
   /* detach gaisler_irqmp irq end-points */

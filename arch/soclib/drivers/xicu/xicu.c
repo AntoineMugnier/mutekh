@@ -63,14 +63,6 @@ static DEV_USE(soclib_xicu_use)
 static DEV_INIT(soclib_xicu_init);
 static DEV_CLEANUP(soclib_xicu_cleanup);
 
-extern DEV_ICU_GET_ENDPOINT(soclib_xicu_icu_get_endpoint);
-extern DEV_ICU_ENABLE_IRQ(soclib_xicu_icu_enable_irq);
-extern DEV_ICU_DISABLE_IRQ(soclib_xicu_icu_disable_irq);
-extern DEV_TIMER_REQUEST(soclib_xicu_timer_request);
-extern DEV_TIMER_CANCEL(soclib_xicu_timer_cancel);
-extern DEV_TIMER_GET_VALUE(soclib_xicu_timer_get_value);
-extern DEV_TIMER_CONFIG(soclib_xicu_timer_config);
-
 DRIVER_DECLARE(soclib_xicu_drv, "Soclib Xicu", soclib_xicu
 #ifdef CONFIG_DRIVER_SOCLIB_XICU_ICU
                , DRIVER_ICU_METHODS(soclib_xicu_icu)
@@ -127,7 +119,7 @@ static DEV_INIT(soclib_xicu_init)
         goto err_mem;
 
       device_irq_source_init(dev, pv->srcs, pv->irq_count,
-                             &soclib_xicu_source_process, DEV_IRQ_SENSE_HIGH_LEVEL);
+                             &soclib_xicu_source_process);
 
 # ifdef CONFIG_DRIVER_SOCLIB_XICU_TIMER
       if (device_irq_source_link(dev, pv->srcs, pv->irq_count, -1))
@@ -148,7 +140,9 @@ static DEV_INIT(soclib_xicu_init)
 
       for (i = 0; i < pv->hwi_count; i++)
         {
-          device_irq_sink_init(dev, &pv->sinks[i].sink, 1, DEV_IRQ_SENSE_HIGH_LEVEL);
+          device_irq_sink_init(dev, &pv->sinks[i].sink, 1,
+                               &soclib_xicu_icu_sink_update,
+                               DEV_IRQ_SENSE_HIGH_LEVEL);
           pv->sinks[i].affinity = 0;
         }
     }

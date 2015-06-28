@@ -49,7 +49,7 @@ struct mxk_range_s
 struct mxk_context_s
 {
   dev_request_queue_root_t queue;
-  struct dev_irq_ep_s irq_ep;
+  struct dev_irq_src_s irq_ep;
 
   struct device_timer_s timer;
   struct dev_timer_rq_s rescan_timer_rq;
@@ -310,9 +310,9 @@ static void mxk_scan_done(struct mxk_context_s *pv)
     mxk_scan_start(pv);
 }
 
-static DEV_IRQ_EP_PROCESS(mxk_irq)
+static DEV_IRQ_SRC_PROCESS(mxk_irq)
 {
-  struct device_s *dev = ep->dev;
+  struct device_s *dev = ep->base.dev;
   struct mxk_context_s *pv = dev->drv_pv;
 
   dprintk("%p %s %d %d %d\n", pv, __FUNCTION__,
@@ -425,7 +425,7 @@ static DEV_INIT(matrix_keyboard_init)
     goto free_pv;
   }
 
-  pv->range_id = r->u.irq.icu_in_id;
+  pv->range_id = r->u.irq.sink_id;
 
   err = device_get_param_dev_accessor(dev, "timer", &pv->timer, DRIVER_CLASS_TIMER);
   if (err)
@@ -460,8 +460,7 @@ static DEV_INIT(matrix_keyboard_init)
 
   dev_request_queue_init(&pv->queue);
 
-  device_irq_source_init(dev, &pv->irq_ep, 1, &mxk_irq,
-                         DEV_IRQ_SENSE_ANY_EDGE);
+  device_irq_source_init(dev, &pv->irq_ep, 1, &mxk_irq /*, DEV_IRQ_SENSE_ANY_EDGE */);
 
   err = device_irq_source_link(dev, &pv->irq_ep, 1, -1);
   if (err)

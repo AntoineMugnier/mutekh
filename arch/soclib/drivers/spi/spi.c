@@ -55,11 +55,11 @@ struct soclib_spi_context_s
 {
   uintptr_t                      addr;
 #ifdef CONFIG_DEVICE_IRQ
-  struct dev_irq_ep_s            src_ep;
+  struct dev_irq_src_s            src_ep;
 #endif
 
 #ifdef CONFIG_DRIVER_SOCLIB_SPI_ICU
-  struct dev_irq_ep_s            *sinks;
+  struct dev_irq_sink_s          *sinks;
   uint32_t                       irq_mask;
 #endif
 
@@ -366,99 +366,59 @@ static DEV_GPIO_GET_INPUT(soclib_spi_gpio_get_input)
 
 #ifdef CONFIG_DRIVER_SOCLIB_SPI_ICU
 
-static DEV_ICU_GET_ENDPOINT(soclib_spi_icu_get_endpoint)
+static DEV_ICU_GET_SINK(soclib_spi_icu_get_sink)
 {
   struct device_s *dev = accessor->dev;
   struct soclib_spi_context_s *pv = dev->drv_pv;
 
-  switch (type)
+  if (id >= pv->gpin_cnt)
+    return NULL;
+  return pv->sinks + id;
+}
+
+static DEV_IRQ_SINK_UPDATE(soclib_spi_icu_sink_update)
+{
+  struct device_s *dev = sink->base.dev;
+  struct soclib_spi_context_s *pv = dev->drv_pv;
+  uint_fast8_t sink_id = sink - pv->sinks;
+
+  switch (sense)
     {
-    case DEV_IRQ_EP_SINK: {
+    case DEV_IRQ_SENSE_NONE:
+      pv->irq_mask &= ~(1 << sink_id);
+      goto end;
 
-      if (id >= pv->gpin_cnt)
-        return NULL;
-      struct dev_irq_ep_s *ep = pv->sinks + id;
-      if (!ep->link_count)
-        ep->sense = DEV_IRQ_SENSE_HIGH_LEVEL | DEV_IRQ_SENSE_LOW_LEVEL |
-          DEV_IRQ_SENSE_RISING_EDGE | DEV_IRQ_SENSE_FALLING_EDGE;
-      return ep;
-    }
-
-    case DEV_IRQ_EP_SOURCE:
-      if (id == 0)
-        return &pv->src_ep;
+    case DEV_IRQ_SENSE_HIGH_LEVEL:
+    case DEV_IRQ_SENSE_LOW_LEVEL:
+    case DEV_IRQ_SENSE_RISING_EDGE:
+    case DEV_IRQ_SENSE_FALLING_EDGE:
+      break;
 
     default:
-      return NULL;
-    }
-}
-
-static DEV_ICU_ENABLE_IRQ(soclib_spi_icu_enable_irq)
-{
-  struct device_s *dev = accessor->dev;
-  struct soclib_spi_context_s *pv = dev->drv_pv;
-  uint_fast8_t icu_in_id = sink - pv->sinks;
-  bool_t done = 0;
-
-  if (irq_id > 0)
-    {
-      printk("soclib spi %p: single wire IRQ must use 0 as logical IRQ id for %p device\n", dev, dev_ep->dev);
-      return 0;
+      return;
     }
 
-  LOCK_SPIN_IRQ(&dev->lock);
+  uint32_t mode = endian_le32(cpu_mem_read_32(pv->addr + SOCLIB_SPI_GPIRQ_MODE_ADDR));
+  if (sense & (DEV_IRQ_SENSE_HIGH_LEVEL | DEV_IRQ_SENSE_LOW_LEVEL))
+    SOCLIB_SPI_GPIRQ_MODE_PIN_SET(sink_id, mode, LEVEL);
+  else
+    SOCLIB_SPI_GPIRQ_MODE_PIN_SET(sink_id, mode, EDGE);
+  cpu_mem_write_32(pv->addr + SOCLIB_SPI_GPIRQ_MODE_ADDR, mode);
 
-  uint_fast8_t sense = src->sense & sink->sense;
-  uint32_t mask = 1 << icu_in_id;
+  uint32_t pol = endian_le32(cpu_mem_read_32(pv->addr + SOCLIB_SPI_GPIRQ_POL_ADDR));
+  if (sense & (DEV_IRQ_SENSE_HIGH_LEVEL | DEV_IRQ_SENSE_RISING_EDGE))
+    SOCLIB_SPI_GPIRQ_POL_PIN_SET(sink_id, pol, RISING);
+  else
+    SOCLIB_SPI_GPIRQ_POL_PIN_SET(sink_id, pol, FALLING);
+  cpu_mem_write_32(pv->addr + SOCLIB_SPI_GPIRQ_POL_ADDR, pol);
 
-  if (sense)
-    {
-      if (!(mask & pv->irq_mask))
-        {
-          /* if more than one mode is left, keep only the lsb */
-          sense = sense & ~(sense - 1);
-          src->sense = sink->sense = sense;
+  pv->irq_mask |= 1 << sink_id;
 
-          uint32_t mode = endian_le32(cpu_mem_read_32(pv->addr + SOCLIB_SPI_GPIRQ_MODE_ADDR));
-          if (sense & (DEV_IRQ_SENSE_HIGH_LEVEL | DEV_IRQ_SENSE_LOW_LEVEL))
-            SOCLIB_SPI_GPIRQ_MODE_PIN_SET(icu_in_id, mode, LEVEL);
-          else
-            SOCLIB_SPI_GPIRQ_MODE_PIN_SET(icu_in_id, mode, EDGE);
-          cpu_mem_write_32(pv->addr + SOCLIB_SPI_GPIRQ_MODE_ADDR, mode);
-
-          uint32_t pol = endian_le32(cpu_mem_read_32(pv->addr + SOCLIB_SPI_GPIRQ_POL_ADDR));
-          if (sense & (DEV_IRQ_SENSE_HIGH_LEVEL | DEV_IRQ_SENSE_RISING_EDGE))
-            SOCLIB_SPI_GPIRQ_POL_PIN_SET(icu_in_id, pol, RISING);
-          else
-            SOCLIB_SPI_GPIRQ_POL_PIN_SET(icu_in_id, pol, FALLING);
-          cpu_mem_write_32(pv->addr + SOCLIB_SPI_GPIRQ_POL_ADDR, pol);
-
-          /* enable */
-          pv->irq_mask |= 1 << icu_in_id;
-          cpu_mem_write_32(pv->addr + SOCLIB_SPI_GPIN_ADDR, pv->irq_mask);
-        }
-
-      done = 1;
-    }
-
-  LOCK_RELEASE_IRQ(&dev->lock);
-
-  return done;
-}
-
-static DEV_ICU_DISABLE_IRQ(soclib_spi_icu_disable_irq)
-{
-  struct device_s *dev = accessor->dev;
-  struct soclib_spi_context_s *pv = accessor->dev->drv_pv;
-  uint_fast8_t icu_in_id = sink - pv->sinks;
-
-  LOCK_SPIN_IRQ(&dev->lock);
-
-  pv->irq_mask &= ~(1 << icu_in_id);
+ end:
   cpu_mem_write_32(pv->addr + SOCLIB_SPI_GPIN_ADDR, pv->irq_mask);
-
-  LOCK_RELEASE_IRQ(&dev->lock);
 }
+
+#define soclib_spi_icu_link device_icu_dummy_link
 
 #endif
 
@@ -486,9 +446,9 @@ DRIVER_REGISTER(soclib_spi_drv,
 
 #ifdef CONFIG_DEVICE_IRQ
 
-static DEV_IRQ_EP_PROCESS(soclib_spi_irq)
+static DEV_IRQ_SRC_PROCESS(soclib_spi_irq)
 {
-  struct device_s *dev = ep->dev;
+  struct device_s *dev = ep->base.dev;
   struct soclib_spi_context_s *pv = dev->drv_pv;
 
   lock_spin(&dev->lock);
@@ -518,9 +478,9 @@ static DEV_IRQ_EP_PROCESS(soclib_spi_irq)
           uint32_t n = SOCLIB_SPI_IRQPEND_GPIRQN_GET(p);
           assert (n <= pv->gpin_cnt);
 
-          struct dev_irq_ep_s *sink = pv->sinks + n;
+          struct dev_irq_sink_s *sink = pv->sinks + n;
           lock_release(&dev->lock);
-          sink->process(sink, id);
+          device_irq_sink_process(sink, 0);
           lock_spin(&dev->lock);
         }
 # endif
@@ -578,7 +538,7 @@ static DEV_INIT(soclib_spi_init)
   pv->sinks = (void*)(pv + 1);
   pv->irq_mask = 0;
   if (gpin_cnt)
-    device_irq_sink_init(dev, pv->sinks, gpin_cnt,
+    device_irq_sink_init(dev, pv->sinks, gpin_cnt, &soclib_spi_icu_sink_update,
                          DEV_IRQ_SENSE_HIGH_LEVEL | DEV_IRQ_SENSE_LOW_LEVEL |
                          DEV_IRQ_SENSE_RISING_EDGE | DEV_IRQ_SENSE_FALLING_EDGE);
 #endif
@@ -590,7 +550,7 @@ static DEV_INIT(soclib_spi_init)
 
 #ifdef CONFIG_DEVICE_IRQ
   device_irq_source_init(dev, &pv->src_ep, 1,
-                         &soclib_spi_irq, DEV_IRQ_SENSE_HIGH_LEVEL);
+                         &soclib_spi_irq);
 
   if (device_irq_source_link(dev, &pv->src_ep, 1, -1))
     goto err_queue;

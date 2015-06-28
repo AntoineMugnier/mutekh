@@ -60,7 +60,7 @@ struct cadence_uart_context_s
 # endif
 #endif
 #ifdef CONFIG_DEVICE_IRQ
-  struct dev_irq_ep_s           irq_ep;
+  struct dev_irq_src_s           irq_ep;
 #endif
   uint32_t                      mode;
 
@@ -230,9 +230,9 @@ DEV_CHAR_REQUEST(cadence_uart_request)
 
 #ifdef CONFIG_DEVICE_IRQ
 
-static DEV_IRQ_EP_PROCESS(cadence_uart_irq)
+static DEV_IRQ_SRC_PROCESS(cadence_uart_irq)
 {
-  struct device_s *dev = ep->dev;
+  struct device_s *dev = ep->base.dev;
   struct cadence_uart_context_s	*pv = dev->drv_pv;
 
   lock_spin(&dev->lock);
@@ -352,7 +352,7 @@ static DEV_INIT(cadence_uart_init)
 # endif
 
   device_irq_source_init(dev, &pv->irq_ep, 1,
-                         &cadence_uart_irq, DEV_IRQ_SENSE_HIGH_LEVEL);
+                         &cadence_uart_irq);
 
   if (device_irq_source_link(dev, &pv->irq_ep, 1, 1))
     goto err_fifo;

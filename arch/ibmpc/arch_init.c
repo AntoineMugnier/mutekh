@@ -72,15 +72,6 @@ DEV_DECLARE_STATIC(cpu_dev, "cpu", DEVICE_FLAG_CPU, x86_drv,
 
 /////////////////////////////////////////////////////////////////////
 
-#if defined(CONFIG_DEVICE_IRQ) && defined(CONFIG_ARCH_SMP)
-bool_t arch_cpu_irq_affinity_test(struct device_s *cpu, struct dev_irq_ep_s *src)
-{
-    return 1;
-}
-#endif
-
-/////////////////////////////////////////////////////////////////////
-
 void ibmpc_start_cpus()
 {
 }

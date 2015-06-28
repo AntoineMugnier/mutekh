@@ -41,7 +41,7 @@ struct dma_soclib_context_s
 {
   /* dma input request queue and dma fifo */
   dev_request_queue_root_t		queue;
-  struct dev_irq_ep_s         irq_ep;
+  struct dev_irq_src_s        irq_ep;
   uintptr_t                   addr;
   bool_t                      busy;
 };
@@ -106,9 +106,9 @@ end:
     kroutine_exec(&req->base.kr, cpu_is_interruptible());
 }
 
-static DEV_IRQ_EP_PROCESS(dma_soclib_irq)
+static DEV_IRQ_SRC_PROCESS(dma_soclib_irq)
 {
-  struct device_s *dev = ep->dev;
+  struct device_s *dev = ep->base.dev;
   struct dma_soclib_context_s *pv = dev->drv_pv;
   struct dev_dma_rq_s *rq;
 
@@ -168,8 +168,7 @@ static DEV_INIT(dma_soclib_init)
   if (device_res_get_uint(dev, DEV_RES_MEM, 0, &pv->addr, NULL))
     goto err_mem;
 
-  device_irq_source_init(dev, &pv->irq_ep, 1,
-                         &dma_soclib_irq, DEV_IRQ_SENSE_HIGH_LEVEL);
+  device_irq_source_init(dev, &pv->irq_ep, 1, &dma_soclib_irq);
 
   if (device_irq_source_link(dev, &pv->irq_ep, 1, 1))
     goto err_mem;

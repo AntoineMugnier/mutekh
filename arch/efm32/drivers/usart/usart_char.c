@@ -59,7 +59,7 @@ struct efm32_usart_context_s
 # endif
 #endif
 #ifdef CONFIG_DEVICE_IRQ
-  struct dev_irq_ep_s           irq_ep[2];
+  struct dev_irq_src_s           irq_ep[2];
 #endif
   uint32_t                      mode;
 
@@ -242,9 +242,9 @@ static DEV_CHAR_REQUEST(efm32_usart_request)
 
 #ifdef CONFIG_DEVICE_IRQ
 
-static DEV_IRQ_EP_PROCESS(efm32_usart_irq)
+static DEV_IRQ_SRC_PROCESS(efm32_usart_irq)
 {
-  struct device_s *dev = ep->dev;
+  struct device_s *dev = ep->base.dev;
   struct efm32_usart_context_s	*pv = dev->drv_pv;
 
   lock_spin(&dev->lock);
@@ -373,8 +373,7 @@ static DEV_INIT(efm32_usart_char_init)
 # endif
 
   /* init irq endpoints */
-  device_irq_source_init(dev, pv->irq_ep, 2,
-                         &efm32_usart_irq, DEV_IRQ_SENSE_HIGH_LEVEL);
+  device_irq_source_init(dev, pv->irq_ep, 2, &efm32_usart_irq);
 
   if (device_irq_source_link(dev, pv->irq_ep, 2, -1))
     goto err_fifo;

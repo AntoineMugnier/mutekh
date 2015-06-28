@@ -74,7 +74,7 @@ struct adxl362_private_s
 
   enum adxl362_state_s state:8;
 
-  struct dev_irq_ep_s src_ep;
+  struct dev_irq_src_s src_ep;
   struct dev_spi_ctrl_request_s spi_rq;
 
   /* queue for requests */
@@ -501,9 +501,9 @@ static DEV_VALIO_REQUEST(adxl362_request)
      kroutine_exec(&req->base.kr, cpu_is_interruptible());
 }
 
-static DEV_IRQ_EP_PROCESS(adxl362_irq_source_process)
+static DEV_IRQ_SRC_PROCESS(adxl362_irq_source_process)
 {
-  struct device_s *dev = ep->dev;
+  struct device_s *dev = ep->base.dev;
   struct adxl362_private_s *pv = dev->drv_pv;
 
 #ifdef ADXL362_DEBUG            
@@ -614,7 +614,7 @@ static DEV_INIT(adxl362_init)
 
   /* irq io pin */
   device_irq_source_init(dev, &pv->src_ep, 1,
-         &adxl362_irq_source_process, DEV_IRQ_SENSE_RISING_EDGE);
+                         &adxl362_irq_source_process /*, DEV_IRQ_SENSE_RISING_EDGE*/);
 
   if (device_irq_source_link(dev, &pv->src_ep, 1, -1))
     goto err_srq;

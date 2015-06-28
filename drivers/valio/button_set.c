@@ -43,7 +43,7 @@
 struct bs_context_s
 {
   dev_request_queue_root_t queue;
-  struct dev_irq_ep_s irq_ep;
+  struct dev_irq_src_s irq_ep;
 
   struct device_gpio_s gpio;
   uint64_t mask;
@@ -113,9 +113,9 @@ static bool_t bs_read_or_update(struct bs_context_s *pv,
   return 1;
 }
 
-static DEV_IRQ_EP_PROCESS(bs_irq)
+static DEV_IRQ_SRC_PROCESS(bs_irq)
 {
-  struct device_s *dev = ep->dev;
+  struct device_s *dev = ep->base.dev;
   struct bs_context_s *pv = dev->drv_pv;
   struct dev_valio_rq_s *rq;
 
@@ -219,7 +219,7 @@ static DEV_INIT(button_set_init)
     goto free_pv;
   }
 
-  pv->range_id = r->u.irq.icu_in_id;
+  pv->range_id = r->u.irq.sink_id;
 
   err = device_get_accessor_by_path(&pv->gpio, NULL, r->u.irq.icu, DRIVER_CLASS_GPIO);
   if (err)
@@ -250,8 +250,7 @@ static DEV_INIT(button_set_init)
 
   dev_request_queue_init(&pv->queue);
 
-  device_irq_source_init(dev, &pv->irq_ep, 1, &bs_irq,
-                         DEV_IRQ_SENSE_ANY_EDGE);
+  device_irq_source_init(dev, &pv->irq_ep, 1, &bs_irq /* , DEV_IRQ_SENSE_ANY_EDGE*/);
 
   err = device_irq_source_link(dev, &pv->irq_ep, 1, -1);
   if (err)

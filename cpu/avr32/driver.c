@@ -43,7 +43,7 @@
 struct avr32_dev_private_s
 {
 #ifdef CONFIG_DEVICE_IRQ
-  struct dev_irq_ep_s	sinks[AVR32_IRQ_COUNT];
+  struct dev_irq_sink_s	sinks[AVR32_IRQ_COUNT];
 #endif
 
   struct cpu_tree_s node;
@@ -68,67 +68,47 @@ static CPU_INTERRUPT_HANDLER(avr32_irq_handler)
   struct avr32_dev_private_s  *pv = dev->drv_pv;
 
   if ( irq < AVR32_IRQ_COUNT ) {
-    struct dev_irq_ep_s *sink = pv->sinks + irq;
-    int_fast16_t id = 0;
-
-    sink->process(sink, &id);
+    struct dev_irq_sink_s *sink = pv->sinks + irq;
+    device_irq_sink_process(sink, 0);
   }
 }
 
-static DEV_ICU_GET_ENDPOINT(avr32_icu_get_endpoint)
+static DEV_ICU_GET_SINK(avr32_icu_get_sink)
 {
   struct device_s *dev = accessor->dev;
   struct avr32_dev_private_s  *pv = dev->drv_pv;
 
-  switch (type)
+  if (id < AVR32_IRQ_COUNT)
+    return pv->sinks + id;
+  return NULL;
+}
+
+static DEV_IRQ_SINK_UPDATE(avr32_icu_sink_update)
+{
+#ifndef CONFIG_ARCH_SMP
+  struct device_s *dev = sink->base.dev;
+  struct nios2_dev_private_s  *pv = dev->drv_pv;
+
+  reg_t status;
+  asm volatile ("mfsr	%0, 0" : "=r" (status));
+
+  switch (sense)
     {
-    case DEV_IRQ_EP_SINK:
-      if (id < AVR32_IRQ_COUNT)
-        return pv->sinks + id;
+    case DEV_IRQ_SENSE_NONE:
+      status &= ~(2 << sink_id);
+      break;
+    case DEV_IRQ_SENSE_ID_BUS:
+      status |= 2 << sink_id;
+      break;
     default:
-      return NULL;
+      return;
     }
-}
 
-static DEV_ICU_ENABLE_IRQ(avr32_icu_enable_irq)
-{
-  struct device_s *dev = accessor->dev;
-  struct avr32_dev_private_s  *pv = dev->drv_pv;
-
-  // inputs are single wire, logical irq id must be 0
-  if (irq_id > 0)
-    return 0;
-
-# ifdef CONFIG_ARCH_SMP
-  if (!arch_cpu_irq_affinity_test(dev, dev_ep))
-    return 0;
-
-# else
-  /* Enable irq line. On SMP platforms, all lines are already enabled on init. */
-  uint_fast8_t icu_in_id = sink - pv->sinks;
-  reg_t status;
-  asm volatile ("mfsr	%0, 0" : "=r" (status));
-  status &= ~(2 << icu_in_id);
   asm volatile ("mtsr	0, %0" :: "r" (status));
-# endif
-
-  return 1;
+#endif
 }
 
-# ifndef CONFIG_ARCH_SMP
-/* Disable irq line. On SMP platforms, all lines must remain enabled. */
-static DEV_ICU_DISABLE_IRQ(avr32_icu_disable_irq)
-{
-  struct device_s *dev = accessor->dev;
-  struct avr32_dev_private_s  *pv = dev->drv_pv;
-  uint_fast8_t icu_in_id = sink - pv->sinks;
-
-  reg_t status;
-  asm volatile ("mfsr	%0, 0" : "=r" (status));
-  status |= 2 << icu_in_id;
-  asm volatile ("mtsr	0, %0" :: "r" (status));
-}
-# endif
+#define avr32_icu_link device_icu_dummy_link
 
 #endif
 
@@ -244,7 +224,7 @@ static DEV_INIT(avr32_init);
 #ifdef CONFIG_DEVICE_CLOCK
 static DEV_CLOCK_SINK_CHANGED(arv32_clk_changed)
 {
-  struct device_s *dev = ep->dev;
+  struct device_s *dev = ep->base.dev;
   struct arv32_dev_private_s *pv = dev->drv_pv;
   LOCK_SPIN_IRQ(&dev->lock);
   pv->freq = *freq;
@@ -337,7 +317,7 @@ static DEV_INIT(avr32_init)
 #ifdef CONFIG_DEVICE_IRQ
   /* init avr32 irq sink end-points */
   device_irq_sink_init(dev, pv->sinks, AVR32_IRQ_COUNT,
-                       DEV_IRQ_SENSE_ID_BUS);
+                       &avr32_icu_sink_update, DEV_IRQ_SENSE_ID_BUS);
 
 # ifdef CONFIG_ARCH_SMP
   CPU_LOCAL_CLS_SET(pv->node.cls, avr32_icu_dev, dev);

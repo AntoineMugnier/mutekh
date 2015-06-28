@@ -90,15 +90,15 @@ struct soclib_timer_private_s
   uintptr_t addr;
   uintptr_t t_count;
 #ifdef CONFIG_DEVICE_IRQ
-  struct dev_irq_ep_s *irq_eps;
+  struct dev_irq_src_s *irq_eps;
 #endif
   struct soclib_timer_state_s t[0];
 };
 
 #ifdef CONFIG_DEVICE_IRQ
-static DEV_IRQ_EP_PROCESS(soclib_timer_irq)
+static DEV_IRQ_SRC_PROCESS(soclib_timer_irq)
 {
-  struct device_s *dev = ep->dev;
+  struct device_s *dev = ep->base.dev;
   struct soclib_timer_private_s *pv = dev->drv_pv;
   uint_fast8_t number = ep - pv->irq_eps;
 
@@ -485,7 +485,7 @@ static DEV_INIT(soclib_timer_init)
 
   pv = mem_alloc(sizeof (*pv) + t_count * (sizeof(struct soclib_timer_state_s)
 #ifdef CONFIG_DEVICE_IRQ
-                                           + sizeof(struct dev_irq_ep_s)
+                                           + sizeof(struct dev_irq_src_s)
 #endif
                                            ), (mem_scope_sys));
   if (!pv)
@@ -507,7 +507,7 @@ static DEV_INIT(soclib_timer_init)
   pv->irq_eps = (void*)(pv->t + t_count);
 
   device_irq_source_init(dev, pv->irq_eps, t_count,
-                         soclib_timer_irq, DEV_IRQ_SENSE_HIGH_LEVEL);
+                         soclib_timer_irq);
 
   if (device_irq_source_link(dev, pv->irq_eps, t_count, -1))
     goto err_mem;

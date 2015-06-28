@@ -67,7 +67,7 @@ struct mpu6505_private_s
   struct device_i2c_s i2c;
   struct device_timer_s timer;
   struct dev_timer_rq_s timer_req;
-  struct dev_irq_ep_s irq;
+  struct dev_irq_src_s irq;
   struct dev_i2c_rq_s i2c_req;
   struct dev_i2c_transfer_s i2c_transfer[2];
   struct dev_valio_rq_s *running;
@@ -573,9 +573,9 @@ DEV_VALIO_REQUEST(mpu6505_request)
   }
 }
 
-static DEV_IRQ_EP_PROCESS(mpu6505_irq)
+static DEV_IRQ_SRC_PROCESS(mpu6505_irq)
 {
-  struct device_s *dev = ep->dev;
+  struct device_s *dev = ep->base.dev;
   struct mpu6505_private_s *pv = dev->drv_pv;
 
   lock_spin(&dev->lock);
@@ -649,7 +649,7 @@ static DEV_INIT(mpu6505_init)
   }
 
   device_irq_source_init(dev, &pv->irq, 1,
-                         &mpu6505_irq, DEV_IRQ_SENSE_LOW_LEVEL);
+                         &mpu6505_irq /*, DEV_IRQ_SENSE_LOW_LEVEL*/);
 
   if (device_irq_source_link(dev, &pv->irq, 1, -1))
     goto err_pv;

@@ -36,36 +36,25 @@
 
 #define XICU_RR_COUNT 5
 
-DEV_ICU_GET_ENDPOINT(soclib_xicu_icu_get_endpoint)
+DEV_ICU_GET_SINK(soclib_xicu_icu_get_sink)
 {
   struct device_s *dev = accessor->dev;
   struct soclib_xicu_private_s *pv = dev->drv_pv;
 
-  switch (type)
-    {
-    case DEV_IRQ_EP_SINK:
-      if (id < pv->hwi_count)
-        return &pv->sinks[id].sink;
-      return NULL;
-
-    case DEV_IRQ_EP_SOURCE:
-      if (id < pv->irq_count)
-        return pv->srcs + id;
-
-    default:
-      return NULL;
-    }
+  if (id < pv->hwi_count)
+    return &pv->sinks[id].sink;
+  return NULL;
 }
 
 #warning add IRQ load balance policy
 static void soclib_xicu_rr_mask(struct soclib_xicu_private_s *pv, struct soclib_xicu_sink_s* xsink)
 {
-  uint_fast8_t icu_in_id = xsink - pv->sinks;
+  uint_fast8_t sink_id = xsink - pv->sinks;
 
 #if 1
   /* enable hwi on first affinity source */
   uint_fast8_t first = ffs(xsink->affinity) - 1;
-  cpu_mem_write_32(XICU_REG_ADDR(pv->addr, XICU_MSK_HWI_ENABLE, first), endian_le32(1 << icu_in_id));
+  cpu_mem_write_32(XICU_REG_ADDR(pv->addr, XICU_MSK_HWI_ENABLE, first), endian_le32(1 << sink_id));
 #else
   /* round robin stuff */
 
@@ -73,76 +62,66 @@ static void soclib_xicu_rr_mask(struct soclib_xicu_private_s *pv, struct soclib_
     {
       xsink->counter = XICU_RR_COUNT;
 
-      cpu_mem_write_32(XICU_REG_ADDR(pv->addr, XICU_MSK_HWI_DISABLE, xsink->current), endian_le32(1 << icu_in_id));
+      cpu_mem_write_32(XICU_REG_ADDR(pv->addr, XICU_MSK_HWI_DISABLE, xsink->current), endian_le32(1 << sink_id));
 
       do {
         xsink->current = (xsink->current + 1) % pv->irq_count;
       } while (!(xsink->affinity & (1 << xsink->current)));
 
-      cpu_mem_write_32(XICU_REG_ADDR(pv->addr, XICU_MSK_HWI_ENABLE, xsink->current), endian_le32(1 << icu_in_id));
+      cpu_mem_write_32(XICU_REG_ADDR(pv->addr, XICU_MSK_HWI_ENABLE, xsink->current), endian_le32(1 << sink_id));
     }
 #endif
 }
 
-DEV_ICU_ENABLE_IRQ(soclib_xicu_icu_enable_irq)
+DEV_IRQ_SINK_UPDATE(soclib_xicu_icu_sink_update)
 {
-  struct device_s *dev = accessor->dev;
+  struct device_s *dev = sink->base.dev;
   struct soclib_xicu_private_s *pv = dev->drv_pv;
   struct soclib_xicu_sink_s *xsink = (struct soclib_xicu_sink_s*)sink;
-  uint_fast8_t i, icu_in_id = xsink - pv->sinks;
+  uint_fast8_t sink_id = xsink - pv->sinks;
 
-  if (irq_id > 0)
+  switch (sense)
     {
-      printk("xicu %p: single wire IRQ must use 0 as logical IRQ id for %p device\n", dev, dev_ep->dev);
-      return 0;
-    }
-
-  // find routes through all source end-points which will relay this interrupt
-  uint32_t     affinity = 0;
-  for (i = 0; i < pv->irq_count; i++)
-    {
-      if (device_icu_irq_enable(pv->srcs + i, 0, NULL, dev_ep))
-        affinity |= (1 << i);
-    }
-
-  if (!affinity)
-    {
-      printk("xicu %p: found no source end-point which can relay interrupt for %p device\n", dev, dev_ep->dev);
-      return 0;
-    }
-  else if (xsink->affinity && affinity != xsink->affinity)
-    { 
-      xsink->affinity |= affinity;
-      printk("xicu %p: shared interrupt on sink %u will change affinity\n", dev, icu_in_id);
-    }
-  else
-    {
-      xsink->affinity = affinity;
+    case DEV_IRQ_SENSE_NONE:
+      cpu_mem_write_32(XICU_REG_ADDR(pv->addr, XICU_MSK_HWI_DISABLE, xsink->current), endian_le32(1 << sink_id));
+      pv->sinks[sink_id].affinity = 0;
+      break;
+    case DEV_IRQ_SENSE_HIGH_LEVEL:
       xsink->current = 0;
       xsink->counter = 0;
       soclib_xicu_rr_mask(pv, xsink);
+    default:
+      break;
     }
-
-  return 1;
 }
 
-DEV_ICU_DISABLE_IRQ(soclib_xicu_icu_disable_irq)
+DEV_ICU_LINK(soclib_xicu_icu_link)
 {
+  if (!route_mask || *bypass)
+    return 0;
+
   struct device_s *dev = accessor->dev;
   struct soclib_xicu_private_s *pv = dev->drv_pv;
   struct soclib_xicu_sink_s *xsink = (struct soclib_xicu_sink_s*)sink;
-  uint_fast8_t icu_in_id = xsink - pv->sinks;
+  uint_fast8_t sink_id = xsink - pv->sinks;
 
-  // disable relaying of this sink
-  cpu_mem_write_32(XICU_REG_ADDR(pv->addr, XICU_MSK_HWI_DISABLE, xsink->current), endian_le32(1 << icu_in_id));
+  if (xsink->affinity && *route_mask != xsink->affinity)
+    {
+      xsink->affinity |= *route_mask;
+      printk("xicu %p: shared interrupt on sink %u will change affinity\n", dev, sink_id);
+    }
+  else
+    {
+      xsink->affinity = *route_mask;
+    }
 
-  pv->sinks[icu_in_id].affinity = 0;
+  return 0;
 }
 
-DEV_IRQ_EP_PROCESS(soclib_xicu_source_process)
+DEV_IRQ_SRC_PROCESS(soclib_xicu_source_process)
 {
-  struct dev_irq_ep_s  *src = ep;
-  struct device_s *dev = ep->dev;
+  struct dev_irq_src_s  *src = ep;
+  struct device_s *dev = ep->base.dev;
   struct soclib_xicu_private_s *pv = dev->drv_pv;
   uint_fast8_t out = src - pv->srcs;
 
@@ -157,8 +136,8 @@ DEV_IRQ_EP_PROCESS(soclib_xicu_source_process)
       {
         done = 0;
         struct soclib_xicu_sink_s *xsink = pv->sinks + XICU_PRIO_HWI(prio);
-        struct dev_irq_ep_s *sink = &xsink->sink;
-        sink->process(sink, id);
+        struct dev_irq_sink_s *sink = &xsink->sink;
+        device_irq_sink_process(sink, 0);
         soclib_xicu_rr_mask(pv, xsink);
       }
 

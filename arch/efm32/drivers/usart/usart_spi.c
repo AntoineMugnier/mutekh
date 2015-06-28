@@ -53,7 +53,7 @@ struct efm32_usart_spi_context_s
 {
   uintptr_t                      addr;
 #ifdef CONFIG_DEVICE_IRQ
-  struct dev_irq_ep_s            irq_ep;
+  struct dev_irq_src_s           irq_ep;
 #endif
   struct dev_spi_ctrl_transfer_s *tr;
   uint32_t                       ctrl;
@@ -224,10 +224,10 @@ static bool_t efm32_usart_spi_transfer_tx(struct device_s *dev)
 
 #ifdef CONFIG_DEVICE_IRQ
 
-static DEV_IRQ_EP_PROCESS(efm32_usart_spi_irq)
+static DEV_IRQ_SRC_PROCESS(efm32_usart_spi_irq)
 {
 
-  struct device_s *dev = ep->dev;
+  struct device_s *dev = ep->base.dev;
   struct efm32_usart_spi_context_s *pv = dev->drv_pv;
 
 
@@ -512,8 +512,7 @@ static DEV_INIT(efm32_usart_spi_init)
 
   /* init irq endpoint */
 #ifdef CONFIG_DEVICE_IRQ
-  device_irq_source_init(dev, &pv->irq_ep, 1,
-                         &efm32_usart_spi_irq, DEV_IRQ_SENSE_HIGH_LEVEL);
+  device_irq_source_init(dev, &pv->irq_ep, 1, &efm32_usart_spi_irq);
 
   if (device_irq_source_link(dev, &pv->irq_ep, 1, -1))
     goto err_clk;

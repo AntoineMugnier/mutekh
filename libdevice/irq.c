@@ -1,4 +1,3 @@
-
 /*
     This file is part of MutekH.
     
@@ -31,220 +30,55 @@
 
 #include <mutek/printk.h>
 #include <mutek/mem_alloc.h>
+#include <hexo/endian.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include <assert.h>
 
-#if 0
-/* anchor source_process */
-static DEV_IRQ_EP_PROCESS(device_icu_source_process)
+extern inline error_t device_irq_src_enable(struct dev_irq_src_s *src);
+
+extern inline void device_irq_sink_process(struct dev_irq_sink_s *sink, dev_irq_id_t id);
+
+extern inline error_t device_res_add_irq(struct device_s *dev, uint_fast8_t src_id,
+                                         uint_fast8_t sink_id, enum dev_irq_sense_modes_e trig_mode,
+                                         dev_irq_id_t irq_id, dev_irq_route_t route_mask);
+
+static DEV_IRQ_SRC_PROCESS(device_irq_dummy_process)
 {
-  struct dev_irq_ep_s  *src = ep;
-
-#ifdef CONFIG_DEBUG
-  assert(src->type != DEV_IRQ_EP_SINK);
-#endif
-
-  /* process irq and get next sink */
-  int_fast16_t         next_id = *id;
-  struct dev_irq_ep_s  *sink = src->f_irq(src, &next_id);
-
-#ifdef CONFIG_DEBUG
-  assert(!sink || sink->type != DEV_IRQ_EP_SOURCE);
-#endif
-
-  if (sink)
-    sink->process(sink, &next_id);
+  printk("device: spurious interrupt\n");
 }
-/* anchor end */
 
-/* anchor sink_process */
-static DEV_IRQ_EP_PROCESS(device_irq_sink_process)
+static const struct dev_irq_src_s device_irq_dummy_src_ep = {
+  .process = device_irq_dummy_process
+};
+
+static void device_irq_sink_cleanup(struct dev_irq_sink_s *sink)
 {
-  struct dev_irq_ep_s  *sink = ep;
-
-#ifdef CONFIG_DEBUG
-  assert(sink->type != DEV_IRQ_EP_SOURCE);
-#endif
-
-  switch (sink->link_count)
+  if (!sink->base.link_count)
     {
-      struct dev_irq_ep_s *src;
-
-    case 0: /* no source end-point connected to sink */
-      device_irq_spurious_process(sink, id);
-      break;
-
-    case 1: /* single source end-point connected */
-      src = sink->links.single;
-      src->process(src, id);
-      break;
-
-    default: { /* multiple source end-points sharing the same irq line */
-      uint_fast8_t i;
-      for (i = 0; i < sink->link_count; i++)
-        {
-          src = sink->links.array[i];
-          src->process(src, id);
-        }
-      break;
-    }
+      if (sink->sense_all != DEV_IRQ_SENSE_ID_BUS)
+        sink->update(sink, DEV_IRQ_SENSE_NONE, 0);
+      sink->base.links.single = (void*)&device_irq_dummy_src_ep;
     }
 }
-/* anchor end */
-#endif
-
-static DEV_IRQ_EP_PROCESS(device_irq_sink_process_0)
-{
-  struct dev_irq_ep_s  *sink = ep;
-
-  printk("device: spurious interrupt on sink end-point %p with no connection (icu device %p)\n", sink, sink->dev);
-}
-
-static DEV_IRQ_EP_PROCESS(device_irq_sink_process_1)
-{
-  struct dev_irq_ep_s  *sink = ep;
-  struct dev_irq_ep_s *src = sink->links.single; 
-  //  printk("irq1 %u %p\n", id, src->dev);
-  src->process(src, id);
-}
-
-static DEV_IRQ_EP_PROCESS(device_irq_sink_process_N)
-{
-  struct dev_irq_ep_s  *sink = ep;
-  uint_fast8_t i;
-  for (i = 0; i < sink->link_count; i++)
-    {
-      struct dev_irq_ep_s *src = sink->links.array[i];
-      //  printk("irqN %u %p\n", id, src->dev);
-      src->process(src, id);
-    }
-}
-
-static void device_irq_sink_fcn_set(struct dev_irq_ep_s *sink)
-{
-  switch (sink->link_count)
-    {
-    case 0: {
-      struct device_icu_s icu;
-
-      if (sink->dev &&
-          !device_get_accessor(&icu, sink->dev, DRIVER_CLASS_ICU, 0))
-        {
-          if (DEVICE_HAS_OP(&icu, disable_irq))
-            DEVICE_OP(&icu, disable_irq, sink);
-          device_put_accessor(&icu);
-        }
-      sink->process = &device_irq_sink_process_0;
-      return;
-    }
-    case 1:
-      sink->process = &device_irq_sink_process_1;
-      return;
-    default:
-      sink->process = &device_irq_sink_process_N;
-      return;
-    }
-}
-
-/****************************************/
-
-#ifdef CONFIG_DEVICE_IRQ_BYPASS
-
-void device_irq_bypass_init(struct dev_irq_bypass_s *bypass, uint_fast8_t count)
-{
-  memset(bypass, 0, sizeof(*bypass) * count);
-}
-
-void device_irq_bypass_cleanup(struct dev_irq_bypass_s *bypass, uint_fast8_t count)
-{
-  uint_fast8_t i;
-  for (i = 0; i < count; i++)
-    device_irq_bypass_unlink(bypass + i);
-}
-
-void device_irq_bypass_unlink(struct dev_irq_bypass_s *bypass)
-{
-  struct dev_irq_ep_s *src = bypass->src;
-  struct dev_irq_bypass_s **head, *i;
-
-  if (src == NULL)
-    return;
-
-  for (head = &src->bypass_list; (i = *head); head = &i->next)
-    if (i == bypass)
-      {
-        *head = i->next;
-        i->src = NULL;
-        i->next = NULL;
-        return;
-      }
-
-  abort();
-}
-
-error_t device_irq_bypass_link(struct dev_irq_ep_s *src, struct dev_irq_bypass_s *bypass)
-{
-  if (!src)
-    {
-      device_irq_bypass_unlink(bypass);
-      bypass->next = bypass; // unusable mark
-      return -EBUSY;
-    }
-  else if (bypass->src)
-    {
-      if (bypass->src == src)
-        return -EEXISTS;
-      device_irq_bypass_unlink(bypass);
-      bypass->next = bypass; // unusable mark
-      return -EBUSY;
-    }
-  else if (bypass->next == bypass)
-    {
-      return -EBUSY;
-    }
-  else
-    {
-      bypass->next = src->bypass_list;
-      src->bypass_list = bypass;
-      bypass->src = src;
-      return 0;
-    }
-}
-
-void device_irq_bypass_src_cleanup(struct dev_irq_ep_s *src)
-{
-  struct dev_irq_bypass_s *bypass = src->bypass_list;
-
-  while (bypass)
-    {
-      assert(bypass->src == src);
-      bypass->src = NULL;
-
-      struct dev_irq_bypass_s *next = bypass->next;
-      bypass->next = NULL;
-      bypass = next;
-    }
-
-  src->bypass_list = NULL;
-}
-
-#endif
 
 /****************************************/
 
 static error_t device_irq_ep_link_half(struct dev_irq_ep_s *a, struct dev_irq_ep_s *b)
 {
+#if defined(CONFIG_DEVICE_IRQ_SHARING) || defined(CONFIG_DEVICE_IRQ_MULTI_SINK)
   uint_fast8_t c = a->link_count;
 
   switch (c)
     {
     case 0:
+#endif
       a->links.single = b;
       a->link_count = 1;
       return 0;
 
+#if defined(CONFIG_DEVICE_IRQ_SHARING) || defined(CONFIG_DEVICE_IRQ_MULTI_SINK)
     case 1: {
       struct dev_irq_ep_s **r, *t = a->links.single;
       r = mem_alloc(sizeof(*r) * 2, (mem_scope_sys));
@@ -269,16 +103,19 @@ static error_t device_irq_ep_link_half(struct dev_irq_ep_s *a, struct dev_irq_ep
     }
 
     }
+#endif
 }
 
 static error_t device_irq_ep_unlink_half(struct dev_irq_ep_s *a, struct dev_irq_ep_s *b)
 {
+#if defined(CONFIG_DEVICE_IRQ_SHARING) || defined(CONFIG_DEVICE_IRQ_MULTI_SINK)
   struct dev_irq_ep_s **r = a->links.array;
+#endif
 
   switch (a->link_count)
     {
     case 0:
-      return -ENOENT;
+      break;
 
     case 1:
       if (a->links.single != b)
@@ -286,6 +123,7 @@ static error_t device_irq_ep_unlink_half(struct dev_irq_ep_s *a, struct dev_irq_
       a->link_count = 0;
       return 0;
 
+#if defined(CONFIG_DEVICE_IRQ_SHARING) || defined(CONFIG_DEVICE_IRQ_MULTI_SINK)
     case 2: {
       if (r[0] == b)
         a->links.single = r[1];
@@ -307,10 +145,11 @@ static error_t device_irq_ep_unlink_half(struct dev_irq_ep_s *a, struct dev_irq_
             a->link_count--;
             return 0;
           }
-      return -ENOENT;
     }
+#endif
     }
 
+  return -ENOENT;
 }
 
 static void device_irq_ep_unlink_all(struct dev_irq_ep_s *a)
@@ -325,6 +164,7 @@ static void device_irq_ep_unlink_all(struct dev_irq_ep_s *a)
       a->link_count = 0;
       return;
 
+#if defined(CONFIG_DEVICE_IRQ_SHARING) || defined(CONFIG_DEVICE_IRQ_MULTI_SINK)
     default: {
       struct dev_irq_ep_s **r = a->links.array;
       uint_fast8_t i;
@@ -334,146 +174,204 @@ static void device_irq_ep_unlink_all(struct dev_irq_ep_s *a)
       a->link_count = 0;
       return;
     }
+#endif
     }
 }
 
-error_t device_irq_ep_link(struct dev_irq_ep_s *source, struct dev_irq_ep_s *sink)
+error_t device_irq_ep_link(struct dev_irq_src_s *source, struct dev_irq_sink_s *sink)
 {
-#ifdef CONFIG_DEBUG
-  assert(source->type != DEV_IRQ_EP_SINK);
-  assert(sink->type != DEV_IRQ_EP_SOURCE);
+#ifndef CONFIG_DEVICE_IRQ_SHARING
+  if (sink->base.link_count)
+    return -ENOTSUP;
+#endif
+#ifndef CONFIG_DEVICE_IRQ_MULTI_SINK
+  if (source->base.link_count)
+    return -ENOTSUP;
 #endif
 
-  if (device_irq_ep_link_half(source, sink))
+  if (device_irq_ep_link_half(&source->base, &sink->base))
     return -ENOMEM;
-  if (device_irq_ep_link_half(sink, source))
+  if (device_irq_ep_link_half(&sink->base, &source->base))
     {
-      ensure(!device_irq_ep_unlink_half(source, sink));
+      ensure(!device_irq_ep_unlink_half(&source->base, &sink->base));
       return -ENOMEM;
     }
 
-  device_irq_sink_fcn_set(sink);
   return 0;
 }
 
-error_t device_irq_ep_unlink(struct dev_irq_ep_s *source, struct dev_irq_ep_s *sink)
+error_t device_irq_ep_unlink(struct dev_irq_src_s *source, struct dev_irq_sink_s *sink)
 {
   assert(source != NULL || sink != NULL);
-#ifdef CONFIG_DEBUG
-  assert(!source || source->type != DEV_IRQ_EP_SINK);
-  assert(!sink || sink->type != DEV_IRQ_EP_SOURCE);
-#endif
 
-  if (device_irq_ep_unlink_half(source, sink))
+  if (device_irq_ep_unlink_half(&source->base, &sink->base))
     return -ENOENT;
-  ensure(!device_irq_ep_unlink_half(sink, source));
-  device_irq_sink_fcn_set(sink);
+  ensure(!device_irq_ep_unlink_half(&sink->base, &source->base));
+  device_irq_sink_cleanup(sink);
   return 0;
 }
 
-void device_irq_source_init(struct device_s *dev, struct dev_irq_ep_s *sources,
-                            uint_fast8_t src_count, dev_irq_ep_process_t *handler,
-                            enum dev_irq_sense_modes_e sense_capabilities)
+void device_irq_source_init(struct device_s *dev, struct dev_irq_src_s *sources,
+                            uint_fast8_t src_count, dev_irq_src_process_t *handler)
 {
   uint_fast8_t i;
 
   for (i = 0; i < src_count; i++)
     {
-      struct dev_irq_ep_s *ep = sources + i;
-      ep->dev = dev;
+      struct dev_irq_src_s *ep = sources + i;
+      ep->base.dev = dev;
+      ep->base.link_count = 0;
       ep->process = handler;
-      ep->link_count = 0;
-      ep->sense = sense_capabilities;
-#ifdef CONFIG_DEVICE_IRQ_BYPASS
-      ep->bypass_list = NULL;
-#endif
-#ifdef CONFIG_DEBUG
-      ep->type = DEV_IRQ_EP_SOURCE;
-#endif
+      ep->trig_mode = 0;
     }
 }
 
-void device_irq_sink_init(struct device_s *dev, struct dev_irq_ep_s *sinks, uint_fast8_t sink_count,
+void device_irq_sink_init(struct device_s *dev, struct dev_irq_sink_s *sinks,
+                          uint_fast8_t sink_count, dev_irq_sink_update_t *update,
                           enum dev_irq_sense_modes_e sense_capabilities)
 {
   uint_fast8_t i;
 
   for (i = 0; i < sink_count; i++)
     {
-      struct dev_irq_ep_s *ep = sinks + i;
-      ep->dev = dev;
-      ep->link_count = 0;
-      ep->sense = sense_capabilities;
-#ifdef CONFIG_DEBUG
-      ep->type = DEV_IRQ_EP_SINK;
-#endif
-      device_irq_sink_fcn_set(ep);
+      struct dev_irq_sink_s *ep = sinks + i;
+      ep->base.dev = dev;
+      ep->base.link_count = 0;
+      ep->base.links.single = (void*)&device_irq_dummy_src_ep;
+      ep->update = update;
+      ep->sense_link = ep->sense_all = sense_capabilities;
     }
 }
 
-void device_irq_source_unlink(struct device_s *dev, struct dev_irq_ep_s *sources, uint_fast8_t src_count)
+void device_irq_sink_unlink(struct device_s *dev, struct dev_irq_sink_s *sinks, uint_fast8_t sink_count)
 {
-  uint_fast8_t i;
+  uint_fast8_t i = 0;
 
-  for (i = 0; i < src_count; i++)
+  for (; i < sink_count; i++)
     {
-#ifdef CONFIG_DEBUG
-      assert(sources[i].type != DEV_IRQ_EP_SINK);
+      device_irq_ep_unlink_all(dev_irq_sink_s_base(sinks + i));
+      device_irq_sink_cleanup(sinks + i);
+    }
+}
+
+static error_t device_icu_source_link(struct dev_irq_src_s *src, dev_irq_route_t *route_mask)
+{
+  struct dev_irq_ep_s **array;
+  uint_fast8_t count = src->base.link_count;
+  uint_fast8_t j = 0;
+  error_t err = 0;
+
+  switch (count)
+    {
+    case 0:
+      return 0;
+    case 1:
+      array = &src->base.links.single;
+#ifdef CONFIG_DEVICE_IRQ_MULTI_SINK
+      break;
+    default:
+      array = src->base.links.array;
+      break;
+    }
+
+  dev_irq_route_t rt = route_mask != NULL ? *route_mask : 0;
+
+  for (; j < count && !err; j++)
+    {
 #endif
-      device_irq_ep_unlink_all(sources + i);
+      struct dev_irq_sink_s *sink = dev_irq_sink_s_cast(array[j]);
+      struct dev_irq_src_s *bypass = NULL;
+
 #ifdef CONFIG_DEVICE_IRQ_BYPASS
-      device_irq_bypass_src_cleanup(sources + i);
+      while (1)
+        {
+#endif
+          struct device_icu_s icu;
+          if (device_get_accessor(&icu, sink->base.dev, DRIVER_CLASS_ICU, 0))
+            return -EINVAL;
+
+          err = DEVICE_OP(&icu, link, sink, src, route_mask, &bypass);
+
+          device_put_accessor(&icu);
+
+#ifdef CONFIG_DEVICE_IRQ_BYPASS
+          if (err != -EAGAIN)
+            break;
+
+          if (bypass->base.link_count != 1)
+            return -EINVAL;
+
+          sink = dev_irq_sink_s_cast(bypass->base.links.single);
+        }
+#else
+      if (err != -EAGAIN)
+        err = 0;
+#endif
+
+#ifdef CONFIG_DEVICE_IRQ_MULTI_SINK
+      if (route_mask != NULL)
+        *route_mask = rt;
 #endif
     }
+
+  return err;
 }
 
-void device_irq_sink_unlink(struct device_s *dev, struct dev_irq_ep_s *sinks, uint_fast8_t sink_count)
+void device_irq_source_unlink(struct device_s *dev, struct dev_irq_src_s *sources, uint_fast8_t src_count)
 {
-  uint_fast8_t i;
+  uint_fast8_t i = 0;
 
-  for (i = 0; i < sink_count; i++)
+  for (; i < src_count; i++)
     {
-#ifdef CONFIG_DEBUG
-      assert(sinks[i].type != DEV_IRQ_EP_SOURCE);
-#endif
-      device_irq_ep_unlink_all(sinks + i);
-      device_irq_sink_fcn_set(sinks + i);
+      struct dev_irq_src_s *src = sources + i;
+      device_icu_source_link(src, NULL);
+      device_irq_ep_unlink_all(dev_irq_src_s_base(src));
     }
 }
 
-error_t device_irq_source_link(struct device_s *dev, struct dev_irq_ep_s *srcs,
+error_t device_irq_source_link(struct device_s *dev, struct dev_irq_src_s *srcs,
                                uint_fast8_t src_count, uint32_t enable_mask)
 {
   uint_fast8_t i;
   error_t err;
   bool_t done[src_count];
+  const char *icu_path = NULL;
 
   memset(done, 0, sizeof(done));
 
   DEVICE_RES_FOREACH(dev, r, {
 
+      if (r->type == DEV_RES_DEV_PARAM && !strcmp(r->u.dev_param.name, "icu"))
+        icu_path = r->u.dev_param.dev;
+
       if (r->type != DEV_RES_IRQ)
         continue;
 
-      uint_fast8_t id = r->u.irq.dev_out_id;
+      if (!icu_path)
+        {
+          printk("device: missing icu device resource for device %p.\n", dev);
+          return -ENOENT;
+        }
 
-      if (id >= src_count)
+      uint_fast8_t src_id = r->u.irq.src_id;
+
+      if (src_id >= src_count)
         {
           printk("device: driver for device %p does not provide source end-point for IRQ output %u.\n",
-                 dev, id);
+                 dev, src_id);
           err = -ENOENT;
           goto error;
         }
 
-      if (done[id])
+      if (done[src_id])
         {
-          printk("device: multiple resource entries for IRQ source end-point %u.\n", dev, id);
+          printk("device: multiple resource entries for IRQ source end-point %u.\n", dev, src_id);
           err = -ENOENT;
           goto error;
         }
 
       struct device_s *icu_dev = dev;
-      if (device_get_by_path(&icu_dev, r->u.irq.icu, &device_filter_init_done))
+      if (device_get_by_path(&icu_dev, icu_path, &device_filter_init_done))
         {
           printk("device: no initialized interrupt controller available for %p device.\n", dev);
           err = -ENOENT;
@@ -481,41 +379,105 @@ error_t device_irq_source_link(struct device_s *dev, struct dev_irq_ep_s *srcs,
         }
 
       struct device_icu_s icu;
-
       if (device_get_accessor(&icu, icu_dev, DRIVER_CLASS_ICU, 0))
         {
-          printk("device: can not use %p device as an interrupt controller.\n", r->u.irq.icu);
+          printk("device: can not use %p device as an interrupt controller.\n", icu_path);
           err = -EINVAL;
           goto error;
         }
 
-      struct dev_irq_ep_s *src = srcs + id;
-      struct dev_irq_ep_s *sink = DEVICE_OP(&icu, get_endpoint, DEV_IRQ_EP_SINK, r->u.irq.icu_in_id);
-
-      if (!sink)
-        {
-          printk("device: interrupt controller %p does not have sink end-point for IRQ input %u.\n", icu_dev, r->u.irq.icu_in_id);
-          err = -EINVAL;
-        }
-      else
-        {
-          err = device_irq_ep_link(src, sink);
-        }
+      struct dev_irq_src_s *src = srcs + src_id;
+      struct dev_irq_sink_s *sink = DEVICE_OP(&icu, get_sink, r->u.irq.sink_id);
 
       device_put_accessor(&icu);
 
-      if (err)
+      if (!sink)
+        {
+          printk("device: interrupt controller %p does not have sink end-point for IRQ input %u.\n", icu_dev, r->u.irq.sink_id);
+          err = -EINVAL;
+          goto error;
+        }
+
+      /* create link between end-points */
+      if ((err = device_irq_ep_link(src, sink)))
         goto error;
 
-      if ((enable_mask >> id) & 1)
-        if (!device_icu_irq_enable(src, r->u.irq.irq_id, src, src))
-          {
-            printk("device: Unable to enable IRQ output %u of device %p, no suitable irq path found.\n", r->u.irq.irq_id, dev);
-            err = -EBUSY;
-            goto error;
-          }
+      uint_fast16_t irq_id = r->u.irq.irq_id;
+      uint_fast16_t trig_mode = r->u.irq.trig_mode;
+      dev_irq_route_t route_mask = r->u.irq.route_mask;
 
-      done[id]++;
+      assert(!irq_id || trig_mode == DEV_IRQ_SENSE_ID_BUS);
+      assert(sink->sense_all);
+
+#ifdef CONFIG_DEVICE_IRQ_MULTI_SINK
+      if (src->base.link_count > 1)
+        {
+          if (irq_id != src->irq_id)
+            {
+              printk("device: irq linked to multiple sinks with different logical ids.\n", icu_dev);
+              err = -EINVAL;
+              goto error;
+            }
+        }
+#endif
+
+      src->irq_id = irq_id;
+
+#ifdef CONFIG_DEVICE_IRQ_SHARING
+      if (sink->base.link_count > 1)
+        {
+          trig_mode &= sink->sense_link;
+          if (!trig_mode)
+            {
+              printk("device: icu %p can't share a sink end-point with a different trigger mode.\n", icu_dev);
+              err = -EINVAL;
+              goto error;
+            }
+          src->trig_mode = dev_irq_src_s_cast(sink->base.links.array[0])->trig_mode;
+        }
+      else
+#endif
+        {
+          /* update sink sense modes */
+          if (trig_mode)
+            {
+              trig_mode &= sink->sense_all;
+              if (!trig_mode)
+                {
+                  printk("device: trigger modes of IRQ source %u of device %p not supported by sink\n", src_id, dev);
+                  err = -EINVAL;
+                  goto error;
+                }
+              trig_mode &= ~(trig_mode - 1); /* keep a single trigger mode */
+            }
+
+          sink->sense_link = trig_mode;
+        }
+
+      /* setup interrupt controller */
+      if ((err = device_icu_source_link(src, &route_mask)))
+        {
+          printk("device: unable to link IRQ source %u of device %p\n", src_id, dev);
+          err = -EINVAL;
+          goto error;
+        }
+
+#ifdef CONFIG_DEVICE_IRQ_SHARING
+      if (sink->base.link_count == 1)
+#endif
+        {
+          if ((enable_mask >> src_id) & 1)
+            {
+              sink->update(sink, trig_mode, irq_id);
+              src->trig_mode = trig_mode;
+            }
+          else
+            {
+              src->trig_mode = DEV_IRQ_SENSE_NONE;
+            }
+        }
+
+      done[src_id]++;
   });
 
   for (i = 0; i < src_count; i++)
@@ -533,47 +495,146 @@ error_t device_irq_source_link(struct device_s *dev, struct dev_irq_ep_s *srcs,
   return err;
 }
 
-bool_t device_icu_irq_enable(struct dev_irq_ep_s *local_src, uint_fast16_t target_irq_id,
-                             struct dev_irq_ep_s *target_src, struct dev_irq_ep_s *dev_ep)
+error_t device_irq_src_update(struct dev_irq_src_s *src,
+                              enum dev_irq_sense_modes_e trig_mode)
 {
-  struct dev_irq_ep_s **array;
-  uint_fast8_t count = local_src->link_count;
+  if (src->trig_mode == trig_mode)
+    return 0;
+
+  struct dev_irq_ep_s **array = &src->base.links.single;
+  uint_fast8_t count = src->base.link_count;
+  uint_fast8_t j = 0;
 
   switch (count)
     {
     case 0:
-      return 0;
-    case 1:
-      array = &local_src->links.single;
-      break;
+      return -ENOENT;
     default:
-      array = local_src->links.array;
+#ifdef CONFIG_DEVICE_IRQ_MULTI_SINK
+      array = src->base.links.array;
+    case 1:
+#endif
       break;
     }
 
-  bool_t res = 0;
-  uint_fast8_t  j;
-
+#ifdef CONFIG_DEVICE_IRQ_MULTI_SINK
   for (j = 0; j < count; j++)
+#endif
     {
-      struct dev_irq_ep_s *next_sink = array[j];
-      struct device_icu_s next_icu;
-
-#warning should we enable all source or stop on the first success? use icu priority to decide order?
-      ensure(device_get_accessor(&next_icu, next_sink->dev, DRIVER_CLASS_ICU, 0) == 0);
-      res |= DEVICE_OP(&next_icu, enable_irq, next_sink, target_irq_id, target_src, dev_ep);
-      device_put_accessor(&next_icu);
+      struct dev_irq_sink_s *sink = dev_irq_sink_s_cast(array[j]);
+#ifdef CONFIG_DEVICE_IRQ_SHARING
+      if (sink->base.link_count > 1)
+        return -EBUSY;
+#endif
+      if (trig_mode)
+        {
+          if (!(sink->sense_link & trig_mode))
+            return -ENOTSUP;
+          assert(ALIGN_ISPOWTWO(trig_mode));
+        }
     }
 
-  return res;
+#ifdef CONFIG_DEVICE_IRQ_MULTI_SINK
+  for (j = 0; j < count; j++)
+#endif
+    {
+      struct dev_irq_sink_s *sink = dev_irq_sink_s_cast(array[j]);
+      sink->update(sink, trig_mode, src->irq_id);
+    }
+
+  src->trig_mode = trig_mode;
+
+  return 0;
 }
 
-error_t device_icu_irq_bind(struct dev_irq_ep_s *source, const char *icu_name,
-                            uint_fast16_t sink_id, uint8_t irq_id)
+inline error_t device_irq_src_enable(struct dev_irq_src_s *src)
+{
+  struct dev_irq_ep_s **array = &src->base.links.single;
+  uint_fast8_t count = src->base.link_count;
+  uint_fast8_t j = 0;
+
+  switch (count)
+    {
+    case 0:
+      return -ENOENT;
+    default:
+#ifdef CONFIG_DEVICE_IRQ_MULTI_SINK
+      array = src->base.links.array;
+    case 1:
+#endif
+      break;
+    }
+
+  struct dev_irq_sink_s *sink;
+#ifdef CONFIG_DEVICE_IRQ_MULTI_SINK
+  for (j = 0; j < count; j++)
+#endif
+    {
+      sink = dev_irq_sink_s_cast(array[j]);
+#ifdef CONFIG_DEVICE_IRQ_SHARING
+      if (sink->base.link_count > 1)
+        return -EBUSY;
+#endif
+    }
+
+  enum dev_irq_sense_modes_e trig_mode = sink->sense_link;
+  assert(trig_mode && ALIGN_ISPOWTWO(trig_mode));
+
+  if (src->trig_mode == trig_mode)
+    return 0;
+
+#ifdef CONFIG_DEVICE_IRQ_MULTI_SINK
+  for (j = 0; j < count; j++)
+    {
+      sink = dev_irq_sink_s_cast(array[j]);
+#endif
+      sink->update(sink, trig_mode, src->irq_id);
+#ifdef CONFIG_DEVICE_IRQ_MULTI_SINK
+    }
+#endif
+
+  src->trig_mode = trig_mode;
+
+  return 0;
+}
+
+void device_irq_modes(struct dev_irq_src_s *src,
+                      enum dev_irq_sense_modes_e *cur_,
+                      enum dev_irq_sense_modes_e *modes_)
+{
+  struct dev_irq_ep_s **array = &src->base.links.single;
+  struct dev_irq_sink_s *sink;
+  uint_fast8_t count = src->base.link_count;
+  enum dev_irq_sense_modes_e cur, modes;
+
+  switch (count)
+    {
+    case 0:
+      modes = cur = 0;
+      break;
+    default:
+#ifdef CONFIG_DEVICE_IRQ_MULTI_SINK
+      array = src->base.links.array;
+    case 1:
+#endif
+      sink = dev_irq_sink_s_cast(array[0]);
+      modes = sink->sense_link;
+      cur = src->trig_mode;
+      break;
+    }
+  if (modes_)
+    *modes_ = modes;
+  if (cur_)
+    *cur_ = cur;
+}
+
+error_t device_icu_irq_bind(struct dev_irq_src_s *src, const char *icu_name,
+                            uint_fast16_t sink_id, uint8_t irq_id,
+                            enum dev_irq_sense_modes_e trig_mode, dev_irq_route_t route_mask)
 {
     error_t err;
     struct device_icu_s icu;
-    struct dev_irq_ep_s *sink;
+    struct dev_irq_sink_s *sink;
 
     err = device_get_accessor_by_path(&icu, NULL, icu_name, DRIVER_CLASS_ICU);
     if (err) {
@@ -581,22 +642,37 @@ error_t device_icu_irq_bind(struct dev_irq_ep_s *source, const char *icu_name,
         return err;
     }
 
-    sink = DEVICE_OP(&icu, get_endpoint, DEV_IRQ_EP_SINK, sink_id);
+    sink = DEVICE_OP(&icu, get_sink, sink_id);
 
-    if (!sink) {
+    if (!sink)
+      {
         err = -ENOENT;
         goto out;
-    }
+      }
 
-    err = device_irq_ep_link(source, sink);
+    trig_mode &= sink->sense_link;
+
+    if (!trig_mode)
+      {
+        err = -ENOTSUP;
+        goto out;
+      }
+
+    trig_mode &= ~(trig_mode - 1); /* keep a single trigger mode */
+    src->trig_mode = trig_mode;
+
+    err = device_irq_ep_link(src, sink);
     if (err)
         goto out;
 
-    if (!DEVICE_OP(&icu, enable_irq, sink, irq_id, source, source)) {
-      device_irq_ep_unlink(source, sink);
-      err = -EBUSY;
-      goto out;
-    }
+    if (!device_icu_source_link(src, &route_mask))
+      {
+        device_irq_ep_unlink(src, sink);
+        err = -EBUSY;
+        goto out;
+      }
+
+    sink->update(sink, trig_mode, irq_id);
 
     err = 0;
 
@@ -605,3 +681,9 @@ error_t device_icu_irq_bind(struct dev_irq_ep_s *source, const char *icu_name,
 
     return err;
 }
+
+DEV_ICU_LINK(device_icu_dummy_link)
+{
+  return 0;
+}
+

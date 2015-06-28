@@ -42,11 +42,18 @@
 # include <arch/mem_checker.h>
 #endif
 
+#if defined(CONFIG_CPU_ARM32_SOCLIB)
+# define ARM_IRQ_SENSE_MODE    DEV_IRQ_SENSE_HIGH_LEVEL
+#else
+# define ARM_IRQ_SENSE_MODE    DEV_IRQ_SENSE_LOW_LEVEL
+#endif
+
+
 struct arm_dev_private_s
 {
 #ifdef CONFIG_DEVICE_IRQ
 #define ICU_ARM_MAX_VECTOR	1
-  struct dev_irq_ep_s	sinks[ICU_ARM_MAX_VECTOR];
+  struct dev_irq_sink_s	sinks[ICU_ARM_MAX_VECTOR];
 #endif
 
   struct cpu_tree_s node;
@@ -71,47 +78,26 @@ static CPU_INTERRUPT_HANDLER(arm_irq_handler)
   struct arm_dev_private_s  *pv = dev->drv_pv;
 
   if ( irq < ICU_ARM_MAX_VECTOR ) {
-    struct dev_irq_ep_s *sink = pv->sinks + irq;
-    int_fast16_t id = 0;
-
-    sink->process(sink, &id);
+    struct dev_irq_sink_s *sink = pv->sinks + irq;
+    device_irq_sink_process(sink, 0);
   }
 }
 
-static DEV_ICU_GET_ENDPOINT(arm_icu_get_endpoint)
+static DEV_IRQ_SINK_UPDATE(arm_icu_sink_update)
+{
+}
+
+static DEV_ICU_GET_SINK(arm_icu_get_sink)
 {
   struct device_s *dev = accessor->dev;
   struct arm_dev_private_s  *pv = dev->drv_pv;
 
-  switch (type)
-    {
-    case DEV_IRQ_EP_SINK:
-      if (id < ICU_ARM_MAX_VECTOR)
-        return pv->sinks + id;
-    default:
-      return NULL;
-    }
+  if (id < ICU_ARM_MAX_VECTOR)
+    return &pv->sinks[id];
+  return NULL;
 }
 
-static DEV_ICU_ENABLE_IRQ(arm_icu_enable_irq)
-{
-  __unused__ struct device_s *dev = accessor->dev;
-
-  // inputs are single wire, logical irq id must be 0
-  if (irq_id > 0)
-    return 0;
-
-# ifdef CONFIG_ARCH_SMP
-  if (!arch_cpu_irq_affinity_test(dev, dev_ep))
-    return 0;
-# else
-  /* Enable irq line. On SMP platforms, all lines are already enabled on init. */
-# endif
-
-  return 1;
-}
-
-#define arm_icu_disable_irq (dev_icu_disable_irq_t*)dev_driver_notsup_fcn
+#define arm_icu_link device_icu_dummy_link
 
 #endif
 
@@ -271,7 +257,7 @@ static DEV_TIMER_CONFIG(arm_timer_config)
 }
 
 #define arm_timer_request (dev_timer_request_t*)dev_driver_notsup_fcn
-#define arm_timer_cancel (dev_timer_request_t*)dev_driver_notsup_fcn
+#define arm_timer_cancel (dev_timer_cancel_t*)dev_driver_notsup_fcn
 
 #endif
 
@@ -283,7 +269,7 @@ static DEV_INIT(arm_init);
 #ifdef CONFIG_DEVICE_CLOCK
 static DEV_CLOCK_SINK_CHANGED(arm_clk_changed)
 {
-  struct device_s *dev = ep->dev;
+  struct device_s *dev = ep->base.dev;
   struct arm_dev_private_s *pv = dev->drv_pv;
   LOCK_SPIN_IRQ(&dev->lock);
   pv->freq = *freq;
@@ -375,12 +361,7 @@ static DEV_INIT(arm_init)
 #ifdef CONFIG_DEVICE_IRQ
   /* init arm irq sink end-points */
   device_irq_sink_init(dev, pv->sinks, ICU_ARM_MAX_VECTOR,
-# if defined(CONFIG_CPU_ARM32_SOCLIB)
-                       DEV_IRQ_SENSE_HIGH_LEVEL
-# else
-                       DEV_IRQ_SENSE_LOW_LEVEL
-# endif
-                       );
+                       &arm_icu_sink_update, ARM_IRQ_SENSE_MODE);
 
   /* set processor interrupt handler */
 # ifdef CONFIG_ARCH_SMP

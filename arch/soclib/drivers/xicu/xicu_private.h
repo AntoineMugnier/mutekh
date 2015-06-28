@@ -35,11 +35,12 @@
 
 #include <device/class/icu.h>
 
-DEV_IRQ_EP_PROCESS(soclib_xicu_source_process);
+DEV_IRQ_SRC_PROCESS(soclib_xicu_source_process);
+DEV_IRQ_SINK_UPDATE(soclib_xicu_icu_sink_update);
 
 struct soclib_xicu_sink_s
 {
-  struct dev_irq_ep_s sink;
+  struct dev_irq_sink_s sink;
   uint32_t     affinity;
   uint_fast8_t current;
   uint_fast8_t counter;
@@ -54,6 +55,14 @@ void soclib_xicu_pti_irq_process(struct device_s *dev, uint_fast8_t number);
 
 # define SOCLIB_XICU_PTI_MIN_PERIOD 2000
 # define SOCLIB_XICU_PTI_DEFAULT_PERIOD 250000
+
+DEV_ICU_GET_SINK(soclib_xicu_icu_get_sink);
+DEV_ICU_LINK(soclib_xicu_icu_link);
+
+DEV_TIMER_REQUEST(soclib_xicu_timer_request);
+DEV_TIMER_CANCEL(soclib_xicu_timer_cancel);
+DEV_TIMER_GET_VALUE(soclib_xicu_timer_get_value);
+DEV_TIMER_CONFIG(soclib_xicu_timer_config);
 
 struct soclib_xicu_pti_s
 {
@@ -81,7 +90,7 @@ struct soclib_xicu_private_s
   struct soclib_xicu_sink_s *sinks;
 
   uintptr_t irq_count;
-  struct dev_irq_ep_s *srcs;
+  struct dev_irq_src_s *srcs;
 
 # ifdef CONFIG_HEXO_IPI
   uintptr_t wti_count;

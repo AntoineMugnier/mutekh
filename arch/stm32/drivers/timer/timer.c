@@ -59,7 +59,7 @@ struct stm32_timer_private_s
   /* Timer Software value */
   uint64_t swvalue;
   /* Interrupt end-point */
-  struct dev_irq_ep_s irq_eps;
+  struct dev_irq_src_s irq_eps;
   /* Request queue */
   dev_request_pqueue_root_t queue;
 #endif
@@ -151,9 +151,9 @@ static inline void stm32_timer_raise_irq(struct stm32_timer_private_s *pv)
   DEVICE_REG_FIELD_SET_DEV(TIMER, pv->addr, EGR, UG);
 }
 
-static DEV_IRQ_EP_PROCESS(stm32_timer_irq)
+static DEV_IRQ_SRC_PROCESS(stm32_timer_irq)
 {
-  struct device_s *dev = ep->dev;
+  struct device_s *dev = ep->base.dev;
   struct stm32_timer_private_s *pv = dev->drv_pv;
 
   lock_spin(&dev->lock);

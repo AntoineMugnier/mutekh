@@ -46,7 +46,7 @@
 
 #if defined(CONFIG_CPU_SPARC_LEON3)
 #define ICU_SPARC_SINKS_COUNT	1
-#define SPARC_IRQ_SENSE_MODE    DEV_IRQ_SENSE_RISING_EDGE
+#define SPARC_IRQ_SENSE_MODE    DEV_IRQ_SENSE_ID_BUS
 #define SPARC_SINGLE_IRQ_EP
 #elif defined(CONFIG_CPU_SPARC_SOCLIB)
 #define ICU_SPARC_SINKS_COUNT	ICU_SPARC_MAX_VECTOR
@@ -58,10 +58,7 @@
 struct sparc_dev_private_s
 {
 #ifdef CONFIG_DEVICE_IRQ
-  struct dev_irq_ep_s	sinks[ICU_SPARC_SINKS_COUNT];
-#if defined(SPARC_SINGLE_IRQ_EP) && defined(CONFIG_DEVICE_IRQ_BYPASS)
-  struct dev_irq_bypass_s bypass[ICU_SPARC_MAX_VECTOR];
-#endif
+  struct dev_irq_sink_s	sinks[ICU_SPARC_SINKS_COUNT];
 #endif
 
   struct cpu_tree_s node;
@@ -84,85 +81,37 @@ static CPU_INTERRUPT_HANDLER(sparc_irq_handler)
   struct sparc_dev_private_s  *pv = dev->drv_pv;
 
 #ifdef SPARC_SINGLE_IRQ_EP
-  int_fast16_t id = irq;
 
-# ifdef CONFIG_DEVICE_IRQ_BYPASS
-  struct dev_irq_ep_s *src = pv->bypass[id].src;
-  if (src)
-    return src->process(src, &id);
-# endif
-
-  struct dev_irq_ep_s *sink = pv->sinks;
-  return sink->process(sink, &id);
+  struct dev_irq_sink_s *sink = pv->sinks;
+  return device_irq_sink_process(sink, irq);
 
 #else
   if ( irq < ICU_SPARC_SINKS_COUNT ) {
-    struct dev_irq_ep_s *sink = pv->sinks + irq;
-    int_fast16_t id = 0;
+    struct dev_irq_sink_s *sink = pv->sinks + irq;
 
-    return sink->process(sink, &id);
+    return device_irq_sink_process(sink, 0);
   }
 #endif
 }
 
-static DEV_ICU_GET_ENDPOINT(sparc_icu_get_endpoint)
+static DEV_IRQ_SINK_UPDATE(sparc_icu_sink_update)
+{
+}
+
+static DEV_ICU_GET_SINK(sparc_icu_get_sink)
 {
   struct device_s *dev = accessor->dev;
   struct sparc_dev_private_s  *pv = dev->drv_pv;
 
-  switch (type)
-    {
-    case DEV_IRQ_EP_SINK:
-      if (id < ICU_SPARC_SINKS_COUNT)
-        return pv->sinks + id;
-      return NULL;
-
-#if defined(SPARC_SINGLE_IRQ_EP) && defined(CONFIG_DEVICE_IRQ_BYPASS)
-    case DEV_IRQ_EP_BYPASS:
-      if (id < ICU_SPARC_MAX_VECTOR)
-        return pv->bypass + id;
-      return NULL;
-#endif
-
-    default:
-      return NULL;
-    }
+  if (id < ICU_SPARC_SINKS_COUNT)
+    return pv->sinks + id;
+  return NULL;
 }
 
-static DEV_ICU_ENABLE_IRQ(sparc_icu_enable_irq)
+static DEV_ICU_LINK(sparc_icu_link)
 {
-  struct device_s *dev = accessor->dev;
-  __unused__ struct sparc_dev_private_s *pv = dev->drv_pv;
-
-#ifdef CONFIG_ARCH_SMP
-  if (!arch_cpu_irq_affinity_test(dev, dev_ep))
-    return 0;
-#endif
-
-#if defined(SPARC_SINGLE_IRQ_EP)
-  if (irq_id >= ICU_SPARC_MAX_VECTOR)
-    return 0;
-
-# if defined(CONFIG_DEVICE_IRQ_BYPASS)
-  /* try to create a bypass link or make bypass unusable for this irq */
-  device_irq_bypass_link(src, pv->bypass + irq_id);
-# endif
-
-#else // ! SPARC_SINGLE_IRQ_EP
-
-  /* inputs are single wire, logical irq id must be 0 */
-  if (irq_id > 0)
-    return 0;
-#endif
-
-#if !defined(CONFIG_ARCH_SMP)
-  /* Enable irq line. On SMP platforms, all lines are already enabled on init. */
-#endif
-
-  return 1;
+  return 0;
 }
-
-#define sparc_icu_disable_irq (dev_icu_disable_irq_t*)dev_driver_notsup_fcn
 
 #endif
 
@@ -306,11 +255,7 @@ static DEV_INIT(sparc_init)
 #ifdef CONFIG_DEVICE_IRQ
   /* init sparc irq sink end-points */
   device_irq_sink_init(dev, pv->sinks, ICU_SPARC_SINKS_COUNT,
-                       SPARC_IRQ_SENSE_MODE);
-
-# if defined(SPARC_SINGLE_IRQ_EP) && defined(CONFIG_DEVICE_IRQ_BYPASS)
-  device_irq_bypass_init(pv->bypass, ICU_SPARC_MAX_VECTOR);
-# endif
+                       &sparc_icu_sink_update, SPARC_IRQ_SENSE_MODE);
 
 # ifdef CONFIG_ARCH_SMP
   CPU_LOCAL_CLS_SET(pv->node.cls, sparc_icu_dev, dev);
@@ -354,9 +299,6 @@ static DEV_CLEANUP(sparc_cleanup)
 #ifdef CONFIG_DEVICE_IRQ
 # ifdef CONFIG_ARCH_SMP
   /* Disable all irq lines. */
-# endif
-# if defined(SPARC_SINGLE_IRQ_EP) && defined(CONFIG_DEVICE_IRQ_BYPASS)
-  device_irq_bypass_cleanup(pv->bypass, ICU_SPARC_MAX_VECTOR);
 # endif
   /* detach sparc irq sink end-points */
   device_irq_sink_unlink(dev, pv->sinks, ICU_SPARC_SINKS_COUNT);

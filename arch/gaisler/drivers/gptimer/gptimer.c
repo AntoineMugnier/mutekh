@@ -84,7 +84,7 @@ struct gptimer_private_s
 {
   uintptr_t addr;
   uintptr_t t_count;
-  struct dev_irq_ep_s *irq_eps;
+  struct dev_irq_src_s *irq_eps;
   struct gptimer_state_s t[0];
 };
 
@@ -139,9 +139,9 @@ static inline bool_t gptimer_irq_process(struct device_s *dev, uint_fast8_t numb
   return 1;
 }
 
-static DEV_IRQ_EP_PROCESS(gptimer_irq_single)
+static DEV_IRQ_SRC_PROCESS(gptimer_irq_single)
 {
-  struct device_s *dev = ep->dev;
+  struct device_s *dev = ep->base.dev;
   struct gptimer_private_s *pv = dev->drv_pv;
 
   lock_spin(&dev->lock);
@@ -162,9 +162,9 @@ static DEV_IRQ_EP_PROCESS(gptimer_irq_single)
   lock_release(&dev->lock);
 }
 
-static DEV_IRQ_EP_PROCESS(gptimer_irq_separate)
+static DEV_IRQ_SRC_PROCESS(gptimer_irq_separate)
 {
-  struct device_s *dev = ep->dev;
+  struct device_s *dev = ep->base.dev;
   struct gptimer_private_s *pv = dev->drv_pv;
   uint_fast8_t number = ep - pv->irq_eps;
 
@@ -534,7 +534,7 @@ static DEV_INIT(gptimer_init)
 
   pv = mem_alloc(sizeof (*pv) + t_count * (sizeof(struct gptimer_state_s)
 #ifdef CONFIG_DEVICE_IRQ
-                              + irq_count * sizeof(struct dev_irq_ep_s)
+                              + irq_count * sizeof(struct dev_irq_src_s)
 #endif
                                            ), (mem_scope_sys));
   if (!pv)
@@ -552,10 +552,10 @@ static DEV_INIT(gptimer_init)
 
   if (cfg & TIMER_CFG_SIRQ)
     device_irq_source_init(dev, pv->irq_eps, irq_count,
-                           gptimer_irq_separate, DEV_IRQ_SENSE_RISING_EDGE);
+                           gptimer_irq_separate);
   else
     device_irq_source_init(dev, pv->irq_eps, irq_count,
-                           gptimer_irq_single, DEV_IRQ_SENSE_RISING_EDGE);
+                           gptimer_irq_single);
 
   if (device_irq_source_link(dev, pv->irq_eps, irq_count, -1))
     goto err_mem;
@@ -569,6 +569,7 @@ static DEV_INIT(gptimer_init)
 # ifdef CONFIG_DEVICE_IRQ
       p->value = 0;
       dev_request_pqueue_init(&p->queue);
+      cpu_mem_write_32(TIMER_REG_ADDR(addr, TIMER_REG_COUNTER, i), 10000);
       cpu_mem_write_32(TIMER_REG_ADDR(addr, TIMER_REG_RELOAD, i), 10000);
       cpu_mem_write_32(TIMER_REG_ADDR(addr, TIMER_REG_CTRL, i),
                        endian_be32(TIMER_CTRL_IP | TIMER_CTRL_IE));

@@ -52,8 +52,8 @@ struct bcm2835_gpio_private_s
 #ifdef CONFIG_DRIVER_BCM2835_GPIO_ICU
   uint32_t edge[GPIO_SRC_IRQ_COUNT];
 
-  struct dev_irq_ep_s sink[GPIO_IO_COUNT];
-  struct dev_irq_ep_s src[GPIO_SRC_IRQ_COUNT];
+  struct dev_irq_sink_s sink[GPIO_IO_COUNT];
+  struct dev_irq_src_s src[GPIO_SRC_IRQ_COUNT];
 #endif
 };
 
@@ -61,10 +61,11 @@ struct bcm2835_gpio_private_s
    instance, get_msk(0b1010) returns 0b111000111000 */
 static inline uint32_t bcm2835_gpio_get_mask(uint16_t msk)
 {
-  uint32_t p0 = (0x00105050 * (msk & 0x266)) & 0x20120120;
-  uint32_t p1 = (0x00050504 * (msk & 0x199)) & 0x04804804;
+  uint32_t p0 = (0x00011044 * (msk & 0x00a5)) & 0x00820104;
+  uint32_t p1 = (0x00044110 * (msk & 0x014a)) & 0x04100820;
+  uint32_t p2 = (0x00100400 * (msk & 0x0210)) & 0x20004000;
 
-  uint32_t r = p0 | p1;
+  uint32_t r = p0 | p1 | p2;
 
   r |= r >> 1;
   r |= r >> 1;
@@ -281,6 +282,9 @@ static DEV_GPIO_GET_INPUT(bcm2835_gpio_get_input)
   return 0;
 }
 
+#define bcm2835_gpio_request dev_gpio_request_async_to_sync
+#define bcm2835_gpio_input_irq_range (dev_gpio_input_irq_range_t*)dev_driver_notsup_fcn
+
 /********************** iomux controller driver part *********************/
 
 #ifdef CONFIG_DEVICE_IOMUX
@@ -327,37 +331,14 @@ static DEV_IOMUX_SETUP(bcm2835_gpio_iomux_setup)
 
 #ifdef CONFIG_DRIVER_BCM2835_GPIO_ICU
 
-static DEV_ICU_GET_ENDPOINT(bcm2835_gpio_icu_get_endpoint)
+static DEV_ICU_GET_SINK(bcm2835_gpio_icu_get_sink)
 {
   struct device_s *dev = accessor->dev;
   struct bcm2835_gpio_private_s *pv = dev->drv_pv;
 
-  switch (type)
-    {
-    case DEV_IRQ_EP_SINK: {
-
-      if (id > GPIO_IO_COUNT)
-        return NULL;
-
-      struct dev_irq_ep_s *ep = pv->sink + id;
-
-      if (!ep->link_count)
-        {
-          ep->sense = DEV_IRQ_SENSE_FALLING_EDGE | DEV_IRQ_SENSE_RISING_EDGE |
-                  DEV_IRQ_SENSE_LOW_LEVEL | DEV_IRQ_SENSE_HIGH_LEVEL |
-                  DEV_IRQ_SENSE_ASYNC_FALLING_EDGE | DEV_IRQ_SENSE_ASYNC_RISING_EDGE;
-        }
-
-      return ep;
-    }
-
-    case DEV_IRQ_EP_SOURCE:
-      if (id < GPIO_SRC_IRQ_COUNT)
-        return pv->src + id;
-
-    default:
-      return NULL;
-    }
+  if (id > GPIO_IO_COUNT)
+    return NULL;
+  return pv->sink + id;
 }
 
 static void bcm2835_gpio_icu_dis_irq(struct bcm2835_gpio_private_s *pv, uint_fast8_t id)
@@ -366,10 +347,6 @@ static void bcm2835_gpio_icu_dis_irq(struct bcm2835_gpio_private_s *pv, uint_fas
   uint32_t mask = endian_le32(~(1 << (id % GPIO_BANK_SIZE)));
   uintptr_t a;
 
-  a = pv->addr + BCM2835_GPIO_GPAREN_ADDR(bank);
-  cpu_mem_write_32(a, cpu_mem_read_32(a) & mask);
-  a = pv->addr + BCM2835_GPIO_GPAFEN_ADDR(bank);
-  cpu_mem_write_32(a, cpu_mem_read_32(a) & mask);
   a = pv->addr + BCM2835_GPIO_GPREN_ADDR(bank);
   cpu_mem_write_32(a, cpu_mem_read_32(a) & mask);
   a = pv->addr + BCM2835_GPIO_GPFEN_ADDR(bank);
@@ -388,10 +365,6 @@ static void bcm2835_gpio_icu_disall_irq(struct bcm2835_gpio_private_s *pv)
     {
       uintptr_t a;
 
-      a = pv->addr + BCM2835_GPIO_GPAREN_ADDR(bank);
-      cpu_mem_write_32(a, 0);
-      a = pv->addr + BCM2835_GPIO_GPAFEN_ADDR(bank);
-      cpu_mem_write_32(a, 0);
       a = pv->addr + BCM2835_GPIO_GPREN_ADDR(bank);
       cpu_mem_write_32(a, 0);
       a = pv->addr + BCM2835_GPIO_GPFEN_ADDR(bank);
@@ -405,39 +378,19 @@ static void bcm2835_gpio_icu_disall_irq(struct bcm2835_gpio_private_s *pv)
     }
 }
 
-static DEV_ICU_ENABLE_IRQ(bcm2835_gpio_icu_enable_irq)
+static DEV_IRQ_SINK_UPDATE(bcm2835_gpio_icu_sink_update)
 {
-  struct device_s *dev = accessor->dev;
+  struct device_s *dev = sink->base.dev;
   struct bcm2835_gpio_private_s *pv = dev->drv_pv;
-  uint_fast8_t icu_in_id = sink - pv->sink;
+  uint_fast8_t sink_id = sink - pv->sink;
 
-  if (irq_id > 0)
-    {
-      printk("BCM2835 GPIO %p: single wire IRQ must use 0 as logical IRQ id for %p device\n", dev, dev_ep->dev);
-      return 0;
-    }
-
-  uint_fast8_t sense = src->sense & sink->sense;
-
-  if (!sense)
-    return 0;
-
-  if (icu_in_id > GPIO_IO_COUNT)
-    return 0;
-
-  if (!device_icu_irq_enable(pv->src + icu_in_id % GPIO_SRC_IRQ_COUNT, 0, NULL, dev_ep))
-    {
-      printk("BCM2835 ODD GPIO: source end-point can not relay interrupt for %p device\n", dev_ep->dev);
-      return 0;
-    }
-
-  /* if more than one mode is left, keep only the lsb */
-  sense = sense & ~(sense - 1);
-  src->sense = sink->sense = sense;
-
-  uint8_t bank = icu_in_id / GPIO_BANK_SIZE;
-  uint8_t line = icu_in_id % GPIO_BANK_SIZE;
+  uint8_t bank = sink_id / GPIO_BANK_SIZE;
+  uint8_t line = sink_id % GPIO_BANK_SIZE;
   uintptr_t a;
+
+  /* disable irq in all modes */
+  bcm2835_gpio_icu_dis_irq(pv, sink_id);
+
   switch (sense)
     {
       case DEV_IRQ_SENSE_RISING_EDGE:
@@ -448,14 +401,6 @@ static DEV_ICU_ENABLE_IRQ(bcm2835_gpio_icu_enable_irq)
         a =  BCM2835_GPIO_GPFEN_ADDR(bank);
         pv->edge[bank] |= 1 << line;
         break;
-      case DEV_IRQ_SENSE_ASYNC_RISING_EDGE:
-        a =  BCM2835_GPIO_GPAREN_ADDR(bank);
-        pv->edge[bank] |= 1 << line;
-        break;
-      case DEV_IRQ_SENSE_ASYNC_FALLING_EDGE:
-        a =  BCM2835_GPIO_GPAFEN_ADDR(bank);
-        pv->edge[bank] |= 1 << line;
-        break;
       case DEV_IRQ_SENSE_HIGH_LEVEL:
         a =  BCM2835_GPIO_GPHEN_ADDR(bank);
         pv->edge[bank] &= ~(1 << line);
@@ -464,42 +409,46 @@ static DEV_ICU_ENABLE_IRQ(bcm2835_gpio_icu_enable_irq)
         a =  BCM2835_GPIO_GPLEN_ADDR(bank);
         pv->edge[bank] &= ~(1 << line);
         break;
+      case DEV_IRQ_SENSE_NONE:
+        return;
       default:
-        return 0;
+        return;
     }
-
-  /* disable irq in all modes */
-  bcm2835_gpio_icu_dis_irq(pv, icu_in_id);
 
   /* enable irq in requested sense mode */
   uint32_t x = endian_le32(cpu_mem_read_32(pv->addr + a));
   x |= 1 << line;
   cpu_mem_write_32(pv->addr + a, endian_le32(x));
+}
+
+static DEV_ICU_LINK(bcm2835_gpio_icu_link)
+{
+  if (!route_mask || *bypass)
+    return 0;
+
+  struct device_s *dev = accessor->dev;
+  struct bcm2835_gpio_private_s *pv = dev->drv_pv;
+  uint_fast8_t sink_id = sink - pv->sink;
+
+  uint8_t bank = sink_id / GPIO_BANK_SIZE;
+  uint8_t line = sink_id % GPIO_BANK_SIZE;
 
   /* Change pin mode to input */
-  a = BCM2835_GPIO_GPFSEL_ADDR(icu_in_id / 10);
-  x = endian_le32(cpu_mem_read_32(pv->addr + a));
+  uintptr_t a = BCM2835_GPIO_GPFSEL_ADDR(sink_id / 10);
+  uint32_t x = endian_le32(cpu_mem_read_32(pv->addr + a));
   BCM2835_GPIO_GPFSEL_FSEL_SET(line % 10, x, INPUT);
   cpu_mem_write_32(pv->addr + a, endian_le32(x));
 
   /* Clear interrupt */
   cpu_mem_write_32(pv->addr + BCM2835_GPIO_GPEDS_ADDR(bank), endian_le32(1 << line));
 
-  return 1;
+  return 0;
 }
 
-static DEV_ICU_DISABLE_IRQ(bcm2835_gpio_icu_disable_irq)
-{
-  struct bcm2835_gpio_private_s *pv = accessor->dev->drv_pv;
-  uint_fast8_t icu_in_id = sink - pv->sink;
-
-  bcm2835_gpio_icu_dis_irq(pv, icu_in_id);
-}
-
-static DEV_IRQ_EP_PROCESS(bcm2835_gpio_source_process)
+static DEV_IRQ_SRC_PROCESS(bcm2835_gpio_source_process)
 {
 
-  struct bcm2835_gpio_private_s *pv = ep->dev->drv_pv;
+  struct bcm2835_gpio_private_s *pv = ep->base.dev->drv_pv;
 
   uint_fast8_t src_id = ep - pv->src;
   uint32_t x;
@@ -522,8 +471,8 @@ static DEV_IRQ_EP_PROCESS(bcm2835_gpio_source_process)
       while (x)
         {
           uint_fast8_t i = __builtin_ctz(x);
-          struct dev_irq_ep_s *sink = pv->sink + i + GPIO_BANK_SIZE * src_id;
-          sink->process(sink, id);
+          struct dev_irq_sink_s *sink = pv->sink + i + GPIO_BANK_SIZE * src_id;
+          device_irq_sink_process(sink, 0);
           x ^= 1 << i;
         }
 
@@ -535,9 +484,6 @@ static DEV_IRQ_EP_PROCESS(bcm2835_gpio_source_process)
 }
 
 #endif
-
-#define bcm2835_gpio_request dev_gpio_request_async_to_sync
-#define bcm2835_gpio_input_irq_range (dev_gpio_input_irq_range_t*)dev_driver_notsup_fcn
 
 /***********************************************************************/
 
@@ -577,18 +523,21 @@ static DEV_INIT(bcm2835_gpio_init)
 
 #ifdef CONFIG_DRIVER_BCM2835_GPIO_ICU
   /* Disable and clear all interrupts */
+  cpu_mem_write_32(pv->addr + BCM2835_GPIO_GPAREN_ADDR(0), 0);
+  cpu_mem_write_32(pv->addr + BCM2835_GPIO_GPAFEN_ADDR(0), 0);
+  cpu_mem_write_32(pv->addr + BCM2835_GPIO_GPAREN_ADDR(1), 0);
+  cpu_mem_write_32(pv->addr + BCM2835_GPIO_GPAFEN_ADDR(1), 0);
   bcm2835_gpio_icu_disall_irq(pv);
 
   device_irq_source_init(dev, pv->src, GPIO_SRC_IRQ_COUNT,
-                    &bcm2835_gpio_source_process, DEV_IRQ_SENSE_HIGH_LEVEL);
+                    &bcm2835_gpio_source_process);
 
   if (device_irq_source_link(dev, pv->src, GPIO_SRC_IRQ_COUNT, -1))
     goto err_mem;
 
-  device_irq_sink_init(dev, pv->sink, GPIO_IO_COUNT,
+  device_irq_sink_init(dev, pv->sink, GPIO_IO_COUNT, &bcm2835_gpio_icu_sink_update,
                     DEV_IRQ_SENSE_FALLING_EDGE | DEV_IRQ_SENSE_RISING_EDGE |
-                    DEV_IRQ_SENSE_LOW_LEVEL | DEV_IRQ_SENSE_HIGH_LEVEL |
-                    DEV_IRQ_SENSE_ASYNC_FALLING_EDGE | DEV_IRQ_SENSE_ASYNC_RISING_EDGE);
+                    DEV_IRQ_SENSE_LOW_LEVEL | DEV_IRQ_SENSE_HIGH_LEVEL);
 
 #endif
 
@@ -613,7 +562,6 @@ static DEV_CLEANUP(bcm2835_gpio_cleanup)
   bcm2835_gpio_icu_disall_irq(pv);
 
   device_irq_source_unlink(dev, pv->src, GPIO_SRC_IRQ_COUNT);
-  device_irq_source_unlink(dev, pv->sink, GPIO_IO_COUNT);
 #endif
 
   mem_free(pv);

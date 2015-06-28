@@ -91,8 +91,9 @@ static DEVICE_TREE_WALKER(apbctrl_scan_cpu_irq)
       char buf[128];
       if (device_get_path(NULL, buf, sizeof(buf), &dev->node, 0) > 0)
         {
-          if (device_res_add_irq(ctx->irqmp, maj, 0, 0, buf) == 0)
-            ctx->count++;
+          device_res_add_dev_param(ctx->irqmp, "icu", buf);
+          device_res_add_irq(ctx->irqmp, maj, 0, DEV_IRQ_SENSE_ID_BUS, 0, 1);
+          ctx->count++;
         }
     }
 
@@ -159,13 +160,14 @@ static void apbctrl_scan(struct device_s *dev, uintptr_t begin)
             case GAISLER_DEVICE_GPTIMER: {
               uint32_t gpt_cfg = endian_be32(cpu_mem_read_32(start + 0x8));
               uint_fast8_t nirq = gpt_cfg & 0x100 ? gpt_cfg & 7 : 1;
-              d = device_alloc(4 + nirq);
+              d = device_alloc(5 + nirq);
               if (!d)
                 continue;
 
               uint8_t j, irq = endian_be32(p[0]) & 0x1f;
+              device_res_add_dev_param(d, "icu", "/icu");
               for (j = 0; j < nirq; j++)
-                device_res_add_irq(d, j, irq + j - 1, 0, "/icu");
+                device_res_add_irq(d, j, irq + j - 1, DEV_IRQ_SENSE_RISING_EDGE, 0, 1);
             }
 #endif
             }
@@ -180,7 +182,10 @@ static void apbctrl_scan(struct device_s *dev, uintptr_t begin)
 #ifdef CONFIG_DEVICE_IRQ
           uint8_t irq = endian_be32(p[0]) & 0x1f;
           if (irq)
-            device_res_add_irq(d, 0, irq - 1, 0, "/icu");
+            {
+              device_res_add_dev_param(d, "icu", "/icu");
+              device_res_add_irq(d, 0, irq - 1, DEV_IRQ_SENSE_RISING_EDGE, 0, 1);
+            }
 #endif
         }
 

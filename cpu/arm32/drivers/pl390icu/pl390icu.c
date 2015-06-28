@@ -61,42 +61,31 @@ struct pl390_icu_private_s
 
   uint32_t imp_irq[32];  // mask of implemented irqs
 
-  struct dev_irq_ep_s *sinks; // spi_count entries, then ppi_count * cpu_count
-  struct dev_irq_ep_s *srcs;
+  struct dev_irq_sink_s *sinks; // spi_count entries, then ppi_count * cpu_count
+  struct dev_irq_src_s *srcs;
 };
 
-static DEV_ICU_GET_ENDPOINT(pl390_icu_icu_get_endpoint)
+static DEV_ICU_GET_SINK(pl390_icu_get_sink)
 {
   struct device_s *dev = accessor->dev;
   struct pl390_icu_private_s *pv = dev->drv_pv;
 
-  switch (type)
+  if (id >= 32 && id < pv->reg_count * 32)
+    return (pv->imp_irq[id / 32] & (1 << (id % 32)))
+      ? pv->sinks + id - 32 : NULL;          /* spi */
+
+  if (id >= 1024)
     {
-    case DEV_IRQ_EP_SINK:
-      if (id >= 32 && id < pv->reg_count * 32)
-        return (pv->imp_irq[id / 32] & (1 << (id % 32)))
-          ? pv->sinks + id - 32 : NULL;          /* spi */
-
-      if (id >= 1024)
-        {
-          id -= 1024;
-          uint_fast8_t cpu = id / 16;
-          id %= 16;
-          if (cpu >= pv->cpu_count)
-            return NULL;
-          return (pv->imp_irq[0] & (0x10000 << id)) ?   /* ppi */
-            pv->sinks + (pv->reg_count - 1) * 32 + cpu * 16 + id : NULL;
-        }
-
-      return NULL;
-
-    case DEV_IRQ_EP_SOURCE:
-      if (id < pv->cpu_count)
-        return pv->srcs + id;
-
-    default:
-      return NULL;
+      id -= 1024;
+      uint_fast8_t cpu = id / 16;
+      id %= 16;
+      if (cpu >= pv->cpu_count)
+        return NULL;
+      return (pv->imp_irq[0] & (0x10000 << id)) ?   /* ppi */
+        pv->sinks + (pv->reg_count - 1) * 32 + cpu * 16 + id : NULL;
     }
+
+  return NULL;
 }
 
 static inline uint_fast8_t
@@ -108,74 +97,60 @@ pl390_get_current_cpu(struct pl390_icu_private_s *pv, uint_fast8_t ppi_id)
   return __builtin_ctz(mask);
 }
 
-static DEV_ICU_ENABLE_IRQ(pl390_icu_icu_enable_irq)
+static DEV_IRQ_SINK_UPDATE(pl390_icu_sink_update)
 {
-  struct device_s *dev = accessor->dev;
+  struct device_s *dev = sink->base.dev;
   struct pl390_icu_private_s *pv = dev->drv_pv;
-  uint_fast8_t icu_in_id = sink - pv->sinks;
+  uint_fast8_t sink_id = sink - pv->sinks;
+  uint_fast16_t id;
 
-#warning handle irq type edge/level
-  if (icu_in_id < (pv->reg_count - 1) * 32)
+  if (sink_id < (pv->reg_count - 1) * 32) /* spi */
     {
-      uint_fast16_t id = icu_in_id + 32;
-
-      if (!(pv->imp_irq[id / 32] & (1 << (id % 32))))
-        return 0;
-
-      cpu_mem_write_32(pv->gicd_addr + PL390_GICD_ISENABLER_ADDR(id / 32),
-                       endian_le32(1 << (id % 32)));
-      return 1;
+      id = sink_id + 32;
     }
-  else
+  else                                    /* ppi */
     {
-      icu_in_id -= (pv->reg_count - 1) * 32;
-      uint_fast16_t id = icu_in_id % 16;
-
-      if (!(pv->imp_irq[0] & (0x10000 << id)))
-        return 0;
-
-      uint_fast16_t cpu = icu_in_id / 16;
+      sink_id -= (pv->reg_count - 1) * 32;
+      id = sink_id % 16;
 
       /* check cpu id */
-      if (cpu != pl390_get_current_cpu(pv, id))
-        return 0;
-
-      cpu_mem_write_32(pv->gicd_addr + PL390_GICD_ISENABLER_ADDR(0),
-                       endian_le32(1 << id));
-
-      return 1;
+      if (sink_id / 16 != pl390_get_current_cpu(pv, id))
+        return;
     }
-}
 
-static DEV_ICU_DISABLE_IRQ(pl390_icu_icu_disable_irq)
-{
-  struct device_s *dev = accessor->dev;
-  struct pl390_icu_private_s *pv = dev->drv_pv;
-  uint_fast8_t icu_in_id = sink - pv->sinks;
+  uint_fast8_t mode;
 
-  if (icu_in_id < (pv->reg_count - 1) * 32)
+  switch (sense)
     {
-      uint_fast16_t id = icu_in_id + 32;
+    case DEV_IRQ_SENSE_HIGH_LEVEL:
+      mode = 0;
+      break;
 
+    case DEV_IRQ_SENSE_RISING_EDGE:
+      mode = PL390_GICD_ICFR_IRQ_EDGE;
+      break;
+
+    case DEV_IRQ_SENSE_NONE:
       cpu_mem_write_32(pv->gicd_addr + PL390_GICD_ICENABLER_ADDR(id / 32),
                        endian_le32(1 << (id % 32)));
+    default:
+      return;
     }
-  else
-    {
-      icu_in_id -= (pv->reg_count - 1) * 32;
-      uint_fast16_t id = icu_in_id % 16;
-      uint_fast16_t cpu = icu_in_id / 16;
 
-      /* check cpu id */
-      if (cpu != pl390_get_current_cpu(pv, id))
-        cpu_mem_write_32(pv->gicd_addr + PL390_GICD_ICENABLER_ADDR(0),
-                         endian_le32(1 << id));
-    }
+  cpu_mem_write_32(pv->gicd_addr + PL390_GICD_ISENABLER_ADDR(id / 32),
+                   endian_le32(1 << (id % 32)));
+
+  uintptr_t a = pv->gicd_addr + PL390_GICD_ICFR_ADDR(id / 16);
+  uint32_t x = cpu_mem_read_32(a);
+  PL390_GICD_ICFR_IRQ_SETVAL(id % 16, x, mode);
+  cpu_mem_write_32(a, x);
 }
 
-static DEV_IRQ_EP_PROCESS(pl390_icu_source_process)
+#define pl390_icu_link device_icu_dummy_link
+
+static DEV_IRQ_SRC_PROCESS(pl390_icu_source_process)
 {
-  struct device_s *dev = ep->dev;
+  struct device_s *dev = ep->base.dev;
   struct pl390_icu_private_s *pv = dev->drv_pv;
 
   while (1)
@@ -183,7 +158,7 @@ static DEV_IRQ_EP_PROCESS(pl390_icu_source_process)
       uint32_t iar = endian_le32(cpu_mem_read_32(pv->gicc_addr + PL390_GICC_IAR_ADDR));
 
       uint_fast16_t j = PL390_GICC_IAR_INTID_GET(iar);
-      struct dev_irq_ep_s *sink;
+      struct dev_irq_sink_s *sink;
 
       switch (j)
         {
@@ -193,7 +168,7 @@ static DEV_IRQ_EP_PROCESS(pl390_icu_source_process)
         case 32 ... 1022:       /* spi */
           j -= 32;
           sink = pv->sinks + j;
-          sink->process(sink, id);
+          device_irq_sink_process(sink, 0);
           break;
 
         case 16 ... 31:         /* ppi */
@@ -202,7 +177,7 @@ static DEV_IRQ_EP_PROCESS(pl390_icu_source_process)
             + (pv->reg_count - 1) * 32
             + 16 * pl390_get_current_cpu(pv, j)
             + j;
-          sink->process(sink, id);
+          device_irq_sink_process(sink, 0);
           break;
 
         case 0 ... 15:          /* sgi */
@@ -214,12 +189,18 @@ static DEV_IRQ_EP_PROCESS(pl390_icu_source_process)
     }
 }
 
+static const struct dev_enum_ident_s  pl390_icu_ids[] =
+{
+  DEV_ENUM_FDTNAME_ENTRY("pl390"),
+  { 0 }
+};
+
 static DEV_INIT(pl390_icu_init);
 static DEV_CLEANUP(pl390_icu_cleanup);
 #define pl390_icu_use dev_use_generic
 
 DRIVER_DECLARE(pl390_icu_drv, "PL390 ARM generic interrupts controller", pl390_icu,
-               DRIVER_ICU_METHODS(pl390_icu_icu));
+               DRIVER_ICU_METHODS(pl390_icu));
 
 DRIVER_REGISTER(pl390_icu_drv,
                 DEV_ENUM_FDTNAME_ENTRY("pl390"));
@@ -229,7 +210,7 @@ void pl390_icu_cpu_init(struct device_s *dev)
   struct pl390_icu_private_s  *pv = dev->drv_pv;
 
   /* level sensitive, N-N model */
-  //  cpu_mem_write_32(pv->gicd_addr + PL390_GICD_ICFGR_ADDR(0), 0);
+  //  cpu_mem_write_32(pv->gicd_addr + PL390_GICD_ICFR_ADDR(0), 0);
 
   cpu_mem_write_32(pv->gicd_addr + PL390_GICD_ICENABLER_ADDR(0), endian_le32(0xffff0000));
   
@@ -301,7 +282,7 @@ static DEV_INIT(pl390_icu_init)
   for (i = 1; i < n; i++)
     {
       /* level sensitive, N-N model */
-      cpu_mem_write_32(pv->gicd_addr + PL390_GICD_ICFGR_ADDR(i), 0);
+      cpu_mem_write_32(pv->gicd_addr + PL390_GICD_ICFR_ADDR(i), 0);
       /* disable irqs */
       cpu_mem_write_32(pv->gicd_addr + PL390_GICD_ICENABLER_ADDR(i), 0xffffffff);
     }
@@ -326,12 +307,12 @@ static DEV_INIT(pl390_icu_init)
     goto err_mem2;
 
   device_irq_source_init(dev, pv->srcs, pv->cpu_count,
-                         &pl390_icu_source_process, DEV_IRQ_SENSE_LOW_LEVEL);
-  if (device_irq_source_link(dev, pv->srcs, pv->cpu_count, 0))
+                         &pl390_icu_source_process);
+  if (device_irq_source_link(dev, pv->srcs, pv->cpu_count, -1))
     goto err_mem3;
 
   device_irq_sink_init(dev, pv->sinks, ((n - 1) * 32 + pv->cpu_count * 16),
-                       DEV_IRQ_SENSE_HIGH_LEVEL | DEV_IRQ_SENSE_RISING_EDGE);
+                       &pl390_icu_sink_update, DEV_IRQ_SENSE_HIGH_LEVEL | DEV_IRQ_SENSE_RISING_EDGE);
 
   dev->drv = &pl390_icu_drv;
   dev->status = DEVICE_DRIVER_INIT_DONE;
@@ -357,4 +338,5 @@ static DEV_CLEANUP(pl390_icu_cleanup)
 
   mem_free(pv);
 }
+
 

@@ -42,7 +42,7 @@
 struct arm_dev_private_s
 {
 #ifdef CONFIG_DEVICE_IRQ
-  struct dev_irq_ep_s	sinks[CONFIG_CPU_ARM32M_M_IRQ_COUNT];
+  struct dev_irq_sink_s	sinks[CONFIG_CPU_ARM32M_M_IRQ_COUNT];
 #endif
 
   struct cpu_tree_s node;

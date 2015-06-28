@@ -51,7 +51,7 @@ struct bcm2835_systimer_private_s
   uintptr_t addr;
 #ifdef CONFIG_DEVICE_IRQ
   /* Interrupt end-points */
-  struct dev_irq_ep_s irq_eps[4];
+  struct dev_irq_src_s irq_eps[4];
   /* Request queue */
   dev_request_pqueue_root_t queue;
   uint32_t skew;
@@ -96,9 +96,9 @@ static void set_timer_compare(struct bcm2835_systimer_private_s *pv, dev_timer_v
     }
 }
 
-static DEV_IRQ_EP_PROCESS(bcm2835_systimer_irq)
+static DEV_IRQ_SRC_PROCESS(bcm2835_systimer_irq)
 {
-  struct device_s *dev = ep->dev;
+  struct device_s *dev = ep->base.dev;
   struct bcm2835_systimer_private_s *pv = dev->drv_pv;
 
   lock_spin(&dev->lock);
@@ -297,7 +297,7 @@ static DEV_INIT(bcm2835_systimer_init)
 
 #ifdef CONFIG_DEVICE_IRQ
   device_irq_source_init(dev, pv->irq_eps, 4,
-                         bcm2835_systimer_irq, DEV_IRQ_SENSE_HIGH_LEVEL);
+                         bcm2835_systimer_irq);
 
   if (device_irq_source_link(dev, pv->irq_eps, 4, 1 << BCM2835_SYSTIMER_CMP_CHANNEL))
     goto err_mem;

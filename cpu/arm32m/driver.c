@@ -51,10 +51,8 @@ static CPU_INTERRUPT_HANDLER(arm_irq_handler)
 #endif
 
     case 16 ... 16+CONFIG_CPU_ARM32M_M_IRQ_COUNT-1: {
-      struct dev_irq_ep_s *sink = pv->sinks + irq - 16;
-      int_fast16_t id = 0;
-
-      sink->process(sink, &id);
+      struct dev_irq_sink_s *sink = pv->sinks + irq - 16;
+      device_irq_sink_process(sink, 0);
       break;
     }
     default:
@@ -62,48 +60,38 @@ static CPU_INTERRUPT_HANDLER(arm_irq_handler)
     }
 }
 
-static DEV_ICU_GET_ENDPOINT(arm_icu_get_endpoint)
+static DEV_ICU_GET_SINK(arm_icu_get_sink)
 {
   struct device_s *dev = accessor->dev;
   struct arm_dev_private_s  *pv = dev->drv_pv;
 
-  switch (type)
+  if (id < CONFIG_CPU_ARM32M_M_IRQ_COUNT)
+    return &pv->sinks[id];
+  return NULL;
+}
+
+static DEV_IRQ_SINK_UPDATE(arm_icu_sink_update)
+{
+  struct device_s *dev = sink->base.dev;
+  struct arm_dev_private_s  *pv = dev->drv_pv;
+  uint_fast8_t sink_id = sink - pv->sinks;
+
+  switch (sense)
     {
-    case DEV_IRQ_EP_SINK:
-      if (id < CONFIG_CPU_ARM32M_M_IRQ_COUNT)
-        return pv->sinks + id;
+    case DEV_IRQ_SENSE_NONE:
+      cpu_mem_write_32(ARMV7M_NVIC_ICER_ADDR(sink_id / 32),
+                       ARMV7M_NVIC_ICER_CLRENA(sink_id % 32));
+      return;
+    case DEV_IRQ_SENSE_RISING_EDGE:
+    case DEV_IRQ_SENSE_HIGH_LEVEL:
+      cpu_mem_write_32(ARMV7M_NVIC_ISER_ADDR(sink_id / 32),
+                       ARMV7M_NVIC_ISER_SETENA(sink_id % 32));
     default:
-      return NULL;
+      return;
     }
 }
 
-static DEV_ICU_ENABLE_IRQ(arm_icu_enable_irq)
-{
-  struct device_s *dev = accessor->dev;
-  struct arm_dev_private_s  *pv = dev->drv_pv;
-  uint_fast8_t icu_in_id = sink - pv->sinks;
-
-  /* inputs are single wire, logical irq id must be 0 */
-  if (irq_id > 0)
-    return 0;
-
-  /* configure NVIC */
-  cpu_mem_write_32(ARMV7M_NVIC_ISER_ADDR(icu_in_id / 32),
-    ARMV7M_NVIC_ISER_SETENA(icu_in_id % 32));
-
-  return 1;
-}
-
-static DEV_ICU_DISABLE_IRQ(arm_icu_disable_irq)
-{
-  struct device_s *dev = accessor->dev;
-  struct arm_dev_private_s  *pv = dev->drv_pv;
-  uint_fast8_t icu_in_id = sink - pv->sinks;
-
-  /* configure NVIC */
-  cpu_mem_write_32(ARMV7M_NVIC_ICER_ADDR(icu_in_id / 32),
-    ARMV7M_NVIC_ICER_CLRENA(icu_in_id % 32));
-}
+#define arm_icu_link device_icu_dummy_link
 
 #endif
 
@@ -297,7 +285,7 @@ static DEV_INIT(arm_init)
 #ifdef CONFIG_DEVICE_IRQ
   /* init arm irq sink end-points */
   device_irq_sink_init(dev, pv->sinks, CONFIG_CPU_ARM32M_M_IRQ_COUNT,
-                       DEV_IRQ_SENSE_HIGH_LEVEL | DEV_IRQ_SENSE_RISING_EDGE);
+                       arm_icu_sink_update, DEV_IRQ_SENSE_HIGH_LEVEL | DEV_IRQ_SENSE_RISING_EDGE);
 
   /* set processor interrupt handler */
   if (id == CONFIG_ARCH_BOOTSTRAP_CPU_ID)

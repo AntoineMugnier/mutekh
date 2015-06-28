@@ -36,7 +36,6 @@
 #include <device/class/icu.h>
 #include <device/class/clock.h>
 
-#include <mutek/printk.h>
 #include <string.h>
 
 #define GPIO_SRC_IRQ_COUNT 2
@@ -45,17 +44,16 @@
 struct efm32_gpio_private_s
 {
 #ifdef CONFIG_DRIVER_EFM32_GPIO_ICU
-  struct dev_irq_ep_s sink[CONFIG_DRIVER_EFM32_GPIO_IRQ_COUNT];
+  struct dev_irq_sink_s sink[CONFIG_DRIVER_EFM32_GPIO_IRQ_COUNT];
 
   /* This specifies which bank is selected for each interrupt line. A
      value of -1 means that no bank is currently bound to an
      interrupt. */
   struct {
     int8_t            bank:5;
-    int8_t            enabled:1;
   }                   irq[CONFIG_DRIVER_EFM32_GPIO_IRQ_COUNT];
 
-  struct dev_irq_ep_s src[2];
+  struct dev_irq_src_s src[2];
 #endif
 
 #ifdef CONFIG_DEVICE_CLOCK
@@ -111,7 +109,6 @@ static void efm32_gpio_out_reg(gpio_id_t io_first, gpio_id_t io_last,
   uint32_t x = endian_le32(cpu_mem_read_32(a));
   x = smp ^ (x & (smp ^ ~cmp));
 
-  //  printk("gpio set : reg=%08x value=%08x clr=%08x set=%08x\n", a, x, cmp, smp);
   cpu_mem_write_32(a, endian_le32(x & EFM32_GPIO_DOUT_MASK));
 
   cmp >>= GPIO_BANK_SIZE;
@@ -157,7 +154,6 @@ static void efm32_gpio_mode_reg(gpio_id_t io_first, gpio_id_t io_last,
   uint32_t x = endian_le32(cpu_mem_read_32(a));
   x = (x & ~mp) | (mp & mde);
 
-  //  printk("gpio mode: reg=%08x value=%08x\n", a, x);
   cpu_mem_write_32(a, endian_le32(x));
 
   mp >>= 4 * GPIO_BANK_SIZE/2;
@@ -296,6 +292,9 @@ static DEV_GPIO_GET_INPUT(efm32_gpio_get_input)
 
 }
 
+#define efm32_gpio_request dev_gpio_request_async_to_sync
+#define efm32_gpio_input_irq_range (dev_gpio_input_irq_range_t*)dev_driver_notsup_fcn
+
 /******** GPIO iomux controller driver part *********************/
 
 static DEV_IOMUX_SETUP(efm32_gpio_iomux_setup)
@@ -316,148 +315,119 @@ static DEV_IOMUX_SETUP(efm32_gpio_iomux_setup)
 
 #ifdef CONFIG_DRIVER_EFM32_GPIO_ICU
 
-static DEV_ICU_GET_ENDPOINT(efm32_gpio_icu_get_endpoint)
+static DEV_IRQ_SINK_UPDATE(efm32_gpio_icu_sink_update)
 {
-  struct device_s *dev = accessor->dev;
+  struct device_s *dev = sink->base.dev;
   struct efm32_gpio_private_s *pv = dev->drv_pv;
-
-  switch (type)
-    {
-    case DEV_IRQ_EP_SINK: {
-      uint8_t line = id % GPIO_BANK_SIZE;
-      uint_fast8_t bank = id / GPIO_BANK_SIZE;
-
-      if (line >= CONFIG_DRIVER_EFM32_GPIO_IRQ_COUNT || bank >= 6)
-        return NULL;
-      struct dev_irq_ep_s *ep = pv->sink + line;
-
-      /* We actually keep only one end-point object per line for all
-         banks. We have to keep track of which bank the end-point is
-         associated to. */
-      if (!ep->link_count)
-        {
-          pv->irq[line].bank = bank;
-          pv->irq[line].enabled = 0;
-          ep->sense = DEV_IRQ_SENSE_FALLING_EDGE | DEV_IRQ_SENSE_RISING_EDGE | DEV_IRQ_SENSE_ANY_EDGE;
-        }
-      else if (pv->irq[line].bank != bank)
-        return NULL;
-
-      return ep;
-    }
-
-    case DEV_IRQ_EP_SOURCE:
-      if (id < GPIO_SRC_IRQ_COUNT)
-        return pv->src + id;
-
-    default:
-      return NULL;
-    }
-}
-
-static DEV_ICU_ENABLE_IRQ(efm32_gpio_icu_enable_irq)
-{
-  struct device_s *dev = accessor->dev;
-  struct efm32_gpio_private_s *pv = dev->drv_pv;
-  uint_fast8_t icu_in_id = sink - pv->sink;
-
-  if (irq_id > 0)
-    {
-      printk("EFM32 GPIO %p: single wire IRQ must use 0 as logical IRQ id for %p device\n", dev, dev_ep->dev);
-      return 0;
-    }
-
-  uint_fast8_t sense = src->sense & sink->sense;
-
-  if (!sense)
-    return 0;
-
-  uint_fast8_t line = icu_in_id % GPIO_BANK_SIZE;
-  uint_fast8_t bank = pv->irq[line].bank;
-
-  /* if more than one mode is left, keep only the lsb */
-  sense = sense & ~(sense - 1);
+  uint_fast8_t sink_id = sink - pv->sink;
+  uint32_t mask = 1 << sink_id;
 
   /* Select polarity of interrupt edge */
   uint32_t e, d;
 
   switch (sense)
     {
+    case DEV_IRQ_SENSE_NONE: {
+      /* Disable external interrupt */
+      uint32_t x = endian_le32(cpu_mem_read_32(EFM32_GPIO_ADDR + EFM32_GPIO_IEN_ADDR));
+      x &= ~mask;
+      cpu_mem_write_32(EFM32_GPIO_ADDR + EFM32_GPIO_IEN_ADDR, endian_le32(x));
+      return;
+    }
+
     case DEV_IRQ_SENSE_FALLING_EDGE:
       e = 0;
-      d = -1;
+      d = 0xffffffff;
       break;
     case DEV_IRQ_SENSE_RISING_EDGE:
-      e = -1;
+      e = 0xffffffff;
       d = 0;
       break;
     case DEV_IRQ_SENSE_ANY_EDGE:
-      d = e = -1;
+      d = e = 0xffffffff;
       break;
+
     default:
-      return 0;
+      return;
     }
 
-  if (!device_icu_irq_enable(pv->src + icu_in_id % 2, 0, NULL, dev_ep))
-    {
-      printk("EFM32 ODD GPIO: source end-point can not relay interrupt for %p device\n", dev_ep->dev);
-      return 0;
-    }
+  /* Set polarity */
+  uint32_t x = endian_le32(cpu_mem_read_32(EFM32_GPIO_ADDR + EFM32_GPIO_EXTIRISE_ADDR));
+  x = (mask & e) | (~mask & x);
+  cpu_mem_write_32(EFM32_GPIO_ADDR + EFM32_GPIO_EXTIRISE_ADDR, endian_le32(x));
 
-  src->sense = sink->sense = sense;
+  x = endian_le32(cpu_mem_read_32(EFM32_GPIO_ADDR + EFM32_GPIO_EXTIFALL_ADDR));
+  x = (mask & d) | (~mask & x);
+  cpu_mem_write_32(EFM32_GPIO_ADDR + EFM32_GPIO_EXTIFALL_ADDR, endian_le32(x));
 
-  if (!pv->irq[line].enabled)
-    {
-      /* set polarity */
-      uint32_t mask = 1 << line;
-      uint32_t x = endian_le32(cpu_mem_read_32(EFM32_GPIO_ADDR + EFM32_GPIO_EXTIRISE_ADDR));
-      x = (mask & e) | (~mask & x);
-      cpu_mem_write_32(EFM32_GPIO_ADDR + EFM32_GPIO_EXTIRISE_ADDR, endian_le32(x));
-
-      x = endian_le32(cpu_mem_read_32(EFM32_GPIO_ADDR + EFM32_GPIO_EXTIFALL_ADDR));
-      x = (mask & d) | (~mask & x);
-      cpu_mem_write_32(EFM32_GPIO_ADDR + EFM32_GPIO_EXTIFALL_ADDR, endian_le32(x));
-
-      /* Select bank */
-      uintptr_t a = line >= 8 ? EFM32_GPIO_EXTIPSELH_ADDR : EFM32_GPIO_EXTIPSELL_ADDR;
-      x = endian_le32(cpu_mem_read_32(EFM32_GPIO_ADDR + a));
-      EFM32_GPIO_EXTIPSELL_EXT_SETVAL(line & 7, x, bank);
-      cpu_mem_write_32(EFM32_GPIO_ADDR + a, endian_le32(x));
-
-      /* Change pin mode to input */
-      a = line >= 8 ? EFM32_GPIO_MODEH_ADDR(bank) : EFM32_GPIO_MODEL_ADDR(bank);
-      x = endian_le32(cpu_mem_read_32(EFM32_GPIO_ADDR + a));
-      EFM32_GPIO_MODEL_MODE_SET(line & 7, x, INPUT);
-      cpu_mem_write_32(EFM32_GPIO_ADDR + a, endian_le32(x));
-
-      /* Clear and enable interrupt */
-      cpu_mem_write_32(EFM32_GPIO_ADDR + EFM32_GPIO_IFC_ADDR, endian_le32(1 << line));
-      x = endian_le32(cpu_mem_read_32(EFM32_GPIO_ADDR + EFM32_GPIO_IEN_ADDR));
-      x |= (1 << line);
-      cpu_mem_write_32(EFM32_GPIO_ADDR + EFM32_GPIO_IEN_ADDR, endian_le32(x));
-
-      pv->irq[line].enabled = 1;
-    }
-
-  return 1;
-}
-
-static DEV_ICU_DISABLE_IRQ(efm32_gpio_icu_disable_irq)
-{
-  struct efm32_gpio_private_s *pv = accessor->dev->drv_pv;
-  uint_fast8_t icu_in_id = sink - pv->sink;
-
-  uint_fast8_t line = icu_in_id % 16;
-
-  /* Disable external interrupt */
-  uint32_t x = endian_le32(cpu_mem_read_32(EFM32_GPIO_ADDR + EFM32_GPIO_IEN_ADDR));
-  x &= ~(1 << line);
+  /* Enable interrupt */
+  x = endian_le32(cpu_mem_read_32(EFM32_GPIO_ADDR + EFM32_GPIO_IEN_ADDR));
+  x |= mask;
   cpu_mem_write_32(EFM32_GPIO_ADDR + EFM32_GPIO_IEN_ADDR, endian_le32(x));
 }
 
-static DEV_IRQ_EP_PROCESS(efm32_gpio_source_process)
+static DEV_ICU_GET_SINK(efm32_gpio_icu_get_sink)
 {
-  struct efm32_gpio_private_s *pv = ep->dev->drv_pv;
+  struct device_s *dev = accessor->dev;
+  struct efm32_gpio_private_s *pv = dev->drv_pv;
+  uint8_t line = id % GPIO_BANK_SIZE;
+  uint_fast8_t bank = id / GPIO_BANK_SIZE;
+
+  if (line >= CONFIG_DRIVER_EFM32_GPIO_IRQ_COUNT || bank >= 6)
+    return NULL;
+
+  struct dev_irq_sink_s *sink = pv->sink + line;
+
+  /* We actually keep only one end-point object per line for all
+     banks. We have to keep track of which bank the end-point is
+     associated to. */
+  if (sink->base.link_count == 0)
+    pv->irq[line].bank = bank;
+  else if (pv->irq[line].bank != bank)
+    return NULL;
+
+  return sink;
+}
+
+static DEV_ICU_LINK(efm32_gpio_icu_link)
+{
+  if (!route_mask || *bypass)
+    return 0;
+
+  struct device_s *dev = accessor->dev;
+  struct efm32_gpio_private_s *pv = dev->drv_pv;
+  uint_fast8_t sink_id = sink - pv->sink;
+  uint_fast8_t bank = pv->irq[sink_id].bank;
+
+#ifdef CONFIG_DEVICE_IRQ_SHARING
+  if (sink->base.link_count > 1)
+    return 0;
+#endif
+
+  /* Select bank */
+  uintptr_t a = sink_id >= 8 ? EFM32_GPIO_EXTIPSELH_ADDR : EFM32_GPIO_EXTIPSELL_ADDR;
+  uint32_t x = endian_le32(cpu_mem_read_32(EFM32_GPIO_ADDR + a));
+  EFM32_GPIO_EXTIPSELL_EXT_SETVAL(sink_id & 7, x, bank);
+  cpu_mem_write_32(EFM32_GPIO_ADDR + a, endian_le32(x));
+
+  /* Change pin mode to input */
+  a = sink_id >= 8 ? EFM32_GPIO_MODEH_ADDR(bank) : EFM32_GPIO_MODEL_ADDR(bank);
+  x = endian_le32(cpu_mem_read_32(EFM32_GPIO_ADDR + a));
+  EFM32_GPIO_MODEL_MODE_SET(sink_id & 7, x, INPUT);
+  cpu_mem_write_32(EFM32_GPIO_ADDR + a, endian_le32(x));
+
+  /* Clear interrupt */
+  cpu_mem_write_32(EFM32_GPIO_ADDR + EFM32_GPIO_IFC_ADDR, endian_le32(1 << sink_id));
+  x = endian_le32(cpu_mem_read_32(EFM32_GPIO_ADDR + EFM32_GPIO_IEN_ADDR));
+  x |= (1 << sink_id);
+  cpu_mem_write_32(EFM32_GPIO_ADDR + EFM32_GPIO_IEN_ADDR, endian_le32(x));
+
+  return 0;
+}
+
+static DEV_IRQ_SRC_PROCESS(efm32_gpio_source_process)
+{
+  struct efm32_gpio_private_s *pv = ep->base.dev->drv_pv;
 
   while (1)
     {
@@ -472,9 +442,9 @@ static DEV_IRQ_EP_PROCESS(efm32_gpio_source_process)
       while (x)
         {
           uint_fast8_t i = __builtin_ctz(x);
-          struct dev_irq_ep_s *sink = pv->sink + i;
+          struct dev_irq_sink_s *sink = pv->sink + i;
           int_fast16_t id = (cpu_mem_read_32(EFM32_GPIO_ADDR + EFM32_GPIO_DIN_ADDR(pv->irq[i].bank)) >> i) & 1;
-          sink->process(sink, &id);
+          device_irq_sink_process(sink, id);
           x ^= 1 << i;
         }
     }
@@ -482,8 +452,7 @@ static DEV_IRQ_EP_PROCESS(efm32_gpio_source_process)
 
 #endif
 
-#define efm32_gpio_request dev_gpio_request_async_to_sync
-#define efm32_gpio_input_irq_range (dev_gpio_input_irq_range_t*)dev_driver_notsup_fcn
+/******** GPIO generic driver part *********************/
 
 static DEV_INIT(efm32_gpio_init);
 static DEV_CLEANUP(efm32_gpio_cleanup);
@@ -530,13 +499,15 @@ static DEV_INIT(efm32_gpio_init)
 
 #ifdef CONFIG_DRIVER_EFM32_GPIO_ICU
   device_irq_source_init(dev, pv->src, GPIO_SRC_IRQ_COUNT,
-                    &efm32_gpio_source_process, DEV_IRQ_SENSE_HIGH_LEVEL);
+                    &efm32_gpio_source_process);
 
-  if (device_irq_source_link(dev, pv->src, GPIO_SRC_IRQ_COUNT, 0))
+  if (device_irq_source_link(dev, pv->src, GPIO_SRC_IRQ_COUNT, -1))
     goto err_clk;
 
   device_irq_sink_init(dev, pv->sink, CONFIG_DRIVER_EFM32_GPIO_IRQ_COUNT,
-                    DEV_IRQ_SENSE_FALLING_EDGE | DEV_IRQ_SENSE_RISING_EDGE);
+                       &efm32_gpio_icu_sink_update,
+                       DEV_IRQ_SENSE_FALLING_EDGE | DEV_IRQ_SENSE_RISING_EDGE |
+                       DEV_IRQ_SENSE_ANY_EDGE);
 #endif
 
   dev->drv = &efm32_gpio_drv;
@@ -568,7 +539,6 @@ static DEV_CLEANUP(efm32_gpio_cleanup)
   cpu_mem_write_32(EFM32_GPIO_ADDR + EFM32_GPIO_IEN_ADDR, 0);
 
   device_irq_source_unlink(dev, pv->src, GPIO_SRC_IRQ_COUNT);
-  device_irq_source_unlink(dev, pv->sink, CONFIG_DRIVER_EFM32_GPIO_IRQ_COUNT);
 #endif
 
 #ifdef CONFIG_DEVICE_CLOCK

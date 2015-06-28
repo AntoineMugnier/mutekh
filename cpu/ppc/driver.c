@@ -42,7 +42,7 @@ struct ppc_dev_private_s
 {
 #ifdef CONFIG_DEVICE_IRQ
 #define ICU_PPC_MAX_VECTOR	1
-  struct dev_irq_ep_s	sinks[ICU_PPC_MAX_VECTOR];
+  struct dev_irq_sink_s	sinks[ICU_PPC_MAX_VECTOR];
 #endif
 
   struct cpu_tree_s node;
@@ -67,46 +67,26 @@ static CPU_INTERRUPT_HANDLER(ppc_irq_handler)
   struct ppc_dev_private_s  *pv = dev->drv_pv;
 
   if ( irq < ICU_PPC_MAX_VECTOR ) {
-    struct dev_irq_ep_s *sink = pv->sinks + irq;
-    int_fast16_t id = 0;
-
-    sink->process(sink, &id);
+    struct dev_irq_sink_s *sink = pv->sinks + irq;
+    device_irq_sink_process(sink, 0);
   }
 }
 
-static DEV_ICU_GET_ENDPOINT(ppc_icu_get_endpoint)
+static DEV_IRQ_SINK_UPDATE(ppc_icu_sink_update)
+{
+}
+
+static DEV_ICU_GET_SINK(ppc_icu_get_sink)
 {
   struct device_s *dev = accessor->dev;
   struct ppc_dev_private_s  *pv = dev->drv_pv;
 
-  switch (type)
-    {
-    case DEV_IRQ_EP_SINK:
-      if (id < ICU_PPC_MAX_VECTOR)
-        return pv->sinks + id;
-    default:
-      return NULL;
-    }
+  if (id < ICU_PPC_MAX_VECTOR)
+    return pv->sinks + id;
+  return NULL;
 }
 
-static DEV_ICU_ENABLE_IRQ(ppc_icu_enable_irq)
-{
-  __unused__ struct device_s *dev = accessor->dev;
-
-  // inputs are single wire, logical irq id must be 0
-  if (irq_id > 0)
-    return 0;
-
-# ifdef CONFIG_ARCH_SMP
-  if (!arch_cpu_irq_affinity_test(dev, dev_ep))
-    return 0;
-
-# else
-  /* Enable irq line. On SMP platforms, all lines are already enabled on init. */
-# endif
-
-  return 1;
-}
+#define ppc_icu_link device_icu_dummy_link
 
 #endif
 
@@ -225,7 +205,7 @@ static DEV_INIT(ppc_init);
 #ifdef CONFIG_DEVICE_CLOCK
 static DEV_CLOCK_SINK_CHANGED(ppc_clk_changed)
 {
-  struct device_s *dev = ep->dev;
+  struct device_s *dev = ep->base.dev;
   struct ppc_dev_private_s *pv = dev->drv_pv;
   LOCK_SPIN_IRQ(&dev->lock);
   pv->freq = *freq;
@@ -273,7 +253,7 @@ DRIVER_DECLARE(ppc_drv, "PowerPC processor", ppc,
 #endif
                DRIVER_CPU_METHODS(ppc_cpu));
 
-DRIVER_REGISTER(ppc_drv,
+DRIVER_REGISTER(ppc_drv
 #ifdef CONFIG_LIBFDT
                 ,DEV_ENUM_FDTNAME_ENTRY("cpu:ppc")
                 ,DEV_ENUM_FDTNAME_ENTRY("cpu:powerpc")
@@ -322,7 +302,8 @@ static DEV_INIT(ppc_init)
 
 #ifdef CONFIG_DEVICE_IRQ
   /* init ppc irq sink end-points */
-  device_irq_sink_init(dev, pv->sinks, ICU_PPC_MAX_VECTOR, DEV_IRQ_SENSE_HIGH_LEVEL);
+  device_irq_sink_init(dev, pv->sinks, ICU_PPC_MAX_VECTOR,
+                       &ppc_icu_sink_update, DEV_IRQ_SENSE_HIGH_LEVEL);
 
 # ifdef CONFIG_ARCH_SMP
   CPU_LOCAL_CLS_SET(pv->node.cls, ppc_icu_dev, dev);

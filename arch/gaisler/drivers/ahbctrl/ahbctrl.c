@@ -80,7 +80,7 @@ static void ahbctrl_scan(struct device_s *dev, uintptr_t begin, uintptr_t end)
       uint16_t device = (endian_be32(p[0]) >> 12) & 0xfff;
       uint8_t version = (endian_be32(p[0]) >> 5) & 0x1f; 
 
-      struct device_s *d = device_alloc(11);
+      struct device_s *d = device_alloc(12);
       if (!d)
         continue;
 
@@ -143,7 +143,10 @@ static void ahbctrl_scan(struct device_s *dev, uintptr_t begin, uintptr_t end)
       uint8_t irq = endian_be32(p[0]) & 0x1f;
 
       if (irq)
-        device_res_add_irq(d, 0, irq - 1, 0, "/icu");
+        {
+          device_res_add_dev_param(d, "icu", "/icu");
+          device_res_add_irq(d, 0, irq - 1, DEV_IRQ_SENSE_RISING_EDGE, 0, 1);
+        }
 #endif
 
       uint8_t mtype = 0;

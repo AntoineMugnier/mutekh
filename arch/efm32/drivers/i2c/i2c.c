@@ -62,7 +62,7 @@ struct efm32_i2c_context_s
 {
   uintptr_t addr;
   /* Interrupt end-point */
-  struct dev_irq_ep_s irq_ep;
+  struct dev_irq_src_s irq_ep;
   /* request queue */
   dev_request_queue_root_t queue;
   /* transfert size */
@@ -283,9 +283,9 @@ DEV_I2C_CONFIG(efm32_i2c_config)
 
 /***************************************** transfer */
 
-static DEV_IRQ_EP_PROCESS(efm32_i2c_irq)
+static DEV_IRQ_SRC_PROCESS(efm32_i2c_irq)
 {
-  struct device_s             *dev = ep->dev;
+  struct device_s             *dev = ep->base.dev;
   struct efm32_i2c_context_s  *pv  = dev->drv_pv;
 
   lock_spin(&dev->lock);
@@ -448,8 +448,7 @@ static DEV_INIT(efm32_i2c_init)
 
   cpu_mem_write_32(pv->addr + EFM32_I2C_ROUTE_ADDR, endian_le32(route));
 
-  device_irq_source_init(dev, &pv->irq_ep, 1, &efm32_i2c_irq,
-                         DEV_IRQ_SENSE_HIGH_LEVEL);
+  device_irq_source_init(dev, &pv->irq_ep, 1, &efm32_i2c_irq);
 
   if (device_irq_source_link(dev, &pv->irq_ep, 1, -1))
     goto err_clk;

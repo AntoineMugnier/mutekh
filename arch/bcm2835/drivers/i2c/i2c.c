@@ -68,7 +68,7 @@ struct bcm2835_i2c_context_s
 {
   uintptr_t addr;
   /* Interrupt end-point */
-  struct dev_irq_ep_s irq_ep;
+  struct dev_irq_src_s irq_ep;
   /* request queue */
   dev_request_queue_root_t queue;
   /* global transfert size */
@@ -398,9 +398,9 @@ static bool_t bcm2835_i2c_timer_rq(struct device_s *dev)
 
 /***************************************** interrupt */
 
-static DEV_IRQ_EP_PROCESS(bcm2835_i2c_irq)
+static DEV_IRQ_SRC_PROCESS(bcm2835_i2c_irq)
 {
-  struct device_s                *dev = ep->dev;
+  struct device_s                *dev = ep->base.dev;
   struct bcm2835_i2c_context_s   *pv  = dev->drv_pv;
 
   bool_t stop = 0;
@@ -562,8 +562,7 @@ static DEV_INIT(bcm2835_i2c_init)
   /* Set default timeout in counter cycle for 1 byte @ 100 KHz */
   pv->bperiod = 80;
 
-  device_irq_source_init(dev, &pv->irq_ep, 1, &bcm2835_i2c_irq,
-                         DEV_IRQ_SENSE_HIGH_LEVEL);
+  device_irq_source_init(dev, &pv->irq_ep, 1, &bcm2835_i2c_irq);
 
   if (device_irq_source_link(dev, &pv->irq_ep, 1, -1))
     goto err_mem;

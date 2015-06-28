@@ -330,8 +330,8 @@ dev_shell_dump_device(struct termui_console_s *con, struct device_s *dev, uint_f
           break;
 #ifdef CONFIG_DEVICE_IRQ
         case DEV_RES_IRQ: {
-          termui_con_printf(con, "  IRQ %u connected to input %u:%u of controller `%s'\n",
-                 r->u.irq.dev_out_id, r->u.irq.icu_in_id, r->u.irq.irq_id, r->u.irq.icu);
+          termui_con_printf(con, "  IRQ source %u connected to sink %u of icu, irq id %u",
+                 r->u.irq.src_id, r->u.irq.sink_id, r->u.irq.irq_id);
           break;
         }
 #endif

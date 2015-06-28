@@ -86,7 +86,7 @@ enum soclib_block_type_e
 struct soclib_block_context_s
 {
   uintptr_t                 addr;
-  struct dev_irq_ep_s       irq_ep;
+  struct dev_irq_src_s      irq_ep;
   dev_request_queue_root_t  queue;
 
   uint_fast8_t              blk_log2;
@@ -279,9 +279,9 @@ static DEV_MEM_INFO(soclib_block_info)
   return 0;
 }
 
-static DEV_IRQ_EP_PROCESS(soclib_block_irq)
+static DEV_IRQ_SRC_PROCESS(soclib_block_irq)
 {
-  struct device_s *dev = ep->dev;
+  struct device_s *dev = ep->base.dev;
   struct soclib_block_context_s	*pv = dev->drv_pv;
 
   lock_spin(&dev->lock);
@@ -359,7 +359,7 @@ static DEV_INIT(soclib_block_init)
     goto err_mem;
 
   device_irq_source_init(dev, &pv->irq_ep, 1,
-                         &soclib_block_irq, DEV_IRQ_SENSE_HIGH_LEVEL);
+                         &soclib_block_irq);
 
   dev_request_queue_init(&pv->queue);
 

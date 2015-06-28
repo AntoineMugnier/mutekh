@@ -47,7 +47,7 @@ struct tty_soclib_context_s
   dev_request_queue_root_t	read_q;
 #ifdef CONFIG_DEVICE_IRQ
   tty_fifo_root_t		read_fifo;
-  struct dev_irq_ep_s           irq_ep;
+  struct dev_irq_src_s          irq_ep;
 #endif
   uintptr_t addr;
 };
@@ -136,9 +136,9 @@ static DEV_CHAR_REQUEST(tty_soclib_request)
 
 #ifdef CONFIG_DEVICE_IRQ
 
-static DEV_IRQ_EP_PROCESS(tty_soclib_irq)
+static DEV_IRQ_SRC_PROCESS(tty_soclib_irq)
 {
-  struct device_s *dev = ep->dev;
+  struct device_s *dev = ep->base.dev;
   struct tty_soclib_context_s *pv = dev->drv_pv;
   uint8_t c;
 
@@ -152,7 +152,6 @@ static DEV_IRQ_EP_PROCESS(tty_soclib_irq)
 
       /* add character to driver fifo, discard if fifo full */
       tty_fifo_pushback(&pv->read_fifo, c);
-      *id = 0;
     } while ( cpu_mem_read_8(pv->addr + TTY_SOCLIB_REG_STATUS)
               && ! tty_fifo_isfull(&pv->read_fifo));
 
@@ -196,7 +195,7 @@ static DEV_INIT(tty_soclib_init)
 
 #ifdef CONFIG_DEVICE_IRQ
   device_irq_source_init(dev, &pv->irq_ep, 1,
-                         &tty_soclib_irq, DEV_IRQ_SENSE_HIGH_LEVEL);
+                         &tty_soclib_irq);
 
   tty_fifo_init(&pv->read_fifo);
 

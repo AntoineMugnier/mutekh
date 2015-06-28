@@ -54,7 +54,7 @@ struct efm32_rtc_private_s
   /* Timer Software value */
   uint32_t swvalue;
   /* Interrupt end-point */
-  struct dev_irq_ep_s irq_eps;
+  struct dev_irq_src_s irq_eps;
   /* Request queue */
   dev_request_pqueue_root_t queue;
 #endif
@@ -161,9 +161,9 @@ static inline void efm32_rtc_raise_irq(struct efm32_rtc_private_s *pv)
   cpu_mem_write_32(pv->addr + EFM32_RTC_IFS_ADDR, endian_le32(EFM32_RTC_IFC_COMP0));
 }
 
-static DEV_IRQ_EP_PROCESS(efm32_rtc_irq)
+static DEV_IRQ_SRC_PROCESS(efm32_rtc_irq)
 {
-  struct device_s *dev = ep->dev;
+  struct device_s *dev = ep->base.dev;
   struct efm32_rtc_private_s *pv = dev->drv_pv;
  
   lock_spin(&dev->lock);
@@ -490,8 +490,7 @@ static DEV_INIT(efm32_rtc_init)
 #endif
 
 #ifdef CONFIG_DEVICE_IRQ
-  device_irq_source_init(dev, &pv->irq_eps, 1,
-                         efm32_rtc_irq, DEV_IRQ_SENSE_HIGH_LEVEL);
+  device_irq_source_init(dev, &pv->irq_eps, 1, efm32_rtc_irq);
 
   if (device_irq_source_link(dev, &pv->irq_eps, 1, 1))
     goto err_clk;

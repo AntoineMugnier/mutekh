@@ -71,7 +71,7 @@ struct gaisler_apbuart_context_s
   uart_fifo_root_t		read_fifo;
 #ifdef CONFIG_DEVICE_IRQ
   uart_fifo_root_t		write_fifo;
-  struct dev_irq_ep_s           irq_ep;
+  struct dev_irq_src_s          irq_ep;
 #endif
 
   bool_t                        read_started:1;

@@ -73,7 +73,7 @@ struct stm32_i2c_private_s
     bool_t                   stopped:1;
 
     /* interrupt end-point (event and error). */
-    struct dev_irq_ep_s      irq_ep[2];
+    struct dev_irq_src_s     irq_ep[2];
 };
 
 
@@ -545,9 +545,9 @@ wait_event:
 /***************************************** irq end-point process */
 
 static
-DEV_IRQ_EP_PROCESS(stm32_i2c_irq)
+DEV_IRQ_SRC_PROCESS(stm32_i2c_irq)
 {
-  struct device_s                *dev = ep->dev;
+  struct device_s                *dev = ep->base.dev;
   struct stm32_i2c_private_s     *pv  = dev->drv_pv;
 
   lock_spin(&dev->lock);

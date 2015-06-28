@@ -59,7 +59,7 @@ struct x86_dev_private_s
 #else
 # define CPU_X86_IRQ_SINKS 1
 #endif
-  struct dev_irq_ep_s	sinks[CPU_X86_IRQ_SINKS];
+  struct dev_irq_sink_s	sinks[CPU_X86_IRQ_SINKS];
 #endif
 
 #ifdef CONFIG_ARCH_SMP
@@ -101,32 +101,26 @@ static CPU_INTERRUPT_HANDLER(x86_irq_handler)
   struct device_s *dev = CPU_LOCAL_GET(x86_icu_dev);
   struct x86_dev_private_s  *pv = dev->drv_pv;
 
-  struct dev_irq_ep_s *sink = &pv->sinks[0];
-  int_fast16_t id = irq;
+  struct dev_irq_sink_s *sink = &pv->sinks[0];
 
-  sink->process(sink, &id);
+  device_irq_sink_process(sink, irq);
 }
 
-static DEV_ICU_GET_ENDPOINT(x86_icu_get_endpoint)
+static DEV_ICU_GET_SINK(x86_icu_get_sink)
 {
   struct device_s *dev = accessor->dev;
   struct x86_dev_private_s  *pv = dev->drv_pv;
 
-  switch (type)
-    {
-    case DEV_IRQ_EP_SINK:
-      if (id < CPU_X86_IRQ_SINKS)
-        return pv->sinks + id;
-    default:
-      return NULL;
-    }
+  if (id < CPU_X86_IRQ_SINKS)
+    return pv->sinks + id;
+  return NULL;
 }
 
-static DEV_ICU_ENABLE_IRQ(x86_icu_enable_irq)
+static DEV_IRQ_SINK_UPDATE(x86_sink_update)
 {
-#warning CPU IRQ ENABLE
-  return 0;
 }
+
+#define x86_icu_link device_icu_dummy_link
 
 #endif
 
@@ -270,7 +264,7 @@ static DEV_INIT(x86_init);
 #ifdef CONFIG_DEVICE_CLOCK
 static DEV_CLOCK_SINK_CHANGED(x86_clk_changed)
 {
-  struct device_s *dev = ep->dev;
+  struct device_s *dev = ep->base.dev;
   struct x86_dev_private_s *pv = dev->drv_pv;
   LOCK_SPIN_IRQ(&dev->lock);
   pv->freq = *freq;
@@ -386,7 +380,8 @@ static DEV_INIT(x86_init)
 
 #ifdef CONFIG_DEVICE_IRQ
   /* init x86 irq sink end-points */
-  device_irq_sink_init(dev, pv->sinks, CPU_X86_IRQ_SINKS, DEV_IRQ_SENSE_ID_BUS);
+  device_irq_sink_init(dev, pv->sinks, CPU_X86_IRQ_SINKS,
+                       &x86_sink_update, DEV_IRQ_SENSE_ID_BUS);
 
 # ifdef CONFIG_ARCH_SMP
   CPU_LOCAL_CLS_SET(pv->node.cls, x86_icu_dev, dev);

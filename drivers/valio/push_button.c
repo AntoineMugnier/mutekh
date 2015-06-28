@@ -46,7 +46,7 @@ struct push_button_context_s
   /* Value when released */
   bool_t release_state;
   /* Interrupt end-point */
-  struct dev_irq_ep_s irq_ep;
+  struct dev_irq_src_s irq_ep;
   /* request queue */
   dev_request_queue_root_t queue;
 #ifdef CONFIG_DRIVER_PUSH_BUTTON_TIMER
@@ -108,9 +108,9 @@ static bool_t push_button_timer_rq(struct device_s *dev)
 
 /***************************************** interrupt */
 
-static DEV_IRQ_EP_PROCESS(push_button_irq)
+static DEV_IRQ_SRC_PROCESS(push_button_irq)
 {
-  struct device_s *dev = ep->dev;
+  struct device_s *dev = ep->base.dev;
   struct push_button_context_s *pv  = dev->drv_pv;
    
   struct dev_request_s *base = dev_request_queue_head(&pv->queue);
@@ -281,8 +281,7 @@ static DEV_INIT(push_button_init)
 
   dev_request_queue_init(&pv->queue);
 
-  device_irq_source_init(dev, &pv->irq_ep, 1, &push_button_irq,
-                         DEV_IRQ_SENSE_ANY_EDGE);
+  device_irq_source_init(dev, &pv->irq_ep, 1, &push_button_irq);
 
   if (device_irq_source_link(dev, &pv->irq_ep, 1, -1))
     goto err_mem;

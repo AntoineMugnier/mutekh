@@ -38,10 +38,16 @@
 #include <mutek/mem_alloc.h>
 #include <mutek/printk.h>
 
+#ifdef CONFIG_CPU_LM32_SOCLIB
+# define LM32_IRQ_SENSE_MODE DEV_IRQ_SENSE_HIGH_LEVEL
+#else
+# define LM32_IRQ_SENSE_MODE DEV_IRQ_SENSE_LOW_LEVEL
+#endif
+
 struct lm32_dev_private_s
 {
 #ifdef CONFIG_DEVICE_IRQ
-  struct dev_irq_ep_s	sinks[CONFIG_CPU_LM32_IRQ_COUNT];
+  struct dev_irq_sink_s	sinks[CONFIG_CPU_LM32_IRQ_COUNT];
 #endif
 
   struct cpu_tree_s node;
@@ -66,67 +72,48 @@ static CPU_INTERRUPT_HANDLER(lm32_irq_handler)
   struct lm32_dev_private_s  *pv = dev->drv_pv;
 
   if ( irq < CONFIG_CPU_LM32_IRQ_COUNT ) {
-    struct dev_irq_ep_s *sink = pv->sinks + irq;
-    int_fast16_t id = 0;
-
-    sink->process(sink, &id);
+    struct dev_irq_sink_s *sink = pv->sinks + irq;
+    device_irq_sink_process(sink, 0);
   }
 }
 
-static DEV_ICU_GET_ENDPOINT(lm32_icu_get_endpoint)
+static DEV_ICU_GET_SINK(lm32_icu_get_sink)
 {
   struct device_s *dev = accessor->dev;
   struct lm32_dev_private_s  *pv = dev->drv_pv;
 
-  switch (type)
+  if (id < CONFIG_CPU_LM32_IRQ_COUNT)
+    return pv->sinks + id;
+  return NULL;
+}
+
+static DEV_IRQ_SINK_UPDATE(lm32_icu_sink_update)
+{
+#ifndef CONFIG_ARCH_SMP
+  struct device_s *dev = sink->base.dev;
+  struct lm32_dev_private_s  *pv = dev->drv_pv;
+  uint_fast8_t sink_id = sink - pv->sinks;
+
+  reg_t status;
+  asm volatile ("rcsr	%0, IM" : "=r" (status));
+
+  switch (sense)
     {
-    case DEV_IRQ_EP_SINK:
-      if (id < CONFIG_CPU_LM32_IRQ_COUNT)
-        return pv->sinks + id;
+    case DEV_IRQ_SENSE_NONE:
+      status &= ~(1 << sink_id);
+      break;
+    case LM32_IRQ_SENSE_MODE:
+      status |= 1 << sink_id;
+      break;
     default:
-      return NULL;
+      return;
     }
-}
 
-static DEV_ICU_ENABLE_IRQ(lm32_icu_enable_irq)
-{
-  struct device_s *dev = accessor->dev;
-  struct lm32_dev_private_s  *pv = dev->drv_pv;
-
-  // inputs are single wire, logical irq id must be 0
-  if (irq_id > 0)
-    return 0;
-
-# ifdef CONFIG_ARCH_SMP
-  if (!arch_cpu_irq_affinity_test(dev, dev_ep))
-    return 0;
-
-# else
-  /* Enable irq line. On SMP platforms, all lines are already enabled on init. */
-  uint_fast8_t icu_in_id = sink - pv->sinks;
-  reg_t status;
-  asm volatile ("rcsr	%0, IM" : "=r" (status));
-  status |= 1 << icu_in_id;
   asm volatile ("wcsr	IM, %0" :: "r" (status));
-# endif
-
-  return 1;
+#endif
 }
 
-# ifndef CONFIG_ARCH_SMP
-/* Disable irq line. On SMP platforms, all lines must remain enabled. */
-static DEV_ICU_DISABLE_IRQ(lm32_icu_disable_irq)
-{
-  struct device_s *dev = accessor->dev;
-  struct lm32_dev_private_s  *pv = dev->drv_pv;
-  uint_fast8_t icu_in_id = sink - pv->sinks;
-
-  reg_t status;
-  asm volatile ("rcsr	%0, IM" : "=r" (status));
-  status &= ~(1 << icu_in_id);
-  asm volatile ("wcsr	IM, %0" :: "r" (status));
-}
-# endif
+#define lm32_icu_link device_icu_dummy_link
 
 #endif
 
@@ -239,7 +226,7 @@ static DEV_INIT(lm32_init);
 #ifdef CONFIG_DEVICE_CLOCK
 static DEV_CLOCK_SINK_CHANGED(lm32_clk_changed)
 {
-  struct device_s *dev = ep->dev;
+  struct device_s *dev = ep->base.dev;
   struct lm32_dev_private_s *pv = dev->drv_pv;
   LOCK_SPIN_IRQ(&dev->lock);
   pv->freq = *freq;
@@ -330,12 +317,7 @@ static DEV_INIT(lm32_init)
 #ifdef CONFIG_DEVICE_IRQ
   /* init lm32 irq sink end-points */
   device_irq_sink_init(dev, pv->sinks, CONFIG_CPU_LM32_IRQ_COUNT,
-#ifdef CONFIG_CPU_LM32_SOCLIB
-                       DEV_IRQ_SENSE_HIGH_LEVEL
-#else
-                       DEV_IRQ_SENSE_LOW_LEVEL
-#endif
-                       );
+                       &lm32_icu_sink_update, LM32_IRQ_SENSE_MODE);
 
 # ifdef CONFIG_ARCH_SMP
   CPU_LOCAL_CLS_SET(pv->node.cls, lm32_icu_dev, dev);

@@ -406,19 +406,25 @@ static FDT_ON_NODE_PROP_FUNC(enum_fdt_node_prop)
           while (datalen >= elen)
             {
               struct dev_resource_s *r;
+
+              if (device_res_alloc_str(e->dev, DEV_RES_DEV_PARAM, NULL, "icu", &r))
+                goto res_err;
+              r->flags |= DEVICE_RES_FLAGS_ENUM_RESERVED0;
+              /* pass fdt phandle instead of pointer, will be changed in resolve_dev_links */
+              r->u.uint[0] = phandle;
               error_t err = device_res_alloc(e->dev, &r, DEV_RES_IRQ);
               if (err)
                 goto res_err;
 
-              r->u.irq.dev_out_id = j++;
-              r->u.irq.icu_in_id = endian_be32(*(const uint32_t*)data8);
+              r->u.irq.src_id = j++;
+              r->u.irq.sink_id = endian_be32(*(const uint32_t*)data8);
+              r->u.irq.trig_mode = DEV_IRQ_SENSE_HIGH_LEVEL | DEV_IRQ_SENSE_LOW_LEVEL |
+                DEV_IRQ_SENSE_RISING_EDGE | DEV_IRQ_SENSE_FALLING_EDGE;
 
               /* logical irq id is passed as second value if interrupt cells size > 4 */
               r->u.irq.irq_id = elen > 4 ? endian_be32(*(const uint32_t*)(data8 + 4)) : 0;
-
-              /* pass fdt phandle instead of pointer, will be changed in resolve_dev_links */
-              r->u.uint[0] = phandle;
-              r->flags |= DEVICE_RES_FLAGS_ENUM_RESERVED0;
+#warning fdt irq route mask wired to 1
+              r->u.irq.route_mask = 1;
 
               datalen -= elen;
               data8 += elen;
@@ -431,18 +437,25 @@ static FDT_ON_NODE_PROP_FUNC(enum_fdt_node_prop)
           while (datalen >= 8 + elen)
             {
               struct dev_resource_s *r;
+
+              if (device_res_alloc_str(e->dev, DEV_RES_DEV_PARAM, NULL, "icu", &r))
+                goto res_err;
+              r->flags |= DEVICE_RES_FLAGS_ENUM_RESERVED0;
+              /* pass fdt phandle instead of pointer, will be changed in resolve_dev_links */
+              r->u.uint[0] = endian_be32(*(const uint32_t*)(data8 + 4));
+
               error_t err = device_res_alloc(e->dev, &r, DEV_RES_IRQ);
               if (err)
                 goto res_err;
-              r->u.irq.dev_out_id = endian_be32(*(const uint32_t*)data8);
-              r->u.irq.icu_in_id = endian_be32(*(const uint32_t*)(data8 + 8));
+              r->u.irq.src_id = endian_be32(*(const uint32_t*)data8);
+              r->u.irq.sink_id = endian_be32(*(const uint32_t*)(data8 + 8));
+              r->u.irq.trig_mode = DEV_IRQ_SENSE_HIGH_LEVEL | DEV_IRQ_SENSE_LOW_LEVEL |
+                DEV_IRQ_SENSE_RISING_EDGE | DEV_IRQ_SENSE_FALLING_EDGE;
 
               /* logical irq id is passed as fourth value if interrupt cells size > 12 */
               r->u.irq.irq_id = elen > 12 ? endian_be32(*(const uint32_t*)(data8 + 12)) : 0;
-
-              /* pass fdt phandle instead of pointer, will be changed in resolve_dev_links */
-              r->u.uint[0] = endian_be32(*(const uint32_t*)(data8 + 4));
-              r->flags |= DEVICE_RES_FLAGS_ENUM_RESERVED0;
+#warning fdt irq route mask wired to 1
+              r->u.irq.route_mask = 1;
 
               datalen -= 8 + elen;
               data8 += 8 + elen;
@@ -520,7 +533,7 @@ static void resolve_dev_links(struct device_s *root, struct device_s *dev)
             {
               struct device_s *dep = enum_fdt_get_phandle(root, r->u.uint[0]);
 
-              r->flags ^= DEVICE_RES_FLAGS_ENUM_RESERVED0 | DEVICE_RES_FLAGS_DEPEND;
+              r->flags ^= DEVICE_RES_FLAGS_ENUM_RESERVED0;
               /* set path to device or drop resource entry */
               if (dep != NULL)
                 {
@@ -538,13 +551,13 @@ static void resolve_dev_links(struct device_s *root, struct device_s *dev)
                       if (path != NULL)
                         {
                           r->u.uint[0] = (uintptr_t)path;
-                          r->flags |= DEVICE_RES_FLAGS_FREE_PTR0;
+                          r->flags |= DEVICE_RES_FLAGS_FREE_PTR0 | DEVICE_RES_FLAGS_DEPEND;
                           continue;
                         }
                     }
                 }
 
-              printk("enum-fdt: bad node handle in %p `%s'\n", dep, dep->node.name);
+              printk("enum-fdt: bad node handle %p\n", r->u.uint[0]);
               device_res_cleanup(r);
             }
         });

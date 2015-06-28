@@ -41,7 +41,7 @@
 
 struct efm32_dma_context
 {
-  struct dev_irq_ep_s           irq_ep;
+  struct dev_irq_src_s           irq_ep;
   /* base address of DMA */
   uintptr_t                     addr;
   /* lock for reentrant kroutine */
@@ -278,9 +278,9 @@ static inline void efm32_dev_dma_kroutine(struct device_s *dev, struct dev_reque
 #endif
 }
 
-static DEV_IRQ_EP_PROCESS(efm32_dma_irq)
+static DEV_IRQ_SRC_PROCESS(efm32_dma_irq)
 {
-  struct device_s *dev = ep->dev;
+  struct device_s *dev = ep->base.dev;
   struct efm32_dma_context *pv = dev->drv_pv;
   struct dev_dma_rq_s *rq; 
   
@@ -453,7 +453,7 @@ static DEV_INIT(efm32_dma_init)
   for(uint8_t i = 0; i < CONFIG_DRIVER_EFM32_DMA_CHANNEL_COUNT; i++) 
     dev_request_queue_init(pv->queue + i);
 
-  device_irq_source_init(dev, &pv->irq_ep, 1, &efm32_dma_irq, DEV_IRQ_SENSE_RISING_EDGE);
+  device_irq_source_init(dev, &pv->irq_ep, 1, &efm32_dma_irq);
 
   if (device_irq_source_link(dev, &pv->irq_ep, 1, 1))
     goto err_mem;

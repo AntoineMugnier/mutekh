@@ -86,7 +86,7 @@ static DEV_INIT(a9mpcore_init)
 
 #ifdef CONFIG_DRIVER_ARM_A9MPCORE_IRQ
   /* add interrupt controller distributor */
-  struct device_s *icu = device_alloc(cpu_count + 2);
+  struct device_s *icu = device_alloc(cpu_count * 2 + 2);
   assert(icu != NULL);
 
   device_set_name(icu, "icu");
@@ -118,7 +118,8 @@ static DEV_INIT(a9mpcore_init)
       device_attach(d, dev);
 
 #ifdef CONFIG_DRIVER_ARM_A9MPCORE_IRQ
-      device_res_add_irq(icu, i, 0, 0, name);
+      device_res_add_dev_param(icu, "icu", name);
+      device_res_add_irq(icu, i, 0, DEV_IRQ_SENSE_LOW_LEVEL, 0, 0);
 #endif
 
       extern const struct driver_s arm32_drv;

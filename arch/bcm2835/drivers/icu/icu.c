@@ -66,89 +66,66 @@ struct bcm2835_icu_private_s
 {
   uintptr_t addr;
 
-  struct dev_irq_ep_s sinks[BCM2835ICU_MAX_VECTOR];
-  struct dev_irq_ep_s src;
+  struct dev_irq_sink_s sinks[BCM2835ICU_MAX_VECTOR];
+  struct dev_irq_src_s src;
 };
 
-static DEV_ICU_GET_ENDPOINT(bcm2835_icu_icu_get_endpoint)
+static DEV_ICU_GET_SINK(bcm2835_icu_get_sink)
 {
   struct device_s *dev = accessor->dev;
   struct bcm2835_icu_private_s *pv = dev->drv_pv;
 
-  switch (type)
+  if (id < BCM2835ICU_MAX_VECTOR)
+    return &pv->sinks[id];
+  return NULL;
+}
+
+static DEV_IRQ_SINK_UPDATE(bcm2835_icu_sink_update)
+{
+  struct device_s *dev = sink->base.dev;
+  struct bcm2835_icu_private_s *pv = dev->drv_pv;
+  uint_fast8_t sink_id = sink - pv->sinks;
+
+  switch (sense)
     {
-    case DEV_IRQ_EP_SINK:
-      if (id < BCM2835ICU_MAX_VECTOR)
-        return pv->sinks + id;
-      return NULL;
-
-    case DEV_IRQ_EP_SOURCE:
-      if (id < 1)
-        return &pv->src;
-
+    case DEV_IRQ_SENSE_NONE:
+      switch (sink_id)
+        {
+        case 0 ... 7:
+          cpu_mem_write_32(pv->addr + BCM2835ICU_BAS_DIS, endian_le32(1 << sink_id));
+          break;
+        case 8 ... 39:
+          cpu_mem_write_32(pv->addr + BCM2835ICU_DIS1, endian_le32(1 << (sink_id - 8)));
+          break;
+        case 40 ... 71:
+          cpu_mem_write_32(pv->addr + BCM2835ICU_DIS2, endian_le32(1 << (sink_id - 40)));
+          break;
+        }
+      break;
+    case DEV_IRQ_SENSE_HIGH_LEVEL:
+      switch (sink_id)
+        {
+        case 0 ... 7:
+          cpu_mem_write_32(pv->addr + BCM2835ICU_BAS_ENA, endian_le32(1 << sink_id));
+          break;
+        case 8 ... 39:
+          cpu_mem_write_32(pv->addr + BCM2835ICU_ENA1, endian_le32(1 << (sink_id - 8)));
+          break;
+        case 40 ... 71:
+          cpu_mem_write_32(pv->addr + BCM2835ICU_ENA2, endian_le32(1 << (sink_id - 40)));
+          break;
+        }
+      break;
     default:
-      return NULL;
+      return;
     }
 }
 
-static DEV_ICU_ENABLE_IRQ(bcm2835_icu_icu_enable_irq)
+#define bcm2835_icu_link device_icu_dummy_link
+
+static DEV_IRQ_SRC_PROCESS(bcm2835_icu_source_process)
 {
-  struct device_s *dev = accessor->dev;
-  struct bcm2835_icu_private_s *pv = dev->drv_pv;
-  uint_fast8_t icu_in_id = sink - pv->sinks;
-
-  if (irq_id > 0)
-    {
-      printk("icu %p: single wire IRQ must use 0 as logical IRQ id for %p device\n", dev, dev_ep->dev);
-      return 0;
-    }
-
-  if (!device_icu_irq_enable(&pv->src, 0, NULL, dev_ep))
-    {
-      printk("icu: source end-point can not relay interrupt for %p device\n", dev_ep->dev);
-      return 0;
-    }
-
-  switch (icu_in_id)
-    {
-    case 0 ... 7:
-      cpu_mem_write_32(pv->addr + BCM2835ICU_BAS_ENA, endian_le32(1 << icu_in_id));
-      return 1;
-    case 8 ... 39:
-      cpu_mem_write_32(pv->addr + BCM2835ICU_ENA1, endian_le32(1 << (icu_in_id - 8)));
-      return 1;
-    case 40 ... 71:
-      cpu_mem_write_32(pv->addr + BCM2835ICU_ENA2, endian_le32(1 << (icu_in_id - 40)));
-      return 1;
-    default:
-      printk("bcm2835_icu %p: invalid irq end-point, valid range is 0-71 (0-7: ARM irqs, 8-71: GPU irqs)\n", dev);
-      return 0;
-    }
-}
-
-static DEV_ICU_DISABLE_IRQ(bcm2835_icu_icu_disable_irq)
-{
-  struct device_s *dev = accessor->dev;
-  struct bcm2835_icu_private_s *pv = dev->drv_pv;
-  uint_fast8_t icu_in_id = sink - pv->sinks;
-
-  switch (icu_in_id)
-    {
-    case 0 ... 7:
-      cpu_mem_write_32(pv->addr + BCM2835ICU_BAS_DIS, endian_le32(1 << icu_in_id));
-      break;
-    case 8 ... 39:
-      cpu_mem_write_32(pv->addr + BCM2835ICU_DIS1, endian_le32(1 << (icu_in_id - 8)));
-      break;
-    case 40 ... 71:
-      cpu_mem_write_32(pv->addr + BCM2835ICU_DIS2, endian_le32(1 << (icu_in_id - 40)));
-      break;
-    }
-}
-
-static DEV_IRQ_EP_PROCESS(bcm2835_icu_source_process)
-{
-  struct device_s *dev = ep->dev;
+  struct device_s *dev = ep->base.dev;
   struct bcm2835_icu_private_s *pv = dev->drv_pv;
   static const uint8_t bcm2835_icu_basic_to_gpu[21] =
     {
@@ -176,8 +153,8 @@ static DEV_IRQ_EP_PROCESS(bcm2835_icu_source_process)
       else
         break;
 
-      struct dev_irq_ep_s *sink = pv->sinks + i;
-      sink->process(sink, id);
+      struct dev_irq_sink_s *sink = pv->sinks + i;
+      device_irq_sink_process(sink, 0);
     }
 }
 
@@ -187,12 +164,12 @@ static DEV_CLEANUP(bcm2835_icu_cleanup);
 #define bcm2835_icu_use dev_use_generic
 
 DRIVER_DECLARE(bcm2835_icu_drv, "BCM2835 irq controller", bcm2835_icu,
-               DRIVER_ICU_METHODS(bcm2835_icu_icu));
+               DRIVER_ICU_METHODS(bcm2835_icu));
 
 DRIVER_REGISTER(bcm2835_icu_drv,
                 DEV_ENUM_FDTNAME_ENTRY("bcm2835_icu"));
 
-static DEV_INIT(bcm2835_icu_init)
+DEV_INIT(bcm2835_icu_init)
 {
   struct bcm2835_icu_private_s  *pv;
 
@@ -216,13 +193,12 @@ static DEV_INIT(bcm2835_icu_init)
   /* enable pending regs 1 & 2 */
   cpu_mem_write_32(pv->addr + BCM2835ICU_BAS_ENA, endian_le32(3 << 8));
 
-  device_irq_source_init(dev, &pv->src, 1, &bcm2835_icu_source_process,
-                         DEV_IRQ_SENSE_LOW_LEVEL);
+  device_irq_source_init(dev, &pv->src, 1, &bcm2835_icu_source_process);
   if (device_irq_source_link(dev, &pv->src, 1, 0))
     goto err_mem;
 
   device_irq_sink_init(dev, pv->sinks, BCM2835ICU_MAX_VECTOR,
-                       DEV_IRQ_SENSE_HIGH_LEVEL);
+                       &bcm2835_icu_sink_update, DEV_IRQ_SENSE_HIGH_LEVEL);
 
   dev->drv = &bcm2835_icu_drv;
   dev->status = DEVICE_DRIVER_INIT_DONE;

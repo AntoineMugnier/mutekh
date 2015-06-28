@@ -45,7 +45,7 @@ struct nios2_dev_private_s
 {
 #ifdef CONFIG_DEVICE_IRQ
 #define ICU_NIOS2_MAX_VECTOR	32
-  struct dev_irq_ep_s	sinks[ICU_NIOS2_MAX_VECTOR];
+  struct dev_irq_sink_s	sinks[ICU_NIOS2_MAX_VECTOR];
 #endif
 
   struct cpu_tree_s node;
@@ -70,65 +70,49 @@ static CPU_INTERRUPT_HANDLER(nios2_irq_handler)
   struct nios2_dev_private_s  *pv = dev->drv_pv;
 
   if ( irq < ICU_NIOS2_MAX_VECTOR ) {
-    struct dev_irq_ep_s *sink = pv->sinks + irq;
-    int_fast16_t id = 0;
-
-    sink->process(sink, &id);
+    struct dev_irq_sink_s *sink = pv->sinks + irq;
+    device_irq_sink_process(sink, 0);
   }
 }
 
-static DEV_ICU_GET_ENDPOINT(nios2_icu_get_endpoint)
+static DEV_ICU_GET_SINK(nios2_icu_get_sink)
 {
   struct device_s *dev = accessor->dev;
   struct nios2_dev_private_s  *pv = dev->drv_pv;
 
-  switch (type)
-    {
-    case DEV_IRQ_EP_SINK:
-      if (id < ICU_NIOS2_MAX_VECTOR)
-        return pv->sinks + id;
-    default:
-      return NULL;
-    }
+  if (id < ICU_NIOS2_MAX_VECTOR)
+    return pv->sinks + id;
+  return NULL;
 }
 
-static DEV_ICU_ENABLE_IRQ(nios2_icu_enable_irq)
+static DEV_IRQ_SINK_UPDATE(nios2_icu_sink_update)
 {
-  struct device_s *dev = CPU_LOCAL_GET(nios2_icu_dev);
-  __unused__ struct nios2_dev_private_s  *pv = dev->drv_pv;
-
-  // inputs are single wire, logical irq id must be 0
-  if (irq_id > 0)
-    return 0;
-
-# ifdef CONFIG_ARCH_SMP
-  if (!arch_cpu_irq_affinity_test(dev, dev_ep))
-    return 0;
-
-# else
-  /* Enable irq line. On SMP platforms, all lines are already enabled on init. */
-  uint_fast8_t icu_in_id = sink - pv->sinks;
-  reg_t status = cpu_nios2_read_ctrl_reg(3);
-  status |= 1 << icu_in_id;
-  cpu_nios2_write_ctrl_reg(3, status);
-# endif
-
-  return 1;
-}
-
-# ifndef CONFIG_ARCH_SMP
-static DEV_ICU_DISABLE_IRQ(nios2_icu_disable_irq)
-{
-  struct device_s *dev = CPU_LOCAL_GET(nios2_icu_dev);
+#ifndef CONFIG_ARCH_SMP
+  struct device_s *dev = sink->base.dev;
   struct nios2_dev_private_s  *pv = dev->drv_pv;
-  uint_fast8_t icu_in_id = sink - pv->sinks;
+  uint_fast8_t sink_id = sink - pv->sinks;
 
-  /* Disable irq line. On SMP platforms, all lines must remain enabled. */
   reg_t status = cpu_nios2_read_ctrl_reg(3);
-  status &= ~(1 << icu_in_id);
+
+  switch (sense)
+    {
+    case DEV_IRQ_SENSE_NONE:
+      status &= ~(1 << sink_id);
+      break;
+    case DEV_IRQ_SENSE_HIGH_LEVEL:
+      /* On SMP platforms, all lines are already enabled on init. */
+      status |= 1 << sink_id;
+      break;
+    default:
+      return;
+    }
+
   cpu_nios2_write_ctrl_reg(3, status);
+
+#endif
 }
-# endif
+
+#define nios2_icu_link device_icu_dummy_link
 
 #endif
 
@@ -248,7 +232,7 @@ static DEV_INIT(nios2_init);
 #ifdef CONFIG_DEVICE_CLOCK
 static DEV_CLOCK_SINK_CHANGED(nios2_clk_changed)
 {
-  struct device_s *dev = ep->dev;
+  struct device_s *dev = ep->base.dev;
   struct nios2_dev_private_s *pv = dev->drv_pv;
   LOCK_SPIN_IRQ(&dev->lock);
   pv->freq = *freq;
@@ -341,6 +325,7 @@ static DEV_INIT(nios2_init)
 #ifdef CONFIG_DEVICE_IRQ
   /* init nios2 irq sink end-points */
   device_irq_sink_init(dev, pv->sinks, ICU_NIOS2_MAX_VECTOR,
+                       &nios2_icu_sink_update,
                        DEV_IRQ_SENSE_HIGH_LEVEL);
 
 # ifdef CONFIG_ARCH_SMP

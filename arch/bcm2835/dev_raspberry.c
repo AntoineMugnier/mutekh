@@ -24,6 +24,7 @@
 # include <device/driver.h>
 # include <device/resources.h>
 # include <device/device.h>
+# include <device/irq.h>
 # include <device/class/iomux.h>
 # include <arch/bcm2835_gpio.h>
 
@@ -37,7 +38,9 @@
 
 DEV_DECLARE_STATIC(spi_dev, "spi0", 0, bcm2835_spi_drv,
                    DEV_STATIC_RES_MEM(0x20204000, 0x20204020),
-                   DEV_STATIC_RES_IRQ(0, 8+54, 0, "/icu"),
+
+                   DEV_STATIC_RES_DEV_PARAM("icu", "/icu"),
+                   DEV_STATIC_RES_IRQ(0, 8+54, DEV_IRQ_SENSE_HIGH_LEVEL, 0, 1),
 
                    DEV_STATIC_RES_DEV_PARAM("spi-timer", "/timer"),
 
@@ -60,7 +63,9 @@ DEV_DECLARE_STATIC(spi_dev, "spi0", 0, bcm2835_spi_drv,
 /* i2c on P1 header */
 DEV_DECLARE_STATIC(i2c0_dev, "i2c0", 0, bcm2835_i2c_drv,
                    DEV_STATIC_RES_MEM(0x20205000, 0x20804020),
-                   DEV_STATIC_RES_IRQ(0, 8+53, 0, "/icu"),
+
+                   DEV_STATIC_RES_DEV_PARAM("icu", "/icu"),
+                   DEV_STATIC_RES_IRQ(0, 8+53, DEV_IRQ_SENSE_HIGH_LEVEL, 0, 1),
 
                    DEV_STATIC_RES_DEV_PARAM("i2c-timer", "/timer"),
                    DEV_STATIC_RES_DEV_PARAM("iomux", "/gpio"),
@@ -76,7 +81,9 @@ DEV_DECLARE_STATIC(i2c0_dev, "i2c0", 0, bcm2835_i2c_drv,
 /* i2c on P5 header */
 DEV_DECLARE_STATIC(i2c0_dev, "i2c0", 0, bcm2835_i2c_drv,
                    DEV_STATIC_RES_MEM(0x20205000, 0x20804020),
-                   DEV_STATIC_RES_IRQ(0, 8+53, 0, "/icu"),
+
+                   DEV_STATIC_RES_DEV_PARAM("icu", "/icu"),
+                   DEV_STATIC_RES_IRQ(0, 8+53, DEV_IRQ_SENSE_HIGH_LEVEL, 0, 1),
 
                    DEV_STATIC_RES_DEV_PARAM("i2c-timer", "/timer"),
                    DEV_STATIC_RES_DEV_PARAM("iomux", "/gpio"),
@@ -87,7 +94,9 @@ DEV_DECLARE_STATIC(i2c0_dev, "i2c0", 0, bcm2835_i2c_drv,
 /* i2c on P1 header */
 DEV_DECLARE_STATIC(i2c1_dev, "i2c1", 0, bcm2835_i2c_drv,
                    DEV_STATIC_RES_MEM(0x20804000, 0x20804020),
-                   DEV_STATIC_RES_IRQ(0, 8+53, 0, "/icu"),
+
+                   DEV_STATIC_RES_DEV_PARAM("icu", "/icu"),
+                   DEV_STATIC_RES_IRQ(0, 8+53, DEV_IRQ_SENSE_HIGH_LEVEL, 0, 1),
 
                    DEV_STATIC_RES_DEV_PARAM("i2c-timer", "/timer"),
                    DEV_STATIC_RES_DEV_PARAM("iomux", "/gpio"),
