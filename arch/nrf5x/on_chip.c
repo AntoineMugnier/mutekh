@@ -27,7 +27,7 @@
 
 DEV_DECLARE_STATIC(cpu_dev, "cpu", DEVICE_FLAG_CPU, arm32m_drv,
                    DEV_STATIC_RES_ID(0, 0),
-#if defined(CONFIG_ARCH_NRF52) && defined(CONFIG_CPU_ARM32M_TIMER_SYSTICK)
+#if defined(CONFIG_ARCH_NRF52) && defined(CONFIG_DRIVER_CLOCK)
                    DEV_STATIC_RES_CLK_SRC("/clock", NRF_CLOCK_HF, 0),
 #endif
                    );

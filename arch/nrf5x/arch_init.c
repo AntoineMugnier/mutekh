@@ -25,3 +25,56 @@
 #include <mutek/mem_alloc.h>
 #include <mutek/memory_allocator.h>
 
+#include <arch/nrf5x/nvmc.h>
+#include <arch/nrf5x/clock.h>
+#include <arch/nrf5x/ids.h>
+#include <arch/nrf5x/gpio.h>
+#include <arch/nrf5x/peripheral.h>
+
+#if defined(CONFIG_ARCH_NRF52)
+static void nrf52_icache_init(void)
+{
+  uintptr_t nvmc = NRF_PERIPHERAL_ADDR(NRF5X_NVMC);
+
+  nrf_reg_set(nvmc, NRF_NVMC_ICACHECNF, NRF_NVMC_ICACHECNF_CACHEEN_ENABLED);
+}
+#endif
+
+#if defined(CONFIG_ARCH_NRF52)
+static bool_t is_nrf52_0(void)
+{
+  // Nothing else exists for now
+  return 1;
+
+  static const uint8_t const mask[]     = {0xff, 0x0f, 0xf0, 0xf0};
+  static const uint8_t const expected[] = {0x06, 0x00, 0x30, 0x00};
+  const uint32_t *base = (const uint32_t*)0xf0000fe0;
+
+  for (uint8_t i = 0; i < ARRAY_SIZE(mask); ++i) {
+    if ((base[i] & mask[i]) != expected[i])
+      return 0;
+  }
+
+  return 1;
+}
+
+void nrf52_init(void)
+{
+  uintptr_t clock = NRF_PERIPHERAL_ADDR(NRF5X_CLOCK);
+  uintptr_t demcr = 0xe000edfc;
+
+  nrf52_icache_init();
+
+  if (is_nrf52_0()) {
+    // FTPAN 32
+    cpu_mem_write_32(demcr, cpu_mem_read_32(demcr) & ~0x01000000);
+
+    // FTPAN 37
+    *(volatile uint32_t *)0x400005A0 = 0x3;
+
+    // FTPAN 36
+    nrf_event_clear(clock, NRF_CLOCK_DONE);
+    nrf_event_clear(clock, NRF_CLOCK_CTTO);
+  }
+}
+#endif
