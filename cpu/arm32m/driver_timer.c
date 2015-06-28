@@ -376,7 +376,9 @@ DEV_TIMER_CONFIG(arm_timer_config)
   if (cfg)
     {
       cfg->freq = pv->freq;
+#ifdef CONFIG_CPU_ARM32M_TIMER_SYSTICK
       cfg->acc = pv->acc;
+#endif
     }
 
   switch (accessor->number)
