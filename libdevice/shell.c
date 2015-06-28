@@ -516,9 +516,9 @@ static TERMUI_CON_COMMAND_PROTOTYPE(dev_shell_drivers)
         continue;
 
 #if defined(CONFIG_DEVICE_DRIVER_DESC)
-      termui_con_printf(con, "\n  Driver %p `%s'", dev->drv, dev->drv->desc);
+      termui_con_printf(con, "\n  Driver %p `%s'", d, d->desc);
 #else
-      termui_con_printf(con, "\n  Driver %p", dev->drv);
+      termui_con_printf(con, "\n  Driver %p", d);
 #endif
       termui_con_printf(con, "\n    Classes: ");
       dev_shell_dump_drv_class(con, d);
