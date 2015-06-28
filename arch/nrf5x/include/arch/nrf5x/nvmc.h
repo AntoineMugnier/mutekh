@@ -28,7 +28,7 @@ enum nrf5x_nvmc_register {
     NRF_NVMC_READY = 0,
     NRF_NVMC_CONFIG = 65,
     NRF_NVMC_ERASEPAGE = 66,
-    NRF_NVMC_PCR1 = 66,
+    NRF_NVMC_ERASEPCR1 = 66,
     NRF_NVMC_ERASEALL = 67,
     NRF_NVMC_ERASEPCR0 = 68,
     NRF_NVMC_ERASEUICR = 69,
@@ -44,5 +44,10 @@ enum nrf5x_nvmc_register {
 #define NRF_NVMC_ICACHECNF_CACHEEN_DISABLED (0 << 0)
 #define NRF_NVMC_ICACHECNF_CACHEPROFEN_ENABLED (1 << 8)
 #define NRF_NVMC_ICACHECNF_CACHEPROFEN_DISABLED (0 << 8)
+
+size_t nrf5x_flash_page_size(void);
+size_t nrf5x_flash_page_count(void);
+void nrf5x_flash_page_erase(uintptr_t page);
+void nrf5x_flash_write(uintptr_t dest, const void *data, size_t word_count);
 
 #endif
