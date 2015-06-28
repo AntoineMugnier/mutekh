@@ -78,3 +78,15 @@ DEV_DECLARE_STATIC(rtc1, "rtc1", 0, nrf5x_rtc_drv,
                    );
 
 #endif
+
+#if defined(CONFIG_DRIVER_NRF5X_NVMC) || defined(CONFIG_DRIVER_NRF5X_PERSIST)
+
+DEV_DECLARE_STATIC(nvmc_dev, "nvmc", 0, nrf5x_nvmc_drv,
+                   NRF_STATIC_RES_PERIPHERAL_MEM(NRF5X_NVMC),
+#if defined(CONFIG_DRIVER_NRF5X_PERSIST)
+                   DEV_STATIC_RES_MEM(CONFIG_LOAD_ROM_RO_ADDR + CONFIG_LOAD_ROM_RO_SIZE - CONFIG_DRIVER_NRF5X_PERSIST_SIZE,
+                                      CONFIG_DRIVER_NRF5X_PERSIST_SIZE)
+#endif
+                   );
+
+#endif

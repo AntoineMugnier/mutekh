@@ -63,7 +63,21 @@ Nordic's nRF51 and nRF52 architecture support.
     RTC1 instance is declared built-in as "rtc1".  User may
     instantiate RTC0 on its own if radio driver is unused.
   @end section
-  
+
+  @section NVMC
+    Flash controller is implemented for two concurrent interfaces:
+    @list
+      @item Memory controller,
+      @item Persistent data controller.
+    @end list
+
+    This allows to implement persistent data support and yet have
+    concurrent raw block accesses.
+
+    Flash access is polled and fully blocking when writing.  This is a
+    hardware-enforced requirement.
+  @end section
+
 @end section
 
 @section {Implementation notes}
