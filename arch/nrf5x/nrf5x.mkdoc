@@ -1,11 +1,11 @@
-@section TP {nRF51 Architecture support}
+@section TP {nRF51/nRF52 Architecture support}
 
-Nordic's nRF51 architecture support.
+Nordic's nRF51 and nRF52 architecture support.
 
 @section {Drivers}
 
   @section Clocks
-    Clocking in nRF51 is quite simple because most clock dependencies
+    Clocking in nRF5x is quite simple because most clock dependencies
     are handled automatically by hardware, and because there are only
     two clock sources, using fixed frequencies.  Nevertheless, clock
     driver handles many tedious aspects of the clocking of the device:
@@ -28,15 +28,15 @@ Nordic's nRF51 architecture support.
 @section {Implementation notes}
 
   @section {Device register access}
-    nRF51 devices all look the same and regular.  Device at address
+    nRF5x devices all look the same and regular.  Device at address
     0x4000000 has number 0 and interrupt 0, device at address 0x40001000
     has number 1 and interrupt 1, and so on.  Inside a device register
     map, there are tasks, events, shorts, interrupt handling, and then
     configuration registers.
 
-    This regular pattern explains why nRF51 architecture declaration
+    This regular pattern explains why nRF5x architecture declaration
     adds an overlay on top of cpu_mem_read_32 and cpu_mem_write_32 to
-    access hardware registers.  nRF51 code use the following accessors:
+    access hardware registers.  nRF5x code use the following accessors:
     @list
       @item nrf_task_trigger,
       @item nrf_event_check,
