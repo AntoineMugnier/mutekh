@@ -213,17 +213,17 @@ static DEV_INIT(button_set_init)
 
   dev->drv_pv = pv;
 
+  err = device_get_param_dev_accessor(dev, "icu", &pv->gpio, DRIVER_CLASS_GPIO);
+  if (err)
+    goto free_pv;
+
   r = device_res_get(dev, DEV_RES_IRQ, 0);
   if (!r) {
     err = -ENOENT;
-    goto free_pv;
+    goto put_gpio;
   }
 
   pv->range_id = r->u.irq.sink_id;
-
-  err = device_get_accessor_by_path(&pv->gpio, NULL, r->u.irq.icu, DRIVER_CLASS_GPIO);
-  if (err)
-    goto free_pv;
 
   err = device_res_get_io(dev, 0, &first, &last);
   if (err)
