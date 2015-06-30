@@ -504,10 +504,8 @@ static DEV_INIT(stm32_timer_init)
 #ifdef CONFIG_DEVICE_IRQ
   pv->cap |= DEV_TIMER_CAP_REQUEST;
 
-  device_irq_source_init(dev, &pv->irq_eps, 1,
-                         stm32_timer_irq, DEV_IRQ_SENSE_HIGH_LEVEL);
-
-  if (device_irq_source_link(dev, &pv->irq_eps, 1, 1))
+  device_irq_source_init(dev, &pv->irq_eps, 1, stm32_timer_irq);
+  if (device_irq_source_link(dev, &pv->irq_eps, 1, -1))
     goto err_clk;
 
   dev_request_pqueue_init(&pv->queue);

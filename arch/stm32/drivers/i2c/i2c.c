@@ -685,14 +685,7 @@ static DEV_INIT(stm32_i2c_init)
     break;
   }
 
-  device_irq_source_init(
-    dev,
-    pv->irq_ep,
-    2,
-    &stm32_i2c_irq,
-    DEV_IRQ_SENSE_HIGH_LEVEL
-  );
-
+  device_irq_source_init(dev, pv->irq_ep, 2, &stm32_i2c_irq);
   if (device_irq_source_link(dev, pv->irq_ep, 2, -1))
     goto err_mem;
 

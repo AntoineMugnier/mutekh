@@ -587,14 +587,7 @@ DEV_INIT(stm32_usart_init)
     }
 
 #if defined(CONFIG_DEVICE_IRQ)
-  device_irq_source_init(
-    dev,
-    pv->irq_ep,
-    1,
-    &stm32_usart_irq,
-    DEV_IRQ_SENSE_HIGH_LEVEL
-  );
-
+  device_irq_source_init(dev, pv->irq_ep, 1, &stm32_usart_irq);
   if (device_irq_source_link(dev, pv->irq_ep, 1, -1))
     goto err_fifo;
 

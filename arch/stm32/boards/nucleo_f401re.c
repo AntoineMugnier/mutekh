@@ -24,6 +24,7 @@
 #include <device/device.h>
 #include <device/driver.h>
 #include <device/resources.h>
+#include <device/irq.h>
 #include <device/class/iomux.h>
 #include <device/class/clock.h>
 
@@ -46,7 +47,8 @@ DEV_DECLARE_STATIC(usart1_dev, "uart1", 0, stm32_usart_drv,
                                       STM32_DEV_MEM_END(USART, 1)
                                       ),
 
-                   DEV_STATIC_RES_IRQ(0, STM32_IRQ_USART1, 0, "/cpu"),
+                   DEV_STATIC_RES_DEV_PARAM("icu", "/cpu"),
+                   DEV_STATIC_RES_IRQ(0, STM32_IRQ_USART1, DEV_IRQ_SENSE_HIGH_LEVEL, 0, 0x1),
 
                    DEV_STATIC_RES_DEV_PARAM("iomux", "/gpio"),
                    DEV_STATIC_RES_IOMUX("tx", 0, /* PA9 */ 0*16+9, /* AF7. */ 7, 0),
@@ -60,7 +62,8 @@ DEV_DECLARE_STATIC(usart2_dev, "uart2", 0, stm32_usart_drv,
                                       STM32_DEV_MEM_END(USART, 2)
                                       ),
 
-                   DEV_STATIC_RES_IRQ(0, STM32_IRQ_USART2, 0, "/cpu"),
+                   DEV_STATIC_RES_DEV_PARAM("icu", "/cpu"),
+                   DEV_STATIC_RES_IRQ(0, STM32_IRQ_USART2, DEV_IRQ_SENSE_HIGH_LEVEL, 0, 0x1),
 
                    DEV_STATIC_RES_DEV_PARAM("iomux", "/gpio"),
                    DEV_STATIC_RES_IOMUX("tx", 0, /* PA2 */ 0*16+2, /* AF7. */ 7, 0),
@@ -77,7 +80,8 @@ DEV_DECLARE_STATIC(usart6_dev, "uart6", 0, stm32_usart_drv,
                                       STM32_DEV_MEM_END(USART, 6)
                                       ),
 
-                   DEV_STATIC_RES_IRQ(0, STM32_IRQ_USART6, 0, "/cpu"),
+                   DEV_STATIC_RES_DEV_PARAM("icu", "/cpu"),
+                   DEV_STATIC_RES_IRQ(0, STM32_IRQ_USART6, DEV_IRQ_SENSE_HIGH_LEVEL, 0, 0x1),
 
                    DEV_STATIC_RES_DEV_PARAM("iomux", "/gpio"),
                    DEV_STATIC_RES_IOMUX("tx", 0, /* PA11 */ 0*16+11, /* AF8. */ 8, 0),
@@ -95,8 +99,9 @@ DEV_DECLARE_STATIC(i2c1_dev, "i2c1", 0, stm32_i2c_ctrl_drv,
                                       STM32_DEV_MEM_END(I2C, 1)
                                       ),
 
-                   DEV_STATIC_RES_IRQ(0, STM32_IRQ_I2C1_EV, 0, "/cpu"),
-                   DEV_STATIC_RES_IRQ(1, STM32_IRQ_I2C1_ER, 0, "/cpu"),
+                   DEV_STATIC_RES_DEV_PARAM("icu", "/cpu"),
+                   DEV_STATIC_RES_IRQ(0, STM32_IRQ_I2C1_EV, DEV_IRQ_SENSE_HIGH_LEVEL, 0, 0x1),
+                   DEV_STATIC_RES_IRQ(1, STM32_IRQ_I2C1_ER, DEV_IRQ_SENSE_HIGH_LEVEL, 0, 0x1),
 
                    DEV_STATIC_RES_DEV_PARAM("iomux", "/gpio"),
                    DEV_STATIC_RES_IOMUX("scl", 0, /* PB8 */ 1*16+8, /* AF4 */ 4, 0),
@@ -114,27 +119,29 @@ DEV_DECLARE_STATIC(gpio_dev, "gpio", 0, stm32_gpio_drv,
                                       STM32_DEV_MEM_END(GPIO, E)
                                       ),
 
-                   DEV_STATIC_RES_IRQ(0, STM32_IRQ_EXTI0,      0, "/cpu"),
-                   DEV_STATIC_RES_IRQ(1, STM32_IRQ_EXTI1,      0, "/cpu"),
-                   DEV_STATIC_RES_IRQ(2, STM32_IRQ_EXTI2,      0, "/cpu"),
-                   DEV_STATIC_RES_IRQ(3, STM32_IRQ_EXTI3,      0, "/cpu"),
-                   DEV_STATIC_RES_IRQ(4, STM32_IRQ_EXTI4,      0, "/cpu"),
-                   DEV_STATIC_RES_IRQ(5, STM32_IRQ_EXTI_9_5,   0, "/cpu"),
-                   DEV_STATIC_RES_IRQ(6, STM32_IRQ_EXTI_15_10, 0, "/cpu")
+                   DEV_STATIC_RES_DEV_PARAM("icu", "/cpu"),
+                   DEV_STATIC_RES_IRQ(0, STM32_IRQ_EXTI0, DEV_IRQ_SENSE_NONE, 0, 0x1),
+                   DEV_STATIC_RES_IRQ(1, STM32_IRQ_EXTI1, DEV_IRQ_SENSE_NONE, 0, 0x1),
+                   DEV_STATIC_RES_IRQ(2, STM32_IRQ_EXTI2, DEV_IRQ_SENSE_NONE, 0, 0x1),
+                   DEV_STATIC_RES_IRQ(3, STM32_IRQ_EXTI3, DEV_IRQ_SENSE_NONE, 0, 0x1),
+                   DEV_STATIC_RES_IRQ(4, STM32_IRQ_EXTI4, DEV_IRQ_SENSE_NONE, 0, 0x1),
+                   DEV_STATIC_RES_IRQ(5, STM32_IRQ_EXTI_9_5, DEV_IRQ_SENSE_NONE, 0, 0x1),
+                   DEV_STATIC_RES_IRQ(6, STM32_IRQ_EXTI_15_10, DEV_IRQ_SENSE_NONE, 0, 0x1),
                    );
 
 #endif
 
 #if defined(CONFIG_DRIVER_STM32_TIMER)
 
-/* TIMER 9. */
-DEV_DECLARE_STATIC(timer4_dev, "timer9", 0, stm32_timer_drv,
+/* TIMER 4. */
+DEV_DECLARE_STATIC(timer4_dev, "timer4", 0, stm32_timer_drv,
                    DEV_STATIC_RES_MEM(
                                       STM32_DEV_MEM_START(TIM, 4),
                                       STM32_DEV_MEM_END(TIM, 4)
                                       ),
 
-                   DEV_STATIC_RES_IRQ(0, STM32_IRQ_TIM4, 0, "/cpu")
+                   DEV_STATIC_RES_DEV_PARAM("icu", "/cpu"),
+                   DEV_STATIC_RES_IRQ(0, STM32_IRQ_TIM4, DEV_IRQ_SENSE_HIGH_LEVEL, 0, 0x1),
                    );
 
 #endif
