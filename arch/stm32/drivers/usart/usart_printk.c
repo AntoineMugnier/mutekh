@@ -66,22 +66,18 @@ static PRINTF_OUTPUT_FUNC(early_console_out)
 
 void stm32_usart_printk_init()
 {
-  reg_t cr1 = 0, cr2 = 0, cfg;
+  reg_t cr1 = 0, cr2 = 0;
 
   /* enable clock on USART bus. */
   DEVICE_REG_FIELD_SET(RCC, , AHB1ENR, GPIOAEN);
   DEVICE_REG_FIELD_SET(RCC, , APB1ENR, USART2EN);
 
   /* configure PA2/PA3 as TX/RX. */
-  cfg = DEVICE_REG_VALUE(GPIO, A, MODER);
-  DEVICE_REG_FIELD_IDX_UPDATE_VAR(GPIO, MODER, MODE, 2, ALT, cfg);
-  DEVICE_REG_FIELD_IDX_UPDATE_VAR(GPIO, MODER, MODE, 3, ALT, cfg);
-  DEVICE_REG_UPDATE(GPIO, A, MODER, cfg);
+  DEVICE_REG_IDX_FIELD_IDX_UPDATE(GPIO, A, MODER, 0, MODE, 2, ALT);
+  DEVICE_REG_IDX_FIELD_IDX_UPDATE(GPIO, A, MODER, 0, MODE, 3, ALT);
 
-  cfg = DEVICE_REG_VALUE(GPIO, A, AFRL);
-  DEVICE_REG_FIELD_IDX_UPDATE_VAR(GPIO, AFRL, AF, 2, 7, cfg);
-  DEVICE_REG_FIELD_IDX_UPDATE_VAR(GPIO, AFRL, AF, 3, 7, cfg);
-  DEVICE_REG_UPDATE(GPIO, A, AFRL, cfg);
+  DEVICE_REG_IDX_FIELD_IDX_UPDATE(GPIO, A, AFRL, 0, AF, 2, 7);
+  DEVICE_REG_IDX_FIELD_IDX_UPDATE(GPIO, A, AFRL, 0, AF, 3, 7);
 
   /* wait for the last byte to be send just in case. */
   stm32_usart_tx_wait_ready();
