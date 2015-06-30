@@ -472,7 +472,7 @@ memory_allocator_nolock_extend(struct memory_allocator_region_s *region, void *s
 {
   struct memory_allocator_header_s *hdr = start;
   struct memory_allocator_header_s *hdr_end = start + size - mem_hdr_size_align;
-  size_t hdr_size = (void*)hdr - (void*)hdr_end;
+  size_t hdr_size = (void*)hdr_end - (void *)hdr;
 
   assert( hdr != NULL );
   
