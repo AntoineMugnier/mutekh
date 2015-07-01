@@ -497,6 +497,7 @@ static TERMUI_CON_COMMAND_PROTOTYPE(dev_shell_tree)
 
 static TERMUI_CON_COMMAND_PROTOTYPE(dev_shell_drivers)
 {
+#ifdef CONFIG_DEVICE_ENUM
   extern const struct driver_registry_s driver_registry_table[];
   extern const struct driver_registry_s driver_registry_table_end[];
 
@@ -521,7 +522,7 @@ static TERMUI_CON_COMMAND_PROTOTYPE(dev_shell_drivers)
       for (i = 0; i < reg->id_count; ++i)
         {
           const struct dev_enum_ident_s *id = reg->id_table + i;
-          
+
           termui_con_printf(con, "    Id: %N", id->type, dev_enum_type_e);
           switch (id->type)
             {
@@ -540,7 +541,9 @@ static TERMUI_CON_COMMAND_PROTOTYPE(dev_shell_drivers)
             }
         }
     }
-
+#else
+  termui_con_printf(con, "device enumeration not activated\n");
+#endif
   return 0;
 }
 
