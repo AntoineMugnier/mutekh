@@ -522,12 +522,14 @@ DEV_INIT(stm32_usart_init)
   if (device_res_get_uint(dev, DEV_RES_MEM, 0, &pv->addr, NULL))
     goto err_mem;
 
+#if 0
   /* wait for previous TX to complete. */
   if (DEVICE_REG_FIELD_VALUE_DEV(USART, pv->addr, CR1, TE))
     {
       while (!DEVICE_REG_FIELD_VALUE_DEV(USART, pv->addr, SR, TC));
       DEVICE_REG_FIELD_CLR_DEV(USART, pv->addr, SR, TC);
     }
+#endif
 
   /* disable and reset the usart. */
   DEVICE_REG_UPDATE_DEV(USART, pv->addr, CR1, 0);
