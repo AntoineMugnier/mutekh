@@ -184,7 +184,7 @@ static KROUTINE_EXEC(mtch6102_state_done)
     if (!rq) {
         struct dev_request_s *drq = dev_request_queue_head(&pv->queue);
         if (drq)
-            rq = dev_valio_rq_s_from_base(drq);
+            rq = dev_valio_rq_s_cast(drq);
     }
 
     st.touch = pv->rdata[0] & 0x1;
@@ -235,7 +235,7 @@ static void mtch6102_request_run(
 
     assert(drq);
 
-    struct dev_valio_rq_s *rq = dev_valio_rq_s_from_base(drq);
+    struct dev_valio_rq_s *rq = dev_valio_rq_s_cast(drq);
 
     dprintk("%s %p %d\n", __FUNCTION__, rq, rq->type);
 

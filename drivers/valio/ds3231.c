@@ -127,7 +127,7 @@ static void ds3231_request_run(
 
     assert(drq);
 
-    struct dev_valio_rq_s *rq = dev_valio_rq_s_from_base(drq);
+    struct dev_valio_rq_s *rq = dev_valio_rq_s_cast(drq);
 
     kroutine_init(&pv->i2c_req.base.kr, ds3231_state_done,
                   KROUTINE_IMMEDIATE);

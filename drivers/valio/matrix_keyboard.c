@@ -264,7 +264,7 @@ static void mxk_scan_done(struct mxk_context_s *pv)
     goto out;
   }
 
-  rq = dev_valio_rq_s_from_base(dev_request_queue_head(&pv->queue));
+  rq = dev_valio_rq_s_cast(dev_request_queue_head(&pv->queue));
 
   dprintk("%p %s done %p %d\n", pv, __FUNCTION__, rq, pv->one_pressed);
 
@@ -295,7 +295,7 @@ static void mxk_scan_done(struct mxk_context_s *pv)
   kroutine_exec(&rq->base.kr, 0);
   lock_spin(&dev->lock);
 
-  rq = dev_valio_rq_s_from_base(dev_request_queue_head(&pv->queue));
+  rq = dev_valio_rq_s_cast(dev_request_queue_head(&pv->queue));
 
   if (rq && rq->type == DEVICE_VALIO_READ)
     start = 1;

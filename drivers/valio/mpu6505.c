@@ -472,7 +472,7 @@ static
 void mpu6505_request_run_first(struct device_s *dev)
 {
   struct mpu6505_private_s *pv = dev->drv_pv;
-  struct dev_valio_rq_s *rq = dev_valio_rq_s_from_base(dev_request_queue_head(&pv->queue));
+  struct dev_valio_rq_s *rq = dev_valio_rq_s_cast(dev_request_queue_head(&pv->queue));
 
   assert(pv);
 

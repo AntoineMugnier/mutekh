@@ -122,7 +122,7 @@ static DEV_IRQ_SRC_PROCESS(bs_irq)
   dprintk("%s\n", __FUNCTION__);
 
   LOCK_SPIN_IRQ(&dev->lock);
-  rq = dev_valio_rq_s_from_base(dev_request_queue_head(&pv->queue));
+  rq = dev_valio_rq_s_cast(dev_request_queue_head(&pv->queue));
 
   pv->changed = 1;
 
@@ -134,7 +134,7 @@ static DEV_IRQ_SRC_PROCESS(bs_irq)
       kroutine_exec(&rq->base.kr, 0);
       lock_spin(&dev->lock);
 
-      rq = dev_valio_rq_s_from_base(dev_request_queue_head(&pv->queue));
+      rq = dev_valio_rq_s_cast(dev_request_queue_head(&pv->queue));
     }
 
     if (!rq || rq->type != DEVICE_VALIO_READ)
