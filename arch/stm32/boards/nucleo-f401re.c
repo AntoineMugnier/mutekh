@@ -192,6 +192,16 @@ DEV_DECLARE_STATIC(pwm5_dev, "pwm5", 0, stm32_pwm_drv,
 
 #endif
 
+#if defined(CONFIG_DRIVER_PUSH_BUTTON)
+
+DEV_DECLARE_STATIC(btn0_dev, "btn0", 0, push_button_drv,
+                   DEV_STATIC_RES_UINT_PARAM("release-state", 1),
+                   DEV_STATIC_RES_DEV_PARAM("icu", "/gpio"),
+                   DEV_STATIC_RES_IRQ(0, 2*16+13 /* PC13 */, DEV_IRQ_SENSE_ANY_EDGE, 0, 0x1)
+                  );
+
+#endif
+
 /////////////////////////////////////////////////////////////////////
 
 uint32_t stm32f4xx_clock_freq_ahb1 = 16000000; /* 16MHz on reset. */

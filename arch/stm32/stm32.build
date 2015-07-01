@@ -5,6 +5,9 @@
   CONFIG_BOARD_STM32_NUCLEOF401RE
   CONFIG_MUTEK_CONSOLE_DEVICE_PATHS "uart2 uart*"
 
+  CONFIG_DRIVER_PUSH_BUTTON
+  CONFIG_DRIVER_PUSH_BUTTON_TIMER undefined
+
 %section stm32-f?????
   %types architecture
 
