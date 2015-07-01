@@ -267,10 +267,7 @@ dev_shell_dump_drv_class(struct termui_console_s *con, const struct driver_s *dr
   uint_fast8_t i;
 
   for (i = 0; (c = drv->classes[i]); i++)
-    {
-      if (i > 0)
-        termui_con_printf(con, ", %N", c->class_, driver_class_e);
-    }
+    termui_con_printf(con, "%N, ", c->class_, driver_class_e);
 }
 
 static void
