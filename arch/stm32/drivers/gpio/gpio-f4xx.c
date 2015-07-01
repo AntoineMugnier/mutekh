@@ -36,59 +36,49 @@
 #include <device/class/icu.h>
 #include <device/class/iomux.h>
 
-#include <arch/stm32_exti.h>
 #include <arch/stm32f4xx_gpio.h>
 #include <arch/stm32f4xx_rcc.h>
 #include <arch/stm32_syscfg.h>
+#include <arch/stm32_exti.h>
 
 #include <cpp/device/helpers.h>
 #include <arch/stm32_memory_map.h>
 
 
-#define STM32_GPIO_BANK_WIDTH       0x400
 #define STM32_GPIO_BANK_SIZE        16
-#define STM32_GPIO_BANK_COUNT       5
-#define STM32_GPIO_MAX_ID                                \
-  (STM32_GPIO_BANK_SIZE * STM32_GPIO_BANK_COUNT - 1) \
-/**/
+#define STM32_GPIO_BANK_COUNT       7
+#define STM32_GPIO_BANK_MASK        ((1 << STM32_GPIO_BANK_SIZE)-1)
+#define STM32_GPIO_MAX_ID           (STM32_GPIO_BANK_SIZE * STM32_GPIO_BANK_COUNT - 1)
 #define STM32_GPIO_IRQ_SRC_COUNT    7
 
-struct stm32_gpio_context_s
+struct stm32_gpio_private_s
 {
-  /* address of the device. */
-  uintptr_t             addr;
-
 #if defined(CONFIG_DRIVER_STM32_GPIO_ICU)
-  struct dev_irq_ep_s   sink[CONFIG_DRIVER_STM32_GPIO_IRQ_COUNT];
-
   /* This specifies which bank is selected for each interrupt line. A
      value of -1 means that no bank is currently bound to an
      interrupt. */
   struct {
-    int8_t bank:3;
-    bool_t enabled:1;
-  }                     irq[CONFIG_DRIVER_EFM32_GPIO_IRQ_COUNT];
+      int8_t bank:3;
+  }                     irq[STM32_GPIO_BANK_SIZE];
 
-  struct dev_irq_ep_s   src[STM32_GPIO_IRQ_SRC_COUNT];
+  struct dev_irq_sink_s sink[STM32_GPIO_BANK_SIZE];
+  struct dev_irq_src_s  src[STM32_GPIO_IRQ_SRC_COUNT];
 #endif
 };
 
 
 /********************************* GPIO class. **********/
 
-#define STM32_GPIO_MODE_INPUT       1
-#define STM32_GPIO_MODE_OUTPUT      2
-#define STM32_GPIO_MODE_ANALOG      4
-#define STM32_GPIO_MODE_PUSHPULL    8
-#define STM32_GPIO_MODE_OPENDRAIN   16
-#define STM32_GPIO_MODE_PULLUP      32
-#define STM32_GPIO_MODE_PULLDOWN    64
+#define STM32_GPIO_REG_MODE     0
+#define STM32_GPIO_REG_OTYPE    1
+#define STM32_GPIO_REG_PUPD     2
 
 static
-error_t stm32_gpio_gpio_make_mode(enum dev_pin_driving_e mode,
-                                  uint8_t                *bf)
+error_t stm32_gpio_prepare_mode(enum dev_pin_driving_e mode,
+                                uint8_t                mask[3])
 {
-  *bf = 0;
+  *mask = 0;
+
   switch (mode)
     {
     default:
@@ -98,235 +88,297 @@ error_t stm32_gpio_gpio_make_mode(enum dev_pin_driving_e mode,
       break;
 
     case DEV_PIN_PUSHPULL:
-      *bf = STM32_GPIO_MODE_OUTPUT | STM32_GPIO_MODE_PUSHPULL;
+      mask[STM32_GPIO_REG_MODE]  = STM32_GPIO_MODER_MODE_OUTPUT;
+      mask[STM32_GPIO_REG_OTYPE] = STM32_GPIO_OTYPER_OT_PUSHPULL;
+      mask[STM32_GPIO_REG_PUPD]  = 0;
       break;
 
     case DEV_PIN_INPUT:
-      *bf = STM32_GPIO_MODE_INPUT;
+      mask[STM32_GPIO_REG_MODE]  = STM32_GPIO_MODER_MODE_INPUT;
+      mask[STM32_GPIO_REG_OTYPE] = 0;
+      mask[STM32_GPIO_REG_PUPD]  = 0;
       break;
 
     case DEV_PIN_INPUT_PULLUP:
-      *bf = STM32_GPIO_MODE_INPUT | STM32_GPIO_MODE_PULLUP;
+      mask[STM32_GPIO_REG_MODE]  = STM32_GPIO_MODER_MODE_INPUT;
+      mask[STM32_GPIO_REG_OTYPE] = 0;
+      mask[STM32_GPIO_REG_PUPD]  = STM32_GPIO_PUPDR_PUPD_PULLUP;
+      break;
+
+    case DEV_PIN_INPUT_PULLDOWN:
+      mask[STM32_GPIO_REG_MODE]  = STM32_GPIO_MODER_MODE_INPUT;
+      mask[STM32_GPIO_REG_OTYPE] = 0;
+      mask[STM32_GPIO_REG_PUPD]  = STM32_GPIO_PUPDR_PUPD_PULLDOWN;
       break;
 
     case DEV_PIN_OPENDRAIN:
-      *bf = STM32_GPIO_MODE_OUTPUT | STM32_GPIO_MODE_OPENDRAIN;
+      mask[STM32_GPIO_REG_MODE]  = STM32_GPIO_MODER_MODE_OUTPUT;
+      mask[STM32_GPIO_REG_OTYPE] = STM32_GPIO_OTYPER_OT_OPENDRAIN;
+      mask[STM32_GPIO_REG_PUPD]  = 0;
       break;
 
     case DEV_PIN_OPENSOURCE:
-      *bf = STM32_GPIO_MODE_OUTPUT | STM32_GPIO_MODE_OPENDRAIN;
+      mask[STM32_GPIO_REG_MODE]  = STM32_GPIO_MODER_MODE_OUTPUT;
+      mask[STM32_GPIO_REG_OTYPE] = STM32_GPIO_OTYPER_OT_OPENDRAIN;
+      mask[STM32_GPIO_REG_PUPD]  = 0;
       break;
 
     case DEV_PIN_OPENDRAIN_PULLUP:
-      *bf = STM32_GPIO_MODE_OUTPUT |
-        STM32_GPIO_MODE_OPENDRAIN  |
-        STM32_GPIO_MODE_PULLUP;
+      mask[STM32_GPIO_REG_MODE]  = STM32_GPIO_MODER_MODE_OUTPUT;
+      mask[STM32_GPIO_REG_OTYPE] = STM32_GPIO_OTYPER_OT_OPENDRAIN;
+      mask[STM32_GPIO_REG_PUPD]  = STM32_GPIO_PUPDR_PUPD_PULLUP;
       break;
 
     case DEV_PIN_OPENSOURCE_PULLDOWN:
-      *bf = STM32_GPIO_MODE_OUTPUT |
-        STM32_GPIO_MODE_OPENDRAIN  |
-        STM32_GPIO_MODE_PULLDOWN;
+      mask[STM32_GPIO_REG_MODE]  = STM32_GPIO_MODER_MODE_OUTPUT;
+      mask[STM32_GPIO_REG_OTYPE] = STM32_GPIO_OTYPER_OT_OPENDRAIN;
+      mask[STM32_GPIO_REG_PUPD]  = STM32_GPIO_PUPDR_PUPD_PULLDOWN;
       break;
     }
+
   return 0;
 }
 
 static
-void stm32_gpio_gpio_apply_mode(struct device_s *dev,
-                                gpio_id_t       iopin,
-                                uint8_t         bf)
+inline
+uint64_t stm32_gpio_get_1bit_mask(uint32_t smask)
 {
-  struct stm32_gpio_context_s *pv  = dev->drv_pv;
+  return smask;
+}
 
-  uint8_t bank           = iopin / STM32_GPIO_BANK_SIZE;
-  uint8_t io_in_bank     = iopin % STM32_GPIO_BANK_SIZE;
-  uintptr_t const bkaddr = pv->addr + (bank * STM32_GPIO_BANK_WIDTH);
+static
+inline
+uint64_t stm32_gpio_get_2bit_mask(uint32_t smask)
+{
+#if 0
+  uint32_t p0 = (0x00002412 * (i & 0x1209)) & 0x02080082;
+  uint32_t p1 = (0x000050a8 * (i & 0x2854)) & 0x08802220;
+  uint32_t p2 = (0x00008904 * (i & 0x4482)) & 0x20208008;
+  uint32_t p3 = (0x00010240 * (i & 0x8120)) & 0x80020800;
 
-  /* Input/output. */
-  if (bf & STM32_GPIO_MODE_OUTPUT)
-    DEVICE_REG_FIELD_IDX_UPDATE_DEV(
-      GPIO,
-      bkaddr,
-      MODER,
-      MODE,
-      io_in_bank,
-      OUTPUT
-    );
-  else if (bf & STM32_GPIO_MODE_INPUT)
-    DEVICE_REG_FIELD_IDX_UPDATE_DEV(
-      GPIO,
-      bkaddr,
-      MODER,
-      MODE,
-      io_in_bank,
-      INPUT
-    );
+  uint64_t r = p0 | p1 | p2 | p3;
+#else
+  uint_fast8_t bi;
+  uint64_t     r = 0;
 
-  /* Pushpull/open-drain. */
-  if (bf & STM32_GPIO_MODE_PUSHPULL)
-    DEVICE_REG_FIELD_IDX_UPDATE_DEV(
-      GPIO,
-      bkaddr,
-      OTYPER,
-      OT,
-      io_in_bank,
-      PUSHPULL
-    );
-  else if (bf & STM32_GPIO_MODE_OPENDRAIN)
-    DEVICE_REG_FIELD_IDX_UPDATE_DEV(
-      GPIO,
-      bkaddr,
-      OTYPER,
-      OT,
-      io_in_bank,
-      OPEN
-    );
+  for (bi = 0; bi < 32; ++bi)
+    r |= (smask & (1 << bi)) != 0 ? 1ULL << (2*bi+1) : 0ULL;
+#endif
 
-  /* Pull-up/pull-down. */
-  if (bf & STM32_GPIO_MODE_PULLUP)
-    DEVICE_REG_FIELD_IDX_UPDATE_DEV(
-      GPIO,
-      bkaddr,
-      PUPDR,
-      PUPD,
-      io_in_bank,
-      PULLUP
-    );
-  else if (bf & STM32_GPIO_MODE_PULLDOWN)
-    DEVICE_REG_FIELD_IDX_UPDATE_DEV(
-      GPIO,
-      bkaddr,
-      PUPDR,
-      PUPD,
-      io_in_bank,
-      PULLDOWN
-    );
+  r |= r >> 1;
 
-  /* set gpio speed. */
-  extern uint32_t stm32f4xx_clock_freq_ahb1;
-  if (stm32f4xx_clock_freq_ahb1 >= 80000000)
-    DEVICE_REG_FIELD_IDX_UPDATE_DEV(
-      GPIO,
-      bkaddr,
-      OSPEEDR,
-      OSPEED,
-      io_in_bank,
-      HIGH
-    );
-  else if (stm32f4xx_clock_freq_ahb1 >= 50000000)
-    DEVICE_REG_FIELD_IDX_UPDATE_DEV(
-      GPIO,
-      bkaddr,
-      OSPEEDR,
-      OSPEED,
-      io_in_bank,
-      FAST
-    );
-  else if (stm32f4xx_clock_freq_ahb1 >= 25000000)
-    DEVICE_REG_FIELD_IDX_UPDATE_DEV(
-      GPIO,
-      bkaddr,
-      OSPEEDR,
-      OSPEED,
-      io_in_bank,
-      MEDIUM
-    );
+  return r;
+}
+
+static
+void stm32_gpio_set_mode_reg(gpio_id_t io_first, gpio_id_t io_last,
+                             const uint8_t *mask, uint32_t mode,
+                             uint_fast8_t reg)
+{
+  uint16_t tmask;
+  uint32_t smask;
+  uint64_t pmask = 0;
+
+  /* GPIO mode is configured in only one register for the 16 pins per bank. */
+  uint_fast8_t mshift = io_first % STM32_GPIO_BANK_SIZE;
+  int_fast8_t mlen    = io_last - io_first + 1;
+
+mask:
+  /* do we need to compute the entire mask byte ? */
+  if (mlen > (STM32_GPIO_BANK_SIZE / 2))
+    tmask = mlen > STM32_GPIO_BANK_SIZE ? STM32_GPIO_BANK_MASK : ((1 << mlen) - 1);
   else
-    DEVICE_REG_FIELD_IDX_UPDATE_DEV(
-      GPIO,
-      bkaddr,
-      OSPEEDR,
-      OSPEED,
-      io_in_bank,
-      LOW
-    );
+    tmask = (1 << mlen) - 1;
+
+loop:
+  /* do we need to compute the entire mask byte ? */
+  if (mlen > (STM32_GPIO_BANK_SIZE / 2))
+    {
+      smask  = endian_le16_na_load(mask) & tmask;
+      mask  += 2;
+    }
+  else
+    smask = *mask++ & tmask;
+
+  /* we compute the relevant bits in the mask and align to the first io. */
+  switch (reg)
+    {
+    case STM32_GPIO_REG_MODE:
+    case STM32_GPIO_REG_PUPD:
+      /* 2-bit stride */
+      pmask |= stm32_gpio_get_2bit_mask(smask) << (mshift * 2);
+      break;
+
+    case STM32_GPIO_REG_OTYPE:
+      pmask |= stm32_gpio_get_1bit_mask(smask) << mshift;
+      break;
+    }
+
+  mlen -= STM32_GPIO_BANK_SIZE;
+
+update:;
+  uint_fast8_t bank = io_first / STM32_GPIO_BANK_SIZE;
+  uintptr_t a       = STM32_DEV_MEM_START(GPIO, A);
+
+  switch (reg)
+    {
+    case STM32_GPIO_REG_MODE:
+      a += STM32_GPIO_MODER_ADDR(bank);
+      break;
+
+    case STM32_GPIO_REG_OTYPE:
+      a += STM32_GPIO_OTYPER_ADDR(bank);
+      break;
+
+    case STM32_GPIO_REG_PUPD:
+      a += STM32_GPIO_PUPDR_ADDR(bank);
+      break;
+    }
+
+  uint32_t x = endian_le32(cpu_mem_read_32(a));
+  x = (x & ~pmask) | (pmask & mode);
+  //printk("update mode reg:%u bank:%u mode:0x%08x\n", reg, bank, x);
+  cpu_mem_write_32(a, endian_le32(x));
+
+  /* we compute the relevant bits in the mask and align to the first io. */
+  switch (reg)
+    {
+    case STM32_GPIO_REG_MODE:
+    case STM32_GPIO_REG_PUPD:
+      /* 2-bit stride */
+      pmask >>= STM32_GPIO_BANK_SIZE * 2;
+      break;
+
+    case STM32_GPIO_REG_OTYPE:
+      pmask >>= STM32_GPIO_BANK_SIZE;
+      break;
+    }
+
+  io_first += STM32_GPIO_BANK_SIZE;
+
+  if (mlen >= STM32_GPIO_BANK_SIZE)
+    goto loop;
+
+  if (io_first <= io_last)
+    {
+      if (mlen < 0)
+        goto update;
+      goto mask;
+    }
+}
+
+static
+error_t stm32_gpio_apply_mode(gpio_id_t io_first, gpio_id_t io_last,
+                              const uint8_t *mask, enum dev_pin_driving_e mode,
+                              bool_t alt)
+{
+  uint8_t mmask[3] = { 0 };
+
+  error_t err = stm32_gpio_prepare_mode(mode, mmask);
+  if (err)
+    return err;
+
+  if (alt)
+    mmask[STM32_GPIO_REG_MODE] = STM32_GPIO_MODER_MODE_ALT;
+
+  /* Input/output/alternate (32-bit mask with 2-bit stride). */
+  stm32_gpio_set_mode_reg(io_first, io_last, mask,
+    mmask[STM32_GPIO_REG_MODE] * 0x55555555, STM32_GPIO_REG_MODE);
+  /* Push-pull/open-drain (32-bit mask with 1-bit stride). */
+  stm32_gpio_set_mode_reg(io_first, io_last, mask,
+    mmask[STM32_GPIO_REG_OTYPE] * 0xffff, STM32_GPIO_REG_OTYPE);
+  /* Pull-up/pull-down (32-bit mask with 2-bit stride). */
+  stm32_gpio_set_mode_reg(io_first, io_last, mask,
+    mmask[STM32_GPIO_REG_PUPD] * 0x55555555, STM32_GPIO_REG_PUPD);
+
+  return 0;
+}
+
+static
+error_t stm32_gpio_apply_alt_func(gpio_id_t io_id, uint8_t mux)
+{
+  uint_fast8_t const bank  = io_id / STM32_GPIO_BANK_SIZE;
+  uint_fast8_t const shift = (io_id % STM32_GPIO_BANK_SIZE) * 4 /* stride */;
+
+  if (io_id > STM32_GPIO_MAX_ID)
+    return -ERANGE;
+
+  if (mux > 15)
+    return -ERANGE;
+
+  uintptr_t a = STM32_DEV_MEM_START(GPIO, A) + STM32_GPIO_AFRL_ADDR(bank);
+  uint64_t  x = endian_le64_na_load(a);
+  x = (x & ~(0xfULL << shift)) | (mux << shift);
+  //printk("alt func id:%u f:%u\n", io_id, mux);
+  endian_le64_na_store(a, x);
+
+  return 0;
 }
 
 static
 DEV_GPIO_SET_MODE(stm32_gpio_gpio_set_mode)
 {
   struct device_s *dev = gpio->dev;
-  uint8_t         msk_idx = 0, bf;
 
   if (io_first > io_last || io_last > STM32_GPIO_MAX_ID)
     return -ERANGE;
 
-  if (stm32_gpio_gpio_make_mode(mode, &bf))
-    return -ENOTSUP;
+  error_t err = 0;
 
   LOCK_SPIN_IRQ(&dev->lock);
-
-  for (; io_first <= io_last && msk_idx < 64; ++io_first)
-    {
-      if ((mask[msk_idx/8] >> (msk_idx % 8)) & 0x1)
-        {
-          stm32_gpio_gpio_apply_mode(dev, io_first, bf);
-        }
-      ++msk_idx;
-    }
-
+  err = stm32_gpio_apply_mode(io_first, io_last, mask, mode, 0 /* alt */);
   LOCK_RELEASE_IRQ(&dev->lock);
 
-  return 0;
+  return err;
 }
 
 static
 DEV_GPIO_SET_OUTPUT(stm32_gpio_gpio_set_output)
 {
-  struct device_s             *dev = gpio->dev;
-  struct stm32_gpio_context_s *pv  = dev->drv_pv;
-  uint8_t                     msk_idx = 0;
+  struct device_s *dev = gpio->dev;
+
+  uint16_t tmask;
+  uint32_t pmask = 0, smask = 0, cmask = 0;
+
+  uint_fast8_t mshift = io_first % STM32_GPIO_BANK_SIZE;
+  int_fast8_t mlen    = io_last - io_first + 1;
 
   if (io_first > io_last || io_last > STM32_GPIO_MAX_ID)
     return -ERANGE;
 
   LOCK_SPIN_IRQ(&dev->lock);
 
-  for (; io_first <= io_last && msk_idx < 64; ++io_first)
+mask:
+  tmask = mlen > STM32_GPIO_BANK_SIZE ? 0xffff : ((1 << mlen) - 1);
+
+loop:
+  smask |= ((uint32_t)endian_le16_na_load(set_mask) & tmask) << mshift;
+  cmask |= ((uint32_t)endian_le16_na_load(clear_mask) & tmask) << mshift;
+
+  mlen -= STM32_GPIO_BANK_SIZE;
+
+update:;
+  uint_fast8_t bank = io_first / STM32_GPIO_BANK_SIZE;
+
+  uintptr_t a = STM32_DEV_MEM_START(GPIO, A) + STM32_GPIO_ODR_ADDR(bank);
+  uint32_t  x = endian_le32(cpu_mem_read_32(a)) & 0xffff;
+  x = smask ^ (x & (smask ^ cmask));
+  //printk("update odr bank:%u reg:0x%x\n", bank, pmask);
+  cpu_mem_write_32(a, endian_le32(x));
+
+  cmask >>= STM32_GPIO_BANK_SIZE;
+  pmask >>= STM32_GPIO_BANK_SIZE;
+
+  io_first  += STM32_GPIO_BANK_SIZE;
+
+  if (mlen >= STM32_GPIO_BANK_SIZE)
+    goto loop;
+
+  if (io_first <= io_last)
     {
-      uint8_t bank           = io_first / STM32_GPIO_BANK_SIZE;
-      uint8_t io_in_bank     = io_first % STM32_GPIO_BANK_SIZE;
-      uintptr_t const bkaddr = pv->addr + (bank * STM32_GPIO_BANK_WIDTH);
-
-      uint8_t sval = (set_mask[msk_idx/8] >> (msk_idx % 8)) & 0x1;
-      uint8_t cval = (clear_mask[msk_idx/8] >> (msk_idx % 8)) & 0x1;
-
-      ++msk_idx;
-
-      /* sval cval concatenated. */
-      switch ((sval << 1) | cval)
-      {
-      default: break;
-
-      /* clear */
-      case 0 /* 00 */:
-        DEVICE_REG_FIELD_IDX_SET_DEV(GPIO, bkaddr, BSRR, BR, io_in_bank);
-        break;
-
-      /* unchanged */
-      case 1 /* 01 */:
-        break;
-
-      /* toggle */
-      case 2 /* 10 */: {
-        uint32_t register oldval = DEVICE_REG_FIELD_IDX_VALUE_DEV(
-          GPIO,
-          bkaddr,
-          ODR,
-          OD,
-          io_in_bank
-        );
-        DEVICE_REG_FIELD_IDX_UPDATE_DEV(GPIO, bkaddr, ODR, OD, io_in_bank,
-          oldval ^ 0x1);
-        break;
-      }
-
-      /* set */
-      case 3 /* 11 */:
-        DEVICE_REG_FIELD_IDX_SET_DEV(GPIO, bkaddr, BSRR, BS, io_in_bank);
-        break;
-      }
+      if (mlen < 0)
+        goto update;
+      goto mask;
     }
 
   LOCK_RELEASE_IRQ(&dev->lock);
@@ -337,24 +389,34 @@ DEV_GPIO_SET_OUTPUT(stm32_gpio_gpio_set_output)
 static
 DEV_GPIO_GET_INPUT(stm32_gpio_gpio_get_input)
 {
-  struct device_s             *dev = gpio->dev;
-  struct stm32_gpio_context_s *pv  = dev->drv_pv;
+  struct device_s *dev = gpio->dev;
+
+  uint32_t vp, v;
+  uint_fast8_t bf = io_first / STM32_GPIO_BANK_SIZE;
+  uint_fast8_t bl = io_last / STM32_GPIO_BANK_SIZE;
+  uint_fast8_t shift = io_first % STM32_GPIO_BANK_SIZE;
 
   if (io_first > io_last || io_last > STM32_GPIO_MAX_ID)
     return -ERANGE;
 
   LOCK_SPIN_IRQ(&dev->lock);
 
-  for (; io_first <= io_last; io_first += 32)
+  vp = endian_le32(
+    cpu_mem_read_32(STM32_DEV_MEM_START(GPIO, A) + STM32_GPIO_IDR_ADDR(bf)));
+  vp >>= shift;
+
+  while (bf++ < bl)
     {
-      uint8_t bank           = io_first / STM32_GPIO_BANK_SIZE;
-      uintptr_t const bkaddr = pv->addr + (bank * STM32_GPIO_BANK_WIDTH);
+      v = endian_le32(
+        cpu_mem_read_32(STM32_DEV_MEM_START(GPIO, A) + STM32_GPIO_IDR_ADDR(bf)));
+      v = (v << (STM32_GPIO_BANK_SIZE - shift)) | vp ;
+      vp = v >> STM32_GPIO_BANK_SIZE;
 
-      uint32_t register value = DEVICE_REG_VALUE_DEV(GPIO, bkaddr, IDR);
-      *(uint32_t*)data = value >> io_first;
-
-      data += 4;
+      endian_le16_na_store(data, v);
+      data += 2;
     }
+
+  endian_le16_na_store(data, vp);
 
   LOCK_RELEASE_IRQ(&dev->lock);
 
@@ -366,59 +428,26 @@ DEV_GPIO_GET_INPUT(stm32_gpio_gpio_get_input)
 static
 DEV_IOMUX_SETUP(stm32_gpio_iomux_setup)
 {
-  struct device_s             *dev = accessor->dev;
-  struct stm32_gpio_context_s *pv  = dev->drv_pv;
-  uint8_t                     bf;
-
-  uint8_t bank           = io_id / STM32_GPIO_BANK_SIZE;
-  uint8_t io_in_bank     = io_id % STM32_GPIO_BANK_SIZE;
-  uintptr_t const bkaddr = pv->addr + (bank * STM32_GPIO_BANK_WIDTH);
+  struct device_s *dev = accessor->dev;
+  error_t         err;
 
   if (io_id > STM32_GPIO_MAX_ID)
     return -ERANGE;
 
-  if (stm32_gpio_gpio_make_mode(dir, &bf))
-    return -ENOTSUP;
+  LOCK_SPIN_IRQ(&dev->lock);
 
-  /* alternate functions between 0 and 15. */
-  if (mux > 15)
-    return -EINVAL;
+  /* set pin mode */
+  uint8_t mask[1] = { 0x1 };
+  err = stm32_gpio_apply_mode(io_id, io_id, mask, dir, 1 /* alt */);
+  if (err)
+    goto end;
 
   /* configure the alternate function (number in mux argument). */
+  err = stm32_gpio_apply_alt_func(io_id, mux);
 
-  DEVICE_REG_FIELD_IDX_UPDATE_DEV(
-    GPIO,
-    bkaddr,
-    MODER,
-    MODE,
-    io_in_bank,
-    ALT
-  );
-
-  if (io_in_bank > 7)
-    DEVICE_REG_FIELD_IDX_UPDATE_DEV(
-      GPIO,
-      bkaddr,
-      AFRH,
-      AF,
-      (io_in_bank - 8),
-      mux
-    );
-  else
-    DEVICE_REG_FIELD_IDX_UPDATE_DEV(
-      GPIO,
-      bkaddr,
-      AFRL,
-      AF,
-      io_in_bank,
-      mux
-    );
-
-  /* remove input/output in bitfield as we use here alternate function. */
-  bf &= ~(STM32_GPIO_MODE_INPUT | STM32_GPIO_MODE_OUTPUT);
-  stm32_gpio_gpio_apply_mode(dev, io_id, bf);
-
-  return 0;
+end:
+  LOCK_RELEASE_IRQ(&dev->lock);
+  return err;
 }
 
 /********************************* ICU class. **********/
@@ -426,30 +455,34 @@ DEV_IOMUX_SETUP(stm32_gpio_iomux_setup)
 #if defined(CONFIG_DRIVER_STM32_GPIO_ICU)
 
 static
-uint_fast8_t stm32_gpio_icu_source_of_sink(uint_fast8_t icu_sink_id)
+uint_fast8_t stm32_gpio_icu_src_id_of_sink_id(uint_fast8_t sink_id)
 {
-  switch (icu_sink_id)
+  switch (sink_id)
     {
     default:
       assert(0 && "non reachable.");
       return 0;
 
     case 0 ... 4:
-      return icu_sink_id;
+      // No interrupt sharing for EXTI0...4
+      return 0;
 
     case 5 ... 9:
-      return STM32_GPIO_IRQ_SRC_COUNT-2;
+      // Interrupt sharing for EXTI5...9
+      return sink_id - 5;
 
-    case 10 ... STM32_GPIO_BANK_SIZE-1:
-      return STM32_GPIO_IRQ_SRC_COUNT-1;
+    case 10 ... 15:
+      // Interrupt sharing for EXTI10...15
+      return sink_id - 10;
     }
 }
 
+#if 0
 static
 DEV_ICU_GET_ENDPOINT(stm32_gpio_icu_get_endpoint)
 {
   struct device_s             *dev = accessor->dev;
-  struct stm32_gpio_context_s *pv = dev->drv_pv;
+  struct stm32_gpio_private_s *pv = dev->drv_pv;
 
   switch (type)
     {
@@ -493,7 +526,7 @@ static
 DEV_ICU_ENABLE_IRQ(stm32_gpio_icu_enable_irq)
 {
   struct device_s             *dev        = accessor->dev;
-  struct stm32_gpio_context_s *pv         = dev->drv_pv;
+  struct stm32_gpio_private_s *pv         = dev->drv_pv;
   uint_fast8_t                icu_sink_id = sink - pv->sink;
 
   if (irq_id > 0)
@@ -576,7 +609,7 @@ static
 DEV_ICU_DISABLE_IRQ(stm32_gpio_icu_disable_irq)
 {
   struct device_s             *dev        = accessor->dev;
-  struct stm32_gpio_context_s *pv         = dev->drv_pv;
+  struct stm32_gpio_private_s *pv         = dev->drv_pv;
   uint_fast8_t                icu_sink_id = sink - pv->sink;
 
   uint_fast8_t io_in_bank = icu_sink_id % STM32_GPIO_BANK_SIZE;
@@ -589,7 +622,7 @@ static
 DEV_IRQ_EP_PROCESS(stm32_gpio_irq)
 {
   struct device_s             *dev = ep->dev;
-  struct stm32_gpio_context_s *pv  = dev->drv_pv;
+  struct stm32_gpio_private_s *pv  = dev->drv_pv;
 
   while (1)
     {
@@ -613,6 +646,135 @@ DEV_IRQ_EP_PROCESS(stm32_gpio_irq)
 
           /* mark interrupt as processed. */
           pending ^= 1 << icu_sink_id;
+        }
+    }
+}
+#endif
+
+static
+DEV_IRQ_SINK_UPDATE(stm32_gpio_icu_sink_update)
+{
+  struct device_s             *dev = sink->base.dev;
+  struct stm32_gpio_private_s *pv  = dev->drv_pv;
+
+  uint_fast8_t const sink_id = sink - pv->sink;
+  uint_fast8_t       f, r;
+
+  switch (sense)
+    {
+    default:
+      assert(0 && "unsupported sensing");
+      return;
+
+    case DEV_IRQ_SENSE_NONE:
+      /* Disable external interrupt. */
+      DEVICE_REG_FIELD_IDX_CLR(EXTI, , IMR, MR, sink_id);
+      return;
+
+    case DEV_IRQ_SENSE_FALLING_EDGE:
+      r = 0;
+      f = 1;
+      break;
+
+    case DEV_IRQ_SENSE_RISING_EDGE:
+      r = 1;
+      f = 0;
+      break;
+
+    case DEV_IRQ_SENSE_ANY_EDGE:
+      r = 1;
+      f = 1;
+      break;
+    }
+
+  /* Set trigger. */
+  DEVICE_REG_FIELD_IDX_UPDATE(EXTI, , FTSR, TR, sink_id, f);
+  DEVICE_REG_FIELD_IDX_UPDATE(EXTI, , RTSR, TR, sink_id, r);
+
+  /* Enable interrupt. */
+  DEVICE_REG_FIELD_IDX_SET(EXTI, , IMR, MR, sink_id);
+}
+
+static
+DEV_ICU_GET_SINK(stm32_gpio_icu_get_sink)
+{
+  struct device_s             *dev = accessor->dev;
+  struct stm32_gpio_private_s *pv  = dev->drv_pv;
+
+  uint_fast8_t sink_id = id % STM32_GPIO_BANK_SIZE;
+  uint_fast8_t bank    = id / STM32_GPIO_BANK_SIZE;
+
+  if (bank > 8)
+    return NULL;
+
+  struct dev_irq_sink_s *sink = &pv->sink[sink_id];
+
+  /* We actually keep track of only one end-point per interrupt for all banks.
+     We have to keep track of the bank number which the end-point is linked to.
+   */
+  if (sink->base.link_count == 0)
+    pv->irq[sink_id].bank = bank;
+  else if(pv->irq[sink_id].bank != bank)
+    return NULL;
+
+  return sink;
+}
+
+static
+DEV_ICU_LINK(stm32_gpio_icu_link)
+{
+  if (!route_mask || *bypass)
+    return 0;
+
+  struct device_s             *dev = accessor->dev;
+  struct stm32_gpio_private_s *pv  = dev->drv_pv;
+
+  uint_fast8_t sink_id = sink - pv->sink;
+  uint_fast8_t bank    = pv->irq[sink_id].bank;
+
+  gpio_id_t io_id = bank * STM32_GPIO_BANK_SIZE + sink_id;
+  uint8_t mask[1] = { 0x1 };
+
+  error_t err = 0;
+
+  /* Change pin mode to input. */
+  err = stm32_gpio_apply_mode(io_id, io_id, mask, DEV_PIN_INPUT, 0 /* alt */);
+  if (err)
+    return err;
+
+  /* Setup link between the pin (i.e. bank) and and the external interrupt
+     line. */
+  DEVICE_REG_IDX_FIELD_IDX_UPDATE(SYSCFG, , EXTICR, sink_id / 4, EXTI,
+    sink_id % 4, bank);
+
+  /* Clear interrupt. */
+  DEVICE_REG_FIELD_IDX_CLR(EXTI, , PR, PR, sink_id);
+
+  return 0;
+}
+
+static
+DEV_IRQ_SRC_PROCESS(stm32_gpio_icu_src_process)
+{
+  struct stm32_gpio_private_s *pv = ep->base.dev->drv_pv;
+
+  while (1)
+    {
+      uint32_t x = DEVICE_REG_VALUE(EXTI, , PR);
+
+      if (!x)
+        break;
+
+      /* clear interrupts. */
+      DEVICE_REG_UPDATE(EXTI, , PR, x);
+
+      while (x)
+        {
+          uint_fast8_t          sink_id = __builtin_ctz(x);
+          struct dev_irq_sink_s *sink   = &pv->sink[sink_id];
+          dev_irq_id_t          irq_id  = stm32_gpio_icu_src_id_of_sink_id(sink_id);
+          device_irq_sink_process(sink, irq_id);
+          x ^= 1 << sink_id;
         }
     }
 }
@@ -641,7 +803,7 @@ DRIVER_REGISTER(stm32_gpio_drv);
 static
 DEV_INIT(stm32_gpio_init)
 {
-  struct stm32_gpio_context_s *pv;
+  struct stm32_gpio_private_s *pv;
 
   dev->status = DEVICE_DRIVER_INIT_FAILED;
 
@@ -650,41 +812,32 @@ DEV_INIT(stm32_gpio_init)
     return -ENOMEM;
 
   memset(pv, 0, sizeof(*pv));
-  dev->drv_pv = pv;
-
-  if (device_res_get_uint(dev, DEV_RES_MEM, 0, &pv->addr, NULL))
-    goto err_mem;
 
   /* enable clock gating for gpio A..E. */
   DEVICE_REG_UPDATE(RCC, , AHB1ENR, 0x1f);
+
+  uint8_t bi;
+  /* enable high-speed i/o on all ports. */
+  for (bi = 0; bi < 5; ++bi)
+    DEVICE_REG_IDX_UPDATE(GPIO, A, OSPEEDR, bi, 0xffffffff);
 
 #if defined(CONFIG_DRIVER_STM32_GPIO_ICU)
   /* enable clock gating for SYSCFG. */
   DEVICE_REG_FIELD_SET(RCC, , APB2ENR, SYSCFGEN);
 
-  device_irq_source_init(
-    dev,
-    pv->src,
-    STM32_GPIO_IRQ_SRC_COUNT,
-    &stm32_gpio_irq,
-    DEV_IRQ_SENSE_HIGH_LEVEL
-  );
-
-  if (device_irq_source_link(dev, pv->src, STM32_GPIO_IRQ_SRC_COUNT, 0))
+  device_irq_source_init(dev, pv->src, STM32_GPIO_IRQ_SRC_COUNT,
+    &stm32_gpio_icu_src_process);
+  if (device_irq_source_link(dev, pv->src, STM32_GPIO_IRQ_SRC_COUNT, -1))
     goto err_mem;
 
-  device_irq_sink_init(
-    dev,
-    pv->sink,
-    CONFIG_DRIVER_STM32_GPIO_IRQ_COUNT,
-    DEV_IRQ_SENSE_FALLING_EDGE | DEV_IRQ_SENSE_RISING_EDGE
-  );
+  device_irq_sink_init(dev, pv->sink, STM32_GPIO_BANK_SIZE,
+    &stm32_gpio_icu_sink_update, DEV_IRQ_SENSE_ANY_EDGE |
+    DEV_IRQ_SENSE_FALLING_EDGE | DEV_IRQ_SENSE_RISING_EDGE);
 #endif
 
-  dev->drv = &stm32_gpio_drv;
-
+  dev->drv    = &stm32_gpio_drv;
+  dev->drv_pv = pv;
   dev->status = DEVICE_DRIVER_INIT_DONE;
-
   return 0;
 
 err_mem:
@@ -695,7 +848,7 @@ err_mem:
 static
 DEV_CLEANUP(stm32_gpio_cleanup)
 {
-  struct stm32_gpio_context_s *pv = dev->drv_pv;
+  struct stm32_gpio_private_s *pv = dev->drv_pv;
 
   /* disable clock gating for gpio A..E. */
   DEVICE_REG_UPDATE(RCC, , AHB1ENR, 0x0);
@@ -704,8 +857,8 @@ DEV_CLEANUP(stm32_gpio_cleanup)
   /* disable clock gating for SYSCFG. */
   DEVICE_REG_FIELD_CLR(RCC, , APB2ENR, SYSCFGEN);
 
+  device_irq_sink_unlink(dev, pv->sink, STM32_GPIO_BANK_SIZE);
   device_irq_source_unlink(dev, pv->src, STM32_GPIO_IRQ_SRC_COUNT);
-  device_irq_sink_unlink(dev, pv->sink, CONFIG_DRIVER_STM32_GPIO_IRQ_COUNT);
 #endif
 
   mem_free(pv);
