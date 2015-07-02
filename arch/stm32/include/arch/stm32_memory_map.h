@@ -23,8 +23,8 @@
 #ifndef _STM32F4xx_MEMORY_MAP_H_
 #define _STM32F4xx_MEMORY_MAP_H_
 
-#if defined(CONFIG_BOARD_STM32_NUCLEOF401RE)
-# include <arch/stm32f401re_memory_map.h>
+#if CONFIG_STM32_FAMILY == 4
+# include <arch/stm32f4xx_memory_map.h>
 #endif
 
 #define STM32_DEV_MEM_START(dev, id) \
