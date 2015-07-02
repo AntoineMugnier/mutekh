@@ -66,7 +66,7 @@ static PRINTF_OUTPUT_FUNC(early_console_out)
 
 void stm32_usart_printk_init()
 {
-  reg_t cr1 = 0, cr2 = 0;
+  reg_t cr1 = 0, cr2 = 0, cr3 = 0;
 
   /* enable clock on USART bus. */
   DEVICE_REG_FIELD_SET(RCC, , AHB1ENR, GPIOAEN);
@@ -79,8 +79,17 @@ void stm32_usart_printk_init()
   DEVICE_REG_IDX_FIELD_IDX_UPDATE(GPIO, A, AFRL, 0, AF, 2, 7);
   DEVICE_REG_IDX_FIELD_IDX_UPDATE(GPIO, A, AFRL, 0, AF, 3, 7);
 
+  DEVICE_REG_IDX_FIELD_IDX_UPDATE(GPIO, A, OTYPER, 0, OT, 2, PUSHPULL);
+  DEVICE_REG_IDX_FIELD_IDX_UPDATE(GPIO, A, OTYPER, 0, OT, 3, PUSHPULL);
+
+  DEVICE_REG_IDX_FIELD_IDX_UPDATE(GPIO, A, PUPDR, 0, PUPD, 2, PULLUP);
+  DEVICE_REG_IDX_FIELD_IDX_UPDATE(GPIO, A, PUPDR, 0, PUPD, 3, PULLUP);
+
+  DEVICE_REG_IDX_FIELD_IDX_UPDATE(GPIO, A, OSPEEDR, 0, OSPEED, 2, FAST);
+  DEVICE_REG_IDX_FIELD_IDX_UPDATE(GPIO, A, OSPEEDR, 0, OSPEED, 3, FAST);
+
   /* wait for the last byte to be send just in case. */
-  stm32_usart_tx_wait_ready();
+  //stm32_usart_tx_wait_ready();
 
   /* deactivate the USART and reset configuration. */
   DEVICE_REG_UPDATE(USART, 2, CR1, 0);
@@ -98,6 +107,7 @@ void stm32_usart_printk_init()
 
   /* oversampling x16. */
   DEVICE_REG_FIELD_UPDATE_VAR(USART, CR1, OVER8, 16, cr1);
+  DEVICE_REG_FIELD_CLR_VAR(USART, CR3, ONEBIT, cr3);
 
   /* configure USART 8 bits, no parity, 1 stop bit. */
   DEVICE_REG_FIELD_UPDATE_VAR(USART, CR1, M, 8_BITS, cr1);
@@ -110,6 +120,7 @@ void stm32_usart_printk_init()
   /* propagate the configuration. */
   DEVICE_REG_UPDATE(USART, 2, CR1, cr1);
   DEVICE_REG_UPDATE(USART, 2, CR2, cr2);
+  DEVICE_REG_UPDATE(USART, 2, CR3, cr3);
 
   /* enable USART2. */
   DEVICE_REG_FIELD_SET_VAR(USART, CR1, UE, cr1);
