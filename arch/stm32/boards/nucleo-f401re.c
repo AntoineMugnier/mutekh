@@ -120,13 +120,13 @@ DEV_DECLARE_STATIC(gpio_dev, "gpio", 0, stm32_gpio_drv,
                                       ),
 
                    DEV_STATIC_RES_DEV_PARAM("icu", "/cpu"),
-                   DEV_STATIC_RES_IRQ(0, STM32_IRQ_EXTI0,      DEV_IRQ_SENSE_RISING_EDGE, 0, 0x1),
-                   DEV_STATIC_RES_IRQ(1, STM32_IRQ_EXTI1,      DEV_IRQ_SENSE_RISING_EDGE, 0, 0x1),
-                   DEV_STATIC_RES_IRQ(2, STM32_IRQ_EXTI2,      DEV_IRQ_SENSE_RISING_EDGE, 0, 0x1),
-                   DEV_STATIC_RES_IRQ(3, STM32_IRQ_EXTI3,      DEV_IRQ_SENSE_RISING_EDGE, 0, 0x1),
-                   DEV_STATIC_RES_IRQ(4, STM32_IRQ_EXTI4,      DEV_IRQ_SENSE_RISING_EDGE, 0, 0x1),
-                   DEV_STATIC_RES_IRQ(5, STM32_IRQ_EXTI_9_5,   DEV_IRQ_SENSE_RISING_EDGE, 0, 0x1),
-                   DEV_STATIC_RES_IRQ(6, STM32_IRQ_EXTI_15_10, DEV_IRQ_SENSE_RISING_EDGE, 0, 0x1),
+                   DEV_STATIC_RES_IRQ(0, STM32_IRQ_EXTI0,     DEV_IRQ_SENSE_HIGH_LEVEL, 0, 0x1),
+                   DEV_STATIC_RES_IRQ(1, STM32_IRQ_EXTI1,     DEV_IRQ_SENSE_HIGH_LEVEL, 0, 0x1),
+                   DEV_STATIC_RES_IRQ(2, STM32_IRQ_EXTI2,     DEV_IRQ_SENSE_HIGH_LEVEL, 0, 0x1),
+                   DEV_STATIC_RES_IRQ(3, STM32_IRQ_EXTI3,     DEV_IRQ_SENSE_HIGH_LEVEL, 0, 0x1),
+                   DEV_STATIC_RES_IRQ(4, STM32_IRQ_EXTI4,     DEV_IRQ_SENSE_HIGH_LEVEL, 0, 0x1),
+                   DEV_STATIC_RES_IRQ(5, STM32_IRQ_EXTI9_5,   DEV_IRQ_SENSE_HIGH_LEVEL, 0, 0x1),
+                   DEV_STATIC_RES_IRQ(6, STM32_IRQ_EXTI15_10, DEV_IRQ_SENSE_HIGH_LEVEL, 0, 0x1),
                    );
 
 #endif
