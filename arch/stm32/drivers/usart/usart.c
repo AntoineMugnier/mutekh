@@ -413,11 +413,11 @@ error_t stm32_usart_config_simple(struct device_s          *dev,
 
   case STM32_USART1_ADDR:
   case STM32_USART6_ADDR:
-    brr = (((uint64_t)stm32f4xx_clock_freq_apb2) << 8) / (cfg->baudrate << 8);
+    brr = stm32f4xx_clock_freq_apb2 / cfg->baudrate;
     break;
 
   case STM32_USART2_ADDR:
-    brr = (((uint64_t)stm32f4xx_clock_freq_apb1) << 8) / (cfg->baudrate << 8);
+    brr = stm32f4xx_clock_freq_apb1 / cfg->baudrate;
     break;
   }
 
