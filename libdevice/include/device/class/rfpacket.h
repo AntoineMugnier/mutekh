@@ -133,7 +133,7 @@ struct dev_rfpacket_config_s
   uint32_t                      sw_len:5;
 };
 
-struct dev_rfpacket_statistics_s
+struct dev_rfpacket_stats_s
 {
   /** Number of rx packet */
   uint32_t                      rx_count;
@@ -348,7 +348,7 @@ typedef DEV_RFPACKET_REQUEST(dev_rfpacket_request_t);
 typedef DEV_RFPACKET_RECEIVE(dev_rfpacket_receive_t);
 
 /** @see dev_rfpacket_request_t */
-#define DEV_RFPACKET_GET_TIMER_SKEW(n) error_t (n) (const struct device_rfpacket_s *accessor, \
+#define DEV_RFPACKET_GET_SKEW(n) error_t (n) (const struct device_rfpacket_s *accessor, \
                                                     struct device_timer_s *timer, \
                                                     struct dev_timer_skew_s *skew)
 /**
@@ -360,10 +360,10 @@ typedef DEV_RFPACKET_RECEIVE(dev_rfpacket_receive_t);
   and skew->r.num and skew->r.denom field are equal to 1.
  */
 
-typedef DEV_RFPACKET_GET_TIMER_SKEW(dev_rfpacket_get_timer_skew_t);
+typedef DEV_RFPACKET_GET_SKEW(dev_rfpacket_get_skew_t);
 
 /** @see dev_rfpacket_request_t */
-#define DEV_RFPACKET_STATISTICS(n) const struct dev_rfpacket_statistics_s * (n) (const struct device_rfpacket_s *accessor)
+#define DEV_RFPACKET_STATS(n) error_t  (n) (const struct device_rfpacket_s *accessor, struct dev_rfpacket_stats_s *stats)
 /**
   This function returns a skew between the transceiver timer and
   another timer provided by caller.
@@ -372,14 +372,14 @@ typedef DEV_RFPACKET_GET_TIMER_SKEW(dev_rfpacket_get_timer_skew_t);
   and skew->r.num and skew->r.denom field are equal to 1.
  */
 
-typedef DEV_RFPACKET_STATISTICS(dev_rfpacket_statistics_t);
+typedef DEV_RFPACKET_STATS(dev_rfpacket_stats_t);
 
 
 DRIVER_CLASS_TYPES(rfpacket,
                    dev_rfpacket_request_t *f_request;
                    dev_rfpacket_receive_t *f_receive;
-                   dev_rfpacket_statistics_t *f_stats;
-                   dev_rfpacket_get_timer_skew_t *f_get_timer_skew;
+                   dev_rfpacket_stats_t *f_stats;
+                   dev_rfpacket_get_skew_t *f_get_skew;
                   );
 
 #define DRIVER_RFPACKET_METHODS(prefix)                            \
@@ -388,7 +388,7 @@ DRIVER_CLASS_TYPES(rfpacket,
     .f_request = prefix ## _request,                               \
     .f_receive = prefix ## _receive,                               \
     .f_stats = prefix ## _stats,                                   \
-    .f_get_timer_skew = prefix ## _get_timer_skew,                 \
+    .f_get_skew = prefix ## _get_skew,                             \
   })
 
 inline error_t dev_rfpacket_spin_send_packet(
