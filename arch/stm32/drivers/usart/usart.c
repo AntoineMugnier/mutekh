@@ -51,11 +51,6 @@ GCT_CONTAINER_FCNS(usart_fifo, static inline, usart_fifo,
                    init, destroy, pop_array, pushback, pushback_array, isempty, pop);
 #endif
 
-extern uint32_t stm32f4xx_clock_freq_ahb1;
-extern uint32_t stm32f4xx_clock_freq_apb1;
-extern uint32_t stm32f4xx_clock_freq_apb2;
-
-
 struct stm32_usart_context_s
 {
   /* usart controller address. */
@@ -82,6 +77,10 @@ struct stm32_usart_context_s
 
   bool_t                read_started:1;
   bool_t                write_started:1;
+
+#if !defined(CONFIG_DEVICE_CLOCK)
+  struct dev_freq_s     busfreq;
+#endif
 };
 
 
@@ -344,11 +343,9 @@ error_t stm32_usart_check_config(struct dev_uart_config_s *cfg)
 }
 
 static
-error_t stm32_usart_config_simple(struct device_s          *dev,
+error_t stm32_usart_config_simple(struct stm32_usart_context_s *pv,
                                   struct dev_uart_config_s *cfg)
 {
-  struct stm32_usart_context_s *pv = dev->drv_pv;
-
   /* check baudrate. */
   error_t err = stm32_usart_check_config(cfg);
   if (err)
@@ -403,23 +400,11 @@ error_t stm32_usart_config_simple(struct device_s          *dev,
     break;
   }
 
-  /* configure the baudrate. */
   uint64_t brr = 0;
-  switch (pv->addr)
-  {
-  default:
-    assert(!"unknown USART base address");
-    break;
-
-  case STM32_USART1_ADDR:
-  case STM32_USART6_ADDR:
-    brr = stm32f4xx_clock_freq_apb2 / cfg->baudrate;
-    break;
-
-  case STM32_USART2_ADDR:
-    brr = stm32f4xx_clock_freq_apb1 / cfg->baudrate;
-    break;
-  }
+#if !defined(CONFIG_DEVICE_CLOCK)
+  /* configure the baudrate. */
+  brr = (uint64_t)pv->busfreq.num / cfg->baudrate / pv->busfreq.denom;
+#endif
 
   DEVICE_REG_UPDATE_DEV(USART, pv->addr, BRR, (uint32_t)brr);
   return 0;
@@ -442,7 +427,7 @@ DEV_UART_CONFIG(stm32_usart_config)
   bool_t enabled = DEVICE_REG_FIELD_VALUE_DEV(USART, pv->addr, CR1, UE);
   DEVICE_REG_FIELD_CLR_DEV(USART, pv->addr, CR1, UE);
 
-  error_t err = stm32_usart_config_simple(dev, cfg);
+  error_t err = stm32_usart_config_simple(pv, cfg);
 
   /* (re-)enable the usart. */
   if (!err || enabled)
@@ -467,41 +452,6 @@ DRIVER_DECLARE(stm32_usart_drv, "STM32 USART", stm32_usart,
 
 DRIVER_REGISTER(stm32_usart_drv);
 
-/* ****************************************************************************
- *
- * Configure clock and GPIO with alternate functions.
- *
- * The clock must be enabled on the buses on which the USARTS are connected.
- * The GPIO must be configured with USART alternate function on both TX and RX
- * pins.
- */
-
-static inline
-void stm32_usart_clock_init(struct device_s *dev)
-{
-  struct stm32_usart_context_s *pv = dev->drv_pv;
-
-  assert(pv != 0);
-
-  switch (pv->addr)
-  {
-  default:
-    break;
-
-  case STM32_USART1_ADDR:
-    DEVICE_REG_FIELD_SET(RCC, , APB2ENR, USART1EN);
-    break;
-
-  case STM32_USART2_ADDR:
-    DEVICE_REG_FIELD_SET(RCC, , APB1ENR, USART2EN);
-    break;
-
-  case STM32_USART6_ADDR:
-    DEVICE_REG_FIELD_SET(RCC, , APB2ENR, USART6EN);
-    break;
-  }
-}
-
 /* ************************************************************************* */
 
 static
@@ -515,10 +465,6 @@ DEV_INIT(stm32_usart_init)
   if (!pv)
     return -ENOMEM;
 
-  pv->read_started = pv->write_started = 0;
-
-  dev->drv_pv = pv;
-
   if (device_res_get_uint(dev, DEV_RES_MEM, 0, &pv->addr, NULL))
     goto err_mem;
 
@@ -530,6 +476,14 @@ DEV_INIT(stm32_usart_init)
       DEVICE_REG_FIELD_CLR_DEV(USART, pv->addr, SR, TC);
     }
 #endif
+
+#if !defined(CONFIG_DEVICE_CLOCK)
+  if (device_get_res_freq(dev, &pv->busfreq, 0))
+#endif
+    goto err_mem;
+
+  /* setup startup state. */
+  pv->read_started = pv->write_started = 0;
 
   /* disable and reset the usart. */
   DEVICE_REG_UPDATE_DEV(USART, pv->addr, CR1, 0);
@@ -546,9 +500,6 @@ DEV_INIT(stm32_usart_init)
   usart_fifo_init(&pv->write_fifo);
 # endif
 #endif
-
-  /* configure clocks. */
-  stm32_usart_clock_init(dev);
 
   /* configure gpio. */
   iomux_demux_t loc[2];
@@ -583,7 +534,7 @@ DEV_INIT(stm32_usart_init)
           .half_duplex = r->u.uart.half_duplex
         };
 
-      err = stm32_usart_config_simple(dev, &cfg);
+      err = stm32_usart_config_simple(pv, &cfg);
       if (err)
         printk("uart: failed to configure uart with default configuration.\n");
     }
@@ -602,8 +553,8 @@ DEV_INIT(stm32_usart_init)
     DEVICE_REG_FIELD_SET_DEV(USART, pv->addr, CR1, UE);
 
   /* link the driver. */
-  dev->drv = &stm32_usart_drv;
-
+  dev->drv    = &stm32_usart_drv;
+  dev->drv_pv = pv;
   dev->status = DEVICE_DRIVER_INIT_DONE;
 
   return 0;

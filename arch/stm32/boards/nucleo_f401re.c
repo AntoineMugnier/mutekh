@@ -47,6 +47,8 @@ DEV_DECLARE_STATIC(usart1_dev, "uart1", 0, stm32_usart_drv,
                                       STM32_DEV_MEM_END(USART, 1)
                                       ),
 
+                   DEV_STATIC_RES_FREQ(84000000, 1),
+
                    DEV_STATIC_RES_DEV_PARAM("icu", "/cpu"),
                    DEV_STATIC_RES_IRQ(0, STM32_IRQ_USART1, DEV_IRQ_SENSE_HIGH_LEVEL, 0, 0x1),
 
@@ -61,6 +63,8 @@ DEV_DECLARE_STATIC(usart2_dev, "uart2", 0, stm32_usart_drv,
                                       STM32_DEV_MEM_START(USART, 2),
                                       STM32_DEV_MEM_END(USART, 2)
                                       ),
+
+                   DEV_STATIC_RES_FREQ(42000000, 1),
 
                    DEV_STATIC_RES_DEV_PARAM("icu", "/cpu"),
                    DEV_STATIC_RES_IRQ(0, STM32_IRQ_USART2, DEV_IRQ_SENSE_HIGH_LEVEL, 0, 0x1),
@@ -79,6 +83,8 @@ DEV_DECLARE_STATIC(usart6_dev, "uart6", 0, stm32_usart_drv,
                                       STM32_DEV_MEM_START(USART, 6),
                                       STM32_DEV_MEM_END(USART, 6)
                                       ),
+
+                   DEV_STATIC_RES_FREQ(84000000, 1),
 
                    DEV_STATIC_RES_DEV_PARAM("icu", "/cpu"),
                    DEV_STATIC_RES_IRQ(0, STM32_IRQ_USART6, DEV_IRQ_SENSE_HIGH_LEVEL, 0, 0x1),
@@ -99,6 +105,8 @@ DEV_DECLARE_STATIC(i2c1_dev, "i2c1", 0, stm32_i2c_ctrl_drv,
                                       STM32_DEV_MEM_END(I2C, 1)
                                       ),
 
+                   DEV_STATIC_RES_FREQ(42000000, 1),
+
                    DEV_STATIC_RES_DEV_PARAM("icu", "/cpu"),
                    DEV_STATIC_RES_IRQ(0, STM32_IRQ_I2C1_EV, DEV_IRQ_SENSE_HIGH_LEVEL, 0, 0x1),
                    DEV_STATIC_RES_IRQ(1, STM32_IRQ_I2C1_ER, DEV_IRQ_SENSE_HIGH_LEVEL, 0, 0x1),
@@ -114,11 +122,6 @@ DEV_DECLARE_STATIC(i2c1_dev, "i2c1", 0, stm32_i2c_ctrl_drv,
 
 /* GPIO A..E. */
 DEV_DECLARE_STATIC(gpio_dev, "gpio", 0, stm32_gpio_drv,
-                   DEV_STATIC_RES_MEM(
-                                      STM32_DEV_MEM_START(GPIO, A),
-                                      STM32_DEV_MEM_END(GPIO, E)
-                                      ),
-
                    DEV_STATIC_RES_DEV_PARAM("icu", "/cpu"),
                    DEV_STATIC_RES_IRQ(0, STM32_IRQ_EXTI0,     DEV_IRQ_SENSE_HIGH_LEVEL, 0, 0x1),
                    DEV_STATIC_RES_IRQ(1, STM32_IRQ_EXTI1,     DEV_IRQ_SENSE_HIGH_LEVEL, 0, 0x1),
@@ -192,6 +195,25 @@ DEV_DECLARE_STATIC(pwm5_dev, "pwm5", 0, stm32_pwm_drv,
 
 #endif
 
+#if defined(CONFIG_DRIVER_STM32_SPI)
+
+DEV_DECLARE_STATIC(spi1_dev, "spi1", 0, stm32_spi_drv,
+                   DEV_STATIC_RES_MEM(STM32_DEV_MEM_START(SPI, 1),
+                                      STM32_DEV_MEM_END(SPI, 1)),
+
+                   DEV_STATIC_RES_FREQ(84000000, 1),
+
+                   DEV_STATIC_RES_DEV_PARAM("icu", "/cpu"),
+                   DEV_STATIC_RES_IRQ(0, STM32_IRQ_SPI1, DEV_IRQ_SENSE_HIGH_LEVEL, 0, 0x1),
+
+                   DEV_STATIC_RES_DEV_PARAM("iomux", "/gpio"),
+                   DEV_STATIC_RES_IOMUX("clk", 0, 0*16+5 /* PA5 */, 5 /* AF5 */, 0),
+                   DEV_STATIC_RES_IOMUX("miso", 0, 0*16+6 /* PA6 */, 5 /* AF5 */, 0),
+                   DEV_STATIC_RES_IOMUX("mosi", 0, 0*16+7 /* PA7 */, 5 /* AF5 */, 0)
+                   );
+
+#endif
+
 #if defined(CONFIG_DRIVER_PUSH_BUTTON)
 
 DEV_DECLARE_STATIC(btn0_dev, "btn0", 0, push_button_drv,
@@ -204,60 +226,10 @@ DEV_DECLARE_STATIC(btn0_dev, "btn0", 0, push_button_drv,
 
 /////////////////////////////////////////////////////////////////////
 
-uint32_t stm32f4xx_clock_freq_ahb1 = 16000000; /* 16MHz on reset. */
-uint32_t stm32f4xx_clock_freq_apb1 = 16000000; /* 16MHz on reset. */
-uint32_t stm32f4xx_clock_freq_apb2 = 16000000; /* 16MHz on reset. */
+#include <hexo/iospace.h>
+#include <arch/stm32f4xx_rcc.h>
 
 #define __IO volatile
-
-struct stm32f4xx_rcc_dev_s
-{
-  __IO uint32_t RCC_CR;
-  __IO uint32_t RCC_PLLCFGR;
-  __IO uint32_t RCC_CFGR;
-  __IO uint32_t RCC_CIR;
-  __IO uint32_t RCC_AHB1RSTR;
-  __IO uint32_t RCC_AHB2RSTR;
-       uint32_t RCC_reserved1[2];
-  __IO uint32_t RCC_APB1RSTR;
-  __IO uint32_t RCC_APB2RSTR;
-       uint32_t RCC_reserved2[2];
-  __IO uint32_t RCC_AHB1ENR;
-  __IO uint32_t RCC_AHB2ENR;
-       uint32_t RCC_reserved3[2];
-  __IO uint32_t RCC_APB1ENR;
-  __IO uint32_t RCC_APB2ENR;
-       uint32_t RCC_reserved4[2];
-  __IO uint32_t RCC_AHB1LPENR;
-  __IO uint32_t RCC_AHB2LPENR;
-       uint32_t RCC_reserved5[2];
-  __IO uint32_t RCC_APB1LPENR;
-  __IO uint32_t RCC_APB2LPENR;
-       uint32_t RCC_reserved6[2];
-  __IO uint32_t RCC_BDCR;
-  __IO uint32_t RCC_CSR;
-       uint32_t RCC_reserved7[2];
-  __IO uint32_t RCC_SSCGR;
-  __IO uint32_t RCC_PLLI2SCFGR;
-       uint32_t RCC_reserved8[1];
-  __IO uint32_t RCC_DCKCFGR;
-} __attribute__ ((packed));
-
-#define STM32_RCC_PLLSRC_HSI    0
-#define STM32_RCC_PLLSRC_HSE    (1 << 22)
-
-#define STM32_RCC_PLL_M_DIV(n)  ((n) << 0)
-#define STM32_RCC_PLL_N_SCAL(n) ((n) << 6)
-#define STM32_RCC_PLL_Q_DIV(n)  ((n) << 24)
-
-#define STM32_RCC_PLL_P_DIV_2   0
-#define STM32_RCC_PLL_P_DIV_4   (1 << 16)
-#define STM32_RCC_PLL_P_DIV_6   (2 << 16)
-#define STM32_RCC_PLL_P_DIV_8   (3 << 16)
-
-#define STM32_RCC_PLL_RDY       (1 << 25)
-#define STM32_RCC_PLL_SWS       0xc
-#define STM32_RCC_SYSCLK_PLL    0x8
 
 struct stm32f4xx_flash_dev_s
 {
@@ -276,60 +248,72 @@ struct stm32f4xx_flash_dev_s
 /* Set the frequency to the maximam valid frequency (84MHz). */
 void stm32_clock_init()
 {
-  struct stm32f4xx_rcc_dev_s * rcc_dev =
-    ( struct stm32f4xx_rcc_dev_s * ) 0x40023800;
+  uint32_t x;
 
   struct stm32f4xx_flash_dev_s * flash_dev =
     ( struct stm32f4xx_flash_dev_s * ) 0x40023c00;
 
-  /* reset configuration. */
-  rcc_dev->RCC_CR = 1 << 16; /* PLL OFF, PLLI2S OFF, HSE ONN, HSI OFF. */
-  //rcc_dev->RCC_CR |= (16 << 3); /* set trim for HSI clock. */
+  /* disable irqs. */
+  cpu_mem_write_32(STM32_RCC_ADDR + STM32_RCC_CIR_ADDR, 0);
 
-  /* configure the pll parameters (HSI 16MHz -> 84MHz). */
-  rcc_dev->RCC_PLLCFGR =
-    STM32_RCC_PLLSRC_HSE      |
-    STM32_RCC_PLL_M_DIV(8)    |
-    STM32_RCC_PLL_N_SCAL(336) |
-    STM32_RCC_PLL_P_DIV_4     | /* System clock @ 84MHz. */
-    STM32_RCC_PLL_Q_DIV(7)      /* Peripheral clock @ 48MHz. */
-  ;
+  /* enable hse clock. */
+  cpu_mem_write_32(STM32_RCC_ADDR + STM32_RCC_CR_ADDR,
+    endian_le32(STM32_RCC_CR_HSEON));
 
-  /* disable interrupts. */
-  rcc_dev->RCC_CIR = 0x0;
+  /* wait for the hse clock to stabilize. */
+  do
+    {
+      x = endian_le32(cpu_mem_read_32(STM32_RCC_ADDR + STM32_RCC_CR_ADDR));
+    }
+  while (!(x & STM32_RCC_CR_HSERDY));
+
+  /* set pll to 84MHz. */
+  x = 0;
+  STM32_RCC_PLLCFGR_PLLSRC_SET(x, HSE);
+  STM32_RCC_PLLCFGR_M_SET(x, 8);
+  STM32_RCC_PLLCFGR_N_SET(x, 336);
+  STM32_RCC_PLLCFGR_P_SET(x, DIV_4);
+  STM32_RCC_PLLCFGR_Q_SET(x, 7);
+  cpu_mem_write_32(STM32_RCC_ADDR + STM32_RCC_PLLCFGR_ADDR, endian_le32(x));
 
   /* switch the pll on. */
-  rcc_dev->RCC_CR |= 1 << 24;
+  x = endian_le32(cpu_mem_read_32(STM32_RCC_ADDR + STM32_RCC_CR_ADDR));
+  STM32_RCC_CR_PLLON_SET(x, 1);
+  cpu_mem_write_32(STM32_RCC_ADDR + STM32_RCC_CR_ADDR, endian_le32(x));
 
   /* wait until pll is locked. */
-  while ((rcc_dev->RCC_CR & STM32_RCC_PLL_RDY) == 0);
+  do
+    {
+      x = endian_le32(cpu_mem_read_32(STM32_RCC_ADDR + STM32_RCC_CR_ADDR));
+    }
+  while (!(x & STM32_RCC_CR_PLLRDY));
 
-  /* activate caches this is important for instruction fetch. */
+  /* activate caches and set wait cycles for the flash. */
   flash_dev->FLASH_ACR =
     STM32_FLASH_ICACHE_EN |
     STM32_FLASH_DCACHE_EN |
-    STM32_FLASH_LAT_WS(2)
-  ;
+    STM32_FLASH_LAT_WS(2);
+
+  /* set different bus prescalers. */
+  x = 0;
+  STM32_RCC_CFGR_HPRE_SET(x, DIV_1);    /* 84 MHz */
+  STM32_RCC_CFGR_PPRE1_SET(x, DIV_2);   /* 42 MHz */
+  STM32_RCC_CFGR_PPRE2_SET(x, DIV_1);   /* 84 MHz */
 
   /* use the pll @ 84MHz for the system clock. */
-  rcc_dev->RCC_CFGR |= 0x2;
+  STM32_RCC_CFGR_SW_SET(x, PLL);
+  cpu_mem_write_32(STM32_RCC_ADDR + STM32_RCC_CFGR_ADDR, endian_le32(x));
 
   /* wait for system clock to be sourced by the pll. */
-  while (
-    (rcc_dev->RCC_CFGR & STM32_RCC_PLL_SWS) !=
-    STM32_RCC_SYSCLK_PLL
-  );
+  do
+    {
+      x = endian_le32(cpu_mem_read_32(STM32_RCC_ADDR + STM32_RCC_CFGR_ADDR));
+    }
+  while (!(x & STM32_RCC_CFGR_SWS_PLL));
 
-  /* configure AHB prescaler (not divided). */
-  rcc_dev->RCC_CFGR &= ~0xf0;
-
-  /* configure APB1 @ 42MHz and APB2 @ 84MHz prescaler. */
-  rcc_dev->RCC_CFGR &= ~0xfc00;
-  rcc_dev->RCC_CFGR |= (4 << 10); /* APB1 @ 42MHz */
-
-  /* update working frequency. */
-  stm32f4xx_clock_freq_ahb1 = 84000000;
-  stm32f4xx_clock_freq_apb1 = 42000000;
-  stm32f4xx_clock_freq_apb2 = 84000000;
+  /* enable all clock gates. */
+  cpu_mem_write_32(STM32_RCC_ADDR + STM32_RCC_AHB1ENR_ADDR, -1);
+  cpu_mem_write_32(STM32_RCC_ADDR + STM32_RCC_APB1ENR_ADDR, -1);
+  cpu_mem_write_32(STM32_RCC_ADDR + STM32_RCC_APB2ENR_ADDR, -1);
 }
 

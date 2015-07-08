@@ -44,23 +44,8 @@
 #define STM32_CRC_ADDR              0x40023000
 #define STM32_CRC_SIZE              0x00000400
 
-#define STM32_GPIOH_ADDR            0x40021c00
-#define STM32_GPIOH_SIZE            0x00000400
-
-#define STM32_GPIOE_ADDR            0x40021000
-#define STM32_GPIOE_SIZE            0x00000400
-
-#define STM32_GPIOD_ADDR            0x40020c00
-#define STM32_GPIOD_SIZE            0x00000400
-
-#define STM32_GPIOC_ADDR            0x40020800
-#define STM32_GPIOC_SIZE            0x00000400
-
-#define STM32_GPIOB_ADDR            0x40020400
-#define STM32_GPIOB_SIZE            0x00000400
-
-#define STM32_GPIOA_ADDR            0x40020000
-#define STM32_GPIOA_SIZE            0x00000400
+#define STM32_GPIO_ADDR             0x40020000
+#define STM32_GPIO_SIZE             0x00002000
 
 #define STM32_TIM11_ADDR            0x40014800
 #define STM32_TIM11_SIZE            0x00000400

@@ -74,6 +74,8 @@ struct stm32_i2c_private_s
 
     /* interrupt end-point (event and error). */
     struct dev_irq_src_s     irq_ep[2];
+
+    struct dev_freq_s        busfreq;
 };
 
 
@@ -645,10 +647,12 @@ static DEV_INIT(stm32_i2c_init)
     return -ENOMEM;
 
   memset(pv, 0, sizeof(*pv));
-  dev->drv_pv = pv;
 
   /* retreive the device base address from device tree. */
-  if(device_res_get_uint(dev, DEV_RES_MEM, 0, &pv->addr, NULL))
+  if (device_res_get_uint(dev, DEV_RES_MEM, 0, &pv->addr, NULL))
+    goto err_mem;
+
+  if (device_get_res_freq(dev, &pv->busfreq, 0))
     goto err_mem;
 
   /* if the bus is busy, fix blocked state using a soft reset. */
@@ -666,25 +670,6 @@ static DEV_INIT(stm32_i2c_init)
   if (device_iomux_setup(dev, ",scl ,sda", NULL, NULL, NULL))
     goto err_mem;
 
-  /* configure input clock. */
-  // XXX: will be fixed by clock tree. */
-  switch (pv->addr)
-  {
-  default: assert(0 && "unknown I2C controller");
-
-  case STM32_I2C1_ADDR:
-    DEVICE_REG_FIELD_SET(RCC, , APB1ENR, I2C1EN);
-    break;
-
-  case STM32_I2C2_ADDR:
-    DEVICE_REG_FIELD_SET(RCC, , APB1ENR, I2C2EN);
-    break;
-
-  case STM32_I2C3_ADDR:
-    DEVICE_REG_FIELD_SET(RCC, , APB1ENR, I2C3EN);
-    break;
-  }
-
   device_irq_source_init(dev, pv->irq_ep, 2, &stm32_i2c_irq);
   if (device_irq_source_link(dev, pv->irq_ep, 2, -1))
     goto err_mem;
@@ -695,10 +680,7 @@ static DEV_INIT(stm32_i2c_init)
   /* enable error interrupts. */
   DEVICE_REG_FIELD_SET_DEV(I2C, pv->addr, CR2, ITERREN);
 
-  /* initialize the input clock frequency. */
-  extern uint32_t stm32f4xx_clock_freq_apb1;
-
-  freq_in_mhz = stm32f4xx_clock_freq_apb1 / 1000000;
+  freq_in_mhz = (uint64_t)pv->busfreq.num / (1000000ULL * pv->busfreq.denom);
   DEVICE_REG_FIELD_UPDATE_DEV(I2C, pv->addr, CR2, FREQ, freq_in_mhz);
 
   /* set standard mode. */
@@ -713,13 +695,15 @@ static DEV_INIT(stm32_i2c_init)
   /* enable I2C device. */
   DEVICE_REG_FIELD_SET_DEV(I2C, pv->addr, CR1, PE);
 
+  dev->drv    = &stm32_i2c_ctrl_drv;
+  dev->drv_pv = pv;
   dev->status = DEVICE_DRIVER_INIT_DONE;
 
   return 0;
 
 err_mem:
   mem_free(pv);
-  return -EINVAL;
+  return -1;
 }
 
 static
