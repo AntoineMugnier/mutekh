@@ -206,6 +206,14 @@ SECTIONS
 # define __cpu_data_end __context_data_end
 #endif
 
+        /*
+          End of all ROM sections (excluding separate reset, if any).
+          This is start address in flash that can be used for other
+          purposes in a MCU.
+        */
+        __rom_end = __cpu_data_end;
+
+
 #if defined(CONFIG_LOAD_ROM)
 	.bss VMAEND(.data) : AT(VMAEND(.data)) {
 #else
