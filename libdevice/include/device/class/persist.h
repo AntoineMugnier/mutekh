@@ -360,7 +360,7 @@ dev_persist_wait_counter_read(struct device_persist_s *accessor,
 {
   struct dev_persist_rq_s rq = {
     .descriptor = desc,
-    .op = DEV_PERSIST_WRITE,
+    .op = DEV_PERSIST_READ,
     .uid_offset = uid_offset,
     .counter = 1,
   };
