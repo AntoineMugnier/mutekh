@@ -116,7 +116,8 @@ static TERMUI_CON_COMMAND_PROTOTYPE(dev_shell_spi_config)
   error_t err = DEVICE_OP(&data->spi, config, &cfg);
 
   if (err)
-    termui_con_printf(con, "Failed to apply spi configuration : error %d\n", err);
+    termui_con_printf(con, "Failed to apply spi configuration : error %s\n",
+      strerror(err));
 
   return err;
 }
@@ -130,7 +131,8 @@ static TERMUI_CON_COMMAND_PROTOTYPE(dev_shell_spi_select)
   if (err == -ENOTSUP)
     termui_con_printf(con, "Chip select policy not supported by controller\n");
   else if (err)
-    termui_con_printf(con, "Failed to select spi slave : error %d\n", err);
+    termui_con_printf(con, "Failed to select spi slave : error %s\n",
+      strerror(err));
 
   return err;
 }
@@ -168,7 +170,8 @@ static TERMUI_CON_COMMAND_PROTOTYPE(dev_shell_spi_read)
   error_t err = dev_spi_wait_transfer(tr); 
 
   if (err)
-    termui_con_printf(con, "Failed to transfert spi data with error: %d\n", err);
+    termui_con_printf(con, "Failed to transfert spi data with error: %\n",
+      strerror(err));
 
   termui_con_printf(con, "read (%u bytes): %P\n", size, in, size);
   mem_free(in);
@@ -206,7 +209,8 @@ static TERMUI_CON_COMMAND_PROTOTYPE(dev_shell_spi_swap)
   error_t err = dev_spi_wait_transfer(tr); 
 
   if (err)
-    termui_con_printf(con, "Failed to transfert spi data with error: %d\n", err);
+    termui_con_printf(con, "Failed to transfert spi data with error: %s\n",
+      strerror(err));
 
   termui_con_printf(con, "write (%u bytes): %P\n", size, out, size);
   termui_con_printf(con, "read (%u bytes): %P\n", size, in, size);
@@ -237,7 +241,8 @@ static TERMUI_CON_COMMAND_PROTOTYPE(dev_shell_spi_write)
   error_t err = dev_spi_wait_transfer(tr); 
 
   if (err)
-    termui_con_printf(con, "Failed to transfert spi data with error: %d\n", err);
+    termui_con_printf(con, "Failed to transfert spi data with error: %s\n",
+      strerror(err));
 
   termui_con_printf(con, "write %u bytes: %P (hex)\n", size, out, size);
 
