@@ -37,9 +37,9 @@
 
 struct device_iomux_s;
 
-typedef uint8_t iomux_demux_t;
+typedef uint8_t  iomux_demux_t;
 typedef uint16_t iomux_io_id_t;
-typedef uint8_t iomux_mux_t;
+typedef uint32_t iomux_mux_t;
 typedef uint32_t iomux_config_t;
 
 #define IOMUX_INVALID_DEMUX 255
