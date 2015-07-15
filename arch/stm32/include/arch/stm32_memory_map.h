@@ -25,6 +25,8 @@
 
 #if CONFIG_STM32_FAMILY == 4
 # include <arch/stm32f4xx_memory_map.h>
+#elif CONFIG_STM32_FAMILY == 1
+# include <arch/stm32f1xx_memory_map.h>
 #endif
 
 #define STM32_DEV_MEM_START(dev, id) \
