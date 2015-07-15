@@ -1,0 +1,524 @@
+/*
+    This file is part of MutekH.
+
+    MutekH is free software; you can redistribute it and/or modify it
+    under the terms of the GNU Lesser General Public License as
+    published by the Free Software Foundation; version 2.1 of the
+    License.
+
+    MutekH is distributed in the hope that it will be useful, but
+    WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+    Lesser General Public License for more details.
+
+    You should have received a copy of the GNU Lesser General Public
+    License along with MutekH; if not, write to the Free Software
+    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+    02110-1301 USA.
+
+    Copyright Alexandre Becoulet <alexandre.becoulet@free.fr> (c) 2013
+    Copyright Julien Peeters <contact@julienpeeters.net> (c) 2015
+*/
+
+#include <hexo/types.h>
+#include <hexo/endian.h>
+#include <hexo/iospace.h>
+#include <hexo/interrupt.h>
+
+#include <mutek/mem_alloc.h>
+#include <mutek/printk.h>
+
+#include <device/device.h>
+#include <device/resources.h>
+#include <device/driver.h>
+#include <device/irq.h>
+#include <device/class/spi.h>
+#include <device/class/timer.h>
+#include <device/class/iomux.h>
+
+#include <arch/stm32_irq.h>
+#include <arch/stm32_spi.h>
+#include <arch/stm32_memory_map.h>
+
+
+struct stm32_spi_private_s
+{
+  uintptr_t                      addr;
+
+  bool_t                         use_cs:1;
+
+  struct dev_irq_src_s           irq_ep;
+  struct dev_spi_ctrl_transfer_s *tr;
+
+  uint_fast8_t                   fifo_lvl;
+
+#ifdef CONFIG_DEVICE_SPI_REQUEST
+  struct dev_spi_ctrl_queue_s    queue;
+#endif
+
+  struct dev_freq_s              busfreq;
+  uint32_t                       bit_rate;
+};
+
+static
+error_t stm32_spi_update_bitrate(struct stm32_spi_private_s *pv,
+                                 uint32_t                   *bit_rate)
+{
+  if (*bit_rate == 0)
+    return -EINVAL;
+
+  uint32_t const div = pv->busfreq.num / (*bit_rate * pv->busfreq.denom);
+  if (div == 0)
+    return -EINVAL;
+
+  uint32_t logval = 31 - __builtin_clz(div);
+  if (logval < 1)
+    return -ERANGE;
+
+  /* get the closest power of two bit rate and compute the log2. */
+  logval += (div >> (logval - 1)) & 0x1;
+
+  if (logval > 8)
+    return -ERANGE;
+
+  pv->bit_rate = (uint64_t)pv->busfreq.num / ((uint64_t)pv->busfreq.denom << logval);
+  *bit_rate = pv->bit_rate;
+
+  uintptr_t a = pv->addr + STM32_SPI_CR1_ADDR;
+  uint32_t  x = endian_le32(cpu_mem_read_32(a));
+  STM32_SPI_CR1_BR_SETVAL(x, logval - 1);
+  cpu_mem_write_32(a, endian_le32(x));
+
+  return 0;
+}
+
+static
+DEV_SPI_CTRL_CONFIG(stm32_spi_config)
+{
+  struct device_s                  *dev = accessor->dev;
+  struct stm32_spi_private_s *pv = dev->drv_pv;
+
+  error_t err = 0;
+
+  LOCK_SPIN_IRQ(&dev->lock);
+
+  if (pv->tr != NULL)
+    {
+      err = -EBUSY;
+      goto cfg_end;
+    }
+
+  /* check data frame size */
+  if (cfg->word_width != 8 && cfg->word_width != 16)
+    {
+      err = -ENOTSUP;
+      goto cfg_end;
+    }
+
+  /* check mosi/miso polarity */
+  if (cfg->miso_pol != DEV_SPI_CS_ACTIVE_HIGH ||
+      cfg->mosi_pol != DEV_SPI_CS_ACTIVE_HIGH)
+    {
+      err = -ENOTSUP;
+      goto cfg_end;
+    }
+
+  /* bitrate */
+  err = stm32_spi_update_bitrate(pv, &cfg->bit_rate);
+  if (err)
+    goto cfg_end;
+
+  uintptr_t a = pv->addr + STM32_SPI_CR1_ADDR;
+  uint32_t  x = endian_le32(cpu_mem_read_32(a));
+
+  /* data width. */
+  if (cfg->word_width == 16)
+    STM32_SPI_CR1_DFF_SET(a, 8_BITS);
+
+  /* clock */
+  switch (cfg->ck_mode)
+    {
+    default:
+      assert(!"unreachable state");
+      break;
+
+    case DEV_SPI_CK_LOW_LEADING:
+      STM32_SPI_CR1_CPHA_SET(x, FIRST_TRANS);
+      STM32_SPI_CR1_CPOL_SET(x, 0);
+      break;
+
+    case DEV_SPI_CK_LOW_TRAILING:
+      STM32_SPI_CR1_CPHA_SET(x, SECOND_TRANS);
+      STM32_SPI_CR1_CPOL_SET(x, 0);
+      break;
+
+    case DEV_SPI_CK_HIGH_LEADING:
+      STM32_SPI_CR1_CPHA_SET(x, FIRST_TRANS);
+      STM32_SPI_CR1_CPOL_SET(x, 1);
+      break;
+
+    case DEV_SPI_CK_HIGH_TRAILING:
+      STM32_SPI_CR1_CPHA_SET(x, SECOND_TRANS);
+      STM32_SPI_CR1_CPOL_SET(x, 1);
+      break;
+    }
+
+  /* msb/lsb first */
+  if (cfg->bit_order == DEV_SPI_LSB_FIRST)
+    STM32_SPI_CR1_LSBFIRST_SET(x, 1);
+
+  cpu_mem_write_32(a, endian_le32(x));
+
+cfg_end:
+  LOCK_RELEASE_IRQ(&dev->lock);
+
+  return err;
+}
+
+static
+bool_t stm32_spi_transfer_tx(struct device_s *dev);
+
+static
+bool_t stm32_spi_transfer_rx(struct device_s *dev)
+{
+  struct stm32_spi_private_s     *pv = dev->drv_pv;
+  struct dev_spi_ctrl_transfer_s *tr = pv->tr;
+
+  while (pv->fifo_lvl > 0)
+   {
+      uint32_t x = cpu_mem_read_32(pv->addr + STM32_SPI_SR_ADDR)
+                    & endian_le32(STM32_SPI_SR_RXNE);
+
+      if (!x)
+        return 0;
+
+      uint32_t w = endian_le32(cpu_mem_read_32(pv->addr + STM32_SPI_DR_ADDR));
+
+      --pv->fifo_lvl;
+
+      switch (tr->in_width)
+        {
+        case 1:
+          *(uint8_t *)tr->in = w & 0xff;
+          break;
+        case 2:
+          *(uint16_t *)tr->in = w & 0xffff;
+          break;
+        }
+
+      tr->in = (void *)((uint8_t *)tr->in + tr->in_width);
+    }
+
+  /* disable rx irq. */
+  uintptr_t a = pv->addr + STM32_SPI_CR2_ADDR;
+  uint32_t  x = endian_le32(cpu_mem_read_32(a));
+  STM32_SPI_CR2_RXNEIE_SET(x, 0);
+  cpu_mem_write_32(a, endian_le32(x));
+
+  if (tr->count > 0)
+    return stm32_spi_transfer_tx(dev);
+
+  pv->tr = NULL;
+
+  return 1;
+}
+
+static
+bool_t stm32_spi_transfer_tx(struct device_s *dev)
+{
+  struct stm32_spi_private_s     *pv = dev->drv_pv;
+  struct dev_spi_ctrl_transfer_s *tr = pv->tr;
+
+  while (pv->fifo_lvl < 1)
+    {
+      uint32_t x = cpu_mem_read_32(pv->addr + STM32_SPI_SR_ADDR)
+                     & endian_le32(STM32_SPI_SR_TXE);
+
+      uintptr_t a = pv->addr + STM32_SPI_CR2_ADDR;
+      if (!x)
+        {
+          /* enable tx irq. */
+          x = endian_le32(cpu_mem_read_32(a));
+          STM32_SPI_CR2_TXEIE_SET(x, 1);
+          cpu_mem_write_32(a, endian_le32(x));
+          return 0;
+        }
+
+      /* clear tx irq and enable rx irq. */
+      x = endian_le32(cpu_mem_read_32(a));
+      STM32_SPI_CR2_TXEIE_SET(x, 0);
+      STM32_SPI_CR2_RXNEIE_SET(x, 1);
+      cpu_mem_write_32(a, endian_le32(x));
+
+      uint32_t w = 0;
+
+      switch (tr->out_width)
+       {
+        case 1:
+          w = *(const uint8_t *)tr->out;
+          break;
+        case 2:
+          w = *(const uint16_t *)tr->out;
+          break;
+        }
+
+      cpu_mem_write_32(pv->addr + STM32_SPI_DR_ADDR, endian_le32(w));
+
+      tr->out = (const void *)((const uint8_t *)tr->out + tr->out_width);
+
+      --tr->count;
+      ++pv->fifo_lvl;
+    }
+
+  if (pv->fifo_lvl > 0)
+    return stm32_spi_transfer_rx(dev);
+
+  return 0;
+}
+
+static
+DEV_IRQ_SRC_PROCESS(stm32_spi_irq)
+{
+
+  struct device_s            *dev = ep->base.dev;
+  struct stm32_spi_private_s *pv  = dev->drv_pv;
+
+  lock_spin(&dev->lock);
+
+  while (1)
+    {
+      uintptr_t a = pv->addr + STM32_SPI_SR_ADDR;
+      uint32_t  x = endian_le32(cpu_mem_read_32(a));
+
+      if (!(x & (STM32_SPI_SR_RXNE | STM32_SPI_SR_TXE)))
+        break;
+
+      struct dev_spi_ctrl_transfer_s *tr = pv->tr;
+      if (tr == NULL)
+        break;
+
+      bool_t done = 0;
+
+      if (pv->fifo_lvl < 1 && (x & STM32_SPI_SR_TXE))
+        done = stm32_spi_transfer_tx(dev);
+
+      if (pv->fifo_lvl > 0 && (x & STM32_SPI_SR_RXNE))
+        done = stm32_spi_transfer_rx(dev);
+
+      if (done)
+        {
+          lock_release(&dev->lock);
+          kroutine_exec(&tr->kr, 0);
+          lock_spin(&dev->lock);
+        }
+
+    }
+
+  lock_release(&dev->lock);
+}
+
+static
+DEV_SPI_CTRL_SELECT(stm32_spi_select)
+{
+  struct device_s            *dev = accessor->dev;
+  struct stm32_spi_private_s *pv  = dev->drv_pv;
+
+  error_t err = 0;
+
+  if (cs_id > 0)
+    return -ENOTSUP;
+
+  if (!pv->use_cs)
+    return 0;
+
+  uintptr_t a = pv->addr + STM32_SPI_CR2_ADDR;
+  uint32_t  x = endian_le32(cpu_mem_read_32(a));
+
+  bool_t enable = 0;
+
+  LOCK_SPIN_IRQ(&dev->lock);
+
+  if (pv->tr != NULL)
+    err = -EBUSY;
+  else
+    {
+      switch (pc)
+        {
+        case DEV_SPI_CS_ASSERT:
+          STM32_SPI_CR2_SSOE_SET(x, 1);
+          enable = 1;
+          break;
+
+        case DEV_SPI_CS_RELEASE:
+          STM32_SPI_CR2_SSOE_SET(x, 0);
+          break;
+
+        case DEV_SPI_CS_TRANSFER:
+        case DEV_SPI_CS_DEASSERT:
+          err = -ENOTSUP;
+          break;
+        }
+
+      if (!err)
+        cpu_mem_write_32(a, endian_le32(x));
+
+      /* we need to re-enable the SPI device as SSOE = 0 disabled it. */
+      if (enable)
+        {
+          a = pv->addr + STM32_SPI_CR1_ADDR;
+          x = endian_le32(cpu_mem_read_32(a));
+          STM32_SPI_CR1_SPE_SET(x, 1);
+          STM32_SPI_CR1_MSTR_SET(x, MASTER);
+          cpu_mem_write_32(a, endian_le32(x));
+        }
+    }
+
+  LOCK_RELEASE_IRQ(&dev->lock);
+
+  return err;
+}
+
+static
+DEV_SPI_CTRL_TRANSFER(stm32_spi_transfer)
+{
+  struct device_s *dev = accessor->dev;
+  struct stm32_spi_private_s *pv = dev->drv_pv;
+
+  bool_t done = 1;
+
+  LOCK_SPIN_IRQ(&dev->lock);
+
+  if (pv->tr != NULL)
+    tr->err = -EBUSY;
+  else
+    {
+      assert(tr->count > 0);
+      tr->accessor = accessor;
+      tr->err = 0;
+      pv->tr = tr;
+
+      done = stm32_spi_transfer_tx(dev);
+    }
+
+ end:
+
+  LOCK_RELEASE_IRQ(&dev->lock);
+
+  if (done)
+    kroutine_exec(&tr->kr, cpu_is_interruptible());
+}
+
+#ifdef CONFIG_DEVICE_SPI_REQUEST
+
+static DEV_SPI_CTRL_QUEUE(stm32_spi_queue)
+{
+  struct device_s *dev = accessor->dev;
+  struct stm32_spi_private_s *pv = dev->drv_pv;
+  return &pv->queue;
+}
+
+#endif
+
+static DEV_INIT(stm32_spi_init);
+static DEV_CLEANUP(stm32_spi_cleanup);
+
+#define stm32_spi_use dev_use_generic
+
+DRIVER_DECLARE(stm32_spi_drv, "STM32 SPI", stm32_spi,
+               DRIVER_SPI_CTRL_METHODS(stm32_spi));
+
+DRIVER_REGISTER(stm32_spi_drv);
+
+static DEV_INIT(stm32_spi_init)
+{
+  struct stm32_spi_private_s *pv;
+
+  dev->status = DEVICE_DRIVER_INIT_FAILED;
+
+  pv = mem_alloc(sizeof(*pv), (mem_scope_sys));
+  memset(pv, 0, sizeof(*pv));
+
+  if (!pv)
+    return -ENOMEM;
+
+  if (device_res_get_uint(dev, DEV_RES_MEM, 0, &pv->addr, NULL))
+    goto err_mem;
+
+  if (device_get_res_freq(dev, &pv->busfreq, 0))
+    goto err_mem;
+
+  /* init state */
+  pv->tr = NULL;
+
+#ifdef CONFIG_DEVICE_SPI_REQUEST
+  if (dev_spi_queue_init(dev, &pv->queue))
+    goto err_mem;
+#endif
+
+  /* disable and clear irqs */
+  cpu_mem_write_32(pv->addr + STM32_SPI_CR2_ADDR, 0);
+  cpu_mem_write_32(pv->addr + STM32_SPI_SR_ADDR, 0);
+
+  /* disable device. */
+  cpu_mem_write_32(pv->addr + STM32_SPI_CR1_ADDR, 0);
+
+  /* setup pinmux */
+  iomux_demux_t loc[4];
+  if (device_iomux_setup(dev, ">clk <miso >mosi >cs?", loc, NULL, NULL))
+    goto err_mem;
+
+  /* TODO: add suppot for rxonly/txonly */
+  uint32_t cr1 = 0;
+  if (loc[3] != IOMUX_INVALID_MUX)
+    pv->use_cs = 1;
+  else
+    {
+      STM32_SPI_CR1_SSM_SET(cr1, 1);
+      STM32_SPI_CR1_SSI_SET(cr1, 1);
+    }
+
+  /* init irq endpoint */
+  device_irq_source_init(dev, &pv->irq_ep, 1, &stm32_spi_irq);
+
+  if (device_irq_source_link(dev, &pv->irq_ep, 1, -1))
+    goto err_mem;
+
+  /* setup bit rate */
+  //uint32_t bit_rate = 500000;
+  //if(stm32_spi_update_bitrate(pv, &bit_rate))
+  //  goto err_mem;
+
+  /* enable the spi with rx and tx enabled in master mode. */
+  STM32_SPI_CR1_SPE_SET(cr1, 1);
+  STM32_SPI_CR1_MSTR_SET(cr1, MASTER);
+  cpu_mem_write_32(pv->addr + STM32_SPI_CR1_ADDR, endian_le32(cr1));
+
+  dev->drv    = &stm32_spi_drv;
+  dev->drv_pv = pv;
+  dev->status = DEVICE_DRIVER_INIT_DONE;
+
+  return 0;
+
+ err_mem:
+  mem_free(pv);
+  return -1;
+}
+
+static
+DEV_CLEANUP(stm32_spi_cleanup)
+{
+  struct stm32_spi_private_s	*pv = dev->drv_pv;
+
+  device_irq_source_unlink(dev, &pv->irq_ep, 1);
+
+  /* disable irqs */
+  cpu_mem_write_32(pv->addr + STM32_SPI_CR2_ADDR, 0);
+  /* disable the usart */
+  cpu_mem_write_32(pv->addr + STM32_SPI_CR1_ADDR, 0);
+
+#ifdef CONFIG_DEVICE_SPI_REQUEST
+  dev_spi_queue_cleanup(&pv->queue);
+#endif
+
+  mem_free(pv);
+}
