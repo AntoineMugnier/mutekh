@@ -26,6 +26,7 @@
 #include <hexo/interrupt.h>
 #include <hexo/lock.h>
 #include <hexo/context.h>
+#include <hexo/power.h>
 
 static lock_t fault_lock;
 
@@ -66,8 +67,12 @@ static CPU_EXCEPTION_HANDLER(fault_handler)
 
   lock_release(&fault_lock);
 
+#ifdef CONFIG_RELEASE
+  power_reboot();
+#else
   while (1)
     ;
+#endif
 }
 
 void mutek_fault_initsmp()
