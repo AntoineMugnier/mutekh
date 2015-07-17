@@ -139,7 +139,7 @@ void net_task_push(struct net_task_header_s *header,
 /**
    @this destroys a task.  This calls its destroy function.
  */
-void net_task_cleanup(struct net_task_s *task);
+void net_task_destroy(struct net_task_s *task);
 
 /**
    @this is the structure for standard tasks.
@@ -246,5 +246,24 @@ void net_task_query_push(struct net_task_s *task,
    fields.
  */
 void net_task_query_respond_push(struct net_task_s *task, error_t err);
+
+ALWAYS_INLINE
+struct buffer_s *net_task_inbound_buffer_steal(struct net_task_s *task,
+                                               size_t begin,
+                                               size_t size)
+{
+  struct buffer_s *ret = task->inbound.buffer;
+
+  assert(ret);
+  task->inbound.buffer = NULL;
+  ret->begin = begin;
+  ret->end = begin + size;
+
+  return ret;
+}
+
+void net_task_inbound_respond(struct net_task_s *task,
+                              dev_timer_value_t timestamp,
+                              const struct net_addr_s dst[static 1]);
 
 #endif

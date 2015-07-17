@@ -23,6 +23,9 @@
 #include <net/scheduler.h>
 #include <net/layer.h>
 
+GCT_CONTAINER_FCNS(net_scheduler_destroy_listener, ALWAYS_INLINE, net_scheduler_destroy_listener,
+                   init, destroy, pushback, remove, isempty);
+
 static
 void net_layer_context_update(struct net_layer_s *layer,
                               const struct net_layer_context_s *context)
@@ -36,7 +39,7 @@ void net_layer_context_update(struct net_layer_s *layer,
     changed = 1;
   }
 
-  //printk("Layer %S now %d+%d\n", &layer->handler->type, 4,
+  //printk("Layer %d now %d+%d\n", &layer->handler->type,
   //       layer->context.mtu, layer->context.prefix_size);
 
   if (changed)
@@ -67,7 +70,7 @@ error_t net_layer_bind(
   if (err)
     return err;
 
-  //printk("Layer %S bound to %S\n", &child->handler->type, 4, &layer->handler->type, 4);
+  //printk("Layer %d bound to %d\n", &child->handler->type, &layer->handler->type);
 
   child->parent = layer;
   net_layer_list_pushback(&layer->children, child);
@@ -83,7 +86,7 @@ void net_layer_unbind(
 {
   assert(child->parent == layer);
 
-  //printk("Layer %S unbound from %S\n", &child->handler->type, 4, &layer->handler->type, 4);
+  //printk("Layer %d unbound from %d\n", &child->handler->type, &layer->handler->type);
 
   if (layer->handler->unbound)
     layer->handler->unbound(layer, child);
@@ -104,7 +107,7 @@ error_t net_layer_init(
   layer->scheduler = sched;
   layer->parent = NULL;
 
-  //printk("Layer %S init\n", &layer->handler->type, 4);
+  /* printk("Layer %d init\n", &layer->handler->type); */
 
   if (layer->handler->use_timer)
     net_scheduler_timer_use(layer->scheduler);
@@ -121,7 +124,7 @@ void net_layer_destroy(
 
   layer->scheduler = NULL;
 
-  //printk("Layer %S destroy\n", &layer->handler->type, 4);
+  /* printk("Layer %d destroy\n", &layer->handler->type); */
 
   while ((child = net_layer_list_head(&layer->children))) {
     net_layer_unbind(layer, child);
@@ -129,6 +132,10 @@ void net_layer_destroy(
   }
 
   net_scheduler_from_layer_cancel(sched, layer);
+
+  GCT_FOREACH(net_scheduler_destroy_listener, &sched->destroy_listeners, item,
+              item->func(item, layer);
+              );
 
   handler->destroyed(layer);
 
