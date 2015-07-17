@@ -20,40 +20,11 @@
 
 /**
    @file
-   @module{Network stack library}
-   @short Network layer common structure
+   @module {Network stack library}
+   @short Network layer base structure
 
-   @section {Description}
-
-   A network layer is a part of a networking stack.  Depending on
-   actual needs, layer may be statically or dynamically allocated on a
-   per-session basis.
-
-   For instance, in a TCP/IP stack, Ethernet, IP and TCP layers are
-   long-lived, whereas TCP session layer (for a single source/target
-   IP/port couple) is shorter-lived.
-
-   Layers communicate through tasks that are executed in a unique
-   scheduler for a given stack.
-
-   Layers are stacked in a tree fashion.  Root is close to the network
-   interfaces, leaves are upper-layer sessions.  A layer has a single
-   parent layer in stack, but may have multiple children layers.
-
-   All layers are refcounted.  Parents hold a refcount on children
-   (and not the other way around).  An interface layer that gets
-   destroyed (because the communication medium disappears) implicitly
-   drops references on upper layers which will, in turn, get
-   destroyed.
-
-   Each layer should check for parent validity before sending a task
-   to it.
-
-   Communication at borders of libnetwork (between libnetwork and
-   other modules) is done through a delegate pattern.  Each layer is
-   responsible for declaration of its delegate vtable and API.
-
-   @end section
+   @this contains all definitions around @ref {net_layer_s} {Network
+   layer structure}.
  */
 
 #ifndef NET_LAYER_H
@@ -69,21 +40,13 @@
 #include <gct/refcount.h>
 #include <gct/container_clist.h>
 
+#include <mutek/buffer_pool.h>
+
 #include <assert.h>
 
-#include "scheduler.h"
+#include <net/addr.h>
 
-/**
-   @this makes a unique layer ID from four characters.
-
-   Example:
-   @code
-     NET_LAYER_TYPE('I','P','v','4')
-   @end code
- */
-#define NET_LAYER_TYPE(d, c, b, a) (((a) << 24) | ((b) << 16) | ((c) << 8) | (d))
-
-struct net_task_header_s;
+struct net_task_s;
 struct net_layer_s;
 
 /**
@@ -109,33 +72,39 @@ struct net_layer_handler_s
      @this is called after a layer gets destroyed because its refcount
      dropped down to 0.
    */
-  void (*destroyed)(
-    struct net_layer_s *layer);
+  void (*destroyed)(struct net_layer_s *layer);
 
   /**
      @this is called when a task requires handling from the layer.  It
      is responsability from this call to destroy the task (or reuse
      it).
    */
-  void (*task_handle)(
-    struct net_layer_s *layer,
-    struct net_task_header_s *task);
+  void (*task_handle)(struct net_layer_s *layer,
+                      struct net_task_s *task);
 
   /**
-     @this notifies a layer its parent's context changed.
-
-     @this must return whether this layer's context gets updated
-     because this call.  Context update notification will be forwarded
-     to children layer if so.
+     @this is responsible for calculating children's context.
    */
-  bool_t (*context_updated)(
-    struct net_layer_s *layer,
-    const struct net_layer_context_s *parent_context);
+  void (*child_context_adjust)(const struct net_layer_s *layer,
+                               struct net_layer_context_s *ctx);
+
+  /**
+     @this notifies a layer its own context changed
+   */
+  void (*context_changed)(struct net_layer_s *layer);
+
+  /**
+     @this notifies a layer its got unbound and has no parent any
+     more.
+   */
+  void (*dandling)(struct net_layer_s *layer);
 
   /**
      @this is called when another layer is bound using this one as
      parent.  @tt addr is address context passed to
      @ref{net_layer_bind}, it is context-dependent.
+
+     If this function returns an error, layer binding is aborted.
    */
   error_t (*bound)(
     struct net_layer_s *layer,
@@ -148,13 +117,26 @@ struct net_layer_handler_s
   void (*unbound)(
     struct net_layer_s *layer,
     struct net_layer_s *child);
-
-  uint32_t type;
-  bool_t use_timer;
 };
 
 #define GCT_CONTAINER_ALGO_net_layer_list CLIST
 #define GCT_CONTAINER_REFCOUNT_net_layer_list net_layer
+#define GCT_CONTAINER_ALGO_net_layer_sched_list CLIST
+
+/**
+   @this is the base vtable for a delegate.  All delegate must
+   implement functions contained herein.
+
+   Specific layer definitions may inherit this vtable as base.
+ */
+struct net_layer_delegate_vtable_s
+{
+  /**
+     @this notifies delegate the layer got destroyed, implying
+     delegate is released from referencing layer.
+   */
+  void (*release)(void *delegate, struct net_layer_s *layer);
+};
 
 GCT_CONTAINER_TYPES(net_layer_list,
 /**
@@ -166,23 +148,27 @@ struct net_layer_s
   GCT_REFCOUNT_ENTRY(obj_entry);
   GCT_CONTAINER_ENTRY(net_layer_list, entry);
   net_layer_list_root_t children;
+  GCT_CONTAINER_ENTRY(net_layer_sched_list, scheduler_ref);
 
   struct net_scheduler_s *scheduler;
   const struct net_layer_handler_s *handler;
   struct net_layer_s *parent;
   struct net_layer_context_s context;
+  void *delegate;
+  const struct net_layer_delegate_vtable_s *delegate_vtable;
 
   // Rest is done through derivation
 } *, entry);
 
 GCT_REFCOUNT(net_layer, struct net_layer_s *, obj_entry);
+GCT_CONTAINER_TYPES(net_layer_sched_list, struct net_layer_s *, scheduler_ref);
 
 GCT_CONTAINER_FCNS(net_layer_list, static inline, net_layer_list,
                    init, destroy, push, pop, pushback, next, head, isempty, remove, foreach);
 
-/* Refcount destroy function. @internal */
-void net_layer_destroy(
-  struct net_layer_s *layer);
+/* Refcount destroy function. Called from refcount
+   management. @internal */
+void net_layer_destroy(struct net_layer_s *layer);
 
 /**
    @this binds a child layer to another layer.
@@ -206,26 +192,9 @@ void net_layer_unbind(
   struct net_layer_s *child);
 
 /**
-   @this allocates a packet for layer.
-
-   @param layer Layer to allocate packet for
-   @param begin reserved header size for layers headers
-          (should be at least @tt{layer->context.prefix_size})
-   @param size minimal data size to allocate packet for
-          (should be no more than @tt{layer->context.mtu})
- */
-ALWAYS_INLINE
-struct buffer_s *net_layer_packet_alloc(
-  struct net_layer_s *layer,
-  size_t begin,
-  size_t size)
-{
-  struct buffer_s *pkt = net_scheduler_packet_alloc(layer->scheduler);
-  pkt->begin = begin;
-  pkt->end = begin + size;
-
-  return pkt;
-}
+   @this unbinds all children layers from a layer.
+*/
+void net_layer_unbind_all(struct net_layer_s *layer);
 
 /**
    @this must be called by layer when @ref{net_layer_context_s}{its
@@ -236,14 +205,17 @@ void net_layer_context_changed(struct net_layer_s *layer);
 /**
    @this initializes a network layer.
 
+   @param layer Layer to initialize
    @param handler Pointer to a vtable
    @param scheduler Context scheduler this layer runs in
-   @param type Layer type as returned by @ref NET_LAYER_TYPE, hints
-          about what protocol is implemented by layer
+   @param delegate Delegate private data pointer
+   @param delegate_vtable Vtable for delegate, mandatory if @tt delegate is set
  */
 error_t net_layer_init(
   struct net_layer_s *layer,
   const struct net_layer_handler_s *handler,
-  struct net_scheduler_s *scheduler);
+  struct net_scheduler_s *scheduler,
+  void *delegate,
+  const struct net_layer_delegate_vtable_s *delegate_vtable);
 
 #endif

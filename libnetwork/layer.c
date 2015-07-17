@@ -23,30 +23,23 @@
 #include <net/scheduler.h>
 #include <net/layer.h>
 
-static
-void net_layer_context_update(struct net_layer_s *layer,
-                              const struct net_layer_context_s *context)
-{
-  bool_t changed = 0;
-
-  if (layer->handler->context_updated) {
-    changed = layer->handler->context_updated(layer, context);
-  } else if (memcmp(&layer->context, context, sizeof(*context))) {
-    layer->context = *context;
-    changed = 1;
-  }
-
-  //printk("Layer %S now %d+%d\n", &layer->handler->type, 4,
-  //       layer->context.mtu, layer->context.prefix_size);
-
-  if (changed)
-    net_layer_context_changed(layer);
-}
+#include "network.h"
 
 void net_layer_context_changed(struct net_layer_s *layer)
 {
+  if (net_layer_list_isempty(&layer->children))
+    return;
+
+  struct net_layer_context_s cc = layer->context;
+
+  if (layer->handler->child_context_adjust)
+    layer->handler->child_context_adjust(layer, &cc);
+
   GCT_FOREACH(net_layer_list, &layer->children, child,
-              net_layer_context_update(child, &layer->context);
+              child->context = cc;
+              if (child->handler->context_changed)
+                child->handler->context_changed(child);
+              net_layer_context_changed(child);
               );
 }
 
@@ -67,12 +60,19 @@ error_t net_layer_bind(
   if (err)
     return err;
 
-  //printk("Layer %S bound to %S\n", &child->handler->type, 4, &layer->handler->type, 4);
+  //printk("Layer %p %p bound to %p %p\n", child, child->handler,
+  //       layer, layer->handler);
 
   child->parent = layer;
   net_layer_list_pushback(&layer->children, child);
 
-  net_layer_context_update(child, &layer->context);
+  child->context = layer->context;
+
+  if (layer->handler->child_context_adjust)
+    layer->handler->child_context_adjust(layer, &child->context);
+
+  if (child->handler->context_changed)
+    child->handler->context_changed(child);
 
   return 0;
 }
@@ -81,21 +81,37 @@ void net_layer_unbind(
     struct net_layer_s *layer,
     struct net_layer_s *child)
 {
+  //printk("Layer %p %p unbound from %p %p\n", child, child->handler,
+  //       layer, layer->handler);
+
   assert(child->parent == layer);
 
-  //printk("Layer %S unbound from %S\n", &child->handler->type, 4, &layer->handler->type, 4);
+  net_layer_list_remove(&layer->children, child);
+  child->parent = NULL;
+
+  if (child->handler->dandling)
+    child->handler->dandling(child);
 
   if (layer->handler->unbound)
     layer->handler->unbound(layer, child);
+}
 
-  child->parent = NULL;
-  net_layer_list_remove(&layer->children, child);
+void net_layer_unbind_all(struct net_layer_s *layer)
+{
+  struct net_layer_s *child;
+
+  while ((child = net_layer_list_head(&layer->children))) {
+    net_layer_unbind(layer, child);
+    net_layer_refdec(child);
+  }
 }
 
 error_t net_layer_init(
-    struct net_layer_s *layer,
-    const struct net_layer_handler_s *handler,
-    struct net_scheduler_s *sched)
+  struct net_layer_s *layer,
+  const struct net_layer_handler_s *handler,
+  struct net_scheduler_s *sched,
+  void *delegate,
+  const struct net_layer_delegate_vtable_s *delegate_vtable)
 {
   net_layer_refinit(layer);
   net_layer_list_init(&layer->children);
@@ -103,11 +119,16 @@ error_t net_layer_init(
   layer->handler = handler;
   layer->scheduler = sched;
   layer->parent = NULL;
+  layer->delegate = delegate;
+  layer->delegate_vtable = delegate_vtable;
 
-  //printk("Layer %S init\n", &layer->handler->type, 4);
+  assert((!delegate || delegate_vtable) && "Delegate must come with a vtable");
 
-  if (layer->handler->use_timer)
-    net_scheduler_timer_use(layer->scheduler);
+  net_scheduler_layer_created(sched, layer);
+  
+  /* printk("Layer %p %p init\n", layer, layer->handler); */
+
+  net_scheduler_timer_use(layer->scheduler);
 
   return 0;
 }
@@ -115,24 +136,37 @@ error_t net_layer_init(
 void net_layer_destroy(
     struct net_layer_s *layer)
 {
+  net_scheduler_layer_destroyed(layer->scheduler, layer);
+}
+
+void net_layer_destroy_real(
+    struct net_layer_s *layer)
+{
   struct net_layer_s *child;
   struct net_scheduler_s *sched = layer->scheduler;
   const struct net_layer_handler_s *handler = layer->handler;
+  void *delegate = layer->delegate;
+  const struct net_layer_delegate_vtable_s *delegate_vtable = layer->delegate_vtable;
 
   layer->scheduler = NULL;
 
-  //printk("Layer %S destroy\n", &layer->handler->type, 4);
+  //printk("Layer %p %p destroy\n", layer, layer->handler);
 
   while ((child = net_layer_list_head(&layer->children))) {
+    //printk(" cleaning ref to %p %p\n", layer, layer->handler);
     net_layer_unbind(layer, child);
     net_layer_refdec(child);
   }
 
   net_scheduler_from_layer_cancel(sched, layer);
 
+  if (delegate)
+    delegate_vtable->release(delegate, layer);
+
+  layer->delegate = NULL;
+
   handler->destroyed(layer);
 
-  if (handler->use_timer)
-    net_scheduler_timer_release(sched);
+  net_scheduler_timer_release(sched);
 }
 
