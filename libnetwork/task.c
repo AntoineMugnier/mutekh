@@ -24,38 +24,47 @@
 #include <net/layer.h>
 #include <net/scheduler.h>
 
-void net_task_cleanup(struct net_task_s *task)
+void net_task_destroy(struct net_task_s *task)
 {
-  struct net_layer_s *source = task->header.source;
-  struct net_layer_s *target = task->header.target;
+  struct net_layer_s *source = task->source;
+  struct net_layer_s *target = task->target;
 
-  switch (task->header.type) {
+  switch (task->type) {
   case NET_TASK_INBOUND:
-    buffer_refdec(task->inbound.buffer);
+  case NET_TASK_OUTBOUND:
+    if (task->packet.buffer)
+      buffer_refdec(task->packet.buffer);
     break;
 
   default:
     break;
   }
 
-  if (task->header.destroy_func)
-    task->header.destroy_func(&task->header);
-  net_layer_refdec(source);
-  net_layer_refdec(target);
+  task->packet.buffer = (void*)0x55aa55aa;
+  task->target = (void*)0x55aa55aa;
+
+  task->destroy_func(task);
+
+  if (source)
+    net_layer_refdec(source);
+  if (target)
+    net_layer_refdec(target);
 }
 
-void net_task_push(struct net_task_header_s *header,
+void net_task_push(struct net_task_s *task,
                    struct net_layer_s *target,
                    struct net_layer_s *source,
                    enum net_task_type_e type)
 {
-  header->target = net_layer_refinc(target);
-  header->source = net_layer_refinc(source);
-  header->type = type;
+  task->target = net_layer_refinc(target);
+  task->source = net_layer_refinc(source);
+  task->type = type;
 
-  //printk("Task %p push %S\n", header, &header->target->handler->type, 4);
+  assert(task->destroy_func);
 
-  net_scheduler_task_push(target->scheduler, header);
+  //printk("Task %p push %p\n", task, task->target->handler);
+
+  net_scheduler_task_push(target->scheduler, task);
 }
 
 void net_task_inbound_push(struct net_task_s *task,
@@ -66,31 +75,63 @@ void net_task_inbound_push(struct net_task_s *task,
                            const struct net_addr_s *dst_addr,
                            struct buffer_s *buffer)
 {
-  task->inbound.timestamp = timestamp;
-  task->inbound.buffer = buffer_refinc(buffer);
+  task->packet.timestamp = timestamp;
+  task->packet.buffer = buffer_refinc(buffer);
+
+  assert(buffer);
+
   if (src_addr)
-    task->inbound.src_addr = *src_addr;
+    task->packet.src_addr = *src_addr;
   else
-    memset(&task->inbound.src_addr, 0, sizeof(struct net_addr_s));
+    memset(&task->packet.src_addr, 0, sizeof(struct net_addr_s));
+
   if (dst_addr)
-    task->inbound.dst_addr = *dst_addr;
+    task->packet.dst_addr = *dst_addr;
   else
-    memset(&task->inbound.dst_addr, 0, sizeof(struct net_addr_s));
+    memset(&task->packet.dst_addr, 0, sizeof(struct net_addr_s));
 
-  //printk("Task %p forward <- %S\n", task, &source->handler->type, 4);
+  //printk("Task %p forward <- %p\n", task, source->handler);
 
-  net_task_push(&task->header, target, source, NET_TASK_INBOUND);
+  net_task_push(task, target, source, NET_TASK_INBOUND);
 }
 
-void net_task_inbound_forward(struct net_task_s *task,
+void net_task_outbound_push(struct net_task_s *task,
+                           struct net_layer_s *target,
+                           struct net_layer_s *source,
+                           dev_timer_value_t timestamp,
+                           const struct net_addr_s *src_addr,
+                           const struct net_addr_s *dst_addr,
+                           struct buffer_s *buffer)
+{
+  task->packet.timestamp = timestamp;
+  task->packet.buffer = buffer_refinc(buffer);
+
+  assert(buffer);
+
+  if (src_addr)
+    task->packet.src_addr = *src_addr;
+  else
+    memset(&task->packet.src_addr, 0, sizeof(struct net_addr_s));
+
+  if (dst_addr)
+    task->packet.dst_addr = *dst_addr;
+  else
+    memset(&task->packet.dst_addr, 0, sizeof(struct net_addr_s));
+
+  //printk("Task %p forward <- %p\n", task, source->handler);
+
+  net_task_push(task, target, source, NET_TASK_OUTBOUND);
+}
+
+void net_task_packet_forward(struct net_task_s *task,
                               struct net_layer_s *target)
 {
-  struct net_layer_s *old_source = task->header.source;
-  struct net_layer_s *old_target = task->header.target;
+  struct net_layer_s *old_source = task->source;
+  struct net_layer_s *old_target = task->target;
 
-  //printk("Task %p forward <- %S\n", task, &task->inbound.source->handler->type, 4);
+  //printk("Task %p forward <- %p\n", task, old_source->handler);
 
-  net_task_push(&task->header, target, old_target, NET_TASK_INBOUND);
+  net_task_push(task, target, old_source, task->type);
 
   net_layer_refdec(old_source);
   net_layer_refdec(old_target);
@@ -104,7 +145,7 @@ void net_task_timeout_push(struct net_task_s *task,
   task->timeout.deadline = deadline;
   task->timeout.precision = precision;
 
-  net_task_push(&task->header, target, target, NET_TASK_TIMEOUT);
+  net_task_push(task, target, target, NET_TASK_TIMEOUT);
 }
 
 void net_task_notification_push(struct net_task_s *task,
@@ -114,7 +155,7 @@ void net_task_notification_push(struct net_task_s *task,
 {
   task->notification.opcode = opcode;
 
-  net_task_push(&task->header, target, source, NET_TASK_NOTIFICATION);
+  net_task_push(task, target, source, NET_TASK_NOTIFICATION);
 }
 
 void net_task_query_push(struct net_task_s *task,
@@ -124,21 +165,57 @@ void net_task_query_push(struct net_task_s *task,
 {
   task->query.opcode = opcode;
 
-  net_task_push(&task->header, target, source, NET_TASK_QUERY);
+  net_task_push(task, target, source, NET_TASK_QUERY);
 }
 
 void net_task_query_respond_push(struct net_task_s *task,
                                  error_t err)
 {
-  struct net_layer_s *old_source = task->header.source;
-  struct net_layer_s *old_target = task->header.target;
+  struct net_layer_s *old_source = task->source;
+  struct net_layer_s *old_target = task->target;
 
-  assert(task->header.type == NET_TASK_QUERY);
+  assert(task->type == NET_TASK_QUERY);
 
-  task->response.err = err;
+  task->query.err = err;
 
-  net_task_push(&task->header, old_source, old_target, NET_TASK_RESPONSE);
+  net_task_push(task, old_source, old_target, NET_TASK_RESPONSE);
 
   net_layer_refdec(old_source);
   net_layer_refdec(old_target);
 }
+
+void net_task_packet_respond(struct net_task_s *task,
+                             struct net_layer_s *next_hop,
+                             dev_timer_value_t timestamp,
+                             const struct net_addr_s *dst_addr)
+{
+  struct net_layer_s *old_source = task->source;
+  struct net_layer_s *old_target = task->target;
+
+  assert(task->type == NET_TASK_INBOUND);
+
+  task->packet.timestamp = timestamp;
+  task->packet.src_addr = task->packet.dst_addr;
+  if (dst_addr)
+    task->packet.dst_addr = *dst_addr;
+  else
+    memset(&task->packet.dst_addr, 0, sizeof(struct net_addr_s));
+
+  net_task_push(task, next_hop, old_target, NET_TASK_OUTBOUND);
+
+  net_layer_refdec(old_source);
+  net_layer_refdec(old_target);
+}
+
+void net_task_queue_reject_all(net_task_queue_root_t *root)
+{
+  struct net_task_s *task;
+
+  while ((task = net_task_queue_pop(root))) {
+    if (task->type == NET_TASK_QUERY)
+      net_task_query_respond_push(task, -EIO);
+    else
+      net_task_destroy(task);
+  }
+}
+

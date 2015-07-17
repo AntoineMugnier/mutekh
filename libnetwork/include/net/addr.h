@@ -20,9 +20,9 @@
 
 /**
    @file
-   @module{Network stack library}
-   @short Network address structure
- */
+   @module {Network stack library}
+   @short Network address structure definition
+*/
 
 #ifndef NET_ADDR_H
 #define NET_ADDR_H
@@ -37,10 +37,14 @@
 struct net_addr_s
 {
 #if defined(CONFIG_BLE)
-  uint8_t reliable;
-  uint8_t llid;
-  uint16_t att;
+  uint8_t llid : 2;
+  uint8_t encrypted : 1;
+  uint8_t authenticated : 1;
+  uint8_t master : 1;
+  uint8_t unreliable : 1;
+  uint8_t random_addr : 1;
   uint16_t cid;
+  uint16_t att;
 #endif
 #if defined(CONFIG_NET_TCP) || defined(CONFIG_NET_UDP)
   uint16_t port;
@@ -51,10 +55,9 @@ struct net_addr_s
 #if defined(CONFIG_NET_IPV6)
   uint8_t ipv6[16];
 #endif
-#if defined(CONFIG_NET_ETHERNET)
+#if defined(CONFIG_NET_ETHERNET) || defined(CONFIG_BLE)
   uint8_t mac[6];
 #endif
-  
 };
 
 #endif

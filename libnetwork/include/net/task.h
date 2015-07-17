@@ -18,34 +18,17 @@
     Copyright Nicolas Pouillon <nipo@ssji.net> (c) 2015
 */
 
-/**
-   @file
-   @module{Network stack library}
-   @short Network task
-  
-   @section {Description}
-  
-   A network task is a work load to be handled by a given layer.  It may
-   be of various types among:
-   @list
-   @item a task happening after a delay,
-   @item a packet to handle,
-   @item a request to respond to,
-   @item a response to a request,
-   @item a one-way notification,
-   @item a layer-specific task.
-   @end list
-  
-   A task always has a source layer and a target layer.  A layer may
-   send a task to itself.
-  
-   There are various helpers to intialize and send tasks directly.
-  
-   @end section
- */
-
 #ifndef NET_TASK_H
 #define NET_TASK_H
+
+/**
+   @file
+   @module {Network stack library}
+   @short Network task
+
+   @this contains all declarations about @ref {net_task_s} {Network
+   library tasks}.
+ */
 
 #include <hexo/types.h>
 
@@ -67,22 +50,21 @@
 
 struct net_scheduler_s;
 struct net_task_s;
-struct net_task_header_s;
 struct net_layer_s;
 
 /**
    @this is called when a task gets destroyed.
  */
-typedef void net_task_destroy_func_t(
-  struct net_task_header_s *task);
+typedef void net_task_destroy_func_t(void *task);
 
 /**
    @this is a type for tasks.
  */
 enum net_task_type_e
 {
-  NET_TASK_CUSTOM,
+  NET_TASK_INVALID,
   NET_TASK_INBOUND,
+  NET_TASK_OUTBOUND,
   NET_TASK_TIMEOUT,
   NET_TASK_QUERY,
   NET_TASK_RESPONSE,
@@ -90,23 +72,36 @@ enum net_task_type_e
 };
 
 /**
-   @this is a basic task header structure.  Inheriting this structure
-   is mandatory for custom types.
+   @this pushes a task to a given target, for a given type.
+
+   @param task Task to push
+   @param target Target layer, mandatory
+   @param source Source layer, mandatory
+   @param type Task type
+ */
+void net_task_push(struct net_task_s *task,
+                   struct net_layer_s *target,
+                   struct net_layer_s *source,
+                   enum net_task_type_e type);
+
+/**
+   @this destroys a task.  This calls its destroy function.
+ */
+void net_task_destroy(struct net_task_s *task);
+
+/**
+   @this is a network task structure.  Custom query types may inherit
+   this structure.
 
    A destroy function must be set for each task.  When a task is
    cleaned up, its destroy function will be called.
-
-   Basic task types are defined in @ref {net_task_s} and handle all
-   this structure fields.
  */
-struct net_task_header_s
+struct net_task_s
 {
   GCT_CONTAINER_ENTRY(net_task_queue, queue_entry);
 
   /** Destroy function */
   net_task_destroy_func_t *destroy_func;
-  /** Destroy function private data */
-  void *allocator_data;
 
   /** Must be filled, must retain a reference.  This is implicitly
       done by standard functions. */
@@ -117,43 +112,13 @@ struct net_task_header_s
   struct net_layer_s *target;
 
   enum net_task_type_e type;
-};
-
-GCT_CONTAINER_TYPES(net_task_queue, struct net_task_header_s *, queue_entry);
-GCT_CONTAINER_FCNS(net_task_queue, ALWAYS_INLINE, net_task_queue,
-                   init, destroy, pushback, pop, remove);
-
-/**
-   @this pushes a task to a given target, for a given type.
-
-   @param header Task header to push
-   @param target Target layer, mandatory
-   @param source Source layer, mandatory
-   @param type Task type
- */
-void net_task_push(struct net_task_header_s *header,
-                     struct net_layer_s *target,
-                     struct net_layer_s *source,
-                     enum net_task_type_e type);
-
-/**
-   @this destroys a task.  This calls its destroy function.
- */
-void net_task_cleanup(struct net_task_s *task);
-
-/**
-   @this is the structure for standard tasks.
- */
-struct net_task_s
-{
-  struct net_task_header_s header;
 
   union {
     /**
-       Inbound task must have a reference on packet, and a reference on
+       Packet task must have a reference on packet, and a reference on
        source layer.
 
-       Inbound task may be forwarded from layer to layer.  If so,
+       Packet task may be forwarded from layer to layer.  If so,
        reference to source and owner layers must be updated accordingly.
     */
     struct {
@@ -164,7 +129,7 @@ struct net_task_s
 
       /** Must be filled, must retain a reference */
       struct buffer_s *buffer;
-    } inbound;
+    } packet;
 
     /**
        Deadline is relative to scheduler's timer device.
@@ -180,15 +145,18 @@ struct net_task_s
 
     struct {
       uint32_t opcode;
-    } query;
-
-    struct {
       error_t err;
-    } response;
+    } query;
   };
 };
 
-STRUCT_COMPOSE(net_task_s, header);
+GCT_CONTAINER_TYPES(net_task_queue, struct net_task_s *, queue_entry);
+GCT_CONTAINER_FCNS(net_task_queue, ALWAYS_INLINE, net_task_queue,
+                   init, destroy, pushback, pop, remove, head, isempty);
+GCT_CONTAINER_NOLOCK_FCNS(net_task_queue, ALWAYS_INLINE, net_task_queue_nolock,
+                          init, destroy, pushback, pop, remove, head, isempty);
+
+void net_task_queue_reject_all(net_task_queue_root_t *root);
 
 /**
    @this pushes an inbound packet task to a layer.
@@ -204,13 +172,26 @@ void net_task_inbound_push(struct net_task_s *task,
                            struct buffer_s *buffer);
 
 /**
-   Forward an inbound task to another layer without changing timestamp
-   and buffer.
+   @this pushes an outbound packet task to a layer.
+
+   @this sets all structure fields and pushes the task.
+ */
+void net_task_outbound_push(struct net_task_s *task,
+                           struct net_layer_s *target,
+                           struct net_layer_s *source,
+                           dev_timer_value_t timestamp,
+                           const struct net_addr_s *src_addr,
+                           const struct net_addr_s *dst_addr,
+                           struct buffer_s *buffer);
+
+/**
+   Forward a packet task (inbound or outbound) to another layer
+   without changing timestamp and buffer.
 
    Task must not be cleaned up for before calling this function.
 */
-void net_task_inbound_forward(struct net_task_s *task,
-                              struct net_layer_s *target);
+void net_task_packet_forward(struct net_task_s *task,
+                             struct net_layer_s *target);
 
 /**
    @this pushes a timetout task to a layer.  Source layer is same as
@@ -246,5 +227,25 @@ void net_task_query_push(struct net_task_s *task,
    fields.
  */
 void net_task_query_respond_push(struct net_task_s *task, error_t err);
+
+ALWAYS_INLINE
+struct buffer_s *net_task_packet_buffer_steal(struct net_task_s *task,
+                                              size_t begin,
+                                              size_t size)
+{
+  struct buffer_s *ret = task->packet.buffer;
+
+  assert(ret);
+  task->packet.buffer = NULL;
+  ret->begin = begin;
+  ret->end = begin + size;
+
+  return ret;
+}
+
+void net_task_packet_respond(struct net_task_s *task,
+                             struct net_layer_s *next_hop,
+                             dev_timer_value_t timestamp,
+                             const struct net_addr_s dst[static 1]);
 
 #endif

@@ -1,6 +1,90 @@
-
 @moduledef{Network stack library}
- @short Network library
+@short Network stack library
+
+Network library is a framework for designing network stacks.
+It is built around 3 main objects:
+@list
+  @item a set of layers,
+  @item tasks,
+  @item a scheduler.
+@end list
+
+@section {Layers}
+  A network layer is a part of a networking stack.  Depending on
+  actual needs, layer may be statically or dynamically allocated on a
+  per-session basis.
+
+  For instance, in a TCP/IP stack, Ethernet, IP and TCP layers are
+  long-lived, whereas TCP session layer (for a single source/target
+  IP/port tuple) is shorter-lived.
+
+  Layers communicate exclusively through tasks that are executed in a
+  unique scheduler for a given stack.
+
+  Layers are stacked in a tree fashion.  Root is close to the network
+  interfaces, leaves are closer to the application.  A layer has a
+  single parent layer in stack, but may have multiple children layers.
+
+  All layers are refcounted.  Parents hold a refcount on children (and
+  not the other way around).  An interface layer that gets destroyed
+  (because the communication medium disappears) implicitly drops
+  references on children layers which will, in turn, get destroyed.
+
+  Each layer should check for parent validity before sending a task to
+  it.
+
+  Communication at borders of libnetwork (between libnetwork and other
+  modules) is done through a delegate pattern.  Each layer is
+  responsible for declaration of its delegate vtable and API.
+
+  Layers provide a @ref {net_layer_handler_s} {set of entry points}
+  for scheduler to send tasks and update state.  Main entry point for
+  task handling is @ref {net_layer_handler_s::task_handle}
+  {task_handle}.
+@end section
+
+@section {Tasks}
+  A network task is a work load to be handled by a given layer.  It
+  may be of various types among:
+  @list
+    @item a timeout,
+    @item a packet to handle, inbound or outbound,
+    @item a request to respond to,
+    @item a response to a request,
+    @item a one-way notification.
+  @end list
+
+  A task always has a source layer and a target layer.  A layer may
+  send a task to itself.
+
+  Task always take references to source and target headers, therefore,
+  source and target layers of a given task may not disappear.
+
+  Tasks that are not handled yet may be cancelled.
+
+  There are various helpers to intialize and send tasks directly.
+
+  Memory allocation policy for tasks is flexible.  Scheduler contains
+  a slab for allocating basic tasks, but any layer may provide its own
+  allocation policy for its tasks.  Every task must have a @tt destroy
+  function that is called on task completion or cancel.
+@end section
+
+@section {Scheduler}
+  Network scheduler maintains state of tasks.  It has a time source
+  for tracking timeouts of tasks and handles delivery to destination
+  layers.
+
+  Scheduler ensures each layer is executing its @tt task_handle entry
+  point non-concurrently.  This avoids usage for locking in each
+  layer.
+
+  Whether multiple layers may run in parallel is an implementation
+  detail.  Whether layer entry points are called from a thread, a
+  kroutine or other scheduling routines in an implementation detail as
+  well.
+@end section
+
 @end moduledef
 
 @parse{
