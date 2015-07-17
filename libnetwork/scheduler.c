@@ -41,6 +41,9 @@ GCT_CONTAINER_KEY_TYPES(net_timeout_queue, CUSTOM, SCALAR,
 GCT_CONTAINER_KEY_FCNS(net_timeout_queue, ASC, static, net_timeout_queue, net_timeout_queue,
                        init, destroy, pop, head, remove, insert);
 
+GCT_CONTAINER_FCNS(net_scheduler_destroy_listener, ALWAYS_INLINE, net_scheduler_destroy_listener,
+                   init, destroy, pushback, remove, isempty);
+
 static void net_sched_wakeup(struct net_scheduler_s *sched)
 {
   dprintk("Net scheduler wakeup\n");
@@ -78,7 +81,6 @@ static void net_scheduler_timeout_schedule(struct net_scheduler_s *sched)
   if (sched->timer_rq.rq.drvdata)
     DEVICE_OP(&sched->timer, cancel, &sched->timer_rq);
 
-  kroutine_init(&sched->timer_rq.rq.kr, net_scheduler_timeout, KROUTINE_IMMEDIATE);
   sched->timer_rq.deadline = task->timeout.deadline;
   sched->timer_rq.delay = 0;
 
@@ -116,7 +118,7 @@ static bool_t net_scheduler_tasks_handle(struct net_scheduler_s *sched)
   while ((task = net_task_queue_pop(&sched->pending_tasks))) {
     changed = 1;
 
-    dprintk("Sched task %p handling in %S...\n", task, &task->target->handler->type, 4);
+    dprintk("Sched task %p handling in %d...\n", task, &task->target->handler->type);
 
     task->target->handler->task_handle(task->target, task);
   }
@@ -143,10 +145,10 @@ void net_scheduler_cleanup(struct net_scheduler_s *sched)
   CPU_INTERRUPT_RESTORESTATE;
 
   while ((task = net_task_queue_pop(&sched->pending_tasks)))
-    net_task_cleanup(net_task_s_from_header(task));
+    net_task_destroy(net_task_s_from_header(task));
 
   while ((task = net_timeout_queue_pop(&sched->delayed_tasks)))
-    net_task_cleanup(net_task_s_from_header(task));
+    net_task_destroy(net_task_s_from_header(task));
 
   net_task_queue_destroy(&sched->pending_tasks);
   net_timeout_queue_destroy(&sched->delayed_tasks);
@@ -208,6 +210,8 @@ static void scheduler_task_free(
 {
   struct net_scheduler_s *sched = task->header.allocator_data;
 
+  memset(task, 0x55, sizeof(*task));
+
   slab_free(&sched->task_pool, task);
 }
 
@@ -249,6 +253,9 @@ error_t net_scheduler_init(
             scheduler_pool_grow, mem_scope_sys);
 
   sched->timer_rq.rq.drvdata = NULL;
+  kroutine_init(&sched->timer_rq.rq.kr, net_scheduler_timeout, KROUTINE_IMMEDIATE);
+
+  net_scheduler_destroy_listener_init(&sched->destroy_listeners);
 
   device_start(&sched->timer);
 
@@ -280,12 +287,31 @@ error_t net_scheduler_init(
   return err;
 }
 
+void net_scheduler_destroy_listener_register(
+  struct net_scheduler_s *sched,
+  struct net_scheduler_destroy_listener_s *listener,
+  net_scheduler_destroy_listener_func_t *func)
+{
+  listener->func = func;
+  net_scheduler_destroy_listener_pushback(&sched->destroy_listeners,
+                                          listener);
+}
+
+void net_scheduler_destroy_listener_unregister(
+  struct net_scheduler_s *sched,
+  struct net_scheduler_destroy_listener_s *listener)
+{
+  net_scheduler_destroy_listener_remove(&sched->destroy_listeners,
+                                        listener);
+}
+
 void net_scheduler_task_push(
     struct net_scheduler_s *sched,
     struct net_task_header_s *task)
 {
-  dprintk("Sched task %p pushed %d to %S\n", task, task->handler->type,
-          &task->target->handler->type, 4);
+  dprintk("Sched task %p from %d to %d\n", task,
+         &task->source->handler->type,
+         &task->target->handler->type);
 
   if (task->type == NET_TASK_TIMEOUT)
     net_timeout_queue_insert(&sched->delayed_tasks, task);
@@ -307,15 +333,34 @@ void net_scheduler_from_layer_cancel(
   struct net_layer_s *layer)
 {
   GCT_FOREACH(net_timeout_queue, &sched->delayed_tasks, item,
-              if (item->target != layer)
+              if (item->source != layer && item->target != layer)
                 GCT_FOREACH_CONTINUE;
               net_timeout_queue_remove(&sched->delayed_tasks, item);
               );
 
   GCT_FOREACH(net_task_queue, &sched->pending_tasks, item,
-              if (item->target != layer)
+              if (item->source != layer && item->target != layer)
                 GCT_FOREACH_CONTINUE;
               net_task_queue_remove(&sched->pending_tasks, item);
+              );
+}
+
+void net_scheduler_task_cancel(
+  struct net_scheduler_s *sched,
+  struct net_task_header_s *task)
+{
+  GCT_FOREACH(net_timeout_queue, &sched->delayed_tasks, item,
+              if (item != task)
+                GCT_FOREACH_CONTINUE;
+              net_timeout_queue_remove(&sched->delayed_tasks, item);
+              return;
+              );
+
+  GCT_FOREACH(net_task_queue, &sched->pending_tasks, item,
+              if (item != task)
+                GCT_FOREACH_CONTINUE;
+              net_task_queue_remove(&sched->pending_tasks, item);
+              return;
               );
 }
 

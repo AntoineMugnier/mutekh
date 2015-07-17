@@ -24,14 +24,15 @@
 #include <net/layer.h>
 #include <net/scheduler.h>
 
-void net_task_cleanup(struct net_task_s *task)
+void net_task_destroy(struct net_task_s *task)
 {
   struct net_layer_s *source = task->header.source;
   struct net_layer_s *target = task->header.target;
 
   switch (task->header.type) {
   case NET_TASK_INBOUND:
-    buffer_refdec(task->inbound.buffer);
+    if (task->inbound.buffer)
+      buffer_refdec(task->inbound.buffer);
     break;
 
   default:
@@ -53,7 +54,7 @@ void net_task_push(struct net_task_header_s *header,
   header->source = net_layer_refinc(source);
   header->type = type;
 
-  //printk("Task %p push %S\n", header, &header->target->handler->type, 4);
+  //printk("Task %p push %d\n", header, &header->target->handler->type);
 
   net_scheduler_task_push(target->scheduler, header);
 }
@@ -68,16 +69,18 @@ void net_task_inbound_push(struct net_task_s *task,
 {
   task->inbound.timestamp = timestamp;
   task->inbound.buffer = buffer_refinc(buffer);
+
   if (src_addr)
     task->inbound.src_addr = *src_addr;
   else
     memset(&task->inbound.src_addr, 0, sizeof(struct net_addr_s));
+
   if (dst_addr)
     task->inbound.dst_addr = *dst_addr;
   else
     memset(&task->inbound.dst_addr, 0, sizeof(struct net_addr_s));
 
-  //printk("Task %p forward <- %S\n", task, &source->handler->type, 4);
+  //printk("Task %p forward <- %d\n", task, &source->handler->type);
 
   net_task_push(&task->header, target, source, NET_TASK_INBOUND);
 }
@@ -88,7 +91,7 @@ void net_task_inbound_forward(struct net_task_s *task,
   struct net_layer_s *old_source = task->header.source;
   struct net_layer_s *old_target = task->header.target;
 
-  //printk("Task %p forward <- %S\n", task, &task->inbound.source->handler->type, 4);
+  //printk("Task %p forward <- %d\n", task, &task->inbound.source->handler->type);
 
   net_task_push(&task->header, target, old_target, NET_TASK_INBOUND);
 
@@ -138,6 +141,25 @@ void net_task_query_respond_push(struct net_task_s *task,
   task->response.err = err;
 
   net_task_push(&task->header, old_source, old_target, NET_TASK_RESPONSE);
+
+  net_layer_refdec(old_source);
+  net_layer_refdec(old_target);
+}
+
+void net_task_inbound_respond(struct net_task_s *task,
+                              dev_timer_value_t timestamp,
+                              const struct net_addr_s dst[static 1])
+{
+  struct net_layer_s *old_source = task->header.source;
+  struct net_layer_s *old_target = task->header.target;
+
+  assert(task->header.type == NET_TASK_INBOUND);
+
+  task->inbound.timestamp = timestamp;
+  task->inbound.src_addr = task->inbound.dst_addr;
+  task->inbound.dst_addr = *dst;
+
+  net_task_push(&task->header, old_source, old_target, NET_TASK_INBOUND);
 
   net_layer_refdec(old_source);
   net_layer_refdec(old_target);

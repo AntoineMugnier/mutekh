@@ -73,16 +73,6 @@
 
 #include "scheduler.h"
 
-/**
-   @this makes a unique layer ID from four characters.
-
-   Example:
-   @code
-     NET_LAYER_TYPE('I','P','v','4')
-   @end code
- */
-#define NET_LAYER_TYPE(d, c, b, a) (((a) << 24) | ((b) << 16) | ((c) << 8) | (d))
-
 struct net_task_header_s;
 struct net_layer_s;
 
