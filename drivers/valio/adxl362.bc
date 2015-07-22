@@ -419,7 +419,7 @@ void adxl362_run(struct device_s *dev)
       lock_release_irq2(&dev->lock, &pv->irq_save);
       dev_spi_rq_start(srq);
 
-      if (!kroutine_trigger(&srq->kr, 0, KROUTINE_IMMEDIATE))
+      if (!kroutine_trigger(&srq->base.kr, 0, KROUTINE_IMMEDIATE))
         return;
 
       lock_spin_irq2(&dev->lock, &pv->irq_save);
@@ -528,8 +528,9 @@ static DEV_IRQ_SRC_PROCESS(adxl362_irq_source_process)
 
 static KROUTINE_EXEC(spi_rq_done)
 {
-  struct dev_spi_ctrl_request_s *srq = KROUTINE_CONTAINER(kr, *srq, kr);
-  struct device_s *dev = srq->pvdata;
+  struct dev_request_s *grq = KROUTINE_CONTAINER(kr, *grq, kr);
+  struct dev_spi_ctrl_request_s *srq = dev_spi_ctrl_request_s_cast(grq);
+  struct device_s *dev = grq->pvdata;
   struct adxl362_private_s *pv = dev->drv_pv;
 
   lock_spin_irq2(&dev->lock, &pv->irq_save);
@@ -581,7 +582,7 @@ static DEV_INIT(adxl362_init)
   srq->config.word_width = 8;
   srq->config.bit_order = DEV_SPI_MSB_FIRST;
   srq->cs_polarity = DEV_SPI_CS_ACTIVE_LOW;
-  srq->pvdata = dev;
+  srq->base.pvdata = dev;
 
   /* init GPIO stuff */
 
@@ -606,7 +607,7 @@ static DEV_INIT(adxl362_init)
 
   pv->state = ADXL362_STATE_DOWN;
 
-  kroutine_init(&srq->kr, &spi_rq_done, KROUTINE_TRIGGER);
+  kroutine_init(&srq->base.kr, &spi_rq_done, KROUTINE_TRIGGER);
   bc_init(&srq->vm, spi_bytecode, sizeof(spi_bytecode), 1, /* R_CTX_PV */ pv);
 
   /* Disable bytecode trace */
