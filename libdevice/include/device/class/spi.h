@@ -56,7 +56,7 @@ struct device_spi_ctrl_s;
 struct driver_spi_ctrl_s;
 struct dev_spi_ctrl_transfer_s;
 struct dev_spi_ctrl_config_s;
-struct dev_spi_ctrl_request_s;
+struct dev_spi_ctrl_rq_s;
 struct dev_spi_ctrl_queue_s;
 
 /**
@@ -269,7 +269,7 @@ DRIVER_CLASS_TYPES(spi_ctrl,
 /***************************************** request */
 
 /** @This structure describes actions to perform on a SPI slave device. */
-struct dev_spi_ctrl_request_s
+struct dev_spi_ctrl_rq_s
 {
   struct dev_request_s base;
 
@@ -330,7 +330,7 @@ struct dev_spi_ctrl_request_s
   bool_t                  priority:1;
 };
 
-STRUCT_INHERIT(dev_spi_ctrl_request_s, dev_request_s, base);
+STRUCT_INHERIT(dev_spi_ctrl_rq_s, dev_request_s, base);
 
 struct dev_spi_ctrl_queue_s
 {
@@ -355,8 +355,8 @@ struct dev_spi_ctrl_queue_s
   /** This keep track of the last used configuration. */
   struct dev_spi_ctrl_config_s *config;
 
-  struct dev_spi_ctrl_request_s *current;
-  struct dev_spi_ctrl_request_s *timeout;
+  struct dev_spi_ctrl_rq_s *current;
+  struct dev_spi_ctrl_rq_s *timeout;
   dev_request_queue_root_t      queue;
 
   lock_irq_t                    lock;
@@ -396,28 +396,28 @@ void dev_spi_queue_cleanup(struct dev_spi_ctrl_queue_s *q);
    @param accessor pointer to controller device accessor
    @param ep pointer to the SPI endpoint.
 */
-void dev_spi_rq_start(struct dev_spi_ctrl_request_s *rq);
+void dev_spi_rq_start(struct dev_spi_ctrl_rq_s *rq);
 
 /** This helper function initializes a SPI request structure for use
     in a SPI slave device driver. It is usually called from the slave
     driver initialization function to initialize a request stored in
     the driver private context.
 
-    The @ref dev_spi_ctrl_request_s::accessor accessor is initialized
+    The @ref dev_spi_ctrl_rq_s::accessor accessor is initialized
     using the device pointed to by the @tt{'spi'} device resource
     entry of the slave.
 
     If a @tt{'spi-cs-id'} entry is present in the device tree, the request
     is configured to use the chip select feature of the SPI
-    controller.  In the other case, the @ref dev_spi_ctrl_request_s::cs_gpio
+    controller.  In the other case, the @ref dev_spi_ctrl_rq_s::cs_gpio
     field can still be used to drive the chip select using a GPIO pin.
 */
 error_t dev_spi_request_init(struct device_s *slave,
-                             struct dev_spi_ctrl_request_s *rq);
+                             struct dev_spi_ctrl_rq_s *rq);
 
 /** This helper function release the device accessors associated with
     the SPI slave request. @see dev_spi_request_init */
-void dev_spi_request_cleanup(struct dev_spi_ctrl_request_s *rq);
+void dev_spi_request_cleanup(struct dev_spi_ctrl_rq_s *rq);
 
 /** This function cancels the delay of the current or next @ref
     #BC_SPI_YIELDC instruction in the bytecode. If this function is
@@ -428,7 +428,7 @@ void dev_spi_request_cleanup(struct dev_spi_ctrl_request_s *rq);
     restarted. This returns an error if the request is not currently
     running.
  */
-error_t device_spi_request_wakeup(struct dev_spi_ctrl_request_s *rq);
+error_t device_spi_request_wakeup(struct dev_spi_ctrl_rq_s *rq);
 
 #endif
 

@@ -75,7 +75,7 @@ struct adxl362_private_s
   enum adxl362_state_s state:8;
 
   struct dev_irq_src_s src_ep;
-  struct dev_spi_ctrl_request_s spi_rq;
+  struct dev_spi_ctrl_rq_s spi_rq;
 
   /* queue for requests */
   dev_request_queue_root_t queue;
@@ -298,7 +298,7 @@ static inline void adxl362_end_rq(struct device_s *dev)
 static bool_t adxl362_process(struct device_s *dev)
 {
   struct adxl362_private_s *pv = dev->drv_pv;
-  struct dev_spi_ctrl_request_s *srq = &pv->spi_rq;
+  struct dev_spi_ctrl_rq_s *srq = &pv->spi_rq;
 
   struct dev_valio_rq_s *rq = dev_valio_rq_s_cast(dev_request_queue_head(&pv->queue));
   
@@ -403,7 +403,7 @@ static bool_t adxl362_process(struct device_s *dev)
 void adxl362_run(struct device_s *dev)
 {
   struct adxl362_private_s *pv = dev->drv_pv;
-  struct dev_spi_ctrl_request_s *srq = &pv->spi_rq;
+  struct dev_spi_ctrl_rq_s *srq = &pv->spi_rq;
 
   while (1)
     {
@@ -529,7 +529,7 @@ static DEV_IRQ_SRC_PROCESS(adxl362_irq_source_process)
 static KROUTINE_EXEC(spi_rq_done)
 {
   struct dev_request_s *grq = KROUTINE_CONTAINER(kr, *grq, kr);
-  struct dev_spi_ctrl_request_s *srq = dev_spi_ctrl_request_s_cast(grq);
+  struct dev_spi_ctrl_rq_s *srq = dev_spi_ctrl_rq_s_cast(grq);
   struct device_s *dev = grq->pvdata;
   struct adxl362_private_s *pv = dev->drv_pv;
 
@@ -570,7 +570,7 @@ static DEV_INIT(adxl362_init)
 
   dev->drv_pv = pv;
 
-  struct dev_spi_ctrl_request_s *srq = &pv->spi_rq;
+  struct dev_spi_ctrl_rq_s *srq = &pv->spi_rq;
 
   if (dev_spi_request_init(dev, srq))
     goto err_mem;
