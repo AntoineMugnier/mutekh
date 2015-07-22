@@ -261,6 +261,7 @@ static DEV_CLEANUP(pca9557_cleanup);
 #define pca9557_set_mode   (dev_gpio_set_mode_t*)dev_driver_notsup_fcn
 #define pca9557_set_output (dev_gpio_set_output_t*)dev_driver_notsup_fcn
 #define pca9557_get_input  (dev_gpio_get_input_t*)dev_driver_notsup_fcn
+#define pca9557_input_irq_range  (dev_gpio_input_irq_range_t*)dev_driver_notsup_fcn
 #define pca9557_use dev_use_generic
 
 DRIVER_DECLARE(pca9557_drv, "pca9557", pca9557,
