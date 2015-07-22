@@ -85,7 +85,7 @@ static KROUTINE_EXEC(pca9557_i2c_write_done)
     struct pca9557_private_s *pv
         = KROUTINE_CONTAINER(kr, *pv, i2c_req.base.kr);
     struct dev_gpio_rq_s *req
-        = dev_gpio_rq_s_from_base(
+        = dev_gpio_rq_s_cast(
             dev_request_queue_head(&pv->pending));
     struct device_s *dev = pv->i2c_req.base.pvdata;
 
@@ -102,7 +102,7 @@ static KROUTINE_EXEC(pca9557_i2c_read_done)
     struct pca9557_private_s *pv
         = KROUTINE_CONTAINER(kr, *pv, i2c_req.base.kr);
     struct dev_gpio_rq_s *req
-        = dev_gpio_rq_s_from_base(
+        = dev_gpio_rq_s_cast(
             dev_request_queue_head(&pv->pending));
     struct device_s *dev = pv->i2c_req.base.pvdata;
 
@@ -227,7 +227,7 @@ static void pca9557_req_next(struct device_s *dev)
 {
     struct pca9557_private_s *pv = dev->drv_pv;
     struct dev_gpio_rq_s *req
-        = dev_gpio_rq_s_from_base(
+        = dev_gpio_rq_s_cast(
             dev_request_queue_head(&pv->pending));
 
     if (req)

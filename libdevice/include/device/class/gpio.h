@@ -273,7 +273,7 @@ struct dev_gpio_rq_s
   };
 };
 
-STRUCT_COMPOSE(dev_gpio_rq_s, base);
+STRUCT_INHERIT(dev_gpio_rq_s, dev_request_s, base);
 
 /** Helper that implements asynchronous f_request from other
     synchronous primitives.
