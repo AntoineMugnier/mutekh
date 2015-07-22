@@ -77,7 +77,7 @@ STRUCT_COMPOSE(dev_request_s, kr);
 
 GCT_CONTAINER_TYPES(dev_request_queue, struct dev_request_s *, queue_entry);
 GCT_CONTAINER_FCNS(dev_request_queue, inline, dev_request_queue,
-                   init, destroy, pushback, pop, remove, isempty, head, next);
+                   init, destroy, push, pushback, pop, remove, isempty, head, next);
 
 GCT_CONTAINER_TYPES(dev_request_pqueue, struct dev_request_s *, pqueue_entry);
 GCT_CONTAINER_FCNS(dev_request_pqueue, inline, dev_request_pqueue,

@@ -32,6 +32,7 @@
 #include <hexo/types.h>
 #include <hexo/error.h>
 
+#include <device/request.h>
 #include <device/driver.h>
 #include <mutek/kroutine.h>
 
@@ -267,17 +268,10 @@ DRIVER_CLASS_TYPES(spi_ctrl,
 
 /***************************************** request */
 
-#define GCT_CONTAINER_ALGO_dev_spi_ctrl_queue CLIST
-
 /** @This structure describes actions to perform on a SPI slave device. */
 struct dev_spi_ctrl_request_s
 {
-  /** The @ref kroutine_exec function is called on this kroutine when
-      the bytecode execution ends. */
-  struct kroutine_s        kr;
-
-  /** used by driver to enqueue requests */
-  GCT_CONTAINER_ENTRY(dev_spi_ctrl_queue, queue_entry);
+  struct dev_request_s base;
 
   /** bytecode virtual machine context */
   struct bc_context_s      vm;
@@ -293,9 +287,6 @@ struct dev_spi_ctrl_request_s
 
   struct device_spi_ctrl_s accessor;
   struct dev_spi_ctrl_queue_s *queue;
-
-  /** Callback private data */
-  void                     *pvdata;
 
 #ifdef CONFIG_DEVICE_SPI_REQUEST_GPIO
   /** If this device accessor refers to a gpio device, it will be used
@@ -339,9 +330,7 @@ struct dev_spi_ctrl_request_s
   bool_t                  priority:1;
 };
 
-GCT_CONTAINER_TYPES(dev_spi_ctrl_queue, struct dev_spi_ctrl_request_s *, queue_entry);
-GCT_CONTAINER_FCNS(dev_spi_ctrl_queue, inline, dev_spi_ctrl_queue,
-                   init, destroy, remove, push, pushback, pop, isempty);
+STRUCT_INHERIT(dev_spi_ctrl_request_s, dev_request_s, base);
 
 struct dev_spi_ctrl_queue_s
 {
@@ -368,7 +357,7 @@ struct dev_spi_ctrl_queue_s
 
   struct dev_spi_ctrl_request_s *current;
   struct dev_spi_ctrl_request_s *timeout;
-  dev_spi_ctrl_queue_root_t     queue;
+  dev_request_queue_root_t      queue;
 
   lock_irq_t                    lock;
   bool_t                        running;
