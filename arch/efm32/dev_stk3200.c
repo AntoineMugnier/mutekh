@@ -21,6 +21,7 @@
 */
 
 #include <device/resources.h>
+#include <device/irq.h>
 #include <device/class/iomux.h>
 #include <device/class/dma.h>
 #include <device/class/clock.h>
