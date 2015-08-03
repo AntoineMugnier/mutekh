@@ -1948,7 +1948,7 @@ sub read_build_config
 		    $p_ =~ s/\*/[\\w\\d]\+/g;
 		    $p_ =~ s/\?/[\\w\\d]/g;
 
-		    foreach (split(/:/, $section)) {
+		    foreach (split(/:/, $$section)) {
 			if ( $_ =~ /^$p_$/ ) {
 			    $i = 0;
 			    $used_build{$_} = 1;
@@ -2027,8 +2027,8 @@ sub read_build_config
 	    next;
 	}
 
-	if ($line =~ /^\s* %inherit \s+ (.*)$/x) {
-            $section .= ":$1";
+	if ($line =~ /^\s* %inherit \s+ (.*?) \s*$/x) {
+            $$section .= ":$1";
 	    next;
 	}
 
@@ -2662,7 +2662,7 @@ Usage: config.pl [options]
               "See: http://www.mutekh.org/trac/mutekh/wiki/BuildingExamples");
     }
 
-    read_build_config( $_, $param_h{build} )
+    read_build_config( $_, \$param_h{build} )
 	foreach (split(/:/, $param_h{input}));
 
     debug(1, "check build configuration files");
