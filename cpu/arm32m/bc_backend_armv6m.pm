@@ -3,7 +3,7 @@ package bc_backend_armv6m;
 
 use strict;
 
-my @reg = ( 'r1', 'r2', 'r3', 'r5', 'r6', 'r7' );
+our @reg = ( 'r1', 'r2', 'r3', 'r5', 'r6', 'r7' );
 
 sub out_begin {
     my ( $b ) = @_;
@@ -67,7 +67,7 @@ sub out_custom {
            # resume address
 	   "    adr r1, 2f\n".
            "    str r1, [r4, #".(16 * 4)."]\n".
-           "    b Lbytecode_end\n".
+           "    pop    {r4, r5, r6, r7, pc}\n".
 	   "    .balign 4\n".
 	   "2:\n";
 }
@@ -87,14 +87,14 @@ sub out_custom_cond {
            # resume address
 	   "    adr r1, 2f\n".
            "    str r1, [r4, #".(16 * 4)."]\n".
-           "    b Lbytecode_end\n".
+           "    pop    {r4, r5, r6, r7, pc}\n".
 	   "    .balign 4\n".
 	   "2:\n";
 }
 
 sub out_end {
     return "    movs r0, #0\n".
-           "    b Lbytecode_end\n".
+           "    pop    {r4, r5, r6, r7, pc}\n".
 	   "    .ltorg\n";
 }
 
@@ -563,8 +563,7 @@ sub out_lde {
 	} else {
 	    print STDERR "$thisop->{line}: 64 bit store truncated to 32 bits.\n";
 	    $r = "    movs r0, #0\n".
-		 "    ldr $reg[$wo], [$reg[$wi], #$x]\n".
-		 "    ldr r0, [$reg[$wi], #$x]\n";
+		 "    ldr $reg[$wo], [$reg[$wi], #$x]\n";
 	}
     }
     return $r;

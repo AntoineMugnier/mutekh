@@ -34,12 +34,16 @@ endif
 
 ifeq ($(CONFIG_CPU_ARM32M_ARCH_VERSION), 6)
 LIBGCC_DIR += /v6m/thumb
-endif
-ifeq ($(CONFIG_CPU_ARM32M_ARCH_VERSION), 7)
-LIBGCC_DIR += /v7m/thumb
+  ifeq ($(CONFIG_MUTEK_BYTECODE_NATIVE), defined)
+  BCFLAGS+= -b armv6m
+  endif
 endif
 
-ifeq ($(CONFIG_MUTEK_BYTECODE_NATIVE), defined)
-BCFLAGS+= -b armv6m
+ifeq ($(CONFIG_CPU_ARM32M_ARCH_VERSION), 7)
+LIBGCC_DIR += /v7m/thumb
+  ifeq ($(CONFIG_MUTEK_BYTECODE_NATIVE), defined)
+  BCFLAGS+= -b armv7m
+  endif
 endif
+
 
