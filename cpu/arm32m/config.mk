@@ -39,3 +39,7 @@ ifeq ($(CONFIG_CPU_ARM32M_ARCH_VERSION), 7)
 LIBGCC_DIR += /v7m/thumb
 endif
 
+ifeq ($(CONFIG_MUTEK_BYTECODE_NATIVE), defined)
+BCFLAGS+= -b armv6m
+endif
+

@@ -21,13 +21,192 @@
 */
 
 /**
- * @file
- * @module{Devices support library}
- * @short SPI controller driver API
- */
+   @file
+   @module{Devices support library}
+   @short SPI controller driver API
+
+   @section {SPI request bytecode instructions}
+   @table 3
+    @item instruction              @item operands      @item opcode
+
+    @item generic instructions     @item               @item @tt{0--- ---- ---- ----}
+
+    @item spi_delay                @item r             @item @tt{1000 0011 10-- rrrr}
+    @item spi_nodelay              @item               @item @tt{1000 0011 00-- ----}
+
+    @item spi_yield                @item               @item @tt{1000 0000 001- ----}
+    @item spi_yield_delay          @item r             @item @tt{1000 0000 101- rrrr}
+    @item spi_yieldc               @item               @item @tt{1000 0000 000- ----}
+    @item spi_yieldc_delay         @item r             @item @tt{1000 0000 100- rrrr}
+
+    @item spi_wait                 @item cs            @item @tt{1000 0010 00cc ----}
+    @item spi_wait_delay           @item r, cs         @item @tt{1000 0010 10cc rrrr}
+
+    @item spi_setcs                @item cs            @item @tt{1000 0010 01cc ----}
+
+    @item spi_width                @item w, o          @item @tt{1000 0100 00ow wwww}
+    @item spi_brate                @item r             @item @tt{1000 0100 10-- rrrr}
+
+    @item spi_swp                  @item r, r          @item @tt{1000 1000 rrrr rrrr}
+    @item spi_swpl                 @item r, r, l       @item @tt{1000 1lll rrrr rrrr}
+
+    @item spi_pad                  @item r             @item @tt{1001 0000 ---- rrrr}
+
+    @item spi_rdm[8,16,32]         @item ra, r         @item @tt{1001 01ss aaaa rrrr}
+    @item spi_wrm[8,16,32]         @item ra, r         @item @tt{1001 10ss aaaa rrrr}
+    @item spi_swpm[8,16,32]        @item ra, r         @item @tt{1001 11ss aaaa rrrr}
+
+    @item spi_gpioset              @item i, r          @item @tt{1010 iiii iiii rrrr}
+    @item spi_gpioget              @item i, r          @item @tt{1011 iiii iiii rrrr}
+    @item spi_gpiomode             @item i, r          @item @tt{1100 iiii iiii mmmm}
+   @end table
+
+   @section {spi_delay}
+   This instruction setup a delay starting when the instruction is
+   executed. The execution of the bytecode will not be suspended. When
+   a @xref {spi_yield} or @xref {spi_wait} instruction is
+   encountered, the execution is suspended if the delay has not
+   elapsed at that time. The @ref #CONFIG_DEVICE_SPI_REQUEST_TIMER
+   must be defined in order to use this instruction.
+
+   The delay given in the register is expressed timer unit.
+   @end section
+
+   @section {spi_nodelay}
+   This instruction reset the current delay so that the
+   @xref {spi_yield} instruction will not suspend the execution of the
+   bytecode if there are no other request to process.
+   @end section
+
+   @section {spi_yield}
+   This instruction allows other requests targeting slave on the same
+   SPI bus to be processed. The chip select will be deasserted in order
+   to address other devices on the same SPI bus.
+
+   If a @xref {spi_delay} instruction has been executed previously,
+   the bytecode execution will not resume until the delay has elapsed.
+   @end section
+
+   @section {spi_yieldc}
+   This works like @xref {spi_yield} but the delay can be canceled by
+   @ref device_spi_request_wakeup. When the delay is canceled, the
+   next instruction is skipped.
+   @end section
+
+   @section {spi_yield_delay}
+   This instruction acts as @xref {spi_delay} followed by @xref {spi_yield}.
+   @end section
+
+   @section {spi_yieldc_delay}
+   This works like @xref {spi_yield_delay} but the delay can be
+   canceled by @ref device_spi_request_wakeup.
+   @end section
+
+   @section {spi_wait}
+   This instruction instructs the controller to wait before resuming
+   execution of the bytecode. No other request can be serviced on the
+   same bus during the delay. Use @xref {spi_yield} instead if access
+   of the bus by other devices is allowed.
+
+   A previous @xref {spi_delay} instruction must be used to setup the delay.
+
+   The chip select policy to apply during the delay must be specified
+   by using a value defined in @ref dev_spi_cs_policy_e.
+   @end section
+
+   @section {spi_wait_delay}
+   This instruction acts as @xref {spi_wait_delay} followed by @xref {spi_wait}.
+   @end section
+
+   @section {spi_setcs}
+   This instruction set the current chip select policy.
+   Some controllers may not be able to support all chip select
+   policies.
+   @end section
+
+   @section {spi_width}
+   This instruction set the SPI word width in bits and the bit
+   order. The width value is a constant between 1 and 32. The order is
+   MSB first when @tt order is 1.
+   @end section
+
+   @section {spi_brate}
+   This instruction sets the bit transfer rate. The register must
+   contain the new bitrate value in bits per second. The old value is
+   stored in the register.
+   @end section
+
+   @section {spi_swp}
+   This instruction transfers a single word on the SPI bus. The word
+   value of the @tt wr register is transmitted. The @tt rd register is
+   used to store the received word value, unless @tt rd is 15.
+   @end section
+
+   @section {spi_swpl}
+   This instruction transfers up to 8 words on the SPI bus. Word
+   values are loaded and stored in contiguous registers. The word
+   values of the registers starting at @tt wr are transmitted. The
+   registers starting at @tt rd are used to store the received word
+   values.
+
+   If the index of the last register to transmit is greater than 14,
+   the content of the register 14 is used as padding value for all
+   transmitted words. If the index of the last destination register is
+   greater than 14, incoming data are discarded and no register is
+   modified.
+   @end section
+
+   @section {spi_gpioset}
+   This instruction sets the value of a gpio pin. The @ref
+   #CONFIG_DEVICE_SPI_REQUEST_GPIO token must be defined.
+   @end section
+
+   @section {spi_gpioget}
+   This instruction gets the value of a gpio pin.
+   @end section
+
+   @section {spi_gpiomode}
+   This instruction mode the value of a gpio pin.
+   @end section
+
+   @section {spi_pad}
+   This instruction transfers multiple words on the SPI bus. The
+   number of SPI words to transfer is given in the @tt rcnt
+   register. The value of the r14 register is used as the padding
+   write value.
+   @end section
+
+   @section {spi_rdm8, spi_rdm16, spi_rdm32}
+   This instruction reads multiple SPI words and store them in a
+   buffer of byte values. The value of the r14 register is used as
+   the padding write value.
+   @end section
+
+   @section {spi_wrm8, spi_wrm16, spi_wrm32}
+   This instruction writes multiple SPI words from a buffer of
+   bytes. Input values are discarded.
+   @end section
+
+   @section {spi_swpm8, spi_swpm16, spi_swpm32}
+   This instruction reads and writes multiple SPI words using two
+   buffer of bytes. The address of the read buffer is given by the
+   value of the @tt raddr register and the address of the write buffer
+   is given by the value of the neighbor register (@tt raddr ^ 1).
+   @end section
+
+   @end section
+*/
 
 #ifndef __DEVICE_SPI_H__
 #define __DEVICE_SPI_H__
+
+/* for use from spi bytecode */
+#define DEV_SPI_CS_TRANSFER_ 0
+#define DEV_SPI_CS_ASSERT_ 1
+#define DEV_SPI_CS_DEASSERT_ 2
+#define DEV_SPI_CS_RELEASE_ 3
+
+#ifndef __MUTEK_ASM__
 
 #include <hexo/types.h>
 #include <hexo/error.h>
@@ -58,10 +237,6 @@ struct dev_spi_ctrl_transfer_s;
 struct dev_spi_ctrl_config_s;
 struct dev_spi_ctrl_rq_s;
 struct dev_spi_ctrl_queue_s;
-
-/**
-   @file
-*/
 
 /***************************************** config */
 
@@ -97,17 +272,17 @@ enum dev_spi_cs_policy_e
       deasserted at the end of the transfer. Some buggy controllers
       are not able to hold the chip select between two words of the
       same transfer. */
-  DEV_SPI_CS_TRANSFER  = 0,
+  DEV_SPI_CS_TRANSFER  = DEV_SPI_CS_TRANSFER_,
   /** The chip select remains asserted. Not all controller support
       asserting the chip select when there is no ongoing transfer. An
       error will be reported in this case. */
-  DEV_SPI_CS_ASSERT    = 1,
+  DEV_SPI_CS_ASSERT    = DEV_SPI_CS_ASSERT_,
   /** The chip select is deasserted. Not all controller support
       deasserting the chip select during a transfer. An
       error will be reported in this case. */
-  DEV_SPI_CS_DEASSERT  = 2,
+  DEV_SPI_CS_DEASSERT  = DEV_SPI_CS_DEASSERT_,
   /** The chip select pin is not used/driven. */
-  DEV_SPI_CS_RELEASE   = 3,
+  DEV_SPI_CS_RELEASE   = DEV_SPI_CS_RELEASE_,
 };
 
 struct dev_spi_ctrl_config_s
@@ -296,7 +471,7 @@ struct dev_spi_ctrl_rq_s
   struct device_gpio_s    gpio;
 
   /** If the @ref gpio device accessor is valid, these tables give the
-      index of gpio pin to use when a @tt BC_SPI_GPIO* instruction is
+      index of gpio pin to use when a @tt spi_gpio* instruction is
       encountered. If the @ref cs_gpio field is set, the first entry
       of the table is used to drive the chip select signal. */
   const gpio_id_t         *gpio_map;
@@ -419,8 +594,8 @@ error_t dev_spi_request_init(struct device_s *slave,
     the SPI slave request. @see dev_spi_request_init */
 void dev_spi_request_cleanup(struct dev_spi_ctrl_rq_s *rq);
 
-/** This function cancels the delay of the current or next @ref
-    #BC_SPI_YIELDC instruction in the bytecode. If this function is
+/** This function cancels the delay of the current or next @xref
+    {spi_yieldc} instruction in the bytecode. If this function is
     called before the next cancelable yield instruction, the
     instruction will be skipped and no yield will be performed.
 
@@ -430,255 +605,9 @@ void dev_spi_request_cleanup(struct dev_spi_ctrl_rq_s *rq);
  */
 error_t device_spi_request_wakeup(struct dev_spi_ctrl_rq_s *rq);
 
-#endif
-
-/*************************************************************** SPI bytecode */
-
-#ifdef CONFIG_DEVICE_SPI_REQUEST
-
-/*
-   @section {SPI request bytecode instructions}
-   @code R
-    instruction         params        opcode                  format
- -------------------------------------------------------------------
-
-    generic instructions              0--- ---- ---- ----
-
-    delay               r             1000 0011 10-- rrrr
-    nodelay                           1000 0011 00-- ----
-
-    yield                             1000 0000 001- ----
-    yield_delay         r             1000 0000 101- rrrr
-    yieldc                            1000 0000 000- ----
-    yieldc_delay        r             1000 0000 100- rrrr
-
-    wait                cs            1000 0010 00cc ----
-    wait_delay          r, cs         1000 0010 10cc rrrr
-
-    setcs               cs            1000 0010 01cc ----
-
-    width               w, o          1000 0100 00ow wwww
-    brate               r             1000 0100 10-- rrrr
-
-    swp                 r, r          1000 1000 rrrr rrrr
-    swpl                r, r, l       1000 1lll rrrr rrrr
-
-    pad                 r             1001 0000 ---- rrrr
-
-    rdm[8,16,32]        ra, r         1001 01ss aaaa rrrr
-    wrm[8,16,32]        ra, r         1001 10ss aaaa rrrr
-    swpm[8,16,32]       ra, r         1001 11ss aaaa rrrr
-
-    gpioset             i, r          1010 iiii iiii rrrr
-    gpioget             i, r          1011 iiii iiii rrrr
-    gpiomode            i, r          1100 iiii iiii mmmm
-
-   @end code
-   @end section
-*/
-
-#ifdef CONFIG_DEVICE_SPI_REQUEST_TIMER
-
-/**
-   This instruction setup a delay starting when the instruction is
-   executed. The execution of the bytecode will not be suspended. When
-   a @ref #BC_SPI_YIELD or @ref #BC_SPI_WAIT instruction is
-   encountered, the execution is suspended if the delay has not
-   elapsed at that time. The @ref #CONFIG_DEVICE_SPI_REQUEST_TIMER
-   must be defined in order to use this instruction.
-
-   The delay given in the register is expressed timer unit.
- */
-#define BC_SPI_DELAY(r) BC_CUSTOM(0x0380 | (r & 0xf))
-
-/**
-   This instruction reset the current delay so that the @ref
-   #BC_SPI_YIELD instruction will not suspend the execution of the
-   bytecode if there are no other request to process.
- */
-#define BC_SPI_NODELAY() BC_CUSTOM(0x0300)
-
-#endif
-
-/**
-   This instruction allows other requests targeting slave on the same
-   SPI bus to be processed. The chip select will be deasserted in order
-   to address other devices on the same SPI bus.
-
-   If a @ref #BC_SPI_DELAY instruction has been executed previously,
-   the bytecode execution will not resume until the delay has elapsed.
- */
-#define BC_SPI_YIELD() BC_CUSTOM(0x0020)
-
-#ifdef CONFIG_DEVICE_SPI_REQUEST_TIMER
-
-/**
-   This works like @ref #BC_SPI_YIELD but the delay can be canceled by
-   @ref device_spi_request_wakeup. When the delay is canceled, the
-   next instruction is skipped.
- */
-#define BC_SPI_YIELDC() BC_CUSTOM(0x0000)
-
-/**
-   This instruction acts as @ref #BC_SPI_DELAY followed by @ref #BC_SPI_YIELD.
- */
-#define BC_SPI_YIELD_DELAY(r)  BC_CUSTOM(0x00a0 | (r & 0xf))
-
-/**
-   This works like @ref #BC_SPI_YIELD_DELAY but the delay can be
-   canceled by @ref device_spi_request_wakeup.
- */
-#define BC_SPI_YIELDC_DELAY(r)  BC_CUSTOM(0x0080 | (r & 0xf))
-
-/**
-   This instruction instructs the controller to wait before resuming
-   execution of the bytecode. No other request can be serviced on the
-   same bus during the delay. Use @ref #BC_SPI_YIELD instead if access
-   of the bus by other devices is allowed.
-
-   A previous @ref #BC_SPI_DELAY instruction must be used to setup the delay.
-
-   The chip select policy to apply during the delay must be specified
-   by using a value defined in @ref dev_spi_cs_policy_e.
- */
-#define BC_SPI_WAIT(cs) BC_CUSTOM(0x0200 | ((cs & 3) << 4))
-
-/**
-   This instruction acts as @ref #BC_SPI_WAIT_DELAY followed by @ref #BC_SPI_WAIT.
- */
-#define BC_SPI_WAIT_DELAY(r, cs) BC_CUSTOM(0x0280 | (r & 0xf) | ((cs & 3) << 4))
-
-#endif
-
-/**
-   This instruction set the current chip select policy.
-
-   Some controllers may not be able to support all chip select
-   policies.
- */
-#define BC_SPI_SETCS(cs) BC_CUSTOM(0x0240 | ((cs & 3) << 4))
-
-/**
-   This instruction set the SPI word width in bits and the bit
-   order. The width value is a constant between 1 and 32. The order is
-   MSB first when @tt order is 1.
- */
-#define BC_SPI_WIDTH(width, order) BC_CUSTOM(0x0400 | ((order & 1) << 5) (width & 0x1f))
-
-/**
-   This instruction sets the bit transfer rate. The register must
-   contain the new bitrate value in bits per second. The old value is
-   stored in the register.
- */
-#define BC_SPI_BRATE(r) BC_CUSTOM(0x0480 | (w & 0xf))
-
-/**
-   This instruction transfers a single word on the SPI bus. The word
-   value of the @tt wr register is transmitted. The @tt rd register is
-   used to store the received word value, unless @tt rd is 15.
- */
-#define BC_SPI_SWP(wr, rd) BC_CUSTOM(0x0800 | ((wr & 0xf) << 4) | (rd & 0xf))
-
-/**
-   This instruction transfers up to 8 words on the SPI bus. Word
-   values are loaded and stored in contiguous registers. The word
-   values of the registers starting at @tt wr are transmitted. The
-   registers starting at @tt rd are used to store the received word
-   values.
-
-   If the index of the last register to transmit is greater than 14,
-   the content of the register 14 is used as padding value for all
-   transmitted words. If the index of the last destination register is
-   greater than 14, incoming data are discarded and no register is
-   modified.
- */
-#define BC_SPI_SWPL(wr, rd, count) BC_CUSTOM(0x0800 | ((wr & 0xf) << 4) | (rd & 0xf) | (((count) - 1) << 8))
-
-#ifdef CONFIG_DEVICE_SPI_REQUEST_GPIO
-
-/**
-   This instruction sets the value of a gpio pin.
- */
-#define BC_SPI_GPIOSET(index, reg) BC_CUSTOM(0x2000 | (reg & 0xf) | ((index & 0xff) << 4))
-
-/**
-   This instruction gets the value of a gpio pin.
- */
-#define BC_SPI_GPIOGET(reg, index) BC_CUSTOM(0x3000 | (reg & 0xf) | ((index & 0xff) << 4))
-
-/**
-   This instruction mode the value of a gpio pin.
- */
-#define BC_SPI_GPIOMODE(index, mode) BC_CUSTOM(0x4000 | (mode & 0xf) | ((index & 0xff) << 4))
-
-#endif
-
-/**
-   This instruction transfers multiple words on the SPI bus. The
-   number of SPI words to transfer is given in the @tt rcnt
-   register. The value of the r14 register is used as the padding
-   write value.
- */
-#define BC_SPI_PAD(rcnt) BC_CUSTOM(0x1000 | (rcnt & 0xf))
-
-/**
-   This instruction reads multiple SPI words and store them in a
-   buffer of byte values. The value of the r14 register is used as
-   the padding write value.
- */
-#define BC_SPI_RDM8(raddr, rcnt) BC_CUSTOM(0x1400 | ((raddr & 0xf) << 4) | (rcnt & 0xf))
-
-/**
-   Same instruction as @ref #BC_SPI_RDM8, using a buffer of
-   16 bits words.
- */
-#define BC_SPI_RDM16(raddr, rcnt) BC_CUSTOM(0x1500 | ((raddr & 0xf) << 4) | (rcnt & 0xf))
-
-/**
-   Same instruction as @ref #BC_SPI_RDM8, using a buffer of
-   32 bits words.
- */
-#define BC_SPI_RDM32(raddr, rcnt) BC_CUSTOM(0x1700 | ((raddr & 0xf) << 4) | (rcnt & 0xf))
-
-/**
-   This instruction writes multiple SPI words from a buffer of
-   bytes. Input values are discarded.
- */
-#define BC_SPI_WRM8(raddr, rcnt) BC_CUSTOM(0x1800 | ((raddr & 0xf) << 4) | (rcnt & 0xf))
-
-/**
-   Same instruction as @ref #BC_SPI_WRM8, using a buffer of
-   16 bits words.
- */
-#define BC_SPI_WRM16(raddr, rcnt) BC_CUSTOM(0x1900 | ((raddr & 0xf) << 4) | (rcnt & 0xf))
-
-/**
-   Same instruction as @ref #BC_SPI_WRM8, using a buffer of
-   32 bits words.
- */
-#define BC_SPI_WRM32(raddr, rcnt) BC_CUSTOM(0x1b00 | ((raddr & 0xf) << 4) | (rcnt & 0xf))
-
-/**
-   This instruction reads and writes multiple SPI words using two
-   buffer of bytes. The address of the read buffer is given by the
-   value of the @tt raddr register and the address of the write buffer
-   is given by the value of the neighbor register (@tt raddr ^ 1).
- */
-#define BC_SPI_SWPM8(raddr, rcnt) BC_CUSTOM(0x1c00 | ((raddr & 0xf) << 4) | (rcnt & 0xf))
-
-/**
-   Same instruction as @ref #BC_SPI_SWP8, using a buffer of
-   16 bits words.
- */
-#define BC_SPI_SWPM16(raddr, rcnt) BC_CUSTOM(0x1d00 | ((raddr & 0xf) << 4) | (rcnt & 0xf))
-
-/**
-   Same instruction as @ref #BC_SPI_SWP8, using a buffer of
-   32 bits words.
- */
-#define BC_SPI_SWPM32(raddr, rcnt) BC_CUSTOM(0x1f00 | ((raddr & 0xf) << 4) | (rcnt & 0xf))
-
 #endif /* CONFIG_DEVICE_SPI_REQUEST */
+
+#endif  /* __MUTEK_ASM__ */
 
 #endif
 

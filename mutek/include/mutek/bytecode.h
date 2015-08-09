@@ -33,72 +33,205 @@
    with a customisable instruction set. Bytecode instruction are 16
    bits wide.
 
+   There are 16 registers which are at least 32 bits wide and large
+   enough to hold a pointer.
+
    A set of generic instructions is provided. The MSB of the generic
    instructions is always sero, leaving half the opcode space for
    application specific opcodes.
 
-   See @sourcelink example/bytecode/test.c for an example application.
+   See @sourcelink example/bytecode/test.bc for an example application.
 
-   @code R
-    instruction         params        opcode                  format
- -------------------------------------------------------------------
-    end                               0000 0000 0000 0000       0
-    dump                              0000 0000 0000 0001       0
-    abort                             0000 0000 0000 0010       0
-    trace                             0000 0000 0000 01xx       0
-    add8                r, +/-v       0000 vvvv vvvv rrrr       0
-    cst8                r, v          0001 vvvv vvvv rrrr       0
-    jmp                 lbl           0010 llll llll 1111       0
-    jmpl                lbl, r        0010 llll llll rrrr       0
-    loop                lbl, r        0011 llll llll rrrr       0
+   @table 4
+    @item instruction         @item operands      @item opcode                   @item  format
 
-    eq                  r, r          0100 0000 rrrr rrrr       1
-    neq                 r, r          0100 0001 rrrr rrrr	1
-    lt                  r, r          0100 0010 rrrr rrrr       1
-    lteq                r, r          0100 0011 rrrr rrrr	1
-    add                 r, r          0100 0100 rrrr rrrr	1
-    sub                 r, r          0100 0101 rrrr rrrr	1
-    ---                 r, r          0100 0110 rrrr rrrr	1
-    mul                 r, r          0100 0111 rrrr rrrr	1
-    or                  r, r          0100 1000 rrrr rrrr	1
-    xor                 r, r          0100 1001 rrrr rrrr	1
-    and                 r, r          0100 1010 rrrr rrrr	1
-    ccall               r, r          0100 1011 rrrr rrrr	1
-    shl                 r, r          0100 1100 rrrr rrrr	1
-    shr                 r, r          0100 1101 rrrr rrrr       1
-    shra                r, r          0100 1110 rrrr rrrr       1
-    mov                 r, r          0100 1111 rrrr rrrr	1
+    @item end                 @item               @item @tt{0000 0000 0000 0000} @item  0
+    @item dump                @item               @item @tt{0000 0000 0000 0001} @item  0
+    @item abort               @item               @item @tt{0000 0000 0000 0010} @item  0
+    @item nop                 @item               @item @tt{0000 0000 0000 0100} @item  0
+    @item trace               @item               @item @tt{0000 0000 0000 10xx} @item  0
+    @item add8                @item r, +/-v       @item @tt{0000 vvvv vvvv rrrr} @item  0
+    @item cst8                @item r, v          @item @tt{0001 vvvv vvvv rrrr} @item  0
+    @item call8               @item r, lbl        @item @tt{0010 llll llll rrrr} @item  0
+    @item jmp8                @item lbl           @item @tt{0010 llll llll 0000} @item  0
+    @item ret                 @item r             @item @tt{0010 0000 0000 rrrr} @item  0
+    @item loop                @item r, lbl        @item @tt{0011 llll llll rrrr} @item  0
 
-    tst[c,s]            r, bit        0101 00cb bbbb rrrr       2
-    bit[c,s]            r, bit        0101 01cb bbbb rrrr       2
-    shi[l,r]            r, bit        0101 1lbb bbbb rrrr       2
+    @item eq                  @item r, r          @item @tt{0100 0000 rrrr rrrr} @item  1
+    @item eq0                 @item r             @item @tt{0100 0000 rrrr rrrr} @item  1
+    @item neq                 @item r, r          @item @tt{0100 0001 rrrr rrrr} @item  1
+    @item neq0                @item r             @item @tt{0100 0001 rrrr rrrr} @item  1
+    @item lt                  @item r, r          @item @tt{0100 0010 rrrr rrrr} @item  1
+    @item ---                 @item r             @item @tt{0100 0010 rrrr rrrr} @item  1
+    @item lteq                @item r, r          @item @tt{0100 0011 rrrr rrrr} @item  1
+    @item ---                 @item r             @item @tt{0100 0011 rrrr rrrr} @item  1
+    @item add                 @item r, r          @item @tt{0100 0100 rrrr rrrr} @item  1
+    @item ---                 @item r             @item @tt{0100 0100 rrrr rrrr} @item  1
+    @item sub                 @item r, r          @item @tt{0100 0101 rrrr rrrr} @item  1
+    @item neg                 @item r             @item @tt{0100 0101 rrrr rrrr} @item  1
+    @item ---                 @item r, r          @item @tt{0100 0110 rrrr rrrr} @item  1
+    @item mul32               @item r, r          @item @tt{0100 0111 rrrr rrrr} @item  1
+    @item or32                @item r, r          @item @tt{0100 1000 rrrr rrrr} @item  1
+    @item ---                 @item r             @item @tt{0100 1000 rrrr rrrr} @item  1
+    @item xor32               @item r, r          @item @tt{0100 1001 rrrr rrrr} @item  1
+    @item and32               @item r, r          @item @tt{0100 1010 rrrr rrrr} @item  1
+    @item ---                 @item r             @item @tt{0100 1010 rrrr rrrr} @item  1
+    @item ccall               @item r, r          @item @tt{0100 1011 rrrr rrrr} @item  1
+    @item shl32               @item r, r          @item @tt{0100 1100 rrrr rrrr} @item  1
+    @item shr32               @item r, r          @item @tt{0100 1101 rrrr rrrr} @item  1
+    @item andn32              @item r, r          @item @tt{0100 1110 rrrr rrrr} @item  1
+    @item not32               @item r             @item @tt{0100 1110 rrrr rrrr} @item  1
+    @item mov                 @item r, r          @item @tt{0100 1111 rrrr rrrr} @item  1
+    @item msbs32              @item r             @item @tt{0100 1111 rrrr rrrr} @item  1
 
-    ld[8,16,32,64][i]   r, ra         0110 0ssi aaaa rrrr       3
-    st[8,16,32,64][i]   r, ra         0110 1ssi aaaa rrrr       3
-    cst[16,32,64][c]    r, v          0111 0ss0 bbbc rrrr       3
-    st[8,16,32,64]d     r, ra         0111 1ss0 aaaa rrrr       3
-    call                r             0111 0000 ---- rrrr       3
-    ld[8,16,32,64]e     r, ra         0111 0ss1 aaaa rrrr       3
-    st[8,16,32,64]e     r, ra         0111 1ss1 aaaa rrrr       3
+    @item tst32[c,s]          @item r, bit        @item @tt{0101 00sb bbbb rrrr} @item  2
+    @item bit32[c,s]          @item r, bit        @item @tt{0101 01sb bbbb rrrr} @item  2
+    @item shi32[l,r]          @item r, bit        @item @tt{0101 10rb bbbb rrrr} @item  2
+    @item ext[s,z]            @item r, bit        @item @tt{0101 11zb bbbb rrrr} @item  2
 
-    custom                            1--- ---- ---- ----
-   @end code
+    @item ld[8,16,32,64][i]   @item r, ra         @item @tt{0110 0ssi aaaa rrrr} @item  3
+    @item st[8,16,32,64][i]   @item r, ra         @item @tt{0110 1ssi aaaa rrrr} @item  3
+    @item st[8,16,32,64]d     @item r, ra         @item @tt{0111 1ss0 aaaa rrrr} @item  3
+    @item gaddr               @item r, lbl        @item @tt{0111 0000 0000 rrrr} @item  3
+    @item laddr[16,32]        @item r, lbl        @item @tt{0111 0ss0 0000 rrrr} @item  3
+    @item jmp32               @item lbl           @item @tt{0111 0000 ---1 0000} @item  3
+    @item call32              @item r, lbl        @item @tt{0111 0000 ---1 rrrr} @item  3
+    @item cst[16,32,64]       @item r, v, b       @item @tt{0111 0ss0 bbb1 rrrr} @item  3
+    @item ld[8,16,32,64]e     @item r, ra, v      @item @tt{0111 0ss1 aaaa rrrr} @item  3
+    @item st[8,16,32,64]e     @item r, ra, v      @item @tt{0111 1ss1 aaaa rrrr} @item  3
 
+    @item .data16             @item v             @item                          @item
+
+    @item custom              @item               @item @tt{1--- ---- ---- ----} @item
+   @end table
+
+   Instruction details:
+
+   @list
+     @item end: Terminate bytecode execution.
+     @item dump: Dump registers to debug output. @see #CONFIG_MUTEK_BYTECODE_DEBUG
+     @item abort: Terminate bytecode execution and report an error.
+     @item trace: Enable or disable debug trace. @see bc_set_trace
+     @item add8: Add a signed 8 bits value to a register.
+     @item cst8: Set a register to an unsigned 8 bits constant.
+     @item jmp: Jump relative.
+     @item jmpf: Jump absolute.
+     @item jmpl: Jump relative and save the return address in a register.
+     @item call: Jump absolute and save the return address in a register.
+     @item ret: Return to the address saved in a register.
+     @item loop: If the jump target is backward, this instruction decrements the
+     register which should not be initially zero and branch if the
+     result is not zero. If the jump target is forward, this instruction decrement the
+     register if its initial value is not zero. If the register initial
+     value is zero, the branch is taken and the register is left
+     untouched.
+     @item eq: Compare two registers and skip the next instruction if they are not equal.
+     @item neq: Compare two registers and skip the next instruction if thay are equal.
+     @item eq0: Skip the next instruction if the register is not zero.
+     @item neq0: Skip the next instruction if the register is zero.
+     @item lt: Compare two registers and skip the next instruction if
+     first reg >= second reg.
+     @item lteq: Compare two registers and skip the next instruction if
+     first reg > second reg.
+     @item mov: Copy value between 2 registers.
+     @item add: Add the value of the source register to the destination register.
+     @item sub: Subtract the value of the source register from the destination register.
+     @item neg: Subtract the value from zero.
+     @item mul32: Multiply the values of the source register and destination registers.
+     @item ccall: Call a C function. The address of the function is in the source
+     register. The value of the destination register is passed to the
+     function and the return value is stored back in this same register. (bytecode will not be portable)
+     @see bc_call_function_t
+     @item or32: 32 bits bitwise or.
+     @item xor32: 32 bits bitwise exclusive or.
+     @item and32: 32 bits bitwise and.
+     @item andn32: 32 bits bitwise and with complemented source register.
+     @item not32: 32 bits bitwise not.
+     @item shl32: 32 bits variable left shift.
+     @item shr32: 32 bits variable right shift.
+     @item tst32c: Extract a bit from a register and skip the next instruction if the
+     bit is not cleared. Bit index is in the range [0,31].
+     @item tst32s: Extract a bit from a register and skip the next instruction if the
+     bit is not set. Bit index is in the range [0,31].
+     @item bit32c: Clear a bit in a register. Bit index is in the range [0,31].
+     @item bit32s: Set a bit in a register. Bit index is in the range [0,31].
+     @item shil: Left shift a register by a constant amount.
+     Amount must be in the range [0,31].
+     @item shi32r: Right shift a register by a constant amount.
+     Amount must be in the range [0,31].
+     @item msbs32: Find the position of the most significant bit set in range [0, 31].
+     @item exts: Sign extend a register using the specified sign bit in the range [0,31].
+     @item extz: Clear all bits in a register above specified bit in the range [0,31].
+     @item ld*: Load a value from a memory address given by a register into an
+     other register.
+     @item ld*i: Load a value from a memory address given by a register into an
+     other register then add the width of the access to the address
+     register.
+     @item ld*e: Load a value from a memory address given by a register and a 16
+     bits signed offset into an other register.
+     @item st*: Store a value to a memory address given by a register from an
+     other register.
+     @item st*i: Store a value to a memory address given by a register from an
+     other register then add the width of the access to the address
+     register.
+     @item st*d: Subtract the width of the access to the address register then
+     store a value from an other register to the resulting memory
+     address.
+     @item st*e: Store a value from a register to a memory address given by an
+     other register and a 16 bits signed offset.
+     @item cst*: Set a register to an unsigned constant which may
+     be shifted by a mulitple of 8 bits.
+     @item laddr*: Set a register to the address of a bytecode label.
+     @item gaddr: Set a register to the address of a global symbol. (bytecode will not be portable)
+   @end list
 */
 
 typedef uint16_t bc_opcode_t;
 
+#if INT_REG_SIZE <= 32
+typedef uint32_t bc_reg_t;
+typedef int32_t bc_sreg_t;
+#else
+typedef uint64_t bc_reg_t;
+typedef int64_t bc_sreg_t;
+#endif
+
+/** @internal */
+enum bc_flags_s
+{
+  BC_FLAGS_NATIVE = 0x0001,
+};
+
+struct bc_context_s;
+
+/** @internal */
+typedef reg_t (bc_run_t)(struct bc_context_s *ctx, int_fast32_t max_cycles);
+
+/** @This is the bytecode descriptor header */
+struct bc_descriptor_s
+{
+  uint16_t flags;
+  uint16_t op_count;
+  const void *code;
+  bc_run_t *run;
+};
+
 /** @This defines the virtual machine context. */
 struct bc_context_s
 {
-  uintptr_t v[16];
-  const bc_opcode_t *code;
+  bc_reg_t v[16];
+  union {
+    const uint16_t *pc;
+    const void *vpc;
+  };
+  bc_reg_t skip;
+
+  const struct bc_descriptor_s *desc;
 
 #ifdef CONFIG_MUTEK_BYTECODE_CHECKING
   uintptr_t min_addr;
   uintptr_t max_addr;
-  uint16_t op_count;
-  bool_t allow_ccall;
+  bool_t sandbox;
 #endif
 #ifdef CONFIG_MUTEK_BYTECODE_TRACE
   bool_t trace;
@@ -108,25 +241,21 @@ struct bc_context_s
 
 /** @see bc_init */
 void bc_init_va(struct bc_context_s *ctx,
-		const bc_opcode_t *code, uint_fast16_t code_sizeof,
+		const struct bc_descriptor_s *desc,
 		uint_fast8_t pcount, va_list ap);
 
 /** @This intializes the virtual machine. Up to 16 parameters of type
-    @ref uintptr_t can be passed in order to initialize the virtual
-    machine registers. Registers 0 to 13 default to 0. Register 14
-    defaults to all ones. Register 15 is the program counter and is
-    always initialized to 0.
-
-    The @tt code_sizeof parameter is not used if the @ref
-    #CONFIG_MUTEK_BYTECODE_CHECKING token is not defined.
+    @ref bc_reg_t can be passed in order to initialize the virtual
+    machine registers. Other registers are initialized to 0 except r14
+    which defaults to -1.
 */
 void
 bc_init(struct bc_context_s *ctx,
-        const bc_opcode_t *code, uint_fast16_t code_sizeof,
+        const struct bc_descriptor_s *desc,
         uint_fast8_t pcount, ...);
 
 /** @This returns the value of one of the 16 virtual machine registers */
-ALWAYS_INLINE uintptr_t
+ALWAYS_INLINE bc_reg_t
 bc_get_reg(struct bc_context_s *ctx, uint_fast8_t i)
 {
   return ctx->v[i];
@@ -134,14 +263,29 @@ bc_get_reg(struct bc_context_s *ctx, uint_fast8_t i)
 
 /** @This sets the value of one of the 16 virtual machine registers */
 ALWAYS_INLINE void
-bc_set_reg(struct bc_context_s *ctx, uint_fast8_t i, uintptr_t value)
+bc_set_reg(struct bc_context_s *ctx, uint_fast8_t i, bc_reg_t value)
 {
   ctx->v[i] = value;
 }
 
+/** @This returns the value of one of the 16 virtual machine registers */
+ALWAYS_INLINE const void *
+bc_get_pc(struct bc_context_s *ctx)
+{
+  return ctx->vpc;
+}
+
+/** @This sets the value of the virtual machine pc */
+ALWAYS_INLINE void
+bc_set_pc(struct bc_context_s *ctx, const void *pc)
+{
+  ctx->vpc = pc;
+}
+
 /** @This function enables or disable the bytecode execution trace
     debug output. If the @ref #CONFIG_MUTEK_BYTECODE_TRACE token is
-    not defined, this function has no effect. @see #BC_TRACE */
+    not defined, this function has no effect. The @tt trace
+    instruction can be used to enable and disable trace output. */
 ALWAYS_INLINE void
 bc_set_trace(struct bc_context_s *ctx, bool_t enabled, bool_t regs)
 {
@@ -151,11 +295,12 @@ bc_set_trace(struct bc_context_s *ctx, bool_t enabled, bool_t regs)
 #endif
 }
 
-/** @This increments the program counter */
+/** @This skip the next instruction. This can only be called if the
+    execution has stopped on a conditional custom instruction. */
 ALWAYS_INLINE void
 bc_skip(struct bc_context_s *ctx)
 {
-  ctx->v[15]++;  
+  ctx->vpc = (uint8_t*)ctx->vpc + ctx->skip;
 }
 
 /** @This can be used to reduce the range of memory addresses which
@@ -171,14 +316,14 @@ bc_set_addr_range(struct bc_context_s *ctx, uintptr_t min, uintptr_t max)
 #endif
 }
 
-/** @This can be used to disallow use of the @ref #BC_CCALL instruction
+/** @This can be used to disallow use of the @t ccall instruction
     in the bytecode. If the @ref #CONFIG_MUTEK_BYTECODE_CHECKING token
     is not defined, this function has no effect. */
 ALWAYS_INLINE void
-bc_allow_ccall(struct bc_context_s *ctx, bool_t allow)
+bc_sandbox(struct bc_context_s *ctx, bool_t sandbox)
 {
 #ifdef CONFIG_MUTEK_BYTECODE_CHECKING
-  ctx->allow_ccall = allow;
+  ctx->sandbox = sandbox;
 #endif
 }
 
@@ -189,24 +334,32 @@ void bc_dump(const struct bc_context_s *ctx, bool_t regs);
 
 /** This function starts or resumes executions of the bytecode. It
     stops when an instruction which is not handled is encountered and
-    returns its opcode. It may also stop if an error occurs and the
-    @ref #CONFIG_MUTEK_BYTECODE_CHECKING token is defined.
+    returns its opcode. Instructions words with the most significant
+    bit set are custom instructions and must be handled by the caller
+    before resuming execution of the bytecode.
 
     If the end of bytecode instruction has been reached, this function
-    returns 0. If the execution took more than @tt max_cycles
-    instructions, this function returns 1.
+    returns 0. Other return values less than 32768 indicate an error
+    condition.
 
-    Instructions words with the most significant bit set are custom
-    instructions and must be handled by the caller before resuming
-    execution of the bytecode.
-
-    Other return values indicate an error condition.
-
-    In any case, the program counter points to the instruction which
-    made the execution stop. The @ref bc_skip function can be called
-    to advance to the next instruction before resuming.
+    This function will eiter run the vm or jump to the machine
+    compiled bytecode. The type of bytecode is guessed from the
+    descriptor.
 */
-uint16_t bc_run(struct bc_context_s *ctx, int_fast32_t max_cycles);
+ALWAYS_INLINE bc_opcode_t bc_run(struct bc_context_s *ctx,
+                                 int_fast32_t max_cycles)
+{
+  return ctx->desc->run(ctx, max_cycles);
+}
+
+/** This function starts or resumes executions of the bytecode using
+    the virtual machine. This function does not work if the bytecode
+    is compiled in machine code.
+
+    If the execution took more than @tt max_cycles instructions, this
+    function returns 1. It may also stop if an error occurs and the
+    @ref #CONFIG_MUTEK_BYTECODE_CHECKING token is defined. */
+bc_opcode_t bc_run_vm(struct bc_context_s *ctx, int_fast32_t max_cycles);
 
 /** @internal @This specifies opcode values. */
 enum bc_opcode_e
@@ -231,7 +384,7 @@ enum bc_opcode_e
     BC_OP_CCALL = 0x4b,
     BC_OP_SHL  = 0x4c,
     BC_OP_SHR  = 0x4d,
-    BC_OP_SHRA = 0x4e,
+    BC_OP_ANDN = 0x4e,
     BC_OP_MOV  = 0x4f,
   BC_OP_FMT2 = 0x50,
     BC_OP_TSTC = 0x50,
@@ -239,7 +392,9 @@ enum bc_opcode_e
     BC_OP_BITC = 0x54,
     BC_OP_BITS = 0x56,
     BC_OP_SHIL = 0x58,
-    BC_OP_SHIR = 0x5c,
+    BC_OP_SHIR = 0x5a,
+    BC_OP_EXTZ = 0x5c,
+    BC_OP_EXTS = 0x5e,
   BC_OP_FMT3 = 0x60,
     BC_OP_LD   = 0x60,
     BC_OP_LDI  = 0x61,
@@ -253,213 +408,9 @@ enum bc_opcode_e
 };
 
 /** @see #BC_CCALL_FUNCTION */
-#define BC_CCALL_FUNCTION(n) uintptr_t (n)(struct bc_context_s *ctx, uintptr_t dst)
-/** C function type invoked by the @ref #BC_CCALL instruction. */
+#define BC_CCALL_FUNCTION(n) bc_reg_t (n)(struct bc_context_s *ctx, bc_reg_t dst)
+/** C function type invoked by the @tt ccall instruction. */
 typedef BC_CCALL_FUNCTION(bc_ccall_function_t);
-
-/** @multiple @internal */
-#define BC_FMT0(op, value, reg) (((op) << 8) | (((value) & 0xff) << 4) | ((reg) & 0xf))
-#define BC_FMT1(op, rdst, rsrc) (((op) << 8) | (((rsrc) & 0xf) << 4) | ((rdst) & 0xf))
-#define BC_FMT2(op, reg, bit)   (((op) << 8) | (((bit) & 0x3f) << 4) | ((reg) & 0xf))
-#define BC_FMT3(op, size, reg, a, b)  (((op) << 8) | (((size) & 3) << 9) | (((b) & 1) << 8) | (((a) & 0xf) << 4) | ((reg) & 0xf))
-
-/** Terminate bytecode execution */
-#define BC_END()            BC_FMT0(BC_OP_ADD8, 0, 0)
-/** Dump registers to debug output. @see #CONFIG_MUTEK_BYTECODE_DEBUG */
-#define BC_DUMP()           BC_FMT0(BC_OP_ADD8, 0, 1)
-/** Terminate bytecode execution and report an error */
-#define BC_ABORT()          BC_FMT0(BC_OP_ADD8, 0, 2)
-/** Enable or disable debug trace. @see bc_set_trace */
-#define BC_TRACE(enabled, regs)   BC_FMT0(BC_OP_ADD8, 0, 8 | (enabled & 1) | (regs & 1) << 1)
-/** Add a signed 8 bits value to a register */
-#define BC_ADD8(r, v)       BC_FMT0(BC_OP_ADD8, v, r)
-/** Set a register to an unsigned 8 bits constant */
-#define BC_CST8(r, v)       BC_FMT0(BC_OP_CST8, v, r)
-
-/** Jump relative. Jump offset is an 8 bits signed value.  Negative
-    values jump backward, -1 jump to itself.  Some constant loading
-    instructions account for more than 1 instruction word. 
-
-    Branch targets can be computed by the bc_labels.pl script.
-*/
-#define BC_JMP(d)           BC_FMT0(BC_OP_JMP,  d, 15)
-
-/** Jump relative and save the return address in a register.
-
-    Relative branch targets can be computed by the bc_labels.pl script.
-    @see #BC_JMP
-*/
-#define BC_JMPL(r, d)       BC_FMT0(BC_OP_JMP,  d, r)
-
-/** Jump absolute and save the return address in a register.
-
-    Absolute branch targets can be computed by the bc_labels.pl script.
-    This instruction is 2 words long.
-*/
-#define BC_CALL(r, pc)      BC_FMT3(BC_OP_CALL, 0, r, 0, 0), (((pc) >> 16) & 0xffff), ((pc) & 0xffff)
-
-/** If the jump target is backward, this instruction decrements the
-    register which should not be initially zero and branch if the
-    result is not zero.
-
-    If the jump target is forward, this instruction decrement the
-    register if its initial value is not zero. If the register initial
-    value is zero, the branch is taken and the register is left
-    untouched. @see #BC_JMP
-
-    Branch targets can be computed by the bc_labels.pl script.
-*/
-#define BC_LOOP(r, d)       BC_FMT0(BC_OP_LOOP, d, r)
-
-/** Compare two registers and skip the next instruction if they are not equal. */
-#define BC_EQ(r1, r2)         BC_FMT1(BC_OP_EQ, r1, r2)
-/** Compare two registers and skip the next instruction if thay are equal. */
-#define BC_NEQ(r1, r2)        BC_FMT1(BC_OP_NEQ, r1, r2)
-
-/** Compare two registers and skip the next instruction if
-    first reg >= second reg. */
-#define BC_LT(r1, r2)         BC_FMT1(BC_OP_LT, r1, r2)
-/** Compare two registers and skip the next instruction if
-    first reg > second reg. */
-#define BC_LTEQ(r1, r2)       BC_FMT1(BC_OP_LTEQ, r1, r2)
-
-/** Copy value between 2 registers */
-#define BC_MOV(dst, src)      BC_FMT1(BC_OP_MOV, dst, src)
-/** Add the value of the source register to the destination register */
-#define BC_ADD(dst, src)      BC_FMT1(BC_OP_ADD, dst, src)
-/** Subtract the value of the source register from the destination register */
-#define BC_SUB(dst, src)      BC_FMT1(BC_OP_SUB, dst, src)
-/** Multiply the values of the source register and destination registers */
-#define BC_MUL(dst, src)      BC_FMT1(BC_OP_MUL, dst, src)
-
-/** Call a C function. The address of the function is in the source
-    register. The value of the destination register is passed to the
-    function and the return value is stored back in this same register. 
-    @see bc_call_function_t @see #BC_CCALL_FUNCTION
-*/
-#define BC_CCALL(dst, src)       BC_FMT1(BC_OP_CCALL, dst, src)
-
-/** Bitwise or */
-#define BC_OR(dst, src)       BC_FMT1(BC_OP_OR, dst, src)
-/** Bitwise exclusive or */
-#define BC_XOR(dst, src)      BC_FMT1(BC_OP_XOR, dst, src)
-/** Bitwise and */
-#define BC_AND(dst, src)      BC_FMT1(BC_OP_AND, dst, src)
-/** Variable left shift  */
-#define BC_SHL(dst, src)      BC_FMT1(BC_OP_SHL, dst, src)
-/** Variable right shift */
-#define BC_SHR(dst, src)      BC_FMT1(BC_OP_SHR, dst, src)
-/** Variable arithmetic left shift */
-#define BC_SHRA(dst, src)     BC_FMT1(BC_OP_SHRA, dst, src)
-
-/** Extract a bit from a register and skip the next instruction if the
-    bit is not cleared. Bit index is in the range [0,31]. */
-#define BC_TSTC(r, bit)       BC_FMT2(BC_OP_TSTC, r, bit)
-/** Extract a bit from a register and skip the next instruction if the
-    bit is not set. Bit index is in the range [0,31]. */
-#define BC_TSTS(r, bit)       BC_FMT2(BC_OP_TSTS, r, bit)
-
-/** Clear a bit in a register. Bit index is in the range [0,31]. */
-#define BC_BITC(r, bit)       BC_FMT2(BC_OP_BITC, r, bit)
-/** Set a bit in a register. Bit index is in the range [0,31]. */
-#define BC_BITS(r, bit)       BC_FMT2(BC_OP_BITS, r, bit)
-
-/** Left shift a register by a constant amount.
-    Amount must be in the range [0,63]. */
-#define BC_SHIL(r, amount)    BC_FMT2(BC_OP_SHIL, r, amount)
-/** Right shift a register by a constant amount.
-    Amount must be in the range [0,63]. */
-#define BC_SHIR(r, amount)    BC_FMT2(BC_OP_SHIR, r, amount)
-
-/** Load a value from a memory address given by a register into an
-    other register. @multiple */
-#define BC_LD8(r, a)          BC_FMT3(BC_OP_LD, 0, r, a, 0)
-#define BC_LD16(r, a)         BC_FMT3(BC_OP_LD, 1, r, a, 0)
-#define BC_LD32(r, a)         BC_FMT3(BC_OP_LD, 2, r, a, 0)
-#define BC_LD64(r, a)         BC_FMT3(BC_OP_LD, 3, r, a, 0)
-/** Load a value from a memory address given by a register into an
-    other register then add the width of the access to the address
-    register. @multiple */
-#define BC_LD8I(r, a)         BC_FMT3(BC_OP_LD, 0, r, a, 1)
-#define BC_LD16I(r, a)        BC_FMT3(BC_OP_LD, 1, r, a, 1)
-#define BC_LD32I(r, a)        BC_FMT3(BC_OP_LD, 2, r, a, 1)
-#define BC_LD64I(r, a)        BC_FMT3(BC_OP_LD, 3, r, a, 1)
-
-/** Load a value from a memory address given by a register and a 16
-    bits signed offset into an other register. @multiple */
-#define BC_LD8E(r, a, v)      BC_FMT3(BC_OP_LDE, 0, r, a, 1), ((v) & 0xffff)
-#define BC_LD16E(r, a, v)     BC_FMT3(BC_OP_LDE, 1, r, a, 1), ((v) & 0xffff)
-#define BC_LD32E(r, a, v)     BC_FMT3(BC_OP_LDE, 2, r, a, 1), ((v) & 0xffff)
-#define BC_LD64E(r, a, v)     BC_FMT3(BC_OP_LDE, 3, r, a, 1), ((v) & 0xffff)
-
-/** Store a value to a memory address given by a register from an
-    other register. @multiple */
-#define BC_ST8(r, a)          BC_FMT3(BC_OP_ST, 0, r, a, 0)
-#define BC_ST16(r, a)         BC_FMT3(BC_OP_ST, 1, r, a, 0)
-#define BC_ST32(r, a)         BC_FMT3(BC_OP_ST, 2, r, a, 0)
-#define BC_ST64(r, a)         BC_FMT3(BC_OP_ST, 3, r, a, 0)
-
-/** Store a value to a memory address given by a register from an
-    other register then add the width of the access to the address
-    register. @multiple */
-#define BC_ST8I(r, a)         BC_FMT3(BC_OP_ST, 0, r, a, 1)
-#define BC_ST16I(r, a)        BC_FMT3(BC_OP_ST, 1, r, a, 1)
-#define BC_ST32I(r, a)        BC_FMT3(BC_OP_ST, 2, r, a, 1)
-#define BC_ST64I(r, a)        BC_FMT3(BC_OP_ST, 3, r, a, 1)
-
-/** Subtract the width of the access to the address register then
-    store a value from an other register to the resulting memory
-    address. @multiple */
-#define BC_ST8D(r, a)         BC_FMT3(BC_OP_STD, 0, r, a, 0)
-#define BC_ST16D(r, a)        BC_FMT3(BC_OP_STD, 1, r, a, 0)
-#define BC_ST32D(r, a)        BC_FMT3(BC_OP_STD, 2, r, a, 0)
-#define BC_ST64D(r, a)        BC_FMT3(BC_OP_STD, 3, r, a, 0)
-
-/** Store a value from a register to a memory address given by an
-    other register and a 16 bits signed offset. @multiple */
-#define BC_ST8E(r, a, v)      BC_FMT3(BC_OP_STE, 0, r, a, 1), ((v) & 0xffff)
-#define BC_ST16E(r, a, v)     BC_FMT3(BC_OP_STE, 1, r, a, 1), ((v) & 0xffff)
-#define BC_ST32E(r, a, v)     BC_FMT3(BC_OP_STE, 2, r, a, 1), ((v) & 0xffff)
-#define BC_ST64E(r, a, v)     BC_FMT3(BC_OP_STE, 3, r, a, 1), ((v) & 0xffff)
-
-/** Load/Store operations with access width matching pointer
-    width. @multiple @see {#BC_LD32, #BC_LD32I, #BC_ST32, #BC_ST32I, #BC_ST32I, #BC_ST32D} */
-#if INT_PTR_SIZE == 64
-# define BC_LDPTR(r, a)        BC_LD64(r, a)
-# define BC_LDPTRI(r, a)       BC_LD64I(r, a)
-# define BC_STPTR(r, a)        BC_ST64(r, a)
-# define BC_STPTRI(r, a)       BC_ST64I(r, a)
-# define BC_STPTRD(r, a)       BC_ST64D(r, a)
-#elif INT_PTR_SIZE == 32
-# define BC_LDPTR(r, a)        BC_LD32(r, a)
-# define BC_LDPTRI(r, a)       BC_LD32I(r, a)
-# define BC_STPTR(r, a)        BC_ST32(r, a)
-# define BC_STPTRI(r, a)       BC_ST32I(r, a)
-# define BC_STPTRD(r, a)       BC_ST32D(r, a)
-#elif INT_PTR_SIZE == 16
-# define BC_LDPTR(r, a)        BC_LD16(r, a)
-# define BC_LDPTRI(r, a)       BC_LD16I(r, a)
-# define BC_STPTR(r, a)        BC_ST16(r, a)
-# define BC_STPTRI(r, a)       BC_ST16I(r, a)
-# define BC_STPTRD(r, a)       BC_ST16D(r, a)
-#endif
-
-/** Set a register to an unsigned 16 bits constant. This instruction
-    is 2 words long. */
-#define BC_CST16(r, v)        BC_FMT3(BC_OP_CST, 1, r, 0, 0), ((v) & 0xffff)
-/** Set a register to an unsigned 16 bits constant. The constant may
-    be shifted by a mulitple of 8 bits and complemented. This
-    instruction is 2 words long. */
-#define BC_CST16X(r, v, s, c) BC_FMT3(BC_OP_CST, 1, r, (s)/4 + c, 0), ((v) & 0xffff)
-/** Set a register to an unsigned 32 bits constant. This instruction
-    is 3 words long. */
-#define BC_CST32(r, v)        BC_FMT3(BC_OP_CST, 2, r, 0, 0), (((v) >> 16) & 0xffff), ((v) & 0xffff)
-/** Set a register to an unsigned 32 bits constant. This instruction
-    is 5 words long. */
-#define BC_CST64(r, v)        BC_FMT3(BC_OP_CST, 3, r, 0, 0), (((v) >> 48) & 0xffff), (((v) >> 32) & 0xffff), (((v) >> 16) & 0xffff), ((v) & 0xffff)
-
-/** Custom bytecode instruction */
-#define BC_CUSTOM(op)         ((op) | 0x8000)
 
 #endif
 

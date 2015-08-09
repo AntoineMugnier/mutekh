@@ -110,8 +110,6 @@ static KROUTINE_EXEC(device_spi_ctrl_transfer_end)
 
   if (tr->err != 0)
     device_spi_ctrl_end(rq, tr->err);
-  else
-    bc_skip(&rq->vm);
 
   if (kroutine_triggered_1st(kr))
     device_spi_ctrl_run(q);
@@ -351,7 +349,7 @@ device_spi_ctrl_exec(struct dev_spi_ctrl_queue_s *q)
 
   lock_release_irq(&q->lock);
 
-  for (err = 0; err == 0; bc_skip(&rq->vm))
+  for (err = 0; err == 0; )
     {
       op = bc_run(&rq->vm, -1);
 
@@ -396,7 +394,6 @@ device_spi_ctrl_exec(struct dev_spi_ctrl_queue_s *q)
                   lock_spin_irq(&q->lock);
                   dev_request_queue_pushback(&q->queue, &rq->base);
                   q->current = NULL;
-                  bc_skip(&rq->vm);
                   return DEVICE_SPI_CONTINUE;
 
                 case 0x0200: {  /* wait, setcs */
@@ -409,7 +406,6 @@ device_spi_ctrl_exec(struct dev_spi_ctrl_queue_s *q)
                       continue;
                     }
                   lock_spin_irq(&q->lock);
-                  bc_skip(&rq->vm);
 #ifdef CONFIG_DEVICE_SPI_REQUEST_TIMER
                   return device_spi_ctrl_delay(rq);
 #else

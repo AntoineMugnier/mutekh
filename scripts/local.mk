@@ -136,11 +136,13 @@ $(3)/$(1): $(2)/$(1:.o=.cpp) $(OBJ_DIR)/config.h $(OBJ_DIR)/.done_pre_header_lis
 else ifeq ($(wildcard $(2)/$(1:.o=.bc)),$(2)/$(1:.o=.bc))
 
 $(3)/$(1): $(2)/$(1:.o=.bc) $(OBJ_DIR)/config.h $(OBJ_DIR)/.done_pre_header_list
-	$(call prepare_command,BC+CC,$$@)
+	$(call prepare_command,BC,$$@)
 	$(call compute_depfile_c,$$(@:.o=.deps),$(3)/$(1),$$<,$(CPUCFLAGS) $(ARCHCFLAGS) $(INCS) \
 		$($(1)_CFLAGS) $(DIR_CFLAGS))
-	$(call run_command,$$@,perl $(MUTEK_SRC_DIR)/scripts/bc_labels.pl -a -i$(OBJ_DIR)/config.h $$< $$@.c)
-	$(call compile,$(CC),$$@,$$@.c,$($(1)_CFLAGS) $(DIR_CFLAGS))
+	$(call run_command,$$@,$(CPP) $(CPUCFLAGS) $(ARCHCFLAGS) $(INCS) \
+		$($(1)_CFLAGS) $(DIR_CFLAGS) -D__MUTEK_ASM__ $$< \
+                | perl $(MUTEK_SRC_DIR)/scripts/bc_asm.pl $(BCPATH) $(BCFLAGS) -o $$@.s)
+	$(call compile,$(CC),$$@,$$@.s,$($(1)_CFLAGS) $(DIR_CFLAGS))
 	$(value do_hetlink_mangling)
 else
 

@@ -1,2 +1,4 @@
 
-objs = test.o
+objs = test.o app.o
+
+

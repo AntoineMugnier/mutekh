@@ -2,10 +2,16 @@ CPUTOOLS=mipsel-unknown-elf-
 
 ifeq ($(CONFIG_CPU_MIPS_VERSION), 32)
 CPUCFLAGS=-mips32
+  ifeq ($(CONFIG_MUTEK_BYTECODE_NATIVE), defined)
+  BCFLAGS+= -b mips32
+  endif
 endif
 
 ifeq ($(CONFIG_CPU_MIPS_VERSION), 322)
 CPUCFLAGS=-mips32r2
+  ifeq ($(CONFIG_MUTEK_BYTECODE_NATIVE), defined)
+  BCFLAGS+= -b mips32
+  endif
 endif
 
 ifeq ($(CONFIG_CPU_MIPS_VERSION), 4)
@@ -37,11 +43,17 @@ endif
 ifeq ($(CONFIG_CPU_ENDIAN_LITTLE), defined)
 CPUCFLAGS+= -EL
 CPULDFLAGS+= -EL
+ifeq ($(CONFIG_MUTEK_BYTECODE_NATIVE), defined)
+BCFLAGS+= -e little
+endif
 endif
 
 ifeq ($(CONFIG_CPU_ENDIAN_BIG), defined)
 CPUCFLAGS+= -EB
 CPULDFLAGS+= -EB
+ifeq ($(CONFIG_MUTEK_BYTECODE_NATIVE), defined)
+BCFLAGS+= -e big
+endif
 endif
 
 ifeq ($(CONFIG_COMPILE_SOFTFLOAT), defined)

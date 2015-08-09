@@ -1,0 +1,551 @@
+
+package bc_backend_mips32;
+
+use strict;
+
+my @reg = ( '$8', '$9', '$10', '$11', '$12', '$13', '$14', '$15' );
+
+sub out_begin {
+    my ( $b ) = @_;
+    return "    .section .rodata,\"a\"\n".
+	   "    .globl $main::bc_name\n".
+           "$main::bc_name:\n".
+	   # struct bc_descriptor_s
+	   "    .short 0x0001\n".
+	   "    .short 0\n".
+	   "    .long 1f\n".
+	   "    .long _$main::bc_name\n".
+           "    .section .text,\"ax\",\@progbits\n".
+           "    .set noat\n".
+           "    .globl _$main::bc_name\n".
+           "    .func _$main::bc_name\n".
+           "    .type _$main::bc_name, \%function\n".
+           "_$main::bc_name:\n".
+           "    addiu   \$sp, \$sp, -24\n".
+           "    sw      \$31, 20(\$sp)\n".
+           # vm regs array
+           "    sw      \$17, 16(\$sp)\n".
+           "    move    \$17, \$4\n".
+	   # jump to vm start
+           "    lw      \$at, ".(16 * 4)."(\$17)\n".
+           "    jr      \$at\n".
+           "1:\n";
+}
+
+sub out_eof {
+    return "    move \$v0, \$0\n".  # end
+           "Lbytecode_end:\n".
+           "    lw      \$31, 20(\$sp)\n".
+           "    lw      \$17, 16(\$sp)\n".
+           "    addiu   \$sp, \$sp, 24\n".
+           "    jr      \$31\n".
+           "    .endfunc\n".
+           "    .size _$main::bc_name, . - _$main::bc_name\n";
+}
+
+sub out_load {
+    my ($b, $ri, $wo) = @_;
+    return "    lw $reg[$wo], ".($ri * 4)."(\$17)\n";
+}
+
+sub out_store {
+    my ($b, $ro, $wi) = @_;
+    return "    sw $reg[$wi], ".($ro * 4)."(\$17)\n";
+}
+
+sub out_custom {
+    my ($thisop) = @_;
+    my $op = $thisop->{code} | $thisop->{op}->{code};
+    return "    ori \$v0, \$0, $op\n".
+           "    .set noreorder\n".
+           "    bal Lbytecode_end\n".
+           # resume address
+           "    sw \$31, ".(16 * 4)."(\$17)\n".
+           "    .set reorder\n";
+}
+
+sub out_custom_cond {
+    my ($thisop) = @_;
+    my $op = $thisop->{code} | $thisop->{op}->{code};
+    return # skip amount
+           "    ori \$at, \$0, 1f - 2f\n".
+           "    sw \$at, ".(17 * 4)."(\$17)\n".
+           "    ori \$v0, \$0, $op\n".
+           "    .set noreorder\n".
+           "    bal Lbytecode_end\n".
+           # resume address
+           "    sw \$31, ".(16 * 4)."(\$17)\n".
+           "    .set reorder\n".
+           "2:";
+}
+
+sub out_end {
+    return "    move \$v0, \$0\n".
+           "    sw \$v0, ".(16 * 4)."(\$17)\n".
+           "    b Lbytecode_end\n";
+}
+
+sub out_dump {
+    my ($thisop) = @_;
+    return "    move \$v0, \$17\n".
+           "    li \$v1, 1\n".
+           "    .set noreorder\n".
+           "    jal bc_dump\n".
+           "    sw \$31, ".(16 * 4)."(\$17)\n".
+           "    .set reorder\n";
+}
+
+sub out_nop {
+}
+
+sub out_abort {
+    my ($thisop) = @_;
+    return "    jal abort\n";
+}
+
+sub out_trace {
+}
+
+sub out_add8 {
+    my ($thisop, $wo, $wi) = @_;
+    return "    addiu $reg[$wo], $reg[$wi], $thisop->{args}->[1]\n";
+}
+
+sub out_cst8 {
+    my ($thisop, $wo) = @_;
+    return "    li $reg[$wo], $thisop->{args}->[1]\n";
+}
+
+sub out_jmp8 {
+    my ($thisop) = @_;
+    return "    b $thisop->{args}->[0]\n";
+}
+
+sub out_call8 {
+    my ($thisop) = @_;
+    return "    .set noreorder\n".
+           "    bal $thisop->{args}->[1]\n".
+           "    sw \$31, ".($thisop->{lr} * 4)."(\$17)\n".
+           "    .set reorder\n"
+           ;
+}
+
+sub out_call32 {
+    my ($thisop) = @_;
+    return "    .set noreorder\n".
+           "    bal $thisop->{args}->[1]\n".
+           "    sw \$31, ".($thisop->{lr} * 4)."(\$17)\n".
+           "    .set reorder\n"
+}
+
+sub out_jmp32 {
+    my ($thisop) = @_;
+    return "    j $thisop->{args}->[0]\n";
+}
+
+sub out_ret {
+    my ($thisop, $wi) = @_;
+    return "    jr $reg[$wi]\n";
+}
+
+sub out_loop {
+    my ($thisop, $wi) = @_;
+    my $wo = $wi;
+    if ($thisop->{target}->{addr} < $thisop->{addr}) {
+        return "    addiu $reg[$wo], $reg[$wi], -1\n".
+               "    sw $reg[$wo], ".($thisop->{in}->[0] * 4)."(\$17)\n".
+               "    bne $reg[$wo], \$0, $thisop->{args}->[1]\n";
+    } else {
+        return
+               "    beq $reg[$wi], \$0, $thisop->{args}->[1]\n".
+               "    addiu $reg[$wo], $reg[$wi], -1\n".
+               "    sw $reg[$wo], ".($thisop->{in}->[0] * 4)."(\$17)\n";
+    }
+}
+
+sub out_eq {
+    my ($thisop, $wi0, $wi1) = @_;
+    return "    bne $reg[$wi0], $reg[$wi1], 1f\n";
+}
+
+sub out_eq0 {
+    my ($thisop, $wi0) = @_;
+    return "    bne $reg[$wi0], \$0, 1f\n";
+}
+
+sub out_neq {
+    my ($thisop, $wi0, $wi1) = @_;
+    return "    beq $reg[$wi0], $reg[$wi1], 1f\n";
+}
+
+sub out_neq0 {
+    my ($thisop, $wi0) = @_;
+    return "    beq $reg[$wi0], \$0, 1f\n";
+}
+
+sub out_lt {
+    my ($thisop, $wi0, $wi1) = @_;
+    return "    subu \$at, $reg[$wi0], $reg[$wi1]\n".
+           "    blez \$at, 1f\n";
+}
+
+sub out_lteq {
+    my ($thisop, $wi0, $wi1) = @_;
+    return "    subu \$at, $reg[$wi0], $reg[$wi1]\n".
+           "    bltz \$at, 1f\n";
+}
+
+sub out_add {
+    my ($thisop, $wo, $wi0, $wi1) = @_;
+    return "    addu $reg[$wo], $reg[$wi0], $reg[$wi1]\n";
+}
+
+sub out_sub {
+    my ($thisop, $wo, $wi0, $wi1) = @_;
+    return "    subu $reg[$wo], $reg[$wi0], $reg[$wi1]\n";
+}
+
+sub out_neg {
+    my ($thisop, $wo, $wi0) = @_;
+    return "    subu $reg[$wo], \$0, $reg[$wi0]\n";
+}
+
+sub out_mov {
+    my ($thisop, $wo, $wi) = @_;
+    return "    move $reg[$wo], $reg[$wi]\n";
+}
+
+sub out_mul {
+    my ($thisop, $wo, $wi0, $wi1) = @_;
+    return "    multu $reg[$wi0], $reg[$wi1]\n".
+           "    mflo $reg[$wo]\n";
+}
+
+sub out_or {
+    my ($thisop, $wo, $wi0, $wi1) = @_;
+    return "    or $reg[$wo], $reg[$wi0], $reg[$wi1]\n";
+}
+
+sub out_xor {
+    my ($thisop, $wo, $wi0, $wi1) = @_;
+    return "    xor $reg[$wo], $reg[$wi0], $reg[$wi1]\n";
+}
+
+sub out_and {
+    my ($thisop, $wo, $wi0, $wi1) = @_;
+    return "    and $reg[$wo], $reg[$wi0], $reg[$wi1]\n";
+}
+
+sub out_andn {
+    my ($thisop, $wo, $wi0, $wi1) = @_;
+    return "    nor \$at, \$0, $reg[$wi1]\n".
+           "    and $reg[$wo], $reg[$wi0], \$at\n";
+}
+
+sub out_not {
+    my ($thisop, $wo, $wi0) = @_;
+    return "    nor $reg[$wo], \$0, $reg[$wi0]\n";
+}
+
+sub out_msbs {
+    my ($thisop, $wo, $wi0) = @_;
+    return "    clz $reg[$wo], $reg[$wi0]\n".
+           "    xori $reg[$wo], $reg[$wo], 31\n";
+}
+
+sub out_ccall {
+    my ($thisop, $wo, $wi0, $wi1) = @_;
+    return "    move \$a0, \$17\n".
+           "    move \$a1, $reg[$wi0]\n".
+           "    jalr $reg[$wi1]\n".
+           "    move $reg[$wo], \$v0\n";
+}
+
+sub out_shl {
+    my ($thisop, $wo, $wi0, $wi1) = @_;
+    return "    sllv $reg[$wo], $reg[$wi0], $reg[$wi1]\n";
+}
+
+sub out_shr {
+    my ($thisop, $wo, $wi0, $wi1) = @_;
+    return "    srlv $reg[$wo], $reg[$wi0], $reg[$wi1]\n";
+}
+
+sub out_tstc {
+    my ($thisop, $wi) = @_;
+    my $x = $thisop->{args}->[1];
+    if ($x > 15) {
+        return "    srl \$at, $reg[$wi], $x\n".
+               "    andi \$at, 1\n".
+               "    bne \$at, \$0, 1f\n";
+    } else {
+        return "    andi \$at, $reg[$wi], (1 << $x)\n".
+               "    bne \$at, \$0, 1f\n";
+    }
+}
+
+sub out_tsts {
+    my ($thisop, $wi) = @_;
+    my $x = $thisop->{args}->[1];
+    if ($x > 15) {
+        return "    srl \$at, $reg[$wi], $x\n".
+               "    andi \$at, 1\n".
+               "    beq \$at, \$0, 1f\n";
+    } else {
+        return "    andi \$at, $reg[$wi], ".(1 << $x)."\n".
+               "    beq \$at, \$0, 1f\n";
+    }
+}
+
+sub out_bitc {
+    my ($thisop, $wo, $wi) = @_;
+    my $x = $thisop->{args}->[1];
+    return "    li \$at, ".(0xffffffff ^ (1 << $x))."\n".
+	   "    and $reg[$wo], $reg[$wi], \$at\n";
+}
+
+sub out_bits {
+    my ($thisop, $wo, $wi) = @_;
+    my $x = $thisop->{args}->[1];
+    if ($x > 15) {
+        return "    lui \$at, ".(1 << ($x - 16))."\n".
+               "    or $reg[$wo], \$at\n";
+    } else {
+	return "    ori $reg[$wo], $reg[$wi], ".(1 << $x)."\n";
+    }
+}
+
+sub out_shil {
+    my ($thisop, $wo, $wi) = @_;
+    my $x = $thisop->{args}->[1];
+    return "    sll $reg[$wo], $reg[$wi], $x\n";
+}
+
+sub out_shir {
+    my ($thisop, $wo, $wi) = @_;
+    my $x = $thisop->{args}->[1];
+    return "    srl $reg[$wo], $reg[$wi], $x\n";
+}
+
+sub out_extz {
+    my ($thisop, $wo, $wi) = @_;
+    my $r;
+    my $x = $thisop->{args}->[1];
+    if ( $x < 16 ) {
+        $r = "    andi $reg[$wo], $reg[$wi], ".((1 << ($x + 1)) - 1)."\n";
+    } elsif ( $x < 31 ) {
+        $x = 31 - $x;
+        $r = "    sll \$at, $reg[$wi], $x\n".
+             "    srl $reg[$wo], \$at, $x";
+    }
+    return $r;
+}
+
+sub out_exts {
+    my ($thisop, $wo, $wi) = @_;
+    my $r;
+    my $x = $thisop->{args}->[1];
+    if ( $x < 31 ) {
+        $x = 31 - $x;
+        $r = "    sll \$at, $reg[$wi], $x\n".
+             "    sra $reg[$wo], \$at, $x";
+    }
+    return $r;
+}
+
+sub out_st {
+    my ($thisop, $wi0, $wi1) = @_;
+    my $s = $thisop->{width};
+    my $r;
+    if ($s == 0) {
+        $r = "    sb $reg[$wi0], ($reg[$wi1])\n";
+    } elsif ($s == 1) {
+        $r = "    sh $reg[$wi0], ($reg[$wi1])\n";
+    } elsif ($s == 2) {
+        $r = "    sw $reg[$wi0], ($reg[$wi1])\n";
+    } else {
+        print STDERR "$thisop->{line}: 64 bit store truncated to 32 bits.\n";
+        if ( $main::backend_endian eq "little" ) {
+            $r = "    sw $reg[$wi0], ($reg[$wi1])\n".
+                 "    sw \$0, 4($reg[$wi1])\n";
+        } else {
+            $r = "    sw $reg[$wi0], 4($reg[$wi1])\n".
+                 "    sw \$0, ($reg[$wi1])\n";
+        }
+    }
+    return $r;
+}
+
+sub out_ste {
+    my ($thisop, $wi0, $wi1) = @_;
+    my $s = $thisop->{width};
+    my $r;
+    if ($s == 0) {
+        $r = "    sb $reg[$wi0], ($thisop->{args}->[2])($reg[$wi1])\n";
+    } elsif ($s == 1) {
+        $r = "    sh $reg[$wi0], ($thisop->{args}->[2])($reg[$wi1])\n";
+    } elsif ($s == 2) {
+        $r = "    sw $reg[$wi0], ($thisop->{args}->[2])($reg[$wi1])\n";
+    } else {
+        print STDERR "$thisop->{line}: 64 bit store truncated to 32 bits.\n";
+        if ( $main::backend_endian eq "little" ) {
+            $r = "    sw $reg[$wi0], ($thisop->{args}->[2])($reg[$wi1])\n".
+                 "    sw \$0, (4 + $thisop->{args}->[2])($reg[$wi1])\n";
+        } else {
+            $r = "    sw $reg[$wi0], (4 + $thisop->{args}->[2])($reg[$wi1])\n".
+                 "    sw \$0, ($thisop->{args}->[2])($reg[$wi1])\n";
+        }
+    }
+    return $r;
+}
+
+sub out_sti {
+    my ($thisop, $wo, $wi0, $wi1) = @_;
+    my $s = $thisop->{width};
+    my $r;
+    if ($s == 0) {
+        $r = "    sb $reg[$wi0], ($reg[$wi1])\n";
+    } elsif ($s == 1) {
+        $r = "    sh $reg[$wi0], ($reg[$wi1])\n";
+    } elsif ($s == 2) {
+        $r = "    sw $reg[$wi0], ($reg[$wi1])\n";
+    } else {
+        print STDERR "$thisop->{line}: 64 bit store truncated to 32 bits.\n";
+        if ( $main::backend_endian eq "little" ) {
+            $r = "    sw $reg[$wi0], ($reg[$wi1])\n".
+                 "    sw \$0, 4($reg[$wi1])\n";
+        } else {
+            $r = "    sw $reg[$wi0], 4($reg[$wi1])\n".
+                 "    sw \$0, ($reg[$wi1])\n";
+        }
+    }
+    $r .= "    addiu $reg[$wo], $reg[$wi1], ".(1 << $s)."\n";
+    return $r;
+}
+
+sub out_std {
+    my ($thisop, $wo, $wi0, $wi1) = @_;
+    my $s = $thisop->{width};
+    my $r = "    addiu $reg[$wo], $reg[$wi1], -".(1 << $s)."\n";
+    if ($s == 0) {
+        $r .= "    sb $reg[$wi0], ($reg[$wo])\n";
+    } elsif ($s == 1) {
+        $r .= "    sh $reg[$wi0], ($reg[$wo])\n";
+    } elsif ($s == 2) {
+        $r .= "    sw $reg[$wi0], ($reg[$wo])\n";
+    } else {
+        print STDERR "$thisop->{line}: 64 bit store truncated to 32 bits.\n";
+        if ( $main::backend_endian eq "little" ) {
+            $r .= "    sw $reg[$wi0], ($reg[$wo])\n".
+                  "    sw \$0, 4($reg[$wi1])\n";
+        } else {
+            $r .= "    sw $reg[$wi0], 4($reg[$wo])\n".
+                  "    sw \$0, ($reg[$wi1])\n";
+        }
+    }
+    return $r;
+}
+
+sub out_ld {
+    my ($thisop, $wo, $wi) = @_;
+    my $s = $thisop->{width};
+    my $r;
+    if ($s == 0) {
+        $r = "    lbu $reg[$wo], ($reg[$wi])\n";
+    } elsif ($s == 1) {
+        $r = "    lhu $reg[$wo], ($reg[$wi])\n";
+    } elsif ($s == 2) {
+        $r = "    lw $reg[$wo], ($reg[$wi])\n";
+    } else {
+        print STDERR "$thisop->{line}: 64 bit load truncated to 32 bits.\n";
+        if ( $main::backend_endian eq "little" ) {
+            $r = "    lw $reg[$wo], ($reg[$wi])\n";
+        } else {
+            $r = "    lw $reg[$wo], 4($reg[$wi])\n";
+        }
+    }
+    return $r;
+}
+
+sub out_lde {
+    my ($thisop, $wo, $wi) = @_;
+    my $s = $thisop->{width};
+    my $r;
+    if ($s == 0) {
+        $r = "    lbu $reg[$wo], ($thisop->{args}->[2])($reg[$wi])\n";
+    } elsif ($s == 1) {
+        $r = "    lhu $reg[$wo], ($thisop->{args}->[2])($reg[$wi])\n";
+    } elsif ($s == 2) {
+        $r = "    lw $reg[$wo], ($thisop->{args}->[2])($reg[$wi])\n";
+    } else {
+        print STDERR "$thisop->{line}: 64 bit load truncated to 32 bits.\n";
+        if ( $main::backend_endian eq "little" ) {
+            $r = "    lw $reg[$wo], ($thisop->{args}->[2])($reg[$wi])\n";
+        } else {
+            $r = "    lw $reg[$wo], ($thisop->{args}->[2] + 4)($reg[$wi])\n";
+        }
+    }
+    return $r;
+}
+
+sub out_ldi {
+    my ($thisop, $wo0, $wo1, $wi) = @_;
+    my $s = $thisop->{width};
+    my $r;
+    if ($s == 0) {
+        $r = "    lbu $reg[$wo0], ($reg[$wi])\n";
+    } elsif ($s == 1) {
+        $r = "    lhu $reg[$wo0], ($reg[$wi])\n";
+    } elsif ($s == 2) {
+        $r = "    lw $reg[$wo0], ($reg[$wi])\n";
+    } else {
+        print STDERR "$thisop->{line}: 64 bit load truncated to 32 bits.\n";
+        if ( $main::backend_endian eq "little" ) {
+            $r = "    lw $reg[$wo0], ($reg[$wi])\n";
+        } else {
+            $r = "    lw $reg[$wo0], 4($reg[$wi])\n";
+        }
+    }
+    $r .= "    addiu $reg[$wo1], $reg[$wi], ".(1 << $s)."\n";
+    return $r;
+}
+
+sub out_cst {
+    my ($thisop, $wo) = @_;
+    my $r;
+    my $x = $thisop->{args}->[1] << $thisop->{args}->[2];
+    if ( $thisop->{width} == 3 ) {
+        print STDERR "$thisop->{line}: 64 bit constant truncated to 32 bits.\n";
+    }
+    if ( !($x & 0xffff0000) ) {
+        $r = "    li $reg[$wo], $x\n";
+    } else {
+        $r = "    lui $reg[$wo], ".(($x & 0xffff0000) >> 16)."\n";
+        if ($x & 0x0000ffff) {
+            $r .= "    ori $reg[$wo], ".($x & 0xffff)."\n";
+        }
+    }
+    return $r;
+}
+
+sub out_gaddr {
+    my ($thisop, $wo) = @_;
+    return "    la $reg[$wo], $thisop->{args}->[1]\n";
+}
+
+sub out_laddr {
+    out_gaddr( @_ );
+}
+
+sub out_data {
+    my ($thisop) = @_;
+    my $x = $thisop->{args}->[0];
+    return "    .short $x ; .balign 4\n";
+}
+
+sub write {
+    main::write_asm( scalar @reg );
+}
+
+return 1;
+

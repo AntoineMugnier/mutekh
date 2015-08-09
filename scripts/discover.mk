@@ -13,6 +13,7 @@ export MODULE_NAMES
 define declare_module_dir
 
 MKDOC_ARGS += -I $(2)/include
+BCPATH += -p $(2)
 $(1)_SRC_DIR:=$(2)
 $(1)_OBJ_DIR:=$(OBJ_DIR)/$(1)
 
