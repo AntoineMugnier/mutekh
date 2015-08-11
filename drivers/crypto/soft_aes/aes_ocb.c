@@ -181,6 +181,7 @@ static inline void soft_aes_ocb_cipher(struct soft_aes_context_s * __restrict__ 
           }          p;
 
           memcpy(p.p8, in, l);
+          memset(p.p8 + l, 0, sizeof(p.p32) - l);
 
           if (rq->op & DEV_CRYPTO_INVERSE)
             {
