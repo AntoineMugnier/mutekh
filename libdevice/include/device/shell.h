@@ -49,7 +49,7 @@ FIRST_FIELD_ASSERT(dev_console_opt_device_s, opt);
 struct dev_console_opt_accessor_s
 {
   struct termui_con_opts_s opt;
-  enum driver_class_e      cl:8;
+  enum driver_class_e      BITFIELD(cl,8);
   uint16_t                 offset; /* offset of device accessor field */
 };
 

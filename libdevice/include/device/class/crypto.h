@@ -91,7 +91,7 @@ struct dev_crypto_info_s
   uint8_t                       align_log2;
 
   /** capability flags */
-  enum dev_crypto_capabilities_e cap:16;
+  enum dev_crypto_capabilities_e BITFIELD(cap,16);
 
   /** algorithm block size in bytes, relevant for block ciphers and
       hash based algorithms. */
@@ -229,19 +229,19 @@ struct dev_crypto_context_s
   uint8_t                       auth_len;
 
   /** Used mode of operation */
-  enum dev_crypto_mode_e        mode:8;
+  enum dev_crypto_mode_e        BITFIELD(mode,8);
 
   /** This hint flag can be set if the context will not be used
       several times. This may prevent the driver from using an
       internal state cache entry. */
-  bool_t                        ephemeral:1;
+  bool_t                        BITFIELD(ephemeral,1);
   /** This hint flag can be set if the context will only be used to
       perform encryption. The driver may skip expanding the key for
       this purpose. */
-  bool_t                        encrypt_only:1;
+  bool_t                        BITFIELD(encrypt_only,1);
   /** This hint flag can be set if the context will only be used to
       perform decryption. */
-  bool_t                        decrypt_only:1;
+  bool_t                        BITFIELD(decrypt_only,1);
 };
 
 ENUM_DESCRIPTOR(dev_crypto_op_e, strip:DEV_CRYPTO_, upper, or, empty);
@@ -263,7 +263,7 @@ struct dev_crypto_rq_s
 {
   struct dev_request_s                  rq;
 
-  enum dev_crypto_op_e                  op:3;
+  enum dev_crypto_op_e                  BITFIELD(op,3);
 
   error_t                               err;
 

@@ -197,7 +197,7 @@ struct dev_timer_config_s
   /** timer resolution */
   dev_timer_res_t               res;
   /** timer device capabilities */
-  enum dev_timer_capabilities_e cap:8;
+  enum dev_timer_capabilities_e BITFIELD(cap,8);
 };
 
 /** Timer skew structure used to measure skew between two timers */

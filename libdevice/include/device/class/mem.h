@@ -104,15 +104,15 @@ struct dev_mem_info_s
 
   /** number of allowed reads cycles between two erase operations. @em
       {read_cycles_m*2^read_cycles_p}. 0 means infinite. */
-  uint8_t read_cycles_p:5;
+  uint8_t BITFIELD(read_cycles_p,5);
   /** @see read_cycles_p */
-  uint8_t read_cycles_m:3;
+  uint8_t BITFIELD(read_cycles_m,3);
 
   /** number of allowed erase cycles. @em
       {erase_cycles_m*2^erase_cycles_p}. 0 means infinite. */
-  uint8_t erase_cycles_p:5;
+  uint8_t BITFIELD(erase_cycles_p,5);
   /** @see erase_cycles_p */
-  uint8_t erase_cycles_m:3;
+  uint8_t BITFIELD(erase_cycles_m,3);
 
   /** log2 of byte size of a page, 0=no paging */
   uint8_t page_log2;
@@ -130,9 +130,9 @@ struct dev_mem_info_s
   uint8_t partial_write;
 
   /** type of memory */
-  enum dev_mem_type_e  type:3;
+  enum dev_mem_type_e  BITFIELD(type,3);
 
-  enum dev_mem_flags_e flags:12;
+  enum dev_mem_flags_e BITFIELD(flags,12);
 };
 
 ENUM_DESCRIPTOR(dev_mem_rq_type_e, strip:DEV_MEM_OP_, upper, or);
@@ -186,7 +186,7 @@ struct dev_mem_rq_s
   struct dev_request_s          base;
 
   /* Requested operation */
-  enum dev_mem_rq_type_e        type:8;
+  enum dev_mem_rq_type_e        BITFIELD(type,8);
 
   error_t                       err;
 

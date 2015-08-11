@@ -82,8 +82,8 @@ enum dev_resource_flags_e
 struct dev_resource_s
 {
   /** resource descriptor type @see dev_resource_type_e */
-  enum dev_resource_type_e type:8;
-  enum dev_resource_flags_e flags:8;
+  enum dev_resource_type_e BITFIELD(type,8);
+  enum dev_resource_flags_e BITFIELD(flags,8);
 
   union {
     /** @internal */
@@ -106,47 +106,47 @@ struct dev_resource_s
     /** @see #DEV_STATIC_RES_IRQ @see device_res_add_irq */
     struct {
       /** id of irq source end-point of the device */
-      uintptr_t                 src_id:CONFIG_DEVICE_IRQ_MAX_OUTPUT_ID;
+      uintptr_t                 BITFIELD(src_id,CONFIG_DEVICE_IRQ_MAX_OUTPUT_ID);
       /** id of irq sink end-point of interrupt controller */
-      uintptr_t                 sink_id:CONFIG_DEVICE_IRQ_MAX_INPUT_ID;
+      uintptr_t                 BITFIELD(sink_id,CONFIG_DEVICE_IRQ_MAX_INPUT_ID);
       /** initial irq trigger mode, @see dev_irq_sense_modes_e */
-      uintptr_t                 trig_mode:8;
+      uintptr_t                 BITFIELD(trig_mode,8);
       /** logical irq id, used when @tt trig_mode is @ref DEV_IRQ_SENSE_ID_BUS */
-      uintptr_t                 irq_id:CONFIG_DEVICE_IRQ_MAX_LOGICAL_ID;
+      uintptr_t                 BITFIELD(irq_id,CONFIG_DEVICE_IRQ_MAX_LOGICAL_ID);
       /** specifies source end-points of the controller that can be used to forward this irq. */
-      uintptr_t                 route_mask:CONFIG_DEVICE_IRQ_MAX_ROUTES;
+      uintptr_t                 BITFIELD(route_mask,CONFIG_DEVICE_IRQ_MAX_ROUTES);
     }                           irq;
 
     /** @see #DEV_STATIC_RES_GPIO @see device_res_add_gpio */
     struct {
-      uintptr_t                 id:CONFIG_DEVICE_GPIO_MAX_ID;
-      uintptr_t                 width:CONFIG_DEVICE_GPIO_MAX_WIDTH;
+      uintptr_t                 BITFIELD(id,CONFIG_DEVICE_GPIO_MAX_ID);
+      uintptr_t                 BITFIELD(width,CONFIG_DEVICE_GPIO_MAX_WIDTH);
       const char                *label;
     }                           gpio;
 
     /** @see #DEV_STATIC_RES_IOMUX @see device_res_add_iomux */
     struct {
-      uintptr_t                 demux:CONFIG_DEVICE_IOMUX_MAX_DEMUX;
-      uintptr_t                 io_id:CONFIG_DEVICE_IOMUX_MAX_ID;
-      uintptr_t                 mux:CONFIG_DEVICE_IOMUX_MAX_MUX;
-      uintptr_t                 config:CONFIG_DEVICE_IOMUX_MAX_CONFIG;
+      uintptr_t                 BITFIELD(demux,CONFIG_DEVICE_IOMUX_MAX_DEMUX);
+      uintptr_t                 BITFIELD(io_id,CONFIG_DEVICE_IOMUX_MAX_ID);
+      uintptr_t                 BITFIELD(mux,CONFIG_DEVICE_IOMUX_MAX_MUX);
+      uintptr_t                 BITFIELD(config,CONFIG_DEVICE_IOMUX_MAX_CONFIG);
       const char                *label;
     }                           iomux;
 
     /** @see #DEV_STATIC_RES_DMA @see device_res_add_dma */
     struct {
       const char                *label;
-      uintptr_t                 channel:5;
+      uintptr_t                 BITFIELD(channel,5);
       uintptr_t                 config;
     }                           dma;
     /** @see #DEV_STATIC_RES_UART @see device_res_add_uart */
     struct {
-      uintptr_t                 baudrate:26;
-      uintptr_t                 data_bits:4;
-      uintptr_t                 stop_bits:2;
-      uintptr_t                 parity:2;
-      uintptr_t                 flow_ctrl:1;
-      uintptr_t                 half_duplex:1;
+      uintptr_t                 BITFIELD(baudrate,26);
+      uintptr_t                 BITFIELD(data_bits,4);
+      uintptr_t                 BITFIELD(stop_bits,2);
+      uintptr_t                 BITFIELD(parity,2);
+      uintptr_t                 BITFIELD(flow_ctrl,1);
+      uintptr_t                 BITFIELD(half_duplex,1);
     }                           uart;
 
     /** @see #DEV_STATIC_RES_ID @see device_res_add_id */
@@ -180,27 +180,27 @@ struct dev_resource_s
     /** @see #DEV_STATIC_RES_CLK_RTE @see device_add_res_clock_route */
     struct {
       /** node id of the input clock signal */
-      uint64_t                  parent:CONFIG_DEVICE_CLOCK_MAX_ID;
+      uint64_t                  BITFIELD(parent,CONFIG_DEVICE_CLOCK_MAX_ID);
       /** node id of the output clock signal */
-      uint64_t                  node:CONFIG_DEVICE_CLOCK_MAX_ID;
+      uint64_t                  BITFIELD(node,CONFIG_DEVICE_CLOCK_MAX_ID);
       /** numerator of the frequency scaling */
-      uint64_t                  num:CONFIG_DEVICE_CLOCK_FRAC_WIDTH;
+      uint64_t                  BITFIELD(num,CONFIG_DEVICE_CLOCK_FRAC_WIDTH);
       /** denominator of the frequency scaling */
-      uint64_t                  denom:CONFIG_DEVICE_CLOCK_FRAC_WIDTH;
+      uint64_t                  BITFIELD(denom,CONFIG_DEVICE_CLOCK_FRAC_WIDTH);
       /** mask of associated configurations */
-      uint64_t                  config:CONFIG_DEVICE_CLOCK_MAX_CONFIG;
+      uint64_t                  BITFIELD(config,CONFIG_DEVICE_CLOCK_MAX_CONFIG);
     }                           clock_rte;
 
     /** @see #DEV_STATIC_RES_CLK_OSC @see device_add_res_clock_osc */
     struct {
       /** node id */
-      uint64_t                  node:CONFIG_DEVICE_CLOCK_MAX_ID;
+      uint64_t                  BITFIELD(node,CONFIG_DEVICE_CLOCK_MAX_ID);
       /** numerator of the frequency fractional part */
-      uint64_t                  num:CONFIG_DEVICE_CLOCK_OSCN_WIDTH;
+      uint64_t                  BITFIELD(num,CONFIG_DEVICE_CLOCK_OSCN_WIDTH);
       /** denominator of the frequency fractional part */
-      uint64_t                  denom:CONFIG_DEVICE_CLOCK_OSCD_WIDTH;
+      uint64_t                  BITFIELD(denom,CONFIG_DEVICE_CLOCK_OSCD_WIDTH);
       /** mask of associated configurations */
-      uint64_t                  config:CONFIG_DEVICE_CLOCK_MAX_CONFIG;
+      uint64_t                  BITFIELD(config,CONFIG_DEVICE_CLOCK_MAX_CONFIG);
     }                           clock_osc;
 
     /** @see #DEV_STATIC_RES_CLK_SRC @see device_add_res_clock_src */
@@ -209,18 +209,18 @@ struct dev_resource_s
       const char                *src;
       /** node id of the source end-point, relevant to the device
           pointed to by @ref src. */
-      uintptr_t                 src_ep:CONFIG_DEVICE_CLOCK_MAX_ID;
+      uintptr_t                 BITFIELD(src_ep,CONFIG_DEVICE_CLOCK_MAX_ID);
       /** node id of the sink end-point, relevant to the device which
           holds this resource. */
-      uintptr_t                 sink_ep:CONFIG_DEVICE_CLOCK_MAX_ID;
+      uintptr_t                 BITFIELD(sink_ep,CONFIG_DEVICE_CLOCK_MAX_ID);
     }                           clock_src;
 
     /** @see #DEV_STATIC_RES_FREQ @see device_add_res_freq */
     struct {
       /** numerator of the frequency fractional part */
-      uint64_t                  num:64-CONFIG_DEVICE_CLOCK_OSCD_WIDTH;
+      uint64_t                  BITFIELD(num,64-CONFIG_DEVICE_CLOCK_OSCD_WIDTH);
       /** denominator of the frequency fractional part */
-      uint64_t                  denom:CONFIG_DEVICE_CLOCK_OSCD_WIDTH;
+      uint64_t                  BITFIELD(denom,CONFIG_DEVICE_CLOCK_OSCD_WIDTH);
     }                           freq;
 
     /** @see #DEV_STATIC_RES_STR_PARAM @see device_res_add_str_param */

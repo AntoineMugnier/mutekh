@@ -287,11 +287,11 @@ enum dev_spi_cs_policy_e
 
 struct dev_spi_ctrl_config_s
 {
-  enum dev_spi_ckmode_e    ck_mode:2;
+  enum dev_spi_ckmode_e    BITFIELD(ck_mode,2);
 
-  enum dev_spi_bit_order_e bit_order:1;
-  enum dev_spi_polarity_e  miso_pol:1;
-  enum dev_spi_polarity_e  mosi_pol:1;
+  enum dev_spi_bit_order_e BITFIELD(bit_order,1);
+  enum dev_spi_polarity_e  BITFIELD(miso_pol,1);
+  enum dev_spi_polarity_e  BITFIELD(mosi_pol,1);
 
   /** This field gives the bitrate in bits per second. */
   uint32_t                 bit_rate;
@@ -362,11 +362,11 @@ struct dev_spi_ctrl_transfer_s
 
   /** Width in bytes of the data type used to store a single input SPI
       word. */
-  uint_fast8_t             in_width:3;
+  uint_fast8_t             BITFIELD(in_width,3);
   /** Width in bytes of the data type used to load a single output SPI
       word. A value of 0 means @ref uint32_t without increment of the
       output pointer during transfer. */
-  uint_fast8_t             out_width:3;
+  uint_fast8_t             BITFIELD(out_width,3);
 };
 
 /** @see dev_spi_ctrl_transfer_t */
@@ -483,26 +483,26 @@ struct dev_spi_ctrl_rq_s
   uint8_t                 cs_id;
 
   /** Current cs policy */
-  enum dev_spi_cs_policy_e cs_policy:2;
+  enum dev_spi_cs_policy_e BITFIELD(cs_policy,2);
 
   /** Chip select polarity of the slave device */
-  enum dev_spi_polarity_e cs_polarity:1;
+  enum dev_spi_polarity_e BITFIELD(cs_polarity,1);
 
 #ifdef CONFIG_DEVICE_SPI_REQUEST_GPIO
   /** Use a gpio device to drive the chip select pin of the slave */
-  bool_t                  cs_gpio:1;
+  bool_t                  BITFIELD(cs_gpio,1);
 #endif
 
   /** Use the controller to driver the chip select pin of the slave */
-  bool_t                  cs_ctrl:1;
+  bool_t                  BITFIELD(cs_ctrl,1);
 
   /** This flag indicates that the request has not ended yet. */
-  bool_t                  enqueued:1;
+  bool_t                  BITFIELD(enqueued,1);
 
-  bool_t                  wakeup:1;
-  bool_t                  wakeup_able:1;
+  bool_t                  BITFIELD(wakeup,1);
+  bool_t                  BITFIELD(wakeup_able,1);
 
-  bool_t                  priority:1;
+  bool_t                  BITFIELD(priority,1);
 };
 
 STRUCT_INHERIT(dev_spi_ctrl_rq_s, dev_request_s, base);

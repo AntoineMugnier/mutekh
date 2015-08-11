@@ -82,8 +82,8 @@ enum dev_pin_driving_e
 */
 struct dev_freq_s
 {
-  uint64_t num:CONFIG_DEVICE_CLOCK_OSCN_WIDTH;
-  uint64_t denom:64-CONFIG_DEVICE_CLOCK_OSCN_WIDTH;
+  uint64_t BITFIELD(num,CONFIG_DEVICE_CLOCK_OSCN_WIDTH);
+  uint64_t BITFIELD(denom,64-CONFIG_DEVICE_CLOCK_OSCN_WIDTH);
 };
 
 /** @This encodes the invalid frequency value @see dev_freq_s. */
@@ -101,8 +101,8 @@ struct dev_freq_s
 */
 struct dev_freq_accuracy_s
 {
-  uint8_t m:3;
-  uint8_t e:5;
+  uint8_t BITFIELD(m,3);
+  uint8_t BITFIELD(e,5);
 };
 
 /** @This encodes a frequency accuracy value @see dev_freq_accuracy_s */
@@ -127,8 +127,8 @@ ALWAYS_INLINE uint32_t dev_freq_acc_ppb(const struct dev_freq_accuracy_s *acc)
 /** Clock ratio */
 struct dev_freq_ratio_s
 {
-  uint32_t num:CONFIG_DEVICE_CLOCK_FRAC_WIDTH;
-  uint32_t denom:CONFIG_DEVICE_CLOCK_FRAC_WIDTH;
+  uint32_t BITFIELD(num,CONFIG_DEVICE_CLOCK_FRAC_WIDTH);
+  uint32_t BITFIELD(denom,CONFIG_DEVICE_CLOCK_FRAC_WIDTH);
 };
 
 #endif

@@ -107,7 +107,7 @@ struct dev_valio_rq_s
     uint16_t attribute;
 
     /** Request type */
-    enum dev_valio_request_type_e type:2;
+    enum dev_valio_request_type_e BITFIELD(type,2);
 
     /** Data buffer, either read or written.  Size is implicit for the
         attribute type. */

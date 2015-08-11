@@ -181,6 +181,11 @@ cont_s##_from_##field(void *x);
 # define ENUM_DESCRIPTOR(...)
 #endif
 
+#ifdef CONFIG_COMPILE_NOBITFIELD
+# define BITFIELD(name, bits) name
+#else
+# define BITFIELD(name, bits) name:bits
+#endif
 
 #if defined(CONFIG_DEBUG) && !defined(__ASSEMBLER__)
 

@@ -102,9 +102,9 @@ struct dev_dma_entry_s
 struct dev_dma_param_s
 {
   uint8_t                       channel;
-  enum dev_dma_inc_e            src_inc:2;
-  enum dev_dma_inc_e            dst_inc:2;
-  uint8_t                       const_data:1;  
+  enum dev_dma_inc_e            BITFIELD(src_inc,2);
+  enum dev_dma_inc_e            BITFIELD(dst_inc,2);
+  uint8_t                       BITFIELD(const_data,1);  
 };
 
 struct device_dma_s;
@@ -135,7 +135,7 @@ struct dev_dma_rq_s
   struct dev_dma_param_s        param[2];
 
   uint16_t                      count;
-  uint8_t                       arch_rq:1;
+  uint8_t                       BITFIELD(arch_rq,1);
                              
   error_t                       error;    
 };

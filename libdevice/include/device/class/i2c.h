@@ -188,7 +188,7 @@ struct dev_i2c_transfer_s {
     /** Size of @tt data buffer */
     uint16_t size;
     /** Way of transfer */
-    enum dev_i2c_way_e type:1;
+    enum dev_i2c_way_e BITFIELD(type,1);
 };
 
 /**

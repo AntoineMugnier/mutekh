@@ -64,8 +64,8 @@ struct pl011uart_context_s
   struct dev_irq_src_s           irq_ep;
 #endif
 
-  bool_t                        read_started:1;
-  bool_t                        write_started:1;
+  bool_t                        BITFIELD(read_started,1);
+  bool_t                        BITFIELD(write_started,1);
 };
 
 static bool_t pl011uart_try_read(struct device_s *dev)

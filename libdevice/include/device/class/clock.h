@@ -129,7 +129,7 @@ struct dev_clock_src_ep_s
   */
   uint16_t                use_count;
 
-  enum dev_clock_src_ep_flags_e flags:8;
+  enum dev_clock_src_ep_flags_e BITFIELD(flags,8);
 };
 
 /** @see dev_clock_sink_changed_t */
@@ -375,7 +375,7 @@ struct dev_clock_link_info_s
   dev_clock_node_id_t src_id;
 
   /** Flags of the source end-point */
-  enum dev_clock_src_ep_flags_e src_flags:8;
+  enum dev_clock_src_ep_flags_e BITFIELD(src_flags,8);
 };
 
 /** @This links multiple clock sink end-points to the appropriate

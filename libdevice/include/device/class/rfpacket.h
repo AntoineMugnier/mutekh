@@ -94,16 +94,16 @@ struct dev_rfpacket_config_s
   uint32_t                      frequency;
 
   /** frequency deviation in Hz (FSK modulation) */
-  uint32_t                      deviation:24;
+  uint32_t                      BITFIELD(deviation,24);
 
   /** bandwidth in Hz (OOK modulation) */
-  uint32_t                      bw:24;
+  uint32_t                      BITFIELD(bw,24);
 
   /** Datarate in bps */
-  uint32_t                      drate:24;
+  uint32_t                      BITFIELD(drate,24);
 
   /** Modulation */
-  enum dev_rfpacket_modulation_e  mod:8;
+  enum dev_rfpacket_modulation_e  BITFIELD(mod,8);
 
   /** Sync word value. Most significant bit are transmitted first */
   uint32_t                      sw_value;
@@ -115,10 +115,10 @@ struct dev_rfpacket_config_s
   int16_t                       rssi_th;
 
   /** Packet handler configuration */
-  enum dev_rfpacket_encoding_e  encoding:4;
+  enum dev_rfpacket_encoding_e  BITFIELD(encoding,4);
 
   /** Use of CRC field */
-  enum dev_rfpacket_crc_e       crc:4;
+  enum dev_rfpacket_crc_e       BITFIELD(crc,4);
 
   /** Size of TX preamble in bits */
   uint8_t                      tx_pb_len;
@@ -127,10 +127,10 @@ struct dev_rfpacket_config_s
   uint8_t                      rx_pb_len;
 
   /** preamble pattern: 0 is 010101..., 1 is 101010... */
-  enum dev_rfpacket_preamble_e  pb_type:2;
+  enum dev_rfpacket_preamble_e  BITFIELD(pb_type,2);
 
   /** Size of sync word in bits minus one */
-  uint32_t                      sw_len:5;
+  uint32_t                      BITFIELD(sw_len,5);
 };
 
 struct dev_rfpacket_stats_s
@@ -186,13 +186,13 @@ struct dev_rfpacket_rq_s
   struct dev_request_s base;
 
   error_t                           err;            //< error code set by driver
-  bool_t                            err_group:1;
-  enum dev_rfpacket_rq_rtype_e      type:2;
+  bool_t                            BITFIELD(err_group,1);
+  enum dev_rfpacket_rq_rtype_e      BITFIELD(type,2);
 
   union {
     struct {
       uint32_t                      lifetime;      //<  request timeout in timer unit
-      enum dev_rfpacket_time_anchor_e anchor:2;
+      enum dev_rfpacket_time_anchor_e BITFIELD(anchor,2);
 
       struct {
         dev_timer_value_t         timestamp;       //< in timer unit

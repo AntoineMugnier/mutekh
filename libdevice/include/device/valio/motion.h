@@ -123,7 +123,7 @@ enum valio_motion_event_e
 struct valio_motion_thresh_s
 {
     /* Axis selection mask. */
-    uint16_t axis:9;
+    uint16_t BITFIELD(axis,9);
 
     /* Minimum duration in us for the event to be emitted. When 0, any event will be 
        emitted */
@@ -169,7 +169,7 @@ enum valio_motion_accel_opt_e
 struct valio_motion_accel_s
 {
     /* A valio_motion_accel_opt_e selection mask. */
-    uint8_t mask:4;
+    uint8_t BITFIELD(mask,4);
 
     struct valio_motion_thresh_s act;
     struct valio_motion_thresh_s inact;
@@ -196,7 +196,7 @@ struct valio_motion_gyro_s
 {
     /* Option selection mask. If the mask value is zero, then the gyroscope
        is disabled. */
-    uint8_t                      mask:1;
+    uint8_t                      BITFIELD(mask,1);
     struct valio_motion_thresh_s move;
 };
 
@@ -209,7 +209,7 @@ struct valio_motion_comp_s
 {
     /* Option selection mask. If the mask value is zero, then the compass
        is disabled. */
-    uint8_t  mask:1;
+    uint8_t  BITFIELD(mask,1);
     uint16_t gain;
 };
 
@@ -218,7 +218,7 @@ struct valio_motion_axis_data_s
     /* This mask is set according to motion detection on each axis. If device
        is not able to differenciate move on each axes, driver must set all axis bits
        to 1 and return each value of axis */
-    uint16_t axis:9;
+    uint16_t BITFIELD(axis,9);
 
     /** The value of each axis. */
     int16_t x;
@@ -242,8 +242,8 @@ struct valio_motion_evt_s
        event are monitored. The request is terminated when at least one of these event
        occurs. @tt revts returns a mask specifying which event has occured */
 
-    uint16_t                   evts:9;
-    uint16_t                   revts:9;
+    uint16_t                   BITFIELD(evts,9);
+    uint16_t                   BITFIELD(revts,9);
 
     struct valio_motion_data_s data;
 };

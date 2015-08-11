@@ -70,7 +70,7 @@ struct vfs_fs_s
     /** A pointer to supported operations table */
     const struct vfs_fs_ops_s *ops;
     /** Whether filesystem is read-only */
-    uint8_t flag_ro:1;
+    uint8_t BITFIELD(flag_ro,1);
 
     /** Object-management-related */
     GCT_REFCOUNT_ENTRY(obj_entry);
