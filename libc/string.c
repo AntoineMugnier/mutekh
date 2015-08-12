@@ -38,6 +38,7 @@
 
 #ifndef HAS_CPU_MEMSET
 #undef memset
+__attribute__((used))
 inline void * memset(void *dst, int_fast8_t _s, size_t count)
 {
   int8_t s = _s;
@@ -66,6 +67,7 @@ inline void * memset(void *dst, int_fast8_t _s, size_t count)
 
 #ifndef HAS_CPU_MEMCPY
 #undef memcpy
+__attribute__((used))
 void *memcpy( void *_dst, const void *_src, size_t size )
 {
   reg_t *dst = _dst;
@@ -122,6 +124,7 @@ void *memcpy( void *_dst, const void *_src, size_t size )
 
 #ifndef HAS_CPU_MEMCMP
 #undef memcmp
+__attribute__((used))
 inline int_fast8_t memcmp(const void *dst, const void *src, size_t count)
 {
   const uint8_t	*d = dst;
@@ -158,6 +161,7 @@ __memcpy_reverse(void *dst, const void *src, size_t size)
 #endif
 
 inline void *
+__attribute__((used))
 memmove(void *dst, const void *src, size_t size)
 {
   if (dst > src)
@@ -171,6 +175,7 @@ memmove(void *dst, const void *src, size_t size)
 
 #ifndef HAS_CPU_STRLEN
 #undef strlen
+__attribute__((used))
 inline size_t strlen(const char *s)
 {
   const char	*s_ = s;
@@ -186,6 +191,7 @@ inline size_t strlen(const char *s)
 
 #ifndef HAS_CPU_STRCAT
 #undef strcat
+__attribute__((used))
 inline char* strcat(char *s, const char *t)
 {
   char	*dest = s;
@@ -208,6 +214,7 @@ inline char* strcat(char *s, const char *t)
 
 #ifndef HAS_CPU_STRNCAT
 #undef strncat
+__attribute__((used))
 inline char *strncat(char *dst, const char *src, size_t n)
 {
   /* source freebsd libc */
@@ -232,6 +239,7 @@ inline char *strncat(char *dst, const char *src, size_t n)
 
 #ifndef HAS_CPU_STRCHR
 #undef strchr
+__attribute__((used))
 inline char *strchr(const char *t, int_fast8_t c)
 {
   char	ch = c;
@@ -255,6 +263,7 @@ inline char *strchr(const char *t, int_fast8_t c)
 
 #ifndef HAS_CPU_STRCHR
 #undef strrchr
+__attribute__((used))
 inline char *strrchr(const char *t, int_fast8_t c)
 {
   char  ch = c;
@@ -277,6 +286,7 @@ inline char *strrchr(const char *t, int_fast8_t c)
 
 #ifndef HAS_CPU_STRCMP
 #undef strcmp
+__attribute__((used))
 inline int_fast8_t strcmp (const char *s1, const char *s2)
 {
   while (*s1 && *s1 == *s2)
@@ -290,6 +300,7 @@ inline int_fast8_t strcmp (const char *s1, const char *s2)
 
 #ifndef HAS_CPU_STRCPY
 #undef strcpy
+__attribute__((used))
 inline char * strcpy (char *s1, const char *s2)
 {
   char	*res = s1;
@@ -305,6 +316,7 @@ inline char * strcpy (char *s1, const char *s2)
 
 #ifndef HAS_CPU_STRDUP
 #undef strdup
+__attribute__((used))
 inline char *strdup(const char *s)
 {
   size_t	len = strlen(s);
@@ -324,6 +336,7 @@ inline char *strdup(const char *s)
 
 #ifndef HAS_CPU_STRSTR
 #undef strstr
+__attribute__((used))
 inline char *strstr(const char *haystack, const char *needle)
 {
   size_t	nl = strlen(needle);
@@ -352,6 +365,7 @@ inline char *strstr(const char *haystack, const char *needle)
 
 #ifndef HAS_CPU_MEMCHR
 #undef memchr
+__attribute__((used))
 inline void * memchr(const void *s, int_fast8_t c, size_t n)
 {
   const unsigned char *pc = (unsigned char *)s;
@@ -371,6 +385,7 @@ inline void * memchr(const void *s, int_fast8_t c, size_t n)
 
 #ifndef HAS_CPU_STRCASECMP
 #undef strcasecmp
+__attribute__((used))
 inline int_fast8_t strcasecmp(const char* s1, const char* s2)
 {
   uint_fast8_t  x2;
@@ -394,6 +409,7 @@ inline int_fast8_t strcasecmp(const char* s1, const char* s2)
 
 #ifndef HAS_CPU_STRNCASECMP
 #undef strncasecmp
+__attribute__((used))
 inline int_fast8_t strncasecmp(const char* s1, const char* s2, size_t len)
 {
   uint_fast8_t  x2;
@@ -434,6 +450,7 @@ void *memccpy(void *dst, const void *src, char c, size_t count)
 
 #ifndef HAS_CPU_STRNCPY
 #undef strncpy
+__attribute__((used))
 inline char *strncpy(char *dest, const char *src, size_t n)
 {
   char *tmp;
@@ -462,6 +479,7 @@ inline char *strncpy(char *dest, const char *src, size_t n)
 
 #ifndef HAS_CPU_STRNCMP
 #undef strncmp
+__attribute__((used))
 inline int_fast8_t strncmp(const char *s1, const char *s2, size_t n)
 {
   register const unsigned char* a = (const unsigned char *)s1;
