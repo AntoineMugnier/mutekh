@@ -443,6 +443,11 @@ dev_timer_delay_check_t2s(int_fast8_t shift, dev_timer_delay_t delay)
   return shift < 0 && __builtin_clz(delay) < -shift ? -ERANGE : 0;
 }
 
+ALWAYS_INLINE bool_t dev_timer_request_is_scheduled(const struct dev_timer_rq_s *rq)
+{
+  return rq->rq.drvdata != NULL;
+}
+
 /** @This checks if the time specified by @tt delay has elapsed since
     the timer had the value specified in @tt start.
 
