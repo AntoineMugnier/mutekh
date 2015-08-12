@@ -54,7 +54,7 @@ CFLAGS += -DGCT_CONFIG_CHECKING
 endif
 
 ifeq ($(CONFIG_HET_BUILD), defined)
-CFLAGS += -fno-section-anchors -ffunction-sections -fdata-sections
+CFLAGS += -fno-section-anchors -ffunction-sections -fdata-sections -fmerge-all-constants
 endif
 
 ifeq ($(CONFIG_COMPILE_SAVETEMPS), defined)
