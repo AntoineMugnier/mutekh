@@ -142,8 +142,15 @@ SECTIONS
 /**************************************** rodata */
 
 	.rodata VMAEND(.text) : AT(LMAEND(.text)) {
+                . = ALIGN(1);
+            INPUT_SECTION_FLAGS (SHF_STRINGS) *(.rodata .rodata.*)
+            *(.rodata.__FUNCTION__.*)
+            *(.rodata.__func__.*)
+            *(.str1.*)
                 . = ALIGN(16);
-		*(.rodata*)
+            INPUT_SECTION_FLAGS (SHF_MERGE) *(.rodata .rodata.*)
+                . = ALIGN(16);
+            *(.rodata*)
 
                 . = ALIGN(8);
 #if defined(CONFIG_DEVICE)
