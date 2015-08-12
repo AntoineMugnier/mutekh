@@ -32,6 +32,7 @@
 .syntax unified
 
 .section .excep,"ax"
+#ifndef CONFIG_LOAD_HEXO_BOOTLOADER
 
 CPU_NAME_DECL(exception_vector):
         .globl CPU_NAME_DECL(exception_vector)
@@ -64,7 +65,7 @@ CPU_NAME_DECL(reset_vector):
         .endr
 
         /* syscall */
-#ifdef CONFIG_HEXO_USERMODE
+#if defined(CONFIG_HEXO_BOOTLOADER) || defined(CONFIG_HEXO_USERMODE)
         .word arm_exc_svcall
 #else
         .word arm_exc_dummy
@@ -77,7 +78,9 @@ CPU_NAME_DECL(reset_vector):
         .word arm_exc_dummy
 
         /* pendsv */
-#ifdef CONFIG_HEXO_CONTEXT_PREEMPT
+#if defined(CONFIG_HEXO_BOOTLOADER)
+        .word arm_exc_pendsv
+#elif defined(CONFIG_HEXO_CONTEXT_PREEMPT)
         .word cpu_context_jumpto_irq
 #else
         .word arm_exc_dummy
@@ -97,6 +100,35 @@ CPU_NAME_DECL(reset_vector):
          .word arm_exc_dummy
         .endr        
 #endif
+#else /* CONFIG_LOAD_HEXO_BOOTLOADER */
+/*
+    We are bootloaded firmware, we do not need usual exception
+	decoding, all we have to declare is a structure with various entry
+	points. Bootloader will peek in this structure to forward relevant
+	exceptions to us.
+*/
+
+CPU_NAME_DECL(exception_info):
+        .globl CPU_NAME_DECL(exception_info)
+        .word 0xa78f8d79               /* magic */
+		.word mutekh_entry             /* entry point */
+        .word CONFIG_STARTUP_STACK_ADDR
+        .word CONFIG_STARTUP_STACK_SIZE
+		.word arm_exc_irq
+		.word arm_exc_fault
+#ifdef CONFIG_HEXO_USERMODE
+		.word arm_exc_svcall
+#else
+        .word 0
+#endif
+#ifdef CONFIG_HEXO_CONTEXT_PREEMPT
+		.word cpu_context_jumpto_irq
+#else
+        .word 0
+#endif
+        .size CPU_NAME_DECL(exception_info), .-CPU_NAME_DECL(exception_info)
+
+#endif
 
 FUNC_START(.text, arm_exc_dummy)
 1:      b 1b
@@ -115,6 +147,7 @@ FUNC_END(arm_exc_dummy)
 
 /********************************************************** irq */
 
+#if !defined(CONFIG_HEXO_BOOTLOADER)
 #ifdef CONFIG_HEXO_IRQ
 FUNC_START(.text, arm_exc_irq)
 
@@ -375,6 +408,39 @@ FUNC_START(.text, arm_exc_preempt)        /* args: r1 = &arm_context_regs + 16 *
         ldr     r1,     = 0xfffffff9
         bx      r1
 FUNC_END(arm_exc_preempt)
+#endif
+
+#else /* CONFIG_HEXO_BOOTLOADER */
+
+/*
+    Trampolines when build acts as a bootloader. All IRQs are
+	forwarded to loaded firmware.
+*/
+
+FUNC_START(.text, arm_exc_irq)
+        ldr     r0,     = CONFIG_HEXO_BOOTLOADER_DESC_ADDRESS
+        ldr     r0,     [r0, #16]
+        bx      r0
+FUNC_END(arm_exc_irq)
+
+FUNC_START(.text, arm_exc_fault)
+        ldr     r0,     = CONFIG_HEXO_BOOTLOADER_DESC_ADDRESS
+        ldr     r0,     [r0, #20]
+        bx      r0
+FUNC_END(arm_exc_fault)
+
+FUNC_START(.text, arm_exc_svcall)
+        ldr     r0,     = CONFIG_HEXO_BOOTLOADER_DESC_ADDRESS
+        ldr     r0,     [r0, #24]
+        bx      r0
+FUNC_END(arm_exc_svcall)
+
+FUNC_START(.text, arm_exc_pendsv)
+        ldr     r0,     = CONFIG_HEXO_BOOTLOADER_DESC_ADDRESS
+        ldr     r0,     [r0, #28]
+        bx      r0
+FUNC_END(arm_exc_pendsv)
+
 #endif
 
 // Local Variables:
