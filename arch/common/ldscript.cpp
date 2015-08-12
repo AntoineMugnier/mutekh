@@ -269,13 +269,15 @@ SECTIONS
 
 }
 
-#ifndef CONFIG_CPU_EXCEPTION_RELOCATABLE
+#ifndef CONFIG_LOAD_HEXO_BOOTLOADER
+# ifndef CONFIG_CPU_EXCEPTION_RELOCATABLE
 ASSERT(CPU_NAME_DECL(exception_vector) == CONFIG_CPU_EXCEPTION_ADDR,
        "The address of the [CPU_NAME]_exception_vector symbol is not equal to CONFIG_CPU_EXCEPTION_ADDR and the processor doesn't support relocating the exception base address.")
-#endif
+# endif
 
 ASSERT(CPU_NAME_DECL(exception_vector) % CONFIG_CPU_EXCEPTION_ALIGN == 0,
        "The address of the [CPU_NAME]_exception_vector symbol is not aligned on CONFIG_CPU_EXCEPTION_ALIGN.")
+#endif
 
 #ifdef CONFIG_LOAD_ROM
 
