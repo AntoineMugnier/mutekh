@@ -22,121 +22,117 @@
 #ifndef __ARM_ASM_H_
 #define __ARM_ASM_H_
 
-#ifdef __MUTEK_ASM__
-
 # define ASM_SECTION(name) \
         .section name,"ax"
 
 # define CPU_ASM_FUNC_END .ltorg
 
-.macro CPU_ID reg
+asm(
+".macro CPU_ID reg \n"
 # if defined(CONFIG_CPU_ARM32_SOCLIB)
-        mrc    p15, 0, \reg, c0, c0, 5
+"        mrc    p15, 0, \\reg, c0, c0, 5 \n"
 # elif defined(CONFIG_ARCH_SMP_CAPABLE)
-        .emsg No CPUID
+"        .emsg No CPUID \n"
 # else
-        mov    \reg, #0
+"        mov    \\reg, #0 \n"
 # endif
-.endm
+".endm \n"
 
 /* get a variable using a cp15 register as base */
-.macro GET_CP15_REL name, rd, rt, op2
-     mrc   p15,0, \rt, c13, c0, \op2
-     ldr   \rd, =\name
-     ldr   \rd, [\rd, \rt]
-.endm
+".macro GET_CP15_REL name, rd, rt, op2 \n"
+"     mrc   p15,0, \\rt, c13, c0, \\op2 \n"
+"     ldr   \\rd, =\\name \n"
+"     ldr   \\rd, [\\rd, \\rt] \n"
+".endm \n"
 
-.macro SET_CP15_REL name, tmp, tmp2, val, op2
-     mrc   p15,0, \tmp, c13, c0, \op2
-     ldr   \tmp2, =\name
-     str   \val, [\tmp, \tmp2]
-.endm
+".macro SET_CP15_REL name, tmp, tmp2, val, op2 \n"
+"     mrc   p15,0, \\tmp, c13, c0, \\op2 \n"
+"     ldr   \\tmp2, =\\name \n"
+"     str   \\val, [\\tmp, \\tmp2] \n"
+".endm \n"
 
 /* get a global variable */
-.macro GET_GLOBAL name, rd
-     ldr   \rd, =\name
-     ldr   \rd, [\rd]
-.endm
+".macro GET_GLOBAL name, rd \n"
+"     ldr   \\rd, =\\name \n"
+"     ldr   \\rd, [\\rd] \n"
+".endm \n"
 
-.macro SET_GLOBAL name, rval, tmp
-     ldr   \tmp, =\name
-     str   \rval, [\tmp]
-.endm
+".macro SET_GLOBAL name, rval, tmp \n"
+"     ldr   \\tmp, =\\name \n"
+"     str   \\rval, [\\tmp] \n"
+".endm \n"
 
 /* get a variable using another global as base */
-.macro GET_GLOBAL_REL name, rd, rt, var
-     ldr   \rt, =\var
-     ldr   \rt, [\rt]
-     ldr   \rd, =\name
-     ldr   \rd, [\rt, \rd]
-.endm
+".macro GET_GLOBAL_REL name, rd, rt, var \n"
+"     ldr   \\rt, =\\var \n"
+"     ldr   \\rt, [\\rt] \n"
+"     ldr   \\rd, =\\name \n"
+"     ldr   \\rd, [\\rt, \\rd] \n"
+".endm \n"
 
-.macro GET_GLOBAL_REL_ADDR name, rd, rt, var
-     ldr   \rt, =\var
-     ldr   \rt, [\rt]
-     ldr   \rd, =\name
-     add   \rd, \rt, \rd
-.endm
+".macro GET_GLOBAL_REL_ADDR name, rd, rt, var \n"
+"     ldr   \\rt, =\\var \n"
+"     ldr   \\rt, [\\rt] \n"
+"     ldr   \\rd, =\\name \n"
+"     add   \\rd, \\rt, \\rd \n"
+".endm \n"
 
 /* TLS stuff */
 
 #if CONFIG_CPU_ARM32_ARCH_VERSION >= 6
 
-.macro CONTEXT_LOCAL_ld name, rd, rt
-     GET_CP15_REL \name, \rd, \rt, 4
-.endm
+".macro CONTEXT_LOCAL_ld name, rd, rt \n"
+"     GET_CP15_REL \\name, \\rd, \\rt, 4 \n"
+".endm \n"
 
-.macro CONTEXT_LOCAL_addr name, rd, rt
-     mrc   p15,0, \rt, c13, c0, 4
-     ldr   \rd, =\name
-     add   \rd, \rd, \rt
-.endm
+".macro CONTEXT_LOCAL_addr name, rd, rt \n"
+"     mrc   p15,0, \\rt, c13, c0, 4 \n"
+"     ldr   \\rd, =\\name \n"
+"     add   \\rd, \\rd, \\rt \n"
+".endm \n"
 
-.macro TLS_BASE_SET reg, tmp
-    mcr   p15, 0, \reg, c13, c0, 4
-.endm
+".macro TLS_BASE_SET reg, tmp \n"
+"    mcr   p15, 0, \\reg, c13, c0, 4 \n"
+".endm \n"
 
 #else
 
-.macro CONTEXT_LOCAL_addr name, rd, rt
-     GET_GLOBAL_REL_ADDR \name, \rd, \rt, __context_data_base
-.endm
+".macro CONTEXT_LOCAL_addr name, rd, rt \n"
+"     GET_GLOBAL_REL_ADDR \\name, \\rd, \\rt, __context_data_base \n"
+".endm \n"
 
-.macro CONTEXT_LOCAL_ld name, rd, rt
-     GET_GLOBAL_REL \name, \rd, \rt, __context_data_base
-.endm
+".macro CONTEXT_LOCAL_ld name, rd, rt \n"
+"     GET_GLOBAL_REL \\name, \\rd, \\rt, __context_data_base \n"
+".endm \n"
 
-.macro TLS_BASE_SET reg, tmp
-     SET_GLOBAL __context_data_base, \reg, \tmp
-.endm
+".macro TLS_BASE_SET reg, tmp \n"
+"     SET_GLOBAL __context_data_base, \\reg, \\tmp \n"
+".endm \n"
 
 #endif
 
 /* CLS stuff */
 
 # ifdef CONFIG_ARCH_SMP
+".macro CPU_LOCAL_ld name, rd, rt \n"
+"     GET_CP15_REL \\name, \\rd, \\rt, 3 \n"
+".endm \n"
 
-.macro CPU_LOCAL_ld name, rd, rt
-     GET_CP15_REL \name, \rd, \rt, 3
-.endm
-
-.macro CPU_LOCAL_st name, tmp, tmp2, val
-     SET_CP15_REL \name, \tmp, \tmp2, \val, 3
-.endm
+".macro CPU_LOCAL_st name, tmp, tmp2, val \n"
+"     SET_CP15_REL \\name, \\tmp, \\tmp2, \\val, 3 \n"
+".endm \n"
 
 # else
 
-.macro CPU_LOCAL_ld name, rd, rt
-     GET_GLOBAL \name, \rd
-.endm
+".macro CPU_LOCAL_ld name, rd, rt \n"
+"     GET_GLOBAL \\name, \\rd \n"
+".endm \n"
 
-.macro CPU_LOCAL_st name, tmp, tmp2, val
-     SET_GLOBAL \name, \val, \tmp
-.endm
-
+".macro CPU_LOCAL_st name, tmp, tmp2, val \n"
+"     SET_GLOBAL \\name, \\val, \\tmp \n"
+".endm \n"
 # endif
-
-#endif
+);
 
 #if defined(CONFIG_CPU_ARM32_THUMB)
 # define THUMB_TMP_VAR uint32_t thumb_tmp

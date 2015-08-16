@@ -70,11 +70,18 @@ sub check_num
     my ( $thisop, $argidx, $min, $max ) = @_;
     my $expr = $thisop->{args}->[$argidx];
 
+    my $bit = sub {
+        my $x = shift;
+        die "$thisop->{line}: bit() expects a power of 2.\n" if !$x or ($x & ($x - 1));
+        return log2($x);
+    };
+
     our $num = qr/(?>[-+]?\b\d+\b)/xs;
 
     while (1) {
 	next if ($expr =~ s/'(.)'/ord($1)/ge);
-        next if ($expr =~ s/\s*([-+]?)(0x[a-fA-F0-9]+)\s*/$1.hex($2)/ge);
+        next if ($expr =~ s/\s*([-+]?)(0[Xx][a-fA-F0-9]+)\s*/$1.hex($2)/ge);
+	next if ($expr =~ s/bit\(($num)\)/$bit->($1)/ge);
 	next if ($expr =~ s/\(\s*($num)\s*\)/$1/ge);
 	next if ($expr =~ s/($num)\s*\*\s*($num)/$1*$2/ge);
 	next if ($expr =~ s/($num)\s*\/\s*($num)/$2 ? int($1\/$2) : 0/ge);
@@ -90,7 +97,7 @@ sub check_num
     }
 
     if ( $expr !~ /^($num)$/ ) {
-        die "$thisop->{line}: expected number as operand $argidx of `$thisop->{name}'.\n";
+        die "$thisop->{line}: expected number as operand $argidx of `$thisop->{name}', got `$expr'.\n";
     }
 
     $expr = int($expr);
@@ -446,26 +453,30 @@ sub parse
 {
     my @lbls;
     my $line;
-    my $file = "<STDIN>";
+    my $file = "<STDIN>.bc";
     my $loc;
 
     foreach (<STDIN>) {
-        $line++;
 
-        if (/^# (\d+) "(.*)"\s*$/) {
-            # cpp location
-            $line = $1 - 1;
-            $file = $2;
-            next;
-        }
+      $line++;
 
-        $loc = "$file:$line";
+      if (/^# (\d+) "(.*)"\s*$/) {
+          # cpp location
+          $line = $1 - 1;
+          $file = $2;
+          next;
+      }
 
-        next if (/^\s*$/);
-        next if (/^\s*#/);
-        next if (/^\s*\/\//);
+      next if (/^\s*#/);
+      next if (/^\s*\/\//);
 
-        if (/^\s*(\w+):\s*$/) {
+      $loc = "$file:$line";
+
+      foreach my $l ( split(/;/) ) {
+
+        next if ($l =~ /^\s*$/);
+
+        if ($l =~ /^\s*(\w+):\s*$/) {
             my $name = $1;
             die "$loc: label `$name' already defined\n" if defined $labels{$name};
 	    my $l = { name => $name };
@@ -473,31 +484,31 @@ sub parse
 	    push @lbls, $l;
             next;
         }
-        if (/^\s*\.define\s+(\w+)\s+(.*?)\s*$/) {
+        if ($l =~ /^\s*\.define\s+(\w+)\s+(.*?)\s*$/) {
             die "$loc: expr already defined\n" if defined $defs{$1};
             $defs{$1} = $2;
             next;
         }
-        if (/^\s*\.backend\s+(\w+)\s*$/) {
+        if ($l =~ /^\s*\.backend\s+(\w+)\s*$/) {
             $backend_name = $1;
             next;
         }
-        if (/^\s*\.name\s+(\w+)\s*$/) {
+        if ($l =~ /^\s*\.name\s+(\w+)\s*$/) {
             $bc_name = $1;
             next;
         }
-        if (/^\s*\.custom\s+([\w.]+)\s*$/) {
+        if ($l =~ /^\s*\.custom\s+([\w.]+)\s*$/) {
 	    push @custom, $1;
             next;
         }
-        if (/^\s*\.export\s+(\w+)\s*$/) {
+        if ($l =~ /^\s*\.export\s+(\w+)\s*$/) {
 	    my $l = $labels{$1};
             die "$loc: undefined label `$1'\n" if not defined $l;
             $l->{export} = 1;
             $l->{used}++;
             next;
         }
-        if (/^\s*(\.?\w+)\b\s*(.*?)\s*$/) {
+        if ($l =~ /^\s*(\.?\w+)\b\s*(.*?)\s*$/) {
             my $opname = $1;
             my @args = map { s/^\s*|\s*$//g; $_ } split(/,/, $2);
             my $thisop = {
@@ -514,7 +525,8 @@ sub parse
             next;
         }
 
-        die "$loc: syntax error\n";
+        die "$loc: syntax error: `$l'\n";
+      }
     }
 
     if ( scalar @lbls ) {

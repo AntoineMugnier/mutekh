@@ -38,8 +38,6 @@
 #define CPU_NIOS2_CONTEXT_STATUS         (CPU_NIOS2_CONTEXT_GPR(32))
 #define CPU_NIOS2_CONTEXT_PC             (CPU_NIOS2_CONTEXT_GPR(33))
 
-#ifndef __MUTEK_ASM__
-
 # include <hexo/cpu.h>
 
 struct cpu_context_s
@@ -56,8 +54,6 @@ struct cpu_context_s
 # define CPU_CONTEXT_REG_NAMES CPU_GPREG_NAMES, "status", "pc"
 /** number of registers in cpu_context_s::gpr */
 # define CPU_CONTEXT_REG_COUNT 34
-
-# endif  /* __MUTEK_ASM__ */
 
 #endif
 

@@ -24,8 +24,6 @@
 #error This file can not be included directly
 #else
 
-#ifndef __MUTEK_ASM__
-
 struct cpu_context_regs_s
 {
   uint32_t edi;
@@ -88,9 +86,6 @@ struct cpu_context_s
 # else
 .equ CPU_X86_CONTEXT_MM,         48
 # endif
-
-
-#endif
 
 #endif
 

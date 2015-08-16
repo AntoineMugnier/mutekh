@@ -32,9 +32,6 @@
 #define CPU_GPREG_COUNT	8
 #define CPU_GPREG_NAMES "edi", "esi", "ebp", "esp", "ebx", "edx", "ecx", "eax"
 
-
-#ifndef __MUTEK_ASM__
-
 #include <arch/hexo/emu_syscalls.h>
 
 ALWAYS_INLINE cpu_id_t cpu_id(void)
@@ -77,7 +74,6 @@ ALWAYS_INLINE size_t cpu_dcache_line_size()
   return 0;			/* FIXME */
 }
 
-#endif
 #endif
 
 

@@ -51,8 +51,6 @@
       "UsageFault",                             \
       }
 
-#ifndef __MUTEK_ASM__
-
 void arm_interrupt_entry(void);
 
 ALWAYS_INLINE void
@@ -175,6 +173,5 @@ ALWAYS_INLINE void cpu_interrupt_wait(void)
 # endif
 }
 
-# endif
 #endif
 

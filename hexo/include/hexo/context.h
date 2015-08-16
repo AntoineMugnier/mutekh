@@ -42,8 +42,6 @@
 /** @internal offset of unlock field in @ref context_s */
 #define HEXO_CONTEXT_S_UNLOCK           1
 
-#ifndef __MUTEK_ASM__
-
 # include <hexo/types.h>
 # include <hexo/local.h>
 # include <hexo/error.h>
@@ -104,10 +102,7 @@ typedef CONTEXT_ENTRY(context_entry_t);
 /** context preempt function prototype. @csee #CONTEXT_PREEMPT */
 typedef CONTEXT_PREEMPT(context_preempt_t);
 
-
-#endif  /* __MUTEK_ASM__ */
 #include "cpu/hexo/context.h"
-#ifndef __MUTEK_ASM__
 
 /** @internal @This only performs processor specific part of the job. @csee context_switch_to */
 void cpu_context_switch(struct context_s *new);
@@ -262,8 +257,6 @@ ALWAYS_INLINE struct context_s * context_current(void)
 {
   return CONTEXT_LOCAL_GET(context_cur);
 }
-
-#endif  /* __MUTEK_ASM__ */
 
 #endif
 

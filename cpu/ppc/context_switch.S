@@ -84,7 +84,7 @@ FUNC_START(.text, cpu_context_switch)
 
 # ifdef CONFIG_HEXO_LAZY_SWITCH
         // keep track of last context using fpu on this processor
-        CPU_LOCAL       stw     ppc_lazy_last, 2, 10
+        CPU_LOCAL_op    stw     ppc_lazy_last, 2, 10
 # endif
 
         // save callee saved fpu registers 14 to 31
@@ -166,7 +166,7 @@ FUNC_START(.text, cpu_context_jumpto)
 
 # ifdef CONFIG_HEXO_LAZY_SWITCH
         // do not need to restore if no other context used processor fpu since
-        CPU_LOCAL       lwz     ppc_lazy_last, 9, 10
+        CPU_LOCAL_op    lwz     ppc_lazy_last, 9, 10
         sub.    10,     9,      2
         beq     1f
 # endif

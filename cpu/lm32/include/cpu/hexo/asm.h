@@ -21,23 +21,17 @@
 #ifndef CPU_ASM_H_
 #define CPU_ASM_H_
 
-# ifdef __MUTEK_ASM__
+asm(
+".macro seta reg sym \n"
+"       orhi \\reg, r0, hi(\\sym) \n"
+"       ori  \\reg, \\reg, lo(\\sym) \n"
+".endm \n"
 
-.macro seta reg sym
-       orhi \reg, r0, hi(\sym)
-       ori  \reg, \reg, lo(\sym)
-.endm
-
-.macro seti reg val
-       orhi \reg, r0, (\val) >> 16
-       ori  \reg, \reg, (\val) & 0xffff
-.endm
-
-# else /* not asm */
-
-#  define ASM_SECTION(name)              \
-        ".section " name ",\"ax\",@progbits \n\t"
-# endif
+".macro seti reg val \n"
+"       orhi \\reg, r0, (\\val) >> 16 \n"
+"       ori  \\reg, \\reg, (\\val) & 0xffff \n"
+".endm \n"
+    );
 
 #endif
 

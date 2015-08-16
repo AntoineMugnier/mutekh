@@ -43,8 +43,6 @@
 #endif
 /** */
 
-#ifndef __MUTEK_ASM__
-
 # include <hexo/cpu.h>
 
 /** Sparc processor context state */
@@ -77,8 +75,6 @@ struct cpu_context_s
 # define CPU_CONTEXT_REG_NAMES CPU_GPREG_NAMES, "y", "psr", "pc", "npc"
 /** number of registers in cpu_context_s::gpr */
 # define CPU_CONTEXT_REG_COUNT 36
-
-# endif  /* __MUTEK_ASM__ */
 
 #endif
 

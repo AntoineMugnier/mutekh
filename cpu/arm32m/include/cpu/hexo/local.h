@@ -37,9 +37,7 @@
 /** context local storage type attribute */
 # define CONTEXT_LOCAL	__attribute__((section (".contextdata")))
 
-# ifndef __MUTEK_ASM__
 extern CONTEXT_LOCAL struct cpu_context_s arm_context_regs;
-# endif
 
 /** get address of cpu local object */
 # define CONTEXT_GET_TLS()                                      \

@@ -36,8 +36,6 @@
 
 #define ARM_PSR_EE          0x200
 
-#ifndef __MUTEK_ASM__
-
 #include <hexo/endian.h>
 
 #define CPU_CPU_H_
@@ -123,8 +121,6 @@ ALWAYS_INLINE size_t cpu_dcache_line_size()
 	return 16;
 #endif
 }
-
-#endif
 
 #endif
 

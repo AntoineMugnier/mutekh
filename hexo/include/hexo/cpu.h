@@ -34,9 +34,7 @@
 
 #include <hexo/decls.h>
 
-#ifndef __MUTEK_ASM__
 C_HEADER_BEGIN
-#endif
 
 #include <cpu/hexo/cpu.h>
 
@@ -62,8 +60,6 @@ C_HEADER_BEGIN
 /** @internal @This specifies the value which should be xored with the
     cpu id for lookup in the cpu tree. */
 #define CPU_TREE_XOR_VALUE 0x55555555
-
-#ifndef __MUTEK_ASM__
 
 /** @internal This defines the cpu tree node structure. This node is
     designed to be part of a binary tree which is used from both C and
@@ -149,7 +145,5 @@ cpu_type_name(void)
 # undef TO_STR
 
 C_HEADER_END
-
-#endif  /* __MUTEK_ASM__ */
 
 #endif

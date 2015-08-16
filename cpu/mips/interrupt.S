@@ -86,7 +86,7 @@ FUNC_START(.text, mips_exception)
 # endif
 
         // get context local storage
-        CPU_LOCAL lw,   __context_data_base, $26, $26
+        CPU_LOCAL_op lw,   __context_data_base, $26, $26
         // get context registers save array
 #ifdef CONFIG_HEXO_CONTEXT_NESTED
         lw      $26,            %lo(mips_context_regs_ptr)($26)
@@ -118,7 +118,7 @@ FUNC_START(.text, mips_exception)
         xori    $8,     $8,     31
 
         // nested regs context stack push
-        CPU_LOCAL lw,   __context_data_base, $7, $7
+        CPU_LOCAL_op lw,   __context_data_base, $7, $7
         addiu   $26,            CPU_MIPS_CONTEXT_SIZE
         sw      $26,            %lo(mips_context_regs_ptr)($7)
 # endif
@@ -144,7 +144,7 @@ FUNC_START(.text, mips_exception)
         beq     $7,     $0,     1f
 
         // get tls
-        CPU_LOCAL lw,   __context_data_base, $8, $8
+        CPU_LOCAL_op lw,   __context_data_base, $8, $8
 
         // use kernel context stack when from user mode
         lw      $sp,    context_stack_end($8)
@@ -158,7 +158,7 @@ FUNC_START(.text, mips_exception)
 
 #ifdef CONFIG_HEXO_CONTEXT_PREEMPT
         // clear context preempt handler
-        CPU_LOCAL sw    cpu_preempt_handler, $0, $7
+        CPU_LOCAL_op sw    cpu_preempt_handler, $0, $7
 #endif
 
 #ifdef CONFIG_HEXO_USERMODE
@@ -214,7 +214,7 @@ interrupt_ex:
 1:
 #endif
         // use cpu local fault handler
-        CPU_LOCAL lw,   cpu_exception_handler, $1, $1
+        CPU_LOCAL_op lw,   cpu_exception_handler, $1, $1
 2:
 
         addiu   $sp,    $sp,    -5 * INT_REG_SIZE/8
@@ -307,7 +307,7 @@ interrupt_hw:
         addu    $4,	$3,	$2
 #endif
 
-        CPU_LOCAL lw,   cpu_interrupt_handler, $1, $1
+        CPU_LOCAL_op lw,   cpu_interrupt_handler, $1, $1
 
         addiu   $sp,    $sp,    -4 * INT_REG_SIZE/8
         jalr    $1                                   
@@ -319,14 +319,14 @@ mips_preempt_and_restore:
 
 #ifdef CONFIG_HEXO_CONTEXT_NESTED
         // nested regs context stack pop
-        CPU_LOCAL lw,   __context_data_base, $8, $8
+        CPU_LOCAL_op lw,   __context_data_base, $8, $8
         sw      $16,    %lo(mips_context_regs_ptr)($8)
 #endif
 
 #ifdef CONFIG_HEXO_CONTEXT_PREEMPT
 
         // check if a preempt handler has been registered
-        CPU_LOCAL lw    cpu_preempt_handler, $1, $1
+        CPU_LOCAL_op lw    cpu_preempt_handler, $1, $1
         beq     $1,     $0,     mips_restore
 
         // call preempt handler
@@ -358,7 +358,7 @@ mips_preempt_and_restore:
 
 #  ifdef CONFIG_HEXO_LAZY_SWITCH
         // keep track of last context using fpu on this processor
-        CPU_LOCAL sw    mips_lazy_last, $16, $1
+        CPU_LOCAL_op sw    mips_lazy_last, $16, $1
 #  endif
 
         // save fpu registers 0 to 31

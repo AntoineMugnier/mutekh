@@ -99,8 +99,6 @@
 
 #define CPU_X86_SEGSEL(index, rpl)      ((index) << 3 | (rpl))
 
-#ifndef __MUTEK_ASM__
-
 #include <hexo/types.h>
 
 /** x86 segement selector integer type */
@@ -500,8 +498,6 @@ cpu_x86_segsel_t cpu_x86_segment_alloc(uintptr_t addr,
 void cpu_x86_segdesc_free(cpu_x86_segsel_t sel);
 
 /**************************************/
-
-# endif
 
 #endif
 

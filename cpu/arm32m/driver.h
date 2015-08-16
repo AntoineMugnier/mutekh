@@ -23,8 +23,6 @@
 #ifndef _ARM_DRIVER_M_H_
 #define _ARM_DRIVER_M_H_
 
-#ifndef __MUTEK_ASM__
-
 #include <hexo/types.h>
 #include <hexo/interrupt.h>
 #include <hexo/local.h>
@@ -77,8 +75,6 @@ extern DEV_TIMER_CANCEL(arm_timer_cancel);
 extern DEV_USE(arm_timer_systick_use);
 extern DEV_TIMER_GET_VALUE(arm_timer_get_value);
 extern DEV_TIMER_CONFIG(arm_timer_config);
-
-#endif /* !defined(__MUTEK_ASM__) */
 
 /* number of 32 bytes sub region of the MPU needed to cover
    CONFIG_CPU_ARM32M_MPU_STACK_GUARD_SIZE bytes */

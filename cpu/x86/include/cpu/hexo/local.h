@@ -38,8 +38,6 @@
 #  define CLS_SEG(x)
 # endif
 
-#ifndef __MUTEK_ASM__
-
 /************************************************************************/
 
 # define CONTEXT_LOCAL	__attribute__((section (".contextdata")))
@@ -87,8 +85,6 @@
 extern CPU_LOCAL void *__cpu_data_base;
 /** pointer to context local storage itself */
 extern CONTEXT_LOCAL void *__context_data_base;
-
-#endif  /* __MUTEK_ASM__ */
 
 # endif
 

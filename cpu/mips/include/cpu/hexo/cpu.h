@@ -67,8 +67,6 @@
 
 # define CPU_MIPS_CAUSE_BD      0x80000000
 
-#ifndef __MUTEK_ASM__
-
 #include <hexo/endian.h>
 
 /** general purpose regsiters count */
@@ -240,8 +238,6 @@ ALWAYS_INLINE size_t cpu_dcache_line_size()
 
   return 8;
 }
-
-# endif  /* __MUTEK_ASM__ */
 
 # endif
 

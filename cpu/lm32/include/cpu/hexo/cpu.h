@@ -24,8 +24,6 @@
 
 #define CPU_CPU_H_
 
-#ifndef __MUTEK_ASM__
-
 /** general purpose regsiters count */
 # define CPU_GPREG_COUNT	32
 
@@ -72,9 +70,6 @@ ALWAYS_INLINE size_t cpu_dcache_line_size()
 {
   return CONFIG_CPU_CACHE_LINE;
 }
-
-
-#endif  /* __MUTEK_ASM__ */
 
 #endif
 

@@ -42,7 +42,7 @@ CPU_NAME_DECL(exception_vector):
 #endif
 
         // get context local storage
-        CPU_LOCAL ldw, __context_data_base, r24, r24
+        CPU_LOCAL_op ldw, __context_data_base, r24, r24
         addi    r24,    r24,    %lo(nios2_context_regs)
 
         // save caller saved
@@ -74,7 +74,7 @@ CPU_NAME_DECL(exception_vector):
 
 #ifdef CONFIG_HEXO_CONTEXT_PREEMPT
         // clear context preempt handler
-        CPU_LOCAL stw     cpu_preempt_handler, r0, r5
+        CPU_LOCAL_op stw     cpu_preempt_handler, r0, r5
 #endif
 
 #ifdef CONFIG_HEXO_USERMODE
@@ -113,7 +113,7 @@ nios2_interrupt_ex:
 1:
 #endif
         // use cpu local fault handler
-        CPU_LOCAL ldw     cpu_exception_handler, r1, r1
+        CPU_LOCAL_op ldw     cpu_exception_handler, r1, r1
 2:      
 
         ldw     r2,     CPU_NIOS2_CONTEXT_GPR(27)(r24)
@@ -173,7 +173,7 @@ nios2_interrupt_hw:
         callr   r1
         mov     r4,     r2
 
-        CPU_LOCAL ldw cpu_interrupt_handler, r1, r1
+        CPU_LOCAL_op ldw cpu_interrupt_handler, r1, r1
         callr   r1
 
 #endif
@@ -183,7 +183,7 @@ nios2_preempt_and_restore:
 #ifdef CONFIG_HEXO_CONTEXT_PREEMPT
 
         // check if a preempt handler has been registered
-        CPU_LOCAL ldw cpu_preempt_handler, r1, r1
+        CPU_LOCAL_op ldw cpu_preempt_handler, r1, r1
         beq     r0,     r1,     1f
 
         // call preempt handler

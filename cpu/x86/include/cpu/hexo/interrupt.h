@@ -58,8 +58,6 @@
 #define CPU_HWINT_VECTOR_IRET           0x5f
 
 
-#ifndef __MUTEK_ASM__
-
 # include <hexo/local.h>
 
 void x86_interrupt_hw_entry(void);
@@ -193,8 +191,6 @@ ALWAYS_INLINE void cpu_interrupt_wait(void)
 #  endif
 }
 # endif
-
-#endif  /* __MUTEK_ASM__ */
 
 #endif
 

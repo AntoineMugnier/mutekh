@@ -36,8 +36,6 @@
 # define CPU_AVR32_CONTEXT_PC           (CPU_AVR32_CONTEXT_GPR(15))
 /** */
 
-#ifndef __MUTEK_ASM__
-
 # include <hexo/cpu.h>
 
 /** Avr32 processor context state */
@@ -52,8 +50,6 @@ struct cpu_context_s
 # define CPU_CONTEXT_REG_NAMES CPU_GPREG_NAMES, "sr"
 /** number of registers in cpu_context_s::gpr */
 # define CPU_CONTEXT_REG_COUNT 17
-
-# endif  /* __MUTEK_ASM__ */
 
 #endif
 

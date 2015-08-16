@@ -76,8 +76,6 @@
       /* 17 */ "MPU region data error",         \
       }
 
-#ifndef __MUTEK_ASM__
-
 # include <hexo/local.h>
 
 
@@ -216,6 +214,5 @@ cpu_interrupt_wait(void)
 }
 # endif
 
-#endif
 #endif
 

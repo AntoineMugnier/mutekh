@@ -22,52 +22,52 @@
 #ifndef CPU_ASM_H_
 #define CPU_ASM_H_
 
-_ASM( .macro CPU_ID _0                                                        )
+asm(
+    " .macro CPU_ID _0 \n"
 # ifdef CONFIG_ARCH_SMP_CAPABLE
 #  if defined (CONFIG_CPU_SPARC_SOCLIB) || defined (CONFIG_CPU_SPARC_LEON3)
-_ASM(        rd    %asr17, p0                                                 )
-_ASM(        srl   p0, 28, p0                                                 )
+    "        rd    %asr17, \\_0 \n"
+    "        srl   \\_0, 28, \\_0 \n"
 #  else
 #   error missing CPUID macro for your architecture
 #  endif
 # else
-_ASM(        mov     %g0,                    p0                               )
+    "        mov     %g0, \\_0 \n"
 # endif
-_ASM( .endm                                                                   )
+    " .endm\n"
 
-
-
-_ASM( .macro CPU_LOCAL_ld _0, _1                                              )
+    " .macro CPU_LOCAL_ld _0, _1 \n"
 # ifdef CONFIG_ARCH_SMP
-_ASM(          ld     [%g6 + %lo(p0)], p1                                     )
+    "          ld     [%g6 + %lo(\\_0)], \\_1 \n"
 # else
-_ASM(          set    p0,   p1                                                )
-_ASM(          ld     [p1], p1                                                )
+    "          set    \\_0,   \\_1 \n"
+    "          ld     [\\_1], \\_1 \n"
 # endif
-_ASM( .endm                                                                   )
+    " .endm \n"
 
 
 
-_ASM( .macro CPU_LOCAL_st _0, _1, _2                                          )
+    " .macro CPU_LOCAL_st _0, _1, _2 \n"
 # ifdef CONFIG_ARCH_SMP
-_ASM(          st     p1, [%g6 + %lo(p0)]                                     )
+    "          st     \\_1, [%g6 + %lo(\\_0)] \n"
 # else
-_ASM(          set    p0,   p2                                                )
-_ASM(          st     p1,   [p2]                                              )
+    "          set    \\_0,   \\_2 \n"
+    "          st     \\_1,   [\\_2] \n"
 # endif
-_ASM( .endm                                                                   )
+    " .endm \n"
 
 
 
-_ASM( .macro WAIT                                                             )
+    " .macro WAIT \n"
 # if defined (CONFIG_CPU_SPARC_LEON3) || defined (CONFIG_CPU_SPARC_SOCLIB)
-_ASM(         wr %g0, %asr19                                                  )
-_ASM(         nop                                                             )
-_ASM(         nop                                                             )
+    "         wr %g0, %asr19 \n"
+    "         nop \n"
+    "         nop \n"
 # elif defined(CONFIG_CPU_WAIT_IRQ)
 #  error No wait opcode defined for selected sparc processor
 # endif
-_ASM( .endm                                                                   )
+    " .endm \n"
+);
 
 #endif
 

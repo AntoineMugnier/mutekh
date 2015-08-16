@@ -21,13 +21,5 @@
 #ifndef CPU_ASM_H_
 #define CPU_ASM_H_
 
-# ifdef __MUTEK_ASM__
-
-# else /* not asm */
-
-#  define ASM_SECTION(name)              \
-        ".section " name ",\"ax\",@progbits \n\t"
-# endif
-
 #endif
 

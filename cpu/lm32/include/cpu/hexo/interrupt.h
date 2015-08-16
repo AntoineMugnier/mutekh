@@ -33,8 +33,6 @@
 
 # define CPU_FAULT_COUNT 7
 
-#ifndef __MUTEK_ASM__
-
 # define CPU_FAULT_NAMES {                      \
     "Break point",                              \
       "Ins bus error",                          \
@@ -155,8 +153,6 @@ cpu_is_interruptible(void)
 	return 0;
 # endif
 }
-
-#endif  /* __MUTEK_ASM__ */
 
 #endif
 

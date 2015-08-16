@@ -20,6 +20,7 @@
 
 */
 
+#include <hexo/context.h>
 #include <hexo/asm.h>
 #include <hexo/cpu.h>
 

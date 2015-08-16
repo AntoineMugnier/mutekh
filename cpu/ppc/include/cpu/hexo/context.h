@@ -47,8 +47,6 @@
 #endif
 /** */
 
-#ifndef __MUTEK_ASM__
-
 # include <hexo/cpu.h>
 
 /** PowerPc processor context state */
@@ -73,8 +71,6 @@ struct cpu_context_s
 # define CPU_CONTEXT_REG_NAMES CPU_GPREG_NAMES, "cr", "ctr", "msr", "lr", "pc"
 /** number of registers in cpu_context_s::gpr */
 # define CPU_CONTEXT_REG_COUNT 37
-
-# endif  /* __MUTEK_ASM__ */
 
 #endif
 

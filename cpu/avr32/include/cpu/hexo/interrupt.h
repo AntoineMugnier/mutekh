@@ -46,8 +46,6 @@
 
 # define CPU_FAULT_COUNT          20
 
-#ifndef __MUTEK_ASM__
-
 # define CPU_FAULT_NAMES {                      \
     "Unrecoverable exception",                  \
     "TLB multiple hit",                         \
@@ -191,8 +189,6 @@ cpu_is_interruptible(void)
 	return 0;
 # endif
 }
-
-#endif  /* __MUTEK_ASM__ */
 
 #endif
 

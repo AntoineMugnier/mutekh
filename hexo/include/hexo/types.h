@@ -35,8 +35,6 @@ C_HEADER_BEGIN
 
 #include "cpu/hexo/types.h"
 
-#ifndef __MUTEK_ASM__
-
 /* define fixed width types */
 
 typedef unsigned char		uint8_t;
@@ -193,8 +191,6 @@ typedef long _dont_use_native_long_type_t __attribute__ ((deprecated));
 # else
 #  define NULL 0
 # endif
-
-#endif  /* __MUTEK_ASM__ */
 
 C_HEADER_END
 

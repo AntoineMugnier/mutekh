@@ -39,8 +39,6 @@
 #define CPU_ARM_CONTEXT_CPSR           CPU_ARM_CONTEXT_GPR(16)
 #define CPU_ARM_CONTEXT_SAVE_MASK      CPU_ARM_CONTEXT_GPR(17)
 
-#ifndef __MUTEK_ASM__
-
 struct cpu_context_s
 {
     reg_t gpr[16];
@@ -52,8 +50,6 @@ struct cpu_context_s
 # define CPU_CONTEXT_REG_NAMES CPU_GPREG_NAMES, "cpsr"
 /** number of registers in cpu_context_s::gpr */
 # define CPU_CONTEXT_REG_COUNT 17
-
-#endif
 
 #endif
 

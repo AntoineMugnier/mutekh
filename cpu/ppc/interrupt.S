@@ -121,7 +121,7 @@
 #ifdef CONFIG_HEXO_CONTEXT_PREEMPT
         // clear context preempt handler
         li      9,              0
-        CPU_LOCAL       stw     cpu_preempt_handler, 9, 10
+        CPU_LOCAL_op       stw     cpu_preempt_handler, 9, 10
 #endif
 .endm
 
@@ -151,17 +151,17 @@
         beq     1f
 
         // use kernel context stack when from user mode
-        CONTEXT_LOCAL   lwz     context_stack_end, 1, 10
+        CONTEXT_LOCAL_op   lwz     context_stack_end, 1, 10
         addi    1,      1,      -CONFIG_HEXO_STACK_ALIGN
 
         // use context local fault handler for user when available
-        CONTEXT_LOCAL   lwz     cpu_user_exception_handler, 9, 10
+        CONTEXT_LOCAL_op   lwz     cpu_user_exception_handler, 9, 10
         and.    9,      9,      9
         bne     2f
 1:
 #endif
         // use cpu local fault handler
-        CPU_LOCAL       lwz     cpu_exception_handler, 9, 10
+        CPU_LOCAL_op       lwz     cpu_exception_handler, 9, 10
 2:
 
         mtctr   9
@@ -190,11 +190,11 @@
         beq     1f
 
         // use kernel context stack
-        CONTEXT_LOCAL   lwz     context_stack_end, 1, 10
+        CONTEXT_LOCAL_op   lwz     context_stack_end, 1, 10
         addi    1,      1,      -CONFIG_HEXO_STACK_ALIGN
 1:
 
-        CONTEXT_LOCAL   lwz     cpu_syscall_handler, 9, 10
+        CONTEXT_LOCAL_op   lwz     cpu_syscall_handler, 9, 10
         li      3,      0               // arg0 number
         mr      4,      2               // arg1 reg table
         mtctr   9
@@ -225,7 +225,7 @@
         beq     1f
 
         // use kernel context stack
-        CONTEXT_LOCAL   lwz     context_stack_end, 1, 10
+        CONTEXT_LOCAL_op   lwz     context_stack_end, 1, 10
         addi    1,      1,      -CONFIG_HEXO_STACK_ALIGN
 1:
 #endif
@@ -235,7 +235,7 @@
         mtspr   PPC_SPRG(4),    0
 #endif
 
-        CPU_LOCAL       lwz     cpu_interrupt_handler, 9, 10
+        CPU_LOCAL_op       lwz     cpu_interrupt_handler, 9, 10
         li      3,      \number         // arg0 number
         mtctr   9
         bctrl
@@ -260,7 +260,7 @@
 #ifdef CONFIG_HEXO_CONTEXT_PREEMPT
 
         // check if a preempt handler has been registered
-        CPU_LOCAL       lwz     cpu_preempt_handler, 9, 10
+        CPU_LOCAL_op       lwz     cpu_preempt_handler, 9, 10
         and.    9,      9,      9
         beq     2f
 
@@ -293,7 +293,7 @@
 
 #  ifdef CONFIG_HEXO_LAZY_SWITCH
         // keep track of last context using fpu on this processor
-        CPU_LOCAL       stw     ppc_lazy_last, 2, 10
+        CPU_LOCAL_op       stw     ppc_lazy_last, 2, 10
 #  endif
 
         // save fpu registers 0 to 31

@@ -35,8 +35,6 @@
 
 #define CPU_FAULT_COUNT 6
 
-#ifndef __MUTEK_ASM__
-
 # define CPU_FAULT_NAMES {       \
 "Illegal instruction",          \
 "Data storage",                 \
@@ -198,8 +196,6 @@ ALWAYS_INLINE void cpu_interrupt_wait(void)
 #  endif
 }
 # endif
-
-#endif  /* __MUTEK_ASM__ */
 
 #endif
 

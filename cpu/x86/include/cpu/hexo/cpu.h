@@ -41,8 +41,6 @@
 #define CPU_X86_EFLAGS_NONE  (1<<1)
 #define CPU_X86_EFLAGS_IRQ   (1<<9)
 
-#ifndef __MUTEK_ASM__
-		
 #include <hexo/interrupt.h>
 #include <hexo/iospace.h>
 #include <hexo/local.h>
@@ -85,8 +83,6 @@ ALWAYS_INLINE size_t cpu_dcache_line_size()
 {
   return 0;			/* FIXME */
 }
-
-#endif  /* __MUTEK_ASM__ */
 
 #endif
 

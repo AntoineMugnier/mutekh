@@ -33,7 +33,7 @@
 /* warp C header in C++ */
 # define _GNUC_VERSION      (__GNUC__ * 10000 + __GNUC_MINOR__ * 100 + __GNUC_PATCHLEVEL__)
 
-# if __cplusplus &&! defined(__MUTEK_ASM__)
+# if __cplusplus
 #  define C_HEADER_BEGIN extern "C" {
 #  define C_HEADER_END }
 # else
@@ -61,7 +61,7 @@
 
 # define ALWAYS_INLINE inline __attribute__((always_inline))
 
-# ifndef __MUTEK_ASM__ // mkdoc:skip
+# if 1 // mkdoc:skip
 
 #  define _CONFIG_DEPEND_1(name, attr, proto, ...) \
   attr proto __VA_ARGS__
@@ -153,7 +153,7 @@ cont_s##_from_##field(typeof(((struct cont_s*)0)->field) *x)            \
 #undef ENUM_DESCRIPTOR
 #define ENUM_DESCRIPTOR(name, ...) extern const char name[];
 
-#endif /* !defined(__MUTEK_ASM__) */
+#endif /* 1 */
 
 #ifdef __MKDOC__
 # define config_depend(token)

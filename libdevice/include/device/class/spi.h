@@ -206,8 +206,6 @@
 #define DEV_SPI_CS_DEASSERT_ 2
 #define DEV_SPI_CS_RELEASE_ 3
 
-#ifndef __MUTEK_ASM__
-
 #include <hexo/types.h>
 #include <hexo/error.h>
 
@@ -606,8 +604,6 @@ void dev_spi_request_cleanup(struct dev_spi_ctrl_rq_s *rq);
 error_t device_spi_request_wakeup(struct dev_spi_ctrl_rq_s *rq);
 
 #endif /* CONFIG_DEVICE_SPI_REQUEST */
-
-#endif  /* __MUTEK_ASM__ */
 
 #endif
 

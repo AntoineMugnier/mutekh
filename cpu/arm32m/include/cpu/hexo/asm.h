@@ -22,16 +22,12 @@
 #ifndef __ARM_ASM_H_
 #define __ARM_ASM_H_
 
-#ifdef __MUTEK_ASM__
-
 # define ASM_SECTION(name)     \
         .section name,"ax" ;   \
         .thumb           ;     \
         .thumb_func
 
 # define CPU_ASM_FUNC_END .ltorg
-
-#endif
 
 #endif
 

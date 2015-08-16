@@ -44,8 +44,6 @@
 # define CPU_NIOS2_CLS_REG r26
 #endif
 
-#ifndef __MUTEK_ASM__
-
 #include <hexo/endian.h>
 
 /** general purpose registers count */
@@ -122,8 +120,6 @@ ALWAYS_INLINE size_t cpu_dcache_line_size()
 {
   return 8;
 }
-
-# endif  /* __MUTEK_ASM__ */
 
 #endif
 

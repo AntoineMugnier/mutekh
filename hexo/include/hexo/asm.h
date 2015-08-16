@@ -29,56 +29,12 @@
 #ifndef ASM_H_
 #define ASM_H_
 
-/* The cpu/hexo/asm.h file contains GNU as .macro definition which
-   must go in the assembly source file. Assembly is this file use the
-   _ASM macro foreach line of code so that appropriate escaping is
-   used. The p* macros are used for as .macro parameters in order to
-   properly escape backslash. */
-
-#ifdef __MUTEK_ASM__     /* We are included from a .S file */
-
-# define p0 \_0
-# define p1 \_1
-# define p2 \_2
-# define p3 \_3
-# define p4 \_4
-# define p5 \_5
-# define _ASM(...) __VA_ARGS__
-# define __ASM
-
-#else                    /* We are included from a .c file */
-
-# define p0 \\_0
-# define p1 \\_1
-# define p2 \\_2
-# define p3 \\_3
-# define p4 \\_4
-# define p5 \\_5
-# define _ASM(...) __ASM(__VA_ARGS__)
-# define __ASM(...) #__VA_ARGS__ "\n"
-
-asm(
-#endif
-#include <cpu/hexo/asm.h>
-#ifndef __MUTEK_ASM__
-);
-#endif
-
-#undef p0
-#undef p1
-#undef p2
-#undef p3
-#undef p4
-#undef p5
-#undef _ASM
-#undef __ASM
-
-/****************************************************/
-
 # define ASM_STR_(x) #x
 # define ASM_STR(x) ASM_STR_(x)
 
-#ifdef __MUTEK_ASM__     /* We are included from a .S file */
+#include <cpu/hexo/asm.h>
+
+/****************************************************/
 
 # ifndef ASM_SECTION
 #  define ASM_SECTION(name) \
@@ -109,11 +65,5 @@ asm(
         .endfunc                              ; \
         .size x, .-x
 
-#else                    /* We are included from a .c file */
-
-# define ASM_SECTION(name)              \
-        ".section " name ",\"ax\",@progbits \n\t"
-
 #endif
 
-#endif

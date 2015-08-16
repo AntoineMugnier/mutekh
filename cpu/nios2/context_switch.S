@@ -60,7 +60,7 @@ FUNC_START(.text, cpu_context_switch)
         .set noat
 
         // get context local storage
-        CPU_LOCAL ldw, __context_data_base, r1, r1
+        CPU_LOCAL_op ldw, __context_data_base, r1, r1
         // get context registers save array
         addi    r2,     r1,     nios2_context_regs
 
@@ -111,7 +111,7 @@ FUNC_START(.text, cpu_context_jumpto)
 
         // restore tls pointer from context struct
         ldw     r8,             HEXO_CONTEXT_S_TLS * 4 (r4)
-        CPU_LOCAL stw,          __context_data_base, r8, r7
+        CPU_LOCAL_op stw,          __context_data_base, r8, r7
 
         addi    r2,     r8,     nios2_context_regs
 
@@ -223,7 +223,7 @@ FUNC_START(.text, cpu_context_stack_use)
         
 #ifndef CONFIG_RELEASE
         // prevent use of previous context local storage
-        CPU_LOCAL stw,   __context_data_base, zero, r1
+        CPU_LOCAL_op stw,   __context_data_base, zero, r1
 #endif
 
         // private param

@@ -23,20 +23,22 @@
 #ifndef __HEXO_NIOS2_ASM_H_
 #define __HEXO_NIOS2_ASM_H_
 
-_ASM(.macro GLOBAL_ACCESS _0, _1, _2, _3                    )
-_ASM(         movia  p3,     p1                             )
-_ASM(         p0    p2,     (p3)                            )
-_ASM(.endm                                                  )
+asm(
+".macro GLOBAL_ACCESS _0, _1, _2, _3                    \n"
+"         movia  \\_3,     \\_1                         \n"
+"         \\_0    \\_2,     (\\_3)                      \n"
+".endm                                                  \n"
 
 #ifdef CONFIG_ARCH_SMP
-_ASM(.macro CPU_LOCAL _0, _1, _2, _3                        )
-_ASM(        p0 p2, p1(CPU_NIOS2_CLS_REG)                   )
-_ASM(.endm                                                  )
+".macro CPU_LOCAL_op _0, _1, _2, _3                     \n"
+"        \\_0 \\_2, \\_1(r26)                           \n"
+".endm                                                  \n"
 #else
-_ASM(.macro CPU_LOCAL _0, _1, _2, _3                        )
-_ASM(	GLOBAL_ACCESS p0, p1, p2, p3                        )
-_ASM(.endm                                                  )
+".macro CPU_LOCAL_op _0, _1, _2, _3                     \n"
+"	GLOBAL_ACCESS \\_0, \\_1, \\_2, \\_3            \n"
+".endm                                                  \n"
 #endif
+);
 
 #endif
 

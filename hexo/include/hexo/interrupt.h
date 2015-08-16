@@ -33,8 +33,6 @@
 
 C_HEADER_BEGIN
 
-#ifndef __MUTEK_ASM__
-
 #include "local.h"
 #include "types.h"
 
@@ -228,8 +226,6 @@ void cpu_syscall_sethandler_ctx(struct context_s *context,
 #endif
 
 /************************************************************/
-
-#endif  /* __MUTEK_ASM__ */
 
 # include "cpu/hexo/interrupt.h"
 

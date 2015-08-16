@@ -89,8 +89,6 @@
 #  define SOCLIB_MC_CHECK_ALL (SOCLIB_MC_CHECK_INIT | SOCLIB_MC_CHECK_REGIONS | SOCLIB_MC_CHECK_SP)
 # endif
 
-# ifndef __MUTEK_ASM__
-
 # include <stdint.h>
 
 #  if defined(CONFIG_SOCLIB_MEMCHECK)
@@ -248,8 +246,6 @@ soclib_mem_bypass_sp_check(uintptr_t pc_start, uintptr_t pc_end)
 }
 
 #  endif
-
-# endif  /* __MUTEK_ASM__ */
 
 #endif
 

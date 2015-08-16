@@ -36,8 +36,6 @@ C_HEADER_BEGIN
 #include <hexo/types.h>
 #include <cpu/hexo/local.h>
 
-#ifndef __MUTEK_ASM__
-
 /************************************************************************/
 
 # ifdef CONFIG_ARCH_SMP
@@ -128,8 +126,6 @@ C_HEADER_BEGIN
 /************************************************************************/
 
 C_HEADER_END
-
-#endif  /* __MUTEK_ASM__ */
 
 #endif
 

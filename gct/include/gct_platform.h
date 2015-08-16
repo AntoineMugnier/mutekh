@@ -49,6 +49,10 @@ C_HEADER_BEGIN
 #define _GCT_ULONG	__compiler_ulong_t
 #define _GCT_ULONGLONG	__compiler_ulonglong_t
 
+#ifndef __STDC_VERSION__
+# define __STDC_VERSION__ 199901
+#endif
+
 typedef bool_t		gct_bool_t;
 typedef	error_t		gct_err_t;
 typedef size_t		_gct_index_t;

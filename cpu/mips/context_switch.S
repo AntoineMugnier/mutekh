@@ -38,7 +38,7 @@ FUNC_START(.text, cpu_context_switch)
         .set noat
 
         // get context local storage
-        CPU_LOCAL lw,   __context_data_base, $1, $1
+        CPU_LOCAL_op lw,   __context_data_base, $1, $1
         // get context registers save array
 #ifdef CONFIG_HEXO_CONTEXT_NESTED
         lw      $2,             %lo(mips_context_regs_ptr)($1)
@@ -67,7 +67,7 @@ FUNC_START(.text, cpu_context_switch)
 
 # ifdef CONFIG_HEXO_LAZY_SWITCH
         // keep track of last context using fpu on this processor
-        CPU_LOCAL sw    mips_lazy_last, $2, $7
+        CPU_LOCAL_op sw    mips_lazy_last, $2, $7
 # endif
 
         // save fpu registers 20 to 30
@@ -120,7 +120,7 @@ FUNC_START(.text, cpu_context_jumpto)
 
         // restore tls pointer from context struct
         lw      $25,    HEXO_CONTEXT_S_TLS * 4 ($4)
-        CPU_LOCAL sw,   __context_data_base, $25, $1
+        CPU_LOCAL_op sw,   __context_data_base, $25, $1
 
         // context registers save array
 #ifdef CONFIG_HEXO_CONTEXT_NESTED
@@ -303,7 +303,7 @@ FUNC_START(.text, cpu_context_stack_use)
 
 #ifndef CONFIG_RELEASE
         // prevent use of previous context local storage
-        CPU_LOCAL sw,   __context_data_base, $0, $1
+        CPU_LOCAL_op sw,   __context_data_base, $0, $1
 #endif
 
         // private param

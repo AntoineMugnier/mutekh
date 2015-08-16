@@ -20,92 +20,84 @@
 
 */
 
-#ifndef __MIPS_SPECIFIC_H_
-#define __MIPS_SPECIFIC_H_
+#ifndef __MIPS_ASM_H_
+#define __MIPS_ASM_H_
 
-#ifdef __MUTEK_ASM__
+asm(
 
 // rd and rt must be different for store
-.macro GLOBAL_ACCESS op, name, rd, rt
-	lui  \rt, %hi(\name)
-        addiu \rt, %lo(\name)
-	\op  \rd, 0(\rt)
-.endm
+".macro GLOBAL_ACCESS op, name, rd, rt \n"
+"	lui  \\rt, %hi(\\name) \n"
+"        addiu \\rt, %lo(\\name) \n"
+"	\\op  \\rd, 0(\\rt) \n"
+".endm \n"
 
 #ifdef CONFIG_ARCH_SMP
-.macro CPU_LOCAL op, name, rd, rt
-        \op \rd, %lo(\name) ($27)
-.endm
+".macro CPU_LOCAL_op op, name, rd, rt \n"
+"        \\op \\rd, %lo(\\name) ($27) \n"
+".endm \n"
 #else
-.macro CPU_LOCAL op, name, rd, rt
-	GLOBAL_ACCESS \op, \name, \rd, \rt
-.endm
+".macro CPU_LOCAL_op op, name, rd, rt \n"
+"	GLOBAL_ACCESS \\op, \\name, \\rd, \\rt \n"
+".endm \n"
 #endif
 
-.macro CONTEXT_LOCAL op, name, rd, rt
-        CPU_LOCAL lw, __context_data_base, \rt, \rt
-        \op \name, \rd (\rt)
-.endm
+".macro CONTEXT_LOCAL_op op, name, rd, rt \n"
+"        CPU_LOCAL lw, __context_data_base, \\rt, \\rt \n"
+"        \\op \\name, \\rd (\\rt) \n"
+".endm \n"
 
-.macro MTC0_ reg, creg
-        mtc0   \reg,    $\creg
+".macro MTC0_ reg, creg \n"
+"        mtc0   \\reg,    $\\creg \n"
 #if CONFIG_CPU_MIPS_VERSION > 32
-	ehb
+"	ehb \n"
 #else
-	nop
-	nop
+"	nop \n"
+"	nop \n"
 #endif
-.endm
+".endm \n"
 
-.macro CPU_ID reg
+".macro CPU_ID reg \n"
 #ifdef CONFIG_ARCH_SMP_CAPABLE
 # if CONFIG_CPU_MIPS_VERSION >= 32
-        mfc0    \reg,    $15,    1
-        andi    \reg,    \reg,    0x3ff
+"        mfc0    \\reg,    $15,    1 \n"
+"        andi    \\reg,    \\reg,    0x3ff \n"
 # else
-        mfc0    \reg,    $15
-        andi    \reg,    \reg,    0x3ff
+"        mfc0    \\reg,    $15 \n"
+"        andi    \\reg,    \\reg,    0x3ff \n"
 # endif
 #else
-        or     \reg,  $0,      $0
+"        or     \\reg,  $0,      $0 \n"
 #endif
-.endm
+".endm \n"
 
 // restore multiple fpu regs
-.macro LxC1 i j
+".macro LxC1 i j \n"
 # if CONFIG_CPU_MIPS_FPU == 32
-    .ifeq \i & 1
-	ldc1	$\i,		\j
-    .endif
+"    .ifeq \\i & 1 \n"
+"	ldc1	$\\i,		\\j \n"
+"    .endif \n"
 # elif CONFIG_CPU_MIPS_FPU == 64
-	ldc1	$\i,		\j
+"	ldc1	$\\i,		\\j \n"
 #endif
-.endm
+".endm \n"
 
-.macro SxC1 i j
+".macro SxC1 i j \n"
 # if CONFIG_CPU_MIPS_FPU == 32
-    .ifeq \i & 1
-	sdc1	$\i,		\j
-    .endif
+"    .ifeq \\i & 1 \n"
+"	sdc1	$\\i,		\\j \n"
+"    .endif \n"
 # elif CONFIG_CPU_MIPS_FPU == 64
-	sdc1	$\i,		\j
+"	sdc1	$\\i,		\\j \n"
 #endif
-.endm
-
-#else /* not asm */
-
-#define ASM_SECTION(name)              \
-        ".section " name ",\"ax\",@progbits \n\t"
+".endm \n"
 
 /** mtf0 instruction wait cycles (FIXME should depend on MIPS version) */
-__asm__ (
-	 ".macro MTC0_WAIT	\n"
-	 "nop			\n"
-	 "nop			\n"
-	 ".endm			\n"
-	 );
-
-# endif  /* __MUTEK_ASM__ */
+".macro MTC0_WAIT	\n"
+"nop			\n"
+"nop			\n"
+".endm			\n"
+     );
 
 #endif
 
