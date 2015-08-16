@@ -1,0 +1,137 @@
+        /* -*- asm -*- */
+	.custom spi
+	.name adxl362_bytecode
+
+#include "adxl362.h"
+
+#warning invoke a single spi_setcs on reset
+
+#define ADXL362_WRITE(N)                                          \
+  spi_setcs             _const(DEV_SPI_CS_TRANSFER)          ;    \
+  cst8                  %R_TMP0,         0x0A                ;    \
+  spi_swpl              %R_TMP0,         %15,             N
+
+#define ADXL362_READ(N)                                           \
+  spi_setcs             _const(DEV_SPI_CS_TRANSFER)          ;    \
+  cst8                  %R_TMP0,         0x0B                ;    \
+  spi_swpl              %R_TMP0,         %R_TMP0,         N
+
+adxl362_spi_entry_reset:
+	.export adxl362_spi_entry_reset
+
+        cst8                    %R_TMP1,        0x1F
+        cst8                    %R_TMP2,        0x52
+	ADXL362_WRITE(3),
+        cst16                   %R_TMP0,        1000, 0
+        spi_yield_delay         %R_TMP0
+        cst8                    %R_TMP1,        0x0
+	ADXL362_READ(5),
+        cst8                    %R_TMP0,        ADXL362_DEVID
+        neq                     %R_TMP2,        %R_TMP0
+         jmp8                   error_device
+        cst8                    %R_TMP0,        ADXL362_MEMSID
+        neq                     %R_TMP3,        %R_TMP0
+         jmp8                   error_device
+        cst8                    %R_TMP0,        ADXL362_PARTID
+        neq                     %R_TMP4,        %R_TMP0
+         jmp8                   error_device
+
+        cst8                    %R_TMP1,        0x27
+        cst8                    %R_TMP2,        0xF
+	ADXL362_WRITE(3),
+
+        cst8                    %R_TMP1,        0x2D
+        cst8                    %R_TMP2,        0xA
+	ADXL362_WRITE(3),
+
+        call8                   %R_LINK,        clear_irq
+
+        end
+
+error_device:
+        dump
+        abort
+        end
+
+/*--------------------------------------------------------------------*/
+
+adxl362_spi_entry_cfg:
+	.export adxl362_spi_entry_cfg
+
+	tst32c                  %R_TMP0,	bit(_const(VALIO_MOTION_ACC_OPT_ACT))
+         jmp8                   cfg_inactivity
+
+cfg_activity:
+        mov                     %R_TMP3,        %R_ARG1
+        shi32r                  %R_TMP3,        8
+        cst8                    %R_TMP1,        0x20
+	ADXL362_WRITE(4)
+
+cfg_inactivity:
+        tst32c                  %R_TMP0,        bit(_const(VALIO_MOTION_ACC_OPT_INACT))
+         end
+
+        cst8                    %R_TMP1,        0x23
+        mov                     %R_TMP3,        %R_ARG2
+        shi32r                  %R_TMP3,        8
+        ld32e                   %R_TMP4,        %R_CTX_PV,    _offsetof(adxl362_private_s, time, 4)
+        mov                     %R_TMP5,        %R_TMP4
+        shi32r                  %R_TMP5,        8
+	ADXL362_WRITE(6)
+
+        end
+
+/*--------------------------------------------------------------------*/
+
+adxl362_spi_entry_wait:
+	.export adxl362_spi_entry_wait
+
+        cst8                    %R_TMP2,	0
+
+        tst32s                  %R_ARG0,        bit(_const(VALIO_MOTION_ACC_ACT))
+         bit32s                 %R_TMP2,        bit(0x10)
+
+        tst32s                  %R_ARG0,        bit(_const(VALIO_MOTION_ACC_INACT))
+         bit32s                 %R_TMP2,        bit(0x20)
+
+        cst8                    %R_TMP1,        0x2A
+	ADXL362_WRITE(3)
+
+        cst8                    %R_STATUS,	0
+
+        call8                   %R_LINK,        clear_irq
+
+        end
+
+/*--------------------------------------------------------------------*/
+
+adxl362_spi_entry_irq:
+	.export adxl362_spi_entry_irq
+
+        call8                   %R_LINK,        clear_irq
+        mov                     %R_STATUS,      %R_TMP2
+
+        cst8                    %R_TMP0,        0x30
+	and32			%R_TMP0,        %R_STATUS
+        eq0                     %R_TMP0
+         end
+
+adxl362_spi_entry_read_value:
+	.export adxl362_spi_entry_read_value
+        cst8                    %R_TMP1,        0x08
+	ADXL362_READ(6)
+
+        st8e                    %R_TMP2,        %R_CTX_PV,      _offsetof(adxl362_private_s, x, 1)
+        st8e                    %R_TMP3,        %R_CTX_PV,      _offsetof(adxl362_private_s, y, 1)
+        st8e                    %R_TMP4,        %R_CTX_PV,      _offsetof(adxl362_private_s, z, 1)
+
+        end
+
+clear_irq:
+        ld8e                    %R_TMP0,        %R_CTX_PV,      _offsetof(adxl362_private_s, flags, 1)
+        bit32c                  %R_TMP0,        bit(ADXL362_FLAGS_IRQ)
+        st8e                    %R_TMP0,        %R_CTX_PV,      _offsetof(adxl362_private_s, flags, 1)
+
+        cst8                    %R_TMP1,        0x0B
+	ADXL362_READ(3)
+        ret                     %R_LINK

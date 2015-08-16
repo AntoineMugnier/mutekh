@@ -27,238 +27,13 @@
    a overthreshold condition is detected. Activity and inactivity detection can be used 
    simultaneously */
 
-#include <hexo/interrupt.h>
+#include "adxl362.h"
 
 #include <mutek/mem_alloc.h>
 #include <mutek/printk.h>
 #include <mutek/bytecode.h>
 
-#include <device/resources.h>
-#include <device/device.h>
-#include <device/driver.h>
-#include <device/irq.h>
-
 #include <string.h>
-
-#include <device/class/spi.h>
-#include <device/class/gpio.h>
-#include <device/class/valio.h>
-#include <device/valio/motion.h>
-
-enum adxl362_state_s
-{
-  ADXL362_STATE_DOWN,   
-  ADXL362_STATE_READY,  
-  ADXL362_STATE_READ,  
-  ADXL362_STATE_WRITE,  
-  ADXL362_STATE_WAIT,   
-};
-
-#define ADXL362_RANGE_SELECTION        1  /* 1mg/bit */
-#define ADXL362_TIME_GRANULARITY       165000  /* 166000 us */
-
-#define ADXL362_FLAGS_BC_RUN  (1 << 0)  /* bytecode is running */
-#define ADXL362_FLAGS_WAIT_RQ (1 << 1)  /* A wait request is pending */
-#define ADXL362_FLAGS_IRQ     (1 << 2)  /* A irq is pending */
-
-
-struct adxl362_private_s
-{
-  int8_t x;
-  int8_t y;
-  int8_t z;
-
-  uint8_t flags;
-
-  uint32_t time;
-
-  enum adxl362_state_s state:8;
-
-  struct dev_irq_src_s src_ep;
-  struct dev_spi_ctrl_rq_s spi_rq;
-
-  /* queue for requests */
-  dev_request_queue_root_t queue;
-
-  /* cpu irq save mask */
-  reg_t irq_save;
-
-  gpio_id_t pin_map[1];
-};
-
-#define PVOFF(f)   ((uint8_t)(offsetof(struct adxl362_private_s, f)))
-#define THRDOFF(f) ((uint8_t)(offsetof(struct valio_motion_thresh_s, f)))
-
-#define R_CTX_PV 0
-
-#define R_TMP0 1
-#define R_TMP1 2
-#define R_TMP2 3
-#define R_TMP3 4
-#define R_TMP4 5
-#define R_TMP5 6
-
-#define R_SIZE 7
-
-#define R_STATUS 8
-#define R_ARG0 9
-#define R_ARG1 10
-#define R_ARG2 11 
-
-#define R_LINK 12
-#define R_ZERO 13
-#define R_ONES 14
-#define R_PC   15
-
-#define ADXL362_DEVID  0xAD
-#define ADXL362_MEMSID 0x1D
-#define ADXL362_PARTID 0xF2
-
-
-#define ADXL362_WRITE(N)                                                \
-  BC_SPI_SETCS(             DEV_SPI_CS_TRANSFER                     ),  \
-  BC_CST8(                  R_TMP0,         0x0A                    ),  \
-  BC_SPI_SWPL(              R_TMP0,         15,             N       )
-
-#define ADXL362_READ(N)                                                 \
-  BC_SPI_SETCS(             DEV_SPI_CS_TRANSFER                     ),  \
-  BC_CST8(                  R_TMP0,         0x0B                    ),  \
-  BC_SPI_SWPL(              R_TMP0,         R_TMP0,         N       )
-
-static const bc_opcode_t spi_bytecode[] =
-  {
-/*--------------------------------------------------------------------*/
-
-    /* label:entry_reset 0 */
-    BC_CST8(                  R_TMP1,         0x1F                    ),
-    BC_CST8(                  R_TMP2,         0x52                    ),
-    ADXL362_WRITE(3),
-    BC_CST8(                  R_TMP0,         1000                    ), /* Wait 1ms */
-    BC_SPI_YIELD_DELAY(       R_TMP0                                  ),
-    BC_CST8(                  R_TMP1,         0x0                     ), /* Check id */ 
-    ADXL362_READ(5),
-    BC_CST8(                  R_TMP0,         ADXL362_DEVID           ), 
-    BC_NEQ(                   R_TMP2,         R_TMP0                  ),
-    BC_JMP(                   3 /* :error_device*/                    ),
-    BC_CST8(                  R_TMP0,         ADXL362_MEMSID          ), 
-    BC_NEQ(                   R_TMP3,         R_TMP0                  ),
-    BC_JMP(                   3 /* :error_device*/                    ),
-    BC_CST8(                  R_TMP0,         ADXL362_PARTID          ), 
-    BC_NEQ(                   R_TMP4,         R_TMP0                  ),
-    BC_JMP(                   3 /* :error_device*/                    ),
-
-    BC_CST8(                  R_TMP1,         0x27                    ),/* reference + measure */
-    BC_CST8(                  R_TMP2,         0xF                     ),
-    ADXL362_WRITE(3),
-
-    BC_CST8(                  R_TMP1,         0x2D                    ),
-    BC_CST8(                  R_TMP2,         0xA                     ), /* Wake-up mode */
-    ADXL362_WRITE(3),
-
-    BC_JMPL(                  R_LINK,         -15 /* :clear_irq */    ),
-
-    BC_END(),
-
-    /* label:error_device */
-    BC_DUMP(),
-    BC_ABORT(),
-    BC_END(),
-    
-/*--------------------------------------------------------------------*/
-
-    /* label:entry_cfg */
-    BC_CST32(                 R_TMP0,         VALIO_MOTION_ACC_OPT_ACT),
-    BC_AND(                   R_TMP0,         R_ARG0                  ),
-    BC_EQ(                    R_TMP0,         R_ZERO                  ),
-    BC_JMP(                   3 /* :cfg_inactivity */                 ),
-
-    /* label:cfg_activity */
-    BC_LD16E(                 R_TMP2,         R_ARG1,      THRDOFF(x) ), /* x */
-    BC_MOV(                   R_TMP3,         R_TMP2                  ),
-    BC_SHIR(                  R_TMP3,         8                       ),
-    BC_CST8(                  R_TMP1,         0x20                    ), /* write activity threshold */
-    ADXL362_WRITE(4),
-    /* label:cfg_inactivity */
-    BC_CST32(                 R_TMP0,         VALIO_MOTION_ACC_OPT_INACT),
-    BC_AND(                   R_TMP0,         R_ARG0                  ),
-    BC_EQ(                    R_TMP0,         R_ZERO                  ),
-    BC_END(),
-    BC_CST8(                  R_TMP1,         0x23                    ), /* write inactivity threshold */
-    BC_LD16E(                 R_TMP2,         R_ARG2,     THRDOFF(x)  ), /* x */
-    BC_MOV(                   R_TMP3,         R_TMP2                  ),
-    BC_SHIR(                  R_TMP3,         8                       ),
-    BC_LD32E(                 R_TMP4,         R_CTX_PV,    PVOFF(time)), /* time */
-    BC_MOV(                   R_TMP5,         R_TMP4                  ),
-    BC_SHIR(                  R_TMP5,         8                       ),
-    ADXL362_WRITE(6),
-
-    BC_END(),
-
-/*--------------------------------------------------------------------*/
-
-    /* label:entry_wait */
-
-    BC_MOV(                   R_TMP2,         R_ZERO                  ),
-    /* label:irq_act 236 */
-    BC_CST32(                 R_TMP0,         VALIO_MOTION_ACC_ACT    ),
-    BC_AND(                   R_TMP0,         R_ARG0                  ),
-    BC_EQ(                    R_TMP0,         R_ZERO                  ),
-    BC_JMP(                   3 /* :irq_inact */                      ),
-    BC_CST8(                  R_TMP0,         0x10                    ), /* activity irq */
-    BC_OR(                    R_TMP2,         R_TMP0                  ),
-
-    /* label:irq_inact 236 */
-    BC_CST32(                 R_TMP0,         VALIO_MOTION_ACC_INACT  ),
-    BC_AND(                   R_TMP0,         R_ARG0                  ),
-    BC_EQ(                    R_TMP0,         R_ZERO                  ),
-    BC_JMP(                   3 /* :irq_write */                      ),
-    BC_CST8(                  R_TMP0,         0x20                    ), /* inactivity irq */
-    BC_OR(                    R_TMP2,         R_TMP0                  ),
-
-    /* label:irq_write 236 */
-    BC_CST8(                  R_TMP1,         0x2A                    ),
-    ADXL362_WRITE(3),
-
-    BC_MOV(                   R_STATUS,       R_ZERO                  ), /* clear status */
-
-    BC_JMPL(                  R_LINK,         -15 /* :clear_irq */    ),
-
-    BC_END(),
-
-/*--------------------------------------------------------------------*/
-
-    /* label:entry_irq 236 */
-    BC_JMPL(                  R_LINK,         -15 /* :clear_irq */    ),
-    BC_MOV(                   R_STATUS,       R_TMP2                  ),
-
-    BC_CST8(                  R_TMP0,         0x30                    ), /* irq mask */
-    BC_AND(                   R_TMP0,         R_STATUS                ),
-
-    BC_EQ(                    R_TMP0,         R_ZERO                  ),
-    BC_END(),
-
-    /* label:entry_read_value */
-    BC_CST8(                  R_TMP1,         0x08                    ),
-    ADXL362_READ(6),
-
-    BC_ST8E(                  R_TMP2,         R_CTX_PV,      PVOFF(x) ), /* x */
-    BC_ST8E(                  R_TMP3,         R_CTX_PV,      PVOFF(y) ), /* y */
-    BC_ST8E(                  R_TMP4,         R_CTX_PV,      PVOFF(z) ), /* z */
-
-    BC_END(),
-
-    /* label:clear_irq */
-    BC_LD8E(                  R_TMP0,         R_CTX_PV,   PVOFF(flags)), /* clear pv->irq */
-    BC_CST32(                 R_TMP1,         ~ADXL362_FLAGS_IRQ      ),
-    BC_AND(                   R_TMP0,         R_TMP1                  ),
-    BC_ST8E(                  R_TMP0,         R_CTX_PV,   PVOFF(flags)),
-
-    BC_CST8(                  R_TMP1,         0x0B                    ), /* clear irq */
-    ADXL362_READ(3),
-    BC_MOV(                   R_PC,           R_LINK                  ),
-    
-
-  };
 
 static inline void adxl362_end_rq(struct device_s *dev)
 {
@@ -313,7 +88,7 @@ static bool_t adxl362_process(struct device_s *dev)
     switch (pv->state)
       {
         case ADXL362_STATE_DOWN:
-          bc_set_reg(&srq->vm, R_PC, 228 /* :spi_bytecode:entry_reset */);
+          bc_set_pc(&srq->vm, &adxl362_spi_entry_reset);
           pv->state = ADXL362_STATE_READY;
           return 1;
   
@@ -325,7 +100,7 @@ static bool_t adxl362_process(struct device_s *dev)
               switch (rq->type)
                 {
                    case DEVICE_VALIO_READ:
-                     bc_set_reg(&srq->vm, R_PC, 228 /* :spi_bytecode:entry_read_value */);
+                     bc_set_pc(&srq->vm, &adxl362_spi_entry_read_value);
                      pv->state = ADXL362_STATE_READ;
                      break;
           
@@ -336,9 +111,9 @@ static bool_t adxl362_process(struct device_s *dev)
                      pv->time = macc->inact.duration/ADXL362_TIME_GRANULARITY;
              
                      bc_set_reg(&srq->vm, R_ARG0, macc->mask);
-                     bc_set_reg(&srq->vm, R_ARG1, (uintptr_t)&macc->act);
-                     bc_set_reg(&srq->vm, R_ARG2, (uintptr_t)&macc->inact);
-                     bc_set_reg(&srq->vm, R_PC, 228 /* :spi_bytecode:entry_cfg */);
+                     bc_set_reg(&srq->vm, R_ARG1, macc->act.x);
+                     bc_set_reg(&srq->vm, R_ARG2, macc->inact.x);
+                     bc_set_pc(&srq->vm, &adxl362_spi_entry_cfg);
              
                      pv->state = ADXL362_STATE_WRITE;
              
@@ -346,7 +121,7 @@ static bool_t adxl362_process(struct device_s *dev)
            
                    case DEVICE_VALIO_WAIT_UPDATE:
 
-                     bc_set_reg(&srq->vm, R_PC, 228 /* :spi_bytecode:entry_wait */);
+                     bc_set_pc(&srq->vm, &adxl362_spi_entry_wait);
                      bc_set_reg(&srq->vm, R_ARG0, ((struct valio_motion_evt_s *)rq->data)->evts);
 
                      pv->flags |= ADXL362_FLAGS_WAIT_RQ;
@@ -408,7 +183,7 @@ void adxl362_run(struct device_s *dev)
   while (1)
     {
       if (pv->flags & ADXL362_FLAGS_IRQ)
-        bc_set_reg(&srq->vm, R_PC, 199 /* :spi_bytecode:entry_irq */);
+        bc_set_pc(&srq->vm, &adxl362_spi_entry_irq);
       else if (!adxl362_process(dev))
         {
           lock_release_irq2(&dev->lock, &pv->irq_save);
@@ -608,7 +383,7 @@ static DEV_INIT(adxl362_init)
   pv->state = ADXL362_STATE_DOWN;
 
   kroutine_init(&srq->base.kr, &spi_rq_done, KROUTINE_TRIGGER);
-  bc_init(&srq->vm, spi_bytecode, sizeof(spi_bytecode), 1, /* R_CTX_PV */ pv);
+  bc_init(&srq->vm, &adxl362_bytecode, 1, /* R_CTX_PV */ pv);
 
   /* Disable bytecode trace */
   bc_set_trace(&srq->vm, 0, 0);

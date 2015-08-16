@@ -200,12 +200,6 @@
 #ifndef __DEVICE_SPI_H__
 #define __DEVICE_SPI_H__
 
-/* for use from spi bytecode */
-#define DEV_SPI_CS_TRANSFER_ 0
-#define DEV_SPI_CS_ASSERT_ 1
-#define DEV_SPI_CS_DEASSERT_ 2
-#define DEV_SPI_CS_RELEASE_ 3
-
 #include <hexo/types.h>
 #include <hexo/error.h>
 
@@ -270,17 +264,17 @@ enum dev_spi_cs_policy_e
       deasserted at the end of the transfer. Some buggy controllers
       are not able to hold the chip select between two words of the
       same transfer. */
-  DEV_SPI_CS_TRANSFER  = DEV_SPI_CS_TRANSFER_,
+  DEV_SPI_CS_TRANSFER,
   /** The chip select remains asserted. Not all controller support
       asserting the chip select when there is no ongoing transfer. An
       error will be reported in this case. */
-  DEV_SPI_CS_ASSERT    = DEV_SPI_CS_ASSERT_,
+  DEV_SPI_CS_ASSERT,
   /** The chip select is deasserted. Not all controller support
       deasserting the chip select during a transfer. An
       error will be reported in this case. */
-  DEV_SPI_CS_DEASSERT  = DEV_SPI_CS_DEASSERT_,
+  DEV_SPI_CS_DEASSERT,
   /** The chip select pin is not used/driven. */
-  DEV_SPI_CS_RELEASE   = DEV_SPI_CS_RELEASE_,
+  DEV_SPI_CS_RELEASE,
 };
 
 struct dev_spi_ctrl_config_s
