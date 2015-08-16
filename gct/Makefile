@@ -6,3 +6,4 @@ copy = $(subst $(LOCAL_SRC_DIR)/gct/,,$(header_raw))
 
 objs = libgct.o
 
+DIR_CFLAGS = -Wno-maybe-uninitialized
