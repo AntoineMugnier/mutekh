@@ -132,5 +132,5 @@ FUNC_START(.text, mutekh_entry)
         jmp     %g1
         nop
 
-FUNC_END(mutekh_startup)
+FUNC_END(mutekh_entry)
 
