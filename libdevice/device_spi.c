@@ -34,6 +34,7 @@
 #endif
 #include <hexo/lock.h>
 #include <hexo/interrupt.h>
+#include <hexo/endian.h>
 
 const char dev_spi_ckmode_e[] = ENUM_DESC_DEV_SPI_CKMODE_E;
 const char dev_spi_polarity_e[] = ENUM_DESC_DEV_SPI_POLARITY_E;
