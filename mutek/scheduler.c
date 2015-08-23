@@ -222,13 +222,6 @@ error_t kroutine_schedule(struct kroutine_s *kr, bool_t interruptible,
 }
 #endif
 
-extern inline bool_t kroutine_exec(struct kroutine_s *kr, bool_t interruptible);
-
-#ifdef CONFIG_MUTEK_KROUTINE_TRIGGER
-extern inline bool_t kroutine_trigger(struct kroutine_s *kr, bool_t interruptible,
-                                      enum kroutine_policy_e policy);
-#endif
-
 /***********************************************************************
  *      Scheduler idle context
  */
