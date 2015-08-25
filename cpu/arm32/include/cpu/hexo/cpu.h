@@ -89,7 +89,7 @@ reg_t cpu_get_stackptr()
 ALWAYS_INLINE void
 cpu_trap()
 {
-  asm volatile ("swi 0");
+  asm volatile ("bkpt");
 }
 
 ALWAYS_INLINE void cpu_dcache_invld(void *ptr)
