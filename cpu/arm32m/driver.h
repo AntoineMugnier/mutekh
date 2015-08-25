@@ -28,6 +28,7 @@
 #include <hexo/local.h>
 #include <hexo/iospace.h>
 
+#if defined(CONFIG_DEVICE)
 #include <device/device.h>
 #include <device/resources.h>
 #include <device/driver.h>
@@ -36,9 +37,11 @@
 #include <device/class/timer.h>
 #include <device/class/clock.h>
 #include <device/irq.h>
+#endif
 
 struct arm_dev_private_s
 {
+#if defined(CONFIG_DEVICE)
 #ifdef CONFIG_DEVICE_IRQ
   struct dev_irq_sink_s	sinks[CONFIG_CPU_ARM32M_M_IRQ_COUNT];
 #endif
@@ -64,6 +67,7 @@ struct arm_dev_private_s
 #endif
 #ifdef CONFIG_CPU_ARM32M_TIMER_SYSTICK
   struct dev_freq_accuracy_s acc;
+#endif
 #endif
 };
 
