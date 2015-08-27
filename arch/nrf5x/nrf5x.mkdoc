@@ -55,6 +55,11 @@ arch/nrf5x/peripheral.h
     sink.  This feature uses GPIOTE channels in Event mode.  @see
     GPIOTE.
   @end section
+
+  @section {PWM}
+    PWM is a composite device using a timer, PPIs and GPIOTE channels.
+    GPIOTE are used in Task mode.  @see GPIOTE.
+  @end section
   
 @end section
 
