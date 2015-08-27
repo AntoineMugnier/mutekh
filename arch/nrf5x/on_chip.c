@@ -61,3 +61,7 @@ DEV_DECLARE_STATIC(gpio_dev, "gpio", 0, nrf5x_gpio_drv,
                    );
 
 #endif
+
+#if (CONFIG_DRIVER_NRF5X_GPIO_ICU_CHANNEL_COUNT + CONFIG_DRIVER_NRF5X_GPIO_PWM_CHANNEL_COUNT) > NRF_GPIOTE_COUNT
+# error nRF51 ICU channel count + GPIO_PWM channel count may not use more than total GPIOTE channel count on the platform
+#endif
