@@ -1,127 +1,147 @@
 /*
     This file is part of MutekH.
-    
+
     MutekH is free software; you can redistribute it and/or modify it
     under the terms of the GNU Lesser General Public License as
     published by the Free Software Foundation; version 2.1 of the
     License.
-    
+
     MutekH is distributed in the hope that it will be useful, but
     WITHOUT ANY WARRANTY; without even the implied warranty of
     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
     Lesser General Public License for more details.
-    
+
     You should have received a copy of the GNU Lesser General Public
-    License along with MutekH; if not, write to the Free Software
-    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
-    02110-1301 USA.
+    License along with this program.  If not, see
+    <http://www.gnu.org/licenses/>.
 
-    Copyright Matthieu Bucchianeri <matthieu.bucchianeri@epita.fr> (c) 2006
-
+    Copyright Nicolas Pouillon <nipo@ssji.net> (c) 2015
 */
 
 /**
- * @file
- * @module{Devices support library}
- * @short Network device driver API
- */                                                                 
+   @file
+   @module{Devices support library}
+   @short Network device driver class
 
-#ifndef __DEVICE_NET_H__
-#define __DEVICE_NET_H__
+   @section {Description}
+
+   Network devices implement a network layer in libnetwork API terms.
+
+   On request, device is responsible for creating a network layer, and
+   returns it to caller.  Caller is then free to stack other layers on
+   top of it.
+
+   As network layers are refcounted, caller may close its network
+   session by dropping all references it has on layer returned by the
+   device.
+
+   When asking for instanciation of a layer, caller must provide
+   various parameters, including network layer type.  This gives an
+   opportunity to optimize stacks by using the highest-level layer
+   possible.
+
+   For instance, in a classical IP over ethernet environment, most
+   ethernet device drivers will implement IEEE802.3 MAC layer.  Some
+   high-end network adapters do optimizations at IP level, and then
+   may also implement IP layer.  A stack creation routine may try to
+   use the device driver to implement each layer, going lower in stack
+   depth until it gets an implemented layer for the driver.
+
+   For protocols sharing the same medium for various unrelated tasks,
+   like Bluetooth Low Energy where Radio is used for Advertising,
+   Connection, Scanning, etc., device driver may implement each as a
+   separate layer.
+
+   A device should be able to run multiple concurrent layers where it
+   makes sense.
+
+   Each layer API (tasks, commands, etc.) is defined in libnetwork.
+   Layers returned by network drivers should be drop-in replacement
+   for their generic libnetwork counterparts, if any.
+
+   Network layer definition may contain handler specialization.
+   Layers returns by device drivers must implement the whose set of
+   APIs of a layer definition.
+
+   @end section
+*/
+
+#ifndef DEVICE_NET_H
+#define DEVICE_NET_H
 
 #include <hexo/types.h>
-#include <hexo/error.h>
+#include <device/request.h>
+#include <device/class/timer.h>
 
-#include <device/driver.h>
+#include <net/addr.h>
 
-struct device_s;
-struct driver_s;
+struct net_layer_s;
+struct net_layer_delegate_vtable_s;
+struct net_scheduler_s;
 struct device_net_s;
-struct driver_net_s;
-struct net_packet_s;
-
-/* network device options */
-#define DEV_NET_OPT_PROMISC	1 //< promiscuous mode, data is bool_t *
-#define DEV_NET_OPT_BCAST	2 //< broadcat adress, data is const uint8_t **
-#define DEV_NET_OPT_MAC         3 //< mac adress, data is const uint8_t **
-
-/** Network device class packet creation function template. */
-#define DEV_NET_PREPAREPKT(n)	uint8_t  *(n) (const struct device_net_s *accessor, struct net_packet_s *packet, size_t size, size_t max_padding)
 
 /**
-    Network device class preparepkt() function type.
-    Create a buffer of given size into a packet.
+   @this retrieves a layer from the device driver.  Driver is
+   responsible for memory allocation for layer structure.  Layer is
+   reference counted, ownership is transferred to caller.  Caller may
+   drop all references to layer when not needed any more.
 
-    @param dev pointer to device descriptor
-    @param packet pointer to the packet
-    @param size the size of the level 2 subpacket (eg: ARP, IP...)
-    @param max_padding the additionnal size to allocate to permit the upper layer to pad the data
-    @return pointer to the layer 2 subpacket
-*/
-typedef DEV_NET_PREPAREPKT(dev_net_preparepkt_t);
+   @tt layer is meaningful only if return value is not an error.
 
+   @param accessor Device instance
+   @param scheduler Network scheduler to attach layer in
+   @param type Network layer type
+   @param params Layer creation parameters structure, as defined by layer type
+   @param delegate Delegate for network layer side-channel handling
+   @param delegate_vtable Delegate vtable, may be extended by layer type declaration
+   @param layer Returned layer
+   @returns an error level
+ */
+#define DEV_NET_LAYER_CREATE(n)                                         \
+  error_t (n)(struct device_net_s *accessor,                            \
+              struct net_scheduler_s *scheduler,                        \
+              uint_fast8_t type,                                        \
+              const void *params,                                       \
+              void *delegate,                                           \
+              const struct net_layer_delegate_vtable_s *delegate_vtable, \
+              struct net_layer_s **layer)
 
-/** Network device class packet sending function template. */
-#define DEV_NET_SENDPKT(n)	void  (n) (const struct device_net_s *accessor, struct net_packet_s *packet, uint_fast16_t proto)
+/** @This defines the prototype of the layer creation function. */
+typedef DEV_NET_LAYER_CREATE(device_net_layer_create_t);
 
-/**
-    Network device class sendpkt() function type.
-    Send a packet.
-
-    @param dev pointer to device descriptor
-    @param packet pointer to the packet
-    @param proto the level 2 protocol identifier
-*/
-typedef DEV_NET_SENDPKT(dev_net_sendpkt_t);
-
-
-/** Network device class device set option function template. */
-#define DEV_NET_SETOPT(n)	error_t (n) (const struct device_net_s *accessor, uint_fast32_t option, void *value, size_t len)
-
-/**
-    Network device class setopt() function type.
-    Set an option.
-
-    @param dev pointer to device descriptor
-    @param option option to set
-    @param value value for the option
-    @param len length of value
-    @return error code
-*/
-typedef DEV_NET_SETOPT(dev_net_setopt_t);
-
-
-/** Network device class device get option function template. */
-#define DEV_NET_GETOPT(n)	error_t (n) (const struct device_net_s *accessor, uint_fast32_t option, void *value, size_t *len)
+struct dev_net_info_s
+{
+  /**
+     A bitfield from @tt{CONFIG_NET_LAYER_TYPE_ENUM} enum allocator
+     with a bit set for each layer type implemented by this device.
+   */
+  uint64_t implemented_layers;
+  struct net_addr_s addr;
+  uint16_t prefix_size;
+  uint16_t mtu;
+};
 
 /**
-    Network device class getopt() function type.
-    Get an option or constant.
+   @this retrieves device information.
+ */
+#define DEV_NET_GET_INFO(n)                                 \
+  error_t (n)(struct device_net_s *accessor,                \
+              struct dev_net_info_s *info)
 
-    @param dev pointer to device descriptor
-    @param option to get
-    @param value value for the option
-    @param len length of value
-    @return error code
-*/
-typedef DEV_NET_GETOPT(dev_net_getopt_t);
+/** @This defines the prototype of the get_info function. */
+typedef DEV_NET_GET_INFO(device_net_get_info_t);
 
-
+/** Driver types. */
 DRIVER_CLASS_TYPES(net,
-                   dev_net_preparepkt_t *f_preparepkt;
-                   dev_net_sendpkt_t *f_sendpkt;
-                   dev_net_setopt_t *f_setopt;
-                   dev_net_getopt_t *f_getopt;
-                   );
+                   device_net_layer_create_t *f_layer_create;
+                   device_net_get_info_t *f_get_info;
+                  );
 
-#define DRIVER_NET_METHODS(prefix)                               \
-  ((const struct driver_class_s*)&(const struct driver_net_s){   \
-    .class_ = DRIVER_CLASS_NET,                                  \
-    .f_preparepkt = prefix ## _preparepkt,                       \
-    .f_sendpkt = prefix ## _sendpkt,                             \
-    .f_setopt = prefix ## _setopt,                               \
-    .f_getopt = prefix ## _getopt,                               \
+#define DRIVER_NET_METHODS(prefix)                                      \
+  ((const struct driver_class_s*)&(const struct driver_net_s){          \
+    .class_ = DRIVER_CLASS_NET,                                         \
+    .f_layer_create = prefix ## _layer_create,                          \
+    .f_get_info = prefix ## _get_info,                                  \
   })
 
 #endif
-
