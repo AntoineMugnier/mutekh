@@ -1622,7 +1622,6 @@ sub tokens_enum
     foreach my $opt (values %config_opts) {
         if ( $opt->{flags}->{enum} ) {
             my $value = $opt->{value};
-            $value = oct($value) if $value =~ /^0/;
             $opt->{providers} ||= [];
             foreach my $pr (sort { $a->{name} cmp $b->{name} } @{$opt->{providers}}) {
 
@@ -1635,7 +1634,7 @@ sub tokens_enum
                 my $o = new_token($name.'_FIRST', $pr->{file}, $pr->{location});
                 $o->{value} = $value;
                 $o->{flags}->{value} = 1;
-                $value += $pr->{default};
+                $value = "($value + ($pr->{default}))";
             }
 
             # create _COUNT token for the enum
