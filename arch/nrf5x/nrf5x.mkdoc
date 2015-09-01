@@ -183,6 +183,11 @@ arch/nrf5x/peripheral.h
     left to the user.
   @end section
 
+  @section {nRF51-DK}
+    PCA10028 board definition declares buttons.  All other IOs are
+    left to the user.
+  @end section
+
 @end section
 
 @section {Implementation notes}
