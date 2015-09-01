@@ -562,15 +562,22 @@ int_fast8_t memcstcmp(const void *s1, int_fast8_t _v, size_t n)
     return 0;
 }
 
-void memrevcpy(uint8_t *dest, const uint8_t *src, size_t size)
+void memrevcpy(void *dest_, const void *src_, size_t size)
 {
-    src += size;
-    while (size--)
-        *dest++ = *--src;
+  uint8_t *dest = dest_;
+  const uint8_t *src = src_;
+
+  src += size;
+  while (size--)
+    *dest++ = *--src;
 }
 
-void memxor(uint8_t *dest, const uint8_t *a, const uint8_t *b, size_t size)
+void memxor(void *dest_, const void *a_, const void *b_, size_t size)
 {
+  uint8_t *dest = dest_;
+  const uint8_t *a = a_;
+  const uint8_t *b = b_;
+
   for (size_t i = 0; i < size; ++i)
     dest[i] = a[i] ^ b[i];
 }

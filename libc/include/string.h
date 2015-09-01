@@ -48,9 +48,9 @@ void * memcpy(void *dst, const void *src, size_t size);
 #define memcpy __builtin_memcpy
 
 /* Reverse memcpy */
-void memrevcpy(uint8_t *dest, const uint8_t *src, size_t size);
+void memrevcpy(void *dest, const void *src, size_t size);
 
-void memxor(uint8_t *dest, const uint8_t *a, const uint8_t *b, size_t len);
+void memxor(void *dest, const void *a, const void *b, size_t len);
 
 void *__memcpy_reverse(void *dst, const void *src, size_t size);
 
