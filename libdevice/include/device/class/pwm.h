@@ -88,9 +88,6 @@ struct dev_pwm_config_s
 
   /* Output polarity. */
   enum dev_pwm_polarity_e pol;
-
-  /* Setter mask. */
-  uint_fast8_t            mask;
 };
 
 struct dev_pwm_rq_s
@@ -98,49 +95,55 @@ struct dev_pwm_rq_s
   /* Generic request. */
   struct dev_request_s          base;
 
-  /* Error. */
-  error_t                       error;
-
   /* Channel configurations. */
-  const struct dev_pwm_config_s **cfg;
+  const struct dev_pwm_config_s *cfg;
 
   /* Channel mask. */
-  uint32_t                      chan_mask;
+  uint32_t                chan_mask;
+
+  /* Setter mask. */
+  uint_fast8_t            mask;
+
+  /* Error. */
+  error_t                 error;
 };
 
 STRUCT_INHERIT(dev_pwm_rq_s, dev_request_s, base);
 
 #define DEV_PWM_CONFIG(n) void (n)(struct device_pwm_s *pdev, \
-                                  struct dev_pwm_rq_s  *rq)   \
-/**/
+                                  struct dev_pwm_rq_s  *rq)
 
-/** @This tries to configure some PWM channels. The first channel to configure
-    is identified by the device accessor. Subsequent channels with a
-    configuration specified in the @tt cfg array of the request are selected by
-    the @tt chan_mask field. The least significant bit of the mask corresponds
-    to the API instance number given by the accessor and must be set. The size
-    of the array must match the number of bits set in the @tt chan_mask field.
+/** @This configures some PWM channels. The first channel to configure
+    is identified by the device accessor number. Subsequent channels
+    with a configuration specified in the @tt cfg array of the request
+    are selected by the @tt chan_mask field. The least significant bit
+    of the mask corresponds to the API instance number given by the
+    accessor and must be set. The size of the array must match the
+    number of bits set in the @tt chan_mask field.
 
-    The @ref dev_pwm_config_s::mask field selects the parameters that are used
-    in the configuration. All channels require being started by calling
-    @ref device_start before doing any configuration.
+    The @ref dev_pwm_rq_s::mask field selects the parameters that are
+    updated. A single call to @this, can set the configuration of
+    multiple channels atomically if this is supported by the the
+    hardware.
 
-    If a configuration parameter is shared between PWM channels, one
-    configuration may conflict with other channels. It is not allowed to update
-    a shared parameter on different channels using separate calls to this
-    function if they were already started by a call to @ref device_start.  When
-    the value of a shared configuration parameter is changed, all passed @ref
-    dev_pwm_config_s must agree on the mask and value for this parameter.
-    This way the caller does not need to know if the parameter is actually shared.
+    Depending on the hardware design, some parameters may be shared
+    between channels. This is usually the case for the frequency
+    parameters. The configuration of all started channels with a
+    shared parameter must be updated at the same time. A channel is
+    considered started when it's duty cycle is neither 0 nor 1. In any
+    case, if the value of a shared parameter is not updated simultaneously
+    for all started channels, the @tt -ENOTSUP error is reported.
 
-    With a single call to @this, one can set the configuration of multiple
-    channels atomically if this is supported by the the hardware. The channel
-    output signal is actually started on the first call to @this.
+    The duty cycle of channels is set to 0 when the driver is
+    initialized. The @ref device_start function can be called in order
+    to keep the internal counter running when channels are not
+    started.
 
-    The @tt kr is executed upon completion. In case of error, the @tt dev_request_s::kr
-    kroutine is called with the @tt error field set appropriately. If at least one
-    error condition is detected for a single channel no configuration is performed at
-    all on other channels.
+    The @tt kr is executed upon completion. In case of error, the @tt
+    dev_request_s::kr kroutine is called with the @tt error field set
+    appropriately. If at least one error condition is detected for a
+    single channel no configuration is performed at all on other
+    channels.
 
     @table 2 {Error values}
  
@@ -159,9 +162,6 @@ STRUCT_INHERIT(dev_pwm_rq_s, dev_request_s, base);
     @item -ERANGE
     @item Configuration can not be achieved
 
-    @item -EINVAL
-    @item Configuration of a channel not started
-    
     @end table
 
 */
@@ -195,12 +195,11 @@ config_depend(CONFIG_DEVICE_PWM)
 
 inline error_t dev_pwm_wait_config(struct device_pwm_s *pdev, const struct dev_pwm_config_s *cfg)
 {
-     const struct dev_pwm_config_s * pcfg[1] = {cfg};
      struct dev_request_status_s status;
 
      struct dev_pwm_rq_s rq =
      {
-       .cfg = pcfg,
+       .cfg = cfg,
        .chan_mask = 1,
        .error = 0,
      };
@@ -217,12 +216,11 @@ inline error_t dev_pwm_wait_config(struct device_pwm_s *pdev, const struct dev_p
 
 inline error_t dev_pwm_spin_config(struct device_pwm_s *pdev, const struct dev_pwm_config_s *cfg)
 {
-     const struct dev_pwm_config_s * pcfg[1] = {cfg};
      struct dev_request_status_s status;
 
      struct dev_pwm_rq_s rq =
      {
-       .cfg = pcfg,
+       .cfg = cfg,
        .chan_mask = 1,
        .error = 0,
      };
