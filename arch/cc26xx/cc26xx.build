@@ -1,0 +1,68 @@
+
+%section cc13??-*-* cc26??-*-*
+  %types architecture
+
+  CONFIG_ARCH_CC26XX
+
+  CONFIG_DRIVER_SEGGER_RTT
+  CONFIG_DRIVER_SEGGER_RTT_PRINTK
+
+  # Memory layout
+
+  CONFIG_LOAD_ROM
+  CONFIG_MUTEK_DEFAULT_MEMALLOC_INIT
+
+  CONFIG_COMPILE_OPTIMIZE s
+
+  CONFIG_LOAD_EXCEPTIONS_SEPARATE undefined
+  CONFIG_LOAD_EXCEPTIONS_TEXT
+
+  CONFIG_DEVICE_TREE undefined
+
+  CONFIG_CPU_ARM32M_CORTEXM3
+
+  CONFIG_HEXO_CPU_STACK_SIZE 0x200
+  CONFIG_PTHREAD_STACK_SIZE  0x200
+  CONFIG_STARTUP_STACK_SIZE  0x200
+
+  CONFIG_CC26XX_RAMSIZE 0x5000
+
+  CONFIG_LOAD_ROM_RW_ADDR 0x20000000
+  CONFIG_STARTUP_HEAP_SIZE  0
+  CONFIG_STARTUP_STACK_ADDR (CONFIG_LOAD_ROM_RW_ADDR + CONFIG_CC26XX_RAMSIZE - CONFIG_STARTUP_STACK_SIZE)
+  CONFIG_LOAD_ROM_RW_SIZE   (CONFIG_CC26XX_RAMSIZE - CONFIG_STARTUP_STACK_SIZE)
+
+  %subsection cc1310-*-*
+    %types family
+    %set BUILD_NAME cc13xx
+  %end
+
+  %subsection cc2620-*-* cc2630-*-* cc2640-*-* cc2650-*-*
+    %types family
+    %set BUILD_NAME cc26xx
+  %end
+
+  %subsection *-f128-*
+    %types flash
+    CONFIG_LOAD_ROM_RO_ADDR 0x00000000
+    CONFIG_LOAD_ROM_RO_SIZE 0x00020000
+  %end
+
+  %subsection *-*-rgz
+    %types package
+    CONFIG_CC26XX_GPIO_COUNT 31
+  %end
+
+  %subsection *-*-rhb
+    %types package
+    CONFIG_CC26XX_GPIO_COUNT 15
+  %end
+
+  %subsection *-*-rsm
+    %types package
+    CONFIG_CC26XX_GPIO_COUNT 10
+  %end
+
+  %requiretypes family
+  %requiretypes flash
+  %requiretypes package

@@ -8,6 +8,7 @@
   @include soclib/soclib.mkdoc
   @include stm32/stm32.mkdoc
   @include zynq/zynq.mkdoc
+  @include cc26xx/cc26xx.mkdoc
 
 @end section
 
