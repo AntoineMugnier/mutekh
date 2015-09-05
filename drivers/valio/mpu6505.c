@@ -337,7 +337,7 @@ bool_t mpu6505_switch_mode(struct device_s *dev, enum mpu6505_power_mode_e mode)
     REG_PWR_MGMT_2_LP_WAKE_CTRL_20_HZ,
 
     2, REG_INT_PIN_CFG,
-    REG_INT_PIN_CFG_ACTIVE_LOW | REG_INT_PIN_CFG_OPEN_DRAIN
+    REG_INT_PIN_CFG_ACTIVE_HIGH | REG_INT_PIN_CFG_PUSHPULL
        | REG_INT_PIN_CFG_LEVEL | REG_INT_PIN_CLEAR_READ_ANY,
 
     7, REG_CONFIG,
@@ -648,8 +648,7 @@ static DEV_INIT(mpu6505_init)
     goto err_pv;
   }
 
-  device_irq_source_init(dev, &pv->irq, 1,
-                         &mpu6505_irq /*, DEV_IRQ_SENSE_LOW_LEVEL*/);
+  device_irq_source_init(dev, &pv->irq, 1, &mpu6505_irq);
 
   if (device_irq_source_link(dev, &pv->irq, 1, -1))
     goto err_pv;
