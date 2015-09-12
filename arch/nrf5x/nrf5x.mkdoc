@@ -1,6 +1,7 @@
 @section TP {nRF51/nRF52 Architecture support}
 
-Nordic's nRF51 and nRF52 architecture support.
+Nordic's nRF51 and nRF52 architectures are supported for most of their
+hardware features.  Most development boards are supported as well.
 
 @section {Drivers}
 
@@ -135,6 +136,18 @@ Nordic's nRF51 and nRF52 architecture support.
     configuration is done at driver instantiation time.
   @end section
 
+@end section
+
+@section {Unsupported hardware features}
+  @list
+    @item SPI Slave: MutekH has no driver class for this;
+    @item AAR: This is of no usefulness for current MutekH BLE stack implementation;
+    @item WDT: Watchdog is not a kernel feature;
+    @item QDEC: MutekH has no such device definition yet,
+    @item nRF52 UARTE, SPIM, TWIE blocks with EasyDMA,
+    @item nRF52 NFC tag interface,
+    @item nRF52 I2S and PDM audio interfaces.
+  @end list
 @end section
 
 @section {Boards}
