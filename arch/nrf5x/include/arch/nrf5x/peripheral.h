@@ -21,8 +21,47 @@
 #ifndef ARCH_NRF_PERIPHERAL_H_
 #define ARCH_NRF_PERIPHERAL_H_
 
+/**
+   @file
+   @module {Hexo}
+   @short nRF51/nRF52 peripheral access
+
+   Inside a device register map, there are tasks, events, shorts,
+   interrupt handling, and then configuration registers.
+
+   This regular pattern explains why nRF5x architecture declaration
+   adds an overlay on top of @ref cpu_mem_read_32 and @ref
+   cpu_mem_write_32 to access hardware registers.  nRF5x code use the
+   following accessors:
+   @list
+     @item @ref nrf_task_trigger,
+     @item @ref nrf_event_check,
+     @item @ref nrf_event_clear,
+     @item @ref nrf_event_wait,
+     @item @ref nrf_event_wait_clear,
+     @item @ref nrf_it_is_enabled,
+     @item @ref nrf_it_set_mask,
+     @item @ref nrf_it_enable,
+     @item @ref nrf_it_enable_mask,
+     @item @ref nrf_it_disable,
+     @item @ref nrf_it_disable_mask,
+     @item @ref nrf_short_set,
+     @item @ref nrf_short_enable,
+     @item @ref nrf_short_enable_mask,
+     @item @ref nrf_short_disable,
+     @item @ref nrf_short_disable_mask,
+     @item @ref nrf_reg_get,
+     @item @ref nrf_reg_set.
+   @end list
+
+   All these accessors take device base address and task/event/register
+   number as arguments.  These accessors make the code obvious about
+   what the driver intends to do.
+ */
+
 #include <hexo/iospace.h>
 
+/** @internal @multiple */
 #define NRF_TASK     0x0
 #define NRF_EVENT    0x100
 #define NRF_SHORT    0x200
@@ -34,6 +73,10 @@
 #define NRF_EVTENCLR 0x348
 #define NRF_REGISTER 0x400
 
+/**
+   @this triggers task @tt task for peripheral at base address @tt
+   base.
+ */
 ALWAYS_INLINE
 void nrf_task_trigger(uintptr_t base, uint8_t task)
 {
@@ -41,6 +84,10 @@ void nrf_task_trigger(uintptr_t base, uint8_t task)
     cpu_mem_write_32(addr, 1);
 }
 
+/**
+   @this checks whether interrupt @tt it for peripheral at base
+   address @tt base is enabled.
+ */
 ALWAYS_INLINE
 bool_t nrf_it_is_enabled(uintptr_t base, uint8_t it)
 {
@@ -48,6 +95,10 @@ bool_t nrf_it_is_enabled(uintptr_t base, uint8_t it)
     return !!(cpu_mem_read_32(addr) & (1 << it));
 }
 
+/**
+   @this updates the interrupt mask of device at base address @tt base
+   with mask @tt mask.
+ */
 ALWAYS_INLINE
 void nrf_it_set_mask(uintptr_t base, uint32_t mask)
 {
@@ -55,6 +106,10 @@ void nrf_it_set_mask(uintptr_t base, uint32_t mask)
     cpu_mem_write_32(addr, mask);
 }
 
+/**
+   @this adds interrupts in mask @tt mask to enabled interrupt list for
+   device at base address @tt addr.
+ */
 ALWAYS_INLINE
 void nrf_it_enable_mask(uintptr_t base, uint32_t mask)
 {
@@ -62,12 +117,20 @@ void nrf_it_enable_mask(uintptr_t base, uint32_t mask)
     cpu_mem_write_32(addr, mask);
 }
 
+/**
+   @this adds interrupt @tt it in interrupt list for device at base
+   address @tt addr.
+ */
 ALWAYS_INLINE
 void nrf_it_enable(uintptr_t base, uint8_t it)
 {
     nrf_it_enable_mask(base, 1 << it);
 }
 
+/**
+   @this removes interrupts in mask @tt mask from enabled interrupt
+   list for device at base address @tt addr.
+ */
 ALWAYS_INLINE
 void nrf_it_disable_mask(uintptr_t base, uint32_t mask)
 {
@@ -75,12 +138,20 @@ void nrf_it_disable_mask(uintptr_t base, uint32_t mask)
     cpu_mem_write_32(addr, mask);
 }
 
+/**
+   @this removes interrupt @tt it from enabled interrupt list for
+   device at base address @tt addr.
+ */
 ALWAYS_INLINE
 void nrf_it_disable(uintptr_t base, uint8_t it)
 {
     nrf_it_disable_mask(base, 1 << it);
 }
 
+/**
+   @this checks whether event @tt evt is enabled for peripheral at
+   base address @tt base.
+ */
 ALWAYS_INLINE
 bool_t nrf_evt_is_enabled(uintptr_t base, uint8_t evt)
 {
@@ -88,6 +159,10 @@ bool_t nrf_evt_is_enabled(uintptr_t base, uint8_t evt)
     return !!(cpu_mem_read_32(addr) & (1 << evt));
 }
 
+/**
+   @this adds events in mask @tt mask to enabled event list for device
+   at base address @tt addr.
+ */
 ALWAYS_INLINE
 void nrf_evt_enable_mask(uintptr_t base, uint32_t mask)
 {
@@ -95,12 +170,20 @@ void nrf_evt_enable_mask(uintptr_t base, uint32_t mask)
     cpu_mem_write_32(addr, mask);
 }
 
+/**
+   @this adds event @tt it in enabled event list for device at base
+   address @tt addr.
+ */
 ALWAYS_INLINE
 void nrf_evt_enable(uintptr_t base, uint8_t evt)
 {
     nrf_evt_enable_mask(base, 1 << evt);
 }
 
+/**
+   @this removes events in mask @tt mask from enabled event list for
+   device at base address @tt addr.
+ */
 ALWAYS_INLINE
 void nrf_evt_disable_mask(uintptr_t base, uint32_t mask)
 {
@@ -108,12 +191,20 @@ void nrf_evt_disable_mask(uintptr_t base, uint32_t mask)
     cpu_mem_write_32(addr, mask);
 }
 
+/**
+   @this removes event @tt it from enabled event list for device at
+   base address @tt addr.
+ */
 ALWAYS_INLINE
 void nrf_evt_disable(uintptr_t base, uint8_t evt)
 {
     nrf_evt_disable_mask(base, 1 << evt);
 }
 
+/**
+   @this retrieves value register @tt id in device at base address @tt
+   addr.
+ */
 ALWAYS_INLINE
 uint32_t nrf_reg_get(uintptr_t base, uint16_t id)
 {
@@ -121,6 +212,10 @@ uint32_t nrf_reg_get(uintptr_t base, uint16_t id)
     return cpu_mem_read_32(addr);
 }
 
+/**
+   @this sets register @tt id to value @tt data in device at base
+   address @tt addr.
+ */
 ALWAYS_INLINE
 void nrf_reg_set(uintptr_t base, uint16_t id, uint32_t data)
 {
@@ -128,6 +223,10 @@ void nrf_reg_set(uintptr_t base, uint16_t id, uint32_t data)
     cpu_mem_write_32(addr, data);
 }
 
+/**
+   @this retrieves current short enable mask for device at base
+   address @tt addr.
+ */
 ALWAYS_INLINE
 uint32_t nrf_short_get(uintptr_t base)
 {
@@ -135,6 +234,10 @@ uint32_t nrf_short_get(uintptr_t base)
     return cpu_mem_read_32(addr);
 }
 
+/**
+   @this sets current short enable mask to @tt shorts for device at
+   base address @tt addr.
+ */
 ALWAYS_INLINE
 void nrf_short_set(uintptr_t base, uint32_t shorts)
 {
@@ -142,6 +245,10 @@ void nrf_short_set(uintptr_t base, uint32_t shorts)
     cpu_mem_write_32(addr, shorts);
 }
 
+/**
+   @this adds shorts in mask @tt mask to current short enable mask for
+   device at base address @tt addr.
+ */
 ALWAYS_INLINE
 void nrf_short_enable_mask(uintptr_t base, uint32_t mask)
 {
@@ -149,12 +256,20 @@ void nrf_short_enable_mask(uintptr_t base, uint32_t mask)
     cpu_mem_write_32(addr, mask | cpu_mem_read_32(addr));
 }
 
+/**
+   @this adds short @tt id in current short enable mask for device at
+   base address @tt addr.
+ */
 ALWAYS_INLINE
 void nrf_short_enable(uintptr_t base, uint8_t id)
 {
   nrf_short_enable_mask(base, 1 << id);
 }
 
+/**
+   @this checks whether short @tt id is enabled for device at base
+   address @tt addr.
+ */
 ALWAYS_INLINE
 bool_t nrf_short_is_enabled(uintptr_t base, uint8_t id)
 {
@@ -162,6 +277,10 @@ bool_t nrf_short_is_enabled(uintptr_t base, uint8_t id)
     return !!(cpu_mem_read_32(addr) & (1 << id));
 }
 
+/**
+   @this removes shorts in mask @tt mask from current short enable
+   mask for device at base address @tt addr.
+ */
 ALWAYS_INLINE
 void nrf_short_disable_mask(uintptr_t base, uint32_t mask)
 {
@@ -169,50 +288,70 @@ void nrf_short_disable_mask(uintptr_t base, uint32_t mask)
     cpu_mem_write_32(addr, ~mask & cpu_mem_read_32(addr));
 }
 
+/**
+   @this removes short @tt id from current short enable mask for
+   device at base address @tt addr.
+ */
 ALWAYS_INLINE
 void nrf_short_disable(uintptr_t base, uint8_t id)
 {
   nrf_short_disable_mask(base, 1 << id);
 }
 
+/**
+   @this checks whether event @tt event is currently pending for
+   device at base address @tt addr.
+ */
 ALWAYS_INLINE
-uint32_t nrf_event_check(uintptr_t base, uint8_t task)
+uint32_t nrf_event_check(uintptr_t base, uint8_t event)
 {
-    uintptr_t addr = base | NRF_EVENT | (task << 2);
+    uintptr_t addr = base | NRF_EVENT | (event << 2);
     return cpu_mem_read_32(addr);
 }
 
+/**
+   @this acknowledges event @tt event for device at base address @tt
+   addr.
+ */
 ALWAYS_INLINE
-void nrf_event_clear(uintptr_t base, uint8_t task)
+void nrf_event_clear(uintptr_t base, uint8_t event)
 {
-    uintptr_t addr = base | NRF_EVENT | (task << 2);
+    uintptr_t addr = base | NRF_EVENT | (event << 2);
     cpu_mem_write_32(addr, 0);
 }
 
+/**
+   @this busy-waits for event @tt event from device at base address
+   @tt addr.
+ */
 ALWAYS_INLINE
-void nrf_event_wait(uintptr_t base, uint8_t evt)
+void nrf_event_wait(uintptr_t base, uint8_t event)
 {
 #if 1
-  nrf_it_disable(base, evt);
-  while (!nrf_event_check(base, evt))
+  nrf_it_disable(base, event);
+  while (!nrf_event_check(base, event))
     ;
 #else
   CPU_INTERRUPT_SAVESTATE_DISABLE;
 
-  nrf_it_enable(base, evt);
-  while (!nrf_event_check(base, evt))
+  nrf_it_enable(base, event);
+  while (!nrf_event_check(base, event))
     __asm__ __volatile__("wfi");
-  nrf_it_disable(base, evt);
+  nrf_it_disable(base, event);
 
   CPU_INTERRUPT_RESTORESTATE;
 #endif
 }
 
+/**
+   @this busy-waits for event @tt event from device at base address
+   @tt addr and acknowledges it.
+ */
 ALWAYS_INLINE
-void nrf_event_wait_clear(uintptr_t base, uint8_t evt)
+void nrf_event_wait_clear(uintptr_t base, uint8_t event)
 {
-  nrf_event_wait(base, evt);
-  nrf_event_clear(base, evt);
+  nrf_event_wait(base, event);
+  nrf_event_clear(base, event);
 }
 
 #endif

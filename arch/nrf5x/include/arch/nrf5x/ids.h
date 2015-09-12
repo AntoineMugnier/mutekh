@@ -21,20 +21,67 @@
 #ifndef ARCH_NRF5X_IDS_H_
 #define ARCH_NRF5X_IDS_H_
 
+/**
+   @file
+   @module {Hexo}
+   @short nRF51/nRF52 peripheral IDs
+
+   nRF5x devices all look the same and regular.  Device at address
+   0x4000000 has number 0 and interrupt 0, device at address
+   0x40001000 has number 1 and interrupt 1, and so on.
+
+   @ref nrf5x_peripheral_id_e defines available peripheral IDs. All of
+   them map to an address range, and an interrupt source to NVIC.
+
+   @ref #NRF_PERIPHERAL_ADDR and @ref nrf_peripheral_addr allow to
+   retrieve device base address, @ref #NRF_STATIC_RES_PERIPHERAL_MEM
+   is a shortcut for declaring a @ref #DEV_STATIC_RES_MEM for a
+   device.
+*/
+
+#if !defined(CONFIG_ARCH_NRF5X)
+# error You should not include this header on non-nRF builds
+#endif
+
 #include <hexo/types.h>
 #include <hexo/decls.h>
 
+/**
+   @this statically computes the device base address from its @ref
+   {nrf5x_peripheral} {device number}.
+
+   @see nrf_peripheral_addr
+ */
 #define NRF_PERIPHERAL_ADDR(no) (0x40000000 | ((uintptr_t)(no) << 12))
+
+/**
+   @this statically retrieves device ID from its base address.
+   Address is assumed to be existing.
+ */
 #define NRF_PERIPHERAL_ID(addr) ((uint8_t)((addr) >> 12) & 0x7f)
 
+/**
+   @this expands to @ref #DEV_STATIC_RES_MEM for a given peripheral
+   ID.
+ */
 #define NRF_STATIC_RES_PERIPHERAL_MEM(x) DEV_STATIC_RES_MEM(NRF_PERIPHERAL_ADDR((x)), NRF_PERIPHERAL_ADDR((x) + 1))
 
+/**
+   @this computes the device base address from its @ref
+   {nrf5x_peripheral} {device number}.
+
+   @see NRF_PERIPHERAL_ADDR
+ */
 ALWAYS_INLINE uintptr_t nrf_peripheral_addr(uint8_t no)
 {
     return 0x40000000 | ((uintptr_t)no << 12);
 }
 
-enum nrf5x_peripheral {
+/**
+   @this defines the list of peripheral IDs for nRF51/nRF52 chips.
+ */
+enum nrf5x_peripheral_id_e
+{
     NRF5X_POWER = 0,
     NRF5X_CLOCK = 0,
     NRF5X_RADIO = 1,
@@ -101,9 +148,17 @@ enum nrf5x_peripheral {
 #endif
 };
 
+/**
+   @this is the @em {input range} interrupt endpoint ID in GPIO
+   driver.
+ */
 #define NRF_GPIO_RANGE_IRQ_ID 32
 
-enum nrf5x_clock
+/**
+   @this defines identifiers for nRF51/nRF52 clocks as modeled by
+   clock driver in MutekH.
+ */
+enum nrf5x_clock_id_e
 {
   NRF_CLOCK_LF,
   NRF_CLOCK_LF_PRECISE,
@@ -116,20 +171,31 @@ enum nrf5x_clock
   NRF_CLOCK_EP_COUNT,
 };
 
-enum nrf5x_xo
+/**
+   @this defines the external oscillators IDs.
+*/
+enum nrf5x_xo_id_e
 {
   NRF5X_LFXO,
   NRF5X_HFXO,
 };
 
-enum {
+/**
+   @this defines IRQ sources for the nRF51/nRF52 radio driver.
+ */
+enum nrf5x_radio_irq_source_id_e
+{
   NRF5X_BLE_IRQ_RADIO,
   NRF5X_BLE_IRQ_TIMER,
   NRF5X_BLE_IRQ_RTC,
   NRF5X_BLE_IRQ_COUNT,
 };
 
-enum {
+/**
+   @this defines clock sinks for the nRF51/nRF52 radio driver.
+ */
+enum nrf5x_radio_clock_sink_e
+{
   NRF5X_BLE_CLK_SLEEP,
   NRF5X_BLE_CLK_RADIO,
   NRF5X_BLE_CLK_COUNT,
