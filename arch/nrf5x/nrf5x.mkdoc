@@ -184,6 +184,11 @@ Nordic's nRF51 and nRF52 architecture support.
     left to the user.
   @end section
 
+  @section {nRF51-Dongle}
+    PCA10031 is successor of nRF51822-Dongle (PCA10000).  It shares
+    basic layout, with some GPIOs going out of the board on PCB side.
+  @end section
+
 @end section
 
 @section {Implementation notes}
