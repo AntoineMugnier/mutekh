@@ -67,34 +67,27 @@ void cpu_interrupt_cls_sethandler(void *cls, cpu_interrupt_handler_t *handler);
 
 /** @this disables all maskable interrupts for the current cpu.
     This acts as a compiler memory barrier. */
-__attribute__ ((always_inline))
 ALWAYS_INLINE void cpu_interrupt_disable();
 
 /** @this enables all maskable interrupts for the current cpu.
     This acts as a compiler memory barrier. */
-__attribute__ ((always_inline))
 ALWAYS_INLINE void cpu_interrupt_enable();
 
 /** @this saves interrupts enable state (may use stack) */
-__attribute__ ((always_inline))
 ALWAYS_INLINE void cpu_interrupt_savestate(reg_t *state);
 
 /** @this saves interrupts enable state end disable interrupts.
     This acts as a compiler memory barrier. */
-__attribute__ ((always_inline))
 ALWAYS_INLINE void cpu_interrupt_savestate_disable(reg_t *state);
 
 /** @this restores interrupts enable state (may use stack).
     This acts as a compiler memory barrier. */
-__attribute__ ((always_inline))
 ALWAYS_INLINE void cpu_interrupt_restorestate(const reg_t *state);
 
 /** @this reads current interrupts state as boolean */
-__attribute__ ((always_inline))
 ALWAYS_INLINE bool_t cpu_interrupt_getstate();
 
 /** @this checks if the cpu is interruptible */
-__attribute__ ((always_inline))
 ALWAYS_INLINE bool_t cpu_is_interruptible();
 
 /** @this enables interrupts and give a chance to pending requests to
@@ -102,7 +95,6 @@ ALWAYS_INLINE bool_t cpu_is_interruptible();
     sequence which don't let interrupts raise on some
     processors. Memory is marked as clobbered by this function to
     force global variable reload after interrupts occured. */
-__attribute__ ((always_inline))
 ALWAYS_INLINE void cpu_interrupt_process();
 
 # ifdef CONFIG_CPU_WAIT_IRQ
@@ -110,7 +102,6 @@ ALWAYS_INLINE void cpu_interrupt_process();
     @ref #CONFIG_CPU_WAIT_IRQ token may be used to check for
     availability. Memory is marked as clobbered by this function to
     force global variable reload after interrupts occured. */
-__attribute__ ((always_inline))
 ALWAYS_INLINE void cpu_interrupt_wait();
 # endif
 
