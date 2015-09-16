@@ -527,7 +527,7 @@ struct dev_spi_ctrl_queue_s
   dev_request_queue_root_t      queue;
 
   lock_irq_t                    lock;
-  bool_t                        running;
+  uint8_t                       running;
 };
 
 /** This helper function initializes a SPI request queue struct for
