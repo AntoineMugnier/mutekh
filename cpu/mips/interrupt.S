@@ -275,11 +275,24 @@ interrupt_sys:
 #ifdef CONFIG_HEXO_IRQ
 interrupt_hw:                                   
 
-#if defined (CONFIG_HEXO_CONTEXT_PREEMPT) || !defined (CONFIG_CPU_MIPS_USE_ERET)
         // get epc
+# if defined (CONFIG_HEXO_CONTEXT_PREEMPT) || !defined (CONFIG_CPU_MIPS_USE_ERET) || defined(CONFIG_CPU_MIPS_WAIT_NEEDS_IE)
         mfc0    $5,     $CPU_MIPS_EPC
+# endif
+
+# ifdef CONFIG_CPU_MIPS_WAIT_NEEDS_IE
+        // skip 4 instructions if inside cpu_interrupt_wait
+        la      $4,     mips_interrupt_wait
+        subu    $4,     $5,     $4
+        sltiu   $4,     $4,     16
+        sll     $4,             4
+        addu    $5,     $4
+        mtc0    $5,     $CPU_MIPS_EPC
+# endif
+
+# if defined (CONFIG_HEXO_CONTEXT_PREEMPT) || !defined (CONFIG_CPU_MIPS_USE_ERET)
         sw      $5,     CPU_MIPS_CONTEXT_PC($16)
-#endif
+# endif
 
         /* pending hw irq enabled in status */
         and     $4,     $6,     $9
@@ -430,6 +443,37 @@ mips_restore:
         .set pop                                        
 
 FUNC_END(mips_exception)
+
+#if defined(CONFIG_HEXO_IRQ) && defined(CONFIG_CPU_WAIT_IRQ)
+FUNC_START(.text, mips_interrupt_wait)
+        .set push
+        .set noreorder
+        .set noat
+
+#ifdef CONFIG_CPU_MIPS_WAIT_NEEDS_IE
+        // enable irq before wait, race handled in interrupt_hw
+        mfc0    $1,     $12     // must be at mips_interrupt_wait + 0
+        ori     $1,     1
+        mtc0    $1,     $12
+#endif
+        wait
+#ifdef CONFIG_CPU_MIPS_WAIT_NEEDS_IE
+        jr      $31             // must be at mips_interrupt_wait + 16
+        nop
+        nop
+        nop
+#else
+        // enable irq after wait
+        mfc0    $1,     $12
+        ori     $1,     1
+        mtc0    $1,     $12
+#endif
+        jr      $31
+        nop
+
+        .set pop
+FUNC_END(mips_interrupt_wait)
+#endif
 
 // Local Variables:
 // indent-tabs-mode: nil;
