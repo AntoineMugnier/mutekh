@@ -388,6 +388,13 @@ mips_restore:
         // we need to restore the status either because the fpu have
 	// been disabled during irq handling or because exl/erl flags have been cleared
         lw      $4,     CPU_MIPS_CONTEXT_SR($16)
+
+        // keep IM2-IM7/IPL bits from status
+        mfc0    $5,     $CPU_MIPS_STATUS
+        xor     $5,     $4
+        andi    $5,     0xfc00
+        xor     $4,     $5
+
         MTC0_   $4,     CPU_MIPS_STATUS
 #endif
 

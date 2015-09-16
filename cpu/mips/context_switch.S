@@ -141,6 +141,13 @@ FUNC_START(.text, cpu_context_jumpto)
 
         // restore status
         lw      $4,     CPU_MIPS_CONTEXT_SR($25)
+
+        // keep IM2-IM7/IPL bits from status
+        mfc0    $5,     $CPU_MIPS_STATUS
+        xor     $5,     $4
+        andi    $5,     0xfc00
+        xor     $4,     $5
+
 #ifdef CONFIG_CPU_MIPS_USE_ERET
         // context will be restored as an exception return
         ori     $4,     CPU_MIPS_STATUS_EXL
