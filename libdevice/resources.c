@@ -61,6 +61,8 @@ struct dev_resource_s *device_res_get(const struct device_s *dev,
 
 static inline bool_t device_res_strcmp(const char *a, const char *b)
 {
+  while ((uint8_t)((*b | 32) - 'a') >= 26)
+    b++;
   while (*a && *a == *b)
     a++, b++;
   return *b || ((uint8_t)((*a | 32) - 'a') < 26 ||

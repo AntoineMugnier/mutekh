@@ -85,7 +85,10 @@ DRIVER_CLASS_TYPES(iomux,
    corresponding arrays if no matching label is found in the device tree.
 
    The directions of the IOs are specified using prefix characters
-   attached to labels in the list (see @ref dev_pin_driving_e symbols).
+   attached to labels in the @tt io_list parameter. (see @ref
+   dev_pin_driving_e symbols). A direction prefix can also be used in
+   the device resource label name; this overrides the direction specified
+   in the list.
 
    Example:
    @code

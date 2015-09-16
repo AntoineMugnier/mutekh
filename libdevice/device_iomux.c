@@ -26,6 +26,30 @@
 
 #include <stdarg.h>
 
+static enum dev_pin_driving_e device_iomux_mode(char l)
+{
+  struct switch_s { char c; char n; };
+  static const struct switch_s sw[10] = {
+    { '^', DEV_PIN_OPENSOURCE },
+    { '_', DEV_PIN_OPENDRAIN },
+    { '`', DEV_PIN_OPENSOURCE_PULLDOWN },
+    { '+', DEV_PIN_INPUT_PULLUP },
+    { ',', DEV_PIN_OPENDRAIN_PULLUP },
+    { '-', DEV_PIN_INPUT_PULLDOWN },
+    { 0, 0 },
+    { '<', DEV_PIN_INPUT },
+    { '=', DEV_PIN_INPUT_PULL },
+    { '>', DEV_PIN_PUSHPULL },
+  };
+
+  /* decode direction symbol using a perfect hash */
+  uint32_t x = ((319838000U * (uint32_t)l) >> 28);
+  if (x < 10 && sw[x].c == l)
+    return sw[x].n;
+
+  return DEV_PIN_DISABLED;
+}
+
 error_t device_iomux_setup(struct device_s *dev, const char *io_list,
                            iomux_demux_t *demux, iomux_io_id_t *io_id,
                            iomux_config_t *config)
@@ -39,29 +63,9 @@ error_t device_iomux_setup(struct device_s *dev, const char *io_list,
 
   while (*io_list)
     {
-      enum dev_pin_driving_e dir = DEV_PIN_DISABLED;
-
-      struct switch_s { char c; char n; };
-      static const struct switch_s sw[10] = {
-        { '^', DEV_PIN_OPENSOURCE },
-        { '_', DEV_PIN_OPENDRAIN },
-        { '`', DEV_PIN_OPENSOURCE_PULLDOWN },
-        { '+', DEV_PIN_INPUT_PULLUP },
-        { ',', DEV_PIN_OPENDRAIN_PULLUP },
-        { '-', DEV_PIN_INPUT_PULLDOWN },
-        { 0, 0 },
-        { '<', DEV_PIN_INPUT },
-        { '=', DEV_PIN_INPUT_PULL },
-        { '>', DEV_PIN_PUSHPULL },
-      };
-
-      /* decode direction symbol using a perfect hash */
-      uint32_t x = ((319838000U * (uint32_t)*io_list) >> 28);
-      if (x < 10 && sw[x].c == *io_list)
-        {
-          dir = sw[x].n;
-          io_list++;
-        }
+      enum dev_pin_driving_e dir = device_iomux_mode(*io_list);
+      if (dir)
+        io_list++;
 
       /* lookup io name in resources */
       struct dev_resource_s *r = device_res_get_from_name(dev, DEV_RES_IOMUX, 0, io_list);
@@ -77,10 +81,17 @@ error_t device_iomux_setup(struct device_s *dev, const char *io_list,
         return -ENOENT;
     done:
 
-      /* configure io on iomux */
-      if (r && !ent && (err = DEVICE_OP(&iomux, setup, r->u.iomux.io_id, dir,
-                                        r->u.iomux.mux, r->u.iomux.config)))
-        return err;
+      if (r)
+        {
+          enum dev_pin_driving_e dir2 = device_iomux_mode(*r->u.iomux.label);
+          if (dir2)
+            dir = dir2;
+
+          /* configure io on iomux */
+          if (!ent && (err = DEVICE_OP(&iomux, setup, r->u.iomux.io_id, dir,
+                                       r->u.iomux.mux, r->u.iomux.config)))
+            return err;
+        }
 
       /* fill arrays */
       if (demux)
