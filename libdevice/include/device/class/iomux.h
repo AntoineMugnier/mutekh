@@ -130,7 +130,7 @@ ALWAYS_INLINE error_t device_res_add_iomux(struct device_s *dev, const char *lab
 {
 #ifdef CONFIG_DEVICE_IOMUX
   struct dev_resource_s *r;
-  error_t err = device_res_alloc_str(dev, DEV_RES_IOMUX, NULL, label, &r);
+  error_t err = device_res_alloc_str(dev, DEV_RES_IOMUX, label, NULL, &r);
   if (err)
     return err;
 

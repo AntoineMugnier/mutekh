@@ -573,7 +573,7 @@ error_t device_add_res_clock_src(struct device_s     *dev,
     return err;
 
   /* force dependence checking for clock source using source name. */
-  r->flags |= DEVICE_RES_FLAGS_DEPEND;
+  r->flags |= DEVICE_RES_FLAGS_DEPEND0;
 
   r->u.clock_src.src_ep  = src_id;
   r->u.clock_src.sink_ep = sink_id;
@@ -592,7 +592,7 @@ error_t device_add_res_clock_src(struct device_s     *dev,
 # define DEV_STATIC_RES_CLK_SRC(__src, __src_id, __sink_id) \
   {                                                         \
     .type  = DEV_RES_CLOCK_SRC,                             \
-    .flags = DEVICE_RES_FLAGS_DEPEND,                       \
+    .flags = DEVICE_RES_FLAGS_DEPEND0,                      \
     .u = { .clock_src = {                                   \
       .src = (__src),                                       \
       .src_ep  = (__src_id),                                \

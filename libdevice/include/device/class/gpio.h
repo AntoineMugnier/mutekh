@@ -351,7 +351,7 @@ ALWAYS_INLINE error_t device_res_add_gpio(struct device_s *dev, const char *labe
 {
 #ifdef CONFIG_DEVICE_GPIO
   struct dev_resource_s *r;
-  error_t err = device_res_alloc_str(dev, DEV_RES_GPIO, NULL, label, &r);
+  error_t err = device_res_alloc_str(dev, DEV_RES_GPIO, label, NULL, &r);
   if (err)
     return err;
 

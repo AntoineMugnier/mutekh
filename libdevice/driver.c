@@ -197,10 +197,11 @@ error_t device_init_driver(struct device_s *dev)
 
   /* check dependencies before trying device initialization */
   DEVICE_RES_FOREACH(dev, r, {
-      if (r->flags & DEVICE_RES_FLAGS_DEPEND)
+      if (r->flags & (DEVICE_RES_FLAGS_DEPEND0 | DEVICE_RES_FLAGS_DEPEND1))
         {
           struct device_s *dep = dev;
-          if (device_get_by_path(&dep, (const char*)r->u.uint[0], &device_filter_init_done))
+          if (device_get_by_path(&dep, r->u.ptr[!(r->flags & DEVICE_RES_FLAGS_DEPEND0)],
+                                 &device_filter_init_done))
             return -EAGAIN;
         }
   });

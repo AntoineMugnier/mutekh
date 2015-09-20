@@ -74,18 +74,19 @@ enum dev_resource_flags_e
   DEVICE_RES_FLAGS_FREE_PTR1 = 2,
   /** first resource field is a path string to an other device which
       must be initialized before initialization of this device. */
-  DEVICE_RES_FLAGS_DEPEND = 4,
+  DEVICE_RES_FLAGS_DEPEND0 = 4,
+  /** secoond resource field is a path string to an other device which
+      must be initialized before initialization of this device. */
+  DEVICE_RES_FLAGS_DEPEND1 = 8,
   /** reserved for use by enumerator driver */
-  DEVICE_RES_FLAGS_ENUM_RESERVED0 = 8,
+  DEVICE_RES_FLAGS_ENUM_RESERVED0 = 16,
 };
 
 struct dev_resource_s
 {
-  /** resource descriptor type @see dev_resource_type_e */
-  enum dev_resource_type_e BITFIELD(type,8);
-  enum dev_resource_flags_e BITFIELD(flags,8);
-
   union {
+    /** @internal */
+    const void *                ptr[2];
     /** @internal */
     uintptr_t                   uint[2];
     /** @internal */
@@ -119,26 +120,27 @@ struct dev_resource_s
 
     /** @see #DEV_STATIC_RES_GPIO @see device_res_add_gpio */
     struct {
+      const char                *label;
       uintptr_t                 BITFIELD(id,CONFIG_DEVICE_GPIO_MAX_ID);
       uintptr_t                 BITFIELD(width,CONFIG_DEVICE_GPIO_MAX_WIDTH);
-      const char                *label;
     }                           gpio;
 
     /** @see #DEV_STATIC_RES_IOMUX @see device_res_add_iomux */
     struct {
+      const char                *label;
       uintptr_t                 BITFIELD(demux,CONFIG_DEVICE_IOMUX_MAX_DEMUX);
       uintptr_t                 BITFIELD(io_id,CONFIG_DEVICE_IOMUX_MAX_ID);
       uintptr_t                 BITFIELD(mux,CONFIG_DEVICE_IOMUX_MAX_MUX);
       uintptr_t                 BITFIELD(config,CONFIG_DEVICE_IOMUX_MAX_CONFIG);
-      const char                *label;
     }                           iomux;
 
     /** @see #DEV_STATIC_RES_DMA @see device_res_add_dma */
     struct {
       const char                *label;
-      uintptr_t                 BITFIELD(channel,5);
       uintptr_t                 config;
+      uintptr_t                 BITFIELD(channel,5);
     }                           dma;
+
     /** @see #DEV_STATIC_RES_UART @see device_res_add_uart */
     struct {
       uintptr_t                 BITFIELD(baudrate,26);
@@ -225,36 +227,45 @@ struct dev_resource_s
 
     /** @see #DEV_STATIC_RES_STR_PARAM @see device_res_add_str_param */
     struct {
-      const char                *value;
       const char                *name;
+      const char                *value;
     }                           str_param;
 
     /** @see #DEV_STATIC_RES_BLOB_PARAM */
     struct {
-      const void                *value;
       const char                *name;
+      const void                *value;
     }                           blob_param;
 
     /** @see #DEV_STATIC_RES_UINT_PARAM @see device_res_add_uint_param */
     struct {
-      uintptr_t                 value;
       const char                *name;
+      uintptr_t                 value;
     }                           uint_param;
 
     /** @see #DEV_STATIC_RES_DEV_PARAM @see device_res_add_dev_param */
     struct {
-      const char                *dev;
       const char                *name;
+      const char                *dev;
     }                           dev_param;
 
     /** @see device_res_add_uint_array_param */
     struct {
-      uintptr_t                 *value;
       const char                *name;
+      uintptr_t                 *value;
     }                           uint_array_param;
 
-  }                             u;
+  } __attribute__((packed))     u;
+
+  /** resource descriptor type @see dev_resource_type_e */
+  enum dev_resource_type_e BITFIELD(type,8);
+  enum dev_resource_flags_e BITFIELD(flags,8);
 };
+
+#ifndef CONFIG_COMPILE_NOBITFIELD
+STATIC_ASSERT(resource_entry_size_exceeded, sizeof(struct dev_resource_s)
+              <= 4 * sizeof(uintptr_t));
+#endif
 
 enum dev_resource_table_flags_e
 {
@@ -648,7 +659,7 @@ ALWAYS_INLINE error_t device_get_res_freq(const struct device_s *dev,
     exact meaning of the value is driver dependent. */
 ALWAYS_INLINE error_t device_res_add_str_param(struct device_s *dev, const char *name, const char *value)
 {
-  return device_res_alloc_str(dev, DEV_RES_STR_PARAM, value, name, NULL);
+  return device_res_alloc_str(dev, DEV_RES_STR_PARAM, name, value, NULL);
 }
 
 # define DEV_STATIC_RES_STR_PARAM(name_, value_)        \
@@ -722,7 +733,7 @@ ALWAYS_INLINE error_t device_get_param_blob(const struct device_s *dev,
 ALWAYS_INLINE error_t device_res_add_uint_param(struct device_s *dev, const char *name, uintptr_t value)
 {
   struct dev_resource_s *r;
-  error_t err = device_res_alloc_str(dev, DEV_RES_UINT_PARAM, NULL, name, &r);
+  error_t err = device_res_alloc_str(dev, DEV_RES_UINT_PARAM, name, NULL, &r);
   if (err)
     return err;
 
@@ -750,7 +761,7 @@ ALWAYS_INLINE error_t device_get_param_uint(const struct device_s *dev,
     return -ENOENT;
 
   if (a)
-    *a = r->u.uint[0];
+    *a = r->u.uint_param.value;
   return 0;
 }
 
@@ -765,7 +776,7 @@ ALWAYS_INLINE void device_get_param_uint_default(const struct device_s *dev, con
   if (!(r = device_res_get_from_name(dev, DEV_RES_UINT_PARAM, 0, name)))
     *a = def;
   else
-    *a = r->u.uint[0];
+    *a = r->u.uint_param.value;
 }
 
 
@@ -776,18 +787,18 @@ ALWAYS_INLINE void device_get_param_uint_default(const struct device_s *dev, con
 ALWAYS_INLINE error_t device_res_add_dev_param(struct device_s *dev, const char *name, const char *path)
 {
   struct dev_resource_s *r;
-  error_t err = device_res_alloc_str(dev, DEV_RES_DEV_PARAM, path, name, &r);
+  error_t err = device_res_alloc_str(dev, DEV_RES_DEV_PARAM, name, path, &r);
   if (err)
     return err;
 
-  r->flags |= DEVICE_RES_FLAGS_DEPEND;
+  r->flags |= DEVICE_RES_FLAGS_DEPEND1;
 
   return 0;
 }
 
-# define DEV_STATIC_RES_DEV_PARAM(name_, path_)          \
+# define DEV_STATIC_RES_DEV_PARAM(name_, path_)         \
   {                                                     \
-    .flags = DEVICE_RES_FLAGS_DEPEND,                   \
+    .flags = DEVICE_RES_FLAGS_DEPEND1,                  \
     .type = DEV_RES_DEV_PARAM,                          \
       .u = { .dev_param = {                             \
         .name = (name_),                                \

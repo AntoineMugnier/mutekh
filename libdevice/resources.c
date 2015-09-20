@@ -75,8 +75,9 @@ struct dev_resource_s *device_res_get_from_name(const struct device_s *dev,
                                                 uint_fast8_t id, const char *name)
 {
   DEVICE_RES_FOREACH(dev, r, {
-      if (r->type == type && r->u.str_param.name &&
-          !device_res_strcmp(name, r->u.str_param.name) && !id--)
+      const char *rname = r->u.ptr[0];
+      if (r->type == type && rname &&
+          !device_res_strcmp(name, rname) && !id--)
         return r;
   });
 
@@ -131,9 +132,9 @@ error_t device_res_alloc(struct device_s *dev, struct dev_resource_s **res,
 void device_res_cleanup(struct dev_resource_s *r)
 {
   if (r->flags & DEVICE_RES_FLAGS_FREE_PTR0)
-    mem_free((void*)r->u.uint[0]);
+    mem_free((void*)r->u.ptr[0]);
   if (r->flags & DEVICE_RES_FLAGS_FREE_PTR1)
-    mem_free((void*)r->u.uint[1]);
+    mem_free((void*)r->u.ptr[1]);
   r->flags = 0;
   r->type = DEV_RES_UNUSED;
 }
@@ -163,13 +164,13 @@ error_t device_res_alloc_str(struct device_s *dev,
         }
 
       r->flags |= DEVICE_RES_FLAGS_FREE_PTR1;
-      r->u.uint[1] = (uintptr_t)b;
+      r->u.ptr[1] = b;
     }
 
   if (a != NULL)
     {
       r->flags |= DEVICE_RES_FLAGS_FREE_PTR0;
-      r->u.uint[0] = (uintptr_t)a;
+      r->u.ptr[0] = a;
     }
 
   if (r_)

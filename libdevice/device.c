@@ -21,6 +21,7 @@
 */
 
 #include <hexo/error.h>
+#include <hexo/endian.h>
 
 #include <stdio.h>
 #include <device/device.h>
@@ -88,9 +89,11 @@ void device_init(struct device_s *dev, const struct dev_resource_table_s *tbl)
 #endif
 }
 
+static const size_t devsize = ALIGN_VALUE_UP(sizeof(struct device_s), sizeof(uint64_t));
+
 struct device_s *device_alloc(size_t resources)
 {
-  size_t s = sizeof(struct device_s);
+  size_t s = devsize;
 
   if (resources > 0)
     s += sizeof(struct dev_resource_table_s)
@@ -108,7 +111,7 @@ struct device_s *device_alloc(size_t resources)
 
       if (resources > 0)
         {
-          struct dev_resource_table_s *tbl = (void*)(dev + 1);
+          struct dev_resource_table_s *tbl = (void*)((uint8_t*)dev + devsize);
 
           dev->res_tbl = tbl;
           tbl->next = NULL;
@@ -225,8 +228,8 @@ void device_shrink(struct device_s *dev)
 {
   struct dev_resource_table_s *tbl = dev->res_tbl;
 
-  if ((void*)tbl == (void*)(dev + 1) && (dev->node.flags & DEVICE_FLAG_ALLOCATED))
-    device_res_shrink(&dev->res_tbl, sizeof (struct device_s));
+  if ((void*)tbl == (void*)((uint8_t*)dev + devsize) && (dev->node.flags & DEVICE_FLAG_ALLOCATED))
+    device_res_shrink(&dev->res_tbl, devsize);
   else
     device_res_shrink(&dev->res_tbl, 0);
 }

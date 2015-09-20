@@ -364,11 +364,11 @@ static FDT_ON_NODE_PROP_FUNC(enum_fdt_node_prop)
           else if (!strncmp(name + 1, "aram-device-", 12) && datalen == 4)
             {
               struct dev_resource_s *r;
-              if (device_res_alloc_str(e->dev, DEV_RES_DEV_PARAM, NULL, name + 13, &r))
+              if (device_res_alloc_str(e->dev, DEV_RES_DEV_PARAM, name + 13, NULL, &r))
                 goto res_err;
               r->flags |= DEVICE_RES_FLAGS_ENUM_RESERVED0;
               /* pass fdt phandle instead of pointer, will be changed in resolve_dev_links */
-              r->u.uint[0] = endian_be32(*(const uint32_t*)data);
+              r->u.uint[1] = endian_be32(*(const uint32_t*)data);
               return;
             }
           else if (!strncmp(name + 1, "aram-array-", 11))
@@ -407,11 +407,11 @@ static FDT_ON_NODE_PROP_FUNC(enum_fdt_node_prop)
             {
               struct dev_resource_s *r;
 
-              if (device_res_alloc_str(e->dev, DEV_RES_DEV_PARAM, NULL, "icu", &r))
+              if (device_res_alloc_str(e->dev, DEV_RES_DEV_PARAM, "icu", NULL, &r))
                 goto res_err;
               r->flags |= DEVICE_RES_FLAGS_ENUM_RESERVED0;
               /* pass fdt phandle instead of pointer, will be changed in resolve_dev_links */
-              r->u.uint[0] = phandle;
+              r->u.uint[1] = phandle;
               error_t err = device_res_alloc(e->dev, &r, DEV_RES_IRQ);
               if (err)
                 goto res_err;
@@ -438,11 +438,11 @@ static FDT_ON_NODE_PROP_FUNC(enum_fdt_node_prop)
             {
               struct dev_resource_s *r;
 
-              if (device_res_alloc_str(e->dev, DEV_RES_DEV_PARAM, NULL, "icu", &r))
+              if (device_res_alloc_str(e->dev, DEV_RES_DEV_PARAM, "icu", NULL, &r))
                 goto res_err;
               r->flags |= DEVICE_RES_FLAGS_ENUM_RESERVED0;
               /* pass fdt phandle instead of pointer, will be changed in resolve_dev_links */
-              r->u.uint[0] = endian_be32(*(const uint32_t*)(data8 + 4));
+              r->u.uint[1] = endian_be32(*(const uint32_t*)(data8 + 4));
 
               error_t err = device_res_alloc(e->dev, &r, DEV_RES_IRQ);
               if (err)
@@ -531,7 +531,7 @@ static void resolve_dev_links(struct device_s *root, struct device_s *dev)
 
           if (r->flags & DEVICE_RES_FLAGS_ENUM_RESERVED0)
             {
-              struct device_s *dep = enum_fdt_get_phandle(root, r->u.uint[0]);
+              struct device_s *dep = enum_fdt_get_phandle(root, r->u.uint[1]);
 
               r->flags ^= DEVICE_RES_FLAGS_ENUM_RESERVED0;
               /* set path to device or drop resource entry */
@@ -550,14 +550,14 @@ static void resolve_dev_links(struct device_s *root, struct device_s *dev)
                       const char *path = strdup(buf);
                       if (path != NULL)
                         {
-                          r->u.uint[0] = (uintptr_t)path;
-                          r->flags |= DEVICE_RES_FLAGS_FREE_PTR0 | DEVICE_RES_FLAGS_DEPEND;
+                          r->u.ptr[1] = path;
+                          r->flags |= DEVICE_RES_FLAGS_FREE_PTR1 | DEVICE_RES_FLAGS_DEPEND1;
                           continue;
                         }
                     }
                 }
 
-              printk("enum-fdt: bad node handle %p\n", r->u.uint[0]);
+              printk("enum-fdt: bad node handle %p\n", r->u.uint[1]);
               device_res_cleanup(r);
             }
         });
