@@ -487,18 +487,24 @@ void mpu6505_request_run_first(struct device_s *dev)
     return;
   }
 
-  switch (rq->type) {
-  case DEVICE_VALIO_WRITE:
-    dprintk("%s write %d\n", __FUNCTION__, rq->attribute);
-    switch (rq->attribute) {
-    case VALIO_MS_CALIBRATE:
+  switch (rq->attribute) {
+  case VALIO_MS_CALIBRATE:
+    switch (rq->type) {
+    case DEVICE_VALIO_WRITE:
+      dprintk("%s write %d\n", __FUNCTION__, rq->attribute);
       memcpy(pv->offset, rq->data, 6 * 2);
       // Trigger calibration values update
       if (pv->power_mode > MPU6505_POWER_ON)
         pv->power_mode = MPU6505_POWER_ON;
-      rq_done_(dev, rq, 0);
-      return;
+      break;
+
+    case DEVICE_VALIO_READ:
+      memcpy(rq->data, pv->offset, 6 * 2);
+      break;
     }
+
+    rq_done_(dev, rq, 0);
+    return;
   }
 
   switch (rq->type) {
@@ -551,7 +557,7 @@ DEV_VALIO_REQUEST(mpu6505_request)
     break;
 
   case VALIO_MS_CALIBRATE:
-    if (req->type != DEVICE_VALIO_WRITE)
+    if (!((1 << req->type) & ((1 << DEVICE_VALIO_READ) | (1 << DEVICE_VALIO_WRITE))))
       break;
     err = 0;
     break;
