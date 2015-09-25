@@ -219,7 +219,7 @@ cpu_interrupt_getstate(void)
 #ifdef CONFIG_HEXO_IRQ
   reg_t		state;
 
-  __asm__ volatile (
+  __asm__ (
 # if (CONFIG_CPU_MIPS_VERSION >= 322)
 		    "ehb			\n"
 # else
@@ -241,7 +241,7 @@ cpu_is_interruptible(void)
 #ifdef CONFIG_HEXO_IRQ
   reg_t		state;
 
-  __asm__ volatile (
+  __asm__ (
 # if (CONFIG_CPU_MIPS_VERSION >= 322)
 		    "ehb			\n"
 # else
