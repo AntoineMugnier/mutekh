@@ -361,7 +361,7 @@ struct device_##cl##_s                                                  \
 */                                                                      \
 struct driver_##cl##_s                                                  \
 {                                                                       \
-  enum driver_class_e class_;                                           \
+  uint16_t class_; /* enum driver_class_e */                            \
   __VA_ARGS__                                                           \
 };                                                                      \
                                                                         \
@@ -379,7 +379,7 @@ device_##cl##_s_base(struct device_##cl##_s *x)                         \
 
 struct driver_class_s
 {
-  enum driver_class_e class_;
+  uint16_t class_;  /* enum driver_class_e */
   void *functions[];
 };
 
