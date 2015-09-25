@@ -14,6 +14,13 @@ CPUCFLAGS=-mips32r2
   endif
 endif
 
+ifeq ($(CONFIG_CPU_MIPS_VERSION), 323)
+CPUCFLAGS=-mips32r2
+  ifeq ($(CONFIG_MUTEK_BYTECODE_NATIVE), defined)
+  BCFLAGS+= -b mips32
+  endif
+endif
+
 ifeq ($(CONFIG_CPU_MIPS_VERSION), 4)
 CPUCFLAGS=-mips4 -mno-branch-likely
 endif
