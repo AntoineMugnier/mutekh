@@ -55,7 +55,8 @@ cpu_context_init(struct context_s *context, context_entry_t *entry, void *param)
 #endif
   regs->gpr[4] = (uintptr_t)param;
 
-  regs->sr = CPU_MIPS_STATUS_IM;
+  regs->sr = 0;
+
 #if defined (CONFIG_HEXO_FPU) && !defined(CONFIG_HEXO_LAZY_SWITCH)
   regs->sr |= CPU_MIPS_STATUS_FPU;
   regs->fcsr = 0;

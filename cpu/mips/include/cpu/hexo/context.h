@@ -61,6 +61,7 @@ struct cpu_context_s
   reg_t hi;
   reg_t sr;
   reg_t pc;
+#ifdef CONFIG_HEXO_FPU
 # if CONFIG_CPU_MIPS_FPU == 32
    float fr[32];
 # elif CONFIG_CPU_MIPS_FPU == 64
@@ -68,7 +69,6 @@ struct cpu_context_s
 # else
 #  error
 # endif
-#ifdef CONFIG_HEXO_FPU
   reg_t fcsr;
 #endif
 } __attribute__((aligned(16)));
