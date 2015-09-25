@@ -26,6 +26,8 @@
 .section .reset,"ax",@progbits
 CPU_NAME_DECL(reset_vector):
         .globl CPU_NAME_DECL(reset_vector)
+        .set noreorder
+
         la      $8,             mutekh_entry
         j       $8
         nop
@@ -44,11 +46,6 @@ FUNC_START(.text, mutekh_entry)
 
         .set push
         .set noreorder
-
-        /* set up IT disable and kernel mode */
-        li      $8,             CPU_MIPS_STATUS_IM
-        MTC0_   $8,             CPU_MIPS_STATUS
-        MTC0_   $0,             CPU_MIPS_CAUSE
 
 #ifdef CONFIG_CPU_EXCEPTION_RELOCATABLE
         /* set cpu interrupts entry point */
@@ -118,6 +115,11 @@ FUNC_START(.text, mutekh_entry)
         mtc0    $2,     $16,    0
 2:
 #endif
+
+        /* set up IT disable and kernel mode */
+        MTC0_   $0,             CPU_MIPS_CAUSE
+        li      $8,             CPU_MIPS_STATUS_IM
+        MTC0_   $8,             CPU_MIPS_STATUS
 
 #ifdef CONFIG_ARCH_SMP_CAPABLE
 
