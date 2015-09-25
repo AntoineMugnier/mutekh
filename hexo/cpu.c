@@ -34,14 +34,29 @@ void cpu_dcache_invld_buf(void *ptr, size_t size)
   size_t ls = cpu_dcache_line_size();
 
   if (ls != 0)
-    {
-      uint8_t *ptr_;
+  {
+    uint8_t *ptr_;
 
-      for (ptr_ = ALIGN_ADDRESS_LOW(ptr, ls);
-	   ptr_ < (uint8_t*)ptr + size;
-	   ptr_ += ls)
-	cpu_dcache_invld(ptr_);
-    }
+    for (ptr_ = ALIGN_ADDRESS_LOW(ptr, ls);
+        ptr_ < (uint8_t*)ptr + size;
+        ptr_ += ls)
+      cpu_dcache_invld(ptr_);
+  }
+}
+
+void cpu_dcache_flush_buf(void *ptr, size_t size)
+{
+  size_t ls = cpu_dcache_line_size();
+
+  if (ls != 0)
+  {
+    uint8_t *ptr_;
+
+    for (ptr_ = ALIGN_ADDRESS_LOW(ptr, ls);
+        ptr_ < (uint8_t*)ptr + size;
+        ptr_ += ls)
+      cpu_dcache_flush(ptr_);
+  }
 }
 
 #endif

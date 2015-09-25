@@ -56,6 +56,69 @@ FUNC_START(.text, mutekh_entry)
         mtc0    $4,     $15,    1
 #endif
 
+#if defined(CONFIG_CPU_CACHE) && CONFIG_CPU_MIPS_VERSION >= 32
+        /* Test if CONFIG 1 */
+        mfc0    $2,     $16,    0
+        srl     $3,     $2,     31
+        beqz    $3,     2f
+        nop
+        mfc0    $2,     $16,    1
+
+        /* Icache way */
+        srl     $3,     $2,     16
+        andi    $3,     7
+        addiu   $3,     1
+        /* Icache line count */
+        srl     $4,     $2,     22
+        andi    $4,     7
+        li      $5,     64
+        sllv    $4,     $5,     $4
+        /* Icache line size */
+        srl     $5,     $2,     19
+        andi    $5,     7
+        li      $6,     2
+        sllv    $5,     $6,     $5
+        /* way * line count */
+        mul     $3,     $3,     $4
+        addiu   $3,     $3,     -1
+        move    $4,     $0
+3:      cache   MIPS32_CACHE_INSTRUCTION | MIPS32_CACHE_OP_INDEX_INVALIDATE, 0($4)
+        addu    $4,     $5    
+        bne     $3,     $0,    3b
+        addiu   $3,     -1   
+
+        mtc0    $0,     $28,    0
+        /* Dcache way */
+        srl     $3,     $2,     7
+        andi    $3,     7
+        addiu   $3,     1
+        /* Dcache line count */
+        srl     $4,     $2,     13
+        andi    $4,     7
+        li      $5,     64
+        sllv    $4,     $5,     $4
+        /* Icache line size */
+        srl     $5,     $2,     10
+        andi    $5,     7
+        li      $6,     2
+        sllv    $5,     $6,     $5
+        /* way * line count */
+        mul     $3,     $3,     $4
+        addiu   $3,     $3,     -1
+        move    $4,     $0
+3:      cache   MIPS32_CACHE_DATA | MIPS32_CACHE_OP_INDEX_STORE_TAG, 0($4)
+        addiu   $3,     -1   
+        bne     $3,     $0,    3b
+        addu    $4,     $5    
+
+        /* Enable write through cache */
+        mfc0    $2,     $16,    0
+        ori     $2,     7
+        xori    $2,     (7 - CPU_MIPS_CACHE_WTNA)
+        mtc0    $2,     $16,    0
+2:
+#endif
+
 #ifdef CONFIG_ARCH_SMP_CAPABLE
 
         CPU_ID  $8

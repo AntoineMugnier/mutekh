@@ -29,6 +29,16 @@
 # warning compiler mips version doesnt match configuration
 #endif
 
+/* Cacheable, non-coherent, write-through, no write allocate */
+#define CPU_MIPS_CACHE_WTNA     0
+/* Cacheable, non-coherent, write-through, write allocate */
+#define CPU_MIPS_CACHE_WTA      1
+/* Uncached */
+#define CPU_MIPS_NO_CACHE       2
+/* Cacheable, non-coherent, write-back, write allocate */
+#define CPU_MIPS_CACHE_WB       3
+
+
 #define CPU_MIPS_GP             28
 #define CPU_MIPS_SP             29
 #define CPU_MIPS_FP             30
@@ -205,19 +215,33 @@ cpu_trap()
   asm volatile ("break 0");
 }
 
+#define  MIPS32_CACHE_OP_INDEX_INVALIDATE  (0 << 2)
+#define  MIPS32_CACHE_OP_INDEX_STORE_TAG   (2 << 2)
+#define  MIPS32_CACHE_OP_HIT_INVALIDATE    (4 << 2)
+#define  MIPS32_CACHE_OP_HIT_WRITEBACK     (5 << 2)
+
+#define  MIPS32_CACHE_INSTRUCTION  0
+#define  MIPS32_CACHE_DATA         1
+#define  MIPS32_CACHE_TERTIARY     2
+#define  MIPS32_CACHE_SECONDARY    3
+
 ALWAYS_INLINE void cpu_dcache_invld(void *ptr)
 {
   asm volatile (
 # if CONFIG_CPU_MIPS_VERSION >= 32
 		" cache %0, %1"
 		: : "i" (0x11) , "R" (*(uint8_t*)(ptr))
-# else
-#  ifdef CONFIG_ARCH_SOCLIB
-		" lw $0, (%0)"
-		: : "r" (ptr)
-#  else
-		"nop"::
-#  endif
+# endif
+		: "memory"
+		);
+}
+
+ALWAYS_INLINE void cpu_dcache_flush(void *ptr)
+{
+  asm volatile (
+# if CONFIG_CPU_MIPS_VERSION >= 32
+		" cache %0, %1"
+		: : "i" (0x19) , "R" (*(uint8_t*)(ptr))
 # endif
 		: "memory"
 		);

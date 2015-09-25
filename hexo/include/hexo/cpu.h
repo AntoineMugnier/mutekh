@@ -122,10 +122,28 @@ ALWAYS_INLINE void cpu_dcache_invld(void *ptr);
     size is in bytes. */
 void cpu_dcache_invld_buf(void *ptr, size_t size);
 
+/** invalidate all the cpu instruction cache lines within given range.
+    size is in bytes. */
+void cpu_icache_invld_buf(void *ptr, size_t size);
+
+/** invalidate all the cpu data cache lines within given range.
+    size is in bytes. */
+void cpu_dcache_flush_buf(void *ptr, size_t size);
+
 # else
 
 ALWAYS_INLINE void
 cpu_dcache_invld_buf(void *ptr, size_t size)
+{
+}
+
+ALWAYS_INLINE void
+cpu_icache_invld_buf(void *ptr, size_t size)
+{
+}
+
+ALWAYS_INLINE void
+cpu_dcache_flush_buf(void *ptr, size_t size)
 {
 }
 
