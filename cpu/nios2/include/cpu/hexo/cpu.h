@@ -40,9 +40,7 @@
 #define CPU_NIOS2_BA 30
 #define CPU_NIOS2_RA 31
 
-#ifdef CONFIG_ARCH_SMP
-# define CPU_NIOS2_CLS_REG r26
-#endif
+#define CPU_NIOS2_CLS_REG r26
 
 #include <hexo/endian.h>
 

@@ -214,7 +214,9 @@ static DEV_CLOCK_SINK_CHANGED(arm_clk_changed)
   pv->freq = *freq;
 # ifdef CONFIG_CPU_ARM32M_TIMER_SYSTICK
   pv->acc = *acc;
+#  ifdef CONFIG_DEVICE_IRQ
   pv->systick_rev += 2;
+#  endif
 # endif
   LOCK_RELEASE_IRQ(&dev->lock);
 }

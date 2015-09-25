@@ -209,7 +209,7 @@ nios2_preempt_and_restore:
         movi    r1,             CPU_NIOS2_CONTEXT_RESTORE_CALLER | CPU_NIOS2_CONTEXT_RESTORE_CALLEE
         stw     r1,             CPU_NIOS2_CONTEXT_SAVE_MASK(r24)
 
-        br      cpu_context_jumpto
+        jmpi    cpu_context_jumpto
 1:
 #endif
 

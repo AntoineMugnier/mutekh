@@ -137,16 +137,16 @@ static DEV_CPU_REG_INIT(sparc_cpu_reg_init)
   /* set cpu local storage register base pointer */
   asm volatile("mov %0, %%g6" : : "r" (pv->node.cls));
 
+# ifdef CONFIG_HEXO_USERMODE
+  cpu_local_storage[pv->node.cpu_id] = pv->node.cls;
+# endif
+
 # ifdef CONFIG_DEVICE_IRQ
   /* Enable all irq lines. On SMP platforms other CPUs won't be able to enable these lines later. */
 # endif
 #endif
 
   CPU_LOCAL_SET(cpu_device, dev);
-
-# ifdef CONFIG_HEXO_USERMODE
-  cpu_local_storage[pv->node.cpu_id] = pv->node.cls;
-# endif
 
 #ifdef CONFIG_SOCLIB_MEMCHECK
   /* all these functions may execute with briefly invalid stack & frame

@@ -512,7 +512,7 @@ static DEV_INIT(efm32_timer_init)
 
   dev_request_pqueue_init(&pv->queue);
 #else
-  cfg->cap |= DEV_TIMER_CAP_TICKLESS;
+  pv->cap |= DEV_TIMER_CAP_TICKLESS;
 #endif
 
   /* Stop timer */

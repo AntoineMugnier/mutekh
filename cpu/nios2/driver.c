@@ -143,7 +143,7 @@ static DEV_CPU_REG_INIT(nios2_cpu_reg_init)
 # endif
 
 # ifdef CONFIG_HEXO_USERMODE
-  cpu_local_storage[pv->id] = pv->node.cls;
+  cpu_local_storage[pv->node.cpu_id] = pv->node.cls;
 # endif
 #endif
 
