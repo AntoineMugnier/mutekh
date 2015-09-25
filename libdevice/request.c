@@ -23,10 +23,10 @@
 #include <device/request.h>
 
 GCT_CONTAINER_PROTOTYPES(dev_request_queue, extern inline, dev_request_queue,
-                         init, destroy, pushback, pop, remove, isempty, head);
+                         init, destroy, push, pushback, pop, remove, isempty, head, next);
 
 GCT_CONTAINER_PROTOTYPES(dev_request_pqueue, extern inline, dev_request_pqueue,
-                         init, destroy, pop, isempty, head, prev, next);
+                         init, destroy, pop, isempty, head, prev, next, remove);
 
 extern inline KROUTINE_EXEC(dev_request_spin_done);
 
