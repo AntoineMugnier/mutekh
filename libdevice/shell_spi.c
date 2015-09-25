@@ -40,7 +40,7 @@ enum spi_opt_e
   SPI_OPT_BIT_RATE  = 0x02,
   SPI_OPT_BIT_ORDER = 0x04,
   SPI_OPT_CLK_MODE  = 0x08,
-  SPI_OPT_POL       = 0x10,
+  SPI_OPT_POLARITY  = 0x10,
   SPI_OPT_CS_ID     = 0x20,
   SPI_OPT_CS_POLICY = 0x40,
   SPI_OPT_WR_DATA   = 0x80,
@@ -52,30 +52,36 @@ struct termui_optctx_dev_spi_opts
 {
   /* spi device. */
   struct device_spi_ctrl_s       spi;
-  
-  struct dev_spi_ctrl_transfer_s tr;
 
   union 
     {
-      size_t count;
-      union 
+      struct
         {
-          /* Chip select */
-          struct 
-            {
-              enum dev_spi_cs_policy_e policy;
-              uint8_t csid;
-            }cs;
-          /* config */
-          struct 
-            {
-              uint32_t bit_rate;
-              enum dev_spi_ckmode_e ck_mode;
-              enum dev_spi_bit_order_e bit_order;
-            }cfg;
+          struct dev_spi_ctrl_transfer_s tr;
+          size_t count;
         };
-      
-      enum dev_spi_polarity_e  pol;
+
+      struct
+        {
+          enum dev_spi_polarity_e  pol;
+          union 
+            {
+              /* Chip select */
+              struct 
+                {
+                  enum dev_spi_cs_policy_e policy;
+                  uint8_t csid;
+                }cs;
+              /* config */
+              struct 
+                {
+                  uint32_t bit_rate;
+                  enum dev_spi_ckmode_e ck_mode;
+                  enum dev_spi_bit_order_e bit_order;
+                }cfg;
+            };
+        };
+          
     };
 };
 
@@ -101,7 +107,7 @@ static TERMUI_CON_COMMAND_PROTOTYPE(dev_shell_spi_config)
   if (used & SPI_OPT_BIT_ORDER)
     cfg.bit_order = data->cfg.bit_order;
 
-  if (used & SPI_OPT_POL)
+  if (used & SPI_OPT_POLARITY)
     {
       cfg.miso_pol = data->pol;
       cfg.mosi_pol = data->pol;
@@ -289,17 +295,17 @@ static TERMUI_CON_OPT_DECL(dev_spi_opts) =
                         NULL)
   )
 
-  TERMUI_CON_OPT_ENUM_ENTRY("-p", "--polarity", SPI_OPT_POL,
+  TERMUI_CON_OPT_ENUM_ENTRY("-p", "--polarity", SPI_OPT_POLARITY,
     struct termui_optctx_dev_spi_opts, pol, dev_spi_polarity_e,
-    TERMUI_CON_OPT_CONSTRAINTS(SPI_OPT_POL, SPI_OPT_DEV)
-    TERMUI_CON_OPT_HELP("This option defines the polarity of the chip select signal",
+    TERMUI_CON_OPT_CONSTRAINTS(SPI_OPT_POLARITY, SPI_OPT_DEV)
+    TERMUI_CON_OPT_HELP("This option defines the polarity of mosi/miso signal",
                         NULL)
   )
 
   TERMUI_CON_OPT_ENUM_ENTRY("-m", "--clock-mode", SPI_OPT_CLK_MODE,
     struct termui_optctx_dev_spi_opts, cfg.ck_mode, dev_spi_ckmode_e,
     TERMUI_CON_OPT_CONSTRAINTS(SPI_OPT_CLK_MODE, SPI_OPT_DEV)
-    TERMUI_CON_OPT_HELP("This option defines the polarity of the clock mode",
+    TERMUI_CON_OPT_HELP("This option defines the clock mode",
                         NULL)
   )
 
@@ -325,14 +331,14 @@ TERMUI_CON_GROUP_DECL(dev_shell_spi_ctrl_group) =
     TERMUI_CON_OPTS_CTX(dev_spi_opts,
                         SPI_OPT_DEV,
                         SPI_OPT_BIT_RATE | SPI_OPT_BIT_ORDER |
-                        SPI_OPT_POL | SPI_OPT_CLK_MODE,
+                        SPI_OPT_POLARITY | SPI_OPT_CLK_MODE,
                         spi_opts_cleanup)
   )
 
   TERMUI_CON_ENTRY(dev_shell_spi_select, "select",
     TERMUI_CON_OPTS_CTX(dev_spi_opts,
                         SPI_OPT_DEV,
-                        SPI_OPT_POL | SPI_OPT_CS_POLICY | SPI_OPT_CS_ID,
+                        SPI_OPT_POLARITY | SPI_OPT_CS_POLICY | SPI_OPT_CS_ID,
                         spi_opts_cleanup)
   )
 

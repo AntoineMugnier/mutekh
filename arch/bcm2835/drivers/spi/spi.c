@@ -75,8 +75,12 @@ static DEV_SPI_CTRL_CONFIG(bcm2835_spi_config)
 
   pv->bit_order = cfg->bit_order;
 
-  BCM2835_SPI_CS_CPOL_SETVAL(pv->ctrl, (cfg->ck_mode >> 1) & 1);
-  BCM2835_SPI_CS_CPHA_SETVAL(pv->ctrl, (cfg->ck_mode >> 0) & 1);
+  BCM2835_SPI_CS_CPOL_SETVAL(pv->ctrl, cfg->ck_mode == DEV_SPI_CK_MODE_2 ||
+                                       cfg->ck_mode == DEV_SPI_CK_MODE_3);
+
+  BCM2835_SPI_CS_CPHA_SETVAL(pv->ctrl, cfg->ck_mode == DEV_SPI_CK_MODE_1 ||
+                                       cfg->ck_mode == DEV_SPI_CK_MODE_3);
+
   cpu_mem_write_32(pv->addr + BCM2835_SPI_CS_ADDR, endian_le32(pv->ctrl));
 
   /* DIV must be rounded down to the nearest power of 2 */

@@ -251,10 +251,14 @@ enum dev_spi_polarity_e
 
 enum dev_spi_ckmode_e
 {
-  DEV_SPI_CK_LOW_LEADING,
-  DEV_SPI_CK_LOW_TRAILING,
-  DEV_SPI_CK_HIGH_LEADING,
-  DEV_SPI_CK_HIGH_TRAILING,
+  /* CPOL = 0, CPHA = 0 */
+  DEV_SPI_CK_MODE_0,
+  /* CPOL = 0, CPHA = 1 */
+  DEV_SPI_CK_MODE_1,
+  /* CPOL = 1, CPHA = 0 */
+  DEV_SPI_CK_MODE_2,
+  /* CPOL = 1, CPHA = 1 */
+  DEV_SPI_CK_MODE_3,
 };
 
 

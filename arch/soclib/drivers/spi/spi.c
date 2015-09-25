@@ -106,8 +106,12 @@ static DEV_SPI_CTRL_CONFIG(soclib_spi_config)
 
           SOCLIB_SPI_CTRL_WSIZE_SET(ctrl, cfg->word_width);
 
-          SOCLIB_SPI_CTRL_CKPOL_SETVAL(ctrl, (cfg->ck_mode >> 1) & 1);
-          SOCLIB_SPI_CTRL_CKPHA_SETVAL(ctrl, cfg->ck_mode & 1);
+          SOCLIB_SPI_CTRL_CKPOL_SETVAL(ctrl, cfg->ck_mode == DEV_SPI_CK_MODE_2 ||
+                                             cfg->ck_mode == DEV_SPI_CK_MODE_3);
+
+          SOCLIB_SPI_CTRL_CKPHA_SETVAL(ctrl, cfg->ck_mode == DEV_SPI_CK_MODE_1 ||
+                                             cfg->ck_mode == DEV_SPI_CK_MODE_3);
+
           SOCLIB_SPI_CTRL_LSBF_SETVAL(ctrl, cfg->bit_order == DEV_SPI_LSB_FIRST);
           SOCLIB_SPI_CTRL_DPOL_SETVAL(ctrl, cfg->miso_pol == DEV_SPI_CS_ACTIVE_HIGH);
 

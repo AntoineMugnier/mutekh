@@ -103,13 +103,13 @@ static DEV_SPI_CTRL_CONFIG(efm32_usart_spi_config)
         {
           cpu_mem_write_32(pv->addr + EFM32_USART_FRAME_ADDR, endian_le32(cfg->word_width - 3));
 
-          EFM32_USART_CTRL_CLKPOL_SETVAL(pv->ctrl, cfg->ck_mode == DEV_SPI_CK_HIGH_LEADING ||
-                                                   cfg->ck_mode == DEV_SPI_CK_HIGH_TRAILING);
-          EFM32_USART_CTRL_CLKPHA_SETVAL(pv->ctrl, cfg->ck_mode == DEV_SPI_CK_LOW_TRAILING ||
-                                                   cfg->ck_mode == DEV_SPI_CK_HIGH_TRAILING);
+          EFM32_USART_CTRL_CLKPOL_SETVAL(pv->ctrl, cfg->ck_mode == DEV_SPI_CK_MODE_2 ||
+                                                   cfg->ck_mode == DEV_SPI_CK_MODE_3);
+          EFM32_USART_CTRL_CLKPHA_SETVAL(pv->ctrl, cfg->ck_mode == DEV_SPI_CK_MODE_1 ||
+                                                   cfg->ck_mode == DEV_SPI_CK_MODE_3);
 
-          EFM32_USART_CTRL_RXINV_SETVAL(pv->ctrl, cfg->miso_pol == DEV_SPI_CS_ACTIVE_HIGH);
-          EFM32_USART_CTRL_TXINV_SETVAL(pv->ctrl, cfg->mosi_pol == DEV_SPI_CS_ACTIVE_HIGH);
+          EFM32_USART_CTRL_RXINV_SETVAL(pv->ctrl, cfg->miso_pol == DEV_SPI_CS_ACTIVE_LOW);
+          EFM32_USART_CTRL_TXINV_SETVAL(pv->ctrl, cfg->mosi_pol == DEV_SPI_CS_ACTIVE_LOW);
           EFM32_USART_CTRL_MSBF_SETVAL(pv->ctrl,  cfg->bit_order == DEV_SPI_MSB_FIRST);
 
           cpu_mem_write_32(pv->addr + EFM32_USART_CTRL_ADDR, endian_le32(pv->ctrl));

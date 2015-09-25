@@ -142,22 +142,22 @@ DEV_SPI_CTRL_CONFIG(stm32_spi_config)
       assert(!"unreachable state");
       break;
 
-    case DEV_SPI_CK_LOW_LEADING:
+    case DEV_SPI_CK_MODE_0:
       STM32_SPI_CR1_CPHA_SET(x, FIRST_TRANS);
       STM32_SPI_CR1_CPOL_SET(x, 0);
       break;
 
-    case DEV_SPI_CK_LOW_TRAILING:
+    case DEV_SPI_CK_MODE_1:
       STM32_SPI_CR1_CPHA_SET(x, SECOND_TRANS);
       STM32_SPI_CR1_CPOL_SET(x, 0);
       break;
 
-    case DEV_SPI_CK_HIGH_LEADING:
+    case DEV_SPI_CK_MODE_2:
       STM32_SPI_CR1_CPHA_SET(x, FIRST_TRANS);
       STM32_SPI_CR1_CPOL_SET(x, 1);
       break;
 
-    case DEV_SPI_CK_HIGH_TRAILING:
+    case DEV_SPI_CK_MODE_3:
       STM32_SPI_CR1_CPHA_SET(x, SECOND_TRANS);
       STM32_SPI_CR1_CPOL_SET(x, 1);
       break;
