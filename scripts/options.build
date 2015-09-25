@@ -38,3 +38,5 @@
 %section binary
   CONFIG_COMPILE_FORMAT binary
 
+%section ihex
+  CONFIG_COMPILE_FORMAT ihex
