@@ -1,5 +1,5 @@
 
-objs = arch_init.o
+objs = arch_init.o power.o
 
 objs-$(CONFIG_EFM32_STK3200) += dev_stk3200.o
 objs-$(CONFIG_EFM32_STK3600) += dev_stk3x00_678.o
