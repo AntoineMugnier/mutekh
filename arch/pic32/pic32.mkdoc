@@ -1,0 +1,46 @@
+@section {Microchip PIC32MZ}
+
+  @section {Building for a PIC32MZ Starter kit}
+
+    @code R
+make CONF=examples/hello/config BUILD=pic32-stkmzec:ihex TARGET_EXT=hex
+    @end code
+
+  @end section
+
+  @section {Use of Microchip PICkit 2}
+
+    @section {Programming with MPLAB IPE}
+      Select your .hex file and simply start a programmation.
+    @end section
+
+    @section {Debugging with EJTAGPROXY}
+      Launch ejtagproxy and connect a GDB on port 2000.
+    @end section
+
+  @end section
+
+  @section {Use of JLink v9 probe}
+
+    @section {Programming a PIC32MZ2048ECH144 with JLinEXE}
+      @code R
+JLinkExe -if jtag -device PIC32MZ2048ECH144 -speed 8000
+      @end code
+
+      On JLink prompt:
+      @code R
+erase
+loadfile hello-pic32-mips32el.hex
+r
+g
+q
+      @end code
+    @end section
+
+    @section {Debugging with JLinkGDBServer}
+      Launch JLinkGDBServer and connect a GDB on port 2331.
+    @end section
+
+  @end section
+
+@end section

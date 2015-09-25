@@ -8,6 +8,7 @@
 %include zynq/zynq.build
 %include efm32/efm32.build
 %include stm32/stm32.build
+%include pic32/pic32.build
 %include cc26xx/cc26xx.build
 
 %common

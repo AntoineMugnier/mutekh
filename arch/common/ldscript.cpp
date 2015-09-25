@@ -20,6 +20,10 @@
 SECTIONS
 {
 
+#ifdef ARCH_LDSCRIPT_SECTIONS
+  ARCH_LDSCRIPT_SECTIONS
+#endif
+
 #ifdef CONFIG_LOAD_MULTIBOOT
         .multiboot RO_START : AT(RO_START) {
 # undef RO_START
