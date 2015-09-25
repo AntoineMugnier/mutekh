@@ -240,6 +240,7 @@ void device_irq_sink_init(struct device_s *dev, struct dev_irq_sink_s *sinks,
       ep->base.links.single = (void*)&device_irq_dummy_src_ep;
       ep->update = update;
       ep->sense_link = ep->sense_all = sense_capabilities;
+      ep->icu_pv = 0;
     }
 }
 

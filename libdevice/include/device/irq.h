@@ -146,6 +146,9 @@ struct dev_irq_sink_s
       is updated by the @ref device_irq_source_link function. */
   uint8_t sense_link;
 
+  /** Interrupt controller private flags. */
+  uint16_t icu_pv;
+
   dev_irq_sink_update_t *update;
 };
 
