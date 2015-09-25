@@ -266,7 +266,7 @@ FUNC_START(.text, cpu_context_set_user)
 # ifndef CONFIG_HEXO_IRQ
     mov     r3,     #(ARM_PSR_IRQ_DIS | ARM_PSR_FIQ_DIS | ARM_PSR_MODE_USER)
 # else
-    mov     r3,     #ARM_PSR_MODE_USER
+    mov     r3,     #(ARM_PSR_FIQ_DIS | ARM_PSR_MODE_USER)
 # endif
 
 # ifdef CONFIG_CPU_ARM32_BIG_BE8
