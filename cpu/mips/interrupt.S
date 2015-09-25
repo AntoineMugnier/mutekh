@@ -58,12 +58,32 @@ CPU_NAME_DECL(exception_vector):
         .set noreorder                                  
         .set noat
 
+/* MIPS32: TLB Refill, EXL = 0 */
+        .org    0x0
+        la      $26,   mips_exception
+        j       $26
+        nop
+
+/* MIPS64: XTLB refill  */
         .org    0x80
         la      $26,   mips_exception
         j       $26
         nop
 
+/* MIPS32: Cache error */
+        .org    0x100
+        la      $26,   mips_exception
+        j       $26
+        nop
+
+/* MIPS32: General Exception */
         .org    0x180
+        la      $26,   mips_exception
+        j       $26
+        nop
+
+/* MIPS32: Interrupt, Cause IV = 1 */
+        .org    0x200
         la      $26,   mips_exception
         j       $26
         nop
