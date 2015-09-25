@@ -36,6 +36,14 @@
     %set BUILD_NAME soclib-arm
   %end
 
+  %subsection soclib-armbe
+    %types cpu
+  
+    CONFIG_CPU_ARM32_SOCLIB
+    CONFIG_CPU_ARM32_BIG_BE8
+    %set BUILD_NAME soclib-armbe
+  %end
+
   %subsection soclib-ppc
     %types cpu
   
