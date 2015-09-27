@@ -30,6 +30,7 @@ my $parsedecl;
 
 foreach my $opt (@ARGV) {
     if ($opt =~ /^-o(.*)/) {
+    } elsif ($opt eq '-save-temps') {
 
     } elsif ($opt eq '--filter-gnuasm') {
         $gnuasm++;
