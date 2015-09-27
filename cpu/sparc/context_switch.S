@@ -46,18 +46,17 @@
             l0 to l7 : sp + 0 words to sp + 7 words
             i0 to i7 : sp + 8 words to sp + 15 words
 
-    Sparc system v ABI using flat regs
-    ----------------------------------
+    Sparc system v ABI using flat regs with gcc >= 4.6
+    --------------------------------------------------
 
-        %i7       frame pointer
-        %l7       PIC base
         %o0       return value
         %o0-5     function arguments
+        %i6       frame pointer
         %o6       stack pointer
-        %o7       return address
+        %i7,%o7   return address
 
-        %l*,%i0-5  callee saved
-        %o*,%y,%g*,%i6 caller saved
+        %l*,%i*,%o6 callee saved
+        %o0-%o5,%o7,%y,%g* caller saved
 
     gcc clobber regnums: %g* 0-7, %o* 8-15, %l* 16-23, %i* 24-31
 
@@ -78,8 +77,8 @@ FUNC_START(.text, cpu_context_switch)
         std     %i0, [%g1 + CPU_SPARC_CONTEXT_I(0)]
         std     %i2, [%g1 + CPU_SPARC_CONTEXT_I(2)]
         std     %i4, [%g1 + CPU_SPARC_CONTEXT_I(4)]
-        // save sp & fp
-        st      %i7, [%g1 + CPU_SPARC_CONTEXT_I(7)]
+        std     %i6, [%g1 + CPU_SPARC_CONTEXT_I(6)]
+        // save sp
         st      %o6, [%g1 + CPU_SPARC_CONTEXT_O(6)]
 
         // save status
@@ -144,7 +143,6 @@ FUNC_START(.text, cpu_context_jumpto)
 
         // restore callee saved stack pointer
         ld      [%g1 + CPU_SPARC_CONTEXT_O(6)], %o6
-        ld      [%g1 + CPU_SPARC_CONTEXT_I(7)], %i7
 
 #ifdef CONFIG_SOCLIB_MEMCHECK
         /* leave memchecker command mode */
@@ -173,6 +171,7 @@ FUNC_START(.text, cpu_context_jumpto)
         ldd     [%g1 + CPU_SPARC_CONTEXT_I(0)], %i0
         ldd     [%g1 + CPU_SPARC_CONTEXT_I(2)], %i2
         ldd     [%g1 + CPU_SPARC_CONTEXT_I(4)], %i4
+        ldd     [%g1 + CPU_SPARC_CONTEXT_I(6)], %i6
 1:      
         andcc   %g5, CPU_SPARC_CONTEXT_RESTORE_CALLER, %g0
         bz      1f
@@ -183,7 +182,6 @@ FUNC_START(.text, cpu_context_jumpto)
         ldd     [%g1 + CPU_SPARC_CONTEXT_O(2)], %o2
         ldd     [%g1 + CPU_SPARC_CONTEXT_O(4)], %o4
         ld      [%g1 + CPU_SPARC_CONTEXT_O(7)], %o7
-        ld      [%g1 + CPU_SPARC_CONTEXT_I(6)], %i6
 
         ld      [%g1 + CPU_SPARC_CONTEXT_Y], %g5
         mov     %g5, %y
@@ -237,7 +235,7 @@ FUNC_START(.text, cpu_context_set)
         // set stack pointer
         add     %o0,    %o1,    %o6
 #ifdef CONFIG_COMPILE_FRAMEPTR
-        mov     %o6,            %i7
+        mov     %o6,            %i6
 #endif
 
 #ifdef CONFIG_SOCLIB_MEMCHECK
@@ -269,7 +267,7 @@ FUNC_START(.text, cpu_context_stack_use)
 
         ld      [%g1 + CPU_SPARC_CONTEXT_O(6)], %o6
 #ifdef CONFIG_COMPILE_FRAMEPTR
-        mov     %o6,            %i7
+        mov     %o6,            %i6
 #endif
 
 #ifdef CONFIG_SOCLIB_MEMCHECK

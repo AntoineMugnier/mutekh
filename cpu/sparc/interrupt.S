@@ -169,14 +169,10 @@ CPU_NAME_DECL(reset_vector):
         mov     %y,     %l0
         mov     %g1,    %l3
         mov     %psr,   %l5
-        // %i6 and %i7 are caller saved registers, preserve %o6 and %o7 in interrupted code
-        mov     %i6,    %l6
-        mov     %i7,    %l7
 
 #ifdef CONFIG_HEXO_CONTEXT_PREEMPT
         // clear context preempt handler
-        set     cpu_preempt_handler, %o0
-        st      %g0,    [%o0]
+        CPU_LOCAL_st    cpu_preempt_handler, %g0, %o0
 #endif
 
         // use interrupted code stack
@@ -197,9 +193,9 @@ CPU_NAME_DECL(reset_vector):
 1:      
 #endif
 
-#ifdef CONFIG_COMPILE_FRAMEPTR
-        mov     %sp,    %i7
-#endif
+        // skip register window save area
+        add     %sp,    -64,    %sp
+
 .endm
 
 
@@ -225,13 +221,12 @@ FUNC_START(.text, sparc_excep_entry)
 1:      
 #endif
 
+        // skip register window save area
+        add     %sp,    -64,    %sp
+
         // use cpu local handler
         CPU_LOCAL_ld cpu_exception_handler, %o5
 2:      
-
-#ifdef CONFIG_COMPILE_FRAMEPTR
-        mov     %sp,    %i7
-#endif
 
         // dump some registers
         st     %l5, [%g5 + CPU_SPARC_CONTEXT_PSR]
@@ -244,7 +239,7 @@ FUNC_START(.text, sparc_excep_entry)
         mov     %g5,    %o3 // arg4 regtable
         // call exception handler
         call    %o5
-        mov     %l6,    %o4 // arg5 stack
+        mov     %i6,    %o4 // arg5 stack
 
         // read some registers back in case they were modified by c code
         ld     [%g5 + CPU_SPARC_CONTEXT_PSR], %l5
@@ -320,8 +315,7 @@ FUNC_START(.text, sparc_except_restore)
 #ifdef CONFIG_HEXO_CONTEXT_PREEMPT
         
         // check if a preempt handler has been registered
-        set     cpu_preempt_handler, %o0
-        ld      [%o0],  %o0
+        CPU_LOCAL_ld    cpu_preempt_handler, %o0
 
         tst     %o0
         beq     1f
@@ -341,10 +335,10 @@ FUNC_START(.text, sparc_except_restore)
         st      %l3,    [%g5 + CPU_SPARC_CONTEXT_G(1)]
         st      %l5,    [%g5 + CPU_SPARC_CONTEXT_PSR]
 
-        std     %l6,    [%g5 + CPU_SPARC_CONTEXT_O(6)]
         std     %i0,    [%g5 + CPU_SPARC_CONTEXT_O(0)]
         std     %i2,    [%g5 + CPU_SPARC_CONTEXT_O(2)]
         std     %i4,    [%g5 + CPU_SPARC_CONTEXT_O(4)]
+        std     %i6,    [%g5 + CPU_SPARC_CONTEXT_O(6)]
 
 # ifdef CONFIG_HEXO_CONTEXT_STATS
         // update context stats
@@ -382,8 +376,6 @@ FUNC_START(.text, sparc_except_restore)
         mov     %l5,   %psr
 
         mov     %l3,    %g1
-        mov     %l6,    %i6
-        mov     %l7,    %i7
 
 #if CONFIG_CPU_SPARC_WINCOUNT < 3
         /* need to restore %o* overlapping registers */
