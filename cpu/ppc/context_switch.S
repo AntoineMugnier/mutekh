@@ -142,10 +142,6 @@ FUNC_START(.text, cpu_context_jumpto)
         stw     0,              SOCLIB_MC_MAGIC (0)
 #endif
 
-        // restore condition register
-        lwz     0,              CPU_PPC_CONTEXT_CR(2)
-        mtcr    0
-
         // restore link register
         lwz     0,              CPU_PPC_CONTEXT_LR(2)
         mtlr    0
@@ -203,6 +199,10 @@ FUNC_START(.text, cpu_context_jumpto)
 
         andi.   5,      4,      CPU_PPC_CONTEXT_RESTORE_CALLER
         beq     1f
+
+        // restore condition register
+        lwz     0,              CPU_PPC_CONTEXT_CR(2)
+        mtcr    0
 
         // restore caller saved counter register
         lwz     0,              CPU_PPC_CONTEXT_CTR(2)
