@@ -1298,7 +1298,7 @@ sub process_config_depend
     return 0 if ( !check_defined( $opt ) );
     return 0 if ( $opt->{flags}->{meta} || $opt->{flags}->{value} || $opt->{flags}->{enum} );
 
-    my $de = $enforce_deps ? 'deperror' : 'depnotice';
+    my $de = $enforce_deps or $opt->{enforce} ? 'deperror' : 'depnotice';
 
     # check if at least one parent is defined
     my $pres = 1;
@@ -2081,9 +2081,10 @@ sub read_build_config
 	    next;
 	}
 
-	if ($line =~ /^\s* (\w[\w\d]*\b) (?: \s+(\S.*?) )? \s*$/x) {
+	if ($line =~ /^\s* (\w[\w\d]*\b)(\!?) (?: \s+(\S.*?) )? \s*$/x) {
 	    my $opt = $config_opts{$1};
-	    my $val = $2;
+	    my $enforce = $2;
+	    my $val = $3;
 
 	    if (not $opt) {
 		warning("$file:$lnum: undeclared configuration token `$1', ignored");
@@ -2097,7 +2098,12 @@ sub read_build_config
 		$val = "defined" if (!defined $val);
 		$opt->{value} = $val;
 		$opt->{vlocation} = "$file:$lnum";
+
+                error("$file:$lnum: The `".$opt->{name}."' token value has already been defined at $opt->{vlocation}.")
+                    if ($opt->{enforce});
+
 		$opt->{userdefined} = 1;
+                $opt->{enforce} = $enforce;
 
                 if ($opt->{flags}->{deprecated}) {
                     warning_loc($opt, "use of deprecated token in configuration.");
