@@ -57,26 +57,5 @@ struct cpu_context_s
 /** number of registers in cpu_context_s::gpr */
 # define CPU_CONTEXT_REG_COUNT 10
 
-#else
-
-.extern x86emu_context
-.equ CPU_X86EMU_CONTEXT_mask,    0
-
-.equ CPU_X86EMU_CONTEXT_edi,     4
-.equ CPU_X86EMU_CONTEXT_esi,     8 
-.equ CPU_X86EMU_CONTEXT_ebp,     12
-.equ CPU_X86EMU_CONTEXT_esp,     16
-.equ CPU_X86EMU_CONTEXT_ebx,     20
-.equ CPU_X86EMU_CONTEXT_edx,     24
-.equ CPU_X86EMU_CONTEXT_ecx,     28
-.equ CPU_X86EMU_CONTEXT_eax,     32
-.equ CPU_X86EMU_CONTEXT_EIP,     36
-.equ CPU_X86EMU_CONTEXT_EFLAGS,  40
-
-.equ CPU_X86EMU_CONTEXT_REGS_OFFSET, 4
-
-.equ CPU_X86EMU_CONTEXT_MM,         48
-
-
 #endif
 

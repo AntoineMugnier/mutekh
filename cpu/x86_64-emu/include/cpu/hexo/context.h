@@ -34,7 +34,14 @@ struct cpu_context_regs_s
   uint64_t rdx;
   uint64_t rcx;
   uint64_t rax;
-  uint64_t rn[8];
+  uint64_t r8;
+  uint64_t r9;
+  uint64_t r10;
+  uint64_t r11;
+  uint64_t r12;
+  uint64_t r13;
+  uint64_t r14;
+  uint64_t r15;
   uint64_t rip;
   uint64_t rflags;
 };
@@ -57,35 +64,6 @@ struct cpu_context_s
 # define CPU_CONTEXT_REG_NAMES CPU_GPREG_NAMES, "rip", "rflags"
 /** number of registers in cpu_context_s::gpr */
 # define CPU_CONTEXT_REG_COUNT 18
-
-#else
-
-.extern x86emu_context
-.equ CPU_X86EMU_CONTEXT_mask,    0
-
-.equ CPU_X86EMU_CONTEXT_rdi,     8
-.equ CPU_X86EMU_CONTEXT_rsi,     16
-.equ CPU_X86EMU_CONTEXT_rbp,     24
-.equ CPU_X86EMU_CONTEXT_rsp,     32
-.equ CPU_X86EMU_CONTEXT_rbx,     40
-.equ CPU_X86EMU_CONTEXT_rdx,     48
-.equ CPU_X86EMU_CONTEXT_rcx,     56
-.equ CPU_X86EMU_CONTEXT_rax,     64
-.equ CPU_X86EMU_CONTEXT_r8,      72
-.equ CPU_X86EMU_CONTEXT_r9,      80 
-.equ CPU_X86EMU_CONTEXT_r10,     88 
-.equ CPU_X86EMU_CONTEXT_r11,     96 
-.equ CPU_X86EMU_CONTEXT_r12,     104
-.equ CPU_X86EMU_CONTEXT_r13,     112
-.equ CPU_X86EMU_CONTEXT_r14,     120
-.equ CPU_X86EMU_CONTEXT_r15,     128
-.equ CPU_X86EMU_CONTEXT_RIP,     136
-
-.equ CPU_X86EMU_CONTEXT_RFLAGS,  144
-
-.equ CPU_X86EMU_CONTEXT_REGS_OFFSET, 8
-
-.equ CPU_X86EMU_CONTEXT_MM,      160
 
 #endif
 
