@@ -108,5 +108,18 @@ cpu_mem_read_32(uintptr_t addr)
   return 0;
 }
 
+ALWAYS_INLINE void
+cpu_mem_write_64(uintptr_t addr, uint64_t data)
+{
+  cpu_trap();
+}
+
+ALWAYS_INLINE uint64_t
+cpu_mem_read_64(uintptr_t addr)
+{
+  cpu_trap();
+  return 0;
+}
+
 #endif
 
