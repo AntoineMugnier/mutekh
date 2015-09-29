@@ -165,7 +165,7 @@ FUNC_START(.text, mutekh_entry)
 3:        
         /* get address of the cpu stack */
         lw      $sp,    CPU_TREE_STACK($5)
-        li      $4,     CONFIG_HEXO_CPU_STACK_SIZE
+        li      $4,     CONFIG_HEXO_CPU_STACK_SIZE - (4 * INT_REG_SIZE/8)
         add     $sp,    $4,     $sp
 #  ifdef CONFIG_COMPILE_FRAMEPTR
         move    $fp,            $sp
@@ -186,7 +186,7 @@ FUNC_START(.text, mutekh_entry)
 1:
 #endif
 
-        li      $sp,            CONFIG_STARTUP_STACK_ADDR + CONFIG_STARTUP_STACK_SIZE
+        li      $sp,            CONFIG_STARTUP_STACK_ADDR + CONFIG_STARTUP_STACK_SIZE - (4 * INT_REG_SIZE/8)
 #ifdef CONFIG_COMPILE_FRAMEPTR
         move    $fp,            $sp
 #endif
