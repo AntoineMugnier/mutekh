@@ -15,9 +15,9 @@
 #
 #    _const(enum_value_name)
 #    _sizeof(struct_name)
-#    _sizeof(struct_name, field_name)
-#    _offsetof(struct_name, field_name)
-#    _offsetof(struct_name, field_name, expected_field_size)
+#    _sizeof(struct_name, field.field...)
+#    _offsetof(struct_name, field.field...)
+#    _offsetof(struct_name, field.field..., expected_field_size)
 #
 # All other arguments are used to invoke the compiler in order to
 # parse C declarations (when --parse-decl is used).
@@ -136,16 +136,18 @@ sub cmd_pipe
 my %enums;
 my %consts;
 my %structs;
+my %types;
 my $err_count;
 
 sub stabs_error
 {
     my $err = shift;
-    print STDERR "stabs parse error: $err\n";
+    #print STDERR "stabs parse error: $err\n";
     $err_count++;
 }
 
 our $e_name = qr/ [_a-zA-Z][\w]* /xs;
+our $e_fields = qr/ [_a-zA-Z][\w\.]* /xs;
 
 sub parse_stabs
 {
@@ -183,23 +185,26 @@ sub parse_stabs
 
             $enums{$name} = $enum;
 
-        } elsif ( $str =~ / ($e_name) : T$e_type_number = [su](\d+) ([^"]*) /xs ) {
-            my ( $name, $sizeof, $content ) = ( $1, $2, $3 );
-            # print STDERR $str;
-            # print STDERR "struct $name : $sizeof\n";
+        } elsif ( $str =~ / ($e_name) : T($e_type_number) = [su](\d+) ([^"]*) /xs ) {
+            my ( $name, $tnum, $sizeof, $content ) = ( $1, $2, $3, $4 );
+            #print STDERR $str;
+            #print STDERR "struct $name : $sizeof\n";
 
             my ( $t, $p );
 
             # type parser
             $t = sub {
-                my $r = [];
+                my $r = { };
                 # print STDERR "$content\n";
-                if ( $content =~ /^ $e_type_number = /xs ) {
+                if ( $content =~ /^ ($e_type_number) = /xs ) {
                     $content = $';
-                    #print STDERR "newtype {\n";
+                    #print STDERR "newtype $1 {\n";
                     $r = $t->();
+                    $r->{tnum} = $1;
+                    $types{$1} = $r;
                     #print STDERR "}\n";
-                } elsif ( $content =~ /^ $e_type_number /xs ) {
+                } elsif ( $content =~ /^ ($e_type_number) /xs ) {
+                    $r->{tnum} = $1;
                     $content = $';
                     #print STDERR "type\n";
                     return $r;
@@ -213,7 +218,14 @@ sub parse_stabs
                     # struct/union
                     $content = $';
                     #print STDERR "struct {\n";
-                    $r = $p->();
+                    my $sf = $p->();
+                    my $dict = {};
+                    $dict->{$_->{name}} = $_ foreach ( @$sf );
+                    $r->{struct} = {
+                        fields => $sf,
+                        sizeof => $1,
+                        dict => $dict
+                    };
                     #print STDERR "}\n";
                 } elsif ( $content =~ /^ a /xs ) {
                     # array
@@ -252,19 +264,26 @@ sub parse_stabs
                         my $name = $1;
                         $content = $';
 
-                        my $subfields = $t->( );
+                        my $type = $t->( );
 
                         if ( $content =~ /^,(\d+),(\d+);/xs ) {
                             $content = $';
                             my ( $bitoff, $bitsize ) = ( $1, $2 );
 
                             if ( defined $name ) {
-                                push @$r, { name => $name, bitsize => $bitsize, bitoff => $bitoff };
+                                push @$r, {
+                                    name => $name,
+                                    bitsize => $bitsize,
+                                    bitoff => $bitoff,
+                                    tnum => $type->{tnum}
+                                };
                             }
 
-                            foreach my $sf (@$subfields) {
-                                $sf->{bitoff} += $bitoff;
-                                push @$r, $sf;
+                            if ( $type->{struct} ) {
+                                foreach my $sf (@{$type->{struct}->{fields}}) {
+                                    $sf->{bitoff} += $bitoff;
+                                    push @$r, $sf;
+                                }
                             }
 
                             next;
@@ -277,6 +296,7 @@ sub parse_stabs
             };
 
             my $fields = $p->();
+
             my $dict = {};
             foreach my $sf (@$fields) {
                 #printf STDERR "  $sf->{name}, %u %u\n", $sf->{bitoff} / 8, $sf->{bitsize} / 8;
@@ -290,6 +310,7 @@ sub parse_stabs
                 dict => $dict
             };
 
+            $types{$tnum} = { struct => $struct };
             $structs{$name} = $struct;
         }
 
@@ -318,24 +339,36 @@ sub process_asm
     };
 
     my $offsetof = sub {
-        my ( $struct, $field, $size ) = @_;
+        my ( $struct, $path, $size ) = @_;
         my $s = $structs{$struct};
         die "$loc: undefined struct `$struct'.\n" unless defined $s;
-        my $f = $s->{dict}->{$field};
-        die "$loc: undefined field `$field' in struct `$struct'.\n" unless defined $f;
-        die "$loc: field `$field' is not byte aligned.\n" if ($f->{bitoff} % 8) || ($f->{bitsize} % 8);
+        my $bitoff = 0;
+        my $f;
+        foreach my $field ( split /\./, $path ) {
+            $f = $s->{dict}->{$field};
+            die "$loc: undefined field `$path' in struct `$struct'.\n" unless defined $f;
+            die "$loc: field `$field' is not byte aligned.\n" if ($f->{bitoff} % 8) || ($f->{bitsize} % 8);
+            $bitoff += $f->{bitoff};
+            my $type = $types{$f->{tnum}};
+            $s = $type->{struct};
+        }
         my $fs = $f->{bitsize} / 8;
-        die "$loc: field `$field' size doesn't match: $fs, expected $size.\n" if ($size && $size != $fs);
-        return $f->{bitoff} / 8;
+        die "$loc: field `$f->{name}' size doesn't match expected $size $fs.\n" if ($size && $size != $fs);
+        return $bitoff / 8;
     };
 
     my $sizeof_field = sub {
-        my ( $struct, $field ) = @_;
+        my ( $struct, $path ) = @_;
         my $s = $structs{$struct};
         die "$loc: undefined struct `$struct'.\n" unless defined $s;
-        my $f = $s->{dict}->{$field};
-        die "$loc: undefined field `$field' in struct `$struct'.\n" unless defined $f;
-        die "$loc: field `$field' is not byte aligned.\n" if ($f->{bitoff} % 8) || ($f->{bitsize} % 8);
+        my $f;
+        foreach my $field ( split /\./, $path ) {
+            $f = $s->{dict}->{$field};
+            die "$loc: undefined field `$path' in struct `$struct'.\n" unless defined $f;
+            die "$loc: field `$field' is not byte aligned.\n" if ($f->{bitoff} % 8) || ($f->{bitsize} % 8);
+            my $type = $types{$f->{tnum}};
+            $s = $type->{struct};
+        }
         return $f->{bitsize} / 8;
     };
 
@@ -361,10 +394,10 @@ sub process_asm
             $str =~ s/\b _const\s*\(\s* ($e_name) \s*\)/$const->($1)/gxse;
 
             # offsetof(struct foo, field, size)
-            $str =~ s/\b _offsetof\s*\((?:struct\s*)? \s* ($e_name) \s* , \s* ($e_name) \s* , \s* (\d+) \s* \)/$offsetof->($1, $2, $3)/gxse;
+            $str =~ s/\b _offsetof\s*\((?:struct\s*)? \s* ($e_name) \s* , \s* ($e_fields) \s* , \s* (\d+) \s* \)/$offsetof->($1, $2, $3)/gxse;
 
             # offsetof(struct foo, field)
-            $str =~ s/\b _offsetof\s*\((?:struct\s*)? \s* ($e_name) \s* , \s* ($e_name) \s*\)/$offsetof->($1, $2, 0)/gxse;
+            $str =~ s/\b _offsetof\s*\((?:struct\s*)? \s* ($e_name) \s* , \s* ($e_fields) \s*\)/$offsetof->($1, $2, 0)/gxse;
         }
     }
 }
