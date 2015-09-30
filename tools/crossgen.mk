@@ -129,7 +129,7 @@ qemu_VER=0.14.0
 qemu_CONF=--disable-docs --disable-kvm
 
 # Testsuite simulation wrapper
-testwrap_VER=1.0
+testwrap_VER=1.1
 
 HELP_END=91 #### LINE 86 IS HERE ####
 
