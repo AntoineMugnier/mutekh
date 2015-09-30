@@ -255,7 +255,13 @@ struct dev_resource_s
       uintptr_t                 *value;
     }                           uint_array_param;
 
-  } __attribute__((packed))     u;
+#ifndef CONFIG_COMPILE_NOBITFIELD
+    uint8_t                     _align[4 * sizeof(uintptr_t) - 2];
+  } __attribute__((packed))
+#else
+  }
+#endif
+    u;
 
   /** resource descriptor type @see dev_resource_type_e */
   enum dev_resource_type_e BITFIELD(type,8);
@@ -264,7 +270,7 @@ struct dev_resource_s
 
 #ifndef CONFIG_COMPILE_NOBITFIELD
 STATIC_ASSERT(resource_entry_size_exceeded, sizeof(struct dev_resource_s)
-              <= 4 * sizeof(uintptr_t));
+              == 4 * sizeof(uintptr_t));
 #endif
 
 enum dev_resource_table_flags_e
@@ -276,8 +282,9 @@ enum dev_resource_table_flags_e
 struct dev_resource_table_s
 {
   struct dev_resource_table_s     *next;
-  enum dev_resource_table_flags_e flags;
-  uint_fast8_t                    count;
+  enum dev_resource_table_flags_e BITFIELD(flags,8);
+  uint8_t                         count;
+  __attribute__((aligned(8)))
   struct dev_resource_s           table[0];
 };
 
