@@ -21,9 +21,27 @@
 */
 
 /**
- * @file
- * @module{Hexo}
- * @short Integer values byte-swaping and endian stuff
+   @file
+   @module{Hexo}
+   @short Integer values byte-swaping and endian stuff
+
+   @section {Non-aligned memory access}
+
+     Non-aligned memory access is provided through various functions.
+     Three flavors of accesses are provided:
+     @list
+     @item native CPU endianness accesses,
+     @item little-endian accesses,
+     @item big-endian accesses.
+     @end list
+
+     Depending on CPU module configuration and headers, each operation
+     is implemented through dedicated assembly routine, native access
+     or byte-based access.
+
+     @ref #CONFIG_CPU_NONALIGNED_ACCESS
+
+   @end section
  */
 
 #ifndef __ENDIAN_H_
@@ -139,6 +157,11 @@ ALWAYS_INLINE uint64_t endian_swap64(uint64_t x)
 
 # endif
 
+
+/**
+   Endian-dependent structure contents reversal
+ */
+
 /** @internal */
 #define __ENDIAN_REVERSE_ARGS(b01, b02, b03, b04, b05, b06, b07, b08, b09, b10, b11, b12, b13, b14, b15, b16, ...)    \
 			       b16; b15; b14; b13; b12; b11; b10; b09; b08; b07; b06; b05; b04; b03; b02; b01;
@@ -178,151 +201,377 @@ ALWAYS_INLINE uint64_t endian_swap64(uint64_t x)
 #  error No bitfield endian mode defined in cpu/hexo/endian.h
 # endif
 
-/***********************************************************************
- *		Non aligned access functions
+/**
+   @this loads a 16-bit value stored at arbitrary address from memory
+   with native CPU endianness.
+
+   @xsee {Non-aligned memory access}
+
+   @param addr Address pointing a 16-bit value
+   @returns Value at address
  */
-
-#if defined (CONFIG_CPU_NONALIGNED_ACCESS)
-/** @multiple @this loads from non aligned memory location with native endianess */
-# define endian_16_na_load(a)		({ void * __a = (void*)(a); *((uint16_t*)(__a)); })
-# define endian_32_na_load(a)		({ void * __a = (void*)(a); *((uint32_t*)(__a)); })
-# define endian_64_na_load(a)		({ void * __a = (void*)(a); *((uint64_t*)(__a)); })
-/** @multiple @this stores to non aligned memory location with native endianess */
-# define endian_16_na_store(a, x)	({ void * __a = (void*)(a); *((uint16_t*)(__a)) = (x); })
-# define endian_32_na_store(a, x)	({ void * __a = (void*)(a); *((uint32_t*)(__a)) = (x); })
-# define endian_64_na_store(a, x)	({ void * __a = (void*)(a); *((uint64_t*)(__a)) = (x); })
-
-/** @multiple @this allows direct non aligned word width memory access with endian permutation */
-# define endian_le16_na_load(a)		endian_le16(endian_16_na_load(a))
-# define endian_le32_na_load(a)		endian_le32(endian_32_na_load(a))
-# define endian_le64_na_load(a)		endian_le64(endian_64_na_load(a))
-# define endian_le16_na_store(a, x)	endian_16_na_store(a, endian_le16(x))
-# define endian_le32_na_store(a, x)	endian_32_na_store(a, endian_le32(x))
-# define endian_le64_na_store(a, x)	endian_64_na_store(a, endian_le64(x))
-
-# define endian_be16_na_load(a)		endian_be16(endian_16_na_load(a))
-# define endian_be32_na_load(a)		endian_be32(endian_32_na_load(a))
-# define endian_be64_na_load(a)		endian_be64(endian_64_na_load(a))
-# define endian_be16_na_store(a, x)	endian_16_na_store(a, endian_be16(x))
-# define endian_be32_na_store(a, x)	endian_32_na_store(a, endian_be32(x))
-# define endian_be64_na_store(a, x)	endian_64_na_store(a, endian_be64(x))
-
+ALWAYS_INLINE uint16_t endian_16_na_load(const void *addr)
+{
+#if defined(HAS_CPU_ENDIAN_16_NA_LOAD)
+  return cpu_endian_16_na_load(addr);
+#elif CONFIG_CPU_NONALIGNED_ACCESS & 16
+  return *(uint16_t*)addr;
 #else
-
-/** @internal @multiple */
-# define __ENDIAN_NAL_L(addr, type, index, shift)	((type)((uint8_t*)addr)[index] << shift)
-# define __ENDIAN_NAS_R(addr, index, value, shift)	(((uint8_t*)addr)[index] = (uint8_t)(value >> shift))
-
-/** @multiple @this allows memory access with endian permutation using multiple bytes access */
-
-# define endian_le16_na_load(a)		({ void * __a = (void*)(a);                     \
-                                         __ENDIAN_NAL_L(__a, uint16_t, 0, 0) |          \
-                                         __ENDIAN_NAL_L(__a, uint16_t, 1, 8); })
-
-# define endian_le32_na_load(a)		({ void * __a = (void*)(a);                     \
-                                         __ENDIAN_NAL_L(__a, uint32_t, 0, 0)  |         \
-                                         __ENDIAN_NAL_L(__a, uint32_t, 1, 8)  |         \
-				         __ENDIAN_NAL_L(__a, uint32_t, 2, 16) |         \
-                                         __ENDIAN_NAL_L(__a, uint32_t, 3, 24); })
-
-# define endian_le64_na_load(a)		({ void * __a = (void*)(a);                     \
-                                         __ENDIAN_NAL_L(__a, uint64_t, 0, 0)  |         \
-                                         __ENDIAN_NAL_L(__a, uint64_t, 1, 8)  |         \
-					 __ENDIAN_NAL_L(__a, uint64_t, 2, 16) |         \
-                                         __ENDIAN_NAL_L(__a, uint64_t, 3, 24) |         \
-					 __ENDIAN_NAL_L(__a, uint64_t, 4, 32) |         \
-                                         __ENDIAN_NAL_L(__a, uint64_t, 5, 40) |         \
-					 __ENDIAN_NAL_L(__a, uint64_t, 6, 48) |         \
-                                         __ENDIAN_NAL_L(__a, uint64_t, 7, 56); })
-
-# define endian_le16_na_store(a, x)	({ void * __a = (void*)(a);                     \
-                                          const uint16_t __val = (x);			\
-					 __ENDIAN_NAS_R(__a, 0, __val, 0);		\
-					 __ENDIAN_NAS_R(__a, 1, __val, 8); __val; })
-
-# define endian_le32_na_store(a, x)	({ void * __a = (void*)(a);                     \
-                                          const uint32_t __val = (x);			\
-					 __ENDIAN_NAS_R(__a, 0, __val, 0);		\
-					 __ENDIAN_NAS_R(__a, 1, __val, 8);		\
-					 __ENDIAN_NAS_R(__a, 2, __val, 16);		\
-					 __ENDIAN_NAS_R(__a, 3, __val, 24); __val; })
-
-# define endian_le64_na_store(a, x)	({ void * __a = (void*)(a);                     \
-                                          const uint64_t __val = (x);			\
-					 __ENDIAN_NAS_R(__a, 0, __val, 0);		\
-					 __ENDIAN_NAS_R(__a, 1, __val, 8);		\
-					 __ENDIAN_NAS_R(__a, 2, __val, 16);		\
-					 __ENDIAN_NAS_R(__a, 3, __val, 24);		\
-					 __ENDIAN_NAS_R(__a, 4, __val, 32);		\
-					 __ENDIAN_NAS_R(__a, 5, __val, 40);		\
-					 __ENDIAN_NAS_R(__a, 6, __val, 48);		\
-					 __ENDIAN_NAS_R(__a, 7, __val, 56); __val; })
-
-# define endian_be16_na_load(a)		({ void * __a = (void*)(a);                     \
-                                         __ENDIAN_NAL_L(__a, uint16_t,  0, 8) |         \
-                                         __ENDIAN_NAL_L(__a, uint16_t, 1, 0); })
-
-# define endian_be32_na_load(a)		({ void * __a = (void*)(a);                     \
-                                         __ENDIAN_NAL_L(__a, uint32_t, 0, 24) |         \
-                                         __ENDIAN_NAL_L(__a, uint32_t, 1, 16) |         \
-				         __ENDIAN_NAL_L(__a, uint32_t, 2, 8)  |         \
-                                         __ENDIAN_NAL_L(__a, uint32_t, 3, 0); })
-
-# define endian_be64_na_load(a)		({ void * __a = (void*)(a);                     \
-                                         __ENDIAN_NAL_L(__a, uint64_t, 0, 56) |         \
-                                         __ENDIAN_NAL_L(__a, uint64_t, 1, 48) |         \
-					 __ENDIAN_NAL_L(__a, uint64_t, 2, 40) |         \
-                                         __ENDIAN_NAL_L(__a, uint64_t, 3, 32) |         \
-					 __ENDIAN_NAL_L(__a, uint64_t, 4, 24) |         \
-                                         __ENDIAN_NAL_L(__a, uint64_t, 5, 16) |         \
-					 __ENDIAN_NAL_L(__a, uint64_t, 6, 8)  |         \
-                                         __ENDIAN_NAL_L(__a, uint64_t, 7, 0); })
-
-# define endian_be16_na_store(a, x)	({ void * __a = (void*)(a);                     \
-                                          const uint16_t __val = (x);			\
-					 __ENDIAN_NAS_R(__a, 0, __val, 8);		\
-					 __ENDIAN_NAS_R(__a, 1, __val, 0); __val; })
-
-# define endian_be32_na_store(a, x)	({ void * __a = (void*)(a);                     \
-                                          const uint32_t __val = (x);			\
-					 __ENDIAN_NAS_R(__a, 0, __val, 24);		\
-					 __ENDIAN_NAS_R(__a, 1, __val, 16);		\
-					 __ENDIAN_NAS_R(__a, 2, __val, 8);		\
-					 __ENDIAN_NAS_R(__a, 3, __val, 0); __val; })
-
-# define endian_be64_na_store(a, x)	({ void * __a = (void*)(a);                     \
-                                          const uint64_t __val = (x);			\
-					 __ENDIAN_NAS_R(__a, 0, __val, 56);		\
-					 __ENDIAN_NAS_R(__a, 1, __val, 48);		\
-					 __ENDIAN_NAS_R(__a, 2, __val, 40);		\
-					 __ENDIAN_NAS_R(__a, 3, __val, 32);		\
-					 __ENDIAN_NAS_R(__a, 4, __val, 24);		\
-					 __ENDIAN_NAS_R(__a, 5, __val, 16);		\
-					 __ENDIAN_NAS_R(__a, 6, __val, 8);		\
-					 __ENDIAN_NAS_R(__a, 7, __val, 0); __val; })
-
-
-# if defined (CONFIG_CPU_ENDIAN_BIG)
-/** @multiple @this loads from non aligned memory location with native endianess */
-#  define endian_16_na_load(a)		endian_be16_na_load(a)
-#  define endian_32_na_load(a)		endian_be32_na_load(a)
-#  define endian_64_na_load(a)		endian_be64_na_load(a)
-/** @multiple @this stores to non aligned memory location with native endianess */
-#  define endian_16_na_store(a, x)	endian_be16_na_store(a, x)
-#  define endian_32_na_store(a, x)	endian_be32_na_store(a, x)
-#  define endian_64_na_store(a, x)	endian_be64_na_store(a, x)
+  const uint8_t *d = addr;
+# if defined(CONFIG_CPU_ENDIAN_LITTLE)
+  return ((uint16_t)d[1] << 8) | d[0];
 # else
-/** @multiple @this loads from non aligned memory location with native endianess */
-#  define endian_16_na_load(a)		endian_le16_na_load(a)
-#  define endian_32_na_load(a)		endian_le32_na_load(a)
-#  define endian_64_na_load(a)		endian_le64_na_load(a)
-/** @multiple @this stores to non aligned memory location with native endianess */
-#  define endian_16_na_store(a, x)	endian_le16_na_store(a, x)
-#  define endian_32_na_store(a, x)	endian_le32_na_store(a, x)
-#  define endian_64_na_store(a, x)	endian_le64_na_store(a, x)
+  return ((uint16_t)d[0] << 8) | d[1];
 # endif
-
 #endif
+}
+
+/**
+   @this loads a 32-bit value stored at arbitrary address from memory
+   with native CPU endianness.
+
+   @xsee {Non-aligned memory access}
+
+   @param addr Address pointing a 32-bit value
+   @returns Value at address
+ */
+ALWAYS_INLINE uint32_t endian_32_na_load(const void *addr)
+{
+#if defined(HAS_CPU_ENDIAN_32_NA_LOAD)
+  return cpu_endian_32_na_load(addr);
+#elif CONFIG_CPU_NONALIGNED_ACCESS & 32
+  return *(uint32_t*)addr;
+#else
+  const uint8_t *d = addr;
+# if defined(CONFIG_CPU_ENDIAN_LITTLE)
+  return endian_16_na_load(d) | ((uint32_t)endian_16_na_load(d + 2) << 16);
+# else
+  return ((uint32_t)endian_16_na_load(d) << 16) | endian_16_na_load(d + 2);
+# endif
+#endif
+}
+
+/**
+   @this loads a 64-bit value stored at arbitrary address from memory
+   with native CPU endianness.
+
+   @xsee {Non-aligned memory access}
+
+   @param addr Address pointing a 64-bit value
+   @returns Value at address
+ */
+ALWAYS_INLINE uint64_t endian_64_na_load(const void *addr)
+{
+#if defined(HAS_CPU_ENDIAN_64_NA_LOAD)
+  return cpu_endian_64_na_load(addr);
+#elif CONFIG_CPU_NONALIGNED_ACCESS & 64
+  return *(uint64_t*)addr;
+#else
+  const uint8_t *d = addr;
+# if defined(CONFIG_CPU_ENDIAN_LITTLE)
+  return endian_32_na_load(d) | ((uint64_t)endian_32_na_load(d + 4) << 32);
+# else
+  return ((uint64_t)endian_32_na_load(d) << 32) | endian_32_na_load(d + 4);
+# endif
+#endif
+}
+
+/**
+   @this stores a 16-bit value at arbitrary address to memory with
+   native CPU endianness.
+
+   @xsee {Non-aligned memory access}
+
+   @param addr Address to store 16-bit value at
+   @param val Value to store
+ */
+ALWAYS_INLINE void endian_16_na_store(void *addr, uint16_t val)
+{
+#if defined(HAS_CPU_ENDIAN_16_NA_STORE)
+  cpu_endian_16_na_store(addr, val);
+#elif CONFIG_CPU_NONALIGNED_ACCESS & 16
+  *(uint16_t*)addr = val;
+#else
+  uint8_t *d = addr;
+# if defined(CONFIG_CPU_ENDIAN_LITTLE)
+  d[0] = val;
+  d[1] = val >> 8;
+# else
+  d[0] = val >> 8;
+  d[1] = val;
+# endif
+#endif
+}
+
+/**
+   @this stores a 32-bit value at arbitrary address to memory with
+   native CPU endianness.
+
+   @xsee {Non-aligned memory access}
+
+   @param addr Address to store 32-bit value at
+   @param val Value to store
+ */
+ALWAYS_INLINE void endian_32_na_store(void *addr, uint32_t val)
+{
+#if defined(HAS_CPU_ENDIAN_32_NA_STORE)
+  cpu_endian_32_na_store(addr, val);
+#elif CONFIG_CPU_NONALIGNED_ACCESS & 32
+  *(uint32_t*)addr = val;
+#else
+  uint8_t *d = addr;
+# if defined(CONFIG_CPU_ENDIAN_LITTLE)
+  endian_16_na_store(d, val);
+  endian_16_na_store(d + 2, val >> 16);
+# else
+  endian_16_na_store(d, val >> 16);
+  endian_16_na_store(d + 2, val);
+# endif
+#endif
+}
+
+/**
+   @this stores a 64-bit value at arbitrary address to memory with
+   native CPU endianness.
+
+   @xsee {Non-aligned memory access}
+
+   @param addr Address to store 64-bit value at
+   @param val Value to store
+ */
+ALWAYS_INLINE void endian_64_na_store(void *addr, uint64_t val)
+{
+#if defined(HAS_CPU_ENDIAN_64_NA_STORE)
+  cpu_endian_64_na_store(addr, val);
+#elif CONFIG_CPU_NONALIGNED_ACCESS & 64
+  *(uint64_t*)addr = val;
+#else
+  uint8_t *d = addr;
+# if defined(CONFIG_CPU_ENDIAN_LITTLE)
+  endian_32_na_store(d, val);
+  endian_32_na_store(d + 4, val >> 32);
+# else
+  endian_32_na_store(d, val >> 32);
+  endian_32_na_store(d + 4, val);
+# endif
+#endif
+}
+
+/**
+   @this loads a 16-bit little-endian value stored at arbitrary
+   address from memory.
+
+   @xsee {Non-aligned memory access}
+
+   @param addr Address pointing a 16-bit value
+   @returns Value at address
+ */
+ALWAYS_INLINE uint16_t endian_le16_na_load(const void *addr)
+{
+#if defined(HAS_CPU_ENDIAN_LE16_NA_LOAD)
+  return cpu_endian_le16_na_load(addr);
+#else
+  return endian_le16(endian_16_na_load(addr));
+#endif
+}
+
+/**
+   @this loads a 32-bit little-endian value stored at arbitrary
+   address from memory.
+
+   @xsee {Non-aligned memory access}
+
+   @param addr Address pointing a 32-bit value
+   @returns Value at address
+ */
+ALWAYS_INLINE uint32_t endian_le32_na_load(const void *addr)
+{
+#if defined(HAS_CPU_ENDIAN_LE32_NA_LOAD)
+  return cpu_endian_le32_na_load(addr);
+#else
+  return endian_le32(endian_32_na_load(addr));
+#endif
+}
+
+/**
+   @this loads a 64-bit little-endian value stored at arbitrary
+   address from memory.
+
+   @xsee {Non-aligned memory access}
+
+   @param addr Address pointing a 64-bit value
+   @returns Value at address
+ */
+ALWAYS_INLINE uint64_t endian_le64_na_load(const void *addr)
+{
+#if defined(HAS_CPU_ENDIAN_LE64_NA_LOAD)
+  return cpu_endian_le64_na_load(addr);
+#else
+  return endian_le64(endian_64_na_load(addr));
+#endif
+}
+
+/**
+   @this stores a 16-bit value to memory using little-endian
+   representation.
+
+   @xsee {Non-aligned memory access}
+
+   @param addr Address to store 16-bit value at
+   @param val Value to store
+ */
+ALWAYS_INLINE void endian_le16_na_store(void *addr, uint16_t val)
+{
+#if defined(HAS_CPU_ENDIAN_LE16_NA_STORE)
+  cpu_endian_le16_na_store(addr, val);
+#else
+  endian_16_na_store(addr, endian_le16(val));
+#endif
+}
+
+/**
+   @this stores a 32-bit value to memory using little-endian
+   representation.
+
+   @xsee {Non-aligned memory access}
+
+   @param addr Address to store 32-bit value at
+   @param val Value to store
+ */
+ALWAYS_INLINE void endian_le32_na_store(void *addr, uint32_t val)
+{
+#if defined(HAS_CPU_ENDIAN_LE32_NA_STORE)
+  cpu_endian_le32_na_store(addr, val);
+#else
+  endian_32_na_store(addr, endian_le32(val));
+#endif
+}
+
+/**
+   @this stores a 64-bit value to memory using little-endian
+   representation.
+
+   @xsee {Non-aligned memory access}
+
+   @param addr Address to store 64-bit value at
+   @param val Value to store
+ */
+ALWAYS_INLINE void endian_le64_na_store(void *addr, uint64_t val)
+{
+#if defined(HAS_CPU_ENDIAN_LE64_NA_STORE)
+  cpu_endian_le64_na_store(addr, val);
+#else
+  endian_64_na_store(addr, endian_le64(val));
+#endif
+}
+
+/**
+   @this loads a 16-bit big-endian value stored at arbitrary
+   address from memory.
+
+   @xsee {Non-aligned memory access}
+
+   @param addr Address pointing a 16-bit value
+   @returns Value at address
+ */
+ALWAYS_INLINE uint16_t endian_be16_na_load(const void *addr)
+{
+#if defined(HAS_CPU_ENDIAN_BE16_NA_LOAD)
+  return cpu_endian_be16_na_load(addr);
+#else
+  return endian_be16(endian_16_na_load(addr));
+#endif
+}
+
+/**
+   @this loads a 32-bit big-endian value stored at arbitrary
+   address from memory.
+
+   @xsee {Non-aligned memory access}
+
+   @param addr Address pointing a 32-bit value
+   @returns Value at address
+ */
+ALWAYS_INLINE uint32_t endian_be32_na_load(const void *addr)
+{
+#if defined(HAS_CPU_ENDIAN_BE32_NA_LOAD)
+  return cpu_endian_be32_na_load(addr);
+#else
+  return endian_be32(endian_32_na_load(addr));
+#endif
+}
+
+/**
+   @this loads a 64-bit big-endian value stored at arbitrary
+   address from memory.
+
+   @xsee {Non-aligned memory access}
+
+   @param addr Address pointing a 64-bit value
+   @returns Value at address
+ */
+ALWAYS_INLINE uint64_t endian_be64_na_load(const void *addr)
+{
+#if defined(HAS_CPU_ENDIAN_BE64_NA_LOAD)
+  return cpu_endian_be64_na_load(addr);
+#else
+  return endian_be64(endian_64_na_load(addr));
+#endif
+}
+
+/**
+   @this stores a 16-bit value to memory using big-endian
+   representation.
+
+   @xsee {Non-aligned memory access}
+
+   @param addr Address to store 16-bit value at
+   @param val Value to store
+ */
+ALWAYS_INLINE void endian_be16_na_store(void *addr, uint16_t val)
+{
+#if defined(HAS_CPU_ENDIAN_BE16_NA_STORE)
+  cpu_endian_be16_na_store(addr, val);
+#else
+  endian_16_na_store(addr, endian_be16(val));
+#endif
+}
+
+/**
+   @this stores a 32-bit value to memory using big-endian
+   representation.
+
+   @xsee {Non-aligned memory access}
+
+   @param addr Address to store 32-bit value at
+   @param val Value to store
+ */
+ALWAYS_INLINE void endian_be32_na_store(void *addr, uint32_t val)
+{
+#if defined(HAS_CPU_ENDIAN_BE32_NA_STORE)
+  cpu_endian_be32_na_store(addr, val);
+#else
+  endian_32_na_store(addr, endian_be32(val));
+#endif
+}
+
+/**
+   @this stores a 64-bit value to memory using big-endian
+   representation.
+
+   @xsee {Non-aligned memory access}
+
+   @param addr Address to store 64-bit value at
+   @param val Value to store
+ */
+ALWAYS_INLINE void endian_be64_na_store(void *addr, uint64_t val)
+{
+#if defined(HAS_CPU_ENDIAN_BE64_NA_STORE)
+  cpu_endian_be64_na_store(addr, val);
+#else
+  endian_64_na_store(addr, endian_be64(val));
+#endif
+}
 
 /***********************************************************************
  *		Address and values alignment

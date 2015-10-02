@@ -60,5 +60,57 @@ ALWAYS_INLINE uint32_t cpu_endian_swap32(uint32_t x)
 
 //#define HAS_CPU_ENDIAN_SWAP64
 
+#if CONFIG_CPU_ARM32_ARCH_VERSION >= 6
+
+# define HAS_CPU_ENDIAN_16_NA_STORE
+
+ALWAYS_INLINE void cpu_endian_16_na_store(void *addr, uint16_t val)
+{
+  asm ("strh    %[data], %[address]"
+       : [address] "=Q" (*(uint16_t*)addr)
+       : [data] "l" (val)
+       );
+}
+
+# define HAS_CPU_ENDIAN_16_NA_LOAD
+
+ALWAYS_INLINE uint16_t cpu_endian_16_na_load(const void *addr)
+{
+  uint16_t val;
+
+  asm ("ldrh    %0, %1"
+       : "=l" (val)
+       : "Q" (*(uint16_t*)addr)
+       );
+
+  return val;
+}
+
+# define HAS_CPU_ENDIAN_32_NA_STORE
+
+ALWAYS_INLINE void cpu_endian_32_na_store(void *addr, uint32_t val)
+{
+  asm ("str    %[data], %[address]"
+       : [address] "=Q" (*(uint32_t*)addr)
+       : [data] "l" (val)
+       );
+}
+
+# define HAS_CPU_ENDIAN_32_NA_LOAD
+
+ALWAYS_INLINE uint32_t cpu_endian_32_na_load(const void *addr)
+{
+  uint32_t val;
+
+  asm ("ldr    %0, %1"
+       : "=l" (val)
+       : "Q" (*(uint32_t*)addr)
+       );
+
+  return val;
+}
+
+#endif /* ARM-v6+ */
+
 #endif
 

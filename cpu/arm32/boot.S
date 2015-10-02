@@ -55,7 +55,7 @@ FUNC_START(.text, mutekh_entry)
         mcr    p15, 0, r4, c12, c0, 0    /* VBAR register */
 #endif
 
-#if CONFIG_CPU_ARM32_ARCH_VERSION == 6 && defined(CONFIG_CPU_NONALIGNED_ACCESS)
+#if CONFIG_CPU_ARM32_ARCH_VERSION == 6
         /* enable non aligned memory access on ARMv6 */
         mrc    p15, 0, r4, c1, c0, 0 /* system control register */
         orr    r4, r4, #(1 << 22)    /* set bit U */

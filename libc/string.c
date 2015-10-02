@@ -67,23 +67,53 @@ inline void * memset(void *dst, int_fast8_t _s, size_t count)
 #undef memcpy
 void *memcpy( void *_dst, const void *_src, size_t size )
 {
-	reg_t *dst = _dst;
-	const reg_t *src = _src;
-# ifndef CONFIG_CPU_NONALIGNED_ACCESS
-	if ( ! ((uintptr_t)dst & reg_t_log2_m1) && ! ((uintptr_t)src & reg_t_log2_m1) )
-# endif
-		while (size >= sizeof(reg_t)) {
-			*dst++ = *src++;
-			size -= sizeof(reg_t);
-		}
+  reg_t *dst = _dst;
+  const reg_t *src = _src;
 
-	uint8_t *cdst = (uint8_t*)dst;
-	uint8_t *csrc = (uint8_t*)src;
+  if (((uintptr_t)dst & reg_t_log2_m1) == 0 && ((uintptr_t)src & reg_t_log2_m1) == 0) {
+    while (size >= sizeof(reg_t)) {
+      *dst++ = *src++;
+      size -= sizeof(reg_t);
+    }
+  } else {
+    // In the end, we'll only use register copier loop if non-aligned
+    // access is CPU-optimized
+#if (defined(HAS_CPU_ENDIAN_64_NA_STORE) && defined(HAS_CPU_ENDIAN_64_NA_LOAD)) \
+  || (CONFIG_CPU_NONALIGNED_ACCESS & 8)
+    if (sizeof(reg_t) == 8) {
+      while (size >= sizeof(reg_t)) {
+        endian_64_na_store(dst++, endian_64_na_load(src++));
+        size -= sizeof(reg_t);
+      }
+    }
+#endif
+#if (defined(HAS_CPU_ENDIAN_32_NA_STORE) && defined(HAS_CPU_ENDIAN_32_NA_LOAD)) \
+  || (CONFIG_CPU_NONALIGNED_ACCESS & 4)
+    if (sizeof(reg_t) == 4) {
+      while (size >= sizeof(reg_t)) {
+        endian_32_na_store(dst++, endian_32_na_load(src++));
+        size -= sizeof(reg_t);
+      }
+    }
+#endif
+#if (defined(HAS_CPU_ENDIAN_16_NA_STORE) && defined(HAS_CPU_ENDIAN_16_NA_LOAD)) \
+  || (CONFIG_CPU_NONALIGNED_ACCESS & 2)
+    if (sizeof(reg_t) == 2) {
+      while (size >= sizeof(reg_t)) {
+        endian_16_na_store(dst++, endian_16_na_load(src++));
+        size -= sizeof(reg_t);
+      }
+    }
+#endif
+  }
 
-	while (size--) {
-		*cdst++ = *csrc++;
-	}
-	return _dst;
+  uint8_t *cdst = (uint8_t*)dst;
+  uint8_t *csrc = (uint8_t*)src;
+
+  while (size--) {
+    *cdst++ = *csrc++;
+  }
+  return _dst;
 }
 #endif
 
