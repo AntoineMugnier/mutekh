@@ -111,7 +111,7 @@ DEV_CLEANUP(block_file_emu_cleanup)
 
 #define block_file_emu_use dev_use_generic
 
-DRIVER_DECLARE(block_file_emu_drv, "File -> Block", block_file_emu,
+DRIVER_DECLARE(block_file_emu_drv, 0, "File -> Block", block_file_emu,
                DRIVER_MEM_METHODS(block_file_emu));
 
 DRIVER_REGISTER(block_file_emu_drv);

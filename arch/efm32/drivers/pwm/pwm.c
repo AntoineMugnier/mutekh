@@ -302,7 +302,7 @@ static DEV_INIT(efm32_pwm_init);
 static DEV_CLEANUP(efm32_pwm_cleanup);
 static DEV_USE(efm32_pwm_use);
 
-DRIVER_DECLARE(efm32_pwm_drv, "EFM32 PWM", efm32_pwm,
+DRIVER_DECLARE(efm32_pwm_drv, 0, "EFM32 PWM", efm32_pwm,
                DRIVER_PWM_METHODS(efm32_pwm));
 
 DRIVER_REGISTER(efm32_pwm_drv);

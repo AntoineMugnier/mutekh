@@ -171,7 +171,7 @@ DEV_IRQ(uart_us6089c_irq)
 
 #define uart_us6089c_use dev_use_generic
 
-DRIVER_DECLARE(uart_6089c_drv, "us6089c", uart_us6089c,
+DRIVER_DECLARE(uart_6089c_drv, 0, "us6089c", uart_us6089c,
                DRIVER_TIMER_METHODS(uart_6089c));
 
 DRIVER_REGISTER(uart_us6089c_drv,

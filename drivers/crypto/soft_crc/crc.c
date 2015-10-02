@@ -374,7 +374,7 @@ static DEV_CLEANUP(soft_crc_cleanup);
 
 #define soft_crc_use dev_use_generic
 
-DRIVER_DECLARE(soft_crc_drv, "Software CRC hash", soft_crc,
+DRIVER_DECLARE(soft_crc_drv, 0, "Software CRC hash", soft_crc,
                DRIVER_CRYPTO_METHODS(soft_crc));
 
 DRIVER_REGISTER(soft_crc_drv);

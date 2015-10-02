@@ -93,7 +93,7 @@ static DEV_CLEANUP(ram_cleanup);
 
 #define ram_use dev_use_generic
 
-DRIVER_DECLARE(ram_drv, "Generic RAM", ram,
+DRIVER_DECLARE(ram_drv, 0, "Generic RAM", ram,
                DRIVER_MEM_METHODS(ram));
 
 DRIVER_REGISTER(ram_drv,

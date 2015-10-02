@@ -446,7 +446,7 @@ static DEV_CLEANUP(stm32_usart_cleanup);
 
 #define stm32_usart_use dev_use_generic
 
-DRIVER_DECLARE(stm32_usart_drv, "STM32 USART", stm32_usart,
+DRIVER_DECLARE(stm32_usart_drv, 0, "STM32 USART", stm32_usart,
                DRIVER_CHAR_METHODS(stm32_usart),
                DRIVER_UART_METHODS(stm32_usart));
 

@@ -459,7 +459,7 @@ static DEV_CLEANUP(efm32_gpio_cleanup);
 
 #define efm32_gpio_use dev_use_generic
 
-DRIVER_DECLARE(efm32_gpio_drv, "EFM32 GPIO", efm32_gpio,
+DRIVER_DECLARE(efm32_gpio_drv, 0, "EFM32 GPIO", efm32_gpio,
                DRIVER_GPIO_METHODS(efm32_gpio),
 #ifdef CONFIG_DRIVER_EFM32_GPIO_ICU
                DRIVER_ICU_METHODS(efm32_gpio_icu),

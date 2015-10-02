@@ -107,7 +107,7 @@ int32_t soclib_fdaccess_rq(struct device_s *dev,
 
 #define soclib_fdaccess_use dev_use_generic
 
-DRIVER_DECLARE(soclib_fdaccess_drv, "SoCLib FDAccess", soclib_fdaccess,
+DRIVER_DECLARE(soclib_fdaccess_drv, 0, "SoCLib FDAccess", soclib_fdaccess,
                DRIVER_MEM_METHODS(soclib_fdaccess));
 
 DRIVER_REGISTER(soclib_fdaccess_drv,

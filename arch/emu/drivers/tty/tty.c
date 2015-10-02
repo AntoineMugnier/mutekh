@@ -126,7 +126,7 @@ static DEV_CLEANUP(emu_tty_cleanup)
 
 #define emu_tty_use dev_use_generic
 
-DRIVER_DECLARE(emu_tty_drv, "Emu TTY", emu_tty,
+DRIVER_DECLARE(emu_tty_drv, 0, "Emu TTY", emu_tty,
                DRIVER_CHAR_METHODS(emu_tty));
 
 DRIVER_REGISTER(emu_tty_drv);

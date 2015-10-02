@@ -260,7 +260,7 @@ static DEV_CLEANUP(efm32_aes_cleanup);
 
 #define efm32_aes_use dev_use_generic
 
-DRIVER_DECLARE(efm32_aes_drv, "EFM32 AES", efm32_aes,
+DRIVER_DECLARE(efm32_aes_drv, 0, "EFM32 AES", efm32_aes,
                DRIVER_CRYPTO_METHODS(efm32_aes));
 
 DRIVER_REGISTER(efm32_aes_drv);

@@ -212,7 +212,7 @@ static DEV_INIT(ahbctrl_init);
 
 #define ahbctrl_use dev_use_generic
 
-DRIVER_DECLARE(ahbctrl_drv, "Gaisler AHB controller", ahbctrl,
+DRIVER_DECLARE(ahbctrl_drv, 0, "Gaisler AHB controller", ahbctrl,
                DRIVER_ENUM_METHODS(ahbctrl));
 
 DRIVER_REGISTER(ahbctrl_drv);

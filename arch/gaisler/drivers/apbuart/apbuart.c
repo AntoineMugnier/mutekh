@@ -210,7 +210,7 @@ static DEV_IRQ_SRC_PROCESS(gaisler_apbuart_irq)
 
 #define gaisler_apbuart_use dev_use_generic
 
-DRIVER_DECLARE(gaisler_apbuart_drv, "Gaisler APB UART", gaisler_apbuart,
+DRIVER_DECLARE(gaisler_apbuart_drv, 0, "Gaisler APB UART", gaisler_apbuart,
                DRIVER_CHAR_METHODS(gaisler_apbuart));
 
 DRIVER_REGISTER(gaisler_apbuart_drv,

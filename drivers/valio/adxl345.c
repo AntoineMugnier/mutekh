@@ -335,7 +335,7 @@ static DEV_INIT(adxl345_init);
 static DEV_CLEANUP(adxl345_cleanup);
 static DEV_USE(adxl345_use);
 
-DRIVER_DECLARE(adxl345_drv, "ADXL345 accelerometer", adxl345,
+DRIVER_DECLARE(adxl345_drv, 0, "ADXL345 accelerometer", adxl345,
                DRIVER_VALIO_METHODS(adxl345));
 
 DRIVER_REGISTER(adxl345_drv);

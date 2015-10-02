@@ -218,7 +218,7 @@ DEV_IRQ(uart_8250_irq)
 
 #define uart_8250_use dev_use_generic
 
-DRIVER_DECLARE(uart_8250_drv, "i8250", uart_8250,
+DRIVER_DECLARE(uart_8250_drv, 0, "i8250", uart_8250,
                DRIVER_CHAR_METHODS(uart_8250));
 
 static const struct driver_param_binder_s binder[] =

@@ -297,7 +297,7 @@ static DEV_INIT(pic32_uart_char_init);
 static DEV_CLEANUP(pic32_uart_char_cleanup);
 #define pic32_uart_char_use dev_use_generic
 
-DRIVER_DECLARE(pic32_uart_drv, "PIC32 UART", pic32_uart_char,
+DRIVER_DECLARE(pic32_uart_drv, 0, "PIC32 UART", pic32_uart_char,
                DRIVER_CHAR_METHODS(pic32_uart));
 
 DRIVER_REGISTER(pic32_uart_drv);

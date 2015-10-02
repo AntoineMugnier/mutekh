@@ -63,7 +63,7 @@ static DEV_USE(soclib_xicu_use)
 static DEV_INIT(soclib_xicu_init);
 static DEV_CLEANUP(soclib_xicu_cleanup);
 
-DRIVER_DECLARE(soclib_xicu_drv, "Soclib Xicu", soclib_xicu
+DRIVER_DECLARE(soclib_xicu_drv, 0, "Soclib Xicu", soclib_xicu
 #ifdef CONFIG_DRIVER_SOCLIB_XICU_ICU
                , DRIVER_ICU_METHODS(soclib_xicu_icu)
 #endif

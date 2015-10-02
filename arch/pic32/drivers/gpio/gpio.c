@@ -423,7 +423,7 @@ static DEV_IRQ_SRC_PROCESS(pic32_gpio_source_process)
 static DEV_INIT(pic32_gpio_init);
 static DEV_CLEANUP(pic32_gpio_cleanup);
 
-DRIVER_DECLARE(pic32_gpio_drv, "PIC32 GPIO", pic32_gpio,
+DRIVER_DECLARE(pic32_gpio_drv, 0, "PIC32 GPIO", pic32_gpio,
                DRIVER_GPIO_METHODS(pic32_gpio),
 #ifdef CONFIG_DRIVER_PIC32_GPIO_ICU
                DRIVER_ICU_METHODS(pic32_gpio_icu),

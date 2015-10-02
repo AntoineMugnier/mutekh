@@ -122,7 +122,7 @@ DEV_CLEANUP(icu_sam7_cleanup)
 
 #define spi_spi6088d_use dev_use_generic
 
-DRIVER_DECLARE(spi_6088d_drv, "SPI 6088d", spi_spi6088d,
+DRIVER_DECLARE(spi_6088d_drv, 0, "SPI 6088d", spi_spi6088d,
                DRIVER_TIMER_METHODS(spi_6088d));
 
 const struct driver_s	icu_sam7_drv =

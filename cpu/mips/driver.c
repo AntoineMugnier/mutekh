@@ -285,7 +285,7 @@ static DEV_USE(mips_use)
 #define mips_timer_request (dev_timer_request_t*)&dev_driver_notsup_fcn
 #define mips_timer_cancel  (dev_timer_cancel_t*)&dev_driver_notsup_fcn
 
-DRIVER_DECLARE(mips_drv, "MIPS processor", mips,
+DRIVER_DECLARE(mips_drv, 0, "MIPS processor", mips,
 #ifdef CONFIG_DEVICE_IRQ
                DRIVER_ICU_METHODS(mips_icu),
 #endif

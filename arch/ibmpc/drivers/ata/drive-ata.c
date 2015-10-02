@@ -291,7 +291,7 @@ DEV_CLEANUP(drive_ata_cleanup)
 
 #define drive_ata_use dev_use_generic
 
-DRIVER_DECLARE(drive_ata_drv, "ATA Drive", drive_ata,
+DRIVER_DECLARE(drive_ata_drv, 0, "ATA Drive", drive_ata,
                DRIVER_MEM_METHODS(drive_ata));
 
 DRIVER_REGISTER(drive_ata_drv);

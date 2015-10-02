@@ -235,7 +235,7 @@ static DEV_CLEANUP(stm32_rcc_cleanup);
 
 #define stm32_rcc_use dev_use_generic
 
-DRIVER_DECLARE(stm32_rcc_drv, "STM32 RCC", stm32_rcc,
+DRIVER_DECLARE(stm32_rcc_drv, 0, "STM32 RCC", stm32_rcc,
                DRIVER_CLOCK_METHODS(stm32_rcc));
 
 DRIVER_REGISTER(stm32_rcc_drv);

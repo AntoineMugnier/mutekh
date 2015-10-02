@@ -443,7 +443,7 @@ static DEV_CLEANUP(soft_salsa_cleanup);
 
 #define soft_salsa_use dev_use_generic
 
-DRIVER_DECLARE(soft_salsa_drv, "Software Salsa family of ciphers", soft_salsa,
+DRIVER_DECLARE(soft_salsa_drv, 0, "Software Salsa family of ciphers", soft_salsa,
                DRIVER_CRYPTO_METHODS(soft_salsa));
 
 DRIVER_REGISTER(soft_salsa_drv);

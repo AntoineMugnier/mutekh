@@ -374,7 +374,7 @@ DEV_CREATE(block_cache_create)
 
 #define block_cache_use dev_use_generic
 
-DRIVER_DECLARE(block_cache_drv, "Block Cache", block_cache,
+DRIVER_DECLARE(block_cache_drv, 0, "Block Cache", block_cache,
                DRIVER_MEM_METHODS(block_cache));
 
 DRIVER_REGISTER(block_cache_drv);

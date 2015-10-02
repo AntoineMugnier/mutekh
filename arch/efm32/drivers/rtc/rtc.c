@@ -435,7 +435,7 @@ static DEV_TIMER_CONFIG(efm32_rtc_config)
 static DEV_INIT(efm32_rtc_init);
 static DEV_CLEANUP(efm32_rtc_cleanup);
 
-DRIVER_DECLARE(efm32_rtc_drv, "EFM32 RTC", efm32_rtc,
+DRIVER_DECLARE(efm32_rtc_drv, 0, "EFM32 RTC", efm32_rtc,
                DRIVER_TIMER_METHODS(efm32_rtc));
 
 DRIVER_REGISTER(efm32_rtc_drv);

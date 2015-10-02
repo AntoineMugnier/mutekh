@@ -336,7 +336,7 @@ static DEV_CLEANUP(soclib_block_cleanup);
 
 #define soclib_block_use dev_use_generic
 
-DRIVER_DECLARE(soclib_block_drv, "Soclib Block Device", soclib_block,
+DRIVER_DECLARE(soclib_block_drv, 0, "Soclib Block Device", soclib_block,
                DRIVER_MEM_METHODS(soclib_block));
 
 DRIVER_REGISTER(soclib_block_drv,

@@ -340,7 +340,7 @@ static DEV_CLEANUP(mtch6102_cleanup);
 
 #define mtch6102_use dev_use_generic
 
-DRIVER_DECLARE(mtch6102_drv, "MTCH6102 Touchpad", mtch6102,
+DRIVER_DECLARE(mtch6102_drv, 0, "MTCH6102 Touchpad", mtch6102,
                DRIVER_VALIO_METHODS(mtch6102));
 
 DRIVER_REGISTER(mtch6102_drv);

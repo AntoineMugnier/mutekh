@@ -266,7 +266,7 @@ DEV_INIT(apbctrl_init);
 
 #define apbctrl_use dev_use_generic
 
-DRIVER_DECLARE(apbctrl_drv, "Gaisler APB bus controller", apbctrl,
+DRIVER_DECLARE(apbctrl_drv, 0, "Gaisler APB bus controller", apbctrl,
                DRIVER_ENUM_METHODS(apbctrl));
 
 DRIVER_REGISTER(apbctrl_drv,

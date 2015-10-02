@@ -1292,7 +1292,7 @@ static DEV_INIT(efm32_recmu_init);
 static DEV_CLEANUP(efm32_recmu_cleanup);
 #define efm32_recmu_use dev_use_generic
 
-DRIVER_DECLARE(efm32_recmu_drv, "EFM32 Reset, Energy and Clock management units", efm32_recmu,
+DRIVER_DECLARE(efm32_recmu_drv, 0, "EFM32 Reset, Energy and Clock management units", efm32_recmu,
                DRIVER_CLOCK_METHODS(efm32_recmu));
 
 DRIVER_REGISTER(efm32_recmu_drv);

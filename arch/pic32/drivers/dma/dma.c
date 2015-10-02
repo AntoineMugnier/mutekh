@@ -321,7 +321,7 @@ static DEV_INIT(pic32_dma_init);
 static DEV_CLEANUP(pic32_dma_cleanup);
 #define pic32_dma_use dev_use_generic
 
-DRIVER_DECLARE(pic32_dma_drv, "PIC32 DMA", pic32_dma,
+DRIVER_DECLARE(pic32_dma_drv, 0, "PIC32 DMA", pic32_dma,
                DRIVER_DMA_METHODS(pic32_dma));
 
 DRIVER_REGISTER(pic32_dma_drv);

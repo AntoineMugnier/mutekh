@@ -63,7 +63,7 @@ DEV_FB_GETBUFFER(fb_vga_getbuffer)
 
 #define fb_vga_use dev_use_generic
 
-DRIVER_DECLARE(fb_vga_drv, "VGA FB", fb_vga,
+DRIVER_DECLARE(fb_vga_drv, 0, "VGA FB", fb_vga,
                DRIVER_FB_METHODS(fb_vga));
 
 DRIVER_REGISTER(fb_vga_drv);

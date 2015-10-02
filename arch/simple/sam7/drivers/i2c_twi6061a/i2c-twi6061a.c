@@ -282,7 +282,7 @@ DEV_I2C_SET_BAUDRATE(i2c_twi6061a_set_baudrate)
 
 #define twi_6061a_use dev_use_generic
 
-DRIVER_DECLARE(twi_6061a_drv, "TWI 6061a", twi_6061a,
+DRIVER_DECLARE(twi_6061a_drv, 0, "TWI 6061a", twi_6061a,
                DRIVER_TIMER_METHODS(twi_6061a));
 
 DRIVER_REGISTER(i2c_twi6061a_drv,

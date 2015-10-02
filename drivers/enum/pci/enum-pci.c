@@ -206,7 +206,7 @@ pci_enum_probe(struct device_s *dev)
 
 #define enum_pci_use dev_use_generic
 
-DRIVER_DECLARE(enum_pci_drv, "PCI Enumerator", enum_pci,
+DRIVER_DECLARE(enum_pci_drv, 0, "PCI Enumerator", enum_pci,
                DRIVER_ENUM_METHODS(enum_pci));
 
 DRIVER_REGISTER(enum_pci_drv);

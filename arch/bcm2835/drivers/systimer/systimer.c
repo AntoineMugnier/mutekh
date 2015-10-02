@@ -270,7 +270,7 @@ static DEV_USE(bcm2835_systimer_use)
 static DEV_INIT(bcm2835_systimer_init);
 static DEV_CLEANUP(bcm2835_systimer_cleanup);
 
-DRIVER_DECLARE(bcm2835_systimer_drv, "BCM2835 system timer", bcm2835_systimer,
+DRIVER_DECLARE(bcm2835_systimer_drv, 0, "BCM2835 system timer", bcm2835_systimer,
                DRIVER_TIMER_METHODS(bcm2835_systimer));
 
 DRIVER_REGISTER(bcm2835_systimer_drv);

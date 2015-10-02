@@ -492,7 +492,7 @@ DEV_CLEANUP(tty_vga_cleanup)
 
 #define tty_vga_use dev_use_generic
 
-DRIVER_DECLARE(tty_vga_drv, "VGA TTY", tty_vga,
+DRIVER_DECLARE(tty_vga_drv, 0, "VGA TTY", tty_vga,
                DRIVER_CHAR_METHODS(tty_vga));
 
 DRIVER_REGISTER(tty_vga_drv);

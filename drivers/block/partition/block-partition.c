@@ -260,7 +260,7 @@ DEV_BLOCK_GETRQSIZE(block_partition_getrqsize)
 
 #define block_partition_use dev_use_generic
 
-DRIVER_DECLARE(block_partition_drv, "Partition", block_partition,
+DRIVER_DECLARE(block_partition_drv, 0, "Partition", block_partition,
                DRIVER_MEM_METHODS(block_partition));
 
 DRIVER_REGISTER(block_partition_drv);

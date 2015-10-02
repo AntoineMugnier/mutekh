@@ -264,7 +264,7 @@ static DEV_CLEANUP(pca9557_cleanup);
 #define pca9557_input_irq_range  (dev_gpio_input_irq_range_t*)dev_driver_notsup_fcn
 #define pca9557_use dev_use_generic
 
-DRIVER_DECLARE(pca9557_drv, "pca9557", pca9557,
+DRIVER_DECLARE(pca9557_drv, 0, "pca9557", pca9557,
                DRIVER_GPIO_METHODS(pca9557));
 
 static DEV_INIT(pca9557_init)

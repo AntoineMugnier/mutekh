@@ -326,7 +326,7 @@ static DEV_CLEANUP(adxl362_cleanup);
 
 #define adxl362_use dev_use_generic
 
-DRIVER_DECLARE(adxl362_drv, "ADXL362 motion", adxl362,
+DRIVER_DECLARE(adxl362_drv, 0, "ADXL362 motion", adxl362,
                DRIVER_VALIO_METHODS(adxl362));
 
 DRIVER_REGISTER(adxl362_drv);

@@ -209,7 +209,7 @@ static DEV_CLEANUP(soft_arc4_cleanup);
 
 #define soft_arc4_use dev_use_generic
 
-DRIVER_DECLARE(soft_arc4_drv, "Software ARC4 cipher", soft_arc4,
+DRIVER_DECLARE(soft_arc4_drv, 0, "Software ARC4 cipher", soft_arc4,
                DRIVER_CRYPTO_METHODS(soft_arc4));
 
 DRIVER_REGISTER(soft_arc4_drv);

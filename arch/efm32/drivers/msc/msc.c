@@ -174,7 +174,7 @@ static DEV_CLEANUP(efm32_msc_cleanup);
 
 #define efm32_msc_use dev_use_generic
 
-DRIVER_DECLARE(efm32_msc_drv, "EFM32 Memory System Controller", efm32_msc,
+DRIVER_DECLARE(efm32_msc_drv, 0, "EFM32 Memory System Controller", efm32_msc,
                DRIVER_MEM_METHODS(efm32_msc));
 
 DRIVER_REGISTER(efm32_msc_drv);

@@ -397,7 +397,7 @@ static DEV_TIMER_CONFIG(enst_rttimer_config)
 static DEV_INIT(enst_rttimer_init);
 static DEV_CLEANUP(enst_rttimer_cleanup);
 
-DRIVER_DECLARE(enst_rttimer_drv, "Telecom ParisTech Real-time Timer", enst_rttimer,
+DRIVER_DECLARE(enst_rttimer_drv, 0, "Telecom ParisTech Real-time Timer", enst_rttimer,
                DRIVER_TIMER_METHODS(enst_rttimer));
 
 DRIVER_REGISTER(enst_rttimer_drv

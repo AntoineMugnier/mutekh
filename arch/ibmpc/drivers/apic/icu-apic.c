@@ -239,7 +239,7 @@ static void icu_apic_setup(struct device_s *dev)
 
 #define icu_apic_use dev_use_generic
 
-DRIVER_DECLARE(icu_apic_drv, "APIC", icu_apic,
+DRIVER_DECLARE(icu_apic_drv, 0, "APIC", icu_apic,
                DRIVER_ICU_METHODS(icu_apic));
 
 DRIVER_REGISTER(icu_apic_drv);

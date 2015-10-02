@@ -263,7 +263,7 @@ static DEV_CLEANUP(cadence_uart_cleanup);
 
 #define cadence_uart_use dev_use_generic
 
-DRIVER_DECLARE(cadence_uart_drv, "Cadence UART", cadence_uart,
+DRIVER_DECLARE(cadence_uart_drv, 0, "Cadence UART", cadence_uart,
                DRIVER_CHAR_METHODS(cadence_uart));
 
 DRIVER_REGISTER(cadence_uart_drv,

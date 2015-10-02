@@ -280,7 +280,7 @@ static DEV_INIT(efm32_leuart_init);
 static DEV_CLEANUP(efm32_leuart_cleanup);
 #define efm32_leuart_use dev_use_generic
 
-DRIVER_DECLARE(efm32_leuart_drv, "EFM32 Low Energy UART", efm32_leuart,
+DRIVER_DECLARE(efm32_leuart_drv, 0, "EFM32 Low Energy UART", efm32_leuart,
                DRIVER_CHAR_METHODS(efm32_leuart));
 
 DRIVER_REGISTER(efm32_leuart_drv);

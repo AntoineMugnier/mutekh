@@ -413,7 +413,7 @@ static DEV_CLEANUP(efm32_usart_spi_cleanup);
 
 #define efm32_usart_spi_use dev_use_generic
 
-DRIVER_DECLARE(efm32_usart_spi_drv, "EFM32 USART (SPI)", efm32_usart_spi,
+DRIVER_DECLARE(efm32_usart_spi_drv, 0, "EFM32 USART (SPI)", efm32_usart_spi,
                DRIVER_SPI_CTRL_METHODS(efm32_usart_spi));
 
 DRIVER_REGISTER(efm32_usart_spi_drv);

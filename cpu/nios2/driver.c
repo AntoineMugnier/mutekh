@@ -271,7 +271,7 @@ static DEV_USE(nios2_use)
 #define nios2_timer_request (dev_timer_request_t*)dev_driver_notsup_fcn
 #define nios2_timer_cancel  (dev_timer_cancel_t*)dev_driver_notsup_fcn
 
-DRIVER_DECLARE(nios2_drv, "Nios II processor", nios2,
+DRIVER_DECLARE(nios2_drv, 0, "Nios II processor", nios2,
 #ifdef CONFIG_DEVICE_IRQ
                DRIVER_ICU_METHODS(nios2_icu),
 #endif

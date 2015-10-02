@@ -617,7 +617,7 @@ static DEV_INIT(mpu6505_init);
 static DEV_CLEANUP(mpu6505_cleanup);
 static DEV_USE(mpu6505_use);
 
-DRIVER_DECLARE(mpu6505_drv, "MPU6505 motion", mpu6505,
+DRIVER_DECLARE(mpu6505_drv, 0, "MPU6505 motion", mpu6505,
                DRIVER_VALIO_METHODS(mpu6505));
 
 DRIVER_REGISTER(mpu6505_drv);

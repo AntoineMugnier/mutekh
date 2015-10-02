@@ -230,7 +230,7 @@ static DEV_CLEANUP(push_button_cleanup);
 
 #define push_button_use dev_use_generic
 
-DRIVER_DECLARE(push_button_drv, "Push-button", push_button,
+DRIVER_DECLARE(push_button_drv, 0, "Push-button", push_button,
                DRIVER_VALIO_METHODS(push_button));
 
 DRIVER_REGISTER(push_button_drv);

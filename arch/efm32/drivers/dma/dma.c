@@ -379,7 +379,7 @@ static DEV_INIT(efm32_dma_init);
 static DEV_CLEANUP(efm32_dma_cleanup);
 #define efm32_dma_use dev_use_generic
 
-DRIVER_DECLARE(efm32_dma_drv, "EFM32 DMA", efm32_dma,
+DRIVER_DECLARE(efm32_dma_drv, 0, "EFM32 DMA", efm32_dma,
                DRIVER_DMA_METHODS(efm32_dma));
 
 DRIVER_REGISTER(efm32_dma_drv);

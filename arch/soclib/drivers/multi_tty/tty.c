@@ -168,7 +168,7 @@ static DEV_CLEANUP(tty_soclib_cleanup);
 
 #define tty_soclib_use dev_use_generic
 
-DRIVER_DECLARE(tty_soclib_drv, "Soclib Tty", tty_soclib,
+DRIVER_DECLARE(tty_soclib_drv, 0, "Soclib Tty", tty_soclib,
                DRIVER_CHAR_METHODS(tty_soclib));
 
 DRIVER_REGISTER(tty_soclib_drv,

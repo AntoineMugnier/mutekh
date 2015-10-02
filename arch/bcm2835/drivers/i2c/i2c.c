@@ -512,7 +512,7 @@ static DEV_CLEANUP(bcm2835_i2c_cleanup);
 
 #define bcm2835_i2c_use dev_use_generic
 
-DRIVER_DECLARE(bcm2835_i2c_drv, "BCM2835 I2C Master", bcm2835_i2c,
+DRIVER_DECLARE(bcm2835_i2c_drv, 0, "BCM2835 I2C Master", bcm2835_i2c,
                DRIVER_I2C_METHODS(bcm2835_i2c));
 
 DRIVER_REGISTER(bcm2835_i2c_drv);

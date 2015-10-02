@@ -156,7 +156,7 @@ static DEV_CLEANUP(soft_aes_cleanup);
 
 #define soft_aes_use dev_use_generic
 
-DRIVER_DECLARE(soft_aes_drv, "Software AES cipher", soft_aes,
+DRIVER_DECLARE(soft_aes_drv, 0, "Software AES cipher", soft_aes,
                DRIVER_CRYPTO_METHODS(soft_aes));
 
 DRIVER_REGISTER(soft_aes_drv);

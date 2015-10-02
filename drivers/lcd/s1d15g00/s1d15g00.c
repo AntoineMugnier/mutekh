@@ -361,7 +361,7 @@ DEV_LCD_GETINFO(s1d15g00_getinfo)
 
 #define s1d15g00_use dev_use_generic
 
-DRIVER_DECLARE(s1d15g00_drv, "S1D15G00", s1d15g00,
+DRIVER_DECLARE(s1d15g00_drv, 0, "S1D15G00", s1d15g00,
                DRIVER_LCD_METHODS(s1d15g00));
 
 static const struct driver_param_binder_s s1d15g00_binder[] =

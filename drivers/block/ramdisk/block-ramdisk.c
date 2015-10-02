@@ -106,7 +106,7 @@ DEV_CLEANUP(block_ramdisk_cleanup)
 
 #define block_ramdisk_use dev_use_generic
 
-DRIVER_DECLARE(block_ramdisk_drv, "RamDisk", block_ramdisk,
+DRIVER_DECLARE(block_ramdisk_drv, 0, "RamDisk", block_ramdisk,
                DRIVER_MEM_METHODS(block_ramdisk));
 
 DRIVER_REGISTER(block_ramdisk_drv,

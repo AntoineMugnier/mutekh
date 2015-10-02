@@ -212,7 +212,7 @@ DEV_CLEANUP(icu_8259_cleanup)
 
 #define icu_8259_use dev_use_generic
 
-DRIVER_DECLARE(icu_8259_drv, "i8259", icu_8259,
+DRIVER_DECLARE(icu_8259_drv, 0, "i8259", icu_8259,
                DRIVER_ICU_METHODS(icu_8259));
 
 DRIVER_REGISTER(icu_8259_drv);

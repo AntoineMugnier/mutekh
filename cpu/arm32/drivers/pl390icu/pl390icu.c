@@ -199,7 +199,7 @@ static DEV_INIT(pl390_icu_init);
 static DEV_CLEANUP(pl390_icu_cleanup);
 #define pl390_icu_use dev_use_generic
 
-DRIVER_DECLARE(pl390_icu_drv, "PL390 ARM generic interrupts controller", pl390_icu,
+DRIVER_DECLARE(pl390_icu_drv, 0, "PL390 ARM generic interrupts controller", pl390_icu,
                DRIVER_ICU_METHODS(pl390_icu));
 
 DRIVER_REGISTER(pl390_icu_drv,

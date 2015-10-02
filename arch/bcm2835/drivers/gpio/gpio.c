@@ -492,7 +492,7 @@ static DEV_CLEANUP(bcm2835_gpio_cleanup);
 
 #define bcm2835_gpio_use dev_use_generic
 
-DRIVER_DECLARE(bcm2835_gpio_drv, "BCM2835 GPIO", bcm2835_gpio
+DRIVER_DECLARE(bcm2835_gpio_drv, 0, "BCM2835 GPIO", bcm2835_gpio
                , DRIVER_GPIO_METHODS(bcm2835_gpio)
 #ifdef CONFIG_DEVICE_IOMUX
                , DRIVER_IOMUX_METHODS(bcm2835_gpio_iomux)

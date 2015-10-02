@@ -479,7 +479,7 @@ static DEV_CLEANUP(pic32_spi_cleanup);
 
 #define pic32_spi_use dev_use_generic
 
-DRIVER_DECLARE(pic32_spi_drv, "PIC32 SPI", pic32_spi,
+DRIVER_DECLARE(pic32_spi_drv, 0, "PIC32 SPI", pic32_spi,
                DRIVER_SPI_CTRL_METHODS(pic32_spi));
 
 DRIVER_REGISTER(pic32_spi_drv);

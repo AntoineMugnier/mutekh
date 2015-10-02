@@ -264,8 +264,12 @@ typedef DEV_USE(dev_use_t);
 
 extern DEV_USE(dev_use_generic);
 
-/** device driver object structure */
+enum driver_flags_e
+{
+  DRIVER_FLAGS_EARLY_INIT = 1,
+};
 
+/** device driver object structure */
 struct driver_s
 {
 #if defined(CONFIG_DEVICE_DRIVER_DESC)
@@ -278,6 +282,8 @@ struct driver_s
   dev_cleanup_t	*f_cleanup;
 #endif
   dev_use_t     *f_use;
+
+  enum driver_flags_e flags;
 
   /** NULL terminated array of pointers to driver classes structs */
   const void	*classes[];
@@ -295,13 +301,14 @@ struct driver_s
 # define DRIVER_DECLARE_CLEANUP(x)
 #endif
 
-#define DRIVER_DECLARE(symbol_, pretty_, prefix_, ...) \
+#define DRIVER_DECLARE(symbol_, flags_, pretty_, prefix_, ...)   \
   const struct driver_s symbol_ = {                    \
     DRIVER_DECLARE_DESC(pretty_)                       \
     .f_init = prefix_ ## _init,                        \
     DRIVER_DECLARE_CLEANUP(prefix_ ## _cleanup)        \
     .f_use = prefix_ ## _use,                          \
     .classes = { __VA_ARGS__, 0 },                     \
+    .flags = flags_                                    \
   }
 
 struct driver_registry_s

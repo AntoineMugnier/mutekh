@@ -144,7 +144,7 @@ static DEV_INIT(dma_soclib_init);
 static DEV_CLEANUP(dma_soclib_cleanup);
 #define dma_soclib_use dev_use_generic
 
-DRIVER_DECLARE(dma_soclib_drv, "Soclib Dma", dma_soclib,
+DRIVER_DECLARE(dma_soclib_drv, 0, "Soclib Dma", dma_soclib,
                DRIVER_DMA_METHODS(dma_soclib));
 
 DRIVER_REGISTER(dma_soclib_drv,

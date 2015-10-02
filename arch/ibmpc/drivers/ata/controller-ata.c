@@ -84,7 +84,7 @@ DEV_IRQ(controller_ata_irq)
 
 #define controller_ata_use dev_use_generic
 
-DRIVER_DECLARE(controller_ata_drv, "ATA Controller", controller_ata,
+DRIVER_DECLARE(controller_ata_drv, 0, "ATA Controller", controller_ata,
                DRIVER_ENUM_METHODS(controller_ata));
 
 DRIVER_REGISTER(controller_ata_drv,

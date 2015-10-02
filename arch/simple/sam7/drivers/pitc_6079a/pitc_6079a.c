@@ -138,7 +138,7 @@ DEV_CLEANUP(pitc_6079a_cleanup)
 
 #define pitc_6079a_use dev_use_generic
 
-DRIVER_DECLARE(pitc_6079a_drv, "PITC 6079a", pitc_6079a,
+DRIVER_DECLARE(pitc_6079a_drv, 0, "PITC 6079a", pitc_6079a,
                DRIVER_TIMER_METHODS(pitc_6079a));
 
 DRIVER_REGISTER(pitc_6079a_drv,

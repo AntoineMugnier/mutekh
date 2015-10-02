@@ -436,7 +436,7 @@ static DEV_CLEANUP(soclib_spi_cleanup);
 
 #define soclib_spi_use dev_use_generic
 
-DRIVER_DECLARE(soclib_spi_drv, "Soclib Spi", soclib_spi,
+DRIVER_DECLARE(soclib_spi_drv, 0, "Soclib Spi", soclib_spi,
 #ifdef CONFIG_DRIVER_SOCLIB_SPI_GPIO
                DRIVER_GPIO_METHODS(soclib_spi_gpio),
 #endif

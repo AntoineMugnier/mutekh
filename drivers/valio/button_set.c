@@ -190,7 +190,7 @@ static DEV_CLEANUP(button_set_cleanup);
 
 #define button_set_use dev_use_generic
 
-DRIVER_DECLARE(button_set_drv, "Button-set keyboard", button_set,
+DRIVER_DECLARE(button_set_drv, 0, "Button-set keyboard", button_set,
                DRIVER_VALIO_METHODS(button_set));
 
 DRIVER_REGISTER(button_set_drv);

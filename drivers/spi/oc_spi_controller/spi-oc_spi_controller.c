@@ -547,7 +547,7 @@ DEV_SPI_SET_DATA_FORMAT(spi_oc_spi_controller_set_data_format)
 
 #define spi_oc_spi_controller_use dev_use_generic
 
-DRIVER_DECLARE(spi_oc_spi_controller_drv, "OpenCores SPI controller", spi_oc_spi_controller,
+DRIVER_DECLARE(spi_oc_spi_controller_drv, 0, "OpenCores SPI controller", spi_oc_spi_controller,
                DRIVER_SPI_CTRL_METHODS(spi_oc_spi_controller));
 
 static const struct driver_param_binder_s spi_oc_spi_controller_param_binder[] =

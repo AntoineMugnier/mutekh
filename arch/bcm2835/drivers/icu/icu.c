@@ -163,7 +163,7 @@ static DEV_CLEANUP(bcm2835_icu_cleanup);
 
 #define bcm2835_icu_use dev_use_generic
 
-DRIVER_DECLARE(bcm2835_icu_drv, "BCM2835 irq controller", bcm2835_icu,
+DRIVER_DECLARE(bcm2835_icu_drv, 0, "BCM2835 irq controller", bcm2835_icu,
                DRIVER_ICU_METHODS(bcm2835_icu));
 
 DRIVER_REGISTER(bcm2835_icu_drv,

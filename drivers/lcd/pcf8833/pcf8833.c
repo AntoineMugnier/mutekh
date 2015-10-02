@@ -268,7 +268,7 @@ DEV_LCD_GETINFO(pcf8833_getinfo)
 
 #define pcf8833_use dev_use_generic
 
-DRIVER_DECLARE(pcf8833_drv, "PCF8833", pcf8833,
+DRIVER_DECLARE(pcf8833_drv, 0, "PCF8833", pcf8833,
                DRIVER_LCD_METHODS(pcf8833));
 
 DRIVER_REGISTER(pcf8833_drv);

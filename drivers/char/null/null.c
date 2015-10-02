@@ -68,7 +68,7 @@ DEV_CLEANUP(dev_null_cleanup)
 
 #define dev_null_use dev_use_generic
 
-DRIVER_DECLARE(dev_null_drv, "dev-null", dev_null,
+DRIVER_DECLARE(dev_null_drv, 0, "dev-null", dev_null,
                DRIVER_CHAR_METHODS(dev_null));
 
 DRIVER_REGISTER(dev_null_drv);

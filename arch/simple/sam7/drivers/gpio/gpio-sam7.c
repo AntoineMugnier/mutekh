@@ -193,7 +193,7 @@ DEV_IRQ(gpio_sam7_irq)
 
 #define gpio_sam7_use dev_use_generic
 
-DRIVER_DECLARE(gpio_sam7_drv, "GPIO Sam7", gpio_sam7,
+DRIVER_DECLARE(gpio_sam7_drv, 0, "GPIO Sam7", gpio_sam7,
                DRIVER_TIMER_METHODS(gpio_sam7));
 
 DRIVER_REGISTER(gpio_sam7_drv,

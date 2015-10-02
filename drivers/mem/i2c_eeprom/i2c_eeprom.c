@@ -283,7 +283,7 @@ static DEV_CLEANUP(i2c_eeprom_cleanup);
 
 #define i2c_eeprom_use dev_use_generic
 
-DRIVER_DECLARE(i2c_eeprom_drv, "I2C eeprom", i2c_eeprom,
+DRIVER_DECLARE(i2c_eeprom_drv, 0, "I2C eeprom", i2c_eeprom,
                DRIVER_MEM_METHODS(i2c_eeprom));
 
 DRIVER_REGISTER(i2c_eeprom_drv);

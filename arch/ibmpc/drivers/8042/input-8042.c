@@ -349,7 +349,7 @@ DEV_CLEANUP(input_8042_cleanup)
 
 #define input_8042_use dev_use_generic
 
-DRIVER_DECLARE(input_8042_drv, "i8042", input_8042,
+DRIVER_DECLARE(input_8042_drv, 0, "i8042", input_8042,
                DRIVER_INPUT_METHODS(input_8042));
 
 DRIVER_REGISTER(input_8042_drv);

@@ -513,7 +513,7 @@ static DEV_INIT(enum_fdt_init);
 
 #define enum_fdt_use dev_use_generic
 
-DRIVER_DECLARE(enum_fdt_drv, "FDT Enumerator", enum_fdt,
+DRIVER_DECLARE(enum_fdt_drv, 0, "FDT Enumerator", enum_fdt,
                DRIVER_ENUM_METHODS(enum_fdt));
 
 DRIVER_REGISTER(enum_fdt_drv);

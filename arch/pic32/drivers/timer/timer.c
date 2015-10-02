@@ -436,7 +436,7 @@ static DEV_TIMER_CONFIG(pic32_timer_config)
 static DEV_INIT(pic32_timer_init);
 static DEV_CLEANUP(pic32_timer_cleanup);
 
-DRIVER_DECLARE(pic32_timer_drv, "PIC32 Timer", pic32_timer,
+DRIVER_DECLARE(pic32_timer_drv, 0, "PIC32 Timer", pic32_timer,
                DRIVER_TIMER_METHODS(pic32_timer));
 
 DRIVER_REGISTER(pic32_timer_drv);

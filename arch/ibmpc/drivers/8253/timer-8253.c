@@ -129,7 +129,7 @@ DEV_CLEANUP(timer_8253_cleanup)
 
 #define timer_8253_use dev_use_generic
 
-DRIVER_DECLARE(timer_8253_drv, "i8253", timer_8253,
+DRIVER_DECLARE(timer_8253_drv, 0, "i8253", timer_8253,
                DRIVER_TIMER_METHODS(timer_8253));
 
 DRIVER_REGISTER(timer_8253_drv);

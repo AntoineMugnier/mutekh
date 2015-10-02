@@ -369,7 +369,7 @@ static DEV_CLEANUP(efm32_i2c_cleanup);
 
 #define efm32_i2c_use dev_use_generic
 
-DRIVER_DECLARE(efm32_i2c_drv, "EFM32 i2c", efm32_i2c,
+DRIVER_DECLARE(efm32_i2c_drv, 0, "EFM32 i2c", efm32_i2c,
                DRIVER_I2C_METHODS(efm32_i2c));
 
 DRIVER_REGISTER(efm32_i2c_drv);

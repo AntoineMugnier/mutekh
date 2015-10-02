@@ -60,7 +60,7 @@ static DEV_CLEANUP(a9mpcore_cleanup);
 static DEV_INIT(a9mpcore_init);
 #define a9mpcore_use dev_use_generic
 
-DRIVER_DECLARE(a9mpcore_drv, "ARM Cortex-A9 MPCore", a9mpcore,
+DRIVER_DECLARE(a9mpcore_drv, 0, "ARM Cortex-A9 MPCore", a9mpcore,
                DRIVER_ENUM_METHODS(a9mpcore));
 
 DRIVER_REGISTER(a9mpcore_drv);

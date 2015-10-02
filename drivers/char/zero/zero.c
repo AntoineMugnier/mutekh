@@ -71,7 +71,7 @@ DEV_CLEANUP(dev_zero_cleanup)
 
 #define dev_zero_use dev_use_generic
 
-DRIVER_DECLARE(dev_zero_drv, "dev-zero", dev_zero,
+DRIVER_DECLARE(dev_zero_drv, 0, "dev-zero", dev_zero,
                DRIVER_CHAR_METHODS(dev_zero));
 
 DRIVER_REGISTER(dev_zero_drv);

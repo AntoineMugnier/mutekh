@@ -167,7 +167,7 @@ static CPU_INTERRUPT_HANDLER(icu_emu_cpu_handler)
 
 #define icu_emu_use dev_use_generic
 
-DRIVER_DECLARE(icu_emu_drv, "Emu ICU", icu_emu,
+DRIVER_DECLARE(icu_emu_drv, 0, "Emu ICU", icu_emu,
                DRIVER_ICU_METHODS(icu_emu));
 
 DRIVER_REGISTER(icu_emu_drv);

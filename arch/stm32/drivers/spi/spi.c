@@ -424,7 +424,7 @@ static DEV_CLEANUP(stm32_spi_cleanup);
 
 #define stm32_spi_use dev_use_generic
 
-DRIVER_DECLARE(stm32_spi_drv, "STM32 SPI", stm32_spi,
+DRIVER_DECLARE(stm32_spi_drv, 0, "STM32 SPI", stm32_spi,
                DRIVER_SPI_CTRL_METHODS(stm32_spi));
 
 DRIVER_REGISTER(stm32_spi_drv);

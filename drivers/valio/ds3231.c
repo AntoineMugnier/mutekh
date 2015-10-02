@@ -197,7 +197,7 @@ static DEV_CLEANUP(ds3231_cleanup);
 
 #define ds3231_use dev_use_generic
 
-DRIVER_DECLARE(ds3231_drv, "DS3231 Calendar Clock", ds3231,
+DRIVER_DECLARE(ds3231_drv, 0, "DS3231 Calendar Clock", ds3231,
                DRIVER_VALIO_METHODS(ds3231));
 
 DRIVER_REGISTER(ds3231_drv);

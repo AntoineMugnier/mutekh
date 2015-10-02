@@ -536,7 +536,7 @@ static DEV_CLEANUP(soft_sha2_cleanup);
 
 #define soft_sha2_use dev_use_generic
 
-DRIVER_DECLARE(soft_sha2_drv, "Software SHA2 hashes", soft_sha2,
+DRIVER_DECLARE(soft_sha2_drv, 0, "Software SHA2 hashes", soft_sha2,
                DRIVER_CRYPTO_METHODS(soft_sha2));
 
 DRIVER_REGISTER(soft_sha2_drv);

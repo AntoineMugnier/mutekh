@@ -323,7 +323,7 @@ static DEV_CLEANUP(bcm2835_spi_cleanup);
 
 #define bcm2835_spi_use dev_use_generic
 
-DRIVER_DECLARE(bcm2835_spi_drv, "BCM2835 SPI", bcm2835_spi,
+DRIVER_DECLARE(bcm2835_spi_drv, 0, "BCM2835 SPI", bcm2835_spi,
                DRIVER_SPI_CTRL_METHODS(bcm2835_spi));
 
 DRIVER_REGISTER(bcm2835_spi_drv);

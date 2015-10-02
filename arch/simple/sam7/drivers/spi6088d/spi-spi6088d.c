@@ -431,7 +431,7 @@ DEV_SPI_SET_DATA_FORMAT(spi_spi6088d_set_data_format)
 
 #define spi_spi6088d_use dev_use_generic
 
-DRIVER_DECLARE(spi_6088d_drv, "SPI 6088d", spi_spi6088d,
+DRIVER_DECLARE(spi_6088d_drv, 0, "SPI 6088d", spi_spi6088d,
                DRIVER_TIMER_METHODS(spi_6088d));
 
 static const struct driver_param_binder_s spi_spi6088d_param_binder[] =

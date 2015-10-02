@@ -276,7 +276,7 @@ static DEV_INIT(efm32_usart_char_init);
 static DEV_CLEANUP(efm32_usart_char_cleanup);
 #define efm32_usart_char_use dev_use_generic
 
-DRIVER_DECLARE(efm32_usart_drv, "EFM32 USART (char)", efm32_usart_char,
+DRIVER_DECLARE(efm32_usart_drv, 0, "EFM32 USART (char)", efm32_usart_char,
                DRIVER_CHAR_METHODS(efm32_usart));
 
 DRIVER_REGISTER(efm32_usart_drv);

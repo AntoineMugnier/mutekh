@@ -225,7 +225,7 @@ static DEV_CLEANUP(soft_sha1_cleanup);
 
 #define soft_sha1_use dev_use_generic
 
-DRIVER_DECLARE(soft_sha1_drv, "Software SHA1 hash", soft_sha1,
+DRIVER_DECLARE(soft_sha1_drv, 0, "Software SHA1 hash", soft_sha1,
                DRIVER_CRYPTO_METHODS(soft_sha1));
 
 DRIVER_REGISTER(soft_sha1_drv);

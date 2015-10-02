@@ -238,7 +238,7 @@ static DEV_CLEANUP(soft_md5_cleanup);
 
 #define soft_md5_use dev_use_generic
 
-DRIVER_DECLARE(soft_md5_drv, "Software MD5 hash", soft_md5,
+DRIVER_DECLARE(soft_md5_drv, 0, "Software MD5 hash", soft_md5,
                DRIVER_CRYPTO_METHODS(soft_md5));
 
 DRIVER_REGISTER(soft_md5_drv);

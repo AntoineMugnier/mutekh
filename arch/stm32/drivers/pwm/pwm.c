@@ -330,7 +330,7 @@ static DEV_INIT(stm32_pwm_init);
 static DEV_CLEANUP(stm32_pwm_cleanup);
 static DEV_USE(stm32_pwm_use);
 
-DRIVER_DECLARE(stm32_pwm_drv, "STM32 PWM", stm32_pwm,
+DRIVER_DECLARE(stm32_pwm_drv, 0, "STM32 PWM", stm32_pwm,
                DRIVER_PWM_METHODS(stm32_pwm));
 
 DRIVER_REGISTER(stm32_pwm_drv);

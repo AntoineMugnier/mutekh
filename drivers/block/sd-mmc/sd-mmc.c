@@ -665,7 +665,7 @@ DEV_BLOCK_GETRQSIZE(sd_mmc_get_rqsize)
 
 #define sd_mmc_use dev_use_generic
 
-DRIVER_DECLARE(sd_mmc_drv, "SD/MMC block", sd_mmc,
+DRIVER_DECLARE(sd_mmc_drv, 0, "SD/MMC block", sd_mmc,
                DRIVER_MEM_METHODS(sd_mmc));
 
 static const struct driver_param_binder_s sd_mmc_binder[] =

@@ -638,7 +638,7 @@ static DEV_CLEANUP(stm32_gpio_cleanup);
 
 #define stm32_gpio_use dev_use_generic
 
-DRIVER_DECLARE(stm32_gpio_drv, "STM32 GPIO", stm32_gpio,
+DRIVER_DECLARE(stm32_gpio_drv, 0, "STM32 GPIO", stm32_gpio,
                DRIVER_GPIO_METHODS(stm32_gpio_gpio),
 #if defined(CONFIG_DRIVER_STM32_GPIO_ICU)
                DRIVER_ICU_METHODS(stm32_gpio_icu),

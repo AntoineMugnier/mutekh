@@ -629,7 +629,7 @@ static DEV_CLEANUP(stm32_i2c_cleanup);
 
 #define stm32_i2c_use dev_use_generic
 
-DRIVER_DECLARE(stm32_i2c_ctrl_drv, "STM32 I2C Master", stm32_i2c,
+DRIVER_DECLARE(stm32_i2c_ctrl_drv, 0, "STM32 I2C Master", stm32_i2c,
                DRIVER_I2C_METHODS(stm32_i2c));
 
 DRIVER_REGISTER(stm32_i2c_ctrl_drv);

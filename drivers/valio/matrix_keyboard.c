@@ -368,7 +368,7 @@ static DEV_CLEANUP(matrix_keyboard_cleanup);
 
 #define matrix_keyboard_use dev_use_generic
 
-DRIVER_DECLARE(matrix_keyboard_drv, "Matrix-keyboard", matrix_keyboard,
+DRIVER_DECLARE(matrix_keyboard_drv, 0, "Matrix-keyboard", matrix_keyboard,
                DRIVER_VALIO_METHODS(matrix_keyboard));
 
 DRIVER_REGISTER(matrix_keyboard_drv);

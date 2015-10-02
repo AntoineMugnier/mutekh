@@ -105,7 +105,7 @@ static DEV_CLEANUP(soclib_icu_cleanup);
 
 #define soclib_icu_use dev_use_generic
 
-DRIVER_DECLARE(soclib_icu_drv, "Soclib Icu", soclib_icu,
+DRIVER_DECLARE(soclib_icu_drv, 0, "Soclib Icu", soclib_icu,
                DRIVER_ICU_METHODS(soclib_icu_icu));
 
 DRIVER_REGISTER(soclib_icu_drv,
