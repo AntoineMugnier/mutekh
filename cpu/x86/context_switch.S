@@ -30,25 +30,26 @@ FUNC_START(.text, cpu_context_switch)
 
 #ifdef CONFIG_HEXO_USERMODE
         // context switch happened in kernel mode
-        movl    $0, TLS_SEG(:) (x86_context + CPU_X86_CONTEXT_mask)
+        movl    $0, TLS_SEG(:) (x86_context + _offsetof(cpu_context_s, mask))
 #endif
         
         // save stack
         lea     4(%esp), %eax
-        movl    %eax, TLS_SEG(:) (x86_context + CPU_X86_CONTEXT_esp)
+        movl    %eax, TLS_SEG(:) (x86_context + _offsetof(cpu_context_s, kregs.esp))
 
         // eflags
         pushf
-        popl    TLS_SEG(:) (x86_context + CPU_X86_CONTEXT_EFLAGS)
+        popl    TLS_SEG(:) (x86_context + _offsetof(cpu_context_s, kregs.eflags))
 
         // save pc
         movl    (%esp), %eax
-        movl    %eax, TLS_SEG(:) (x86_context + CPU_X86_CONTEXT_EIP) // return address
+        movl    %eax, TLS_SEG(:) (x86_context + _offsetof(cpu_context_s, kregs.eip)) // return address
 
         // save "callee saved" registers only
-        .irp    reg, edi, esi, ebp, ebx
-        movl    %\reg, TLS_SEG(:) (x86_context + CPU_X86_CONTEXT_\reg)
-        .endr
+        movl    %edi, TLS_SEG(:) (x86_context + _offsetof(cpu_context_s, kregs.edi))
+        movl    %esi, TLS_SEG(:) (x86_context + _offsetof(cpu_context_s, kregs.esi))
+        movl    %ebp, TLS_SEG(:) (x86_context + _offsetof(cpu_context_s, kregs.ebp))
+        movl    %ebx, TLS_SEG(:) (x86_context + _offsetof(cpu_context_s, kregs.ebx))
 
         jmp     cpu_context_jumpto
 
@@ -119,19 +120,23 @@ cpu_context_restore_user:
         .globl cpu_context_restore_kernel
 cpu_context_restore_kernel:
         // restore kernel stack pointer
-        mov     (x86_context + CPU_X86_CONTEXT_esp)(%esi), %esp
+        mov     (x86_context + _offsetof(cpu_context_s, kregs.esp))(%esi), %esp
         
         mov     $CPU_X86_SEGSEL(ARCH_GDT_CODE_INDEX, CPU_X86_KERNEL), %eax
 2:
         // prepare iret eflags/eip restoration
-        pushl   (x86_context + CPU_X86_CONTEXT_EFLAGS)(%esi)
+        pushl   (x86_context + _offsetof(cpu_context_s, kregs.eflags))(%esi)
         pushl   %eax
-        pushl   (x86_context + CPU_X86_CONTEXT_EIP)(%esi)
+        pushl   (x86_context + _offsetof(cpu_context_s, kregs.eip))(%esi)
 
         // restore gp regs
-        .irp    reg, ebp, ebx, edx, ecx, eax, edi, esi
-        mov     (x86_context + CPU_X86_CONTEXT_\reg)(%esi), %\reg
-        .endr
+        mov     (x86_context + _offsetof(cpu_context_s, kregs.ebp))(%esi), %ebp
+        mov     (x86_context + _offsetof(cpu_context_s, kregs.ebx))(%esi), %ebx
+        mov     (x86_context + _offsetof(cpu_context_s, kregs.edx))(%esi), %edx
+        mov     (x86_context + _offsetof(cpu_context_s, kregs.ecx))(%esi), %ecx
+        mov     (x86_context + _offsetof(cpu_context_s, kregs.eax))(%esi), %eax
+        mov     (x86_context + _offsetof(cpu_context_s, kregs.edi))(%esi), %edi
+        mov     (x86_context + _offsetof(cpu_context_s, kregs.esi))(%esi), %esi
 
         iret
 
@@ -171,7 +176,7 @@ FUNC_START(.text, cpu_context_stack_use)
         mov     HEXO_CONTEXT_S_TLS * 4(%eax), %eax
 
         // use context stack
-        movl    (x86_context + CPU_X86_CONTEXT_esp)(%eax), %esp
+        movl    (x86_context + _offsetof(cpu_context_s, kregs.esp))(%eax), %esp
 
 #ifndef CONFIG_RELEASE
         // prevent use of context local storage

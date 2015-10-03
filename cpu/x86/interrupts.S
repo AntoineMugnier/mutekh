@@ -51,7 +51,7 @@
 .equ INT_STACK_ecx,     24
 .equ INT_STACK_eax,     28
 .equ INT_STACK_ERR,     32
-.equ INT_STACK_EIP,     36
+.equ INT_STACK_eip,     36
 .equ INT_STACK_CS,      40
 .equ INT_STACK_EFLAGS,  44
 .equ INT_STACK_esp,     48
@@ -157,10 +157,22 @@ CPU_NAME_DECL(exception_vector):
 
 .macro X86_STACK_TO_CTX offset
         // copy stack saved registers in context save area
-        .irp    reg, edi, esi, ebp, ebx, edx, ecx, eax, EIP
-        mov     INT_STACK_\reg(%ebp), %ecx
-        mov     %ecx, (x86_context + CPU_X86_CONTEXT_\reg)\offset
-        .endr
+        mov     INT_STACK_edi(%ebp), %ecx
+        mov     %ecx, (x86_context + _offsetof(cpu_context_s, kregs.edi))\offset
+        mov     INT_STACK_esi(%ebp), %ecx
+        mov     %ecx, (x86_context + _offsetof(cpu_context_s, kregs.esi))\offset
+        mov     INT_STACK_ebp(%ebp), %ecx
+        mov     %ecx, (x86_context + _offsetof(cpu_context_s, kregs.ebp))\offset
+        mov     INT_STACK_ebx(%ebp), %ecx
+        mov     %ecx, (x86_context + _offsetof(cpu_context_s, kregs.ebx))\offset
+        mov     INT_STACK_edx(%ebp), %ecx
+        mov     %ecx, (x86_context + _offsetof(cpu_context_s, kregs.edx))\offset
+        mov     INT_STACK_ecx(%ebp), %ecx
+        mov     %ecx, (x86_context + _offsetof(cpu_context_s, kregs.ecx))\offset
+        mov     INT_STACK_eax(%ebp), %ecx
+        mov     %ecx, (x86_context + _offsetof(cpu_context_s, kregs.eax))\offset
+        mov     INT_STACK_eip(%ebp), %ecx
+        mov     %ecx, (x86_context + _offsetof(cpu_context_s, kregs.eip))\offset
 .endm
 
 #ifdef CONFIG_HEXO_USERMODE
@@ -295,13 +307,13 @@ FUNC_START(.text, x86_fault_entry)
 
         // save registers
         X86_STACK_TO_CTX (%esi)
-        mov     %eax, (x86_context + CPU_X86_CONTEXT_esp)(%esi)
+        mov     %eax, (x86_context + _offsetof(cpu_context_s, kregs.esp))(%esi)
 
         X86_PREEMPT_CLEAR
 
         // context switch can happend in exception handler
-        pushl   TLS_SEG(:) (x86_context + CPU_X86_CONTEXT_mask)
-        movl    $0, TLS_SEG(:) (x86_context + CPU_X86_CONTEXT_mask)
+        pushl   TLS_SEG(:) (x86_context + _offsetof(cpu_context_s, mask))
+        movl    $0, TLS_SEG(:) (x86_context + _offsetof(cpu_context_s, mask))
         
         // prepare fault handler arguments
         pushl	%eax            	/* stackptr */
@@ -312,7 +324,7 @@ FUNC_START(.text, x86_fault_entry)
         movl	%cr2,   %ecx
         pushl	%ecx			/* dataptr */
         
-        movl    (x86_context + CPU_X86_CONTEXT_EIP)(%esi), %ecx
+        movl    (x86_context + _offsetof(cpu_context_s, kregs.eip))(%esi), %ecx
         pushl	%ecx                    /* execptr */
         
         pushl	%edi			/* type */
@@ -321,7 +333,7 @@ FUNC_START(.text, x86_fault_entry)
         call	*%edx
         addl    $4*5,   %esp
 
-        popl    TLS_SEG(:) (x86_context + CPU_X86_CONTEXT_mask)
+        popl    TLS_SEG(:) (x86_context + _offsetof(cpu_context_s, mask))
 
 #ifdef CONFIG_HEXO_CONTEXT_PREEMPT
         // check if a preempt handler has been registered
@@ -406,7 +418,7 @@ FUNC_START(.text, x86_irq_entry)
 
         // save registers
         X86_STACK_TO_CTX (%esi)
-        mov     %eax, (x86_context + CPU_X86_CONTEXT_esp)(%esi)
+        mov     %eax, (x86_context + _offsetof(cpu_context_s, kregs.esp))(%esi)
 
         X86_PREEMPT_IRQ
 
@@ -493,13 +505,13 @@ x86_interrupt_sys_enter:
         // save registers
         mov     INT_STACK_esp(%ebp), %eax
         X86_STACK_TO_CTX (%esi)
-        mov     %eax, (x86_context + CPU_X86_CONTEXT_esp)(%esi)
+        mov     %eax, (x86_context + _offsetof(cpu_context_s, kregs.esp))(%esi)
 
         X86_PREEMPT_CLEAR
 
         // context switch can happend in syscall
-        pushl   TLS_SEG(:) (x86_context + CPU_X86_CONTEXT_mask)
-        movl    $0, TLS_SEG(:) (x86_context + CPU_X86_CONTEXT_mask)
+        pushl   TLS_SEG(:) (x86_context + _offsetof(cpu_context_s, kregs.mask))
+        movl    $0, TLS_SEG(:) (x86_context + _offsetof(cpu_context_s, kregs.mask))
 
         // prepare handler arguments
         leal    (x86_context)(%esi), %ecx
@@ -511,7 +523,7 @@ x86_interrupt_sys_enter:
         call    TLS_SEG(:) *(cpu_syscall_handler)
         addl	$4*2, %esp
 
-        popl    TLS_SEG(:) (x86_context + CPU_X86_CONTEXT_mask)
+        popl    TLS_SEG(:) (x86_context + _offsetof(cpu_context_s, kregs.mask))
 
 # ifdef CONFIG_HEXO_CONTEXT_PREEMPT
         // check if a preempt handler has been registered
@@ -539,13 +551,15 @@ x86_interrupt_sys_enter:
 #  endif
 
         // prepare sysexit
-        movl    (x86_context + CPU_X86_CONTEXT_EIP)(%esi), %edx
-        movl    (x86_context + CPU_X86_CONTEXT_esp)(%esi), %ecx
+        movl    (x86_context + _offsetof(cpu_context_s, kregs.eip))(%esi), %edx
+        movl    (x86_context + _offsetof(cpu_context_s, kregs.esp))(%esi), %ecx
 
         // restore "callee saved" gp regs & eax for return value
-        .irp    reg, ebp, ebx, eax, edi, esi
-        mov     (x86_context + CPU_X86_CONTEXT_\reg)(%esi), %\reg
-        .endr
+        mov     (x86_context + _offsetof(cpu_context_s, kregs.ebp))(%esi), %ebp
+        mov     (x86_context + _offsetof(cpu_context_s, kregs.ebx))(%esi), %ebx
+        mov     (x86_context + _offsetof(cpu_context_s, kregs.eax))(%esi), %eax
+        mov     (x86_context + _offsetof(cpu_context_s, kregs.edi))(%esi), %edi
+        mov     (x86_context + _offsetof(cpu_context_s, kregs.esi))(%esi), %esi
 
         sti
         sysexit
