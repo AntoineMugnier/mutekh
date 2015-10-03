@@ -109,7 +109,7 @@ struct dev_irq_src_s
   /** Current irq trigger mode configured on linked sink end-points. */
   uint8_t trig_mode;
 
-  /** Logical id of interrupt, valid when @trig_mode is @ref DEV_IRQ_SENSE_ID_BUS */
+  /** Logical id of interrupt, valid when @ref trig_mode is @ref DEV_IRQ_SENSE_ID_BUS */
   dev_irq_id_t irq_id;
 
   /** Irq event handling function for source endpoint */
