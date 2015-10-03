@@ -21,8 +21,10 @@
 */
 
 #include <device/resources.h>
+#include <device/irq.h>
 #include <device/class/iomux.h>
 #include <device/class/clock.h>
+#include <device/class/dma.h>
 
 #include <arch/efm32_irq.h>
 #include <arch/efm32_pin.h>
