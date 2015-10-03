@@ -244,7 +244,7 @@ static DEV_USE(ppc_use)
 #define ppc_timer_request (dev_timer_request_t*)&dev_driver_notsup_fcn
 #define ppc_timer_cancel  (dev_timer_cancel_t*)&dev_driver_notsup_fcn
 
-DRIVER_DECLARE(ppc_drv, 0, "PowerPC processor", ppc,
+DRIVER_DECLARE(ppc_drv, DRIVER_FLAGS_EARLY_INIT, "PowerPC processor", ppc,
 #ifdef CONFIG_DEVICE_IRQ
                DRIVER_ICU_METHODS(ppc_icu),
 #endif

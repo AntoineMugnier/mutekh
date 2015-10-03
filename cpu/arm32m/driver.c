@@ -193,7 +193,7 @@ static DEV_USE(arm_use)
 static DEV_CLEANUP(arm_cleanup);
 static DEV_INIT(arm_init);
 
-DRIVER_DECLARE(arm32m_drv, 0, "Arm-m processor", arm,
+DRIVER_DECLARE(arm32m_drv, DRIVER_FLAGS_EARLY_INIT, "Arm-m processor", arm,
 #ifdef CONFIG_DEVICE_IRQ
                DRIVER_ICU_METHODS(arm_icu),
 #endif

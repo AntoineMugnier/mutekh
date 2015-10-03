@@ -99,7 +99,7 @@ error_t device_get_accessor_by_path(void *accessor, struct device_node_s *root,
 
 #ifdef CONFIG_DEVICE_TREE
 
-static bool_t device_find_driver_r(struct device_node_s *node)
+static bool_t device_find_driver_r(struct device_node_s *node, uint_fast8_t pass)
 {
   extern const struct driver_registry_s driver_registry_table[];
   extern const struct driver_registry_s driver_registry_table_end[];
@@ -149,8 +149,11 @@ static bool_t device_find_driver_r(struct device_node_s *node)
           /* try to intialize device using associated driver */
         case DEVICE_DRIVER_INIT_PENDING: 
 
-          if (device_init_driver(dev) != -EAGAIN)
-            if (dev->status != DEVICE_DRIVER_INIT_PENDING)
+          if (!pass && !(dev->drv->flags & DRIVER_FLAGS_EARLY_INIT))
+            break;
+
+          if (device_init_driver(dev) != -EAGAIN &&
+              dev->status != DEVICE_DRIVER_INIT_PENDING)
               done = 1;
 
         default:
@@ -159,19 +162,19 @@ static bool_t device_find_driver_r(struct device_node_s *node)
     }
 
   DEVICE_NODE_FOREACH(node, child, {
-      done |= device_find_driver_r(child);
+      done |= device_find_driver_r(child, pass);
   });
 
   return done;
 }
 
-void device_find_driver(struct device_node_s *node)
+void device_find_driver(struct device_node_s *node, uint_fast8_t pass)
 {
   if (!node)
     node = device_tree_root();
 
   /* try to bind and init as many devices as possible */
-  while (device_find_driver_r(node))
+  while (device_find_driver_r(node, pass))
     ;
 }
 

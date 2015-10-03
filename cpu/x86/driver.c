@@ -304,7 +304,7 @@ static DEV_USE(x86_use)
 #define x86_timer_request (dev_timer_request_t*)&dev_driver_notsup_fcn
 #define x86_timer_cancel  (dev_timer_cancel_t*)&dev_driver_notsup_fcn
 
-DRIVER_DECLARE(x86_drv, 0, "x86 32-bit processor", x86,
+DRIVER_DECLARE(x86_drv, DRIVER_FLAGS_EARLY_INIT, "x86 32-bit processor", x86,
 #ifdef CONFIG_DEVICE_IRQ
                DRIVER_ICU_METHODS(x86_icu),
 #endif

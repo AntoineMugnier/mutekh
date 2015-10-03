@@ -265,7 +265,7 @@ static DEV_USE(lm32_use)
 #define lm32_timer_request (dev_timer_request_t*)&dev_driver_notsup_fcn
 #define lm32_timer_cancel  (dev_timer_cancel_t*)&dev_driver_notsup_fcn
 
-DRIVER_DECLARE(lm32_drv, 0, "LM32 processor", lm32,
+DRIVER_DECLARE(lm32_drv, DRIVER_FLAGS_EARLY_INIT, "LM32 processor", lm32,
 #ifdef CONFIG_DEVICE_IRQ
                DRIVER_ICU_METHODS(lm32_icu),
 #endif

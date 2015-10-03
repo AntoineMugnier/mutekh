@@ -202,8 +202,10 @@ struct dev_enum_ident_s
    DEVICE_DRIVER_INIT_PENDING if the device was not initialized due to
    missing resource but can be successfully initialized later.
 
+   Some kernel service can not be used from this function if the
+   driver has the @ref DRIVER_FLAGS_EARLY_INIT flag set.
+
    @param dev pointer to device descriptor
-   @param params driver dependent parameters, NULL if none
    @return negative error code, 0 on succes
 */
 typedef DEV_INIT(dev_init_t);
@@ -266,6 +268,11 @@ extern DEV_USE(dev_use_generic);
 
 enum driver_flags_e
 {
+  /* Perform initialization of the device during the @tt
+     INIT_BOOTSTRAP phase instead of @tt INIT_SMP. This is needed
+     mainly for processor and memory devices. It is not possible to
+     rely on some kernel features (scheduler, irq, kroutines) being
+     functional during the early initialization phase. */
   DRIVER_FLAGS_EARLY_INIT = 1,
 };
 
@@ -521,7 +528,7 @@ ALWAYS_INLINE error_t device_stop(void *accessor)
    more actions can be taken.
 */
 config_depend(CONFIG_DEVICE_TREE)
-void device_find_driver(struct device_node_s *node);
+void device_find_driver(struct device_node_s *node, uint_fast8_t pass);
 
 /** @This binds a device to a device driver. No check is performed to
     determine if the driver is appropriate. */

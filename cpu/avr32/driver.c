@@ -263,7 +263,7 @@ static DEV_USE(arv32_use)
 #define avr32_timer_request (dev_timer_request_t*)&dev_driver_notsup_fcn
 #define avr32_timer_cancel  (dev_timer_cancel_t*)&dev_driver_notsup_fcn
 
-DRIVER_DECLARE(avr32_drv, 0, "AVR32 processor", avr32,
+DRIVER_DECLARE(avr32_drv, DRIVER_FLAGS_EARLY_INIT, "AVR32 processor", avr32,
 #ifdef CONFIG_DEVICE_IRQ
                DRIVER_ICU_METHODS(avr32_icu),
 #endif

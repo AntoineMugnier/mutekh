@@ -307,7 +307,7 @@ static DEV_USE(arm_use)
   return -ENOTSUP;
 }
 
-DRIVER_DECLARE(arm32_drv, 0, "Arm processor", arm,
+DRIVER_DECLARE(arm32_drv, DRIVER_FLAGS_EARLY_INIT, "Arm processor", arm,
 #ifdef CONFIG_DEVICE_IRQ
                DRIVER_ICU_METHODS(arm_icu),
 #endif

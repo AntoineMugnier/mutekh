@@ -201,7 +201,7 @@ static DEV_CLEANUP(sparc_cleanup);
 static DEV_INIT(sparc_init);
 #define sparc_use dev_use_generic
 
-DRIVER_DECLARE(sparc_drv, 0, "Sparc processor", sparc,
+DRIVER_DECLARE(sparc_drv, DRIVER_FLAGS_EARLY_INIT, "Sparc processor", sparc,
 #ifdef CONFIG_DEVICE_IRQ
                DRIVER_ICU_METHODS(sparc_icu),
 #endif

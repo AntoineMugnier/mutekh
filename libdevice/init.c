@@ -28,10 +28,10 @@
 #include <assert.h>
 #include <stdlib.h>
 
-void libdevice_drivers_init()
+static void libdevice_drivers_init(uint_fast8_t pass)
 {
 #ifdef CONFIG_DEVICE_TREE
-  device_find_driver(NULL);
+  device_find_driver(NULL, pass);
 #else
   bool_t done;
   struct device_s *dev;
@@ -44,14 +44,29 @@ void libdevice_drivers_init()
         if (!(dev = device_from_node(node)))
           continue;
 
-        if (dev->status == DEVICE_DRIVER_INIT_PENDING &&
-            device_init_driver(dev) != -EAGAIN)
-          done = 0;
+        if (dev->status == DEVICE_DRIVER_INIT_PENDING)
+          {
+            if (!pass && !(dev->drv->flags & DRIVER_FLAGS_EARLY_INIT))
+              continue;
+            if (device_init_driver(dev) != -EAGAIN &&
+                dev->status != DEVICE_DRIVER_INIT_PENDING)
+              done = 0;
+          }
     });
   } while (!done);
 #endif
 }
 
+void libdevice_drivers_init0()
+{
+  libdevice_drivers_init(0);
+}
+
+void libdevice_drivers_init1()
+{
+  if (cpu_isbootstrap())
+    libdevice_drivers_init(1);
+}
 
 #include <device/class/cpu.h>
 
