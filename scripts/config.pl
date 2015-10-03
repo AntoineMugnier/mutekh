@@ -1298,7 +1298,7 @@ sub process_config_depend
     return 0 if ( !check_defined( $opt ) );
     return 0 if ( $opt->{flags}->{meta} || $opt->{flags}->{value} || $opt->{flags}->{enum} );
 
-    my $de = $enforce_deps or $opt->{enforce} ? 'deperror' : 'depnotice';
+    my $de = $enforce_deps || $opt->{enforce} ? 'deperror' : 'depnotice';
 
     # check if at least one parent is defined
     my $pres = 1;
