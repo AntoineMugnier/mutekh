@@ -99,7 +99,7 @@ FUNC_START(.text, mutekh_entry)
 3:      
         /* get address of the cpu stack */
         ld      [%g5 + CPU_TREE_STACK], %sp
-        set     CONFIG_HEXO_CPU_STACK_SIZE, %g2
+        set     CONFIG_HEXO_CPU_STACK_SIZE - SPARC_STACK_REDZONE, %g2
         add     %sp,    %g2,    %sp
 #  ifdef CONFIG_COMPILE_FRAMEPTR
         mov     %sp,            %i7
@@ -121,7 +121,7 @@ FUNC_START(.text, mutekh_entry)
 
         /* set startup stack pointer */
         set     CONFIG_STARTUP_STACK_ADDR \
-              + CONFIG_STARTUP_STACK_SIZE,        %sp
+              + CONFIG_STARTUP_STACK_SIZE - SPARC_STACK_REDZONE,        %sp
 
 #ifdef CONFIG_COMPILE_FRAMEPTR
         mov     %sp,            %i7

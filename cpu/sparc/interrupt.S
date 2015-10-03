@@ -194,7 +194,7 @@ CPU_NAME_DECL(reset_vector):
 #endif
 
         // skip register window save area
-        add     %sp,    -64,    %sp
+        add     %sp,    -SPARC_STACK_REDZONE,    %sp
 
 .endm
 
@@ -222,7 +222,7 @@ FUNC_START(.text, sparc_excep_entry)
 #endif
 
         // skip register window save area
-        add     %sp,    -64,    %sp
+        add     %sp,    -SPARC_STACK_REDZONE,    %sp
 
         // use cpu local handler
         CPU_LOCAL_ld cpu_exception_handler, %o5

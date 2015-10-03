@@ -43,6 +43,9 @@
 #define SPARC_TRAP_USERBREAK    1
 #define SPARC_TRAP_WINFLUSH     3
 
+/** register window save area on stack */
+#define SPARC_STACK_REDZONE     (16 * INT_REG_SIZE/8)
+
 /** general purpose regsiters count */
 # define CPU_GPREG_COUNT	32
 

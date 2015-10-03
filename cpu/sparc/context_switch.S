@@ -149,11 +149,6 @@ FUNC_START(.text, cpu_context_jumpto)
         st      %g0,            [ SOCLIB_MC_MAGIC ]
 #endif
 
-        // restore status
-        ld      [%g1 + CPU_SPARC_CONTEXT_PSR], %g5
-        andn    %g5, SPARC_PSR_TRAP_ENABLED | SPARC_PSR_CWP_MASK, %g5
-        mov     %g5, %psr
-
         ld      [%g1 + CPU_SPARC_CONTEXT_SAVE_MASK], %g5
 
 #if 0   // callee should almost always get restored (except on context start)
@@ -173,6 +168,12 @@ FUNC_START(.text, cpu_context_jumpto)
         ldd     [%g1 + CPU_SPARC_CONTEXT_I(4)], %i4
         ldd     [%g1 + CPU_SPARC_CONTEXT_I(6)], %i6
 1:      
+
+        // restore status
+        ld      [%g1 + CPU_SPARC_CONTEXT_PSR], %o0
+        andn    %o0, SPARC_PSR_TRAP_ENABLED | SPARC_PSR_CWP_MASK, %o0
+        mov     %o0, %psr
+
         andcc   %g5, CPU_SPARC_CONTEXT_RESTORE_CALLER, %g0
         bz      1f
         nop
@@ -234,6 +235,7 @@ FUNC_START(.text, cpu_context_set)
 
         // set stack pointer
         add     %o0,    %o1,    %o6
+        sub     %o6,    SPARC_STACK_REDZONE,     %o6
 #ifdef CONFIG_COMPILE_FRAMEPTR
         mov     %o6,            %i6
 #endif
@@ -266,6 +268,7 @@ FUNC_START(.text, cpu_context_stack_use)
         add     %g1, %lo(sparc_context_regs), %g1
 
         ld      [%g1 + CPU_SPARC_CONTEXT_O(6)], %o6
+        sub     %o6,    SPARC_STACK_REDZONE,     %o6
 #ifdef CONFIG_COMPILE_FRAMEPTR
         mov     %o6,            %i6
 #endif
@@ -296,7 +299,7 @@ FUNC_START(.text, cpu_context_set_user)
         mov     %l0,    %psr
 
         /* set stack */
-        mov     %i0,    %i6
+        sub     %i0,    SPARC_STACK_REDZONE,     %i6
         /* set arg */
         mov     %i2,    %i0
         nop
