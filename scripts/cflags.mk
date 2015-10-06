@@ -38,6 +38,11 @@ CFLAGS=	-std=gnu99 -nostdlib -fno-builtin -foptimize-sibling-calls \
         -Wall -Wno-main -Wno-unused-label -O$(CONFIG_COMPILE_OPTIMIZE)
 DTC=dtc
 
+ifeq ($(CONFIG_SOCLIB_MEMCHECK), defined)
+# disable load optimizations : prevent load undefined values
+CFLAGS += -fno-gcse-lm -fno-gcse-sm -fno-sched-spec
+endif
+
 ifeq ($(CONFIG_COMPILE_LTO), defined)
 CFLAGS += -flto
 LINK_LDFLAGS += -flto
