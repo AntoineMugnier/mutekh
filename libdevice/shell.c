@@ -558,6 +558,7 @@ extern TERMUI_CON_GROUP_DECL(dev_shell_i2c_group);
 extern TERMUI_CON_GROUP_DECL(dev_shell_gpio_group);
 extern TERMUI_CON_GROUP_DECL(dev_shell_rfpacket_group);
 extern TERMUI_CON_GROUP_DECL(dev_shell_spi_ctrl_group);
+extern TERMUI_CON_GROUP_DECL(dev_shell_char_group);
 
 static TERMUI_CON_GROUP_DECL(dev_shell_subgroup) =
 {
@@ -595,6 +596,9 @@ static TERMUI_CON_GROUP_DECL(dev_shell_subgroup) =
 #endif
 #ifdef CONFIG_DEVICE_SPI
   TERMUI_CON_GROUP_ENTRY(dev_shell_spi_ctrl_group, "spi")
+#endif
+#ifdef CONFIG_DEVICE_CHAR
+  TERMUI_CON_GROUP_ENTRY(dev_shell_char_group, "char")
 #endif
   TERMUI_CON_LIST_END
 };
