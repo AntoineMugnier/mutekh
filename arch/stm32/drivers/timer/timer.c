@@ -510,7 +510,7 @@ static DEV_INIT(stm32_timer_init)
 
   dev_request_pqueue_init(&pv->queue);
 #else
-  cfg->cap |= DEV_TIMER_CAP_TICKLESS;
+  pv->cap |= DEV_TIMER_CAP_TICKLESS;
 #endif
 
   /* FIXME: setup clock. */
