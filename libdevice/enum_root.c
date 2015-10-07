@@ -38,7 +38,8 @@ static DEV_CLEANUP(device_enum_root_cleanup)
 
 #define device_enum_root_use dev_use_generic
 
-DRIVER_DECLARE(device_enum_root_drv, 0, "MutekH root enumerator", device_enum_root,
+DRIVER_DECLARE(device_enum_root_drv, DRIVER_FLAGS_EARLY_INIT,
+               "MutekH root enumerator", device_enum_root,
                DRIVER_ENUM_METHODS(device_enum_root));
 
 static DEV_INIT(device_enum_root_init)
