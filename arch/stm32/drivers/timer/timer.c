@@ -103,8 +103,6 @@ static uint64_t get_timer_value(struct stm32_timer_private_s *pv)
 #endif
 }
 
-#ifdef CONFIG_DEVICE_IRQ
-
 /* This function writes a value in the Compare/Capture channel 0 of the
    timer. When the timer counter value will be greater than this value
    a compare interrup will be raised. */
@@ -128,6 +126,8 @@ static inline void stm32_timer_disable_compare(struct stm32_timer_private_s *pv)
   /* Set output compare inactive. */
   //DEVICE_REG_FIELD_UPDATE_DEV(TIMER, pv->addr, CCMR1OC, OC1M, FORCE_INACTIVE);
 }
+
+#ifdef CONFIG_DEVICE_IRQ
 
 static bool_t stm32_timer_request_start(struct stm32_timer_private_s *pv,
                                         struct dev_timer_rq_s *rq,
