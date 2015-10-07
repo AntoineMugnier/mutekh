@@ -33,6 +33,28 @@
 
 #define CPU_INTERRUPT_H_
 
+/** @multiple x86 cpu exception id */
+#define CPU_EXCEPTION_DIVIDE_ERROR          0
+#define CPU_EXCEPTION_DEBUG                 1
+#define CPU_EXCEPTION_NMI_INTERRUPT         2
+#define CPU_EXCEPTION_BREAKPOINT            3
+#define CPU_EXCEPTION_OVERFLOW              4
+#define CPU_EXCEPTION_BOUND_RANGE           5
+#define CPU_EXCEPTION_INVALID_OPCODE        6
+#define CPU_EXCEPTION_NO_FPU                7
+#define CPU_EXCEPTION_DOUBLE_FAULT          8
+#define CPU_EXCEPTION_COPROCESSOR_SEGMENT   9
+#define CPU_EXCEPTION_INVALID_TSS           10
+#define CPU_EXCEPTION_NO_SEGMENT            11
+#define CPU_EXCEPTION_STACK_SEGMENT         12
+#define CPU_EXCEPTION_GENERAL_PROTECTION    13
+#define CPU_EXCEPTION_PAGE_FAULT            14
+#define CPU_EXCEPTION_INTEL_RESERVED        15
+#define CPU_EXCEPTION_X87_FPU_ERROR         16
+#define CPU_EXCEPTION_ALIGNMENT_CHECK       17
+#define CPU_EXCEPTION_MACHINE_CHECK         18
+#define CPU_EXCEPTION_SIMD_FP_EXCEPTION     19
+
 /** first interrupt vector used for exceptions */
 #define CPU_EXCEPT_VECTOR		0
 /** exceptions vector count */
