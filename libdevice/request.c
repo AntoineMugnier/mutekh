@@ -23,7 +23,7 @@
 #include <device/request.h>
 
 GCT_CONTAINER_PROTOTYPES(dev_request_queue, extern inline, dev_request_queue,
-                         init, destroy, push, pushback, pop, remove, isempty, head, next);
+                         init, destroy, push, pushback, pop, remove, isempty, head, tail, next);
 
 GCT_CONTAINER_PROTOTYPES(dev_request_pqueue, extern inline, dev_request_pqueue,
                          init, destroy, pop, isempty, head, prev, next, remove);
