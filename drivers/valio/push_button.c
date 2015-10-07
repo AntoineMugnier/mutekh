@@ -74,7 +74,7 @@ static KROUTINE_EXEC(push_button_lock_timeout)
    struct dev_valio_rq_s *rq = KROUTINE_CONTAINER(kr, *rq, base.kr);
    struct device_s *dev = rq->base.pvdata;
    struct push_button_context_s *pv  = dev->drv_pv;
- 
+
    LOCK_SPIN_IRQ(&dev->lock);
    pv->lock = 0;
    LOCK_RELEASE_IRQ(&dev->lock);
@@ -112,7 +112,7 @@ static DEV_IRQ_SRC_PROCESS(push_button_irq)
 {
   struct device_s *dev = ep->base.dev;
   struct push_button_context_s *pv  = dev->drv_pv;
-   
+
   struct dev_request_s *base = dev_request_queue_head(&pv->queue);
   struct dev_valio_rq_s *rq = dev_valio_rq_s_cast(base);
 
@@ -255,7 +255,7 @@ static DEV_INIT(push_button_init)
 
   if (r)
     pv->release_state = r->u.uint_param.value;
-  else 
+  else
     goto err_mem;
 
   pv->state = pv->release_state;
