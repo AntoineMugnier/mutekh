@@ -93,7 +93,7 @@
     .if \i+3<=\j
         PUT_ENTRY (\i+3), \label
     .endif
-    .if \i<\j
+    .if \i+4<=\j
         PUT_ENTRIES (\i+4), \j, \label
     .endif
 .endm
@@ -510,8 +510,8 @@ x86_interrupt_sys_enter:
         X86_PREEMPT_CLEAR
 
         // context switch can happend in syscall
-        pushl   TLS_SEG(:) (x86_context + _offsetof(cpu_context_s, kregs.mask))
-        movl    $0, TLS_SEG(:) (x86_context + _offsetof(cpu_context_s, kregs.mask))
+        pushl   TLS_SEG(:) (x86_context + _offsetof(cpu_context_s, mask))
+        movl    $0, TLS_SEG(:) (x86_context + _offsetof(cpu_context_s, mask))
 
         // prepare handler arguments
         leal    (x86_context)(%esi), %ecx
@@ -523,7 +523,7 @@ x86_interrupt_sys_enter:
         call    TLS_SEG(:) *(cpu_syscall_handler)
         addl	$4*2, %esp
 
-        popl    TLS_SEG(:) (x86_context + _offsetof(cpu_context_s, kregs.mask))
+        popl    TLS_SEG(:) (x86_context + _offsetof(cpu_context_s, mask))
 
 # ifdef CONFIG_HEXO_CONTEXT_PREEMPT
         // check if a preempt handler has been registered

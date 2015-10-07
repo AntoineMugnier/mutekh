@@ -84,7 +84,7 @@ FUNC_START(.text, cpu_context_jumpto)
 #ifdef CONFIG_HEXO_USERMODE
         // jump to user mode ?
         testl	$CPU_X86_CONTEXT_MASK_USER, \
-                (x86_context + CPU_X86_CONTEXT_mask)(%esi)
+                (x86_context + _offsetof(cpu_context_s, mask))(%esi)
         jz      cpu_context_restore_kernel
 
         // restore registers from user bank
@@ -100,7 +100,7 @@ cpu_context_restore_user:
 
         // prepare iret user stack restoration
         pushl   $CPU_X86_SEGSEL(ARCH_GDT_USER_DATA_INDEX, CPU_X86_USER)
-        pushl   (x86_context + CPU_X86_CONTEXT_esp)(%esi)
+        pushl   (x86_context + _offsetof(cpu_context_s, kregs.esp))(%esi)
 
         // restore user data segments
         movl	$CPU_X86_SEGSEL(ARCH_GDT_USER_DATA_INDEX, CPU_X86_KERNEL), %eax
@@ -214,7 +214,7 @@ FUNC_START(.text, cpu_context_set_user)
         movl    TLS_SEG(), %eax
         movl    %eax, CLS_SEG(:) (cpu_tls_seg)
 
-        movl    $1, TLS_SEG(:) (x86_context + CPU_X86_CONTEXT_mask)
+        movl    $1, TLS_SEG(:) (x86_context + _offsetof(cpu_context_s, mask))
 
 # ifndef CONFIG_RELEASE
         // invalidate cls and tls segments

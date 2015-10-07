@@ -165,7 +165,7 @@ static DEV_CPU_REG_INIT(x86_cpu_reg_init)
 #endif
 
 #ifdef CONFIG_HEXO_USERMODE
-  cpu_x86_taskseg_use(pv->tss_sel);
+  cpu_x86_taskseg_use(pv->tss_seg);
 
 # ifdef CONFIG_CPU_X86_SYSENTER
   cpu_x86_write_msr(SYSENTER_CS_MSR, CPU_X86_SEG_SEL(ARCH_GDT_CODE_INDEX, 0));
@@ -371,7 +371,7 @@ static DEV_INIT(x86_init)
     goto err_cls_seg;
 
   pv->tss.ss0 = ARCH_GDT_DATA_INDEX << 3;
-  pv->tss.esp0 = (uintptr_t)cpu_interrupt_stack + CONFIG_HEXO_INTERRUPT_STACK_SIZE;
+  pv->tss.esp0 = (uintptr_t)pv->cpu_interrupt_stack + CONFIG_HEXO_INTERRUPT_STACK_SIZE;
 
   pv->tss_seg = cpu_x86_segment_alloc((uintptr_t)&pv->tss, sizeof(pv->tss), CPU_X86_SEG_CONTEXT32);
   if (!pv->tss_seg)
