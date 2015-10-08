@@ -23,7 +23,6 @@
 #include <arch/hexo/emu_syscalls.h>
 #include <hexo/power.h>
 #include <hexo/cpu.h>
-#include <device/device.h>
 
 error_t power_reboot()
 {
