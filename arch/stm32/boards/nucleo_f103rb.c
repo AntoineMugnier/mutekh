@@ -21,21 +21,26 @@
 
 */
 
-#include <device/device.h>
-#include <device/driver.h>
-#include <device/resources.h>
-#include <device/irq.h>
-#include <device/class/iomux.h>
-#include <device/class/clock.h>
+#if defined(CONFIG_DEVICE)
+# include <device/device.h>
+# include <device/driver.h>
+# include <device/resources.h>
+# include <device/irq.h>
+# include <device/class/iomux.h>
+# include <device/class/clock.h>
+#endif
 
 #include <arch/stm32_memory_map.h>
 #include <arch/stm32_irq.h>
 
+#if defined(CONFIG_DRIVER_CPU_ARM32M)
 
 /* CPU. */
 DEV_DECLARE_STATIC(cpu_dev, "cpu", DEVICE_FLAG_CPU, arm32m_drv,
                    DEV_STATIC_RES_ID(0, 0)
                    );
+
+#endif
 
 #if defined(CONFIG_DRIVER_STM32_USART)
 
@@ -110,6 +115,7 @@ DEV_DECLARE_STATIC(btn0_dev, "btn0", 0, push_button_drv,
 
 /////////////////////////////////////////////////////////////////////
 
+#include <hexo/endian.h>
 #include <hexo/iospace.h>
 #include <arch/stm32f1xx_rcc.h>
 
@@ -196,4 +202,3 @@ void stm32_clock_init()
   cpu_mem_write_32(STM32_RCC_ADDR + STM32_RCC_APB1ENR_ADDR, -1);
   cpu_mem_write_32(STM32_RCC_ADDR + STM32_RCC_APB2ENR_ADDR, -1);
 }
-
