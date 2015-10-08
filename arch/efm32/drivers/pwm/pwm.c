@@ -66,7 +66,7 @@ struct efm32_pwm_private_s
 static error_t efm32_pwm_validate_parameter(struct device_pwm_s *pdev, struct dev_pwm_rq_s *rq)
 {
   struct efm32_pwm_private_s *pv  = pdev->dev->drv_pv;
-  struct dev_freq_s freq = rq->cfg[0]->freq;
+  struct dev_freq_s freq = rq->cfg[0].freq;
 
   /* A channel is configured before being started */
   if ((rq->chan_mask << pdev->number) & !pv->start)
@@ -79,9 +79,9 @@ static error_t efm32_pwm_validate_parameter(struct device_pwm_s *pdev, struct de
       if (!(rq->chan_mask & (1 << i)))
         continue;
 
-      const struct dev_pwm_config_s * cfg = rq->cfg[i];
+      const struct dev_pwm_config_s * cfg = &rq->cfg[i];
 
-      if (cfg->mask & DEV_PWM_MASK_FREQ)
+      if (rq->mask & DEV_PWM_MASK_FREQ)
         {
           freq_msk |= 1 << i;
           /* Error on shared parameter frequency */
@@ -188,9 +188,9 @@ static DEV_PWM_CONFIG(efm32_pwm_config)
       if (!(rq->chan_mask & (1 << i)))
         continue;
 
-      const struct dev_pwm_config_s * cfg = rq->cfg[i];
+      const struct dev_pwm_config_s * cfg = &rq->cfg[i];
 
-      if ((cfg->mask & DEV_PWM_MASK_FREQ) && !freq_done) 
+      if ((rq->mask & DEV_PWM_MASK_FREQ) && !freq_done) 
         {
           pv->pwm_freq.num = cfg->freq.num;
           pv->pwm_freq.denom = cfg->freq.denom;
@@ -205,7 +205,7 @@ static DEV_PWM_CONFIG(efm32_pwm_config)
 
       uint8_t channel = pdev->number + i;
 
-      if (cfg->mask & DEV_PWM_MASK_DUTY)
+      if (rq->mask & DEV_PWM_MASK_DUTY)
         {
           pv->duty[channel].num = cfg->duty.num;
           pv->duty[channel].denom = cfg->duty.denom;
@@ -215,7 +215,7 @@ static DEV_PWM_CONFIG(efm32_pwm_config)
             goto cfg_end;
         }
 
-      if (cfg->mask & DEV_PWM_MASK_POL)
+      if (rq->mask & DEV_PWM_MASK_POL)
         efm32_pwm_polarity(dev, channel, cfg->pol);
 
       if (!(pv->config & (1 << channel)))
