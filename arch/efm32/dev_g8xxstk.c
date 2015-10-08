@@ -20,22 +20,27 @@
 
 */
 
-#include <device/resources.h>
-#include <device/irq.h>
-#include <device/class/iomux.h>
-#include <device/class/clock.h>
-#include <device/class/dma.h>
+#if defined(CONFIG_DEVICE)
+# include <device/resources.h>
+# include <device/irq.h>
+# include <device/class/iomux.h>
+# include <device/class/clock.h>
+# include <device/class/dma.h>
+#endif
 
 #include <arch/efm32_irq.h>
 #include <arch/efm32_pin.h>
 #include <arch/efm32_clock.h>
 #include <arch/efm32_dma_source.h>
 
+#if defined(CONFIG_DRIVER_CPU_ARM32M)
+
 DEV_DECLARE_STATIC(cpu_dev, "cpu", DEVICE_FLAG_CPU, arm32m_drv,
                    DEV_STATIC_RES_ID(0, 0),
                    DEV_STATIC_RES_CLK_SRC("/recmu", EFM32_CLOCK_CPU, 0)
                    );
 
+#endif
 
 #ifdef CONFIG_DRIVER_EFM32_RECMU
 
