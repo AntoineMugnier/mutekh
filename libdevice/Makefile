@@ -18,8 +18,8 @@ objs-$(CONFIG_DEVICE_IRQ) += irq.o
 objs-$(CONFIG_DEVICE_TREE) += enum_root.o
 
 ifeq ($(CONFIG_DEVICE_CHAR), defined)
-objs-$(CONFIG_DEVICE_CHAR) += shell_char.o
-objs-$(CONFIG_DEVICE_CHAR) += device_char.o
+objs += device_char.o
+objs-$(CONFIG_DEVICE_SHELL) += shell_char.o
 endif
 
 ifeq ($(CONFIG_DEVICE_TIMER), defined)
