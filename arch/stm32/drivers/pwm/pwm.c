@@ -83,7 +83,7 @@ error_t stm32_pwm_validate(struct device_pwm_s *pdev,
   if ((rq->chan_mask << pdev->number) & ~pv->start)
     return -EINVAL;
 
-  struct dev_freq_s const *freq = &rq->cfg[0]->freq;
+  struct dev_freq_s const *freq = &rq->cfg[0].freq;
 
   uint8_t freq_mask = 0;
   uint8_t const max = STM32_PWM_CHANNEL_MAX - pdev->number;
@@ -93,8 +93,8 @@ error_t stm32_pwm_validate(struct device_pwm_s *pdev,
       if (!(rq->chan_mask & (1 << ci)))
         continue;
 
-      const struct dev_pwm_config_s *cfg = rq->cfg[ci];
-      if (cfg->mask & DEV_PWM_MASK_FREQ)
+      const struct dev_pwm_config_s *cfg = &rq->cfg[ci];
+      if (rq->mask & DEV_PWM_MASK_FREQ)
         {
           freq_mask |= 1 << ci;
 
@@ -198,8 +198,8 @@ DEV_PWM_CONFIG(stm32_pwm_config)
       if (!(rq->chan_mask & (1 << ci)))
         continue;
 
-      const struct dev_pwm_config_s *cfg = rq->cfg[ci];
-      if ((cfg->mask & DEV_PWM_MASK_FREQ) && !fdone)
+      struct dev_pwm_config_s const *cfg = &rq->cfg[ci];
+      if ((rq->mask & DEV_PWM_MASK_FREQ) && !fdone)
         {
           pv->freq.num   = cfg->freq.num;
           pv->freq.denom = cfg->freq.denom;
@@ -212,7 +212,7 @@ DEV_PWM_CONFIG(stm32_pwm_config)
         }
 
       uint8_t channel = pdev->number + ci;
-      if (cfg->mask & DEV_PWM_MASK_DUTY)
+      if (rq->mask & DEV_PWM_MASK_DUTY)
         {
           pv->duty[channel].num   = cfg->duty.num;
           pv->duty[channel].denom = cfg->duty.denom;
@@ -222,7 +222,7 @@ DEV_PWM_CONFIG(stm32_pwm_config)
             goto cfg_end;
         }
 
-      if(cfg->mask & DEV_PWM_MASK_POL)
+      if(rq->mask & DEV_PWM_MASK_POL)
         stm32_pwm_polarity(dev, channel, cfg->pol);
 
       if (!(pv->config & (1 << channel)))
