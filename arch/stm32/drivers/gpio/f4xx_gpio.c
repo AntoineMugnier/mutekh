@@ -296,10 +296,10 @@ error_t stm32_gpio_apply_alt_func(gpio_id_t io_id, uint8_t mux)
     return -ERANGE;
 
   uintptr_t a = STM32_GPIO_ADDR + STM32_GPIO_AFRL_ADDR(bank);
-  uint64_t  x = endian_le64_na_load(a);
+  uint64_t  x = endian_le64_na_load((void*)a);
   x = (x & ~(0xfULL << shift)) | (mux << shift);
   //printk("alt func id:%u f:%u\n", io_id, mux);
-  endian_le64_na_store(a, x);
+  endian_le64_na_store((void*)a, x);
 
   return 0;
 }
