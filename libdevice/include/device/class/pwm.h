@@ -184,16 +184,16 @@ DRIVER_CLASS_TYPES(pwm,
 
     If the configuration cannot be applied, the function returns an error code.
 
-    This function takes a list of device accessors along with associated
-    configurations. It may performs multiple calls to the @ref dev_pwm_config_t
-    function if multiple devices are involved.
+    @param pdev a pwm device accessor pointing to a pwm channel.
+    @param cfg  the configuration to apply to the pwm channel.
+    @param mask a bitmask defining which configuration fields to consider.
  */
 
 config_depend(CONFIG_DEVICE_PWM)
 
 #if defined(CONFIG_MUTEK_SCHEDULER)
 
-inline error_t dev_pwm_wait_config(struct device_pwm_s *pdev, const struct dev_pwm_config_s *cfg)
+inline error_t dev_pwm_wait_config(struct device_pwm_s *pdev, const struct dev_pwm_config_s *cfg, uint_fast8_t mask)
 {
      struct dev_request_status_s status;
 
@@ -202,6 +202,7 @@ inline error_t dev_pwm_wait_config(struct device_pwm_s *pdev, const struct dev_p
        .cfg = cfg,
        .chan_mask = 1,
        .error = 0,
+       .mask = mask,
      };
 
      dev_request_sched_init(&rq.base, &status);
@@ -214,7 +215,7 @@ inline error_t dev_pwm_wait_config(struct device_pwm_s *pdev, const struct dev_p
 }
 #endif
 
-inline error_t dev_pwm_spin_config(struct device_pwm_s *pdev, const struct dev_pwm_config_s *cfg)
+inline error_t dev_pwm_spin_config(struct device_pwm_s *pdev, const struct dev_pwm_config_s *cfg, uint_fast8_t mask)
 {
      struct dev_request_status_s status;
 
@@ -223,6 +224,7 @@ inline error_t dev_pwm_spin_config(struct device_pwm_s *pdev, const struct dev_p
        .cfg = cfg,
        .chan_mask = 1,
        .error = 0,
+       .mask = mask,
      };
 
      dev_request_spin_init(&rq.base, &status);

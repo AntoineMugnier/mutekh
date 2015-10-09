@@ -32,8 +32,8 @@
 const char dev_pwm_polarity_e[] = ENUM_DESC_DEV_PWM_POLARITY_E;
 
 
-extern inline error_t dev_pwm_spin_config(struct device_pwm_s *pdev, const struct dev_pwm_config_s *cfg);
+extern inline error_t dev_pwm_spin_config(struct device_pwm_s *pdev, const struct dev_pwm_config_s *cfg, uint_fast8_t mask);
 
 #if defined(CONFIG_MUTEK_SCHEDULER)
-extern inline error_t dev_pwm_wait_config(struct device_pwm_s *pdev, const struct dev_pwm_config_s *cfg);
+extern inline error_t dev_pwm_wait_config(struct device_pwm_s *pdev, const struct dev_pwm_config_s *cfg, uint_fast8_t mask);
 #endif

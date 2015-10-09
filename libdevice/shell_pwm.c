@@ -58,6 +58,8 @@ struct termui_optctx_dev_pwm_opts
     };
     struct dev_pwm_config_s   cfg;
   };
+
+  uint_fast8_t                mask;
 };
 
 static
@@ -74,21 +76,21 @@ TERMUI_CON_COMMAND_PROTOTYPE(dev_shell_pwm_config)
 {
   struct termui_optctx_dev_pwm_opts *data = ctx;
 
-  data->cfg.mask = 0;
+  data->mask = 0;
 
   if (used & PWM_OPT_FREQ)
-    data->cfg.mask |= DEV_PWM_MASK_FREQ;
+    data->mask |= DEV_PWM_MASK_FREQ;
 
   if (used & PWM_OPT_DUTY)
-    data->cfg.mask |= DEV_PWM_MASK_DUTY;
+    data->mask |= DEV_PWM_MASK_DUTY;
 
   if (used & PWM_OPT_POL)
-    data->cfg.mask |= DEV_PWM_MASK_POL;
+    data->mask |= DEV_PWM_MASK_POL;
 
 #if defined(CONFIG_MUTEK_SCHEDULER)
-  error_t err = dev_pwm_wait_config(&data->pwm, &data->cfg);
+  error_t err = dev_pwm_wait_config(&data->pwm, &data->cfg, data->mask);
 #else
-  error_t err = dev_pwm_spin_config(&data->pwm, &data->cfg);
+  error_t err = dev_pwm_spin_config(&data->pwm, &data->cfg, data->mask);
 #endif
 
   if (err)
