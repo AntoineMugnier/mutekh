@@ -1,6 +1,8 @@
 CPUCFLAGS=-fsigned-char -mflat -Wa,-Av9 -Usparc
 CPUTOOLS=sparc-unknown-elf-
 
+BCFLAGS+= -w 2
+
 ifeq ($(CONFIG_COMPILE_SOFTFLOAT), defined)
 CPUCFLAGS += -msoft-float
 endif

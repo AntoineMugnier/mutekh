@@ -341,7 +341,7 @@ sub out_laddr {
     my $res = fmt3( $thisop, $thisop->{width}, 0,
                     $thisop->{out}->[0] );
 
-    my $x = $thisop->{target}->{addr} - 1;
+    my $x = $thisop->{target}->{addr};
 
     if ( $thisop->{width} == 1 ) {
         $res .= word( $x );

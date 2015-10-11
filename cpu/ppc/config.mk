@@ -1,6 +1,8 @@
 CPUTOOLS=powerpc-unknown-elf-
 CPUCFLAGS=-mstrict-align -fsigned-char -G0
 
+BCFLAGS+= -w 2
+
 ifeq ($(CONFIG_COMPILE_SOFTFLOAT), defined)
 CPUCFLAGS += -msoft-float
 endif

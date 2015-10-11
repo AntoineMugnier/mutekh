@@ -114,8 +114,8 @@ static const char * bc_opname(uint16_t op)
     { 0xf900, BC_OP_STI   << 8, "sti" },
     { 0xfff0, BC_OP_CST  << 8, "gaddr" },
     { 0xf9f0, BC_OP_CST  << 8, "laddr" },
-    { 0xffff, BC_OP_CALL  << 8, "jmp32" },
-    { 0xfff0, BC_OP_CALL  << 8, "call32" },
+    { 0xffff, (BC_OP_CALL  << 8) | 0x10, "jmp32" },
+    { 0xfff0, (BC_OP_CALL  << 8) | 0x10, "call32" },
     { 0xf900, BC_OP_CST   << 8, "cst" },
     { 0xf900, BC_OP_STD   << 8, "std" },
     { 0xf900, BC_OP_LDE   << 8, "lde" },
@@ -168,7 +168,8 @@ void bc_dump(const struct bc_context_s *ctx, bool_t regs)
 typedef int16_t bs_dispatch_t;
 
 __attribute__((noinline))
-static uint_fast8_t bc_run_ldst(struct bc_context_s *ctx, uint16_t op)
+static uint_fast8_t bc_run_ldst(const struct bc_descriptor_s * __restrict__ desc,
+                                struct bc_context_s *ctx, uint16_t op)
 {
   dispatch_begin:;
   bc_reg_t *dst = &ctx->v[op & 0xf];
@@ -194,7 +195,10 @@ static uint_fast8_t bc_run_ldst(struct bc_context_s *ctx, uint16_t op)
     }
 
 #ifdef CONFIG_MUTEK_BYTECODE_CHECKING
-  if (addr < ctx->min_addr || addr > ctx->max_addr)
+  if ((addr < ctx->min_addr || addr > ctx->max_addr) && /* out of user range */
+      ((op & 4) ||                                      /* not a load */
+       (void*)addr < desc->code ||                 /* out of bytecode */
+       (uint16_t*)addr >= (uint16_t*)desc->code + desc->op_count))
     {
 # ifdef CONFIG_MUTEK_BYTECODE_DEBUG
       printk("bytecode: memory access out of range: [%p:%p] at pc=%p\n",
@@ -345,9 +349,10 @@ static uint_fast8_t bc_run_alu(struct bc_context_s *ctx, uint16_t op)
 
 bc_opcode_t bc_run_vm(struct bc_context_s *ctx, int_fast32_t max_cycles)
 {
+  const struct bc_descriptor_s * __restrict__ desc = ctx->desc;
   uint16_t op = 0;
 
-  if (ctx->desc->flags & BC_FLAGS_NATIVE)
+  if (desc->flags & BC_FLAGS_NATIVE)
     return 3;
 
   for (;; ctx->pc++)
@@ -498,7 +503,7 @@ bc_opcode_t bc_run_vm(struct bc_context_s *ctx, int_fast32_t max_cycles)
 	      uint_fast8_t c = (0x4212 >> ((op >> 7) & 0xc)) & 7;
 	      bc_reg_t x = 0;
 #ifdef CONFIG_MUTEK_BYTECODE_CHECKING
-	      if ((uint16_t*)ctx->desc->code + ctx->desc->op_count - c < ctx->pc)
+	      if ((uint16_t*)desc->code + desc->op_count - c < ctx->pc)
 		goto err_pc;
 #endif
 	      while (c--)
@@ -507,7 +512,7 @@ bc_opcode_t bc_run_vm(struct bc_context_s *ctx, int_fast32_t max_cycles)
                 {
                   x <<= ((op & 0x00e0) >> 2);
                   if (!(op & 0x0010))
-                    x = x * 2 + (uintptr_t)ctx->desc->code; /* BC_LADDR */
+                    x = x * 2 + (uintptr_t)desc->code; /* BC_LADDR */
                   *dst = x;
                   break;
                 }
@@ -515,21 +520,21 @@ bc_opcode_t bc_run_vm(struct bc_context_s *ctx, int_fast32_t max_cycles)
                 {
                   if (op & 0xf)
                     *dst = (bc_reg_t)ctx->pc;
-                  ctx->pc = (uint16_t*)ctx->desc->code + x;
+                  ctx->pc = (uint16_t*)desc->code + x;
                   goto check_pc;
                 }
 	    }
         }
 
       dispatch_ldst:
-	if (bc_run_ldst(ctx, op))
+	if (bc_run_ldst(desc, ctx, op))
 	  return 3;
 	break;
 
       check_pc:
 #ifdef CONFIG_MUTEK_BYTECODE_CHECKING
-        if (ctx->pc < (uint16_t*)ctx->desc->code ||
-            ctx->pc >= (uint16_t*)ctx->desc->code + ctx->desc->op_count ||
+        if (ctx->pc < (uint16_t*)desc->code ||
+            ctx->pc >= (uint16_t*)desc->code + desc->op_count ||
             ((uintptr_t)ctx->pc & 1))
           goto err_pc;
 #endif

@@ -1,5 +1,7 @@
 CPUTOOLS=mipsel-unknown-elf-
 
+BCFLAGS+= -w 2
+
 ifeq ($(CONFIG_CPU_MIPS_VERSION), 32)
 CPUCFLAGS=-mips32
   ifeq ($(CONFIG_MUTEK_BYTECODE_NATIVE), defined)

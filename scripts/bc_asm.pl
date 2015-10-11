@@ -6,7 +6,7 @@ our @src;
 our %labels;
 our %defs;
 our $backend_endian = "little";
-our $backend_width = 2;		# 8 << 2 bits
+our $backend_width = 0;		# 8 << 2 bits
 our $backend_name = "bytecode";
 our $bc_name = "mybytecode";
 our $fout = "bc.out";
@@ -25,28 +25,34 @@ BEGIN {
 
 while (defined $ARGV[0]) {
     my $opt = shift @ARGV;
-    if ($opt =~ /^-o(.*)/) {
+    if ($opt eq '-o') {
         $fout = shift @ARGV;
         next;
     }
-    if ($opt =~ /^-b(.*)/) {
+    if ($opt eq '-b') {
         $backend_name = shift @ARGV;
         next;
     }
-    if ($opt =~ /^-e(.*)/) {
+    if ($opt eq '-e') {
         $backend_endian = shift @ARGV;
         next;
     }
-    if ($opt =~ /^-n(.*)/) {
+    if ($opt eq '-n') {
         $bc_name = shift @ARGV;
         next;
     }
-    if ($opt =~ /^-p(.*)/) {
+    if ($opt eq '-p') {
         $modpath .= ':'.(shift @ARGV);
+        next;
+    }
+    if ($opt eq '-w') {
+        $backend_width = shift @ARGV;
         next;
     }
     die "bad command line option `$opt'\n";
 }
+
+die "missing -w option\n" if !$backend_width;
 
 sub log2
 {
@@ -767,7 +773,7 @@ our %asm = (
         parse => \&parse_cst, out => $backend->can('out_cst'),
     },
     'laddr16' => {
-        words => 3, code => 0x7200, argscnt => 2,
+        words => 2, code => 0x7200, argscnt => 2,
         parse => \&parse_laddr, out => $backend->can('out_laddr'),
     },
     'laddr32' => {

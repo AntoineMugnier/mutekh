@@ -1,5 +1,7 @@
 CPUTOOLS=arm-mutekh-eabi-
 
+BCFLAGS+= -w 2
+
 CPUCFLAGS= -fsigned-char -mabi=aapcs
 CPULDFLAGS=
 CPUASFLAGS=
