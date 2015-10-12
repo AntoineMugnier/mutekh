@@ -80,8 +80,8 @@ static DEV_INIT(soclib_xicu_init)
   struct soclib_xicu_private_s  *pv;
   uint_fast8_t i;
 
-  uintptr_t pti_count = 0;
 #ifdef CONFIG_DRIVER_SOCLIB_XICU_TIMER
+  uintptr_t pti_count = 0;
   device_get_param_uint_default(dev, "pti-count", &pti_count, 0);
 
 # ifdef CONFIG_DRIVER_SOCLIB_XICU_ICU
@@ -200,8 +200,8 @@ static DEV_CLEANUP(soclib_xicu_cleanup)
   struct soclib_xicu_private_s *pv = dev->drv_pv;
 
 #ifdef CONFIG_DRIVER_SOCLIB_XICU_ICU
-# ifdef CONFIG_DRIVER_SOCLIB_XICU_TIMER
   uint_fast8_t i;
+# ifdef CONFIG_DRIVER_SOCLIB_XICU_TIMER
   for (i = 0; i < pv->pti_count; i++)
     {
       struct soclib_xicu_pti_s *p = pv->pti + i;
