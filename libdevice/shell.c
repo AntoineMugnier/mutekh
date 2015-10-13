@@ -64,9 +64,9 @@ static void dev_console_opt_comp(struct termui_con_complete_ctx_s *cctx,
 {
   while (cctx->start < cctx->end && *cctx->start == '/')
     cctx->start++;
-  char *s = cctx->start;
 
 #ifdef CONFIG_DEVICE_TREE
+  char *s = cctx->start;
   struct device_node_s *root = device_tree_root();
 
   while (s < cctx->end)
