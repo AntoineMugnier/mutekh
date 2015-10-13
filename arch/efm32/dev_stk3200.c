@@ -137,7 +137,7 @@ DEV_DECLARE_STATIC(usart1_dev, "uart1", 0, efm32_usart_drv,
 
 
 
-#ifdef CONFIG_DRIVER_EFM32_LEUART
+#ifdef CONFIG_DRIVER_EFM32_LEUART_CHAR
 
 DEV_DECLARE_STATIC(leuart0_dev, "uart0", 0, efm32_leuart_drv,
                    DEV_STATIC_RES_MEM(0x40084000, 0x40084400),
