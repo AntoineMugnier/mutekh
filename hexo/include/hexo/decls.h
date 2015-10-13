@@ -99,16 +99,16 @@
 #  define config_depend_and2(token1, token2) \
   _CONFIG_DEPEND_AND2(#token1, #token2, _##token1, _##token2, , , )
 #  define config_depend_and2_alwaysinline(token1, token2, proto, ...) \
-  _CONFIG_DEPEND_AND2(#token1, #token2, _##token1, _##token2, ALWAYS_INLINE, proto, __VA_ARGS__)
+  _CONFIG_DEPEND_AND2(#token1, #token2, _##token1, _##token2, ALWAYS_INLINE, proto, __VA_ARGS__) ;
 #  define config_depend_and2_inline(token1, token2, proto, ...) \
-  _CONFIG_DEPEND_AND2(#token1, #token2, _##token1, _##token2, inline, proto, __VA_ARGS__)
+  _CONFIG_DEPEND_AND2(#token1, #token2, _##token1, _##token2, inline, proto, __VA_ARGS__) ;
 
 #  define config_depend_or2(token1, token2) \
   _CONFIG_DEPEND_OR2(#token1, #token2, _##token1, _##token2, , , )
 #  define config_depend_or2_alwaysinline(token1, token2, proto, ...) \
-  _CONFIG_DEPEND_OR2(#token1, #token2, _##token1, _##token2, ALWAYS_INLINE, proto, __VA_ARGS__)
+  _CONFIG_DEPEND_OR2(#token1, #token2, _##token1, _##token2, ALWAYS_INLINE, proto, __VA_ARGS__) ;
 #  define config_depend_or2_inline(token1, token2, proto, ...) \
-  _CONFIG_DEPEND_OR2(#token1, #token2, _##token1, _##token2, inline, proto, __VA_ARGS__)
+  _CONFIG_DEPEND_OR2(#token1, #token2, _##token1, _##token2, inline, proto, __VA_ARGS__) ;
 
 #ifndef STATIC_ASSERT
 #define STATIC_ASSERT(error, expr)                              \
