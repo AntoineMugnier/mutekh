@@ -301,30 +301,30 @@ DRIVER_CLASS_TYPES(gpio,
 
 /** Synchronous gpio device request function. This function use a
     busy wait loop during the request. @see dev_gpio_wait_rq */
-config_depend(CONFIG_DEVICE_GPIO)
-inline error_t dev_gpio_spin_rq(struct device_gpio_s *accessor,
-                                struct dev_gpio_rq_s *rq)
+config_depend_inline(CONFIG_DEVICE_GPIO,
+error_t dev_gpio_spin_rq(struct device_gpio_s *accessor,
+                         struct dev_gpio_rq_s *rq),
 {
   struct dev_request_status_s st;
   dev_request_spin_init(&rq->base, &st);
   DEVICE_OP(accessor, request, rq);
   dev_request_spin_wait(&st);
   return rq->error;
-}
+ })
 
 /** Synchronous gpio device request function. This function use the
     scheduler api to put the current context in wait state during the
     request. */
-config_depend_and2(CONFIG_DEVICE_GPIO, CONFIG_MUTEK_SCHEDULER)
-inline error_t dev_gpio_wait_rq(struct device_gpio_s *accessor,
-                                struct dev_gpio_rq_s *rq)
+config_depend_and2_inline(CONFIG_DEVICE_GPIO, CONFIG_MUTEK_SCHEDULER,
+error_t dev_gpio_wait_rq(struct device_gpio_s *accessor,
+                         struct dev_gpio_rq_s *rq),
 {
   struct dev_request_status_s st;
   dev_request_sched_init(&rq->base, &st);
   DEVICE_OP(accessor, request, rq);
   dev_request_sched_wait(&st);
   return rq->error;
-}
+})
 
 
 /** @This changes the mode of multiple GPIO pins. */
@@ -346,8 +346,9 @@ error_t device_gpio_map_set_mode(struct device_gpio_s *accessor,
 
     @see #DEV_STATIC_RES_GPIO
 */
-ALWAYS_INLINE error_t device_res_add_gpio(struct device_s *dev, const char *label,
-                                          gpio_id_t id, gpio_width_t width)
+config_depend_alwaysinline(CONFIG_DEVICE_GPIO,
+error_t device_res_add_gpio(struct device_s *dev, const char *label,
+                            gpio_id_t id, gpio_width_t width),
 {
 #ifdef CONFIG_DEVICE_GPIO
   struct dev_resource_s *r;
@@ -362,7 +363,7 @@ ALWAYS_INLINE error_t device_res_add_gpio(struct device_s *dev, const char *labe
 #else
   return -EINVAL;
 #endif
-}
+})
 
 #ifdef CONFIG_DEVICE_GPIO
 /** @This can be used to include a GPIO resource entry in a static

@@ -170,10 +170,9 @@ DRIVER_CLASS_TYPES(char,
     .f_request = prefix ## _request,                               \
   })
 
-
-inline ssize_t dev_char_spin_request(
-    const struct device_char_s *accessor,
-    struct dev_char_rq_s *rq)
+config_depend_inline(CONFIG_DEVICE_CHAR,
+ssize_t dev_char_spin_request(const struct device_char_s *accessor,
+                              struct dev_char_rq_s *rq),
 {
     struct dev_request_status_s status;
     ssize_t todo = rq->size;
@@ -185,13 +184,11 @@ inline ssize_t dev_char_spin_request(
     dev_request_spin_wait(&status);
 
     return rq->error ? rq->error : (todo - rq->size);
-}
+})
 
-#if defined(CONFIG_MUTEK_SCHEDULER)
-
-inline ssize_t dev_char_wait_request(
-    const struct device_char_s *accessor,
-    struct dev_char_rq_s *rq)
+config_depend_and2_inline(CONFIG_DEVICE_CHAR, CONFIG_MUTEK_SCHEDULER,
+ssize_t dev_char_wait_request(const struct device_char_s *accessor,
+                              struct dev_char_rq_s *rq),
 {
     struct dev_request_status_s status;
     ssize_t todo = rq->size;
@@ -203,7 +200,7 @@ inline ssize_t dev_char_wait_request(
     dev_request_sched_wait(&status);
 
     return rq->error ? rq->error : (todo - rq->size);
-}
+})
 
 /** Synchronous helper read function. This function uses the scheduler
     api to put current context in wait state if no data is available
@@ -212,10 +209,9 @@ inline ssize_t dev_char_wait_request(
 
     @returns transferred size or a negative error code
 */
-config_depend(CONFIG_DEVICE_CHAR)
-inline ssize_t dev_char_wait_read(
-    const struct device_char_s *accessor,
-    uint8_t *data, size_t size)
+config_depend_and2_inline(CONFIG_DEVICE_CHAR, CONFIG_MUTEK_SCHEDULER,
+ssize_t dev_char_wait_read(const struct device_char_s *accessor,
+                           uint8_t *data, size_t size),
 {
     struct dev_char_rq_s rq =
     {
@@ -225,7 +221,7 @@ inline ssize_t dev_char_wait_read(
     };
 
     return dev_char_wait_request(accessor, &rq);
-}
+})
 
 /** Synchronous helper write function. This function uses the scheduler
     api to put current context in wait state if no data is available
@@ -234,10 +230,9 @@ inline ssize_t dev_char_wait_read(
 
     @returns transferred size or a negative error code
 */
-config_depend(CONFIG_DEVICE_CHAR)
-inline ssize_t dev_char_wait_write(
-    const struct device_char_s *accessor,
-    const uint8_t *data, size_t size)
+config_depend_and2_inline(CONFIG_DEVICE_CHAR, CONFIG_MUTEK_SCHEDULER,
+ssize_t dev_char_wait_write(const struct device_char_s *accessor,
+                            const uint8_t *data, size_t size),
 {
     struct dev_char_rq_s rq =
     {
@@ -247,19 +242,16 @@ inline ssize_t dev_char_wait_write(
     };
 
     return dev_char_wait_request(accessor, &rq);
-}
-
-#endif
+})
 
 /** Synchronous helper read function. This function spins in a loop
     waiting for read operation to complete.
 
     @returns transferred size or a negative error code
 */
-config_depend(CONFIG_DEVICE_CHAR)
-inline ssize_t dev_char_spin_read(
-    const struct device_char_s *accessor,
-    uint8_t *data, size_t size)
+config_depend_inline(CONFIG_DEVICE_CHAR,
+ssize_t dev_char_spin_read(const struct device_char_s *accessor,
+                           uint8_t *data, size_t size),
 {
     struct dev_char_rq_s rq =
     {
@@ -269,17 +261,16 @@ inline ssize_t dev_char_spin_read(
     };
 
     return dev_char_spin_request(accessor, &rq);
-}
+})
 
 /** Synchronous helper write function. This function spins in a loop
     waiting for write operation to complete.
 
     @returns transferred size or a negative error code
 */
-config_depend(CONFIG_DEVICE_CHAR)
-inline ssize_t dev_char_spin_write(
-    const struct device_char_s *accessor,
-    const uint8_t *data, size_t size)
+config_depend_inline(CONFIG_DEVICE_CHAR,
+ssize_t dev_char_spin_write(const struct device_char_s *accessor,
+                            const uint8_t *data, size_t size),
 {
     struct dev_char_rq_s rq =
     {
@@ -289,6 +280,6 @@ inline ssize_t dev_char_spin_write(
     };
 
     return dev_char_spin_request(accessor, &rq);
-}
+})
 
 #endif

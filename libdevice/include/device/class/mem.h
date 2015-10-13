@@ -280,16 +280,16 @@ DRIVER_CLASS_TYPES(mem,
 
 /** Synchronous memory device operation function. This function use a
     busy wait loop during the request. @see dev_mem_wait_op */
-config_depend(CONFIG_DEVICE_MEM)
-inline error_t dev_mem_spin_op(struct device_mem_s *accessor,
-                               struct dev_mem_rq_s *rq)
+config_depend_inline(CONFIG_DEVICE_MEM,
+error_t dev_mem_spin_op(struct device_mem_s *accessor,
+                        struct dev_mem_rq_s *rq),
 {
   struct dev_request_status_s st;
   dev_request_spin_init(&rq->base, &st);
   DEVICE_OP(accessor, request, rq);
   dev_request_spin_wait(&st);
   return rq->err;
-}
+})
 
 /** Synchronous memory device operation function. This function use
     the scheduler api to put current context in wait state during the
@@ -299,16 +299,16 @@ inline error_t dev_mem_spin_op(struct device_mem_s *accessor,
     request, the @tt type, @tt band_mask, @tt page_count,
     @tt sc_log2 and @tt page_index fields must be initialized by the
     caller. */
-config_depend_and2(CONFIG_DEVICE_MEM, CONFIG_MUTEK_SCHEDULER)
-inline error_t dev_mem_wait_op(struct device_mem_s *accessor,
-                               struct dev_mem_rq_s *rq)
+config_depend_and2_inline(CONFIG_DEVICE_MEM, CONFIG_MUTEK_SCHEDULER,
+error_t dev_mem_wait_op(struct device_mem_s *accessor,
+                        struct dev_mem_rq_s *rq),
 {
   struct dev_request_status_s st;
   dev_request_sched_init(&rq->base, &st);
   DEVICE_OP(accessor, request, rq);
   dev_request_sched_wait(&st);
   return rq->err;
-}
+})
 
 /** @internal @This handles read/write operations to mapped memories
     using the @ref memcpy function. */
