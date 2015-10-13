@@ -79,14 +79,14 @@ static void iomux_init(void)
 
   //DIO3 as UART0 TX
   reg = 0;
-  CC26XX_IOC_IOCFG3_PORT_ID_SET(reg, UART0_TX);
-  CC26XX_IOC_IOCFG3_PULL_CTL_SET(reg, DIS);
-  reg &= ~CC26XX_IOC_IOCFG3_IE;
-  cpu_mem_write_32(CC26XX_IOC_BASE + CC26XX_IOC_IOCFG3_ADDR, reg);
+  CC26XX_IOC_IOCFG_PORT_ID_SET(reg, UART0_TX);
+  CC26XX_IOC_IOCFG_PULL_CTL_SET(reg, DIS);
+  reg &= ~CC26XX_IOC_IOCFG_IE;
+  cpu_mem_write_32(CC26XX_IOC_BASE + CC26XX_IOC_IOCFG_ADDR(3), reg);
 
   reg = cpu_mem_read_32(CC26XX_GPIO_BASE + CC26XX_GPIO_DOE31_0_ADDR);
   //enable DIO3 output
-  reg |= CC26XX_GPIO_DOE31_0_DIO3;
+  reg |= CC26XX_GPIO_DOE31_0_DIO(3);
   cpu_mem_write_32(CC26XX_GPIO_BASE + CC26XX_GPIO_DOE31_0_ADDR, reg);
 }
 
