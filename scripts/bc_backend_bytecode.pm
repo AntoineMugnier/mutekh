@@ -2,23 +2,29 @@
 package bc_backend_bytecode;
 
 use strict;
- 
+
+sub addr {
+    my $x = shift;
+    return "    .".(1 << $main::backend_width)."byte $x\n";
+}
+
 sub out_begin {
     my ( $b, $opcount ) = @_;
     return "    .section .rodata,\"a\"\n".
            "    .globl $main::bc_name\n".
+           "    .balign ".(1 << $main::backend_width)."\n".
            "$main::bc_name:\n".
 	   # struct bc_descriptor_s
-	   "    .short 0x0000\n".
-	   "    .short $opcount\n".
-	   "    .long _$main::bc_name\n".
-	   "    .long bc_run_vm\n".
+	   addr( "_".$main::bc_name ).
+	   addr( "bc_run_vm" ).
+	   "    .2byte 0x0000\n".
+	   "    .2byte $opcount\n".
 	   "_$main::bc_name:\n";
 }
 
 sub out_eof {
-    return "    .hword 0\n". # end op
-	   "    .hword 0\n". # end op
+    return "    .2byte 0\n". # end op
+	   "    .2byte 0\n". # end op
 	   "    .size $main::bc_name, . - $main::bc_name\n";
 }
 
@@ -26,7 +32,6 @@ sub word
 {
     my ($w) = @_;
     return sprintf("    .balign 2 ; .byte 0x%02x ; .byte 0x%02x ;", $w & 0xff, ($w >> 8) & 0xff);
-#    return sprintf(" .hword %u ;", $w & 0xffff);
 }
 
 sub out_custom {
@@ -359,7 +364,7 @@ sub out_gaddr {
     my ($thisop) = @_;
 
     return fmt3( $thisop, 0, 0, $thisop->{out}->[0] ).
-           "    .long $thisop->{args}->[1] ;";
+           addr( $thisop->{args}->[1] );
 }
 
 sub out_data {

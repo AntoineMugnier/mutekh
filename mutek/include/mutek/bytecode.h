@@ -210,10 +210,10 @@ typedef reg_t (bc_run_t)(struct bc_context_s *ctx, int_fast32_t max_cycles);
 /** @This is the bytecode descriptor header */
 struct bc_descriptor_s
 {
-  uint16_t flags;
-  uint16_t op_count;
   const void *code;
   bc_run_t *run;
+  uint16_t flags;
+  uint16_t op_count;
 };
 
 /** @This defines the virtual machine context. */

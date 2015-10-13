@@ -13,11 +13,11 @@ sub out_begin {
 	   "    .globl $main::bc_name\n".
            "$main::bc_name:\n".
 	   # struct bc_descriptor_s
+	   "    .long 1f\n".
+	   "    .long _$main::bc_name\n".
 	   "    .byte 0x01\n".
 	   "    .byte 16\n".
 	   "    .short 0\n".
-	   "    .long 1f\n".
-	   "    .long _$main::bc_name\n".
 
            "    .section .text\n".
            "    .code 16\n".

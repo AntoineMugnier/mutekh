@@ -11,10 +11,10 @@ sub out_begin {
 	   "    .globl $main::bc_name\n".
            "$main::bc_name:\n".
 	   # struct bc_descriptor_s
-	   "    .short 0x0001\n".
-	   "    .short 0\n".
 	   "    .long 1f\n".
 	   "    .long _$main::bc_name\n".
+	   "    .short 0x0001\n".
+	   "    .short 0\n".
            "    .section .text,\"ax\",\@progbits\n".
            "    .set noat\n".
            "    .globl _$main::bc_name\n".
