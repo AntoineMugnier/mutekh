@@ -24,7 +24,6 @@
 #include <hexo/cpu.h>
 
 #include <cpu/arm_v7m.h>
-#include "driver.h"
 
 #ifdef CONFIG_SOCLIB_MEMCHECK
 # include <arch/mem_checker.h>

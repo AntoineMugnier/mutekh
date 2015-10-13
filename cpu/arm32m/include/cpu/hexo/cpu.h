@@ -82,5 +82,16 @@ ALWAYS_INLINE size_t cpu_dcache_line_size()
   return 0;
 }
 
+/* number of 32 bytes sub region of the MPU needed to cover
+   CONFIG_CPU_ARM32M_MPU_STACK_GUARD_SIZE bytes */
+#define ARM_M_STACK_GUARD_MPU_SUBREGION_COUNT \
+  (CONFIG_CPU_ARM32M_MPU_STACK_GUARD_SIZE / 32)
+
+/* number of region slots of the MPU needed to cover
+   CONFIG_CPU_ARM32M_MPU_STACK_GUARD_SIZE bytes, taking overlapping into
+   account. */
+#define ARM_M_STACK_GUARD_MPU_REGION_COUNT \
+  ((CONFIG_CPU_ARM32M_MPU_STACK_GUARD_SIZE / 32 + 6) / 8 + 1)
+
 #endif
 

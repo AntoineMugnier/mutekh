@@ -80,17 +80,6 @@ extern DEV_USE(arm_timer_systick_use);
 extern DEV_TIMER_GET_VALUE(arm_timer_get_value);
 extern DEV_TIMER_CONFIG(arm_timer_config);
 
-/* number of 32 bytes sub region of the MPU needed to cover
-   CONFIG_CPU_ARM32M_MPU_STACK_GUARD_SIZE bytes */
-#define ARM_M_STACK_GUARD_MPU_SUBREGION_COUNT \
-  (CONFIG_CPU_ARM32M_MPU_STACK_GUARD_SIZE / 32)
-
-/* number of region slots of the MPU needed to cover
-   CONFIG_CPU_ARM32M_MPU_STACK_GUARD_SIZE bytes, taking overlapping into
-   account. */
-#define ARM_M_STACK_GUARD_MPU_REGION_COUNT \
-  ((CONFIG_CPU_ARM32M_MPU_STACK_GUARD_SIZE / 32 + 6) / 8 + 1)
-
 #define ARM_M_SYSTICK_MIN_PERIOD            10000
 
 #define ARM_M_DWT_CTRL_ADDR                 0xe0001000
