@@ -31,6 +31,8 @@
 
 CONTEXT_LOCAL cpu_x86_segsel_t context_tls_seg;
 CONTEXT_LOCAL struct cpu_context_s x86_context;
+/** pointer to context local storage */
+CONTEXT_LOCAL void *__context_data_base;
 
 #ifdef CONFIG_HEXO_USERMODE
 /* current context local storage segment descriptor, used to restore

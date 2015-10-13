@@ -6,6 +6,8 @@
 #include <hexo/context.h>
 #include <hexo/interrupt.h>
 
+CPU_LOCAL void *__context_data_base;
+
 #ifdef CONFIG_HEXO_CONTEXT_NESTED
 CONTEXT_LOCAL struct cpu_context_s mips_context_regs[CONFIG_HEXO_CONTEXT_NESTED_COUNT];
 CONTEXT_LOCAL struct cpu_context_s *mips_context_regs_ptr;

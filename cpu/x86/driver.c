@@ -132,8 +132,6 @@ CPU_LOCAL struct device_s *cpu_device = NULL;
 
 /** pointer to cpu local storage */
 CPU_LOCAL void *__cpu_data_base;
-/** pointer to context local storage */
-CONTEXT_LOCAL void *__context_data_base;
 
 static DEV_CPU_REG_INIT(x86_cpu_reg_init)
 {

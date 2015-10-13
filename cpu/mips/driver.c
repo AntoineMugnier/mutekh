@@ -42,8 +42,6 @@
 # include <arch/mem_checker.h>
 #endif
 
-CPU_LOCAL void *__context_data_base;
-
 struct mips_dev_private_s
 {
 #ifdef CONFIG_DEVICE_IRQ

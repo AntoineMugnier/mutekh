@@ -25,6 +25,7 @@
 #include <hexo/context.h>
 
 CONTEXT_LOCAL struct cpu_context_s x86emu_context;
+CPU_LOCAL void *__context_data_base;
 
 error_t
 cpu_context_bootstrap(struct context_s *context)
