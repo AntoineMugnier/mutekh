@@ -38,9 +38,6 @@
 #include <mutek/mem_alloc.h>
 #include <mutek/printk.h>
 
-/** pointer to context local storage in cpu local storage */
-CPU_LOCAL void *__context_data_base;
-
 struct nios2_dev_private_s
 {
 #ifdef CONFIG_DEVICE_IRQ

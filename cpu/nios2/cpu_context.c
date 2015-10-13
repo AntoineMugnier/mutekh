@@ -27,6 +27,9 @@
 #include <hexo/context.h>
 #include <hexo/interrupt.h>
 
+/** pointer to context local storage in cpu local storage */
+CPU_LOCAL void *__context_data_base;
+
 CONTEXT_LOCAL struct cpu_context_s nios2_context_regs;
 
 error_t

@@ -37,7 +37,6 @@
 #include <mutek/mem_alloc.h>
 #include <mutek/printk.h>
 
-CPU_LOCAL void *__context_data_base;
 CPU_LOCAL void *__cpu_data_base;
 
 #define ICU_X86_EMU_MAX_VECTOR 1
