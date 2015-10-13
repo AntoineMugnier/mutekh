@@ -1,16 +1,16 @@
 /*
     This file is part of MutekH.
-    
+
     MutekH is free software; you can redistribute it and/or modify it
     under the terms of the GNU Lesser General Public License as
     published by the Free Software Foundation; version 2.1 of the
     License.
-    
+
     MutekH is distributed in the hope that it will be useful, but
     WITHOUT ANY WARRANTY; without even the implied warranty of
     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
     Lesser General Public License for more details.
-    
+
     You should have received a copy of the GNU Lesser General Public
     License along with MutekH; if not, write to the Free Software
     Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
@@ -43,7 +43,7 @@ TERMUI_CON_PARSE_OPT_PROTOTYPE(dev_console_opt_device_parse)
 
   if (device_get_by_path(devp, argv[0], optd->filter))
     return -ECANCELED;
-  return 0;    
+  return 0;
 }
 
 TERMUI_CON_PARSE_OPT_PROTOTYPE(dev_console_opt_accessor_parse)
@@ -71,7 +71,7 @@ static void dev_console_opt_comp(struct termui_con_complete_ctx_s *cctx,
 
   while (s < cctx->end)
     {
-    next:      
+    next:
       if (*s == '/' || *s == '[')
         {
           size_t len = s - cctx->start;
@@ -344,7 +344,7 @@ dev_shell_dump_device(struct termui_console_s *con, struct device_s *dev, uint_f
           termui_con_printf(con, "  IO `%s' muxing: demux %u, id %u, mux %u, config %x\n",
                  r->u.iomux.label, r->u.iomux.demux,
                  r->u.iomux.io_id, r->u.iomux.mux, r->u.iomux.config);
-          break;          
+          break;
         }
 #endif
 #ifdef CONFIG_DEVICE_CLOCK
@@ -380,7 +380,7 @@ dev_shell_dump_device(struct termui_console_s *con, struct device_s *dev, uint_f
         }
 
         case DEV_RES_CLOCK_SRC: {
-          termui_con_printf(con, 
+          termui_con_printf(con,
             "  Clock source `%s': src %u, sink %u\n",
             r->u.clock_src.src, r->u.clock_src.src_ep, r->u.clock_src.sink_ep
           );
@@ -390,7 +390,7 @@ dev_shell_dump_device(struct termui_console_s *con, struct device_s *dev, uint_f
 #ifdef CONFIG_DEVICE_UART
         case DEV_RES_UART: {
           static const char uart_parity[] = "NOE";
-          termui_con_printf(con, 
+          termui_con_printf(con,
             "  UART: %d baud, %d-%c-%d"
               "%s%s\n",
             r->u.uart.baudrate,
