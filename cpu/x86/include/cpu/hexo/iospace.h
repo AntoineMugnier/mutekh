@@ -116,7 +116,7 @@ cpu_mem_write_8(uintptr_t addr, uint8_t data)
   __asm__ volatile (
 		    "movb	%1,	%0	\n"
 		    : "=m" (*(uint8_t*)addr)
-		    : "r" (data)
+		    : "q" (data)
 		    );
 }
 
@@ -127,7 +127,7 @@ cpu_mem_read_8(uintptr_t addr)
 
   __asm__ volatile (
 		    "movb	%1,	%0	\n"
-		    : "=r" (data)
+		    : "=q" (data)
 		    : "m" (*(uint8_t*)addr)
 		    );
 
