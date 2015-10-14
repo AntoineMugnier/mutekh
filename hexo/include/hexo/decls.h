@@ -92,9 +92,9 @@
 #  define config_depend(token) \
   _CONFIG_DEPEND(#token, _##token, , , )
 #  define config_depend_alwaysinline(token, proto, ...) \
-  _CONFIG_DEPEND(#token, _##token, ALWAYS_INLINE, proto, __VA_ARGS__)
+  _CONFIG_DEPEND(#token, _##token, ALWAYS_INLINE, proto, __VA_ARGS__) ;
 #  define config_depend_inline(token, proto, ...) \
-  _CONFIG_DEPEND(#token, _##token, inline, proto, __VA_ARGS__)
+  _CONFIG_DEPEND(#token, _##token, inline, proto, __VA_ARGS__) ;
 
 #  define config_depend_and2(token1, token2) \
   _CONFIG_DEPEND_AND2(#token1, #token2, _##token1, _##token2, , , )
