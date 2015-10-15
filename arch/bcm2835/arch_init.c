@@ -40,16 +40,23 @@ void bcm2835_mem_init()
 
 /////////////////////////////////////////////////////////////////////
 
+# ifdef CONFIG_DEVICE
 # include <device/driver.h>
 # include <device/resources.h>
 # include <device/device.h>
 # include <device/irq.h>
 # include <device/class/iomux.h>
-# include <arch/bcm2835_gpio.h>
+#endif
+
+#include <arch/bcm2835_gpio.h>
+
+#ifdef CONFIG_DRIVER_CPU_ARM32
 
 DEV_DECLARE_STATIC(cpu_dev, "cpu", DEVICE_FLAG_CPU, arm32_drv,
                    DEV_STATIC_RES_ID(0, 0)
                    );
+
+#endif
 
 #ifdef CONFIG_DRIVER_BCM2835_ICU
 
