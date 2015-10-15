@@ -1,4 +1,4 @@
-objs = arch_init.o
+objs = arch_init.o power.o
 objs-$(CONFIG_MUTEK_PRINTK_HANDLER) += early_console.o
 
 ifeq ($(findstring RASPBERRY_,$(CONFIG_ARCH_BCM2835_BOARD)), RASPBERRY_)
