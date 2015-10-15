@@ -21,11 +21,6 @@
 
 */
 
-#include <mutek/startup.h>
-
-#include <string.h>
-
-
 /////////////////////////////////////////////////////////////////////
 
 #include <mutek/mem_alloc.h>
