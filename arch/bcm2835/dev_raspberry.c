@@ -21,12 +21,15 @@
 
 */
 
+#ifdef CONFIG_DEVICE
 # include <device/driver.h>
 # include <device/resources.h>
 # include <device/device.h>
 # include <device/irq.h>
 # include <device/class/iomux.h>
-# include <arch/bcm2835_gpio.h>
+#endif
+
+#include <arch/bcm2835_gpio.h>
 
 #define RASPBERRY_B1     1
 #define RASPBERRY_A2     2
