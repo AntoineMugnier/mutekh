@@ -21,20 +21,21 @@
 
 */
 
-#include <mutek/startup.h>
-
-/////////////////////////////////////////////////////////////////////
-
+#if defined(CONFIG_DEVICE)
 # include <device/driver.h>
 # include <device/device.h>
 # include <device/resources.h>
 # include <device/irq.h>
 # include <device/class/cpu.h>
+#endif
+
+#ifdef CONFIG_DRIVER_CPU_ARM32
 
 DEV_DECLARE_STATIC(mpcore_dev, "mpcore0", 0, a9mpcore_drv,
                    DEV_STATIC_RES_MEM(0xf8f00000, 0xf8f02000)
                    );
 
+#endif
 
 #ifdef CONFIG_DRIVER_CHAR_CADENCE_UART
 
