@@ -1,3 +1,4 @@
+#include <mutek/startup.h>
 
 #include <lua/lauxlib.h>
 #include <lua/lua.h>
@@ -112,7 +113,7 @@ void* lua_main(void *unused)
 
 void *joystick_main(void *unused);
 
-void app_start()
+void app_start(void)
 {
 	cpu_interrupt_enable();
 

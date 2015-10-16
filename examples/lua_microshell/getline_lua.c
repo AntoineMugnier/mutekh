@@ -15,6 +15,8 @@
 #include <lua/lauxlib.h>
 #include <lua/lua.h>
 
+#include <mutek/startup.h>
+
 #include <termui/term.h>
 #include <termui/getline.h>
 
@@ -160,7 +162,7 @@ void* shell(void *param)
 }
 
 
-void app_start()
+void app_start(void)
 {
     pthread_create(&a, NULL, shell, NULL);
 }

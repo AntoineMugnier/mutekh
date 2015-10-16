@@ -1,6 +1,7 @@
 
 #include <mutek/printk.h>
 #include <mutek/scheduler.h>
+#include <mutek/startup.h>
 
 struct sched_context_s ca;
 struct sched_context_s cb;
@@ -26,7 +27,7 @@ static CONTEXT_ENTRY(fb)
 unsigned char sa[1024];
 unsigned char sb[1024];
 
-void app_start()
+void app_start(void)
 {
   context_init(&ca.context, sa, sa + 1024, fa, 0);
   sched_context_init(&ca);

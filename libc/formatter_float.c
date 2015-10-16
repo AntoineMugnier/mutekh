@@ -19,7 +19,7 @@
 */
 
 #include <stdlib.h>
-//#include <math.h>
+#include <libc/formatter.h>
 
 /* convert double to string.  Helper for sprintf. */
 

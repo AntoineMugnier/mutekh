@@ -1,4 +1,4 @@
-
+#include <mutek/startup.h>
 #include <mutek/printk.h>
 #include <mutek/bytecode.h>
 
@@ -13,7 +13,7 @@ static BC_CCALL_FUNCTION(c_func)
 
 extern const struct bc_descriptor_s test_bytecode;
 
-void app_start()
+void app_start(void)
 {
   struct bc_context_s vm;
   char buf[128] = "testbarx";

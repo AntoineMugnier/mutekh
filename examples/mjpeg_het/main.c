@@ -1,4 +1,4 @@
-
+#include <mutek/startup.h>
 #include <pthread.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -124,7 +124,7 @@ static void *run_task(srl_task_s *task)
 
 static volatile reg_t start = 0;
 
-int app_start()
+int app_start(void)
 {
   /* every processor execute the app_start function due to CONFIG_MUTEK_SMP_APP_START */
 

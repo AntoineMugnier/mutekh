@@ -205,6 +205,7 @@ DRIVER_DECLARE(pl390_icu_drv, 0, "PL390 ARM generic interrupts controller", pl39
 DRIVER_REGISTER(pl390_icu_drv,
                 DEV_ENUM_FDTNAME_ENTRY("pl390"));
 
+static
 void pl390_icu_cpu_init(struct device_s *dev)
 {
   struct pl390_icu_private_s  *pv = dev->drv_pv;

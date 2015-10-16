@@ -24,6 +24,7 @@
 #include <hexo/iospace.h>
 
 #include <mutek/printk.h>
+#include <mutek/startup.h>
 
 #include <arch/efm32_usart.h>
 #include <arch/efm32_gpio.h>

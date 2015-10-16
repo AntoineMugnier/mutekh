@@ -56,6 +56,7 @@ struct tty_soclib_context_s
 #define TTY_SOCLIB_REG_STATUS	4
 #define TTY_SOCLIB_REG_READ	8
 
+static
 void tty_soclib_try_read(struct device_s *dev)
 {
   struct tty_soclib_context_s	*pv = dev->drv_pv;

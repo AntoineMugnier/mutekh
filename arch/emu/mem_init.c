@@ -22,6 +22,7 @@
 
 #include <mutek/mem_alloc.h>
 #include <mutek/memory_allocator.h>
+#include <mutek/startup.h>
 
 #if defined(CONFIG_MUTEK_MEM_REGION)
 #include <mutek/mem_region.h>

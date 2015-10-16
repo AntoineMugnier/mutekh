@@ -1,4 +1,4 @@
-
+#include <mutek/startup.h>
 #include <vfs/vfs.h>
 #include <libvfs/fs/ramfs/ramfs.h>
 
@@ -52,7 +52,7 @@ bool_t do_read()
     return 0;
 }
 
-void app_start()
+void app_start(void)
 {
     vfs_init();
 

@@ -1,3 +1,4 @@
+#include <mutek/startup.h>
 #include <stdio.h>
 #include <mutek/printk.h>
 #include <mutek/mem_alloc.h>
@@ -99,7 +100,7 @@ void *_main(void *root_ptr)
 	return NULL;
 }
 
-void app_start()
+void app_start(void)
 {
 	root = vfs_init();
 

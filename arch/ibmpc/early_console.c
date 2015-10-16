@@ -25,6 +25,7 @@
 #include <hexo/iospace.h>
 #include <hexo/ordering.h>
 #include <mutek/printk.h>
+#include <mutek/startup.h>
 #include <string.h>
 
 static lock_t early_console_lock;
@@ -88,7 +89,7 @@ static PRINTF_OUTPUT_FUNC(early_console_output)
   lock_release(&early_console_lock);
 }
 
-void ibmpc_early_console_init()
+void ibmpc_early_console_init(void)
 {
   lock_init(&early_console_lock);
   printk_set_output(early_console_output, NULL);

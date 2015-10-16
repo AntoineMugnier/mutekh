@@ -37,6 +37,7 @@
 /*                                                                       */
 /*************************************************************************/
 
+#include <mutek/startup.h>
 #include <mutek/printk.h>
 //#include <stdio.h>
 //#include <math.h>
@@ -121,7 +122,7 @@ static void test_sort(int final);
 static void printout(void);
 static volatile int start = 0;
 
-void app_start()
+void app_start(void)
 {
   int i;
   int p;

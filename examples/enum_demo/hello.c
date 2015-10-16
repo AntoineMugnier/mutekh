@@ -1,3 +1,4 @@
+#include <mutek/startup.h>
 
 #include <pthread.h>
 #include <mutek/printk.h>
@@ -31,7 +32,7 @@ static void dump_enumerator(struct device_s *root, uint_fast8_t prefix)
 }
 #endif
 
-void app_start()
+void app_start(void)
 {
 #ifdef CONFIG_DRIVER_ENUM_ROOT
 	dump_enumerator(&enum_root, 0);

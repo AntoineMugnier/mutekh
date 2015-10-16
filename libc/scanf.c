@@ -139,6 +139,7 @@ enum scanf_flags_e
   flag_intmax_t  = flag_64bits,
 };
 
+static
 ssize_t __scanf(void *ctx, scanf_input_func_t *in,
                 scanf_unget_func_t *un,
                 const char *fmt, va_list ap)

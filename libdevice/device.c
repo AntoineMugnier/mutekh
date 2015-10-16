@@ -32,6 +32,7 @@
 #include <enums.h>
 
 #include <mutek/mem_alloc.h>
+#include <mutek/startup.h>
 
 const char dev_pin_driving_e[] = ENUM_DESC_DEV_PIN_DRIVING_E;
 const char device_status_e[] = ENUM_DESC_DEVICE_STATUS_E;
@@ -50,7 +51,7 @@ struct device_node_s *device_tree_root()
 GCT_CONTAINER_PROTOTYPES(device_list, extern inline, device_list,
                          init, destroy, pushback, remove, isempty);
 
-void device_tree_init()
+void device_tree_init(void)
 {
   /* attach statically declared devices in the device tree */
 

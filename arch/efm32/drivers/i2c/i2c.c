@@ -270,7 +270,7 @@ static void efm32_i2c_fsm(struct efm32_i2c_context_s *pv, bool_t stop)
 
 /***************************************** config */
 
-DEV_I2C_CONFIG(efm32_i2c_config)
+static DEV_I2C_CONFIG(efm32_i2c_config)
 {
   struct device_s               *dev = accessor->dev;
   struct efm32_i2c_context_s    *pv  = dev->drv_pv;
@@ -345,7 +345,7 @@ static DEV_IRQ_SRC_PROCESS(efm32_i2c_irq)
     }
 }
 
-DEV_I2C_REQUEST(efm32_i2c_request)
+static DEV_I2C_REQUEST(efm32_i2c_request)
 {
   struct device_s               *dev = accessor->dev;
   struct efm32_i2c_context_s    *pv  = dev->drv_pv;

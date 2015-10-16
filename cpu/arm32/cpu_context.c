@@ -78,7 +78,7 @@ cpu_context_destroy(struct context_s *context)
 __attribute__((noreturn))
 extern void arm_context_jumpto_back();
 
-void arm_except_preempt()
+static void arm_except_preempt()
 {
     void arm_context_jumpto_fast();
 
@@ -105,6 +105,8 @@ extern CONTEXT_LOCAL cpu_exception_handler_t  *cpu_user_exception_handler;
 #endif
 
 extern CPU_LOCAL cpu_exception_handler_t  *cpu_exception_handler;
+
+void arm_exc_common(reg_t no, struct cpu_context_s *context);
 
 void arm_exc_common(reg_t no, struct cpu_context_s *context)
 {

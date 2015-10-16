@@ -196,7 +196,7 @@ static void pl011uart_try_write(struct device_s *dev)
   pv->write_started = 0;
 }
 
-DEV_CHAR_REQUEST(pl011uart_request)
+static DEV_CHAR_REQUEST(pl011uart_request)
 {
   struct device_s               *dev = accessor->dev;
   struct pl011uart_context_s	*pv = dev->drv_pv;

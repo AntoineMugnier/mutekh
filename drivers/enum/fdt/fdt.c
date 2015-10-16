@@ -485,7 +485,7 @@ static FDT_ON_MEM_RESERVE_FUNC(enum_fdt_mem_reserve)
 }
 
 
-DEV_ENUM_MATCH_DRIVER(enum_fdt_match_driver)
+static DEV_ENUM_MATCH_DRIVER(enum_fdt_match_driver)
 {
   size_t i;
 

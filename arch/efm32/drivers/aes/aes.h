@@ -104,6 +104,10 @@ void efm32_aes_ocb_decrypt(struct efm32_aes_context_s * __restrict__ actx,
                            struct dev_crypto_rq_s * __restrict__ rq,
                            const uint8_t * __restrict__ key);
 
+void efm32_aes_ocb_hash(struct efm32_aes_context_s * __restrict__ actx,
+                        struct dev_crypto_rq_s * __restrict__ rq, const uint8_t *key,
+                        uint32_t tag[4]);
+
 void efm32_aes_ecb(struct efm32_aes_context_s * __restrict__ actx,
                    struct dev_crypto_rq_s *rq, const uint8_t *key);
 

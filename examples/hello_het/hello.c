@@ -1,4 +1,4 @@
-
+#include <mutek/startup.h>
 #include <pthread.h>
 #include <mutek/printk.h>
 
@@ -16,7 +16,7 @@ void *f(void *param)
     }
 }
 
-void app_start()
+void app_start(void)
 {
   /* every processor execute the app_start function due to CONFIG_MUTEK_SMP_APP_START */
 

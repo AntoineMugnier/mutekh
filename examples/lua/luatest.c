@@ -1,6 +1,7 @@
 
 #include <lua/lua.h>
 #include <lua/lauxlib.h>
+#include <mutek/startup.h>
 
 lua_State	*ls;
 
@@ -26,7 +27,7 @@ int cmd_print(lua_State *st)
   return 0;
 }
 
-void app_start()
+void app_start(void)
 {
   const char	*cmd = "for i = 1, 6, 1 do print (\"coucou\", i); end";
 

@@ -1,3 +1,4 @@
+#include <mutek/startup.h>
 
 #include <drivers/char/random/random.h>
 #include <drivers/char/null/null.h>
@@ -8,7 +9,7 @@
 
 struct device_s random_dev, zero_dev, null_dev;
 
-void app_start()
+void app_start(void)
 {
   uint8_t buf[256];
 

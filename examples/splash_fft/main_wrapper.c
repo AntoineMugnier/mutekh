@@ -1,4 +1,4 @@
-
+#include <mutek/startup.h>
 #include <pthread.h>
 #include <unistd.h>
 #include <stdlib.h>
@@ -8,7 +8,8 @@ pthread_t PThreadWrapper;
 
 extern int main(void);
 
-void app_start(){
+void app_start(void)
+{
   if (cpu_id() == 0)
     {
       pthread_create(&PThreadWrapper, NULL, (void * (*)(void *))(main),NULL);

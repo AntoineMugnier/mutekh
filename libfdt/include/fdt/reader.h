@@ -248,4 +248,8 @@ bool_t fdt_reader_get_prop_int(const struct fdt_walker_state_s *state,
 	return 0;
 }
 
+error_t fdt_get_prop_at(const void *blob, uint32_t offset,
+                        const char *propname,
+                        const void **data, size_t *datasize);
+
 #endif

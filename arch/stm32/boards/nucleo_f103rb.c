@@ -118,6 +118,7 @@ DEV_DECLARE_STATIC(btn0_dev, "btn0", 0, push_button_drv,
 #include <hexo/endian.h>
 #include <hexo/iospace.h>
 #include <arch/stm32f1xx_rcc.h>
+#include <mutek/startup.h>
 
 #define __IO volatile
 
@@ -137,7 +138,7 @@ struct stm32f1xx_flash_dev_s
 #define STM32_FLASH_LAT_WS(n)   ((n) & 0x7)
 
 /* Set the frequency to the maximam valid frequency (84MHz). */
-void stm32_clock_init()
+void stm32_clock_init(void)
 {
   uint32_t x;
 

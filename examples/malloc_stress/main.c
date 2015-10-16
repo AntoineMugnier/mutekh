@@ -1,4 +1,4 @@
-
+#include <mutek/startup.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -53,6 +53,7 @@ static void hash_check(const void *data, size_t len, const uint8_t *hash)
   }
 }
 
+static
 void * thread(void *id_)
 {
   size_t id = (size_t)id_;
@@ -162,7 +163,7 @@ void * thread(void *id_)
 
 pthread_t threads[THREAD_COUNT];
 
-void app_start()
+void app_start(void)
 {
   size_t i;
 

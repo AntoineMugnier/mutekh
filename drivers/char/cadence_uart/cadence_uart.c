@@ -191,7 +191,7 @@ static void cadence_uart_try_write(struct device_s *dev)
   pv->write_started = 0;
 }
 
-DEV_CHAR_REQUEST(cadence_uart_request)
+static DEV_CHAR_REQUEST(cadence_uart_request)
 {
   struct device_s               *dev = accessor->dev;
   struct cadence_uart_context_s	*pv = dev->drv_pv;

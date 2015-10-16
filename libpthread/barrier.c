@@ -28,6 +28,7 @@
 #include <pthread.h>
 #include <assert.h>
 
+static
 error_t _pthread_barrier_normal_init(pthread_barrier_t *barrier, unsigned count)
 {
     barrier->normal.count = count;

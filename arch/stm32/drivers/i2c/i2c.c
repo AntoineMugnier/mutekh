@@ -81,7 +81,7 @@ struct stm32_i2c_private_s
 
 /***************************************** config */
 
-DEV_I2C_CONFIG(stm32_i2c_config)
+static DEV_I2C_CONFIG(stm32_i2c_config)
 {
   return -ENOTSUP;
 }

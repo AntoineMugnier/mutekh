@@ -25,8 +25,9 @@
 
 #include <mutek/mem_alloc.h>
 #include <mutek/memory_allocator.h>
+#include <mutek/startup.h>
 
-void bcm2835_mem_init()
+void bcm2835_mem_init(void)
 {
   default_region = memory_allocator_init(NULL, (void*)CONFIG_STARTUP_HEAP_ADDR,
                                          (void*)(CONFIG_STARTUP_HEAP_ADDR +

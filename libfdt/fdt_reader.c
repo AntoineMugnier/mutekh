@@ -44,7 +44,7 @@ struct fdt_walker_state_s
 	const uint32_t *ptr;
 };
 
-const uint32_t *fdt_skip_str(const uint32_t *ptr)
+static const uint32_t *fdt_skip_str(const uint32_t *ptr)
 {
 	uint32_t data;
 	do {
@@ -57,6 +57,7 @@ const uint32_t *fdt_skip_str(const uint32_t *ptr)
  * Walks a node, start token should already be eaten. Will eat the
  * stop token.
  */
+static
 error_t fdt_walk_node(struct fdt_walker_state_s *state, struct fdt_walker_s *walker)
 {
 	size_t level = 0;
@@ -259,8 +260,8 @@ error_t fdt_walk_blob_from(const void *blob, struct fdt_walker_s *walker, uint32
 }
 
 error_t fdt_get_prop_at(const void *blob, uint32_t offset,
-						const char *propname,
-						const void **data, size_t *datasize)
+                        const char *propname,
+                        const void **data, size_t *datasize)
 {
 	const struct fdt_header_s *header = blob;
 	const uint32_t *ptr = (void*)(
