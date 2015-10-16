@@ -35,7 +35,7 @@ LIBGCC_PATH=$(if $(LIBGCC_DIR), \
     $(shell $(CC) $(CFLAGS) $(CPUCFLAGS) -print-libgcc-file-name) )
 
 CFLAGS=	-std=gnu99 -nostdlib -fno-builtin -foptimize-sibling-calls \
-        -Wall -Wno-main -Wno-unused-label -O$(CONFIG_COMPILE_OPTIMIZE)
+        -Wall -Wmissing-prototypes -Wno-main -Wno-unused-label -O$(CONFIG_COMPILE_OPTIMIZE)
 DTC=dtc
 
 ifeq ($(CONFIG_SOCLIB_MEMCHECK), defined)
