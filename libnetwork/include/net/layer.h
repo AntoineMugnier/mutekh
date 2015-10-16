@@ -146,6 +146,11 @@ struct net_layer_handler_s
 #define GCT_CONTAINER_ALGO_net_layer_list CLIST
 #define GCT_CONTAINER_REFCOUNT_net_layer_list net_layer
 
+struct net_layer_delegate_vtable_s
+{
+  void (*release)(void *delegate, struct net_layer_s *layer);
+};
+
 GCT_CONTAINER_TYPES(net_layer_list,
 /**
    @this is base structure for a layer.  It should be inherited from
@@ -161,6 +166,8 @@ struct net_layer_s
   const struct net_layer_handler_s *handler;
   struct net_layer_s *parent;
   struct net_layer_context_s context;
+  void *delegate;
+  const struct net_layer_delegate_vtable_s *delegate_vtable;
 
   // Rest is done through derivation
 } *, entry);
@@ -234,6 +241,8 @@ void net_layer_context_changed(struct net_layer_s *layer);
 error_t net_layer_init(
   struct net_layer_s *layer,
   const struct net_layer_handler_s *handler,
-  struct net_scheduler_s *scheduler);
+  struct net_scheduler_s *scheduler,
+  void *delegate,
+  const struct net_layer_delegate_vtable_s *delegate_vtable);
 
 #endif

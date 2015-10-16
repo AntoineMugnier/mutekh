@@ -23,9 +23,6 @@
 #include <net/scheduler.h>
 #include <net/layer.h>
 
-GCT_CONTAINER_FCNS(net_scheduler_destroy_listener, ALWAYS_INLINE, net_scheduler_destroy_listener,
-                   init, destroy, pushback, remove, isempty);
-
 static
 void net_layer_context_update(struct net_layer_s *layer,
                               const struct net_layer_context_s *context)
@@ -96,9 +93,11 @@ void net_layer_unbind(
 }
 
 error_t net_layer_init(
-    struct net_layer_s *layer,
-    const struct net_layer_handler_s *handler,
-    struct net_scheduler_s *sched)
+  struct net_layer_s *layer,
+  const struct net_layer_handler_s *handler,
+  struct net_scheduler_s *sched,
+  void *delegate,
+  const struct net_layer_delegate_vtable_s *delegate_vtable)
 {
   net_layer_refinit(layer);
   net_layer_list_init(&layer->children);
@@ -106,6 +105,10 @@ error_t net_layer_init(
   layer->handler = handler;
   layer->scheduler = sched;
   layer->parent = NULL;
+  layer->delegate = delegate;
+  layer->delegate_vtable = delegate_vtable;
+
+  assert((!delegate || delegate_vtable) && "Delegate must come with a vtable");
 
   /* printk("Layer %d init\n", &layer->handler->type); */
 
@@ -121,6 +124,8 @@ void net_layer_destroy(
   struct net_layer_s *child;
   struct net_scheduler_s *sched = layer->scheduler;
   const struct net_layer_handler_s *handler = layer->handler;
+  void *delegate = layer->delegate;
+  const struct net_layer_delegate_vtable_s *delegate_vtable = layer->delegate_vtable;
 
   layer->scheduler = NULL;
 
@@ -133,9 +138,10 @@ void net_layer_destroy(
 
   net_scheduler_from_layer_cancel(sched, layer);
 
-  GCT_FOREACH(net_scheduler_destroy_listener, &sched->destroy_listeners, item,
-              item->func(item, layer);
-              );
+  if (delegate)
+    delegate_vtable->release(delegate, layer);
+
+  layer->delegate = NULL;
 
   handler->destroyed(layer);
 
