@@ -178,7 +178,8 @@ error_t device_res_alloc_str(struct device_s *dev,
   return 0;
 }
 
-error_t device_res_add_uint_array_param(struct device_s *dev, const char *name, uintptr_t *value)
+error_t device_res_add_uint_array_param(struct device_s *dev, const char *name,
+                                        uint16_t count, uintptr_t values[])
 {
   struct dev_resource_s *r;
   error_t err = device_res_alloc(dev, &r, DEV_RES_UINT_ARRAY_PARAM);
@@ -190,7 +191,7 @@ error_t device_res_add_uint_array_param(struct device_s *dev, const char *name, 
     return -ENOMEM;
 
   uintptr_t i;
-  uintptr_t *v = mem_alloc(sizeof(uintptr_t) * (value[0] + 1), mem_scope_sys);
+  uintptr_t *v = mem_alloc(sizeof(uintptr_t) * count, mem_scope_sys);
 
   if (!v)
     {
@@ -198,13 +199,13 @@ error_t device_res_add_uint_array_param(struct device_s *dev, const char *name, 
       return -ENOMEM;
     }
 
-  for (i = 0; i <= value[0]; i++)
-    v[i] = value[i];
-  value = v;
+  for (i = 0; i < count; i++)
+    v[i] = values[i];
 
   r->flags = DEVICE_RES_FLAGS_FREE_PTR0 | DEVICE_RES_FLAGS_FREE_PTR1;
   r->u.uint_array_param.name = name;
-  r->u.uint_array_param.value = value;
+  r->u.uint_array_param.array = v;
+  r->u.uint_array_param.count = count;
 
   return 0;
 }

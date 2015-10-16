@@ -252,7 +252,8 @@ struct dev_resource_s
     /** @see device_res_add_uint_array_param */
     struct {
       const char                *name;
-      uintptr_t                 *value;
+      const uintptr_t           *array;
+      uint16_t                  count;
     }                           uint_array_param;
 
 #ifndef CONFIG_COMPILE_NOBITFIELD
@@ -821,13 +822,37 @@ error_t device_get_param_dev_accessor(struct device_s *dev,
                                       const char *name, void *accessor,
                                       enum driver_class_e cl);
 
+# define DEV_STATIC_RES_UINT_ARRAY_PARAM(name_, ...)         \
+  {                                                          \
+    .type = DEV_RES_UINT_ARRAY_PARAM,                        \
+      .u = { .uint_array_param = {                           \
+        .name = (name_),                                     \
+        .count = ARRAY_SIZE(((const uintptr_t[]){ __VA_ARGS__ })),      \
+        .array = (const uintptr_t[]){ __VA_ARGS__ },         \
+      } }                                                    \
+  }
 
 /** @This attaches an integer array parameter resource to the
-    device. The first value of the array must indicate the number of
-    subsequent entries in the array. The exact meaning of the value is
-    driver dependent.
+    device. The exact meaning of the values is driver dependent.
 
     The name string and the array will be duplicated. */
-error_t device_res_add_uint_array_param(struct device_s *dev, const char *name, uintptr_t *value);
+error_t device_res_add_uint_array_param(struct device_s *dev, const char *name,
+                                        uint16_t count, uintptr_t values[]);
+
+/** @This retrieves the value of a integer parameter resource entry
+    from the associated parameter name. */
+ALWAYS_INLINE error_t device_get_param_uint_array(const struct device_s *dev,
+                                                  const char *name, uint16_t *count, const uintptr_t **a)
+{
+  struct dev_resource_s *r;
+
+  if (!(r = device_res_get_from_name(dev, DEV_RES_UINT_ARRAY_PARAM, 0, name)))
+    return -ENOENT;
+
+  *count = r->u.uint_array_param.count;
+  *a = r->u.uint_array_param.array;
+  return 0;
+}
+
 
 #endif

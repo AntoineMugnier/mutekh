@@ -373,12 +373,11 @@ static FDT_ON_NODE_PROP_FUNC(enum_fdt_node_prop)
             }
           else if (!strncmp(name + 1, "aram-array-", 11))
             {
-              uintptr_t value[(datalen / 4 + 1) * sizeof(uintptr_t)];
-              value[0] = datalen / 4;
+              uintptr_t value[(datalen / 4) * sizeof(uintptr_t)];
               uint_fast8_t i;
               for (i = 0; i < datalen / 4; i++)
-                value[i + 1] = endian_be32(((const uint32_t*)data)[i]);
-              if (device_res_add_uint_array_param(e->dev, name + 12, value))
+                value[i] = endian_be32(((const uint32_t*)data)[i]);
+              if (device_res_add_uint_array_param(e->dev, name + 12, datalen / 4, value))
                 goto res_err;
               return;
             }

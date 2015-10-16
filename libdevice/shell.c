@@ -435,8 +435,8 @@ dev_shell_dump_device(struct termui_console_s *con, struct device_s *dev, uint_f
         case DEV_RES_UINT_ARRAY_PARAM: {
           uintptr_t i;
           termui_con_printf(con, "  Array parameter `%s' = [", r->u.uint_array_param.name);
-          for (i = 1; i <= r->u.uint_array_param.value[0]; i++)
-            termui_con_printf(con, " 0x%x", r->u.uint_array_param.value[i]);
+          for (i = 0; i < r->u.uint_array_param.count; i++)
+            termui_con_printf(con, " 0x%x", r->u.uint_array_param.array[i]);
           termui_con_printf(con, " ]\n");
           break;
           }
