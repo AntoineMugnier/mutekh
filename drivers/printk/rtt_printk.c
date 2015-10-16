@@ -24,37 +24,30 @@
 
 #include <mutek/printk.h>
 
-#include "segger-rtt.h"
+#include <drivers/rtt/rtt.h>
 
 static uint8_t rtt_printk_ringbuffer[CONFIG_RTT_PRINTK_RINGBUFFER_SIZE];
 
-static struct {
-  struct rtt_s control;
-  struct rtt_ringbuffer_s ring;
-} rtt_printk_control = {
-  .control = RTT_INITIALIZER("", 1, 0),
-  .ring = RTT_RINGBUFFER_INITIALIZER("Terminal", rtt_printk_ringbuffer,
-                                     RTT_RINGBUFFER_MODE_BLOCKING),
-};
-
 static PRINTF_OUTPUT_FUNC(rtt_printk_out)
 {
-  struct rtt_s *rtt = ctx;
+  struct rtt_channel_s *chan = ctx;
   uint32_t done = 0;
-  bool_t blocking = !!(rtt->buffer[0].flags & RTT_RINGBUFFER_MODE_BLOCKING);
+  bool_t blocking = !!(chan->flags & RTT_CHANNEL_MODE_BLOCKING);
 
   while (done < len && blocking)
-    done += rtt_ringbuffer_write(&rtt->buffer[0],
-                                 (const uint8_t *)str + done,
-                                 len - done);
+    done += rtt_channel_write(chan, (const uint8_t *)str + done, len - done);
 }
 
-void rtt_printk_init()
+void rtt_printk_init(void);
+void rtt_printk_init(void)
 {
-  // Avoid having one instance of the token in .rodata
-  strcpy(rtt_printk_control.control.id, "SEGGER");
-  strcat(rtt_printk_control.control.id, " RTT");
-  printk_set_output(rtt_printk_out, (void*)&rtt_printk_control.control);
+  struct rtt_channel_s *chan = rtt_channel_init(
+    RTT_CHANNEL_TX_ID(CONFIG_DRIVER_RTT_PRINTK_OUT_FIRST),
+    "Printk Output",
+    rtt_printk_ringbuffer, CONFIG_RTT_PRINTK_RINGBUFFER_SIZE,
+    RTT_CHANNEL_MODE_BLOCKING);
+
+  printk_set_output(rtt_printk_out, chan);
 }
 
 /*

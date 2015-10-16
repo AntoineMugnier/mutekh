@@ -8,6 +8,7 @@ gpio \
 lcd \
 mem \
 printk \
+rtt \
 spi \
 timer \
 valio \
