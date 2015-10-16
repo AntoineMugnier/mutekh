@@ -147,6 +147,14 @@ cont_s##_from_##field(typeof(((struct cont_s*)0)->field) *x)            \
   if (__builtin_offsetof(struct cont_s, field) && x == NULL)            \
     return NULL;                                                        \
   return (void*)((uint8_t*)x - __builtin_offsetof(struct cont_s, field)); \
+}                                                                       \
+                                                                        \
+ALWAYS_INLINE const struct cont_s *                                     \
+const_##cont_s##_from_##field(typeof(((const struct cont_s*)0)->field) *x) \
+{                                                                       \
+  if (__builtin_offsetof(const struct cont_s, field) && x == NULL)      \
+    return NULL;                                                        \
+  return (const void*)((const uint8_t*)x - __builtin_offsetof(const struct cont_s, field)); \
 }
 
 
