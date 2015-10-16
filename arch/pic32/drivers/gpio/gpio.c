@@ -318,6 +318,7 @@ static DEV_IRQ_SINK_UPDATE(pic32_gpio_icu_sink_update)
   uintptr_t a = PIC32_GPIO_ADDR + PIC32_GPIO_PORT_ADDR(b);
   uint32_t mask = 1 << (sink_id % GPIO_BANK_SIZE);
 
+  sink->icu_pv = 0;
   switch (sense)
     {
     case DEV_IRQ_SENSE_NONE: {
@@ -328,6 +329,7 @@ static DEV_IRQ_SINK_UPDATE(pic32_gpio_icu_sink_update)
     }
 
     case DEV_IRQ_SENSE_LOW_LEVEL:
+      sink->icu_pv = 1;
     case DEV_IRQ_SENSE_HIGH_LEVEL:{
       /* Rearm irq */
       __unused__ uint32_t x = endian_le32(cpu_mem_read_32(a));
@@ -389,7 +391,7 @@ static DEV_IRQ_SRC_PROCESS(pic32_gpio_source_process)
       uint32_t msk = cpu_mem_read_32(PIC32_GPIO_ADDR + PIC32_GPIO_CNEN_ADDR(src_id));
 
       x &= msk;
-      
+
       if (!x)
         break;
 
@@ -400,20 +402,12 @@ static DEV_IRQ_SRC_PROCESS(pic32_gpio_source_process)
           uint_fast8_t i = __builtin_ctz(x);
           struct dev_irq_sink_s *sink = pv->sinks + i + src_id * GPIO_BANK_SIZE;
 
-          if (sink->icu_pv & DEV_IRQ_SENSE_HIGH_LEVEL)
+          do
             {
-               do {
-                 src->process(src, 0);
-                 p = (endian_le32(cpu_mem_read_32(a)) >> i) & 1; 
-               } while(p);
-            }
-          else if (sink->icu_pv & DEV_IRQ_SENSE_LOW_LEVEL)
-            {
-               do {
-                 src->process(src, 0);
-                 p = (endian_le32(cpu_mem_read_32(a)) >> i) & 1; 
-               } while(!p);
-             }
+              device_irq_sink_process(sink, 0);
+              p = (endian_le32(cpu_mem_read_32(a)) >> i) & 1; 
+            } while(p ^ sink->icu_pv);
+
           x ^= 1 << i;
         }
     }
