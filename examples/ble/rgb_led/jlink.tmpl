@@ -1,0 +1,11 @@
+device DEV
+speed 4000
+w4 0x4001e504 2
+w4 0x4001e50c 1
+sleep 100
+r
+w4 0x4001e504 1
+loadbin BIN 0 
+r
+g
+q 0
