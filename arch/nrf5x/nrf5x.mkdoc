@@ -191,6 +191,13 @@ Nordic's nRF51 and nRF52 architecture support.
     basic layout, with some GPIOs going out of the board on PCB side.
   @end section
 
+  @section {Seed Studio Tiny BLE}
+    @url {Tiny BLE} {http://www.seeedstudio.com/wiki/Tiny_BLE} is a
+    board designed by Seed Studio.  It contains a RGB Led, a MPU6050
+    6-axis accelerometer + gyroscope, and a button.  All peripherals
+    are supported in MutekH.
+  @end section
+
 @end section
 
 @section {Implementation notes}
