@@ -26,32 +26,32 @@
 #include <device/device.h>
 #include <device/driver.h>
 
+#define dev_null_cancel (dev_char_cancel_t*)&dev_driver_notsup_fcn
+
 DEV_CHAR_REQUEST(dev_null_request)
 {
   switch (rq->type)
     {
-      /* Get EOF error */
-    case DEV_CHAR_READ: {
-
-      rq->error = EEOF;
-      rq->callback(dev, rq, 0);
-
+    case DEV_CHAR_READ_PARTIAL:
+    case DEV_CHAR_READ:
+      rq->error = -EPIPE;
       break;
-    }
 
       /* Eat everything */
-    case DEV_CHAR_WRITE: {
-      size_t size = rq->size;
-
+    case DEV_CHAR_WRITE_PARTIAL_FLUSH:
+    case DEV_CHAR_WRITE_FLUSH:
+    case DEV_CHAR_WRITE_PARTIAL:
+    case DEV_CHAR_WRITE:
+      rq->data += rq->size;
       rq->size = 0;
       rq->error = 0;
-
-      rq->callback(dev, rq, size);
       break;
+
+    default:
+      rq->error = -ENOTSUP;
     }
 
-    }
-
+  kroutine_exec(&rq->base.kr, 0);
 }
 
 /* 

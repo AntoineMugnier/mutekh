@@ -34,14 +34,14 @@ static TERMUI_TERMIO_FCN_WRITE(termui_dev_write)
 {
   struct device_char_s *dev = tm->io_pv;
 
-  dev_char_wait_write(dev, (void*)data, size);
+  dev_char_wait_op(dev, DEV_CHAR_WRITE_FLUSH, (void*)data, size);
 }
 
 static TERMUI_TERMIO_FCN_READ(termui_dev_read)
 {
   struct device_char_s *dev = tm->io_pv;
   uint8_t c;
-  ssize_t res = dev_char_wait_read(dev, &c, 1);
+  ssize_t res = dev_char_wait_op(dev, DEV_CHAR_READ, &c, 1);
   return res == 1 ? c : -1;
 }
 

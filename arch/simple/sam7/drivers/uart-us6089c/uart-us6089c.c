@@ -102,10 +102,13 @@ static void try_recv(struct device_s *dev, bool_t continuous)
 		cpu_mem_read_32(registers + US_RHR);
 }
 
+#define uart_us6089c_cancel (dev_char_cancel_t*)&dev_driver_notsup_fcn
+
 DEV_CHAR_REQUEST(uart_us6089c_request)
 {
 	struct uart_us6089c_context_s	*pv = dev->drv_pv;
 	uintptr_t registers = (uintptr_t)dev->addr[0];
+        error_t err = 0;
 
 	if (rq->size == 0) {
 		if (rq->callback)
@@ -118,19 +121,31 @@ DEV_CHAR_REQUEST(uart_us6089c_request)
 	switch (rq->type)
     {
     case DEV_CHAR_READ:
+    case DEV_CHAR_READ_PARTIAL:
 		dev_char_queue_pushback(&pv->read_q, rq);
 		cpu_mem_write_32(registers + US_IER, US6089C_RXRDY);
 		try_recv(dev, 0);
 		break;
 
+    case DEV_CHAR_WRITE_PARTIAL_FLUSH:
+    case DEV_CHAR_WRITE_FLUSH:
+    case DEV_CHAR_WRITE_PARTIAL:
     case DEV_CHAR_WRITE:
 		dev_char_queue_pushback(&pv->write_q, rq);
 		cpu_mem_write_32(registers + US_IER, US6089C_TXRDY);
 		try_send(dev, 0);
 		break;
+    default:
+      err = -ENOTSUP;
     }
 
 	LOCK_RELEASE_IRQ(&dev->lock);
+
+  if (err)
+    {
+      rq->error = err;
+      kroutine_exec(&rq->base.kr, 0);
+    }
 }
 
 /* 

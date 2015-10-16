@@ -84,7 +84,7 @@ void tty_soclib_try_read(struct device_s *dev)
     rq->error = 0;
     rq->data += size;
 
-    if (rq->size == 0 || rq->type == DEV_CHAR_READ_PARTIAL) {
+    if (rq->size == 0 || (rq->type & _DEV_CHAR_PARTIAL)) {
       dev_request_queue_pop(&pv->read_q);
       lock_release(&dev->lock);
       kroutine_exec(&rq->base.kr, 0);
@@ -92,6 +92,8 @@ void tty_soclib_try_read(struct device_s *dev)
     }
   }
 }
+
+#define tty_soclib_cancel (dev_char_cancel_t*)&dev_driver_notsup_fcn
 
 static DEV_CHAR_REQUEST(tty_soclib_request)
 {
@@ -115,7 +117,9 @@ static DEV_CHAR_REQUEST(tty_soclib_request)
       tty_soclib_try_read(dev);
     break;
 
+  case DEV_CHAR_WRITE_PARTIAL_FLUSH:
   case DEV_CHAR_WRITE_PARTIAL:
+  case DEV_CHAR_WRITE_FLUSH:
   case DEV_CHAR_WRITE: {
     size_t i;
 
@@ -124,6 +128,10 @@ static DEV_CHAR_REQUEST(tty_soclib_request)
 
     rq->size = 0;
     rq->error = 0;
+    done_rq = rq;
+    break;
+  default:
+    rq->error = -ENOTSUP;
     done_rq = rq;
     break;
   }

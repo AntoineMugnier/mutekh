@@ -43,15 +43,7 @@ PRINTF_OUTPUT_FUNC(__printf_out_tty)
     return;
 #endif
 
-  while (len > 0)
-    {
-      ssize_t	res = dev_char_spin_write((struct device_char_s *)ctx, (uint8_t*)str, len);
-
-      if (res < 0)
-	break;
-      len -= res;
-      str += res;
-    }
+  dev_char_spin_op((struct device_char_s *)ctx, DEV_CHAR_WRITE, (uint8_t*)str, len);
 }
 
 #endif
@@ -59,7 +51,7 @@ PRINTF_OUTPUT_FUNC(__printf_out_tty)
 static FILEOPS_READ(tty_read)
 {
 #if defined(CONFIG_MUTEK_CONSOLE)
-  return dev_char_wait_read(&console_dev, buffer, count);
+  return dev_char_wait_op(&console_dev, DEV_CHAR_READ_PARTIAL, (uint8_t*)buffer, count);
 #else
   return 0;
 #endif
@@ -68,7 +60,7 @@ static FILEOPS_READ(tty_read)
 static FILEOPS_WRITE(tty_write)
 {
 #if defined(CONFIG_MUTEK_CONSOLE)
-  return dev_char_wait_write(&console_dev, buffer, count);
+  return dev_char_wait_op(&console_dev, DEV_CHAR_WRITE_PARTIAL, (uint8_t*)buffer, count);
 #else
   return count;
 #endif

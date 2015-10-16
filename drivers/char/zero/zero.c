@@ -26,35 +26,37 @@
 #include <device/device.h>
 #include <device/driver.h>
 
+#define dev_zero_cancel (dev_char_cancel_t*)&dev_driver_notsup_fcn
+
 DEV_CHAR_REQUEST(dev_zero_request)
 {
   switch (rq->type)
     {
       /* Get zeros */
-    case DEV_CHAR_READ: {
-      size_t size = rq->size;
-
+    case DEV_CHAR_READ_PARTIAL:
+    case DEV_CHAR_READ:
       memset(rq->data, 0, rq->size);
 
+      rq->data += rq->size;
       rq->size = 0;
       rq->error = 0;
-
-      rq->callback(dev, rq, size);
       break;
-    }
 
       /* Eat everything */
-    case DEV_CHAR_WRITE: {
-      size_t size = rq->size;
-
+    case DEV_CHAR_WRITE_PARTIAL_FLUSH:
+    case DEV_CHAR_WRITE_FLUSH:
+    case DEV_CHAR_WRITE_PARTIAL:
+    case DEV_CHAR_WRITE:
+      rq->data += rq->size;
       rq->size = 0;
       rq->error = 0;
-
-      rq->callback(dev, rq, size);
       break;
+
+    default:
+      rq->error = -ENOTSUP;
     }
 
-    }
+  kroutine_exec(&rq->base.kr, 0);
 }
 
 /* 

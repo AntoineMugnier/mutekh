@@ -23,13 +23,13 @@ void app_start(void)
 
   memset(buf, 0x55, sizeof(buf));
 
-  dev_char_wait_read(&null_dev, buf, sizeof(buf));
+  dev_char_wait_op(&null_dev, DEV_CHAR_READ, buf, sizeof(buf));
   printk("%P\n", buf, sizeof(buf));
 
-  dev_char_wait_read(&zero_dev, buf, sizeof(buf));
+  dev_char_wait_op(&zero_dev, DEV_CHAR_READ, buf, sizeof(buf));
   printk("%P\n", buf, sizeof(buf));
 
-  dev_char_wait_read(&random_dev, buf, sizeof(buf));
+  dev_char_wait_op(&random_dev, DEV_CHAR_READ, buf, sizeof(buf));
   printk("%P\n", buf, sizeof(buf));
 }
 

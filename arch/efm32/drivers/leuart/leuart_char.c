@@ -116,7 +116,7 @@ static void efm32_leuart_try_read(struct device_s *dev)
           rq->data += size;
           rq->error = 0;
 
-          if (rq->type == DEV_CHAR_READ_PARTIAL || rq->size == 0)
+          if ((rq->type & _DEV_CHAR_PARTIAL) || rq->size == 0)
             {
               dev_request_queue_pop(&pv->read_q);
               lock_release(&dev->lock);
@@ -188,7 +188,7 @@ static void efm32_leuart_try_write(struct device_s *dev)
           rq->data += size;
           rq->error = 0;
 
-          if (rq->type == DEV_CHAR_WRITE_PARTIAL || rq->size == 0)
+          if ((rq->type & _DEV_CHAR_PARTIAL) || rq->size == 0)
             {
               dev_request_queue_pop(&pv->write_q);
               lock_release(&dev->lock);
@@ -207,10 +207,13 @@ static void efm32_leuart_try_write(struct device_s *dev)
   pv->write_started = 0;
 }
 
+#define efm32_leuart_cancel (dev_char_cancel_t*)&dev_driver_notsup_fcn
+
 static DEV_CHAR_REQUEST(efm32_leuart_request)
 {
   struct device_s               *dev = accessor->dev;
   struct efm32_leuart_context_s	*pv = dev->drv_pv;
+  error_t err = 0;
 
   assert(rq->size);
 
@@ -229,6 +232,8 @@ static DEV_CHAR_REQUEST(efm32_leuart_request)
       break;
     }
 
+    case DEV_CHAR_WRITE_PARTIAL_FLUSH:
+    case DEV_CHAR_WRITE_FLUSH:
     case DEV_CHAR_WRITE_PARTIAL:
     case DEV_CHAR_WRITE: {
       dev_request_queue_pushback(&pv->write_q, dev_char_rq_s_base(rq));
@@ -239,9 +244,17 @@ static DEV_CHAR_REQUEST(efm32_leuart_request)
         }
       break;
     }
+    default:
+      err = -ENOTSUP;
     }
 
   LOCK_RELEASE_IRQ(&dev->lock);
+
+  if (err)
+    {
+      rq->error = err;
+      kroutine_exec(&rq->base.kr, 0);
+    }
 }
 
 #ifdef CONFIG_DEVICE_IRQ

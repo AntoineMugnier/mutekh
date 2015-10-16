@@ -30,18 +30,8 @@
    device.
 
    Two main types of requests are available on this driver: Read and
-   Write.
-
-   Each request targets a data buffer and a direction for transfer,
-   either @tt DEV_CHAR_READ or @tt DEV_CHAR_WRITE.
-
-   A variant of read and write operations permits to return from
-   request with as-much data as possible, but without more waiting
-   than necessary if no new data is available from hardware.  These
-   are @tt DEV_CHAR_READ_PARTIAL or @tt DEV_CHAR_WRITE_PARTIAL.  This
-   is not a non-blocking transfer.  Request may block, but as soon as
-   it is considered and as soon as at least one byte has been
-   transferred, it may return.
+   Write operations. Some variants operations exist as defined in @ref
+   dev_char_rq_type_e.
 
    @end section
 
@@ -70,20 +60,6 @@
 
    @end section
 
-   @section {Error handling}
-
-   When kroutine is called back after a request completion, @tt error
-   field of the request contains the completion status.  Normal
-   operation completion has @tt error field set to @tt 0.
-
-   For a partial read or write, completion without the whole buffer
-   tranferred is a normal completion.
-
-   If underlying hardware gets an error condition, @tt error is set to
-   -EIO.
-
-   @end section
-
    @section {Request Completion Information}
 
    Driver updates @tt data and @tt size fields of the request in order
@@ -94,7 +70,7 @@
    data.
 
    @end section
- */                                                                 
+ */
 
 #ifndef __DEVICE_CHAR_H__
 #define __DEVICE_CHAR_H__
@@ -110,21 +86,62 @@ struct dev_char_rq_s;
 struct driver_char_s;
 struct device_char_s;
 
+/** @internal op */
+#define  _DEV_CHAR_WRITE 1
+/** @internal mode */
+#define  _DEV_CHAR_ALL 2
+/** @internal mode */
+#define  _DEV_CHAR_PARTIAL 4
+/** @internal mode */
+#define  _DEV_CHAR_FRAME 8
+/** @internal mode */
+#define  _DEV_CHAR_POLL 16
+/** @internal flush */
+#define  _DEV_CHAR_FLUSH 32
+
 /** @this defines possible request types */
 enum dev_char_rq_type_e
 {
-  /** Copy characters from device to caller, wait for total
-      completion or error */
-  DEV_CHAR_READ,
-  /** Copy characters from caller to device, wait for total
-      completion or error */
-  DEV_CHAR_WRITE,
-  /** Copy characters from device to caller, finish on first
-      blocking cause after some byte transfer */
-  DEV_CHAR_READ_PARTIAL,
-  /** Copy characters from caller to device, finish on first
-      blocking cause after some byte transfer */
-  DEV_CHAR_WRITE_PARTIAL,
+  /** Read data from the device. If no error occur, the request does
+      not terminate until all data have been read. */
+  DEV_CHAR_READ = _DEV_CHAR_ALL,
+  /** Write data to the device. If no error occur, the request does
+      not terminate until all data have been written. */
+  DEV_CHAR_WRITE = _DEV_CHAR_WRITE | _DEV_CHAR_ALL,
+  /** This is equivalent to @ref DEV_CHAR_WRITE, forcing flush of
+      output data. On devices where data are always transmitted sent
+      immediately, this is handled as a regular write. */
+  DEV_CHAR_WRITE_FLUSH = _DEV_CHAR_WRITE | _DEV_CHAR_ALL | _DEV_CHAR_FLUSH,
+  /** Read data from the device. If no error occur, the request does
+      not terminate until at least one byte of data has been read. */
+  DEV_CHAR_READ_PARTIAL = _DEV_CHAR_PARTIAL,
+  /** Write data to the device. If no error occur, the request does
+      not terminate until at least on byte of data has been written. */
+  DEV_CHAR_WRITE_PARTIAL = _DEV_CHAR_WRITE | _DEV_CHAR_PARTIAL,
+  /** This is equivalent to @ref DEV_CHAR_WRITE_PARTIAL, forcing flush
+      of output data. On devices where data are always transmitted sent
+      immediately, this is handled as a regular write. */
+  DEV_CHAR_WRITE_PARTIAL_FLUSH = _DEV_CHAR_WRITE | _DEV_CHAR_PARTIAL | _DEV_CHAR_FLUSH,
+  /** This request terminates when the specified amount of data bytes
+      is currently available from the device. The data field of the
+      request is not used. Most device may not support this operation
+      for size greater than 1. */
+  DEV_CHAR_READ_POLL = _DEV_CHAR_POLL,
+  /** This request terminates when the specified amount of data bytes
+      may be written to the device without blocking. The data field of
+      the request is not used. Most device may not support this
+      operation for size greater than 1. */
+  DEV_CHAR_WRITE_POLL = _DEV_CHAR_WRITE | _DEV_CHAR_POLL,
+  /** Read a frame from the device. This operation is only
+      supported by devices working with framed data. The returned data
+      is guaranteed to match a frame start boundary. The returned
+      frame data may be smaller than the request buffer. */
+  DEV_CHAR_READ_FRAME = _DEV_CHAR_FRAME,
+  /** Write a frame to the device. This operation is only
+      supported by devices working with framed data. The size of the
+      request may be limited by the maximum frame size supported by
+      the device. */
+  DEV_CHAR_WRITE_FRAME = _DEV_CHAR_WRITE | _DEV_CHAR_FRAME,
 };
 
 struct dev_char_rq_s
@@ -155,19 +172,66 @@ STRUCT_INHERIT(dev_char_rq_s, dev_request_s, base);
 /**
    Char device class request() function type. Enqueue a read or write request.
 
+   The @tt type, @tt data and @tt size fields of the request must be
+   initialized. The size can not be 0. The @tt error field of the
+   request is updated when the request completes.
+
+   When no error is reported, the @tt data and @tt size fields are
+   updated in order to indicate what is left to transfer. These fields
+   are left in an undefined state when an error is reported.
+
+   The following error codes are valid:
+
+   @list
+     @item @tt -ENOENT: The targeted sub-device does not exists.
+       This is only reported when the driver implements sub-devices.
+     @item @tt -ENOTSUP: The request operation is not supported by
+       the device.
+     @item @tt -EIO: Temporary or permanent hardware error.
+     @item @tt -EPIPE: Data have been lost due to a buffer overflow or
+       a sync error condition. This error is reported once.
+     @item @tt -ENOSPC: The request date size is too small to store the
+       incoming frame or the outgoing frame is to large to be processed
+       by the device. This error is reported once.
+     @item @tt -EBADDATA: The incoming data has been dropped due to a
+       bad parity or bad checksum condition. This error is reported once.
+   @end list
+
    @param dev pointer to device descriptor
    @param rq pointer to request.
 */
 typedef DEV_CHAR_REQUEST(dev_char_request_t);
 
+/** Char device class @ref dev_char_cancel_t function template. */
+#define DEV_CHAR_CANCEL(n)                                             \
+  void (n)(                                                            \
+    const struct device_char_s *accessor,                                  \
+    struct dev_char_rq_s *rq)
+/**
+   Char device class cancel() function type. Cancel a request.
+
+   This function cancels a request which have previously been passed to
+   the @ref dev_char_request_t function.
+
+   The function returns @tt -EBUSY if the request is already being
+   processed and will terminate in a short time. When the function
+   returns 0, the request is canceled and will never terminate.
+
+   @param dev pointer to device descriptor
+   @param rq pointer to request.
+*/
+typedef DEV_CHAR_CANCEL(dev_char_cancel_t);
+
 DRIVER_CLASS_TYPES(char, 
                    dev_char_request_t *f_request;
+                   dev_char_cancel_t *f_cancel;
                    );
 
 #define DRIVER_CHAR_METHODS(prefix)                                \
   (&(const struct driver_char_s){                                  \
     .class_ = DRIVER_CLASS_CHAR,                                   \
     .f_request = prefix ## _request,                               \
+    .f_cancel = prefix ## _cancel,                               \
   })
 
 config_depend_inline(CONFIG_DEVICE_CHAR,
@@ -202,20 +266,19 @@ ssize_t dev_char_wait_request(const struct device_char_s *accessor,
     return rq->error ? rq->error : (todo - rq->size);
 })
 
-/** Synchronous helper read function. This function uses the scheduler
-    api to put current context in wait state if no data is available
-    from device yet. This function spins in a loop waiting for read
-    operation to complete when scheduler is disabled.
+/** Synchronous helper function. This function uses the scheduler api
+    to put current context in wait state until the operation
+    completes.
 
     @returns transferred size or a negative error code
 */
 config_depend_and2_inline(CONFIG_DEVICE_CHAR, CONFIG_MUTEK_SCHEDULER,
-ssize_t dev_char_wait_read(const struct device_char_s *accessor,
-                           uint8_t *data, size_t size),
+ssize_t dev_char_wait_op(const struct device_char_s *accessor,
+                         enum dev_char_rq_type_e type, uint8_t *data, size_t size),
 {
     struct dev_char_rq_s rq =
     {
-        .type = DEV_CHAR_READ,
+        .type = type,
         .data = data,
         .size = size,
     };
@@ -223,59 +286,19 @@ ssize_t dev_char_wait_read(const struct device_char_s *accessor,
     return dev_char_wait_request(accessor, &rq);
 })
 
-/** Synchronous helper write function. This function uses the scheduler
-    api to put current context in wait state if no data is available
-    from device yet. This function spins in a loop waiting for write
-    operation to complete when scheduler is disabled.
-
-    @returns transferred size or a negative error code
-*/
-config_depend_and2_inline(CONFIG_DEVICE_CHAR, CONFIG_MUTEK_SCHEDULER,
-ssize_t dev_char_wait_write(const struct device_char_s *accessor,
-                            const uint8_t *data, size_t size),
-{
-    struct dev_char_rq_s rq =
-    {
-        .type = DEV_CHAR_WRITE,
-        .data = (uint8_t *)data,
-        .size = size,
-    };
-
-    return dev_char_wait_request(accessor, &rq);
-})
-
-/** Synchronous helper read function. This function spins in a loop
-    waiting for read operation to complete.
+/** Synchronous helper function. This function spins in a loop
+    waiting for the specified operation to complete.
 
     @returns transferred size or a negative error code
 */
 config_depend_inline(CONFIG_DEVICE_CHAR,
-ssize_t dev_char_spin_read(const struct device_char_s *accessor,
-                           uint8_t *data, size_t size),
+ssize_t dev_char_spin_op(const struct device_char_s *accessor,
+                         enum dev_char_rq_type_e type, uint8_t *data, size_t size),
 {
     struct dev_char_rq_s rq =
     {
-        .type = DEV_CHAR_READ,
+        .type = type,
         .data = data,
-        .size = size,
-    };
-
-    return dev_char_spin_request(accessor, &rq);
-})
-
-/** Synchronous helper write function. This function spins in a loop
-    waiting for write operation to complete.
-
-    @returns transferred size or a negative error code
-*/
-config_depend_inline(CONFIG_DEVICE_CHAR,
-ssize_t dev_char_spin_write(const struct device_char_s *accessor,
-                            const uint8_t *data, size_t size),
-{
-    struct dev_char_rq_s rq =
-    {
-        .type = DEV_CHAR_WRITE,
-        .data = (uint8_t *)data,
         .size = size,
     };
 

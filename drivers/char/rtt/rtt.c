@@ -94,7 +94,7 @@ static void rtt_try_io(struct device_s *dev)
     rq->data += done;
     rq->size -= done;
 
-    if (rq->size == 0 || rq->type == DEV_CHAR_WRITE_PARTIAL) {
+    if (rq->size == 0 || (rq->type & _DEV_CHAR_PARTIAL)) {
       dev_request_queue_remove(&pv->tx_queue, &rq->base);
       rtt_request_finish(dev, rq);
     }
@@ -109,7 +109,7 @@ static void rtt_try_io(struct device_s *dev)
     rq->data += done;
     rq->size -= done;
 
-    if (rq->size == 0 || rq->type == DEV_CHAR_READ_PARTIAL) {
+    if (rq->size == 0 || (rq->type & _DEV_CHAR_PARTIAL)) {
       dev_request_queue_remove(&pv->rx_queue, &rq->base);
       rtt_request_finish(dev, rq);
     }
@@ -134,6 +134,8 @@ static KROUTINE_EXEC(rtt_tick)
   LOCK_RELEASE_IRQ(&dev->lock);
 }
 
+#define char_rtt_cancel (dev_char_cancel_t*)&dev_driver_notsup_fcn
+
 DEV_CHAR_REQUEST(char_rtt_request)
 {
   struct device_s *dev = accessor->dev;
@@ -149,14 +151,17 @@ DEV_CHAR_REQUEST(char_rtt_request)
     q = &pv->rx_queue;
     break;
 
+  case DEV_CHAR_WRITE_PARTIAL_FLUSH:
+  case DEV_CHAR_WRITE_FLUSH:
   case DEV_CHAR_WRITE_PARTIAL:
   case DEV_CHAR_WRITE:
     q = &pv->tx_queue;
     break;
-  }
-
-  if (!q)
+  default:
+    rq->error = -ENOTSUP;
+    kroutine_exec(&rq->base.kr, 0);
     return;
+  }
 
   LOCK_SPIN_IRQ(&dev->lock);
 

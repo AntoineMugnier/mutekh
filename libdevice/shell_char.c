@@ -36,7 +36,10 @@ enum char_opts_e
   CHAR_OPT_SIZE = 0x02,
   CHAR_OPT_DATA = 0x04,
   CHAR_OPT_HEX = 0x08,
-  CHAR_OPT_PARTIAL = 0x10
+  CHAR_OPT_PARTIAL = 0x10,
+  CHAR_OPT_FRAME = 0x20,
+  CHAR_OPT_POLL = 0x40,
+  CHAR_OPT_FLUSH = 0x80
 };
 
 struct termui_optctx_dev_char_opts
@@ -54,6 +57,24 @@ static TERMUI_CON_ARGS_CLEANUP_PROTOTYPE(char_opts_cleanup)
     device_put_accessor(&c->accessor);
 }
 
+static enum dev_char_rq_type_e
+char_rq_type(enum dev_char_rq_type_e type, enum char_opts_e used)
+{
+  if (used & CHAR_OPT_PARTIAL)
+    type |= _DEV_CHAR_PARTIAL;
+  else if (used & CHAR_OPT_FRAME)
+    type |= _DEV_CHAR_FRAME;
+  else if (used & CHAR_OPT_POLL)
+    type |= _DEV_CHAR_POLL;
+  else
+    type |= _DEV_CHAR_ALL;
+
+  if (used & CHAR_OPT_FLUSH)
+    type |= _DEV_CHAR_FLUSH;
+
+  return type;
+}
+
 static TERMUI_CON_COMMAND_PROTOTYPE(shell_char_read)
 {
   struct termui_optctx_dev_char_opts *c = ctx;
@@ -67,9 +88,9 @@ static TERMUI_CON_COMMAND_PROTOTYPE(shell_char_read)
     }
 
   struct dev_char_rq_s rq;
+  rq.type = char_rq_type(0, used);
   rq.size = c->size;
   rq.data = data;
-  rq.type = used & CHAR_OPT_PARTIAL ? DEV_CHAR_READ_PARTIAL : DEV_CHAR_READ;
 
 #if defined(CONFIG_MUTEK_SCHEDULER)
   ssize_t s_read = dev_char_wait_request(&c->accessor, &rq);
@@ -77,9 +98,9 @@ static TERMUI_CON_COMMAND_PROTOTYPE(shell_char_read)
   ssize_t s_read = dev_char_spin_request(&c->accessor, &rq);
 #endif
 
-  if (s_read < 0)
+  if (rq.error)
     {
-      termui_con_printf(con, "error %zi reading from char device\n", s_read);
+      termui_con_printf(con, "error %zi reading from char device\n", rq.error);
       mem_free(data);
       return -EINVAL;
     }
@@ -98,9 +119,9 @@ static TERMUI_CON_COMMAND_PROTOTYPE(shell_char_write)
   struct termui_optctx_dev_char_opts *c = ctx;
 
   struct dev_char_rq_s rq;
+  rq.type = char_rq_type(_DEV_CHAR_WRITE, used);
   rq.size = c->data.len;
   rq.data = (uint8_t*)c->data.str;
-  rq.type = used & CHAR_OPT_PARTIAL ? DEV_CHAR_WRITE_PARTIAL : DEV_CHAR_WRITE;
 
 #if defined(CONFIG_MUTEK_SCHEDULER)
   ssize_t w_size = dev_char_wait_request(&c->accessor, &rq);
@@ -108,9 +129,9 @@ static TERMUI_CON_COMMAND_PROTOTYPE(shell_char_write)
   ssize_t w_size = dev_char_spin_request(&c->accessor, &rq);
 #endif
 
-  if (w_size < 0)
+  if (rq.error)
     {
-      termui_con_printf(con, "error %zi writing to char device\n", w_size);
+      termui_con_printf(con, "error %zi writing to char device\n", rq.error);
       return -EINVAL;
     }
 
@@ -127,7 +148,7 @@ static TERMUI_CON_OPT_DECL(dev_char_opts) =
                                     TERMUI_CON_OPT_CONSTRAINTS(CHAR_OPT_DEV, 0)
                                     )
 
-  TERMUI_CON_OPT_INTEGER_ENTRY("-s", "--size", CHAR_OPT_SIZE, struct termui_optctx_dev_char_opts, size, 1,
+  TERMUI_CON_OPT_INTEGER_RANGE_ENTRY("-s", "--size", CHAR_OPT_SIZE, struct termui_optctx_dev_char_opts, size, 1, 1, 1024,
                                TERMUI_CON_OPT_CONSTRAINTS(CHAR_OPT_SIZE, 0)
                                )
 
@@ -140,7 +161,19 @@ static TERMUI_CON_OPT_DECL(dev_char_opts) =
 		       )
 
   TERMUI_CON_OPT_ENTRY("-p", "--partial", CHAR_OPT_PARTIAL,
-		       TERMUI_CON_OPT_CONSTRAINTS(CHAR_OPT_PARTIAL, 0)
+		       TERMUI_CON_OPT_CONSTRAINTS(CHAR_OPT_FRAME | CHAR_OPT_PARTIAL | CHAR_OPT_POLL, 0)
+		       )
+
+  TERMUI_CON_OPT_ENTRY("-f", "--frame", CHAR_OPT_FRAME,
+		       TERMUI_CON_OPT_CONSTRAINTS(CHAR_OPT_FRAME | CHAR_OPT_PARTIAL | CHAR_OPT_POLL | CHAR_OPT_FLUSH, 0)
+		       )
+
+  TERMUI_CON_OPT_ENTRY("-F", "--flush", CHAR_OPT_FLUSH,
+		       TERMUI_CON_OPT_CONSTRAINTS(CHAR_OPT_FLUSH | CHAR_OPT_FRAME | CHAR_OPT_POLL, 0)
+		       )
+
+  TERMUI_CON_OPT_ENTRY("-P", "--poll", CHAR_OPT_POLL,
+		       TERMUI_CON_OPT_CONSTRAINTS(CHAR_OPT_FRAME | CHAR_OPT_PARTIAL | CHAR_OPT_POLL | CHAR_OPT_FLUSH, 0)
 		       )
 
   TERMUI_CON_LIST_END
@@ -151,14 +184,14 @@ TERMUI_CON_GROUP_DECL(dev_shell_char_group) =
   TERMUI_CON_ENTRY(shell_char_read, "read",
     TERMUI_CON_OPTS_CTX(dev_char_opts,
                         CHAR_OPT_DEV | CHAR_OPT_SIZE,
-                        CHAR_OPT_HEX | CHAR_OPT_PARTIAL,
+                        CHAR_OPT_HEX | CHAR_OPT_PARTIAL | CHAR_OPT_FRAME | CHAR_OPT_POLL,
                         char_opts_cleanup)
   )
 
   TERMUI_CON_ENTRY(shell_char_write, "write",
     TERMUI_CON_OPTS_CTX(dev_char_opts,
                         CHAR_OPT_DEV | CHAR_OPT_DATA,
-                        CHAR_OPT_PARTIAL,
+                        CHAR_OPT_PARTIAL | CHAR_OPT_FRAME | CHAR_OPT_POLL | CHAR_OPT_FLUSH,
                         char_opts_cleanup)
   )
 

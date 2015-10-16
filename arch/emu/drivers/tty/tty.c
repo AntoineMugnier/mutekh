@@ -60,6 +60,8 @@
 #include <device/driver.h>
 #include <device/class/char.h>
 
+#define emu_tty_cancel (dev_char_cancel_t*)&dev_driver_notsup_fcn
+
 static DEV_CHAR_REQUEST(emu_tty_request)
 {
   //  struct device_s *dev = accessor->dev;
@@ -79,15 +81,17 @@ static DEV_CHAR_REQUEST(emu_tty_request)
     id = EMU_SYSCALL_READ;
     break;
 
+  case DEV_CHAR_WRITE_PARTIAL_FLUSH:
   case DEV_CHAR_WRITE_PARTIAL:
     partial = 1;
+  case DEV_CHAR_WRITE_FLUSH:
   case DEV_CHAR_WRITE:
     fd = 1;
     id = EMU_SYSCALL_WRITE;
     break;
 
   default:
-    rq->error = -EINVAL;
+    rq->error = -ENOTSUP;
     goto end;
   }
 

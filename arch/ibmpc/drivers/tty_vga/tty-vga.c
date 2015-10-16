@@ -420,6 +420,8 @@ void tty_vga_try_read(struct device_s *dev)
 }
 #endif
 
+#define tty_vga_cancel (dev_char_cancel_t*)&dev_driver_notsup_fcn
+
 DEV_CHAR_REQUEST(tty_vga_request)
 {
   struct tty_vga_context_s	*pv = dev->drv_pv;

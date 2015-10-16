@@ -107,6 +107,8 @@ static void try_write(struct device_s *dev, struct dev_char_rq_s *rq)
     }
 }
 
+#define uart_8250_cancel (dev_char_cancel_t*)&dev_driver_notsup_fcn
+
 DEV_CHAR_REQUEST(uart_8250_request)
 {
     struct uart_8250_context_s	*pv = dev->drv_pv;
