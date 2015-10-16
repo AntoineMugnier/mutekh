@@ -28,6 +28,7 @@
 		PTHREAD_MUTEX_NORMAL
 ************************************************************************/
 
+static
 error_t
 __pthread_mutex_normal_lock(pthread_mutex_t *mutex)
 {
@@ -52,6 +53,7 @@ __pthread_mutex_normal_lock(pthread_mutex_t *mutex)
   return 0;
 }
 
+static
 error_t
 __pthread_mutex_normal_trylock(pthread_mutex_t *mutex)
 {
@@ -73,6 +75,7 @@ __pthread_mutex_normal_trylock(pthread_mutex_t *mutex)
   return res;
 }
 
+static
 error_t
 __pthread_mutex_normal_unlock(pthread_mutex_t *mutex)
 {

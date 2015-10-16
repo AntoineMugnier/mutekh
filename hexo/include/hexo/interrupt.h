@@ -67,11 +67,11 @@ void cpu_interrupt_cls_sethandler(void *cls, cpu_interrupt_handler_t *handler);
 
 /** @this disables all maskable interrupts for the current cpu.
     This acts as a compiler memory barrier. */
-ALWAYS_INLINE void cpu_interrupt_disable();
+ALWAYS_INLINE void cpu_interrupt_disable(void);
 
 /** @this enables all maskable interrupts for the current cpu.
     This acts as a compiler memory barrier. */
-ALWAYS_INLINE void cpu_interrupt_enable();
+ALWAYS_INLINE void cpu_interrupt_enable(void);
 
 /** @this saves interrupts enable state (may use stack) */
 ALWAYS_INLINE void cpu_interrupt_savestate(reg_t *state);
@@ -85,24 +85,24 @@ ALWAYS_INLINE void cpu_interrupt_savestate_disable(reg_t *state);
 ALWAYS_INLINE void cpu_interrupt_restorestate(const reg_t *state);
 
 /** @this reads current interrupts state as boolean */
-ALWAYS_INLINE bool_t cpu_interrupt_getstate();
+ALWAYS_INLINE bool_t cpu_interrupt_getstate(void);
 
 /** @this checks if the cpu is interruptible */
-ALWAYS_INLINE bool_t cpu_is_interruptible();
+ALWAYS_INLINE bool_t cpu_is_interruptible(void);
 
 /** @this enables interrupts and give a chance to pending requests to
     execute. This function must be used to avoid the "sti; cli"
     sequence which don't let interrupts raise on some
     processors. Memory is marked as clobbered by this function to
     force global variable reload after interrupts occured. */
-ALWAYS_INLINE void cpu_interrupt_process();
+ALWAYS_INLINE void cpu_interrupt_process(void);
 
 # ifdef CONFIG_CPU_WAIT_IRQ
 /** @this enables interrupts and enters in interrupt wait state. The
     @ref #CONFIG_CPU_WAIT_IRQ token may be used to check for
     availability. Memory is marked as clobbered by this function to
     force global variable reload after interrupts occured. */
-ALWAYS_INLINE void cpu_interrupt_wait();
+ALWAYS_INLINE void cpu_interrupt_wait(void);
 # endif
 
 /** @showcontent

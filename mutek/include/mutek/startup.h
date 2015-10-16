@@ -39,7 +39,7 @@ INIT_BOOTSTRAP_PROTOTYPES;
 INIT_SMP_PROTOTYPES;
 
 /** boot address, (located in cpu/current/boot.S) */
-void cpu_boot();
+void cpu_boot(void);
 
 /** Called from boot assembly code (@ref cpu_boot). @This is the C
     code entrypoint for the bootstrap processor. If this function is
@@ -50,14 +50,14 @@ void mutekh_startup(void *arg);
 
 /** Starting point of non-bootstrap processors. @This performs all
     initializations of the @ref #INIT_SMP group. */
-void mutekh_startup_smp();
+void mutekh_startup_smp(void);
 
 #ifdef CONFIG_ARCH_SMP
 /** Spin barrier which can be used to synchronize processors when
     performing intializations of the @ref #INIT_SMP group. */
-void mutekh_startup_smp_barrier();
+void mutekh_startup_smp_barrier(void);
 #else
-ALWAYS_INLINE void mutekh_startup_smp_barrier()
+ALWAYS_INLINE void mutekh_startup_smp_barrier(void)
 {
 }
 #endif
@@ -68,7 +68,7 @@ ALWAYS_INLINE void mutekh_startup_smp_barrier()
 
     @This is executed by the bootstrap processor only, unless @ref
     #CONFIG_MUTEK_SMP_APP_START is defined. */
-void app_start();
+void app_start(void);
 
 C_HEADER_END
 

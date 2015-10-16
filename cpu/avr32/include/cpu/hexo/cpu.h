@@ -40,7 +40,7 @@ cpu_id(void)
 }
 
 ALWAYS_INLINE
-reg_t cpu_get_stackptr()
+reg_t cpu_get_stackptr(void)
 {
     reg_t ret;
     asm ("mov %0, sp" : "=r" (ret));
@@ -54,7 +54,7 @@ cpu_isbootstrap(void)
 }
 
 ALWAYS_INLINE void
-cpu_trap()
+cpu_trap(void)
 {
   asm volatile ("breakpoint");
 }
@@ -63,7 +63,7 @@ ALWAYS_INLINE void cpu_dcache_invld(void *ptr)
 {
 }
 
-ALWAYS_INLINE size_t cpu_dcache_line_size()
+ALWAYS_INLINE size_t cpu_dcache_line_size(void)
 {
   reg_t ret;
   asm ("mfsr %0, 260" : "=r" (ret)); /* CONFIG1 register */

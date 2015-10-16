@@ -751,7 +751,7 @@ typedef struct pthread_once_s pthread_once_t;
    @returns 0 when done
 */
 config_depend_alwaysinline(CONFIG_PTHREAD_ONCE,
-error_t pthread_once(pthread_once_t *once, void (*func)()),
+error_t pthread_once(pthread_once_t *once, void (*func)(void)),
 {
   /* No contention here... */
   if ( once->done )

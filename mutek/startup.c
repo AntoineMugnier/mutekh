@@ -37,7 +37,7 @@
 ////////////////////////////////////////////////////// copy .data
 
 #ifdef CONFIG_LOAD_ROM
-void section_data_init()
+void section_data_init(void)
 {
   extern __ldscript_symbol_t __data_start;
   extern __ldscript_symbol_t __data_load_start;
@@ -53,7 +53,7 @@ void section_data_init()
 
 #if defined(CONFIG_LOAD_ROM) || defined(CONFIG_LOAD_BOOTLOAD)
 
-void section_bss_init()
+void section_bss_init(void)
 {
   extern __ldscript_symbol_t __bss_start;
   extern __ldscript_symbol_t __bss_end;

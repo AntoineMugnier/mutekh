@@ -190,7 +190,7 @@
 # endif
 
 ALWAYS_INLINE
-reg_t cpu_get_stackptr()
+reg_t cpu_get_stackptr(void)
 {
     reg_t ret;
     asm("move %0, $sp": "=r"(ret));
@@ -210,7 +210,7 @@ cpu_isbootstrap(void)
 }
 
 ALWAYS_INLINE void
-cpu_trap()
+cpu_trap(void)
 {
   asm volatile ("break 0");
 }
@@ -247,7 +247,7 @@ ALWAYS_INLINE void cpu_dcache_flush(void *ptr)
 		);
 }
 
-ALWAYS_INLINE size_t cpu_dcache_line_size()
+ALWAYS_INLINE size_t cpu_dcache_line_size(void)
 {
   reg_t r0 = cpu_mips_mfc0(16, 0);
   reg_t r1 = cpu_mips_mfc0(16, 1);

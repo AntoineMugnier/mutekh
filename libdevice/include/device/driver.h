@@ -538,7 +538,7 @@ error_t device_bind_driver(struct device_s *dev, const struct driver_s *drv);
 error_t device_init_driver(struct device_s *dev);
 
 /** @This function does nothing but returning @tt -ENOTUP */
-error_t dev_driver_notsup_fcn();
+error_t dev_driver_notsup_fcn(void);
 
 #endif
 

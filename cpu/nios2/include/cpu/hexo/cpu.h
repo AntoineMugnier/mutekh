@@ -95,7 +95,7 @@ cpu_isbootstrap(void)
 }
 
 ALWAYS_INLINE void
-cpu_trap()
+cpu_trap(void)
 {
   __asm__ volatile ("trap");
 }
@@ -114,7 +114,7 @@ ALWAYS_INLINE void cpu_dcache_invld(void *ptr)
 		    );
 }
 
-ALWAYS_INLINE size_t cpu_dcache_line_size()
+ALWAYS_INLINE size_t cpu_dcache_line_size(void)
 {
   return 8;
 }

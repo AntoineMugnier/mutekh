@@ -2,6 +2,8 @@
 #include <hexo/types.h>
 #include <hexo/cpu.h>
 
+#include <assert.h>
+
 #if defined(CONFIG_LIBC_ASSERT)
 
 #ifdef CONFIG_MUTEK_PRINTK_HANDLER

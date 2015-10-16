@@ -22,6 +22,7 @@
 #include <mutek/mem_alloc.h>
 #include <hexo/endian.h>
 #include <hexo/iospace.h>
+#include <mutek/startup.h>
 #include <assert.h>
 
 extern inline void *

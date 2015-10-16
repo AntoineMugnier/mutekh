@@ -79,7 +79,7 @@ cpu_isbootstrap(void)
 }
 
 ALWAYS_INLINE
-reg_t cpu_get_stackptr()
+reg_t cpu_get_stackptr(void)
 {
     reg_t ret;
     asm("mov %0, sp": "=r"(ret));
@@ -87,7 +87,7 @@ reg_t cpu_get_stackptr()
 }
 
 ALWAYS_INLINE void
-cpu_trap()
+cpu_trap(void)
 {
   asm volatile ("bkpt");
 }
@@ -105,7 +105,7 @@ ALWAYS_INLINE void cpu_dcache_invld(void *ptr)
 #endif
 }
 
-ALWAYS_INLINE size_t cpu_dcache_line_size()
+ALWAYS_INLINE size_t cpu_dcache_line_size(void)
 {
 #if defined(CONFIG_CPU_CACHE)
     THUMB_TMP_VAR;

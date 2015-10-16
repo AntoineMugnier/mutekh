@@ -920,6 +920,9 @@ sub output_inits
             while ( $par = $par->{during} ) {
                 last if ( $args = $par->{prototype} );                
             }
+
+            $args = "void" if ( $args == "" );
+
             print {$out} "  void $call->{constructor}($args); \\\n"
                 if ( $call->{constructor} );
             print {$out} "  void $call->{destructor}($args); \\\n"

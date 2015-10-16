@@ -26,6 +26,8 @@
 #include "term_pv.h"
 #include <termui/term_keys.h>
 
+#include <termui/mutekh.h>
+
 #include <device/class/char.h>
 
 static TERMUI_TERMIO_FCN_WRITE(termui_dev_write)

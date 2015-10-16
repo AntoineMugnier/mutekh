@@ -82,7 +82,7 @@ error_t nanosleep(const struct timespec *rqtp, struct timespec *rmtp);
 
 /** @internal @This returns a pointer to libc timer. */
 config_depend(CONFIG_LIBC_TIME)
-struct device_timer_s *libc_timer();
+struct device_timer_s *libc_timer(void);
 
 /** @internal @This converts between libc time and libc timer value. */
 config_depend(CONFIG_LIBC_TIME)

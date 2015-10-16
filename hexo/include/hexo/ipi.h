@@ -102,7 +102,7 @@ error_t ipi_post_rq(struct ipi_endpoint_s *endpoint, struct ipi_request_s *rq);
    Request processing of pending messages on current processor. Must
    be called from icu driver
  */
-void ipi_process_rq();
+void ipi_process_rq(void);
 
 /**
    Checks whether a given endpoint may receive IPIs.

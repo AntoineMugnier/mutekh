@@ -75,7 +75,7 @@ static CPU_EXCEPTION_HANDLER(fault_handler)
 #endif
 }
 
-void mutek_fault_initsmp()
+void mutek_fault_initsmp(void)
 {
   lock_init(&fault_lock);
   cpu_exception_sethandler(fault_handler);

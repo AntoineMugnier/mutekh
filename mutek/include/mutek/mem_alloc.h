@@ -56,7 +56,7 @@ enum mem_scope_e
     @see #CONFIG_MUTEK_MEMALLOC_STATS
 */
 ALWAYS_INLINE
-void mem_check()
+void mem_check(void)
 {
   memory_allocator_region_check(default_region);
 }

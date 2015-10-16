@@ -57,12 +57,12 @@ static void libdevice_drivers_init(uint_fast8_t pass)
 #endif
 }
 
-void libdevice_drivers_init0()
+void libdevice_drivers_init0(void)
 {
   libdevice_drivers_init(0);
 }
 
-void libdevice_drivers_init1()
+void libdevice_drivers_init1(void)
 {
   if (cpu_isbootstrap())
     libdevice_drivers_init(1);

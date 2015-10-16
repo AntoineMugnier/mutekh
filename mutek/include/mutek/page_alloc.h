@@ -89,7 +89,7 @@ void ppage_refdrop( paddr_t paddr);
 struct vmem_page_region_s *ppage_to_region(paddr_t paddr);
 
 /** Return the physical page allocator's initial region*/
-struct vmem_page_region_s *ppage_initial_region_get();
+struct vmem_page_region_s *ppage_initial_region_get(void);
 
 # endif
 

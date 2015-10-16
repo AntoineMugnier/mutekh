@@ -178,6 +178,7 @@ static void device_irq_ep_unlink_all(struct dev_irq_ep_s *a)
     }
 }
 
+static
 error_t device_irq_ep_link(struct dev_irq_src_s *source, struct dev_irq_sink_s *sink)
 {
 #ifndef CONFIG_DEVICE_IRQ_SHARING
@@ -200,6 +201,7 @@ error_t device_irq_ep_link(struct dev_irq_src_s *source, struct dev_irq_sink_s *
   return 0;
 }
 
+static
 error_t device_irq_ep_unlink(struct dev_irq_src_s *source, struct dev_irq_sink_s *sink)
 {
   assert(source != NULL || sink != NULL);

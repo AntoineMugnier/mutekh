@@ -274,7 +274,7 @@ void device_shrink(struct device_s *dev);
 
 /** @This returns the device tree root node. */
 config_depend(CONFIG_DEVICE_TREE)
-struct device_node_s *device_tree_root();
+struct device_node_s *device_tree_root(void);
 
 /** @This creates an alias in the device tree. The parent parameter
     may be @tt NULL to attach the alias on the tree root. */
@@ -394,7 +394,7 @@ bool_t device_tree_walk(struct device_node_s *root, device_tree_walker_t *walker
 
 /** @This returns the number of processor devices present in the
     devices tree with a properly initialized driver attached. */
-uint_fast8_t device_get_cpu_count();
+uint_fast8_t device_get_cpu_count(void);
 
 #ifdef CONFIG_VMEM
 uintptr_t vpage_io_map(paddr_t paddr, size_t size);

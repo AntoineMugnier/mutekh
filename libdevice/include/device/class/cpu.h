@@ -39,7 +39,7 @@
 extern CPU_LOCAL struct device_s *cpu_device;
 
 /** @This returns a pointer to local cpu device */
-ALWAYS_INLINE struct device_s * cpu_local_device()
+ALWAYS_INLINE struct device_s * cpu_local_device(void)
 {
   return CPU_LOCAL_GET(cpu_device);
 }

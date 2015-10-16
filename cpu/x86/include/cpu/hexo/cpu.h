@@ -67,7 +67,7 @@ cpu_isbootstrap(void)
 cpu_id_t cpu_id(void);
 
 ALWAYS_INLINE void
-cpu_trap()
+cpu_trap(void)
 {
   asm volatile ("int3");
 }
@@ -79,7 +79,7 @@ ALWAYS_INLINE void cpu_dcache_invld(void *ptr)
 #endif
 }
 
-ALWAYS_INLINE size_t cpu_dcache_line_size()
+ALWAYS_INLINE size_t cpu_dcache_line_size(void)
 {
   return 0;			/* FIXME */
 }

@@ -235,7 +235,7 @@ config_depend(CONFIG_LIBC_STREAM_STD)
 extern FILE * const stderr;
 
 config_depend_alwaysinline(CONFIG_LIBC_STREAM_STD,
-int_fast16_t getchar(),
+int_fast16_t getchar(void),
 {
   return fgetc(stdin);
 });

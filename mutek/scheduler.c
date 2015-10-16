@@ -586,7 +586,7 @@ void sched_context_candidate_fcn(struct sched_context_s *sched_ctx,
  *      Scheduler init
  */
 
-void mutek_scheduler_initsmp()
+void mutek_scheduler_initsmp(void)
 {
   if (cpu_isbootstrap())
     {
@@ -622,7 +622,7 @@ void mutek_scheduler_initsmp()
   mutekh_startup_smp_barrier();
 }
 
-void mutek_scheduler_start()
+void mutek_scheduler_start(void)
 {
   /* init the processor idle thread */
   struct sched_context_s *idle = CPU_LOCAL_ADDR(sched_idle);

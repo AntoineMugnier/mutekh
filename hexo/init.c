@@ -24,6 +24,7 @@
 #include <hexo/context.h>
 #include <mutek/mem_alloc.h>
 #include <mutek/printk.h>
+#include <mutek/startup.h>
 
 #ifdef CONFIG_DEVICE
 # include <device/device.h>
@@ -35,7 +36,7 @@
 
 /////////////////////////////////// cpu main context intialization
 
-void hexo_context_initsmp()
+void hexo_context_initsmp(void)
 {
   struct context_s *context = CPU_LOCAL_ADDR(cpu_main_context);
 

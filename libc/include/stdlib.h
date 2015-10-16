@@ -147,7 +147,7 @@ char *setstate(char *state);
 /******************** abort */
 
 __attribute__((noreturn))
-void abort();
+void abort(void);
 
 /******************* exit */
 

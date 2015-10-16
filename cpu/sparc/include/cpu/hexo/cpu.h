@@ -82,7 +82,7 @@ cpu_id(void)
 }
 
 ALWAYS_INLINE
-reg_t cpu_get_stackptr()
+reg_t cpu_get_stackptr(void)
 {
     reg_t ret;
     asm("mov %%o6, %0"
@@ -97,7 +97,7 @@ cpu_isbootstrap(void)
 }
 
 ALWAYS_INLINE void
-cpu_trap()
+cpu_trap(void)
 {
   asm volatile ("ta %0 \n"
                 "nop \n"
@@ -108,7 +108,7 @@ ALWAYS_INLINE void cpu_dcache_invld(void *ptr)
 {
 }
 
-ALWAYS_INLINE size_t cpu_dcache_line_size()
+ALWAYS_INLINE size_t cpu_dcache_line_size(void)
 {
   return CONFIG_CPU_CACHE_LINE;
 }

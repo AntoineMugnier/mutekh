@@ -51,7 +51,7 @@ cpu_isbootstrap(void)
   return 1;
 }
 
-ALWAYS_INLINE void cpu_trap()
+ALWAYS_INLINE void cpu_trap(void)
 {
 #ifdef CONFIG_ARCH_EMU_TRAP_KILL
   /* kill process group */
@@ -70,7 +70,7 @@ ALWAYS_INLINE void cpu_dcache_invld(void *ptr)
 # endif
 }
 
-ALWAYS_INLINE size_t cpu_dcache_line_size()
+ALWAYS_INLINE size_t cpu_dcache_line_size(void)
 {
   return 0;			/* FIXME */
 }

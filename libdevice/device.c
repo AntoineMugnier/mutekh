@@ -661,7 +661,7 @@ static DEVICE_TREE_WALKER(count_cpus_r)
   return 0;
 }
 
-uint_fast8_t device_get_cpu_count()
+uint_fast8_t device_get_cpu_count(void)
 {
   uint_fast8_t count = 0;
   device_tree_walk(NULL, count_cpus_r, &count);

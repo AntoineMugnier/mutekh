@@ -108,10 +108,10 @@ ALWAYS_INLINE const char *cpu_type_name(void);
 ALWAYS_INLINE bool_t cpu_isbootstrap(void);
 
 /** cpu trap instruction */
-ALWAYS_INLINE void cpu_trap();
+ALWAYS_INLINE void cpu_trap(void);
 
 /** get cpu cache line size, return 0 if no dcache */
-ALWAYS_INLINE size_t cpu_dcache_line_size();
+ALWAYS_INLINE size_t cpu_dcache_line_size(void);
 
 /** invalidate the cpu data cache line containing this address */
 ALWAYS_INLINE void cpu_dcache_invld(void *ptr);

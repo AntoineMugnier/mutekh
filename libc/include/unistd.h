@@ -52,7 +52,7 @@ typedef int16_t mode_t;
 
 #ifdef CONFIG_LIBC_UNIXFD
 /* setup fd 0, 1, 2 */
-void libc_unixfd_init();
+void libc_unixfd_init(void);
 #endif
 
 enum open_flags_e

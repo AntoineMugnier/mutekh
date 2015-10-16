@@ -32,10 +32,10 @@
 #include <hexo/error.h>
 
 /** Hard reboot the platform. May return ENOTSUP. */
-error_t power_reboot();
+error_t power_reboot(void);
 
 /** Turn system power off. May return ENOTSUP. */
-error_t power_shutdown();
+error_t power_shutdown(void);
 
 enum power_reset_cause_e
 {

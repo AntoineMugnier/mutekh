@@ -28,6 +28,7 @@ pthread_t pthread_main;
 
 error_t main(size_t argc, char **argv);
 
+static
 void * pthread_main_func(void *pv)
 {
   char *argv[] = { "a.out", NULL };

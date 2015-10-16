@@ -77,14 +77,14 @@ ALWAYS_INLINE struct mmu_context_s * mmu_context_get(void)
 }
 
 /* initialize virtual memory structures */
-uint_fast32_t mmu_global_init();
+uint_fast32_t mmu_global_init(void);
 
 /* switch to virtual memory mode by enabling mmu */
 void mmu_cpu_init(void);
 
 
 /* get kernel context */
-struct mmu_context_s * mmu_get_kernel_context();
+struct mmu_context_s * mmu_get_kernel_context(void);
 
 /* create a memory context and initialize context object */
 error_t mmu_context_init(struct mmu_context_s *ctx, struct vmem_page_region_s *ppage_region);

@@ -25,6 +25,7 @@
 
 #include <mutek/printk.h>
 #include <mutek/fileops.h>
+#include <mutek/startup.h>
 
 #include <mutek/console.h>
 #include <device/class/char.h>
@@ -83,7 +84,7 @@ const struct fileops_s console_file_ops =
 
 struct device_char_s console_dev = DEVICE_ACCESSOR_INIT;
 
-void mutek_console_initsmp()
+void mutek_console_initsmp(void)
 {
   if (!cpu_isbootstrap())
     return;
@@ -95,7 +96,7 @@ void mutek_console_initsmp()
            CONFIG_MUTEK_CONSOLE_DEVICE_PATHS "' in the device tree.\n");
 }
 
-void mutek_console_cleanupsmp()
+void mutek_console_cleanupsmp(void)
 {
   if (!cpu_isbootstrap())
     return;
