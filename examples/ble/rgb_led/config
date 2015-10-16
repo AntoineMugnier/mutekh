@@ -1,0 +1,20 @@
+%set OUTPUT_NAME rgb_led
+%append MODULES app:$(CONFIGPATH)
+
+CONFIG_COMPILE_COLLECT
+CONFIG_COMPILE_DEBUG
+CONFIG_MUTEK_THREAD
+
+CONFIG_LICENSE_APP_BSD
+
+# Libs
+CONFIG_APP_START
+
+CONFIG_DRIVER_NRF5X_GPIO_PWM
+CONFIG_DRIVER_NRF5X_GPIO_PWM_CHANNEL_COUNT 3
+
+%inherit ble-peripheral
+
+%include arch/arch.build
+%include scripts/options.build
+%include examples/ble/ble.build
