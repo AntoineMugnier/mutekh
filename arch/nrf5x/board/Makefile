@@ -6,3 +6,4 @@ objs-$(CONFIG_NRF5X_PCA20006) += pca20006.o
 objs-$(CONFIG_NRF5X_PCA10028) += pca10028.o
 objs-$(CONFIG_NRF5X_PCA10031) += pca10031.o
 objs-$(CONFIG_NRF5X_PCA10036) += pca10036.o
+objs-$(CONFIG_NRF5X_TINYBLE) += tiny_ble.o
