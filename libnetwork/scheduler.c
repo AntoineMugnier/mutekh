@@ -41,9 +41,6 @@ GCT_CONTAINER_KEY_TYPES(net_timeout_queue, CUSTOM, SCALAR,
 GCT_CONTAINER_KEY_FCNS(net_timeout_queue, ASC, static, net_timeout_queue, net_timeout_queue,
                        init, destroy, pop, head, remove, insert);
 
-GCT_CONTAINER_FCNS(net_scheduler_destroy_listener, ALWAYS_INLINE, net_scheduler_destroy_listener,
-                   init, destroy, pushback, remove, isempty);
-
 static void net_sched_wakeup(struct net_scheduler_s *sched)
 {
   dprintk("Net scheduler wakeup\n");
@@ -255,8 +252,6 @@ error_t net_scheduler_init(
   sched->timer_rq.rq.drvdata = NULL;
   kroutine_init(&sched->timer_rq.rq.kr, net_scheduler_timeout, KROUTINE_IMMEDIATE);
 
-  net_scheduler_destroy_listener_init(&sched->destroy_listeners);
-
   device_start(&sched->timer);
 
   const size_t stack_size = 1024;
@@ -285,24 +280,6 @@ error_t net_scheduler_init(
   lock_destroy(&sched->lock);
 
   return err;
-}
-
-void net_scheduler_destroy_listener_register(
-  struct net_scheduler_s *sched,
-  struct net_scheduler_destroy_listener_s *listener,
-  net_scheduler_destroy_listener_func_t *func)
-{
-  listener->func = func;
-  net_scheduler_destroy_listener_pushback(&sched->destroy_listeners,
-                                          listener);
-}
-
-void net_scheduler_destroy_listener_unregister(
-  struct net_scheduler_s *sched,
-  struct net_scheduler_destroy_listener_s *listener)
-{
-  net_scheduler_destroy_listener_remove(&sched->destroy_listeners,
-                                        listener);
 }
 
 void net_scheduler_task_push(

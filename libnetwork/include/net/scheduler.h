@@ -60,24 +60,6 @@
 
 GCT_CONTAINER_TYPES(net_timeout_queue, struct net_task_header_s *, queue_entry);
 
-#define GCT_CONTAINER_ALGO_net_scheduler_destroy_listener CLIST
-
-struct net_scheduler_destroy_listener_s;
-
-#define NET_SCHEDULER_DESTROY_LISTENER(x) void (x)(     \
-  struct net_scheduler_destroy_listener_s *listener,    \
-  struct net_layer_s *layer)
-
-typedef NET_SCHEDULER_DESTROY_LISTENER(net_scheduler_destroy_listener_func_t);
-
-struct net_scheduler_destroy_listener_s
-{
-  GCT_CONTAINER_ENTRY(net_scheduler_destroy_listener, entry);
-  net_scheduler_destroy_listener_func_t *func;
-};
-
-GCT_CONTAINER_TYPES(net_scheduler_destroy_listener, struct net_scheduler_destroy_listener_s *, entry);
-
 struct net_scheduler_s;
 
 /**
@@ -87,8 +69,6 @@ struct net_scheduler_s;
 struct net_scheduler_s
 {
   lock_t lock;
-
-  net_scheduler_destroy_listener_root_t destroy_listeners;
 
   struct context_s context;
   struct sched_context_s sched_context;
@@ -144,16 +124,6 @@ void net_scheduler_timer_release(struct net_scheduler_s *sched);
 void net_scheduler_task_free(
   struct net_scheduler_s *sched,
   struct net_task_s *task);
-
-
-void net_scheduler_destroy_listener_register(
-  struct net_scheduler_s *sched,
-  struct net_scheduler_destroy_listener_s *listener,
-  net_scheduler_destroy_listener_func_t *func);
-
-void net_scheduler_destroy_listener_unregister(
-  struct net_scheduler_s *sched,
-  struct net_scheduler_destroy_listener_s *listener);
 
 /**
    @this allocates a packet from scheduler's packet pool.
