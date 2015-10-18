@@ -47,8 +47,8 @@
     @item spi_width                @item w, o          @item @tt{1000 0100 00ow wwww}
     @item spi_brate                @item r             @item @tt{1000 0100 10-- rrrr}
 
-    @item spi_swp                  @item r, r          @item @tt{1000 1000 rrrr rrrr}
-    @item spi_swpl                 @item r, r, l       @item @tt{1000 1lll rrrr rrrr}
+    @item spi_swp                  @item wr, rd        @item @tt{1000 1000 rrrr rrrr}
+    @item spi_swpl                 @item wr, rd, l     @item @tt{1000 1lll rrrr rrrr}
 
     @item spi_pad                  @item r             @item @tt{1001 0000 ---- rrrr}
 
@@ -211,7 +211,7 @@
 
 #ifdef CONFIG_DEVICE_SPI_REQUEST
 # include <mutek/bytecode.h>
-# ifdef CONFIG_DEVICE_SPI_REQUEST_GPIO
+# ifdef CONFIG_DEVICE_GPIO
 #  include <device/class/gpio.h>
 # endif
 # ifdef CONFIG_DEVICE_SPI_REQUEST_TIMER
@@ -391,7 +391,7 @@ typedef DEV_SPI_CTRL_TRANSFER(dev_spi_ctrl_transfer_t);
 
 /** This helper function performs a SPI transfert as defined in @tt tr
     and waits for end of transfert. */
-config_depend(CONFIG_MUTEK_SCHEDULER)
+config_depend_and2(CONFIG_DEVICE_SPI, CONFIG_MUTEK_SCHEDULER)
 error_t dev_spi_wait_transfer(struct dev_spi_ctrl_transfer_s * tr);
 
 
@@ -435,6 +435,9 @@ DRIVER_CLASS_TYPES(spi_ctrl,
   })
 #endif
 
+struct dev_spi_ctrl_queue_s;
+struct dev_spi_ctrl_rq_s;
+
 #ifdef CONFIG_DEVICE_SPI_REQUEST
 
 /***************************************** request */
@@ -459,23 +462,24 @@ struct dev_spi_ctrl_rq_s
   struct device_spi_ctrl_s accessor;
   struct dev_spi_ctrl_queue_s *queue;
 
-#ifdef CONFIG_DEVICE_SPI_REQUEST_GPIO
+#ifdef CONFIG_DEVICE_GPIO
   /** If this device accessor refers to a gpio device, it will be used
       to drive the chip select pin and aux pins for this SPI slave. If
       it's not valid, the controller chip select mechanism will be
       used if available. */
   struct device_gpio_s    gpio;
+#endif
 
+#ifdef CONFIG_DEVICE_SPI_REQUEST_GPIO
   /** If the @ref gpio device accessor is valid, these tables give the
       index of gpio pin to use when a @tt spi_gpio* instruction is
-      encountered. If the @ref cs_gpio field is set, the first entry
-      of the table is used to drive the chip select signal. */
+      encountered. */
   const gpio_id_t         *gpio_map;
   const gpio_width_t      *gpio_wmap;
 #endif
 
-  /** If the @ref cs_ctrl field is set, this value is used by the SPI
-      controller to select the chip select output. */
+  /** This is either the index of the spi controller chip select
+      output or the pin id of the gpio device used as chip select. */
   uint8_t                 cs_id;
 
   /** Current cs policy */
@@ -484,7 +488,7 @@ struct dev_spi_ctrl_rq_s
   /** Chip select polarity of the slave device */
   enum dev_spi_polarity_e BITFIELD(cs_polarity,1);
 
-#ifdef CONFIG_DEVICE_SPI_REQUEST_GPIO
+#ifdef CONFIG_DEVICE_GPIO
   /** Use a gpio device to drive the chip select pin of the slave */
   bool_t                  BITFIELD(cs_gpio,1);
 #endif
@@ -534,6 +538,8 @@ struct dev_spi_ctrl_queue_s
   uint8_t                       running;
 };
 
+#endif /* CONFIG_DEVICE_SPI_REQUEST */
+
 /** This helper function initializes a SPI request queue struct for
     use in a SPI controller device driver. It is usually called from
     the controller driver initialization function to initialize a
@@ -543,11 +549,13 @@ struct dev_spi_ctrl_queue_s
     the device pointed to by the @tt{'spi-timer'} device resource
     entry of the controller, if available.
 */
+config_depend(CONFIG_DEVICE_SPI_REQUEST)
 error_t dev_spi_queue_init(struct device_s *dev, struct dev_spi_ctrl_queue_s *q);
 
 /** This helper function release the device accessor associated with
     the SPI request queue. @see dev_spi_queue_init
  */
+config_depend(CONFIG_DEVICE_SPI_REQUEST)
 void dev_spi_queue_cleanup(struct dev_spi_ctrl_queue_s *q);
 
 /**
@@ -567,6 +575,7 @@ void dev_spi_queue_cleanup(struct dev_spi_ctrl_queue_s *q);
    @param accessor pointer to controller device accessor
    @param ep pointer to the SPI endpoint.
 */
+config_depend(CONFIG_DEVICE_SPI_REQUEST)
 void dev_spi_rq_start(struct dev_spi_ctrl_rq_s *rq);
 
 /** This helper function initializes a SPI request structure for use
@@ -575,19 +584,55 @@ void dev_spi_rq_start(struct dev_spi_ctrl_rq_s *rq);
     the driver private context.
 
     The @ref dev_spi_ctrl_rq_s::accessor accessor is initialized
-    using the device pointed to by the @tt{'spi'} device resource
+    using the device pointed to by the @tt spi device resource
     entry of the slave.
 
-    If a @tt{'spi-cs-id'} entry is present in the device tree, the request
-    is configured to use the chip select feature of the SPI
-    controller.  In the other case, the @ref dev_spi_ctrl_rq_s::cs_gpio
-    field can still be used to drive the chip select using a GPIO pin.
+    If a @tt{'spi-cs-id'} entry is present in the device tree, the
+    request is configured to use the chip select feature of the SPI
+    controller. If a @tt{'gpio-cs-id'} entry is present, the request
+    is configured to use a gpio pin as chip select instead.
+
+    In order to use the gpio bytecode instructions, the
+    #CONFIG_DEVICE_SPI_REQUEST_GPIO token must be defined and the @tt
+    use_gpio parameter must be true. The @tt {rq->gpio} accessor will
+    be initialized can then be used to setup the @tt {rq->gpio_map}
+    and @tt {rq->gpio_wmap} fields of the request before running the
+    bytecode.
+
+    When gpios are used either for chip select or from the bytecode,
+    the @tt gpio resource entry of the device must point to a valid
+    gpio device.
+
+    In order to use delay related bytecode instructions, the @ref
+    #CONFIG_DEVICE_SPI_REQUEST_TIMER token must be defined and the @tt
+    use_timer parameter must be true. The @ref dev_spi_request_timer
+    function can be used to access the spi associated timer.
 */
+config_depend(CONFIG_DEVICE_SPI_REQUEST)
 error_t dev_spi_request_init(struct device_s *slave,
-                             struct dev_spi_ctrl_rq_s *rq);
+                             struct dev_spi_ctrl_rq_s *rq,
+                             bool_t use_gpio, bool_t use_timer);
+
+/** This function returns an accessor to the timer associated with the
+    spi controller of the request. */
+config_depend_alwaysinline(CONFIG_DEVICE_SPI_REQUEST_TIMER,
+struct device_timer_s *
+dev_spi_request_timer(struct dev_spi_ctrl_rq_s *rq),
+{
+  return &rq->queue->timer;
+})
+
+/** This function returns an accessor to the gpio device of the request. */
+config_depend_alwaysinline(CONFIG_DEVICE_SPI_REQUEST_GPIO,
+struct device_gpio_s *
+dev_spi_request_gpio(struct dev_spi_ctrl_rq_s *rq),
+{
+  return &rq->gpio;
+})
 
 /** This helper function release the device accessors associated with
     the SPI slave request. @see dev_spi_request_init */
+config_depend(CONFIG_DEVICE_SPI_REQUEST)
 void dev_spi_request_cleanup(struct dev_spi_ctrl_rq_s *rq);
 
 /** This function cancels the delay of the current or next @xref
@@ -599,9 +644,8 @@ void dev_spi_request_cleanup(struct dev_spi_ctrl_rq_s *rq);
     restarted. This returns an error if the request is not currently
     running.
  */
+config_depend(CONFIG_DEVICE_SPI_REQUEST)
 error_t device_spi_request_wakeup(struct dev_spi_ctrl_rq_s *rq);
-
-#endif /* CONFIG_DEVICE_SPI_REQUEST */
 
 #endif
 

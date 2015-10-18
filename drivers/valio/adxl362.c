@@ -347,36 +347,15 @@ static DEV_INIT(adxl362_init)
 
   struct dev_spi_ctrl_rq_s *srq = &pv->spi_rq;
 
-  if (dev_spi_request_init(dev, srq))
+  if (dev_spi_request_init(dev, srq, 0, 1))
     goto err_mem;
-
-  if (!device_check_accessor(&srq->queue->timer))
-    goto err_srq;
 
   srq->config.bit_rate = 1000000;
   srq->config.word_width = 8;
   srq->config.bit_order = DEV_SPI_MSB_FIRST;
+  srq->config.ck_mode = DEV_SPI_CK_MODE_0;
   srq->cs_polarity = DEV_SPI_CS_ACTIVE_LOW;
   srq->base.pvdata = dev;
-
-  /* init GPIO stuff */
-
-  static const gpio_width_t pin_wmap[1] = {1};
-
-  if (device_res_gpio_map(dev, "nsel:1", pv->pin_map, NULL))
-    goto err_srq;          
-
-  if (device_get_param_dev_accessor(dev, "gpio", &srq->gpio, DRIVER_CLASS_GPIO))
-    goto err_srq;
-
-  srq->gpio_map = pv->pin_map;
-  srq->gpio_wmap = pin_wmap;
-
-  if (device_gpio_map_set_mode(&srq->gpio, pv->pin_map, pin_wmap, 1, DEV_PIN_PUSHPULL))
-    goto err_srq;
-
-  if (pv->pin_map[0] != GPIO_INVALID_ID)
-    srq->cs_gpio = 1;
 
   dev_request_queue_init(&pv->queue);
 

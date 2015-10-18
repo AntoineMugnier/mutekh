@@ -68,7 +68,7 @@ static error_t device_spi_ctrl_select(struct dev_spi_ctrl_rq_s *rq,
   if (rq->cs_ctrl)
     return DEVICE_OP(&rq->accessor, select, pc, rq->cs_polarity, rq->cs_id);
 
-#ifdef CONFIG_DEVICE_SPI_REQUEST_GPIO
+#ifdef CONFIG_DEVICE_GPIO
   if (rq->cs_gpio)
     {
       const uint8_t *value = NULL;
@@ -87,8 +87,8 @@ static error_t device_spi_ctrl_select(struct dev_spi_ctrl_rq_s *rq,
           break;
         }
 
-      return DEVICE_OP(&rq->gpio, set_output, rq->gpio_map[0],
-                       rq->gpio_map[0], value, value);
+      return DEVICE_OP(&rq->gpio, set_output, rq->cs_id,
+                       rq->cs_id, value, value);
     }
 #endif
 
@@ -103,7 +103,7 @@ static KROUTINE_EXEC(device_spi_ctrl_transfer_end)
 
   lock_spin_irq(&q->lock);
 
-#ifdef CONFIG_DEVICE_SPI_REQUEST_GPIO
+#ifdef CONFIG_DEVICE_GPIO
   if (rq->cs_gpio && rq->cs_policy == DEV_SPI_CS_TRANSFER)
     device_spi_ctrl_select(rq, DEV_SPI_CS_DEASSERT);
 #endif
@@ -126,7 +126,7 @@ device_spi_ctrl_transfer(struct dev_spi_ctrl_rq_s *rq,
   struct dev_spi_ctrl_transfer_s *tr = &q->transfer;
   error_t err;
 
-#ifdef CONFIG_DEVICE_SPI_REQUEST_GPIO
+#ifdef CONFIG_DEVICE_GPIO
   if (rq->cs_gpio && rq->cs_policy == DEV_SPI_CS_TRANSFER &&
       (err = device_spi_ctrl_select(rq, DEV_SPI_CS_ASSERT)))
     goto err;
@@ -198,7 +198,7 @@ device_spi_ctrl_end(struct dev_spi_ctrl_rq_s *rq, error_t err)
   if (rq == q->current)
     {
       if (
-#ifdef CONFIG_DEVICE_SPI_REQUEST_GPIO
+#ifdef CONFIG_DEVICE_GPIO
           rq->cs_gpio ||
 #endif
           rq->cs_ctrl)
@@ -391,7 +391,7 @@ device_spi_ctrl_exec(struct dev_spi_ctrl_queue_s *q)
                       continue;
                     }
                   if (
-#ifdef CONFIG_DEVICE_SPI_REQUEST_GPIO
+#ifdef CONFIG_DEVICE_GPIO
                       rq->cs_gpio ||
 #endif
                       rq->cs_ctrl)
@@ -568,12 +568,12 @@ dev_spi_rq_start(struct dev_spi_ctrl_rq_s *rq)
   struct dev_spi_ctrl_queue_s *q = rq->queue;
   error_t err = 0;
 
-#ifdef CONFIG_DEVICE_SPI_REQUEST_GPIO
+#ifdef CONFIG_DEVICE_GPIO
   assert(!rq->cs_gpio || device_check_accessor(&rq->gpio));
 #endif
 
   if (
-#ifdef CONFIG_DEVICE_SPI_REQUEST_GPIO
+#ifdef CONFIG_DEVICE_GPIO
       rq->cs_gpio ||
 #endif
       rq->cs_ctrl)
@@ -682,30 +682,67 @@ void dev_spi_queue_cleanup(struct dev_spi_ctrl_queue_s *q)
 }
 
 error_t dev_spi_request_init(struct device_s *slave,
-                             struct dev_spi_ctrl_rq_s *rq)
+                             struct dev_spi_ctrl_rq_s *rq,
+                             bool_t use_gpio, bool_t use_timer)
 {
   uintptr_t x;
 
   memset(rq, 0, sizeof(*rq));
+
+#ifndef CONFIG_DEVICE_SPI_REQUEST_TIMER
+  if (use_timer)
+    return -ENOTSUP;
+#endif
+#ifndef CONFIG_DEVICE_SPI_REQUEST_GPIO
+  if (use_gpio)
+    return -ENOTSUP;
+#endif
 
   if (device_get_param_dev_accessor(slave, "spi", &rq->accessor, DRIVER_CLASS_SPI_CTRL))
     return -ENOENT;
 
   rq->queue = DEVICE_OP(&rq->accessor, queue);
 
+#ifdef CONFIG_DEVICE_SPI_REQUEST_TIMER
+  if (use_timer && !device_check_accessor(&rq->queue->timer))
+    goto err;
+#endif
+
   if (!device_get_param_uint(slave, "spi-cs-id", &x))
     {
       rq->cs_ctrl = 1;
-      rq->cs_id = x;      
+      rq->cs_id = x;
+    }
+  else if (!device_get_param_uint(slave, "gpio-cs-id", &x))
+    {
+#ifdef CONFIG_DEVICE_GPIO
+      rq->cs_gpio = 1;
+      rq->cs_id = x;
+#else
+      goto err;
+#endif
     }
 
+#ifdef CONFIG_DEVICE_GPIO
+  if (use_gpio || rq->cs_gpio)
+    {
+      if (device_get_param_dev_accessor(slave, "gpio", &rq->gpio, DRIVER_CLASS_GPIO))
+        goto err;
+      if (rq->cs_gpio)
+        DEVICE_OP(&rq->gpio, set_mode, rq->cs_id, rq->cs_id, dev_gpio_mask1, DEV_PIN_PUSHPULL);
+    }
+#endif
+
   return 0;
+ err:
+  device_put_accessor(&rq->accessor);
+  return -ENOTSUP;
 }
 
 void dev_spi_request_cleanup(struct dev_spi_ctrl_rq_s *rq)
 {
   device_put_accessor(&rq->accessor);
-#ifdef CONFIG_DEVICE_SPI_REQUEST_GPIO
+#ifdef CONFIG_DEVICE_GPIO
   device_put_accessor(&rq->gpio);
 #endif
 }

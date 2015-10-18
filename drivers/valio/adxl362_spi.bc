@@ -22,6 +22,7 @@ adxl362_spi_entry_reset:
         cst8                    %R_TMP1,        0x1F
         cst8                    %R_TMP2,        0x52
 	ADXL362_WRITE(3),
+#warning compute a delay in driver init
         cst16                   %R_TMP0,        1000, 0
         spi_yield_delay         %R_TMP0
         cst8                    %R_TMP1,        0x0

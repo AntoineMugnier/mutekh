@@ -23,8 +23,8 @@ package bc_custom_spi;
 #    brate               r             1000 0100 10-- rrrr
 #
 #    write               r             1000 1000 rrrr 1111
-#    swp                 r, r          1000 1000 rrrr rrrr
-#    swpl                r, r, l       1000 1lll rrrr rrrr
+#    swp                 wr, rd        1000 1000 rrrr rrrr
+#    swpl                wr, rd, l     1000 1lll rrrr rrrr
 #
 #    pad                 r             1001 0000 ---- rrrr
 #
