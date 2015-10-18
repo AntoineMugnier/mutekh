@@ -45,12 +45,6 @@ static TERMUI_TERMIO_FCN_READ(termui_dev_read)
   return res == 1 ? c : -1;
 }
 
-static TERMUI_TERMIO_FCN_POLLFD(termui_dev_pollfd)
-{
-#warning remove this poll function.
-  return 42;
-}
-
 static TERMUI_TERMIO_FCN_CLEANUP(termui_dev_cleanup)
 {
 }
@@ -65,7 +59,6 @@ termui_dev_io_init(struct termui_term_s *tm, struct device_char_s *dev, const ch
   /* register tty operations in term object */
   tm->s_write = termui_dev_write;
   tm->s_read = termui_dev_read;
-  tm->s_pollfd = termui_dev_pollfd;
   tm->s_cleanup = termui_dev_cleanup;
 
   tm->s_getsize = (termui_termio_getsize_t*)term_err;
