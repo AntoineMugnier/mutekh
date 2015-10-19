@@ -39,7 +39,9 @@ struct net_addr_s
 #if defined(CONFIG_BLE)
   uint8_t llid : 2;
   uint8_t unreliable : 1;
-  uint8_t secure : 1;
+  uint8_t authenticated : 1;
+  uint8_t encrypted : 1;
+  uint8_t random_addr : 1;
   uint16_t att;
   uint16_t cid;
 #endif
@@ -52,10 +54,9 @@ struct net_addr_s
 #if defined(CONFIG_NET_IPV6)
   uint8_t ipv6[16];
 #endif
-#if defined(CONFIG_NET_ETHERNET)
+#if defined(CONFIG_NET_ETHERNET) || defined(CONFIG_BLE)
   uint8_t mac[6];
 #endif
-  
 };
 
 #endif
