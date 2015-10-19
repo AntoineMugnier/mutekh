@@ -658,7 +658,7 @@ error_t device_icu_irq_bind(struct dev_irq_src_s *src, const char *icu_name,
     if (err)
         goto out;
 
-    if (!device_icu_source_link(src, &route_mask))
+    if (device_icu_source_link(src, &route_mask))
       {
         device_irq_ep_unlink(src, sink);
         err = -EBUSY;
