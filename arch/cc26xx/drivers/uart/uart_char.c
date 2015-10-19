@@ -4,12 +4,14 @@
 #include <hexo/interrupt.h>
 
 #include <mutek/mem_alloc.h>
+#include <mutek/printk.h>
 
 #include <device/device.h>
 #include <device/resources.h>
 #include <device/driver.h>
 #include <device/irq.h>
 #include <device/class/char.h>
+#include <device/class/iomux.h>
 
 #include <arch/cc26xx/memory_map.h>
 #include <arch/cc26xx/prcm.h>
@@ -337,33 +339,6 @@ static void clk_enable(void)
     CC26XX_PRCM_CLKLOADCTL_LOAD_DONE));
 }
 
-
-static void iomux_init(void)
-{
-  uint32_t reg;
-
-  //DIO2 as UART0 RX
-  reg = 0;
-  CC26XX_IOC_IOCFG_PORT_ID_SET(reg, UART0_RX);
-  CC26XX_IOC_IOCFG_PULL_CTL_SET(reg, DIS);
-  reg |= CC26XX_IOC_IOCFG_IE;
-  cpu_mem_write_32(CC26XX_IOC_BASE + CC26XX_IOC_IOCFG_ADDR(2), reg);
-
-  //DIO3 as UART0 TX
-  reg = 0;
-  CC26XX_IOC_IOCFG_PORT_ID_SET(reg, UART0_TX);
-  CC26XX_IOC_IOCFG_PULL_CTL_SET(reg, DIS);
-  reg &= ~CC26XX_IOC_IOCFG_IE;
-  cpu_mem_write_32(CC26XX_IOC_BASE + CC26XX_IOC_IOCFG_ADDR(3), reg);
-
-  reg = cpu_mem_read_32(CC26XX_GPIO_BASE + CC26XX_GPIO_DOE31_0_ADDR);
-  //disable DIO2 output
-  reg &= ~CC26XX_GPIO_DOE31_0_DIO(2);
-  //enable DIO3 output
-  reg |= CC26XX_GPIO_DOE31_0_DIO(3);
-  cpu_mem_write_32(CC26XX_GPIO_BASE + CC26XX_GPIO_DOE31_0_ADDR, reg);
-}
-
 static DEV_INIT(cc26xx_uart_init)
 {
   uint32_t                      reg;
@@ -376,19 +351,22 @@ static DEV_INIT(cc26xx_uart_init)
   dev->status = DEVICE_DRIVER_INIT_FAILED;
 
   pv = mem_alloc(sizeof(*pv), (mem_scope_sys));
-  dev->drv_pv = pv;
-
   if (!pv)
     return -ENOMEM;
-
-  pv->read_started = pv->write_started = 0;
+  memset(pv, 0, sizeof(*pv));
+  dev->drv_pv = pv;
 
   if (device_res_get_uint(dev, DEV_RES_MEM, 0, &pv->addr, NULL))
     goto err_mem;
 
+  pv->read_started = pv->write_started = 0;
+
   power_domain_on();
   clk_enable();
-  iomux_init();
+
+  /* setup pinmux */
+  if (device_iomux_setup(dev, ">tx <rx", NULL, NULL, NULL))
+    return -1;
 
   /* wait for empty fifo */
   while (!(cpu_mem_read_32(CC26XX_UART0_BASE + CC26XX_UART_FR_ADDR)
