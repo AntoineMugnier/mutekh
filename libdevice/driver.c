@@ -100,6 +100,28 @@ error_t device_get_accessor(void *accessor, struct device_s *dev,
   return err;
 }
 
+error_t device_copy_accessor(void *accessor, const void *source)
+{
+  struct device_accessor_s *a = accessor;
+  const struct device_accessor_s *b = source;
+  struct device_s *dev = b->dev;
+  error_t err = 0;
+
+  assert(dev);
+
+  a->dev = b->dev;
+  a->api = b->api;
+  a->number = b->number;
+
+  if (dev->drv->f_use == NULL ||
+      !(err = dev->drv->f_use(accessor, DEV_USE_GET_ACCESSOR)))
+    dev->ref_count++;
+  else
+    a->dev = NULL;
+
+  return err;
+}
+
 void device_put_accessor(void *accessor)
 {
   struct device_accessor_s *a = accessor;
