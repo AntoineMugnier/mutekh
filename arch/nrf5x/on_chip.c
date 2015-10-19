@@ -123,6 +123,18 @@ DEV_DECLARE_STATIC(ble_radio, "ble-radio", 0, nrf5x_ble_radio_drv,
                    DEV_STATIC_RES_CLK_SRC("/clock", NRF_CLOCK_HF_PRECISE, NRF5X_BLE_RADIO_CLK_RADIO)
                    );
 
+#if defined(CONFIG_DRIVER_BLE_RADIO)
+
+DEV_DECLARE_STATIC(ble_net_dev, "ble", 0, ble_net_drv,
+                   DEV_STATIC_RES_DEV_RADIO("/ble-radio"),
+#if defined(CONFIG_BLE_CRYPTO)
+                   DEV_STATIC_RES_DEV_CRYPTO("/aes"),
+                   DEV_STATIC_RES_STR_PARAM("rng", "/aes"),
+                   DEV_STATIC_RES_STR_PARAM("seed", "/rng"),
+#endif
+                   );
+
+#endif
 #endif
 
 #if defined(CONFIG_DRIVER_NRF5X_AES)
@@ -143,6 +155,17 @@ DEV_DECLARE_STATIC(rng_dev, "rng", 0, nrf5x_rng_drv,
                    NRF_STATIC_RES_PERIPHERAL_MEM(NRF5X_RNG),
                    DEV_STATIC_RES_DEV_ICU("/cpu"),
                    DEV_STATIC_RES_IRQ(0, NRF5X_RNG, DEV_IRQ_SENSE_HIGH_LEVEL, 0, 1)
+                   );
+
+#endif
+
+#if defined(CONFIG_DRIVER_BLE_RADIO)
+
+DEV_DECLARE_STATIC(ble_net_dev, "ble", 0, ble_net_drv,
+                   DEV_STATIC_RES_DEV_PARAM("radio", "/ble-radio"),
+                   DEV_STATIC_RES_DEV_PARAM("crypto", "/aes"),
+                   DEV_STATIC_RES_STR_PARAM("rng", "/aes"),
+                   DEV_STATIC_RES_STR_PARAM("seed", "/rng"),
                    );
 
 #endif
