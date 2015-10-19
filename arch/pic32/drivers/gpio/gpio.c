@@ -42,6 +42,7 @@
 
 #define GPIO_BANK_SIZE 16
 #define GPIO_BANK_COUNT 10
+#define GPIO_IRQ_PIN_COUNT GPIO_BANK_SIZE * GPIO_BANK_COUNT
 
 struct pic32_gpio_private_s
 {
@@ -49,6 +50,7 @@ struct pic32_gpio_private_s
   struct dev_irq_sink_s sinks[CONFIG_DRIVER_PIC32_GPIO_IRQ_COUNT];
   /* One irq by bank */
   struct dev_irq_src_s src[GPIO_BANK_COUNT];
+  uint8_t               sinks_map[GPIO_IRQ_PIN_COUNT];
 #endif
 #ifdef CONFIG_DEVICE_CLOCK
   struct dev_clock_sink_ep_s    clk_ep;
@@ -308,17 +310,37 @@ static DEV_IOMUX_SETUP(pic32_gpio_iomux_setup)
 
 #ifdef CONFIG_DRIVER_PIC32_GPIO_ICU
 
+static inline uint8_t icu_pv_get_pin_id(uint16_t icu_pv)
+{
+  return icu_pv & 0xff;
+}
+
+static inline void icu_pv_set_pin_id(uint16_t *icu_pv, uint8_t pin_id)
+{
+  *icu_pv &= ~0xff;
+  *icu_pv |= pin_id;
+}
+
+static inline uint8_t icu_pv_get_irq_lvl_flag(uint16_t icu_pv)
+{
+  return icu_pv >> 8;
+}
+
+static inline void icu_pv_set_irq_lvl_flag(uint16_t *icu_pv, uint8_t flag)
+{
+  *icu_pv &= ~0xff00;
+  *icu_pv |= (flag << 8);
+}
+
 static DEV_IRQ_SINK_UPDATE(pic32_gpio_icu_sink_update)
 {
-  struct device_s *dev = sink->base.dev;
-  struct pic32_gpio_private_s *pv = dev->drv_pv;
-  uint_fast8_t sink_id = sink - pv->sinks;
+  uint8_t pin_id = icu_pv_get_pin_id(sink->icu_pv);
 
-  uint8_t b = sink_id / GPIO_BANK_SIZE;
+  uint8_t b = pin_id / GPIO_BANK_SIZE;
   uintptr_t a = PIC32_GPIO_ADDR + PIC32_GPIO_PORT_ADDR(b);
-  uint32_t mask = 1 << (sink_id % GPIO_BANK_SIZE);
+  uint32_t mask = 1 << (pin_id % GPIO_BANK_SIZE);
 
-  sink->icu_pv = 0;
+  icu_pv_set_irq_lvl_flag(&sink->icu_pv, 0);
   switch (sense)
     {
     case DEV_IRQ_SENSE_NONE: {
@@ -329,7 +351,7 @@ static DEV_IRQ_SINK_UPDATE(pic32_gpio_icu_sink_update)
     }
 
     case DEV_IRQ_SENSE_LOW_LEVEL:
-      sink->icu_pv = 1;
+      icu_pv_set_irq_lvl_flag(&sink->icu_pv, 1);
     case DEV_IRQ_SENSE_HIGH_LEVEL:{
       /* Rearm irq */
       __unused__ uint32_t x = endian_le32(cpu_mem_read_32(a));
@@ -347,10 +369,20 @@ static DEV_ICU_GET_SINK(pic32_gpio_icu_get_sink)
   struct device_s *dev = accessor->dev;
   struct pic32_gpio_private_s *pv = dev->drv_pv;
 
-  if (id >= CONFIG_DRIVER_PIC32_GPIO_IRQ_COUNT)
+  if (id >= GPIO_IRQ_PIN_COUNT)
     return NULL;
 
-  return pv->sinks + id;
+  for (uint_fast8_t i = 0; i < CONFIG_DRIVER_PIC32_GPIO_IRQ_COUNT; i++)
+    {
+      if (!pv->sinks[i].base.link_count)
+        {
+          pv->sinks_map[id] = i;
+          icu_pv_set_pin_id(&pv->sinks[i].icu_pv, (uint8_t)id);
+          return pv->sinks + i;
+        }
+    }
+
+  return NULL;
 }
 
 static DEV_ICU_LINK(pic32_gpio_icu_link)
@@ -358,9 +390,7 @@ static DEV_ICU_LINK(pic32_gpio_icu_link)
   if (!route_mask || *bypass)
     return 0;
 
-  struct device_s *dev = accessor->dev;
-  struct pic32_gpio_private_s *pv = dev->drv_pv;
-  uint_fast8_t sink_id = sink - pv->sinks;
+  uint_fast8_t pin_id = icu_pv_get_pin_id(sink->icu_pv);
 
 #ifdef CONFIG_DEVICE_IRQ_SHARING
   if (sink->base.link_count > 1)
@@ -368,10 +398,10 @@ static DEV_ICU_LINK(pic32_gpio_icu_link)
 #endif
 
   /* Change pin mode to input */
-  pic32_gpio_mode(sink_id, sink_id, dev_gpio_mask1, DEV_PIN_INPUT); 
+  pic32_gpio_mode(pin_id, pin_id, dev_gpio_mask1, DEV_PIN_INPUT); 
 
   /* Clear interrupt */
-  uintptr_t a = PIC32_GPIO_ADDR + PIC32_GPIO_PORT_ADDR(sink_id / GPIO_BANK_SIZE);
+  uintptr_t a = PIC32_GPIO_ADDR + PIC32_GPIO_PORT_ADDR(pin_id / GPIO_BANK_SIZE);
   __unused__ uint32_t x = endian_le32(cpu_mem_read_32(a));
 
   return 0;
@@ -400,13 +430,13 @@ static DEV_IRQ_SRC_PROCESS(pic32_gpio_source_process)
       while (x)
         {
           uint_fast8_t i = __builtin_ctz(x);
-          struct dev_irq_sink_s *sink = pv->sinks + i + src_id * GPIO_BANK_SIZE;
+          struct dev_irq_sink_s *sink = pv->sinks + pv->sinks_map[i + src_id * GPIO_BANK_SIZE];
 
           do
             {
               device_irq_sink_process(sink, 0);
               p = (endian_le32(cpu_mem_read_32(a)) >> i) & 1; 
-            } while(p ^ sink->icu_pv);
+            } while(p ^ icu_pv_get_irq_lvl_flag(sink->icu_pv));
 
           x ^= 1 << i;
         }
@@ -453,6 +483,7 @@ static DEV_INIT(pic32_gpio_init)
                        DEV_IRQ_SENSE_LOW_LEVEL |
                        DEV_IRQ_SENSE_HIGH_LEVEL);
 
+  memset(pv->sinks_map, 0, sizeof(*(pv->sinks_map)));
 #endif
 
   dev->drv = &pic32_gpio_drv;
@@ -471,6 +502,14 @@ static DEV_CLEANUP(pic32_gpio_cleanup)
 
 #ifdef CONFIG_DRIVER_PIC32_GPIO_ICU
   device_irq_source_unlink(dev, pv->src, GPIO_BANK_COUNT);
+  for (uint_fast8_t i = 0; i < CONFIG_DRIVER_PIC32_GPIO_IRQ_COUNT; i++)
+    {
+      if (!pv->sinks[i].base.link_count)
+        {
+          __unused__ uint8_t pin_id = icu_pv_get_pin_id(pv->sinks[i].icu_pv);
+          /* TODO : disable external interrupt for pin_id */
+        }
+    }
 #endif
   mem_free(pv);
 }
