@@ -1119,6 +1119,7 @@ error_t memory_allocator_stats(struct memory_allocator_region_s *region,
 
 #include <mutek/shell.h>
 
+TERMUI_CON_COMMAND_PROTOTYPE(shell_mem_blocks);
 TERMUI_CON_COMMAND_PROTOTYPE(shell_mem_blocks)
 {
   struct memory_allocator_region_s *region = default_region;
@@ -1140,6 +1141,7 @@ TERMUI_CON_COMMAND_PROTOTYPE(shell_mem_blocks)
 }
 
 # ifdef CONFIG_MUTEK_MEMALLOC_STATS
+TERMUI_CON_COMMAND_PROTOTYPE(shell_mem_stats);
 TERMUI_CON_COMMAND_PROTOTYPE(shell_mem_stats)
 {
   struct memory_allocator_region_s *region = default_region;

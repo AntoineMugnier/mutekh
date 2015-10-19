@@ -29,9 +29,6 @@
 #include <hexo/cpu.h>
 #include <hexo/ipi.h>
 
-CONTEXT_PREEMPT(sched_preempt_switch);
-CONTEXT_PREEMPT(sched_preempt_stop);
-
 /* processor current scheduler context */
 CONTEXT_LOCAL struct sched_context_s *sched_cur = NULL;
 

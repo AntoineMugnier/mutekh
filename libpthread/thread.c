@@ -49,7 +49,7 @@ __pthread_switch(void)
   cpu_interrupt_enable();
 }
 
-void
+static void
 __pthread_cleanup(void *param)
 {
   struct pthread_s *thread = param;

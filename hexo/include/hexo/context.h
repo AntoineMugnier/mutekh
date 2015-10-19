@@ -98,7 +98,7 @@ typedef CONTEXT_ENTRY(context_entry_t);
     common context queuing operations: See @ref sched_preempt_switch,
     @ref sched_preempt_stop and @ref sched_preempt_wait_unlock.
  */
-#define CONTEXT_PREEMPT(n) struct context_s * (n)()
+#define CONTEXT_PREEMPT(n) struct context_s * (n)(void)
 /** context preempt function prototype. @csee #CONTEXT_PREEMPT */
 typedef CONTEXT_PREEMPT(context_preempt_t);
 

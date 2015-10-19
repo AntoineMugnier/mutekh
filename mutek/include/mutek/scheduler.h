@@ -146,7 +146,7 @@ void sched_context_init(struct sched_context_s *sched_ctx,
 config_depend_alwaysinline(CONFIG_MUTEK_SCHEDULER,
 void sched_context_switch(void),
 {
-  struct context_s *next = sched_preempt_switch(NULL);
+  struct context_s *next = sched_preempt_switch();
 
   if (next)
     context_switch_to(next);
@@ -158,7 +158,7 @@ void sched_context_switch(void),
 config_depend_alwaysinline(CONFIG_MUTEK_SCHEDULER,
 void sched_context_exit(void),
 {
-  context_jump_to(sched_preempt_stop(NULL));
+  context_jump_to(sched_preempt_stop());
 });
 
 /** @internal */

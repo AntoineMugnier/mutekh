@@ -375,6 +375,13 @@ config_depend(CONFIG_PTHREAD_MUTEX)
 error_t
 pthread_mutex_destroy(pthread_mutex_t *mutex);
 
+/** @internal */
+error_t __pthread_mutex_normal_lock(pthread_mutex_t *mutex);
+/** @internal */
+error_t __pthread_mutex_normal_trylock(pthread_mutex_t *mutex);
+/** @internal */
+error_t __pthread_mutex_normal_unlock(pthread_mutex_t *mutex);
+
 # ifdef CONFIG_PTHREAD_MUTEX_ATTR
 
 /** @this takes a mutex */
@@ -422,21 +429,18 @@ error_t pthread_mutexattr_destroy(pthread_mutexattr_t *attr),
 config_depend_alwaysinline(CONFIG_PTHREAD_MUTEX,
 error_t pthread_mutex_lock(pthread_mutex_t *mutex),
 {
-  error_t __pthread_mutex_normal_lock(pthread_mutex_t *mutex);
   return __pthread_mutex_normal_lock(mutex);
 });
 
 config_depend_alwaysinline(CONFIG_PTHREAD_MUTEX,
 error_t pthread_mutex_trylock(pthread_mutex_t *mutex),
 {
-  error_t __pthread_mutex_normal_trylock(pthread_mutex_t *mutex);
   return __pthread_mutex_normal_trylock(mutex);
 });
 
 config_depend_alwaysinline(CONFIG_PTHREAD_MUTEX,
 error_t pthread_mutex_unlock(pthread_mutex_t *mutex),
 {
-  error_t __pthread_mutex_normal_unlock(pthread_mutex_t *mutex);
   return __pthread_mutex_normal_unlock(mutex);
 });
 
