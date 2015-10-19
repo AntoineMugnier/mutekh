@@ -1,6 +1,5 @@
 objs =											\
 arch_init.o										\
-mem_init.o \
 power.o \
 syscalls.o
 
