@@ -474,6 +474,15 @@ error_t device_get_api(struct device_s *dev,
 error_t device_get_accessor(void *accessor, struct device_s *dev,
                             enum driver_class_e cl, uint_fast8_t number);
 
+/**
+   @This copies a device accessor.  This gets a new reference to the
+   accessor that must be released with @tt device_put_accessor by
+   itself.
+
+   @see {#DEVICE_ACCESSOR_INIT, #DEVICE_OP, device_put_accessor}
+ */
+error_t device_copy_accessor(void *accessor, const void *source);
+
 /** 
     @This initializes a device accessor object after lookup in the
     device tree. The @tt root parameter may be @tt NULL to lookup from
