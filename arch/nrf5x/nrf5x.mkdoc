@@ -60,8 +60,9 @@ Nordic's nRF51 and nRF52 architecture support.
 
   @section {RTC}
     RTC is supported as a Timer device.  When driver is compiled in,
-    RTC1 instance is declared built-in as "rtc1".  User may
-    instantiate RTC0 on its own if radio driver is unused.
+    RTC1 instance is declared built-in as "rtc1".  RTC0 is left out of
+    BLE radio driver.  User may instantiate RTC0 on its own if radio
+    driver is unused.
   @end section
 
   @section NVMC
@@ -83,6 +84,28 @@ Nordic's nRF51 and nRF52 architecture support.
     Timer1 is instantiated as "timer1".
   @end section
 
+  @section {BLE Radio}
+    BLE Radio driver implements various network layers, depending on
+    the @tt libble configuration:
+
+    @list
+      @item Advertising layer,
+      @item Scanner layer (Oberver, Scanner, Initiator),
+      @item Slave,
+      @item Master.
+    @end list
+
+    Link-layer (LL demux, Crypto and LLCP) is handled through generic
+    libble network layers.
+
+    This driver uses 3 hardware blocks: Radio, RTC0 and Timer0.
+    Timer0 and RTC0 blocks may not be changed to others as there are
+    some hardwired PPIs between them.
+
+    Nordic assigns Random BLE addresses to its chips.  Driver
+    retrieves device address from FICR.
+  @end section
+  
   @section {AES}
     Hardware AES encrypt block is supported through a crypto driver
     which supports 4 functions:
