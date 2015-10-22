@@ -169,4 +169,25 @@ enum nrf5x_clock_id_e
   NRF_CLOCK_NODE_COUNT,
 };
 
+/**
+   @this defines IRQ sources for the nRF51/nRF52 radio driver.
+ */
+enum nrf5x_radio_irq_source_id_e
+{
+  NRF5X_BLE_IRQ_RADIO,
+  NRF5X_BLE_IRQ_TIMER,
+  NRF5X_BLE_IRQ_RTC,
+  NRF5X_BLE_IRQ_COUNT,
+};
+
+/**
+   @this defines clock sinks for the nRF51/nRF52 radio driver.
+ */
+enum nrf5x_radio_clock_sink_e
+{
+  NRF5X_BLE_CLK_SLEEP,
+  NRF5X_BLE_CLK_RADIO,
+  NRF5X_BLE_CLK_COUNT,
+};
+
 #endif
