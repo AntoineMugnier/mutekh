@@ -171,6 +171,8 @@ static CONTEXT_ENTRY(net_scheduler_worker)
 {
   struct net_scheduler_s *sched = param;
 
+  cpu_interrupt_enable();
+
   dprintk("Net scheduler started\n");
 
   while (!sched->exiter) {
@@ -193,6 +195,8 @@ static CONTEXT_ENTRY(net_scheduler_worker)
 
   if (sched->timer_rq.rq.drvdata)
     DEVICE_OP(&sched->timer, cancel, &sched->timer_rq);
+
+  cpu_interrupt_disable();
 
   cpu_context_stack_use(sched_tmp_context(), sched_cleanup, sched);
 }
