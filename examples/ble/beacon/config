@@ -1,0 +1,19 @@
+%set OUTPUT_NAME beacon
+%append MODULES app:$(CONFIGPATH)
+
+CONFIG_COMPILE_COLLECT
+
+CONFIG_MUTEK_THREAD
+CONFIG_BLE_GATTDB_DESCRIPTOR
+
+CONFIG_LICENSE_APP_BSD
+
+# Libs
+CONFIG_APP_START
+CONFIG_DEVICE_PERSIST
+
+%inherit ble-peripheral
+
+%include arch/arch.build
+%include scripts/options.build
+%include examples/ble/ble.build
