@@ -60,8 +60,9 @@ Nordic's nRF51 and nRF52 architecture support.
 
   @section {RTC}
     RTC is supported as a Timer device.  When driver is compiled in,
-    RTC1 instance is declared built-in as "rtc1".  User may
-    instantiate RTC0 on its own if radio driver is unused.
+    RTC1 instance is declared built-in as "rtc1".  RTC0 is left out of
+    BLE radio driver.  User may instantiate RTC0 on its own if radio
+    driver is unused.
   @end section
 
   @section NVMC
@@ -81,6 +82,30 @@ Nordic's nRF51 and nRF52 architecture support.
   @section Timer
     Timers are implemented as Timer devices.  When driver is enabled,
     Timer1 is instantiated as "timer1".
+  @end section
+  
+  @section {BLE Radio}
+    BLE Radio driver implements most of the ble_radio driver class,
+    depending on the @tt libble configuration:
+    @list
+      @item Advertising operations,
+      @item Observing operations,
+      @item Initiating operations,
+      @item Connection event handling (slave or master),
+      @item RSSI evaluation.
+    @end list
+
+    This driver uses 3 hardware blocks:
+    @list
+      @item RADIO block,
+      @item RTC0 instance,
+      @item TIMER0 instance.
+    @end list
+
+    It also uses some PPIs between those hardware blocks.
+
+    Nordic assigns random addresses to its chips.  Driver retrieves
+    Bluetooth device address from FICR.
   @end section
 
 @end section

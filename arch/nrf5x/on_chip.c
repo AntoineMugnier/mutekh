@@ -107,3 +107,19 @@ DEV_DECLARE_STATIC(timer1, "timer1", 0, nrf5x_timer_drv,
                    );
 
 #endif
+
+#if defined(CONFIG_DRIVER_NRF5X_BLE_RADIO)
+
+DEV_DECLARE_STATIC(ble_radio, "ble-radio", 0, nrf5x_ble_radio_drv,
+                   NRF_STATIC_RES_PERIPHERAL_MEM(NRF5X_RADIO),
+                   NRF_STATIC_RES_PERIPHERAL_MEM(NRF5X_TIMER0),
+                   NRF_STATIC_RES_PERIPHERAL_MEM(NRF5X_RTC0),
+                   DEV_STATIC_RES_DEV_ICU("/cpu"),
+                   DEV_STATIC_RES_IRQ(NRF5X_BLE_RADIO_IRQ_RADIO, NRF5X_RADIO, DEV_IRQ_SENSE_HIGH_LEVEL, 0, 1),
+                   DEV_STATIC_RES_IRQ(NRF5X_BLE_RADIO_IRQ_TIMER, NRF5X_TIMER0, DEV_IRQ_SENSE_HIGH_LEVEL, 0, 1),
+                   DEV_STATIC_RES_IRQ(NRF5X_BLE_RADIO_IRQ_RTC, NRF5X_RTC0, DEV_IRQ_SENSE_HIGH_LEVEL, 0, 1),
+                   DEV_STATIC_RES_CLK_SRC("/clock", NRF_CLOCK_LF_PRECISE, NRF5X_BLE_RADIO_CLK_SLEEP),
+                   DEV_STATIC_RES_CLK_SRC("/clock", NRF_CLOCK_HF_PRECISE, NRF5X_BLE_RADIO_CLK_RADIO)
+                   );
+
+#endif
