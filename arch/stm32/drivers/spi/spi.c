@@ -308,7 +308,7 @@ DEV_IRQ_SRC_PROCESS(stm32_spi_irq)
       if (done)
         {
           lock_release(&dev->lock);
-          kroutine_exec(&tr->kr, 0);
+          kroutine_exec(&tr->kr);
           lock_spin(&dev->lock);
         }
 
@@ -405,7 +405,7 @@ DEV_SPI_CTRL_TRANSFER(stm32_spi_transfer)
   LOCK_RELEASE_IRQ(&dev->lock);
 
   if (done)
-    kroutine_exec(&tr->kr, cpu_is_interruptible());
+    kroutine_exec(&tr->kr);
 }
 
 #ifdef CONFIG_DEVICE_SPI_REQUEST

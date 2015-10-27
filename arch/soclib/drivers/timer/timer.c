@@ -142,7 +142,7 @@ static DEV_IRQ_SRC_PROCESS(soclib_timer_irq)
           dev_timer_pqueue_remove(&p->queue, dev_timer_rq_s_base(rq));
 
           lock_release(&dev->lock);
-          kroutine_exec(&rq->rq.kr, 0);
+          kroutine_exec(&rq->rq.kr);
           lock_spin(&dev->lock);
         }
     }

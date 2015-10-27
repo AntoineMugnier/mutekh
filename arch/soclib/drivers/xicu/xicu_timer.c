@@ -86,7 +86,7 @@ void soclib_xicu_pti_irq_process(struct device_s *dev, uint_fast8_t number)
       dev_timer_pqueue_remove(&p->queue, dev_timer_rq_s_base(rq));
 
       lock_release(&dev->lock);
-      kroutine_exec(&rq->rq.kr, 0);
+      kroutine_exec(&rq->rq.kr);
       lock_spin(&dev->lock);
     }
 

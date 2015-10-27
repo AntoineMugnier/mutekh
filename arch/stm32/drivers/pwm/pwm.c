@@ -244,7 +244,7 @@ cfg_end:
   LOCK_RELEASE_IRQ(&dev->lock);
 
   rq->error = err;
-  kroutine_exec(&rq->base.kr, 0);
+  kroutine_exec(&rq->base.kr);
 }
 
 static

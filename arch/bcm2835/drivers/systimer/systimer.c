@@ -134,7 +134,7 @@ static DEV_IRQ_SRC_PROCESS(bcm2835_systimer_irq)
             }
 
           lock_release(&dev->lock);
-          kroutine_exec(&rq->kr, 0);
+          kroutine_exec(&rq->kr);
           lock_spin(&dev->lock);
         }
     }

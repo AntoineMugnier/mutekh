@@ -223,7 +223,7 @@ end:
   LOCK_RELEASE_IRQ(&dev->lock);
 
   if (req->error)
-    kroutine_exec(&base->kr, cpu_is_interruptible());
+    kroutine_exec(&base->kr);
 }
 
 #ifdef CONFIG_CPU_CACHE
@@ -291,7 +291,7 @@ static DEV_IRQ_SRC_PROCESS(pic32_dma_irq)
     pv->busy = msk;
     dev_request_queue_pop(&pv->queue[chan]);
     lock_release(&dev->lock);
-    kroutine_exec(&rq->base.kr, cpu_is_interruptible());
+    kroutine_exec(&rq->base.kr);
     lock_spin(&dev->lock);
     pv->busy = 0;
 

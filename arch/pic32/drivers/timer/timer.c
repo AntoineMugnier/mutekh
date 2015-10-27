@@ -176,7 +176,7 @@ static void pic32_timer_test_queue(struct device_s *dev)
       rq->rq.drvdata = NULL;
 
       lock_release_irq2(&dev->lock, &pv->irq_save);
-      kroutine_exec(&rq->rq.kr, cpu_is_interruptible());
+      kroutine_exec(&rq->rq.kr);
       lock_spin_irq2(&dev->lock, &pv->irq_save);
     }
 }

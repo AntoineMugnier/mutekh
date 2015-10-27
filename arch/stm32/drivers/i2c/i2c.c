@@ -587,7 +587,7 @@ DEV_IRQ_SRC_PROCESS(stm32_i2c_irq)
           dev_request_queue_pop(&pv->queue);
 
           lock_release(&dev->lock);
-          kroutine_exec(&base->kr, 0);
+          kroutine_exec(&base->kr);
           lock_spin(&dev->lock);
 
           base = dev_request_queue_head(&pv->queue);
@@ -621,7 +621,7 @@ DEV_I2C_REQUEST(stm32_i2c_request)
      terminates, then execute the kroutine.
    */
   if (done)
-    kroutine_exec(&req->base.kr, 0);
+    kroutine_exec(&req->base.kr);
 }
 
 static DEV_INIT(stm32_i2c_init);

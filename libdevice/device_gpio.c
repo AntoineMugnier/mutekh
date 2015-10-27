@@ -131,5 +131,5 @@ DEV_GPIO_REQUEST(dev_gpio_request_async_to_sync)
     break;
   }
 
-  kroutine_exec(&req->base.kr, cpu_is_interruptible());
+  kroutine_exec(&req->base.kr);
 }

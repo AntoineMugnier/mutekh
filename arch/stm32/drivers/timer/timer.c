@@ -202,7 +202,7 @@ static DEV_IRQ_SRC_PROCESS(stm32_timer_irq)
           rq->rq.drvdata = NULL;
 
           lock_release(&dev->lock);
-          kroutine_exec(&rq->rq.kr, 0);
+          kroutine_exec(&rq->rq.kr);
           lock_spin(&dev->lock);
         }
     }

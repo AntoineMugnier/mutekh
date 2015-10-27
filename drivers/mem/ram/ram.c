@@ -85,7 +85,7 @@ static DEV_MEM_REQUEST(ram_request)
       dev_mem_mapped_op_helper(b->addr, 1, rq);
     }
 
-  kroutine_exec(&rq->base.kr, cpu_is_interruptible());
+  kroutine_exec(&rq->base.kr);
 }
 
 static DEV_INIT(ram_init);

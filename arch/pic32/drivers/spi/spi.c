@@ -330,7 +330,7 @@ static KROUTINE_EXEC(dma_callback)
 
   lock_release(&dev->lock);
 
-  kroutine_exec(&tr->kr, cpu_is_interruptible());
+  kroutine_exec(&tr->kr);
 }
 
 static void pic32_spi_start_dma(struct device_s *dev)
@@ -401,7 +401,7 @@ static DEV_IRQ_SRC_PROCESS(pic32_spi_irq)
      
         lock_release(&dev->lock);
 
-        kroutine_exec(&tr->kr, cpu_is_interruptible());
+        kroutine_exec(&tr->kr);
         return;
       }
 #endif
@@ -409,7 +409,7 @@ static DEV_IRQ_SRC_PROCESS(pic32_spi_irq)
   if (tr != NULL && pic32_spi_transfer_rx(dev))
     {
       lock_release(&dev->lock);
-      kroutine_exec(&tr->kr, cpu_is_interruptible());
+      kroutine_exec(&tr->kr);
       lock_spin(&dev->lock);
     }
 
@@ -460,7 +460,7 @@ end:
   LOCK_RELEASE_IRQ(&dev->lock);
 
   if (done)
-    kroutine_exec(&tr->kr, cpu_is_interruptible());
+    kroutine_exec(&tr->kr);
 }
 
 #ifdef CONFIG_DEVICE_SPI_REQUEST

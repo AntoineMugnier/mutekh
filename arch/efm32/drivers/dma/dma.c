@@ -262,7 +262,7 @@ end:
   LOCK_RELEASE_IRQ(&dev->lock);
 
   if (req->error)
-    kroutine_exec(&base->kr, cpu_is_interruptible());
+    kroutine_exec(&base->kr);
 }
 
 static inline void efm32_dev_dma_kroutine(struct device_s *dev, struct dev_request_s *base)
@@ -270,7 +270,7 @@ static inline void efm32_dev_dma_kroutine(struct device_s *dev, struct dev_reque
   struct efm32_dma_context *pv = dev->drv_pv;
        
   lock_release(&dev->lock);
-  kroutine_exec(&base->kr, cpu_is_interruptible());
+  kroutine_exec(&base->kr);
   lock_spin(&dev->lock);
 
 #ifdef CONFIG_DEVICE_CLOCK

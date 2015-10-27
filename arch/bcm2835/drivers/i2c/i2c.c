@@ -445,7 +445,7 @@ static DEV_IRQ_SRC_PROCESS(bcm2835_i2c_irq)
 
   if (stop)
     {
-      kroutine_exec(&base->kr, 0);
+      kroutine_exec(&base->kr);
 
       lock_spin(&dev->lock); 
 
@@ -490,7 +490,7 @@ static DEV_I2C_REQUEST(bcm2835_i2c_request)
   if (!bcm2835_i2c_valid_request(pv))
     {
       req->error = -ENOTSUP;
-      kroutine_exec(&req->base.kr, 0);
+      kroutine_exec(&req->base.kr);
       return;
     }
 

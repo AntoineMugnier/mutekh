@@ -166,7 +166,7 @@ static DEV_MEM_REQUEST(efm32_msc_request)
       rq->err = -EINVAL;
     }
 
-  kroutine_exec(&rq->base.kr, cpu_is_interruptible());
+  kroutine_exec(&rq->base.kr);
 }
 
 static DEV_INIT(efm32_msc_init);

@@ -179,7 +179,7 @@ static DEV_IRQ_SRC_PROCESS(push_button_irq)
     {
       dev_request_queue_pop(&pv->queue);
       lock_release(&dev->lock);
-      kroutine_exec(&rq->base.kr, cpu_is_interruptible());
+      kroutine_exec(&rq->base.kr);
     }
   else
     lock_release(&dev->lock);
@@ -222,7 +222,7 @@ static DEV_VALIO_REQUEST(push_button_request)
   LOCK_RELEASE_IRQ(&dev->lock);
 
   if (done)
-    kroutine_exec(&req->base.kr, cpu_is_interruptible());
+    kroutine_exec(&req->base.kr);
 }
 
 static DEV_INIT(push_button_init);

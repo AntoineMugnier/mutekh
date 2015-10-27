@@ -144,7 +144,7 @@ DEV_CHAR_REQUEST(uart_us6089c_request)
   if (err)
     {
       rq->error = err;
-      kroutine_exec(&rq->base.kr, 0);
+      kroutine_exec(&rq->base.kr);
     }
 }
 

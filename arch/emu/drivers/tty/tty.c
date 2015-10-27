@@ -112,7 +112,7 @@ static DEV_CHAR_REQUEST(emu_tty_request)
   } while (rq->size > 0 && !rq->error && !partial);
 
  end:
-  kroutine_exec(&rq->base.kr, cpu_is_interruptible());
+  kroutine_exec(&rq->base.kr);
 }
 
 const struct driver_s emu_tty_drv;

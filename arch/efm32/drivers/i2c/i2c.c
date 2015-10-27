@@ -331,7 +331,7 @@ static DEV_IRQ_SRC_PROCESS(efm32_i2c_irq)
 
   if (stop)
     {
-      kroutine_exec(&base->kr, 0);
+      kroutine_exec(&base->kr);
 
       lock_spin(&dev->lock); 
 

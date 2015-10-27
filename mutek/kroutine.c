@@ -22,10 +22,9 @@
 
 #include <mutek/kroutine.h>
 
-extern inline bool_t kroutine_exec(struct kroutine_s *kr, bool_t interruptible);
+extern inline bool_t kroutine_exec(struct kroutine_s *kr);
 
 #ifdef CONFIG_MUTEK_KROUTINE_TRIGGER
-extern inline bool_t kroutine_trigger(struct kroutine_s *kr, bool_t interruptible,
-                                      enum kroutine_policy_e policy);
+extern inline bool_t kroutine_trigger(struct kroutine_s *kr, enum kroutine_policy_e policy);
 #endif
 

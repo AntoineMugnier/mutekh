@@ -107,7 +107,7 @@ static KROUTINE_EXEC(ds3231_state_done)
 
     LOCK_RELEASE_IRQ(&dev->lock);
 
-    kroutine_exec(&rq->base.kr, cpu_is_interruptible());
+    kroutine_exec(&rq->base.kr);
 
     LOCK_SPIN_IRQ(&dev->lock);
     ds3231_request_run(dev, pv);
@@ -188,7 +188,7 @@ static DEV_VALIO_REQUEST(ds3231_request)
     if (err <= 0) {
         req->error = err;
         
-        kroutine_exec(&req->base.kr, cpu_is_interruptible());
+        kroutine_exec(&req->base.kr);
     }
 }
 

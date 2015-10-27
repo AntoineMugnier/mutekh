@@ -182,7 +182,7 @@ static void device_spi_ctrl_next(struct dev_spi_ctrl_queue_s *q)
   tr->pvdata = q;
 
   lock_release_irq(&q->lock);
-  kroutine_exec(&tr->kr, cpu_is_interruptible());
+  kroutine_exec(&tr->kr);
 }
 #endif
 
@@ -221,7 +221,7 @@ device_spi_ctrl_end(struct dev_spi_ctrl_rq_s *rq, error_t err)
 #endif
 
   lock_release_irq(&q->lock);
-  kroutine_exec(&rq->base.kr, cpu_is_interruptible());
+  kroutine_exec(&rq->base.kr);
   lock_spin_irq(&q->lock);
 
   return DEVICE_SPI_CONTINUE;
@@ -544,14 +544,14 @@ static void device_spi_ctrl_run(struct dev_spi_ctrl_queue_s *q)
 #ifdef CONFIG_DEVICE_SPI_REQUEST_TIMER
       case DEVICE_SPI_WAIT_TIMER:
         lock_release_irq(&q->lock);
-        kroutine_trigger(&q->timer_rq.rq.kr, 0, KROUTINE_IMMEDIATE);
+        kroutine_trigger(&q->timer_rq.rq.kr, KROUTINE_IMMEDIATE);
         lock_spin_irq(&q->lock);
         q->running--;
         break;
 #endif
       case DEVICE_SPI_WAIT_TRANSFER:
         lock_release_irq(&q->lock);
-        kroutine_trigger(&q->transfer.kr, 0, KROUTINE_IMMEDIATE);
+        kroutine_trigger(&q->transfer.kr, KROUTINE_IMMEDIATE);
         lock_spin_irq(&q->lock);
         q->running--;
         break;
@@ -615,7 +615,7 @@ dev_spi_rq_start(struct dev_spi_ctrl_rq_s *rq)
     {
       lock_release_irq(&q->lock);
       rq->err = err;
-      kroutine_exec(&rq->base.kr, cpu_is_interruptible());
+      kroutine_exec(&rq->base.kr);
     }
 }
 

@@ -75,7 +75,7 @@ static void pca9557_req_done(
     dev_request_queue_pop(&pv->pending);
     lock_release(&dev->lock);
     req->base.drvdata = NULL;
-    kroutine_exec(&req->base.kr, cpu_is_interruptible());
+    kroutine_exec(&req->base.kr);
     pca9557_req_next(dev);
     lock_spin(&dev->lock);
 }

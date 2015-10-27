@@ -87,7 +87,7 @@ void tty_soclib_try_read(struct device_s *dev)
     if (rq->size == 0 || (rq->type & _DEV_CHAR_PARTIAL)) {
       dev_request_queue_pop(&pv->read_q);
       lock_release(&dev->lock);
-      kroutine_exec(&rq->base.kr, 0);
+      kroutine_exec(&rq->base.kr);
       lock_spin(&dev->lock);
     }
   }
@@ -140,7 +140,7 @@ static DEV_CHAR_REQUEST(tty_soclib_request)
   LOCK_RELEASE_IRQ(&dev->lock);
 
   if (done_rq)
-    kroutine_exec(&done_rq->base.kr, cpu_is_interruptible());
+    kroutine_exec(&done_rq->base.kr);
 }
 
 #ifdef CONFIG_DEVICE_IRQ

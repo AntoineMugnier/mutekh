@@ -128,7 +128,7 @@ static void rq_done_(struct device_s *dev, struct dev_valio_rq_s *rq, error_t er
     dev_request_queue_remove(&pv->queue, &rq->base);
 
     lock_release(&dev->lock);
-    kroutine_exec(&rq->base.kr, 0);
+    kroutine_exec(&rq->base.kr);
     lock_spin(&dev->lock);
   }
 
@@ -575,7 +575,7 @@ DEV_VALIO_REQUEST(mpu6505_request)
 
   if (err < 0) {
     req->error = err;
-    kroutine_exec(&req->base.kr, cpu_is_interruptible());
+    kroutine_exec(&req->base.kr);
   }
 }
 

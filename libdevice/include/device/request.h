@@ -237,10 +237,10 @@ dev_request_delayed_end(struct dev_request_dlqueue_s *q,
       LOCK_SPIN_IRQ(&dev->lock);
       dev_request_queue_remove(&q->queue, rq);
       if (!dev_request_queue_isempty(&q->queue))
-        kroutine_exec(&q->kr, 0); /* delayed exec next rq */
+        kroutine_exec(&q->kr); /* delayed exec next rq */
       LOCK_RELEASE_IRQ(&dev->lock);
     }
-  kroutine_exec(&rq->kr, cpu_is_interruptible());
+  kroutine_exec(&rq->kr);
 #endif
 }
 
@@ -277,7 +277,7 @@ dev_request_delayed_push(struct device_accessor_s *accessor,
       rq->drvdata = accessor;
       dev_request_queue_pushback(&q->queue, rq);
       if (empty && !interruptible)
-        kroutine_exec(&q->kr, 0); /* delayed exec */
+        kroutine_exec(&q->kr); /* delayed exec */
       LOCK_RELEASE_IRQ(&dev->lock);
     }
   if (empty && interruptible)
@@ -289,7 +289,7 @@ dev_request_delayed_push(struct device_accessor_s *accessor,
   q->func(accessor, rq);
   if (critical)
     lock_release_irq2(&dev->lock, &irq_state);
-  kroutine_exec(&rq->kr, interruptible);    /* request end */
+  kroutine_exec(&rq->kr);    /* request end */
 #endif
 }
 

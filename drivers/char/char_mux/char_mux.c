@@ -190,10 +190,10 @@ static void char_mux_unlock(struct device_s *dev)
         }
 
       if (running & 1)
-        kroutine_trigger(&pv->read_rq.base.kr, 0, KROUTINE_IMMEDIATE);
+        kroutine_trigger(&pv->read_rq.base.kr, KROUTINE_IMMEDIATE);
 
       if (running & 2)
-        kroutine_trigger(&pv->write_rq.base.kr, 0, KROUTINE_IMMEDIATE);
+        kroutine_trigger(&pv->write_rq.base.kr, KROUTINE_IMMEDIATE);
 
       lock_spin_irq2(&dev->lock, &pv->irq_state);
     }
@@ -211,7 +211,7 @@ static bool_t char_mux_chan_rx_error(struct device_s *dev, struct char_mux_chann
       chan->rq_done = 0;
       dev_request_queue_pop(&chan->read_q);
       lock_release(&dev->lock);
-      kroutine_exec(&rq->base.kr, 0);
+      kroutine_exec(&rq->base.kr);
       lock_spin(&dev->lock);
     }
   else
@@ -278,7 +278,7 @@ static error_t char_mux_try_read(struct device_s *dev, struct char_mux_channel_s
       chan->rq_done = 0;
       dev_request_queue_pop(&chan->read_q);
       lock_release(&dev->lock);
-      kroutine_exec(&rq->base.kr, 0);
+      kroutine_exec(&rq->base.kr);
       lock_spin(&dev->lock);
     }
 
@@ -378,7 +378,7 @@ static DEV_CHAR_REQUEST(char_mux_request)
   if (err)
     {
       rq->error = err;
-      kroutine_exec(&rq->base.kr, 0);
+      kroutine_exec(&rq->base.kr);
     }
 }
 
@@ -693,7 +693,7 @@ static KROUTINE_EXEC(char_mux_io_write_done)
           pv->tx_rq_done = 0;
           dev_request_queue_pop(&pv->write_q);
           lock_release(&dev->lock);
-          kroutine_exec(&trq->base.kr, 0);
+          kroutine_exec(&trq->base.kr);
           lock_spin(&dev->lock);
         }
       pv->tx_state = CHAR_MUX_TX_IDLE;

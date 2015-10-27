@@ -224,7 +224,7 @@ static DEV_IRQ_SRC_PROCESS(bcm2835_spi_irq)
             }
 
           lock_release(&dev->lock);
-          kroutine_exec(&tr->kr, 0);
+          kroutine_exec(&tr->kr);
           lock_spin(&dev->lock);
         }
     }
@@ -304,7 +304,7 @@ static DEV_SPI_CTRL_TRANSFER(bcm2835_spi_transfer)
   LOCK_RELEASE_IRQ(&dev->lock);
 
   if (done)
-    kroutine_exec(&tr->kr, cpu_is_interruptible());     /* tail call */
+    kroutine_exec(&tr->kr);
 }
 
 #ifdef CONFIG_DEVICE_SPI_REQUEST

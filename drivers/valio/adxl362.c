@@ -67,7 +67,7 @@ static inline void adxl362_end_rq(struct device_s *dev)
 
   dev_request_queue_pop(&pv->queue);
   lock_release_irq2(&dev->lock, &pv->irq_save);
-  kroutine_exec(&grq->kr, 0);
+  kroutine_exec(&grq->kr);
 }
 
 static bool_t adxl362_process(struct device_s *dev)
@@ -194,7 +194,7 @@ void adxl362_run(struct device_s *dev)
       lock_release_irq2(&dev->lock, &pv->irq_save);
       dev_spi_rq_start(srq);
 
-      if (!kroutine_trigger(&srq->base.kr, 0, KROUTINE_IMMEDIATE))
+      if (!kroutine_trigger(&srq->base.kr, KROUTINE_IMMEDIATE))
         return;
 
       lock_spin_irq2(&dev->lock, &pv->irq_save);
@@ -273,7 +273,7 @@ static DEV_VALIO_REQUEST(adxl362_request)
      lock_release_irq2(&dev->lock, &pv->irq_save);
 
    if (req->error || end)
-     kroutine_exec(&req->base.kr, cpu_is_interruptible());
+     kroutine_exec(&req->base.kr);
 }
 
 static DEV_IRQ_SRC_PROCESS(adxl362_irq_source_process)
@@ -315,10 +315,10 @@ static KROUTINE_EXEC(spi_rq_done)
   if (srq->err)
     abort();
 
-  if (kroutine_triggered_1st(kr))
-    adxl362_run(dev);
-  else
+  if (flags & KROUTINE_EXEC_TRIGGERED)
     lock_release_irq2(&dev->lock, &pv->irq_save);
+  else
+    adxl362_run(dev);
 }
 
 static DEV_INIT(adxl362_init);

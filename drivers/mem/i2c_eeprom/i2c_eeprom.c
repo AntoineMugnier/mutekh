@@ -169,7 +169,7 @@ static KROUTINE_EXEC(i2c_eeprom_done)
     if (!done)
         return;
 
-    kroutine_exec(&done->base.kr, cpu_is_interruptible());
+    kroutine_exec(&done->base.kr);
 }
 
 static void i2c_rq_run(
@@ -275,7 +275,7 @@ out:
     if (!rq)
         return;
 
-    kroutine_exec(&rq->base.kr, cpu_is_interruptible());
+    kroutine_exec(&rq->base.kr);
 }
 
 static DEV_INIT(i2c_eeprom_init);

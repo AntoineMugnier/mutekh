@@ -79,7 +79,7 @@ KROUTINE_EXEC(adxl345_offset_write_done)
     dev_request_queue_pop(&pv->queue);
 
     LOCK_RELEASE_IRQ(&dev->lock);
-    kroutine_exec(&rq->base.kr, cpu_is_interruptible());
+    kroutine_exec(&rq->base.kr);
     LOCK_SPIN_IRQ(&dev->lock);
 
     adxl345_request_run(dev, pv);
@@ -136,7 +136,7 @@ KROUTINE_EXEC(adxl345_offset_read_done)
     dev_request_queue_pop(&pv->queue);
 
     LOCK_RELEASE_IRQ(&dev->lock);
-    kroutine_exec(&rq->base.kr, cpu_is_interruptible());
+    kroutine_exec(&rq->base.kr);
     LOCK_SPIN_IRQ(&dev->lock);
 
     adxl345_request_run(dev, pv);
@@ -197,7 +197,7 @@ KROUTINE_EXEC(adxl345_data_read_done)
     rq->error = 0;
 
     LOCK_RELEASE_IRQ(&dev->lock);
-    kroutine_exec(&rq->base.kr, cpu_is_interruptible());
+    kroutine_exec(&rq->base.kr);
     LOCK_SPIN_IRQ(&dev->lock);
 
     adxl345_request_run(dev, pv);
@@ -327,7 +327,7 @@ DEV_VALIO_REQUEST(adxl345_request)
     if (err < 0)
     {
         req->error = err;
-        kroutine_exec(&req->base.kr, cpu_is_interruptible());
+        kroutine_exec(&req->base.kr);
     }
 }
 

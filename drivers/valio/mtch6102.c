@@ -209,7 +209,7 @@ static KROUTINE_EXEC(mtch6102_state_done)
     LOCK_RELEASE_IRQ(&dev->lock);
 
     if (rq)
-        kroutine_exec(&rq->base.kr, cpu_is_interruptible());
+        kroutine_exec(&rq->base.kr);
 
     LOCK_SPIN_IRQ(&dev->lock);
     mtch6102_request_run(dev, pv, 0);
@@ -317,7 +317,7 @@ static DEV_VALIO_REQUEST(mtch6102_request)
     if (err <= 0) {
         req->error = err;
         
-        kroutine_exec(&req->base.kr, cpu_is_interruptible());
+        kroutine_exec(&req->base.kr);
     }
 }
 

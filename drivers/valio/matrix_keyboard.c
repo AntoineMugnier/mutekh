@@ -142,7 +142,7 @@ static void mxk_next_later(struct mxk_context_s *pv)
 
   err = DEVICE_OP(&pv->timer, request, &pv->row_timer_rq);
   if (err)
-    kroutine_exec(&pv->row_timer_rq.rq.kr, 0);
+    kroutine_exec(&pv->row_timer_rq.rq.kr);
 }
 
 static void mxk_scan_start(struct mxk_context_s *pv)
@@ -292,7 +292,7 @@ static void mxk_scan_done(struct mxk_context_s *pv)
   dev_request_queue_remove(&pv->queue, &rq->base);
 
   lock_release(&dev->lock);
-  kroutine_exec(&rq->base.kr, 0);
+  kroutine_exec(&rq->base.kr);
   lock_spin(&dev->lock);
 
   rq = dev_valio_rq_s_cast(dev_request_queue_head(&pv->queue));
@@ -359,7 +359,7 @@ static DEV_VALIO_REQUEST(matrix_keyboard_request)
 
  out:
   if (req->error)
-    kroutine_exec(&req->base.kr, cpu_is_interruptible());
+    kroutine_exec(&req->base.kr);
 }
 
 

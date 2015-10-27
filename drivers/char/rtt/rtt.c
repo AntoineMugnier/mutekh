@@ -159,7 +159,7 @@ DEV_CHAR_REQUEST(char_rtt_request)
     break;
   default:
     rq->error = -ENOTSUP;
-    kroutine_exec(&rq->base.kr, 0);
+    kroutine_exec(&rq->base.kr);
     return;
   }
 

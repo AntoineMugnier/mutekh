@@ -56,7 +56,7 @@ DEV_CHAR_REQUEST(dev_zero_request)
       rq->error = -ENOTSUP;
     }
 
-  kroutine_exec(&rq->base.kr, 0);
+  kroutine_exec(&rq->base.kr);
 }
 
 /* 

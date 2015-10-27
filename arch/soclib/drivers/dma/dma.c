@@ -103,7 +103,7 @@ end:
   LOCK_RELEASE_IRQ(&dev->lock);
 
   if (req->error)
-    kroutine_exec(&req->base.kr, cpu_is_interruptible());
+    kroutine_exec(&req->base.kr);
 }
 
 static DEV_IRQ_SRC_PROCESS(dma_soclib_irq)
@@ -122,7 +122,7 @@ static DEV_IRQ_SRC_PROCESS(dma_soclib_irq)
 
   lock_release(&dev->lock);
 
-  kroutine_exec(&base->kr, cpu_is_interruptible());
+  kroutine_exec(&base->kr);
 
   lock_spin(&dev->lock);
 
