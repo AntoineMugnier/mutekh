@@ -168,6 +168,7 @@ struct dev_ble_radio_rq_s
       buffer_queue_root_t received;
 
       uint8_t channel;
+      bool_t do_scan;
     } adv_listen;
 
     struct {
