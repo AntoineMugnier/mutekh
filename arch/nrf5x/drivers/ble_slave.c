@@ -260,8 +260,13 @@ error_t nrf5x_ble_slave_create(struct net_scheduler_s *scheduler,
   if (err)
     goto err_put_timer;
 
+  assert(CONFIG_BLE_PACKET_SIZE - 1 - 6 >= 27);
+
   slave->context.layer.context.prefix_size = 1 + 2;
-  slave->context.layer.context.mtu = CONFIG_BLE_PACKET_SIZE - 1 - 6;
+  // Default MTU, may be negociated on nRF52 with packet length
+  // extension, but not on nRF51 as there is a hard limitation in CCM.
+  slave->context.layer.context.mtu = 27;
+
   slave->peer = params->peer;
 #if defined(CONFIG_BLE_CRYPTO)
   slave->rng = params->rng;
