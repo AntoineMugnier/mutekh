@@ -138,7 +138,7 @@ void net_task_query_respond_push(struct net_task_s *task,
 
   assert(task->header.type == NET_TASK_QUERY);
 
-  task->response.err = err;
+  task->query.err = err;
 
   net_task_push(&task->header, old_source, old_target, NET_TASK_RESPONSE);
 
