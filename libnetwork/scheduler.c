@@ -223,8 +223,12 @@ struct net_task_s *net_scheduler_task_alloc(
 {
   struct net_task_s *task = slab_alloc(&sched->task_pool);
 
-  task->header.destroy_func = (void*)scheduler_task_free;
-  task->header.allocator_data = sched;
+  dprintk("%s %p\n", __FUNCTION__, task);
+
+  if (task) {
+    task->header.destroy_func = (void*)scheduler_task_free;
+    task->header.allocator_data = sched;
+  }
 
   return task;
 }
