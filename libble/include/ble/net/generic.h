@@ -45,6 +45,10 @@ error_t ble_gatt_create(struct net_scheduler_s *scheduler,
                         const void *params,
                         struct net_layer_s **layer);
 
+error_t ble_gatts_create(struct net_scheduler_s *scheduler,
+                         const void *params,
+                         struct net_layer_s **layer);
+
 error_t ble_l2cap_create(struct net_scheduler_s *scheduler,
                          struct net_layer_s **layer);
 

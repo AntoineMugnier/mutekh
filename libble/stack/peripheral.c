@@ -29,6 +29,8 @@
 #include <ble/net/adv.h>
 #include <ble/net/slave.h>
 #include <ble/net/layer.h>
+#include <ble/net/gatts.h>
+#include <ble/net/att.h>
 
 #include <mutek/printk.h>
 
@@ -227,6 +229,7 @@ bool_t peri_connection_requested(void *delegate, struct net_layer_s *layer,
   }
 #endif
 
+#if 0
   struct ble_gatt_params_s gatt_params = {
     .peer = &peri->peer,
     .db = &peri->context->gattdb,
@@ -243,6 +246,40 @@ bool_t peri_connection_requested(void *delegate, struct net_layer_s *layer,
     printk("error while binding gatt to l2cap: %d\n", err);
     goto out_gatt;
   }
+#else
+  struct net_layer_s *att;
+
+  err = ble_att_create(&peri->context->scheduler, &att);
+  if (err) {
+    printk("error while creating att: %d\n", err);
+    goto out_sm;
+  }
+
+  cid = BLE_L2CAP_CID_ATT;
+  err = net_layer_bind(l2cap, &cid, att);
+  if (err) {
+    printk("error while binding gatt to l2cap: %d\n", err);
+    goto out_gatt;
+  }
+
+  struct ble_gatts_params_s gatts_params = {
+    .peer = &peri->peer,
+    .db = &peri->context->gattdb,
+  };
+
+  err = ble_gatts_create(&peri->context->scheduler, &gatts_params, &gatt);
+  if (err) {
+    printk("error while creating gatts: %d\n", err);
+    goto out_sm;
+  }
+
+  cid = BLE_ATT_SERVER;
+  err = net_layer_bind(att, &cid, gatt);
+  if (err) {
+    printk("error while binding gatt to att: %d\n", err);
+    goto out_gatt;
+  }
+#endif
 
   err = ble_signalling_create(&peri->context->scheduler, &signalling);
   if (err) {
