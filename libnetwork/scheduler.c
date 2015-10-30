@@ -211,6 +211,8 @@ static void scheduler_task_free(
 {
   struct net_scheduler_s *sched = task->header.allocator_data;
 
+  dprintk("%s %p\n", __FUNCTION__, task);
+
   memset(task, 0x55, sizeof(*task));
 
   slab_free(&sched->task_pool, task);

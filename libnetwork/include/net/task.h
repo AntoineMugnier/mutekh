@@ -180,11 +180,8 @@ struct net_task_s
 
     struct {
       uint32_t opcode;
-    } query;
-
-    struct {
       error_t err;
-    } response;
+    } query;
   };
 };
 
