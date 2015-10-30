@@ -21,6 +21,9 @@
 #ifndef BLE_ATT_H
 #define BLE_ATT_H
 
+#include <hexo/types.h>
+#include <hexo/decls.h>
+
 enum ble_att_opcode_e {
   BLE_ATT_ERROR_RSP                     = 0x01,
   BLE_ATT_EXCHANGE_MTU_RQT              = 0x02,
@@ -52,7 +55,32 @@ enum ble_att_opcode_e {
   BLE_ATT_SIGNED_WRITE_CMD              = 0xD2
 };
 
+ALWAYS_INLINE
+uint8_t ble_att_opcode_operation(enum ble_att_opcode_e opcode)
+{
+  return (opcode & 0x3f);
+}
+
+ALWAYS_INLINE
+bool_t ble_att_opcode_is_client_to_server(enum ble_att_opcode_e opcode)
+{
+  return !(opcode & 1);
+}
+
+ALWAYS_INLINE
+bool_t ble_att_opcode_is_response_expected(enum ble_att_opcode_e opcode)
+{
+  return (opcode & 0xc0) != 0x40;
+}
+
+ALWAYS_INLINE
+bool_t ble_att_opcode_is_signed(enum ble_att_opcode_e opcode)
+{
+  return (opcode & 0xc0) == 0xc0;
+}
+
 enum ble_att_error_e {
+  BLE_ATT_ERR_NONE                      = 0x00,
   BLE_ATT_ERR_INVALID_HANDLE            = 0x01,
   BLE_ATT_ERR_READ_NOT_PERMITTED        = 0x02,
   BLE_ATT_ERR_WRITE_NOT_PERMITTED       = 0x03,
@@ -70,6 +98,11 @@ enum ble_att_error_e {
   BLE_ATT_ERR_INSUF_ENCRYPTION          = 0x0F,
   BLE_ATT_ERR_UNSUPPORTED_GROUP_TYPE    = 0x10,
   BLE_ATT_ERR_INSUF_RESOURCES           = 0x11
+};
+
+enum ble_att_type_fmt_e {
+  BLE_ATT_TYPE_UUID16 = 1,
+  BLE_ATT_TYPE_UUID128 = 2,
 };
 
 #endif

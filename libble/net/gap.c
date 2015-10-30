@@ -144,10 +144,10 @@ void ble_gap_task_handle(struct net_layer_s *layer,
 
   case NET_TASK_RESPONSE:
     printk("GAP conn params update response from %d: %d\n",
-           &task->header.source->handler->type, task->response.err);
+           &task->header.source->handler->type, task->query.err);
 
     if (task->header.source == gap->layer.parent &&
-        task->response.err == -ENOTSUP) {
+        task->query.err == -ENOTSUP) {
       struct ble_conn_params_update_task_s *upd = gap_create_update(gap);
 
       printk("GAP conn params update forwarded to signalling\n");
@@ -156,7 +156,7 @@ void ble_gap_task_handle(struct net_layer_s *layer,
       break;
     }
 
-    if (task->response.err == -EINVAL)
+    if (task->query.err == -EINVAL)
       gap_update_conn_in(gap, 30);
 
     break;
