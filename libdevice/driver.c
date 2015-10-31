@@ -113,7 +113,7 @@ void device_put_accessor(void *accessor)
 static bool_t device_filter_accessor(struct device_node_s *node)
 {
   struct device_s *dev = device_from_node(node);
-  if (dev == NULL || dev->drv != NULL)
+  if (dev == NULL || dev->drv == NULL)
     return 0;
   if (dev->status == DEVICE_DRIVER_INIT_DONE)
     return 1;
