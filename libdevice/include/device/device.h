@@ -100,8 +100,6 @@ GCT_CONTAINER_TYPES(device_list,
 /** device tree base node structure */
 struct device_node_s
 {
-  enum device_flags_e           flags;
-
   /** device name, freed on device object destruction if not NULL and
       @tt allocated is set. */
   const char *                  name;
@@ -111,7 +109,9 @@ struct device_node_s
   device_list_entry_t		list_entry;
   device_list_root_t		children;
 #endif
-}
+
+  enum device_flags_e           flags:8;
+} __attribute__((packed))
 #ifdef CONFIG_DEVICE_TREE
  *, list_entry);
 
@@ -127,25 +127,25 @@ struct device_s
   /* must be first field */
   struct device_node_s          node;
 
+  /** Device/driver initialization status */
+  enum device_status_e          status:3;
+
   /** When the @ref status is @ref DEVICE_DRIVER_INIT_PARTIAL, this is
       a mask of initialized classes in driver API order. Extra bits
       can be used by the driver in order to flag internal initialization
       states. */
   uint8_t                       init_mask;
 
+  /** device uses counter */
+  uint8_t                       ref_count;
+
   /** general purpose device lock */
   lock_t			lock;
-
-  /** Set to true if driver initialization done */
-  enum device_status_e          status;
 
   /** pointer to device driver if any */
   const struct driver_s		*drv;
   /** pointer to device driver private data */
   void				*drv_pv;
-
-  /** device uses counter */
-  uint_fast8_t                  ref_count;
 
 #ifdef CONFIG_DEVICE_TREE
   /** pointer to device enumerator private data if any */
