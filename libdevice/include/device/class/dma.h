@@ -216,7 +216,6 @@ inline error_t dev_dma_wait_copy(const struct device_dma_s *accessor,
     device resources table declaration.*/
 # define DEV_STATIC_RES_DMA(label_, channel_, config_)    \
   {                                                       \
-    .flags = DEVICE_RES_FLAGS_DEPEND0,                    \
       .type = DEV_RES_DMA,                                \
         .u = { .dma = {                                   \
           .label = (label_),                              \

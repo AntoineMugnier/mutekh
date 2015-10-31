@@ -23,6 +23,7 @@
 
 #include <hexo/error.h>
 
+#include <mutek/startup.h>
 #include <mutek/mem_alloc.h>
 #include <mutek/printk.h>
 
@@ -39,36 +40,60 @@
 
 const char driver_class_e[] = ENUM_DESC_DRIVER_CLASS_E;
 
+static error_t device_get_api(struct device_s *dev,
+                              enum driver_class_e cl,
+                              const struct driver_class_s **api)
+{
+  const struct driver_s *drv = dev->drv;
+  if (drv == NULL)
+    return -EBUSY;
+
+  const struct driver_class_s *c = NULL;
+  uint_fast8_t i;
+  for (i = 0; (c = drv->classes[i]) != NULL; i++)
+    if (c->class_ == cl)
+      goto found;
+  return -ENOENT;
+
+ found:
+  switch (dev->status)
+    {
+    case DEVICE_ENUM_ERROR:
+    case DEVICE_NO_DRIVER:
+      UNREACHABLE();
+    case DEVICE_DRIVER_INIT_PARTIAL:
+      if (dev->init_mask & (1 << i))
+        {
+        case DEVICE_DRIVER_INIT_DONE:
+          if (api)
+            *api = c;
+          return 0;
+        }
+      return -EAGAIN;
+    default:
+      return -EBUSY;
+    }
+}
+
 error_t device_get_accessor(void *accessor, struct device_s *dev,
                             enum driver_class_e cl, uint_fast8_t number)
 {
   struct device_accessor_s *a = accessor;
+  error_t err;
+
   const struct driver_class_s *c;
-  uint_fast8_t i;
-  error_t err = -ENOTSUP;
+  if ((err = device_get_api(dev, cl, &c)))
+    return err;
 
-  if (dev->status != DEVICE_DRIVER_INIT_DONE)
-    return -EAGAIN;
-  assert(dev->drv != NULL);
-
-  for (i = 0; (c = dev->drv->classes[i]) != NULL; i++)
-    {
-      if (c->class_ == cl)
-        {
-          a->dev = dev;
-          a->api = c;
-          a->number = number;
-          err = 0;
-          if (dev->drv->f_use == NULL ||
-            !(err = dev->drv->f_use(accessor, DEV_USE_GET_ACCESSOR)))
-            dev->ref_count++;
-          else
-            a->dev = NULL;
-          return err;
-        }
-    }
-
-  return -ENOTSUP;
+  a->dev = dev;
+  a->api = c;
+  a->number = number;
+  if (dev->drv->f_use == NULL ||
+      !(err = dev->drv->f_use(accessor, DEV_USE_GET_ACCESSOR)))
+    dev->ref_count++;
+  else
+    a->dev = NULL;
+  return err;
 }
 
 void device_put_accessor(void *accessor)
@@ -85,12 +110,22 @@ void device_put_accessor(void *accessor)
   a->api = NULL;
 }
 
+static bool_t device_filter_accessor(struct device_node_s *node)
+{
+  struct device_s *dev = device_from_node(node);
+  if (dev == NULL || dev->drv != NULL)
+    return 0;
+  if (dev->status == DEVICE_DRIVER_INIT_DONE)
+    return 1;
+  return !(dev->node.flags & DEVICE_FLAG_IGNORE);
+}
+
 error_t device_get_accessor_by_path(void *accessor, struct device_node_s *root,
                                     const char *path, enum driver_class_e cl)
 {
   const char *num;
 
-  error_t e = device_node_from_path(&root, path, 5, &num, &device_filter_init_done);
+  error_t e = device_node_from_path(&root, path, 5, &num, &device_filter_accessor);
   if (e)
     return e;
 
@@ -104,7 +139,7 @@ static bool_t device_find_driver_r(struct device_node_s *node, uint_fast8_t pass
   extern const struct driver_registry_s driver_registry_table[];
   extern const struct driver_registry_s driver_registry_table_end[];
 
-  bool_t done = 0;
+  bool_t done = 1;
 
   struct device_s *dev = device_from_node(node);
 
@@ -135,7 +170,7 @@ static bool_t device_find_driver_r(struct device_node_s *node, uint_fast8_t pass
               if (DEVICE_OP(&e, match_driver, reg->id_table, reg->id_count, dev))
                 {
                   device_bind_driver(dev, reg->driver);
-                  done = 1;
+                  done = 0;
                   break;
                 }
             }
@@ -152,9 +187,10 @@ static bool_t device_find_driver_r(struct device_node_s *node, uint_fast8_t pass
           if (!pass && !(dev->drv->flags & DRIVER_FLAGS_EARLY_INIT))
             break;
 
-          if (device_init_driver(dev) != -EAGAIN &&
-              dev->status != DEVICE_DRIVER_INIT_PENDING)
-              done = 1;
+        case DEVICE_DRIVER_INIT_PARTIAL:
+
+          if (device_init_driver(dev) == 0)
+            done = 0;
 
         default:
           break;
@@ -162,7 +198,7 @@ static bool_t device_find_driver_r(struct device_node_s *node, uint_fast8_t pass
     }
 
   DEVICE_NODE_FOREACH(node, child, {
-      done |= device_find_driver_r(child, pass);
+      done &= device_find_driver_r(child, pass);
   });
 
   return done;
@@ -174,11 +210,54 @@ void device_find_driver(struct device_node_s *node, uint_fast8_t pass)
     node = device_tree_root();
 
   /* try to bind and init as many devices as possible */
-  while (device_find_driver_r(node, pass))
+  while (!device_find_driver_r(node, pass))
     ;
 }
 
 #endif
+
+static void libdevice_drivers_init(uint_fast8_t pass)
+{
+#ifdef CONFIG_DEVICE_TREE
+  device_find_driver(NULL, pass);
+#else
+  bool_t done;
+  struct device_s *dev;
+
+  do {
+    done = 1;
+    DEVICE_NODE_FOREACH(, node, {
+        if (node->flags & DEVICE_FLAG_IGNORE)
+          continue;
+        if (!(dev = device_from_node(node)))
+          continue;
+
+        switch (dev->status)
+          {
+          default:
+            continue;
+          case DEVICE_DRIVER_INIT_PENDING:
+            if (!pass && !(dev->drv->flags & DRIVER_FLAGS_EARLY_INIT))
+              continue;
+          case DEVICE_DRIVER_INIT_PARTIAL:
+            if (device_init_driver(dev) == 0)
+              done = 0;
+          }
+    });
+  } while (!done);
+#endif
+}
+
+void libdevice_drivers_init0(void)
+{
+  libdevice_drivers_init(0);
+}
+
+void libdevice_drivers_init1(void)
+{
+  if (cpu_isbootstrap())
+    libdevice_drivers_init(1);
+}
 
 error_t device_bind_driver(struct device_s *dev, const struct driver_s *drv)
 {
@@ -195,19 +274,72 @@ error_t device_init_driver(struct device_s *dev)
 {
   const struct driver_s *drv = dev->drv;
 
-  if (dev->status != DEVICE_DRIVER_INIT_PENDING)
-    return -EBUSY;
+  switch (dev->status)
+    {
+    default:
+      return -EBUSY;
+    case DEVICE_DRIVER_INIT_PENDING:
+    case DEVICE_DRIVER_INIT_PARTIAL:
+      break;
+    }
+
+  uint32_t cl_missing = 0;
 
   /* check dependencies before trying device initialization */
   DEVICE_RES_FOREACH(dev, r, {
-      if (r->flags & (DEVICE_RES_FLAGS_DEPEND0 | DEVICE_RES_FLAGS_DEPEND1))
+      const char *path;
+      enum driver_class_e cl;
+
+      switch (r->type)
         {
-          struct device_s *dep = dev;
-          if (device_get_by_path(&dep, r->u.ptr[!(r->flags & DEVICE_RES_FLAGS_DEPEND0)],
-                                 &device_filter_init_done))
-            return -EAGAIN;
+#ifdef CONFIG_DEVICE_CLOCK
+        case DEV_RES_CLOCK_SRC:
+          path = r->u.ptr[0];
+          cl = DRIVER_CLASS_CLOCK;
+          break;
+#endif
+#ifdef CONFIG_DEVICE_DMA
+        case DEV_RES_DMA:
+          path = r->u.ptr[0];
+          cl = DRIVER_CLASS_DMA;
+          break;
+#endif
+        case DEV_RES_DEV_PARAM:
+          path = r->u.ptr[1];
+          cl = r->u.dev_param.class_;
+          break;
+        default:
+          continue;
         }
-  });
+
+      struct device_s *dep = dev;
+      if (device_get_by_path(&dep, path, NULL))
+        goto missing;
+
+      switch (dep->status)
+        {
+        case DEVICE_DRIVER_INIT_DONE:
+          continue;
+        case DEVICE_DRIVER_INIT_PARTIAL:
+          if (cl == DRIVER_CLASS_NONE)
+          default:
+            goto missing;
+        }
+      if (!device_get_api(dep, cl, NULL))
+        continue;
+    missing:
+      if (cl >= sizeof(cl_missing) * 8)
+        return -EAGAIN;
+      cl_missing |= 1 << cl;
+    });
+
+  if (!(drv->flags & DRIVER_FLAGS_NO_DEPEND) && cl_missing)
+    {
+#if 0
+      printk("device: postponed initialization of device %p `%s'\n", dev, dev->node.name);
+#endif
+      return -EAGAIN;
+    }
 
   printk("device: initialization of device %p `%s' using driver %p"
 #if defined(CONFIG_DEVICE_DRIVER_DESC)
@@ -221,11 +353,23 @@ error_t device_init_driver(struct device_s *dev)
          );
 
   /* device init */
-  error_t err = drv->f_init(dev);
+  error_t err = drv->f_init(dev, cl_missing);
 
-  if (err)
-    printk("device: device %p `%s' initialization failed with return code %i\n",
-           dev, dev->node.name, err);
+  switch (err)
+    {
+    default:
+      printk("device: device %p `%s' initialization failed with return code %i\n",
+             dev, dev->node.name, err);
+      break;
+    case 0:
+      assert(dev->status == DEVICE_DRIVER_INIT_DONE ||
+             dev->status == DEVICE_DRIVER_INIT_PARTIAL);
+      break;
+    case -EAGAIN:
+      assert(dev->status == DEVICE_DRIVER_INIT_PENDING ||
+             dev->status == DEVICE_DRIVER_INIT_PARTIAL);
+      break;
+    }
 
   return err;
 }

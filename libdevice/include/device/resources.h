@@ -72,12 +72,6 @@ enum dev_resource_flags_e
   DEVICE_RES_FLAGS_FREE_PTR0 = 1,
   /** second resource field is a pointer which must be freeed on cleanup */
   DEVICE_RES_FLAGS_FREE_PTR1 = 2,
-  /** first resource field is a path string to an other device which
-      must be initialized before initialization of this device. */
-  DEVICE_RES_FLAGS_DEPEND0 = 4,
-  /** secoond resource field is a path string to an other device which
-      must be initialized before initialization of this device. */
-  DEVICE_RES_FLAGS_DEPEND1 = 8,
   /** reserved for use by enumerator driver */
   DEVICE_RES_FLAGS_ENUM_RESERVED0 = 16,
 };
@@ -247,6 +241,7 @@ struct dev_resource_s
     struct {
       const char                *name;
       const char                *dev;
+      uint8_t                   class_;
     }                           dev_param;
 
     /** @see device_res_add_uint_array_param */
@@ -792,25 +787,26 @@ ALWAYS_INLINE void device_get_param_uint_default(const struct device_s *dev, con
     exact meaning of the value is driver dependent. The driver
     initialization will not take place until the device path points to
     an exisiting and properly initialized device. */
-ALWAYS_INLINE error_t device_res_add_dev_param(struct device_s *dev, const char *name, const char *path)
-{
-  struct dev_resource_s *r;
-  error_t err = device_res_alloc_str(dev, DEV_RES_DEV_PARAM, name, path, &r);
-  if (err)
-    return err;
-
-  r->flags |= DEVICE_RES_FLAGS_DEPEND1;
-
-  return 0;
-}
+error_t device_res_add_dev_param(struct device_s *dev, const char *name,
+                                 const char *path, enum driver_class_e cl);
 
 # define DEV_STATIC_RES_DEV_PARAM(name_, path_)         \
   {                                                     \
-    .flags = DEVICE_RES_FLAGS_DEPEND1,                  \
     .type = DEV_RES_DEV_PARAM,                          \
       .u = { .dev_param = {                             \
         .name = (name_),                                \
         .dev = (path_),                                 \
+        .class_ = DRIVER_CLASS_NONE,                    \
+      } }                                               \
+  }
+
+# define DEV_STATIC_RES_DEVCLASS_PARAM(name_, path_, class__) \
+  {                                                     \
+    .type = DEV_RES_DEV_PARAM,                          \
+      .u = { .dev_param = {                             \
+        .name = (name_),                                \
+        .dev = (path_),                                 \
+        .class_ = (class__),                            \
       } }                                               \
   }
 

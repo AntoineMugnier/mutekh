@@ -42,12 +42,12 @@
 DEV_DECLARE_STATIC(spi_dev, "spi0", 0, bcm2835_spi_drv,
                    DEV_STATIC_RES_MEM(0x20204000, 0x20204020),
 
-                   DEV_STATIC_RES_DEV_PARAM("icu", "/icu"),
+                   DEV_STATIC_RES_DEV_ICU("/icu"),
                    DEV_STATIC_RES_IRQ(0, 8+54, DEV_IRQ_SENSE_HIGH_LEVEL, 0, 1),
 
-                   DEV_STATIC_RES_DEV_PARAM("spi-timer", "/timer"),
+                   DEV_STATIC_RES_DEV_TIMER("/timer"),
 
-                   DEV_STATIC_RES_DEV_PARAM("iomux", "/gpio"),
+                   DEV_STATIC_RES_DEV_IOMUX("/gpio"),
                    DEV_STATIC_RES_IOMUX("clk",  0, 11, BCM2835_GPIO_GPFSEL_FSEL_FUNCTION0, 0),
                    DEV_STATIC_RES_IOMUX("miso", 0, 9,  BCM2835_GPIO_GPFSEL_FSEL_FUNCTION0, 0),
                    DEV_STATIC_RES_IOMUX("mosi", 0, 10, BCM2835_GPIO_GPFSEL_FSEL_FUNCTION0, 0),
@@ -67,11 +67,11 @@ DEV_DECLARE_STATIC(spi_dev, "spi0", 0, bcm2835_spi_drv,
 DEV_DECLARE_STATIC(i2c0_dev, "i2c0", 0, bcm2835_i2c_drv,
                    DEV_STATIC_RES_MEM(0x20205000, 0x20804020),
 
-                   DEV_STATIC_RES_DEV_PARAM("icu", "/icu"),
+                   DEV_STATIC_RES_DEV_ICU("/icu"),
                    DEV_STATIC_RES_IRQ(0, 8+53, DEV_IRQ_SENSE_HIGH_LEVEL, 0, 1),
 
-                   DEV_STATIC_RES_DEV_PARAM("i2c-timer", "/timer"),
-                   DEV_STATIC_RES_DEV_PARAM("iomux", "/gpio"),
+                   DEV_STATIC_RES_DEV_TIMER("/timer"),
+                   DEV_STATIC_RES_DEV_IOMUX("/gpio"),
                    DEV_STATIC_RES_IOMUX("scl", 0, 1, BCM2835_GPIO_GPFSEL_FSEL_FUNCTION0, 0),
                    DEV_STATIC_RES_IOMUX("sda", 0, 0, BCM2835_GPIO_GPFSEL_FSEL_FUNCTION0, 0)
                    );
@@ -85,11 +85,11 @@ DEV_DECLARE_STATIC(i2c0_dev, "i2c0", 0, bcm2835_i2c_drv,
 DEV_DECLARE_STATIC(i2c0_dev, "i2c0", 0, bcm2835_i2c_drv,
                    DEV_STATIC_RES_MEM(0x20205000, 0x20804020),
 
-                   DEV_STATIC_RES_DEV_PARAM("icu", "/icu"),
+                   DEV_STATIC_RES_DEV_ICU("/icu"),
                    DEV_STATIC_RES_IRQ(0, 8+53, DEV_IRQ_SENSE_HIGH_LEVEL, 0, 1),
 
-                   DEV_STATIC_RES_DEV_PARAM("i2c-timer", "/timer"),
-                   DEV_STATIC_RES_DEV_PARAM("iomux", "/gpio"),
+                   DEV_STATIC_RES_DEV_TIMER("/timer"),
+                   DEV_STATIC_RES_DEV_IOMUX("/gpio"),
                    DEV_STATIC_RES_IOMUX("scl", 0, 29, BCM2835_GPIO_GPFSEL_FSEL_FUNCTION0, 0),
                    DEV_STATIC_RES_IOMUX("sda", 0, 28, BCM2835_GPIO_GPFSEL_FSEL_FUNCTION0, 0)
                    );
@@ -98,11 +98,11 @@ DEV_DECLARE_STATIC(i2c0_dev, "i2c0", 0, bcm2835_i2c_drv,
 DEV_DECLARE_STATIC(i2c1_dev, "i2c1", 0, bcm2835_i2c_drv,
                    DEV_STATIC_RES_MEM(0x20804000, 0x20804020),
 
-                   DEV_STATIC_RES_DEV_PARAM("icu", "/icu"),
+                   DEV_STATIC_RES_DEV_ICU("/icu"),
                    DEV_STATIC_RES_IRQ(0, 8+53, DEV_IRQ_SENSE_HIGH_LEVEL, 0, 1),
 
-                   DEV_STATIC_RES_DEV_PARAM("i2c-timer", "/timer"),
-                   DEV_STATIC_RES_DEV_PARAM("iomux", "/gpio"),
+                   DEV_STATIC_RES_DEV_TIMER("/timer"),
+                   DEV_STATIC_RES_DEV_IOMUX("/gpio"),
                    DEV_STATIC_RES_IOMUX("scl", 0, 3, BCM2835_GPIO_GPFSEL_FSEL_FUNCTION0, 0),
                    DEV_STATIC_RES_IOMUX("sda", 0, 2, BCM2835_GPIO_GPFSEL_FSEL_FUNCTION0, 0)
                    );

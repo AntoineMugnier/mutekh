@@ -55,10 +55,10 @@ DEV_DECLARE_STATIC(usart1_dev, "uart1", 0, stm32_usart_drv,
 
                    DEV_STATIC_RES_FREQ(84000000, 1),
 
-                   DEV_STATIC_RES_DEV_PARAM("icu", "/cpu"),
+                   DEV_STATIC_RES_DEV_ICU("/cpu"),
                    DEV_STATIC_RES_IRQ(0, STM32_IRQ_USART1, DEV_IRQ_SENSE_HIGH_LEVEL, 0, 0x1),
 
-                   DEV_STATIC_RES_DEV_PARAM("iomux", "/gpio"),
+                   DEV_STATIC_RES_DEV_IOMUX("/gpio"),
                    DEV_STATIC_RES_IOMUX("tx", 0, /* PA9 */ 0*16+9, /* AF7. */ 7, 0),
                    DEV_STATIC_RES_IOMUX("rx", 0, /* PA10 */ 0*16+10, /* AF7. */ 7, 0),
                    );
@@ -72,10 +72,10 @@ DEV_DECLARE_STATIC(usart2_dev, "uart2", 0, stm32_usart_drv,
 
                    DEV_STATIC_RES_FREQ(42000000, 1),
 
-                   DEV_STATIC_RES_DEV_PARAM("icu", "/cpu"),
+                   DEV_STATIC_RES_DEV_ICU("/cpu"),
                    DEV_STATIC_RES_IRQ(0, STM32_IRQ_USART2, DEV_IRQ_SENSE_HIGH_LEVEL, 0, 0x1),
 
-                   DEV_STATIC_RES_DEV_PARAM("iomux", "/gpio"),
+                   DEV_STATIC_RES_DEV_IOMUX("/gpio"),
                    DEV_STATIC_RES_IOMUX("tx", 0, /* PA2 */ 0*16+2, /* AF7. */ 7, 0),
                    DEV_STATIC_RES_IOMUX("rx", 0, /* PA3 */ 0*16+3, /* AF7. */ 7, 0),
 
@@ -92,10 +92,10 @@ DEV_DECLARE_STATIC(usart6_dev, "uart6", 0, stm32_usart_drv,
 
                    DEV_STATIC_RES_FREQ(84000000, 1),
 
-                   DEV_STATIC_RES_DEV_PARAM("icu", "/cpu"),
+                   DEV_STATIC_RES_DEV_ICU("/cpu"),
                    DEV_STATIC_RES_IRQ(0, STM32_IRQ_USART6, DEV_IRQ_SENSE_HIGH_LEVEL, 0, 0x1),
 
-                   DEV_STATIC_RES_DEV_PARAM("iomux", "/gpio"),
+                   DEV_STATIC_RES_DEV_IOMUX("/gpio"),
                    DEV_STATIC_RES_IOMUX("tx", 0, /* PA11 */ 0*16+11, /* AF8. */ 8, 0),
                    DEV_STATIC_RES_IOMUX("rx", 0, /* PA12 */ 0*16+12, /* AF8. */ 8, 0)
                    );
@@ -113,11 +113,11 @@ DEV_DECLARE_STATIC(i2c1_dev, "i2c1", 0, stm32_i2c_ctrl_drv,
 
                    DEV_STATIC_RES_FREQ(42000000, 1),
 
-                   DEV_STATIC_RES_DEV_PARAM("icu", "/cpu"),
+                   DEV_STATIC_RES_DEV_ICU("/cpu"),
                    DEV_STATIC_RES_IRQ(0, STM32_IRQ_I2C1_EV, DEV_IRQ_SENSE_HIGH_LEVEL, 0, 0x1),
                    DEV_STATIC_RES_IRQ(1, STM32_IRQ_I2C1_ER, DEV_IRQ_SENSE_HIGH_LEVEL, 0, 0x1),
 
-                   DEV_STATIC_RES_DEV_PARAM("iomux", "/gpio"),
+                   DEV_STATIC_RES_DEV_IOMUX("/gpio"),
                    DEV_STATIC_RES_IOMUX("scl", 0, /* PB8 */ 1*16+8, /* AF4 */ 4, 0),
                    DEV_STATIC_RES_IOMUX("sda", 0, /* PB9 */ 1*16+9, /* AF4 */ 4, 0)
                    );
@@ -128,7 +128,7 @@ DEV_DECLARE_STATIC(i2c1_dev, "i2c1", 0, stm32_i2c_ctrl_drv,
 
 /* GPIO A..E. */
 DEV_DECLARE_STATIC(gpio_dev, "gpio", 0, stm32_gpio_drv,
-                   DEV_STATIC_RES_DEV_PARAM("icu", "/cpu"),
+                   DEV_STATIC_RES_DEV_ICU("/cpu"),
                    DEV_STATIC_RES_IRQ(0, STM32_IRQ_EXTI0,     DEV_IRQ_SENSE_HIGH_LEVEL, 0, 0x1),
                    DEV_STATIC_RES_IRQ(1, STM32_IRQ_EXTI1,     DEV_IRQ_SENSE_HIGH_LEVEL, 0, 0x1),
                    DEV_STATIC_RES_IRQ(2, STM32_IRQ_EXTI2,     DEV_IRQ_SENSE_HIGH_LEVEL, 0, 0x1),
@@ -149,7 +149,7 @@ DEV_DECLARE_STATIC(timer4_dev, "timer4", 0, stm32_timer_drv,
                                       STM32_DEV_MEM_END(TIM, 4)
                                       ),
 
-                   DEV_STATIC_RES_DEV_PARAM("icu", "/cpu"),
+                   DEV_STATIC_RES_DEV_ICU("/cpu"),
                    DEV_STATIC_RES_IRQ(0, STM32_IRQ_TIM4, DEV_IRQ_SENSE_HIGH_LEVEL, 0, 0x1),
                    );
 
@@ -166,7 +166,7 @@ DEV_DECLARE_STATIC(pwm2_dev, "pwm2", 0, stm32_pwm_drv,
 
                    DEV_STATIC_RES_FREQ(84000000, 1),
 
-                   DEV_STATIC_RES_DEV_PARAM("iomux", "/gpio"),
+                   DEV_STATIC_RES_DEV_IOMUX("/gpio"),
                    DEV_STATIC_RES_IOMUX("oc1", 0, /* PA5 */ 0*16+5, /* AF1 */ 1, 0),
                    DEV_STATIC_RES_IOMUX("oc2", 0, /* PB3 */ 1*16+3, /* AF1 */ 1, 0)
                    );
@@ -180,7 +180,7 @@ DEV_DECLARE_STATIC(pwm3_dev, "pwm3", 0, stm32_pwm_drv,
 
                    DEV_STATIC_RES_FREQ(84000000, 1),
 
-                   DEV_STATIC_RES_DEV_PARAM("iomux", "/gpio"),
+                   DEV_STATIC_RES_DEV_IOMUX("/gpio"),
                    DEV_STATIC_RES_IOMUX("oc1", 0, /* PA6 */ 0*16+6, /* AF2 */ 2, 0),
                    DEV_STATIC_RES_IOMUX("oc2", 0, /* PA7 */ 0*16+7, /* AF2 */ 2, 0)
                    );
@@ -194,7 +194,7 @@ DEV_DECLARE_STATIC(pwm5_dev, "pwm5", 0, stm32_pwm_drv,
 
                    DEV_STATIC_RES_FREQ(84000000, 1),
 
-                   DEV_STATIC_RES_DEV_PARAM("iomux", "/gpio"),
+                   DEV_STATIC_RES_DEV_IOMUX("/gpio"),
                    DEV_STATIC_RES_IOMUX("oc1", 0, /* PA0 */ 0*16+0, /* AF2 */ 2, 0),
                    DEV_STATIC_RES_IOMUX("oc2", 0, /* PA1 */ 0*16+1, /* AF2 */ 2, 0)
                    );
@@ -209,10 +209,10 @@ DEV_DECLARE_STATIC(spi1_dev, "spi1", 0, stm32_spi_drv,
 
                    DEV_STATIC_RES_FREQ(84000000, 1),
 
-                   DEV_STATIC_RES_DEV_PARAM("icu", "/cpu"),
+                   DEV_STATIC_RES_DEV_ICU("/cpu"),
                    DEV_STATIC_RES_IRQ(0, STM32_IRQ_SPI1, DEV_IRQ_SENSE_HIGH_LEVEL, 0, 0x1),
 
-                   DEV_STATIC_RES_DEV_PARAM("iomux", "/gpio"),
+                   DEV_STATIC_RES_DEV_IOMUX("/gpio"),
                    DEV_STATIC_RES_IOMUX("clk", 0, 0*16+5 /* PA5 */, 5 /* AF5 */, 0),
                    DEV_STATIC_RES_IOMUX("miso", 0, 0*16+6 /* PA6 */, 5 /* AF5 */, 0),
                    DEV_STATIC_RES_IOMUX("mosi", 0, 0*16+7 /* PA7 */, 5 /* AF5 */, 0)
@@ -224,7 +224,7 @@ DEV_DECLARE_STATIC(spi1_dev, "spi1", 0, stm32_spi_drv,
 
 DEV_DECLARE_STATIC(btn0_dev, "btn0", 0, push_button_drv,
                    DEV_STATIC_RES_UINT_PARAM("release-state", 1),
-                   DEV_STATIC_RES_DEV_PARAM("icu", "/gpio"),
+                   DEV_STATIC_RES_DEV_ICU("/gpio"),
                    DEV_STATIC_RES_IRQ(0, 2*16+13 /* PC13 */, DEV_IRQ_SENSE_ANY_EDGE, 0, 0x1)
                   );
 

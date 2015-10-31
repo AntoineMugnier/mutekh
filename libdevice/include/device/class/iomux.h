@@ -160,10 +160,18 @@ ALWAYS_INLINE error_t device_res_add_iomux(struct device_s *dev, const char *lab
         .config = (config_),                            \
       } }                                               \
   }
+
+# define DEV_STATIC_RES_DEV_IOMUX(path_) DEV_STATIC_RES_DEVCLASS_PARAM("iomux", path_, DRIVER_CLASS_IOMUX)
+
 #else
 # define DEV_STATIC_RES_IOMUX(label_, demux_, io_id_, mux_, config_)    \
   {                                                     \
     .type = DEV_RES_UNUSED,                             \
+  }
+
+# define DEV_STATIC_RES_DEV_IOMUX(path_)                                   \
+  {                                                                     \
+    .type = DEV_RES_UNUSED,                                             \
   }
 #endif
 

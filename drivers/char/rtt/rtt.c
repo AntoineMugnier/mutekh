@@ -237,5 +237,5 @@ static DEV_INIT(char_rtt_init)
 }
 
 DEV_DECLARE_STATIC(rtt_console_dev, "console1", 0, char_rtt_drv,
-                   DEV_STATIC_RES_DEV_PARAM("timer", "rtc* timer*"),
+                   DEV_STATIC_RES_DEV_TIMER("rtc* timer*"),
                    );

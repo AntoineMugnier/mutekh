@@ -480,6 +480,15 @@ error_t dev_timer_sleep(struct device_timer_s *accessor, struct dev_timer_rq_s *
 config_depend(CONFIG_DEVICE_TIMER)
 error_t dev_timer_busy_wait(struct device_timer_s *accessor, dev_timer_delay_t delay);
 
+#ifdef CONFIG_DEVICE_TIMER
+# define DEV_STATIC_RES_DEV_TIMER(path_)                                \
+  DEV_STATIC_RES_DEVCLASS_PARAM("timer", path_, DRIVER_CLASS_TIMER)
+#else
+# define DEV_STATIC_RES_DEV_TIMER(path_)                                \
+  {                                                                     \
+    .type = DEV_RES_UNUSED,                                             \
+  }
+#endif
 
 #endif
 

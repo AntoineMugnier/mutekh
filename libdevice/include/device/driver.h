@@ -190,7 +190,7 @@ struct dev_enum_ident_s
 
 
 /** Common class init() function template. */
-#define DEV_INIT(n)	error_t (n) (struct device_s *dev)
+#define DEV_INIT(n)	error_t (n) (struct device_s *dev, uint32_t cl_missing)
 
 /**
    @This is device init() function type. This function will allocate
@@ -198,15 +198,31 @@ struct dev_enum_ident_s
    before using any other functions on the device.
    
    @This must update the @ref device_s::status value to indicate the
-   new status of the device. The value can be left to @ref
-   DEVICE_DRIVER_INIT_PENDING if the device was not initialized due to
-   missing resource but can be successfully initialized later.
+   new status of the device. The value can be set to any status with
+   the @tt DEVICE_DRIVER_INIT_ prefix.
 
-   Some kernel service can not be used from this function if the
-   driver has the @ref DRIVER_FLAGS_EARLY_INIT flag set.
+   The @ref DEVICE_DRIVER_INIT_PARTIAL status can be used to indicate
+   that only some drivers classes are properly initialized and ready
+   for use. The @ref device_s::init_mask bit mask must be updated
+   along in this case.
 
-   @param dev pointer to device descriptor
-   @return negative error code, 0 on succes
+   This init function must return 0 when some progress have been made
+   or @tt -EAGAIN when some resources are missing to complete
+   initialization of the device. In both cases, it may be called again
+   later depending on the new device status. Any other error code can
+   be used. Any permanent error must be indicated by setting the
+   status to DEVICE_DRIVER_INIT_FAILED so that the function is not
+   called again later.
+
+   The @ref DRIVER_FLAGS_NO_DEPEND flag can be used so that this
+   function is called even if some resource dependencies are not
+   satisfied. The driver is then responsible for testing missing
+   dependencies. In this case the @tt cl_missing mask indicates any
+   driver classes related to missing resource dependencies.
+
+   This function may be called early during startup depending on the
+   driver. Some kernel service can not be used from this function if
+   the driver has the @ref DRIVER_FLAGS_EARLY_INIT flag set.
 */
 typedef DEV_INIT(dev_init_t);
 
@@ -268,12 +284,15 @@ extern DEV_USE(dev_use_generic);
 
 enum driver_flags_e
 {
-  /* Perform initialization of the device during the @tt
+  /** Perform initialization of the device during the @tt
      INIT_BOOTSTRAP phase instead of @tt INIT_SMP. This is needed
      mainly for processor and memory devices. It is not possible to
      rely on some kernel features (scheduler, irq, kroutines) being
      functional during the early initialization phase. */
   DRIVER_FLAGS_EARLY_INIT = 1,
+  /** Do not test for missing resource dependencies before calling the
+      driver initialization function on a device. */
+  DRIVER_FLAGS_NO_DEPEND = 2,
 };
 
 /** device driver object structure */

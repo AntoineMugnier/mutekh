@@ -55,10 +55,10 @@ DEV_DECLARE_STATIC(usart2_dev, "uart2", 0, stm32_usart_drv,
 
                    DEV_STATIC_RES_FREQ(36000000, 1),
 
-                   DEV_STATIC_RES_DEV_PARAM("icu", "/cpu"),
+                   DEV_STATIC_RES_DEV_ICU("/cpu"),
                    DEV_STATIC_RES_IRQ(0, STM32_IRQ_USART2, DEV_IRQ_SENSE_HIGH_LEVEL, 0, 0x1),
 
-                   DEV_STATIC_RES_DEV_PARAM("iomux", "/gpio"),
+                   DEV_STATIC_RES_DEV_IOMUX("/gpio"),
                    DEV_STATIC_RES_IOMUX("tx", 0, /* PA2 */ 0*16+2, 0 /* no remap */, 0),
                    DEV_STATIC_RES_IOMUX("rx", 0, /* PA3 */ 0*16+3, 0 /* no remap */, 0),
 
@@ -72,7 +72,7 @@ DEV_DECLARE_STATIC(usart2_dev, "uart2", 0, stm32_usart_drv,
 
 /* GPIO A..E. */
 DEV_DECLARE_STATIC(gpio_dev, "gpio", 0, stm32_gpio_drv,
-                   DEV_STATIC_RES_DEV_PARAM("icu", "/cpu"),
+                   DEV_STATIC_RES_DEV_ICU("/cpu"),
                    DEV_STATIC_RES_IRQ(0, STM32_IRQ_EXTI0,     DEV_IRQ_SENSE_HIGH_LEVEL, 0, 0x1),
                    DEV_STATIC_RES_IRQ(1, STM32_IRQ_EXTI1,     DEV_IRQ_SENSE_HIGH_LEVEL, 0, 0x1),
                    DEV_STATIC_RES_IRQ(2, STM32_IRQ_EXTI2,     DEV_IRQ_SENSE_HIGH_LEVEL, 0, 0x1),
@@ -92,10 +92,10 @@ DEV_DECLARE_STATIC(spi1_dev, "spi1", 0, stm32_spi_drv,
 
                    DEV_STATIC_RES_FREQ(72000000, 1),
 
-                   DEV_STATIC_RES_DEV_PARAM("icu", "/cpu"),
+                   DEV_STATIC_RES_DEV_ICU("/cpu"),
                    DEV_STATIC_RES_IRQ(0, STM32_IRQ_SPI1, DEV_IRQ_SENSE_RISING_EDGE, 0, 0x1),
 
-                   DEV_STATIC_RES_DEV_PARAM("iomux", "/gpio"),
+                   DEV_STATIC_RES_DEV_IOMUX("/gpio"),
                    DEV_STATIC_RES_IOMUX("clk", 0, 0*16+5 /* PA5 */, 0 /* no remap */, 0),
                    DEV_STATIC_RES_IOMUX("miso", 0, 0*16+6 /* PA6 */, 0 /* no remap */, 0),
                    DEV_STATIC_RES_IOMUX("mosi", 0, 0*16+7 /* PA7 */, 0 /* no remap */, 0)
@@ -107,7 +107,7 @@ DEV_DECLARE_STATIC(spi1_dev, "spi1", 0, stm32_spi_drv,
 
 DEV_DECLARE_STATIC(btn0_dev, "btn0", 0, push_button_drv,
                    DEV_STATIC_RES_UINT_PARAM("release-state", 1),
-                   DEV_STATIC_RES_DEV_PARAM("icu", "/gpio"),
+                   DEV_STATIC_RES_DEV_ICU("/gpio"),
                    DEV_STATIC_RES_IRQ(0, 2*16+13 /* PC13 */, DEV_IRQ_SENSE_ANY_EDGE, 0, 0x1)
                   );
 

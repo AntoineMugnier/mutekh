@@ -58,7 +58,7 @@ DEV_DECLARE_STATIC(cpu_dev, "cpu", DEVICE_FLAG_CPU, arm32_drv,
 
 DEV_DECLARE_STATIC(icu_dev, "icu", 0, bcm2835_icu_drv,
                    DEV_STATIC_RES_MEM(0x2000b000, 0x2000b400),
-                   DEV_STATIC_RES_DEV_PARAM("icu", "/cpu"),
+                   DEV_STATIC_RES_DEV_ICU("/cpu"),
                    DEV_STATIC_RES_IRQ(0, 0, DEV_IRQ_SENSE_LOW_LEVEL, 0, 1),
                    );
 #endif
@@ -69,10 +69,10 @@ DEV_DECLARE_STATIC(icu_dev, "icu", 0, bcm2835_icu_drv,
 DEV_DECLARE_STATIC(uart_dev, "uart", 0, pl011uart_drv,
                    DEV_STATIC_RES_MEM(0x20201000, 0x20202000),
 
-                   DEV_STATIC_RES_DEV_PARAM("icu", "/icu"),
+                   DEV_STATIC_RES_DEV_ICU("/icu"),
                    DEV_STATIC_RES_IRQ(0, 8+57, DEV_IRQ_SENSE_HIGH_LEVEL, 0, 1),
 
-                   DEV_STATIC_RES_DEV_PARAM("iomux", "/gpio"),
+                   DEV_STATIC_RES_DEV_IOMUX("/gpio"),
 
                    DEV_STATIC_RES_IOMUX("rx",  0, 15,  BCM2835_GPIO_GPFSEL_FSEL_FUNCTION0, 0),
                    DEV_STATIC_RES_IOMUX("tx",  0, 14,  BCM2835_GPIO_GPFSEL_FSEL_FUNCTION0, 0)
@@ -86,7 +86,7 @@ DEV_DECLARE_STATIC(uart_dev, "uart", 0, pl011uart_drv,
 DEV_DECLARE_STATIC(systimer_dev, "timer", 0, bcm2835_systimer_drv,
                    DEV_STATIC_RES_MEM(0x20003000, 0x20003020),
                    DEV_STATIC_RES_FREQ(1000000, 1),
-                   DEV_STATIC_RES_DEV_PARAM("icu", "/icu"),
+                   DEV_STATIC_RES_DEV_ICU("/icu"),
                    DEV_STATIC_RES_IRQ(0, 8+0, DEV_IRQ_SENSE_HIGH_LEVEL, 0, 1),
                    DEV_STATIC_RES_IRQ(1, 8+1, DEV_IRQ_SENSE_HIGH_LEVEL, 0, 1),
                    DEV_STATIC_RES_IRQ(2, 8+2, DEV_IRQ_SENSE_HIGH_LEVEL, 0, 1),
@@ -100,7 +100,7 @@ DEV_DECLARE_STATIC(systimer_dev, "timer", 0, bcm2835_systimer_drv,
 
 DEV_DECLARE_STATIC(gpio_dev, "gpio", 0, bcm2835_gpio_drv,
                    DEV_STATIC_RES_MEM(0x20200000, 0x20003020),
-                   DEV_STATIC_RES_DEV_PARAM("icu", "/icu"),
+                   DEV_STATIC_RES_DEV_ICU("/icu"),
                    DEV_STATIC_RES_IRQ(0, 8+49, DEV_IRQ_SENSE_HIGH_LEVEL, 0, 1),
                    DEV_STATIC_RES_IRQ(1, 8+50, DEV_IRQ_SENSE_HIGH_LEVEL, 0, 1),
                    );

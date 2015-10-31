@@ -546,7 +546,7 @@ struct dev_spi_ctrl_queue_s
     queue stored in the driver private context.
 
     The @ref dev_spi_ctrl_queue_s::timer accessor is initialized using
-    the device pointed to by the @tt{'spi-timer'} device resource
+    the device pointed to by the @tt{'timer'} device resource
     entry of the controller, if available.
 */
 config_depend(CONFIG_DEVICE_SPI_REQUEST)
@@ -647,5 +647,16 @@ void dev_spi_request_cleanup(struct dev_spi_ctrl_rq_s *rq);
 config_depend(CONFIG_DEVICE_SPI_REQUEST)
 error_t device_spi_request_wakeup(struct dev_spi_ctrl_rq_s *rq);
 
+#ifdef CONFIG_DEVICE_SPI
+# define DEV_STATIC_RES_DEV_SPI(path_)                          \
+  DEV_STATIC_RES_DEVCLASS_PARAM("spi", path_, DRIVER_CLASS_SPI)
+#else
+# define DEV_STATIC_RES_DEV_SPI(path_)                                  \
+  {                                                                     \
+    .type = DEV_RES_UNUSED,                                             \
+  }
 #endif
+
+#endif
+
 

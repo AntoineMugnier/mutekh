@@ -219,5 +219,22 @@ error_t device_get_param_dev_accessor(struct device_s *dev,
   if (!(r = device_res_get_from_name(dev, DEV_RES_DEV_PARAM, 0, name)))
     return -ENOENT;
 
+  if (r->u.dev_param.class_ != DRIVER_CLASS_NONE &&
+      r->u.dev_param.class_ != cl)
+    return -EINVAL;
+
   return device_get_accessor_by_path(accessor, &dev->node, r->u.str_param.value, cl);
+}
+
+error_t device_res_add_dev_param(struct device_s *dev, const char *name,
+                                 const char *path, enum driver_class_e cl)
+{
+  struct dev_resource_s *r;
+  error_t err = device_res_alloc_str(dev, DEV_RES_DEV_PARAM, name, path, &r);
+  if (err)
+    return err;
+
+  r->u.dev_param.class_ = cl;
+
+  return 0;
 }

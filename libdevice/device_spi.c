@@ -657,7 +657,7 @@ error_t dev_spi_queue_init(struct device_s *dev, struct dev_spi_ctrl_queue_s *q)
   __unused__ error_t err;
 
 #ifdef CONFIG_DEVICE_SPI_REQUEST_TIMER
-  if (device_get_param_dev_accessor(dev, "spi-timer", &q->timer, DRIVER_CLASS_TIMER))
+  if (device_get_param_dev_accessor(dev, "timer", &q->timer, DRIVER_CLASS_TIMER))
     device_init_accessor(&q->timer);
 
   q->timeout = NULL;

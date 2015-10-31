@@ -551,7 +551,7 @@ static DEV_INIT(bcm2835_i2c_init)
     goto err_mem;
 
   /* Get accessor on timer */
-  if (device_get_param_dev_accessor(dev, "i2c-timer", &pv->timer, DRIVER_CLASS_TIMER))
+  if (device_get_param_dev_accessor(dev, "timer", &pv->timer, DRIVER_CLASS_TIMER))
     device_init_accessor(&pv->timer);
 
   pv->trq.rq.pvdata = dev;

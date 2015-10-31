@@ -378,8 +378,16 @@ error_t device_res_add_gpio(struct device_s *dev, const char *label,
         .width = (width_),                                              \
       } }                                                               \
   }
+
+# define DEV_STATIC_RES_DEV_GPIO(path_)                                 \
+  DEV_STATIC_RES_DEVCLASS_PARAM("gpio", path_, DRIVER_CLASS_GPIO)
 #else
 # define DEV_STATIC_RES_GPIO(label_, id_, width_)                       \
+  {                                                                     \
+    .type = DEV_RES_UNUSED,                                             \
+  }
+
+# define DEV_STATIC_RES_DEV_GPIO(path_)                                \
   {                                                                     \
     .type = DEV_RES_UNUSED,                                             \
   }

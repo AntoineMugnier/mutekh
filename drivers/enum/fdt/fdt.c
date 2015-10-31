@@ -20,7 +20,7 @@
     Copyright Alexandre Becoulet <alexandre.becoulet@free.fr> (c) 2012
 */
 
-
+#include <enums.h>
 #include <hexo/types.h>
 #include <mutek/mem_alloc.h>
 #include <mutek/printk.h>
@@ -345,34 +345,21 @@ static FDT_ON_NODE_PROP_FUNC(enum_fdt_node_prop)
         {
           if (!strncmp(name + 1, "aram-str-", 9) && !((char*)data)[datalen])
             {
+              /* param-str-NAME = "bar"; */
               if (device_res_add_str_param(e->dev, name + 10, data))
                 goto res_err;
               return;
             }
           else if (!strncmp(name + 1, "aram-int-", 9) && datalen == 4)
             {
+              /* param-int-NAME = 42; */
               if (device_res_add_uint_param(e->dev, name + 10, endian_be32(*(const uint32_t*)data)))
                 goto res_err;
               return;
             }
-          else if (!strncmp(name + 1, "aram-device-path-", 17) && !((char*)data)[datalen])
-            {
-              if (device_res_add_dev_param(e->dev, name + 18, data))
-                goto res_err;
-              return;
-            }
-          else if (!strncmp(name + 1, "aram-device-", 12) && datalen == 4)
-            {
-              struct dev_resource_s *r;
-              if (device_res_alloc_str(e->dev, DEV_RES_DEV_PARAM, name + 13, NULL, &r))
-                goto res_err;
-              r->flags |= DEVICE_RES_FLAGS_ENUM_RESERVED0;
-              /* pass fdt phandle instead of pointer, will be changed in resolve_dev_links */
-              r->u.uint[1] = endian_be32(*(const uint32_t*)data);
-              return;
-            }
           else if (!strncmp(name + 1, "aram-array-", 11))
             {
+              /* param-array-NAME = < 1 2 3 >; */
               uintptr_t value[(datalen / 4) * sizeof(uintptr_t)];
               uint_fast8_t i;
               for (i = 0; i < datalen / 4; i++)
@@ -380,6 +367,49 @@ static FDT_ON_NODE_PROP_FUNC(enum_fdt_node_prop)
               if (device_res_add_uint_array_param(e->dev, name + 12, datalen / 4, value))
                 goto res_err;
               return;
+            }
+          else if (!strncmp(name + 1, "aram-", 5))
+            {
+              /* param-device-NAME = < &{/devfoo@0} >
+                 param-CLASS-NAME = < &{/devfoo@0} >
+                 param-device-path-NAME = "/devfoo@0"
+                 param-CLASS-path-NAME = "/devfoo@0" */
+              const char *end = name + 13;
+              enum driver_class_e cl = DRIVER_CLASS_NONE;
+              if (strncmp(name + 6, "device-", 7))
+                {
+                  end = name + 6;
+                  ENUM_FOREACH(uint_fast16_t, driver_class_e, {
+                      uint_fast8_t i = 0;
+                      while (name[i] && (name[i] | 32) == end[i])
+                        i++;
+                      if (end[i] == '-')
+                        {
+                          cl = value;
+                          end += i + 1;
+                          goto class_ok;
+                        }
+                  });
+                  goto res_err;
+                }
+            class_ok:
+              if (!strncmp(end, "path-", 5) && !((char*)data)[datalen])
+                {
+                  if (device_res_add_dev_param(e->dev, end + 5, data, cl))
+                    goto res_err;
+                  return;
+                }
+              else if (datalen == 4)
+                {
+                  struct dev_resource_s *r;
+                  if (device_res_alloc_str(e->dev, DEV_RES_DEV_PARAM, end, NULL, &r))
+                    goto res_err;
+                  r->flags |= DEVICE_RES_FLAGS_ENUM_RESERVED0;
+                  /* pass fdt phandle instead of pointer, will be changed in resolve_dev_links */
+                  r->u.uint[1] = endian_be32(*(const uint32_t*)data);
+                  r->u.dev_param.class_ = cl;
+                  return;
+                }
             }
        }
       break;
@@ -411,6 +441,7 @@ static FDT_ON_NODE_PROP_FUNC(enum_fdt_node_prop)
               r->flags |= DEVICE_RES_FLAGS_ENUM_RESERVED0;
               /* pass fdt phandle instead of pointer, will be changed in resolve_dev_links */
               r->u.uint[1] = phandle;
+              r->u.dev_param.class_ = DRIVER_CLASS_ICU;
               error_t err = device_res_alloc(e->dev, &r, DEV_RES_IRQ);
               if (err)
                 goto res_err;
@@ -442,6 +473,7 @@ static FDT_ON_NODE_PROP_FUNC(enum_fdt_node_prop)
               r->flags |= DEVICE_RES_FLAGS_ENUM_RESERVED0;
               /* pass fdt phandle instead of pointer, will be changed in resolve_dev_links */
               r->u.uint[1] = endian_be32(*(const uint32_t*)(data8 + 4));
+              r->u.dev_param.class_ = DRIVER_CLASS_ICU;
 
               error_t err = device_res_alloc(e->dev, &r, DEV_RES_IRQ);
               if (err)
@@ -550,7 +582,7 @@ static void resolve_dev_links(struct device_s *root, struct device_s *dev)
                       if (path != NULL)
                         {
                           r->u.ptr[1] = path;
-                          r->flags |= DEVICE_RES_FLAGS_FREE_PTR1 | DEVICE_RES_FLAGS_DEPEND1;
+                          r->flags |= DEVICE_RES_FLAGS_FREE_PTR1;
                           continue;
                         }
                     }

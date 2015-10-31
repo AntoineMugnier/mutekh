@@ -167,21 +167,13 @@ error_t dev_clock_sink_link(struct device_s *dev,
     struct dev_clock_sink_ep_s *sink = &sinks[id - first_sink];
     struct dev_clock_link_info_s *li = &lkinfo[id - first_sink];
 
-    struct device_s *clock_dev;
+    struct device_clock_s clock;
+    struct device_s *clock_dev = clock.dev;
 
-    if (device_get_by_path(&clock_dev, r->u.clock_src.src, &device_filter_init_done))
+    if (device_get_accessor_by_path(&clock, &dev->node, r->u.clock_src.src, DRIVER_CLASS_CLOCK))
       {
         printk("device: no initialized clock provider available for %p device.\n", dev);
         err = -ENOENT;
-        goto error;
-      }
-
-    struct device_clock_s clock;
-
-    if (device_get_accessor(&clock, clock_dev, DRIVER_CLASS_CLOCK, 0))
-      {
-        printk("device: can not use %p device as a clock provider.\n", r->u.clock_src.src);
-        err = -EINVAL;
         goto error;
       }
 

@@ -586,4 +586,15 @@ ALWAYS_INLINE error_t dev_i2c_res_get_addr(const struct device_s *dev,
     return 0;
 }
 
+#ifdef CONFIG_DEVICE_I2C
+# define DEV_STATIC_RES_DEV_I2C(path_)                          \
+  DEV_STATIC_RES_DEVCLASS_PARAM("i2c", path_, DRIVER_CLASS_I2C)
+#else
+# define DEV_STATIC_RES_DEV_I2C(path_)                                  \
+  {                                                                     \
+    .type = DEV_RES_UNUSED,                                             \
+  }
+#endif
+
+
 #endif

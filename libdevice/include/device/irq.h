@@ -336,13 +336,20 @@ inline error_t device_res_add_irq(struct device_s *dev, uint_fast8_t src_id,
         .route_mask = (route_mask_),                                    \
       } }                                                               \
   }
+
+#define DEV_STATIC_RES_DEV_ICU(path_) DEV_STATIC_RES_DEVCLASS_PARAM("icu", path_, DRIVER_CLASS_ICU)
+
 #else
 # define DEV_STATIC_RES_IRQ(src_id_, sink_id_, trig_mode_, irq_id_, route_mask_) \
   {                                                                     \
     .type = DEV_RES_UNUSED,                                             \
   }
-#endif
 
+#define DEV_STATIC_RES_DEV_ICU(path_)                                   \
+  {                                                                     \
+    .type = DEV_RES_UNUSED,                                             \
+  }
+#endif
 
 
 #endif

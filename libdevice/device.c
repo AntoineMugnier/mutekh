@@ -445,13 +445,6 @@ error_t device_resolve_alias(struct device_node_s **node, uint_fast8_t depth, co
 
 #endif
 
-bool_t device_filter_init_done(struct device_node_s *node)
-{
-  struct device_s *dev = device_from_node(node);
-  return dev && dev->status == DEVICE_DRIVER_INIT_DONE
-    && !(dev->node.flags & DEVICE_FLAG_IGNORE);
-}
-
 error_t device_node_from_path(struct device_node_s **node, const char *path,
                               uint_fast8_t depth, const char **brackets,
                               device_filter_t *filter)

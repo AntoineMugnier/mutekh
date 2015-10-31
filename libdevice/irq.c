@@ -373,22 +373,15 @@ error_t device_irq_source_link(struct device_s *dev, struct dev_irq_src_s *srcs,
           goto error;
         }
 
-      struct device_s *icu_dev = dev;
-      if (device_get_by_path(&icu_dev, icu_path, &device_filter_init_done))
-        {
-          printk("device: no initialized interrupt controller available for %p device.\n", dev);
-          err = -ENOENT;
-          goto error;
-        }
-
       struct device_icu_s icu;
-      if (device_get_accessor(&icu, icu_dev, DRIVER_CLASS_ICU, 0))
+      if (device_get_accessor_by_path(&icu, &dev->node, icu_path, DRIVER_CLASS_ICU))
         {
           printk("device: can not use %p device as an interrupt controller.\n", icu_path);
           err = -EINVAL;
           goto error;
         }
 
+      struct device_s *icu_dev = icu.dev;
       struct dev_irq_src_s *src = srcs + src_id;
       struct dev_irq_sink_s *sink = DEVICE_OP(&icu, get_sink, r->u.irq.sink_id);
 

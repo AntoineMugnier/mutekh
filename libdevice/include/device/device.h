@@ -59,8 +59,13 @@ enum device_status_e
   DEVICE_ENUM_ERROR,
   /** No driver is currently attached to the device */
   DEVICE_NO_DRIVER,
-  /** A driver has been attached to the device but initialization has not been performed yet */
+  /** A driver has been attached to the device but initialization has
+      not been performed yet */
   DEVICE_DRIVER_INIT_PENDING,
+  /** A driver has been attached to the device and the initialization
+      needs more calls to the device initialization function in order
+      to complete for all implemented classes. */
+  DEVICE_DRIVER_INIT_PARTIAL,
   /** A driver has been attached to the device and initialization took place */
   DEVICE_DRIVER_INIT_DONE,
   /** A driver has been attached to the device but initialization failed */
@@ -121,6 +126,12 @@ struct device_s
 {
   /* must be first field */
   struct device_node_s          node;
+
+  /** When the @ref status is @ref DEVICE_DRIVER_INIT_PARTIAL, this is
+      a mask of initialized classes in driver API order. Extra bits
+      can be used by the driver in order to flag internal initialization
+      states. */
+  uint8_t                       init_mask;
 
   /** general purpose device lock */
   lock_t			lock;
@@ -304,9 +315,6 @@ error_t device_node_from_path(struct device_node_s **node, const char *path,
 /** @internal */
 error_t device_resolve_alias(struct device_node_s **node, uint_fast8_t depth,
                              const char **brackets);
-
-/** @internal */
-DEVICE_FILTER(device_filter_init_done);
 
 /** @This returns child device by path. The @tt node parameter must
     provide an initialized device pointer which will be updated is a

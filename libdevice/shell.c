@@ -261,13 +261,18 @@ static TERMUI_CON_COMMAND_PROTOTYPE(dev_shell_alias)
 #include <device/class/clock.h>
 
 static void
-dev_shell_dump_drv_class(struct termui_console_s *con, const struct driver_s *drv)
+dev_shell_dump_drv_class(struct termui_console_s *con, const struct driver_s *drv,
+                         uint8_t pending_mask)
 {
   const struct driver_class_s *c;
   uint_fast8_t i;
 
   for (i = 0; (c = drv->classes[i]); i++)
-    termui_con_printf(con, "%N, ", c->class_, driver_class_e);
+    {
+      termui_con_printf(con, "%N%s, ", c->class_, driver_class_e,
+                        pending_mask & 1 ? " (pending)" : "");
+      pending_mask >>= 1;
+    }
 }
 
 static void
@@ -299,7 +304,7 @@ dev_shell_dump_device(struct termui_console_s *con, struct device_s *dev, uint_f
       for (i = 0; i < indent + 2; i++)
         termui_con_printf(con, "  ");
       termui_con_printf(con, "Classes: ");
-      dev_shell_dump_drv_class(con, dev->drv);
+      dev_shell_dump_drv_class(con, dev->drv, dev->status == DEVICE_DRIVER_INIT_PARTIAL ? ~dev->init_mask : 0);
       termui_con_printf(con, "\n");
     }
 
@@ -430,7 +435,8 @@ dev_shell_dump_device(struct termui_console_s *con, struct device_s *dev, uint_f
                  r->u.uint_param.value, r->u.uint_param.value);
           break;
         case DEV_RES_DEV_PARAM:
-          termui_con_printf(con, "  Device parameter `%s' = `%s'\n", r->u.dev_param.name, r->u.dev_param.dev);
+          termui_con_printf(con, "  Device parameter `%s' = `%s' (%N)\n",
+                            r->u.dev_param.name, r->u.dev_param.dev, r->u.dev_param.class_, driver_class_e);
           break;
         case DEV_RES_UINT_ARRAY_PARAM: {
           uintptr_t i;
@@ -516,7 +522,7 @@ static TERMUI_CON_COMMAND_PROTOTYPE(dev_shell_drivers)
       termui_con_printf(con, "\n  Driver %p", d);
 #endif
       termui_con_printf(con, "\n    Classes: ");
-      dev_shell_dump_drv_class(con, d);
+      dev_shell_dump_drv_class(con, d, 0);
       termui_con_printf(con, "\n");
 
       for (i = 0; i < reg->id_count; ++i)
