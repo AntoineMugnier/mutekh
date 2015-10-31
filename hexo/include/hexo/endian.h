@@ -618,10 +618,14 @@ ALWAYS_INLINE void endian_be64_na_store(void *addr, uint64_t val)
  */
 
 /** @this extracts bit at specified index */
-#define BIT_EXTRACT(v, index) ((v) & (1 << (index)))
+#define BIT_EXTRACT(v, index) ((v) & (1ULL << (index)))
+
+#define BIT_SET(v, index) ((v) |= (1ULL << (index)))
+
+#define BIT_CLEAR(v, index) ((v) &= ~(1ULL << (index)))
 
 /** @this extracts count bits from specified index */
-#define BITS_EXTRACT_FC(v, first, count) (((v) >> (first)) & ((1 << (count)) - 1))
+#define BITS_EXTRACT_FC(v, first, count) (((v) >> (first)) & ((1ULL << (count)) - 1))
 
 /** @this extracts bits between specified first and last index */
 #define BITS_EXTRACT_FL(v, first, last) BITS_EXTRACT_FC(v, first, (last) - (first) + 1)
