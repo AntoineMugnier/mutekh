@@ -109,7 +109,7 @@ static uint64_t get_timer_value(struct efm32_rtc_private_s *pv)
         value += 1ULL << EFM32_RTC_HW_WIDTH;
     }
 
-  return value + (pv->swvalue << EFM32_RTC_HW_WIDTH);
+  return value + ((uint64_t)pv->swvalue << EFM32_RTC_HW_WIDTH);
 #else
   return value;
 #endif
