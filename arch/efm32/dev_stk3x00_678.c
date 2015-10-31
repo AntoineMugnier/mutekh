@@ -49,10 +49,8 @@ DEV_DECLARE_STATIC(recmu_dev, "recmu", 0, efm32_recmu_drv,
                    DEV_STATIC_RES_MEM(0x400c6000, 0x400c6400), /* EMU */
                    DEV_STATIC_RES_MEM(0x400c8000, 0x400c8400), /* CMU */
 
-#if 0
                    DEV_STATIC_RES_DEV_ICU("/cpu"),
                    DEV_STATIC_RES_IRQ(0, EFM32_IRQ_CMU, DEV_IRQ_SENSE_RISING_EDGE, 0, 1),
-#endif
 
                    /* Crystal freqs */
                    DEV_STATIC_RES_CLK_OSC(EFM32_CLOCK_HFXO, -1, 48000000, 1),

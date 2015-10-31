@@ -193,7 +193,22 @@ static DEV_USE(arm_use)
 static DEV_CLEANUP(arm_cleanup);
 static DEV_INIT(arm_init);
 
-DRIVER_DECLARE(arm32m_drv, DRIVER_FLAGS_EARLY_INIT, "Arm-m processor", arm,
+enum {   /* same order as driver methods below */
+#ifdef CONFIG_DEVICE_IRQ
+  ARM32M_INITID_ICU,
+#endif
+#if defined(CONFIG_CPU_ARM32M_TIMER_SYSTICK) || defined(CONFIG_CPU_ARM32M_TIMER_DWTCYC)
+  ARM32M_INITID_TIMER,
+#endif
+  ARM32M_INITID_CPU,
+#ifdef CONFIG_DEVICE_CLOCK
+  ARM32M_INITID_CLOCK,
+#endif
+};
+
+DRIVER_DECLARE(arm32m_drv, DRIVER_FLAGS_EARLY_INIT |
+                           DRIVER_FLAGS_NO_DEPEND,
+               "Arm-m processor", arm,
 #ifdef CONFIG_DEVICE_IRQ
                DRIVER_ICU_METHODS(arm_icu),
 #endif
@@ -224,42 +239,77 @@ static DEV_CLOCK_SINK_CHANGED(arm_clk_changed)
 
 static DEV_INIT(arm_init)
 {
-  struct arm_dev_private_s  *pv;
+  struct arm_dev_private_s  *pv = dev->drv_pv;
 
-  dev->status = DEVICE_DRIVER_INIT_FAILED;
+  if (dev->status == DEVICE_DRIVER_INIT_PENDING)
+    {
+      /* get processor device id specifed in resources */
+      uintptr_t id = 0;
+      if (device_res_get_uint(dev, DEV_RES_ID, 0, &id, NULL))
+        PRINTK_RET(-ENOENT, "arm: device has no ID resource")
+          ;
 
-  /* get processor device id specifed in resources */
-  uintptr_t id = 0;
-  if (device_res_get_uint(dev, DEV_RES_ID, 0, &id, NULL))
-    PRINTK_RET(-ENOENT, "arm: device has no ID resource")
-      ;
+      /* allocate device private data */
+      pv = mem_alloc_cpu(sizeof (*pv), (mem_scope_sys), id);
+      if (pv == NULL)
+        goto err;
 
-  /* allocate device private data */
-  pv = mem_alloc_cpu(sizeof (*pv), (mem_scope_sys), id);
-  if (pv == NULL)
-    return -ENOMEM;
+      memset(pv, 0, sizeof(*pv));
+      dev->drv_pv = pv;
+      dev->drv = &arm32m_drv;
+      dev->status = DEVICE_DRIVER_INIT_PARTIAL;
 
-  memset(pv, 0, sizeof(*pv));
-  dev->drv_pv = pv;
+      if (cpu_tree_node_init(&pv->node, id, dev))
+        goto err_pv;
+      if (cpu_tree_insert(&pv->node))
+        {
+          cpu_tree_node_cleanup(&pv->node);
+          goto err_pv;
+        }
+      BIT_SET(dev->init_mask, ARM32M_INITID_CPU);
 
-  if (cpu_tree_node_init(&pv->node, id, dev))
-    goto err_pv;
+#ifdef CONFIG_DEVICE_IRQ
+      /* init arm irq sink end-points */
+      device_irq_sink_init(dev, pv->sinks, CONFIG_CPU_ARM32M_M_IRQ_COUNT,
+                           arm_icu_sink_update, DEV_IRQ_SENSE_HIGH_LEVEL | DEV_IRQ_SENSE_RISING_EDGE);
+
+      /* set processor interrupt handler */
+      if (id == CONFIG_ARCH_BOOTSTRAP_CPU_ID)
+        {
+          CPU_LOCAL_SET(arm_icu_dev, dev);
+          cpu_interrupt_sethandler(arm_irq_handler);
+        }
+
+      BIT_SET(dev->init_mask, ARM32M_INITID_ICU);
+#endif
+    }
 
 #ifdef CONFIG_DEVICE_CLOCK
-  dev_clock_sink_init(dev, &pv->clk_ep, &arm_clk_changed);
+  if (!BIT_EXTRACT(dev->init_mask, ARM32M_INITID_CLOCK))
+    {
+      if (BIT_EXTRACT(cl_missing, DRIVER_CLASS_CLOCK))
+        return -EAGAIN;
 
-  struct dev_clock_link_info_s ckinfo;
-  if (dev_clock_sink_link(dev, &pv->clk_ep, &ckinfo, 0, 0))
-    goto no_clock;
-  pv->freq = ckinfo.freq;
+      dev_clock_sink_init(dev, &pv->clk_ep, &arm_clk_changed);
+
+      struct dev_clock_link_info_s ckinfo;
+      if (dev_clock_sink_link(dev, &pv->clk_ep, &ckinfo, 0, 0))
+        return -EUNKNOWN;
+
+      pv->freq = ckinfo.freq;
+
 # ifdef CONFIG_CPU_ARM32M_TIMER_SYSTICK
-  pv->acc = ckinfo.acc;
+      pv->acc = ckinfo.acc;
 # endif
 
-  if (dev_clock_sink_hold(&pv->clk_ep, 0))
-    goto err_clku;
+      if (dev_clock_sink_hold(&pv->clk_ep, 0))
+        {
+          dev_clock_sink_unlink(dev, &pv->clk_ep, 1);
+          return -EUNKNOWN;
+        }
 
- no_clock:
+      BIT_SET(dev->init_mask, ARM32M_INITID_CLOCK);
+    }
 #else
   if (device_get_res_freq(dev, &pv->freq, 0))
     pv->freq = DEV_FREQ_INVALID;
@@ -276,7 +326,7 @@ static DEV_INIT(arm_init)
   pv->systick_rev = 1;
   /* enable systick in NVIC */
   cpu_mem_write_32(ARMV7M_NVIC_ISER_ADDR(0),
-    ARMV7M_NVIC_ISER_SETENA(15));
+                   ARMV7M_NVIC_ISER_SETENA(15));
 # endif
 #endif
 
@@ -284,40 +334,16 @@ static DEV_INIT(arm_init)
   pv->dwt_cycnt_start = 0;
 #endif
 
-#ifdef CONFIG_DEVICE_IRQ
-  /* init arm irq sink end-points */
-  device_irq_sink_init(dev, pv->sinks, CONFIG_CPU_ARM32M_M_IRQ_COUNT,
-                       arm_icu_sink_update, DEV_IRQ_SENSE_HIGH_LEVEL | DEV_IRQ_SENSE_RISING_EDGE);
-
-  /* set processor interrupt handler */
-  if (id == CONFIG_ARCH_BOOTSTRAP_CPU_ID)
-    {
-      CPU_LOCAL_SET(arm_icu_dev, dev);
-      cpu_interrupt_sethandler(arm_irq_handler);
-    }
-#endif
-
-  if (cpu_tree_insert(&pv->node))
-    goto err_clk;
-
-  dev->drv = &arm32m_drv;
   dev->status = DEVICE_DRIVER_INIT_DONE;
 
   return 0;
 
- err_clk:
-#ifdef CONFIG_DEVICE_CLOCK
-  dev_clock_sink_release(&pv->clk_ep);
-#endif
- err_clku:
-#ifdef CONFIG_DEVICE_CLOCK
-  dev_clock_sink_unlink(dev, &pv->clk_ep, 1);
-#endif
- err_node:
-  cpu_tree_node_cleanup(&pv->node);
  err_pv:
   mem_free(pv);
-  return -1;
+ err:
+  dev->status = DEVICE_DRIVER_INIT_FAILED;
+  dev->drv = NULL;
+  return -EUNKNOWN;
 }
 
 static DEV_CLEANUP(arm_cleanup)
@@ -329,17 +355,24 @@ static DEV_CLEANUP(arm_cleanup)
 #endif
 
 #ifdef CONFIG_DEVICE_IRQ
-  /* detach arm irq sink end-points */
-  device_irq_sink_unlink(dev, pv->sinks, CONFIG_CPU_ARM32M_M_IRQ_COUNT);
+  if (BIT_EXTRACT(dev->init_mask, ARM32M_INITID_ICU))
+    /* detach arm irq sink end-points */
+    device_irq_sink_unlink(dev, pv->sinks, CONFIG_CPU_ARM32M_M_IRQ_COUNT);
 #endif
 
 #ifdef CONFIG_DEVICE_CLOCK
-  dev_clock_sink_release(&pv->clk_ep);
-  dev_clock_sink_unlink(dev, &pv->clk_ep, 1);
+  if (BIT_EXTRACT(dev->init_mask, ARM32M_INITID_CLOCK))
+    {
+      dev_clock_sink_release(&pv->clk_ep);
+      dev_clock_sink_unlink(dev, &pv->clk_ep, 1);
+    }
 #endif
 
-  cpu_tree_remove(&pv->node);
-  cpu_tree_node_cleanup(&pv->node);
+  if (BIT_EXTRACT(dev->init_mask, ARM32M_INITID_CPU))
+    {
+      cpu_tree_remove(&pv->node);
+      cpu_tree_node_cleanup(&pv->node);
+    }
 
   mem_free(pv);
 }
