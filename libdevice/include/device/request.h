@@ -266,8 +266,8 @@ dev_request_delayed_push(struct device_accessor_s *accessor,
                          struct dev_request_s *rq, bool_t critical)
 {
   struct device_s *dev = accessor->dev;
-  bool_t interruptible = cpu_is_interruptible();
 #ifdef CONFIG_DEVICE_DELAYED_REQUEST
+  bool_t interruptible = cpu_is_interruptible();
   bool_t empty = 1;
   rq->drvdata = NULL;
   if (critical || !interruptible)
