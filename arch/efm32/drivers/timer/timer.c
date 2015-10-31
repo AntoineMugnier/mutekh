@@ -479,7 +479,7 @@ static DEV_INIT(efm32_timer_init)
   pv->addr = addr;
   pv->start_count = 0;
   pv->rev = 1;
-  pv->cap = DEV_TIMER_CAP_STOPPABLE | DEV_TIMER_CAP_HIGHRES | DEV_TIMER_CAP_KEEPVALUE;
+  pv->cap = DEV_TIMER_CAP_STOPPABLE | DEV_TIMER_CAP_HIGHRES | DEV_TIMER_CAP_KEEPVALUE | DEV_TIMER_CAP_TICKLESS;
   dev->drv_pv = pv;
 
 #ifdef CONFIG_DEVICE_CLOCK
@@ -511,8 +511,6 @@ static DEV_INIT(efm32_timer_init)
     goto err_clk;
 
   dev_request_pqueue_init(&pv->queue);
-#else
-  pv->cap |= DEV_TIMER_CAP_TICKLESS;
 #endif
 
   /* Stop timer */

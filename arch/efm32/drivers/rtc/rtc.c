@@ -415,12 +415,11 @@ static DEV_TIMER_CONFIG(efm32_rtc_config)
 #endif
       cfg->cap = pv->cap;
       cfg->res = 1;
-      cfg->cap = DEV_TIMER_CAP_STOPPABLE | DEV_TIMER_CAP_HIGHRES | DEV_TIMER_CAP_KEEPVALUE;
+      cfg->cap |= DEV_TIMER_CAP_STOPPABLE | DEV_TIMER_CAP_HIGHRES | DEV_TIMER_CAP_KEEPVALUE | DEV_TIMER_CAP_TICKLESS;
 #ifdef CONFIG_DEVICE_IRQ
       cfg->cap |= DEV_TIMER_CAP_REQUEST;
       cfg->max = 0xffffffffffffffffULL;
 #else
-      cfg->cap |= DEV_TIMER_CAP_TICKLESS;
       cfg->max = EFM32_RTC_HW_MASK;
 #endif
     }
@@ -460,12 +459,6 @@ static DEV_INIT(efm32_rtc_init)
   pv->addr = addr;
   pv->start_count = 0;
   dev->drv_pv = pv;
-
-#ifdef CONFIG_DEVICE_IRQ
-  pv->cap |= DEV_TIMER_CAP_REQUEST;
-#else
-  pv->cap |= DEV_TIMER_CAP_TICKLESS;
-#endif
 
 #ifdef CONFIG_DEVICE_CLOCK
   /* enable clock */
