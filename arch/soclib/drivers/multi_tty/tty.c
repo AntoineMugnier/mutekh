@@ -45,6 +45,7 @@ struct tty_soclib_context_s
 {
   /* tty input request queue and char fifo */
   dev_request_queue_root_t	read_q;
+  bool_t                        rx_busy;
 #ifdef CONFIG_DEVICE_IRQ
   tty_fifo_root_t		read_fifo;
   struct dev_irq_src_s          irq_ep;
@@ -61,8 +62,14 @@ void tty_soclib_try_read(struct device_s *dev)
 {
   struct tty_soclib_context_s	*pv = dev->drv_pv;
 
-  while (!dev_request_queue_isempty(&pv->read_q))
+  while (1)
   {
+    if (dev_request_queue_isempty(&pv->read_q))
+      {
+        pv->rx_busy = 0;
+        break;
+      }
+
     struct dev_char_rq_s *rq =
       dev_char_rq_s_cast(dev_request_queue_head(&pv->read_q));
     size_t size;
@@ -106,15 +113,16 @@ static DEV_CHAR_REQUEST(tty_soclib_request)
 
   LOCK_SPIN_IRQ(&dev->lock);
 
-  bool_t empty = dev_request_queue_isempty(&pv->read_q);
-
   switch (rq->type)
   {
   case DEV_CHAR_READ_PARTIAL:
   case DEV_CHAR_READ:
     dev_request_queue_pushback(&pv->read_q, dev_char_rq_s_base(rq));
-    if (empty)
-      tty_soclib_try_read(dev);
+    if (!pv->rx_busy)
+      {
+        pv->rx_busy = 1;
+        tty_soclib_try_read(dev);
+      }
     break;
 
   case DEV_CHAR_WRITE_PARTIAL_FLUSH:
@@ -231,6 +239,9 @@ static DEV_CLEANUP(tty_soclib_cleanup)
 {
   struct tty_soclib_context_s	*pv = dev->drv_pv;
 
+  if (pv->rx_busy)
+    return -EBUSY;
+
 #ifdef CONFIG_DEVICE_IRQ
   device_irq_source_unlink(dev, &pv->irq_ep, 1);
 
@@ -240,4 +251,6 @@ static DEV_CLEANUP(tty_soclib_cleanup)
   dev_request_queue_destroy(&pv->read_q);
 
   mem_free(pv);
+
+  return 0;
 }

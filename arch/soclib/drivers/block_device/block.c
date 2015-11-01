@@ -391,6 +391,9 @@ static DEV_CLEANUP(soclib_block_cleanup)
 {
   struct soclib_block_context_s	*pv = dev->drv_pv;
 
+  if (pv->running)
+    return -EBUSY;
+
   cpu_mem_write_32(pv->addr + SOCLIB_BLOCK_IRQ_ENABLE, 0);
 
   device_irq_source_unlink(dev, &pv->irq_ep, 1);
@@ -398,5 +401,7 @@ static DEV_CLEANUP(soclib_block_cleanup)
   dev_request_queue_destroy(&pv->queue);
 
   mem_free(pv);
+
+  return 0;
 }
 

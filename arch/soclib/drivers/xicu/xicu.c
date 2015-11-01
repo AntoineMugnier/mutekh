@@ -205,6 +205,13 @@ static DEV_CLEANUP(soclib_xicu_cleanup)
   for (i = 0; i < pv->pti_count; i++)
     {
       struct soclib_xicu_pti_s *p = pv->pti + i;
+      if (!dev_request_pqueue_isempty(&p->queue))
+        return -EBUSY;
+    }
+
+  for (i = 0; i < pv->pti_count; i++)
+    {
+      struct soclib_xicu_pti_s *p = pv->pti + i;
       cpu_mem_write_32(XICU_REG_ADDR(pv->addr, XICU_MSK_PTI_ENABLE, i), 0);
       dev_request_pqueue_destroy(&p->queue);
     }
@@ -220,5 +227,6 @@ static DEV_CLEANUP(soclib_xicu_cleanup)
 #endif
 
   mem_free(pv);
+  return 0;
 }
 

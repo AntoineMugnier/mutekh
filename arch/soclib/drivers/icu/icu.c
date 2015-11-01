@@ -167,5 +167,7 @@ static DEV_CLEANUP(soclib_icu_cleanup)
     mem_free(pv->sinks);
 
   mem_free(pv);
+
+  return 0;
 }
 

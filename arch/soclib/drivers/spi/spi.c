@@ -586,6 +586,9 @@ DEV_CLEANUP(soclib_spi_cleanup)
 {
   struct soclib_spi_context_s	*pv = dev->drv_pv;
 
+  if (pv->tr != NULL)
+    return -EBUSY;
+
 #ifdef CONFIG_DEVICE_IRQ
   cpu_mem_write_32(pv->addr + SOCLIB_SPI_IRQMASK_ADDR, 0);
   device_irq_source_unlink(dev, &pv->src_ep, 1);
@@ -596,4 +599,5 @@ DEV_CLEANUP(soclib_spi_cleanup)
 #endif
 
   mem_free(pv);
+  return 0;
 }

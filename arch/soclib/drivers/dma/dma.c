@@ -189,9 +189,14 @@ static DEV_CLEANUP(dma_soclib_cleanup)
 {
   struct dma_soclib_context_s	*pv = dev->drv_pv;
 
+  if (!dev_request_queue_isempty(&pv->queue) || pv->busy)
+    return -EBUSY;
+
   device_irq_source_unlink(dev, &pv->irq_ep, 1);
 
   dev_request_queue_destroy(&pv->queue);
 
   mem_free(pv);
+
+  return 0;
 }

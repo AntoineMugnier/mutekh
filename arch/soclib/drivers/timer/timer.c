@@ -541,8 +541,15 @@ static DEV_INIT(soclib_timer_init)
 static DEV_CLEANUP(soclib_timer_cleanup)
 {
   struct soclib_timer_private_s *pv = dev->drv_pv;
-
   uint_fast8_t i;
+
+  for (i = 0; i < pv->t_count; i++)
+    {
+      struct soclib_timer_state_s *p = pv->t + i;
+      if (p->start_count & 1)
+        return -EBUSY;
+    }
+
   for (i = 0; i < pv->t_count; i++)
     {
       cpu_mem_write_32(TIMER_REG_ADDR(pv->addr, TIMER_MODE, i), 0);
@@ -557,5 +564,7 @@ static DEV_CLEANUP(soclib_timer_cleanup)
 #endif
 
   mem_free(pv);
+
+  return 0;
 }
 
