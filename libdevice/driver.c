@@ -156,6 +156,7 @@ static bool_t device_find_driver_r(struct device_node_s *node, uint_fast8_t pass
       switch (dev->status)
         {
         case DEVICE_NO_DRIVER: {
+# if defined(CONFIG_DEVICE_DRIVER_REGISTRY) && defined(CONFIG_DEVICE_ENUM)
           const struct driver_registry_s *reg;
           struct device_enum_s e;
 
@@ -186,6 +187,7 @@ static bool_t device_find_driver_r(struct device_node_s *node, uint_fast8_t pass
           device_put_accessor(&e);
 
           if (dev->status != DEVICE_DRIVER_INIT_PENDING)
+# endif
             break;
         }
 

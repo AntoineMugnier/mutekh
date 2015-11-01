@@ -33,7 +33,7 @@
 enum dev_opts_e
 {
   DEV_OPT_DEV    = 0x01,
-#ifdef CONFIG_DEVICE_ENUM
+#ifdef CONFIG_DEVICE_DRIVER_REGISTRY
   DEV_OPT_DRV    = 0x02,
 #endif
 };
@@ -41,7 +41,7 @@ enum dev_opts_e
 struct termui_optctx_dev_opts
 {
   struct device_s *dev;
-#ifdef CONFIG_DEVICE_ENUM
+#ifdef CONFIG_DEVICE_DRIVER_REGISTRY
   struct driver_s *drv;
 #endif
 };
@@ -70,7 +70,7 @@ TERMUI_CON_PARSE_OPT_PROTOTYPE(dev_console_opt_accessor_parse)
 
 TERMUI_CON_PARSE_OPT_PROTOTYPE(dev_console_opt_driver_parse)
 {
-#ifdef CONFIG_DEVICE_ENUM
+#ifdef CONFIG_DEVICE_DRIVER_REGISTRY
   struct dev_console_opt_device_s *optd = (void*)opt;
   const struct driver_registry_s *reg = driver_registry_table;
 
@@ -532,7 +532,7 @@ static TERMUI_CON_COMMAND_PROTOTYPE(dev_shell_tree)
   return 0;
 }
 
-#ifdef CONFIG_DEVICE_ENUM
+#ifdef CONFIG_DEVICE_DRIVER_REGISTRY
 static TERMUI_CON_COMMAND_PROTOTYPE(dev_shell_driver_list)
 {
   const struct driver_registry_s *reg = driver_registry_table;
@@ -587,6 +587,7 @@ static TERMUI_CON_COMMAND_PROTOTYPE(dev_shell_driver_bind)
 static TERMUI_CON_COMMAND_PROTOTYPE(dev_shell_driver_unbind)
 {
   struct termui_optctx_dev_opts *c = ctx;
+  device_release_driver(c->dev);
   return device_unbind_driver(c->dev) ? -EINVAL : 0;
 }
 
@@ -611,7 +612,7 @@ static TERMUI_CON_OPT_DECL(dev_opts) =
                                   TERMUI_CON_OPT_CONSTRAINTS(DEV_OPT_DEV, 0)
                                   )
 
-#ifdef CONFIG_DEVICE_ENUM
+#ifdef CONFIG_DEVICE_DRIVER_REGISTRY
   TERMUI_CON_OPT_DEV_DRIVER_ENTRY("-D", "--driver", DEV_OPT_DRV,
                                   struct termui_optctx_dev_opts, drv,
                                   TERMUI_CON_OPT_CONSTRAINTS(DEV_OPT_DRV, 0)
@@ -628,7 +629,7 @@ static TERMUI_CON_GROUP_DECL(dev_driver_group) =
   TERMUI_CON_ENTRY(dev_shell_driver_release, "release",
                    TERMUI_CON_OPTS_CTX(dev_opts, DEV_OPT_DEV, 0, NULL)
                    )
-#ifdef CONFIG_DEVICE_ENUM
+#ifdef CONFIG_DEVICE_DRIVER_REGISTRY
   TERMUI_CON_ENTRY(dev_shell_driver_unbind, "unbind",
                    TERMUI_CON_OPTS_CTX(dev_opts, DEV_OPT_DEV, 0, NULL)
                    )

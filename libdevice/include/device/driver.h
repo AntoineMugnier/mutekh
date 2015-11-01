@@ -354,7 +354,7 @@ extern const struct driver_registry_s driver_registry_table_end[];
 # define DRIVER_REGISTRY_SECTION(x) __attribute__((section (".drivers."#x)))
 #endif
 
-#if defined(CONFIG_DEVICE_ENUM)
+#ifdef CONFIG_DEVICE_DRIVER_REGISTRY
 # define DRIVER_REGISTER(driver_, ...)                             \
   DRIVER_REGISTRY_SECTION(driver_)                                 \
   const struct driver_registry_s driver_##_driver_registry = {     \

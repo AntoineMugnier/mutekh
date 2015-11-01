@@ -146,7 +146,7 @@ SECTIONS
 		*(.rodata*)
 
                 . = ALIGN(8);
-#if defined(CONFIG_DEVICE)
+#ifdef CONFIG_DEVICE_DRIVER_REGISTRY
 		driver_registry_table = .;
 		KEEP(*(.drivers .drivers.*))
 		driver_registry_table_end = .;
