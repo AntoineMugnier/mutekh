@@ -198,6 +198,9 @@ error_t device_irq_ep_link(struct dev_irq_src_s *source, struct dev_irq_sink_s *
       return -ENOMEM;
     }
 
+#warning sink device lock
+  sink->base.dev->ref_count++;
+
   return 0;
 }
 
@@ -210,6 +213,9 @@ error_t device_irq_ep_unlink(struct dev_irq_src_s *source, struct dev_irq_sink_s
     return -ENOENT;
   ensure(!device_irq_ep_unlink_half(&sink->base, &source->base));
   device_irq_sink_cleanup(sink);
+
+  sink->base.dev->ref_count--;
+
   return 0;
 }
 
@@ -243,17 +249,6 @@ void device_irq_sink_init(struct device_s *dev, struct dev_irq_sink_s *sinks,
       ep->update = update;
       ep->sense_link = ep->sense_all = sense_capabilities;
       ep->icu_pv = 0;
-    }
-}
-
-void device_irq_sink_unlink(struct device_s *dev, struct dev_irq_sink_s *sinks, uint_fast8_t sink_count)
-{
-  uint_fast8_t i = 0;
-
-  for (; i < sink_count; i++)
-    {
-      device_irq_ep_unlink_all(dev_irq_sink_s_base(sinks + i));
-      device_irq_sink_cleanup(sinks + i);
     }
 }
 

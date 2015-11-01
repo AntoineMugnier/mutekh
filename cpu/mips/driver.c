@@ -397,8 +397,7 @@ static DEV_CLEANUP(mips_cleanup)
   status &= ~0xfc00;
   cpu_mips_mtc0(CPU_MIPS_STATUS, 0, status);
 # endif
-  /* detach mips irq sink end-points */
-  device_irq_sink_unlink(dev, pv->sinks, ICU_MIPS_MAX_VECTOR);
+
 #endif
 
 #ifdef CONFIG_DEVICE_CLOCK

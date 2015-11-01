@@ -366,8 +366,6 @@ static DEV_CLEANUP(avr32_cleanup)
   status |= 0x1e;
   asm volatile ("musfr	%0" :: "r" (status));
 # endif
-  /* detach avr32 irq sink end-points */
-  device_irq_sink_unlink(dev, pv->sinks, AVR32_IRQ_COUNT);
 #endif
 
 #ifdef CONFIG_DEVICE_CLOCK

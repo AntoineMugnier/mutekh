@@ -309,10 +309,6 @@ static DEV_CLEANUP(gaisler_irqmp_cleanup)
 
 #ifdef CONFIG_DRIVER_GAISLER_IRQMP_ICU
   /* detach gaisler_irqmp irq end-points */
-  uint_fast8_t i;
-  for (i = 0; i < GAISLER_IRQMP_SINKS_COUNT; i++)
-    device_irq_sink_unlink(dev, &pv->sinks[i].sink, 1);
-
   device_irq_source_unlink(dev, pv->srcs, pv->srcs_count);
 
   mem_free(pv->srcs);

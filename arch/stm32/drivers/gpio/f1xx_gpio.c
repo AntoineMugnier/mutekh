@@ -597,7 +597,6 @@ DEV_CLEANUP(stm32_gpio_cleanup)
   struct stm32_gpio_private_s *pv = dev->drv_pv;
 
 #if defined(CONFIG_DRIVER_STM32_GPIO_ICU)
-  device_irq_sink_unlink(dev, pv->sink, STM32_GPIO_BANK_SIZE);
   device_irq_source_unlink(dev, pv->src, STM32_GPIO_IRQ_SRC_COUNT);
 #endif
 

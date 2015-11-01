@@ -233,12 +233,6 @@ void device_irq_modes(struct dev_irq_src_s *src,
 config_depend(CONFIG_DEVICE_IRQ)
 void device_irq_source_unlink(struct device_s *dev, struct dev_irq_src_s *sources, uint_fast8_t count);
 
-/** @This unlink device interrupt end-points. @This is usually called
-    from the interrupt controller driver cleanup function, passing an
-    array of sink end-points allocated in the private driver data. */
-config_depend(CONFIG_DEVICE_IRQ)
-void device_irq_sink_unlink(struct device_s *dev, struct dev_irq_sink_s *sinks, uint_fast8_t count);
-
 /** @This is called from the interrupt controller code to forward an
     irq to all source end-points connected to one of the controller
     sink end-point. */

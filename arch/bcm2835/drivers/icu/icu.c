@@ -219,7 +219,6 @@ static DEV_CLEANUP(bcm2835_icu_cleanup)
   cpu_mem_write_32(pv->addr + BCM2835ICU_DIS2, 0xffffffff);
 
   /* detach bcm2835_icu irq end-points */
-  device_irq_sink_unlink(dev, pv->sinks, BCM2835ICU_MAX_VECTOR);
   device_irq_source_unlink(dev, &pv->src, 1);
 
   if (pv->sinks)

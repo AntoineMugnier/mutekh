@@ -161,7 +161,6 @@ static DEV_CLEANUP(soclib_icu_cleanup)
   cpu_mem_write_32(pv->addr + ICU_SOCLIB_REG_IER_CLR, 0xffffffff);
 
   /* detach soclib_icu irq end-points */
-  device_irq_sink_unlink(dev, pv->sinks, pv->nirq);
   device_irq_source_unlink(dev, &pv->src, 1);
 
   if (pv->sinks)

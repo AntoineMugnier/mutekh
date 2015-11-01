@@ -435,9 +435,6 @@ static DEV_CLEANUP(x86_cleanup)
 # ifdef CONFIG_ARCH_SMP
   /* Disable all irq lines. */
 # endif
-
-  /* detach x86 irq sink end-points */
-  device_irq_sink_unlink(dev, pv->sinks, CPU_X86_IRQ_SINKS);
 #endif
 
 #ifdef CONFIG_HEXO_USERMODE

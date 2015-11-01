@@ -300,8 +300,6 @@ static DEV_CLEANUP(sparc_cleanup)
 # ifdef CONFIG_ARCH_SMP
   /* Disable all irq lines. */
 # endif
-  /* detach sparc irq sink end-points */
-  device_irq_sink_unlink(dev, pv->sinks, ICU_SPARC_SINKS_COUNT);
 #endif
 
 #ifdef CONFIG_DEVICE_CLOCK

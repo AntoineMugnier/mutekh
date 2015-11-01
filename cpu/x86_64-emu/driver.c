@@ -152,10 +152,6 @@ static DEV_CLEANUP(x86_64_emu_cleanup)
 {
   struct x86_64_emu_dev_private_s *pv = dev->drv_pv;
 
-#ifdef CONFIG_DEVICE_IRQ
-  device_irq_sink_unlink(dev, pv->sinks, ICU_X86_64_EMU_MAX_VECTOR);
-#endif
-
   cpu_tree_remove(&pv->node);
   cpu_tree_node_cleanup(&pv->node);
 

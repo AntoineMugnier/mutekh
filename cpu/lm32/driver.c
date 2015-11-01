@@ -363,8 +363,6 @@ static DEV_CLEANUP(lm32_cleanup)
   /* Disable all irq lines. */
   asm volatile ("wcsr	IM, %0" :: "r" (0));
 # endif
-  /* detach lm32 irq sink end-points */
-  device_irq_sink_unlink(dev, pv->sinks, CONFIG_CPU_LM32_IRQ_COUNT);
 #endif
 
 #ifdef CONFIG_DEVICE_CLOCK

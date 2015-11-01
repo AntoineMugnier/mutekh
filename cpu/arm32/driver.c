@@ -407,8 +407,6 @@ static DEV_CLEANUP(arm_cleanup)
 # ifdef CONFIG_ARCH_SMP
   /* Disable all irq lines. */
 # endif
-  /* detach arm irq sink end-points */
-  device_irq_sink_unlink(dev, pv->sinks, ICU_ARM_MAX_VECTOR);
 #endif
 
 #ifdef CONFIG_DEVICE_CLOCK

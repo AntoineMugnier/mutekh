@@ -369,8 +369,6 @@ static DEV_CLEANUP(nios2_cleanup)
   /* Disable all irq lines. */
   cpu_nios2_write_ctrl_reg(3, 0);
 # endif
-  /* detach nios2 irq sink end-points */
-  device_irq_sink_unlink(dev, pv->sinks, ICU_NIOS2_MAX_VECTOR);
 #endif
 
 #ifdef CONFIG_DEVICE_CLOCK

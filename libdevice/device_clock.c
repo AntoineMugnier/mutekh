@@ -199,6 +199,10 @@ error_t dev_clock_sink_link(struct device_s *dev,
         sink->src = src;
         sink->next = src->sink_head;
         src->sink_head = sink;
+
+#warning src device lock
+        src->dev->ref_count++;
+
         if (sink->f_changed != NULL
             && !(src->flags & DEV_CLOCK_SRC_EP_NOTIFY))
           {
@@ -280,6 +284,9 @@ void dev_clock_sink_unlink(struct device_s *dev,
           src->flags ^= DEV_CLOCK_SRC_EP_NOTIFY;
           src->f_use(src, 0, DEV_CLOCK_SRC_USE_IGNORE);
         }
+
+#warning src device lock
+      src->dev->ref_count--;
     }
 }
 

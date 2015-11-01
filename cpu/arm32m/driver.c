@@ -354,12 +354,6 @@ static DEV_CLEANUP(arm_cleanup)
   cpu_mem_write_32(ARMV7M_SYST_CSR_ADDR, 0);
 #endif
 
-#ifdef CONFIG_DEVICE_IRQ
-  if (BIT_EXTRACT(dev->init_mask, ARM32M_INITID_ICU))
-    /* detach arm irq sink end-points */
-    device_irq_sink_unlink(dev, pv->sinks, CONFIG_CPU_ARM32M_M_IRQ_COUNT);
-#endif
-
 #ifdef CONFIG_DEVICE_CLOCK
   if (BIT_EXTRACT(dev->init_mask, ARM32M_INITID_CLOCK))
     {

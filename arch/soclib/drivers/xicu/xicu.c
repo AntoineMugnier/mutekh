@@ -211,8 +211,6 @@ static DEV_CLEANUP(soclib_xicu_cleanup)
 # endif
 
   /* detach soclib_xicu irq end-points */
-  for (i = 0; i < pv->hwi_count; i++)
-    device_irq_sink_unlink(dev, &pv->sinks[i].sink, 1);
   device_irq_source_unlink(dev, pv->srcs, pv->irq_count);
 
   if (pv->srcs)

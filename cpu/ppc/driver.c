@@ -348,8 +348,6 @@ static DEV_CLEANUP(ppc_cleanup)
 # ifdef CONFIG_ARCH_SMP
   /* Disable all irq lines. */
 # endif
-  /* detach ppc irq sink end-points */
-  device_irq_sink_unlink(dev, pv->sinks, ICU_PPC_MAX_VECTOR);
 #endif
 
 #ifdef CONFIG_DEVICE_CLOCK
