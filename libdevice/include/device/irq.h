@@ -83,7 +83,7 @@ struct dev_irq_ep_s
   } links;
 
   /** Number of links */
-  uint16_t link_count;
+  uint8_t link_count;
 } __attribute__ ((packed));
 
 
@@ -147,7 +147,7 @@ struct dev_irq_sink_s
   uint8_t sense_link;
 
   /** Interrupt controller private flags. */
-  uint16_t icu_pv;
+  uint8_t icu_pv;
 
   dev_irq_sink_update_t *update;
 };
