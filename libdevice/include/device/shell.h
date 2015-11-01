@@ -46,6 +46,22 @@ FIRST_FIELD_ASSERT(dev_console_opt_device_s, opt);
     __VA_ARGS__                                                    \
   )
 
+struct dev_console_opt_driver_s
+{
+  struct termui_con_opts_s opt;
+  uint16_t                 offset; /* offset of field struct driver_s * */
+};
+
+FIRST_FIELD_ASSERT(dev_console_opt_driver_s, opt);
+
+/* define a macro to use as console option descriptor parameter */
+#define TERMUI_CON_OPT_DEV_DRIVER_ENTRY(sname_, lname_, id_, type_, field_, ...) \
+  TERMUI_CON_OPT_CUSTOM_ENTRY(dev_console_opt_device_s, sname_, lname_, id_, \
+    TERMUI_CON_OPT_PARSE(dev_console_opt_driver_parse, 1)          \
+    .offset = offsetof(type_, field_),                             \
+    __VA_ARGS__                                                    \
+  )
+
 struct dev_console_opt_accessor_s
 {
   struct termui_con_opts_s opt;
@@ -90,6 +106,8 @@ FIRST_FIELD_ASSERT(dev_console_opt_freq_s, opt);
 TERMUI_CON_PARSE_OPT_PROTOTYPE(dev_console_opt_device_parse);
 
 TERMUI_CON_PARSE_OPT_PROTOTYPE(dev_console_opt_accessor_parse);
+
+TERMUI_CON_PARSE_OPT_PROTOTYPE(dev_console_opt_driver_parse);
 
 TERMUI_CON_ARGS_COLLECT_PROTOTYPE(dev_console_opt_device_comp);
 

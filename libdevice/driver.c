@@ -81,18 +81,23 @@ error_t device_get_accessor(void *accessor, struct device_s *dev,
   struct device_accessor_s *a = accessor;
   error_t err;
 
-  const struct driver_class_s *c;
-  if ((err = device_get_api(dev, cl, &c)))
-    return err;
+  LOCK_SPIN_IRQ(&dev->lock);
 
-  a->dev = dev;
-  a->api = c;
-  a->number = number;
-  if (dev->drv->f_use == NULL ||
-      !(err = dev->drv->f_use(accessor, DEV_USE_GET_ACCESSOR)))
-    dev->ref_count++;
-  else
-    a->dev = NULL;
+  const struct driver_class_s *c;
+  if (!(err = device_get_api(dev, cl, &c)))
+    {
+      a->dev = dev;
+      a->api = c;
+      a->number = number;
+      if (dev->drv->f_use == NULL ||
+          !(err = dev->drv->f_use(accessor, DEV_USE_GET_ACCESSOR)))
+        dev->ref_count++;
+      else
+        a->dev = NULL;
+    }
+
+  LOCK_RELEASE_IRQ(&dev->lock);
+
   return err;
 }
 
@@ -101,13 +106,19 @@ void device_put_accessor(void *accessor)
   struct device_accessor_s *a = accessor;
   struct device_s *dev = a->dev;
 
-  assert(dev && dev->ref_count);
+  assert(dev != NULL);
+
+  LOCK_SPIN_IRQ(&dev->lock);
+
+  assert(dev->ref_count);
 
   dev->ref_count--;
   if (dev->drv->f_use != NULL)
     dev->drv->f_use(accessor, DEV_USE_PUT_ACCESSOR);
   a->dev = NULL;
   a->api = NULL;
+
+  LOCK_RELEASE_IRQ(&dev->lock);
 }
 
 static bool_t device_filter_accessor(struct device_node_s *node)
@@ -136,9 +147,6 @@ error_t device_get_accessor_by_path(void *accessor, struct device_node_s *root,
 
 static bool_t device_find_driver_r(struct device_node_s *node, uint_fast8_t pass)
 {
-  extern const struct driver_registry_s driver_registry_table[];
-  extern const struct driver_registry_s driver_registry_table_end[];
-
   bool_t done = 1;
 
   struct device_s *dev = device_from_node(node);
@@ -261,23 +269,88 @@ void libdevice_drivers_init1(void)
 
 error_t device_bind_driver(struct device_s *dev, const struct driver_s *drv)
 {
-  if (dev->status != DEVICE_NO_DRIVER)
-    return -EBUSY;
+  error_t err = -EBUSY;
 
-  dev->drv = drv;
-  dev->status = DEVICE_DRIVER_INIT_PENDING;
+  LOCK_SPIN_IRQ(&dev->lock);
 
-  return 0;
+  if (dev->status == DEVICE_NO_DRIVER)
+    {
+      err = 0;
+      dev->drv = drv;
+      dev->status = DEVICE_DRIVER_INIT_PENDING;
+    }
+
+  LOCK_RELEASE_IRQ(&dev->lock);
+
+  return err;
+}
+
+error_t device_unbind_driver(struct device_s *dev)
+{
+  error_t err;
+
+  LOCK_SPIN_IRQ(&dev->lock);
+
+  switch (dev->status)
+    {
+    default:
+      err = -EINVAL;
+      break;
+    case DEVICE_NO_DRIVER:
+    case DEVICE_DRIVER_INIT_PENDING:
+    case DEVICE_DRIVER_INIT_FAILED:
+      dev->status = DEVICE_NO_DRIVER;
+      dev->drv = NULL;
+      err = 0;
+    }
+
+  LOCK_RELEASE_IRQ(&dev->lock);
+
+  return err;
+}
+
+error_t device_release_driver(struct device_s *dev)
+{
+  error_t err = -EBUSY;
+
+  LOCK_SPIN_IRQ(&dev->lock);
+
+  switch (dev->status)
+    {
+    default:
+      break;
+#ifdef CONFIG_DEVICE_DRIVER_CLEANUP
+    case DEVICE_DRIVER_INIT_DONE:
+    case DEVICE_DRIVER_INIT_PARTIAL:
+      if (dev->ref_count)
+        break;
+      if (dev->drv->f_cleanup(dev))
+        break;
+#endif
+    case DEVICE_DRIVER_INIT_PENDING:
+    case DEVICE_DRIVER_INIT_FAILED:
+      err = 0;
+      dev->status = DEVICE_DRIVER_INIT_PENDING;
+      break;
+    }
+
+  LOCK_RELEASE_IRQ(&dev->lock);
+
+  return err;
 }
 
 error_t device_init_driver(struct device_s *dev)
 {
   const struct driver_s *drv = dev->drv;
+  error_t err = 0;
+
+  LOCK_SPIN_IRQ(&dev->lock);
 
   switch (dev->status)
     {
     default:
-      return -EBUSY;
+      err = -EBUSY;
+      goto end;
     case DEVICE_DRIVER_INIT_PENDING:
     case DEVICE_DRIVER_INIT_PARTIAL:
       break;
@@ -329,7 +402,10 @@ error_t device_init_driver(struct device_s *dev)
         continue;
     missing:
       if (cl >= sizeof(cl_missing) * 8)
-        return -EAGAIN;
+        {
+          err = -EAGAIN;
+          goto end;
+        }
       cl_missing |= 1 << cl;
     });
 
@@ -338,7 +414,8 @@ error_t device_init_driver(struct device_s *dev)
 #if 0
       printk("device: postponed initialization of device %p `%s'\n", dev, dev->node.name);
 #endif
-      return -EAGAIN;
+      err = -EAGAIN;
+      goto end;
     }
 
   printk("device: initialization of device %p `%s' using driver %p"
@@ -353,7 +430,7 @@ error_t device_init_driver(struct device_s *dev)
          );
 
   /* device init */
-  error_t err = drv->f_init(dev, cl_missing);
+  err = drv->f_init(dev, cl_missing);
 
   switch (err)
     {
@@ -370,6 +447,9 @@ error_t device_init_driver(struct device_s *dev)
              dev->status == DEVICE_DRIVER_INIT_PARTIAL);
       break;
     }
+
+ end:;
+  LOCK_RELEASE_IRQ(&dev->lock);
 
   return err;
 }

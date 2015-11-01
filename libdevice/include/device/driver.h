@@ -229,17 +229,14 @@ typedef DEV_INIT(dev_init_t);
 
 
 /** Common device class cleanup() function template. */
-#if defined(CONFIG_DEVICE_DRIVER_CLEANUP)
-#define DEV_CLEANUP(n)	void    (n) (struct device_s *dev)
-#else
-#define DEV_CLEANUP(n)	__attribute__((unused)) void    (n) (struct device_s *dev)
-#endif
+#define DEV_CLEANUP(n)	__attribute__((unused)) error_t    (n) (struct device_s *dev)
 
 /**
-   @This is device cleanup() function type. Free all ressources
-   allocated with the init() function.
+   @This is device cleanup() function type. @This tries to release
+   all ressources allocated by the initialization function.
 
-   @param dev pointer to device descriptor
+   @This function must return @tt -EBUSY if it is not possible to
+   release the device yet.
 */
 typedef DEV_CLEANUP(dev_cleanup_t);
 
@@ -343,6 +340,9 @@ struct driver_registry_s
   const struct dev_enum_ident_s	*id_table;
   size_t id_count;
 };
+
+extern const struct driver_registry_s driver_registry_table[];
+extern const struct driver_registry_s driver_registry_table_end[];
 
 /**
    Registers a driver (struct driver_s) in the driver_registry_table
@@ -553,8 +553,12 @@ void device_find_driver(struct device_node_s *node, uint_fast8_t pass);
     determine if the driver is appropriate. */
 error_t device_bind_driver(struct device_s *dev, const struct driver_s *drv);
 
+error_t device_unbind_driver(struct device_s *dev);
+
 /** @This performs device initialization using previously bound driver. */
 error_t device_init_driver(struct device_s *dev);
+
+error_t device_release_driver(struct device_s *dev);
 
 /** @This function does nothing but returning @tt -ENOTUP */
 error_t dev_driver_notsup_fcn(void);

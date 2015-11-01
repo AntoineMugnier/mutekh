@@ -35,6 +35,7 @@ static DEV_INIT(device_enum_root_init);
 
 static DEV_CLEANUP(device_enum_root_cleanup)
 {
+  return 0;
 }
 
 #define device_enum_root_use dev_use_generic
