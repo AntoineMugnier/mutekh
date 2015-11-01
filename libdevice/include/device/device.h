@@ -147,11 +147,11 @@ struct device_s
   /** pointer to device driver private data */
   void				*drv_pv;
 
-#ifdef CONFIG_DEVICE_TREE
+#ifdef CONFIG_DEVICE_ENUM
   /** pointer to device enumerator private data if any */
   struct device_s               *enum_dev;
   void				*enum_pv;
-#endif /* !CONFIG_DEVICE_TREE */
+#endif
 
 #if defined(CONFIG_ARCH_SMP) && defined(CONFIG_DEVICE_IRQ)
   //  struct cpu_set_s              irq_cpus;
@@ -196,7 +196,6 @@ struct device_s
       .status = DEVICE_DRIVER_INIT_PENDING,                             \
       .drv = &driver_,                                                  \
       .ref_count = 0,                                                   \
-      .enum_dev = NULL,                                                 \
       .res_tbl = ARRAY_SIZE(DEV_STATIC_RESOURCES_ARRAY(resources_))     \
       ? (struct dev_resource_table_s *)DEV_STATIC_RESOURCES(resources_) \
       : NULL,                                                           \

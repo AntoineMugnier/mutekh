@@ -82,12 +82,11 @@ void device_init(struct device_s *dev, const struct dev_resource_table_s *tbl)
 #ifdef CONFIG_DEVICE_TREE
   dev->node.name = NULL;
   dev->node.parent = NULL;
-  dev->enum_dev = &device_enum_root;
   device_list_init(&dev->node.children);
 #endif
 
-#if defined(CONFIG_ARCH_SMP) && defined(CONFIG_DEVICE_IRQ)
-  //  cpu_set_init(&dev->cpu_irqs);
+#ifdef CONFIG_DEVICE_ENUM
+  dev->enum_dev = &device_enum_root;
 #endif
 }
 
@@ -130,12 +129,11 @@ struct device_s *device_alloc(size_t resources)
 #ifdef CONFIG_DEVICE_TREE
       dev->node.name = NULL;
       dev->node.parent = NULL;
-      dev->enum_dev = &device_enum_root;
       device_list_init(&dev->node.children);
 #endif
 
-#if defined(CONFIG_ARCH_SMP) && defined(CONFIG_DEVICE_IRQ)
-      //      cpu_set_init(&dev->cpu_irqs);
+#ifdef CONFIG_DEVICE_ENUM
+      dev->enum_dev = &device_enum_root;
 #endif
     }
 
