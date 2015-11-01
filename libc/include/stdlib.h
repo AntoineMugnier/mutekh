@@ -78,6 +78,7 @@ int_fast64_t ato_intl64(const char *nptr);
 # define strtoul _STRTOINT_(strto_uintl, CPU_SIZEOF_LONG)
 # define strtoll strto_intl64
 # define strtoull strto_uintl64
+# define strtoptr _STRTOINT_(strto_uintl, INT_PTR_SIZE)
 
 # define atoi _STRTOINT_(ato_intl, CPU_SIZEOF_INT)
 # define atol _STRTOINT_(ato_intl, CPU_SIZEOF_LONG)
