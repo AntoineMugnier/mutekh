@@ -156,5 +156,7 @@ static DEV_CLEANUP(x86_64_emu_cleanup)
   cpu_tree_node_cleanup(&pv->node);
 
   mem_free(pv);
+
+  return 0;
 }
 

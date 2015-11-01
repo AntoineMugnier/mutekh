@@ -380,5 +380,7 @@ static DEV_CLEANUP(nios2_cleanup)
   cpu_tree_node_cleanup(&pv->node);
 
   mem_free(pv);
+
+  return 0;
 }
 

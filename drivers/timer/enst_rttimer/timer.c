@@ -497,6 +497,11 @@ static DEV_CLEANUP(enst_rttimer_cleanup)
 {
   struct enst_rttimer_private_s *pv = dev->drv_pv;
 
+#ifdef CONFIG_DEVICE_IRQ
+  if (pv->start_count >= 0x10000)
+    return -EBUSY;
+#endif
+
   /* stop */
   cpu_mem_write_32(pv->addr + RT_TIMER_CTRL_ADDR, 0);
 
@@ -514,5 +519,7 @@ static DEV_CLEANUP(enst_rttimer_cleanup)
 #endif
 
   mem_free(pv);
+
+  return 0;
 }
 

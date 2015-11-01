@@ -328,6 +328,7 @@ static DEV_INIT(arm_init)
   cpu_mem_write_32(ARMV7M_NVIC_ISER_ADDR(0),
                    ARMV7M_NVIC_ISER_SETENA(15));
 # endif
+  BIT_SET(dev->init_mask, ARM32M_INITID_TIMER);
 #endif
 
 #ifdef CONFIG_CPU_ARM32M_TIMER_DWTCYC
@@ -351,6 +352,12 @@ static DEV_CLEANUP(arm_cleanup)
   struct arm_dev_private_s *pv = dev->drv_pv;
 
 #ifdef CONFIG_CPU_ARM32M_TIMER_SYSTICK
+  if (BIT_EXTRACT(dev->init_mask, ARM32M_INITID_TIMER))
+    {
+      if (pv->systick_start & 1)
+        return -EBUSY;
+    }
+
   cpu_mem_write_32(ARMV7M_SYST_CSR_ADDR, 0);
 #endif
 
@@ -369,5 +376,7 @@ static DEV_CLEANUP(arm_cleanup)
     }
 
   mem_free(pv);
+
+  return 0;
 }
 

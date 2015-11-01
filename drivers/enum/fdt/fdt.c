@@ -642,5 +642,6 @@ static DEV_INIT(enum_fdt_init)
 
 static DEV_CLEANUP(enum_fdt_cleanup)
 {
+  return -EBUSY; /* prevent multiple enumerations */
 }
 

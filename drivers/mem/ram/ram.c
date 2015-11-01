@@ -139,5 +139,7 @@ static DEV_CLEANUP(ram_cleanup)
   struct ram_context_s	*pv = dev->drv_pv;
 
   mem_free(pv);
+
+  return 0;
 }
 

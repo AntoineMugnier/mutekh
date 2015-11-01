@@ -409,5 +409,7 @@ static DEV_CLEANUP(mips_cleanup)
   cpu_tree_node_cleanup(&pv->node);
 
   mem_free(pv);
+
+  return 0;
 }
 

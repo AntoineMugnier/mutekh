@@ -374,5 +374,7 @@ static DEV_CLEANUP(lm32_cleanup)
   cpu_tree_node_cleanup(&pv->node);
 
   mem_free(pv);
+
+  return 0;
 }
 
