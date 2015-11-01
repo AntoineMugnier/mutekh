@@ -280,6 +280,7 @@ void device_cleanup(struct device_s *dev);
 
 /** @This reduces resource slots count to number of used slots
     count. The device node is reallocated to save memory. */
+config_depend(CONFIG_DEVICE_RESOURCE_ALLOC)
 void device_shrink(struct device_s *dev);
 
 /** @This returns the device tree root node. */

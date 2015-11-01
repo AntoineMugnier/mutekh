@@ -124,11 +124,11 @@ error_t device_iomux_setup(struct device_s *dev, const char *io_list,
 
     @see #DEV_STATIC_RES_IOMUX
 */
-ALWAYS_INLINE error_t device_res_add_iomux(struct device_s *dev, const char *label,
-                                           iomux_demux_t demux, iomux_io_id_t io_id,
-                                           iomux_mux_t mux, iomux_config_t config)
+config_depend_and2_alwaysinline(CONFIG_DEVICE_IOMUX, CONFIG_DEVICE_RESOURCE_ALLOC,
+error_t device_res_add_iomux(struct device_s *dev, const char *label,
+                             iomux_demux_t demux, iomux_io_id_t io_id,
+                             iomux_mux_t mux, iomux_config_t config),
 {
-#ifdef CONFIG_DEVICE_IOMUX
   struct dev_resource_s *r;
   error_t err = device_res_alloc_str(dev, DEV_RES_IOMUX, label, NULL, &r);
   if (err)
@@ -140,10 +140,7 @@ ALWAYS_INLINE error_t device_res_add_iomux(struct device_s *dev, const char *lab
   r->u.iomux.config = config;
 
   return 0;
-#else
-  return -EINVAL;
-#endif
-}
+})
 
 #ifdef CONFIG_DEVICE_IOMUX
 /** @This can be used to include a IOMUX resource entry in a static

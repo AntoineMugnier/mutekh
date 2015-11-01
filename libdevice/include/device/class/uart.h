@@ -117,16 +117,15 @@ error_t dev_uart_config(struct device_uart_s     *accessor,
 /** @This specify a UART device configuration to store in the device tree.
     @see #DEV_STATIC_RES_UART
  */
-ALWAYS_INLINE
+config_depend_and2_alwaysinline(CONFIG_DEVICE_UART, CONFIG_DEVICE_RESOURCE_ALLOC,
 error_t device_add_res_uart(struct device_s           *dev,
                             uint32_t                  baudrate,
                             uint8_t                   data_bits,
                             enum dev_uart_parity_e    parity,
                             uint8_t                   stop_bits,
                             bool_t                    flow_ctrl,
-                            bool_t                    half_duplex)
+                            bool_t                    half_duplex),
 {
-#if defined(CONFIG_DEVICE_UART)
   struct dev_resource_s *r;
 
   error_t err = device_res_alloc(dev, &r, DEV_RES_UART);
@@ -141,10 +140,7 @@ error_t device_add_res_uart(struct device_s           *dev,
   r->u.uart.half_duplex = half_duplex;
 
   return 0;
-#else
-  return -ENOTSUP;
-#endif
-}
+})
 
 #if defined(CONFIG_DEVICE_UART)
 

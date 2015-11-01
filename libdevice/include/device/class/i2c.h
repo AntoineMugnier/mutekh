@@ -557,10 +557,11 @@ ssize_t dev_i2c_wait_write(
 
 /* Resource stuff */
 
-ALWAYS_INLINE error_t dev_i2c_res_add_address(struct device_s *dev, uint8_t saddr)
+config_depend_and2_alwaysinline(CONFIG_DEVICE_I2C, CONFIG_DEVICE_RESOURCE_ALLOC,
+error_t dev_i2c_res_add_address(struct device_s *dev, uint8_t saddr),
 {
     return device_res_alloc_uint(dev, DEV_RES_I2C_ADDR, saddr, 0, NULL);
-}
+})
 
 #define DEV_STATIC_RES_I2C_ADDRESS(addr_)      \
   {                                             \

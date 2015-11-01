@@ -31,17 +31,19 @@
 
 #include <string.h>
 
+#ifdef CONFIG_DEVICE_RESOURCE_ALLOC
 extern inline error_t device_res_alloc_uint(struct device_s *dev,
                                             enum dev_resource_type_e type,
                                             uintptr_t a, uintptr_t b, struct dev_resource_s **r_);
 
-extern inline error_t device_res_get_uint(const struct device_s *dev,
-                                          enum dev_resource_type_e type,
-                                          uint_fast8_t id, uintptr_t *a, uintptr_t *b);
-
 extern inline error_t device_res_alloc_uint64(struct device_s *dev,
                                               enum dev_resource_type_e type,
                                               uint64_t a, struct dev_resource_s **r_);
+#endif
+
+extern inline error_t device_res_get_uint(const struct device_s *dev,
+                                          enum dev_resource_type_e type,
+                                          uint_fast8_t id, uintptr_t *a, uintptr_t *b);
 
 extern inline error_t device_res_get_uint64(const struct device_s *dev,
                                             enum dev_resource_type_e type,
@@ -84,15 +86,18 @@ struct dev_resource_s *device_res_get_from_name(const struct device_s *dev,
   return NULL;
 }
 
+#ifdef CONFIG_DEVICE_RESOURCE_ALLOC
 error_t device_res_alloc(struct device_s *dev, struct dev_resource_s **res,
                          enum dev_resource_type_e type)
 {
-  if (dev->status == DEVICE_DRIVER_INIT_DONE)
+  if (dev->status == DEVICE_DRIVER_INIT_DONE ||
+      dev->status == DEVICE_DRIVER_INIT_PARTIAL)
     return -EBUSY;
 
-  struct dev_resource_table_s *tbl, **tbl_;
+  struct dev_resource_table_s *tbl, **tbl_ = &dev->res_tbl;
   uint_fast8_t i;
-  for (tbl_ = &dev->res_tbl; *tbl_ != NULL; tbl_ = &tbl->next)
+
+  for (; *tbl_ != NULL; tbl_ = &tbl->next)
     {
       tbl = *tbl_;
 
@@ -210,6 +215,20 @@ error_t device_res_add_uint_array_param(struct device_s *dev, const char *name,
   return 0;
 }
 
+error_t device_res_add_dev_param(struct device_s *dev, const char *name,
+                                 const char *path, enum driver_class_e cl)
+{
+  struct dev_resource_s *r;
+  error_t err = device_res_alloc_str(dev, DEV_RES_DEV_PARAM, name, path, &r);
+  if (err)
+    return err;
+
+  r->u.dev_param.class_ = cl;
+
+  return 0;
+}
+#endif
+
 error_t device_get_param_dev_accessor(struct device_s *dev,
                                       const char *name, void *accessor,
                                       enum driver_class_e cl)
@@ -226,15 +245,3 @@ error_t device_get_param_dev_accessor(struct device_s *dev,
   return device_get_accessor_by_path(accessor, &dev->node, r->u.str_param.value, cl);
 }
 
-error_t device_res_add_dev_param(struct device_s *dev, const char *name,
-                                 const char *path, enum driver_class_e cl)
-{
-  struct dev_resource_s *r;
-  error_t err = device_res_alloc_str(dev, DEV_RES_DEV_PARAM, name, path, &r);
-  if (err)
-    return err;
-
-  r->u.dev_param.class_ = cl;
-
-  return 0;
-}

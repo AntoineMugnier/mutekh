@@ -421,16 +421,14 @@ void dev_clock_sink_unlink(struct device_s *dev,
 
     @see #DEV_STATIC_RES_CLK_RTE
  */
-config_depend(CONFIG_DEVICE_CLOCK)
-ALWAYS_INLINE
+config_depend_and2_alwaysinline(CONFIG_DEVICE_CLOCK, CONFIG_DEVICE_RESOURCE_ALLOC,
 error_t device_add_res_clock_route(struct device_s     *dev,
                                    dev_clock_node_id_t parent_id,
                                    dev_clock_node_id_t node_id,
                                    dev_clock_config_mask_t config_mask,
                                    uint32_t            fnum,
-                                   uint32_t            fdenom)
+                                   uint32_t            fdenom),
 {
-#if defined(CONFIG_DEVICE_CLOCK)
   struct dev_resource_s *r;
 
   error_t err = device_res_alloc(dev, &r, DEV_RES_CLOCK_RTE);
@@ -444,10 +442,7 @@ error_t device_add_res_clock_route(struct device_s     *dev,
   r->u.clock_rte.denom  = fdenom;
 
   return 0;
-#else
-  return -EINVAL;
-#endif
-}
+})
 
 #ifdef CONFIG_DEVICE_CLOCK
 
@@ -494,15 +489,13 @@ error_t device_add_res_clock_route(struct device_s     *dev,
 
     @see #DEV_STATIC_RES_CLK_OSC
  */
-config_depend(CONFIG_DEVICE_CLOCK)
-ALWAYS_INLINE
+config_depend_and2_alwaysinline(CONFIG_DEVICE_CLOCK, CONFIG_DEVICE_RESOURCE_ALLOC,
 error_t device_add_res_clock_osc(struct device_s     *dev,
                                  dev_clock_node_id_t node_id,
                                  dev_clock_config_mask_t config_mask,
                                  uint64_t            num,
-                                 uint32_t            denom)
+                                 uint32_t            denom),
 {
-#if defined(CONFIG_DEVICE_CLOCK)
   struct dev_resource_s *r;
 
   error_t err = device_res_alloc(dev, &r, DEV_RES_CLOCK_OSC);
@@ -515,10 +508,7 @@ error_t device_add_res_clock_osc(struct device_s     *dev,
   r->u.clock_osc.denom    = denom;
 
   return 0;
-#else
-  return -EINVAL;
-#endif
-}
+})
 
 #ifdef CONFIG_DEVICE_CLOCK
 
@@ -555,14 +545,12 @@ error_t device_add_res_clock_osc(struct device_s     *dev,
 
     @see #DEV_STATIC_RES_CLK_SRC
  */
-config_depend(CONFIG_DEVICE_CLOCK)
-ALWAYS_INLINE
+config_depend_and2_alwaysinline(CONFIG_DEVICE_CLOCK, CONFIG_DEVICE_RESOURCE_ALLOC,
 error_t device_add_res_clock_src(struct device_s     *dev,
                                  const char          *src_name,
                                  dev_clock_node_id_t src_id,
-                                 dev_clock_node_id_t sink_id)
+                                 dev_clock_node_id_t sink_id),
 {
-#if defined(CONFIG_DEVICE_CLOCK)
   struct dev_resource_s *r;
 
   /* this setup the src pointer thanks to the union and the fact that the src
@@ -576,10 +564,7 @@ error_t device_add_res_clock_src(struct device_s     *dev,
   r->u.clock_src.sink_ep = sink_id;
 
   return 0;
-#else
-  return -EINVAL;
-#endif
-}
+})
 
 #ifdef CONFIG_DEVICE_CLOCK
 

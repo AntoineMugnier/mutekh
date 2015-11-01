@@ -346,11 +346,10 @@ error_t device_gpio_map_set_mode(struct device_gpio_s *accessor,
 
     @see #DEV_STATIC_RES_GPIO
 */
-config_depend_alwaysinline(CONFIG_DEVICE_GPIO,
+config_depend_and2_alwaysinline(CONFIG_DEVICE_GPIO, CONFIG_DEVICE_RESOURCE_ALLOC,
 error_t device_res_add_gpio(struct device_s *dev, const char *label,
                             gpio_id_t id, gpio_width_t width),
 {
-#ifdef CONFIG_DEVICE_GPIO
   struct dev_resource_s *r;
   error_t err = device_res_alloc_str(dev, DEV_RES_GPIO, label, NULL, &r);
   if (err)
@@ -360,9 +359,6 @@ error_t device_res_add_gpio(struct device_s *dev, const char *label,
   r->u.gpio.width = width;
 
   return 0;
-#else
-  return -EINVAL;
-#endif
 })
 
 #ifdef CONFIG_DEVICE_GPIO

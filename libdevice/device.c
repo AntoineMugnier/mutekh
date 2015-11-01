@@ -115,7 +115,9 @@ struct device_s *device_alloc(size_t resources)
           struct dev_resource_table_s *tbl = (void*)((uint8_t*)dev + devsize);
 
           dev->res_tbl = tbl;
+#ifdef CONFIG_DEVICE_RESOURCE_ALLOC
           tbl->next = NULL;
+#endif
           tbl->flags = 0;
           tbl->count = resources;
 
@@ -151,17 +153,22 @@ void device_cleanup(struct device_s *dev)
   if (dev->status == DEVICE_DRIVER_INIT_DONE)
     dev->drv->f_cleanup(dev);
 
-  struct dev_resource_table_s *tbl, *next;
-  for (tbl = dev->res_tbl; tbl != NULL; tbl = next)
+  struct dev_resource_table_s *tbl = dev->res_tbl;
+# ifdef CONFIG_DEVICE_RESOURCE_ALLOC
+  struct dev_resource_table_s *next;
+  for (; tbl != NULL; tbl = next)
     {
       next = tbl->next;
+# endif
       uint_fast8_t i;
       for (i = 0; i < tbl->count; i++)
         device_res_cleanup(&tbl->table[i]);
 
+# ifdef CONFIG_DEVICE_RESOURCE_ALLOC
       if (tbl->flags & DEVICE_RES_TBL_FLAGS_ALLOCATED)
         mem_free((void*)tbl);
     }
+# endif
 
 #ifdef CONFIG_DEVICE_TREE
   device_list_destroy(&dev->node.children);
@@ -180,6 +187,7 @@ void device_cleanup(struct device_s *dev)
 }
 #endif
 
+#ifdef CONFIG_DEVICE_RESOURCE_ALLOC
 static void device_res_shrink(struct dev_resource_table_s **tbl_,
                               size_t header)
 {
@@ -233,6 +241,7 @@ void device_shrink(struct device_s *dev)
   else
     device_res_shrink(&dev->res_tbl, 0);
 }
+#endif
 
 error_t device_set_name(struct device_s *dev, const char *name)
 {

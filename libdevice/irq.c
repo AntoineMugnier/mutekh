@@ -40,9 +40,11 @@ extern inline error_t device_irq_src_enable(struct dev_irq_src_s *src);
 
 extern inline void device_irq_sink_process(struct dev_irq_sink_s *sink, dev_irq_id_t id);
 
+#ifdef CONFIG_DEVICE_RESOURCE_ALLOC
 extern inline error_t device_res_add_irq(struct device_s *dev, uint_fast8_t src_id,
                                          uint_fast8_t sink_id, enum dev_irq_sense_modes_e trig_mode,
                                          dev_irq_id_t irq_id, dev_irq_route_t route_mask);
+#endif
 
 static DEV_IRQ_SRC_PROCESS(device_irq_dummy_process)
 {

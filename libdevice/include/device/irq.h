@@ -258,11 +258,11 @@ inline void device_irq_sink_process(struct dev_irq_sink_s *sink, dev_irq_id_t id
 
 /** @This adds an IRQ binding to the device resources list.
     @see #DEV_STATIC_RES_IRQ */
-inline error_t device_res_add_irq(struct device_s *dev, uint_fast8_t src_id,
-                                  uint_fast8_t sink_id, enum dev_irq_sense_modes_e trig_mode,
-                                  dev_irq_id_t irq_id, dev_irq_route_t route_mask)
+config_depend_and2_inline(CONFIG_DEVICE_IRQ, CONFIG_DEVICE_RESOURCE_ALLOC,
+error_t device_res_add_irq(struct device_s *dev, uint_fast8_t src_id,
+                           uint_fast8_t sink_id, enum dev_irq_sense_modes_e trig_mode,
+                           dev_irq_id_t irq_id, dev_irq_route_t route_mask),
 {
-#ifdef CONFIG_DEVICE_IRQ
   struct dev_resource_s *r;
   error_t err = device_res_alloc(dev, &r, DEV_RES_IRQ);
   if (err)
@@ -275,10 +275,7 @@ inline error_t device_res_add_irq(struct device_s *dev, uint_fast8_t src_id,
   r->u.irq.route_mask = route_mask;
 
   return 0;
-#else
-  return -ENOTSUP;
-#endif
-}
+})
 
 #ifdef CONFIG_DEVICE_IRQ
 /** @This can be used to include an irq resource entry in a static
