@@ -142,16 +142,15 @@ struct device_s *device_alloc(size_t resources)
   return dev;
 }
 
-#if defined(CONFIG_DEVICE_DRIVER_CLEANUP)
+#ifdef CONFIG_DEVICE_DRIVER_CLEANUP
 void device_cleanup(struct device_s *dev)
 {
-#ifdef CONFIG_DEVICE_TREE
+# ifdef CONFIG_DEVICE_TREE
   assert(!dev->node.parent);
-#endif
-  assert(!dev->ref_count);
+# endif
 
-  if (dev->status == DEVICE_DRIVER_INIT_DONE)
-    dev->drv->f_cleanup(dev);
+  assert(dev->status == DEVICE_DRIVER_INIT_FAILED ||
+         dev->status == DEVICE_NO_DRIVER);
 
   struct dev_resource_table_s *tbl = dev->res_tbl;
 # ifdef CONFIG_DEVICE_RESOURCE_ALLOC
@@ -170,15 +169,11 @@ void device_cleanup(struct device_s *dev)
     }
 # endif
 
-#ifdef CONFIG_DEVICE_TREE
+# ifdef CONFIG_DEVICE_TREE
   device_list_destroy(&dev->node.children);
-#endif
+# endif
 
   lock_destroy(&dev->lock);
-
-#if defined(CONFIG_ARCH_SMP) && defined(CONFIG_DEVICE_IRQ)
-  //  cpu_set_destroy(&dev->cpu_irqs);
-#endif
 
   if (dev->node.flags & DEVICE_FLAG_NAME_ALLOCATED)
     mem_free((void*)dev->node.name);
@@ -289,12 +284,18 @@ void device_attach(struct device_s *dev,
   device_list_pushback(&parent->node.children, (struct device_node_s*)dev);
 }
 
-void device_detach(struct device_s *dev)
+error_t device_detach(struct device_s *dev)
 {
   assert(dev->node.parent);
 
+  if (dev->status != DEVICE_DRIVER_INIT_FAILED &&
+      dev->status != DEVICE_NO_DRIVER)
+    return -EBUSY;
+
   device_list_remove(&dev->node.parent->children, &dev->node);
   dev->node.parent = 0;
+
+  return 0;
 }
 
 void device_alias_remove(struct device_alias_s *alias)

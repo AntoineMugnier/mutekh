@@ -271,10 +271,11 @@ void device_init(struct device_s *dev, const struct dev_resource_table_s *tbl);
 */
 struct device_s *device_alloc(size_t resources);
 
-/** @This cleanups a device object. Memory is freed if the device has
-    been allocated using the @ref device_alloc function. The device
-    must not be attached or have attached children and its reference
-    count must be zero when this function is called. */
+/** @This release memory used by a device. This includes device object
+    allocated by the @ref device_alloc function along with resources
+    entries. The device must not be attached or have attached children
+    and its reference count must be zero when this function is
+    called. */
 config_depend(CONFIG_DEVICE_DRIVER_CLEANUP)
 void device_cleanup(struct device_s *dev);
 
@@ -387,7 +388,7 @@ void device_attach(struct device_s *dev,
 
 /** @This detaches a device from its parent enumerator device */
 config_depend(CONFIG_DEVICE_TREE)
-void device_detach(struct device_s *dev);
+error_t device_detach(struct device_s *dev);
 
 /** @see device_tree_walker_t */
 #define DEVICE_TREE_WALKER(x) bool_t (x)(struct device_s *dev, void *priv)

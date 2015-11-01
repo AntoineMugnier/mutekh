@@ -287,6 +287,7 @@ error_t device_bind_driver(struct device_s *dev, const struct driver_s *drv)
   return err;
 }
 
+#if defined(CONFIG_DEVICE_DRIVER_CLEANUP)
 error_t device_unbind_driver(struct device_s *dev)
 {
   error_t err;
@@ -340,6 +341,7 @@ error_t device_release_driver(struct device_s *dev)
 
   return err;
 }
+#endif
 
 error_t device_init_driver(struct device_s *dev)
 {

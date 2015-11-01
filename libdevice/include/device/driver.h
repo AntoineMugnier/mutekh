@@ -553,11 +553,15 @@ void device_find_driver(struct device_node_s *node, uint_fast8_t pass);
     determine if the driver is appropriate. */
 error_t device_bind_driver(struct device_s *dev, const struct driver_s *drv);
 
+/** @This leave the device without any associated driver. */
+config_depend(CONFIG_DEVICE_DRIVER_CLEANUP)
 error_t device_unbind_driver(struct device_s *dev);
 
 /** @This performs device initialization using previously bound driver. */
 error_t device_init_driver(struct device_s *dev);
 
+/** @This stops the device and cleanup driver allocated resources. */
+config_depend(CONFIG_DEVICE_DRIVER_CLEANUP)
 error_t device_release_driver(struct device_s *dev);
 
 /** @This function does nothing but returning @tt -ENOTUP */
