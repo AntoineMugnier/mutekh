@@ -21,14 +21,19 @@
 #include <assert.h>
 
 #include <mutek/thread.h>
+#include <mutek/startup.h>
 
 void cmac_test(void);
 void sm_test(void);
+void ccm_test(void);
+void speed_test(void);
 
-CONTEXT_ENTRY(tests)
+static CONTEXT_ENTRY(tests)
 {
   sm_test();
   cmac_test();
+  ccm_test();
+  speed_test();
 }
 
 void app_start()
