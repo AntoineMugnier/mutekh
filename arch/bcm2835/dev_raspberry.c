@@ -27,6 +27,7 @@
 # include <device/device.h>
 # include <device/irq.h>
 # include <device/class/iomux.h>
+# include <device/class/timer.h>
 #endif
 
 #include <arch/bcm2835_gpio.h>
