@@ -91,7 +91,7 @@ static DEVICE_TREE_WALKER(apbctrl_scan_cpu_irq)
       char buf[128];
       if (device_get_path(NULL, buf, sizeof(buf), &dev->node, 0) > 0)
         {
-          device_res_add_dev_param(ctx->irqmp, "icu", buf);
+          device_res_add_dev_param(ctx->irqmp, "icu", buf, DRIVER_CLASS_ICU);
           device_res_add_irq(ctx->irqmp, maj, 0, DEV_IRQ_SENSE_ID_BUS, 0, 1);
           ctx->count++;
         }
@@ -165,7 +165,7 @@ static void apbctrl_scan(struct device_s *dev, uintptr_t begin)
                 continue;
 
               uint8_t j, irq = endian_be32(p[0]) & 0x1f;
-              device_res_add_dev_param(d, "icu", "/icu");
+              device_res_add_dev_param(d, "icu", "/icu", DRIVER_CLASS_ICU);
               for (j = 0; j < nirq; j++)
                 device_res_add_irq(d, j, irq + j - 1, DEV_IRQ_SENSE_RISING_EDGE, 0, 1);
             }
@@ -183,7 +183,7 @@ static void apbctrl_scan(struct device_s *dev, uintptr_t begin)
           uint8_t irq = endian_be32(p[0]) & 0x1f;
           if (irq)
             {
-              device_res_add_dev_param(d, "icu", "/icu");
+              device_res_add_dev_param(d, "icu", "/icu", DRIVER_CLASS_ICU);
               device_res_add_irq(d, 0, irq - 1, DEV_IRQ_SENSE_RISING_EDGE, 0, 1);
             }
 #endif

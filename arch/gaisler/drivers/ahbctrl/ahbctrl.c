@@ -144,7 +144,7 @@ static void ahbctrl_scan(struct device_s *dev, uintptr_t begin, uintptr_t end)
 
       if (irq)
         {
-          device_res_add_dev_param(d, "icu", "/icu");
+          device_res_add_dev_param(d, "icu", "/icu", DRIVER_CLASS_ICU);
           device_res_add_irq(d, 0, irq - 1, DEV_IRQ_SENSE_RISING_EDGE, 0, 1);
         }
 #endif
