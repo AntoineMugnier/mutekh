@@ -42,6 +42,7 @@
 #ifdef CONFIG_DRIVER_NRF5X_AES_CCM
 # include <arch/nrf5x/ccm.h>
 # define CCM_ADDR NRF_PERIPHERAL_ADDR(NRF5X_CCM)
+# include <ble/ccm_params.h>
 #endif
 
 struct nrf5x_aes_private_s
@@ -333,6 +334,241 @@ static error_t nrf5x_aes_cmac(struct dev_crypto_rq_s *rq)
 #endif
 
 #ifdef CONFIG_DRIVER_NRF5X_AES_CCM
+static void nrf5x_aes_ccm_hw_start(struct nrf5x_aes_private_s *pv,
+                                   struct dev_crypto_rq_s *rq)
+{
+  struct dev_crypto_context_s *ctx = rq->ctx;
+  struct nrf5x_aes_state_s *state = ctx->state_data;
+  const struct ble_ccm_state_s *pstate = (void*)rq->iv_ctr;
+  uint8_t *in = (uint8_t*)rq->in - 1;
+  uint8_t *out = rq->out - 1;
+
+  pv->current = rq;
+
+  state->ccm.packet_counter = pstate->packet_counter;
+  state->ccm.direction = pstate->sent_by_master;
+
+  pv->in0 = in[0];
+  in[0] = in[1];
+  in[1] = in[2];
+  in[2] = 0;
+
+  nrf_reg_set(CCM_ADDR, NRF_CCM_ENABLE, NRF_CCM_ENABLE_ENABLED);
+  nrf_reg_set(CCM_ADDR, NRF_CCM_MODE, (rq->op & DEV_CRYPTO_INVERSE)
+              ? NRF_CCM_MODE_DECRYPTION_FASTEST
+              : NRF_CCM_MODE_ENCRYPTION);
+  nrf_reg_set(CCM_ADDR, NRF_CCM_CNFPTR, (uintptr_t)state);
+  nrf_reg_set(CCM_ADDR, NRF_CCM_INPTR, (uintptr_t)in);
+  nrf_reg_set(CCM_ADDR, NRF_CCM_OUTPTR, (uintptr_t)out);
+
+  nrf_event_clear(CCM_ADDR, NRF_CCM_ENDCRYPT);
+  nrf_task_trigger(CCM_ADDR, NRF_CCM_KSGEN);
+}
+
+static error_t nrf5x_aes_ccm_sw_encrypt(struct nrf5x_aes_private_s *pv,
+                                     struct dev_crypto_rq_s *rq)
+{
+  struct dev_crypto_context_s *ctx = rq->ctx;
+  struct nrf5x_aes_state_s *state = ctx->state_data;
+  const struct ble_ccm_state_s *pstate = (const void *)rq->iv_ctr;
+  struct nrf5x_ecb_param_s aes_ctr, aes_cbc;
+  uint32_t len = rq->in[1];
+
+  if (rq->in[1] > 252)
+    return -EINVAL;
+
+  for (uint32_t i = 0; i < 4; ++i)
+    aes_ctr.key[i] = aes_cbc.key[i] = state->ccm.key[i];
+
+  // Actually, CTR input has same structure than CBC-MAC first block,
+  // reuse context.
+
+  // CBC-MAC block 0 (parameters, IV, packet length)
+  aes_ctr.cleartext[0] = 0x49 | (pstate->packet_counter << 8);
+  aes_ctr.cleartext[1] = (pstate->packet_counter >> 24)
+    | (pstate->sent_by_master ? 0x8000 : 0)
+    | (state->ccm.iv[0] << 16)
+    | (state->ccm.iv[1] << 24);
+  aes_ctr.cleartext[2] = endian_le32_na_load(state->ccm.iv + 2);
+  aes_ctr.cleartext[3] = endian_le16_na_load(state->ccm.iv + 6)
+    | (len << 24);
+  nrf5x_aes_encrypt_start(&aes_ctr);
+  nrf5x_aes_encrypt_spin();
+
+  // CBC-MAC block 1 (AD)
+  aes_cbc.cleartext[0] = aes_ctr.ciphertext[0] ^ (0x100 | ((rq->in[0] & 0xe3) << 16));
+  aes_cbc.cleartext[1] = aes_ctr.ciphertext[1];
+  aes_cbc.cleartext[2] = aes_ctr.ciphertext[2];
+  aes_cbc.cleartext[3] = aes_ctr.ciphertext[3];
+  nrf5x_aes_encrypt_start(&aes_cbc);
+
+  *(uint8_t *)aes_ctr.cleartext = 0x01;
+  uint16_t *ctr = (uint16_t *)aes_ctr.cleartext + 7;
+  *ctr = endian_be16(1);
+
+  nrf5x_aes_encrypt_spin();
+
+  // CTR block 1 (Data cipher stream)
+  nrf5x_aes_encrypt_start(&aes_ctr);
+  
+  for (uint32_t point = 0; point < len; point += 16) {
+    uint32_t input[4];
+
+    // CTR stream generation is running, fetch data in the mean time
+    memcpy(input, rq->in + 2 + point, __MIN(len - point, 16));
+    if (point + 16 > len) {
+      size_t offset = len - point;
+      memset((uint8_t *)input + offset, 0, 16 - offset);
+    }
+
+    // Feedback CBC-MAC input
+    aes_cbc.cleartext[0] = aes_cbc.ciphertext[0] ^ input[0];
+    aes_cbc.cleartext[1] = aes_cbc.ciphertext[1] ^ input[1];
+    aes_cbc.cleartext[2] = aes_cbc.ciphertext[2] ^ input[2];
+    aes_cbc.cleartext[3] = aes_cbc.ciphertext[3] ^ input[3];
+
+    // End of CTR
+    nrf5x_aes_encrypt_spin();
+
+    // Start CBC-MAC on packet data
+    nrf5x_aes_encrypt_start(&aes_cbc);
+
+    // Prepare next counter round
+    if (point + 16 < len)
+      *ctr = endian_be16(point / 16 + 2);
+    else
+      *ctr = 0;
+
+    // Apply stream cipher on packet payload
+    aes_ctr.ciphertext[0] ^= input[0];
+    aes_ctr.ciphertext[1] ^= input[1];
+    aes_ctr.ciphertext[2] ^= input[2];
+    aes_ctr.ciphertext[3] ^= input[3];
+
+    memcpy(rq->out + 2 + point, aes_ctr.ciphertext, __MIN(len - point, 16));
+
+    // End of CBC-MAC
+    nrf5x_aes_encrypt_spin();
+
+    // Next CTR round
+    nrf5x_aes_encrypt_start(&aes_ctr);
+  }    
+
+  // End of CTR block 0, for MIC encoding
+  nrf5x_aes_encrypt_spin();
+
+  rq->out[0] = rq->in[0];
+  rq->out[1] = rq->in[1] + 4;
+  
+  endian_le32_na_store(rq->out + 2 + len, aes_cbc.ciphertext[0] ^ aes_ctr.ciphertext[0]);
+
+  return 0;
+}
+
+static error_t nrf5x_aes_ccm_sw_decrypt(struct nrf5x_aes_private_s *pv,
+                                        struct dev_crypto_rq_s *rq)
+{
+  struct dev_crypto_context_s *ctx = rq->ctx;
+  struct nrf5x_aes_state_s *state = ctx->state_data;
+  const struct ble_ccm_state_s *pstate = (const void *)rq->iv_ctr;
+  struct nrf5x_ecb_param_s aes_ctr, aes_cbc;
+  uint32_t len = rq->in[1] - 4;
+
+  if (rq->in[1] <= 4)
+    return -EINVAL;
+
+  for (uint32_t i = 0; i < 4; ++i)
+    aes_ctr.key[i] = aes_cbc.key[i] = state->ccm.key[i];
+
+  // Actually, CTR input has same structure than CBC-MAC first block,
+  // reuse context.
+
+  // CBC-MAC block 0 (parameters, IV, packet length)
+  aes_ctr.cleartext[0] = 0x49 | (pstate->packet_counter << 8);
+  aes_ctr.cleartext[1] = (pstate->packet_counter >> 24)
+    | (pstate->sent_by_master ? 0x8000 : 0)
+    | (state->ccm.iv[0] << 16)
+    | (state->ccm.iv[1] << 24);
+  aes_ctr.cleartext[2] = endian_le32_na_load(state->ccm.iv + 2);
+  aes_ctr.cleartext[3] = endian_le16_na_load(state->ccm.iv + 6)
+    | (len << 24);
+  nrf5x_aes_encrypt_start(&aes_ctr);
+  nrf5x_aes_encrypt_spin();
+
+  // CBC-MAC block 1 (AD)
+  aes_cbc.cleartext[0] = aes_ctr.ciphertext[0] ^ (0x100 | ((rq->in[0] & 0xe3) << 16));
+  aes_cbc.cleartext[1] = aes_ctr.ciphertext[1];
+  aes_cbc.cleartext[2] = aes_ctr.ciphertext[2];
+  aes_cbc.cleartext[3] = aes_ctr.ciphertext[3];
+  nrf5x_aes_encrypt_start(&aes_cbc);
+
+  *(uint8_t *)aes_ctr.cleartext = 0x01;
+  uint16_t *ctr = (uint16_t *)aes_ctr.cleartext + 7;
+  *ctr = endian_be16(1);
+
+  nrf5x_aes_encrypt_spin();
+
+  // CTR block 1 (Data)
+  nrf5x_aes_encrypt_start(&aes_ctr);
+
+  for (uint32_t point = 0; point < len; point += 16) {
+    uint32_t ciphertext[4];
+    uint32_t cleartext[4];
+
+    // CTR stream generation is running, fetch data in the mean time
+    memcpy(ciphertext, rq->in + 2 + point, __MIN(len - point, 16));
+
+    // End of CTR
+    nrf5x_aes_encrypt_spin();
+
+    // Apply stream cipher on packet payload
+    cleartext[0] = aes_ctr.ciphertext[0] ^ ciphertext[0];
+    cleartext[1] = aes_ctr.ciphertext[1] ^ ciphertext[1];
+    cleartext[2] = aes_ctr.ciphertext[2] ^ ciphertext[2];
+    cleartext[3] = aes_ctr.ciphertext[3] ^ ciphertext[3];
+
+    if (point + 16 > len) {
+      size_t offset = len - point;
+      memset((uint8_t *)cleartext + offset, 0, 16 - offset);
+    }
+
+    // Feedback CBC-MAC input
+    aes_cbc.cleartext[0] = aes_cbc.ciphertext[0] ^ cleartext[0];
+    aes_cbc.cleartext[1] = aes_cbc.ciphertext[1] ^ cleartext[1];
+    aes_cbc.cleartext[2] = aes_cbc.ciphertext[2] ^ cleartext[2];
+    aes_cbc.cleartext[3] = aes_cbc.ciphertext[3] ^ cleartext[3];
+
+    // Start CBC-MAC on packet data
+    nrf5x_aes_encrypt_start(&aes_cbc);
+
+    // Prepare next counter round
+    if (point + 16 < len)
+      *ctr = endian_be16(point / 16 + 2);
+    else
+      *ctr = 0;
+
+    memcpy(rq->out + 2 + point, cleartext, __MIN(len - point, 16));
+
+    // End of CBC-MAC
+    nrf5x_aes_encrypt_spin();
+
+    // Next CTR round
+    nrf5x_aes_encrypt_start(&aes_ctr);
+  }    
+
+  // End of CTR block 0, for MIC encoding
+  nrf5x_aes_encrypt_spin();
+
+  rq->out[0] = rq->in[0];
+  rq->out[1] = rq->in[1] - 4;
+
+  uint32_t mic = aes_cbc.ciphertext[0] ^ aes_ctr.ciphertext[0];
+
+  if (endian_le32_na_load(rq->in + 2 + len) == mic)
+    return 0;
+  return -EINVAL;
+}
+
 static error_t nrf5x_aes_ccm(struct nrf5x_aes_private_s *pv,
                              struct dev_crypto_rq_s *rq)
 {
@@ -344,34 +580,24 @@ static error_t nrf5x_aes_ccm(struct nrf5x_aes_private_s *pv,
 
   if (rq->op & DEV_CRYPTO_INIT) {
     memcpy(state->ccm.key, ctx->key_data, 16);
-    state->ccm.packet_counter = 0;
-    state->ccm.direction = (rq->op & DEV_CRYPTO_INVERSE) ? 1 : 0;
     memcpy(state->ccm.iv, rq->iv_ctr, 8);
   }
 
   if (rq->op & DEV_CRYPTO_FINALIZE) {
-    uint8_t *in = (uint8_t*)rq->in - 1;
-    uint8_t *out = rq->out - 1;
+    uint8_t cleartext_size = rq->in[1] - (rq->op & DEV_CRYPTO_INVERSE ? 4 : 0);
 
-    pv->current = rq;
+    /* if (!(rq->op & DEV_CRYPTO_INVERSE)) */
+    /*   return nrf5x_aes_ccm_sw_encrypt(pv, rq); */
 
-    pv->in0 = in[0];
-    in[0] = in[1];
-    in[1] = in[2];
-    in[2] = 0;
+    if (cleartext_size <= 27) {
+      nrf5x_aes_ccm_hw_start(pv, rq);
+      return -EAGAIN;
+    }
 
-    nrf_reg_set(CCM_ADDR, NRF_CCM_ENABLE, NRF_CCM_ENABLE_ENABLED);
-    nrf_reg_set(CCM_ADDR, NRF_CCM_MODE, (rq->op & DEV_CRYPTO_INVERSE)
-                ? NRF_CCM_MODE_DECRYPTION
-                : NRF_CCM_MODE_ENCRYPTION);
-    nrf_reg_set(CCM_ADDR, NRF_CCM_CNFPTR, (uintptr_t)state);
-    nrf_reg_set(CCM_ADDR, NRF_CCM_INPTR, (uintptr_t)in);
-    nrf_reg_set(CCM_ADDR, NRF_CCM_OUTPTR, (uintptr_t)out);
-
-    nrf_event_clear(CCM_ADDR, NRF_CCM_ENDCRYPT);
-    nrf_task_trigger(CCM_ADDR, NRF_CCM_KSGEN);
-
-    return -EAGAIN;
+    if (rq->op & DEV_CRYPTO_INVERSE)
+      return nrf5x_aes_ccm_sw_decrypt(pv, rq);
+    else
+      return nrf5x_aes_ccm_sw_encrypt(pv, rq);
   }
 
   return 0;
@@ -404,16 +630,17 @@ static DEV_IRQ_SRC_PROCESS(nrf5x_aes_irq)
         out[2] = out[1];
         out[1] = out[0];
 
-        if (nrf_reg_get(CCM_ADDR, NRF_CCM_MICSTATUS) == NRF_CCM_MICSTATUS_FAILED) {
+        if ((rq->op & DEV_CRYPTO_INVERSE) && 
+            nrf_reg_get(CCM_ADDR, NRF_CCM_MICSTATUS) == NRF_CCM_MICSTATUS_FAILED) {
           printk("MIC Status failed:\n");
-          printk(" Ciphertext: %P\n", rq->in, rq->in[1] + 2);
-          printk(" Cleartext: %P\n", rq->out, rq->out[1] + 2);
-          printk(" Context: %P\n", state, sizeof(*state));
-
+          printk(" In:  %P\n", rq->in, rq->in[1] + 2);
+          printk(" Out: %P\n", rq->out, rq->out[1] + 2);
+          printk(" Ctx: %P\n", state, sizeof(*state));
+          printk(" Scr: %P\n", pv->scratch, sizeof(pv->scratch));
+  
           rq->err = -EINVAL;
         } else {
           rq->err = 0;
-          state->ccm.packet_counter++;
         }
 
         nrf_reg_set(CCM_ADDR, NRF_CCM_ENABLE, NRF_CCM_ENABLE_DISABLED);
@@ -439,9 +666,10 @@ static DEV_IRQ_SRC_PROCESS(nrf5x_aes_irq)
         in[0] = pv->in0;
 
         printk("CCM Error:\n");
-        printk(" Ciphertext: %P\n", rq->in, rq->in[1] + 2);
-        printk(" Cleartext: %P\n", rq->out, rq->out[1] + 2);
-        printk(" Context: %P\n", state, sizeof(*state));
+        printk(" In:  %P\n", rq->in, rq->in[1] + 2);
+        printk(" Out: %P\n", rq->out, rq->out[1] + 2);
+        printk(" Ctx: %P\n", state, sizeof(*state));
+        printk(" Scr: %P\n", pv->scratch, sizeof(pv->scratch));
 
         nrf_reg_set(CCM_ADDR, NRF_CCM_ENABLE, NRF_CCM_ENABLE_DISABLED);
 
