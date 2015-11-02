@@ -118,7 +118,7 @@ static DEV_INIT(a9mpcore_init)
       device_attach(d, dev);
 
 #ifdef CONFIG_DRIVER_ARM_A9MPCORE_IRQ
-      device_res_add_dev_param(icu, "icu", name);
+      device_res_add_dev_param(icu, "icu", name, DRIVER_CLASS_ICU);
       device_res_add_irq(icu, i, 0, DEV_IRQ_SENSE_LOW_LEVEL, 0, 0);
 #endif
 
