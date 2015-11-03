@@ -69,9 +69,11 @@
 #include <gct/refcount.h>
 #include <gct/container_clist.h>
 
+#include <mutek/buffer_pool.h>
+
 #include <assert.h>
 
-#include "scheduler.h"
+#include "addr.h"
 
 struct net_task_header_s;
 struct net_layer_s;
@@ -145,6 +147,7 @@ struct net_layer_handler_s
 
 #define GCT_CONTAINER_ALGO_net_layer_list CLIST
 #define GCT_CONTAINER_REFCOUNT_net_layer_list net_layer
+#define GCT_CONTAINER_ALGO_net_layer_list_noref CLIST
 
 struct net_layer_delegate_vtable_s
 {
@@ -159,7 +162,10 @@ GCT_CONTAINER_TYPES(net_layer_list,
 struct net_layer_s
 {
   GCT_REFCOUNT_ENTRY(obj_entry);
-  GCT_CONTAINER_ENTRY(net_layer_list, entry);
+  union {
+    GCT_CONTAINER_ENTRY(net_layer_list, entry);
+    GCT_CONTAINER_ENTRY(net_layer_list_noref, noref_entry);
+  };
   net_layer_list_root_t children;
 
   struct net_scheduler_s *scheduler;
@@ -172,10 +178,15 @@ struct net_layer_s
   // Rest is done through derivation
 } *, entry);
 
+GCT_CONTAINER_TYPES(net_layer_list_noref, struct net_layer_s *, noref_entry);
+
 GCT_REFCOUNT(net_layer, struct net_layer_s *, obj_entry);
 
 GCT_CONTAINER_FCNS(net_layer_list, static inline, net_layer_list,
                    init, destroy, push, pop, pushback, next, head, isempty, remove, foreach);
+
+GCT_CONTAINER_FCNS(net_layer_list_noref, static inline, net_layer_list_noref,
+                   init, destroy, pop, pushback);
 
 /* Refcount destroy function. @internal */
 void net_layer_destroy(
@@ -201,28 +212,6 @@ error_t net_layer_bind(
 void net_layer_unbind(
   struct net_layer_s *layer,
   struct net_layer_s *child);
-
-/**
-   @this allocates a packet for layer.
-
-   @param layer Layer to allocate packet for
-   @param begin reserved header size for layers headers
-          (should be at least @tt{layer->context.prefix_size})
-   @param size minimal data size to allocate packet for
-          (should be no more than @tt{layer->context.mtu})
- */
-ALWAYS_INLINE
-struct buffer_s *net_layer_packet_alloc(
-  struct net_layer_s *layer,
-  size_t begin,
-  size_t size)
-{
-  struct buffer_s *pkt = net_scheduler_packet_alloc(layer->scheduler);
-  pkt->begin = begin;
-  pkt->end = begin + size;
-
-  return pkt;
-}
 
 /**
    @this must be called by layer when @ref{net_layer_context_s}{its

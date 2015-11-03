@@ -23,6 +23,8 @@
 #include <net/scheduler.h>
 #include <net/layer.h>
 
+#include "network.h"
+
 static
 void net_layer_context_update(struct net_layer_s *layer,
                               const struct net_layer_context_s *context)
@@ -119,6 +121,12 @@ error_t net_layer_init(
 }
 
 void net_layer_destroy(
+    struct net_layer_s *layer)
+{
+  net_scheduler_layer_destroyed(layer->scheduler, layer);
+}
+
+void net_layer_destroy_real(
     struct net_layer_s *layer)
 {
   struct net_layer_s *child;

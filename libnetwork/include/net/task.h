@@ -122,6 +122,8 @@ struct net_task_header_s
 GCT_CONTAINER_TYPES(net_task_queue, struct net_task_header_s *, queue_entry);
 GCT_CONTAINER_FCNS(net_task_queue, ALWAYS_INLINE, net_task_queue,
                    init, destroy, pushback, pop, remove, head, isempty);
+GCT_CONTAINER_NOLOCK_FCNS(net_task_queue, ALWAYS_INLINE, net_task_queue_nolock,
+                          init, destroy, pushback, pop, remove, head, isempty);
 
 /**
    @this pushes a task to a given target, for a given type.

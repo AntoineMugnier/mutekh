@@ -30,6 +30,8 @@
 #include <net/scheduler.h>
 #include <net/task.h>
 
+#include "network.h"
+
 //#define dprintk printk
 #define dprintk(...) do{}while(0)
 
@@ -39,9 +41,12 @@ GCT_CONTAINER_KEY_TYPES(net_timeout_queue, CUSTOM, SCALAR,
                         net_task_s_from_header(net_timeout_queue_item)->timeout.deadline,
                         net_timeout_queue);
 GCT_CONTAINER_KEY_FCNS(net_timeout_queue, ASC, static, net_timeout_queue, net_timeout_queue,
-                       init, destroy, pop, head, remove, insert);
+                       init, destroy, pop, head, insert);
+GCT_CONTAINER_KEY_NOLOCK_FCNS(net_timeout_queue, ASC, static, net_timeout_queue_nolock, net_timeout_queue,
+                              remove);
 
-static void net_sched_wakeup(struct net_scheduler_s *sched)
+static
+void net_sched_wakeup(struct net_scheduler_s *sched)
 {
   dprintk("Net scheduler wakeup\n");
 
@@ -58,6 +63,12 @@ static KROUTINE_EXEC(net_scheduler_timeout)
   struct net_scheduler_s *sched = KROUTINE_CONTAINER(kr, *sched, timer_rq.rq.kr);
 
   net_sched_wakeup(sched);
+}
+
+void net_scheduler_layer_destroyed(struct net_scheduler_s *scheduler, struct net_layer_s *layer)
+{
+  net_layer_list_noref_pushback(&scheduler->destroyed_layers, layer);
+  net_sched_wakeup(scheduler);
 }
 
 static void net_scheduler_timeout_schedule(struct net_scheduler_s *sched)
@@ -149,6 +160,7 @@ void net_scheduler_cleanup(struct net_scheduler_s *sched)
 
   net_task_queue_destroy(&sched->pending_tasks);
   net_timeout_queue_destroy(&sched->delayed_tasks);
+  net_layer_list_noref_destroy(&sched->destroyed_layers);
 
   mem_free(context_destroy(&sched->context));
 
@@ -170,6 +182,7 @@ static void sched_cleanup(void *param)
 static CONTEXT_ENTRY(net_scheduler_worker)
 {
   struct net_scheduler_s *sched = param;
+  struct net_layer_s *layer;
 
   cpu_interrupt_enable();
 
@@ -183,6 +196,9 @@ static CONTEXT_ENTRY(net_scheduler_worker)
 
     if (net_scheduler_tasks_handle(sched))
       continue;
+
+    while ((layer = net_layer_list_noref_pop(&sched->destroyed_layers)))
+      net_layer_destroy_real(layer);
 
     dprintk("   Nothing to do, waiting\n");
     
@@ -253,6 +269,7 @@ error_t net_scheduler_init(
 
   net_task_queue_init(&sched->pending_tasks);
   net_timeout_queue_init(&sched->delayed_tasks);
+  net_layer_list_noref_init(&sched->destroyed_layers);
 
   sched->packet_pool = packet_pool;
 
@@ -322,13 +339,13 @@ void net_scheduler_from_layer_cancel(
   GCT_FOREACH(net_timeout_queue, &sched->delayed_tasks, item,
               if (item->source != layer && item->target != layer)
                 GCT_FOREACH_CONTINUE;
-              net_timeout_queue_remove(&sched->delayed_tasks, item);
+              net_timeout_queue_nolock_remove(&sched->delayed_tasks, item);
               );
 
   GCT_FOREACH(net_task_queue, &sched->pending_tasks, item,
               if (item->source != layer && item->target != layer)
                 GCT_FOREACH_CONTINUE;
-              net_task_queue_remove(&sched->pending_tasks, item);
+              net_task_queue_nolock_remove(&sched->pending_tasks, item);
               );
 }
 
@@ -336,18 +353,24 @@ void net_scheduler_task_cancel(
   struct net_scheduler_s *sched,
   struct net_task_header_s *task)
 {
+  bool_t found = 0;
+
   GCT_FOREACH(net_timeout_queue, &sched->delayed_tasks, item,
               if (item != task)
                 GCT_FOREACH_CONTINUE;
-              net_timeout_queue_remove(&sched->delayed_tasks, item);
-              return;
+              net_timeout_queue_nolock_remove(&sched->delayed_tasks, item);
+              found = 1;
+              GCT_FOREACH_BREAK;
               );
+
+  if (found)
+    return;
 
   GCT_FOREACH(net_task_queue, &sched->pending_tasks, item,
               if (item != task)
                 GCT_FOREACH_CONTINUE;
-              net_task_queue_remove(&sched->pending_tasks, item);
-              return;
+              net_task_queue_nolock_remove(&sched->pending_tasks, item);
+              GCT_FOREACH_BREAK;
               );
 }
 
