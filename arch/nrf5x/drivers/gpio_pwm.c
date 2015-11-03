@@ -78,7 +78,7 @@ struct nrf5x_gpio_pwm_context_s
 
 #define GPIOTE_ADDR NRF_PERIPHERAL_ADDR(NRF5X_GPIOTE)
 
-static void nrf5x_gpio_pwm_update(struct nrf5x_gpio_pwm_context_s *pv);
+static void nrf5x_gpio_pwm_update(struct nrf5x_gpio_pwm_context_s *pv, bool_t sync);
 
 static DEV_REQUEST_DELAYED_FUNC(nrf5x_gpio_pwm_setup)
 {
@@ -153,9 +153,6 @@ static DEV_REQUEST_DELAYED_FUNC(nrf5x_gpio_pwm_setup)
     }
   }
 
-  assert(!pv->rq);
-  pv->rq = rq;
-
   pv->ppi_disable = pv->ppi_enable = 0;
 
   for (uint8_t i = 0; i < CONFIG_DRIVER_NRF5X_GPIO_PWM_CHANNEL_COUNT; ++i) {
@@ -188,30 +185,38 @@ static DEV_REQUEST_DELAYED_FUNC(nrf5x_gpio_pwm_setup)
            pv->period_tk, pv->channel[i].duty.num, pv->channel[i].duty.denom);
   }
 
+  CPU_INTERRUPT_SAVESTATE_DISABLE;
+  assert(!pv->rq);
+  pv->rq = rq;
   pv->updated = 0;
 
   if (pv->running) {
-    CPU_INTERRUPT_SAVESTATE_DISABLE;
     nrf_event_clear(pv->timer_addr, NRF_TIMER_COMPARE(OVERFLOW));
     nrf_short_set(pv->timer_addr, 1 << NRF_TIMER_COMPARE_STOP(OVERFLOW));
     // Stop may happen here, see below.
     nrf_it_enable(pv->timer_addr, NRF_TIMER_COMPARE(OVERFLOW));
-    CPU_INTERRUPT_RESTORESTATE;
 
     if (nrf_event_check(pv->timer_addr, NRF_TIMER_COMPARE(OVERFLOW)) && !pv->updated) {
+      nrf_it_disable(pv->timer_addr, NRF_TIMER_COMPARE(OVERFLOW));
+
       // We got a race: stop happened where marked above.
-      nrf5x_gpio_pwm_update(pv);
+      nrf5x_gpio_pwm_update(pv, 1);
     }
   } else {
-    nrf5x_gpio_pwm_update(pv);
+    nrf5x_gpio_pwm_update(pv, 1);
   }
+  CPU_INTERRUPT_RESTORESTATE;
 }
 
-static void nrf5x_gpio_pwm_update(struct nrf5x_gpio_pwm_context_s *pv)
+static void nrf5x_gpio_pwm_update(struct nrf5x_gpio_pwm_context_s *pv, bool_t sync)
 {
   struct dev_pwm_rq_s *rq = pv->rq;
 
-  assert(rq);
+  if (!rq)
+    return;
+
+  if (!nrf_it_is_enabled(pv->timer_addr, NRF_TIMER_COMPARE(OVERFLOW)) && !sync)
+    return;
 
   pv->rq = NULL;
 
@@ -270,7 +275,7 @@ static DEV_IRQ_SRC_PROCESS(nrf5x_gpio_pwm_irq)
   struct device_s *dev = ep->base.dev;
   struct nrf5x_gpio_pwm_context_s *pv = dev->drv_pv;
 
-  nrf5x_gpio_pwm_update(pv);
+  nrf5x_gpio_pwm_update(pv, 0);
 }
 
 static DEV_PWM_CONFIG(nrf5x_gpio_pwm_config)
@@ -338,7 +343,7 @@ static DEV_INIT(nrf5x_gpio_pwm_init)
   nrf_reg_set(pv->timer_addr, NRF_TIMER_BITMODE, NRF_TIMER_BITMODE_16);
 
   nrf_it_disable_mask(pv->timer_addr, -1);
-  dev_request_delayed_init(&pv->queue, &nrf5x_gpio_pwm_setup);
+  dev_request_delayed_init(&pv->queue, nrf5x_gpio_pwm_setup);
 
   nrf_reg_set(pv->timer_addr, NRF_TIMER_MODE, NRF_TIMER_MODE_TIMER);
   nrf_reg_set(pv->timer_addr, NRF_TIMER_CC(OVERFLOW), 0);
