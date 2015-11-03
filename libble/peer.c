@@ -108,7 +108,7 @@ error_t ble_peer_sk_get(struct ble_peer_s *peer,
     if (err)
       return err;
 
-    dprintk("LTK:        %P\n", tmp, 16);
+    printk("LTK:        %P\n", tmp, 16);
 
     memrevcpy(pk, tmp, 16);
   } else
@@ -121,7 +121,7 @@ error_t ble_peer_sk_get(struct ble_peer_s *peer,
     if (!peer->stk_present)
       return -ENOENT;
 
-    dprintk("STK:        %P\n", peer->stk, 16);
+    printk("STK:        %P\n", peer->stk, 16);
 
     memrevcpy(pk, peer->stk, 16);
   }

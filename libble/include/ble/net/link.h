@@ -18,44 +18,47 @@
     Copyright (c) Nicolas Pouillon <nipo@ssji.net> 2015
 */
 
-#ifndef BLE_GAP_H_
-#define BLE_GAP_H_
-
-#include <hexo/types.h>
+#ifndef BLE_NET_LINK_H_
+#define BLE_NET_LINK_H_
 
 /**
    @file
    @module{BLE library}
-   @short Generic Access Profile network layer
+   @short Low level connection layer (either master or slave)
 
    @section {Description}
 
-   This layer is not a layer per-se, but implement GAP behavior
-   (advertising, pairing/bonding) for devices.
+   This handles a connection on low level.  In particular, this layer
+   handles cryptography if enabled.  It also demuxes between L2CAP and
+   LLCP.
 
    @end section
 */
 
-struct net_scheduler_s;
-struct net_layer_s;
+#include <hexo/types.h>
+#include <hexo/decls.h>
 
-struct ble_gap_params_s
+#include <net/layer.h>
+
+#include <ble/protocol/advertise.h>
+#include <device/class/crypto.h>
+
+struct buffer_s;
+struct ble_link_handler_s;
+struct ble_peer_s;
+
+enum ble_link_child_type_e
 {
-  struct ble_gatt_db_s *db;
-  struct net_layer_s *sig;
+  BLE_LINK_CHILD_LLCP,
+  BLE_LINK_CHILD_L2CAP,
 };
 
-#define BLE_GAP_CONN_PARAMS_UPDATE 0x43757064
-
-struct ble_gap_conn_params_update_s
+struct ble_link_param_s
 {
-  struct net_task_s task;
-
-  uint16_t interval_min, interval_max;
-  uint16_t slave_latency;
-  uint16_t timeout;
+  bool_t is_master;
+#if defined(CONFIG_BLE_CRYPTO)
+  struct device_crypto_s *crypto;
+#endif
 };
-
-STRUCT_COMPOSE(ble_gap_conn_params_update_s, task);
 
 #endif

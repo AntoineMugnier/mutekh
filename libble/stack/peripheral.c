@@ -31,16 +31,19 @@
 #include <ble/net/layer.h>
 #include <ble/net/gatts.h>
 #include <ble/net/att.h>
+#include <ble/net/link.h>
+#include <ble/net/llcp.h>
 
 #include <mutek/printk.h>
 
 #include <ble/net/generic.h>
 
-static const struct ble_slave_delegate_vtable_s slave_delegate_vtable;
+static const struct ble_slave_delegate_vtable_s peri_slave_vtable;
 #if defined(CONFIG_BLE_CRYPTO)
 static const struct ble_sm_delegate_vtable_s sm_delegate_vtable;
 #endif
 static const struct ble_advertiser_delegate_vtable_s peri_adv_vtable;
+static const struct ble_llcp_delegate_vtable_s peri_llcp_vtable;
 static error_t adv_start(struct ble_peripheral_s *peri);
 
 struct dev_rng_s;
@@ -68,23 +71,53 @@ static void peri_state_update(struct ble_peripheral_s *peri)
   peri->handler->state_changed(peri, state);
 }
 
-static void conn_connection_closed(void *delegate, struct net_layer_s *layer,
-                                   uint8_t reason)
+static void peri_conn_drop(struct ble_peripheral_s *peri, uint8_t reason)
 {
-  struct ble_peripheral_s *peri = delegate;
-
-  if (layer != peri->slave)
+  if (!peri->slave)
     return;
 
-  printk("Peripheral connection dropped: %d\n", reason);
+  if (peri->llcp && !reason)
+    ble_llcp_connection_close(peri->llcp);
 
-  net_layer_refdec(layer);
+  net_layer_refdec(peri->slave);
   peri->slave = NULL;
+  peri->llcp = NULL;
 
   peri->handler->connection_closed(peri, reason);
 
   peri_state_update(peri);
   adv_start(peri);
+}
+
+static void conn_connection_lost(void *delegate, struct net_layer_s *layer,
+                                 uint8_t reason)
+{
+  struct ble_peripheral_s *peri = delegate;
+
+  printk("Peripheral connection dropped: %d\n", reason);
+
+  if (layer != peri->slave)
+    return;
+
+  peri_conn_drop(peri, reason);
+}
+
+static void peri_llcp_closed(void *delegate, struct net_layer_s *layer,
+                             uint8_t reason)
+{
+  struct ble_peripheral_s *peri = delegate;
+
+  if (layer != peri->llcp)
+    return;
+
+  peri->llcp = NULL;
+
+  peri_conn_drop(peri, reason);
+}
+
+static void peri_llcp_destroyed(void *delegate, struct net_layer_s *layer)
+{
+  printk("LLCP layer released\n");
 }
 
 static void peri_slave_destroyed(void *delegate, struct net_layer_s *layer)
@@ -99,6 +132,8 @@ void peri_pairing_requested(void *delegate, struct net_layer_s *layer,
 {
   struct ble_peripheral_s *peri = delegate;
 
+  printk("Slave pairing requested\n");
+
   peri->handler->pairing_requested(peri, bonding);
 }
 
@@ -108,6 +143,8 @@ void peri_pairing_failed(void *delegate, struct net_layer_s *layer,
 {
   struct ble_peripheral_s *peri = delegate;
 
+  printk("Slave pairing failed\n");
+
   peri->handler->pairing_failed(peri, reason);
 }
 
@@ -115,6 +152,8 @@ static
 void peri_pairing_success(void *delegate, struct net_layer_s *layer)
 {
   struct ble_peripheral_s *peri = delegate;
+
+  printk("Slave pairing success\n");
 
   peri->handler->pairing_success(peri);
 }
@@ -140,21 +179,25 @@ bool_t peri_connection_requested(void *delegate, struct net_layer_s *layer,
 {
   struct ble_peripheral_s *peri = delegate;
   error_t err;
-  struct net_layer_s *slave, *l2cap, *signalling, *gatt, *gap;
+  struct net_layer_s *slave, *l2cap, *signalling, *gatt, *gap, *link, *llcp;
   uint16_t cid;
   struct ble_slave_param_s slave_params;
+
+  printk("Connection request from "BLE_ADDR_FMT"...", BLE_ADDR_ARG(&conn->master));
 
 #if defined(CONFIG_BLE_SECURITY_DB)
   struct net_layer_s *sm;
 
-  if (peri->sm)
+  if (peri->sm) {
+    printk(" still have sm\n");
     return 1;
+  }
 #endif
 
-  if (peri->slave)
+  if (peri->slave) {
+    printk(" still have slave\n");
     return 1;
-
-  printk("Connection request from "BLE_ADDR_FMT"...", BLE_ADDR_ARG(&conn->master));
+  }
 
   if (!peri->handler->connection_requested(peri, &conn->master)) {
     printk(" rejected by handler\n");
@@ -170,9 +213,6 @@ bool_t peri_connection_requested(void *delegate, struct net_layer_s *layer,
 
   slave_params.connect_packet_timestamp = anchor;
   slave_params.conn_req = *conn;
-#if defined(CONFIG_BLE_CRYPTO)
-  slave_params.rng = &peri->context->rng;
-#endif
 #if defined(CONFIG_BLE_SECURITY_DB)
   ble_peer_init(&peri->peer, &peri->context->security_db, &conn->master);
 #else
@@ -185,24 +225,62 @@ bool_t peri_connection_requested(void *delegate, struct net_layer_s *layer,
                   &peri->context->scheduler,
                   BLE_NET_LAYER_SLAVE,
                   &slave_params,
-                  peri, &slave_delegate_vtable.base,
+                  peri, &peri_slave_vtable.base,
                   &slave);
   if (err) {
     printk("error while creating slave: %d\n", err);
     return 1;
   }
 
-  err = ble_l2cap_create(&peri->context->scheduler, &l2cap);
+  struct ble_link_param_s link_params = {
+    .is_master = 0,
+#if defined(CONFIG_BLE_CRYPTO)
+    .crypto = &peri->context->crypto,
+#endif
+  };
+
+  err = ble_link_create(&peri->context->scheduler, &link_params, NULL, NULL, &link);
   if (err) {
-    printk("error while creating l2cap: %d\n", err);
+    printk("error while creating link: %d\n", err);
     goto out_slave;
   }
 
-  cid = BLE_SLAVE_LAYER_L2CAP;
-  err = net_layer_bind(slave, &cid, l2cap);
+  err = net_layer_bind(slave, NULL, link);
   if (err) {
-    printk("error while binding l2cap to slave: %d\n", err);
+    printk("error while binding link to slave: %d\n", err);
+    goto out_link;
+  }
+
+  err = ble_l2cap_create(&peri->context->scheduler, NULL, NULL, &l2cap);
+  if (err) {
+    printk("error while creating l2cap: %d\n", err);
+    goto out_link;
+  }
+
+  cid = BLE_LINK_CHILD_L2CAP;
+  err = net_layer_bind(link, &cid, l2cap);
+  if (err) {
+    printk("error while binding l2cap to link: %d\n", err);
     goto out_l2cap;
+  }
+
+  struct ble_llcp_params_s llcp_params = {
+#if defined(CONFIG_BLE_CRYPTO)
+    .rng = &peri->context->rng,
+    .peer = &peri->peer,
+#endif
+  };
+  err = ble_llcp_create(&peri->context->scheduler, &llcp_params, peri, &peri_llcp_vtable.base, &llcp);
+  if (err) {
+    printk("error while creating llcp: %d\n", err);
+    goto out_l2cap;
+  }
+
+  cid = BLE_LINK_CHILD_LLCP;
+  err = net_layer_bind(link, &cid, llcp);
+  if (err) {
+    printk("error while binding llcp to link: %d\n", err);
+    goto out_llcp;
   }
 
 #if defined(CONFIG_BLE_SECURITY_DB)
@@ -216,7 +294,7 @@ bool_t peri_connection_requested(void *delegate, struct net_layer_s *layer,
   err = ble_sm_create(&peri->context->scheduler, &sm_params, peri, &sm_delegate_vtable.base, &sm);
   if (err) {
     printk("error while creating sm: %d\n", err);
-    goto out_l2cap;
+    goto out_llcp;
   }
 
   peri->sm = sm;
@@ -249,7 +327,7 @@ bool_t peri_connection_requested(void *delegate, struct net_layer_s *layer,
 #else
   struct net_layer_s *att;
 
-  err = ble_att_create(&peri->context->scheduler, &att);
+  err = ble_att_create(&peri->context->scheduler, NULL, NULL, &att);
   if (err) {
     printk("error while creating att: %d\n", err);
     goto out_sm;
@@ -267,7 +345,7 @@ bool_t peri_connection_requested(void *delegate, struct net_layer_s *layer,
     .db = &peri->context->gattdb,
   };
 
-  err = ble_gatts_create(&peri->context->scheduler, &gatts_params, &gatt);
+  err = ble_gatts_create(&peri->context->scheduler, &gatts_params, NULL, NULL, &gatt);
   if (err) {
     printk("error while creating gatts: %d\n", err);
     goto out_sm;
@@ -281,7 +359,7 @@ bool_t peri_connection_requested(void *delegate, struct net_layer_s *layer,
   }
 #endif
 
-  err = ble_signalling_create(&peri->context->scheduler, &signalling);
+  err = ble_signalling_create(&peri->context->scheduler, NULL, NULL, &signalling);
   if (err) {
     printk("error while creating signalling: %d\n", err);
     goto out_gatt;
@@ -298,14 +376,14 @@ bool_t peri_connection_requested(void *delegate, struct net_layer_s *layer,
     .db = &peri->context->gattdb,
     .sig = signalling,
   };
-  err = ble_gap_create(&peri->context->scheduler, &gap_params, &gap);
+  err = ble_gap_create(&peri->context->scheduler, &gap_params, NULL, NULL, &gap);
   if (err) {
     printk("error while creating gap: %d\n", err);
     goto out_signalling;
   }
 
-  cid = BLE_SLAVE_LAYER_GAP;
-  err = net_layer_bind(slave, &cid, gap);
+  cid = BLE_LLCP_CHILD_GAP;
+  err = net_layer_bind(llcp, &cid, gap);
   if (err) {
     printk("error while binding gap to slave: %d\n", err);
     goto out_gap;
@@ -323,8 +401,12 @@ bool_t peri_connection_requested(void *delegate, struct net_layer_s *layer,
 #if defined(CONFIG_BLE_SECURITY_DB)
   net_layer_refdec(sm);
 #endif
+ out_llcp:
+  net_layer_refdec(llcp);
  out_l2cap:
   net_layer_refdec(l2cap);
+ out_link:
+  net_layer_refdec(link);
  out_slave:
 
   if (err) {
@@ -474,13 +556,13 @@ error_t ble_peripheral_init(
   return 0;
 }
 
-static const struct ble_slave_delegate_vtable_s slave_delegate_vtable =
+static const struct ble_slave_delegate_vtable_s peri_slave_vtable =
 {
   .base.release = peri_slave_destroyed,
-  .connection_closed = conn_connection_closed,
+  .connection_lost = conn_connection_lost,
 };
 
-#if defined(CONFIG_BLE_CRYPTO)
+#if defined(CONFIG_BLE_SECURITY_DB)
 static const struct ble_sm_delegate_vtable_s sm_delegate_vtable =
 {
   .base.release = peri_sm_invalidate,
@@ -496,6 +578,12 @@ static const struct ble_advertiser_delegate_vtable_s peri_adv_vtable =
   .connection_requested = peri_connection_requested,
 };
 
+static const struct ble_llcp_delegate_vtable_s peri_llcp_vtable =
+{
+  .base.release = peri_llcp_destroyed,
+  .connection_closed = peri_llcp_closed,
+};
+
 void ble_peripheral_mode_set(struct ble_peripheral_s *peri, uint8_t mode)
 {
   if (mode == peri->mode)
@@ -503,8 +591,8 @@ void ble_peripheral_mode_set(struct ble_peripheral_s *peri, uint8_t mode)
 
   peri->mode = mode;
 
-  if (!(mode & BLE_PERIPHERAL_CONNECTABLE) && peri->slave)
-    ble_slave_connection_close(peri->slave);
+  if (!(mode & BLE_PERIPHERAL_CONNECTABLE))
+    peri_conn_drop(peri, 0);
 
   if (peri->adv) {
     net_layer_refdec(peri->adv);
@@ -514,3 +602,14 @@ void ble_peripheral_mode_set(struct ble_peripheral_s *peri, uint8_t mode)
   if (mode & BLE_PERIPHERAL_CONNECTABLE && !peri->slave)
     adv_start(peri);
 }
+
+#if defined(CONFIG_BLE_SECURITY_DB)
+void ble_peripheral_pairing_accept(struct ble_peripheral_s *peri,
+                                   bool_t mitm_protection,
+                                   uint32_t pin,
+                                   const void *oob_data)
+{
+  if (peri->sm)
+    ble_sm_pairing_accept(peri->sm, mitm_protection, pin, oob_data);
+}
+#endif

@@ -61,7 +61,7 @@ void ble_gap_destroyed(struct net_layer_s *layer)
   mem_free(gap);
 }
 
-static struct ble_conn_params_update_task_s *gap_create_update(struct ble_gap_s *gap)
+static struct ble_gap_conn_params_update_s *gap_create_update(struct ble_gap_s *gap)
 {
   const uint16_t *tmp;
   size_t size;
@@ -72,7 +72,7 @@ static struct ble_conn_params_update_task_s *gap_create_update(struct ble_gap_s 
                                 (const void **)&tmp, &size) || size != 8)
     return NULL;
 
-  struct ble_conn_params_update_task_s *upd = malloc(sizeof(*upd));
+  struct ble_gap_conn_params_update_s *upd = malloc(sizeof(*upd));
 
   upd->interval_min = tmp[0];
   upd->interval_max = tmp[1];
@@ -120,25 +120,13 @@ void ble_gap_task_handle(struct net_layer_s *layer,
     break;
 
   case NET_TASK_TIMEOUT: {
-    printk("GAP asking for new connection parametters to slave\n");
-    struct ble_conn_params_update_task_s *upd = gap_create_update(gap);
+    printk("GAP asking for new connection parametters to LLCP\n");
+    struct ble_gap_conn_params_update_s *upd = gap_create_update(gap);
 
     if (!upd)
       break;
 
-#if defined(CONFIG_MUTEK_MEMALLOC_STATS)
-    size_t alloc_blocks;
-    size_t free_size;
-    size_t free_blocks;
-
-    memory_allocator_stats(default_region, &alloc_blocks, &free_size, &free_blocks);
-    printk("Mem stats at update. blocks: %d allocated, %d free; free bytes: %d\n",
-           (__compiler_sint_t)alloc_blocks,
-           (__compiler_sint_t)free_blocks,
-           (__compiler_sint_t)free_size);
-#endif
-
-    net_task_query_push(&upd->task, gap->layer.parent, &gap->layer, BLE_CONN_PARAMS_UPDATE);
+    net_task_query_push(&upd->task, gap->layer.parent, &gap->layer, BLE_GAP_CONN_PARAMS_UPDATE);
     break;
   }
 
@@ -148,11 +136,11 @@ void ble_gap_task_handle(struct net_layer_s *layer,
 
     if (task->header.source == gap->layer.parent &&
         task->query.err == -ENOTSUP) {
-      struct ble_conn_params_update_task_s *upd = gap_create_update(gap);
+      struct ble_gap_conn_params_update_s *upd = gap_create_update(gap);
 
       printk("GAP conn params update forwarded to signalling\n");
 
-      net_task_query_push(&upd->task, gap->sig, &gap->layer, BLE_CONN_PARAMS_UPDATE);
+      net_task_query_push(&upd->task, gap->sig, &gap->layer, BLE_GAP_CONN_PARAMS_UPDATE);
       break;
     }
 
@@ -187,29 +175,11 @@ static const struct net_layer_handler_s gap_handler = {
   .use_timer = 1,
 };
 
-static
-error_t ble_gap_init(
-  struct ble_gap_s *gap,
-  struct net_scheduler_s *scheduler,
-  struct ble_gatt_db_s *db,
-  struct net_layer_s *sig)
-{
-  memset(gap, 0, sizeof(*gap));
-
-  error_t err = net_layer_init(&gap->layer, &gap_handler, scheduler, NULL, NULL);
-  if (err)
-    return err;
-
-  gap->db = db;
-  gap->sig = net_layer_refinc(sig);
-  gap->conn_update_task = NULL;
-
-  return 0;
-}
-
 error_t ble_gap_create(
   struct net_scheduler_s *scheduler,
   const void *params_,
+  void *delegate,
+  const struct net_layer_delegate_vtable_s *delegate_vtable,
   struct net_layer_s **layer)
 {
   struct ble_gap_s *gap = mem_alloc(sizeof(*gap), mem_scope_sys);
@@ -218,11 +188,20 @@ error_t ble_gap_create(
   if (!gap)
     return -ENOMEM;
 
-  error_t err = ble_gap_init(gap, scheduler, params->db, params->sig);
-  if (err)
+  memset(gap, 0, sizeof(*gap));
+
+  error_t err = net_layer_init(&gap->layer, &gap_handler, scheduler,
+                               delegate, delegate_vtable);
+  if (err) {
     mem_free(gap);
-  else
-    *layer = &gap->layer;
+    return err;
+  }
+
+  gap->db = params->db;
+  gap->sig = net_layer_refinc(params->sig);
+  gap->conn_update_task = NULL;
+
+  *layer = &gap->layer;
 
   return err;
 }

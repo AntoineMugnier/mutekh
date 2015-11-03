@@ -25,6 +25,7 @@
 #include <net/task.h>
 #include <mutek/buffer_pool.h>
 #include <device/class/crypto.h>
+#include <ble/ccm_params.h>
 
 struct ble_datapath_s;
 struct device_crypto_s;
@@ -62,7 +63,7 @@ struct ble_datapath_s
     buffer_queue_root_t queue;
 #if defined(CONFIG_BLE_CRYPTO)
     buffer_queue_root_t crypto_queue;
-    struct dev_crypto_context_s ccm_ctx;
+    struct ble_ccm_state_s ccm_state;
     bool_t crypto_enabled;
 #endif
   } way[DATA_WAY_COUNT];
@@ -74,8 +75,8 @@ struct ble_datapath_s
   struct buffer_s *ccm_out_packet;
   struct dev_crypto_rq_s crypto_rq;
   struct device_crypto_s crypto;
+  struct dev_crypto_context_s ccm_ctx;
   int8_t ccm_retries;
-  uint8_t sk[16];
 #endif
 };
 

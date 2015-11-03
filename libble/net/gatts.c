@@ -39,8 +39,8 @@
 
 #include <ble/net/generic.h>
 
-//#define dprintk(...) do{}while(0)
-#define dprintk printk
+#define dprintk(...) do{}while(0)
+//#define dprintk printk
 
 struct ble_gatts_s
 {
@@ -170,41 +170,31 @@ void ble_gatts_att_value_changed(struct ble_gatt_client_s *client,
                                 const void *data, size_t size)
 {
   struct ble_gatts_s *gatt = ble_gatts_s_from_client(client);
+  struct ble_att_write_task_s *txn;
 
   if (!gatt->layer.parent)
     return;
 
-  struct buffer_s *pkt = net_layer_packet_alloc(&gatt->layer,
-                                                gatt->layer.context.prefix_size,
-                                                0);
-  struct net_addr_s dst = {
-    .cid = BLE_L2CAP_CID_ATT,
-  };
-
   size = __MIN(gatt->layer.context.mtu - 3, size);
 
-  pkt->end = pkt->begin + size + 3;
+  txn = mem_alloc(sizeof(*txn) + size, mem_scope_sys);
+  if (!txn)
+    return;
 
-  pkt->data[pkt->begin] = mode & BLE_GATT_CCCD_NOTIFICATION
+  txn->base.task.header.destroy_func = (void*)memory_allocator_push;
+  txn->base.task.header.allocator_data = NULL;
+
+  txn->value = (void*)(txn + 1);
+  txn->value_size = size;
+  txn->handle = value_handle;
+  memcpy(txn->value, data, size);
+
+  txn->base.command = mode & BLE_GATT_CCCD_NOTIFICATION
     ? BLE_ATT_HANDLE_VALUE_NOTIF
     : BLE_ATT_HANDLE_VALUE_INDIC;
 
-  dst.unreliable = pkt->data[pkt->begin] == BLE_ATT_HANDLE_VALUE_NOTIF;
 
-  endian_le16_na_store(pkt->data + pkt->begin + 1, value_handle);
-
-  memcpy(pkt->data + pkt->begin + 3, data, size);
-
-  net_task_inbound_push(net_scheduler_task_alloc(gatt->layer.scheduler),
-                        gatt->layer.parent, &gatt->layer,
-                        0, NULL, &dst, pkt);
-
-  dprintk("Gatt Notif/Indic %02x (%d) %P\n", pkt->data[pkt->begin],
-         pkt->end - pkt->begin,
-         &pkt->data[pkt->begin + 1],
-         pkt->end - pkt->begin - 1);
-
-  buffer_refdec(pkt);
+  net_task_query_push(&txn->base.task, gatt->layer.parent, &gatt->layer, BLE_ATT_REQUEST);
 }
 
 static void gatts_save_peer_later(struct ble_gatts_s *gatt)
@@ -237,7 +227,6 @@ static bool_t ble_gatts_context_updated(
 
   gatt->layer.context = *parent_context;
   gatt->client.encrypted = parent_context->addr.encrypted;
-  gatt->client.authenticated = parent_context->addr.authenticated;
 
   dprintk("Gatt client layer now %s\n", gatt->client.encrypted ? "encrypted" : "clear text");
 
@@ -382,7 +371,7 @@ error_t gatts_read_by_type(struct ble_gatts_s *gatt,
     else
       written = task->handle_value_size_max - 2;
 
-    endian_16_na_store(task->handle_value + task->handle_value_size, handle);
+    endian_16_na_store((uint8_t *)task->handle_value + task->handle_value_size, handle);
     err = ble_gatt_client_read(&gatt->client, 0,
                                (uint8_t *)task->handle_value + task->handle_value_size + 2,
                                &written);
@@ -424,7 +413,7 @@ error_t gatts_read(struct ble_gatts_s *gatt,
     return 0;
 
   written = task->value_size_max - task->offset;
-  task->base.error = ble_gatt_client_read(&gatt->client, task->offset, task->value, &written);
+  task->base.error = ble_gatt_client_read(&gatt->client, task->offset, task->value + task->offset, &written);
   if (task->base.error)
     return 0;
 
@@ -498,6 +487,9 @@ error_t gatts_read_by_group_type(struct ble_gatts_s *gatt,
     if (task->attribute_data_stride)
       written = __MIN(task->attribute_data_stride, written);
 
+    dprintk(" reading handle %d, %d bytes free\n",
+            handle, written);
+
     struct ble_att_data_s *ad = (void*)((uint8_t*)task->attribute_data
                                         + task->attribute_data_size);
 
@@ -522,6 +514,8 @@ error_t gatts_read_by_group_type(struct ble_gatts_s *gatt,
       task->attribute_data_stride = written + 4;
 
     task->attribute_data_size += task->attribute_data_stride;
+
+    once = 1;
   }
 
   return 0;
@@ -542,6 +536,8 @@ error_t gatts_write(struct ble_gatts_s *gatt,
 
 error_t ble_gatts_create(struct net_scheduler_s *scheduler,
                         const void *params_,
+                        void *delegate,
+                        const struct net_layer_delegate_vtable_s *delegate_vtable,
                         struct net_layer_s **layer)
 {
   struct ble_gatts_s *gatt = mem_alloc(sizeof(*gatt), mem_scope_sys);
@@ -550,7 +546,8 @@ error_t ble_gatts_create(struct net_scheduler_s *scheduler,
   if (!gatt)
     return -ENOMEM;
 
-  error_t err = net_layer_init(&gatt->layer, &gatts_handler, scheduler, NULL, NULL);
+  error_t err = net_layer_init(&gatt->layer, &gatts_handler, scheduler,
+                               delegate, delegate_vtable);
   if (err) {
     mem_free(gatt);
     return err;

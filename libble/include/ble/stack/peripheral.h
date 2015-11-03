@@ -89,6 +89,7 @@ struct ble_peripheral_s
   const struct ble_peripheral_handler_s *handler;
   struct ble_stack_context_s *context;
   struct net_layer_s *slave;
+  struct net_layer_s *llcp;
 #if defined(CONFIG_BLE_CRYPTO)
   struct net_layer_s *sm;
 #endif

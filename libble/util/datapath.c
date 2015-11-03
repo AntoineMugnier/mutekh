@@ -53,6 +53,8 @@ static KROUTINE_EXEC(ble_datapath_ccm_done)
     return;
   }
 
+  data->way[way].ccm_state.packet_counter++;
+
   bool_t empty = buffer_queue_isempty(&data->way[way].queue);
 
   buffer_queue_pushback(&data->way[way].queue, out);
@@ -146,8 +148,8 @@ void ble_datapath_packet_push(struct ble_datapath_s *data, enum ble_datapath_way
 }
 
 error_t ble_datapath_init(struct ble_datapath_s *data,
-                       const struct ble_datapath_handler_s *handler,
-                       struct device_crypto_s *crypto)
+                          const struct ble_datapath_handler_s *handler,
+                          struct device_crypto_s *crypto)
 {
   memset(data, 0, sizeof(*data));
 
@@ -161,20 +163,13 @@ error_t ble_datapath_init(struct ble_datapath_s *data,
   struct dev_crypto_info_s crypto_info;
   DEVICE_OP(&data->crypto, info, &crypto_info);
 
-  kroutine_init(&data->crypto_rq.rq.kr, ble_datapath_ccm_done, KROUTINE_INTERRUPTIBLE);
-  data->ccm_retries = 3;
+  data->ccm_ctx.state_data = mem_alloc(crypto_info.state_size, mem_scope_sys);
 #endif
+
   kroutine_init(&data->pending_kr, ble_datapath_pending_exec, KROUTINE_INTERRUPTIBLE);
 
   for (uint8_t way = 0; way < DATA_WAY_COUNT; ++way) {
 #if defined(CONFIG_BLE_CRYPTO)
-    data->way[way].ccm_ctx.mode = DEV_CRYPTO_MODE_BLE_CCM;
-    data->way[way].ccm_ctx.state_data = mem_alloc(crypto_info.state_size, mem_scope_sys);
-    data->way[way].ccm_ctx.key_data = NULL;
-    data->way[way].ccm_ctx.key_len = 16;
-    data->way[way].ccm_ctx.iv_len = 8;
-    data->way[way].ccm_ctx.auth_len = 2;
-    data->way[way].ccm_ctx.encrypt_only = 1;
     buffer_queue_init(&data->way[way].crypto_queue);
 #endif
     buffer_queue_init(&data->way[way].queue);
@@ -187,7 +182,7 @@ void ble_datapath_cleanup(struct ble_datapath_s *data)
 {
   for (uint8_t way = 0; way < DATA_WAY_COUNT; ++way) {
 #if defined(CONFIG_BLE_CRYPTO)
-    mem_free(data->way[way].ccm_ctx.state_data);
+    mem_free(data->state_data);
     buffer_queue_destroy(&data->way[DATA_WAY_TX].crypto_queue);
 #endif
     buffer_queue_destroy(&data->way[DATA_WAY_TX].queue);
@@ -206,20 +201,24 @@ error_t ble_datapath_encryption_setup(struct ble_datapath_s *data,
   error_t err;
 
   data->crypto_rq.op = DEV_CRYPTO_INIT;
-  data->crypto_rq.ctx = &data->way[DATA_WAY_TX].ccm_ctx;
+  data->crypto_rq.ctx = &data->ccm_ctx;
   data->crypto_rq.iv_ctr = iv;
+  data->ccm_ctx.key_data = sk;
+  data->ccm_retries = 3;
+  data->ccm_ctx.mode = DEV_CRYPTO_MODE_BLE_CCM;
+  data->ccm_ctx.key_len = 16;
+  data->ccm_ctx.iv_len = 8;
+  data->ccm_ctx.auth_len = 2;
+  data->ccm_ctx.encrypt_only = 1;
 
   err = dev_crypto_wait_op(&data->crypto, &data->crypto_rq);
   if (err)
     return err;
 
-  data->crypto_rq.op = DEV_CRYPTO_INIT | DEV_CRYPTO_INVERSE;
-  data->crypto_rq.ctx = &data->way[DATA_WAY_RX].ccm_ctx;
-  data->crypto_rq.iv_ctr = iv;
-
-  err = dev_crypto_wait_op(&data->crypto, &data->crypto_rq);
-  if (err)
-    return err;
+  data->way[DATA_WAY_RX].ccm_state.packet_counter = 0;
+  data->way[DATA_WAY_RX].ccm_state.sent_by_master = 1;
+  data->way[DATA_WAY_TX].ccm_state.packet_counter = 0;
+  data->way[DATA_WAY_TX].ccm_state.sent_by_master = 0;
 
   kroutine_init(&data->crypto_rq.rq.kr, ble_datapath_ccm_done, KROUTINE_INTERRUPTIBLE);
 

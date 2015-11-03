@@ -27,14 +27,16 @@
 
 #include <ble/net/layer.h>
 #include <ble/net/signalling.h>
-#include <ble/net/slave.h>
+#include <ble/net/gap.h>
 #include <ble/protocol/signalling.h>
 #include <ble/protocol/l2cap.h>
 
 #include <ble/net/generic.h>
 
+//#define dprintk printk
+#define dprintk(...) do{}while(0)
+
 struct ble_signalling_handler_s;
-struct ble_conn_params_update_task_s;
 
 /**
  BLE L2CAP signalling layer.
@@ -133,19 +135,19 @@ void ble_sig_task_handle(struct net_layer_s *layer,
     break;
 
   case NET_TASK_QUERY:
-    printk("SIG Query, %S, current %d\n", &task->query.opcode, 4, sig->pending_conn_params);
+    dprintk("SIG Query, %x, current %p\n", task->query.opcode, sig->pending_conn_params);
 
     switch (task->query.opcode) {
-    case BLE_CONN_PARAMS_UPDATE: {
+    case BLE_GAP_CONN_PARAMS_UPDATE: {
       if (sig->pending_conn_params) {
         net_task_query_respond_push(task, -EBUSY);
         return;
       }
 
-      struct ble_conn_params_update_task_s *up;
+      struct ble_gap_conn_params_update_s *up;
       struct buffer_s *pkt;
 
-      up = ble_conn_params_update_task_s_from_task(task);
+      up = ble_gap_conn_params_update_s_from_task(task);
       pkt = net_layer_packet_alloc(&sig->layer, sig->layer.context.prefix_size + 4, 8);
 
       endian_le16_na_store(&pkt->data[pkt->begin], up->interval_min);
@@ -176,17 +178,9 @@ static const struct net_layer_handler_s sig_handler = {
   .type = BLE_NET_LAYER_SIGNALLING,
 };
 
-static
-error_t ble_signalling_init(
-  struct ble_signalling_s *sig,
-  struct net_scheduler_s *scheduler)
-{
-  memset(sig, 0, sizeof(*sig));
-
-  return net_layer_init(&sig->layer, &sig_handler, scheduler, NULL, NULL);
-}
-
 error_t ble_signalling_create(struct net_scheduler_s *scheduler,
+                              void *delegate,
+                              const struct net_layer_delegate_vtable_s *delegate_vtable,
                               struct net_layer_s **layer)
 {
  struct ble_signalling_s *sig = mem_alloc(sizeof(*sig), mem_scope_sys);
@@ -194,7 +188,10 @@ error_t ble_signalling_create(struct net_scheduler_s *scheduler,
   if (!sig)
     return -ENOMEM;
 
-  error_t err = ble_signalling_init(sig, scheduler);
+  memset(sig, 0, sizeof(*sig));
+
+  error_t err = net_layer_init(&sig->layer, &sig_handler, scheduler,
+                               delegate, delegate_vtable);
   if (err)
     mem_free(sig);
   else
