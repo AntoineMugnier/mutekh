@@ -38,8 +38,6 @@ struct net_addr_s
 {
 #if defined(CONFIG_BLE)
   uint8_t llid : 2;
-  uint8_t unreliable : 1;
-  uint8_t authenticated : 1;
   uint8_t encrypted : 1;
   uint8_t random_addr : 1;
   uint16_t att;
