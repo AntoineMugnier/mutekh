@@ -31,7 +31,9 @@
 #include <ble/net/gap.h>
 #include <ble/protocol/radio.h>
 #include <ble/protocol/data.h>
-#include <ble/peer.h>
+
+#include <ble/util/channel_mapper.h>
+#include <ble/util/timing_mapper.h>
 
 #include "ble_radio_private.h"
 
@@ -124,8 +126,6 @@ struct ble_slave_s
 #endif
 
   uint8_t reason;
-
-  struct ble_peer_s *peer;
 };
 
 STRUCT_COMPOSE(ble_slave_s, layer);
@@ -363,24 +363,6 @@ static void slave_crypto_next(struct ble_slave_s *slave)
     if (!slave->tx_encryption) {
       slave_tx_enqueue(slave, task);
       goto again;
-    }
-
-    // We may drop unreliable packets here, if tx queue overflows
-    if (task->inbound.dst_addr.unreliable) {
-      bool_t dropped = slave->tx_queue_count > (slave->tx_per_event_lp >> 4) + 2;
-
-      if (!(random() & 0x7))
-        dprintk("TXQ: %d / %d\n",
-               slave->tx_queue_count,
-               (slave->tx_per_event_lp >> 4));
-
-      if (dropped) {
-        dprintk("TXQ: %d: dropped\n",
-               slave->tx_queue_count);
-
-        net_task_destroy(task);
-        goto again;
-      }
     }
 
     slave->crypto_rq.op = DEV_CRYPTO_FINALIZE;
@@ -622,7 +604,7 @@ error_t ble_slave_init(
 
   memset(slave, 0, sizeof(*slave));
 
-  err = net_layer_init(&slave->layer, &slave_handler.base, scheduler, delegate, delegate_vtable);
+  err = net_layer_init(&slave->layer, &slave_handler, scheduler, delegate, delegate_vtable);
   if (err)
     return err;
 
@@ -633,7 +615,6 @@ error_t ble_slave_init(
   slave->layer.context.prefix_size = ble_info.prefix_size + 2;
   slave->layer.context.mtu = ble_info.mtu - 6;
 
-  slave->peer = params->peer;
   device_start(&slave->pv->radio);
 
 #if defined(CONFIG_BLE_CRYPTO)
