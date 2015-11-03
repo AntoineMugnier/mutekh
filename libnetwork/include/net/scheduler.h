@@ -54,6 +54,7 @@
 #include <gct/container_clist.h>
 
 #include "task.h"
+#include "layer.h"
 
 #define GCT_CONTAINER_ALGO_net_timeout_queue CLIST
 #define GCT_CONTAINER_LOCK_net_timeout_queue HEXO_LOCK_IRQ
@@ -75,6 +76,7 @@ struct net_scheduler_s
 
   net_task_queue_root_t pending_tasks;
   net_timeout_queue_root_t delayed_tasks;
+  net_layer_list_noref_root_t destroyed_layers;
 
   struct device_timer_s timer;
   struct dev_timer_rq_s timer_rq;
@@ -132,6 +134,28 @@ ALWAYS_INLINE
 struct buffer_s *net_scheduler_packet_alloc(struct net_scheduler_s *sched)
 {
   return buffer_pool_alloc(sched->packet_pool);
+}
+
+/**
+   @this allocates a packet for layer.
+
+   @param layer Layer to allocate packet for
+   @param begin reserved header size for layers headers
+          (should be at least @tt{layer->context.prefix_size})
+   @param size minimal data size to allocate packet for
+          (should be no more than @tt{layer->context.mtu})
+ */
+ALWAYS_INLINE
+struct buffer_s *net_layer_packet_alloc(
+  struct net_layer_s *layer,
+  size_t begin,
+  size_t size)
+{
+  struct buffer_s *pkt = net_scheduler_packet_alloc(layer->scheduler);
+  pkt->begin = begin;
+  pkt->end = begin + size;
+
+  return pkt;
 }
 
 /**
