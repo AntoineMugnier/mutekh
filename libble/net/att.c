@@ -34,8 +34,8 @@
 #include <string.h>
 #include "att_encoding.h"
 
-//#define dprintk(...) do{}while(0)
-#define dprintk printk
+#define dprintk(...) do{}while(0)
+//#define dprintk printk
 
 STRUCT_COMPOSE(ble_att_s, layer);
 
@@ -187,6 +187,7 @@ void ble_att_task_handle(struct net_layer_s *layer,
 
     if (ble_att_transaction_s_from_task(task)->command == BLE_ATT_HANDLE_VALUE_NOTIF
         && !net_task_queue_isempty(&att->transaction_queue)) {
+      dprintk("Too many requests pending, telling we are busy\n");
       net_task_query_respond_push(task, -EBUSY);
       return;
     }
@@ -267,6 +268,8 @@ static const struct net_layer_handler_s att_handler = {
 
 error_t ble_att_create(
   struct net_scheduler_s *scheduler,
+  void *delegate,
+  const struct net_layer_delegate_vtable_s *delegate_vtable,
   struct net_layer_s **layer)
 {
   struct ble_att_s *att = mem_alloc(sizeof(*att), mem_scope_sys);
@@ -274,7 +277,8 @@ error_t ble_att_create(
   if (!att)
     return -ENOMEM;
 
-  error_t err = net_layer_init(&att->layer, &att_handler, scheduler, NULL, NULL);
+  error_t err = net_layer_init(&att->layer, &att_handler, scheduler,
+                               delegate, delegate_vtable);
 
   if (err) {
     mem_free(att);
@@ -299,7 +303,6 @@ error_t ble_att_create(
 static
 void att_request_free(struct net_task_header_s *task)
 {
-  memset(task, 0xaa, sizeof(struct net_task_s));
   mem_free(task);
 }
 
@@ -310,7 +313,6 @@ struct ble_att_transaction_s *att_request_allocate(struct ble_att_s *att,
   if (!txn)
     return NULL;
 
-  memset(txn, 0, total_size);
   txn->task.header.destroy_func = att_request_free;
   txn->task.header.allocator_data = NULL;
 
@@ -340,8 +342,13 @@ static void att_transaction_first_send(struct ble_att_s *att)
 
     bool_t with_response = ble_att_opcode_is_response_expected(txn->command);
 
-    if (att->transaction_pending && with_response)
+    dprintk("%s %p %d %s response\n", __FUNCTION__,
+            txn, txn->command, with_response ? "with" : "without");
+
+    if (att->transaction_pending && with_response) {
+      dprintk(" A transaction is pending and ours expects a response\n");
       break;
+    }
 
     net_task_queue_pop(&att->transaction_queue);
 
@@ -375,6 +382,8 @@ static void att_transaction_first_send(struct ble_att_s *att)
 
     if (with_response)
       att->transaction_pending = txn;
+    else
+      net_task_query_respond_push(&txn->task, 0);
 
     req_task = NULL;
     req = NULL;

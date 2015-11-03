@@ -353,6 +353,7 @@ bool_t ble_security_db_contains(struct ble_security_db_s *db,
   return 0;
 }
 
+static
 error_t ble_security_db_load(struct ble_security_db_s *db,
                                const struct ble_addr_s *addr,
                                struct ble_peer_s *peer)

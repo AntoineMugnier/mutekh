@@ -398,8 +398,6 @@ void ble_gatt_att_value_changed(struct ble_gatt_client_s *client,
     ? BLE_ATT_HANDLE_VALUE_NOTIF
     : BLE_ATT_HANDLE_VALUE_INDIC;
 
-  dst.unreliable = pkt->data[pkt->begin] == BLE_ATT_HANDLE_VALUE_NOTIF;
-
   endian_le16_na_store(pkt->data + pkt->begin + 1, value_handle);
 
   memcpy(pkt->data + pkt->begin + 3, data, size);
@@ -446,7 +444,6 @@ static bool_t ble_gatt_context_updated(
 
   gatt->layer.context = *parent_context;
   gatt->client.encrypted = parent_context->addr.encrypted;
-  gatt->client.authenticated = parent_context->addr.authenticated;
 
   printk("Gatt client layer now %s\n", gatt->client.encrypted ? "encrypted" : "clear text");
 
@@ -466,24 +463,6 @@ static const struct ble_gatt_client_handler_s gatt_db_handler = {
   .att_value_changed = ble_gatt_att_value_changed,
   .att_subscription_changed = ble_gatt_att_subscription_changed,
 };
-
-static
-error_t ble_gatt_init(
-  struct ble_gatt_s *gatt,
-  struct net_scheduler_s *scheduler,
-  struct ble_peer_s *peer,
-  struct ble_gatt_db_s *db)
-{
-  error_t err = net_layer_init(&gatt->layer, &gatt_handler, scheduler, NULL, NULL);
-
-  gatt->server_mtu = 23;
-  gatt->peer = peer;
-
-  ble_gatt_client_db_open(&gatt->client, &gatt_db_handler, db);
-  ble_gatt_client_subscription_set(&gatt->client, peer->subscriptions, BLE_SUBSCRIBED_CHAR_COUNT);
-
-  return err;
-}
 
 static enum ble_att_error_e gatt_read_by_group_type(
   struct ble_gatt_s *gatt,
@@ -838,6 +817,8 @@ static void gatt_read_multiple(
 
 error_t ble_gatt_create(struct net_scheduler_s *scheduler,
                         const void *params_,
+                        void *delegate,
+                        const struct net_layer_delegate_vtable_s *delegate_vtable,
                         struct net_layer_s **layer)
 {
   struct ble_gatt_s *gatt = mem_alloc(sizeof(*gatt), mem_scope_sys);
@@ -846,11 +827,20 @@ error_t ble_gatt_create(struct net_scheduler_s *scheduler,
   if (!gatt)
     return -ENOMEM;
 
-  error_t err = ble_gatt_init(gatt, scheduler, params->peer, params->db);
-  if (err)
+  error_t err = net_layer_init(&gatt->layer, &gatt_handler, scheduler,
+                               delegate, delegate_vtable);
+  if (err) {
     mem_free(gatt);
-  else
-    *layer = &gatt->layer;
+    return err;
+  }
+
+  gatt->server_mtu = 23;
+  gatt->peer = params->peer;
+
+  ble_gatt_client_db_open(&gatt->client, &gatt_db_handler, params->db);
+  ble_gatt_client_subscription_set(&gatt->client, params->peer->subscriptions, BLE_SUBSCRIBED_CHAR_COUNT);
+
+  *layer = &gatt->layer;
 
   return err;
 }

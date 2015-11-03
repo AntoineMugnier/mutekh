@@ -38,17 +38,33 @@
 #include <net/task.h>
 #include <ble/uuid.h>
 #include <ble/protocol/att.h>
+#include <ble/protocol/data.h>
 
 struct net_layer_s;
 struct net_scheduler_s;
+struct ble_peer_s;
+struct dev_rng_s;
+
+enum ble_llcp_child_e
+{
+  BLE_LLCP_CHILD_GAP,
+};
+
+struct ble_llcp_delegate_vtable_s
+{
+  struct net_layer_delegate_vtable_s base;
+
+  void (*connection_closed)(void *delegate, struct net_layer_s *layer, uint8_t reason);
+};
+
+STRUCT_COMPOSE(ble_llcp_delegate_vtable_s, base);
 
 enum ble_llcp_task_id_e
 {
-  BLE_LLCP_CONNECTION_PARAMETERS_UPDATE = 0xllc20000,
+  BLE_LLCP_CONNECTION_PARAMETERS_UPDATE = 0x11c20000,
   BLE_LLCP_CHANNEL_MAP_UPDATE,
   BLE_LLCP_CONNECTION_PARAMETERS_REQ,
   BLE_LLCP_ENCRYPTION_SETUP,
-  BLE_LLCP_ENCRYPTION_ENABLE,
   BLE_LLCP_LENGTH_UPDATE,
   BLE_LLCP_PING,
 };
@@ -57,9 +73,7 @@ struct ble_llcp_connection_parameters_update_s
 {
   struct net_task_s task;
 
-  struct ble_conn_timing_param_s timing;
-  uint16_t win_offset;
-  uint16_t instant;
+  struct ble_conn_params_update update;
 };
 
 STRUCT_COMPOSE(ble_llcp_connection_parameters_update_s, task);
@@ -84,15 +98,6 @@ struct ble_llcp_encryption_setup_s
 
 STRUCT_COMPOSE(ble_llcp_encryption_setup_s, task);
 
-struct ble_llcp_encryption_enable_s
-{
-  struct net_task_s task;
-
-  bool_t enabled;
-};
-
-STRUCT_COMPOSE(ble_llcp_encryption_enable_s, task);
-
 struct ble_llcp_length_update_s
 {
   struct net_task_s task;
@@ -100,6 +105,30 @@ struct ble_llcp_length_update_s
   uint16_t rx_mtu;
 };
 
-STRUCT_COMPOSE(ble_llcp_encryption_enable_s, task);
+STRUCT_COMPOSE(ble_llcp_length_update_s, task);
+
+
+struct ble_llcp_handler_s
+{
+  struct net_layer_handler_s base;
+
+  void (*connection_close)(struct net_layer_s *layer);
+};
+
+STRUCT_COMPOSE(ble_llcp_handler_s, base);
+
+ALWAYS_INLINE void ble_llcp_connection_close(struct net_layer_s *layer)
+{
+  const struct ble_llcp_handler_s *handler = const_ble_llcp_handler_s_from_base(layer->handler);
+  handler->connection_close(layer);
+}
+
+struct ble_llcp_params_s
+{
+#if defined(CONFIG_BLE_CRYPTO)
+  struct dev_rng_s *rng;
+  struct ble_peer_s *peer;
+#endif
+};
 
 #endif

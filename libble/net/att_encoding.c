@@ -50,7 +50,6 @@ error_t att_response_serialize(struct buffer_s *p,
                                const struct ble_att_transaction_s *txn,
                                uint16_t mtu)
 {
-  assert(ble_att_opcode_is_client_to_server(txn->command));
   assert(ble_att_opcode_is_response_expected(txn->command));
 
   if (txn->error)
@@ -216,8 +215,6 @@ error_t att_request_serialize(struct buffer_s *p,
                               const struct ble_att_transaction_s *txn,
                               uint16_t mtu)
 {
-  assert(ble_att_opcode_is_client_to_server(txn->command));
-
   p->data[p->begin] = txn->command;
 
   switch (ble_att_opcode_operation(txn->command)) {
@@ -466,7 +463,7 @@ enum ble_att_error_e att_request_parse(struct ble_att_s *att,
 
     req->handle = endian_le16_na_load(data + 1);
     req->offset = endian_le16_na_load(data + 3);
-    req->value_size = endian_le16_na_load(data + 3);
+    req->offset = req->value_size = endian_le16_na_load(data + 3);
     req->value = (uint8_t*)(req + 1) - req->value_size;
     req->value_size_max = req->value_size + att->mtu - 1;
 
@@ -662,7 +659,7 @@ enum ble_att_error_e att_response_parse(struct ble_att_s *att,
          point < data + size && query->handle_value_size + data[1] <= query->handle_value_size_max;
          point += data[1]) {
       struct ble_att_handle_value_s *hv
-        = (void*)(query->handle_value + query->handle_value_size);
+        = (void*)((uint8_t*)query->handle_value + query->handle_value_size);
       uint16_t h = endian_le16_na_load(point);
 
       query->start = h + 1;
@@ -679,9 +676,9 @@ enum ble_att_error_e att_response_parse(struct ble_att_s *att,
     struct ble_att_read_task_s *query
       = ble_att_read_task_s_from_base(txn);
 
-    size_t to_copy = __MIN(size - 1, query->value_size_max - query->value_size);
-    memcpy(query->value + query->value_size, data + 1, to_copy);
-    query->value_size += to_copy;
+    size_t to_copy = __MIN(size - 1, query->value_size_max - query->offset);
+    memcpy(query->value + query->offset, data + 1, to_copy);
+    query->value_size = query->offset + to_copy;
 
     break;
   }
@@ -716,7 +713,7 @@ enum ble_att_error_e att_response_parse(struct ble_att_s *att,
          point < data + size && query->attribute_data_size + data[1] <= query->attribute_data_size_max;
          point += data[1]) {
       struct ble_att_data_s *ad
-        = (void*)(query->attribute_data + query->attribute_data_size);
+        = (void*)((uint8_t*)query->attribute_data + query->attribute_data_size);
       uint16_t h = endian_le16_na_load(point);
       uint16_t e = endian_le16_na_load(point + 2);
 

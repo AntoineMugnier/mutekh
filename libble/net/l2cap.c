@@ -35,6 +35,9 @@
 
 #include <ble/net/generic.h>
 
+//#define dprintk printk
+#define dprintk(...) do{}while(0)
+
 struct ble_l2cap_s;
 struct ble_sm_s;
 struct ble_att_s;
@@ -59,9 +62,6 @@ struct ble_l2cap_s
 
 STRUCT_COMPOSE(ble_l2cap_s, layer);
 
-//#define dprintk printk
-#define dprintk(...) do{}while(0)
-
 static
 void ble_l2cap_task_handle(struct net_layer_s *layer,
                            struct net_task_header_s *header)
@@ -80,8 +80,8 @@ void ble_l2cap_task_handle(struct net_layer_s *layer,
 
       // TODO: Handle fragmentation
 
-      dprintk("L2CAP rx ll %d, size %d, length %d\n",
-             task->inbound.dst_addr.llid, size, length);
+      dprintk("L2CAP rx ll %d, size %d, length %d, cid %d\n",
+              task->inbound.dst_addr.llid, size, length, cid);
 
       if (task->inbound.dst_addr.llid != BLE_LL_DATA_START)
         break;
@@ -107,9 +107,8 @@ void ble_l2cap_task_handle(struct net_layer_s *layer,
       }
 
       if (target) {
-        dprintk("L2CAP %d %d > %P\n",
-               !task->inbound.dst_addr.unreliable,
-               &target->handler->type,
+        dprintk("L2CAP %d > %P\n",
+               target->handler->type,
                task->inbound.buffer->data + task->inbound.buffer->begin,
                task->inbound.buffer->end - task->inbound.buffer->begin);
         net_task_inbound_forward(task, target);
@@ -119,9 +118,8 @@ void ble_l2cap_task_handle(struct net_layer_s *layer,
       uint16_t cid = task->inbound.dst_addr.cid;
       uint8_t header[] = {size & 0xff, size >> 8, cid & 0xff, cid >> 8};
 
-      dprintk("L2CAP %d %d < %P\n",
-             !task->inbound.dst_addr.unreliable,
-             &task->header.source->handler->type,
+      dprintk("L2CAP %d < %P\n",
+             task->header.source->handler->type,
              task->inbound.buffer->data + task->inbound.buffer->begin,
              task->inbound.buffer->end - task->inbound.buffer->begin);
 
@@ -213,21 +211,9 @@ static const struct net_layer_handler_s l2cap_handler = {
   .type = BLE_NET_LAYER_L2CAP,
 };
 
-static
-error_t ble_l2cap_init(
-  struct ble_l2cap_s *l2cap,
-  struct net_scheduler_s *scheduler)
-{
-  error_t err = net_layer_init(&l2cap->layer, &l2cap_handler, scheduler, NULL, NULL);
-
-  l2cap->sm = NULL;
-  l2cap->att = NULL;
-  l2cap->signalling = NULL;
-
-  return err;
-}
-
 error_t ble_l2cap_create(struct net_scheduler_s *scheduler,
+                         void *delegate,
+                         const struct net_layer_delegate_vtable_s *delegate_vtable,
                          struct net_layer_s **layer)
 {
   struct ble_l2cap_s *l2cap = mem_alloc(sizeof(*l2cap), mem_scope_sys);
@@ -235,7 +221,13 @@ error_t ble_l2cap_create(struct net_scheduler_s *scheduler,
   if (!l2cap)
     return -ENOMEM;
 
-  error_t err = ble_l2cap_init(l2cap, scheduler);
+  error_t err = net_layer_init(&l2cap->layer, &l2cap_handler, scheduler,
+                               delegate, delegate_vtable);
+
+  l2cap->sm = NULL;
+  l2cap->att = NULL;
+  l2cap->signalling = NULL;
+
   if (err)
     mem_free(l2cap);
   else

@@ -70,7 +70,7 @@ bool_t ble_att_opcode_is_client_to_server(enum ble_att_opcode_e opcode)
 ALWAYS_INLINE
 bool_t ble_att_opcode_is_response_expected(enum ble_att_opcode_e opcode)
 {
-  return (opcode & 0xc0) != 0x40;
+  return (opcode & 0xc0) != 0x40 && opcode != BLE_ATT_HANDLE_VALUE_NOTIF;
 }
 
 ALWAYS_INLINE

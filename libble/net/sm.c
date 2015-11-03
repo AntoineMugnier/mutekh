@@ -42,8 +42,8 @@
 #define EXPECT_IDENTITY_ADDRESS_INFORMATION 8
 #define EXPECT_CSRK 16
 
-//#define dprintk(...) do{}while(0)
-#define dprintk printk
+#define dprintk(...) do{}while(0)
+//#define dprintk printk
 
 #include <ble/peer.h>
 #include <device/class/crypto.h>
@@ -224,7 +224,7 @@ static uint8_t sm_mconf_check(struct ble_sm_s *sm, const uint8_t *mrand)
   if (err)
     return BLE_SM_REASON_UNSPECIFIED_REASON;
 
-  printk("STK:        %P\n", stk, 16);
+  dprintk("STK:        %P\n", stk, 16);
 
   err = ble_peer_paired(sm->peer,
                         (authreq & BLE_SM_REQ_BONDING_MASK) == BLE_SM_REQ_BONDING,
@@ -270,7 +270,7 @@ static uint8_t sm_sconf_check(struct ble_sm_s *sm, const uint8_t *sconf)
   if (err)
     return BLE_SM_REASON_UNSPECIFIED_REASON;
 
-  printk("STK:        %P\n", stk, 16);
+  dprintk("STK:        %P\n", stk, 16);
 
   err = ble_peer_paired(sm->peer,
                         (authreq & BLE_SM_REQ_BONDING_MASK) == BLE_SM_REQ_BONDING,
@@ -386,7 +386,7 @@ static void sm_command_handle(struct ble_sm_s *sm, struct net_task_s *task)
 
     if (sm->pairing_state != BLE_SM_IDLE && sm->pairing_state != BLE_SM_REQUESTED) {
       err = BLE_SM_REASON_INVALID_PARAMETERS;
-      printk("Bad state %d\n", sm->pairing_state);
+      dprintk("Bad state %d\n", sm->pairing_state);
       goto error;
     }
 
@@ -409,7 +409,7 @@ static void sm_command_handle(struct ble_sm_s *sm, struct net_task_s *task)
 
     if (sm->pairing_state != BLE_SM_REQUEST_DONE) {
       err = BLE_SM_REASON_INVALID_PARAMETERS;
-      printk("Bad state %d\n", sm->pairing_state);
+      dprintk("Bad state %d\n", sm->pairing_state);
       goto error;
     }
 
@@ -439,12 +439,12 @@ static void sm_command_handle(struct ble_sm_s *sm, struct net_task_s *task)
     }
 
     if (sm_is_slave(sm)) {
-      if (sm->pairing_state != BLE_SM_REQUEST_DONE) {
+      if (sm->pairing_state != BLE_SM_REQUEST_ANSWERED) {
         err = BLE_SM_REASON_INVALID_PARAMETERS;
         goto error;
       }
 
-      printk("mconf stored.\n");
+      dprintk("mconf stored.\n");
 
       rsp->data[rsp->begin] = BLE_SM_PAIRING_CONFIRM;
       // compute sconfirm, send it
@@ -604,7 +604,7 @@ static void sm_command_handle(struct ble_sm_s *sm, struct net_task_s *task)
   rsp->data[rsp->begin + 1] = err;
   sm->pairing_state = BLE_SM_IDLE;
 
-  printk("Sm state %d sending error %d after packet %P\n", sm->pairing_state, err, data, size);
+  dprintk("Sm state %d sending error %d after packet %P\n", sm->pairing_state, err, data, size);
 
  send:
   dprintk("SM < %P\n", rsp->data + rsp->begin, rsp->end - rsp->begin);
@@ -693,7 +693,7 @@ void sm_pairing_request(struct net_layer_s *layer,
 
     rsp->data[rsp->begin] = BLE_SM_SECURITY_REQUEST;
     rsp->data[rsp->begin + 1] = 0
-      | (_CONFIG_BLE_SECURITY_DB ? BLE_SM_REQ_BONDING : 0)
+      | (_CONFIG_BLE_SECURITY_DB && bonding ? BLE_SM_REQ_BONDING : 0)
       | (mitm_protection ? BLE_SM_REQ_MITM : 0);
 
     sm->pairing_state = BLE_SM_REQUESTED;
