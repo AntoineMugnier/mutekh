@@ -56,6 +56,7 @@
 #endif
 
 static KROUTINE_EXEC(nrf5x_ble_reschedule_kr);
+static KROUTINE_EXEC(nrf5x_ble_closer_kr);
 
 void nrf5x_ble_debug_init(void)
 {
@@ -282,6 +283,7 @@ static DEV_INIT(nrf5x_ble_init)
 #endif
 
   kroutine_init(&pv->rescheduler, nrf5x_ble_reschedule_kr, KROUTINE_INTERRUPTIBLE);
+  kroutine_init(&pv->closer, nrf5x_ble_closer_kr, KROUTINE_INTERRUPTIBLE);
 
 #if defined(CONFIG_BLE_CRYPTO)
   err = device_get_param_dev_accessor(dev, "crypto", &pv->crypto, DRIVER_CLASS_CRYPTO);
@@ -297,6 +299,7 @@ static DEV_INIT(nrf5x_ble_init)
   nrf5x_ble_debug_init();
 
   nrf5x_ble_context_list_init(&pv->context_list);
+  nrf5x_ble_context_list_init(&pv->closed_list);
 
   pv->dev = dev;
 
@@ -336,9 +339,21 @@ static void nrf5x_ble_event_close(struct nrf5x_ble_private_s *pv,
   pv->current = NULL;
   nrf5x_ble_context_list_remove(&pv->context_list, ctx);
 
-  ctx->handler->event_closed(ctx, status);
+  ctx->status = status;
+  nrf5x_ble_context_list_pushback(&pv->closed_list, ctx);
 
-  net_layer_refdec(&ctx->layer);
+  kroutine_exec(&pv->closer);
+}
+
+static KROUTINE_EXEC(nrf5x_ble_closer_kr)
+{
+  struct nrf5x_ble_private_s *pv = KROUTINE_CONTAINER(kr, *pv, closer);
+  struct nrf5x_ble_context_s *ctx;
+  
+  while ((ctx = nrf5x_ble_context_list_pop(&pv->closed_list))) {
+    ctx->handler->event_closed(ctx, ctx->status);
+    net_layer_refdec(&ctx->layer);
+  }
 
   kroutine_exec(&pv->rescheduler);
 }
@@ -546,6 +561,8 @@ void nrf5x_ble_reschedule(struct nrf5x_ble_private_s *pv)
 
   gpio(I_LATER, 0);
 
+  CPU_INTERRUPT_SAVESTATE_DISABLE;
+
 #if defined(CONFIG_DEVICE_CLOCK)
   dev_timer_value_t now = nrf5x_ble_rtc_value_get(pv);
   dev_timer_value_t ramp = RADIO_ENABLE_TK + CLOCK_ENABLE_TK;
@@ -553,12 +570,15 @@ void nrf5x_ble_reschedule(struct nrf5x_ble_private_s *pv)
   if (ctx->event_begin > now + ramp + RTC_SKEW * 2) {
     dprintk("later\n");
     nrf5x_ble_context_start_later(pv, ctx);
-    return;
+    goto out;
   }
 #endif
 
   dprintk("now\n");
   nrf5x_ble_context_start_first(pv);
+
+ out:
+  CPU_INTERRUPT_RESTORESTATE;
 }
 
 static
@@ -583,6 +603,7 @@ void _ble_context_unschedule(struct nrf5x_ble_private_s *pv,
     kroutine_exec(&pv->rescheduler);
 
   nrf5x_ble_context_list_remove(&pv->context_list, ctx);
+  ctx->scheduled = 0;
 }
 
 void nrf5x_ble_context_cleanup(struct nrf5x_ble_context_s *ctx)
@@ -592,8 +613,6 @@ void nrf5x_ble_context_cleanup(struct nrf5x_ble_context_s *ctx)
   assert(ctx != pv->current);
 
   _ble_context_unschedule(pv, ctx);
-
-  nrf5x_ble_reschedule(pv);
 
   if (--(pv->context_count) == 0)
     nrf5x_ble_rtc_stop(pv);

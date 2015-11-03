@@ -143,6 +143,7 @@ struct nrf5x_ble_context_s {
   dev_timer_delay_t event_max_duration;
   uint32_t can_miss_score;
   bool_t scheduled : 1;
+  uint8_t status;
 
   struct nrf5x_ble_private_s *pv;
   const struct nrf5x_ble_context_handler_s *handler;
@@ -167,6 +168,7 @@ struct nrf5x_ble_private_s {
 
   struct dev_freq_accuracy_s sleep_acc;
   nrf5x_ble_context_list_root_t context_list;
+  nrf5x_ble_context_list_root_t closed_list;
 
   struct nrf5x_ble_context_s *current;
 
@@ -175,6 +177,7 @@ struct nrf5x_ble_private_s {
   struct buffer_s *transmitting;
 
   struct kroutine_s rescheduler;
+  struct kroutine_s closer;
 
   dev_timer_value_t base;
   dev_timer_value_t address_ts;

@@ -20,6 +20,10 @@
 
 #include <mutek/buffer_pool.h>
 
+#include <net/task.h>
+#include <net/scheduler.h>
+#include <net/layer.h>
+
 #include <device/class/clock.h>
 
 #include <arch/nrf5x/ppi.h>

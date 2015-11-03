@@ -22,6 +22,10 @@
 #include <ble/net/adv.h>
 #include <ble/net/layer.h>
 
+#include <net/scheduler.h>
+#include <net/layer.h>
+#include <net/task.h>
+
 #include "ble.h"
 #include "ble_advertiser.h"
 
@@ -277,6 +281,8 @@ error_t nrf5x_ble_advertiser_create(struct net_scheduler_s *scheduler,
     return -ENOMEM;
 
   memset(adv, 0, sizeof(*adv));
+
+  printk("Advertiser init start\n");
 
   err = nrf5x_ble_context_init(&adv->context,
                                scheduler,
