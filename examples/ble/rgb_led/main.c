@@ -30,6 +30,7 @@ struct app_s
 static
 void peri_pairing_requested(struct ble_peripheral_s *peri, bool_t bonding)
 {
+  ble_peripheral_pairing_accept(peri, 0, 0, 0);
 }
 
 static
