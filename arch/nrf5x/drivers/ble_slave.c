@@ -320,15 +320,14 @@ static void slave_query_task_handle(struct nrf5x_ble_slave_s *slave,
 
 static
 void slave_layer_task_handle(struct net_layer_s *layer,
-                             struct net_task_header_s *header)
+                             struct net_task_s *task)
 {
   struct nrf5x_ble_context_s *ctx = nrf5x_ble_context_s_from_layer(layer);
   struct nrf5x_ble_slave_s *slave = nrf5x_ble_slave_s_from_context(ctx);
-  struct net_task_s *task = net_task_s_from_header(header);
 
-  dprintk("%s in %p %p -> %p", __FUNCTION__, slave, task->header.source, task->header.target);
+  dprintk("%s in %p %p -> %p", __FUNCTION__, slave, task->source, task->target);
 
-  switch (header->type) {
+  switch (task->type) {
   case NET_TASK_INBOUND:
     dprintk(" inbound [%P]",
             task->inbound.buffer->data + task->inbound.buffer->begin,
