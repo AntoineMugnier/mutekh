@@ -38,14 +38,14 @@
 #include <hexo/decls.h>
 #include <net/scheduler.h>
 
-#include <ble/gatt/client.h>
+#include <ble/gattdb/client.h>
 #include <ble/protocol/att.h>
 #include <ble/peer.h>
 
 struct ble_gatts_params_s
 {
   struct ble_peer_s *peer;
-  struct ble_gatt_db_s *db;
+  struct ble_gattdb_s *db;
 };
 
 #endif

@@ -480,13 +480,13 @@ static error_t adv_start(struct ble_peripheral_s *peri)
     flags |= BLE_GAP_FLAGS_LIMITED_ADV;
   adv_data_append(&ad, &ad_left, BLE_GAP_FLAGS, &flags, sizeof(flags));
 
-  if (!ble_gatt_db_std_char_read(&peri->context->gattdb,
+  if (!ble_gattdb_std_char_read(&peri->context->gattdb,
                                  BLE_UUID_GENERIC_ACCESS_SERVICE,
                                  BLE_UUID_GAP_APPEARANCE_CHAR,
                                  &data, &size))
     adv_data_append(&ad, &ad_left, BLE_GAP_APPEARANCE, data, size);
 
-  value_size = ble_gatt_db_srv16_list_get(&peri->context->gattdb,
+  value_size = ble_gattdb_srv16_list_get(&peri->context->gattdb,
                                           srv_list, sizeof(srv_list[0]) * srv_max_count);
   if (value_size)
     adv_data_append(&ad, &ad_left,
@@ -494,21 +494,21 @@ static error_t adv_start(struct ble_peripheral_s *peri)
                     : BLE_GAP_UUID16_SERVICE_LIST_INCOMPLETE,
                     srv_list, __MIN(sizeof(srv_list[0]), value_size));
 
-  value_size = ble_gatt_db_srv128_list_get(&peri->context->gattdb,
+  value_size = ble_gattdb_srv128_list_get(&peri->context->gattdb,
                                            srv16_list, sizeof(srv16_list));
   if (value_size)
     adv_data_append(&ad, &ad_left,
                     BLE_GAP_UUID128_SERVICE_LIST_COMPLETE,
                     srv16_list, __MIN(sizeof(srv16_list), value_size));
 
-  if (!ble_gatt_db_std_char_read(&peri->context->gattdb,
+  if (!ble_gattdb_std_char_read(&peri->context->gattdb,
                                  BLE_UUID_GENERIC_ACCESS_SERVICE,
                                  BLE_UUID_GAP_PERIPHERAL_PREFERRED_CONNECTION_PARAMETERS_CHAR,
                                  &data, &size))
     adv_data_append(&ad, &ad_left,
                     BLE_GAP_SLAVE_CONNECTION_INTERVAL_RANGE, data, 4);
 
-  if (!ble_gatt_db_std_char_read(&peri->context->gattdb,
+  if (!ble_gattdb_std_char_read(&peri->context->gattdb,
                                  BLE_UUID_GENERIC_ACCESS_SERVICE,
                                  BLE_UUID_GAP_DEVICE_NAME_CHAR,
                                  &data, &size))

@@ -38,7 +38,7 @@
 #include <hexo/decls.h>
 #include <net/scheduler.h>
 
-#include <ble/gatt/client.h>
+#include <ble/gattdb/client.h>
 #include <ble/protocol/att.h>
 #include <ble/peer.h>
 
@@ -49,7 +49,7 @@
 struct ble_gatt_s
 {
   struct net_layer_s layer;
-  struct ble_gatt_client_s client;
+  struct ble_gattdb_client_s client;
   struct ble_peer_s *peer;
   const struct ble_gatt_handler_s *handler;
   struct net_task_s *delayed_client_update;
@@ -154,7 +154,7 @@ struct ble_gatt_find_chars_s
 struct ble_gatt_params_s
 {
   struct ble_peer_s *peer;
-  struct ble_gatt_db_s *db;
+  struct ble_gattdb_s *db;
 };
 
 #endif
