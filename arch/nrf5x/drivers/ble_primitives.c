@@ -167,6 +167,14 @@ void nrf5x_ble_ppi_init(void)
   nrf_ppi_setup(PPI_ADDRESS_TIMER_STOP,
                   BLE_RADIO_ADDR, NRF_RADIO_ADDRESS,
                   BLE_TIMER_ADDR, NRF_TIMER_STOP);
+
+  nrf_ppi_setup(PPI_RADIO_READY_START,
+                BLE_RADIO_ADDR, NRF_RADIO_READY,
+                BLE_RADIO_ADDR, NRF_RADIO_START);
+
+  nrf_ppi_setup(PPI_ADDRESS_DISABLE_PIPELINE,
+                BLE_RADIO_ADDR, NRF_RADIO_ADDRESS,
+                NRF_PPI_ADDR, NRF_PPI_CHG_DIS(PPI_GROUP_PIPELINE_DISABLE));
 }
 
 void nrf5x_ble_ppi_cleanup(struct nrf5x_ble_private_s *pv)
@@ -176,6 +184,8 @@ void nrf5x_ble_ppi_cleanup(struct nrf5x_ble_private_s *pv)
                          | (1 << PPI_RTC_ENABLE_RXEN)
                          | (1 << PPI_RTC_ENABLE_TXEN)
                          | (1 << PPI_RTC_REQUEST_END_DISABLE)
+                         | (1 << PPI_ADDRESS_DISABLE_PIPELINE)
+                         | (1 << PPI_RADIO_READY_START)
                          );
 
   nrf_evt_disable_mask(BLE_RTC_ADDR, 0
@@ -311,9 +321,11 @@ bool_t nrf5x_ble_pipelined_setup(const struct nrf5x_ble_params_s *params)
   case MODE_TX:
     nrf_short_set(BLE_RADIO_ADDR, 0
                   | (1 << NRF_RADIO_END_DISABLE)
-                  | (1 << NRF_RADIO_DISABLED_TXEN)
-                  | (1 << NRF_RADIO_READY_START));
-
+                  | (1 << NRF_RADIO_DISABLED_TXEN));
+    nrf_ppi_enable_mask(0
+                        | (1 << PPI_RADIO_READY_START)
+                        | (1 << PPI_ADDRESS_DISABLE_PIPELINE));
+    
     nrf_task_trigger(BLE_TIMER_ADDR, NRF_TIMER_STOP);
     nrf_task_trigger(BLE_TIMER_ADDR, NRF_TIMER_CLEAR);
 
@@ -332,8 +344,10 @@ bool_t nrf5x_ble_pipelined_setup(const struct nrf5x_ble_params_s *params)
   case MODE_RX:
     nrf_short_set(BLE_RADIO_ADDR, 0
                   | (1 << NRF_RADIO_END_DISABLE)
-                  | (1 << NRF_RADIO_DISABLED_RXEN)
-                  | (1 << NRF_RADIO_READY_START));
+                  | (1 << NRF_RADIO_DISABLED_RXEN));
+    nrf_ppi_enable_mask(0
+                        | (1 << PPI_RADIO_READY_START)
+                        | (1 << PPI_ADDRESS_DISABLE_PIPELINE));
 
     if (params->ifs_timeout) {
       /*
@@ -392,7 +406,7 @@ void nrf5x_ble_pipelined_reset(struct nrf5x_ble_private_s *pv)
     | NRF_RADIO_MODECNF0_DTX_B1);
 #endif
 
-  nrf_short_enable(BLE_RADIO_ADDR, NRF_RADIO_READY_START);
+  nrf_ppi_enable(PPI_RADIO_READY_START);
 
   switch (pv->current_params.mode) {
   case MODE_TX:

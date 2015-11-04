@@ -436,9 +436,9 @@ void nrf5x_ble_context_start_first(struct nrf5x_ble_private_s *pv)
     nrf5x_ble_rtc_boundary_set(pv->event_end, 1);
 
   nrf_ppi_disable_mask(0
-                         | (1 << PPI_END_TIMER_START)
-                         | (1 << PPI_ADDRESS_TIMER_STOP)
-                         );
+                       | (1 << PPI_END_TIMER_START)
+                       | (1 << PPI_ADDRESS_TIMER_STOP)
+                       );
   nrf_reg_set(BLE_RADIO_ADDR, NRF_RADIO_BCC, 16);
   nrf5x_ble_config_init(&pv->current_params);
 
@@ -763,7 +763,7 @@ void nrf5x_ble_event_packet_ended(struct nrf5x_ble_private_s *pv)
   bool_t rx = pv->current_params.mode == MODE_RX;
   uint32_t shorts = nrf_short_get(BLE_RADIO_ADDR);
 
-  if (shorts & (1 << NRF_RADIO_END_DISABLE) && shorts & (1 << NRF_RADIO_READY_START)
+  if (shorts & (1 << NRF_RADIO_END_DISABLE) && nrf_ppi_is_enabled(PPI_RADIO_READY_START)
       && shorts & ((1 << NRF_RADIO_DISABLED_RXEN) | (1 << NRF_RADIO_DISABLED_TXEN))) {
     pv->current_params = pv->next_params;
   }
