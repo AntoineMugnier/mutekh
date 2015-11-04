@@ -49,6 +49,7 @@ struct i2c_eeprom_priv_s
     size_t page;
 
     bool_t last_was_write;
+    bool_t busy;
 };
 
 static DEV_MEM_INFO(i2c_eeprom_info)
@@ -84,16 +85,9 @@ static void i2c_eeprom_request_run(
     struct device_s *dev)
 {
     struct i2c_eeprom_priv_s *pv = dev->drv_pv;
-    struct dev_request_s *drq;
-    struct dev_mem_rq_s *rq;
+    struct dev_mem_rq_s *rq = dev_mem_rq_s_cast(dev_request_queue_head(&pv->queue));
 
-    drq = dev_request_queue_head(&pv->queue);
-
-    if (!drq)
-        return;
-
-    rq = dev_mem_rq_s_cast(drq);
-
+    pv->busy = 1;
     pv->page = 0;
     pv->sc = 0;
 
@@ -161,7 +155,10 @@ static KROUTINE_EXEC(i2c_eeprom_done)
         i2c_rq_run(dev, rq);
     } else {
         dev_request_queue_pop(&pv->queue);
-        i2c_eeprom_request_run(dev);
+        if (dev_request_queue_isempty(&pv->queue))
+            pv->busy = 0;
+        else
+            i2c_eeprom_request_run(dev);
     }
     
     LOCK_RELEASE_IRQ(&dev->lock);
@@ -266,7 +263,8 @@ static DEV_MEM_REQUEST(i2c_eeprom_request)
     }
 
     dev_request_queue_pushback(&pv->queue, &rq->base);
-    i2c_eeprom_request_run(dev);
+    if (!pv->busy)
+      i2c_eeprom_request_run(dev);
     rq = NULL;
 
 out:
@@ -320,6 +318,7 @@ static DEV_INIT(i2c_eeprom_init)
     if (err)
         goto fail;
 
+    pv->busy = 0;
     pv->page_size_l2 = __builtin_ctz(page_size);
     pv->size = size;
     pv->addr_size = addr_size;
@@ -341,7 +340,12 @@ static DEV_CLEANUP(i2c_eeprom_cleanup)
 {
     struct i2c_eeprom_priv_s *pv = dev->drv_pv;
 
+    if (pv->busy)
+        return -EBUSY;
+
     device_put_accessor(&pv->bus);
     dev_request_queue_destroy(&pv->queue);
     mem_free(pv);
+
+    return 0;
 }
