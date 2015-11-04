@@ -26,11 +26,12 @@
 #include <net/scheduler.h>
 
 #include <ble/net/att.h>
+#include <ble/net/layer.h>
+#include <ble/net/generic.h>
+
 #include <ble/protocol/att.h>
 #include <ble/protocol/l2cap.h>
-#include <ble/net/layer.h>
 
-#include <ble/net/generic.h>
 #include <string.h>
 #include "att_encoding.h"
 
@@ -173,17 +174,16 @@ static void att_command_handle(struct ble_att_s *att, struct net_task_s *task)
 
 static
 void ble_att_task_handle(struct net_layer_s *layer,
-                         struct net_task_header_s *header)
+                         struct net_task_s *task)
 {
   struct ble_att_s *att = ble_att_s_from_layer(layer);
-  struct net_task_s *task = net_task_s_from_header(header);
 
-  switch (header->type) {
+  switch (task->type) {
   default:
     break;
 
   case NET_TASK_QUERY:
-    dprintk("Att query from %p\n", task->header.source);
+    dprintk("Att query from %p\n", task->source);
 
     if (ble_att_transaction_s_from_task(task)->command == BLE_ATT_HANDLE_VALUE_NOTIF
         && !net_task_queue_isempty(&att->transaction_queue)) {
@@ -192,20 +192,20 @@ void ble_att_task_handle(struct net_layer_s *layer,
       return;
     }
 
-    net_task_queue_pushback(&att->transaction_queue, &task->header);
+    net_task_queue_pushback(&att->transaction_queue, task);
     att_transaction_first_send(att);
     return;
 
   case NET_TASK_RESPONSE:
-    dprintk("Att response from %p\n", task->header.source);
+    dprintk("Att response from %p\n", task->source);
     if (ble_att_opcode_is_response_expected(ble_att_transaction_s_from_task(task)->command))
       att_response_send(att, ble_att_transaction_s_from_task(task));
     break;
 
   case NET_TASK_INBOUND:
-    dprintk("Att inbound from %p (parent %p)\n", task->header.source, layer->parent);
+    dprintk("Att inbound from %p (parent %p)\n", task->source, layer->parent);
     dprintk("Att > %P\n", task->inbound.buffer->data + task->inbound.buffer->begin, task->inbound.buffer->end - task->inbound.buffer->begin);
-    if (task->header.source == layer->parent)
+    if (task->source == layer->parent)
       att_command_handle(att, task);
     break;
   }
@@ -300,12 +300,6 @@ error_t ble_att_create(
   return 0;
 }
 
-static
-void att_request_free(struct net_task_header_s *task)
-{
-  mem_free(task);
-}
-
 struct ble_att_transaction_s *att_request_allocate(struct ble_att_s *att,
                                                    size_t total_size)
 {
@@ -313,8 +307,7 @@ struct ble_att_transaction_s *att_request_allocate(struct ble_att_s *att,
   if (!txn)
     return NULL;
 
-  txn->task.header.destroy_func = att_request_free;
-  txn->task.header.allocator_data = NULL;
+  txn->task.destroy_func = memory_allocator_push;
 
   return txn;
 }
@@ -330,8 +323,7 @@ static void att_transaction_first_send(struct ble_att_s *att)
   struct ble_att_transaction_s *txn;
 
   while ((txn = ble_att_transaction_s_from_task(
-                  net_task_s_from_header(
-                    net_task_queue_head(&att->transaction_queue))))) {
+                    net_task_queue_head(&att->transaction_queue)))) {
     error_t err;
 
     if (!att->layer.parent) {

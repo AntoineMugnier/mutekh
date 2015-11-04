@@ -79,8 +79,7 @@ static struct ble_gap_conn_params_update_s *gap_create_update(struct ble_gap_s *
   upd->slave_latency = tmp[2];
   upd->timeout = tmp[3];
 
-  upd->task.header.destroy_func = (void*)memory_allocator_push;
-  upd->task.header.allocator_data = NULL;
+  upd->task.destroy_func = (void*)memory_allocator_push;
 
   return upd;
 }
@@ -89,7 +88,7 @@ static void gap_update_conn_in(struct ble_gap_s *gap, uint32_t sec)
 {
   if (gap->conn_update_task)
     net_scheduler_task_cancel(gap->layer.scheduler,
-                              &gap->conn_update_task->header);
+                              gap->conn_update_task);
 
   struct net_task_s *timeout = net_scheduler_task_alloc(gap->layer.scheduler);
   if (timeout) {
@@ -107,15 +106,14 @@ static void gap_update_conn_in(struct ble_gap_s *gap, uint32_t sec)
 
 static
 void ble_gap_task_handle(struct net_layer_s *layer,
-                         struct net_task_header_s *header)
+                         struct net_task_s *task)
 {
   struct ble_gap_s *gap = ble_gap_s_from_layer(layer);
-  struct net_task_s *task = net_task_s_from_header(header);
 
   if (!gap->layer.parent)
     goto out;
 
-  switch (header->type) {
+  switch (task->type) {
   default:
     break;
 
@@ -132,9 +130,9 @@ void ble_gap_task_handle(struct net_layer_s *layer,
 
   case NET_TASK_RESPONSE:
     printk("GAP conn params update response from %d: %d\n",
-           &task->header.source->handler->type, task->query.err);
+           &task->source->handler->type, task->query.err);
 
-    if (task->header.source == gap->layer.parent &&
+    if (task->source == gap->layer.parent &&
         task->query.err == -ENOTSUP) {
       struct ble_gap_conn_params_update_s *upd = gap_create_update(gap);
 
