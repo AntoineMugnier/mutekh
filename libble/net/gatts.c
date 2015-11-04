@@ -125,14 +125,13 @@ static void gatts_query_handle(struct ble_gatts_s *gatt, struct ble_att_transact
 
 static
 void ble_gatts_task_handle(struct net_layer_s *layer,
-                         struct net_task_header_s *header)
+                         struct net_task_s *task)
 {
   struct ble_gatts_s *gatt = ble_gatts_s_from_layer(layer);
-  struct net_task_s *task = net_task_s_from_header(header);
 
-  switch (header->type) {
+  switch (task->type) {
   case NET_TASK_QUERY:
-    if (task->header.source == layer->parent) {
+    if (task->source == layer->parent) {
       gatts_query_handle(gatt, ble_att_transaction_s_from_task(task));
       return;
     }
@@ -181,8 +180,7 @@ void ble_gatts_att_value_changed(struct ble_gatt_client_s *client,
   if (!txn)
     return;
 
-  txn->base.task.header.destroy_func = (void*)memory_allocator_push;
-  txn->base.task.header.allocator_data = NULL;
+  txn->base.task.destroy_func = (void*)memory_allocator_push;
 
   txn->value = (void*)(txn + 1);
   txn->value_size = size;
@@ -201,7 +199,7 @@ static void gatts_save_peer_later(struct ble_gatts_s *gatt)
 {
   if (gatt->delayed_client_update)
     net_scheduler_task_cancel(gatt->layer.scheduler,
-                              &gatt->delayed_client_update->header);
+                              gatt->delayed_client_update);
 
   struct net_task_s *timeout = net_scheduler_task_alloc(gatt->layer.scheduler);
   dev_timer_delay_t ticks;

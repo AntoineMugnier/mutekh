@@ -619,14 +619,13 @@ static void sm_command_handle(struct ble_sm_s *sm, struct net_task_s *task)
 
 static
 void ble_sm_task_handle(struct net_layer_s *layer,
-                        struct net_task_header_s *header)
+                        struct net_task_s *task)
 {
   struct ble_sm_s *sm = ble_sm_s_from_layer(layer);
-  struct net_task_s *task = net_task_s_from_header(header);
 
-  switch (header->type) {
+  switch (task->type) {
   case NET_TASK_INBOUND:
-    if (task->header.source == layer->parent)
+    if (task->source == layer->parent)
       sm_command_handle(sm, task);
     break;
 

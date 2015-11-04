@@ -338,14 +338,13 @@ static void gatt_command_handle(struct ble_gatt_s *gatt, struct net_task_s *task
 
 static
 void ble_gatt_task_handle(struct net_layer_s *layer,
-                         struct net_task_header_s *header)
+                         struct net_task_s *task)
 {
   struct ble_gatt_s *gatt = ble_gatt_s_from_layer(layer);
-  struct net_task_s *task = net_task_s_from_header(header);
 
-  switch (header->type) {
+  switch (task->type) {
   case NET_TASK_INBOUND:
-    if (task->header.source == layer->parent) {
+    if (task->source == layer->parent) {
       gatt_command_handle(gatt, task);
       return;
     }
@@ -418,7 +417,7 @@ static void gatt_save_peer_later(struct ble_gatt_s *gatt)
 {
   if (gatt->delayed_client_update)
     net_scheduler_task_cancel(gatt->layer.scheduler,
-                              &gatt->delayed_client_update->header);
+                              gatt->delayed_client_update);
 
   struct net_task_s *timeout = net_scheduler_task_alloc(gatt->layer.scheduler);
   dev_timer_delay_t ticks;

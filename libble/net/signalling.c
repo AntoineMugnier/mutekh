@@ -120,17 +120,16 @@ uint8_t sig_pkt_send(
 
 static
 void ble_sig_task_handle(struct net_layer_s *layer,
-                         struct net_task_header_s *header)
+                         struct net_task_s *task)
 {
   struct ble_signalling_s *sig = ble_signalling_s_from_layer(layer);
-  struct net_task_s *task = net_task_s_from_header(header);
 
-  switch (header->type) {
+  switch (task->type) {
   default:
     break;
 
   case NET_TASK_INBOUND:
-    if (task->header.source == layer->parent)
+    if (task->source == layer->parent)
       sig_command_handle(sig, task);
     break;
 

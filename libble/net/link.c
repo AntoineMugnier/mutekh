@@ -128,7 +128,7 @@ static void link_task_forward(struct ble_link_s *link, struct net_task_s *task)
           task->inbound.buffer->data + task->inbound.buffer->begin,
           task->inbound.buffer->end - task->inbound.buffer->begin);
 
-  if (task->header.source == link->layer.parent) {
+  if (task->source == link->layer.parent) {
     task->inbound.dst_addr.llid = task->inbound.buffer->data[task->inbound.buffer->begin] & 0x03;
     task->inbound.buffer->begin += 2;
 
@@ -245,7 +245,7 @@ static void link_task_crypt(struct ble_link_s *link, struct net_task_s *task)
   link->out_packet = out;
   link->ccm_task = task;
 
-  if (task->header.source == link->layer.parent) {
+  if (task->source == link->layer.parent) {
     // Inbound
     link->crypto_rq.op = DEV_CRYPTO_FINALIZE | DEV_CRYPTO_INVERSE;
     link->crypto_rq.iv_ctr = (void*)&link->ccm_state[LINK_IN];
@@ -300,7 +300,7 @@ static void link_crypto_next(struct ble_link_s *link)
 
   if (!link->layer.parent) {
     dprintk("%s No parent, flushing queue\n", __FUNCTION__);
-    task = net_task_s_from_header(net_task_queue_pop(&link->queue));
+    task = net_task_queue_pop(&link->queue);
     net_task_destroy(task);
     goto again;
   }
@@ -314,10 +314,9 @@ static void link_crypto_next(struct ble_link_s *link)
   case LINK_FAILED:
     dprintk("%s in state %d, getting non-data outbound packets\n", __FUNCTION__, link->state);
     assert(cpu_is_interruptible());
-    GCT_FOREACH(net_task_queue, &link->queue, h,
-                struct net_task_s *t = net_task_s_from_header(h);
-                if (t->header.source == link->layer.parent || t->header.source == link->llcp) {
-                  net_task_queue_nolock_remove(&link->queue, &t->header);
+    GCT_FOREACH(net_task_queue, &link->queue, t,
+                if (t->source == link->layer.parent || t->source == link->llcp) {
+                  net_task_queue_nolock_remove(&link->queue, t);
                   task = t;
                   GCT_FOREACH_BREAK;
                 });
@@ -325,7 +324,7 @@ static void link_crypto_next(struct ble_link_s *link)
     break;
 
   default:
-    task = net_task_s_from_header(net_task_queue_pop(&link->queue));
+    task = net_task_queue_pop(&link->queue);
     break;
   }
 
@@ -349,20 +348,19 @@ static void link_crypto_next(struct ble_link_s *link)
 
 static
 void ble_link_task_handle(struct net_layer_s *layer,
-                        struct net_task_header_s *header)
+                          struct net_task_s *task)
 {
-  struct net_task_s *task = net_task_s_from_header(header);
   struct ble_link_s *link = ble_link_s_from_layer(layer);
 
-  dprintk("%s %d\n", __FUNCTION__, header->type);
+  dprintk("%s %d\n", __FUNCTION__, task->type);
 
-  switch (header->type) {
+  switch (task->type) {
   case NET_TASK_INBOUND:
     dprintk("%s packet %P\n", __FUNCTION__,
             task->inbound.buffer->data + task->inbound.buffer->begin,
             task->inbound.buffer->end - task->inbound.buffer->begin);
 
-    if (task->header.source != layer->parent) {
+    if (task->source != layer->parent) {
       uint8_t header[2] = {
         task->inbound.dst_addr.llid,
         task->inbound.buffer->end - task->inbound.buffer->begin,
@@ -370,7 +368,7 @@ void ble_link_task_handle(struct net_layer_s *layer,
       buffer_prepend(task->inbound.buffer, header, 2);
     }
     assert(cpu_is_interruptible());
-    net_task_queue_pushback(&link->queue, &task->header);
+    net_task_queue_pushback(&link->queue, task);
     link_crypto_next(link);
     return;
 
@@ -459,9 +457,8 @@ void ble_link_unbound(struct net_layer_s *layer,
 
   assert(net_task_queue_isempty(&link->queue));
 
-  GCT_FOREACH(net_task_queue, &link->queue, h,
-              struct net_task_s *t = net_task_s_from_header(h);
-              assert(t->header.source != child && t->header.target != child);
+  GCT_FOREACH(net_task_queue, &link->queue, t,
+              assert(t->source != child && t->target != child);
               );
 }
 

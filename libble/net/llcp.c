@@ -103,11 +103,10 @@ void llcp_query_pending_respond(struct ble_llcp_s *llcp, uint32_t type, error_t 
 {
   struct net_task_s *found = NULL;
 
-  GCT_FOREACH(net_task_queue, &llcp->pending, h,
-              struct net_task_s *task = net_task_s_from_header(h);
+  GCT_FOREACH(net_task_queue, &llcp->pending, task,
               if (!type || task->query.opcode == type) {
                 found = task;
-                net_task_queue_nolock_remove(&llcp->pending, &task->header);
+                net_task_queue_nolock_remove(&llcp->pending, task);
                 GCT_FOREACH_BREAK;
               });
 
@@ -122,8 +121,7 @@ bool_t llcp_query_is_pending(struct ble_llcp_s *llcp, uint32_t type)
 {
   bool_t ret = 0;
 
-  GCT_FOREACH(net_task_queue, &llcp->pending, h,
-              struct net_task_s *task = net_task_s_from_header(h);
+  GCT_FOREACH(net_task_queue, &llcp->pending, task,
               if (task->query.opcode == type) {
                 ret = 1;
                 GCT_FOREACH_BREAK;
@@ -160,7 +158,7 @@ static void ble_llcp_packet_handle(struct ble_llcp_s *llcp, struct net_task_s *t
       goto error;
     }
 
-    up->task.header.destroy_func = memory_allocator_push;
+    up->task.destroy_func = memory_allocator_push;
 
     dprintk("connection parameters update\n");
 
@@ -187,7 +185,7 @@ static void ble_llcp_packet_handle(struct ble_llcp_s *llcp, struct net_task_s *t
       goto error;
     }
 
-    up->task.header.destroy_func = memory_allocator_push;
+    up->task.destroy_func = memory_allocator_push;
 
     dprintk("channel map update\n");
 
@@ -252,7 +250,7 @@ static void ble_llcp_packet_handle(struct ble_llcp_s *llcp, struct net_task_s *t
       goto error;
     }
 
-    setup->task.header.destroy_func = memory_allocator_push;
+    setup->task.destroy_func = memory_allocator_push;
 
     error_t err;
 
@@ -459,7 +457,7 @@ static void ble_llcp_packet_handle(struct ble_llcp_s *llcp, struct net_task_s *t
     break;
 
   case BLE_LL_LENGTH_REQ: {
-    uint16_t unit_size = buffer_pool_unit_size(llcp->layer.scheduler->packet_pool);
+    uint16_t unit_size = net_scheduler_packet_mtu(llcp->layer.scheduler);
     unit_size -= llcp->layer.context.prefix_size;
     unit_size -= 4;
     unit_size = __MIN(unit_size, 251);
@@ -617,7 +615,7 @@ static void ble_llcp_query_handle(struct ble_llcp_s *llcp, struct net_task_s *ta
                           0, NULL, &dst, p);
     buffer_refdec(p);
 
-    net_task_queue_pushback(&llcp->pending, &task->header);
+    net_task_queue_pushback(&llcp->pending, task);
     return;
 
   case BLE_GAP_CONN_PARAMS_UPDATE:
@@ -675,7 +673,7 @@ static void ble_llcp_query_handle(struct ble_llcp_s *llcp, struct net_task_s *ta
                             0, NULL, &dst, p);
       buffer_refdec(p);
 
-      net_task_queue_pushback(&llcp->pending, &task->header);
+      net_task_queue_pushback(&llcp->pending, task);
     }
     return;
   }
@@ -728,14 +726,13 @@ static void ble_llcp_timeout_handle(struct ble_llcp_s *llcp, struct net_task_s *
 
 static
 void ble_llcp_task_handle(struct net_layer_s *layer,
-                           struct net_task_header_s *header)
+                           struct net_task_s *task)
 {
-  struct net_task_s *task = net_task_s_from_header(header);
   struct ble_llcp_s *llcp = ble_llcp_s_from_layer(layer);
 
-  switch (header->type) {
+  switch (task->type) {
   case NET_TASK_INBOUND:
-    if (task->header.source != layer->parent)
+    if (task->source != layer->parent)
       break;
     ble_llcp_packet_handle(llcp, task);
     return;
@@ -792,7 +789,7 @@ static void llcp_feature_req_later(struct ble_llcp_s *llcp)
 
   if (llcp->feature_req_later)
     net_scheduler_task_cancel(llcp->layer.scheduler,
-                              &llcp->feature_req_later->header);
+                              llcp->feature_req_later);
 
   dprintk("%s\n", __FUNCTION__);
 

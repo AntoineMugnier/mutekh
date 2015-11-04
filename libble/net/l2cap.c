@@ -64,16 +64,15 @@ STRUCT_COMPOSE(ble_l2cap_s, layer);
 
 static
 void ble_l2cap_task_handle(struct net_layer_s *layer,
-                           struct net_task_header_s *header)
+                           struct net_task_s *task)
 {
-  struct net_task_s *task = net_task_s_from_header(header);
   const uint8_t *data = task->inbound.buffer->data + task->inbound.buffer->begin;
   const size_t size = task->inbound.buffer->end - task->inbound.buffer->begin;
   struct ble_l2cap_s *l2cap = ble_l2cap_s_from_layer(layer);
 
-  switch (header->type) {
+  switch (task->type) {
   case NET_TASK_INBOUND:
-    if (task->header.source == layer->parent) {
+    if (task->source == layer->parent) {
       uint16_t length = endian_le16_na_load(data);
       uint16_t cid = endian_le16_na_load(data + 2);
       struct net_layer_s *target = NULL;
@@ -119,7 +118,7 @@ void ble_l2cap_task_handle(struct net_layer_s *layer,
       uint8_t header[] = {size & 0xff, size >> 8, cid & 0xff, cid >> 8};
 
       dprintk("L2CAP %d < %P\n",
-             task->header.source->handler->type,
+             task->source->handler->type,
              task->inbound.buffer->data + task->inbound.buffer->begin,
              task->inbound.buffer->end - task->inbound.buffer->begin);
 

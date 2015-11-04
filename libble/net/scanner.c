@@ -136,14 +136,13 @@ void ble_scanner_destroyed(struct net_layer_s *layer)
 
 static
 void ble_scanner_task_handle(struct net_layer_s *layer,
-                                struct net_task_header_s *header)
+                             struct net_task_s *task)
 {
   struct ble_scanner_s *adv = ble_scanner_s_from_layer(layer);
-  struct net_task_s *task = net_task_s_from_header(header);
 
-  dprintk("%s in %p %p -> %p", __FUNCTION__, adv, task->header.source, task->header.target);
+  dprintk("%s in %p %p -> %p", __FUNCTION__, adv, task->source, task->target);
 
-  switch (header->type) {
+  switch (task->type) {
 
   default:
     dprintk(" other\n");
