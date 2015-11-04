@@ -147,7 +147,7 @@ struct net_layer_handler_s
 
 #define GCT_CONTAINER_ALGO_net_layer_list CLIST
 #define GCT_CONTAINER_REFCOUNT_net_layer_list net_layer
-#define GCT_CONTAINER_ALGO_net_layer_list_noref CLIST
+#define GCT_CONTAINER_ALGO_net_layer_sched_list CLIST
 
 struct net_layer_delegate_vtable_s
 {
@@ -162,12 +162,9 @@ GCT_CONTAINER_TYPES(net_layer_list,
 struct net_layer_s
 {
   GCT_REFCOUNT_ENTRY(obj_entry);
-  union {
-    GCT_CONTAINER_ENTRY(net_layer_list, entry);
-    GCT_CONTAINER_ENTRY(net_layer_list_noref, noref_entry);
-  };
+  GCT_CONTAINER_ENTRY(net_layer_list, entry);
   net_layer_list_root_t children;
-  GCT_CONTAINER_ENTRY(net_layer_list_noref, schduler_ref);
+  GCT_CONTAINER_ENTRY(net_layer_sched_list, scheduler_ref);
 
   struct net_scheduler_s *scheduler;
   const struct net_layer_handler_s *handler;
@@ -180,14 +177,10 @@ struct net_layer_s
 } *, entry);
 
 GCT_REFCOUNT(net_layer, struct net_layer_s *, obj_entry);
+GCT_CONTAINER_TYPES(net_layer_sched_list, struct net_layer_s *, scheduler_ref);
 
 GCT_CONTAINER_FCNS(net_layer_list, static inline, net_layer_list,
                    init, destroy, push, pop, pushback, next, head, isempty, remove, foreach);
-
-GCT_CONTAINER_TYPES(net_layer_list_noref, struct net_layer_s *, noref_entry);
-
-GCT_CONTAINER_FCNS(net_layer_list_noref, static inline, net_layer_list_noref,
-                   init, destroy, pop, pushback, isempty, remove);
 
 /* Refcount destroy function. Called from refcount
    management. @internal */

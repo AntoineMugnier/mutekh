@@ -24,10 +24,15 @@
 #include <net/layer.h>
 #include <net/scheduler.h>
 
-void net_scheduler_layer_destroyed(struct net_scheduler_s *scheduler, struct net_layer_s *layer);
 void net_layer_destroy_real(struct net_layer_s *layer);
 
 void net_scheduler_timer_use(struct net_scheduler_s *sched);
 void net_scheduler_timer_release(struct net_scheduler_s *sched);
+
+GCT_CONTAINER_FCNS(net_layer_sched_list, static inline, net_layer_sched_list,
+                   init, destroy, pop, pushback, isempty, remove);
+
+void net_scheduler_layer_created(struct net_scheduler_s *sched, struct net_layer_s *layer);
+void net_scheduler_layer_destroyed(struct net_scheduler_s *scheduler, struct net_layer_s *layer);
 
 #endif
