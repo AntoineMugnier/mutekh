@@ -546,14 +546,13 @@ void ble_master_destroyed(struct net_layer_s *layer)
 
 static
 void ble_master_task_handle(struct net_layer_s *layer,
-                           struct net_task_header_s *header)
+                           struct net_task_s *task)
 {
   struct ble_master_s *master = ble_master_s_from_layer(layer);
-  struct net_task_s *task = net_task_s_from_header(header);
 
-  dprintk("%s in %p %p -> %p", __FUNCTION__, master, task->header.source, task->header.target);
+  dprintk("%s in %p %p -> %p", __FUNCTION__, master, task->source, task->target);
 
-  switch (header->type) {
+  switch (task->type) {
   case NET_TASK_INBOUND:
     dprintk(" inbound @%lld %s, ll %d [%P]",
            task->inbound.timestamp,
@@ -562,7 +561,7 @@ void ble_master_task_handle(struct net_layer_s *layer,
            task->inbound.buffer->data + task->inbound.buffer->begin,
            task->inbound.buffer->end - task->inbound.buffer->begin);
 
-    if (task->header.source != &master->layer) {
+    if (task->source != &master->layer) {
       // Packet from another layer
 
       // We are closing connection, dont enqueue anything

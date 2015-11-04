@@ -346,7 +346,7 @@ static void slave_crypto_next(struct ble_slave_s *slave)
   slave->ccm_retry = 0;
 
  again:
-  task = net_task_s_from_header(net_task_queue_pop(&slave->ccm_queue));
+  task = net_task_queue_pop(&slave->ccm_queue);
 
   if (!task)
     return;
@@ -1089,8 +1089,8 @@ void ble_slave_destroyed(struct net_layer_s *layer)
   mem_free(slave->ccm_tx_ctx.state_data);
   mem_free(slave->ccm_rx_ctx.state_data);
 
-  GCT_FOREACH(net_task_queue, &slave->ccm_queue, header,
-              net_task_destroy(net_task_s_from_header(header));
+  GCT_FOREACH(net_task_queue, &slave->ccm_queue, task,
+              net_task_destroy(task);
               );
 
   net_task_queue_destroy(&slave->ccm_queue);
@@ -1108,14 +1108,13 @@ void ble_slave_destroyed(struct net_layer_s *layer)
 
 static
 void ble_slave_task_handle(struct net_layer_s *layer,
-                           struct net_task_header_s *header)
+                           struct net_task_s *task)
 {
   struct ble_slave_s *slave = ble_slave_s_from_layer(layer);
-  struct net_task_s *task = net_task_s_from_header(header);
 
-  dprintk("%s in %p %p -> %p", __FUNCTION__, slave, task->header.source, task->header.target);
+  dprintk("%s in %p %p -> %p", __FUNCTION__, slave, task->source, task->target);
 
-  switch (header->type) {
+  switch (task->type) {
   case NET_TASK_INBOUND:
     dprintk(" inbound @%lld %s, ll %d [%P]",
            task->inbound.timestamp,
@@ -1124,7 +1123,7 @@ void ble_slave_task_handle(struct net_layer_s *layer,
            task->inbound.buffer->data + task->inbound.buffer->begin,
            task->inbound.buffer->end - task->inbound.buffer->begin);
 
-    if (task->header.source != &slave->layer) {
+    if (task->source != &slave->layer) {
       // Packet from another layer
 
       // We are closing connection, dont enqueue anything
