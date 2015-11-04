@@ -38,7 +38,7 @@
 #define GCT_CONTAINER_ALGO_tty_fifo RING
 GCT_CONTAINER_TYPES(tty_fifo, uint8_t, 256);
 GCT_CONTAINER_FCNS(tty_fifo, static inline, tty_fifo,
-                   init, destroy, pop_array, pushback, isfull);
+                   init, destroy, pop_array, pushback, isfull, isempty);
 #endif
 
 struct tty_soclib_context_s
@@ -61,46 +61,75 @@ static
 void tty_soclib_try_read(struct device_s *dev)
 {
   struct tty_soclib_context_s	*pv = dev->drv_pv;
+  struct dev_char_rq_s *rq;
 
-  while (1)
-  {
-    if (dev_request_queue_isempty(&pv->read_q))
-      {
-        pv->rx_busy = 0;
-        break;
-      }
-
-    struct dev_char_rq_s *rq =
-      dev_char_rq_s_cast(dev_request_queue_head(&pv->read_q));
-    size_t size;
+  while ((rq = dev_char_rq_s_cast(dev_request_queue_head(&pv->read_q)))) {
 
 #ifdef CONFIG_DEVICE_IRQ
-    size = tty_fifo_pop_array(&pv->read_fifo, rq->data, rq->size);
+    if (tty_fifo_isempty(&pv->read_fifo))
+      return;
+
+    if (rq->type & _DEV_CHAR_POLL)
+      goto done;
+
+    size_t size = tty_fifo_pop_array(&pv->read_fifo, rq->data, rq->size);
 #else
     /* use polling if no IRQ support available */
-    size = 0;
+    size_t size = 0;
     while (size < rq->size)
       if (cpu_mem_read_8(pv->addr + TTY_SOCLIB_REG_STATUS))
         rq->data[size++] = cpu_mem_read_8(pv->addr + TTY_SOCLIB_REG_READ);
 #endif
 
     if (!size)
-      break;
+      return;
 
     rq->size -= size;
-    rq->error = 0;
     rq->data += size;
 
     if (rq->size == 0 || (rq->type & _DEV_CHAR_PARTIAL)) {
+    done:
+      rq->error = 0;
       dev_request_queue_pop(&pv->read_q);
+      rq->base.drvdata = NULL;
       lock_release(&dev->lock);
       kroutine_exec(&rq->base.kr);
       lock_spin(&dev->lock);
     }
   }
+
+  pv->rx_busy = 0;
 }
 
-#define tty_soclib_cancel (dev_char_cancel_t*)&dev_driver_notsup_fcn
+static DEV_CHAR_CANCEL(tty_soclib_cancel)
+{
+  struct device_s               *dev = accessor->dev;
+  struct tty_soclib_context_s	*pv = dev->drv_pv;
+  error_t err = -ENOTSUP;
+
+  LOCK_SPIN_IRQ(&dev->lock);
+
+  switch (rq->type)
+    {
+    case DEV_CHAR_READ_PARTIAL:
+    case DEV_CHAR_READ:
+      err = -EBUSY;
+      if (rq->base.drvdata == pv)
+        {
+          rq->error = -ECANCELED;
+          dev_request_queue_remove(&pv->read_q, dev_char_rq_s_base(rq));
+          rq->base.drvdata = NULL;
+          pv->rx_busy = !dev_request_queue_isempty(&pv->read_q);
+          err = 0;
+        }
+    default:
+      break;
+    }
+
+  LOCK_RELEASE_IRQ(&dev->lock);
+
+  return err;
+}
 
 static DEV_CHAR_REQUEST(tty_soclib_request)
 {
@@ -115,14 +144,19 @@ static DEV_CHAR_REQUEST(tty_soclib_request)
 
   switch (rq->type)
   {
+#ifdef CONFIG_DEVICE_IRQ
+  case DEV_CHAR_READ_POLL:
+    if (rq->size > 1)
+      goto notsup;
+#endif
   case DEV_CHAR_READ_PARTIAL:
   case DEV_CHAR_READ:
     dev_request_queue_pushback(&pv->read_q, dev_char_rq_s_base(rq));
-    if (!pv->rx_busy)
-      {
-        pv->rx_busy = 1;
-        tty_soclib_try_read(dev);
-      }
+    rq->base.drvdata = pv;
+    if (pv->rx_busy)
+      break;
+    pv->rx_busy = 1;
+    tty_soclib_try_read(dev);
     break;
 
   case DEV_CHAR_WRITE_PARTIAL_FLUSH:
@@ -135,10 +169,13 @@ static DEV_CHAR_REQUEST(tty_soclib_request)
       cpu_mem_write_32(pv->addr + TTY_SOCLIB_REG_WRITE, endian_le32(rq->data[i]));
 
     rq->size = 0;
+  case DEV_CHAR_WRITE_POLL:
+  done:
     rq->error = 0;
     done_rq = rq;
     break;
   default:
+  notsup:
     rq->error = -ENOTSUP;
     done_rq = rq;
     break;
@@ -206,6 +243,7 @@ static DEV_INIT(tty_soclib_init)
     return -ENOMEM;
 
   dev_request_queue_init(&pv->read_q);
+  pv->rx_busy = 0;
 
   if (device_res_get_uint(dev, DEV_RES_MEM, 0, &pv->addr, NULL))
     goto err_mem;
