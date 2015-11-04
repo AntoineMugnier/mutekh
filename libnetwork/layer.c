@@ -112,6 +112,8 @@ error_t net_layer_init(
 
   assert((!delegate || delegate_vtable) && "Delegate must come with a vtable");
 
+  net_layer_list_noref_pushback(&sched->layers, layer);
+
   /* printk("Layer %d init\n", &layer->handler->type); */
 
   if (layer->handler->use_timer)
@@ -123,6 +125,7 @@ error_t net_layer_init(
 void net_layer_destroy(
     struct net_layer_s *layer)
 {
+  net_layer_list_noref_remove(&layer->scheduler->layers, layer);
   net_scheduler_layer_destroyed(layer->scheduler, layer);
 }
 

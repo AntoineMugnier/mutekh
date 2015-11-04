@@ -67,21 +67,18 @@
 
 struct net_scheduler_s;
 struct net_task_s;
-struct net_task_header_s;
 struct net_layer_s;
 
 /**
    @this is called when a task gets destroyed.
  */
-typedef void net_task_destroy_func_t(
-  struct net_task_header_s *task);
+typedef void net_task_destroy_func_t(void *task);
 
 /**
    @this is a type for tasks.
  */
 enum net_task_type_e
 {
-  NET_TASK_CUSTOM,
   NET_TASK_INBOUND,
   NET_TASK_TIMEOUT,
   NET_TASK_QUERY,
@@ -90,50 +87,14 @@ enum net_task_type_e
 };
 
 /**
-   @this is a basic task header structure.  Inheriting this structure
-   is mandatory for custom types.
-
-   A destroy function must be set for each task.  When a task is
-   cleaned up, its destroy function will be called.
-
-   Basic task types are defined in @ref {net_task_s} and handle all
-   this structure fields.
- */
-struct net_task_header_s
-{
-  GCT_CONTAINER_ENTRY(net_task_queue, queue_entry);
-
-  /** Destroy function */
-  net_task_destroy_func_t *destroy_func;
-  /** Destroy function private data */
-  void *allocator_data;
-
-  /** Must be filled, must retain a reference.  This is implicitly
-      done by standard functions. */
-  struct net_layer_s *source;
-
-  /** Must be filled, must retain a reference.  This is implicitly
-      done by standard functions. */
-  struct net_layer_s *target;
-
-  enum net_task_type_e type;
-};
-
-GCT_CONTAINER_TYPES(net_task_queue, struct net_task_header_s *, queue_entry);
-GCT_CONTAINER_FCNS(net_task_queue, ALWAYS_INLINE, net_task_queue,
-                   init, destroy, pushback, pop, remove, head, isempty);
-GCT_CONTAINER_NOLOCK_FCNS(net_task_queue, ALWAYS_INLINE, net_task_queue_nolock,
-                          init, destroy, pushback, pop, remove, head, isempty);
-
-/**
    @this pushes a task to a given target, for a given type.
 
-   @param header Task header to push
+   @param task Task to push
    @param target Target layer, mandatory
    @param source Source layer, mandatory
    @param type Task type
  */
-void net_task_push(struct net_task_header_s *header,
+void net_task_push(struct net_task_s *task,
                      struct net_layer_s *target,
                      struct net_layer_s *source,
                      enum net_task_type_e type);
@@ -144,11 +105,28 @@ void net_task_push(struct net_task_header_s *header,
 void net_task_destroy(struct net_task_s *task);
 
 /**
-   @this is the structure for standard tasks.
+   @this is a network task structure.  Custom query types may inherit
+   this structure.
+
+   A destroy function must be set for each task.  When a task is
+   cleaned up, its destroy function will be called.
  */
 struct net_task_s
 {
-  struct net_task_header_s header;
+  GCT_CONTAINER_ENTRY(net_task_queue, queue_entry);
+
+  /** Destroy function */
+  net_task_destroy_func_t *destroy_func;
+
+  /** Must be filled, must retain a reference.  This is implicitly
+      done by standard functions. */
+  struct net_layer_s *source;
+
+  /** Must be filled, must retain a reference.  This is implicitly
+      done by standard functions. */
+  struct net_layer_s *target;
+
+  enum net_task_type_e type;
 
   union {
     /**
@@ -187,7 +165,11 @@ struct net_task_s
   };
 };
 
-STRUCT_COMPOSE(net_task_s, header);
+GCT_CONTAINER_TYPES(net_task_queue, struct net_task_s *, queue_entry);
+GCT_CONTAINER_FCNS(net_task_queue, ALWAYS_INLINE, net_task_queue,
+                   init, destroy, pushback, pop, remove, head, isempty);
+GCT_CONTAINER_NOLOCK_FCNS(net_task_queue, ALWAYS_INLINE, net_task_queue_nolock,
+                          init, destroy, pushback, pop, remove, head, isempty);
 
 /**
    @this pushes an inbound packet task to a layer.
