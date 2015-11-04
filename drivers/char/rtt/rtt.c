@@ -187,12 +187,19 @@ static DEV_CLEANUP(char_rtt_cleanup)
 {
   struct rtt_private_s *pv = dev->drv_pv;
 
+  if (!dev_request_queue_isempty(&pv->rx_queue) ||
+      !dev_request_queue_isempty(&pv->tx_queue) ||
+      pv->callbacking)
+    return -EBUSY;
+
   rtt_channel_cleanup(pv->tx);
   rtt_channel_cleanup(pv->rx);
 
   device_put_accessor(&pv->timer);
 
   mem_free(pv);
+
+  return 0;
 }
 
 static DEV_INIT(char_rtt_init)

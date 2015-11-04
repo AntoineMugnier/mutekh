@@ -431,6 +431,9 @@ DEV_CLEANUP(cadence_uart_cleanup)
 {
   struct cadence_uart_context_s	*pv = dev->drv_pv;
 
+  if (pv->read_started || pv->write_started)
+    return -EBUSY;
+
 #ifdef CONFIG_DEVICE_IRQ
   /* disable irqs */
   cpu_mem_write_32(pv->addr + CADENCE_UART_EN_ADDR, 0);
@@ -450,4 +453,6 @@ DEV_CLEANUP(cadence_uart_cleanup)
   dev_request_queue_destroy(&pv->write_q);
 
   mem_free(pv);
+
+  return 0;
 }
