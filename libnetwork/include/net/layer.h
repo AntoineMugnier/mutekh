@@ -75,7 +75,7 @@
 
 #include "addr.h"
 
-struct net_task_header_s;
+struct net_task_s;
 struct net_layer_s;
 
 /**
@@ -111,7 +111,7 @@ struct net_layer_handler_s
    */
   void (*task_handle)(
     struct net_layer_s *layer,
-    struct net_task_header_s *task);
+    struct net_task_s *task);
 
   /**
      @this notifies a layer its parent's context changed.
@@ -167,6 +167,7 @@ struct net_layer_s
     GCT_CONTAINER_ENTRY(net_layer_list_noref, noref_entry);
   };
   net_layer_list_root_t children;
+  GCT_CONTAINER_ENTRY(net_layer_list_noref, schduler_ref);
 
   struct net_scheduler_s *scheduler;
   const struct net_layer_handler_s *handler;
@@ -178,19 +179,19 @@ struct net_layer_s
   // Rest is done through derivation
 } *, entry);
 
-GCT_CONTAINER_TYPES(net_layer_list_noref, struct net_layer_s *, noref_entry);
-
 GCT_REFCOUNT(net_layer, struct net_layer_s *, obj_entry);
 
 GCT_CONTAINER_FCNS(net_layer_list, static inline, net_layer_list,
                    init, destroy, push, pop, pushback, next, head, isempty, remove, foreach);
 
-GCT_CONTAINER_FCNS(net_layer_list_noref, static inline, net_layer_list_noref,
-                   init, destroy, pop, pushback);
+GCT_CONTAINER_TYPES(net_layer_list_noref, struct net_layer_s *, noref_entry);
 
-/* Refcount destroy function. @internal */
-void net_layer_destroy(
-  struct net_layer_s *layer);
+GCT_CONTAINER_FCNS(net_layer_list_noref, static inline, net_layer_list_noref,
+                   init, destroy, pop, pushback, isempty, remove);
+
+/* Refcount destroy function. Called from refcount
+   management. @internal */
+void net_layer_destroy(struct net_layer_s *layer);
 
 /**
    @this binds a child layer to another layer.

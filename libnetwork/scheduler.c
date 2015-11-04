@@ -38,7 +38,7 @@
 STRUCT_INHERIT(net_scheduler_s, dev_timer_rq_s, timer_rq);
 
 GCT_CONTAINER_KEY_TYPES(net_timeout_queue, CUSTOM, SCALAR,
-                        net_task_s_from_header(net_timeout_queue_item)->timeout.deadline,
+                        net_timeout_queue_item->timeout.deadline,
                         net_timeout_queue);
 GCT_CONTAINER_KEY_FCNS(net_timeout_queue, ASC, static, net_timeout_queue, net_timeout_queue,
                        init, destroy, pop, head, insert);
@@ -75,7 +75,7 @@ static void net_scheduler_timeout_schedule(struct net_scheduler_s *sched)
 {
   struct net_task_s *task;
 
-  task = net_task_s_from_header(net_timeout_queue_head(&sched->delayed_tasks));
+  task = net_timeout_queue_head(&sched->delayed_tasks);
   if (!task) {
     if (sched->timer_rq.rq.drvdata)
       DEVICE_OP(&sched->timer, cancel, &sched->timer_rq);
@@ -103,7 +103,7 @@ static bool_t net_scheduler_timeout_handle(struct net_scheduler_s *sched)
 
   now = net_scheduler_time_get(sched);
 
-  while ((task = net_task_s_from_header(net_timeout_queue_head(&sched->delayed_tasks)))) {
+  while ((task = net_timeout_queue_head(&sched->delayed_tasks))) {
     dprintk("Sched delayed task %p...\n", task);
 
     if (now < task->timeout.deadline - task->timeout.precision)
@@ -111,8 +111,8 @@ static bool_t net_scheduler_timeout_handle(struct net_scheduler_s *sched)
 
     changed = 1;
 
-    task = net_task_s_from_header(net_timeout_queue_pop(&sched->delayed_tasks));
-    net_task_queue_pushback(&sched->pending_tasks, &task->header);
+    task = net_timeout_queue_pop(&sched->delayed_tasks);
+    net_task_queue_pushback(&sched->pending_tasks, task);
   }
 
   return changed;
@@ -120,7 +120,7 @@ static bool_t net_scheduler_timeout_handle(struct net_scheduler_s *sched)
 
 static bool_t net_scheduler_tasks_handle(struct net_scheduler_s *sched)
 {
-  struct net_task_header_s *task;
+  struct net_task_s *task;
   bool_t changed = 0;
 
   while ((task = net_task_queue_pop(&sched->pending_tasks))) {
@@ -134,10 +134,13 @@ static bool_t net_scheduler_tasks_handle(struct net_scheduler_s *sched)
   return changed;
 }
 
-void net_scheduler_cleanup(struct net_scheduler_s *sched)
+error_t net_scheduler_cleanup(struct net_scheduler_s *sched)
 {
-  struct net_task_header_s *task;
+  struct net_task_s *task;
 
+  if (!net_layer_list_noref_isempty(&sched->layers))
+    return -EBUSY;
+  
   dprintk("%s\n", __FUNCTION__);
 
   sched->exiter = sched_get_current();
@@ -153,10 +156,10 @@ void net_scheduler_cleanup(struct net_scheduler_s *sched)
   CPU_INTERRUPT_RESTORESTATE;
 
   while ((task = net_task_queue_pop(&sched->pending_tasks)))
-    net_task_destroy(net_task_s_from_header(task));
+    net_task_destroy(task);
 
   while ((task = net_timeout_queue_pop(&sched->delayed_tasks)))
-    net_task_destroy(net_task_s_from_header(task));
+    net_task_destroy(task);
 
   net_task_queue_destroy(&sched->pending_tasks);
   net_timeout_queue_destroy(&sched->delayed_tasks);
@@ -166,6 +169,8 @@ void net_scheduler_cleanup(struct net_scheduler_s *sched)
 
   slab_cleanup(&sched->task_pool);
   lock_destroy(&sched->lock);
+
+  return 0;
 }
 
 static void sched_cleanup(void *param)
@@ -225,7 +230,7 @@ static SLAB_GROW(scheduler_pool_grow)
 static void scheduler_task_free(
   struct net_task_s *task)
 {
-  struct net_scheduler_s *sched = task->header.allocator_data;
+  struct net_scheduler_s *sched = task->source->scheduler;
 
   dprintk("%s %p\n", __FUNCTION__, task);
 
@@ -241,10 +246,8 @@ struct net_task_s *net_scheduler_task_alloc(
 
   dprintk("%s %p\n", __FUNCTION__, task);
 
-  if (task) {
-    task->header.destroy_func = (void*)scheduler_task_free;
-    task->header.allocator_data = sched;
-  }
+  if (task)
+    task->destroy_func = (void*)scheduler_task_free;
 
   return task;
 }
@@ -267,6 +270,7 @@ error_t net_scheduler_init(
   sched->exited = 0;
   lock_init(&sched->lock);
 
+  net_layer_list_noref_init(&sched->layers);
   net_task_queue_init(&sched->pending_tasks);
   net_timeout_queue_init(&sched->delayed_tasks);
   net_layer_list_noref_init(&sched->destroyed_layers);
@@ -311,7 +315,7 @@ error_t net_scheduler_init(
 
 void net_scheduler_task_push(
     struct net_scheduler_s *sched,
-    struct net_task_header_s *task)
+    struct net_task_s *task)
 {
   dprintk("Sched task %p from %d to %d\n", task,
          &task->source->handler->type,
@@ -351,7 +355,7 @@ void net_scheduler_from_layer_cancel(
 
 void net_scheduler_task_cancel(
   struct net_scheduler_s *sched,
-  struct net_task_header_s *task)
+  struct net_task_s *task)
 {
   bool_t found = 0;
 

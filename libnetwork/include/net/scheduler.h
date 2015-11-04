@@ -59,7 +59,7 @@
 #define GCT_CONTAINER_ALGO_net_timeout_queue CLIST
 #define GCT_CONTAINER_LOCK_net_timeout_queue HEXO_LOCK_IRQ
 
-GCT_CONTAINER_TYPES(net_timeout_queue, struct net_task_header_s *, queue_entry);
+GCT_CONTAINER_TYPES(net_timeout_queue, struct net_task_s *, queue_entry);
 
 struct net_scheduler_s;
 
@@ -76,6 +76,7 @@ struct net_scheduler_s
 
   net_task_queue_root_t pending_tasks;
   net_timeout_queue_root_t delayed_tasks;
+  net_layer_list_noref_root_t layers;
   net_layer_list_noref_root_t destroyed_layers;
 
   struct device_timer_s timer;
@@ -107,7 +108,7 @@ error_t net_scheduler_init(
   struct buffer_pool_s *packet_pool,
   const char *timer_dev);
 
-void net_scheduler_cleanup(
+error_t net_scheduler_cleanup(
   struct net_scheduler_s *sched);
 
 /**
@@ -116,16 +117,6 @@ void net_scheduler_cleanup(
  */
 struct net_task_s *net_scheduler_task_alloc(
   struct net_scheduler_s *sched);
-
-void net_scheduler_timer_use(struct net_scheduler_s *sched);
-void net_scheduler_timer_release(struct net_scheduler_s *sched);
-
-/**
-   @this frees a task allocated from @ref {net_scheduler_task_alloc}.
- */
-void net_scheduler_task_free(
-  struct net_scheduler_s *sched,
-  struct net_task_s *task);
 
 /**
    @this allocates a packet from scheduler's packet pool.
@@ -169,14 +160,14 @@ dev_timer_value_t net_scheduler_time_get(
  */
 void net_scheduler_task_push(
   struct net_scheduler_s *sched,
-  struct net_task_header_s *task);
+  struct net_task_s *task);
 
 /**
    @this cancels a scheduled task. @internal
  */
 void net_scheduler_task_cancel(
   struct net_scheduler_s *sched,
-  struct net_task_header_s *task);
+  struct net_task_s *task);
 
 /**
    @this cancels all tasks involving a given layer. @internal
