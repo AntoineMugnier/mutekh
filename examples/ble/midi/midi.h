@@ -1,8 +1,8 @@
 #ifndef MIDI_H_
 #define MIDI_H_
 
-#include <ble/gatt/db.h>
-#include <ble/gatt/service.h>
+#include <ble/gattdb/db.h>
+#include <ble/gattdb/service.h>
 #include <device/class/timer.h>
 #include <device/class/valio.h>
 #include <device/valio/keyboard.h>
@@ -12,7 +12,7 @@
 
 struct midi_s
 {
-  struct ble_gatt_db_service_s dbs;
+  struct ble_gattdb_registry_s reg;
 
   struct device_valio_s keyboard;
   struct dev_valio_rq_s keyboard_rq;
@@ -33,9 +33,9 @@ struct midi_s
 #endif
 };
 
-STRUCT_COMPOSE(midi_s, dbs);
+STRUCT_COMPOSE(midi_s, reg);
 
 error_t midi_service_register(struct midi_s *midi,
-                             struct ble_gatt_db_s *db);
+                             struct ble_gattdb_s *db);
 
 #endif

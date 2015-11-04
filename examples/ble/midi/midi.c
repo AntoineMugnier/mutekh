@@ -1,16 +1,16 @@
-#include <ble/gatt/db.h>
-#include <ble/gatt/service.h>
+#include <ble/gattdb/db.h>
+#include <ble/gattdb/service.h>
 #include <ble/protocol/gatt/characteristic.h>
 #include <ble/protocol/gatt/service.h>
 #include <mutek/printk.h>
 #include "midi.h"
 
 static
-uint8_t on_midi_data_write(struct ble_gatt_client_s *client,
-                           struct ble_gatt_db_service_s *service, uint8_t charid,
+uint8_t on_midi_data_write(struct ble_gattdb_client_s *client,
+                           struct ble_gattdb_registry_s *reg, uint8_t charid,
                            const void *data, size_t size)
 {
-    struct midi_s *midi = midi_s_from_dbs(service);
+    struct midi_s *midi = midi_s_from_reg(reg);
 
     (void)midi;
 
@@ -19,13 +19,13 @@ uint8_t on_midi_data_write(struct ble_gatt_client_s *client,
     return 0;
 }
 
-BLE_GATT_SERVICE_DECL(midi_service,
-                      BLE_GATT_SERVICE_PRIMARY | BLE_GATT_SERVICE_ADVERTISED,
+BLE_GATTDB_SERVICE_DECL(midi_service,
+                      BLE_GATTDB_SERVICE_PRIMARY | BLE_GATTDB_SERVICE_ADVERTISED,
                       BLE_UUID_P(0x03B80E5A, 0xEDE8, 0x4B33, 0xA751, 0x6CE34EC4C700ULL),
                       NULL,
-                      BLE_GATT_CHAR(BLE_UUID_P(0x7772E5DB, 0x3868, 0x4112, 0xA1A9, 0xF2669D106BF3ULL),
-                                    BLE_GATT_PERM_AUTH_WRITE | BLE_GATT_PERM_AUTH_READ | BLE_GATT_NOTIFIABLE,
-                                    BLE_GATT_CHAR_DATA_DYNAMIC(NULL, on_midi_data_write, NULL)),
+                      BLE_GATTDB_CHAR(BLE_UUID_P(0x7772E5DB, 0x3868, 0x4112, 0xA1A9, 0xF2669D106BF3ULL),
+                                    BLE_GATTDB_PERM_AUTH_WRITE | BLE_GATTDB_PERM_AUTH_READ | BLE_GATTDB_NOTIFIABLE,
+                                    BLE_GATTDB_CHAR_DATA_DYNAMIC(NULL, on_midi_data_write, NULL)),
                       );
 
 static KROUTINE_EXEC(midi_button_pressed)
@@ -70,7 +70,7 @@ static KROUTINE_EXEC(midi_button_pressed)
     }
 
     if (ptr > 1)
-      ble_gatt_db_char_changed(&midi->dbs, 0, 1, msg, ptr);
+      ble_gattdb_char_changed(&midi->reg, 0, 1, msg, ptr);
     
 }
 
@@ -127,7 +127,7 @@ static KROUTINE_EXEC(midi_motion)
     printk("\r");
 
     if (ptr > 1)
-      ble_gatt_db_char_changed(&midi->dbs, 0, 1, msg, ptr);
+      ble_gatt_db_char_changed(&midi->reg, 0, 1, msg, ptr);
 
     midi->motion_rq.type = DEVICE_VALIO_WAIT_UPDATE;
     kroutine_init(&midi->motion_rq.base.kr, midi_motion, KROUTINE_INTERRUPTIBLE);
@@ -137,7 +137,7 @@ static KROUTINE_EXEC(midi_motion)
 #endif
 
 error_t midi_service_register(struct midi_s *midi,
-                             struct ble_gatt_db_s *db)
+                             struct ble_gattdb_s *db)
 {
     if (device_get_accessor_by_path(&midi->keyboard, NULL, "keyboard", DRIVER_CLASS_VALIO)) {
         printk("Keyboard not found\n");
@@ -173,5 +173,5 @@ error_t midi_service_register(struct midi_s *midi,
     midi->last_motion = 0;
 #endif
 
-    return ble_gatt_db_service_register(&midi->dbs, db, &midi_service);
+    return ble_gattdb_service_register(&midi->reg, db, &midi_service);
 }
