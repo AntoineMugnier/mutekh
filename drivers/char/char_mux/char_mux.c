@@ -211,6 +211,7 @@ static bool_t char_mux_chan_rx_error(struct device_s *dev, struct char_mux_chann
       rq->error = err;
       chan->rq_done = 0;
       dev_request_queue_pop(&chan->read_q);
+      rq->base.drvdata = NULL;
       lock_release(&dev->lock);
       kroutine_exec(&rq->base.kr);
       lock_spin(&dev->lock);
@@ -253,6 +254,9 @@ static error_t char_mux_try_read(struct device_s *dev, struct char_mux_channel_s
 
   while ((rq = dev_char_rq_s_cast(dev_request_queue_head(&chan->read_q))))
     {
+      if ((rq->type & _DEV_CHAR_POLL) && j < l)
+        goto done;
+
       /* copy data */
       for (i = chan->rq_done; i < rq->size && j < l; i++)
         rq->data[i] = data[j++];
@@ -277,7 +281,9 @@ static error_t char_mux_try_read(struct device_s *dev, struct char_mux_channel_s
 
       /* end of read request on virtual char device */
       chan->rq_done = 0;
+    done:
       dev_request_queue_pop(&chan->read_q);
+      rq->base.drvdata = NULL;
       chan->nested = 1;
       lock_release(&dev->lock);
       kroutine_exec(&rq->base.kr);
@@ -289,7 +295,39 @@ static error_t char_mux_try_read(struct device_s *dev, struct char_mux_channel_s
   return 0;
 }
 
-#define char_mux_cancel (dev_char_cancel_t*)&dev_driver_notsup_fcn
+static DEV_CHAR_CANCEL(char_mux_cancel)
+{
+  CHAR_MUX_DEBUG(">>> %s\n", __func__);
+  struct device_s *dev = accessor->dev;
+  struct char_mux_context_s *pv = dev->drv_pv;
+  uint_fast8_t num = accessor->number;
+  struct char_mux_channel_s *chan = pv->chans + num;
+  error_t err = -ENOTSUP;
+
+  LOCK_SPIN_IRQ(&dev->lock);
+
+  switch (rq->type)
+    {
+    case DEV_CHAR_READ_FRAME:
+    case DEV_CHAR_READ_PARTIAL:
+    case DEV_CHAR_READ:
+      err = -EBUSY;
+      if (rq->base.drvdata == chan)
+        {
+          rq->error = -ECANCELED;
+          chan->rq_done = 0;
+          dev_request_queue_remove(&chan->read_q, dev_char_rq_s_base(rq));
+          rq->base.drvdata = NULL;
+          err = 0;
+        }
+    default:
+      break;
+    }
+
+  LOCK_RELEASE_IRQ(&dev->lock);
+
+  return err;
+}
 
 static DEV_CHAR_REQUEST(char_mux_request)
 {
@@ -311,6 +349,12 @@ static DEV_CHAR_REQUEST(char_mux_request)
 
       switch (rq->type)
         {
+        case DEV_CHAR_READ_POLL:
+          if (rq->size > 1)
+            {
+              err = -ENOTSUP;
+              break;
+            }
         case DEV_CHAR_READ_FRAME:
         case DEV_CHAR_READ_PARTIAL:
         case DEV_CHAR_READ: {
@@ -343,6 +387,7 @@ static DEV_CHAR_REQUEST(char_mux_request)
             }
 
           rq->error = 0;
+          rq->base.drvdata = chan;
           dev_request_queue_pushback(&chan->read_q, dev_char_rq_s_base(rq));
 
 #ifdef CONFIG_DRIVER_CHAR_MUX_RX_FIFOS
@@ -352,6 +397,7 @@ static DEV_CHAR_REQUEST(char_mux_request)
                 {
                   chan->rq_done = 0;
                   dev_request_queue_pop(&chan->read_q);
+                  rq->base.drvdata = NULL;
                   break;
                 }
               chan->fifo_size -= l;
@@ -372,7 +418,6 @@ static DEV_CHAR_REQUEST(char_mux_request)
           char_mux_start_tx(dev);
           break;
         }
-        case DEV_CHAR_READ_POLL:
         case DEV_CHAR_WRITE_POLL:
           err = -ENOTSUP;
         }
@@ -807,6 +852,7 @@ static DEV_INIT(char_mux_init)
   return -EINVAL;
 }
 
+#ifdef CONFIG_DEVICE_DRIVER_CLEANUP
 static DEV_CLEANUP(char_mux_cleanup)
 {
   struct char_mux_context_s *pv = dev->drv_pv;
@@ -832,4 +878,4 @@ static DEV_CLEANUP(char_mux_cleanup)
 
   return 0;
 }
-
+#endif
