@@ -479,7 +479,7 @@ static DEV_CLEANUP(soft_salsa_cleanup)
 {
   struct soft_salsa_private_s  *pv = dev->drv_pv;
 
-  if (!dev_request_queue_isempty(&pv->queue.queue))
+  if (!dev_request_delayed_isidle(&pv->queue))
     return -EBUSY;
 
   dev_request_delayed_cleanup(&pv->queue);

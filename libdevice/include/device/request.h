@@ -244,6 +244,17 @@ dev_request_delayed_end(struct dev_request_dlqueue_s *q,
 #endif
 }
 
+/** @This tests if a delayed device request queue is idle. */
+ALWAYS_INLINE bool_t
+dev_request_delayed_isidle(struct dev_request_dlqueue_s *q)
+{
+#ifdef CONFIG_DEVICE_DELAYED_REQUEST
+  return dev_request_queue_isempty(&q->queue);
+#else
+  return 1;
+#endif
+}
+
 /** @This pushes the device request in a @ref dev_request_dlqueue_s
     delayed execution queue. if interrupts are enabled and either the
     @tt critical parameter is not set or the queue is empty, the
