@@ -41,7 +41,7 @@ struct net_layer_s;
 
 struct ble_gap_params_s
 {
-  struct ble_gatt_db_s *db;
+  struct ble_gattdb_s *db;
   struct net_layer_s *sig;
 };
 

@@ -45,7 +45,7 @@ struct ble_security_db_s;
 #define BLE_SUBSCRIBED_CHAR_COUNT 8
 
 struct ble_subscription_s {
-  uint8_t service_index : 3;
+  uint8_t registry_index : 3;
   uint8_t char_index : 4;
   uint8_t mode : 1;
 } __attribute__((__packed__));

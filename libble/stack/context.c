@@ -74,7 +74,7 @@ error_t ble_stack_context_init(struct ble_stack_context_s *ctx,
   buffer_pool_init(&ctx->packet_pool, CONFIG_BLE_PACKET_SIZE,
                    packet_pool_grow, mem_scope_sys);
 
-  ble_gatt_db_init(&ctx->gattdb);
+  ble_gattdb_init(&ctx->gattdb);
 
   err = net_scheduler_init(&ctx->scheduler, &ctx->packet_pool, rtc_name);
   if (err) {
@@ -95,7 +95,7 @@ error_t ble_stack_context_init(struct ble_stack_context_s *ctx,
  sched_cleanup:
   net_scheduler_cleanup(&ctx->scheduler);
  gatt_db_cleanup:
-  ble_gatt_db_cleanup(&ctx->gattdb);
+  ble_gattdb_cleanup(&ctx->gattdb);
   buffer_pool_cleanup(&ctx->packet_pool);
  crypto_close:
 #if defined(CONFIG_BLE_CRYPTO)
@@ -115,7 +115,7 @@ error_t ble_stack_context_init(struct ble_stack_context_s *ctx,
 void ble_stack_context_cleanup(struct ble_stack_context_s *ctx)
 {
   net_scheduler_cleanup(&ctx->scheduler);
-  ble_gatt_db_cleanup(&ctx->gattdb);
+  ble_gattdb_cleanup(&ctx->gattdb);
   buffer_pool_cleanup(&ctx->packet_pool);
 #if defined(CONFIG_BLE_CRYPTO)
   dev_rng_cleanup(&ctx->rng);

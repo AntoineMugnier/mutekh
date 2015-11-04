@@ -5,7 +5,7 @@
 #include <device/class/crypto.h>
 #include <ble/security_db.h>
 #include <mutek/buffer_pool.h>
-#include <ble/gatt/db.h>
+#include <ble/gattdb/db.h>
 #include <device/class/crypto.h>
 #include <device/class/net.h>
 
@@ -18,7 +18,7 @@ struct ble_stack_context_s
   struct device_net_s ble;
   struct net_scheduler_s scheduler;
   struct buffer_pool_s packet_pool;
-  struct ble_gatt_db_s gattdb;
+  struct ble_gattdb_s gattdb;
   struct device_crypto_s crypto;
 };
 

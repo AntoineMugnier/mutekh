@@ -32,7 +32,7 @@
 
 #include <ble/net/generic.h>
 
-#include <ble/gatt/db.h>
+#include <ble/gattdb/db.h>
 #include <ble/protocol/gatt/service.h>
 #include <ble/protocol/gatt/characteristic.h>
 
@@ -45,7 +45,7 @@ struct ble_gap_s
 {
   struct net_layer_s layer;
   struct net_layer_s *sig;
-  struct ble_gatt_db_s *db;
+  struct ble_gattdb_s *db;
   struct net_task_s *conn_update_task;
 };
 
@@ -66,7 +66,7 @@ static struct ble_gap_conn_params_update_s *gap_create_update(struct ble_gap_s *
   const uint16_t *tmp;
   size_t size;
 
-  if (ble_gatt_db_std_char_read(gap->db,
+  if (ble_gattdb_std_char_read(gap->db,
                                 BLE_UUID_GENERIC_ACCESS_SERVICE,
                                 BLE_UUID_GAP_PERIPHERAL_PREFERRED_CONNECTION_PARAMETERS_CHAR,
                                 (const void **)&tmp, &size) || size != 8)

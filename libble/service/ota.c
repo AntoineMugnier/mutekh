@@ -46,7 +46,7 @@ static
 uint8_t ota_on_actuator_subscribe(struct ble_gatt_db_service_s *service, uint8_t charid,
                                   bool_t subscribed)
 {
-    struct gamepad_otas_s *otas = gamepad_otas_s_from_dbs(service);
+    struct gamepad_otas_s *otas = gamepad_otas_s_from_reg(service);
 
     printk("Actuator subscribed: %d\n", subscribed);
 
@@ -59,7 +59,7 @@ static
 uint8_t ota_on_motion_subscribe(struct ble_gatt_db_service_s *service, uint8_t charid,
                                 bool_t subscribed)
 {
-    struct gamepad_otas_s *otas = gamepad_otas_s_from_dbs(service);
+    struct gamepad_otas_s *otas = gamepad_otas_s_from_reg(service);
 
     (void)otas;
 
@@ -74,7 +74,7 @@ static
 uint8_t ota_on_vibrator_changed(struct ble_gatt_client_s *client,
                                 struct ble_gatt_db_service_s *service, uint8_t charid)
 {
-    struct gamepad_otas_s *otas = gamepad_otas_s_from_dbs(service);
+    struct gamepad_otas_s *otas = gamepad_otas_s_from_reg(service);
 
     printk("Vibrator write: %P\n", vibrator_report_data, sizeof(vibrator_report_data));
 
@@ -88,7 +88,7 @@ static
 uint8_t ota_on_battery_subscribe(struct ble_gatt_db_service_s *service, uint8_t charid,
                                  bool_t subscribed)
 {
-    struct gamepad_otas_s *otas = gamepad_otas_s_from_dbs(service);
+    struct gamepad_otas_s *otas = gamepad_otas_s_from_reg(service);
 
     (void)otas;
 
@@ -146,14 +146,14 @@ void gamepad_otas_actuator_set(struct gamepad_otas_s *otas,
                                const struct gamepad_actuator_s *act)
 {
     actuator_report_data = *act;
-    ble_gatt_db_char_changed(otas->dbs.db, &otas->dbs, CHAR_ID_ACTUATOR, &actuator_report_data, sizeof(actuator_report_data));
+    ble_gatt_db_char_changed(otas->reg.db, &otas->reg, CHAR_ID_ACTUATOR, &actuator_report_data, sizeof(actuator_report_data));
 }
 
 void gamepad_otas_motion_set(struct gamepad_otas_s *otas,
                              const struct gamepad_motion_s *act)
 {
     motion_report_data = *act;
-    ble_gatt_db_char_changed(otas->dbs.db, &otas->dbs, CHAR_ID_MOTION, &motion_report_data, sizeof(motion_report_data));
+    ble_gatt_db_char_changed(otas->reg.db, &otas->reg, CHAR_ID_MOTION, &motion_report_data, sizeof(motion_report_data));
 }
 
 error_t gamepad_otas_init(struct gamepad_otas_s *otas,
@@ -162,5 +162,5 @@ error_t gamepad_otas_init(struct gamepad_otas_s *otas,
 {
     otas->gamepad = gamepad;
 
-    return ble_gatt_db_service_register(&otas->dbs, db, &ota_service);
+    return ble_gatt_db_service_register(&otas->reg, db, &ota_service);
 }

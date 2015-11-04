@@ -33,9 +33,9 @@
 #include <ble/protocol/l2cap.h>
 #include <ble/protocol/gatt.h>
 
-#include <ble/gatt/db.h>
+#include <ble/gattdb/db.h>
+#include <ble/gattdb/client.h>
 #include <ble/security_db.h>
-#include <ble/gatt/client.h>
 
 #include <ble/net/generic.h>
 
@@ -92,7 +92,7 @@ void ble_gatt_destroyed(struct net_layer_s *layer)
 {
   struct ble_gatt_s *gatt = ble_gatt_s_from_layer(layer);
 
-  ble_gatt_client_db_close(&gatt->client);
+  ble_gattdb_client_close(&gatt->client);
 
   mem_free(gatt);
 }
@@ -356,7 +356,7 @@ void ble_gatt_task_handle(struct net_layer_s *layer,
 
       struct ble_subscription_s subscriptions[BLE_SUBSCRIBED_CHAR_COUNT];
 
-      ble_gatt_client_subscription_get(&gatt->client, subscriptions, BLE_SUBSCRIBED_CHAR_COUNT);
+      ble_gattdb_client_subscription_get(&gatt->client, subscriptions, BLE_SUBSCRIBED_CHAR_COUNT);
       ble_peer_subscriptions_set(gatt->peer, subscriptions);
 #if defined(CONFIG_BLE_CRYPTO)
       ble_peer_save(gatt->peer);
@@ -373,7 +373,7 @@ void ble_gatt_task_handle(struct net_layer_s *layer,
 }
 
 static
-void ble_gatt_att_value_changed(struct ble_gatt_client_s *client,
+void ble_gatt_att_value_changed(struct ble_gattdb_client_s *client,
                                 uint16_t value_handle, uint16_t mode,
                                 const void *data, size_t size)
 {
@@ -428,7 +428,7 @@ static void gatt_save_peer_later(struct ble_gatt_s *gatt)
 }
 
 static
-void ble_gatt_att_subscription_changed(struct ble_gatt_client_s *client)
+void ble_gatt_att_subscription_changed(struct ble_gattdb_client_s *client)
 {
   struct ble_gatt_s *gatt = ble_gatt_s_from_client(client);
 
@@ -446,7 +446,7 @@ static bool_t ble_gatt_context_updated(
 
   printk("Gatt client layer now %s\n", gatt->client.encrypted ? "encrypted" : "clear text");
 
-  ble_gatt_client_subscription_set(&gatt->client, gatt->peer->subscriptions, BLE_SUBSCRIBED_CHAR_COUNT);
+  ble_gattdb_client_subscription_set(&gatt->client, gatt->peer->subscriptions, BLE_SUBSCRIBED_CHAR_COUNT);
 
   return 1;
 }
@@ -458,7 +458,7 @@ static const struct net_layer_handler_s gatt_handler = {
   .type = BLE_NET_LAYER_GATT,
 };
 
-static const struct ble_gatt_client_handler_s gatt_db_handler = {
+static const struct ble_gattdb_client_handler_s gatt_db_handler = {
   .att_value_changed = ble_gatt_att_value_changed,
   .att_subscription_changed = ble_gatt_att_subscription_changed,
 };
@@ -483,13 +483,13 @@ static enum ble_att_error_e gatt_read_by_group_type(
 
   assert(buffer_available(rsp) >= available);
 
-  for (err = ble_gatt_client_seek(&gatt->client, start);
-       err == 0 && ble_gatt_client_tell(&gatt->client) <= end;
-       err = ble_gatt_client_next(&gatt->client)) {
-    err = ble_gatt_client_type_get(&gatt->client, &tmp);
+  for (err = ble_gattdb_client_seek(&gatt->client, start);
+       err == 0 && ble_gattdb_client_tell(&gatt->client) <= end;
+       err = ble_gattdb_client_next(&gatt->client)) {
+    err = ble_gattdb_client_type_get(&gatt->client, &tmp);
 
     dprintk(" type for handle %d: " BLE_UUID_FMT " / err %d\n",
-           ble_gatt_client_tell(&gatt->client),
+           ble_gattdb_client_tell(&gatt->client),
            BLE_UUID_ARG(tmp), err);
 
     if (err)
@@ -502,11 +502,11 @@ static enum ble_att_error_e gatt_read_by_group_type(
       break;
 
     written = available - 4;
-    err = ble_gatt_client_read(&gatt->client, 0,
+    err = ble_gattdb_client_read(&gatt->client, 0,
                                rsp->data + rsp->end + 4,
                                &written);
 
-    dprintk(" reading handle %d, %d bytes\n", ble_gatt_client_tell(&gatt->client), written);
+    dprintk(" reading handle %d, %d bytes\n", ble_gattdb_client_tell(&gatt->client), written);
 
     if (err)
       break;
@@ -519,17 +519,17 @@ static enum ble_att_error_e gatt_read_by_group_type(
       dprintk(" unit size now %d\n", *unit_size);
     }
 
-    endian_le16_na_store(rsp->data + rsp->end, ble_gatt_client_tell(&gatt->client));
+    endian_le16_na_store(rsp->data + rsp->end, ble_gattdb_client_tell(&gatt->client));
     endian_le16_na_store(rsp->data + rsp->end + 2,
-                         gatt->client.cursor.service->start_handle
-                         + gatt->client.cursor.service->handle_count
+                         gatt->client.cursor.registry->start_handle
+                         + gatt->client.cursor.registry->handle_count
                          - 1);
     rsp->end += 4 + written;
     available -= 4 + written;
   }
 
   if (((err == BLE_ATT_ERR_ATTRIBUTE_NOT_FOUND)
-       || (ble_gatt_client_tell(&gatt->client) > end))
+       || (ble_gattdb_client_tell(&gatt->client) > end))
       && *unit_size)
     endian_le16_na_store(rsp->data + rsp->end - *unit_size + 2, end);
 
@@ -546,7 +546,7 @@ static enum ble_att_error_e gatt_read(
   enum ble_att_error_e err;
   size_t written;
 
-  err = ble_gatt_client_seek(&gatt->client, handle);
+  err = ble_gattdb_client_seek(&gatt->client, handle);
   if (err)
     return err;
 
@@ -554,7 +554,7 @@ static enum ble_att_error_e gatt_read(
   rsp->end = rsp->begin + 1;
 
   written = gatt->server_mtu - 1;
-  err = ble_gatt_client_read(&gatt->client, 0, rsp->data + rsp->end, &written);
+  err = ble_gattdb_client_read(&gatt->client, 0, rsp->data + rsp->end, &written);
   rsp->end += written;
 
   return err;
@@ -569,7 +569,7 @@ static enum ble_att_error_e gatt_read_blob(
   enum ble_att_error_e err;
   size_t written;
 
-  err = ble_gatt_client_seek(&gatt->client, handle);
+  err = ble_gattdb_client_seek(&gatt->client, handle);
   if (err)
     return err;
 
@@ -577,7 +577,7 @@ static enum ble_att_error_e gatt_read_blob(
   rsp->end = rsp->begin + 1;
 
   written = gatt->server_mtu - 1;
-  err = ble_gatt_client_read(&gatt->client, offset, rsp->data + rsp->end, &written);
+  err = ble_gattdb_client_read(&gatt->client, offset, rsp->data + rsp->end, &written);
   rsp->end += written;
 
   return err;
@@ -594,11 +594,11 @@ static enum ble_att_error_e gatt_write(
   rsp->data[rsp->begin] = BLE_ATT_WRITE_RSP;
   rsp->end = rsp->begin + 1;
 
-  err = ble_gatt_client_seek(&gatt->client, handle);
+  err = ble_gattdb_client_seek(&gatt->client, handle);
   if (err)
     return err;
 
-  return ble_gatt_client_write(&gatt->client, data, size);
+  return ble_gattdb_client_write(&gatt->client, data, size);
 }
 
 static enum ble_att_error_e gatt_find_information(
@@ -617,12 +617,12 @@ static enum ble_att_error_e gatt_find_information(
 
   assert(buffer_available(rsp) >= available);
 
-  for (err = ble_gatt_client_seek(&gatt->client, start);
-       err == 0 && available >= 4 && ble_gatt_client_tell(&gatt->client) <= end;
-       err = ble_gatt_client_next(&gatt->client)) {
-    err = ble_gatt_client_type_get(&gatt->client, &tmp);
+  for (err = ble_gattdb_client_seek(&gatt->client, start);
+       err == 0 && available >= 4 && ble_gattdb_client_tell(&gatt->client) <= end;
+       err = ble_gattdb_client_next(&gatt->client)) {
+    err = ble_gattdb_client_type_get(&gatt->client, &tmp);
 
-    dprintk("%s %d " BLE_UUID_FMT " %d\n", __FUNCTION__, ble_gatt_client_tell(&gatt->client), 
+    dprintk("%s %d " BLE_UUID_FMT " %d\n", __FUNCTION__, ble_gattdb_client_tell(&gatt->client), 
            BLE_UUID_ARG(tmp), err);
 
     if (*format != BLE_GATT_NONE) {
@@ -634,7 +634,7 @@ static enum ble_att_error_e gatt_find_information(
       *format = BLE_GATT_HANDLE_UUID16;
       if (available < 4)
         return 0;
-      endian_le16_na_store(rsp->data + rsp->end, ble_gatt_client_tell(&gatt->client));
+      endian_le16_na_store(rsp->data + rsp->end, ble_gattdb_client_tell(&gatt->client));
       endian_le16_na_store(rsp->data + rsp->end + 2, ble_uuid_uuid16_get(tmp));
       rsp->end += 4;
       available -= 4;
@@ -642,14 +642,14 @@ static enum ble_att_error_e gatt_find_information(
       *format = BLE_GATT_HANDLE_UUID128;
       if (available < 18)
         return 0;
-      endian_le16_na_store(rsp->data + rsp->end, ble_gatt_client_tell(&gatt->client));
+      endian_le16_na_store(rsp->data + rsp->end, ble_gattdb_client_tell(&gatt->client));
       memcpy(rsp->data + rsp->end + 2, tmp, 16);
       rsp->end += 18;
       available -= 18;
     }
 
     dprintk("%s at %d / %d, %d available\n", __FUNCTION__,
-           ble_gatt_client_tell(&gatt->client), end, available);
+           ble_gattdb_client_tell(&gatt->client), end, available);
   }
 
   if (err) {
@@ -678,31 +678,31 @@ static enum ble_att_error_e gatt_find_by_type_value(
 
   assert(buffer_available(rsp) >= available);
 
-  for (err = ble_gatt_client_seek(&gatt->client, start);
-       err == 0 && available >= 4 && ble_gatt_client_tell(&gatt->client) <= end;
-       err = ble_gatt_client_next(&gatt->client)) {
+  for (err = ble_gattdb_client_seek(&gatt->client, start);
+       err == 0 && available >= 4 && ble_gattdb_client_tell(&gatt->client) <= end;
+       err = ble_gattdb_client_next(&gatt->client)) {
     size_t rsize = size + 1;
 
-    err = ble_gatt_client_type_get(&gatt->client, &tmp);
+    err = ble_gattdb_client_type_get(&gatt->client, &tmp);
     if (err)
       break;
 
     if (!ble_uuid_is_uuid16(tmp) || ble_uuid_uuid16_get(tmp) != type)
       continue;
 
-    err = ble_gatt_client_read(&gatt->client, 0, tmp_data, &rsize);
+    err = ble_gattdb_client_read(&gatt->client, 0, tmp_data, &rsize);
     if (err || size != rsize || memcmp(tmp_data, value, size))
       continue;
 
     dprintk("%s at %d -> %d, %d available\n", __FUNCTION__,
-           ble_gatt_client_tell(&gatt->client),
-            gatt->client.cursor.service->start_handle
-            + gatt->client.cursor.service->handle_count - 1, available);
+           ble_gattdb_client_tell(&gatt->client),
+            gatt->client.cursor.registry->start_handle
+            + gatt->client.cursor.registry->handle_count - 1, available);
 
-    endian_le16_na_store(rsp->data + rsp->end, ble_gatt_client_tell(&gatt->client));
+    endian_le16_na_store(rsp->data + rsp->end, ble_gattdb_client_tell(&gatt->client));
     endian_le16_na_store(rsp->data + rsp->end + 2,
-                         gatt->client.cursor.service->start_handle
-                         + gatt->client.cursor.service->handle_count - 1);
+                         gatt->client.cursor.registry->start_handle
+                         + gatt->client.cursor.registry->handle_count - 1);
     rsp->end += 4;
     available -= 4;
   }
@@ -733,13 +733,13 @@ static enum ble_att_error_e gatt_read_by_type(
 
   assert(buffer_available(rsp) >= available);
 
-  for (err = ble_gatt_client_seek(&gatt->client, start);
-       err == 0 && available > *unit_size && ble_gatt_client_tell(&gatt->client) <= end;
-       err = ble_gatt_client_next(&gatt->client)) {
-    err = ble_gatt_client_type_get(&gatt->client, &tmp);
+  for (err = ble_gattdb_client_seek(&gatt->client, start);
+       err == 0 && available > *unit_size && ble_gattdb_client_tell(&gatt->client) <= end;
+       err = ble_gattdb_client_next(&gatt->client)) {
+    err = ble_gattdb_client_type_get(&gatt->client, &tmp);
 
     dprintk(" type for handle %d: " BLE_UUID_FMT " / err %d\n",
-           ble_gatt_client_tell(&gatt->client),
+           ble_gattdb_client_tell(&gatt->client),
            BLE_UUID_ARG(tmp), err);
 
     if (err)
@@ -748,10 +748,10 @@ static enum ble_att_error_e gatt_read_by_type(
     if (ble_uuid_cmp(tmp, type))
       continue;
 
-    dprintk(" reading handle %d\n", ble_gatt_client_tell(&gatt->client));
+    dprintk(" reading handle %d\n", ble_gattdb_client_tell(&gatt->client));
 
     written = available - 2;
-    err = ble_gatt_client_read(&gatt->client, 0,
+    err = ble_gattdb_client_read(&gatt->client, 0,
                                rsp->data + rsp->end + 2, &written);
 
     if (err == BLE_ATT_ERR_INVALID_ATTR_VALUE_LEN)
@@ -765,7 +765,7 @@ static enum ble_att_error_e gatt_read_by_type(
       dprintk(" unit size now %d\n", *unit_size);
     }
 
-    endian_le16_na_store(rsp->data + rsp->end, ble_gatt_client_tell(&gatt->client));
+    endian_le16_na_store(rsp->data + rsp->end, ble_gattdb_client_tell(&gatt->client));
     rsp->end += 2 + written;
     available -= 2 + written;
   }
@@ -792,12 +792,12 @@ static void gatt_read_multiple(
   for (i = 0; i < handle_count && available; ++i) {
     handle = endian_le16_na_load(&handle_array[i]);
 
-    err = ble_gatt_client_seek(&gatt->client, handle);
+    err = ble_gattdb_client_seek(&gatt->client, handle);
     if (err)
       goto error;
 
     written = available;
-    err = ble_gatt_client_read(&gatt->client, 0, rsp->data + rsp->end, &written);
+    err = ble_gattdb_client_read(&gatt->client, 0, rsp->data + rsp->end, &written);
 
     if (err == BLE_ATT_ERR_INVALID_ATTR_VALUE_LEN)
       break;
@@ -836,8 +836,8 @@ error_t ble_gatt_create(struct net_scheduler_s *scheduler,
   gatt->server_mtu = 23;
   gatt->peer = params->peer;
 
-  ble_gatt_client_db_open(&gatt->client, &gatt_db_handler, params->db);
-  ble_gatt_client_subscription_set(&gatt->client, params->peer->subscriptions, BLE_SUBSCRIBED_CHAR_COUNT);
+  ble_gattdb_client_open(&gatt->client, &gatt_db_handler, params->db);
+  ble_gattdb_client_subscription_set(&gatt->client, params->peer->subscriptions, BLE_SUBSCRIBED_CHAR_COUNT);
 
   *layer = &gatt->layer;
 
