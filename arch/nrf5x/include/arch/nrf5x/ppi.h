@@ -110,6 +110,12 @@ void nrf_ppi_enable(uint8_t channel)
 }
 
 ALWAYS_INLINE
+bool_t nrf_ppi_is_enabled(uint8_t channel)
+{
+  return (nrf_reg_get(NRF_PPI_ADDR, NRF_PPI_CHEN) >> channel) & 1;
+}
+
+ALWAYS_INLINE
 void nrf_ppi_disable(uint8_t channel)
 {
   nrf_ppi_disable_mask(1 << channel);
