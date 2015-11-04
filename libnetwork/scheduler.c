@@ -65,12 +65,6 @@ static KROUTINE_EXEC(net_scheduler_timeout)
   net_sched_wakeup(sched);
 }
 
-void net_scheduler_layer_destroyed(struct net_scheduler_s *scheduler, struct net_layer_s *layer)
-{
-  net_layer_list_noref_pushback(&scheduler->destroyed_layers, layer);
-  net_sched_wakeup(scheduler);
-}
-
 static void net_scheduler_timeout_schedule(struct net_scheduler_s *sched)
 {
   struct net_task_s *task;
@@ -138,7 +132,7 @@ error_t net_scheduler_cleanup(struct net_scheduler_s *sched)
 {
   struct net_task_s *task;
 
-  if (!net_layer_list_noref_isempty(&sched->layers))
+  if (!net_layer_sched_list_isempty(&sched->layers))
     return -EBUSY;
   
   dprintk("%s\n", __FUNCTION__);
@@ -163,7 +157,7 @@ error_t net_scheduler_cleanup(struct net_scheduler_s *sched)
 
   net_task_queue_destroy(&sched->pending_tasks);
   net_timeout_queue_destroy(&sched->delayed_tasks);
-  net_layer_list_noref_destroy(&sched->destroyed_layers);
+  net_layer_sched_list_destroy(&sched->destroyed_layers);
 
   mem_free(context_destroy(&sched->context));
 
@@ -184,6 +178,18 @@ static void sched_cleanup(void *param)
   sched_context_exit();
 }
 
+void net_scheduler_layer_created(struct net_scheduler_s *sched, struct net_layer_s *layer)
+{
+  net_layer_sched_list_pushback(&sched->layers, layer);
+}
+
+void net_scheduler_layer_destroyed(struct net_scheduler_s *sched, struct net_layer_s *layer)
+{
+  net_layer_sched_list_remove(&sched->layers, layer);
+  net_layer_sched_list_pushback(&sched->destroyed_layers, layer);
+  net_sched_wakeup(sched);
+}
+
 static CONTEXT_ENTRY(net_scheduler_worker)
 {
   struct net_scheduler_s *sched = param;
@@ -202,7 +208,7 @@ static CONTEXT_ENTRY(net_scheduler_worker)
     if (net_scheduler_tasks_handle(sched))
       continue;
 
-    while ((layer = net_layer_list_noref_pop(&sched->destroyed_layers)))
+    while ((layer = net_layer_sched_list_pop(&sched->destroyed_layers)))
       net_layer_destroy_real(layer);
 
     dprintk("   Nothing to do, waiting\n");
@@ -270,10 +276,10 @@ error_t net_scheduler_init(
   sched->exited = 0;
   lock_init(&sched->lock);
 
-  net_layer_list_noref_init(&sched->layers);
+  net_layer_sched_list_init(&sched->layers);
   net_task_queue_init(&sched->pending_tasks);
   net_timeout_queue_init(&sched->delayed_tasks);
-  net_layer_list_noref_init(&sched->destroyed_layers);
+  net_layer_sched_list_init(&sched->destroyed_layers);
 
   sched->packet_pool = packet_pool;
 

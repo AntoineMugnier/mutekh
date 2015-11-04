@@ -76,8 +76,8 @@ struct net_scheduler_s
 
   net_task_queue_root_t pending_tasks;
   net_timeout_queue_root_t delayed_tasks;
-  net_layer_list_noref_root_t layers;
-  net_layer_list_noref_root_t destroyed_layers;
+  net_layer_sched_list_root_t layers;
+  net_layer_sched_list_root_t destroyed_layers;
 
   struct device_timer_s timer;
   struct dev_timer_rq_s timer_rq;
