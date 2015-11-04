@@ -204,7 +204,7 @@ typedef DEV_CHAR_REQUEST(dev_char_request_t);
 
 /** Char device class @ref dev_char_cancel_t function template. */
 #define DEV_CHAR_CANCEL(n)                                             \
-  void (n)(                                                            \
+  error_t (n)(                                                            \
     const struct device_char_s *accessor,                                  \
     struct dev_char_rq_s *rq)
 /**
@@ -213,12 +213,10 @@ typedef DEV_CHAR_REQUEST(dev_char_request_t);
    This function cancels a request which have previously been passed to
    the @ref dev_char_request_t function.
 
-   The function returns @tt -EBUSY if the request is already being
-   processed and will terminate in a short time. When the function
-   returns 0, the request is canceled and will never terminate.
-
-   @param dev pointer to device descriptor
-   @param rq pointer to request.
+   The function returns 0 if the request has been cancelled or @tt
+   -EBUSY if the request has already ended. It may also return @tt
+   -ENOTSUP. The request kroutine is not executed when this function
+   returns 0.
 */
 typedef DEV_CHAR_CANCEL(dev_char_cancel_t);
 
