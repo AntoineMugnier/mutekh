@@ -103,7 +103,8 @@ struct char_mux_channel_s
   uint16_t rq_done;
   uint32_t rx_fnv;
   error_t error;
-  bool_t started;
+  uint8_t BITFIELD(nested,1);
+  uint8_t BITFIELD(started,1);
 };
 
 struct char_mux_context_s
@@ -277,9 +278,11 @@ static error_t char_mux_try_read(struct device_s *dev, struct char_mux_channel_s
       /* end of read request on virtual char device */
       chan->rq_done = 0;
       dev_request_queue_pop(&chan->read_q);
+      chan->nested = 1;
       lock_release(&dev->lock);
       kroutine_exec(&rq->base.kr);
       lock_spin(&dev->lock);
+      chan->nested = 0;
     }
 
   *size = j;
@@ -312,36 +315,38 @@ static DEV_CHAR_REQUEST(char_mux_request)
         case DEV_CHAR_READ_PARTIAL:
         case DEV_CHAR_READ: {
           char_mux_start_rx(pv);
-
           struct char_mux_channel_s *chan = pv->chans + num;
+          size_t l = chan->fifo_size;
 
-          if ((err = chan->error))
+          if (!chan->nested)
             {
-              chan->error = 0;
-              break;
-            }
+              if ((err = chan->error))
+                {
+                  chan->error = 0;
+                  break;
+                }
 
 #ifdef CONFIG_DRIVER_CHAR_MUX_RX_FIFOS
-          /* try to read from fifo */
-          size_t l = chan->fifo_size;
-          assert(l == 0 || dev_request_queue_isempty(&chan->read_q));
+              /* try to read from fifo */
+              assert(l == 0 || dev_request_queue_isempty(&chan->read_q));
 
-          if ((rq->type & _DEV_CHAR_FRAME) &&
-              chan->fifo_frame != l)
-            {
-              err = -EPIPE;
-              l -= chan->fifo_frame;
-              memmove(chan->fifo, chan->fifo + l, chan->fifo_frame);
-              chan->fifo_size = chan->fifo_frame;
-              break;
-            }
+              if ((rq->type & _DEV_CHAR_FRAME) &&
+                  chan->fifo_frame != l)
+                {
+                  err = -EPIPE;
+                  l -= chan->fifo_frame;
+                  memmove(chan->fifo, chan->fifo + l, chan->fifo_frame);
+                  chan->fifo_size = chan->fifo_frame;
+                  break;
+                }
 #endif
+            }
 
           rq->error = 0;
           dev_request_queue_pushback(&chan->read_q, dev_char_rq_s_base(rq));
 
 #ifdef CONFIG_DRIVER_CHAR_MUX_RX_FIFOS
-          if (l)
+          if (l && !chan->nested)
             {
               if ((err = char_mux_try_read(dev, chan, chan->fifo, &l, !chan->started)))
                 {
@@ -775,6 +780,7 @@ static DEV_INIT(char_mux_init)
       chan->fifo_max = fifo_size;
       chan->error = 0;
       chan->started = 0;
+      chan->nested = 0;
       fifo += fifo_size;
 #endif
     }
@@ -794,10 +800,6 @@ static DEV_INIT(char_mux_init)
   pv->nested = 0;
   pv->running = 0;
 
-  lock_spin_irq2(&dev->lock, &pv->irq_state);
-  char_mux_start_rx(pv);
-  char_mux_unlock(dev);
-
   return 0;
 
  err_mem:
@@ -808,8 +810,26 @@ static DEV_INIT(char_mux_init)
 static DEV_CLEANUP(char_mux_cleanup)
 {
   struct char_mux_context_s *pv = dev->drv_pv;
+  uint_fast8_t i;
+
+  if (pv->tx_state != CHAR_MUX_TX_IDLE ||
+      !dev_request_queue_isempty(&pv->write_q))
+    return -EBUSY;
+
+  for (i = 0; i < pv->chan_count; i++)
+    {
+      struct char_mux_channel_s *chan = pv->chans + i;
+      if (chan->nested || !dev_request_queue_isempty(&chan->read_q))
+        return -EBUSY;
+    }
+
+  if (pv->rx_state != CHAR_MUX_RX_IDLE &&
+      DEVICE_OP(&pv->io, cancel, &pv->read_rq))
+    return -EBUSY;
 
   device_put_accessor(&pv->io);
   mem_free(pv);
+
+  return 0;
 }
 
