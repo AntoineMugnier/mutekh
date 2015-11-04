@@ -318,10 +318,17 @@ static DEV_CLEANUP(efm32_aes_cleanup)
 {
   struct efm32_aes_private_s  *pv = dev->drv_pv;
 
+  if (!dev_request_queue_isempty(&pv->queue.queue))
+    return -EBUSY;
+
+  dev_request_delayed_cleanup(&pv->queue);
+
 #ifdef CONFIG_DEVICE_CLOCK
   dev_clock_sink_release(&pv->clk_ep);
   dev_clock_sink_unlink(dev, &pv->clk_ep, 1);
 #endif
 
   mem_free(pv);
+
+  return 0;
 }

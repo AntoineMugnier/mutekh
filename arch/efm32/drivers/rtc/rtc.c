@@ -532,6 +532,9 @@ static DEV_CLEANUP(efm32_rtc_cleanup)
 {
   struct efm32_rtc_private_s *pv = dev->drv_pv;
 
+  if (pv->start_count & 1)
+    return -EBUSY;
+
   /* Stop rtc */ 
   efm32_rtc_stop_counter(pv);
 
@@ -547,5 +550,7 @@ static DEV_CLEANUP(efm32_rtc_cleanup)
 #endif
 
   mem_free(pv);
+
+  return 0;
 }
 

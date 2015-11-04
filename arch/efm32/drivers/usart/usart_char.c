@@ -446,6 +446,9 @@ DEV_CLEANUP(efm32_usart_char_cleanup)
 {
   struct efm32_usart_context_s	*pv = dev->drv_pv;
 
+  if (pv->read_started || pv->write_started)
+    return -EBUSY;
+
 #ifdef CONFIG_DEVICE_IRQ
   /* disable irqs */
   cpu_mem_write_32(pv->addr + EFM32_USART_IEN_ADDR, 0);
@@ -473,5 +476,7 @@ DEV_CLEANUP(efm32_usart_char_cleanup)
   dev_request_queue_destroy(&pv->write_q);
 
   mem_free(pv);
+
+  return 0;
 }
 

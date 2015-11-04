@@ -1417,5 +1417,7 @@ static DEV_CLEANUP(efm32_recmu_cleanup)
   struct efm32_recmu_private_s *pv = dev->drv_pv;
 
   mem_free(pv);
+
+  return 0;
 }
 

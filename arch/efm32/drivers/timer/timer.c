@@ -568,6 +568,9 @@ static DEV_CLEANUP(efm32_timer_cleanup)
 {
   struct efm32_timer_private_s *pv = dev->drv_pv;
 
+  if (pv->start_count & 1)
+    return -EBUSY;
+
   /* Stop timer */
   efm32_timer_stop_counter(pv);
 
@@ -583,5 +586,7 @@ static DEV_CLEANUP(efm32_timer_cleanup)
 #endif
 
   mem_free(pv);
+
+  return 0;
 }
 

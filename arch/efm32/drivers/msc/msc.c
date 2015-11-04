@@ -212,5 +212,7 @@ static DEV_CLEANUP(efm32_msc_cleanup)
   struct efm32_msc_context_s	*pv = dev->drv_pv;
 
   mem_free(pv);
+
+  return 0;
 }
 

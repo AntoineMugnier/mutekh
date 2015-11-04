@@ -405,6 +405,8 @@ static DEV_CLEANUP(efm32_pwm_cleanup)
 #endif
 
   mem_free(pv);
+
+  return 0;
 }
 
 static DEV_USE(efm32_pwm_use)
