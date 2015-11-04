@@ -22,8 +22,8 @@ struct app_s
 {
     struct ble_stack_context_s context;
     struct ble_peripheral_s peripheral;
-    struct ble_gatt_db_service_s gap;
-    struct ble_gatt_db_service_s dis;
+    struct ble_gattdb_registry_s gap;
+    struct ble_gattdb_registry_s dis;
     struct led_s led;
 };
 

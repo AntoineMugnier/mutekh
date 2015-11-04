@@ -1,10 +1,10 @@
 #ifndef GAP_H_
 #define GAP_H_
 
-#include <ble/gatt/db.h>
-#include <ble/gatt/service.h>
+#include <ble/gattdb/db.h>
+#include <ble/gattdb/service.h>
 
-error_t gap_service_register(struct ble_gatt_db_service_s *dbs,
-                             struct ble_gatt_db_s *db);
+error_t gap_service_register(struct ble_gattdb_registry_s *reg,
+                             struct ble_gattdb_s *db);
 
 #endif

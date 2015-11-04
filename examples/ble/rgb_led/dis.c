@@ -1,5 +1,5 @@
-#include <ble/gatt/db.h>
-#include <ble/gatt/service.h>
+#include <ble/gattdb/db.h>
+#include <ble/gattdb/service.h>
 #include <ble/protocol/gatt/characteristic.h>
 #include <ble/protocol/gatt/service.h>
 
@@ -12,20 +12,20 @@ struct pnp_id_s {
     uint16_t version;
 } __attribute__((packed));
 
-BLE_GATT_SERVICE_DECL(dis_service,
-                      BLE_GATT_SERVICE_PRIMARY,
+BLE_GATTDB_SERVICE_DECL(dis_service,
+                      BLE_GATTDB_SERVICE_PRIMARY,
                       BLE_UUID_SHORT_P(BLE_UUID_DEVICE_INFORMATION_SERVICE),
                       NULL,
-                      BLE_GATT_CHAR_CONSTANT_STRING(
+                      BLE_GATTDB_CHAR_CONSTANT_STRING(
                           BLE_UUID_SHORT_P(BLE_UUID_MANUFACTURER_NAME_STRING_CHAR),
                           "MutekH"),
-                      BLE_GATT_CHAR_CONSTANT_STRING(
+                      BLE_GATTDB_CHAR_CONSTANT_STRING(
                           BLE_UUID_SHORT_P(BLE_UUID_MODEL_NUMBER_STRING_CHAR),
                           "BLE RGB Led"),
                       );
 
-error_t dis_service_register(struct ble_gatt_db_service_s *dbs,
-                             struct ble_gatt_db_s *db)
+error_t dis_service_register(struct ble_gattdb_registry_s *dbs,
+                             struct ble_gattdb_s *db)
 {
-    return ble_gatt_db_service_register(dbs, db, &dis_service);
+    return ble_gattdb_service_register(dbs, db, &dis_service);
 }

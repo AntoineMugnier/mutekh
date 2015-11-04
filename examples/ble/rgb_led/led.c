@@ -1,5 +1,5 @@
-#include <ble/gatt/db.h>
-#include <ble/gatt/service.h>
+#include <ble/gattdb/db.h>
+#include <ble/gattdb/service.h>
 #include <ble/protocol/gatt/characteristic.h>
 #include <ble/protocol/gatt/service.h>
 #include <mutek/printk.h>
@@ -19,8 +19,8 @@
 static uint8_t led_color[4] = {0,0,255,255};
 
 static
-uint8_t on_led_color_write(struct ble_gatt_client_s *client,
-                           struct ble_gatt_db_service_s *service,
+uint8_t on_led_color_write(struct ble_gattdb_client_s *client,
+                           struct ble_gattdb_registry_s *service,
                            uint8_t charid)
 {
     struct led_s *led = led_s_from_dbs(service);
@@ -45,18 +45,18 @@ uint8_t on_led_color_write(struct ble_gatt_client_s *client,
     return 0;
 }
 
-BLE_GATT_SERVICE_DECL(led_service,
-                      BLE_GATT_SERVICE_PRIMARY | BLE_GATT_SERVICE_ADVERTISED,
-                      BLE_UUID_SHORT_P(CYPRESS_LED_SERVICE),
-                      NULL,
-                      BLE_GATT_CHAR(BLE_UUID_SHORT_P(CYPRESS_LED_COLOR_CHAR),
-                                    BLE_GATT_PERM_OTHER_WRITE | BLE_GATT_PERM_OTHER_READ,
-                                    BLE_GATT_CHAR_DATA_PLAIN(led_color, sizeof(led_color),
-                                                             NULL, on_led_color_write)),
-                      );
+BLE_GATTDB_SERVICE_DECL(led_service,
+                        BLE_GATTDB_SERVICE_PRIMARY | BLE_GATTDB_SERVICE_ADVERTISED,
+                        BLE_UUID_SHORT_P(CYPRESS_LED_SERVICE),
+                        NULL,
+                        BLE_GATTDB_CHAR(BLE_UUID_SHORT_P(CYPRESS_LED_COLOR_CHAR),
+                                        BLE_GATTDB_PERM_OTHER_WRITE | BLE_GATTDB_PERM_OTHER_READ,
+                                        BLE_GATTDB_CHAR_DATA_PLAIN(led_color, sizeof(led_color),
+                                                                   NULL, on_led_color_write)),
+                        );
 
 error_t led_service_register(struct led_s *led,
-                             struct ble_gatt_db_s *db)
+                             struct ble_gattdb_s *db)
 {
     error_t err;
 
@@ -86,5 +86,5 @@ error_t led_service_register(struct led_s *led,
 
     printk("PWM init: %d\n", rq.error);
 
-    return ble_gatt_db_service_register(&led->dbs, db, &led_service);
+    return ble_gattdb_service_register(&led->dbs, db, &led_service);
 }
