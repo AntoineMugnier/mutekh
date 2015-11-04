@@ -152,18 +152,15 @@ void device_cleanup(struct device_s *dev)
   assert(dev->status == DEVICE_DRIVER_INIT_FAILED ||
          dev->status == DEVICE_NO_DRIVER);
 
-  struct dev_resource_table_s *tbl = dev->res_tbl;
 # ifdef CONFIG_DEVICE_RESOURCE_ALLOC
-  struct dev_resource_table_s *next;
-  for (; tbl != NULL; tbl = next)
+  struct dev_resource_table_s *next, *tbl;
+  for (tbl = dev->res_tbl; tbl != NULL; tbl = next)
     {
       next = tbl->next;
-# endif
       uint_fast8_t i;
       for (i = 0; i < tbl->count; i++)
         device_res_cleanup(&tbl->table[i]);
 
-# ifdef CONFIG_DEVICE_RESOURCE_ALLOC
       if (tbl->flags & DEVICE_RES_TBL_FLAGS_ALLOCATED)
         mem_free((void*)tbl);
     }
