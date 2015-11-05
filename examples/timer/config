@@ -1,0 +1,18 @@
+
+  %set OUTPUT_NAME timer
+
+  # New source code module to be compiled
+  %append MODULES $(OUTPUT_NAME):$(CONFIGPATH)
+
+  # Application license
+  CONFIG_LICENSE_APP_LGPL
+
+  %include scripts/options.build
+  %include arch/arch.build
+
+  # Libs
+  CONFIG_PTHREAD
+  CONFIG_PTHREAD_MAIN
+
+  CONFIG_PTHREAD_STACK_SIZE  1024
+  CONFIG_MUTEK_KROUTINE_SCHED_SWITCH
