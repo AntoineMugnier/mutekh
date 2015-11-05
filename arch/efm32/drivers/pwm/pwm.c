@@ -426,6 +426,9 @@ static DEV_USE(efm32_pwm_use)
           return -ENOTSUP;
       case DEV_USE_PUT_ACCESSOR:
         return 0;
+      case DEV_USE_LAST_NUMBER:
+        accessor->number = EFM32_PWM_CHANNEL_MAX - 1;
+        return 0;
 
       default:
         return -ENOTSUP;

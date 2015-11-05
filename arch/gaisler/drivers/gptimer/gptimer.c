@@ -286,6 +286,11 @@ static DEV_USE(gptimer_use)
     case DEV_USE_START:
     case DEV_USE_STOP:
       break;
+    case DEV_USE_LAST_NUMBER: {
+      struct gptimer_private_s *pv = accessor->dev->drv_pv;
+      accessor->number = pv->t_count * 2 - 1;
+      return 0;
+    }
     default:
       return -ENOTSUP;
     }

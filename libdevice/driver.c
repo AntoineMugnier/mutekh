@@ -40,9 +40,9 @@
 
 const char driver_class_e[] = ENUM_DESC_DRIVER_CLASS_E;
 
-static error_t device_get_api(struct device_s *dev,
-                              enum driver_class_e cl,
-                              const struct driver_class_s **api)
+error_t device_get_api(struct device_s *dev,
+                       enum driver_class_e cl,
+                       const struct driver_class_s **api)
 {
   const struct driver_s *drv = dev->drv;
   if (drv == NULL)

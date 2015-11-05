@@ -182,6 +182,9 @@ static DEV_USE(efm32_msc_use)
     case DEV_USE_START:
     case DEV_USE_STOP:
       return 0;
+    case DEV_USE_LAST_NUMBER:
+      accessor->number = 2;
+      return 0;
     default:
       return -ENOTSUP;
     }

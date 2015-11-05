@@ -263,6 +263,11 @@ static DEV_USE(soclib_timer_use)
     case DEV_USE_START:
     case DEV_USE_STOP:
       break;
+    case DEV_USE_LAST_NUMBER: {
+      struct soclib_timer_private_s *pv = accessor->dev->drv_pv;
+      accessor->number = pv->t_count * 2 - 1;
+      return 0;
+    }
     default:
       return -ENOTSUP;
     }
@@ -475,6 +480,9 @@ static DEV_INIT(soclib_timer_init)
     printk("warning: timer device `%p' has no `count' parameter, assuming only one timer is available.\n", dev);
 
   dev->status = DEVICE_DRIVER_INIT_FAILED;
+
+  if (t_count < 1 || t_count > 64)
+    return -EINVAL;
 
   pv = mem_alloc(sizeof (*pv) + t_count * (sizeof(struct soclib_timer_state_s)
 #ifdef CONFIG_DEVICE_IRQ

@@ -245,6 +245,7 @@ enum dev_use_op_e
 {
   DEV_USE_GET_ACCESSOR,
   DEV_USE_PUT_ACCESSOR,
+  DEV_USE_LAST_NUMBER,
   DEV_USE_START,
   DEV_USE_STOP,
 };
@@ -277,6 +278,11 @@ struct device_accessor_s;
    error code may be returned on @ref DEV_USE_GET_START. The @tt param
    argument is a pointer to a @ref device_accessor_s object. The default
    implementation does nothing and always succeed.
+
+   @item @ref DEV_USE_LAST_NUMBER is used when @ref device_last_number
+   is called. The @tt param argument is a pointer to a @ref
+   device_accessor_s structure with the @tt dev and @tt api field
+   properly initialized. The default implementation reports 0.
 
    @end list
 */
@@ -450,6 +456,11 @@ struct device_accessor_s
 
 #define DEVICE_ACCESSOR_INIT { .dev = NULL, .api = NULL }
 
+/** @internal */
+error_t device_get_api(struct device_s *dev,
+                       enum driver_class_e cl,
+                       const struct driver_class_s **api);
+
 /**
    @This initializes a device accessor object. If the return value is
    0, the accessor object can then be used to access device driver
@@ -540,6 +551,34 @@ ALWAYS_INLINE error_t device_stop(void *accessor)
   struct device_accessor_s *acc = accessor;
   dev_use_t *use = acc->dev->drv->f_use;
   return use(accessor, DEV_USE_STOP);
+}
+
+/** @This retreives the value of the last possibly valid sub-devices
+    number. It returns @tt -ENOTSUP if the class does not implement
+    sub-devices. Other errors indicate that the driver class is not
+    ready for use.
+
+    Numbers are used to specify an instance of a hardware device
+    function, a logical driver feature or both. Implemented
+    sub-devices numbers may not be contiguous. This allows binding a
+    number to a particular feature or a special way of using the
+    hardware which never changes for a given driver. In this case the
+    driver may report a last number which may not be available with
+    the current configuration.
+ */
+ALWAYS_INLINE error_t device_last_number(struct device_s *dev,
+                                         enum driver_class_e cl,
+                                         uint_fast8_t *num)
+{
+  struct device_accessor_s acc;
+  acc.dev = dev;
+  error_t err = device_get_api(dev, cl, &acc.api);
+  if (!err)
+    {
+      dev_use_t *use = dev->drv->f_use;
+      err = use(&acc, DEV_USE_LAST_NUMBER);
+    }
+  return err;
 }
 
 /**

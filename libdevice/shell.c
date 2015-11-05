@@ -138,7 +138,6 @@ static void dev_console_opt_comp(struct termui_con_complete_ctx_s *cctx,
 
   DEVICE_NODE_FOREACH(root, node, {
       struct device_node_s *n = node;
-      uint_fast8_t i;
       if (!n->name || (n->flags & DEVICE_FLAG_IGNORE))
         continue;
       if (termui_con_comp_match(cctx, n->name, NULL, 0) <= 0)
@@ -162,14 +161,16 @@ static void dev_console_opt_comp(struct termui_con_complete_ctx_s *cctx,
 #endif
         if (cl != DRIVER_CLASS_NONE)
           {
-            const struct driver_class_s *c;
-            if (dev->drv == NULL)
-              continue;
-            for (i = 0; (c = dev->drv->classes[i]) != NULL; i++)
-              if (c->class_ == cl)
+            uint_fast8_t num = 0;
+            switch (device_last_number(dev, cl, &num))
+              {
+              case 0:
+                cctx->suffix = '[';
+              case -ENOTSUP:    /* no subdevice */
                 break;
-            if (c == NULL)
-              continue;
+              default:          /* device not usable */
+                continue;
+              }
           }
       if (!termui_con_comp_append(cctx, node->name))
         return;

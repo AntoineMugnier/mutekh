@@ -79,6 +79,17 @@ static DEV_USE(soclib_xicu_use)
         default:
           return 0;
         }
+#ifdef CONFIG_DRIVER_SOCLIB_XICU_TIMER
+    case DEV_USE_LAST_NUMBER: {
+      struct soclib_xicu_private_s  *pv = accessor->dev->drv_pv;
+      if (accessor->api->class_ == DRIVER_CLASS_TIMER &&
+          pv->pti_count > 0)
+        {
+          accessor->number = pv->pti_count * 2 - 1;
+          return 0;
+        }
+    }
+#endif
     default:
       return -ENOTSUP;
     }

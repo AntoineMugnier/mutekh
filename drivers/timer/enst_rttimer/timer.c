@@ -282,6 +282,12 @@ static DEV_USE(enst_rttimer_use)
       return 0;
     }
 
+    case DEV_USE_LAST_NUMBER: {
+      struct enst_rttimer_private_s *pv = accessor->dev->drv_pv;
+      accessor->number = pv->t_count - 1;
+      return 0;
+    }
+
     case DEV_USE_START: {
       struct device_s *dev = accessor->dev;
       struct enst_rttimer_private_s *pv = dev->drv_pv;

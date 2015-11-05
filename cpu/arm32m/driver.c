@@ -200,6 +200,17 @@ static DEV_USE(arm_use)
         return arm_timer_systick_use(accessor, op);
 #endif
       return 0;
+    case DEV_USE_LAST_NUMBER:
+      if (accessor->api->class_ == DRIVER_CLASS_TIMER)
+        {
+#ifdef CONFIG_CPU_ARM32M_TIMER_DWTCYC
+          accessor->number = 2;
+          return 0;
+#elif defined(CONFIG_CPU_ARM32M_TIMER_SYSTICK)
+          accessor->number = 1;
+          return 0;
+#endif
+        }
     default:
       return -ENOTSUP;
     }

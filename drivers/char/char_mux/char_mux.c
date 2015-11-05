@@ -767,6 +767,12 @@ static DEV_USE(char_mux_use)
     }
     case DEV_USE_PUT_ACCESSOR:
       return 0;
+    case DEV_USE_LAST_NUMBER: {
+      struct device_s *dev = accessor->dev;
+      struct char_mux_context_s *pv = dev->drv_pv;
+      accessor->number = pv->chan_count - 1;
+      return 0;
+    }
     case DEV_USE_START: {
       struct char_mux_context_s *pv = accessor->dev->drv_pv;
       return device_start(&pv->io);

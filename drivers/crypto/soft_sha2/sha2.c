@@ -562,6 +562,9 @@ static DEV_USE(soft_sha2_use)
     case DEV_USE_START:
     case DEV_USE_STOP:
       return 0;
+    case DEV_USE_LAST_NUMBER:
+      accessor->number = 3;
+      return 0;
     default:
       return -ENOTSUP;
     }

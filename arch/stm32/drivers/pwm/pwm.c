@@ -478,7 +478,9 @@ DEV_USE(stm32_pwm_use)
         return -ENOTSUP;
     case DEV_USE_PUT_ACCESSOR:
       return 0;
-
+    case DEV_USE_LAST_NUMBER:
+      accessor->number = STM32_PWM_CHANNEL_MAX - 1;
+      return 0;
     default:
       return -ENOTSUP;
     }
