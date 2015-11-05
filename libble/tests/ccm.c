@@ -167,7 +167,7 @@ static void ccm_test_core(struct device_crypto_s *aes)
         0x6f, 0x70, 0x71, 0x31, 0x32, 0x33, 0x34, 0x35,
         0x36, 0x37, 0x38, 0x39, 0x30, );
 
-  printk("Checking crypto for sizes 1..128\n");
+  printk("Checking CCM for sizes 1..128\n");
   for (size_t len = 1; len < 128; ++len) {
     uint8_t tmp[256];
     ccm_state.sent_by_master = 1;
