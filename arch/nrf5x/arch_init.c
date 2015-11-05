@@ -72,6 +72,12 @@ void nrf52_init(void)
     // FTPAN 37
     *(volatile uint32_t *)0x400005A0 = 0x3;
 
+    // PAN 16
+    *(uint32_t *)0x4007C074 = 0xbaadf00d;
+
+    // PAN 31
+    *(volatile uint32_t *)0x4000053C = ((*(volatile uint32_t *)0x10000244) & 0x0000E000) >> 13;
+
     // FTPAN 36
     nrf_event_clear(clock, NRF_CLOCK_DONE);
     nrf_event_clear(clock, NRF_CLOCK_CTTO);
