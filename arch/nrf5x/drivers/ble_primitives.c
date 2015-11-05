@@ -239,6 +239,9 @@ static struct buffer_s *nrf5x_ble_packet_alloc(const struct nrf5x_ble_private_s 
 
   packet = buffer_pool_alloc(pv->current->layer.scheduler->packet_pool);
 
+  if (!packet)
+    return NULL;
+
   assert(buffer_size(packet) >= CONFIG_BLE_PACKET_SIZE);
 
   packet->begin = 1;
@@ -248,7 +251,7 @@ static struct buffer_s *nrf5x_ble_packet_alloc(const struct nrf5x_ble_private_s 
   return packet;
 }
 
-void nrf5x_ble_data_setup(struct nrf5x_ble_private_s *pv)
+error_t nrf5x_ble_data_setup(struct nrf5x_ble_private_s *pv)
 {
   debug(pv, "Ds");
 
@@ -264,6 +267,9 @@ void nrf5x_ble_data_setup(struct nrf5x_ble_private_s *pv)
     break;
   }
 
+  if (!pv->transmitting)
+    return -ENOMEM;
+
   nrf_reg_set(BLE_RADIO_ADDR, NRF_RADIO_PACKETPTR,
               (uintptr_t)pv->transmitting->data + pv->transmitting->begin);
 
@@ -273,6 +279,8 @@ void nrf5x_ble_data_setup(struct nrf5x_ble_private_s *pv)
                      | (1 << NRF_RADIO_ADDRESS)
                      | (1 << NRF_RADIO_END)
                      );
+
+  return 0;
 }
 
 static

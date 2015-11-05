@@ -498,7 +498,8 @@ void nrf5x_ble_context_start_first(struct nrf5x_ble_private_s *pv)
     nrf5x_ble_pipelined_reset(pv);
   }
 
-  nrf5x_ble_data_setup(pv);
+  if (nrf5x_ble_data_setup(pv))
+    nrf5x_ble_event_close(pv, EVENT_STATUS_RESOURCES_MISSING);
 }
 
 static
@@ -808,7 +809,8 @@ void nrf5x_ble_event_packet_ended(struct nrf5x_ble_private_s *pv)
   gpio(I_TX, 0);
 
   nrf_reg_set(BLE_RADIO_ADDR, NRF_RADIO_BCC, 16);
-  nrf5x_ble_data_setup(pv);
+  if (nrf5x_ble_data_setup(pv))
+    nrf5x_ble_event_close(pv, EVENT_STATUS_RESOURCES_MISSING);
 }
 
 void nrf5x_ble_event_ifs_timeout(struct nrf5x_ble_private_s *pv)
@@ -843,7 +845,8 @@ void nrf5x_ble_event_ifs_timeout(struct nrf5x_ble_private_s *pv)
   }
 
   nrf5x_ble_pipelined_reset(pv);
-  nrf5x_ble_data_setup(pv);
+  if (nrf5x_ble_data_setup(pv))
+    nrf5x_ble_event_close(pv, EVENT_STATUS_RESOURCES_MISSING);
 }
 
 void nrf5x_ble_event_timeout(struct nrf5x_ble_private_s *pv)

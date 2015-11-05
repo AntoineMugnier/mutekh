@@ -90,6 +90,7 @@ enum event_status_e
     EVENT_STATUS_PREEMPTED,
     EVENT_STATUS_DEADLINE_MISSED,
     EVENT_STATUS_PIPELINE_FAILED,
+    EVENT_STATUS_RESOURCES_MISSING,
 };
 
 enum rtc_channel_e
@@ -214,7 +215,7 @@ DEV_IRQ_SRC_PROCESS(nrf5x_ble_radio_irq);
 DEV_IRQ_SRC_PROCESS(nrf5x_ble_timer_irq);
 DEV_IRQ_SRC_PROCESS(nrf5x_ble_rtc_irq);
 
-void nrf5x_ble_data_setup(struct nrf5x_ble_private_s *pv);
+error_t nrf5x_ble_data_setup(struct nrf5x_ble_private_s *pv);
 void nrf5x_ble_rtc_start(struct nrf5x_ble_private_s *pv);
 void nrf5x_ble_rtc_stop(struct nrf5x_ble_private_s *pv);
 uint64_t nrf5x_ble_rtc_value_get(struct nrf5x_ble_private_s *pv);
