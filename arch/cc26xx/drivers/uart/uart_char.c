@@ -416,12 +416,14 @@ static DEV_INIT(cc26xx_uart_init)
 
   //write the integer portion of the BRD
   reg = 0;
-  CC26XX_UART_IBRD_DIVINT_SET(reg, 0x138);
+  //CC26XX_UART_IBRD_DIVINT_SET(reg, 0x138); //9600
+  CC26XX_UART_IBRD_DIVINT_SET(reg, 0x1A);  //115200
   cpu_mem_write_32(CC26XX_UART0_BASE + CC26XX_UART_IBRD_ADDR, reg);
 
   //write the fractionnal portion of the BRD
   reg = 0;
-  CC26XX_UART_FBRD_DIVFRAC_SET(reg, 0);
+  //CC26XX_UART_FBRD_DIVFRAC_SET(reg, 0); //9600
+  CC26XX_UART_FBRD_DIVFRAC_SET(reg, 3); //115200
   cpu_mem_write_32(CC26XX_UART0_BASE + CC26XX_UART_FBRD_ADDR, reg);
 
   //write the desired serial parameters

@@ -90,7 +90,7 @@ static void iomux_init(void)
   cpu_mem_write_32(CC26XX_GPIO_BASE + CC26XX_GPIO_DOE31_0_ADDR, reg);
 }
 
-void cc26xx_printk_init(void)
+void cc26xx_printk_init()
 {
   uint32_t reg;
 
@@ -103,12 +103,14 @@ void cc26xx_printk_init(void)
 
   //write the integer portion of the BRD
   reg = 0;
-  CC26XX_UART_IBRD_DIVINT_SET(reg, 0x138);
+  //CC26XX_UART_IBRD_DIVINT_SET(reg, 0x138); //9600
+  CC26XX_UART_IBRD_DIVINT_SET(reg, 0x1A);  //115200
   cpu_mem_write_32(CC26XX_UART0_BASE + CC26XX_UART_IBRD_ADDR, reg);
 
   //write the fractionnal portion of the BRD
   reg = 0;
-  CC26XX_UART_FBRD_DIVFRAC_SET(reg, 0);
+  //CC26XX_UART_FBRD_DIVFRAC_SET(reg, 0); //9600
+  CC26XX_UART_FBRD_DIVFRAC_SET(reg, 3); //115200
   cpu_mem_write_32(CC26XX_UART0_BASE + CC26XX_UART_FBRD_ADDR, reg);
 
   //write the desired serial parameters
