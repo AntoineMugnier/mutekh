@@ -182,7 +182,7 @@ static void cc26xx_timer_rq_handler(struct device_s *dev)
       rq->rq.drvdata = NULL;
 
       lock_release(&dev->lock);
-      kroutine_exec(&rq->rq.kr, 0);
+      kroutine_exec(&rq->rq.kr);
       lock_spin(&dev->lock);
     }
 
@@ -543,5 +543,7 @@ static DEV_CLEANUP(cc26xx_timer_cleanup)
 #endif
 
   mem_free(pv);
+
+  return 0;
 }
 

@@ -84,7 +84,7 @@ static void cc26xx_uart_try_read(struct device_s *dev)
             {
               dev_request_queue_pop(&pv->read_q);
               lock_release(&dev->lock);
-              kroutine_exec(&rq->base.kr, 0);
+              kroutine_exec(&rq->base.kr);
               lock_spin(&dev->lock);
               continue;
             }
@@ -187,7 +187,7 @@ static void cc26xx_uart_try_write(struct device_s *dev)
           {
             dev_request_queue_pop(&pv->write_q);
             lock_release(&dev->lock);
-            kroutine_exec(&rq->base.kr, 0);
+            kroutine_exec(&rq->base.kr);
             lock_spin(&dev->lock);
             continue;
           }
@@ -270,7 +270,7 @@ DEV_CHAR_REQUEST(cc26xx_uart_request)
   if (err)
     {
       rq->error = err;
-      kroutine_exec(&rq->base.kr, 0);
+      kroutine_exec(&rq->base.kr);
     }
 }
 

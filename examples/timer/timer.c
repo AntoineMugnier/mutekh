@@ -220,7 +220,7 @@ static inline void new_request_handler(struct dev_timer_rq_s *timer_rq, struct p
         }
       pvdata->state = TEST_TIMER_STATE_NEW_REQUEST;
       kroutine_init(&timer_rq->rq.kr, request_handler, KROUTINE_SCHED_SWITCH);
-      kroutine_exec(&timer_rq->rq.kr, 0);
+      kroutine_exec(&timer_rq->rq.kr);
     }
   else
     {
@@ -237,7 +237,7 @@ static inline void irq_handler(struct dev_timer_rq_s *timer_rq, struct pvdata_s 
   DEVICE_OP(&ref_dev_g, get_value, &pvdata->ref_deadline, 0);
   pvdata->state = TEST_TIMER_STATE_DEADLINE_REACHED;
   kroutine_init(&timer_rq->rq.kr, request_handler, KROUTINE_SCHED_SWITCH);
-  kroutine_exec(&timer_rq->rq.kr, 0);
+  kroutine_exec(&timer_rq->rq.kr);
 }
 
 
@@ -254,7 +254,7 @@ static inline void deadline_handler(struct dev_timer_rq_s *timer_rq, struct pvda
   /* ready to post new request */
   pvdata->state = TEST_TIMER_STATE_NEW_REQUEST;
   kroutine_init(&timer_rq->rq.kr, request_handler, KROUTINE_SCHED_SWITCH);
-  kroutine_exec(&timer_rq->rq.kr, 0);
+  kroutine_exec(&timer_rq->rq.kr);
 }
 
 
@@ -311,7 +311,7 @@ static inline void cancel_request(uint32_t id)
         break;
     }
     pvdata_g[id].state = TEST_TIMER_STATE_NEW_REQUEST;
-    kroutine_exec(&request_g[id].rq.kr, 0);
+    kroutine_exec(&request_g[id].rq.kr);
 }
 
 
@@ -341,7 +341,7 @@ static KROUTINE_EXEC(kcontrol_handler)
       cancel_request(rand() % RQ_NB);
     }
   /* Re-run */
-  kroutine_exec(&kcontrol_g, 0);
+  kroutine_exec(&kcontrol_g);
 }
 
 
@@ -365,7 +365,7 @@ static inline void run_requests(void)
     }
 
   for (id = 0; id < RQ_NB; id++)
-    kroutine_exec(&request_g[id].rq.kr, 0);
+    kroutine_exec(&request_g[id].rq.kr);
 }
 
 
@@ -410,7 +410,7 @@ void main(void)
 
   /* run control routine */
   kroutine_init(&kcontrol_g, kcontrol_handler, KROUTINE_SCHED_SWITCH);
-  kroutine_exec(&kcontrol_g, 0);
+  kroutine_exec(&kcontrol_g);
 }
 
 
