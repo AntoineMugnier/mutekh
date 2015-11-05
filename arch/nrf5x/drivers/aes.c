@@ -50,7 +50,7 @@ struct nrf5x_aes_private_s
   struct dev_request_dlqueue_s queue;
 #ifdef CONFIG_DRIVER_NRF5X_AES_CCM
   struct dev_irq_src_s irq_ep[1];
-  uint8_t scratch[NRF_CCM_SCRATCH_SIZE(CONFIG_BLE_PACKET_SIZE)];
+  uint8_t scratch[NRF_CCM_SCRATCH_SIZE];
   struct dev_crypto_rq_s *current;
   uint8_t in0;
 #endif
@@ -342,6 +342,7 @@ static void nrf5x_aes_ccm_hw_start(struct nrf5x_aes_private_s *pv,
   const struct ble_ccm_state_s *pstate = (void*)rq->iv_ctr;
   uint8_t *in = (uint8_t*)rq->in - 1;
   uint8_t *out = rq->out - 1;
+  uint8_t ciphertext_size = rq->in[1] + (rq->op & DEV_CRYPTO_INVERSE ? 0 : 4);
 
   pv->current = rq;
 
@@ -353,18 +354,26 @@ static void nrf5x_aes_ccm_hw_start(struct nrf5x_aes_private_s *pv,
   in[1] = in[2];
   in[2] = 0;
 
+  order_io_mem();
+
   nrf_reg_set(CCM_ADDR, NRF_CCM_ENABLE, NRF_CCM_ENABLE_ENABLED);
-  nrf_reg_set(CCM_ADDR, NRF_CCM_MODE, (rq->op & DEV_CRYPTO_INVERSE)
-              ? NRF_CCM_MODE_DECRYPTION_FASTEST
-              : NRF_CCM_MODE_ENCRYPTION);
+  nrf_reg_set(CCM_ADDR, NRF_CCM_MODE, ((rq->op & DEV_CRYPTO_INVERSE)
+                                       ? NRF_CCM_MODE_DECRYPTION_FASTEST
+                                       : NRF_CCM_MODE_ENCRYPTION)
+#if defined(CONFIG_ARCH_NRF52)
+              | (ciphertext_size > 31 ? NRF_CCM_MODE_LENGTH_8BIT : NRF_CCM_MODE_LENGTH_5BIT)
+#endif
+              );
   nrf_reg_set(CCM_ADDR, NRF_CCM_CNFPTR, (uintptr_t)state);
   nrf_reg_set(CCM_ADDR, NRF_CCM_INPTR, (uintptr_t)in);
   nrf_reg_set(CCM_ADDR, NRF_CCM_OUTPTR, (uintptr_t)out);
+  nrf_reg_set(CCM_ADDR, NRF_CCM_SCRATCHPTR, (uintptr_t)pv->scratch);
 
   nrf_event_clear(CCM_ADDR, NRF_CCM_ENDCRYPT);
   nrf_task_trigger(CCM_ADDR, NRF_CCM_KSGEN);
 }
 
+#if NRF_CCM_MAX_SW_PACKET_SIZE != NRF_CCM_MAX_HW_PACKET_SIZE
 static error_t nrf5x_aes_ccm_sw_encrypt(struct nrf5x_aes_private_s *pv,
                                      struct dev_crypto_rq_s *rq)
 {
@@ -566,8 +575,17 @@ static error_t nrf5x_aes_ccm_sw_decrypt(struct nrf5x_aes_private_s *pv,
 
   if (endian_le32_na_load(rq->in + 2 + len) == mic)
     return 0;
+
+#if 0
+  printk("MIC Status failed, expected %08x, got %08x:\n",
+         endian_le32_na_load(rq->in + 2 + len), mic);
+  printk(" In:  %P\n", rq->in, rq->in[1] + 6);
+  printk(" Out: %P\n", rq->out, rq->out[1] + 2);
+#endif
+
   return -EINVAL;
 }
+#endif
 
 static error_t nrf5x_aes_ccm(struct nrf5x_aes_private_s *pv,
                              struct dev_crypto_rq_s *rq)
@@ -586,18 +604,19 @@ static error_t nrf5x_aes_ccm(struct nrf5x_aes_private_s *pv,
   if (rq->op & DEV_CRYPTO_FINALIZE) {
     uint8_t cleartext_size = rq->in[1] - (rq->op & DEV_CRYPTO_INVERSE ? 4 : 0);
 
-    /* if (!(rq->op & DEV_CRYPTO_INVERSE)) */
-    /*   return nrf5x_aes_ccm_sw_encrypt(pv, rq); */
-
-    if (cleartext_size <= 27) {
+    if (cleartext_size <= NRF_CCM_MAX_HW_PACKET_SIZE) {
       nrf5x_aes_ccm_hw_start(pv, rq);
       return -EAGAIN;
     }
 
+#if NRF_CCM_MAX_SW_PACKET_SIZE != NRF_CCM_MAX_HW_PACKET_SIZE
     if (rq->op & DEV_CRYPTO_INVERSE)
       return nrf5x_aes_ccm_sw_decrypt(pv, rq);
     else
       return nrf5x_aes_ccm_sw_encrypt(pv, rq);
+#else
+    return -ENOTSUP;
+#endif
   }
 
   return 0;
@@ -630,14 +649,17 @@ static DEV_IRQ_SRC_PROCESS(nrf5x_aes_irq)
         out[2] = out[1];
         out[1] = out[0];
 
+        order_io_mem();
+
         if ((rq->op & DEV_CRYPTO_INVERSE) && 
             nrf_reg_get(CCM_ADDR, NRF_CCM_MICSTATUS) == NRF_CCM_MICSTATUS_FAILED) {
+#if 0
           printk("MIC Status failed:\n");
           printk(" In:  %P\n", rq->in, rq->in[1] + 2);
           printk(" Out: %P\n", rq->out, rq->out[1] + 2);
           printk(" Ctx: %P\n", state, sizeof(*state));
           printk(" Scr: %P\n", pv->scratch, sizeof(pv->scratch));
-  
+#endif  
           rq->err = -EINVAL;
         } else {
           rq->err = 0;
@@ -665,11 +687,13 @@ static DEV_IRQ_SRC_PROCESS(nrf5x_aes_irq)
         in[1] = in[0];
         in[0] = pv->in0;
 
+#if 0
         printk("CCM Error:\n");
         printk(" In:  %P\n", rq->in, rq->in[1] + 2);
         printk(" Out: %P\n", rq->out, rq->out[1] + 2);
         printk(" Ctx: %P\n", state, sizeof(*state));
         printk(" Scr: %P\n", pv->scratch, sizeof(pv->scratch));
+#endif
 
         nrf_reg_set(CCM_ADDR, NRF_CCM_ENABLE, NRF_CCM_ENABLE_DISABLED);
 
@@ -794,8 +818,6 @@ static DEV_INIT(nrf5x_aes_init)
                      | (1 << NRF_CCM_ENDCRYPT)
                      | (1 << NRF_CCM_ERROR));
   nrf_short_enable_mask(CCM_ADDR, 1 << NRF_CCM_ENDKSGEN_CRYPT);
-
-  nrf_reg_set(CCM_ADDR, NRF_CCM_SCRATCHPTR, (uintptr_t)pv->scratch);
 #endif
 
   dev->drv_pv = pv;

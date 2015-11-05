@@ -57,21 +57,23 @@ enum nrf5x_ccm_register {
 #define NRF_CCM_ENABLE_ENABLED 2
 
 #define NRF_CCM_MODE_ENCRYPTION 0
-#if defined(CONFIG_ARCH_NRF51)
-# define NRF_CCM_MODE_DECRYPTION 1
-# define NRF_CCM_MODE_DECRYPTION_FASTEST 2
-#elif defined(CONFIG_ARCH_NRF52)
-# define NRF_CCM_MODE_DECRYPTION 1
+#define NRF_CCM_MODE_DECRYPTION 1
+#define NRF_CCM_MODE_DECRYPTION_FASTEST 2
+
+#if defined(CONFIG_ARCH_NRF52)
 # define NRF_CCM_MODE_RATE_1MBIT 0x000
 # define NRF_CCM_MODE_RATE_2MBIT 0x100
-# define NRF_CCM_MODE_DECRYPTION_FASTEST (NRF_CCM_MODE_DECRYPTION | NRF_CCM_MODE_RATE_2MBIT)
+# define NRF_CCM_MODE_LENGTH_5BIT 0
+# define NRF_CCM_MODE_LENGTH_8BIT 0x1000000
 #endif
 
 #if defined(CONFIG_ARCH_NRF51)
-# define NRF_CCM_SCRATCH_SIZE(max_packet_size) (16 + (max_packet_size))
+# define NRF_CCM_MAX_HW_PACKET_SIZE 27
 #elif defined(CONFIG_ARCH_NRF52)
-# define NRF_CCM_SCRATCH_SIZE(max_packet_size) 43
+# define NRF_CCM_MAX_HW_PACKET_SIZE 251
 #endif
+# define NRF_CCM_MAX_SW_PACKET_SIZE 251
+# define NRF_CCM_SCRATCH_SIZE (16 + NRF_CCM_MAX_HW_PACKET_SIZE)
 
 __attribute__((__packed__))
 struct nrf5x_ccm_param_s
