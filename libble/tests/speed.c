@@ -27,7 +27,7 @@ static KROUTINE_EXEC(done2)
                                                                         \
         printk("%30s", text);          \
                                                                         \
-        dev_timer_init_sec(&timer, &timer_req.delay, NULL, seconds, 1); \
+        dev_timer_init_sec(&timer, &timer_req.delay, NULL, ms, 1000);   \
         kroutine_init(&timer_req.rq.kr, done2, KROUTINE_IMMEDIATE);     \
         DEVICE_OP(&timer, request, &timer_req);                         \
                                                                         \
@@ -39,16 +39,15 @@ static KROUTINE_EXEC(done2)
             order_compiler_mem();                                       \
         }                                                               \
                                                                         \
-        uint32_t cycles = seconds * hz / iter_count;                    \
-        uint32_t us = seconds * 1000000 / iter_count;                   \
+        uint32_t cycles = ms * hz / 1000 / iter_count;                  \
+        uint32_t us = ms * 1000 / iter_count;                           \
                                                                         \
-        printk(" %8d %4d %6d\n", \
-               iter_count, us, cycles);                                  \
+        printk(" %8d %4d %6d\n", iter_count, us, cycles);               \
     }
 
 void speed_test(void)
 {
-  const uint32_t seconds = 1;
+  const uint32_t ms = 400;
   const uint32_t hz = 16000000;
   struct device_timer_s timer;
   struct device_crypto_s aes;
@@ -71,9 +70,9 @@ void speed_test(void)
   }
 
   device_start(&timer);
-  dev_timer_init_sec(&timer, &timer_req.delay, NULL, seconds, 1);
+  dev_timer_init_sec(&timer, &timer_req.delay, NULL, ms, 1000);
 
-  printk("Starting %d seconds benches\n", seconds);
+  printk("Starting %d ms benches\n", ms);
   printk("%30s %8s %4s %6s\n", "bench", "iter", "us", "cycles");
 
   BENCH("empty",,);
@@ -300,7 +299,7 @@ void speed_test(void)
           0x67, 0x68, 0x69, 0x6a, 0x6b, 0x6c, 0x6d, 0x6e,
           0x6f, 0x70, 0x71, 0x31, 0x32, 0x33, 0x34, 0x35,
           0x36, 0x37, 0x38, 0x39, 0x30, }, 29);
-    rq.len = 27;
+    rq.len = 29;
     ccm_state.sent_by_master = 1;
     ccm_state.packet_counter = 1;
 
@@ -308,6 +307,21 @@ void speed_test(void)
           ,
           dev_crypto_spin_op(&aes, &rq);
           );
+
+    memcpy(in, (const uint8_t[]){
+        0x0E, 0x1b, 0x17, 0x00, 0x63, 0x64, 0x65, 0x66,
+          0x67, 0x68, 0x69, 0x6a, 0x6b, 0x6c, 0x6d, 0x6e,
+          0x6f, 0x70, 0x71, 0x31, 0x32, 0x33, 0x34, 0x35,
+          0x36, 0x37, 0x38, 0x39, 0x30, 0xa2 }, 30);
+    rq.len = 30;
+    ccm_state.sent_by_master = 1;
+    ccm_state.packet_counter = 1;
+
+    BENCH("BLE AES-CCM 28B encrypt",
+          ,
+          dev_crypto_spin_op(&aes, &rq);
+          );
+
   }
 
   {
@@ -358,11 +372,11 @@ void speed_test(void)
           );
 
     memcpy(in, (const uint8_t[]){
-      0x0E, 0x1F, 0x7A, 0x70, 0xD6, 0x64, 0x15, 0x22,
-        0x6D, 0xF2, 0x6B, 0x17, 0x83, 0x9A, 0x06, 0x04,
-        0x05, 0x59, 0x6B, 0xD6, 0x56, 0x4F, 0x79, 0x6B,
-        0x5B, 0x9C, 0xE6, 0xFF, 0x32, 0xF7, 0x5A, 0x6D,
-        0x33, }, 33);
+        0x0E, 0x1F, 0x7A, 0x70, 0xD6, 0x64, 0x15, 0x22,
+          0x6D, 0xF2, 0x6B, 0x17, 0x83, 0x9A, 0x06, 0x04,
+          0x05, 0x59, 0x6B, 0xD6, 0x56, 0x4F, 0x79, 0x6B,
+          0x5B, 0x9C, 0xE6, 0xFF, 0x32, 0xF7, 0x5A, 0x6D,
+          0x33, }, 33);
     rq.len = 33;
     ccm_state.sent_by_master = 1;
     ccm_state.packet_counter = 1;
@@ -371,5 +385,23 @@ void speed_test(void)
           ,
           dev_crypto_spin_op(&aes, &rq);
           );
-  }
+
+    memcpy(in, (const uint8_t[]){
+        0x0e, 0x1f, 0x7a, 0x70, 0xd6, 0x64, 0x15, 0x22,
+          0x6d, 0xf2, 0x6b, 0x17, 0x83, 0x9a, 0x06, 0x04,
+          0x05, 0x59, 0x6b, 0xd6, 0x56, 0x4f, 0x79, 0x6b,
+          0x5b, 0x9c, 0xe6, 0xff, 0x32, 0xf7, 0x5a, 0x6d,
+          0x33, 0x56,
+          }, 34);
+    rq.len = 34;
+    ccm_state.sent_by_master = 1;
+    ccm_state.packet_counter = 1;
+
+    BENCH("BLE AES-CCM 28B decrypt",
+          ,
+          dev_crypto_spin_op(&aes, &rq);
+          );
+
+    
+      }
 }
