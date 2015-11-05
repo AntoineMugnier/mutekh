@@ -153,10 +153,6 @@ struct device_s
   void				*enum_pv;
 #endif
 
-#if defined(CONFIG_ARCH_SMP) && defined(CONFIG_DEVICE_IRQ)
-  //  struct cpu_set_s              irq_cpus;
-#endif
-
   /** device resources table */
   struct dev_resource_table_s   *res_tbl;
 };
