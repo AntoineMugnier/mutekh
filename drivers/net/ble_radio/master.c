@@ -132,13 +132,13 @@ static void master_tx_enqueue(struct ble_master_s *master,
                              struct net_task_s *task)
 {
   __attribute__((unused))
-  struct buffer_s *p = task->inbound.buffer;
+  struct buffer_s *p = task->packet.buffer;
 
   master->tx_queue_count++;
   buffer_queue_pushback(&master->ble_rq.data.tx_queue,
-                        task->inbound.buffer);
+                        task->packet.buffer);
 
-  dprintk("%s: @%lld %p ll %d [%P]\n", __FUNCTION__, task->inbound.timestamp,
+  dprintk("%s: @%lld %p ll %d [%P]\n", __FUNCTION__, task->packet.timestamp,
          p, p->data[p->begin] & 0x3,
          p->data + p->begin,
          p->end - p->begin);
@@ -153,17 +153,17 @@ static void master_tx_enqueue(struct ble_master_s *master,
 static void master_rx_enqueue(struct ble_master_s *master,
                              struct net_task_s *task)
 {
-  struct buffer_s *p = task->inbound.buffer;
+  struct buffer_s *p = task->packet.buffer;
 
-  task->inbound.dst_addr.llid = p->data[p->begin] & 0x3;
+  task->packet.dst_addr.llid = p->data[p->begin] & 0x3;
   p->begin += 2;
 
-  dprintk("%s %lld: %p ll %d [%P]\n", __FUNCTION__, task->inbound.timestamp,
-          p, task->inbound.dst_addr.llid,
+  dprintk("%s %lld: %p ll %d [%P]\n", __FUNCTION__, task->packet.timestamp,
+          p, task->packet.dst_addr.llid,
           p->data + p->begin,
           p->end - p->begin);
 
-  net_task_inbound_forward(task, &master->layer);
+  net_task_packet_forward(task, &master->layer);
 }
 
 static void master_llcp_push(struct ble_master_s *master,
@@ -412,9 +412,9 @@ static KROUTINE_EXEC(master_rq_done)
 static
 void master_llcp_task_handle(struct ble_master_s *master, struct net_task_s *task)
 {
-  struct buffer_s *p = task->inbound.buffer;
+  struct buffer_s *p = task->packet.buffer;
   uint8_t reason = 0;
-  struct buffer_s *rsp = task->inbound.buffer;
+  struct buffer_s *rsp = task->packet.buffer;
 
   switch (p->data[p->begin]) {
   case BLE_LL_CONNECTION_UPDATE_REQ:
@@ -520,7 +520,7 @@ void master_llcp_task_handle(struct ble_master_s *master, struct net_task_s *tas
  reply:
   {
     struct net_addr_s dst = {};
-    net_task_inbound_respond(task, 0, &dst);
+    net_task_packet_respond(task, 0, &dst);
   }
   return;
 
@@ -553,13 +553,13 @@ void ble_master_task_handle(struct net_layer_s *layer,
   dprintk("%s in %p %p -> %p", __FUNCTION__, master, task->source, task->target);
 
   switch (task->type) {
-  case NET_TASK_INBOUND:
-    dprintk(" inbound @%lld %s, ll %d [%P]",
-           task->inbound.timestamp,
-           task->inbound.dst_addr.unreliable ? "bulk" : "reliable",
-           task->inbound.dst_addr.llid,
-           task->inbound.buffer->data + task->inbound.buffer->begin,
-           task->inbound.buffer->end - task->inbound.buffer->begin);
+  case NET_TASK_OUTBOUND:
+    dprintk(" outbound @%lld %s, ll %d [%P]",
+           task->packet.timestamp,
+           task->packet.dst_addr.unreliable ? "bulk" : "reliable",
+           task->packet.dst_addr.llid,
+           task->packet.buffer->data + task->packet.buffer->begin,
+           task->packet.buffer->end - task->packet.buffer->begin);
 
     if (task->source != &master->layer) {
       // Packet from another layer
@@ -569,12 +569,12 @@ void ble_master_task_handle(struct net_layer_s *layer,
         break;
 
       uint8_t header[] = {
-        task->inbound.dst_addr.llid,
-        task->inbound.buffer->end - task->inbound.buffer->begin,
+        task->packet.dst_addr.llid,
+        task->packet.buffer->end - task->packet.buffer->begin,
       };
-      buffer_prepend(task->inbound.buffer, header, 2);
+      buffer_prepend(task->packet.buffer, header, 2);
       // Delete timestamp, this marks packet as ours
-      task->inbound.timestamp = 0;
+      task->packet.timestamp = 0;
 
       dprintk(" outgoing -> ccm\n");
 
@@ -584,10 +584,10 @@ void ble_master_task_handle(struct net_layer_s *layer,
       master_tx_enqueue(master, task);
 #endif
       return;
-    } else if (task->inbound.timestamp) {
+    } else if (task->packet.timestamp) {
       // Packet originating from radio
 
-      switch (task->inbound.dst_addr.llid) {
+      switch (task->packet.dst_addr.llid) {
       case BLE_LL_RESERVED:
         dprintk(" radio packet -> ccm\n");
         // Packet type not decoded yet, we are before crypto
@@ -604,7 +604,7 @@ void ble_master_task_handle(struct net_layer_s *layer,
         if (!master->l2cap)
           break;
 
-        net_task_inbound_forward(task, master->l2cap);
+        net_task_packet_forward(task, master->l2cap);
         return;
 
       case BLE_LL_CONTROL:

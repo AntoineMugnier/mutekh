@@ -203,13 +203,13 @@ static void slave_error_push(struct ble_slave_s *slave, uint8_t error, bool_t se
 static void slave_tx_enqueue(struct ble_slave_s *slave,
                              struct net_task_s *task)
 {
-  struct buffer_s *p = task->inbound.buffer;
+  struct buffer_s *p = task->packet.buffer;
 
   (void)p;
 
   slave->tx_queue_count++;
   buffer_queue_pushback(&slave->ble_rq.data.tx_queue,
-                        task->inbound.buffer);
+                        task->packet.buffer);
 
 #if defined(CONFIG_BLE_CRYPTO)
   if ((p->data[p->begin] & 0x3) == BLE_LL_CONTROL) {
@@ -225,7 +225,7 @@ static void slave_tx_enqueue(struct ble_slave_s *slave,
   }
 #endif
 
-  dprintk("%s: @%lld %p ll %d [%P]\n", __FUNCTION__, task->inbound.timestamp,
+  dprintk("%s: @%lld %p ll %d [%P]\n", __FUNCTION__, task->packet.timestamp,
          p, p->data[p->begin] & 0x3,
          p->data + p->begin,
          p->end - p->begin);
@@ -240,7 +240,7 @@ static void slave_tx_enqueue(struct ble_slave_s *slave,
 static void slave_rx_enqueue(struct ble_slave_s *slave,
                              struct net_task_s *task)
 {
-  struct buffer_s *p = task->inbound.buffer;
+  struct buffer_s *p = task->packet.buffer;
 
 #if defined(CONFIG_BLE_CRYPTO)
   if ((p->data[p->begin] & 0x3) == BLE_LL_CONTROL) {
@@ -252,15 +252,15 @@ static void slave_rx_enqueue(struct ble_slave_s *slave,
   }
 #endif
 
-  task->inbound.dst_addr.llid = p->data[p->begin] & 0x3;
+  task->packet.dst_addr.llid = p->data[p->begin] & 0x3;
   p->begin += 2;
 
-  dprintk("%s %lld: %p ll %d [%P]\n", __FUNCTION__, task->inbound.timestamp,
-          p, task->inbound.dst_addr.llid,
+  dprintk("%s %lld: %p ll %d [%P]\n", __FUNCTION__, task->packet.timestamp,
+          p, task->packet.dst_addr.llid,
           p->data + p->begin,
           p->end - p->begin);
 
-  net_task_inbound_forward(task, &slave->layer);
+  net_task_packet_forward(task, &slave->layer);
 }
 
 #if defined(CONFIG_BLE_CRYPTO)
@@ -280,8 +280,8 @@ static KROUTINE_EXEC(slave_crypto_done)
       printk("Slave ccm error %d at event %d\n", slave->crypto_rq.err, slave->last_event_counter);
       slave_error_push(slave, BLE_AUTHENTICATION_FAILURE, 1);
 
-      buffer_refdec(task->inbound.buffer);
-      task->inbound.buffer = slave->ccm_tmp_packet;
+      buffer_refdec(task->packet.buffer);
+      task->packet.buffer = slave->ccm_tmp_packet;
       slave->ccm_tmp_packet = NULL;
       slave->ccm_task = NULL;
 
@@ -300,16 +300,16 @@ static KROUTINE_EXEC(slave_crypto_done)
     }
   }
 
-  buffer_refdec(task->inbound.buffer);
-  task->inbound.buffer = slave->ccm_tmp_packet;
+  buffer_refdec(task->packet.buffer);
+  task->packet.buffer = slave->ccm_tmp_packet;
   slave->ccm_tmp_packet = NULL;
   slave->ccm_task = NULL;
 
-  if (!task->inbound.timestamp) {
+  if (!task->packet.timestamp) {
     // Outbound
     dprintk("CRY < %P\n",
-           task->inbound.buffer->data + task->inbound.buffer->begin,
-           task->inbound.buffer->end - task->inbound.buffer->begin);
+           task->packet.buffer->data + task->packet.buffer->begin,
+           task->packet.buffer->end - task->packet.buffer->begin);
 
 
     slave_crypto_next(slave);
@@ -319,11 +319,11 @@ static KROUTINE_EXEC(slave_crypto_done)
   } else {
     // Inbound
     dprintk("CLR %d > %P\n",
-           !task->inbound.dst_addr.unreliable,
-           task->inbound.buffer->data + task->inbound.buffer->begin,
-           task->inbound.buffer->end - task->inbound.buffer->begin);
+           !task->packet.dst_addr.unreliable,
+           task->packet.buffer->data + task->packet.buffer->begin,
+           task->packet.buffer->end - task->packet.buffer->begin);
 
-    task->inbound.src_addr.encrypted = 1;
+    task->packet.src_addr.encrypted = 1;
 
     slave_crypto_next(slave);
 
@@ -351,12 +351,12 @@ static void slave_crypto_next(struct ble_slave_s *slave)
   if (!task)
     return;
 
-  in = task->inbound.buffer;
+  in = task->packet.buffer;
 
-  if (!task->inbound.timestamp) {
+  if (!task->packet.timestamp) {
     // Outbound
     dprintk("CLR %d < %P\n",
-           !task->inbound.dst_addr.unreliable,
+           !task->packet.dst_addr.unreliable,
            in->data + in->begin,
            in->end - in->begin);
 
@@ -373,7 +373,7 @@ static void slave_crypto_next(struct ble_slave_s *slave)
 
     if (!slave->rx_encryption) {
       dprintk("CLR %d > %P\n",
-             task->inbound.dst_addr.unreliable,
+             task->packet.dst_addr.unreliable,
              in->data + in->begin,
              in->end - in->begin);
 
@@ -779,10 +779,10 @@ static KROUTINE_EXEC(slave_rq_done)
 static
 void slave_llcp_task_handle(struct ble_slave_s *slave, struct net_task_s *task)
 {
-  struct buffer_s *p = task->inbound.buffer;
+  struct buffer_s *p = task->packet.buffer;
   const uint8_t *args = &p->data[p->begin + 1];
   uint8_t reason = 0;
-  struct buffer_s *rsp = task->inbound.buffer;
+  struct buffer_s *rsp = task->packet.buffer;
 
   switch (p->data[p->begin]) {
   case BLE_LL_CONNECTION_UPDATE_REQ: {
@@ -921,7 +921,7 @@ void slave_llcp_task_handle(struct ble_slave_s *slave, struct net_task_s *task)
     slave_llcp_push(slave, rsp);
     buffer_refdec(rsp);
 
-    rsp = task->inbound.buffer;
+    rsp = task->packet.buffer;
     rsp->begin = slave->layer.context.prefix_size;
     rsp->end = rsp->begin + 3;
 
@@ -1067,7 +1067,7 @@ void slave_llcp_task_handle(struct ble_slave_s *slave, struct net_task_s *task)
  reply:
   {
     struct net_addr_s dst = {};
-    net_task_inbound_respond(task, 0, &dst);
+    net_task_packet_respond(task, 0, &dst);
   }
   return;
 
@@ -1115,13 +1115,13 @@ void ble_slave_task_handle(struct net_layer_s *layer,
   dprintk("%s in %p %p -> %p", __FUNCTION__, slave, task->source, task->target);
 
   switch (task->type) {
-  case NET_TASK_INBOUND:
-    dprintk(" inbound @%lld %s, ll %d [%P]",
-           task->inbound.timestamp,
-           task->inbound.dst_addr.unreliable ? "bulk" : "reliable",
-           task->inbound.dst_addr.llid,
-           task->inbound.buffer->data + task->inbound.buffer->begin,
-           task->inbound.buffer->end - task->inbound.buffer->begin);
+  case NET_TASK_OUTBOUND:
+    dprintk(" outbound @%lld %s, ll %d [%P]",
+           task->packet.timestamp,
+           task->packet.dst_addr.unreliable ? "bulk" : "reliable",
+           task->packet.dst_addr.llid,
+           task->packet.buffer->data + task->packet.buffer->begin,
+           task->packet.buffer->end - task->packet.buffer->begin);
 
     if (task->source != &slave->layer) {
       // Packet from another layer
@@ -1131,12 +1131,12 @@ void ble_slave_task_handle(struct net_layer_s *layer,
         break;
 
       uint8_t header[] = {
-        task->inbound.dst_addr.llid,
-        task->inbound.buffer->end - task->inbound.buffer->begin,
+        task->packet.dst_addr.llid,
+        task->packet.buffer->end - task->packet.buffer->begin,
       };
-      buffer_prepend(task->inbound.buffer, header, 2);
+      buffer_prepend(task->packet.buffer, header, 2);
       // Delete timestamp, this marks packet as ours
-      task->inbound.timestamp = 0;
+      task->packet.timestamp = 0;
 
       dprintk(" outgoing -> ccm\n");
 
@@ -1148,10 +1148,10 @@ void ble_slave_task_handle(struct net_layer_s *layer,
       slave_tx_enqueue(slave, task);
 #endif
       return;
-    } else if (task->inbound.timestamp) {
+    } else if (task->packet.timestamp) {
       // Packet originating from radio
 
-      switch (task->inbound.dst_addr.llid) {
+      switch (task->packet.dst_addr.llid) {
       case BLE_LL_RESERVED:
         dprintk(" radio packet -> ccm\n");
         // Packet type not decoded yet, we are before crypto
@@ -1169,7 +1169,7 @@ void ble_slave_task_handle(struct net_layer_s *layer,
           break;
 
         slave->latency_backoff = 1;
-        net_task_inbound_forward(task, slave->l2cap);
+        net_task_packet_forward(task, slave->l2cap);
         return;
 
       case BLE_LL_CONTROL:
