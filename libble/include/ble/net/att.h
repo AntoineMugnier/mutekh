@@ -289,6 +289,9 @@ struct ble_att_write_task_s
   uint16_t handle;
   uint16_t value_size;
   void *value;
+
+  bool_t authenticated;
+  bool_t encrypted;
 };
 
 STRUCT_COMPOSE(ble_att_write_task_s, base);

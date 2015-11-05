@@ -132,7 +132,7 @@ bool_t llcp_query_is_pending(struct ble_llcp_s *llcp, uint32_t type)
 
 static void ble_llcp_packet_handle(struct ble_llcp_s *llcp, struct net_task_s *task)
 {
-  struct buffer_s *p = task->inbound.buffer;
+  struct buffer_s *p = task->packet.buffer;
   const uint8_t *args = &p->data[p->begin + 1];
   uint8_t reason = 0;
   struct net_addr_s dst = { .llid = BLE_LL_CONTROL };
@@ -208,8 +208,7 @@ static void ble_llcp_packet_handle(struct ble_llcp_s *llcp, struct net_task_s *t
     p->data[p->begin] = BLE_LL_PING_RSP;
     p->end = p->begin + 1;
 
-    net_task_inbound_respond(task, 0, &dst);
-    return;
+    goto respond;
 
   case BLE_LL_VERSION_IND:
     if (llcp->version_sent)
@@ -225,8 +224,7 @@ static void ble_llcp_packet_handle(struct ble_llcp_s *llcp, struct net_task_s *t
     endian_le16_na_store(&p->data[p->begin + 4], 0);
     p->end = p->begin + 6;
 
-    net_task_inbound_respond(task, 0, &dst);
-    return;
+    goto respond;
 
 #if defined(CONFIG_BLE_CRYPTO)
   case BLE_LL_ENC_REQ: {
@@ -291,6 +289,8 @@ static void ble_llcp_packet_handle(struct ble_llcp_s *llcp, struct net_task_s *t
     dprintk("SK:        %P\n", setup->sk, 16);
     dprintk("IV:        %P\n", setup->iv, 8);
 
+    setup->authenticated = llcp->peer->mitm_protection;
+
     net_task_query_push(&setup->task, llcp->layer.parent, &llcp->layer,
                         BLE_LLCP_ENCRYPTION_SETUP);
     break;
@@ -325,8 +325,7 @@ static void ble_llcp_packet_handle(struct ble_llcp_s *llcp, struct net_task_s *t
     p->data[p->begin + 0] = BLE_LL_START_ENC_RSP;
     p->end = p->begin + 1;
 
-    net_task_inbound_respond(task, 0, &dst);
-    return;
+    goto respond;
 
   case BLE_LL_START_ENC_RSP:
     if (!is_slave)
@@ -340,8 +339,7 @@ static void ble_llcp_packet_handle(struct ble_llcp_s *llcp, struct net_task_s *t
     p->data[p->begin + 0] = BLE_LL_START_ENC_RSP;
     p->end = p->begin + 1;
 
-    net_task_inbound_respond(task, 0, &dst);
-    return;
+    goto respond;
 
   case BLE_LL_PAUSE_ENC_REQ:
     if (!is_slave) {
@@ -357,8 +355,7 @@ static void ble_llcp_packet_handle(struct ble_llcp_s *llcp, struct net_task_s *t
     p->data[p->begin + 0] = BLE_LL_PAUSE_ENC_RSP;
     p->end = p->begin + 1;
 
-    net_task_inbound_respond(task, 0, &dst);
-    return;
+    goto respond;
 
   case BLE_LL_PAUSE_ENC_RSP:
     if (is_slave)
@@ -369,8 +366,7 @@ static void ble_llcp_packet_handle(struct ble_llcp_s *llcp, struct net_task_s *t
     p->data[p->begin + 0] = BLE_LL_PAUSE_ENC_RSP;
     p->end = p->begin + 1;
 
-    net_task_inbound_respond(task, 0, &dst);
-    return;
+    goto respond;
 #endif
 
 #if 0
@@ -387,8 +383,7 @@ static void ble_llcp_packet_handle(struct ble_llcp_s *llcp, struct net_task_s *t
       memset(p->data + p->begin + 12, 0xff, 12);
       p->end = p->begin + 24;
 
-      net_task_inbound_respond(task, 0, &dst);
-      return;
+      goto respond;
     } else {
       // TODO: Handle slave-initiated connection update
       reason = BLE_COMMAND_DISALLOWED;
@@ -424,8 +419,7 @@ static void ble_llcp_packet_handle(struct ble_llcp_s *llcp, struct net_task_s *t
     endian_le64_na_store(p->data + p->begin + 1, SUPPORTED_FEATURES);
     p->end = p->begin + 9;
 
-    net_task_inbound_respond(task, 0, &dst);
-    return;
+    goto respond;
     
   case BLE_LL_FEATURE_RSP:
     llcp->features = SUPPORTED_FEATURES & endian_le64_na_load(args);
@@ -474,8 +468,7 @@ static void ble_llcp_packet_handle(struct ble_llcp_s *llcp, struct net_task_s *t
     endian_le16_na_store(p->data + p->begin + 7, acceptable_mtu * 8 + 14);
     p->end = p->begin + 9;
 
-    net_task_inbound_respond(task, 0, &dst);
-    return;
+    goto respond;
   }
 
   case BLE_LL_LENGTH_RSP:
@@ -495,7 +488,11 @@ static void ble_llcp_packet_handle(struct ble_llcp_s *llcp, struct net_task_s *t
   p->data[p->begin + 0] = BLE_LL_REJECT_IND_EXT;
   p->data[p->begin + 2] = reason;
 
-  net_task_inbound_respond(task, 0, &dst);
+ respond:
+  if (llcp->layer.parent)
+    net_task_packet_respond(task, llcp->layer.parent, 0, &dst);
+  else
+    net_task_destroy(task);
 }
 
 static void ble_llcp_response_handle(struct ble_llcp_s *llcp, struct net_task_s *task)
@@ -529,7 +526,7 @@ static void ble_llcp_response_handle(struct ble_llcp_s *llcp, struct net_task_s 
       p->data[p->begin + 0] = BLE_LL_REJECT_IND_EXT;
       p->data[p->begin + 1] = BLE_LL_ENC_REQ;
       p->data[p->begin + 2] = task->query.err;
-      net_task_inbound_push(in, llcp->layer.parent, &llcp->layer,
+      net_task_outbound_push(in, llcp->layer.parent, &llcp->layer,
                             0, NULL, &dst, p);
       buffer_refdec(p);
       break;
@@ -550,7 +547,7 @@ static void ble_llcp_response_handle(struct ble_llcp_s *llcp, struct net_task_s 
     memcpy(p->data + p->begin + 1, llcp->local_skd, 8);
     memcpy(p->data + p->begin + 9, setup->iv + 4, 4);
 
-    net_task_inbound_push(in, llcp->layer.parent, &llcp->layer,
+    net_task_outbound_push(in, llcp->layer.parent, &llcp->layer,
                           0, NULL, &dst, p);
     buffer_refdec(p);
 
@@ -567,7 +564,7 @@ static void ble_llcp_response_handle(struct ble_llcp_s *llcp, struct net_task_s 
 
     p->data[p->begin + 0] = BLE_LL_START_ENC_REQ;
 
-    net_task_inbound_push(in, llcp->layer.parent, &llcp->layer,
+    net_task_outbound_push(in, llcp->layer.parent, &llcp->layer,
                           0, NULL, &dst, p);
     buffer_refdec(p);
 
@@ -611,7 +608,7 @@ static void ble_llcp_query_handle(struct ble_llcp_s *llcp, struct net_task_s *ta
     }
 
     p->data[p->begin + 0] = BLE_LL_PING_REQ;
-    net_task_inbound_push(in, llcp->layer.parent, &llcp->layer,
+    net_task_outbound_push(in, llcp->layer.parent, &llcp->layer,
                           0, NULL, &dst, p);
     buffer_refdec(p);
 
@@ -669,7 +666,7 @@ static void ble_llcp_query_handle(struct ble_llcp_s *llcp, struct net_task_s *ta
 
       dprintk("%s sending %d\n", __FUNCTION__, p->data[p->begin]);
 
-      net_task_inbound_push(in, llcp->layer.parent, &llcp->layer,
+      net_task_outbound_push(in, llcp->layer.parent, &llcp->layer,
                             0, NULL, &dst, p);
       buffer_refdec(p);
 
@@ -714,7 +711,7 @@ static void ble_llcp_timeout_handle(struct ble_llcp_s *llcp, struct net_task_s *
 
     dprintk("%s sending %d\n", __FUNCTION__, p->data[p->begin]);
 
-    net_task_inbound_push(in, llcp->layer.parent, &llcp->layer,
+    net_task_outbound_push(in, llcp->layer.parent, &llcp->layer,
                           0, NULL, &dst, p);
     buffer_refdec(p);
 
@@ -732,8 +729,6 @@ void ble_llcp_task_handle(struct net_layer_s *layer,
 
   switch (task->type) {
   case NET_TASK_INBOUND:
-    if (task->source != layer->parent)
-      break;
     ble_llcp_packet_handle(llcp, task);
     return;
 

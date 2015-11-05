@@ -110,9 +110,9 @@ void gatt_error_set(struct buffer_s *rsp, uint8_t cmd, uint16_t handle, uint8_t 
 
 static void gatt_command_handle(struct ble_gatt_s *gatt, struct net_task_s *task)
 {
-  const uint8_t *data = task->inbound.buffer->data + task->inbound.buffer->begin;
-  const size_t size = task->inbound.buffer->end - task->inbound.buffer->begin;
-  struct buffer_s *rsp = task->inbound.buffer;
+  const uint8_t *data = task->packet.buffer->data + task->packet.buffer->begin;
+  const size_t size = task->packet.buffer->end - task->packet.buffer->begin;
+  struct buffer_s *rsp = task->packet.buffer;
   struct net_addr_s dst = {
     .cid = BLE_L2CAP_CID_ATT,
   };
@@ -328,7 +328,7 @@ static void gatt_command_handle(struct ble_gatt_s *gatt, struct net_task_s *task
          rsp->end - rsp->begin - 1);
 
   if (gatt->layer.parent) {
-    net_task_inbound_respond(task, 0, &dst);
+    net_task_packet_respond(task, gatt->layer.parent, 0, &dst);
     return;
   }
 
@@ -344,11 +344,8 @@ void ble_gatt_task_handle(struct net_layer_s *layer,
 
   switch (task->type) {
   case NET_TASK_INBOUND:
-    if (task->source == layer->parent) {
-      gatt_command_handle(gatt, task);
-      return;
-    }
-    break;
+    gatt_command_handle(gatt, task);
+    return;
 
   case NET_TASK_TIMEOUT: {
     if (task == gatt->delayed_client_update) {
@@ -401,7 +398,7 @@ void ble_gatt_att_value_changed(struct ble_gattdb_client_s *client,
 
   memcpy(pkt->data + pkt->begin + 3, data, size);
 
-  net_task_inbound_push(net_scheduler_task_alloc(gatt->layer.scheduler),
+  net_task_outbound_push(net_scheduler_task_alloc(gatt->layer.scheduler),
                         gatt->layer.parent, &gatt->layer,
                         0, NULL, &dst, pkt);
 

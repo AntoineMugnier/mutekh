@@ -66,71 +66,78 @@ static
 void ble_l2cap_task_handle(struct net_layer_s *layer,
                            struct net_task_s *task)
 {
-  const uint8_t *data = task->inbound.buffer->data + task->inbound.buffer->begin;
-  const size_t size = task->inbound.buffer->end - task->inbound.buffer->begin;
+  const uint8_t *data = task->packet.buffer->data + task->packet.buffer->begin;
+  const size_t size = task->packet.buffer->end - task->packet.buffer->begin;
   struct ble_l2cap_s *l2cap = ble_l2cap_s_from_layer(layer);
 
   switch (task->type) {
-  case NET_TASK_INBOUND:
-    if (task->source == layer->parent) {
-      uint16_t length = endian_le16_na_load(data);
-      uint16_t cid = endian_le16_na_load(data + 2);
-      struct net_layer_s *target = NULL;
+  case NET_TASK_INBOUND: {
+    assert(task->packet.buffer);
 
-      // TODO: Handle fragmentation
+    uint16_t length = endian_le16_na_load(data);
+    uint16_t cid = endian_le16_na_load(data + 2);
+    struct net_layer_s *target = NULL;
 
-      dprintk("L2CAP rx ll %d, size %d, length %d, cid %d\n",
-              task->inbound.dst_addr.llid, size, length, cid);
+    // TODO: Handle fragmentation
 
-      if (task->inbound.dst_addr.llid != BLE_LL_DATA_START)
-        break;
+    dprintk("L2CAP rx ll %d, size %d, length %d, cid %d\n",
+            task->packet.dst_addr.llid, size, length, cid);
 
-      if (size - 4 != length)
-        break;
+    if (task->packet.dst_addr.llid != BLE_LL_DATA_START)
+      break;
 
-      task->inbound.buffer->begin += 4;
-      task->inbound.dst_addr.cid = cid;
+    if (size - 4 != length)
+      break;
 
-      switch (cid) {
-      case BLE_L2CAP_CID_ATT:
-        target = l2cap->att;
-        break;
+    task->packet.buffer->begin += 4;
+    task->packet.dst_addr.cid = cid;
 
-      case BLE_L2CAP_CID_SM:
-        target = l2cap->sm;
-        break;
+    switch (cid) {
+    case BLE_L2CAP_CID_ATT:
+      target = l2cap->att;
+      break;
 
-      case BLE_L2CAP_CID_SIGNALLING:
-        target = l2cap->signalling;
-        break;
-      }
+    case BLE_L2CAP_CID_SM:
+      target = l2cap->sm;
+      break;
 
-      if (target) {
-        dprintk("L2CAP %d > %P\n",
-               target->handler->type,
-               task->inbound.buffer->data + task->inbound.buffer->begin,
-               task->inbound.buffer->end - task->inbound.buffer->begin);
-        net_task_inbound_forward(task, target);
-        return;
-      }
-    } else {
-      uint16_t cid = task->inbound.dst_addr.cid;
-      uint8_t header[] = {size & 0xff, size >> 8, cid & 0xff, cid >> 8};
+    case BLE_L2CAP_CID_SIGNALLING:
+      target = l2cap->signalling;
+      break;
+    }
 
-      dprintk("L2CAP %d < %P\n",
-             task->source->handler->type,
-             task->inbound.buffer->data + task->inbound.buffer->begin,
-             task->inbound.buffer->end - task->inbound.buffer->begin);
+    if (target) {
+      dprintk("L2CAP %d > %P\n",
+              target->handler->type,
+              task->packet.buffer->data + task->packet.buffer->begin,
+              task->packet.buffer->end - task->packet.buffer->begin);
+      net_task_packet_forward(task, target);
+      return;
+    }
 
-      buffer_prepend(task->inbound.buffer, header, 4);
-      task->inbound.dst_addr.llid = BLE_LL_DATA_START;
+    break;
+  }
 
-      if (layer->parent) {
-        net_task_inbound_forward(task, layer->parent);
-        return;
-      }
+  case NET_TASK_OUTBOUND: {
+    assert(task->packet.buffer);
+
+    uint16_t cid = task->packet.dst_addr.cid;
+    uint8_t header[] = {size & 0xff, size >> 8, cid & 0xff, cid >> 8};
+
+    dprintk("L2CAP %d < %P\n",
+            cid,
+            task->packet.buffer->data + task->packet.buffer->begin,
+            task->packet.buffer->end - task->packet.buffer->begin);
+
+    buffer_prepend(task->packet.buffer, header, 4);
+    task->packet.dst_addr.llid = BLE_LL_DATA_START;
+
+    if (layer->parent) {
+      net_task_packet_forward(task, layer->parent);
+      return;
     }
     break;
+  }
 
   default:
     break;

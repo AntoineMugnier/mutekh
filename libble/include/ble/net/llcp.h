@@ -94,6 +94,7 @@ struct ble_llcp_encryption_setup_s
 
   uint8_t sk[16];
   uint8_t iv[8];
+  bool_t authenticated;
 };
 
 STRUCT_COMPOSE(ble_llcp_encryption_setup_s, task);
