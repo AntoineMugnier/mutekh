@@ -31,18 +31,24 @@ void net_task_destroy(struct net_task_s *task)
 
   switch (task->type) {
   case NET_TASK_INBOUND:
-    if (task->inbound.buffer)
-      buffer_refdec(task->inbound.buffer);
+  case NET_TASK_OUTBOUND:
+    if (task->packet.buffer)
+      buffer_refdec(task->packet.buffer);
     break;
 
   default:
     break;
   }
 
+  task->packet.buffer = 0x55aa55aa;
+  task->target = 0x55aa55aa;
+
   task->destroy_func(task);
 
-  net_layer_refdec(source);
-  net_layer_refdec(target);
+  if (source)
+    net_layer_refdec(source);
+  if (target)
+    net_layer_refdec(target);
 }
 
 void net_task_push(struct net_task_s *task,
@@ -69,33 +75,63 @@ void net_task_inbound_push(struct net_task_s *task,
                            const struct net_addr_s *dst_addr,
                            struct buffer_s *buffer)
 {
-  task->inbound.timestamp = timestamp;
-  task->inbound.buffer = buffer_refinc(buffer);
+  task->packet.timestamp = timestamp;
+  task->packet.buffer = buffer_refinc(buffer);
+
+  assert(buffer);
 
   if (src_addr)
-    task->inbound.src_addr = *src_addr;
+    task->packet.src_addr = *src_addr;
   else
-    memset(&task->inbound.src_addr, 0, sizeof(struct net_addr_s));
+    memset(&task->packet.src_addr, 0, sizeof(struct net_addr_s));
 
   if (dst_addr)
-    task->inbound.dst_addr = *dst_addr;
+    task->packet.dst_addr = *dst_addr;
   else
-    memset(&task->inbound.dst_addr, 0, sizeof(struct net_addr_s));
+    memset(&task->packet.dst_addr, 0, sizeof(struct net_addr_s));
 
   //printk("Task %p forward <- %d\n", task, &source->handler->type);
 
   net_task_push(task, target, source, NET_TASK_INBOUND);
 }
 
-void net_task_inbound_forward(struct net_task_s *task,
+void net_task_outbound_push(struct net_task_s *task,
+                           struct net_layer_s *target,
+                           struct net_layer_s *source,
+                           dev_timer_value_t timestamp,
+                           const struct net_addr_s *src_addr,
+                           const struct net_addr_s *dst_addr,
+                           struct buffer_s *buffer)
+{
+  task->packet.timestamp = timestamp;
+  task->packet.buffer = buffer_refinc(buffer);
+
+  assert(buffer);
+
+  if (src_addr)
+    task->packet.src_addr = *src_addr;
+  else
+    memset(&task->packet.src_addr, 0, sizeof(struct net_addr_s));
+
+  if (dst_addr)
+    task->packet.dst_addr = *dst_addr;
+  else
+    memset(&task->packet.dst_addr, 0, sizeof(struct net_addr_s));
+
+  //printk("Task %p forward <- %d\n", task, &source->handler->type);
+
+  net_task_push(task, target, source, NET_TASK_OUTBOUND);
+}
+
+void net_task_packet_forward(struct net_task_s *task,
                               struct net_layer_s *target)
 {
   struct net_layer_s *old_source = task->source;
   struct net_layer_s *old_target = task->target;
 
-  //printk("Task %p forward <- %d\n", task, &task->inbound.source->handler->type);
+  //printk("Task %p forward <- %d\n", task, &task->packet.source->handler->type);
 
-  net_task_push(task, target, old_target, NET_TASK_INBOUND);
+  net_task_push(task, target, old_source, task->type);
 
   net_layer_refdec(old_source);
   net_layer_refdec(old_target);
@@ -148,20 +184,21 @@ void net_task_query_respond_push(struct net_task_s *task,
   net_layer_refdec(old_target);
 }
 
-void net_task_inbound_respond(struct net_task_s *task,
-                              dev_timer_value_t timestamp,
-                              const struct net_addr_s dst[static 1])
+void net_task_packet_respond(struct net_task_s *task,
+                             struct net_layer_s *next_hop,
+                             dev_timer_value_t timestamp,
+                             const struct net_addr_s dst[static 1])
 {
   struct net_layer_s *old_source = task->source;
   struct net_layer_s *old_target = task->target;
 
   assert(task->type == NET_TASK_INBOUND);
 
-  task->inbound.timestamp = timestamp;
-  task->inbound.src_addr = task->inbound.dst_addr;
-  task->inbound.dst_addr = *dst;
+  task->packet.timestamp = timestamp;
+  task->packet.src_addr = task->packet.dst_addr;
+  task->packet.dst_addr = *dst;
 
-  net_task_push(task, old_source, old_target, NET_TASK_INBOUND);
+  net_task_push(task, next_hop, old_target, NET_TASK_OUTBOUND);
 
   net_layer_refdec(old_source);
   net_layer_refdec(old_target);

@@ -252,8 +252,12 @@ struct net_task_s *net_scheduler_task_alloc(
 
   dprintk("%s %p\n", __FUNCTION__, task);
 
-  if (task)
+  if (task) {
     task->destroy_func = (void*)scheduler_task_free;
+    task->type = NET_TASK_INVALID;
+    task->source = NULL;
+    task->target = NULL;
+  }
 
   return task;
 }

@@ -143,8 +143,11 @@ struct buffer_s *net_layer_packet_alloc(
   size_t size)
 {
   struct buffer_s *pkt = net_scheduler_packet_alloc(layer->scheduler);
-  pkt->begin = begin;
-  pkt->end = begin + size;
+
+  if (pkt) {
+    pkt->begin = begin;
+    pkt->end = begin + size;
+  }
 
   return pkt;
 }
