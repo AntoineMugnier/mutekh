@@ -19,7 +19,20 @@
 */
 
 #include <ble/protocol/address.h>
+#include <net/addr.h>
 
 const char *const ble_addr_rand_name[4] = {
     "Non resolvable", "Resolvable", "Invalid", "Static"
 };
+
+void ble_addr_net_parse(struct ble_addr_s *addr, const struct net_addr_s *naddr)
+{
+  memrevcpy(addr->addr, naddr->mac, 6);
+  addr->type = naddr->random_addr ? BLE_ADDR_RANDOM : BLE_ADDR_PUBLIC;
+}
+
+void ble_addr_net_set(const struct ble_addr_s *addr, struct net_addr_s *naddr)
+{
+  memrevcpy(naddr->mac, addr->addr, 6);
+  naddr->random_addr = addr->type == BLE_ADDR_RANDOM;
+}

@@ -70,8 +70,8 @@ void ble_sig_destroyed(struct net_layer_s *layer)
 
 static void sig_command_handle(struct ble_signalling_s *sig, struct net_task_s *task)
 {
-  const uint8_t *data = task->inbound.buffer->data + task->inbound.buffer->begin;
-  const size_t size = task->inbound.buffer->end - task->inbound.buffer->begin;
+  const uint8_t *data = task->packet.buffer->data + task->packet.buffer->begin;
+  const size_t size = task->packet.buffer->end - task->packet.buffer->begin;
 
   if (size < 4)
     return;
@@ -111,7 +111,7 @@ uint8_t sig_pkt_send(
   pkt->data[pkt->begin + 1] = identifier;
   endian_le16_na_store(&pkt->data[pkt->begin + 2], length);
 
-  net_task_inbound_push(net_scheduler_task_alloc(sig->layer.scheduler),
+  net_task_outbound_push(net_scheduler_task_alloc(sig->layer.scheduler),
                         sig->layer.parent, &sig->layer,
                         0, NULL, &dst, pkt);
 
@@ -129,8 +129,7 @@ void ble_sig_task_handle(struct net_layer_s *layer,
     break;
 
   case NET_TASK_INBOUND:
-    if (task->source == layer->parent)
-      sig_command_handle(sig, task);
+    sig_command_handle(sig, task);
     break;
 
   case NET_TASK_QUERY:

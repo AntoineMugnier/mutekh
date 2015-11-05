@@ -53,6 +53,11 @@ enum ble_link_child_type_e
   BLE_LINK_CHILD_L2CAP,
 };
 
+enum ble_link_task_type_e
+{
+  BLE_LINK_FLOW_UPDATE = 0x465e4,
+};
+
 struct ble_link_param_s
 {
   bool_t is_master;
@@ -60,5 +65,14 @@ struct ble_link_param_s
   struct device_crypto_s *crypto;
 #endif
 };
+
+struct ble_link_flow_update_s
+{
+  struct net_task_s task;
+
+  int32_t accepted_count;
+};
+
+STRUCT_COMPOSE(ble_link_flow_update_s, task);
 
 #endif

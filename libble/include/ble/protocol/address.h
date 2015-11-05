@@ -24,6 +24,8 @@
 #include <hexo/types.h>
 #include <string.h>
 
+struct net_addr_s;
+
 extern const char *const ble_addr_rand_name[4];
 
 enum ble_addr_type_e
@@ -80,5 +82,8 @@ uint8_t ble_addr_cmp(const struct ble_addr_s *a, const struct ble_addr_s *b)
 
   return memcmp(a->addr, b->addr, 6);
 }
+
+void ble_addr_net_parse(struct ble_addr_s *addr, const struct net_addr_s *naddr);
+void ble_addr_net_set(const struct ble_addr_s *addr, struct net_addr_s *naddr);
 
 #endif

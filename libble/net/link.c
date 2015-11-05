@@ -69,15 +69,19 @@ struct ble_link_s
 
   net_task_queue_root_t queue;
 
+  int32_t outbound_accepted_count;
+
 #if defined(CONFIG_BLE_CRYPTO)
   struct ble_ccm_state_s ccm_state[LINK_WAY_COUNT];
 
   struct net_task_s *ccm_task;
-  struct buffer_s *out_packet;
+  struct buffer_s *tmp_packet;
 
   struct dev_crypto_rq_s crypto_rq;
   struct device_crypto_s crypto;
   struct dev_crypto_context_s ccm_ctx;
+
+  bool_t authenticated;
 #endif
 
   enum ble_link_state_e state;
@@ -113,6 +117,7 @@ static void link_state_set(struct ble_link_s *link, enum ble_link_state_e state)
 
   if (crypto_state_changed) {
     link->layer.context.addr.encrypted = state == LINK_ENC_RUNNING;
+    link->layer.context.addr.authenticated = link->authenticated && link->layer.context.addr.encrypted;
     net_layer_context_changed(&link->layer);
   }
 #else
@@ -125,14 +130,14 @@ static void link_task_forward(struct ble_link_s *link, struct net_task_s *task)
   struct net_layer_s *dest = NULL;
 
   dprintk("%s %P...", __FUNCTION__,
-          task->inbound.buffer->data + task->inbound.buffer->begin,
-          task->inbound.buffer->end - task->inbound.buffer->begin);
+          task->packet.buffer->data + task->packet.buffer->begin,
+          task->packet.buffer->end - task->packet.buffer->begin);
 
-  if (task->source == link->layer.parent) {
-    task->inbound.dst_addr.llid = task->inbound.buffer->data[task->inbound.buffer->begin] & 0x03;
-    task->inbound.buffer->begin += 2;
+  if (task->type == NET_TASK_INBOUND) {
+    task->packet.dst_addr.llid = task->packet.buffer->data[task->packet.buffer->begin] & 0x03;
+    task->packet.buffer->begin += 2;
 
-    switch (task->inbound.dst_addr.llid) {
+    switch (task->packet.dst_addr.llid) {
     case BLE_LL_RESERVED:
       dprintk(" error\n");
       link_state_set(link, LINK_FAILED);
@@ -151,7 +156,7 @@ static void link_task_forward(struct ble_link_s *link, struct net_task_s *task)
 
 #if defined(CONFIG_BLE_CRYPTO)
       if (!link_is_master(link)) {
-        uint8_t opcode = task->inbound.buffer->data[task->inbound.buffer->begin];
+        uint8_t opcode = task->packet.buffer->data[task->packet.buffer->begin];
 
         switch (link->state) {
         default:
@@ -177,7 +182,7 @@ static void link_task_forward(struct ble_link_s *link, struct net_task_s *task)
 
 #if defined(CONFIG_BLE_CRYPTO)
     if (!link_is_master(link)) {
-      uint8_t opcode = task->inbound.buffer->data[task->inbound.buffer->begin + 2];
+      uint8_t opcode = task->packet.buffer->data[task->packet.buffer->begin + 2];
 
       switch (link->state) {
       default:
@@ -193,7 +198,7 @@ static void link_task_forward(struct ble_link_s *link, struct net_task_s *task)
   }
 
   if (dest)
-    net_task_inbound_forward(task, dest);
+    net_task_packet_forward(task, dest);
   else
     net_task_destroy(task);
 }
@@ -203,7 +208,7 @@ static KROUTINE_EXEC(link_crypto_done)
 {
   struct ble_link_s *link = KROUTINE_CONTAINER(kr, *link, crypto_rq.rq.kr);
   struct net_task_s *task = link->ccm_task;
-  struct buffer_s *tmp = link->out_packet;
+  struct buffer_s *tmp = link->tmp_packet;
 
   assert(task && tmp);
 
@@ -211,18 +216,16 @@ static KROUTINE_EXEC(link_crypto_done)
           tmp->data + tmp->begin,
           tmp->end - tmp->begin);
 
-  link->out_packet = NULL;
+  /* Swap cleartext with ciphertext */
+  link->tmp_packet = task->packet.buffer;
+  task->packet.buffer = tmp;
   link->ccm_task = NULL;
 
   if (link->crypto_rq.err) {
     link_state_set(link, LINK_FAILED);
-    buffer_refdec(tmp);
 
     net_task_destroy(task);
   } else {
-    buffer_refdec(task->inbound.buffer);
-    task->inbound.buffer = tmp;
-
     ((struct ble_ccm_state_s *)link->crypto_rq.iv_ctr)->packet_counter++;
 
     link_task_forward(link, task);
@@ -236,22 +239,23 @@ static void link_task_crypt(struct ble_link_s *link, struct net_task_s *task)
   struct buffer_s *in, *out;
 
   assert(!link->ccm_task);
-  assert(!link->out_packet);
+  assert(link->tmp_packet);
 
   dprintk("%s\n", __FUNCTION__);
 
-  in = task->inbound.buffer;
-  out = net_layer_packet_alloc(&link->layer, link->layer.context.prefix_size, 0);
-  link->out_packet = out;
+  //  assert(buffer_refcount(task->packet.buffer) == 1);
+
+  in = task->packet.buffer;
+  out = link->tmp_packet;
+  out->begin = link->layer.context.prefix_size;
+
   link->ccm_task = task;
 
-  if (task->source == link->layer.parent) {
-    // Inbound
+  if (task->type == NET_TASK_INBOUND) {
     link->crypto_rq.op = DEV_CRYPTO_FINALIZE | DEV_CRYPTO_INVERSE;
     link->crypto_rq.iv_ctr = (void*)&link->ccm_state[LINK_IN];
     out->end = out->begin + (in->end - in->begin) - 4;
   } else {
-    // Outboud
     link->crypto_rq.op = DEV_CRYPTO_FINALIZE;
     link->crypto_rq.iv_ctr = (void*)&link->ccm_state[LINK_OUT];
     out->end = out->begin + (in->end - in->begin) + 4;
@@ -270,6 +274,9 @@ static void link_task_crypt(struct ble_link_s *link, struct net_task_s *task)
       }
     }
   }
+
+  task->packet.dst_addr.encrypted = 1;
+  task->packet.dst_addr.authenticated = link->authenticated;
 
   link->crypto_rq.ctx = &link->ccm_ctx;
   link->crypto_rq.ad_len = 0;
@@ -315,7 +322,7 @@ static void link_crypto_next(struct ble_link_s *link)
     dprintk("%s in state %d, getting non-data outbound packets\n", __FUNCTION__, link->state);
     assert(cpu_is_interruptible());
     GCT_FOREACH(net_task_queue, &link->queue, t,
-                if (t->source == link->layer.parent || t->source == link->llcp) {
+                if (t->type == NET_TASK_INBOUND || t->source == link->llcp) {
                   net_task_queue_nolock_remove(&link->queue, t);
                   task = t;
                   GCT_FOREACH_BREAK;
@@ -355,19 +362,36 @@ void ble_link_task_handle(struct net_layer_s *layer,
   dprintk("%s %d\n", __FUNCTION__, task->type);
 
   switch (task->type) {
-  case NET_TASK_INBOUND:
-    dprintk("%s packet %P\n", __FUNCTION__,
-            task->inbound.buffer->data + task->inbound.buffer->begin,
-            task->inbound.buffer->end - task->inbound.buffer->begin);
+  case NET_TASK_OUTBOUND:
+    dprintk("%s < %P\n", __FUNCTION__,
+            task->packet.buffer->data + task->packet.buffer->begin,
+            task->packet.buffer->end - task->packet.buffer->begin);
 
-    if (task->source != layer->parent) {
-      uint8_t header[2] = {
-        task->inbound.dst_addr.llid,
-        task->inbound.buffer->end - task->inbound.buffer->begin,
-      };
-      buffer_prepend(task->inbound.buffer, header, 2);
+    assert(task->packet.buffer);
+
+    if (task->packet.dst_addr.unreliable && link->outbound_accepted_count < 0) {
+      dprintk("Dropping unreliable packet because of overflow\n");
+      break;
     }
-    assert(cpu_is_interruptible());
+
+    link->outbound_accepted_count--;
+
+    buffer_prepend(task->packet.buffer, (uint8_t[]){
+      task->packet.dst_addr.llid,
+      task->packet.buffer->end - task->packet.buffer->begin,
+    }, 2);
+
+    net_task_queue_pushback(&link->queue, task);
+    link_crypto_next(link);
+    return;
+
+  case NET_TASK_INBOUND:
+    dprintk("%s > %P\n", __FUNCTION__,
+            task->packet.buffer->data + task->packet.buffer->begin,
+            task->packet.buffer->end - task->packet.buffer->begin);
+
+    assert(task->packet.buffer);
+
     net_task_queue_pushback(&link->queue, task);
     link_crypto_next(link);
     return;
@@ -379,10 +403,24 @@ void ble_link_task_handle(struct net_layer_s *layer,
       struct ble_llcp_encryption_setup_s *setup
         = ble_llcp_encryption_setup_s_from_task(task);
       net_task_query_respond_push(task, link_crypto_setup(link, setup->sk, setup->iv));
+      link->authenticated = setup->authenticated;
       link_state_set(link, LINK_ENC_STARTING1);
       return;      
     }
 #endif
+    }
+    break;
+
+
+  case NET_TASK_NOTIFICATION:
+    switch (task->notification.opcode) {
+    case BLE_LINK_FLOW_UPDATE: {
+      struct ble_link_flow_update_s *up
+        = ble_link_flow_update_s_from_task(task);
+      link->outbound_accepted_count = up->accepted_count;
+      dprintk("Now at %d accepted packets\n", link->outbound_accepted_count);
+      break;
+    }
     }
     break;
 
@@ -454,12 +492,6 @@ void ble_link_unbound(struct net_layer_s *layer,
 
   if (child == link->llcp)
     link->llcp = NULL;
-
-  assert(net_task_queue_isempty(&link->queue));
-
-  GCT_FOREACH(net_task_queue, &link->queue, t,
-              assert(t->source != child && t->target != child);
-              );
 }
 
 static
@@ -538,10 +570,11 @@ error_t ble_link_create(struct net_scheduler_s *scheduler,
   }
 
   link->ccm_task = NULL;
-  link->out_packet = NULL;
   memset(&link->ccm_ctx, 0, sizeof(link->ccm_ctx));
   memset(&link->crypto_rq, 0, sizeof(link->crypto_rq));
   link->ccm_ctx.state_data = link + 1;
+
+  link->tmp_packet = net_layer_packet_alloc(&link->layer, link->layer.context.prefix_size, 0);
 #endif
 
   link->state = LINK_CLEAR;

@@ -169,7 +169,11 @@ static void peri_sm_invalidate(void *delegate, struct net_layer_s *layer)
 
 static void peri_adv_destroyed(void *delegate, struct net_layer_s *layer)
 {
+  struct ble_peripheral_s *peri = delegate;
+
   printk("Advertise layer destroyed\n");
+
+  peri_state_update(peri);
 }
 
 static

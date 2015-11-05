@@ -187,10 +187,11 @@ void ble_gatts_att_value_changed(struct ble_gattdb_client_s *client,
   txn->handle = value_handle;
   memcpy(txn->value, data, size);
 
+  txn->authenticated = 
+
   txn->base.command = mode & BLE_GATT_CCCD_NOTIFICATION
     ? BLE_ATT_HANDLE_VALUE_NOTIF
     : BLE_ATT_HANDLE_VALUE_INDIC;
-
 
   net_task_query_push(&txn->base.task, gatt->layer.parent, &gatt->layer, BLE_ATT_REQUEST);
 }
@@ -225,6 +226,7 @@ static bool_t ble_gatts_context_updated(
 
   gatt->layer.context = *parent_context;
   gatt->client.encrypted = parent_context->addr.encrypted;
+  gatt->client.authenticated = parent_context->addr.authenticated;
 
   dprintk("Gatt client layer now %s\n", gatt->client.encrypted ? "encrypted" : "clear text");
 

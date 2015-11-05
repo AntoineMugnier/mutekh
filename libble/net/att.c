@@ -47,12 +47,16 @@ static void att_transaction_first_send(struct ble_att_s *att);
 
 static void att_command_handle(struct ble_att_s *att, struct net_task_s *task)
 {
-  const uint8_t *data = task->inbound.buffer->data + task->inbound.buffer->begin;
-  const size_t size = task->inbound.buffer->end - task->inbound.buffer->begin;
+  struct buffer_s *pkt = task->packet.buffer;
+  const uint8_t *data = pkt->data + pkt->begin;
+  const size_t size = pkt->end - pkt->begin;
+  struct net_addr_s dst = {
+    .cid = BLE_L2CAP_CID_ATT,
+  };
+
   uint8_t err;
   struct ble_att_transaction_s *txn = NULL;
   uint8_t opcode = data[0];
-  struct buffer_s *rsp;
 
   if (size < 1) {
     err = BLE_ATT_ERR_INVALID_PDU;
@@ -74,10 +78,10 @@ static void att_command_handle(struct ble_att_s *att, struct net_task_s *task)
     att->server_mtu = endian_le16_na_load(data + 1);
     att->mtu = __MIN(att->server_mtu, att->layer.context.mtu);
 
-    rsp = net_task_inbound_buffer_steal(task, att->layer.context.prefix_size, 3);
-    rsp->data[rsp->begin] = BLE_ATT_EXCHANGE_MTU_RSP;
-    endian_le16_na_store(&rsp->data[rsp->begin + 1], att->layer.context.mtu);
-    goto send;
+    pkt->data[pkt->begin] = BLE_ATT_EXCHANGE_MTU_RSP;
+    endian_le16_na_store(&pkt->data[pkt->begin + 1], att->layer.context.mtu);
+    pkt->end = pkt->begin + 3;
+    goto respond;
 
   case BLE_ATT_EXCHANGE_MTU_RSP:
     if (size != 3) {
@@ -87,7 +91,7 @@ static void att_command_handle(struct ble_att_s *att, struct net_task_s *task)
 
     att->server_mtu = endian_le16_na_load(data + 1);
     att->mtu = __MIN(att->server_mtu, att->layer.context.mtu);
-    return;
+    goto destroy;
 
   case BLE_ATT_ERROR_RSP:
   case BLE_ATT_FIND_INFORMATION_RSP:
@@ -101,15 +105,15 @@ static void att_command_handle(struct ble_att_s *att, struct net_task_s *task)
   case BLE_ATT_PREPARE_WRITE_RSP:
   case BLE_ATT_EXECUTE_WRITE_RSP:
   case BLE_ATT_HANDLE_VALUE_CONFIRM:
-    err = att_response_parse(att, task->inbound.buffer, &txn);
+    err = att_response_parse(att, pkt, &txn);
     if (err)
-      return;
+      goto destroy;
 
     assert(txn && txn == att->transaction_pending);
     att->transaction_pending = NULL;
     net_task_query_respond_push(&txn->task, 0);
     att_transaction_first_send(att);
-    return;
+    goto destroy;
 
   case BLE_ATT_FIND_INFORMATION_RQT:
   case BLE_ATT_FIND_BY_TYPE_VALUE_RQT:
@@ -128,24 +132,29 @@ static void att_command_handle(struct ble_att_s *att, struct net_task_s *task)
       goto error;
     }
 
-    err = att_request_parse(att, task->inbound.buffer, &txn);
+    err = att_request_parse(att, pkt, &txn);
     if (err)
       goto error;
 
     net_task_query_push(&txn->task, att->server, &att->layer, BLE_ATT_REQUEST);
-    return;
+    goto destroy;
+
+  case BLE_ATT_HANDLE_VALUE_INDIC:
+    if (!att->client) {
+      err = BLE_ATT_ERR_REQUEST_NOT_SUPPORTED;
+      goto error;
+    }
 
   case BLE_ATT_HANDLE_VALUE_NOTIF:
-  case BLE_ATT_HANDLE_VALUE_INDIC:
     if (!att->client)
-      return;
+      goto destroy;
 
-    err = att_request_parse(att, task->inbound.buffer, &txn);
+    err = att_request_parse(att, pkt, &txn);
     if (err)
-      return;
+      goto destroy;
 
     net_task_query_push(&txn->task, att->client, &att->layer, BLE_ATT_REQUEST);
-    return;
+    goto destroy;
 
   default:
     err = BLE_ATT_ERR_INVALID_PDU;
@@ -153,23 +162,19 @@ static void att_command_handle(struct ble_att_s *att, struct net_task_s *task)
   }
 
  error:
-  rsp = net_task_inbound_buffer_steal(task, att->layer.context.prefix_size, 5);
-  rsp->data[rsp->begin] = BLE_ATT_ERROR_RSP;
-  rsp->data[rsp->begin + 1] = opcode;
-  endian_le16_na_store(&rsp->data[rsp->begin + 2], 0);
-  rsp->data[rsp->begin + 4] = err;
+  pkt->data[pkt->begin] = BLE_ATT_ERROR_RSP;
+  pkt->data[pkt->begin + 1] = opcode;
+  endian_le16_na_store(&pkt->data[pkt->begin + 2], 0);
+  pkt->data[pkt->begin + 4] = err;
+  pkt->end = pkt->begin + 5;
 
- send:;
-  struct net_addr_s dst = {
-    .cid = BLE_L2CAP_CID_ATT,
-  };
-  struct net_task_s *rsp_task = net_scheduler_task_alloc(att->layer.scheduler);
-  if (rsp_task)
-    dprintk("Att rsp < %P\n", rsp->data + rsp->begin, rsp->end - rsp->begin);
-    net_task_inbound_push(rsp_task,
-                          att->layer.parent, &att->layer,
-                          0, NULL, &dst, rsp);
-  buffer_refdec(rsp);
+ respond:
+  dprintk("Att rsp < %P\n", pkt->data + pkt->begin, pkt->end - pkt->begin);
+  net_task_packet_respond(task, att->layer.parent, 0, &dst);
+  return;
+
+ destroy:
+  net_task_destroy(task);
 }
 
 static
@@ -203,11 +208,9 @@ void ble_att_task_handle(struct net_layer_s *layer,
     break;
 
   case NET_TASK_INBOUND:
-    dprintk("Att inbound from %p (parent %p)\n", task->source, layer->parent);
-    dprintk("Att > %P\n", task->inbound.buffer->data + task->inbound.buffer->begin, task->inbound.buffer->end - task->inbound.buffer->begin);
-    if (task->source == layer->parent)
-      att_command_handle(att, task);
-    break;
+    dprintk("Att > %P\n", task->packet.buffer->data + task->packet.buffer->begin, task->packet.buffer->end - task->packet.buffer->begin);
+    att_command_handle(att, task);
+    return;
   }
 
   net_task_destroy(task);
@@ -317,7 +320,7 @@ static void att_transaction_first_send(struct ble_att_s *att)
   struct buffer_s *req = NULL;
   struct net_task_s *req_task = NULL;
 
-  const struct net_addr_s dst = {
+  struct net_addr_s dst = {
     .cid = BLE_L2CAP_CID_ATT,
   };
   struct ble_att_transaction_s *txn;
@@ -351,6 +354,9 @@ static void att_transaction_first_send(struct ble_att_s *att)
         net_task_query_respond_push(&txn->task, -ENOMEM);
         continue;
       }
+    } else {
+      req->begin = att->layer.context.prefix_size;
+      req->end = req->begin;
     }
 
     if (!req_task) {
@@ -368,8 +374,10 @@ static void att_transaction_first_send(struct ble_att_s *att)
       continue;
     }
 
+    dst.unreliable = !with_response;
+
     dprintk("Att req < %P\n", req->data + req->begin, req->end - req->begin);
-    net_task_inbound_push(req_task, att->layer.parent, &att->layer, 0, NULL, &dst, req);
+    net_task_outbound_push(req_task, att->layer.parent, &att->layer, 0, NULL, &dst, req);
     buffer_refdec(req);
 
     if (with_response)
@@ -380,6 +388,11 @@ static void att_transaction_first_send(struct ble_att_s *att)
     req_task = NULL;
     req = NULL;
   }
+
+  if (req_task)
+    net_task_destroy(req_task);
+  if (req)
+    buffer_refdec(req);
 }
 
 static error_t att_response_send(struct ble_att_s *att,
@@ -412,7 +425,7 @@ static error_t att_response_send(struct ble_att_s *att,
   }
 
   dprintk("Att rsp < %P\n", rsp->data + rsp->begin, rsp->end - rsp->begin);
-  net_task_inbound_push(rsp_task, att->layer.parent, &att->layer, 0, NULL, &dst, rsp);
+  net_task_outbound_push(rsp_task, att->layer.parent, &att->layer, 0, NULL, &dst, rsp);
 
  error_free_buffer:
   buffer_refdec(rsp);
