@@ -79,7 +79,9 @@ typedef void net_task_destroy_func_t(void *task);
  */
 enum net_task_type_e
 {
+  NET_TASK_INVALID,
   NET_TASK_INBOUND,
+  NET_TASK_OUTBOUND,
   NET_TASK_TIMEOUT,
   NET_TASK_QUERY,
   NET_TASK_RESPONSE,
@@ -130,10 +132,10 @@ struct net_task_s
 
   union {
     /**
-       Inbound task must have a reference on packet, and a reference on
+       Packet task must have a reference on packet, and a reference on
        source layer.
 
-       Inbound task may be forwarded from layer to layer.  If so,
+       Packet task may be forwarded from layer to layer.  If so,
        reference to source and owner layers must be updated accordingly.
     */
     struct {
@@ -144,7 +146,7 @@ struct net_task_s
 
       /** Must be filled, must retain a reference */
       struct buffer_s *buffer;
-    } inbound;
+    } packet;
 
     /**
        Deadline is relative to scheduler's timer device.
@@ -185,13 +187,26 @@ void net_task_inbound_push(struct net_task_s *task,
                            struct buffer_s *buffer);
 
 /**
-   Forward an inbound task to another layer without changing timestamp
-   and buffer.
+   @this pushes an outbound packet task to a layer.
+
+   @this sets all structure fields and pushes the task.
+ */
+void net_task_outbound_push(struct net_task_s *task,
+                           struct net_layer_s *target,
+                           struct net_layer_s *source,
+                           dev_timer_value_t timestamp,
+                           const struct net_addr_s *src_addr,
+                           const struct net_addr_s *dst_addr,
+                           struct buffer_s *buffer);
+
+/**
+   Forward a packet task (inbound or outbound) to another layer
+   without changing timestamp and buffer.
 
    Task must not be cleaned up for before calling this function.
 */
-void net_task_inbound_forward(struct net_task_s *task,
-                              struct net_layer_s *target);
+void net_task_packet_forward(struct net_task_s *task,
+                             struct net_layer_s *target);
 
 /**
    @this pushes a timetout task to a layer.  Source layer is same as
@@ -229,22 +244,23 @@ void net_task_query_push(struct net_task_s *task,
 void net_task_query_respond_push(struct net_task_s *task, error_t err);
 
 ALWAYS_INLINE
-struct buffer_s *net_task_inbound_buffer_steal(struct net_task_s *task,
-                                               size_t begin,
-                                               size_t size)
+struct buffer_s *net_task_packet_buffer_steal(struct net_task_s *task,
+                                              size_t begin,
+                                              size_t size)
 {
-  struct buffer_s *ret = task->inbound.buffer;
+  struct buffer_s *ret = task->packet.buffer;
 
   assert(ret);
-  task->inbound.buffer = NULL;
+  task->packet.buffer = NULL;
   ret->begin = begin;
   ret->end = begin + size;
 
   return ret;
 }
 
-void net_task_inbound_respond(struct net_task_s *task,
-                              dev_timer_value_t timestamp,
-                              const struct net_addr_s dst[static 1]);
+void net_task_packet_respond(struct net_task_s *task,
+                             struct net_layer_s *next_hop,
+                             dev_timer_value_t timestamp,
+                             const struct net_addr_s dst[static 1]);
 
 #endif
