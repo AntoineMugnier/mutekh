@@ -90,24 +90,6 @@ static TERMUI_CON_ARGS_CLEANUP_PROTOTYPE(rfpacket_opts_cleanup)
     device_put_accessor(&c->accessor);
 }
 
-static TERMUI_CON_COMMAND_PROTOTYPE(dev_shell_rfpacket_start)
-{
-  struct termui_optctx_dev_rfpacket_opts *c = ctx;
-
-  if (device_start(&c->accessor))
-    return -EINVAL;
-  return 0;
-}
-
-static TERMUI_CON_COMMAND_PROTOTYPE(dev_shell_rfpacket_stop)
-{
-  struct termui_optctx_dev_rfpacket_opts *c = ctx;
-
-  if (device_stop(&c->accessor))
-    return -EINVAL;
-  return 0;
-}
-
 static TERMUI_CON_COMMAND_PROTOTYPE(shell_rfpacket_configure)
 {
   struct termui_optctx_dev_rfpacket_opts *c = ctx;
@@ -262,13 +244,6 @@ TERMUI_CON_GROUP_DECL(dev_shell_rfpacket_group) =
                         RFPACKET_OPT_DEV,
                         RFPACKET_OPT_FREQ | RFPACKET_OPT_DEVIATION | RFPACKET_OPT_BW | RFPACKET_OPT_DRATE | RFPACKET_OPT_RSSI | RFPACKET_OPT_MOD | RFPACKET_OPT_SYMB,
                         rfpacket_opts_cleanup)
-  )
-  TERMUI_CON_ENTRY(dev_shell_rfpacket_start, "start",
-    TERMUI_CON_OPTS_CTX(dev_rfpacket_opts, RFPACKET_OPT_DEV, 0, rfpacket_opts_cleanup)
-  )
-
-  TERMUI_CON_ENTRY(dev_shell_rfpacket_stop, "stop",
-    TERMUI_CON_OPTS_CTX(dev_rfpacket_opts, RFPACKET_OPT_DEV, 0, rfpacket_opts_cleanup)
   )
 
   TERMUI_CON_LIST_END

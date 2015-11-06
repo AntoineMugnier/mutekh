@@ -65,24 +65,6 @@ static TERMUI_CON_COMMAND_PROTOTYPE(dev_shell_timer_value)
   return 0;
 }
 
-static TERMUI_CON_COMMAND_PROTOTYPE(dev_shell_timer_start)
-{
-  struct termui_optctx_dev_timer_opts *c = ctx;
-
-  if (device_start(&c->timer))
-    return -EINVAL;
-  return 0;
-}
-
-static TERMUI_CON_COMMAND_PROTOTYPE(dev_shell_timer_stop)
-{
-  struct termui_optctx_dev_timer_opts *c = ctx;
-
-  if (device_stop(&c->timer))
-    return -EINVAL;
-  return 0;
-}
-
 static TERMUI_CON_COMMAND_PROTOTYPE(dev_shell_timer_wait)
 {
   struct termui_optctx_dev_timer_opts *c = ctx;
@@ -208,12 +190,6 @@ static TERMUI_CON_OPT_DECL(dev_timer_opts) =
 TERMUI_CON_GROUP_DECL(dev_shell_timer_group) =
 {
   TERMUI_CON_ENTRY(dev_shell_timer_value, "value",
-		   TERMUI_CON_OPTS_CTX(dev_timer_opts, TIMER_OPT_DEV, 0, timer_opts_cleanup)
-                   )
-  TERMUI_CON_ENTRY(dev_shell_timer_start, "start",
-		   TERMUI_CON_OPTS_CTX(dev_timer_opts, TIMER_OPT_DEV, 0, timer_opts_cleanup)
-                   )
-  TERMUI_CON_ENTRY(dev_shell_timer_stop, "stop",
 		   TERMUI_CON_OPTS_CTX(dev_timer_opts, TIMER_OPT_DEV, 0, timer_opts_cleanup)
                    )
   TERMUI_CON_ENTRY(dev_shell_timer_wait, "wait",

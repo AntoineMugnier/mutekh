@@ -99,24 +99,6 @@ TERMUI_CON_COMMAND_PROTOTYPE(dev_shell_pwm_config)
   return err;
 }
 
-static TERMUI_CON_COMMAND_PROTOTYPE(dev_shell_pwm_start)
-{
-  struct termui_optctx_dev_pwm_opts *data = ctx;
-
-  if (device_start(&data->pwm))
-    return -EINVAL;
-  return 0;
-}
-
-static TERMUI_CON_COMMAND_PROTOTYPE(dev_shell_pwm_stop)
-{
-  struct termui_optctx_dev_pwm_opts *data = ctx;
-
-  if (device_stop(&data->pwm))
-    return -EINVAL;
-  return 0;
-}
-
 static TERMUI_CON_OPT_DECL(dev_pwm_opts) =
 {
   TERMUI_CON_OPT_DEV_ACCESSOR_ENTRY("-d", "--pwm-dev", PWM_OPT_DEV,
@@ -157,14 +139,6 @@ TERMUI_CON_GROUP_DECL(dev_shell_pwm_group) =
                         PWM_OPT_DEV,
                         PWM_OPT_FREQ | PWM_OPT_DUTY | PWM_OPT_POL,
                         pwm_opts_cleanup)
-  )
-
-  TERMUI_CON_ENTRY(dev_shell_pwm_start, "start",
-    TERMUI_CON_OPTS_CTX(dev_pwm_opts, PWM_OPT_DEV, 0, pwm_opts_cleanup)
-  )
-
-  TERMUI_CON_ENTRY(dev_shell_pwm_stop, "stop",
-    TERMUI_CON_OPTS_CTX(dev_pwm_opts, PWM_OPT_DEV, 0, pwm_opts_cleanup)
   )
 
   TERMUI_CON_LIST_END

@@ -38,6 +38,7 @@ enum dev_opts_e
   DEV_OPT_DRV    = 0x04,
 #endif
   DEV_OPT_VERBOSE = 0x08,
+  DEV_OPT_CLASS = 0x10,
 };
 
 struct termui_optctx_dev_opts
@@ -48,6 +49,7 @@ struct termui_optctx_dev_opts
 #ifdef CONFIG_DEVICE_DRIVER_REGISTRY
   struct driver_s *drv;
 #endif
+  enum driver_class_e cl;
 };
 
 TERMUI_CON_PARSE_OPT_PROTOTYPE(dev_console_opt_device_parse)
@@ -59,6 +61,7 @@ TERMUI_CON_PARSE_OPT_PROTOTYPE(dev_console_opt_device_parse)
 
   if (device_get_by_path(devp, nump, NULL, argv[0], optd->filter))
     return -ECANCELED;
+
   return 0;
 }
 
@@ -591,6 +594,44 @@ static TERMUI_CON_COMMAND_PROTOTYPE(dev_shell_tree)
   return 0;
 }
 
+static error_t dev_shell_start_stop(struct termui_console_s *con, enum dev_opts_e used,
+                                    struct termui_optctx_dev_opts *c, bool_t start)
+{
+  const struct driver_s *drv = c->dev->drv;
+
+  if (!(used & DEV_OPT_CLASS))
+    {
+      /* guess device class */
+      if (drv && drv->classes[0] && !drv->classes[1])
+        c->cl = drv->classes[0]->class_;
+      else
+        {
+          termui_con_printf(con, "Ambiguous device class, use --class\n");
+          return -EINVAL;
+        }
+    }
+
+  struct device_accessor_s acc;
+
+  if (device_get_accessor(&acc, c->dev, c->cl, c->num))
+    return -EINVAL;
+
+  error_t err = start ? device_start(&acc) : device_stop(&acc);
+  device_put_accessor(&acc);
+
+  return err ? -EINVAL : 0;
+}
+
+static TERMUI_CON_COMMAND_PROTOTYPE(dev_shell_start)
+{
+  return dev_shell_start_stop(con, used, ctx, 1);
+}
+
+static TERMUI_CON_COMMAND_PROTOTYPE(dev_shell_stop)
+{
+  return dev_shell_start_stop(con, used, ctx, 0);
+}
+
 #ifdef CONFIG_DEVICE_DRIVER_REGISTRY
 static TERMUI_CON_COMMAND_PROTOTYPE(dev_shell_driver_list)
 {
@@ -691,6 +732,10 @@ static TERMUI_CON_OPT_DECL(dev_opts) =
                        TERMUI_CON_OPT_CONSTRAINTS(DEV_OPT_VERBOSE, 0)
                        )
 
+  TERMUI_CON_OPT_ENUM_ENTRY("-c", "--class", DEV_OPT_CLASS, struct termui_optctx_dev_opts,
+                            cl, driver_class_e,
+                            TERMUI_CON_OPT_CONSTRAINTS(DEV_OPT_CLASS, 0))
+
   TERMUI_CON_LIST_END
 };
 
@@ -738,6 +783,12 @@ static TERMUI_CON_GROUP_DECL(dev_shell_subgroup) =
 {
   TERMUI_CON_ENTRY(dev_shell_tree, "tree",
                    TERMUI_CON_OPTS_CTX(dev_opts, 0, DEV_OPT_DEV | DEV_OPT_VERBOSE, NULL)
+                   )
+  TERMUI_CON_ENTRY(dev_shell_start, "start",
+                   TERMUI_CON_OPTS_CTX(dev_opts, DEV_OPT_DEV, DEV_OPT_CLASS, NULL)
+                   )
+  TERMUI_CON_ENTRY(dev_shell_stop, "stop",
+                   TERMUI_CON_OPTS_CTX(dev_opts, DEV_OPT_DEV, DEV_OPT_CLASS, NULL)
                    )
 #ifdef CONFIG_DEVICE_TREE
 # ifdef CONFIG_DEVICE_DRIVER_CLEANUP
