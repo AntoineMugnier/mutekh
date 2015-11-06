@@ -37,6 +37,7 @@ enum dev_opts_e
 #ifdef CONFIG_DEVICE_DRIVER_REGISTRY
   DEV_OPT_DRV    = 0x04,
 #endif
+  DEV_OPT_VERBOSE = 0x08,
 };
 
 struct termui_optctx_dev_opts
@@ -350,7 +351,8 @@ dev_shell_dump_drv_class(struct termui_console_s *con, const struct driver_s *dr
 }
 
 static void
-dev_shell_dump_device(struct termui_console_s *con, struct device_s *dev, uint_fast8_t indent)
+dev_shell_dump_device(struct termui_console_s *con, struct device_s *dev,
+                      uint_fast8_t indent, bool_t show_resources)
 {
   uint_fast8_t i;
 
@@ -381,6 +383,9 @@ dev_shell_dump_device(struct termui_console_s *con, struct device_s *dev, uint_f
       dev_shell_dump_drv_class(con, dev->drv, dev->status == DEVICE_DRIVER_INIT_PARTIAL ? ~dev->init_mask : 0);
       termui_con_printf(con, "\n");
     }
+
+  if (!show_resources)
+    return;
 
   uint_fast8_t count[DEV_RES_TYPES_COUNT] = { 0 };
 
@@ -544,10 +549,11 @@ dev_shell_dump_alias(struct termui_console_s *con, struct device_alias_s *alias,
 #endif
 
 static void
-dev_shell_dump_node(struct termui_console_s *con, struct device_node_s *root, uint_fast8_t i)
+dev_shell_dump_node(struct termui_console_s *con, struct device_node_s *root,
+                    uint_fast8_t i, bool_t show_resources)
 {
   if (root->flags & DEVICE_FLAG_DEVICE)
-    dev_shell_dump_device(con, (struct device_s*)root, i);
+    dev_shell_dump_device(con, (struct device_s*)root, i, show_resources);
 #ifdef CONFIG_DEVICE_TREE
   else if (root->flags & DEVICE_FLAG_ALIAS)
     dev_shell_dump_alias(con, (struct device_alias_s*)root, i);
@@ -557,7 +563,7 @@ dev_shell_dump_node(struct termui_console_s *con, struct device_node_s *root, ui
 
 #ifdef CONFIG_DEVICE_TREE
   DEVICE_NODE_FOREACH(root, node, {
-    dev_shell_dump_node(con, node, i+1);
+      dev_shell_dump_node(con, node, i+1, show_resources);
   });
 #endif
 }
@@ -567,16 +573,16 @@ static TERMUI_CON_COMMAND_PROTOTYPE(dev_shell_tree)
   struct termui_optctx_dev_opts *c = ctx;
 #ifdef CONFIG_DEVICE_TREE
   struct device_node_s *root = used & DEV_OPT_DEV ? &c->dev->node : device_tree_root();
-  dev_shell_dump_node(con, root, 0);
+  dev_shell_dump_node(con, root, 0, !!(used & DEV_OPT_VERBOSE));
 #else
   if (used & DEV_OPT_DEV)
     {
-      dev_shell_dump_node(con, &c->dev->node, 0);
+      dev_shell_dump_node(con, &c->dev->node, 0, !!(used & DEV_OPT_VERBOSE));
     }
   else
     {
       DEVICE_NODE_FOREACH(, node, {
-          dev_shell_dump_node(con, node, 0);
+          dev_shell_dump_node(con, node, 0, !!(used & DEV_OPT_VERBOSE));
         });
     }
 #endif
@@ -603,6 +609,9 @@ static TERMUI_CON_COMMAND_PROTOTYPE(dev_shell_driver_list)
       termui_con_printf(con, "\n    Classes: ");
       dev_shell_dump_drv_class(con, d, 0);
       termui_con_printf(con, "\n");
+
+      if (!(used & DEV_OPT_VERBOSE))
+        continue;
 
       for (i = 0; i < reg->id_count; ++i)
         {
@@ -676,6 +685,10 @@ static TERMUI_CON_OPT_DECL(dev_opts) =
   TERMUI_CON_OPT_CSTRING_ENTRY("-n", "--name", DEV_OPT_NAME,
                                struct termui_optctx_dev_opts, name, 1)
 
+  TERMUI_CON_OPT_ENTRY("-v", "--verbose", DEV_OPT_VERBOSE,
+                       TERMUI_CON_OPT_CONSTRAINTS(DEV_OPT_VERBOSE, 0)
+                       )
+
   TERMUI_CON_LIST_END
 };
 
@@ -698,7 +711,9 @@ static TERMUI_CON_GROUP_DECL(dev_driver_group) =
   TERMUI_CON_ENTRY(dev_shell_driver_bind, "bind",
                    TERMUI_CON_OPTS_CTX(dev_opts, DEV_OPT_DEV | DEV_OPT_DRV, 0, NULL)
                    )
-  TERMUI_CON_ENTRY(dev_shell_driver_list, "list")
+  TERMUI_CON_ENTRY(dev_shell_driver_list, "list",
+                   TERMUI_CON_OPTS_CTX(dev_opts, 0, DEV_OPT_VERBOSE, NULL)
+                   )
 #endif
 
   TERMUI_CON_LIST_END
@@ -720,7 +735,7 @@ extern TERMUI_CON_GROUP_DECL(dev_shell_char_group);
 static TERMUI_CON_GROUP_DECL(dev_shell_subgroup) =
 {
   TERMUI_CON_ENTRY(dev_shell_tree, "tree",
-                   TERMUI_CON_OPTS_CTX(dev_opts, 0, DEV_OPT_DEV, NULL)
+                   TERMUI_CON_OPTS_CTX(dev_opts, 0, DEV_OPT_DEV | DEV_OPT_VERBOSE, NULL)
                    )
 #ifdef CONFIG_DEVICE_TREE
 # ifdef CONFIG_DEVICE_DRIVER_CLEANUP
