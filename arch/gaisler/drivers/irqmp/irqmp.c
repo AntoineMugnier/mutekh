@@ -339,9 +339,9 @@ static DEVICE_TREE_WALKER(irqmp_start_cpus_mask)
 
 void gaisler_irqmp_start_cpus()
 {
-  struct device_s *icu = NULL;
+  struct device_s *icu;
   
-  if (device_get_by_path(&icu, "/icu", NULL) ||
+  if (device_get_by_path(&icu, NULL, NULL, "/icu", NULL) ||
       icu->status != DEVICE_DRIVER_INIT_DONE ||
       icu->drv != &gaisler_irqmp_drv)
     {

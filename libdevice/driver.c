@@ -132,13 +132,14 @@ static bool_t device_filter_accessor(struct device_node_s *node)
 error_t device_get_accessor_by_path(void *accessor, struct device_node_s *root,
                                     const char *path, enum driver_class_e cl)
 {
-  const char *num;
-
-  error_t e = device_node_from_path(&root, path, 5, &num, &device_filter_accessor);
+  struct device_accessor_s *acc = accessor;
+  struct device_s *dev;
+  uint_fast8_t number;
+  error_t e = device_get_by_path(&dev, &number, root, path, &device_filter_accessor);
   if (e)
     return e;
 
-  return device_get_accessor(accessor, device_from_node(root), cl, num ? atoi(num) : 0);
+  return device_get_accessor(acc, dev, cl, number);
 }
 
 #ifdef CONFIG_DEVICE_TREE
@@ -387,8 +388,8 @@ error_t device_init_driver(struct device_s *dev)
           continue;
         }
 
-      struct device_s *dep = dev;
-      if (device_get_by_path(&dep, path, NULL))
+      struct device_s *dep;
+      if (device_get_by_path(&dep, NULL, &dev->node, path, NULL))
         goto missing;
 
       switch (dep->status)

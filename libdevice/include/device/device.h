@@ -329,7 +329,9 @@ error_t device_resolve_alias(struct device_node_s **node, uint_fast8_t depth,
     The filter can be used to provide an additional filter
     function. It may be NULL.
  */
-error_t device_get_by_path(struct device_s **dev, const char *path, device_filter_t *filter);
+error_t device_get_by_path(struct device_s **dev, uint_fast8_t *number,
+                           struct device_node_s *root, const char *path,
+                           device_filter_t *filter);
 
 /** @This writes a null terminated device tree path in buffer. If the
     @tt number parameter is not 0, the value is appended at the end

@@ -24,6 +24,8 @@
 #include <hexo/endian.h>
 
 #include <stdio.h>
+#include <stdlib.h>
+
 #include <device/device.h>
 #include <device/resources.h>
 #include <device/driver.h>
@@ -600,18 +602,32 @@ error_t device_node_from_path(struct device_node_s **node, const char *path,
   return -ENOENT;
 }
 
-error_t device_get_by_path(struct device_s **dev, const char *path, device_filter_t *filter)
+error_t device_get_by_path(struct device_s **dev, uint_fast8_t *number,
+                           struct device_node_s *root, const char *path,
+                           device_filter_t *filter)
 {
-  const char *unused;
-  struct device_node_s *node = &(*dev)->node;
-  error_t e = device_node_from_path(&node, path, 5, &unused, filter);
-  if (!e)
+  const char *num;
+#ifdef CONFIG_DEVICE_TREE
+  if (!root)
+    root = &device_enum_root.node;
+#endif
+  error_t e = device_node_from_path(&root, path, 5, &num, filter);
+  if (e)
+    return e;
+  uint_fast8_t n = 0;
+  *dev = device_from_node(root);
+  if (*dev == NULL)
+    return -ENOENT;
+  if (num)
     {
-      *dev = device_from_node(node);
-      if (!dev)
-        e = -ENOENT;
+      char *end;
+      n = strtoul(num, &end, 0);
+      if (*end != ']')
+        return -EINVAL;
     }
-  return e;
+  if (number)
+    *number = n;
+  return 0;
 }
 
 static inline bool_t _device_tree_walk(struct device_node_s *node, device_tree_walker_t *walker, void *priv)

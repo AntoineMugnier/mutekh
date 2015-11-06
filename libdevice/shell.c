@@ -43,6 +43,7 @@ enum dev_opts_e
 struct termui_optctx_dev_opts
 {
   struct device_s *dev;
+  uint_fast8_t num;
   const char *name;
 #ifdef CONFIG_DEVICE_DRIVER_REGISTRY
   struct driver_s *drv;
@@ -53,9 +54,10 @@ TERMUI_CON_PARSE_OPT_PROTOTYPE(dev_console_opt_device_parse)
 {
   struct dev_console_opt_device_s *optd = (void*)opt;
 
-  struct device_s **devp = (void*)((uint8_t*)ctx + optd->offset);
+  struct device_s **devp = (void*)((uint8_t*)ctx + optd->dev_offset);
+  uint_fast8_t *nump = (void*)((uint8_t*)ctx + optd->num_offset);
 
-  if (device_get_by_path(devp, argv[0], optd->filter))
+  if (device_get_by_path(devp, nump, NULL, argv[0], optd->filter))
     return -ECANCELED;
   return 0;
 }
@@ -671,7 +673,7 @@ static TERMUI_CON_COMMAND_PROTOTYPE(dev_shell_driver_release)
 static TERMUI_CON_OPT_DECL(dev_opts) =
 {
   TERMUI_CON_OPT_DEV_DEVICE_ENTRY("-d", "--device", DEV_OPT_DEV,
-                                  struct termui_optctx_dev_opts, dev, NULL,
+                                  struct termui_optctx_dev_opts, dev, num, NULL,
                                   TERMUI_CON_OPT_CONSTRAINTS(DEV_OPT_DEV, 0)
                                   )
 

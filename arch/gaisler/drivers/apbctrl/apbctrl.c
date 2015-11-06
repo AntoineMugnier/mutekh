@@ -196,8 +196,7 @@ static void apbctrl_scan(struct device_s *dev, uintptr_t begin)
           struct device_s *tmp;
           do {
             sprintf(n, "%s%u", name, i++);
-            tmp = dev;
-          } while (!device_get_by_path(&tmp, n, NULL));
+          } while (!device_get_by_path(&tmp, NULL, &dev->node, n, NULL));
 
           device_set_name(d, n);
         }
@@ -249,8 +248,8 @@ static void apbctrl_scan(struct device_s *dev, uintptr_t begin)
             case GAISLER_DEVICE_GPTIMER:
             case GAISLER_DEVICE_APBUART:
             case GAISLER_DEVICE_IRQMP: {
-              struct device_s *tmp = NULL;
-              if (device_get_by_path(&tmp, gaisler_devices_names[device], NULL))
+              struct device_s *tmp;
+              if (device_get_by_path(&tmp, NULL, NULL, gaisler_devices_names[device], NULL))
                 device_new_alias_to_node(NULL, gaisler_devices_names[device], &d->node);
               break;
             }

@@ -131,8 +131,7 @@ static void ahbctrl_scan(struct device_s *dev, uintptr_t begin, uintptr_t end)
               struct device_s *tmp;
               do {
                 sprintf(n, "%s%u", name, i++);
-                tmp = dev;
-              } while (!device_get_by_path(&tmp, n, NULL));
+              } while (!device_get_by_path(&tmp, NULL, &dev->node, n, NULL));
                   
               device_set_name(d, n);
             }

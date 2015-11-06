@@ -31,17 +31,19 @@ struct dev_console_opt_device_s
 {
   struct termui_con_opts_s opt;
   device_filter_t          *filter;
-  uint16_t                 offset; /* offset of field struct device_s * */
+  uint16_t                 dev_offset; /* offset of field struct device_s * */
+  uint16_t                 num_offset;
 };
 
 FIRST_FIELD_ASSERT(dev_console_opt_device_s, opt);
 
 /* define a macro to use as console option descriptor parameter */
-#define TERMUI_CON_OPT_DEV_DEVICE_ENTRY(sname_, lname_, id_, type_, field_, filter_, ...) \
+#define TERMUI_CON_OPT_DEV_DEVICE_ENTRY(sname_, lname_, id_, type_, dev_field_, num_field_, filter_, ...) \
   TERMUI_CON_OPT_CUSTOM_ENTRY(dev_console_opt_device_s, sname_, lname_, id_, \
     TERMUI_CON_OPT_PARSE(dev_console_opt_device_parse, 1)          \
     TERMUI_CON_OPT_COMPLETE(dev_console_opt_device_comp, NULL)     \
-    .offset = offsetof(type_, field_),                             \
+    .dev_offset = offsetof(type_, dev_field_),                     \
+    .num_offset = offsetof(type_, num_field_),                     \
     .filter = filter_,                                             \
     __VA_ARGS__                                                    \
   )
