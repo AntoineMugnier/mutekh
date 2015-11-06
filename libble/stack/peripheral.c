@@ -341,7 +341,7 @@ bool_t peri_connection_requested(void *delegate, struct net_layer_s *layer,
   err = net_layer_bind(l2cap, &cid, att);
   if (err) {
     printk("error while binding gatt to l2cap: %d\n", err);
-    goto out_gatt;
+    goto out_att;
   }
 
   struct ble_gatts_params_s gatts_params = {
@@ -352,7 +352,7 @@ bool_t peri_connection_requested(void *delegate, struct net_layer_s *layer,
   err = ble_gatts_create(&peri->context->scheduler, &gatts_params, NULL, NULL, &gatt);
   if (err) {
     printk("error while creating gatts: %d\n", err);
-    goto out_sm;
+    goto out_att;
   }
 
   cid = BLE_ATT_SERVER;
@@ -401,6 +401,8 @@ bool_t peri_connection_requested(void *delegate, struct net_layer_s *layer,
   net_layer_refdec(signalling);
  out_gatt:
   net_layer_refdec(gatt);
+ out_att:
+  net_layer_refdec(att);
  out_sm:
 #if defined(CONFIG_BLE_SECURITY_DB)
   net_layer_refdec(sm);

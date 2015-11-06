@@ -163,6 +163,12 @@ void ble_gatts_task_handle(struct net_layer_s *layer,
   net_task_destroy(task);
 }
 
+static void att_req_destroy(void *mem)
+{
+  dprintk("Gatt txn %p destroy\n", mem);
+  mem_free(mem);
+}
+
 static
 void ble_gatts_att_value_changed(struct ble_gattdb_client_s *client,
                                 uint16_t value_handle, uint16_t mode,
@@ -180,7 +186,9 @@ void ble_gatts_att_value_changed(struct ble_gattdb_client_s *client,
   if (!txn)
     return;
 
-  txn->base.task.destroy_func = (void*)memory_allocator_push;
+  dprintk("Gatt txn %p alloc\n", txn);
+
+  txn->base.task.destroy_func = att_req_destroy;
 
   txn->value = (void*)(txn + 1);
   txn->value_size = size;
@@ -198,11 +206,16 @@ void ble_gatts_att_value_changed(struct ble_gattdb_client_s *client,
 
 static void gatts_save_peer_later(struct ble_gatts_s *gatt)
 {
-  if (gatt->delayed_client_update)
+  if (gatt->delayed_client_update) {
     net_scheduler_task_cancel(gatt->layer.scheduler,
                               gatt->delayed_client_update);
+    net_task_destroy(gatt->delayed_client_update);
+    gatt->delayed_client_update = NULL;
+  }
 
   struct net_task_s *timeout = net_scheduler_task_alloc(gatt->layer.scheduler);
+  if (timeout)
+    return;
   dev_timer_delay_t ticks;
   dev_timer_init_sec(&gatt->layer.scheduler->timer, &ticks, NULL, 2, 1);
   net_task_timeout_push(timeout, &gatt->layer,
@@ -235,10 +248,23 @@ static bool_t ble_gatts_context_updated(
   return 1;
 }
 
+static void ble_gatts_dandling(struct net_layer_s *layer)
+{
+  struct ble_gatts_s *gatt = ble_gatts_s_from_layer(layer);
+
+  if (gatt->delayed_client_update) {
+    net_scheduler_task_cancel(gatt->layer.scheduler,
+                              gatt->delayed_client_update);
+    net_task_destroy(gatt->delayed_client_update);
+    gatt->delayed_client_update = NULL;
+  }
+}
+
 static const struct net_layer_handler_s gatts_handler = {
   .destroyed = ble_gatts_destroyed,
   .task_handle = ble_gatts_task_handle,
   .context_updated = ble_gatts_context_updated,
+  .dandling = ble_gatts_dandling,
   .type = BLE_NET_LAYER_GATT,
 };
 

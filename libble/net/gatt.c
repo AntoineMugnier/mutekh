@@ -398,25 +398,34 @@ void ble_gatt_att_value_changed(struct ble_gattdb_client_s *client,
 
   memcpy(pkt->data + pkt->begin + 3, data, size);
 
-  net_task_outbound_push(net_scheduler_task_alloc(gatt->layer.scheduler),
-                        gatt->layer.parent, &gatt->layer,
-                        0, NULL, &dst, pkt);
+  struct net_task_s *task = net_scheduler_task_alloc(gatt->layer.scheduler);
+  if (task) {
+    net_task_outbound_push(task,
+                           gatt->layer.parent, &gatt->layer,
+                           0, NULL, &dst, pkt);
 
-  dprintk("Gatt Notif/Indic %02x (%d) %P\n", pkt->data[pkt->begin],
-         pkt->end - pkt->begin,
-         &pkt->data[pkt->begin + 1],
-         pkt->end - pkt->begin - 1);
+    dprintk("Gatt Notif/Indic %02x (%d) %P\n", pkt->data[pkt->begin],
+            pkt->end - pkt->begin,
+            &pkt->data[pkt->begin + 1],
+            pkt->end - pkt->begin - 1);
+  }
 
   buffer_refdec(pkt);
 }
 
 static void gatt_save_peer_later(struct ble_gatt_s *gatt)
 {
-  if (gatt->delayed_client_update)
+  if (gatt->delayed_client_update) {
     net_scheduler_task_cancel(gatt->layer.scheduler,
                               gatt->delayed_client_update);
+    net_task_destroy(gatt->delayed_client_update);
+    gatt->delayed_client_update = NULL;
+  }
 
   struct net_task_s *timeout = net_scheduler_task_alloc(gatt->layer.scheduler);
+  if (timeout)
+    return;
+
   dev_timer_delay_t ticks;
   dev_timer_init_sec(&gatt->layer.scheduler->timer, &ticks, NULL, 2, 1);
   net_task_timeout_push(timeout, &gatt->layer,

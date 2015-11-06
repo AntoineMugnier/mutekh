@@ -24,7 +24,7 @@
 
 static SLAB_GROW(packet_pool_grow)
 {
-    return 20;
+    return 40;
 }
 
 error_t ble_stack_context_init(struct ble_stack_context_s *ctx,

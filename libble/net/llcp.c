@@ -641,6 +641,11 @@ static void ble_llcp_query_handle(struct ble_llcp_s *llcp, struct net_task_s *ta
         return;
       }
 
+      if (!llcp->layer.parent) {
+        net_task_query_respond_push(task, -EIO);
+        return;
+      }
+
       p = net_layer_packet_alloc(&llcp->layer,
                                  llcp->layer.context.prefix_size,
                                  24);
@@ -782,9 +787,12 @@ static void llcp_feature_req_later(struct ble_llcp_s *llcp)
 {
   dprintk("%s\n", __FUNCTION__);
 
-  if (llcp->feature_req_later)
+  if (llcp->feature_req_later) {
     net_scheduler_task_cancel(llcp->layer.scheduler,
                               llcp->feature_req_later);
+    net_task_destroy(llcp->feature_req_later);
+    llcp->feature_req_later = NULL;
+  }
 
   dprintk("%s\n", __FUNCTION__);
 
@@ -826,12 +834,27 @@ void ble_llcp_destroyed(struct net_layer_s *layer)
   mem_free(llcp);
 }
 
+static void ble_llcp_dandling(struct net_layer_s *layer)
+{
+  struct ble_llcp_s *llcp = ble_llcp_s_from_layer(layer);
+
+  if (llcp->feature_req_later) {
+    net_scheduler_task_cancel(llcp->layer.scheduler,
+                              llcp->feature_req_later);
+    net_task_destroy(llcp->feature_req_later);
+    llcp->feature_req_later = NULL;
+  }
+
+  net_task_queue_reject_all(&llcp->pending);
+}
+
 static const struct net_layer_handler_s llcp_handler = {
   .destroyed = ble_llcp_destroyed,
   .task_handle = ble_llcp_task_handle,
   .bound = ble_llcp_bound,
   .unbound = ble_llcp_unbound,
   .context_updated = ble_llcp_context_updated,
+  .dandling = ble_llcp_dandling,
   .type = BLE_NET_LAYER_LLCP,
 };
 

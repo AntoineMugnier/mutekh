@@ -208,7 +208,7 @@ void ble_att_task_handle(struct net_layer_s *layer,
     break;
 
   case NET_TASK_INBOUND:
-    dprintk("Att > %P\n", task->packet.buffer->data + task->packet.buffer->begin, task->packet.buffer->end - task->packet.buffer->begin);
+    dprintk("Att inb > %P\n", task->packet.buffer->data + task->packet.buffer->begin, task->packet.buffer->end - task->packet.buffer->begin);
     att_command_handle(att, task);
     return;
   }
@@ -261,11 +261,24 @@ void ble_att_unbound(struct net_layer_s *layer,
     att->client = NULL;
 }
 
+static void ble_att_dandling(struct net_layer_s *layer)
+{
+  struct ble_att_s *att = ble_att_s_from_layer(layer);
+
+  if (att->transaction_pending) {
+    net_task_query_respond_push(&att->transaction_pending->task, -EIO);
+    att->transaction_pending = NULL;
+  }
+
+  net_task_queue_reject_all(&att->transaction_queue);
+}
+
 static const struct net_layer_handler_s att_handler = {
   .destroyed = ble_att_destroyed,
   .task_handle = ble_att_task_handle,
   .bound = ble_att_bound,
   .unbound = ble_att_unbound,
+  .dandling = ble_att_dandling,
   .type = BLE_NET_LAYER_ATT,
 };
 
@@ -303,6 +316,12 @@ error_t ble_att_create(
   return 0;
 }
 
+static void att_req_destroy(void *mem)
+{
+  dprintk("Att req %p destroy\n", mem);
+  mem_free(mem);
+}
+
 struct ble_att_transaction_s *att_request_allocate(struct ble_att_s *att,
                                                    size_t total_size)
 {
@@ -310,7 +329,9 @@ struct ble_att_transaction_s *att_request_allocate(struct ble_att_s *att,
   if (!txn)
     return NULL;
 
-  txn->task.destroy_func = memory_allocator_push;
+  dprintk("Att req %p alloc\n", txn);
+
+  txn->task.destroy_func = att_req_destroy;
 
   return txn;
 }
