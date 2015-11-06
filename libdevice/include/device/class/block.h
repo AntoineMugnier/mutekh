@@ -140,7 +140,7 @@ DRIVER_CLASS_TYPES(block,
                    );
 
 #define DRIVER_BLOCK_METHODS(prefix)                                    \
-  (&(const struct driver_block_s){                                      \
+  ((const struct driver_class_s*)&(const struct driver_block_s){        \
     .class_ = DRIVER_CLASS_BLOCK,                                       \
     .f_request = prefix ## _request,                                    \
     .f_getparams = prefix ## _getparams,                                \

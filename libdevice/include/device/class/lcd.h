@@ -146,7 +146,7 @@ DRIVER_CLASS_TYPES(lcd,
 
 
 #define DRIVER_LCD_METHODS(prefix)                               \
-  (&(const struct driver_lcd_s){                                 \
+  ((const struct driver_class_s*)&(const struct driver_lcd_s){   \
     .class_ = DRIVER_CLASS_LCD,                                  \
     .f_request = prefix ## _request,                             \
     .f_getinfo = prefix ## _getinfo,                             \

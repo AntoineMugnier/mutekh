@@ -133,7 +133,7 @@ DRIVER_CLASS_TYPES(valio,
 );
 
 #define DRIVER_VALIO_METHODS(prefix)                            \
-  (&(const struct driver_valio_s){                              \
+  ((const struct driver_class_s*)&(const struct driver_valio_s){        \
     .class_ = DRIVER_CLASS_VALIO,                               \
     .f_request = prefix ## _request,                            \
   })

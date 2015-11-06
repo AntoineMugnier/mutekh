@@ -383,7 +383,7 @@ DRIVER_CLASS_TYPES(rfpacket,
                   );
 
 #define DRIVER_RFPACKET_METHODS(prefix)                            \
-  (&(const struct driver_rfpacket_s){                              \
+  ((const struct driver_class_s*)&(const struct driver_rfpacket_s){     \
     .class_ = DRIVER_CLASS_RFPACKET,                               \
     .f_request = prefix ## _request,                               \
     .f_receive = prefix ## _receive,                               \

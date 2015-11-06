@@ -272,7 +272,7 @@ DRIVER_CLASS_TYPES(mem,
                    );
 
 #define DRIVER_MEM_METHODS(prefix)                               \
-  (&(const struct driver_mem_s){                                 \
+  ((const struct driver_class_s*)&(const struct driver_mem_s){   \
     .class_ = DRIVER_CLASS_MEM,                                  \
     .f_info = prefix ## _info,                                   \
     .f_request = prefix ## _request,                             \

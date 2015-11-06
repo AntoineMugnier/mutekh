@@ -99,7 +99,7 @@ DRIVER_CLASS_TYPES(icu,
 
 /** ICU device class methodes */
 #define DRIVER_ICU_METHODS(prefix)                               \
-  (&(const struct driver_icu_s){                                 \
+  ((const struct driver_class_s*)&(const struct driver_icu_s){   \
     .class_ = DRIVER_CLASS_ICU,                                  \
     .f_get_sink = prefix ## _get_sink,                           \
     .f_link = prefix ## _link,                                   \

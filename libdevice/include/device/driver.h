@@ -320,7 +320,7 @@ struct driver_s
   enum driver_flags_e flags;
 
   /** NULL terminated array of pointers to driver classes structs */
-  const void	*classes[];
+  const struct driver_class_s *classes[];
 };
 
 #if defined(CONFIG_DEVICE_DRIVER_DESC)

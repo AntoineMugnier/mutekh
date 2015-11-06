@@ -94,7 +94,7 @@ DRIVER_CLASS_TYPES(uart,
                   );
 
 #define DRIVER_UART_METHODS(prefix)                            \
-  (&(const struct driver_uart_s){                              \
+  ((const struct driver_class_s*)&(const struct driver_uart_s){ \
     .class_ = DRIVER_CLASS_UART,                               \
     .f_config = prefix ## _config,                             \
   })

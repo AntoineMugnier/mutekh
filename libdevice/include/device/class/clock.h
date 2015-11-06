@@ -282,7 +282,7 @@ DRIVER_CLASS_TYPES(clock,
                    );
 
 #define DRIVER_CLOCK_METHODS(prefix)                                \
-  (&(const struct driver_clock_s){                                  \
+  ((const struct driver_class_s*)&(const struct driver_clock_s){    \
     .class_ = DRIVER_CLASS_CLOCK,                                   \
     .f_node_info = prefix ## _node_info,                            \
     .f_config_node = prefix ## _config_node,                        \

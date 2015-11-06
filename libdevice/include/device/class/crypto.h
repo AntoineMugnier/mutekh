@@ -308,7 +308,7 @@ DRIVER_CLASS_TYPES(crypto,
                    );
 
 #define DRIVER_CRYPTO_METHODS(prefix)                               \
-  (&(const struct driver_crypto_s){                                 \
+  ((const struct driver_class_s*)&(const struct driver_crypto_s){   \
     .class_ = DRIVER_CLASS_CRYPTO,                                  \
     .f_info = prefix ## _info,                                      \
     .f_request = prefix ## _request,                                \

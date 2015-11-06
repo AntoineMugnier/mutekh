@@ -329,7 +329,7 @@ DRIVER_CLASS_TYPES(timer,
                    );
 
 #define DRIVER_TIMER_METHODS(prefix)                            \
-  (&(const struct driver_timer_s){                              \
+  ((const struct driver_class_s*)&(const struct driver_timer_s){        \
     .class_ = DRIVER_CLASS_TIMER,                               \
     .f_request = prefix ## _request,                            \
     .f_cancel = prefix ## _cancel,                              \

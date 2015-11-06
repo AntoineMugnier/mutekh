@@ -141,7 +141,7 @@ DRIVER_CLASS_STRUCT(input,
                     );
 
 #define DRIVER_INPUT_METHODS(prefix)                               \
-  (&(const struct driver_input_s){                                 \
+  ((const struct driver_class_s*)&(const struct driver_input_s){   \
     .class_ = DRIVER_CLASS_INPUT,                                  \
     .f_info = prefix ## _info,                                     \
     .f_read = prefix ## _read,                                     \

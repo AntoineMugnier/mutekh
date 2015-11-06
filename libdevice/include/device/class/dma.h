@@ -176,7 +176,7 @@ DRIVER_CLASS_TYPES(dma,
                    );
 
 #define DRIVER_DMA_METHODS(prefix)                               \
-  (&(const struct driver_dma_s){                                 \
+  ((const struct driver_class_s*)&(const struct driver_dma_s){   \
     .class_ = DRIVER_CLASS_DMA,                                  \
     .f_request = prefix ## _request,                             \
   })

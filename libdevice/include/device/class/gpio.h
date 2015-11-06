@@ -290,7 +290,7 @@ DRIVER_CLASS_TYPES(gpio,
   );
 
 #define DRIVER_GPIO_METHODS(prefix)                               \
-  (&(const struct driver_gpio_s){                                 \
+  ((const struct driver_class_s*)&(const struct driver_gpio_s){   \
     .class_ = DRIVER_CLASS_GPIO,                                  \
     .f_set_mode = prefix ## _set_mode,                            \
     .f_set_output = prefix ## _set_output,                        \

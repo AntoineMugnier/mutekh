@@ -226,7 +226,7 @@ DRIVER_CLASS_TYPES(char,
                    );
 
 #define DRIVER_CHAR_METHODS(prefix)                                \
-  (&(const struct driver_char_s){                                  \
+  ((const struct driver_class_s*)&(const struct driver_char_s){    \
     .class_ = DRIVER_CLASS_CHAR,                                   \
     .f_request = prefix ## _request,                               \
     .f_cancel = prefix ## _cancel,                               \

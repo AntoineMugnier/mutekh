@@ -250,7 +250,7 @@ DRIVER_CLASS_TYPES(persist,
                    );
 
 #define DRIVER_PERSIST_METHODS(prefix)                            \
-  (&(const struct driver_persist_s){                              \
+  ((const struct driver_class_s*)&(const struct driver_persist_s){      \
     .class_ = DRIVER_CLASS_PERSIST,                               \
     .f_info = prefix ## _info,                                    \
     .f_request = prefix ## _request,                              \
