@@ -111,9 +111,13 @@ uint8_t sig_pkt_send(
   pkt->data[pkt->begin + 1] = identifier;
   endian_le16_na_store(&pkt->data[pkt->begin + 2], length);
 
-  net_task_outbound_push(net_scheduler_task_alloc(sig->layer.scheduler),
-                        sig->layer.parent, &sig->layer,
-                        0, NULL, &dst, pkt);
+  struct net_task_s *task = net_scheduler_task_alloc(sig->layer.scheduler);
+
+  if (task) {
+    net_task_outbound_push(task,
+                           sig->layer.parent, &sig->layer,
+                           0, NULL, &dst, pkt);
+  }
 
   return identifier;
 }
@@ -170,9 +174,21 @@ void ble_sig_task_handle(struct net_layer_s *layer,
   net_task_destroy(task);
 }
 
+static
+void ble_sig_dandling(struct net_layer_s *layer)
+{
+  struct ble_signalling_s *sig = ble_signalling_s_from_layer(layer);
+
+  if (sig->pending_conn_params) {
+    net_task_query_respond_push(sig->pending_conn_params, -EIO);
+    sig->pending_conn_params = NULL;
+  }
+}
+
 static const struct net_layer_handler_s sig_handler = {
   .destroyed = ble_sig_destroyed,
   .task_handle = ble_sig_task_handle,
+  .dandling = ble_sig_dandling,
   .type = BLE_NET_LAYER_SIGNALLING,
 };
 

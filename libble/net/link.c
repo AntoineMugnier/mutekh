@@ -243,7 +243,7 @@ static void link_task_crypt(struct ble_link_s *link, struct net_task_s *task)
 
   dprintk("%s\n", __FUNCTION__);
 
-  //  assert(buffer_refcount(task->packet.buffer) == 1);
+  assert(buffer_refcount(task->packet.buffer) == 1);
 
   in = task->packet.buffer;
   out = link->tmp_packet;
@@ -519,12 +519,20 @@ void ble_link_destroyed(struct net_layer_s *layer)
   mem_free(link);
 }
 
+static void ble_link_dandling(struct net_layer_s *layer)
+{
+  struct ble_link_s *link = ble_link_s_from_layer(layer);
+
+  net_task_queue_reject_all(&link->queue);
+}
+
 static const struct net_layer_handler_s link_handler = {
   .destroyed = ble_link_destroyed,
   .task_handle = ble_link_task_handle,
   .bound = ble_link_bound,
   .unbound = ble_link_unbound,
   .context_updated = ble_link_context_updated,
+  .dandling = ble_link_dandling,
   .type = BLE_NET_LAYER_LINK,
 };
 

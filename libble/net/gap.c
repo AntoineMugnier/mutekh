@@ -86,9 +86,15 @@ static struct ble_gap_conn_params_update_s *gap_create_update(struct ble_gap_s *
 
 static void gap_update_conn_in(struct ble_gap_s *gap, uint32_t sec)
 {
-  if (gap->conn_update_task)
+  if (gap->conn_update_task) {
     net_scheduler_task_cancel(gap->layer.scheduler,
                               gap->conn_update_task);
+    net_task_destroy(gap->conn_update_task);
+    gap->conn_update_task = NULL;
+  }
+
+  if (!gap->layer.parent)
+    return;
 
   struct net_task_s *timeout = net_scheduler_task_alloc(gap->layer.scheduler);
   if (timeout) {
@@ -125,15 +131,19 @@ void ble_gap_task_handle(struct net_layer_s *layer,
       break;
 
     net_task_query_push(&upd->task, gap->layer.parent, &gap->layer, BLE_GAP_CONN_PARAMS_UPDATE);
+
+    gap->conn_update_task = NULL;
     break;
   }
 
   case NET_TASK_RESPONSE:
+    if (task->query.opcode != BLE_GAP_CONN_PARAMS_UPDATE)
+      break;
+
     printk("GAP conn params update response from %d: %d\n",
            &task->source->handler->type, task->query.err);
 
-    if (task->source == gap->layer.parent &&
-        task->query.err == -ENOTSUP) {
+    if (task->source == layer->parent && task->query.err == -ENOTSUP) {
       struct ble_gap_conn_params_update_s *upd = gap_create_update(gap);
 
       printk("GAP conn params update forwarded to signalling\n");
@@ -165,10 +175,23 @@ static bool_t ble_gap_context_updated(
   return 1;
 }
 
+static void ble_gap_dandling(struct net_layer_s *layer)
+{
+  struct ble_gap_s *gap = ble_gap_s_from_layer(layer);
+
+  if (gap->conn_update_task) {
+    net_scheduler_task_cancel(gap->layer.scheduler,
+                              gap->conn_update_task);
+    net_task_destroy(gap->conn_update_task);
+    gap->conn_update_task = NULL;
+  }
+}
+
 static const struct net_layer_handler_s gap_handler = {
   .destroyed = ble_gap_destroyed,
   .task_handle = ble_gap_task_handle,
   .context_updated = ble_gap_context_updated,
+  .dandling = ble_gap_dandling,
   .type = BLE_NET_LAYER_GAP,
   .use_timer = 1,
 };

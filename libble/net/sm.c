@@ -311,54 +311,80 @@ static void sm_distribute(struct ble_sm_s *sm)
     .cid = BLE_L2CAP_CID_SM,
   };
   struct buffer_s *pkt;
+  struct net_task_s *task;
 
   if (sm->to_distribute & EXPECT_ENCRYPTION_INFORMATION) {
     pkt = net_layer_packet_alloc(&sm->layer, sm->layer.context.prefix_size, 17);
-    pkt->data[pkt->begin] = BLE_SM_ENCRYPTION_INFORMATION;
-    ble_peer_ltk_get(sm->peer, pkt->data + pkt->begin + 1);
-    net_task_outbound_push(net_scheduler_task_alloc(sm->layer.scheduler),
-                          sm->layer.parent, &sm->layer,
-                          0, NULL, &dst, pkt);
+    if (pkt) {
+      pkt->data[pkt->begin] = BLE_SM_ENCRYPTION_INFORMATION;
+      ble_peer_ltk_get(sm->peer, pkt->data + pkt->begin + 1);
+      task = net_scheduler_task_alloc(sm->layer.scheduler);
+      if (task)
+        net_task_outbound_push(task,
+                               sm->layer.parent, &sm->layer,
+                               0, NULL, &dst, pkt);
+      buffer_refdec(pkt);
+    }
   }
 
   if (sm->to_distribute & EXPECT_MASTER_IDENTIFICATION) {
     uint16_t ediv;
 
     pkt = net_layer_packet_alloc(&sm->layer, sm->layer.context.prefix_size, 11);
-    pkt->data[pkt->begin] = BLE_SM_MASTER_IDENTIFICATION;
-    ble_peer_id_get(sm->peer, pkt->data + pkt->begin + 3, &ediv);
-    endian_le16_na_store(pkt->data + pkt->begin + 1, ediv);
-    net_task_outbound_push(net_scheduler_task_alloc(sm->layer.scheduler),
-                          sm->layer.parent, &sm->layer,
-                          0, NULL, &dst, pkt);
+    if (pkt) {
+      pkt->data[pkt->begin] = BLE_SM_MASTER_IDENTIFICATION;
+      ble_peer_id_get(sm->peer, pkt->data + pkt->begin + 3, &ediv);
+      endian_le16_na_store(pkt->data + pkt->begin + 1, ediv);
+      task = net_scheduler_task_alloc(sm->layer.scheduler);
+      if (task)
+        net_task_outbound_push(task,
+                               sm->layer.parent, &sm->layer,
+                               0, NULL, &dst, pkt);
+      buffer_refdec(pkt);
+    }
   }
 
   if (sm->to_distribute & EXPECT_IDENTITY_INFORMATION) {
     pkt = net_layer_packet_alloc(&sm->layer, sm->layer.context.prefix_size, 17);
-    pkt->data[pkt->begin] = BLE_SM_IDENTITY_INFORMATION;
-    memcpy(pkt->data + pkt->begin + 1, sm->peer->db->irk, 16);
-    net_task_outbound_push(net_scheduler_task_alloc(sm->layer.scheduler),
-                          sm->layer.parent, &sm->layer,
-                          0, NULL, &dst, pkt);
+    if (pkt) {
+      pkt->data[pkt->begin] = BLE_SM_IDENTITY_INFORMATION;
+      memcpy(pkt->data + pkt->begin + 1, sm->peer->db->irk, 16);
+      task = net_scheduler_task_alloc(sm->layer.scheduler);
+      if (task)
+        net_task_outbound_push(task,
+                               sm->layer.parent, &sm->layer,
+                               0, NULL, &dst, pkt);
+      buffer_refdec(pkt);
+    }
   }
 
   if (sm->to_distribute & EXPECT_IDENTITY_ADDRESS_INFORMATION) {
     pkt = net_layer_packet_alloc(&sm->layer, sm->layer.context.prefix_size, 8);
-    pkt->data[pkt->begin] = BLE_SM_IDENTITY_ADDRESS_INFORMATION;
-    pkt->data[pkt->begin + 1] = sm->local_addr.type == BLE_ADDR_RANDOM;
-    memcpy(pkt->data + pkt->begin + 2, sm->local_addr.addr, 6);
-    net_task_outbound_push(net_scheduler_task_alloc(sm->layer.scheduler),
-                          sm->layer.parent, &sm->layer,
-                          0, NULL, &dst, pkt);
+    if (pkt) {
+      pkt->data[pkt->begin] = BLE_SM_IDENTITY_ADDRESS_INFORMATION;
+      pkt->data[pkt->begin + 1] = sm->local_addr.type == BLE_ADDR_RANDOM;
+      memcpy(pkt->data + pkt->begin + 2, sm->local_addr.addr, 6);
+      task = net_scheduler_task_alloc(sm->layer.scheduler);
+      if (task)
+        net_task_outbound_push(task,
+                               sm->layer.parent, &sm->layer,
+                               0, NULL, &dst, pkt);
+      buffer_refdec(pkt);
+    }
   }
 
   if (sm->to_distribute & EXPECT_CSRK) {
     pkt = net_layer_packet_alloc(&sm->layer, sm->layer.context.prefix_size, 17);
-    pkt->data[pkt->begin] = BLE_SM_SIGNING_INFORMATION;
-    ble_peer_csrk_get(sm->peer, pkt->data + pkt->begin + 1);
-    net_task_outbound_push(net_scheduler_task_alloc(sm->layer.scheduler),
-                          sm->layer.parent, &sm->layer,
-                          0, NULL, &dst, pkt);
+    if (pkt) {
+      pkt->data[pkt->begin] = BLE_SM_SIGNING_INFORMATION;
+      ble_peer_csrk_get(sm->peer, pkt->data + pkt->begin + 1);
+      task = net_scheduler_task_alloc(sm->layer.scheduler);
+      if (task)
+        net_task_outbound_push(task,
+                               sm->layer.parent, &sm->layer,
+                               0, NULL, &dst, pkt);
+      buffer_refdec(pkt);
+    }
   }
 #endif
 }
@@ -609,9 +635,11 @@ static void sm_command_handle(struct ble_sm_s *sm, struct net_task_s *task)
  send:
   dprintk("SM < %P\n", rsp->data + rsp->begin, rsp->end - rsp->begin);
 
-  net_task_outbound_push(net_scheduler_task_alloc(sm->layer.scheduler),
-                        sm->layer.parent, &sm->layer,
-                        0, NULL, &dst, rsp);
+  task = net_scheduler_task_alloc(sm->layer.scheduler);
+  if (task)
+    net_task_outbound_push(task,
+                           sm->layer.parent, &sm->layer,
+                           0, NULL, &dst, rsp);
 
  out:
   buffer_refdec(rsp);
@@ -696,9 +724,12 @@ void sm_pairing_request(struct net_layer_s *layer,
 
     sm->pairing_state = BLE_SM_REQUESTED;
 
-    net_task_outbound_push(net_scheduler_task_alloc(sm->layer.scheduler),
-                          sm->layer.parent, &sm->layer,
-                          0, NULL, &dst, rsp);
+    struct net_task_s *task = net_scheduler_task_alloc(sm->layer.scheduler);
+    if (task)
+      net_task_outbound_push(task,
+                             sm->layer.parent, &sm->layer,
+                             0, NULL, &dst, rsp);
+    buffer_refdec(rsp);
   } else {
     sm->pairing_state = BLE_SM_REQUESTED;
 
@@ -788,9 +819,12 @@ void sm_pairing_accept(struct net_layer_s *layer,
     dprintk("Pairing REQ sent\n");
   }
 
-  net_task_outbound_push(net_scheduler_task_alloc(sm->layer.scheduler),
-                        sm->layer.parent, &sm->layer,
-                        0, NULL, &dst, pkt);
+  struct net_task_s *task = net_scheduler_task_alloc(sm->layer.scheduler);
+  if (task)
+    net_task_outbound_push(task,
+                           sm->layer.parent, &sm->layer,
+                           0, NULL, &dst, pkt);
+    buffer_refdec(pkt);
 }
 
 static
@@ -811,9 +845,12 @@ void sm_pairing_abort(struct net_layer_s *layer, enum sm_reason reason)
 
   sm->pairing_state = BLE_SM_IDLE;
 
-  net_task_outbound_push(net_scheduler_task_alloc(sm->layer.scheduler),
-                        sm->layer.parent, &sm->layer,
-                        0, NULL, &dst, rsp);
+  struct net_task_s *task = net_scheduler_task_alloc(sm->layer.scheduler);
+  if (task)
+    net_task_outbound_push(net_scheduler_task_alloc(sm->layer.scheduler),
+                           sm->layer.parent, &sm->layer,
+                           0, NULL, &dst, rsp);
+  buffer_refdec(rsp);
 
   dprintk("Pairing aborted\n");
 }
