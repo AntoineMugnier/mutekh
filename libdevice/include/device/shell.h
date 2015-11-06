@@ -58,7 +58,7 @@ FIRST_FIELD_ASSERT(dev_console_opt_driver_s, opt);
 
 /* define a macro to use as console option descriptor parameter */
 #define TERMUI_CON_OPT_DEV_DRIVER_ENTRY(sname_, lname_, id_, type_, field_, ...) \
-  TERMUI_CON_OPT_CUSTOM_ENTRY(dev_console_opt_device_s, sname_, lname_, id_, \
+  TERMUI_CON_OPT_CUSTOM_ENTRY(dev_console_opt_driver_s, sname_, lname_, id_, \
     TERMUI_CON_OPT_PARSE(dev_console_opt_driver_parse, 1)          \
     .offset = offsetof(type_, field_),                             \
     __VA_ARGS__                                                    \

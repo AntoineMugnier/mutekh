@@ -76,7 +76,7 @@ TERMUI_CON_PARSE_OPT_PROTOTYPE(dev_console_opt_accessor_parse)
 TERMUI_CON_PARSE_OPT_PROTOTYPE(dev_console_opt_driver_parse)
 {
 #ifdef CONFIG_DEVICE_DRIVER_REGISTRY
-  struct dev_console_opt_device_s *optd = (void*)opt;
+  struct dev_console_opt_driver_s *optd = (void*)opt;
   const struct driver_registry_s *reg = driver_registry_table;
 
   const struct driver_s **drvp = (void*)((uint8_t*)ctx + optd->offset);
