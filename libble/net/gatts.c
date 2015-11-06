@@ -381,8 +381,8 @@ error_t gatts_read_by_type(struct ble_gatts_s *gatt,
     uint16_t handle = ble_gattdb_client_tell(&gatt->client);
     err = ble_gattdb_client_type_get(&gatt->client, &type);
 
-    /* dprintk(" % 4d err %d: " BLE_UUID_FMT "\n", */
-    /*         handle, err, BLE_UUID_ARG(type)); */
+    dprintk(" % 4d err %d: " BLE_UUID_FMT "\n",
+            handle, err, BLE_UUID_ARG(type));
 
     if (err)
       break;
@@ -392,10 +392,13 @@ error_t gatts_read_by_type(struct ble_gatts_s *gatt,
 
     size_t written;
 
-    if (task->handle_value_stride)
+    if (task->handle_value_stride) {
       written = task->handle_value_stride - 2;
-    else
+      if (task->handle_value_size + task->handle_value_stride > task->handle_value_size_max)
+        break;
+    } else {
       written = task->handle_value_size_max - 2;
+    }
 
     endian_16_na_store((uint8_t *)task->handle_value + task->handle_value_size, handle);
     err = ble_gattdb_client_read(&gatt->client, 0,
@@ -508,10 +511,15 @@ error_t gatts_read_by_group_type(struct ble_gatts_s *gatt,
     if (ble_uuid_cmp(type, &task->type))
       continue;
 
-    size_t written = task->attribute_data_size_max - task->attribute_data_size - 4;
+    size_t written;
 
-    if (task->attribute_data_stride)
-      written = __MIN(task->attribute_data_stride, written);
+    if (task->attribute_data_stride) {
+      written = task->attribute_data_stride - 4;
+      if (task->attribute_data_size + task->attribute_data_stride > task->attribute_data_size_max)
+        break;
+    } else {
+      written = task->attribute_data_size_max - 4;
+    }
 
     dprintk(" reading handle %d, %d bytes free\n",
             handle, written);
