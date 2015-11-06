@@ -231,26 +231,6 @@ void nrf5x_ble_radio_disable(struct nrf5x_ble_private_s *pv)
   nrf_reg_set(BLE_RADIO_ADDR, NRF_RADIO_BCC, 16);
 }
 
-static struct buffer_s *nrf5x_ble_packet_alloc(const struct nrf5x_ble_private_s *pv)
-{
-  struct buffer_s *packet;
-
-  assert(pv->current);
-
-  packet = buffer_pool_alloc(pv->current->layer.scheduler->packet_pool);
-
-  if (!packet)
-    return NULL;
-
-  assert(buffer_size(packet) >= CONFIG_BLE_PACKET_SIZE);
-
-  packet->begin = 1;
-  packet->end = buffer_size(packet);
-  packet->data[packet->begin + 1] = 0;
-
-  return packet;
-}
-
 error_t nrf5x_ble_data_setup(struct nrf5x_ble_private_s *pv)
 {
   debug(pv, "Ds");
@@ -258,14 +238,7 @@ error_t nrf5x_ble_data_setup(struct nrf5x_ble_private_s *pv)
   assert(pv->current);
   assert(!pv->transmitting);
 
-  switch (pv->current_params.mode) {
-  case MODE_TX:
-    pv->transmitting = pv->current->handler->payload_get(pv->current);
-    break;
-  case MODE_RX:
-    pv->transmitting = nrf5x_ble_packet_alloc(pv);
-    break;
-  }
+  pv->transmitting = pv->current->handler->payload_get(pv->current, pv->current_params.mode);
 
   if (!pv->transmitting)
     return -ENOMEM;

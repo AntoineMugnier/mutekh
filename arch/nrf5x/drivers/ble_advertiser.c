@@ -53,7 +53,7 @@ struct nrf5x_ble_advertiser_s
 
   struct buffer_s *adv_packet;
   struct buffer_s *scan_response;
-
+  struct buffer_s *rx_buffer;
   struct buffer_s *conn_packet;
   dev_timer_value_t conn_ts;
 
@@ -110,6 +110,9 @@ static void advertiser_ctx_event_closed(struct nrf5x_ble_context_s *context,
     adv->conn_packet = NULL;
   }
 
+  if (!adv->rx_buffer)
+    adv->rx_buffer = net_layer_packet_alloc(&adv->context.layer, 0, 0);
+
   if (reschedule)
     advertiser_schedule(adv);
 }
@@ -147,16 +150,22 @@ static bool_t advertiser_ctx_radio_params(struct nrf5x_ble_context_s *context,
   return 0;
 }
 
-static struct buffer_s *advertiser_ctx_payload_get(struct nrf5x_ble_context_s *context)
+static struct buffer_s *advertiser_ctx_payload_get(struct nrf5x_ble_context_s *context,
+                                                   enum nrf5x_ble_transfer_e mode)
 {
   struct nrf5x_ble_advertiser_s *adv
     = nrf5x_ble_advertiser_s_from_context(context);
 
   switch (adv->state) {
   case ADV_IND:
+    assert(mode == MODE_TX);
     return buffer_refinc(adv->adv_packet);
   case SCAN_RSP:
+    assert(mode == MODE_TX);
     return buffer_refinc(adv->scan_response);
+  case SCAN_REQ:
+    assert(mode == MODE_RX);
+    return buffer_refinc(adv->rx_buffer);
   default:
     return NULL;
   }
@@ -236,7 +245,9 @@ static void advertiser_ctx_payload_received(struct nrf5x_ble_context_s *context,
       goto channel_next;
 
     adv->state = ADV_DONE;
-    adv->conn_packet = buffer_refinc(packet);
+    adv->conn_packet = packet;
+    assert(packet == adv->rx_buffer);
+    adv->rx_buffer = NULL;
     adv->conn_ts = ts;
     return;
 
@@ -259,8 +270,14 @@ void advertiser_layer_destroyed(struct net_layer_s *layer)
   struct nrf5x_ble_advertiser_s *adv = nrf5x_ble_advertiser_s_from_context(ctx);
 
   nrf5x_ble_context_cleanup(&adv->context);
-  buffer_refdec(adv->adv_packet);
-  buffer_refdec(adv->scan_response);
+  if (adv->adv_packet)
+    buffer_refdec(adv->adv_packet);
+  if (adv->scan_response)
+    buffer_refdec(adv->scan_response);
+  if (adv->rx_buffer)
+    buffer_refdec(adv->rx_buffer);
+  if (adv->conn_packet)
+    buffer_refdec(adv->conn_packet);
 
   mem_free(adv);
 }
@@ -297,6 +314,8 @@ error_t nrf5x_ble_advertiser_create(struct net_scheduler_s *scheduler,
   adv->scan_response = net_layer_packet_alloc(&adv->context.layer, 0, 0);
 
   adv_param_update(&adv->context.layer, params_);
+
+  adv->rx_buffer = net_layer_packet_alloc(&adv->context.layer, 0, 0);
 
   advertiser_schedule(adv);
 

@@ -52,50 +52,39 @@ struct nrf5x_ble_slave_s
 {
   struct nrf5x_ble_context_s context;
 
-  const struct ble_slave_handler_s *handler;
-
-  struct net_layer_s *ll;
+  buffer_queue_root_t tx_queue;
 
   struct ble_channel_mapper_s channel_mapper;
   struct ble_timing_mapper_s timing;
-
-  struct net_task_s *conn_params_rq_pending;
-
-  buffer_queue_root_t tx_queue;
-
-  uint8_t tx_queue_count;
-
   struct net_addr_s src, dst;
+
+  const struct ble_slave_handler_s *handler;
+  struct net_layer_s *ll;
+
+  struct buffer_s *rx_buffer;
 
   dev_timer_value_t anchor;
 
   uint32_t access_address;
   uint32_t crc_init;
-  int16_t packet_per_event_lp;
 
+  int16_t packet_per_event_lp;
   uint16_t last_event_counter;
   uint16_t scheduled_event_counter;
-
   uint16_t latency_backoff;
   uint16_t since_last_event_intervals;
-  uint16_t since_last_event_unit;
-  uint16_t to_next_event_unit;
 
-  uint16_t features;
-
+  uint8_t tx_queue_count;
   uint8_t missed_event_count;
   uint8_t event_acked_count;
   uint8_t event_rx_count;
   uint8_t event_tx_count;
-  uint8_t tx_per_event_lp;
   uint8_t event_packet_count;
   uint8_t event_crc_error;
   uint8_t event_channel;
   uint8_t reason;
 
   bool_t established : 1;
-  bool_t version_sent : 1;
-  bool_t features_sent : 1;
   bool_t peer_md : 1;
   bool_t latency_permitted : 1;
   bool_t event_done : 1;
@@ -290,6 +279,8 @@ error_t nrf5x_ble_slave_create(struct net_scheduler_s *scheduler,
 
   slave_schedule(slave);
 
+  slave->rx_buffer = net_layer_packet_alloc(&slave->context.layer, 1, 0);
+
   *layer = &slave->context.layer;
 
  err_put_timer:
@@ -458,12 +449,14 @@ void slave_ctx_event_closed(struct nrf5x_ble_context_s *context,
           slave->event_tx_count, slave->event_acked_count, slave->event_crc_error);
 
   slave->established |= !!slave->event_acked_count;
-  slave->tx_per_event_lp += slave->event_tx_count - (slave->tx_per_event_lp >> 4);
 
   slave->since_last_event_intervals += (int16_t)(slave->scheduled_event_counter - slave->last_event_counter);
   slave->last_event_counter = slave->scheduled_event_counter;
 
   slave->packet_per_event_lp += slave->event_acked_count - (slave->packet_per_event_lp >> 4);
+
+  if (!slave->rx_buffer)
+    slave->rx_buffer = net_layer_packet_alloc(&slave->context.layer, 1, 0);
 
   switch (slave->event_packet_count) {
   default:
@@ -524,17 +517,28 @@ bool_t slave_ctx_radio_params(struct nrf5x_ble_context_s *context,
 }
 
 static
-struct buffer_s *slave_ctx_payload_get(struct nrf5x_ble_context_s *context)
+struct buffer_s *slave_ctx_payload_get(struct nrf5x_ble_context_s *context,
+                                       enum nrf5x_ble_transfer_e mode)
 {
   struct nrf5x_ble_slave_s *slave = nrf5x_ble_slave_s_from_context(context);
   struct buffer_s *packet;
+
+  if (mode == MODE_RX)
+    return buffer_refinc(slave->rx_buffer);
 
   if (slave->tx_queue_count == 0) {
     // Tx queue is empty, we have to create an empty packet to piggyback
     // handshaking.  Cannot borrow reference to a common packet as it is
     // chained in tx queue.
-    packet = net_layer_packet_alloc(&slave->context.layer,
-                                    slave->context.layer.context.prefix_size, 2);
+    if (slave->rx_buffer) {
+      // Here steal next rx buffer to at least keep connection alive.
+      packet = slave->rx_buffer;
+      slave->rx_buffer = NULL;
+      packet->begin = 0;
+      packet->end = 2;
+    } else {
+      packet = net_layer_packet_alloc(&slave->context.layer, 0, 2);
+    }
 
     if (!packet)
       return NULL;
@@ -580,6 +584,10 @@ void slave_ctx_payload_received(struct nrf5x_ble_context_s *context,
 {
   struct nrf5x_ble_slave_s *slave = nrf5x_ble_slave_s_from_context(context);
   const uint8_t size = packet->end - packet->begin;
+  struct buffer_s *next_rx_packet;
+  struct net_task_s *task;
+
+  assert(packet == slave->rx_buffer);
 
   slave->event_rx_count++;
 
@@ -594,23 +602,8 @@ void slave_ctx_payload_received(struct nrf5x_ble_context_s *context,
 
   bool_t sn = ble_data_sn_get(packet);
   bool_t nesn = ble_data_nesn_get(packet);
-  bool_t md = ble_data_md_get(packet);
   bool_t empty = size == 2 && ble_data_llid_get(packet) == BLE_LL_DATA_CONT;
-
-  if (slave->nesn == sn) {
-    if (!empty && slave->ll) {
-      struct net_task_s *task = net_scheduler_task_alloc(slave->context.layer.scheduler);
-      if (task) {
-        net_task_inbound_push(task, slave->ll, &slave->context.layer,
-                              timestamp, &slave->src, &slave->dst, packet);
-        slave->nesn = !sn;
-      }
-    } else {
-      slave->nesn = !sn;
-    }
-  }
-
-  slave->peer_md = md;
+  slave->peer_md = ble_data_md_get(packet);
 
   if (nesn != slave->sn) {
     slave->event_acked_count++;
@@ -623,6 +616,30 @@ void slave_ctx_payload_received(struct nrf5x_ble_context_s *context,
       buffer_refdec(packet);
     }
   }
+
+  if (slave->nesn != sn)
+    return;
+
+  if (empty || !slave->ll)
+    goto accept;
+
+  next_rx_packet = net_layer_packet_alloc(&slave->context.layer, 1, 0);
+  if (!next_rx_packet)
+    return;
+
+  task = net_scheduler_task_alloc(slave->context.layer.scheduler);
+  if (!task) {
+    buffer_refdec(next_rx_packet);
+    return;
+  }
+
+  net_task_inbound_push(task, slave->ll, &slave->context.layer,
+                        timestamp, &slave->src, &slave->dst, packet);
+  buffer_refdec(packet);
+  slave->rx_buffer = next_rx_packet;
+
+ accept:
+  slave->nesn = !sn;
 }
 
 static const struct net_layer_handler_s ble_slave_layer_handler = {

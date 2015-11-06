@@ -278,7 +278,8 @@ struct nrf5x_ble_context_handler_s
                        enum event_status_e status);
   bool_t (*radio_params)(struct nrf5x_ble_context_s *radio,
                          struct nrf5x_ble_params_s *params);
-  struct buffer_s *(*payload_get)(struct nrf5x_ble_context_s *radio);
+  struct buffer_s *(*payload_get)(struct nrf5x_ble_context_s *radio,
+                                  enum nrf5x_ble_transfer_e mode);
   void (*ifs_event)(struct nrf5x_ble_context_s *radio, bool_t rx_timeout);
   void (*payload_received)(struct nrf5x_ble_context_s *radio,
                            dev_timer_value_t timestamp,
