@@ -21,6 +21,7 @@
 */
 
 #include <hexo/types.h>
+#include <hexo/endian.h>
 #include <mutek/mem_alloc.h>
 #include <mutek/printk.h>
 
