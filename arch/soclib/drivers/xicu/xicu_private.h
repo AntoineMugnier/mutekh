@@ -103,7 +103,7 @@ struct soclib_xicu_private_s
 #endif
 };
 
-DEV_USE(soclib_xicu_timer_use);
+error_t soclib_xicu_timer_use(struct device_accessor_s *accessor, enum dev_use_op_e op);
 
 /******** hw registers */
 

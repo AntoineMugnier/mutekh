@@ -31,9 +31,6 @@ static DEVCRYPTO_INFO(efm32_aes_info)
   struct efm32_aes_private_s *pv = dev->drv_pv;
 #endif
 
-  if (accessor->number > 0)
-    return -ENOENT;
-
   memset(info, 0, sizeof(*info));
   info->name = "aes";
   info->modes_mask = 0

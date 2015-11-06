@@ -89,8 +89,7 @@ error_t device_get_accessor(void *accessor, struct device_s *dev,
       a->dev = dev;
       a->api = c;
       a->number = number;
-      if (dev->drv->f_use == NULL ||
-          !(err = dev->drv->f_use(accessor, DEV_USE_GET_ACCESSOR)))
+      if (!(err = dev->drv->f_use(accessor, DEV_USE_GET_ACCESSOR)))
         dev->ref_count++;
       else
         a->dev = NULL;
@@ -113,8 +112,7 @@ void device_put_accessor(void *accessor)
   assert(dev->ref_count);
 
   dev->ref_count--;
-  if (dev->drv->f_use != NULL)
-    dev->drv->f_use(accessor, DEV_USE_PUT_ACCESSOR);
+  dev->drv->f_use(accessor, DEV_USE_PUT_ACCESSOR);
   a->dev = NULL;
   a->api = NULL;
 
@@ -465,6 +463,21 @@ error_t dev_driver_notsup_fcn(void)
 
 DEV_USE(dev_use_generic)
 {
+  switch (op)
+    {
+    case DEV_USE_GET_ACCESSOR: {
+      struct device_accessor_s *acc = param;
+      if (acc->number)
+        return -ENOTSUP;
+    }
+    case DEV_USE_PUT_ACCESSOR:
+    case DEV_USE_START:
+    case DEV_USE_STOP:
+      return 0;
+    default:
+      return -ENOTSUP;
+    }
+
   return 0;
 }
 

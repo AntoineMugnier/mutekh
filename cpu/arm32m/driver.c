@@ -163,31 +163,46 @@ static DEV_CPU_REG_INIT(arm_cpu_reg_init)
 
 static DEV_USE(arm_use)
 {
-  switch (accessor->api->class_)
+  struct device_accessor_s *accessor = param;
+
+  switch (op)
     {
-#ifdef CONFIG_CPU_ARM32M_TIMER_SYSTICK
-    case DRIVER_CLASS_TIMER:
-      return arm_timer_systick_use(accessor, op);
-#endif
-      break;
-
-    case DRIVER_CLASS_CPU:
-    case DRIVER_CLASS_ICU:
-      if (accessor->number > 0)
-        break;
-      switch (op)
+    case DEV_USE_GET_ACCESSOR:
+      switch (accessor->api->class_)
         {
-        case DEV_USE_GET_ACCESSOR:
-        case DEV_USE_PUT_ACCESSOR:
-          return 0;
-        default:
+        case DRIVER_CLASS_TIMER:
+          switch (accessor->number)
+            {
+#ifdef CONFIG_CPU_ARM32M_TIMER_SYSTICK
+            case 0:
+            case 1:
+              break;
+#endif
+#ifdef CONFIG_CPU_ARM32M_TIMER_DWTCYC
+            case 2:
+              break;
+#endif
+            default:
+              return -ENOTSUP;
+            }
           break;
+        default:
+          if (accessor->number > 0)
+            return -ENOTSUP;
         }
+      return 0;
+    case DEV_USE_PUT_ACCESSOR:
+      return 0;
+    case DEV_USE_START:
+    case DEV_USE_STOP:
+#ifdef CONFIG_CPU_ARM32M_TIMER_SYSTICK
+      if (accessor->api->class_ == DRIVER_CLASS_TIMER)
+        return arm_timer_systick_use(accessor, op);
+#endif
+      return 0;
     default:
-      break;
+      return -ENOTSUP;
     }
-
-  return -ENOTSUP;
 }
 
 static DEV_CLEANUP(arm_cleanup);

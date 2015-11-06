@@ -102,7 +102,6 @@ static DEV_IRQ_SRC_PROCESS(soclib_timer_irq)
   struct soclib_timer_private_s *pv = dev->drv_pv;
   uint_fast8_t number = ep - pv->irq_eps;
 
-  assert(number < pv->t_count);
   lock_spin(&dev->lock);
 
   while (1)
@@ -163,9 +162,6 @@ static DEV_TIMER_REQUEST(soclib_timer_request)
   if (mode == 0)
     return -ENOTSUP;
 
-  if (number >= pv->t_count)
-    return -ENOTSUP;
-
   struct soclib_timer_state_s *p = pv->t + number;
 
   LOCK_SPIN_IRQ(&dev->lock);
@@ -219,9 +215,6 @@ static DEV_TIMER_CANCEL(soclib_timer_cancel)
   if (mode == 0)
     return -ENOTSUP;
 
-  if (number >= pv->t_count)
-    return -ENOTSUP;
-
   struct soclib_timer_state_s *p = pv->t + number;
 
   LOCK_SPIN_IRQ(&dev->lock);
@@ -256,25 +249,28 @@ static DEV_TIMER_CANCEL(soclib_timer_cancel)
 
 static DEV_USE(soclib_timer_use)
 {
+  struct device_accessor_s *accessor = param;
+
+  switch (op)
+    {
+    case DEV_USE_GET_ACCESSOR: {
+      struct soclib_timer_private_s *pv = accessor->dev->drv_pv;
+      if (accessor->number / 2 >= pv->t_count)
+        return -ENOTSUP;
+    }
+    case DEV_USE_PUT_ACCESSOR:
+      return 0;
+    case DEV_USE_START:
+    case DEV_USE_STOP:
+      break;
+    default:
+      return -ENOTSUP;
+    }
+
   struct device_s *dev = accessor->dev;
   struct soclib_timer_private_s *pv = dev->drv_pv;
   uint_fast8_t number = accessor->number / 2;
   uint_fast8_t mode = accessor->number % 2;
-  bool_t start = 0;
-
-  if (number >= pv->t_count)
-    return -ENOTSUP;
-
-  switch (op)
-    {
-    case DEV_USE_GET_ACCESSOR:
-    case DEV_USE_PUT_ACCESSOR:
-      return 0;
-    case DEV_USE_START:
-      start = 1;
-    case DEV_USE_STOP:
-      break;
-    }
 
 #ifndef CONFIG_DEVICE_IRQ
   if (mode != 0)
@@ -293,7 +289,7 @@ static DEV_USE(soclib_timer_use)
       /* timer already used in the other mode */
       err = -EBUSY;
     }
-  else if (start)
+  else if (op == DEV_USE_START)
     {
       if (p->start_count == 0)
         {
@@ -337,9 +333,6 @@ static DEV_TIMER_GET_VALUE(soclib_timer_get_value)
   uint_fast8_t number = accessor->number / 2;
   uint_fast8_t mode = accessor->number % 2;
   error_t err = 0;
-
-  if (number >= pv->t_count)
-    return -ENOTSUP;
 
   LOCK_SPIN_IRQ(&dev->lock);
 

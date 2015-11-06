@@ -252,28 +252,33 @@ enum dev_use_op_e
 struct device_accessor_s;
 
 /** Common device class use() function template. */
-#define DEV_USE(n) error_t (n) (struct device_accessor_s *accessor,  \
-                                enum dev_use_op_e op)
+#define DEV_USE(n) error_t (n) (void *param, enum dev_use_op_e op)
 
 /**
    @This is called when the usage status of a device changes.
 
-   This function is optional and may not be provided by all device
-   drivers.
+   The @ref dev_use_generic function provides a default implementation
+   of this driver API function.
 
-   When the @ref device_get_accessor function is called, this function
-   is called with the @tt op parameter set to @ref
-   DEV_USE_GET_ACCESSOR and the @tt acc parameter pointing to the
-   initialized accessor. The function may return an error code in
-   order to make the process fail. The device use count is updated
-   after this function call.
+   The following operations are defined:
+   @list
 
-   When the @ref device_put_accessor function is called, this function
-   is called with the @tt op parameter set to @ref DEV_USE_PUT_ACCESSOR.
+   @item @ref DEV_USE_GET_ACCESSOR and @ref DEV_USE_PUT_ACCESSOR are
+   used when the @ref device_get_accessor and @ref device_put_accessor
+   functions are called. An error code may be returned on @ref
+   DEV_USE_GET_ACCESSOR in order to prevent the caller from acquiring
+   an accessor. The @tt param argument is a pointer to a @ref
+   device_accessor_s object. The default implementation reports an
+   error when the accessor sub-device number is not zero.
+   @see DRIVER_FLAGS_MULTIPLE
 
-   The @ref device_start and @ref device_stop function call this
-   function with the @ref DEV_USE_START and @ref DEV_USE_STOP
-   operation values.
+   @item @ref DEV_USE_START and @ref DEV_USE_STOP are used when @ref
+   device_start and @ref device_stop are called on the device. An
+   error code may be returned on @ref DEV_USE_GET_START. The @tt param
+   argument is a pointer to a @ref device_accessor_s object. The default
+   implementation does nothing and always succeed.
+
+   @end list
 */
 typedef DEV_USE(dev_use_t);
 
@@ -448,9 +453,10 @@ struct device_accessor_s
 /**
    @This initializes a device accessor object. If the return value is
    0, the accessor object can then be used to access device driver
-   functions of requested api class. The @tt number parameter can be
-   used when the device provides more than one api instance of the
-   requested class type.
+   functions of requested api class.
+
+   The @tt number parameter can be used when the device provides
+   multiple sub-devices of the requested class type.
 
    @see {#DEVICE_ACCESSOR_INIT, #DEVICE_OP, device_put_accessor}
  */
@@ -520,7 +526,7 @@ ALWAYS_INLINE error_t device_start(void *accessor)
 {
   struct device_accessor_s *acc = accessor;
   dev_use_t *use = acc->dev->drv->f_use;
-  return use != NULL ? use(accessor, DEV_USE_START) : -ENOTSUP;
+  return use(accessor, DEV_USE_START);
 }
 
 /** @This stops the device operation. This function return 0 if the
@@ -533,7 +539,7 @@ ALWAYS_INLINE error_t device_stop(void *accessor)
 {
   struct device_accessor_s *acc = accessor;
   dev_use_t *use = acc->dev->drv->f_use;
-  return use != NULL ? use(accessor, DEV_USE_STOP) : -ENOTSUP;
+  return use(accessor, DEV_USE_STOP);
 }
 
 /**

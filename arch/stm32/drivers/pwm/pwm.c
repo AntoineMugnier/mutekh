@@ -463,23 +463,24 @@ DEV_CLEANUP(stm32_pwm_cleanup)
 static
 DEV_USE(stm32_pwm_use)
 {
-  struct device_s *dev = accessor->dev;
+  struct device_accessor_s *accessor = param;
 
   switch (op)
     {
-    default:
-      return 0;
-
     case DEV_USE_START:
-      return stm32_pwm_start_stop(dev, accessor->number, 1);
+      return stm32_pwm_start_stop(accessor->dev, accessor->number, 1);
 
     case DEV_USE_STOP:
-      return stm32_pwm_start_stop(dev, accessor->number, 0);
+      return stm32_pwm_start_stop(accessor->dev, accessor->number, 0);
 
-    case DEV_USE_PUT_ACCESSOR:
+    case DEV_USE_GET_ACCESSOR:
       if (accessor->number >= STM32_PWM_CHANNEL_MAX)
-        return -EINVAL;
+        return -ENOTSUP;
+    case DEV_USE_PUT_ACCESSOR:
       return 0;
+
+    default:
+      return -ENOTSUP;
     }
 }
 

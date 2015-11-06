@@ -260,13 +260,7 @@ static DEV_TIMER_CONFIG(bcm2835_systimer_config)
 
 /************************************************************************/
 
-static DEV_USE(bcm2835_systimer_use)
-{
-  if (accessor->number > 0)
-    return -ENOTSUP;
-  return 0;
-}
-
+#define bcm2835_systimer_use dev_use_generic
 static DEV_INIT(bcm2835_systimer_init);
 static DEV_CLEANUP(bcm2835_systimer_cleanup);
 

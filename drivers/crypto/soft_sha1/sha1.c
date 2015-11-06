@@ -44,9 +44,6 @@ struct soft_sha1_private_s
 
 static DEVCRYPTO_INFO(soft_sha1_info)
 {
-  if (accessor->number > 0)
-    return -ENOENT;
-
   memset(info, 0, sizeof(*info));
   info->name = "sha1";
   info->modes_mask = 1 << DEV_CRYPTO_MODE_HASH;

@@ -223,9 +223,6 @@ static DEV_TIMER_CONFIG(x86_timer_config)
   struct x86_dev_private_s *pv = dev->drv_pv;
   error_t err = 0;
 
-  switch (accessor->number)
-    {
-    case 0: {          /* cycle counter */
       if (res > 1)
         err = -ERANGE;
       if (cfg)
@@ -242,12 +239,6 @@ static DEV_TIMER_CONFIG(x86_timer_config)
 #endif
           cfg->res = 1;
         }
-      break;
-    }
-
-    default:
-      err = -ENOTSUP;
-    }
 
   return err;
 }
@@ -271,34 +262,7 @@ static DEV_CLOCK_SINK_CHANGED(x86_clk_changed)
 }
 #endif
 
-static DEV_USE(x86_use)
-{
-  switch (accessor->api->class_)
-    {
-    case DRIVER_CLASS_TIMER:
-      if (accessor->number > 0)
-        break;
-      return 0;
-
-    case DRIVER_CLASS_CPU:
-    case DRIVER_CLASS_ICU:
-      if (accessor->number > 0)
-        break;
-      switch (op)
-        {
-        case DEV_USE_GET_ACCESSOR:
-        case DEV_USE_PUT_ACCESSOR:
-          return 0;
-        default:
-          break;
-        }
-    default:
-      break;
-    }
-
-  return -ENOTSUP;
-}
-
+#define x86_use dev_use_generic
 #define x86_timer_request (dev_timer_request_t*)&dev_driver_notsup_fcn
 #define x86_timer_cancel  (dev_timer_cancel_t*)&dev_driver_notsup_fcn
 

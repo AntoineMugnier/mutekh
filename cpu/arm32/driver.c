@@ -200,9 +200,6 @@ static DEV_TIMER_GET_VALUE(arm_timer_get_value)
     return -EIO;
 # endif
 
-  switch (accessor->number)
-    {
-    case 0: {          /* cycle counter */
       uint32_t ret;
       THUMB_TMP_VAR;
       asm volatile (
@@ -211,12 +208,6 @@ static DEV_TIMER_GET_VALUE(arm_timer_get_value)
                     ARM_TO_THUMB
                     : [ret] "=r"(ret) /*,*/ THUMB_OUT(,));
       *value = ret;
-      return 0;
-    }
-
-    default:
-      return -ENOTSUP;
-    }
 
   return 0;
 }
@@ -227,9 +218,6 @@ static DEV_TIMER_CONFIG(arm_timer_config)
   struct arm_dev_private_s *pv = dev->drv_pv;
   error_t err = 0;
 
-  switch (accessor->number)
-    {
-    case 0: {          /* cycle counter */
       if (res > 1)
         err = -ERANGE;
       if (cfg)
@@ -246,12 +234,6 @@ static DEV_TIMER_CONFIG(arm_timer_config)
 #endif
           cfg->res = 1;
         }
-      break;
-    }
-
-    default:
-      err = -ENOTSUP;
-    }
 
   return err;
 }
@@ -278,34 +260,7 @@ static DEV_CLOCK_SINK_CHANGED(arm_clk_changed)
 }
 #endif
 
-static DEV_USE(arm_use)
-{
-  if (accessor->number > 0)
-    return -ENOTSUP;
-
-  switch (accessor->api->class_)
-    {
-#ifdef CONFIG_CPU_ARM32_TIMER_CYCLECOUNTER
-    case DRIVER_CLASS_TIMER:
-      return 0;
-#endif
-
-    case DRIVER_CLASS_CPU:
-    case DRIVER_CLASS_ICU:
-      switch (op)
-        {
-        case DEV_USE_GET_ACCESSOR:
-        case DEV_USE_PUT_ACCESSOR:
-          return 0;
-        default:
-          break;
-        }
-    default:
-      break;
-    }
-
-  return -ENOTSUP;
-}
+#define arm_use dev_use_generic
 
 DRIVER_DECLARE(arm32_drv, DRIVER_FLAGS_EARLY_INIT, "Arm processor", arm,
 #ifdef CONFIG_DEVICE_IRQ

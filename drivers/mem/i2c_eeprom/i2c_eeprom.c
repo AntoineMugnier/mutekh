@@ -57,9 +57,6 @@ static DEV_MEM_INFO(i2c_eeprom_info)
     struct device_s *dev = accessor->dev;
     struct i2c_eeprom_priv_s *pv = dev->drv_pv;
 
-    if (accessor->number > 0)
-        return -ENOENT;
-
     if (band_index > 0)
         return -ENOENT;
 

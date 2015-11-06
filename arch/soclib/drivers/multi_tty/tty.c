@@ -138,7 +138,6 @@ static DEV_CHAR_REQUEST(tty_soclib_request)
   struct dev_char_rq_s          *done_rq = NULL;
 
   assert(rq->size);
-  assert(accessor->number == 0);
 
   LOCK_SPIN_IRQ(&dev->lock);
 

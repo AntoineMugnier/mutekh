@@ -54,7 +54,7 @@ static DEVCRYPTO_INFO(soft_salsa_info)
       break;
 #endif
     default:
-      return -ENOENT;
+      UNREACHABLE();
     }
 
   info->modes_mask = 0
@@ -441,7 +441,33 @@ static DEVCRYPTO_REQUEST(soft_salsa_request)
 static DEV_INIT(soft_salsa_init);
 static DEV_CLEANUP(soft_salsa_cleanup);
 
-#define soft_salsa_use dev_use_generic
+static DEV_USE(soft_salsa_use)
+{
+  struct device_accessor_s *accessor = param;
+
+  switch (op)
+    {
+    case DEV_USE_GET_ACCESSOR:
+      switch (accessor->number)
+        {
+#ifdef CONFIG_DRIVER_CRYPTO_SOFT_SALSA20
+        case 0:
+#endif
+#ifdef CONFIG_DRIVER_CRYPTO_SOFT_CHACHA20
+        case 1:
+#endif
+          break;
+        default:
+          return -ENOTSUP;
+        }
+    case DEV_USE_PUT_ACCESSOR:
+    case DEV_USE_START:
+    case DEV_USE_STOP:
+      return 0;
+    default:
+      return -ENOTSUP;
+    }
+}
 
 DRIVER_DECLARE(soft_salsa_drv, 0, "Software Salsa family of ciphers", soft_salsa,
                DRIVER_CRYPTO_METHODS(soft_salsa));

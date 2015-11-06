@@ -72,11 +72,11 @@ struct arm_dev_private_s
 };
 
 void arm_timer_systick_irq(struct device_s *dev);
-DEV_USE(arm_timer_systick_use);
+error_t arm_timer_systick_use(const struct device_accessor_s *accessor,
+                              enum dev_use_op_e op);
 
 extern DEV_TIMER_REQUEST(arm_timer_request);
 extern DEV_TIMER_CANCEL(arm_timer_cancel);
-extern DEV_USE(arm_timer_systick_use);
 extern DEV_TIMER_GET_VALUE(arm_timer_get_value);
 extern DEV_TIMER_CONFIG(arm_timer_config);
 

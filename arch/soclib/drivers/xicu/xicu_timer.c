@@ -199,15 +199,12 @@ DEV_TIMER_CANCEL(soclib_xicu_timer_cancel)
 #endif
 }
 
-DEV_USE(soclib_xicu_timer_use)
+error_t soclib_xicu_timer_use(struct device_accessor_s *accessor, enum dev_use_op_e op)
 {
   struct device_s *dev = accessor->dev;
   struct soclib_xicu_private_s *pv = dev->drv_pv;
   uint_fast8_t number = accessor->number / 2;
   uint_fast8_t mode = accessor->number % 2;
-
-  if (number >= pv->pti_count)
-    return -ENOTSUP;
 
 #ifndef CONFIG_DRIVER_SOCLIB_XICU_ICU
   if (mode != 0)
@@ -215,7 +212,6 @@ DEV_USE(soclib_xicu_timer_use)
 #endif
 
   error_t err = 0;
-  bool_t start = (op == DEV_USE_START);
   struct soclib_xicu_pti_s *p = pv->pti + number;
 
   LOCK_SPIN_IRQ(&dev->lock);
@@ -225,7 +221,7 @@ DEV_USE(soclib_xicu_timer_use)
       /* timer already used in the other mode */
       err = -EBUSY;
     }
-  else if (start)
+  else if (op == DEV_USE_START)
     {
       if (p->start_count == 0)
         {
@@ -244,7 +240,7 @@ DEV_USE(soclib_xicu_timer_use)
         }
       p->start_count += mode ? 2 : -2;
     }
-  else
+  else        /* DEV_USE_STOP */
     {
       if ((p->start_count & ~1) == 0)
         err = -EINVAL;

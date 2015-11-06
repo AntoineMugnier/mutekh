@@ -47,9 +47,6 @@ static DEV_MEM_INFO(ram_info)
   struct device_s *dev = accessor->dev;
   struct ram_context_s *pv = dev->drv_pv;
 
-  if (accessor->number >= pv->bank_count)
-    return -ENOENT;
-
   if (band_index > 0)
     return -ENOENT;
 
@@ -75,9 +72,7 @@ static DEV_MEM_REQUEST(ram_request)
 
   rq->err = 0;
 
-  if (accessor->number >= pv->bank_count)
-    rq->err = -ENOENT;
-  else if (rq->band_mask & 0xfe)
+  if (rq->band_mask & 0xfe)
     rq->err = -ENOENT;
   else if (rq->band_mask & 1)
     {
@@ -88,10 +83,28 @@ static DEV_MEM_REQUEST(ram_request)
   kroutine_exec(&rq->base.kr);
 }
 
+static DEV_USE(ram_use)
+{
+  struct device_accessor_s *accessor = param;
+
+  switch (op)
+    {
+    case DEV_USE_GET_ACCESSOR: {
+      struct ram_context_s *pv = accessor->dev->drv_pv;
+      if (accessor->number >= pv->bank_count)
+        return -ENOTSUP;
+    }
+    case DEV_USE_PUT_ACCESSOR:
+    case DEV_USE_START:
+    case DEV_USE_STOP:
+      return 0;
+    default:
+      return -ENOTSUP;
+    }
+}
+
 static DEV_INIT(ram_init);
 static DEV_CLEANUP(ram_cleanup);
-
-#define ram_use dev_use_generic
 
 DRIVER_DECLARE(ram_drv, 0, "Generic RAM", ram,
                DRIVER_MEM_METHODS(ram));

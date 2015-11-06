@@ -42,12 +42,34 @@
 
 static DEV_USE(soclib_xicu_use)
 {
+  struct device_accessor_s *accessor = param;
+
   switch (op)
     {
     case DEV_USE_GET_ACCESSOR:
+      switch (accessor->api->class_)
+        {
+#ifdef CONFIG_DRIVER_SOCLIB_XICU_ICU
+        case DRIVER_CLASS_ICU:
+          if (accessor->number > 0)
+            return -ENOTSUP;
+          break;
+#endif
+#ifdef CONFIG_DRIVER_SOCLIB_XICU_TIMER
+        case DRIVER_CLASS_TIMER: {
+          struct soclib_xicu_private_s  *pv = accessor->dev->drv_pv;
+          if (accessor->number / 2 >= pv->pti_count)
+            return -ENOTSUP;
+          break;
+        }
+#endif
+        default:
+          UNREACHABLE();
+        }
     case DEV_USE_PUT_ACCESSOR:
       return 0;
-    default:
+    case DEV_USE_START:
+    case DEV_USE_STOP:
       switch (accessor->api->class_)
         {
 #ifdef CONFIG_DRIVER_SOCLIB_XICU_TIMER
@@ -55,8 +77,10 @@ static DEV_USE(soclib_xicu_use)
           return soclib_xicu_timer_use(accessor, op);
 #endif
         default:
-          return -ENOTSUP;
+          return 0;
         }
+    default:
+      return -ENOTSUP;
     }
 }
 

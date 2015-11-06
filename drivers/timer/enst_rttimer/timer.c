@@ -270,21 +270,22 @@ static DEV_TIMER_REQUEST(enst_rttimer_request)
 
 static DEV_USE(enst_rttimer_use)
 {
-  struct device_s *dev = accessor->dev;
-  struct enst_rttimer_private_s *pv = dev->drv_pv;
-
-  if (accessor->number >= pv->t_count)
-    return -ENOTSUP;
-
-  error_t err = 0;
+  struct device_accessor_s *accessor = param;
 
   switch (op)
     {
-    case DEV_USE_GET_ACCESSOR:
+    case DEV_USE_GET_ACCESSOR: {
+      struct enst_rttimer_private_s *pv = accessor->dev->drv_pv;
+      if (accessor->number >= pv->t_count)
+        return -ENOTSUP;
     case DEV_USE_PUT_ACCESSOR:
-      break;
+      return 0;
+    }
 
-    case DEV_USE_START:
+    case DEV_USE_START: {
+      struct device_s *dev = accessor->dev;
+      struct enst_rttimer_private_s *pv = dev->drv_pv;
+
       LOCK_SPIN_IRQ(&dev->lock);
 #ifdef CONFIG_DEVICE_IRQ
       if (pv->start_count++ == 0)
@@ -295,9 +296,14 @@ static DEV_USE(enst_rttimer_use)
 	cpu_mem_write_32(pv->addr + RT_TIMER_CTRL_ADDR, RT_TIMER_ENDIAN32(RT_TIMER_CTRL_CE_SMASK));
 #endif
       LOCK_RELEASE_IRQ(&dev->lock);
-      break;
+      return 0;
+    }
 
-    case DEV_USE_STOP:
+    case DEV_USE_STOP: {
+      struct device_s *dev = accessor->dev;
+      struct enst_rttimer_private_s *pv = dev->drv_pv;
+      error_t err = 0;
+
       LOCK_SPIN_IRQ(&dev->lock);
 #ifdef CONFIG_DEVICE_IRQ
       if ((pv->start_count & 0xffff) == 0)
@@ -311,10 +317,12 @@ static DEV_USE(enst_rttimer_use)
 	cpu_mem_write_32(pv->addr + RT_TIMER_CTRL_ADDR, 0);
 #endif
       LOCK_RELEASE_IRQ(&dev->lock);
-      break;
+      return err;
     }
 
-  return err;
+    default:
+      return -ENOTSUP;
+    }
 }
 
 static DEV_TIMER_GET_VALUE(enst_rttimer_get_value)

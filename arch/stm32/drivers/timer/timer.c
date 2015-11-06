@@ -310,26 +310,29 @@ static DEV_TIMER_REQUEST(stm32_timer_request)
 
 static DEV_USE(stm32_timer_use)
 {
-  struct device_s *dev = accessor->dev;
-  struct stm32_timer_private_s *pv = dev->drv_pv;
-
-  error_t err = 0;
-  bool_t start = 0;
+  struct device_accessor_s *accessor = param;
 
   switch (op)
     {
     case DEV_USE_GET_ACCESSOR:
+      if (accessor->number)
+        return -EINVAL;
     case DEV_USE_PUT_ACCESSOR:
       return 0;
     case DEV_USE_START:
-      start = 1;
     case DEV_USE_STOP:
       break;
+    default:
+      return -ENOTSUP;
     }
+
+  struct device_s *dev = accessor->dev;
+  struct stm32_timer_private_s *pv = dev->drv_pv;
+  error_t err = 0;
 
   LOCK_SPIN_IRQ(&dev->lock);
 
-  if (start)
+  if (op == DEV_USE_START)
     {
       if (pv->start_count == 0)
         stm32_timer_start_counter(pv);

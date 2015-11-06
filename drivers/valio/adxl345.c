@@ -405,21 +405,24 @@ error_t adxl345_start_stop(struct adxl345_private_s *pv, bool_t start)
 static
 DEV_USE(adxl345_use)
 {
-    struct device_s          *dev = accessor->dev;
-    struct adxl345_private_s *pv  = dev->drv_pv;
+    struct device_accessor_s *accessor = param;
 
     switch (op)
     {
-    default:
-        break;
+    case DEV_USE_GET_ACCESSOR:
+      if (accessor->number)
+        return -ENOTSUP;
+    case DEV_USE_PUT_ACCESSOR:
+      return 0;
 
     case DEV_USE_START:
-        return adxl345_start_stop(pv, 1);
+        return adxl345_start_stop(accessor->dev->drv_pv, 1);
 
     case DEV_USE_STOP:
-        return adxl345_start_stop(pv, 0);
-    }
+        return adxl345_start_stop(accessor->dev->drv_pv, 0);
 
-    return 0;
+    default:
+      return -ENOTSUP;
+    }
 }
 

@@ -321,32 +321,36 @@ static DEV_TIMER_REQUEST(efm32_rtc_request)
 
 static DEV_USE(efm32_rtc_use)
 {
-  struct device_s *dev = accessor->dev;
-  struct efm32_rtc_private_s *pv = dev->drv_pv;
+  struct device_accessor_s *accessor = param;
 
   error_t err = 0;
-  bool_t start = 0;
 
   switch (op)
     {
     case DEV_USE_GET_ACCESSOR:
+      if (accessor->number)
+        return -ENOTSUP;
     case DEV_USE_PUT_ACCESSOR:
       return 0;
     case DEV_USE_START:
-      start = 1;
     case DEV_USE_STOP:
       break;
+    default:
+      return -ENOTSUP;
     }
+
+  struct device_s *dev = accessor->dev;
+  struct efm32_rtc_private_s *pv = dev->drv_pv;
 
   LOCK_SPIN_IRQ(&dev->lock);
 
-  if (start)
+  if (op == DEV_USE_START)
     {
       if (pv->start_count == 0)
         efm32_rtc_start_counter(pv);
       pv->start_count += 2;
     }
-  else
+  else   /* DEV_USE_STOP */
     {
       if (pv->start_count < 2)
         err = -EINVAL;

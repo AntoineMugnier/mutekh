@@ -688,21 +688,29 @@ static DEV_CLEANUP(mpu6505_cleanup)
 
 static DEV_USE(mpu6505_use)
 {
-  struct device_s *dev = accessor->dev;
-  struct mpu6505_private_s *pv = dev->drv_pv;
+  struct device_accessor_s *accessor = param;
 
   switch (op) {
-  default:
-    break;
 
-  case DEV_USE_START:
-    device_start(&pv->timer);
-    break;
+  case DEV_USE_GET_ACCESSOR:
+    if (accessor->number)
+      return -ENOTSUP;
+  case DEV_USE_PUT_ACCESSOR:
+    return 0;
 
-  case DEV_USE_STOP:
-    device_stop(&pv->timer);
-    break;
+  case DEV_USE_START: {
+    struct device_s *dev = accessor->dev;
+    struct mpu6505_private_s *pv = dev->drv_pv;
+    return device_start(&pv->timer);
   }
 
-  return 0;
+  case DEV_USE_STOP: {
+    struct device_s *dev = accessor->dev;
+    struct mpu6505_private_s *pv = dev->drv_pv;
+    return device_stop(&pv->timer);
+  }
+
+  default:
+    return -ENOTSUP;
+  }
 }

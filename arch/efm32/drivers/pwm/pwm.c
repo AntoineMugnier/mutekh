@@ -411,22 +411,24 @@ static DEV_CLEANUP(efm32_pwm_cleanup)
 
 static DEV_USE(efm32_pwm_use)
 {
-    struct device_s *dev = accessor->dev;
+    struct device_accessor_s *accessor = param;
 
     switch (op)
       {
       case DEV_USE_START:
-        return efm32_pwm_start_stop(dev, accessor->number, 1);
+        return efm32_pwm_start_stop(accessor->dev, accessor->number, 1);
 
       case DEV_USE_STOP:
-        return efm32_pwm_start_stop(dev, accessor->number, 0);
+        return efm32_pwm_start_stop(accessor->dev, accessor->number, 0);
 
       case DEV_USE_GET_ACCESSOR:
         if (accessor->number >= EFM32_PWM_CHANNEL_MAX)
-          return -EINVAL;
-        
-      default:
+          return -ENOTSUP;
+      case DEV_USE_PUT_ACCESSOR:
         return 0;
+
+      default:
+        return -ENOTSUP;
       }
 }
 

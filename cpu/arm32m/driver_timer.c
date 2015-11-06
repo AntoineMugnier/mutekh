@@ -195,23 +195,12 @@ DEV_TIMER_CANCEL(arm_timer_cancel)
     }
 }
 
-DEV_USE(arm_timer_systick_use)
+error_t arm_timer_systick_use(const struct device_accessor_s *accessor,
+                              enum dev_use_op_e op)
 {
   struct device_s *dev = accessor->dev;
   __unused__ struct arm_dev_private_s *pv = dev->drv_pv;
   error_t err = 0;
-  bool_t start = 0;
-
-  switch (op)
-    {
-    case DEV_USE_GET_ACCESSOR:
-    case DEV_USE_PUT_ACCESSOR:
-      return 0;
-    case DEV_USE_START:
-      start = 1;
-    case DEV_USE_STOP:
-      break;
-    }
 
   LOCK_SPIN_IRQ(&dev->lock);
 
@@ -226,7 +215,7 @@ DEV_USE(arm_timer_systick_use)
         {
           err = -EBUSY;
         }
-      else if (start)
+      else if (op == DEV_USE_START)
         {
           if (pv->systick_start == 0)
             {
@@ -272,7 +261,7 @@ DEV_USE(arm_timer_systick_use)
       uint32_t ctrl = cpu_mem_read_32(ARM_M_DWT_CTRL_ADDR);
       if (ctrl & ARM_M_DWT_CTRL_NOCYCCNT)
         err = -ENOTSUP;
-      else if (start)
+      else if (op == DEV_USE_START)
         {
           if (pv->dwt_cycnt_start++ == 0)
             cpu_mem_write_32(ARM_M_DWT_CTRL_ADDR,

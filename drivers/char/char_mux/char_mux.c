@@ -339,12 +339,6 @@ static DEV_CHAR_REQUEST(char_mux_request)
 
   assert(rq->size);
 
-  if (num >= pv->chan_count)
-    {
-      err = -ENOENT;
-    }
-  else
-    {
       lock_spin_irq2(&dev->lock, &pv->irq_state);
 
       switch (rq->type)
@@ -423,7 +417,6 @@ static DEV_CHAR_REQUEST(char_mux_request)
         }
 
       char_mux_unlock(dev);
-    }
 
   if (err)
     {
@@ -760,7 +753,32 @@ static KROUTINE_EXEC(char_mux_io_write_done)
 static DEV_INIT(char_mux_init);
 static DEV_CLEANUP(char_mux_cleanup);
 
-#define char_mux_use dev_use_generic
+static DEV_USE(char_mux_use)
+{
+  struct device_accessor_s *accessor = param;
+
+  switch (op)
+    {
+    case DEV_USE_GET_ACCESSOR: {
+      struct device_s *dev = accessor->dev;
+      struct char_mux_context_s *pv = dev->drv_pv;
+      if (accessor->number >= pv->chan_count)
+        return -ENOTSUP;
+    }
+    case DEV_USE_PUT_ACCESSOR:
+      return 0;
+    case DEV_USE_START: {
+      struct char_mux_context_s *pv = accessor->dev->drv_pv;
+      return device_start(&pv->io);
+    }
+    case DEV_USE_STOP: {
+      struct char_mux_context_s *pv = accessor->dev->drv_pv;
+      return device_stop(&pv->io);
+    }
+    default:
+      return -ENOTSUP;
+    }
+}
 
 DRIVER_DECLARE(char_mux_drv, 0, "Char Mux", char_mux,
                DRIVER_CHAR_METHODS(char_mux));

@@ -87,7 +87,7 @@ static DEVCRYPTO_INFO(soft_sha2_info)
       break;
 #endif
     default:
-      return -ENOENT;
+      UNREACHABLE();
     }
 
   return 0;
@@ -446,7 +446,7 @@ static DEV_REQUEST_DELAYED_FUNC(soft_sha2_process)
         }
 #endif
         default:
-          goto pop;
+          UNREACHABLE();
         }
     }
 
@@ -513,6 +513,8 @@ static DEV_REQUEST_DELAYED_FUNC(soft_sha2_process)
           break;
         }
 #endif
+        default:
+          UNREACHABLE();
         }
     }
 
@@ -531,10 +533,42 @@ static DEVCRYPTO_REQUEST(soft_sha2_request)
                            &pv->queue, dev_crypto_rq_s_base(rq), 0);
 }
 
+static DEV_USE(soft_sha2_use)
+{
+  struct device_accessor_s *accessor = param;
+
+  switch (op)
+    {
+    case DEV_USE_GET_ACCESSOR:
+      switch (accessor->number)
+        {
+#ifdef CONFIG_DRIVER_CRYPTO_SOFT_SHA224
+        case 0:
+#endif
+#ifdef CONFIG_DRIVER_CRYPTO_SOFT_SHA256
+        case 1:
+#endif
+#ifdef CONFIG_DRIVER_CRYPTO_SOFT_SHA384
+        case 2:
+#endif
+#ifdef CONFIG_DRIVER_CRYPTO_SOFT_SHA512
+        case 3:
+#endif
+          break;
+        default:
+          return -ENOTSUP;
+        }
+    case DEV_USE_PUT_ACCESSOR:
+    case DEV_USE_START:
+    case DEV_USE_STOP:
+      return 0;
+    default:
+      return -ENOTSUP;
+    }
+}
+
 static DEV_INIT(soft_sha2_init);
 static DEV_CLEANUP(soft_sha2_cleanup);
-
-#define soft_sha2_use dev_use_generic
 
 DRIVER_DECLARE(soft_sha2_drv, 0, "Software SHA2 hashes", soft_sha2,
                DRIVER_CRYPTO_METHODS(soft_sha2));

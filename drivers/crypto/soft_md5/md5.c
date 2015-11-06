@@ -44,9 +44,6 @@ struct soft_md5_private_s
 
 static DEVCRYPTO_INFO(soft_md5_info)
 {
-  if (accessor->number > 0)
-    return -ENOENT;
-
   memset(info, 0, sizeof(*info));
   info->name = "md5";
   info->modes_mask = 1 << DEV_CRYPTO_MODE_HASH;

@@ -93,8 +93,6 @@ static inline bool_t gptimer_irq_process(struct device_s *dev, uint_fast8_t numb
 {
   struct gptimer_private_s *pv = dev->drv_pv;
 
-  assert(number < pv->t_count);
-
   if ((endian_be32(TIMER_CTRL_IP) & cpu_mem_read_32(TIMER_REG_ADDR(pv->addr, TIMER_REG_CTRL, number))) == 0)
     return 0;
 
@@ -187,7 +185,7 @@ static DEV_TIMER_CANCEL(gptimer_cancel)
   uint_fast8_t number = accessor->number / 2;
   uint_fast8_t mode = accessor->number % 2;
 
-  if (!mode || number >= pv->t_count)
+  if (!mode)
     return -ENOTSUP;
 
   struct gptimer_state_s *p = pv->t + number;
@@ -231,7 +229,7 @@ static DEV_TIMER_REQUEST(gptimer_request)
   uint_fast8_t number = accessor->number / 2;
   uint_fast8_t mode = accessor->number % 2;
 
-  if (!mode || number >= pv->t_count)
+  if (!mode)
     return -ENOTSUP;
 
   struct gptimer_state_s *p = pv->t + number;
@@ -274,26 +272,36 @@ static DEV_TIMER_REQUEST(gptimer_request)
 
 static DEV_USE(gptimer_use)
 {
+  struct device_accessor_s *accessor = param;
+
+  switch (op)
+    {
+    case DEV_USE_GET_ACCESSOR: {
+      struct gptimer_private_s *pv = accessor->dev->drv_pv;
+      if (accessor->number / 2 >= pv->t_count)
+        return -ENOTSUP;
+    }
+    case DEV_USE_PUT_ACCESSOR:
+      return 0;
+    case DEV_USE_START:
+    case DEV_USE_STOP:
+      break;
+    default:
+      return -ENOTSUP;
+    }
+
   struct device_s *dev = accessor->dev;
   struct gptimer_private_s *pv = dev->drv_pv;
   uint_fast8_t number = accessor->number / 2;
   uint_fast8_t mode = accessor->number % 2;
-
-  if (number >= pv->t_count)
-    return -ENOTSUP;
-
   error_t err = 0;
 
   struct gptimer_state_s *p = pv->t + number;
 
   LOCK_SPIN_IRQ(&dev->lock);
 
-  switch (op)
+  if (op == DEV_USE_START)
     {
-    case DEV_USE_GET_ACCESSOR:
-    case DEV_USE_PUT_ACCESSOR:
-      break;
-    case DEV_USE_START:
       if (mode)
         {
 #ifdef CONFIG_DEVICE_IRQ
@@ -309,9 +317,8 @@ static DEV_USE(gptimer_use)
 #else
           err = -ENOTSUP;
 #endif
-          break;
         }
-      if (p->start_count > 0)
+      else if (p->start_count > 0)
         err = -EBUSY;
       else
         {
@@ -320,9 +327,9 @@ static DEV_USE(gptimer_use)
                              endian_be32(TIMER_CTRL_ENABLED | TIMER_CTRL_RESTART));
           p->start_count -= 2;
         }
-      break;
-
-    case DEV_USE_STOP:
+    }
+  else     /* DEV_USE_STOP */
+    {
       if (mode)
         {
 #ifdef CONFIG_DEVICE_IRQ
@@ -343,9 +350,8 @@ static DEV_USE(gptimer_use)
 #else
           err = -ENOTSUP;
 #endif
-          break;
         }
-      if (p->start_count > 0)
+      else if (p->start_count > 0)
         err = -EBUSY;
       else
         {
@@ -358,7 +364,6 @@ static DEV_USE(gptimer_use)
                 cpu_mem_write_32(TIMER_REG_ADDR(pv->addr, TIMER_REG_CTRL, number), 0);
             }
         }
-      break;
     }
 
   LOCK_RELEASE_IRQ(&dev->lock);

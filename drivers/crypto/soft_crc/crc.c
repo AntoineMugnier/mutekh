@@ -74,9 +74,6 @@ enum soft_crc_variants_e
 
 static DEVCRYPTO_INFO(soft_crc_info)
 {
-  if (accessor->number >= SOFT_CRC32_count)
-    return -ENOENT;
-
   memset(info, 0, sizeof(*info));
   info->modes_mask = 1 << DEV_CRYPTO_MODE_HASH;
   info->cap |= DEV_CRYPTO_CAP_STATEFUL;
@@ -325,7 +322,7 @@ static DEV_REQUEST_DELAYED_FUNC(soft_crc_process)
           break;
 #endif
         default:
-          goto pop;
+          UNREACHABLE();
         }
     }
 
@@ -369,10 +366,45 @@ static DEVCRYPTO_REQUEST(soft_crc_request)
                            &pv->queue, dev_crypto_rq_s_base(rq), 0);
 }
 
+static DEV_USE(soft_crc_use)
+{
+  struct device_accessor_s *accessor = param;
+
+  switch (op)
+    {
+    case DEV_USE_GET_ACCESSOR:
+      switch (accessor->number)
+        {
+#ifdef CONFIG_DRIVER_CRYPTO_SOFT_CRC_CRC32C
+        case SOFT_CRC32C:
+#endif
+#ifdef CONFIG_DRIVER_CRYPTO_SOFT_CRC_CRC32
+        case SOFT_CRC32:
+#endif
+#ifdef CONFIG_DRIVER_CRYPTO_SOFT_CRC_CRC32_IEC13818
+        case SOFT_CRC32_IEC13818:
+#endif
+#ifdef CONFIG_DRIVER_CRYPTO_SOFT_CRC_CRC32_POSIX
+        case SOFT_CRC32_POSIX:
+#endif
+#ifdef CONFIG_DRIVER_CRYPTO_SOFT_CRC_CRC32_ETSI
+        case SOFT_CRC32_ETSI:
+#endif
+          return 0;
+        default:
+          return -ENOTSUP;
+        }
+    case DEV_USE_PUT_ACCESSOR:
+    case DEV_USE_START:
+    case DEV_USE_STOP:
+      return 0;
+    default:
+      return -ENOTSUP;
+    }
+}
+
 static DEV_INIT(soft_crc_init);
 static DEV_CLEANUP(soft_crc_cleanup);
-
-#define soft_crc_use dev_use_generic
 
 DRIVER_DECLARE(soft_crc_drv, 0, "Software CRC hash", soft_crc,
                DRIVER_CRYPTO_METHODS(soft_crc));

@@ -94,7 +94,7 @@ static DEV_MEM_INFO(efm32_msc_info)
       info->erase_log2 = info->page_log2;
       break;
     default:
-      return -ENOENT;
+      UNREACHABLE();
     }
 
   return 0;
@@ -163,16 +163,32 @@ static DEV_MEM_REQUEST(efm32_msc_request)
         rq->err = -EIO;
       break;
     default:
-      rq->err = -EINVAL;
+      UNREACHABLE();
     }
 
   kroutine_exec(&rq->base.kr);
 }
 
+static DEV_USE(efm32_msc_use)
+{
+  struct device_accessor_s *accessor = param;
+
+  switch (op)
+    {
+    case DEV_USE_GET_ACCESSOR:
+      if (accessor->number > 2)
+        return -ENOTSUP;
+    case DEV_USE_PUT_ACCESSOR:
+    case DEV_USE_START:
+    case DEV_USE_STOP:
+      return 0;
+    default:
+      return -ENOTSUP;
+    }
+}
+
 static DEV_INIT(efm32_msc_init);
 static DEV_CLEANUP(efm32_msc_cleanup);
-
-#define efm32_msc_use dev_use_generic
 
 DRIVER_DECLARE(efm32_msc_drv, 0, "EFM32 Memory System Controller", efm32_msc,
                DRIVER_MEM_METHODS(efm32_msc));

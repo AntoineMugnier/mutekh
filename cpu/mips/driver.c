@@ -205,9 +205,6 @@ static DEV_TIMER_CONFIG(mips_timer_config)
   struct mips_dev_private_s *pv = dev->drv_pv;
   error_t err = 0;
 
-  switch (accessor->number)
-    {
-    case 0: {          /* cycle counter */
       if (res > 1)
         err = -ERANGE;
       if (cfg)
@@ -224,12 +221,6 @@ static DEV_TIMER_CONFIG(mips_timer_config)
 #endif
           cfg->res = 1;
         }
-      break;
-    }
-
-    default:
-      err = -ENOTSUP;
-    }
 
   return err;
 }
@@ -253,33 +244,7 @@ static DEV_CLOCK_SINK_CHANGED(mips_clk_changed)
 }
 #endif
 
-static DEV_USE(mips_use)
-{
-  if (accessor->number > 0)
-    return -ENOTSUP;
-
-  switch (accessor->api->class_)
-    {
-    case DRIVER_CLASS_TIMER:
-      return 0;
-
-    case DRIVER_CLASS_CPU:
-    case DRIVER_CLASS_ICU:
-      switch (op)
-        {
-        case DEV_USE_GET_ACCESSOR:
-        case DEV_USE_PUT_ACCESSOR:
-          return 0;
-        default:
-          break;
-        }
-    default:
-      break;
-    }
-
-  return -ENOTSUP;
-}
-
+#define mips_use dev_use_generic
 #define mips_timer_request (dev_timer_request_t*)&dev_driver_notsup_fcn
 #define mips_timer_cancel  (dev_timer_cancel_t*)&dev_driver_notsup_fcn
 
