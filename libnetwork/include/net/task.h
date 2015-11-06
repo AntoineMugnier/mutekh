@@ -173,6 +173,8 @@ GCT_CONTAINER_FCNS(net_task_queue, ALWAYS_INLINE, net_task_queue,
 GCT_CONTAINER_NOLOCK_FCNS(net_task_queue, ALWAYS_INLINE, net_task_queue_nolock,
                           init, destroy, pushback, pop, remove, head, isempty);
 
+void net_task_queue_reject_all(net_task_queue_root_t *root);
+
 /**
    @this pushes an inbound packet task to a layer.
 
