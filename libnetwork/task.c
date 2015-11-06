@@ -203,3 +203,16 @@ void net_task_packet_respond(struct net_task_s *task,
   net_layer_refdec(old_source);
   net_layer_refdec(old_target);
 }
+
+void net_task_queue_reject_all(net_task_queue_root_t *root)
+{
+  struct net_task_s *task;
+
+  while ((task = net_task_queue_pop(root))) {
+    if (task->type == NET_TASK_QUERY)
+      net_task_query_respond_push(task, -EIO);
+    else
+      net_task_destroy(task);
+  }
+}
+

@@ -92,6 +92,9 @@ void net_layer_unbind(
   net_layer_list_remove(&layer->children, child);
   child->parent = NULL;
 
+  if (child->handler->dandling)
+    child->handler->dandling(child);
+
   if (layer->handler->unbound)
     layer->handler->unbound(layer, child);
 }

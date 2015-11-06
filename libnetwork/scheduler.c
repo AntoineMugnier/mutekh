@@ -208,8 +208,15 @@ static CONTEXT_ENTRY(net_scheduler_worker)
     if (net_scheduler_tasks_handle(sched))
       continue;
 
-    while ((layer = net_layer_sched_list_pop(&sched->destroyed_layers)))
-      net_layer_destroy_real(layer);
+    if (!net_layer_sched_list_isempty(&sched->destroyed_layers)) {
+      while ((layer = net_layer_sched_list_pop(&sched->destroyed_layers)))
+        net_layer_destroy_real(layer);
+
+      printk("In scheduler: %d live layers left\n",
+             net_layer_sched_list_count(&sched->layers));
+
+      continue;
+    }
 
     dprintk("   Nothing to do, waiting\n");
     

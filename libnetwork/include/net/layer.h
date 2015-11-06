@@ -125,6 +125,11 @@ struct net_layer_handler_s
     const struct net_layer_context_s *parent_context);
 
   /**
+     @this notifies a layer its parent context got unbound.
+   */
+  void (*dandling)(struct net_layer_s *layer);
+
+  /**
      @this is called when another layer is bound using this one as
      parent.  @tt addr is address context passed to
      @ref{net_layer_bind}, it is context-dependent.
