@@ -150,8 +150,8 @@ static bool_t advertiser_ctx_radio_params(struct nrf5x_ble_context_s *context,
   return 0;
 }
 
-static struct buffer_s *advertiser_ctx_payload_get(struct nrf5x_ble_context_s *context,
-                                                   enum nrf5x_ble_transfer_e mode)
+static uint8_t *advertiser_ctx_payload_get(struct nrf5x_ble_context_s *context,
+                                           enum nrf5x_ble_transfer_e mode)
 {
   struct nrf5x_ble_advertiser_s *adv
     = nrf5x_ble_advertiser_s_from_context(context);
@@ -159,13 +159,14 @@ static struct buffer_s *advertiser_ctx_payload_get(struct nrf5x_ble_context_s *c
   switch (adv->state) {
   case ADV_IND:
     assert(mode == MODE_TX);
-    return buffer_refinc(adv->adv_packet);
+    return adv->adv_packet->data + adv->adv_packet->begin;
   case SCAN_RSP:
     assert(mode == MODE_TX);
-    return buffer_refinc(adv->scan_response);
+    return adv->scan_response->data + adv->scan_response->begin;
   case SCAN_REQ:
     assert(mode == MODE_RX);
-    return buffer_refinc(adv->rx_buffer);
+    if (adv->rx_buffer)
+      return adv->rx_buffer->data + adv->rx_buffer->begin;
   default:
     return NULL;
   }
@@ -207,8 +208,7 @@ static void advertiser_ctx_ifs_event(struct nrf5x_ble_context_s *context,
 
 static void advertiser_ctx_payload_received(struct nrf5x_ble_context_s *context,
                                             dev_timer_value_t ts,
-                                            bool_t crc_valid,
-                                            struct buffer_s *packet)
+                                            bool_t crc_valid)
 {
   struct nrf5x_ble_advertiser_s *adv
     = nrf5x_ble_advertiser_s_from_context(context);
@@ -219,15 +219,17 @@ static void advertiser_ctx_payload_received(struct nrf5x_ble_context_s *context,
   if (!crc_valid)
     goto channel_next;
 
-  const uint8_t size = packet->end - packet->begin;
+  const uint8_t size = __MIN(CONFIG_BLE_PACKET_SIZE,
+                             adv->rx_buffer->data[adv->rx_buffer->begin + 1] + 2);
   struct ble_addr_s adva;
 
-  switch (ble_advertise_packet_type_get(packet)) {
+  adv->rx_buffer->end = adv->rx_buffer->begin + size;
+  switch (ble_advertise_packet_type_get(adv->rx_buffer)) {
   case BLE_SCAN_REQ:
     if (size != 14)
       goto channel_next;
 
-    ble_advertise_packet_rxaddr_get(packet, &adva);
+    ble_advertise_packet_rxaddr_get(adv->rx_buffer, &adva);
 
     if (ble_addr_cmp(&adva, &adv->local_addr) || !adv->scan_response)
       goto channel_next;
@@ -239,14 +241,13 @@ static void advertiser_ctx_payload_received(struct nrf5x_ble_context_s *context,
     if (size != 2 + 12 + 22 || !adv->connectable)
       goto channel_next;
 
-    ble_advertise_packet_rxaddr_get(packet, &adva);
+    ble_advertise_packet_rxaddr_get(adv->rx_buffer, &adva);
 
     if (ble_addr_cmp(&adva, &adv->local_addr))
       goto channel_next;
 
     adv->state = ADV_DONE;
-    adv->conn_packet = packet;
-    assert(packet == adv->rx_buffer);
+    adv->conn_packet = adv->rx_buffer;
     adv->rx_buffer = NULL;
     adv->conn_ts = ts;
     return;

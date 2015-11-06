@@ -243,8 +243,7 @@ error_t nrf5x_ble_data_setup(struct nrf5x_ble_private_s *pv)
   if (!pv->transmitting)
     return -ENOMEM;
 
-  nrf_reg_set(BLE_RADIO_ADDR, NRF_RADIO_PACKETPTR,
-              (uintptr_t)pv->transmitting->data + pv->transmitting->begin);
+  nrf_reg_set(BLE_RADIO_ADDR, NRF_RADIO_PACKETPTR, (uintptr_t)pv->transmitting);
 
   nrf_it_disable(BLE_RADIO_ADDR, NRF_RADIO_BCMATCH);
   nrf_short_enable(BLE_RADIO_ADDR, NRF_RADIO_ADDRESS_BCSTART);

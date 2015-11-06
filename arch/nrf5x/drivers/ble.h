@@ -179,11 +179,10 @@ struct nrf5x_ble_private_s {
   nrf5x_ble_context_list_root_t closed_list;
 
   struct nrf5x_ble_context_s *current;
+  uint8_t *transmitting;
 
   struct nrf5x_ble_params_s current_params;
   struct nrf5x_ble_params_s next_params;
-  struct buffer_s *transmitting;
-
   struct kroutine_s rescheduler;
   struct kroutine_s closer;
 
@@ -278,13 +277,12 @@ struct nrf5x_ble_context_handler_s
                        enum event_status_e status);
   bool_t (*radio_params)(struct nrf5x_ble_context_s *radio,
                          struct nrf5x_ble_params_s *params);
-  struct buffer_s *(*payload_get)(struct nrf5x_ble_context_s *radio,
-                                  enum nrf5x_ble_transfer_e mode);
+  uint8_t *(*payload_get)(struct nrf5x_ble_context_s *radio,
+                          enum nrf5x_ble_transfer_e mode);
   void (*ifs_event)(struct nrf5x_ble_context_s *radio, bool_t rx_timeout);
   void (*payload_received)(struct nrf5x_ble_context_s *radio,
                            dev_timer_value_t timestamp,
-                           bool_t crc_valid,
-                           struct buffer_s *packet);
+                           bool_t crc_valid);
 };
 
 error_t nrf5x_ble_context_init(struct nrf5x_ble_context_s *ctx,

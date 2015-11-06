@@ -327,10 +327,7 @@ static void nrf5x_ble_event_close(struct nrf5x_ble_private_s *pv,
   nrf5x_ble_radio_disable(pv);
   nrf5x_ble_rtc_boundary_clear();
 
-  if (pv->transmitting) {
-    buffer_refdec(pv->transmitting);
-    pv->transmitting = NULL;
-  }
+  pv->transmitting = NULL;
 
   dprintk("%s %p %d %d\n", __FUNCTION__, ctx, pv->event_packet_count, status);
 
@@ -712,7 +709,7 @@ void nrf5x_ble_event_address_matched(struct nrf5x_ble_private_s *pv)
   nrf_event_clear(BLE_RADIO_ADDR, NRF_RADIO_BCMATCH);
   gpio(I_WAIT, 0);
 
-  uint8_t len = pv->transmitting->data[pv->transmitting->begin + 1];
+  uint8_t len = pv->transmitting[1];
   uint16_t end_irq_bits = ((uint16_t)len + 5) * 8;
 
   nrf_reg_set(BLE_RADIO_ADDR, NRF_RADIO_BCC, end_irq_bits - RADIO_IRQ_LATENCY_US);
@@ -769,18 +766,11 @@ void nrf5x_ble_event_packet_ended(struct nrf5x_ble_private_s *pv)
     pv->current_params = pv->next_params;
   }
 
-  if (rx) {
-    pv->transmitting->end = pv->transmitting->begin
-      + __MIN(pv->transmitting->data[pv->transmitting->begin + 1] + 2,
-              buffer_size(pv->transmitting) - pv->transmitting->begin);
-
+  if (rx)
     current->handler->payload_received(current,
                                        pv->address_ts,
-                                       nrf_reg_get(BLE_RADIO_ADDR, NRF_RADIO_CRCSTATUS),
-                                       pv->transmitting);
-  }
+                                       nrf_reg_get(BLE_RADIO_ADDR, NRF_RADIO_CRCSTATUS));
 
-  buffer_refdec(pv->transmitting);
   pv->transmitting = NULL;
 
   gpio(I_PIPELINE, 0);
@@ -825,10 +815,7 @@ void nrf5x_ble_event_ifs_timeout(struct nrf5x_ble_private_s *pv)
   nrf_it_disable(BLE_RADIO_ADDR, NRF_RADIO_BCMATCH);
   nrf_reg_set(BLE_RADIO_ADDR, NRF_RADIO_BCC, 16);
 
-  if (pv->transmitting) {
-    buffer_refdec(pv->transmitting);
-    pv->transmitting = NULL;
-  }
+  pv->transmitting = NULL;
 
   if (!current) {
     kroutine_exec(&pv->rescheduler);

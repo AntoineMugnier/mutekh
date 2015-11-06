@@ -517,14 +517,18 @@ bool_t slave_ctx_radio_params(struct nrf5x_ble_context_s *context,
 }
 
 static
-struct buffer_s *slave_ctx_payload_get(struct nrf5x_ble_context_s *context,
-                                       enum nrf5x_ble_transfer_e mode)
+uint8_t *slave_ctx_payload_get(struct nrf5x_ble_context_s *context,
+                               enum nrf5x_ble_transfer_e mode)
 {
   struct nrf5x_ble_slave_s *slave = nrf5x_ble_slave_s_from_context(context);
   struct buffer_s *packet;
 
-  if (mode == MODE_RX)
-    return buffer_refinc(slave->rx_buffer);
+  if (mode == MODE_RX) {
+    if (!slave->rx_buffer)
+      return NULL;
+    packet = slave->rx_buffer;
+    goto out;
+  }
 
   if (slave->tx_queue_count == 0) {
     // Tx queue is empty, we have to create an empty packet to piggyback
@@ -547,9 +551,11 @@ struct buffer_s *slave_ctx_payload_get(struct nrf5x_ble_context_s *context,
     packet->data[packet->begin + 1] = 0;
 
     buffer_queue_pushback(&slave->tx_queue, packet);
+    buffer_refdec(packet);
     slave->tx_queue_count++;
   } else {
     packet = buffer_queue_head(&slave->tx_queue);
+    buffer_refdec(packet);
   }
 
   packet->data[packet->begin] = (packet->data[packet->begin] & 0x3)
@@ -562,7 +568,8 @@ struct buffer_s *slave_ctx_payload_get(struct nrf5x_ble_context_s *context,
 
   slave->event_tx_count++;
 
-  return packet;
+ out:
+  return packet->data + packet->begin;
 }
 
 static
@@ -579,16 +586,16 @@ void slave_ctx_ifs_event(struct nrf5x_ble_context_s *context, bool_t rx_timeout)
 static
 void slave_ctx_payload_received(struct nrf5x_ble_context_s *context,
                                 dev_timer_value_t timestamp,
-                                bool_t crc_valid,
-                                struct buffer_s *packet)
+                                bool_t crc_valid)
 {
   struct nrf5x_ble_slave_s *slave = nrf5x_ble_slave_s_from_context(context);
-  const uint8_t size = packet->end - packet->begin;
+  struct buffer_s *packet = slave->rx_buffer;
+  uint16_t size = __MIN(CONFIG_BLE_PACKET_SIZE,
+                        packet->data[packet->begin + 1] + 2);
   struct buffer_s *next_rx_packet;
   struct net_task_s *task;
 
-  assert(packet == slave->rx_buffer);
-
+  packet->end = packet->begin + size;
   slave->event_rx_count++;
 
   if (slave->event_packet_count == 1)
