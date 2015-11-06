@@ -148,7 +148,6 @@ static TERMUI_CON_COMMAND_PROTOTYPE(dev_shell_spi_read)
   struct termui_optctx_dev_spi_opts *data = ctx;
   struct dev_spi_ctrl_transfer_s *tr = &data->tr;
  
-  tr->accessor = &data->spi;
   tr->out_width = 1;
   tr->in_width = 1;
   tr->out = NULL;
@@ -172,7 +171,7 @@ static TERMUI_CON_COMMAND_PROTOTYPE(dev_shell_spi_read)
 
   tr->in = in;
 
-  error_t err = dev_spi_wait_transfer(tr); 
+  error_t err = dev_spi_wait_transfer(&data->spi, tr); 
 
   if (err)
     termui_con_printf(con, "Failed to transfert spi data with error: %\n",
@@ -189,7 +188,6 @@ static TERMUI_CON_COMMAND_PROTOTYPE(dev_shell_spi_swap)
   struct termui_optctx_dev_spi_opts *data = ctx;
   struct dev_spi_ctrl_transfer_s *tr = &data->tr;
  
-  tr->accessor = &data->spi;
   tr->out_width = 1;
   tr->in_width = 1;
 
@@ -211,7 +209,7 @@ static TERMUI_CON_COMMAND_PROTOTYPE(dev_shell_spi_swap)
 
   tr->in = in;
 
-  error_t err = dev_spi_wait_transfer(tr); 
+  error_t err = dev_spi_wait_transfer(&data->spi, tr); 
 
   if (err)
     termui_con_printf(con, "Failed to transfert spi data with error: %s\n",
@@ -231,8 +229,6 @@ static TERMUI_CON_COMMAND_PROTOTYPE(dev_shell_spi_write)
  
   uint8_t *out = (uint8_t*)tr->out;
 
-  tr->accessor = &data->spi;
-
   tr->out_width = 1;
   tr->in_width = 1;
 
@@ -243,7 +239,7 @@ static TERMUI_CON_COMMAND_PROTOTYPE(dev_shell_spi_write)
 
   uint16_t size = tr->count;  
 
-  error_t err = dev_spi_wait_transfer(tr); 
+  error_t err = dev_spi_wait_transfer(&data->spi, tr); 
 
   if (err)
     termui_con_printf(con, "Failed to transfert spi data with error: %s\n",

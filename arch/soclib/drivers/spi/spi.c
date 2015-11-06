@@ -280,7 +280,6 @@ static DEV_SPI_CTRL_TRANSFER(soclib_spi_transfer)
       assert(tr->count > 0);
 
       pv->tr = tr;
-      tr->accessor = accessor;
 
       pv->fifo_lvl = 0;
       tr->err = 0;

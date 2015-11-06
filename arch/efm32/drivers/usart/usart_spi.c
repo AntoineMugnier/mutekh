@@ -366,7 +366,6 @@ static DEV_SPI_CTRL_TRANSFER(efm32_usart_spi_transfer)
   else
     {
       assert(tr->count > 0);
-      tr->accessor = accessor;
       tr->err = 0;
       pv->tr = tr;
 

@@ -353,9 +353,6 @@ struct dev_spi_ctrl_transfer_s
   /** Transfer completion error */
   error_t                  err;
 
-  /** Associated SPI controller device */
-  struct device_spi_ctrl_s *accessor;
-
   /** Width in bytes of the data type used to store a single input SPI
       word. */
   uint_fast8_t             BITFIELD(in_width,3);
@@ -392,7 +389,8 @@ typedef DEV_SPI_CTRL_TRANSFER(dev_spi_ctrl_transfer_t);
 /** This helper function performs a SPI transfert as defined in @tt tr
     and waits for end of transfert. */
 config_depend_and2(CONFIG_DEVICE_SPI, CONFIG_MUTEK_SCHEDULER)
-error_t dev_spi_wait_transfer(struct dev_spi_ctrl_transfer_s * tr);
+error_t dev_spi_wait_transfer(struct device_spi_ctrl_s *accessor,
+                              struct dev_spi_ctrl_transfer_s * tr);
 
 
 /***************************************** queue getter */

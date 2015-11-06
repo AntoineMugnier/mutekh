@@ -764,7 +764,8 @@ static KROUTINE_EXEC(dev_request_spi_wait_done)
   LOCK_RELEASE_IRQ(&status->lock);
 }
 
-error_t dev_spi_wait_transfer(struct dev_spi_ctrl_transfer_s * tr)
+error_t dev_spi_wait_transfer(struct device_spi_ctrl_s *accessor,
+                              struct dev_spi_ctrl_transfer_s * tr)
 {
   struct dev_request_status_s status;
 
@@ -774,7 +775,7 @@ error_t dev_spi_wait_transfer(struct dev_spi_ctrl_transfer_s * tr)
   tr->pvdata = &status;
   kroutine_init(&tr->kr, &dev_request_spi_wait_done, KROUTINE_IMMEDIATE);
 
-  DEVICE_OP(tr->accessor, transfer, tr);
+  DEVICE_OP(accessor, transfer, tr);
 
   CPU_INTERRUPT_SAVESTATE_DISABLE;
 

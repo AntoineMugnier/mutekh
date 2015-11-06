@@ -292,7 +292,6 @@ static DEV_SPI_CTRL_TRANSFER(bcm2835_spi_transfer)
       pv->tr = tr;
       pv->fifo_lvl = 0;
       tr->err = 0;
-      tr->accessor = accessor;
 
       BCM2835_SPI_CS_TA_SET(pv->ctrl, ACTIVE); 
       BCM2835_SPI_CS_CLEAR_SET(pv->ctrl, NONE);
