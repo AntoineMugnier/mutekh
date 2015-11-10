@@ -533,6 +533,9 @@ static DEV_CLEANUP(cc26xx_timer_cleanup)
 {
   struct cc26xx_timer_private_s *pv = dev->drv_pv;
 
+  if (pv->start_count & 1)
+    return -EBUSY;
+
   /* Stop timer */
   cc26xx_timer_stop_counter(pv);
 

@@ -470,6 +470,9 @@ DEV_CLEANUP(cc26xx_uart_cleanup)
 {
   struct cc26xx_uart_context_s  *pv = dev->drv_pv;
 
+  if (pv->read_started || pv->write_started)
+    return -EBUSY;
+
 #ifdef CONFIG_DEVICE_IRQ
   /* disable irqs */
   cpu_mem_write_32(pv->addr + CC26XX_UART_IMSC_ADDR, 0);

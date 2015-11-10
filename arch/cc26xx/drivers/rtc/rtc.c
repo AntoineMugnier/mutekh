@@ -496,6 +496,9 @@ static DEV_CLEANUP(cc26xx_rtc_cleanup)
 {
   struct cc26xx_rtc_private_s *pv = dev->drv_pv;
 
+  if (pv->start_count & 1)
+    return -EBUSY;
+
   /* Stop rtc */
   cc26xx_rtc_stop_counter(pv);
 
