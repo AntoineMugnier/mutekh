@@ -71,9 +71,11 @@ enum ble_peripheral_mode_e {
 
 struct ble_peripheral_handler_s
 {
+#if defined(CONFIG_BLE_CRYPTO)
   void (*pairing_requested)(struct ble_peripheral_s *peri, bool_t bonding);
   void (*pairing_failed)(struct ble_peripheral_s *peri, enum sm_reason reason);
   void (*pairing_success)(struct ble_peripheral_s *peri);
+#endif
   bool_t (*connection_requested)(struct ble_peripheral_s *peri, const struct ble_addr_s *addr);
   void (*connection_closed)(struct ble_peripheral_s *peri, uint8_t reason);
   void (*state_changed)(struct ble_peripheral_s *peri, enum ble_peripheral_state_e state);
@@ -108,6 +110,8 @@ error_t ble_peripheral_init(
   const struct ble_peripheral_handler_s *handler,
   struct ble_stack_context_s *context);
 
+#if defined(CONFIG_BLE_CRYPTO)
+
 void ble_peripheral_pairing_request(struct ble_peripheral_s *peri,
                                     bool_t mitm_protection,
                                     bool_t bonding);
@@ -119,6 +123,8 @@ void ble_peripheral_pairing_accept(struct ble_peripheral_s *peri,
 
 void ble_peripheral_pairing_abort(struct ble_peripheral_s *peri,
                                   enum sm_reason reason);
+
+#endif
 
 void ble_peripheral_mode_set(struct ble_peripheral_s *peri, uint8_t mode);
 
