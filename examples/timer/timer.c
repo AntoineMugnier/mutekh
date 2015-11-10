@@ -6,31 +6,40 @@
 #include <device/class/timer.h>
 
 
-#define DEBUG 0
+
+/*
+  TIMER:      Timer to test.
+  REF_TIMER:  reference timer used to validate TIMER
+
+  DELAY_UNIT: Unit used to computed requests delay (1=>s, 1000=>ms, 1000000=>us)
+  MAX_DELAY:  Maximum delay used in requests (in DELAY_UNIT unit).
+
+  SKEW_MAX:   maximum skew authorized between planned deadline and real
+              effective deadline (calculed with REF_TIMER).
+*/
 
 
-#define CC26XX
 
-#ifdef CC26XX
+#define CC26XX 1
 
-# define TIMER     "timer0"
-# define REF_TIMER "cpu"
-# define SKEW_MAX 0xffff
-
-#else
-
-/* SOCLIB */
-# define TIMER     "/fdt/vci_rttimer*"
-# define REF_TIMER "/fdt/cpu@0"
-# define SKEW_MAX 0xffffffff
-
+#if CC26XX == 1
+# define REF_TIMER   "timer0"
+# define TIMER       "rtc"
+# define SKEW_MAX    0xffff
+# define DELAY_UNIT  10000
+# define MAX_DELAY   100000
+#else /* SOCLIB */
+# define REF_TIMER    "/fdt/cpu@0"
+# define TIMER        "/fdt/vci_rttimer*"
+# define SKEW_MAX     0xffffff
+# define DELAY_UNIT   10000
+# define MAX_DELAY    10000
 #endif
 
 
-
-#define RQ_NB 16
-#define MAX_DELAY_US 1000000000
-
+#define DEBUG 0
+#define RQ_NB 64
+#define CANCEL
 
 
 enum  rq_state_e
@@ -45,7 +54,7 @@ struct pvdata_s
   dev_timer_value_t ref_start;
   dev_timer_value_t calc_deadline;
   dev_timer_value_t ref_deadline;
-  uint32_t          delay_us;
+  uint32_t          delay;
   uint32_t          id;
   enum rq_state_e   state;
 };
@@ -56,12 +65,13 @@ struct dev_timer_rq_s request_g[RQ_NB];
 struct device_timer_s ref_dev_g;
 struct device_timer_s timer_dev_g;
 struct kroutine_s     kcontrol_g;
-uint32_t              ref_us_g;
-uint32_t              timer_us_g;
-uint32_t              min_delay_us_g;
+#ifdef CANCEL
+  struct kroutine_s     kcancel_g;
+#endif
+uint32_t              ref_min_delay;
+uint32_t              timer_min_delay;
 dev_timer_value_t     larger_skew_g;
 uint32_t              rq_cnt_g;
-bool_t                cancel_flag_g;
 
 
 
@@ -72,14 +82,20 @@ static KROUTINE_EXEC(request_handler);
 /******************************************************************************/
 
 
-static inline void display_deadline(struct pvdata_s *pvdata, dev_timer_value_t *skew)
+static inline void display_deadline(struct pvdata_s *pvdata,
+                                    dev_timer_value_t *skew)
 {
 #if DEBUG == 0
-  printk("rq %4d skew:0x%08llx delay:%10uus\n", pvdata->id, *skew, pvdata->delay_us);
+  printk("[%u] delay:%9u skew:0x%08llx [0x%llx]\n",
+          rq_cnt_g,
+          pvdata->delay,
+          *skew,
+          larger_skew_g);
 #elif DEBUG == 1
-  printk("\e[33m%016llx deadline %4d:  skew    : 0x%016llx\e[39m\n", pvdata->ref_deadline, pvdata->id, *skew);
-#else
-  printk("larger skew:0x%016llx  min delay:%10uus\n", larger_skew_g, min_delay_us_g);
+  printk("\e[33m%016llx [%4d] DEADLINE            skew: 0x%016llx\e[39m\n",
+          pvdata->ref_deadline,
+          pvdata->id,
+          *skew);
 #endif
 }
 
@@ -89,32 +105,33 @@ static inline void display_deadline(struct pvdata_s *pvdata, dev_timer_value_t *
 static inline void display_request(struct pvdata_s *pvdata)
 {
 #if DEBUG == 1
-  printk("%016llx request  %4d:  deadline: 0x%016llx  delay: %13uus\n",
-          pvdata->ref_deadline,
+  printk("%016llx [%4d] REQUEST    calc_deadline: 0x%016llx  delay: %9u\n",
+          pvdata->ref_start,
           pvdata->id,
-          pvdata->ref_deadline,
-          pvdata->delay_us);
+          pvdata->calc_deadline,
+          pvdata->delay);
 #endif
 }
 
 
 
 
-static inline void display_error(struct pvdata_s *pvdata, dev_timer_value_t *ref, dev_timer_value_t *skew)
+static inline void display_error(struct pvdata_s *pvdata,
+                                 dev_timer_value_t *ref,
+                                 dev_timer_value_t *skew)
 {
   cpu_interrupt_disable();
   printk("-------------------- ERROR -------------------\n");
   printk("ref       =                0x%016llx\n", *ref);
   printk("\n");
   printk("SKEW_MAX  =                0x%016x\n", SKEW_MAX);
-  printk("skew      =                0x%016x\n", *skew);
-  printk("min delay =                %uus\n", min_delay_us_g);
+  printk("skew      =                0x%016llx\n", *skew);
   printk("\n");
   printk("  request [%d]\n", pvdata->id);
   printk("\n");
   printk("    pvdata:\n");
   printk("      ref_start:           0x%016llx\n", pvdata->ref_start);
-  printk("      delay_us:            %u us\n", pvdata->delay_us);
+  printk("      delay:               %u\n", pvdata->delay);
   printk("      calc_deadline:       0x%016llx\n", pvdata->calc_deadline);
   printk("      ref_deadline:        0x%016llx\n", pvdata->ref_deadline);
   printk("-----------------------------------------------\n");
@@ -123,7 +140,8 @@ static inline void display_error(struct pvdata_s *pvdata, dev_timer_value_t *ref
 
 
 
-static inline bool_t check_skew(struct pvdata_s *pvdata, dev_timer_value_t *ref, dev_timer_value_t *skew)
+static inline bool_t check_skew(struct pvdata_s *pvdata, dev_timer_value_t *ref,
+                                dev_timer_value_t *skew)
 {
   *skew = 0;
   if (pvdata->calc_deadline < *ref)
@@ -146,47 +164,43 @@ static inline bool_t check_skew(struct pvdata_s *pvdata, dev_timer_value_t *ref,
 /******************************************************************************/
 
 
-#define BASE_DELAY_COUNTER (1 << 10)
-
-/* get 1024 (BASE_DELAY_COUNTER) random delay modulo 10 */
-/* 512 random delay modulo 100 */
-/* etc... until modulo == MAX_DELAY_US */
-
 static inline uint32_t get_delay(void)
 {
-  static uint32_t modulo = 10;
-  static uint32_t base_counter = BASE_DELAY_COUNTER;
-  static uint32_t counter = BASE_DELAY_COUNTER;
-
-  uint32_t delay_us = (rand() << 15) | rand();
+  static uint32_t modulo = MAX_DELAY;
+  static uint32_t base_counter = 2;
+  static uint32_t counter = 2;
 
   if (!counter)
     {
-      if (modulo == MAX_DELAY_US)
+      if (modulo <= 10)
         {
-          modulo = 10;
-          base_counter = BASE_DELAY_COUNTER;
+          modulo = MAX_DELAY;
+          base_counter = 2;
         }
       else
         {
-          modulo *= 10;
-          base_counter >>= 1;
+          modulo /= 10;
+          base_counter <<= 1;
         }
       counter = base_counter;
     }
+
+  uint32_t delay = (rand() << 15) | rand();
   counter--;
-  return delay_us % modulo;
+
+  return delay % modulo;
 }
 
 
 
 
-static inline void new_request_handler(struct dev_timer_rq_s *timer_rq, struct pvdata_s *pvdata)
+static inline void new_request_handler(struct dev_timer_rq_s *timer_rq,
+                                       struct pvdata_s *pvdata)
 {
-  /* get random delay (in us) */
-  uint32_t delay_us = get_delay();
-  if (delay_us < min_delay_us_g)
-    delay_us += min_delay_us_g;
+  /* get random delay */
+  uint32_t delay = get_delay();
+  if (delay == 0)
+    delay++;
 
   /* get the current timer value */
   dev_timer_value_t timer_current;
@@ -197,12 +211,12 @@ static inline void new_request_handler(struct dev_timer_rq_s *timer_rq, struct p
   DEVICE_OP(&ref_dev_g, get_value, &ref_current, 0);
 
   /* set the deadline for the timer request */
-  timer_rq->deadline = timer_current + (delay_us * timer_us_g);
+  timer_rq->deadline = timer_current + (delay * timer_min_delay);
 
   /* save data for the reference timer */
   pvdata->ref_start = ref_current;
-  pvdata->delay_us = delay_us;
-  pvdata->calc_deadline = ref_current + (ref_us_g * delay_us);
+  pvdata->delay = delay;
+  pvdata->calc_deadline = ref_current + (ref_min_delay * delay);
   pvdata->ref_deadline = 0;
 
   display_request(pvdata);
@@ -215,8 +229,8 @@ static inline void new_request_handler(struct dev_timer_rq_s *timer_rq, struct p
     {
       if (err == -ETIMEDOUT)
         {
-          min_delay_us_g = ++delay_us;
-          printk("\e[34mInfo: rq %d ETIMEDOUT (new min delay = %uus)\e[39m\n", pvdata->id, min_delay_us_g);
+          printk("\e[34mInfo: rq %d ETIMEDOUT (delay = %u)\e[39m\n",
+                  pvdata->id, delay);
         }
       pvdata->state = TEST_TIMER_STATE_NEW_REQUEST;
       kroutine_init(&timer_rq->rq.kr, request_handler, KROUTINE_SCHED_SWITCH);
@@ -224,15 +238,19 @@ static inline void new_request_handler(struct dev_timer_rq_s *timer_rq, struct p
     }
   else
     {
-      if (cancel_flag_g == 0 && (++rq_cnt_g % RQ_NB) == 0)
-        cancel_flag_g = 1;
+      rq_cnt_g++;
+#ifdef CANCEL
+      if ((rq_cnt_g % RQ_NB) == 0)
+        kroutine_exec(&kcancel_g);
+#endif
     }
 }
 
 
 
 
-static inline void irq_handler(struct dev_timer_rq_s *timer_rq, struct pvdata_s *pvdata)
+static inline void irq_handler(struct dev_timer_rq_s *timer_rq,
+                               struct pvdata_s *pvdata)
 {
   DEVICE_OP(&ref_dev_g, get_value, &pvdata->ref_deadline, 0);
   pvdata->state = TEST_TIMER_STATE_DEADLINE_REACHED;
@@ -243,7 +261,8 @@ static inline void irq_handler(struct dev_timer_rq_s *timer_rq, struct pvdata_s 
 
 
 
-static inline void deadline_handler(struct dev_timer_rq_s *timer_rq, struct pvdata_s *pvdata)
+static inline void deadline_handler(struct dev_timer_rq_s *timer_rq,
+                                    struct pvdata_s *pvdata)
 {
   dev_timer_value_t skew;
 
@@ -286,9 +305,13 @@ static KROUTINE_EXEC(request_handler)
 /******************************************************************************/
 
 
-static inline void cancel_request(uint32_t id)
+#ifdef CANCEL
+static KROUTINE_EXEC(kcancel_handler)
 {
+  uint32_t id = rand() % RQ_NB;
+
   error_t err = DEVICE_OP(&timer_dev_g, cancel, &request_g[id]);
+
   switch (pvdata_g[id].state)
     {
       /* Check that unqueue rq return an error */
@@ -302,10 +325,10 @@ static inline void cancel_request(uint32_t id)
         break;
       case TEST_TIMER_STATE_WAIT_FOR_DEADLINE:
         if (!err)
-          printk("\e[31mInfo: rq %d canceled\e[39m\n", id);
+          printk("\e[31mInfo: [%d] canceled\e[39m\n", id);
         else
           {
-            printk("Error: Cannot cancel rq %d\n", id);
+            printk("Error: Cannot cancel [%d]\n", id);
             abort();
           }
         break;
@@ -313,7 +336,7 @@ static inline void cancel_request(uint32_t id)
     pvdata_g[id].state = TEST_TIMER_STATE_NEW_REQUEST;
     kroutine_exec(&request_g[id].rq.kr);
 }
-
+#endif
 
 
 
@@ -332,14 +355,8 @@ static KROUTINE_EXEC(kcontrol_handler)
       if (pvdata_g[id].state == TEST_TIMER_STATE_WAIT_FOR_DEADLINE)
         if(!check_skew(&pvdata_g[id], &ref_current, &skew))
           abort();
-
     }
 
-  if (cancel_flag_g)
-    {
-      cancel_flag_g = 0;
-      cancel_request(rand() % RQ_NB);
-    }
   /* Re-run */
   kroutine_exec(&kcontrol_g);
 }
@@ -373,10 +390,16 @@ static inline void run_requests(void)
 
 void main(void)
 {
-  min_delay_us_g = 1;
   rq_cnt_g = 0;
-  cancel_flag_g = 0;
   larger_skew_g = 0;
+  memset(&timer_dev_g, 0, sizeof(timer_dev_g));
+  memset(&ref_dev_g, 0, sizeof(ref_dev_g));
+
+  if (DELAY_UNIT > 1000000000 || MAX_DELAY > 1000000000)
+    {
+      printk("Error: DELAY_UNIT and MAX_DELAY should be < 1000000000\n");
+      abort();
+    }
 
   /* get accessor for the timer under test and the for the reference timer */
   if (device_get_accessor_by_path(&timer_dev_g, NULL, TIMER, DRIVER_CLASS_TIMER))
@@ -390,14 +413,18 @@ void main(void)
       abort();
     }
 
-  /* for each timer, save the value for 1us */
-  dev_timer_init_sec(&timer_dev_g, &timer_us_g, 0, 1, 1000000);
+  /* for each timer, save the value for the unit min */
+  if ((dev_timer_init_sec(&timer_dev_g, &timer_min_delay, 0, 1, DELAY_UNIT)))
+    {
+      printk("Error: cannot get timer unit min\n");
+      abort();
+    }
 
-#ifdef CC26XX
-  ref_us_g = timer_us_g;
-#else
-  dev_timer_init_sec(&timer_dev_g, &ref_us_g, 0, 1, 1000000);
-#endif
+  if ((dev_timer_init_sec(&ref_dev_g, &ref_min_delay, 0, 1, DELAY_UNIT)))
+    {
+      printk("Error: cannot get ref unit min\n");
+      abort();
+    }
 
   /* start the reference timer */
   if (device_start(&ref_dev_g))
@@ -411,6 +438,11 @@ void main(void)
   /* run control routine */
   kroutine_init(&kcontrol_g, kcontrol_handler, KROUTINE_SCHED_SWITCH);
   kroutine_exec(&kcontrol_g);
+
+#ifdef CANCEL
+  /* init cancel kroutine */
+  kroutine_init(&kcancel_g, kcancel_handler, KROUTINE_SCHED_SWITCH);
+#endif
 }
 
 
