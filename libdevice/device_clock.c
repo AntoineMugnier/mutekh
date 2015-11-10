@@ -70,17 +70,12 @@ error_t dev_clock_config(struct device_clock_s *accessor,
           if (!((r->u.clock_rte.config >> config_id) & 1))
             break;
 
-          union dev_clock_config_value_u val, *v = NULL;
+          struct dev_freq_ratio_s ratio;
+          ratio.num = r->u.clock_rte.num;
+          ratio.denom = r->u.clock_rte.denom;
 
-          if (r->u.clock_rte.denom != 0)
-            {
-              val.ratio.num = r->u.clock_rte.num;
-              val.ratio.denom = r->u.clock_rte.denom;
-              v = &val;
-            }
-
-          err = DEVICE_OP(accessor, config_node, r->u.clock_rte.node,
-                          r->u.clock_rte.parent, v);
+          err = DEVICE_OP(accessor, config_route, r->u.clock_rte.node,
+                          r->u.clock_rte.parent, &ratio);
           if (err)
             goto err;
 
@@ -92,13 +87,15 @@ error_t dev_clock_config(struct device_clock_s *accessor,
           if (!((r->u.clock_osc.config >> config_id) & 1))
             break;
 
-          union dev_clock_config_value_u val;
-          val.freq.num = r->u.clock_osc.num;
-          val.freq.denom = r->u.clock_osc.denom;
-          val.acc = DEV_FREQ_ACC_INVALID;
+          struct dev_freq_s freq;
+          freq.num = r->u.clock_osc.num;
+          freq.denom = r->u.clock_osc.denom;
+          struct dev_freq_accuracy_s acc;
+          acc.m = r->u.clock_osc.acc_m;
+          acc.e = r->u.clock_osc.acc_e;
 
-          err = DEVICE_OP(accessor, config_node, r->u.clock_osc.node,
-                          DEV_CLOCK_INVALID_NODE_ID, &val);
+          err = DEVICE_OP(accessor, config_oscillator, r->u.clock_osc.node,
+                          &freq, &acc);
           if (err)
             goto err;
 

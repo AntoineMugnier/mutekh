@@ -490,7 +490,7 @@ efm32_recmu_get_node_freq(struct efm32_recmu_private_s *pv,
   return 0;
 }
 
-static DEV_CLOCK_CONFIG_NODE(efm32_recmu_config_node)
+static DEV_CLOCK_CONFIG_OSCILLATOR(efm32_recmu_config_oscillator)
 {
   struct device_s *dev = accessor->dev;
   struct efm32_recmu_private_s *pv = dev->drv_pv;
@@ -498,14 +498,11 @@ static DEV_CLOCK_CONFIG_NODE(efm32_recmu_config_node)
   if (pv->busy)
     return -EBUSY;
 
-  if (node_id >= EFM32_CLOCK_count)
-    return -ENOENT;
-
   /* oscilator nodes */
   switch (node_id)
     {
     case EFM32_CLOCK_HFRCO: {
-      switch (value->freq.denom)
+      switch (freq->denom)
         {
         case 1:
           break;
@@ -514,7 +511,7 @@ static DEV_CLOCK_CONFIG_NODE(efm32_recmu_config_node)
         default:
           return -ENOTSUP;
         }
-      switch (value->freq.num)
+      switch (freq->num)
         {
         case 0:
           break;
@@ -553,7 +550,7 @@ static DEV_CLOCK_CONFIG_NODE(efm32_recmu_config_node)
   || defined(CONFIG_EFM32_GIANT_GECKO) \
   || defined(CONFIG_EFM32_ZERO_GECKO)
     case EFM32_CLOCK_AUXHFRCO: {
-      switch (value->freq.denom)
+      switch (freq->denom)
         {
         case 1:
           break;
@@ -562,7 +559,7 @@ static DEV_CLOCK_CONFIG_NODE(efm32_recmu_config_node)
         default:
           return -ENOTSUP;
         }
-      switch (value->freq.num)
+      switch (freq->num)
         {
         case 0:
           break;
@@ -597,24 +594,20 @@ static DEV_CLOCK_CONFIG_NODE(efm32_recmu_config_node)
 #endif
 
     case EFM32_CLOCK_HFXO:
-      if (DEV_FREQ_IS_VALID(value->freq))
-        pv->hfxo_freq = value->freq;
-      if (DEV_FREQ_ACC_IS_VALID(value->acc))
-        pv->hfxo_acc = value->acc;
+      pv->hfxo_freq = *freq;
+      pv->hfxo_acc = *acc;
       pv->chg_mask |= EFM32_CLK_MASK(node_id);
       return 0;
 
     case EFM32_CLOCK_LFXO:
-      if (DEV_FREQ_IS_VALID(value->freq))
-        pv->lfxo_freq = value->freq;
-      if (DEV_FREQ_ACC_IS_VALID(value->acc))
-        pv->lfxo_acc = value->acc;
+      pv->lfxo_freq = *freq;
+      pv->lfxo_acc = *acc;
       pv->chg_mask |= EFM32_CLK_MASK(node_id);
       return 0;
 
     case EFM32_CLOCK_LFRCO:
     case EFM32_CLOCK_ULFRCO:
-      switch (value->freq.denom)
+      switch (freq->denom)
         {
         case 0:
           return 0;
@@ -623,19 +616,25 @@ static DEV_CLOCK_CONFIG_NODE(efm32_recmu_config_node)
         }
 
     default:
-      break;
+      return -ENOENT;
     }
+}
 
-  /* other nodes */
+static DEV_CLOCK_CONFIG_ROUTE(efm32_recmu_config_route)
+{
+  struct device_s *dev = accessor->dev;
+  struct efm32_recmu_private_s *pv = dev->drv_pv;
 
-  if (value != NULL && (value->ratio.num != 1 ||
-                        (value->ratio.denom & (value->ratio.denom-1))))
+  if (pv->busy)
+    return -EBUSY;
+
+  if (ratio->num != 1 || !ALIGN_ISPOWTWO(ratio->denom))
     return -EINVAL;
 
   switch (node_id)
     {
     case EFM32_CLOCK_HFCLK: {
-      if (value != NULL && (value->freq.denom != 1))
+      if (ratio->denom != 1)
         return -ENOTSUP;
       switch (parent_id)
         {
@@ -664,9 +663,8 @@ static DEV_CLOCK_CONFIG_NODE(efm32_recmu_config_node)
     case EFM32_CLOCK_HFCLKDIV:
       if (parent_id != EFM32_CLOCK_HFCLK)
         return -ENOTSUP;
-      if (value != NULL)
         {
-          uint32_t d = value->ratio.denom;
+          uint32_t d = ratio->denom;
           if (d > 8)
             return -ENOTSUP;
           EFM32_CMU_CTRL_HFCLKDIV_SET(pv->r_ctrl, d + 1);
@@ -677,9 +675,8 @@ static DEV_CLOCK_CONFIG_NODE(efm32_recmu_config_node)
     case EFM32_CLOCK_HFCORECLK: {
       if (parent_id != EFM32_CLOCK_HFCLKDIV)
         return -ENOTSUP;
-      if (value != NULL)
         {
-          uint32_t d = value->ratio.denom;
+          uint32_t d = ratio->denom;
           if (d > 512)
             return -ENOTSUP;
           EFM32_CMU_HFCORECLKDIV_HFCORECLKDIV_SETVAL(pv->r_hfcoreclkdiv, __FFS(d) - 1);
@@ -690,9 +687,8 @@ static DEV_CLOCK_CONFIG_NODE(efm32_recmu_config_node)
     case EFM32_CLOCK_HFPERCLK: {
       if (parent_id != EFM32_CLOCK_HFCLKDIV)
         return -ENOTSUP;
-      if (value != NULL)
         {
-          uint32_t d = value->ratio.denom;
+          uint32_t d = ratio->denom;
           if (d > 512)
             return -ENOTSUP;
           EFM32_CMU_HFPERCLKDIV_HFPERCLKDIV_SETVAL(pv->r_hfperclkdiv, __FFS(d) - 1);
@@ -703,9 +699,8 @@ static DEV_CLOCK_CONFIG_NODE(efm32_recmu_config_node)
     case EFM32_CLOCK_LE: {
       if (parent_id != EFM32_CLOCK_HFCORECLK)
         return -ENOTSUP;
-      if (value != NULL)
         {
-          uint32_t d = value->ratio.denom;
+          uint32_t d = ratio->denom;
 # if defined(CONFIG_EFM32_LEOPARD_GECKO) \
   || defined(CONFIG_EFM32_WONDER_GECKO) \
   || defined(CONFIG_EFM32_GIANT_GECKO) \
@@ -723,7 +718,7 @@ static DEV_CLOCK_CONFIG_NODE(efm32_recmu_config_node)
 
 #ifdef EFM32_CLOCK_USBC
     case EFM32_CLOCK_USBC: {
-      if (value != NULL && value->freq.denom != 1)
+      if (ratio->denom != 1)
         return -ENOTSUP;
       switch (parent_id)
         {
@@ -745,7 +740,7 @@ static DEV_CLOCK_CONFIG_NODE(efm32_recmu_config_node)
 #endif
 
     case EFM32_CLOCK_LFACLK: {
-      if (value != NULL && value->freq.denom != 1)
+      if (ratio->denom != 1)
         return -ENOTSUP;
       switch (parent_id)
         {
@@ -775,7 +770,7 @@ static DEV_CLOCK_CONFIG_NODE(efm32_recmu_config_node)
     }
 
     case EFM32_CLOCK_LFBCLK: {
-      if (value != NULL && value->freq.denom != 1)
+      if (ratio->denom != 1)
         return -ENOTSUP;
       switch (parent_id)
         {
@@ -808,9 +803,8 @@ static DEV_CLOCK_CONFIG_NODE(efm32_recmu_config_node)
     case EFM32_CLOCK_LESENSE:
       if (parent_id != EFM32_CLOCK_LFACLK)
         return -ENOTSUP;
-      if (value != NULL)
         {
-          uint32_t d = value->ratio.denom;
+          uint32_t d = ratio->denom;
           if (d > 8)
             return -ENOTSUP;
           EFM32_CMU_LFAPRESC0_LESENSE_SETVAL(pv->r_lfapresc0, __FFS(d) - 1);
@@ -822,9 +816,8 @@ static DEV_CLOCK_CONFIG_NODE(efm32_recmu_config_node)
     case EFM32_CLOCK_RTC:
       if (parent_id != EFM32_CLOCK_LFACLK)
         return -ENOTSUP;
-      if (value != NULL)
         {
-          uint32_t d = value->ratio.denom;
+          uint32_t d = ratio->denom;
           if (d > 32768)
             return -ENOTSUP;
           EFM32_CMU_LFAPRESC0_RTC_SETVAL(pv->r_lfapresc0, __FFS(d) - 1);
@@ -836,9 +829,8 @@ static DEV_CLOCK_CONFIG_NODE(efm32_recmu_config_node)
     case EFM32_CLOCK_LETIMER:
       if (parent_id != EFM32_CLOCK_LFACLK)
         return -ENOTSUP;
-      if (value != NULL)
         {
-          uint32_t d = value->ratio.denom;
+          uint32_t d = ratio->denom;
           if (d > 32768)
             return -ENOTSUP;
           EFM32_CMU_LFAPRESC0_LETIMER0_SETVAL(pv->r_lfapresc0, __FFS(d) - 1);
@@ -850,9 +842,8 @@ static DEV_CLOCK_CONFIG_NODE(efm32_recmu_config_node)
     case EFM32_CLOCK_LCD:
       if (parent_id != EFM32_CLOCK_LFACLK)
         return -ENOTSUP;
-      if (value != NULL)
         {
-          uint32_t d = value->ratio.denom;
+          uint32_t d = ratio->denom;
           if (d < 16)
             return -ENOTSUP;
           EFM32_CMU_LFAPRESC0_LCD_SETVAL(pv->r_lfapresc0, __FFS(d) - 5);
@@ -864,9 +855,8 @@ static DEV_CLOCK_CONFIG_NODE(efm32_recmu_config_node)
     case EFM32_CLOCK_LEUART0:
       if (parent_id != EFM32_CLOCK_LFBCLK)
         return -ENOTSUP;
-      if (value != NULL)
         {
-          uint32_t d = value->ratio.denom;
+          uint32_t d = ratio->denom;
           if (d > 8)
             return -ENOTSUP;
           EFM32_CMU_LFBPRESC0_LEUART0_SETVAL(pv->r_lfbpresc0, __FFS(d) - 1);
@@ -878,9 +868,8 @@ static DEV_CLOCK_CONFIG_NODE(efm32_recmu_config_node)
     case EFM32_CLOCK_LEUART1:
       if (parent_id != EFM32_CLOCK_LFBCLK)
         return -ENOTSUP;
-      if (value != NULL)
         {
-          uint32_t d = value->ratio.denom;
+          uint32_t d = ratio->denom;
           if (d > 8)
             return -ENOTSUP;
           EFM32_CMU_LFBPRESC0_LEUART1_SETVAL(pv->r_lfbpresc0, __FFS(d) - 1);
@@ -889,7 +878,7 @@ static DEV_CLOCK_CONFIG_NODE(efm32_recmu_config_node)
 #endif
 
     default:
-      return -ENOTSUP;
+      return -ENOENT;
     }
 
   pv->chg_mask |= EFM32_CLK_MASK(node_id);

@@ -162,41 +162,47 @@ struct dev_clock_sink_ep_s
 
 
 
-/** @see dev_clock_config_node_t */
-union dev_clock_config_value_u
-{
-  struct {
-    /** updated when valid */
-    struct dev_freq_s          freq;
-    /** updated when valid */
-    struct dev_freq_accuracy_s acc;
-  };
-  struct dev_freq_ratio_s      ratio;
-};
-
-/** @see dev_clock_config_node_t */
-#define DEV_CLOCK_CONFIG_NODE(n) error_t (n) (                \
-    struct device_clock_s *accessor,                            \
+/** @see dev_clock_config_route_t */
+#define DEV_CLOCK_CONFIG_ROUTE(n) error_t (n) (              \
+    struct device_clock_s *accessor,                         \
     dev_clock_node_id_t   node_id,                           \
     dev_clock_node_id_t   parent_id,                         \
-    union dev_clock_config_value_u *value                    \
+    struct dev_freq_ratio_s *ratio                           \
 )
 
-/** @This set the next configuration of a clock node internal to the
-    device.
+/** @This sets the next configuration of a clock route node internal
+    to the device.
 
-    For oscillator nodes, this function sets the oscillator frequency
-    value. The @tt parent_id parameter is not relevant in this case.
-
-    For other types of node (end-point and internal clock signals),
-    the function have to select the route to the parent clock node
-    inside the device and optionally update the clock scale factor
-    associated to this route. The @tt value parameter may be @tt NULL.
+    This function acts on end-point nodes and internal clock signals
+    nodes.  The function have to select the route to the parent clock
+    node inside the device and optionally update the clock scale
+    factor associated to this route.
 
     No hardware configuration actually takes place before the call to
     the @ref dev_clock_commit_t function.
 */
-typedef DEV_CLOCK_CONFIG_NODE(dev_clock_config_node_t);
+typedef DEV_CLOCK_CONFIG_ROUTE(dev_clock_config_route_t);
+
+
+
+/** @see dev_clock_config_oscillator_t */
+#define DEV_CLOCK_CONFIG_OSCILLATOR(n) error_t (n) (            \
+    struct device_clock_s *accessor,                            \
+    dev_clock_node_id_t   node_id,                              \
+    struct dev_freq_s          *freq,                           \
+    struct dev_freq_accuracy_s *acc                             \
+)
+
+/** @This sets the next configuration of a clock oscillator node
+    internal to the device.
+
+    @This sets the oscillator frequency value and the accuracy
+    values.
+
+    No hardware configuration actually takes place before the call to
+    the @ref dev_clock_commit_t function.
+*/
+typedef DEV_CLOCK_CONFIG_OSCILLATOR(dev_clock_config_oscillator_t);
 
 
 
@@ -204,8 +210,8 @@ typedef DEV_CLOCK_CONFIG_NODE(dev_clock_config_node_t);
 #define DEV_CLOCK_COMMIT(n) error_t (n) (struct device_clock_s *accessor)
 
 /** @This starts the configuration of the clocks based on parameters
-    passed to previous calls to the @ref dev_clock_config_node_t
-    function.
+    passed to previous calls to the @ref dev_clock_config_route_t and
+    @ref dev_clock_config_oscillator_t functions.
 
     The driver may further delay the configuration of some clock
     signals and make it effective only when appropriate. Depending on
@@ -226,7 +232,8 @@ typedef DEV_CLOCK_COMMIT(dev_clock_commit_t);
 #define DEV_CLOCK_ROLLBACK(n) error_t (n) (struct device_clock_s *accessor)
 
 /** @This discard all configuration changes requests made by calling
-    the @ref dev_clock_config_node_t function. This can be used to
+    the @ref dev_clock_config_route_t and @ref
+    dev_clock_config_oscillator_t functions. This can be used to
     revert to a known state in case of error.
  */
 typedef DEV_CLOCK_ROLLBACK(dev_clock_rollback_t);
@@ -276,7 +283,8 @@ typedef DEV_CLOCK_NODE_INFO(dev_clock_node_info_t);
 
 DRIVER_CLASS_TYPES(clock,
                    dev_clock_node_info_t   *f_node_info;
-                   dev_clock_config_node_t *f_config_node;
+                   dev_clock_config_route_t *f_config_route;
+                   dev_clock_config_oscillator_t *f_config_oscillator;
                    dev_clock_commit_t      *f_commit;
                    dev_clock_rollback_t    *f_rollback;
                    );
@@ -285,7 +293,8 @@ DRIVER_CLASS_TYPES(clock,
   ((const struct driver_class_s*)&(const struct driver_clock_s){    \
     .class_ = DRIVER_CLASS_CLOCK,                                   \
     .f_node_info = prefix ## _node_info,                            \
-    .f_config_node = prefix ## _config_node,                        \
+    .f_config_route = prefix ## _config_route,                      \
+    .f_config_oscillator = prefix ## _config_oscillator,            \
     .f_commit = prefix ## _commit,                                  \
     .f_rollback = prefix ## _rollback,                              \
   })
