@@ -189,14 +189,18 @@ struct dev_resource_s
 
     /** @see #DEV_STATIC_RES_CLK_OSC @see device_add_res_clock_osc */
     struct {
-      /** node id */
-      uint64_t                  BITFIELD(node,CONFIG_DEVICE_CLOCK_MAX_ID);
       /** numerator of the frequency fractional part */
       uint64_t                  BITFIELD(num,CONFIG_DEVICE_CLOCK_OSCN_WIDTH);
       /** denominator of the frequency fractional part */
       uint64_t                  BITFIELD(denom,CONFIG_DEVICE_CLOCK_OSCD_WIDTH);
+      /** node id */
+      uint32_t                  BITFIELD(node,CONFIG_DEVICE_CLOCK_MAX_ID);
       /** mask of associated configurations */
-      uint64_t                  BITFIELD(config,CONFIG_DEVICE_CLOCK_MAX_CONFIG);
+      uint32_t                  BITFIELD(config,CONFIG_DEVICE_CLOCK_MAX_CONFIG);
+      /** accuracy, @see dev_freq_accuracy_s */
+      uint32_t                  BITFIELD(acc_m,3);
+      /** accuracy, @see dev_freq_accuracy_s */
+      uint32_t                  BITFIELD(acc_e,5);
     }                           clock_osc;
 
     /** @see #DEV_STATIC_RES_CLK_SRC @see device_add_res_clock_src */

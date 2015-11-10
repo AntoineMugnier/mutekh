@@ -524,12 +524,34 @@ error_t device_add_res_clock_osc(struct device_s     *dev,
         .config   = (__config_id),                                \
         .num      = (__num),                                      \
         .denom    = (__denom),                                    \
+        .acc_m    = 7,                                            \
+        .acc_e    = 31,                                           \
+      } }                                                         \
+  }
+
+# define DEV_STATIC_RES_CLK_OSC_ACC(__node_id, __config_id,             \
+                                    __num, __denom, _acc_m, _acc_e)     \
+  {                                                               \
+    .type = DEV_RES_CLOCK_OSC,                                    \
+      .u = { .clock_osc = {                                       \
+        .node     = (__node_id),                                  \
+        .config   = (__config_id),                                \
+        .num      = (__num),                                      \
+        .denom    = (__denom),                                    \
+        .acc_m    = (_acc_m),                                     \
+        .acc_e    = (_acc_e),                                     \
       } }                                                         \
   }
 
 #else
 
 # define DEV_STATIC_RES_CLK_OSC(__node_id, __config_id, __num, __denom) \
+  {                                                               \
+    .type = DEV_RES_UNUSED,                                       \
+  }
+
+# define DEV_STATIC_RES_CLK_OSC_ACC(__node_id, __config_id,             \
+                                    __num, __denom, _acc_m, _acc_e)     \
   {                                                               \
     .type = DEV_RES_UNUSED,                                       \
   }
