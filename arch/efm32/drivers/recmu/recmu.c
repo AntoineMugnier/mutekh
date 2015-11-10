@@ -364,8 +364,7 @@ efm32_recmu_get_node_freq(struct efm32_recmu_private_s *pv,
 
     default:
       /* HFCORECLK & childs */
-      if (EFM32_CLK_MASK(node) & (EFM32_CLOCK_HFCORECLK_CHILDMASK |
-               EFM32_CLK_MASK(EFM32_CLOCK_LE) | EFM32_CLK_MASK(EFM32_CLOCK_HFCORECLK)))
+      if (EFM32_CLK_MASK(node) & (EFM32_CLOCK_HFCORECLK_CHILDMASK | EFM32_CLK_MASK(EFM32_CLOCK_HFCORECLK)))
         {
           node = EFM32_CLOCK_HFCLKDIV;
           div = 1 << EFM32_CMU_HFCORECLKDIV_HFCORECLKDIV_GET(endian_le32(
@@ -481,7 +480,12 @@ efm32_recmu_get_node_freq(struct efm32_recmu_private_s *pv,
   if (!freq->num || !freq->denom)
     return -EINVAL;
 
-  /* FIXME simplify fraction */
+  if (freq->denom > 1)
+    {
+      uint64_t g = gcd64(freq->num, freq->denom);
+      freq->num /= g;
+      freq->denom /= g;
+    }
 
   return 0;
 }
@@ -1171,7 +1175,7 @@ static DEV_CLOCK_COMMIT(efm32_recmu_commit)
 static void efm32_recmu_read_config(struct efm32_recmu_private_s *pv)
 {
   pv->r_ctrl = endian_le32(cpu_mem_read_32(EFM32_CMU_ADDR + EFM32_CMU_CTRL_ADDR));
-  pv->r_hfcoreclkdiv = endian_le32(cpu_mem_read_32(EFM32_CMU_ADDR + EFM32_CMU_HFPERCLKDIV_ADDR));
+  pv->r_hfcoreclkdiv = endian_le32(cpu_mem_read_32(EFM32_CMU_ADDR + EFM32_CMU_HFCORECLKDIV_ADDR));
   pv->r_hfperclkdiv = endian_le32(cpu_mem_read_32(EFM32_CMU_ADDR + EFM32_CMU_HFPERCLKDIV_ADDR));
   pv->r_hfrcoctrl = endian_le32(cpu_mem_read_32(EFM32_CMU_ADDR + EFM32_CMU_HFRCOCTRL_ADDR));
   pv->r_lfrcoctrl = endian_le32(cpu_mem_read_32(EFM32_CMU_ADDR + EFM32_CMU_LFRCOCTRL_ADDR));
@@ -1245,11 +1249,14 @@ static DEV_CLOCK_NODE_INFO(efm32_recmu_node_info)
         break;
       }
 
-  if (*mask & (DEV_CLOCK_INFO_SRC | DEV_CLOCK_INFO_SINK))
+  *mask &= ~DEV_CLOCK_INFO_SINK;
+
+  if (*mask & DEV_CLOCK_INFO_SRC)
     {
-      info->src = node_id > EFM32_CLOCK_FIRST_EP ?
-        pv->src + node_id - EFM32_CLOCK_FIRST_EP : NULL;
-      *mask &= ~DEV_CLOCK_INFO_SINK;
+      if (node_id > EFM32_CLOCK_FIRST_EP)
+        info->src = pv->src + node_id - EFM32_CLOCK_FIRST_EP;
+      else
+        *mask ^= DEV_CLOCK_INFO_SRC;
     }
 
   return 0;
