@@ -624,6 +624,9 @@ void nrf5x_ble_context_schedule(struct nrf5x_ble_context_s *ctx,
 {
   struct nrf5x_ble_private_s *pv = ctx->pv;
 
+  if (!net_layer_refcount(&ctx->layer))
+    return;
+
   dprintk("%s %p %lld %lld\n", __FUNCTION__, ctx, ctx->event_begin, ctx->event_end);
 
   _ble_context_unschedule(pv, ctx);
@@ -699,8 +702,9 @@ void nrf5x_ble_event_address_matched(struct nrf5x_ble_private_s *pv)
   gpio(I_WAIT, I_WAIT);
 
   while (!nrf_event_check(BLE_RADIO_ADDR, NRF_RADIO_BCMATCH)) {
-    if (!nrf_reg_get(BLE_RADIO_ADDR, NRF_RADIO_STATE) == NRF_RADIO_STATE_RX) {
-      dprintk("Not in RX any more\n");
+    if (nrf_reg_get(BLE_RADIO_ADDR, NRF_RADIO_STATE) != NRF_RADIO_STATE_RX
+        || nrf_reg_get(BLE_RADIO_ADDR, NRF_RADIO_STATE) != NRF_RADIO_STATE_TX) {
+      printk("Not in RX/TX any more\n");
       break;
     }
     assert(nrf_reg_get(BLE_RADIO_ADDR, NRF_RADIO_BCC) == 16);

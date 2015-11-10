@@ -47,6 +47,7 @@
                             )
 
 #define SLAVE_CONTEXT_UPDATED 1
+#define STUCK_EVENTS_MAX 100
 
 struct nrf5x_ble_slave_s
 {
@@ -83,6 +84,9 @@ struct nrf5x_ble_slave_s
   uint8_t event_crc_error;
   uint8_t event_channel;
   uint8_t reason;
+  uint8_t stuck_events_left;
+
+  uint8_t empty[2];
 
   bool_t established : 1;
   bool_t peer_md : 1;
@@ -92,6 +96,7 @@ struct nrf5x_ble_slave_s
   bool_t sn : 1;
   bool_t opened : 1;
   bool_t flow_updating : 1;
+  bool_t empty_first : 1;
 
   struct ble_link_flow_update_s flow_update;
 };
@@ -262,6 +267,7 @@ error_t nrf5x_ble_slave_create(struct net_scheduler_s *scheduler,
   slave->latency_backoff = 1;
 
   slave->flow_update.task.destroy_func = nrf5x_ble_slave_flow_updated;
+  slave->stuck_events_left = STUCK_EVENTS_MAX;
 
   buffer_queue_init(&slave->tx_queue);
   slave->tx_queue_count = 0;
@@ -448,6 +454,10 @@ void slave_ctx_event_closed(struct nrf5x_ble_context_s *context,
           slave->event_rx_count,
           slave->event_tx_count, slave->event_acked_count, slave->event_crc_error);
 
+  slave->stuck_events_left--;
+  if (slave->stuck_events_left == 0)
+    nrf5x_ble_slave_error(slave, BLE_RESPONSE_TIMEOUT);
+
   slave->established |= !!slave->event_acked_count;
 
   slave->since_last_event_intervals += (int16_t)(slave->scheduled_event_counter - slave->last_event_counter);
@@ -512,6 +522,7 @@ bool_t slave_ctx_radio_params(struct nrf5x_ble_context_s *context,
 
   return (slave->event_packet_count < 2 && !slave->latency_permitted)
     || slave->tx_queue_count
+    || slave->empty_first
     || slave->peer_md
     || (slave->event_packet_count >= 2 && (slave->event_packet_count & 1));
 }
@@ -527,49 +538,39 @@ uint8_t *slave_ctx_payload_get(struct nrf5x_ble_context_s *context,
     if (!slave->rx_buffer)
       return NULL;
     packet = slave->rx_buffer;
-    goto out;
+    return packet->data + packet->begin;
   }
 
-  if (slave->tx_queue_count == 0) {
-    // Tx queue is empty, we have to create an empty packet to piggyback
-    // handshaking.  Cannot borrow reference to a common packet as it is
-    // chained in tx queue.
-    if (slave->rx_buffer) {
-      // Here steal next rx buffer to at least keep connection alive.
-      packet = slave->rx_buffer;
-      slave->rx_buffer = NULL;
-      packet->begin = 0;
-      packet->end = 2;
-    } else {
-      packet = net_layer_packet_alloc(&slave->context.layer, 0, 2);
-    }
+  uint8_t *data;
+  bool_t md;
 
-    if (!packet)
-      return NULL;
+  if (slave->tx_queue_count == 0 || slave->empty_first) {
+    // Tx queue is empty, we have to emulate an empty packet to
+    // piggyback handshaking.
 
-    packet->data[packet->begin + 0] = BLE_LL_DATA_CONT;
-    packet->data[packet->begin + 1] = 0;
-
-    buffer_queue_pushback(&slave->tx_queue, packet);
-    buffer_refdec(packet);
-    slave->tx_queue_count++;
+    slave->empty_first = 1;
+    slave->empty[0] = BLE_LL_DATA_CONT;
+    slave->empty[1] = 0;
+    data = slave->empty;
+    md = !!slave->tx_queue_count;
   } else {
     packet = buffer_queue_head(&slave->tx_queue);
+    data = packet->data + packet->begin;
     buffer_refdec(packet);
+    // Lie about MD: also tell we have more data to send when only one
+    // packet is in queue, this way, master acknowledges early, and we
+    // can apply slave latency on subsequent event.
+    md = slave->tx_queue_count && slave->rx_buffer;
   }
 
-  packet->data[packet->begin] = (packet->data[packet->begin] & 0x3)
-    // If head packet has data in it, force master to ack it.
-    | (packet->data[packet->begin + 1] ? BLE_LL_DATA_MD : 0)
-    // Normal MD semantics
-    | ((slave->tx_queue_count > 1) ? BLE_LL_DATA_MD : 0)
+  data[0] = (data[0] & 0x3)
+    | (md ? BLE_LL_DATA_MD : 0)
     | (slave->nesn ? BLE_LL_DATA_NESN : 0)
     | (slave->sn ? BLE_LL_DATA_SN : 0);
 
   slave->event_tx_count++;
 
- out:
-  return packet->data + packet->begin;
+  return data;
 }
 
 static
@@ -615,12 +616,17 @@ void slave_ctx_payload_received(struct nrf5x_ble_context_s *context,
   if (nesn != slave->sn) {
     slave->event_acked_count++;
     slave->sn = nesn;
+    slave->stuck_events_left = STUCK_EVENTS_MAX;
 
-    struct buffer_s *packet = buffer_queue_pop(&slave->tx_queue);
+    if (slave->empty_first) {
+      slave->empty_first = 0;
+    } else {
+      struct buffer_s *packet = buffer_queue_pop(&slave->tx_queue);
 
-    if (packet) {
-      slave->tx_queue_count--;
-      buffer_refdec(packet);
+      if (packet) {
+        slave->tx_queue_count--;
+        buffer_refdec(packet);
+      }
     }
   }
 
