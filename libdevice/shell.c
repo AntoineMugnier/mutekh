@@ -215,33 +215,36 @@ struct dev_console_fract_s
 static error_t dev_console_parse_fract(const char                 *arg,
                                        struct dev_console_fract_s *fract)
 {
-  char *ptr;
+  char *ptr, *end;
 
-  fract->num = strtoll(arg, &ptr, 10);
-  if (fract->num == LONG_MAX || fract->num == LONG_MIN || arg == ptr)
+  fract->num = strto_uintl64(arg, &ptr, 10);
+  if (arg == ptr)
     return -EINVAL;
 
   if (*ptr == '\0')
     fract->denom = 1;
   else if ((*ptr == '/') || (*ptr == '.'))
-    fract->denom = strtoll(ptr+1, NULL, 10);
+    fract->denom = strto_uintl64(ptr + 1, &end, 10);
   else
     return -EINVAL;
 
-  if (fract->denom == LONG_MAX || fract->denom == LONG_MIN)
+  if (end == ptr + 1)
     return -EINVAL;
 
-  if (*ptr == '.')
+  if (*ptr++ == '.')
     {
       uint32_t div = 1;
-      size_t   divlen = strlen(ptr+1);
 
-      for (uint32_t i = 0; i < divlen; i++)
+      while (*ptr++)
         div *= 10;
 
       fract->num   = fract->num * div + fract->denom;
       fract->denom = div;
     }
+
+  uint64_t gcd = gcd64(fract->num, fract->denom);
+  fract->num /= gcd;
+  fract->denom /= gcd;
 
   return 0;
 }
