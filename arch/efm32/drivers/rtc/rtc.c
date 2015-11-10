@@ -412,7 +412,7 @@ static DEV_TIMER_CONFIG(efm32_rtc_config)
 
   if (cfg)
     {
-#ifndef CONFIG_DEVICE_CLOCK
+#ifdef CONFIG_DEVICE_CLOCK
       cfg->rev = pv->rev;
 #else
       cfg->rev = 1;
