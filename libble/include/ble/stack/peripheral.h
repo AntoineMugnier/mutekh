@@ -99,7 +99,6 @@ struct ble_peripheral_s
   struct ble_addr_s addr;
   enum ble_peripheral_state_e last_state : 8;
   uint8_t mode;
-  bool_t whitelist_only;
   struct ble_peripheral_params_s params;
 };
 
