@@ -32,7 +32,6 @@
 #include <device/driver.h>
 #include <device/class/timer.h>
 #include <device/irq.h>
-#include <device/class/clock.h>
 
 #include <mutek/printk.h>
 #include <mutek/mem_alloc.h>
@@ -55,7 +54,6 @@ struct cc26xx_timer_private_s
 {
   /* Timer address */
   uintptr_t addr;
-  /* Start timer counter, bit 0 indicates if there are pending requests */
 #ifdef CONFIG_DEVICE_IRQ
   /* Timer Software value */
   uint64_t swvalue;
@@ -67,16 +65,16 @@ struct cc26xx_timer_private_s
 
   struct dev_freq_s freq;
   struct dev_freq_accuracy_s acc;
-  uint_fast8_t start_count;
   enum dev_timer_capabilities_e cap:8;
   dev_timer_cfgrev_t rev;
+  /* Start timer counter, bit 0 indicates if there are pending requests */
+  uint_fast8_t start_count;
 };
 
 /* This function starts the hardware timer counter. */
 static inline void cc26xx_timer_start_counter(struct cc26xx_timer_private_s *pv)
 {
   /* enable the timer */
-  /* timer freezes counting while the processor is halted by the debugger */
   cpu_mem_write_32(pv->addr + CC26XX_GPT_CTL_ADDR, endian_le32(
                     CC26XX_GPT_CTL_TAEN(EN) |
                     CC26XX_GPT_CTL_TASTALL(DIS)));
@@ -86,7 +84,6 @@ static inline void cc26xx_timer_start_counter(struct cc26xx_timer_private_s *pv)
 static inline void cc26xx_timer_stop_counter(struct cc26xx_timer_private_s *pv)
 {
   /* disable the timer */
-  /* timer freezes counting while the processor is halted by the debugger */
   cpu_mem_write_32(pv->addr + CC26XX_GPT_CTL_ADDR, endian_le32(
                     CC26XX_GPT_CTL_TAEN(DIS) |
                     CC26XX_GPT_CTL_TASTALL(DIS)));
@@ -409,7 +406,7 @@ static DEV_TIMER_CONFIG(cc26xx_timer_config)
 static DEV_INIT(cc26xx_timer_init);
 static DEV_CLEANUP(cc26xx_timer_cleanup);
 
-DRIVER_DECLARE(cc26xx_timer_drv, 0, "CC26XX Timer", cc26xx_timer,
+DRIVER_DECLARE(cc26xx_timer_drv, 0, "CC26XX TIMER", cc26xx_timer,
                DRIVER_TIMER_METHODS(cc26xx_timer));
 
 DRIVER_REGISTER(cc26xx_timer_drv);

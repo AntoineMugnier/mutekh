@@ -490,5 +490,6 @@ DEV_CLEANUP(cc26xx_uart_cleanup)
   dev_request_queue_destroy(&pv->write_q);
 
   mem_free(pv);
+  return 0;
 }
 

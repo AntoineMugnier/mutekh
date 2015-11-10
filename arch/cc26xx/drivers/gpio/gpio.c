@@ -463,4 +463,5 @@ static DEV_CLEANUP(cc26xx_gpio_cleanup)
 #endif
 
   mem_free(pv);
+  return 0;
 }
