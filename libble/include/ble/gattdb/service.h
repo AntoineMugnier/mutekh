@@ -117,44 +117,44 @@ struct ble_gattdb_characteristic_s
       void *data;
       size_t size;
 
-      uint8_t (*on_subscribe)(struct ble_gattdb_registry_s *service, uint8_t charid,
+      uint8_t (*on_subscribe)(struct ble_gattdb_registry_s *reg, uint8_t charid,
                               bool_t subscribed);
 
       uint8_t (*on_changed)(struct ble_gattdb_client_s *client,
-                            struct ble_gattdb_registry_s *service, uint8_t charid);
+                            struct ble_gattdb_registry_s *reg, uint8_t charid);
     } plain;
 
     struct {
-      uint8_t (*on_subscribe)(struct ble_gattdb_registry_s *service, uint8_t charid,
+      uint8_t (*on_subscribe)(struct ble_gattdb_registry_s *reg, uint8_t charid,
                               bool_t subscribed);
 
       uint8_t (*on_write)(struct ble_gattdb_client_s *client,
-                          struct ble_gattdb_registry_s *service, uint8_t charid,
+                          struct ble_gattdb_registry_s *reg, uint8_t charid,
                           const void *data, size_t size);
 
       uint8_t (*on_read)(struct ble_gattdb_client_s *client,
-                         struct ble_gattdb_registry_s *service, uint8_t charid,
+                         struct ble_gattdb_registry_s *reg, uint8_t charid,
                          uint16_t offset,
                          void *data, size_t *size);
     } dynamic;
 
 #if defined(CONFIG_BLE_ATT_LONG_WRITE)
     struct {
-      uint8_t (*on_subscribe)(struct ble_gattdb_registry_s *service, uint8_t charid,
+      uint8_t (*on_subscribe)(struct ble_gattdb_registry_s *reg, uint8_t charid,
                               bool_t subscribed);
 
       uint8_t (*on_read)(struct ble_gattdb_client_s *client,
-                         struct ble_gattdb_registry_s *service, uint8_t charid,
+                         struct ble_gattdb_registry_s *reg, uint8_t charid,
                          uint16_t offset,
                          void *data, size_t *size);
 
       uint8_t (*on_write_part)(struct ble_gattdb_client_s *client,
-                               struct ble_gattdb_registry_s *service, uint8_t charid,
+                               struct ble_gattdb_registry_s *reg, uint8_t charid,
                                uint16_t offset,
                                const void *data, size_t size);
 
       uint8_t (*on_execute)(struct ble_gattdb_client_s *client,
-                            struct ble_gattdb_registry_s *service, uint8_t charid);
+                            struct ble_gattdb_registry_s *reg, uint8_t charid);
     } dynamic_prepared;
 #endif
   } data;

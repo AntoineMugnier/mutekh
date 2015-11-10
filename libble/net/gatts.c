@@ -214,7 +214,7 @@ static void gatts_save_peer_later(struct ble_gatts_s *gatt)
   }
 
   struct net_task_s *timeout = net_scheduler_task_alloc(gatt->layer.scheduler);
-  if (timeout)
+  if (!timeout)
     return;
   dev_timer_delay_t ticks;
   dev_timer_init_sec(&gatt->layer.scheduler->timer, &ticks, NULL, 2, 1);

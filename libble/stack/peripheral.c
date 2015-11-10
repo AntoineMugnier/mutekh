@@ -209,7 +209,8 @@ bool_t peri_connection_requested(void *delegate, struct net_layer_s *layer,
   }
 
 #if defined(CONFIG_BLE_SECURITY_DB)
-  if (peri->whitelist_only && !ble_security_db_contains(&peri->context->security_db, &conn->master)) {
+  if (!(peri->mode & BLE_PERIPHERAL_PAIRABLE)
+      && !ble_security_db_contains(&peri->context->security_db, &conn->master)) {
     printk(" ignored: we are not paired\n");
     return 1;
   }
@@ -482,7 +483,7 @@ static error_t adv_start(struct ble_peripheral_s *peri)
   ad_left = ad_size_max;
 
   uint8_t flags = BLE_GAP_FLAGS_BREDR_NOT_SUPPORTED;
-  if (peri->mode & BLE_PERIPHERAL_PAIRABLE)
+  //  if (peri->mode & BLE_PERIPHERAL_PAIRABLE)
     flags |= BLE_GAP_FLAGS_LIMITED_ADV;
   adv_data_append(&ad, &ad_left, BLE_GAP_FLAGS, &flags, sizeof(flags));
 
@@ -592,6 +593,13 @@ static const struct ble_llcp_delegate_vtable_s peri_llcp_vtable =
 
 void ble_peripheral_mode_set(struct ble_peripheral_s *peri, uint8_t mode)
 {
+#if defined(CONFIG_BLE_SECURITY_DB)
+  if (ble_security_db_count(&peri->context->security_db) == 0
+      && mode & BLE_PERIPHERAL_CONNECTABLE) {
+    mode |= BLE_PERIPHERAL_PAIRABLE;
+  }
+#endif
+
   if (mode == peri->mode)
     return;
 
