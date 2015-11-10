@@ -43,3 +43,13 @@ DEV_DECLARE_STATIC(timer0_dev, "timer0", 0, cc26xx_timer_drv,
                    DEV_STATIC_RES_IRQ(0, CC26XX_IRQ_GPTIMER_0A, DEV_IRQ_SENSE_HIGH_LEVEL, 0, 1)
                    );
 #endif
+
+#ifdef CONFIG_DRIVER_CC26XX_RTC
+DEV_DECLARE_STATIC(rtc_dev, "rtc", 0, cc26xx_rtc_drv,
+                   DEV_STATIC_RES_MEM(0x40092000, 0x40093000),
+                   DEV_STATIC_RES_FREQ(65536, 1),
+
+                   DEV_STATIC_RES_DEV_PARAM("icu", "/cpu"),
+                   DEV_STATIC_RES_IRQ(0, CC26XX_IRQ_AON_RTC, DEV_IRQ_SENSE_HIGH_LEVEL, 0, 1)
+                   );
+#endif
