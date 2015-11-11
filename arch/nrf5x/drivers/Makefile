@@ -4,6 +4,7 @@ objs-$(CONFIG_DRIVER_NRF5X_GPIO_PWM) += gpio_pwm.o
 objs-$(CONFIG_DRIVER_NRF5X_UART) += uart.o
 objs-$(CONFIG_DRIVER_NRF5X_PRINTK) += printk.o
 objs-$(CONFIG_DRIVER_NRF5X_SPI) += spi.o
+objs-$(CONFIG_DRIVER_NRF52_SPIM) += spim.o
 objs-$(CONFIG_DRIVER_NRF5X_I2C) += i2c.o
 objs-$(CONFIG_DRIVER_NRF5X_RTC) += rtc.o
 objs += nvmc.o
