@@ -469,4 +469,14 @@ config_depend_and2(CONFIG_DEVICE_CRYPTO, CONFIG_MUTEK_SCHEDULER)
 error_t dev_rng_wait_seed_from_other(struct dev_rng_s *rng,
                                      struct dev_rng_s *other, size_t size);
 
+#ifdef CONFIG_DEVICE_CRYPTO
+# define DEV_STATIC_RES_DEV_CRYPTO(path_)                               \
+  DEV_STATIC_RES_DEVCLASS_PARAM("crypto", path_, DRIVER_CLASS_CRYPTO)
+#else
+# define DEV_STATIC_RES_DEV_CRYPTO(path_)                               \
+  {                                                                     \
+    .type = DEV_RES_UNUSED,                                             \
+  }
+#endif
+
 #endif
