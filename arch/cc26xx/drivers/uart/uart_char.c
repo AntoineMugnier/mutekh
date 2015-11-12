@@ -380,7 +380,7 @@ static DEV_INIT(cc26xx_uart_init)
 
   /* setup pinmux */
   if (device_iomux_setup(dev, ">tx <rx", NULL, NULL, NULL))
-    return -1;
+    goto err_mem;
 
   /* wait for empty fifo */
   while (!(cpu_mem_read_32(CC26XX_UART0_BASE + CC26XX_UART_FR_ADDR)
