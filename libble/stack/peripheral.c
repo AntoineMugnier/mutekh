@@ -177,43 +177,17 @@ static void peri_adv_destroyed(void *delegate, struct net_layer_s *layer)
 }
 
 static
-bool_t peri_connection_requested(void *delegate, struct net_layer_s *layer,
-                                 const struct ble_adv_connect_s *conn,
-                                 dev_timer_value_t anchor)
+error_t peri_connection_create(struct ble_peripheral_s *peri,
+                               const struct ble_adv_connect_s *conn,
+                               dev_timer_value_t anchor)
 {
-  struct ble_peripheral_s *peri = delegate;
   error_t err;
   struct net_layer_s *slave, *l2cap, *signalling, *gatt, *gap, *link, *llcp;
   uint16_t cid;
   struct ble_slave_param_s slave_params;
 
-  printk("Connection request from "BLE_ADDR_FMT"...", BLE_ADDR_ARG(&conn->master));
-
-#if defined(CONFIG_BLE_SECURITY_DB)
+#if defined(CONFIG_BLE_CRYPTO)
   struct net_layer_s *sm;
-
-  if (peri->sm) {
-    printk(" still have sm\n");
-    return 1;
-  }
-#endif
-
-  if (peri->slave) {
-    printk(" still have slave\n");
-    return 1;
-  }
-
-  if (!peri->handler->connection_requested(peri, &conn->master)) {
-    printk(" rejected by handler\n");
-    return 1;
-  }
-
-#if defined(CONFIG_BLE_SECURITY_DB)
-  if (!(peri->mode & BLE_PERIPHERAL_PAIRABLE)
-      && !ble_security_db_contains(&peri->context->security_db, &conn->master)) {
-    printk(" ignored: we are not paired\n");
-    return 1;
-  }
 #endif
 
   slave_params.connect_packet_timestamp = anchor;
@@ -224,8 +198,6 @@ bool_t peri_connection_requested(void *delegate, struct net_layer_s *layer,
   ble_peer_init(&peri->peer, NULL, &conn->master);
 #endif
 
-  peri->connection_tk = anchor;
-
   err = DEVICE_OP(&peri->context->ble, layer_create,
                   &peri->context->scheduler,
                   BLE_NET_LAYER_SLAVE,
@@ -234,7 +206,7 @@ bool_t peri_connection_requested(void *delegate, struct net_layer_s *layer,
                   &slave);
   if (err) {
     printk("error while creating slave: %d\n", err);
-    return 1;
+    return err;
   }
 
   struct ble_link_param_s link_params = {
@@ -288,7 +260,7 @@ bool_t peri_connection_requested(void *delegate, struct net_layer_s *layer,
     goto out_llcp;
   }
 
-#if defined(CONFIG_BLE_SECURITY_DB)
+#if defined(CONFIG_BLE_CRYPTO)
   struct ble_sm_param_s sm_params = {
     .peer = &peri->peer,
     .local_addr = slave_params.conn_req.slave,
@@ -302,8 +274,6 @@ bool_t peri_connection_requested(void *delegate, struct net_layer_s *layer,
     goto out_llcp;
   }
 
-  peri->sm = sm;
-
   cid = BLE_L2CAP_CID_SM;
   err = net_layer_bind(l2cap, &cid, sm);
   if (err) {
@@ -312,24 +282,6 @@ bool_t peri_connection_requested(void *delegate, struct net_layer_s *layer,
   }
 #endif
 
-#if 0
-  struct ble_gatt_params_s gatt_params = {
-    .peer = &peri->peer,
-    .db = &peri->context->gattdb,
-  };
-  err = ble_gatt_create(&peri->context->scheduler, &gatt_params, &gatt);
-  if (err) {
-    printk("error while creating gatt: %d\n", err);
-    goto out_sm;
-  }
-
-  cid = BLE_L2CAP_CID_ATT;
-  err = net_layer_bind(l2cap, &cid, gatt);
-  if (err) {
-    printk("error while binding gatt to l2cap: %d\n", err);
-    goto out_gatt;
-  }
-#else
   struct net_layer_s *att;
 
   err = ble_att_create(&peri->context->scheduler, NULL, NULL, &att);
@@ -362,7 +314,6 @@ bool_t peri_connection_requested(void *delegate, struct net_layer_s *layer,
     printk("error while binding gatt to att: %d\n", err);
     goto out_gatt;
   }
-#endif
 
   err = ble_signalling_create(&peri->context->scheduler, NULL, NULL, &signalling);
   if (err) {
@@ -405,7 +356,7 @@ bool_t peri_connection_requested(void *delegate, struct net_layer_s *layer,
  out_att:
   net_layer_refdec(att);
  out_sm:
-#if defined(CONFIG_BLE_SECURITY_DB)
+#if defined(CONFIG_BLE_CRYPTO)
   net_layer_refdec(sm);
 #endif
  out_llcp:
@@ -418,15 +369,60 @@ bool_t peri_connection_requested(void *delegate, struct net_layer_s *layer,
 
   if (err) {
     net_layer_refdec(slave);
-    peri_state_update(peri);
-    return 1;
   } else {
+    peri->sm = sm;
+    peri->slave = slave;
+    peri->connection_tk = anchor;
+  }
+
+  return err;
+}
+
+static
+bool_t peri_connection_requested(void *delegate, struct net_layer_s *layer,
+                                 const struct ble_adv_connect_s *conn,
+                                 dev_timer_value_t anchor)
+{
+  struct ble_peripheral_s *peri = delegate;
+  error_t err;
+
+  printk("Connection request from "BLE_ADDR_FMT"...", BLE_ADDR_ARG(&conn->master));
+
+#if defined(CONFIG_BLE_CRYPTO)
+  if (peri->sm) {
+    printk(" still have sm\n");
+    return 1;
+  }
+#endif
+
+  if (peri->slave) {
+    printk(" still have slave\n");
+    return 1;
+  }
+
+  if (!peri->handler->connection_requested(peri, &conn->master)) {
+    printk(" rejected by handler\n");
+    return 1;
+  }
+
+#if defined(CONFIG_BLE_SECURITY_DB)
+  if (!(peri->mode & BLE_PERIPHERAL_PAIRABLE)
+      && !ble_security_db_contains(&peri->context->security_db, &conn->master)) {
+    printk(" ignored: we are not paired\n");
+    return 1;
+  }
+#endif
+
+  err = peri_connection_create(peri, conn, anchor);
+
+  if (!err) {
     net_layer_refdec(peri->adv);
     peri->adv = NULL;
-    peri->slave = slave;
-    peri_state_update(peri);
-    return 0;
   }
+
+  peri_state_update(peri);
+
+  return err ? 1 : 0;
 }
 
 static void adv_data_append(uint8_t **buffer, size_t *buffer_size,
@@ -547,8 +543,6 @@ error_t ble_peripheral_init(
   const struct ble_peripheral_handler_s *handler,
   struct ble_stack_context_s *context)
 {
-  struct dev_net_info_s info;
-
   memset(peri, 0, sizeof(*peri));
 
   peri->params = *params;
@@ -556,9 +550,7 @@ error_t ble_peripheral_init(
   peri->context = context;
   peri->mode = 0;
 
-  DEVICE_OP(&peri->context->ble, get_info, &info);
-  memcpy(peri->addr.addr, info.addr.mac, 6);
-  peri->addr.type = info.addr.random_addr ? BLE_ADDR_RANDOM : BLE_ADDR_PUBLIC;
+  ble_stack_context_local_address_get(context, &peri->addr);
 
   return 0;
 }
@@ -569,7 +561,7 @@ static const struct ble_slave_delegate_vtable_s peri_slave_vtable =
   .connection_lost = conn_connection_lost,
 };
 
-#if defined(CONFIG_BLE_SECURITY_DB)
+#if defined(CONFIG_BLE_CRYPTO)
 static const struct ble_sm_delegate_vtable_s sm_delegate_vtable =
 {
   .base.release = peri_sm_invalidate,
@@ -598,6 +590,8 @@ void ble_peripheral_mode_set(struct ble_peripheral_s *peri, uint8_t mode)
       && mode & BLE_PERIPHERAL_CONNECTABLE) {
     mode |= BLE_PERIPHERAL_PAIRABLE;
   }
+#else
+  mode |= BLE_PERIPHERAL_PAIRABLE;
 #endif
 
   if (mode == peri->mode)
@@ -617,7 +611,7 @@ void ble_peripheral_mode_set(struct ble_peripheral_s *peri, uint8_t mode)
     adv_start(peri);
 }
 
-#if defined(CONFIG_BLE_SECURITY_DB)
+#if defined(CONFIG_BLE_CRYPTO)
 void ble_peripheral_pairing_accept(struct ble_peripheral_s *peri,
                                    bool_t mitm_protection,
                                    uint32_t pin,

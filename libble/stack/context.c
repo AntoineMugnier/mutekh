@@ -142,3 +142,18 @@ error_t ble_stack_context_address_non_resolvable_generate(struct ble_stack_conte
   return 0;
 }
 
+error_t ble_stack_context_local_address_get(struct ble_stack_context_s *ctx,
+                                            struct ble_addr_s *addr)
+{
+  error_t err;
+  struct dev_net_info_s info;
+
+  err = DEVICE_OP(&ctx->ble, get_info, &info);
+  if (err)
+    return err;
+
+  ble_addr_net_parse(addr, &info.addr);
+
+  return 0;
+}
+

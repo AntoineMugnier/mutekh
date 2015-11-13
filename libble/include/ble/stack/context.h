@@ -34,4 +34,7 @@ void ble_stack_context_cleanup(struct ble_stack_context_s *ctx);
 error_t ble_stack_context_address_non_resolvable_generate(struct ble_stack_context_s *ctx,
                                                           struct ble_addr_s *addr);
 
+error_t ble_stack_context_local_address_get(struct ble_stack_context_s *ctx,
+                                             struct ble_addr_s *addr);
+
 #endif
