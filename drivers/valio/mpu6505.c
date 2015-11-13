@@ -639,7 +639,7 @@ static DEV_INIT(mpu6505_init)
   if (!pv)
     return -ENOMEM;
 
-  if (device_get_param_dev_accessor(dev, "bus", &pv->i2c, DRIVER_CLASS_I2C)) {
+  if (device_get_param_dev_accessor(dev, "i2c", &pv->i2c, DRIVER_CLASS_I2C)) {
     dprintk("Bus not found");
     goto err_pv;
   }
