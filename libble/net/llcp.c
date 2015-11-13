@@ -393,11 +393,25 @@ static void ble_llcp_packet_handle(struct ble_llcp_s *llcp, struct net_task_s *t
 
   case BLE_LL_PING_RSP:
     dprintk("ping rsp\n");
-
     llcp_query_pending_respond(llcp, BLE_LLCP_PING, 0);
     break;
 
   case BLE_LL_UNKNOWN_RSP:
+    switch (args[0]) {
+    case BLE_LL_PING_REQ:
+      llcp->features |= 0x80;
+      llcp->features &= ~(1 << BLE_LL_FEATURE_LE_PING);
+      llcp_query_pending_respond(llcp, BLE_LLCP_PING, -ENOTSUP);
+      break;
+
+    case BLE_LL_CONNECTION_PARAM_REQ:
+      llcp->features |= 0x80;
+      llcp->features &= ~(1 << BLE_LL_FEATURE_CONNECTION_PARAMETERS_REQUEST_PROCEDURE);
+      llcp_query_pending_respond(llcp, BLE_GAP_CONN_PARAMS_UPDATE, -ENOTSUP);
+      break;
+    }
+    break;
+
   case BLE_LL_REJECT_IND:
     // Dont care
     llcp_query_pending_respond(llcp, 0, -ENOTSUP);
