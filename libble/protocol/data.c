@@ -39,7 +39,7 @@ void ble_data_conn_params_update_parse(
     const uint8_t *pdu,
     struct ble_conn_params_update *cpu)
 {
-    cpu->timing.win_size = pdu[1];
+    cpu->win_size = pdu[1];
     cpu->win_offset = endian_le16_na_load(pdu + 2);
     cpu->timing.interval = endian_le16_na_load(pdu + 4);
     cpu->timing.latency = endian_le16_na_load(pdu + 6);

@@ -40,6 +40,7 @@ struct ble_adv_connect_s
   uint16_t win_offset;
   uint8_t hop;
   uint8_t sca;
+  uint8_t win_size;
 };
 
 enum ble_adv_type

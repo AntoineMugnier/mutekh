@@ -57,6 +57,7 @@ struct ble_timing_mapper_s
   uint16_t last_event;
   uint16_t update_instant;
   uint16_t pending_win_offset;
+  uint16_t pending_win_size;
 
   uint8_t master_sca;
   bool_t update_pending : 1;

@@ -59,6 +59,7 @@ error_t ble_timing_mapper_init(struct ble_timing_mapper_s *tm,
                           NULL, BLE_PACKET_TIME(34), 1000000);
 
   tm->pending_win_offset = connect->win_offset + 1;
+  tm->pending_win_size = connect->win_size;
 
   tm->last_anchor = reference - tm->imprecision_tk + conn_packet_tk;
   tm->drops_at = tm->last_anchor + cu_tk(tm, tm->pending.interval * 7 + tm->pending_win_offset);
@@ -106,7 +107,7 @@ void timing_window_get(struct ble_timing_mapper_s *tm,
       + tm->pending_win_offset
       + after_update * tm->pending.interval;
 
-    *transmit_window_tk = cu_tk(tm, tm->pending.win_size);
+    *transmit_window_tk = cu_tk(tm, tm->pending_win_size);
     *event_duration_tk = cu_tk(tm, tm->pending.interval);
   } else {
     *to_event_unit = delta * tm->current.interval;
@@ -170,6 +171,7 @@ error_t ble_timing_mapper_update_push(struct ble_timing_mapper_s *tm,
   tm->pending = update->timing;
   tm->update_instant = update->instant;
   tm->pending_win_offset = update->win_offset;
+  tm->pending_win_size = update->win_size;
 
   dev_timer_init_sec_round(&tm->timer, &tm->pending_timeout_tk,
                            NULL, tm->pending.timeout, 100);

@@ -133,7 +133,7 @@ void ble_adv_connect_set(
 
   endian_le32_na_store(&p->data[14], params->access_address);
   endian_le32_na_store(&p->data[18], params->crc_init);
-  p->data[21] = params->timing.win_size;
+  p->data[21] = params->win_size;
   endian_le16_na_store(&p->data[22], params->win_offset);
   endian_le16_na_store(&p->data[24], params->timing.interval);
   endian_le16_na_store(&p->data[26], params->timing.latency);
@@ -163,7 +163,7 @@ error_t ble_adv_connect_parse(
 
   params->access_address = endian_le32_na_load(&data[14]);
   params->crc_init = endian_le32_na_load(&data[18]) & 0xffffff;
-  params->timing.win_size = data[21];
+  params->win_size = data[21];
   params->win_offset = endian_le16_na_load(&data[22]);
   params->timing.interval = endian_le16_na_load(&data[24]);
   params->timing.latency = endian_le16_na_load(&data[26]);

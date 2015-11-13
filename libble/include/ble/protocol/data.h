@@ -91,7 +91,6 @@ struct ble_conn_timing_param_s
   uint16_t interval;
   uint16_t latency;
   uint16_t timeout;
-  uint8_t win_size;
 };
 
 struct ble_conn_params_update
@@ -99,6 +98,7 @@ struct ble_conn_params_update
   struct ble_conn_timing_param_s timing;
   uint16_t win_offset;
   uint16_t instant;
+  uint8_t win_size;
 };
 
 void ble_data_packet_dump(const struct buffer_s *p, bool_t m2s);
