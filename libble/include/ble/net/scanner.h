@@ -27,49 +27,40 @@
 #include <ble/protocol/address.h>
 #include <ble/protocol/advertise.h>
 
-#include <gct/container_avl_p.h>
-
-#define GCT_CONTAINER_ALGO_ble_scanner_device_set AVL_P
-
-GCT_CONTAINER_TYPES    (ble_scanner_device_set, struct ble_scanner_device_s *, hash_entry);
-GCT_CONTAINER_KEY_TYPES(ble_scanner_device_set, PTR, BLOB, addr, sizeof(struct ble_addr_s));
-GCT_CONTAINER_KEY_FCNS (ble_scanner_device_set, ASC, ALWAYS_INLINE, ble_scanner_device_set, addr,
-                        init, destroy, push, lookup, remove);
-
 struct net_layer_s;
 struct net_scheduler_s;
 struct ble_peer_s;
 struct dev_rng_s;
+
+enum ble_scanner_action_e
+{
+  BLE_SCANNER_CONNECT,
+  BLE_SCANNER_SCAN,
+};
+
+struct ble_scanner_target_s
+{
+  struct ble_addr_s addr;
+  enum ble_scanner_action_e action;
+};
+
+#define BLE_SCANNER_TARGET_MAXCOUNT 8
 
 struct ble_scanner_param_s
 {
   uint32_t interval_ms;
   uint32_t duration_ms;
   struct ble_addr_s local_addr;
-};
-
-struct ble_scanner_initiation_s
-{
-  struct ble_conn_timing_param_s timing;
-  uint64_t channel_map;
-  uint32_t access_address;
-  uint32_t crc_init;
-  uint16_t win_period_tk;
-  uint16_t win_offset_tk;
-  uint8_t hop;
-  uint8_t sca;
-  uint8_t win_size;
+  size_t target_count;
+  struct ble_scanner_target_s target[BLE_SCANNER_TARGET_MAXCOUNT];
 };
 
 struct ble_scanner_handler_s
 {
   struct net_layer_handler_s base;
 
-  error_t (*params_update)(struct net_layer_s *layer, const struct ble_scanner_param_s *params);
-  void (*scan_device)(struct net_layer_s *layer, const struct ble_addr_s *addr);
-  void (*connect_device)(struct net_layer_s *layer,
-                         const struct ble_addr_s *addr,
-                         );
+  error_t (*params_update)(struct net_layer_s *layer,
+                           const struct ble_scanner_param_s *params);
 };
 
 struct ble_scanner_delegate_vtable_s
