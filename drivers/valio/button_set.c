@@ -213,7 +213,7 @@ static DEV_INIT(button_set_init)
 
   dev->drv_pv = pv;
 
-  err = device_get_param_dev_accessor(dev, "icu", &pv->gpio, DRIVER_CLASS_GPIO);
+  err = device_get_param_dev_accessor(dev, "gpio", &pv->gpio, DRIVER_CLASS_GPIO);
   if (err)
     goto free_pv;
 
