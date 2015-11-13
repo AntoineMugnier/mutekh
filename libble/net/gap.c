@@ -47,6 +47,8 @@ struct ble_gap_s
   struct net_layer_s *sig;
   struct ble_gattdb_s *db;
   struct net_task_s *conn_update_task;
+  bool_t ask_llcp : 1;
+  bool_t ask_sig : 1;
 };
 
 STRUCT_COMPOSE(ble_gap_s, layer);
@@ -96,6 +98,9 @@ static void gap_update_conn_in(struct ble_gap_s *gap, uint32_t sec)
   if (!gap->layer.parent)
     return;
 
+  if (!gap->ask_llcp && !gap->ask_sig)
+    return;
+
   struct net_task_s *timeout = net_scheduler_task_alloc(gap->layer.scheduler);
   if (timeout) {
     dev_timer_delay_t ticks;
@@ -115,6 +120,7 @@ void ble_gap_task_handle(struct net_layer_s *layer,
                          struct net_task_s *task)
 {
   struct ble_gap_s *gap = ble_gap_s_from_layer(layer);
+  struct net_layer_s *target = NULL;
 
   if (!gap->layer.parent)
     goto out;
@@ -125,15 +131,11 @@ void ble_gap_task_handle(struct net_layer_s *layer,
 
   case NET_TASK_TIMEOUT: {
     printk("GAP asking for new connection parametters to LLCP\n");
-    struct ble_gap_conn_params_update_s *upd = gap_create_update(gap);
-
-    if (!upd)
-      break;
-
-    net_task_query_push(&upd->task, gap->layer.parent, &gap->layer, BLE_GAP_CONN_PARAMS_UPDATE);
-
     gap->conn_update_task = NULL;
-    break;
+
+    target = gap->ask_llcp ? gap->layer.parent : gap->ask_sig ? gap->sig : NULL;
+
+    goto ask;
   }
 
   case NET_TASK_RESPONSE:
@@ -144,22 +146,41 @@ void ble_gap_task_handle(struct net_layer_s *layer,
            &task->source->handler->type, task->query.err);
 
     if (task->source == layer->parent && task->query.err == -ENOTSUP) {
-      struct ble_gap_conn_params_update_s *upd = gap_create_update(gap);
+      printk("LLCP does not support conn params update, forward to signalling\n");
+      gap->ask_llcp = 0;
 
-      printk("GAP conn params update forwarded to signalling\n");
+      target = gap->sig;
+      goto ask;
+    }
 
-      net_task_query_push(&upd->task, gap->sig, &gap->layer, BLE_GAP_CONN_PARAMS_UPDATE);
+    if (task->source == layer->parent && task->query.err == -ENOTSUP) {
+      printk("Signalling does not support conn params update, abort\n");
+      gap->ask_sig = 0;
       break;
     }
 
-    if (task->query.err == -EINVAL)
+    if (task->query.err) {
+      printk("Conn update reponse was a non-fatal error, retrying later...\n");
       gap_update_conn_in(gap, 30);
+    }
 
     break;
   }
 
  out:
   net_task_destroy(task);
+
+  return;
+
+ ask:
+  if (target) {
+    struct ble_gap_conn_params_update_s *upd = gap_create_update(gap);
+
+    if (upd)
+      net_task_query_push(&upd->task, target, &gap->layer, BLE_GAP_CONN_PARAMS_UPDATE);
+  }
+
+  goto out;
 }
 
 static bool_t ble_gap_context_updated(
@@ -221,6 +242,8 @@ error_t ble_gap_create(
   gap->db = params->db;
   gap->sig = net_layer_refinc(params->sig);
   gap->conn_update_task = NULL;
+  gap->ask_llcp = 1;
+  gap->ask_sig = 1;
 
   *layer = &gap->layer;
 
