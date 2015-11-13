@@ -27,6 +27,15 @@
 #include <ble/protocol/address.h>
 #include <ble/protocol/advertise.h>
 
+#include <gct/container_avl_p.h>
+
+#define GCT_CONTAINER_ALGO_ble_scanner_device_set AVL_P
+
+GCT_CONTAINER_TYPES    (ble_scanner_device_set, struct ble_scanner_device_s *, hash_entry);
+GCT_CONTAINER_KEY_TYPES(ble_scanner_device_set, PTR, BLOB, addr, sizeof(struct ble_addr_s));
+GCT_CONTAINER_KEY_FCNS (ble_scanner_device_set, ASC, ALWAYS_INLINE, ble_scanner_device_set, addr,
+                        init, destroy, push, lookup, remove);
+
 struct net_layer_s;
 struct net_scheduler_s;
 struct ble_peer_s;
@@ -39,29 +48,17 @@ struct ble_scanner_param_s
   struct ble_addr_s local_addr;
 };
 
-struct ble_scanner_device_s
+struct ble_scanner_initiation_s
 {
-  struct ble_addr_s addr;
-  dev_timer_value_t first_seen;
-  dev_timer_value_t last_seen;
-  uint8_t ad[62];
-  uint8_t adv_ad_len;
-  uint8_t scan_ad_len;
-  bool_t connectable;
-};
-
-enum ble_scanner_device_state_e
-{
-  BLE_SCANNER_ADV_SEEN,
-  BLE_SCANNER_SCANNED,
-  BLE_SCANNER_LOST,
-};
-
-enum ble_scanner_device_action_e
-{
-  BLE_SCANNER_IGNORE,
-  BLE_SCANNER_SCAN,
-  BLE_SCANNER_CONNECT,
+  struct ble_conn_timing_param_s timing;
+  uint64_t channel_map;
+  uint32_t access_address;
+  uint32_t crc_init;
+  uint16_t win_period_tk;
+  uint16_t win_offset_tk;
+  uint8_t hop;
+  uint8_t sca;
+  uint8_t win_size;
 };
 
 struct ble_scanner_handler_s
@@ -69,15 +66,15 @@ struct ble_scanner_handler_s
   struct net_layer_handler_s base;
 
   error_t (*params_update)(struct net_layer_s *layer, const struct ble_scanner_param_s *params);
+  void (*scan_device)(struct net_layer_s *layer, const struct ble_addr_s *addr);
+  void (*connect_device)(struct net_layer_s *layer,
+                         const struct ble_addr_s *addr,
+                         );
 };
-
-STRUCT_COMPOSE(ble_advertiser_handler_s, base);
 
 struct ble_scanner_delegate_vtable_s
 {
   struct net_layer_delegate_vtable_s base;
-
-  enum ble_scanner_device_action_e (*device_action)(void *delegate, struct net_layer_s *layer, const struct ble_scanner_device_s *dev);
 
   bool_t (*connection_requested)(void *delegate, struct net_layer_s *layer,
                                  const struct ble_adv_connect_s *conn,

@@ -38,44 +38,90 @@
 
 #include <hexo/types.h>
 #include <errno.h>
-#include <ble/net/slave.h>
-#include <ble/net/l2cap.h>
 #if defined(CONFIG_BLE_CRYPTO)
-#include <ble/net/sm.h>
+#include <ble/protocol/sm.h>
 #endif
-#include <ble/net/signalling.h>
-#include <ble/net/gatt.h>
-#include <ble/net/gap.h>
-#include <net/scheduler.h>
+#include <ble/protocol/address.h>
+#include <device/class/timer.h>
 
 struct ble_central_handler_s;
+struct ble_central_s;
+struct ble_stack_context_s;
+struct net_layer_s;
 struct dev_rng_s;
 
-struct ble_central_s
-{
-  struct net_scheduler_s *scheduler;
-  const struct ble_central_handler_s *handler;
-  struct ble_slave_s slave;
+enum ble_central_state_e {
+  BLE_CENTRAL_IDLE,
+  BLE_CENTRAL_SCANNING,
+  BLE_CENTRAL_PAIRING,
+  BLE_CENTRAL_CONNECTED,
 };
 
-STRUCT_COMPOSE(ble_central_s, slave);
+enum ble_central_mode_e {
+  BLE_CENTRAL_CONNECTABLE = 1, // Defaults to whitelist only
+  BLE_CENTRAL_PAIRABLE = 2,
+};
 
 struct ble_central_handler_s
 {
-  void (*dropped)(struct ble_central_s *peri,
-                  uint8_t reason);
+#if defined(CONFIG_BLE_CRYPTO)
+  void (*pairing_requested)(struct ble_central_s *peri, bool_t bonding);
+  void (*pairing_failed)(struct ble_central_s *peri, enum sm_reason reason);
+  void (*pairing_success)(struct ble_central_s *peri);
+#endif
+  void (*connection_opened)(struct ble_central_s *peri, const struct ble_addr_s *addr);
+  void (*connection_closed)(struct ble_central_s *peri, uint8_t reason);
+  void (*state_changed)(struct ble_central_s *peri, enum ble_central_state_e state);
+};
+
+struct ble_central_params_s
+{
+  uint32_t scan_interval_ms;
+  uint32_t scan_duration_ms;
+};
+
+struct ble_central_s
+{
+  const struct ble_central_handler_s *handler;
+  struct ble_stack_context_s *context;
+  struct net_layer_s *master;
+  struct net_layer_s *llcp;
+#if defined(CONFIG_BLE_CRYPTO)
+  struct net_layer_s *sm;
+#endif
+  struct net_layer_s *scan;
+  struct ble_peer_s peer;
+
+  dev_timer_value_t connection_tk;
+  struct ble_addr_s addr;
+
+  enum ble_central_state_e last_state : 8;
+  uint8_t mode;
+  struct ble_central_params_s params;
 };
 
 error_t ble_central_init(
   struct ble_central_s *peri,
-  struct net_scheduler_s *sched,
+  const struct ble_central_params_s *params,
   const struct ble_central_handler_s *handler,
-  const char *radio,
-  struct dev_rng_s *rng,
-  const char *aes_dev,
-  struct ble_gatt_db_s *gattdb,
-  struct ble_peer_s *peer,
-  dev_timer_value_t connection_packet_time,
-  const struct buffer_s *connect_packet);
+  struct ble_stack_context_s *context);
+
+#if defined(CONFIG_BLE_CRYPTO)
+
+void ble_central_pairing_request(struct ble_central_s *peri,
+                                 bool_t mitm_protection,
+                                 bool_t bonding);
+
+void ble_central_pairing_accept(struct ble_central_s *peri,
+                                bool_t mitm_protection,
+                                uint32_t pin,
+                                const void *oob_data);
+
+void ble_central_pairing_abort(struct ble_central_s *peri,
+                               enum sm_reason reason);
+
+#endif
+
+void ble_central_mode_set(struct ble_central_s *peri, uint8_t mode);
 
 #endif
