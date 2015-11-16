@@ -66,6 +66,17 @@ enum ble_adv_type
 
 extern const char *ble_adv_type_name[BLE_ADV_TYPE_LAST + 1];
 
+enum ble_sca_e {
+  BLE_SCA_251_500_PPM = 0,
+  BLE_SCA_151_250_PPM = 1,
+  BLE_SCA_101_150_PPM = 2,
+  BLE_SCA_76_100_PPM = 3,
+  BLE_SCA_51_75_PPM = 4,
+  BLE_SCA_31_50_PPM = 5,
+  BLE_SCA_21_30_PPM = 6,
+  BLE_SCA_0_20_PPM = 7,
+};
+
 extern const uint16_t ble_sca_wc[8];
 extern const uint16_t ble_sca_bc[8];
 
