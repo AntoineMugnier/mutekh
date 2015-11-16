@@ -42,6 +42,7 @@
 #include <ble/protocol/sm.h>
 #endif
 #include <ble/protocol/address.h>
+#include <ble/peer.h>
 #include <device/class/timer.h>
 
 struct ble_central_handler_s;
