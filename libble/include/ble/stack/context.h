@@ -37,4 +37,6 @@ error_t ble_stack_context_address_non_resolvable_generate(struct ble_stack_conte
 error_t ble_stack_context_local_address_get(struct ble_stack_context_s *ctx,
                                              struct ble_addr_s *addr);
 
+uint32_t ble_stack_access_address_generate(struct ble_stack_context_s *ctx);
+
 #endif

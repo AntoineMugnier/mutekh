@@ -134,4 +134,6 @@ ALWAYS_INLINE bool_t ble_data_md_get(const struct buffer_s *p)
     return !!(p->data[p->begin] & BLE_LL_DATA_MD);
 }
 
+bool_t ble_data_aa_is_valid(uint32_t aa);
+
 #endif

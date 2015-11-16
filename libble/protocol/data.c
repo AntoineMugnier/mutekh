@@ -24,6 +24,7 @@
 #include <ble/protocol/data.h>
 #include <ble/protocol/error.h>
 #include <ble/protocol/company.h>
+#include <ble/protocol/advertise.h>
 
 #include <hexo/decls.h>
 
@@ -240,4 +241,36 @@ void ble_data_packet_dump(const struct buffer_s *p, bool_t m2s)
     }
 
     return;
+}
+
+bool_t ble_data_aa_is_valid(uint32_t aa)
+{
+  uint32_t transitions = aa ^ (aa >> 1);
+
+  if (aa == BLE_ADVERTISE_AA)
+    return 0;
+
+  if (ALIGN_ISPOWTWO(aa ^ BLE_ADVERTISE_AA))
+    return 0;
+
+  if (__builtin_popcountl(transitions) > 24)
+    return 0;
+
+  if (__builtin_popcountl(transitions >> 26) < 2)
+    return 0;
+
+  if ((uint8_t)aa == (uint8_t)(aa >> 8)
+      && (uint8_t)aa == (uint8_t)(aa >> 16)
+      && (uint8_t)aa == (uint8_t)(aa >> 24))
+    return 0;
+
+  for (uint8_t off = 0; off < 26; ++off) {
+    // At least 6 bits with the same value
+    if ((transitions & 0x3f) == 0)
+      return 0;
+
+    transitions >>= 1;
+  }
+
+  return 1;
 }

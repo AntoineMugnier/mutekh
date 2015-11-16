@@ -19,6 +19,7 @@
 */
 
 #include <ble/stack/context.h>
+#include <ble/protocol/data.h>
 
 #include <mutek/printk.h>
 
@@ -155,5 +156,21 @@ error_t ble_stack_context_local_address_get(struct ble_stack_context_s *ctx,
   ble_addr_net_parse(addr, &info.addr);
 
   return 0;
+}
+
+uint32_t ble_stack_access_address_generate(struct ble_stack_context_s *ctx)
+{
+  for (;;) {
+    uint8_t tmp[16];
+  
+    dev_rng_wait_read(&ctx->rng, tmp, 16);
+
+    for (uint8_t offset = 0; offset <= 12; ++offset) {
+      uint32_t aa = endian_le32_na_load(tmp + offset);
+
+      if (ble_data_aa_is_valid(aa))
+        return aa;
+    }
+  }
 }
 
