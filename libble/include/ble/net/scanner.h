@@ -23,6 +23,7 @@
 
 #include <hexo/types.h>
 #include <net/task.h>
+#include <net/layer.h>
 
 #include <ble/protocol/address.h>
 #include <ble/protocol/advertise.h>
@@ -32,16 +33,17 @@ struct net_scheduler_s;
 struct ble_peer_s;
 struct dev_rng_s;
 
-enum ble_scanner_action_e
+enum ble_scanner_policy_e
 {
-  BLE_SCANNER_CONNECT,
-  BLE_SCANNER_SCAN,
+  BLE_SCANNER_IGNORE = 0,
+  BLE_SCANNER_SCAN = 1,
+  BLE_SCANNER_CONNECT = 2,
 };
 
 struct ble_scanner_target_s
 {
   struct ble_addr_s addr;
-  enum ble_scanner_action_e action;
+  uint8_t policy;
 };
 
 #define BLE_SCANNER_TARGET_MAXCOUNT 8
@@ -53,6 +55,10 @@ struct ble_scanner_param_s
   struct ble_addr_s local_addr;
   size_t target_count;
   struct ble_scanner_target_s target[BLE_SCANNER_TARGET_MAXCOUNT];
+  uint8_t default_policy;
+
+  uint32_t access_address;
+  uint32_t crc_init;
 };
 
 struct ble_scanner_handler_s
