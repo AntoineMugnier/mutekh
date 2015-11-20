@@ -432,7 +432,7 @@ static void clk_enable(void)
 {
   uint32_t reg;
 
-  //gpio clock enable
+  //gpt clock enable
   reg = cpu_mem_read_32(CC26XX_PRCM_BASE + CC26XX_PRCM_GPTCLKGR_ADDR);
   reg |= CC26XX_PRCM_GPTCLKGR_CLK_EN;
   cpu_mem_write_32(CC26XX_PRCM_BASE + CC26XX_PRCM_GPTCLKGR_ADDR, reg);
