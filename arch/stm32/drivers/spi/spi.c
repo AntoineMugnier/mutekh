@@ -508,6 +508,9 @@ DEV_CLEANUP(stm32_spi_cleanup)
 {
   struct stm32_spi_private_s	*pv = dev->drv_pv;
 
+  if (pv->tr != NULL)
+    return -EBUSY;
+
   device_irq_source_unlink(dev, &pv->irq_ep, 1);
 
   /* disable irqs */
@@ -520,4 +523,6 @@ DEV_CLEANUP(stm32_spi_cleanup)
 #endif
 
   mem_free(pv);
+
+  return 0;
 }

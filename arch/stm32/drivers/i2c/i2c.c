@@ -708,9 +708,10 @@ err_mem:
 static
 DEV_CLEANUP(stm32_i2c_cleanup)
 {
-  struct stm32_i2c_private_s *pv;
+  struct stm32_i2c_private_s *pv = dev->drv_pv;
 
-  pv = dev->drv_pv;
+  if (!dev_request_queue_isempty(&pv->queue))
+    return -EBUSY;
 
   /* disable I2C device. */
   cpu_mem_write_32( ( (((pv->addr))) + (STM32_I2C_CR1_ADDR) ), endian_le32(0) );
@@ -725,5 +726,7 @@ DEV_CLEANUP(stm32_i2c_cleanup)
 
   /* deallocate private driver context. */
   mem_free(pv);
+
+  return 0;
 }
 

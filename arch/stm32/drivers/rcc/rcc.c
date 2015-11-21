@@ -279,5 +279,7 @@ static DEV_CLEANUP(stm32_rcc_cleanup)
 {
   struct stm32_rcc_private_s *pv = dev->drv_pv;
   mem_free(pv);
+
+  return 0;
 }
 

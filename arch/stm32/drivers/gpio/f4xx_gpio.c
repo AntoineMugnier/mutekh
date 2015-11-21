@@ -697,5 +697,7 @@ DEV_CLEANUP(stm32_gpio_cleanup)
 #endif
 
   mem_free(pv);
+
+  return 0;
 }
 

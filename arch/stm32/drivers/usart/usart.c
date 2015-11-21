@@ -590,6 +590,9 @@ static DEV_CLEANUP(stm32_usart_cleanup)
 {
   struct stm32_usart_context_s *pv = dev->drv_pv;
 
+  if (pv->read_started || pv->write_started)
+    return -EBUSY;
+
   /* disable and reset the usart. */
   cpu_mem_write_32( ( (((pv->addr))) + (STM32_USART_CR1_ADDR) ), endian_le32(0) );
   cpu_mem_write_32( ( (((pv->addr))) + (STM32_USART_CR2_ADDR) ), endian_le32(0) );
@@ -609,5 +612,7 @@ static DEV_CLEANUP(stm32_usart_cleanup)
   dev_request_queue_destroy(&pv->write_q);
 
   mem_free(pv);
+
+  return 0;
 }
 
