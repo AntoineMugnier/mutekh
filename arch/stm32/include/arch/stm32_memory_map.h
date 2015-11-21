@@ -52,8 +52,8 @@
 #define STM32_TIM10_ADDR            0x40015000
 #define STM32_TIM10_SIZE            0x00000400
 
-#define STM32_TIM09_ADDR            0x40014c00
-#define STM32_TIM09_SIZE            0x00000400
+#define STM32_TIM9_ADDR             0x40014c00
+#define STM32_TIM9_SIZE             0x00000400
 
 #define STM32_ADC3_ADDR             0x40013c00
 #define STM32_ADC3_SIZE             0x00000400
