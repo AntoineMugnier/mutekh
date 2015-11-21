@@ -114,7 +114,7 @@ mask:
 
 loop:
   smask |= ((uint32_t)endian_le16_na_load(set_mask) & tmask) << mshift;
-  cmask |= ((uint32_t)endian_le16_na_load(clear_mask) & tmask) << mshift;
+  cmask |= ((uint32_t)(uint16_t)~endian_le16_na_load(clear_mask) & tmask) << mshift;
 
   set_mask   += 2;
   clear_mask += 2;
@@ -125,15 +125,15 @@ update:;
   uint_fast8_t bank = io_first / STM32_GPIO_BANK_SIZE;
 
   uintptr_t a = STM32_GPIO_ADDR + STM32_GPIO_ODR_ADDR(bank);
-  uint32_t  x = endian_le32(cpu_mem_read_32(a)) & 0xffff;
-  x = smask ^ (x & (smask ^ cmask));
-  //printk("update odr bank:%u reg:0x%x\n", bank, pmask);
-  cpu_mem_write_32(a, endian_le32(x));
+  uint32_t  x = endian_le32(cpu_mem_read_32(a));
+  x = smask ^ (x & (smask ^ ~cmask));
+  // printk("update out %p 0x%08x\n", a, x);
+  cpu_mem_write_32(a, endian_le32(x & 0xffff));
 
   smask >>= STM32_GPIO_BANK_SIZE;
   cmask >>= STM32_GPIO_BANK_SIZE;
 
-  io_first += STM32_GPIO_BANK_SIZE;
+  io_first = (io_first | (STM32_GPIO_BANK_SIZE - 1)) + 1;
 
   if (mlen >= STM32_GPIO_BANK_SIZE)
     goto loop;
@@ -154,7 +154,7 @@ void stm32_gpio_set_mode_reg(gpio_id_t io_first, gpio_id_t io_last,
   uint64_t pmask = 0;
 
   /* GPIO mode is configured in only one register for the 16 pins per bank. */
-  uint_fast8_t mshift = io_first % STM32_GPIO_BANK_SIZE;
+  uint_fast8_t mshift = io_first % (STM32_GPIO_BANK_SIZE / 2);
   int_fast8_t  mlen   = io_last - io_first + 1;
 
 mask:
@@ -165,21 +165,21 @@ loop:
   /* we compute the relevant bits in the mask and align to the first io. */
   pmask |= stm32_gpio_get_4bit_mask(*mask++ & tmask) << (mshift * 4);
 
-  mlen -= STM32_GPIO_BANK_SIZE;
+  mlen -= STM32_GPIO_BANK_SIZE / 2;
 
-update:;
+last:;
   uint_fast8_t bank = io_first / STM32_GPIO_BANK_SIZE;
 
   uintptr_t a = STM32_GPIO_ADDR + STM32_GPIO_CRL_ADDR(bank) +
     ((io_first & 0x8) >> 1);
   uint32_t  x = endian_le32(cpu_mem_read_32(a));
   x = (x & ~pmask) | (pmask & mode);
-  //printk("update mode reg:%u bank:%u mode:0x%08x\n", reg, bank, x);
+  // printk("update mode %p 0x%08x\n", a, x);
   cpu_mem_write_32(a, endian_le32(x));
 
   pmask >>= 4 * STM32_GPIO_BANK_SIZE / 2;
 
-  io_first += STM32_GPIO_BANK_SIZE / 2;
+  io_first = (io_first | (STM32_GPIO_BANK_SIZE/2 - 1)) + 1;
 
   if (mlen >= STM32_GPIO_BANK_SIZE / 2)
     goto loop;
@@ -187,7 +187,7 @@ update:;
   if (io_first <= io_last)
     {
       if (mlen < 0)
-        goto update;
+        goto last;
       goto mask;
     }
 }
