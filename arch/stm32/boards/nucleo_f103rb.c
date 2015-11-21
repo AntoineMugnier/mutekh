@@ -48,10 +48,7 @@ DEV_DECLARE_STATIC(cpu_dev, "cpu", DEVICE_FLAG_CPU, arm32m_drv,
 
 /* USART2. */
 DEV_DECLARE_STATIC(usart2_dev, "uart2", 0, stm32_usart_drv,
-                   DEV_STATIC_RES_MEM(
-                                      STM32_DEV_MEM_START(USART, 2),
-                                      STM32_DEV_MEM_END(USART, 2)
-                                      ),
+                   DEV_STATIC_RES_MEM(STM32_USART2_ADDR, STM32_USART2_ADDR + STM32_USART2_SIZE),
 
                    DEV_STATIC_RES_FREQ(36000000, 1),
 
@@ -87,8 +84,7 @@ DEV_DECLARE_STATIC(gpio_dev, "gpio", 0, stm32_gpio_drv,
 #if defined(CONFIG_DRIVER_STM32_SPI)
 
 DEV_DECLARE_STATIC(spi1_dev, "spi1", 0, stm32_spi_drv,
-                   DEV_STATIC_RES_MEM(STM32_DEV_MEM_START(SPI, 1),
-                                      STM32_DEV_MEM_END(SPI, 1)),
+                   DEV_STATIC_RES_MEM(STM32_SPI1_ADDR, STM32_SPI1_ADDR + STM32_SPI1_SIZE),
 
                    DEV_STATIC_RES_FREQ(72000000, 1),
 

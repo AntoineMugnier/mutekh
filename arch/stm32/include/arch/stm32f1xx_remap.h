@@ -24,7 +24,6 @@
 #define _STM32F1XX_REMAP_H_
 
 #include <arch/stm32f1xx_afio.h>
-#include <arch/stm32f1xx_memory_map.h>
 
 /* configuration value for the I/O remapping.
 

@@ -48,10 +48,7 @@ DEV_DECLARE_STATIC(cpu_dev, "cpu", DEVICE_FLAG_CPU, arm32m_drv,
 
 /* USART1. */
 DEV_DECLARE_STATIC(usart1_dev, "uart1", 0, stm32_usart_drv,
-                   DEV_STATIC_RES_MEM(
-                                      STM32_DEV_MEM_START(USART, 1),
-                                      STM32_DEV_MEM_END(USART, 1)
-                                      ),
+                   DEV_STATIC_RES_MEM(STM32_USART1_ADDR, STM32_USART1_ADDR + STM32_USART1_SIZE),
 
                    DEV_STATIC_RES_FREQ(84000000, 1),
 
@@ -65,10 +62,7 @@ DEV_DECLARE_STATIC(usart1_dev, "uart1", 0, stm32_usart_drv,
 
 /* USART2. */
 DEV_DECLARE_STATIC(usart2_dev, "uart2", 0, stm32_usart_drv,
-                   DEV_STATIC_RES_MEM(
-                                      STM32_DEV_MEM_START(USART, 2),
-                                      STM32_DEV_MEM_END(USART, 2)
-                                      ),
+                   DEV_STATIC_RES_MEM(STM32_USART2_ADDR, STM32_USART2_ADDR + STM32_USART2_SIZE),
 
                    DEV_STATIC_RES_FREQ(42000000, 1),
 
@@ -85,10 +79,7 @@ DEV_DECLARE_STATIC(usart2_dev, "uart2", 0, stm32_usart_drv,
 
 /* USART6. */
 DEV_DECLARE_STATIC(usart6_dev, "uart6", 0, stm32_usart_drv,
-                   DEV_STATIC_RES_MEM(
-                                      STM32_DEV_MEM_START(USART, 6),
-                                      STM32_DEV_MEM_END(USART, 6)
-                                      ),
+                   DEV_STATIC_RES_MEM(STM32_USART6_ADDR, STM32_USART6_ADDR + STM32_USART6_SIZE),
 
                    DEV_STATIC_RES_FREQ(84000000, 1),
 
@@ -106,10 +97,7 @@ DEV_DECLARE_STATIC(usart6_dev, "uart6", 0, stm32_usart_drv,
 
 /* I2C1. */
 DEV_DECLARE_STATIC(i2c1_dev, "i2c1", 0, stm32_i2c_ctrl_drv,
-                   DEV_STATIC_RES_MEM(
-                                      STM32_DEV_MEM_START(I2C, 1),
-                                      STM32_DEV_MEM_END(I2C, 1)
-                                      ),
+                   DEV_STATIC_RES_MEM(STM32_I2C1_ADDR, STM32_I2C1_ADDR + STM32_I2C1_SIZE),
 
                    DEV_STATIC_RES_FREQ(42000000, 1),
 
@@ -144,10 +132,7 @@ DEV_DECLARE_STATIC(gpio_dev, "gpio", 0, stm32_gpio_drv,
 
 /* TIMER 4. */
 DEV_DECLARE_STATIC(timer4_dev, "timer4", 0, stm32_timer_drv,
-                   DEV_STATIC_RES_MEM(
-                                      STM32_DEV_MEM_START(TIM, 4),
-                                      STM32_DEV_MEM_END(TIM, 4)
-                                      ),
+                   DEV_STATIC_RES_MEM(STM32_TIM4_ADDR, STM32_TIM4_ADDR + STM32_TIM4_SIZE),
 
                    DEV_STATIC_RES_DEV_ICU("/cpu"),
                    DEV_STATIC_RES_IRQ(0, STM32_IRQ_TIM4, DEV_IRQ_SENSE_HIGH_LEVEL, 0, 0x1),
@@ -159,10 +144,7 @@ DEV_DECLARE_STATIC(timer4_dev, "timer4", 0, stm32_timer_drv,
 
 /* PWM on TIMER 2. */
 DEV_DECLARE_STATIC(pwm2_dev, "pwm2", 0, stm32_pwm_drv,
-                   DEV_STATIC_RES_MEM(
-                                      STM32_DEV_MEM_START(TIM, 2),
-                                      STM32_DEV_MEM_END(TIM, 2)
-                                      ),
+                   DEV_STATIC_RES_MEM(STM32_TIM2_ADDR, STM32_TIM2_ADDR + STM32_TIM2_SIZE),
 
                    DEV_STATIC_RES_FREQ(84000000, 1),
 
@@ -173,10 +155,7 @@ DEV_DECLARE_STATIC(pwm2_dev, "pwm2", 0, stm32_pwm_drv,
 
 /* PWM on TIMER 3. */
 DEV_DECLARE_STATIC(pwm3_dev, "pwm3", 0, stm32_pwm_drv,
-                   DEV_STATIC_RES_MEM(
-                                      STM32_DEV_MEM_START(TIM, 3),
-                                      STM32_DEV_MEM_END(TIM, 3)
-                                      ),
+                   DEV_STATIC_RES_MEM(STM32_TIM3_ADDR, STM32_TIM3_ADDR + STM32_TIM3_SIZE),
 
                    DEV_STATIC_RES_FREQ(84000000, 1),
 
@@ -187,10 +166,7 @@ DEV_DECLARE_STATIC(pwm3_dev, "pwm3", 0, stm32_pwm_drv,
 
 /* PWM on TIMER 5. */
 DEV_DECLARE_STATIC(pwm5_dev, "pwm5", 0, stm32_pwm_drv,
-                   DEV_STATIC_RES_MEM(
-                                      STM32_DEV_MEM_START(TIM, 5),
-                                      STM32_DEV_MEM_END(TIM, 5)
-                                      ),
+                   DEV_STATIC_RES_MEM(STM32_TIM5_ADDR, STM32_TIM5_ADDR + STM32_TIM5_SIZE),
 
                    DEV_STATIC_RES_FREQ(84000000, 1),
 
@@ -204,8 +180,7 @@ DEV_DECLARE_STATIC(pwm5_dev, "pwm5", 0, stm32_pwm_drv,
 #if defined(CONFIG_DRIVER_STM32_SPI)
 
 DEV_DECLARE_STATIC(spi1_dev, "spi1", 0, stm32_spi_drv,
-                   DEV_STATIC_RES_MEM(STM32_DEV_MEM_START(SPI, 1),
-                                      STM32_DEV_MEM_END(SPI, 1)),
+                   DEV_STATIC_RES_MEM(STM32_SPI1_ADDR, STM32_SPI1_ADDR + STM32_SPI1_SIZE),
 
                    DEV_STATIC_RES_FREQ(84000000, 1),
 
