@@ -26,7 +26,6 @@
 
 #include <mutek/printk.h>
 
-#include <cpp/device/helpers.h>
 #include <arch/stm32_usart.h>
 #include <arch/stm32f1xx_gpio.h>
 #include <arch/stm32f1xx_rcc.h>

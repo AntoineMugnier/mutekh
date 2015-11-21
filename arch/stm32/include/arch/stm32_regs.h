@@ -34,7 +34,5 @@
 
 #include <arch/stm32_memory_map.h>
 
-#include <cpp/device/helpers.h>
-
 #endif
 

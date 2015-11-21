@@ -37,7 +37,6 @@
 #include <mutek/kroutine.h>
 #include <mutek/printk.h>
 
-#include <cpp/device/helpers.h>
 #include <arch/stm32f4xx_rcc.h>
 #include <arch/stm32_timer.h>
 #include <arch/stm32_memory_map.h>
@@ -47,8 +46,8 @@ extern uint32_t stm32f4xx_clock_freq_apb1;
 extern uint32_t stm32f4xx_clock_freq_apb2;
 
 
-#define STM32_PWM_CHANNEL_MAX   4
-#define STM32_PWM_CHANNEL_MASK  ((1<<STM32_PWM_CHANNEL_MAX)-1)
+#define STM32_PWM_CHANNEL_MAX 4
+#define STM32_PWM_CHANNEL_MASK ((1<<STM32_PWM_CHANNEL_MAX)-1)
 
 struct stm32_pwm_private_s
 {
@@ -139,10 +138,10 @@ error_t stm32_pwm_freq(struct device_s *dev)
   uint32_t const period = scale / (presc+1);
 
   /* save the configuration. */
-  DEVICE_REG_UPDATE_DEV(TIMER, pv->addr, RCR, 0);
-  DEVICE_REG_FIELD_UPDATE_DEV(TIMER, pv->addr, CR1, CKD, NO_DIV);
-  DEVICE_REG_UPDATE_DEV(TIMER, pv->addr, PSC, presc);
-  DEVICE_REG_UPDATE_DEV(TIMER, pv->addr, ARR, period);
+  cpu_mem_write_32( ( (((pv->addr))) + (STM32_TIMER_RCR_ADDR) ), endian_le32(0) );
+  do { uint32_t register _reg = endian_le32(cpu_mem_read_32(( ((((pv->addr)))) + (STM32_TIMER_CR1_ADDR) ))); STM32_TIMER_CR1_CKD_SET( (_reg), NO_DIV ); cpu_mem_write_32( ( ((((pv->addr)))) + (STM32_TIMER_CR1_ADDR) ), endian_le32(_reg) ); } while (0);
+  cpu_mem_write_32( ( (((pv->addr))) + (STM32_TIMER_PSC_ADDR) ), endian_le32(presc) );
+  cpu_mem_write_32( ( (((pv->addr))) + (STM32_TIMER_ARR_ADDR) ), endian_le32(period) );
 
   return 0;
 }
@@ -155,9 +154,9 @@ error_t stm32_pwm_duty(struct device_s *dev, uint_fast8_t channel)
   if (pv->duty[channel].num > pv->duty[channel].denom)
     return -ERANGE;
 
-  uint32_t const period = DEVICE_REG_VALUE_DEV(TIMER, pv->addr, ARR);
-  uint32_t const ratio  = (uint64_t)pv->duty[channel].num * period / pv->duty[channel].denom;
-  DEVICE_REG_IDX_UPDATE_DEV(TIMER, pv->addr, CCR, channel, ratio);
+  uint32_t const period = endian_le32(cpu_mem_read_32(( (((pv->addr))) + (STM32_TIMER_ARR_ADDR) )));
+  uint32_t const ratio = (uint64_t)pv->duty[channel].num * period / pv->duty[channel].denom;
+  cpu_mem_write_32( ( (((pv->addr))) + (STM32_TIMER_CCR_ADDR(channel)) ), endian_le32(ratio) );
 
   return 0;
 }
@@ -170,9 +169,9 @@ void stm32_pwm_polarity(struct device_s         *dev,
   struct stm32_pwm_private_s *pv = dev->drv_pv;
 
   if ( pol == DEV_PWM_POL_HIGH )
-    DEVICE_REG_FIELD_IDX_UPDATE_DEV(TIMER, pv->addr, CCER, CCP, channel, HIGH);
+    do { uint32_t register _reg = endian_le32(cpu_mem_read_32(( ((((pv->addr)))) + (STM32_TIMER_CCER_ADDR) ))); STM32_TIMER_CCER_CCP_SET( channel, _reg, HIGH ); cpu_mem_write_32( ( ((((pv->addr)))) + (STM32_TIMER_CCER_ADDR) ), endian_le32(_reg) ); } while (0);
   else
-    DEVICE_REG_FIELD_IDX_UPDATE_DEV(TIMER, pv->addr, CCER, CCP, channel, LOW);
+    do { uint32_t register _reg = endian_le32(cpu_mem_read_32(( ((((pv->addr)))) + (STM32_TIMER_CCER_ADDR) ))); STM32_TIMER_CCER_CCP_SET( channel, _reg, LOW ); cpu_mem_write_32( ( ((((pv->addr)))) + (STM32_TIMER_CCER_ADDR) ), endian_le32(_reg) ); } while (0);
 }
 
 static
@@ -228,16 +227,16 @@ DEV_PWM_CONFIG(stm32_pwm_config)
       if (!(pv->config & (1 << channel)))
         {
           pv->config |= 1 << channel;
-          DEVICE_REG_FIELD_IDX_SET_DEV(TIMER, pv->addr, CCER, CCE, channel);
+          do { uint32_t register _reg = endian_le32(cpu_mem_read_32(( ((((pv->addr)))) + (STM32_TIMER_CCER_ADDR) ))); STM32_TIMER_CCER_CCE_SET( channel, (_reg), 1 ); cpu_mem_write_32( ( ((((pv->addr)))) + (STM32_TIMER_CCER_ADDR) ), endian_le32(_reg) ); } while (0);
         }
     }
 
   /* start counter. */
   if (start)
     {
-      DEVICE_REG_UPDATE_DEV(TIMER, pv->addr, CNT, 0);
-      DEVICE_REG_FIELD_SET_DEV(TIMER, pv->addr, CR1, CEN);
-      DEVICE_REG_FIELD_SET_DEV(TIMER, pv->addr, EGR, UG);
+      cpu_mem_write_32( ( (((pv->addr))) + (STM32_TIMER_CNT_ADDR) ), endian_le32(0) );
+      do { uint32_t register _reg = endian_le32(cpu_mem_read_32(( ((((pv->addr)))) + (STM32_TIMER_CR1_ADDR) ))); STM32_TIMER_CR1_CEN_SET( (_reg), 1 ); cpu_mem_write_32( ( ((((pv->addr)))) + (STM32_TIMER_CR1_ADDR) ), endian_le32(_reg) ); } while (0);
+      do { uint32_t register _reg = endian_le32(cpu_mem_read_32(( ((((pv->addr)))) + (STM32_TIMER_EGR_ADDR) ))); STM32_TIMER_EGR_UG_SET( (_reg), 1 ); cpu_mem_write_32( ( ((((pv->addr)))) + (STM32_TIMER_EGR_ADDR) ), endian_le32(_reg) ); } while (0);
     }
 
 cfg_end:
@@ -270,12 +269,12 @@ error_t stm32_pwm_start_stop(struct device_s *dev,
       --pv->count[channel];
       if(pv->count[channel] == 0)
         {
-          DEVICE_REG_FIELD_IDX_CLR_DEV(TIMER, pv->addr, CCER, CCE, channel);
+          do { uint32_t register _reg = endian_le32(cpu_mem_read_32(( ((((pv->addr)))) + (STM32_TIMER_CCER_ADDR) ))); STM32_TIMER_CCER_CCE_SET( channel, (_reg), 1 ); cpu_mem_write_32( ( ((((pv->addr)))) + (STM32_TIMER_CCER_ADDR) ), endian_le32(_reg) ); } while (0);
           pv->start &= ~(1 << channel);
         }
 
       if (pv->start == 0)
-        DEVICE_REG_FIELD_CLR_DEV(TIMER, pv->addr, CR1, CEN);
+        do { uint32_t register _reg = endian_le32(cpu_mem_read_32(( ((((pv->addr)))) + (STM32_TIMER_CR1_ADDR) ))); STM32_TIMER_CR1_CEN_SET( (_reg), 0 ); cpu_mem_write_32( ( ((((pv->addr)))) + (STM32_TIMER_CR1_ADDR) ), endian_le32(_reg) ); } while (0);
     }
 
   LOCK_RELEASE_IRQ(&dev->lock);
@@ -291,35 +290,35 @@ void stm32_pwm_clock_init(struct stm32_pwm_private_s *pv)
       break;
 
     case STM32_TIM1_ADDR:
-      DEVICE_REG_FIELD_SET(RCC, , APB2ENR, TIM1EN);
+      do { uint32_t register _reg = endian_le32(cpu_mem_read_32(( ((((STM32_RCC_ADDR)))) + (STM32_RCC_APB2ENR_ADDR) ))); STM32_RCC_APB2ENR_TIM1EN_SET( (_reg), 1 ); cpu_mem_write_32( ( ((((STM32_RCC_ADDR)))) + (STM32_RCC_APB2ENR_ADDR) ), endian_le32(_reg) ); } while (0);
       break;
 
     case STM32_TIM2_ADDR:
-      DEVICE_REG_FIELD_SET(RCC, , APB1ENR, TIM2EN);
+      do { uint32_t register _reg = endian_le32(cpu_mem_read_32(( ((((STM32_RCC_ADDR)))) + (STM32_RCC_APB1ENR_ADDR) ))); STM32_RCC_APB1ENR_TIM2EN_SET( (_reg), 1 ); cpu_mem_write_32( ( ((((STM32_RCC_ADDR)))) + (STM32_RCC_APB1ENR_ADDR) ), endian_le32(_reg) ); } while (0);
       break;
 
     case STM32_TIM3_ADDR:
-      DEVICE_REG_FIELD_SET(RCC, , APB1ENR, TIM3EN);
+      do { uint32_t register _reg = endian_le32(cpu_mem_read_32(( ((((STM32_RCC_ADDR)))) + (STM32_RCC_APB1ENR_ADDR) ))); STM32_RCC_APB1ENR_TIM3EN_SET( (_reg), 1 ); cpu_mem_write_32( ( ((((STM32_RCC_ADDR)))) + (STM32_RCC_APB1ENR_ADDR) ), endian_le32(_reg) ); } while (0);
       break;
 
     case STM32_TIM4_ADDR:
-      DEVICE_REG_FIELD_SET(RCC, , APB1ENR, TIM4EN);
+      do { uint32_t register _reg = endian_le32(cpu_mem_read_32(( ((((STM32_RCC_ADDR)))) + (STM32_RCC_APB1ENR_ADDR) ))); STM32_RCC_APB1ENR_TIM4EN_SET( (_reg), 1 ); cpu_mem_write_32( ( ((((STM32_RCC_ADDR)))) + (STM32_RCC_APB1ENR_ADDR) ), endian_le32(_reg) ); } while (0);
       break;
 
     case STM32_TIM5_ADDR:
-      DEVICE_REG_FIELD_SET(RCC, , APB1ENR, TIM5EN);
+      do { uint32_t register _reg = endian_le32(cpu_mem_read_32(( ((((STM32_RCC_ADDR)))) + (STM32_RCC_APB1ENR_ADDR) ))); STM32_RCC_APB1ENR_TIM5EN_SET( (_reg), 1 ); cpu_mem_write_32( ( ((((STM32_RCC_ADDR)))) + (STM32_RCC_APB1ENR_ADDR) ), endian_le32(_reg) ); } while (0);
       break;
 
     case STM32_TIM9_ADDR:
-      DEVICE_REG_FIELD_SET(RCC, , APB2ENR, TIM9EN);
+      do { uint32_t register _reg = endian_le32(cpu_mem_read_32(( ((((STM32_RCC_ADDR)))) + (STM32_RCC_APB2ENR_ADDR) ))); STM32_RCC_APB2ENR_TIM9EN_SET( (_reg), 1 ); cpu_mem_write_32( ( ((((STM32_RCC_ADDR)))) + (STM32_RCC_APB2ENR_ADDR) ), endian_le32(_reg) ); } while (0);
       break;
 
     case STM32_TIM10_ADDR:
-      DEVICE_REG_FIELD_SET(RCC, , APB2ENR, TIM10EN);
+      do { uint32_t register _reg = endian_le32(cpu_mem_read_32(( ((((STM32_RCC_ADDR)))) + (STM32_RCC_APB2ENR_ADDR) ))); STM32_RCC_APB2ENR_TIM10EN_SET( (_reg), 1 ); cpu_mem_write_32( ( ((((STM32_RCC_ADDR)))) + (STM32_RCC_APB2ENR_ADDR) ), endian_le32(_reg) ); } while (0);
       break;
 
     case STM32_TIM11_ADDR:
-      DEVICE_REG_FIELD_SET(RCC, , APB2ENR, TIM11EN);
+      do { uint32_t register _reg = endian_le32(cpu_mem_read_32(( ((((STM32_RCC_ADDR)))) + (STM32_RCC_APB2ENR_ADDR) ))); STM32_RCC_APB2ENR_TIM11EN_SET( (_reg), 1 ); cpu_mem_write_32( ( ((((STM32_RCC_ADDR)))) + (STM32_RCC_APB2ENR_ADDR) ), endian_le32(_reg) ); } while (0);
       break;
     }
 }
@@ -382,7 +381,7 @@ DEV_INIT(stm32_pwm_init)
     goto err_mem;
 
   /* Stop PWM/timer */
-  DEVICE_REG_FIELD_CLR_DEV(TIMER, pv->addr, CR1, CEN);
+  do { uint32_t register _reg = endian_le32(cpu_mem_read_32(( ((((pv->addr)))) + (STM32_TIMER_CR1_ADDR) ))); STM32_TIMER_CR1_CEN_SET( (_reg), 0 ); cpu_mem_write_32( ( ((((pv->addr)))) + (STM32_TIMER_CR1_ADDR) ), endian_le32(_reg) ); } while (0);
 
   /* Configure GPIO. */
   iomux_demux_t loc[STM32_PWM_CHANNEL_MAX];
@@ -390,55 +389,55 @@ DEV_INIT(stm32_pwm_init)
     goto err_mem;
 
   /* Check timer width. */
-  DEVICE_REG_UPDATE_DEV(TIMER, pv->addr, CNT, 0xffffffff);
+  cpu_mem_write_32( ( (((pv->addr))) + (STM32_TIMER_CNT_ADDR) ), endian_le32(0xffffffff) );
 
-  if (DEVICE_REG_VALUE_DEV(TIMER, pv->addr, CNT) & 0xffff0000)
+  if (endian_le32(cpu_mem_read_32(( (((pv->addr))) + (STM32_TIMER_CNT_ADDR) ))) & 0xffff0000)
     pv->hw_width = 32;
   else
     pv->hw_width = 16;
 
   /* Disable interrupts. */
-  DEVICE_REG_UPDATE_DEV(TIMER, pv->addr, DIER, 0);
+  cpu_mem_write_32( ( (((pv->addr))) + (STM32_TIMER_DIER_ADDR) ), endian_le32(0) );
 
   if (loc[0] != IOMUX_INVALID_DEMUX && pv->chan_count > 0)
     {
       /* Set capture/icompare channel PWM mode. */
-      DEVICE_REG_FIELD_UPDATE_DEV(TIMER, pv->addr, CCMR1OC, OC1M, PWM_MODE_1);
+      do { uint32_t register _reg = endian_le32(cpu_mem_read_32(( ((((pv->addr)))) + (STM32_TIMER_CCMR1OC_ADDR) ))); STM32_TIMER_CCMR1OC_OC1M_SET( (_reg), PWM_MODE_1 ); cpu_mem_write_32( ( ((((pv->addr)))) + (STM32_TIMER_CCMR1OC_ADDR) ), endian_le32(_reg) ); } while (0);
       /* Set capture/compare channel as output. */
-      DEVICE_REG_FIELD_UPDATE_DEV(TIMER, pv->addr, CCMR1OC, CC1S, OUTPUT);
+      do { uint32_t register _reg = endian_le32(cpu_mem_read_32(( ((((pv->addr)))) + (STM32_TIMER_CCMR1OC_ADDR) ))); STM32_TIMER_CCMR1OC_CC1S_SET( (_reg), OUTPUT ); cpu_mem_write_32( ( ((((pv->addr)))) + (STM32_TIMER_CCMR1OC_ADDR) ), endian_le32(_reg) ); } while (0);
       /* Disable CCR preload, updating CCR immediately applies. */
-      DEVICE_REG_FIELD_CLR_DEV(TIMER, pv->addr, CCMR1OC, OC1PE);
+      do { uint32_t register _reg = endian_le32(cpu_mem_read_32(( ((((pv->addr)))) + (STM32_TIMER_CCMR1OC_ADDR) ))); STM32_TIMER_CCMR1OC_OC1PE_SET( (_reg), 0 ); cpu_mem_write_32( ( ((((pv->addr)))) + (STM32_TIMER_CCMR1OC_ADDR) ), endian_le32(_reg) ); } while (0);
     }
 
   /* Set up other channels. */
   if (loc[1] != IOMUX_INVALID_DEMUX && pv->chan_count > 1)
     {
-      DEVICE_REG_FIELD_UPDATE_DEV(TIMER, pv->addr, CCMR1OC, OC2M, PWM_MODE_1);
-      DEVICE_REG_FIELD_UPDATE_DEV(TIMER, pv->addr, CCMR1OC, CC2S, OUTPUT);
-      DEVICE_REG_FIELD_CLR_DEV(TIMER, pv->addr, CCMR1OC, OC2PE);
+      do { uint32_t register _reg = endian_le32(cpu_mem_read_32(( ((((pv->addr)))) + (STM32_TIMER_CCMR1OC_ADDR) ))); STM32_TIMER_CCMR1OC_OC2M_SET( (_reg), PWM_MODE_1 ); cpu_mem_write_32( ( ((((pv->addr)))) + (STM32_TIMER_CCMR1OC_ADDR) ), endian_le32(_reg) ); } while (0);
+      do { uint32_t register _reg = endian_le32(cpu_mem_read_32(( ((((pv->addr)))) + (STM32_TIMER_CCMR1OC_ADDR) ))); STM32_TIMER_CCMR1OC_CC2S_SET( (_reg), OUTPUT ); cpu_mem_write_32( ( ((((pv->addr)))) + (STM32_TIMER_CCMR1OC_ADDR) ), endian_le32(_reg) ); } while (0);
+      do { uint32_t register _reg = endian_le32(cpu_mem_read_32(( ((((pv->addr)))) + (STM32_TIMER_CCMR1OC_ADDR) ))); STM32_TIMER_CCMR1OC_OC2PE_SET( (_reg), 0 ); cpu_mem_write_32( ( ((((pv->addr)))) + (STM32_TIMER_CCMR1OC_ADDR) ), endian_le32(_reg) ); } while (0);
     }
   if (loc[2] != IOMUX_INVALID_DEMUX && pv->chan_count > 2)
     {
-      DEVICE_REG_FIELD_UPDATE_DEV(TIMER, pv->addr, CCMR2OC, OC3M, PWM_MODE_1);
-      DEVICE_REG_FIELD_UPDATE_DEV(TIMER, pv->addr, CCMR2OC, CC3S, OUTPUT);
-      DEVICE_REG_FIELD_CLR_DEV(TIMER, pv->addr, CCMR2OC, OC3PE);
+      do { uint32_t register _reg = endian_le32(cpu_mem_read_32(( ((((pv->addr)))) + (STM32_TIMER_CCMR2OC_ADDR) ))); STM32_TIMER_CCMR2OC_OC3M_SET( (_reg), PWM_MODE_1 ); cpu_mem_write_32( ( ((((pv->addr)))) + (STM32_TIMER_CCMR2OC_ADDR) ), endian_le32(_reg) ); } while (0);
+      do { uint32_t register _reg = endian_le32(cpu_mem_read_32(( ((((pv->addr)))) + (STM32_TIMER_CCMR2OC_ADDR) ))); STM32_TIMER_CCMR2OC_CC3S_SET( (_reg), OUTPUT ); cpu_mem_write_32( ( ((((pv->addr)))) + (STM32_TIMER_CCMR2OC_ADDR) ), endian_le32(_reg) ); } while (0);
+      do { uint32_t register _reg = endian_le32(cpu_mem_read_32(( ((((pv->addr)))) + (STM32_TIMER_CCMR2OC_ADDR) ))); STM32_TIMER_CCMR2OC_OC3PE_SET( (_reg), 0 ); cpu_mem_write_32( ( ((((pv->addr)))) + (STM32_TIMER_CCMR2OC_ADDR) ), endian_le32(_reg) ); } while (0);
     }
 
   if (loc[3] != IOMUX_INVALID_DEMUX && pv->chan_count > 3)
     {
-      DEVICE_REG_FIELD_UPDATE_DEV(TIMER, pv->addr, CCMR2OC, OC4M, PWM_MODE_1);
-      DEVICE_REG_FIELD_UPDATE_DEV(TIMER, pv->addr, CCMR2OC, CC4S, OUTPUT);
-      DEVICE_REG_FIELD_CLR_DEV(TIMER, pv->addr, CCMR2OC, OC4PE);
+      do { uint32_t register _reg = endian_le32(cpu_mem_read_32(( ((((pv->addr)))) + (STM32_TIMER_CCMR2OC_ADDR) ))); STM32_TIMER_CCMR2OC_OC4M_SET( (_reg), PWM_MODE_1 ); cpu_mem_write_32( ( ((((pv->addr)))) + (STM32_TIMER_CCMR2OC_ADDR) ), endian_le32(_reg) ); } while (0);
+      do { uint32_t register _reg = endian_le32(cpu_mem_read_32(( ((((pv->addr)))) + (STM32_TIMER_CCMR2OC_ADDR) ))); STM32_TIMER_CCMR2OC_CC4S_SET( (_reg), OUTPUT ); cpu_mem_write_32( ( ((((pv->addr)))) + (STM32_TIMER_CCMR2OC_ADDR) ), endian_le32(_reg) ); } while (0);
+      do { uint32_t register _reg = endian_le32(cpu_mem_read_32(( ((((pv->addr)))) + (STM32_TIMER_CCMR2OC_ADDR) ))); STM32_TIMER_CCMR2OC_OC4PE_SET( (_reg), 0 ); cpu_mem_write_32( ( ((((pv->addr)))) + (STM32_TIMER_CCMR2OC_ADDR) ), endian_le32(_reg) ); } while (0);
     }
 
   /* Upcounting. */
-  DEVICE_REG_FIELD_CLR_DEV(TIMER, pv->addr, CR1, DIR);
+  do { uint32_t register _reg = endian_le32(cpu_mem_read_32(( ((((pv->addr)))) + (STM32_TIMER_CR1_ADDR) ))); STM32_TIMER_CR1_DIR_SET( (_reg), 0 ); cpu_mem_write_32( ( ((((pv->addr)))) + (STM32_TIMER_CR1_ADDR) ), endian_le32(_reg) ); } while (0);
 
   /* ster mode and internal clock selection. */
-  DEVICE_REG_UPDATE_DEV(TIMER, pv->addr, SMCR, 0);
+  cpu_mem_write_32( ( (((pv->addr))) + (STM32_TIMER_SMCR_ADDR) ), endian_le32(0) );
 
   /* Set repeat counter to 0, then generate update at each overflow. */
-  DEVICE_REG_FIELD_UPDATE_DEV(TIMER, pv->addr, RCR, REP, 0);
+  do { uint32_t register _reg = endian_le32(cpu_mem_read_32(( ((((pv->addr)))) + (STM32_TIMER_RCR_ADDR) ))); STM32_TIMER_RCR_REP_SET( (_reg), 0 ); cpu_mem_write_32( ( ((((pv->addr)))) + (STM32_TIMER_RCR_ADDR) ), endian_le32(_reg) ); } while (0);
 
   dev->drv_pv = pv;
   dev->drv    = &stm32_pwm_drv;
@@ -456,7 +455,7 @@ DEV_CLEANUP(stm32_pwm_cleanup)
 {
   struct stm32_pwm_private_s *pv = dev->drv_pv;
 
-  DEVICE_REG_FIELD_CLR_DEV(TIMER, pv->addr, CR1, CEN);
+  do { uint32_t register _reg = endian_le32(cpu_mem_read_32(( ((((pv->addr)))) + (STM32_TIMER_CR1_ADDR) ))); STM32_TIMER_CR1_CEN_SET( (_reg), 0 ); cpu_mem_write_32( ( ((((pv->addr)))) + (STM32_TIMER_CR1_ADDR) ), endian_le32(_reg) ); } while (0);
   mem_free(pv);
 }
 

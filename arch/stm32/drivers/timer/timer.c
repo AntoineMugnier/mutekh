@@ -37,7 +37,6 @@
 #include <mutek/mem_alloc.h>
 #include <mutek/kroutine.h>
 
-#include <cpp/device/helpers.h>
 #include <arch/stm32f4xx_rcc.h>
 #include <arch/stm32_timer.h>
 #include <arch/stm32_memory_map.h>
@@ -72,13 +71,13 @@ struct stm32_timer_private_s
 /* This function starts the hardware timer counter. */
 static inline void stm32_timer_start_counter(struct stm32_timer_private_s *pv)
 {
-    DEVICE_REG_FIELD_SET_DEV(TIMER, pv->addr, CR1, CEN);
+    do { uint32_t register _reg = endian_le32(cpu_mem_read_32(( ((((pv->addr)))) + (STM32_TIMER_CR1_ADDR) ))); STM32_TIMER_CR1_CEN_SET( (_reg), 1 ); cpu_mem_write_32( ( ((((pv->addr)))) + (STM32_TIMER_CR1_ADDR) ), endian_le32(_reg) ); } while (0);
 }
 
 /* This function stops the hardware timer counter. */
 static inline void stm32_timer_stop_counter(struct stm32_timer_private_s *pv)
 {
-    DEVICE_REG_FIELD_CLR_DEV(TIMER, pv->addr, CR1, CEN);
+    do { uint32_t register _reg = endian_le32(cpu_mem_read_32(( ((((pv->addr)))) + (STM32_TIMER_CR1_ADDR) ))); STM32_TIMER_CR1_CEN_SET( (_reg), 0 ); cpu_mem_write_32( ( ((((pv->addr)))) + (STM32_TIMER_CR1_ADDR) ), endian_le32(_reg) ); } while (0);
 }
 
 /* This function returns a concatenation of the software timer value and
@@ -87,12 +86,12 @@ static inline void stm32_timer_stop_counter(struct stm32_timer_private_s *pv)
    most recent timer value. */
 static uint64_t get_timer_value(struct stm32_timer_private_s *pv)
 {
-  uint64_t value = DEVICE_REG_VALUE_DEV(TIMER, pv->addr, CNT);
+  uint64_t value = endian_le32(cpu_mem_read_32(( (((pv->addr))) + (STM32_TIMER_CNT_ADDR) )));
 
 #ifdef CONFIG_DEVICE_IRQ
-  if (value < STM32_TIMER_HW_MASK(pv) / 2)      /* check if a wrap just occured */
+  if (value < STM32_TIMER_HW_MASK(pv) / 2) /* check if a wrap just occured */
     {
-      uint32_t x = DEVICE_REG_FIELD_VALUE_DEV(TIMER, pv->addr, SR, UIF);
+      uint32_t x = STM32_TIMER_SR_UIF_GET( endian_le32(cpu_mem_read_32(( ((((pv->addr)))) + (STM32_TIMER_SR_ADDR) ))) );
       if (x)
         value += 1ULL << STM32_TIMER_HW_WIDTH(pv);
     }
@@ -109,10 +108,10 @@ static uint64_t get_timer_value(struct stm32_timer_private_s *pv)
 static inline void stm32_timer_enable_compare(struct stm32_timer_private_s *pv, dev_timer_value_t v)
 {
   /* Write v in Compare 0 channel */
-  DEVICE_REG_IDX_UPDATE_DEV(TIMER, pv->addr, CCR, STM32_TIMER_CHANNEL, v);
+  cpu_mem_write_32( ( (((pv->addr))) + (STM32_TIMER_CCR_ADDR(STM32_TIMER_CHANNEL)) ), endian_le32(v) );
 
   /* Enable interrupt. */
-  DEVICE_REG_FIELD_IDX_SET_DEV(TIMER, pv->addr, DIER, CCIE, STM32_TIMER_CHANNEL);
+  do { uint32_t register _reg = endian_le32(cpu_mem_read_32(( ((((pv->addr)))) + (STM32_TIMER_DIER_ADDR) ))); STM32_TIMER_DIER_CCIE_SET( STM32_TIMER_CHANNEL, (_reg), 1 ); cpu_mem_write_32( ( ((((pv->addr)))) + (STM32_TIMER_DIER_ADDR) ), endian_le32(_reg) ); } while (0);
   /* Set output compare active. */
   //DEVICE_REG_FIELD_UPDATE_DEV(TIMER, pv->addr, CCMR1OC, OC1M, ACTIVE);
 }
@@ -122,7 +121,7 @@ static inline void stm32_timer_enable_compare(struct stm32_timer_private_s *pv, 
 static inline void stm32_timer_disable_compare(struct stm32_timer_private_s *pv)
 {
   /* Disable interrupt. */
-  DEVICE_REG_FIELD_IDX_SET_DEV(TIMER, pv->addr, DIER, CCIE, STM32_TIMER_CHANNEL);
+  do { uint32_t register _reg = endian_le32(cpu_mem_read_32(( ((((pv->addr)))) + (STM32_TIMER_DIER_ADDR) ))); STM32_TIMER_DIER_CCIE_SET( STM32_TIMER_CHANNEL, (_reg), 1 ); cpu_mem_write_32( ( ((((pv->addr)))) + (STM32_TIMER_DIER_ADDR) ), endian_le32(_reg) ); } while (0);
   /* Set output compare inactive. */
   //DEVICE_REG_FIELD_UPDATE_DEV(TIMER, pv->addr, CCMR1OC, OC1M, FORCE_INACTIVE);
 }
@@ -148,7 +147,7 @@ static bool_t stm32_timer_request_start(struct stm32_timer_private_s *pv,
 
 static inline void stm32_timer_raise_irq(struct stm32_timer_private_s *pv)
 {
-  DEVICE_REG_FIELD_SET_DEV(TIMER, pv->addr, EGR, UG);
+  do { uint32_t register _reg = endian_le32(cpu_mem_read_32(( ((((pv->addr)))) + (STM32_TIMER_EGR_ADDR) ))); STM32_TIMER_EGR_UG_SET( (_reg), 1 ); cpu_mem_write_32( ( ((((pv->addr)))) + (STM32_TIMER_EGR_ADDR) ), endian_le32(_reg) ); } while (0);
 }
 
 static DEV_IRQ_SRC_PROCESS(stm32_timer_irq)
@@ -160,13 +159,13 @@ static DEV_IRQ_SRC_PROCESS(stm32_timer_irq)
 
   while (1)
     {
-      uint32_t x = DEVICE_REG_VALUE_DEV(TIMER, pv->addr, SR);
+      uint32_t x = endian_le32(cpu_mem_read_32(( (((pv->addr))) + (STM32_TIMER_SR_ADDR) )));
       x &= STM32_TIMER_SR_UIF | STM32_TIMER_SR_CCIF(STM32_TIMER_CHANNEL);
 
       if (!x)
         break;
 
-      DEVICE_REG_UPDATE_DEV(TIMER, pv->addr, SR, 0);
+      cpu_mem_write_32( ( (((pv->addr))) + (STM32_TIMER_SR_ADDR) ), endian_le32(0) );
 
       /* Compare channel interrupt */
       if (x & STM32_TIMER_SR_CCIF(STM32_TIMER_CHANNEL))
@@ -394,7 +393,7 @@ static DEV_TIMER_CONFIG(stm32_timer_config)
             res = 0x10000;
 
           r = res;
-          DEVICE_REG_UPDATE_DEV(TIMER, pv->addr, PSC, r-1);
+          cpu_mem_write_32( ( (((pv->addr))) + (STM32_TIMER_PSC_ADDR) ), endian_le32(r-1) );
 
           /* update configuration revision. */
           pv->rev += 2;
@@ -402,7 +401,7 @@ static DEV_TIMER_CONFIG(stm32_timer_config)
     }
   else
     {
-      r = DEVICE_REG_VALUE_DEV(TIMER, pv->addr, PSC) + 1;
+      r = endian_le32(cpu_mem_read_32(( (((pv->addr))) + (STM32_TIMER_PSC_ADDR) ))) + 1;
     }
 
   if (cfg)
@@ -448,35 +447,35 @@ void stm32_timer_clock_init(struct device_s *dev)
       break;
 
     case STM32_TIM1_ADDR:
-      DEVICE_REG_FIELD_SET(RCC, , APB2ENR, TIM1EN);
+      do { uint32_t register _reg = endian_le32(cpu_mem_read_32(( ((((STM32_RCC_ADDR)))) + (STM32_RCC_APB2ENR_ADDR) ))); STM32_RCC_APB2ENR_TIM1EN_SET( (_reg), 1 ); cpu_mem_write_32( ( ((((STM32_RCC_ADDR)))) + (STM32_RCC_APB2ENR_ADDR) ), endian_le32(_reg) ); } while (0);
       break;
 
     case STM32_TIM2_ADDR:
-      DEVICE_REG_FIELD_SET(RCC, , APB1ENR, TIM2EN);
+      do { uint32_t register _reg = endian_le32(cpu_mem_read_32(( ((((STM32_RCC_ADDR)))) + (STM32_RCC_APB1ENR_ADDR) ))); STM32_RCC_APB1ENR_TIM2EN_SET( (_reg), 1 ); cpu_mem_write_32( ( ((((STM32_RCC_ADDR)))) + (STM32_RCC_APB1ENR_ADDR) ), endian_le32(_reg) ); } while (0);
       break;
 
     case STM32_TIM3_ADDR:
-      DEVICE_REG_FIELD_SET(RCC, , APB1ENR, TIM3EN);
+      do { uint32_t register _reg = endian_le32(cpu_mem_read_32(( ((((STM32_RCC_ADDR)))) + (STM32_RCC_APB1ENR_ADDR) ))); STM32_RCC_APB1ENR_TIM3EN_SET( (_reg), 1 ); cpu_mem_write_32( ( ((((STM32_RCC_ADDR)))) + (STM32_RCC_APB1ENR_ADDR) ), endian_le32(_reg) ); } while (0);
       break;
 
     case STM32_TIM4_ADDR:
-      DEVICE_REG_FIELD_SET(RCC, , APB1ENR, TIM4EN);
+      do { uint32_t register _reg = endian_le32(cpu_mem_read_32(( ((((STM32_RCC_ADDR)))) + (STM32_RCC_APB1ENR_ADDR) ))); STM32_RCC_APB1ENR_TIM4EN_SET( (_reg), 1 ); cpu_mem_write_32( ( ((((STM32_RCC_ADDR)))) + (STM32_RCC_APB1ENR_ADDR) ), endian_le32(_reg) ); } while (0);
       break;
 
     case STM32_TIM5_ADDR:
-      DEVICE_REG_FIELD_SET(RCC, , APB1ENR, TIM5EN);
+      do { uint32_t register _reg = endian_le32(cpu_mem_read_32(( ((((STM32_RCC_ADDR)))) + (STM32_RCC_APB1ENR_ADDR) ))); STM32_RCC_APB1ENR_TIM5EN_SET( (_reg), 1 ); cpu_mem_write_32( ( ((((STM32_RCC_ADDR)))) + (STM32_RCC_APB1ENR_ADDR) ), endian_le32(_reg) ); } while (0);
       break;
 
     case STM32_TIM9_ADDR:
-      DEVICE_REG_FIELD_SET(RCC, , APB2ENR, TIM9EN);
+      do { uint32_t register _reg = endian_le32(cpu_mem_read_32(( ((((STM32_RCC_ADDR)))) + (STM32_RCC_APB2ENR_ADDR) ))); STM32_RCC_APB2ENR_TIM9EN_SET( (_reg), 1 ); cpu_mem_write_32( ( ((((STM32_RCC_ADDR)))) + (STM32_RCC_APB2ENR_ADDR) ), endian_le32(_reg) ); } while (0);
       break;
 
     case STM32_TIM10_ADDR:
-      DEVICE_REG_FIELD_SET(RCC, , APB2ENR, TIM10EN);
+      do { uint32_t register _reg = endian_le32(cpu_mem_read_32(( ((((STM32_RCC_ADDR)))) + (STM32_RCC_APB2ENR_ADDR) ))); STM32_RCC_APB2ENR_TIM10EN_SET( (_reg), 1 ); cpu_mem_write_32( ( ((((STM32_RCC_ADDR)))) + (STM32_RCC_APB2ENR_ADDR) ), endian_le32(_reg) ); } while (0);
       break;
 
     case STM32_TIM11_ADDR:
-      DEVICE_REG_FIELD_SET(RCC, , APB2ENR, TIM11EN);
+      do { uint32_t register _reg = endian_le32(cpu_mem_read_32(( ((((STM32_RCC_ADDR)))) + (STM32_RCC_APB2ENR_ADDR) ))); STM32_RCC_APB2ENR_TIM11EN_SET( (_reg), 1 ); cpu_mem_write_32( ( ((((STM32_RCC_ADDR)))) + (STM32_RCC_APB2ENR_ADDR) ), endian_le32(_reg) ); } while (0);
       break;
     }
 }
@@ -520,35 +519,35 @@ static DEV_INIT(stm32_timer_init)
   stm32_timer_clock_init(dev);
 
   /* Stop timer */
-  DEVICE_REG_FIELD_CLR_DEV(TIMER, pv->addr, CR1, CEN);
+  do { uint32_t register _reg = endian_le32(cpu_mem_read_32(( ((((pv->addr)))) + (STM32_TIMER_CR1_ADDR) ))); STM32_TIMER_CR1_CEN_SET( (_reg), 0 ); cpu_mem_write_32( ( ((((pv->addr)))) + (STM32_TIMER_CR1_ADDR) ), endian_le32(_reg) ); } while (0);
 
   /* Check hw width. */
-  DEVICE_REG_UPDATE_DEV(TIMER, pv->addr, ARR, 0xffffffff);
-  if ((DEVICE_REG_VALUE_DEV(TIMER, pv->addr, ARR) >> 16) == 0x0)
+  cpu_mem_write_32( ( (((pv->addr))) + (STM32_TIMER_ARR_ADDR) ), endian_le32(0xffffffff) );
+  if ((endian_le32(cpu_mem_read_32(( (((pv->addr))) + (STM32_TIMER_ARR_ADDR) ))) >> 16) == 0x0)
     pv->hw_width = 16;
   else
     pv->hw_width = 32;
 
 #ifdef CONFIG_DEVICE_IRQ
   /* Clear interrupts */
-  DEVICE_REG_UPDATE_DEV(TIMER, pv->addr, SR, 0);
+  cpu_mem_write_32( ( (((pv->addr))) + (STM32_TIMER_SR_ADDR) ), endian_le32(0) );
 
   /* Enable Overflow interrupts */
-  DEVICE_REG_FIELD_SET_DEV(TIMER, pv->addr, DIER, UIE);
+  do { uint32_t register _reg = endian_le32(cpu_mem_read_32(( ((((pv->addr)))) + (STM32_TIMER_DIER_ADDR) ))); STM32_TIMER_DIER_UIE_SET( (_reg), 1 ); cpu_mem_write_32( ( ((((pv->addr)))) + (STM32_TIMER_DIER_ADDR) ), endian_le32(_reg) ); } while (0);
 
   /* Set Compare/Capture channel 0 to Output Compare */
-  DEVICE_REG_FIELD_UPDATE_DEV(TIMER, pv->addr, CCMR1OC, CC1S, OUTPUT);
+  do { uint32_t register _reg = endian_le32(cpu_mem_read_32(( ((((pv->addr)))) + (STM32_TIMER_CCMR1OC_ADDR) ))); STM32_TIMER_CCMR1OC_CC1S_SET( (_reg), OUTPUT ); cpu_mem_write_32( ( ((((pv->addr)))) + (STM32_TIMER_CCMR1OC_ADDR) ), endian_le32(_reg) ); } while (0);
 
   pv->swvalue = 0;
 #endif
 
   /* Prescaler 1MHz. */
   // FIXME: 84MHz hardcoded clock freq.
-  DEVICE_REG_UPDATE_DEV(TIMER, pv->addr, PSC, 83);
-  DEVICE_REG_FIELD_SET_DEV(TIMER, pv->addr, EGR, UG);
+  cpu_mem_write_32( ( (((pv->addr))) + (STM32_TIMER_PSC_ADDR) ), endian_le32(83) );
+  do { uint32_t register _reg = endian_le32(cpu_mem_read_32(( ((((pv->addr)))) + (STM32_TIMER_EGR_ADDR) ))); STM32_TIMER_EGR_UG_SET( (_reg), 1 ); cpu_mem_write_32( ( ((((pv->addr)))) + (STM32_TIMER_EGR_ADDR) ), endian_le32(_reg) ); } while (0);
 
   /* Top value. */
-  DEVICE_REG_UPDATE_DEV(TIMER, pv->addr, ARR, STM32_TIMER_TOP(pv));
+  cpu_mem_write_32( ( (((pv->addr))) + (STM32_TIMER_ARR_ADDR) ), endian_le32(STM32_TIMER_TOP(pv)) );
 
   /* Disable compare on startup. */
   stm32_timer_disable_compare(pv);

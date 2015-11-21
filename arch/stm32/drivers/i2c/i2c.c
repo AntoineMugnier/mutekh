@@ -35,7 +35,6 @@
 #include <device/class/i2c.h>
 #include <device/class/iomux.h>
 
-#include <cpp/device/helpers.h>
 #include <arch/stm32_memory_map.h>
 
 #include <arch/stm32_i2c.h>
@@ -137,14 +136,14 @@ static inline
 void
 stm32_i2c_enable_events(struct stm32_i2c_private_s *pv)
 {
-    DEVICE_REG_FIELD_SET_DEV(I2C, pv->addr, CR2, ITEVTEN);
+    do { uint32_t register _reg = endian_le32(cpu_mem_read_32(( ((((pv->addr)))) + (STM32_I2C_CR2_ADDR) ))); STM32_I2C_CR2_ITEVTEN_SET( (_reg), 1 ); cpu_mem_write_32( ( ((((pv->addr)))) + (STM32_I2C_CR2_ADDR) ), endian_le32(_reg) ); } while (0);
 }
 
 static inline
 void
 stm32_i2c_disable_events(struct stm32_i2c_private_s *pv)
 {
-    DEVICE_REG_FIELD_CLR_DEV(I2C, pv->addr, CR2, ITEVTEN);
+    do { uint32_t register _reg = endian_le32(cpu_mem_read_32(( ((((pv->addr)))) + (STM32_I2C_CR2_ADDR) ))); STM32_I2C_CR2_ITEVTEN_SET( (_reg), 0 ); cpu_mem_write_32( ( ((((pv->addr)))) + (STM32_I2C_CR2_ADDR) ), endian_le32(_reg) ); } while (0);
 }
 
 static inline
@@ -223,7 +222,7 @@ static inline
 STM32_I2C_FSM_CALLBACK(stm32_i2c_start)
 {
     stm32_i2c_enable_events(pv);
-    DEVICE_REG_FIELD_SET_DEV(I2C, pv->addr, CR1, START);
+    do { uint32_t register _reg = endian_le32(cpu_mem_read_32(( ((((pv->addr)))) + (STM32_I2C_CR1_ADDR) ))); STM32_I2C_CR1_START_SET( (_reg), 1 ); cpu_mem_write_32( ( ((((pv->addr)))) + (STM32_I2C_CR1_ADDR) ), endian_le32(_reg) ); } while (0);
 
     /* reset current transfered byte. */
     rq->error_offset = 0;
@@ -237,7 +236,7 @@ STM32_I2C_FSM_CALLBACK(stm32_i2c_address)
     struct dev_i2c_transfer_s *tr = &rq->transfer[rq->error_transfer];
 
     /* if the control of the bus is pending, then wait. */
-    if (!DEVICE_REG_FIELD_VALUE_DEV(I2C, pv->addr, SR1, SB))
+    if (!STM32_I2C_SR1_SB_GET( endian_le32(cpu_mem_read_32(( ((((pv->addr)))) + (STM32_I2C_SR1_ADDR) ))) ))
         return 0;
 
     /* send slave address. */
@@ -245,7 +244,7 @@ STM32_I2C_FSM_CALLBACK(stm32_i2c_address)
     if (tr->type == DEV_I2C_READ)
       address |= 1;
 
-    DEVICE_REG_FIELD_UPDATE_DEV(I2C, pv->addr, DR, DATA, address);
+    do { uint32_t register _reg = endian_le32(cpu_mem_read_32(( ((((pv->addr)))) + (STM32_I2C_DR_ADDR) ))); STM32_I2C_DR_DATA_SET( (_reg), address ); cpu_mem_write_32( ( ((((pv->addr)))) + (STM32_I2C_DR_ADDR) ), endian_le32(_reg) ); } while (0);
 
     return 1;
 }
@@ -262,20 +261,20 @@ STM32_I2C_FSM_CALLBACK(stm32_i2c_read_n_bytes)
         uint32_t left = stm32_i2c_bytes_left_same_way(rq);
         if (left == 3)
         {
-            if (!DEVICE_REG_FIELD_VALUE_DEV(I2C, pv->addr, SR1, BTF))
+            if (!STM32_I2C_SR1_BTF_GET( endian_le32(cpu_mem_read_32(( ((((pv->addr)))) + (STM32_I2C_SR1_ADDR) ))) ))
                 return 0;
 
-            DEVICE_REG_FIELD_CLR_DEV(I2C, pv->addr, CR1, ACK);
+            do { uint32_t register _reg = endian_le32(cpu_mem_read_32(( ((((pv->addr)))) + (STM32_I2C_CR1_ADDR) ))); STM32_I2C_CR1_ACK_SET( (_reg), 0 ); cpu_mem_write_32( ( ((((pv->addr)))) + (STM32_I2C_CR1_ADDR) ), endian_le32(_reg) ); } while (0);
         }
     }
 
     /* otherwise, process byte reading normally. */
-    else if (!DEVICE_REG_FIELD_VALUE_DEV(I2C, pv->addr, SR1, RXNE))
+    else if (!STM32_I2C_SR1_RXNE_GET( endian_le32(cpu_mem_read_32(( ((((pv->addr)))) + (STM32_I2C_SR1_ADDR) ))) ))
         return 0;
 
     /* read byte from register. */
-    tr->data[rq->error_offset++] = DEVICE_REG_FIELD_VALUE_DEV(
-        I2C, pv->addr, DR, DATA);
+    tr->data[rq->error_offset++] = STM32_I2C_DR_DATA_GET( endian_le32(cpu_mem_read_32(( ((((pv->addr)))) + (STM32_I2C_DR_ADDR) ))) )
+                                ;
 
     --tr->size;
 
@@ -287,19 +286,19 @@ STM32_I2C_FSM_CALLBACK(stm32_i2c_read_2_bytes)
 {
     struct dev_i2c_transfer_s *tr = &rq->transfer[rq->error_transfer];
 
-    if (tr->size == 1 && !DEVICE_REG_FIELD_VALUE_DEV(I2C, pv->addr, SR1, RXNE))
+    if (tr->size == 1 && !STM32_I2C_SR1_RXNE_GET( endian_le32(cpu_mem_read_32(( ((((pv->addr)))) + (STM32_I2C_SR1_ADDR) ))) ))
         return 0;
 
-    if (tr->size > 1 && !DEVICE_REG_FIELD_VALUE_DEV(I2C, pv->addr, SR1, BTF))
+    if (tr->size > 1 && !STM32_I2C_SR1_BTF_GET( endian_le32(cpu_mem_read_32(( ((((pv->addr)))) + (STM32_I2C_SR1_ADDR) ))) ))
         return 0;
 
     /* send stop condition. */
-    DEVICE_REG_FIELD_SET_DEV(I2C, pv->addr, CR1, STOP);
+    do { uint32_t register _reg = endian_le32(cpu_mem_read_32(( ((((pv->addr)))) + (STM32_I2C_CR1_ADDR) ))); STM32_I2C_CR1_STOP_SET( (_reg), 1 ); cpu_mem_write_32( ( ((((pv->addr)))) + (STM32_I2C_CR1_ADDR) ), endian_le32(_reg) ); } while (0);
 
     while (tr->size-- > 0)
     {
-        tr->data[rq->error_offset++] = DEVICE_REG_FIELD_VALUE_DEV(
-            I2C, pv->addr, DR, DATA);
+        tr->data[rq->error_offset++] = STM32_I2C_DR_DATA_GET( endian_le32(cpu_mem_read_32(( ((((pv->addr)))) + (STM32_I2C_DR_ADDR) ))) )
+                                    ;
 
         if (tr->size == 0 && !stm32_i2c_is_last_same_way(rq))
         {
@@ -316,11 +315,11 @@ STM32_I2C_FSM_CALLBACK(stm32_i2c_write_n_bytes)
 {
     struct dev_i2c_transfer_s *tr = &rq->transfer[rq->error_transfer];
 
-    if (!DEVICE_REG_FIELD_VALUE_DEV(I2C, pv->addr, SR1, TXE))
+    if (!STM32_I2C_SR1_TXE_GET( endian_le32(cpu_mem_read_32(( ((((pv->addr)))) + (STM32_I2C_SR1_ADDR) ))) ))
         return 0;
 
-    DEVICE_REG_FIELD_UPDATE_DEV(
-        I2C, pv->addr, DR, DATA, tr->data[rq->error_offset++]);
+    do { uint32_t register _reg = endian_le32(cpu_mem_read_32(( ((((pv->addr)))) + (STM32_I2C_DR_ADDR) ))); STM32_I2C_DR_DATA_SET( (_reg), tr->data[rq->error_offset++] ); cpu_mem_write_32( ( ((((pv->addr)))) + (STM32_I2C_DR_ADDR) ), endian_le32(_reg) ); } while (0)
+                                                              ;
 
     --tr->size;
 
@@ -374,7 +373,7 @@ stm32_i2c_run(struct stm32_i2c_private_s *pv)
 
         case STM32_I2C_S_PREPARE:
             /* check that the address is sent and accepted, otherwise wait. */
-            if (!DEVICE_REG_FIELD_VALUE_DEV(I2C, pv->addr, SR1, ADDRESS))
+            if (!STM32_I2C_SR1_ADDRESS_GET( endian_le32(cpu_mem_read_32(( ((((pv->addr)))) + (STM32_I2C_SR1_ADDR) ))) ))
                 goto wait_event;
 
             /* check for next transfer. */
@@ -389,7 +388,7 @@ stm32_i2c_run(struct stm32_i2c_private_s *pv)
             }
 
             /* enable buffer events. */
-            DEVICE_REG_FIELD_SET_DEV(I2C, pv->addr, CR2, ITBUFEN);
+            do { uint32_t register _reg = endian_le32(cpu_mem_read_32(( ((((pv->addr)))) + (STM32_I2C_CR2_ADDR) ))); STM32_I2C_CR2_ITBUFEN_SET( (_reg), 1 ); cpu_mem_write_32( ( ((((pv->addr)))) + (STM32_I2C_CR2_ADDR) ), endian_le32(_reg) ); } while (0);
 
             /* prepare read/write. */
             if (tr->type == DEV_I2C_READ)
@@ -398,22 +397,22 @@ stm32_i2c_run(struct stm32_i2c_private_s *pv)
                 {
                 default:
                     /* ack next byte. */
-                    DEVICE_REG_FIELD_SET_DEV(I2C, pv->addr, CR1, ACK);
-                    DEVICE_REG_FIELD_CLR_DEV(I2C, pv->addr, CR1, POS);
+                    do { uint32_t register _reg = endian_le32(cpu_mem_read_32(( ((((pv->addr)))) + (STM32_I2C_CR1_ADDR) ))); STM32_I2C_CR1_ACK_SET( (_reg), 1 ); cpu_mem_write_32( ( ((((pv->addr)))) + (STM32_I2C_CR1_ADDR) ), endian_le32(_reg) ); } while (0);
+                    do { uint32_t register _reg = endian_le32(cpu_mem_read_32(( ((((pv->addr)))) + (STM32_I2C_CR1_ADDR) ))); STM32_I2C_CR1_POS_SET( (_reg), 0 ); cpu_mem_write_32( ( ((((pv->addr)))) + (STM32_I2C_CR1_ADDR) ), endian_le32(_reg) ); } while (0);
                     pv->state = STM32_I2C_S_READ_N_BYTES;
                     break;
 
                 case 1:
                     /* nack next byte. */
-                    DEVICE_REG_FIELD_CLR_DEV(I2C, pv->addr, CR1, ACK);
-                    DEVICE_REG_FIELD_CLR_DEV(I2C, pv->addr, CR1, POS);
+                    do { uint32_t register _reg = endian_le32(cpu_mem_read_32(( ((((pv->addr)))) + (STM32_I2C_CR1_ADDR) ))); STM32_I2C_CR1_ACK_SET( (_reg), 0 ); cpu_mem_write_32( ( ((((pv->addr)))) + (STM32_I2C_CR1_ADDR) ), endian_le32(_reg) ); } while (0);
+                    do { uint32_t register _reg = endian_le32(cpu_mem_read_32(( ((((pv->addr)))) + (STM32_I2C_CR1_ADDR) ))); STM32_I2C_CR1_POS_SET( (_reg), 0 ); cpu_mem_write_32( ( ((((pv->addr)))) + (STM32_I2C_CR1_ADDR) ), endian_le32(_reg) ); } while (0);
                     pv->state = STM32_I2C_S_READ_1_BYTE;
                     break;
 
                 case 2:
                     /* nack next+1 byte. */
-                    DEVICE_REG_FIELD_CLR_DEV(I2C, pv->addr, CR1, ACK);
-                    DEVICE_REG_FIELD_SET_DEV(I2C, pv->addr, CR1, POS);
+                    do { uint32_t register _reg = endian_le32(cpu_mem_read_32(( ((((pv->addr)))) + (STM32_I2C_CR1_ADDR) ))); STM32_I2C_CR1_ACK_SET( (_reg), 0 ); cpu_mem_write_32( ( ((((pv->addr)))) + (STM32_I2C_CR1_ADDR) ), endian_le32(_reg) ); } while (0);
+                    do { uint32_t register _reg = endian_le32(cpu_mem_read_32(( ((((pv->addr)))) + (STM32_I2C_CR1_ADDR) ))); STM32_I2C_CR1_POS_SET( (_reg), 1 ); cpu_mem_write_32( ( ((((pv->addr)))) + (STM32_I2C_CR1_ADDR) ), endian_le32(_reg) ); } while (0);
                     pv->state = STM32_I2C_S_READ_2_BYTES;
                     break;
                 }
@@ -422,7 +421,7 @@ stm32_i2c_run(struct stm32_i2c_private_s *pv)
                 pv->state = STM32_I2C_S_WRITE_N_BYTES;
 
             /* clear address flag. */
-            (void) DEVICE_REG_VALUE_DEV(I2C, pv->addr, SR2);
+            (void) endian_le32(cpu_mem_read_32(( (((pv->addr))) + (STM32_I2C_SR2_ADDR) )));
 
             break;
 
@@ -476,7 +475,7 @@ stm32_i2c_run(struct stm32_i2c_private_s *pv)
             way = tr->type;
 
             /* disable buffer events. */
-            DEVICE_REG_FIELD_CLR_DEV(I2C, pv->addr, CR2, ITBUFEN);
+            do { uint32_t register _reg = endian_le32(cpu_mem_read_32(( ((((pv->addr)))) + (STM32_I2C_CR2_ADDR) ))); STM32_I2C_CR2_ITBUFEN_SET( (_reg), 0 ); cpu_mem_write_32( ( ((((pv->addr)))) + (STM32_I2C_CR2_ADDR) ), endian_le32(_reg) ); } while (0);
 
             /* go next. */
             if ((tr = stm32_i2c_next_transfer(rq)) == NULL)
@@ -497,7 +496,7 @@ stm32_i2c_run(struct stm32_i2c_private_s *pv)
             /* restart on way change. */
             if (tr->type != way)
             {
-                DEVICE_REG_FIELD_CLR_DEV(I2C, pv->addr, CR2, ITBUFEN);
+                do { uint32_t register _reg = endian_le32(cpu_mem_read_32(( ((((pv->addr)))) + (STM32_I2C_CR2_ADDR) ))); STM32_I2C_CR2_ITBUFEN_SET( (_reg), 0 ); cpu_mem_write_32( ( ((((pv->addr)))) + (STM32_I2C_CR2_ADDR) ), endian_le32(_reg) ); } while (0);
                 pv->state = STM32_I2C_S_START;
             }
             else
@@ -517,10 +516,10 @@ stm32_i2c_run(struct stm32_i2c_private_s *pv)
             /* if we have just written the last byte, wait for BTF=1. */
             tr = &rq->transfer[rq->error_transfer-1];
             if (rq->error_offset > 0 && tr->type == DEV_I2C_WRITE &&
-                !DEVICE_REG_FIELD_VALUE_DEV(I2C, pv->addr, SR1, BTF))
+                !STM32_I2C_SR1_BTF_GET( endian_le32(cpu_mem_read_32(( ((((pv->addr)))) + (STM32_I2C_SR1_ADDR) ))) ))
                 return 0;
 
-            DEVICE_REG_FIELD_SET_DEV(I2C, pv->addr, CR1, STOP);
+            do { uint32_t register _reg = endian_le32(cpu_mem_read_32(( ((((pv->addr)))) + (STM32_I2C_CR1_ADDR) ))); STM32_I2C_CR1_STOP_SET( (_reg), 1 ); cpu_mem_write_32( ( ((((pv->addr)))) + (STM32_I2C_CR1_ADDR) ), endian_le32(_reg) ); } while (0);
 
             pv->state = STM32_I2C_S_FINALIZE;
             /* continue. */
@@ -530,7 +529,7 @@ stm32_i2c_run(struct stm32_i2c_private_s *pv)
 
             /* active wait that the controller leaves the Master mode (i.e. MSL
                bit set). */
-            while (DEVICE_REG_FIELD_VALUE_DEV(I2C, pv->addr, SR2, MSL));
+            while (STM32_I2C_SR2_MSL_GET( endian_le32(cpu_mem_read_32(( ((((pv->addr)))) + (STM32_I2C_SR2_ADDR) ))) ));
 
             pv->state = STM32_I2C_S_IDLE;
             goto transfer_done;
@@ -561,11 +560,11 @@ DEV_IRQ_SRC_PROCESS(stm32_i2c_irq)
   while (1)
     {
       /* get interurpt flags */
-      uint32_t status = DEVICE_REG_VALUE_DEV(I2C, pv->addr, SR1);
+      uint32_t status = endian_le32(cpu_mem_read_32(( (((pv->addr))) + (STM32_I2C_SR1_ADDR) )));
       status &= STM32_I2C_IRQ_MASK;
 
       /* clear errors. */
-      DEVICE_REG_UPDATE_DEV(I2C, pv->addr, SR1, 0);
+      cpu_mem_write_32( ( (((pv->addr))) + (STM32_I2C_SR1_ADDR) ), endian_le32(0) );
 
       if (status == 0 || rq == NULL)
         break;
@@ -656,15 +655,15 @@ static DEV_INIT(stm32_i2c_init)
     goto err_mem;
 
   /* if the bus is busy, fix blocked state using a soft reset. */
-  if (DEVICE_REG_FIELD_VALUE_DEV(I2C, pv->addr, SR2, BUSY))
+  if (STM32_I2C_SR2_BUSY_GET( endian_le32(cpu_mem_read_32(( ((((pv->addr)))) + (STM32_I2C_SR2_ADDR) ))) ))
     {
-      DEVICE_REG_FIELD_SET_DEV(I2C, pv->addr, CR1, SWRST);
-      DEVICE_REG_FIELD_CLR_DEV(I2C, pv->addr, CR1, SWRST);
+      do { uint32_t register _reg = endian_le32(cpu_mem_read_32(( ((((pv->addr)))) + (STM32_I2C_CR1_ADDR) ))); STM32_I2C_CR1_SWRST_SET( (_reg), 1 ); cpu_mem_write_32( ( ((((pv->addr)))) + (STM32_I2C_CR1_ADDR) ), endian_le32(_reg) ); } while (0);
+      do { uint32_t register _reg = endian_le32(cpu_mem_read_32(( ((((pv->addr)))) + (STM32_I2C_CR1_ADDR) ))); STM32_I2C_CR1_SWRST_SET( (_reg), 0 ); cpu_mem_write_32( ( ((((pv->addr)))) + (STM32_I2C_CR1_ADDR) ), endian_le32(_reg) ); } while (0);
     }
 
   /* reset the device. */
-  DEVICE_REG_UPDATE_DEV(I2C, pv->addr, CR1, 0);
-  DEVICE_REG_UPDATE_DEV(I2C, pv->addr, CR2, 0);
+  cpu_mem_write_32( ( (((pv->addr))) + (STM32_I2C_CR1_ADDR) ), endian_le32(0) );
+  cpu_mem_write_32( ( (((pv->addr))) + (STM32_I2C_CR2_ADDR) ), endian_le32(0) );
 
   /* configure GPIO with pull-up on SCL/SDA lines. */
   if (device_iomux_setup(dev, ",scl ,sda", NULL, NULL, NULL))
@@ -678,22 +677,22 @@ static DEV_INIT(stm32_i2c_init)
   dev_request_queue_init(&pv->queue);
 
   /* enable error interrupts. */
-  DEVICE_REG_FIELD_SET_DEV(I2C, pv->addr, CR2, ITERREN);
+  do { uint32_t register _reg = endian_le32(cpu_mem_read_32(( ((((pv->addr)))) + (STM32_I2C_CR2_ADDR) ))); STM32_I2C_CR2_ITERREN_SET( (_reg), 1 ); cpu_mem_write_32( ( ((((pv->addr)))) + (STM32_I2C_CR2_ADDR) ), endian_le32(_reg) ); } while (0);
 
   freq_in_mhz = (uint64_t)pv->busfreq.num / (1000000ULL * pv->busfreq.denom);
-  DEVICE_REG_FIELD_UPDATE_DEV(I2C, pv->addr, CR2, FREQ, freq_in_mhz);
+  do { uint32_t register _reg = endian_le32(cpu_mem_read_32(( ((((pv->addr)))) + (STM32_I2C_CR2_ADDR) ))); STM32_I2C_CR2_FREQ_SET( (_reg), freq_in_mhz ); cpu_mem_write_32( ( ((((pv->addr)))) + (STM32_I2C_CR2_ADDR) ), endian_le32(_reg) ); } while (0);
 
   /* set standard mode. */
-  DEVICE_REG_FIELD_UPDATE_DEV(I2C, pv->addr, CCR, FS, SM);
+  do { uint32_t register _reg = endian_le32(cpu_mem_read_32(( ((((pv->addr)))) + (STM32_I2C_CCR_ADDR) ))); STM32_I2C_CCR_FS_SET( (_reg), SM ); cpu_mem_write_32( ( ((((pv->addr)))) + (STM32_I2C_CCR_ADDR) ), endian_le32(_reg) ); } while (0);
 
   /* initialize the I2C bus speed (100kHz in standard mode). */
-  DEVICE_REG_FIELD_UPDATE_DEV(I2C, pv->addr, CCR, CCR, 5 * freq_in_mhz);
+  do { uint32_t register _reg = endian_le32(cpu_mem_read_32(( ((((pv->addr)))) + (STM32_I2C_CCR_ADDR) ))); STM32_I2C_CCR_CCR_SET( (_reg), 5 * freq_in_mhz ); cpu_mem_write_32( ( ((((pv->addr)))) + (STM32_I2C_CCR_ADDR) ), endian_le32(_reg) ); } while (0);
 
   /* initialize the rise time (p. 491 of Reference manual). */
-  DEVICE_REG_UPDATE_DEV(I2C, pv->addr, TRISE, freq_in_mhz + 1);
+  cpu_mem_write_32( ( (((pv->addr))) + (STM32_I2C_TRISE_ADDR) ), endian_le32(freq_in_mhz + 1) );
 
   /* enable I2C device. */
-  DEVICE_REG_FIELD_SET_DEV(I2C, pv->addr, CR1, PE);
+  do { uint32_t register _reg = endian_le32(cpu_mem_read_32(( ((((pv->addr)))) + (STM32_I2C_CR1_ADDR) ))); STM32_I2C_CR1_PE_SET( (_reg), 1 ); cpu_mem_write_32( ( ((((pv->addr)))) + (STM32_I2C_CR1_ADDR) ), endian_le32(_reg) ); } while (0);
 
   dev->drv    = &stm32_i2c_ctrl_drv;
   dev->drv_pv = pv;
@@ -714,9 +713,9 @@ DEV_CLEANUP(stm32_i2c_cleanup)
   pv = dev->drv_pv;
 
   /* disable I2C device. */
-  DEVICE_REG_UPDATE_DEV(I2C, pv->addr, CR1, 0);
-  DEVICE_REG_UPDATE_DEV(I2C, pv->addr, CR2, 0);
-  DEVICE_REG_UPDATE_DEV(I2C, pv->addr, CCR, 0);
+  cpu_mem_write_32( ( (((pv->addr))) + (STM32_I2C_CR1_ADDR) ), endian_le32(0) );
+  cpu_mem_write_32( ( (((pv->addr))) + (STM32_I2C_CR2_ADDR) ), endian_le32(0) );
+  cpu_mem_write_32( ( (((pv->addr))) + (STM32_I2C_CCR_ADDR) ), endian_le32(0) );
 
   /* clean up irqs. */
   device_irq_source_unlink(dev, pv->irq_ep, 2);

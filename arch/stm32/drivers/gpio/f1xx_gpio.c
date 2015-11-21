@@ -39,7 +39,6 @@
 #include <arch/stm32f1xx_rcc.h>
 #include <arch/stm32_exti.h>
 
-#include <cpp/device/helpers.h>
 #include <arch/stm32_memory_map.h>
 
 #include <arch/stm32f1xx_remap.h>
