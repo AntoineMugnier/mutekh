@@ -50,24 +50,21 @@ struct stm32_spi_private_s
   struct dev_irq_src_s           irq_ep;
   struct dev_spi_ctrl_transfer_s *tr;
 
-  uint_fast8_t                   fifo_lvl;
-
 #ifdef CONFIG_DEVICE_SPI_REQUEST
   struct dev_spi_ctrl_queue_s    queue;
 #endif
 
   struct dev_freq_s              busfreq;
-  uint32_t                       bit_rate;
 };
 
 static
 error_t stm32_spi_update_bitrate(struct stm32_spi_private_s *pv,
-                                 uint32_t                   *bit_rate)
+                                 uint32_t bit_rate)
 {
-  if (*bit_rate == 0)
+  if (bit_rate == 0)
     return -EINVAL;
 
-  uint32_t const div = pv->busfreq.num / (*bit_rate * pv->busfreq.denom);
+  uint32_t const div = pv->busfreq.num / (bit_rate * pv->busfreq.denom);
   if (div == 0)
     return -EINVAL;
 
@@ -80,9 +77,6 @@ error_t stm32_spi_update_bitrate(struct stm32_spi_private_s *pv,
 
   if (logval > 8)
     return -ERANGE;
-
-  pv->bit_rate = (uint64_t)pv->busfreq.num / ((uint64_t)pv->busfreq.denom << logval);
-  *bit_rate = pv->bit_rate;
 
   uintptr_t a = pv->addr + STM32_SPI_CR1_ADDR;
   uint32_t  x = endian_le32(cpu_mem_read_32(a));
@@ -108,13 +102,6 @@ DEV_SPI_CTRL_CONFIG(stm32_spi_config)
       goto cfg_end;
     }
 
-  /* check data frame size */
-  if (cfg->word_width != 8 && cfg->word_width != 16)
-    {
-      err = -ENOTSUP;
-      goto cfg_end;
-    }
-
   /* check mosi/miso polarity */
   if (cfg->miso_pol != DEV_SPI_CS_ACTIVE_HIGH ||
       cfg->mosi_pol != DEV_SPI_CS_ACTIVE_HIGH)
@@ -124,7 +111,7 @@ DEV_SPI_CTRL_CONFIG(stm32_spi_config)
     }
 
   /* bitrate */
-  err = stm32_spi_update_bitrate(pv, &cfg->bit_rate);
+  err = stm32_spi_update_bitrate(pv, cfg->bit_rate);
   if (err)
     goto cfg_end;
 
@@ -132,15 +119,24 @@ DEV_SPI_CTRL_CONFIG(stm32_spi_config)
   uint32_t  x = endian_le32(cpu_mem_read_32(a));
 
   /* data width. */
-  if (cfg->word_width == 16)
-    STM32_SPI_CR1_DFF_SET(a, 8_BITS);
+  switch (cfg->word_width)
+    {
+    case 8:
+      STM32_SPI_CR1_DFF_SET(a, 8_BITS);
+      break;
+    case 16:
+      STM32_SPI_CR1_DFF_SET(a, 16_BITS);
+      break;
+    default:
+      err = -ENOTSUP;
+      goto cfg_end;
+    }
 
   /* clock */
   switch (cfg->ck_mode)
     {
     default:
-      assert(!"unreachable state");
-      break;
+      UNREACHABLE();
 
     case DEV_SPI_CK_MODE_0:
       STM32_SPI_CR1_CPHA_SET(x, FIRST_TRANS);
@@ -176,7 +172,7 @@ cfg_end:
 }
 
 static
-bool_t stm32_spi_transfer_tx(struct device_s *dev);
+void stm32_spi_transfer_tx(struct device_s *dev);
 
 static
 bool_t stm32_spi_transfer_rx(struct device_s *dev)
@@ -184,102 +180,66 @@ bool_t stm32_spi_transfer_rx(struct device_s *dev)
   struct stm32_spi_private_s     *pv = dev->drv_pv;
   struct dev_spi_ctrl_transfer_s *tr = pv->tr;
 
-  while (pv->fifo_lvl > 0)
-   {
-      uint32_t x = cpu_mem_read_32(pv->addr + STM32_SPI_SR_ADDR)
-                    & endian_le32(STM32_SPI_SR_RXNE);
+  uint32_t w = endian_le32(cpu_mem_read_32(pv->addr + STM32_SPI_DR_ADDR));
 
-      if (!x)
-        return 0;
-
-      uint32_t w = endian_le32(cpu_mem_read_32(pv->addr + STM32_SPI_DR_ADDR));
-
-      --pv->fifo_lvl;
-
+  if (tr->in != NULL)
+    {
       switch (tr->in_width)
         {
         case 1:
-          *(uint8_t *)tr->in = w & 0xff;
+          *(uint8_t *)tr->in = w;
           break;
         case 2:
-          *(uint16_t *)tr->in = w & 0xffff;
+          *(uint16_t *)tr->in = w;
+          break;
+        case 4:
+          *(uint32_t *)tr->in = w;
           break;
         }
 
       tr->in = (void *)((uint8_t *)tr->in + tr->in_width);
     }
 
-  /* disable rx irq. */
-  uintptr_t a = pv->addr + STM32_SPI_CR2_ADDR;
-  uint32_t  x = endian_le32(cpu_mem_read_32(a));
-  STM32_SPI_CR2_RXNEIE_SET(x, 0);
-  cpu_mem_write_32(a, endian_le32(x));
+  bool_t end = !tr->count;
 
-  if (tr->count > 0)
-    return stm32_spi_transfer_tx(dev);
+  if (!end)
+    stm32_spi_transfer_tx(dev);
 
-  pv->tr = NULL;
-
-  return 1;
+  return end;
 }
 
 static
-bool_t stm32_spi_transfer_tx(struct device_s *dev)
+void stm32_spi_transfer_tx(struct device_s *dev)
 {
   struct stm32_spi_private_s     *pv = dev->drv_pv;
   struct dev_spi_ctrl_transfer_s *tr = pv->tr;
 
-  while (pv->fifo_lvl < 1)
+  uint32_t w = 0;
+
+  switch (tr->out_width)
     {
-      uint32_t x = cpu_mem_read_32(pv->addr + STM32_SPI_SR_ADDR)
-                     & endian_le32(STM32_SPI_SR_TXE);
-
-      uintptr_t a = pv->addr + STM32_SPI_CR2_ADDR;
-      if (!x)
-        {
-          /* enable tx irq. */
-          x = endian_le32(cpu_mem_read_32(a));
-          STM32_SPI_CR2_TXEIE_SET(x, 1);
-          cpu_mem_write_32(a, endian_le32(x));
-          return 0;
-        }
-
-      /* clear tx irq and enable rx irq. */
-      x = endian_le32(cpu_mem_read_32(a));
-      STM32_SPI_CR2_TXEIE_SET(x, 0);
-      STM32_SPI_CR2_RXNEIE_SET(x, 1);
-      cpu_mem_write_32(a, endian_le32(x));
-
-      uint32_t w = 0;
-
-      switch (tr->out_width)
-       {
-        case 1:
-          w = *(const uint8_t *)tr->out;
-          break;
-        case 2:
-          w = *(const uint16_t *)tr->out;
-          break;
-        }
-
-      cpu_mem_write_32(pv->addr + STM32_SPI_DR_ADDR, endian_le32(w));
-
-      tr->out = (const void *)((const uint8_t *)tr->out + tr->out_width);
-
-      --tr->count;
-      ++pv->fifo_lvl;
+    case 1:
+      w = *(const uint8_t *)tr->out;
+      break;
+    case 2:
+      w = *(const uint16_t *)tr->out;
+      break;
+    case 0:
+    case 4:
+      w = *(const uint32_t*)tr->out;
+      break;
     }
 
-  if (pv->fifo_lvl > 0)
-    return stm32_spi_transfer_rx(dev);
+  cpu_mem_write_32(pv->addr + STM32_SPI_DR_ADDR, endian_le32(w));
 
-  return 0;
+  tr->out = (const void *)((const uint8_t *)tr->out + tr->out_width);
+
+  --tr->count;
 }
 
 static
 DEV_IRQ_SRC_PROCESS(stm32_spi_irq)
 {
-
   struct device_s            *dev = ep->base.dev;
   struct stm32_spi_private_s *pv  = dev->drv_pv;
 
@@ -290,28 +250,22 @@ DEV_IRQ_SRC_PROCESS(stm32_spi_irq)
       uintptr_t a = pv->addr + STM32_SPI_SR_ADDR;
       uint32_t  x = endian_le32(cpu_mem_read_32(a));
 
-      if (!(x & (STM32_SPI_SR_RXNE | STM32_SPI_SR_TXE)))
+      // printk("spi irq%08x\n", x);
+      if (!(x & STM32_SPI_SR_RXNE))
         break;
 
       struct dev_spi_ctrl_transfer_s *tr = pv->tr;
       if (tr == NULL)
-        break;
-
-      bool_t done = 0;
-
-      if (pv->fifo_lvl < 1 && (x & STM32_SPI_SR_TXE))
-        done = stm32_spi_transfer_tx(dev);
-
-      if (pv->fifo_lvl > 0 && (x & STM32_SPI_SR_RXNE))
-        done = stm32_spi_transfer_rx(dev);
-
-      if (done)
         {
+          cpu_mem_read_32(pv->addr + STM32_SPI_DR_ADDR);
+        }
+      else if (stm32_spi_transfer_rx(dev))
+        {
+          pv->tr = NULL;
           lock_release(&dev->lock);
           kroutine_exec(&tr->kr);
           lock_spin(&dev->lock);
         }
-
     }
 
   lock_release(&dev->lock);
@@ -325,11 +279,8 @@ DEV_SPI_CTRL_SELECT(stm32_spi_select)
 
   error_t err = 0;
 
-  if (cs_id > 0)
+  if (cs_id > 0 || !pv->use_cs)
     return -ENOTSUP;
-
-  if (!pv->use_cs)
-    return 0;
 
   uintptr_t a = pv->addr + STM32_SPI_CR2_ADDR;
   uint32_t  x = endian_le32(cpu_mem_read_32(a));
@@ -384,26 +335,21 @@ DEV_SPI_CTRL_TRANSFER(stm32_spi_transfer)
   struct device_s *dev = accessor->dev;
   struct stm32_spi_private_s *pv = dev->drv_pv;
 
-  bool_t done = 1;
+  assert(tr->count > 0);
+  tr->err = -EBUSY;
 
   LOCK_SPIN_IRQ(&dev->lock);
 
-  if (pv->tr != NULL)
-    tr->err = -EBUSY;
-  else
+  if (pv->tr == NULL)
     {
-      assert(tr->count > 0);
       tr->err = 0;
       pv->tr = tr;
-
-      done = stm32_spi_transfer_tx(dev);
+      stm32_spi_transfer_tx(dev);
     }
-
- end:
 
   LOCK_RELEASE_IRQ(&dev->lock);
 
-  if (done)
+  if (tr->err)
     kroutine_exec(&tr->kr);
 }
 
@@ -454,10 +400,6 @@ static DEV_INIT(stm32_spi_init)
     goto err_mem;
 #endif
 
-  /* disable and clear irqs */
-  cpu_mem_write_32(pv->addr + STM32_SPI_CR2_ADDR, 0);
-  cpu_mem_write_32(pv->addr + STM32_SPI_SR_ADDR, 0);
-
   /* disable device. */
   cpu_mem_write_32(pv->addr + STM32_SPI_CR1_ADDR, 0);
 
@@ -482,15 +424,21 @@ static DEV_INIT(stm32_spi_init)
   if (device_irq_source_link(dev, &pv->irq_ep, 1, -1))
     goto err_mem;
 
-  /* setup bit rate */
-  //uint32_t bit_rate = 500000;
-  //if(stm32_spi_update_bitrate(pv, &bit_rate))
-  //  goto err_mem;
-
   /* enable the spi with rx and tx enabled in master mode. */
   STM32_SPI_CR1_SPE_SET(cr1, 1);
   STM32_SPI_CR1_MSTR_SET(cr1, MASTER);
+
+  STM32_SPI_CR1_BR_SET(cr1, PCLK_DIV_256);
+
   cpu_mem_write_32(pv->addr + STM32_SPI_CR1_ADDR, endian_le32(cr1));
+
+  /* flush rx */
+  while (cpu_mem_read_32(pv->addr + STM32_SPI_SR_ADDR)
+         & endian_le32(STM32_SPI_SR_RXNE | STM32_SPI_SR_OVR))
+    cpu_mem_read_32(pv->addr + STM32_SPI_DR_ADDR);
+
+  /* enable rx irqs */
+  cpu_mem_write_32(pv->addr + STM32_SPI_CR2_ADDR, STM32_SPI_CR2_RXNEIE);
 
   dev->drv    = &stm32_spi_drv;
   dev->drv_pv = pv;
