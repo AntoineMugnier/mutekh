@@ -148,18 +148,23 @@ extern CPU_LOCAL void *cpu_preempt_param;
 
 /** @This sets a preemption handler function local to the executing
     processor. The preemtion handler pointer is reset to @tt NULL on
-    each exception entry and can be setup by the exception handler when
-    context preemption is needed on exception return.
+    each exception entry and can be setup from an interrupt handler when
+    context preemption is needed on interrupt return.
 
-    This function must only be called from within @ref
-    cpu_syscall_handler_t, @ref cpu_exception_handler_t or @ref
-    cpu_interrupt_handler_t functions or nested calls.
+    This function returns an error if a handler has already been set
+    during the current interrupt or if it is not called from an
+    interrupt handler. This function must be called with interrupts
+    disabled.
 
     @see #CONTEXT_PREEMPT */
-ALWAYS_INLINE void context_set_preempt(context_preempt_t *func, void *param)
+ALWAYS_INLINE error_t context_set_preempt(context_preempt_t *func, void *param)
 {
-  CPU_LOCAL_SET(cpu_preempt_handler, func);
+  context_preempt_t **f = CPU_LOCAL_ADDR(cpu_preempt_handler);
+  if (*f != NULL)
+    return -EBUSY;
+  *f = func;
   CPU_LOCAL_SET(cpu_preempt_param, param);
+  return 0;
 }
 # endif
 

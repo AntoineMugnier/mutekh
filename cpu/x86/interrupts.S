@@ -339,9 +339,12 @@ FUNC_START(.text, x86_fault_entry)
         // check if a preempt handler has been registered
         mov     CLS_SEG(:) (cpu_preempt_handler), %edx
         test    %edx, %edx
-        jz      1f
+        jz      2f
 
         X86_PREEMPT
+2:
+        // invalidate handler outside interrupt
+        movl    $1, CLS_SEG(:) (cpu_preempt_handler)
 #endif
 1:
 #ifdef CONFIG_HEXO_USERMODE

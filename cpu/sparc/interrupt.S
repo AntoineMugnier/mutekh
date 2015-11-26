@@ -327,7 +327,7 @@ FUNC_START(.text, sparc_except_restore)
 
         // got pointer to context to switch to ?
         tst     %o0
-        beq     1f
+        beq     2f
         // save all registers available from this exception window
         st      %l0,    [%g5 + CPU_SPARC_CONTEXT_Y]
         st      %l1,    [%g5 + CPU_SPARC_CONTEXT_PC]
@@ -368,7 +368,10 @@ FUNC_START(.text, sparc_except_restore)
         // switch to new context
         b       cpu_context_jumpto
         st      %l0, [%g5 + CPU_SPARC_CONTEXT_SAVE_MASK]
-1:      
+1:
+        // invalidate handler outside interrupt
+        CPU_LOCAL_st    cpu_preempt_handler, %g5, %o0
+2:
 #endif
         
         // restore caller saved registers

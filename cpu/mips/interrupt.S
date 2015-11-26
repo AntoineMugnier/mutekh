@@ -360,13 +360,13 @@ mips_preempt_and_restore:
 
         // check if a preempt handler has been registered
         CPU_LOCAL_op lw    cpu_preempt_handler, $1, $1
-        beq     $1,     $0,     mips_restore
+        beq     $1,     $0,     2f
 
         // call preempt handler
         jalr    $1
 
         // got pointer to context to switch to ?
-        beq     $2,     $0,     mips_restore
+        beq     $2,     $0,     3f
 
         // save callee saved registers
         .irp    r, 17, 18, 19, 20, 21, 22, 23
@@ -413,9 +413,12 @@ mips_preempt_and_restore:
 
         // switch to new context
         b       cpu_context_jumpto
-#endif
 
-mips_restore:
+2:
+        // invalidate handler outside interrupt
+        CPU_LOCAL_op sw    cpu_preempt_handler, $sp, $1
+3:
+#endif
 
 #if (defined(CONFIG_HEXO_FPU) && !defined(CONFIG_RELEASE)) || defined(CONFIG_HEXO_CONTEXT_NESTED)
         // we need to restore the status either because the fpu have

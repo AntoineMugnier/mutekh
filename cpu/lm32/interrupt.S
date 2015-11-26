@@ -174,9 +174,9 @@ FUNC_START(.text, lm32_restore_preempt)
 #ifdef CONFIG_HEXO_CONTEXT_PREEMPT
 
         // check if a preempt handler has been registered
-        seta    r1, cpu_preempt_handler
-        lw      r1, (r1+0)
-        be      r1,     r0,     1f
+        seta    r2, cpu_preempt_handler
+        lw      r1, (r2+0)
+        be      r1,     r0,     2f
 
         // call preempt handler
         call    r1
@@ -211,7 +211,10 @@ FUNC_START(.text, lm32_restore_preempt)
 
         // switch to new context
         bi      cpu_context_jumpto
-1:      
+2:
+        // invalidate handler outside interrupt
+        sw      (r2+0), r2
+1:
 #endif
 
         // restore regs

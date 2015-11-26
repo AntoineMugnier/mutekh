@@ -209,6 +209,10 @@ FUNC_START(.text, arm_exc_irq)
     CPU_LOCAL_ld cpu_preempt_handler, r2, r3
     movs   r2, r2
     bne    1f
+
+    /* invalidate handler outside interrupt */
+    mov    r3, #1
+    CPU_LOCAL_st cpu_preempt_handler, r1, r2, r3
 # endif
 
 2:

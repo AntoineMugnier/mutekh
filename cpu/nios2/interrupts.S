@@ -184,7 +184,7 @@ nios2_preempt_and_restore:
 
         // check if a preempt handler has been registered
         CPU_LOCAL_op ldw cpu_preempt_handler, r1, r1
-        beq     r0,     r1,     1f
+        beq     r0,     r1,     2f
 
         // call preempt handler
         callr   r1
@@ -210,6 +210,9 @@ nios2_preempt_and_restore:
         stw     r1,             CPU_NIOS2_CONTEXT_SAVE_MASK(r24)
 
         jmpi    cpu_context_jumpto
+2:
+        // invalidate handler outside interrupt
+        CPU_LOCAL_op stw     cpu_preempt_handler, r24, r1
 1:
 #endif
 

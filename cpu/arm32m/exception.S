@@ -315,10 +315,10 @@ FUNC_END(arm_exc_svcall)
 FUNC_START(.text, arm_exc_preempt)        /* args: r1 = &arm_context_regs + 16 */
 
         /* check if a preempt handler has been registered */
-        ldr     r0,     = cpu_preempt_handler
-        ldr     r0,     [r0]
+        ldr     r2,     = cpu_preempt_handler
+        ldr     r0,     [r2]
         tst     r0,     r0
-        beq     1f
+        beq     2f
 
         /* call preempt handler */
         push    {r1}
@@ -366,7 +366,9 @@ FUNC_START(.text, arm_exc_preempt)        /* args: r1 = &arm_context_regs + 16 *
         ldr     r1,     = 0x01000000      /* xpsr: stack 8 bytes aligned, exception number is 0 */
         push    {r0, r1}
         sub     sp,     #24
-
+2:
+        // invalidate handler outside interrupt
+        str     r2,     [r2]
 1:
         /* regular return from irq */
         ldr     r1,     = 0xfffffff9

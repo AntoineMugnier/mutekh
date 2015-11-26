@@ -270,7 +270,7 @@
 
         // got pointer to context to switch to ?
         and.    3,      3,      3
-        beq     2f
+        beq     3f
 
         // save callee saved registers r14 to r31
         stmw    14,             CPU_PPC_CONTEXT_GPR(14)(2)
@@ -311,6 +311,9 @@
         // switch to new context
         b       cpu_context_jumpto
 2:
+        // invalidate handler outside interrupt
+        CPU_LOCAL_op       stw     cpu_preempt_handler, 1, 10
+3:
 #endif
 .endm
 
