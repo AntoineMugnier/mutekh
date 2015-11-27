@@ -1,0 +1,18 @@
+%set OUTPUT_NAME scanner
+%append MODULES app:$(CONFIGPATH)
+
+CONFIG_COMPILE_COLLECT
+CONFIG_COMPILE_DEBUG
+CONFIG_MUTEK_THREAD
+
+CONFIG_LICENSE_APP_BSD
+
+# Libs
+CONFIG_APP_START
+
+%inherit ble-central
+%inherit printk
+
+%include arch/arch.build
+%include scripts/options.build
+%include examples/ble/ble.build
