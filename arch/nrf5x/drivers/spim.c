@@ -41,9 +41,15 @@ struct nrf5x_spim_context_s
 
   size_t offset;
 
+  union {
+    uint8_t byte[16];
+    uint32_t word[4];
+  } buffer;
+
   struct dev_irq_src_s irq_ep[1];
   struct dev_spi_ctrl_transfer_s *current_transfer;
-  bool_t callbacking;
+  bool_t callbacking : 1;
+  bool_t from_rom : 1;
 
 #ifdef CONFIG_DEVICE_SPI_REQUEST
   struct dev_spi_ctrl_queue_s queue;
@@ -120,6 +126,19 @@ static void nrf5x_spim_next_start(struct nrf5x_spim_context_s *pv)
   in = (uintptr_t)tr->in + pv->offset;
   out = (uintptr_t)tr->out + pv->offset;
   count = __MIN(255, tr->count - pv->offset);
+
+  if (in < 0x20000000) {
+    uintptr_t offset = in % sizeof(pv->buffer);
+    uint32_t *src = (uint32_t *)(in - offset);
+
+    for (uint8_t i = 0; i < sizeof(pv->buffer) / 4; ++i)
+      pv->buffer.word[i] = src[i];
+
+    in = (uintptr_t)pv->buffer.byte + offset;
+    count = __MIN(count, sizeof(pv->buffer) - offset);
+
+    pv->from_rom = 1;
+  }
 
   nrf_reg_set(pv->addr, NRF_SPIM_RXD_PTR, in);
   nrf_reg_set(pv->addr, NRF_SPIM_RXD_LIST, NRF_SPIM_RXD_LIST_DISABLED);
