@@ -41,6 +41,20 @@
 #include <ble/uuid.h>
 #include <ble/protocol/att.h>
 
+/**
+   Attribute layer.
+
+   Opcodes necessitating a response are handled through request tasks.
+
+   Unacknowledged opcodes are forwarded as simple packets with
+   relevant attribute id set in address.
+
+   When attribute layer receives a data packet from upper layers, it
+   is converted either to a notification packet (if attribute id is
+   set in source address) or a write without response packet (if
+   attribute id is set in destination address).
+ */
+
 struct net_layer_s;
 struct net_scheduler_s;
 
@@ -275,9 +289,7 @@ STRUCT_COMPOSE(ble_att_read_by_group_type_task_s, base);
    Task type may be:
    @list
    @item @tt BLE_ATT_WRITE_TASK,
-   @item @tt BLE_ATT_WRITE_NO_RSP_TASK,
    @item @tt BLE_ATT_WRITE_PREPARED_TASK,
-   @item @tt BLE_ATT_NOTIFICATION_TASK,
    @item @tt BLE_ATT_INDICATION_TASK.
    @end list
 */

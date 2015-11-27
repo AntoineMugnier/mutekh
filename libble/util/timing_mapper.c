@@ -28,10 +28,10 @@
 static uint32_t cu_tk(struct ble_timing_mapper_s *tm, uint32_t units);
 static uint32_t cu_ww_tk(struct ble_timing_mapper_s *tm, uint32_t units);
 
-error_t ble_timing_mapper_init(struct ble_timing_mapper_s *tm,
-                               struct device_timer_s *timer,
-                               const struct ble_adv_connect_s *connect,
-                               dev_timer_value_t reference)
+error_t ble_timing_mapper_slave_init(struct ble_timing_mapper_s *tm,
+                                     struct device_timer_s *timer,
+                                     const struct ble_adv_connect_s *connect,
+                                     dev_timer_value_t reference)
 {
   dev_timer_delay_t conn_packet_tk;
 
@@ -41,7 +41,7 @@ error_t ble_timing_mapper_init(struct ble_timing_mapper_s *tm,
 
   tm->master_sca = connect->sca;
   tm->pending = connect->timing;
-  tm->last_event = -1;
+  tm->last_event = 0;
   tm->update_instant = 0;
   tm->update_pending = 1;
 
@@ -62,6 +62,43 @@ error_t ble_timing_mapper_init(struct ble_timing_mapper_s *tm,
   tm->pending_win_size = connect->win_size;
 
   tm->last_anchor = reference - tm->imprecision_tk + conn_packet_tk;
+  tm->drops_at = tm->last_anchor + cu_tk(tm, tm->pending.interval * 7 + tm->pending_win_offset);
+
+  return 0;
+}
+
+error_t ble_timing_mapper_master_init(struct ble_timing_mapper_s *tm,
+                                      struct device_timer_s *timer,
+                                      const struct ble_adv_connect_s *connect,
+                                      dev_timer_value_t reference)
+{
+  dev_timer_delay_t conn_packet_tk;
+
+  memset(tm, 0, sizeof(*tm));
+
+  device_copy_accessor(&tm->timer, timer);
+
+  tm->master_sca = 0;
+  tm->pending = connect->timing;
+  tm->last_event = 0;
+  tm->update_instant = 0;
+  tm->update_pending = 1;
+  tm->imprecision_tk = 0;
+
+  dev_timer_init_sec_round(&tm->timer, &tm->pending_timeout_tk,
+                           NULL, tm->pending.timeout, 100);
+
+  dev_timer_init_sec_ceil(&tm->timer, &tm->min_conn_event_tk,
+                          NULL, BLE_PACKET_TIME(CONFIG_BLE_PACKET_SIZE)
+                          + 16 + BLE_T_IFS * 2, 1000000);
+
+  dev_timer_init_sec_ceil(&tm->timer, &conn_packet_tk,
+                          NULL, BLE_PACKET_TIME(34), 1000000);
+
+  tm->pending_win_offset = connect->win_offset + 1;
+  tm->pending_win_size = connect->win_size;
+
+  tm->last_anchor = reference + conn_packet_tk;
   tm->drops_at = tm->last_anchor + cu_tk(tm, tm->pending.interval * 7 + tm->pending_win_offset);
 
   return 0;
@@ -92,47 +129,31 @@ void ble_timing_mapper_event_set(struct ble_timing_mapper_s *tm,
   tm->drops_at = anchor + tm->timeout_tk;
 }
 
-static
-void timing_window_get(struct ble_timing_mapper_s *tm,
-                       uint16_t event,
-                       uint32_t *to_event_unit,
-                       dev_timer_delay_t *transmit_window_tk,
-                       dev_timer_delay_t *event_duration_tk)
+void ble_timing_mapper_window_master_get(struct ble_timing_mapper_s *tm,
+                                         uint16_t event,
+                                         dev_timer_value_t *begin,
+                                         dev_timer_value_t *end,
+                                         dev_timer_delay_t *max_dur)
 {
+  uint32_t to_event_unit;
   uint16_t delta = event - tm->last_event;
   int16_t after_update = event - tm->update_instant;
 
   if (tm->update_pending && after_update >= 0) {
-    *to_event_unit = (delta - after_update) * tm->current.interval
+    to_event_unit = (delta - after_update) * tm->current.interval
       + tm->pending_win_offset
-      + after_update * tm->pending.interval;
+      + after_update * tm->pending.interval
+      + tm->pending_win_size / 2;
 
-    *transmit_window_tk = cu_tk(tm, tm->pending_win_size);
-    *event_duration_tk = cu_tk(tm, tm->pending.interval);
+    *max_dur = cu_tk(tm, tm->pending.interval);
   } else {
-    *to_event_unit = delta * tm->current.interval;
+    to_event_unit = delta * tm->current.interval;
 
-    *transmit_window_tk = tm->min_conn_event_tk;
-    //    *transmit_window_tk = cu_tk(tm, tm->current.win_size);
-    *event_duration_tk = cu_tk(tm, tm->current.interval);
+    *max_dur = cu_tk(tm, tm->current.interval);
   }
-}
 
-void ble_timing_mapper_window_get(struct ble_timing_mapper_s *tm,
-                                  uint16_t event,
-                                  dev_timer_value_t *begin,
-                                  dev_timer_value_t *end,
-                                  dev_timer_delay_t *max_dur)
-{
-  uint32_t to_event_unit;
-  dev_timer_delay_t to_event_tk;
-  dev_timer_delay_t transmit_window_tk;
-
-  timing_window_get(tm, event, &to_event_unit, &transmit_window_tk, max_dur);
-  to_event_tk = cu_tk(tm, to_event_unit);
-
-  *begin = tm->last_anchor + to_event_tk;
-  *end = *begin + transmit_window_tk;
+  *begin = tm->last_anchor + cu_tk(tm, to_event_unit);
+  *end = 0;
 }
 
 void ble_timing_mapper_window_slave_get(struct ble_timing_mapper_s *tm,
@@ -146,8 +167,22 @@ void ble_timing_mapper_window_slave_get(struct ble_timing_mapper_s *tm,
   dev_timer_delay_t transmit_window_tk;
   dev_timer_delay_t ww_tk;
   dev_timer_value_t theorical_begin;
+  uint16_t delta = event - tm->last_event;
+  int16_t after_update = event - tm->update_instant;
 
-  timing_window_get(tm, event, &to_event_unit, &transmit_window_tk, max_dur);
+  if (tm->update_pending && after_update >= 0) {
+    to_event_unit = (delta - after_update) * tm->current.interval
+      + tm->pending_win_offset
+      + after_update * tm->pending.interval;
+
+    transmit_window_tk = cu_tk(tm, tm->pending_win_size);
+    *max_dur = cu_tk(tm, tm->pending.interval);
+  } else {
+    to_event_unit = delta * tm->current.interval;
+
+    transmit_window_tk = tm->min_conn_event_tk;
+    *max_dur = cu_tk(tm, tm->current.interval);
+  }
 
   to_event_tk = cu_tk(tm, to_event_unit);
   ww_tk = cu_ww_tk(tm, to_event_unit);

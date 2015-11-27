@@ -18,7 +18,6 @@
     Copyright Nicolas Pouillon <nipo@ssji.net> (c) 2015
 */
 
-#include <ble/stack/central.h>
 #include <ble/protocol/l2cap.h>
 #include <ble/protocol/advertise.h>
 #include <ble/protocol/gap.h>
@@ -26,25 +25,38 @@
 #include <ble/protocol/gatt/service.h>
 #include <ble/protocol/gatt/characteristic.h>
 
+#include <ble/stack/central.h>
+#include <ble/stack/context.h>
+
 #include <ble/net/scanner.h>
-#include <ble/net/master.h>
-#include <ble/net/layer.h>
-#include <ble/net/gatts.h>
+#include <ble/net/phy.h>
+#include <ble/net/gatt.h>
+#include <ble/net/sm.h>
+#include <ble/net/gap.h>
 #include <ble/net/att.h>
 #include <ble/net/link.h>
 #include <ble/net/llcp.h>
+
+#include <ble/net/layer_id.h>
 
 #include <mutek/printk.h>
 
 #include <ble/net/generic.h>
 
-static const struct ble_master_delegate_vtable_s ctr_master_vtable;
+static const struct ble_phy_delegate_vtable_s ctr_master_vtable;
 #if defined(CONFIG_BLE_CRYPTO)
 static const struct ble_sm_delegate_vtable_s sm_delegate_vtable;
 #endif
 static const struct ble_llcp_delegate_vtable_s ctr_llcp_vtable;
+static const struct ble_scanner_delegate_vtable_s ctr_scan_vtable;
+
+static void ble_central_target_add(struct ble_central_s *ctrl,
+                                   const struct ble_addr_s *addr,
+                                   enum ble_scanner_policy_e policy);
 
 struct dev_rng_s;
+
+static error_t scan_start(struct ble_central_s *ctr);
 
 static void ctr_state_update(struct ble_central_s *ctr)
 {
@@ -182,7 +194,7 @@ error_t ctr_connection_create(struct ble_central_s *ctr,
   error_t err;
   struct net_layer_s *master, *l2cap, *signalling, *gatt, *gap, *link, *llcp;
   uint16_t cid;
-  struct ble_master_param_s master_params;
+  struct ble_phy_params_s master_params;
 
 #if defined(CONFIG_BLE_CRYPTO)
   struct net_layer_s *sm;
@@ -295,14 +307,14 @@ error_t ctr_connection_create(struct ble_central_s *ctr,
     goto out_att;
   }
 
-  struct ble_gatts_params_s gatts_params = {
+  struct ble_gatt_params_s gatt_params = {
     .peer = &ctr->peer,
     .db = &ctr->context->gattdb,
   };
 
-  err = ble_gatts_create(&ctr->context->scheduler, &gatts_params, NULL, NULL, &gatt);
+  err = ble_gatt_create(&ctr->context->scheduler, &gatt_params, NULL, NULL, &gatt);
   if (err) {
-    printk("error while creating gatts: %d\n", err);
+    printk("error while creating gatt: %d\n", err);
     goto out_att;
   }
 
@@ -368,7 +380,9 @@ error_t ctr_connection_create(struct ble_central_s *ctr,
   if (err) {
     net_layer_refdec(master);
   } else {
+#if defined(CONFIG_BLE_CRYPTO)
     ctr->sm = sm;
+#endif
     ctr->master = master;
     ctr->connection_tk = anchor;
   }
@@ -398,21 +412,9 @@ bool_t ctr_connection_requested(void *delegate, struct net_layer_s *layer,
     return 1;
   }
 
-  if (!ctr->handler->connection_requested(ctr, &conn->master)) {
-    printk(" rejected by handler\n");
-    return 1;
-  }
-
-#if defined(CONFIG_BLE_SECURITY_DB)
-  if (!(ctr->mode & BLE_CENTRAL_PAIRABLE)
-      && !ble_security_db_contains(&ctr->context->security_db, &conn->master)) {
-    printk(" ignored: we are not paired\n");
-    return 1;
-  }
-#endif
+  ctr->handler->connection_opened(ctr, &conn->master);
 
   err = ctr_connection_create(ctr, conn, anchor);
-
   if (!err) {
     net_layer_refdec(ctr->scan);
     ctr->scan = NULL;
@@ -425,6 +427,8 @@ bool_t ctr_connection_requested(void *delegate, struct net_layer_s *layer,
 
 static error_t scan_start(struct ble_central_s *ctr)
 {
+  error_t err;
+
   if (ctr->master) {
     printk("Cannot scan: has master\n");
     return 0;
@@ -435,12 +439,17 @@ static error_t scan_start(struct ble_central_s *ctr)
     return 0;
   }
 
+  ctr->params.access_address = ble_stack_access_address_generate(ctr->context);
+  dev_rng_wait_read(&ctr->context->rng, &ctr->params.crc_init, 4);
+  ctr->params.crc_init &= 0xffffff;
+  ble_stack_context_local_address_get(ctr->context, &ctr->params.local_addr);
+
   printk("Central scanning starting\n");
 
   err = DEVICE_OP(&ctr->context->ble, layer_create,
                   &ctr->context->scheduler,
-                  BLE_NET_LAYER_SCAN,
-                  &params,
+                  BLE_NET_LAYER_SCANNER,
+                  &ctr->params,
                   ctr, &ctr_scan_vtable.base,
                   &ctr->scan);
   if (err) {
@@ -461,7 +470,11 @@ error_t ble_central_init(
 {
   memset(ctr, 0, sizeof(*ctr));
 
-  ctr->params = *params;
+  ctr->params.interval_ms = params->scan_interval_ms;
+  ctr->params.duration_ms = params->scan_duration_ms;
+  ctr->params.target_count = 0;
+  ctr->params.default_policy = BLE_SCANNER_IGNORE;
+
   ctr->handler = handler;
   ctr->context = context;
   ctr->mode = 0;
@@ -471,7 +484,7 @@ error_t ble_central_init(
   return 0;
 }
 
-static const struct ble_master_delegate_vtable_s ctr_master_vtable =
+static const struct ble_phy_delegate_vtable_s ctr_master_vtable =
 {
   .base.release = ctr_master_destroyed,
   .connection_lost = conn_connection_lost,
@@ -537,3 +550,27 @@ void ble_central_pairing_accept(struct ble_central_s *ctr,
     ble_sm_pairing_accept(ctr->sm, mitm_protection, pin, oob_data);
 }
 #endif
+
+static void ble_central_target_add(struct ble_central_s *ctrl,
+                                   const struct ble_addr_s *addr,
+                                   enum ble_scanner_policy_e policy)
+{
+  if (ctrl->params.target_count < BLE_SCANNER_TARGET_MAXCOUNT) {
+    ctrl->params.target_count++;
+  } else {
+    memmove(ctrl->params.target, ctrl->params.target + 1,
+            sizeof(struct ble_scanner_target_s) * (BLE_SCANNER_TARGET_MAXCOUNT - 1));
+  }
+
+  ctrl->params.target[ctrl->params.target_count - 1].addr = *addr;
+  ctrl->params.target[ctrl->params.target_count - 1].policy = policy;
+
+  if (ctrl->scan)
+    ble_scanner_params_update(ctrl->scan, &ctrl->params);
+}
+
+void ble_central_connect(struct ble_central_s *ctrl, const struct ble_addr_s *addr)
+{
+  ble_central_target_add(ctrl, addr, BLE_SCANNER_CONNECT);
+}
+

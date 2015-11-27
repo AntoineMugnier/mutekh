@@ -28,7 +28,6 @@
 #include <ble/net/llcp.h>
 #include <ble/net/generic.h>
 #include <ble/net/gap.h>
-#include <ble/net/layer.h>
 #include <ble/protocol/data.h>
 #include <ble/protocol/error.h>
 
@@ -289,7 +288,11 @@ static void ble_llcp_packet_handle(struct ble_llcp_s *llcp, struct net_task_s *t
     dprintk("SK:        %P\n", setup->sk, 16);
     dprintk("IV:        %P\n", setup->iv, 8);
 
+#if defined(CONFIG_BLE_SECURITY_DB)
     setup->authenticated = llcp->peer->mitm_protection;
+#else
+    setup->authenticated = 0;
+#endif
 
     net_task_query_push(&setup->task, llcp->layer.parent, &llcp->layer,
                         BLE_LLCP_ENCRYPTION_SETUP);
@@ -869,7 +872,6 @@ static const struct net_layer_handler_s llcp_handler = {
   .unbound = ble_llcp_unbound,
   .context_updated = ble_llcp_context_updated,
   .dandling = ble_llcp_dandling,
-  .type = BLE_NET_LAYER_LLCP,
 };
 
 error_t ble_llcp_create(struct net_scheduler_s *scheduler,

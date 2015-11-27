@@ -21,9 +21,10 @@
 #include <ble/stack/context.h>
 #include <ble/stack/beacon.h>
 #include <ble/net/adv.h>
-#include <ble/net/layer.h>
 #include <ble/protocol/company.h>
 #include <ble/protocol/gap.h>
+
+#include <ble/net/layer_id.h>
 
 #include <mutek/printk.h>
 

@@ -69,6 +69,8 @@ struct ble_scanner_handler_s
                            const struct ble_scanner_param_s *params);
 };
 
+STRUCT_COMPOSE(ble_scanner_handler_s, base);
+
 struct ble_scanner_delegate_vtable_s
 {
   struct net_layer_delegate_vtable_s base;

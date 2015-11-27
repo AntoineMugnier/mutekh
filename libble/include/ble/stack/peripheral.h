@@ -38,7 +38,7 @@
 
 #include <hexo/types.h>
 #include <errno.h>
-#include <ble/net/slave.h>
+#include <ble/net/phy.h>
 #include <ble/net/l2cap.h>
 #if defined(CONFIG_BLE_CRYPTO)
 #include <ble/net/sm.h>

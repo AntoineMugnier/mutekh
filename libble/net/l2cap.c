@@ -27,7 +27,6 @@
 
 #include <ble/net/l2cap.h>
 #include <ble/net/sm.h>
-#include <ble/net/layer.h>
 #include <ble/net/signalling.h>
 #include <ble/net/att.h>
 #include <ble/protocol/data.h>
@@ -214,7 +213,6 @@ static const struct net_layer_handler_s l2cap_handler = {
   .bound = ble_l2cap_bound,
   .unbound = ble_l2cap_unbound,
   .context_updated = ble_l2cap_context_updated,
-  .type = BLE_NET_LAYER_L2CAP,
 };
 
 error_t ble_l2cap_create(struct net_scheduler_s *scheduler,

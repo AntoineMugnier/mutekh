@@ -29,7 +29,6 @@
 #include <net/task.h>
 #include <net/scheduler.h>
 
-#include <ble/net/layer.h>
 #include <ble/net/sm.h>
 #include <ble/net/generic.h>
 #include <ble/crypto.h>
@@ -856,12 +855,9 @@ void sm_pairing_abort(struct net_layer_s *layer, enum sm_reason reason)
 }
 
 static const struct ble_sm_handler_s sm_handler = {
-  .base = {
-    .destroyed = ble_sm_destroyed,
-    .task_handle = ble_sm_task_handle,
-    .context_updated = ble_sm_context_updated,
-    .type = BLE_NET_LAYER_SM,
-  },
+  .base.destroyed = ble_sm_destroyed,
+  .base.task_handle = ble_sm_task_handle,
+  .base.context_updated = ble_sm_context_updated,
   .pairing_request = sm_pairing_request,
   .pairing_accept = sm_pairing_accept,
   .pairing_abort = sm_pairing_abort,

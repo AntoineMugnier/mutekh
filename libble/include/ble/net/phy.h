@@ -48,19 +48,20 @@
 #include <device/class/timer.h>
 
 struct buffer_s;
-struct ble_master_handler_s;
 
-enum ble_master_layer_e
+struct ble_phy_delegate_vtable_s
 {
-  BLE_MASTER_LAYER_L2CAP,
-  BLE_MASTER_LAYER_GAP,
+  struct net_layer_delegate_vtable_s base;
+
+  void (*connection_lost)(void *delegate, struct net_layer_s *layer, uint8_t reason);
 };
 
-struct ble_master_parameters_s
+STRUCT_COMPOSE(ble_phy_delegate_vtable_s, base);
+
+struct ble_phy_params_s
 {
   struct ble_adv_connect_s conn_req;
   dev_timer_value_t connect_packet_timestamp;
-  struct ble_peer_s *peer;
 };
 
 #endif

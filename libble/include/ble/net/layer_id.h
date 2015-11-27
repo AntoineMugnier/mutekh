@@ -18,34 +18,15 @@
     Copyright (c) Nicolas Pouillon <nipo@ssji.net> 2015
 */
 
-#ifndef BLE_GATTS_H_
-#define BLE_GATTS_H_
+#ifndef BLE_NET_LAYER_H_
+#define BLE_NET_LAYER_H_
 
-/**
-   @file
-   @module{BLE library}
-   @short GATT protocol layer
-
-   @section {Description}
-
-   This implements the Attribute protocol for LE links backed by a
-   GATT database.
-
-   @end section
-*/
-
-#include <hexo/types.h>
-#include <hexo/decls.h>
-#include <net/scheduler.h>
-
-#include <ble/gattdb/client.h>
-#include <ble/protocol/att.h>
-#include <ble/peer.h>
-
-struct ble_gatts_params_s
-{
-  struct ble_peer_s *peer;
-  struct ble_gattdb_s *db;
+enum ble_net_layer_id_e {
+  BLE_NET_LAYER_ADV = CONFIG_BLE_NET_LAYER_FIRST,
+  BLE_NET_LAYER_SCANNER,
+  BLE_NET_LAYER_MASTER,
+  BLE_NET_LAYER_SLAVE,
+  BLE_NET_LAYER_SNIFFER,
 };
 
 #endif

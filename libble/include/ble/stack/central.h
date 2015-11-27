@@ -41,6 +41,7 @@
 #if defined(CONFIG_BLE_CRYPTO)
 #include <ble/protocol/sm.h>
 #endif
+#include <ble/net/scanner.h>
 #include <ble/protocol/address.h>
 #include <ble/peer.h>
 #include <device/class/timer.h>
@@ -66,13 +67,13 @@ enum ble_central_mode_e {
 struct ble_central_handler_s
 {
 #if defined(CONFIG_BLE_CRYPTO)
-  void (*pairing_requested)(struct ble_central_s *peri, bool_t bonding);
-  void (*pairing_failed)(struct ble_central_s *peri, enum sm_reason reason);
-  void (*pairing_success)(struct ble_central_s *peri);
+  void (*pairing_requested)(struct ble_central_s *ctrl, bool_t bonding);
+  void (*pairing_failed)(struct ble_central_s *ctrl, enum sm_reason reason);
+  void (*pairing_success)(struct ble_central_s *ctrl);
 #endif
-  void (*connection_opened)(struct ble_central_s *peri, const struct ble_addr_s *addr);
-  void (*connection_closed)(struct ble_central_s *peri, uint8_t reason);
-  void (*state_changed)(struct ble_central_s *peri, enum ble_central_state_e state);
+  void (*connection_opened)(struct ble_central_s *ctrl, const struct ble_addr_s *addr);
+  void (*connection_closed)(struct ble_central_s *ctrl, uint8_t reason);
+  void (*state_changed)(struct ble_central_s *ctrl, enum ble_central_state_e state);
 };
 
 struct ble_central_params_s
@@ -98,31 +99,34 @@ struct ble_central_s
 
   enum ble_central_state_e last_state : 8;
   uint8_t mode;
-  struct ble_central_params_s params;
+
+  struct ble_scanner_param_s params;
 };
 
 error_t ble_central_init(
-  struct ble_central_s *peri,
+  struct ble_central_s *ctrl,
   const struct ble_central_params_s *params,
   const struct ble_central_handler_s *handler,
   struct ble_stack_context_s *context);
 
 #if defined(CONFIG_BLE_CRYPTO)
 
-void ble_central_pairing_request(struct ble_central_s *peri,
+void ble_central_pairing_request(struct ble_central_s *ctrl,
                                  bool_t mitm_protection,
                                  bool_t bonding);
 
-void ble_central_pairing_accept(struct ble_central_s *peri,
+void ble_central_pairing_accept(struct ble_central_s *ctrl,
                                 bool_t mitm_protection,
                                 uint32_t pin,
                                 const void *oob_data);
 
-void ble_central_pairing_abort(struct ble_central_s *peri,
+void ble_central_pairing_abort(struct ble_central_s *ctrl,
                                enum sm_reason reason);
 
 #endif
 
-void ble_central_mode_set(struct ble_central_s *peri, uint8_t mode);
+void ble_central_mode_set(struct ble_central_s *ctrl, uint8_t mode);
+
+void ble_central_connect(struct ble_central_s *ctrl, const struct ble_addr_s *addr);
 
 #endif

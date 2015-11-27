@@ -25,7 +25,6 @@
 #include <net/task.h>
 #include <net/scheduler.h>
 
-#include <ble/net/layer.h>
 #include <ble/net/signalling.h>
 #include <ble/net/gap.h>
 #include <ble/protocol/signalling.h>
@@ -189,7 +188,6 @@ static const struct net_layer_handler_s sig_handler = {
   .destroyed = ble_sig_destroyed,
   .task_handle = ble_sig_task_handle,
   .dandling = ble_sig_dandling,
-  .type = BLE_NET_LAYER_SIGNALLING,
 };
 
 error_t ble_signalling_create(struct net_scheduler_s *scheduler,

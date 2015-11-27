@@ -27,7 +27,6 @@
 
 #include <ble/net/link.h>
 #include <ble/net/llcp.h>
-#include <ble/net/layer.h>
 #include <ble/net/generic.h>
 #include <ble/ccm_params.h>
 #include <ble/protocol/data.h>
@@ -533,7 +532,6 @@ static const struct net_layer_handler_s link_handler = {
   .unbound = ble_link_unbound,
   .context_updated = ble_link_context_updated,
   .dandling = ble_link_dandling,
-  .type = BLE_NET_LAYER_LINK,
 };
 
 error_t ble_link_create(struct net_scheduler_s *scheduler,

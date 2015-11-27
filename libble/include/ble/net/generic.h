@@ -62,12 +62,6 @@ error_t ble_gatt_create(struct net_scheduler_s *scheduler,
                         const struct net_layer_delegate_vtable_s *delegate_vtable,
                         struct net_layer_s **layer);
 
-error_t ble_gatts_create(struct net_scheduler_s *scheduler,
-                         const void *params,
-                        void *delegate,
-                        const struct net_layer_delegate_vtable_s *delegate_vtable,
-                         struct net_layer_s **layer);
-
 error_t ble_signalling_create(struct net_scheduler_s *scheduler,
                         void *delegate,
                         const struct net_layer_delegate_vtable_s *delegate_vtable,
@@ -84,5 +78,11 @@ error_t ble_gap_create(struct net_scheduler_s *scheduler,
                         void *delegate,
                         const struct net_layer_delegate_vtable_s *delegate_vtable,
                        struct net_layer_s **layer);
+
+error_t ble_scan_filter_create(struct net_scheduler_s *scheduler,
+                               const void *params,
+                               void *delegate,
+                               const struct net_layer_delegate_vtable_s *delegate_vtable,
+                               struct net_layer_s **layer);
 
 #endif

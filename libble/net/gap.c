@@ -27,8 +27,6 @@
 
 #include <ble/net/gap.h>
 #include <ble/net/signalling.h>
-#include <ble/net/slave.h>
-#include <ble/net/layer.h>
 
 #include <ble/net/generic.h>
 
@@ -142,8 +140,8 @@ void ble_gap_task_handle(struct net_layer_s *layer,
     if (task->query.opcode != BLE_GAP_CONN_PARAMS_UPDATE)
       break;
 
-    printk("GAP conn params update response from %d: %d\n",
-           &task->source->handler->type, task->query.err);
+    printk("GAP conn params update response from %p: %d\n",
+           task->source->handler, task->query.err);
 
     if (task->source == layer->parent && task->query.err == -ENOTSUP) {
       printk("LLCP does not support conn params update, forward to signalling\n");
@@ -213,8 +211,6 @@ static const struct net_layer_handler_s gap_handler = {
   .task_handle = ble_gap_task_handle,
   .context_updated = ble_gap_context_updated,
   .dandling = ble_gap_dandling,
-  .type = BLE_NET_LAYER_GAP,
-  .use_timer = 1,
 };
 
 error_t ble_gap_create(

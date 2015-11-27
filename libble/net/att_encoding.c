@@ -20,7 +20,6 @@
 
 #include <ble/protocol/att.h>
 #include <ble/net/att.h>
-#include <ble/net/layer.h>
 #include <net/task.h>
 #include <net/layer.h>
 

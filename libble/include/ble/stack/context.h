@@ -11,8 +11,8 @@
 
 struct ble_stack_context_s
 {
-#if defined(CONFIG_BLE_CRYPTO)
   struct dev_rng_s rng;
+#if defined(CONFIG_BLE_CRYPTO)
   struct ble_security_db_s security_db;
 #endif
   struct device_net_s ble;

@@ -140,7 +140,7 @@ void ble_adv_connect_set(
   endian_le16_na_store(&p->data[28], params->timing.timeout);
   endian_le32_na_store(&p->data[30], params->channel_map);
   p->data[34] = params->channel_map >> 32;
-  p->data[35] = (params->sca << 3) | params->hop;
+  p->data[35] = (params->sca << 5) | params->hop;
 }
 
 error_t ble_adv_connect_parse(

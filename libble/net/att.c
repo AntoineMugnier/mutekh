@@ -26,7 +26,6 @@
 #include <net/scheduler.h>
 
 #include <ble/net/att.h>
-#include <ble/net/layer.h>
 #include <ble/net/generic.h>
 
 #include <ble/protocol/att.h>
@@ -207,10 +206,67 @@ void ble_att_task_handle(struct net_layer_s *layer,
       att_response_send(att, ble_att_transaction_s_from_task(task));
     break;
 
-  case NET_TASK_INBOUND:
+  case NET_TASK_INBOUND: {
     dprintk("Att inb > %P\n", task->packet.buffer->data + task->packet.buffer->begin, task->packet.buffer->end - task->packet.buffer->begin);
-    att_command_handle(att, task);
-    return;
+
+    const uint8_t *header = &task->packet.buffer->data[task->packet.buffer->begin];
+    uint8_t op = *header;
+    struct net_layer_s *target = NULL;
+
+    switch (op) {
+    case BLE_ATT_HANDLE_VALUE_NOTIF:
+      task->packet.src_addr.att = endian_le16_na_load(header + 1);
+      target = att->client;
+      break;
+
+    case BLE_ATT_WRITE_CMD:
+      task->packet.dst_addr.att = endian_le16_na_load(header + 1);
+      target = att->server;
+      break;
+
+    default:
+      att_command_handle(att, task);
+      return;
+    }
+
+    if (target && (task->packet.buffer->end - task->packet.buffer->begin) >= 3) {
+      task->packet.buffer->begin += 3;
+      net_task_packet_forward(task, target);
+      return;
+    }
+
+    break;
+  }
+
+  case NET_TASK_OUTBOUND: {
+    uint8_t header[3];
+    if (task->packet.src_addr.att) {
+      dprintk("Att not %d > %P\n", 
+              task->packet.src_addr.att,
+              task->packet.buffer->data + task->packet.buffer->begin,
+              task->packet.buffer->end - task->packet.buffer->begin);
+      header[0] = BLE_ATT_HANDLE_VALUE_NOTIF;
+      endian_le16_na_store(header + 1, task->packet.src_addr.att);
+    } else if (task->packet.dst_addr.att) {
+      dprintk("Att wrt %d > %P\n", 
+              task->packet.dst_addr.att,
+              task->packet.buffer->data + task->packet.buffer->begin,
+              task->packet.buffer->end - task->packet.buffer->begin);
+      header[0] = BLE_ATT_WRITE_CMD;
+      endian_le16_na_store(header + 1, task->packet.dst_addr.att);
+    } else {
+      break;
+    }
+
+    buffer_prepend(task->packet.buffer, header, 3);
+    task->packet.dst_addr.cid = BLE_L2CAP_CID_ATT;
+
+    if (layer->parent) {
+      net_task_packet_forward(task, layer->parent);
+      return;
+    }
+    break;
+  }
   }
 
   net_task_destroy(task);
@@ -273,13 +329,25 @@ static void ble_att_dandling(struct net_layer_s *layer)
   net_task_queue_reject_all(&att->transaction_queue);
 }
 
+static
+bool_t ble_att_context_updated(struct net_layer_s *layer,
+                                 const struct net_layer_context_s *parent_context)
+{
+  layer->context = *parent_context;
+  layer->context.addr = parent_context->addr;
+  layer->context.prefix_size = parent_context->prefix_size + 3;
+  layer->context.mtu = parent_context->mtu - 3;
+
+  return 1;
+}
+
 static const struct net_layer_handler_s att_handler = {
   .destroyed = ble_att_destroyed,
   .task_handle = ble_att_task_handle,
   .bound = ble_att_bound,
   .unbound = ble_att_unbound,
   .dandling = ble_att_dandling,
-  .type = BLE_NET_LAYER_ATT,
+  .context_updated = ble_att_context_updated,
 };
 
 error_t ble_att_create(

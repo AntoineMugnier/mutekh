@@ -36,7 +36,6 @@ error_t ble_stack_context_init(struct ble_stack_context_s *ctx,
                                const char *persist_name)
 {
   error_t err;
-#if defined(CONFIG_BLE_CRYPTO)
   struct dev_rng_s rng;
 
   err = dev_rng_init(&ctx->rng, sec_name);
@@ -59,6 +58,7 @@ error_t ble_stack_context_init(struct ble_stack_context_s *ctx,
 
   dev_rng_cleanup(&rng);
 
+#if defined(CONFIG_BLE_CRYPTO)
   err = device_get_accessor_by_path(&ctx->crypto, NULL, sec_name, DRIVER_CLASS_CRYPTO);
   if (err) {
     printk("Error while opening crypto device: %d\n", err);
@@ -102,13 +102,11 @@ error_t ble_stack_context_init(struct ble_stack_context_s *ctx,
 #if defined(CONFIG_BLE_CRYPTO)
   device_put_accessor(&ctx->crypto);
   goto rng_close;
+#endif
  rng_close2:
   dev_rng_cleanup(&rng);
  rng_close:
   dev_rng_cleanup(&ctx->rng);
-#else
- rng_close:
-#endif
 
   return err;
 }
@@ -119,24 +117,19 @@ void ble_stack_context_cleanup(struct ble_stack_context_s *ctx)
   ble_gattdb_cleanup(&ctx->gattdb);
   buffer_pool_cleanup(&ctx->packet_pool);
 #if defined(CONFIG_BLE_CRYPTO)
-  dev_rng_cleanup(&ctx->rng);
   ble_security_db_cleanup(&ctx->security_db);
 #endif
+  dev_rng_cleanup(&ctx->rng);
 }
 
 error_t ble_stack_context_address_non_resolvable_generate(struct ble_stack_context_s *ctx,
                                                           struct ble_addr_s *addr)
 {
-#if defined(CONFIG_BLE_CRYPTO)
   error_t err;
 
   err = dev_rng_wait_read(&ctx->rng, addr->addr, 6);
   if (err)
     return err;
-#else
-  for (size_t i = 0; i < 6; ++i)
-    addr->addr[i] = random();
-#endif
   
   ble_addr_random_type_set(addr, BLE_ADDR_RANDOM_NON_RESOLVABLE);
 

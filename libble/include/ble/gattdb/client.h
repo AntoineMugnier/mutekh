@@ -71,8 +71,8 @@ GCT_CONTAINER_TYPES(ble_gattdb_client_sl, struct ble_gattdb_client_subs_s *, cli
 
 struct ble_gattdb_client_handler_s
 {
-  void (*att_value_changed)(struct ble_gattdb_client_s *client, uint16_t value_handle,
-                            uint16_t mode, const void *data, size_t size);
+  error_t (*att_value_changed)(struct ble_gattdb_client_s *client, uint16_t value_handle,
+                               uint16_t mode, const void *data, size_t size);
   void (*att_subscription_changed)(struct ble_gattdb_client_s *client);
 };
 

@@ -63,10 +63,15 @@ struct ble_timing_mapper_s
   bool_t update_pending : 1;
 };
 
-error_t ble_timing_mapper_init(struct ble_timing_mapper_s *tm,
-                               struct device_timer_s *timer,
-                               const struct ble_adv_connect_s *connect,
-                               dev_timer_value_t reference);
+error_t ble_timing_mapper_slave_init(struct ble_timing_mapper_s *tm,
+                                     struct device_timer_s *timer,
+                                     const struct ble_adv_connect_s *connect,
+                                     dev_timer_value_t reference);
+
+error_t ble_timing_mapper_master_init(struct ble_timing_mapper_s *tm,
+                                      struct device_timer_s *timer,
+                                      const struct ble_adv_connect_s *connect,
+                                      dev_timer_value_t reference);
 
 void ble_timing_mapper_cleanup(struct ble_timing_mapper_s *tm);
 
@@ -74,11 +79,11 @@ void ble_timing_mapper_event_set(struct ble_timing_mapper_s *tm,
                                  uint16_t event,
                                  dev_timer_value_t anchor);
 
-void ble_timing_mapper_window_get(struct ble_timing_mapper_s *tm,
-                                  uint16_t event,
-                                  dev_timer_value_t *begin,
-                                  dev_timer_value_t *end,
-                                  dev_timer_delay_t *max_duration);
+void ble_timing_mapper_window_master_get(struct ble_timing_mapper_s *tm,
+                                         uint16_t event,
+                                         dev_timer_value_t *begin,
+                                         dev_timer_value_t *end,
+                                         dev_timer_delay_t *max_duration);
 
 void ble_timing_mapper_window_slave_get(struct ble_timing_mapper_s *tm,
                                         uint16_t event,

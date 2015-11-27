@@ -53,9 +53,9 @@ struct ble_gattc_descriptor_s
 
 enum ble_gattc_characteristic_flag_e
 {
-  BLE_GATTC_CHARACTERISTIC_REQUIRED = 1,
-  BLE_GATTC_CHARACTERISTIC_UNIQUE = 2,
-  BLE_GATTC_CHARACTERISTIC_READ = 4,
+  BLE_GATTC_CHAR_REQUIRED = 1,
+  BLE_GATTC_CHAR_UNIQUE = 2,
+  BLE_GATTC_CHAR_READ = 4,
 };
 
 enum ble_gattc_data_origin_e
@@ -75,18 +75,8 @@ struct ble_gattc_characteristic_s
 
 enum ble_gattc_service_flags_e
 {
-  BLE_GATTC_SERVICE_REQUIRED = 1,
-  BLE_GATTC_SERVICE_UNIQUE = 2,
-  BLE_GATTC_SERVICE_PRIMARY = 4,
-  BLE_GATTC_SERVICE_SOLLICIT = 8,
-};
-
-enum ble_gattc_service_state_e
-{
-  BLE_GATTC_SERVICE_DISCONNECTED,
-  BLE_GATTC_SERVICE_ENUMERATING,
-  BLE_GATTC_SERVICE_READY,
-  BLE_GATTC_SERVICE_FAILED,
+  BLE_GATTC_SERVICE_PRIMARY = 1,
+  BLE_GATTC_SERVICE_SOLLICIT = 2,
 };
 
 struct ble_gattc_service_s
@@ -96,16 +86,13 @@ struct ble_gattc_service_s
   uint8_t characteristic_count;
   uint8_t flags;
 
-  void (*on_state_changed)(struct ble_gattc_consumer_s *cons,
-                           enum ble_gattc_service_state_e state);
-
   void (*on_characteristic_updated)(struct ble_gattc_consumer_s *cons,
                                     uint8_t char_index,
                                     uint8_t instance_index,
                                     const uint8_t *value, size_t size);
 };
 
-#define BLE_GATTC_SERVICE_DECL(name_, flags_, type_, chars_...)         \
+#define BLE_GATTC_SERVICE(name_, flags_, type_, chars_...)              \
   const struct ble_gattc_service_s name_ = {                            \
     .type = type_,                                                      \
     .characteristic = (const struct ble_gattc_characteristic_s[]){ chars_ }, \
@@ -113,7 +100,7 @@ struct ble_gattc_service_s
     .flags = flags_,                                                    \
   }
 
-#define BLE_GATTC_CHAR_DECL(type_, flags_, desc_...)                    \
+#define BLE_GATTC_CHAR(type_, flags_, desc_...)                         \
   {                                                                     \
     .type = (type_),                                                    \
     .descriptor = (const struct ble_gattc_descriptor_s[]){ desc_ },     \

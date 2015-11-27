@@ -245,7 +245,7 @@ void ble_data_packet_dump(const struct buffer_s *p, bool_t m2s)
 
 bool_t ble_data_aa_is_valid(uint32_t aa)
 {
-  uint32_t transitions = aa ^ (aa >> 1);
+  uint32_t transitions = aa ^ ((int32_t)aa >> 1);
 
   if (aa == BLE_ADVERTISE_AA)
     return 0;

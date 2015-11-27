@@ -27,18 +27,19 @@
 #include <ble/protocol/gatt/characteristic.h>
 
 #include <ble/net/adv.h>
-#include <ble/net/slave.h>
-#include <ble/net/layer.h>
-#include <ble/net/gatts.h>
+#include <ble/net/phy.h>
+#include <ble/net/gatt.h>
 #include <ble/net/att.h>
 #include <ble/net/link.h>
 #include <ble/net/llcp.h>
+
+#include <ble/net/layer_id.h>
 
 #include <mutek/printk.h>
 
 #include <ble/net/generic.h>
 
-static const struct ble_slave_delegate_vtable_s peri_slave_vtable;
+static const struct ble_phy_delegate_vtable_s peri_slave_vtable;
 #if defined(CONFIG_BLE_CRYPTO)
 static const struct ble_sm_delegate_vtable_s sm_delegate_vtable;
 #endif
@@ -184,7 +185,7 @@ error_t peri_connection_create(struct ble_peripheral_s *peri,
   error_t err;
   struct net_layer_s *slave, *l2cap, *signalling, *gatt, *gap, *link, *llcp;
   uint16_t cid;
-  struct ble_slave_param_s slave_params;
+  struct ble_phy_params_s slave_params;
 
 #if defined(CONFIG_BLE_CRYPTO)
   struct net_layer_s *sm;
@@ -297,14 +298,14 @@ error_t peri_connection_create(struct ble_peripheral_s *peri,
     goto out_att;
   }
 
-  struct ble_gatts_params_s gatts_params = {
+  struct ble_gatt_params_s gatt_params = {
     .peer = &peri->peer,
     .db = &peri->context->gattdb,
   };
 
-  err = ble_gatts_create(&peri->context->scheduler, &gatts_params, NULL, NULL, &gatt);
+  err = ble_gatt_create(&peri->context->scheduler, &gatt_params, NULL, NULL, &gatt);
   if (err) {
-    printk("error while creating gatts: %d\n", err);
+    printk("error while creating gatt: %d\n", err);
     goto out_att;
   }
 
@@ -370,7 +371,9 @@ error_t peri_connection_create(struct ble_peripheral_s *peri,
   if (err) {
     net_layer_refdec(slave);
   } else {
+#if defined(CONFIG_BLE_CRYPTO)
     peri->sm = sm;
+#endif
     peri->slave = slave;
     peri->connection_tk = anchor;
   }
@@ -555,7 +558,7 @@ error_t ble_peripheral_init(
   return 0;
 }
 
-static const struct ble_slave_delegate_vtable_s peri_slave_vtable =
+static const struct ble_phy_delegate_vtable_s peri_slave_vtable =
 {
   .base.release = peri_slave_destroyed,
   .connection_lost = conn_connection_lost,
