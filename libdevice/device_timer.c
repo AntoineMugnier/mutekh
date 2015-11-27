@@ -343,4 +343,5 @@ error_t dev_timer_sleep(struct device_timer_s *accessor, struct dev_timer_rq_s *
 }
 #endif
 
-
+extern inline
+error_t dev_timer_wait_deadline(struct device_timer_s *accessor, dev_timer_value_t deadline);
