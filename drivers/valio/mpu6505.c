@@ -680,10 +680,15 @@ static DEV_CLEANUP(mpu6505_cleanup)
 {
   struct mpu6505_private_s *pv = dev->drv_pv;
 
+  if (!dev_request_queue_isempty(&pv->queue))
+    return -EBUSY;
+
   device_put_accessor(&pv->i2c);
   device_irq_source_unlink(dev, &pv->irq, 1);
   dev_request_queue_destroy(&pv->queue);
   mem_free(pv);
+
+  return 0;
 }
 
 static DEV_USE(mpu6505_use)
