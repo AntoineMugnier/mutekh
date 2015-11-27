@@ -120,7 +120,7 @@ static bool_t net_scheduler_tasks_handle(struct net_scheduler_s *sched)
   while ((task = net_task_queue_pop(&sched->pending_tasks))) {
     changed = 1;
 
-    dprintk("Sched task %p handling in %d...\n", task, &task->target->handler->type);
+    dprintk("Sched task %p handling in %p...\n", task, task->target->handler);
 
     task->target->handler->task_handle(task->target, task);
   }
@@ -212,8 +212,8 @@ static CONTEXT_ENTRY(net_scheduler_worker)
       while ((layer = net_layer_sched_list_pop(&sched->destroyed_layers)))
         net_layer_destroy_real(layer);
 
-      printk("In scheduler: %d live layers left\n",
-             net_layer_sched_list_count(&sched->layers));
+      /* printk("In scheduler: %d live layers left\n", */
+      /*        net_layer_sched_list_count(&sched->layers)); */
 
       continue;
     }
@@ -334,9 +334,9 @@ void net_scheduler_task_push(
     struct net_scheduler_s *sched,
     struct net_task_s *task)
 {
-  dprintk("Sched task %p from %d to %d\n", task,
-         &task->source->handler->type,
-         &task->target->handler->type);
+  dprintk("Sched task %p from %p to %p\n", task,
+         task->source->handler,
+         task->target->handler);
 
   if (task->type == NET_TASK_TIMEOUT)
     net_timeout_queue_insert(&sched->delayed_tasks, task);

@@ -43,6 +43,7 @@ struct net_addr_s
   uint8_t unreliable : 1;
   uint8_t random_addr : 1;
   uint16_t cid;
+  uint16_t att;
 #endif
 #if defined(CONFIG_NET_TCP) || defined(CONFIG_NET_UDP)
   uint16_t port;

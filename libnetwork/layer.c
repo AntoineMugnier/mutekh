@@ -38,7 +38,7 @@ void net_layer_context_update(struct net_layer_s *layer,
     changed = 1;
   }
 
-  //printk("Layer %d now %d+%d\n", &layer->handler->type,
+  //printk("Layer %p now %d+%d\n", layer,
   //       layer->context.mtu, layer->context.prefix_size);
 
   if (changed)
@@ -69,8 +69,8 @@ error_t net_layer_bind(
   if (err)
     return err;
 
-  printk("Layer %p %d bound to %p %d\n", child, child->handler->type,
-         layer, layer->handler->type);
+  //printk("Layer %p %p bound to %p %p\n", child, child->handler,
+  //       layer, layer->handler);
 
   child->parent = layer;
   net_layer_list_pushback(&layer->children, child);
@@ -84,8 +84,8 @@ void net_layer_unbind(
     struct net_layer_s *layer,
     struct net_layer_s *child)
 {
-  printk("Layer %p %d unbound from %p %d\n", child, child->handler->type,
-         layer, layer->handler->type);
+  //printk("Layer %p %p unbound from %p %p\n", child, child->handler,
+  //       layer, layer->handler);
 
   assert(child->parent == layer);
 
@@ -119,10 +119,9 @@ error_t net_layer_init(
 
   net_scheduler_layer_created(sched, layer);
   
-  /* printk("Layer %d init\n", &layer->handler->type); */
+  /* printk("Layer %p %p init\n", layer, layer->handler); */
 
-  if (layer->handler->use_timer)
-    net_scheduler_timer_use(layer->scheduler);
+  net_scheduler_timer_use(layer->scheduler);
 
   return 0;
 }
@@ -144,10 +143,10 @@ void net_layer_destroy_real(
 
   layer->scheduler = NULL;
 
-  printk("Layer %p %d destroy\n", layer, layer->handler->type);
+  //printk("Layer %p %p destroy\n", layer, layer->handler);
 
   while ((child = net_layer_list_head(&layer->children))) {
-    printk(" cleaning ref to %p %d\n", layer, layer->handler->type);
+    //printk(" cleaning ref to %p %p\n", layer, layer->handler);
     net_layer_unbind(layer, child);
     net_layer_refdec(child);
   }
@@ -161,7 +160,6 @@ void net_layer_destroy_real(
 
   handler->destroyed(layer);
 
-  if (handler->use_timer)
-    net_scheduler_timer_release(sched);
+  net_scheduler_timer_release(sched);
 }
 

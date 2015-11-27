@@ -28,12 +28,11 @@
    A network task is a work load to be handled by a given layer.  It may
    be of various types among:
    @list
-   @item a task happening after a delay,
-   @item a packet to handle,
+   @item a timeout,
+   @item a packet to handle, inbound or outbound,
    @item a request to respond to,
    @item a response to a request,
-   @item a one-way notification,
-   @item a layer-specific task.
+   @item a one-way notification.
    @end list
   
    A task always has a source layer and a target layer.  A layer may

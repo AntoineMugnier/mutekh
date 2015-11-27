@@ -145,9 +145,6 @@ struct net_layer_handler_s
   void (*unbound)(
     struct net_layer_s *layer,
     struct net_layer_s *child);
-
-  uint32_t type;
-  bool_t use_timer;
 };
 
 #define GCT_CONTAINER_ALGO_net_layer_list CLIST
@@ -221,10 +218,11 @@ void net_layer_context_changed(struct net_layer_s *layer);
 /**
    @this initializes a network layer.
 
+   @param layer Layer to initialize
    @param handler Pointer to a vtable
    @param scheduler Context scheduler this layer runs in
-   @param type Layer type as returned by @ref NET_LAYER_TYPE, hints
-          about what protocol is implemented by layer
+   @param delegate Delegate private data pointer
+   @param delegate_vtable Vtable for delegate, mandatory if @tt delegate is set
  */
 error_t net_layer_init(
   struct net_layer_s *layer,
