@@ -45,6 +45,7 @@ enum ble_scan_filter_policy_e
 struct ble_scan_filter_device_s
 {
   struct ble_addr_s addr;
+  uint32_t id;
   dev_timer_value_t first_seen;
   dev_timer_value_t last_seen;
   bool_t active : 1;

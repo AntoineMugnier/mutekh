@@ -43,11 +43,6 @@
 
 #include <ble/net/generic.h>
 
-static const struct ble_phy_delegate_vtable_s ctr_master_vtable;
-#if defined(CONFIG_BLE_CRYPTO)
-static const struct ble_sm_delegate_vtable_s sm_delegate_vtable;
-#endif
-static const struct ble_llcp_delegate_vtable_s ctr_llcp_vtable;
 static const struct ble_scanner_delegate_vtable_s ctr_scan_vtable;
 
 static void ble_central_target_add(struct ble_central_s *ctrl,
@@ -62,7 +57,7 @@ static void ctr_state_update(struct ble_central_s *ctr)
 {
   enum ble_central_state_e state = BLE_CENTRAL_IDLE;
 
-  if (ctr->master) {
+  if (ctr->conn.phy) {
     state = BLE_CENTRAL_CONNECTED;
   } else if (ctr->scan) {
     if (ctr->mode & BLE_CENTRAL_PAIRABLE)
@@ -83,312 +78,24 @@ static void ctr_state_update(struct ble_central_s *ctr)
 
 static void ctr_conn_drop(struct ble_central_s *ctr, uint8_t reason)
 {
-  if (!ctr->master)
-    return;
-
-  if (ctr->llcp && !reason)
-    ble_llcp_connection_close(ctr->llcp);
-
-  net_layer_refdec(ctr->master);
-  ctr->master = NULL;
-  ctr->llcp = NULL;
-
-  ctr->handler->connection_closed(ctr, reason);
+  ble_stack_connection_drop(&ctr->conn, reason);
 
   ctr_state_update(ctr);
   scan_start(ctr);
 }
 
-static void conn_connection_lost(void *delegate, struct net_layer_s *layer,
-                                 uint8_t reason)
+static void ctr_conn_state_changed(struct ble_stack_connection_s *conn,
+                                    bool_t connected)
 {
-  struct ble_central_s *ctr = delegate;
-
-  printk("Central connection dropped: %d\n", reason);
-
-  if (layer != ctr->master)
-    return;
-
-  ctr_conn_drop(ctr, reason);
-}
-
-static void ctr_llcp_closed(void *delegate, struct net_layer_s *layer,
-                             uint8_t reason)
-{
-  struct ble_central_s *ctr = delegate;
-
-  if (layer != ctr->llcp)
-    return;
-
-  ctr->llcp = NULL;
-
-  ctr_conn_drop(ctr, reason);
-}
-
-static void ctr_llcp_destroyed(void *delegate, struct net_layer_s *layer)
-{
-  printk("LLCP layer released\n");
-}
-
-static void ctr_master_destroyed(void *delegate, struct net_layer_s *layer)
-{
-  printk("Master layer released\n");
-}
-
-#if defined(CONFIG_BLE_CRYPTO)
-static
-void ctr_pairing_requested(void *delegate, struct net_layer_s *layer,
-                            bool_t bonding)
-{
-  struct ble_central_s *ctr = delegate;
-
-  printk("Master pairing requested\n");
-
-  ctr->handler->pairing_requested(ctr, bonding);
-}
-
-static
-void ctr_pairing_failed(void *delegate, struct net_layer_s *layer,
-                         enum sm_reason reason)
-{
-  struct ble_central_s *ctr = delegate;
-
-  printk("Master pairing failed\n");
-
-  ctr->handler->pairing_failed(ctr, reason);
-}
-
-static
-void ctr_pairing_success(void *delegate, struct net_layer_s *layer)
-{
-  struct ble_central_s *ctr = delegate;
-
-  printk("Master pairing success\n");
-
-  ctr->handler->pairing_success(ctr);
-}
-
-static void ctr_sm_invalidate(void *delegate, struct net_layer_s *layer)
-{
-  struct ble_central_s *ctr = delegate;
-
-  if (ctr->sm == layer)
-    ctr->sm = NULL;
-}
-#endif
-
-static void ctr_scan_destroyed(void *delegate, struct net_layer_s *layer)
-{
-  struct ble_central_s *ctr = delegate;
-
-  printk("Scanner layer destroyed\n");
+  struct ble_central_s *ctr = ble_central_s_from_conn(conn);
 
   ctr_state_update(ctr);
 }
 
-static
-error_t ctr_connection_create(struct ble_central_s *ctr,
-                               const struct ble_adv_connect_s *conn,
-                               dev_timer_value_t anchor)
+static const struct ble_stack_context_handler_s ctr_conn_handler =
 {
-  error_t err;
-  struct net_layer_s *master, *l2cap, *signalling, *gatt, *gap, *link, *llcp;
-  uint16_t cid;
-  struct ble_phy_params_s master_params;
-
-#if defined(CONFIG_BLE_CRYPTO)
-  struct net_layer_s *sm;
-#endif
-
-  master_params.connect_packet_timestamp = anchor;
-  master_params.conn_req = *conn;
-#if defined(CONFIG_BLE_SECURITY_DB)
-  ble_peer_init(&ctr->peer, &ctr->context->security_db, &conn->master);
-#else
-  ble_peer_init(&ctr->peer, NULL, &conn->master);
-#endif
-
-  err = DEVICE_OP(&ctr->context->ble, layer_create,
-                  &ctr->context->scheduler,
-                  BLE_NET_LAYER_MASTER,
-                  &master_params,
-                  ctr, &ctr_master_vtable.base,
-                  &master);
-  if (err) {
-    printk("error while creating master: %d\n", err);
-    return err;
-  }
-
-  struct ble_link_param_s link_params = {
-    .is_master = 0,
-#if defined(CONFIG_BLE_CRYPTO)
-    .crypto = &ctr->context->crypto,
-#endif
-  };
-
-  err = ble_link_create(&ctr->context->scheduler, &link_params, NULL, NULL, &link);
-  if (err) {
-    printk("error while creating link: %d\n", err);
-    goto out_master;
-  }
-
-  err = net_layer_bind(master, NULL, link);
-  if (err) {
-    printk("error while binding link to master: %d\n", err);
-    goto out_link;
-  }
-
-  err = ble_l2cap_create(&ctr->context->scheduler, NULL, NULL, &l2cap);
-  if (err) {
-    printk("error while creating l2cap: %d\n", err);
-    goto out_link;
-  }
-
-  cid = BLE_LINK_CHILD_L2CAP;
-  err = net_layer_bind(link, &cid, l2cap);
-  if (err) {
-    printk("error while binding l2cap to link: %d\n", err);
-    goto out_l2cap;
-  }
-
-  struct ble_llcp_params_s llcp_params = {
-#if defined(CONFIG_BLE_CRYPTO)
-    .rng = &ctr->context->rng,
-    .peer = &ctr->peer,
-#endif
-  };
-  err = ble_llcp_create(&ctr->context->scheduler, &llcp_params, ctr, &ctr_llcp_vtable.base, &llcp);
-  if (err) {
-    printk("error while creating llcp: %d\n", err);
-    goto out_l2cap;
-  }
-
-  cid = BLE_LINK_CHILD_LLCP;
-  err = net_layer_bind(link, &cid, llcp);
-  if (err) {
-    printk("error while binding llcp to link: %d\n", err);
-    goto out_llcp;
-  }
-
-#if defined(CONFIG_BLE_CRYPTO)
-  struct ble_sm_param_s sm_params = {
-    .peer = &ctr->peer,
-    .local_addr = master_params.conn_req.master,
-    .rng = &ctr->context->rng,
-    .crypto = &ctr->context->crypto,
-  };
-
-  err = ble_sm_create(&ctr->context->scheduler, &sm_params, ctr, &sm_delegate_vtable.base, &sm);
-  if (err) {
-    printk("error while creating sm: %d\n", err);
-    goto out_llcp;
-  }
-
-  cid = BLE_L2CAP_CID_SM;
-  err = net_layer_bind(l2cap, &cid, sm);
-  if (err) {
-    printk("error while binding sm to l2cap: %d\n", err);
-    goto out_sm;
-  }
-#endif
-
-  struct net_layer_s *att;
-
-  err = ble_att_create(&ctr->context->scheduler, NULL, NULL, &att);
-  if (err) {
-    printk("error while creating att: %d\n", err);
-    goto out_sm;
-  }
-
-  cid = BLE_L2CAP_CID_ATT;
-  err = net_layer_bind(l2cap, &cid, att);
-  if (err) {
-    printk("error while binding gatt to l2cap: %d\n", err);
-    goto out_att;
-  }
-
-  struct ble_gatt_params_s gatt_params = {
-    .peer = &ctr->peer,
-    .db = &ctr->context->gattdb,
-  };
-
-  err = ble_gatt_create(&ctr->context->scheduler, &gatt_params, NULL, NULL, &gatt);
-  if (err) {
-    printk("error while creating gatt: %d\n", err);
-    goto out_att;
-  }
-
-  cid = BLE_ATT_SERVER;
-  err = net_layer_bind(att, &cid, gatt);
-  if (err) {
-    printk("error while binding gatt to att: %d\n", err);
-    goto out_gatt;
-  }
-
-  err = ble_signalling_create(&ctr->context->scheduler, NULL, NULL, &signalling);
-  if (err) {
-    printk("error while creating signalling: %d\n", err);
-    goto out_gatt;
-  }
-
-  cid = BLE_L2CAP_CID_SIGNALLING;
-  err = net_layer_bind(l2cap, &cid, signalling);
-  if (err) {
-    printk("error while binding signalling to l2cap: %d\n", err);
-    goto out_signalling;
-  }
-
-  struct ble_gap_params_s gap_params = {
-    .db = &ctr->context->gattdb,
-    .sig = signalling,
-  };
-  err = ble_gap_create(&ctr->context->scheduler, &gap_params, NULL, NULL, &gap);
-  if (err) {
-    printk("error while creating gap: %d\n", err);
-    goto out_signalling;
-  }
-
-  cid = BLE_LLCP_CHILD_GAP;
-  err = net_layer_bind(llcp, &cid, gap);
-  if (err) {
-    printk("error while binding gap to master: %d\n", err);
-    goto out_gap;
-  }
-
-  printk("Connection creation done\n");
-
- out_gap:
-  net_layer_refdec(gap);
- out_signalling:
-  net_layer_refdec(signalling);
- out_gatt:
-  net_layer_refdec(gatt);
- out_att:
-  net_layer_refdec(att);
- out_sm:
-#if defined(CONFIG_BLE_CRYPTO)
-  net_layer_refdec(sm);
-#endif
- out_llcp:
-  net_layer_refdec(llcp);
- out_l2cap:
-  net_layer_refdec(l2cap);
- out_link:
-  net_layer_refdec(link);
- out_master:
-
-  if (err) {
-    net_layer_refdec(master);
-  } else {
-#if defined(CONFIG_BLE_CRYPTO)
-    ctr->sm = sm;
-#endif
-    ctr->master = master;
-    ctr->connection_tk = anchor;
-  }
-
-  return err;
-}
+  .state_changed = ctr_conn_state_changed,
+};
 
 static
 bool_t ctr_connection_requested(void *delegate, struct net_layer_s *layer,
@@ -401,20 +108,24 @@ bool_t ctr_connection_requested(void *delegate, struct net_layer_s *layer,
   printk("Connection request from "BLE_ADDR_FMT"...", BLE_ADDR_ARG(&conn->master));
 
 #if defined(CONFIG_BLE_CRYPTO)
-  if (ctr->sm) {
+  if (ctr->conn.sm) {
     printk(" still have sm\n");
     return 1;
   }
 #endif
 
-  if (ctr->master) {
+  if (ctr->conn.phy) {
     printk(" still have master\n");
     return 1;
   }
 
-  ctr->handler->connection_opened(ctr, &conn->master);
+  ctr->handler->connection_opened(ctr, &conn->slave);
 
-  err = ctr_connection_create(ctr, conn, anchor);
+  err = ble_stack_connection_create(&ctr->conn, ctr->context,
+                                    &ctr->handler->base,
+                                    &ctr_conn_handler,
+                                    1, conn, anchor);
+
   if (!err) {
     net_layer_refdec(ctr->scan);
     ctr->scan = NULL;
@@ -429,7 +140,7 @@ static error_t scan_start(struct ble_central_s *ctr)
 {
   error_t err;
 
-  if (ctr->master) {
+  if (ctr->conn.phy) {
     printk("Cannot scan: has master\n");
     return 0;
   }
@@ -484,32 +195,19 @@ error_t ble_central_init(
   return 0;
 }
 
-static const struct ble_phy_delegate_vtable_s ctr_master_vtable =
+static void ctr_scan_destroyed(void *delegate, struct net_layer_s *layer)
 {
-  .base.release = ctr_master_destroyed,
-  .connection_lost = conn_connection_lost,
-};
+  struct ble_central_s *ctr = delegate;
 
-#if defined(CONFIG_BLE_CRYPTO)
-static const struct ble_sm_delegate_vtable_s sm_delegate_vtable =
-{
-  .base.release = ctr_sm_invalidate,
-  .pairing_requested = ctr_pairing_requested,
-  .pairing_failed = ctr_pairing_failed,
-  .pairing_success = ctr_pairing_success,
-};
-#endif
+  printk("Scanner layer destroyed\n");
+
+  ctr_state_update(ctr);
+}
 
 static const struct ble_scanner_delegate_vtable_s ctr_scan_vtable =
 {
   .base.release = ctr_scan_destroyed,
   .connection_requested = ctr_connection_requested,
-};
-
-static const struct ble_llcp_delegate_vtable_s ctr_llcp_vtable =
-{
-  .base.release = ctr_llcp_destroyed,
-  .connection_closed = ctr_llcp_closed,
 };
 
 void ble_central_mode_set(struct ble_central_s *ctr, uint8_t mode)
@@ -536,20 +234,9 @@ void ble_central_mode_set(struct ble_central_s *ctr, uint8_t mode)
     ctr->scan = NULL;
   }
 
-  if (mode & BLE_CENTRAL_CONNECTABLE && !ctr->master)
+  if (mode & BLE_CENTRAL_CONNECTABLE && !ctr->conn.phy)
     scan_start(ctr);
 }
-
-#if defined(CONFIG_BLE_CRYPTO)
-void ble_central_pairing_accept(struct ble_central_s *ctr,
-                                   bool_t mitm_protection,
-                                   uint32_t pin,
-                                   const void *oob_data)
-{
-  if (ctr->sm)
-    ble_sm_pairing_accept(ctr->sm, mitm_protection, pin, oob_data);
-}
-#endif
 
 static void ble_central_target_add(struct ble_central_s *ctrl,
                                    const struct ble_addr_s *addr,
@@ -573,4 +260,3 @@ void ble_central_connect(struct ble_central_s *ctrl, const struct ble_addr_s *ad
 {
   ble_central_target_add(ctrl, addr, BLE_SCANNER_CONNECT);
 }
-

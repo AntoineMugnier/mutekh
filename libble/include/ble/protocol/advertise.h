@@ -113,6 +113,8 @@ void ble_advertise_packet_txaddr_set(struct buffer_s *p, const struct ble_addr_s
 
   if (addr->type == BLE_ADDR_RANDOM)
     data[BLE_ADV_TYPE_OFFSET] |= BLE_ADV_TXADD;
+  else
+    data[BLE_ADV_TYPE_OFFSET] &= ~BLE_ADV_TXADD;
   memcpy(&data[BLE_ADV_TXADDR_OFFSET], addr->addr, 6);
 }
 
@@ -123,6 +125,8 @@ void ble_advertise_packet_rxaddr_set(struct buffer_s *p, const struct ble_addr_s
 
   if (addr->type == BLE_ADDR_RANDOM)
     data[BLE_ADV_TYPE_OFFSET] |= BLE_ADV_RXADD;
+  else
+    data[BLE_ADV_TYPE_OFFSET] &= ~BLE_ADV_RXADD;
   memcpy(&data[BLE_ADV_RXADDR_OFFSET], addr->addr, 6);
 }
 

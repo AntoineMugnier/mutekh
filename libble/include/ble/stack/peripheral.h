@@ -40,13 +40,9 @@
 #include <errno.h>
 #include <ble/net/phy.h>
 #include <ble/net/l2cap.h>
-#if defined(CONFIG_BLE_CRYPTO)
-#include <ble/net/sm.h>
-#endif
 #include <ble/net/signalling.h>
 #include <ble/net/gatt.h>
 #include <ble/net/gap.h>
-#include <ble/protocol/sm.h>
 #include <net/scheduler.h>
 
 #include "context.h"
@@ -71,15 +67,13 @@ enum ble_peripheral_mode_e {
 
 struct ble_peripheral_handler_s
 {
-#if defined(CONFIG_BLE_CRYPTO)
-  void (*pairing_requested)(struct ble_peripheral_s *peri, bool_t bonding);
-  void (*pairing_failed)(struct ble_peripheral_s *peri, enum sm_reason reason);
-  void (*pairing_success)(struct ble_peripheral_s *peri);
-#endif
-  bool_t (*connection_requested)(struct ble_peripheral_s *peri, const struct ble_addr_s *addr);
-  void (*connection_closed)(struct ble_peripheral_s *peri, uint8_t reason);
+  struct ble_stack_connection_handler_s base;
+  bool_t (*connection_requested)(struct ble_peripheral_s *peri,
+                                 const struct ble_addr_s *addr);
   void (*state_changed)(struct ble_peripheral_s *peri, enum ble_peripheral_state_e state);
 };
+
+STRUCT_COMPOSE(ble_peripheral_handler_s, base);
 
 struct ble_peripheral_params_s
 {
@@ -88,43 +82,23 @@ struct ble_peripheral_params_s
 
 struct ble_peripheral_s
 {
-  const struct ble_peripheral_handler_s *handler;
   struct ble_stack_context_s *context;
-  struct net_layer_s *slave;
-  struct net_layer_s *llcp;
-#if defined(CONFIG_BLE_CRYPTO)
-  struct net_layer_s *sm;
-#endif
+  const struct ble_peripheral_handler_s *handler;
+  struct ble_stack_connection_s conn;
   struct net_layer_s *adv;
-  struct ble_peer_s peer;
-  dev_timer_value_t connection_tk;
   struct ble_addr_s addr;
   enum ble_peripheral_state_e last_state : 8;
   uint8_t mode;
   struct ble_peripheral_params_s params;
 };
 
+STRUCT_COMPOSE(ble_peripheral_s, conn);
+
 error_t ble_peripheral_init(
   struct ble_peripheral_s *peri,
   const struct ble_peripheral_params_s *params,
   const struct ble_peripheral_handler_s *handler,
   struct ble_stack_context_s *context);
-
-#if defined(CONFIG_BLE_CRYPTO)
-
-void ble_peripheral_pairing_request(struct ble_peripheral_s *peri,
-                                    bool_t mitm_protection,
-                                    bool_t bonding);
-
-void ble_peripheral_pairing_accept(struct ble_peripheral_s *peri,
-                                   bool_t mitm_protection,
-                                   uint32_t pin,
-                                   const void *oob_data);
-
-void ble_peripheral_pairing_abort(struct ble_peripheral_s *peri,
-                                  enum sm_reason reason);
-
-#endif
 
 void ble_peripheral_mode_set(struct ble_peripheral_s *peri, uint8_t mode);
 

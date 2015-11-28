@@ -59,8 +59,8 @@ struct ble_scan_filter_s
   struct net_layer_s layer;
 
   ble_scan_list_root_t devices;
-
   dev_timer_delay_t lifetime_tk;
+  uint32_t next_id;
 
   struct ble_scanner_param_s scan_params;
 
@@ -101,6 +101,7 @@ struct ble_scan_item_s *ble_scan_filter_device_get(struct ble_scan_filter_s *sf,
 
   memset(item, 0, sizeof(*item));
 
+  item->device.id = sf->next_id++;
   item->device.addr = *addr;
   item->device.active = 1;
   item->device.first_seen = net_scheduler_time_get(sf->layer.scheduler);
@@ -178,11 +179,13 @@ void ble_scan_filter_adv_handle(struct ble_scan_filter_s *sf,
     break;
 
   case BLE_SCAN_RSP:
-    if ((item->device.scanned && !item->rescan)
+    if (item->device.scanned
         && ad_len == item->device.scan_ad_len
         && !memcmp(item->device.ad + item->device.adv_ad_len, ad, ad_len)
-        && item->policy != BLE_SCAN_FILTER_MONITOR)
+        && item->policy != BLE_SCAN_FILTER_MONITOR) {
+      item->rescan = 0;
       return;
+    }
 
     item->device.connectable = 1;
     item->device.scanned = 1;

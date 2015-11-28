@@ -47,24 +47,6 @@ struct ble_beacon_adv_config_s
 
 #define BEACON_AD_SIZE (sizeof(struct beacon_data_s) + 2)
 
-static void beacon_adv_destroyed(void *delegate, struct net_layer_s *layer)
-{
-}
-
-static
-bool_t beacon_connection_requested(void *delegate, struct net_layer_s *layer,
-                                   const struct ble_adv_connect_s *conn,
-                                   dev_timer_value_t anchor)
-{
-  return 1;
-}
-
-static const struct ble_advertiser_delegate_vtable_s beacon_adv_vtable =
-{
-  .base.release = beacon_adv_destroyed,
-  .connection_requested = beacon_connection_requested,
-};
-
 static
 void ble_beacon_config_apply(struct ble_beacon_adv_config_s *adv_config,
                              const struct ble_beacon_config_s *config)
@@ -103,7 +85,7 @@ error_t ble_beacon_create(
                   &context->scheduler,
                   BLE_NET_LAYER_ADV,
                   &params.adv_params,
-                  NULL, &beacon_adv_vtable.base,
+                  NULL, NULL,
                   beaconer);
 }
 
