@@ -227,7 +227,7 @@ static bool_t pic32_spi_transfer_tx(struct device_s *dev)
 
       word = pic32_spi_format(dev, word);
 
-      cpu_mem_write_32(pv->addr + PIC32_SPI_BUF_ADDR, endian_le32((uint8_t)word));
+      cpu_mem_write_32(pv->addr + PIC32_SPI_BUF_ADDR, endian_le32(word));
 
       tr->out = (const void*)((const uint8_t*)tr->out + tr->out_width);
       tr->count--;

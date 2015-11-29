@@ -203,7 +203,7 @@ static bool_t soclib_spi_transfer_tx(struct device_s *dev)
           break;
         }
 
-      cpu_mem_write_32(pv->addr + SOCLIB_SPI_FIFO_ADDR, endian_le32((uint8_t)word));
+      cpu_mem_write_32(pv->addr + SOCLIB_SPI_FIFO_ADDR, endian_le32(word));
 
       tr->out = (const void*)((const uint8_t*)tr->out + tr->out_width);
       tr->count--;
