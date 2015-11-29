@@ -137,7 +137,7 @@ static uint32_t pic32_spi_format(struct device_s *dev, uint32_t word)
 
   uint32_t w = word;
 
-  if (pv->pol == DEV_SPI_CS_ACTIVE_LOW)
+  if (pv->pol == DEV_SPI_ACTIVE_LOW)
     w = ~word;
 
   if (pv->bit_order == DEV_SPI_LSB_FIRST)
@@ -267,7 +267,7 @@ static DEV_SPI_CTRL_SELECT(pic32_spi_select)
         {
         case DEV_SPI_CS_TRANSFER:
           x |= PIC32_SPI_CON_MSSEN;
-          x = pt == DEV_SPI_CS_ACTIVE_LOW ? x & ~PIC32_SPI_CON_FRMPOL : x | PIC32_SPI_CON_FRMPOL;
+          x = pt == DEV_SPI_ACTIVE_LOW ? x & ~PIC32_SPI_CON_FRMPOL : x | PIC32_SPI_CON_FRMPOL;
           break;
 
         case DEV_SPI_CS_DEASSERT:

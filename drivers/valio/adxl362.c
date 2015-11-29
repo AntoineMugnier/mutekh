@@ -354,7 +354,7 @@ static DEV_INIT(adxl362_init)
   srq->config.word_width = 8;
   srq->config.bit_order = DEV_SPI_MSB_FIRST;
   srq->config.ck_mode = DEV_SPI_CK_MODE_0;
-  srq->cs_polarity = DEV_SPI_CS_ACTIVE_LOW;
+  srq->cs_polarity = DEV_SPI_ACTIVE_LOW;
   srq->base.pvdata = dev;
 
   dev_request_queue_init(&pv->queue);

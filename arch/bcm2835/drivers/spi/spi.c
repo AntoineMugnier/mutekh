@@ -249,7 +249,7 @@ static DEV_SPI_CTRL_SELECT(bcm2835_spi_select)
     err = -EBUSY;
   else
     {
-      BCM2835_SPI_CS_CSPOL_SETVAL(cs_id, pv->ctrl, pt == DEV_SPI_CS_ACTIVE_HIGH);
+      BCM2835_SPI_CS_CSPOL_SETVAL(cs_id, pv->ctrl, pt == DEV_SPI_ACTIVE_HIGH);
       BCM2835_SPI_CS_CS_SETVAL(pv->ctrl, cs_id);
   
       switch (pc)

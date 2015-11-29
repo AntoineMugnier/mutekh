@@ -93,7 +93,7 @@ void main()
     .config = {
       .bit_rate = 100000,
       .word_width = 8,
-      //      .miso_pol = DEV_SPI_CS_ACTIVE_LOW,
+      //      .miso_pol = DEV_SPI_ACTIVE_LOW,
     },
     .cs_id = 0,
     .cs_gpio = 1,

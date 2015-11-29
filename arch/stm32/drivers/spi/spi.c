@@ -103,8 +103,8 @@ DEV_SPI_CTRL_CONFIG(stm32_spi_config)
     }
 
   /* check mosi/miso polarity */
-  if (cfg->miso_pol != DEV_SPI_CS_ACTIVE_HIGH ||
-      cfg->mosi_pol != DEV_SPI_CS_ACTIVE_HIGH)
+  if (cfg->miso_pol != DEV_SPI_ACTIVE_HIGH ||
+      cfg->mosi_pol != DEV_SPI_ACTIVE_HIGH)
     {
       err = -ENOTSUP;
       goto cfg_end;
