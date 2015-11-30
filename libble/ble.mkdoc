@@ -6,6 +6,121 @@
   devices using this whole stack of protocols.
 
   Network-like protocols are modeled through the libnetwork APIs.
+  Device drivers provide implmentation for the hardware-dependent
+  network layers.
+
+@end section
+
+@section {Recap for Bluetooth Core Specification (non-)readers}
+
+  @section {Connection and Device Roles}
+
+    For devices that connect to others, Specification speaks of
+    Central and Peripheral Roles.  Central is a device that Scans for
+    presence of Peripherals and connects to them.  Peripheral
+    Advertises its presence and capabilities through Advertisement
+    Data (AD) and accepts connection requests from Centrals.
+
+    Because Scanning requires keeping radio hardware running for long
+    periods of time, Scanner (therefore, Central) is usually the
+    device with the biggest battery (or permanent power source).  With
+    the same spirit, once connected, Peripheral battery will be saved
+    as much as possible.
+
+    Once connected, Central is Master of the connection, Peripheral is
+    Slave.  Master defines timing and channel hopping sequence for the
+    connection.
+
+    Most management operations are driven by Central (Connection
+    establishment, Pairing, Connection Parameter updates, Link-layer
+    cryptography, etc.), but for each operation, Peripheral may
+    sollicit Central for performing them.
+
+  @end section
+
+  @section {Slave latency}
+
+    If allowed, Slave may skip some radio events and sleep instead.
+    This saves battery and is called the "Slave Latency feature".  A
+    Slave applying Slave Latency remains connected as it wakes up
+    periodically to sync clocks and check for incoming messages.
+
+    Slave Latency has a side effect: data usually flows better from
+    Peripheral (Slave) to Central (Master) because Slave knows whether
+    is has data to send and can stop applying Slave Latency.  On the
+    other hand, if Master has data waiting for a Slave applying Slave
+    Latency, data gets queued until Slave listens again and may be
+    delayed for some time (e.g. more than one second).
+
+  @end section
+
+  @section {Device profiles, GATT and Attribute protocol}
+
+    A Profile is an arbitrary Specification using a set of GATT
+    Services for a specific purpose.  A Profile is implemented by a
+    Device when all its requirements in terms of Services are
+    satisfied.  As such, Profile definitions dictate how Services will
+    be declared, implemented and used, but do not define any protocol.
+
+    There is always a GATT Database in a device, whatever the side of
+    the connection it is on.  GATT Client comunicates to peer's GATT
+    Server.  There are no Server-to-Server or Client-to-Client
+    communications.  A GATT Server exposes one GATT Database.
+
+    GATT Database keeps a hierarchy of Services and Characteristics
+    through careful construction of an Attribute Database.
+
+    Attribute Database is a simple collection of attributes.  Each
+    attribute is a (Handle, Type, Value) tuple.  Attribute Protocol
+    defines a set of operations to enumerate, query, read, write and
+    send update notifications for Attribute Values.  Set of operations
+    that is permitted/possible is Attribute-dependent.
+
+    A GATT Database is an Attribute Database with a specific way of
+    interleaving Definition, Value and Descriptor Attributes.  Service
+    Definition Attributes and Characteristic Definition Attributes
+    provide schema and grouping for Characteristic values.
+    Descriptors are additional Attributes attached to Characteristics.
+    Definition Attributes are read-only, Value Attributes are
+    read/write/notify depending on Service Specification, and some
+    Descriptors may be read-write, but most are read-only.
+
+    A GATT Service is a set of Characteristics and encoding of their
+    values to implement a specific protocol.
+
+  @end section
+
+  @section {UUIDs}
+
+    Attributes types, GATT Services, Characteristics and Descriptors
+    types, and other constants are defined through UUID values
+    (128-bit numbers).  This ensures minimal chances of value
+    collisions without the need for a central registry.
+
+    SIG-defined UUIDs receive special treatment as they are commonly
+    used throughout the various protocols of the Specification. They
+    are grouped around the "Bluetooth Base UUID" and share 96 common
+    bits.  In various protocol parts, they can be transmitted in a
+    short form, skipping the common bits, thus only using 16 or 32
+    bits.  Because of this, SIG UUIDs are often referred as "Short
+    UUIDs".  This is an implementation detail specific to some
+    protocols in the whole stack.
+
+    Apart from SIG-defined UUIDs, any implementor is free to generate
+    its own UUIDs and use them in various protocols.  Custom UUIDs
+    must not use the Bluetooth Base UUID (and cannot be encoded in a
+    short form).
+
+    Specification does not define any grouping scheme for custom
+    UUIDs, but some vendors do incitate to group custom UUIDs for
+    various reasons.  In order to avoid collisions, it is probably
+    better to use full 128-bit random UUIDs anyway.
+
+  @end section
+
+@end section
+
+@section {Library overview}
 
   This library provides:
   @list
@@ -31,87 +146,10 @@
 
 @end section
 
-@section {Recap for Bluetooth Core Specification (non-)readers}
-
-  @section {Connection and Device Roles}
-
-    For devices that connect to others, Specification speaks of
-    Central and Peripheral.  Central is a device that Scans for
-    presence of Peripherals and connects to them.  Peripheral
-    Advertises its presence and capabilities through Advertisement
-    Data (AD) and accepts connection requests from Centrals.
-
-    Because Scanning requires keeping radio hardware running for long
-    periods of time, Scanner (and, therefore, Central) is usually the
-    device with the biggest battery (or permanent power source).  With
-    the same spirit, once connected, Peripheral battery will be saved
-    as much as possible.
-
-    Once connected, Central is Master of the connection, Peripheral is
-    Slave.  Master defines timing and channel hopping sequence for the
-    connection.
-
-    If allowed, Slave may skip some radio events and sleep instead.
-    This saves battery and is called the "Slave Latency feature".  A
-    Slave applying Slave Latency remains connected as it wakes up
-    periodically to sync clocks and check for incoming messages.  This
-    has a side effect: data usually flows better from Peripheral
-    (Slave) to Central (Master) because Slave knows whether is has
-    data to send and can stop applying Slave Latency.  On the
-    contrary, if Master has data waiting for a Slave applying Slave
-    Latency, data gets queued until Slave listens again and may be
-    delayed for some time (e.g. more than a second).
-
-    Most management operations are driven by Central (Connection
-    establishment, Pairing, Connection Parameter updates, Link-layer
-    cryptography, etc.), but for each operation, Peripheral may
-    sollicit Central for performing them.
-
-  @end section
-
-  @section {GATT and Attribute protocol}
-
-    BLE devices implement Profiles using GATT Services, exposed
-    through a GATT Database.
-
-    There is always a GATT Database in a device, whatever the side of
-    the connection it is on.  GATT Client comunicates to peer's GATT
-    Server.  There are no Server-to-Server or Client-to-Client
-    communications.  A GATT Server exposes a GATT Database.
-
-    GATT Database keeps a hierarchy of Services and Characteristics
-    through careful construction of an Attribute Database.
-
-    Attribute Database is a simple collection of attributes.  Each
-    attribute is a (Handle, Type, Value) tuple.  Attribute Protocol
-    defines a set of operations to enumerate, query, read, write and
-    send update notifications for Attribute Values.  Set of operations
-    that is permitted/possible is Attribute-dependent.
-
-    A GATT Database is an Attribute Database with a specific way of
-    interleaving Definition, Value and Descriptor Attributes.  Service
-    and Characteristic Definition Attributes provide schema and
-    grouping for Characteristic values.  Descriptors are additional
-    Attributes attached to Characteristics.  Definition Attributes are
-    read-only, Value Attributes are read/write/notify depending on
-    Service Specification, and some Descriptors can be read-write
-    (most are read-only).
-
-    A GATT Service is a set of Characteristics and encoding of their
-    values to implement a specific protocol.
-
-    A Profile is an arbitrary Specification using a set of GATT
-    Services for a specific purpose.  A Profile is implemented by a
-    Device when all its requirements in terms of Service and
-    Characteristics are satisfied.  As such, Profile definitions
-    dictate how Services will be declared, implemented and used, but
-    do not defined any protocol.
-
-  @end section
-
-@end section
-
 @section {GATT Database}
+
+  This part describes declaration and usage of a GATT Service in
+  MutekH's libble.
 
   @section {Concepts}
 
@@ -139,11 +177,12 @@
     Attribute handle allocation and encoding of Service/Characteristic
     Definition Attributes is handled by the library.
 
-    UUIDs are always 128 bits in service/characteristic declarations.
-    Shortening to 16 bits is done when possible if protocol encoding
-    permits so (like Attribute Protocol does).  Keeping UUID-128 in
-    internal representation simplifies handling of UUIDs in generic
-    code (no special case for comparisons, etc.).
+    UUIDs are always in full 128-bit form in Service/Characteristic
+    declarations structures.  Shortening to 16 bits is done when
+    possible if protocol encoding permits so (like Attribute Protocol
+    does).  Keeping UUID-128 in internal representation simplifies
+    handling of UUIDs in generic code (no special case for
+    comparisons, etc.).
 
     For each request, GATT Server layer knows whether it comes through
     a secure link-layer and will enforce characteristic-defined security
@@ -202,19 +241,24 @@
 
   @section {GATT side notes}
 
-    A Characteristic needs at least 2 Attributes to be valid: a
-    Characteristic Declaration Attribute, and a Value Attribute.  Other
-    attributes may follow, they are called Descriptors.
+    A Characteristic yields at least 2 Attributes to be valid: a
+    Characteristic Declaration Attribute, and a Value Attribute.
+    Other attributes may follow, they are called Descriptors.
 
     Because GATT Services and Characteristics are encoded in terms of
     Attributes in the Attribute Protocol, there is some confusion
     between the terms "Characteristic" and "Attribute" in many
     programs and libraries.
 
-    For instance, BlueZ gatttool defines the following commands:
+    For instance, BlueZ @tt gatttool defines the following commands:
     "char-read-hnd", "char-read-uuid", "char-write-req",
-    "char-write-cmd", but their names are misleading: they operate on
+    "char-write-cmd".  Their names are misleading: they operate on
     Attributes.
+
+    In MutekH, Services defined with the GATT DB library only consider
+    Characteristics.  All indices target Characteristic index in
+    Service, or Descriptor index in Characteristic.  Attribute
+    handle allocation is completely hidden.
 
   @end section
 
