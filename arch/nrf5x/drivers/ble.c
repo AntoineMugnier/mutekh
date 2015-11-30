@@ -670,7 +670,6 @@ void nrf5x_ble_event_address_matched(struct nrf5x_ble_private_s *pv)
 
   nrf5x_ble_ppi_cleanup(pv);
   nrf_it_disable_mask(BLE_RADIO_ADDR, 0
-                      | (1 << NRF_RADIO_BCMATCH)
                       | (1 << NRF_RADIO_END)
                       );
 
@@ -687,9 +686,9 @@ void nrf5x_ble_event_address_matched(struct nrf5x_ble_private_s *pv)
     nrf_short_set(BLE_RADIO_ADDR, 1 << NRF_RADIO_END_DISABLE);
 
     nrf_ppi_disable_mask(0
-                           | (1 << PPI_END_TIMER_START)
-                           | (1 << PPI_ADDRESS_TIMER_STOP)
-                           );
+                         | (1 << PPI_END_TIMER_START)
+                         | (1 << PPI_ADDRESS_TIMER_STOP)
+                         );
 
     nrf_it_disable(BLE_TIMER_ADDR, NRF_TIMER_COMPARE(TIMER_IFS_TIMEOUT));
 
@@ -707,17 +706,10 @@ void nrf5x_ble_event_address_matched(struct nrf5x_ble_private_s *pv)
 
   gpio(I_WAIT, I_WAIT);
 
-  while (!pv->pipelining_race
-         && !nrf_event_check(BLE_RADIO_ADDR, NRF_RADIO_BCMATCH)) {
-    if (nrf_reg_get(BLE_RADIO_ADDR, NRF_RADIO_STATE) != NRF_RADIO_STATE_RX
-        && nrf_reg_get(BLE_RADIO_ADDR, NRF_RADIO_STATE) != NRF_RADIO_STATE_TX) {
-      dprintk("Not in RX/TX any more: %d\n", nrf_reg_get(BLE_RADIO_ADDR, NRF_RADIO_STATE));
-      break;
-    }
-    assert(nrf_reg_get(BLE_RADIO_ADDR, NRF_RADIO_BCC) == 16);
-  }
+  while (!pv->pipelining_race && !nrf_event_check(BLE_RADIO_ADDR, NRF_RADIO_BCMATCH));
 
   nrf_event_clear(BLE_RADIO_ADDR, NRF_RADIO_BCMATCH);
+  nrf_event_clear(BLE_RADIO_ADDR, NRF_RADIO_PAYLOAD);
   gpio(I_WAIT, 0);
 
   uint8_t len = pv->transmitting[1];
@@ -732,13 +724,19 @@ void nrf5x_ble_event_address_matched(struct nrf5x_ble_private_s *pv)
                      );
 
   gpio(I_WAIT, I_WAIT);
-  if (end_irq_bits > 36 + RADIO_IRQ_LATENCY_US * 2 + 4
+  if (end_irq_bits > 16 + RADIO_IRQ_LATENCY_US * 2 + RADIO_RX_CHAIN_DELAY_US
+      && !nrf_event_check(BLE_RADIO_ADDR, NRF_RADIO_PAYLOAD)
       && !nrf_event_check(BLE_RADIO_ADDR, NRF_RADIO_END)) {
   } else {
     gpio(I_WAIT, 0);
     gpio(I_WAIT, I_WAIT);
-    uint32_t some_long_time = 1024;
 
+    nrf_it_disable_mask(BLE_RADIO_ADDR, 0
+                        | (1 << NRF_RADIO_BCMATCH)
+                        | (1 << NRF_RADIO_END)
+                        );
+
+    uint32_t some_long_time = 1024;
     while (!nrf_event_check(BLE_RADIO_ADDR, NRF_RADIO_END)) {
       --some_long_time;
 
@@ -830,6 +828,8 @@ void nrf5x_ble_event_ifs_timeout(struct nrf5x_ble_private_s *pv)
     kroutine_exec(&pv->rescheduler);
     return;
   }
+
+  nrf5x_ble_backlog(pv->current, "IF Timeout", 0);
 
   current->handler->ifs_event(current, 1);
 
