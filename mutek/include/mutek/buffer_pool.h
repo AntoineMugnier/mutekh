@@ -25,6 +25,7 @@ struct buffer_s
   GCT_CONTAINER_ENTRY(buffer_queue, entry);
 
   struct buffer_pool_s *pool;
+  void *allocator;
 
   uint16_t begin;
   uint16_t end;

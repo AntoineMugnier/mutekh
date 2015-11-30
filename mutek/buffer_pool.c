@@ -39,6 +39,7 @@ void buffer_pool_cleanup(struct buffer_pool_s *pool)
 void buffer_destroy(struct buffer_s *buffer)
 {
     buffer_refcleanup(buffer);
+    buffer->allocator = NULL;
     slab_free(&buffer->pool->slab, buffer);
 }
 
@@ -53,6 +54,7 @@ struct buffer_s *buffer_pool_alloc(struct buffer_pool_s *pool)
     buffer_refinit(buffer);
     buffer->begin = 0;
     buffer->end = pool->slab.unit_size - sizeof(struct buffer_s);
+    buffer->allocator = __builtin_return_address(0);
 
     return buffer;
 }
