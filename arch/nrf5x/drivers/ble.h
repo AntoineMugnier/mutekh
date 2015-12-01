@@ -214,6 +214,7 @@ struct nrf5x_ble_private_s {
 
   bool_t pipelining : 1;
   bool_t pipelining_race : 1;
+  bool_t wait_end : 1;
 
 #if defined(CONFIG_DEVICE_CLOCK)
   bool_t accurate_clock_requested : 1;
@@ -242,6 +243,7 @@ void nrf5x_ble_rtc_boundary_set(dev_timer_value_t value, bool_t stop);
 void nrf5x_ble_rtc_boundary_clear(void);
 
 void nrf5x_ble_event_address_matched(struct nrf5x_ble_private_s *pv);
+void nrf5x_ble_event_bcc_end(struct nrf5x_ble_private_s *pv);
 void nrf5x_ble_event_packet_ended(struct nrf5x_ble_private_s *pv);
 void nrf5x_ble_event_ifs_timeout(struct nrf5x_ble_private_s *pv);
 void nrf5x_ble_event_timeout(struct nrf5x_ble_private_s *pv);

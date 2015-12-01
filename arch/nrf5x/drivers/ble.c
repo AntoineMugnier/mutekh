@@ -700,9 +700,9 @@ void nrf5x_ble_event_address_matched(struct nrf5x_ble_private_s *pv)
     nrf_short_set(BLE_RADIO_ADDR, 1 << NRF_RADIO_END_DISABLE);
 
     nrf_ppi_disable_mask(0
-                           | (1 << PPI_END_TIMER_START)
-                           | (1 << PPI_ADDRESS_TIMER_STOP)
-                           );
+                         | (1 << PPI_END_TIMER_START)
+                         | (1 << PPI_ADDRESS_TIMER_STOP)
+                         );
 
     nrf_it_disable(BLE_TIMER_ADDR, NRF_TIMER_COMPARE(TIMER_IFS_TIMEOUT));
 
@@ -748,23 +748,42 @@ void nrf5x_ble_event_address_matched(struct nrf5x_ble_private_s *pv)
   gpio(I_WAIT, I_WAIT);
   if (end_irq_bits > 16 + RADIO_IRQ_LATENCY_US * 2 + RADIO_RX_CHAIN_DELAY_US
       && !nrf_event_check(BLE_RADIO_ADDR, NRF_RADIO_END)) {
-  } else {
-    gpio(I_WAIT, 0);
-    gpio(I_WAIT, I_WAIT);
-    uint32_t some_long_time = 1024;
-
-    while (!nrf_event_check(BLE_RADIO_ADDR, NRF_RADIO_END)) {
-      --some_long_time;
-
-      if (!some_long_time) {
-        nrf5x_ble_event_timeout(pv);
-        return;
-      }
-    }
-    gpio(I_WAIT, 0);
-
-    nrf5x_ble_event_packet_ended(pv);
+    pv->wait_end = 1;
+    return;
   }
+
+  gpio(I_WAIT, 0);
+  gpio(I_WAIT, I_WAIT);
+
+  uint32_t some_long_time = 1024;
+  while (!nrf_event_check(BLE_RADIO_ADDR, NRF_RADIO_END)) {
+    --some_long_time;
+
+    if (!some_long_time) {
+      printk("Long time passed\n");
+      nrf5x_ble_event_timeout(pv);
+      return;
+    }
+  }
+  gpio(I_WAIT, 0);
+
+  nrf5x_ble_event_packet_ended(pv);
+}
+
+void nrf5x_ble_event_bcc_end(struct nrf5x_ble_private_s *pv)
+{
+  if (!pv->wait_end)
+    return;
+  pv->wait_end = 0;
+  gpio(I_WAIT, 0);
+  gpio(I_WAIT, I_WAIT);
+
+  assert(nrf_reg_get(BLE_RADIO_ADDR, NRF_RADIO_BCC) != 16);
+  while (!nrf_event_check(BLE_RADIO_ADDR, NRF_RADIO_END))
+    ;
+
+  gpio(I_WAIT, 0);
+  nrf5x_ble_event_packet_ended(pv);
 }
 
 void nrf5x_ble_event_packet_ended(struct nrf5x_ble_private_s *pv)
