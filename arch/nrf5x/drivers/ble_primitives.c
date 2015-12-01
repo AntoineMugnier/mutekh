@@ -114,7 +114,10 @@ void nrf5x_ble_radio_init(void)
   nrf_reg_set(NRF_PERIPHERAL_ADDR(NRF5X_POWER), NRF_POWER_DCDCEN,
               _CONFIG_NRF5X_RADIO_DCDC ? NRF_POWER_DCDCEN_ENABLE : 0);
 
-  nrf_it_disable_mask(BLE_RADIO_ADDR, -1);
+  nrf_it_enable_mask(BLE_RADIO_ADDR, 0
+                  | (1 << NRF_RADIO_BCMATCH)
+                  | (1 << NRF_RADIO_END)
+                  );
 
   if ((~cpu_mem_read_32(NRF_FICR_OVERRIDEEN)) & (1 << NRF_FICR_OVERRIDE_BLE_1MBIT)) {
     for (uint8_t i = 0; i < 5; ++i)
@@ -137,6 +140,11 @@ void nrf5x_ble_radio_init(void)
   nrf_task_trigger(BLE_RADIO_ADDR, NRF_RADIO_STOP);
   nrf_task_trigger(BLE_RADIO_ADDR, NRF_RADIO_DISABLE);
 
+  nrf_short_set(BLE_RADIO_ADDR, 0
+                | (1 << NRF_RADIO_ADDRESS_BCSTART)
+                | (1 << NRF_RADIO_READY_START)
+                | (1 << NRF_RADIO_END_DISABLE));
+
 #if defined(CONFIG_ARCH_NRF52)
   nrf_reg_set(BLE_RADIO_ADDR, NRF_RADIO_MODECNF0, 0
     | NRF_RADIO_MODECNF0_RU_FAST
@@ -153,10 +161,11 @@ void nrf5x_ble_rtc_init(void)
 
 void nrf5x_ble_timer_init(void)
 {
-  nrf_task_trigger(BLE_TIMER_ADDR, NRF_TIMER_STOP);
+  nrf_task_trigger(BLE_TIMER_ADDR, NRF_TIMER_CLEAR);
   nrf_reg_set(BLE_TIMER_ADDR, NRF_TIMER_PRESCALER, 4);
   nrf_reg_set(BLE_TIMER_ADDR, NRF_TIMER_MODE, NRF_TIMER_MODE_TIMER);
   nrf_reg_set(BLE_TIMER_ADDR, NRF_TIMER_BITMODE, NRF_TIMER_BITMODE_16);
+  nrf_short_set(BLE_TIMER_ADDR, (1 << NRF_TIMER_COMPARE_CLEAR(TIMER_IFS_TIMEOUT)));
   nrf_reg_set(BLE_TIMER_ADDR, NRF_TIMER_CC(TIMER_IFS_TIMEOUT),
               BLE_T_IFS
               + 8 + 32
@@ -164,31 +173,22 @@ void nrf5x_ble_timer_init(void)
               + RADIO_RX_CHAIN_DELAY_US
               + 20);
   nrf_reg_set(BLE_TIMER_ADDR, NRF_TIMER_CC(TIMER_ENABLE),
-              BLE_T_IFS - PPI_LATENCY_US * 2 - RADIO_RX_CHAIN_DELAY_US - 1
-              - RADIO_RAMPUP_US - 1);
+              1);
 }
 
 void nrf5x_ble_ppi_init(void)
 {
   nrf_ppi_setup(PPI_RTC_REQUEST_END_DISABLE,
-                  BLE_RTC_ADDR, NRF_RTC_COMPARE(RTC_REQUEST_BOUNDARY),
-                  BLE_RADIO_ADDR, NRF_RADIO_DISABLE);
-
-  nrf_ppi_setup(PPI_RTC_MATCH_START,
-                  BLE_RTC_ADDR, NRF_RTC_COMPARE(RTC_START),
-                  BLE_RADIO_ADDR, NRF_RADIO_START);
+                BLE_RTC_ADDR, NRF_RTC_COMPARE(RTC_REQUEST_BOUNDARY),
+                BLE_RADIO_ADDR, NRF_RADIO_DISABLE);
 
   nrf_ppi_setup(PPI_END_TIMER_START,
-                  BLE_RADIO_ADDR, NRF_RADIO_END,
-                  BLE_TIMER_ADDR, NRF_TIMER_START);
+                BLE_RADIO_ADDR, NRF_RADIO_END,
+                BLE_TIMER_ADDR, NRF_TIMER_START);
 
   nrf_ppi_setup(PPI_ADDRESS_TIMER_STOP,
-                  BLE_RADIO_ADDR, NRF_RADIO_ADDRESS,
-                  BLE_TIMER_ADDR, NRF_TIMER_STOP);
-
-  nrf_ppi_setup(PPI_TIMER_IFS_RADIO_START,
-                BLE_TIMER_ADDR, NRF_TIMER_CC(TIMER_IFS_START),
-                BLE_RADIO_ADDR, NRF_RADIO_START);
+                BLE_RADIO_ADDR, NRF_RADIO_ADDRESS,
+                BLE_TIMER_ADDR, NRF_TIMER_STOP);
 
   nrf_ppi_setup(PPI_ADDRESS_PIPELINE_RESET,
                 BLE_RADIO_ADDR, NRF_RADIO_ADDRESS,
@@ -196,9 +196,9 @@ void nrf5x_ble_ppi_init(void)
 
   nrf_reg_set(NRF_PPI_ADDR, NRF_PPI_CHG(PPI_GROUP_PIPELINE_RESET), 0
               | (1 << PPI_END_TIMER_START)
+              | (1 << PPI_TIMER_TIMEOUT_DISABLE)
               | (1 << PPI_TIMER_ENABLE_TXEN)
-              | (1 << PPI_TIMER_ENABLE_RXEN)
-              | (1 << PPI_TIMER_IFS_RADIO_START));
+              | (1 << PPI_TIMER_ENABLE_RXEN));
 
   nrf_ppi_enable(PPI_ADDRESS_PIPELINE_RESET);
 }
@@ -211,12 +211,10 @@ void nrf5x_ble_ppi_cleanup(struct nrf5x_ble_private_s *pv)
                        | (1 << PPI_RTC_ENABLE_TXEN)
                        | (1 << PPI_TIMER_ENABLE_TXEN)
                        | (1 << PPI_TIMER_ENABLE_RXEN)
-                       | (1 << PPI_RTC_REQUEST_END_DISABLE)
                        );
 
   nrf_evt_disable_mask(BLE_RTC_ADDR, 0
                        | (1 << NRF_RTC_COMPARE(RTC_ENABLE))
-                       | (1 << NRF_RTC_COMPARE(RTC_START))
                        );
 
   nrf_it_disable(BLE_TIMER_ADDR, NRF_TIMER_COMPARE(TIMER_IFS_TIMEOUT));
@@ -226,9 +224,7 @@ void nrf5x_ble_radio_disable(struct nrf5x_ble_private_s *pv)
 {
   pv->pipelining = 0;
   pv->current_params.channel = -1;
-
-  nrf_it_disable_mask(BLE_RADIO_ADDR, -1);
-  nrf_short_set(BLE_RADIO_ADDR, 0);
+  pv->wait_end = 0;
 
   nrf_event_clear(BLE_RADIO_ADDR, NRF_RADIO_READY);
 
@@ -236,15 +232,14 @@ void nrf5x_ble_radio_disable(struct nrf5x_ble_private_s *pv)
                        | (1 << PPI_RTC_MATCH_START)
                        | (1 << PPI_RTC_ENABLE_RXEN)
                        | (1 << PPI_RTC_ENABLE_TXEN)
-                       | (1 << PPI_TIMER_IFS_RADIO_START)
                        | (1 << PPI_RTC_REQUEST_END_DISABLE)
+                       | (1 << PPI_TIMER_TIMEOUT_DISABLE)
                        | (1 << PPI_END_TIMER_START)
                        | (1 << PPI_ADDRESS_TIMER_STOP)
                        );
 
   nrf_evt_disable_mask(BLE_RTC_ADDR, 0
                        | (1 << NRF_RTC_COMPARE(RTC_ENABLE))
-                       | (1 << NRF_RTC_COMPARE(RTC_START))
                        );
 
   nrf_task_trigger(BLE_RADIO_ADDR, NRF_RADIO_STOP);
@@ -259,7 +254,8 @@ void nrf5x_ble_radio_disable(struct nrf5x_ble_private_s *pv)
   nrf_reg_set(BLE_RADIO_ADDR, NRF_RADIO_BCC, 16);
 }
 
-error_t nrf5x_ble_data_setup(struct nrf5x_ble_private_s *pv)
+error_t 
+nrf5x_ble_data_setup(struct nrf5x_ble_private_s *pv)
 {
   assert(pv->current);
   assert(!pv->transmitting);
@@ -269,20 +265,15 @@ error_t nrf5x_ble_data_setup(struct nrf5x_ble_private_s *pv)
 
   nrf5x_ble_backlog(pv->current, "data setup: %p", (uint32_t)pv->transmitting);
 
-  assert(!(nrf_reg_get(NRF_PPI_ADDR, NRF_PPI_CHEN) & (1 << PPI_TIMER_IFS_RADIO_START)));
-  assert(nrf_reg_get(BLE_RADIO_ADDR, NRF_RADIO_STATE) != NRF_RADIO_STATE_RX
-         && nrf_reg_get(BLE_RADIO_ADDR, NRF_RADIO_STATE) != NRF_RADIO_STATE_TX);
-
   if (!pv->transmitting)
     return -ENOMEM;
 
   nrf_event_clear(BLE_RADIO_ADDR, NRF_RADIO_BCMATCH);
-  nrf_it_disable(BLE_RADIO_ADDR, NRF_RADIO_BCMATCH);
   nrf_reg_set(BLE_RADIO_ADDR, NRF_RADIO_BCC, 16);
-  nrf_it_enable_mask(BLE_RADIO_ADDR, 0
-                     | (1 << NRF_RADIO_ADDRESS)
-                     | (1 << NRF_RADIO_END)
-                     );
+
+  if (nrf_reg_get(BLE_RADIO_ADDR, NRF_RADIO_STATE) == NRF_RADIO_STATE_RX
+      || nrf_reg_get(BLE_RADIO_ADDR, NRF_RADIO_STATE) == NRF_RADIO_STATE_TX)
+    return -EIO;
 
   return 0;
 }
@@ -328,42 +319,47 @@ bool_t nrf5x_ble_pipelined_setup(struct nrf5x_ble_private_s *pv)
 
   gpio(I_PIPELINE, I_PIPELINE);
 
-  nrf_ppi_disable(PPI_TIMER_IFS_RADIO_START);
-
   nrf_task_trigger(BLE_TIMER_ADDR, NRF_TIMER_STOP);
   nrf_task_trigger(BLE_TIMER_ADDR, NRF_TIMER_CLEAR);
   nrf_event_clear(BLE_RADIO_ADDR, NRF_RADIO_READY);
 
   nrf5x_ble_backlog(pv->current, "pipeline setup %d", params->mode);
 
-  nrf_short_set(BLE_RADIO_ADDR, 0
-                | (1 << NRF_RADIO_ADDRESS_BCSTART)
-                | (1 << NRF_RADIO_END_DISABLE));
-
   switch (params->mode) {
   case MODE_TX:
     nrf_ppi_enable_mask(0
                         | (1 << PPI_END_TIMER_START)
+                        | (1 << PPI_TIMER_TIMEOUT_DISABLE)
                         | (1 << PPI_ADDRESS_TIMER_STOP)
                         | (1 << PPI_TIMER_ENABLE_TXEN)
                         );
-    nrf_reg_set(BLE_TIMER_ADDR, NRF_TIMER_CC(TIMER_IFS_START),
-                BLE_T_IFS - PPI_LATENCY_US * 2 - RADIO_TX_CHAIN_DELAY_US - 1);
+    nrf_reg_set(BLE_TIMER_ADDR, NRF_TIMER_CC(TIMER_ENABLE),
+                BLE_T_IFS
+                - PPI_LATENCY_US * 2
+                - RADIO_TX_CHAIN_DELAY_US
+                - RADIO_RAMPUP_US);
     break;
 
   default:
   case MODE_RX:
     nrf_ppi_enable_mask(0
                         | (1 << PPI_END_TIMER_START)
+                        | (1 << PPI_TIMER_TIMEOUT_DISABLE)
                         | (1 << PPI_ADDRESS_TIMER_STOP)
                         | (1 << PPI_TIMER_ENABLE_RXEN)
                         );
     nrf_it_enable(BLE_TIMER_ADDR, NRF_TIMER_COMPARE(TIMER_IFS_TIMEOUT));
     nrf_event_clear(BLE_TIMER_ADDR, NRF_TIMER_COMPARE(TIMER_IFS_TIMEOUT));
-    nrf_reg_set(BLE_TIMER_ADDR, NRF_TIMER_CC(TIMER_IFS_START),
-                BLE_T_IFS - PPI_LATENCY_US * 2 - RADIO_RX_CHAIN_DELAY_US - 1);
+    nrf_reg_set(BLE_TIMER_ADDR, NRF_TIMER_CC(TIMER_ENABLE),
+                BLE_T_IFS
+                - PPI_LATENCY_US * 2
+                - RADIO_RX_CHAIN_DELAY_US
+                - RADIO_RAMPUP_US
+                - 2);
     break;
   }
+
+  nrf_short_disable(BLE_RADIO_ADDR, NRF_RADIO_READY_START);
 
   // If we ended already, we may not have pipelined in time
   return nrf_event_check(BLE_RADIO_ADDR, NRF_RADIO_END);
@@ -371,8 +367,9 @@ bool_t nrf5x_ble_pipelined_setup(struct nrf5x_ble_private_s *pv)
 
 void nrf5x_ble_pipelined_commit(struct nrf5x_ble_private_s *pv)
 {
-  assert(!(nrf_reg_get(NRF_PPI_ADDR, NRF_PPI_CHEN) & (1 << PPI_TIMER_IFS_RADIO_START)));
-  nrf_ppi_enable(PPI_TIMER_IFS_RADIO_START);
+  nrf_short_enable(BLE_RADIO_ADDR, NRF_RADIO_READY_START);
+  gpio(I_PIPELINE, 0);
+  gpio(I_PIPELINE, I_PIPELINE);
   gpio(I_PIPELINE, 0);
 
   nrf5x_ble_backlog(pv->current, "pipeline commit %d", pv->pipelining_race);
@@ -395,12 +392,8 @@ void nrf5x_ble_pipelined_reset(struct nrf5x_ble_private_s *pv)
   pv->current_params = pv->next_params;
   nrf5x_ble_radio_channel_set(&pv->current_params);
 
-  nrf_short_set(BLE_RADIO_ADDR, 0
-                | (1 << NRF_RADIO_ADDRESS_BCSTART)
-                | (1 << NRF_RADIO_READY_START)
-                | (1 << NRF_RADIO_END_DISABLE));
   nrf_event_clear(BLE_RADIO_ADDR, NRF_RADIO_READY);
-  nrf_ppi_disable(PPI_TIMER_IFS_RADIO_START);
+  nrf_short_enable(BLE_RADIO_ADDR, NRF_RADIO_READY_START);
 
   switch (pv->current_params.mode) {
   case MODE_TX:
@@ -469,22 +462,13 @@ DEV_IRQ_SRC_PROCESS(nrf5x_ble_radio_irq)
     nrf5x_ble_event_address_matched(pv);
   }
 
-  if (nrf_event_check(BLE_RADIO_ADDR, NRF_RADIO_BCMATCH)
-      && nrf_it_is_enabled(BLE_RADIO_ADDR, NRF_RADIO_BCMATCH)) {
+  if (nrf_event_check(BLE_RADIO_ADDR, NRF_RADIO_BCMATCH)) {
     nrf_event_clear(BLE_RADIO_ADDR, NRF_RADIO_BCMATCH);
-    nrf_it_disable(BLE_RADIO_ADDR, NRF_RADIO_BCMATCH);
 
-    gpio(I_WAIT, 0);
-
-    assert(nrf_reg_get(BLE_RADIO_ADDR, NRF_RADIO_BCC) != 16);
-    while (!nrf_event_check(BLE_RADIO_ADDR, NRF_RADIO_END))
-      ;
-    nrf5x_ble_event_packet_ended(pv);
+    nrf5x_ble_event_bcc_end(pv);
   }
 
-  if (nrf_event_check(BLE_RADIO_ADDR, NRF_RADIO_END)
-      && nrf_it_is_enabled(BLE_RADIO_ADDR, NRF_RADIO_END)) {
-    //    assert(nrf_reg_get(BLE_RADIO_ADDR, NRF_RADIO_BCC) != 16);
+  if (nrf_event_check(BLE_RADIO_ADDR, NRF_RADIO_END)) {
     nrf5x_ble_event_packet_ended(pv);
   }
 

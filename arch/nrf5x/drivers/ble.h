@@ -71,6 +71,7 @@ struct net_scheduler_s;
 #define CLOCK_ENABLE_TK US_TO_TICKS_CEIL(HFCLK_RAMPUP_US + RADIO_IRQ_LATENCY_US)
 #define RADIO_ENABLE_TK US_TO_TICKS_CEIL(RADIO_RAMPUP_US + RADIO_IRQ_LATENCY_US)
 #define PACKET_MIN_TK US_TO_TICKS_CEIL(BLE_T_IFS + BLE_PACKET_TIME(20))
+#define BLE_CRC_TIME_US 24
 
 /* Must use Timer0 and RTC0 as there are some hardwired PPIs */
 #define BLE_RADIO_ADDR NRF_PERIPHERAL_ADDR(NRF5X_RADIO)
@@ -89,14 +90,12 @@ enum rtc_channel_e
 {
   RTC_ENABLE = 0, /* Must be 0 because of hardwired PPI */
   RTC_REQUEST_BOUNDARY,
-  RTC_START,
 };
 
 enum timer_channel_e
 {
   TIMER_ENABLE = 0, /* Must be 0 because of hardwired PPI */
-  TIMER_IFS_START,
-  TIMER_IFS_TIMEOUT,
+  TIMER_IFS_TIMEOUT = 1, /* Hardwired PPI */
 };
 
 enum ppi_id_e
@@ -106,12 +105,12 @@ enum ppi_id_e
   PPI_END_TIMER_START,
   PPI_ADDRESS_TIMER_STOP,
   PPI_ADDRESS_PIPELINE_RESET,
-  PPI_TIMER_IFS_RADIO_START,
 
   PPI_RTC_ENABLE_TXEN = NRF_PPI_RTC0_COMPARE_0_RADIO_TXEN,
   PPI_RTC_ENABLE_RXEN = NRF_PPI_RTC0_COMPARE_0_RADIO_RXEN,
   PPI_TIMER_ENABLE_TXEN = NRF_PPI_TIMER0_COMPARE_0_RADIO_TXEN,
   PPI_TIMER_ENABLE_RXEN = NRF_PPI_TIMER0_COMPARE_0_RADIO_RXEN,
+  PPI_TIMER_TIMEOUT_DISABLE = NRF_PPI_TIMER0_COMPARE_1_RADIO_DISABLE,
 };
 
 enum ppi_group_id_e
@@ -136,7 +135,7 @@ struct nrf5x_ble_params_s
 
 #define GCT_CONTAINER_ALGO_nrf5x_ble_context_list CLIST
 
-#define NRF5X_BLE_BACKLOG 32
+//#define NRF5X_BLE_BACKLOG 32
 
 #ifdef NRF5X_BLE_BACKLOG
 struct nrf5x_ble_backlog_s {
@@ -213,14 +212,15 @@ struct nrf5x_ble_private_s {
   uint8_t context_count;
   uint8_t event_packet_count;
 
-  bool_t pipelining;
-  bool_t pipelining_race;
+  bool_t pipelining : 1;
+  bool_t pipelining_race : 1;
+  bool_t wait_end : 1;
 
 #if defined(CONFIG_DEVICE_CLOCK)
-  struct dev_clock_sink_ep_s clock_sink[NRF5X_BLE_CLK_COUNT];
+  bool_t accurate_clock_requested : 1;
+  bool_t accurate_clock_running : 1;
 
-  bool_t accurate_clock_requested;
-  bool_t accurate_clock_running;
+  struct dev_clock_sink_ep_s clock_sink[NRF5X_BLE_CLK_COUNT];
 #endif
 };
 
@@ -243,6 +243,7 @@ void nrf5x_ble_rtc_boundary_set(dev_timer_value_t value, bool_t stop);
 void nrf5x_ble_rtc_boundary_clear(void);
 
 void nrf5x_ble_event_address_matched(struct nrf5x_ble_private_s *pv);
+void nrf5x_ble_event_bcc_end(struct nrf5x_ble_private_s *pv);
 void nrf5x_ble_event_packet_ended(struct nrf5x_ble_private_s *pv);
 void nrf5x_ble_event_ifs_timeout(struct nrf5x_ble_private_s *pv);
 void nrf5x_ble_event_timeout(struct nrf5x_ble_private_s *pv);
