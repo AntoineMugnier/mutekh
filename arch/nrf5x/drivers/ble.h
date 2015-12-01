@@ -20,11 +20,12 @@
 #ifndef NRF5X_BLE_RADIO_PRIVATE_H_
 #define NRF5X_BLE_RADIO_PRIVATE_H_
 
-#include <ble/protocol/address.h>
-
+#include <device/class/net.h>
 #include <device/class/timer.h>
 #include <device/class/icu.h>
 #include <device/class/clock.h>
+
+#include <ble/protocol/address.h>
 
 #include <arch/nrf5x/ids.h>
 #include <arch/nrf5x/ppi.h>
@@ -70,6 +71,7 @@ struct net_scheduler_s;
 #define CLOCK_ENABLE_TK US_TO_TICKS_CEIL(HFCLK_RAMPUP_US + RADIO_IRQ_LATENCY_US)
 #define RADIO_ENABLE_TK US_TO_TICKS_CEIL(RADIO_RAMPUP_US + RADIO_IRQ_LATENCY_US)
 #define PACKET_MIN_TK US_TO_TICKS_CEIL(BLE_T_IFS + BLE_PACKET_TIME(20))
+#define BLE_CRC_TIME_US 24
 
 /* Must use Timer0 and RTC0 as there are some hardwired PPIs */
 #define BLE_RADIO_ADDR NRF_PERIPHERAL_ADDR(NRF5X_RADIO)
@@ -133,7 +135,7 @@ struct nrf5x_ble_params_s
 
 #define GCT_CONTAINER_ALGO_nrf5x_ble_context_list CLIST
 
-#define NRF5X_BLE_BACKLOG 32
+//#define NRF5X_BLE_BACKLOG 32
 
 #ifdef NRF5X_BLE_BACKLOG
 struct nrf5x_ble_backlog_s {
@@ -210,14 +212,14 @@ struct nrf5x_ble_private_s {
   uint8_t context_count;
   uint8_t event_packet_count;
 
-  bool_t pipelining;
-  bool_t pipelining_race;
+  bool_t pipelining : 1;
+  bool_t pipelining_race : 1;
 
 #if defined(CONFIG_DEVICE_CLOCK)
-  struct dev_clock_sink_ep_s clock_sink[NRF5X_BLE_CLK_COUNT];
+  bool_t accurate_clock_requested : 1;
+  bool_t accurate_clock_running : 1;
 
-  bool_t accurate_clock_requested;
-  bool_t accurate_clock_running;
+  struct dev_clock_sink_ep_s clock_sink[NRF5X_BLE_CLK_COUNT];
 #endif
 };
 

@@ -165,12 +165,12 @@ void nrf5x_ble_ppi_init(void)
                   BLE_RADIO_ADDR, NRF_RADIO_START);
 
   nrf_ppi_setup(PPI_END_TIMER_START,
-                  BLE_RADIO_ADDR, NRF_RADIO_END,
-                  BLE_TIMER_ADDR, NRF_TIMER_START);
+                BLE_RADIO_ADDR, NRF_RADIO_END,
+                BLE_TIMER_ADDR, NRF_TIMER_START);
 
   nrf_ppi_setup(PPI_ADDRESS_TIMER_STOP,
-                  BLE_RADIO_ADDR, NRF_RADIO_ADDRESS,
-                  BLE_TIMER_ADDR, NRF_TIMER_STOP);
+                BLE_RADIO_ADDR, NRF_RADIO_ADDRESS,
+                BLE_TIMER_ADDR, NRF_TIMER_STOP);
 
   nrf_ppi_setup(PPI_TIMER_IFS_RADIO_START,
                 BLE_TIMER_ADDR, NRF_TIMER_CC(TIMER_IFS_START),
@@ -188,11 +188,11 @@ void nrf5x_ble_ppi_init(void)
 void nrf5x_ble_ppi_cleanup(struct nrf5x_ble_private_s *pv)
 {
   nrf_ppi_disable_mask(0
-                         | (1 << PPI_RTC_MATCH_START)
-                         | (1 << PPI_RTC_ENABLE_RXEN)
-                         | (1 << PPI_RTC_ENABLE_TXEN)
-                         | (1 << PPI_RTC_REQUEST_END_DISABLE)
-                         );
+                       | (1 << PPI_RTC_MATCH_START)
+                       | (1 << PPI_RTC_ENABLE_RXEN)
+                       | (1 << PPI_RTC_ENABLE_TXEN)
+                       | (1 << PPI_RTC_REQUEST_END_DISABLE)
+                       );
 
   nrf_evt_disable_mask(BLE_RTC_ADDR, 0
                        | (1 << NRF_RTC_COMPARE(RTC_ENABLE))
@@ -356,6 +356,8 @@ void nrf5x_ble_pipelined_commit(struct nrf5x_ble_private_s *pv)
 {
   assert(!(nrf_reg_get(NRF_PPI_ADDR, NRF_PPI_CHEN) & (1 << PPI_TIMER_IFS_RADIO_START)));
   nrf_ppi_enable(PPI_TIMER_IFS_RADIO_START);
+  gpio(I_PIPELINE, 0);
+  gpio(I_PIPELINE, I_PIPELINE);
   gpio(I_PIPELINE, 0);
 
   nrf5x_ble_backlog(pv->current, "pipeline commit %d", pv->pipelining_race);
