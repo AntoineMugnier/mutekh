@@ -25,8 +25,8 @@
 
 # if defined(CONFIG_NRF5X_PCA10028)
 #  define I_NEXT_ACTION 0
-#  define I_CLOCK_REQ   (1 << 13)
-#  define I_CLOCK_RUN   (1 << 14)
+#  define I_CLOCK_REQ   0 // (1 << 13)
+#  define I_CLOCK_RUN   0 // (1 << 14)
 #  define I_LATER       (1 << 15)
 #  define I_ENABLE      (1 << 16)
 #  define I_TRANSFER    (1 << 25)
