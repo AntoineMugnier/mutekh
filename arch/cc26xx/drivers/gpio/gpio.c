@@ -195,17 +195,15 @@ static DEV_GPIO_SET_OUTPUT(cc26xx_gpio_set_output)
 
   LOCK_SPIN_IRQ(&dev->lock);
 
-  uint32_t len_mask32 = (1 << (io_last - io_first + 1)) - 1;
-  uint32_t set_mask32 = endian_le32_na_load(set_mask);
-  uint32_t clear_mask32 = endian_le32_na_load(clear_mask);
+  uint32_t range_mask = ((1 << (io_last - io_first + 1)) - 1) << io_first;
+  uint32_t s_mask = endian_le32_na_load(set_mask) << io_first;
+  uint32_t c_mask = endian_le32_na_load(clear_mask) << io_first;
 
-  set_mask32 = (set_mask32 & len_mask32) << io_first;
-  clear_mask32 = (clear_mask32 & len_mask32) << io_first;
-
-  uint32_t old = cpu_mem_read_32(CC26XX_GPIO_BASE + CC26XX_GPIO_DOUT31_0_ADDR);
-  uint32_t new = set_mask32 ^ (old & (set_mask32 ^ clear_mask32));
-
-  cpu_mem_write_32(CC26XX_GPIO_BASE + CC26XX_GPIO_DOUT31_0_ADDR, new);
+  uint32_t reg = cpu_mem_read_32(CC26XX_GPIO_BASE + CC26XX_GPIO_DOUT31_0_ADDR);
+  uint32_t mask = s_mask ^ (reg & (s_mask ^ c_mask));
+  reg |= mask & range_mask;
+  reg &= mask | ~range_mask;
+  cpu_mem_write_32(CC26XX_GPIO_BASE + CC26XX_GPIO_DOUT31_0_ADDR, reg);
 
   LOCK_RELEASE_IRQ(&dev->lock);
 
@@ -296,8 +294,17 @@ static DEV_ICU_GET_SINK(cc26xx_gpio_icu_get_sink)
 
 static DEV_ICU_LINK(cc26xx_gpio_icu_link)
 {
-  if (!route_mask || *bypass)
+  if (*bypass)
     return 0;
+
+  if (!route_mask)
+    {
+      uint_fast8_t dio_id = sink->icu_pv;
+      uint32_t reg = cpu_mem_read_32(CC26XX_IOC_BASE + CC26XX_IOC_IOCFG_ADDR(dio_id));
+      reg &= ~CC26XX_IOC_IOCFG_EDGE_IRQ_EN;
+      cpu_mem_write_32(CC26XX_IOC_BASE + CC26XX_IOC_IOCFG_ADDR(dio_id), reg);
+      return 0;
+    }
 
   uint_fast8_t dio_id = sink->icu_pv;
 
@@ -448,18 +455,6 @@ static DEV_CLEANUP(cc26xx_gpio_cleanup)
 
 #ifdef CONFIG_DRIVER_CC26XX_GPIO_ICU
   device_irq_source_unlink(dev, &pv->src_ep, 1);
-  for (uint_fast8_t i = 0; i < CONFIG_DRIVER_CC26XX_GPIO_IRQ_COUNT; i++)
-    {
-      if (!pv->sinks_ep[i].base.link_count)
-        {
-          uint_fast8_t dio_id = pv->sinks_ep[i].icu_pv;
-          uint32_t reg = cpu_mem_read_32(CC26XX_IOC_BASE +
-            CC26XX_IOC_IOCFG_ADDR(dio_id));
-          reg &= ~CC26XX_IOC_IOCFG_EDGE_IRQ_EN;
-          cpu_mem_write_32(CC26XX_IOC_BASE +
-            CC26XX_IOC_IOCFG_ADDR(dio_id), reg);
-        }
-    }
 #endif
 
   mem_free(pv);
