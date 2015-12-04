@@ -255,7 +255,7 @@ struct dev_resource_s
       uint16_t                  count;
     }                           uint_array_param;
 
-#ifndef CONFIG_COMPILE_NOBITFIELD
+#ifndef CONFIG_COMPILE_NOBITFIELD /* mkdoc:skip */
     uint8_t                     _align[4 * sizeof(uintptr_t) - 2];
   } __attribute__((packed))
 #else
@@ -268,7 +268,7 @@ struct dev_resource_s
   enum dev_resource_flags_e BITFIELD(flags,8);
 };
 
-#ifndef CONFIG_COMPILE_NOBITFIELD
+#ifndef CONFIG_COMPILE_NOBITFIELD /* mkdoc:skip */
 STATIC_ASSERT(resource_entry_size_exceeded, sizeof(struct dev_resource_s)
               == 4 * sizeof(uintptr_t));
 #endif

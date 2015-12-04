@@ -146,10 +146,10 @@
   #define STM32_RCC_CFGR_USBPRE_GET(x)             (((x) >> 22) & 0x1)
     #define STM32_RCC_CFGR_USBPRE_DIV_1_5            0x00000000
     #define STM32_RCC_CFGR_USBPRE_DIV_1              0x00000001
-  #define STM32_RCC_CFGR_MCO_MASK                  0x00000007
-  #define STM32_RCC_CFGR_MCO(v)                    ((STM32_RCC_CFGR_MCO_##v) << 23)
-  #define STM32_RCC_CFGR_MCO_SET(x, v)             do { (x) = (((x) & ~0x3800000) | ((STM32_RCC_CFGR_MCO_##v) << 23)); } while(0)
-  #define STM32_RCC_CFGR_MCO_GET(x)                (((x) >> 23) & 0x7)
+  #define STM32_RCC_CFGR_MCO_MASK                  0x0000000f
+  #define STM32_RCC_CFGR_MCO(v)                    ((STM32_RCC_CFGR_MCO_##v) << 24)
+  #define STM32_RCC_CFGR_MCO_SET(x, v)             do { (x) = (((x) & ~0xf000000) | ((STM32_RCC_CFGR_MCO_##v) << 24)); } while(0)
+  #define STM32_RCC_CFGR_MCO_GET(x)                (((x) >> 24) & 0xf)
     #define STM32_RCC_CFGR_MCO_NO_CLOCK              0x00000000
     #define STM32_RCC_CFGR_MCO_SYSCLK                0x00000004
     #define STM32_RCC_CFGR_MCO_HSI                   0x00000005

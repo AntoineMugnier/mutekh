@@ -316,7 +316,7 @@ bc_set_addr_range(struct bc_context_s *ctx, uintptr_t min, uintptr_t max)
 #endif
 }
 
-/** @This can be used to disallow use of the @t ccall instruction
+/** @This can be used to disallow use of the @tt ccall instruction
     in the bytecode. If the @ref #CONFIG_MUTEK_BYTECODE_CHECKING token
     is not defined, this function has no effect. */
 ALWAYS_INLINE void

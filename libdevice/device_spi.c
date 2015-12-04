@@ -75,14 +75,14 @@ static error_t device_spi_ctrl_select(struct dev_spi_ctrl_rq_s *rq,
       switch (pc)
         {
         case DEV_SPI_CS_ASSERT:
-          value = rq->cs_polarity == DEV_SPI_CS_ACTIVE_HIGH ?
+          value = rq->cs_polarity == DEV_SPI_ACTIVE_HIGH ?
             dev_gpio_mask1 : dev_gpio_mask0;
           break;
 
         case DEV_SPI_CS_TRANSFER:
         case DEV_SPI_CS_DEASSERT:
         case DEV_SPI_CS_RELEASE:
-          value = rq->cs_polarity == DEV_SPI_CS_ACTIVE_HIGH ?
+          value = rq->cs_polarity == DEV_SPI_ACTIVE_HIGH ?
             dev_gpio_mask0 : dev_gpio_mask1;
           break;
         }

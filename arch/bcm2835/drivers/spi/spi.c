@@ -101,6 +101,14 @@ static DEV_SPI_CTRL_CONFIG(bcm2835_spi_config)
   return err;
 }
 
+static inline uint8_t bcm2835_spi_swap(uint8_t word)
+{
+  word = ((word & 0x0F) << 4) | ((0xF0 & word) >> 4);
+  word = ((word & 0xCC) >> 2) | ((0x33 & word) << 2);
+  word = ((word & 0xAA) >> 1) | ((0x55 & word) << 1);
+  return word;
+}
+
 static bool_t bcm2835_spi_transfer_tx(struct device_s *dev);
 
 static bool_t bcm2835_spi_transfer_rx(struct device_s *dev)
@@ -121,6 +129,9 @@ static bool_t bcm2835_spi_transfer_rx(struct device_s *dev)
 
       if (tr->in == NULL)
         continue;
+
+      if (pv->bit_order == DEV_SPI_LSB_FIRST)
+        word = bcm2835_spi_swap(word);
 
       switch (tr->in_width)
         {
@@ -177,11 +188,7 @@ static bool_t bcm2835_spi_transfer_tx(struct device_s *dev)
         }
 
       if (pv->bit_order == DEV_SPI_LSB_FIRST)
-        {
-          word = ((word & 0x0F) << 4) | ((0xF0 & word) >> 4);
-          word = ((word & 0xCC) >> 2) | ((0x33 & word) << 2);
-          word = ((word & 0xAA) >> 1) | ((0x55 & word) << 1);
-        }
+        word = bcm2835_spi_swap(word);
 
       cpu_mem_write_32(pv->addr + BCM2835_SPI_FIFO_ADDR, endian_le32(word));
 
@@ -249,7 +256,7 @@ static DEV_SPI_CTRL_SELECT(bcm2835_spi_select)
     err = -EBUSY;
   else
     {
-      BCM2835_SPI_CS_CSPOL_SETVAL(cs_id, pv->ctrl, pt == DEV_SPI_CS_ACTIVE_HIGH);
+      BCM2835_SPI_CS_CSPOL_SETVAL(cs_id, pv->ctrl, pt == DEV_SPI_ACTIVE_HIGH);
       BCM2835_SPI_CS_CS_SETVAL(pv->ctrl, cs_id);
   
       switch (pc)

@@ -245,8 +245,8 @@ enum dev_spi_bit_order_e
 
 enum dev_spi_polarity_e
 {
-  DEV_SPI_CS_ACTIVE_LOW,
-  DEV_SPI_CS_ACTIVE_HIGH,
+  DEV_SPI_ACTIVE_LOW,
+  DEV_SPI_ACTIVE_HIGH,
 };
 
 enum dev_spi_ckmode_e

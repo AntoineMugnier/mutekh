@@ -113,7 +113,7 @@ static DEV_SPI_CTRL_CONFIG(soclib_spi_config)
                                              cfg->ck_mode == DEV_SPI_CK_MODE_3);
 
           SOCLIB_SPI_CTRL_LSBF_SETVAL(ctrl, cfg->bit_order == DEV_SPI_LSB_FIRST);
-          SOCLIB_SPI_CTRL_DPOL_SETVAL(ctrl, cfg->miso_pol == DEV_SPI_CS_ACTIVE_HIGH);
+          SOCLIB_SPI_CTRL_DPOL_SETVAL(ctrl, cfg->miso_pol == DEV_SPI_ACTIVE_HIGH);
 
           cpu_mem_write_32(pv->addr + SOCLIB_SPI_CTRL_ADDR, endian_le32(ctrl));
 
@@ -203,7 +203,7 @@ static bool_t soclib_spi_transfer_tx(struct device_s *dev)
           break;
         }
 
-      cpu_mem_write_32(pv->addr + SOCLIB_SPI_FIFO_ADDR, endian_le32((uint8_t)word));
+      cpu_mem_write_32(pv->addr + SOCLIB_SPI_FIFO_ADDR, endian_le32(word));
 
       tr->out = (const void*)((const uint8_t*)tr->out + tr->out_width);
       tr->count--;
@@ -236,7 +236,7 @@ static DEV_SPI_CTRL_SELECT(soclib_spi_select)
     {
       uint32_t mask = 1 << cs_id;
       uint32_t gpout = endian_le32(cpu_mem_read_32(pv->addr + SOCLIB_SPI_GPOUT_ADDR)) & ~mask;
-      uint32_t csmask = (pt == DEV_SPI_CS_ACTIVE_LOW) << cs_id;
+      uint32_t csmask = (pt == DEV_SPI_ACTIVE_LOW) << cs_id;
 
       switch (pc)
         {
