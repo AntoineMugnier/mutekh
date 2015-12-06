@@ -99,24 +99,6 @@ cpu_interrupt_enable(void)
 }
 
 ALWAYS_INLINE void
-cpu_interrupt_savestate(cpu_irq_state_t *state)
-{
-# ifdef CONFIG_HEXO_IRQ
-	uint32_t tmp;
-
-        THUMB_TMP_VAR;
-	asm volatile (
-                      THUMB_TO_ARM
-                      "mrs  %[tmp], cpsr        \n\t"
-                      ARM_TO_THUMB
-		      : [tmp] "=r" (tmp) /*,*/ THUMB_OUT(,)
-                     );
-
-	*state = tmp;
-# endif
-}
-
-ALWAYS_INLINE void
 cpu_interrupt_savestate_disable(cpu_irq_state_t *state)
 {
 # ifdef CONFIG_HEXO_IRQ

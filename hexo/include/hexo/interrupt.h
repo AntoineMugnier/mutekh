@@ -76,9 +76,6 @@ ALWAYS_INLINE void cpu_interrupt_disable(void);
     This acts as a compiler memory barrier. */
 ALWAYS_INLINE void cpu_interrupt_enable(void);
 
-/** @this saves interrupts enable state (may use stack) */
-ALWAYS_INLINE void cpu_interrupt_savestate(cpu_irq_state_t *state);
-
 /** @this saves interrupts enable state end disable interrupts.
     This acts as a compiler memory barrier. */
 ALWAYS_INLINE void cpu_interrupt_savestate_disable(cpu_irq_state_t *state);

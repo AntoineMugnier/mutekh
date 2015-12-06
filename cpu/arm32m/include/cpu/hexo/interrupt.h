@@ -72,21 +72,6 @@ cpu_interrupt_enable(void)
 }
 
 ALWAYS_INLINE void
-cpu_interrupt_savestate(cpu_irq_state_t *state)
-{
-# ifdef CONFIG_HEXO_IRQ
-	uint32_t tmp;
-
-	asm volatile (
-                      "mrs  %[tmp], primask     \n\t"
-                      : [tmp] "=l" (tmp)
-                     );
-
-	*state = tmp;
-# endif
-}
-
-ALWAYS_INLINE void
 cpu_interrupt_savestate_disable(cpu_irq_state_t *state)
 {
 # ifdef CONFIG_HEXO_IRQ

@@ -138,17 +138,6 @@ cpu_interrupt_enable(void)
 }
 
 ALWAYS_INLINE void
-cpu_interrupt_savestate(cpu_irq_state_t *state)
-{
-#ifdef CONFIG_HEXO_IRQ
-  __asm__ volatile (
-		    "mfc0	%0,	$12	\n"
-		    : "=r" (*state)
-		    );
-#endif
-}
-
-ALWAYS_INLINE void
 cpu_interrupt_savestate_disable(cpu_irq_state_t *state)
 {
 #ifdef CONFIG_HEXO_IRQ

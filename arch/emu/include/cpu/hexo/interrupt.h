@@ -71,18 +71,10 @@ cpu_interrupt_process(void)
 }
 
 ALWAYS_INLINE void
-cpu_interrupt_savestate(cpu_irq_state_t *state)
-{
-#ifdef CONFIG_HEXO_IRQ
-  *state = emu_interrupts_get();
-#endif
-}
-
-ALWAYS_INLINE void
 cpu_interrupt_savestate_disable(cpu_irq_state_t *state)
 {
 #ifdef CONFIG_HEXO_IRQ
-  cpu_interrupt_savestate(state);
+  *state = emu_interrupts_get();
   cpu_interrupt_disable();
   order_compiler_mem();
 #endif
