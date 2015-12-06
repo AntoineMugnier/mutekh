@@ -62,5 +62,19 @@ struct cpu_context_s
 
 #define CPU_X86_CONTEXT_MASK_USER       1
 
+# ifdef CONFIG_HEXO_CONTEXT_PREEMPT
+/** @internal */
+extern CPU_LOCAL context_preempt_t *cpu_preempt_handler;
+
+ALWAYS_INLINE error_t context_set_preempt(context_preempt_t *func)
+{
+  context_preempt_t **f = CPU_LOCAL_ADDR(cpu_preempt_handler);
+  if (*f != NULL)
+    return -EBUSY;
+  *f = func;
+  return 0;
+}
+# endif
+
 #endif
 

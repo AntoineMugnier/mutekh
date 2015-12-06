@@ -23,6 +23,10 @@
 #include <hexo/error.h>
 #include <hexo/context.h>
 
+#ifdef CONFIG_HEXO_CONTEXT_PREEMPT
+CPU_LOCAL context_preempt_t *cpu_preempt_handler = (context_preempt_t*)1;
+#endif
+
 CONTEXT_LOCAL struct cpu_context_s ppc_context_regs;
 
 #ifdef CONFIG_HEXO_LAZY_SWITCH

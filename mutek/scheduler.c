@@ -205,7 +205,7 @@ error_t kroutine_schedule(struct kroutine_s *kr, enum kroutine_policy_e policy)
       kroutine_queue_pushback(CPU_LOCAL_ADDR(kroutine_sched_switch), kr);
 # ifdef CONFIG_HEXO_CONTEXT_PREEMPT
       if (policy == KROUTINE_PREEMPT || policy == KROUTINE_PREEMPT_INTERRUPTIBLE)
-        context_set_preempt(sched_preempt_switch, NULL);
+        context_set_preempt(sched_preempt_switch);
 # endif
       break;
 #endif
@@ -440,9 +440,11 @@ sched_wait_unlock_ctx(sched_queue_root_t *queue)
 }
 
 #ifdef CONFIG_HEXO_CONTEXT_PREEMPT
+CPU_LOCAL sched_queue_root_t *sched_preempt_wait_unlock_q;
+
 CONTEXT_PREEMPT(sched_preempt_wait_unlock)
 {
-  sched_queue_root_t *queue = CPU_LOCAL_GET(cpu_preempt_param);
+  sched_queue_root_t *queue = CPU_LOCAL_GET(sched_preempt_wait_unlock_q);
   return sched_wait_unlock_ctx(queue);
 }
 #endif

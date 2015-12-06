@@ -126,15 +126,18 @@ CONTEXT_PREEMPT(sched_preempt_stop);
 
 /** @This is a context preemption handler.
 
-    @This pushes current context on wait queue passed as preempt
-    handler parameter, unlock the queue and finally returns next
-    scheduler candidate or processor idle context if none is
-    available.
+    @This pushes current context on the wait queue specified in @ref
+    sched_preempt_wait_unlock_q. The function unlocks the queue and
+    returns the next candidate context which may be the processor idle
+    context.
 
     @see context_set_preempt @see #CONTEXT_PREEMPT @see sched_wait_unlock */
 config_depend_and2(CONFIG_MUTEK_SCHEDULER, CONFIG_HEXO_CONTEXT_PREEMPT)
 CONTEXT_PREEMPT(sched_preempt_wait_unlock);
 
+/** @see sched_preempt_wait_unlock */
+config_depend_and2(CONFIG_MUTEK_SCHEDULER, CONFIG_HEXO_CONTEXT_PREEMPT)
+extern CPU_LOCAL sched_queue_root_t *sched_preempt_wait_unlock_q;
 
 /** @This initializes scheduler context. */
 config_depend(CONFIG_MUTEK_SCHEDULER)

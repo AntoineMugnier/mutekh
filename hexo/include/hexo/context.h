@@ -141,11 +141,6 @@ void cpu_context_set_user(uintptr_t stack_ptr, uintptr_t entry, reg_t param);
 # endif
 
 # ifdef CONFIG_HEXO_CONTEXT_PREEMPT
-/** @internal */
-extern CPU_LOCAL context_preempt_t *cpu_preempt_handler;
-/** @internal */
-extern CPU_LOCAL void *cpu_preempt_param;
-
 /** @This sets a preemption handler function local to the executing
     processor. The preemtion handler pointer is reset to @tt NULL on
     each exception entry and can be setup from an interrupt handler when
@@ -157,15 +152,7 @@ extern CPU_LOCAL void *cpu_preempt_param;
     disabled.
 
     @see #CONTEXT_PREEMPT */
-ALWAYS_INLINE error_t context_set_preempt(context_preempt_t *func, void *param)
-{
-  context_preempt_t **f = CPU_LOCAL_ADDR(cpu_preempt_handler);
-  if (*f != NULL)
-    return -EBUSY;
-  *f = func;
-  CPU_LOCAL_SET(cpu_preempt_param, param);
-  return 0;
-}
+ALWAYS_INLINE error_t context_set_preempt(context_preempt_t *func);
 # endif
 
 /** @This sets address of a lock which must be unlocked on next context

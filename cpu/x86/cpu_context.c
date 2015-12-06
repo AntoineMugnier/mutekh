@@ -29,6 +29,10 @@
 
 #include <stdlib.h>
 
+#ifdef CONFIG_HEXO_CONTEXT_PREEMPT
+CPU_LOCAL context_preempt_t *cpu_preempt_handler = (context_preempt_t*)1;
+#endif
+
 CONTEXT_LOCAL cpu_x86_segsel_t context_tls_seg;
 CONTEXT_LOCAL struct cpu_context_s x86_context;
 /** pointer to context local storage */

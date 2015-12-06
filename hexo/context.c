@@ -13,11 +13,6 @@
 # include <arch/mem_checker.h>
 #endif
 
-#ifdef CONFIG_HEXO_CONTEXT_PREEMPT
-CPU_LOCAL context_preempt_t *cpu_preempt_handler = (context_preempt_t*)1;
-CPU_LOCAL void *cpu_preempt_param;
-#endif
-
 CPU_LOCAL struct context_s cpu_main_context;
 
 CONTEXT_LOCAL uintptr_t context_stack_start;
