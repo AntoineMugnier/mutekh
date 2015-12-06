@@ -229,23 +229,12 @@
         addi    1,      1,      -CONFIG_HEXO_STACK_ALIGN
 1:
 #endif
-#ifndef CONFIG_RELEASE
-        // ensure we do not use context local storage in irq handler
-        li      0,              0
-        mtspr   PPC_SPRG(4),    0
-#endif
 
         CPU_LOCAL_op       lwz     cpu_interrupt_handler, 9, 10
         li      3,      \number         // arg0 number
         mtctr   9
         bctrl
 
-#ifndef CONFIG_RELEASE
-        // restore cls
-        li      0,              ppc_context_regs@l
-        sub     0,      2,      0
-        mtspr   PPC_SPRG(4),    0
-#endif
 .endm
 
 
