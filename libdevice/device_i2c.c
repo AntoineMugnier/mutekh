@@ -30,7 +30,7 @@
 #include <hexo/lock.h>
 #include <hexo/interrupt.h>
 
-#if defined(CONFIG_MUTEK_SCHEDULER)
+#if defined(CONFIG_MUTEK_CONTEXT_SCHED)
 # include <mutek/scheduler.h>
 #endif
 
@@ -69,7 +69,7 @@ ssize_t dev_i2c_spin_write(
     const uint8_t *data,
     size_t size);
 
-#if defined(CONFIG_MUTEK_SCHEDULER)
+#if defined(CONFIG_MUTEK_CONTEXT_SCHED)
 
 extern inline
 ssize_t dev_i2c_wait_request(

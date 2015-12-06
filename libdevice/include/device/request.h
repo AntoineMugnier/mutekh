@@ -38,7 +38,7 @@
 #include <device/driver.h>
 
 #include <mutek/kroutine.h>
-#ifdef CONFIG_MUTEK_SCHEDULER
+#ifdef CONFIG_MUTEK_CONTEXT_SCHED
 # include <mutek/scheduler.h>
 # include <hexo/lock.h>
 # include <hexo/interrupt.h>
@@ -85,7 +85,7 @@ GCT_CONTAINER_FCNS(dev_request_pqueue, inline, dev_request_pqueue,
 
 struct dev_request_status_s
 {
-# ifdef CONFIG_MUTEK_SCHEDULER
+# ifdef CONFIG_MUTEK_CONTEXT_SCHED
   lock_t lock;
   struct sched_context_s *ctx;
 # endif
@@ -121,7 +121,7 @@ dev_request_spin_wait(struct dev_request_status_s *status)
   } while (!status->done);
 }
 
-# ifdef CONFIG_MUTEK_SCHEDULER
+# ifdef CONFIG_MUTEK_CONTEXT_SCHED
 inline KROUTINE_EXEC(dev_request_sched_done)
 {
   struct dev_request_s *rq = KROUTINE_CONTAINER(kr, *rq, kr);

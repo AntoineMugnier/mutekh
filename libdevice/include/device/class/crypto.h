@@ -329,7 +329,7 @@ dev_crypto_spin_op(struct device_crypto_s *accessor,
 /** Synchronous memory device operation function. This function use
     the scheduler api to put current context in wait state during the
     request. */
-config_depend_and2(CONFIG_DEVICE_CRYPTO, CONFIG_MUTEK_SCHEDULER)
+config_depend_and2(CONFIG_DEVICE_CRYPTO, CONFIG_MUTEK_CONTEXT_SCHED)
 inline error_t
 dev_crypto_wait_op(struct device_crypto_s *accessor,
                    struct dev_crypto_rq_s *rq)
@@ -442,7 +442,7 @@ void dev_rng_cleanup(struct dev_rng_s *rng);
    @param size Byte size to read
    @returns 0 on success, or an error
  */
-config_depend_and2(CONFIG_DEVICE_CRYPTO, CONFIG_MUTEK_SCHEDULER)
+config_depend_and2(CONFIG_DEVICE_CRYPTO, CONFIG_MUTEK_CONTEXT_SCHED)
 error_t dev_rng_wait_read(struct dev_rng_s *rng, void *data, size_t size);
 
 /**
@@ -453,7 +453,7 @@ error_t dev_rng_wait_read(struct dev_rng_s *rng, void *data, size_t size);
    @param size Byte size to read
    @returns 0 on success, or an error
  */
-config_depend_and2(CONFIG_DEVICE_CRYPTO, CONFIG_MUTEK_SCHEDULER)
+config_depend_and2(CONFIG_DEVICE_CRYPTO, CONFIG_MUTEK_CONTEXT_SCHED)
 error_t dev_rng_wait_seed(struct dev_rng_s *rng, const void *data, size_t size);
 
 /**
@@ -465,7 +465,7 @@ error_t dev_rng_wait_seed(struct dev_rng_s *rng, const void *data, size_t size);
    @param size Byte size to pass from one to the other
    @returns 0 on success, or an error
  */
-config_depend_and2(CONFIG_DEVICE_CRYPTO, CONFIG_MUTEK_SCHEDULER)
+config_depend_and2(CONFIG_DEVICE_CRYPTO, CONFIG_MUTEK_CONTEXT_SCHED)
 error_t dev_rng_wait_seed_from_other(struct dev_rng_s *rng,
                                      struct dev_rng_s *other, size_t size);
 

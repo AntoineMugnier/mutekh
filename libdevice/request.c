@@ -39,7 +39,7 @@ dev_request_spin_init(struct dev_request_s *rq,
 extern inline void
 dev_request_spin_wait(struct dev_request_status_s *status);
 
-#ifdef CONFIG_MUTEK_SCHEDULER
+#ifdef CONFIG_MUTEK_CONTEXT_SCHED
 
 extern inline KROUTINE_EXEC(dev_request_sched_done);
 

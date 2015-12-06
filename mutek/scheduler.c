@@ -63,7 +63,7 @@ CPU_LOCAL kroutine_queue_root_t kroutine_idle;
 static struct sched_context_s *
 __sched_candidate_noidle(sched_queue_root_t *root)
 {
-#ifdef CONFIG_MUTEK_SCHEDULER_CANDIDATE_FCN
+#ifdef CONFIG_MUTEK_CONTEXT_SCHED_CANDIDATE_FCN
   struct sched_context_s *c = NULL;
 
   GCT_FOREACH_NOLOCK(sched_queue, root, item, {
@@ -122,7 +122,7 @@ struct scheduler_s
 #endif
 };
 
-#if defined (CONFIG_MUTEK_SCHEDULER_MIGRATION)
+#if defined (CONFIG_MUTEK_CONTEXT_SCHED_MIGRATION)
 
 /* scheduler root */
 static struct scheduler_s CPU_NAME_DECL(scheduler);
@@ -134,7 +134,7 @@ __scheduler_get(void)
   return & CPU_NAME_DECL(scheduler);
 }
 
-#elif defined (CONFIG_MUTEK_SCHEDULER_STATIC)
+#elif defined (CONFIG_MUTEK_CONTEXT_SCHED_STATIC)
 
 /* scheduler root */
 static CPU_LOCAL struct scheduler_s     scheduler;
@@ -460,7 +460,7 @@ void sched_context_init(struct sched_context_s *sched_ctx,
   sched_ctx->priv = NULL;
   sched_ctx->scheduler = __scheduler_get();
 
-#ifdef CONFIG_MUTEK_SCHEDULER_CANDIDATE_FCN
+#ifdef CONFIG_MUTEK_CONTEXT_SCHED_CANDIDATE_FCN
   sched_ctx->is_candidate = NULL;
 #endif
 
@@ -516,41 +516,41 @@ struct sched_context_s *sched_wake(sched_queue_root_t *queue)
   return sched_ctx;
 }
 
-#ifdef CONFIG_MUTEK_SCHEDULER_MIGRATION
+#ifdef CONFIG_MUTEK_CONTEXT_SCHED_MIGRATION
 
 void sched_affinity_add(struct sched_context_s *sched_ctx, cpu_id_t cpu)
 {
-# ifndef CONFIG_MUTEK_SCHEDULER_MIGRATION_AFFINITY
+# ifndef CONFIG_MUTEK_CONTEXT_SCHED_MIGRATION_AFFINITY
 # endif
 }
 
 void sched_affinity_remove(struct sched_context_s *sched_ctx, cpu_id_t cpu)
 {
-# ifndef CONFIG_MUTEK_SCHEDULER_MIGRATION_AFFINITY
+# ifndef CONFIG_MUTEK_CONTEXT_SCHED_MIGRATION_AFFINITY
 # endif
 }
 
 void sched_affinity_single(struct sched_context_s *sched_ctx, cpu_id_t cpu)
 {
-# ifndef CONFIG_MUTEK_SCHEDULER_MIGRATION_AFFINITY
+# ifndef CONFIG_MUTEK_CONTEXT_SCHED_MIGRATION_AFFINITY
 # endif
 }
 
 void sched_affinity_all(struct sched_context_s *sched_ctx)
 {
-# ifndef CONFIG_MUTEK_SCHEDULER_MIGRATION_AFFINITY
+# ifndef CONFIG_MUTEK_CONTEXT_SCHED_MIGRATION_AFFINITY
 # endif
 }
 
 void sched_affinity_clear(struct sched_context_s *sched_ctx)
 {
-# ifndef CONFIG_MUTEK_SCHEDULER_MIGRATION_AFFINITY
+# ifndef CONFIG_MUTEK_CONTEXT_SCHED_MIGRATION_AFFINITY
 # endif
 }
 
 #endif
 
-#ifdef CONFIG_MUTEK_SCHEDULER_STATIC
+#ifdef CONFIG_MUTEK_CONTEXT_SCHED_STATIC
 
 void sched_affinity_add(struct sched_context_s *sched_ctx, cpu_id_t cpu)
 {
@@ -581,7 +581,7 @@ void sched_affinity_clear(struct sched_context_s *sched_ctx)
 
 #endif
 
-#ifdef CONFIG_MUTEK_SCHEDULER_CANDIDATE_FCN
+#ifdef CONFIG_MUTEK_CONTEXT_SCHED_CANDIDATE_FCN
 void sched_context_candidate_fcn(struct sched_context_s *sched_ctx,
                                  sched_candidate_fcn_t *fcn)
 {
@@ -597,7 +597,7 @@ void mutek_scheduler_initsmp(void)
 {
   if (cpu_isbootstrap())
     {
-#if defined(CONFIG_MUTEK_SCHEDULER_MIGRATION)
+#if defined(CONFIG_MUTEK_CONTEXT_SCHED_MIGRATION)
       /* init single shared scheduler queue */
       struct scheduler_s *sched = __scheduler_get();
 
@@ -608,7 +608,7 @@ void mutek_scheduler_initsmp(void)
 #endif
     }
 
-#if defined(CONFIG_MUTEK_SCHEDULER_STATIC)
+#if defined(CONFIG_MUTEK_CONTEXT_SCHED_STATIC)
   /* init a scheduler queue for each processor */
   struct scheduler_s *sched = __scheduler_get();
 

@@ -422,7 +422,7 @@ ssize_t dev_i2c_spin_write(
     return dev_i2c_spin_request(accessor, saddr, tr, 1);
 }
 
-#if defined(CONFIG_MUTEK_SCHEDULER)
+#if defined(CONFIG_MUTEK_CONTEXT_SCHED)
 
 inline ssize_t dev_i2c_wait_request(
     const struct device_i2c_s *accessor,

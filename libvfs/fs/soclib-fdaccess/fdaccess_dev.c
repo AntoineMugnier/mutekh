@@ -75,7 +75,7 @@ int32_t soclib_fdaccess_rq(struct device_s *dev,
   /* enqueue request */
   soclib_fdaccess_rq_pushback(&pv->queue, rq);
 
-# ifdef CONFIG_MUTEK_SCHEDULER
+# ifdef CONFIG_MUTEK_CONTEXT_SCHED
   rq->ctx = sched_get_current();
   sched_stop_unlock(&dev->lock);
   CPU_INTERRUPT_RESTORESTATE;
@@ -126,7 +126,7 @@ DEV_IRQ(soclib_fdaccess_irq)
     if (rq)
       {
         soclib_fdaccess_read_rq(dev, rq);
-#if defined(CONFIG_MUTEK_SCHEDULER)
+#if defined(CONFIG_MUTEK_CONTEXT_SCHED)
         if (rq->ctx)
           sched_context_start(rq->ctx);
 #endif

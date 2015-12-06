@@ -25,7 +25,7 @@
 #include <device/class/char.h>
 #include <device/driver.h>
 
-#ifdef CONFIG_MUTEK_SCHEDULER
+#ifdef CONFIG_MUTEK_CONTEXT_SCHED
 # include <mutek/scheduler.h>
 
 extern inline ssize_t dev_char_wait_op(

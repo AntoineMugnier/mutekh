@@ -395,7 +395,7 @@ error_t adxl345_start_stop(struct adxl345_private_s *pv, bool_t start)
     data[0] = ADXL345_REG_POWER_CTL;
     data[1] = start ? 0x28 : 0x0;
 
-#if defined(CONFIG_MUTEK_SCHEDULER)
+#if defined(CONFIG_MUTEK_CONTEXT_SCHED)
     return dev_i2c_wait_write(&pv->i2c, pv->i2c_saddr, data, 2);
 #else
     return dev_i2c_spin_write(&pv->i2c, pv->i2c_saddr, data, 2);

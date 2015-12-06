@@ -191,7 +191,7 @@ DRIVER_CLASS_TYPES(pwm,
 
 config_depend(CONFIG_DEVICE_PWM)
 
-#if defined(CONFIG_MUTEK_SCHEDULER)
+#if defined(CONFIG_MUTEK_CONTEXT_SCHED)
 
 inline error_t dev_pwm_wait_config(struct device_pwm_s *pdev, const struct dev_pwm_config_s *cfg, uint_fast8_t mask)
 {

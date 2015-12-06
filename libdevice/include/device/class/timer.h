@@ -469,7 +469,7 @@ error_t dev_timer_check_timeout(struct device_timer_s *accessor,
     dev_timer_init_sec. It can then be reused multiple times to
     save timer units conversion computation.
 */
-config_depend_and2(CONFIG_DEVICE_TIMER, CONFIG_MUTEK_SCHEDULER)
+config_depend_and2(CONFIG_DEVICE_TIMER, CONFIG_MUTEK_CONTEXT_SCHED)
 error_t dev_timer_sleep(struct device_timer_s *accessor, struct dev_timer_rq_s *rq);
 
 /** Synchronous timer busy-wait function. @This spins in a loop

@@ -26,7 +26,7 @@
 #include <device/resources.h>
 #include <device/class/timer.h>
 
-#ifdef CONFIG_MUTEK_SCHEDULER
+#ifdef CONFIG_MUTEK_CONTEXT_SCHED
 # include <mutek/scheduler.h>
 # include <hexo/lock.h>
 #endif
@@ -273,14 +273,14 @@ error_t dev_timer_busy_wait(struct device_timer_s *accessor, dev_timer_delay_t d
 
 struct dev_timer_wait_rq_s
 {
-#ifdef CONFIG_MUTEK_SCHEDULER
+#ifdef CONFIG_MUTEK_CONTEXT_SCHED
   lock_t lock;
   struct sched_context_s *ctx;
 #endif
   bool_t done;
 };
 
-#ifdef CONFIG_MUTEK_SCHEDULER
+#ifdef CONFIG_MUTEK_CONTEXT_SCHED
 static KROUTINE_EXEC(dev_timer_wait_request_cb)
 {
   struct dev_timer_rq_s *rq = dev_timer_rq_s_cast(dev_request_s_from_kr(kr));
@@ -294,7 +294,7 @@ static KROUTINE_EXEC(dev_timer_wait_request_cb)
 }
 #endif
 
-#ifdef CONFIG_MUTEK_SCHEDULER
+#ifdef CONFIG_MUTEK_CONTEXT_SCHED
 error_t dev_timer_sleep(struct device_timer_s *accessor, struct dev_timer_rq_s *rq)
 {
   struct dev_timer_wait_rq_s status;

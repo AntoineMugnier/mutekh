@@ -315,7 +315,7 @@ error_t dev_gpio_spin_rq(struct device_gpio_s *accessor,
 /** Synchronous gpio device request function. This function use the
     scheduler api to put the current context in wait state during the
     request. */
-config_depend_and2_inline(CONFIG_DEVICE_GPIO, CONFIG_MUTEK_SCHEDULER,
+config_depend_and2_inline(CONFIG_DEVICE_GPIO, CONFIG_MUTEK_CONTEXT_SCHED,
 error_t dev_gpio_wait_rq(struct device_gpio_s *accessor,
                          struct dev_gpio_rq_s *rq),
 {

@@ -31,7 +31,7 @@ const char dev_mem_type_e[] = ENUM_DESC_DEV_MEM_TYPE_E;
 const char dev_mem_flags_e[] = ENUM_DESC_DEV_MEM_FLAGS_E;
 const char dev_mem_rq_type_e[] = ENUM_DESC_DEV_MEM_RQ_TYPE_E;
 
-# ifdef CONFIG_MUTEK_SCHEDULER
+# ifdef CONFIG_MUTEK_CONTEXT_SCHED
 extern inline error_t
 dev_mem_wait_op(struct device_mem_s *accessor,
                 struct dev_mem_rq_s *rq);

@@ -91,7 +91,7 @@ static TERMUI_CON_COMMAND_PROTOTYPE(dev_shell_timer_wait)
     }
   else
     {
-#ifdef CONFIG_MUTEK_SCHEDULER
+#ifdef CONFIG_MUTEK_CONTEXT_SCHED
       if (dev_timer_sleep(&c->timer, &rq))
 #endif
         return -EINVAL;

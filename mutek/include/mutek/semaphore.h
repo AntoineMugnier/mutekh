@@ -46,7 +46,7 @@ typedef int_fast8_t semaphore_count_t;
 /** Semaphore object structure */
 struct semaphore_s
 {
-#ifdef CONFIG_MUTEK_SCHEDULER
+#ifdef CONFIG_MUTEK_CONTEXT_SCHED
 	/** semaphore counter */
 	semaphore_count_t count;
 
@@ -58,7 +58,7 @@ struct semaphore_s
 #endif
 };
 
-#ifndef CONFIG_MUTEK_SCHEDULER
+#ifndef CONFIG_MUTEK_CONTEXT_SCHED
 ALWAYS_INLINE error_t
 semaphore_init(struct semaphore_s *semaphore, semaphore_count_t value)
 {

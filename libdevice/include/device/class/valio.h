@@ -211,7 +211,7 @@ inline error_t dev_valio_spin_update(
     return dev_valio_spin_request(accessor, &req);
 }
 
-#if defined(CONFIG_MUTEK_SCHEDULER)
+#if defined(CONFIG_MUTEK_CONTEXT_SCHED)
 
 inline error_t dev_valio_wait_request(
     const struct device_valio_s *accessor,

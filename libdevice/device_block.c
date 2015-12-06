@@ -26,7 +26,7 @@
 #include <device/class/block.h>
 #include <device/driver.h>
 
-#ifdef CONFIG_MUTEK_SCHEDULER
+#ifdef CONFIG_MUTEK_CONTEXT_SCHED
 # include <mutek/scheduler.h>
 # include <hexo/lock.h>
 #endif
@@ -38,7 +38,7 @@ GCT_CONTAINER_PROTOTYPES(dev_blk_queue, extern inline, dev_blk_queue,
 
 struct dev_block_wait_rq_s
 {
-#ifdef CONFIG_MUTEK_SCHEDULER
+#ifdef CONFIG_MUTEK_CONTEXT_SCHED
   lock_t lock;
   struct sched_context_s *ctx;
 #endif
@@ -82,7 +82,7 @@ static error_t dev_block_lock_request(struct device_block_s *dev, uint8_t **data
   return __MIN(rq.progress, 0);
 }
 
-#ifdef CONFIG_MUTEK_SCHEDULER
+#ifdef CONFIG_MUTEK_CONTEXT_SCHED
 static DEV_BLOCK_CALLBACK(dev_block_sync_request)
 {
   struct dev_block_wait_rq_s *status = rq->pvdata;
@@ -145,7 +145,7 @@ static error_t dev_block_wait_request(struct device_block_s *dev, uint8_t **data
 error_t dev_block_wait_read(struct device_block_s *dev, uint8_t **data,
 			    dev_block_lba_t lba, size_t count)
 {
-#ifdef CONFIG_MUTEK_SCHEDULER
+#ifdef CONFIG_MUTEK_CONTEXT_SCHED
   return dev_block_wait_request(dev, data, lba, count, DEV_BLOCK_READ);
 #else
   return dev_block_lock_request(dev, data, lba, count, DEV_BLOCK_READ);
@@ -161,7 +161,7 @@ error_t dev_block_spin_read(struct device_block_s *dev, uint8_t **data,
 error_t dev_block_wait_write(struct device_block_s *dev, uint8_t **data,
 			     dev_block_lba_t lba, size_t count)
 {
-#ifdef CONFIG_MUTEK_SCHEDULER
+#ifdef CONFIG_MUTEK_CONTEXT_SCHED
   return dev_block_wait_request(dev, data, lba, count, DEV_BLOCK_WRITE);
 #else
   return dev_block_lock_request(dev, data, lba, count, DEV_BLOCK_WRITE);

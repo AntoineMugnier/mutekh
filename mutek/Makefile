@@ -14,7 +14,7 @@ objs-$(CONFIG_MUTEK_LOGO) += mutek_logo_320x200.o
 objs-$(CONFIG_VMEM_PHYS_ALLOC) += page_alloc.o
 
 objs-$(CONFIG_MUTEK_THREAD) += thread.o
-ifeq ($(CONFIG_MUTEK_SCHEDULER), defined)
+ifeq ($(CONFIG_MUTEK_CONTEXT_SCHED), defined)
  objs += scheduler.o
  objs-$(CONFIG_MUTEK_SEMAPHORE) += semaphore.o
  objs-$(CONFIG_MUTEK_RWLOCK) += rwlock.o

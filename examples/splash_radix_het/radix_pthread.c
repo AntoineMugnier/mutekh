@@ -276,7 +276,7 @@ static void slave_sort()
 
   pthread_mutex_lock(&(global->lock_Index));
   printk("Thread started on cpu %i (%s)"
-#ifdef CONFIG_MUTEK_SCHEDULER_MIGRATION
+#ifdef CONFIG_MUTEK_CONTEXT_SCHED_MIGRATION
 	 " but threads migration is enabled"
 #endif
 	 "\n", cpu_id(), cpu_type_name());

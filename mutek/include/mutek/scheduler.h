@@ -41,7 +41,7 @@ struct sched_context_s;
 typedef SCHED_CANDIDATE_FCN(sched_candidate_fcn_t);
 
 
-#ifdef CONFIG_MUTEK_SCHEDULER
+#ifdef CONFIG_MUTEK_CONTEXT_SCHED
 
 #include <gct_platform.h>
 #include <gct_lock_hexo_lock.h>
@@ -58,11 +58,11 @@ struct sched_context_s
 
   void			*priv;
 
-# ifdef CONFIG_MUTEK_SCHEDULER_MIGRATION_AFFINITY
+# ifdef CONFIG_MUTEK_CONTEXT_SCHED_MIGRATION_AFFINITY
   cpu_bitmap_t		cpu_map;
 # endif
 
-# ifdef CONFIG_MUTEK_SCHEDULER_CANDIDATE_FCN
+# ifdef CONFIG_MUTEK_CONTEXT_SCHED_CANDIDATE_FCN
   sched_candidate_fcn_t	*is_candidate;
 # endif
 
@@ -88,7 +88,7 @@ typedef struct __empty_s sched_queue_root_t;
 #endif
 
 /** @This returns the current scheduler context */
-config_depend_alwaysinline(CONFIG_MUTEK_SCHEDULER,
+config_depend_alwaysinline(CONFIG_MUTEK_CONTEXT_SCHED,
 struct sched_context_s *sched_get_current(void),
 {
   return CONTEXT_LOCAL_GET(sched_cur);
@@ -98,7 +98,7 @@ struct sched_context_s *sched_get_current(void),
     @ref cpu_context_stack_use, useful to run other context
     exit/destroy. The processor idle context is actually returned. This
     context must be used with interrupts disabled. */
-config_depend_alwaysinline(CONFIG_MUTEK_SCHEDULER,
+config_depend_alwaysinline(CONFIG_MUTEK_CONTEXT_SCHED,
 struct context_s * sched_tmp_context(void),
 {
   return CPU_LOCAL_ADDR(sched_idle)->context;
@@ -111,7 +111,7 @@ struct context_s * sched_tmp_context(void),
     running queue, this function does nothing and return @tt NULL.
 
     @see context_set_preempt @see #CONTEXT_PREEMPT @see sched_context_switch */
-config_depend(CONFIG_MUTEK_SCHEDULER)
+config_depend(CONFIG_MUTEK_CONTEXT_SCHED)
 CONTEXT_PREEMPT(sched_preempt_switch);
 
 /** @This is a context preemption handler.
@@ -121,7 +121,7 @@ CONTEXT_PREEMPT(sched_preempt_switch);
     running queue.
 
     @see context_set_preempt @see #CONTEXT_PREEMPT @see sched_context_stop */
-config_depend(CONFIG_MUTEK_SCHEDULER)
+config_depend(CONFIG_MUTEK_CONTEXT_SCHED)
 CONTEXT_PREEMPT(sched_preempt_stop);
 
 /** @This is a context preemption handler.
@@ -132,21 +132,21 @@ CONTEXT_PREEMPT(sched_preempt_stop);
     context.
 
     @see context_set_preempt @see #CONTEXT_PREEMPT @see sched_wait_unlock */
-config_depend_and2(CONFIG_MUTEK_SCHEDULER, CONFIG_HEXO_CONTEXT_PREEMPT)
+config_depend_and2(CONFIG_MUTEK_CONTEXT_SCHED, CONFIG_HEXO_CONTEXT_PREEMPT)
 CONTEXT_PREEMPT(sched_preempt_wait_unlock);
 
 /** @see sched_preempt_wait_unlock */
-config_depend_and2(CONFIG_MUTEK_SCHEDULER, CONFIG_HEXO_CONTEXT_PREEMPT)
+config_depend_and2(CONFIG_MUTEK_CONTEXT_SCHED, CONFIG_HEXO_CONTEXT_PREEMPT)
 extern CPU_LOCAL sched_queue_root_t *sched_preempt_wait_unlock_q;
 
 /** @This initializes scheduler context. */
-config_depend(CONFIG_MUTEK_SCHEDULER)
+config_depend(CONFIG_MUTEK_CONTEXT_SCHED)
 void sched_context_init(struct sched_context_s *sched_ctx,
                         struct context_s *context);
 
 /** @This switches to next context. Must be called with interrupts
     disabled. @see sched_preempt_switch */
-config_depend_alwaysinline(CONFIG_MUTEK_SCHEDULER,
+config_depend_alwaysinline(CONFIG_MUTEK_CONTEXT_SCHED,
 void sched_context_switch(void),
 {
   struct context_s *next = sched_preempt_switch();
@@ -158,7 +158,7 @@ void sched_context_switch(void),
 /** @This jumps to next context without saving current context. current
     context will be lost. Must be called with interrupts disabled and
     main sched queue locked. @see sched_preempt_stop */
-config_depend_alwaysinline(CONFIG_MUTEK_SCHEDULER,
+config_depend_alwaysinline(CONFIG_MUTEK_CONTEXT_SCHED,
 void sched_context_exit(void),
 {
   context_jump_to(sched_preempt_stop());
@@ -171,7 +171,7 @@ sched_wait_unlock_ctx(sched_queue_root_t *queue);
 /** @This pushes current context in the 'queue', unlock it and switch
    to next context available in the 'root' queue. Must be called with
    interrupts disabled. @see sched_preempt_wait_unlock */
-config_depend_alwaysinline(CONFIG_MUTEK_SCHEDULER,
+config_depend_alwaysinline(CONFIG_MUTEK_CONTEXT_SCHED,
 void sched_wait_unlock(sched_queue_root_t *queue),
 {
   context_switch_to(sched_wait_unlock_ctx(queue));
@@ -179,33 +179,33 @@ void sched_wait_unlock(sched_queue_root_t *queue),
 
 /** @This enqueues scheduler context for execution. Must be called
     with interrupts disabled */
-config_depend(CONFIG_MUTEK_SCHEDULER)
+config_depend(CONFIG_MUTEK_CONTEXT_SCHED)
 void sched_context_start(struct sched_context_s *sched_ctx);
 
 /** @This switches to next context without pushing current context
     back in running queue and unlock passed scheduler queue. @see
     sched_context_stop */
-config_depend(CONFIG_MUTEK_SCHEDULER)
+config_depend(CONFIG_MUTEK_CONTEXT_SCHED)
 void sched_stop_unlock(lock_t *lock);
 
 /** @This locks context queue for writting. */
-config_depend(CONFIG_MUTEK_SCHEDULER)
+config_depend(CONFIG_MUTEK_CONTEXT_SCHED)
 inline void sched_queue_wrlock(sched_queue_root_t *queue);
 
 /** @This locks context queue for reading. */
-config_depend(CONFIG_MUTEK_SCHEDULER)
+config_depend(CONFIG_MUTEK_CONTEXT_SCHED)
 inline void sched_queue_rdlock(sched_queue_root_t *queue);
 
 /** @This unlocks context queue. */
-config_depend(CONFIG_MUTEK_SCHEDULER)
+config_depend(CONFIG_MUTEK_CONTEXT_SCHED)
 inline void sched_queue_unlock(sched_queue_root_t *queue);
 
 /** @This initializes context queue. */
-config_depend(CONFIG_MUTEK_SCHEDULER)
+config_depend(CONFIG_MUTEK_CONTEXT_SCHED)
 inline error_t sched_queue_init(sched_queue_root_t *queue);
 
 /** @This frees resources associated with context queue. */
-config_depend(CONFIG_MUTEK_SCHEDULER)
+config_depend(CONFIG_MUTEK_CONTEXT_SCHED)
 inline void sched_queue_destroy(sched_queue_root_t *queue);
 
 typedef void (sched_wait_cb_t)(void *ctx);
@@ -214,43 +214,43 @@ typedef void (sched_wait_cb_t)(void *ctx);
     running queue.  @This returns a pointer to context or NULL if
     queue was empty. @This Must be called with interrupts disabled and
     queue locked. */
-config_depend(CONFIG_MUTEK_SCHEDULER)
+config_depend(CONFIG_MUTEK_CONTEXT_SCHED)
 struct sched_context_s *sched_wake(sched_queue_root_t *queue);
 
 /** @This function removes a given context from passed queue and push it back in
     running queue. @This Must be called with interrupts disabled and
     queue locked. */
-config_depend(CONFIG_MUTEK_SCHEDULER)
+config_depend(CONFIG_MUTEK_CONTEXT_SCHED)
 void sched_context_wake(sched_queue_root_t *queue, struct sched_context_s *sched_ctx);
 
 /** @This function set processor affinity sothat scheduler context
     will run on this cpu */
-config_depend(CONFIG_MUTEK_SCHEDULER)
+config_depend(CONFIG_MUTEK_CONTEXT_SCHED)
 void sched_affinity_add(struct sched_context_s *sched_ctx, cpu_id_t cpu);
 
 /** @This function set processor affinity sothat scheduler context
     will not run on this cpu */
-config_depend(CONFIG_MUTEK_SCHEDULER)
+config_depend(CONFIG_MUTEK_CONTEXT_SCHED)
 void sched_affinity_remove(struct sched_context_s *sched_ctx, cpu_id_t cpu);
 
 /** @This function set processor affinity sothat scheduler context
     will run on a single cpu */
-config_depend(CONFIG_MUTEK_SCHEDULER)
+config_depend(CONFIG_MUTEK_CONTEXT_SCHED)
 void sched_affinity_single(struct sched_context_s *sched_ctx, cpu_id_t cpu);
 
 /** @This function set processor affinity sothat scheduler context
     will run on all cpu */
-config_depend(CONFIG_MUTEK_SCHEDULER)
+config_depend(CONFIG_MUTEK_CONTEXT_SCHED)
 void sched_affinity_all(struct sched_context_s *sched_ctx);
 
 /** @This function set processor affinity sothat scheduler context
     will run on all cpu */
-config_depend(CONFIG_MUTEK_SCHEDULER)
+config_depend(CONFIG_MUTEK_CONTEXT_SCHED)
 void sched_affinity_clear(struct sched_context_s *sched_ctx);
 
 /** @This function setups a scheduler context candidate checking
     function. */
-config_depend(CONFIG_MUTEK_SCHEDULER_CANDIDATE_FCN)
+config_depend(CONFIG_MUTEK_CONTEXT_SCHED_CANDIDATE_FCN)
 void sched_context_candidate_fcn(struct sched_context_s *sched_ctx, sched_candidate_fcn_t *fcn);
 
 #endif

@@ -441,7 +441,7 @@ inline error_t dev_rfpacket_spin_config(
     return rq.err;
 }
 
-#ifdef CONFIG_MUTEK_SCHEDULER
+#ifdef CONFIG_MUTEK_CONTEXT_SCHED
 inline error_t dev_rfpacket_wait_send_packet(
        const struct device_rfpacket_s *accessor,
        const uint8_t *buf,
