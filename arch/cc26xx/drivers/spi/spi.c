@@ -84,8 +84,8 @@ static DEV_SPI_CTRL_CONFIG(cc26xx_spi_config)
     {
       if (cfg->word_width < 4 || cfg->word_width > 16)
         err = -ENOTSUP;
-      else if (cfg->miso_pol != DEV_SPI_CS_ACTIVE_LOW
-                || cfg->mosi_pol != DEV_SPI_CS_ACTIVE_LOW)
+      else if (cfg->miso_pol != DEV_SPI_ACTIVE_LOW
+                || cfg->mosi_pol != DEV_SPI_ACTIVE_LOW)
         err = -ENOTSUP;
       else if (cfg->bit_order != DEV_SPI_MSB_FIRST)
         err = -ENOTSUP;
