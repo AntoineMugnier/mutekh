@@ -25,6 +25,7 @@
 
 #include <hexo/decls.h>
 #include <hexo/types.h>
+#include <hexo/ordering.h>
 
 /**
   @file
@@ -119,7 +120,7 @@ __cpu_atomic_inc(atomic_int_t *a)
 {
   atomic_int_t old;
   do {
-    asm ("" : "+m" (*a));
+    order_smp_read();
     old = *a;
   } while (!__cpu_atomic_compare_and_swap(a, old, old + 1));
 
@@ -134,7 +135,7 @@ __cpu_atomic_dec(atomic_int_t *a)
 {
   atomic_int_t old;
   do {
-    asm ("" : "+m" (*a));
+    order_smp_read();
     old = *a;
   } while (!__cpu_atomic_compare_and_swap(a, old, old - 1));
 
@@ -152,7 +153,7 @@ __cpu_atomic_bit_testset(atomic_int_t *a, uint_fast8_t n)
   bool_t res;
 
   do {
-    asm ("" : "+m" (*a));
+    order_smp_read();
     old = *a;
     res = (old & mask) != 0;
   } while (!res && !__cpu_atomic_compare_and_swap(a, old, old | mask));
@@ -171,7 +172,7 @@ __cpu_atomic_bit_testclr(atomic_int_t *a, uint_fast8_t n)
   bool_t res;
 
   do {
-    asm ("" : "+m" (*a));
+    order_smp_read();
     old = *a;
     res = (old & mask) != 0;
   } while (res && !__cpu_atomic_compare_and_swap(a, old, old & ~mask));
