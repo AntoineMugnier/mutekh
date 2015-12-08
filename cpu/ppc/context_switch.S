@@ -50,7 +50,7 @@
 FUNC_START(.text, cpu_context_switch)
 
         // context local storage
-        mfspr   2,              0x114
+        mfspr   2,              PPC_SPRG(4)
         // context registers save array
         addi    2,      2,      ppc_context_regs@l
 
@@ -129,7 +129,7 @@ FUNC_START(.text, cpu_context_jumpto)
 
         // restore tls pointer from context struct
         lwz     2,              HEXO_CONTEXT_S_TLS * 4 (3)
-        mtspr   0x114,          2
+        mtspr   PPC_SPRG(4),    2
         // context registers save array
         addi    2,      2,      ppc_context_regs@l
 
@@ -289,7 +289,7 @@ FUNC_START(.text, cpu_context_stack_use)
 #ifndef CONFIG_RELEASE
         // ensure we do not use context local storage from here
         li      0,              0
-        mtspr   0x114,          0
+        mtspr   PPC_SPRG(4),    0
 #endif
 
         // private param
