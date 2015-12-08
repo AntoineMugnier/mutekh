@@ -28,6 +28,10 @@
 CPU_LOCAL context_preempt_t *cpu_preempt_handler = (context_preempt_t*)1;
 #endif
 
+#ifdef CONFIG_HEXO_CONTEXT_IRQEN
+CPU_LOCAL context_irqen_t *cpu_irqen_handler = NULL;
+#endif
+
 CONTEXT_LOCAL struct cpu_context_s arm_context_regs;
 
 void cpu_context_entry();
@@ -79,4 +83,17 @@ void cpu_exception_resume_pc(struct cpu_context_s *regs, uintptr_t pc)
 {
     regs->gpr[15] = pc;
 }
+
+#ifdef CONFIG_HEXO_CONTEXT_IRQEN
+void arm_interrupt_restore(void)
+{
+  context_irqen_t *func = CPU_LOCAL_GET(cpu_irqen_handler);
+
+  reg_t ipsr;
+  asm ("mrs  %0, ipsr" : "=l" (ipsr));
+
+  if (func != NULL && !(ipsr & 0xff))
+    func();
+}
+#endif
 

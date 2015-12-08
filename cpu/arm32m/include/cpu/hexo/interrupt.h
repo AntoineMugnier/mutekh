@@ -51,6 +51,7 @@
       "UsageFault",                             \
       }
 
+void arm_interrupt_restore(void);
 void arm_interrupt_entry(void);
 
 typedef reg_t cpu_irq_state_t;
@@ -92,9 +93,14 @@ ALWAYS_INLINE bool_t
 cpu_interrupt_restorestate(const cpu_irq_state_t *state)
 {
 # ifdef CONFIG_HEXO_IRQ
+        reg_t s = *state;
+#  ifdef CONFIG_HEXO_CONTEXT_IRQEN
+        if (!s)
+          arm_interrupt_restore();
+#  endif
 	asm volatile (
                       "msr  primask, %[state]        \n\t"
-                      : : [state] "l" (*state)
+                      : : [state] "l" (s)
                       : "memory"     /* compiler memory barrier */
                      );
 	return ~*state & 1;
