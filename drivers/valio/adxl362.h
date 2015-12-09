@@ -62,7 +62,7 @@ struct adxl362_private_s
   dev_request_queue_root_t queue;
 
   /* cpu irq save mask */
-  reg_t irq_save;
+  cpu_irq_state_t irq_save;
 
   gpio_id_t pin_map[1];
 

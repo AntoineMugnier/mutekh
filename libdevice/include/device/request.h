@@ -294,7 +294,7 @@ dev_request_delayed_push(struct device_accessor_s *accessor,
   if (empty && interruptible)
     q->func(accessor, rq);
 #else
-  reg_t irq_state;
+  cpu_irq_state_t irq_state;
   if (critical)
     lock_spin_irq2(&dev->lock, &irq_state);
   q->func(accessor, rq);

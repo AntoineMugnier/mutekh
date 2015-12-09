@@ -58,7 +58,7 @@ typedef struct lock_s	lock_t;
 struct			lock_irq_s
 {
 #ifdef CONFIG_HEXO_IRQ
-  reg_t	__interrupt_state;
+  cpu_irq_state_t	__interrupt_state;
 #endif
 #ifdef CONFIG_ARCH_SMP
   /** architecture specific lock data */
@@ -138,7 +138,7 @@ ALWAYS_INLINE void lock_spin(lock_t *lock)
 ALWAYS_INLINE void lock_spin_irq(lock_irq_t *lock)
 {
 #ifdef CONFIG_HEXO_IRQ
-  reg_t state;
+  cpu_irq_state_t state;
   cpu_interrupt_savestate_disable(&state);
 #endif
 #ifdef CONFIG_ARCH_SMP
@@ -152,10 +152,10 @@ ALWAYS_INLINE void lock_spin_irq(lock_irq_t *lock)
 
 /** @This disables interrupts, spins to take the lock and store the
     previous irq state in @tt *irq_state */
-ALWAYS_INLINE void lock_spin_irq2(lock_t *lock, reg_t *irq_state)
+ALWAYS_INLINE void lock_spin_irq2(lock_t *lock, cpu_irq_state_t *irq_state)
 {
 #ifdef CONFIG_HEXO_IRQ
-  reg_t state;
+  cpu_irq_state_t state;
   cpu_interrupt_savestate_disable(&state);
 #endif
 #ifdef CONFIG_ARCH_SMP
@@ -183,7 +183,7 @@ ALWAYS_INLINE bool_t lock_state(lock_t *lock)
 #ifdef CONFIG_HEXO_IRQ
 # define LOCK_SPIN_IRQ(lock)					\
   HEXO_ATOMIC_SCOPE_BEGIN                                       \
-  reg_t	__interrupt_state;					\
+  cpu_irq_state_t	__interrupt_state;					\
   cpu_interrupt_savestate_disable(&__interrupt_state);		\
   lock_spin(lock);
 #else
@@ -204,7 +204,7 @@ ALWAYS_INLINE void lock_release(lock_t *lock)
 ALWAYS_INLINE void lock_release_irq(lock_irq_t *lock)
 {
 #ifdef CONFIG_HEXO_IRQ
-  reg_t state = lock->__interrupt_state;
+  cpu_irq_state_t state = lock->__interrupt_state;
 #endif
 #ifdef CONFIG_ARCH_SMP
   order_smp_mem();
@@ -216,10 +216,10 @@ ALWAYS_INLINE void lock_release_irq(lock_irq_t *lock)
 }
 
 /** @This releases a lock and restore interrupt state from @tt *irq_state */
-ALWAYS_INLINE void lock_release_irq2(lock_t *lock, const reg_t *irq_state)
+ALWAYS_INLINE void lock_release_irq2(lock_t *lock, const cpu_irq_state_t *irq_state)
 {
 #ifdef CONFIG_HEXO_IRQ
-  reg_t state = *irq_state;
+  cpu_irq_state_t state = *irq_state;
 #endif
 #ifdef CONFIG_ARCH_SMP
   order_smp_mem();

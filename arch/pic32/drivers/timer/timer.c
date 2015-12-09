@@ -68,7 +68,7 @@ struct pic32_timer_private_s
   /* Core frequency */
   struct dev_freq_s freq;
   /* cpu irq save mask */
-  reg_t irq_save;
+  cpu_irq_state_t irq_save;
 };
 
 /* This function returns a concatenation of the software timer value and 

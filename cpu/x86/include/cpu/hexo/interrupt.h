@@ -87,6 +87,8 @@ void x86_interrupt_ex_entry(void);
 void x86_interrupt_sys_entry(void);
 void x86_interrupt_sys_enter(void);
 
+typedef reg_t cpu_irq_state_t;
+
 ALWAYS_INLINE void
 cpu_interrupt_disable(void)
 {
@@ -134,7 +136,7 @@ cpu_interrupt_process(void)
 }
 
 ALWAYS_INLINE void
-cpu_interrupt_savestate(reg_t *state)
+cpu_interrupt_savestate(cpu_irq_state_t *state)
 {
 # ifdef CONFIG_HEXO_IRQ
   __asm__ volatile (
@@ -146,7 +148,7 @@ cpu_interrupt_savestate(reg_t *state)
 }
 
 ALWAYS_INLINE void
-cpu_interrupt_savestate_disable(reg_t *state)
+cpu_interrupt_savestate_disable(cpu_irq_state_t *state)
 {
 # ifdef CONFIG_HEXO_IRQ
   __asm__ volatile (
@@ -160,8 +162,8 @@ cpu_interrupt_savestate_disable(reg_t *state)
 # endif
 }
 
-ALWAYS_INLINE void
-cpu_interrupt_restorestate(const reg_t *state)
+ALWAYS_INLINE bool_t
+cpu_interrupt_restorestate(const cpu_irq_state_t *state)
 {
 # ifdef CONFIG_HEXO_IRQ
   __asm__ volatile (
@@ -171,6 +173,10 @@ cpu_interrupt_restorestate(const reg_t *state)
 		    : "m,r" (*state)
                     : "memory"     /* compiler memory barrier */
 		    );
+
+  return (*state >> 9) & 1;
+# else
+  return 0;
 # endif
 }
 
@@ -186,7 +192,7 @@ cpu_interrupt_getstate(void)
 		    : "=r" (flags)
 		    );
 
-  return flags & 0x200 ? 1 : 0;
+  return (flags >> 9) & 1;
 # else
   return 0;
 # endif

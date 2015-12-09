@@ -38,6 +38,8 @@ C_HEADER_BEGIN
 
 /************************************************************ hw irq */
 
+#include "cpu/hexo/interrupt.h"
+
 # ifdef CONFIG_HEXO_IRQ
 
 /** CPU interrupt handler function template
@@ -62,6 +64,7 @@ void cpu_interrupt_sethandler(cpu_interrupt_handler_t *handler);
     interrupt handler updated must be specified. */
 config_depend(CONFIG_ARCH_SMP)
 void cpu_interrupt_cls_sethandler(void *cls, cpu_interrupt_handler_t *handler);
+
 # endif
 
 
@@ -74,15 +77,15 @@ ALWAYS_INLINE void cpu_interrupt_disable(void);
 ALWAYS_INLINE void cpu_interrupt_enable(void);
 
 /** @this saves interrupts enable state (may use stack) */
-ALWAYS_INLINE void cpu_interrupt_savestate(reg_t *state);
+ALWAYS_INLINE void cpu_interrupt_savestate(cpu_irq_state_t *state);
 
 /** @this saves interrupts enable state end disable interrupts.
     This acts as a compiler memory barrier. */
-ALWAYS_INLINE void cpu_interrupt_savestate_disable(reg_t *state);
+ALWAYS_INLINE void cpu_interrupt_savestate_disable(cpu_irq_state_t *state);
 
 /** @this restores interrupts enable state (may use stack).
     This acts as a compiler memory barrier. */
-ALWAYS_INLINE void cpu_interrupt_restorestate(const reg_t *state);
+ALWAYS_INLINE bool_t cpu_interrupt_restorestate(const cpu_irq_state_t *state);
 
 /** @this reads current interrupts state as boolean */
 ALWAYS_INLINE bool_t cpu_interrupt_getstate(void);
@@ -111,7 +114,7 @@ ALWAYS_INLINE void cpu_interrupt_wait(void);
     This acts as a compiler memory barrier. */
 #define CPU_INTERRUPT_SAVESTATE_DISABLE				\
 {								\
-  reg_t	__interrupt_state;					\
+  cpu_irq_state_t	__interrupt_state;				\
   cpu_interrupt_savestate_disable(&__interrupt_state);
 
 /** @showcontent
@@ -217,8 +220,6 @@ void cpu_syscall_sethandler_ctx(struct context_s *context,
 #endif
 
 /************************************************************/
-
-# include "cpu/hexo/interrupt.h"
 
 C_HEADER_END
 
