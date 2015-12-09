@@ -102,6 +102,12 @@ typedef CONTEXT_ENTRY(context_entry_t);
 /** context preempt function prototype. @csee #CONTEXT_PREEMPT */
 typedef CONTEXT_PREEMPT(context_preempt_t);
 
+/** @showvalue irq enable restore function prototype.
+    @see context_set_irqen */
+#define CONTEXT_IRQEN(n) void (n)(void)
+/** context irq restore enable function prototype. @csee #CONTEXT_IRQEN */
+typedef CONTEXT_IRQEN(context_irqen_t);
+
 #include "cpu/hexo/context.h"
 
 /** @internal @This only performs processor specific part of the job. @csee context_switch_to */
@@ -153,6 +159,14 @@ void cpu_context_set_user(uintptr_t stack_ptr, uintptr_t entry, reg_t param);
 
     @see #CONTEXT_PREEMPT */
 ALWAYS_INLINE error_t context_set_preempt(context_preempt_t *func);
+# endif
+
+# ifdef CONFIG_HEXO_CONTEXT_IRQEN
+/** @This sets an irq re-enable handler function local to the
+    executing processor. It is called when the interrupt enable state
+    is restored by the @ref cpu_interrupt_restorestate function. The
+    handler pointer is reset to @tt NULL on context switch. */
+ALWAYS_INLINE void context_set_irqen(context_irqen_t *func);
 # endif
 
 /** @This sets address of a lock which must be unlocked on next context

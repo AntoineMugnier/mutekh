@@ -122,6 +122,11 @@ FUNC_START(.text, cpu_context_jumpto)
         lw      $25,    HEXO_CONTEXT_S_TLS * 4 ($4)
         CPU_LOCAL_op sw,   __context_data_base, $25, $1
 
+#ifdef CONFIG_HEXO_CONTEXT_IRQEN
+        // clear irq enable hook
+        CPU_LOCAL_op sw,   cpu_irqen_handler, $0, $1
+#endif
+
         // context registers save array
 #ifdef CONFIG_HEXO_CONTEXT_NESTED
         lw      $25,    %lo(mips_context_regs_ptr)($25)

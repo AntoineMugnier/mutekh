@@ -92,5 +92,14 @@ ALWAYS_INLINE error_t context_set_preempt(context_preempt_t *func)
 }
 # endif
 
+# ifdef CONFIG_HEXO_CONTEXT_IRQEN
+extern CPU_LOCAL context_irqen_t *cpu_irqen_handler;
+
+ALWAYS_INLINE void context_set_irqen(context_irqen_t *func)
+{
+  CPU_LOCAL_SET(cpu_irqen_handler, func);
+}
+# endif
+
 #endif
 
