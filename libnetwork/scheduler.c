@@ -78,7 +78,7 @@ static void net_scheduler_timeout_schedule(struct net_scheduler_s *sched)
   if (sched->timer_rq.rq.drvdata)
     DEVICE_OP(&sched->timer, cancel, &sched->timer_rq);
 
-  kroutine_init(&sched->timer_rq.rq.kr, net_scheduler_timeout, KROUTINE_IMMEDIATE);
+  kroutine_init_immediate(&sched->timer_rq.rq.kr, net_scheduler_timeout);
   sched->timer_rq.deadline = task->timeout.deadline;
   sched->timer_rq.delay = 0;
 

@@ -106,7 +106,7 @@ dev_request_spin_init(struct dev_request_s *rq,
 {
   status->done = 0;
   rq->pvdata = status;
-  kroutine_init(&rq->kr, &dev_request_spin_done, KROUTINE_IMMEDIATE);
+  kroutine_init_immediate(&rq->kr, &dev_request_spin_done);
 }
 
 inline void
@@ -142,7 +142,7 @@ dev_request_sched_init(struct dev_request_s *rq,
   lock_init(&status->lock);
   status->ctx = NULL;
   rq->pvdata = status;
-  kroutine_init(&rq->kr, &dev_request_sched_done, KROUTINE_IMMEDIATE);
+  kroutine_init_immediate(&rq->kr, &dev_request_sched_done);
 }
 
 inline void
@@ -206,7 +206,7 @@ dev_request_delayed_init(struct dev_request_dlqueue_s *q,
 {
 #ifdef CONFIG_DEVICE_DELAYED_REQUEST
   dev_request_queue_init(&q->queue);
-  kroutine_init(&q->kr, dev_request_delayed_kr, KROUTINE_SCHED_SWITCH);
+  kroutine_init_sched_switch(&q->kr, dev_request_delayed_kr);
 #endif
   q->func = f;
 }

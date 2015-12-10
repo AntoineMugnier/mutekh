@@ -145,7 +145,7 @@ device_spi_ctrl_transfer(struct dev_spi_ctrl_rq_s *rq,
   tr->in_width = in_width;
   tr->out_width = out_width;
   tr->pvdata = rq;
-  kroutine_init(&tr->kr, &device_spi_ctrl_transfer_end, KROUTINE_TRIGGER);
+  kroutine_init_trigger(&tr->kr, &device_spi_ctrl_transfer_end);
 
   DEVICE_OP(&rq->accessor, transfer, tr);
 
@@ -177,8 +177,7 @@ static void device_spi_ctrl_next(struct dev_spi_ctrl_queue_s *q)
 {
   /* start next rq from interruptible context */
   struct dev_spi_ctrl_transfer_s *tr = &q->transfer;
-  kroutine_init(&tr->kr, &device_spi_ctrl_next_kr,
-                rq->priority ? KROUTINE_IMMEDIATE : KROUTINE_SCHED_SWITCH);
+  kroutine_init_sched_switch(&tr->kr, &device_spi_ctrl_next_kr);
   tr->pvdata = q;
 
   lock_release_irq(&q->lock);
@@ -261,7 +260,7 @@ device_spi_ctrl_delay(struct dev_spi_ctrl_rq_s *rq)
       trq->deadline = rq->sleep_before;
       trq->delay = 0;
       trq->rev = 0;
-      kroutine_init(&trq->rq.kr, device_spi_ctrl_timeout, KROUTINE_TRIGGER);
+      kroutine_init_trigger(&trq->rq.kr, device_spi_ctrl_timeout);
       trq->rq.pvdata = q;
 
       err = DEVICE_OP(&q->timer, request, trq);
@@ -773,7 +772,7 @@ error_t dev_spi_wait_transfer(struct device_spi_ctrl_s *accessor,
   lock_init(&status.lock);
   status.ctx = NULL;
   tr->pvdata = &status;
-  kroutine_init(&tr->kr, &dev_request_spi_wait_done, KROUTINE_IMMEDIATE);
+  kroutine_init_immediate(&tr->kr, &dev_request_spi_wait_done);
 
   DEVICE_OP(accessor, transfer, tr);
 

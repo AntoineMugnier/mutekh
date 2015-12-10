@@ -172,7 +172,7 @@ static void i2c_rq_run(
 {
     struct i2c_eeprom_priv_s *pv = dev->drv_pv;
 
-    kroutine_init(&pv->i2c_req.base.kr, i2c_eeprom_done, KROUTINE_IMMEDIATE);
+    kroutine_init_immediate(&pv->i2c_req.base.kr, i2c_eeprom_done);
 
     pv->i2c_req.saddr = pv->saddr + (rq->addr >> (pv->addr_size * 8));
     pv->i2c_req.base.pvdata = dev;

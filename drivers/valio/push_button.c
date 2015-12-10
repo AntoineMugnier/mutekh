@@ -272,7 +272,7 @@ static DEV_INIT(push_button_init)
       pv->trq.rq.drvdata = NULL;
       pv->trq.deadline = 0;
       pv->trq.rev = 2;
-      kroutine_init(&pv->trq.rq.kr, push_button_lock_timeout, KROUTINE_IMMEDIATE);
+      kroutine_init_immediate(&pv->trq.rq.kr, push_button_lock_timeout);
 #endif
     }
   else

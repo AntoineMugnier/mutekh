@@ -577,7 +577,7 @@ static DEV_INIT(pic32_spi_init)
   pv->intlrq.cfg[DEV_DMA_INTL_READ].trigsrc = rx->u.dma.config;
   pv->intlrq.cfg[DEV_DMA_INTL_READ].cell_size = 1;
   
-  kroutine_init(&pv->intlrq.rq.base.kr, &dma_callback, KROUTINE_IMMEDIATE);
+  kroutine_init_immediate(&pv->intlrq.rq.base.kr, &dma_callback);
 
   /* Set basic request */
 
@@ -591,7 +591,7 @@ static DEV_INIT(pic32_spi_init)
   pv->brq.cfg[0].trigsrc = tx->u.dma.config;
   pv->brq.cfg[0].cell_size = PIC32_SPI_FIFO_SIZE;
 
-  kroutine_init(&pv->brq.rq.base.kr, &dma_callback, KROUTINE_IMMEDIATE);
+  kroutine_init_immediate(&pv->brq.rq.base.kr, &dma_callback);
 
 #endif
 

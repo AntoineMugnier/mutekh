@@ -118,8 +118,7 @@ static KROUTINE_EXEC(mtch6102_channels_done)
 
     LOCK_SPIN_IRQ(&dev->lock);
 
-    kroutine_init(&pv->i2c_req.base.kr, mtch6102_mode_done,
-                  KROUTINE_IMMEDIATE);
+    kroutine_init_immediate(&pv->i2c_req.base.kr, mtch6102_mode_done);
 
     pv->i2c_req.base.pvdata = dev;
     pv->i2c_req.transfer = pv->i2c_transfer;
@@ -146,8 +145,7 @@ static void mtch6102_configure(
 
     dprintk("%s\n", __FUNCTION__);
 
-    kroutine_init(&pv->i2c_req.base.kr, mtch6102_channels_done,
-                  KROUTINE_IMMEDIATE);
+    kroutine_init_immediate(&pv->i2c_req.base.kr, mtch6102_channels_done);
 
     pv->i2c_req.base.pvdata = dev;
     pv->i2c_req.transfer = pv->i2c_transfer;
@@ -244,8 +242,7 @@ static void mtch6102_request_run(
         return;
     }
 
-    kroutine_init(&pv->i2c_req.base.kr, mtch6102_state_done,
-                  KROUTINE_IMMEDIATE);
+    kroutine_init_immediate(&pv->i2c_req.base.kr, mtch6102_state_done);
 
     assert(rq->attribute == VALIO_TOUCHPAD_STATE);
 

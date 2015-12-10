@@ -222,7 +222,7 @@ static inline void new_request_handler(struct dev_timer_rq_s *timer_rq,
   display_request(pvdata);
 
   pvdata->state = TEST_TIMER_STATE_WAIT_FOR_DEADLINE;
-  kroutine_init(&timer_rq->rq.kr, request_handler, KROUTINE_IMMEDIATE);
+  kroutine_init_immediate(&timer_rq->rq.kr, request_handler);
   error_t err = DEVICE_OP(&timer_dev_g, request, timer_rq);
 
   if (err)
@@ -233,7 +233,7 @@ static inline void new_request_handler(struct dev_timer_rq_s *timer_rq,
                   pvdata->id, delay);
         }
       pvdata->state = TEST_TIMER_STATE_NEW_REQUEST;
-      kroutine_init(&timer_rq->rq.kr, request_handler, KROUTINE_SCHED_SWITCH);
+      kroutine_init_sched_switch(&timer_rq->rq.kr, request_handler);
       kroutine_exec(&timer_rq->rq.kr);
     }
   else
@@ -254,7 +254,7 @@ static inline void irq_handler(struct dev_timer_rq_s *timer_rq,
 {
   DEVICE_OP(&ref_dev_g, get_value, &pvdata->ref_deadline, 0);
   pvdata->state = TEST_TIMER_STATE_DEADLINE_REACHED;
-  kroutine_init(&timer_rq->rq.kr, request_handler, KROUTINE_SCHED_SWITCH);
+  kroutine_init_sched_switch(&timer_rq->rq.kr, request_handler);
   kroutine_exec(&timer_rq->rq.kr);
 }
 
@@ -272,7 +272,7 @@ static inline void deadline_handler(struct dev_timer_rq_s *timer_rq,
 
   /* ready to post new request */
   pvdata->state = TEST_TIMER_STATE_NEW_REQUEST;
-  kroutine_init(&timer_rq->rq.kr, request_handler, KROUTINE_SCHED_SWITCH);
+  kroutine_init_sched_switch(&timer_rq->rq.kr, request_handler);
   kroutine_exec(&timer_rq->rq.kr);
 }
 
@@ -378,7 +378,7 @@ static inline void run_requests(void)
       pvdata_g[id].state = TEST_TIMER_STATE_NEW_REQUEST;
       pvdata_g[id].id = id;
       request_g[id].rq.pvdata = &pvdata_g[id];
-      kroutine_init(&request_g[id].rq.kr, request_handler, KROUTINE_SCHED_SWITCH);
+      kroutine_init_sched_switch(&request_g[id].rq.kr, request_handler);
     }
 
   for (id = 0; id < RQ_NB; id++)
@@ -436,12 +436,12 @@ void main(void)
   run_requests();
 
   /* run control routine */
-  kroutine_init(&kcontrol_g, kcontrol_handler, KROUTINE_SCHED_SWITCH);
+  kroutine_init_sched_switch(&kcontrol_g, kcontrol_handler);
   kroutine_exec(&kcontrol_g);
 
 #ifdef CANCEL
   /* init cancel kroutine */
-  kroutine_init(&kcancel_g, kcancel_handler, KROUTINE_SCHED_SWITCH);
+  kroutine_init_sched_switch(&kcancel_g, kcancel_handler);
 #endif
 }
 

@@ -857,10 +857,10 @@ static DEV_INIT(char_mux_init)
 
   pv->read_rq.type = DEV_CHAR_READ;
   pv->read_rq.base.pvdata = dev;
-  kroutine_init(&pv->read_rq.base.kr, char_mux_io_read_done, KROUTINE_TRIGGER);
+  kroutine_init_trigger(&pv->read_rq.base.kr, char_mux_io_read_done);
 
   pv->write_rq.base.pvdata = dev;
-  kroutine_init(&pv->write_rq.base.kr, char_mux_io_write_done, KROUTINE_TRIGGER);
+  kroutine_init_trigger(&pv->write_rq.base.kr, char_mux_io_write_done);
 
   dev->status = DEVICE_DRIVER_INIT_DONE;
 

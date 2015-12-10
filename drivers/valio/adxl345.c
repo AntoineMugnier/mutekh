@@ -107,8 +107,7 @@ void adxl345_do_offset_write(struct device_s          *dev,
     pv->i2c_req.transfer_count = 1;
 
     pv->i2c_req.base.pvdata = dev;
-    kroutine_init(&pv->i2c_req.base.kr, &adxl345_offset_write_done,
-                  KROUTINE_IMMEDIATE);
+    kroutine_init_immediate(&pv->i2c_req.base.kr, &adxl345_offset_write_done);
 
     DEVICE_OP(&pv->i2c, request, &pv->i2c_req);
 }
@@ -163,8 +162,7 @@ void adxl345_do_offset_read(struct device_s          *dev,
     pv->i2c_req.transfer_count = 2;
 
     pv->i2c_req.base.pvdata = dev;
-    kroutine_init(&pv->i2c_req.base.kr, &adxl345_offset_read_done,
-                  KROUTINE_IMMEDIATE);
+    kroutine_init_immediate(&pv->i2c_req.base.kr, &adxl345_offset_read_done);
 
     DEVICE_OP(&pv->i2c, request, &pv->i2c_req);
 }
@@ -224,8 +222,7 @@ void adxl345_do_data_read(struct device_s          *dev,
     pv->i2c_req.transfer_count = 2;
 
     pv->i2c_req.base.pvdata = dev;
-    kroutine_init(&pv->i2c_req.base.kr, &adxl345_data_read_done,
-                  KROUTINE_IMMEDIATE);
+    kroutine_init_immediate(&pv->i2c_req.base.kr, &adxl345_data_read_done);
 
     DEVICE_OP(&pv->i2c, request, &pv->i2c_req);
 }

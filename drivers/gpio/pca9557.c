@@ -119,7 +119,7 @@ static KROUTINE_EXEC(pca9557_i2c_read_done)
 static void pca9557_mode_update(
     struct pca9557_private_s *pv)
 {
-    kroutine_init(&pv->i2c_req.base.kr, pca9557_i2c_write_done, KROUTINE_IMMEDIATE);
+    kroutine_init_immediate(&pv->i2c_req.base.kr, pca9557_i2c_write_done);
 
     pv->i2c_req.transfer = pv->i2c_transfer;
     pv->i2c_transfer[0].data = pv->command;
@@ -135,7 +135,7 @@ static void pca9557_mode_update(
 static void pca9557_output_update(
     struct pca9557_private_s *pv)
 {
-    kroutine_init(&pv->i2c_req.base.kr, pca9557_i2c_write_done, KROUTINE_IMMEDIATE);
+    kroutine_init_immediate(&pv->i2c_req.base.kr, pca9557_i2c_write_done);
 
     pv->i2c_req.transfer = pv->i2c_transfer;
     pv->i2c_transfer[0].data = pv->command;
@@ -151,7 +151,7 @@ static void pca9557_output_update(
 static void pca9557_input_get(
     struct pca9557_private_s *pv)
 {
-    kroutine_init(&pv->i2c_req.base.kr, pca9557_i2c_read_done, KROUTINE_IMMEDIATE);
+    kroutine_init_immediate(&pv->i2c_req.base.kr, pca9557_i2c_read_done);
 
     pv->i2c_req.transfer = pv->i2c_transfer;
     pv->i2c_transfer[0].data = pv->command;

@@ -187,7 +187,7 @@ pthread_cond_timedwait(pthread_cond_t *cond,
       this->state &= ~_PTHREAD_STATE_TIMEOUT;
       lock_release(&this->lock);
 
-      kroutine_init(&rq.rq.kr, pthread_cond_timer, KROUTINE_IMMEDIATE);
+      kroutine_init_immediate(&rq.rq.kr, pthread_cond_timer);
       rq.rq.pvdata = &ev_ctx;
 
       switch (DEVICE_OP(libc_timer(), request, &rq))

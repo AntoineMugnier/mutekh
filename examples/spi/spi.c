@@ -47,7 +47,7 @@ void main()
     .out_width = sizeof (tx[0]),
   };
 
-  kroutine_init(&tr.kr, &tr_callback, KROUTINE_IMMEDIATE);
+  kroutine_init_immediate(&tr.kr, &tr_callback);
 
   DEVICE_OP(&spi, transfer, &tr);
 
@@ -106,7 +106,7 @@ void main()
   if (device_get_accessor_by_path(&rq.gpio, NULL, "gpio*", DRIVER_CLASS_GPIO))
     abort();
 
-  kroutine_init(&rq.kr, &rq_callback, KROUTINE_IMMEDIATE);
+  kroutine_init_immediate(&rq.kr, &rq_callback);
 
   DEVICE_OP(&spi, request, &rq);
 

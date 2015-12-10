@@ -120,7 +120,7 @@ void console_printk_init(void)
 
   lock_init_irq(&status.lock);
   status.char_rq.type = DEV_CHAR_WRITE;
-  kroutine_init(&status.char_rq.base.kr, console_printk_done, KROUTINE_IMMEDIATE);
+  kroutine_init_immediate(&status.char_rq.base.kr, console_printk_done);
 
   status.free_size = CONFIG_DRIVER_CONSOLE_PRINTK_BUFFER_SIZE;
   status.free_begin = 0;

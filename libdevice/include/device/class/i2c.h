@@ -90,7 +90,7 @@
        .transfer_count = 2,
    };
 
-   kroutine_init(&rq.base.kr, my_callback, KROUTINE_IMMEDIATE);
+   kroutine_init_immediate(&rq.base.kr, my_callback);
 
    DEVICE_OP(&i2c_dev, request, &rq);
    @end code

@@ -558,7 +558,7 @@ static DEV_INIT(bcm2835_i2c_init)
   pv->trq.rq.drvdata = NULL;
   pv->trq.deadline = 0;
   pv->trq.rev = 2;
-  kroutine_init(&pv->trq.rq.kr, bcm2835_i2c_timeout, KROUTINE_IMMEDIATE);
+  kroutine_init_immediate(&pv->trq.rq.kr, bcm2835_i2c_timeout);
   /* Set default timeout in counter cycle for 1 byte @ 100 KHz */
   pv->bperiod = 80;
 

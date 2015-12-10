@@ -361,7 +361,7 @@ static DEV_INIT(adxl362_init)
 
   pv->state = ADXL362_STATE_DOWN;
 
-  kroutine_init(&srq->base.kr, &spi_rq_done, KROUTINE_TRIGGER);
+  kroutine_init_trigger(&srq->base.kr, &spi_rq_done);
   bc_init(&srq->vm, &adxl362_bytecode, 1, /* R_CTX_PV */ pv);
 
   /* Disable bytecode trace */

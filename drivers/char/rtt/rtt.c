@@ -233,7 +233,7 @@ static DEV_INIT(char_rtt_init)
   dev->drv = &char_rtt_drv;
   dev->status = DEVICE_DRIVER_INIT_DONE;
 
-  kroutine_init(&pv->timer_rq.rq.kr, rtt_tick, KROUTINE_INTERRUPTIBLE);
+  kroutine_init_interruptible(&pv->timer_rq.rq.kr, rtt_tick);
   dev_timer_init_sec(&pv->timer, &pv->timer_rq.delay, 0, 1, 20);
 
   return 0;

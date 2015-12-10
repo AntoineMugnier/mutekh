@@ -469,8 +469,7 @@ static error_t spi_config(
 
   bc_init(&pv->spi_req.vm, &mcp23s17_bytecode, 1, pv);
 
-  kroutine_init(
-    &pv->spi_req.base.kr, &mcp23s17_spi_done, KROUTINE_IMMEDIATE);
+  kroutine_init_immediate(&pv->spi_req.base.kr, &mcp23s17_spi_done);
 
   return 0;
 }

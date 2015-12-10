@@ -488,8 +488,8 @@ static DEV_INIT(matrix_keyboard_init)
   dev->status = DEVICE_DRIVER_INIT_DONE;
   pv->rescan_timer_rq.rq.pvdata = dev;
   pv->row_timer_rq.rq.pvdata = dev;
-  kroutine_init(&pv->row_timer_rq.rq.kr, mxk_scan_routine, KROUTINE_INTERRUPTIBLE);
-  kroutine_init(&pv->rescan_timer_rq.rq.kr, mxk_restart_routine, KROUTINE_INTERRUPTIBLE);
+  kroutine_init_interruptible(&pv->row_timer_rq.rq.kr, mxk_scan_routine);
+  kroutine_init_interruptible(&pv->rescan_timer_rq.rq.kr, mxk_restart_routine);
 
   return 0;
 

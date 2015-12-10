@@ -564,7 +564,7 @@ static DEV_INIT(efm32_usart_spi_init)
   pv->drq.cfg[DEV_DMA_INTL_READ].trigsrc = rx->u.dma.config;
   pv->drq.cfg[DEV_DMA_INTL_READ].arbiter = DMA_CHANNEL_CFG_R_POWER_AFTER1;
   
-  kroutine_init(&pv->drq.rq.base.kr, &dma_callback, KROUTINE_IMMEDIATE);
+  kroutine_init_immediate(&pv->drq.rq.base.kr, &dma_callback);
 
 #endif
 
