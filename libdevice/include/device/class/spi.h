@@ -647,7 +647,7 @@ error_t device_spi_request_wakeup(struct dev_spi_ctrl_rq_s *rq);
 
 #ifdef CONFIG_DEVICE_SPI
 # define DEV_STATIC_RES_DEV_SPI(path_)                          \
-  DEV_STATIC_RES_DEVCLASS_PARAM("spi", path_, DRIVER_CLASS_SPI)
+  DEV_STATIC_RES_DEVCLASS_PARAM("spi", path_, DRIVER_CLASS_SPI_CTRL)
 #else
 # define DEV_STATIC_RES_DEV_SPI(path_)                                  \
   {                                                                     \
