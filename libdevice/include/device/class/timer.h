@@ -472,6 +472,30 @@ error_t dev_timer_check_timeout(struct device_timer_s *accessor,
 config_depend_and2(CONFIG_DEVICE_TIMER, CONFIG_MUTEK_CONTEXT_SCHED)
 error_t dev_timer_sleep(struct device_timer_s *accessor, struct dev_timer_rq_s *rq);
 
+/** Synchronous timer wait function. @This uses the scheduler API to
+    put the current context in wait state waiting for the specified
+    deadline.
+*/
+config_depend_and2(CONFIG_DEVICE_TIMER, CONFIG_MUTEK_SCHEDULER)
+inline
+error_t dev_timer_wait_deadline(struct device_timer_s *accessor, dev_timer_value_t deadline)
+{
+  struct dev_timer_rq_s rq = {
+    .deadline = deadline,
+  };
+  struct dev_request_status_s st;
+
+  dev_request_sched_init(&rq.rq, &st);
+  error_t err = DEVICE_OP(accessor, request, &rq);
+
+  if (!err) {
+    dev_request_sched_wait(&st);
+    err = 0;
+  }
+
+  return err;
+}
+
 /** Synchronous timer busy-wait function. @This spins in a loop
     waiting for the requested delay. @This returns @tt -ERANGE if the
     requested delay is greater than half the maximum timer value
