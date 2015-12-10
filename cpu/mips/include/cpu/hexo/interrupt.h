@@ -82,6 +82,8 @@
 
 void mips_interrupt_entry(void);
 
+typedef bool_t (*cpu_irq_state_t)(void);
+
 ALWAYS_INLINE void
 cpu_interrupt_disable(void)
 {
@@ -136,36 +138,29 @@ cpu_interrupt_enable(void)
 }
 
 ALWAYS_INLINE void
-cpu_interrupt_savestate(reg_t *state)
+cpu_interrupt_savestate_disable(cpu_irq_state_t *state)
 {
 #ifdef CONFIG_HEXO_IRQ
   __asm__ volatile (
-		    "mfc0	%0,	$12	\n"
-		    : "=r" (*state)
-		    );
-#endif
-}
-
-ALWAYS_INLINE void
-cpu_interrupt_savestate_disable(reg_t *state)
-{
-#ifdef CONFIG_HEXO_IRQ
-  __asm__ volatile (
+		    ".set push				\n"
+		    ".set noat				\n"
+		    ".set reorder			\n"
 # if (CONFIG_CPU_MIPS_VERSION >= 322)
 		    "di	%0			\n"
 		    "ehb			\n"
 # else
-		    ".set push				\n"
-		    ".set noat				\n"
-		    ".set reorder			\n"
 		    "mfc0	%0,	$12		\n"
 		    "ori	$1,	%0,	1	\n"
 		    "addiu	$1,	-1		\n"
 		    ".set noreorder			\n"
 		    "mtc0	$1,	$12		\n"
 		    "MTC0_WAIT				\n"
-		    ".set pop				\n"
 # endif
+                    "la $1, mips_interrupt_restore\n"
+                    "andi       %0,     1               \n"
+                    "sll        %0,     %0,     3       \n"
+                    "addu       %0,     $1,     %0      \n"
+		    ".set pop				\n"
 		    : "=r" (*state)
                     :
                     : "memory"     /* compiler memory barrier */
@@ -173,21 +168,13 @@ cpu_interrupt_savestate_disable(reg_t *state)
 #endif
 }
 
-ALWAYS_INLINE void
-cpu_interrupt_restorestate(const reg_t *state)
+ALWAYS_INLINE bool_t
+cpu_interrupt_restorestate(const cpu_irq_state_t *state)
 {
 #ifdef CONFIG_HEXO_IRQ
-  __asm__ volatile (
-		    "mtc0	%0,	$12		\n"
-# if (CONFIG_CPU_MIPS_VERSION >= 322)
-		    "ehb			\n"
-# else
-		    "MTC0_WAIT				\n"
-# endif
-		    :
-		    : "r" (*state)
-                    : "memory"     /* compiler memory barrier */
-		    );
+  return (*state)();
+#else
+  return 0;
 #endif
 }
 
@@ -219,7 +206,7 @@ cpu_interrupt_getstate(void)
 #ifdef CONFIG_HEXO_IRQ
   reg_t		state;
 
-  __asm__ (
+  __asm__ volatile (
 # if (CONFIG_CPU_MIPS_VERSION >= 322)
 		    "ehb			\n"
 # else
@@ -241,7 +228,7 @@ cpu_is_interruptible(void)
 #ifdef CONFIG_HEXO_IRQ
   reg_t		state;
 
-  __asm__ (
+  __asm__ volatile (
 # if (CONFIG_CPU_MIPS_VERSION >= 322)
 		    "ehb			\n"
 # else
@@ -252,8 +239,7 @@ cpu_is_interruptible(void)
 		    );
 
   // erl and exl masks interrupts
-  return ( ! (state & 0x6)
-		   && (state & 0x1) );
+  return (state & 7) == 1;
 #else
   return 0;
 #endif

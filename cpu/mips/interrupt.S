@@ -498,6 +498,55 @@ FUNC_START(.text, mips_interrupt_wait)
 FUNC_END(mips_interrupt_wait)
 #endif
 
+#if defined(CONFIG_HEXO_IRQ)
+FUNC_START(.text, mips_interrupt_restore)
+        .set push
+        .set noreorder
+        .set noat
+        // leave disabled
+        jr      $31
+        move    $2,     $0
+
+        .set reorder
+# ifdef CONFIG_HEXO_CONTEXT_IRQEN
+        // test if we are interruptible
+        mfc0	$1,	$12
+        andi    $2,     $1,     0x6
+        bne     $2,     $0,     1f
+
+        // test if restore enable handler is defined
+        CPU_LOCAL_op lw,   cpu_irqen_handler, $2, $2
+        beq     $2,     $0,     1f
+
+        // call handler
+        addiu   $sp,    $sp,    -20
+        sw      $31,    16($sp)
+        jalr    $2
+        lw      $31,    16($sp)
+        addiu   $sp,    $sp,    20
+
+#  if (CONFIG_CPU_MIPS_VERSION < 322)
+        mfc0	$1,	$12
+#  endif
+1:
+# endif
+
+        // re-enable interrupts
+# if (CONFIG_CPU_MIPS_VERSION >= 322)
+	ei
+# else
+#  ifndef CONFIG_HEXO_CONTEXT_IRQEN
+        mfc0	$1,	$12
+#  endif
+	ori	$1,	1
+	mtc0	$1,	$12
+# endif
+        ori     $2,     $0,     1
+        jr      $31
+        .set pop
+FUNC_END(mips_interrupt_restore)
+#endif
+
 // Local Variables:
 // indent-tabs-mode: nil;
 // vim: filetype=cpp:expandtab

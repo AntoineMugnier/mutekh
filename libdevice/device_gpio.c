@@ -34,7 +34,7 @@ const uint8_t dev_gpio_mask0[8] = { };
 extern inline error_t dev_gpio_spin_rq(struct device_gpio_s *accessor,
                                        struct dev_gpio_rq_s *rq);
 
-#ifdef CONFIG_MUTEK_SCHEDULER
+#ifdef CONFIG_MUTEK_CONTEXT_SCHED
 
 extern inline error_t dev_gpio_wait_rq(struct device_gpio_s *accessor,
                                        struct dev_gpio_rq_s *rq);

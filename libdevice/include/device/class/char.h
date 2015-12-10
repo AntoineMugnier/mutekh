@@ -248,7 +248,7 @@ ssize_t dev_char_spin_request(const struct device_char_s *accessor,
     return rq->error ? rq->error : (todo - rq->size);
 })
 
-config_depend_and2_inline(CONFIG_DEVICE_CHAR, CONFIG_MUTEK_SCHEDULER,
+config_depend_and2_inline(CONFIG_DEVICE_CHAR, CONFIG_MUTEK_CONTEXT_SCHED,
 ssize_t dev_char_wait_request(const struct device_char_s *accessor,
                               struct dev_char_rq_s *rq),
 {
@@ -270,7 +270,7 @@ ssize_t dev_char_wait_request(const struct device_char_s *accessor,
 
     @returns transferred size or a negative error code
 */
-config_depend_and2_inline(CONFIG_DEVICE_CHAR, CONFIG_MUTEK_SCHEDULER,
+config_depend_and2_inline(CONFIG_DEVICE_CHAR, CONFIG_MUTEK_CONTEXT_SCHED,
 ssize_t dev_char_wait_op(const struct device_char_s *accessor,
                          enum dev_char_rq_type_e type, uint8_t *data, size_t size),
 {

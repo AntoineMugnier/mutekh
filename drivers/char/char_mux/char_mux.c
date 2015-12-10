@@ -114,7 +114,7 @@ struct char_mux_context_s
 
   struct dev_char_rq_s write_rq;
   struct dev_char_rq_s read_rq;
-  reg_t irq_state;
+  cpu_irq_state_t irq_state;
 
   dev_request_queue_root_t write_q;
   uint32_t tx_fnv;

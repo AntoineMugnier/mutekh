@@ -235,7 +235,7 @@ extern CONTEXT_LOCAL struct __pthread_cleanup_s *__pthread_cleanup_list;
 /** @this must be matched with @ref #pthread_cleanup_pop */
 #define pthread_cleanup_push(routine_, arg_)		\
 {							\
-  reg_t				__irq_state;            \
+  cpu_irq_state_t			__irq_state;    \
   cpu_interrupt_savestate_disable(&__irq_state);	\
 							\
   const struct __pthread_cleanup_s	__cleanup =	\

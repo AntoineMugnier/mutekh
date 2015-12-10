@@ -105,7 +105,7 @@ static void *run_task(srl_task_s *task)
 {
   pthread_mutex_lock(&print_lock);
   printk("Starting %s task on %s processor %i"
-#ifdef CONFIG_MUTEK_SCHEDULER_MIGRATION
+#ifdef CONFIG_MUTEK_CONTEXT_SCHED_MIGRATION
 	 " but threads migration is enabled"
 #endif
 	 "\n", task->name, cpu_type_name(), cpu_id());

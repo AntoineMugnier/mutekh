@@ -42,7 +42,7 @@ C_HEADER_BEGIN
 
 struct rwlock_s
 {
-#ifdef CONFIG_MUTEK_SCHEDULER
+#ifdef CONFIG_MUTEK_CONTEXT_SCHED
   /** lock counter:
       count < 0 is write locked,
       count > 0 is read locked. */
@@ -65,7 +65,7 @@ struct rwlock_s
 #endif
 };
 
-#ifndef CONFIG_MUTEK_SCHEDULER
+#ifndef CONFIG_MUTEK_CONTEXT_SCHED
 ALWAYS_INLINE error_t rwlock_destroy(struct rwlock_s *rwlock)
 {
   return 0;

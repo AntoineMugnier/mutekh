@@ -5,6 +5,10 @@
 #include <hexo/interrupt.h>
 #include <mutek/scheduler.h>
 
+#ifdef CONFIG_HEXO_CONTEXT_PREEMPT
+CPU_LOCAL context_preempt_t *cpu_preempt_handler = (context_preempt_t*)1;
+#endif
+
 CONTEXT_LOCAL struct cpu_context_s arm_context_regs;
 
 #if CONFIG_CPU_ARM32_ARCH_VERSION < 6

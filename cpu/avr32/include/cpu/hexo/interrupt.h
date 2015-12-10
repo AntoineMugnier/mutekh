@@ -72,6 +72,8 @@
 
 # include "hexo/local.h"
 
+typedef reg_t cpu_irq_state_t;
+
 ALWAYS_INLINE void
 cpu_interrupt_disable(void)
 {
@@ -122,18 +124,7 @@ cpu_interrupt_process(void)
 }
 
 ALWAYS_INLINE void
-cpu_interrupt_savestate(reg_t *state)
-{
-# ifdef CONFIG_HEXO_IRQ
-  __asm__ volatile (
-                    "mustr %0		\n"
-		    : "=r" (*state)
-		    );
-# endif
-}
-
-ALWAYS_INLINE void
-cpu_interrupt_savestate_disable(reg_t *state)
+cpu_interrupt_savestate_disable(cpu_irq_state_t *state)
 {
 # ifdef CONFIG_HEXO_IRQ
   reg_t tmp;
@@ -150,8 +141,8 @@ cpu_interrupt_savestate_disable(reg_t *state)
 # endif
 }
 
-ALWAYS_INLINE void
-cpu_interrupt_restorestate(const reg_t *state)
+ALWAYS_INLINE bool_t
+cpu_interrupt_restorestate(const cpu_irq_state_t *state)
 {
 # ifdef CONFIG_HEXO_IRQ
   __asm__ volatile (
@@ -160,6 +151,9 @@ cpu_interrupt_restorestate(const reg_t *state)
 		    : "r" (*state)
                     : "memory"     /* compiler memory barrier */
 		    );
+  return !(*state & 1);
+# else
+  return 0;
 # endif
 }
 

@@ -26,7 +26,7 @@
 #include <device/class/lcd.h>
 #include <device/driver.h>
 
-#ifdef CONFIG_MUTEK_SCHEDULER
+#ifdef CONFIG_MUTEK_CONTEXT_SCHED
 # include <mutek/scheduler.h>
 # include <hexo/lock.h>
 #endif
@@ -34,7 +34,7 @@
 
 struct dev_lcd_wait_rq_s
 {
-#ifdef CONFIG_MUTEK_SCHEDULER
+#ifdef CONFIG_MUTEK_CONTEXT_SCHED
   lock_t lock;
   struct sched_context_s *ctx;
 #endif
@@ -45,7 +45,7 @@ static DEV_LCD_CALLBACK(dev_lcd_handle_request_cb)
 {
 	struct dev_lcd_wait_rq_s *status = context;
 
-#ifdef CONFIG_MUTEK_SCHEDULER
+#ifdef CONFIG_MUTEK_CONTEXT_SCHED
 	lock_spin(&status->lock);
 	if (status->ctx != NULL)
 		sched_context_start(status->ctx);
@@ -62,7 +62,7 @@ static ssize_t dev_lcd_handle_request(
 {
   struct dev_lcd_wait_rq_s status;
 
-#ifdef CONFIG_MUTEK_SCHEDULER
+#ifdef CONFIG_MUTEK_CONTEXT_SCHED
   lock_init(&status.lock);
   status.ctx = NULL;
 #endif
@@ -74,7 +74,7 @@ static ssize_t dev_lcd_handle_request(
   if ( err )
 	  return err;
 
-#ifdef CONFIG_MUTEK_SCHEDULER
+#ifdef CONFIG_MUTEK_CONTEXT_SCHED
   /* ensure callback doesn't occur here */
 
   CPU_INTERRUPT_SAVESTATE_DISABLE;

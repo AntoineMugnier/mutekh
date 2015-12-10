@@ -142,6 +142,13 @@ FUNC_START(.text, cpu_context_jumpto_restore)
         mov     r14,     r2
 #endif
 
+#ifdef CONFIG_HEXO_CONTEXT_IRQEN
+        // clear irq enable hook
+        ldr     r1,     = cpu_irqen_handler
+        movs    r2,     #0
+        str     r2,     [r1]
+#endif
+
         /* context registers save array */
         ldr     r1,     = arm_context_regs /* skip r0 - r3 */ + 16
         add     r0,     r1

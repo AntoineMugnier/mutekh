@@ -41,7 +41,7 @@ ALWAYS_INLINE void atomic_set(atomic_t *a, atomic_int_t value)
 
 ALWAYS_INLINE atomic_int_t atomic_get(atomic_t *a)
 {
-  order_compiler_mem();
+  order_smp_read();
   return a->value;
 }
 

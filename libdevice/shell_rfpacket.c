@@ -121,7 +121,7 @@ static TERMUI_CON_COMMAND_PROTOTYPE(shell_rfpacket_configure)
   cfg.mod = c->mod;
   cfg.symbols = c->symbols;
 
-#if defined(CONFIG_MUTEK_SCHEDULER)
+#if defined(CONFIG_MUTEK_CONTEXT_SCHED)
   error_t err = dev_rfpacket_wait_config(&c->accessor, &cfg, mask);
 #else
   error_t err = dev_rfpacket_spin_config(&c->accessor, &cfg, mask);
@@ -167,7 +167,7 @@ static TERMUI_CON_COMMAND_PROTOTYPE(shell_rfpacket_request)
   if (!(used & RFPACKET_OPT_LIFETIME))
     c->lifetime = 10000;
 
-#if defined(CONFIG_MUTEK_SCHEDULER)
+#if defined(CONFIG_MUTEK_CONTEXT_SCHED)
   error_t err = dev_rfpacket_wait_send_packet(&c->accessor, buf, txsize, c->pwr * 8, c->lifetime);
 #else
   error_t err = dev_rfpacket_spin_send_packet(&c->accessor, buf, txsize, c->pwr * 8, c->lifetime);

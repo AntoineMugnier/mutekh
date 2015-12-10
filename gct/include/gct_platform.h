@@ -58,9 +58,26 @@ typedef	error_t		gct_err_t;
 typedef size_t		_gct_index_t;
 typedef ssize_t		_gct_sindex_t;
 
-#define _gct_malloc(s) malloc(s)
-#define _gct_realloc(p, s) realloc(p, s)
-#define _gct_free(p) free(p)
+ALWAYS_INLINE void* _gct_malloc(size_t s)
+{
+  extern void *malloc(size_t);
+
+  return malloc(s);
+}
+
+ALWAYS_INLINE void* _gct_realloc(void *p, size_t s)
+{
+  extern void *realloc(void *, size_t);
+
+  return realloc(p, s);
+}
+
+ALWAYS_INLINE void _gct_free(void *p)
+{
+  extern void free(void *);
+
+  free(p);
+}
 
 #include <gct_atomic.h>
 

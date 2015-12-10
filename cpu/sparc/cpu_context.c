@@ -23,6 +23,10 @@
 #include <hexo/context.h>
 #include <hexo/local.h>
 
+#ifdef CONFIG_HEXO_CONTEXT_PREEMPT
+CPU_LOCAL context_preempt_t *cpu_preempt_handler = (context_preempt_t*)1;
+#endif
+
 #ifdef CONFIG_HEXO_USERMODE
 CPU_LOCAL void *__context_data_base;
 #endif

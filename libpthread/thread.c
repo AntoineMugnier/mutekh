@@ -312,7 +312,7 @@ pthread_create(pthread_t *thread_, const pthread_attr_t *attr,
     {
       sched_affinity_single(&thread->sched_ctx, attr->cpulist[0]);
       
-#  ifdef CONFIG_MUTEK_SCHEDULER_MIGRATION
+#  ifdef CONFIG_MUTEK_CONTEXT_SCHED_MIGRATION
       cpu_id_t i;
       for (i = 1; i < attr->cpucount; i++)
 	sched_affinity_add(&thread->sched_ctx, attr->cpulist[i]);
@@ -350,11 +350,11 @@ error_t pthread_attr_affinity(pthread_attr_t *attr, cpu_id_t cpu)
   if (attr->cpucount >= CONFIG_ARCH_LAST_CPU_ID+1)
     return ENOMEM;
 
-#ifdef CONFIG_MUTEK_SCHEDULER_MIGRATION
+#ifdef CONFIG_MUTEK_CONTEXT_SCHED_MIGRATION
   attr->cpulist[attr->cpucount++] = cpu;
 #endif
 
-#ifdef CONFIG_MUTEK_SCHEDULER_STATIC
+#ifdef CONFIG_MUTEK_CONTEXT_SCHED_STATIC
   attr->cpulist[0] = cpu;
 #endif
 #endif

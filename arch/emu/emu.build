@@ -11,12 +11,9 @@
   CONFIG_COMPILE_SOFTFLOAT undefined
   CONFIG_LOAD_CUSTOM
 
-  %subsection emusmp
-    CONFIG_ARCH_EMU_UNLOCK_YIELD
-    CONFIG_LOAD_SMP_RESET_MERGED
-    CONFIG_ARCH_SMP
-    CONFIG_ARCH_BOOTSTRAP_CPU_ID __bootstrap_pid
-  %end
+  CONFIG_ARCH_EMU_UNLOCK_YIELD
+  CONFIG_LOAD_SMP_RESET_MERGED
+  CONFIG_ARCH_BOOTSTRAP_CPU_ID __bootstrap_pid
 
   #################################################
   # Host OS

@@ -13,12 +13,10 @@ objs-$(CONFIG_MUTEK_PRINTK_HANDLER) += printk.o
 objs-$(CONFIG_MUTEK_LOGO) += mutek_logo_320x200.o
 objs-$(CONFIG_VMEM_PHYS_ALLOC) += page_alloc.o
 
+objs-$(CONFIG_MUTEK_SCHED) += scheduler.o
 objs-$(CONFIG_MUTEK_THREAD) += thread.o
-ifeq ($(CONFIG_MUTEK_SCHEDULER), defined)
- objs += scheduler.o
- objs-$(CONFIG_MUTEK_SEMAPHORE) += semaphore.o
- objs-$(CONFIG_MUTEK_RWLOCK) += rwlock.o
-endif
+objs-$(CONFIG_MUTEK_SEMAPHORE) += semaphore.o
+objs-$(CONFIG_MUTEK_RWLOCK) += rwlock.o
 
 objs-$(CONFIG_VMEM_KERNEL_ALLOC) += vmem_kalloc.o
 objs-$(CONFIG_MUTEK_SLAB) += slab.o

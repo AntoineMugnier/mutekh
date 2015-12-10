@@ -6,6 +6,14 @@
 #include <hexo/context.h>
 #include <hexo/interrupt.h>
 
+#ifdef CONFIG_HEXO_CONTEXT_PREEMPT
+CPU_LOCAL context_preempt_t *cpu_preempt_handler = (context_preempt_t*)1;
+#endif
+
+#ifdef CONFIG_HEXO_CONTEXT_IRQEN
+CPU_LOCAL context_irqen_t *cpu_irqen_handler = NULL;
+#endif
+
 CPU_LOCAL void *__context_data_base;
 
 #ifdef CONFIG_HEXO_CONTEXT_NESTED

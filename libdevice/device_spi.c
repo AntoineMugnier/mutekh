@@ -29,7 +29,7 @@
 
 #include <mutek/bytecode.h>
 
-#ifdef CONFIG_MUTEK_SCHEDULER
+#ifdef CONFIG_MUTEK_CONTEXT_SCHED
 # include <mutek/scheduler.h>
 #endif
 #include <hexo/lock.h>
@@ -750,7 +750,7 @@ void dev_spi_request_cleanup(struct dev_spi_ctrl_rq_s *rq)
 #endif
 
 
-#if defined(CONFIG_MUTEK_SCHEDULER)
+#if defined(CONFIG_MUTEK_CONTEXT_SCHED)
 
 static KROUTINE_EXEC(dev_request_spi_wait_done)
 {

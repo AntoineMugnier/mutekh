@@ -78,5 +78,28 @@ struct cpu_context_s
 /** number of registers in cpu_context_s::gpr */
 # define CPU_CONTEXT_REG_COUNT 36
 
+# ifdef CONFIG_HEXO_CONTEXT_PREEMPT
+/** @internal */
+extern CPU_LOCAL context_preempt_t *cpu_preempt_handler;
+
+ALWAYS_INLINE error_t context_set_preempt(context_preempt_t *func)
+{
+  context_preempt_t **f = CPU_LOCAL_ADDR(cpu_preempt_handler);
+  if (*f != NULL)
+    return -EBUSY;
+  *f = func;
+  return 0;
+}
+# endif
+
+# ifdef CONFIG_HEXO_CONTEXT_IRQEN
+extern CPU_LOCAL context_irqen_t *cpu_irqen_handler;
+
+ALWAYS_INLINE void context_set_irqen(context_irqen_t *func)
+{
+  CPU_LOCAL_SET(cpu_irqen_handler, func);
+}
+# endif
+
 #endif
 

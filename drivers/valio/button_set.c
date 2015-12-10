@@ -213,7 +213,7 @@ static DEV_INIT(button_set_init)
 
   dev->drv_pv = pv;
 
-  err = device_get_param_dev_accessor(dev, "icu", &pv->gpio, DRIVER_CLASS_GPIO);
+  err = device_get_param_dev_accessor(dev, "gpio", &pv->gpio, DRIVER_CLASS_GPIO);
   if (err)
     goto free_pv;
 
@@ -278,6 +278,9 @@ static DEV_CLEANUP(button_set_cleanup)
 {
   struct bs_context_s *pv = dev->drv_pv;
 
+  if (!dev_request_queue_isempty(&pv->queue))
+    return -EBUSY;
+
   device_put_accessor(&pv->gpio);
 
   device_irq_source_unlink(dev, &pv->irq_ep, 1);
@@ -285,4 +288,6 @@ static DEV_CLEANUP(button_set_cleanup)
 
   mem_free(pv->last_read_state);
   mem_free(pv);
+
+  return 0;
 }

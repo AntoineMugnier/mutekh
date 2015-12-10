@@ -165,7 +165,7 @@ static TERMUI_CON_COMMAND_PROTOTYPE(dev_shell_i2c_scan)
 
   for (saddr = 0; saddr < 0x7f; ++saddr)
     {
-#if defined(CONFIG_MUTEK_SCHEDULER)
+#if defined(CONFIG_MUTEK_CONTEXT_SCHED)
       error_t err = dev_i2c_wait_request(&data->i2c, saddr, &tr, 1);
 #else
       error_t err = dev_i2c_spin_request(&data->i2c, saddr, &tr, 1);
@@ -196,7 +196,7 @@ static TERMUI_CON_COMMAND_PROTOTYPE(dev_shell_i2c_io)
   size_t count;
   struct dev_i2c_transfer_s *tr = &data->transfer[0];
 
-#if defined(CONFIG_MUTEK_SCHEDULER)
+#if defined(CONFIG_MUTEK_CONTEXT_SCHED)
   dev_request_sched_init(&req.base, &status);
 #else
   dev_request_spin_init(&req.base, &status);
@@ -204,7 +204,7 @@ static TERMUI_CON_COMMAND_PROTOTYPE(dev_shell_i2c_io)
 
   DEVICE_OP(&data->i2c, request, &req);
 
-#if defined(CONFIG_MUTEK_SCHEDULER)
+#if defined(CONFIG_MUTEK_CONTEXT_SCHED)
   dev_request_sched_wait(&status);
 #else
   dev_request_spin_wait(&status);

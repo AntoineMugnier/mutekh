@@ -26,7 +26,7 @@
 #include <hexo/lock.h>
 #include <mutek/mem_alloc.h>
 
-#if defined(CONFIG_MUTEK_SCHEDULER)
+#if defined(CONFIG_MUTEK_CONTEXT_SCHED)
 #include <mutek/scheduler.h>
 #endif
 
@@ -63,7 +63,7 @@ void arch_init(uintptr_t init_sp)
   /* configure first CPU */
   cpu_init();
 
-#if defined(CONFIG_MUTEK_SCHEDULER)
+#if defined(CONFIG_MUTEK_CONTEXT_SCHED)
   sched_global_init();
   sched_cpu_init();
 #endif

@@ -271,7 +271,7 @@ dev_persist_spin_op(struct device_persist_s *accessor,
 /** Synchronous persist device operation function. This function use
     the scheduler api to put current context in wait state during the
     request. */
-config_depend_and2(CONFIG_DEVICE_PERSIST, CONFIG_MUTEK_SCHEDULER)
+config_depend_and2(CONFIG_DEVICE_PERSIST, CONFIG_MUTEK_CONTEXT_SCHED)
 inline error_t
 dev_persist_wait_op(struct device_persist_s *accessor,
                     struct dev_persist_rq_s *rq)
@@ -283,7 +283,7 @@ dev_persist_wait_op(struct device_persist_s *accessor,
   return rq->err;
 }
 
-config_depend_and2(CONFIG_DEVICE_PERSIST, CONFIG_MUTEK_SCHEDULER)
+config_depend_and2(CONFIG_DEVICE_PERSIST, CONFIG_MUTEK_CONTEXT_SCHED)
 inline error_t
 dev_persist_wait_read(struct device_persist_s *accessor,
                       const struct dev_persist_descriptor_s *desc,
@@ -303,7 +303,7 @@ dev_persist_wait_read(struct device_persist_s *accessor,
   return err;
 }
 
-config_depend_and2(CONFIG_DEVICE_PERSIST, CONFIG_MUTEK_SCHEDULER)
+config_depend_and2(CONFIG_DEVICE_PERSIST, CONFIG_MUTEK_CONTEXT_SCHED)
 inline error_t
 dev_persist_wait_write(struct device_persist_s *accessor,
                        const struct dev_persist_descriptor_s *desc,
@@ -320,7 +320,7 @@ dev_persist_wait_write(struct device_persist_s *accessor,
   return dev_persist_wait_op(accessor, &rq);
 }
 
-config_depend_and2(CONFIG_DEVICE_PERSIST, CONFIG_MUTEK_SCHEDULER)
+config_depend_and2(CONFIG_DEVICE_PERSIST, CONFIG_MUTEK_CONTEXT_SCHED)
 inline error_t
 dev_persist_wait_remove(struct device_persist_s *accessor,
                         const struct dev_persist_descriptor_s *desc,
@@ -335,7 +335,7 @@ dev_persist_wait_remove(struct device_persist_s *accessor,
   return dev_persist_wait_op(accessor, &rq);
 }
 
-config_depend_and2(CONFIG_DEVICE_PERSIST, CONFIG_MUTEK_SCHEDULER)
+config_depend_and2(CONFIG_DEVICE_PERSIST, CONFIG_MUTEK_CONTEXT_SCHED)
 inline error_t
 dev_persist_wait_inc(struct device_persist_s *accessor,
                      const struct dev_persist_descriptor_s *desc,
@@ -351,7 +351,7 @@ dev_persist_wait_inc(struct device_persist_s *accessor,
   return dev_persist_wait_op(accessor, &rq);
 }
 
-config_depend_and2(CONFIG_DEVICE_PERSIST, CONFIG_MUTEK_SCHEDULER)
+config_depend_and2(CONFIG_DEVICE_PERSIST, CONFIG_MUTEK_CONTEXT_SCHED)
 inline error_t
 dev_persist_wait_counter_read(struct device_persist_s *accessor,
                               const struct dev_persist_descriptor_s *desc,

@@ -639,7 +639,7 @@ static DEV_INIT(mpu6505_init)
   if (!pv)
     return -ENOMEM;
 
-  if (device_get_param_dev_accessor(dev, "bus", &pv->i2c, DRIVER_CLASS_I2C)) {
+  if (device_get_param_dev_accessor(dev, "i2c", &pv->i2c, DRIVER_CLASS_I2C)) {
     dprintk("Bus not found");
     goto err_pv;
   }
@@ -680,10 +680,15 @@ static DEV_CLEANUP(mpu6505_cleanup)
 {
   struct mpu6505_private_s *pv = dev->drv_pv;
 
+  if (!dev_request_queue_isempty(&pv->queue))
+    return -EBUSY;
+
   device_put_accessor(&pv->i2c);
   device_irq_source_unlink(dev, &pv->irq, 1);
   dev_request_queue_destroy(&pv->queue);
   mem_free(pv);
+
+  return 0;
 }
 
 static DEV_USE(mpu6505_use)

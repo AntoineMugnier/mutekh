@@ -388,7 +388,7 @@ typedef DEV_SPI_CTRL_TRANSFER(dev_spi_ctrl_transfer_t);
 
 /** This helper function performs a SPI transfert as defined in @tt tr
     and waits for end of transfert. */
-config_depend_and2(CONFIG_DEVICE_SPI, CONFIG_MUTEK_SCHEDULER)
+config_depend_and2(CONFIG_DEVICE_SPI, CONFIG_MUTEK_CONTEXT_SCHED)
 error_t dev_spi_wait_transfer(struct device_spi_ctrl_s *accessor,
                               struct dev_spi_ctrl_transfer_s * tr);
 

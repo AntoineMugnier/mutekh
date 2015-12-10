@@ -36,7 +36,7 @@ extern inline error_t dev_rfpacket_spin_config(
     const struct dev_rfpacket_config_s *cfg,
     enum dev_rfpacket_cfg_msk_e mask);
 
-# ifdef CONFIG_MUTEK_SCHEDULER
+# ifdef CONFIG_MUTEK_CONTEXT_SCHED
 extern inline error_t dev_rfpacket_wait_send_packet(
        const struct device_rfpacket_s *accessor,
        const uint8_t *buf,

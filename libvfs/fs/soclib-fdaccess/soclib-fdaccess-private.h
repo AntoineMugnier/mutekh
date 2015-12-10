@@ -57,12 +57,12 @@ struct soclib_fdaccess_rq_s
 {
 #ifdef CONFIG_HEXO_IRQ
   GCT_CONTAINER_ENTRY(CLIST)	queue_entry;
-# ifndef CONFIG_MUTEK_SCHEDULER
+# ifndef CONFIG_MUTEK_CONTEXT_SCHED
   bool_t done;
 # endif
 #endif
 
-#if defined(CONFIG_MUTEK_SCHEDULER) && defined(CONFIG_HEXO_IRQ)
+#if defined(CONFIG_MUTEK_CONTEXT_SCHED) && defined(CONFIG_HEXO_IRQ)
   struct sched_context_s *ctx;
 #endif
 

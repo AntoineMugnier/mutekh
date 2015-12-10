@@ -39,7 +39,7 @@ dev_request_spin_init(struct dev_request_s *rq,
 extern inline void
 dev_request_spin_wait(struct dev_request_status_s *status);
 
-#ifdef CONFIG_MUTEK_SCHEDULER
+#ifdef CONFIG_MUTEK_CONTEXT_SCHED
 
 extern inline KROUTINE_EXEC(dev_request_sched_done);
 
@@ -50,6 +50,10 @@ dev_request_sched_init(struct dev_request_s *rq,
 extern inline void
 dev_request_sched_wait(struct dev_request_status_s *status);
 
+#endif
+
+#ifdef CONFIG_DEVICE_DELAYED_REQUEST
+
 extern inline void
 dev_request_delayed_push(struct device_accessor_s *accessor,
                          struct dev_request_dlqueue_s *d,
@@ -58,7 +62,6 @@ extern inline void
 dev_request_delayed_end(struct dev_request_dlqueue_s *q,
                         struct dev_request_s *rq);
 
-#ifdef CONFIG_DEVICE_DELAYED_REQUEST
 /** @internal */
 KROUTINE_EXEC(dev_request_delayed_kr)
 {
@@ -69,5 +72,4 @@ KROUTINE_EXEC(dev_request_delayed_kr)
 }
 #endif
 
-#endif
 

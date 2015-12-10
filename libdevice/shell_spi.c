@@ -139,7 +139,7 @@ static TERMUI_CON_COMMAND_PROTOTYPE(dev_shell_spi_select)
   return 0;
 }
 
-#ifdef CONFIG_MUTEK_SCHEDULER
+#ifdef CONFIG_MUTEK_CONTEXT_SCHED
 static TERMUI_CON_COMMAND_PROTOTYPE(dev_shell_spi_transfer)
 {
   struct termui_optctx_dev_spi_opts *c = ctx;
@@ -313,7 +313,7 @@ TERMUI_CON_GROUP_DECL(dev_shell_spi_ctrl_group) =
                         spi_opts_cleanup)
   )
 
-#if defined(CONFIG_MUTEK_SCHEDULER)
+#if defined(CONFIG_MUTEK_CONTEXT_SCHED)
   TERMUI_CON_ENTRY(dev_shell_spi_transfer, "transfer",
     TERMUI_CON_OPTS_CTX(dev_spi_opts,
                         SPI_OPT_DEV | SPI_OPT_WR_DATA |
