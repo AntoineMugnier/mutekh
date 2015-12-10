@@ -114,7 +114,7 @@ static void rq_start(struct device_s *dev, kroutine_exec_t *kr)
   assert(!pv->i2c_req.base.pvdata);
   pv->i2c_req.base.pvdata = dev;
 
-  kroutine_init_immediate(&pv->i2c_req.base.kr, kr);
+  kroutine_init_sched_switch(&pv->i2c_req.base.kr, kr);
   DEVICE_OP(&pv->i2c, request, &pv->i2c_req);
 }
 
@@ -454,7 +454,6 @@ bool_t mpu6505_switch_mode(struct device_s *dev, enum mpu6505_power_mode_e mode)
         DEVICE_OP(&pv->timer, cancel, &pv->timer_req);
 
       dev_timer_init_sec(&pv->timer, &pv->timer_req.delay, &pv->timer_req.rev, 1, STREAMING_FPS);
-      kroutine_init_immediate(&pv->timer_req.rq.kr, mpu6505_tick);
       DEVICE_OP(&pv->timer, request, &pv->timer_req);
       return 1;
 
@@ -653,6 +652,8 @@ static DEV_INIT(mpu6505_init)
     dprintk("Slave address not found");
     goto err_pv;
   }
+
+  kroutine_init_sched_switch(&pv->timer_req.rq.kr, mpu6505_tick);
 
   device_irq_source_init(dev, &pv->irq, 1, &mpu6505_irq);
 
