@@ -178,7 +178,7 @@ cpu_interrupt_getstate(void)
 # ifdef CONFIG_HEXO_IRQ
   reg_t state;
 
-  __asm__ (
+  __asm__ volatile (
 		    "	rdctl	%0, status		\n"
 		    : "=r" (state)
 		    );
