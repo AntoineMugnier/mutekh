@@ -28,3 +28,37 @@ extern inline bool_t kroutine_exec(struct kroutine_s *kr);
 extern inline bool_t kroutine_trigger(struct kroutine_s *kr, enum kroutine_policy_e policy);
 #endif
 
+#ifdef CONFIG_MUTEK_KROUTINE_QUEUE
+GCT_CONTAINER_PROTOTYPES(kroutine_list, extern inline, kroutine_list,
+                         init, destroy, head, pushback, pop, wrlock, unlock);
+
+GCT_CONTAINER_PROTOTYPES(kroutine_list, extern inline, kroutine_list_nolock,
+                         head, pushback, pop);
+
+bool_t kroutine_queue_process(struct kroutine_queue_s *queue)
+{
+  struct kroutine_s *kr = kroutine_list_pop(&queue->list);
+  bool_t done = kr != NULL;
+  if (done)
+    {
+      kr->queue = queue;
+      atomic_set(&kr->state, KROUTINE_INVALID);
+      kr->exec(kr, KROUTINE_EXEC_DEFERRED);
+    }
+  return done;
+}
+
+#endif
+
+#ifdef CONFIG_MUTEK_KROUTINE_SEMAPHORE
+
+# include <mutek/semaphore.h>
+
+bool_t kroutine_queue_wait(struct kroutine_queue_s *queue)
+{
+  semaphore_take(queue->sem, 1);
+  return kroutine_queue_process(queue);
+}
+
+#endif
+

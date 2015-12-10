@@ -58,6 +58,10 @@ struct sched_context_s
 
   void			*priv;
 
+# if CONFIG_MUTEK_SCHED_PRIORITIES > 1
+  uint8_t               priority;
+# endif
+
 # ifdef CONFIG_MUTEK_CONTEXT_SCHED_MIGRATION_AFFINITY
   cpu_bitmap_t		cpu_map;
 # endif

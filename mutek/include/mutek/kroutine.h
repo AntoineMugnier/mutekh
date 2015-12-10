@@ -36,7 +36,7 @@
    This is mainly used to implement deferred interrupt processing and
    various device request termination callbacks.
 
-   The @ref kroutine_init function is used to initialize a routine and
+   The @tt kroutine_init* functions are used to initialize a routine and
    the @ref kroutine_exec function must be called when the routine
    have to be executed or scheduled for execution. The @ref
    kroutine_policy_e enum specifies the various available execution
@@ -44,6 +44,7 @@
 */
 
 #include <gct_platform.h>
+#include <gct_lock_hexo_lock.h>
 #include <gct/container_clist.h>
 
 #include <hexo/atomic.h>
@@ -101,138 +102,366 @@ enum kroutine_policy_e
   KROUTINE_TRIGGER,
 #endif
 
-#ifdef CONFIG_MUTEK_KROUTINE_SCHED_SWITCH
-  /** If the @ref kroutine_exec function is called with interrupts
-      enabled, the kroutine handler is executed immediately.
-
-      In the other case, the kroutine is scheduled for execution on the
-      next context switch. In this case, the handler will be executed
-      with the @ref KROUTINE_EXEC_DEFERRED flag set on the stack of
-      the processor idle context. The execution will take place on the
-      processor where the @ref kroutine_exec function has been called.
-  */
-  KROUTINE_INTERRUPTIBLE,
-
-  /** If the @ref #CONFIG_HEXO_CONTEXT_PREEMPT configuration token is
-      not defined, this is the same as @ref KROUTINE_INTERRUPTIBLE.
-
-      In the other case, it has the additional behavior of preempting
-      the current context: If the @ref kroutine_exec function is called
-      from an interrupt handler, a context switch to the processor idle
-      context will occur on interrupt return in order to execute the
-      kroutine handler.
-  */
-  KROUTINE_PREEMPT_INTERRUPTIBLE,
-
-  /** The kroutine is scheduled for execution on the next context
-      switch. The kroutine handler will be executed with interrupts
-      enabled on the stack of the processor idle context. The
-      execution will take place on the processor where the @ref
-      kroutine_exec function has been called.
-
-      If the @ref #CONFIG_MUTEK_KROUTINE_SCHED_SWITCH token is not
-      defined, the handler is executed immediately.
-  */
-  KROUTINE_SCHED_SWITCH,
-
-  /** If the @ref #CONFIG_HEXO_CONTEXT_PREEMPT configuration token is
-      not defined, this is the same as @ref KROUTINE_SCHED_SWITCH.
-
-      In the other case, it has the additional behavior of preempting
-      the current context: If the @ref kroutine_exec function is called
-      from an interrupt handler, a context switch to the processor idle
-      context will occur on interrupt return in order to execute the
-      kroutine handler.
-  */
-  KROUTINE_PREEMPT,
-
-  /** @multiple If the @ref #CONFIG_MUTEK_KROUTINE_SCHED_SWITCH token
-      is not defined, the policy defaults to KROUTINE_IMMEDIATE. */
-  KROUTINE_INTERRUPTIBLE_OR_IMMEDIATE          = KROUTINE_INTERRUPTIBLE,
-  KROUTINE_PREEMPT_INTERRUPTIBLE_OR_IMMEDIATE  = KROUTINE_PREEMPT_INTERRUPTIBLE,
-  KROUTINE_SCHED_SWITCH_OR_IMMEDIATE           = KROUTINE_SCHED_SWITCH,
-  KROUTINE_PREEMPT_OR_IMMEDIATE                = KROUTINE_PREEMPT,
-
-# ifdef CONFIG_MUTEK_KROUTINE_TRIGGER
-  /** @multiple If the @ref #CONFIG_MUTEK_KROUTINE_SCHED_SWITCH token
-      is not defined, the policy defaults to KROUTINE_TRIGGER. */
-  KROUTINE_INTERRUPTIBLE_OR_TRIGGER            = KROUTINE_INTERRUPTIBLE,
-  KROUTINE_PREEMPT_INTERRUPTIBLE_OR_TRIGGER    = KROUTINE_PREEMPT_INTERRUPTIBLE,
-  KROUTINE_SCHED_SWITCH_OR_TRIGGER             = KROUTINE_SCHED_SWITCH,
-  KROUTINE_PREEMPT_OR_TRIGGER                  = KROUTINE_PREEMPT,     
-# endif
-#else
-  KROUTINE_INTERRUPTIBLE_OR_IMMEDIATE          = KROUTINE_IMMEDIATE,
-  KROUTINE_PREEMPT_INTERRUPTIBLE_OR_IMMEDIATE  = KROUTINE_IMMEDIATE,
-  KROUTINE_SCHED_SWITCH_OR_IMMEDIATE           = KROUTINE_IMMEDIATE,
-  KROUTINE_PREEMPT_OR_IMMEDIATE                = KROUTINE_IMMEDIATE,
-
-# ifdef CONFIG_MUTEK_KROUTINE_TRIGGER
-  KROUTINE_INTERRUPTIBLE_OR_TRIGGER            = KROUTINE_TRIGGER,
-  KROUTINE_PREEMPT_INTERRUPTIBLE_OR_TRIGGER    = KROUTINE_TRIGGER,
-  KROUTINE_SCHED_SWITCH_OR_TRIGGER             = KROUTINE_TRIGGER,
-  KROUTINE_PREEMPT_OR_TRIGGER                  = KROUTINE_TRIGGER,
-# endif
+#ifdef CONFIG_MUTEK_KROUTINE_QUEUE
+  /** This policy allows scheduling of a kroutine on a user defined
+      queue when @ref kroutine_exec is called. The actual routine
+      execution will occur when either the @ref kroutine_queue_process
+      or kroutine_queue_wait function is called. */
+  KROUTINE_QUEUE,
 #endif
 
-#ifdef CONFIG_MUTEK_KROUTINE_IDLE
-  /** The kroutine is scheduled for execution when the processor
-      becomes idle. The kroutine handler will be executed with
-      interrupts enabled on the stack of idle context. The execution
-      will take place on the processor where the @ref kroutine_exec
-      function has been called. */
-  KROUTINE_IDLE,
+#ifdef CONFIG_MUTEK_KROUTINE_SCHED
 
-  /** @multiple If the @ref #CONFIG_MUTEK_KROUTINE_IDLE token
-      is not defined, the policy defaults to KROUTINE_IMMEDIATE. */
-  KROUTINE_IDLE_OR_IMMEDIATE            = KROUTINE_IDLE,
-# ifdef CONFIG_MUTEK_KROUTINE_TRIGGER
-  /** @multiple If the @ref #CONFIG_MUTEK_KROUTINE_IDLE token
-      is not defined, the policy defaults to KROUTINE_TRIGGER. */
-  KROUTINE_IDLE_OR_TRIGGER              = KROUTINE_IDLE,
+  /** The kroutine is scheduled for defered execution with interrupts
+      enabled on the stack of the idle context. The execution will not
+      occur before the next context switch regardless of the
+      priorities of the kroutine and current context.
+
+      This policy can be used as soon as the context scheduler as been
+      initialized, before it is actually started. */
+  KROUTINE_SCHED_SWITCH,
+
+  /** The kroutine is scheduled for defered execution with interrupts
+      enabled on the stack of the idle context. This will occur as
+      soon as possible depending on the priorities of the kroutine and
+      current context as well as build configuration.
+
+      The @ref #CONFIG_HEXO_CONTEXT_PREEMPT and @ref
+      #CONFIG_HEXO_CONTEXT_IRQEN features allow switching to the idle
+      context without waiting for the next context switch.
+
+      This policy can not be used until the scheduler is started. */
+  KROUTINE_DEFERRED,
+
+  /** If the @ref kroutine_exec function is called with interrupts
+      enabled, the kroutine handler is executed immediately on the
+      current stack. In the other case, the kroutine is handled as if
+      the policy were @ref KROUTINE_DEFERRED.
+
+      This policy can not be used until the scheduler is started. */
+  KROUTINE_INTERRUPTIBLE,
+
+# ifdef CONFIG_MUTEK_KROUTINE_IDLE
+  /** The kroutine is scheduled for execution when the last processor
+      of the platform becomes idle. The kroutine handler will be
+      executed with interrupts enabled on the stack of idle context.
+
+      This policy can be used as soon as the scheduler as been
+      initialized, before it is actually started. */
+  KROUTINE_IDLE,
 # endif
-#else
-  KROUTINE_IDLE_OR_IMMEDIATE            = KROUTINE_IMMEDIATE,
-# ifdef CONFIG_MUTEK_KROUTINE_TRIGGER
-  KROUTINE_IDLE_OR_TRIGGER              = KROUTINE_TRIGGER,
+
+# ifdef CONFIG_ARCH_SMP
+  /** This is similar to @ref KROUTINE_INTERRUPTIBLE. On SMP platforms
+      the execution is scheduled for execution on a specific
+      processor. */
+  KROUTINE_CPU_INTERRUPTIBLE,
+  /** This is similar to @ref KROUTINE_SCHED_SWITCH. On SMP platforms
+      the execution is scheduled for execution on a specific
+      processor. */
+  KROUTINE_CPU_SCHED_SWITCH,
+  /** This is similar to @ref KROUTINE_DEFERRED. On SMP platforms
+      the execution is scheduled for execution on a specific
+      processor. */
+  KROUTINE_CPU_DEFERRED,
+# else
+  KROUTINE_CPU_INTERRUPTIBLE = KROUTINE_INTERRUPTIBLE,
+  KROUTINE_CPU_SCHED_SWITCH = KROUTINE_SCHED_SWITCH,
+  KROUTINE_CPU_DEFERRED = KROUTINE_DEFERRED,
 # endif
+
 #endif
 };
 
-#define GCT_CONTAINER_ALGO_kroutine_queue CLIST
+#define GCT_CONTAINER_ALGO_kroutine_list CLIST
+#define GCT_CONTAINER_LOCK_kroutine_list HEXO_LOCK
 
+struct semaphore_s;
+struct kroutine_queue_s;
+
+#ifdef CONFIG_MUTEK_KROUTINE_QUEUE
+GCT_CONTAINER_TYPES       (kroutine_list,
+#endif
 struct kroutine_s
 {
-#if defined(CONFIG_MUTEK_KROUTINE_SCHED_SWITCH) || defined(CONFIG_MUTEK_KROUTINE_IDLE)
-  GCT_CONTAINER_ENTRY(kroutine_queue, queue_entry);
+#ifdef CONFIG_MUTEK_KROUTINE_QUEUE
+  union {
+    GCT_CONTAINER_ENTRY(kroutine_list, queue_entry);
+# if defined(CONFIG_ARCH_SMP) && defined(CONFIG_MUTEK_KROUTINE_SCHED)
+    void *cls;
+# endif
+    struct kroutine_queue_s *queue;
+  };
 #endif
   kroutine_exec_t              *exec;
   enum kroutine_policy_e       policy;
   atomic_t                     state;
-};
+#if CONFIG_MUTEK_SCHED_PRIORITIES > 1 && defined(CONFIG_MUTEK_KROUTINE_SCHED)
+  uint8_t                      priority;
+#endif
+}
+#ifdef CONFIG_MUTEK_KROUTINE_QUEUE
+                           *, queue_entry)
+#endif
+;
 
-#if defined(CONFIG_MUTEK_KROUTINE_SCHED_SWITCH) || defined(CONFIG_MUTEK_KROUTINE_IDLE)
-GCT_CONTAINER_TYPES       (kroutine_queue, struct kroutine_s *, queue_entry);
-GCT_CONTAINER_FCNS       (kroutine_queue, inline, kroutine_queue,
-                          init, destroy, head, pushback, pop);
+#ifdef CONFIG_MUTEK_KROUTINE_QUEUE
+GCT_CONTAINER_FCNS       (kroutine_list, inline, kroutine_list,
+                          init, destroy, head, pushback, pop, wrlock, unlock);
+GCT_CONTAINER_NOLOCK_FCNS(kroutine_list, inline, kroutine_list_nolock,
+                            head, pushback, pop);
+
+/** User defined kroutine scheduling queue. @see KROUTINE_QUEUE */
+
+#else
+typedef void kroutine_list_root_t;
 #endif
 
-/** @This changes the scheduling policy of a kroutine . */
-ALWAYS_INLINE void kroutine_set_policy(struct kroutine_s *kr,
-                                       enum kroutine_policy_e policy)
+config_depend(CONFIG_MUTEK_KROUTINE_QUEUE)
+struct kroutine_queue_s
 {
-  kr->policy = policy;
-  atomic_set(&kr->state, KROUTINE_INVALID);
-}
+#ifdef CONFIG_MUTEK_KROUTINE_QUEUE
+  kroutine_list_root_t list;
+#endif
+#ifdef CONFIG_MUTEK_KROUTINE_SEMAPHORE
+  struct semaphore_s *sem;
+#endif
+};
+
+#define KROUTINE_DEFAULT_PRIORITY 0
+
+/** @This changes the scheduler priority associated to a kroutine. */
+config_depend_alwaysinline(CONFIG_MUTEK_KROUTINE_SCHED,
+void kroutine_set_priority(struct kroutine_s *kr,
+                           uint8_t priority),
+{
+  assert(priority < CONFIG_MUTEK_SCHED_PRIORITIES);
+#if CONFIG_MUTEK_SCHED_PRIORITIES > 1
+  kr->priority = priority;
+#endif
+});
 
 /** @This initializes a routine with the given callback and scheduling policy. */
+__attribute__((deprecated))
 ALWAYS_INLINE void kroutine_init(struct kroutine_s *kr,
                                  kroutine_exec_t *exec,
                                  enum kroutine_policy_e policy)
 {
+  kr->policy = policy;
   kr->exec = exec;
-  kroutine_set_policy(kr, policy);
+#ifdef CONFIG_MUTEK_KROUTINE_SCHED
+# ifdef CONFIG_ARCH_SMP
+  kr->cls = NULL;
+# endif
+# if CONFIG_MUTEK_SCHED_PRIORITIES > 1
+  kr->priority = KROUTINE_DEFAULT_PRIORITY;
+# endif
+#endif
 }
+
+/** @This initializes a kroutine with the @ref KROUTINE_IMMEDIATE policy. */
+ALWAYS_INLINE void kroutine_init_immediate(struct kroutine_s *kr,
+                                           kroutine_exec_t *exec)
+{
+  kr->policy = KROUTINE_IMMEDIATE;
+  kr->exec = exec;
+}
+
+/** @This initializes a kroutine with the @ref KROUTINE_TRIGGER policy. */
+config_depend_alwaysinline(CONFIG_MUTEK_KROUTINE_TRIGGER,
+void kroutine_init_trigger(struct kroutine_s *kr,
+                           kroutine_exec_t *exec),
+{
+  kr->policy = KROUTINE_TRIGGER;
+  kr->exec = exec;
+  atomic_set(&kr->state, KROUTINE_INVALID);
+#if CONFIG_MUTEK_SCHED_PRIORITIES > 1 && defined(CONFIG_MUTEK_KROUTINE_SCHED)
+  kr->priority = KROUTINE_DEFAULT_PRIORITY;
+#endif
+});
+
+/** @This initializes a kroutine with the @ref KROUTINE_DEFERRED policy. */
+config_depend_alwaysinline(CONFIG_MUTEK_KROUTINE_SCHED,
+void kroutine_init_deffered(struct kroutine_s *kr,
+                            kroutine_exec_t *exec),
+{
+  kr->policy = KROUTINE_DEFERRED;
+  kr->exec = exec;
+  atomic_set(&kr->state, KROUTINE_INVALID);
+#ifdef CONFIG_ARCH_SMP
+  kr->cls = NULL;
+#endif
+#if CONFIG_MUTEK_SCHED_PRIORITIES > 1
+  kr->priority = KROUTINE_DEFAULT_PRIORITY;
+#endif
+});
+
+/** @This initializes a kroutine with the @ref KROUTINE_CPU_DEFERRED
+    policy. The target processor used for execution must be specified. */
+config_depend_and2_alwaysinline(CONFIG_ARCH_SMP, CONFIG_MUTEK_KROUTINE_SCHED,
+void kroutine_init_deffered_cpu(struct kroutine_s *kr,
+                                kroutine_exec_t *exec,
+                                struct cpu_tree_s *cpu),
+{
+  kr->policy = KROUTINE_CPU_DEFERRED;
+  kr->exec = exec;
+  atomic_set(&kr->state, KROUTINE_INVALID);
+  kr->cls = cpu->cls;
+#if CONFIG_MUTEK_SCHED_PRIORITIES > 1
+  kr->priority = KROUTINE_DEFAULT_PRIORITY;
+#endif
+});
+
+/** @This initializes a kroutine with the @ref KROUTINE_CPU_DEFERRED policy.
+    The execution will take place on the current processor. */
+config_depend_alwaysinline(CONFIG_MUTEK_KROUTINE_SCHED,
+void kroutine_init_deffered_local(struct kroutine_s *kr,
+                                  kroutine_exec_t *exec),
+{
+  kr->policy = KROUTINE_CPU_DEFERRED;
+  kr->exec = exec;
+  atomic_set(&kr->state, KROUTINE_INVALID);
+#ifdef CONFIG_ARCH_SMP
+  kr->cls = (void*)CPU_GET_CLS();
+#endif
+#if CONFIG_MUTEK_SCHED_PRIORITIES > 1
+  kr->priority = KROUTINE_DEFAULT_PRIORITY;
+#endif
+});
+
+/** @This initializes a kroutine with the @ref KROUTINE_SCHED_SWITCH policy. */
+config_depend_alwaysinline(CONFIG_MUTEK_KROUTINE_SCHED,
+void kroutine_init_sched_switch(struct kroutine_s *kr,
+                                kroutine_exec_t *exec),
+{
+  kr->policy = KROUTINE_SCHED_SWITCH;
+  kr->exec = exec;
+  atomic_set(&kr->state, KROUTINE_INVALID);
+#ifdef CONFIG_ARCH_SMP
+  kr->cls = NULL;
+#endif
+#if CONFIG_MUTEK_SCHED_PRIORITIES > 1
+  kr->priority = KROUTINE_DEFAULT_PRIORITY;
+#endif
+});
+
+/** @This initializes a kroutine with the @ref KROUTINE_CPU_SCHED_SWITCH policy.
+    The target processor used for execution must be specified. */
+config_depend_and2_alwaysinline(CONFIG_ARCH_SMP, CONFIG_MUTEK_KROUTINE_SCHED,
+void kroutine_init_sched_switch_cpu(struct kroutine_s *kr,
+                                    kroutine_exec_t *exec,
+                                    struct cpu_tree_s *cpu),
+{
+  kr->policy = KROUTINE_CPU_SCHED_SWITCH;
+  kr->exec = exec;
+  atomic_set(&kr->state, KROUTINE_INVALID);
+  kr->cls = cpu->cls;
+#if CONFIG_MUTEK_SCHED_PRIORITIES > 1
+  kr->priority = KROUTINE_DEFAULT_PRIORITY;
+#endif
+});
+
+/** @This initializes a kroutine with the @ref KROUTINE_CPU_SCHED_SWITCH policy.
+    The execution will take place on the current processor. */
+config_depend_alwaysinline(CONFIG_MUTEK_KROUTINE_SCHED,
+void kroutine_init_sched_switch_local(struct kroutine_s *kr,
+                                      kroutine_exec_t *exec),
+{
+  kr->policy = KROUTINE_CPU_SCHED_SWITCH;
+  kr->exec = exec;
+  atomic_set(&kr->state, KROUTINE_INVALID);
+#ifdef CONFIG_ARCH_SMP
+  kr->cls = (void*)CPU_GET_CLS();
+#endif
+#if CONFIG_MUTEK_SCHED_PRIORITIES > 1
+  kr->priority = KROUTINE_DEFAULT_PRIORITY;
+#endif
+});
+
+/** @This initializes a kroutine with the @ref KROUTINE_INTERRUPTIBLE policy. */
+config_depend_alwaysinline(CONFIG_MUTEK_KROUTINE_SCHED,
+void kroutine_init_interruptible(struct kroutine_s *kr,
+                                 kroutine_exec_t *exec),
+{
+  kr->policy = KROUTINE_INTERRUPTIBLE;
+  kr->exec = exec;
+  atomic_set(&kr->state, KROUTINE_INVALID);
+#ifdef CONFIG_ARCH_SMP
+  kr->cls = NULL;
+#endif
+#if CONFIG_MUTEK_SCHED_PRIORITIES > 1
+  kr->priority = KROUTINE_DEFAULT_PRIORITY;
+#endif
+});
+
+/** @This initializes a kroutine with the @ref KROUTINE_CPU_INTERRUPTIBLE
+    policy. The target processor used for execution must be specified. */
+config_depend_and2_alwaysinline(CONFIG_ARCH_SMP, CONFIG_MUTEK_KROUTINE_SCHED,
+void kroutine_init_interruptible_cpu(struct kroutine_s *kr,
+                                     kroutine_exec_t *exec,
+                                     struct cpu_tree_s *cpu),
+{
+  kr->policy = KROUTINE_CPU_INTERRUPTIBLE;
+  kr->exec = exec;
+  atomic_set(&kr->state, KROUTINE_INVALID);
+  kr->cls = cpu->cls;
+#if CONFIG_MUTEK_SCHED_PRIORITIES > 1
+  kr->priority = KROUTINE_DEFAULT_PRIORITY;
+#endif
+});
+
+/** @This initializes a kroutine with the @ref KROUTINE_CPU_INTERRUPTIBLE policy.
+    The execution will take place on the current processor. */
+config_depend_alwaysinline(CONFIG_MUTEK_KROUTINE_SCHED,
+void kroutine_init_interruptible_local(struct kroutine_s *kr,
+                                       kroutine_exec_t *exec),
+{
+  kr->policy = KROUTINE_CPU_INTERRUPTIBLE;
+  kr->exec = exec;
+  atomic_set(&kr->state, KROUTINE_INVALID);
+#ifdef CONFIG_ARCH_SMP
+  kr->cls = (void*)CPU_GET_CLS();
+#endif
+#if CONFIG_MUTEK_SCHED_PRIORITIES > 1
+  kr->priority = KROUTINE_DEFAULT_PRIORITY;
+#endif
+});
+
+/** @This initializes a kroutine with the @ref KROUTINE_IDLE policy. */
+config_depend_alwaysinline(CONFIG_MUTEK_KROUTINE_IDLE,
+void kroutine_init_idle(struct kroutine_s *kr,
+                        kroutine_exec_t *exec),
+{
+  kr->policy = KROUTINE_IDLE;
+  kr->exec = exec;
+  atomic_set(&kr->state, KROUTINE_INVALID);
+});
+
+/** @This initializes a kroutine with the @ref KROUTINE_QUEUE policy. */
+config_depend_alwaysinline(CONFIG_MUTEK_KROUTINE_QUEUE,
+void kroutine_init_queue(struct kroutine_s *kr,
+                         kroutine_exec_t *exec,
+                         struct kroutine_queue_s *queue),
+{
+  kr->policy = KROUTINE_QUEUE;
+  kr->exec = exec;
+  kr->queue = queue;
+  atomic_set(&kr->state, KROUTINE_INVALID);
+});
+
+/** @This initializes a queue used to push kroutine initialized with
+    the @ref KROUTINE_QUEUE policy. */
+config_depend_alwaysinline(CONFIG_MUTEK_KROUTINE_QUEUE,
+void kroutine_queue_init(struct kroutine_queue_s *q,
+                         struct semaphore_s *sem),
+{
+  kroutine_list_init(&q->list);
+#ifdef CONFIG_MUTEK_KROUTINE_SEMAPHORE
+  q->sem = sem;
+#else
+  assert(sem == NULL);
+#endif
+});
 
 /** @internal */
 error_t kroutine_schedule(struct kroutine_s *kr, enum kroutine_policy_e policy);
@@ -263,21 +492,26 @@ inline bool_t kroutine_exec(struct kroutine_s *kr)
         return 0;
       policy = atomic_get(&kr->state);
       assert(policy != KROUTINE_TRIGGER && policy != KROUTINE_NONE);
-# if defined(CONFIG_MUTEK_KROUTINE_SCHED_SWITCH) || defined(CONFIG_MUTEK_KROUTINE_IDLE)
+# if defined(CONFIG_MUTEK_KROUTINE_QUEUE)
       if (policy != KROUTINE_IMMEDIATE)
         goto sched;
 # endif
       goto imm;
 #endif
-#if defined(CONFIG_MUTEK_KROUTINE_SCHED_SWITCH) || defined(CONFIG_MUTEK_KROUTINE_IDLE)
+#if defined(CONFIG_MUTEK_KROUTINE_QUEUE)
+    case KROUTINE_QUEUE:
 # ifdef CONFIG_MUTEK_KROUTINE_IDLE
     case KROUTINE_IDLE:
 # endif
-# ifdef CONFIG_MUTEK_KROUTINE_SCHED_SWITCH
-    case KROUTINE_PREEMPT:
-    case KROUTINE_PREEMPT_INTERRUPTIBLE:
+# ifdef CONFIG_MUTEK_KROUTINE_SCHED
     case KROUTINE_INTERRUPTIBLE:
     case KROUTINE_SCHED_SWITCH:
+    case KROUTINE_DEFERRED:
+#  ifdef CONFIG_ARCH_SMP
+    case KROUTINE_CPU_INTERRUPTIBLE:
+    case KROUTINE_CPU_SCHED_SWITCH:
+    case KROUTINE_CPU_DEFERRED:
+#  endif
 # endif
       if (!atomic_compare_and_swap(&kr->state, KROUTINE_INVALID, !KROUTINE_INVALID))
         return 0;
@@ -292,6 +526,19 @@ inline bool_t kroutine_exec(struct kroutine_s *kr)
       return 1;
     }
 }
+
+/** @This pops a kroutine from the queue and executes its handler.
+    The kroutine policy is KROUTINE_QUEUE and it has been pushed on
+    the kroutine_exec function call.
+
+    This function returns false if the queue is empty. */
+config_depend(CONFIG_MUTEK_KROUTINE_QUEUE)
+bool_t kroutine_queue_process(struct kroutine_queue_s *queue);
+
+/** @This waits on the semaphore associated to the kroutine queue
+    then invokes the @ref kroutine_queue_process function. */
+config_depend(CONFIG_MUTEK_KROUTINE_SEMAPHORE)
+bool_t kroutine_queue_wait(struct kroutine_queue_s *queue);
 
 /** @This should be used on a kroutine initialized with the @ref
     KROUTINE_TRIGGER policy. If it is not the case, this function does
@@ -320,15 +567,20 @@ bool_t kroutine_trigger(struct kroutine_s *kr, enum kroutine_policy_e policy),
       UNREACHABLE();
     case KROUTINE_NONE:
       break;
-#if defined(CONFIG_MUTEK_KROUTINE_SCHED_SWITCH) || defined(CONFIG_MUTEK_KROUTINE_IDLE)
+#if defined(CONFIG_MUTEK_KROUTINE_QUEUE)
+    case KROUTINE_QUEUE:
 # ifdef CONFIG_MUTEK_KROUTINE_IDLE
     case KROUTINE_IDLE:
 # endif
-# ifdef CONFIG_MUTEK_KROUTINE_SCHED_SWITCH
-    case KROUTINE_PREEMPT:
-    case KROUTINE_PREEMPT_INTERRUPTIBLE:
+# ifdef CONFIG_MUTEK_KROUTINE_SCHED
     case KROUTINE_INTERRUPTIBLE:
     case KROUTINE_SCHED_SWITCH:
+    case KROUTINE_DEFERRED:
+#  ifdef CONFIG_ARCH_SMP
+    case KROUTINE_CPU_INTERRUPTIBLE:
+    case KROUTINE_CPU_SCHED_SWITCH:
+    case KROUTINE_CPU_DEFERRED:
+#  endif
 # endif
       if (!kroutine_schedule(kr, policy))
         break;
@@ -343,7 +595,7 @@ bool_t kroutine_trigger(struct kroutine_s *kr, enum kroutine_policy_e policy),
 /** @This function is similar to @ref kroutine_trigger but does
     nothing when the @ref kroutine_exec function has already been
     called. The routine will only be executed if the call to @ref
-    kroutine_exec if performed after the call to this function.
+    kroutine_exec is performed after the call to this function.
 
     This can be used to leave then resume a FSM loop when an
     asynchronous operation as not already completed. */
