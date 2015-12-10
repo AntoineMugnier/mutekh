@@ -86,13 +86,13 @@ static TERMUI_CON_COMMAND_PROTOTYPE(dev_shell_timer_wait)
 
   if (used & TIMER_OPT_BUSY)
     {
-      if (dev_timer_busy_wait(&c->timer, rq.delay))
+      if (dev_timer_busy_wait_delay(&c->timer, rq.delay))
         return -EINVAL;
     }
   else
     {
 #ifdef CONFIG_MUTEK_CONTEXT_SCHED
-      if (dev_timer_sleep(&c->timer, &rq))
+      if (dev_timer_wait_request(&c->timer, &rq))
 #endif
         return -EINVAL;
     }

@@ -461,32 +461,17 @@ error_t dev_timer_check_timeout(struct device_timer_s *accessor,
                                 dev_timer_delay_t delay,
                                 const dev_timer_value_t *start);
 
-/** Synchronous timer sleep function. @This uses the scheduler API to
-    put the current context in wait state waiting for the specified
-    delay.
-
-    The request can be first initialized by calling @ref
-    dev_timer_init_sec. It can then be reused multiple times to
-    save timer units conversion computation.
-*/
-config_depend_and2(CONFIG_DEVICE_TIMER, CONFIG_MUTEK_CONTEXT_SCHED)
-error_t dev_timer_sleep(struct device_timer_s *accessor, struct dev_timer_rq_s *rq);
-
 /** Synchronous timer wait function. @This uses the scheduler API to
-    put the current context in wait state waiting for the specified
-    deadline.
-*/
-config_depend_and2(CONFIG_DEVICE_TIMER, CONFIG_MUTEK_SCHEDULER)
-inline
-error_t dev_timer_wait_deadline(struct device_timer_s *accessor, dev_timer_value_t deadline)
+    put the current context in wait state waiting for the given
+    request to terminate. */
+config_depend_and2_inline(CONFIG_DEVICE_TIMER, CONFIG_MUTEK_CONTEXT_SCHED,
+error_t dev_timer_wait_request(struct device_timer_s *accessor,
+                               struct dev_timer_rq_s *rq),
 {
-  struct dev_timer_rq_s rq = {
-    .deadline = deadline,
-  };
   struct dev_request_status_s st;
 
-  dev_request_sched_init(&rq.rq, &st);
-  error_t err = DEVICE_OP(accessor, request, &rq);
+  dev_request_sched_init(&rq->rq, &st);
+  error_t err = DEVICE_OP(accessor, request, rq);
 
   if (!err) {
     dev_request_sched_wait(&st);
@@ -494,7 +479,42 @@ error_t dev_timer_wait_deadline(struct device_timer_s *accessor, dev_timer_value
   }
 
   return err;
-}
+});
+
+/** Synchronous timer wait function. @This uses the scheduler API to
+    put the current context in wait state waiting for the specified
+    deadline. */
+config_depend_and2_inline(CONFIG_DEVICE_TIMER, CONFIG_MUTEK_CONTEXT_SCHED,
+error_t dev_timer_wait_deadline(struct device_timer_s *accessor,
+                                dev_timer_value_t deadline,
+                                dev_timer_cfgrev_t rev),
+{
+  struct dev_timer_rq_s rq;
+  rq.deadline = deadline;
+  rq.rev = rev;
+
+  return dev_timer_wait_request(accessor, &rq);
+});
+
+/** Synchronous timer wait function. @This uses the scheduler API to
+    put the current context in wait state waiting for the specified
+    delay. The function never returns @tt -ETIMEDOUT. */
+config_depend_and2_inline(CONFIG_DEVICE_TIMER, CONFIG_MUTEK_CONTEXT_SCHED,
+error_t dev_timer_wait_delay(struct device_timer_s *accessor,
+                             dev_timer_delay_t delay,
+                             dev_timer_cfgrev_t rev),
+{
+  struct dev_timer_rq_s rq;
+  rq.delay = delay;
+  rq.rev = rev;
+
+  error_t err = dev_timer_wait_request(accessor, &rq);
+
+  if (err == -ETIMEDOUT)
+    err = 0;
+
+  return err;
+});
 
 /** Synchronous timer busy-wait function. @This spins in a loop
     waiting for the requested delay. @This returns @tt -ERANGE if the
@@ -502,7 +522,7 @@ error_t dev_timer_wait_deadline(struct device_timer_s *accessor, dev_timer_value
     because counter overlap can not be handled properly in this
     case. @see dev_timer_sleep */
 config_depend(CONFIG_DEVICE_TIMER)
-error_t dev_timer_busy_wait(struct device_timer_s *accessor, dev_timer_delay_t delay);
+error_t dev_timer_busy_wait_delay(struct device_timer_s *accessor, dev_timer_delay_t delay);
 
 #ifdef CONFIG_DEVICE_TIMER
 # define DEV_STATIC_RES_DEV_TIMER(path_)                                \

@@ -220,7 +220,7 @@ error_t dev_timer_check_timeout(struct device_timer_s *accessor,
   return ((((*start + delay) & cfg.max) - v) & b) != 0;
 }
 
-error_t dev_timer_busy_wait(struct device_timer_s *accessor, dev_timer_delay_t delay)
+error_t dev_timer_busy_wait_delay(struct device_timer_s *accessor, dev_timer_delay_t delay)
 {
   // get max timer value (power of 2 minus 1)
   struct dev_timer_config_s cfg;
@@ -271,77 +271,15 @@ error_t dev_timer_busy_wait(struct device_timer_s *accessor, dev_timer_delay_t d
   return err;
 }
 
-struct dev_timer_wait_rq_s
-{
-#ifdef CONFIG_MUTEK_CONTEXT_SCHED
-  lock_t lock;
-  struct sched_context_s *ctx;
-#endif
-  bool_t done;
-};
-
-#ifdef CONFIG_MUTEK_CONTEXT_SCHED
-static KROUTINE_EXEC(dev_timer_wait_request_cb)
-{
-  struct dev_timer_rq_s *rq = dev_timer_rq_s_cast(dev_request_s_from_kr(kr));
-  struct dev_timer_wait_rq_s *status = rq->rq.pvdata;
-
-  LOCK_SPIN_IRQ(&status->lock);
-  if (status->ctx != NULL)
-    sched_context_start(status->ctx);
-  status->done = 1;
-  LOCK_RELEASE_IRQ(&status->lock);
-}
-#endif
-
-#ifdef CONFIG_MUTEK_CONTEXT_SCHED
-error_t dev_timer_sleep(struct device_timer_s *accessor, struct dev_timer_rq_s *rq)
-{
-  struct dev_timer_wait_rq_s status;
-
-  if (rq->delay == 0)
-    return 0;
-
-  lock_init(&status.lock);
-  status.ctx = NULL;
-  status.done = 0;
-  rq->rq.pvdata = &status;
-  kroutine_init(&rq->rq.kr, dev_timer_wait_request_cb, KROUTINE_IMMEDIATE);
-
-  error_t e = DEVICE_OP(accessor, request, rq);
-
-  switch (e)
-    {
-    case -ETIMEDOUT:
-      e = 0;
-      break;
-
-    case 0:
-      CPU_INTERRUPT_SAVESTATE_DISABLE;
-      lock_spin(&status.lock);
-
-      if (!status.done)
-        {
-          status.ctx = sched_get_current();
-          sched_stop_unlock(&status.lock);
-        }
-      else
-        lock_release(&status.lock);
-
-      assert(!rq->rq.drvdata);
-
-      CPU_INTERRUPT_RESTORESTATE;
-      lock_destroy(&status.lock);
-
-    default:
-      break;
-    }
-
-  lock_destroy(&status.lock);
-
-  return e;
-}
-#endif
+extern inline
+error_t dev_timer_wait_request(struct device_timer_s *accessor, struct dev_timer_rq_s *rq);
 
 extern inline
-error_t dev_timer_wait_deadline(struct device_timer_s *accessor, dev_timer_value_t deadline);
+error_t dev_timer_wait_deadline(struct device_timer_s *accessor,
+                                dev_timer_value_t deadline,
+                                dev_timer_cfgrev_t rev);
+
+extern inline
+error_t dev_timer_wait_delay(struct device_timer_s *accessor,
+                             dev_timer_delay_t delay,
+                             dev_timer_cfgrev_t rev);
