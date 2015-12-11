@@ -282,7 +282,7 @@ void kroutine_init_trigger(struct kroutine_s *kr,
 
 /** @This initializes a kroutine with the @ref KROUTINE_DEFERRED policy. */
 config_depend_alwaysinline(CONFIG_MUTEK_KROUTINE_SCHED,
-void kroutine_init_deffered(struct kroutine_s *kr,
+void kroutine_init_deferred(struct kroutine_s *kr,
                             kroutine_exec_t *exec),
 {
   kr->policy = KROUTINE_DEFERRED;
@@ -299,7 +299,7 @@ void kroutine_init_deffered(struct kroutine_s *kr,
 /** @This initializes a kroutine with the @ref KROUTINE_CPU_DEFERRED
     policy. The target processor used for execution must be specified. */
 config_depend_and2_alwaysinline(CONFIG_ARCH_SMP, CONFIG_MUTEK_KROUTINE_SCHED,
-void kroutine_init_deffered_cpu(struct kroutine_s *kr,
+void kroutine_init_deferred_cpu(struct kroutine_s *kr,
                                 kroutine_exec_t *exec,
                                 struct cpu_tree_s *cpu),
 {
@@ -315,7 +315,7 @@ void kroutine_init_deffered_cpu(struct kroutine_s *kr,
 /** @This initializes a kroutine with the @ref KROUTINE_CPU_DEFERRED policy.
     The execution will take place on the current processor. */
 config_depend_alwaysinline(CONFIG_MUTEK_KROUTINE_SCHED,
-void kroutine_init_deffered_local(struct kroutine_s *kr,
+void kroutine_init_deferred_local(struct kroutine_s *kr,
                                   kroutine_exec_t *exec),
 {
   kr->policy = KROUTINE_CPU_DEFERRED;
