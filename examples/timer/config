@@ -1,18 +1,26 @@
 
-  %set OUTPUT_NAME timer
+%set OUTPUT_NAME timer
 
-  # New source code module to be compiled
-  %append MODULES $(OUTPUT_NAME):$(CONFIGPATH)
+# New source code module to be compiled
+%append MODULES $(OUTPUT_NAME):$(CONFIGPATH)
 
-  # Application license
-  CONFIG_LICENSE_APP_LGPL
+# Application license
+CONFIG_LICENSE_APP_LGPL
 
-  %include scripts/options.build
-  %include arch/arch.build
+%include scripts/options.build
+%include arch/arch.build
 
-  # Libs
-  CONFIG_PTHREAD
-  CONFIG_PTHREAD_MAIN
+# Libs
+CONFIG_PTHREAD
+CONFIG_PTHREAD_MAIN
 
-  CONFIG_PTHREAD_STACK_SIZE  1024
-  CONFIG_MUTEK_KROUTINE_SCHED_SWITCH
+CONFIG_PTHREAD_STACK_SIZE  1024
+CONFIG_MUTEK_KROUTINE_SCHED
+
+%section nrf5x-*
+  CONFIG_DRIVER_NRF5X_CLOCK_LFCLK_XOSC undefined
+  CONFIG_DRIVER_NRF5X_CLOCK
+  CONFIG_DRIVER_NRF5X_TIMER
+  CONFIG_DRIVER_NRF5X_RTC
+  CONFIG_DRIVER_NRF5X_PRINTK
+
