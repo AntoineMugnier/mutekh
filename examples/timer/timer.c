@@ -5,8 +5,6 @@
 
 #include <device/class/timer.h>
 
-
-
 /*
   TIMER:      Timer to test.
   REF_TIMER:  reference timer used to validate TIMER
@@ -18,29 +16,31 @@
               effective deadline (calculed with REF_TIMER).
 */
 
-
-
-#define CC26XX 1
-
-#if CC26XX == 1
+#if defined(CONFIG_ARCH_CC26XX)
 # define REF_TIMER   "timer0"
 # define TIMER       "rtc"
 # define SKEW_MAX    0xffff
 # define DELAY_UNIT  10000
 # define MAX_DELAY   100000
-#else /* SOCLIB */
+#elif defined(CONFIG_ARCH_NRF5X)
+# define REF_TIMER   "timer1"
+# define TIMER       "rtc1"
+# define SKEW_MAX    0xffff
+# define DELAY_UNIT  10000
+# define MAX_DELAY   100000
+#elif defined(CONFIG_ARCH_SOCLIB)
 # define REF_TIMER    "/fdt/cpu@0"
 # define TIMER        "/fdt/vci_rttimer*"
 # define SKEW_MAX     0xffffff
 # define DELAY_UNIT   10000
 # define MAX_DELAY    10000
+#else
+# error Unsupported arch
 #endif
-
 
 #define DEBUG 0
 #define RQ_NB 64
 #define CANCEL
-
 
 enum  rq_state_e
 {
@@ -66,11 +66,13 @@ struct device_timer_s ref_dev_g;
 struct device_timer_s timer_dev_g;
 struct kroutine_s     kcontrol_g;
 #ifdef CANCEL
-  struct kroutine_s     kcancel_g;
+struct kroutine_s     kcancel_g;
 #endif
 uint32_t              ref_min_delay;
 uint32_t              timer_min_delay;
 dev_timer_value_t     larger_skew_g;
+dev_timer_value_t     next_print;
+dev_timer_delay_t     ref_sec;
 uint32_t              rq_cnt_g;
 
 
@@ -325,7 +327,7 @@ static KROUTINE_EXEC(kcancel_handler)
         break;
       case TEST_TIMER_STATE_WAIT_FOR_DEADLINE:
         if (!err)
-          printk("\e[31mInfo: [%d] canceled\e[39m\n", id);
+          printk("\e[31mInfo: [%d] cancelled\e[39m\n", id);
         else
           {
             printk("Error: Cannot cancel [%d]\n", id);
@@ -343,19 +345,22 @@ static KROUTINE_EXEC(kcancel_handler)
 static KROUTINE_EXEC(kcontrol_handler)
 {
   dev_timer_value_t skew;
-
   dev_timer_value_t ref_current;
-  DEVICE_OP(&ref_dev_g, get_value, &ref_current, 0);
 
   /* Control routine */
   uint32_t  id;
   for (id = 0; id < RQ_NB; id++)
     {
-
+      DEVICE_OP(&ref_dev_g, get_value, &ref_current, 0);
       if (pvdata_g[id].state == TEST_TIMER_STATE_WAIT_FOR_DEADLINE)
         if(!check_skew(&pvdata_g[id], &ref_current, &skew))
           abort();
     }
+
+  if (next_print < ref_current) {
+    printk("Larger skew: %llx\n", larger_skew_g);
+    next_print += ref_sec;
+  }
 
   /* Re-run */
   kroutine_exec(&kcontrol_g);
@@ -426,6 +431,12 @@ void main(void)
       abort();
     }
 
+  if ((dev_timer_init_sec(&ref_dev_g, &ref_sec, 0, 1, 1)))
+    {
+      printk("Error: cannot get ref second\n");
+      abort();
+    }
+
   /* start the reference timer */
   if (device_start(&ref_dev_g))
     {
@@ -433,6 +444,7 @@ void main(void)
       abort();
     }
 
+  next_print = 0;
   run_requests();
 
   /* run control routine */
@@ -444,9 +456,3 @@ void main(void)
   kroutine_init_sched_switch(&kcancel_g, kcancel_handler);
 #endif
 }
-
-
-
-
-
-
