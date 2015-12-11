@@ -368,6 +368,7 @@ FUNC_START(.text, arm_exc_preempt)        /* args: r1 = &arm_context_regs + 16 *
         sub     sp,     #24
 2:
         // invalidate handler outside interrupt
+        ldr     r2,     = cpu_preempt_handler
         str     r2,     [r2]
 1:
         /* regular return from irq */
