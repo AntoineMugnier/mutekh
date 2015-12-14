@@ -33,7 +33,7 @@ GCT_CONTAINER_PROTOTYPES(kroutine_list, extern inline, kroutine_list,
                          init, destroy, head, pushback, pop, wrlock, unlock);
 
 GCT_CONTAINER_PROTOTYPES(kroutine_list, extern inline, kroutine_list_nolock,
-                         head, pushback, pop);
+                         head, pushback, pop, remove);
 
 bool_t kroutine_queue_process(struct kroutine_queue_s *queue)
 {

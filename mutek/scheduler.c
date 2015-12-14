@@ -277,8 +277,9 @@ error_t kroutine_schedule(struct kroutine_s *kr, enum kroutine_policy_e policy)
       cls = kr->cls;
       krq = CPU_LOCAL_CLS_ADDR(cls, kroutine_local_sched_switch);
       goto push;
-#  endif
 
+    case KROUTINE_SEQ_INTERRUPTIBLE:
+#  endif
     case KROUTINE_INTERRUPTIBLE:
       if (it)
         {
@@ -288,6 +289,8 @@ error_t kroutine_schedule(struct kroutine_s *kr, enum kroutine_policy_e policy)
     case KROUTINE_DEFERRED:
     case KROUTINE_SCHED_SWITCH:
 #  ifdef CONFIG_ARCH_SMP
+    case KROUTINE_SEQ_DEFERRED:
+    case KROUTINE_SEQ_SCHED_SWITCH:
 #   if CONFIG_MUTEK_SCHED_PRIORITIES > 1
       cls = sched_cpu_priority_bound(kr->priority, kr->cls);
 #   else
@@ -414,9 +417,27 @@ static void sched_context_idle()
       kr = kroutine_list_pop(krq);
 
       if (kr == NULL)
+        {
+          GCT_FOREACH(kroutine_list, &kroutine_sched_switch, k, {
+              switch (k->policy)
+                {
+                case KROUTINE_SEQ_INTERRUPTIBLE:
+                case KROUTINE_SEQ_SCHED_SWITCH:
+                case KROUTINE_SEQ_DEFERRED:
+                  /* lock sequence */
+                  if (atomic_bit_testset(&k->seq->state, 0))
+                    GCT_FOREACH_CONTINUE;
+                default:
+                  break;
+                }
+              kroutine_list_nolock_remove(&kroutine_sched_switch, k);
+              kr = k;
+              GCT_FOREACH_BREAK;
+          });
+        }
+# else
+      kr = kroutine_list_pop(&kroutine_sched_switch);
 # endif
-        /* Try to get a KROUTINE_SCHED_SWITCH or KROUTINE_INTERRUPTIBLE kroutine */
-        kr = kroutine_list_pop(&kroutine_sched_switch);
 
       if (kr != NULL
 # if CONFIG_MUTEK_SCHED_PRIORITIES > 1 && defined(CONFIG_MUTEK_CONTEXT_SCHED)
@@ -437,6 +458,18 @@ static void sched_context_idle()
           kr->exec(kr, KROUTINE_EXEC_DEFERRED);
           cpu_interrupt_disable();
 
+# ifdef CONFIG_ARCH_SMP
+          switch (kr->policy)
+            {
+            case KROUTINE_SEQ_INTERRUPTIBLE:
+            case KROUTINE_SEQ_SCHED_SWITCH:
+            case KROUTINE_SEQ_DEFERRED:
+              /* release sequence */
+              atomic_bit_clr(&kr->seq->state, 0);
+            default:
+              break;
+            }
+# endif
           /* A context might have been pushed in the run queue from a kroutine */
 # ifdef CONFIG_MUTEK_CONTEXT_SCHED
           sched_queue_wrlock(&sched->root);

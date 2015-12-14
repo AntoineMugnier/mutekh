@@ -50,6 +50,7 @@
 #include <hexo/atomic.h>
 
 struct kroutine_s;
+struct kroutine_sequence_s;
 
 /** @This flags are passed to the @ref kroutine_exec_t handler */
 enum kroutine_exec_flags_e
@@ -164,10 +165,26 @@ enum kroutine_policy_e
       the execution is scheduled for execution on a specific
       processor. */
   KROUTINE_CPU_DEFERRED,
+
+  /** This is similar to @ref KROUTINE_INTERRUPTIBLE. Execution of the
+      handler is guaranteed not to run concurrently with kroutines
+      associated to the same sequence. */
+  KROUTINE_SEQ_INTERRUPTIBLE,
+  /** This is similar to @ref KROUTINE_SCHED_SWITCH. Execution of the
+      handler is guaranteed not to run concurrently with kroutines
+      associated to the same sequence. */
+  KROUTINE_SEQ_SCHED_SWITCH,
+  /** This is similar to @ref KROUTINE_DEFERRED. Execution of the
+      handler is guaranteed not to run concurrently with kroutines
+      associated to the same sequence. */
+  KROUTINE_SEQ_DEFERRED,
 # else
   KROUTINE_CPU_INTERRUPTIBLE = KROUTINE_INTERRUPTIBLE,
   KROUTINE_CPU_SCHED_SWITCH = KROUTINE_SCHED_SWITCH,
   KROUTINE_CPU_DEFERRED = KROUTINE_DEFERRED,
+  KROUTINE_SEQ_INTERRUPTIBLE = KROUTINE_INTERRUPTIBLE,
+  KROUTINE_SEQ_SCHED_SWITCH = KROUTINE_SCHED_SWITCH,
+  KROUTINE_SEQ_DEFERRED = KROUTINE_DEFERRED,
 # endif
 
 #endif
@@ -193,6 +210,9 @@ struct kroutine_s
     struct kroutine_queue_s *queue;
   };
 #endif
+#ifdef CONFIG_ARCH_SMP
+  struct kroutine_sequence_s   *seq;
+#endif
   kroutine_exec_t              *exec;
   enum kroutine_policy_e       policy;
   atomic_t                     state;
@@ -205,11 +225,19 @@ struct kroutine_s
 #endif
 ;
 
+/** @see kroutine_seq_init */
+struct kroutine_sequence_s
+{
+#ifdef CONFIG_ARCH_SMP
+  atomic_t state;
+#endif
+};
+
 #ifdef CONFIG_MUTEK_KROUTINE_QUEUE
 GCT_CONTAINER_FCNS       (kroutine_list, inline, kroutine_list,
                           init, destroy, head, pushback, pop, wrlock, unlock);
 GCT_CONTAINER_NOLOCK_FCNS(kroutine_list, inline, kroutine_list_nolock,
-                            head, pushback, pop);
+                          head, pushback, pop, remove);
 
 /** User defined kroutine scheduling queue. @see KROUTINE_QUEUE */
 
@@ -329,6 +357,24 @@ void kroutine_init_deferred_local(struct kroutine_s *kr,
 #endif
 });
 
+/** @This initializes a kroutine with the @ref KROUTINE_CPU_DEFERRED policy.
+    The execution will take place on the current processor. */
+config_depend_alwaysinline(CONFIG_MUTEK_KROUTINE_SCHED,
+void kroutine_init_deferred_seq(struct kroutine_s *kr,
+                                kroutine_exec_t *exec,
+                                struct kroutine_sequence_s *seq),
+{
+  kr->policy = KROUTINE_SEQ_DEFERRED;
+  kr->exec = exec;
+  atomic_set(&kr->state, KROUTINE_INVALID);
+#ifdef CONFIG_ARCH_SMP
+  kr->seq = seq;
+#endif
+#if CONFIG_MUTEK_SCHED_PRIORITIES > 1
+  kr->priority = KROUTINE_DEFAULT_PRIORITY;
+#endif
+});
+
 /** @This initializes a kroutine with the @ref KROUTINE_SCHED_SWITCH policy. */
 config_depend_alwaysinline(CONFIG_MUTEK_KROUTINE_SCHED,
 void kroutine_init_sched_switch(struct kroutine_s *kr,
@@ -378,6 +424,24 @@ void kroutine_init_sched_switch_local(struct kroutine_s *kr,
 #endif
 });
 
+/** @This initializes a kroutine with the @ref KROUTINE_CPU_SCHED_SWITCH policy.
+    The execution will take place on the current processor. */
+config_depend_alwaysinline(CONFIG_MUTEK_KROUTINE_SCHED,
+void kroutine_init_sched_switch_seq(struct kroutine_s *kr,
+                                    kroutine_exec_t *exec,
+                                    struct kroutine_sequence_s *seq),
+{
+  kr->policy = KROUTINE_SEQ_SCHED_SWITCH;
+  kr->exec = exec;
+  atomic_set(&kr->state, KROUTINE_INVALID);
+#ifdef CONFIG_ARCH_SMP
+  kr->seq = seq;
+#endif
+#if CONFIG_MUTEK_SCHED_PRIORITIES > 1
+  kr->priority = KROUTINE_DEFAULT_PRIORITY;
+#endif
+});
+
 /** @This initializes a kroutine with the @ref KROUTINE_INTERRUPTIBLE policy. */
 config_depend_alwaysinline(CONFIG_MUTEK_KROUTINE_SCHED,
 void kroutine_init_interruptible(struct kroutine_s *kr,
@@ -421,6 +485,25 @@ void kroutine_init_interruptible_local(struct kroutine_s *kr,
   atomic_set(&kr->state, KROUTINE_INVALID);
 #ifdef CONFIG_ARCH_SMP
   kr->cls = (void*)CPU_GET_CLS();
+#endif
+#if CONFIG_MUTEK_SCHED_PRIORITIES > 1
+  kr->priority = KROUTINE_DEFAULT_PRIORITY;
+#endif
+});
+
+/** @This initializes a kroutine with the @ref KROUTINE_SEQ_INTERRUPTIBLE policy.
+    The handler will not run concurrently with kroutines associated to the same
+    sequence. */
+config_depend_alwaysinline(CONFIG_MUTEK_KROUTINE_SCHED,
+void kroutine_init_interruptible_seq(struct kroutine_s *kr,
+                                     kroutine_exec_t *exec,
+                                     struct kroutine_sequence_s *seq),
+{
+  kr->policy = KROUTINE_SEQ_INTERRUPTIBLE;
+  kr->exec = exec;
+  atomic_set(&kr->state, KROUTINE_INVALID);
+#ifdef CONFIG_ARCH_SMP
+  kr->seq = seq;
 #endif
 #if CONFIG_MUTEK_SCHED_PRIORITIES > 1
   kr->priority = KROUTINE_DEFAULT_PRIORITY;
@@ -519,6 +602,9 @@ inline bool_t kroutine_exec(struct kroutine_s *kr)
     case KROUTINE_CPU_INTERRUPTIBLE:
     case KROUTINE_CPU_SCHED_SWITCH:
     case KROUTINE_CPU_DEFERRED:
+    case KROUTINE_SEQ_INTERRUPTIBLE:
+    case KROUTINE_SEQ_SCHED_SWITCH:
+    case KROUTINE_SEQ_DEFERRED:
 #  endif
 # endif
       if (!atomic_compare_and_swap(&kr->state, KROUTINE_INVALID, !KROUTINE_INVALID))
@@ -588,6 +674,9 @@ bool_t kroutine_trigger(struct kroutine_s *kr, enum kroutine_policy_e policy),
     case KROUTINE_CPU_INTERRUPTIBLE:
     case KROUTINE_CPU_SCHED_SWITCH:
     case KROUTINE_CPU_DEFERRED:
+    case KROUTINE_SEQ_INTERRUPTIBLE:
+    case KROUTINE_SEQ_SCHED_SWITCH:
+    case KROUTINE_SEQ_DEFERRED:
 #  endif
 # endif
       if (!kroutine_schedule(kr, policy))
@@ -615,6 +704,22 @@ bool_t kroutine_postpone(struct kroutine_s *kr, enum kroutine_policy_e policy),
   if (!r)
     atomic_set(&kr->state, KROUTINE_INVALID); /* reset state */
   return r;
+});
+
+/** @This initializes a kroutine sequence. */
+config_depend_alwaysinline(CONFIG_MUTEK_KROUTINE_QUEUE,
+error_t kroutine_seq_init(struct kroutine_sequence_s *seq),
+{
+#ifdef CONFIG_ARCH_SMP
+  atomic_set(&seq->state, 0);
+#endif
+  return 0;
+});
+
+/** @This releases resources associated to a kroutine sequence. */
+config_depend_alwaysinline(CONFIG_MUTEK_KROUTINE_QUEUE,
+void kroutine_seq_cleanup(struct kroutine_sequence_s *seq),
+{
 });
 
 #endif
