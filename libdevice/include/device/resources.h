@@ -339,6 +339,8 @@ struct dev_resource_table_s
   do {                                                                  \
     struct dev_resource_table_s *_tbl = (dev)->res_tbl;                 \
     uint_fast8_t _i;                                                    \
+    if (_tbl == NULL)                                                   \
+      break;                                                            \
     for (_i = 0; ; _i++)                                                \
       {                                                                 \
         if (_i >= _tbl->count)                                          \
