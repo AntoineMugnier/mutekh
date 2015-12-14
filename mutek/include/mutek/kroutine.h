@@ -452,8 +452,8 @@ void kroutine_init_queue(struct kroutine_s *kr,
 /** @This initializes a queue used to push kroutine initialized with
     the @ref KROUTINE_QUEUE policy. */
 config_depend_alwaysinline(CONFIG_MUTEK_KROUTINE_QUEUE,
-void kroutine_queue_init(struct kroutine_queue_s *q,
-                         struct semaphore_s *sem),
+error_t kroutine_queue_init(struct kroutine_queue_s *q,
+                            struct semaphore_s *sem),
 {
   kroutine_list_init(&q->list);
 #ifdef CONFIG_MUTEK_KROUTINE_SEMAPHORE
@@ -461,6 +461,14 @@ void kroutine_queue_init(struct kroutine_queue_s *q,
 #else
   assert(sem == NULL);
 #endif
+  return 0;
+});
+
+/** @This releases resources associated to a kroutine sequence. */
+config_depend_alwaysinline(CONFIG_MUTEK_KROUTINE_QUEUE,
+void kroutine_queue_cleanup(struct kroutine_queue_s *q),
+{
+  kroutine_list_destroy(&q->list);
 });
 
 /** @internal */
