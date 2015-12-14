@@ -193,24 +193,24 @@ config_depend(CONFIG_MUTEK_CONTEXT_SCHED)
 void sched_stop_unlock(lock_t *lock);
 
 /** @This locks context queue for writting. */
-config_depend(CONFIG_MUTEK_CONTEXT_SCHED)
-inline void sched_queue_wrlock(sched_queue_root_t *queue);
+config_depend_inline(CONFIG_MUTEK_CONTEXT_SCHED,
+void sched_queue_wrlock(sched_queue_root_t *queue),);
 
 /** @This locks context queue for reading. */
-config_depend(CONFIG_MUTEK_CONTEXT_SCHED)
-inline void sched_queue_rdlock(sched_queue_root_t *queue);
+config_depend_inline(CONFIG_MUTEK_CONTEXT_SCHED,
+void sched_queue_rdlock(sched_queue_root_t *queue),);
 
 /** @This unlocks context queue. */
-config_depend(CONFIG_MUTEK_CONTEXT_SCHED)
-inline void sched_queue_unlock(sched_queue_root_t *queue);
+config_depend_inline(CONFIG_MUTEK_CONTEXT_SCHED,
+void sched_queue_unlock(sched_queue_root_t *queue),);
 
 /** @This initializes context queue. */
-config_depend(CONFIG_MUTEK_CONTEXT_SCHED)
-inline error_t sched_queue_init(sched_queue_root_t *queue);
+config_depend_inline(CONFIG_MUTEK_CONTEXT_SCHED,
+error_t sched_queue_init(sched_queue_root_t *queue),);
 
 /** @This frees resources associated with context queue. */
-config_depend(CONFIG_MUTEK_CONTEXT_SCHED)
-inline void sched_queue_destroy(sched_queue_root_t *queue);
+config_depend_inline(CONFIG_MUTEK_CONTEXT_SCHED,
+void sched_queue_destroy(sched_queue_root_t *queue),);
 
 typedef void (sched_wait_cb_t)(void *ctx);
 
