@@ -110,7 +110,7 @@ struct device_node_s
   device_list_root_t		children;
 #endif
 
-  enum device_flags_e           flags:8;
+  enum device_flags_e           BITFIELD(flags,8);
 } __attribute__((packed))
 #ifdef CONFIG_DEVICE_TREE
  *, list_entry);
@@ -128,7 +128,7 @@ struct device_s
   struct device_node_s          node;
 
   /** Device/driver initialization status */
-  enum device_status_e          status:3;
+  enum device_status_e          BITFIELD(status,3);
 
   /** When the @ref status is @ref DEVICE_DRIVER_INIT_PARTIAL, this is
       a mask of initialized classes in driver API order. Extra bits
