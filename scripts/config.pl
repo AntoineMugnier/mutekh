@@ -2089,7 +2089,7 @@ sub read_build_config
 	    my $val = $3;
 
 	    if (not $opt) {
-		warning("$file:$lnum: undeclared configuration token `$1', ignored");
+		error("$file:$lnum: undeclared configuration token `$1'");
 
 	    } else {
 		if ($opt->{flags}->{internal} || $opt->{flags}->{meta}  || $opt->{flags}->{mandatory}) {
