@@ -238,6 +238,8 @@ enum_headers-defined:=
 
 include $$(LOCAL_SRC_DIR)/Makefile
 
+$$(eval $$(if $$(findstring -,$$(objs)), $$(warning '-' is not allowed in source file names: $$(objs))))
+
 TARGET_OBJECT_LIST+=$$(addprefix $$(LOCAL_OBJ_DIR)/,$$(objs) $$(objs-defined))
 COPY_OBJECT_LIST+=$$(addprefix $$(LOCAL_OBJ_DIR)/,$$(copy) $$(copy-defined))
 META_OBJECT_LIST+=$$(addprefix $$(LOCAL_OBJ_DIR)/,$$(meta) $$(meta-defined))
