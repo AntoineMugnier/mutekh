@@ -118,7 +118,7 @@ enum kroutine_policy_e
       occur before the next context switch regardless of the
       priorities of the kroutine and current context.
 
-      This policy can be used as soon as the context scheduler as been
+      This policy can be used as soon as the scheduler as been
       initialized, before it is actually started. */
   KROUTINE_SCHED_SWITCH,
 
@@ -131,15 +131,15 @@ enum kroutine_policy_e
       #CONFIG_HEXO_CONTEXT_IRQEN features allow switching to the idle
       context without waiting for the next context switch.
 
-      This policy can not be used until the scheduler is started. */
+      This policy can be used as soon as the scheduler as been
+      initialized, before it is actually started but the handler
+      execution will be postponed. */
   KROUTINE_DEFERRED,
 
   /** If the @ref kroutine_exec function is called with interrupts
       enabled, the kroutine handler is executed immediately on the
       current stack. In the other case, the kroutine is handled as if
-      the policy were @ref KROUTINE_DEFERRED.
-
-      This policy can not be used until the scheduler is started. */
+      the policy were @ref KROUTINE_DEFERRED. */
   KROUTINE_INTERRUPTIBLE,
 
 # ifdef CONFIG_MUTEK_KROUTINE_IDLE

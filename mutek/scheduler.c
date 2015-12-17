@@ -30,6 +30,8 @@
 #include <hexo/cpu.h>
 #include <hexo/ipi.h>
 
+static bool_t sched_started = 0;
+
 #ifdef CONFIG_MUTEK_CONTEXT_SCHED
 /* processor current scheduler context */
 CONTEXT_LOCAL struct sched_context_s *sched_cur = NULL;
@@ -302,7 +304,9 @@ error_t kroutine_schedule(struct kroutine_s *kr, enum kroutine_policy_e policy)
     push:
       kroutine_list_pushback(krq, kr);
 
-      if (policy == KROUTINE_SCHED_SWITCH || policy == KROUTINE_CPU_SCHED_SWITCH)
+      if (policy == KROUTINE_SCHED_SWITCH ||
+          policy == KROUTINE_CPU_SCHED_SWITCH ||
+          !sched_started)
         break;
 
 #  ifdef CONFIG_ARCH_SMP
@@ -591,6 +595,8 @@ CONTEXT_PREEMPT(sched_preempt_switch)
   struct sched_context_s *cur = CONTEXT_LOCAL_GET(sched_cur);
   struct sched_context_s *next;
 
+  assert(sched_started);
+
   if (cur == NULL)
     return NULL;
 
@@ -640,6 +646,7 @@ CONTEXT_PREEMPT(sched_preempt_stop)
   struct scheduler_s *sched = __scheduler_get();
   struct sched_context_s *next;
 
+  assert(sched_started);
   assert(!cpu_is_interruptible());
 
   sched_queue_wrlock(&sched->root);
@@ -659,6 +666,7 @@ sched_wait_unlock_ctx(sched_queue_root_t *queue)
   struct sched_context_s *cur = CONTEXT_LOCAL_GET(sched_cur);
   struct sched_context_s *next;
 
+  assert(sched_started);
   assert(!cpu_is_interruptible());
   assert(sched == cur->scheduler);
 
@@ -724,6 +732,7 @@ void sched_stop_unlock(lock_t *lock)
   struct scheduler_s *sched = __scheduler_get();
   struct sched_context_s *next;
 
+  assert(sched_started);
   assert(!cpu_is_interruptible());
 
   /* get next running context */
@@ -894,9 +903,13 @@ void mutek_scheduler_start(void)
   sched_context_init(idle, CPU_LOCAL_ADDR(cpu_main_context));
 #endif
 
-  mutekh_startup_smp_barrier();
-
   cpu_interrupt_disable();
+# ifndef CONFIG_ARCH_SMP
+  mutekh_startup_smp_barrier();
+  if (cpu_isbootstrap())
+# endif
+    sched_started = 1;
+  mutekh_startup_smp_barrier();
   sched_context_idle();
 }
 
