@@ -122,7 +122,7 @@ $(3)/$(1): $(2)/$(1:.o=.cc) $(OBJ_DIR)/config.h $(OBJ_DIR)/.done_pre_header_list
 	$(call prepare_command,C++,$$@)
 	$(call compute_depfile_c,$$(@:.o=.deps),$(3)/$(1),$$<,$(CPUCFLAGS) $(ARCHCFLAGS) $(INCS) \
 		$($(1)_CXXFLAGS) $(DIR_CXXFLAGS))
-	$(call compile,$(CXX),$$@,$$<,$($(1)_CXXFLAGS) $(DIR_CXXFLAGS))
+	$(call compile,$(CXX),$$@,$$<,$($(1)_CXXFLAGS) $(DIR_CXXFLAGS) -DMUTEK_CFILE='"$$(<F)"')
 	$(value do_hetlink_mangling)
 
 else ifeq ($(wildcard $(2)/$(1:.o=.cpp)),$(2)/$(1:.o=.cpp))
@@ -133,7 +133,7 @@ $(3)/$(1): $(2)/$(1:.o=.cpp) $(OBJ_DIR)/config.h $(OBJ_DIR)/.done_pre_header_lis
 	$(call prepare_command,C++,$$@)
 	$(call compute_depfile_c,$$(@:.o=.deps),$(3)/$(1),$$<,$(CPUCFLAGS) $(ARCHCFLAGS) $(INCS) \
 		$($(1)_CXXFLAGS) $(DIR_CXXFLAGS))
-	$(call compile,$(CXX),$$@,$$<,$($(1)_CXXFLAGS) $(DIR_CXXFLAGS))
+	$(call compile,$(CXX),$$@,$$<,$($(1)_CXXFLAGS) $(DIR_CXXFLAGS) -DMUTEK_CFILE='"$$(<F)"')
 	$(value do_hetlink_mangling)
 
 else ifeq ($(wildcard $(2)/$(1:.o=.bc)),$(2)/$(1:.o=.bc))
@@ -159,7 +159,7 @@ $(3)/$(1): $(2)/$(1:.o=.c) $(OBJ_DIR)/config.h $(OBJ_DIR)/.done_pre_header_list
 	$(call prepare_command,CC,$$@)
 	$(call compute_depfile_c,$$(@:.o=.deps),$(3)/$(1),$$<,$(CPUCFLAGS) $(ARCHCFLAGS) $(INCS) \
 		$($(1)_CFLAGS) $(DIR_CFLAGS))
-	$(call compile,$(CC),$$@,$$<,$($(1)_CFLAGS) $(DIR_CFLAGS))
+	$(call compile,$(CC),$$@,$$<,$($(1)_CFLAGS) $(DIR_CFLAGS) -DMUTEK_CFILE='"$$(<F)"')
 	$(value do_hetlink_mangling)
 
 endif

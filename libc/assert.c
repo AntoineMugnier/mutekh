@@ -12,18 +12,23 @@ ssize_t printk(const char *format, ...);
 
 static bool_t already_failed = 0;
 
-void
-__assert_fail(const char *file,
-			  uint_fast16_t line,
-			  const char *func,
-			  const char *expr)
+# if defined(CONFIG_LIBC_ASSERT_SIMPLE) || !defined(CONFIG_MUTEK_PRINTK_HANDLER)
+void __assert_fail(void)
+# else
+void __assert_fail(const char *file, uint_fast16_t line,
+                   const char *func, const char *expr)
+# endif
 {
   if (!already_failed)
     {
       already_failed = 1;
-#ifdef CONFIG_MUTEK_PRINTK_HANDLER
+# if defined(CONFIG_MUTEK_PRINTK_HANDLER)
+#  if defined(CONFIG_LIBC_ASSERT_SIMPLE)
+      printk("Assertion failed at pc=%p\n", __builtin_return_address(0));
+#  else
       printk("Assertion failed at %s:%u:%s(): (%s) is false\n", file, line, func, expr);
-#endif
+#  endif
+# endif
       cpu_trap();
       while (1)
 	;
