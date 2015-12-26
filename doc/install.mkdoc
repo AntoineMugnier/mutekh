@@ -1,0 +1,161 @@
+@section TP {Install}
+
+  @section {Summary}
+
+    Building and running MutekH requires some development tools.
+    Most should be available from your operating system packages.
+    A script to easily get other specific tools installed is provided.
+
+  @end section
+
+  @section {Required tools}
+
+    @section {Repository access}
+
+      The MutekH source code is available from its mercurial
+      repository.  You will need
+      @url{http://mercurial.selenic.com/}{mercurial} (>=1.5) to fetch
+      the source:
+
+      @code R
+hg clone http://www.mutekh.org/hg/mutekh
+      @end code
+
+      MutekH relies on the
+      @url{http://mercurial.selenic.com/wiki/Subrepository}{Subrepository}
+      feature of mercurial.  The @tt{.hgsub} file contains the
+      external repositories list.  If some source files are missing,
+      ensure your mercurial version is not outdated.
+
+    @end section
+
+    @section {Toolchain}
+
+      Building MutekH requires the following standard software packages:
+
+      @list
+        @item The @url{http://gcc.gnu.org/}{GNU Compiler Collection}
+          (gcc) (>=4.9).
+        @item @url{http://www.gnu.org/software/make/}{GNU make}.
+        @item A @url{http://www.perl.org/}{perl} script interpreter.
+      @end list
+
+      Some builds may require the following additional tools,
+      depending on the target architecture and build configuration:
+
+      @list
+        @item The flattened device tree compiler (dtc): This tool
+          comes with toolchains.
+        @item The heterogeneous linker found in
+          @tt{tools/hlink}, for heterogeneous platforms only.
+      @end list
+    @end section
+
+    @section {Target simulation tools}
+
+      You may need real hardware or a simulator to run MutekH
+      (Arch/Emu target doesn't need one though):
+
+      @list
+        @item @url{http://www.qemu.org/}{Qemu} to run MutekH, available
+          in most GNU/Linux distributions.
+        @item @url{http://bochs.sourceforge.net/}{Bochs} an other x86
+          emulator, available in most GNU/Linux distributions.
+        @item @url{https://www.soclib.fr/}{SoCLib} to experiment with
+          various multiprocessor platforms (Mips, PowerPc, Arm, ...).
+          @url{https://www.mutekh.org/www/tools/}{A precompiled SoCLib
+          platform} is available for test purpose. We suggest building
+          your own platforms by installing SoCLib.
+      @end list
+
+      All this simulators can be used with the
+      @url{http://www.gnu.org/software/gdb/}{GNU debugger}.
+
+      You may need extra tools to prepare bootable kernel images for
+      some targets:
+
+      @list
+        @item GNU mtools or mkisofs to create a x86 bootable disk
+          images, available in most GNU/Linux distributions.
+        @item GNU grub or etherboot to boot compiled kernel images,
+          included in boot image in @tt{tools/} directory.
+      @end list
+
+      The @tt{tools/x86_cdrom.sh} and
+      @tt{tools/x86_floppy.sh} scripts are available to easily
+      create boot disk images.
+
+    @end section
+
+  @end section
+
+  @section {Getting the tools}
+
+    Some tools are readily available in most GNU/Linux distributions.
+
+    Other tools require being build with a specific set of options and customized for a particular target.
+    MutekH comes with a script to build and install these tools on your particular platform.
+
+    @section {Precompiled tools}
+
+      @url{https://www.mutekh.org/www/tools/}{Some precompiled
+      toolchains} are avaialble for convenience and quick start purpose.
+      These binaries are available for GNU/Linux i386 and x86_64
+      distributions. It was configured for installation in
+      @tt{/opt/mutekh}.
+
+    @end section
+
+    @section {Building tools from source}
+
+      The @tt{tools/crossgen.mk} script is able to download, patch,
+      build and install required specific tools for you.
+
+      The following commands display help and default configuration:
+
+      @code R
+ $ cd .../mutekh
+ $ tools/crossgen.mk
+[display some help]
+ $ tools/crossgen.mk config
+[display default configuration]
+      @end code
+
+      The following example shows how to get a little-endian Mips
+      cross-compiler installed under @tt{~/mutekh}:
+      @code R
+ $ tools/crossgen.mk TARGET=mipsel PREFIX=$HOME/mutekh toolchain
+      @end code
+
+      This script can install the following tools for you:
+      @list
+        @item GNU Compiler Collection (@tt{gcc}),
+        @item GNU Binutils,
+        @item GNU Debugger (@tt{gdb}),
+        @item Device Tree Compiler (@tt{dtc}),
+        @item Bochs x86 emulator,
+        @item Qemu processor emulator,
+        @item Modified GNU coreutils timeout command (@tt{testwrap}),
+          used by @xref{Testsuite}.
+      @end list
+    @end section
+
+  @end section
+
+  @section {Running the tools}
+
+    When working with MutekH, be sure to add the @tt{bin} and @tt{lib}
+    paths to your environment in order to use the tools:
+
+    @code R
+export PATH=/opt/mutekh/bin:$PATH
+export LD_LIBRARY_PATH=/opt/mutekh/lib:$LD_LIBRARY_PATH
+    @end code
+    if installed in @tt{/opt/mutekh}, or:
+    @code R
+export PATH=$HOME/mutekh/bin:$PATH
+export LD_LIBRARY_PATH=$HOME/mutekh/lib:$LD_LIBRARY_PATH
+    @end code
+    if installed in @tt{~/mutekh}.
+  @end section
+@end section

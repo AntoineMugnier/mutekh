@@ -44,6 +44,11 @@ doc/config.h
 @include ../arch/arch.mkdoc
 @include ../cpu/cpu.mkdoc
 
+@include build_config.mkdoc
+@include config_desc.mkdoc
+@include install.mkdoc
+@include testsuite.mkdoc
+
 @section TP {Modules documentation}
  @section TH {Modules list}
   @insert {module} compound_table
