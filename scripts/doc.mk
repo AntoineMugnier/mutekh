@@ -17,10 +17,8 @@ doc: $(BUILD_DIR)/doc/config.h
 	  --mkdoclib-url http://www.mutekh.org/www/mutekh_api/ \
 	  --output-path $(BUILD_DIR)/doc \
 	  --source-rev $(HG_REV) \
-	  -I $(BUILD_DIR) doc/config.h \
-	  -I . \
+	  -I $(BUILD_DIR) -I . \
 	  -I doc/include \
-	  $(subst $(MUTEK_SRC_DIR)/,,$(MKDOC_ARGS)) \
-	  $(CPU_HEADER) $(ARCH_HEADER)
+	  $(subst $(MUTEK_SRC_DIR)/,,$(MKDOC_ARGS))
 
 .PHONY: doc
