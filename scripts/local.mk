@@ -144,7 +144,7 @@ $(3)/$(1): $(2)/$(1:.o=.bc) $(OBJ_DIR)/config.h $(OBJ_DIR)/.done_pre_header_list
 		$($(1)_CFLAGS) $(DIR_CFLAGS))
 	$(call run_command,$$@, $(CC) -E -x c \
                 $(CFLAGS) $(CPUCFLAGS) $(ARCHCFLAGS) $(INCS) \
-                $($(1)_CFLAGS) $(DIR_CFLAGS) $$< -o $$@.i )
+                $($(1)_CFLAGS) $(DIR_CFLAGS) -DMUTEK_CFILE='"$$(<F)"' $$< -o $$@.i )
 	$(call run_command,$$@, perl $(MUTEK_SRC_DIR)/scripts/decl_filter.pl --parse-decl $(CC) \
                 $(CFLAGS) $(CPUCFLAGS) $(ARCHCFLAGS) $(INCS) \
                 $($(1)_CFLAGS) $(DIR_CFLAGS) < $$@.i > $$@.bc)
