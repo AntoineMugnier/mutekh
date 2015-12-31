@@ -1,8 +1,8 @@
 
 #include <hexo/iospace.h>
 
-#include <mutek/console.h>
 #include <mutek/shell.h>
+#include <stdlib.h>
 
 TERMUI_CON_COMMAND_PROTOTYPE(shell_mem_blocks);
 
