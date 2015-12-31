@@ -144,6 +144,39 @@ static TERMUI_CON_COMMAND_PROTOTYPE(shell_char_write)
   return 0;
 }
 
+#if defined(CONFIG_MUTEK_THREAD) && defined(CONFIG_MUTEK_SEMAPHORE)
+# include <mutek/thread.h>
+# include <mutek/semaphore.h>
+
+struct thread_params_s
+{
+  struct semaphore_s sem;
+  struct termui_optctx_dev_char_opts *c;
+};
+
+static CONTEXT_ENTRY(shell_thread)
+{
+  struct thread_params_s *p = param;
+  struct device_char_s accessor;
+
+  bool_t ok = !device_copy_accessor(&accessor, &p->c->accessor);
+  semaphore_give(&p->sem, 1);
+  if (ok)
+    mutek_shell_start(&accessor, "xterm", NULL, CONFIG_MUTEK_SHELL_PROMPT, NULL);
+}
+
+static TERMUI_CON_COMMAND_PROTOTYPE(shell_char_shell)
+{
+  struct thread_params_s p;
+  p.c = ctx;
+  semaphore_init(&p.sem, 0);
+  thread_create(shell_thread, &p, NULL);
+  semaphore_take(&p.sem, 1);
+  semaphore_destroy(&p.sem);
+  return 0;
+}
+#endif
+
 static TERMUI_CON_OPT_DECL(dev_char_opts) =
 {
   TERMUI_CON_OPT_DEV_ACCESSOR_ENTRY("-d", "--char-dev", CHAR_OPT_DEV,
@@ -201,6 +234,14 @@ TERMUI_CON_GROUP_DECL(dev_shell_char_group) =
                         CHAR_OPT_PARTIAL | CHAR_OPT_FRAME | CHAR_OPT_POLL | CHAR_OPT_NONBLOCK | CHAR_OPT_FLUSH,
                         char_opts_cleanup)
   )
+
+#if defined(CONFIG_MUTEK_THREAD) && defined(CONFIG_MUTEK_SEMAPHORE)
+  TERMUI_CON_ENTRY(shell_char_shell, "shell",
+    TERMUI_CON_OPTS_CTX(dev_char_opts,
+                        CHAR_OPT_DEV, 0,
+                        char_opts_cleanup)
+  )
+#endif
 
   TERMUI_CON_LIST_END
 };
