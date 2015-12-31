@@ -499,8 +499,6 @@ struct dev_spi_ctrl_rq_s
 
   bool_t                  BITFIELD(wakeup,1);
   bool_t                  BITFIELD(wakeup_able,1);
-
-  bool_t                  BITFIELD(priority,1);
 };
 
 STRUCT_INHERIT(dev_spi_ctrl_rq_s, dev_request_s, base);
@@ -533,7 +531,6 @@ struct dev_spi_ctrl_queue_s
   dev_request_queue_root_t      queue;
 
   lock_irq_t                    lock;
-  uint8_t                       running;
 };
 
 #endif /* CONFIG_DEVICE_SPI_REQUEST */
