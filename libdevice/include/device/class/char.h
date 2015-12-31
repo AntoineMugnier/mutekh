@@ -208,6 +208,11 @@ STRUCT_INHERIT(dev_char_rq_s, dev_request_s, base);
        bad parity or bad checksum condition. This error is reported once.
    @end list
 
+   The kroutine of the request may be executed from within this
+   function. The kroutine handler of the request must never call the
+   @ref dev_char_request_t function when the kroutine policy allows
+   immediate execution of the handler.
+
    @param dev pointer to device descriptor
    @param rq pointer to request.
 */
