@@ -42,7 +42,9 @@ struct device_char_s;
 /** @This starts an interactive shell. This function does not returns
     until the shell is exited by the user. */
 config_depend(CONFIG_MUTEK_SHELL)
-void mutek_shell_start(struct device_char_s *c, const char *term);
+void mutek_shell_start(struct device_char_s *c, const char *term,
+                       const struct termui_con_entry_s * const *root,
+                       const char *prompt, void *con_pv);
 
 /** @internal */
 struct mutek_shell_root_groups_s

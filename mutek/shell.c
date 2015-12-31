@@ -39,10 +39,15 @@ MUTEK_SHELL_ROOT_ENTRY(quit, TERMUI_CON_BUILTIN_QUIT(-1) );
 
 extern __ldscript_symbol_t shell_cmd_table;
 
-void mutek_shell_start(struct device_char_s *c, const char *term)
+void mutek_shell_start(struct device_char_s *c, const char *term,
+                       const struct termui_con_entry_s * const *root,
+                       const char *prompt, void *con_pv)
 {
   struct termui_term_s *tm;
   struct termui_console_s *con;
+
+  if (root == NULL)
+    root = (void*)&shell_cmd_table;
 
   tm = mem_alloc(sizeof(*tm) + sizeof(*con), mem_scope_sys);
   if (tm == NULL)
@@ -50,9 +55,10 @@ void mutek_shell_start(struct device_char_s *c, const char *term)
   con = (void*)(tm + 1);
 
   termui_dev_io_init(tm, c, term);
-  termui_con_init(con, tm, (void*)&shell_cmd_table);
+  termui_con_init(con, tm, root);
 
-  termui_con_set_prompt(con, CONFIG_MUTEK_SHELL_PROMPT);
+  termui_con_set_private(con, con_pv);
+  termui_con_set_prompt(con, prompt);
 
   termui_term_printf(tm, "You may type `list' and `help'.\n\n");
 
@@ -80,7 +86,8 @@ void mutek_shell_start(struct device_char_s *c, const char *term)
 
 static CONTEXT_ENTRY(shell_thread)
 {
-  mutek_shell_start(param, "xterm");
+  while (1)
+    mutek_shell_start(param, "xterm", NULL, CONFIG_MUTEK_SHELL_PROMPT, NULL);
 }
 
 void mutek_shell_thread_init()
