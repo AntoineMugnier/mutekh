@@ -39,7 +39,8 @@ enum char_opts_e
   CHAR_OPT_PARTIAL = 0x10,
   CHAR_OPT_FRAME = 0x20,
   CHAR_OPT_POLL = 0x40,
-  CHAR_OPT_FLUSH = 0x80
+  CHAR_OPT_FLUSH = 0x80,
+  CHAR_OPT_NONBLOCK = 0x100
 };
 
 struct termui_optctx_dev_char_opts
@@ -66,6 +67,8 @@ char_rq_type(enum dev_char_rq_type_e type, enum char_opts_e used)
     type |= _DEV_CHAR_FRAME;
   else if (used & CHAR_OPT_POLL)
     type |= _DEV_CHAR_POLL;
+  else if (used & CHAR_OPT_NONBLOCK)
+    type |= _DEV_CHAR_NONBLOCK;
   else
     type |= _DEV_CHAR_ALL;
 
@@ -161,19 +164,23 @@ static TERMUI_CON_OPT_DECL(dev_char_opts) =
 		       )
 
   TERMUI_CON_OPT_ENTRY("-p", "--partial", CHAR_OPT_PARTIAL,
-		       TERMUI_CON_OPT_CONSTRAINTS(CHAR_OPT_FRAME | CHAR_OPT_PARTIAL | CHAR_OPT_POLL, 0)
+		       TERMUI_CON_OPT_CONSTRAINTS(CHAR_OPT_FRAME | CHAR_OPT_PARTIAL | CHAR_OPT_POLL | CHAR_OPT_NONBLOCK, 0)
 		       )
 
   TERMUI_CON_OPT_ENTRY("-f", "--frame", CHAR_OPT_FRAME,
-		       TERMUI_CON_OPT_CONSTRAINTS(CHAR_OPT_FRAME | CHAR_OPT_PARTIAL | CHAR_OPT_POLL | CHAR_OPT_FLUSH, 0)
+		       TERMUI_CON_OPT_CONSTRAINTS(CHAR_OPT_FRAME | CHAR_OPT_PARTIAL | CHAR_OPT_POLL | CHAR_OPT_NONBLOCK | CHAR_OPT_FLUSH, 0)
 		       )
 
   TERMUI_CON_OPT_ENTRY("-F", "--flush", CHAR_OPT_FLUSH,
-		       TERMUI_CON_OPT_CONSTRAINTS(CHAR_OPT_FLUSH | CHAR_OPT_FRAME | CHAR_OPT_POLL, 0)
+		       TERMUI_CON_OPT_CONSTRAINTS(CHAR_OPT_FLUSH | CHAR_OPT_FRAME | CHAR_OPT_POLL | CHAR_OPT_NONBLOCK, 0)
 		       )
 
   TERMUI_CON_OPT_ENTRY("-P", "--poll", CHAR_OPT_POLL,
-		       TERMUI_CON_OPT_CONSTRAINTS(CHAR_OPT_FRAME | CHAR_OPT_PARTIAL | CHAR_OPT_POLL | CHAR_OPT_FLUSH, 0)
+		       TERMUI_CON_OPT_CONSTRAINTS(CHAR_OPT_FRAME | CHAR_OPT_PARTIAL | CHAR_OPT_POLL | CHAR_OPT_NONBLOCK | CHAR_OPT_FLUSH, 0)
+		       )
+
+  TERMUI_CON_OPT_ENTRY("-n", "--nonblock", CHAR_OPT_NONBLOCK,
+		       TERMUI_CON_OPT_CONSTRAINTS(CHAR_OPT_FRAME | CHAR_OPT_PARTIAL | CHAR_OPT_POLL | CHAR_OPT_NONBLOCK, 0)
 		       )
 
   TERMUI_CON_LIST_END
@@ -184,14 +191,14 @@ TERMUI_CON_GROUP_DECL(dev_shell_char_group) =
   TERMUI_CON_ENTRY(shell_char_read, "read",
     TERMUI_CON_OPTS_CTX(dev_char_opts,
                         CHAR_OPT_DEV | CHAR_OPT_SIZE,
-                        CHAR_OPT_HEX | CHAR_OPT_PARTIAL | CHAR_OPT_FRAME | CHAR_OPT_POLL,
+                        CHAR_OPT_HEX | CHAR_OPT_PARTIAL | CHAR_OPT_FRAME | CHAR_OPT_POLL | CHAR_OPT_NONBLOCK,
                         char_opts_cleanup)
   )
 
   TERMUI_CON_ENTRY(shell_char_write, "write",
     TERMUI_CON_OPTS_CTX(dev_char_opts,
                         CHAR_OPT_DEV | CHAR_OPT_DATA,
-                        CHAR_OPT_PARTIAL | CHAR_OPT_FRAME | CHAR_OPT_POLL | CHAR_OPT_FLUSH,
+                        CHAR_OPT_PARTIAL | CHAR_OPT_FRAME | CHAR_OPT_POLL | CHAR_OPT_NONBLOCK | CHAR_OPT_FLUSH,
                         char_opts_cleanup)
   )
 

@@ -93,11 +93,13 @@ struct device_char_s;
 /** @internal mode */
 #define  _DEV_CHAR_PARTIAL 4
 /** @internal mode */
-#define  _DEV_CHAR_FRAME 8
+#define  _DEV_CHAR_NONBLOCK 8
 /** @internal mode */
-#define  _DEV_CHAR_POLL 16
+#define  _DEV_CHAR_FRAME 16
+/** @internal mode */
+#define  _DEV_CHAR_POLL 32
 /** @internal flush */
-#define  _DEV_CHAR_FLUSH 32
+#define  _DEV_CHAR_FLUSH 64
 
 /** @this defines possible request types */
 enum dev_char_rq_type_e
@@ -122,15 +124,24 @@ enum dev_char_rq_type_e
       of output data. On devices where data are always transmitted sent
       immediately, this is handled as a regular write. */
   DEV_CHAR_WRITE_PARTIAL_FLUSH = _DEV_CHAR_WRITE | _DEV_CHAR_PARTIAL | _DEV_CHAR_FLUSH,
+  /** Read data from the device. The request terminates
+      immediately even if no data is currently available. */
+  DEV_CHAR_READ_NONBLOCK = _DEV_CHAR_NONBLOCK,
+  /** Write data to the device. The request terminates
+      immediately even if no data can be written currently. */
+  DEV_CHAR_WRITE_NONBLOCK = _DEV_CHAR_WRITE | _DEV_CHAR_NONBLOCK,
+  /** This is equivalent to @ref DEV_CHAR_WRITE_NONBLOCK, forcing flush
+      of output data. */
+  DEV_CHAR_WRITE_NONBLOCK_FLUSH = _DEV_CHAR_WRITE | _DEV_CHAR_NONBLOCK | _DEV_CHAR_FLUSH,
   /** This request terminates when the specified amount of data bytes
       is currently available from the device. The data field of the
-      request is not used. Most device may not support this operation
-      for size greater than 1. */
+      request is not used and the size field is not updated. Most
+      device may not support this operation for size greater than 1. */
   DEV_CHAR_READ_POLL = _DEV_CHAR_POLL,
   /** This request terminates when the specified amount of data bytes
       may be written to the device without blocking. The data field of
-      the request is not used. Most device may not support this
-      operation for size greater than 1. */
+      the request is not used and the size field is not updated. Most
+      device may not support this operation for size greater than 1. */
   DEV_CHAR_WRITE_POLL = _DEV_CHAR_WRITE | _DEV_CHAR_POLL,
   /** Read a frame from the device. This operation is only
       supported by devices working with framed data. The returned data
