@@ -271,6 +271,7 @@ error_t dev_timer_busy_wait_delay(struct device_timer_s *accessor, dev_timer_del
   return err;
 }
 
+#ifdef CONFIG_MUTEK_CONTEXT_SCHED
 extern inline
 error_t dev_timer_wait_request(struct device_timer_s *accessor, struct dev_timer_rq_s *rq);
 
@@ -283,3 +284,4 @@ extern inline
 error_t dev_timer_wait_delay(struct device_timer_s *accessor,
                              dev_timer_delay_t delay,
                              dev_timer_cfgrev_t rev);
+#endif
