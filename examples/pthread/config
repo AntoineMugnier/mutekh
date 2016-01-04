@@ -1,5 +1,5 @@
 
-  %set OUTPUT_NAME hello
+  %set OUTPUT_NAME pthread
 
   # New source code module to be compiled
   %append MODULES $(OUTPUT_NAME):$(CONFIGPATH)
@@ -10,6 +10,7 @@
   # Application license
   CONFIG_LICENSE_APP_LGPL
 
-  # Features
-  CONFIG_APP_START
+  # Libs
+  CONFIG_PTHREAD
+  CONFIG_PTHREAD_MAIN
 
