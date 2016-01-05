@@ -78,6 +78,7 @@ static DEV_CHAR_CANCEL(char_pipe_cancel)
   if (q != NULL)
     {
       dev_request_queue_remove(q, dev_char_rq_s_base(rq));
+      rq->base.drvdata = NULL;
       err = 0;
     }
 
