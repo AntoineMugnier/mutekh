@@ -22,6 +22,7 @@
 */
 
 #include <mutek/shell.h>
+#include <mutek/startup.h>
 #include <mutek/mem_alloc.h>
 
 #include <termui/term.h>
