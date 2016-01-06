@@ -72,7 +72,7 @@ FUNC_END(cpu_context_switch)
 
 #ifdef CONFIG_CPU_ARM32M_MPU_STACK_GUARD
 /* in: r1 = stack top address */
-FUNC_START(.text, cpu_context_stack_guard)
+FUNC_START(.text, cpu_context_stack_guard_)
 
         /* disable guard if stack is not 32 bytes aligned */
         movs    r7,     0
@@ -119,6 +119,13 @@ FUNC_START(.text, cpu_context_stack_guard)
 
         bx      r14
 
+FUNC_END(cpu_context_stack_guard_)
+
+FUNC_START(.text, cpu_context_stack_guard)
+        push    {r5, r6, r7, lr}
+        mov     r1,     r0
+        bl      cpu_context_stack_guard_
+        pop     {r5, r6, r7, pc}
 FUNC_END(cpu_context_stack_guard)
 #endif
 
@@ -138,7 +145,7 @@ FUNC_START(.text, cpu_context_jumpto_restore)
         ldr     r1,     [r0, r1]
 
         mov     r2,     r14
-        bl      cpu_context_stack_guard
+        bl      cpu_context_stack_guard_
         mov     r14,     r2
 #endif
 
@@ -224,7 +231,7 @@ FUNC_START(.text, cpu_context_set)
 
 #ifdef CONFIG_CPU_ARM32M_MPU_STACK_GUARD
 	mov     r1,     r0
-        bl      cpu_context_stack_guard
+        bl      cpu_context_stack_guard_
 #endif
 
 	bx      r2
@@ -250,7 +257,7 @@ FUNC_START(.text, cpu_context_stack_use)
         ldr     r1,     = context_stack_start
         ldr     r1,     [r0, r1]
 
-        bl      cpu_context_stack_guard
+        bl      cpu_context_stack_guard_
 #endif
 
         /* context registers save array */

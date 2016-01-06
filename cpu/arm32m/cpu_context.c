@@ -41,6 +41,10 @@ cpu_context_bootstrap(struct context_s *context)
 {
     asm volatile ("msr   psp, %0" :: "l" (context->tls));
 
+#ifdef CONFIG_CPU_ARM32M_MPU_STACK_GUARD
+    cpu_context_stack_guard(CONTEXT_LOCAL_GET(context_stack_start));
+#endif
+
     return 0;
 }
 

@@ -95,5 +95,9 @@ ALWAYS_INLINE void context_set_irqen(context_irqen_t *func)
 }
 # endif
 
+# ifdef CONFIG_CPU_ARM32M_MPU_STACK_GUARD
+void cpu_context_stack_guard(uintptr_t stack_top);
+# endif
+
 #endif
 
