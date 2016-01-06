@@ -32,10 +32,6 @@ extern inline error_t
 dev_crypto_spin_op(struct device_crypto_s *accessor,
                    struct dev_crypto_rq_s *rq);
 
-extern inline error_t
-dev_crypto_wait_op(struct device_crypto_s *accessor,
-                   struct dev_crypto_rq_s *rq);
-
 extern inline bool_t
 dev_crypto_ctx_bind(struct dev_crypto_context_s *ctx,
                     struct dev_crypto_context_s *ctx_array[],
@@ -76,6 +72,12 @@ void dev_rng_cleanup(struct dev_rng_s *rng)
     mem_free(rng->state_data);
   device_put_accessor(&rng->device);
 }
+
+#ifdef CONFIG_MUTEK_CONTEXT_SCHED
+
+extern inline error_t
+dev_crypto_wait_op(struct device_crypto_s *accessor,
+                   struct dev_crypto_rq_s *rq);
 
 error_t dev_rng_wait_read(struct dev_rng_s *rng, void *data, size_t size)
 {
@@ -121,4 +123,5 @@ error_t dev_rng_wait_seed_from_other(struct dev_rng_s *rng,
 
   return dev_rng_wait_seed(rng, tmp, size);
 }
+#endif
 

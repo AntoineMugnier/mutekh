@@ -314,32 +314,32 @@ DRIVER_CLASS_TYPES(crypto,
     .f_request = prefix ## _request,                                \
   })
 
-config_depend(CONFIG_DEVICE_CRYPTO)
-inline error_t
+config_depend_inline(CONFIG_DEVICE_CRYPTO,
+error_t
 dev_crypto_spin_op(struct device_crypto_s *accessor,
-                   struct dev_crypto_rq_s *rq)
+                   struct dev_crypto_rq_s *rq),
 {
   struct dev_request_status_s st;
   dev_request_spin_init(&rq->rq, &st);
   DEVICE_OP(accessor, request, rq);
   dev_request_spin_wait(&st);
   return rq->err;
-}
+});
 
 /** Synchronous memory device operation function. This function use
     the scheduler api to put current context in wait state during the
     request. */
-config_depend_and2(CONFIG_DEVICE_CRYPTO, CONFIG_MUTEK_CONTEXT_SCHED)
-inline error_t
+config_depend_and2_inline(CONFIG_DEVICE_CRYPTO, CONFIG_MUTEK_CONTEXT_SCHED,
+error_t
 dev_crypto_wait_op(struct device_crypto_s *accessor,
-                   struct dev_crypto_rq_s *rq)
+                   struct dev_crypto_rq_s *rq),
 {
   struct dev_request_status_s st;
   dev_request_sched_init(&rq->rq, &st);
   DEVICE_OP(accessor, request, rq);
   dev_request_sched_wait(&st);
   return rq->err;
-}
+});
 
 typedef uint8_t dev_crypto_context_id_t;
 
