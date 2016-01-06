@@ -325,6 +325,8 @@ div.sec_shown {
 /*********** code */
 
 .codebox {
+  font-family: monospace;
+  white-space: pre;
   border: solid;
   border-width: 1px 0px;
   border-color: #c0d0ff;
@@ -367,6 +369,7 @@ div.sec_shown {
 
 .divmember h1, .divmember h2, .divmember h3,
 .divmember h4, .divmember h5, .divmember h6 {
+  white-space: pre;
   margin: 0px;
   font-size: 120%;
 }
