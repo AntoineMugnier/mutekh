@@ -31,10 +31,42 @@
    MutekH, BLE library does not use shortened UUIDs in memory.
    Shortening is only done where protocol requires so.
 
-   This header provides declaration for the UUID structure, and some
-   helpers to compare, initialize and check UUID features.
+   UUIDs are defined as a 16-byte structure.  @ref
+   {ble_uuid_is_bluetooth_based} {A set of} @ref {ble_uuid_uuid16_get}
+   {accessor functions} and a @ref {ble_uuid_cmp} {comparator}
+   function are provided.
 
-   @xsee {UUIDs}
+   @ref {#BLE_UUID_BT_BASED_P}, @ref {#BLE_UUID_P} yield valid
+   pointers to constant UUIDs for given values.
+
+   With the following code
+
+   @code
+static const struct ble_uuid_s dis_service_type_1 =
+{
+  .value = {0xfb, 0x34, 0x9b, 0x5f, 0x80, 0x00,
+    0x00, 0x80,
+    0x00, 0x10,
+    0x00, 0x00,
+    0x0a, 0x18, 0x00, 0x00},
+};
+
+static const struct ble_uuid_s dis_service_type_2 = BLE_UUID(0x180a, 0x0000, 0x1000, 0x8000, 0x00805f9b34fbULL);
+
+static const struct ble_uuid_s dis_service_type_3 = BLE_UUID_BT_BASED(0x180a);
+   @end code
+
+   those five statements yield a pointer to a constant UUID object
+   with value @tt {0000180a-0000-1000-8000-00805f9b34fb}.
+
+
+   @code
+&dis_service_type_1;
+&dis_service_type_2;
+&dis_service_type_3;
+BLE_UUID_P(0x180a, 0x0000, 0x1000, 0x8000, 0x00805f9b34fbULL);
+BLE_UUID_BT_BASED_P(0x180a);
+   @end code
 */
 
 #include <hexo/types.h>

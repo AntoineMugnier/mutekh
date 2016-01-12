@@ -5,32 +5,46 @@
 #include <mutek/printk.h>
 #include "midi.h"
 
+/* anchor write_handler */
 static
 uint8_t on_midi_data_write(struct ble_gattdb_client_s *client,
                            struct ble_gattdb_registry_s *reg, uint8_t charid,
                            const void *data, size_t size)
 {
+/* anchor end */
   struct midi_s *midi = midi_s_from_reg(reg);
 
   (void)midi;
 
+/* anchor write_handler */
   printk("midi data write: %P\n", data, size);
 
   return 0;
 }
 
+/* anchor end */
+/* anchor service_decl */
 BLE_GATTDB_SERVICE_DECL(
   midi_service,
   BLE_GATTDB_SERVICE_PRIMARY | BLE_GATTDB_SERVICE_ADVERTISED,
   BLE_UUID_P(0x03B80E5A, 0xEDE8, 0x4B33, 0xA751, 0x6CE34EC4C700ULL),
   NULL,
-  BLE_GATTDB_CHAR(BLE_UUID_P(0x7772E5DB, 0x3868, 0x4112, 0xA1A9, 0xF2669D106BF3ULL),
-                  // PERM_AUTH_READ implies pairing before subscribing,
-                  // but as there is not read handler, reading value
-                  // will not be permitted.
-                  BLE_GATTDB_PERM_AUTH_WRITE | BLE_GATTDB_PERM_AUTH_READ | BLE_GATTDB_NOTIFIABLE,
-                  BLE_GATTDB_CHAR_DATA_DYNAMIC(NULL, on_midi_data_write, NULL)),
+  BLE_GATTDB_CHAR(
+    BLE_UUID_P(0x7772E5DB, 0x3868, 0x4112, 0xA1A9, 0xF2669D106BF3ULL),
+/* anchor details */
+    // PERM_AUTH_READ implies pairing before subscribing,
+    // but as there is not read handler, reading value
+    // will not be permitted.
+/* anchor service_decl */
+    BLE_GATTDB_PERM_AUTH_WRITE | BLE_GATTDB_PERM_AUTH_READ | BLE_GATTDB_NOTIFIABLE,
+/* anchor details */
+    // Dont implement read
+    // Call on_midi_data_write on write
+    // Dont notify code on subscription
+/* anchor service_decl */
+    BLE_GATTDB_CHAR_DATA_DYNAMIC(NULL, on_midi_data_write, NULL)),
   );
+/* anchor end */
 
 static KROUTINE_EXEC(midi_button_pressed)
 {
