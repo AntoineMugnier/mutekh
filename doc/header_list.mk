@@ -8,6 +8,8 @@ ARCH_HEADER= arch/hexo/atomic.h arch/hexo/lock.h	\
 CPU_HEADER= cpu/hexo/atomic.h cpu/hexo/iospace.h cpu/hexo/local.h	\
 	cpu/hexo/types.h
 
+MKDOC_ARGS += -I arch/nrf5x/include
+
 #	-I doc/include
 #	doc/include/cpu/hexo/types.h
 #	doc/include/arch/hexo/types.h
