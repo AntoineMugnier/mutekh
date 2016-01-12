@@ -469,6 +469,7 @@ error_t dev_timer_wait_request(struct device_timer_s *accessor,
   struct dev_request_status_s st;
 
   dev_request_sched_init(&rq->rq, &st);
+  rq->rq.drvdata = NULL;
   error_t err = DEVICE_OP(accessor, request, rq);
 
   if (!err) {
