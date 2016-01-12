@@ -26,7 +26,21 @@
    @module {Bluetooth Low Energy library}
    @short Bluetooth device address declaration
 
-   @this defines address data type.
+   @ref {ble_addr_s} {Device addresses} are defined as a 48-bit
+   address + 1 bit type (Random / Public).  There are various tools
+   provided to generate and resolve random addresses.
+
+   @list
+     @item @ref ble_stack_context_address_resolvable_generate and
+           @ref ble_stack_context_address_non_resolvable_generate
+           can generate addresses,
+     @item @ref ble_addr_random_type_set can override address type,
+     @item @ref #BLE_ADDR_FMT and @ref #BLE_ADDR_ARG can help
+           printing addresses with printf-like functions,
+     @item @ref ble_addr_cmp can compare addresses,
+     @item @ref ble_addr_net_parse and @ref ble_addr_net_set can
+           convert from/to @ref {net_addr_s} {libnetwork addresses}.
+   @end list
  */
 
 #include <hexo/types.h>
