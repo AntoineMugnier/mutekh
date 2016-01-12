@@ -38,6 +38,7 @@
 #endif
 
 struct device_char_s;
+struct termui_con_entry_s;
 
 /** @This starts an interactive shell. This function does not returns
     until the shell is exited by the user. */
