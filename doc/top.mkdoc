@@ -50,14 +50,14 @@ doc/config.h
 @include testsuite.mkdoc
 
 @section TP {Modules documentation}
- @section TH {Modules list}
+ @section TH {Module list}
   @insert {module} compound_table
  @end section
  @insert {module} all_compound_sections
 @end section
 
 @section TP {Headers documentation}
- @section T {Headers list}
+ @section T {Header list}
   @insert {header} compound_table
  @end section
   @insert {header} all_compound_sections
