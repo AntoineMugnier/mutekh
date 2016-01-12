@@ -60,7 +60,7 @@ static void rtt_poll_enable(struct device_s *dev)
   if (!pv->timer_rq.rq.pvdata) {
     pv->timer_rq.rq.pvdata = dev;
     pv->timer_rq.deadline = 0;
-    DEVICE_OP(&pv->timer, request, &pv->timer_rq);
+    ensure(DEVICE_OP(&pv->timer, request, &pv->timer_rq) == 0);
   }
 }
 
@@ -74,7 +74,7 @@ static void rtt_request_finish(
   lock_release(&dev->lock);
 
   rq->error = 0;
-  kroutine_exec(&rq->base.kr, 1);
+  kroutine_exec(&rq->base.kr);
 
   lock_spin(&dev->lock);
   pv->callbacking = 0;
@@ -230,7 +230,7 @@ static DEV_INIT(char_rtt_init)
 
   dev->drv_pv = pv;
 
-  kroutine_init_interruptible(&pv->timer_rq.rq.kr, rtt_tick);
+  kroutine_init_sched_switch(&pv->timer_rq.rq.kr, rtt_tick);
   dev_timer_init_sec(&pv->timer, &pv->timer_rq.delay, 0, 1, 20);
 
   return 0;
