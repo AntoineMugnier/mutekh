@@ -1,0 +1,27 @@
+CONFIG_HEXO_CPU_STACK_SIZE 0x600
+
+CONFIG_COMPILE_PIC undefined
+CONFIG_COMPILE_FRAMEPTR undefined
+CONFIG_COMPILE_MERGE
+CONFIG_COMPILE_OPTIMIZE s
+
+%section ble-peripheral
+  CONFIG_NET
+  CONFIG_BLE
+  CONFIG_BLE_PERIPHERAL
+  CONFIG_BLE_GATTDB_INCLUDE
+
+%section ble-central
+  CONFIG_NET
+  CONFIG_BLE
+  CONFIG_BLE_CENTRAL
+
+%section ble-security
+  CONFIG_BLE_SECURITY_DB
+  %inherit ble-crypto
+
+%section ble-crypto
+  CONFIG_BLE_CRYPTO
+
+%section printk
+  CONFIG_MUTEK_PRINTK_HEXDUMP
