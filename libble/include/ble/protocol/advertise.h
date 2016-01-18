@@ -95,6 +95,14 @@ extern const uint16_t ble_sca_wc[8];
 /** Sleep clock accuracy best case PPM, indexed by SCA constant */
 extern const uint16_t ble_sca_bc[8];
 
+struct dev_freq_accuracy_s;
+
+/**
+   @this computes a BLE sleep clock accuracy constant from libdevice
+   timer accuracy.
+ */
+enum ble_sca_e ble_sca_from_accuracy(const struct dev_freq_accuracy_s *acc);
+
 /**
    @this printk() an advertise packet.
 */

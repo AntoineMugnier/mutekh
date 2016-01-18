@@ -139,7 +139,8 @@ bool_t ctr_connection_requested(void *delegate, struct net_layer_s *layer,
   err = ble_stack_connection_create(&ctr->conn, ctr->context,
                                     &ctr->handler->base,
                                     &ctr_conn_handler,
-                                    1, conn, NULL, anchor);
+                                    1, conn,
+                                    &ctr->conn_params, anchor);
 
   if (!err) {
     net_layer_refdec(ctr->scan);
@@ -173,6 +174,8 @@ static error_t scan_start(struct ble_central_s *ctr)
 
   ctr->params.default_policy = BLE_SCANNER_IGNORE;
   ctr->params.target_count = 0;
+
+  ctr->params.timing = ctr->conn_params;
 
   printk("Central scanning starting\n");
 
@@ -224,6 +227,8 @@ error_t ble_central_init(
   ctr->params.duration_ms = params->scan_duration_ms;
   ctr->params.target_count = 0;
   ctr->params.default_policy = BLE_SCANNER_IGNORE;
+
+  ctr->conn_params = params->conn;
 
   ctr->handler = handler;
   ctr->context = context;

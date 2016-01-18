@@ -26,6 +26,7 @@
 #include <ble/protocol/company.h>
 #include <ble/protocol/llcp.h>
 #include <ble/protocol/advertise.h>
+#include <device/types.h>
 
 const char *ble_adv_type_name[BLE_ADV_TYPE_LAST + 1] = {
     [BLE_ADV_IND] = "Adv. Ind",
@@ -319,3 +320,22 @@ invalid:
   printk("\nInvalid data, %d bytes left, %P\n", size, data, size);
   return;
 }
+
+enum ble_sca_e ble_sca_from_accuracy(const struct dev_freq_accuracy_s *acc)
+{
+  if (acc->e < 15)
+    return BLE_SCA_0_20_PPM;
+
+  if (acc->e > 18)
+    return BLE_SCA_251_500_PPM;
+
+  uint32_t ppb = dev_freq_acc_ppb(acc);
+
+  for (uint_fast8_t i = BLE_SCA_0_20_PPM; i > 0; --i) {
+    if (ppb <= ble_sca_wc[i] * 1000)
+      return i;
+  }
+
+  return BLE_SCA_251_500_PPM;
+}
+

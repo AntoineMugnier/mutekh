@@ -34,6 +34,7 @@
 #include <ble/net/scanner.h>
 #include <ble/net/scan_filter.h>
 #include <ble/protocol/address.h>
+#include <ble/protocol/gap.h>
 #include <ble/stack/connection.h>
 
 struct ble_central_handler_s;
@@ -112,6 +113,8 @@ struct ble_central_params_s
   uint32_t scan_interval_ms;
   /** Time to scan for */
   uint32_t scan_duration_ms;
+  /** Initial connection parameters */
+  struct ble_gap_preferred_conn_params_s conn;
 };
 
 /**
@@ -136,6 +139,7 @@ struct ble_central_s
   enum ble_central_state_e last_state : 8;
   uint8_t mode;
 
+  struct ble_gap_preferred_conn_params_s conn_params;
   struct ble_scanner_param_s params;
 };
 

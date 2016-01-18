@@ -27,6 +27,7 @@
 
 #include <ble/protocol/address.h>
 #include <ble/protocol/advertise.h>
+#include <ble/protocol/gap.h>
 
 struct net_layer_s;
 struct net_scheduler_s;
@@ -59,6 +60,8 @@ struct ble_scanner_param_s
 
   uint32_t access_address;
   uint32_t crc_init;
+
+  struct ble_gap_preferred_conn_params_s timing;
 };
 
 struct ble_scanner_handler_s
