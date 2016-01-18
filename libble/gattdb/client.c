@@ -125,6 +125,21 @@ enum ble_att_error_e ble_gattdb_client_next(struct ble_gattdb_client_s *client)
   return 0;
 }
 
+static const struct ble_uuid_s ble_gatt_att_service_primary
+    = BLE_UUID_BT_BASED(BLE_GATT_ATT_SERVICE_PRIMARY);
+static const struct ble_uuid_s ble_gatt_att_service_secondary
+    = BLE_UUID_BT_BASED(BLE_GATT_ATT_SERVICE_SECONDARY);
+static const struct ble_uuid_s ble_gatt_att_service_include
+    = BLE_UUID_BT_BASED(BLE_GATT_ATT_SERVICE_INCLUDE);
+static const struct ble_uuid_s ble_gatt_att_characteristic
+    = BLE_UUID_BT_BASED(BLE_GATT_ATT_CHARACTERISTIC);
+static const struct ble_uuid_s ble_gatt_att_desc_cccd
+    = BLE_UUID_BT_BASED(BLE_GATT_ATT_DESC_CCCD);
+static const struct ble_uuid_s ble_gatt_att_desc_sccd
+    = BLE_UUID_BT_BASED(BLE_GATT_ATT_DESC_SCCD);
+static const struct ble_uuid_s ble_gatt_att_desc_cep
+    = BLE_UUID_BT_BASED(BLE_GATT_ATT_DESC_CEP);
+
 enum ble_att_error_e ble_gattdb_client_type_get(struct ble_gattdb_client_s *client,
                                               const struct ble_uuid_s **type)
 {
@@ -134,19 +149,19 @@ enum ble_att_error_e ble_gattdb_client_type_get(struct ble_gattdb_client_s *clie
   switch ((enum ble_gattdb_hndl_type_e)hndl->type) {
   case BLE_GATTDB_HNDL_SERVICE:
     if (reg->service->flags & BLE_GATTDB_SERVICE_PRIMARY)
-      *type = BLE_UUID_BT_BASED_P(BLE_GATT_ATT_SERVICE_PRIMARY);
+      *type = &ble_gatt_att_service_primary;
     else
-      *type = BLE_UUID_BT_BASED_P(BLE_GATT_ATT_SERVICE_SECONDARY);
+      *type = &ble_gatt_att_service_secondary;
     return 0;
 
 #if defined(CONFIG_BLE_GATTDB_INCLUDE)
   case BLE_GATTDB_HNDL_INCLUDE:
-    *type = BLE_UUID_BT_BASED_P(BLE_GATT_ATT_SERVICE_INCLUDE);
+    *type = &ble_gatt_att_service_include;
     return 0;
 #endif
 
   case BLE_GATTDB_HNDL_CHAR_TYPE:
-    *type = BLE_UUID_BT_BASED_P(BLE_GATT_ATT_CHARACTERISTIC);
+    *type = &ble_gatt_att_characteristic;
     return 0;
 
   case BLE_GATTDB_HNDL_CHAR_VALUE:
@@ -154,18 +169,18 @@ enum ble_att_error_e ble_gattdb_client_type_get(struct ble_gattdb_client_s *clie
     return 0;
 
   case BLE_GATTDB_HNDL_CCCD:
-    *type = BLE_UUID_BT_BASED_P(BLE_GATT_ATT_DESC_CCCD);
+    *type = &ble_gatt_att_desc_cccd;
     return 0;
 
 #if defined(CONFIG_BLE_GATTDB_BROADCAST)
   case BLE_GATTDB_HNDL_SCCD:
-    *type = BLE_UUID_BT_BASED_P(BLE_GATT_ATT_DESC_SCCD);
+    *type = &ble_gatt_att_desc_sccd;
     return 0;
 #endif
 
 #if defined(CONFIG_BLE_ATT_LONG_WRITE)
   case BLE_GATTDB_HNDL_CEP:
-    *type = BLE_UUID_BT_BASED_P(BLE_GATT_ATT_DESC_CEP);
+    *type = &ble_gatt_att_desc_cep;
     return 0;
 #endif
 
