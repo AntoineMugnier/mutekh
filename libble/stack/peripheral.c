@@ -144,10 +144,10 @@ bool_t peri_connection_requested(void *delegate, struct net_layer_s *layer,
     return 1;
   }
 
-  if ((peri->mode & BLE_PERIPHERAL_PAIRABLE) && known_device) {
-    printk(" ignored: we are paired and connection comes from a known device\n");
-    return 1;
-  }
+  /* if ((peri->mode & BLE_PERIPHERAL_PAIRABLE) && known_device) { */
+  /*   printk(" ignored: we are paired and connection comes from a known device\n"); */
+  /*   return 1; */
+  /* } */
 #endif
 
   if (ble_gattdb_std_char_read(&peri->context->gattdb,
