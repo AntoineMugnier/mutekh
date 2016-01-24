@@ -330,26 +330,37 @@ static void sm_exchange_done(struct ble_sm_s *sm)
   ble_peer_save(sm->peer);
 }
 
-static void sm_distribute(struct ble_sm_s *sm)
+static void sm_tx(struct ble_sm_s *sm,
+                  struct buffer_s *packet)
 {
-#if defined(CONFIG_BLE_SECURITY_DB)
   struct net_addr_s dst = {
     .cid = BLE_L2CAP_CID_SM,
   };
-  struct buffer_s *pkt;
   struct net_task_s *task;
+
+  dprintk("SM < %P\n",
+          packet->data + packet->begin,
+          packet->end - packet->begin);
+
+  task = net_scheduler_task_alloc(sm->layer.scheduler);
+  if (task)
+    net_task_outbound_push(task,
+                           sm->layer.parent, &sm->layer,
+                           0, NULL, &dst, packet);
+  buffer_refdec(packet);
+}
+
+static void sm_distribute(struct ble_sm_s *sm)
+{
+#if defined(CONFIG_BLE_SECURITY_DB)
+  struct buffer_s *pkt;
 
   if (sm->to_distribute & EXPECT_ENCRYPTION_INFORMATION) {
     pkt = net_layer_packet_alloc(&sm->layer, sm->layer.context.prefix_size, 17);
     if (pkt) {
       pkt->data[pkt->begin] = BLE_SM_ENCRYPTION_INFORMATION;
       ble_peer_ltk_get(sm->peer, pkt->data + pkt->begin + 1);
-      task = net_scheduler_task_alloc(sm->layer.scheduler);
-      if (task)
-        net_task_outbound_push(task,
-                               sm->layer.parent, &sm->layer,
-                               0, NULL, &dst, pkt);
-      buffer_refdec(pkt);
+      sm_tx(sm, pkt);
     }
   }
 
@@ -361,12 +372,7 @@ static void sm_distribute(struct ble_sm_s *sm)
       pkt->data[pkt->begin] = BLE_SM_MASTER_IDENTIFICATION;
       ble_peer_id_get(sm->peer, pkt->data + pkt->begin + 3, &ediv);
       endian_le16_na_store(pkt->data + pkt->begin + 1, ediv);
-      task = net_scheduler_task_alloc(sm->layer.scheduler);
-      if (task)
-        net_task_outbound_push(task,
-                               sm->layer.parent, &sm->layer,
-                               0, NULL, &dst, pkt);
-      buffer_refdec(pkt);
+      sm_tx(sm, pkt);
     }
   }
 
@@ -375,12 +381,7 @@ static void sm_distribute(struct ble_sm_s *sm)
     if (pkt) {
       pkt->data[pkt->begin] = BLE_SM_IDENTITY_INFORMATION;
       memcpy(pkt->data + pkt->begin + 1, sm->peer->db->irk, 16);
-      task = net_scheduler_task_alloc(sm->layer.scheduler);
-      if (task)
-        net_task_outbound_push(task,
-                               sm->layer.parent, &sm->layer,
-                               0, NULL, &dst, pkt);
-      buffer_refdec(pkt);
+      sm_tx(sm, pkt);
     }
   }
 
@@ -390,12 +391,7 @@ static void sm_distribute(struct ble_sm_s *sm)
       pkt->data[pkt->begin] = BLE_SM_IDENTITY_ADDRESS_INFORMATION;
       pkt->data[pkt->begin + 1] = sm->local_addr.type == BLE_ADDR_RANDOM;
       memcpy(pkt->data + pkt->begin + 2, sm->local_addr.addr, 6);
-      task = net_scheduler_task_alloc(sm->layer.scheduler);
-      if (task)
-        net_task_outbound_push(task,
-                               sm->layer.parent, &sm->layer,
-                               0, NULL, &dst, pkt);
-      buffer_refdec(pkt);
+      sm_tx(sm, pkt);
     }
   }
 
@@ -404,12 +400,7 @@ static void sm_distribute(struct ble_sm_s *sm)
     if (pkt) {
       pkt->data[pkt->begin] = BLE_SM_SIGNING_INFORMATION;
       ble_peer_csrk_get(sm->peer, pkt->data + pkt->begin + 1);
-      task = net_scheduler_task_alloc(sm->layer.scheduler);
-      if (task)
-        net_task_outbound_push(task,
-                               sm->layer.parent, &sm->layer,
-                               0, NULL, &dst, pkt);
-      buffer_refdec(pkt);
+      sm_tx(sm, pkt);
     }
   }
 
@@ -424,11 +415,11 @@ static void sm_command_handle(struct ble_sm_s *sm, struct net_task_s *task)
   struct buffer_s *rsp = net_layer_packet_alloc(&sm->layer, sm->layer.context.prefix_size, 0);
   const struct ble_sm_delegate_vtable_s *vtable
     = const_ble_sm_delegate_vtable_s_from_base(sm->layer.delegate_vtable);
-  struct net_addr_s dst = {
-    .cid = BLE_L2CAP_CID_SM,
-  };
   uint8_t err;
-
+  bool_t receive_ok = sm_is_slave(sm)
+    ? (sm->pairing_state == BLE_SM_DISTRIBUTION_DONE)
+    : (sm->pairing_state == BLE_SM_STK_DONE);
+  
   dprintk("SM > %P\n", data, size);
 
   switch (data[0]) {
@@ -581,9 +572,13 @@ static void sm_command_handle(struct ble_sm_s *sm, struct net_task_s *task)
 
 #if defined(CONFIG_BLE_SECURITY_DB)
   case BLE_SM_ENCRYPTION_INFORMATION:
-    if (sm->pairing_state != BLE_SM_DISTRIBUTION_DONE
+    if (!receive_ok
         || !sm->layer.context.addr.encrypted
         || (!(sm->to_expect & EXPECT_ENCRYPTION_INFORMATION))) {
+      dprintk("SM error while receiving enc info\n");
+      dprintk("state: %d, enc: %d, to_expect: %02x\n",
+              sm->pairing_state, sm->layer.context.addr.encrypted,
+              sm->to_expect);
       err = BLE_SM_REASON_AUTHENTICATION_REQUIREMENTS;
       goto error;
     }
@@ -594,9 +589,13 @@ static void sm_command_handle(struct ble_sm_s *sm, struct net_task_s *task)
     goto expected_rx;
 
   case BLE_SM_MASTER_IDENTIFICATION:
-    if (sm->pairing_state != BLE_SM_DISTRIBUTION_DONE
+    if (!receive_ok
         || !sm->layer.context.addr.encrypted
         || (!(sm->to_expect & EXPECT_MASTER_IDENTIFICATION))) {
+      dprintk("SM error while receiving master id\n");
+      dprintk("state: %d, enc: %d, to_expect: %02x\n",
+              sm->pairing_state, sm->layer.context.addr.encrypted,
+              sm->to_expect);
       err = BLE_SM_REASON_AUTHENTICATION_REQUIREMENTS;
       goto error;
     }
@@ -607,9 +606,13 @@ static void sm_command_handle(struct ble_sm_s *sm, struct net_task_s *task)
     goto expected_rx;
 
   case BLE_SM_IDENTITY_INFORMATION:
-    if (sm->pairing_state != BLE_SM_DISTRIBUTION_DONE
+    if (!receive_ok
         || !sm->layer.context.addr.encrypted
         || (!(sm->to_expect & EXPECT_IDENTITY_INFORMATION))) {
+      dprintk("SM error while receiving id info\n");
+      dprintk("state: %d, enc: %d, to_expect: %02x\n",
+              sm->pairing_state, sm->layer.context.addr.encrypted,
+              sm->to_expect);
       err = BLE_SM_REASON_AUTHENTICATION_REQUIREMENTS;
       goto error;
     }
@@ -620,7 +623,7 @@ static void sm_command_handle(struct ble_sm_s *sm, struct net_task_s *task)
     goto expected_rx;
 
   case BLE_SM_IDENTITY_ADDRESS_INFORMATION:
-    if (sm->pairing_state != BLE_SM_DISTRIBUTION_DONE
+    if (!receive_ok
         || !sm->layer.context.addr.encrypted
         || (!(sm->to_expect & EXPECT_IDENTITY_ADDRESS_INFORMATION))) {
       err = BLE_SM_REASON_AUTHENTICATION_REQUIREMENTS;
@@ -641,6 +644,10 @@ static void sm_command_handle(struct ble_sm_s *sm, struct net_task_s *task)
   case BLE_SM_PAIRING_FAILED:
     dprintk("SM: Pairing failed beause of peer (%d)\n", data[1]);
     sm->pairing_state = BLE_SM_IDLE;
+    goto out;
+
+  case BLE_SM_SECURITY_REQUEST:
+    dprintk("SM: Security req %02x\n", data[1]);
     goto out;
 
   default:
@@ -673,13 +680,8 @@ static void sm_command_handle(struct ble_sm_s *sm, struct net_task_s *task)
   dprintk("Sm state %d sending error %d after packet %P\n", sm->pairing_state, err, data, size);
 
  send:
-  dprintk("SM < %P\n", rsp->data + rsp->begin, rsp->end - rsp->begin);
-
-  task = net_scheduler_task_alloc(sm->layer.scheduler);
-  if (task)
-    net_task_outbound_push(task,
-                           sm->layer.parent, &sm->layer,
-                           0, NULL, &dst, rsp);
+  sm_tx(sm, rsp);
+  return;
 
  out:
   buffer_refdec(rsp);
@@ -706,6 +708,10 @@ void ble_sm_task_handle(struct net_layer_s *layer,
 static void ble_sm_context_changed(struct net_layer_s *layer)
 {
   struct ble_sm_s *sm = ble_sm_s_from_layer(layer);
+
+  dprintk("SM: context changed, now %s, state %d\n",
+          layer->context.addr.encrypted ? "encrypted" : "clear",
+          sm->pairing_state);
 
   if (layer->parent) {
     if (layer->context.addr.encrypted
@@ -749,9 +755,6 @@ void sm_pairing_request(struct net_layer_s *layer,
   if (sm_is_slave(sm)) {
 #if defined(CONFIG_BLE_PERIPHERAL)
     struct buffer_s *rsp = net_layer_packet_alloc(&sm->layer, sm->layer.context.prefix_size, 2);
-    struct net_addr_s dst = {
-      .cid = BLE_L2CAP_CID_SM,
-    };
 
     rsp->data[rsp->begin] = BLE_SM_SECURITY_REQUEST;
     rsp->data[rsp->begin + 1] = 0
@@ -760,12 +763,7 @@ void sm_pairing_request(struct net_layer_s *layer,
 
     sm->pairing_state = BLE_SM_REQUESTED;
 
-    struct net_task_s *task = net_scheduler_task_alloc(sm->layer.scheduler);
-    if (task)
-      net_task_outbound_push(task,
-                             sm->layer.parent, &sm->layer,
-                             0, NULL, &dst, rsp);
-    buffer_refdec(rsp);
+    sm_tx(sm, rsp);
 #endif
   } else {
 #if defined(CONFIG_BLE_CENTRAL)
@@ -792,9 +790,6 @@ void sm_pairing_accept(struct net_layer_s *layer,
     return;
 
   struct buffer_s *pkt = net_layer_packet_alloc(&sm->layer, sm->layer.context.prefix_size, 7);
-  struct net_addr_s dst = {
-    .cid = BLE_L2CAP_CID_SM,
-  };
 
   if (oob_data) {
     memcpy(sm->tk, oob_data, 16);
@@ -866,12 +861,7 @@ void sm_pairing_accept(struct net_layer_s *layer,
 #endif
   }
 
-  struct net_task_s *task = net_scheduler_task_alloc(sm->layer.scheduler);
-  if (task)
-    net_task_outbound_push(task,
-                           sm->layer.parent, &sm->layer,
-                           0, NULL, &dst, pkt);
-  buffer_refdec(pkt);
+  sm_tx(sm, pkt);
 }
 
 static
@@ -883,21 +873,13 @@ void sm_pairing_abort(struct net_layer_s *layer, enum sm_reason reason)
     return;
 
   struct buffer_s *rsp = net_layer_packet_alloc(&sm->layer, sm->layer.context.prefix_size, 2);
-  struct net_addr_s dst = {
-    .cid = BLE_L2CAP_CID_SM,
-  };
 
   rsp->data[rsp->begin] = BLE_SM_PAIRING_FAILED;
   rsp->data[rsp->begin + 1] = reason;
 
   sm->pairing_state = BLE_SM_IDLE;
 
-  struct net_task_s *task = net_scheduler_task_alloc(sm->layer.scheduler);
-  if (task)
-    net_task_outbound_push(net_scheduler_task_alloc(sm->layer.scheduler),
-                           sm->layer.parent, &sm->layer,
-                           0, NULL, &dst, rsp);
-  buffer_refdec(rsp);
+  sm_tx(sm, rsp);
 
   dprintk("Pairing aborted\n");
 }
