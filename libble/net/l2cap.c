@@ -105,7 +105,7 @@ void ble_l2cap_task_handle(struct net_layer_s *layer,
 
     if (target) {
       dprintk("L2CAP %d > %P\n",
-              target->handler->type,
+              cid,
               task->packet.buffer->data + task->packet.buffer->begin,
               task->packet.buffer->end - task->packet.buffer->begin);
       net_task_packet_forward(task, target);
