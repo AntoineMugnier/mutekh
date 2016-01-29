@@ -72,12 +72,11 @@ void device_tree_init(void)
 }
 #endif
 
-void device_init(struct device_s *dev, const struct dev_resource_table_s *tbl)
+static void device_init_(struct device_s *dev)
 {
   lock_init(&dev->lock);
   dev->status = DEVICE_NO_DRIVER;
   dev->drv = NULL;
-  dev->res_tbl = (void*)tbl;
   dev->ref_count = 0;
   dev->node.flags = DEVICE_FLAG_DEVICE;
 
@@ -90,6 +89,12 @@ void device_init(struct device_s *dev, const struct dev_resource_table_s *tbl)
 #ifdef CONFIG_DEVICE_ENUM
   dev->enum_dev = &device_enum_root;
 #endif
+}
+
+void device_init(struct device_s *dev, const struct dev_resource_table_s *tbl)
+{
+  device_init_(dev);
+  dev->res_tbl = (void*)tbl;
 }
 
 static const size_t devsize = ALIGN_VALUE_UP(sizeof(struct device_s), sizeof(uint64_t));
@@ -106,11 +111,8 @@ struct device_s *device_alloc(size_t resources)
 
   if (dev != NULL)
     {
-      lock_init(&dev->lock);
-      dev->status = DEVICE_NO_DRIVER;
-      dev->drv = NULL;
-      dev->ref_count = 0;
-      dev->node.flags = DEVICE_FLAG_ALLOCATED | DEVICE_FLAG_DEVICE;
+      device_init_(dev);
+      dev->node.flags |= DEVICE_FLAG_ALLOCATED;
 
       if (resources > 0)
         {
@@ -129,16 +131,6 @@ struct device_s *device_alloc(size_t resources)
         {
           dev->res_tbl = NULL;
         }
-
-#ifdef CONFIG_DEVICE_TREE
-      dev->node.name = NULL;
-      dev->node.parent = NULL;
-      device_list_init(&dev->node.children);
-#endif
-
-#ifdef CONFIG_DEVICE_ENUM
-      dev->enum_dev = &device_enum_root;
-#endif
     }
 
   return dev;
