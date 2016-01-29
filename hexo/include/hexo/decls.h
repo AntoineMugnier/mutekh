@@ -195,6 +195,22 @@ cont_s##_from_##field(void *x);
 # define BITFIELD(name, bits) name:bits
 #endif
 
+/** @This expands to an unsigned integer type large enough to hold the
+    constant value @tt x */
+#define UINT_FIT_TYPE(x) typeof(                           \
+  __builtin_choose_expr((uint8_t)(x)  == (x), (uint8_t)0,  \
+  __builtin_choose_expr((uint16_t)(x) == (x), (uint16_t)0, \
+  __builtin_choose_expr((uint32_t)(x) == (x), (uint32_t)0, \
+                        (uint64_t)0))))
+
+/** @This expands to a signed integer type large enough to hold the
+    constant value @tt x */
+#define INT_FIT_TYPE(x) typeof(                            \
+  __builtin_choose_expr((int8_t)(x)  == (x), (uint8_t)0,   \
+  __builtin_choose_expr((int16_t)(x) == (x), (int16_t)0,   \
+  __builtin_choose_expr((int32_t)(x) == (x), (int32_t)0,   \
+                        (int64_t)0))))
+
 #if defined(CONFIG_DEBUG) && !defined(__ASSEMBLER__)
 
 ALWAYS_INLINE void hexo_atomic_scope_check(char *scope_exited_cleanly)
