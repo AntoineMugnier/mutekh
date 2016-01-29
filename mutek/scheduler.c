@@ -576,11 +576,11 @@ static void sched_context_idle()
          therefore allows use of a singly linked and non-locked list. */
       } while (!idle_cpu_queue_isorphan(ipi_e));
 #endif
-    }
 
 #if defined(CONFIG_MUTEK_KROUTINE_IDLE) && defined(CONFIG_ARCH_SMP)
-  atomic_inc(&sched_running_cpus);
+    atomic_inc(&sched_running_cpus);
 #endif
+    }
 }
 
 /***********************************************************************
