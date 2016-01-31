@@ -709,7 +709,8 @@ static DEV_USE(mpu6505_use)
     struct device_s *dev = accessor->dev;
     struct mpu6505_private_s *pv = dev->drv_pv;
     if (dev->start_count == 0)
-      return device_stop(&pv->timer);
+      device_stop(&pv->timer);
+    return 0;
   }
 
   default:

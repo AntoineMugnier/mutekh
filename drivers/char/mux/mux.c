@@ -760,7 +760,8 @@ static DEV_USE(char_mux_use)
       struct device_s *dev = accessor->dev;
       struct char_mux_context_s *pv = dev->drv_pv;
       if (dev->start_count == 0)
-        return device_stop(&pv->io);
+        device_stop(&pv->io);
+      return 0;
     }
 
     default:
