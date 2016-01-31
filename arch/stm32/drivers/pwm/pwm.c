@@ -253,21 +253,16 @@ error_t stm32_pwm_start_stop(struct device_s *dev,
 {
   struct stm32_pwm_private_s *pv = dev->drv_pv;
 
-  if (channel > pv->chan_count)
-    return -EINVAL;
-
-  LOCK_SPIN_IRQ(&dev->lock);
-
   if (start)
     {
       ++pv->count[channel];
       pv->start |= 1 << channel;
+      return 0;
     }
-  else 
+  else if (pv->count[channel] > 0)
     {
-      assert(pv->count[channel] > 0);
       --pv->count[channel];
-      if(pv->count[channel] == 0)
+      if (pv->count[channel] == 0)
         {
           do { uint32_t register _reg = endian_le32(cpu_mem_read_32(( ((((pv->addr)))) + (STM32_TIMER_CCER_ADDR) ))); STM32_TIMER_CCER_CCE_SET( channel, (_reg), 1 ); cpu_mem_write_32( ( ((((pv->addr)))) + (STM32_TIMER_CCER_ADDR) ), endian_le32(_reg) ); } while (0);
           pv->start &= ~(1 << channel);
@@ -275,10 +270,10 @@ error_t stm32_pwm_start_stop(struct device_s *dev,
 
       if (pv->start == 0)
         do { uint32_t register _reg = endian_le32(cpu_mem_read_32(( ((((pv->addr)))) + (STM32_TIMER_CR1_ADDR) ))); STM32_TIMER_CR1_CEN_SET( (_reg), 0 ); cpu_mem_write_32( ( ((((pv->addr)))) + (STM32_TIMER_CR1_ADDR) ), endian_le32(_reg) ); } while (0);
+      return 0;
     }
 
-  LOCK_RELEASE_IRQ(&dev->lock);
-  return 0;
+  return -EBUSY;
 }
 
 static inline
@@ -477,13 +472,11 @@ DEV_USE(stm32_pwm_use)
     case DEV_USE_GET_ACCESSOR:
       if (accessor->number >= STM32_PWM_CHANNEL_MAX)
         return -ENOTSUP;
-    case DEV_USE_PUT_ACCESSOR:
-      return 0;
     case DEV_USE_LAST_NUMBER:
       accessor->number = STM32_PWM_CHANNEL_MAX - 1;
       return 0;
     default:
-      return -ENOTSUP;
+      return dev_use_generic(param, op);
     }
 }
 

@@ -47,8 +47,6 @@ struct efm32_rtc_private_s
 {
   /* Timer address */
   uintptr_t addr;
-  /* Start timer counter, bit 0 indicates if there are pending requests */
-  uint_fast8_t start_count;
   dev_timer_cfgrev_t rev;
 #ifdef CONFIG_DEVICE_IRQ
   /* Timer Software value */
@@ -192,8 +190,8 @@ static DEV_IRQ_SRC_PROCESS(efm32_rtc_irq)
           rq = dev_timer_rq_s_cast(dev_request_pqueue_head(&pv->queue));
           if (rq == NULL)
             {
-              pv->start_count &= ~1;
-              if (pv->start_count == 0)
+              dev->start_count &= ~1;
+              if (dev->start_count == 0)
                 efm32_rtc_stop_counter(pv);
               break;
             }
@@ -252,8 +250,8 @@ static DEV_TIMER_CANCEL(efm32_rtc_cancel)
             }
           else
             {
-              pv->start_count &= ~1;
-              if (pv->start_count == 0)
+              dev->start_count &= ~1;
+              if (dev->start_count == 0)
                 efm32_rtc_stop_counter(pv);
             }
         }
@@ -285,7 +283,7 @@ static DEV_TIMER_REQUEST(efm32_rtc_request)
   else
     {
       /* Start timer if needed */
-      if (pv->start_count == 0)
+      if (dev->start_count == 0)
         efm32_rtc_start_counter(pv);
 
       uint64_t value = get_timer_value(pv);
@@ -297,7 +295,7 @@ static DEV_TIMER_REQUEST(efm32_rtc_request)
         err = -ETIMEDOUT;
       else
         {
-          pv->start_count |= 1;
+          dev->start_count |= 1;
           dev_timer_pqueue_insert(&pv->queue, dev_timer_rq_s_base(rq));
           rq->rq.drvdata = pv;
 
@@ -307,7 +305,7 @@ static DEV_TIMER_REQUEST(efm32_rtc_request)
               efm32_rtc_raise_irq(pv);
         }
 
-      if (pv->start_count == 0)
+      if (dev->start_count == 0)
         efm32_rtc_stop_counter(pv);
     }
 
@@ -323,48 +321,27 @@ static DEV_USE(efm32_rtc_use)
 {
   struct device_accessor_s *accessor = param;
 
-  error_t err = 0;
-
   switch (op)
     {
-    case DEV_USE_GET_ACCESSOR:
-      if (accessor->number)
-        return -ENOTSUP;
-    case DEV_USE_PUT_ACCESSOR:
-      return 0;
-    case DEV_USE_START:
-    case DEV_USE_STOP:
-      break;
-    default:
-      return -ENOTSUP;
-    }
-
-  struct device_s *dev = accessor->dev;
-  struct efm32_rtc_private_s *pv = dev->drv_pv;
-
-  LOCK_SPIN_IRQ(&dev->lock);
-
-  if (op == DEV_USE_START)
-    {
-      if (pv->start_count == 0)
+    case DEV_USE_START: {
+      struct device_s *dev = accessor->dev;
+      struct efm32_rtc_private_s *pv = dev->drv_pv;
+      if (dev->start_count == 0)
         efm32_rtc_start_counter(pv);
-      pv->start_count += 2;
-    }
-  else   /* DEV_USE_STOP */
-    {
-      if (pv->start_count < 2)
-        err = -EINVAL;
-      else
-        {
-          pv->start_count -= 2;
-          if (pv->start_count == 0)
-            efm32_rtc_stop_counter(pv);
-        }
+      return 0;
     }
 
-  LOCK_RELEASE_IRQ(&dev->lock);
+    case DEV_USE_STOP: {
+      struct device_s *dev = accessor->dev;
+      struct efm32_rtc_private_s *pv = dev->drv_pv;
+      if (dev->start_count == 0)
+        efm32_rtc_stop_counter(pv);
+      return 0;
+    }
 
-  return err;
+    default:
+      return dev_use_generic(param, op);
+    }
 }
 
 static DEV_TIMER_GET_VALUE(efm32_rtc_get_value)
@@ -461,7 +438,6 @@ static DEV_INIT(efm32_rtc_init)
 
   memset(pv, 0, sizeof(*pv));
   pv->addr = addr;
-  pv->start_count = 0;
   dev->drv_pv = pv;
 
 #ifdef CONFIG_DEVICE_CLOCK
@@ -535,12 +511,6 @@ static DEV_INIT(efm32_rtc_init)
 static DEV_CLEANUP(efm32_rtc_cleanup)
 {
   struct efm32_rtc_private_s *pv = dev->drv_pv;
-
-  if (pv->start_count & 1)
-    return -EBUSY;
-
-  /* Stop rtc */ 
-  efm32_rtc_stop_counter(pv);
 
 #ifdef CONFIG_DEVICE_CLOCK
   dev_clock_sink_release(&pv->clk_ep);

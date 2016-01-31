@@ -91,7 +91,7 @@ static DEV_USE(soclib_xicu_use)
     }
 #endif
     default:
-      return -ENOTSUP;
+      return dev_use_generic(param, op);
     }
 }
 

@@ -281,8 +281,6 @@ static DEV_USE(gptimer_use)
       if (accessor->number / 2 >= pv->t_count)
         return -ENOTSUP;
     }
-    case DEV_USE_PUT_ACCESSOR:
-      return 0;
     case DEV_USE_START:
     case DEV_USE_STOP:
       break;
@@ -292,7 +290,7 @@ static DEV_USE(gptimer_use)
       return 0;
     }
     default:
-      return -ENOTSUP;
+      return dev_use_generic(param, op);
     }
 
   struct device_s *dev = accessor->dev;
@@ -302,8 +300,6 @@ static DEV_USE(gptimer_use)
   error_t err = 0;
 
   struct gptimer_state_s *p = pv->t + number;
-
-  LOCK_SPIN_IRQ(&dev->lock);
 
   if (op == DEV_USE_START)
     {
@@ -370,8 +366,6 @@ static DEV_USE(gptimer_use)
             }
         }
     }
-
-  LOCK_RELEASE_IRQ(&dev->lock);
 
   return err;
 }

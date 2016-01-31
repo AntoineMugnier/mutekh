@@ -62,7 +62,6 @@ struct pic32_timer_private_s
   struct dev_irq_src_s irq_ep[3];
   /* Request queue */
   dev_request_pqueue_root_t queue;
-  uint_fast8_t start_count;
   enum dev_timer_capabilities_e cap:8;
   dev_timer_cfgrev_t rev;
   /* Core frequency */
@@ -158,8 +157,8 @@ static void pic32_timer_test_queue(struct device_s *dev)
 
       if (rq == NULL)
         {
-          pv->start_count &= ~1;
-          if (pv->start_count == 0)
+          dev->start_count &= ~1;
+          if (dev->start_count == 0)
             pic32_timer_stop_counter(pv);
           break;
         }
@@ -253,8 +252,8 @@ static DEV_TIMER_CANCEL(pic32_timer_cancel)
             }
           else
             {
-              pv->start_count &= ~1;
-              if (pv->start_count == 0)
+              dev->start_count &= ~1;
+              if (dev->start_count == 0)
                 pic32_timer_stop_counter(pv);
             }
         }
@@ -279,7 +278,7 @@ static DEV_TIMER_REQUEST(pic32_timer_request)
   else
     {
       /* Start timer if needed */
-      if (pv->start_count == 0)
+      if (dev->start_count == 0)
         pic32_timer_start_counter(pv);
 
       uint64_t value = get_timer_value(pv);
@@ -291,7 +290,7 @@ static DEV_TIMER_REQUEST(pic32_timer_request)
         err = -ETIMEDOUT;
       else
         {
-          pv->start_count |= 1;
+          dev->start_count |= 1;
           dev_timer_pqueue_insert(&pv->queue, dev_timer_rq_s_base(rq));
           rq->rq.drvdata = pv;
 
@@ -301,7 +300,7 @@ static DEV_TIMER_REQUEST(pic32_timer_request)
               pic32_timer_test_queue(dev);
         }
 
-      if (pv->start_count == 0)
+      if (dev->start_count == 0)
         pic32_timer_stop_counter(pv);
     }
 
@@ -316,45 +315,25 @@ static DEV_USE(pic32_timer_use)
 
   switch (op)
     {
-    case DEV_USE_GET_ACCESSOR:
-      if (accessor->number > 0)
-        return -ENOTSUP;
-    case DEV_USE_PUT_ACCESSOR:
-      return 0;
-    case DEV_USE_START:
-    case DEV_USE_STOP:
-      break;
-    default:
-      return -ENOTSUP;
-    }
-
-  struct device_s *dev = accessor->dev;
-  struct pic32_timer_private_s *pv = dev->drv_pv;
-  error_t err = 0;
-
-  lock_spin_irq2(&dev->lock, &pv->irq_save);
-
-  if (op == DEV_USE_START)
-    {
-      if (pv->start_count == 0)
+    case DEV_USE_START: {
+      struct device_s *dev = accessor->dev;
+      struct pic32_timer_private_s *pv = dev->drv_pv;
+      if (dev->start_count == 0)
         pic32_timer_start_counter(pv);
-      pv->start_count += 2;
-    }
-  else   /* DEV_USE_STOP */
-    {
-      if (pv->start_count < 2)
-        err = -EINVAL;
-      else
-        {
-          pv->start_count -= 2;
-          if (pv->start_count == 0)
-            pic32_timer_stop_counter(pv);
-        }
+      return 0;
     }
 
-  lock_release_irq2(&dev->lock, &pv->irq_save);
+    case DEV_USE_STOP: {
+      struct device_s *dev = accessor->dev;
+      struct pic32_timer_private_s *pv = dev->drv_pv;
+      if (dev->start_count == 0)
+        pic32_timer_stop_counter(pv);
+      return 0;
+    }
 
-  return err;
+    default:
+      return dev_use_generic(param, op);
+    }
 }
 
 static DEV_TIMER_GET_VALUE(pic32_timer_get_value)
@@ -390,7 +369,7 @@ static DEV_TIMER_CONFIG(pic32_timer_config)
 
   if (res)
     {
-      if (pv->start_count)
+      if (dev->start_count)
         {
           err = -EBUSY;
           r = res;
@@ -467,7 +446,6 @@ static DEV_INIT(pic32_timer_init)
   if (device_get_res_freq(dev, &pv->freq, 0))
     goto err_mem;
 
-  pv->start_count = 0;
   pv->rev = 1;
   pv->cap = DEV_TIMER_CAP_STOPPABLE | DEV_TIMER_CAP_HIGHRES | DEV_TIMER_CAP_KEEPVALUE;
   dev->drv_pv = pv;

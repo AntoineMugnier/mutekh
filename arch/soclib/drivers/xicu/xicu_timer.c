@@ -214,8 +214,6 @@ error_t soclib_xicu_timer_use(struct device_accessor_s *accessor, enum dev_use_o
   error_t err = 0;
   struct soclib_xicu_pti_s *p = pv->pti + number;
 
-  LOCK_SPIN_IRQ(&dev->lock);
-
   if (p->start_count && ((p->start_count > 0) ^ mode))
     {
       /* timer already used in the other mode */
@@ -251,8 +249,6 @@ error_t soclib_xicu_timer_use(struct device_accessor_s *accessor, enum dev_use_o
             cpu_mem_write_32(XICU_REG_ADDR(pv->addr, XICU_PTI_PER, number), 0);
         }
     }
-
-  LOCK_RELEASE_IRQ(&dev->lock);
 
   return err;
 }

@@ -75,6 +75,67 @@ error_t device_get_api(struct device_s *dev,
     }
 }
 
+error_t device_last_number(struct device_s *dev,
+                           enum driver_class_e cl,
+                           uint_fast8_t *num)
+{
+  struct device_accessor_s acc;
+  error_t err;
+
+  acc.dev = dev;
+  LOCK_SPIN_IRQ(&dev->lock);
+  err = device_get_api(dev, cl, &acc.api);
+  if (!err)
+    {
+      dev_use_t *use = dev->drv->f_use;
+      err = use(&acc, DEV_USE_LAST_NUMBER);
+    }
+  LOCK_RELEASE_IRQ(&dev->lock);
+  return err;
+}
+
+error_t device_start(void *accessor)
+{
+  struct device_accessor_s *acc = accessor;
+  struct device_s *dev = acc->dev;
+  dev_use_t *use = dev->drv->f_use;
+  error_t err = 0;
+  LOCK_SPIN_IRQ(&dev->lock);
+  assert((dev->start_count + DEVICE_START_COUNT_INC) >>
+         (CONFIG_DEVICE_USE_BITS + CONFIG_DEVICE_START_LOG2INC) == 0);
+  err = use(accessor, DEV_USE_START);
+  if (!err)
+    dev->start_count += DEVICE_START_COUNT_INC;
+  LOCK_RELEASE_IRQ(&dev->lock);
+  return err;
+}
+
+void device_stop(void *accessor)
+{
+  struct device_accessor_s *acc = accessor;
+  struct device_s *dev = acc->dev;
+  dev_use_t *use = dev->drv->f_use;
+  LOCK_SPIN_IRQ(&dev->lock);
+  assert(dev->start_count >= DEVICE_START_COUNT_INC);
+  dev->start_count -= DEVICE_START_COUNT_INC;
+  use(accessor, DEV_USE_STOP);
+  LOCK_RELEASE_IRQ(&dev->lock);
+}
+
+void device_stop_safe(void *accessor)
+{
+  struct device_accessor_s *acc = accessor;
+  struct device_s *dev = acc->dev;
+  dev_use_t *use = dev->drv->f_use;
+  LOCK_SPIN_IRQ(&dev->lock);
+  if (dev->start_count >= DEVICE_START_COUNT_INC)
+    {
+      dev->start_count -= DEVICE_START_COUNT_INC;
+      use(accessor, DEV_USE_STOP);
+    }
+  LOCK_RELEASE_IRQ(&dev->lock);
+}
+
 error_t device_get_accessor(void *accessor, struct device_s *dev,
                             enum driver_class_e cl, uint_fast8_t number)
 {
@@ -346,7 +407,7 @@ error_t device_release_driver(struct device_s *dev)
 #ifdef CONFIG_DEVICE_DRIVER_CLEANUP
     case DEVICE_DRIVER_INIT_DONE:
     case DEVICE_DRIVER_INIT_PARTIAL:
-      if (dev->ref_count)
+      if (dev->ref_count || dev->start_count)
         break;
       if (dev->drv->f_cleanup(dev))
         break;

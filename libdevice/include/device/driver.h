@@ -234,7 +234,10 @@ typedef DEV_INIT(dev_init_t);
 /**
    @This is device cleanup() function type. @This tries to release
    all ressources allocated by the initialization function.
+   This function will only be called when @ref device_s::ref_count
+   and @ref device_s::start_count are both zero.
 
+   This function is called with the device lock held.
    @This function must return @tt -EBUSY if it is not possible to
    release the device yet.
 */
@@ -243,10 +246,37 @@ typedef DEV_CLEANUP(dev_cleanup_t);
 /** @This specifies device use and start/stop operations. @see dev_use_t */
 enum dev_use_op_e
 {
+  /** Get and Put operations are used when the @ref
+      device_get_accessor and @ref device_put_accessor functions are
+      called. An error code may be returned on @ref
+      DEV_USE_GET_ACCESSOR in order to prevent the caller from
+      acquiring an accessor. The @tt param argument is a pointer to a
+      @ref device_accessor_s object. */
   DEV_USE_GET_ACCESSOR,
+  /* @see DEV_USE_GET_ACCESSOR */
   DEV_USE_PUT_ACCESSOR,
+
+  /** This operation is used when @ref device_last_number is
+      called. The @tt param argument is a pointer to a @ref
+      device_accessor_s structure with the @tt dev and @tt api field
+      properly initialized. The default implementation reports 0. */
   DEV_USE_LAST_NUMBER,
+
+  /** Start and stop operations are invoked from the @ref device_start
+      and @ref device_stop functions. An error code may be returned on
+      @ref DEV_USE_START. The @tt param argument is a pointer to a
+      @ref device_accessor_s object. The default implementation does
+      nothing and always succeed.
+
+      The driver may test if the value of @ref device_s::start_count
+      is zero. This field is updated by the @ref device_start and @ref
+      device_stop functions. The driver may also manage the lower bits
+      of the value directly if they were reserved by providing a
+      suitable value for the @ref #CONFIG_DEVICE_START_LOG2INC
+      token. The driver may still maintain some other internal start
+      counters if sub-devices do require separate counters. */
   DEV_USE_START,
+  /** @see DEV_USE_START */
   DEV_USE_STOP,
 };
 
@@ -255,37 +285,12 @@ struct device_accessor_s;
 /** Common device class use() function template. */
 #define DEV_USE(n) error_t (n) (void *param, enum dev_use_op_e op)
 
-/**
-   @This is called when the usage status of a device changes.
+/** @This is called when the usage status of a device changes. The
+    @ref dev_use_generic function provides a default implementation of
+    this driver API function.
 
-   The @ref dev_use_generic function provides a default implementation
-   of this driver API function.
-
-   The following operations are defined:
-   @list
-
-   @item @ref DEV_USE_GET_ACCESSOR and @ref DEV_USE_PUT_ACCESSOR are
-   used when the @ref device_get_accessor and @ref device_put_accessor
-   functions are called. An error code may be returned on @ref
-   DEV_USE_GET_ACCESSOR in order to prevent the caller from acquiring
-   an accessor. The @tt param argument is a pointer to a @ref
-   device_accessor_s object. The default implementation reports an
-   error when the accessor sub-device number is not zero.
-   @see DRIVER_FLAGS_MULTIPLE
-
-   @item @ref DEV_USE_START and @ref DEV_USE_STOP are used when @ref
-   device_start and @ref device_stop are called on the device. An
-   error code may be returned on @ref DEV_USE_GET_START. The @tt param
-   argument is a pointer to a @ref device_accessor_s object. The default
-   implementation does nothing and always succeed.
-
-   @item @ref DEV_USE_LAST_NUMBER is used when @ref device_last_number
-   is called. The @tt param argument is a pointer to a @ref
-   device_accessor_s structure with the @tt dev and @tt api field
-   properly initialized. The default implementation reports 0.
-
-   @end list
-*/
+    This function is called with the device lock held.
+    Valid operations are defined in @ref dev_use_op_e. */
 typedef DEV_USE(dev_use_t);
 
 extern DEV_USE(dev_use_generic);
@@ -532,35 +537,37 @@ ALWAYS_INLINE void device_init_accessor(void *accessor)
   a->dev = NULL;
 }
 
-/** @This starts the device operation.
+/** @This specifies the value added to the device_s::start_count value
+    when the @ref device_start function is invoked. */
+#define DEVICE_START_COUNT_INC (1 << CONFIG_DEVICE_START_LOG2INC)
 
-    Depending on the device class, the device operation may be started
-    and stopped by submitting requests. This function can be used when
-    the device active state needs to be changed explicitly. A counter
-    must be used internally to match the number of calls with the @ref
-    device_stop function.
+/** @This instructs the driver to keep the device in active
+    state. @This internally invoke the @ref DEV_USE_START operation of
+    the driver increases the value of @ref device_s::start_count and.
 
-    @see device_stop.
+    This function always returns immediately. It is implementation
+    defined if the actual device startup is delayed by the driver.
+
+    Depending on the device class, the device operation may also get
+    started when submitting requests to the device driver. In this
+    case, this function can be used when the device must remain active
+    between requests. Refer to the device class specific documentation
+    for details.
+
+    @see device_stop. @see #DEVICE_START_COUNT_INC
 */
-ALWAYS_INLINE error_t device_start(void *accessor)
-{
-  struct device_accessor_s *acc = accessor;
-  dev_use_t *use = acc->dev->drv->f_use;
-  return use(accessor, DEV_USE_START);
-}
+error_t device_start(void *accessor);
 
-/** @This stops the device operation. This function return 0 if the
-    device has actually been stopped. If the internal use count has
-    not reached zero, @tt -EBUSY is returned.
+/** @This reverts the effect of the @ref device_start function. @This
+    internally decreases the value of @ref device_s::start_count and
+    invoke the @ref DEV_USE_STOP operation of the driver.
 
     @see device_start.
 */
-ALWAYS_INLINE error_t device_stop(void *accessor)
-{
-  struct device_accessor_s *acc = accessor;
-  dev_use_t *use = acc->dev->drv->f_use;
-  return use(accessor, DEV_USE_STOP);
-}
+void device_stop(void *accessor);
+
+/** @internal @This is similar to @ref device_stop, for test purpose only. */
+void device_stop_safe(void *accessor);
 
 /** @This retreives the value of the last possibly valid sub-devices
     number. It returns @tt -ENOTSUP if the class does not implement
@@ -575,20 +582,9 @@ ALWAYS_INLINE error_t device_stop(void *accessor)
     driver may report a last number which may not be available with
     the current configuration.
  */
-ALWAYS_INLINE error_t device_last_number(struct device_s *dev,
-                                         enum driver_class_e cl,
-                                         uint_fast8_t *num)
-{
-  struct device_accessor_s acc;
-  acc.dev = dev;
-  error_t err = device_get_api(dev, cl, &acc.api);
-  if (!err)
-    {
-      dev_use_t *use = dev->drv->f_use;
-      err = use(&acc, DEV_USE_LAST_NUMBER);
-    }
-  return err;
-}
+error_t device_last_number(struct device_s *dev,
+                           enum driver_class_e cl,
+                           uint_fast8_t *num);
 
 /**
    @This walks down the device tree from specified node (from root if

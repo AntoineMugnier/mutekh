@@ -751,15 +751,20 @@ static DEV_USE(char_mux_use)
       return 0;
     }
     case DEV_USE_START: {
-      struct char_mux_context_s *pv = accessor->dev->drv_pv;
-      return device_start(&pv->io);
+      struct device_s *dev = accessor->dev;
+      struct char_mux_context_s *pv = dev->drv_pv;
+      if (dev->start_count == 0)
+        return device_start(&pv->io);
     }
     case DEV_USE_STOP: {
-      struct char_mux_context_s *pv = accessor->dev->drv_pv;
-      return device_stop(&pv->io);
+      struct device_s *dev = accessor->dev;
+      struct char_mux_context_s *pv = dev->drv_pv;
+      if (dev->start_count == 0)
+        return device_stop(&pv->io);
     }
+
     default:
-      return -ENOTSUP;
+      return dev_use_generic(param, op);
     }
 }
 

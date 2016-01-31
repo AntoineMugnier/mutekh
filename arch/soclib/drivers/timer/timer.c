@@ -258,8 +258,6 @@ static DEV_USE(soclib_timer_use)
       if (accessor->number / 2 >= pv->t_count)
         return -ENOTSUP;
     }
-    case DEV_USE_PUT_ACCESSOR:
-      return 0;
     case DEV_USE_START:
     case DEV_USE_STOP:
       break;
@@ -269,7 +267,7 @@ static DEV_USE(soclib_timer_use)
       return 0;
     }
     default:
-      return -ENOTSUP;
+      return dev_use_generic(param, op);
     }
 
   struct device_s *dev = accessor->dev;
@@ -286,8 +284,6 @@ static DEV_USE(soclib_timer_use)
 
   struct soclib_timer_state_s *p = pv->t + number;
   int_fast8_t st = mode ? 2 : -2;
-
-  LOCK_SPIN_IRQ(&dev->lock);
 
   if (p->start_count && ((p->start_count > 0) ^ mode))
     {
@@ -325,8 +321,6 @@ static DEV_USE(soclib_timer_use)
             cpu_mem_write_32(TIMER_REG_ADDR(pv->addr, TIMER_MODE, number), 0);
         }
     }
-
-  LOCK_RELEASE_IRQ(&dev->lock);
 
   return err;
 }

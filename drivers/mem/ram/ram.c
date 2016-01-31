@@ -94,17 +94,15 @@ static DEV_USE(ram_use)
       if (accessor->number >= pv->bank_count)
         return -ENOTSUP;
     }
-    case DEV_USE_PUT_ACCESSOR:
-    case DEV_USE_START:
-    case DEV_USE_STOP:
-      return 0;
+
     case DEV_USE_LAST_NUMBER: {
       struct ram_context_s *pv = accessor->dev->drv_pv;
       accessor->number = pv->bank_count - 1;
       return 0;
     }
+
     default:
-      return -ENOTSUP;
+      return dev_use_generic(param, op);
     }
 }
 

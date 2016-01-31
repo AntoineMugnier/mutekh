@@ -698,25 +698,21 @@ static DEV_USE(mpu6505_use)
 
   switch (op) {
 
-  case DEV_USE_GET_ACCESSOR:
-    if (accessor->number)
-      return -ENOTSUP;
-  case DEV_USE_PUT_ACCESSOR:
-    return 0;
-
   case DEV_USE_START: {
     struct device_s *dev = accessor->dev;
     struct mpu6505_private_s *pv = dev->drv_pv;
-    return device_start(&pv->timer);
+    if (dev->start_count == 0)
+      return device_start(&pv->timer);
   }
 
   case DEV_USE_STOP: {
     struct device_s *dev = accessor->dev;
     struct mpu6505_private_s *pv = dev->drv_pv;
-    return device_stop(&pv->timer);
+    if (dev->start_count == 0)
+      return device_stop(&pv->timer);
   }
 
   default:
-    return -ENOTSUP;
+    return dev_use_generic(param, op);
   }
 }

@@ -134,10 +134,14 @@ struct device_s
       a mask of initialized classes in driver API order. Extra bits
       can be used by the driver in order to flag internal initialization
       states. */
-  uint8_t                       init_mask;
+  uint8_t                       BITFIELD(init_mask,5);
 
   /** device uses counter */
-  uint8_t                       ref_count;
+  uint8_t                       BITFIELD(ref_count,CONFIG_DEVICE_USE_BITS);
+
+  /** device start counter */
+  uint8_t                       BITFIELD(start_count,CONFIG_DEVICE_USE_BITS
+                                         + CONFIG_DEVICE_START_LOG2INC);
 
   /** general purpose device lock */
   lock_t			lock;

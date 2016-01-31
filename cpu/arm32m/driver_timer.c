@@ -202,8 +202,6 @@ error_t arm_timer_systick_use(const struct device_accessor_s *accessor,
   __unused__ struct arm_dev_private_s *pv = dev->drv_pv;
   error_t err = 0;
 
-  LOCK_SPIN_IRQ(&dev->lock);
-
   switch (accessor->number)
     {
 #ifdef CONFIG_CPU_ARM32M_TIMER_SYSTICK
@@ -280,8 +278,6 @@ error_t arm_timer_systick_use(const struct device_accessor_s *accessor,
     default:
       err = -ENOTSUP;
     }
-
-  LOCK_RELEASE_IRQ(&dev->lock);
 
   return err;
 }

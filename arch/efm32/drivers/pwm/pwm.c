@@ -261,19 +261,15 @@ static DEV_CLOCK_SINK_CHANGED(efm32_pwm_clk_changed)
 static error_t efm32_pwm_start_stop(struct device_s *dev, uint_fast8_t channel, bool_t start)
 {
   struct efm32_pwm_private_s *pv = dev->drv_pv;
-  error_t err = 0;
 
-  LOCK_SPIN_IRQ(&dev->lock);
- 
   if (start)
     {
       pv->count[channel]++;
       pv->start |= 1 << channel;
+      return 0;
     }
-  else 
+  else if (pv->count[channel])
     {
-      assert(pv->count[channel]);
-
       pv->count[channel]--;
 
       if (!pv->count[channel])
@@ -289,11 +285,11 @@ static error_t efm32_pwm_start_stop(struct device_s *dev, uint_fast8_t channel, 
       if (!pv->start)
         /* Stop counter */
         cpu_mem_write_32(pv->addr + EFM32_TIMER_CMD_ADDR, endian_le32(EFM32_TIMER_CMD_STOP));
+
+      return 0;
     }
 
-end:
-  LOCK_RELEASE_IRQ(&dev->lock);
-  return err;
+  return -EBUSY;
 }
 
 /************************************************************************/
@@ -424,14 +420,13 @@ static DEV_USE(efm32_pwm_use)
       case DEV_USE_GET_ACCESSOR:
         if (accessor->number >= EFM32_PWM_CHANNEL_MAX)
           return -ENOTSUP;
-      case DEV_USE_PUT_ACCESSOR:
-        return 0;
+
       case DEV_USE_LAST_NUMBER:
         accessor->number = EFM32_PWM_CHANNEL_MAX - 1;
         return 0;
 
       default:
-        return -ENOTSUP;
+        return dev_use_generic(param, op);
       }
 }
 

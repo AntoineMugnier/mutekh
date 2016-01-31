@@ -374,7 +374,16 @@ dev_shell_dump_device(struct termui_console_s *con, struct device_s *dev,
 
   for (i = 0; i < indent; i++)
     termui_con_printf(con, "  ");
-  termui_con_printf(con, "  status: %N, use: %u\n", dev->status, device_status_e, dev->ref_count);
+  termui_con_printf(con, "  status: %N, use: %u, start: %u",
+                    dev->status, device_status_e, dev->ref_count,
+                    dev->start_count >> CONFIG_DEVICE_START_LOG2INC);
+
+#if CONFIG_DEVICE_START_LOG2INC
+  uint_fast8_t f = dev->start_count & (DEVICE_START_COUNT_INC - 1);
+  if (f)
+    termui_con_printf(con, " [flags 0x%x]\n", f);
+#endif
+  termui_con_printf(con, "\n");
 
   if (dev->drv)
     {
@@ -619,7 +628,12 @@ static error_t dev_shell_start_stop(struct termui_console_s *con, enum dev_opts_
   if (device_get_accessor(&acc, c->dev, c->cl, c->num))
     return -EINVAL;
 
-  error_t err = start ? device_start(&acc) : device_stop(&acc);
+  error_t err = 0;
+  if (start)
+    err = device_start(&acc);
+  else
+    device_stop_safe(&acc);
+
   device_put_accessor(&acc);
 
   return err ? -EINVAL : 0;

@@ -60,7 +60,6 @@ struct enst_rttimer_private_s
 {
   uintptr_t addr;
   uint_fast8_t t_count;         // timers count
-  uint32_t start_count;
   dev_timer_cfgrev_t rev;
 #ifdef CONFIG_DEVICE_IRQ
   struct dev_irq_src_s *irq_eps;
@@ -78,7 +77,7 @@ static inline void enst_rttimer_irq_process(struct device_s *dev, uint_fast8_t n
 
   while ((rq = dev_timer_rq_s_cast(dev_request_pqueue_head(&p->queue))))
     {
-      assert(pv->start_count >= 0x10000);
+      assert(dev->start_count >= 1);
 
       uint64_t value = RT_TIMER_ENDIAN32(cpu_mem_read_32(pv->addr + RT_TIMER_RTCL_ADDR));
       value |= (uint64_t)RT_TIMER_ENDIAN32(cpu_mem_read_32(pv->addr + RT_TIMER_RTCTMP_ADDR)) << 32;
@@ -97,8 +96,8 @@ static inline void enst_rttimer_irq_process(struct device_s *dev, uint_fast8_t n
       kroutine_exec(&rq->rq.kr);
       lock_spin(&dev->lock);
 
-      pv->start_count -= 0x10000;
-      if (pv->start_count == 0)
+      dev->start_count--;
+      if (dev->start_count == 0)
         cpu_mem_write_32(pv->addr + RT_TIMER_CTRL_ADDR, RT_TIMER_ENDIAN32(RT_TIMER_CTRL_IEW_SMASK));
     }
 }
@@ -183,8 +182,8 @@ static DEV_TIMER_CANCEL(enst_rttimer_cancel)
       rq->rq.drvdata = NULL;
 
       /* stop timer if not in use */
-      pv->start_count -= 0x10000;
-      if (pv->start_count == 0)
+      dev->start_count--;
+      if (dev->start_count == 0)
         cpu_mem_write_32(pv->addr + RT_TIMER_CTRL_ADDR, RT_TIMER_ENDIAN32(RT_TIMER_CTRL_IEW_SMASK));
 
       if (first)  /* removed first ? */
@@ -251,12 +250,12 @@ static DEV_TIMER_REQUEST(enst_rttimer_request)
             }
 
           /* start timer if needed */
-          if (pv->start_count == 0)
+          if (dev->start_count == 0)
             {
               cpu_mem_write_32(pv->addr + RT_TIMER_CTRL_ADDR,
                                RT_TIMER_ENDIAN32(RT_TIMER_CTRL_CE_SMASK | RT_TIMER_CTRL_IEW_SMASK));
             }
-          pv->start_count += 0x10000;
+          dev->start_count++;
         }
     }
 
@@ -278,8 +277,6 @@ static DEV_USE(enst_rttimer_use)
       struct enst_rttimer_private_s *pv = accessor->dev->drv_pv;
       if (accessor->number >= pv->t_count)
         return -ENOTSUP;
-    case DEV_USE_PUT_ACCESSOR:
-      return 0;
     }
 
     case DEV_USE_LAST_NUMBER: {
@@ -292,16 +289,13 @@ static DEV_USE(enst_rttimer_use)
       struct device_s *dev = accessor->dev;
       struct enst_rttimer_private_s *pv = dev->drv_pv;
 
-      LOCK_SPIN_IRQ(&dev->lock);
+      if (dev->start_count == 0)
 #ifdef CONFIG_DEVICE_IRQ
-      if (pv->start_count++ == 0)
         cpu_mem_write_32(pv->addr + RT_TIMER_CTRL_ADDR,
                          RT_TIMER_ENDIAN32(RT_TIMER_CTRL_CE_SMASK | RT_TIMER_CTRL_IEW_SMASK));
 #else
-      if (pv->start_count++ == 0)
-	cpu_mem_write_32(pv->addr + RT_TIMER_CTRL_ADDR, RT_TIMER_ENDIAN32(RT_TIMER_CTRL_CE_SMASK));
+ 	cpu_mem_write_32(pv->addr + RT_TIMER_CTRL_ADDR, RT_TIMER_ENDIAN32(RT_TIMER_CTRL_CE_SMASK));
 #endif
-      LOCK_RELEASE_IRQ(&dev->lock);
       return 0;
     }
 
@@ -310,24 +304,17 @@ static DEV_USE(enst_rttimer_use)
       struct enst_rttimer_private_s *pv = dev->drv_pv;
       error_t err = 0;
 
-      LOCK_SPIN_IRQ(&dev->lock);
+      if (dev->start_count == 0)
 #ifdef CONFIG_DEVICE_IRQ
-      if ((pv->start_count & 0xffff) == 0)
-	err = -EINVAL;
-      else if (--pv->start_count == 0)
         cpu_mem_write_32(pv->addr + RT_TIMER_CTRL_ADDR, RT_TIMER_ENDIAN32(RT_TIMER_CTRL_IEW_SMASK));
 #else
-      if (pv->start_count == 0)
-	err = -EINVAL;
-      else if (--pv->start_count == 0)
 	cpu_mem_write_32(pv->addr + RT_TIMER_CTRL_ADDR, 0);
 #endif
-      LOCK_RELEASE_IRQ(&dev->lock);
       return err;
     }
 
     default:
-      return -ENOTSUP;
+      return dev_use_generic(param, op);
     }
 }
 
@@ -372,7 +359,7 @@ static DEV_TIMER_CONFIG(enst_rttimer_config)
 
   if (res)
     {
-      if (pv->start_count)
+      if (dev->start_count)
         {
           err = -EBUSY;
         }
@@ -456,7 +443,6 @@ static DEV_INIT(enst_rttimer_init)
   memset(pv, 0, s);
   pv->addr = addr;
   pv->t_count = t_count;
-  pv->start_count = 0;
   pv->rev = 1;
   dev->drv_pv = pv;
 
@@ -510,11 +496,6 @@ static DEV_INIT(enst_rttimer_init)
 static DEV_CLEANUP(enst_rttimer_cleanup)
 {
   struct enst_rttimer_private_s *pv = dev->drv_pv;
-
-#ifdef CONFIG_DEVICE_IRQ
-  if (pv->start_count >= 0x10000)
-    return -EBUSY;
-#endif
 
   /* stop */
   cpu_mem_write_32(pv->addr + RT_TIMER_CTRL_ADDR, 0);

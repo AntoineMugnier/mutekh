@@ -77,7 +77,7 @@ static void device_init_(struct device_s *dev)
   lock_init(&dev->lock);
   dev->status = DEVICE_NO_DRIVER;
   dev->drv = NULL;
-  dev->ref_count = 0;
+  dev->ref_count = dev->start_count = 0;
   dev->node.flags = DEVICE_FLAG_DEVICE;
 
 #ifdef CONFIG_DEVICE_TREE

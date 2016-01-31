@@ -67,8 +67,6 @@ struct cc26xx_timer_private_s
   struct dev_freq_accuracy_s acc;
   enum dev_timer_capabilities_e cap:8;
   dev_timer_cfgrev_t rev;
-  /* Start timer counter, bit 0 indicates if there are pending requests */
-  uint_fast8_t start_count;
 };
 
 /* This function starts the hardware timer counter. */
@@ -161,8 +159,8 @@ static void cc26xx_timer_rq_handler(struct device_s *dev)
       rq = dev_timer_rq_s_cast(dev_request_pqueue_head(&pv->queue));
       if (rq == NULL)
         {
-          pv->start_count &= ~1;
-          if (pv->start_count == 0)
+          dev->start_count &= ~1;
+          if (dev->start_count == 0)
             cc26xx_timer_stop_counter(pv);
           break;
         }
@@ -249,8 +247,8 @@ static DEV_TIMER_CANCEL(cc26xx_timer_cancel)
             }
           else
             {
-              pv->start_count &= ~1;
-              if (pv->start_count == 0)
+              dev->start_count &= ~1;
+              if (dev->start_count == 0)
                 cc26xx_timer_stop_counter(pv);
             }
         }
@@ -280,7 +278,7 @@ static DEV_TIMER_REQUEST(cc26xx_timer_request)
   else
     {
       /* Start timer if needed */
-      if (pv->start_count == 0)
+      if (dev->start_count == 0)
         cc26xx_timer_start_counter(pv);
 
       uint64_t value = get_timer_value(pv);
@@ -292,7 +290,7 @@ static DEV_TIMER_REQUEST(cc26xx_timer_request)
         err = -ETIMEDOUT;
       else
         {
-          pv->start_count |= 1;
+          dev->start_count |= 1;
           dev_timer_pqueue_insert(&pv->queue, dev_timer_rq_s_base(rq));
           rq->rq.drvdata = pv;
 
@@ -302,7 +300,7 @@ static DEV_TIMER_REQUEST(cc26xx_timer_request)
               cc26xx_timer_rq_handler(dev);
         }
 
-      if (pv->start_count == 0)
+      if (dev->start_count == 0)
         cc26xx_timer_stop_counter(pv);
     }
 
@@ -320,45 +318,25 @@ static DEV_USE(cc26xx_timer_use)
 
   switch (op)
     {
-    case DEV_USE_GET_ACCESSOR:
-      if (accessor->number)
-        return -ENOTSUP;
-    case DEV_USE_PUT_ACCESSOR:
-      return 0;
-    case DEV_USE_START:
-    case DEV_USE_STOP:
-      break;
-    default:
-      return -ENOTSUP;
-    }
-
-  struct device_s *dev = accessor->dev;
-  struct cc26xx_timer_private_s *pv = dev->drv_pv;
-  error_t err = 0;
-
-  LOCK_SPIN_IRQ(&dev->lock);
-
-  if (op == DEV_USE_START)
-    {
-      if (pv->start_count == 0)
+    case DEV_USE_START: {
+      struct device_s *dev = accessor->dev;
+      struct cc26xx_timer_private_s *pv = dev->drv_pv;
+      if (dev->start_count == 0)
         cc26xx_timer_start_counter(pv);
-      pv->start_count += 2;
-    }
-  else
-    {
-      if (pv->start_count < 2)
-        err = -EINVAL;
-      else
-        {
-          pv->start_count -= 2;
-          if (pv->start_count == 0)
-            cc26xx_timer_stop_counter(pv);
-        }
+      return 0;
     }
 
-  LOCK_RELEASE_IRQ(&dev->lock);
+    case DEV_USE_STOP: {
+      struct device_s *dev = accessor->dev;
+      struct cc26xx_timer_private_s *pv = dev->drv_pv;
+      if (dev->start_count == 0)
+        cc26xx_timer_stop_counter(pv);
+      return 0;
+    }
 
-  return err;
+    default:
+      return dev_use_generic(param, op);
+    }
 }
 
 static DEV_TIMER_GET_VALUE(cc26xx_timer_get_value)
@@ -467,7 +445,6 @@ static DEV_INIT(cc26xx_timer_init)
 
   memset(pv, 0, sizeof(*pv));
   pv->addr = addr;
-  pv->start_count = 0;
   pv->rev = 1;
   pv->cap = DEV_TIMER_CAP_STOPPABLE | DEV_TIMER_CAP_HIGHRES | DEV_TIMER_CAP_KEEPVALUE;
   dev->drv_pv = pv;
@@ -532,9 +509,6 @@ static DEV_INIT(cc26xx_timer_init)
 static DEV_CLEANUP(cc26xx_timer_cleanup)
 {
   struct cc26xx_timer_private_s *pv = dev->drv_pv;
-
-  if (pv->start_count & 1)
-    return -EBUSY;
 
   /* Stop timer */
   cc26xx_timer_stop_counter(pv);
