@@ -26,6 +26,7 @@
 #include <mutek/startup.h>
 #include <mutek/mem_alloc.h>
 #include <mutek/printk.h>
+#include <mutek/instrumentation.h>
 
 #include <device/device.h>
 #include <device/resources.h>
@@ -530,6 +531,7 @@ error_t device_init_driver(struct device_s *dev)
       device_sleep_order++;
 #endif
       dev->status = DEVICE_DRIVER_INIT_DONE;
+      instrumentation_pointer_name(dev, dev->node.name);
       break;
     case -EAGAIN:
       dev->status = DEVICE_DRIVER_INIT_PARTIAL;

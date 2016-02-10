@@ -9,9 +9,7 @@
 
 #include <string.h>
 
-#ifdef CONFIG_SOCLIB_MEMCHECK
-# include <arch/mem_checker.h>
-#endif
+#include <mutek/instrumentation.h>
 
 CPU_LOCAL struct context_s cpu_main_context;
 
@@ -98,16 +96,13 @@ context_init(struct context_s *context,
   context->unlock = NULL;
 # endif
 
-#ifdef CONFIG_SOCLIB_MEMCHECK
-  soclib_mem_check_create_ctx((uint32_t)context, stack_start, stack_end);
-#endif
+  instrumentation_context_create((uint32_t)context, (uintptr_t)stack_start,
+                                 (uintptr_t)stack_end - (uintptr_t)stack_start);
 
   /* setup cpu specific context data */
   if ((res = cpu_context_init(context, entry, param)))
     {
-#ifdef CONFIG_SOCLIB_MEMCHECK
-      soclib_mem_check_delete_ctx((uint32_t)context);
-#endif
+      instrumentation_context_destroy((uint32_t)context);
       mem_free(context->tls);
       return res;
     }
@@ -138,9 +133,7 @@ context_destroy(struct context_s *context)
 
   cpu_context_destroy(context);
 
-#ifdef CONFIG_SOCLIB_MEMCHECK
-  soclib_mem_check_delete_ctx((uint32_t)context);
-#endif
+  instrumentation_context_destroy((uint32_t)context);
 
   mem_free(context->tls);
 

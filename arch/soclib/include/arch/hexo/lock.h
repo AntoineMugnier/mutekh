@@ -30,9 +30,7 @@
 
 #include <hexo/ordering.h>
 
-#ifdef CONFIG_SOCLIB_MEMCHECK
-# include <arch/mem_checker.h>
-#endif
+#include <mutek/instrumentation.h>
 
 # ifdef CONFIG_ARCH_SOCLIB_RAMLOCK
 
@@ -58,9 +56,7 @@ ALWAYS_INLINE error_t __arch_lock_init(struct __arch_lock_s *lock)
   /* FIXME add allocation algorithm */
   lock->ramlock = __ramlock_base;
 
-#ifdef CONFIG_SOCLIB_MEMCHECK
-  soclib_mem_check_declare_lock((void*)lock->ramlock, 1);
-#endif
+  instrumentation_lock_create(lock->ramlock);
 
   __ramlock_base += 4;
 
@@ -69,9 +65,7 @@ ALWAYS_INLINE error_t __arch_lock_init(struct __arch_lock_s *lock)
 
 ALWAYS_INLINE void __arch_lock_destroy(struct __arch_lock_s *lock)
 {
-#ifdef CONFIG_SOCLIB_MEMCHECK
-  soclib_mem_check_declare_lock((void*)lock->ramlock, 0);
-#endif
+  instrumentation_lock_destroy(lock->ramlock);
 }
 
 ALWAYS_INLINE bool_t __arch_lock_try(struct __arch_lock_s *lock)
@@ -127,18 +121,14 @@ ALWAYS_INLINE error_t __arch_lock_init(struct __arch_lock_s *lock)
   lock->a = 0;
   order_smp_write();
 
-#ifdef CONFIG_SOCLIB_MEMCHECK
-  soclib_mem_check_declare_lock((void*)&lock->a, 1);
-#endif
+  instrumentation_lock_create((uintptr_t)&lock->a);
 
   return 0;
 }
 
 ALWAYS_INLINE void __arch_lock_destroy(struct __arch_lock_s *lock)
 {
-#ifdef CONFIG_SOCLIB_MEMCHECK
-  soclib_mem_check_declare_lock((void*)&lock->a, 0);
-#endif
+  instrumentation_lock_destroy((uintptr_t)&lock->a);
 }
 
 ALWAYS_INLINE bool_t __arch_lock_try(struct __arch_lock_s *lock)

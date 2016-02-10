@@ -38,9 +38,7 @@
 #include <mutek/mem_alloc.h>
 #include <mutek/printk.h>
 
-#ifdef CONFIG_SOCLIB_MEMCHECK
-# include <arch/mem_checker.h>
-#endif
+#include <mutek/instrumentation.h>
 
 #define ICU_SPARC_MAX_VECTOR    	14  /* exclude nmi */
 
@@ -148,41 +146,53 @@ static DEV_CPU_REG_INIT(sparc_cpu_reg_init)
 
   CPU_LOCAL_SET(cpu_device, dev);
 
-#ifdef CONFIG_SOCLIB_MEMCHECK
   /* all these functions may execute with briefly invalid stack & frame
      pointer registers due to register window switch. */
 
   void cpu_context_jumpto();
   void cpu_context_jumpto_end();
-  soclib_mem_bypass_sp_check(&cpu_context_jumpto, &cpu_context_jumpto_end);
+  instrumentation_sp_check_bypass_declare((uintptr_t)&cpu_context_jumpto,
+                                          (uintptr_t)&cpu_context_jumpto_end,
+                                          1);
 
   extern __ldscript_symbol_t CPU_NAME_DECL(exception_vector);
   extern __ldscript_symbol_t CPU_NAME_DECL(exception_vector_end);
-  soclib_mem_bypass_sp_check(&CPU_NAME_DECL(exception_vector), &CPU_NAME_DECL(exception_vector_end));
+  instrumentation_sp_check_bypass_declare((uintptr_t)&CPU_NAME_DECL(exception_vector),
+                                          (uintptr_t)&CPU_NAME_DECL(exception_vector_end),
+                                          1);
 
   void sparc_excep_entry();
   void sparc_excep_entry_end();
-  soclib_mem_bypass_sp_check(&sparc_excep_entry, &sparc_excep_entry_end);
+  instrumentation_sp_check_bypass_declare((uintptr_t)&sparc_excep_entry,
+                                          (uintptr_t)&sparc_excep_entry_end,
+                                          1);
 
   void sparc_except_restore();
   void sparc_except_restore_end();
-  soclib_mem_bypass_sp_check(&sparc_except_restore, &sparc_except_restore_end);
+  instrumentation_sp_check_bypass_declare((uintptr_t)&sparc_except_restore,
+                                          (uintptr_t)&sparc_except_restore_end,
+                                          1);
 
-# ifdef CONFIG_HEXO_IRQ
+#ifdef CONFIG_HEXO_IRQ
   void sparc_irq_entry();
   void sparc_irq_entry_end();
-  soclib_mem_bypass_sp_check(&sparc_irq_entry, &sparc_irq_entry_end);
-# endif
+  instrumentation_sp_check_bypass_declare((uintptr_t)&sparc_irq_entry,
+                                          (uintptr_t)&sparc_irq_entry_end,
+                                          1);
+#endif
 
-# ifdef CONFIG_HEXO_USERMODE
+#ifdef CONFIG_HEXO_USERMODE
   void sparc_syscall_entry();
   void sparc_syscall_entry_end();
-  soclib_mem_bypass_sp_check(&sparc_syscall_entry, &sparc_syscall_entry_end);
+  instrumentation_sp_check_bypass_declare((uintptr_t)&sparc_syscall_entry,
+                                          (uintptr_t)&sparc_syscall_entry_end,
+                                          1);
 
   void cpu_context_set_user();
   void cpu_context_set_user_end();
-  soclib_mem_bypass_sp_check(&cpu_context_set_user, &cpu_context_set_user_end);
-# endif
+  instrumentation_sp_check_bypass_declare((uintptr_t)&cpu_context_set_user,
+                                          (uintptr_t)&cpu_context_set_user_end,
+                                          1);
 #endif
 }
 

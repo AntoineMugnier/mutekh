@@ -26,6 +26,7 @@
 
 #include <mutek/semaphore.h>
 #include <mutek/startup.h>
+#include <mutek/instrumentation.h>
 #include <hexo/local.h>
 #include <hexo/cpu.h>
 #include <hexo/ipi.h>
@@ -195,6 +196,8 @@ void __sched_context_push(struct sched_context_s *sched_ctx)
 {
     struct scheduler_s *sched = sched_ctx->scheduler;
 
+    instrumentation_context_waiting((uintptr_t)sched_ctx->context);
+
     sched_queue_wrlock(&sched->root);
     sched_queue_nolock_pushback(&sched->root, sched_ctx);
 
@@ -239,7 +242,11 @@ static CONTEXT_PREEMPT(sched_preempt_kroutine)
 #  ifdef CONFIG_HEXO_CONTEXT_IRQEN
 static CONTEXT_IRQEN(sched_irqen_kroutine)
 {
-  context_switch_to(sched_preempt_kroutine());
+  struct sched_context_s *ctx = sched_preempt_kroutine();
+
+  instrumentation_context_running((uintptr_t)ctx->context);
+
+  context_switch_to(ctx);
 }
 #  endif
 
@@ -252,6 +259,8 @@ static CONTEXT_IRQEN(sched_irqen_kroutine)
 error_t kroutine_schedule(struct kroutine_s *kr, enum kroutine_policy_e policy)
 {
   error_t err = 0;
+
+  instrumentation_context_waiting((uintptr_t)kr);
 
   __unused__ bool_t it = 0
 # ifdef CONFIG_HEXO_IRQ
@@ -331,7 +340,13 @@ error_t kroutine_schedule(struct kroutine_s *kr, enum kroutine_policy_e policy)
 #   endif
 
           if (it) /* switch to idle now */
-            context_switch_to(sched_preempt_kroutine());
+            {
+              struct context_s *ctx = sched_preempt_kroutine();
+
+              instrumentation_context_running((uintptr_t)ctx);
+
+              context_switch_to(ctx);
+            }
           else
             {
 #   if defined(CONFIG_HEXO_CONTEXT_IRQEN)
@@ -459,7 +474,11 @@ static void sched_context_idle()
            /* reset state after pop and before the call so that no
               call to kroutine_exec is discarded. */
           atomic_set(&kr->state, KROUTINE_INVALID);
+          instrumentation_kroutine_begin((uintptr_t)kr);
+          instrumentation_context_running((uintptr_t)kr);
           kr->exec(kr, KROUTINE_EXEC_DEFERRED);
+          instrumentation_context_stopped((uintptr_t)kr);
+          instrumentation_kroutine_end((uintptr_t)kr);
           cpu_interrupt_disable();
 
 # ifdef CONFIG_ARCH_SMP
@@ -487,6 +506,7 @@ static void sched_context_idle()
         {
           sched_queue_nolock_remove(&sched->root, next);
           sched_queue_unlock(&sched->root);
+          instrumentation_context_running((uintptr_t)next->context);
           context_switch_to(next->context);
 
           /* A context might have been pushed in run queue during switch */
@@ -518,7 +538,11 @@ static void sched_context_idle()
               /* reset state after pop and before the call so that no
                  call to kroutine_exec is discarded. */
               atomic_set(&kri->state, KROUTINE_INVALID);
+              instrumentation_kroutine_begin((uintptr_t)kri);
+              instrumentation_context_running((uintptr_t)kri);
               kri->exec(kri, KROUTINE_EXEC_DEFERRED);
+              instrumentation_context_stopped((uintptr_t)kri);
+              instrumentation_kroutine_end((uintptr_t)kri);
               cpu_interrupt_disable();
 # ifdef CONFIG_MUTEK_CONTEXT_SCHED
               sched_queue_wrlock(&sched->root);
@@ -540,6 +564,8 @@ static void sched_context_idle()
 #ifdef CONFIG_MUTEK_CONTEXT_SCHED
       sched_queue_unlock(&sched->root);
 #endif
+
+      instrumentation_scheduler_idle();
 
   /***************************/
 
@@ -743,7 +769,7 @@ void sched_stop_unlock(lock_t *lock)
   struct context_s *ctx = next->context;
   /* queue will be unlocked once context has been saved */
   context_set_unlock(ctx, &sched->root.lock);
-
+  instrumentation_context_running((uintptr_t)ctx);
   context_switch_to(ctx);
 }
 

@@ -32,6 +32,7 @@
 #include <hexo/types.h>
 #include <hexo/error.h>
 #include <device/device.h>
+#include <mutek/instrumentation.h>
 
 ENUM_DESCRIPTOR(driver_class_e, strip:DRIVER_CLASS_, upper);
 
@@ -478,10 +479,16 @@ struct device_accessor_s
    @This invokes the requested operation on a device accessor object.
    The function must be provided by the driver.
 */
-#define DEVICE_OP(dev_accessor, op, ...)        \
-({                                            \
-  typeof(dev_accessor) __a__ = (dev_accessor);  \
-  __a__->api->f_##op(__a__, ## __VA_ARGS__);       \
+#define DEVICE_OP(dev_accessor, op, ...)                                \
+({                                                                      \
+ typeof(dev_accessor) __a__ = (dev_accessor);                           \
+ const struct driver_class_s *__cla                                     \
+   = (const struct driver_class_s*)__a__->api;                          \
+ instrumentation_device_op_begin((uintptr_t)__a__->dev,          \
+                                 (uintptr_t)__a__->dev->drv,     \
+                                 (void**)&(__a__->api->f_##op) - \
+                                 (void**)__cla->functions);             \
+ __a__->api->f_##op(__a__, ## __VA_ARGS__);                             \
 })
 
 /**

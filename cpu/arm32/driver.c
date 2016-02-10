@@ -38,9 +38,7 @@
 #include <mutek/mem_alloc.h>
 #include <mutek/printk.h>
 
-#ifdef CONFIG_SOCLIB_MEMCHECK
-# include <arch/mem_checker.h>
-#endif
+#include <mutek/instrumentation.h>
 
 #if defined(CONFIG_CPU_ARM32_SOCLIB)
 # define ARM_IRQ_SENSE_MODE    DEV_IRQ_SENSE_HIGH_LEVEL
@@ -77,10 +75,14 @@ static CPU_INTERRUPT_HANDLER(arm_irq_handler)
   struct device_s *dev = CPU_LOCAL_GET(arm_icu_dev);
   struct arm_dev_private_s  *pv = dev->drv_pv;
 
+  instrumentation_irq_begin(irq);
+
   if ( irq < ICU_ARM_MAX_VECTOR ) {
     struct dev_irq_sink_s *sink = pv->sinks + irq;
     device_irq_sink_process(sink, 0);
   }
+
+  instrumentation_irq_end(irq);
 }
 
 static DEV_IRQ_SINK_UPDATE(arm_icu_sink_update)
@@ -128,44 +130,60 @@ static DEV_CPU_REG_INIT(arm_cpu_reg_init)
 
   CPU_LOCAL_SET(cpu_device, dev);
 
-#ifdef CONFIG_SOCLIB_MEMCHECK
   /* all these function may execute with invalid stack pointer
      register due to arm shadow registers bank switching. */
   void CPU_NAME_DECL(exception_vector)();
   void CPU_NAME_DECL(exception_vector_end)();
-  soclib_mem_bypass_sp_check(&CPU_NAME_DECL(exception_vector), &CPU_NAME_DECL(exception_vector_end));
+  instrumentation_sp_check_bypass_declare((uintptr_t)&CPU_NAME_DECL(exception_vector),
+                                          (uintptr_t)&CPU_NAME_DECL(exception_vector_end),
+                                          1);
   void arm_exc_undef();
   void arm_exc_undef_end();
-  soclib_mem_bypass_sp_check(&arm_exc_undef, &arm_exc_undef_end);
+  instrumentation_sp_check_bypass_declare((uintptr_t)&arm_exc_undef,
+                                          (uintptr_t)&arm_exc_undef_end,
+                                          1);
   void arm_exc_pabt();
   void arm_exc_pabt_end();
-  soclib_mem_bypass_sp_check(&arm_exc_pabt, &arm_exc_pabt_end);
+  instrumentation_sp_check_bypass_declare((uintptr_t)&arm_exc_pabt,
+                                          (uintptr_t)&arm_exc_pabt_end,
+                                          1);
   void arm_exc_dabt();
   void arm_exc_dabt_end();
-  soclib_mem_bypass_sp_check(&arm_exc_dabt, &arm_exc_dabt_end);
+  instrumentation_sp_check_bypass_declare((uintptr_t)&arm_exc_dabt,
+                                          (uintptr_t)&arm_exc_dabt_end,
+                                          1);
   void arm_exc_common_asm();
   void arm_exc_common_asm_end();
-  soclib_mem_bypass_sp_check(&arm_exc_common_asm, &arm_exc_common_asm_end);
-# ifdef CONFIG_HEXO_IRQ
+  instrumentation_sp_check_bypass_declare((uintptr_t)&arm_exc_common_asm,
+                                          (uintptr_t)&arm_exc_common_asm_end,
+                                          1);
+#ifdef CONFIG_HEXO_IRQ
   void arm_exc_irq();
   void arm_exc_irq_end();
-  soclib_mem_bypass_sp_check(&arm_exc_irq, &arm_exc_irq_end);
-# endif
+  instrumentation_sp_check_bypass_declare((uintptr_t)&arm_exc_irq,
+                                          (uintptr_t)&arm_exc_irq_end,
+                                          1);
+#endif
 
-# ifdef CONFIG_HEXO_USERMODE
+#ifdef CONFIG_HEXO_USERMODE
   void arm_exc_swi();
   void arm_exc_swi_end();
-  soclib_mem_bypass_sp_check(&arm_exc_swi, &arm_exc_swi_end);
+  instrumentation_sp_check_bypass_declare((uintptr_t)&arm_exc_swi,
+                                          (uintptr_t)&arm_exc_swi_end,
+                                          1);
 
   void cpu_context_set_user();
   void cpu_context_set_user_end();
-  soclib_mem_bypass_sp_check(&cpu_context_set_user, &cpu_context_set_user_end);
-# endif
+  instrumentation_sp_check_bypass_declare((uintptr_t)&cpu_context_set_user,
+                                          (uintptr_t)&cpu_context_set_user_end,
+                                          1);
+#endif
 
   void cpu_context_jumpto();
   void cpu_context_jumpto_end();
-  soclib_mem_bypass_sp_check(&cpu_context_jumpto, &cpu_context_jumpto_end);
-#endif
+  instrumentation_sp_check_bypass_declare((uintptr_t)&cpu_context_jumpto,
+                                          (uintptr_t)&cpu_context_jumpto_end,
+                                          1);
 }
 
 #ifdef CONFIG_ARCH_SMP

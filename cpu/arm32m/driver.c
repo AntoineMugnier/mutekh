@@ -24,6 +24,7 @@
 
 #include <mutek/mem_alloc.h>
 #include <mutek/printk.h>
+#include <mutek/instrumentation.h>
 
 #include <cpu/arm_v7m.h>
 
@@ -42,6 +43,8 @@ static CPU_INTERRUPT_HANDLER(arm_irq_handler)
   struct device_s *dev = CPU_LOCAL_GET(arm_icu_dev);
   struct arm_dev_private_s  *pv = dev->drv_pv;
 
+  instrumentation_irq_begin(irq);
+
   switch (irq)
     {
 #ifdef CONFIG_CPU_ARM32M_TIMER_SYSTICK
@@ -58,6 +61,8 @@ static CPU_INTERRUPT_HANDLER(arm_irq_handler)
     default:
       break;
     }
+
+  instrumentation_irq_end(irq);
 }
 
 static DEV_ICU_GET_SINK(arm_icu_get_sink)

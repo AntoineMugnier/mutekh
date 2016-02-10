@@ -20,6 +20,7 @@
 
 #include <mutek/printk.h>
 #include <mutek/bytecode.h>
+#include <mutek/instrumentation.h>
 
 #include <hexo/endian.h>
 #include <stdlib.h>
@@ -358,6 +359,8 @@ bc_opcode_t bc_run_vm(struct bc_context_s *ctx, int_fast32_t max_cycles)
   for (;; ctx->pc++)
     {
       op = endian_le16(*ctx->pc);
+
+      instrumentation_bytecode_vm_op(ctx, op);
 
 #ifdef CONFIG_MUTEK_BYTECODE_TRACE
       if (ctx->trace)

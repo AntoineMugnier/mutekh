@@ -20,69 +20,10 @@
 */
 
 #include <mutek/startup.h>
-#include <arch/mem_checker.h>
 #include <hexo/cpu.h>
 
 #include <string.h>
 #include <assert.h>
-
-#ifdef CONFIG_SOCLIB_MEMCHECK
-
-static void soclib_memcheck_cpu_init(uintptr_t id, uintptr_t stack, size_t size)
-{
-  /* create a new memchecker context */
-  cpu_mem_write_32(SOCLIB_MC_MAGIC, SOCLIB_MC_MAGIC_VAL);
-  cpu_mem_write_32(SOCLIB_MC_R1, stack);
-  cpu_mem_write_32(SOCLIB_MC_R2, size);
-  cpu_mem_write_32(SOCLIB_MC_CTX_CREATE, id);
-
-  /* switch to new memchecker context */
-  cpu_mem_write_32(SOCLIB_MC_CTX_SET, id);
-
-  /* enable all memchecker checks */
-  cpu_mem_write_32(SOCLIB_MC_ENABLE, SOCLIB_MC_CHECK_ALL);
-
-  /* leave memchecker command mode */
-  cpu_mem_write_32(SOCLIB_MC_MAGIC, 0);
-}
-
-void soclib_memcheck_init()
-{
-  extern __ldscript_symbol_t __data_start;
-  extern __ldscript_symbol_t __data_load_start;
-  extern __ldscript_symbol_t __data_load_end;
-
-  soclib_mem_check_region_status(
-      (uint8_t*)&__data_start,
-      (uint8_t*)&__data_load_end-(uint8_t*)&__data_load_start,
-      SOCLIB_MC_REGION_GLOBAL);
-
-  extern __ldscript_symbol_t __bss_start;
-  extern __ldscript_symbol_t __bss_end;
-
-  soclib_mem_check_region_status(
-      (uint8_t*)&__bss_start,
-      (uint8_t*)&__bss_end-(uint8_t*)&__bss_start,
-      SOCLIB_MC_REGION_GLOBAL);
-
-  soclib_memcheck_cpu_init(0, CONFIG_STARTUP_STACK_ADDR,
-                           CONFIG_STARTUP_STACK_SIZE);
-}
-
-# ifdef CONFIG_ARCH_SMP
-void soclib_memcheck_initsmp()
-{
-  if (!cpu_isbootstrap())
-    {
-      const struct cpu_tree_s *cpu = cpu_tree_lookup(cpu_id());
-      assert(cpu != NULL && "processor id not found in the cpu tree.");
-      soclib_memcheck_cpu_init(cpu->stack, cpu->stack,
-                               CONFIG_HEXO_CPU_STACK_SIZE);
-    }
-}
-# endif
-
-#endif
 
 /////////////////////////////////////////////////////////////////////
 
@@ -90,7 +31,7 @@ void soclib_memcheck_initsmp()
 #include <mutek/mem_region.h>
 #include <mutek/memory_allocator.h>
 
-void soclib_mem_init()
+void soclib_mem_init(void)
 {
   default_region = memory_allocator_init(NULL, (void*)CONFIG_STARTUP_HEAP_ADDR,
                                          (void*)(CONFIG_STARTUP_HEAP_ADDR +

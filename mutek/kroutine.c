@@ -43,7 +43,11 @@ bool_t kroutine_queue_process(struct kroutine_queue_s *queue)
     {
       kr->queue = queue;
       atomic_set(&kr->state, KROUTINE_INVALID);
+      instrumentation_kroutine_begin((uintptr_t)kr);
+      instrumentation_context_running((uintptr_t)kr);
       kr->exec(kr, KROUTINE_EXEC_DEFERRED);
+      instrumentation_context_stopped((uintptr_t)kr);
+      instrumentation_kroutine_end((uintptr_t)kr);
     }
   return done;
 }

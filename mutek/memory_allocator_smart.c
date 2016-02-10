@@ -34,9 +34,7 @@
 #include <hexo/mmu.h>
 #endif
 
-#ifdef CONFIG_SOCLIB_MEMCHECK
-#include <arch/mem_checker.h>
-#endif
+#include <mutek/instrumentation.h>
 
 /********************************************************/
 /*********** Structure and global declaration ***********/
@@ -382,37 +380,31 @@ void memory_allocator_scramble_check(size_t size, struct memory_allocator_header
 static inline
 void disable_memchecker()
 {
-#ifdef CONFIG_SOCLIB_MEMCHECK
-  soclib_mem_check_disable(SOCLIB_MC_CHECK_REGIONS);
-#endif
+  instrumentation_check_disable(INSTRUMENTATION_CHECK_MEM_REGIONS);
 }
 
 static inline
 void enable_memchecker()
 {
-#ifdef CONFIG_SOCLIB_MEMCHECK
-  soclib_mem_check_enable(SOCLIB_MC_CHECK_REGIONS);
-#endif
+  instrumentation_check_enable(INSTRUMENTATION_CHECK_MEM_REGIONS);
 }
 
 static inline
 void memchecker_set_alloc(size_t size, void *hdr)
 {
-#ifdef CONFIG_SOCLIB_MEMCHECK
-  soclib_mem_check_region_status(hdr2mem(hdr),
-				 size_real2alloc(size),
-				 SOCLIB_MC_REGION_ALLOC);
-#endif
+  instrumentation_memory_region_state_change(
+    (uintptr_t)hdr2mem(hdr),
+    size_real2alloc(size),
+    INSTRUMENTATION_MEMORY_REGION_ALLOC);
 }
 
 static inline
 void memchecker_set_free(size_t size, void *hdr)
 {
-#ifdef CONFIG_SOCLIB_MEMCHECK
-  soclib_mem_check_region_status(hdr2mem(hdr),
-				 size_real2alloc(size),
-				 SOCLIB_MC_REGION_FREE);
-#endif
+  instrumentation_memory_region_state_change(
+    (uintptr_t)hdr2mem(hdr),
+    size_real2alloc(size),
+    INSTRUMENTATION_MEMORY_REGION_FREE);
 }
 
 static inline

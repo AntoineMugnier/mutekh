@@ -38,9 +38,7 @@
 #include <mutek/mem_alloc.h>
 #include <mutek/printk.h>
 
-#ifdef CONFIG_SOCLIB_MEMCHECK
-# include <arch/mem_checker.h>
-#endif
+#include <mutek/instrumentation.h>
 
 struct mips_dev_private_s
 {
@@ -70,10 +68,14 @@ static CPU_INTERRUPT_HANDLER(mips_irq_handler)
   struct device_s *dev = CPU_LOCAL_GET(mips_icu_dev);
   struct mips_dev_private_s  *pv = dev->drv_pv;
 
+  instrumentation_irq_begin(irq);
+
   if ( irq < ICU_MIPS_MAX_VECTOR ) {
     struct dev_irq_sink_s *sink = pv->sinks + irq;
     device_irq_sink_process(sink, 0);
   }
+
+  instrumentation_irq_end(irq);
 }
 
 static DEV_IRQ_SINK_UPDATE(mips_icu_sink_update)
@@ -151,10 +153,11 @@ static DEV_CPU_REG_INIT(mips_cpu_reg_init)
 # endif
 #endif
 
-#if defined(CONFIG_SOCLIB_MEMCHECK) && defined(CONFIG_HEXO_USERMODE)
+#if defined(CONFIG_HEXO_USERMODE)
   void cpu_context_set_user();
   void cpu_context_set_user_end();
-  soclib_mem_bypass_sp_check(&cpu_context_set_user, &cpu_context_set_user_end);
+  instrumentation_sp_check_bypass_declare((uintptr_t)&cpu_context_set_user,
+                                          (uintptr_t)&cpu_context_set_user_end, 1);
 #endif
 
   CPU_LOCAL_SET(cpu_device, dev);

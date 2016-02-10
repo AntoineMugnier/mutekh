@@ -48,6 +48,7 @@
 #include <gct/container_clist.h>
 
 #include <hexo/atomic.h>
+#include <mutek/instrumentation.h>
 
 struct kroutine_s;
 struct kroutine_sequence_s;
@@ -285,6 +286,8 @@ ALWAYS_INLINE void kroutine_init(struct kroutine_s *kr,
   kr->priority = KROUTINE_DEFAULT_PRIORITY;
 # endif
 #endif
+  instrumentation_kroutine_init((uintptr_t)kr, policy);
+  instrumentation_context_create((uintptr_t)kr, 0, 0);
 }
 
 /** @This initializes a kroutine with the @ref KROUTINE_IMMEDIATE policy. */
@@ -293,6 +296,8 @@ ALWAYS_INLINE void kroutine_init_immediate(struct kroutine_s *kr,
 {
   kr->policy = KROUTINE_IMMEDIATE;
   kr->exec = exec;
+  instrumentation_kroutine_init((uintptr_t)kr, KROUTINE_IMMEDIATE);
+  instrumentation_context_create((uintptr_t)kr, 0, 0);
 }
 
 /** @This initializes a kroutine with the @ref KROUTINE_TRIGGER policy. */
@@ -306,6 +311,8 @@ void kroutine_init_trigger(struct kroutine_s *kr,
 #if CONFIG_MUTEK_SCHED_PRIORITIES > 1 && defined(CONFIG_MUTEK_KROUTINE_SCHED)
   kr->priority = KROUTINE_DEFAULT_PRIORITY;
 #endif
+  instrumentation_kroutine_init((uintptr_t)kr, KROUTINE_TRIGGER);
+  instrumentation_context_create((uintptr_t)kr, 0, 0);
 });
 
 /** @This initializes a kroutine with the @ref KROUTINE_DEFERRED policy. */
@@ -322,6 +329,8 @@ void kroutine_init_deferred(struct kroutine_s *kr,
 #if CONFIG_MUTEK_SCHED_PRIORITIES > 1
   kr->priority = KROUTINE_DEFAULT_PRIORITY;
 #endif
+  instrumentation_kroutine_init((uintptr_t)kr, KROUTINE_DEFERRED);
+  instrumentation_context_create((uintptr_t)kr, 0, 0);
 });
 
 /** @This initializes a kroutine with the @ref KROUTINE_CPU_DEFERRED
@@ -338,6 +347,8 @@ void kroutine_init_deferred_cpu(struct kroutine_s *kr,
 #if CONFIG_MUTEK_SCHED_PRIORITIES > 1
   kr->priority = KROUTINE_DEFAULT_PRIORITY;
 #endif
+  instrumentation_kroutine_init((uintptr_t)kr, KROUTINE_CPU_DEFERRED);
+  instrumentation_context_create((uintptr_t)kr, 0, 0);
 });
 
 /** @This initializes a kroutine with the @ref KROUTINE_CPU_DEFERRED policy.
@@ -355,6 +366,8 @@ void kroutine_init_deferred_local(struct kroutine_s *kr,
 #if CONFIG_MUTEK_SCHED_PRIORITIES > 1
   kr->priority = KROUTINE_DEFAULT_PRIORITY;
 #endif
+  instrumentation_kroutine_init((uintptr_t)kr, KROUTINE_CPU_DEFERRED);
+  instrumentation_context_create((uintptr_t)kr, 0, 0);
 });
 
 /** @This initializes a kroutine with the @ref KROUTINE_CPU_DEFERRED policy.
@@ -373,6 +386,8 @@ void kroutine_init_deferred_seq(struct kroutine_s *kr,
 #if CONFIG_MUTEK_SCHED_PRIORITIES > 1
   kr->priority = KROUTINE_DEFAULT_PRIORITY;
 #endif
+  instrumentation_kroutine_init((uintptr_t)kr, KROUTINE_SEQ_DEFERRED);
+  instrumentation_context_create((uintptr_t)kr, 0, 0);
 });
 
 /** @This initializes a kroutine with the @ref KROUTINE_SCHED_SWITCH policy. */
@@ -389,6 +404,8 @@ void kroutine_init_sched_switch(struct kroutine_s *kr,
 #if CONFIG_MUTEK_SCHED_PRIORITIES > 1
   kr->priority = KROUTINE_DEFAULT_PRIORITY;
 #endif
+  instrumentation_kroutine_init((uintptr_t)kr, KROUTINE_SCHED_SWITCH);
+  instrumentation_context_create((uintptr_t)kr, 0, 0);
 });
 
 /** @This initializes a kroutine with the @ref KROUTINE_CPU_SCHED_SWITCH policy.
@@ -405,6 +422,8 @@ void kroutine_init_sched_switch_cpu(struct kroutine_s *kr,
 #if CONFIG_MUTEK_SCHED_PRIORITIES > 1
   kr->priority = KROUTINE_DEFAULT_PRIORITY;
 #endif
+  instrumentation_kroutine_init((uintptr_t)kr, KROUTINE_CPU_SCHED_SWITCH);
+  instrumentation_context_create((uintptr_t)kr, 0, 0);
 });
 
 /** @This initializes a kroutine with the @ref KROUTINE_CPU_SCHED_SWITCH policy.
@@ -422,6 +441,8 @@ void kroutine_init_sched_switch_local(struct kroutine_s *kr,
 #if CONFIG_MUTEK_SCHED_PRIORITIES > 1
   kr->priority = KROUTINE_DEFAULT_PRIORITY;
 #endif
+  instrumentation_kroutine_init((uintptr_t)kr, KROUTINE_CPU_SCHED_SWITCH);
+  instrumentation_context_create((uintptr_t)kr, 0, 0);
 });
 
 /** @This initializes a kroutine with the @ref KROUTINE_CPU_SCHED_SWITCH policy.
@@ -440,6 +461,8 @@ void kroutine_init_sched_switch_seq(struct kroutine_s *kr,
 #if CONFIG_MUTEK_SCHED_PRIORITIES > 1
   kr->priority = KROUTINE_DEFAULT_PRIORITY;
 #endif
+  instrumentation_kroutine_init((uintptr_t)kr, KROUTINE_SEQ_SCHED_SWITCH);
+  instrumentation_context_create((uintptr_t)kr, 0, 0);
 });
 
 /** @This initializes a kroutine with the @ref KROUTINE_INTERRUPTIBLE policy. */
@@ -456,6 +479,8 @@ void kroutine_init_interruptible(struct kroutine_s *kr,
 #if CONFIG_MUTEK_SCHED_PRIORITIES > 1
   kr->priority = KROUTINE_DEFAULT_PRIORITY;
 #endif
+  instrumentation_kroutine_init((uintptr_t)kr, KROUTINE_INTERRUPTIBLE);
+  instrumentation_context_create((uintptr_t)kr, 0, 0);
 });
 
 /** @This initializes a kroutine with the @ref KROUTINE_CPU_INTERRUPTIBLE
@@ -472,6 +497,8 @@ void kroutine_init_interruptible_cpu(struct kroutine_s *kr,
 #if CONFIG_MUTEK_SCHED_PRIORITIES > 1
   kr->priority = KROUTINE_DEFAULT_PRIORITY;
 #endif
+  instrumentation_kroutine_init((uintptr_t)kr, KROUTINE_CPU_INTERRUPTIBLE);
+  instrumentation_context_create((uintptr_t)kr, 0, 0);
 });
 
 /** @This initializes a kroutine with the @ref KROUTINE_CPU_INTERRUPTIBLE policy.
@@ -489,6 +516,8 @@ void kroutine_init_interruptible_local(struct kroutine_s *kr,
 #if CONFIG_MUTEK_SCHED_PRIORITIES > 1
   kr->priority = KROUTINE_DEFAULT_PRIORITY;
 #endif
+  instrumentation_kroutine_init((uintptr_t)kr, KROUTINE_CPU_INTERRUPTIBLE);
+  instrumentation_context_create((uintptr_t)kr, 0, 0);
 });
 
 /** @This initializes a kroutine with the @ref KROUTINE_SEQ_INTERRUPTIBLE policy.
@@ -508,6 +537,8 @@ void kroutine_init_interruptible_seq(struct kroutine_s *kr,
 #if CONFIG_MUTEK_SCHED_PRIORITIES > 1
   kr->priority = KROUTINE_DEFAULT_PRIORITY;
 #endif
+  instrumentation_kroutine_init((uintptr_t)kr, KROUTINE_SEQ_INTERRUPTIBLE);
+  instrumentation_context_create((uintptr_t)kr, 0, 0);
 });
 
 /** @This initializes a kroutine with the @ref KROUTINE_IDLE policy. */
@@ -518,6 +549,8 @@ void kroutine_init_idle(struct kroutine_s *kr,
   kr->policy = KROUTINE_IDLE;
   kr->exec = exec;
   atomic_set(&kr->state, KROUTINE_INVALID);
+  instrumentation_kroutine_init((uintptr_t)kr, KROUTINE_IDLE);
+  instrumentation_context_create((uintptr_t)kr, 0, 0);
 });
 
 /** @This initializes a kroutine with the @ref KROUTINE_QUEUE policy. */
@@ -530,6 +563,8 @@ void kroutine_init_queue(struct kroutine_s *kr,
   kr->exec = exec;
   kr->queue = queue;
   atomic_set(&kr->state, KROUTINE_INVALID);
+  instrumentation_kroutine_init((uintptr_t)kr, KROUTINE_QUEUE);
+  instrumentation_context_create((uintptr_t)kr, 0, 0);
 });
 
 /** @This initializes a queue used to push kroutine initialized with
@@ -569,6 +604,8 @@ error_t kroutine_schedule(struct kroutine_s *kr, enum kroutine_policy_e policy);
 inline bool_t kroutine_exec(struct kroutine_s *kr)
 {
   enum kroutine_policy_e policy = kr->policy;
+
+  instrumentation_kroutine_exec((uintptr_t)kr);
 
   assert(policy != KROUTINE_INVALID);
   switch (policy)
@@ -616,7 +653,11 @@ inline bool_t kroutine_exec(struct kroutine_s *kr)
     imm:
       atomic_set(&kr->state, KROUTINE_INVALID); /* reset state */
     case KROUTINE_IMMEDIATE:
+      instrumentation_kroutine_begin((uintptr_t)kr);
+      instrumentation_context_running((uintptr_t)kr);
       kr->exec(kr, 0);
+      instrumentation_context_stopped((uintptr_t)kr);
+      instrumentation_kroutine_end((uintptr_t)kr);
       return 1;
     }
 }
@@ -684,7 +725,11 @@ bool_t kroutine_trigger(struct kroutine_s *kr, enum kroutine_policy_e policy),
 #endif
     case KROUTINE_IMMEDIATE:
       atomic_set(&kr->state, KROUTINE_INVALID);
+      instrumentation_kroutine_begin((uintptr_t)kr);
+      instrumentation_context_running((uintptr_t)kr);
       kr->exec(kr, KROUTINE_EXEC_TRIGGERED);
+      instrumentation_context_stopped((uintptr_t)kr);
+      instrumentation_kroutine_end((uintptr_t)kr);
     }
   return 1;
 });

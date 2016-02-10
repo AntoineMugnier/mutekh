@@ -36,7 +36,7 @@
 #include <hexo/lock.h>
 #include <hexo/interrupt.h>
 
-#include <arch/mem_checker.h>
+#include <mutek/instrumentation.h>
 
 #include <stdlib.h>
 #include <string.h>
@@ -295,7 +295,7 @@ static DEV_IRQ_SRC_PROCESS(soclib_block_irq)
     case SOCLIB_BLOCK_STATUS_READ_SUCCESS:
       /* invalidate dcache after dma */
       cpu_dcache_invld_buf(pv->data, pv->size);
-      soclib_mem_mark_initialized(pv->data, pv->size);
+      instrumentation_memory_region_mark_initialized(pv->data, pv->size);
 
     case SOCLIB_BLOCK_STATUS_ERASE_SUCCESS:
     case SOCLIB_BLOCK_STATUS_WRITE_SUCCESS:

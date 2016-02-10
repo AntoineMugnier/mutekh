@@ -30,9 +30,7 @@
 # include <device/device.h>
 #endif
 
-#ifdef CONFIG_SOCLIB_MEMCHECK
-# include <arch/mem_checker.h>
-#endif
+#include <mutek/instrumentation.h>
 
 /////////////////////////////////// cpu main context intialization
 
@@ -45,10 +43,7 @@ void hexo_context_initsmp(void)
   assert(cpu != NULL && "processor id not found in the cpu tree.");
 
   ensure(context_bootstrap(context, cpu->stack, CONFIG_HEXO_CPU_STACK_SIZE) == 0);
-# ifdef CONFIG_SOCLIB_MEMCHECK
-  soclib_mem_check_change_id(cpu->stack, (uint32_t)context);
-# endif
-
+  instrumentation_context_rename((uint32_t)context, cpu->stack);
 #else
   ensure(context_bootstrap(context, CONFIG_STARTUP_STACK_ADDR, CONFIG_STARTUP_STACK_SIZE) == 0);
 #endif

@@ -72,7 +72,7 @@ void mutek_mem_alloc_init()
   cpu_mem_write_32(CONFIG_STARTUP_STACK_ADDR, 0x42ab8d64);
 }
 
-void mutek_startup_stack_reclaim()
+void mutek_startup_stack_reclaim(void)
 {
   /* check the guard value of the startup stack */
   assert(cpu_mem_read_32(CONFIG_STARTUP_STACK_ADDR) == 0x42ab8d64 &&
