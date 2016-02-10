@@ -81,6 +81,22 @@ static DEV_IRQ_SINK_UPDATE(arm_icu_sink_update)
   struct arm_dev_private_s  *pv = dev->drv_pv;
   uint_fast8_t sink_id = sink - pv->sinks;
 
+#if defined(CONFIG_SYSTEMVIEW)
+  if (sink->base.link_count == 1) {
+    char tmp[32];
+    size_t i = 0;
+
+    tmp[i++] = 'I';
+    tmp[i++] = '#';
+    tmp[i++] = '0' + (sink_id + 16) / 10;
+    tmp[i++] = '0' + ((sink_id + 16) % 10);
+    tmp[i++] = '=';
+    strcpy(tmp + i, sink->base.links.single->dev->node.name);
+
+    systemview_log_sysdesc(tmp);
+  }
+#endif
+
   switch (sense)
     {
     case DEV_IRQ_SENSE_NONE:

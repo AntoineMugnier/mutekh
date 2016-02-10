@@ -28,6 +28,10 @@
 #include <cpu/arm32m/dwt.h>
 #include <cpu/arm32m/coredebug.h>
 
+#if defined(CONFIG_SYSTEMVIEW)
+# include <systemview/log.h>
+#endif
+
 #if defined(CONFIG_CPU_ARM32M_TRACE)
 #define RATE_DIVISOR ((CONFIG_CPU_ARM32M_TRACE_CLKIN_RATE + CONFIG_CPU_ARM32M_TRACE_RATE / 2) \
                       / CONFIG_CPU_ARM32M_TRACE_RATE)
@@ -178,3 +182,10 @@ uint32_t arm32m_dwt_cycle_count(void)
 {
   return cpu_mem_read_32(DWT_CYCCNT_ADDR);
 }
+
+#if defined(CONFIG_SYSTEMVIEW)
+uint64_t systemview_timestamp_get()
+{
+  return arm32m_dwt_cycle_count();
+}
+#endif
