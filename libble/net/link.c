@@ -94,12 +94,12 @@ static
 error_t link_crypto_setup(struct ble_link_s *link,
                         const uint8_t sk[static 16],
                         const uint8_t iv[static 8]);
-#endif
 
 static bool_t link_is_master(struct ble_link_s *link)
 {
   return !!link->layer.context.addr.master;
 }
+#endif
 
 static void link_state_set(struct ble_link_s *link, enum ble_link_state_e state)
 {
@@ -342,7 +342,6 @@ static void link_task_crypt(struct ble_link_s *link, struct net_task_s *task)
   net_layer_refinc(&link->layer);
   DEVICE_OP(&link->crypto, request, &link->crypto_rq);
 }
-#endif
 
 static bool_t is_enc_control(const struct buffer_s *buffer)
 {
@@ -357,6 +356,7 @@ static bool_t is_enc_control(const struct buffer_s *buffer)
 
   return (enc_control >> opcode) & 1;
 }
+#endif
 
 static void link_crypto_next(struct ble_link_s *link)
 {

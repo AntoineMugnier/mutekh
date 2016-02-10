@@ -98,6 +98,8 @@ void peri_conn_pairing_success(struct ble_stack_connection_s *conn)
 {
   struct ble_peripheral_s *peri = ble_peripheral_s_from_conn(conn);
 
+  (void)peri;
+
   printk("Slave pairing success\n");
 }
 
