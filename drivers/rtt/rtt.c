@@ -42,39 +42,61 @@ uint32_t rtt_channel_write(
 {
   uint32_t available;
   uint32_t rptr, wptr;
+  uint32_t copied = 0;
 
-  wptr = cpu_mem_read_32((uintptr_t)&chan->write_ptr);
-  rptr = cpu_mem_read_32((uintptr_t)&chan->read_ptr);
+  while (copied < len) {
+    wptr = cpu_mem_read_32((uintptr_t)&chan->write_ptr);
+    rptr = cpu_mem_read_32((uintptr_t)&chan->read_ptr);
 
-  if (wptr < rptr)
-    available = rptr - wptr - 1;
-  else
-    available = chan->buffer_size - 1 - wptr + rptr;
+    if (wptr < rptr)
+      available = rptr - wptr - 1;
+    else
+      available = chan->buffer_size - 1 - wptr + rptr;
 
-  if (!available || !len)
-    return 0;
+    switch (chan->flags & RTT_CHANNEL_MODE_MASK) {
+    case RTT_CHANNEL_MODE_BLOCKING:
+      if (available == 0)
+        continue;
+      break;
 
-  uint32_t to_copy = __MIN(available, len);
-  uint32_t to_copy1 = __MIN(chan->buffer_size - wptr, to_copy);
-  uint32_t to_copy2 = to_copy - to_copy1;
+    case RTT_CHANNEL_MODE_TRIM:
+      if (available == 0)
+        return copied;
+      break;
 
-  memcpy(chan->buffer + wptr, buf, to_copy1);
+    case RTT_CHANNEL_MODE_SKIP:
+      if (available < len)
+        return 0;
+      break;
 
-  if (to_copy2) {
-    memcpy(chan->buffer, buf + to_copy1, to_copy2);
-    wptr = to_copy2;
-  } else {
-    wptr += to_copy1;
+    default:
+      break;
+    }
 
-    if (wptr == chan->buffer_size)
-      wptr = 0;
+    uint32_t to_copy = __MIN(available, len - copied);
+    uint32_t to_copy1 = __MIN(chan->buffer_size - wptr, to_copy);
+    uint32_t to_copy2 = to_copy - to_copy1;
+
+    memcpy(chan->buffer + wptr, buf + copied, to_copy1);
+
+    if (to_copy2) {
+      memcpy(chan->buffer, buf + copied + to_copy1, to_copy2);
+      wptr = to_copy2;
+    } else {
+      wptr += to_copy1;
+
+      if (wptr == chan->buffer_size)
+        wptr = 0;
+    }
+
+    assert(wptr < chan->buffer_size);
+
+    cpu_mem_write_32((uintptr_t)&chan->write_ptr, wptr);
+
+    copied += to_copy;
   }
 
-  assert(wptr < chan->buffer_size);
-
-  cpu_mem_write_32((uintptr_t)&chan->write_ptr, wptr);
-
-  return to_copy;
+  return copied;
 }
 
 uint32_t rtt_channel_read(
