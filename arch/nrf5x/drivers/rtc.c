@@ -34,6 +34,7 @@
 #include <device/class/cmu.h>
 
 #include <arch/nrf5x/rtc.h>
+#include <arch/nrf5x/ids.h>
 
 struct nrf5x_rtc_context_s
 {
@@ -383,3 +384,11 @@ DEV_CLEANUP(nrf5x_rtc_cleanup)
 
   return 0;
 }
+
+#if defined(CONFIG_ARCH_NRF51) && defined(CONFIG_SYSTEMVIEW)
+uint64_t systemview_timestamp_get(void);
+uint64_t systemview_timestamp_get(void)
+{
+  return nrf_reg_get(NRF_PERIPHERAL_ADDR(NRF5X_RTC1), NRF_RTC_COUNTER);
+}
+#endif
