@@ -23,3 +23,4 @@ objs-$(CONFIG_MUTEK_SLAB) += slab.o
 objs-$(CONFIG_MUTEK_BUFFER_POOL) += buffer_pool.o
 objs-$(CONFIG_MUTEK_BYTECODE) += bytecode.o
 
+objs-$(CONFIG_MUTEK_INSTRUMENTATION) += instrumentation.o
