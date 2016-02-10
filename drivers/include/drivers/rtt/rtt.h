@@ -22,6 +22,7 @@
 #define SEGGER_RTT_H_
 
 #include <hexo/types.h>
+#include <hexo/iospace.h>
 
 struct rtt_channel_s {
   const char *name;
@@ -31,6 +32,12 @@ struct rtt_channel_s {
   uint32_t read_ptr;
   uint32_t flags;
 };
+
+ALWAYS_INLINE
+bool_t rtt_channel_has_data(const struct rtt_channel_s *chan)
+{
+  return cpu_mem_read_32((uintptr_t)&chan->write_ptr) != cpu_mem_read_32((uintptr_t)&chan->read_ptr);
+}
 
 /**
    @this reads as much data as possible from the channel.  Function
@@ -83,8 +90,12 @@ struct rtt_channel_s *rtt_channel_init(uint8_t id,
  */
 void rtt_channel_cleanup(struct rtt_channel_s *channel);
 
-#define RTT_CHANNEL_MODE_TRIM 1
-#define RTT_CHANNEL_MODE_BLOCKING 2
+enum rtt_channel_mode_e {
+  RTT_CHANNEL_MODE_SKIP = 0,
+  RTT_CHANNEL_MODE_TRIM = 1,
+  RTT_CHANNEL_MODE_BLOCKING = 2,
+  RTT_CHANNEL_MODE_MASK = 3,
+};
 
 #define RTT_CHANNEL_TX_ID(x) (x)
 #define RTT_CHANNEL_RX_ID(x) ((CONFIG_DRIVER_RTT_TX_CHANNEL_COUNT) + (x))
