@@ -122,7 +122,7 @@ struct device_node_s
 
 #ifdef CONFIG_DEVICE_TREE
   struct device_node_s		*parent;
-  device_list_entry_t		list_entry;
+  GCT_CONTAINER_ENTRY           (device_list, list_entry);
   device_list_root_t		children;
 #endif
 
@@ -153,10 +153,10 @@ struct device_s
   uint8_t                       BITFIELD(init_mask,5);
 
   /** device uses counter */
-  uint8_t                       BITFIELD(ref_count,CONFIG_DEVICE_USE_BITS);
+  uint16_t                      BITFIELD(ref_count,CONFIG_DEVICE_USE_BITS);
 
   /** device start counter */
-  uint8_t                       BITFIELD(start_count,CONFIG_DEVICE_USE_BITS
+  uint16_t                      BITFIELD(start_count,CONFIG_DEVICE_USE_BITS
                                          + CONFIG_DEVICE_START_LOG2INC);
 
 #ifdef CONFIG_DEVICE_SLEEP
