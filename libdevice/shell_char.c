@@ -162,7 +162,10 @@ static CONTEXT_ENTRY(shell_thread)
   bool_t ok = !device_copy_accessor(&accessor, &p->c->accessor);
   semaphore_give(&p->sem, 1);
   if (ok)
-    mutek_shell_start(&accessor, "xterm", NULL, CONFIG_MUTEK_SHELL_PROMPT, NULL);
+    {
+      mutek_shell_start(&accessor, "xterm", NULL, CONFIG_MUTEK_SHELL_PROMPT, NULL);
+      device_put_accessor(&accessor);
+    }
 }
 
 static TERMUI_CON_COMMAND_PROTOTYPE(shell_char_shell)
