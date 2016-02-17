@@ -628,11 +628,11 @@ static error_t dev_shell_start_stop(struct termui_console_s *con, enum dev_opts_
   if (device_get_accessor(&acc, c->dev, c->cl, c->num))
     return -EINVAL;
 
-  error_t err = 0;
+  error_t err;
   if (start)
     err = device_start(&acc);
   else
-    device_stop_safe(&acc);
+    err = device_stop(&acc);
 
   device_put_accessor(&acc);
 

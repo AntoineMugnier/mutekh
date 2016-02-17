@@ -110,30 +110,22 @@ error_t device_start(void *accessor)
   return err;
 }
 
-void device_stop(void *accessor)
+error_t device_stop(void *accessor)
 {
   struct device_accessor_s *acc = accessor;
   struct device_s *dev = acc->dev;
   dev_use_t *use = dev->drv->f_use;
-  LOCK_SPIN_IRQ(&dev->lock);
-  assert(dev->start_count >= DEVICE_START_COUNT_INC);
-  dev->start_count -= DEVICE_START_COUNT_INC;
-  use(accessor, DEV_USE_STOP);
-  LOCK_RELEASE_IRQ(&dev->lock);
-}
-
-void device_stop_safe(void *accessor)
-{
-  struct device_accessor_s *acc = accessor;
-  struct device_s *dev = acc->dev;
-  dev_use_t *use = dev->drv->f_use;
+  error_t err = -EINVAL;
   LOCK_SPIN_IRQ(&dev->lock);
   if (dev->start_count >= DEVICE_START_COUNT_INC)
     {
       dev->start_count -= DEVICE_START_COUNT_INC;
-      use(accessor, DEV_USE_STOP);
+      err = use(accessor, DEV_USE_STOP);
+      if (err)
+        dev->start_count += DEVICE_START_COUNT_INC;
     }
   LOCK_RELEASE_IRQ(&dev->lock);
+  return err;
 }
 
 error_t device_get_accessor(void *accessor, struct device_s *dev,

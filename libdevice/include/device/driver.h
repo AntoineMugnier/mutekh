@@ -582,10 +582,7 @@ error_t device_start(void *accessor);
 
     @see device_start.
 */
-void device_stop(void *accessor);
-
-/** @internal @This is similar to @ref device_stop, for test purpose only. */
-void device_stop_safe(void *accessor);
+error_t device_stop(void *accessor);
 
 /** @This retreives the value of the last possibly valid sub-devices
     number. It returns @tt -ENOTSUP if the class does not implement
