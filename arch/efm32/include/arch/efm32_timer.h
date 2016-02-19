@@ -255,7 +255,7 @@
     #define EFM32_TIMER_ROUTE_LOCATION_L0C4            0x00000004
     #define EFM32_TIMER_ROUTE_LOCATION_L0C5            0x00000005
 
-#define EFM32_TIMER_CC_CTRL_ADDR(ridx)               (0x00000030 + (ridx) * 4)
+#define EFM32_TIMER_CC_CTRL_ADDR(ridx)               (0x00000030 + (ridx) * 16)
 #define EFM32_TIMER_CC_CTRL_COUNT                    3
 #define EFM32_TIMER_CC_CTRL_MASK                     0x1f333f17
 /** These bits select the mode for Compare/Capture channel. @multiple */
