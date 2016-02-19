@@ -429,6 +429,9 @@ error_t device_init_driver(struct device_s *dev)
 {
   const struct driver_s *drv = dev->drv;
   error_t err = 0;
+#ifdef CONFIG_DEVICE_SLEEP
+  static typeof(dev->sleep_order) device_sleep_order = 0;
+#endif
 
   LOCK_SPIN_IRQ(&dev->lock);
 
@@ -516,6 +519,11 @@ error_t device_init_driver(struct device_s *dev)
          );
 
   /* device init */
+#ifdef CONFIG_DEVICE_SLEEP
+  dev->sleep_order = device_sleep_order;
+  device_sleep_queue_orphan(dev);
+  dev->sleep_policy = DEVICE_SLEEP_CPUIDLE;
+#endif
   err = drv->f_init(dev, cl_missing);
 
   switch (err)
@@ -527,6 +535,9 @@ error_t device_init_driver(struct device_s *dev)
     case 0:
       assert(dev->status == DEVICE_DRIVER_INIT_DONE ||
              dev->status == DEVICE_DRIVER_INIT_PARTIAL);
+#ifdef CONFIG_DEVICE_SLEEP
+      device_sleep_order++;
+#endif
       break;
     case -EAGAIN:
       assert(dev->status == DEVICE_DRIVER_INIT_PENDING ||

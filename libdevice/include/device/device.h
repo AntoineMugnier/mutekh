@@ -45,9 +45,21 @@ struct dev_resource_table_s;
 typedef uint8_t address_space_id_t;
 
 #include <gct_platform.h>
+#include <gct_lock_hexo_lock.h>
 
 #ifdef CONFIG_DEVICE_TREE
 # include <gct/container_clist.h>
+#endif
+
+#ifdef CONFIG_DEVICE_SLEEP
+# include <gct/container_slist.h>
+enum device_sleep_policy_e
+{
+  /** When this policy is in use, the @ref DEV_USE_SLEEP driver
+      operation is delayed until all processors in the platform become
+      idle. */
+  DEVICE_SLEEP_CPUIDLE,
+};
 #endif
 
 ENUM_DESCRIPTOR(device_status_e, strip:DEVICE_, upper);
@@ -93,6 +105,10 @@ enum device_flags_e
 };
 
 #define GCT_CONTAINER_ALGO_device_list CLIST
+
+#define GCT_CONTAINER_ALGO_device_sleep SLIST
+#define GCT_CONTAINER_LOCK_device_sleep HEXO_LOCK
+#define GCT_CONTAINER_ORPHAN_device_sleep
 
 #ifdef CONFIG_DEVICE_TREE
 GCT_CONTAINER_TYPES(device_list,
@@ -143,6 +159,12 @@ struct device_s
   uint8_t                       BITFIELD(start_count,CONFIG_DEVICE_USE_BITS
                                          + CONFIG_DEVICE_START_LOG2INC);
 
+#ifdef CONFIG_DEVICE_SLEEP
+  uint_fast8_t                  sleep_order;
+  enum device_sleep_policy_e    sleep_policy;
+  GCT_CONTAINER_ENTRY           (device_sleep, sleep_queue_entry);
+#endif
+
   /** general purpose device lock */
   lock_t			lock;
 
@@ -160,6 +182,30 @@ struct device_s
   /** device resources table */
   struct dev_resource_table_s   *res_tbl;
 };
+
+#ifdef CONFIG_DEVICE_SLEEP
+GCT_CONTAINER_TYPES(device_sleep, struct device_s *, sleep_queue_entry);
+GCT_CONTAINER_KEY_TYPES(device_sleep, PTR, SCALAR, sleep_order);
+GCT_CONTAINER_FCNS(device_sleep, ALWAYS_INLINE, device_sleep_queue,
+                   orphan, isorphan);
+#endif
+
+/** @This schedules a call to the @ref dev_use_t function of the
+    device driver so that the device power consumption can be reduced.
+
+    This function should be called when the driver notice that the
+    device is not in active use anymore and is candidate for being put
+    in low power mode.
+
+    When the @ref dev_use_t function is called, the driver then have
+    to take the required actions to reduce device power usage. See
+    @ref DEV_USE_SLEEP for details. This call is delayed depending on
+    the current device sleep policy (see @ref device_sleep_policy_e).
+
+    It is harmless to call this function multiple times.
+*/
+config_depend(CONFIG_DEVICE_SLEEP)
+void device_sleep_schedule(struct device_s *dev);
 
 #ifdef CONFIG_DEVICE_TREE
 /** @This statically declares and intializes a global @ref device_s

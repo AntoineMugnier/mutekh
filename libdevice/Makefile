@@ -16,6 +16,7 @@ objs = driver.o device.o resources.o init.o request.o
 
 objs-$(CONFIG_DEVICE_IRQ) += irq.o
 objs-$(CONFIG_DEVICE_TREE) += enum_root.o
+objs-$(CONFIG_DEVICE_SLEEP) += sleep.o
 
 ifeq ($(CONFIG_DEVICE_CHAR), defined)
 objs += device_char.o
@@ -78,3 +79,4 @@ endif
 ifeq ($(CONFIG_DEVICE_PERSIST), defined)
 objs += device_persist.o
 endif
+

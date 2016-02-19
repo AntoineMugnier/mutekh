@@ -278,6 +278,24 @@ enum dev_use_op_e
   DEV_USE_START,
   /** @see DEV_USE_START */
   DEV_USE_STOP,
+
+#ifdef CONFIG_DEVICE_SLEEP
+  /** This operation is only used when the driver has previously
+      called the @ref device_sleep_schedule function. The device power
+      must be reduced if the device is not currently in use. The @tt
+      param argument is a pointer to a @ref device_s object.
+
+      What is actually performed by the driver is device
+      dependent. This may include releasing clock and power
+      end-points, calling @ref device_stop on associated spi or i2c
+      bus controllers or enabling a device specific low power mode.
+
+      When this operation is performed on multiple devices, driver
+      initialization order is used to determine the call order. This
+      ensure a bus controller is not disabled then re-enabled in order
+      to put a dependent device in low power mode. */
+  DEV_USE_SLEEP,
+#endif
 };
 
 struct device_accessor_s;
