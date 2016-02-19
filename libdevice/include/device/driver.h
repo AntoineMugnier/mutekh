@@ -410,6 +410,15 @@ extern const struct driver_registry_s driver_registry_table_end[];
 */
 #define DRIVER_CLASS_TYPES(cl, ...)                                    \
 /**                                                                     \
+   @This is the driver API descriptor for the cl device class.          \
+*/                                                                      \
+struct driver_##cl##_s                                                  \
+{                                                                       \
+  uint16_t class_; /* enum driver_class_e */                            \
+  __VA_ARGS__                                                           \
+};                                                                      \
+                                                                        \
+/**                                                                     \
    @This is the device accessor object type for the cl device class.    \
    This accessor must be initialized                                    \
    using the @ref device_get_accessor function before being used to     \
@@ -421,15 +430,6 @@ struct device_##cl##_s                                                  \
   struct device_s *dev;                                                 \
   struct driver_##cl##_s *api;                                          \
   uint_fast8_t number;                                                  \
-};                                                                      \
-                                                                        \
-/**                                                                     \
-   @This is the driver API descriptor for the cl device class.          \
-*/                                                                      \
-struct driver_##cl##_s                                                  \
-{                                                                       \
-  uint16_t class_; /* enum driver_class_e */                            \
-  __VA_ARGS__                                                           \
 };                                                                      \
                                                                         \
 ALWAYS_INLINE struct device_##cl##_s *                                  \

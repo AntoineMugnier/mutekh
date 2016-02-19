@@ -164,15 +164,38 @@ const_##cont_s##_from_##field(typeof(((const struct cont_s*)0)->field) *x) \
 #endif /* 1 */
 
 #ifdef __MKDOC__
-# define config_depend(token)
-# define config_depend_inline(token, proto, ...) inline proto __VA_ARGS__
-# define config_depend_alwaysinline(token, proto, ...) ALWAYS_INLINE proto __VA_ARGS__
-# define config_depend_and2(token1, token2)
-# define config_depend_and2_inline(token1, token2, proto, ...) inline proto __VA_ARGS__
-# define config_depend_and2_alwaysinline(token1, token2, proto, ...) ALWAYS_INLINE proto __VA_ARGS__
-# define config_depend_or2(token1, token2)
-# define config_depend_or2_inline(token1, token2, proto, ...) inline proto __VA_ARGS__
-# define config_depend_or2_alwaysinline(token1, token2, proto, ...) ALWAYS_INLINE proto __VA_ARGS__
+# define config_depend(token)                           \
+  /*+ This is available when @ref # ## token is defined. */
+
+# define config_depend_inline(token, proto, ...)        \
+  config_depend(token)                                  \
+  inline proto __VA_ARGS__
+
+# define config_depend_alwaysinline(token, proto, ...)  \
+  config_depend(token)                                  \
+  ALWAYS_INLINE proto __VA_ARGS__
+
+# define config_depend_and2(token1, token2)             \
+  /*+ This is available when @ref # ## token1 and @ref # ## token2 are both defined. */
+
+# define config_depend_and2_inline(token1, token2, proto, ...)  \
+  config_depend_and2(token1, token2)                            \
+  inline proto __VA_ARGS__
+
+# define config_depend_and2_alwaysinline(token1, token2, proto, ...)    \
+  config_depend_and2(token1, token2)                                    \
+  ALWAYS_INLINE proto __VA_ARGS__
+
+# define config_depend_or2(token1, token2)                              \
+  /*+ This is available when either @ref # ## token1 or @ref # ## token2 is defined. */
+
+# define config_depend_or2_inline(token1, token2, proto, ...)   \
+  config_depend_or2(token1, token2)\
+  inline proto __VA_ARGS__
+
+# define config_depend_or2_alwaysinline(token1, token2, proto, ...)     \
+  config_depend_or2(token1, token2)                                     \
+  ALWAYS_INLINE proto __VA_ARGS__
 
 #define STRUCT_INHERIT(type_s, base_s, field)                           \
 ALWAYS_INLINE struct base_s *                                           \

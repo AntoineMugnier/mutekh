@@ -16,7 +16,7 @@
 
 @macro _compound_details id
 
-  @foreach mid {typedef,enum,struct,function,variable,macro} {@id@} {1}
+  @foreach mid {typedef,enum,struct,union,function,variable,macro} {@id@} {1}
     @section {} {@mid@}
       @ifsymattr {@id@} {visible}
         @insert {@mid@} decl_location_sentence
