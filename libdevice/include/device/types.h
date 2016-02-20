@@ -78,50 +78,49 @@ enum dev_pin_driving_e
 
 /** Clock frequency in Hz = num / denom. The invalid frequency is
     encoded by setting denom to 0.
+
+    Clock frequency accuracy in ppb.  The value in ppb is
+    @em {(8 | m) * 2^(e-4)}.
+
+    The invalid accuracy value is encoded by setting e to 0.
+
+    @see #DEV_FREQ_ACC
     @see #DEV_FREQ_INVALID @see #DEV_FREQ_IS_VALID
-*/
+    @see #DEV_FREQ_ACC_INVALID @see #DEV_FREQ_ACC_IS_VALID */
 struct dev_freq_s
 {
   uint64_t BITFIELD(num,CONFIG_DEVICE_CLOCK_OSCN_WIDTH);
-  uint64_t BITFIELD(denom,64-CONFIG_DEVICE_CLOCK_OSCN_WIDTH);
+  uint64_t BITFIELD(denom,CONFIG_DEVICE_CLOCK_OSCD_WIDTH);
+  uint64_t BITFIELD(acc_m,3);
+  uint64_t BITFIELD(acc_e,5);
 };
 
 /** @This encodes the invalid frequency value @see dev_freq_s. */
-#define DEV_FREQ_INVALID ((struct dev_freq_s){ .denom = 0 })
+#define DEV_FREQ_INVALID ((struct dev_freq_s){ .denom = 0, .acc_e = 0 })
 
 /** @This tests if the frequency value is valid @see dev_freq_s. */
 #define DEV_FREQ_IS_VALID(f) ((f).denom != 0)
 
-/** Clock frequency accuracy in ppb.  The value in ppb is
-    @em {(8 | m) * 2^(e-4)}.
-
-    The invalid accuracy value is encoded by setting e to 0.
-    @see #DEV_FREQ_ACC
-    @see #DEV_FREQ_ACC_INVALID @see #DEV_FREQ_ACC_IS_VALID
-*/
-struct dev_freq_accuracy_s
-{
-  uint8_t BITFIELD(m,3);
-  uint8_t BITFIELD(e,5);
-};
-
 /** @This encodes a frequency accuracy value @see dev_freq_accuracy_s */
-#define DEV_FREQ_ACC(m_, e_) ((struct dev_freq_accuracy_s){ .e = e_, .m = m_ })
-
-/** @This encodes the invalid frequency accuracy value @see dev_freq_accuracy_s */
-#define DEV_FREQ_ACC_INVALID ((struct dev_freq_accuracy_s){ .e = 0 })
+#define DEV_FREQ_ACC(m_, e_) ((struct dev_freq_s){ .acc_e = e_, .acc_m = m_ })
 
 /** @This tests if the frequency accuracy value is valid @see dev_freq_accuracy_s */
-#define DEV_FREQ_ACC_IS_VALID(a) ((a).e != 0)
+#define DEV_FREQ_ACC_IS_VALID(a) ((a).acc_e != 0)
 
-ALWAYS_INLINE uint32_t dev_freq_acc_ppb(const struct dev_freq_accuracy_s *acc)
+ALWAYS_INLINE uint32_t dev_freq_acc_ppb(const struct dev_freq_s *freq)
 {
-  uint32_t r = (acc->m | 8);
-  if (acc->e >= 4)
-    r <<= acc->e - 4;
+  uint32_t r = (freq->acc_m | 8);
+  if (freq->acc_e >= 4)
+    r <<= freq->acc_e - 4;
   else
-    r >>= 4 - acc->e;
+    r >>= 4 - freq->acc_e;
   return r;
+}
+
+ALWAYS_INLINE void dev_freq_acc_set(struct dev_freq_s *freq, uint8_t acc_m, uint8_t acc_e)
+{
+  freq->acc_m = acc_m;
+  freq->acc_e = acc_e;
 }
 
 /** Clock ratio */

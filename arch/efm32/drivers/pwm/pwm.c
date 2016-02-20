@@ -32,7 +32,7 @@
 #include <device/class/pwm.h>
 #include <device/class/timer.h>
 #include <device/class/iomux.h>
-#include <device/class/clock.h>
+#include <device/clock.h>
 
 #include <mutek/mem_alloc.h>
 #include <mutek/kroutine.h>
@@ -239,57 +239,68 @@ cfg_end:
   kroutine_exec(&rq->base.kr);
 }
 
-#ifdef CONFIG_DEVICE_CLOCK
-static DEV_CLOCK_SINK_CHANGED(efm32_pwm_clk_changed)
+#ifdef CONFIG_DEVICE_CLOCK_VARFREQ
+static void efm32_pwm_clk_changed(struct device_s *dev)
 {
-  struct efm32_pwm_private_s *pv = ep->dev->drv_pv;
-  pv->core_freq = *freq;
+  struct efm32_pwm_private_s *pv = dev->drv_pv;
 
   if (!pv->config)
     return;
 
-  efm32_pwm_freq(ep->dev);
+  efm32_pwm_freq(dev);
 
   for (uint8_t i = 0; i < EFM32_PWM_CHANNEL_MAX; i++)
     {
       if (pv->config & (1 << i))
-        efm32_pwm_duty(ep->dev, i);
+        efm32_pwm_duty(dev, i);
     }
 }
 #endif
 
-static error_t efm32_pwm_start_stop(struct device_s *dev, uint_fast8_t channel, bool_t start)
+static error_t efm32_pwm_start(struct device_s *dev, uint_fast8_t channel)
 {
   struct efm32_pwm_private_s *pv = dev->drv_pv;
 
-  if (start)
+#ifdef CONFIG_DEVICE_CLOCK_GATING
+  if (!pv->start)
+    dev_clock_sink_gate(&pv->clk_ep, DEV_CLOCK_EP_POWER_CLOCK);
+#endif
+  pv->count[channel]++;
+  pv->start |= 1 << channel;
+
+  return 0;
+}
+
+static error_t efm32_pwm_stop(struct device_s *dev, uint_fast8_t channel)
+{
+  struct efm32_pwm_private_s *pv = dev->drv_pv;
+
+  if (!pv->count[channel])
+    return -EINVAL;
+
+  pv->count[channel]--;
+
+  uint8_t mask = 1 << channel;
+
+  if (!pv->count[channel])
     {
-      pv->count[channel]++;
-      pv->start |= 1 << channel;
-      return 0;
+      /* Stop channel */
+      cpu_mem_write_32(pv->addr + EFM32_TIMER_CC_CTRL_ADDR(channel), EFM32_TIMER_CC_CTRL_MODE(OFF));
+      pv->start &= ~mask;
     }
-  else if (pv->count[channel])
+
+  pv->config &= ~mask;
+
+  if (!pv->start)
     {
-      pv->count[channel]--;
-
-      if (!pv->count[channel])
-        {
-          /* Stop channel */
-          cpu_mem_write_32(pv->addr + EFM32_TIMER_CC_CTRL_ADDR(channel), EFM32_TIMER_CC_CTRL_MODE(OFF));
-          pv->start &= ~(1 << channel);
-        }
-
-      pv->config &= ~(1 << channel);
-
-      /* FIXME : Timer clock might be disabled here to save power */
-      if (!pv->start)
-        /* Stop counter */
-        cpu_mem_write_32(pv->addr + EFM32_TIMER_CMD_ADDR, endian_le32(EFM32_TIMER_CMD_STOP));
-
-      return 0;
+#ifdef CONFIG_DEVICE_CLOCK_GATING
+      dev_clock_sink_gate(&pv->clk_ep, DEV_CLOCK_EP_POWER);
+#endif
+      /* Stop counter */
+      cpu_mem_write_32(pv->addr + EFM32_TIMER_CMD_ADDR, endian_le32(EFM32_TIMER_CMD_STOP));
     }
 
-  return -EBUSY;
+  return 0;
 }
 
 /************************************************************************/
@@ -320,18 +331,11 @@ static DEV_INIT(efm32_pwm_init)
 
 #ifdef CONFIG_DEVICE_CLOCK
   /* enable clock */
-  dev_clock_sink_init(dev, &pv->clk_ep, &efm32_pwm_clk_changed);
+  dev_clock_sink_init(dev, &pv->clk_ep, DEV_CLOCK_EP_SINK_NOTIFY |
+                      DEV_CLOCK_EP_POWER_CLOCK | DEV_CLOCK_EP_SINK_SYNC);
 
-  struct dev_clock_link_info_s ckinfo;
-  if (dev_clock_sink_link(dev, &pv->clk_ep, &ckinfo, 0, 0))
+  if (dev_clock_sink_link(&pv->clk_ep, 0, &pv->core_freq))
     goto err_mem;
-
-  if (!DEV_FREQ_IS_VALID(ckinfo.freq))
-    goto err_mem;
-  pv->core_freq = ckinfo.freq;
-
-  if (dev_clock_sink_hold(&pv->clk_ep, 0))
-    goto err_clku;
 #else
   if (device_get_res_freq(dev, &pv->core_freq, 0))
     goto err_mem;
@@ -372,12 +376,15 @@ static DEV_INIT(efm32_pwm_init)
 
   cpu_mem_write_32(pv->addr + EFM32_TIMER_ROUTE_ADDR, endian_le32(route));
 
+#ifdef CONFIG_DEVICE_CLOCK_GATING
+  dev_clock_sink_gate(&pv->clk_ep, DEV_CLOCK_EP_POWER);
+#endif
 
   return 0;
 
  err_clku:
 #ifdef CONFIG_DEVICE_CLOCK
-  dev_clock_sink_unlink(dev, &pv->clk_ep, 1);
+  dev_clock_sink_unlink(&pv->clk_ep);
 #endif
  err_mem:
   mem_free(pv);
@@ -392,8 +399,7 @@ static DEV_CLEANUP(efm32_pwm_cleanup)
   cpu_mem_write_32(pv->addr + EFM32_TIMER_CMD_ADDR, endian_le32(EFM32_TIMER_CMD_STOP));
 
 #ifdef CONFIG_DEVICE_CLOCK
-  dev_clock_sink_release(&pv->clk_ep);
-  dev_clock_sink_unlink(dev, &pv->clk_ep, 1);
+  dev_clock_sink_unlink(&pv->clk_ep);
 #endif
 
   mem_free(pv);
@@ -407,15 +413,28 @@ static DEV_USE(efm32_pwm_use)
 
     switch (op)
       {
+#ifdef CONFIG_DEVICE_CLOCK_VARFREQ
+      case DEV_USE_CLOCK_NOTIFY: {
+        struct dev_clock_notify_s *chg = param;
+        struct dev_clock_sink_ep_s *sink = chg->sink;
+        struct device_s *dev = sink->dev;
+        struct efm32_pwm_private_s *pv = dev->drv_pv;
+        pv->core_freq = chg->freq;
+        efm32_pwm_clk_changed(dev);
+        return 0;
+    }
+#endif
+
       case DEV_USE_START:
-        return efm32_pwm_start_stop(accessor->dev, accessor->number, 1);
+        return efm32_pwm_start(accessor->dev, accessor->number);
 
       case DEV_USE_STOP:
-        return efm32_pwm_start_stop(accessor->dev, accessor->number, 0);
+        return efm32_pwm_stop(accessor->dev, accessor->number);
 
       case DEV_USE_GET_ACCESSOR:
         if (accessor->number >= EFM32_PWM_CHANNEL_MAX)
           return -ENOTSUP;
+        return 0;
 
       case DEV_USE_LAST_NUMBER:
         accessor->number = EFM32_PWM_CHANNEL_MAX - 1;

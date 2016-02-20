@@ -187,8 +187,6 @@ struct dev_timer_config_s
 {
   /** timer input frequency */
   struct dev_freq_s             freq;
-  /** timer input clock accuracy */
-  struct dev_freq_accuracy_s    acc;
   /** timer maximum value */
   dev_timer_value_t             max;
   /** revision id associated with this configuration, increased on

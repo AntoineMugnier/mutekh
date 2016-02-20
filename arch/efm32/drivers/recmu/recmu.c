@@ -28,31 +28,77 @@
 #include <arch/efm32_cmu.h>
 #include <arch/efm32_devaddr.h>
 #include <arch/efm32_clock.h>
+#include <cpu/arm_v7m.h>
 
 #include <device/resources.h>
 #include <device/device.h>
 #include <device/irq.h>
-#include <device/class/clock.h>
+#include <device/class/cmu.h>
 
-/* FIXME uint32_t would be better when EFM32_CLOCK_count <= 32 */
-typedef uint64_t efm32_clock_mask_t;
-#define EFM32_CLK_MASK(x) (1ULL << (x))
+typedef UINT_FIT_TYPE(1ULL << (EFM32_CLOCK_count - 1)) efm32_clock_mask_t;
+#define EFM32_CLK_MASK(x) ((efm32_clock_mask_t)1 << (x))
 
 #define EFM32_CLOCK_HFCORECLK_CHILDMASK \
-  (((1ULL << (EFM32_CLOCK_HFCORECLK_last - EFM32_CLOCK_HFCORECLK_first + 1)) - 1) \
+  ((EFM32_CLK_MASK(EFM32_CLOCK_HFCORECLK_last - EFM32_CLOCK_HFCORECLK_first + 1) - 1) \
    << EFM32_CLOCK_HFCORECLK_first)
 
 #define EFM32_CLOCK_HFPERCLK_CHILDMASK \
-  (((1ULL << (EFM32_CLOCK_HFPERCLK_last - EFM32_CLOCK_HFPERCLK_first + 1)) - 1) \
+  ((EFM32_CLK_MASK(EFM32_CLOCK_HFPERCLK_last - EFM32_CLOCK_HFPERCLK_first + 1) - 1) \
    << EFM32_CLOCK_HFPERCLK_first)
 
 #define EFM32_CLOCK_LFACLK_CHILDMASK \
-  (((1ULL << (EFM32_CLOCK_LFACLK_last - EFM32_CLOCK_LFACLK_first + 1)) - 1) \
+  ((EFM32_CLK_MASK(EFM32_CLOCK_LFACLK_last - EFM32_CLOCK_LFACLK_first + 1) - 1) \
    << EFM32_CLOCK_LFACLK_first)
 
 #define EFM32_CLOCK_LFBCLK_CHILDMASK \
-  (((1ULL << (EFM32_CLOCK_LFBCLK_last - EFM32_CLOCK_LFBCLK_first + 1)) - 1) \
+  ((EFM32_CLK_MASK(EFM32_CLOCK_LFBCLK_last - EFM32_CLOCK_LFBCLK_first + 1) - 1) \
    << EFM32_CLOCK_LFBCLK_first)
+
+static const efm32_clock_mask_t efm32_clock_em1_mask =
+  ((EFM32_CLOCK_HFCORECLK_CHILDMASK |
+    EFM32_CLOCK_HFPERCLK_CHILDMASK)
+   & ~(
+#ifdef CONFIG_DRIVER_EFM32_GPIO
+       /* allow em2+ when gpio clock is enabled. Disabling HFPERCLK
+          when the cpu is idle is ok for pin irq. It is only used to
+          access gpio registers when the cpu is running. */
+       EFM32_CLK_MASK(EFM32_CLOCK_GPIO) |
+#endif
+       EFM32_CLK_MASK(EFM32_CLOCK_CPU)));
+
+  /* EFM32_CLOCK_HFCORECLK and EFM32_CLOCK_HFCLK always enabled */
+static const efm32_clock_mask_t efm32_clock_alwayson_mask = 
+  EFM32_CLK_MASK(EFM32_CLOCK_HFCLK) | EFM32_CLK_MASK(EFM32_CLOCK_HFCORECLK) |
+  EFM32_CLK_MASK(EFM32_CLOCK_CPU)
+
+#ifdef CONFIG_MUTEK_PRINTK
+# ifdef CONFIG_DRIVER_EFM32_LEUART_PRINTK
+  /* hack to keep leuart clock enabled for early console before the
+     leuart driver is loaded. */
+#  if defined(EFM32_CLOCK_LEUART0) && CONFIG_MUTEK_PRINTK_ADDR == 0x40084000
+  | EFM32_CLK_MASK(EFM32_CLOCK_LEUART0);
+#  elif defined(EFM32_CLOCK_LEUART1) && CONFIG_MUTEK_PRINTK_ADDR == 0x40084400
+  | EFM32_CLK_MASK(EFM32_CLOCK_LEUART1);
+#  endif
+# endif
+
+# ifdef CONFIG_DRIVER_EFM32_USART_PRINTK
+  /* hack to keep usart clock enabled for early console before the
+     usart driver is loaded. */
+#  if defined(EFM32_CLOCK_UART0) && CONFIG_MUTEK_PRINTK_ADDR == 0x4000e000
+  | EFM32_CLK_MASK(EFM32_CLOCK_UART0);
+#  elif defined(EFM32_CLOCK_UART1) && CONFIG_MUTEK_PRINTK_ADDR == 0x4000e400
+  | EFM32_CLK_MASK(EFM32_CLOCK_UART1);
+#  elif defined(EFM32_CLOCK_USART0) && CONFIG_MUTEK_PRINTK_ADDR == 0x4000c000
+  | EFM32_CLK_MASK(EFM32_CLOCK_USART0);
+#  elif defined(EFM32_CLOCK_USART1) && CONFIG_MUTEK_PRINTK_ADDR == 0x4000c400
+  | EFM32_CLK_MASK(EFM32_CLOCK_USART1);
+#  elif defined(EFM32_CLOCK_USART2) && CONFIG_MUTEK_PRINTK_ADDR == 0x4000c800
+  | EFM32_CLK_MASK(EFM32_CLOCK_USART2);
+#  endif
+# endif
+#endif
+  ;
 
 #ifdef CONFIG_DRIVER_EFM32_RECMU_NAMES
 static const char * const efm32_clock_names[EFM32_CLOCK_count] = {
@@ -252,9 +298,7 @@ struct efm32_recmu_private_s
   struct dev_clock_src_ep_s src[EFM32_CLOCK_EP_COUNT];
 
   struct dev_freq_s hfxo_freq;
-  struct dev_freq_accuracy_s hfxo_acc;
   struct dev_freq_s lfxo_freq;
-  struct dev_freq_accuracy_s lfxo_acc;
 
   enum efm32_clock_node_e hfclk_parent:8;
   enum efm32_clock_node_e hfclk_new_parent:8;
@@ -272,16 +316,19 @@ struct efm32_recmu_private_s
 
   bool_t busy;
 
-  efm32_clock_mask_t chg_mask;   /* what clock signal have their config changed */
-
   efm32_clock_mask_t use_mask;   /* what is enabled by direct use */
+  efm32_clock_mask_t link_mask;  /* what has a linked end-point */
   efm32_clock_mask_t dep_mask;   /* what is enabled, including dependencies */
   efm32_clock_mask_t wait_mask;
+
+#ifdef CONFIG_DEVICE_CLOCK_VARFREQ
+  efm32_clock_mask_t chg_mask;   /* what clock signal have their config changed */
   efm32_clock_mask_t notify_mask; /* source ep with notification enabled */
+#endif
 
   uint32_t lfclksel;            /* mux value of lfclksel (without gating) */
 
-  /** registers used used for new config */
+  /** registers used for next config */
   uint32_t r_ctrl;
   uint32_t r_hfcoreclkdiv;
   uint32_t r_hfperclkdiv;
@@ -297,8 +344,7 @@ struct efm32_recmu_private_s
 static error_t
 efm32_recmu_get_node_freq(struct efm32_recmu_private_s *pv,
                           struct dev_freq_s *freq,
-                          struct dev_freq_accuracy_s *acc,
-                          dev_clock_node_id_t node)
+                          dev_cmu_node_id_t node)
 {
   uint32_t div;
 
@@ -416,7 +462,7 @@ efm32_recmu_get_node_freq(struct efm32_recmu_private_s *pv,
   switch (node)
     {
     case EFM32_CLOCK_LE:
-      if (efm32_recmu_get_node_freq(pv, freq, acc, EFM32_CLOCK_HFCORECLK))
+      if (efm32_recmu_get_node_freq(pv, freq, EFM32_CLOCK_HFCORECLK))
         return -EINVAL;
 # if defined(CONFIG_EFM32_LEOPARD_GECKO) \
   || defined(CONFIG_EFM32_WONDER_GECKO) \
@@ -431,12 +477,10 @@ efm32_recmu_get_node_freq(struct efm32_recmu_private_s *pv,
 
     case EFM32_CLOCK_HFXO:
       *freq = pv->hfxo_freq;
-      *acc = pv->hfxo_acc;
       break;
 
     case EFM32_CLOCK_LFXO:
       *freq = pv->lfxo_freq;
-      *acc = pv->lfxo_acc;
       break;
 
     case EFM32_CLOCK_HFRCO: {
@@ -444,7 +488,7 @@ efm32_recmu_get_node_freq(struct efm32_recmu_private_s *pv,
       freq->denom = 1;
       freq->num = hfrcoband[EFM32_CMU_HFRCOCTRL_BAND_GET(endian_le32(
         cpu_mem_read_32(EFM32_CMU_ADDR + EFM32_CMU_HFRCOCTRL_ADDR)))] * 1000000;
-      *acc = DEV_FREQ_ACC(4, 27); /* 1% */
+      dev_freq_acc_set(freq, 4, 27); /* 1% */
       break;
     }
 
@@ -454,7 +498,7 @@ efm32_recmu_get_node_freq(struct efm32_recmu_private_s *pv,
       freq->denom = 1;
       freq->num = auxfrcoband[EFM32_CMU_AUXHFRCOCTRL_BAND_GET(endian_le32(
         cpu_mem_read_32(EFM32_CMU_ADDR + EFM32_CMU_AUXHFRCOCTRL_ADDR)))] * 1000000;
-      *acc = DEV_FREQ_ACC(4, 27); /* 1% */
+      dev_freq_acc_set(freq, 4, 27); /* 1% */
       break;
     }
 #endif
@@ -462,13 +506,13 @@ efm32_recmu_get_node_freq(struct efm32_recmu_private_s *pv,
     case EFM32_CLOCK_LFRCO:
       freq->denom = 1;
       freq->num = 32768;
-      *acc = DEV_FREQ_ACC(4, 27); /* 1% */
+      dev_freq_acc_set(freq, 4, 27); /* 1% */
       break;
 
     case EFM32_CLOCK_ULFRCO:
       freq->denom = 1;
       freq->num = 1000;
-      *acc = DEV_FREQ_ACC(4, 27); /* 1% */
+      dev_freq_acc_set(freq, 4, 27); /* 1% */
       break;
 
     default:
@@ -490,7 +534,7 @@ efm32_recmu_get_node_freq(struct efm32_recmu_private_s *pv,
   return 0;
 }
 
-static DEV_CLOCK_CONFIG_OSCILLATOR(efm32_recmu_config_oscillator)
+static DEV_CMU_CONFIG_OSC(efm32_recmu_config_osc)
 {
   struct device_s *dev = accessor->dev;
   struct efm32_recmu_private_s *pv = dev->drv_pv;
@@ -541,7 +585,9 @@ static DEV_CLOCK_CONFIG_OSCILLATOR(efm32_recmu_config_oscillator)
         default:
           return -ENOTSUP;
         }
+#ifdef CONFIG_DEVICE_CLOCK_VARFREQ
       pv->chg_mask |= EFM32_CLK_MASK(node_id);
+#endif
       return 0;
     }
 
@@ -588,21 +634,25 @@ static DEV_CLOCK_CONFIG_OSCILLATOR(efm32_recmu_config_oscillator)
         default:
           return -ENOTSUP;
         }
+#ifdef CONFIG_DEVICE_CLOCK_VARFREQ
       pv->chg_mask |= EFM32_CLK_MASK(node_id);
+#endif
       return 0;
     }
 #endif
 
     case EFM32_CLOCK_HFXO:
       pv->hfxo_freq = *freq;
-      pv->hfxo_acc = *acc;
+#ifdef CONFIG_DEVICE_CLOCK_VARFREQ
       pv->chg_mask |= EFM32_CLK_MASK(node_id);
+#endif
       return 0;
 
     case EFM32_CLOCK_LFXO:
       pv->lfxo_freq = *freq;
-      pv->lfxo_acc = *acc;
+#ifdef CONFIG_DEVICE_CLOCK_VARFREQ
       pv->chg_mask |= EFM32_CLK_MASK(node_id);
+#endif
       return 0;
 
     case EFM32_CLOCK_LFRCO:
@@ -620,7 +670,7 @@ static DEV_CLOCK_CONFIG_OSCILLATOR(efm32_recmu_config_oscillator)
     }
 }
 
-static DEV_CLOCK_CONFIG_ROUTE(efm32_recmu_config_route)
+static DEV_CMU_CONFIG_MUX(efm32_recmu_config_mux)
 {
   struct device_s *dev = accessor->dev;
   struct efm32_recmu_private_s *pv = dev->drv_pv;
@@ -881,7 +931,9 @@ static DEV_CLOCK_CONFIG_ROUTE(efm32_recmu_config_route)
       return -ENOENT;
     }
 
+#ifdef CONFIG_DEVICE_CLOCK_VARFREQ
   pv->chg_mask |= EFM32_CLK_MASK(node_id);
+#endif
   return 0;
 }
 
@@ -909,55 +961,47 @@ static void efm32_recmu_clock_wait(struct efm32_recmu_private_s *pv)
   pv->wait_mask = 0;
 }
 
-static void efm32_recmu_clock_en(struct efm32_recmu_private_s *pv,
-                                 efm32_clock_mask_t use_mask)
+struct efm32_recmu_deps_s
 {
-  struct lower_nodes_s
-  {
-    efm32_clock_mask_t child_mask;
-    enum efm32_clock_node_e node;
-    uintptr_t addr;
-  };
+  efm32_clock_mask_t child_mask;
+  enum efm32_clock_node_e node;
+  uintptr_t addr;
+};
 
-  static const struct lower_nodes_s tm[4] = {
-    { EFM32_CLOCK_LFACLK_CHILDMASK,    EFM32_CLOCK_LFACLK,    EFM32_CMU_LFACLKEN0_ADDR },
-    { EFM32_CLOCK_LFBCLK_CHILDMASK,    EFM32_CLOCK_LFBCLK,    EFM32_CMU_LFBCLKEN0_ADDR },
-    { EFM32_CLOCK_HFPERCLK_CHILDMASK,  EFM32_CLOCK_HFPERCLK,  EFM32_CMU_HFPERCLKEN0_ADDR },
-    { EFM32_CLOCK_HFCORECLK_CHILDMASK, EFM32_CLOCK_HFCORECLK, EFM32_CMU_HFCORECLKEN0_ADDR },
-  };
+static const struct efm32_recmu_deps_s efm32_recmu_deps[4] = {
+  { EFM32_CLOCK_LFACLK_CHILDMASK,    EFM32_CLOCK_LFACLK,    EFM32_CMU_LFACLKEN0_ADDR },
+  { EFM32_CLOCK_LFBCLK_CHILDMASK,    EFM32_CLOCK_LFBCLK,    EFM32_CMU_LFBCLKEN0_ADDR },
+  { EFM32_CLOCK_HFPERCLK_CHILDMASK,  EFM32_CLOCK_HFPERCLK,  EFM32_CMU_HFPERCLKEN0_ADDR },
+  { EFM32_CLOCK_HFCORECLK_CHILDMASK, EFM32_CLOCK_HFCORECLK, EFM32_CMU_HFCORECLKEN0_ADDR },
+};
 
-  efm32_clock_mask_t dep_mask;
+static void efm32_recmu_clock_gate(struct efm32_recmu_private_s *pv,
+                                   efm32_clock_mask_t mask)
+{
+  mask |= efm32_clock_alwayson_mask;
+  efm32_clock_mask_t m = mask ^ pv->dep_mask;
 
-  /* EFM32_CLOCK_HFCORECLK and EFM32_CLOCK_HFCLK always enabled */
-  dep_mask = use_mask | EFM32_CLK_MASK(pv->hfclk_parent) |
-    EFM32_CLK_MASK(EFM32_CLOCK_HFCLK) | EFM32_CLK_MASK(EFM32_CLOCK_HFCORECLK) |
-    EFM32_CLK_MASK(EFM32_CLOCK_CPU);
-
-  efm32_clock_mask_t m = dep_mask ^ pv->dep_mask;
-
-  /***** lower nodes */
-
-  const struct lower_nodes_s *t = tm;
-  for (; t < tm + 4; t++)
+  uint_fast8_t i;
+  for (i = 0; i < 4; i++)
     {
-      /* update deps */
-      if (dep_mask & t->child_mask)
-        dep_mask |= EFM32_CLK_MASK(t->node);
+      const struct efm32_recmu_deps_s *t = efm32_recmu_deps + i;
 
       efm32_clock_mask_t q = m & t->child_mask;
       if (!q)
         continue;
 
       /* enable/disable peripherals clocks */
+      pv->dep_mask ^= q;
+
       uint32_t x = cpu_mem_read_32(EFM32_CMU_ADDR + t->addr);
       while (q)
         {
-          dev_clock_node_id_t id = __FFS(q) - 1;
+          dev_cmu_node_id_t id = __FFS(q) - 1;
           uint8_t s = efm32_en_bits[id];
           if (s & 0x80)
             {
               s &= 0x7f;
-              if ((dep_mask >> id) & 1)
+              if ((mask >> id) & 1)
                 x |= endian_le32(1 << s);
               else
                 x &= ~endian_le32(1 << s);
@@ -967,16 +1011,28 @@ static void efm32_recmu_clock_en(struct efm32_recmu_private_s *pv,
         }
       cpu_mem_write_32(EFM32_CMU_ADDR + t->addr, x);
     }
+}
 
-  /***** intermediate nodes */
+static void efm32_recmu_clock_dep(struct efm32_recmu_private_s *pv,
+                                  efm32_clock_mask_t mask)
+{
+  mask |= efm32_clock_alwayson_mask | EFM32_CLK_MASK(pv->hfclk_parent);
 
-  m = dep_mask ^ pv->dep_mask;
+  uint_fast8_t i;
+  for (i = 0; i < 4; i++)
+    {
+      const struct efm32_recmu_deps_s *t = efm32_recmu_deps + i;
+      if (mask & t->child_mask)
+        mask |= EFM32_CLK_MASK(t->node);
+    }
+
+  efm32_clock_mask_t m = mask ^ pv->dep_mask;
 
   /* enable/disable EFM32_CLOCK_HFPERCLK */
   if (m & EFM32_CLK_MASK(EFM32_CLOCK_HFPERCLK))
     {
       uint32_t x = endian_le32(cpu_mem_read_32(EFM32_CMU_ADDR + EFM32_CMU_HFPERCLKDIV_ADDR));
-      EFM32_CMU_HFPERCLKDIV_HFPERCLKEN_SET(x, (dep_mask >> EFM32_CLOCK_HFPERCLK) & 1);
+      EFM32_CMU_HFPERCLKDIV_HFPERCLKEN_SET(x, (mask >> EFM32_CLOCK_HFPERCLK) & 1);
       cpu_mem_write_32(EFM32_CMU_ADDR + EFM32_CMU_HFPERCLKDIV_ADDR, endian_le32(x));
     }
 
@@ -984,12 +1040,12 @@ static void efm32_recmu_clock_en(struct efm32_recmu_private_s *pv,
   /* enable/disable EFM32_CLOCK_USBC */
   if (m & EFM32_CLK_MASK(EFM32_CLOCK_USBC))
     {
-      bool_t en = (dep_mask >> EFM32_CLOCK_USBC) & 1;
+      bool_t en = (mask >> EFM32_CLOCK_USBC) & 1;
       uint32_t x = endian_le32(cpu_mem_read_32(EFM32_CMU_ADDR + EFM32_CMU_HFCORECLKEN0_ADDR));
       EFM32_CMU_HFCORECLKEN0_USBC_SET(x, en);
       cpu_mem_write_32(EFM32_CMU_ADDR + EFM32_CMU_HFCORECLKEN0_ADDR, endian_le32(x));
       if (en)
-        dep_mask |= EFM32_CLK_MASK(pv->usbcclk_parent);
+        mask |= EFM32_CLK_MASK(pv->usbcclk_parent);
     }
 #endif
 
@@ -997,46 +1053,53 @@ static void efm32_recmu_clock_en(struct efm32_recmu_private_s *pv,
   {
     uint32_t x = 0;
 
-    if (dep_mask & EFM32_CLK_MASK(EFM32_CLOCK_LFACLK))
+    if (mask & EFM32_CLK_MASK(EFM32_CLOCK_LFACLK))
       {
         x |= pv->lfclksel & 0x00010003;
-        dep_mask |= EFM32_CLK_MASK(pv->lfaclk_parent) | EFM32_CLK_MASK(EFM32_CLOCK_LE);
+        mask |= EFM32_CLK_MASK(pv->lfaclk_parent) | EFM32_CLK_MASK(EFM32_CLOCK_LE);
       }
 
-    if (dep_mask & EFM32_CLK_MASK(EFM32_CLOCK_LFBCLK))
+    if (mask & EFM32_CLK_MASK(EFM32_CLOCK_LFBCLK))
       {
         x |= pv->lfclksel & 0x0010000c;
-        dep_mask |= EFM32_CLK_MASK(pv->lfbclk_parent) | EFM32_CLK_MASK(EFM32_CLOCK_LE);
+        mask |= EFM32_CLK_MASK(pv->lfbclk_parent) | EFM32_CLK_MASK(EFM32_CLOCK_LE);
       }
 
     cpu_mem_write_32(EFM32_CMU_ADDR + EFM32_CMU_LFCLKSEL_ADDR, endian_le32(x));
   }
 
+  pv->dep_mask ^= m & (EFM32_CLK_MASK(EFM32_CLOCK_HFPERCLK) |
+#ifdef EFM32_CLOCK_USBC
+                   EFM32_CLK_MASK(EFM32_CLOCK_USBC) |
+#endif
+                   EFM32_CLK_MASK(EFM32_CLOCK_LFACLK) |
+                   EFM32_CLK_MASK(EFM32_CLOCK_LFBCLK));
+
   /***** root nodes */
 
-  m = dep_mask ^ pv->dep_mask;
+  m = mask ^ pv->dep_mask;
 
   /* enable/disable EFM32_CLOCK_LE */
   if (m & EFM32_CLK_MASK(EFM32_CLOCK_LE))
     {
       uint32_t x = endian_le32(cpu_mem_read_32(EFM32_CMU_ADDR + EFM32_CMU_HFCORECLKEN0_ADDR));
-      EFM32_CMU_HFCORECLKEN0_LE_SET(x, (dep_mask >> EFM32_CLOCK_LE) & 1);
+      EFM32_CMU_HFCORECLKEN0_LE_SET(x, (mask >> EFM32_CLOCK_LE) & 1);
       cpu_mem_write_32(EFM32_CMU_ADDR + EFM32_CMU_HFCORECLKEN0_ADDR, endian_le32(x));
+      pv->dep_mask ^= EFM32_CLK_MASK(EFM32_CLOCK_LE);
     }
 
   /* enable/disable oscillators */
-  static const efm32_clock_mask_t o =
-      EFM32_CLK_MASK(EFM32_CLOCK_LFXO) | EFM32_CLK_MASK(EFM32_CLOCK_HFXO)
+  m &= EFM32_CLK_MASK(EFM32_CLOCK_LFXO) | EFM32_CLK_MASK(EFM32_CLOCK_HFXO)
     | EFM32_CLK_MASK(EFM32_CLOCK_LFRCO) | EFM32_CLK_MASK(EFM32_CLOCK_HFRCO)
 #ifdef EFM32_CLOCK_AUXHFRCO
     | EFM32_CLK_MASK(EFM32_CLOCK_AUXHFRCO)
 #endif
     ;
 
-  if (m & o)
+  if (m)
     {
-      efm32_clock_mask_t en = o & m & dep_mask;
-      efm32_clock_mask_t dis = o & m & ~dep_mask;
+      efm32_clock_mask_t en = m & mask;
+      efm32_clock_mask_t dis = m & ~mask;
       uint32_t cmd = 0;
 #ifdef EFM32_CLOCK_AUXHFRCO
       EFM32_CMU_OSCENCMD_AUXHFRCOEN_SET(cmd,  (en  >> EFM32_CLOCK_AUXHFRCO) & 1);
@@ -1053,13 +1116,12 @@ static void efm32_recmu_clock_en(struct efm32_recmu_private_s *pv,
       cpu_mem_write_32(EFM32_CMU_ADDR + EFM32_CMU_OSCENCMD_ADDR, endian_le32(cmd));
 
       pv->wait_mask |= en;
+      pv->dep_mask ^= m;
     }
-
-  pv->dep_mask = dep_mask;
 }
 
 
-static DEV_CLOCK_COMMIT(efm32_recmu_commit)
+static DEV_CMU_COMMIT(efm32_recmu_commit)
 {
   struct device_s *dev = accessor->dev;
   struct efm32_recmu_private_s *pv = dev->drv_pv;
@@ -1074,7 +1136,7 @@ static DEV_CLOCK_COMMIT(efm32_recmu_commit)
 
   /* Enable clocks from new config. Keep clocks from old config
      enabled. */
-  efm32_recmu_clock_en(pv, pv->dep_mask);
+  efm32_recmu_clock_dep(pv, pv->dep_mask | pv->link_mask);
   efm32_recmu_clock_wait(pv);
 
   /* Write configuration to device registers */
@@ -1092,7 +1154,7 @@ static DEV_CLOCK_COMMIT(efm32_recmu_commit)
                   endian_le32(pv->r_auxhfrcoctrl));
 
     /* lf clocks use the config mux for gating, register will be
-       updated in efm32_recmu_clock_en. */
+       updated in efm32_recmu_clock_dep. */
   pv->lfclksel = pv->r_lfclksel;
 
   cpu_mem_write_32(EFM32_CMU_ADDR + EFM32_CMU_LFAPRESC0_ADDR,
@@ -1104,10 +1166,16 @@ static DEV_CLOCK_COMMIT(efm32_recmu_commit)
                   endian_le32(pv->r_cmd));
   pv->r_cmd = 0;
 
-  /* Disable unused clocks */
-  efm32_recmu_clock_en(pv, pv->use_mask);
-  efm32_recmu_clock_wait(pv);
+  /* Disable unused clocks after mux update */
+  efm32_recmu_clock_dep(pv, pv->link_mask);
 
+#ifdef CONFIG_DRIVER_EFM32_RECMU_SLEEPDEEP
+  /* SLEEPDEEP always restore HFRCO. */
+  if (pv->hfclk_parent != EFM32_CLOCK_HFRCO)
+    cpu_mem_write_32(ARMV7M_SCR_ADDR, 0);
+#endif
+
+#ifdef CONFIG_DEVICE_CLOCK_VARFREQ
   /* propagate changes in tree */
   if ((pv->chg_mask >> pv->hfclk_new_parent) & 1)
     pv->chg_mask |= EFM32_CLK_MASK(EFM32_CLOCK_HFCLK)
@@ -1140,21 +1208,21 @@ static DEV_CLOCK_COMMIT(efm32_recmu_commit)
 
   while (m)
     {
-      dev_clock_node_id_t id = __FFS(m) - 1;
+      dev_cmu_node_id_t id = __FFS(m) - 1;
       struct dev_clock_src_ep_s *src = pv->src + id;
-      assert(src->flags & DEV_CLOCK_SRC_EP_NOTIFY);
+      assert(src->notify_count);
       id += EFM32_CLOCK_FIRST_EP;
 
-      struct dev_freq_s freq;
-      struct dev_freq_accuracy_s acc;
-      if (efm32_recmu_get_node_freq(pv, &freq, &acc, id))
+      struct dev_clock_notify_s notify;
+      if (efm32_recmu_get_node_freq(pv, &notify.freq, id))
         abort();
-      dev_clock_src_changed(accessor, src, &freq, &acc);
+      dev_cmu_src_notify(src, &notify);
 
       m = m & (m - 1);          /* clear lsb */
     }
 
   pv->chg_mask = 0;
+#endif
 
   pv->busy = 0;
 
@@ -1174,7 +1242,9 @@ static void efm32_recmu_read_config(struct efm32_recmu_private_s *pv)
   pv->r_lfapresc0 = endian_le32(cpu_mem_read_32(EFM32_CMU_ADDR + EFM32_CMU_LFAPRESC0_ADDR));
   pv->r_lfbpresc0 = endian_le32(cpu_mem_read_32(EFM32_CMU_ADDR + EFM32_CMU_LFBPRESC0_ADDR));
 
+#ifdef CONFIG_DEVICE_CLOCK_VARFREQ
   pv->chg_mask = 0;
+#endif
   pv->lfaclk_new_parent = pv->lfaclk_parent;
   pv->lfbclk_new_parent = pv->lfbclk_parent;
   pv->hfclk_new_parent = pv->hfclk_parent;
@@ -1183,7 +1253,7 @@ static void efm32_recmu_read_config(struct efm32_recmu_private_s *pv)
 #endif
 }
 
-static DEV_CLOCK_ROLLBACK(efm32_recmu_rollback)
+static DEV_CMU_ROLLBACK(efm32_recmu_rollback)
 {
   struct device_s *dev = accessor->dev;
   struct efm32_recmu_private_s *pv = dev->drv_pv;
@@ -1196,7 +1266,7 @@ static DEV_CLOCK_ROLLBACK(efm32_recmu_rollback)
   return 0;
 }
 
-static DEV_CLOCK_NODE_INFO(efm32_recmu_node_info)
+static DEV_CMU_NODE_INFO(efm32_recmu_node_info)
 {
   struct device_s *dev = accessor->dev;
   struct efm32_recmu_private_s *pv = dev->drv_pv;
@@ -1205,7 +1275,7 @@ static DEV_CLOCK_NODE_INFO(efm32_recmu_node_info)
     return -EINVAL;
 
   if (*mask & (DEV_CLOCK_INFO_FREQ | DEV_CLOCK_INFO_ACCURACY))
-    if (efm32_recmu_get_node_freq(pv, &info->freq, &info->acc, node_id))
+    if (efm32_recmu_get_node_freq(pv, &info->freq, node_id))
       *mask &= ~(DEV_CLOCK_INFO_FREQ | DEV_CLOCK_INFO_ACCURACY);
 
 #ifdef CONFIG_DRIVER_EFM32_RECMU_NAMES
@@ -1251,46 +1321,100 @@ static DEV_CLOCK_NODE_INFO(efm32_recmu_node_info)
   return 0;
 }
 
-static DEV_CLOCK_SRC_USE(efm32_recmu_ep_use)
+static DEV_CLOCK_SRC_SETUP(efm32_recmu_ep_setup)
 {
   struct device_s *dev = src->dev;
   struct efm32_recmu_private_s *pv = dev->drv_pv;
 
-  dev_clock_node_id_t id = src - pv->src + EFM32_CLOCK_FIRST_EP;
+  dev_cmu_node_id_t id = src - pv->src + EFM32_CLOCK_FIRST_EP;
   if (id >= EFM32_CLOCK_count)
     return -EINVAL;
 
-  switch (action)
+  efm32_clock_mask_t mask = EFM32_CLK_MASK(id);
+
+  switch (op)
     {
-      case DEV_CLOCK_SRC_USE_HOLD:
-        pv->use_mask |= EFM32_CLK_MASK(id);
-        src->flags |= DEV_CLOCK_SRC_EP_RUNNING;
-        break;
-      case DEV_CLOCK_SRC_USE_RELEASE:
-        pv->use_mask &= ~EFM32_CLK_MASK(id);
-        src->flags &= ~DEV_CLOCK_SRC_EP_RUNNING;
-        break;
-      case DEV_CLOCK_SRC_USE_NOTIFY:
-        pv->notify_mask |= EFM32_CLK_MASK(id);
-        return 0;
-      case DEV_CLOCK_SRC_USE_IGNORE:
-        pv->notify_mask &= ~EFM32_CLK_MASK(id);
-        return 0;
-      }
+#ifdef CONFIG_DEVICE_CLOCK_VARFREQ
+    case DEV_CLOCK_SETUP_NOTIFY:
+      pv->notify_mask |= mask;
+      return 0;
+    case DEV_CLOCK_SETUP_NONOTIFY:
+      pv->notify_mask &= ~mask;
+      return 0;
+#endif
 
-  efm32_recmu_clock_en(pv, pv->use_mask);
-  efm32_recmu_clock_wait(pv);
+    case DEV_CLOCK_SETUP_GATES:
+      if (param->flags & DEV_CLOCK_EP_CLOCK)
+        {
+          pv->use_mask |= mask;
+          efm32_recmu_clock_gate(pv, pv->use_mask);
 
-  return 0;
+#ifdef CONFIG_DRIVER_EFM32_RECMU_SLEEPDEEP
+          /* disable SLEEPDEEP ? */
+          if (mask & efm32_clock_em1_mask)
+            cpu_mem_write_32(ARMV7M_SCR_ADDR, 0);
+#endif
+        }
+      else
+        {
+          pv->use_mask &= ~mask;
+
+#ifdef CONFIG_DRIVER_EFM32_RECMU_SLEEPDEEP
+          /* delayed clock disable */
+          device_sleep_schedule(dev);
+#else
+          efm32_recmu_clock_gate(pv, pv->use_mask);
+#endif
+        }
+
+      dev_cmu_src_update(src, param->flags);
+      return 0;
+
+    case DEV_CLOCK_SETUP_LINK:
+      pv->link_mask |= mask;
+      efm32_recmu_clock_dep(pv, pv->link_mask);
+      efm32_recmu_clock_wait(pv);
+      return 0;
+
+    case DEV_CLOCK_SETUP_UNLINK:
+      pv->link_mask &= ~mask;
+      efm32_recmu_clock_dep(pv, pv->link_mask);
+      return 0;
+
+    default:
+      return -ENOTSUP;
+    }
 }
 
 static DEV_INIT(efm32_recmu_init);
 static DEV_CLEANUP(efm32_recmu_cleanup);
-#define efm32_recmu_use dev_use_generic
+
+static DEV_USE(efm32_recmu_use)
+{
+  switch (op)
+    {
+#ifdef CONFIG_DRIVER_EFM32_RECMU_SLEEPDEEP
+    case DEV_USE_SLEEP: {
+      struct device_s *dev = param;
+      struct efm32_recmu_private_s *pv = dev->drv_pv;
+      efm32_recmu_clock_gate(pv, pv->use_mask);
+
+      if (pv->hfclk_parent == EFM32_CLOCK_HFRCO &&
+          !(pv->dep_mask & efm32_clock_em1_mask))
+        cpu_mem_write_32(ARMV7M_SCR_ADDR, ARMV7M_SCR_SLEEPDEEP);
+
+      return 0;
+    }
+#endif
+
+    default:
+      return dev_use_generic(param, op);
+    }
+}
 
 DRIVER_DECLARE(efm32_recmu_drv, DRIVER_FLAGS_EARLY_INIT,
                "EFM32 Reset, Energy and Clock management units", efm32_recmu,
-               DRIVER_CLOCK_METHODS(efm32_recmu));
+               DRIVER_CMU_METHODS(efm32_recmu));
 
 DRIVER_REGISTER(efm32_recmu_drv);
 
@@ -1315,13 +1439,14 @@ static DEV_INIT(efm32_recmu_init)
 
   memset(pv, 0, sizeof (*pv));
 
-  pv->lfxo_acc = DEV_FREQ_ACC(4, 17); /* default to 100ppm */
-  pv->hfxo_acc = DEV_FREQ_ACC(4, 17);
+  dev_freq_acc_set(&pv->lfxo_freq, 4, 17); /* default to 100ppm */
+  dev_freq_acc_set(&pv->hfxo_freq, 4, 17); /* default to 100ppm */
   dev->drv_pv = pv;
 
+  uint_fast8_t i;
+#ifdef CONFIG_DEVICE_CLOCK_VARFREQ
   /* find nodes which can have multiple clock sources with the
      defined set of resources. */
-  uint_fast8_t i;
   efm32_clock_mask_t once, mult = 0, o;
   do {
     o = mult;
@@ -1330,13 +1455,13 @@ static DEV_INIT(efm32_recmu_init)
     DEVICE_RES_FOREACH(dev, r, {
         switch (r->type)
           {
-          case DEV_RES_CLOCK_RTE:
-            i = r->u.clock_rte.node;
-            if ((mult >> r->u.clock_rte.parent) & 1)
+          case DEV_RES_CMU_MUX:
+            i = r->u.cmu_mux.node;
+            if ((mult >> r->u.cmu_mux.parent) & 1)
               mult |= EFM32_CLK_MASK(i);
             break;
-          case DEV_RES_CLOCK_OSC:
-            i = r->u.clock_osc.node;
+          case DEV_RES_CMU_OSC:
+            i = r->u.cmu_osc.node;
             break;
           default:
             continue;
@@ -1352,13 +1477,16 @@ static DEV_INIT(efm32_recmu_init)
     if ((mult >> EFM32_CLOCK_LFBCLK) & 1)
       mult |= EFM32_CLOCK_LFBCLK_CHILDMASK;
   } while (o != mult);
+#endif
 
   /* init oscilator nodes */
   for (i = 0; i < EFM32_CLOCK_EP_COUNT; i++)
     {
-      dev_clock_source_init(dev, &pv->src[i], &efm32_recmu_ep_use);
+      dev_clock_source_init(dev, &pv->src[i], &efm32_recmu_ep_setup);
+#ifdef CONFIG_DEVICE_CLOCK_VARFREQ
       if ((mult >> (i + EFM32_CLOCK_FIRST_EP)) & 1)
-        pv->src[i].flags |= DEV_CLOCK_SRC_EP_VARFREQ;
+        pv->src[i].flags |= DEV_CLOCK_EP_VARFREQ;
+#endif
     }
 
   pv->lfclksel = EFM32_CMU_LFCLKSEL_LFA(LFRCO) | EFM32_CMU_LFCLKSEL_LFB(LFRCO);
@@ -1371,32 +1499,8 @@ static DEV_INIT(efm32_recmu_init)
 
   efm32_recmu_read_config(pv);
 
-#ifdef CONFIG_DRIVER_EFM32_LEUART_PRINTK
-  /* hack to keep leuart clock enabled for early console before the
-     leuart driver is loaded. */
-# if defined(EFM32_CLOCK_LEUART0) && CONFIG_MUTEK_PRINTK_ADDR == 0x40084000
-    pv->use_mask |= EFM32_CLK_MASK(EFM32_CLOCK_LEUART0);
-# elif defined(EFM32_CLOCK_LEUART1) && CONFIG_MUTEK_PRINTK_ADDR == 0x40084400
-    pv->use_mask |= EFM32_CLK_MASK(EFM32_CLOCK_LEUART1);
-# endif
-#endif
-
-#ifdef CONFIG_DRIVER_EFM32_USART_PRINTK
-  /* hack to keep usart clock enabled for early console before the
-     usart driver is loaded. */
-# if defined(EFM32_CLOCK_UART0) && CONFIG_MUTEK_PRINTK_ADDR == 0x4000e000
-    pv->use_mask |= EFM32_CLK_MASK(EFM32_CLOCK_UART0);
-# elif defined(EFM32_CLOCK_UART1) && CONFIG_MUTEK_PRINTK_ADDR == 0x4000e400
-    pv->use_mask |= EFM32_CLK_MASK(EFM32_CLOCK_UART1);
-# elif defined(EFM32_CLOCK_USART0) && CONFIG_MUTEK_PRINTK_ADDR == 0x4000c000
-    pv->use_mask |= EFM32_CLK_MASK(EFM32_CLOCK_USART0);
-# elif defined(EFM32_CLOCK_USART1) && CONFIG_MUTEK_PRINTK_ADDR == 0x4000c400
-    pv->use_mask |= EFM32_CLK_MASK(EFM32_CLOCK_USART1);
-# elif defined(EFM32_CLOCK_USART2) && CONFIG_MUTEK_PRINTK_ADDR == 0x4000c800
-    pv->use_mask |= EFM32_CLK_MASK(EFM32_CLOCK_USART2);
-# endif
-#endif
-
+  if (dev_cmu_init(&efm32_recmu_drv, dev))
+    goto err_mem;
 
   return 0;
 

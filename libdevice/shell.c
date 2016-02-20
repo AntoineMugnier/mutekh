@@ -267,6 +267,8 @@ TERMUI_CON_PARSE_OPT_PROTOTYPE(dev_console_opt_freq_parse)
 
   freq->num   = fract.num;
   freq->denom = fract.denom;
+  dev_freq_acc_set(freq, 4, 17); /* default to 100ppm */
+
   return 0;
 }
 
@@ -341,8 +343,6 @@ static TERMUI_CON_COMMAND_PROTOTYPE(dev_shell_new)
 
 /*************************************************** device tree dump */
 
-#include <device/class/clock.h>
-
 static void
 dev_shell_dump_drv_class(struct termui_console_s *con, const struct driver_s *drv,
                          uint8_t pending_mask)
@@ -381,7 +381,7 @@ dev_shell_dump_device(struct termui_console_s *con, struct device_s *dev,
 #if CONFIG_DEVICE_START_LOG2INC
   uint_fast8_t f = dev->start_count & (DEVICE_START_COUNT_INC - 1);
   if (f)
-    termui_con_printf(con, " [flags 0x%x]\n", f);
+    termui_con_printf(con, " [flags 0x%x]", f);
 #endif
   termui_con_printf(con, "\n");
 
@@ -449,34 +449,18 @@ dev_shell_dump_device(struct termui_console_s *con, struct device_s *dev,
         }
 #endif
 #ifdef CONFIG_DEVICE_CLOCK
-        case DEV_RES_CLOCK_RTE: {
-          struct dev_clock_node_info_s info;
-          const char *nname = "unknown";
-          const char *pname = "unknown";
-          if (!dev_clock_node_info(dev, r->u.clock_rte.node, DEV_CLOCK_INFO_NAME, &info))
-            nname = info.name;
-          if (!dev_clock_node_info(dev, r->u.clock_rte.parent, DEV_CLOCK_INFO_NAME, &info))
-            pname = info.name;
-          termui_con_printf(con, "  Clock route: node %u `%s': parent %u `%s', scale %"PRIu64"/%"PRIu64", config mask 0x%x\n",
-                 r->u.clock_rte.node, nname, r->u.clock_rte.parent, pname,
-                 (uint64_t)r->u.clock_rte.num, (uint64_t)r->u.clock_rte.denom,
-                 r->u.clock_rte.config
-          );
+        case DEV_RES_CMU_MUX: {
+          termui_con_printf(con, "  Clock route: node %u: parent %u, scale %"PRIu64"/%"PRIu64", config mask 0x%x\n",
+                 r->u.cmu_mux.node, r->u.cmu_mux.parent,
+                 (uint64_t)r->u.cmu_mux.num, (uint64_t)r->u.cmu_mux.denom,
+                            r->u.cmu_mux.config);
           break;
         }
 
-        case DEV_RES_CLOCK_OSC: {
-          struct dev_clock_node_info_s info;
-          const char *nname = "?";
-          if (!dev_clock_node_info(dev, r->u.clock_osc.node, DEV_CLOCK_INFO_NAME, &info))
-            nname = info.name;
-          uint64_t integral  = r->u.clock_osc.num / r->u.clock_osc.denom;
-          uint32_t frac      = 1000 * (r->u.clock_osc.num % r->u.clock_osc.denom) /
-                                 r->u.clock_osc.denom;
-          termui_con_printf(con, "  Clock oscillator: node %"PRIuFAST8" `%s' @ %"PRIu64".%03"PRIu32" Hz, config mask 0x%x\n",
-                 (uint_fast8_t)r->u.clock_osc.node, nname, (uint64_t)integral, (uint32_t)frac,
-                 r->u.clock_osc.config
-          );
+        case DEV_RES_CMU_OSC: {
+          termui_con_printf(con, "  Clock oscillator: node %"PRIuFAST8" @ %"PRIu64"/%"PRIu64" Hz, config mask 0x%x\n",
+                            (uint_fast8_t)r->u.cmu_osc.node, (uint64_t)r->u.cmu_osc.num, (uint64_t)r->u.cmu_osc.denom,
+                            r->u.cmu_osc.config);
           break;
         }
 

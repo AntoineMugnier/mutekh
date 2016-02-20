@@ -32,7 +32,7 @@
 #include <device/driver.h>
 #include <device/class/timer.h>
 #include <device/irq.h>
-#include <device/class/clock.h>
+#include <device/clock.h>
 
 #include <mutek/mem_alloc.h>
 #include <mutek/kroutine.h>
@@ -63,29 +63,29 @@ struct efm32_timer_private_s
 #ifdef CONFIG_DEVICE_CLOCK
   struct dev_clock_sink_ep_s clk_ep;
   struct dev_freq_s freq;
-  struct dev_freq_accuracy_s acc;
 #endif
 
   enum dev_timer_capabilities_e cap:8;
+  uint8_t prescaler:4;
   dev_timer_cfgrev_t rev;
 };
 
-#ifdef CONFIG_DEVICE_CLOCK
-static DEV_CLOCK_SINK_CHANGED(efm32_timer_clk_changed)
-{
-  struct device_s *dev = ep->dev;
-  struct efm32_timer_private_s *pv = dev->drv_pv;
-  LOCK_SPIN_IRQ(&dev->lock);
-  pv->rev += 2;
-  pv->freq = *freq;
-  pv->acc = *acc;
-  LOCK_RELEASE_IRQ(&dev->lock);
-}
-#endif
+#define EFM32_TIMER_CTRL_CONST (EFM32_TIMER_CTRL_MODE(UP) |             \
+                                EFM32_TIMER_CTRL_CLKSEL(PRESCHFPERCLK) | \
+                                EFM32_TIMER_CTRL_SYNC(NONE) |           \
+                                EFM32_TIMER_CTRL_RISEA(NONE) |          \
+                                EFM32_TIMER_CTRL_FALLA(NONE))
 
 /* This function starts the hardware timer counter. */
 static inline void efm32_timer_start_counter(struct efm32_timer_private_s *pv)
 {
+#ifdef CONFIG_DEVICE_CLOCK_GATING
+  dev_clock_sink_gate(&pv->clk_ep, DEV_CLOCK_EP_POWER_CLOCK);
+#endif
+  uint32_t ctrl = EFM32_TIMER_CTRL_CONST;
+  EFM32_TIMER_CTRL_PRESC_SETVAL(ctrl, pv->prescaler);
+  cpu_mem_write_32(pv->addr + EFM32_TIMER_CTRL_ADDR, endian_le32(ctrl));
+
   cpu_mem_write_32(pv->addr + EFM32_TIMER_CMD_ADDR, endian_le32(EFM32_TIMER_CMD_START));
 }
 
@@ -93,6 +93,12 @@ static inline void efm32_timer_start_counter(struct efm32_timer_private_s *pv)
 static inline void efm32_timer_stop_counter(struct efm32_timer_private_s *pv)
 {
   cpu_mem_write_32(pv->addr + EFM32_TIMER_CMD_ADDR, endian_le32(EFM32_TIMER_CMD_STOP));
+#ifdef CONFIG_DEVICE_CLOCK_GATING
+  if (endian_le32(cpu_mem_read_32(pv->addr + EFM32_TIMER_IF_ADDR))
+      & (EFM32_TIMER_IF_OF | EFM32_TIMER_IF_CC(EFM32_TIMER_CHANNEL)))
+    return;
+  dev_clock_sink_gate(&pv->clk_ep, DEV_CLOCK_EP_POWER);
+#endif
 }
 
 /* This function returns a concatenation of the software timer value and 
@@ -168,11 +174,14 @@ static DEV_IRQ_SRC_PROCESS(efm32_timer_irq)
   struct efm32_timer_private_s *pv = dev->drv_pv;
 
   lock_spin(&dev->lock);
+#ifdef CONFIG_DEVICE_CLOCK_GATING
+  assert(dev->start_count);
+#endif
 
   while (1)
     {
       uint32_t irq = endian_le32(cpu_mem_read_32(pv->addr + EFM32_TIMER_IF_ADDR))
-        & (EFM32_TIMER_IEN_OF | EFM32_TIMER_IEN_CC(EFM32_TIMER_CHANNEL));
+        & (EFM32_TIMER_IF_OF | EFM32_TIMER_IF_CC(EFM32_TIMER_CHANNEL));
 
       if (!irq)
         break;
@@ -323,6 +332,18 @@ static DEV_USE(efm32_timer_use)
 
   switch (op)
     {
+#ifdef CONFIG_DEVICE_CLOCK_VARFREQ
+    case DEV_USE_CLOCK_NOTIFY: {
+      struct dev_clock_notify_s *chg = param;
+      struct dev_clock_sink_ep_s *sink = chg->sink;
+      struct device_s *dev = sink->dev;
+      struct efm32_timer_private_s *pv = dev->drv_pv;
+      pv->freq = chg->freq;
+      pv->rev += 2;
+      return 0;
+    }
+#endif
+
     case DEV_USE_START: {
       struct device_s *dev = accessor->dev;
       struct efm32_timer_private_s *pv = dev->drv_pv;
@@ -348,21 +369,27 @@ static DEV_TIMER_GET_VALUE(efm32_timer_get_value)
 {
   struct device_s *dev = accessor->dev;
   struct efm32_timer_private_s *pv = dev->drv_pv;
+  error_t err = 0;
 
   LOCK_SPIN_IRQ(&dev->lock);
 
-  *value = get_timer_value(pv);
+#ifdef CONFIG_DEVICE_CLOCK_GATING
+  if (!dev->start_count)
+    err = -EBUSY;
+  else
+#endif
+    *value = get_timer_value(pv);
 
   LOCK_RELEASE_IRQ(&dev->lock);
 
-  return 0;
+  return err;
 }
 
 static DEV_TIMER_CONFIG(efm32_timer_config)
 {
   struct device_s *dev = accessor->dev;
   struct efm32_timer_private_s *pv = dev->drv_pv;
-  uint32_t ctrl, r, div;
+  uint32_t r, div;
 
   error_t err = 0;
 
@@ -371,7 +398,6 @@ static DEV_TIMER_CONFIG(efm32_timer_config)
     {
       if (device_get_res_freq(accessor->dev, &cfg->freq, 0))
         cfg->freq = DEV_FREQ_INVALID;
-      cfg->acc = DEV_FREQ_ACC_INVALID;
     }
 #endif
 
@@ -379,10 +405,7 @@ static DEV_TIMER_CONFIG(efm32_timer_config)
 
 #ifdef CONFIG_DEVICE_CLOCK
   if (cfg)
-    {
-      cfg->freq = pv->freq;
-      cfg->acc = pv->acc;
-    }
+    cfg->freq = pv->freq;
 #endif
 
   if (res)
@@ -396,10 +419,7 @@ static DEV_TIMER_CONFIG(efm32_timer_config)
         {
           /* div is either set to maximum value 10 or rounded down to the nearest power of 2 */
           div = res > 1024 ? 10 : sizeof(__compiler_sint_t) * 8 - __builtin_clz(res) - 1;
-
-          ctrl = endian_le32(cpu_mem_read_32(pv->addr + EFM32_TIMER_CTRL_ADDR));
-          EFM32_TIMER_CTRL_PRESC_SETVAL(ctrl, div);
-          cpu_mem_write_32(pv->addr + EFM32_TIMER_CTRL_ADDR, endian_le32(ctrl));
+          pv->prescaler = div;
 
           r = 1 << div;
           if (r != res)
@@ -410,8 +430,7 @@ static DEV_TIMER_CONFIG(efm32_timer_config)
     }
   else
     {
-      uint32_t ctrl = endian_le32(cpu_mem_read_32(pv->addr + EFM32_TIMER_CTRL_ADDR));
-      r = 1 << EFM32_TIMER_CTRL_PRESC_GET(ctrl);
+      r = 1 << pv->prescaler;
     }
 
   if (cfg)
@@ -462,22 +481,16 @@ static DEV_INIT(efm32_timer_init)
 
 #ifdef CONFIG_DEVICE_CLOCK
   /* enable clock */
-  dev_clock_sink_init(dev, &pv->clk_ep, &efm32_timer_clk_changed);
+  dev_clock_sink_init(dev, &pv->clk_ep, DEV_CLOCK_EP_SINK_NOTIFY |
+                      DEV_CLOCK_EP_POWER_CLOCK | DEV_CLOCK_EP_SINK_SYNC);
 
-  struct dev_clock_link_info_s ckinfo;
-  if (dev_clock_sink_link(dev, &pv->clk_ep, &ckinfo, 0, 0))
+  if (dev_clock_sink_link(&pv->clk_ep, 0, &pv->freq))
     goto err_mem;
 
-  if (!DEV_FREQ_IS_VALID(ckinfo.freq))
-    goto err_mem;
-  pv->freq = ckinfo.freq;
-  pv->acc = ckinfo.acc;
-
-  if (ckinfo.src_flags & DEV_CLOCK_SRC_EP_VARFREQ)
+# ifdef CONFIG_DEVICE_CLOCK_VARFREQ
+  if (pv->clk_ep.flags & DEV_CLOCK_EP_VARFREQ)
     pv->cap |= DEV_TIMER_CAP_VARFREQ | DEV_TIMER_CAP_CLKSKEW;
-
-  if (dev_clock_sink_hold(&pv->clk_ep, 0))
-    goto err_clku;
+# endif
 #endif
 
 #ifdef CONFIG_DEVICE_IRQ
@@ -510,30 +523,25 @@ static DEV_INIT(efm32_timer_init)
   cpu_mem_write_32(pv->addr + EFM32_TIMER_IEN_ADDR, 0);
 #endif
 
+  pv->prescaler = EFM32_TIMER_CTRL_PRESC_DIV1024;
+
   /* Ctrl register configuration */
-  cpu_mem_write_32(pv->addr + EFM32_TIMER_CTRL_ADDR,
-                   endian_le32(EFM32_TIMER_CTRL_MODE(UP) |
-                               EFM32_TIMER_CTRL_CLKSEL(PRESCHFPERCLK) |
-                               EFM32_TIMER_CTRL_SYNC(NONE) |
-                               EFM32_TIMER_CTRL_RISEA(NONE) |
-                               EFM32_TIMER_CTRL_FALLA(NONE) |
-                               EFM32_TIMER_CTRL_PRESC(DIV1024)));
+  cpu_mem_write_32(pv->addr + EFM32_TIMER_CTRL_ADDR, endian_le32(EFM32_TIMER_CTRL_CONST));
 
   /* Set counter wrapping value to EFM32_TIMER_TOP */
   cpu_mem_write_32(pv->addr + EFM32_TIMER_TOP_ADDR, endian_le32(EFM32_TIMER_TOP));
 
+#ifdef CONFIG_DEVICE_CLOCK_GATING
+  dev_clock_sink_gate(&pv->clk_ep, DEV_CLOCK_EP_POWER);
+#endif
 
   return 0;
 
  err_clk:
 #ifdef CONFIG_DEVICE_IRQ
 # ifdef CONFIG_DEVICE_CLOCK
-  dev_clock_sink_release(&pv->clk_ep);
+  dev_clock_sink_unlink(&pv->clk_ep);
 # endif
-#endif
- err_clku:
-#ifdef CONFIG_DEVICE_CLOCK
-  dev_clock_sink_unlink(dev, &pv->clk_ep, 1);
 #endif
  err_mem:
   mem_free(pv);
@@ -545,8 +553,7 @@ static DEV_CLEANUP(efm32_timer_cleanup)
   struct efm32_timer_private_s *pv = dev->drv_pv;
 
 #ifdef CONFIG_DEVICE_CLOCK
-  dev_clock_sink_release(&pv->clk_ep);
-  dev_clock_sink_unlink(dev, &pv->clk_ep, 1);
+  dev_clock_sink_unlink(&pv->clk_ep);
 #endif
 
 #ifdef CONFIG_DEVICE_IRQ

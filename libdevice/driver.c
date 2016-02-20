@@ -449,7 +449,7 @@ error_t device_init_driver(struct device_s *dev)
 #ifdef CONFIG_DEVICE_CLOCK
         case DEV_RES_CLOCK_SRC:
           path = r->u.ptr[0];
-          cl = DRIVER_CLASS_CLOCK;
+          cl = DRIVER_CLASS_CMU;
           break;
 #endif
 #ifdef CONFIG_DEVICE_DMA
@@ -556,6 +556,12 @@ DEV_USE(dev_use_generic)
       if (acc->number)
         return -ENOTSUP;
     }
+#ifdef CONFIG_DEVICE_CLOCK
+    case DEV_USE_CLOCK_GATES:
+#endif
+#ifdef CONFIG_DEVICE_CLOCK_VARFREQ
+    case DEV_USE_CLOCK_NOTIFY:
+#endif
     case DEV_USE_PUT_ACCESSOR:
     case DEV_USE_START:
     case DEV_USE_STOP:

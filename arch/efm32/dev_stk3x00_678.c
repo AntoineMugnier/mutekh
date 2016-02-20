@@ -24,7 +24,7 @@
 # include <device/resources.h>
 # include <device/irq.h>
 # include <device/class/iomux.h>
-# include <device/class/clock.h>
+# include <device/class/cmu.h>
 # include <device/class/dma.h>
 #endif
 
@@ -52,19 +52,20 @@ DEV_DECLARE_STATIC(recmu_dev, "recmu", 0, efm32_recmu_drv,
                    DEV_STATIC_RES_DEV_ICU("/cpu"),
                    DEV_STATIC_RES_IRQ(0, EFM32_IRQ_CMU, DEV_IRQ_SENSE_RISING_EDGE, 0, 1),
 
-                   /* Crystal freqs */
-                   DEV_STATIC_RES_CLK_OSC(EFM32_CLOCK_HFXO, -1, 48000000, 1),
-                   DEV_STATIC_RES_CLK_OSC(EFM32_CLOCK_LFXO, -1,    32768, 1),
+                   /* config 0: run on HFRCO @ 14Mhz */
+                   DEV_STATIC_RES_CMU_MUX(EFM32_CLOCK_LFRCO, EFM32_CLOCK_LFACLK, 0b0111, 1, 1),
+                   DEV_STATIC_RES_CMU_MUX(EFM32_CLOCK_HFRCO, EFM32_CLOCK_HFCLK,  0b0011, 1, 1),
+                   DEV_STATIC_RES_CMU_OSC(EFM32_CLOCK_HFRCO, 0b0001, 14000000, 1),
+                   /* config 1: run on HFRCO @ 28Mhz */
+                   DEV_STATIC_RES_CMU_OSC(EFM32_CLOCK_HFRCO, 0b0010, 28000000, 1),
+                   /* config 2: run on LFRCO @ 32khz */
+                   DEV_STATIC_RES_CMU_MUX(EFM32_CLOCK_LFRCO, EFM32_CLOCK_HFCLK,  0b0100, 1, 1),
 
-                   DEV_STATIC_RES_CLK_RTE(EFM32_CLOCK_HFRCO, EFM32_CLOCK_HFCLK, 1|2, 1, 1),
-                   /* config 0: use HFRCO @ 14Mhz */
-                   DEV_STATIC_RES_CLK_OSC(EFM32_CLOCK_HFRCO, 1, 14000000, 1),
-                   /* config 1: use HFRCO @ 28Mhz */
-                   DEV_STATIC_RES_CLK_OSC(EFM32_CLOCK_HFRCO, 2, 28000000, 1),
-
-
-                   /* config 2: use HFXO @ 48Mhz */
-                   DEV_STATIC_RES_CLK_RTE(EFM32_CLOCK_HFXO, EFM32_CLOCK_HFCLK, 4, 1, 1)
+                   /* config 3: run on crystals HFXO @ 48Mhz, LFXO @ 32Khz */
+                   DEV_STATIC_RES_CMU_OSC(EFM32_CLOCK_LFXO, 0b1000, 32768, 1),
+                   DEV_STATIC_RES_CMU_OSC(EFM32_CLOCK_HFXO, 0b1000, 48000000, 1),
+                   DEV_STATIC_RES_CMU_MUX(EFM32_CLOCK_LFXO, EFM32_CLOCK_LFACLK, 0b1000, 1, 1),
+                   DEV_STATIC_RES_CMU_MUX(EFM32_CLOCK_HFXO, EFM32_CLOCK_HFCLK,  0b1000, 1, 1)
                    );
 
 #endif

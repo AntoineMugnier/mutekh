@@ -34,7 +34,7 @@
 #include <device/class/spi.h>
 #include <device/class/timer.h>
 #include <device/class/iomux.h>
-#include <device/class/clock.h>
+#include <device/clock.h>
 
 #ifdef CONFIG_DRIVER_EFM32_DMA
 #include <device/class/dma.h>
@@ -56,9 +56,6 @@ struct efm32_usart_spi_context_s
   struct dev_irq_src_s           irq_ep;
 #endif
   struct dev_spi_ctrl_transfer_s *tr;
-  uint32_t                       ctrl;
-  uint32_t                       route;
-  uint_fast8_t                   fifo_lvl;
 
 #ifdef CONFIG_DEVICE_SPI_REQUEST
   struct dev_spi_ctrl_queue_s    queue;
@@ -72,17 +69,23 @@ struct efm32_usart_spi_context_s
 #endif
 
 #ifdef CONFIG_DRIVER_EFM32_DMA
-  bool_t                         dma_use;
   struct device_dma_s            dma;
   struct efm32_dev_dma_rq_s      drq; 
 #endif
 
+  uint32_t                       ctrl;
+  uint32_t                       BITFIELD(clkdiv,24);
+  uint32_t                       BITFIELD(frame,8);
+  uint16_t                       route;
+  uint8_t                        fifo_lvl;
+  bool_t                         dma_use;
 };
 
-static void efm32_usart_spi_update_rate(struct efm32_usart_spi_context_s *pv)
+static void efm32_usart_spi_update_rate(struct device_s *dev, uint32_t bit_rate)
 {
-  uint32_t div = (128 * pv->freq.num) / (pv->bit_rate * pv->freq.denom) - 256;
-  cpu_mem_write_32(pv->addr + EFM32_USART_CLKDIV_ADDR, endian_le32(div));
+  struct efm32_usart_spi_context_s *pv = dev->drv_pv;
+  pv->bit_rate = bit_rate;
+  pv->clkdiv = (128 * pv->freq.num) / (bit_rate * pv->freq.denom) - 256;
 }
 
 static DEV_SPI_CTRL_CONFIG(efm32_usart_spi_config)
@@ -101,7 +104,7 @@ static DEV_SPI_CTRL_CONFIG(efm32_usart_spi_config)
         err = -ENOTSUP;
       else
         {
-          cpu_mem_write_32(pv->addr + EFM32_USART_FRAME_ADDR, endian_le32(cfg->word_width - 3));
+          pv->frame = cfg->word_width - 3;
 
           EFM32_USART_CTRL_CLKPOL_SETVAL(pv->ctrl, cfg->ck_mode == DEV_SPI_CK_MODE_2 ||
                                                    cfg->ck_mode == DEV_SPI_CK_MODE_3);
@@ -112,13 +115,8 @@ static DEV_SPI_CTRL_CONFIG(efm32_usart_spi_config)
           EFM32_USART_CTRL_TXINV_SETVAL(pv->ctrl, cfg->mosi_pol == DEV_SPI_ACTIVE_LOW);
           EFM32_USART_CTRL_MSBF_SETVAL(pv->ctrl,  cfg->bit_order == DEV_SPI_MSB_FIRST);
 
-          cpu_mem_write_32(pv->addr + EFM32_USART_CTRL_ADDR, endian_le32(pv->ctrl));
-
           if (pv->bit_rate != cfg->bit_rate)
-            {
-              pv->bit_rate = cfg->bit_rate;
-              efm32_usart_spi_update_rate(pv);
-            }
+            efm32_usart_spi_update_rate(dev, cfg->bit_rate);
         }
     }
 
@@ -175,6 +173,12 @@ static bool_t efm32_usart_spi_transfer_rx(struct device_s *dev)
     return efm32_usart_spi_transfer_tx(dev);
 
   pv->tr = NULL;
+  dev->start_count &= ~1;
+
+# ifdef CONFIG_DEVICE_CLOCK_GATING
+  if (dev->start_count == 0)
+    dev_clock_sink_gate(&pv->clk_ep, DEV_CLOCK_EP_POWER);
+# endif
 
   return 1;
 }
@@ -232,6 +236,9 @@ static DEV_IRQ_SRC_PROCESS(efm32_usart_spi_irq)
 
 
   lock_spin(&dev->lock);
+#ifdef CONFIG_DEVICE_CLOCK_GATING
+  assert(dev->start_count);
+#endif
 
   while (cpu_mem_read_32(pv->addr + EFM32_USART_IF_ADDR) &
          endian_le32(EFM32_USART_IF_RXDATAV | EFM32_USART_IF_RXFULL))
@@ -298,8 +305,6 @@ static DEV_SPI_CTRL_SELECT(efm32_usart_spi_select)
         case DEV_SPI_CS_ASSERT:
           err = -ENOTSUP;
         }
-
-      cpu_mem_write_32(pv->addr + EFM32_USART_ROUTE_ADDR, endian_le32(pv->route));
     }
 
   LOCK_RELEASE_IRQ(&dev->lock);
@@ -320,6 +325,12 @@ static KROUTINE_EXEC(dma_callback)
   struct dev_spi_ctrl_transfer_s *tr = pv->tr;
 
   pv->tr = NULL;
+
+  dev->start_count &= ~1;
+# ifdef CONFIG_DEVICE_CLOCK_GATING
+  if (dev->start_count == 0)
+    dev_clock_sink_gate(&pv->clk_ep, DEV_CLOCK_EP_POWER);
+# endif
 
   lock_release(&dev->lock);
 
@@ -368,6 +379,16 @@ static DEV_SPI_CTRL_TRANSFER(efm32_usart_spi_transfer)
       assert(tr->count > 0);
       tr->err = 0;
       pv->tr = tr;
+      dev->start_count |= 1;
+
+# ifdef CONFIG_DEVICE_CLOCK_GATING
+      dev_clock_sink_gate(&pv->clk_ep, DEV_CLOCK_EP_POWER_CLOCK);
+# endif
+
+      cpu_mem_write_32(pv->addr + EFM32_USART_CLKDIV_ADDR, endian_le32(pv->clkdiv));
+      cpu_mem_write_32(pv->addr + EFM32_USART_ROUTE_ADDR, endian_le32(pv->route));
+      cpu_mem_write_32(pv->addr + EFM32_USART_CTRL_ADDR, endian_le32(pv->ctrl));
+      cpu_mem_write_32(pv->addr + EFM32_USART_FRAME_ADDR, endian_le32(pv->frame));
 
 #ifdef CONFIG_DRIVER_EFM32_DMA
       pv->dma_use = 0;
@@ -377,18 +398,17 @@ static DEV_SPI_CTRL_TRANSFER(efm32_usart_spi_transfer)
       if (tr->count > CONFIG_DRIVER_EFM32_USART_DMA_THRD)
         {
           efm32_usart_spi_start_dma(dev);
-          goto end;
         }
+      else
 #endif
-      cpu_mem_write_32(pv->addr + EFM32_USART_CTRL_ADDR, endian_le32(pv->ctrl));
-      cpu_mem_write_32(pv->addr + EFM32_USART_IFC_ADDR, endian_le32(EFM32_USART_IFC_MASK));
+        {
+          cpu_mem_write_32(pv->addr + EFM32_USART_IFC_ADDR, endian_le32(EFM32_USART_IFC_MASK));
 
-      pv->fifo_lvl = 0;
+          pv->fifo_lvl = 0;
 
-      done = efm32_usart_spi_transfer_tx(dev);
+          done = efm32_usart_spi_transfer_tx(dev);
+        }
     }
-
- end:
 
   LOCK_RELEASE_IRQ(&dev->lock);
 
@@ -410,21 +430,51 @@ static DEV_SPI_CTRL_QUEUE(efm32_usart_spi_queue)
 static DEV_INIT(efm32_usart_spi_init);
 static DEV_CLEANUP(efm32_usart_spi_cleanup);
 
-#define efm32_usart_spi_use dev_use_generic
+static DEV_USE(efm32_usart_spi_use)
+{
+  switch (op)
+    {
+#ifdef CONFIG_DEVICE_CLOCK_VARFREQ
+    case DEV_USE_CLOCK_NOTIFY: {
+      struct dev_clock_notify_s *chg = param;
+      struct dev_clock_sink_ep_s *sink = chg->sink;
+      struct device_s *dev = sink->dev;
+      struct efm32_usart_spi_context_s *pv = dev->drv_pv;
+      pv->freq = chg->freq;
+      efm32_usart_spi_update_rate(dev, pv->bit_rate);
+      return 0;
+    }
+#endif
+
+#ifdef CONFIG_DEVICE_CLOCK_GATING
+    case DEV_USE_START: {
+      struct device_accessor_s *acc = param;
+      struct device_s *dev = acc->dev;
+      struct efm32_usart_spi_context_s *pv = dev->drv_pv;
+      if (dev->start_count == 0)
+        dev_clock_sink_gate(&pv->clk_ep, DEV_CLOCK_EP_POWER_CLOCK);
+      return 0;
+    }
+
+    case DEV_USE_STOP: {
+      struct device_accessor_s *acc = param;
+      struct device_s *dev = acc->dev;
+      struct efm32_usart_spi_context_s *pv = dev->drv_pv;
+      if (dev->start_count == 0)
+        dev_clock_sink_gate(&pv->clk_ep, DEV_CLOCK_EP_POWER);
+      return 0;
+    }
+#endif
+
+    default:
+      return dev_use_generic(param, op);
+    }
+}
 
 DRIVER_DECLARE(efm32_usart_spi_drv, 0, "EFM32 USART (SPI)", efm32_usart_spi,
                DRIVER_SPI_CTRL_METHODS(efm32_usart_spi));
 
 DRIVER_REGISTER(efm32_usart_spi_drv);
-
-#ifdef CONFIG_DEVICE_CLOCK
-static DEV_CLOCK_SINK_CHANGED(efm32_usart_spi_clk_changed)
-{
-  struct efm32_usart_spi_context_s *pv = ep->dev->drv_pv;
-  pv->freq = *freq;
-  efm32_usart_spi_update_rate(pv);
-}
-#endif
 
 static DEV_INIT(efm32_usart_spi_init)
 {
@@ -444,18 +494,11 @@ static DEV_INIT(efm32_usart_spi_init)
 
 #ifdef CONFIG_DEVICE_CLOCK
   /* enable clock */
-  dev_clock_sink_init(dev, &pv->clk_ep, &efm32_usart_spi_clk_changed);
+  dev_clock_sink_init(dev, &pv->clk_ep, DEV_CLOCK_EP_SINK_NOTIFY |
+                      DEV_CLOCK_EP_POWER_CLOCK | DEV_CLOCK_EP_SINK_SYNC);
 
-  struct dev_clock_link_info_s ckinfo;
-  if (dev_clock_sink_link(dev, &pv->clk_ep, &ckinfo, 0, 0))
+  if (dev_clock_sink_link(&pv->clk_ep, 0, &pv->freq))
     goto err_mem;
-
-  if (!DEV_FREQ_IS_VALID(ckinfo.freq))
-    goto err_mem;
-  pv->freq = ckinfo.freq;
-
-  if (dev_clock_sink_hold(&pv->clk_ep, 0))
-    goto err_clku;
 #else
   if (device_get_res_freq(dev, &pv->freq, 0))
     goto err_mem;
@@ -479,7 +522,7 @@ static DEV_INIT(efm32_usart_spi_init)
   /* synchronous mode, 8 bits */
   pv->ctrl = EFM32_USART_CTRL_SYNC(SYNC);
   cpu_mem_write_32(pv->addr + EFM32_USART_CTRL_ADDR, endian_le32(pv->ctrl));
-  cpu_mem_write_32(pv->addr + EFM32_USART_FRAME_ADDR, endian_le32(8 - 3));
+  pv->frame = 8 - 3;
 
   /* setup pinmux */
   iomux_demux_t loc[4];
@@ -500,7 +543,8 @@ static DEV_INIT(efm32_usart_spi_init)
 
   /* setup bit rate */
   pv->bit_rate = 100000;
-  efm32_usart_spi_update_rate(pv);
+  efm32_usart_spi_update_rate(dev, pv->bit_rate);
+  cpu_mem_write_32(pv->addr + EFM32_USART_CLKDIV_ADDR, endian_le32(pv->clkdiv));
 
   /* enable the uart */
   cpu_mem_write_32(pv->addr + EFM32_USART_CMD_ADDR,
@@ -521,19 +565,19 @@ static DEV_INIT(efm32_usart_spi_init)
   struct dev_resource_s * rx = device_res_get(dev, DEV_RES_DMA, 0); 
 
   if (rx->u.dma.channel > CONFIG_DRIVER_EFM32_DMA_CHANNEL_COUNT)
-    goto err_dma;
+    goto err_irq;
 
   /* TX */
   struct dev_resource_s * tx = device_res_get(dev, DEV_RES_DMA, 1); 
 
   if (tx->u.dma.channel > CONFIG_DRIVER_EFM32_DMA_CHANNEL_COUNT)
-    goto err_dma;
+    goto err_irq;
 
   if (strcmp(tx->u.dma.label, rx->u.dma.label))
-    goto err_dma;
+    goto err_irq;
 
   if (device_get_accessor_by_path(&pv->dma, NULL, rx->u.dma.label, DRIVER_CLASS_DMA))
-    goto err_dma;
+    goto err_irq;
 
   /* Set all fields that will not change */
 
@@ -566,17 +610,17 @@ static DEV_INIT(efm32_usart_spi_init)
 
 #endif
 
+# ifdef CONFIG_DEVICE_CLOCK_GATING
+  dev_clock_sink_gate(&pv->clk_ep, DEV_CLOCK_EP_POWER);
+# endif
+
   return 0;
 
- err_dma:
-   printk("EFM32 usart error on DMA ressource\n");
+ err_irq:
+  device_irq_source_unlink(dev, &pv->irq_ep, 1);
  err_clk:
 #ifdef CONFIG_DEVICE_CLOCK
-  dev_clock_sink_release(&pv->clk_ep);
-#endif
- err_clku:
-#ifdef CONFIG_DEVICE_CLOCK
-  dev_clock_sink_unlink(dev, &pv->clk_ep, 1);
+  dev_clock_sink_unlink(&pv->clk_ep);
 #endif
  err_mem:
   mem_free(pv);
@@ -601,8 +645,7 @@ DEV_CLEANUP(efm32_usart_spi_cleanup)
                    endian_le32(EFM32_USART_CMD_RXDIS | EFM32_USART_CMD_TXDIS));
 
 #ifdef CONFIG_DEVICE_CLOCK
-  dev_clock_sink_release(&pv->clk_ep);
-  dev_clock_sink_unlink(dev, &pv->clk_ep, 1);
+  dev_clock_sink_unlink(&pv->clk_ep);
 #endif
 
 #ifdef CONFIG_DEVICE_SPI_REQUEST

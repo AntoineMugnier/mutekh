@@ -52,9 +52,10 @@ enum dev_resource_type_e
     DEV_RES_PRODUCT,
     DEV_RES_REVISION,
     DEV_RES_FREQ,
-    DEV_RES_CLOCK_RTE,
-    DEV_RES_CLOCK_OSC,
+    DEV_RES_CMU_MUX,
+    DEV_RES_CMU_OSC,
     DEV_RES_CLOCK_SRC,
+    DEV_RES_CLOCK_MODES,
     DEV_RES_STR_PARAM,
     DEV_RES_BLOB_PARAM,
     DEV_RES_UINT_PARAM,
@@ -173,7 +174,7 @@ struct dev_resource_s
       const char                *name;
     }                           product;
 
-    /** @see #DEV_STATIC_RES_CLK_RTE @see device_add_res_clock_route */
+    /** @see #DEV_STATIC_RES_CMU_MUX @see device_add_res_cmu_mux */
     struct {
       /** node id of the input clock signal */
       uint64_t                  BITFIELD(parent,CONFIG_DEVICE_CLOCK_MAX_ID);
@@ -185,10 +186,10 @@ struct dev_resource_s
       uint64_t                  BITFIELD(denom,CONFIG_DEVICE_CLOCK_FRAC_WIDTH);
       /** mask of associated configurations */
       uint64_t                  BITFIELD(config,CONFIG_DEVICE_CLOCK_MAX_CONFIG);
-    }                           clock_rte;
+    }                           cmu_mux;
 
-    /** @see #DEV_STATIC_RES_CLK_OSC @see device_add_res_clock_osc */
-    struct {
+    /** @see #DEV_STATIC_RES_CMU_OSC @see device_add_res_cmu_osc */
+    struct __attribute__((packed)) {
       /** numerator of the frequency fractional part */
       uint64_t                  BITFIELD(num,CONFIG_DEVICE_CLOCK_OSCN_WIDTH);
       /** denominator of the frequency fractional part */
@@ -197,11 +198,11 @@ struct dev_resource_s
       uint32_t                  BITFIELD(node,CONFIG_DEVICE_CLOCK_MAX_ID);
       /** mask of associated configurations */
       uint32_t                  BITFIELD(config,CONFIG_DEVICE_CLOCK_MAX_CONFIG);
-      /** accuracy, @see dev_freq_accuracy_s */
+      /** accuracy, @see dev_freq_s */
       uint32_t                  BITFIELD(acc_m,3);
-      /** accuracy, @see dev_freq_accuracy_s */
+      /** accuracy, @see dev_freq_s */
       uint32_t                  BITFIELD(acc_e,5);
-    }                           clock_osc;
+    }                           cmu_osc;
 
     /** @see #DEV_STATIC_RES_CLK_SRC @see device_add_res_clock_src */
     struct {
@@ -215,12 +216,25 @@ struct dev_resource_s
       uintptr_t                 BITFIELD(sink_ep,CONFIG_DEVICE_CLOCK_MAX_ID);
     }                           clock_src;
 
-    /** @see #DEV_STATIC_RES_FREQ @see device_add_res_freq */
+#ifdef CONFIG_DEVICE_CLOCK_VARFREQ
+    /** @see #DEV_STATIC_RES_CLOCK_MODES */
     struct {
+      uintptr_t                 BITFIELD(sink_ep,CONFIG_DEVICE_CLOCK_MAX_ID);
+      /** device driver throttling modes to clock provider mask bits */
+      uintptr_t                 BITFIELD(modes,CONFIG_DEVICE_CLOCK_MODES*CONFIG_DEVICE_CLOCK_MASKB);
+    }                           clock_modes;
+#endif
+
+    /** @see #DEV_STATIC_RES_FREQ @see device_add_res_freq */
+    struct __attribute__((packed)) {
       /** numerator of the frequency fractional part */
-      uint64_t                  BITFIELD(num,64-CONFIG_DEVICE_CLOCK_OSCD_WIDTH);
+      uint64_t                  BITFIELD(num,CONFIG_DEVICE_CLOCK_OSCN_WIDTH);
       /** denominator of the frequency fractional part */
       uint64_t                  BITFIELD(denom,CONFIG_DEVICE_CLOCK_OSCD_WIDTH);
+      /** accuracy, @see dev_freq_s */
+      uint32_t                  BITFIELD(acc_m,3);
+      /** accuracy, @see dev_freq_s */
+      uint32_t                  BITFIELD(acc_e,5);
     }                           freq;
 
     /** @see #DEV_STATIC_RES_STR_PARAM @see device_res_add_str_param */
@@ -662,6 +676,8 @@ error_t device_res_add_freq(struct device_s *dev,
 
   r->u.freq.num = freq->num;
   r->u.freq.denom = freq->denom;
+  r->u.freq.acc_m = freq->acc_m;
+  r->u.freq.acc_e = freq->acc_e;
   return 0;
 })
 
@@ -672,6 +688,20 @@ error_t device_res_add_freq(struct device_s *dev,
       .u = { .freq = {                          \
         .num = (num_),                          \
         .denom = (denom_),                      \
+        .acc_m = 7,                             \
+        .acc_e = 31,                            \
+      } }                                       \
+  }
+
+/** @see #DEV_DECLARE_STATIC_RESOURCES @see device_res_add_freq */
+# define DEV_STATIC_RES_FREQ_ACC(num_, denom_, _acc_m, _acc_e)      \
+  {                                             \
+    .type = DEV_RES_FREQ,                       \
+      .u = { .freq = {                          \
+        .num = (num_),                          \
+        .denom = (denom_),                      \
+        .acc_m = (_acc_m),                      \
+        .acc_e = (_acc_e),                      \
       } }                                       \
   }
 
@@ -687,6 +717,8 @@ ALWAYS_INLINE error_t device_get_res_freq(const struct device_s *dev,
 
   freq->num = r->u.freq.num;
   freq->denom = r->u.freq.denom;
+  freq->acc_m = r->u.freq.acc_m;
+  freq->acc_e = r->u.freq.acc_e;
 
   return 0;
 }

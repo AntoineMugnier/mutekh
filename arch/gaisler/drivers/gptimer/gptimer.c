@@ -473,7 +473,6 @@ static DEV_TIMER_CONFIG(gptimer_config)
 
       if (cfg)
         {
-          cfg->acc = DEV_FREQ_ACC_INVALID;
           cfg->max = 0xffffffffffffffffULL;
           cfg->rev = p->rev;
           cfg->res = res;
@@ -490,7 +489,6 @@ static DEV_TIMER_CONFIG(gptimer_config)
 
       if (cfg)
         {
-          cfg->acc = DEV_FREQ_ACC_INVALID;
           cfg->rev = 1;
           cfg->res = CONFIG_DRIVER_GAISLER_GPTIMER_PRESCALE;
           cfg->cap = DEV_TIMER_CAP_STOPPABLE;

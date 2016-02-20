@@ -35,7 +35,7 @@
 #include <device/class/icu.h>
 #include <device/class/cpu.h>
 #include <device/class/timer.h>
-#include <device/class/clock.h>
+#include <device/clock.h>
 #include <device/irq.h>
 #endif
 
@@ -64,9 +64,6 @@ struct arm_dev_private_s
   struct dev_freq_s freq;
 #ifdef CONFIG_DEVICE_CLOCK
   struct dev_clock_sink_ep_s clk_ep;
-#endif
-#ifdef CONFIG_CPU_ARM32M_TIMER_SYSTICK
-  struct dev_freq_accuracy_s acc;
 #endif
 #endif
 };

@@ -124,10 +124,10 @@ static TERMUI_CON_COMMAND_PROTOTYPE(dev_shell_timer_config)
                           "freq: %llu/%llu\n",
                           (uint64_t)cfg.freq.num,
                           (uint64_t)cfg.freq.denom);
-      if (DEV_FREQ_ACC_IS_VALID(cfg.acc))
+      if (DEV_FREQ_ACC_IS_VALID(cfg.freq))
         termui_con_printf(con,
                           "acc : %u ppb\n",
-                          dev_freq_acc_ppb(&cfg.acc));
+                          dev_freq_acc_ppb(&cfg.freq));
       termui_con_printf(con,
                         "rev : %"PRItimerRev"\n"
                         "res : %"PRItimerRes"\n"

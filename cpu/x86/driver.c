@@ -36,7 +36,7 @@
 #include <device/class/icu.h>
 #include <device/class/cpu.h>
 #include <device/class/timer.h>
-#include <device/class/clock.h>
+#include <device/clock.h>
 #include <device/irq.h>
 
 #include <mutek/mem_alloc.h>
@@ -228,7 +228,6 @@ static DEV_TIMER_CONFIG(x86_timer_config)
       if (cfg)
         {
           cfg->max = 0xffffffffffffffffULL;
-          cfg->acc = DEV_FREQ_ACC_INVALID;
           cfg->freq = pv->freq;
           cfg->cap = DEV_TIMER_CAP_HIGHRES | DEV_TIMER_CAP_KEEPVALUE | DEV_TIMER_CAP_TICKLESS;
 #ifdef CONFIG_DEVICE_CLOCK

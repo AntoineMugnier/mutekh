@@ -33,7 +33,7 @@
 #include <device/irq.h>
 #include <device/class/char.h>
 #include <device/class/iomux.h>
-#include <device/class/clock.h>
+#include <device/clock.h>
 
 #include <arch/pic32_freq.h>
 #include <arch/pic32_uart.h>

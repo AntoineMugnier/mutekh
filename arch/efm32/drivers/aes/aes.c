@@ -86,6 +86,10 @@ static DEV_REQUEST_DELAYED_FUNC(efm32_aes_process)
   struct dev_crypto_context_s *ctx = rq->ctx;
   const uint8_t *rawkey;
 
+#ifdef CONFIG_DEVICE_CLOCK_GATING
+  dev_clock_sink_gate(&pv->clk_ep, DEV_CLOCK_EP_POWER_CLOCK);
+#endif
+
 #ifdef CONFIG_DRIVER_EFM32_AES_RANDOM
   if (ctx->mode == DEV_CRYPTO_MODE_RANDOM)
     {
@@ -240,6 +244,9 @@ static DEV_REQUEST_DELAYED_FUNC(efm32_aes_process)
     }
 
  pop:
+#ifdef CONFIG_DEVICE_CLOCK_GATING
+  dev_clock_sink_gate(&pv->clk_ep, DEV_CLOCK_EP_NONE);
+#endif
   dev_request_delayed_end(&pv->queue, rq_);
 }
 
@@ -266,8 +273,6 @@ static DEV_INIT(efm32_aes_init)
 {
   struct efm32_aes_private_s *pv;
 
-  dev->status = DEVICE_DRIVER_INIT_FAILED;
-
   uintptr_t addr;
   if (device_res_get_uint(dev, DEV_RES_MEM, 0, &addr, NULL))
     return -ENOENT;
@@ -285,27 +290,18 @@ static DEV_INIT(efm32_aes_init)
 
 #ifdef CONFIG_DEVICE_CLOCK
   /* enable clock */
-  dev_clock_sink_init(dev, &pv->clk_ep, NULL);
+  dev_clock_sink_init(dev, &pv->clk_ep, DEV_CLOCK_EP_SINK_SYNC
+# ifndef CONFIG_DEVICE_CLOCK_GATING
+                      | DEV_CLOCK_EP_POWER_CLOCK
+# endif
+                      );
 
-  if (dev_clock_sink_link(dev, &pv->clk_ep, NULL, 0, 0))
+  if (dev_clock_sink_link(&pv->clk_ep, 0, NULL))
     goto err_mem;
-
-  if (dev_clock_sink_hold(&pv->clk_ep, 0))
-    goto err_clku;
 #endif
 
-  dev->drv = &efm32_aes_drv;
-  dev->status = DEVICE_DRIVER_INIT_DONE;
   return 0;
 
- err_clk:
-#ifdef CONFIG_DEVICE_CLOCK
-  dev_clock_sink_release(&pv->clk_ep);
-#endif
- err_clku:
-#ifdef CONFIG_DEVICE_CLOCK
-  dev_clock_sink_unlink(dev, &pv->clk_ep, 1);
-#endif
  err_mem:
   mem_free(pv);
   return -1;
@@ -321,8 +317,7 @@ static DEV_CLEANUP(efm32_aes_cleanup)
   dev_request_delayed_cleanup(&pv->queue);
 
 #ifdef CONFIG_DEVICE_CLOCK
-  dev_clock_sink_release(&pv->clk_ep);
-  dev_clock_sink_unlink(dev, &pv->clk_ep, 1);
+  dev_clock_sink_unlink(&pv->clk_ep);
 #endif
 
   mem_free(pv);

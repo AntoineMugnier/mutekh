@@ -32,7 +32,7 @@
 #include <device/driver.h>
 #include <device/class/timer.h>
 #include <device/irq.h>
-#include <device/class/clock.h>
+#include <device/clock.h>
 
 #include <mutek/mem_alloc.h>
 #include <mutek/kroutine.h>
@@ -60,28 +60,17 @@ struct efm32_rtc_private_s
 #ifdef CONFIG_DEVICE_CLOCK
   struct dev_clock_sink_ep_s clk_ep;
   struct dev_freq_s freq;
-  struct dev_freq_accuracy_s acc;
 #endif
 
   enum dev_timer_capabilities_e cap:8;
 };
 
-#ifdef CONFIG_DEVICE_CLOCK
-static DEV_CLOCK_SINK_CHANGED(efm32_rtc_clk_changed)
-{
-  struct device_s *dev = ep->dev;
-  struct efm32_rtc_private_s *pv = ep->dev->drv_pv;
-  LOCK_SPIN_IRQ(&dev->lock);
-  pv->rev += 2;
-  pv->freq = *freq;
-  pv->acc = *acc;
-  LOCK_RELEASE_IRQ(&dev->lock);
-}
-#endif
-
 /* This function starts the hardware rtc counter. */
 static inline void efm32_rtc_start_counter(struct efm32_rtc_private_s *pv)
 {
+#ifdef CONFIG_DEVICE_CLOCK_GATING
+  dev_clock_sink_gate(&pv->clk_ep, DEV_CLOCK_EP_POWER_CLOCK);
+#endif
   cpu_mem_write_32(pv->addr + EFM32_RTC_CTRL_ADDR, endian_le32(EFM32_RTC_CTRL_EN(COUNT)));
 }
 
@@ -89,6 +78,12 @@ static inline void efm32_rtc_start_counter(struct efm32_rtc_private_s *pv)
 static inline void efm32_rtc_stop_counter(struct efm32_rtc_private_s *pv)
 {
   cpu_mem_write_32(pv->addr + EFM32_RTC_CTRL_ADDR, 0);
+#ifdef CONFIG_DEVICE_CLOCK_GATING
+  if (cpu_mem_read_32(pv->addr + EFM32_RTC_IF_ADDR)
+      & endian_le32(EFM32_RTC_IEN_COMP0 | EFM32_RTC_IF_OF))
+    return;
+  dev_clock_sink_gate(&pv->clk_ep, DEV_CLOCK_EP_POWER);
+#endif
 }
 
 /* This function returns a concatenation of the software rtc value and 
@@ -165,6 +160,9 @@ static DEV_IRQ_SRC_PROCESS(efm32_rtc_irq)
   struct efm32_rtc_private_s *pv = dev->drv_pv;
  
   lock_spin(&dev->lock);
+#ifdef CONFIG_DEVICE_CLOCK_GATING
+  assert(dev->start_count);
+#endif
 
   while (1)
     {
@@ -323,6 +321,18 @@ static DEV_USE(efm32_rtc_use)
 
   switch (op)
     {
+#ifdef CONFIG_DEVICE_CLOCK_VARFREQ
+    case DEV_USE_CLOCK_NOTIFY: {
+      struct dev_clock_notify_s *chg = param;
+      struct dev_clock_sink_ep_s *sink = chg->sink;
+      struct device_s *dev = sink->dev;
+      struct efm32_rtc_private_s *pv = dev->drv_pv;
+      pv->freq = chg->freq;
+      pv->rev += 2;
+      return 0;
+    }
+#endif
+
     case DEV_USE_START: {
       struct device_s *dev = accessor->dev;
       struct efm32_rtc_private_s *pv = dev->drv_pv;
@@ -348,14 +358,20 @@ static DEV_TIMER_GET_VALUE(efm32_rtc_get_value)
 {
   struct device_s *dev = accessor->dev;
   struct efm32_rtc_private_s *pv = dev->drv_pv;
+  error_t err = 0;
 
   LOCK_SPIN_IRQ(&dev->lock);
 
-  *value = get_timer_value(pv);
+#ifdef CONFIG_DEVICE_CLOCK_GATING
+  if (!dev->start_count)
+    err = -EBUSY;
+  else
+#endif
+    *value = get_timer_value(pv);
 
   LOCK_RELEASE_IRQ(&dev->lock);
 
-  return 0;
+  return err;
 }
 
 static DEV_TIMER_CONFIG(efm32_rtc_config)
@@ -370,7 +386,6 @@ static DEV_TIMER_CONFIG(efm32_rtc_config)
     {
       if (device_get_res_freq(accessor->dev, &cfg->freq, 0))
         cfg->freq = DEV_FREQ_INVALID;
-      cfg->acc = DEV_FREQ_ACC_INVALID;
     }
 #endif
 
@@ -378,10 +393,7 @@ static DEV_TIMER_CONFIG(efm32_rtc_config)
 
 #ifdef CONFIG_DEVICE_CLOCK
   if (cfg)
-    {
-      cfg->freq = pv->freq;
-      cfg->acc = pv->acc;
-    }
+    cfg->freq = pv->freq;
 #endif
 
   if (res > 1)
@@ -440,24 +452,18 @@ static DEV_INIT(efm32_rtc_init)
 
 #ifdef CONFIG_DEVICE_CLOCK
   /* enable clock */
-  dev_clock_sink_init(dev, &pv->clk_ep, &efm32_rtc_clk_changed);
+  dev_clock_sink_init(dev, &pv->clk_ep, DEV_CLOCK_EP_SINK_NOTIFY |
+                      DEV_CLOCK_EP_POWER_CLOCK | DEV_CLOCK_EP_SINK_SYNC);
 
-  struct dev_clock_link_info_s ckinfo;
-  if (dev_clock_sink_link(dev, &pv->clk_ep, &ckinfo, 0, 0))
+  if (dev_clock_sink_link(&pv->clk_ep, 0, &pv->freq))
     goto err_mem;
-
-  if (!DEV_FREQ_IS_VALID(ckinfo.freq))
-    goto err_mem;
-  pv->freq = ckinfo.freq;
-  pv->acc = ckinfo.acc;
-
-  if (ckinfo.src_flags & DEV_CLOCK_SRC_EP_VARFREQ)
-    pv->cap |= DEV_TIMER_CAP_VARFREQ | DEV_TIMER_CAP_CLKSKEW;
-
-  if (dev_clock_sink_hold(&pv->clk_ep, 0))
-    goto err_clku;
 
   pv->rev = 1;
+
+# ifdef CONFIG_DEVICE_CLOCK_VARFREQ
+  if (pv->clk_ep.flags & DEV_CLOCK_EP_VARFREQ)
+    pv->cap |= DEV_TIMER_CAP_VARFREQ | DEV_TIMER_CAP_CLKSKEW;
+# endif
 #endif
 
 #ifdef CONFIG_DEVICE_IRQ
@@ -486,18 +492,15 @@ static DEV_INIT(efm32_rtc_init)
                                                                EFM32_RTC_CTRL_EN(RESET) |
                                                                EFM32_RTC_CTRL_COMP0TOP(TOPMAX)));
 
+#ifdef CONFIG_DEVICE_CLOCK_GATING
+  dev_clock_sink_gate(&pv->clk_ep, DEV_CLOCK_EP_POWER);
+#endif
 
   return 0;
 
-#ifdef CONFIG_DEVICE_IRQ
  err_clk:
-# ifdef CONFIG_DEVICE_CLOCK
-  dev_clock_sink_release(&pv->clk_ep);
-# endif
-#endif
- err_clku:
 #ifdef CONFIG_DEVICE_CLOCK
-  dev_clock_sink_unlink(dev, &pv->clk_ep, 1);
+  dev_clock_sink_unlink(&pv->clk_ep);
 #endif
  err_mem:
   mem_free(pv);
@@ -509,8 +512,7 @@ static DEV_CLEANUP(efm32_rtc_cleanup)
   struct efm32_rtc_private_s *pv = dev->drv_pv;
 
 #ifdef CONFIG_DEVICE_CLOCK
-  dev_clock_sink_release(&pv->clk_ep);
-  dev_clock_sink_unlink(dev, &pv->clk_ep, 1);
+  dev_clock_sink_unlink(&pv->clk_ep);
 #endif
 
 #ifdef CONFIG_DEVICE_IRQ

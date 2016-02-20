@@ -30,7 +30,7 @@
 #include <device/device.h>
 #include <device/driver.h>
 #include <device/resources.h>
-#include <device/class/clock.h>
+#include <device/class/cmu.h>
 
 #include <arch/stm32f4xx_rcc.h>
 
@@ -57,8 +57,8 @@ struct stm32_rcc_private_s
 
   /** internal nodes. */
   struct {
-    dev_clock_node_id_t src;
-    dev_clock_node_id_t sink;
+    dev_cmu_node_id_t src;
+    dev_cmu_node_id_t sink;
     dev_clock_frac_t    num;
     dev_clock_frac_t    denum;
   }                     signals[STM32_CLOCK_SIG_MAX];
@@ -235,7 +235,7 @@ static DEV_CLEANUP(stm32_rcc_cleanup);
 #define stm32_rcc_use dev_use_generic
 
 DRIVER_DECLARE(stm32_rcc_drv, 0, "STM32 RCC", stm32_rcc,
-               DRIVER_CLOCK_METHODS(stm32_rcc));
+               DRIVER_CMU_METHODS(stm32_rcc));
 
 DRIVER_REGISTER(stm32_rcc_drv);
 

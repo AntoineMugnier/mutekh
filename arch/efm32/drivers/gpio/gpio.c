@@ -34,7 +34,7 @@
 #include <device/class/gpio.h>
 #include <device/class/iomux.h>
 #include <device/class/icu.h>
-#include <device/class/clock.h>
+#include <device/clock.h>
 
 #include <string.h>
 
@@ -472,7 +472,6 @@ static DEV_INIT(efm32_gpio_init)
 {
   struct efm32_gpio_private_s *pv;
 
-  dev->status = DEVICE_DRIVER_INIT_FAILED;
 
   pv = mem_alloc(sizeof (*pv), (mem_scope_sys));
 
@@ -488,13 +487,10 @@ static DEV_INIT(efm32_gpio_init)
 
 #ifdef CONFIG_DEVICE_CLOCK
   /* enable clock */
-  dev_clock_sink_init(dev, &pv->clk_ep, NULL);
+  dev_clock_sink_init(dev, &pv->clk_ep, DEV_CLOCK_EP_POWER_CLOCK | DEV_CLOCK_EP_SINK_SYNC);
 
-  if (dev_clock_sink_link(dev, &pv->clk_ep, NULL, 0, 0))
+  if (dev_clock_sink_link(&pv->clk_ep, 0, NULL))
     goto err_mem;
-
-  if (dev_clock_sink_hold(&pv->clk_ep, 0))
-    goto err_clku;
 #endif
 
 #ifdef CONFIG_DRIVER_EFM32_GPIO_ICU
@@ -510,8 +506,6 @@ static DEV_INIT(efm32_gpio_init)
                        DEV_IRQ_SENSE_ANY_EDGE);
 #endif
 
-  dev->drv = &efm32_gpio_drv;
-  dev->status = DEVICE_DRIVER_INIT_DONE;
   return 0;
 
 #if 0
@@ -520,11 +514,7 @@ static DEV_INIT(efm32_gpio_init)
 #endif
  err_clk:
 #ifdef CONFIG_DEVICE_CLOCK
-  dev_clock_sink_release(&pv->clk_ep);
-#endif
- err_clku:
-#ifdef CONFIG_DEVICE_CLOCK
-  dev_clock_sink_unlink(dev, &pv->clk_ep, 1);
+  dev_clock_sink_unlink(&pv->clk_ep);
 #endif
  err_mem:
   mem_free(pv);
@@ -542,8 +532,7 @@ static DEV_CLEANUP(efm32_gpio_cleanup)
 #endif
 
 #ifdef CONFIG_DEVICE_CLOCK
-  dev_clock_sink_release(&pv->clk_ep);
-  dev_clock_sink_unlink(dev, &pv->clk_ep, 1);
+  dev_clock_sink_unlink(&pv->clk_ep);
 #endif
 
   mem_free(pv);

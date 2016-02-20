@@ -32,7 +32,7 @@
 #include <device/driver.h>
 #include <device/class/icu.h>
 #include <device/class/cpu.h>
-#include <device/class/clock.h>
+#include <device/clock.h>
 #include <device/irq.h>
 
 #include <mutek/mem_alloc.h>

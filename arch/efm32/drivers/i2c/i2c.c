@@ -34,7 +34,7 @@
 #include <device/irq.h>
 #include <device/class/i2c.h>
 #include <device/class/iomux.h>
-#include <device/class/clock.h>
+#include <device/clock.h>
 
 #include <arch/efm32_i2c.h>
 
@@ -367,28 +367,36 @@ static DEV_I2C_REQUEST(efm32_i2c_request)
 static DEV_INIT(efm32_i2c_init);
 static DEV_CLEANUP(efm32_i2c_cleanup);
 
-#define efm32_i2c_use dev_use_generic
+static DEV_USE(efm32_i2c_use)
+{
+  switch (op)
+    {
+#ifdef CONFIG_DEVICE_CLOCK_VARFREQ
+    case DEV_USE_CLOCK_NOTIFY: {
+      struct dev_clock_notify_s *chg = param;
+      struct dev_clock_sink_ep_s *sink = chg->sink;
+      struct device_s *dev = sink->dev;
+      struct efm32_i2c_context_s *pv = dev->drv_pv;
+      pv->freq = chg->freq;
+      efm32_i2c_update_rate(pv);
+      return 0;
+    }
+#endif
+
+    default:
+      return dev_use_generic(param, op);
+    }
+}
 
 DRIVER_DECLARE(efm32_i2c_drv, 0, "EFM32 i2c", efm32_i2c,
                DRIVER_I2C_METHODS(efm32_i2c));
 
 DRIVER_REGISTER(efm32_i2c_drv);
 
-#ifdef CONFIG_DEVICE_CLOCK
-static DEV_CLOCK_SINK_CHANGED(efm32_i2c_clk_changed)
-{
-  struct efm32_i2c_context_s *pv = ep->dev->drv_pv;
-
-  pv->freq = *freq;
-  efm32_i2c_update_rate(pv);
-}
-#endif
-
 static DEV_INIT(efm32_i2c_init)
 {
   struct efm32_i2c_context_s    *pv;
 
-  dev->status = DEVICE_DRIVER_INIT_FAILED;
 
   /* allocate driver private context. */
   pv = mem_alloc(sizeof(*pv), (mem_scope_sys));
@@ -401,18 +409,11 @@ static DEV_INIT(efm32_i2c_init)
 
 #ifdef CONFIG_DEVICE_CLOCK
   /* enable clock */
-  dev_clock_sink_init(dev, &pv->clk_ep, &efm32_i2c_clk_changed);
+  dev_clock_sink_init(dev, &pv->clk_ep, DEV_CLOCK_EP_SINK_NOTIFY |
+                      DEV_CLOCK_EP_POWER_CLOCK | DEV_CLOCK_EP_SINK_SYNC);
 
-  struct dev_clock_link_info_s ckinfo;
-  if (dev_clock_sink_link(dev, &pv->clk_ep, &ckinfo, 0, 0))
+  if (dev_clock_sink_link(&pv->clk_ep, 0, &pv->freq))
     goto err_mem;
-
-  if (!DEV_FREQ_IS_VALID(ckinfo.freq))
-    goto err_mem;
-  pv->freq = ckinfo.freq;
-
-  if (dev_clock_sink_hold(&pv->clk_ep, 0))
-    goto err_clku;
 #else
   if (device_get_res_freq(dev, &pv->freq, 0))
     goto err_mem;
@@ -466,17 +467,12 @@ static DEV_INIT(efm32_i2c_init)
   
   cpu_mem_write_32(pv->addr + EFM32_I2C_IEN_ADDR, endian_le32(EFM32_I2C_IRQ_MASK)); 
 
-  dev->status = DEVICE_DRIVER_INIT_DONE;
 
   return 0;
 
  err_clk:
 #ifdef CONFIG_DEVICE_CLOCK
-  dev_clock_sink_release(&pv->clk_ep);
-#endif
- err_clku:
-#ifdef CONFIG_DEVICE_CLOCK
-  dev_clock_sink_unlink(dev, &pv->clk_ep, 1);
+  dev_clock_sink_unlink(&pv->clk_ep);
 #endif
  err_mem:
   mem_free(pv);
@@ -495,8 +491,7 @@ static DEV_CLEANUP(efm32_i2c_cleanup)
   cpu_mem_write_32(pv->addr + EFM32_I2C_IF_ADDR, 0);  
 
 #ifdef CONFIG_DEVICE_CLOCK
-  dev_clock_sink_release(&pv->clk_ep);
-  dev_clock_sink_unlink(dev, &pv->clk_ep, 1);
+  dev_clock_sink_unlink(&pv->clk_ep);
 #endif
 
   device_irq_source_unlink(dev, &pv->irq_ep, 1);
@@ -506,5 +501,7 @@ static DEV_CLEANUP(efm32_i2c_cleanup)
 
   /* deallocate private driver context. */
   mem_free(pv);
+
+  return 0;
 }
 

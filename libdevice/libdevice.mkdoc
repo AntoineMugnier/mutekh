@@ -8,13 +8,14 @@
 device/device.h
 device/driver.h
 device/irq.h
+device/clock.h
 device/resources.h
 
 device/class/cpu.h
 device/class/enum.h
 device/class/icu.h
 device/class/iomux.h
-device/class/clock.h
+device/class/cmu.h
 device/class/dma.h
 device/class/char.h
 device/class/mem.h

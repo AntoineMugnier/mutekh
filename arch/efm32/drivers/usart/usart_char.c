@@ -25,7 +25,6 @@
 #include <hexo/interrupt.h>
 
 #include <mutek/mem_alloc.h>
-#include <mutek/printk.h>
 
 #include <device/device.h>
 #include <device/resources.h>
@@ -33,7 +32,7 @@
 #include <device/irq.h>
 #include <device/class/char.h>
 #include <device/class/iomux.h>
-#include <device/class/clock.h>
+#include <device/clock.h>
 
 #include <arch/efm32_usart.h>
 
@@ -45,6 +44,15 @@ GCT_CONTAINER_TYPES(uart_fifo, uint8_t, CONFIG_DRIVER_EFM32_USART_CHAR_SWFIFO);
 GCT_CONTAINER_FCNS(uart_fifo, static inline, uart_fifo,
                    init, destroy, isempty, pop, pop_array, pushback, pushback_array);
 #endif
+
+#if CONFIG_DEVICE_START_LOG2INC < 2
+# error
+#endif
+enum efm32_usart_start_e
+{
+  EFM32_USART_STARTED_READ = 1,
+  EFM32_USART_STARTED_WRITE = 2,
+};
 
 struct efm32_usart_context_s
 {
@@ -61,25 +69,22 @@ struct efm32_usart_context_s
 #ifdef CONFIG_DEVICE_IRQ
   struct dev_irq_src_s           irq_ep[2];
 #endif
-  uint32_t                      mode;
 
+#ifdef CONFIG_DEVICE_CLOCK_VARFREQ
   uint32_t                      bauds;
+#endif
   struct dev_freq_s             freq;
 
 #ifdef CONFIG_DEVICE_CLOCK
   struct dev_clock_sink_ep_s    clk_ep;
 #endif
-
-  bool_t                        read_started:1;
-  bool_t                        write_started:1;
 };
 
-static void efm32_usart_char_update_bauds(struct efm32_usart_context_s *pv)
+static uint32_t efm32_usart_char_bauds(struct device_s *dev, uint32_t bauds)
 {
-  uint32_t div = (256 * pv->freq.num) / (4 * pv->bauds * pv->freq.denom) - 256;
-  cpu_mem_write_32(pv->addr + EFM32_USART_CLKDIV_ADDR, endian_le32(div));
+  struct efm32_usart_context_s	*pv = dev->drv_pv;
+  return (256 * pv->freq.num) / (4 * bauds * pv->freq.denom) - 256;
 }
-
 
 static void efm32_usart_try_read(struct device_s *dev)
 {
@@ -119,12 +124,13 @@ static void efm32_usart_try_read(struct device_s *dev)
         }
 
 #ifdef CONFIG_DEVICE_IRQ
+    irqen:
       /* more data will be available on next interrupt */
+      cpu_mem_write_32(pv->addr + EFM32_USART_IEN_ADDR,
+                       endian_le32(EFM32_USART_IEN_RXDATAV | EFM32_USART_IEN_TXC));
       return;
 #endif
     }
-
-  pv->read_started = 0;
 
   /* if no request currently need incoming data, copy to driver fifo or discard. */
   if (cpu_mem_read_32(pv->addr + EFM32_USART_STATUS_ADDR)
@@ -135,12 +141,32 @@ static void efm32_usart_try_read(struct device_s *dev)
       uart_fifo_pushback(&pv->read_fifo, c);
 #endif
     }
+
+#ifdef CONFIG_DEVICE_IRQ
+  /* disable rx irqs */
+  cpu_mem_write_32(pv->addr + EFM32_USART_IEN_ADDR, EFM32_USART_IEN_TXC);
+
+# ifdef CONFIG_DEVICE_CLOCK_GATING
+  /* race: we can not disable clock yet if an irq has been edge triggered */
+  if ((cpu_mem_read_32(pv->addr + EFM32_USART_IF_ADDR)
+       & endian_le32(EFM32_USART_IF_RXDATAV)))
+    goto irqen;
+# endif
+#endif
+
+  dev->start_count &= ~EFM32_USART_STARTED_READ;
 }
 
 static void efm32_usart_try_write(struct device_s *dev)
 {
   struct efm32_usart_context_s	*pv = dev->drv_pv;
   struct dev_char_rq_s		*rq;
+  bool_t done = 0;
+
+#ifdef CONFIG_DEVICE_IRQ
+  cpu_mem_write_32(pv->addr + EFM32_USART_IFC_ADDR,
+                   endian_le32(EFM32_USART_IFC_TXC));
+#endif
 
 #if defined(CONFIG_DEVICE_IRQ) && CONFIG_DRIVER_EFM32_USART_CHAR_SWFIFO > 0
   /* try to write data from driver fifo to device */
@@ -150,6 +176,7 @@ static void efm32_usart_try_write(struct device_s *dev)
     {
       uint8_t c = uart_fifo_pop(&pv->write_fifo);
       cpu_mem_write_32(pv->addr + EFM32_USART_TXDATAX_ADDR, endian_le32(c));
+      done = 1;
     }
 #endif
 
@@ -168,6 +195,7 @@ static void efm32_usart_try_write(struct device_s *dev)
             {
               cpu_mem_write_32(pv->addr + EFM32_USART_TXDATAX_ADDR,
                                endian_le32(rq->data[size++]));
+              done = 1;
             }
 
 #if defined(CONFIG_DEVICE_IRQ) && CONFIG_DRIVER_EFM32_USART_CHAR_SWFIFO > 0
@@ -200,7 +228,15 @@ static void efm32_usart_try_write(struct device_s *dev)
 #endif
     }
 
-  pv->write_started = 0;
+#if CONFIG_DRIVER_EFM32_USART_CHAR_SWFIFO > 0
+  if (!uart_fifo_isempty(&pv->write_fifo))
+    return;
+#endif
+
+#ifdef CONFIG_DEVICE_IRQ
+  if (!done)
+#endif
+    dev->start_count &= ~EFM32_USART_STARTED_WRITE;
 }
 
 #define efm32_usart_cancel (dev_char_cancel_t*)&dev_driver_notsup_fcn
@@ -220,11 +256,11 @@ static DEV_CHAR_REQUEST(efm32_usart_request)
     case DEV_CHAR_READ_PARTIAL:
     case DEV_CHAR_READ: {
       dev_request_queue_pushback(&pv->read_q, dev_char_rq_s_base(rq));
-      if (!pv->read_started)
-        {
-          pv->read_started = 1;
-          efm32_usart_try_read(dev);
-        }
+      dev->start_count |= EFM32_USART_STARTED_READ;
+#ifdef CONFIG_DEVICE_CLOCK_GATING
+      dev_clock_sink_gate(&pv->clk_ep, DEV_CLOCK_EP_POWER_CLOCK);
+#endif
+      efm32_usart_try_read(dev);
       break;
     }
 
@@ -233,16 +269,21 @@ static DEV_CHAR_REQUEST(efm32_usart_request)
     case DEV_CHAR_WRITE_PARTIAL:
     case DEV_CHAR_WRITE: {
       dev_request_queue_pushback(&pv->write_q, dev_char_rq_s_base(rq));
-      if (!pv->write_started)
-        {
-          pv->write_started = 1;
-          efm32_usart_try_write(dev);
-        }
+      dev->start_count |= EFM32_USART_STARTED_WRITE;
+#ifdef CONFIG_DEVICE_CLOCK_GATING
+      dev_clock_sink_gate(&pv->clk_ep, DEV_CLOCK_EP_POWER_CLOCK);
+#endif
+      efm32_usart_try_write(dev);
       break;
     }
     default:
       err = -ENOTSUP;
     }
+
+#ifdef CONFIG_DEVICE_CLOCK_GATING
+  if (!dev->start_count)
+    dev_clock_sink_gate(&pv->clk_ep, DEV_CLOCK_EP_POWER);
+#endif
 
   LOCK_RELEASE_IRQ(&dev->lock);
 
@@ -270,15 +311,16 @@ static DEV_IRQ_SRC_PROCESS(efm32_usart_irq)
         break;
 
       if (ir & EFM32_USART_IF_TXC)
-        {
-          cpu_mem_write_32(pv->addr + EFM32_USART_IFC_ADDR,
-                           endian_le32(EFM32_USART_IFC_TXC));
-          efm32_usart_try_write(dev);
-        }
+        efm32_usart_try_write(dev);
 
       if (ir & EFM32_USART_IF_RXDATAV)
         efm32_usart_try_read(dev);
     }
+
+#ifdef CONFIG_DEVICE_CLOCK_GATING
+  if (!dev->start_count)
+    dev_clock_sink_gate(&pv->clk_ep, DEV_CLOCK_EP_POWER);
+#endif
 
   lock_release(&dev->lock);
 }
@@ -287,21 +329,60 @@ static DEV_IRQ_SRC_PROCESS(efm32_usart_irq)
 
 static DEV_INIT(efm32_usart_char_init);
 static DEV_CLEANUP(efm32_usart_char_cleanup);
-#define efm32_usart_char_use dev_use_generic
+
+static DEV_USE(efm32_usart_char_use)
+{
+  switch (op)
+    {
+#ifdef CONFIG_DEVICE_CLOCK_VARFREQ
+    case DEV_USE_CLOCK_NOTIFY: {
+      struct dev_clock_notify_s *chg = param;
+      struct dev_clock_sink_ep_s *sink = chg->sink;
+      struct device_s *dev = sink->dev;
+      struct efm32_usart_context_s *pv = dev->drv_pv;
+      pv->freq = chg->freq;
+# ifdef CONFIG_DEVICE_CLOCK_GATING
+      dev_clock_sink_gate(&pv->clk_ep, DEV_CLOCK_EP_POWER_CLOCK);
+# endif
+      cpu_mem_write_32(pv->addr + EFM32_USART_CLKDIV_ADDR,
+                       endian_le32(efm32_usart_char_bauds(dev, pv->bauds)));
+# ifdef CONFIG_DEVICE_CLOCK_GATING
+      if (dev->start_count == 0)
+        dev_clock_sink_gate(&pv->clk_ep, DEV_CLOCK_EP_POWER);
+# endif
+      return 0;
+    }
+#endif
+
+#ifdef CONFIG_DEVICE_CLOCK_GATING
+    case DEV_USE_START: {
+      struct device_accessor_s *acc = param;
+      struct device_s *dev = acc->dev;
+      struct efm32_usart_context_s *pv = dev->drv_pv;
+      if (dev->start_count == 0)
+        dev_clock_sink_gate(&pv->clk_ep, DEV_CLOCK_EP_POWER_CLOCK);
+      return 0;
+    }
+
+    case DEV_USE_STOP: {
+      struct device_accessor_s *acc = param;
+      struct device_s *dev = acc->dev;
+      struct efm32_usart_context_s *pv = dev->drv_pv;
+      if (dev->start_count == 0)
+        dev_clock_sink_gate(&pv->clk_ep, DEV_CLOCK_EP_POWER);
+      return 0;
+    }
+#endif
+
+    default:
+      return dev_use_generic(param, op);
+    }
+}
 
 DRIVER_DECLARE(efm32_usart_drv, 0, "EFM32 USART (char)", efm32_usart_char,
                DRIVER_CHAR_METHODS(efm32_usart));
 
 DRIVER_REGISTER(efm32_usart_drv);
-
-#ifdef CONFIG_DEVICE_CLOCK
-static DEV_CLOCK_SINK_CHANGED(efm32_usart_char_clk_changed)
-{
-  struct efm32_usart_context_s	*pv = ep->dev->drv_pv;
-  pv->freq = *freq;
-  efm32_usart_char_update_bauds(pv);
-}
-#endif
 
 static DEV_INIT(efm32_usart_char_init)
 {
@@ -314,48 +395,13 @@ static DEV_INIT(efm32_usart_char_init)
   if (!pv)
     return -ENOMEM;
 
-  pv->read_started = pv->write_started = 0;
-
   if (device_res_get_uint(dev, DEV_RES_MEM, 0, &pv->addr, NULL))
     goto err_mem;
-
-#ifdef CONFIG_DEVICE_CLOCK
-  /* enable clock */
-  dev_clock_sink_init(dev, &pv->clk_ep, &efm32_usart_char_clk_changed);
-
-  struct dev_clock_link_info_s ckinfo;
-  if (dev_clock_sink_link(dev, &pv->clk_ep, &ckinfo, 0, 0))
-    goto err_mem;
-
-  if (!DEV_FREQ_IS_VALID(ckinfo.freq))
-    goto err_mem;
-  pv->freq = ckinfo.freq;
-
-  if (dev_clock_sink_hold(&pv->clk_ep, 0))
-    goto err_clku;
-#else
-  if (device_get_res_freq(dev, &pv->freq, 0))
-    goto err_mem;
-#endif
-
-  /* wait for current TX to complete */
-  if (cpu_mem_read_32(pv->addr + EFM32_USART_STATUS_ADDR)
-      & endian_le32(EFM32_USART_STATUS_TXENS))
-      while (!(cpu_mem_read_32(pv->addr + EFM32_USART_STATUS_ADDR)
-               & endian_le32(EFM32_USART_STATUS_TXBL)))
-        ;
-
-  /* disable and clear the uart */
-  cpu_mem_write_32(pv->addr + EFM32_USART_CMD_ADDR,
-                   endian_le32(EFM32_USART_CMD_RXDIS | EFM32_USART_CMD_TXDIS));
-
-  cpu_mem_write_32(pv->addr + EFM32_USART_CMD_ADDR,
-                   endian_le32(EFM32_USART_CMD_CLEARRX | EFM32_USART_CMD_CLEARTX));
 
   /* setup pinmux */
   iomux_demux_t loc[2];
   if (device_iomux_setup(dev, "<rx? >tx?", loc, NULL, NULL))
-    goto err_clk;
+    goto err_mem;
 
   uint32_t route = 0;
   if (loc[0] != IOMUX_INVALID_DEMUX)
@@ -364,11 +410,9 @@ static DEV_INIT(efm32_usart_char_init)
     route |= EFM32_USART_ROUTE_TXPEN;
 
   if (route == 0)
-    goto err_clk;
+    goto err_mem;
 
   EFM32_USART_ROUTE_LOCATION_SETVAL(route, loc[0] != IOMUX_INVALID_DEMUX ? loc[0] : loc[1]);
-
-  cpu_mem_write_32(pv->addr + EFM32_USART_ROUTE_ADDR, endian_le32(route));
 
   /* init software fifos */
   dev_request_queue_init(&pv->read_q);
@@ -390,13 +434,41 @@ static DEV_INIT(efm32_usart_char_init)
     goto err_fifo;
 #endif
 
+#ifdef CONFIG_DEVICE_CLOCK
+  /* enable clock */
+  dev_clock_sink_init(dev, &pv->clk_ep, DEV_CLOCK_EP_SINK_NOTIFY |
+                      DEV_CLOCK_EP_POWER_CLOCK | DEV_CLOCK_EP_SINK_SYNC);
+
+  if (dev_clock_sink_link(&pv->clk_ep, 0, &pv->freq))
+    goto err_irq;
+#else
+  if (device_get_res_freq(dev, &pv->freq, 0))
+    goto err_irq;
+#endif
+
+  /* wait for current TX to complete */
+  if (cpu_mem_read_32(pv->addr + EFM32_USART_STATUS_ADDR)
+      & endian_le32(EFM32_USART_STATUS_TXENS))
+      while (!(cpu_mem_read_32(pv->addr + EFM32_USART_STATUS_ADDR)
+               & endian_le32(EFM32_USART_STATUS_TXBL)))
+        ;
+
+  /* disable and clear the uart */
+  cpu_mem_write_32(pv->addr + EFM32_USART_CMD_ADDR,
+                   endian_le32(EFM32_USART_CMD_RXDIS | EFM32_USART_CMD_TXDIS));
+
+  cpu_mem_write_32(pv->addr + EFM32_USART_CMD_ADDR,
+                   endian_le32(EFM32_USART_CMD_CLEARRX | EFM32_USART_CMD_CLEARTX));
+
+  cpu_mem_write_32(pv->addr + EFM32_USART_ROUTE_ADDR, endian_le32(route));
+
 #ifdef CONFIG_DEVICE_IRQ
   /* enable irqs */
   cpu_mem_write_32(pv->addr + EFM32_USART_IFC_ADDR, endian_le32(EFM32_USART_IFC_MASK));
-  cpu_mem_write_32(pv->addr + EFM32_USART_IEN_ADDR,
-                   endian_le32(EFM32_USART_IEN_TXC | EFM32_USART_IEN_RXDATAV));
+  cpu_mem_write_32(pv->addr + EFM32_USART_IEN_ADDR, EFM32_USART_IEN_TXC);
 #endif
 
+  /* configure */
   cpu_mem_write_32(pv->addr + EFM32_USART_CTRL_ADDR,
                    endian_le32(EFM32_USART_CTRL_SYNC(ASYNC) | EFM32_USART_CTRL_OVS(X4)));
 
@@ -405,34 +477,36 @@ static DEV_INIT(efm32_usart_char_init)
                                EFM32_USART_FRAME_PARITY(NONE) |
                                EFM32_USART_FRAME_STOPBITS(ONE)));
 
-  /* setup baud rate */
+  /* set baud rate */
+#ifdef CONFIG_DEVICE_CLOCK_VARFREQ
   pv->bauds = CONFIG_DRIVER_EFM32_USART_RATE;
-  efm32_usart_char_update_bauds(pv);
+#endif
+  cpu_mem_write_32(pv->addr + EFM32_USART_CLKDIV_ADDR,
+                   endian_le32(efm32_usart_char_bauds(dev, CONFIG_DRIVER_EFM32_USART_RATE)));
 
   /* enable the uart */
   cpu_mem_write_32(pv->addr + EFM32_USART_CMD_ADDR,
                    endian_le32(EFM32_USART_CMD_RXEN | EFM32_USART_CMD_TXEN | EFM32_USART_CMD_RXBLOCKDIS));
 
+#ifdef CONFIG_DEVICE_CLOCK_GATING
+  dev_clock_sink_gate(&pv->clk_ep, DEV_CLOCK_EP_POWER);
+#endif
 
   return 0;
 
+ err_irq:
 #ifdef CONFIG_DEVICE_IRQ
+  device_irq_source_unlink(dev, pv->irq_ep, 2);
+#endif
  err_fifo:
-# if CONFIG_DRIVER_EFM32_USART_CHAR_SWFIFO > 0
+#if CONFIG_DRIVER_EFM32_USART_CHAR_SWFIFO > 0
+# ifdef CONFIG_DEVICE_IRQ
   uart_fifo_destroy(&pv->write_fifo);
-  uart_fifo_destroy(&pv->read_fifo);
 # endif
+  uart_fifo_destroy(&pv->read_fifo);
+#endif
   dev_request_queue_destroy(&pv->read_q);
   dev_request_queue_destroy(&pv->write_q);
-#endif
- err_clk:
-#ifdef CONFIG_DEVICE_CLOCK
-  dev_clock_sink_release(&pv->clk_ep);
-#endif
- err_clku:
-#ifdef CONFIG_DEVICE_CLOCK
-  dev_clock_sink_unlink(dev, &pv->clk_ep, 1);
-#endif
  err_mem:
   mem_free(pv);
   return -1;
@@ -441,9 +515,6 @@ static DEV_INIT(efm32_usart_char_init)
 DEV_CLEANUP(efm32_usart_char_cleanup)
 {
   struct efm32_usart_context_s	*pv = dev->drv_pv;
-
-  if (pv->read_started || pv->write_started)
-    return -EBUSY;
 
 #ifdef CONFIG_DEVICE_IRQ
   /* disable irqs */
@@ -457,8 +528,7 @@ DEV_CLEANUP(efm32_usart_char_cleanup)
                    endian_le32(EFM32_USART_CMD_RXDIS | EFM32_USART_CMD_TXDIS));
 
 #ifdef CONFIG_DEVICE_CLOCK
-  dev_clock_sink_release(&pv->clk_ep);
-  dev_clock_sink_unlink(dev, &pv->clk_ep, 1);
+  dev_clock_sink_unlink(&pv->clk_ep);
 #endif
 
 #if CONFIG_DRIVER_EFM32_USART_CHAR_SWFIFO > 0

@@ -245,7 +245,6 @@ static DEV_TIMER_CONFIG(bcm2835_systimer_config)
 
   if (cfg)
     {
-      cfg->acc = DEV_FREQ_ACC_INVALID;
       cfg->rev = 1;
       cfg->res = 1;
       cfg->cap = DEV_TIMER_CAP_HIGHRES | DEV_TIMER_CAP_KEEPVALUE;
@@ -273,7 +272,6 @@ static DEV_INIT(bcm2835_systimer_init)
 {
   struct bcm2835_systimer_private_s  *pv;
 
-  dev->status = DEVICE_DRIVER_INIT_FAILED;
 
   uintptr_t addr;
 
@@ -300,8 +298,6 @@ static DEV_INIT(bcm2835_systimer_init)
   pv->skew = 1;
 #endif
 
-  dev->drv = &bcm2835_systimer_drv;
-  dev->status = DEVICE_DRIVER_INIT_DONE;
 
   return 0;
 #ifdef CONFIG_DEVICE_IRQ

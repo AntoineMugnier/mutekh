@@ -52,7 +52,7 @@ enum driver_class_e
   DRIVER_CLASS_PWM,
   DRIVER_CLASS_SPI_CTRL,
   DRIVER_CLASS_LCD,
-  DRIVER_CLASS_CLOCK,
+  DRIVER_CLASS_CMU,
   DRIVER_CLASS_GPIO,
   DRIVER_CLASS_IOMUX,
   DRIVER_CLASS_UART,
@@ -295,6 +295,23 @@ enum dev_use_op_e
       ensure a bus controller is not disabled then re-enabled in order
       to put a dependent device in low power mode. */
   DEV_USE_SLEEP,
+#endif
+
+#ifdef CONFIG_DEVICE_CLOCK
+  /** This operation is used when a clock or power enable operation
+      requested by the driver has been satisfied. The @tt param
+      argument is a pointer to the sink end-point. @see
+      dev_clock_sink_update */
+  DEV_USE_CLOCK_GATES,
+
+# ifdef CONFIG_DEVICE_CLOCK_VARFREQ
+  /** This operation is used when a clock frequency change occurred on
+      a clock sink end-point and the change notifications is
+      enabled. The change might not have been solicited by the
+      driver. The @tt param argument is a pointer to a @ref
+      dev_clock_notify_s object. */
+  DEV_USE_CLOCK_NOTIFY,
+# endif
 #endif
 };
 

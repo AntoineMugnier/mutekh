@@ -27,7 +27,7 @@
 # include <device/resources.h>
 # include <device/irq.h>
 # include <device/class/iomux.h>
-# include <device/class/clock.h>
+# include <device/class/cmu.h>
 #endif
 
 #include <arch/stm32_memory_map.h>

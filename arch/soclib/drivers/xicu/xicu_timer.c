@@ -336,7 +336,6 @@ DEV_TIMER_CONFIG(soclib_xicu_timer_config)
 
       if (cfg)
         {
-          cfg->acc = DEV_FREQ_ACC_INVALID;
           cfg->max = 0xffffffffffffffffULL;
           cfg->rev = p->rev;
           cfg->res = p->period;
@@ -355,7 +354,6 @@ DEV_TIMER_CONFIG(soclib_xicu_timer_config)
 
       if (cfg)
         {
-          cfg->acc = DEV_FREQ_ACC_INVALID;
           cfg->max = 0xffffffff;
           cfg->rev = 1;
           cfg->res = 1;

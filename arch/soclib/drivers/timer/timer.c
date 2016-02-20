@@ -416,7 +416,6 @@ static DEV_TIMER_CONFIG(soclib_timer_config)
 
       if (cfg)
         {
-          cfg->acc = DEV_FREQ_ACC_INVALID;
           cfg->max = 0xffffffffffffffffULL;
           cfg->rev = p->rev;
           cfg->res = p->period;
@@ -434,7 +433,6 @@ static DEV_TIMER_CONFIG(soclib_timer_config)
 
       if (cfg)
         {
-          cfg->acc = DEV_FREQ_ACC_INVALID;
           cfg->cap = DEV_TIMER_CAP_STOPPABLE | DEV_TIMER_CAP_HIGHRES;
 #ifdef CONFIG_DEVICE_IRQ
           cfg->max = 0xffffffffffffffffULL;

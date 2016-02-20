@@ -30,7 +30,7 @@
 #include <device/device.h>
 #include <device/irq.h>
 #include <device/class/dma.h>
-#include <device/class/clock.h>
+#include <device/clock.h>
 
 #include <arch/pic32_dma_request.h>
 #include <arch/pic32_dma.h>

@@ -34,7 +34,7 @@
 #include <device/class/spi.h>
 #include <device/class/timer.h>
 #include <device/class/iomux.h>
-#include <device/class/clock.h>
+#include <device/clock.h>
 
 #include <arch/cc26xx/memory_map.h>
 #include <arch/cc26xx/prcm.h>
@@ -344,7 +344,6 @@ static DEV_INIT(cc26xx_spi_init)
 
   device_mem_map( dev , 1 << 0 );
 
-  dev->status = DEVICE_DRIVER_INIT_FAILED;
 
   pv = mem_alloc(sizeof(*pv), (mem_scope_sys));
   dev->drv_pv = pv;
@@ -403,8 +402,6 @@ static DEV_INIT(cc26xx_spi_init)
   cpu_mem_write_32(pv->addr + CC26XX_SSI_CR1_ADDR,
                    CC26XX_SSI_CR1_SSE(SSI_ENABLED) | CC26XX_SSI_CR1_MS(MASTER));
 
-  dev->drv = &cc26xx_spi_drv;
-  dev->status = DEVICE_DRIVER_INIT_DONE;
   return 0;
 
  err_mem:

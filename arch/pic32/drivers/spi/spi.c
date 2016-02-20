@@ -34,7 +34,7 @@
 #include <device/class/spi.h>
 #include <device/class/timer.h>
 #include <device/class/iomux.h>
-#include <device/class/clock.h>
+#include <device/clock.h>
 
 #include <arch/pic32_irq.h>
 #include <arch/pic32_spi.h>

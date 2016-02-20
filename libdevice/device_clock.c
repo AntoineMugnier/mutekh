@@ -17,47 +17,92 @@
     02110-1301 usa.
 
     Copyright Julien Peeters <contact@julienpeeters.net> (c) 2014
-    Copyright Alexandre Becoulet <alexandre.becoulet@free.fr> (c) 2014
+    Copyright Alexandre Becoulet <alexandre.becoulet@free.fr> (c) 2014-2016
 
 */
 
 #include <device/device.h>
 #include <device/driver.h>
-#include <device/class/clock.h>
+#include <device/class/cmu.h>
 
 #include <mutek/printk.h>
 
-error_t dev_clock_sink_hold(struct dev_clock_sink_ep_s *sink,
-                            bool_t synchronous)
+#ifdef CONFIG_DEVICE_CLOCK_GATING
+error_t dev_clock_sink_gate(struct dev_clock_sink_ep_s *sink,
+                            enum dev_clock_ep_flags_e gates)
 {
   struct dev_clock_src_ep_s *src = sink->src;
-  error_t err = 0;
+  error_t err = -EBUSY;
 
   LOCK_SPIN_IRQ(&src->dev->lock);
 
-  src->use_count++;
-  if (!(src->flags & DEV_CLOCK_SRC_EP_RUNNING))
-    err = src->f_use(src, synchronous, DEV_CLOCK_SRC_USE_HOLD);
+  if ((sink->flags ^ gates) & DEV_CLOCK_EP_ANY)
+    {
+      err = 0;
+      sink->flags = gates | (sink->flags & ~DEV_CLOCK_EP_ANY);
+
+      enum dev_clock_ep_flags_e src_gates = src->flags & DEV_CLOCK_EP_ANY;
+
+# ifdef CONFIG_DEVICE_CLOCK_SHARING
+      if (src_gates & ~gates)
+        {
+          /* if a gate disabling is suggested for this sink,
+             also check other sinks. */
+          struct dev_clock_sink_ep_s *osink = src->sink_head;
+          while (osink != NULL)
+            {
+              gates |= osink->flags & DEV_CLOCK_EP_ANY;
+              osink = osink->next;
+            }
+        }
+# endif
+
+      if (src_gates ^ gates)
+        {
+          /* initiate source end-point gates change */
+          union dev_clock_setup_u setup;
+          setup.flags = gates | (sink->flags & DEV_CLOCK_EP_SINK_SYNC);
+          err = src->f_setup(src, DEV_CLOCK_SETUP_GATES, &setup);
+        }
+    }
 
   LOCK_RELEASE_IRQ(&src->dev->lock);
 
   return err;
 }
+#endif
 
-void dev_clock_sink_release(struct dev_clock_sink_ep_s *sink)
+void dev_cmu_src_ready(struct dev_clock_src_ep_s *src,
+                         enum dev_clock_ep_flags_e gates)
 {
-  struct dev_clock_src_ep_s *src = sink->src;
+  enum dev_clock_ep_flags_e old = src->flags;
+  struct dev_clock_sink_ep_s *sink = src->sink_head;
 
-  LOCK_SPIN_IRQ(&src->dev->lock);
+# ifdef CONFIG_DEVICE_CLOCK_SHARING
+  while (1)
+    {
+# endif
+      if (sink == NULL)
+        return;
 
-  if (--src->use_count == 0)
-    src->f_use(src, 0, DEV_CLOCK_SRC_USE_RELEASE);
+      struct device_s *dev = sink->dev;
+      const struct driver_s *drv = dev->drv;
 
-  LOCK_RELEASE_IRQ(&src->dev->lock);
+      LOCK_SPIN_IRQ(&dev->lock);
+      enum dev_clock_ep_flags_e flags = sink->flags;
+      /* check that all new requirements are satisfied */
+      if (((gates & flags) == flags) && ((old & flags) != flags))
+        drv->f_use(sink, DEV_USE_CLOCK_GATES);
+      LOCK_RELEASE_IRQ(&dev->lock);
+
+# ifdef CONFIG_DEVICE_CLOCK_SHARING
+      sink = sink->next;
+    }
+# endif
 }
 
-error_t dev_clock_config(struct device_clock_s *accessor,
-                         dev_clock_config_id_t config_id)
+static error_t dev_cmu_config_res(struct device_cmu_s *accessor,
+                                    dev_cmu_config_id_t config_id)
 {
   struct device_s *dev = accessor->dev;
   bool_t done = 0;
@@ -66,16 +111,16 @@ error_t dev_clock_config(struct device_clock_s *accessor,
   DEVICE_RES_FOREACH(dev, r, {
       switch (r->type)
         {
-        case DEV_RES_CLOCK_RTE: {
-          if (!((r->u.clock_rte.config >> config_id) & 1))
+        case DEV_RES_CMU_MUX: {
+          if (!((r->u.cmu_mux.config >> config_id) & 1))
             break;
 
           struct dev_freq_ratio_s ratio;
-          ratio.num = r->u.clock_rte.num;
-          ratio.denom = r->u.clock_rte.denom;
+          ratio.num = r->u.cmu_mux.num;
+          ratio.denom = r->u.cmu_mux.denom;
 
-          err = DEVICE_OP(accessor, config_route, r->u.clock_rte.node,
-                          r->u.clock_rte.parent, &ratio);
+          err = DEVICE_OP(accessor, config_mux, r->u.cmu_mux.node,
+                          r->u.cmu_mux.parent, &ratio);
           if (err)
             goto err;
 
@@ -83,19 +128,17 @@ error_t dev_clock_config(struct device_clock_s *accessor,
           break;
         }
 
-        case DEV_RES_CLOCK_OSC: {
-          if (!((r->u.clock_osc.config >> config_id) & 1))
+        case DEV_RES_CMU_OSC: {
+          if (!((r->u.cmu_osc.config >> config_id) & 1))
             break;
 
           struct dev_freq_s freq;
-          freq.num = r->u.clock_osc.num;
-          freq.denom = r->u.clock_osc.denom;
-          struct dev_freq_accuracy_s acc;
-          acc.m = r->u.clock_osc.acc_m;
-          acc.e = r->u.clock_osc.acc_e;
+          freq.num = r->u.cmu_osc.num;
+          freq.denom = r->u.cmu_osc.denom;
+          freq.acc_m = r->u.cmu_osc.acc_m;
+          freq.acc_e = r->u.cmu_osc.acc_e;
 
-          err = DEVICE_OP(accessor, config_oscillator, r->u.clock_osc.node,
-                          &freq, &acc);
+          err = DEVICE_OP(accessor, config_osc, r->u.cmu_osc.node, &freq);
           if (err)
             goto err;
 
@@ -104,13 +147,15 @@ error_t dev_clock_config(struct device_clock_s *accessor,
         }
 
         default:
-          continue;
+          if (done)
+            goto done;
         }
   });
 
   if (!done)
     return -ENOENT;
 
+ done:
   return DEVICE_OP(accessor, commit);
 
  err:
@@ -118,192 +163,227 @@ error_t dev_clock_config(struct device_clock_s *accessor,
   return err;
 }
 
-void dev_clock_src_changed(struct device_clock_s *accessor,
-                           struct dev_clock_src_ep_s *src,
-                           const struct dev_freq_s *freq,
-                           const struct dev_freq_accuracy_s *acc)
+#ifdef CONFIG_DEVICE_CLOCK_VARFREQ
+error_t dev_cmu_config(struct device_cmu_s *accessor,
+                         dev_cmu_config_id_t config_id)
 {
-  struct dev_clock_sink_ep_s *s = src->sink_head;
+  struct device_s *dev = accessor->dev;
+  error_t err;
+  LOCK_SPIN_IRQ(&dev->lock);
+  err = dev_cmu_config_res(accessor, config_id);
+  LOCK_RELEASE_IRQ(&dev->lock);
+  return err;
+}
+#endif
 
-  while (s != NULL)
-    {
-      if (s->f_changed != NULL)
-        s->f_changed(s, freq, acc);
-      s = s->next;
-    }
+error_t dev_cmu_init(const struct driver_s *drv, struct device_s *dev)
+{
+  struct device_cmu_s acc = {
+    .api = (void*)drv->classes[0],
+    .dev = dev
+  };
+  assert(acc.api->class_ == DRIVER_CLASS_CMU);
+  return dev_cmu_config_res(&acc, 0);
 }
 
-error_t dev_clock_sink_link(struct device_s *dev,
-                            struct dev_clock_sink_ep_s *sinks,
-                            struct dev_clock_link_info_s *lkinfo,
-                            dev_clock_node_id_t first_sink,
-                            dev_clock_node_id_t last_sink)
+#ifdef CONFIG_DEVICE_CLOCK_VARFREQ
+void dev_cmu_src_notify(struct dev_clock_src_ep_s *src,
+                          struct dev_clock_notify_s *param)
 {
-  error_t err = 0;
-  size_t count = last_sink - first_sink + 1;
-  bool_t done[count];
+  struct dev_clock_sink_ep_s *sink = src->sink_head;
 
-  memset(done, 0, sizeof(done));
+# ifdef CONFIG_DEVICE_CLOCK_SHARING
+  while (1)
+    {
+# endif
+      if (sink == NULL)
+        return;
+      struct device_s *dev = sink->dev;
+      const struct driver_s *drv = dev->drv;
+
+      LOCK_SPIN_IRQ(&dev->lock);
+      param->sink = sink;
+      drv->f_use(param, DEV_USE_CLOCK_NOTIFY);
+      LOCK_RELEASE_IRQ(&dev->lock);
+
+# ifdef CONFIG_DEVICE_CLOCK_SHARING
+      sink = sink->next;
+    }
+# endif
+}
+#endif
+
+static void dev_clock_link(struct dev_clock_src_ep_s *src,
+                           struct dev_clock_sink_ep_s *sink)
+{
+  sink->src = src;
+#ifdef CONFIG_DEVICE_CLOCK_SHARING
+  sink->next = src->sink_head;
+#endif
+  src->sink_head = sink;
+  src->dev->ref_count++;
+}
+
+error_t dev_clock_sink_link(struct dev_clock_sink_ep_s *sink,
+                            dev_cmu_node_id_t id,
+                            struct dev_freq_s *freq)
+{
+  struct device_s *dev = sink->dev;
+  error_t err = -ENOENT;
+  bool_t done = 0;
 
   DEVICE_RES_FOREACH(dev, r, {
 
-    if (r->type != DEV_RES_CLOCK_SRC)
-      continue;
+      switch (r->type)
+        {
+        case DEV_RES_CLOCK_SRC: {
 
-    dev_clock_node_id_t id = r->u.clock_src.sink_ep;
-    if (id < first_sink || id > last_sink)
-      continue;
+          if (r->u.clock_src.sink_ep != id)
+            continue;
 
-    if (done[id])
-      {
-        printk("device: multiple resource entries for clock sink end-point %u.\n", dev, id);
-        err = -ENOENT;
-        goto error;
-      }
+          if (done)
+            {
+              printk("device: duplicate clock source resource entry for %p device.\n", dev);
+              return -EINVAL;
+            }
 
-    struct dev_clock_sink_ep_s *sink = &sinks[id - first_sink];
-    struct dev_clock_link_info_s *li = &lkinfo[id - first_sink];
+          struct device_cmu_s cmu;
+          struct device_s *cmu_dev = cmu.dev;
 
-    struct device_clock_s clock;
-    struct device_s *clock_dev = clock.dev;
+          done = 1;
+          if (device_get_accessor_by_path(&cmu, &dev->node, r->u.clock_src.src, DRIVER_CLASS_CMU))
+            {
+              printk("device: no initialized clock provider available for %p device.\n", dev);
+              return -ENOENT;
+            }
 
-    if (device_get_accessor_by_path(&clock, &dev->node, r->u.clock_src.src, DRIVER_CLASS_CLOCK))
-      {
-        printk("device: no initialized clock provider available for %p device.\n", dev);
-        err = -ENOENT;
-        goto error;
-      }
+          struct dev_cmu_node_info_s info;
+          enum dev_cmu_node_info_e mask = DEV_CLOCK_INFO_SRC;
 
-    struct dev_clock_node_info_s info;
-    enum dev_clock_node_info_e mask = DEV_CLOCK_INFO_SRC;
-    if (lkinfo != NULL)
-      {
-        li->src_id = r->u.clock_src.src_ep;
-        mask |= DEV_CLOCK_INFO_FREQ | DEV_CLOCK_INFO_ACCURACY;
-      }
+          LOCK_SPIN_IRQ(&cmu_dev->lock);
 
-    if (DEVICE_OP(&clock, node_info, r->u.clock_src.src_ep, &mask, &info) ||
-        !(mask & DEV_CLOCK_INFO_SRC))
-      {
-        printk("device: clock provider %p does not have source end-point with node id %u.\n",
-               clock_dev, r->u.clock_src.src_ep);
-        err = -EINVAL;
-      }
-    else
-      {
-        struct dev_clock_src_ep_s  *src = info.src;
+          if (DEVICE_OP(&cmu, node_info, r->u.clock_src.src_ep, &mask, &info) ||
+              !(mask & DEV_CLOCK_INFO_SRC))
+            {
+              printk("device: clock provider %p does not have a source end-point with node id %u.\n",
+                     cmu_dev, r->u.clock_src.src_ep);
+              err = -EINVAL;
+              goto unlock;
+            }
 
-        sink->src = src;
-        sink->next = src->sink_head;
-        src->sink_head = sink;
+          struct dev_clock_src_ep_s  *src = info.src;
 
-#warning src device lock
-        src->dev->ref_count++;
+          err = src->f_setup(src, DEV_CLOCK_SETUP_LINK, (void*)sink);
+          if (!err)
+            {
+              dev_clock_link(src, sink);
 
-        if (sink->f_changed != NULL
-            && !(src->flags & DEV_CLOCK_SRC_EP_NOTIFY))
-          {
-            src->flags |= DEV_CLOCK_SRC_EP_NOTIFY;
-            src->f_use(src, 0, DEV_CLOCK_SRC_USE_NOTIFY);
-          }
+#ifdef CONFIG_DEVICE_CLOCK_VARFREQ
+              sink->flags |= src->flags & DEV_CLOCK_EP_VARFREQ;
 
-        if (lkinfo != NULL)
-          {
-            li->src_flags = src->flags;
-            if (mask & DEV_CLOCK_INFO_FREQ)
-              li->freq = info.freq;
-            else
-              li->freq = DEV_FREQ_INVALID;
-            if (mask & DEV_CLOCK_INFO_ACCURACY)
-              li->acc = info.acc;
-            else
-              li->acc = DEV_FREQ_ACC_INVALID;
-          }
-      }
+              if ((sink->flags & DEV_CLOCK_EP_SINK_NOTIFY) &&
+                  src->notify_count++ == 0)
+                src->f_setup(src, DEV_CLOCK_SETUP_NOTIFY, NULL);
+#endif
+              if (freq != NULL)
+                {
+                  mask = DEV_CLOCK_INFO_FREQ | DEV_CLOCK_INFO_ACCURACY;
+                  if (DEVICE_OP(&cmu, node_info, r->u.clock_src.src_ep, &mask, &info) ||
+                      !(mask & DEV_CLOCK_INFO_FREQ))
+                    device_get_res_freq(dev, freq, id);
+                  else
+                    *freq = info.freq;
+                }
 
-      device_put_accessor(&clock);
+              if (~src->flags & sink->flags & DEV_CLOCK_EP_ANY)
+                {
+                  enum dev_clock_ep_flags_e flags = src->flags | sink->flags;
+                  err = src->f_setup(src, DEV_CLOCK_SETUP_GATES, (void*)&flags);
+                }
+            }
 
-      if (err)
-        goto error;
+          unlock:;
+          LOCK_RELEASE_IRQ(&cmu_dev->lock);
 
-      done[id]++;
-  });
+          device_put_accessor(&cmu);
+          break;
+        }
 
-  dev_clock_node_id_t i;
-  for (i = 0; i < count; i++)
-    if (!done[i])
-      {
-        printk("device: Unable to link clock sink end-point %u of device %p, no clock source resource entry.\n", i, dev);
-        err = -ENOENT;
-        goto error;
-      }
+#ifdef CONFIG_DEVICE_CLOCK_THROTTLE
+        case DEV_RES_CLOCK_MODES: {
+          if (id != r->u.clock_modes.sink_ep)
+            continue;
 
-  return 0;
+          sink->mode = sink->mode_ids = r->u.clock_modes.modes;
+          break;
+        }
+#endif
+        default:
+          break;
+        }
+    });
 
- error:
-  dev_clock_sink_unlink(dev, sinks, count);
+  if (!done)
+    printk("device: no clock source resource entry for sink %u of device %p.\n", id, dev);
+
   return err;
 }
 
-void dev_clock_sink_unlink(struct device_s *dev,
-                           struct dev_clock_sink_ep_s *sinks,
-                           size_t count)
+void dev_clock_sink_unlink(struct dev_clock_sink_ep_s *sink)
 {
-  uint_fast8_t i;
+  struct dev_clock_src_ep_s *src = sink->src;
 
-  for (i = 0; i < count; i++)
+  if (src == NULL)
+    return;
+
+  LOCK_SPIN_IRQ(&src->dev->lock);
+
+  struct dev_clock_sink_ep_s **s = &src->sink_head;
+  enum dev_clock_ep_flags_e flags = 0;
+
+#ifdef CONFIG_DEVICE_CLOCK_SHARING
+  while (*s)
     {
-      struct dev_clock_sink_ep_s *sink = sinks + i;
-      struct dev_clock_src_ep_s *src = sink->src;
-
-      if (src == NULL)
-        continue;
-
-      bool_t notify = 0;
-      struct dev_clock_sink_ep_s **s = &src->sink_head;
-
-      while (*s)
+      if (*s == sink)
         {
-          if (*s == sink)
-            {
-              *s = sink->next;
-              sink->src = NULL;
-            }
-          else
-            {
-              notify |= (*s)->f_changed != NULL;
-              s = &sink->next;
-            }
+          *s = sink->next;
+          sink->src = NULL;
         }
-
-      if ((src->flags & DEV_CLOCK_SRC_EP_NOTIFY) && !notify)
+      else
         {
-          src->flags ^= DEV_CLOCK_SRC_EP_NOTIFY;
-          src->f_use(src, 0, DEV_CLOCK_SRC_USE_IGNORE);
+          flags |= sink->flags & DEV_CLOCK_EP_ANY;
+          s = &sink->next;
         }
-
-#warning src device lock
-      src->dev->ref_count--;
     }
+#else
+  *s = NULL;
+  sink->src = NULL;
+#endif
+  src->dev->ref_count--;
+
+  if (~flags & src->flags & DEV_CLOCK_EP_ANY)
+    src->f_setup(src, DEV_CLOCK_SETUP_GATES, (void*)&flags);
+
+#ifdef CONFIG_DEVICE_CLOCK_VARFREQ
+  if ((sink->flags & DEV_CLOCK_EP_SINK_NOTIFY) &&
+      --src->notify_count == 0)
+    src->f_setup(src, DEV_CLOCK_SETUP_NONOTIFY, NULL);
+#endif
+
+  src->f_setup(src, DEV_CLOCK_SETUP_UNLINK, (void*)sink);
+
+  LOCK_RELEASE_IRQ(&src->dev->lock);
 }
 
-error_t dev_clock_node_info(struct device_s *dev, dev_clock_node_id_t node_id,
-                            enum dev_clock_node_info_e mask,
-                            struct dev_clock_node_info_s *info)
+error_t dev_cmu_node_info(struct device_cmu_s *accessor,
+                            dev_cmu_node_id_t node_id,
+                            enum dev_cmu_node_info_e *mask,
+                            struct dev_cmu_node_info_s *info)
 {
-  struct device_clock_s accessor;
-
-  if (device_get_accessor(&accessor, dev, DRIVER_CLASS_CLOCK, 0))
-    return -EINVAL;
-
-  enum dev_clock_node_info_e m = mask;
-  error_t err = DEVICE_OP(&accessor, node_info, node_id, &m, info);
-
-  device_put_accessor(&accessor);
-
-  if (!err && m != mask)
-    return -EINVAL;
-
+  error_t err;
+  LOCK_SPIN_IRQ(&accessor->dev->lock);
+  err = DEVICE_OP(accessor, node_info, node_id, mask, info);
+  LOCK_RELEASE_IRQ(&accessor->dev->lock);
   return err;
 }
 

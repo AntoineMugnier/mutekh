@@ -377,7 +377,6 @@ static DEV_TIMER_CONFIG(enst_rttimer_config)
 
   if (cfg)
     {
-      cfg->acc = DEV_FREQ_ACC_INVALID;
       cfg->max = 0xffffffffffffffffULL;
       cfg->rev = pv->rev;
       cfg->res = r;

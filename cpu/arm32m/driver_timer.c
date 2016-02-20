@@ -359,12 +359,7 @@ DEV_TIMER_CONFIG(arm_timer_config)
   LOCK_SPIN_IRQ(&dev->lock);
 
   if (cfg)
-    {
-      cfg->freq = pv->freq;
-#ifdef CONFIG_CPU_ARM32M_TIMER_SYSTICK
-      cfg->acc = pv->acc;
-#endif
-    }
+    cfg->freq = pv->freq;
 
   switch (accessor->number)
     {

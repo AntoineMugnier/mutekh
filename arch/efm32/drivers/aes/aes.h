@@ -34,7 +34,7 @@
 #include <device/resources.h>
 #include <device/driver.h>
 #include <device/class/crypto.h>
-#include <device/class/clock.h>
+#include <device/clock.h>
 
 #include <arch/efm32_aes.h>
 

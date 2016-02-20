@@ -30,7 +30,7 @@
 #include <device/device.h>
 #include <device/irq.h>
 #include <device/class/dma.h>
-#include <device/class/clock.h>
+#include <device/clock.h>
 
 #include <cpu/pl230_dma.h>
 #include <cpu/pl230_channel.h>
@@ -41,24 +41,23 @@
 
 struct efm32_dma_context
 {
-  struct dev_irq_src_s           irq_ep;
   /* base address of DMA */
   uintptr_t                     addr;
+  /* Primary channel memory region */
+  void *                        primary;
+
+  struct dev_irq_src_s          irq_ep;
+  dev_request_queue_root_t      queue[CONFIG_DRIVER_EFM32_DMA_CHANNEL_COUNT];
+#ifdef CONFIG_DEVICE_CLOCK
+  struct dev_clock_sink_ep_s    clk_ep;
+#endif
   /* lock for reentrant kroutine */
   uint16_t                      busy;
   /* Waiting and running interleaved request */
   uint16_t                      intlwait;
   uint16_t                      intlrun;
-  dev_request_queue_root_t      queue[CONFIG_DRIVER_EFM32_DMA_CHANNEL_COUNT];
-  /* Primary channel memory region */
-  uintptr_t                     primary;
   /* Used for double buffering */
   bool_t                        alt;
-#ifdef CONFIG_DEVICE_CLOCK
-  struct dev_clock_sink_ep_s    clk_ep;
-  /* count for release clock */
-  uint16_t                      run;
-#endif
 };
 
 static void efm32_dev_dma_set_ctrl(struct device_s *dev,
@@ -71,9 +70,10 @@ static void efm32_dev_dma_set_ctrl(struct device_s *dev,
   struct dev_dma_param_s *p = &rq->param[idx];
   struct efm32_dev_dma_rq_s *exrq = (struct efm32_dev_dma_rq_s *)rq;
   struct efm32_dev_dma_cfg_s * cfg = &exrq->cfg[idx];
+  uintptr_t ctrladdr = (uintptr_t)pv->primary + CHANNEL_SIZE * p->channel;
 
-  uintptr_t ctrladdr = alternate ? (uintptr_t)pv->primary + 0x100 : (uintptr_t)pv->primary; 
-  ctrladdr += CHANNEL_SIZE * p->channel;
+  if (pv->alt)
+    ctrladdr += 0x100;
 
   size_t len = e->size; 
   if (len > 1024)
@@ -223,59 +223,50 @@ static DEVDMA_REQUEST(efm32_dma_request)
 
   struct dev_request_s *base = &req->base;
 
+  if ((req->type == DEV_DMA_DBL_BUF_SRC) ||
+#ifndef CONFIG_DRIVER_EFM32_DMA_DOUBLE_BUFFERING
+      (req->type == DEV_DMA_DBL_BUF_DST) ||
+#endif
+      (req->type == DEV_DMA_SCATTER_GATHER))
+    {
+      req->error = -ENOTSUP;
+      kroutine_exec(&base->kr);
+      return;
+    }
+
   LOCK_SPIN_IRQ(&dev->lock);
 
   req->error = 0;
 
-  bool_t notsup = (req->type == DEV_DMA_DBL_BUF_SRC) ||
-#ifndef CONFIG_DRIVER_EFM32_DMA_DOUBLE_BUFFERING
-                  (req->type == DEV_DMA_DBL_BUF_DST) ||
+#ifdef CONFIG_DEVICE_CLOCK_GATING
+  if (!dev->start_count)
+    dev_clock_sink_gate(&pv->clk_ep, DEV_CLOCK_EP_POWER_CLOCK);
 #endif
-                  (req->type == DEV_DMA_SCATTER_GATHER);
-  if (notsup)
+  dev->start_count += DEVICE_START_COUNT_INC;
+
+  uint8_t chan = req->param[0].channel;
+  bool_t empty = dev_request_queue_isempty(&pv->queue[chan]);
+  bool_t idle = !((pv->busy | pv->intlrun) & (1 << chan));
+
+  dev_request_queue_pushback(&pv->queue[chan], base);
+
+  if (empty && idle)
     {
-      req->error = -ENOTSUP;
-      goto end;
+      if (req->type != DEV_DMA_INTERLEAVED ||
+          efm32_dma_start_intl(dev, req))
+        efm32_dev_dma_config(dev, req);
     }
 
-#ifdef CONFIG_DEVICE_CLOCK
-  if (!pv->run++)
-    dev_clock_sink_hold(&pv->clk_ep, 0);
-#endif
-
-  bool_t empty = dev_request_queue_isempty(&pv->queue[req->param[0].channel]);
-  dev_request_queue_pushback(&pv->queue[req->param[0].channel], base);
-    
-  bool_t idle = !((pv->busy | pv->intlrun) & (1 << req->param[0].channel));
-
-  if (empty & idle)
-    {
-      if (req->type == DEV_DMA_INTERLEAVED)
-        {
-          if (!efm32_dma_start_intl(dev, req))
-            goto end;
-        }
-      efm32_dev_dma_config(dev, req);
-    }
-  
-end:
   LOCK_RELEASE_IRQ(&dev->lock);
-
-  if (req->error)
-    kroutine_exec(&base->kr);
 }
 
 static inline void efm32_dev_dma_kroutine(struct device_s *dev, struct dev_request_s *base)
 {
-  struct efm32_dma_context *pv = dev->drv_pv;
-       
   lock_release(&dev->lock);
   kroutine_exec(&base->kr);
   lock_spin(&dev->lock);
 
-#ifdef CONFIG_DEVICE_CLOCK
-  pv->run--;
-#endif
+  dev->start_count -= DEVICE_START_COUNT_INC;
 }
 
 static DEV_IRQ_SRC_PROCESS(efm32_dma_irq)
@@ -292,10 +283,10 @@ static DEV_IRQ_SRC_PROCESS(efm32_dma_irq)
 
     if (!x)
       {
-#ifdef CONFIG_DEVICE_CLOCK
+#ifdef CONFIG_DEVICE_CLOCK_GATING
         /* All queue are empty */
-        if (!pv->run)
-          dev_clock_sink_release(&pv->clk_ep);
+        if (!dev->start_count)
+          dev_clock_sink_gate(&pv->clk_ep, DEV_CLOCK_EP_NONE);
 #endif
         break;
       }
@@ -311,12 +302,13 @@ static DEV_IRQ_SRC_PROCESS(efm32_dma_irq)
         rq =  dev_dma_rq_s_cast(dev_request_queue_head(&pv->queue[i]));
        
         bool_t end = 1;
+        uint16_t mask = 1 << i;
 
         /* Not the end of a write interleaved transfer */
-        if (!(pv->intlrun & (1 << i)))
+        if (!(pv->intlrun & mask))
         {
           assert(rq != NULL);
-          pv->busy = 1 << i;
+          pv->busy = mask;
           switch (rq->type)
           {
             case DEV_DMA_INTERLEAVED:
@@ -347,15 +339,15 @@ static DEV_IRQ_SRC_PROCESS(efm32_dma_irq)
           pv->busy = 0;
         }
 
-        pv->intlrun &= ~(1 << i);
+        pv->intlrun &= ~mask;
         rq = dev_dma_rq_s_cast(dev_request_queue_head(&pv->queue[i]));
 
         /* Start Next request */
 
         /* A interleaved request is waiting on this channel */
-        if (pv->intlwait & (1 << i))
+        if (pv->intlwait & mask)
           {
-            pv->intlwait &= ~(1 << i);
+            pv->intlwait &= ~mask;
             rq =  dev_dma_rq_s_cast(dev_request_queue_head(&pv->queue[i + 1]));
           }
 
@@ -377,7 +369,35 @@ static DEV_IRQ_SRC_PROCESS(efm32_dma_irq)
 
 static DEV_INIT(efm32_dma_init);
 static DEV_CLEANUP(efm32_dma_cleanup);
-#define efm32_dma_use dev_use_generic
+
+static DEV_USE(efm32_dma_use)
+{
+  switch (op)
+    {
+#ifdef CONFIG_DEVICE_CLOCK_GATING
+    case DEV_USE_START: {
+      struct device_accessor_s *acc = param;
+      struct device_s *dev = acc->dev;
+      struct efm32_dma_context *pv = dev->drv_pv;
+      if (dev->start_count == 0)
+        dev_clock_sink_gate(&pv->clk_ep, DEV_CLOCK_EP_POWER_CLOCK);
+      return 0;
+    }
+
+    case DEV_USE_STOP: {
+      struct device_accessor_s *acc = param;
+      struct device_s *dev = acc->dev;
+      struct efm32_dma_context *pv = dev->drv_pv;
+      if (dev->start_count == 0)
+        dev_clock_sink_gate(&pv->clk_ep, DEV_CLOCK_EP_POWER);
+      return 0;
+    }
+#endif
+
+    default:
+      return dev_use_generic(param, op);
+    }
+}
 
 DRIVER_DECLARE(efm32_dma_drv, 0, "EFM32 DMA", efm32_dma,
                DRIVER_DMA_METHODS(efm32_dma));
@@ -388,8 +408,6 @@ static DEV_INIT(efm32_dma_init)
 {
   struct efm32_dma_context *pv;
 
-  dev->status = DEVICE_DRIVER_INIT_FAILED;
-  
   /* allocate private driver data */
   pv = mem_alloc(sizeof(struct efm32_dma_context), (mem_scope_sys));
 
@@ -405,13 +423,10 @@ static DEV_INIT(efm32_dma_init)
 
 #ifdef CONFIG_DEVICE_CLOCK
   /* enable clock */
-  dev_clock_sink_init(dev, &pv->clk_ep, NULL);
+  dev_clock_sink_init(dev, &pv->clk_ep, DEV_CLOCK_EP_POWER_CLOCK | DEV_CLOCK_EP_SINK_SYNC);
 
-  if (dev_clock_sink_link(dev, &pv->clk_ep, NULL, 0, 0))
+  if (dev_clock_sink_link(&pv->clk_ep, 0, NULL))
     goto err_mem;
-
-  if (dev_clock_sink_hold(&pv->clk_ep, 0))
-    goto err_clk;
 #endif
 
   /* Check number of channel */
@@ -428,12 +443,12 @@ static DEV_INIT(efm32_dma_init)
   size_t s = CHANNEL_SIZE * CONFIG_DRIVER_EFM32_DMA_CHANNEL_COUNT;
 #endif
 
-  pv->primary = (uintptr_t)mem_alloc_align(s, 512, (mem_scope_sys));
+  pv->primary = mem_alloc_align(s, 512, (mem_scope_sys));
   
   if (!pv->primary)
-    goto err_mem;
+    goto err_clk;
 
-  memset((uint8_t *)pv->primary, 0, s);
+  memset(pv->primary, 0, s);
   
   /* Enable DMA Controller */
   cpu_mem_write_32(pv->addr + PL230_DMA_CONFIG_ADDR, endian_le32(PL230_DMA_CONFIG_EN));
@@ -450,27 +465,26 @@ static DEV_INIT(efm32_dma_init)
   /* Disable Channels */
   cpu_mem_write_32(pv->addr + PL230_DMA_CHENC_ADDR, endian_le32(PL230_DMA_CHENC_MASK));
 
-  for(uint8_t i = 0; i < CONFIG_DRIVER_EFM32_DMA_CHANNEL_COUNT; i++) 
+  for (uint8_t i = 0; i < CONFIG_DRIVER_EFM32_DMA_CHANNEL_COUNT; i++) 
     dev_request_queue_init(pv->queue + i);
 
   device_irq_source_init(dev, &pv->irq_ep, 1, &efm32_dma_irq);
 
   if (device_irq_source_link(dev, &pv->irq_ep, 1, 1))
-    goto err_mem;
+    goto err_prim;
 
-  dev->status = DEVICE_DRIVER_INIT_DONE;
-  dev->drv = &efm32_dma_drv;
-
-#ifdef CONFIG_DEVICE_CLOCK
+#ifdef CONFIG_DEVICE_CLOCK_GATING
   /* Release clock */
-  dev_clock_sink_release(&pv->clk_ep);
+  dev_clock_sink_gate(&pv->clk_ep, DEV_CLOCK_EP_POWER);
 #endif
 
   return 0;
- 
+
+ err_prim:
+  mem_free(pv->primary);
  err_clk:
 #ifdef CONFIG_DEVICE_CLOCK
-  dev_clock_sink_unlink(dev, &pv->clk_ep, 1);
+  dev_clock_sink_unlink(&pv->clk_ep);
 #endif
   err_mem:
   mem_free(pv);
@@ -483,11 +497,15 @@ static DEV_CLEANUP(efm32_dma_cleanup)
 
   device_irq_source_unlink(dev, &pv->irq_ep, 1);
 
-  dev_clock_sink_release(&pv->clk_ep);
+#ifdef CONFIG_DEVICE_CLOCK
+  dev_clock_sink_unlink(&pv->clk_ep);
+#endif
 
-  for(uint8_t i = 0; i < CONFIG_DRIVER_EFM32_DMA_CHANNEL_COUNT; i++) 
+  for (uint8_t i = 0; i < CONFIG_DRIVER_EFM32_DMA_CHANNEL_COUNT; i++) 
     dev_request_queue_destroy(pv->queue + i);
 
-  mem_free((uint8_t *)pv->primary);
+  mem_free(pv->primary);
   mem_free(pv);
+
+  return 0;
 }

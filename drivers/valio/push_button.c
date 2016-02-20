@@ -36,7 +36,6 @@
 
 #include <device/class/timer.h>
 #include <device/class/iomux.h>
-#include <device/class/clock.h>
 #include <device/class/valio.h>
 #include <device/valio/button.h>
 

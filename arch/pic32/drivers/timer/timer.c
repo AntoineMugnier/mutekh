@@ -32,7 +32,7 @@
 #include <device/driver.h>
 #include <device/class/timer.h>
 #include <device/irq.h>
-#include <device/class/clock.h>
+#include <device/clock.h>
 
 #include <mutek/mem_alloc.h>
 #include <mutek/kroutine.h>
