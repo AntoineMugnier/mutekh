@@ -216,13 +216,12 @@ DEV_DECLARE_STATIC(i2c_dev, "i2c1", 0, efm32_i2c_drv,
 
 #ifdef CONFIG_DRIVER_EFM32_PWM
 
-DEV_DECLARE_STATIC(pwm_dev, "pwm0", 0, efm32_pwm_drv,
-                   DEV_STATIC_RES_MEM(0x40010000, 0x40010400),
-                   DEV_STATIC_RES_CLK_SRC("/recmu", EFM32_CLOCK_TIMER0, 0),
+DEV_DECLARE_STATIC(pwm_dev, "pwm3", 0, efm32_pwm_drv,
+                   DEV_STATIC_RES_MEM(0x40010c00, 0x40011000),
+                   DEV_STATIC_RES_CLK_SRC("/recmu", EFM32_CLOCK_TIMER3, 0),
                    DEV_STATIC_RES_DEV_IOMUX("/gpio"),
-                   DEV_STATIC_RES_IOMUX("cc0", EFM32_LOC3, EFM32_PD1, 0, 0),
-                   DEV_STATIC_RES_IOMUX("cc1", EFM32_LOC3, EFM32_PD2, 0, 0),
-                   DEV_STATIC_RES_IOMUX("cc2", EFM32_LOC3, EFM32_PD3, 0, 0)
+                   /* led0 */
+                   DEV_STATIC_RES_IOMUX("cc2", EFM32_LOC1, EFM32_PE2, 0, 0)
                    );
 
 #endif

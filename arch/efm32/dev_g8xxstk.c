@@ -206,18 +206,20 @@ DEV_DECLARE_STATIC(i2c_dev, "i2c0", 0, efm32_i2c_drv,
                    DEV_STATIC_RES_IRQ(0, EFM32_IRQ_I2C0, DEV_IRQ_SENSE_RISING_EDGE, 0, 1),
 
                    DEV_STATIC_RES_DEV_IOMUX("/gpio"),
+                   /* top break out pad row */
                    DEV_STATIC_RES_IOMUX("scl", EFM32_LOC3, EFM32_PD15, 0, 0),
                    DEV_STATIC_RES_IOMUX("sda", EFM32_LOC3, EFM32_PD14, 0, 0)
                    );
 
 #endif
 
-#ifdef CONFIG_DRIVER_EFM32_PWM
+#if 0 && defined(CONFIG_DRIVER_EFM32_PWM)
 
 DEV_DECLARE_STATIC(pwm_dev, "pwm", 0, efm32_pwm_drv,
                    DEV_STATIC_RES_MEM(0x40010000, 0x40010400),
                    DEV_STATIC_RES_CLK_SRC("/recmu", EFM32_CLOCK_TIMER0, 0),
                    DEV_STATIC_RES_DEV_IOMUX("/gpio"),
+                   /* expansion header pins 6, 8, 10, conflicts with spi1 */
                    DEV_STATIC_RES_IOMUX("cc0", EFM32_LOC3, EFM32_PD1, 0, 0),
                    DEV_STATIC_RES_IOMUX("cc1", EFM32_LOC3, EFM32_PD2, 0, 0),
                    DEV_STATIC_RES_IOMUX("cc2", EFM32_LOC3, EFM32_PD3, 0, 0)
