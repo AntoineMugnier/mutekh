@@ -244,7 +244,6 @@ static DEV_INIT(avr32_init)
 {
   struct avr32_dev_private_s  *pv;
 
-  dev->status = DEVICE_DRIVER_INIT_FAILED;
 
   uintptr_t id = 0;
   if (device_res_get_uint(dev, DEV_RES_ID, 0, &id, NULL))
@@ -299,8 +298,6 @@ static DEV_INIT(avr32_init)
   if (cpu_tree_insert(&pv->node))
     goto err_clk;
 
-  dev->drv = &avr32_drv;
-  dev->status = DEVICE_DRIVER_INIT_DONE;
 
   return 0;
 

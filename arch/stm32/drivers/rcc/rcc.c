@@ -243,7 +243,6 @@ static DEV_INIT(stm32_rcc_init)
 {
   struct stm32_rcc_private_s *pv;
 
-  dev->status = DEVICE_DRIVER_INIT_FAILED;
 
   /* allocate driver private context. */
   pv = mem_alloc(sizeof(*pv), (mem_scope_sys));
@@ -266,7 +265,6 @@ static DEV_INIT(stm32_rcc_init)
   if (dev_clock_osc_init_by_id(dev, &pv->oscs[0], 0))
     goto err_mem;
 
-  dev->status = DEVICE_DRIVER_INIT_DONE;
 
   return 0;
 

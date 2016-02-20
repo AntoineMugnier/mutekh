@@ -195,7 +195,6 @@ DEV_INIT(icu_emu_init)
 
   /* we are directly bound to cpu */
   cpu_interrupt_sethandler(icu_emu_cpu_handler);
-  dev->drv = &icu_emu_drv;
 
   return 0;
 }

@@ -327,7 +327,6 @@ static DEV_INIT(cadence_uart_init)
   struct cadence_uart_context_s	*pv;
   device_mem_map( dev , 1 << 0 );
 
-  dev->status = DEVICE_DRIVER_INIT_FAILED;
 
   pv = mem_alloc(sizeof(*pv), (mem_scope_sys));
   dev->drv_pv = pv;
@@ -408,8 +407,6 @@ static DEV_INIT(cadence_uart_init)
                                CADENCE_UART_CONTROL_TXEN |
                                CADENCE_UART_CONTROL_RXEN));
 
-  dev->drv = &cadence_uart_drv;
-  dev->status = DEVICE_DRIVER_INIT_DONE;
 
   return 0;
 

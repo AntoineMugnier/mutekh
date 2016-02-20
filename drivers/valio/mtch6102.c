@@ -347,7 +347,6 @@ static DEV_INIT(mtch6102_init)
     struct mtch6102_priv_s *pv;
     uintptr_t width, height;
 
-    dev->status = DEVICE_DRIVER_INIT_FAILED;
 
     pv = mem_alloc(sizeof(*pv), mem_scope_sys);
     if (!pv)
@@ -388,8 +387,6 @@ static DEV_INIT(mtch6102_init)
     dev_request_queue_init(&pv->queue);
 
     dev->drv_pv = pv;
-    dev->drv = &mtch6102_drv;
-    dev->status = DEVICE_DRIVER_INIT_DONE;
 
     mtch6102_configure(dev, pv);
 

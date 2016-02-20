@@ -525,7 +525,6 @@ static DEV_INIT(gptimer_init)
   uint_fast8_t i;
   uintptr_t addr;
 
-  dev->status = DEVICE_DRIVER_INIT_FAILED;
 
   if (device_res_get_uint(dev, DEV_RES_MEM, 0, &addr, NULL))
     return -ENOTSUP;
@@ -585,8 +584,6 @@ static DEV_INIT(gptimer_init)
 # endif
     }
 
-  dev->drv = &gptimer_drv;
-  dev->status = DEVICE_DRIVER_INIT_DONE;
   return 0;
 
 # ifdef CONFIG_DEVICE_IRQ

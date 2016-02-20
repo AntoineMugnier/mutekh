@@ -120,7 +120,6 @@ DEV_INIT(block_file_emu_init)
 {
   struct block_file_emu_context_s	*pv;
 
-  dev->drv = &block_file_emu_drv;
 
   /* allocate private driver data */
   pv = mem_alloc(sizeof(*pv), (mem_scope_sys));

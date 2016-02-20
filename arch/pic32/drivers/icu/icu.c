@@ -160,7 +160,6 @@ DEV_INIT(pic32_icu_init)
 {
   struct pic32_icu_private_s  *pv;
 
-  dev->status = DEVICE_DRIVER_INIT_FAILED;
 
   pv = mem_alloc(sizeof (*pv), (mem_scope_sys));
   if (!pv)
@@ -189,8 +188,6 @@ DEV_INIT(pic32_icu_init)
                                                DEV_IRQ_SENSE_RISING_EDGE |
                                                DEV_IRQ_SENSE_FALLING_EDGE);
 
-  dev->drv = &pic32_icu_drv;
-  dev->status = DEVICE_DRIVER_INIT_DONE;
   return 0;
 
  err_mem:

@@ -239,7 +239,6 @@ static DEV_INIT(push_button_init)
 {
   struct push_button_context_s *pv;
 
-  dev->status = DEVICE_DRIVER_INIT_FAILED;
 
   /* allocate driver private context. */
   pv = mem_alloc(sizeof(*pv), (mem_scope_sys));
@@ -286,7 +285,6 @@ static DEV_INIT(push_button_init)
   if (device_irq_source_link(dev, &pv->irq_ep, 1, -1))
     goto err_mem;
 
-  dev->status = DEVICE_DRIVER_INIT_DONE;
 
   return 0;
 

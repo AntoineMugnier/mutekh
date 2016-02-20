@@ -234,7 +234,6 @@ DEV_INIT(gaisler_apbuart_init)
   struct gaisler_apbuart_context_s	*pv;
   device_mem_map( dev , 1 << 0 );
 
-  dev->status = DEVICE_DRIVER_INIT_FAILED;
 
   pv = mem_alloc(sizeof(*pv), (mem_scope_sys));
   dev->drv_pv = pv;
@@ -282,8 +281,6 @@ DEV_INIT(gaisler_apbuart_init)
 
   cpu_mem_write_32(pv->addr + APBUART_REG_CTRL, endian_be32(c));
 
-  dev->drv = &gaisler_apbuart_drv;
-  dev->status = DEVICE_DRIVER_INIT_DONE;
 
   return 0;
 

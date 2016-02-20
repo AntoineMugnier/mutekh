@@ -631,7 +631,6 @@ static DEV_INIT(mpu6505_init)
 {
   struct mpu6505_private_s *pv;
 
-  dev->status = DEVICE_DRIVER_INIT_FAILED;
 
   pv = mem_alloc(sizeof(*pv), mem_scope_sys);
   memset(pv, 0, sizeof(*pv));
@@ -663,8 +662,6 @@ static DEV_INIT(mpu6505_init)
   dev_request_queue_init(&pv->queue);
 
   dev->drv_pv = pv;
-  dev->drv = &mpu6505_drv;
-  dev->status = DEVICE_DRIVER_INIT_DONE;
   pv->timer_req.rq.pvdata = dev;
   pv->power_mode = -1;
 

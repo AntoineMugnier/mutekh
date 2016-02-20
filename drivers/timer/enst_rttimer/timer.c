@@ -415,7 +415,6 @@ static DEV_INIT(enst_rttimer_init)
 {
   struct enst_rttimer_private_s  *pv;
 
-  dev->status = DEVICE_DRIVER_INIT_FAILED;
 
   uintptr_t addr;
   if (device_res_get_uint(dev, DEV_RES_MEM, 0, &addr, NULL))
@@ -482,8 +481,6 @@ static DEV_INIT(enst_rttimer_init)
   cpu_mem_write_32(pv->addr + RT_TIMER_CTRL_ADDR, 0);
 #endif
 
-  dev->drv = &enst_rttimer_drv;
-  dev->status = DEVICE_DRIVER_INIT_DONE;
   return 0;
 
 #ifdef CONFIG_DEVICE_IRQ

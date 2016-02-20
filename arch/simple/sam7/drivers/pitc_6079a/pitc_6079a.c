@@ -151,7 +151,6 @@ DRIVER_REGISTER(pitc_6079a_drv,
 DEV_INIT(pitc_6079a_init)
 {
 	struct pitc_6079a_context_s *pv;
-	dev->drv = &pitc_6079a_drv;
 
 	/* allocate private driver data */
 	pv = mem_alloc(sizeof(*pv), mem_scope_sys);

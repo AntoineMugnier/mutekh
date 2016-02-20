@@ -119,7 +119,6 @@ static DEV_INIT(ram_init)
 {
   struct ram_context_s	*pv;
 
-  dev->status = DEVICE_DRIVER_INIT_FAILED;
 
   size_t i, count = 0;
 
@@ -144,8 +143,6 @@ static DEV_INIT(ram_init)
   for (i = 0; i < count; i++)
     device_res_get_uint(dev, DEV_RES_MEM, i, &pv->bank[i].addr, &pv->bank[i].end);
 
-  dev->drv = &ram_drv;
-  dev->status = DEVICE_DRIVER_INIT_DONE;
 
   return 0;
 }

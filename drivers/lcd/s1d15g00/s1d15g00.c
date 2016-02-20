@@ -381,7 +381,6 @@ DEV_INIT(s1d15g00_init)
 	struct s1d15g00_context_s	*pv;
 	struct s1d15g00_param_s *param = params;
 	
-	dev->drv = &s1d15g00_drv;
 
 	/* alocate private driver data */
 	pv = mem_alloc(sizeof(*pv), (mem_scope_sys));

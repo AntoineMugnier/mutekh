@@ -420,7 +420,6 @@ static DEV_INIT(soft_crc_init)
 {
   struct soft_crc_private_s *pv;
 
-  dev->status = DEVICE_DRIVER_INIT_FAILED;
 
   pv = mem_alloc(sizeof (*pv), (mem_scope_sys));
 
@@ -432,8 +431,6 @@ static DEV_INIT(soft_crc_init)
 
   dev_request_delayed_init(&pv->queue, &soft_crc_process);
 
-  dev->drv = &soft_crc_drv;
-  dev->status = DEVICE_DRIVER_INIT_DONE;
   return 0;
 
 err_mem:

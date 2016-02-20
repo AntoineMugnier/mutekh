@@ -683,7 +683,6 @@ DEV_INIT(sd_mmc_init)
     struct sd_mmc_context_s   *pv;
     struct sd_mmc_param_s *param = params;
 
-    dev->drv = &sd_mmc_drv;
 
     /* allocate private driver data */
     pv = mem_alloc(sizeof(*pv), (mem_scope_sys));

@@ -110,7 +110,6 @@ static DEV_INIT(x86_64_emu_init)
 {
   struct x86_64_emu_dev_private_s  *pv;
 
-  dev->status = DEVICE_DRIVER_INIT_FAILED;
 
   /* get processor device id specifed in resources */
   uintptr_t id = 0;
@@ -136,8 +135,6 @@ static DEV_INIT(x86_64_emu_init)
   if (cpu_tree_insert(&pv->node))
     goto err_node;
 
-  dev->drv = &emu_cpu_drv;
-  dev->status = DEVICE_DRIVER_INIT_DONE;
 
   return 0;
 

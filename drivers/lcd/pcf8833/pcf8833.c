@@ -278,7 +278,6 @@ DEV_INIT(pcf8833_init)
 	struct pcf8833_context_s	*pv;
 	struct pcf8833_param_s *param = params;
 	
-	dev->drv = &pcf8833_drv;
 
 	/* alocate private driver data */
 	pv = mem_alloc(sizeof(*pv), (mem_scope_sys));

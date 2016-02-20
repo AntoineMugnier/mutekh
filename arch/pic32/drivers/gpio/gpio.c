@@ -460,7 +460,6 @@ static DEV_INIT(pic32_gpio_init)
 {
   struct pic32_gpio_private_s *pv;
 
-  dev->status = DEVICE_DRIVER_INIT_FAILED;
 
   pv = mem_alloc(sizeof (*pv), (mem_scope_sys));
 
@@ -486,8 +485,6 @@ static DEV_INIT(pic32_gpio_init)
   memset(pv->sinks_map, 0, sizeof(*(pv->sinks_map)));
 #endif
 
-  dev->drv = &pic32_gpio_drv;
-  dev->status = DEVICE_DRIVER_INIT_DONE;
 
   return 0;
 

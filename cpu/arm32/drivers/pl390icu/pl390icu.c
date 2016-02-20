@@ -230,7 +230,6 @@ static DEV_INIT(pl390_icu_init)
 {
   struct pl390_icu_private_s  *pv;
 
-  dev->status = DEVICE_DRIVER_INIT_FAILED;
 
   pv = mem_alloc(sizeof (*pv), (mem_scope_sys));
   if (!pv)
@@ -315,8 +314,6 @@ static DEV_INIT(pl390_icu_init)
   device_irq_sink_init(dev, pv->sinks, ((n - 1) * 32 + pv->cpu_count * 16),
                        &pl390_icu_sink_update, DEV_IRQ_SENSE_HIGH_LEVEL | DEV_IRQ_SENSE_RISING_EDGE);
 
-  dev->drv = &pl390_icu_drv;
-  dev->status = DEVICE_DRIVER_INIT_DONE;
   return 0;
 
  err_mem3:

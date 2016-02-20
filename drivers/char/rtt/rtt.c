@@ -206,7 +206,6 @@ static DEV_INIT(char_rtt_init)
 {
   struct rtt_private_s *pv;
 
-  dev->status = DEVICE_DRIVER_INIT_FAILED;
 
   pv = mem_alloc(sizeof(*pv), mem_scope_sys);
   if (!pv)
@@ -230,8 +229,6 @@ static DEV_INIT(char_rtt_init)
                             RTT_CHANNEL_MODE_BLOCKING);
 
   dev->drv_pv = pv;
-  dev->drv = &char_rtt_drv;
-  dev->status = DEVICE_DRIVER_INIT_DONE;
 
   kroutine_init_interruptible(&pv->timer_rq.rq.kr, rtt_tick);
   dev_timer_init_sec(&pv->timer, &pv->timer_rq.delay, 0, 1, 20);

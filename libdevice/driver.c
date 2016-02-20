@@ -521,19 +521,18 @@ error_t device_init_driver(struct device_s *dev)
   switch (err)
     {
     default:
+      dev->status = DEVICE_DRIVER_INIT_FAILED;
       printk("device: device %p `%s' initialization failed with return code %i\n",
              dev, dev->node.name, err);
       break;
     case 0:
-      assert(dev->status == DEVICE_DRIVER_INIT_DONE ||
-             dev->status == DEVICE_DRIVER_INIT_PARTIAL);
 #ifdef CONFIG_DEVICE_SLEEP
       device_sleep_order++;
 #endif
+      dev->status = DEVICE_DRIVER_INIT_DONE;
       break;
     case -EAGAIN:
-      assert(dev->status == DEVICE_DRIVER_INIT_PENDING ||
-             dev->status == DEVICE_DRIVER_INIT_PARTIAL);
+      dev->status = DEVICE_DRIVER_INIT_PARTIAL;
       break;
     }
 

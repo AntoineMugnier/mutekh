@@ -503,7 +503,6 @@ DEV_INIT(tty_vga_init)
 {
   struct tty_vga_context_s	*pv;
 
-  dev->drv = &tty_vga_drv;
 
   /* alocate private driver data */
   pv = mem_alloc(sizeof(*pv), (mem_scope_sys));

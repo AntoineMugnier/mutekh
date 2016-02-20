@@ -489,7 +489,6 @@ static DEV_INIT(pic32_spi_init)
   struct pic32_spi_context_s	*pv;
   device_mem_map( dev , 1 << 0 );
 
-  dev->status = DEVICE_DRIVER_INIT_FAILED;
 
   pv = mem_alloc(sizeof(*pv), (mem_scope_sys));
   dev->drv_pv = pv;
@@ -601,8 +600,6 @@ static DEV_INIT(pic32_spi_init)
     goto err_clk;
 #endif
 
-  dev->drv = &pic32_spi_drv;
-  dev->status = DEVICE_DRIVER_INIT_DONE;
 
   return 0;
 

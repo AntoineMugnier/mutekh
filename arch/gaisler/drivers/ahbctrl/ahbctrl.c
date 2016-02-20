@@ -218,8 +218,6 @@ DRIVER_REGISTER(ahbctrl_drv);
 
 static DEV_INIT(ahbctrl_init)
 {
-  dev->status = DEVICE_DRIVER_INIT_FAILED;
-  dev->drv = &ahbctrl_drv;
 
   uintptr_t begin, end;
 
@@ -228,7 +226,6 @@ static DEV_INIT(ahbctrl_init)
 
   ahbctrl_scan(dev, begin, end);
 
-  dev->status = DEVICE_DRIVER_INIT_DONE;
 
   return 0;
 

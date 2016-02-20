@@ -282,8 +282,6 @@ static DEV_INIT(arm_init)
 
       memset(pv, 0, sizeof(*pv));
       dev->drv_pv = pv;
-      dev->drv = &arm32m_drv;
-      dev->status = DEVICE_DRIVER_INIT_PARTIAL;
 
       if (cpu_tree_node_init(&pv->node, id, dev))
         goto err_pv;
@@ -361,15 +359,11 @@ static DEV_INIT(arm_init)
   pv->dwt_cycnt_start = 0;
 #endif
 
-  dev->status = DEVICE_DRIVER_INIT_DONE;
-
   return 0;
 
  err_pv:
   mem_free(pv);
  err:
-  dev->status = DEVICE_DRIVER_INIT_FAILED;
-  dev->drv = NULL;
   return -EUNKNOWN;
 }
 

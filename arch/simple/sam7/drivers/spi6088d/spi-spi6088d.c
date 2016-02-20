@@ -450,7 +450,6 @@ DEV_INIT(spi_spi6088d_init)
 	uintptr_t registers = (uintptr_t)dev->addr[0];
 	uint_fast8_t i;
 
-	dev->drv = &spi_spi6088d_drv;
 
 	if ( param->lun_count > 4 ) {
 		printk("SPI-SPI6088D: Invalid lun count: %d\n", param->lun_count);

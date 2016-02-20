@@ -221,7 +221,6 @@ static DEV_INIT(sparc_init)
 {
   struct sparc_dev_private_s  *pv;
 
-  dev->status = DEVICE_DRIVER_INIT_FAILED;
 
   assert(cpu_sparc_wincount() == CONFIG_CPU_SPARC_WINCOUNT);
 
@@ -272,8 +271,6 @@ static DEV_INIT(sparc_init)
   if (cpu_tree_insert(&pv->node))
     goto err_clk;
 
-  dev->drv = &sparc_drv;
-  dev->status = DEVICE_DRIVER_INIT_DONE;
 
   return 0;
 

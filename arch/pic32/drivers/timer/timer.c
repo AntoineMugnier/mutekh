@@ -428,7 +428,6 @@ static DEV_INIT(pic32_timer_init)
 {
   struct pic32_timer_private_s  *pv;
 
-  dev->status = DEVICE_DRIVER_INIT_FAILED;
 
   pv = mem_alloc(sizeof(struct pic32_timer_private_s), (mem_scope_sys));
 
@@ -481,8 +480,6 @@ static DEV_INIT(pic32_timer_init)
   if (device_irq_source_link(dev, pv->irq_ep, 3, -1))
     goto err_mem;
 
-  dev->drv = &pic32_timer_drv;
-  dev->status = DEVICE_DRIVER_INIT_DONE;
 
   return 0;
 

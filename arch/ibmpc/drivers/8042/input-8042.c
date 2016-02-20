@@ -358,7 +358,6 @@ DEV_INIT(input_8042_init)
 {
   struct input_8042_context_s	*pv;
 
-  dev->drv = &input_8042_drv;
 
 #if defined(CONFIG_ARCH_IBMPC)
   assert(dev->addr[0] == 0x60);

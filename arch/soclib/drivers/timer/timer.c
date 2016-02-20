@@ -473,7 +473,6 @@ static DEV_INIT(soclib_timer_init)
   if (device_get_param_uint(dev, "count", &t_count))
     printk("warning: timer device `%p' has no `count' parameter, assuming only one timer is available.\n", dev);
 
-  dev->status = DEVICE_DRIVER_INIT_FAILED;
 
   if (t_count < 1 || t_count > 64)
     return -EINVAL;
@@ -524,8 +523,6 @@ static DEV_INIT(soclib_timer_init)
 # endif
     }
 
-  dev->drv = &soclib_timer_drv;
-  dev->status = DEVICE_DRIVER_INIT_DONE;
   return 0;
 
  err_mem:

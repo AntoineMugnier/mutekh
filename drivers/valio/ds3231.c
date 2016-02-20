@@ -205,7 +205,6 @@ static DEV_INIT(ds3231_init)
 {
     struct ds3231_priv_s *pv;
 
-    dev->status = DEVICE_DRIVER_INIT_FAILED;
 
     pv = mem_alloc(sizeof(*pv), mem_scope_sys);
     if (!pv)
@@ -227,8 +226,6 @@ static DEV_INIT(ds3231_init)
     dev_request_queue_init(&pv->queue);
 
     dev->drv_pv = pv;
-    dev->drv = &ds3231_drv;
-    dev->status = DEVICE_DRIVER_INIT_DONE;
 
     return 0;
 

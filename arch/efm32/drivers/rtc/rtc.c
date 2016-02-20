@@ -424,8 +424,6 @@ static DEV_INIT(efm32_rtc_init)
 {
   struct efm32_rtc_private_s  *pv;
 
-  dev->status = DEVICE_DRIVER_INIT_FAILED;
-
   uintptr_t addr;
 
   if (device_res_get_uint(dev, DEV_RES_MEM, 0, &addr, NULL))
@@ -488,8 +486,6 @@ static DEV_INIT(efm32_rtc_init)
                                                                EFM32_RTC_CTRL_EN(RESET) |
                                                                EFM32_RTC_CTRL_COMP0TOP(TOPMAX)));
 
-  dev->drv = &efm32_rtc_drv;
-  dev->status = DEVICE_DRIVER_INIT_DONE;
 
   return 0;
 

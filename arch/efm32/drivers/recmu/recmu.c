@@ -1308,7 +1308,6 @@ static DEV_INIT(efm32_recmu_init)
   assert(device_res_get_uint(dev, DEV_RES_MEM, 2, &addr, NULL) == 0 &&
          EFM32_CMU_ADDR == addr);
 
-  dev->status = DEVICE_DRIVER_INIT_FAILED;
 
   pv = mem_alloc(sizeof (*pv), (mem_scope_sys));
   if (!pv)
@@ -1398,8 +1397,6 @@ static DEV_INIT(efm32_recmu_init)
 # endif
 #endif
 
-  dev->drv = &efm32_recmu_drv;
-  dev->status = DEVICE_DRIVER_INIT_DONE;
 
   return 0;
 

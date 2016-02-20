@@ -330,7 +330,6 @@ static DEV_INIT(pic32_dma_init)
 {
   struct pic32_dma_context_s *pv;
 
-  dev->status = DEVICE_DRIVER_INIT_FAILED;
   
   /* allocate private driver data */
   pv = mem_alloc(sizeof(struct pic32_dma_context_s), (mem_scope_sys));
@@ -359,8 +358,6 @@ static DEV_INIT(pic32_dma_init)
   if (device_irq_source_link(dev, pv->irq_ep, CONFIG_DRIVER_PIC32_DMA_CHANNEL_COUNT, -1))
     goto err_mem;
 
-  dev->status = DEVICE_DRIVER_INIT_DONE;
-  dev->drv = &pic32_dma_drv;
 
   return 0;
  

@@ -75,7 +75,6 @@ DRIVER_REGISTER(dev_null_drv);
 
 DEV_INIT(dev_null_init)
 {
-  dev->drv = &dev_null_drv;
 
   return 0;
 }

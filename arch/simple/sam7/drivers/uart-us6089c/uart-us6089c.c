@@ -197,7 +197,6 @@ DEV_INIT(uart_us6089c_init)
 	struct uart_us6089c_context_s	*pv;
 	uintptr_t registers = (uintptr_t)dev->addr[0];
 
-	dev->drv = &uart_us6089c_drv;
 
 	/* alocate private driver data */
 	pv = mem_alloc(sizeof(*pv), (mem_scope_sys));

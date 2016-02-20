@@ -154,7 +154,6 @@ static DEV_INIT(dma_soclib_init)
 {
   struct dma_soclib_context_s	*pv;
 
-  dev->status = DEVICE_DRIVER_INIT_FAILED;
 
   /* alocate private driver data */
   pv = mem_alloc(sizeof(*pv), (mem_scope_sys));
@@ -175,8 +174,6 @@ static DEV_INIT(dma_soclib_init)
 
   cpu_mem_write_32(pv->addr + TTY_SOCLIB_REG_RESET, 0);
 
-  dev->status = DEVICE_DRIVER_INIT_DONE;
-  dev->drv = &dma_soclib_drv;
 
   return 0;
 

@@ -498,7 +498,6 @@ static DEV_INIT(soclib_spi_init)
 {
   struct soclib_spi_context_s	*pv;
 
-  dev->status = DEVICE_DRIVER_INIT_FAILED;
 
   uintptr_t addr;
   if (device_res_get_uint(dev, DEV_RES_MEM, 0, &addr, NULL))
@@ -566,8 +565,6 @@ static DEV_INIT(soclib_spi_init)
                    );
 #endif
 
-  dev->drv = &soclib_spi_drv;
-  dev->status = DEVICE_DRIVER_INIT_DONE;
 
   return 0;
 

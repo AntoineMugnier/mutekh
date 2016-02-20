@@ -293,7 +293,6 @@ DEV_INIT(i2c_twi6061a_init)
 	struct i2c_twi6061a_context_s   *pv;
 	uintptr_t registers = (uintptr_t)dev->addr[0];
 
-	dev->drv = &i2c_twi6061a_drv;
 
 	/* allocate private driver data */
 	pv = mem_alloc(sizeof(*pv), (mem_scope_sys));

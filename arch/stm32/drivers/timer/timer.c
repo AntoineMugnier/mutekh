@@ -465,7 +465,6 @@ static DEV_INIT(stm32_timer_init)
 {
   struct stm32_timer_private_s  *pv;
 
-  dev->status = DEVICE_DRIVER_INIT_FAILED;
 
   uintptr_t addr;
 
@@ -532,8 +531,6 @@ static DEV_INIT(stm32_timer_init)
   /* Disable compare on startup. */
   stm32_timer_disable_compare(pv);
 
-  dev->drv = &stm32_timer_drv;
-  dev->status = DEVICE_DRIVER_INIT_DONE;
 
   return 0;
 

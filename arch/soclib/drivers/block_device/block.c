@@ -346,7 +346,6 @@ static DEV_INIT(soclib_block_init)
 {
   struct soclib_block_context_s	*pv;
 
-  dev->status = DEVICE_DRIVER_INIT_FAILED;
 
   /* allocate private driver data */
   pv = mem_alloc(sizeof(*pv), (mem_scope_sys));
@@ -375,8 +374,6 @@ static DEV_INIT(soclib_block_init)
   cpu_mem_write_32(pv->addr + SOCLIB_BLOCK_IRQ_ENABLE,
                    endian_le32(1));
 
-  dev->drv = &soclib_block_drv;
-  dev->status = DEVICE_DRIVER_INIT_DONE;
 
   return 0;
 

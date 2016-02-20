@@ -226,7 +226,6 @@ static DEV_INIT(ppc_init)
 {
   struct ppc_dev_private_s  *pv;
 
-  dev->status = DEVICE_DRIVER_INIT_FAILED;
 
   /* get processor device id specifed in resources */
   uintptr_t id = 0;
@@ -282,8 +281,6 @@ static DEV_INIT(ppc_init)
   if (cpu_tree_insert(&pv->node))
     goto err_clk;
 
-  dev->drv = &ppc_drv;
-  dev->status = DEVICE_DRIVER_INIT_DONE;
 
   return 0;
 

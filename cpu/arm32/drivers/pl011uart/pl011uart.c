@@ -301,7 +301,6 @@ static DEV_INIT(pl011uart_init)
   struct pl011uart_context_s	*pv;
   device_mem_map( dev , 1 << 0 );
 
-  dev->status = DEVICE_DRIVER_INIT_FAILED;
 
   pv = mem_alloc(sizeof(*pv), (mem_scope_sys));
   dev->drv_pv = pv;
@@ -369,8 +368,6 @@ static DEV_INIT(pl011uart_init)
   /* enable the uart */
   cpu_mem_write_32(pv->addr + PL011_CR_ADDR, endian_le32(PL011_CR_TXE | PL011_CR_RXE | PL011_CR_UARTEN));
 
-  dev->drv = &pl011uart_drv;
-  dev->status = DEVICE_DRIVER_INIT_DONE;
 
   return 0;
 

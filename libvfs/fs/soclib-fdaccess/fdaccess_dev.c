@@ -150,7 +150,6 @@ DEV_INIT(soclib_fdaccess_init)
 {
   struct soclib_fdaccess_devpv_s	*pv;
 
-  dev->drv = &soclib_fdaccess_drv;
 
   /* allocate private driver data */
   pv = mem_alloc(sizeof(*pv), (mem_scope_sys));

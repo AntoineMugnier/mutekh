@@ -119,8 +119,6 @@ const struct driver_s emu_tty_drv;
 
 static DEV_INIT(emu_tty_init)
 {
-  dev->drv = &emu_tty_drv;
-  dev->status = DEVICE_DRIVER_INIT_DONE;
   return 0;
 }
 

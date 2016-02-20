@@ -230,7 +230,6 @@ DEV_INIT(icu_8259_init)
 
   memset(pv, 0, sizeof(*pv));
   dev->drv_pv = pv;
-  dev->drv = &icu_8259_drv;
 
 #ifdef CONFIG_DRIVER_ICU_APIC
   {

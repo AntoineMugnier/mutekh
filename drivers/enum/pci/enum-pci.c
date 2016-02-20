@@ -215,7 +215,6 @@ DEV_INIT(enum_pci_init)
 {
   struct enum_pci_context_s	*pv;
 
-  dev->drv = &enum_pci_drv;
 
   /* allocate private driver data */
   pv = mem_alloc(sizeof(*pv), (mem_scope_sys));

@@ -233,7 +233,6 @@ static DEV_INIT(soft_sha1_init)
 {
   struct soft_sha1_private_s *pv;
 
-  dev->status = DEVICE_DRIVER_INIT_FAILED;
 
   pv = mem_alloc(sizeof (*pv), (mem_scope_sys));
 
@@ -245,8 +244,6 @@ static DEV_INIT(soft_sha1_init)
 
   dev_request_delayed_init(&pv->queue, &soft_sha1_process);
 
-  dev->drv = &soft_sha1_drv;
-  dev->status = DEVICE_DRIVER_INIT_DONE;
   return 0;
 
 err_mem:

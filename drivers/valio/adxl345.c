@@ -342,7 +342,6 @@ DEV_INIT(adxl345_init)
 {
     struct adxl345_private_s *pv;
 
-    dev->status = DEVICE_DRIVER_INIT_FAILED;
 
     pv = mem_alloc(sizeof(*pv), mem_scope_sys);
     memset(pv, 0, sizeof(*pv));
@@ -365,7 +364,6 @@ DEV_INIT(adxl345_init)
 
     dev->drv_pv = pv;
     dev->drv    = &adxl345_drv;
-    dev->status = DEVICE_DRIVER_INIT_DONE;
 
     return 0;
 

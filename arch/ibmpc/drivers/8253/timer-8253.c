@@ -138,7 +138,6 @@ DEV_INIT(timer_8253_init)
 {
   struct timer_8253_context_s	*pv;
 
-  dev->drv = &timer_8253_drv;
 
   /* allocate private driver data */
   pv = mem_alloc(sizeof(*pv), (mem_scope_sys));

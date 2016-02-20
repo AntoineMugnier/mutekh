@@ -241,7 +241,6 @@ DEV_INIT(uart_8250_init)
     struct uart_8250_context_s	*pv;
     struct uart_8250_param_s *param = params;
 
-    dev->drv = &uart_8250_drv;
   
     /* alocate private driver data */
     pv = mem_alloc(sizeof(*pv), (mem_scope_sys));

@@ -341,7 +341,6 @@ error_t drive_ata_init(struct device_s *dev, bool_t slave)
   controller_ata_rega_w8(dev->parent, ATA_REG_DEVICE_CONTROL,
 			 ATA_DEVCTRL_RESERVED_HIGH);
 
-  dev->drv = &drive_ata_drv;
 
   return 0;
 }

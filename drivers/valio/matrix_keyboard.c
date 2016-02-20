@@ -409,7 +409,6 @@ static DEV_INIT(matrix_keyboard_init)
   uintptr_t tmp;
   const struct dev_resource_s *r;
 
-  dev->status = DEVICE_DRIVER_INIT_FAILED;
 
   pv = mem_alloc(sizeof(*pv), mem_scope_sys);
   if (!pv)
@@ -485,7 +484,6 @@ static DEV_INIT(matrix_keyboard_init)
             pv->rows.first, pv->rows.last,
             (const uint8_t *)&pv->rows.mask, DEV_PIN_INPUT_PULLDOWN);
 
-  dev->status = DEVICE_DRIVER_INIT_DONE;
   pv->rescan_timer_rq.rq.pvdata = dev;
   pv->row_timer_rq.rq.pvdata = dev;
   kroutine_init_interruptible(&pv->row_timer_rq.rq.kr, mxk_scan_routine);

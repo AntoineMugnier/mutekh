@@ -300,7 +300,6 @@ static DEV_INIT(char_pipe_init)
   struct char_pipe_context_s	*pv;
   size_t fsize = 0;
 
-  dev->status = DEVICE_DRIVER_INIT_FAILED;
 
 #ifdef CONFIG_DRIVER_CHAR_PIPE_FIFO
   const uintptr_t *fsizes;
@@ -332,7 +331,6 @@ static DEV_INIT(char_pipe_init)
   pipe_fifo_storage(&pv->fifo[1], fsizes[1], fbuf1);
 #endif
 
-  dev->status = DEVICE_DRIVER_INIT_DONE;
 
   return 0;
 }

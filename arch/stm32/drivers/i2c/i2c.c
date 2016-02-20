@@ -638,7 +638,6 @@ static DEV_INIT(stm32_i2c_init)
   struct stm32_i2c_private_s *pv;
   uint16_t                   freq_in_mhz;
 
-  dev->status = DEVICE_DRIVER_INIT_FAILED;
 
   /* allocate driver private context. */
   pv = mem_alloc(sizeof(*pv), (mem_scope_sys));
@@ -696,7 +695,6 @@ static DEV_INIT(stm32_i2c_init)
 
   dev->drv    = &stm32_i2c_ctrl_drv;
   dev->drv_pv = pv;
-  dev->status = DEVICE_DRIVER_INIT_DONE;
 
   return 0;
 

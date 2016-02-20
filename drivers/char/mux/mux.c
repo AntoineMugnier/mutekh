@@ -781,7 +781,6 @@ static DEV_INIT(char_mux_init)
   uintptr_t num;
   uint_fast8_t i;
 
-  dev->status = DEVICE_DRIVER_INIT_FAILED;
 
   if (device_get_param_uint(dev, "channels", &num) || num < 1)
     return -EINVAL;
@@ -810,7 +809,6 @@ static DEV_INIT(char_mux_init)
     return -ENOMEM;
 
   pv->chan_count = num;
-  dev->drv = &char_mux_drv;
 
   if (device_get_param_dev_accessor(dev, "io", &pv->io, DRIVER_CLASS_CHAR))
     goto err_mem;
@@ -843,7 +841,6 @@ static DEV_INIT(char_mux_init)
   pv->write_rq.base.pvdata = dev;
   kroutine_init_deferred(&pv->write_rq.base.kr, char_mux_io_write_done);
 
-  dev->status = DEVICE_DRIVER_INIT_DONE;
 
   pv->tx_rq_done = 0;
   pv->tx_state = CHAR_MUX_TX_IDLE;

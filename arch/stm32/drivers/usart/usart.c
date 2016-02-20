@@ -471,7 +471,6 @@ DEV_INIT(stm32_usart_init)
 {
   struct stm32_usart_context_s *pv;
 
-  dev->status = DEVICE_DRIVER_INIT_FAILED;
 
   pv = mem_alloc(sizeof(*pv), (mem_scope_sys));
   if (!pv)
@@ -567,7 +566,6 @@ DEV_INIT(stm32_usart_init)
   /* link the driver. */
   dev->drv    = &stm32_usart_drv;
   dev->drv_pv = pv;
-  dev->status = DEVICE_DRIVER_INIT_DONE;
 
   return 0;
 

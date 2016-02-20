@@ -69,7 +69,6 @@ static DEV_INIT(a9mpcore_init)
 {
   struct a9mpcore_private_s *pv;
 
-  dev->status = DEVICE_DRIVER_INIT_FAILED;
 
   pv = mem_alloc(sizeof (*pv), (mem_scope_sys));
   if (!pv)
@@ -126,8 +125,6 @@ static DEV_INIT(a9mpcore_init)
       device_bind_driver(d, &arm32_drv);
     }
 
-  dev->drv = &a9mpcore_drv;
-  dev->status = DEVICE_DRIVER_INIT_DONE;
 
   return 0;
  err_mem:

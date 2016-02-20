@@ -217,7 +217,6 @@ static DEV_INIT(gaisler_irqmp_init)
 {
   struct gaisler_irqmp_private_s  *pv;
 
-  dev->status = DEVICE_DRIVER_INIT_FAILED;
 
   pv = mem_alloc(sizeof (*pv), (mem_scope_sys));
   if (!pv)
@@ -285,8 +284,6 @@ static DEV_INIT(gaisler_irqmp_init)
     }
 #endif
 
-  dev->drv = &gaisler_irqmp_drv;
-  dev->status = DEVICE_DRIVER_INIT_DONE;
   return 0;
 
 #ifdef CONFIG_DRIVER_GAISLER_IRQMP_ICU

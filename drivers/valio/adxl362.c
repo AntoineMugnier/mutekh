@@ -335,7 +335,6 @@ static DEV_INIT(adxl362_init)
 {
   struct adxl362_private_s *pv;
 
-  dev->status = DEVICE_DRIVER_INIT_FAILED;
 
   pv = mem_alloc(sizeof (*pv), (mem_scope_sys));
 
@@ -375,8 +374,6 @@ static DEV_INIT(adxl362_init)
     goto err_srq;
 
   /* done */
-  dev->drv = &adxl362_drv;
-  dev->status = DEVICE_DRIVER_INIT_DONE;
   return 0;
 
 #if 0

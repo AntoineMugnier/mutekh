@@ -31,7 +31,10 @@ DEV_ENUM_MATCH_DRIVER(device_enum_root_match_driver)
   return 0;
 }
 
-static DEV_INIT(device_enum_root_init);
+static DEV_INIT(device_enum_root_init)
+{
+  return 0;
+}
 
 static DEV_CLEANUP(device_enum_root_cleanup)
 {
@@ -43,11 +46,3 @@ static DEV_CLEANUP(device_enum_root_cleanup)
 DRIVER_DECLARE(device_enum_root_drv, DRIVER_FLAGS_EARLY_INIT,
                "MutekH root enumerator", device_enum_root,
                DRIVER_ENUM_METHODS(device_enum_root));
-
-static DEV_INIT(device_enum_root_init)
-{
-  dev->drv = &device_enum_root_drv;
-  dev->status = DEVICE_DRIVER_INIT_DONE;
-
-  return 0;
-}

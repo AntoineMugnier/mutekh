@@ -444,9 +444,6 @@ DRIVER_REGISTER(efm32_timer_drv);
 static DEV_INIT(efm32_timer_init)
 {
   struct efm32_timer_private_s  *pv;
-
-  dev->status = DEVICE_DRIVER_INIT_FAILED;
-
   uintptr_t addr;
 
   if (device_res_get_uint(dev, DEV_RES_MEM, 0, &addr, NULL))
@@ -525,8 +522,6 @@ static DEV_INIT(efm32_timer_init)
   /* Set counter wrapping value to EFM32_TIMER_TOP */
   cpu_mem_write_32(pv->addr + EFM32_TIMER_TOP_ADDR, endian_le32(EFM32_TIMER_TOP));
 
-  dev->drv = &efm32_timer_drv;
-  dev->status = DEVICE_DRIVER_INIT_DONE;
 
   return 0;
 

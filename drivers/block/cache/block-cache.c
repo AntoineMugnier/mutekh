@@ -347,7 +347,6 @@ DEV_CREATE(block_cache_create)
 
   dev->drv_pv = pv;
   dev->irq = DEVICE_IRQ_INVALID;
-  dev->drv = &block_cache_drv;
 
   pv->bp = dev_block_getparams(parent);
   pv->parent_rq_size = dev_block_getrqsize(dev->parent);

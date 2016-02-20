@@ -203,7 +203,6 @@ static DEV_INIT(button_set_init)
   uintptr_t first, last, tmp;
   const void* mask;
 
-  dev->status = DEVICE_DRIVER_INIT_FAILED;
 
   pv = mem_alloc(sizeof(*pv), mem_scope_sys);
   if (!pv)
@@ -263,7 +262,6 @@ static DEV_INIT(button_set_init)
             (const uint8_t *)&pv->mask,
             pv->active_low ? DEV_PIN_INPUT_PULLUP : DEV_PIN_INPUT_PULLDOWN);
 
-  dev->status = DEVICE_DRIVER_INIT_DONE;
 
   return 0;
 

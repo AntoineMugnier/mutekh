@@ -478,7 +478,6 @@ static DEV_INIT(mcp23s17_init)
 {
   struct mcp23s17_private_s *pv;
 
-  dev->status = DEVICE_DRIVER_INIT_FAILED;
 
   pv = mem_alloc(sizeof(*pv), mem_scope_sys);
   if (!pv)
@@ -524,8 +523,6 @@ static DEV_INIT(mcp23s17_init)
 #endif
 
   dev->drv_pv = pv;
-  dev->drv = &mcp23s17_drv;
-  dev->status = DEVICE_DRIVER_INIT_DONE;
 
   pv->current_op = MCP23S17_INIT_OP;
   mcp23s17_spi_init(pv);

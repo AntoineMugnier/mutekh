@@ -204,7 +204,6 @@ DEV_INIT(gpio_sam7_init)
 	struct gpio_sam7_context_s *pv;
 	AT91PS_PIO registers = (void*)dev->addr[0];
 
-	dev->drv = &gpio_sam7_drv;
 
 	AT91C_BASE_PMC->PMC_PCER = 1 << dev->irq;
 

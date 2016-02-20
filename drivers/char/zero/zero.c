@@ -80,7 +80,6 @@ DRIVER_REGISTER(dev_zero_drv);
 
 DEV_INIT(dev_zero_init)
 {
-  dev->drv = &dev_zero_drv;
 
   return 0;
 }

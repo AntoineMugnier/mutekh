@@ -273,8 +273,6 @@ DRIVER_REGISTER(apbctrl_drv,
 
 DEV_INIT(apbctrl_init)
 {
-  dev->status = DEVICE_DRIVER_INIT_FAILED;
-  dev->drv = &apbctrl_drv;
 
   uintptr_t begin, end;
 
@@ -286,7 +284,6 @@ DEV_INIT(apbctrl_init)
 
   apbctrl_scan(dev, begin);
 
-  dev->status = DEVICE_DRIVER_INIT_DONE;
 
   return 0;
 

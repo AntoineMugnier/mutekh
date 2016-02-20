@@ -220,7 +220,6 @@ static DEV_INIT(soft_arc4_init)
 {
   struct soft_arc4_private_s *pv;
 
-  dev->status = DEVICE_DRIVER_INIT_FAILED;
 
   pv = mem_alloc(sizeof (*pv), (mem_scope_sys));
 
@@ -232,8 +231,6 @@ static DEV_INIT(soft_arc4_init)
 
   dev_request_delayed_init(&pv->queue, &soft_arc4_process);
 
-  dev->drv = &soft_arc4_drv;
-  dev->status = DEVICE_DRIVER_INIT_DONE;
   return 0;
 
 err_mem:

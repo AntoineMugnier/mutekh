@@ -271,7 +271,6 @@ static DEV_INIT(pca9557_init)
 {
     struct pca9557_private_s *pv;
 
-    dev->status = DEVICE_DRIVER_INIT_FAILED;
 
     pv = mem_alloc(sizeof(*pv), mem_scope_sys);
     if (!pv)
@@ -290,7 +289,6 @@ static DEV_INIT(pca9557_init)
         goto err_mem;
     }
 
-    dev->drv = &pca9557_drv;
 
     pv->input_mode = 0xff;
     pv->input_value = 0;
@@ -301,7 +299,6 @@ static DEV_INIT(pca9557_init)
     pv->i2c_req.base.pvdata = dev;
     pv->i2c_req.saddr = pv->saddr;
 
-    dev->status = DEVICE_DRIVER_INIT_DONE;
     return 0;
 
   err_mem:

@@ -116,7 +116,6 @@ DEV_INIT(block_ramdisk_init)
 {
   struct block_ramdisk_context_s	*pv;
 
-  dev->drv = &block_ramdisk_drv;
 
   /* allocate private driver data */
   pv = mem_alloc(sizeof(*pv), (mem_scope_sys));

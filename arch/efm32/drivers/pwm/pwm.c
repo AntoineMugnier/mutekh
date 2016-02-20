@@ -307,8 +307,6 @@ static DEV_INIT(efm32_pwm_init)
 {
   struct efm32_pwm_private_s  *pv;
 
-  dev->status = DEVICE_DRIVER_INIT_FAILED;
-
   pv = mem_alloc(sizeof(struct efm32_pwm_private_s), (mem_scope_sys));
 
   if (!pv)
@@ -374,8 +372,6 @@ static DEV_INIT(efm32_pwm_init)
 
   cpu_mem_write_32(pv->addr + EFM32_TIMER_ROUTE_ADDR, endian_le32(route));
 
-  dev->drv = &efm32_pwm_drv;
-  dev->status = DEVICE_DRIVER_INIT_DONE;
 
   return 0;
 

@@ -140,7 +140,6 @@ DEV_INIT(controller_ata_init)
 {
   struct controller_ata_context_s	*pv;
 
-  dev->drv = &controller_ata_drv;
 
   /* allocate private driver data */
   pv = mem_alloc(sizeof(*pv), (mem_scope_sys));

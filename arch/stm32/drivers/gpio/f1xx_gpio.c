@@ -561,7 +561,6 @@ DEV_INIT(stm32_gpio_init)
 {
   struct stm32_gpio_private_s *pv;
 
-  dev->status = DEVICE_DRIVER_INIT_FAILED;
 
   pv = mem_alloc(sizeof(*pv), (mem_scope_sys));
   if (!pv)
@@ -582,7 +581,6 @@ DEV_INIT(stm32_gpio_init)
 
   dev->drv    = &stm32_gpio_drv;
   dev->drv_pv = pv;
-  dev->status = DEVICE_DRIVER_INIT_DONE;
   return 0;
 
 err_mem:

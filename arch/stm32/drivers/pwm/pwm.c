@@ -334,7 +334,6 @@ DEV_INIT(stm32_pwm_init)
 {
   struct stm32_pwm_private_s *pv;
 
-  dev->status = DEVICE_DRIVER_INIT_FAILED;
 
   pv = mem_alloc(sizeof(struct stm32_pwm_private_s), (mem_scope_sys));
   if (!pv)
@@ -436,7 +435,6 @@ DEV_INIT(stm32_pwm_init)
 
   dev->drv_pv = pv;
   dev->drv    = &stm32_pwm_drv;
-  dev->status = DEVICE_DRIVER_INIT_DONE;
 
   return 0;
 

@@ -624,8 +624,6 @@ static DEV_INIT(enum_fdt_init)
     .on_mem_reserve = enum_fdt_mem_reserve,
   };
 
-  dev->status = DEVICE_DRIVER_INIT_FAILED;
-  dev->drv = &enum_fdt_drv;
 
   uintptr_t addr;
 
@@ -635,7 +633,6 @@ static DEV_INIT(enum_fdt_init)
   fdt_walk_blob((const void*)addr, &walker);
   resolve_dev_links(dev, dev);
 
-  dev->status = DEVICE_DRIVER_INIT_DONE;
 
   return 0;
 }

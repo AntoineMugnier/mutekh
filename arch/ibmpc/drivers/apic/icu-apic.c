@@ -284,7 +284,6 @@ DEV_INIT(icu_apic_init)
 
   icu_apic_setup(dev);
 
-  dev->drv = &icu_apic_drv;
 
 #ifdef CONFIG_ARCH_IBMPC_SMP
   /* wake up other processors if we are bootstrap */

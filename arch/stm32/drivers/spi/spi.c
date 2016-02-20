@@ -378,7 +378,6 @@ static DEV_INIT(stm32_spi_init)
 {
   struct stm32_spi_private_s *pv;
 
-  dev->status = DEVICE_DRIVER_INIT_FAILED;
 
   pv = mem_alloc(sizeof(*pv), (mem_scope_sys));
   memset(pv, 0, sizeof(*pv));
@@ -442,7 +441,6 @@ static DEV_INIT(stm32_spi_init)
 
   dev->drv    = &stm32_spi_drv;
   dev->drv_pv = pv;
-  dev->status = DEVICE_DRIVER_INIT_DONE;
 
   return 0;
 

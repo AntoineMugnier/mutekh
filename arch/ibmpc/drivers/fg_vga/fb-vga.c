@@ -72,7 +72,6 @@ DEV_INIT(fb_vga_init)
 {
   struct fb_vga_context_s	*pv;
 
-  dev->drv = &fb_vga_drv;
 
   /* alocate private driver data */
   pv = mem_alloc(sizeof(*pv), (mem_scope_sys));

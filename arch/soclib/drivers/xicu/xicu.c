@@ -127,7 +127,6 @@ static DEV_INIT(soclib_xicu_init)
 # endif
 #endif
 
-  dev->status = DEVICE_DRIVER_INIT_FAILED;
 
   pv = mem_alloc(sizeof (*pv)
 #ifdef CONFIG_DRIVER_SOCLIB_XICU_TIMER
@@ -214,8 +213,6 @@ static DEV_INIT(soclib_xicu_init)
     }
 #endif
 
-  dev->drv = &soclib_xicu_drv;
-  dev->status = DEVICE_DRIVER_INIT_DONE;
   return 0;
 
 #ifdef CONFIG_DRIVER_SOCLIB_XICU_ICU

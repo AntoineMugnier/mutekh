@@ -289,7 +289,6 @@ static DEV_INIT(i2c_eeprom_init)
     error_t err;
     uintptr_t page_size, size, addr_size;
 
-    dev->status = DEVICE_DRIVER_INIT_FAILED;
 
     pv = mem_alloc(sizeof(*pv), mem_scope_sys);
     if (!pv)
@@ -323,8 +322,6 @@ static DEV_INIT(i2c_eeprom_init)
     dev_request_queue_init(&pv->queue);
 
     dev->drv_pv = pv;
-    dev->drv = &i2c_eeprom_drv;
-    dev->status = DEVICE_DRIVER_INIT_DONE;
 
     return 0;
 

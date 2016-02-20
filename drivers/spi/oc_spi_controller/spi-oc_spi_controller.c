@@ -572,7 +572,6 @@ DEV_INIT(spi_oc_spi_controller_init)
     printk("Status: %d\n", cpu_mips_mfc0(CPU_MIPS_STATUS, 0));
     printk("Cause: %d\n", cpu_mips_mfc0(CPU_MIPS_CAUSE, 0));
 
-	dev->drv = &spi_oc_spi_controller_drv;
 
 	if ( param->lun_count > 8 ) {
 		printk("SPI-OC_SPI_CONTROLLER: Invalid lun count: %d\n", param->lun_count);

@@ -175,7 +175,6 @@ DEV_INIT(icu_sam7_init)
 	uint_fast8_t i;
 	AT91PS_AIC registers = (void*)dev->addr[0];
 
-	dev->drv = &icu_sam7_drv;
 
 	pv = mem_alloc(sizeof(*pv), (mem_scope_sys));
 	sam7_c_irq_dev = dev;

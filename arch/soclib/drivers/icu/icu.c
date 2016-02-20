@@ -115,7 +115,6 @@ static DEV_INIT(soclib_icu_init)
 {
   struct soclib_icu_private_s  *pv;
 
-  dev->status = DEVICE_DRIVER_INIT_FAILED;
 
   pv = mem_alloc(sizeof (*pv), (mem_scope_sys));
   if (!pv)
@@ -142,8 +141,6 @@ static DEV_INIT(soclib_icu_init)
                        &soclib_icu_icu_sink_update,
                        DEV_IRQ_SENSE_HIGH_LEVEL);
 
-  dev->drv = &soclib_icu_drv;
-  dev->status = DEVICE_DRIVER_INIT_DONE;
   return 0;
 
  err_unlink:

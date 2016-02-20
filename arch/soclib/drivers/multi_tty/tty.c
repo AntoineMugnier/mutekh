@@ -264,7 +264,6 @@ static DEV_INIT(tty_soclib_init)
   struct tty_soclib_context_s	*pv;
   device_mem_map( dev , 1 << 0 );
 
-  dev->status = DEVICE_DRIVER_INIT_FAILED;
 
   uintptr_t addr;
   if (device_res_get_uint(dev, DEV_RES_MEM, 0, &addr, NULL))
@@ -299,8 +298,6 @@ static DEV_INIT(tty_soclib_init)
 #endif
     }
 
-  dev->status = DEVICE_DRIVER_INIT_DONE;
-  dev->drv = &tty_soclib_drv;
 
   return 0;
 
