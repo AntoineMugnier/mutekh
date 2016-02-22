@@ -167,8 +167,6 @@ static bool_t efm32_usart_spi_transfer_rx(struct device_s *dev)
       tr->in = (void*)((uint8_t*)tr->in + tr->in_width);
     }
 
-  cpu_mem_write_32(pv->addr + EFM32_USART_IFC_ADDR, endian_le32(EFM32_USART_IFC_MASK));
-
   if (tr->count > 0)
     return efm32_usart_spi_transfer_tx(dev);
 
@@ -237,13 +235,15 @@ static DEV_IRQ_SRC_PROCESS(efm32_usart_spi_irq)
 
   lock_spin(&dev->lock);
 #ifdef CONFIG_DEVICE_CLOCK_GATING
-  assert(dev->start_count);
+  if (!dev->start_count)
+    goto end;
 #endif
 
   while (cpu_mem_read_32(pv->addr + EFM32_USART_IF_ADDR) &
          endian_le32(EFM32_USART_IF_RXDATAV | EFM32_USART_IF_RXFULL))
     {
       cpu_mem_write_32(pv->addr + EFM32_USART_IEN_ADDR, 0);
+      cpu_mem_write_32(pv->addr + EFM32_USART_IFC_ADDR, endian_le32(EFM32_USART_IFC_MASK));
 
 #ifdef CONFIG_DRIVER_EFM32_DMA
       if (pv->dma_use)
@@ -262,6 +262,7 @@ static DEV_IRQ_SRC_PROCESS(efm32_usart_spi_irq)
 
     }
 
+ end:
   lock_release(&dev->lock);
 }
 
