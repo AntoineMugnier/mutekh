@@ -114,7 +114,7 @@ static DEV_TIMER_REQUEST(nrf5x_rtc_request)
   dev_timer_value_t value;
   error_t err = 0;
 
-  assert(rq->rq.drvdata == NULL);
+  //  assert(rq->rq.drvdata == NULL);
 
   LOCK_SPIN_IRQ(&dev->lock);
 
