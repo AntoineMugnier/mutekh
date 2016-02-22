@@ -184,9 +184,7 @@ device_spi_ctrl_end(struct dev_spi_ctrl_rq_s *rq, error_t err)
     device_stop(&q->timer);
 #endif
 
-  lock_release_irq(&q->lock);
   kroutine_exec(&rq->base.kr);
-  lock_spin_irq(&q->lock);
 
   return DEVICE_SPI_CONTINUE;
 }

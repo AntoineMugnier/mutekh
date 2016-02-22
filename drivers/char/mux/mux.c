@@ -171,9 +171,7 @@ static void char_mux_chan_rx_error(struct device_s *dev, struct char_mux_channel
       dev_request_queue_pop(&chan->read_q);
       rq->base.drvdata = NULL;
 
-      lock_release(&dev->lock);
       kroutine_exec(&rq->base.kr);
-      lock_spin(&dev->lock);
     }
   else
     {
@@ -245,9 +243,7 @@ static error_t char_mux_try_read(struct device_s *dev, struct char_mux_channel_s
     done:
       dev_request_queue_pop(&chan->read_q);
       rq->base.drvdata = NULL;
-      lock_release(&dev->lock);
       kroutine_exec(&rq->base.kr);
-      lock_spin(&dev->lock);
     }
 
   *size = j;
@@ -709,9 +705,7 @@ static KROUTINE_EXEC(char_mux_io_write_done)
         trq_end:
           pv->tx_rq_done = 0;
           dev_request_queue_pop(&pv->write_q);
-          lock_release(&dev->lock);
           kroutine_exec(&trq->base.kr);
-          lock_spin(&dev->lock);
         }
       pv->tx_state = CHAR_MUX_TX_IDLE;
       do_tx = char_mux_start_tx(dev);

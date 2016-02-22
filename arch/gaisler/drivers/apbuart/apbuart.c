@@ -64,9 +64,7 @@ static void gaisler_apbuart_try_read(struct device_s *dev)
           if ((rq->type & _DEV_CHAR_PARTIAL) || rq->size == 0)
             {
               dev_request_queue_pop(&pv->read_q);
-              lock_release(&dev->lock);
               kroutine_exec(&rq->base.kr);
-              lock_spin(&dev->lock);
               continue;
             }
         }
@@ -139,9 +137,7 @@ static void gaisler_apbuart_try_write(struct device_s *dev)
           if ((rq->type & _DEV_CHAR_PARTIAL) || rq->size == 0)
             {
               dev_request_queue_pop(&pv->write_q);
-              lock_release(&dev->lock);
               kroutine_exec(&rq->base.kr);
-              lock_spin(&dev->lock);
               continue;
             }
         }

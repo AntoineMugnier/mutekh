@@ -398,20 +398,14 @@ static DEV_IRQ_SRC_PROCESS(pic32_spi_irq)
         /* Fifo is empty */
         pv->tr = NULL;
         pv->dma_use = 0;
-     
-        lock_release(&dev->lock);
 
         kroutine_exec(&tr->kr);
-        return;
+        goto end;
       }
 #endif
 
   if (tr != NULL && pic32_spi_transfer_rx(dev))
-    {
-      lock_release(&dev->lock);
-      kroutine_exec(&tr->kr);
-      lock_spin(&dev->lock);
-    }
+    kroutine_exec(&tr->kr);
 
 end:
   lock_release(&dev->lock);

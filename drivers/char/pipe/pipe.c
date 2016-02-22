@@ -122,17 +122,13 @@ static bool_t char_pipe_rq2rq(struct device_s *dev,
         {
           dev_request_queue_pop(q);
           rq1->base.drvdata = NULL;
-          lock_release(&dev->lock);
           kroutine_exec(&rq1->base.kr);
-          lock_spin(&dev->lock);
           rq1 = dev_char_rq_s_cast(dev_request_queue_head(q));
         }
 
       if (done0)
         {
-          lock_release(&dev->lock);
           kroutine_exec(&rq0->base.kr);
-          lock_spin(&dev->lock);
           return 0;
         }
     }
@@ -157,9 +153,7 @@ static bool_t char_pipe_fifo2rq(struct device_s *dev,
       if (!rq->size || (rq->type & (_DEV_CHAR_PARTIAL | _DEV_CHAR_NONBLOCK)))
         {
         done:
-          lock_release(&dev->lock);
           kroutine_exec(&rq->base.kr);
-          lock_spin(&dev->lock);
           return 0;
         }
     }
@@ -182,9 +176,7 @@ static bool_t char_pipe_rq2fifo(struct device_s *dev,
       if (!rq->size || (rq->type & (_DEV_CHAR_PARTIAL | _DEV_CHAR_NONBLOCK)))
         {
         done:
-          lock_release(&dev->lock);
           kroutine_exec(&rq->base.kr);
-          lock_spin(&dev->lock);
           return 0;
         }
     }

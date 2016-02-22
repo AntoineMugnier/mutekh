@@ -262,9 +262,7 @@ DEV_IRQ_SRC_PROCESS(stm32_spi_irq)
       else if (stm32_spi_transfer_rx(dev))
         {
           pv->tr = NULL;
-          lock_release(&dev->lock);
           kroutine_exec(&tr->kr);
-          lock_spin(&dev->lock);
         }
     }
 

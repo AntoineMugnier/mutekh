@@ -73,11 +73,9 @@ static void pca9557_req_done(
     struct pca9557_private_s *pv = dev->drv_pv;
 
     dev_request_queue_pop(&pv->pending);
-    lock_release(&dev->lock);
     req->base.drvdata = NULL;
     kroutine_exec(&req->base.kr);
     pca9557_req_next(dev);
-    lock_spin(&dev->lock);
 }
 
 static KROUTINE_EXEC(pca9557_i2c_write_done)

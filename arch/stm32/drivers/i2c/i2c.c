@@ -585,9 +585,7 @@ DEV_IRQ_SRC_PROCESS(stm32_i2c_irq)
         {
           dev_request_queue_pop(&pv->queue);
 
-          lock_release(&dev->lock);
           kroutine_exec(&base->kr);
-          lock_spin(&dev->lock);
 
           base = dev_request_queue_head(&pv->queue);
           rq   = dev_i2c_rq_s_cast(base);

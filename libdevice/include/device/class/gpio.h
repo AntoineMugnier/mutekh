@@ -217,8 +217,7 @@ typedef DEV_GPIO_INPUT_IRQ_RANGE(dev_gpio_input_irq_range_t);
 /**
    This function enqueues a request to the GPIO driver.
 
-   Kroutine is callen upon completion.  You may enqueue a request from
-   kroutine code.
+   Kroutine is callen upon completion.
 */
 typedef DEV_GPIO_REQUEST(dev_gpio_request_t);
 

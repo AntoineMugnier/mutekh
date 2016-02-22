@@ -440,14 +440,10 @@ static DEV_IRQ_SRC_PROCESS(bcm2835_i2c_irq)
           break;
         }
     }
-   
-  lock_release(&dev->lock);
 
   if (stop)
     {
       kroutine_exec(&base->kr);
-
-      lock_spin(&dev->lock); 
 
       base = dev_request_queue_head(&pv->queue);
       rq = dev_i2c_rq_s_cast(base);
@@ -455,9 +451,9 @@ static DEV_IRQ_SRC_PROCESS(bcm2835_i2c_irq)
       if (rq != NULL && (pv->state == DEV_I2C_BCM2835_IDLE))
         bcm2835_i2c_fsm(dev, 0);
 
-      lock_release(&dev->lock);
     }
 
+  lock_release(&dev->lock);
 }
 
 /***************************************** config */

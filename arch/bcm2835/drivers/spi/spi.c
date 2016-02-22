@@ -230,9 +230,7 @@ static DEV_IRQ_SRC_PROCESS(bcm2835_spi_irq)
               cpu_mem_write_32(pv->addr + BCM2835_SPI_CS_ADDR, endian_le32(pv->ctrl));
             }
 
-          lock_release(&dev->lock);
           kroutine_exec(&tr->kr);
-          lock_spin(&dev->lock);
         }
     }
 

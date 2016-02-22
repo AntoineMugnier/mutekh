@@ -127,9 +127,7 @@ static void rq_done_(struct device_s *dev, struct dev_valio_rq_s *rq, error_t er
 
     dev_request_queue_remove(&pv->queue, &rq->base);
 
-    lock_release(&dev->lock);
     kroutine_exec(&rq->base.kr);
-    lock_spin(&dev->lock);
   }
 
   pv->i2c_req.base.pvdata = NULL;

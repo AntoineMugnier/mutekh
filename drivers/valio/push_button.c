@@ -177,11 +177,10 @@ static DEV_IRQ_SRC_PROCESS(push_button_irq)
   if (done)
     {
       dev_request_queue_pop(&pv->queue);
-      lock_release(&dev->lock);
       kroutine_exec(&rq->base.kr);
     }
-  else
-    lock_release(&dev->lock);
+
+  lock_release(&dev->lock);
 }
 
 /***************************************** request */

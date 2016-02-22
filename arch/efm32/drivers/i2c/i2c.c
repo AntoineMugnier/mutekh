@@ -327,22 +327,18 @@ static DEV_IRQ_SRC_PROCESS(efm32_i2c_irq)
         }
     }
    
-  lock_release(&dev->lock);
-
   if (stop)
     {
       kroutine_exec(&base->kr);
-
-      lock_spin(&dev->lock); 
 
       base = dev_request_queue_head(&pv->queue);
       rq = dev_i2c_rq_s_cast(base);
 
       if (rq != NULL && (pv->state == DEV_I2C_EFM32_IDLE))
         efm32_i2c_fsm(pv, 0);
-
-      lock_release(&dev->lock);
     }
+
+  lock_release(&dev->lock);
 }
 
 static DEV_I2C_REQUEST(efm32_i2c_request)

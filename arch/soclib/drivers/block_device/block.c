@@ -224,9 +224,7 @@ static void soclib_block_rq_end(struct device_s *dev)
   if (rq->err || !pv->rqtype)
     {
       dev_request_queue_pop(&pv->queue);
-      lock_release(&dev->lock);
       kroutine_exec(&rq->base.kr);
-      lock_spin(&dev->lock);
       pv->running = 0;
     }
 

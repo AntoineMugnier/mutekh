@@ -210,11 +210,7 @@ static DEV_IRQ_SRC_PROCESS(cc26xx_spi_irq)
       struct dev_spi_ctrl_transfer_s *tr = pv->tr;
 
       if (tr != NULL && cc26xx_spi_transfer_rx(dev))
-        {
-          lock_release(&dev->lock);
-          kroutine_exec(&tr->kr);
-          lock_spin(&dev->lock);
-        }
+        kroutine_exec(&tr->kr);
     }
 
   lock_release(&dev->lock);

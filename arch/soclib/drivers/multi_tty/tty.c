@@ -99,9 +99,7 @@ void tty_soclib_try_read(struct device_s *dev, struct tty_soclib_tty_s *tty)
       rq->error = 0;
       dev_request_queue_pop(&tty->read_q);
       rq->base.drvdata = NULL;
-      lock_release(&dev->lock);
       kroutine_exec(&rq->base.kr);
-      lock_spin(&dev->lock);
     }
   }
 }

@@ -130,9 +130,7 @@ static DEV_IRQ_SRC_PROCESS(bs_irq)
     if (bs_read_or_update(pv, rq) == 1) {
       dev_request_queue_remove(&pv->queue, &rq->base);
 
-      lock_release(&dev->lock);
       kroutine_exec(&rq->base.kr);
-      lock_spin(&dev->lock);
 
       rq = dev_valio_rq_s_cast(dev_request_queue_head(&pv->queue));
     }

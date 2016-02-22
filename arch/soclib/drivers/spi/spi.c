@@ -468,11 +468,7 @@ static DEV_IRQ_SRC_PROCESS(soclib_spi_irq)
           struct dev_spi_ctrl_transfer_s *tr = pv->tr;
 
           if (tr != NULL && soclib_spi_transfer_rx(dev))
-            {
-              lock_release(&dev->lock);
-              kroutine_exec(&tr->kr);
-              lock_spin(&dev->lock);
-            }
+            kroutine_exec(&tr->kr);
         }
 
 # ifdef CONFIG_DRIVER_SOCLIB_SPI_ICU
@@ -482,9 +478,7 @@ static DEV_IRQ_SRC_PROCESS(soclib_spi_irq)
           assert (n <= pv->gpin_cnt);
 
           struct dev_irq_sink_s *sink = pv->sinks + n;
-          lock_release(&dev->lock);
           device_irq_sink_process(sink, 0);
-          lock_spin(&dev->lock);
         }
 # endif
     }

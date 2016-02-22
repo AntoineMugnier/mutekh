@@ -129,10 +129,8 @@ static KROUTINE_EXEC(mcp23s17_spi_done)
               break;
           }
         dev_request_queue_pop(&pv->rq_pending);
-        lock_release(&dev->lock);
         req->base.drvdata = NULL;
         kroutine_exec(&req->base.kr);
-        lock_spin(&dev->lock);
         break;
 #ifdef CONFIG_DRIVER_MCP23S17_ICU
       case MCP23S17_IRQ_PROCESS_OP:

@@ -105,11 +105,8 @@ static KROUTINE_EXEC(ds3231_state_done)
         clk->year = year2dec(pv->regs.year);
     }
 
-    LOCK_RELEASE_IRQ(&dev->lock);
-
     kroutine_exec(&rq->base.kr);
 
-    LOCK_SPIN_IRQ(&dev->lock);
     ds3231_request_run(dev, pv);
     LOCK_RELEASE_IRQ(&dev->lock);
 }

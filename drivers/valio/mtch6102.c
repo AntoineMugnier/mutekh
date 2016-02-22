@@ -198,18 +198,13 @@ static KROUTINE_EXEC(mtch6102_state_done)
         rq->error = 0;
 
         pv->last_state = st;
+        kroutine_exec(&rq->base.kr);
     } else {
         // Consider change was not big enough for WAIT_UPDATE to
         // succeed.
         rq = NULL;
     }
 
-    LOCK_RELEASE_IRQ(&dev->lock);
-
-    if (rq)
-        kroutine_exec(&rq->base.kr);
-
-    LOCK_SPIN_IRQ(&dev->lock);
     mtch6102_request_run(dev, pv, 0);
     LOCK_RELEASE_IRQ(&dev->lock);
 }

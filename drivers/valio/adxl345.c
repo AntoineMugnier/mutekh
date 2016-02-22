@@ -70,17 +70,15 @@ KROUTINE_EXEC(adxl345_offset_write_done)
     pv = KROUTINE_CONTAINER(kr, *pv, i2c_req.base.kr);
     dev = pv->i2c_req.base.pvdata;
 
+    LOCK_SPIN_IRQ(&dev->lock);
+
     struct dev_request_s  *base = dev_request_queue_head(&pv->queue);
     struct dev_valio_rq_s *rq   = dev_valio_rq_s_cast(base);
-
-    LOCK_SPIN_IRQ(&dev->lock);
 
     rq->error = 0;
     dev_request_queue_pop(&pv->queue);
 
-    LOCK_RELEASE_IRQ(&dev->lock);
     kroutine_exec(&rq->base.kr);
-    LOCK_SPIN_IRQ(&dev->lock);
 
     adxl345_request_run(dev, pv);
     LOCK_RELEASE_IRQ(&dev->lock);
@@ -121,11 +119,11 @@ KROUTINE_EXEC(adxl345_offset_read_done)
     pv = KROUTINE_CONTAINER(kr, *pv, i2c_req.base.kr);
     dev = pv->i2c_req.base.pvdata;
 
+    LOCK_SPIN_IRQ(&dev->lock);
+
     struct dev_request_s            *base = dev_request_queue_head(&pv->queue);
     struct dev_valio_rq_s           *rq   = dev_valio_rq_s_cast(base);
     struct valio_motion_axis_data_s *val  = rq->data;
-
-    LOCK_SPIN_IRQ(&dev->lock);
 
     val->x = (int32_t) pv->rdata[0];
     val->y = (int32_t) pv->rdata[1];
@@ -134,9 +132,7 @@ KROUTINE_EXEC(adxl345_offset_read_done)
     rq->error = 0;
     dev_request_queue_pop(&pv->queue);
 
-    LOCK_RELEASE_IRQ(&dev->lock);
     kroutine_exec(&rq->base.kr);
-    LOCK_SPIN_IRQ(&dev->lock);
 
     adxl345_request_run(dev, pv);
     LOCK_RELEASE_IRQ(&dev->lock);
@@ -176,11 +172,11 @@ KROUTINE_EXEC(adxl345_data_read_done)
     pv = KROUTINE_CONTAINER(kr, *pv, i2c_req.base.kr);
     dev = pv->i2c_req.base.pvdata;
 
+    LOCK_SPIN_IRQ(&dev->lock);
+
     struct dev_request_s       *base = dev_request_queue_head(&pv->queue);
     struct dev_valio_rq_s      *rq   = dev_valio_rq_s_cast(base);
     struct valio_motion_data_s *data  = rq->data;
-
-    LOCK_SPIN_IRQ(&dev->lock);
 
     data->accel.axis = VALIO_MOTION_ACC_XYZ;
     data->accel.x = ((int16_t) pv->rdata[1] << 8) | pv->rdata[0];
@@ -194,9 +190,7 @@ KROUTINE_EXEC(adxl345_data_read_done)
 
     rq->error = 0;
 
-    LOCK_RELEASE_IRQ(&dev->lock);
     kroutine_exec(&rq->base.kr);
-    LOCK_SPIN_IRQ(&dev->lock);
 
     adxl345_request_run(dev, pv);
     LOCK_RELEASE_IRQ(&dev->lock);
