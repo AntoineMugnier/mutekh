@@ -104,6 +104,7 @@ static TERMUI_CON_COMMAND_PROTOTYPE(dev_shell_spi_config)
     .ck_mode = DEV_SPI_CK_MODE_0,
     .bit_order = DEV_SPI_MSB_FIRST,
     .miso_pol = DEV_SPI_ACTIVE_HIGH,
+    .mosi_pol = DEV_SPI_ACTIVE_HIGH,
     .bit_rate = 100000,
     .word_width = 8
   };
