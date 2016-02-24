@@ -304,14 +304,11 @@ static DEV_INIT(nrf5x_gpio_pwm_init)
   iomux_io_id_t id[CONFIG_DRIVER_NRF5X_GPIO_PWM_CHANNEL_COUNT];
   error_t err = 0;
 
-  dev->status = DEVICE_DRIVER_INIT_FAILED;
-
   pv = mem_alloc(sizeof(*pv), mem_scope_sys);
-  dev->drv_pv = pv;
-
   if (!pv)
     return -ENOMEM;
 
+  dev->drv_pv = pv;
   memset(pv, 0, sizeof(*pv));
 
   if (device_res_get_uint(dev, DEV_RES_MEM, 0, &pv->timer_addr, NULL))
@@ -364,9 +361,6 @@ static DEV_INIT(nrf5x_gpio_pwm_init)
                     pv->timer_addr, NRF_TIMER_COMPARE(OVERFLOW),
                     GPIOTE_ADDR, NRF_GPIOTE_OUT(GPIOTE_ID(i)));
   }
-
-  dev->drv = &nrf5x_gpio_pwm_drv;
-  dev->status = DEVICE_DRIVER_INIT_DONE;
 
   return 0;
 
