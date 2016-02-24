@@ -466,10 +466,7 @@ static DEV_INIT(nrf5x_uarte_char_init)
     .half_duplex = 0,
   };
 
-  dev->status = DEVICE_DRIVER_INIT_FAILED;
-
   pv = mem_alloc(sizeof(*pv), mem_scope_sys);
-
   if (!pv)
     return -ENOMEM;
 
@@ -536,9 +533,6 @@ static DEV_INIT(nrf5x_uarte_char_init)
 #endif
 
   nrf5x_uarte_config(pv, &config);
-
-  dev->drv = &nrf5x_uarte_drv;
-  dev->status = DEVICE_DRIVER_INIT_DONE;
 
   pv->callbacking = 0;
   pv->must_flush = 0;
