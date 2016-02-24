@@ -489,8 +489,6 @@ DRIVER_DECLARE(nrf5x_gpio_drv, 0, "nRF5x GPIO"
 
 static DEV_INIT(nrf5x_gpio_init)
 {
-  dev->status = DEVICE_DRIVER_INIT_FAILED;
-
   __unused__ uintptr_t addr = 0;
   assert(!device_res_get_uint(dev, DEV_RES_MEM, 0, &addr, NULL) && GPIO_ADDR == addr);
 
@@ -500,7 +498,6 @@ static DEV_INIT(nrf5x_gpio_init)
   assert(!device_res_get_uint(dev, DEV_RES_MEM, 1, &addr, NULL) && GPIOTE_ADDR == addr);
 
   pv = mem_alloc(sizeof(*pv), mem_scope_sys);
-
   if (!pv)
     return -ENOMEM;
 
@@ -542,8 +539,6 @@ static DEV_INIT(nrf5x_gpio_init)
                 | NRF_GPIO_PIN_CNF_DIR_INPUT
                 | NRF_GPIO_PIN_CNF_INPUT_DISCONNECT);
 
-  dev->drv = &nrf5x_gpio_drv;
-  dev->status = DEVICE_DRIVER_INIT_DONE;
   return 0;
 
  err_mem:
