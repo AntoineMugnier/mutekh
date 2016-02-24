@@ -208,14 +208,11 @@ static DEV_INIT(nrf5x_adc_init)
   const uintptr_t *config;
   error_t err;
 
-  dev->status = DEVICE_DRIVER_INIT_FAILED;
-
   err = device_get_param_uint_array(dev, "config", &config_count, &config);
   if (err)
     goto out;
 
   pv = mem_alloc(sizeof(*pv), mem_scope_sys);
-
   if (!pv)
     return -ENOMEM;
 
@@ -238,9 +235,6 @@ static DEV_INIT(nrf5x_adc_init)
 
   pv->config = config;
   pv->config_count = config_count;
-  dev->drv = &nrf5x_adc_drv;
-  dev->status = DEVICE_DRIVER_INIT_DONE;
-
   return 0;
 
  free_pv:
