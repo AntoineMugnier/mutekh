@@ -159,8 +159,6 @@ static DEV_INIT(nrf5x_rng_init)
 {
   struct nrf5x_rng_private_s *pv;
 
-  dev->status = DEVICE_DRIVER_INIT_FAILED;
-
   pv = mem_alloc(sizeof(*pv), mem_scope_sys);
   dev->drv_pv = pv;
 
@@ -180,9 +178,6 @@ static DEV_INIT(nrf5x_rng_init)
 
   nrf_it_disable_mask(RNG_ADDR, -1);
   nrf_reg_set(RNG_ADDR, NRF_RNG_CONFIG, NRF_RNG_CONFIG_DERCEN_ENABLED);
-
-  dev->drv = &nrf5x_rng_drv;
-  dev->status = DEVICE_DRIVER_INIT_DONE;
 
   return 0;
 
