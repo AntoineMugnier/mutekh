@@ -959,14 +959,11 @@ static DEV_INIT(nrf5x_clock_init)
 
   debug_init();
 
-  dev->status = DEVICE_DRIVER_INIT_FAILED;
-
   pv = mem_alloc(sizeof(*pv), mem_scope_sys);
-  dev->drv_pv = pv;
-
   if (!pv)
     return -ENOMEM;
 
+  dev->drv_pv = pv;
   memset(pv, 0, sizeof(*pv));
 
   __unused__ uintptr_t addr = 0;
@@ -1015,9 +1012,6 @@ static DEV_INIT(nrf5x_clock_init)
 
   for (i = 0; i < NRF_CLOCK_EP_COUNT; i++)
     dev_clock_source_init(dev, &pv->src[i], &nrf5x_clock_ep_use);
-
-  dev->drv = &nrf5x_clock_drv;
-  dev->status = DEVICE_DRIVER_INIT_DONE;
 
   return 0;
 
