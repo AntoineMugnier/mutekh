@@ -255,8 +255,6 @@ static DEV_INIT(nrf5x_ble_init)
   struct nrf5x_ble_private_s *pv;
   error_t err;
 
-  dev->status = DEVICE_DRIVER_INIT_FAILED;
-
   pv = mem_alloc(sizeof(*pv), mem_scope_sys);
   if (!pv)
     return -ENOMEM;
@@ -313,8 +311,6 @@ static DEV_INIT(nrf5x_ble_init)
   pv->sca = BLE_SCA_251_500_PPM;
 
   dev->drv_pv = pv;
-  dev->drv = &nrf5x_ble_drv;
-  dev->status = DEVICE_DRIVER_INIT_DONE;
 
   return 0;
 
