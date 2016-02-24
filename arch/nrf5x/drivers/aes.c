@@ -791,16 +791,14 @@ static DEV_INIT(nrf5x_aes_init)
 {
   struct nrf5x_aes_private_s  *pv;
 
-  dev->status = DEVICE_DRIVER_INIT_FAILED;
-
   __unused__ uintptr_t addr = 0;
   assert(device_res_get_uint(dev, DEV_RES_MEM, 0, &addr, NULL) == 0 &&
          ECB_ADDR == addr);
 
   pv = mem_alloc(sizeof (*pv), (mem_scope_sys));
-
   if (!pv)
     return -ENOMEM;
+
   memset(pv, 0, sizeof(*pv));
 
 #ifdef CONFIG_DRIVER_NRF5X_AES_CCM
@@ -821,8 +819,6 @@ static DEV_INIT(nrf5x_aes_init)
 
   dev_request_delayed_init(&pv->queue, &nrf5x_aes_process);
 
-  dev->drv = &nrf5x_aes_drv;
-  dev->status = DEVICE_DRIVER_INIT_DONE;
   return 0;
 
  err_mem:
