@@ -319,8 +319,6 @@ static DEV_INIT(nrf5x_spim_init)
   struct nrf5x_spim_context_s *pv;
   iomux_io_id_t id[3];
 
-  dev->status = DEVICE_DRIVER_INIT_FAILED;
-
   pv = mem_alloc(sizeof(*pv), mem_scope_sys);
   dev->drv_pv = pv;
 
@@ -356,9 +354,6 @@ static DEV_INIT(nrf5x_spim_init)
 
   if (device_irq_source_link(dev, pv->irq_ep, 1, -1))
     goto free_queue;
-
-  dev->drv = &nrf5x_spim_drv;
-  dev->status = DEVICE_DRIVER_INIT_DONE;
 
   return 0;
 
