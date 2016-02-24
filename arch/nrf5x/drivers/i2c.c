@@ -355,8 +355,6 @@ static DEV_INIT(nrf5x_i2c_init)
   iomux_io_id_t id[2];
   error_t err = -ENOMEM;
 
-  dev->status = DEVICE_DRIVER_INIT_FAILED;
-
   pv = mem_alloc(sizeof(*pv), mem_scope_sys);
   dev->drv_pv = pv;
 
@@ -389,9 +387,6 @@ static DEV_INIT(nrf5x_i2c_init)
     err = -EHOSTUNREACH;
     goto free_pv;
   }
-
-  dev->drv = &nrf5x_i2c_drv;
-  dev->status = DEVICE_DRIVER_INIT_DONE;
 
   return 0;
 
