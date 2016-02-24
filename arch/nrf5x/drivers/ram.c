@@ -108,9 +108,6 @@ static DEV_USE(nrf5x_ram_use)
 
 static DEV_INIT(nrf5x_ram_init)
 {
-  dev->drv = &nrf5x_ram_drv;
-  dev->status = DEVICE_DRIVER_INIT_DONE;
-
   return 0;
 }
 
