@@ -43,7 +43,6 @@ struct nrf5x_timer_context_s
 
   struct dev_irq_src_s irq_ep[1];
   dev_request_pqueue_root_t queue;
-  size_t start_count;
   dev_timer_value_t base;
   uint8_t width;
   uint8_t div;
@@ -60,28 +59,20 @@ struct nrf5x_timer_context_s
 
 static void nrf5x_timer_start(struct nrf5x_timer_context_s *pv)
 {
-  if (!pv->start_count) {
 #if defined(CONFIG_DEVICE_CLOCK)
-    dev_clock_sink_hold(&pv->clock_sink, 1);
+  dev_clock_sink_hold(&pv->clock_sink, 1);
 #endif
-    nrf_task_trigger(pv->addr, NRF_TIMER_START);
-    nrf_it_enable(pv->addr, NRF_TIMER_COMPARE(OVERFLOW));
-  }
-
-  pv->start_count++;
+  nrf_task_trigger(pv->addr, NRF_TIMER_START);
+  nrf_it_enable(pv->addr, NRF_TIMER_COMPARE(OVERFLOW));
 }
 
 static void nrf5x_timer_stop(struct nrf5x_timer_context_s *pv)
 {
-  pv->start_count--;
-
-  if (!pv->start_count) {
-    nrf_task_trigger(pv->addr, NRF_TIMER_STOP);
-    nrf_it_disable_mask(pv->addr, -1);
+  nrf_task_trigger(pv->addr, NRF_TIMER_STOP);
+  nrf_it_disable_mask(pv->addr, -1);
 #if defined(CONFIG_DEVICE_CLOCK)
-    dev_clock_sink_release(&pv->clock_sink);
+  dev_clock_sink_release(&pv->clock_sink);
 #endif
-  }
 }
 
 static dev_timer_value_t nrf5x_timer_value_get(
@@ -123,8 +114,12 @@ static DEV_TIMER_REQUEST(nrf5x_timer_request)
 
   LOCK_SPIN_IRQ(&dev->lock);
 
-  if (dev_request_pqueue_isempty(&pv->queue))
-    nrf5x_timer_start(pv);
+  if (dev_request_pqueue_isempty(&pv->queue)) {
+    if (!pv->start_count)
+      nrf5x_timer_start(pv);
+
+    pv->start_count++;
+  }
 
   value = nrf5x_timer_value_get(pv);
 
@@ -174,8 +169,12 @@ static DEV_TIMER_CANCEL(nrf5x_timer_cancel)
 
   err = 0;
 
-  if (dev_request_pqueue_isempty(&pv->queue))
-    nrf5x_timer_stop(pv);
+  if (dev_request_pqueue_isempty(&pv->queue)) {
+    pv->start_count--;
+
+    if (!pv->start_count)
+      nrf5x_timer_stop(pv);
+  }
 
   LOCK_RELEASE_IRQ(&dev->lock);
 
@@ -193,11 +192,13 @@ static DEV_USE(nrf5x_timer_use)
     return 0;
 
   case DEV_USE_START:
-    nrf5x_timer_start(pv);
+    if (!pv->start_count)
+      nrf5x_timer_start(pv);
     break;
 
   case DEV_USE_STOP:
-    nrf5x_timer_stop(pv);
+    if (!pv->start_count)
+      nrf5x_timer_stop(pv);
     break;
   }
 
@@ -312,8 +313,6 @@ static DEV_INIT(nrf5x_timer_init)
 {
   struct nrf5x_timer_context_s *pv;
 
-  dev->status = DEVICE_DRIVER_INIT_FAILED;
-
   pv = mem_alloc(sizeof(*pv), mem_scope_sys);
   dev->drv_pv = pv;
 
@@ -364,9 +363,6 @@ static DEV_INIT(nrf5x_timer_init)
   nrf_reg_set(pv->addr, NRF_TIMER_MODE, NRF_TIMER_MODE_TIMER);
   nrf_reg_set(pv->addr, NRF_TIMER_PRESCALER, 4);
   nrf_it_disable_mask(pv->addr, -1);
-
-  dev->drv = &nrf5x_timer_drv;
-  dev->status = DEVICE_DRIVER_INIT_DONE;
 
   return 0;
 
