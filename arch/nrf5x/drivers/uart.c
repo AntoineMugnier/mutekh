@@ -456,15 +456,12 @@ static DEV_INIT(nrf5x_uart_char_init)
         .half_duplex = 0,
     };
 
-    dev->status = DEVICE_DRIVER_INIT_FAILED;
-
     pv = mem_alloc(sizeof(*pv), mem_scope_sys);
-    dev->drv_pv = pv;
-
-    memset(pv, 0, sizeof(*pv));
-
     if (!pv)
         return -ENOMEM;
+
+    dev->drv_pv = pv;
+    memset(pv, 0, sizeof(*pv));
 
     if (device_res_get_uint(dev, DEV_RES_MEM, 0, &pv->addr, NULL))
         goto free_pv;
@@ -539,9 +536,6 @@ static DEV_INIT(nrf5x_uart_char_init)
 #endif
 
     nrf5x_uart_config(pv, &config);
-
-    dev->drv = &nrf5x_uart_drv;
-    dev->status = DEVICE_DRIVER_INIT_DONE;
 
 #if defined(CONFIG_DRIVER_NRF5X_PRINTK)
     if (pv->addr == CONFIG_MUTEK_PRINTK_ADDR)
