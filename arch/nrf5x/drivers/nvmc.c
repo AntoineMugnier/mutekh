@@ -922,16 +922,15 @@ static DEV_INIT(nrf5x_nvmc_init)
   assert(!device_res_get_uint(dev, DEV_RES_MEM, 0, &addr, NULL)
          && NVMC_ADDR == addr);
 
-  dev->status = DEVICE_DRIVER_INIT_FAILED;
-
 #ifdef CONFIG_DRIVER_NRF5X_PERSIST
   uint32_t page_size = cpu_mem_read_32(NRF_FICR_CODEPAGESIZE);
   uintptr_t size;
 
   pv = mem_alloc(sizeof(*pv), mem_scope_sys);
-  memset(pv, 0, sizeof(*pv));
   if (!pv)
     return -ENOMEM;
+
+  memset(pv, 0, sizeof(*pv));
 
   err = device_res_get_uint(dev, DEV_RES_MEM, 1, &addr, &size);
   if (err)
@@ -957,9 +956,6 @@ static DEV_INIT(nrf5x_nvmc_init)
 #endif
 
   dev->drv_pv = pv;
-  dev->drv = &nrf5x_nvmc_drv;
-  dev->status = DEVICE_DRIVER_INIT_DONE;
-
   return 0;
 
 #ifdef CONFIG_DRIVER_NRF5X_PERSIST
