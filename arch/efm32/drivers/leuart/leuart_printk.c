@@ -25,10 +25,10 @@
 
 #include <mutek/printk.h>
 
-#include <arch/efm32_leuart.h>
-#include <arch/efm32_gpio.h>
-#include <arch/efm32_cmu.h>
-#include <arch/efm32_devaddr.h>
+#include <arch/efm32/leuart.h>
+#include <arch/efm32/gpio.h>
+#include <arch/efm32/cmu.h>
+#include <arch/efm32/devaddr.h>
 
 #define LEUART_CLOCK            32768
 #define LEUART_RATE             9600

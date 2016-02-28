@@ -36,7 +36,7 @@
 #include <device/class/iomux.h>
 #include <device/clock.h>
 
-#include <arch/efm32_i2c.h>
+#include <arch/efm32/i2c.h>
 
 #define EFM32_I2C_IRQ_MASK 0x5A8 
 

@@ -25,7 +25,7 @@
 #include <hexo/iospace.h>
 
 #include <mutek/mem_alloc.h>
-#include <arch/efm32_msc.h>
+#include <arch/efm32/msc.h>
 
 #include <device/resources.h>
 #include <device/device.h>

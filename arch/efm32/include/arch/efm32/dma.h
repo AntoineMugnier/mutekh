@@ -4,7 +4,7 @@
 
 /*
    bfgen -o cdefs                                                              \
-     -O /home/cerdan/Work/mutekh/arch/efm32/include/arch/efm32_dma.h           \
+     -O /home/cerdan/Work/mutekh/arch/efm32/include/arch/efm32/dma.h           \
      -I /opt/bfgen/defs/efm32/efm32_dma.bf cdefs_use_reg_mask=1                \
      cdefs_use_setter_value_prefix=0
 */

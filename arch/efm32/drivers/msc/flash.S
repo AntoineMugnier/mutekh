@@ -20,7 +20,7 @@
 */
 
 #include <hexo/asm.h>
-#include <arch/efm32_msc.h>
+#include <arch/efm32/msc.h>
 
 .syntax unified
 

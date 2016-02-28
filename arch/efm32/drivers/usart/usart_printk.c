@@ -26,10 +26,10 @@
 #include <mutek/printk.h>
 #include <mutek/startup.h>
 
-#include <arch/efm32_usart.h>
-#include <arch/efm32_gpio.h>
-#include <arch/efm32_cmu.h>
-#include <arch/efm32_devaddr.h>
+#include <arch/efm32/usart.h>
+#include <arch/efm32/gpio.h>
+#include <arch/efm32/cmu.h>
+#include <arch/efm32/devaddr.h>
 
 #define USART_CLOCK            14000000
 

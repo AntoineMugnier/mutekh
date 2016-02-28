@@ -25,7 +25,7 @@
 
 #include <mutek/printk.h>
 
-#include <arch/efm32_leuart.h>
+#include <arch/efm32/leuart.h>
 
 static void efm32_leuart_write_reg(uint32_t addr, uintptr_t reg, uint32_t x)
 {

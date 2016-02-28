@@ -37,7 +37,7 @@
 #include <mutek/mem_alloc.h>
 #include <mutek/kroutine.h>
 
-#include <arch/efm32_rtc.h>
+#include <arch/efm32/rtc.h>
 
 #define EFM32_RTC_HW_WIDTH 24
 #define EFM32_RTC_HW_MASK  0xffffff

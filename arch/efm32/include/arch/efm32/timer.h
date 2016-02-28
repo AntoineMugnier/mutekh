@@ -3,7 +3,7 @@
 ***************************************/
 
 /*
-   bfgen -o cdefs -O arch/efm32/include/arch/efm32_timer.h cdefs_use_reg_mask=1 \
+   bfgen -o cdefs -O arch/efm32/include/arch/efm32/timer.h cdefs_use_reg_mask=1 \
      cdefs_use_field_setval=1
 */
 

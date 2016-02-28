@@ -3,7 +3,7 @@
 ***************************************/
 
 /*
-   bfgen -o cdefs -O include/arch/efm32_leuart.h cdefs_use_reg_mask=1          \
+   bfgen -o cdefs -O include/arch/efm32/leuart.h cdefs_use_reg_mask=1          \
      cdefs_use_field_setval=1
 */
 

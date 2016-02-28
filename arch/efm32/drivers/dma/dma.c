@@ -34,8 +34,8 @@
 
 #include <cpu/pl230_dma.h>
 #include <cpu/pl230_channel.h>
-#include <arch/efm32_dma_request.h>
-#include <arch/efm32_dma.h>
+#include <arch/efm32/dma_request.h>
+#include <arch/efm32/dma.h>
 
 #define CHANNEL_SIZE 16
 

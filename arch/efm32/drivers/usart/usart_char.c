@@ -34,7 +34,7 @@
 #include <device/class/iomux.h>
 #include <device/clock.h>
 
-#include <arch/efm32_usart.h>
+#include <arch/efm32/usart.h>
 
 #if CONFIG_DRIVER_EFM32_USART_CHAR_SWFIFO > 0
 #include <gct_platform.h>

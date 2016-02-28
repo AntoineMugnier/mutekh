@@ -36,7 +36,7 @@
 #include <device/class/crypto.h>
 #include <device/clock.h>
 
-#include <arch/efm32_aes.h>
+#include <arch/efm32/aes.h>
 
 #define CONFIG_EFM32_AES_ADDR 0x400e0000
 

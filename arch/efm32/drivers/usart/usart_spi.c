@@ -40,12 +40,12 @@
 #include <device/class/dma.h>
 
 #include <cpu/pl230_channel.h>
-#include <arch/efm32_dma_source.h>
-#include <arch/efm32_dma_request.h>
+#include <arch/efm32/dma_source.h>
+#include <arch/efm32/dma_request.h>
 #endif
 
-#include <arch/efm32_irq.h>
-#include <arch/efm32_usart.h>
+#include <arch/efm32/irq.h>
+#include <arch/efm32/usart.h>
 
 #define EFM32_USART_FIFO_SIZE 2
 

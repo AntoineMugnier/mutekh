@@ -37,7 +37,7 @@
 #include <mutek/mem_alloc.h>
 #include <mutek/kroutine.h>
 
-#include <arch/efm32_timer.h>
+#include <arch/efm32/timer.h>
 
 #define EFM32_TIMER_HW_WIDTH 16
 #define EFM32_TIMER_HW_MASK  0xffff
