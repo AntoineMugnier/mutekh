@@ -257,7 +257,7 @@ struct dev_cmu_node_info_s
 typedef DEV_CMU_NODE_INFO(dev_cmu_node_info_t);
 
 
-DRIVER_CLASS_TYPES(cmu,
+DRIVER_CLASS_TYPES(DRIVER_CLASS_CMU, cmu,
                    dev_cmu_node_info_t   *f_node_info;
                    dev_cmu_config_mux_t *f_config_mux;
                    dev_cmu_config_osc_t *f_config_osc;
@@ -356,7 +356,7 @@ error_t dev_cmu_config(struct device_cmu_s *accessor,
     responsibility of the programmer. There may be no internal
     validity check on clocking configurations.
 
-    @see #DEV_STATIC_RES_CMU_MUX */
+    @csee DEV_RES_CMU_MUX */
 config_depend_and2_alwaysinline(CONFIG_DEVICE_CLOCK, CONFIG_DEVICE_RESOURCE_ALLOC,
 error_t device_add_res_cmu_mux(struct device_s     *dev,
                                    dev_cmu_node_id_t parent_id,
@@ -381,11 +381,10 @@ error_t device_add_res_cmu_mux(struct device_s     *dev,
 
 #ifdef CONFIG_DEVICE_CLOCK
 
-/** @This can be used to include a clock mux resource entry in a static
+/** @This specifies a clock mux resource entry in a static
     device resources table declaration.
-
-    @see device_res_add_cmu_mux @see #DEV_DECLARE_STATIC_RESOURCES
- */
+    @csee DEV_RES_CMU_MUX @see device_add_res_cmu_mux
+    @see #DEV_DECLARE_STATIC */
 # define DEV_STATIC_RES_CMU_MUX(__parent_id, __node_id,                 \
                                 __config_mask, __num, __denom)          \
   {                                                                     \
@@ -399,10 +398,11 @@ error_t device_add_res_cmu_mux(struct device_s     *dev,
       } }                                                               \
   }
 
-/** @This can be used to include a clock source oscillator resource entry in a
-    static device resources table declaration.
-    @see device_res_add_cmu_osc @see #DEV_DECLARE_STATIC_RESOURCES
- */
+/** @This specifies a clock source oscillator resource entry in a
+    static device resources table declaration. A default value is used
+    for frequency accuracy.
+    @csee DEV_RES_CMU_OSC @see device_add_res_cmu_osc
+    @see #DEV_DECLARE_STATIC */
 # define DEV_STATIC_RES_CMU_OSC(__node_id, __config_id, __num, __denom) \
   {                                                               \
     .type = DEV_RES_CMU_OSC,                                    \
@@ -416,6 +416,7 @@ error_t device_add_res_cmu_mux(struct device_s     *dev,
       } }                                                         \
   }
 
+/** @This is similar to @cref #DEV_STATIC_RES_CMU_OSC */
 # define DEV_STATIC_RES_CMU_OSC_ACC(__node_id, __config_id,             \
                                     __num, __denom, _acc_m, _acc_e)     \
   {                                                               \
@@ -432,17 +433,20 @@ error_t device_add_res_cmu_mux(struct device_s     *dev,
 
 #else
 
+/** @hidden */
 # define DEV_STATIC_RES_CMU_MUX(__parent_id, __node_id,                 \
                                 __config_mask, __num, __denom)          \
   {                                                                     \
     .type = DEV_RES_UNUSED,                                             \
   }
 
+/** @hidden */
 # define DEV_STATIC_RES_CMU_OSC(__node_id, __config_id, __num, __denom) \
   {                                                               \
     .type = DEV_RES_UNUSED,                                       \
   }
 
+/** @hidden */
 # define DEV_STATIC_RES_CMU_OSC_ACC(__node_id, __config_id,             \
                                     __num, __denom, _acc_m, _acc_e)     \
   {                                                               \
@@ -464,7 +468,7 @@ error_t device_add_res_cmu_mux(struct device_s     *dev,
     In the later case, the internal oscillator may have a default
     frequency value and the resource entry is not mandatory.
 
-    @see #DEV_STATIC_RES_CMU_OSC
+    @csee DEV_RES_CMU_OSC
  */
 config_depend_and2_alwaysinline(CONFIG_DEVICE_CLOCK, CONFIG_DEVICE_RESOURCE_ALLOC,
 error_t device_add_res_cmu_osc(struct device_s     *dev,

@@ -22,7 +22,7 @@
 
 /**
  * @file
- * @module{Mutek}
+ * @module{Kernel services}
  * @short Console device defs
  * @internal
  */

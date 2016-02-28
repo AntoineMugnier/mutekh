@@ -22,7 +22,7 @@
 
 /**
  * @file
- * @module{Mutek}
+ * @module{Kernel services}
  * @short High level memory allocation stuff
  */
 

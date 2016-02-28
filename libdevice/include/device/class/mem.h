@@ -118,7 +118,7 @@ struct dev_mem_info_s
   uint8_t page_log2;
 
   /** log2 byte size of a page erase, 0=no paging. Only valid when
-      either DEV_MEM_ERASE_ONE @ref or @ref DEV_MEM_ERASE_ZERO is set. */
+      either @ref DEV_MEM_ERASE_ONE or @ref DEV_MEM_ERASE_ZERO is set. */
   uint8_t erase_log2;
 
   /** log2 alignment of partial access. */
@@ -126,7 +126,7 @@ struct dev_mem_info_s
 
   /** number of allowed partial write between two erase
       operations. 0=infinite. Only valid when either
-      DEV_MEM_ERASE_ONE @ref or @ref DEV_MEM_ERASE_ZERO is set. */
+      @ref DEV_MEM_ERASE_ONE or @ref DEV_MEM_ERASE_ZERO is set. */
   uint8_t partial_write;
 
   /** type of memory */
@@ -216,7 +216,7 @@ struct dev_mem_rq_s
 
 STRUCT_INHERIT(dev_mem_rq_s, dev_request_s, base);
 
-/** Memory device info() function tempate. @see dev_mem_info_t */
+/** @see dev_mem_info_t */
 #define DEV_MEM_INFO(n)	error_t  (n) (struct device_mem_s *accessor, \
                                       struct dev_mem_info_s *info,      \
                                       uint8_t band_index)
@@ -238,14 +238,15 @@ STRUCT_INHERIT(dev_mem_rq_s, dev_request_s, base);
 typedef DEV_MEM_INFO(dev_mem_info_t);
 
 
-/* Memory device request function template. @see dev_mem_request_t */
+/** @see dev_mem_request_t */
 #define DEV_MEM_REQUEST(n)	void  (n) (struct device_mem_s *accessor,   \
                                            struct dev_mem_rq_s *rq)
 
 /** @This enqueues a memory device operation request.
 
     The request kroutine is executed on completion. The @tt err
-    indicates the status of the request. Here are possible values:
+    indicates the status of the request. Other fields of the request
+    are not modified during processing. Here are possible error values:
 
     @list
       @item @tt 0 : Success
@@ -257,20 +258,20 @@ typedef DEV_MEM_INFO(dev_mem_info_t);
       @item @tt -EBADDATA : uncorrectable ECC error on read
     @end list
 
-    An ending request object can be enqueued again from within the
-    kroutine. Other fields of the request are not modified during
-    processing.
+    The kroutine of the request may be executed from within this
+    function. Please read @xref {Nested device request completion}.
 
     @see #DEV_MEM_REQUEST
 */
 typedef DEV_MEM_REQUEST(dev_mem_request_t);
 
 
-DRIVER_CLASS_TYPES(mem,
+DRIVER_CLASS_TYPES(DRIVER_CLASS_MEM, mem,
                    dev_mem_info_t *f_info;
                    dev_mem_request_t *f_request;
                    );
 
+/** @see driver_mem_s */
 #define DRIVER_MEM_METHODS(prefix)                               \
   ((const struct driver_class_s*)&(const struct driver_mem_s){   \
     .class_ = DRIVER_CLASS_MEM,                                  \

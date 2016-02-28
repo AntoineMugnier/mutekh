@@ -41,7 +41,7 @@ struct device_icu_s;
 struct ipi_endpoint_s;
 struct dev_irq_ep_s;
 
-/** Interrupt controller device class @ref dev_icu_get_sink_t function template. */
+/** @see dev_icu_get_sink_t */
 #define DEV_ICU_GET_SINK(n)	struct dev_irq_sink_s * (n) (struct device_icu_s *accessor, uint_fast8_t id)
 
 /** @This returns the interrupt sink end-point with given id. @This
@@ -49,7 +49,7 @@ struct dev_irq_ep_s;
 typedef DEV_ICU_GET_SINK(dev_icu_get_sink_t);
 
 
-/** Interrupt controller device class @ref dev_icu_link_t function template. */
+/** @see dev_icu_link_t */
 #define DEV_ICU_LINK(n)	error_t (n) (struct device_icu_s *accessor, struct dev_irq_sink_s *sink, \
                                      struct dev_irq_src_s *src, dev_irq_route_t *route_mask, \
                                      struct dev_irq_src_s **bypass)
@@ -68,7 +68,7 @@ typedef DEV_ICU_GET_SINK(dev_icu_get_sink_t);
     sink end-point of this interrupt controller and the @tt src
     end-point of a device.
 
-    When @ref CONFIG_DEVICE_IRQ_BYPASS is defined and @tt *bypass is
+    When @ref #CONFIG_DEVICE_IRQ_BYPASS is defined and @tt *bypass is
     not @tt NULL, a link has changed between the sink end-point of an
     other interrupt controller in the chain to the device and the @tt
     src end-point of a device. This happens when the next interrupt
@@ -90,14 +90,15 @@ typedef DEV_ICU_GET_SINK(dev_icu_get_sink_t);
 */
 typedef DEV_ICU_LINK(dev_icu_link_t);
 
+/** @This does nothing and is successful. */
 DEV_ICU_LINK(device_icu_dummy_link);
 
-DRIVER_CLASS_TYPES(icu,
+DRIVER_CLASS_TYPES(DRIVER_CLASS_ICU, icu,
                    dev_icu_get_sink_t *f_get_sink;
                    dev_icu_link_t *f_link;
                    );
 
-/** ICU device class methodes */
+/** @see driver_icu_s ICU device class methods */
 #define DRIVER_ICU_METHODS(prefix)                               \
   ((const struct driver_class_s*)&(const struct driver_icu_s){   \
     .class_ = DRIVER_CLASS_ICU,                                  \

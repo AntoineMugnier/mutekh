@@ -22,7 +22,7 @@
 
 /**
  * @file
- * @module{Mutek}
+ * @module{Kernel services}
  * @internal
  * @short RW lock for GPCT
  */

@@ -29,7 +29,7 @@ C_HEADER_BEGIN
 
 /**
  * @file
- * @module{Hexo}
+ * @module{Hardware abstraction layer}
  * @short Serializing operations and memory barrier primitives
  */
 

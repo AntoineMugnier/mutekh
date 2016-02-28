@@ -240,6 +240,9 @@ struct dev_timer_skew_s
    available. @This may return -ENOTSUP if either there is no timer
    matching the requested device number or the timer implementation
    doesn't support requests.
+
+   A new request may be submitted from the kroutine handler function.
+   Please read @xref {Nested device request submission}.
 */
 typedef DEV_TIMER_REQUEST(dev_timer_request_t);
 
@@ -260,7 +263,7 @@ typedef DEV_TIMER_REQUEST(dev_timer_request_t);
 typedef DEV_TIMER_CANCEL(dev_timer_cancel_t);
 
 
-/** @see #dev_timer_get_value_t */
+/** @see dev_timer_get_value_t */
 #define DEV_TIMER_GET_VALUE(n)	error_t (n) (struct device_timer_s *accessor, \
                                              dev_timer_value_t *value,  \
                                              dev_timer_cfgrev_t rev)
@@ -284,7 +287,7 @@ typedef DEV_TIMER_GET_VALUE(dev_timer_get_value_t);
 
 
 
-/** @see #dev_timer_get_freq_t */
+/** @see dev_timer_config_t */
 #define DEV_TIMER_CONFIG(n)	error_t (n) (struct device_timer_s *accessor, \
                                              struct dev_timer_config_s *cfg, \
                                              dev_timer_res_t res)
@@ -294,8 +297,8 @@ typedef DEV_TIMER_GET_VALUE(dev_timer_get_value_t);
    resolution. The @ref dev_timer_config_s object is updated with the
    current configuration if the @tt cfg parameter is not @tt NULL.
 
-   The @ref dev_timer_rq_s::freq field is set to 0 if the frequency is
-   not known.
+   The @ref dev_timer_config_s::freq field is set to 0 if the timer
+   frequency is not known.
 
    The resolution is set when the @tt res parameter is not 0. The
    actual resolution can be different from the requested resolution
@@ -319,7 +322,7 @@ typedef DEV_TIMER_GET_VALUE(dev_timer_get_value_t);
 typedef DEV_TIMER_CONFIG(dev_timer_config_t);
 
 
-DRIVER_CLASS_TYPES(timer,
+DRIVER_CLASS_TYPES(DRIVER_CLASS_TIMER, timer,
                    dev_timer_request_t *f_request;
                    dev_timer_request_t *f_cancel;
                    dev_timer_get_value_t *f_get_value;
@@ -518,14 +521,17 @@ error_t dev_timer_wait_delay(struct device_timer_s *accessor,
     waiting for the requested delay. @This returns @tt -ERANGE if the
     requested delay is greater than half the maximum timer value
     because counter overlap can not be handled properly in this
-    case. @see dev_timer_sleep */
+    case. */
 config_depend(CONFIG_DEVICE_TIMER)
 error_t dev_timer_busy_wait_delay(struct device_timer_s *accessor, dev_timer_delay_t delay);
 
 #ifdef CONFIG_DEVICE_TIMER
+/** @This provides a @ref DEV_RES_DEV_PARAM resource entry which
+    specifies a dependency on a timer device. */
 # define DEV_STATIC_RES_DEV_TIMER(path_)                                \
   DEV_STATIC_RES_DEVCLASS_PARAM("timer", path_, DRIVER_CLASS_TIMER)
 #else
+/** @hidden */
 # define DEV_STATIC_RES_DEV_TIMER(path_)                                \
   {                                                                     \
     .type = DEV_RES_UNUSED,                                             \

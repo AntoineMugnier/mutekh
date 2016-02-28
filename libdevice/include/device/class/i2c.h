@@ -275,18 +275,22 @@ typedef DEV_I2C_CONFIG(dev_i2c_config_t);
     initialized before calling this function.
 
     The @ref kroutine_exec function will be called on @tt tr->base.kr
-    when the request ends. This can happen before this function
-    returns.  A new request may be started from the kroutine. @tt
-    rq->error, tr->error_offset and tr->error_request indicates error
-    position.
+    when the request ends.
+
+    The kroutine of the request may be executed from within this
+    function. Please read @xref {Nested device request completion}.
+
+    @tt rq->error, tr->error_offset and tr->error_request indicates
+    error position.
 */
 typedef DEV_I2C_REQUEST(dev_i2c_request_t);
 
-DRIVER_CLASS_TYPES(i2c,
+DRIVER_CLASS_TYPES(DRIVER_CLASS_I2C, i2c,
     dev_i2c_config_t *f_config;
     dev_i2c_request_t *f_request;
 );
 
+/** @see driver_i2c_s */
 #define DRIVER_I2C_METHODS(prefix)                               \
   ((const struct driver_class_s*)&(const struct driver_i2c_s){   \
     .class_ = DRIVER_CLASS_I2C,                                  \

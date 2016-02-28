@@ -53,7 +53,7 @@
        .size = sizeof(data),
    };
 
-   kroutine_init_immediate(&rq.base.kr, my_callback);
+   kroutine_init_deferred(&rq.base.kr, my_callback);
 
    DEVICE_OP(&char_dev, request, &rq);
    @end code
@@ -64,10 +64,6 @@
 
    Driver updates @tt data and @tt size fields of the request in order
    to indicate what is left to transfer.
-
-   In kroutine called after a partial transfer, caller may resubmit
-   the same request untouched from the kroutine to request for more
-   data.
 
    @end section
  */
@@ -174,7 +170,7 @@ struct dev_char_rq_s
 
 STRUCT_INHERIT(dev_char_rq_s, dev_request_s, base);
 
-/** Char device class @ref dev_char_request_t function template. */
+/** @see dev_char_request_t */
 #define DEV_CHAR_REQUEST(n)                                             \
   void (n)(                                                            \
     const struct device_char_s *accessor,                                  \
@@ -209,16 +205,14 @@ STRUCT_INHERIT(dev_char_rq_s, dev_request_s, base);
    @end list
 
    The kroutine of the request may be executed from within this
-   function. The kroutine handler of the request must never call the
-   @ref dev_char_request_t function when the kroutine policy allows
-   immediate execution of the handler.
+   function. Please read @xref {Nested device request completion}.
 
    @param dev pointer to device descriptor
    @param rq pointer to request.
 */
 typedef DEV_CHAR_REQUEST(dev_char_request_t);
 
-/** Char device class @ref dev_char_cancel_t function template. */
+/** @see dev_char_cancel_t */
 #define DEV_CHAR_CANCEL(n)                                             \
   error_t (n)(                                                            \
     const struct device_char_s *accessor,                                  \
@@ -230,17 +224,28 @@ typedef DEV_CHAR_REQUEST(dev_char_request_t);
    the @ref dev_char_request_t function.
 
    The function returns 0 if the request has been cancelled or @tt
-   -EBUSY if the request has already ended. It may also return @tt
-   -ENOTSUP. The request kroutine is not executed when this function
-   returns 0.
+   -EBUSY if the request has already ended or will terminate very
+   soon. It may also return @tt -ENOTSUP. The request kroutine is not
+   executed when this function returns 0.
+
+   When canceling a request of types @ref DEV_CHAR_READ or @ref
+   DEV_CHAR_READ_FRAME, data which might have already been transferred
+   will be lost.
+
+   When canceling a request of types @@ref DEV_CHAR_WRITE or @ref
+   DEV_CHAR_WRITE_FRAME, some data might have been sent partially.
+
+   The @tt size and @tt data fields of a cancelled request have
+   undefined values.
 */
 typedef DEV_CHAR_CANCEL(dev_char_cancel_t);
 
-DRIVER_CLASS_TYPES(char, 
+DRIVER_CLASS_TYPES(DRIVER_CLASS_CHAR, char,
                    dev_char_request_t *f_request;
                    dev_char_cancel_t *f_cancel;
                    );
 
+/** @see driver_char_s */
 #define DRIVER_CHAR_METHODS(prefix)                                \
   ((const struct driver_class_s*)&(const struct driver_char_s){    \
     .class_ = DRIVER_CLASS_CHAR,                                   \

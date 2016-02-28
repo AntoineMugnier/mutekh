@@ -23,7 +23,7 @@
 
 /**
  * @file
- * @module{Mutek}
+ * @module{Kernel services}
  * @short Interactive shell
  */
 

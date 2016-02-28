@@ -2,12 +2,11 @@
 @c ===== member doc =====
 
 @macro _member_doc id
+  @insert {@id@} decl_inline_doc
   @insert {@id@} decl_warn_sentence
   @insert {@id@} decl_homonyms_sentence
   @insert {@id@} decl_cpp_condition_sentence
   @insert {@id@} decl_involved_macros_sentence
-
-  @insert {@id@} decl_inline_doc
   @insert {@id@} decl_content
   @insert {@id@} see_related_typedefs
 @end macro
@@ -33,13 +32,13 @@
 
 @macro _compound_doc id
 
-  @section e {Description}
-    @insert {@id@} decl_inline_doc
-  @end section
-
   @ifsymtype {@id@} {module}
     @section e {Related headers}
       @insert {header} {1} {@id@} compound_table 
+    @end section
+  @else
+    @section e {Description}
+      @insert {@id@} decl_inline_doc
     @end section
   @end if
 
@@ -57,9 +56,9 @@
 
 @c ===== compound section macro for internal use =====
 
-@macro _compound_section type id name
+@macro _compound_section type id name section_flags
 
-  @section P {@name@ @type@ reference} {@id@}
+  @section @section_flags@ {@name@ @type@ reference} {@id@}
     @ifsymattr {@id@} {visible}
       @invoke {@id@} _compound_doc
     @end if
@@ -91,7 +90,7 @@
 @macro compound_section name
 
   @lookup id mname mtype {@name@}
-    @invoke {@mtype@} {@id@} {@mname@} _compound_section
+    @invoke {@mtype@} {@id@} {@mname@} {P} _compound_section
   @end lookup
 
 @end macro
@@ -108,7 +107,24 @@
 
   @foreach id name type {@types@} {@scope@} {0}
     @info Inserting `@name@' @type@ documentation
-    @invoke {@type@} {@id@} {@name@} _compound_section
+    @invoke {@type@} {@id@} {@name@} {P} _compound_section
+  @end foreach
+
+@end macro
+
+@macro module_sections
+
+  @foreach id name type {visible module} {} {0}
+    @info Inserting `@name@' @type@ documentation
+
+    @section PT {@name@} {@id@}
+      The @name@ module is described through the following subsections:
+      @insert localtoc
+      @insert {@id@} decl_inline_doc
+      @section Pte {Module API}
+        @invoke {@id@} _compound_doc
+      @end section
+    @end section
   @end foreach
 
 @end macro

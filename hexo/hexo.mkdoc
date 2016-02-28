@@ -1,7 +1,25 @@
 
-@moduledef{Hexo}
- @short Processor and platform hardware abstraction layer
- @order 100
+@moduledef{Hardware abstraction layer}
+  @short Processor and platform hardware abstraction layer
+  @order 100
+
+  This module provides a hardware abstraction layer which give access
+  to processor and platform specific resources. These are mostly
+  processor system primitives and related language types.
+
+  This module does not handle access to devices like timers, uarts or
+  even interrupt controllers. Those are handled by @xref{device
+  drivers} and the @ref {+Devices support library}.
+
+  The following topics are covered:
+  @list
+    @foreach hid hname htype {header} {+Hardware abstraction layer} {1}
+      @group
+        @insert {@hid@} decl_short_desc, provided by the @ref {@hid@} {@hname@} header.
+      @end group
+    @end foreach
+  @end list
+
 @end moduledef
 
 @parse{

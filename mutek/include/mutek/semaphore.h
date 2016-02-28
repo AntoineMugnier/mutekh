@@ -25,7 +25,7 @@
 
 /**
  * @file
- * @module{Mutek}
+ * @module{Kernel services}
  * @short Kernel semaphore service
  *
  * The semaphore functions are empty and always succeed when the

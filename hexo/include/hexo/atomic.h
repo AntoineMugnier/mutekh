@@ -29,7 +29,7 @@
 
 /**
   @file
-  @module{Hexo}
+  @module{Hardware abstraction layer}
   @short Atomic memory operations primitives
 
   When SMP is enabled, atomic operations are provided either by

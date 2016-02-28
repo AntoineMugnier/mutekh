@@ -24,7 +24,7 @@
 
 /**
  * @file
- * @module{Mutek}
+ * @module{Kernel services}
  * @short Virtual memory kernel land page allocator API
  */
 

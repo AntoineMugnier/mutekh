@@ -35,7 +35,8 @@
 
 ENUM_DESCRIPTOR(driver_class_e, strip:DRIVER_CLASS_, upper);
 
-/** @This specifies device driver personality class. */
+/** @This specifies identifiers of device driver API classes.
+    @xcsee {Device classes} */
 enum driver_class_e
 {
   DRIVER_CLASS_NONE = 0,
@@ -43,6 +44,7 @@ enum driver_class_e
   DRIVER_CLASS_CHAR,
   DRIVER_CLASS_ENUM,
   DRIVER_CLASS_FB,
+  /** Interrupt Controller Unit */
   DRIVER_CLASS_ICU,
   DRIVER_CLASS_DMA,
   DRIVER_CLASS_INPUT,
@@ -52,6 +54,7 @@ enum driver_class_e
   DRIVER_CLASS_PWM,
   DRIVER_CLASS_SPI_CTRL,
   DRIVER_CLASS_LCD,
+  /** Clock Management Unit */
   DRIVER_CLASS_CMU,
   DRIVER_CLASS_GPIO,
   DRIVER_CLASS_IOMUX,
@@ -64,13 +67,15 @@ enum driver_class_e
   DRIVER_CLASS_VALIO,
   DRIVER_CLASS_PERSIST,
 
-  /** Custom driver class IDs should be registered in @ref
+  /* Custom driver class IDs should be registered in @ref
       #CONFIG_DEVICE_CUSTOM_CLASS_COUNT enum config token.
    */
 };
 
 ENUM_DESCRIPTOR(dev_enum_type_e, strip:DEV_ENUM_TYPE_, upper);
 
+/** @This specifies types of enumeration data
+    @see dev_enum_ident_s */
 enum dev_enum_type_e
 {
   DEV_ENUM_TYPE_INVALID,
@@ -86,39 +91,39 @@ enum dev_enum_type_e
     enum driver dependent */
 struct dev_enum_ident_s
 {
-	uint_fast8_t type;   //< @see dev_enum_type_e
+  enum dev_enum_type_e type;
 
-	union {
-		struct {
-			uint16_t vendor;
-			uint16_t device;
-			uint16_t rev_minor;
-			uint16_t rev_major;
-		} generic;
-		struct {
-			uint16_t vendor;
-			uint16_t device;
-			uint32_t class;
-		} pci;
-		struct {
-			uint16_t vendor;
-			uint16_t device;
-		} grlib;
-		struct {
-			uint16_t vendor;
-		} isa;
-		struct {
-			const char *name;
-		} fdtname;
-		struct {
-			const char *str;
-		} ata;
-	};
+  union {
+    struct {
+      uint16_t vendor;
+      uint16_t device;
+      uint16_t rev_minor;
+      uint16_t rev_major;
+    } generic;
+    struct {
+      uint16_t vendor;
+      uint16_t device;
+      uint32_t class;
+    } pci;
+    struct {
+      uint16_t vendor;
+      uint16_t device;
+    } grlib;
+    struct {
+      uint16_t vendor;
+    } isa;
+    struct {
+      const char *name;
+    } fdtname;
+    struct {
+      const char *str;
+    } ata;
+  };
 };
 
 
 /**
-   Shortcut for creating a PCI entry in a static dev_enum_ident_s
+   Shortcut for creating a PCI entry in a static @cref dev_enum_ident_s
    array.
 
    @param _vendor the vendor id to match, -1 for wildcard
@@ -131,7 +136,7 @@ struct dev_enum_ident_s
 				.class = _class } } }
 
 /**
-   Shortcut for creating an ISA entry in a static dev_enum_ident_s
+   Shortcut for creating an ISA entry in a static @cref dev_enum_ident_s
    array.
 
    @param _vendor the vendor id to match
@@ -141,7 +146,7 @@ struct dev_enum_ident_s
 				.vendor = _vendor } } }
 
 /**
-   Shortcut for creating an ATA entry in a static dev_enum_ident_s
+   Shortcut for creating an ATA entry in a static @cref dev_enum_ident_s
    array.
 
    @param _str the string to match from the device
@@ -152,7 +157,7 @@ struct dev_enum_ident_s
 
 /**
    Shortcut for creating a flat-device-tree entry in a static
-   dev_enum_ident_s array.
+   @cref dev_enum_ident_s array.
 
    @param _name The string to match from the device-tree
  */
@@ -161,7 +166,7 @@ struct dev_enum_ident_s
 				.name = _name } } }
 
 /**
-   Shortcut for creating a Gaisler GAISLER entry in a static dev_enum_ident_s
+   Shortcut for creating a Gaisler entry in a static @cref dev_enum_ident_s
    array.
 
    @param _vendor the vendor id to match, -1 for wildcard
@@ -173,7 +178,7 @@ struct dev_enum_ident_s
 
 /**
    Shortcut for creating a Generic with vendor/device ids and version
-   number in a static dev_enum_ident_s array.
+   number in a static @cref dev_enum_ident_s array.
 
    @param _vendor the vendor id to match, -1 for wildcard
    @param _device the device id to match, -1 for wildcard
@@ -189,30 +194,30 @@ struct dev_enum_ident_s
       } } }
 
 
-/** Common class init() function template. */
+/** @see dev_init_t */
 #define DEV_INIT(n)	error_t (n) (struct device_s *dev, uint32_t cl_missing)
 
 /**
-   @This is device init() function type. This function will allocate
-   device private data and initialize the hardware. It must be called
-   before using any other functions on the device.
-   
-   @This must update the @ref device_s::status value to indicate the
-   new status of the device. The value can be set to any status with
-   the @tt DEVICE_DRIVER_INIT_ prefix.
+   @This is the device driver initialization function type. This
+   function will allocate device private data and initialize the
+   hardware. It must be called before using any other functions on the
+   device.
 
-   The @ref DEVICE_DRIVER_INIT_PARTIAL status can be used to indicate
-   that only some drivers classes are properly initialized and ready
-   for use. The @ref device_s::init_mask bit mask must be updated
-   along in this case.
+   The value of @ref device_s::status will be updated depending on the
+   return value of this function.
 
-   This init function must return 0 when some progress have been made
-   or @tt -EAGAIN when some resources are missing to complete
-   initialization of the device. In both cases, it may be called again
-   later depending on the new device status. Any other error code can
-   be used. Any permanent error must be indicated by setting the
-   status to DEVICE_DRIVER_INIT_FAILED so that the function is not
-   called again later.
+   When the function returns @tt -EAGAIN, the @ref
+   DEVICE_DRIVER_INIT_PARTIAL value is used to indicate that only some
+   drivers classes are properly initialized and ready for use. The
+   @ref device_s::init_mask bit mask must be updated along in this
+   case. The initialization function will be called again later
+   in this case.
+
+   This init function must return 0 when the initialization is
+   completed. Any other error code can be used in order to report a
+   permanent error. The status will the be set to @ref
+   DEVICE_DRIVER_INIT_FAILED and the function will not be called again
+   later.
 
    The @ref DRIVER_FLAGS_NO_DEPEND flag can be used so that this
    function is called even if some resource dependencies are not
@@ -223,17 +228,19 @@ struct dev_enum_ident_s
    This function may be called early during startup depending on the
    driver. Some kernel service can not be used from this function if
    the driver has the @ref DRIVER_FLAGS_EARLY_INIT flag set.
+
+   @xsee {Device status}
 */
 typedef DEV_INIT(dev_init_t);
 
 
 
-/** Common device class cleanup() function template. */
+/** @see dev_cleanup_t */
 #define DEV_CLEANUP(n)	__attribute__((unused)) error_t    (n) (struct device_s *dev)
 
 /**
    @This is device cleanup() function type. @This tries to release
-   all ressources allocated by the initialization function.
+   all ressources allocated by the @ref dev_init_t function.
    This function will only be called when @ref device_s::ref_count
    and @ref device_s::start_count are both zero.
 
@@ -243,7 +250,7 @@ typedef DEV_INIT(dev_init_t);
 */
 typedef DEV_CLEANUP(dev_cleanup_t);
 
-/** @This specifies device use and start/stop operations. @see dev_use_t */
+/** @This specifies device usage operations. @see dev_use_t */
 enum dev_use_op_e
 {
   /** Get and Put operations are used when the @ref
@@ -301,7 +308,7 @@ enum dev_use_op_e
   /** This operation is used when a clock or power enable operation
       requested by the driver has been satisfied. The @tt param
       argument is a pointer to the sink end-point. @see
-      dev_clock_sink_update */
+      dev_clock_sink_gate */
   DEV_USE_CLOCK_GATES,
 
 # ifdef CONFIG_DEVICE_CLOCK_VARFREQ
@@ -317,7 +324,7 @@ enum dev_use_op_e
 
 struct device_accessor_s;
 
-/** Common device class use() function template. */
+/** @see dev_use_t */
 #define DEV_USE(n) error_t (n) (void *param, enum dev_use_op_e op)
 
 /** @This is called when the usage status of a device changes. The
@@ -330,6 +337,7 @@ typedef DEV_USE(dev_use_t);
 
 extern DEV_USE(dev_use_generic);
 
+/** @This specifies @ref driver_s flags */
 enum driver_flags_e
 {
   /** Perform initialization of the device during the @tt
@@ -375,6 +383,8 @@ struct driver_s
 # define DRIVER_DECLARE_CLEANUP(x)
 #endif
 
+/** @This declares a @ref driver_s object. Implemented device
+    classes must be specified as extra parameters. */
 #define DRIVER_DECLARE(symbol_, flags_, pretty_, prefix_, ...)   \
   const struct driver_s symbol_ = {                    \
     DRIVER_DECLARE_DESC(pretty_)                       \
@@ -385,6 +395,7 @@ struct driver_s
     .flags = flags_                                    \
   }
 
+/** @internal */
 struct driver_registry_s
 {
   const struct driver_s *driver;  
@@ -392,13 +403,11 @@ struct driver_registry_s
   size_t id_count;
 };
 
+/** @internal */
 extern const struct driver_registry_s driver_registry_table[];
+/** @internal */
 extern const struct driver_registry_s driver_registry_table_end[];
 
-/**
-   Registers a driver (struct driver_s) in the driver_registry_table
-   table.
- */
 #if defined(CONFIG_ARCH_EMU_DARWIN)
 # define DRIVER_REGISTRY_SECTION(x) __attribute__((section ("__DATA, __drivers")))
 #else
@@ -406,6 +415,14 @@ extern const struct driver_registry_s driver_registry_table_end[];
 #endif
 
 #ifdef CONFIG_DEVICE_DRIVER_REGISTRY
+/** @This registers a @ref driver_s object in the @ref
+    driver_registry_table table. This enables lookup and dynamic
+    binding of the driver to a device.
+
+    When this macro is not used, the driver can't be used for
+    enumerated devices. In this case, a pointer to the driver must be
+    passed to the @ref #DEV_DECLARE_STATIC macro or to the @ref
+    device_bind_driver function. */
 # define DRIVER_REGISTER(driver_, ...)                             \
   DRIVER_REGISTRY_SECTION(driver_)                                 \
   const struct driver_registry_s driver_##_driver_registry = {     \
@@ -422,26 +439,22 @@ extern const struct driver_registry_s driver_registry_table_end[];
   __attribute__((used)) const struct driver_s driver_
 #endif
 
-/**
-   @internal @This declares a device accessor type.
-*/
-#define DRIVER_CLASS_TYPES(cl, ...)                                    \
-/**                                                                     \
-   @This is the driver API descriptor for the cl device class.          \
-*/                                                                      \
+/** @internal @This declares a device accessor type.
+    @see driver_class_e
+    @xsee {Device classes} */
+#define DRIVER_CLASS_TYPES(id, cl, ...)                                 \
+  /** @This is the driver API descriptor for the cl device class.       \
+      @csee id @csee driver_class_s */                                  \
 struct driver_##cl##_s                                                  \
 {                                                                       \
   uint16_t class_; /* enum driver_class_e */                            \
   __VA_ARGS__                                                           \
 };                                                                      \
                                                                         \
-/**                                                                     \
-   @This is the device accessor object type for the cl device class.    \
-   This accessor must be initialized                                    \
-   using the @ref device_get_accessor function before being used to     \
-   access the device.                                                   \
-   @see {device_get_accessor, device_put_accessor}                      \
-*/                                                                      \
+/** @This is the device accessor object type for the cl device class.   \
+    This accessor must be initialized by calling the                    \
+    @ref device_get_accessor function.                                  \
+    @csee id @csee device_accessor_s @xsee {Device accessor} */         \
 struct device_##cl##_s                                                  \
 {                                                                       \
   struct device_s *dev;                                                 \
@@ -449,24 +462,30 @@ struct device_##cl##_s                                                  \
   uint_fast8_t number;                                                  \
 };                                                                      \
                                                                         \
+/** @This casts a generic device accessor to a cl device accessor */    \
 ALWAYS_INLINE struct device_##cl##_s *                                  \
 device_##cl##_s_cast(struct device_accessor_s *x)                       \
 {                                                                       \
   return (void*)x;                                                      \
 }                                                                       \
                                                                         \
+/** @This casts a cl device accessor to a generic device accessor */    \
 ALWAYS_INLINE struct device_accessor_s *                                \
 device_##cl##_s_base(struct device_##cl##_s *x)                         \
 {                                                                       \
   return (void*)x;                                                      \
 }
 
+/** @internal @This is the generic device driver class struct header. */
 struct driver_class_s
 {
   uint16_t class_;  /* enum driver_class_e */
   void *functions[];
 };
 
+/** @This is the generic device accessor.
+    @see device_get_accessor
+    @xcsee {Device accessor} */
 struct device_accessor_s
 {
   struct device_s *dev;
@@ -474,10 +493,9 @@ struct device_accessor_s
   uint_fast8_t number;
 };
 
-/**
-   @This invokes the requested operation on a device accessor object.
-   The function must be provided by the driver.
-*/
+/** @This invokes the requested operation on a device accessor object.
+    The function must be provided by the driver.
+    @xcsee {Device accessor} */
 #define DEVICE_OP(dev_accessor, op, ...)        \
 ({                                            \
   typeof(dev_accessor) __a__ = (dev_accessor);  \
@@ -494,6 +512,8 @@ struct device_accessor_s
   __a__->api->f_##op != NULL;       \
 })
 
+/** @This initializes a @ref device_accessor_s object to the null
+    accessor. */
 #define DEVICE_ACCESSOR_INIT { .dev = NULL, .api = NULL }
 
 /** @internal */
@@ -501,26 +521,24 @@ error_t device_get_api(struct device_s *dev,
                        enum driver_class_e cl,
                        const struct driver_class_s **api);
 
-/**
-   @This initializes a device accessor object. If the return value is
-   0, the accessor object can then be used to access device driver
-   functions of requested api class.
+/** @This initializes a device accessor object. If the return value is
+    0, the accessor object can then be used to access device driver
+    functions of requested api class.
 
-   The @tt number parameter can be used when the device provides
-   multiple sub-devices of the requested class type.
+    The @tt number parameter can be used when the device provides
+    multiple sub-devices of the requested class type.
 
-   @see {#DEVICE_ACCESSOR_INIT, #DEVICE_OP, device_put_accessor}
- */
+    @xcsee {Device accessor}
+    @see device_put_accessor */
 error_t device_get_accessor(void *accessor, struct device_s *dev,
                             enum driver_class_e cl, uint_fast8_t number);
 
-/**
-   @This copies a device accessor.  This gets a new reference to the
-   accessor that must be released with @tt device_put_accessor by
-   itself.
+/** @This copies a device accessor.  This gets a new reference to the
+    accessor that must be released with @tt device_put_accessor by
+    itself.
 
-   @see {#DEVICE_ACCESSOR_INIT, #DEVICE_OP, device_put_accessor}
- */
+    @xcsee {Device accessor}
+    @see device_put_accessor */
 error_t device_copy_accessor(void *accessor, const void *source);
 
 /** 
@@ -535,6 +553,8 @@ error_t device_copy_accessor(void *accessor, const void *source);
 
     See @ref device_get_by_path for more details in the path string
     format.
+    @csee device_get_accessor
+    @xcsee {Device accessor}
  */
 error_t device_get_accessor_by_path(void *accessor, struct device_node_s *root,
                                     const char *path, enum driver_class_e cl);

@@ -1,4 +1,5 @@
-@section {Microchip PIC32MZ}
+
+@section tP {Microchip PIC32MZ}
 
   @section {Building for a PIC32MZ Starter kit}
 

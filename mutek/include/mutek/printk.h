@@ -6,7 +6,7 @@
 
 /**
  * @file
- * @module{Mutek}
+ * @module{Kernel services}
  * @short Debugging messages output API
  */
 

@@ -1,7 +1,24 @@
 
-@moduledef{Mutek}
- @short Hardware independent kernel services
- @order 99
+@moduledef{Kernel services}
+  @short Hardware independent kernel services
+  @order 99
+
+  This module provides base kernel services which are not hardware
+  dependent. This includes a context scheduler, some synchronization
+  primitives as well as a memory allocator.
+
+  Some system services like, POSIX threads, file system and networking
+  support are provided by separate libraries.
+
+  The following topics are covered:
+  @list
+    @foreach hid hname htype {header} {+Kernel services} {1}
+      @group
+        @insert {@hid@} decl_short_desc, provided by the @ref {@hid@} {@hname@} header.
+      @end group
+    @end foreach
+  @end list
+
 @end moduledef
 
 @parse{

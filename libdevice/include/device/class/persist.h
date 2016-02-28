@@ -244,7 +244,7 @@ typedef DEV_PERSIST_INFO(devpersist_info_t);
                                         struct dev_persist_rq_s *rq)
 typedef DEV_PERSIST_REQUEST(devpersist_request_t);
 
-DRIVER_CLASS_TYPES(persist,
+DRIVER_CLASS_TYPES(DRIVER_CLASS_PERSIST, persist,
                    devpersist_info_t *f_info;
                    devpersist_request_t *f_request;
                    );

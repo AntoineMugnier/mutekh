@@ -22,7 +22,7 @@
 
 /**
  * @file
- * @module{Hexo}
+ * @module{Hardware abstraction layer}
  * @short Common error codes definitions
  */
 

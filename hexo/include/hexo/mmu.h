@@ -22,7 +22,7 @@
 
 /**
  * @file
- * @module{Hexo}
+ * @module{Hardware abstraction layer}
  * @short Memory Management Unit and memory contexts stuff
  */
 

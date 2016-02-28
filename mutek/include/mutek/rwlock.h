@@ -25,7 +25,7 @@
 
 /**
  * @file
- * @module{Mutek}
+ * @module{Kernel services}
  * @short General purpose read/write lock primitives
  *
  * The rwlock functions are empty and always succeed when the

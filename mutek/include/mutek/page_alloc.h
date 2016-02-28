@@ -25,7 +25,7 @@
 
 /**
  * @file
- * @module{Mutek}
+ * @module{Kernel services}
  * @short Physical pages allocator algorithms
  */
 

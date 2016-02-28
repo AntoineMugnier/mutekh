@@ -133,6 +133,7 @@ struct dev_rfpacket_config_s
   uint32_t                      BITFIELD(sw_len,5);
 };
 
+/** @see dev_rfpacket_stats_t */
 struct dev_rfpacket_stats_s
 {
   /** Number of rx packet */
@@ -220,8 +221,7 @@ STRUCT_INHERIT(dev_rfpacket_rq_s, dev_request_s, base);
   terminated. The first request is not started until all requests were
   properly enqueued.
 
-  The @ref dev_rfpacket_rq_s::kr field of the request must always be
-  initialized. The @ref kroutine_exec function will be called on @tt
+  The @ref kroutine_exec function will be called on @tt
   kr when the request ends. The @tt err field indicates the error
   status of the request.
 
@@ -236,7 +236,7 @@ STRUCT_INHERIT(dev_rfpacket_rq_s, dev_request_s, base);
   field defines this behavior (see @ref dev_rfpacket_time_anchor_e).
   @ref DEV_RFPACKET_RQ_RX and @ref DEV_RFPACKET_RQ_TX requests which
   terminate by exceeding their lifetime have their @tt err field set
-  to @ref -ETIMEDOUT.
+  to @tt -ETIMEDOUT.
 
   Multiple packets can be received during a @ref DEV_RFPACKET_RQ_RX
   request, the request is not terminated until its lifetime expires.
@@ -262,12 +262,14 @@ STRUCT_INHERIT(dev_rfpacket_rq_s, dev_request_s, base);
   their @tt err field set to @tt -ECANCELED.
 
   If the requested configuration is not supported, the request will
-  return @tt -ENOTSUP. The @ref msk provide a mask to the driver to
+  return @tt -ENOTSUP. The @tt mask provide a mask to the driver to
   quickly identify which parameter have changed. This field is set
   to @tt -1 when no mask is provided. In this case the driver must 
   either reconfigure all parameters or embed a mechanism to detect
   which parameters have changed.
   
+  The kroutine of the request may be executed from within this
+  function. Please read @xref {Nested device request completion}.
 
   The transceiver device may implement the timer device class which
   wrap the timer used to handle timestamps and lifetime values.
@@ -319,14 +321,11 @@ STRUCT_INHERIT(dev_rfpacket_rq_s, dev_request_s, base);
 typedef DEV_RFPACKET_REQUEST(dev_rfpacket_request_t);
 
 
-/** @see dev_rfpacket_request_t */
+/** @see dev_rfpacket_receive_t */
 #define DEV_RFPACKET_RECEIVE(n) void  (n) (const struct device_rfpacket_s *accessor, \
                                             struct dev_rfpacket_rx_s *rx)
 /**
   This function enqueues a @ref dev_rfpacket_rx_s buffer.
-
-  The @ref dev_rfpacket_rx_s::kr field of the buffer must always be
-  initialized.
 
   If the device has been started by calling @ref device_start, the transceiver
   is able to receive packets when some @ref dev_rfpacket_rx_s objects are
@@ -343,45 +342,40 @@ typedef DEV_RFPACKET_REQUEST(dev_rfpacket_request_t);
   dev_rfpacket_rx_s object is popped and its kroutine is called. The
   @tt timestamp field is set to the date of the beginning of frame.
 
- */
-
+  The kroutine of the request may be executed from within this
+  function. Please read @xref {Nested device request completion}.
+*/
 typedef DEV_RFPACKET_RECEIVE(dev_rfpacket_receive_t);
 
-/** @see dev_rfpacket_request_t */
+/** @see dev_rfpacket_get_skew_t */
 #define DEV_RFPACKET_GET_SKEW(n) error_t (n) (const struct device_rfpacket_s *accessor, \
                                                     struct device_timer_s *timer, \
                                                     struct dev_timer_skew_s *skew)
 /**
-  
   This function returns a skew between the transceiver timer and
-  another timer provided by caller.
-  The @ref accessor can be an accessor on the same timer device as
-  that used in transceiver. In this case @ref skew->d field is null
-  and skew->r.num and skew->r.denom field are equal to 1.
- */
-
+  another timer provided by caller.  The @tt accessor can be an
+  accessor on the same timer device as that used in transceiver. In
+  this case @ref dev_timer_skew_s::d field is null and @ref
+  dev_timer_skew_s::num and @ref dev_timer_skew_s::denom field are
+  both equal to 1. */
 typedef DEV_RFPACKET_GET_SKEW(dev_rfpacket_get_skew_t);
 
-/** @see dev_rfpacket_request_t */
-#define DEV_RFPACKET_STATS(n) error_t  (n) (const struct device_rfpacket_s *accessor, struct dev_rfpacket_stats_s *stats)
-/**
-  This function returns a skew between the transceiver timer and
-  another timer provided by caller.
-  The @ref accessor can be an accessor on the same timer device as
-  that used in transceiver. In this case @ref skew->d field is null
-  and skew->r.num and skew->r.denom field are equal to 1.
- */
+/** @see dev_rfpacket_stats_t */
+#define DEV_RFPACKET_STATS(n) error_t  (n) (const struct device_rfpacket_s *accessor, \
+                                            struct dev_rfpacket_stats_s *stats)
 
+/** @This return some stat counters. */
 typedef DEV_RFPACKET_STATS(dev_rfpacket_stats_t);
 
 
-DRIVER_CLASS_TYPES(rfpacket,
+DRIVER_CLASS_TYPES(DRIVER_CLASS_RFPACKET, rfpacket,
                    dev_rfpacket_request_t *f_request;
                    dev_rfpacket_receive_t *f_receive;
                    dev_rfpacket_stats_t *f_stats;
                    dev_rfpacket_get_skew_t *f_get_skew;
                   );
 
+/** @see driver_rfpacket_s */
 #define DRIVER_RFPACKET_METHODS(prefix)                            \
   ((const struct driver_class_s*)&(const struct driver_rfpacket_s){     \
     .class_ = DRIVER_CLASS_RFPACKET,                               \
@@ -391,12 +385,13 @@ DRIVER_CLASS_TYPES(rfpacket,
     .f_get_skew = prefix ## _get_skew,                             \
   })
 
-inline error_t dev_rfpacket_spin_send_packet(
+config_depend_inline(CONFIG_DEVICE_RFPACKET,
+error_t dev_rfpacket_spin_send_packet(
        const struct device_rfpacket_s *accessor,
        const uint8_t *buf,
        const size_t size,
        int16_t pwr,
-       uint32_t lifetime)
+       uint32_t lifetime),
 {
     struct dev_request_status_s status;
     struct dev_rfpacket_rq_s rq = {
@@ -416,12 +411,13 @@ inline error_t dev_rfpacket_spin_send_packet(
     dev_request_spin_wait(&status);
 
     return rq.err;
-}
+});
 
-inline error_t dev_rfpacket_spin_config(
+config_depend_inline(CONFIG_DEVICE_RFPACKET,
+error_t dev_rfpacket_spin_config(
     const struct device_rfpacket_s *accessor,
     const struct dev_rfpacket_config_s *cfg,
-    enum dev_rfpacket_cfg_msk_e mask)
+    enum dev_rfpacket_cfg_msk_e mask),
 {
     struct dev_request_status_s status;
     struct dev_rfpacket_rq_s rq = {
@@ -439,15 +435,15 @@ inline error_t dev_rfpacket_spin_config(
     dev_request_spin_wait(&status);
 
     return rq.err;
-}
+});
 
-#ifdef CONFIG_MUTEK_CONTEXT_SCHED
-inline error_t dev_rfpacket_wait_send_packet(
+config_depend_and2_inline(CONFIG_DEVICE_RFPACKET, CONFIG_MUTEK_CONTEXT_SCHED,
+error_t dev_rfpacket_wait_send_packet(
        const struct device_rfpacket_s *accessor,
        const uint8_t *buf,
        const size_t size,
        int16_t pwr,
-       uint32_t lifetime)
+       uint32_t lifetime),
 {
     struct dev_request_status_s status;
     struct dev_rfpacket_rq_s rq = {
@@ -467,12 +463,13 @@ inline error_t dev_rfpacket_wait_send_packet(
     dev_request_sched_wait(&status);
 
     return rq.err;
-}
+});
 
-inline error_t dev_rfpacket_wait_config(
+config_depend_and2_inline(CONFIG_DEVICE_RFPACKET, CONFIG_MUTEK_CONTEXT_SCHED,
+error_t dev_rfpacket_wait_config(
     const struct device_rfpacket_s *accessor,
     const struct dev_rfpacket_config_s *cfg,
-    enum dev_rfpacket_cfg_msk_e mask)
+    enum dev_rfpacket_cfg_msk_e mask),
 {
     struct dev_request_status_s status;
     struct dev_rfpacket_rq_s rq = {
@@ -490,7 +487,7 @@ inline error_t dev_rfpacket_wait_config(
     dev_request_sched_wait(&status);
 
     return rq.err;
-}
+});
 
 #endif
 

@@ -22,7 +22,7 @@
 
 /**
  * @file
- * @module{Hexo}
+ * @module{Hardware abstraction layer}
  * @short Processor local and context local, language global variables features
  */
 

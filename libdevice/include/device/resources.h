@@ -24,10 +24,11 @@
 #define __DEVICE_RESOURCES_H__
 
 /**
- * @file
- * @module{Devices support library}
- * @short Device resources
- */
+   @file
+   @module{Devices support library}
+   @short Device resources
+   @xsee {Device resources}
+*/
 
 #include <assert.h>
 #include <hexo/types.h>
@@ -37,34 +38,86 @@
 
 enum driver_class_e;
 
-/** @This specifies the types of device resource entries. */
+/** @This specifies the types of device resource entries.
+    @xcsee {Device resources} */
 enum dev_resource_type_e
 {
+    /** Mark a resource entry as not used. */
     DEV_RES_UNUSED = 0,
+    /** Memory address range. */
     DEV_RES_MEM,
+    /** IO space address range. */
     DEV_RES_IO,
+    /** This entry specifies the connection of an irq output of the
+        device to an interrupt controller. @see device_res_add_irq */
     DEV_RES_IRQ,
+    /** This entry specifies a pin label name along with a range of
+        associated contiguous pin ids. It used to define a set of GPIO
+        pins which are needed to drive an external device. The label
+        specifies a driver specific role for the pin range. A link to
+        the GPIO controller for which the pin ids are relevant must be
+        specified in a separate @ref DEV_RES_DEV_PARAM resource entry
+        named @tt gpio. */
     DEV_RES_GPIO,
+    /** This entry specifies a pin label name along with the associated
+        pin muxing configuration. It used to define which pins of the
+        chip must be dedicated to IOs of an internal device. */
     DEV_RES_IOMUX,
+    /** Default serial line configuration for an UART. */
     DEV_RES_UART,
+    /** Numerical identifier which uniquely identify an instance of
+        the device. Processor devices must use this resource in order
+        to specifies the cpu id. */
     DEV_RES_ID,
+    /** Vendor ID. Both a numerical and a string values can be
+        specified. The exact meaning of the value depends on the
+        parent enumerator device. */
     DEV_RES_VENDOR,
+    /** Product ID. Both a numerical and a string values can be
+        specified. The exact meaning of the value depends on the
+        parent enumerator device. */
     DEV_RES_PRODUCT,
+    /** Hardware revision number. */
     DEV_RES_REVISION,
+    /** Constant frequency value. */
     DEV_RES_FREQ,
+    /** CMU Clock multiplexer and scaler configuration entry.
+        @see device_add_res_cmu_mux */
     DEV_RES_CMU_MUX,
+    /** CMU Clock oscillator configuration entry.
+        @see device_add_res_cmu_osc */
     DEV_RES_CMU_OSC,
+    /** Device clock source mapping. @see device_add_res_clock_src */
     DEV_RES_CLOCK_SRC,
+    /** @experimental Device clock throttling modes. @see #DEV_STATIC_RES_CLOCK_MODES */
     DEV_RES_CLOCK_MODES,
+    /** Generic string parameters. The exact meaning of the value is
+        driver dependent. */
     DEV_RES_STR_PARAM,
+    /** Generic binary object parameter. The exact meaning of the
+        value is driver dependent. */
     DEV_RES_BLOB_PARAM,
+    /** Generic integer parameter. The exact meaning of the value is
+        driver dependent. */
     DEV_RES_UINT_PARAM,
+    /** Named dependency on an other device. The exact meaning of the
+        value may be device class dependent or driver dependent. The
+        device initialization will not occur until the specified path
+        points to an existing and properly initialized device. The
+        class information is used to check for availability of a
+        specific API implementation by the driver associated to the
+        device, it may be @ref DRIVER_CLASS_NONE. */
     DEV_RES_DEV_PARAM,
+    /** Generic integer array parameter. The exact meaning of the
+        value is driver dependent. */
     DEV_RES_UINT_ARRAY_PARAM,
+    /** I2C device address. */
     DEV_RES_I2C_ADDR,
+    /** DMA channel mapping. The @tt config parameter is driver
+        specific. */
     DEV_RES_DMA,
-
-    DEV_RES_TYPES_COUNT,              //< Number of resource types
+    /** Number of resource types */
+    DEV_RES_TYPES_COUNT,
 };
 
 enum dev_resource_flags_e
@@ -77,6 +130,7 @@ enum dev_resource_flags_e
   DEVICE_RES_FLAGS_ENUM_RESERVED0 = 16,
 };
 
+/** Device resource entry. @see dev_resource_table_s */
 struct dev_resource_s
 {
   union {
@@ -87,19 +141,19 @@ struct dev_resource_s
     /** @internal */
     uint64_t                    uint64;
 
-    /** @see #DEV_STATIC_RES_MEM @see device_res_add_mem */
+    /** @see DEV_RES_MEM */
     struct {
       uintptr_t                 start;
       uintptr_t                 end;
     }                           mem;
 
-    /** @see #DEV_STATIC_RES_IO @see device_res_add_io */
+    /** @see DEV_RES_IO */
     struct {
       uintptr_t                 start;
       uintptr_t                 end;
     }                           io;
 
-    /** @see #DEV_STATIC_RES_IRQ @see device_res_add_irq */
+    /** @see DEV_RES_IRQ */
     struct {
       /** id of irq source end-point of the device */
       uintptr_t                 BITFIELD(src_id,CONFIG_DEVICE_IRQ_MAX_OUTPUT_ID);
@@ -113,14 +167,14 @@ struct dev_resource_s
       uintptr_t                 BITFIELD(route_mask,CONFIG_DEVICE_IRQ_MAX_ROUTES);
     }                           irq;
 
-    /** @see #DEV_STATIC_RES_GPIO @see device_res_add_gpio */
+    /** @see DEV_RES_GPIO */
     struct {
       const char                *label;
       uintptr_t                 BITFIELD(id,CONFIG_DEVICE_GPIO_MAX_ID);
       uintptr_t                 BITFIELD(width,CONFIG_DEVICE_GPIO_MAX_WIDTH);
     }                           gpio;
 
-    /** @see #DEV_STATIC_RES_IOMUX @see device_res_add_iomux */
+    /** @see DEV_RES_IOMUX */
     struct {
       const char                *label;
       uintptr_t                 BITFIELD(demux,CONFIG_DEVICE_IOMUX_MAX_DEMUX);
@@ -129,14 +183,14 @@ struct dev_resource_s
       uintptr_t                 BITFIELD(config,CONFIG_DEVICE_IOMUX_MAX_CONFIG);
     }                           iomux;
 
-    /** @see #DEV_STATIC_RES_DMA @see device_res_add_dma */
+    /** @see DEV_RES_DMA */
     struct {
-      const char                *label;
+ char                *label;
       uintptr_t                 config;
       uintptr_t                 BITFIELD(channel,5);
     }                           dma;
 
-    /** @see #DEV_STATIC_RES_UART @see device_res_add_uart */
+    /** @see DEV_RES_UART */
     struct {
       uintptr_t                 BITFIELD(baudrate,26);
       uintptr_t                 BITFIELD(data_bits,4);
@@ -146,19 +200,19 @@ struct dev_resource_s
       uintptr_t                 BITFIELD(half_duplex,1);
     }                           uart;
 
-    /** @see #DEV_STATIC_RES_ID @see device_res_add_id */
+    /** @ref DEV_RES_ID */
     struct {
       uintptr_t                 major;          //< dynamic numeric id
       uintptr_t                 minor;          //< dynamic numeric id
     }                           id;
 
-    /** @see #DEV_STATIC_RES_REVISION @see device_res_add_revision */
+    /** @see DEV_RES_REVISION */
     struct {
       uintptr_t                 major;
       uintptr_t                 minor;
     }                           revision;
 
-    /** @see #DEV_STATIC_RES_VENDOR @see device_res_add_vendor */
+    /** @see DEV_RES_VENDOR */
     struct {
       /** optional vendor numeric id, may be -1 */
       uintptr_t                 id;
@@ -166,7 +220,7 @@ struct dev_resource_s
       const char                *name;
     }                           vendor;
 
-    /** @see #DEV_STATIC_RES_PRODUCT @see device_res_add_product */
+    /** @see DEV_RES_PRODUCT */
     struct {
       /** optional device numeric id, may be -1 */
       uintptr_t                 id;
@@ -174,7 +228,7 @@ struct dev_resource_s
       const char                *name;
     }                           product;
 
-    /** @see #DEV_STATIC_RES_CMU_MUX @see device_add_res_cmu_mux */
+    /** @see DEV_RES_CMU_MUX */
     struct {
       /** node id of the input clock signal */
       uint64_t                  BITFIELD(parent,CONFIG_DEVICE_CLOCK_MAX_ID);
@@ -188,7 +242,7 @@ struct dev_resource_s
       uint64_t                  BITFIELD(config,CONFIG_DEVICE_CLOCK_MAX_CONFIG);
     }                           cmu_mux;
 
-    /** @see #DEV_STATIC_RES_CMU_OSC @see device_add_res_cmu_osc */
+    /** @see DEV_RES_CMU_OSC */
     struct __attribute__((packed)) {
       /** numerator of the frequency fractional part */
       uint64_t                  BITFIELD(num,CONFIG_DEVICE_CLOCK_OSCN_WIDTH);
@@ -204,12 +258,12 @@ struct dev_resource_s
       uint32_t                  BITFIELD(acc_e,5);
     }                           cmu_osc;
 
-    /** @see #DEV_STATIC_RES_CLK_SRC @see device_add_res_clock_src */
+    /** @see DEV_RES_CLOCK_SRC */
     struct {
       /** path to the clock source device */
       const char                *src;
       /** node id of the source end-point, relevant to the device
-          pointed to by @ref src. */
+          pointed to by @tt src. */
       uintptr_t                 BITFIELD(src_ep,CONFIG_DEVICE_CLOCK_MAX_ID);
       /** node id of the sink end-point, relevant to the device which
           holds this resource. */
@@ -217,7 +271,7 @@ struct dev_resource_s
     }                           clock_src;
 
 #ifdef CONFIG_DEVICE_CLOCK_VARFREQ
-    /** @see #DEV_STATIC_RES_CLOCK_MODES */
+    /** @see DEV_RES_STR_PARAM */
     struct {
       uintptr_t                 BITFIELD(sink_ep,CONFIG_DEVICE_CLOCK_MAX_ID);
       /** device driver throttling modes to clock provider mask bits */
@@ -225,7 +279,7 @@ struct dev_resource_s
     }                           clock_modes;
 #endif
 
-    /** @see #DEV_STATIC_RES_FREQ @see device_add_res_freq */
+    /** @see DEV_RES_FREQ */
     struct __attribute__((packed)) {
       /** numerator of the frequency fractional part */
       uint64_t                  BITFIELD(num,CONFIG_DEVICE_CLOCK_OSCN_WIDTH);
@@ -237,32 +291,32 @@ struct dev_resource_s
       uint32_t                  BITFIELD(acc_e,5);
     }                           freq;
 
-    /** @see #DEV_STATIC_RES_STR_PARAM @see device_res_add_str_param */
+    /** @see DEV_RES_STR_PARAM */
     struct {
       const char                *name;
       const char                *value;
     }                           str_param;
 
-    /** @see #DEV_STATIC_RES_BLOB_PARAM */
+    /** @see DEV_RES_BLOB_PARAM */
     struct {
       const char                *name;
       const void                *value;
     }                           blob_param;
 
-    /** @see #DEV_STATIC_RES_UINT_PARAM @see device_res_add_uint_param */
+    /** @see DEV_RES_UINT_PARAM */
     struct {
       const char                *name;
       uintptr_t                 value;
     }                           uint_param;
 
-    /** @see #DEV_STATIC_RES_DEV_PARAM @see device_res_add_dev_param */
+    /** @see DEV_RES_DEV_PARAM */
     struct {
       const char                *name;
       const char                *dev;
       uint8_t                   class_;
     }                           dev_param;
 
-    /** @see device_res_add_uint_array_param */
+    /** @see DEV_RES_UINT_ARRAY_PARAM */
     struct {
       const char                *name;
       const uintptr_t           *array;
@@ -293,27 +347,29 @@ enum dev_resource_table_flags_e
   DEVICE_RES_TBL_FLAGS_STATIC_CONST = 2,
 };
 
+/** Table of device resources */
 struct dev_resource_table_s
 {
 #ifdef CONFIG_DEVICE_RESOURCE_ALLOC
+  /** chaining of resource entry block */
   struct dev_resource_table_s     *next;
 #endif
   enum dev_resource_table_flags_e BITFIELD(flags,8);
+  /** number of entries in the block */
   uint8_t                         count;
   __attribute__((aligned(8)))
   struct dev_resource_s           table[0];
 };
 
+/** @internal */
 #define DEV_STATIC_RESOURCES_ARRAY(args_...)                    \
   ((struct dev_resource_s[]){                          \
     args_                                                       \
   })
 
-/** @This yields a static pointer to an static initialized @ref
-    dev_resource_s object.
-
-    @see #DEV_DECLARE_STATIC
-*/
+/** @internal @This yields a static pointer to an static initialized
+    @ref dev_resource_s object.
+    @see #DEV_DECLARE_STATIC */
 #define DEV_STATIC_RESOURCES(args_...)                          \
   (const struct dev_resource_table_s *)&(const struct {         \
       struct dev_resource_table_s _table;                       \
@@ -328,8 +384,8 @@ struct dev_resource_table_s
     }                                                           \
   }
 
-/** @This iterates over resources entries of a device. */
 #ifdef CONFIG_DEVICE_RESOURCE_ALLOC
+/** @This iterates over resources entries of a device. */
 # define DEVICE_RES_FOREACH(dev, rvar, ... /* loop body */ )            \
   do {                                                                  \
     struct dev_resource_table_s *_tbl;                                  \
@@ -349,6 +405,7 @@ struct dev_resource_table_s
   _end:;                                                                \
   } while(0)
 #else
+/** @This iterates over resources entries of a device. */
 # define DEVICE_RES_FOREACH(dev, rvar, ... /* loop body */ )            \
   do {                                                                  \
     struct dev_resource_table_s *_tbl = (dev)->res_tbl;                 \
@@ -394,7 +451,7 @@ struct dev_resource_s * device_res_get_from_name(const struct device_s *dev,
                                                  uint_fast8_t index, const char *name);
 
 /** @internal @This allocates a new device resource and setups 2
-    integer or pointers fields. */
+    integer or pointer fields. */
 config_depend_inline(CONFIG_DEVICE_RESOURCE_ALLOC,
 error_t device_res_alloc_uint(struct device_s *dev,
                               enum dev_resource_type_e type,
@@ -477,8 +534,8 @@ error_t device_res_alloc_str(struct device_s *dev,
 /********************************************************************************/
 
 
-/** @This adds an IO space address range to the device resources list.
-    @see #DEV_STATIC_RES_IO */
+/** @This appends an IO space address range to the device resources
+    table.  @csee DEV_RES_IO */
 config_depend_alwaysinline(CONFIG_DEVICE_RESOURCE_ALLOC,
 error_t device_res_add_io(struct device_s *dev, uintptr_t start, uintptr_t end),
 {
@@ -486,9 +543,9 @@ error_t device_res_add_io(struct device_s *dev, uintptr_t start, uintptr_t end),
   return device_res_alloc_uint(dev, DEV_RES_IO, start, end, NULL);
 })
 
-/** @This can be used to include a memory range entry in a static
-    device resources table declaration. @see device_res_add_mem
-    @see #DEV_DECLARE_STATIC_RESOURCES */
+/** @This specifies an IO space address range entry in a static
+    device resources table declaration. @csee DEV_RES_IO
+    @see #DEV_DECLARE_STATIC */
 #define DEV_STATIC_RES_IO(start_, end_)         \
   {                                             \
     .type = DEV_RES_IO,                         \
@@ -498,8 +555,9 @@ error_t device_res_add_io(struct device_s *dev, uintptr_t start, uintptr_t end),
       } }                                       \
   }
 
-/** @internal @This looks up an IO resource entry and reads either
-    fields. @tt start and @tt end pointers may be @tt NULL. */
+/** @This looks up an IO resource entry and reads either
+    fields. @tt start and @tt end pointers may be @tt NULL.
+    @csee DEV_RES_IO */
 ALWAYS_INLINE error_t device_res_get_io(const struct device_s *dev,
                                         uint_fast8_t id, uintptr_t *start, uintptr_t *end)
 {
@@ -507,8 +565,8 @@ ALWAYS_INLINE error_t device_res_get_io(const struct device_s *dev,
 }
 
 
-/** @This adds an memory space address range to the device resources list.
-    @see #DEV_STATIC_RES_MEM */
+/** @This adds a memory space address range to the device resources
+    table. @csee DEV_RES_MEM */
 config_depend_alwaysinline(CONFIG_DEVICE_RESOURCE_ALLOC,
 error_t device_res_add_mem(struct device_s *dev, uintptr_t start, uintptr_t end),
 {
@@ -516,9 +574,8 @@ error_t device_res_add_mem(struct device_s *dev, uintptr_t start, uintptr_t end)
   return device_res_alloc_uint(dev, DEV_RES_MEM, start, end, NULL);
 })
 
-/** @This can be used to include a memory range entry in a static
-    device resources table declaration. @see device_res_add_mem
-    @see #DEV_DECLARE_STATIC_RESOURCES */
+/** @This specifies a memory range entry in a static device resources
+    table declaration. @csee DEV_RES_MEM @see #DEV_DECLARE_STATIC */
 #define DEV_STATIC_RES_MEM(start_, end_)        \
   {                                             \
     .type = DEV_RES_MEM,                        \
@@ -528,8 +585,9 @@ error_t device_res_add_mem(struct device_s *dev, uintptr_t start, uintptr_t end)
       } }                                       \
   }
 
-/** @internal @This looks up a memory resource entry and reads either
-    fields. @tt start and @tt end pointers may be @tt NULL. */
+/** @This looks up a memory range resource entry and reads either
+    fields. @tt start and @tt end pointers may be @tt NULL.
+    @csee DEV_RES_MEM */
 ALWAYS_INLINE error_t device_res_get_mem(const struct device_s *dev,
                                          uint_fast8_t id, uintptr_t *start, uintptr_t *end)
 {
@@ -537,21 +595,17 @@ ALWAYS_INLINE error_t device_res_get_mem(const struct device_s *dev,
 }
 
 
-/**
-   @This adds a numerical identifier which uniquely identify an
-   instance of the device. This is generally used by device which are
-   commonly referred to by using a number. Processor devices must
-   use this resource for the cpu id. @see #DEV_STATIC_RES_ID
-*/
+/** @This adds a device instance identifier to the device resource
+   table. @csee DEV_RES_ID */
 config_depend_alwaysinline(CONFIG_DEVICE_RESOURCE_ALLOC,
 error_t device_res_add_id(struct device_s *dev, uintptr_t major, uintptr_t minor),
 {
   return device_res_alloc_uint(dev, DEV_RES_ID, major, minor, NULL);
 })
 
-/** @This can be used to include a numerical indentifier resource
-    entry in a static device resources table declaration. @see
-    #DEV_DECLARE_STATIC_RESOURCES @see device_res_add_id */
+/** @This specifies a numerical instance identifier in a static device
+    resources table declaration. @csee DEV_RES_ID
+    @see #DEV_DECLARE_STATIC */
 # define DEV_STATIC_RES_ID(major_, minor_)      \
   {                                             \
     .type = DEV_RES_ID,                         \
@@ -561,8 +615,9 @@ error_t device_res_add_id(struct device_s *dev, uintptr_t major, uintptr_t minor
       } }                                       \
   }
 
-/** @internal @This looks up an id resource entry and reads either
-    fields. @tt start and @tt end pointers may be @tt NULL. */
+/** @internal @This looks up an instance identifier resource entry and
+    reads either fields. @tt start and @tt end pointers may be @tt
+    NULL. @csee DEV_RES_ID */
 ALWAYS_INLINE error_t device_res_get_id(const struct device_s *dev,
                                         uint_fast8_t id, uintptr_t *major, uintptr_t *minor)
 {
@@ -570,18 +625,16 @@ ALWAYS_INLINE error_t device_res_get_id(const struct device_s *dev,
 }
 
 
-/**
-   @This adds a revision information for the device.
-*/
+/** @This adds a revision entry for the device. @csee DEV_RES_REVISION */
 config_depend_alwaysinline(CONFIG_DEVICE_RESOURCE_ALLOC,
 error_t device_res_add_revision(struct device_s *dev, uintptr_t major, uintptr_t minor),
 {
   return device_res_alloc_uint(dev, DEV_RES_REVISION, major, minor, NULL);
 })
 
-/** @This can be used to include a revision resource
-    entry in a static device resources table declaration. @see
-    #DEV_DECLARE_STATIC_RESOURCES @see device_res_add_revision */
+/** @This specifies a revision resource entry in a static device
+    resources table declaration. @csee DEV_RES_REVISION
+    @see #DEV_DECLARE_STATIC */
 # define DEV_STATIC_RES_REVISION(major_, minor_)                        \
   {                                                                     \
     .type = DEV_RES_REVISION,                                           \
@@ -591,8 +644,9 @@ error_t device_res_add_revision(struct device_s *dev, uintptr_t major, uintptr_t
       } }                                                               \
   }
 
-/** @internal @This looks up a revision resource entry and reads either
-    fields. @tt start and @tt end pointers may be @tt NULL. */
+/** @This looks up a revision resource entry and reads either
+    fields. @tt start and @tt end pointers may be @tt NULL.
+    @csee DEV_RES_ID */
 ALWAYS_INLINE error_t device_res_get_rev(const struct device_s *dev,
                                          uint_fast8_t id, uintptr_t *major, uintptr_t *minor)
 {
@@ -600,12 +654,9 @@ ALWAYS_INLINE error_t device_res_get_rev(const struct device_s *dev,
 }
 
 
-/**
-   @This attaches a vendor identifier resource to the device. Both a
-   numerical and a string values can be specified. The exact meaning
-   of the value depends on the parent enumerator device. The string
-   will be duplicated if not @tt NULL.
-*/
+/**  @This attaches a vendor identifier resource entry to the
+     device. The string will be duplicated if not @tt NULL.
+     @csee DEV_RES_VENDOR */
 config_depend_alwaysinline(CONFIG_DEVICE_RESOURCE_ALLOC,
 error_t device_res_add_vendor(struct device_s *dev, uintptr_t id, const char *name),
 {
@@ -618,10 +669,9 @@ error_t device_res_add_vendor(struct device_s *dev, uintptr_t id, const char *na
   return 0;
 })
 
-/** @This can be used to include a vendor id resource entry in a
-    static device resources table declaration. When not @tt NULL, the
-    name must be a static string. @see #DEV_DECLARE_STATIC_RESOURCES
-    @see device_res_add_vendor */
+/** @This specifies a vendor id resource entry in a static device
+    resources table declaration. @csee DEV_RES_VENDOR
+    @see #DEV_DECLARE_STATIC */
 # define DEV_STATIC_RES_VENDOR(id_, name_)      \
   {                                             \
     .type = DEV_RES_VENDOR,                     \
@@ -632,12 +682,9 @@ error_t device_res_add_vendor(struct device_s *dev, uintptr_t id, const char *na
   }
 
 
-/**
-   @This attaches a product identifier resource to the device. Both a
-   numerical and a string values can be specified. The exact meaning
-   of the value depends on the parent enumerator device.  The string
-   will be duplicated if not @tt NULL.
-*/
+/**  @This attaches a product identifier resource entry to the
+     device. The string will be duplicated if not @tt NULL.
+     @csee DEV_RES_PRODUCT */
 config_depend_alwaysinline(CONFIG_DEVICE_RESOURCE_ALLOC,
 error_t device_res_add_product(struct device_s *dev, uintptr_t id, const char *name),
 {
@@ -650,10 +697,9 @@ error_t device_res_add_product(struct device_s *dev, uintptr_t id, const char *n
   return 0;
 })
 
-/** @This can be used to include a product id resource entry in a
-    static device resources table declaration. When not @tt NULL, the
-    name must be a static string. @see #DEV_DECLARE_STATIC_RESOURCES
-    @see device_res_add_product */
+/** @This specifies a product id resource entry in a static device
+    resources table declaration. @csee DEV_RES_PRODUCT
+    @see #DEV_DECLARE_STATIC */
 # define DEV_STATIC_RES_PRODUCT(id_, name_)     \
   {                                             \
     .type = DEV_RES_PRODUCT,                    \
@@ -664,7 +710,8 @@ error_t device_res_add_product(struct device_s *dev, uintptr_t id, const char *n
   }
 
 
-/** @This attaches a frequency resource to the device. */
+/** @This attaches a frequency resource to the device.
+    @csee DEV_RES_FREQ */
 config_depend_alwaysinline(CONFIG_DEVICE_RESOURCE_ALLOC,
 error_t device_res_add_freq(struct device_s *dev,
                             const struct dev_freq_s *freq),
@@ -681,7 +728,9 @@ error_t device_res_add_freq(struct device_s *dev,
   return 0;
 })
 
-/** @see #DEV_DECLARE_STATIC_RESOURCES @see device_res_add_freq */
+/** @This specifies a frequency resource entry in a static device
+    resources table declaration. A default value is used for frequency
+    accuracy.  @csee DEV_RES_FREQ @see #DEV_DECLARE_STATIC */
 # define DEV_STATIC_RES_FREQ(num_, denom_)      \
   {                                             \
     .type = DEV_RES_FREQ,                       \
@@ -693,7 +742,8 @@ error_t device_res_add_freq(struct device_s *dev,
       } }                                       \
   }
 
-/** @see #DEV_DECLARE_STATIC_RESOURCES @see device_res_add_freq */
+/** @This is similar to @cref #DEV_STATIC_RES_FREQ, with a specified
+    value for the accuracy. @see dev_freq_s */
 # define DEV_STATIC_RES_FREQ_ACC(num_, denom_, _acc_m, _acc_e)      \
   {                                             \
     .type = DEV_RES_FREQ,                       \
@@ -705,6 +755,8 @@ error_t device_res_add_freq(struct device_s *dev,
       } }                                       \
   }
 
+/** @This looks up a frequency resource entry.
+    @csee DEV_RES_FREQ */
 ALWAYS_INLINE error_t device_get_res_freq(const struct device_s *dev,
                                           struct dev_freq_s *freq,
                                           uint_fast8_t index)
@@ -724,14 +776,17 @@ ALWAYS_INLINE error_t device_get_res_freq(const struct device_s *dev,
 }
 
 
-/** @This attaches a string parameter resource to the device. The
-    exact meaning of the value is driver dependent. */
+/** @This attaches a generic string parameter resource to the
+    device. @csee DEV_RES_STR_PARAM */
 config_depend_alwaysinline(CONFIG_DEVICE_RESOURCE_ALLOC,
 error_t device_res_add_str_param(struct device_s *dev, const char *name, const char *value),
 {
   return device_res_alloc_str(dev, DEV_RES_STR_PARAM, name, value, NULL);
 })
 
+/** @This specifies a generic string parameter resource in a static
+    device resources table declaration. @csee DEV_RES_STR_PARAM @see
+    #DEV_DECLARE_STATIC */
 # define DEV_STATIC_RES_STR_PARAM(name_, value_)        \
   {                                                     \
     .type = DEV_RES_STR_PARAM,                          \
@@ -741,8 +796,8 @@ error_t device_res_add_str_param(struct device_s *dev, const char *name, const c
       } }                                               \
   }
 
-/** @This retrieves the value of a string parameter resource entry
-    from the associated parameter name. */
+/** @This retrieves the value of a generic string parameter resource
+    entry from the associated parameter name. @csee DEV_RES_STR_PARAM */
 ALWAYS_INLINE error_t device_get_param_str(const struct device_s *dev,
                                            const char *name, const char **a)
 {
@@ -756,9 +811,8 @@ ALWAYS_INLINE error_t device_get_param_str(const struct device_s *dev,
   return 0;
 }
 
-/** @This retrieves the value of a string parameter resource entry
-    from the associated parameter name. A default value is returned
-    when not found. */
+/** @This is similar to @cref device_get_param_str. A default value is
+    returned instead of an error when the entry is not found. */
 ALWAYS_INLINE void device_get_param_str_default(const struct device_s *dev, const char *name,
                                                 const char **a, const char *def)
 {
@@ -770,7 +824,9 @@ ALWAYS_INLINE void device_get_param_str_default(const struct device_s *dev, cons
     *a = (const char*)r->u.str_param.value;
 }
 
-
+/** @This specifies a generic blob parameter resource in a static
+    device resources table declaration. @csee DEV_RES_BLOB_PARAM @see
+    #DEV_DECLARE_STATIC */
 # define DEV_STATIC_RES_BLOB_PARAM(name_, value_)       \
   {                                                     \
   .type = DEV_RES_BLOB_PARAM,                           \
@@ -781,7 +837,7 @@ ALWAYS_INLINE void device_get_param_str_default(const struct device_s *dev, cons
   }
 
 /** @This retrieves the value of a blob parameter resource entry from
-    the associated parameter name. */
+    the associated parameter name. @csee DEV_RES_BLOB_PARAM */
 ALWAYS_INLINE error_t device_get_param_blob(const struct device_s *dev,
                                             const char *name, uint8_t id,
                                             const void **a)
@@ -798,8 +854,7 @@ ALWAYS_INLINE error_t device_get_param_blob(const struct device_s *dev,
 
 
 /** @This attaches an integer parameter resource to the device. The
-    exact meaning of the value is driver dependent. The name string
-    will be duplicated. */
+    name string will be duplicated. @csee DEV_RES_UINT_PARAM */
 config_depend_alwaysinline(CONFIG_DEVICE_RESOURCE_ALLOC,
 error_t device_res_add_uint_param(struct device_s *dev, const char *name, uintptr_t value),
 {
@@ -812,6 +867,9 @@ error_t device_res_add_uint_param(struct device_s *dev, const char *name, uintpt
   return 0;
 })
 
+/** @This specifies a generic integer parameter resource in a static
+    device resources table declaration. @csee DEV_RES_UINT_PARAM @see
+    #DEV_DECLARE_STATIC */
 # define DEV_STATIC_RES_UINT_PARAM(name_, value_)       \
   {                                                     \
     .type = DEV_RES_UINT_PARAM,                         \
@@ -822,7 +880,7 @@ error_t device_res_add_uint_param(struct device_s *dev, const char *name, uintpt
   }
 
 /** @This retrieves the value of a integer parameter resource entry
-    from the associated parameter name. */
+    from the associated parameter name. @csee DEV_RES_UINT_PARAM */
 ALWAYS_INLINE error_t device_get_param_uint(const struct device_s *dev,
                                             const char *name, uintptr_t *a)
 {
@@ -836,9 +894,8 @@ ALWAYS_INLINE error_t device_get_param_uint(const struct device_s *dev,
   return 0;
 }
 
-/** @This retrieves the value of an integer parameter resource entry
-    from the associated parameter name. A default value is returned
-    when not found. */
+/** @This is similar to @cref device_get_param_uint. A default value is
+    returned instead of an error when the entry is not found. */
 ALWAYS_INLINE void device_get_param_uint_default(const struct device_s *dev, const char *name,
                                                  uintptr_t *a, uintptr_t def)
 {
@@ -851,14 +908,15 @@ ALWAYS_INLINE void device_get_param_uint_default(const struct device_s *dev, con
 }
 
 
-/** @This attaches a device path parameter resource to the device. The
-    exact meaning of the value is driver dependent. The driver
-    initialization will not take place until the device path points to
-    an exisiting and properly initialized device. */
+/** @This attaches a device path parameter resource to the device.
+    @csee DEV_RES_DEV_PARAM */
 config_depend(CONFIG_DEVICE_RESOURCE_ALLOC)
 error_t device_res_add_dev_param(struct device_s *dev, const char *name,
                                  const char *path, enum driver_class_e cl);
 
+/** @This specifies a named device dependency resource in a static
+    device resources table declaration. The requested class is @ref
+    DRIVER_CLASS_NONE. @csee #DEV_STATIC_RES_DEVCLASS_PARAM */
 # define DEV_STATIC_RES_DEV_PARAM(name_, path_)         \
   {                                                     \
     .type = DEV_RES_DEV_PARAM,                          \
@@ -869,6 +927,9 @@ error_t device_res_add_dev_param(struct device_s *dev, const char *name,
       } }                                               \
   }
 
+/** @This specifies a named device dependency resource in a static
+    device resources table declaration. @csee DEV_RES_DEV_PARAM @see
+    #DEV_DECLARE_STATIC */
 # define DEV_STATIC_RES_DEVCLASS_PARAM(name_, path_, class__) \
   {                                                     \
     .type = DEV_RES_DEV_PARAM,                          \
@@ -880,13 +941,17 @@ error_t device_res_add_dev_param(struct device_s *dev, const char *name,
   }
 
 /** @This initializes a device accessor object from a device path
-    parameter resource of the device tree.
-    @see device_get_accessor_by_path
- */
+    parameter resource of the device tree. This actually perform the
+    resource lookup from the provided name and call the @ref
+    device_get_accessor_by_path function with the device path
+    specified in the device resource.  @csee DEV_RES_DEV_PARAM */
 error_t device_get_param_dev_accessor(struct device_s *dev,
                                       const char *name, void *accessor,
                                       enum driver_class_e cl);
 
+/** @This specifies a generic integer array parameter resource in a
+    static device resources table declaration. @csee
+    DEV_RES_UINT_ARRAY_PARAM @see #DEV_DECLARE_STATIC */
 # define DEV_STATIC_RES_UINT_ARRAY_PARAM(name_, ...)         \
   {                                                          \
     .type = DEV_RES_UINT_ARRAY_PARAM,                        \
@@ -898,15 +963,14 @@ error_t device_get_param_dev_accessor(struct device_s *dev,
   }
 
 /** @This attaches an integer array parameter resource to the
-    device. The exact meaning of the values is driver dependent.
-
-    The name string and the array will be duplicated. */
+    device. The name string will be duplicated. @csee
+    DEV_RES_UINT_ARRAY_PARAM */
 config_depend(CONFIG_DEVICE_RESOURCE_ALLOC)
 error_t device_res_add_uint_array_param(struct device_s *dev, const char *name,
                                         uint16_t count, uintptr_t values[]);
 
 /** @This retrieves the value of a integer parameter resource entry
-    from the associated parameter name. */
+    from the associated parameter name. @csee DEV_RES_UINT_ARRAY_PARAM */
 ALWAYS_INLINE error_t device_get_param_uint_array(const struct device_s *dev,
                                                   const char *name, uint16_t *count, const uintptr_t **a)
 {

@@ -110,6 +110,7 @@ struct dev_pwm_rq_s
 
 STRUCT_INHERIT(dev_pwm_rq_s, dev_request_s, base);
 
+/** @see dev_pwm_config_t */
 #define DEV_PWM_CONFIG(n) void (n)(struct device_pwm_s *pdev, \
                                   struct dev_pwm_rq_s  *rq)
 
@@ -164,14 +165,15 @@ STRUCT_INHERIT(dev_pwm_rq_s, dev_request_s, base);
 
     @end table
 
-*/
+   The kroutine of the request may be executed from within this
+   function. Please read @xref {Nested device request completion}. */
 typedef DEV_PWM_CONFIG(dev_pwm_config_t);
 
-/** Driver types. */
-DRIVER_CLASS_TYPES(pwm,
+DRIVER_CLASS_TYPES(DRIVER_CLASS_PWM, pwm,
                    dev_pwm_config_t *f_config;
                   );
 
+/** @see driver_pwm_s */
 #define DRIVER_PWM_METHODS(prefix)                            \
   ((const struct driver_class_s*)&(const struct driver_pwm_s){  \
     .class_ = DRIVER_CLASS_PWM,                               \
@@ -188,12 +190,8 @@ DRIVER_CLASS_TYPES(pwm,
     @param cfg  the configuration to apply to the pwm channel.
     @param mask a bitmask defining which configuration fields to consider.
  */
-
-config_depend(CONFIG_DEVICE_PWM)
-
-#if defined(CONFIG_MUTEK_CONTEXT_SCHED)
-
-inline error_t dev_pwm_wait_config(struct device_pwm_s *pdev, const struct dev_pwm_config_s *cfg, uint_fast8_t mask)
+config_depend_and2_inline(CONFIG_DEVICE_PWM, CONFIG_MUTEK_CONTEXT_SCHED,
+error_t dev_pwm_wait_config(struct device_pwm_s *pdev, const struct dev_pwm_config_s *cfg, uint_fast8_t mask),
 {
      struct dev_request_status_s status;
 
@@ -212,9 +210,9 @@ inline error_t dev_pwm_wait_config(struct device_pwm_s *pdev, const struct dev_p
      dev_request_sched_wait(&status);
 
      return rq.error;
-}
-#endif
+});
 
+/** @see dev_pwm_wait_config */
 inline error_t dev_pwm_spin_config(struct device_pwm_s *pdev, const struct dev_pwm_config_s *cfg, uint_fast8_t mask)
 {
      struct dev_request_status_s status;

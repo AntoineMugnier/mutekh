@@ -86,7 +86,7 @@ enum dev_dma_transfer_type_e
     perform a SPI transfer. In this case, a first DMA operation is in charge of writing
     data to SPI device and a second DMA operation is in charge of reading data from SPI.
     The read DMA operation must be started before the write operation to avoid loosing data.
-    @ref tr[0] and param[0] are used for read operation and @tt ref tr[1] and param[1]
+    @tt tr[0] and @tt param[0] are used for read operation and @tt tr[1] and @tt param[1]
     are used for write operation. The kroutine is called only when the read operation is
     finished. */
   DEV_DMA_INTERLEAVED,
@@ -104,7 +104,8 @@ struct dev_dma_param_s
   uint8_t                       channel;
   enum dev_dma_inc_e            BITFIELD(src_inc,2);
   enum dev_dma_inc_e            BITFIELD(dst_inc,2);
-  uint8_t                       BITFIELD(const_data,1);  
+  uint8_t                       BITFIELD(const_data,1);
+  uint8_t                       BITFIELD(const_len,3);
 };
 
 struct device_dma_s;
@@ -121,10 +122,9 @@ struct dev_dma_rq_s
     /** Used with @ref DEV_DMA_BASIC */
     struct dev_dma_entry_s      basic;
 
-    /** Used with @ref DEV_DMA_INTERLEAVED */
-    /** Used with @ref DEV_DMA_DBL_BUF_SRC */
-    /** Used with @ref DEV_DMA_DBL_BUF_DST */
-
+    /** Used with @ref DEV_DMA_INTERLEAVED,
+        @ref DEV_DMA_DBL_BUF_SRC and
+        @ref DEV_DMA_DBL_BUF_DST */
     struct dev_dma_entry_s      tr[2];
 
     /** Used with @ref DEV_DMA_SCATTER_GATHER */
@@ -142,39 +142,49 @@ struct dev_dma_rq_s
 
 STRUCT_INHERIT(dev_dma_rq_s, dev_request_s, base);
 
-/** Dma device class @ref devdma_request_t function template. */
+/** @see devdma_request_t */
 #define DEVDMA_REQUEST(n)	void (n) (const struct device_dma_s *accessor, struct dev_dma_rq_s *req)
 
 /**
    Dma device class request() function type. Enqueue a dma transfert
    request.
 
-   @ref src_inc and @ref dst_inc defines the incrementation step of
-   respectively @ref src and @ref dst addresses. When
-   @ref DEV_DMA_INC_NONE is used, address must not be incremented
-   by DMA. @ref src and @ref dst can be modified by driver.
-   When @ref const_data field is set, src field points to the constant
-   data to copy repeatedly to the destination and the @ref const_len
-   field must be used to indicate length of the pattern.
-   @ref channel specifies which channel must be used for the transfert.
-   On mono channel DMA's this field must be set to 0.
- 
-   When @ref arch_rq field is set, @ref struct dev_dma_rq_s contains
-   some fields that are platform specific. For example, DMA triggering
-   signal or peripheral ID when transfer to/from a peripheral can be
-   part of @ref struct dev_dma_rq_s.
+   @ref dev_dma_param_s::src_inc and @ref dev_dma_param_s::dst_inc
+   defines the incrementation step of respectively @ref
+   dev_dma_entry_s::src and @ref dev_dma_entry_s::dst addresses.
 
-   @ref err returns @tt -ENOTSUP when the requested operation is not
+   When @ref DEV_DMA_INC_NONE is used, address must not be incremented
+   by the DMA. The @tt src and @tt dst fields can be modified by
+   driver.
+
+   When the @ref dev_dma_param_s::const_data field is set, the @tt src
+   field points to the constant data to copy repeatedly to the
+   destination and the @ref dev_dma_param_s::const_len field must be
+   used to indicate length of the pattern.  @ref
+   dev_dma_param_s::channel specifies which channel must be used for
+   the transfert.  On single channel DMA's this field must be set to
+   0.
+
+   When the @ref dev_dma_rq_s::arch_rq field is set, The @ref
+   dev_dma_rq_s structure is inherited by a platform specific
+   structure. Additional fields contains some values that are platform
+   specific. This may include DMA triggering signal or peripheral ID
+   when transfering to/from a peripheral.
+
+   A new request may be submitted from the kroutine handler function.
+   Please read @xref {Nested device request submission}.
+
+   The function returns @tt -ENOTSUP when the requested operation is not
    supported and @tt 0 otherwise.
 */
-
 typedef DEVDMA_REQUEST(devdma_request_t);
 
 
-DRIVER_CLASS_TYPES(dma, 
+DRIVER_CLASS_TYPES(DRIVER_CLASS_DMA, dma,
                    devdma_request_t *f_request;
                    );
 
+/** @see driver_dma_s */
 #define DRIVER_DMA_METHODS(prefix)                               \
   ((const struct driver_class_s*)&(const struct driver_dma_s){   \
     .class_ = DRIVER_CLASS_DMA,                                  \
@@ -212,8 +222,9 @@ inline error_t dev_dma_wait_copy(const struct device_dma_s *accessor,
 #endif
 
 #ifdef CONFIG_DEVICE_DMA
-/** @This can be used to include a DMA resource entry in a static
-    device resources table declaration.*/
+/** @This specifies a DMA resource entry in a static
+    device resources table declaration. @csee DEV_RES_DMA
+    @see #DEV_DECLARE_STATIC */
 # define DEV_STATIC_RES_DMA(label_, channel_, config_)    \
   {                                                       \
       .type = DEV_RES_DMA,                                \

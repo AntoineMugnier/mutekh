@@ -53,6 +53,7 @@ typedef uint8_t address_space_id_t;
 
 #ifdef CONFIG_DEVICE_SLEEP
 # include <gct/container_slist.h>
+/** @see device_sleep_schedule */
 enum device_sleep_policy_e
 {
   /** When this policy is in use, the @ref DEV_USE_SLEEP driver
@@ -64,7 +65,8 @@ enum device_sleep_policy_e
 
 ENUM_DESCRIPTOR(device_status_e, strip:DEVICE_, upper);
 
-/** @This specifies the initialization status of a device */
+/** @This specifies the initialization status of a @ref device_s
+    @xcsee {Device status} */
 enum device_status_e
 {
   /** Device enumeration error, some resource entries may be wrong or missing. */
@@ -84,20 +86,22 @@ enum device_status_e
   DEVICE_DRIVER_INIT_FAILED,
 };
 
-/** @This specifies device node type and flags */
+/** @This specifies @ref device_node_s type and flags */
 enum device_flags_e
 {
-  /** The device object has been dynamically allocated and must be freed on cleanup. */
+  /** @internal The device object has been dynamically allocated and
+      must be freed on cleanup. */
   DEVICE_FLAG_ALLOCATED = 1,
-  /** The node name has been dynamically allocated and must be freed on cleanup. */
+  /** @internal The node name has been dynamically allocated and must
+      be freed on cleanup. */
   DEVICE_FLAG_NAME_ALLOCATED = 2,
 
-  /** This device is a processor. Operations on this device may only
-      be executed on the corresponding processor. */
+  /** This device is a processor. Operations on this device
+      may only be executed on the corresponding processor. */
   DEVICE_FLAG_CPU = 4,
-  /** The tree node is a device node */
+  /** @internal The tree node is a device node */
   DEVICE_FLAG_DEVICE = 8,
-  /** The tree node is an alias node */
+  /** @internal The tree node is an alias node */
   DEVICE_FLAG_ALIAS = 16,
   /** Mark the device as not available. The device will not be
       initialized on startup and lookup functions will ignore the node. */
@@ -113,7 +117,8 @@ enum device_flags_e
 #ifdef CONFIG_DEVICE_TREE
 GCT_CONTAINER_TYPES(device_list,
 #endif
-/** device tree base node structure */
+/** @internal Device tree base node structure
+    @xsee {Device tree} */
 struct device_node_s
 {
   /** device name, freed on device object destruction if not NULL and
@@ -137,13 +142,14 @@ GCT_CONTAINER_FCNS(device_list, inline, device_list,
 ;
 
 
-/** device node structure */
+/** device node structure
+    @xcsee {Device instance} */
 struct device_s
 {
-  /* must be first field */
+  /* @internal must be first field */
   struct device_node_s          node;
 
-  /** Device/driver initialization status */
+  /** Device/driver initialization status @xsee {Device status} */
   enum device_status_e          BITFIELD(status,3);
 
   /** When the @ref status is @ref DEVICE_DRIVER_INIT_PARTIAL, this is
@@ -152,16 +158,19 @@ struct device_s
       states. */
   uint8_t                       BITFIELD(init_mask,5);
 
-  /** device uses counter */
+  /** device uses counter, @see {device_get_accessor} */
   uint16_t                      BITFIELD(ref_count,CONFIG_DEVICE_USE_BITS);
 
-  /** device start counter */
+  /** device start counter, @see {device_start} */
   uint16_t                      BITFIELD(start_count,CONFIG_DEVICE_USE_BITS
                                          + CONFIG_DEVICE_START_LOG2INC);
 
 #ifdef CONFIG_DEVICE_SLEEP
+  /** @internal */
   uint_fast8_t                  sleep_order;
+  /** @internal */
   enum device_sleep_policy_e    sleep_policy;
+  /** @internal */
   GCT_CONTAINER_ENTRY           (device_sleep, sleep_queue_entry);
 #endif
 
@@ -174,8 +183,9 @@ struct device_s
   void				*drv_pv;
 
 #ifdef CONFIG_DEVICE_ENUM
-  /** pointer to device enumerator private data if any */
+  /** pointer to device enumerator if any */
   struct device_s               *enum_dev;
+  /** pointer to device enumerator private data if any */
   void				*enum_pv;
 #endif
 
@@ -199,10 +209,12 @@ GCT_CONTAINER_FCNS(device_sleep, ALWAYS_INLINE, device_sleep_queue,
 
     When the @ref dev_use_t function is called, the driver then have
     to take the required actions to reduce device power usage. See
-    @ref DEV_USE_SLEEP for details. This call is delayed depending on
-    the current device sleep policy (see @ref device_sleep_policy_e).
+    @cref DEV_USE_SLEEP for details. This call is delayed depending on
+    the current device sleep policy.
 
     It is harmless to call this function multiple times.
+    @see device_sleep_policy_e
+    @csee #CONFIG_DEVICE_SLEEP
 */
 config_depend(CONFIG_DEVICE_SLEEP)
 void device_sleep_schedule(struct device_s *dev);
@@ -223,8 +235,8 @@ void device_sleep_schedule(struct device_s *dev);
     device_get_by_path and related functions, unless the @ref
     DEVICE_FLAG_IGNORE flag is set.
 
-    @see #DEV_DECLARE_STATIC_RESOURCES
-    @see device_init @see device_alloc
+    @xcsee{Device instance}
+    @see dev_resource_type_e
 */
 # define DEV_DECLARE_STATIC(declname_, name_, flags_, driver_, resources_...) \
     extern const struct driver_s driver_;                               \
@@ -268,7 +280,8 @@ void device_sleep_schedule(struct device_s *dev);
 
 
 #ifdef CONFIG_DEVICE_TREE
-/** device alias node structure */
+/** device alias node structure
+    @xsee{Device tree} */
 struct device_alias_s
 {
   /* must be first field */
@@ -280,7 +293,8 @@ struct device_alias_s
 #endif
 
 #ifdef CONFIG_DEVICE_TREE
-/** @This iterates over child nodes of a device tree node. */
+/** @This iterates over child nodes of a device tree node.
+    @xsee{Device tree} */
 # define DEVICE_NODE_FOREACH(root_, rvar_, ... /* loop body */)         \
   GCT_FOREACH_NOLOCK(device_list, &(root_)->children, item, { \
       struct device_node_s *rvar_ = item;                               \
@@ -301,57 +315,65 @@ struct device_alias_s
   } while(0)
 #endif
 
-/**
-   @This initializes a statically allocated device object. Devices
-   declared using the @ref #DEV_DECLARE_STATIC macro do not require
-   use of this function.
+/** @This initializes a statically allocated device object. Devices
+    declared using the @ref #DEV_DECLARE_STATIC macro do not require
+    use of this function.
 
-   @see {device_init, device_cleanup} */
+    @xsee {Device instance} */
 void device_init(struct device_s *dev, const struct dev_resource_table_s *tbl);
 
 /** @This dynamically allocates and initializes a device object. The
     specified number of resource slots are pre-allocated.
 
-    @see {device_alloc, device_cleanup}
-    @see #DEV_DECLARE_STATIC
-*/
+    @see {device_cleanup, device_shrink}
+    @xcsee {Device instance} */
 struct device_s *device_alloc(size_t resources);
 
 /** @This release memory used by a device. This includes device object
     allocated by the @ref device_alloc function along with resources
     entries. The device must not be attached or have attached children
     and its reference count must be zero when this function is
-    called. */
+    called.
+    @xcsee {Device instance} */
 config_depend(CONFIG_DEVICE_DRIVER_CLEANUP)
 void device_cleanup(struct device_s *dev);
 
 /** @This reduces resource slots count to number of used slots
-    count. The device node is reallocated to save memory. */
+    count. The device node is reallocated to save memory.
+    @xsee {Device instance}
+    @xsee {Device resources} */
 config_depend(CONFIG_DEVICE_RESOURCE_ALLOC)
 void device_shrink(struct device_s *dev);
 
-/** @This returns the device tree root node. */
+/** @This returns the device tree root node.
+    @xsee {Device tree} */
 config_depend(CONFIG_DEVICE_TREE)
 struct device_node_s *device_tree_root(void);
 
 /** @This creates an alias in the device tree. The parent parameter
-    may be @tt NULL to attach the alias on the tree root. */
+    may be @tt NULL to attach the alias on the tree root.
+    @see device_new_alias_to_node
+    @xsee {Device tree} */
 config_depend(CONFIG_DEVICE_TREE)
 struct device_alias_s * device_new_alias_to_path(struct device_node_s *parent, const char *name, const char *path);
 
 /** @This creates an alias in the device tree. The target string is
     obtained using the @ref device_get_path function. The parent
-    parameter may be @tt NULL to attach the alias on the tree root. */
+    parameter may be @tt NULL to attach the alias on the tree root.
+    @see device_new_alias_to_path
+    @xsee {Device tree} */
 config_depend(CONFIG_DEVICE_TREE)
 struct device_alias_s * device_new_alias_to_node(struct device_node_s *parent, const char *name, struct device_node_s *node);
 
+/** @xsee {Device tree} */
 config_depend(CONFIG_DEVICE_TREE)
 void device_alias_remove(struct device_alias_s *alias);
 
-/** device lookup filter prototype */
+/** @internal device lookup filter prototype
+    @see device_filter_t */
 #define DEVICE_FILTER(n) bool_t n(struct device_node_s *)
 
-/** device lookup filter function type */
+/** @internal device lookup filter function type */
 typedef DEVICE_FILTER(device_filter_t);
 
 /** @internal @This lookup a node in the device tree. */
@@ -378,7 +400,7 @@ error_t device_resolve_alias(struct device_node_s **node, uint_fast8_t depth,
 
     The filter can be used to provide an additional filter
     function. It may be NULL.
- */
+    @xcsee {Device tree} */
 error_t device_get_by_path(struct device_s **dev, uint_fast8_t *number,
                            struct device_node_s *root, const char *path,
                            device_filter_t *filter);
@@ -386,16 +408,19 @@ error_t device_get_by_path(struct device_s **dev, uint_fast8_t *number,
 /** @This writes a null terminated device tree path in buffer. If the
     @tt number parameter is not 0, the value is appended at the end
     within a pair of square brackets. @return size of string excluding
-    null byte or a negative error code. */
+    null byte or a negative error code.
+    @xsee {Device tree} */
 config_depend(CONFIG_DEVICE_TREE)
 error_t device_get_path(struct device_node_s *root, char *buf,
                         size_t buflen, struct device_node_s *dev, uint_fast8_t number);
 
+/** @internal */
 ALWAYS_INLINE struct device_s * device_from_node(struct device_node_s *node)
 {
   return node && node->flags & DEVICE_FLAG_DEVICE ? (struct device_s*)node : NULL;
 }
 
+/** @internal */
 config_depend(CONFIG_DEVICE_TREE)
 ALWAYS_INLINE struct device_alias_s * device_alias_from_node(struct device_node_s *node)
 {
@@ -406,11 +431,13 @@ ALWAYS_INLINE struct device_alias_s * device_alias_from_node(struct device_node_
 #endif
 }
 
+/** @internal */
 ALWAYS_INLINE struct device_node_s * device_to_node(struct device_s *dev)
 {
   return &dev->node;
 }
 
+/** @internal */
 config_depend(CONFIG_DEVICE_TREE)
 ALWAYS_INLINE struct device_node_s * device_node_from_alias(struct device_alias_s *alias)
 {
@@ -425,16 +452,20 @@ ALWAYS_INLINE struct device_node_s * device_node_from_alias(struct device_alias_
     changed if the device has not been attached to a parent node.
 
     The name string will be duplicated and later freed on cleanup only if
-    the @ref DEVICE_FLAG_NAME_ALLOCATED flag of the device node is set. */
+    the @ref DEVICE_FLAG_NAME_ALLOCATED flag of the device node is set.
+    @xcsee {Device instance} */
 error_t device_set_name(struct device_s *dev, const char *name);
 
 /** @This attaches a device to a parent enumerator device. If the
-    parent device pointer is NULL, the device is attached on root enumerator. */
+    parent device pointer is NULL, the device is attached on root
+    enumerator.
+    @xcsee {Device tree} */
 config_depend(CONFIG_DEVICE_TREE)
 void device_attach(struct device_s *dev,
                    struct device_s *parent);
 
-/** @This detaches a device from its parent enumerator device */
+/** @This detaches a device from its parent enumerator device
+    @xcsee {Device tree} */
 config_depend(CONFIG_DEVICE_TREE)
 error_t device_detach(struct device_s *dev);
 
@@ -446,7 +477,8 @@ typedef DEVICE_TREE_WALKER(device_tree_walker_t);
 
 /** @This traverse device tree calling @ref device_tree_walker_t
     function type foreach each node. Traversal stops if the provided
-    function returns non-zero. */
+    function returns non-zero.
+    @xsee {Device tree} */
 bool_t device_tree_walk(struct device_node_s *root, device_tree_walker_t *walker, void *priv);
 
 /** @This returns the number of processor devices present in the

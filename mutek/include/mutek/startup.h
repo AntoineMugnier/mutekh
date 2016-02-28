@@ -22,7 +22,7 @@
 
 /**
  * @file
- * @module{Mutek}
+ * @module{Kernel services}
  * @short System initialization and statup functions
  */
 

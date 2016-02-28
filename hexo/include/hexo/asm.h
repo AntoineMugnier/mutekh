@@ -21,7 +21,7 @@
 
 /**
  * @file
- * @module{Hexo}
+ * @module{Hardware abstraction layer}
  * @short Various assembly source defs
  * @internal
  */

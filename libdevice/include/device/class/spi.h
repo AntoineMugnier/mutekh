@@ -369,7 +369,7 @@ struct dev_spi_ctrl_transfer_s
 /**
    @This starts an SPI transfer. A single spi data transfer can be
    started at the same time. This is the low level transfer function
-   of the SPI device class. The @ref dev_spi_ctrl_request_t function is
+   of the SPI device class. The @ref dev_spi_rq_start function is
    able to schedule complex requests for several SPI slaves on the
    same bus.
 
@@ -380,8 +380,10 @@ struct dev_spi_ctrl_transfer_s
 
    The @ref kroutine_exec function will be called on @tt tr->kr when
    the transfer ends. This can happen before this function
-   returns. It's ok to start a new transfer from the kroutine. The @tt
-   tr->err value indicates the error status of the transfer.
+   returns. The @tt err field indicates the error status of the transfer.
+
+   The kroutine of the transfer may be executed from within this
+   function. Please read @xref {Nested device request completion}.
 */
 typedef DEV_SPI_CTRL_TRANSFER(dev_spi_ctrl_transfer_t);
 
@@ -405,7 +407,7 @@ typedef DEV_SPI_CTRL_QUEUE(dev_spi_ctrl_queue_t);
 
 /***************************************** device class */
 
-DRIVER_CLASS_TYPES(spi_ctrl,
+DRIVER_CLASS_TYPES(DRIVER_CLASS_SPI_CTRL, spi_ctrl,
 		   dev_spi_ctrl_config_t         *f_config;
 		   dev_spi_ctrl_select_t         *f_select;
 		   dev_spi_ctrl_transfer_t       *f_transfer;
@@ -557,15 +559,11 @@ void dev_spi_queue_cleanup(struct dev_spi_ctrl_queue_s *q);
    SPI controller processing function type.
 
    When this function is called, the bytecode associated with the
-   endpoint is executed. The endpoint callback function will be called
-   when the processing is over.
+   request is executed. The endpoint kroutine will be called when the
+   processing is over.
 
-   The controller may process bytecode from multiple endpoints at the
-   same time.
-
-   This function will fail and return @tt -EBUSY if an other endpoint
-   with the same @ref dev_spi_endpoint_s::ep_id field is currently
-   being processed.
+   The kroutine of the request may be executed from within this
+   function. Please read @xref {Nested device request completion}.
 
    @param accessor pointer to controller device accessor
    @param ep pointer to the SPI endpoint.

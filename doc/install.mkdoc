@@ -63,7 +63,7 @@ hg clone http://www.mutekh.org/hg/mutekh
           emulator, available in most GNU/Linux distributions.
         @item @url{https://www.soclib.fr/}{SoCLib} to experiment with
           various multiprocessor platforms (Mips, PowerPc, Arm, ...).
-          @url{https://www.mutekh.org/www/tools/}{A precompiled SoCLib
+          @url{https://www.mutekh.org/tools/}{A precompiled SoCLib
           platform} is available for test purpose. We suggest building
           your own platforms by installing SoCLib.
       @end list
@@ -98,7 +98,7 @@ hg clone http://www.mutekh.org/hg/mutekh
 
     @section {Precompiled tools}
 
-      @url{https://www.mutekh.org/www/tools/}{Some precompiled
+      @url{https://www.mutekh.org/tools/precompiled/}{Some precompiled
       toolchains} are avaialble for convenience and quick start purpose.
       These binaries are available for GNU/Linux i386 and x86_64
       distributions. It was configured for installation in

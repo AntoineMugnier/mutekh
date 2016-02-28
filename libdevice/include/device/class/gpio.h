@@ -280,7 +280,7 @@ STRUCT_INHERIT(dev_gpio_rq_s, dev_request_s, base);
 extern DEV_GPIO_REQUEST(dev_gpio_request_async_to_sync);
 
 
-DRIVER_CLASS_TYPES(gpio,
+DRIVER_CLASS_TYPES(DRIVER_CLASS_GPIO, gpio,
                    dev_gpio_set_mode_t *f_set_mode;
                    dev_gpio_set_output_t *f_set_output;
                    dev_gpio_get_input_t *f_get_input;
@@ -288,6 +288,7 @@ DRIVER_CLASS_TYPES(gpio,
                    dev_gpio_request_t *f_request;
   );
 
+/** @see driver_gpio_s */
 #define DRIVER_GPIO_METHODS(prefix)                               \
   ((const struct driver_class_s*)&(const struct driver_gpio_s){   \
     .class_ = DRIVER_CLASS_GPIO,                                  \
@@ -334,17 +335,7 @@ error_t device_gpio_map_set_mode(struct device_gpio_s *accessor,
 
 
 /** @This adds a GPIO pins binding to the device resources list.
-
-    This entry specifies a pin label name along with a range of
-    contiguous pin ids associated to the label. It used to specify how
-    a range of pins of the device with its device specific function
-    identified by the label, are connected to a GPIO controller. A
-    link to the GPIO controller for which the pin id range is relevant
-    must be specified in a separate @ref DEV_RES_DEV_PARAM resource
-    entry named @tt gpio.
-
-    @see #DEV_STATIC_RES_GPIO
-*/
+    @csee DEV_RES_GPIO @see #DEV_STATIC_RES_GPIO */
 config_depend_and2_alwaysinline(CONFIG_DEVICE_GPIO, CONFIG_DEVICE_RESOURCE_ALLOC,
 error_t device_res_add_gpio(struct device_s *dev, const char *label,
                             gpio_id_t id, gpio_width_t width),
@@ -361,9 +352,9 @@ error_t device_res_add_gpio(struct device_s *dev, const char *label,
 })
 
 #ifdef CONFIG_DEVICE_GPIO
-/** @This can be used to include a GPIO resource entry in a static
-    device resources table declaration. The label name must be a static
-    string. @see device_res_add_gpio @see #DEV_DECLARE_STATIC_RESOURCES */
+/** @This specifies a GPIO resource entry in a static device resources
+    table declaration. @csee DEV_RES_GPIO
+    @see #DEV_DECLARE_STATIC @see #DEV_STATIC_RES_DEV_GPIO */
 # define DEV_STATIC_RES_GPIO(label_, id_, width_)                       \
   {                                                                     \
       .type = DEV_RES_GPIO,                                             \
@@ -374,14 +365,19 @@ error_t device_res_add_gpio(struct device_s *dev, const char *label,
       } }                                                               \
   }
 
+/** @This provides a @ref DEV_RES_DEV_PARAM resource entry which
+    specifies the GPIO controller device relevant for the @cref
+    DEV_RES_GPIO entries. */
 # define DEV_STATIC_RES_DEV_GPIO(path_)                                 \
   DEV_STATIC_RES_DEVCLASS_PARAM("gpio", path_, DRIVER_CLASS_GPIO)
 #else
+/** @hidden */
 # define DEV_STATIC_RES_GPIO(label_, id_, width_)                       \
   {                                                                     \
     .type = DEV_RES_UNUSED,                                             \
   }
 
+/** @hidden */
 # define DEV_STATIC_RES_DEV_GPIO(path_)                                \
   {                                                                     \
     .type = DEV_RES_UNUSED,                                             \

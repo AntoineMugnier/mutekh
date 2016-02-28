@@ -211,7 +211,7 @@ struct dev_crypto_context_s
   /** Algorithm internal state. Used to store the state when either
       @ref DEV_CRYPTO_INIT or @ref DEV_CRYPTO_FINALIZE are not set in
       the request.
-      @see dev_crypto_info_s:state_size @see DEV_CRYPTO_CAP_STATEFUL */
+      @see dev_crypto_info_s::state_size @see DEV_CRYPTO_CAP_STATEFUL */
   void                          *state_data;
 
   /** Key data */
@@ -219,7 +219,7 @@ struct dev_crypto_context_s
   /** Key length in bytes. */
   uint8_t                       key_len;
 
-  /** Context id internal to the driver @see dev. */
+  /** Context id internal to the driver @see dev_crypto_ctx_bind. */
   uint8_t                       cache_id;
 
   /** Byte length of the IV/counter/nonce buffer. */
@@ -284,29 +284,40 @@ struct dev_crypto_rq_s
 
   /** Pointer to IV/counter/nonce data relevant to various modes. When
       the size of the buffer is not fixed for the mode in use, it is
-      defined by @ref dev_crypto_context_s:iv_len. */
+      defined by @ref dev_crypto_context_s::iv_len. */
   uint8_t                               *iv_ctr;
 
   /** Pointer to authentication data. The size of the buffer is
-      defined by @ref dev_crypto_context_s:auth_len. */
+      defined by @ref dev_crypto_context_s::auth_len. */
   uint8_t                               *auth;
 };
 
 STRUCT_INHERIT(dev_crypto_rq_s, dev_request_s, rq);
 
+/** @see devcrypto_info_t */
 #define DEVCRYPTO_INFO(n)	error_t  (n) (struct device_crypto_s *accessor, \
                                               struct dev_crypto_info_s *info)
+
+/** @This retrieves information about the cryptographic algorithm
+    implemented by the device. */
 typedef DEVCRYPTO_INFO(devcrypto_info_t);
 
+/** @see devcrypto_request_t */
 #define DEVCRYPTO_REQUEST(n) void  (n) (struct device_crypto_s *accessor,   \
                                         struct dev_crypto_rq_s *rq)
+
+/** @This starts cryptographic processing.
+
+    The kroutine of the request may be executed from within this
+    function. Please read @xref {Nested device request completion}. */
 typedef DEVCRYPTO_REQUEST(devcrypto_request_t);
 
-DRIVER_CLASS_TYPES(crypto,
+DRIVER_CLASS_TYPES(DRIVER_CLASS_CRYPTO, crypto,
                    devcrypto_info_t *f_info;
                    devcrypto_request_t *f_request;
                    );
 
+/** @see driver_crypto_s */
 #define DRIVER_CRYPTO_METHODS(prefix)                               \
   ((const struct driver_class_s*)&(const struct driver_crypto_s){   \
     .class_ = DRIVER_CLASS_CRYPTO,                                  \
@@ -343,7 +354,7 @@ dev_crypto_wait_op(struct device_crypto_s *accessor,
 
 typedef uint8_t dev_crypto_context_id_t;
 
-/** @internal @This helper function can be used by the crypto driver
+/** @This helper function can be used by the crypto driver
     to handle binding of its internally cached crypto context data to
     the @ref dev_crypto_context_s of a request. An internal context
     entry is reused if an existing association is still valid. The @tt

@@ -81,18 +81,18 @@ struct dev_uart_config_s
 /* forward declarations. */
 struct device_uart_s;
 
+/** @see dev_uart_config_t */
 #define DEV_UART_CONFIG(n) error_t (n)(struct device_uart_s     *accessor, \
                                       struct dev_uart_config_s *cfg)
-/**/
 
-/** @This defines the prototype of the configuration function. */
+/** @This configures the uart device with the given configuration. */
 typedef DEV_UART_CONFIG(dev_uart_config_t);
 
-/** Driver types. */
-DRIVER_CLASS_TYPES(uart,
+DRIVER_CLASS_TYPES(DRIVER_CLASS_UART, uart,
                    dev_uart_config_t *f_config;
                   );
 
+/** @see driver_uart_s */
 #define DRIVER_UART_METHODS(prefix)                            \
   ((const struct driver_class_s*)&(const struct driver_uart_s){ \
     .class_ = DRIVER_CLASS_UART,                               \
@@ -100,12 +100,7 @@ DRIVER_CLASS_TYPES(uart,
   })
 
 
-/** @this helper configures the @tt accessor uart device with the given
-    configuration @tt cfg (and returns 0) or returns a negative error code.
-
-    Note: if the device is busy or already in use, the function returns a
-    EBUSY error.
- */
+/** @This is a wrapper for the @ref dev_uart_config_t function */
 ALWAYS_INLINE
 error_t dev_uart_config(struct device_uart_s     *accessor,
                         struct dev_uart_config_s *cfg)
@@ -114,9 +109,8 @@ error_t dev_uart_config(struct device_uart_s     *accessor,
 }
 
 
-/** @This specify a UART device configuration to store in the device tree.
-    @see #DEV_STATIC_RES_UART
- */
+/** @This appends a UART resource entry to the device tree.
+    @csee DEV_RES_UART */
 config_depend_and2_alwaysinline(CONFIG_DEVICE_UART, CONFIG_DEVICE_RESOURCE_ALLOC,
 error_t device_add_res_uart(struct device_s           *dev,
                             uint32_t                  baudrate,
@@ -144,10 +138,9 @@ error_t device_add_res_uart(struct device_s           *dev,
 
 #if defined(CONFIG_DEVICE_UART)
 
-/** @This can be used to include an UART default configuration in the device
-    resource list.
-    @see device_res_add_uart @see #DEV_DECLARE_STATIC_RESOURCES
- */
+/** @This specifies an UART configuration resource entry in a static
+    device resources table declaration. @csee DEV_RES_UART
+    @see #DEV_DECLARE_STATIC */
 # define DEV_STATIC_RES_UART(                               \
     __baudrate, __data, __parity, __stop, __flow, __duplex) \
   {                                                         \
@@ -164,6 +157,7 @@ error_t device_add_res_uart(struct device_s           *dev,
 
 #else
 
+/** @hidden */
 # define DEV_STATIC_RES_UART(                               \
     __baudrate, __data, __parity, __stop, __flow, __duplex) \
   {                                                         \

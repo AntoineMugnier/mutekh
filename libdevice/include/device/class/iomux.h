@@ -46,6 +46,7 @@ typedef uint32_t iomux_config_t;
 #define IOMUX_INVALID_ID 65535
 #define IOMUX_INVALID_MUX 255
 
+/** @see dev_iomux_setup_t */
 #define DEV_IOMUX_SETUP(n) error_t (n)(const struct device_iomux_s *accessor, \
                                       iomux_io_id_t io_id,              \
                                       enum dev_pin_driving_e dir,   \
@@ -55,10 +56,11 @@ typedef uint32_t iomux_config_t;
     parameter. The meaning of the @tt config parameter is driver specific. */
 typedef DEV_IOMUX_SETUP(dev_iomux_setup_t);
 
-DRIVER_CLASS_TYPES(iomux,
+DRIVER_CLASS_TYPES(DRIVER_CLASS_IOMUX, iomux,
                    dev_iomux_setup_t *f_setup;
 		   );
 
+/** @see driver_iomux_s */
 #define DRIVER_IOMUX_METHODS(prefix)                               \
   ((const struct driver_class_s*)&(const struct driver_iomux_s){   \
     .class_ = DRIVER_CLASS_IOMUX,                                  \
@@ -122,8 +124,7 @@ error_t device_iomux_setup(struct device_s *dev, const char *io_list,
         the muxed device. The default value should be 0 for all drivers.
     @end list
 
-    @see #DEV_STATIC_RES_IOMUX
-*/
+    @csee DEV_RES_IOMUX */
 config_depend_and2_alwaysinline(CONFIG_DEVICE_IOMUX, CONFIG_DEVICE_RESOURCE_ALLOC,
 error_t device_res_add_iomux(struct device_s *dev, const char *label,
                              iomux_demux_t demux, iomux_io_id_t io_id,
@@ -143,9 +144,9 @@ error_t device_res_add_iomux(struct device_s *dev, const char *label,
 })
 
 #ifdef CONFIG_DEVICE_IOMUX
-/** @This can be used to include a IOMUX resource entry in a static
-    device resources table declaration. The label name must be a static
-    string. @see device_res_add_iomux @see #DEV_DECLARE_STATIC_RESOURCES */
+/** @This specifies a IOMUX resource entry in a static device
+    resources table declaration. @csee DEV_RES_IOMUX
+    @see device_res_add_iomux @see #DEV_DECLARE_STATIC */
 # define DEV_STATIC_RES_IOMUX(label_, demux_, io_id_, mux_, config_)      \
   {                                                     \
     .type = DEV_RES_IOMUX,                              \
@@ -158,14 +159,19 @@ error_t device_res_add_iomux(struct device_s *dev, const char *label,
       } }                                               \
   }
 
+/** @This provides a @ref DEV_RES_DEV_PARAM resource entry which
+    specifies the IOMUX device relevant for some @cref
+    DEV_RES_IOMUX entries. */
 # define DEV_STATIC_RES_DEV_IOMUX(path_) DEV_STATIC_RES_DEVCLASS_PARAM("iomux", path_, DRIVER_CLASS_IOMUX)
 
 #else
+/** @hidden */
 # define DEV_STATIC_RES_IOMUX(label_, demux_, io_id_, mux_, config_)    \
   {                                                     \
     .type = DEV_RES_UNUSED,                             \
   }
 
+/** @hidden */
 # define DEV_STATIC_RES_DEV_IOMUX(path_)                                   \
   {                                                                     \
     .type = DEV_RES_UNUSED,                                             \

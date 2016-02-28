@@ -22,7 +22,7 @@
 
 /**
  * @file
- * @module{Hexo}
+ * @module{Hardware abstraction layer}
  * @short Io and memory address spaces functions access
  */
 

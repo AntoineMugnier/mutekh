@@ -1,0 +1,41 @@
+@section TP {Quick start}
+
+    The section lists the steps required to build a MutekH kernel file
+    on a x86 GNU/Linux box, assuming you have common development
+    packages installed (make, perl, mercurial...).
+
+    Get a precompiled tool-chain for your target processor from
+    @url{https://www.mutekh.org/tools/precompiled/} and unpack the archive:
+    @code R
+$ wget https://www.mutekh.org/tools/precompiled/mutekh_arm_toolchain-4.9.3-i386-linux.tar.gz
+$ sudo tar -C/ -xvzf mutekh_arm_toolchain-4.9.3-i386-linux.tar.gz
+$ export PATH=$PATH:/opt/mutekh/bin
+    @end code
+
+    Clone the repository using mercurial:
+    @code R
+$ hg clone http://www.mutekh.org/hg/mutekh
+$ cd mutekh
+    @end code
+
+    Build the ELF file containing an example application along with
+    the kernel for your favorite platform:
+    @code R
+$ make CONF=example/hello/config BUILD=efm32-stk3600
+    @end code
+
+    You might want to build a binary file instead:
+    @code R
+$ make CONF=example/hello/config BUILD=efm32-stk3600:binary
+    @end code
+
+    You will then need to flash the kernel into your board or run the
+    MutekH kernel in a simulator, depending on the platform you have
+    chosen.
+
+    The @xref {Supported platforms} section contains more platform
+    specific build command lines.
+
+    You can now start hacking the application code by editing
+    @tt {example/hello/hello.c}.
+@end section

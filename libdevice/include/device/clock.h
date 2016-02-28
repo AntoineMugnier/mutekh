@@ -191,13 +191,13 @@ enum dev_clock_setup_op_e
 
       The clock provider driver must perform the gate changes then
       update the source end-point @tt flags by calling the @ref
-      dev_clk_src_update function.
+      dev_cmu_src_update function.
 
       If an enabling operation can be completed immediately, the
       function returns 0. When the requested change takes time, the
       function must return @tt -EAGAIN, unless the @ref
       DEV_CLOCK_EP_SINK_SYNC flag is used. When doing so, the @ref
-      dev_clk_src_ready function must later be called so that drivers
+      dev_cmu_src_ready function must later be called so that drivers
       associated to sink end-points are notified that enabling is
       effective. Disabling operations can be silently delayed and do
       not require notification.
@@ -232,7 +232,7 @@ union dev_clock_setup_u
 #endif
 };
 
-/** @internal @see dev_clock_ep_setup_t */
+/** @internal @see dev_clock_src_setup_t */
 #define DEV_CLOCK_SRC_SETUP(n) error_t (n) (struct dev_clock_src_ep_s *src, \
                                             enum dev_clock_setup_op_e op, \
                                             union dev_clock_setup_u *param)
@@ -438,7 +438,7 @@ void dev_clock_sink_unlink(struct dev_clock_sink_ep_s *sink);
     sink end-point with node id @tt sink_id (relevant to the present
     device).
 
-    @see #DEV_STATIC_RES_CLK_SRC
+    @csee DEV_RES_CLOCK_SRC
  */
 config_depend_and2_alwaysinline(CONFIG_DEVICE_CLOCK, CONFIG_DEVICE_RESOURCE_ALLOC,
 error_t device_add_res_clock_src(struct device_s *dev, const char *src_name,
@@ -461,8 +461,9 @@ error_t device_add_res_clock_src(struct device_s *dev, const char *src_name,
 
 #ifdef CONFIG_DEVICE_CLOCK
 
-/** @This can be used to define a clock end-point link.
-    @see device_res_add_clock_src @see #DEV_DECLARE_STATIC_RESOURCES */
+/** @This specifies a clock end-point link.
+    @csee DEV_RES_CLOCK_SRC
+    @see device_add_res_clock_src @see #DEV_DECLARE_STATIC */
 # define DEV_STATIC_RES_CLK_SRC(__src, __src_id, __sink_id) \
   {                                                         \
     .type  = DEV_RES_CLOCK_SRC,                             \
@@ -475,6 +476,7 @@ error_t device_add_res_clock_src(struct device_s *dev, const char *src_name,
 
 #else
 
+/** @hidden */
 # define DEV_STATIC_RES_CLK_SRC(__src, __src_id, __sink_id) \
   {                                                         \
     .type = DEV_RES_UNUSED,                                 \
@@ -491,9 +493,9 @@ error_t device_add_res_clock_src(struct device_s *dev, const char *src_name,
   _DEV_STATIC_RES_CMU_MODE(4, e) | _DEV_STATIC_RES_CMU_MODE(5, f) |   \
   _DEV_STATIC_RES_CMU_MODE(6, g) | _DEV_STATIC_RES_CMU_MODE(7, h)
 
-/** @This can be used to define the mapping between device driver
-    throttling clock mode ids and clock provider mask bits.
-    @see #DEV_DECLARE_STATIC_RESOURCES */
+/** @experimental @This specifies the mapping between device driver
+    throttling clock mode ids and clock provider mask bits.  @csee
+    DEV_RES_CLOCK_MODES @see #DEV_DECLARE_STATIC */
 # define DEV_STATIC_RES_CLOCK_MODES(__sink_id, ...)           \
   {                                                         \
     .type  = DEV_RES_CLOCK_MODES,                           \
@@ -506,6 +508,7 @@ error_t device_add_res_clock_src(struct device_s *dev, const char *src_name,
 
 #else
 
+/** @hidden */
 # define DEV_STATIC_RES_CLOCK_MODES(__sink_id, ...)           \
   {                                                         \
     .type = DEV_RES_UNUSED,                                 \

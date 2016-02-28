@@ -25,7 +25,7 @@
 
 /**
    @file
-   @module{Mutek}
+   @module{Kernel services}
    @short Kernel deferred routines
 
    This header provides a deferred callback function service where the

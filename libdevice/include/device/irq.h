@@ -257,32 +257,9 @@ inline void device_irq_sink_process(struct dev_irq_sink_s *sink, dev_irq_id_t id
 }
 
 /** @This adds an IRQ binding to the device resources list.
-    @see #DEV_STATIC_RES_IRQ */
-config_depend_and2_inline(CONFIG_DEVICE_IRQ, CONFIG_DEVICE_RESOURCE_ALLOC,
-error_t device_res_add_irq(struct device_s *dev, uint_fast8_t src_id,
-                           uint_fast8_t sink_id, enum dev_irq_sense_modes_e trig_mode,
-                           dev_irq_id_t irq_id, dev_irq_route_t route_mask),
-{
-  struct dev_resource_s *r;
-  error_t err = device_res_alloc(dev, &r, DEV_RES_IRQ);
-  if (err)
-    return err;
-
-  r->u.irq.src_id = src_id;
-  r->u.irq.sink_id = sink_id;
-  r->u.irq.trig_mode = trig_mode;
-  r->u.irq.irq_id = irq_id;
-  r->u.irq.route_mask = route_mask;
-
-  return 0;
-})
-
-#ifdef CONFIG_DEVICE_IRQ
-/** @This can be used to include an irq resource entry in a static
-    device resources table declaration.
 
     An interrupt controller device path must be specifed in a previous
-    @ref DEV_RES_DEV_PARAM resource named @em icu. The device path is
+    @ref DEV_RES_DEV_PARAM resource named @tt icu. The device path is
     relative to the device owning the resource entry.
 
     This entry specifies how an output irq wire (source) of the
@@ -315,7 +292,31 @@ error_t device_res_add_irq(struct device_s *dev, uint_fast8_t src_id,
     controller input, the @ref #CONFIG_DEVICE_IRQ_SHARING token must
     be defined.
 
-    @see device_res_add_irq @see #DEV_DECLARE_STATIC_RESOURCES. */
+    @csee DEV_RES_IRQ
+*/
+config_depend_and2_inline(CONFIG_DEVICE_IRQ, CONFIG_DEVICE_RESOURCE_ALLOC,
+error_t device_res_add_irq(struct device_s *dev, uint_fast8_t src_id,
+                           uint_fast8_t sink_id, enum dev_irq_sense_modes_e trig_mode,
+                           dev_irq_id_t irq_id, dev_irq_route_t route_mask),
+{
+  struct dev_resource_s *r;
+  error_t err = device_res_alloc(dev, &r, DEV_RES_IRQ);
+  if (err)
+    return err;
+
+  r->u.irq.src_id = src_id;
+  r->u.irq.sink_id = sink_id;
+  r->u.irq.trig_mode = trig_mode;
+  r->u.irq.irq_id = irq_id;
+  r->u.irq.route_mask = route_mask;
+
+  return 0;
+})
+
+#ifdef CONFIG_DEVICE_IRQ
+/** @This specifies an irq resource entry in a static device resources
+    table declaration.  @see device_res_add_irq @csee DEV_RES_IRQ
+    @see #DEV_DECLARE_STATIC. */
 # define DEV_STATIC_RES_IRQ(src_id_, sink_id_, trig_mode_, irq_id_, route_mask_) \
   {                                                                     \
     .type = DEV_RES_IRQ,                                                \
@@ -328,14 +329,19 @@ error_t device_res_add_irq(struct device_s *dev, uint_fast8_t src_id,
       } }                                                               \
   }
 
+/** @This provides a @ref DEV_RES_DEV_PARAM resource entry which
+    specifies the interrupts controller device relevant for some @cref
+    DEV_RES_IRQ entries. */
 #define DEV_STATIC_RES_DEV_ICU(path_) DEV_STATIC_RES_DEVCLASS_PARAM("icu", path_, DRIVER_CLASS_ICU)
 
 #else
+/** @hidden */
 # define DEV_STATIC_RES_IRQ(src_id_, sink_id_, trig_mode_, irq_id_, route_mask_) \
   {                                                                     \
     .type = DEV_RES_UNUSED,                                             \
   }
 
+/** @hidden */
 #define DEV_STATIC_RES_DEV_ICU(path_)                                   \
   {                                                                     \
     .type = DEV_RES_UNUSED,                                             \

@@ -86,7 +86,7 @@ enum dev_pin_driving_e
 
     @see #DEV_FREQ_ACC
     @see #DEV_FREQ_INVALID @see #DEV_FREQ_IS_VALID
-    @see #DEV_FREQ_ACC_INVALID @see #DEV_FREQ_ACC_IS_VALID */
+    @see #DEV_FREQ_ACC_IS_VALID */
 struct dev_freq_s
 {
   uint64_t BITFIELD(num,CONFIG_DEVICE_CLOCK_OSCN_WIDTH);
@@ -101,10 +101,10 @@ struct dev_freq_s
 /** @This tests if the frequency value is valid @see dev_freq_s. */
 #define DEV_FREQ_IS_VALID(f) ((f).denom != 0)
 
-/** @This encodes a frequency accuracy value @see dev_freq_accuracy_s */
+/** @This encodes a frequency accuracy value @see dev_freq_s */
 #define DEV_FREQ_ACC(m_, e_) ((struct dev_freq_s){ .acc_e = e_, .acc_m = m_ })
 
-/** @This tests if the frequency accuracy value is valid @see dev_freq_accuracy_s */
+/** @This tests if the frequency accuracy value is valid @see dev_freq_s */
 #define DEV_FREQ_ACC_IS_VALID(a) ((a).acc_e != 0)
 
 ALWAYS_INLINE uint32_t dev_freq_acc_ppb(const struct dev_freq_s *freq)

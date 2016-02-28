@@ -22,7 +22,7 @@
 
 /**
   @file
-  @module{Hexo}
+  @module{Hardware abstraction layer}
   @short Spinlock stuff
   
   Spinlock operations include memory barriers to ensure the consistency of

@@ -26,7 +26,7 @@
 
 /**
    @file
-   @module{Mutek}
+   @module{Kernel services}
    @short Generic bytecode
 
    This module provides a simple and small bytecode virtual machine
@@ -37,7 +37,7 @@
    enough to hold a pointer.
 
    A set of generic instructions is provided. The MSB of the generic
-   instructions is always sero, leaving half the opcode space for
+   instructions is always zero, leaving half the opcode space for
    application specific opcodes.
 
    See @sourcelink example/bytecode/test.bc for an example application.

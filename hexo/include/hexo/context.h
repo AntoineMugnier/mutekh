@@ -22,7 +22,7 @@
 
 /**
    @file
-   @module{Hexo}
+   @module{Hardware abstraction layer}
    @short Execution context management stuff
 
    The @ref context_s data structure is used to store execution state

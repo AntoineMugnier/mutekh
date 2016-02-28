@@ -22,18 +22,14 @@ html,body {
   padding: 7px 15px;
   float: right;
   background: #e8f0ff;
-  border-bottom-style: solid;
-  border-bottom-width: 1px;
-  border-bottom-color: #d0e0ff;
+  font-weight: bold;
 }
 
 .nestlinks {
   padding: 7px 15px;
   color: #203080;
   background: #e8f0ff;
-  border-bottom-style: solid;
-  border-bottom-width: 1px;
-  border-bottom-color: #d0e0ff;
+  font-weight: bold;
 }
 
 .headlinks {
@@ -43,7 +39,16 @@ html,body {
 }
 
 .headlinks a:link, .headlinks a:visited {
+  text-decoration: none;
   color: white;
+}
+
+.nestlinks a:link, .nestlinks a:visited {
+  text-decoration: none;
+}
+
+.headlinks a:link, .headlinks a:visited {
+  text-decoration: none;
 }
 
 .head {
@@ -54,6 +59,9 @@ html,body {
 .content {
   background: white;
   padding: 20px 15px 80px 15px;
+  max-width: 1200px;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .page
@@ -75,20 +83,17 @@ html,body {
   font-size: 80%;
   position: relative;
   margin-top: -60px;
-  border-top-style: solid;
-  border-top-width: 1px;
-  border-top-color: #d0e0ff;
 }
 
 /*********** misc */
 
 a:link, a:visited {
   text-decoration: none;
-  color: #203080;
+  color: #4060c0;
 }
 
 .ext_link a:link, .ext_link a:visited {
-  color: #206080;
+  color: #409060;
 }
 
 ul {
@@ -155,11 +160,11 @@ div.sec_shown {
 .table {
  width : 100%;
  text-align: left;
- background: #c0d0ff;
+ background: #3050b0;
  border-spacing: 0px;
  margin: 5px 0px;
- border-radius: 8px 8px 0px 0px;
- -moz-border-radius: 8px 8px 0px 0px;
+ border-radius: 4px 4px 0px 0px;
+ -moz-border-radius: 4px 4px 0px 0px;
 }
 
 .table_caption {
@@ -182,15 +187,16 @@ div.sec_shown {
 
 .table th {
   padding : 3px 10px;
+  color: white;
   text-align: left;
 }
 
 .table .tr0 {
-  background-color : #e8f0ff;
+  background-color : #f0f4ff;
 }
 
 .table .tr1 {
-  background-color : #ecf4ff;
+  background-color : #f4f8ff;
 }
 
 /*********** images */
@@ -325,9 +331,11 @@ div.sec_shown {
 /*********** code */
 
 .codebox {
+  font-family: monospace;
+  white-space: pre;
   border: solid;
-  border-width: 1px 0px;
-  border-color: #c0d0ff;
+  border-width: 1px;
+  border-color: #e0e8f8;
   background: #e8f0ff;
   padding: 15px;
   margin: 5px 0px;
@@ -367,6 +375,7 @@ div.sec_shown {
 
 .divmember h1, .divmember h2, .divmember h3,
 .divmember h4, .divmember h5, .divmember h6 {
+  white-space: pre;
   margin: 0px;
   font-size: 120%;
 }
@@ -374,9 +383,9 @@ div.sec_shown {
 .divmember {
   display: block;
   border-top: solid;
-  border-top-width: 2px;
-  border-radius: 0px 0px 8px 8px;
-  -moz-border-radius: 0px 0px 8px 8px ;
+  border-top-width: 1px;
+  border-radius: 0px 0px 4px 4px;
+  -moz-border-radius: 0px 0px 4px 4px ;
   padding: 2px 10px;
   margin-top: 40px;
 }
@@ -406,29 +415,41 @@ div.sec_shown {
   background: #e8fff8;
 }
 
-/*********** member list */
-
 .listitem_pure {
   font-style: italic;
 }
 
-.function_prefix {
-    display: inline-block;
-    min-width: 230px;
+.member_prefix {
+  vertical-align: top;
+  display: inline-block;
 }
 
-.function_name {
-    margin-right: 10px;
+.listitem {
+  white-space: pre;
 }
 
-.variable_prefix {
-    display: inline-block;
-    min-width: 230px;
+.listitem .member_prefix {
+  min-width: 20%;
 }
 
-.field_prefix {
-    display: inline-block;
-    min-width: 230px;
+.member_name {
+  vertical-align: top;
+}
+
+.member_signature {
+  vertical-align: top;
+  display: inline-block;
+  width: 70%;
+}
+
+.member_params {
+  vertical-align: top;
+  display: inline-block;
+  white-space: pre-wrap;
+}
+
+.member_param {
+  display: inline-block;
 }
 
 .decl_short_desc {

@@ -134,7 +134,7 @@ struct dev_block_params_s
 typedef DEV_BLOCK_GETPARAMS(dev_block_getparams_t);
 
 
-DRIVER_CLASS_TYPES(block, 
+DRIVER_CLASS_TYPES(DRIVER_CLASS_BLOCK, block,
                    dev_block_request_t		*f_request;
                    dev_block_getparams_t		*f_getparams;
                    );
