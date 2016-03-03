@@ -300,5 +300,3 @@ error_t dev_valio_wait_update(
 });
 
 #endif
-
-#endif
