@@ -5,7 +5,6 @@ block \
 char \
 enum \
 gpio \
-lcd \
 mem \
 printk \
 rtt \

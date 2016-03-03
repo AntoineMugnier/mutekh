@@ -24,7 +24,9 @@
  * @file
  * @module{Devices support library}
  * @short Block device driver API
- */                                                                 
+   @deprecated
+   Use the mem class instead.
+ */
 
 #ifndef __DEVICE_BLOCK_H__
 #define __DEVICE_BLOCK_H__
@@ -35,6 +37,9 @@
 #include <gct/container_slist.h>
 
 #include <device/driver.h>
+
+__attribute__((deprecated))
+struct device_block_s;
 
 struct device_s;
 struct driver_s;

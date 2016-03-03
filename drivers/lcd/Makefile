@@ -1,2 +1,0 @@
-subdirs-$(CONFIG_DRIVER_LCD_PCF8833) += pcf8833
-subdirs-$(CONFIG_DRIVER_LCD_S1D15G00) += s1d15g00

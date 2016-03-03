@@ -354,7 +354,6 @@ device/class/pwm.h
 device/class/crypto.h
 device/class/i2c.h
 device/class/spi.h
-device/class/net.h
 device/class/persist.h
 device/class/rfpacket.h
 device/class/uart.h
