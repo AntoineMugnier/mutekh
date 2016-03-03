@@ -82,15 +82,15 @@ enum dev_resource_type_e
     /** Constant frequency value. */
     DEV_RES_FREQ,
     /** CMU Clock multiplexer and scaler configuration entry.
-        @see device_add_res_cmu_mux */
+        @see device_res_add_cmu_mux */
     DEV_RES_CMU_MUX,
     /** CMU Clock oscillator configuration entry.
-        @see device_add_res_cmu_osc */
+        @see device_res_add_cmu_osc */
     DEV_RES_CMU_OSC,
-    /** Device clock source mapping. @see device_add_res_clock_src */
-    DEV_RES_CLOCK_SRC,
+    /** Device clock source mapping. @see device_res_add_clock_src */
+    DEV_RES_CLK_SRC,
     /** @experimental Device clock throttling modes. @see #DEV_STATIC_RES_CLOCK_MODES */
-    DEV_RES_CLOCK_MODES,
+    DEV_RES_CLK_MODES,
     /** Generic string parameters. The exact meaning of the value is
         driver dependent. */
     DEV_RES_STR_PARAM,
@@ -258,7 +258,7 @@ struct dev_resource_s
       uint32_t                  BITFIELD(acc_e,5);
     }                           cmu_osc;
 
-    /** @see DEV_RES_CLOCK_SRC */
+    /** @see DEV_RES_CLK_SRC */
     struct {
       /** path to the clock source device */
       const char                *src;

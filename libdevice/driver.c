@@ -447,7 +447,7 @@ error_t device_init_driver(struct device_s *dev)
       switch (r->type)
         {
 #ifdef CONFIG_DEVICE_CLOCK
-        case DEV_RES_CLOCK_SRC:
+        case DEV_RES_CLK_SRC:
           path = r->u.ptr[0];
           cl = DRIVER_CLASS_CMU;
           break;

@@ -43,7 +43,7 @@
    These are linked together dynamically when the device drivers which
    own the sink end-point calls the @ref dev_clock_sink_link helper on
    initialization. End-point links will match actual hardware
-   connections as described using @ref DEV_RES_CLOCK_SRC device
+   connections as described using @ref DEV_RES_CLK_SRC device
    resources attached to the consumer device.
 
    Depending on the hardware, some gates may only be enabled
@@ -342,7 +342,7 @@ error_t dev_clock_sink_gate(struct dev_clock_sink_ep_s *sink,
     This is usually called from a clock/power consumer device driver.
 
     The value of @tt mode_id is driver specific; a @ref
-    DEV_RES_CLOCK_MODES resource entry for the sink end-point must
+    DEV_RES_CLK_MODES resource entry for the sink end-point must
     defines the associated bits of the mode mask for the associated
     clock provider devices.
 
@@ -438,10 +438,10 @@ void dev_clock_sink_unlink(struct dev_clock_sink_ep_s *sink);
     sink end-point with node id @tt sink_id (relevant to the present
     device).
 
-    @csee DEV_RES_CLOCK_SRC
+    @csee DEV_RES_CLK_SRC
  */
 config_depend_and2_alwaysinline(CONFIG_DEVICE_CLOCK, CONFIG_DEVICE_RESOURCE_ALLOC,
-error_t device_add_res_clock_src(struct device_s *dev, const char *src_name,
+error_t device_res_add_clock_src(struct device_s *dev, const char *src_name,
                                  uint_fast8_t src_id, uint_fast8_t sink_id),
 {
   struct dev_resource_s *r;
@@ -449,7 +449,7 @@ error_t device_add_res_clock_src(struct device_s *dev, const char *src_name,
   /* this setup the src pointer thanks to the union and the fact that the src
      field is positioned first. */
   error_t err =
-    device_res_alloc_str(dev, DEV_RES_CLOCK_SRC, src_name, NULL, &r);
+    device_res_alloc_str(dev, DEV_RES_CLK_SRC, src_name, NULL, &r);
   if (err)
     return err;
 
@@ -462,11 +462,11 @@ error_t device_add_res_clock_src(struct device_s *dev, const char *src_name,
 #ifdef CONFIG_DEVICE_CLOCK
 
 /** @This specifies a clock end-point link.
-    @csee DEV_RES_CLOCK_SRC
-    @see device_add_res_clock_src @see #DEV_DECLARE_STATIC */
+    @csee DEV_RES_CLK_SRC
+    @see device_res_add_clock_src @see #DEV_DECLARE_STATIC */
 # define DEV_STATIC_RES_CLK_SRC(__src, __src_id, __sink_id) \
   {                                                         \
-    .type  = DEV_RES_CLOCK_SRC,                             \
+    .type  = DEV_RES_CLK_SRC,                             \
     .u = { .clock_src = {                                   \
       .src = (__src),                                       \
       .src_ep  = (__src_id),                                \
@@ -495,10 +495,10 @@ error_t device_add_res_clock_src(struct device_s *dev, const char *src_name,
 
 /** @experimental @This specifies the mapping between device driver
     throttling clock mode ids and clock provider mask bits.  @csee
-    DEV_RES_CLOCK_MODES @see #DEV_DECLARE_STATIC */
+    DEV_RES_CLK_MODES @see #DEV_DECLARE_STATIC */
 # define DEV_STATIC_RES_CLOCK_MODES(__sink_id, ...)           \
   {                                                         \
-    .type  = DEV_RES_CLOCK_MODES,                           \
+    .type  = DEV_RES_CLK_MODES,                           \
     .u = { .clock_modes = {                                 \
       .sink_ep = (__sink_id),                               \
       .modes = _DEV_STATIC_RES_CLOCK_MODES_VA(__VA_ARGS__,    \

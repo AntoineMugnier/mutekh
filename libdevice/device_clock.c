@@ -236,7 +236,7 @@ error_t dev_clock_sink_link(struct dev_clock_sink_ep_s *sink,
 
       switch (r->type)
         {
-        case DEV_RES_CLOCK_SRC: {
+        case DEV_RES_CLK_SRC: {
 
           if (r->u.clock_src.sink_ep != id)
             continue;
@@ -310,7 +310,7 @@ error_t dev_clock_sink_link(struct dev_clock_sink_ep_s *sink,
         }
 
 #ifdef CONFIG_DEVICE_CLOCK_THROTTLE
-        case DEV_RES_CLOCK_MODES: {
+        case DEV_RES_CLK_MODES: {
           if (id != r->u.clock_modes.sink_ep)
             continue;
 

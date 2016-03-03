@@ -112,7 +112,7 @@ error_t dev_uart_config(struct device_uart_s     *accessor,
 /** @This appends a UART resource entry to the device tree.
     @csee DEV_RES_UART */
 config_depend_and2_alwaysinline(CONFIG_DEVICE_UART, CONFIG_DEVICE_RESOURCE_ALLOC,
-error_t device_add_res_uart(struct device_s           *dev,
+error_t device_res_add_uart(struct device_s           *dev,
                             uint32_t                  baudrate,
                             uint8_t                   data_bits,
                             enum dev_uart_parity_e    parity,

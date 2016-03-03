@@ -358,7 +358,7 @@ error_t dev_cmu_config(struct device_cmu_s *accessor,
 
     @csee DEV_RES_CMU_MUX */
 config_depend_and2_alwaysinline(CONFIG_DEVICE_CLOCK, CONFIG_DEVICE_RESOURCE_ALLOC,
-error_t device_add_res_cmu_mux(struct device_s     *dev,
+error_t device_res_add_cmu_mux(struct device_s     *dev,
                                    dev_cmu_node_id_t parent_id,
                                    dev_cmu_node_id_t node_id,
                                    dev_cmu_config_mask_t config_mask,
@@ -383,7 +383,7 @@ error_t device_add_res_cmu_mux(struct device_s     *dev,
 
 /** @This specifies a clock mux resource entry in a static
     device resources table declaration.
-    @csee DEV_RES_CMU_MUX @see device_add_res_cmu_mux
+    @csee DEV_RES_CMU_MUX @see device_res_add_cmu_mux
     @see #DEV_DECLARE_STATIC */
 # define DEV_STATIC_RES_CMU_MUX(__parent_id, __node_id,                 \
                                 __config_mask, __num, __denom)          \
@@ -401,7 +401,7 @@ error_t device_add_res_cmu_mux(struct device_s     *dev,
 /** @This specifies a clock source oscillator resource entry in a
     static device resources table declaration. A default value is used
     for frequency accuracy.
-    @csee DEV_RES_CMU_OSC @see device_add_res_cmu_osc
+    @csee DEV_RES_CMU_OSC @see device_res_add_cmu_osc
     @see #DEV_DECLARE_STATIC */
 # define DEV_STATIC_RES_CMU_OSC(__node_id, __config_id, __num, __denom) \
   {                                                               \
@@ -471,7 +471,7 @@ error_t device_add_res_cmu_mux(struct device_s     *dev,
     @csee DEV_RES_CMU_OSC
  */
 config_depend_and2_alwaysinline(CONFIG_DEVICE_CLOCK, CONFIG_DEVICE_RESOURCE_ALLOC,
-error_t device_add_res_cmu_osc(struct device_s     *dev,
+error_t device_res_add_cmu_osc(struct device_s     *dev,
                                  dev_cmu_node_id_t node_id,
                                  dev_cmu_config_mask_t config_mask,
                                  uint64_t            num,

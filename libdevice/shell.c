@@ -464,7 +464,7 @@ dev_shell_dump_device(struct termui_console_s *con, struct device_s *dev,
           break;
         }
 
-        case DEV_RES_CLOCK_SRC: {
+        case DEV_RES_CLK_SRC: {
           termui_con_printf(con,
             "  Clock source `%s': src %u, sink %u\n",
             r->u.clock_src.src, r->u.clock_src.src_ep, r->u.clock_src.sink_ep
