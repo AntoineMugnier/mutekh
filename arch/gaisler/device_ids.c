@@ -1,5 +1,5 @@
 
-#include <arch/device_ids.h>
+#include <arch/gaisler/device_ids.h>
 
 const char *const gaisler_devices_names[GAISLER_DEVICE_count] =
   {

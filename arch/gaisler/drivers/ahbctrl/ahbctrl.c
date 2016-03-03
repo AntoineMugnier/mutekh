@@ -34,7 +34,7 @@
 #include <device/driver.h>
 #include <device/irq.h>
 
-#include <arch/device_ids.h>
+#include <arch/gaisler/device_ids.h>
 
 #include <string.h>
 #include <stdio.h>
