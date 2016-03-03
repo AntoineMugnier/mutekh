@@ -27,7 +27,7 @@
 #include <mutek/memory_allocator.h>
 #include <mutek/startup.h>
 
-void bcm2835_mem_init(void)
+void bcm283x_mem_init(void)
 {
   default_region = memory_allocator_init(NULL, (void*)CONFIG_STARTUP_HEAP_ADDR,
                                          (void*)(CONFIG_STARTUP_HEAP_ADDR +
@@ -44,7 +44,7 @@ void bcm2835_mem_init(void)
 # include <device/class/iomux.h>
 #endif
 
-#include <arch/bcm2835_gpio.h>
+#include <arch/bcm283x/gpio.h>
 
 #ifdef CONFIG_DRIVER_CPU_ARM32
 
@@ -54,9 +54,9 @@ DEV_DECLARE_STATIC(cpu_dev, "cpu", DEVICE_FLAG_CPU, arm32_drv,
 
 #endif
 
-#ifdef CONFIG_DRIVER_BCM2835_ICU
+#ifdef CONFIG_DRIVER_BCM283X_ICU
 
-DEV_DECLARE_STATIC(icu_dev, "icu", 0, bcm2835_icu_drv,
+DEV_DECLARE_STATIC(icu_dev, "icu", 0, bcm283x_icu_drv,
                    DEV_STATIC_RES_MEM(0x2000b000, 0x2000b400),
                    DEV_STATIC_RES_DEV_ICU("/cpu"),
                    DEV_STATIC_RES_IRQ(0, 0, DEV_IRQ_SENSE_LOW_LEVEL, 0, 1),
@@ -74,16 +74,16 @@ DEV_DECLARE_STATIC(uart_dev, "uart", 0, pl011uart_drv,
 
                    DEV_STATIC_RES_DEV_IOMUX("/gpio"),
 
-                   DEV_STATIC_RES_IOMUX("rx",  0, 15,  BCM2835_GPIO_GPFSEL_FSEL_FUNCTION0, 0),
-                   DEV_STATIC_RES_IOMUX("tx",  0, 14,  BCM2835_GPIO_GPFSEL_FSEL_FUNCTION0, 0)
+                   DEV_STATIC_RES_IOMUX("rx",  0, 15,  BCM283X_GPIO_GPFSEL_FSEL_FUNCTION0, 0),
+                   DEV_STATIC_RES_IOMUX("tx",  0, 14,  BCM283X_GPIO_GPFSEL_FSEL_FUNCTION0, 0)
                    );
 
 #endif
 
 
-#ifdef CONFIG_DRIVER_BCM2835_SYSTIMER
+#ifdef CONFIG_DRIVER_BCM283X_SYSTIMER
 
-DEV_DECLARE_STATIC(systimer_dev, "timer", 0, bcm2835_systimer_drv,
+DEV_DECLARE_STATIC(systimer_dev, "timer", 0, bcm283x_systimer_drv,
                    DEV_STATIC_RES_MEM(0x20003000, 0x20003020),
                    DEV_STATIC_RES_FREQ(1000000, 1),
                    DEV_STATIC_RES_DEV_ICU("/icu"),
@@ -96,9 +96,9 @@ DEV_DECLARE_STATIC(systimer_dev, "timer", 0, bcm2835_systimer_drv,
 #endif
 
 
-#ifdef CONFIG_DRIVER_BCM2835_GPIO
+#ifdef CONFIG_DRIVER_BCM283X_GPIO
 
-DEV_DECLARE_STATIC(gpio_dev, "gpio", 0, bcm2835_gpio_drv,
+DEV_DECLARE_STATIC(gpio_dev, "gpio", 0, bcm283x_gpio_drv,
                    DEV_STATIC_RES_MEM(0x20200000, 0x20003020),
                    DEV_STATIC_RES_DEV_ICU("/icu"),
                    DEV_STATIC_RES_IRQ(0, 8+49, DEV_IRQ_SENSE_HIGH_LEVEL, 0, 1),

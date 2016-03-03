@@ -1,0 +1,5 @@
+subdirs-$(CONFIG_DRIVER_BCM283X_ICU) += icu
+subdirs-$(CONFIG_DRIVER_BCM283X_SYSTIMER) += systimer
+subdirs-$(CONFIG_DRIVER_BCM283X_GPIO) += gpio
+subdirs-$(CONFIG_DRIVER_BCM283X_SPI) += spi
+subdirs-$(CONFIG_DRIVER_BCM283X_I2C) += i2c

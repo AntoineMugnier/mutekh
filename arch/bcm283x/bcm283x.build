@@ -1,0 +1,69 @@
+
+%section bcm283x bcm283x-* bcm283x-*-*
+  %types architecture
+
+  CONFIG_ARCH_BCM283X
+  CONFIG_CPU_ARM32_1176F
+
+  CONFIG_DEVICE_IRQ_SHARING
+  CONFIG_DEVICE_IOMUX
+  CONFIG_DRIVER_BCM283X_ICU
+  CONFIG_DRIVER_CHAR_PL011
+  CONFIG_DRIVER_BCM283X_SYSTIMER
+  CONFIG_DRIVER_BCM283X_GPIO
+  CONFIG_DRIVER_BCM283X_SPI
+  CONFIG_DRIVER_BCM283X_I2C
+
+  CONFIG_MUTEK_PRINTK_ADDR   0x20201000
+
+  CONFIG_BCM283X_PRINTK_UART
+
+  CONFIG_STARTUP_HEAP_ADDR   0x00600000
+  CONFIG_STARTUP_HEAP_SIZE   0x003ff000
+
+  CONFIG_STARTUP_STACK_ADDR  0x003ff000
+  CONFIG_STARTUP_STACK_SIZE  0x00001000
+
+  CONFIG_LOAD_BOOTLOAD
+  CONFIG_LOAD_BOOTLOAD_KERNEL_ADDR 0x00400000
+  CONFIG_LOAD_BOOTLOAD_KERNEL_SIZE 0x00200000
+  CONFIG_MUTEK_DEFAULT_MEMALLOC_INIT
+
+  %subsection bcm283x
+    %types board
+  %end
+
+  %subsection bcm283x-raspberry-*
+    %types board
+
+    %subsection bcm283x-raspberry-a2
+      %types model
+      CONFIG_ARCH_BCM283X_BOARD RASPBERRY_A2
+    %end
+
+    %subsection bcm283x-raspberry-b1
+      %types model
+      CONFIG_ARCH_BCM283X_BOARD RASPBERRY_B1
+    %end
+
+    %subsection bcm283x-raspberry-b2
+      %types model
+      CONFIG_ARCH_BCM283X_BOARD RASPBERRY_B2
+    %end
+
+    %subsection bcm283x-raspberry-a1plus
+      %types model
+      CONFIG_ARCH_BCM283X_BOARD RASPBERRY_A1PLUS
+    %end
+
+    %subsection bcm283x-raspberry-b1plus
+      %types model
+      CONFIG_ARCH_BCM283X_BOARD RASPBERRY_B1PLUS
+    %end
+
+    %requiretypes model
+  %end
+
+  %set BUILD_NAME bcm283x-arm
+
+  %requiretypes board

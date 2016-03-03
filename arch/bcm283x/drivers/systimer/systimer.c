@@ -37,15 +37,15 @@
 #include <mutek/kroutine.h>
 
 /* systimer registers */
-#define BCM2835_SYSTIMER_STATUS  0x00
-#define BCM2835_SYSTIMER_CLOW    0x04
-#define BCM2835_SYSTIMER_CHIGH   0x08
-#define BCM2835_SYSTIMER_CMP(n)  (0x0c + 4 * (n))
+#define BCM283X_SYSTIMER_STATUS  0x00
+#define BCM283X_SYSTIMER_CLOW    0x04
+#define BCM283X_SYSTIMER_CHIGH   0x08
+#define BCM283X_SYSTIMER_CMP(n)  (0x0c + 4 * (n))
 
 /* channels 0 and 2 are used by the GPU, 1 and 3 are free */
-#define BCM2835_SYSTIMER_CMP_CHANNEL 1
+#define BCM283X_SYSTIMER_CMP_CHANNEL 1
 
-struct bcm2835_systimer_private_s
+struct bcm283x_systimer_private_s
 {
   /* Timer address */
   uintptr_t addr;
@@ -58,22 +58,22 @@ struct bcm2835_systimer_private_s
 #endif
 };
 
-static uint64_t get_timer_value(struct bcm2835_systimer_private_s *pv)
+static uint64_t get_timer_value(struct bcm283x_systimer_private_s *pv)
 {
   uint32_t lo, hi;
 
-  hi = cpu_mem_read_32(pv->addr + BCM2835_SYSTIMER_CHIGH);
-  lo = cpu_mem_read_32(pv->addr + BCM2835_SYSTIMER_CLOW);
+  hi = cpu_mem_read_32(pv->addr + BCM283X_SYSTIMER_CHIGH);
+  lo = cpu_mem_read_32(pv->addr + BCM283X_SYSTIMER_CLOW);
 
-  if (hi != cpu_mem_read_32(pv->addr + BCM2835_SYSTIMER_CHIGH))
-    lo = cpu_mem_read_32(pv->addr + BCM2835_SYSTIMER_CLOW);
+  if (hi != cpu_mem_read_32(pv->addr + BCM283X_SYSTIMER_CHIGH))
+    lo = cpu_mem_read_32(pv->addr + BCM283X_SYSTIMER_CLOW);
 
   return ((uint64_t)endian_le32(hi) << 32) | endian_le32(lo);
 }
 
 #ifdef CONFIG_DEVICE_IRQ
 
-static void set_timer_compare(struct bcm2835_systimer_private_s *pv, dev_timer_value_t deadline)
+static void set_timer_compare(struct bcm283x_systimer_private_s *pv, dev_timer_value_t deadline)
 {
   uint32_t skew = pv->skew;
 
@@ -83,8 +83,8 @@ static void set_timer_compare(struct bcm2835_systimer_private_s *pv, dev_timer_v
 
       if (deadline > now)
         {
-          cpu_mem_write_32(pv->addr + BCM2835_SYSTIMER_STATUS, endian_le32(1 << BCM2835_SYSTIMER_CMP_CHANNEL));
-          cpu_mem_write_32(pv->addr + BCM2835_SYSTIMER_CMP(BCM2835_SYSTIMER_CMP_CHANNEL), endian_le32(deadline));
+          cpu_mem_write_32(pv->addr + BCM283X_SYSTIMER_STATUS, endian_le32(1 << BCM283X_SYSTIMER_CMP_CHANNEL));
+          cpu_mem_write_32(pv->addr + BCM283X_SYSTIMER_CMP(BCM283X_SYSTIMER_CMP_CHANNEL), endian_le32(deadline));
 
           if (deadline > get_timer_value(pv))
             break;
@@ -96,22 +96,22 @@ static void set_timer_compare(struct bcm2835_systimer_private_s *pv, dev_timer_v
     }
 }
 
-static DEV_IRQ_SRC_PROCESS(bcm2835_systimer_irq)
+static DEV_IRQ_SRC_PROCESS(bcm283x_systimer_irq)
 {
   struct device_s *dev = ep->base.dev;
-  struct bcm2835_systimer_private_s *pv = dev->drv_pv;
+  struct bcm283x_systimer_private_s *pv = dev->drv_pv;
 
   lock_spin(&dev->lock);
 
   while (1)
     {
-      uint32_t status = endian_le32(cpu_mem_read_32(pv->addr + BCM2835_SYSTIMER_STATUS))
-        & (1 << BCM2835_SYSTIMER_CMP_CHANNEL);
+      uint32_t status = endian_le32(cpu_mem_read_32(pv->addr + BCM283X_SYSTIMER_STATUS))
+        & (1 << BCM283X_SYSTIMER_CMP_CHANNEL);
 
       if (!status)
         break;
 
-      cpu_mem_write_32(pv->addr + BCM2835_SYSTIMER_STATUS, endian_le32(status));
+      cpu_mem_write_32(pv->addr + BCM283X_SYSTIMER_STATUS, endian_le32(status));
       struct dev_request_s *rq;
 
       while ((rq = dev_request_pqueue_head(&pv->queue)))
@@ -129,7 +129,7 @@ static DEV_IRQ_SRC_PROCESS(bcm2835_systimer_irq)
             {
               trq = dev_timer_rq_s_cast(next);
               if (trq->deadline > get_timer_value(pv))
-                cpu_mem_write_32(pv->addr + BCM2835_SYSTIMER_CMP(BCM2835_SYSTIMER_CMP_CHANNEL),
+                cpu_mem_write_32(pv->addr + BCM283X_SYSTIMER_CMP(BCM283X_SYSTIMER_CMP_CHANNEL),
                                  endian_le32(trq->deadline));
             }
 
@@ -143,11 +143,11 @@ static DEV_IRQ_SRC_PROCESS(bcm2835_systimer_irq)
 }
 #endif
 
-static DEV_TIMER_CANCEL(bcm2835_systimer_cancel)
+static DEV_TIMER_CANCEL(bcm283x_systimer_cancel)
 {
 #ifdef CONFIG_DEVICE_IRQ
   struct device_s *dev = accessor->dev;
-  struct bcm2835_systimer_private_s *pv = dev->drv_pv;
+  struct bcm283x_systimer_private_s *pv = dev->drv_pv;
   error_t err = -ETIMEDOUT;
 
   LOCK_SPIN_IRQ(&dev->lock);
@@ -177,11 +177,11 @@ static DEV_TIMER_CANCEL(bcm2835_systimer_cancel)
 #endif
 }
 
-static DEV_TIMER_REQUEST(bcm2835_systimer_request)
+static DEV_TIMER_REQUEST(bcm283x_systimer_request)
 {
 #ifdef CONFIG_DEVICE_IRQ
   struct device_s *dev = accessor->dev;
-  struct bcm2835_systimer_private_s *pv = dev->drv_pv;
+  struct bcm283x_systimer_private_s *pv = dev->drv_pv;
   error_t err = 0;
 
   LOCK_SPIN_IRQ(&dev->lock);
@@ -215,10 +215,10 @@ static DEV_TIMER_REQUEST(bcm2835_systimer_request)
 #endif
 }
 
-static DEV_TIMER_GET_VALUE(bcm2835_systimer_get_value)
+static DEV_TIMER_GET_VALUE(bcm283x_systimer_get_value)
 {
   struct device_s *dev = accessor->dev;
-  struct bcm2835_systimer_private_s *pv = dev->drv_pv;
+  struct bcm283x_systimer_private_s *pv = dev->drv_pv;
   error_t err = 0;
 
   LOCK_SPIN_IRQ(&dev->lock);
@@ -233,7 +233,7 @@ static DEV_TIMER_GET_VALUE(bcm2835_systimer_get_value)
   return err;
 }
 
-static DEV_TIMER_CONFIG(bcm2835_systimer_config)
+static DEV_TIMER_CONFIG(bcm283x_systimer_config)
 {
   error_t err = 0;
 
@@ -259,18 +259,18 @@ static DEV_TIMER_CONFIG(bcm2835_systimer_config)
 
 /************************************************************************/
 
-#define bcm2835_systimer_use dev_use_generic
-static DEV_INIT(bcm2835_systimer_init);
-static DEV_CLEANUP(bcm2835_systimer_cleanup);
+#define bcm283x_systimer_use dev_use_generic
+static DEV_INIT(bcm283x_systimer_init);
+static DEV_CLEANUP(bcm283x_systimer_cleanup);
 
-DRIVER_DECLARE(bcm2835_systimer_drv, 0, "BCM2835 system timer", bcm2835_systimer,
-               DRIVER_TIMER_METHODS(bcm2835_systimer));
+DRIVER_DECLARE(bcm283x_systimer_drv, 0, "BCM283X system timer", bcm283x_systimer,
+               DRIVER_TIMER_METHODS(bcm283x_systimer));
 
-DRIVER_REGISTER(bcm2835_systimer_drv);
+DRIVER_REGISTER(bcm283x_systimer_drv);
 
-static DEV_INIT(bcm2835_systimer_init)
+static DEV_INIT(bcm283x_systimer_init)
 {
-  struct bcm2835_systimer_private_s  *pv;
+  struct bcm283x_systimer_private_s  *pv;
 
 
   uintptr_t addr;
@@ -278,7 +278,7 @@ static DEV_INIT(bcm2835_systimer_init)
   if (device_res_get_uint(dev, DEV_RES_MEM, 0, &addr, NULL))
     return -ENOENT;
 
-  pv = mem_alloc(sizeof(struct bcm2835_systimer_private_s), (mem_scope_sys));
+  pv = mem_alloc(sizeof(struct bcm283x_systimer_private_s), (mem_scope_sys));
 
   if (!pv)
     return -ENOMEM;
@@ -289,9 +289,9 @@ static DEV_INIT(bcm2835_systimer_init)
 
 #ifdef CONFIG_DEVICE_IRQ
   device_irq_source_init(dev, pv->irq_eps, 4,
-                         bcm2835_systimer_irq);
+                         bcm283x_systimer_irq);
 
-  if (device_irq_source_link(dev, pv->irq_eps, 4, 1 << BCM2835_SYSTIMER_CMP_CHANNEL))
+  if (device_irq_source_link(dev, pv->irq_eps, 4, 1 << BCM283X_SYSTIMER_CMP_CHANNEL))
     goto err_mem;
 
   dev_request_pqueue_init(&pv->queue);
@@ -307,9 +307,9 @@ static DEV_INIT(bcm2835_systimer_init)
 #endif
 }
 
-static DEV_CLEANUP(bcm2835_systimer_cleanup)
+static DEV_CLEANUP(bcm283x_systimer_cleanup)
 {
-  struct bcm2835_systimer_private_s *pv = dev->drv_pv;
+  struct bcm283x_systimer_private_s *pv = dev->drv_pv;
 
 #ifdef CONFIG_DEVICE_IRQ
   dev_request_pqueue_destroy(&pv->queue);
