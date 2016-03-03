@@ -392,7 +392,6 @@ DRIVER_REGISTER(efm32_leuart_drv);
 static DEV_INIT(efm32_leuart_init)
 {
   struct efm32_leuart_context_s	*pv;
-  device_mem_map( dev , 1 << 0 );
 
   pv = mem_alloc(sizeof(*pv), (mem_scope_sys));
   dev->drv_pv = pv;

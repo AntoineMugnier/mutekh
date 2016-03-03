@@ -481,7 +481,6 @@ DRIVER_REGISTER(pic32_spi_drv);
 static DEV_INIT(pic32_spi_init)
 {
   struct pic32_spi_context_s	*pv;
-  device_mem_map( dev , 1 << 0 );
 
 
   pv = mem_alloc(sizeof(*pv), (mem_scope_sys));

@@ -314,7 +314,6 @@ DRIVER_REGISTER(pic32_uart_drv);
 static DEV_INIT(pic32_uart_char_init)
 {
   struct pic32_uart_context_s	*pv;
-  device_mem_map( dev , 1 << 0 );
 
 
   pv = mem_alloc(sizeof(*pv), (mem_scope_sys));

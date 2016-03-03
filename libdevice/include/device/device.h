@@ -485,26 +485,6 @@ bool_t device_tree_walk(struct device_node_s *root, device_tree_walker_t *walker
     devices tree with a properly initialized driver attached. */
 uint_fast8_t device_get_cpu_count(void);
 
-#ifdef CONFIG_VMEM
-uintptr_t vpage_io_map(paddr_t paddr, size_t size);
-#endif
-
-ALWAYS_INLINE
-error_t device_mem_map(struct device_s *dev, uint_fast8_t mask)
-{
-#if defined( CONFIG_VMEM )
-    uint_fast8_t i = 0;
-    while ( mask )
-    {
-        if ( mask & 1 )
-            dev->addr[i] = vpage_io_map( dev->addr[i], 1 );
-        ++i;
-        mask >>= 1;
-    }
-#endif
-    return 0;
-}
-
 /** @This specifies type of access on address space of a device. */
 enum device_access_type_e
 {

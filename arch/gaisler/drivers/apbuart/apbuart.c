@@ -228,7 +228,6 @@ DRIVER_REGISTER(gaisler_apbuart_drv,
 DEV_INIT(gaisler_apbuart_init)
 {
   struct gaisler_apbuart_context_s	*pv;
-  device_mem_map( dev , 1 << 0 );
 
 
   pv = mem_alloc(sizeof(*pv), (mem_scope_sys));

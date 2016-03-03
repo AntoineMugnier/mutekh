@@ -354,7 +354,6 @@ static DEV_INIT(cc26xx_uart_init)
   uint32_t                      reg;
   struct cc26xx_uart_context_s  *pv;
 
-  device_mem_map( dev , 1 << 0 );
 
   cpu_interrupt_disable();
 

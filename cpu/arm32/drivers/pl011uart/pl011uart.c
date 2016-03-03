@@ -295,7 +295,6 @@ DRIVER_REGISTER(pl011uart_drv,
 static DEV_INIT(pl011uart_init)
 {
   struct pl011uart_context_s	*pv;
-  device_mem_map( dev , 1 << 0 );
 
 
   pv = mem_alloc(sizeof(*pv), (mem_scope_sys));

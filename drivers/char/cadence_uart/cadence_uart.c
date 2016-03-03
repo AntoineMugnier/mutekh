@@ -321,7 +321,6 @@ static uint32_t cadence_uart_set_divider(struct cadence_uart_context_s *pv, uint
 static DEV_INIT(cadence_uart_init)
 {
   struct cadence_uart_context_s	*pv;
-  device_mem_map( dev , 1 << 0 );
 
 
   pv = mem_alloc(sizeof(*pv), (mem_scope_sys));

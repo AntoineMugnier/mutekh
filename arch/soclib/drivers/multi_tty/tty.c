@@ -260,7 +260,6 @@ DRIVER_REGISTER(tty_soclib_drv,
 static DEV_INIT(tty_soclib_init)
 {
   struct tty_soclib_context_s	*pv;
-  device_mem_map( dev , 1 << 0 );
 
 
   uintptr_t addr;

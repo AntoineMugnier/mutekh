@@ -383,7 +383,6 @@ DRIVER_REGISTER(efm32_usart_drv);
 static DEV_INIT(efm32_usart_char_init)
 {
   struct efm32_usart_context_s	*pv;
-  device_mem_map( dev , 1 << 0 );
 
   pv = mem_alloc(sizeof(*pv), (mem_scope_sys));
   dev->drv_pv = pv;

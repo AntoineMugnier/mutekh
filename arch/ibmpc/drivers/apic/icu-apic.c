@@ -275,7 +275,6 @@ DEV_INIT(icu_apic_init)
   dev->drv_pv = pv;
   memset(pv, 0, sizeof(*pv));
 
-  device_mem_map(dev ,1);
 
 #ifdef CONFIG_HEXO_IRQ
   /* we are directly bound to cpu */

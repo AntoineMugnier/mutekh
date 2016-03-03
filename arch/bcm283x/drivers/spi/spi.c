@@ -335,7 +335,6 @@ DRIVER_REGISTER(bcm283x_spi_drv);
 static DEV_INIT(bcm283x_spi_init)
 {
   struct bcm283x_spi_context_s	*pv;
-  device_mem_map(dev , 1 << 0 );
 
   dev->status = DEVICE_DRIVER_INIT_FAILED;
 
