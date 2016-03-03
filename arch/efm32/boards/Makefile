@@ -1,7 +1,4 @@
 
-objs-$(CONFIG_EFM32_STK3200) += stk3200.o
-objs-$(CONFIG_EFM32_STK3600) += stk3x00_678.o
-objs-$(CONFIG_EFM32_STK3700) += stk3x00_678.o
-objs-$(CONFIG_EFM32_STK3800) += stk3x00_678.o
-objs-$(CONFIG_EFM32_G8XX_STK) += g8xxstk.o
-
+ifneq ($(CONFIG_EFM32_BOARD), none)
+  objs += $(CONFIG_EFM32_BOARD).o
+endif

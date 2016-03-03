@@ -117,9 +117,9 @@ void efm32_usart_printk_init()
   EFM32_GPIO_MODEL_MODE_SET(pin, x, PUSHPULL);
   cpu_mem_write_32(b + EFM32_GPIO_MODEL_ADDR(bank) + h, x);
 
-#if (defined(CONFIG_EFM32_STK3600) ||             \
-     defined(CONFIG_EFM32_STK3700) ||             \
-     defined(CONFIG_EFM32_STK3800)) &&            \
+#if (defined(CONFIG_EFM32_LEOPARD_GECKO) ||             \
+     defined(CONFIG_EFM32_GIANT_GECKO) ||             \
+     defined(CONFIG_EFM32_WONDER_GECKO)) &&            \
   defined(CONFIG_EFM32_STK_BC_EN) &&              \
   CONFIG_MUTEK_PRINTK_ADDR == 0x4000e000 &&       \
   CONFIG_DRIVER_EFM32_USART_PRINTK_PIN == 64
@@ -131,7 +131,7 @@ void efm32_usart_printk_init()
 
   cpu_mem_write_32(b + EFM32_GPIO_DOUTSET_ADDR(5), EFM32_GPIO_DOUTSET_DOUTSET(7));
 
-#elif defined(CONFIG_EFM32_G8XX_STK) &&           \
+#elif defined(CONFIG_EFM32_GECKO) &&           \
   defined(CONFIG_EFM32_STK_BC_EN) &&              \
   CONFIG_MUTEK_PRINTK_ADDR == 0x4000e000 &&       \
   CONFIG_DRIVER_EFM32_USART_PRINTK_PIN == 64
