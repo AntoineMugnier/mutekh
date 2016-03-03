@@ -29,7 +29,7 @@
       @tt{arch/*/drivers}.
   @end list
 
-  @include bcm2835/bcm2835.mkdoc
+  @include bcm283x/bcm283x.mkdoc
   @include efm32/efm32.mkdoc
   @include emu/emu.mkdoc
   @include gaisler/gaisler.mkdoc
