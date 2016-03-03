@@ -502,16 +502,6 @@ struct device_accessor_s
   __a__->api->f_##op(__a__, ## __VA_ARGS__);       \
 })
 
-/**
-   @This checks if the driver behind the given device accessor
-   provides the specified operation.
-*/
-#define DEVICE_HAS_OP(dev_accessor, op)        \
-({                                            \
-  typeof(dev_accessor) __a__ = (dev_accessor);  \
-  __a__->api->f_##op != NULL;       \
-})
-
 /** @This initializes a @ref device_accessor_s object to the null
     accessor. */
 #define DEVICE_ACCESSOR_INIT { .dev = NULL, .api = NULL }
