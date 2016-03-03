@@ -490,6 +490,3 @@ error_t dev_rfpacket_wait_config(
 });
 
 #endif
-
-#endif
-
