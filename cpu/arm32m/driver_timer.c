@@ -22,7 +22,7 @@
 
 #include "driver.h"
 
-#include <cpu/arm_v7m.h>
+#include <cpu/arm32m/v7m.h>
 
 #include <mutek/kroutine.h>
 

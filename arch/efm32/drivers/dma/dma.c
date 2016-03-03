@@ -32,8 +32,8 @@
 #include <device/class/dma.h>
 #include <device/clock.h>
 
-#include <cpu/pl230_dma.h>
-#include <cpu/pl230_channel.h>
+#include <cpu/arm32m/pl230_dma.h>
+#include <cpu/arm32m/pl230_channel.h>
 #include <arch/efm32/dma_request.h>
 #include <arch/efm32/dma.h>
 

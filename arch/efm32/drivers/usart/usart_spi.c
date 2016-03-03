@@ -39,7 +39,7 @@
 #ifdef CONFIG_DRIVER_EFM32_DMA
 #include <device/class/dma.h>
 
-#include <cpu/pl230_channel.h>
+#include <cpu/arm32m/pl230_channel.h>
 #include <arch/efm32/dma_source.h>
 #include <arch/efm32/dma_request.h>
 #endif

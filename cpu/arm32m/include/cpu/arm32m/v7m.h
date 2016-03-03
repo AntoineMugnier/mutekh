@@ -4,7 +4,7 @@
 
 /*
    bfgen -I /opt/bfgen/defs/arm/arm_v7m.bf -o cdefs cdefs_use_field_shift=1    \
-     -O cpu/arm/include/cpu/arm_v7m.h
+     -O cpu/arm/include/cpu/arm32m/v7m.h
 */
 
 #ifndef _ARMV7M_BFGEN_DEFS_

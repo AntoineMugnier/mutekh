@@ -28,7 +28,7 @@
 #include <arch/efm32/cmu.h>
 #include <arch/efm32/devaddr.h>
 #include <arch/efm32/clock.h>
-#include <cpu/arm_v7m.h>
+#include <cpu/arm32m/v7m.h>
 
 #include <device/resources.h>
 #include <device/device.h>

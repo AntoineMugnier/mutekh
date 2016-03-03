@@ -25,7 +25,7 @@
 #include <mutek/mem_alloc.h>
 #include <mutek/printk.h>
 
-#include <cpu/arm_v7m.h>
+#include <cpu/arm32m/v7m.h>
 
 #include "driver.h"
 
