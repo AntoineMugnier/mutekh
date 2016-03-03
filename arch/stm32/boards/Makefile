@@ -1,0 +1,3 @@
+
+objs-$(CONFIG_BOARD_STM32_NUCLEOF401RE) += nucleo_f401re.o
+objs-$(CONFIG_BOARD_STM32_NUCLEOF103RB) += nucleo_f103rb.o

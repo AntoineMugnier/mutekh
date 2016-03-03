@@ -37,9 +37,9 @@
 #include <device/class/iomux.h>
 #include <device/class/uart.h>
 
-#include <arch/stm32f4xx_rcc.h>
-#include <arch/stm32_usart.h>
-#include <arch/stm32_memory_map.h>
+#include <arch/stm32/f4xx_rcc.h>
+#include <arch/stm32/usart.h>
+#include <arch/stm32/memory_map.h>
 
 #if CONFIG_DRIVER_STM32_USART_SWFIFO > 0
 # include <gct_platform.h>

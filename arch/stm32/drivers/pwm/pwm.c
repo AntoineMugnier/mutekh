@@ -37,9 +37,9 @@
 #include <mutek/kroutine.h>
 #include <mutek/printk.h>
 
-#include <arch/stm32f4xx_rcc.h>
-#include <arch/stm32_timer.h>
-#include <arch/stm32_memory_map.h>
+#include <arch/stm32/f4xx_rcc.h>
+#include <arch/stm32/timer.h>
+#include <arch/stm32/memory_map.h>
 
 extern uint32_t stm32f4xx_clock_freq_ahb1;
 extern uint32_t stm32f4xx_clock_freq_apb1;
