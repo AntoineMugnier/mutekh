@@ -36,7 +36,7 @@
 #include <hexo/lock.h>
 #include <hexo/interrupt.h>
 
-#include <arch/mem_checker.h>
+#include <arch/soclib/mem_checker.h>
 
 #include <stdlib.h>
 #include <string.h>

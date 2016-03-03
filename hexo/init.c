@@ -31,7 +31,7 @@
 #endif
 
 #ifdef CONFIG_SOCLIB_MEMCHECK
-# include <arch/mem_checker.h>
+# include <arch/soclib/mem_checker.h>
 #endif
 
 /////////////////////////////////// cpu main context intialization

@@ -20,7 +20,7 @@
 
 */
 
-#include <arch/mem_checker.h>
+#include <arch/soclib/mem_checker.h>
 #include <hexo/power.h>
 #include <hexo/iospace.h>
 

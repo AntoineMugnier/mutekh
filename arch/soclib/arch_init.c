@@ -20,7 +20,7 @@
 */
 
 #include <mutek/startup.h>
-#include <arch/mem_checker.h>
+#include <arch/soclib/mem_checker.h>
 #include <hexo/cpu.h>
 
 #include <string.h>

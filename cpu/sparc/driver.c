@@ -39,7 +39,7 @@
 #include <mutek/printk.h>
 
 #ifdef CONFIG_SOCLIB_MEMCHECK
-# include <arch/mem_checker.h>
+# include <arch/soclib/mem_checker.h>
 #endif
 
 #define ICU_SPARC_MAX_VECTOR    	14  /* exclude nmi */
