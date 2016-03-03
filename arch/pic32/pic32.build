@@ -2,8 +2,9 @@
 
 %section pic32-stkmzec
   %inherit pic32-mz-2048-ech144
+  # PIC32MZ embedded connectivity starter kit
 
-  CONFIG_PIC32_BOARD_MZEC_STK
+  CONFIG_PIC32_BOARD pic32mzecstk
   CONFIG_DRIVER_PIC32_UART
   CONFIG_DRIVER_PIC32_UART_PRINTK
   CONFIG_MUTEK_PRINTK_ADDR 0xbf822200

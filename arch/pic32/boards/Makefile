@@ -1,2 +1,5 @@
 
-objs-$(CONFIG_PIC32_BOARD_MZEC_STK) += pic32mzecstk.o
+ifneq ($(CONFIG_PIC32_BOARD), none)
+  objs += $(CONFIG_PIC32_BOARD).o
+endif
+
