@@ -34,8 +34,8 @@
 #include <device/class/icu.h>
 #include <device/irq.h>
 
-#include <arch/pic32_irq.h>
-#include <arch/pic32_icu.h>
+#include <arch/pic32/irq.h>
+#include <arch/pic32/icu.h>
 
 #include <mutek/mem_alloc.h>
 #include <mutek/printk.h>

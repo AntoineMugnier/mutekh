@@ -32,8 +32,8 @@
 #include <device/class/dma.h>
 #include <device/clock.h>
 
-#include <arch/pic32_dma_request.h>
-#include <arch/pic32_dma.h>
+#include <arch/pic32/dma_request.h>
+#include <arch/pic32/dma.h>
 
 #define PIC32_DMA_MAX_SIZE 65536
 #define PIC32_DMA_IRQ_MASK (PIC32_DMA_DCHINT_CHBCIE | PIC32_DMA_DCHINT_CHERIE)

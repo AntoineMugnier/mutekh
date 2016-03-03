@@ -36,12 +36,12 @@
 #include <device/class/iomux.h>
 #include <device/clock.h>
 
-#include <arch/pic32_irq.h>
-#include <arch/pic32_spi.h>
+#include <arch/pic32/irq.h>
+#include <arch/pic32/spi.h>
 
 #ifdef CONFIG_DRIVER_PIC32_DMA
 #include <device/class/dma.h>
-#include <arch/pic32_dma_request.h>
+#include <arch/pic32/dma_request.h>
 #endif
 
 #define PIC32_SPI_FIFO_SIZE 16

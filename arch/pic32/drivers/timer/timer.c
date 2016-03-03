@@ -37,9 +37,9 @@
 #include <mutek/mem_alloc.h>
 #include <mutek/kroutine.h>
 
-#include <arch/pic32_timer.h>
-#include <arch/pic32_oc.h>
-#include <arch/pic32_freq.h>
+#include <arch/pic32/timer.h>
+#include <arch/pic32/oc.h>
+#include <arch/pic32/freq.h>
 
 #define PIC32_TIMER_HW_WIDTH 32
 #define PIC32_TIMER_HW_MASK  0xFFFFFFFF

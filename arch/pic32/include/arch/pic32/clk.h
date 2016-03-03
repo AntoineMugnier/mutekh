@@ -3,7 +3,7 @@
 ***************************************/
 
 /*
-   bfgen -o cdefs -O arch/pic32/include/arch/pic32_clk.h cdefs_use_reg_mask=1  \
+   bfgen -o cdefs -O arch/pic32/include/arch/pic32/clk.h cdefs_use_reg_mask=1  \
      cdefs_use_field_setval=1 -I /opt/bfgen/defs/pic32/pic32_clock.bf
 */
 

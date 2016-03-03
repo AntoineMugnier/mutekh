@@ -35,8 +35,8 @@
 #include <device/class/iomux.h>
 #include <device/clock.h>
 
-#include <arch/pic32_freq.h>
-#include <arch/pic32_uart.h>
+#include <arch/pic32/freq.h>
+#include <arch/pic32/uart.h>
 
 
 #if CONFIG_DRIVER_PIC32_UART_CHAR_SWFIFO > 0

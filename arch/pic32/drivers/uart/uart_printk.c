@@ -25,11 +25,11 @@
 
 #include <mutek/printk.h>
 
-#include <arch/pic32_uart.h>
-#include <arch/pic32_gpio.h>
-#include <arch/pic32_clk.h>
-#include <arch/pic32_devaddr.h>
-#include <arch/pic32_freq.h>
+#include <arch/pic32/uart.h>
+#include <arch/pic32/gpio.h>
+#include <arch/pic32/clk.h>
+#include <arch/pic32/devaddr.h>
+#include <arch/pic32/freq.h>
 
 
 static void early_console_out_char(char c)

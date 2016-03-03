@@ -26,10 +26,10 @@
 #include <device/class/iomux.h>
 #include <device/class/dma.h>
 #include <device/irq.h>
-#include <arch/pic32_pin.h>
-#include <arch/pic32_gpio.h>
-#include <arch/pic32_irq.h>
-#include <arch/pic32_freq.h>
+#include <arch/pic32/pin.h>
+#include <arch/pic32/gpio.h>
+#include <arch/pic32/irq.h>
+#include <arch/pic32/freq.h>
 
 /* CPU. */
 DEV_DECLARE_STATIC(cpu_dev, "cpu", DEVICE_FLAG_CPU, mips_drv,

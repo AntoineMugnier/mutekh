@@ -1,4 +1,4 @@
-#include <arch/pic32_devaddr.h>
+#include <arch/pic32/devaddr.h>
 
 #ifndef PIC32_PIN_H_
 #define PIC32_PIN_H_

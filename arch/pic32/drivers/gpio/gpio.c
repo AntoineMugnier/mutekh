@@ -25,8 +25,8 @@
 #include <hexo/iospace.h>
 
 #include <mutek/mem_alloc.h>
-#include <arch/pic32_gpio.h>
-#include <arch/pic32_devaddr.h>
+#include <arch/pic32/gpio.h>
+#include <arch/pic32/devaddr.h>
 
 #include <device/resources.h>
 #include <device/device.h>

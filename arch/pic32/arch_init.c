@@ -29,10 +29,10 @@
 
 #include <mutek/mem_alloc.h>
 #include <mutek/memory_allocator.h>
-#include <arch/pic32_clk.h>
-#include <arch/pic32_pin.h>
-#include <arch/pic32_devaddr.h>
-#include <arch/pic32_gpio.h>
+#include <arch/pic32/clk.h>
+#include <arch/pic32/pin.h>
+#include <arch/pic32/devaddr.h>
+#include <arch/pic32/gpio.h>
 #include <mutek/printk.h>
 
 void pic32_mem_init()
