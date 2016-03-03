@@ -361,11 +361,7 @@ static DEV_TIMER_CONFIG(pic32_timer_config)
   lock_spin_irq2(&dev->lock, &pv->irq_save);
 
   if (cfg)
-    {
-      cfg->freq.num = pv->freq.num;
-      cfg->freq.denom = pv->freq.denom;
-      cfg->acc.e = 0;
-    }
+    cfg->freq = pv->freq;
 
   if (res)
     {
