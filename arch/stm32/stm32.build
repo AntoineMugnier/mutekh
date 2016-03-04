@@ -422,6 +422,8 @@
     CONFIG_CPU_ARM32M_CORTEXM4
     CONFIG_STM32_CPURAMSIZE 0x00000000
 
+    CONFIG_CPU_ARM32M_M_IRQ_COUNT 81
+
     %set BUILD_NAME stm32-l4
 
     ########### Features
@@ -430,32 +432,24 @@
       %types features
 
       CONFIG_STM32_SERIE 471
-
-      CONFIG_CPU_ARM32M_M_IRQ_COUNT 85
     %end
 
     %subsection stm32-l475??
       %types features
 
       CONFIG_STM32_SERIE 475
-
-      CONFIG_CPU_ARM32M_M_IRQ_COUNT 85
     %end
 
     %subsection stm32-l476??
       %types features
 
       CONFIG_STM32_SERIE 476
-
-      CONFIG_CPU_ARM32M_M_IRQ_COUNT 85
     %end
 
     %subsection stm32-l486??
       %types features
 
       CONFIG_STM32_SERIE 486
-
-      CONFIG_CPU_ARM32M_M_IRQ_COUNT 85
     %end
 
     ########### Ram size
