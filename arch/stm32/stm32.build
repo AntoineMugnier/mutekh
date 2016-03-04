@@ -19,7 +19,7 @@
   CONFIG_DRIVER_PUSH_BUTTON_TIMER undefined
   CONFIG_DRIVER_STM32_USART_PRINTK_CLK_FREQ 42000000
 
-%section stm32-f?????
+%section stm32-??????
   %types architecture
 
   CONFIG_ARCH_STM32
@@ -45,67 +45,67 @@
 
   ########### Flash size
 
-  %subsection stm32-f????4
+  %subsection stm32-?????4
     %types flash
     # 16KBytes
     CONFIG_STM32_FLASHSIZE 0x00004000
   %end
 
-  %subsection stm32-f????6
+  %subsection stm32-?????6
     %types flash
     # 32KBytes
     CONFIG_STM32_FLASHSIZE 0x00008000
   %end
 
-  %subsection stm32-f????8
+  %subsection stm32-?????8
     %types flash
     # 64KBytes
     CONFIG_STM32_FLASHSIZE 0x00010000
   %end
 
-  %subsection stm32-f????b
+  %subsection stm32-?????b
     %types flash
     # 128KBytes
     CONFIG_STM32_FLASHSIZE 0x00020000
   %end
 
-  %subsection stm32-f????c
+  %subsection stm32-?????c
     %types flash
     # 256KBytes
     CONFIG_STM32_FLASHSIZE 0x00040000
   %end
 
-  %subsection stm32-f????d
+  %subsection stm32-?????d
     %types flash
     # 384KBytes
     CONFIG_STM32_FLASHSIZE 0x00060000
   %end
 
-  %subsection stm32-f????e
+  %subsection stm32-?????e
     %types flash
     # 512KBytes
     CONFIG_STM32_FLASHSIZE 0x00080000
   %end
 
-  %subsection stm32-f????f
+  %subsection stm32-?????f
     %types flash
     # 768KBytes
     CONFIG_STM32_FLASHSIZE 0x000c0000
   %end
 
-  %subsection stm32-f????g
+  %subsection stm32-?????g
     %types flash
     # 1024KBytes
     CONFIG_STM32_FLASHSIZE 0x00100000
   %end
 
-  %subsection stm32-f????h
+  %subsection stm32-?????h
     %types flash
     # 1536KBytes
     CONFIG_STM32_FLASHSIZE 0x00180000
   %end
 
-  %subsection stm32-f????i
+  %subsection stm32-?????i
     %types flash
     # 2048KBytes
     CONFIG_STM32_FLASHSIZE 0x00200000
@@ -411,6 +411,60 @@
 #    %end
 
   %end
+
+  #########################################################
+  # L4 family
+
+  %subsection stm32-l4????
+    %types family
+
+    CONFIG_STM32_FAMILY L4
+    CONFIG_CPU_ARM32M_CORTEXM4
+    CONFIG_STM32_CPURAMSIZE 0x00000000
+
+    %set BUILD_NAME stm32-l4
+
+    ########### Features
+
+    %subsection stm32-l471??
+      %types features
+
+      CONFIG_STM32_SERIE 471
+
+      CONFIG_CPU_ARM32M_M_IRQ_COUNT 85
+    %end
+
+    %subsection stm32-l475??
+      %types features
+
+      CONFIG_STM32_SERIE 475
+
+      CONFIG_CPU_ARM32M_M_IRQ_COUNT 85
+    %end
+
+    %subsection stm32-l476??
+      %types features
+
+      CONFIG_STM32_SERIE 476
+
+      CONFIG_CPU_ARM32M_M_IRQ_COUNT 85
+    %end
+
+    %subsection stm32-l486??
+      %types features
+
+      CONFIG_STM32_SERIE 486
+
+      CONFIG_CPU_ARM32M_M_IRQ_COUNT 85
+    %end
+
+    ########### Ram size
+
+    %subsection stm32-l4????
+      %types sram
+      # 128k
+      CONFIG_STM32_AHBRAMSIZE 0x00020000
+    %end
 
   %requiretypes family
   %requiretypes flash
