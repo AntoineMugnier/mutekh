@@ -331,8 +331,6 @@ static DEV_USE(stm32_timer_use)
     default:
       return dev_use_generic(param, op);
     }
-
-  return err;
 }
 
 static DEV_TIMER_GET_VALUE(stm32_timer_get_value)
