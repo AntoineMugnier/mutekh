@@ -197,6 +197,7 @@ error_t stm32_gpio_apply_mode(gpio_id_t io_first, gpio_id_t io_last,
                               bool_t alt)
 {
   uint32_t mbits;
+  bool_t pull = 0;
 
   switch (mode)
     {
@@ -210,6 +211,8 @@ error_t stm32_gpio_apply_mode(gpio_id_t io_first, gpio_id_t io_last,
 
     case DEV_PIN_INPUT_PULLUP:
     case DEV_PIN_INPUT_PULLDOWN:
+      pull = 1;
+    case DEV_PIN_INPUT_PULL:
       mbits = STM32_GPIO_MODE_CNF(STM32_GPIO_MODE_INPUT, STM32_GPIO_CNF_INPUT);
       break;
 
@@ -221,8 +224,6 @@ error_t stm32_gpio_apply_mode(gpio_id_t io_first, gpio_id_t io_last,
       break;
 
     case DEV_PIN_OPENDRAIN:
-    case DEV_PIN_OPENDRAIN_PULLUP:
-    case DEV_PIN_OPENSOURCE_PULLDOWN:
       if (alt)
         mbits = STM32_GPIO_MODE_CNF(STM32_GPIO_MODE_OUTPUT_50MHZ, STM32_GPIO_CNF_ALT_OPENDRAIN);
       else
@@ -233,13 +234,16 @@ error_t stm32_gpio_apply_mode(gpio_id_t io_first, gpio_id_t io_last,
   /* setup mode. */
   stm32_gpio_set_mode_reg(io_first, io_last, mask, mbits * 0x11111111);
 
-  if (mode & DEV_PIN_RESISTOR_UP_)
-    stm32_gpio_set_out_reg(io_first, io_last, mask /* set */, dev_gpio_mask1 /* clear */);
-  else if (mode & DEV_PIN_RESISTOR_DOWN_)
+  if (pull)
     {
-      uint8_t m[8];
-      endian_64_na_store(m, ~endian_64_na_load(mask));
-      stm32_gpio_set_out_reg(io_first, io_last, dev_gpio_mask0 /* set */, m /* clear */);
+      if (mode & DEV_PIN_RESISTOR_UP_)
+        stm32_gpio_set_out_reg(io_first, io_last, mask /* set */, dev_gpio_mask1 /* clear */);
+      else if (mode & DEV_PIN_RESISTOR_DOWN_)
+        {
+          uint8_t m[8];
+          endian_64_na_store(m, ~endian_64_na_load(mask));
+          stm32_gpio_set_out_reg(io_first, io_last, dev_gpio_mask0 /* set */, m /* clear */);
+        }
     }
 
   return 0;
