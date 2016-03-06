@@ -25,6 +25,7 @@
 #include <hexo/endian.h>
 
 #include <mutek/printk.h>
+#include <mutek/startup.h>
 
 #include <arch/stm32/usart.h>
 #include <arch/stm32/f1xx_gpio.h>
@@ -35,7 +36,7 @@
 
 static inline void stm32_usart_tx_wait_ready()
 {
-  uintptr_t const a = STM32_USART2_ADDR + STM32_USART_SR_ADDR;
+  uintptr_t const a = CONFIG_MUTEK_PRINTK_ADDR + STM32_USART_SR_ADDR;
 
   reg_t status;
   do
@@ -47,7 +48,7 @@ static inline void stm32_usart_tx_wait_ready()
 
 static PRINTF_OUTPUT_FUNC(early_console_out)
 {
-  uintptr_t const a = STM32_USART2_ADDR + STM32_USART_DR_ADDR;
+  uintptr_t const a = CONFIG_MUTEK_PRINTK_ADDR + STM32_USART_DR_ADDR;
 
   uint_fast8_t i;
 
@@ -70,28 +71,39 @@ void stm32_usart_printk_init()
 {
   uint32_t cr1 = 0, cr2 = 0, x;
 
-  /* gpio PA2/PA3 as TX/RX. */
+  /* set gpio for TX */
+  uint32_t a = (CONFIG_DRIVER_STM32_USART_PRINTK_PIN & 8
+     ? STM32_GPIO_CRH_ADDR(CONFIG_DRIVER_STM32_USART_PRINTK_PIN / 16)
+     : STM32_GPIO_CRL_ADDR(CONFIG_DRIVER_STM32_USART_PRINTK_PIN / 16));
+
+  x = endian_le32(cpu_mem_read_32(STM32_GPIO_ADDR + a));
+  STM32_GPIO_CRL_MODE_SET(CONFIG_DRIVER_STM32_USART_PRINTK_PIN % 8, x, OUTPUT_50MHZ);
+  STM32_GPIO_CRL_CNF_SET(CONFIG_DRIVER_STM32_USART_PRINTK_PIN % 8, x, ALT_PUSH_PULL);
+  cpu_mem_write_32(STM32_GPIO_ADDR + a, endian_le32(x));
 
   /* set gpio alternate function. */
-  x = endian_le32(cpu_mem_read_32(STM32_GPIO_ADDR + STM32_GPIO_CRL_ADDR(0)));
-  STM32_GPIO_CRL_MODE_SET(2, x, OUTPUT_50MHZ);
-  STM32_GPIO_CRL_MODE_SET(3, x, INPUT);
-
-  STM32_GPIO_CRL_CNF_SET(2, x, ALT_PUSH_PULL);
-  STM32_GPIO_CRL_CNF_SET(3, x, FLOATING);
-  cpu_mem_write_32(STM32_GPIO_ADDR + STM32_GPIO_CRL_ADDR(0), endian_le32(x));
-
   x = endian_le32(cpu_mem_read_32(STM32_AFIO_ADDR + STM32_AFIO_MAPR_ADDR));
-  STM32_AFIO_MAPR_USART2_REMAP_SET(x, 0);
+  switch (CONFIG_MUTEK_PRINTK_ADDR)
+    {
+    case 0x40013800:
+      STM32_AFIO_MAPR_USART1_REMAP_SET(x, CONFIG_DRIVER_STM32_USART_PRINTK_AF);
+      break;
+    case 0x40004400:
+      STM32_AFIO_MAPR_USART2_REMAP_SET(x, CONFIG_DRIVER_STM32_USART_PRINTK_AF);
+      break;
+    case 0x40004800:
+      STM32_AFIO_MAPR_USART3_REMAP_SET(x, CONFIG_DRIVER_STM32_USART_PRINTK_AF);
+      break;
+    }
   cpu_mem_write_32(STM32_AFIO_ADDR + STM32_AFIO_MAPR_ADDR, endian_le32(x));
 
   /* wait for the last byte to be send just in case. */
   //stm32_usart_tx_wait_ready();
 
   /* deactivate the USART and reset configuration. */
-  cpu_mem_write_32(STM32_USART2_ADDR + STM32_USART_CR1_ADDR, 0);
-  cpu_mem_write_32(STM32_USART2_ADDR + STM32_USART_CR2_ADDR, 0);
-  cpu_mem_write_32(STM32_USART2_ADDR + STM32_USART_CR3_ADDR, 0);
+  cpu_mem_write_32(CONFIG_MUTEK_PRINTK_ADDR + STM32_USART_CR1_ADDR, 0);
+  cpu_mem_write_32(CONFIG_MUTEK_PRINTK_ADDR + STM32_USART_CR2_ADDR, 0);
+  cpu_mem_write_32(CONFIG_MUTEK_PRINTK_ADDR + STM32_USART_CR3_ADDR, 0);
 
   /* enable TX. */
   STM32_USART_CR1_TE_SET(cr1, 1);
@@ -101,18 +113,18 @@ void stm32_usart_printk_init()
   STM32_USART_CR1_PCE_SET(cr1, NONE);
   STM32_USART_CR2_STOP_SET(cr2, 1_BIT);
 
-  /* configure baud rate tp 9600 Kbps. */
-  cpu_mem_write_32(STM32_USART2_ADDR + STM32_USART_BRR_ADDR,
+  /* configure baud rate */
+  cpu_mem_write_32(CONFIG_MUTEK_PRINTK_ADDR + STM32_USART_BRR_ADDR,
     endian_le32(CONFIG_DRIVER_STM32_USART_PRINTK_CLK_FREQ /
       CONFIG_DRIVER_STM32_USART_PRINTK_BAUDRATE));
 
   /* propagate the configuration. */
-  cpu_mem_write_32(STM32_USART2_ADDR + STM32_USART_CR1_ADDR, endian_le32(cr1));
-  cpu_mem_write_32(STM32_USART2_ADDR + STM32_USART_CR2_ADDR, endian_le32(cr2));
+  cpu_mem_write_32(CONFIG_MUTEK_PRINTK_ADDR + STM32_USART_CR1_ADDR, endian_le32(cr1));
+  cpu_mem_write_32(CONFIG_MUTEK_PRINTK_ADDR + STM32_USART_CR2_ADDR, endian_le32(cr2));
 
-  /* enable USART2. */
+  /* enable USART. */
   STM32_USART_CR1_UE_SET(cr1, 1);
-  cpu_mem_write_32(STM32_USART2_ADDR + STM32_USART_CR1_ADDR, endian_le32(cr1));
+  cpu_mem_write_32(CONFIG_MUTEK_PRINTK_ADDR + STM32_USART_CR1_ADDR, endian_le32(cr1));
 
   printk_set_output(early_console_out, NULL);
 }
