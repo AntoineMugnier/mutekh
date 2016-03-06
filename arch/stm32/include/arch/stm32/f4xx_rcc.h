@@ -17,10 +17,10 @@
   #define STM32_RCC_CR_HSION                       0x00000001
   #define STM32_RCC_CR_HSION_SET(x, v)             do { (x) = (((x) & ~0x1) | ((v) << 0)); } while(0)
   #define STM32_RCC_CR_HSION_GET(x)                (((x) >> 0) & 0x1)
-  #define STM32_RCC_CR_HSIDRY_MASK                 0x00000001
-  #define STM32_RCC_CR_HSIDRY                      0x00000002
-  #define STM32_RCC_CR_HSIDRY_SET(x, v)            do { (x) = (((x) & ~0x2) | ((v) << 1)); } while(0)
-  #define STM32_RCC_CR_HSIDRY_GET(x)               (((x) >> 1) & 0x1)
+  #define STM32_RCC_CR_HSIRDY_MASK                 0x00000001
+  #define STM32_RCC_CR_HSIRDY                      0x00000002
+  #define STM32_RCC_CR_HSIRDY_SET(x, v)            do { (x) = (((x) & ~0x2) | ((v) << 1)); } while(0)
+  #define STM32_RCC_CR_HSIRDY_GET(x)               (((x) >> 1) & 0x1)
   #define STM32_RCC_CR_HSITRIM_MASK                0x0000001f
   #define STM32_RCC_CR_HSITRIM(v)                  ((v) << 3)
   #define STM32_RCC_CR_HSITRIM_SET(x, v)           do { (x) = (((x) & ~0xf8) | ((v) << 3)); } while(0)
