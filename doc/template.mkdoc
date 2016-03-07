@@ -32,6 +32,10 @@
 
 @macro _compound_doc id
 
+  @ifsymtype {@id@} {header}
+    The source code of this header can be @sourceref {@id@} {browsed online}.
+  @end if
+
   @ifsymtype {@id@} {module}
     @section e {Related headers}
       @insert {header} {1} {@id@} compound_table 
@@ -39,12 +43,6 @@
   @else
     @section e {Description}
       @insert {@id@} decl_inline_doc
-    @end section
-  @end if
-
-  @ifsymtype {@id@} {header}
-    @section e {Inclusion list}
-      @insert {@id@} include_list
     @end section
   @end if
 
@@ -114,7 +112,7 @@
 
 @macro module_sections
 
-  @foreach id name type {visible module} {} {0}
+  @foreach id name type {visible module} {} {1}
     @info Inserting `@name@' @type@ documentation
 
     @section PT {@name@} {@id@}

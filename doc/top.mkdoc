@@ -141,6 +141,11 @@ doc/config.h
 @end section
 
 @section TP {Developer reference}
+
+  This section contains material for kernel developers and application
+  developers. The following topics are covered:
+  @insert localtoc
+
   @include config_desc.mkdoc
   @include testsuite.mkdoc
   @section TP {Headers}
