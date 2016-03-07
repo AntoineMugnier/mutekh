@@ -36,6 +36,8 @@
 #include <hexo/local.h>
 #include <hexo/ordering.h>
 
+typedef reg_t cpu_irq_state_t;
+
 #ifdef CONFIG_HEXO_IRQ
 void emu_interrupts_wait(void);
 void emu_interrupts_init(void);
@@ -44,7 +46,7 @@ bool_t emu_interrupts_get(void);
 void emu_interrupts_post(cpu_id_t cpu, uint_fast8_t irq);
 #endif
 
-static inline void
+ALWAYS_INLINE void
 cpu_interrupt_disable(void)
 {
 #ifdef CONFIG_HEXO_IRQ
@@ -53,7 +55,7 @@ cpu_interrupt_disable(void)
 #endif
 }
 
-static inline void
+ALWAYS_INLINE void
 cpu_interrupt_enable(void)
 {
 #ifdef CONFIG_HEXO_IRQ
@@ -62,40 +64,35 @@ cpu_interrupt_enable(void)
 #endif
 }
 
-static inline void
+ALWAYS_INLINE void
 cpu_interrupt_process(void)
 {
   cpu_interrupt_enable();
 }
 
-static inline void
-cpu_interrupt_savestate(reg_t *state)
+ALWAYS_INLINE void
+cpu_interrupt_savestate_disable(cpu_irq_state_t *state)
 {
 #ifdef CONFIG_HEXO_IRQ
   *state = emu_interrupts_get();
-#endif
-}
-
-static inline void
-cpu_interrupt_savestate_disable(reg_t *state)
-{
-#ifdef CONFIG_HEXO_IRQ
-  cpu_interrupt_savestate(state);
   cpu_interrupt_disable();
   order_compiler_mem();
 #endif
 }
 
-static inline void
-cpu_interrupt_restorestate(const reg_t *state)
+ALWAYS_INLINE bool_t
+cpu_interrupt_restorestate(const cpu_irq_state_t *state)
 {
 #ifdef CONFIG_HEXO_IRQ
   order_compiler_mem();
   emu_interrupts_set(*state);
+  return *state;
+#else
+  return 0;
 #endif
 }
 
-static inline bool_t
+ALWAYS_INLINE bool_t
 cpu_interrupt_getstate(void)
 {
 #ifdef CONFIG_HEXO_IRQ
@@ -105,7 +102,7 @@ cpu_interrupt_getstate(void)
 #endif
 }
 
-static inline bool_t
+ALWAYS_INLINE bool_t
 cpu_is_interruptible(void)
 {
 #ifdef CONFIG_HEXO_IRQ
@@ -116,7 +113,7 @@ cpu_is_interruptible(void)
 }
 
 #ifdef CONFIG_CPU_WAIT_IRQ
-static inline void
+ALWAYS_INLINE void
 cpu_interrupt_wait(void)
 {
 # ifdef CONFIG_HEXO_IRQ

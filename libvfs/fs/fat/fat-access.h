@@ -16,7 +16,7 @@
   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
   02110-1301 USA
 
-  Copyright Nicolas Pouillon, <nipo@ssji.net>, 2009
+  Copyright Nicolas Pouillon, <nipo@ssji.net>, 2009,2014
 */
 
 #ifndef _FAT_ACCESS_H_
@@ -31,7 +31,7 @@ struct fat_extent_s;
   @this opens a block device for reading as a FAT. It may return
   -EINVAL or -ENOENT if the FAT is not correctly detected.
  */
-#define FAT_BACKEND_OPEN(x) error_t (x)(struct device_s *dev, struct fat_s **fat, uint32_t flags)
+#define FAT_BACKEND_OPEN(x) error_t (x)(struct device_block_s *dev, struct fat_s **fat, uint32_t flags)
 
 /*
   @this writes back all extents chained lists. (free list and open

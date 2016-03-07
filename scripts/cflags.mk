@@ -30,9 +30,23 @@ AR=$(CPUTOOLS)ar
 AS=$(CPUTOOLS)as
 OBJCOPY=$(CPUTOOLS)objcopy
 OBJDUMP=$(CPUTOOLS)objdump
+LIBGCC_PATH=$(if $(LIBGCC_DIR), \
+    $(dir $(shell $(CC) -print-libgcc-file-name))/$(subst $(_empty_before_space_) ,,$(LIBGCC_DIR))/libgcc.a, \
+    $(shell $(CC) $(CFLAGS) $(CPUCFLAGS) -print-libgcc-file-name) )
 
-CFLAGS=	-nostdlib -fno-builtin -Wall -Wno-main -O$(CONFIG_COMPILE_OPTIMIZE)
+CFLAGS=	-std=gnu99 -nostdlib -fno-builtin -foptimize-sibling-calls \
+        -Wall -Wmissing-prototypes -Wno-main -Wno-unused-label -O$(CONFIG_COMPILE_OPTIMIZE)
 DTC=dtc
+
+ifeq ($(CONFIG_SOCLIB_MEMCHECK), defined)
+# disable load optimizations : prevent load undefined values
+CFLAGS += -fno-gcse-lm -fno-gcse-sm -fno-sched-spec
+endif
+
+ifeq ($(CONFIG_COMPILE_LTO), defined)
+CFLAGS += -flto
+LINK_LDFLAGS += -flto
+endif
 
 ifeq ($(CONFIG_OPENMP), defined)
 CFLAGS += -fopenmp
@@ -74,7 +88,7 @@ CFLAGS += -finstrument-functions
 endif
 
 INCS=-nostdinc -D__MUTEK__ \
-	-I$(MUTEK_SRC_DIR)/include \
+	-I$(MUTEK_SRC_DIR)/include -I $(OBJ_DIR) \
 	$(foreach mod,$(MODULE_NAMES),-I$($(mod)_SRC_DIR)/include) \
 	$(foreach mod,$(MODULE_NAMES),-I$($(mod)_OBJ_DIR)/include) \
 	-I$(CURRENT_DIR) \

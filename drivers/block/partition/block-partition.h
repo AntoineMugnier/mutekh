@@ -23,12 +23,12 @@
 #ifndef DRIVER_BLOCK_PARTITION_H_
 #define DRIVER_BLOCK_PARTITION_H_
 
-#include <device/block.h>
+#include <device/class/block.h>
 #include <device/device.h>
 
 DEV_CREATE(block_partition_create);
 DEV_CLEANUP(block_partition_cleanup);
-DEVBLOCK_REQUEST(block_partition_request);
+DEV_BLOCK_REQUEST(block_partition_request);
 
 #endif
 

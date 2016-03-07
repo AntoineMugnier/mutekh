@@ -22,7 +22,7 @@
 
 #include <hexo/types.h>
 
-#include <device/block.h>
+#include <device/class/block.h>
 #include <device/device.h>
 #include <device/driver.h>
 
@@ -31,7 +31,7 @@
 #include <hexo/lock.h>
 #include <hexo/interrupt.h>
 
-#include <hexo/gpct_platform_hexo.h>
+#include <gct_platform.h>
 #include <gpct/cont_array.h>
 
 #include <stdlib.h>
@@ -42,7 +42,7 @@
 
 /**************************************************************/
 
-DEVBLOCK_REQUEST(block_partition_request)
+DEV_BLOCK_REQUEST(block_partition_request)
 {
   struct block_partition_context_s	*pv = dev->drv_pv;
 
@@ -62,7 +62,7 @@ DEVBLOCK_REQUEST(block_partition_request)
  * device params
  */
 
-DEVBLOCK_GETPARAMS(block_partition_getparams)
+DEV_BLOCK_GETPARAMS(block_partition_getparams)
 {
   struct block_partition_context_s	*pv = dev->drv_pv;
 
@@ -117,8 +117,8 @@ struct block_partition_list_s
   uint8_t		type;
 };
 
-CONTAINER_TYPE(block_partition_list, ARRAY, struct block_partition_list_s, CONFIG_DRIVER_BLOCK_PARTITION_MAXCOUNT);
-CONTAINER_FUNC(block_partition_list, ARRAY, static inline, block_partition_list);
+GCT_CONTAINER_TYPES(block_partition_list, ARRAY, struct block_partition_list_s, CONFIG_DRIVER_BLOCK_PARTITION_MAXCOUNT);
+GCT_CONTAINER_FCNS(block_partition_list, ARRAY, static inline, block_partition_list);
 
 static void block_partition_parse_extended(struct device_s *parent,
 					   dev_block_lba_t last,
@@ -253,20 +253,15 @@ DEV_CREATE(block_partition_create)
   return count;
 }
 
-DEVBLOCK_GETRQSIZE(block_partition_getrqsize)
+DEV_BLOCK_GETRQSIZE(block_partition_getrqsize)
 {
   return dev_block_getrqsize(dev->parent);
 }
 
-const struct driver_s block_partition_drv =
-{
-  .class		= device_class_block,
-  .f_create		= block_partition_create,
-  .f_cleanup		= block_partition_cleanup,
-  .f.blk = {
-    .f_request		= block_partition_request,
-    .f_getparams	= block_partition_getparams,
-    .f_getrqsize	= block_partition_getrqsize,
-  }
-};
+#define block_partition_use dev_use_generic
+
+DRIVER_DECLARE(block_partition_drv, 0, "Partition", block_partition,
+               DRIVER_MEM_METHODS(block_partition));
+
+DRIVER_REGISTER(block_partition_drv);
 

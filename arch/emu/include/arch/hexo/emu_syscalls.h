@@ -27,16 +27,16 @@
 #include <hexo/types.h>
 #include <stdarg.h>
 
-#include "arch/hexo/syscalls_nums.h"
-#include "arch/hexo/syscalls_args.h"
 
-extern __compiler_sint_t cpu_pids[CONFIG_CPU_MAXCOUNT];
+extern __compiler_sint_t cpu_pids[CONFIG_ARCH_EMU_CPUS];
 
 #if defined(CONFIG_ARCH_EMU_LINUX)
 
+#include "emu/syscalls_linux.h"
+
 # if defined(CONFIG_CPU_X86_EMU)
 
-static inline reg_t
+inline reg_t
 emu_do_syscall_va(uint_fast16_t id, size_t argc, va_list ap)
 {
   reg_t		res;
@@ -74,7 +74,7 @@ emu_do_syscall_va(uint_fast16_t id, size_t argc, va_list ap)
 
 # elif defined (CONFIG_CPU_X86_64_EMU)
 
-static inline reg_t
+inline reg_t
 emu_do_syscall_va(uint_fast16_t id, size_t argc, va_list ap)
 {
   reg_t		res;
@@ -106,9 +106,11 @@ emu_do_syscall_va(uint_fast16_t id, size_t argc, va_list ap)
 
 #elif defined(CONFIG_ARCH_EMU_DARWIN)
 
+#include "emu/syscalls_darwin.h"
+
 # if defined(CONFIG_CPU_X86_EMU)
 
-static inline reg_t
+ALWAYS_INLINE reg_t
 emu_do_syscall_va(uint_fast16_t id, size_t argc, va_list ap)
 {
 	register reg_t res;
@@ -136,7 +138,7 @@ emu_do_syscall_va(uint_fast16_t id, size_t argc, va_list ap)
 #endif
 
 
-static inline reg_t
+inline reg_t
 emu_do_syscall(uint_fast16_t id, size_t argc, ...)
 {
   va_list	ap;

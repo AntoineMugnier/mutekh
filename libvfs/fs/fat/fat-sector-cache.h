@@ -16,7 +16,7 @@
   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
   02110-1301 USA
 
-  Copyright Nicolas Pouillon, <nipo@ssji.net>, 2009
+  Copyright Nicolas Pouillon, <nipo@ssji.net>, 2009,2014
 */
 
 #ifndef FAT_TMP_SECTOR_S
@@ -24,7 +24,7 @@
 
 #include <hexo/types.h>
 #include <mutek/semaphore.h>
-#include <device/block.h>
+#include <device/class/block.h>
 #include <device/device.h>
 
 struct fat_tmp_sector_s
@@ -37,12 +37,12 @@ struct fat_tmp_sector_s
 };
 
 error_t fat_sector_lock_and_load(struct fat_tmp_sector_s *sector,
-                                 struct device_s *dev,
+                                 struct device_block_s *dev,
                                  dev_block_lba_t lba);
 
 void fat_sector_lock_release(struct fat_tmp_sector_s *sector);
 
 error_t fat_sector_flush(struct fat_tmp_sector_s *sector,
-                         struct device_s *dev);
+                         struct device_block_s *dev);
 
 #endif

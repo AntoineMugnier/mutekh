@@ -25,6 +25,7 @@
 
 #include <stdio.h>
 #include <mutek/printk.h>
+#include <libc/formatter.h>
 
 static printf_output_func_t *printk_output = NULL;
 static void *printk_output_arg;
@@ -50,7 +51,6 @@ inline ssize_t vprintk(const char *format, va_list ap)
 #endif
 	error_t err = EIO;
 
-#if defined(CONFIG_MUTEK_CONSOLE) || defined(CONFIG_MUTEK_EARLY_CONSOLE)
 	if ( printk_output ) {
 #ifdef CONFIG_MUTEK_PRINTK_LOCK
                 lock_spin(&printk_lock);
@@ -60,7 +60,6 @@ inline ssize_t vprintk(const char *format, va_list ap)
                 lock_release(&printk_lock);
 #endif
         }
-#endif
 
 #ifdef CONFIG_COMPILE_INSTRUMENT
 	mutek_instrument_trace(old);

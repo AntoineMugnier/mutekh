@@ -22,17 +22,20 @@
 
 #include <arch/hexo/emu_syscalls.h>
 #include <hexo/power.h>
+#include <hexo/cpu.h>
 
 error_t power_reboot()
 {
   return ENOTSUP;
 }
 
-extern __compiler_sint_t cpu_pids[CONFIG_CPU_MAXCOUNT];
-
 error_t power_shutdown()
 {
-  emu_do_syscall(EMU_SYSCALL_KILL, 2, -cpu_pids[0], EMU_SIG_KILL);
+  emu_do_syscall(EMU_SYSCALL_KILL, 2, -__bootstrap_pid, EMU_SIG_KILL);
   return 0;
 }
 
+enum power_reset_cause_e power_reset_cause(void)
+{
+  return POWER_RESET_CAUSE_UNKNOWN;
+}

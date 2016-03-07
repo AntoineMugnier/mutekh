@@ -16,7 +16,7 @@
   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
   02110-1301 USA
 
-  Copyright Alexandre Becoulet, <alexandre.becoulet@free.fr>, 2009
+  Copyright Alexandre Becoulet, <alexandre.becoulet@free.fr>, 2009,2014
 */
 
 #include <hexo/types.h>
@@ -25,7 +25,7 @@
 #include <mutek/mem_alloc.h>
 #include <mutek/printk.h>
 
-#include <device/block.h>
+#include <device/class/block.h>
 #include <device/device.h>
 #include <device/driver.h>
 
@@ -35,32 +35,32 @@
 #include "iso9660.h"
 #include "iso9660-private.h"
 
-#if 0
-struct fs_node_s *
-iso9660_node_new(void *mem,
-                 struct iso9660_fs_s *fs, const struct iso9660_dir_s *entry,
-                 const char *name, size_t namelen);
-#endif
+#include <vfs/fs.h>
+#include <vfs/name.h>
 
-OBJECT_CONSTRUCTOR(iso9660_node)
+struct iso9660_node_s *
+iso9660_node_create(struct iso9660_fs_s *fs, const struct iso9660_dir_s *entry,
+                    const char *name, size_t namelen)
 {
-    struct iso9660_fs_s *fs = va_arg(ap, struct iso9660_fs_s *);
-    const struct iso9660_dir_s *entry = va_arg(ap, const struct iso9660_dir_s *);
 //    const char *name = va_arg(ap, const char *);
 //    size_t namelen = va_arg(ap, size_t);
 
-//    enum vfs_node_type_e type = entry->type & iso9660_file_isdir ? VFS_NODE_DIR : VFS_NODE_FILE;
+    enum vfs_node_type_e type = entry->type & iso9660_file_isdir ? VFS_NODE_DIR : VFS_NODE_FILE;
 
-    obj->fs = fs;
+    struct iso9660_node_s *node = mem_alloc(sizeof(*node), mem_scope_sys);
+
+    if (!node)
+        return NULL;
+
+    if (vfs_node_init(&node->node, &fs->fs, type, name, namelen)) {
+        mem_free(node);
+        return NULL;
+    }
 
     /* copy directory entry without file name buffer */
-    memcpy(&obj->entry, entry, sizeof(*entry));
+    memcpy(&node->entry, entry, sizeof(*entry));
 
-    return 0;
-};
-
-OBJECT_DESTRUCTOR(iso9660_node)
-{
+    return node;
 };
 
 static const struct vfs_fs_ops_s iso9660_ops =
@@ -69,8 +69,6 @@ static const struct vfs_fs_ops_s iso9660_ops =
     .lookup = iso9660_lookup,
     .stat = iso9660_stat,
     .can_unmount = iso9660_can_unmount,
-    .node_refdrop = iso9660_node_refdrop,
-    .node_refnew = iso9660_node_refnew,
 
     .create = NULL,
     .link = NULL,
@@ -78,11 +76,12 @@ static const struct vfs_fs_ops_s iso9660_ops =
     .unlink = NULL,
 };
 
-error_t iso9660_open(struct vfs_fs_s **fs, struct device_s *bd)
+error_t iso9660_open(struct device_block_s *bd, struct vfs_fs_s **fs)
 {
     error_t err;
     struct iso9660_fs_s *mnt;
-    const struct dev_block_params_s *bdp = dev_block_getparams(bd);
+    const struct dev_block_params_s *bdp = DEVICE_OP(bd, getparams);
+    struct iso9660_node_s *root;
     uint8_t *ptr;
 
     vfs_printk("iso9660: opening new iso9660 volume\n");
@@ -96,13 +95,15 @@ error_t iso9660_open(struct vfs_fs_s **fs, struct device_s *bd)
     if ( mnt == NULL )
         return -ENOMEM;
     memset(mnt, 0, sizeof(*mnt));
-    vfs_fs_new(&mnt->fs);
+
+    if ((err = vfs_fs_init(&mnt->fs, &iso9660_ops, 1)))
+        goto free_mnt;
 
     /* read volume descriptor */
     ptr = mnt->voldesc_;
     if (( err = dev_block_spin_read(bd, &ptr, ISO9660_PRIM_VOLDESC_BLOCK, 1) )) {
         vfs_printk("iso9660: unable to read primary volume descriptor\n");
-        goto free_mnt;
+        goto fs_cleanup;
     }
 
     /* check signature */
@@ -111,43 +112,39 @@ error_t iso9660_open(struct vfs_fs_s **fs, struct device_s *bd)
         (mnt->voldesc.vol_desc_version != 1)) {
         vfs_printk("iso9660: bad primary volume descriptor signature\n");
         err = -EINVAL;
-        goto free_mnt;
+        goto fs_cleanup;
     }
 
     /* check device size */
     if ( bdp->blk_count < mnt->voldesc.vol_blk_count ) {
         err = -EINVAL;
         vfs_printk("iso9660: device block count smaller than fs\n");
-        goto free_mnt;
+        goto fs_cleanup;
     }
-
-    /* fs struct */
-    atomic_set(&mnt->fs.ref, 0);
-    mnt->fs.ops = &iso9660_ops;
-    mnt->fs.flag_ro = 1;
-    mnt->fs.old_node = NULL;
 
     /* root node init */
     if ( ! (mnt->voldesc.root_dir.type & iso9660_file_isdir) ) {
         err = -EINVAL;
         vfs_printk("iso9660: root entry is not a directory\n");
-        goto free_mnt;
+        goto fs_cleanup;
     }
 
-    mnt->fs.root = iso9660_node_new(NULL, &mnt->fs, &mnt->voldesc.root_dir, "", 0);
+    root = iso9660_node_create(mnt, &mnt->voldesc.root_dir, "", 0);
 
     if (mnt->fs.root == NULL) {
         err = -ENOMEM;
-        goto free_mnt;
+        goto fs_cleanup;
     }
 
-    mnt->bd = device_obj_refnew(bd);
+    mnt->bd = bd;
 
-    // TODO register destructor
+    vfs_fs_root_set(&mnt->fs, &root->node);
 
     *fs = &mnt->fs;
-    return 0;
 
+    return 0;
+ fs_cleanup:
+    vfs_fs_cleanup(&mnt->fs);
  free_mnt:
     mem_free(mnt);
     return err;
@@ -160,15 +157,15 @@ VFS_FS_CAN_UNMOUNT(iso9660_can_unmount)
 
 VFS_FS_LOOKUP(iso9660_lookup)
 {
-    struct fs_node_s *isonode = ref;
-    struct iso9660_fs_s *isofs = ref->fs;
+    struct iso9660_node_s *isonode = (void*)ref;
+    struct iso9660_fs_s *isofs = (void*)ref->fs;
 
     size_t count = ALIGN_VALUE_UP(isonode->entry.file_size, ISO9660_BLOCK_SIZE) / ISO9660_BLOCK_SIZE;
     dev_block_lba_t first = isonode->entry.data_blk;
     size_t b;
     error_t err;
 
-    for ( b = 0; b < + count; b++ ) {
+    for ( b = 0; b < count; b++ ) {
 
         uint8_t dirblk[ISO9660_BLOCK_SIZE];
         uint8_t *ptr = dirblk;
@@ -200,7 +197,7 @@ VFS_FS_LOOKUP(iso9660_lookup)
                 vfs_name_mangle(entryname, entrynamelen, mangled_name);
 
                 if (vfs_name_compare(entryname, entrynamelen, name, namelen)) {
-                    *node = (void*)iso9660_node_new(NULL, isofs, entry, entryname, entrynamelen);
+                    *node = (void*)iso9660_node_create(isofs, entry, entryname, entrynamelen);
                     return *node ? 0 : -ENOMEM;
                 }
             }
@@ -213,20 +210,41 @@ VFS_FS_LOOKUP(iso9660_lookup)
     return -ENOENT;
 }
 
+static const struct vfs_file_ops_s iso9660_file_ops =
+{
+    .read = iso9660_file_read,
+    .seek = iso9660_file_seek,
+};
+
+static const struct vfs_file_ops_s iso9660_dir_ops =
+{
+    .read = iso9660_dir_read,
+};
+
 VFS_FS_NODE_OPEN(iso9660_node_open)
 {
-    struct vfs_file_s *f = vfs_file_new(NULL, node, iso9660_node_refnew, iso9660_node_refdrop);
+    assert(!(flags & VFS_OPEN_WRITE));
 
-    assert(! (flags & VFS_OPEN_WRITE) );
-
-    if (!f)
+    struct vfs_file_s *f = mem_alloc(sizeof (*f), mem_scope_sys);
+    if (f == NULL)
         return -ENOMEM;
 
-    if ( flags & VFS_OPEN_DIR ) {
-        f->read = iso9660_dir_read;
-    } else {
-        f->read = iso9660_file_read;
-        f->seek = iso9660_file_seek;
+    const struct vfs_file_ops_s *ops = NULL;
+
+    switch (node->type) {
+	case VFS_NODE_FILE:
+        ops = &iso9660_file_ops;
+        break;
+	case VFS_NODE_DIR:
+        ops = &iso9660_dir_ops;
+		break;
+    }
+
+    error_t err = vfs_file_init(f, ops, flags, node);
+
+    if (err) {
+        mem_free(f);
+        return err;
     }
 
     *file = f;
@@ -236,7 +254,7 @@ VFS_FS_NODE_OPEN(iso9660_node_open)
 
 VFS_FS_STAT(iso9660_stat)
 {
-    struct fs_node_s *isonode = (void*)node;
+    struct iso9660_node_s *isonode = (void*)node;
 
     stat->nlink = 1;
     stat->size = isonode->entry.file_size;
@@ -244,13 +262,4 @@ VFS_FS_STAT(iso9660_stat)
 
     return 0;
 }
-
-// Local Variables:
-// tab-width: 4
-// c-basic-offset: 4
-// c-file-offsets:((innamespace . 0)(inline-open . 0))
-// indent-tabs-mode: nil
-// End:
-
-// vim: filetype=cpp:expandtab:shiftwidth=4:tabstop=4:softtabstop=4
 

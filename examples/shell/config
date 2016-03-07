@@ -1,0 +1,18 @@
+
+  %set OUTPUT_NAME shell
+
+  # New source code module to be compiled
+  %append MODULES $(OUTPUT_NAME):$(CONFIGPATH)
+
+  # Application license
+  CONFIG_LICENSE_APP_LGPL
+
+  # Libs
+  CONFIG_APP_START
+
+  CONFIG_MUTEK_SHELL
+  CONFIG_MUTEK_THREAD
+
+  %include scripts/options.build
+  %include arch/arch.build
+

@@ -1,11 +1,5 @@
 
 objs = main.o bitmap.o block.o joystick.o i2c.o
 
-ifeq ($(CONFIG_DRIVER_LCD),defined)
-objs += lcd.o
-endif
-
-ifeq ($(CONFIG_MUTEK_TIMER),defined)
-objs += timer.o
-endif
-
+objs-$(CONFIG_DEVICE_LCD) += lcd.o
+objs-$(CONFIG_MUTEK_TIMER) += timer.o

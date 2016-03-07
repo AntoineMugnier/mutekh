@@ -25,6 +25,12 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h> /* FIXME */
+#include <hexo/endian.h>
+
+#if (__GNUC__ * 100 + __GNUC_MINOR__) >= 406
+/* prevent gcc optimizer from generating recursive calls to memset, memcpy... */
+# pragma GCC optimize ("no-tree-loop-distribute-patterns")
+#endif
 
 #define reg_t_log2_m1 (sizeof(reg_t)-1)
 
@@ -62,21 +68,53 @@ inline void * memset(void *dst, int_fast8_t _s, size_t count)
 #undef memcpy
 void *memcpy( void *_dst, const void *_src, size_t size )
 {
-	reg_t *dst = _dst;
-	const reg_t *src = _src;
-	if ( ! ((uintptr_t)dst & reg_t_log2_m1) && ! ((uintptr_t)src & reg_t_log2_m1) )
-		while (size >= sizeof(reg_t)) {
-			*dst++ = *src++;
-			size -= sizeof(reg_t);
-		}
+  reg_t *dst = _dst;
+  const reg_t *src = _src;
 
-	uint8_t *cdst = (uint8_t*)dst;
-	uint8_t *csrc = (uint8_t*)src;
+  if (((uintptr_t)dst & reg_t_log2_m1) == 0 && ((uintptr_t)src & reg_t_log2_m1) == 0) {
+    while (size >= sizeof(reg_t)) {
+      *dst++ = *src++;
+      size -= sizeof(reg_t);
+    }
+  } else {
+    // In the end, we'll only use register copier loop if non-aligned
+    // access is CPU-optimized
+#if (defined(HAS_CPU_ENDIAN_64_NA_STORE) && defined(HAS_CPU_ENDIAN_64_NA_LOAD)) \
+  || (CONFIG_CPU_NONALIGNED_ACCESS & 8)
+    if (sizeof(reg_t) == 8) {
+      while (size >= sizeof(reg_t)) {
+        endian_64_na_store(dst++, endian_64_na_load(src++));
+        size -= sizeof(reg_t);
+      }
+    }
+#endif
+#if (defined(HAS_CPU_ENDIAN_32_NA_STORE) && defined(HAS_CPU_ENDIAN_32_NA_LOAD)) \
+  || (CONFIG_CPU_NONALIGNED_ACCESS & 4)
+    if (sizeof(reg_t) == 4) {
+      while (size >= sizeof(reg_t)) {
+        endian_32_na_store(dst++, endian_32_na_load(src++));
+        size -= sizeof(reg_t);
+      }
+    }
+#endif
+#if (defined(HAS_CPU_ENDIAN_16_NA_STORE) && defined(HAS_CPU_ENDIAN_16_NA_LOAD)) \
+  || (CONFIG_CPU_NONALIGNED_ACCESS & 2)
+    if (sizeof(reg_t) == 2) {
+      while (size >= sizeof(reg_t)) {
+        endian_16_na_store(dst++, endian_16_na_load(src++));
+        size -= sizeof(reg_t);
+      }
+    }
+#endif
+  }
 
-	while (size--) {
-		*cdst++ = *csrc++;
-	}
-	return _dst;
+  uint8_t *cdst = (uint8_t*)dst;
+  uint8_t *csrc = (uint8_t*)src;
+
+  while (size--) {
+    *cdst++ = *csrc++;
+  }
+  return _dst;
 }
 #endif
 
@@ -123,19 +161,11 @@ inline void *
 memmove(void *dst, const void *src, size_t size)
 {
   if (dst > src)
-    return __memcpy_reverse(dst, src, size);
-  else
-    return memcpy(dst, src, size);
+    __memcpy_reverse(dst, src, size);
+  else if (dst < src)
+    memcpy(dst, src, size);
+  return dst;
 }
-
-/********************************/
-
-#ifndef HAS_CPU_MEMCPY_FROM_CODE
-inline void * memcpy_from_code (void *dst, const void *src, size_t n)
-{
-  return memcpy(dst, src, n);
-}
-#endif
 
 /********************************/
 
@@ -347,12 +377,12 @@ inline int_fast8_t strcasecmp(const char* s1, const char* s2)
   uint_fast8_t  x1;
 
     while (1) {
-        x2 = *s2 - 'A'; if (__unlikely(x2 < 26u)) x2 += 32;
-        x1 = *s1 - 'A'; if (__unlikely(x1 < 26u)) x1 += 32;
+        x2 = (uint_fast8_t)*s2 - 'A'; if (__unlikely(x2 < 26u)) x2 += 32;
+        x1 = (uint_fast8_t)*s1 - 'A'; if (__unlikely(x1 < 26u)) x1 += 32;
 	s1++; s2++;
         if ( __unlikely(x2 != x1) )
             break;
-        if ( __unlikely(x1 == (uint32_t)-'A') )
+        if ( __unlikely(x1 == (uint_fast8_t)-'A') )
             break;
     }
 
@@ -373,12 +403,12 @@ inline int_fast8_t strncasecmp(const char* s1, const char* s2, size_t len)
     while (1) {
         if ( __unlikely(s1 >= end) )
             return 0;
-        x2 = *s2 - 'A'; if (__unlikely(x2 < 26u)) x2 += 32;
-        x1 = *s1 - 'A'; if (__unlikely(x1 < 26u)) x1 += 32;
+        x2 = (uint_fast8_t)*s2 - 'A'; if (__unlikely(x2 < 26u)) x2 += 32;
+        x1 = (uint_fast8_t)*s1 - 'A'; if (__unlikely(x1 < 26u)) x1 += 32;
 	s1++; s2++;
         if ( __unlikely(x2 != x1) )
             break;
-        if ( __unlikely(x1 == (uint32_t)-'A') )
+        if ( __unlikely(x1 == (uint_fast8_t)-'A') )
             break;
     }
 
@@ -561,5 +591,25 @@ int_fast8_t memcstcmp(const void *s1, int_fast8_t _v, size_t n)
             return data[i] - v;
     }
     return 0;
+}
+
+void memrevcpy(void *dest_, const void *src_, size_t size)
+{
+  uint8_t *dest = dest_;
+  const uint8_t *src = src_;
+
+  src += size;
+  while (size--)
+    *dest++ = *--src;
+}
+
+void memxor(void *dest_, const void *a_, const void *b_, size_t size)
+{
+  uint8_t *dest = dest_;
+  const uint8_t *a = a_;
+  const uint8_t *b = b_;
+
+  for (size_t i = 0; i < size; ++i)
+    dest[i] = a[i] ^ b[i];
 }
 

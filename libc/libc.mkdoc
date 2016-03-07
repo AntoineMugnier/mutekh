@@ -1,0 +1,32 @@
+
+@moduledef{C library}
+ @short Standard C library
+ @order 90
+@end moduledef
+
+@parse{
+alloca.h
+assert.h
+ctype.h
+errno.h
+fcntl.h
+inttypes.h
+limits.h
+semaphore.h
+setjmp.h
+stdarg.h
+stdbool.h
+stddef.h
+stdint.h
+stdio.h
+stdlib.h
+string.h
+time.h
+unistd.h
+
+sys/stat.h
+sys/time.h
+sys/types.h
+
+libc/formatter.h
+}

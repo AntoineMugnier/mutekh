@@ -49,7 +49,7 @@
 void
 gomp_init_num_threads (void)
 {
-  //  gomp_global_icv.nthreads_var = arch_get_cpu_count();
+  //  gomp_global_icv.nthreads_var = device_get_cpu_count();
   gomp_global_icv.nthreads_var = CONFIG_CPU_MAXCOUNT;
 }
 
@@ -66,7 +66,7 @@ gomp_dynamic_max_threads (void)
   omp_uint_t n_onln, loadavg;
   omp_uint_t nthreads_var = gomp_icv (false)->nthreads_var;
 
-  n_onln = CONFIG_CPU_MAXCOUNT; //arch_get_cpu_count();
+  n_onln = CONFIG_CPU_MAXCOUNT; //device_get_cpu_count();
   if (n_onln > nthreads_var)
     n_onln = nthreads_var;
 
@@ -91,7 +91,7 @@ gomp_dynamic_max_threads (void)
 omp_int_t
 omp_get_num_procs (void)
 {
-  return CONFIG_CPU_MAXCOUNT; //arch_get_cpu_count();
+  return CONFIG_CPU_MAXCOUNT; //device_get_cpu_count();
 }
 
 ialias (omp_get_num_procs)

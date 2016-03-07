@@ -42,10 +42,11 @@
 #ifdef CONFIG_HEXO_FPU
 # define CPU_MIPS_CONTEXT_FR(n)   	(CPU_MIPS_CONTEXT_PC + INT_REG_SIZE/8 + n * CONFIG_CPU_MIPS_FPU/8)
 # define CPU_MIPS_CONTEXT_FCSR   	CPU_MIPS_CONTEXT_FR(32)
+# define CPU_MIPS_CONTEXT_SIZE   	(CPU_MIPS_CONTEXT_FCSR + INT_REG_SIZE/8)
+#else
+# define CPU_MIPS_CONTEXT_SIZE   	(CPU_MIPS_CONTEXT_PC + INT_REG_SIZE/8)
 #endif
 /** */
-
-#ifndef __MUTEK_ASM__
 
 # include <hexo/cpu.h>
 
@@ -60,6 +61,7 @@ struct cpu_context_s
   reg_t hi;
   reg_t sr;
   reg_t pc;
+#ifdef CONFIG_HEXO_FPU
 # if CONFIG_CPU_MIPS_FPU == 32
    float fr[32];
 # elif CONFIG_CPU_MIPS_FPU == 64
@@ -67,16 +69,37 @@ struct cpu_context_s
 # else
 #  error
 # endif
-#ifdef CONFIG_HEXO_FPU
   reg_t fcsr;
 #endif
 } __attribute__((aligned(16)));
 
+/** name of registers accessible using cpu_context_s::gpr */
 # define CPU_CONTEXT_REG_NAMES CPU_GPREG_NAMES, "lo", "hi", "sr", "pc"
-# define CPU_CONTEXT_REG_FIRST 1
+/** number of registers in cpu_context_s::gpr */
 # define CPU_CONTEXT_REG_COUNT 36
 
-# endif  /* __MUTEK_ASM__ */
+# ifdef CONFIG_HEXO_CONTEXT_PREEMPT
+/** @internal */
+extern CPU_LOCAL context_preempt_t *cpu_preempt_handler;
+
+ALWAYS_INLINE error_t context_set_preempt(context_preempt_t *func)
+{
+  context_preempt_t **f = CPU_LOCAL_ADDR(cpu_preempt_handler);
+  if (*f != NULL)
+    return -EBUSY;
+  *f = func;
+  return 0;
+}
+# endif
+
+# ifdef CONFIG_HEXO_CONTEXT_IRQEN
+extern CPU_LOCAL context_irqen_t *cpu_irqen_handler;
+
+ALWAYS_INLINE void context_set_irqen(context_irqen_t *func)
+{
+  CPU_LOCAL_SET(cpu_irqen_handler, func);
+}
+# endif
 
 #endif
 

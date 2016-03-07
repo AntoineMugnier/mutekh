@@ -6,7 +6,22 @@
 #include <hexo/context.h>
 #include <hexo/interrupt.h>
 
-CONTEXT_LOCAL struct cpu_context_s mips_context_regs;
+#ifdef CONFIG_HEXO_CONTEXT_PREEMPT
+CPU_LOCAL context_preempt_t *cpu_preempt_handler = (context_preempt_t*)1;
+#endif
+
+#ifdef CONFIG_HEXO_CONTEXT_IRQEN
+CPU_LOCAL context_irqen_t *cpu_irqen_handler = NULL;
+#endif
+
+CPU_LOCAL void *__context_data_base;
+
+#ifdef CONFIG_HEXO_CONTEXT_NESTED
+CONTEXT_LOCAL struct cpu_context_s mips_context_regs[CONFIG_HEXO_CONTEXT_NESTED_COUNT];
+CONTEXT_LOCAL struct cpu_context_s *mips_context_regs_ptr;
+#else
+CONTEXT_LOCAL struct cpu_context_s mips_context_regs[1];
+#endif
 
 #ifdef CONFIG_HEXO_LAZY_SWITCH
 /* last fpu restored context */
@@ -19,8 +34,14 @@ cpu_context_bootstrap(struct context_s *context)
     /* set context local storage base pointer */
     CPU_LOCAL_SET(__context_data_base, context->tls);
 
+    struct cpu_context_s *regs = CONTEXT_LOCAL_TLS_ADDR(context->tls, mips_context_regs)[0];
+
+#ifdef CONFIG_HEXO_CONTEXT_NESTED
+    CONTEXT_LOCAL_TLS_SET(context->tls, mips_context_regs_ptr, regs);
+#endif
+
     /* nothing is saved for this context */
-    CONTEXT_LOCAL_ADDR(mips_context_regs)->save_mask = 0;
+    regs->save_mask = 0;
 
     return 0;
 }
@@ -30,7 +51,11 @@ cpu_context_bootstrap(struct context_s *context)
 error_t
 cpu_context_init(struct context_s *context, context_entry_t *entry, void *param)
 {
-  struct cpu_context_s *regs = CONTEXT_LOCAL_TLS_ADDR(context->tls, mips_context_regs);
+  struct cpu_context_s *regs = CONTEXT_LOCAL_TLS_ADDR(context->tls, mips_context_regs)[0];
+
+#ifdef CONFIG_HEXO_CONTEXT_NESTED
+  CONTEXT_LOCAL_TLS_SET(context->tls, mips_context_regs_ptr, regs);
+#endif
 
   regs->save_mask = CPU_MIPS_CONTEXT_RESTORE_CALLER; /* for r4 */
   regs->gpr[CPU_MIPS_SP] = CONTEXT_LOCAL_TLS_GET(context->tls, context_stack_end)
@@ -40,7 +65,8 @@ cpu_context_init(struct context_s *context, context_entry_t *entry, void *param)
 #endif
   regs->gpr[4] = (uintptr_t)param;
 
-  regs->sr = CPU_MIPS_STATUS_IM;
+  regs->sr = 0;
+
 #if defined (CONFIG_HEXO_FPU) && !defined(CONFIG_HEXO_LAZY_SWITCH)
   regs->sr |= CPU_MIPS_STATUS_FPU;
   regs->fcsr = 0;

@@ -23,21 +23,28 @@
 #include <hexo/error.h>
 #include <hexo/local.h>
 #include <hexo/context.h>
-#include <hexo/segment.h>
 #include <hexo/interrupt.h>
 
 #include <cpu/hexo/pmode.h>
 
 #include <stdlib.h>
 
+#ifdef CONFIG_HEXO_CONTEXT_PREEMPT
+CPU_LOCAL context_preempt_t *cpu_preempt_handler = (context_preempt_t*)1;
+#endif
+
 CONTEXT_LOCAL cpu_x86_segsel_t context_tls_seg;
 CONTEXT_LOCAL struct cpu_context_s x86_context;
+/** pointer to context local storage */
+CONTEXT_LOCAL void *__context_data_base;
 
 #ifdef CONFIG_HEXO_USERMODE
 /* current context local storage segment descriptor, used to restore
    segment register when returning from user mode */
 CPU_LOCAL cpu_x86_segsel_t *cpu_tls_seg = 0;
 #endif
+
+extern __ldscript_symbol_t __context_data_start, __context_data_end;
 
 error_t
 cpu_context_bootstrap(struct context_s *context)
@@ -46,7 +53,7 @@ cpu_context_bootstrap(struct context_s *context)
 
   /* get a new segment descriptor for tls */
   if (!(tls_seg = cpu_x86_segment_alloc((uintptr_t)context->tls,
-					arch_contextdata_size(),
+					(char*)&__context_data_end - (char*)&__context_data_start,
 					CPU_X86_SEG_DATA_UP_RW)))
     return -ENOMEM;
 
@@ -73,7 +80,7 @@ cpu_context_init(struct context_s *context, context_entry_t *entry, void *param)
 
   /* get a new segment descriptor for tls */
   if (!(tls_seg = cpu_x86_segment_alloc((uintptr_t)context->tls,
-					arch_contextdata_size(),
+					(char*)&__context_data_end - (char*)&__context_data_start,
 					CPU_X86_SEG_DATA_UP_RW)))
     return -ENOMEM;
 

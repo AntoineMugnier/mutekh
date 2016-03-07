@@ -1,20 +1,13 @@
-
 objs =											\
 arch_init.o										\
-mem_init.o \
-hw_init.o \
-power.o
+power.o \
+syscalls.o
 
-ifeq ($(CONFIG_ARCH_EMU_DARWIN),defined)
-objs += darwin_before.o darwin_after.o
-endif
-
-ifeq ($(CONFIG_HEXO_IRQ),defined)
-objs += interrupts.o
-endif
-
-subdirs = include/arch/hexo
+objs-$(CONFIG_ARCH_EMU_DARWIN) += darwin_before.o darwin_after.o
+objs-$(CONFIG_HEXO_IRQ) += interrupts.o
+subdirs = include/arch/hexo drivers
 
 ifeq ($(LINKING),1)
 meta = ldscript
 endif
+

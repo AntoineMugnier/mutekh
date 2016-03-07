@@ -28,19 +28,21 @@
 
 .section        .excep,"ax",@progbits         
 
-        nop
-nios2_interrupt_entry:
         .set noat
+CPU_NAME_DECL(exception_vector):
+        .globl CPU_NAME_DECL(exception_vector)
 
 #if defined(CONFIG_HEXO_USERMODE) && defined(CONFIG_ARCH_SMP)
         /* restore cpu local storage */
     	rdctl   r24,    cpuid                                    
         slli    r24,    r24,    2
-        ldw     CPU_NIOS2_CLS_REG, cpu_local_storage(r24)
+        movia   CPU_NIOS2_CLS_REG, cpu_local_storage
+        add     r24,    r24,    CPU_NIOS2_CLS_REG
+        ldw     CPU_NIOS2_CLS_REG, (r24)
 #endif
 
         // get context local storage
-        CPU_LOCAL ldw, __context_data_base, r24, r24
+        CPU_LOCAL_op ldw, __context_data_base, r24, r24
         addi    r24,    r24,    %lo(nios2_context_regs)
 
         // save caller saved
@@ -72,7 +74,7 @@ nios2_interrupt_entry:
 
 #ifdef CONFIG_HEXO_CONTEXT_PREEMPT
         // clear context preempt handler
-        CPU_LOCAL stw     cpu_preempt_handler, r0, r5
+        CPU_LOCAL_op stw     cpu_preempt_handler, r0, r5
 #endif
 
 #ifdef CONFIG_HEXO_USERMODE
@@ -111,7 +113,7 @@ nios2_interrupt_ex:
 1:
 #endif
         // use cpu local fault handler
-        CPU_LOCAL ldw     cpu_exception_handler, r1, r1
+        CPU_LOCAL_op ldw     cpu_exception_handler, r1, r1
 2:      
 
         ldw     r2,     CPU_NIOS2_CONTEXT_GPR(27)(r24)
@@ -167,10 +169,11 @@ nios2_interrupt_hw:
 
         /* hw interrupt line id */
         rdctl   r4,     ipending
-        call    __ctzsi2
+        movia   r1,     __ctzsi2
+        callr   r1
         mov     r4,     r2
 
-        CPU_LOCAL ldw cpu_interrupt_handler, r1, r1
+        CPU_LOCAL_op ldw cpu_interrupt_handler, r1, r1
         callr   r1
 
 #endif
@@ -180,8 +183,8 @@ nios2_preempt_and_restore:
 #ifdef CONFIG_HEXO_CONTEXT_PREEMPT
 
         // check if a preempt handler has been registered
-        CPU_LOCAL ldw cpu_preempt_handler, r1, r1
-        beq     r0,     r1,     1f
+        CPU_LOCAL_op ldw cpu_preempt_handler, r1, r1
+        beq     r0,     r1,     2f
 
         // call preempt handler
         callr   r1
@@ -206,7 +209,10 @@ nios2_preempt_and_restore:
         movi    r1,             CPU_NIOS2_CONTEXT_RESTORE_CALLER | CPU_NIOS2_CONTEXT_RESTORE_CALLEE
         stw     r1,             CPU_NIOS2_CONTEXT_SAVE_MASK(r24)
 
-        br      cpu_context_jumpto
+        jmpi    cpu_context_jumpto
+2:
+        // invalidate handler outside interrupt
+        CPU_LOCAL_op stw     cpu_preempt_handler, r24, r1
 1:
 #endif
 

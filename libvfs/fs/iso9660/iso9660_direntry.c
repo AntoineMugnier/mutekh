@@ -16,7 +16,7 @@
   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
   02110-1301 USA
 
-  Copyright Alexandre Becoulet, <alexandre.becoulet@free.fr>, 2009
+  Copyright Alexandre Becoulet, <alexandre.becoulet@free.fr>, 2009,2014
 */
 
 #include <hexo/types.h>
@@ -24,7 +24,7 @@
 
 #include <mutek/printk.h>
 
-#include <device/block.h>
+#include <device/class/block.h>
 #include <device/device.h>
 #include <device/driver.h>
 
@@ -35,7 +35,7 @@
 #include "iso9660-private.h"
 
 /** read directory entry */
-error_t iso9660_read_direntry(struct device_s *bd,
+error_t iso9660_read_direntry(struct device_block_s *bd,
 			      const struct iso9660_dir_s *entry,
                               char *name, size_t *namelen)
 {

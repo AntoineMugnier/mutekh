@@ -22,7 +22,7 @@
 
 /**
  * @file
- * @module{Hexo}
+ * @module{Hardware abstraction layer}
  * @short Standard integer types definitions
  */
 
@@ -35,31 +35,58 @@ C_HEADER_BEGIN
 
 #include "cpu/hexo/types.h"
 
-#ifndef __MUTEK_ASM__
-
 /* define fixed width types */
 
 typedef unsigned char		uint8_t;
 typedef signed char		int8_t;
 
+# define INT8_C(c)              c
+# define UINT8_C(c)             c
+
 # if CPU_SIZEOF_INT == 16
 typedef unsigned int		uint16_t;
 typedef signed int		int16_t;
+
 # elif CPU_SIZEOF_SHORT == 16
 typedef unsigned short		uint16_t;
 typedef signed short		int16_t;
+
+# else
+#  error
 # endif
+
+# define INT16_C(c)             c
+# define UINT16_C(c)            c
 
 # if CPU_SIZEOF_INT == 32
 typedef unsigned int		uint32_t;
 typedef signed int		int32_t;
+#  define INT32_C(c)            c
+#  define UINT32_C(c)           c ## U
+
 # elif CPU_SIZEOF_LONG == 32
 typedef unsigned long		uint32_t;
 typedef signed long		int32_t;
+#  define INT32_C(c)            c ## L
+#  define UINT32_C(c)           c ## UL
+
+# else
+#  error
 # endif
 
 typedef unsigned long long	uint64_t;
 typedef signed long long	int64_t;
+
+# define INT64_C(c)             c ## LL
+# define UINT64_C(c)            c ## ULL
+
+/** biggest unsigned integer type available */
+typedef uint64_t	uintmax_t;
+/** biggest signed integer type available */
+typedef int64_t		intmax_t;
+
+# define INTMAX_C(c)            c ## LL
+# define UINTMAX_C(c)           c ## ULL
 
 /* define other iso c99 integer types */
 
@@ -164,8 +191,6 @@ typedef long _dont_use_native_long_type_t __attribute__ ((deprecated));
 # else
 #  define NULL 0
 # endif
-
-#endif  /* __MUTEK_ASM__ */
 
 C_HEADER_END
 

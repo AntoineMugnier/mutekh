@@ -1,0 +1,201 @@
+
+@section TP {Testsuite}
+
+  @section {Required tools}
+
+  Running the MutekH testsuite have the following requirements:
+
+  @list
+    @item A compiler toolchain,
+    @item A python 2 interpreter, available in most GNU/Linux and BSD operating systems,
+    @item Some target platform simulators,
+    @item The @tt{testwrap} tool, a modified version of GNU coreutils timeout command,
+    @item Mercurial to clone the testsuite repository.
+  @end list
+
+  Depending on the target you wish to run the testsuite on, you may not need to install all of these tools.
+
+  The @xref{Install} section explains how to install these requirements.
+
+  @end section
+
+  @section {Usage}
+
+    @section {Getting the test suite}
+
+    Once the required tools are installed and the MutekH source code is fetched, you need to get the testsuite:
+
+    @code R
+cd .../mutekh
+hg clone https://www.mutekh.org/hg/tests
+    @end code
+
+    The python module path must point to the @tt{tests/lib/python} directory:
+
+    @code R
+export PYTHONPATH=tests/lib/python/
+    @end code
+
+    @end section
+
+    @section {Test makefile generation}
+
+    Some tests applications are located in @tt{tests/pool}.
+    The mt.generator python module tool is designed generate a makefile which runs a set of tests:
+
+    @list
+      @item It first reads tests descriptions from all directories passed on the command line,
+      @item then detects which backend tools are available on your system (do not forget to set PATH),
+      @item and finally generates a makefile ready to run the tests.
+
+    @end list
+    Each test application will be used to generate many test targets in the makefile by
+    exploration of associated configurations space.
+
+    @code R
+$ python -m mt.generator tests/pool/hello
+Test: hello
+  Total tests count:     42
+  Available tests count: 42
+Writing 'tests.mk' makefile.
+    @end code
+
+    The generated makefile can then be used to start the previously selected tests:
+
+    @code R
+make -f tests.mk
+    @end code
+
+    This will generate kernel binaries, log files and other files, all with the '@tt{TEST}' prefix.
+    Each passed test target generates a stamp file which must be deleted to start the test again.
+
+    @end section
+
+  @end section
+
+  @section {Test infrastructure}
+
+  The testsuite repository contains the following directories:
+
+  @list
+    @item @tt{pool/} : Tests source code and description,
+    @item @tt{lib/} : python testsuite modules,
+    @item @tt{doc/} : python code documentation,
+    @item @tt{tools/} : additional tools source code.
+
+  @end list
+  The @tt{tests/pool} directory contains a sub-directory for each test application.
+  Other user test applications may reside elsewhere but a test application must always
+  be packaged in its own directory.
+
+    @section {Test application details}
+
+    This part requires good knowledge of the @xref{BuildSystem} usage.
+
+    A test is always packaged in a directory. It's a regular MutekH application module
+    with an additional test description file. It is composed of:
+
+    @list
+      @item Some '.c' source files of the test application,
+      @item An associated '@tt{Makefile}' file,
+      @item A '@tt{config}' file. This file contain configuration sections as described in @xref{BuildSystem},
+      @item A '@tt{test}' description file. This python file contains the test description.
+
+    @end list
+    The '@tt{test}' description file contains details about how to build and run the test application:
+
+    @list
+      @item It specifies configuration sections which may be passed to the build system when building the test application.
+      @item It associates backend names to some of the configuration sections to allow selection of the right execution platform.
+      @item It specifies configuration space to explore for the test.
+      @item It specifies ordered test actions (configuration, build, execute, ...).
+      @item It specifies expected results.
+
+    @end list
+    The test will be built and executed for each possible configuration in the configuration test space.
+
+      @section {Example test files}
+
+      Parts of the test files are detailed here as an example.
+      Refer to @tt{tests/pool/hello/} for full content.
+
+        @section {Configuration sections}
+
+        The test description file is a python script which relies on python modules found
+        in the @tt{tests/lib/python} directory.
+
+        An instance of the @tt{Config} class is used to identify a valid configuration
+        section which can be passed in the BUILD variable of the build command line.
+        Such an instance must exist for each configuration section available in the '@tt{config}' file
+        which is triggered during exploration of the configuration space.
+
+        For instance, if the '@tt{config}' file contains the following lines:
+        @code R
+%section test_ipi
+  CONFIG_HEXO_IPI defined
+%else
+  CONFIG_HEXO_IPI undefined
+        @end code
+        the following line in the '@tt{test}' file allows triggering of the inter-processor
+        interrupts (IPI) feature in the test configuration space:
+        @code R
+# test configuration           BUILD sections
+
+ipi                  = Config("test_ipi")
+        @end code
+
+        Target architecture configuration sections need to be associated with one or more backends
+        to enable the test generation tool to chose the right execution platform (eg simulator) and
+        check cross compiler availability.
+        Test will be run on available backends and unavailable backends will be skipped.
+
+        @code R
+# test configuration           BUILD sections                           test backends
+
+soclib_mips32el      = Config("soclib-mips32el:pf-tutorial",           "soclib-mips32el-1-tuto")
+soclib_mips32el_smp4 = Config("soclib-mips32el:pf-tutorial:test_smp4", "soclib-mips32el-4-tuto")
+ibmpc_x86            = Config("ibmpc-x86",                             "ibmpc-x86-1-*")
+        @end code
+
+        The backend pattern must be of the form @tt{arch-cpu-cpucount-simulator}.
+        When muliple backends match the pattern, all available matching backends are used in generated test.
+        Available backends are defined for each stage in @tt{tests/lib/python/mutekh/stages.py}.
+
+        @end section
+
+        @section {Test description}
+
+        Once all @tt{Config} instances have been created, an instance of the @tt{Environment} class must
+        be created which describes the test. This instance have several properties:
+
+        @list
+          @item @tt{name}: The test unique name,
+          @item @tt{test_space} : A list of configuration dimensions describing the test configuration space.
+          @item @tt{actions} : A list of actions to perform for this test.
+          @item @tt{success_grep}: A grep expression to search for in the execution output for the test to pass,
+          @item @tt{timeout}: simulation timeout delay,
+        @end list
+
+        The @tt{test_space} property is a list of @tt{Dimension} and @tt{Exclude} instances used to finely describe
+        the configuration space based on previously declared @tt{Config} objects.
+
+        The following example shows how to defines a two dimensional space with the first dimension being the target
+        architecture and the second dimension triggering the IPI feature. An additional @tt{Exclude} rule
+        excludes configurations where inter-processors interrupts would be used in single processor platforms.
+
+        @code R
+    test_space = [
+        Dimension(soclib_mips32eb, soclib_mips32eb_smp4, ibmpc_x86),
+        Dimension(ipi, None),
+        Exclude(ipi & ~soclib_mips32eb_smp4)
+        ],
+        @end code
+        @end section
+
+      @end section
+
+    @end section
+
+  @end section
+
+@end section

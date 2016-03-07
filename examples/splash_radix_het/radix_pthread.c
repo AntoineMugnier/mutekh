@@ -37,6 +37,7 @@
 /*                                                                       */
 /*************************************************************************/
 
+#include <mutek/startup.h>
 #include <mutek/printk.h>
 //#include <stdio.h>
 //#include <math.h>
@@ -121,7 +122,7 @@ static void test_sort(int final);
 static void printout(void);
 static volatile int start = 0;
 
-void app_start()
+void app_start(void)
 {
   int i;
   int p;
@@ -275,7 +276,7 @@ static void slave_sort()
 
   pthread_mutex_lock(&(global->lock_Index));
   printk("Thread started on cpu %i (%s)"
-#ifdef CONFIG_MUTEK_SCHEDULER_MIGRATION
+#ifdef CONFIG_MUTEK_CONTEXT_SCHED_MIGRATION
 	 " but threads migration is enabled"
 #endif
 	 "\n", cpu_id(), cpu_type_name());

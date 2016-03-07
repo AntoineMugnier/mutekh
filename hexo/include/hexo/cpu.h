@@ -22,7 +22,7 @@
 
 /**
  * @file
- * @module{Hexo}
+ * @module{Hardware abstraction layer}
  * @short Startup and misc cpu related functions
  */
 
@@ -34,106 +34,134 @@
 
 #include <hexo/decls.h>
 
-#ifndef __MUTEK_ASM__
-
 C_HEADER_BEGIN
-
-typedef uint64_t cpu_cycle_t;
-
-#endif
 
 #include <cpu/hexo/cpu.h>
 
-#ifndef __MUTEK_ASM__
+#define __CPU_NAME_DECL(t, x) t##_##x
+#define _CPU_NAME_DECL(t, x) __CPU_NAME_DECL(t, x)
+/** @this can be used to declare and refer to a variable
+    or function prefixed by cpu type name. */
+#define CPU_NAME_DECL(x) _CPU_NAME_DECL(CONFIG_CPU_NAME, x)
 
-/** init system wide cpu data */
-error_t cpu_global_init(void);
+/** @internal @This specifies the offset of the @ref cpu_tree_s::stack field. */
+#define CPU_TREE_STACK     (INT_PTR_SIZE/8 * 0)
+/** @internal @This specifies the offset of the @ref cpu_tree_s::cpu_dev field. */
+#define CPU_TREE_CPU_DEV   (INT_PTR_SIZE/8 * 1)
+#ifdef CONFIG_ARCH_SMP
+/** @internal @This specifies the offset of the @ref cpu_tree_s::childs field. */
+# define CPU_TREE_CHILDS(n) (INT_PTR_SIZE/8 * (2 + n))
+/** @internal @This specifies the offset of the @ref cpu_tree_s::cpu_id field. */
+# define CPU_TREE_CPU_ID    (INT_PTR_SIZE/8 * 4)
+/** @internal @This specifies the offset of the @ref cpu_tree_s::cls field. */
+# define CPU_TREE_CLS       (INT_PTR_SIZE/8 * 5)
+#endif
 
-/** Setup CPU specific data */
-void cpu_init(void);
+/** @internal @This specifies the value which should be xored with the
+    cpu id for lookup in the cpu tree. */
+#define CPU_TREE_XOR_VALUE 0x55555555
 
-/** get cpu local storage */
-static void *cpu_get_cls(cpu_id_t cpu_id);
+/** @internal This defines the cpu tree node structure. This node is
+    designed to be part of a binary tree which is used from both C and
+    assembly code to lookup the processor from its numerical id. It's
+    first used on startup to setup the processor stack.
 
-/** return CPU id number */
-static cpu_id_t cpu_id(void);
+    This node must be inserted in the cpu tree when the processor
+    device driver initialization takes place.
+*/
+struct cpu_tree_s
+{
+  uintptr_t         stack;        //< address of the cpu stack. @see #CPU_TREE_STACK
+  struct device_s   *cpu_dev;     //< pointer to the cpu device. @see #CPU_TREE_CPU_DEV
+#ifdef CONFIG_ARCH_SMP
+  struct cpu_tree_s *childs[2];   //< left and right childs of the binary tree. @see #CPU_TREE_CHILDS
+  uintptr_t         cpu_id;       //< physical cpu id value. @see #CPU_TREE_CHILDS, @see #CPU_TREE_XOR_VALUE
+  void              *cls;         //< cpu local storage pointer. @see #CPU_TREE_CLS
+#endif
+};
+
+/** @internal @This inserts a node in the cpu tree, the @ref
+    cpu_tree_s::cpu_id, @ref cpu_tree_s::stack and @ref
+    cpu_tree_s::cpu_dev fields must be initialized . */
+error_t cpu_tree_insert(struct cpu_tree_s *node);
+
+/** @internal @This removes a node from the cpu tree. */
+void cpu_tree_remove(struct cpu_tree_s *node);
+
+/** @internal @This lookup a cpu tree node from the cpu numerical id. */
+const struct cpu_tree_s * cpu_tree_lookup(uintptr_t id);
+
+/** @internal @This function initializes the various fields of the cpu
+    node. It allocates the stack and allocates and initializes the cpu
+    local storage. This helper function is designed to be called from
+    the cpu driver initialization code. */
+error_t cpu_tree_node_init(struct cpu_tree_s *node, cpu_id_t id, struct device_s *dev);
+
+/** @internal @This function free the resources allocated by the @ref
+    cpu_tree_node_init function. */
+void cpu_tree_node_cleanup(struct cpu_tree_s *node);
 
 /** return CPU architecture type name */
-static const char *cpu_type_name(void);
+ALWAYS_INLINE const char *cpu_type_name(void);
 
 /** return true if bootstap processor */
-static bool_t cpu_isbootstrap(void);
-
-/** return total cpus count */
-size_t arch_get_cpu_count(void);
-
-/** unlock non first CPUs so that they can enter main_smp() */
-void arch_start_other_cpu(void);
-
-/** return processor cycles count timestamp */
-cpu_cycle_t cpu_cycle_count(void);
-
-/** return number of cycles spent since @tt start stamp. */
-static inline cpu_cycle_t cpu_cycle_diff(cpu_cycle_t start)
-{
-  cpu_cycle_t now = cpu_cycle_count();
-
-  /* handle 32bits wrap */
-  if (now < start)
-    now += 0x100000000ULL;
-  return now - start;
-}
-
-static inline
-void cpu_cycle_wait(cpu_cycle_t delta)
-{
-    delta += cpu_cycle_count();
-    while ( cpu_cycle_count() < delta )
-        ;
-}
+ALWAYS_INLINE bool_t cpu_isbootstrap(void);
 
 /** cpu trap instruction */
-void cpu_trap();
+ALWAYS_INLINE void cpu_trap(void);
 
 /** get cpu cache line size, return 0 if no dcache */
-static size_t cpu_dcache_line_size();
+ALWAYS_INLINE size_t cpu_dcache_line_size(void);
 
 /** invalidate the cpu data cache line containing this address */
-static void cpu_dcache_invld(void *ptr);
+ALWAYS_INLINE void cpu_dcache_invld(void *ptr);
 
-#  if defined(CONFIG_CPU_CACHE)
+# if defined(CONFIG_CPU_CACHE)
 
 /** invalidate all the cpu data cache lines within given range.
     size is in bytes. */
 void cpu_dcache_invld_buf(void *ptr, size_t size);
 
-#  else
+/** invalidate all the cpu instruction cache lines within given range.
+    size is in bytes. */
+void cpu_icache_invld_buf(void *ptr, size_t size);
 
-static inline void
+/** invalidate all the cpu data cache lines within given range.
+    size is in bytes. */
+void cpu_dcache_flush_buf(void *ptr, size_t size);
+
+# else
+
+ALWAYS_INLINE void
 cpu_dcache_invld_buf(void *ptr, size_t size)
 {
 }
 
-#  endif
+ALWAYS_INLINE void
+cpu_icache_invld_buf(void *ptr, size_t size)
+{
+}
+
+ALWAYS_INLINE void
+cpu_dcache_flush_buf(void *ptr, size_t size)
+{
+}
+
+# endif
 
 # define _TO_STR(x) #x
 # define TO_STR(x) _TO_STR(x)
 
 /** @this returns the cpu type name */
-static inline const char *
+ALWAYS_INLINE const char *
 cpu_type_name(void)
 {
-  return TO_STR(CPU_TYPE_NAME);
+  return TO_STR(CONFIG_CPU_NAME);
 }
 
-# define __CPU_NAME_DECL(t, x) t##_##x
-# define _CPU_NAME_DECL(t, x) __CPU_NAME_DECL(t, x)
-/** @this can be used to declare and refer to a variable
-    or function prefixed by cpu type name. */
-# define CPU_NAME_DECL(x) _CPU_NAME_DECL(CPU_TYPE_NAME, x)
+# undef _TO_STR
+# undef TO_STR
 
 C_HEADER_END
-
-#endif  /* __MUTEK_ASM__ */
 
 #endif

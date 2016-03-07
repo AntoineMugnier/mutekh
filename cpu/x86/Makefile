@@ -1,23 +1,13 @@
 
-objs = boot.o cpu_init.o cpu_context.o interrupts.o context_switch.o
+objs = boot.o cpu_init.o driver.o cpu_context.o interrupts.o context_switch.o
 
-ifeq ($(CONFIG_HEXO_MMU), defined)
-objs += mmu.o
-endif
+objs-$(CONFIG_HEXO_MMU) += mmu.o
 
 subdirs = libc
 
-ifeq ($(CONFIG_LIBELF), defined)
-subdirs += libelf
-endif
-
-ifeq ($(CONFIG_NETWORK), defined)
-subdirs += libnetwork
-endif
-
-ifeq ($(CONFIG_LIBUNIX), defined)
-subdirs += libunix
-endif
+subdirs-$(CONFIG_LIBELF) += libelf
+subdirs-$(CONFIG_NETWORK) += libnetwork
+subdirs-$(CONFIG_LIBUNIX) += libunix
 
 copy = ldscript
 

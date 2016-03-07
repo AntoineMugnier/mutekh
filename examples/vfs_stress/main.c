@@ -1,3 +1,4 @@
+#include <mutek/startup.h>
 #include <stdio.h>
 #include <mutek/printk.h>
 #include <mutek/mem_alloc.h>
@@ -5,27 +6,26 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <vfs/vfs.h>
-
+#include <vfs/node.h>
 #include <libvfs/fs/ramfs/ramfs.h>
 
-#define NTHREAD 10
+#include <vfs/path.h>
+#include "cwd.h"
+
+#define NTHREAD 1
 
 void random_vfs_actions();
 
 static
-struct vfs_node_s * vfs_init()
+struct vfs_node_s *vfs_init()
 {
-	struct vfs_fs_s *root_fs;
+    struct vfs_fs_s *root_fs;
 
     printk("init vfs... ");
-	ramfs_open(&root_fs);
+    ramfs_open(&root_fs);
     printk("ok\n");
 
-    struct vfs_node_s *root_node;
-    vfs_create_root(root_fs, &root_node);
-
-	return root_node;
+    return root_fs->root;
 }
 
 pthread_t thread[NTHREAD];
@@ -80,7 +80,6 @@ void *_main(void *root_ptr)
 
 		printk("Tree:\n");
 		vfs_dump(root);
-		vfs_dump_lru(root);
 		ramfs_dump(root->fs);
 
 		printk("Cleaning up /...\n");
@@ -101,9 +100,11 @@ void *_main(void *root_ptr)
 	return NULL;
 }
 
-void app_start()
+void app_start(void)
 {
-	struct vfs_node_s *root = vfs_init();
+	root = vfs_init();
+
+        vfs_set_cwd(root);
 
 	pthread_create(&main_thread, NULL, _main, root);
 }

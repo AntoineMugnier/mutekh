@@ -32,7 +32,7 @@ define compute_depfile_c
 	( cd $$(dir $(value 1)) ; \
 		$(DEPCC) \
 			$$(CFLAGS) $$(DEPINC) $(value 4) \
-			-M -MT $(value 2) -MF $(value 1) $(value 3) \
+			-M -MT $(value 2) -MF $(value 1) -x c $(value 3) \
 	) $(LOG_REDIR)
 endef
 
@@ -85,12 +85,15 @@ $(3)/$(1): $(2)/$(1:.o=.S) $(OBJ_DIR)/.done_pre_header_list $(OBJ_DIR)/config.h
 	$(call prepare_command,AS,$$@)
 	$(call compute_depfile_c,$$(@:.o=.deps),$(3)/$(1),\
 		-x assembler-with-cpp $$<,\
-		$(CPUCFLAGS) $(ARCHCFLAGS) $(INCS) \
-		$($(1)_CFLAGS) $(DIR_CFLAGS) -D__MUTEK_ASM__)
-	$(call compile,$(CC),$$@,\
-		-x assembler-with-cpp $$<,\
-		$(CPUCFLAGS) $(ARCHCFLAGS) $(INCS) \
-		$($(1)_CFLAGS) $(DIR_CFLAGS) -D__MUTEK_ASM__)
+		$(CFLAGS) $(CPUCFLAGS) $(ARCHCFLAGS) $(INCS) \
+		$($(1)_CFLAGS) $(DIR_CFLAGS) )
+	$(call run_command,$$@, $(CC) -E \
+                $(CFLAGS) $(CPUCFLAGS) $(ARCHCFLAGS) $(INCS) \
+                $($(1)_CFLAGS) $(DIR_CFLAGS) $$< -o $$@.i )
+	$(call run_command,$$@, perl $(MUTEK_SRC_DIR)/scripts/decl_filter.pl --filter-gnuasm --parse-decl $(CC) \
+                $(CFLAGS) $(CPUCFLAGS) $(ARCHCFLAGS) $(INCS) \
+                $($(1)_CFLAGS) $(DIR_CFLAGS) < $$@.i > $$@.s)
+	$(call compile,$(CC),$$@, -x assembler-with-cpp $$@.s, $($(1)_CFLAGS) $(DIR_CFLAGS))
 
 else ifeq ($(wildcard $(2)/$(1:.o=.dts)),$(2)/$(1:.o=.dts))
 
@@ -119,7 +122,7 @@ $(3)/$(1): $(2)/$(1:.o=.cc) $(OBJ_DIR)/config.h $(OBJ_DIR)/.done_pre_header_list
 	$(call prepare_command,C++,$$@)
 	$(call compute_depfile_c,$$(@:.o=.deps),$(3)/$(1),$$<,$(CPUCFLAGS) $(ARCHCFLAGS) $(INCS) \
 		$($(1)_CXXFLAGS) $(DIR_CXXFLAGS))
-	$(call compile,$(CXX),$$@,$$<,$($(1)_CXXFLAGS) $(DIR_CXXFLAGS))
+	$(call compile,$(CXX),$$@,$$<,$($(1)_CXXFLAGS) $(DIR_CXXFLAGS) -DMUTEK_CFILE='"$$(<F)"')
 	$(value do_hetlink_mangling)
 
 else ifeq ($(wildcard $(2)/$(1:.o=.cpp)),$(2)/$(1:.o=.cpp))
@@ -130,9 +133,24 @@ $(3)/$(1): $(2)/$(1:.o=.cpp) $(OBJ_DIR)/config.h $(OBJ_DIR)/.done_pre_header_lis
 	$(call prepare_command,C++,$$@)
 	$(call compute_depfile_c,$$(@:.o=.deps),$(3)/$(1),$$<,$(CPUCFLAGS) $(ARCHCFLAGS) $(INCS) \
 		$($(1)_CXXFLAGS) $(DIR_CXXFLAGS))
-	$(call compile,$(CXX),$$@,$$<,$($(1)_CXXFLAGS) $(DIR_CXXFLAGS))
+	$(call compile,$(CXX),$$@,$$<,$($(1)_CXXFLAGS) $(DIR_CXXFLAGS) -DMUTEK_CFILE='"$$(<F)"')
 	$(value do_hetlink_mangling)
 
+else ifeq ($(wildcard $(2)/$(1:.o=.bc)),$(2)/$(1:.o=.bc))
+
+$(3)/$(1): $(2)/$(1:.o=.bc) $(OBJ_DIR)/config.h $(OBJ_DIR)/.done_pre_header_list
+	$(call prepare_command,BC,$$@)
+	$(call compute_depfile_c,$$(@:.o=.deps),$(3)/$(1),$$<,$(CPUCFLAGS) $(ARCHCFLAGS) $(INCS) \
+		$($(1)_CFLAGS) $(DIR_CFLAGS))
+	$(call run_command,$$@, $(CC) -E -x c \
+                $(CFLAGS) $(CPUCFLAGS) $(ARCHCFLAGS) $(INCS) \
+                $($(1)_CFLAGS) $(DIR_CFLAGS) -DMUTEK_CFILE='"$$(<F)"' $$< -o $$@.i )
+	$(call run_command,$$@, perl $(MUTEK_SRC_DIR)/scripts/decl_filter.pl --parse-decl $(CC) \
+                $(CFLAGS) $(CPUCFLAGS) $(ARCHCFLAGS) $(INCS) \
+                $($(1)_CFLAGS) $(DIR_CFLAGS) < $$@.i > $$@.bc)
+	$(call run_command,$$@, perl $(MUTEK_SRC_DIR)/scripts/bc_asm.pl $(BCPATH) $(BCFLAGS) -o $$@.s < $$@.bc )
+	$(call compile,$(CC),$$@,$$@.s,$($(1)_CFLAGS) $(DIR_CFLAGS))
+	$(value do_hetlink_mangling)
 else
 
 #$$( # info  ======== declare_obj, $(1), $(2), $(3), found to be C file)
@@ -141,35 +159,20 @@ $(3)/$(1): $(2)/$(1:.o=.c) $(OBJ_DIR)/config.h $(OBJ_DIR)/.done_pre_header_list
 	$(call prepare_command,CC,$$@)
 	$(call compute_depfile_c,$$(@:.o=.deps),$(3)/$(1),$$<,$(CPUCFLAGS) $(ARCHCFLAGS) $(INCS) \
 		$($(1)_CFLAGS) $(DIR_CFLAGS))
-	$(call compile,$(CC),$$@,$$<,$($(1)_CFLAGS) $(DIR_CFLAGS))
+	$(call compile,$(CC),$$@,$$<,$($(1)_CFLAGS) $(DIR_CFLAGS) -DMUTEK_CFILE='"$$(<F)"')
 	$(value do_hetlink_mangling)
 
 endif
 
 endef
 
-define declare_gpct_header
+define declare_gct_header
 
 $(3)/$(1): $(2)/$(1:.h=.t)
 	$(call prepare_command,\\,$$@)
 	cp $$< $$@ $(LOG_REDIR)
-	perl $(MUTEK_SRC_DIR)/gpct/gpct/build/backslash.pl < $$< > $$@ 2>> $(LOG_FILE)
+	perl $(MUTEK_SRC_DIR)/gct/gct/build/backslash.pl $$< $$@ 2>> $(LOG_FILE)
 #	sed -e 's!^warning:\([0-9]*\):!$$<:\1:warning:!g' < $(LOG_FILE) 1>&2
-
-endef
-
-## declare_meta_h: file_name, src_dir, obj_dir
-
-define declare_meta_h
-
-#$( # info  ======== declare_meta_h, $(1), $(2), $(3))
-
-# Extract HOST defined macros and inject values in a new header file.
-# This is used by emultaion platform to get correct syscall numbers and args
-$(3)/$(1): $(2)/$(1:.h=.def) $(OBJ_DIR)/config.h
-	$(call prepare_command,H_CPP,$$@)
-	cat $(OBJ_DIR)/config.h $(2)/$(1:.h=.def) | \
-		$(HOSTCC) $$(CFLAGS) $$(CPUCFLAGS) $$(ARCHCFLAGS) -E - | grep '#define' > $(3)/$(1)
 
 endef
 
@@ -187,7 +190,7 @@ ifeq ($(wildcard $(2)/$(1).cpp),$(2)/$(1).cpp)
 $(3)/$(1): $(2)/$(1).cpp $(OBJ_DIR)/config.h
 	$(call prepare_command,CPP,$$@)
 	$(DEPCC) -E -M -MF $$@.deps -MT $$@ $$(INCS) -P -x c $$<
-	$(CC) -E $$(INCS) -P -x c - < $$< > $$@
+	$(CC) $$(CFLAGS) $$(CPUCFLAGS) $$(ARCHCFLAGS) -E $$(INCS) -P -x c $$< -o $$@
 
 else
 
@@ -202,18 +205,6 @@ $(3)/$(1): $(2)/$(1).m4 $(OBJ_DIR)/config.m4 $(MUTEK_SRC_DIR)/scripts/global.m4 
 		$$< | m4 $$(filter -I%,$$(INCS)) -P > $$@
 
 endif
-
-endef
-
-define declare_doc_header
-
-MKDOC_ARGS += $(1)
-
-endef
-
-define declare_doc_files
-
-MKDOC_ARGS += $(2)/$(1)
 
 endef
 
@@ -237,46 +228,44 @@ meta:=
 copy:=
 subdirs:=
 pre_headers:=
-doc_headers:=
-doc_files:=
+enum_headers:=
+objs-defined:=
+meta-defined:=
+copy-defined:=
+subdirs-defined:=
+pre_headers-defined:=
+enum_headers-defined:=
 
 include $$(LOCAL_SRC_DIR)/Makefile
 
-#$$( # info  OBJS=$$(objs))
+$$(eval $$(if $$(findstring -,$$(objs)), $$(warning '-' is not allowed in source file names: $$(objs))))
 
-TARGET_OBJECT_LIST+=$$(addprefix $$(LOCAL_OBJ_DIR)/,$$(objs))
-COPY_OBJECT_LIST+=$$(addprefix $$(LOCAL_OBJ_DIR)/,$$(copy))
-META_OBJECT_LIST+=$$(addprefix $$(LOCAL_OBJ_DIR)/,$$(meta))
-PRE_HEADER_LIST+=$$(addprefix $$(LOCAL_OBJ_DIR)/,$$(pre_headers))
-CLEAN_FILE_LIST+=$$(addprefix $$(LOCAL_OBJ_DIR)/,$$(objs) $$(copy) $$(meta))
+TARGET_OBJECT_LIST+=$$(addprefix $$(LOCAL_OBJ_DIR)/,$$(objs) $$(objs-defined))
+COPY_OBJECT_LIST+=$$(addprefix $$(LOCAL_OBJ_DIR)/,$$(copy) $$(copy-defined))
+META_OBJECT_LIST+=$$(addprefix $$(LOCAL_OBJ_DIR)/,$$(meta) $$(meta-defined))
+PRE_HEADER_LIST+=$$(addprefix $$(LOCAL_OBJ_DIR)/,$$(pre_headers) $$(pre_headers-defined))
+ENUM_HEADER_LIST+=$$(addprefix $$(LOCAL_SRC_DIR)/,$$(enum_headers) $$(enum_headers-defined))
+CLEAN_FILE_LIST+=$$(addprefix $$(LOCAL_OBJ_DIR)/,$$(objs) $$(copy) $$(meta) $$(objs-defined) $$(copy-defined) $$(meta-defined))
 
 PRE_HEADER_LIST+=$$(filter %.h,$$(COPY_OBJECT_LIST))
 
 $$(LOCAL_OBJ_DIR):
 	mkdir -p $$@
 
-$$(eval $$(foreach obj,$$(objs),$$(call declare_obj,$$(obj),$$(LOCAL_SRC_DIR),$$(LOCAL_OBJ_DIR))))
+$$(eval $$(foreach obj,$$(objs) $$(objs-defined),$$(call declare_obj,$$(obj),$$(LOCAL_SRC_DIR),$$(LOCAL_OBJ_DIR))))
 
-$$(eval $$(foreach tocopy,$$(copy),$$(call declare_copy,$$(tocopy),$$(LOCAL_SRC_DIR),$$(LOCAL_OBJ_DIR))))
+$$(eval $$(foreach tocopy,$$(copy) $$(copy-defined),$$(call declare_copy,$$(tocopy),$$(LOCAL_SRC_DIR),$$(LOCAL_OBJ_DIR))))
 
-$$(eval $$(foreach tometa,$$(filter %.h,$$(meta)),$$(call declare_meta_h,$$(tometa),$$(LOCAL_SRC_DIR),$$(LOCAL_OBJ_DIR))))
+$$(eval $$(foreach tometa,$$(filter %.h,$$(meta) $$(meta-defined)),$$(call declare_meta_h,$$(tometa),$$(LOCAL_SRC_DIR),$$(LOCAL_OBJ_DIR))))
 
-$$(eval $$(foreach tometa,$$(filter-out %.h,$$(meta)),$$(call declare_meta_cpp,$$(tometa),$$(LOCAL_SRC_DIR),$$(LOCAL_OBJ_DIR))))
+$$(eval $$(foreach tometa,$$(filter-out %.h,$$(meta) $$(meta-defined)),$$(call declare_meta_cpp,$$(tometa),$$(LOCAL_SRC_DIR),$$(LOCAL_OBJ_DIR))))
 
-$$(eval $$(foreach ph,$$(pre_headers),$$(call declare_gpct_header,$$(ph),$$(LOCAL_SRC_DIR),$$(LOCAL_OBJ_DIR))))
-
-$$(eval \
-$$(foreach h,$$(doc_headers),\
-$$(call declare_doc_header,$$(h))))
-
-$$(eval \
-$$(foreach f,$$(doc_files),\
-$$(call declare_doc_files,$$(f),$$(LOCAL_SRC_DIR))))
+$$(eval $$(foreach ph,$$(pre_headers) $$(pre_headers-defined),$$(call declare_gct_header,$$(ph),$$(LOCAL_SRC_DIR),$$(LOCAL_OBJ_DIR))))
 
 # Beware this must be left last in calls
 
 $$(eval \
-$$(foreach m,$$(subdirs),\
+$$(foreach m,$$(subdirs) $$(subdirs-defined),\
 $$(call scan_local_makefile,$$(LOCAL_SRC_DIR)/$$(m),$$(LOCAL_OBJ_DIR)/$$(m))))
 
 endef

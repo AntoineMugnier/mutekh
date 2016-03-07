@@ -20,65 +20,37 @@
 
 */
 
-#include <mutek/printk.h>
-#include <mutek/scheduler.h>
-#include <hexo/context.h>
-#include <hexo/init.h>
-#include <mutek/memory_allocator.h>
+#include <mutek/startup.h>
 
-#if defined(CONFIG_GAISLER_EARLY_CONSOLE)
-void gaisler_early_console(uintptr_t addr);
-#endif
+#include <string.h>
 
-#if defined (CONFIG_MUTEK_SCHEDULER)
-extern struct sched_context_s main_ctx;
-#else
-struct context_s main_ctx;
-#endif
+#include <hexo/lock.h>
 
-extern __ldscript_symbol_t __system_uncached_heap_start, __system_uncached_heap_end;
+#ifndef CONFIG_CPU_SPARC_LEON3_CASA
+lock_t __atomic_arch_lock;
 
-void arch_init(uintptr_t init_sp)
+void gaisler_arch_lock_init()
 {
-    extern __ldscript_symbol_t __bss_start;
-    extern __ldscript_symbol_t __bss_end;
-
-    memset(
-        (uint8_t*)&__bss_start,
-        0,
-        (uint8_t*)&__bss_end-(uint8_t*)&__bss_start);
-
-#if defined(CONFIG_GAISLER_EARLY_CONSOLE)
-    gaisler_early_console(CONFIG_GAISLER_EARLY_CONSOLE_ADDR);
+    lock_init(&__atomic_arch_lock);
+}
 #endif
 
-    cpu_global_init();
 
-    default_region = memory_allocator_init(NULL, 
-                                           &__system_uncached_heap_start, 
-                                           (void*)((uintptr_t)&__system_uncached_heap_end -
-                                                   (1 << CONFIG_HEXO_RESET_STACK_SIZE) * CONFIG_CPU_MAXCOUNT));
+/////////////////////////////////////////////////////////////////////
 
-    hexo_global_init();
+#ifdef CONFIG_GAISLER_AHB_ENUM
 
-    cpu_init();
+# include <device/driver.h>
+# include <device/resources.h>
+# include <device/device.h>
 
-#if defined(CONFIG_MUTEK_SCHEDULER)
-    sched_global_init();
-    sched_cpu_init();
+DEV_DECLARE_STATIC(ahbctrl_dev, "ahbctrl", 0, ahbctrl_drv,
+                   DEV_STATIC_RES_MEM(CONFIG_GAISLER_AHB_ENUM_ADDR,
+                                      CONFIG_GAISLER_AHB_ENUM_ADDR + 0xe00)
+                   );
 
-    /* FIXME initial stack space will never be freed ! */
-    context_bootstrap(&main_ctx.context, 0, init_sp);
-    sched_context_init(&main_ctx);
-#else
-    context_bootstrap(&main_ctx, 0, init_sp);
 #endif
 
-    mutek_start();
-}
 
-void boot_from_reset_vector(uintptr_t init_sp)
-{
-  arch_init(init_sp);
-}
+/////////////////////////////////////////////////////////////////////
 

@@ -32,6 +32,7 @@ use Term::ANSIColor;
 my @config_files;
 my @output_files;
 my %config_opts;
+my @dirs;
 my %inits;
 my $enforce_deps;
 my $quiet_flag = 0;
@@ -195,7 +196,7 @@ sub args_flags
 
     foreach my $flag (@args)
     {
-	if ( $flag !~ /^(internal|value|meta|root|noexport|mandatory|harddep|auto|private|maxval|minval|sumval|deprecated|experimental)$/)
+	if ( $flag !~ /^(internal|value|meta|root|noexport|mandatory|harddep|auto|private|maxval|minval|sumval|single|deprecated|experimental|enum)$/)
 	{
 	    error($location.": unknown flag `".$flag."' for `".$opts->{name}." token'");
 	    next;
@@ -209,7 +210,10 @@ sub args_flags
 
 	$opts->{flags}->{$flag} = 1;
 	$opts->{flags}->{$flag."_keep"} = 1;
-	$opts->{value} = 'defined' if $flag eq 'mandatory';
+        if ( $flag eq 'mandatory' ) {
+            $opts->{value} = 'defined';
+            $opts->{default} = 'defined';
+        }
     }
 }
 
@@ -250,12 +254,27 @@ my %config_cmd =
  "single" => \&args_single,
  "suggest" => \&args_list_concat,
  "suggest_when" => \&args_list_add,
+ "warn_when" => \&args_list_add,
  "when" => \&args_list_add,
  "module" => \&args_module,
  "provide" => \&args_list_concat,
  "range" => \&args_range,
  "desc" => \&args_text_block,
 );
+
+sub new_token
+{
+    my ($name, $file, $lnum) = @_;
+
+    my $opts = $config_opts{$name} = {};
+    $opts->{location} = $lnum;
+    $opts->{file} = $file;
+    $opts->{name} = $name;
+    $opts->{depnotice} = [];
+    $opts->{childs} = [];
+
+    return $opts;
+}
 
 sub new_token_block
 {
@@ -269,24 +288,44 @@ sub new_token_block
 	return undef;
     }
 
-    $opts = $config_opts{$name} = {};
-    $opts->{location} = $lnum;
-    $opts->{file} = $file;
-    $opts->{name} = $name;
-    $opts->{depnotice} = [];
+    $opts = new_token( $name, $file, $lnum );
 
     return ($opts, \%config_cmd);
+}
+
+sub args_init_flags
+{
+    my ($location, $opts, $tag, @args) = @_;
+
+    foreach my $flag (@args)
+    {
+	if ( $flag !~ /^(notempty|calls)$/)
+	{
+	    error($location.": unknown flag `".$flag."' for `".$opts->{name}." token'");
+	    next;
+	}
+
+	if (defined $opts->{flags}->{$flag})
+	{
+	    warning($location.": flag `".$flag."' is already set for `".$opts->{name}." token'");
+	    next;
+	}
+
+	$opts->{flags}->{$flag} = 1;
+    }
 }
 
 my %init_cmd =
 (
  "parent" => \&args_list_concat,
+ "condition" => \&args_list_add,
  "function" => \&args_function,
  "prototype" => \&args_text_line,
  "before" => \&args_list_concat,
  "after" => \&args_list_concat,
  "during" => \&args_word,
  "desc" => \&args_text_block,
+ "flags" => \&args_init_flags,
 );
 
 sub new_init_block
@@ -305,6 +344,7 @@ sub new_init_block
     $init->{location} = $lnum;
     $init->{file} = $file;
     $init->{name} = $name;
+    $init->{parent} = [];
 
     return ($init, \%init_cmd);
 }
@@ -351,7 +391,6 @@ sub read_tokens_file
         }
 
 	next if ($line =~ /^[ \t]*(\#.*)?$/);
-        $line =~ s/#.*$//g;
 
 	# catch blocks start and end
 
@@ -516,6 +555,7 @@ my %config_tokens_resolvers =
  "require" => \&tokens_resolve_config_cond,
  "suggest" => \&tokens_resolve_config_cond,
  "suggest_when" => \&tokens_resolve_config_cond,
+ "warn_when" => \&tokens_resolve_config_cond,
  "when" => \&tokens_resolve_config_cond,
  "provide" => \&tokens_resolve_config_value,
  "parent" => \&tokens_resolve_config_bare,
@@ -527,6 +567,7 @@ my %config_tokens_resolvers =
 my %init_tokens_resolvers =
 (
  "parent" => \&tokens_resolve_config_bare,
+ "condition" => \&tokens_resolve_config_cond,
  "after" => \&tokens_resolve_init,
  "before" => \&tokens_resolve_init,
  "need" => \&tokens_resolve_init,
@@ -584,149 +625,280 @@ sub tokens_resolve
 #	Initialization actions
 ###############################################################################
 
-my @init_actions;
+my @init_defined;
 
-sub process_inits_rec
+sub process_init
 {
-    my ( $init, $sinit, $order, $iorder ) = @_;
+    my ( $init, $sinit, $constraint, $iconstraint ) = @_;
 
     our %cycle;
 
-    if ( $cycle{$init} ) {
-	error_loc($init, "found cycle while processing `$order' tags");
+    if ( $cycle{$init}) {
+	error_loc($init, "found cycle in ordering constraints")
+            if (!$init->{ocycle_error}++);
 	return;
     }
 
     $cycle{$init} = 1;
 
-    sub process_inits_set
+    foreach my $name ( keys %{$init->{$constraint}} )
     {
-        my ( $init, $sinit, $order, $iorder ) = @_;
-    
-        if ( $sinit->{"is$iorder"}->{$init} ) {
-	    error("initialization order conflict `$sinit->{name} $order $init->{name}'");
-	    return 1;
-        }
-    
-        debug(1, "$sinit->{name} $order $init->{name}");
-        $sinit->{"is$order"}->{$init} = 1;
-    
-        return 0;
-    }
-    
-    sub process_inits_chld
-    {
-        my ( $init, $sinit, $order, $iorder ) = @_;
-    
-        foreach my $c ( @{$init->{childs}} ) {
-	    process_inits_set( $c, $sinit, $order, $iorder );
-    	    process_inits_chld( $c, $sinit, $order, $iorder );
-        }
-    }
+        my $next = $inits{$name};
 
-    if ( $init->{$order} ) {
-	foreach my $c ( @{$init->{$order}} ) {
-	    next if process_inits_set( $c, $sinit, $order, $iorder );
+        $sinit->{$constraint}->{$name} ||= 3;
 
-	    process_inits_chld( $c, $sinit, $order, $iorder );
-	    process_inits_rec( $c, $sinit, $order, $iorder );
-	}
-    }
-
-    if ( $init->{during} ) {
-	my $during = $init->{during};
-
-#	process_inits_set( $during, $sinit, $order, $iorder ) if ( $init != $sinit );
-	process_inits_rec( $during, $sinit, $order, $iorder );
+        process_init( $next, $sinit, $constraint, $iconstraint );
     }
 
     $cycle{$init} = 0;
 }
 
+sub process_init2
+{
+    my ( $init, $constraint ) = @_;
+
+    foreach my $name ( keys %{$init->{$constraint}} )
+    {
+        my $a = $inits{$name};
+
+        foreach_recurs( $a, "childs", sub {
+            my $c = shift;
+            $init->{$constraint}->{$c->{name}} = 4;
+        });
+    }
+}
+
+sub inits_sort_predicate
+{
+    return 1 if ($a->{isafter}->{$b->{name}});
+    return 1 if ($b->{isbefore}->{$a->{name}});
+    return -1 if ($b->{isafter}->{$a->{name}});
+    return -1 if ($a->{isbefore}->{$b->{name}});
+    return 0;
+}
+
 sub process_inits
 {
     foreach my $init ( values %inits ) {
-	$init->{defined} = !$init->{parent} || foreach_or_list( $init->{parent}, \&check_defined );
+        my $parents = $init->{parent};
+
+        if (!@$parents) {
+            error_loc($init, "init token has no parent");
+        }
+
+        $init->{defined} =
+            (!$init->{condition} || foreach_or_list( $init->{condition}, \&foreach_and_list, \&check_rule ))
+            && foreach_or_list( $parents, \&check_defined );
+        $init->{isafter} = {};
+        $init->{isbefore} = {};
     }
 
-    foreach my $init ( values %inits ) {
-	next if !$init->{defined};
+    foreach my $init ( sort { $a->{name} cmp $b->{name} } values %inits ) {
 
 	# setup heirarchy
 	if ( my $during = $init->{during} ) {
 
-	    if ( $during->{defined} ) {
+            $during->{childs} ||= [];
+            push @{$during->{childs}}, $init if ($init->{defined});
 
-		$during->{childs} ||= [];
-		push @{$during->{childs}}, $init;
+            if ( $during->{constructor} ) {
+                error_loc($init, "init tokens used with `during' tag can not have `function' defined");
+            }
 
-		if ( $during->{constructor} ) {
-		    error_loc($init, "init tokens used with `during' tag can not have `function' defined");
-		}
+	} else {
+            $init->{calls} = [];
 
-	    } else {
-		warning_loc($init, "initialization will not take place because `$during->{name}' is disabled") ;
-		next;
-	    }
-
-	} elsif ( $init->{constructor} ) {
-            warning_loc($init, "init token has `function' defined but is not attached to a parent token");
+            if ( $init->{constructor} ) {
+                warning_loc($init, "init token has `function' defined but no `during' tag");
+            }
         }
 
         if ( $init->{prototype} && $init->{constructor} ) {
             error_loc($init, "init `prototype' can only be defined for non-leaf tokens (without `function')");
         }
 
-	push @init_actions, $init;
+	push @init_defined, $init if ($init->{defined});
     }
 
-    foreach my $init ( @init_actions ) {
-	process_inits_rec( $init, $init, "before", "after" );
-	process_inits_rec( $init, $init, "after", "before" );
-    };
+    # disable some child inits
+    foreach my $init ( @init_defined ) {
+
+        foreach_recurs( $init, "childs", sub {
+            my $c = shift;
+
+	    if ( $c->{defined} && !$init->{defined} ) {
+		error_loc($c, "initialization will not take place because `$init->{name}' is disabled");
+                $c->{defined} = 0;
+	    }
+        });
+    }
+
+    # fill isbefore/isafter hashes
+    foreach my $init ( @init_defined ) {
+
+        foreach my $c ( @{$init->{after}} ) {
+            $init->{isafter}->{$c->{name}} = 1;
+            $c->{isbefore}->{$init->{name}} ||= 2;
+        }
+
+        foreach my $c ( @{$init->{before}} ) {
+            $init->{isbefore}->{$c->{name}} = 1;
+            $c->{isafter}->{$init->{name}} ||= 2;
+        }
+    }
+
+    # setup indirect ordering constraints
+    foreach my $init ( @init_defined ) {
+
+        my %cycle;
+
+        for ( my $d = $init; $d; $d = $d->{during} ) {
+
+            if ( $cycle{$d}++ ) {
+                error_loc($d, "found cycle in init hierarchy");
+                undef $d->{during};
+                next;
+            }
+
+            process_init( $d, $init, "isbefore", "isafter" );
+            process_init( $d, $init, "isafter", "isbefore" );
+        }
+    }
+
+    # propagate ordering constraints in hierarchy
+    foreach my $init ( @init_defined ) {
+        process_init2( $init, "isbefore" );
+        process_init2( $init, "isafter" );
+    }
 
     return if $err_flag;
 
-    # reorder
+    # sort initialization calls
+    foreach my $init (sort { $a->{name} cmp $b->{name} } @init_defined) {
 
-    for ( my $chg = 1; $chg--; ) {
+        next if (!$init->{defined});
 
-	for (my $i = 0; $i < scalar @init_actions; $i++) {
-	    my $a = @init_actions[$i];
+        my @init_calls;
 
-	    for (my $j = 0; $j < scalar @init_actions; $j++) {
-		next if $i == $j;
-		my $b = @init_actions[$j];
+        foreach_recurs( $init, "childs", sub {
+            my $chld = shift;
+            push @init_calls, $chld if $chld->{constructor} && $chld->{defined};
+        });
 
-		if (($i < $j && $a->{isafter}->{$b}) ||
-		    ($i > $j && $a->{isbefore}->{$b})) {
-		    @init_actions[$i] = $b;
-		    @init_actions[$j] = $a;
-		    $chg = 1;
-		    last;
-		}
-	    }
-	}
+        if ( !@init_calls && $init->{flags}->{notempty} ) {
+            error_loc($init, "initialization stage can not be empty");
+        }
+
+        if ( $init->{flags}->{calls} ) {
+
+            my @c;
+            while ( @init_calls ) {
+                my $t = $init_calls[0];
+                my $j = 0;
+                for ( my $i = 1; $i <= $#init_calls; $i++ ) {
+                    my $r = $init_calls[$i];
+                    if ( $t->{isbefore}->{$r->{name}} ) {
+                        $t = $r;
+                        $j = $i;
+                    }
+                }
+                splice @init_calls, $j, 1;
+                unshift @c, $t;
+            }
+            $init->{calls} = [ @c ];
+        }
     }
-
-    # number
-
-    for (my $i = 0; $i < scalar @init_actions; $i++) {
-        my $a = @init_actions[$i];
-        $a->{num} = $i;
-    }
-
 }
 
-sub output_inits_details
+sub output_inits_calls
+{
+    my ( $out, $actions, $prefix ) = @_;
+
+    foreach my $init (sort { $a->{name} cmp $b->{name} } @$actions) {
+
+        next if !$init->{flags}->{calls} || !$init->{calls};
+
+        my @calls = @{$init->{calls}};
+
+        print {$out} "$prefix $init->{name} (init):\n";
+        foreach my $call ( @calls ) {
+            printf {$out} "$prefix     %-32s %s()\n", $call->{name}, $call->{constructor}
+                if ( $call->{constructor} );
+        }
+        print {$out} "\n";
+
+        print {$out} "$prefix $init->{name} (cleanup):\n";
+        foreach my $call ( reverse @calls ) {
+            printf {$out} "$prefix     %-32s %s()\n", $call->{name}, $call->{destructor}
+                if ( $call->{destructor} );
+        }
+        print {$out} "\n";
+    }
+}
+
+sub output_inits_tree_
+{
+    my ( $actions, $depth ) = @_;
+
+    foreach my $init (sort inits_sort_predicate @$actions) {
+
+        next if ( !foreach_or_list( $init->{parent}, \&check_defined ) );
+
+         my $condition = $init->{condition};
+         my $condstr;
+         if (defined $condition) {
+             foreach my $andlist ( @$condition ) {
+                 if ($condstr) {
+                     $condstr .= "\n".(" "x52)."| ";
+                 } else {
+                     $condstr .= 'if '
+                 }
+                 $condstr .= get_rule_name_list( $andlist, " & " );
+             }
+         }
+
+         if (!$init->{defined}) {
+             print mycolor('red');
+         }
+         printf "%-50s %s\n", "    "x$depth." * ".$init->{name}, $condstr;
+         print mycolor('reset');
+
+         if ( my $chld = $init->{childs} ) {
+             output_inits_tree_( $chld, $depth + 1 );
+         }
+    }
+}
+
+sub output_inits_tree
+{
+    foreach my $init (sort { $a->{name} cmp $b->{name} } values %inits) {
+
+        next if ($init->{during});
+
+        print "  ", $init->{name}, "\n";
+        if ( my $chld = $init->{childs} ) {
+            output_inits_tree_( $chld, 1 );
+        }
+        print "\n";
+    }
+}
+
+sub output_inits_constraints
 {
     my ( $out, $actions ) = @_;
 
-    foreach my $init (@$actions) {
-        print {$out} "  $init->{name} ";
-        print {$out} " $init->{constructor}(); " if ( $init->{constructor} );
-        print {$out} " $init->{destructor}(); " if ( $init->{destructor} );
-        print {$out} "\n";
+    foreach my $init (sort { $a->{name} cmp $b->{name} } @$actions) {
+
+        next if !$init->{constructor};
+
+        printf {$out} "\n  %-32s\n", $init->{name}; #, $init->{defined};
+
+        foreach (keys %{$init->{isafter}}) {
+            print {$out} "      after  $_ ($init->{isafter}->{$_})\n";
+        }
+        foreach (keys %{$init->{isbefore}}) {
+            print {$out} "      before $_ ($init->{isbefore}->{$_})\n";
+        }
     }
 }
 
@@ -736,15 +908,9 @@ sub output_inits
 
     foreach my $init (@$actions) {
 
-        next if ( ! $init->{childs} );
-        next if $init->{constructor};
+        next if !$init->{flags}->{calls} || !$init->{calls};
 
-        my @calls;
-
-        foreach_recurs( $init, "childs", sub {
-            my $chld = shift;
-            push @calls, $chld;
-        });
+        my @calls = @{$init->{calls}};
 
         print {$out} "#define $init->{name}_PROTOTYPES \\\n";
         foreach my $call ( @calls ) {
@@ -754,6 +920,9 @@ sub output_inits
             while ( $par = $par->{during} ) {
                 last if ( $args = $par->{prototype} );                
             }
+
+            $args = "void" if ( $args == "" );
+
             print {$out} "  void $call->{constructor}($args); \\\n"
                 if ( $call->{constructor} );
             print {$out} "  void $call->{destructor}($args); \\\n"
@@ -806,6 +975,8 @@ sub check_condition
 	    return ($value >= $val);
 	} elsif  ($op eq "<=") {
 	    return ($value <= $val);
+	} elsif  ($op eq "!=") {
+	    return ($value ne $val);
 	}
 
     }
@@ -846,6 +1017,20 @@ sub foreach_or_list
     return 0;
 }
 
+sub foreach_orl_list
+{
+    my ( $list, $process, @args ) = @_;
+    my $res;
+
+    if ( $list ) {
+	foreach ( @$list ) {
+	    $res |= $process->( $_, @args );
+	}
+    }
+
+    return $res;
+}
+
 # return number of elements evaluating to true
 sub foreach_count_list
 {
@@ -877,6 +1062,22 @@ sub foreach_and_list
     }
 
     return 1;
+}
+
+sub foreach_and_parent
+{
+    my ( $token, $process, @args ) = @_;
+
+    return 0 if ( !$process->( $token, @args ) );
+
+    my $list = $token->{parent};
+    return 1 if (!$list);
+
+    my $res;
+    foreach ( @$list ) {
+        $res |= foreach_and_parent( $_, $process, @args );
+    }
+    return $res;
 }
 
 # execute a closure if token flag is defined
@@ -986,7 +1187,22 @@ sub check_definable
     return 1;
 }
 
-# check dependencies expressed with the `depend' and `parent' tags
+sub process_config_define
+{
+    my $opt = shift;
+
+    return if $opt->{userdefined} or $opt->{flags}->{value} or
+              $opt->{flags}->{enum} or $opt->{flags}->{meta};
+
+    if ( $opt->{default} eq 'defined' ) {
+        debug(1, "$opt->{name} defined by default");
+        $opt->{value} = 'defined';
+    }
+
+    foreach_recurs( $opt, 'childs', \&process_config_define );
+}
+
+# define tokens flagged `auto' when they are referred to by `suggest' or `depend'
 sub process_config_auto
 {
     # try to recursively define tokens marked with the `auto' flag
@@ -1017,9 +1233,15 @@ sub process_config_auto
 	    return 0;
 	}
 
-	$dep->{value} = 'defined';
+	if ( $dep->{depundef} ) {
+	    debug(1, "auto define of $dep->{name} as an autodep of $opt->{name} is not possible");
+	    return 0;
+        }
 
-	debug(1, "$dep->{name} had been defined as an autodep of $opt->{name}");
+        process_config_define($dep);
+        $dep->{value} = 'defined';
+
+	debug(1, "$dep->{name} has been defined as an autodep of $opt->{name}");
 
 	return 1;
     }
@@ -1028,8 +1250,26 @@ sub process_config_auto
     my $chg = 0;
 
     return 0 if ( !check_defined( $opt ) );
-    return 0 if ( $opt->{flags}->{meta} || $opt->{flags}->{value} );
-    return 0 if !$opt->{depend};
+    return 0 if ( $opt->{flags}->{meta} || $opt->{flags}->{value} || $opt->{flags}->{enum} );
+
+    my $dlist = [];
+    push @$dlist, @{$opt->{depend}} if $opt->{depend};
+
+    # include suggested tokens
+    my $l = [];
+    if ( foreach_orl_list( $opt->{suggest}, sub {
+	my $s = shift;
+        if ( not $s->{condition} ) {
+            push @$l, $s->{token};
+            return 1;
+        } else {
+            return 0;
+        }
+    })) {
+        push @$dlist, $l if @$l;
+    }
+
+    return 0 if !@$dlist;
 
     # check if at least one parent is defined
     if ( $opt->{parent} && !foreach_or_list( $opt->{parent}, \&check_defined ) ) {
@@ -1037,7 +1277,7 @@ sub process_config_auto
     }
 
     # check if all dependencies tags have at least one token defined
-    foreach_and_list( $opt->{depend}, sub {
+    foreach_and_list( $dlist, sub {
 	my $or_list = shift;
 
 	return 1 if ( foreach_or_list( $or_list, \&check_defined ) );
@@ -1059,9 +1299,9 @@ sub process_config_depend
     my ($opt) = @_;
 
     return 0 if ( !check_defined( $opt ) );
-    return 0 if ( $opt->{flags}->{meta} || $opt->{flags}->{value} );
+    return 0 if ( $opt->{flags}->{meta} || $opt->{flags}->{value} || $opt->{flags}->{enum} );
 
-    my $de = $enforce_deps ? 'deperror' : 'depnotice';
+    my $de = $enforce_deps || $opt->{enforce} ? 'deperror' : 'depnotice';
 
     # check if at least one parent is defined
     my $pres = 1;
@@ -1102,7 +1342,7 @@ sub process_config_depend
 
 	if ( $opt->{userdefined} ) {
 	    push @{$opt->{$de}}, "`$opt->{name}' token is defined in build configuration ".
-		"file but has undefined parent.";
+		"but will be undefined due to undefined parent.";
 	}
 
 	$opt->{value} = 'undefined';
@@ -1117,16 +1357,34 @@ sub process_config_depend
 
 sub process_config_when
 {
-    my ( $opt ) = @_;
+    my ( $opt, $done ) = @_;
+
+    if ( $done->{$opt} ) {
+        error("conditional loop found in `when' rule for the `$opt->{name}' token.");
+        return 0;
+    }
+
+    $done->{$opt}++;
+
+    my $res = foreach_orl_list( $opt->{when}, \&foreach_orl_list, sub {
+        my $opt = $_->{token};
+        my $res = process_config_when( $opt, $done );
+        foreach ( @{$opt->{providers}} ) {
+            $res |= process_config_when( $_, $done );
+        }
+        return $res;
+    });
+
+    $done->{$opt}--;
 
     return 0 if !$opt->{when} || $opt->{whendone};
     return 0 if ( check_defined( $opt ) || $opt->{userdefined} );
 
-    my $res = foreach_or_list( $opt->{when}, \&foreach_and_list, \&check_rule );
-
-    if ( $res ) {
+    if ( foreach_or_list( $opt->{when}, \&foreach_and_list, \&check_rule ) ) {
 	debug(1, "$opt->{name} defined thanks to one of its `when' rule");
-	$opt->{value} = 'defined';
+
+        process_config_define($opt);
+        $opt->{value} = 'defined';
 
 	# when rule is used only once
 	$opt->{whendone} = 1;
@@ -1135,6 +1393,7 @@ sub process_config_when
 	$opt->{depnotice} = [];
 	$opt->{deperror} = [];
 	$opt->{depundef} = 0;
+        $res++;
     }
 
     return $res;
@@ -1168,7 +1427,7 @@ sub process_config_require
 {
     my ( $opt ) = @_;
 
-    return 0 if ( $opt->{flags}->{value} || $opt->{flags}->{meta} );
+    return 0 if ( $opt->{flags}->{value} || $opt->{flags}->{meta} || $opt->{flags}->{enum} );
     return 0 if ( !check_defined( $opt ) );
 
     return foreach_and_list( $opt->{require}, sub {
@@ -1199,6 +1458,7 @@ sub process_config_range
 		  "range is: [$opt->{range}->{min}, $opt->{range}->{max}]" );
 	}
 
+    } elsif ($opt->{flags}->{enum}) {
     } else {
 	error("token `$opt->{name}' is set to `$opt->{value}' value but lacks the `value' flag")
 	    if ($opt->{value} !~ /(un)?defined/);
@@ -1220,13 +1480,24 @@ sub process_config_suggest
 		my $token = $rule->{token};
 
 		# do not suggest if not a value token and can not define due to other constraints
-		if ( $token->{flags}->{value} || check_definable( $token ) ) {
+		if ( $token->{flags}->{enum} || $token->{flags}->{value} || check_definable( $token ) ) {
 		    notice("`$opt->{name}' token is defined and suggests this configuration: ".
 			   get_rule_name( $rule ) );
 		}
 	    }
 	    return 1;
         });
+
+        if ( !$opt->{userdefined} ) {
+            foreach_and_list( $opt->{warn_when}, sub {
+                my $list = shift;
+
+                my $res = foreach_and_list( $list, \&check_rule );
+                notice("The `$opt->{name}' token is currently defined by default but ".
+                       get_rule_name_list( $list, " and " )." condition suggests to undefine it.") if $res;
+                return 1;
+            });
+        }
 
     } elsif ( !$opt->{userdefined} ) {
 	# suggest this token be defined
@@ -1235,8 +1506,8 @@ sub process_config_suggest
 	    my $list = shift;
 
 	    my $res = foreach_and_list( $list, \&check_rule ) && check_definable( $opt );
-	    notice("`$opt->{name}' token is currently undefined but suggested by: ".
-		   get_rule_name_list( $list, " and " ) )." condition" if $res;
+	    notice("The `$opt->{name}' token is currently undefined by default but ".
+		   get_rule_name_list( $list, " and " )." condition suggests to define it.") if $res;
 	    return 1;
         });
     }
@@ -1253,11 +1524,17 @@ sub tokens_set_methods
 	    # meta token getvalue method returns 'defined' if one of its provider is defined
 	    $opt->{getvalue} = sub {
 		my ( $token ) = @_;
+                my @l;
 
 		foreach my $p (@{$token->{providers}}) {
-		    return 'defined' if check_defined( $p );
+		    push @l, $p if check_defined( $p );
 		}
-		return 'undefined';
+		return 'undefined' if ( scalar @l == 0 );
+		return 'defined' if ( scalar @l == 1 );
+                if ($opt->{flags}->{single} and not $opt->{proverr}++ ) {
+                    push @{$opt->{deperror}}, "Conflict between ".get_token_name_list(\@l, " and ")." for `provide' on `$opt->{name}' token";
+                }
+                return 'defined'
 	    }
 
 	} elsif ($opt->{flags}->{value}) {
@@ -1334,6 +1611,40 @@ sub tokens_provider
 	    push @{$t->{providers}}, $opt;
 	    $t->{provided}->{$opt->{name}} = $c->{value};
 	});
+
+	foreach_tag_args( $opt, 'parent', sub {
+	    my $t = shift;
+	    push @{$t->{childs}}, $opt;
+	});
+    }
+
+}
+
+sub tokens_enum
+{
+    foreach my $opt (values %config_opts) {
+        if ( $opt->{flags}->{enum} ) {
+            my $value = $opt->{value};
+            $opt->{providers} ||= [];
+            foreach my $pr (sort { $a->{name} cmp $b->{name} } @{$opt->{providers}}) {
+
+                # skip entry if the parent is not defined
+                next if !foreach_or_list( $pr->{parent}, \&check_defined );
+
+                # create _FIRST token for the enum entry
+                my $name = $pr->{name};
+                $name =~ s/_COUNT$//g;
+                my $o = new_token($name.'_FIRST', $pr->{file}, $pr->{location});
+                $o->{value} = $value;
+                $o->{flags}->{value} = 1;
+                $value = "($value + ($pr->{default}))";
+            }
+
+            # create _COUNT token for the enum
+            my $o = new_token($opt->{name}.'_COUNT', $opt->{file}, $opt->{location});
+            $o->{value} = $value;
+            $o->{flags}->{value} = 1;
+        }
     }
 }
 
@@ -1362,6 +1673,10 @@ sub tokens_check
 {
     foreach my $opt (values %config_opts) {
 
+        if ( $opt->{parent} && @{$opt->{parent}} > 1 ) {
+            error_loc($opt, "more than one parent defined.");
+        }
+
 	foreach my $fa (keys %{$opt->{flags}}) {
 	    foreach my $fb (keys %{$opt->{flags}}) {
 		if ( $flags_exclude{"$fa/$fb"} ) {
@@ -1383,9 +1698,13 @@ sub tokens_check
 	    my $c = shift;
 	    my $p = $c->{token};
 
-	    if (!$p->{flags}->{meta} && !$p->{flags}->{value}) {
-		error_loc($opt, "`provide' tag used on `$p->{name}' token without `meta' or `value' flag.");
+	    if (!$p->{flags}->{meta} && !$p->{flags}->{value} && !$p->{flags}->{enum}) {
+		error_loc($opt, "`provide' tag used on `$p->{name}' token without `meta', `value' or `enum' flag.");
 	    }
+
+            if ($p->{flags}->{enum} && !$opt->{flags}->{value}) {
+		error_loc($opt, "`provide' tag used on `$p->{name}' enum from a non-value token.");
+            }
 
 	    if ($p->{flags}->{meta} && $c->{value} ne 'defined') {
 		error_loc($opt, "can not specify a `provide' value for `$p->{name}' token with `meta' flag");
@@ -1413,7 +1732,7 @@ sub tokens_check
 
 	if ($opt->{flags}->{value}) {
 
-	    foreach my $tag (qw(depend when require provide suggest suggest_when exclude single)) {
+	    foreach my $tag (qw(depend when require suggest suggest_when warn_when exclude single)) {
 		error_loc($opt, "token with `value' flag can't use the `$tag' tag.")
 		    if ($opt->{$tag});
 	    }
@@ -1425,14 +1744,14 @@ sub tokens_check
         }
 
 	if ($opt->{flags}->{meta}) {
-	    foreach my $tag (qw(default depend when require suggest_when single)) {
+	    foreach my $tag (qw(default depend when require suggest_when warn_when single)) {
 		error_loc($opt, "token with `meta' flag can't use the `$tag' tag.")
 		    if ($opt->{$tag});
 	    }
 	}
 
 	if ($opt->{flags}->{mandatory}) {
-	    foreach my $tag (qw(default when suggest_when suggest)) {
+	    foreach my $tag (qw(when suggest_when warn_when suggest)) {
 		error_loc($opt, "token with `mandatory' flag can't use the `$tag' tag.")
 		    if ($opt->{$tag});
 	    }
@@ -1481,9 +1800,6 @@ sub tokens_check
 		my $pp = shift;
 		$res = 1 if ($pp == $opt);
 	    });
-	    if ( !$res ) {
-		error_loc($opt, "use of `single' tag on `$p->{name}' token which is not a direct child.");
-	    }
 	});
 
 	if (not $opt->{desc}) {
@@ -1510,15 +1826,33 @@ sub check_config
     foreach my $opt (values %config_opts) {
 	if (not defined $opt->{value}) {
 	    $opt->{default} = 'undefined' if !defined $opt->{default};
-	    $opt->{value} = $opt->{default};
+
+            if ( $opt->{userdefined} or $opt->{flags}->{meta} or $opt->{flags}->{mandatory} ) {
+            } elsif ( $opt->{flags}->{meta} ) {
+                $opt->{value} = 'undefined';
+            } elsif ( $opt->{flags}->{value} or $opt->{flags}->{enum} ) {
+                $opt->{value} = $opt->{default};
+            } else {
+                if ( foreach_and_parent( $opt, sub {
+                    my $l = shift;
+                    return $l->{value} eq 'defined' if $l->{userdefined};
+                    return $l->{default} eq 'defined';
+                } ) ) {
+                    debug(1, "$opt->{name} defined by default");
+                    $opt->{value} = 'defined';
+                } else {
+                    $opt->{value} = 'undefined';
+                }
+            }
 	    $opt->{vlocation} = "$opt->{file}:$opt->{location}";
-	}
+        }
     }
 
     for ( my $chg = 1; $chg--; ) {
 	# process `when' tags
 	foreach my $opt (values %config_opts) {
-	    if ( process_config_when($opt) ) {
+            my %done;
+	    if ( process_config_when($opt, \%done) ) {
 		$chg = 1;
 	    }
 	}
@@ -1603,7 +1937,7 @@ sub read_build_config
 	# replace variables
 	$line =~ s/\$\((\w+)\)/$vars{$1}/ge;
 
-	if ($line =~ /^\s* %(sub)?section \s+ ([*\w\d\s-]+)/x) {
+	if ($line =~ /^\s* %(sub)?section \s+ ([?*\w\d\s-]+)/x) {
 	    my $s = $1;	# subsection ?
 	    my @sections = split(/\s+/, $2);
 	    my $i = 1;
@@ -1614,8 +1948,9 @@ sub read_build_config
 
 		    my $p_ = $p;
 		    $p_ =~ s/\*/[\\w\\d]\+/g;
+		    $p_ =~ s/\?/[\\w\\d]/g;
 
-		    foreach (split(/:/, $section)) {
+		    foreach (split(/:/, $$section)) {
 			if ( $_ =~ /^$p_$/ ) {
 			    $i = 0;
 			    $used_build{$_} = 1;
@@ -1694,6 +2029,11 @@ sub read_build_config
 	    next;
 	}
 
+	if ($line =~ /^\s* %inherit \s+ (.*?) \s*$/x) {
+            $$section .= ":$1";
+	    next;
+	}
+
 	if ($line =~ /^\s* %error \s+ (.*)$/x) {
 	    error("$file:$lnum: $1");
 	    next;
@@ -1730,28 +2070,42 @@ sub read_build_config
 
 	if ($line =~ /^\s* %include \s+ (\S+)/x) {
 	    my $f = $1;
-	    $f = "$cd/$f" unless $f =~ /^\//;
-	    read_build_config( $f, $section );
+            foreach ($cd, @dirs) {
+                if ( -f "$_/$f" ) {
+                    debug(1, "trying `$_/$f' build configuration file");
+                    read_build_config( "$_/$f", $section );
+                    undef $f;
+                    last;
+                }
+            }
+            error("$file:$lnum: unable to find `$f' build configuration file.")
+                if (defined $f);
 	    next;
 	}
 
-	if ($line =~ /^\s* (\w[\w\d]*) (?: \s+(\S+) )?/x) {
+	if ($line =~ /^\s* (\w[\w\d]*\b)(\!?) (?: \s+(\S.*?) )? \s*$/x) {
 	    my $opt = $config_opts{$1};
-	    my $val = $2;
+	    my $enforce = $2;
+	    my $val = $3;
 
 	    if (not $opt) {
-		warning("$file:$lnum: undeclared configuration token `$1', ignored");
+		error("$file:$lnum: undeclared configuration token `$1'");
 
 	    } else {
 		if ($opt->{flags}->{internal} || $opt->{flags}->{meta}  || $opt->{flags}->{mandatory}) {
-		    error("$file:$lnum: `".$opt->{name}."' token can not be defined in".
+		    error("$file:$lnum: The `".$opt->{name}."' token can not be defined in ".
 			  "build configuration file directly.");
 		}
 
 		$val = "defined" if (!defined $val);
 		$opt->{value} = $val;
 		$opt->{vlocation} = "$file:$lnum";
+
+                error("$file:$lnum: The `".$opt->{name}."' token value has already been defined at $opt->{vlocation}.")
+                    if ($opt->{enforce});
+
 		$opt->{userdefined} = 1;
+                $opt->{enforce} = $enforce;
 
                 if ($opt->{flags}->{deprecated}) {
                     warning_loc($opt, "use of deprecated token in configuration.");
@@ -1788,7 +2142,7 @@ sub write_header
 		" * This file has been generated by the configuration script.\n".
 		" */\n\n");
 
-    foreach my $opt (values %config_opts) {
+    foreach my $opt (sort { $a->{name} cmp $b->{name} } values %config_opts) {
 
 	next if $opt->{flags}->{noexport};
 
@@ -1873,6 +2227,9 @@ sub write_makefile
 	print FILE "BUILD_$var=".$vars{$var}."\n";
     }
 
+    print FILE ("\n# inits\n\n");    # included in makefile for compare
+    output_inits_calls( \*FILE, \@init_defined, "#" );
+
     close(FILE);
 
     if ( ! -f $file_ || compare($file, $file_) ) {
@@ -1932,7 +2289,7 @@ sub write_py
 
 sub write_inits
 {
-    my $file = "$bld_path/inits.c";
+    my $file = "$bld_path/inits.h";
 
     push @output_files, $file;
 
@@ -1943,7 +2300,7 @@ sub write_inits
 	return 1;
     }
 
-    output_inits( \*FILE, \@init_actions );
+    output_inits( \*FILE, \@init_defined );
 
     close(FILE);
     return 0;
@@ -1966,8 +2323,8 @@ sub write_infos
     flat_config( \*FILE );
     print FILE "\n";
 
-    print FILE "Initialization order:\n\n";
-    output_inits_details( \*FILE, \@init_actions );
+    print FILE "Initialization calls order:\n\n";
+    output_inits_calls( \*FILE, \@init_defined );
     print FILE "\n";
 
     print FILE "Configuration used:\n\n";
@@ -2095,6 +2452,7 @@ sub write_token_doc
     print_list($out, $opt->{when}, "This token is automatically defined when", " and ", \&get_rule_name_list );
     print_list($out, $opt->{suggest}, "Defining this token suggest use of", " or ", \&get_rule_name );
     print_list($out, $opt->{suggest_when}, "Definition of this token is suggested when", " and ", \&get_rule_name_list );
+    print_list($out, $opt->{warn_when}, "Definition of this token is not advised when", " and ", \&get_rule_name_list );
     print_list($out, $opt->{exclude}, "This token can not be defined along with", "", \&get_token_name );
     print_list($out, $opt->{provide}, "Defining this token will also provide", "", \&get_rule_name );
     print_list($out, $opt->{providers}, "This token value is provided along with", "", \&get_token_name );
@@ -2161,6 +2519,55 @@ sub write_doc_header
 }
 
 ###############################################################################
+#       Check source for bad token names
+###############################################################################
+
+sub find_bad_tokens
+{
+    my @dirs;
+
+    foreach my $opt (values %config_opts) {
+	if ( defined $opt->{module} ) {
+	    push @dirs, $opt->{module}->{path};
+        }
+    }
+
+    while (my $path = shift @dirs) {
+        debug("checking configuration tokens usage in `$path'");
+
+        foreach my $ent (<$path/*>) {
+
+            if (-d $ent) {
+                push @dirs, $ent;
+            } else {
+
+                next if ($ent !~ /(^Makefile|\.(c|h|S|s|cpp|mk|build))$/);
+
+                if (open(FILE, "<$ent")) {
+                    my $l = 1;
+                    foreach my $line (<FILE>) {
+                        while ($line =~ /\b(CONFIG_\w+)/g) {
+                            warning("$ent:$l: found unknown configuration token name `$1'.")
+                                if (!defined $config_opts{$1});
+                        }
+                        while ($line =~ /\b(INIT_\w+)/g) {
+                            warning("$ent:$l: found unknown initialization token name `$1'.")
+                                if (!defined $inits{$1});
+                        }
+                        $l++;
+                    }
+                    close(FILE);
+                } else {
+                    error("$ent:can not open file.")
+                }
+            }
+        }
+    }
+
+    return $err_flag;
+}
+
+###############################################################################
 #	Main function
 ###############################################################################
 
@@ -2193,7 +2600,10 @@ Usage: config.pl [options]
 
         --config            Output .h, .py, .m4, .mk and .deps configuration in `config.*' files.
 	--check             Check configuration constraints without output.
-	--list[=all]        Display configuration tokens list.
+	--find-bad-tokens   Check the source code of modules for use of undefined tokens.
+	--list[=all]        Display configuration tokens.
+	--list=init         Display init tokens.
+	--list=flat         Display flat configuration.
 	--info=token        Display informations about `token'.
 	--docheader=file    Output header with documentation tags in `file' file.
 	--quiet             Do not output diagnostic messages.
@@ -2215,7 +2625,8 @@ Usage: config.pl [options]
 
     debug(1, "explore source tree and parse .config token files");
 
-    explore_token_dirs($_) foreach (split(/:/, $param_h{src_path}));
+    @dirs = split(/:/, $param_h{src_path});
+    explore_token_dirs($_) foreach (@dirs);
 
     debug(1, "resolve and check tokens");
 
@@ -2224,6 +2635,10 @@ Usage: config.pl [options]
     tokens_resolve( \%inits, \%init_tokens_resolvers );
     tokens_provider();
     tokens_check();
+
+    if ($param_h{find_bad_tokens}) {
+        return find_bad_tokens();
+    }
 
     exit 1 if $err_flag;
 
@@ -2245,10 +2660,11 @@ Usage: config.pl [options]
     }
 
     if ( !$param_h{input} ) {
-	error("no build configuration file specified.");
+	error("No build configuration file specified.\n".
+              "See: http://www.mutekh.org/trac/mutekh/wiki/BuildingExamples");
     }
 
-    read_build_config( $_, $param_h{build} )
+    read_build_config( $_, \$param_h{build} )
 	foreach (split(/:/, $param_h{input}));
 
     debug(1, "check build configuration files");
@@ -2261,11 +2677,27 @@ Usage: config.pl [options]
     exit 1 if $err_flag;
 
     check_config();
+    tokens_enum();
     process_inits();
 
     debug(1, "help and info display actions");
 
     if ($param_h{list}) {
+        if ($param_h{list} eq "init") {
+            if ( $debug ) {
+                print "Initialization constraints:\n";
+                output_inits_constraints( \*STDOUT, \@init_defined );
+            }
+            print "\nInitialization hierarchy:\n\n";
+            output_inits_tree();
+            print "Initialization calls order:\n\n";
+            output_inits_calls( \*STDOUT, \@init_defined, "  " );
+            return;
+        }
+        if ($param_h{list} eq "flat") {
+            return flat_config( \*STDOUT );
+        }
+
 	return tokens_list( \*STDOUT, $param_h{list} eq "all" );
     }
 
@@ -2275,7 +2707,7 @@ Usage: config.pl [options]
 
     debug(1, "declare modules");
 
-    foreach my $opt (values %config_opts) {
+    foreach my $opt (sort { $a->{name} cmp $b->{name} } values %config_opts) {
 	if ( defined $opt->{module} && check_defined($opt) ) {
 	    $vars{MODULES} .= " ".$opt->{module}->{name}.":".$opt->{module}->{path};
 	}

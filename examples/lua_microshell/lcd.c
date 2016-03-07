@@ -3,9 +3,9 @@
 #include <lua/lauxlib.h>
 #include <lua/lua.h>
 
-#include <device/lcd.h>
-#include <device/gpio.h>
-#include <device/block.h>
+#include <device/class/lcd.h>
+#include <device/class/gpio.h>
+#include <device/class/block.h>
 
 #include <device/device.h>
 #include <device/driver.h>

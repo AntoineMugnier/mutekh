@@ -61,7 +61,7 @@ typedef struct
 #define TLS_DTP_OFFSET  0x8000
 
 /* Init the thread pointer register */
-static inline void tls_init_tp (uintptr_t tp)
+ALWAYS_INLINE void tls_init_tp (uintptr_t tp)
 {
     /* first, allow user mode to access the tp register */
     reg_t hwrena = cpu_mips_mfc0(7, 0);

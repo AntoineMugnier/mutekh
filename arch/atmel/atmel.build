@@ -1,0 +1,138 @@
+
+%section atmel-*-* atmel-*
+  %types architecture
+
+  CONFIG_ARCH_ATMEL
+
+  # Memory layout
+
+  CONFIG_ATMEL_PRINTK_USART
+
+  #################################################
+  # CPUs
+
+  %subsection atmel-ap7
+    %types cpu
+    %types platform
+
+    CONFIG_LOAD_BOOTLOAD
+
+    CONFIG_LOAD_BOOTLOAD_KERNEL_ADDR 0x00000000
+    CONFIG_LOAD_BOOTLOAD_KERNEL_SIZE 0x00100000
+
+    CONFIG_STARTUP_HEAP_ADDR   0x00100000
+    CONFIG_STARTUP_HEAP_SIZE   0x002fe000
+
+    CONFIG_STARTUP_STACK_ADDR  0x003fe000
+    CONFIG_STARTUP_STACK_SIZE  0x00001000
+
+    CONFIG_MUTEK_PRINTK_ADDR 0xffe00c00
+
+    CONFIG_CPU_AVR32_AP7
+    %set BUILD_NAME atmel-ap7
+
+  %end
+
+  %subsection atmel-uc3a-*
+    %types cpu
+
+    CONFIG_CPU_AVR32_UC3
+    %set BUILD_NAME atmel-uc3
+
+  %end
+
+  %subsection atmel-uc3b-*
+    %types cpu
+
+    CONFIG_CPU_AVR32_UC3
+    %set BUILD_NAME atmel-uc3
+
+  %end
+
+  %subsection atmel-uc3c-*
+    %types cpu
+
+    CONFIG_CPU_AVR32_UC3
+    %set BUILD_NAME atmel-uc3
+
+  %end
+
+  %subsection atmel-sam7-*
+    %types cpu
+
+    CONFIG_CPU_ARM32_7TDMI
+    %set BUILD_NAME atmel-sam7
+
+  %end
+
+  %subsection atmel-sam3-*
+    %types cpu
+
+    CONFIG_CPU_ARM32M_CORTEXM3
+    %set BUILD_NAME atmel-sam3
+
+    # USART0
+    CONFIG_MUTEK_PRINTK_ADDR 0x40098000
+
+  %end
+
+  #################################################
+  # Platforms
+
+  %subsection atmel-sam3-x4
+    %types platform
+
+    CONFIG_LOAD_ROM
+    CONFIG_LOAD_ROM_RO_ADDR 0x00080000
+    CONFIG_LOAD_ROM_RO_SIZE 0x00020000
+
+    CONFIG_LOAD_ROM_RW_ADDR 0x20800000
+    CONFIG_LOAD_ROM_RW_SIZE 0x00008000
+
+    CONFIG_STARTUP_HEAP_ADDR  0x20000000
+    CONFIG_STARTUP_HEAP_SIZE  0x00007000
+
+    CONFIG_STARTUP_STACK_ADDR 0x20007000
+    CONFIG_STARTUP_STACK_SIZE 0x00001000
+
+  %end
+
+  %subsection atmel-sam3-x8
+    %types platform
+
+    CONFIG_LOAD_ROM
+    CONFIG_LOAD_ROM_RO_ADDR 0x00080000
+    CONFIG_LOAD_ROM_RO_SIZE 0x00040000
+
+    CONFIG_LOAD_ROM_RW_ADDR 0x20800000
+    CONFIG_LOAD_ROM_RW_SIZE 0x00008000
+
+    CONFIG_STARTUP_HEAP_ADDR  0x20000000
+    CONFIG_STARTUP_HEAP_SIZE  0x0000e000
+
+    CONFIG_STARTUP_STACK_ADDR 0x2000e000
+    CONFIG_STARTUP_STACK_SIZE 0x00001000
+
+  %end
+
+  %subsection atmel-uc3a-0512 atmel-uc3a-1512
+    %types platform
+
+
+  %end
+
+  %subsection atmel-uc3a-0256 atmel-uc3a-1256
+    %types platform
+
+
+  %end
+
+  %subsection atmel-uc3a-0128 atmel-uc3a-1128
+    %types platform
+
+
+  %end
+
+  %requiretypes cpu
+  %requiretypes platform
+

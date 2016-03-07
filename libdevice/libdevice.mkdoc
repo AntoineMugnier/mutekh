@@ -1,0 +1,374 @@
+
+@moduledef{Devices support library}
+  @short Devices and drivers management library
+  @order 98
+
+  @moduledef{Valio device attributes}
+    @short Valio
+  @end moduledef
+
+  @section Pt {Accessing devices}
+
+    @section t {Device instance}
+
+      In order to use a device in MutekH, an instance of a @ref
+      device_s object must be available for that device. This object
+      may be dynamically allocated by calling the @ref device_alloc
+      function or declared as a global variable by using the @ref
+      #DEV_DECLARE_STATIC macro.
+
+      Application usually do not need to create device objects
+      themselves. Devices objects are generally dynamically created by
+      enumerator devices on system startup or statically declared in a
+      board description source file. They can however be declared in
+      any C file.
+
+      @code
+#include <device/device.h>
+
+DEV_DECLARE_STATIC(uart0_dev, "uart0", 0, my_uart_drv);
+      @end code
+    @end section
+
+    @section t {Device tree}
+      Device objects usually lives in the MutekH device tree. This
+      structure allows to lookup a device by path and helps writing
+      application code which works cross platforms.
+
+      Hierarchy in the device tree is related to device enumeration
+      order. The tree hierarchy may not reflect the hardware
+      interconnection of buses, which may be a graph anyway and may
+      also be different for memory, irq, clocks... Parent devices in
+      the tree are actually enumerator device that create child
+      devices when the enumeration takes place. When device
+      hierarchy is used, aliases nodes can be created.
+
+      When the @cref #CONFIG_DEVICE_TREE token is not defined, a read
+      only device registry is still available so that device lookup by
+      path can be performed in the same way. In this case device
+      objects can only be declared statically and the tree becomes a
+      flat list. This greatly reduce memory usage on embedded
+      platforms where dynamic device enumeration is not required.
+    @end section
+
+    @section t {Device resources}
+      Various predefined @ref dev_resource_type_e {types of resource
+      entries} may be attached to devices. These entries carry
+      information about device addresses, identifiers and connections
+      with other devices in the system.
+
+      Resource can be created dynamically by calling appropriate
+      functions or declared statically along with the device
+      declaration when the @ref #DEV_DECLARE_STATIC macro is used:
+
+      @code
+#include <device/resources.h>
+
+DEV_DECLARE_STATIC(uart0_dev, "uart0", 0, my_uart_drv,
+  /* memory address range */
+  DEV_STATIC_RES_MEM(0x4000e000, 0x4000e400)
+  ...
+);
+      @end code
+
+      Some types of resource embed a path references to an other
+      device in the tree, stating dependencies between device
+      drivers. For instance, a timer device usually have an irq
+      resource along with a reference to the appropriate interrupt
+      controller device.
+
+      @code
+#include <device/irq.h>
+
+DEV_DECLARE_STATIC(timer_dev, "timer", 0, my_timer_drv,
+  DEV_STATIC_RES_DEV_ICU("/irq_ctrl"),
+  DEV_STATIC_RES_IRQ(0, 42, DEV_IRQ_SENSE_RISING_EDGE, 0, 1),
+  ...
+);
+      @end code
+
+    @end section
+
+    @section t {Device classes}
+      MutekH use different APIs to provide access to different types
+      of device. These APIs are defined in device class headers and
+      are implemented by device drivers.
+
+      A device driver may actually implement multiple device classes
+      when the device has multiple functions. It does so by providing
+      a set of function pointers for each supported class of device.
+
+      It is possible to have a virtual device with a driver which is
+      implemented in pure software. For instance, a software
+      implementation of a cryptographic algorithm. It is also possible
+      for a driver not to access the hardware directly, relying on an
+      other device.
+    @end section
+
+    @section t {Device status}
+      In order to access a device in MutekH, the instance of the @ref
+      device_s object must be linked to a @ref driver_s object. When
+      the device is created by dynamic enumerations, the driver
+      registry is searched for a matching driver automatically. When
+      the device is declared statically by the @ref
+      #DEV_DECLARE_STATIC macro, a pointer to the driver is specified.
+
+      The initialization of the device by the driver is not performed
+      until all dependencies expressed in the device resources are
+      satisfied. This mean that all device path references in the
+      resources of the device must be valid and point to an
+      initialized device.
+
+      Once a driver a available and the initialization function
+      has been successful, the device can accessed by other modules,
+      including the application.
+
+      The @ref device_s::status field reflects the device
+      initialization status.
+    @end section
+
+    @section t {Device accessor}
+      Accessing a device require setting up a @ref {device_accessor_s}
+      object. A specific type of accessor actually exist for each
+      device class API. Accessor type names of are of the form @tt
+      {struct device_classname_s}.
+
+      As device drivers may implement multiple classes, it is required
+      to initialize a device accessor object for the right class. A
+      device accessor has two roles: it is a live reference to the
+      device object and a shortcut to one of the API implemented by
+      the driver. When the driver provides access to multiple
+      sub-devices with the same functions, a numerical id must also be
+      provided.
+
+      @code
+  struct device_timer_s t;
+  err = device_get_accessor(&t, timer_dev, DRIVER_CLASS_TIMER, 0);
+      @end code
+
+      It is also possible to initialize a device accessor from the
+      device path in the tree:
+      @code
+  err = device_get_accessor_by_path(&t, NULL, "/timer[0]", DRIVER_CLASS_TIMER);
+      @end code
+
+      Classes specific functions can then be invoked on the device by
+      using the @ref #DEVICE_OP macro:
+      @code
+  dev_timer_value_t date;
+  err = DEVICE_OP(&t, get_value, &date, 0);
+
+  device_put_accessor(&t);   /* release the device */
+      @end code
+
+    @end section
+
+  @end section
+
+  @section Pt {Requests and completion callback nesting}
+    Most device driver class APIs are asynchronous by design. They
+    work by submitting some kind of request to the driver which are
+    processed asynchronously. The driver function used to submit the
+    request always returns immediately and a callback mechanism is
+    used to notify the caller that the request has been processed. The
+    caller has to provide a completion handler function.
+
+    The callback mechanism used is in fact the kernel deferred routine
+    service defined in @ref {@mutek/kroutine.h}. The actual execution
+    of the completion handler may occur at various times depending on
+    both the driver used and the policy the caller as chosen for the
+    @ref kroutine_s object of the submitted request.
+
+    @code
+struct device_timer_s timer_dev;
+struct dev_timer_rq_s timer_rq;
+
+static KROUTINE_EXEC(timer_event)
+{
+  printk("timer deadline!\n");
+}
+
+void timer_start()
+{
+  kroutine_init_immediate(&timer_rq.rq.kr, timer_event);
+  ... DEVICE_OP(&timer_dev, request, &timer_rq);
+}
+    @end code
+
+    Basically the policy may require immediate or deferred execution
+    of the completion handler. Depending on the policy, it is executed
+    or scheduled when the @ref kroutine_exec function is called. The
+    driver may actually invoke this function from different execution
+    contexts when the request processing terminates:
+
+    @list
+      @item The @ref kroutine_exec function may be called @tt nested
+        from the driver function used to submit the request. In this
+        case, the request processing terminates even before the
+        request submitting function returns to the caller.
+      @item The @ref kroutine_exec function may be called from an @tt
+        irq handler.
+      @item The @ref kroutine_exec function may be called from an
+        interruptible context when the driver internally uses a
+        deferred processing mechanism.
+      @item The @ref kroutine_exec function may be even called from an
+        other completion handler when an other driver is used
+        internally by the driver.
+    @end list
+
+    The execution context may vary between requests. For instance, a
+    driver may choose to use a nested call when an error needs to be
+    reported immediately or when the amount of requested data is
+    already available from its internal buffers.
+
+    On the other side, the request submitter may want to start a new
+    request as soon as a previous request completes. It will then call
+    the request function of the driver from the completion handler.
+
+    @b {There is a risk of deep function calls nesting} when the
+    following conditions are all met:
+    @list
+      @item The driver calls the @ref kroutine_exec function nested
+        in its request submitting function @em {(1)},
+      @item the policy of the @ref kroutine_s object chosen by the
+        caller is @ref KROUTINE_IMMEDIATE @em {(2)} and
+      @item the caller submits a new request from its completion
+        handler function @em {(3)}.
+    @end list
+
+    In order to avoid this issue, some rules must be followed so one
+    of the above condition does not occur. When @em {(1)} is not
+    allowed, the driver can not report an immediate error through the
+    completion handler and needs to make the submit function return an
+    error code. This creates two different code path for error
+    handling by the caller and might as well prevent code factoring in
+    the driver. This is also an issue in case the driver is able to
+    satisfy the request immediately without waiting for an irq.
+
+    On the other hand, when @em {(2)} and @em {(3)} are not allowed to
+    occur simultaneously, the submission of a new request by the
+    caller will incur a slightly higher latency.
+
+    The retained rules actually depend on the class of the driver API.
+
+    @section t {Nested device request completion}
+      Most driver class APIs allow the driver to perform a nested call
+      to the @ref kroutine_exec function from their request submitting
+      function. In this case, the request submitter is @b not allowed to
+      submit an other request of any kind from its completion handler
+      when the policy is @ref KROUTINE_IMMEDIATE or similar.
+
+      This policy must be used only when the completion handler is
+      used to perform a short task like waking a scheduler context.
+      In most other cases, it should use the @ref KROUTINE_DEFERRED
+      policy for its completion handler. The handler will then execute
+      from an interruptible context and will not be nested in any
+      other call.
+
+      When this approach is used, the request submitting function of
+      the driver API does not return a value and all possible errors
+      are reported through the request completion handler.
+
+      Note that relying on deferred processing is fair because it
+      still allows good execution latency provided that preemptive
+      context switch is used along with the scheduler priority
+      feature. Performing a long processing in a completion handler
+      with immediate policy may prevent an urgent task from
+      executing. Relying on deferred execution is a way to let the
+      scheduler decide what is urgent.
+
+      @code
+struct device_char char_dev;
+struct dev_char_rq_s char_rq;
+
+static KROUTINE_EXEC(char_read_done)
+{
+  DEVICE_OP(&char_dev, request, &char_rq);
+  ...
+}
+
+void start()
+{
+  kroutine_init_deferred(&char_rq.rq.kr, char_read_done);
+  DEVICE_OP(&char_dev, request, &char_rq);
+  ...
+}
+      @end code
+    @end section
+
+    @section t {Nested device request submission}
+      Some driver class APIs like Timers and DMAs require short
+      latency. In this case, the request submitter is allowed to
+      submit an request to such a driver from a completion handler
+      even when the policy is @ref KROUTINE_IMMEDIATE.
+
+      The driver in turn must report any immediate error by making its
+      request submitting function return an error code. In this case
+      the request submission is rejected and the completion handler is
+      never called.
+
+      When no error is returned, the request is not allowed to
+      terminate immediately. The driver must defer the call to the
+      @ref kroutine_exec function by relying on an asynchronous
+      event. This include relying on an irq, a deferred request to an
+      other driver or a self scheduled deferred kroutine.
+
+      @code
+struct device_timer_s timer_dev;
+struct dev_timer_rq_s timer_rq;
+
+static KROUTINE_EXEC(timer_event)
+{
+  error_t err = DEVICE_OP(&timer_dev, request, &timer_rq);
+  ...
+}
+
+void start()
+{
+  kroutine_init_immediate(&timer_rq.rq.kr, timer_event);
+  error_t err = DEVICE_OP(&timer_dev, request, &timer_rq);
+  ...
+}
+      @end code
+    @end section
+
+  @end section
+
+@end moduledef
+
+@parse{
+device/device.h
+device/driver.h
+device/irq.h
+device/clock.h
+device/resources.h
+device/types.h
+
+device/class/cpu.h
+device/class/enum.h
+device/class/icu.h
+device/class/iomux.h
+device/class/cmu.h
+device/class/dma.h
+device/class/char.h
+device/class/mem.h
+device/class/timer.h
+device/class/gpio.h
+device/class/pwm.h
+device/class/crypto.h
+device/class/i2c.h
+device/class/spi.h
+device/class/persist.h
+device/class/rfpacket.h
+device/class/uart.h
+device/class/valio.h
+
+device/valio/adc.h
+device/valio/button.h
+device/valio/hwclock.h
+device/valio/keyboard.h
+device/valio/led.h
+device/valio/motion.h
+device/valio/motion_sensor.h
+device/valio/touchpad.h
+}

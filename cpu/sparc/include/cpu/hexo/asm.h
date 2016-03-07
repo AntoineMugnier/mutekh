@@ -22,59 +22,52 @@
 #ifndef CPU_ASM_H_
 #define CPU_ASM_H_
 
-#ifdef __MUTEK_ASM__
-
-.macro CPU_ID reg
-#  ifdef CONFIG_ARCH_SMP
-#   error missing CPUID macro for your architecture
-#  else
-        mov     %g0,                    \reg
-#  endif
-.endm
-
-.macro CPU_LOCAL_ld name, rd
-# ifdef CONFIG_ARCH_SMP
-         ld     [%g6 + %lo(\name)], \rd
-# else
-         set    \name,   \rd
-         ld     [\rd], \rd
-# endif
-.endm
-
-.macro CPU_LOCAL_st name, rd, rt
-# ifdef CONFIG_ARCH_SMP
-         st     \rd, [%g6 + %lo(\name)]
-# else
-         set    \name,   \rt
-         st     \rd,   [\rt]
-# endif
-.endm
-
-
-.macro WAIT
-# ifdef CONFIG_CPU_SPARC_LEON3
-        wr %g0, %asr19
-# endif 
-.endm
-
-# else /* not asm */
-
 asm(
-".macro WAIT \n"
-# ifdef CONFIG_CPU_SPARC_LEON3
-"        wr %g0, %asr19 \n"
-# else
-
-#  ifdef CONFIG_CPU_WAIT_IRQ
-#   error No wait opcode defined for selected sparc processor
+    " .macro CPU_ID _0 \n"
+# ifdef CONFIG_ARCH_SMP_CAPABLE
+#  if defined (CONFIG_CPU_SPARC_SOCLIB) || defined (CONFIG_CPU_SPARC_LEON3)
+    "        rd    %asr17, \\_0 \n"
+    "        srl   \\_0, 28, \\_0 \n"
+#  else
+#   error missing CPUID macro for your architecture
 #  endif
-# endif 
-".endm \n"
-);
-
-#  define ASM_SECTION(name)              \
-        ".section " name ",\"ax\",@progbits \n\t"
+# else
+    "        mov     %g0, \\_0 \n"
 # endif
+    " .endm\n"
+
+    " .macro CPU_LOCAL_ld _0, _1 \n"
+# ifdef CONFIG_ARCH_SMP
+    "          ld     [%g6 + %lo(\\_0)], \\_1 \n"
+# else
+    "          set    \\_0,   \\_1 \n"
+    "          ld     [\\_1], \\_1 \n"
+# endif
+    " .endm \n"
+
+
+
+    " .macro CPU_LOCAL_st _0, _1, _2 \n"
+# ifdef CONFIG_ARCH_SMP
+    "          st     \\_1, [%g6 + %lo(\\_0)] \n"
+# else
+    "          set    \\_0,   \\_2 \n"
+    "          st     \\_1,   [\\_2] \n"
+# endif
+    " .endm \n"
+
+
+
+    " .macro WAIT \n"
+# if defined (CONFIG_CPU_SPARC_LEON3) || defined (CONFIG_CPU_SPARC_SOCLIB)
+    "         wr %g0, %asr19 \n"
+    "         nop \n"
+    "         nop \n"
+# elif defined(CONFIG_CPU_WAIT_IRQ)
+#  error No wait opcode defined for selected sparc processor
+# endif
+    " .endm \n"
+);
 
 #endif
 

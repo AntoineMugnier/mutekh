@@ -35,28 +35,34 @@ C_HEADER_BEGIN
 #include <hexo/types.h>
 #include <hexo/error.h>
 
-#include <hexo/gpct_platform_hexo.h>
-#include <gpct/cont_ring.h>
+#include <gct_platform.h>
+#include <gct/container_ring.h>
 
 #include <stdarg.h>
 #include <unistd.h>
 
+config_depend(CONFIG_LIBC_PRINTF)
 ssize_t sprintf(char *str, const char *format, ...);
 
+config_depend(CONFIG_LIBC_PRINTF)
 ssize_t snprintf(char *str, size_t size, const char *format, ...);
 
+config_depend(CONFIG_LIBC_PRINTF)
 ssize_t vsprintf(char *str, const char *format, va_list ap);
 
+config_depend(CONFIG_LIBC_PRINTF)
 ssize_t vsnprintf(char *str, size_t size, const char *format, va_list ap);
 
-config_depend(CONFIG_LIBC_STREAM_STD)
+config_depend_and2(CONFIG_LIBC_SCANF, CONFIG_LIBC_STREAM_STD)
 ssize_t scanf(const char *format, ...);
 
-config_depend(CONFIG_LIBC_STREAM_STD)
+config_depend_and2(CONFIG_LIBC_SCANF, CONFIG_LIBC_STREAM_STD)
 ssize_t vscanf(const char *format, va_list ap);
 
+config_depend(CONFIG_LIBC_SCANF)
 ssize_t sscanf(const char *str, const char *format, ...);
 
+config_depend(CONFIG_LIBC_SCANF)
 ssize_t vsscanf(const char *str, const char *format, va_list ap);
 
 /** standard BUFSIZ macro */
@@ -74,7 +80,9 @@ enum				stdio_buf_mode_e
 
 #ifdef CONFIG_LIBC_STREAM
 
-CONTAINER_TYPE(stream_fifo, RING, uint8_t, CONFIG_LIBC_STREAM_BUFFER_SIZE);
+#define GCT_CONTAINER_ALGO_stream_fifo RING
+
+GCT_CONTAINER_TYPES(stream_fifo, uint8_t, CONFIG_LIBC_STREAM_BUFFER_SIZE);
 
 typedef struct			file_s
 {
@@ -107,7 +115,7 @@ void __stdio_stream_init(FILE *stream);
 typedef struct file_s { } FILE;
 #endif /* CONFIG_LIBC_STREAM */
 
-config_depend_and2(CONFIG_LIBC_STREAM, CONFIG_VFS)
+config_depend_and2(CONFIG_LIBC_STREAM, CONFIG_LIBC_VFS)
 FILE *fopen(const char *path, const char *mode);
 
 config_depend(CONFIG_LIBC_STREAM)
@@ -143,16 +151,16 @@ error_t fflush(FILE *file);
 config_depend(CONFIG_LIBC_STREAM)
 error_t fpurge(FILE *file);
 
-config_depend(CONFIG_LIBC_STREAM)
+config_depend_and2(CONFIG_LIBC_STREAM, CONFIG_LIBC_PRINTF)
 ssize_t vfprintf(FILE *file, const char *format, va_list ap);
 
-config_depend(CONFIG_LIBC_STREAM)
+config_depend_and2(CONFIG_LIBC_STREAM, CONFIG_LIBC_PRINTF)
 ssize_t fprintf(FILE *file, const char *format, ...);
 
-config_depend(CONFIG_LIBC_STREAM)
+config_depend_and2(CONFIG_LIBC_STREAM, CONFIG_LIBC_SCANF)
 ssize_t fscanf(FILE *file, const char *format, ...);
 
-config_depend(CONFIG_LIBC_STREAM)
+config_depend_and2(CONFIG_LIBC_STREAM, CONFIG_LIBC_SCANF)
 ssize_t vfscanf(FILE *file, const char *fmt, va_list ap);
 
 config_depend(CONFIG_LIBC_STREAM)
@@ -161,57 +169,57 @@ int_fast16_t ungetc(int_fast16_t c, FILE *file);
 config_depend(CONFIG_LIBC_STREAM)
 error_t setvbuf(FILE *file, char *buf, enum stdio_buf_mode_e mode, size_t size);
 
-config_depend_inline(CONFIG_LIBC_STREAM,
+config_depend_alwaysinline(CONFIG_LIBC_STREAM,
 fpos_t ftell(FILE *file),
 {
   return file->pos;
 });
 
-config_depend_inline(CONFIG_LIBC_STREAM,
+config_depend_alwaysinline(CONFIG_LIBC_STREAM,
 void rewind(FILE *file),
 {
   fseek(file, 0, SEEK_SET);
 });
 
-config_depend_inline(CONFIG_LIBC_STREAM,
+config_depend_alwaysinline(CONFIG_LIBC_STREAM,
 error_t fgetpos(FILE *file, fpos_t *pos),
 {
   *pos = file->pos;
   return 0;
 });
 
-config_depend_inline(CONFIG_LIBC_STREAM,
+config_depend_alwaysinline(CONFIG_LIBC_STREAM,
 error_t fsetpos(FILE *file, const fpos_t *pos),
 {
   return fseek(file, *pos, SEEK_SET);
 });
 
-config_depend_inline(CONFIG_LIBC_STREAM,
+config_depend_alwaysinline(CONFIG_LIBC_STREAM,
 int_fast16_t getc(FILE *file),
 {
   return fgetc(file);
 });
 
-config_depend_inline(CONFIG_LIBC_STREAM,
+config_depend_alwaysinline(CONFIG_LIBC_STREAM,
 int_fast16_t putc(int_fast16_t c, FILE *file),
 {
   return fputc(c, file);
 });
 
-config_depend_inline(CONFIG_LIBC_STREAM,
+config_depend_alwaysinline(CONFIG_LIBC_STREAM,
 void clearerr(FILE *stream),
 {
   stream->error = 0;
   stream->eof = 0;
 });
 
-config_depend_inline(CONFIG_LIBC_STREAM,
+config_depend_alwaysinline(CONFIG_LIBC_STREAM,
 bool_t ferror(FILE *stream),
 {
   return stream->error;
 });
 
-config_depend_inline(CONFIG_LIBC_STREAM,
+config_depend_alwaysinline(CONFIG_LIBC_STREAM,
 bool_t feof(FILE *stream),
 {
   return stream->eof;
@@ -226,31 +234,32 @@ extern FILE * const stdout;
 config_depend(CONFIG_LIBC_STREAM_STD)
 extern FILE * const stderr;
 
-config_depend_inline(CONFIG_LIBC_STREAM_STD,
-int_fast16_t getchar(),
+config_depend_alwaysinline(CONFIG_LIBC_STREAM_STD,
+int_fast16_t getchar(void),
 {
   return fgetc(stdin);
 });
 
-config_depend_inline(CONFIG_LIBC_STREAM_STD,
+config_depend_alwaysinline(CONFIG_LIBC_STREAM_STD,
 int_fast16_t putchar(int_fast16_t c),
 {
   return fputc(c, stdout);
 });
 
-config_depend_inline(CONFIG_LIBC_STREAM_STD,
+/** @see printf */
+config_depend_and2_alwaysinline(CONFIG_LIBC_STREAM_STD, CONFIG_LIBC_PRINTF,
 ssize_t vprintf(const char *format, va_list ap),
 {
   return vfprintf(stdout, format, ap);
 });
 
 /** This function use libc buffered streams and thus require @ref
-    #CONFIG_LIBC_STREAM_STD enabled. Consider using @ref printk
-    instead for direct output. */
-config_depend(CONFIG_LIBC_STREAM_STD)
+    #CONFIG_LIBC_STREAM_STD to be enabled. Consider using @ref printk
+    instead for direct output. @see formatter_printf */
+config_depend_and2(CONFIG_LIBC_STREAM_STD, CONFIG_LIBC_PRINTF)
 ssize_t printf(const char *format, ...);
 
-config_depend_inline(CONFIG_LIBC_STREAM_STD,
+config_depend_alwaysinline(CONFIG_LIBC_STREAM_STD,
 char *gets(char *s),
 {
   return fgets(s, 1024, stdin);

@@ -1,4 +1,4 @@
-
+#include <mutek/startup.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -6,6 +6,8 @@
 #include <pthread.h>
 
 #include <mutek/printk.h>
+#include <mutek/mem_alloc.h>
+
 #include <hexo/lock.h>
 #include <crypto/crc32.h>
 
@@ -51,10 +53,11 @@ static void hash_check(const void *data, size_t len, const uint8_t *hash)
   }
 }
 
+static
 void * thread(void *id_)
 {
   size_t id = (size_t)id_;
-  size_t i, ac = 0, rc = 0, fc = 0, nc = 0;
+  size_t i, ac = 0, rc = 0, fc = 0, nc = 0, ar = 0, nr = 0;
 
   printk("thread %i started\n", id);
 
@@ -63,15 +66,19 @@ void * thread(void *id_)
     uint_fast16_t e = rand() % POOL_SIZE;
     struct block_s *b = pool + e;
 
+    if (i % 512 == 0)
+      mem_check();
+
     pthread_mutex_lock(&b->lock);
 
-    switch (rand() % 3) {
+    uint32_t r = rand() % 100;
+    switch (r) {
 
-    case 0:			/* switch */
+    case 0 ... 30:			/* switch */
       pthread_yield();
       break;
 
-    case 1: {			/* free/malloc */
+    case 31 ... 70: {			/* free/malloc */
 
       if (b->data) {
 	hash_check(b->data, b->size, b->hash);
@@ -81,22 +88,45 @@ void * thread(void *id_)
 	b->size = 0;
       }
 
-      size_t size = rand() % MAX_SIZE;
-      void *data = malloc(size);
-      if (data) {
-	b->data = data;
-	b->size = size;
-	memset(data, rand(), size);
-	hash_set(data, size, b->hash);
-	ac++;
-      } else {
-	nc++;
-      }
+      if (r <= 60)              /* malloc */
+        {
+          size_t size = rand() % MAX_SIZE;
+          size_t align = 1 << (rand() % 9);
+          void *data = mem_alloc_align(size, align, mem_scope_sys);
+          if (data) {
+            assert((uintptr_t)data % align == 0);
+            b->data = data;
+            b->size = size;
+            memset(data, rand(), size);
+            hash_set(data, size, b->hash);
+            ac++;
+          } else {
+            if (size)
+              nc++;
+          }
+        }
+      else                      /* reserve */
+        {
+          uint8_t *start = (uint8_t*)memory_allocator_region_address(default_region) +
+            (rand() * rand()) % memory_allocator_region_size(default_region);
+          size_t size = rand() % MAX_SIZE;
+          void *data = memory_allocator_reserve(default_region, start, size);
+          if (data) {
+            b->data = data;
+            b->size = size;
+            memset(data, rand(), size);
+            hash_set(data, size, b->hash);
+            ar++;
+          } else {
+            if (size)
+              nr++;
+          }
+        }
 
       break;
     }
 
-    case 2: {			/* realloc */
+    case 71 ... 100: {			/* realloc */
 
       if (b->data)
 	hash_check(b->data, b->size, b->hash);
@@ -110,7 +140,8 @@ void * thread(void *id_)
 	hash_set(data, size, b->hash);
 	rc++;
       } else {
-	nc++;
+        if (size)
+          nc++;
       }
 
       break;
@@ -121,8 +152,10 @@ void * thread(void *id_)
     pthread_mutex_unlock(&b->lock);
   }
 
-  printk("cpu %i thread %i terminated: %i crc errors, %i alloc, %i free, %i realloc, %i alloc fail\n",
-	 cpu_id(), id, errors, ac, fc, rc, nc);
+  mem_check();
+
+  printk("cpu %i thread %i terminated: %i crc errors, %i alloc, %i free, %i realloc, %i alloc fail, %i reserve, %i reserve fail\n",
+	 cpu_id(), id, errors, ac, fc, rc, nc, ar, nr);
   assert(!errors);
 
   return NULL;
@@ -130,7 +163,7 @@ void * thread(void *id_)
 
 pthread_t threads[THREAD_COUNT];
 
-void app_start()
+void app_start(void)
 {
   size_t i;
 

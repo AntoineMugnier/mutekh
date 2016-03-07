@@ -34,6 +34,8 @@
 #endif
 .endm
 
+        .extern x86emu_context
+
 FUNC_START(.text, cpu_context_switch)
 
         GET_TLS_VAR %ecx
@@ -44,20 +46,21 @@ FUNC_START(.text, cpu_context_switch)
 
         // save stack
         lea     4(%esp), %eax
-        movl    %eax, (x86emu_context + CPU_X86EMU_CONTEXT_esp)(%edx)
+        movl    %eax, (x86emu_context + _offsetof(cpu_context_s, kregs.esp))(%edx)
 
         // eflags
         pushf
-        popl    (x86emu_context + CPU_X86EMU_CONTEXT_EFLAGS)(%edx)
+        popl    (x86emu_context + _offsetof(cpu_context_s, kregs.eflags))(%edx)
 
         // save pc
         movl    (%esp), %eax
-        movl    %eax, (x86emu_context + CPU_X86EMU_CONTEXT_EIP)(%edx) // return address
+        movl    %eax, (x86emu_context + _offsetof(cpu_context_s, kregs.eip))(%edx) // return address
 
         // save "callee saved" registers only
-        .irp    reg, edi, esi, ebp, ebx
-        movl    %\reg, (x86emu_context + CPU_X86EMU_CONTEXT_\reg)(%edx)
-        .endr
+        movl    %edi, (x86emu_context + _offsetof(cpu_context_s, kregs.edi))(%edx)
+        movl    %esi, (x86emu_context + _offsetof(cpu_context_s, kregs.esi))(%edx)
+        movl    %ebp, (x86emu_context + _offsetof(cpu_context_s, kregs.ebp))(%edx)
+        movl    %ebx, (x86emu_context + _offsetof(cpu_context_s, kregs.ebx))(%edx)
 
         jmp     1f
 
@@ -94,16 +97,20 @@ FUNC_START(.text, cpu_context_jumpto)
         subl    $__context_data_start, %edx
 
         // restore stack pointer
-        mov     (x86emu_context + CPU_X86EMU_CONTEXT_esp)(%edx), %esp
+        mov     (x86emu_context + _offsetof(cpu_context_s, kregs.esp))(%edx), %esp
 
         // prepare restoration
-        pushl   (x86emu_context + CPU_X86EMU_CONTEXT_EIP)(%edx)
-        pushl   (x86emu_context + CPU_X86EMU_CONTEXT_EFLAGS)(%edx)
+        pushl   (x86emu_context + _offsetof(cpu_context_s, kregs.eip))(%edx)
+        pushl   (x86emu_context + _offsetof(cpu_context_s, kregs.eflags))(%edx)
 
         // restore gp regs
-        .irp    reg, ebp, ebx, ecx, eax, edi, esi, edx
-        mov     (x86emu_context + CPU_X86EMU_CONTEXT_\reg)(%edx), %\reg
-        .endr
+        mov     (x86emu_context + _offsetof(cpu_context_s, kregs.ebp))(%edx), %ebp
+        mov     (x86emu_context + _offsetof(cpu_context_s, kregs.ebx))(%edx), %ebx
+        mov     (x86emu_context + _offsetof(cpu_context_s, kregs.ecx))(%edx), %ecx
+        mov     (x86emu_context + _offsetof(cpu_context_s, kregs.eax))(%edx), %eax
+        mov     (x86emu_context + _offsetof(cpu_context_s, kregs.edi))(%edx), %edi
+        mov     (x86emu_context + _offsetof(cpu_context_s, kregs.esi))(%edx), %esi
+        mov     (x86emu_context + _offsetof(cpu_context_s, kregs.edx))(%edx), %edx
 
         popf
         ret
@@ -145,7 +152,7 @@ FUNC_START(.text, cpu_context_stack_use)
         subl    $__context_data_start, %eax
 
         // use context stack
-        movl    (x86emu_context + CPU_X86EMU_CONTEXT_esp)(%eax), %esp
+        movl    (x86emu_context + _offsetof(cpu_context_s, kregs.esp))(%eax), %esp
 
 #ifndef CONFIG_RELEASE
         // prevent use of context local storage

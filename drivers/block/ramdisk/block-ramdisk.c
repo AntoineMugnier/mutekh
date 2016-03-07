@@ -23,7 +23,7 @@
 
 #include <hexo/types.h>
 
-#include <device/block.h>
+#include <device/class/block.h>
 #include <device/device.h>
 #include <device/driver.h>
 
@@ -40,7 +40,7 @@
 
 /**************************************************************/
 
-DEVBLOCK_REQUEST(block_ramdisk_request)
+DEV_BLOCK_REQUEST(block_ramdisk_request)
 {
   struct block_ramdisk_context_s *pv = dev->drv_pv;
   struct dev_block_params_s *p = &pv->params;
@@ -85,12 +85,12 @@ DEVBLOCK_REQUEST(block_ramdisk_request)
   lock_release(&dev->lock);
 }
 
-DEVBLOCK_GETPARAMS(block_ramdisk_getparams)
+DEV_BLOCK_GETPARAMS(block_ramdisk_getparams)
 {
   return &(((struct block_ramdisk_context_s *)(dev->drv_pv))->params);
 }
 
-DEVBLOCK_GETRQSIZE(block_rmadisk_getrqsize)
+DEV_BLOCK_GETRQSIZE(block_ramdisk_getrqsize)
 {
   return sizeof(struct dev_block_rq_s);
 }
@@ -104,33 +104,18 @@ DEV_CLEANUP(block_ramdisk_cleanup)
   mem_free(pv);
 }
 
-static const struct devenum_ident_s	block_ramdisk_ids[] =
-{
-	DEVENUM_FDTNAME_ENTRY("ramdisk", 0, 0),
-	{ 0 }
-};
+#define block_ramdisk_use dev_use_generic
 
-const struct driver_s	block_ramdisk_drv =
-{
-  .class		= device_class_block,
-  .id_table		= block_ramdisk_ids,
-  .f_init		= block_ramdisk_init,
-  .f_cleanup		= block_ramdisk_cleanup,
-  .f_irq		= DEVICE_IRQ_INVALID,
-  .f.blk = {
-    .f_request		= block_ramdisk_request,
-    .f_getparams	= block_ramdisk_getparams,
-    .f_getrqsize	= block_rmadisk_getrqsize,
-  }
-};
+DRIVER_DECLARE(block_ramdisk_drv, 0, "RamDisk", block_ramdisk,
+               DRIVER_MEM_METHODS(block_ramdisk));
 
-REGISTER_DRIVER(block_ramdisk_drv);
+DRIVER_REGISTER(block_ramdisk_drv,
+                DEV_ENUM_FDTNAME_ENTRY("ramdisk", 0, 0));
 
 DEV_INIT(block_ramdisk_init)
 {
   struct block_ramdisk_context_s	*pv;
 
-  dev->drv = &block_ramdisk_drv;
 
   /* allocate private driver data */
   pv = mem_alloc(sizeof(*pv), (mem_scope_sys));

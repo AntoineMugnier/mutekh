@@ -30,20 +30,6 @@
 void
 __pthread_switch(void);
 
-void
-__pthread_cancel_self(void);
-
-# if 0
-static inline void
-__pthread_testcancel_async(void)
-{
-  pthread_t self = pthread_self();
-
-  if (!self->canceled && self->cancelasync)
-    __pthread_cancel_self();
-}
-# endif
-
 #endif  /* CONFIG_PTHREAD_CANCEL */
 
 extern CONTEXT_LOCAL pthread_t __pthread_current;

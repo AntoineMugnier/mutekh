@@ -25,7 +25,7 @@
 #include <hexo/iospace.h>
 
 #include <device/device.h>
-#include <device/icu.h>
+#include <device/class/icu.h>
 #include <device/driver.h>
 
 #include <mutek/mem_alloc.h>
@@ -75,7 +75,7 @@ int32_t soclib_fdaccess_rq(struct device_s *dev,
   /* enqueue request */
   soclib_fdaccess_rq_pushback(&pv->queue, rq);
 
-# ifdef CONFIG_MUTEK_SCHEDULER
+# ifdef CONFIG_MUTEK_CONTEXT_SCHED
   rq->ctx = sched_get_current();
   sched_stop_unlock(&dev->lock);
   CPU_INTERRUPT_RESTORESTATE;
@@ -105,24 +105,13 @@ int32_t soclib_fdaccess_rq(struct device_s *dev,
   return rq->retval;
 }
 
-static const struct devenum_ident_s	soclib_fdaccess_ids[] =
-{
-  DEVENUM_FDTNAME_ENTRY("soclib:fdaccess", 0, 0),
-  { 0 }
-};
+#define soclib_fdaccess_use dev_use_generic
 
-const struct driver_s	soclib_fdaccess_drv =
-{
-  .class		= device_class_none,
-  .id_table		= soclib_fdaccess_ids,
-  .f_init		= soclib_fdaccess_init,
-  .f_cleanup		= soclib_fdaccess_cleanup,
-#ifdef CONFIG_HEXO_IRQ
-  .f_irq		= soclib_fdaccess_irq,
-#endif
-};
+DRIVER_DECLARE(soclib_fdaccess_drv, 0, "SoCLib FDAccess", soclib_fdaccess,
+               DRIVER_MEM_METHODS(soclib_fdaccess));
 
-REGISTER_DRIVER(soclib_fdaccess_drv);
+DRIVER_REGISTER(soclib_fdaccess_drv,
+                DEV_ENUM_FDTNAME_ENTRY("soclib:fdaccess", 0, 0));
 
 #ifdef CONFIG_HEXO_IRQ
 DEV_IRQ(soclib_fdaccess_irq)
@@ -137,7 +126,7 @@ DEV_IRQ(soclib_fdaccess_irq)
     if (rq)
       {
         soclib_fdaccess_read_rq(dev, rq);
-#if defined(CONFIG_MUTEK_SCHEDULER)
+#if defined(CONFIG_MUTEK_CONTEXT_SCHED)
         if (rq->ctx)
           sched_context_start(rq->ctx);
 #endif
@@ -161,7 +150,6 @@ DEV_INIT(soclib_fdaccess_init)
 {
   struct soclib_fdaccess_devpv_s	*pv;
 
-  dev->drv = &soclib_fdaccess_drv;
 
   /* allocate private driver data */
   pv = mem_alloc(sizeof(*pv), (mem_scope_sys));

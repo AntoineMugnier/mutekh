@@ -5,7 +5,7 @@
 # Platform types
   CONFIG_ARCH_IBMPC
   CONFIG_CPU_X86
-  CONFIG_ARCH_SMP
+  
   CONFIG_CPU_MAXCOUNT 4
 
 # Processor

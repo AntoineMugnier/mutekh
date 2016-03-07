@@ -22,7 +22,7 @@
 
 /**
  * @file
- * @module{Mutek}
+ * @module{Kernel services}
  * @short Memory region allocation stuff
  */
 
@@ -32,17 +32,18 @@
 #include <mutek/mem_alloc.h>
 #include <mutek/memory_allocator.h>
 
-#define CONTAINER_LOCK_region_list HEXO_SPIN_IRQ
-
-#include <hexo/gpct_platform_hexo.h>
-#include <hexo/gpct_lock_hexo.h>
-#include <gpct/cont_slist.h>
+#include <gct_platform.h>
+#include <gct_lock_hexo_lock_irq.h>
+#include <gct/container_slist.h>
 
 enum mem_scope_e;
 
+#define GCT_CONTAINER_LOCK_region_list HEXO_LOCK_IRQ
+#define GCT_CONTAINER_ALGO_region_list SLIST
+
 struct mem_region_s
 {
-  CONTAINER_ENTRY_TYPE(SLIST) list_entry;
+  GCT_CONTAINER_ENTRY(region_list, list_entry);
   uint_fast16_t priority;
   struct memory_allocator_region_s *region;
 };

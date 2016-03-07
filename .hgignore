@@ -3,3 +3,7 @@ glob:*.o
 glob:obj-*
 glob:*.log
 glob:*.diff
+glob:*~
+doc/html
+doc/mutek-api.mkdoclib
+doc/config.h

@@ -22,7 +22,7 @@
 
 /**
    @file
-   @module{Hexo}
+   @module{Hardware abstraction layer}
    @short Execution context management stuff
 
    The @ref context_s data structure is used to store execution state
@@ -41,8 +41,6 @@
 #define HEXO_CONTEXT_S_TLS              0
 /** @internal offset of unlock field in @ref context_s */
 #define HEXO_CONTEXT_S_UNLOCK           1
-
-#ifndef __MUTEK_ASM__
 
 # include <hexo/types.h>
 # include <hexo/local.h>
@@ -67,9 +65,6 @@ struct context_s
 # endif
 
 # ifdef CONFIG_HEXO_CONTEXT_STATS
-  /** number of cpu cycles spent executing this context */
-  __attribute__((aligned(8)))
-  cpu_cycle_t cycles;
   size_t      enter_cnt;
 #  ifdef CONFIG_HEXO_CONTEXT_PREEMPT
   size_t      preempt_cnt;
@@ -103,14 +98,17 @@ typedef CONTEXT_ENTRY(context_entry_t);
     common context queuing operations: See @ref sched_preempt_switch,
     @ref sched_preempt_stop and @ref sched_preempt_wait_unlock.
  */
-#define CONTEXT_PREEMPT(n) struct context_s * (n)(void *param)
+#define CONTEXT_PREEMPT(n) struct context_s * (n)(void)
 /** context preempt function prototype. @csee #CONTEXT_PREEMPT */
 typedef CONTEXT_PREEMPT(context_preempt_t);
 
+/** @showvalue irq enable restore function prototype.
+    @see context_set_irqen */
+#define CONTEXT_IRQEN(n) void (n)(void)
+/** context irq restore enable function prototype. @csee #CONTEXT_IRQEN */
+typedef CONTEXT_IRQEN(context_irqen_t);
 
-#endif  /* __MUTEK_ASM__ */
 #include "cpu/hexo/context.h"
-#ifndef __MUTEK_ASM__
 
 /** @internal @This only performs processor specific part of the job. @csee context_switch_to */
 void cpu_context_switch(struct context_s *new);
@@ -149,31 +147,31 @@ void cpu_context_set_user(uintptr_t stack_ptr, uintptr_t entry, reg_t param);
 # endif
 
 # ifdef CONFIG_HEXO_CONTEXT_PREEMPT
-/** @internal */
-extern CPU_LOCAL context_preempt_t *cpu_preempt_handler;
-/** @internal */
-extern CPU_LOCAL void *cpu_preempt_param;
-
 /** @This sets a preemption handler function local to the executing
     processor. The preemtion handler pointer is reset to @tt NULL on
-    each exception entry and can be setup by the exception handler when
-    context preemption is needed on exception return.
+    each exception entry and can be setup from an interrupt handler when
+    context preemption is needed on interrupt return.
 
-    This function must only be called from within @ref
-    cpu_syscall_handler_t, @ref cpu_exception_handler_t or @ref
-    cpu_interrupt_handler_t functions or nested calls.
+    This function returns an error if a handler has already been set
+    during the current interrupt or if it is not called from an
+    interrupt handler. This function must be called with interrupts
+    disabled.
 
     @see #CONTEXT_PREEMPT */
-static inline void context_set_preempt(context_preempt_t *func, void *param)
-{
-  CPU_LOCAL_SET(cpu_preempt_handler, func);
-  CPU_LOCAL_SET(cpu_preempt_param, param);
-}
+ALWAYS_INLINE error_t context_set_preempt(context_preempt_t *func);
+# endif
+
+# ifdef CONFIG_HEXO_CONTEXT_IRQEN
+/** @This sets an irq re-enable handler function local to the
+    executing processor. It is called when the interrupt enable state
+    is restored by the @ref cpu_interrupt_restorestate function. The
+    handler pointer is reset to @tt NULL on context switch. */
+ALWAYS_INLINE void context_set_irqen(context_irqen_t *func);
 # endif
 
 /** @This sets address of a lock which must be unlocked on next context
     restoration. The lock address is reset to NULL once unlock has been performed. */
-static inline void context_set_unlock(struct context_s *context, lock_t *lock)
+ALWAYS_INLINE void context_set_unlock(struct context_s *context, lock_t *lock)
 {
 # ifdef CONFIG_ARCH_SMP
   // FIXME use arch code to get atomic value address from lock
@@ -184,10 +182,13 @@ static inline void context_set_unlock(struct context_s *context, lock_t *lock)
 /** @internal */
 extern CONTEXT_LOCAL struct context_s *context_cur;
 
+/** @internal */
+extern CPU_LOCAL struct context_s cpu_main_context;
+
 /** @This executes the given function using given existing context
     stack while the context is not actually running. @see sched_tmp_context */
 __attribute__((noreturn))
-static inline void context_stack_use(struct context_s *context,
+ALWAYS_INLINE void context_stack_use(struct context_s *context,
                                      context_entry_t *func, void *param)
 {
   cpu_context_stack_use(context, func, param);
@@ -208,9 +209,6 @@ void * context_destroy(struct context_s *context);
 
 
 #ifdef CONFIG_HEXO_CONTEXT_STATS
-/** @internal timestamp of last context switch on this processor */
-extern CPU_LOCAL cpu_cycle_t context_switch_time;
-
 /** @internal @This updates context stats when current context is preempted */
 void context_preempt_stats(struct context_s *context);
 /** @internal @This updates context stats when leaving current context on switch. */
@@ -222,7 +220,7 @@ void context_enter_stats(struct context_s *context);
 
 
 /** @This saves current context and restore given context. */
-static inline void context_switch_to(struct context_s *context)
+ALWAYS_INLINE void context_switch_to(struct context_s *context)
 {
 #ifdef CONFIG_HEXO_CONTEXT_STATS
   struct context_s *cur = CONTEXT_LOCAL_GET(context_cur);
@@ -244,7 +242,7 @@ static inline void context_switch_to(struct context_s *context)
 }
 
 /** @This restores given context without saving current context. */
-static inline void
+ALWAYS_INLINE void
 __attribute__((noreturn))
 context_jump_to(struct context_s *context)
 {
@@ -261,12 +259,10 @@ context_jump_to(struct context_s *context)
 }
 
 /** @This returns a pointer to current context */
-static inline struct context_s * context_current(void)
+ALWAYS_INLINE struct context_s * context_current(void)
 {
   return CONTEXT_LOCAL_GET(context_cur);
 }
-
-#endif  /* __MUTEK_ASM__ */
 
 #endif
 

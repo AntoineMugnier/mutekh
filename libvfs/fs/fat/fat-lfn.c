@@ -16,7 +16,7 @@
   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
   02110-1301 USA
 
-  Copyright Alexandre Becoulet, <alexandre.becounet@lip6.fr>, 2009
+  Copyright Alexandre Becoulet, <alexandre.becounet@lip6.fr>, 2009,2014
 */
 
 #include <hexo/endian.h>
@@ -24,13 +24,14 @@
 #include <mutek/printk.h>
 #include <mutek/mem_alloc.h>
 
-#include <device/block.h>
+#include <device/class/block.h>
 #include <device/driver.h>
 #include <device/device.h>
-#include <vfs/types.h>
+
+#include <vfs/node.h>
 #include <vfs/file.h>
-#include <vfs/ops.h>
 #include <vfs/fs.h>
+#include <vfs/name.h>
 
 #include "fat-sector-cache.h"
 #include "fat.h"
@@ -151,9 +152,9 @@ error_t fat_get_next_dirent(struct fat_file_s *ffile,
             if ( id == LFN_ID_COMPLETED && flen )
                 vfs_name_mangle(fname, flen, vfs_mangled_name);
             else
-                fat_name_to_vfs(vfs_mangled_name, dirent->old.name);
+                fat_name_to_vfs(CONFIG_VFS_NAMELEN, vfs_mangled_name, dirent->old.name);
 
-            fat_name_to_vfs(name_83, dirent->old.name);
+            fat_name_to_vfs(FAT_83_NAMELEN, name_83, dirent->old.name);
 
             return 1;
         }

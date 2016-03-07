@@ -25,6 +25,8 @@
 
 #define CPU_CPU_H_
 
+#include <hexo/asm.h>
+
 /** sparc psr trap enabled bit */
 #define SPARC_PSR_TRAP_ENABLED     0x20
 /** sparc psr previous super user mode */
@@ -41,11 +43,8 @@
 #define SPARC_TRAP_USERBREAK    1
 #define SPARC_TRAP_WINFLUSH     3
 
-#ifndef __MUTEK_ASM__
-
-# ifdef CONFIG_ARCH_SMP
-extern void * cpu_local_storage[CONFIG_CPU_MAXCOUNT];
-# endif
+/** register window save area on stack */
+#define SPARC_STACK_REDZONE     (16 * INT_REG_SIZE/8)
 
 /** general purpose regsiters count */
 # define CPU_GPREG_COUNT	32
@@ -56,11 +55,8 @@ extern void * cpu_local_storage[CONFIG_CPU_MAXCOUNT];
                 "%l0", "%l1", "%l2", "%l3", "%l4", "%l5", "%l6", "%l7",             \
                 "%i0", "%i1", "%i2", "%i3", "%i4", "%i5", "%i6", "%i7"
 
-# undef sparc
-# define CPU_TYPE_NAME sparc
-
 /** return sparc cpu windows count */
-static inline size_t
+ALWAYS_INLINE size_t
 cpu_sparc_wincount(void)
 {
   uint32_t wim_mask = 0xffffffff;
@@ -77,17 +73,16 @@ cpu_sparc_wincount(void)
   return __builtin_popcount(wim_mask);
 }
 
-static inline cpu_id_t
+ALWAYS_INLINE cpu_id_t
 cpu_id(void)
 {
-  //  reg_t         reg;
-  /** FIXME */
-
-  return 0;
+  reg_t ret;
+  asm("CPU_ID %0" : "=r" (ret));
+  return ret;
 }
 
-static inline
-reg_t cpu_get_stackptr()
+ALWAYS_INLINE
+reg_t cpu_get_stackptr(void)
 {
     reg_t ret;
     asm("mov %%o6, %0"
@@ -95,46 +90,28 @@ reg_t cpu_get_stackptr()
     return ret;
 }
 
-static inline bool_t
+ALWAYS_INLINE bool_t
 cpu_isbootstrap(void)
 {
-  return cpu_id() == 0;
+  return cpu_id() == CONFIG_ARCH_BOOTSTRAP_CPU_ID;
 }
 
-static inline cpu_cycle_t
-cpu_cycle_count(void)
-{
-  extern cpu_cycle_t sparc_fake_tsc;
-  return sparc_fake_tsc++;
-}
-
-static inline void
-cpu_trap()
+ALWAYS_INLINE void
+cpu_trap(void)
 {
   asm volatile ("ta %0 \n"
                 "nop \n"
                 : : "i" (SPARC_TRAP_USERBREAK) );
 }
 
-static inline void *cpu_get_cls(cpu_id_t cpu_id)
-{
-# ifdef CONFIG_ARCH_SMP
-  return cpu_local_storage[cpu_id];
-# endif
-  return NULL;
-}
-
-static inline void cpu_dcache_invld(void *ptr)
+ALWAYS_INLINE void cpu_dcache_invld(void *ptr)
 {
 }
 
-static inline size_t cpu_dcache_line_size()
+ALWAYS_INLINE size_t cpu_dcache_line_size(void)
 {
   return CONFIG_CPU_CACHE_LINE;
 }
-
-
-#endif  /* __MUTEK_ASM__ */
 
 #endif
 

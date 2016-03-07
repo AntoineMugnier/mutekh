@@ -1,0 +1,10 @@
+
+@moduledef{Pthread library}
+ @short POSIX threads library
+ @order 87
+@end moduledef
+
+@parse{
+pthread.h
+}
+

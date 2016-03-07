@@ -23,7 +23,7 @@
 
 #include <hexo/types.h>
 
-#include <device/enum.h>
+#include <device/class/enum.h>
 #include <device/device.h>
 #include <device/driver.h>
 
@@ -204,21 +204,17 @@ pci_enum_probe(struct device_s *dev)
  * device open operation
  */
 
-const struct driver_s	enum_pci_drv =
-{
-  .class		= device_class_enum,
-  .f_init		= enum_pci_init,
-  .f_cleanup		= enum_pci_cleanup,
-  .f.denum = {
-    .f_lookup		= enum_pci_lookup,
-  }
-};
+#define enum_pci_use dev_use_generic
+
+DRIVER_DECLARE(enum_pci_drv, 0, "PCI Enumerator", enum_pci,
+               DRIVER_ENUM_METHODS(enum_pci));
+
+DRIVER_REGISTER(enum_pci_drv);
 
 DEV_INIT(enum_pci_init)
 {
   struct enum_pci_context_s	*pv;
 
-  dev->drv = &enum_pci_drv;
 
   /* allocate private driver data */
   pv = mem_alloc(sizeof(*pv), (mem_scope_sys));
@@ -236,7 +232,7 @@ DEV_INIT(enum_pci_init)
   return 0;
 }
 
-DEVENUM_LOOKUP(enum_pci_lookup)
+DEV_ENUM_LOOKUP(enum_pci_lookup)
 {
 	return NULL;
 }

@@ -26,6 +26,8 @@
 #include <hexo/context.h>
 #include <hexo/local.h>
 #include <hexo/interrupt.h>
+#include <hexo/asm.h>
+#include <hexo/cpu.h>
 
 /*
   System call convention is left to the high level C syscall
@@ -49,7 +51,7 @@
 .equ INT_STACK_ecx,     24
 .equ INT_STACK_eax,     28
 .equ INT_STACK_ERR,     32
-.equ INT_STACK_EIP,     36
+.equ INT_STACK_eip,     36
 .equ INT_STACK_CS,      40
 .equ INT_STACK_EFLAGS,  44
 .equ INT_STACK_esp,     48
@@ -57,7 +59,7 @@
 
 /** entry point templates */
 
-.macro PUT_ENTRY_ n
+.macro PUT_ENTRY_ n label
         // save all 8 gp registers on stack
         pusha
         // keep pointer to reg table on stack in %ebp
@@ -65,69 +67,113 @@
         // keep entry id in %edi
         mov	$\n, %edi
         // goto common handling code
-        jmp	3f
+        jmp	\label
 .endm
 
-.macro PUT_ENTRY n
+.macro PUT_ENTRY n label
         .align CPU_INTERRUPT_ENTRY_ALIGN
         // push a fake error code in this case
         push            $0
-        PUT_ENTRY_      \n
+        PUT_ENTRY_      \n, \label
 .endm
 
-.macro PUT_ENTRY_ERR n
+.macro PUT_ENTRY_ERR n label
         .align CPU_INTERRUPT_ENTRY_ALIGN
-        PUT_ENTRY_      \n
+        PUT_ENTRY_      \n, \label
 .endm
 
-.macro PUT_ENTRIES i j
-        PUT_ENTRY \i
+.macro PUT_ENTRIES i j label
+        PUT_ENTRY \i, \label
     .if \i+1<=\j
-        PUT_ENTRY (\i+1)
+        PUT_ENTRY (\i+1), \label
     .endif
     .if \i+2<=\j
-        PUT_ENTRY (\i+2)
+        PUT_ENTRY (\i+2), \label
     .endif
     .if \i+3<=\j
-        PUT_ENTRY (\i+3)
+        PUT_ENTRY (\i+3), \label
     .endif
-    .if \i<\j
-        PUT_ENTRIES (\i+4), \j
+    .if \i+4<=\j
+        PUT_ENTRIES (\i+4), \j, \label
     .endif
 .endm
+
+.section .excep,"ax",@progbits
+
+#if CPU_EXCEPT_VECTOR_COUNT != 32
+# error x86 exceptions entry points count must be 32
+#endif
+# if CPU_HWINT_VECTOR_COUNT <= 0
+#  error x86 irq entry points count is zero
+# endif
 
 #if CPU_EXCEPT_VECTOR_COUNT + CPU_HWINT_VECTOR_COUNT + CPU_SYSCALL_VECTOR_COUNT > 256
 # error Too many interrupts entry points (max 256)
 #endif
 
-# ifdef CONFIG_HEXO_FPU
-        mov     %cr0, %ecx
-#  ifdef CONFIG_HEXO_LAZY_SWITCH
-        // set fpu lazy task switch flag
-        or      %ecx, 0x8
-        mov     %ecx, %cr0
-#  else
-        // save multimedia state if enabled for this context
-        test    %ecx, 0x8
-        jnz     2f
-        fxsave  TLS_SEG(:) CPU_X86_CONTEXT_MM(x86_context)
-2:
-#  endif
+# if CPU_SYSCALL_VECTOR_COUNT <= 0
+#  error x86 syscall entry points count is zero
 # endif
 
+CPU_NAME_DECL(exception_vector):
+        .globl CPU_NAME_DECL(exception_vector)
+        PUT_ENTRIES     0x00, 0x07, x86_fault_entry
+        PUT_ENTRY_ERR	0x08,       x86_fault_entry
+        PUT_ENTRY	0x09,       x86_fault_entry
+        PUT_ENTRY_ERR	0x0a,       x86_fault_entry
+        PUT_ENTRY_ERR	0x0b,       x86_fault_entry
+        PUT_ENTRY_ERR	0x0c,       x86_fault_entry
+        PUT_ENTRY_ERR	0x0d,       x86_fault_entry
+        PUT_ENTRY_ERR	0x0e,       x86_fault_entry
+        PUT_ENTRY	0x0f,       x86_fault_entry
+        PUT_ENTRY	0x10,       x86_fault_entry
+        PUT_ENTRY_ERR	0x11,       x86_fault_entry
+        PUT_ENTRIES     0x12, 0x1f, x86_fault_entry
+
+#ifdef CONFIG_HEXO_IRQ
+        PUT_ENTRIES     0, (CPU_HWINT_VECTOR_COUNT - 1), x86_irq_entry
+#endif
+
+#ifdef CONFIG_HEXO_USERMODE
+        PUT_ENTRIES     0, (CPU_SYSCALL_VECTOR_COUNT-1), x86_syscall_entry
+#endif
+
+//////////////////////////////////////////////////////////////////////
+
+//# ifdef CONFIG_HEXO_FPU
+//        mov     %cr0, %ecx
+//#  ifdef CONFIG_HEXO_LAZY_SWITCH
+//        // set fpu lazy task switch flag
+//        or      %ecx, 0x8
+//        mov     %ecx, %cr0
+//#  else
+//        // save multimedia state if enabled for this context
+//        test    %ecx, 0x8
+//        jnz     2f
+//        fxsave  TLS_SEG(:) CPU_X86_CONTEXT_MM(x86_context)
+//2:
+//#  endif
+//# endif
 
 .macro X86_STACK_TO_CTX offset
         // copy stack saved registers in context save area
-        .irp    reg, edi, esi, ebp, ebx, edx, ecx, eax, EIP
-        mov     INT_STACK_\reg(%ebp), %ecx
-        mov     %ecx, (x86_context + CPU_X86_CONTEXT_\reg)\offset
-        .endr
+        mov     INT_STACK_edi(%ebp), %ecx
+        mov     %ecx, (x86_context + _offsetof(cpu_context_s, kregs.edi))\offset
+        mov     INT_STACK_esi(%ebp), %ecx
+        mov     %ecx, (x86_context + _offsetof(cpu_context_s, kregs.esi))\offset
+        mov     INT_STACK_ebp(%ebp), %ecx
+        mov     %ecx, (x86_context + _offsetof(cpu_context_s, kregs.ebp))\offset
+        mov     INT_STACK_ebx(%ebp), %ecx
+        mov     %ecx, (x86_context + _offsetof(cpu_context_s, kregs.ebx))\offset
+        mov     INT_STACK_edx(%ebp), %ecx
+        mov     %ecx, (x86_context + _offsetof(cpu_context_s, kregs.edx))\offset
+        mov     INT_STACK_ecx(%ebp), %ecx
+        mov     %ecx, (x86_context + _offsetof(cpu_context_s, kregs.ecx))\offset
+        mov     INT_STACK_eax(%ebp), %ecx
+        mov     %ecx, (x86_context + _offsetof(cpu_context_s, kregs.eax))\offset
+        mov     INT_STACK_eip(%ebp), %ecx
+        mov     %ecx, (x86_context + _offsetof(cpu_context_s, kregs.eip))\offset
 .endm
-
-/******************************* common *******************************/
-
-.section .text,"ax",@progbits
-
 
 #ifdef CONFIG_HEXO_USERMODE
 
@@ -160,8 +206,6 @@
 .endm
 
 #endif
-
-
 
 .macro X86_PREEMPT_CLEAR
 #ifdef CONFIG_HEXO_CONTEXT_PREEMPT
@@ -219,28 +263,7 @@
 
 /******************************* fault *******************************/
 
-#if CPU_EXCEPT_VECTOR_COUNT != 32
-# error x86 exceptions entry points count must be 32
-#endif
-
-        .globl x86_interrupt_ex_entry
-        .func x86_interrupt_ex_entry
-        .align CPU_INTERRUPT_ENTRY_ALIGN
-x86_interrupt_ex_entry:
-        PUT_ENTRIES     0x00 0x07
-        PUT_ENTRY_ERR	0x08
-        PUT_ENTRY	0x09
-        PUT_ENTRY_ERR	0x0a
-        PUT_ENTRY_ERR	0x0b
-        PUT_ENTRY_ERR	0x0c
-        PUT_ENTRY_ERR	0x0d
-        PUT_ENTRY_ERR	0x0e
-        PUT_ENTRY	0x0f
-        PUT_ENTRY	0x10
-        PUT_ENTRY_ERR	0x11
-        PUT_ENTRIES     0x12 0x1f
-
-3:
+FUNC_START(.text, x86_fault_entry)
 
         /* We are running on cpu local interrupt stack if we come from
 	   user mode. We are already running on kernel context stack if not. */
@@ -284,13 +307,13 @@ x86_interrupt_ex_entry:
 
         // save registers
         X86_STACK_TO_CTX (%esi)
-        mov     %eax, (x86_context + CPU_X86_CONTEXT_esp)(%esi)
+        mov     %eax, (x86_context + _offsetof(cpu_context_s, kregs.esp))(%esi)
 
         X86_PREEMPT_CLEAR
 
         // context switch can happend in exception handler
-        pushl   TLS_SEG(:) (x86_context + CPU_X86_CONTEXT_mask)
-        movl    $0, TLS_SEG(:) (x86_context + CPU_X86_CONTEXT_mask)
+        pushl   TLS_SEG(:) (x86_context + _offsetof(cpu_context_s, mask))
+        movl    $0, TLS_SEG(:) (x86_context + _offsetof(cpu_context_s, mask))
         
         // prepare fault handler arguments
         pushl	%eax            	/* stackptr */
@@ -301,7 +324,7 @@ x86_interrupt_ex_entry:
         movl	%cr2,   %ecx
         pushl	%ecx			/* dataptr */
         
-        movl    (x86_context + CPU_X86_CONTEXT_EIP)(%esi), %ecx
+        movl    (x86_context + _offsetof(cpu_context_s, kregs.eip))(%esi), %ecx
         pushl	%ecx                    /* execptr */
         
         pushl	%edi			/* type */
@@ -310,15 +333,18 @@ x86_interrupt_ex_entry:
         call	*%edx
         addl    $4*5,   %esp
 
-        popl    TLS_SEG(:) (x86_context + CPU_X86_CONTEXT_mask)
+        popl    TLS_SEG(:) (x86_context + _offsetof(cpu_context_s, mask))
 
 #ifdef CONFIG_HEXO_CONTEXT_PREEMPT
         // check if a preempt handler has been registered
         mov     CLS_SEG(:) (cpu_preempt_handler), %edx
         test    %edx, %edx
-        jz      1f
+        jz      2f
 
         X86_PREEMPT
+2:
+        // invalidate handler outside interrupt
+        movl    $1, CLS_SEG(:) (cpu_preempt_handler)
 #endif
 1:
 #ifdef CONFIG_HEXO_USERMODE
@@ -327,7 +353,7 @@ x86_interrupt_ex_entry:
 #endif
         jmp     cpu_context_restore_kernel
 
-FUNC_END(x86_interrupt_ex_entry_)
+FUNC_END(x86_fault_entry)
 
 
 
@@ -335,17 +361,8 @@ FUNC_END(x86_interrupt_ex_entry_)
 
 #ifdef CONFIG_HEXO_IRQ
 
-# if CPU_HWINT_VECTOR_COUNT <= 0
-#  error x86 irq entry points count is zero
-# endif
 
-        .globl x86_interrupt_hw_entry
-        .func x86_interrupt_hw_entry
-        .align CPU_INTERRUPT_ENTRY_ALIGN
-x86_interrupt_hw_entry:
-        PUT_ENTRIES     0, (CPU_HWINT_VECTOR_COUNT-1)
-
-3:
+FUNC_START(.text, x86_irq_entry)
 
         /* We are running on cpu local interrupt stack if we come from
 	   user mode. We are running on kernel context stack otherwise. */
@@ -404,7 +421,7 @@ x86_interrupt_hw_entry:
 
         // save registers
         X86_STACK_TO_CTX (%esi)
-        mov     %eax, (x86_context + CPU_X86_CONTEXT_esp)(%esi)
+        mov     %eax, (x86_context + _offsetof(cpu_context_s, kregs.esp))(%esi)
 
         X86_PREEMPT_IRQ
 
@@ -442,7 +459,8 @@ x86_interrupt_hw_entry:
         popa
         add	$4, %esp	; /* error code */
         iret
-FUNC_END(x86_interrupt_hw_entry_)
+
+FUNC_END(x86_irq_entry)
 
 #endif
 
@@ -452,15 +470,7 @@ FUNC_END(x86_interrupt_hw_entry_)
 
 #ifdef CONFIG_HEXO_USERMODE
 
-# if CPU_SYSCALL_VECTOR_COUNT <= 0
-#  error x86 syscall entry points count is zero
-# endif
-
-        .globl x86_interrupt_sys_entry
-        .func x86_interrupt_sys_entry
-        .align CPU_INTERRUPT_ENTRY_ALIGN
-x86_interrupt_sys_entry:
-        PUT_ENTRIES     0, (CPU_SYSCALL_VECTOR_COUNT-1)
+FUNC_START(.text, x86_syscall_entry)
 
 # ifdef CONFIG_CPU_X86_SYSENTER
         /* special entry point used by sysenter instructions, use same
@@ -498,13 +508,13 @@ x86_interrupt_sys_enter:
         // save registers
         mov     INT_STACK_esp(%ebp), %eax
         X86_STACK_TO_CTX (%esi)
-        mov     %eax, (x86_context + CPU_X86_CONTEXT_esp)(%esi)
+        mov     %eax, (x86_context + _offsetof(cpu_context_s, kregs.esp))(%esi)
 
         X86_PREEMPT_CLEAR
 
         // context switch can happend in syscall
-        pushl   TLS_SEG(:) (x86_context + CPU_X86_CONTEXT_mask)
-        movl    $0, TLS_SEG(:) (x86_context + CPU_X86_CONTEXT_mask)
+        pushl   TLS_SEG(:) (x86_context + _offsetof(cpu_context_s, mask))
+        movl    $0, TLS_SEG(:) (x86_context + _offsetof(cpu_context_s, mask))
 
         // prepare handler arguments
         leal    (x86_context)(%esi), %ecx
@@ -516,7 +526,7 @@ x86_interrupt_sys_enter:
         call    TLS_SEG(:) *(cpu_syscall_handler)
         addl	$4*2, %esp
 
-        popl    TLS_SEG(:) (x86_context + CPU_X86_CONTEXT_mask)
+        popl    TLS_SEG(:) (x86_context + _offsetof(cpu_context_s, mask))
 
 # ifdef CONFIG_HEXO_CONTEXT_PREEMPT
         // check if a preempt handler has been registered
@@ -544,20 +554,20 @@ x86_interrupt_sys_enter:
 #  endif
 
         // prepare sysexit
-        movl    (x86_context + CPU_X86_CONTEXT_EIP)(%esi), %edx
-        movl    (x86_context + CPU_X86_CONTEXT_esp)(%esi), %ecx
+        movl    (x86_context + _offsetof(cpu_context_s, kregs.eip))(%esi), %edx
+        movl    (x86_context + _offsetof(cpu_context_s, kregs.esp))(%esi), %ecx
 
         // restore "callee saved" gp regs & eax for return value
-        .irp    reg, ebp, ebx, eax, edi, esi
-        mov     (x86_context + CPU_X86_CONTEXT_\reg)(%esi), %\reg
-        .endr
+        mov     (x86_context + _offsetof(cpu_context_s, kregs.ebp))(%esi), %ebp
+        mov     (x86_context + _offsetof(cpu_context_s, kregs.ebx))(%esi), %ebx
+        mov     (x86_context + _offsetof(cpu_context_s, kregs.eax))(%esi), %eax
+        mov     (x86_context + _offsetof(cpu_context_s, kregs.edi))(%esi), %edi
+        mov     (x86_context + _offsetof(cpu_context_s, kregs.esi))(%esi), %esi
 
         sti
         sysexit
 # endif
 
-FUNC_END(x86_interrupt_sys_entry_)
-
-
+FUNC_END(x86_syscall_entry)
 
 #endif

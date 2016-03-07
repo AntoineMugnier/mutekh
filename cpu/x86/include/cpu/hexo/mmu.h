@@ -123,7 +123,7 @@ struct mmu_context_s
   uint_fast16_t		k_count; /* kernel entries count */
 };
 
-static inline void
+ALWAYS_INLINE void
 mmu_x86_set_pagedir(uintptr_t paddr)
 {
   reg_t tmp;
@@ -140,7 +140,7 @@ mmu_x86_set_pagedir(uintptr_t paddr)
 		);
 }
 
-static inline union cpu_x86_page_entry_s *
+ALWAYS_INLINE union cpu_x86_page_entry_s *
 mmu_x86_get_pagedir(void)
 {
   void *pd;
@@ -153,7 +153,7 @@ mmu_x86_get_pagedir(void)
   return pd;
 }
 
-static inline void
+ALWAYS_INLINE void
 mmu_x86_invalidate_page(uintptr_t vaddr)
 {
   asm volatile("invlpg (%0)	\n"

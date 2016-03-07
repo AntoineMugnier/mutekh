@@ -1,0 +1,146 @@
+.custom spi
+.name mcp23s17_bytecode
+
+#include <drivers/gpio/mcp23s17.h>
+
+#define DEVICE_OPCODE_OFFSET  _offsetof(mcp23s17_private_s, device_opcode,  1)
+#define ICON_CACHE_OFFSET     _offsetof(mcp23s17_private_s, icon_cache,     1)
+#define IODIR_CACHE_OFFSET    _offsetof(mcp23s17_private_s, iodir_cache,    2)
+#define GPPU_CACHE_OFFSET     _offsetof(mcp23s17_private_s, gppu_cache,     2)
+#define OLAT_CACHE_OFFSET     _offsetof(mcp23s17_private_s, olat_cache,     2)
+#define GPIO_CACHE_OFFSET     _offsetof(mcp23s17_private_s, gpio_cache,     2)
+#ifdef CONFIG_DRIVER_MCP23S17_ICU
+#define GPINTEN_CACHE_OFFSET  _offsetof(mcp23s17_private_s, gpinten_cache,  2)
+#define INTCON_CACHE_OFFSET   _offsetof(mcp23s17_private_s, intcon_cache,   2)
+#define DEFVAL_CACHE_OFFSET   _offsetof(mcp23s17_private_s, defval_cache,   2)
+#define INTF_CACHE_OFFSET     _offsetof(mcp23s17_private_s, intf_cache,     2)
+#define EDGE_SENSITIVE_OFFSET _offsetof(mcp23s17_private_s, edge_sensitive, 2)
+#endif
+
+#define MCP23S17_READ8(REG_ADDR)                                    ;\
+ld8e        %BC_SPI_TX_0,   %BC_PV,         DEVICE_OPCODE_OFFSET    ;\
+add8        %BC_SPI_TX_0,   1                                       ;\
+cst8        %BC_SPI_TX_1,   REG_ADDR                                ;\
+xor32       %BC_SPI_RX_2,   %SPI_RX_2                               ;\
+spi_swpl    %BC_SPI_TX_0,   %BC_SPI_RX_0,   3                       ;\
+mov         %BC_SPI_BUFF,   %BC_SPI_RX_2
+
+#define MCP23S17_READ16(REG_ADDR)                                   ;\
+ld8e        %BC_SPI_TX_0,   %BC_PV,         DEVICE_OPCODE_OFFSET    ;\
+add8        %BC_SPI_TX_0,   1                                       ;\
+cst8        %BC_SPI_TX_1,   REG_ADDR                                ;\
+xor32       %BC_SPI_RX_2,   %BC_SPI_RX_2                            ;\
+xor32       %BC_SPI_RX_3,   %BC_SPI_RX_3                            ;\
+spi_swpl    %BC_SPI_TX_0,   %BC_SPI_RX_0,   4                       ;\
+mov         %BC_SPI_BUFF,   %BC_SPI_RX_3                            ;\
+shi32l      %BC_SPI_BUFF,   8                                       ;\
+or32        %BC_SPI_BUFF,   %BC_SPI_RX_2
+
+#define MCP23S17_WRITE8(REG_ADDR)                                   ;\
+ld8e        %BC_SPI_TX_0,   %BC_PV,         DEVICE_OPCODE_OFFSET    ;\
+cst8        %BC_SPI_TX_1,   REG_ADDR                                ;\
+mov         %BC_SPI_TX_2,   %BC_SPI_BUFF                            ;\
+spi_swpl    %BC_SPI_TX_0,   %BC_SPI_RX_0,   3
+
+#define MCP23S17_WRITE16(REG_ADDR)                                  ;\
+ld8e        %BC_SPI_TX_0,   %BC_PV,         DEVICE_OPCODE_OFFSET    ;\
+cst8        %BC_SPI_TX_1,   REG_ADDR                                ;\
+mov         %BC_SPI_TX_2,   %BC_SPI_BUFF                            ;\
+mov         %BC_SPI_TX_3,   %BC_SPI_BUFF                            ;\
+shi32r      %BC_SPI_TX_3,   8                                       ;\
+spi_swpl    %BC_SPI_TX_0,   %BC_SPI_RX_0,   4
+
+#define MCP23S17_READ8_CACHED(REG_ADDR, REG_CACHE_OFFSET)           ;\
+MCP23S17_READ8(REG_ADDR)                                            ;\
+st8e        %BC_SPI_BUFF,   %BC_PV,         REG_CACHE_OFFSET
+
+#define MCP23S17_READ16_CACHED(REG_ADDR, REG_CACHE_OFFSET)          ;\
+MCP23S17_READ16(REG_ADDR)                                           ;\
+st16e       %BC_SPI_BUFF,   %BC_PV,         REG_CACHE_OFFSET
+
+#define MCP23S17_WRITE8_CACHED(REG_ADDR, REG_CACHE_OFFSET)          ;\
+ld8e        %BC_SPI_BUFF,   %BC_PV,         REG_CACHE_OFFSET        ;\
+MCP23S17_WRITE8(REG_ADDR)
+
+#define MCP23S17_WRITE16_CACHED(REG_ADDR, REG_CACHE_OFFSET)         ;\
+ld16e       %BC_SPI_BUFF,   %BC_PV,         REG_CACHE_OFFSET        ;\
+MCP23S17_WRITE16(REG_ADDR)
+
+mcp23s17_bc_sync_cache:
+  .export mcp23s17_bc_sync_cache
+MCP23S17_WRITE8_CACHED(MCP23S17_REG_IOCON, ICON_CACHE_OFFSET)
+MCP23S17_WRITE16_CACHED(MCP23S17_REG_IODIR, IODIR_CACHE_OFFSET)
+MCP23S17_WRITE16_CACHED(MCP23S17_REG_GPPU, GPPU_CACHE_OFFSET)
+MCP23S17_WRITE16_CACHED(MCP23S17_REG_OLAT, OLAT_CACHE_OFFSET)
+MCP23S17_READ16_CACHED(MCP23S17_REG_GPIO, GPIO_CACHE_OFFSET)
+#ifdef CONFIG_DRIVER_MCP23S17_ICU
+st16e     %BC_SPI_BUFF,     %BC_PV,         DEFVAL_CACHE_OFFSET
+MCP23S17_WRITE16_CACHED(MCP23S17_REG_DEFVAL, DEFVAL_CACHE_OFFSET)
+MCP23S17_WRITE16_CACHED(MCP23S17_REG_GPINTEN, GPINTEN_CACHE_OFFSET)
+MCP23S17_WRITE16_CACHED(MCP23S17_REG_INTCON, INTCON_CACHE_OFFSET)
+#endif
+end
+
+mcp23s17_bc_write_output_mode:
+  .export mcp23s17_bc_write_output_mode
+MCP23S17_WRITE16_CACHED(MCP23S17_REG_IODIR, IODIR_CACHE_OFFSET)
+end
+
+mcp23s17_bc_write_input_mode:
+  .export mcp23s17_bc_write_input_mode
+MCP23S17_WRITE16_CACHED(MCP23S17_REG_GPPU, GPPU_CACHE_OFFSET)
+MCP23S17_WRITE16_CACHED(MCP23S17_REG_IODIR, IODIR_CACHE_OFFSET)
+end
+
+mcp23s17_bc_write_output:
+  .export mcp23s17_bc_write_output
+MCP23S17_WRITE16_CACHED(MCP23S17_REG_OLAT, OLAT_CACHE_OFFSET)
+end
+
+mcp23s17_bc_read_input:
+  .export mcp23s17_bc_read_input
+MCP23S17_READ16_CACHED(MCP23S17_REG_GPIO, GPIO_CACHE_OFFSET)
+end
+
+#ifdef CONFIG_DRIVER_MCP23S17_ICU
+mcp23s17_bc_read_irq:
+  .export mcp23s17_bc_read_irq
+read_irq_flags:
+  MCP23S17_READ16_CACHED(MCP23S17_REG_INTF, INTF_CACHE_OFFSET)
+  eq0       %BC_SPI_BUFF
+  end
+reconfig_sense_irq:
+  ld16e     %BC_REG_0,      %BC_PV,       EDGE_SENSITIVE_OFFSET
+  eq0       %BC_REG_0
+  jmp8      clear_irq_flags
+  ld16e     %BC_REG_1,      %BC_PV,       DEFVAL_CACHE_OFFSET
+  and32     %BC_SPI_BUFF,   %BC_REG_0
+  xor32     %BC_SPI_BUFF,   %BC_REG_1
+  MCP23S17_WRITE16(MCP23S17_REG_DEFVAL)
+  st16e       %BC_SPI_BUFF,   %BC_PV,     DEFVAL_CACHE_OFFSET
+clear_irq_flags:
+  MCP23S17_READ16_CACHED(MCP23S17_REG_GPIO, GPIO_CACHE_OFFSET)
+end
+
+mcp23s17_bc_setup_irq:
+  .export mcp23s17_bc_setup_irq
+  /* %BC_REG_0 -> int_update_mask */
+  /* %BC_REG_1 -> int_update_en */
+  xor32     %BC_REG_2,      %BC_REG_2
+  ld16e     %BC_REG_2,      %BC_PV,       GPINTEN_CACHE_OFFSET
+disable_interrupts:
+  not32     %BC_REG_0
+  and32     %BC_REG_2,      %BC_REG_0
+  mov       %BC_SPI_BUFF,   %BC_REG_2
+  MCP23S17_WRITE16(MCP23S17_REG_GPINTEN)
+enable_interrupts:
+  MCP23S17_WRITE16_CACHED(MCP23S17_REG_GPPU, GPPU_CACHE_OFFSET)
+  MCP23S17_WRITE16_CACHED(MCP23S17_REG_IODIR, IODIR_CACHE_OFFSET)
+  MCP23S17_WRITE16_CACHED(MCP23S17_REG_INTCON, INTCON_CACHE_OFFSET)
+  MCP23S17_WRITE16_CACHED(MCP23S17_REG_DEFVAL, DEFVAL_CACHE_OFFSET)
+  or32      %BC_REG_2,      %BC_REG_1
+  mov       %BC_SPI_BUFF,   %BC_REG_2
+  MCP23S17_WRITE16(MCP23S17_REG_GPINTEN)
+  st16e     %BC_REG_2,      %BC_PV,      GPINTEN_CACHE_OFFSET
+#endif
+

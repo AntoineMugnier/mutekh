@@ -22,9 +22,9 @@
 
 /**
  * @file
- * @module{Hexo}
+ * @module{Kernel services}
  * @internal
- * @short Hexo specific platform definition for GPCT
+ * @short Semaphore for GPCT
  */
 
 #ifndef __GPCT_MUTEKH_SEMAPHORE_H__
@@ -41,31 +41,31 @@
 
 typedef struct semaphore_s gpct_lock_MUTEK_SEMAPHORE_type_t;
 
-static inline gpct_error_t
+ALWAYS_INLINE gpct_error_t
 gpct_lock_MUTEK_SEMAPHORE_init(struct semaphore_s *lock)
 {
   return semaphore_init(lock, 1);
 }
 
-static inline void
+ALWAYS_INLINE void
 gpct_lock_MUTEK_SEMAPHORE_destroy(struct semaphore_s *lock)
 {
   semaphore_destroy(lock);
 }
 
-static inline void
+ALWAYS_INLINE void
 gpct_lock_MUTEK_SEMAPHORE_wrlock(struct semaphore_s *lock)
 {
   semaphore_take(lock, 1);
 }
 
-static inline void
+ALWAYS_INLINE void
 gpct_lock_MUTEK_SEMAPHORE_rdlock(struct semaphore_s *lock)
 {
   semaphore_take(lock, 1);
 }
 
-static inline void
+ALWAYS_INLINE void
 gpct_lock_MUTEK_SEMAPHORE_unlock(struct semaphore_s *lock)
 {
   semaphore_give(lock, 1);

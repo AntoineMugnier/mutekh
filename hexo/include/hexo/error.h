@@ -22,7 +22,7 @@
 
 /**
  * @file
- * @module{Hexo}
+ * @module{Hardware abstraction layer}
  * @short Common error codes definitions
  */
 
@@ -35,12 +35,8 @@ C_HEADER_BEGIN
 
 #include <hexo/types.h>
 
-#ifndef __MUTEK_ASM__
-
 /** error code type */
 typedef int_fast8_t		error_t;
-
-#endif
 
 /** unknown or undefined error */
 #define EUNKNOWN	1
@@ -69,9 +65,6 @@ typedef int_fast8_t		error_t;
 /** service temporarily unavailable */
 #define EAGAIN		9
 
-/** value out of range */
-//#define ERANGE		10
-
 /** io error */
 #define EIO		11
 
@@ -84,7 +77,7 @@ typedef int_fast8_t		error_t;
 /** operation canceled */
 #define ECANCELED 14
 
-/** operation canceled */
+/** permission denied */
 #define EACCES 15
 
 /** File exists */
@@ -93,11 +86,18 @@ typedef int_fast8_t		error_t;
 /** Is a directory */
 #define EISDIR 21
 
+/** Too many symbolic links encountered */
+#define ELOOP 26
+
+/** No space left on device */
+#define ENOSPC 28
+
 /** broken pipe */
 #define EPIPE		32
 
 /** Math argument out of domain of func */
 #define EDOM        33
+
 /** Math result not representable */
 #define ERANGE      34
 

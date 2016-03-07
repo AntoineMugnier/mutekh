@@ -1,0 +1,19 @@
+%include atmel/atmel.build
+%include emu/emu.build
+%include simple/simple.build
+%include ibmpc/ibmpc.build
+%include soclib/soclib.build
+%include gaisler/gaisler.build
+%include bcm283x/bcm283x.build
+%include zynq/zynq.build
+%include efm32/efm32.build
+%include stm32/stm32.build
+%include pic32/pic32.build
+%include cc26xx/cc26xx.build
+
+%common
+  %requiretypes architecture
+
+%section default
+  %error No build configuration section names specified, please use BUILD=...
+

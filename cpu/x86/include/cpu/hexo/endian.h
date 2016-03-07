@@ -26,18 +26,9 @@
 
 #define CPU_ENDIAN_H_
 
-/** x86 CPU handle nonaligned memory access */
-#ifndef CONFIG_CPU_X86_ALIGNCHECK
-#define CPU_NATIVE_NONALIGNED_ACCESS
-#endif
-
-/** x86 CPU is little endian */
-#undef CPU_ENDIAN_ISBIG
-#define CPU_ENDIAN_ISLITTLE
-
 #define HAS_CPU_ENDIAN_SWAP16
 
-static inline uint16_t cpu_endian_swap16(uint16_t x)
+ALWAYS_INLINE uint16_t cpu_endian_swap16(uint16_t x)
 {
   asm ("rolw	$8, %0"
        : "=r" (x)
@@ -49,7 +40,7 @@ static inline uint16_t cpu_endian_swap16(uint16_t x)
 
 #define HAS_CPU_ENDIAN_SWAP32
 
-static inline uint32_t cpu_endian_swap32(uint32_t x)
+ALWAYS_INLINE uint32_t cpu_endian_swap32(uint32_t x)
 {
   asm ("bswap	%0"
        : "=r" (x)

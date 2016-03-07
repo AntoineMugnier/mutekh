@@ -30,7 +30,7 @@ C_HEADER_BEGIN
 #include <hexo/types.h>
 
 __attribute__((always_inline))
-static inline void *alloca(size_t size)
+ALWAYS_INLINE void *alloca(size_t size)
 {
   return __builtin_alloca(size);
 }

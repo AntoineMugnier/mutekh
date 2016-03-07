@@ -29,8 +29,6 @@
 
 typedef void (*__sighandler_t)(__compiler_sint_t);
 
-extern __compiler_sint_t cpu_pids[CONFIG_CPU_MAXCOUNT];
-
 /* special case for emu: CPU_LOCAL does not require
    access macro when never accessed from other cpus.
    This allow use before cpu_init() */

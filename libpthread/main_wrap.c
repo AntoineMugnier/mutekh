@@ -21,13 +21,14 @@
 */
 
 #include <hexo/cpu.h>
-#include <hexo/init.h>
+#include <mutek/startup.h>
 #include <pthread.h>
 
 pthread_t pthread_main;
 
 error_t main(size_t argc, char **argv);
 
+static
 void * pthread_main_func(void *pv)
 {
   char *argv[] = { "a.out", NULL };
@@ -35,7 +36,7 @@ void * pthread_main_func(void *pv)
   return NULL;
 }
 
-void app_start()
+void libpthread_create_main_initsmp()
 {
   if (cpu_isbootstrap())
     pthread_create(&pthread_main, NULL, pthread_main_func, NULL);

@@ -23,90 +23,87 @@
 #ifndef CPU_ASM_H_
 #define CPU_ASM_H_
 
-#ifdef __MUTEK_ASM__
-
 #define PPC_SPRG(n) (0x110 + n)
 
-.macro LI32 reg value
-	lis	\reg,		\value@h
-	ori	\reg,	\reg,	\value@l  
-.endm
+asm(
+".macro LI32 reg value \n"
+"	lis	\\reg,		\\value@h \n"
+"	ori	\\reg,	\\reg,	\\value@l \n"
+".endm \n"
 
-.macro LA32 reg symbol
-	lis	\reg,		\symbol@ha
-	la	\reg,		\symbol@l(\reg)
-.endm
+".macro LA32 reg symbol \n"
+"	lis	\\reg,		\\symbol@ha \n"
+"	la	\\reg,		\\symbol@l(\\reg) \n"
+".endm \n"
 
 /* access a variable using a SPR as base */
-.macro SPRREL_ACCESS op, name, rd, rt, spr
-        mfspr  \rt,      \spr
-        \op    \rd,      \name (\rt)
-    .if \rt == 0
-        .fail 0	// rt can not be zero here
-    .endif
-.endm
+".macro SPRREL_ACCESS op, name, rd, rt, spr \n"
+"        mfspr  \\rt,      \\spr \n"
+"        \\op    \\rd,      \\name (\\rt) \n"
+"    .if \\rt == 0 \n"
+"        .fail 0 \n"	// rt can not be zero here
+"    .endif \n"
+".endm \n"
 
 /* access a global variable */
-.macro GLOBAL_ACCESS op, name, rd, rt
-        lis   \rt, \name@h
-        ori   \rt, \rt, \name@l
-        \op   \rd, 0(\rt)
-    .if \rt == 0
-        .fail 0	// rt can not be zero here
-    .endif
-.endm
+".macro GLOBAL_ACCESS op, name, rd, rt \n"
+"        lis   \\rt, \\name@h \n"
+"        ori   \\rt, \\rt, \\name@l \n"
+"        \\op   \\rd, 0(\\rt) \n"
+"    .if \\rt == 0 \n"
+"        .fail 0 \n"	// rt can not be zero here
+"    .endif \n"
+".endm \n"
 
 #ifdef CONFIG_ARCH_SMP
-.macro CPU_LOCAL op, name, rd, rt
-        SPRREL_ACCESS \op, \name, \rd, \rt, 0x115
-.endm
+".macro CPU_LOCAL_op op, name, rd, rt \n"
+"        SPRREL_ACCESS \\op, \\name, \\rd, \\rt, 0x115 \n"
+".endm \n"
 #else
-.macro CPU_LOCAL op, name, rd, rt
-        GLOBAL_ACCESS \op, \name, \rd, \rt
-.endm
+".macro CPU_LOCAL_op op, name, rd, rt \n"
+"        GLOBAL_ACCESS \\op, \\name, \\rd, \\rt \n"
+".endm \n"
 #endif
 
-.macro CONTEXT_LOCAL op, name, rd, rt
-        SPRREL_ACCESS \op, \name, \rd, \rt, 0x114
-.endm
+".macro CONTEXT_LOCAL_op op, name, rd, rt \n"
+"        SPRREL_ACCESS \\op, \\name, \\rd, \\rt, 0x114 \n"
+".endm \n"
 
 // restore multiple gp regs
-.macro LMW_GP array i j
-	lwz	\i,		CPU_PPC_CONTEXT_GPR(\i)(\array)
-    .if \i-\j
-	LMW_GP \array, "(\i+1)", \j
-    .endif
-.endm
+".macro LMW_GP array i j \n"
+"	lwz	\\i,		(_offsetof(cpu_context_s, gpr) + 4 * \\i)(\\array) \n"
+"    .if \\i-\\j \n"
+"	LMW_GP \\array, (\\i+1), \\j \n"
+"    .endif \n"
+".endm \n"
 
 // save multiple gp regs
-.macro SMW_GP array i j
-	stw	\i,		CPU_PPC_CONTEXT_GPR(\i)(\array)
-    .if \i-\j
-	SMW_GP \array, "(\i+1)", \j
-    .endif
-.endm
+".macro SMW_GP array i j \n"
+"	stw	\\i,		(_offsetof(cpu_context_s, gpr) + 4 * \\i)(\\array) \n"
+"    .if \\i-\\j \n"
+"	SMW_GP \\array, (\\i+1), \\j \n"
+"    .endif \n"
+".endm \n"
 
+#ifdef CONFIG_HEXO_FPU
 // restore multiple fpu regs
-.macro LMD_FPU array i j
-	lfd	\i,		CPU_PPC_CONTEXT_FR(\i)(\array)
-    .if \i-\j
-	LMD_FPU \array, "(\i+1)", \j
-    .endif
-.endm
+".macro LMD_FPU array i j \n"
+"	lfd	\\i,		(_offsetof(cpu_context_s, fpr) + 8 * \\i)(\\array) \n"
+"    .if \\i-\\j \n"
+"	LMD_FPU \\array, (\\i+1), \\j \n"
+"    .endif \n"
+".endm \n"
 
 // save multiple fpu regs
-.macro SMD_FPU array i j
-	stfd	\i,		CPU_PPC_CONTEXT_FR(\i)(\array)
-    .if \i-\j
-	SMD_FPU \array, "(\i+1)", \j
-    .endif
-.endm
-
-#else /* not asm */
-
-#define ASM_SECTION(name)              \
-        ".section " name ",\"ax\",@progbits \n\t"
+".macro SMD_FPU array i j \n"
+"	stfd	\\i,		(_offsetof(cpu_context_s, fpr) + 8 * \\i)(\\array) \n"
+"    .if \\i-\\j \n"
+"	SMD_FPU \\array, (\\i+1), \\j \n"
+"    .endif \n"
+".endm \n"
 #endif
+
+);
 
 #endif
 

@@ -27,7 +27,7 @@
 #include <hexo/asm.h>
 
 #ifdef CONFIG_SOCLIB_MEMCHECK
-# include <arch/mem_checker.h>
+# include <arch/soclib/mem_checker.h>
 #endif
 
 /*
@@ -60,7 +60,7 @@ FUNC_START(.text, cpu_context_switch)
         .set noat
 
         // get context local storage
-        CPU_LOCAL ldw, __context_data_base, r1, r1
+        CPU_LOCAL_op ldw, __context_data_base, r1, r1
         // get context registers save array
         addi    r2,     r1,     nios2_context_regs
 
@@ -111,7 +111,7 @@ FUNC_START(.text, cpu_context_jumpto)
 
         // restore tls pointer from context struct
         ldw     r8,             HEXO_CONTEXT_S_TLS * 4 (r4)
-        CPU_LOCAL stw,          __context_data_base, r8, r7
+        CPU_LOCAL_op stw,          __context_data_base, r8, r7
 
         addi    r2,     r8,     nios2_context_regs
 
@@ -164,9 +164,6 @@ FUNC_START(.text, cpu_context_set)
         movia   r1,             SOCLIB_MC_MAGIC_VAL
         stw     r1,             SOCLIB_MC_MAGIC(zero)
         
-        /* switch to associated memchecker context */
-        stw     r4,             SOCLIB_MC_CTX_SET(zero)
-
         /* mark current memchecker context as invalid */
         movi    r1,             SOCLIB_MC_CTX_ID_CURRENT
         stw     r1,             SOCLIB_MC_CTX_INVALIDATE(zero)
@@ -174,15 +171,14 @@ FUNC_START(.text, cpu_context_set)
         /* create a new temporary memchecker context using passed stack */
         stw     r4,             SOCLIB_MC_R1(zero)
         stw     r5,             SOCLIB_MC_R2(zero)
-        stw     r4,             SOCLIB_MC_CTX_CREATE_TMP(zero)
+        stw     r4,             SOCLIB_MC_CTX_CREATE(zero)
 
         /* switch to new temporary memchecker context */
         stw     r4,             SOCLIB_MC_CTX_SET(zero)
 #endif
 
         /* Set stack pointer */
-        add     r4,     r4,     r5
-        addi    sp,     r4,     -CONFIG_HEXO_STACK_ALIGN
+        add     sp,     r4,     r5
 #ifdef CONFIG_COMPILE_FRAMEPTR
         mov     fp,     sp
 #endif
@@ -227,7 +223,7 @@ FUNC_START(.text, cpu_context_stack_use)
         
 #ifndef CONFIG_RELEASE
         // prevent use of previous context local storage
-        CPU_LOCAL stw,   __context_data_base, zero, r1
+        CPU_LOCAL_op stw,   __context_data_base, zero, r1
 #endif
 
         // private param

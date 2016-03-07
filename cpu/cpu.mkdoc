@@ -1,0 +1,43 @@
+
+@section TP {Supported processors}
+
+  MutekH has separate code modules for processor and platform support.
+  The following subsections cover supported processors:
+
+  @insert localtoc
+
+  A processor support package is composed of:
+  @list
+    @item Implementation of some features provided by the
+      @ref{+Hardware abstraction layer}{hardware abstraction layer} module, stored in
+      header files located in @tt{cpu/*/include/hexo/}.
+    @item Optionally, some processor specific definitions, stored in
+      header files located in @tt{cpu/*/include/cpu_name/}.
+    @item Plain assembly code for processor boot and initialization.
+    @item Plain assembly code for interrupts and exceptions handling.
+    @item Plain assembly code for context switching.
+    @item Some assembly implementations of some library features like
+      the libc @ref setjmp and @ref longjmp functions.
+    @item A device driver which implements the
+      @ref{@device/class/cpu.h}{processor device class} for that
+      processor and optionally some other classes.
+    @item Processor dependent compiler options.
+    @item Optionally, Definition for processor specific
+      @xref{Configuration tokens}{configuration tokens} and features.
+    @item Optionally, some @xref{Device drivers}{device drivers}
+      specific to a particular processor vendor may be found in
+      @tt{cpu/*/drivers}.
+    @item Optionally, a native bytecode compiler backend for the generic
+      @ref{@mutek/bytecode.h}{mutekh bytecode} in the form of a perl module.
+  @end list
+
+  @include arm32/arm32.mkdoc
+  @include arm32m/arm32m.mkdoc
+  @include mips/mips.mkdoc
+  @include ppc/ppc.mkdoc
+  @include sparc/sparc.mkdoc
+  @include lm32/lm32.mkdoc
+  @include nios2/nios2.mkdoc
+
+@end section
+

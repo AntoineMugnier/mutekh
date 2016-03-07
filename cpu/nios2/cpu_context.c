@@ -27,6 +27,13 @@
 #include <hexo/context.h>
 #include <hexo/interrupt.h>
 
+#ifdef CONFIG_HEXO_CONTEXT_PREEMPT
+CPU_LOCAL context_preempt_t *cpu_preempt_handler = (context_preempt_t*)1;
+#endif
+
+/** pointer to context local storage in cpu local storage */
+CPU_LOCAL void *__context_data_base;
+
 CONTEXT_LOCAL struct cpu_context_s nios2_context_regs;
 
 error_t

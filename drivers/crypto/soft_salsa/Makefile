@@ -1,0 +1,3 @@
+
+objs += salsa.o
+

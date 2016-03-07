@@ -22,7 +22,7 @@
 
 /**
  * @file
- * @module{Hexo}
+ * @module{Hardware abstraction layer}
  * @short Io and memory address spaces functions access
  */
 
@@ -38,7 +38,7 @@
    @param data value
 */
 
-static void cpu_io_write_8(uintptr_t addr, uint8_t data);
+ALWAYS_INLINE void cpu_io_write_8(uintptr_t addr, uint8_t data);
 
 /**
    IO space 8 bits read
@@ -47,7 +47,7 @@ static void cpu_io_write_8(uintptr_t addr, uint8_t data);
    @return data value
 */
 
-static uint8_t cpu_io_read_8(uintptr_t addr);
+ALWAYS_INLINE uint8_t cpu_io_read_8(uintptr_t addr);
 
 /**
    IO space 16 bits write
@@ -56,7 +56,7 @@ static uint8_t cpu_io_read_8(uintptr_t addr);
    @param data value
 */
 
-static void cpu_io_write_16(uintptr_t addr, uint16_t data);
+ALWAYS_INLINE void cpu_io_write_16(uintptr_t addr, uint16_t data);
 
 /**
    IO space 16 bits read
@@ -65,7 +65,7 @@ static void cpu_io_write_16(uintptr_t addr, uint16_t data);
    @return data value
 */
 
-static uint16_t cpu_io_read_16(uintptr_t addr);
+ALWAYS_INLINE uint16_t cpu_io_read_16(uintptr_t addr);
 
 /**
    IO space 32 bits write
@@ -74,7 +74,7 @@ static uint16_t cpu_io_read_16(uintptr_t addr);
    @param data value
 */
 
-static void cpu_io_write_32(uintptr_t addr, uint32_t data);
+ALWAYS_INLINE void cpu_io_write_32(uintptr_t addr, uint32_t data);
 
 /**
    IO space 32 bits read
@@ -83,7 +83,7 @@ static void cpu_io_write_32(uintptr_t addr, uint32_t data);
    @return data value
 */
 
-static uint32_t cpu_io_read_32(uintptr_t addr);
+ALWAYS_INLINE uint32_t cpu_io_read_32(uintptr_t addr);
 
 /**
    Memory space 8 bits write
@@ -92,7 +92,7 @@ static uint32_t cpu_io_read_32(uintptr_t addr);
    @param data value
 */
 
-static void cpu_mem_write_8(uintptr_t addr, uint8_t data);
+ALWAYS_INLINE void cpu_mem_write_8(uintptr_t addr, uint8_t data);
 
 /**
    Memory space 8 bits read
@@ -101,7 +101,7 @@ static void cpu_mem_write_8(uintptr_t addr, uint8_t data);
    @return data value
 */
 
-static uint8_t cpu_mem_read_8(uintptr_t addr);
+ALWAYS_INLINE uint8_t cpu_mem_read_8(uintptr_t addr);
 
 /**
    Memory space 16 bits write
@@ -110,7 +110,7 @@ static uint8_t cpu_mem_read_8(uintptr_t addr);
    @param data value
 */
 
-static void cpu_mem_write_16(uintptr_t addr, uint16_t data);
+ALWAYS_INLINE void cpu_mem_write_16(uintptr_t addr, uint16_t data);
 
 /**
    Memory space 16 bits read
@@ -119,7 +119,7 @@ static void cpu_mem_write_16(uintptr_t addr, uint16_t data);
    @return data value
 */
 
-static uint16_t cpu_mem_read_16(uintptr_t addr);
+ALWAYS_INLINE uint16_t cpu_mem_read_16(uintptr_t addr);
 
 /**
    Memory space 32 bits write
@@ -128,7 +128,7 @@ static uint16_t cpu_mem_read_16(uintptr_t addr);
    @param data value
 */
 
-static void cpu_mem_write_32(uintptr_t addr, uint32_t data);
+ALWAYS_INLINE void cpu_mem_write_32(uintptr_t addr, uint32_t data);
 
 /**
    Memory space 32 bits read
@@ -137,7 +137,7 @@ static void cpu_mem_write_32(uintptr_t addr, uint32_t data);
    @return data value
 */
 
-static uint32_t cpu_mem_read_32(uintptr_t addr);
+ALWAYS_INLINE uint32_t cpu_mem_read_32(uintptr_t addr);
 
 /**
    Memory space 64 bits write
@@ -146,7 +146,7 @@ static uint32_t cpu_mem_read_32(uintptr_t addr);
    @param data value
 */
 
-static void cpu_mem_write_64(uintptr_t addr, uint64_t data);
+ALWAYS_INLINE void cpu_mem_write_64(uintptr_t addr, uint64_t data);
 
 /**
    Memory space 64 bits read
@@ -155,11 +155,11 @@ static void cpu_mem_write_64(uintptr_t addr, uint64_t data);
    @return data value
 */
 
-static uint64_t cpu_mem_read_64(uintptr_t addr);
+ALWAYS_INLINE uint64_t cpu_mem_read_64(uintptr_t addr);
 
 #include "cpu/hexo/iospace.h"
 
-static inline
+ALWAYS_INLINE
 uint32_t cpu_mem_mask_set_32(uintptr_t addr, uint32_t mask)
 {
     uint32_t future = cpu_mem_read_32(addr) | mask;
@@ -167,7 +167,7 @@ uint32_t cpu_mem_mask_set_32(uintptr_t addr, uint32_t mask)
     return future;
 }
 
-static inline
+ALWAYS_INLINE
 uint32_t cpu_mem_mask_clear_32(uintptr_t addr, uint32_t mask)
 {
     uint32_t future = cpu_mem_read_32(addr) & ~mask;

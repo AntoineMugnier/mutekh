@@ -1,6 +1,8 @@
 CPUTOOLS=lm32-unknown-elf-
 CPUCFLAGS=-fsigned-char -ffixed-r25 -G0
 
+BCFLAGS+= -w 2
+
 ifeq ($(CONFIG_CPU_LM32_BARREL_SHIFT), defined)
 CPUCFLAGS+= -mbarrel-shift-enabled
 endif

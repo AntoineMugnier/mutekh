@@ -22,7 +22,7 @@
 
 /**
  * @file
- * @module{Hexo}
+ * @module{Hardware abstraction layer}
  * @short Power management API
  */
 
@@ -32,10 +32,26 @@
 #include <hexo/error.h>
 
 /** Hard reboot the platform. May return ENOTSUP. */
-error_t power_reboot();
+error_t power_reboot(void);
 
 /** Turn system power off. May return ENOTSUP. */
-error_t power_shutdown();
+error_t power_shutdown(void);
+
+enum power_reset_cause_e
+{
+  POWER_RESET_CAUSE_UNKNOWN,
+  POWER_RESET_CAUSE_POWERUP,
+  POWER_RESET_CAUSE_HARD,
+  POWER_RESET_CAUSE_SOFT,
+  POWER_RESET_CAUSE_WATCHDOG,
+  POWER_RESET_CAUSE_WAKEUP,
+  POWER_RESET_CAUSE_FAULT,
+};
+
+ENUM_DESCRIPTOR(power_reset_cause_e, strip:POWER_RESET_CAUSE_, upper);
+
+/** Get chip reset cause. */
+enum power_reset_cause_e power_reset_cause(void);
 
 #endif
 

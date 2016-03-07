@@ -121,7 +121,7 @@
 #ifdef CONFIG_HEXO_CONTEXT_PREEMPT
         // clear context preempt handler
         li      9,              0
-        CPU_LOCAL       stw     cpu_preempt_handler, 9, 10
+        CPU_LOCAL_op       stw     cpu_preempt_handler, 9, 10
 #endif
 .endm
 
@@ -151,17 +151,17 @@
         beq     1f
 
         // use kernel context stack when from user mode
-        CONTEXT_LOCAL   lwz     context_stack_end, 1, 10
+        CONTEXT_LOCAL_op   lwz     context_stack_end, 1, 10
         addi    1,      1,      -CONFIG_HEXO_STACK_ALIGN
 
         // use context local fault handler for user when available
-        CONTEXT_LOCAL   lwz     cpu_user_exception_handler, 9, 10
+        CONTEXT_LOCAL_op   lwz     cpu_user_exception_handler, 9, 10
         and.    9,      9,      9
         bne     2f
 1:
 #endif
         // use cpu local fault handler
-        CPU_LOCAL       lwz     cpu_exception_handler, 9, 10
+        CPU_LOCAL_op       lwz     cpu_exception_handler, 9, 10
 2:
 
         mtctr   9
@@ -190,11 +190,11 @@
         beq     1f
 
         // use kernel context stack
-        CONTEXT_LOCAL   lwz     context_stack_end, 1, 10
+        CONTEXT_LOCAL_op   lwz     context_stack_end, 1, 10
         addi    1,      1,      -CONFIG_HEXO_STACK_ALIGN
 1:
 
-        CONTEXT_LOCAL   lwz     cpu_syscall_handler, 9, 10
+        CONTEXT_LOCAL_op   lwz     cpu_syscall_handler, 9, 10
         li      3,      0               // arg0 number
         mr      4,      2               // arg1 reg table
         mtctr   9
@@ -225,27 +225,16 @@
         beq     1f
 
         // use kernel context stack
-        CONTEXT_LOCAL   lwz     context_stack_end, 1, 10
+        CONTEXT_LOCAL_op   lwz     context_stack_end, 1, 10
         addi    1,      1,      -CONFIG_HEXO_STACK_ALIGN
 1:
 #endif
-#ifndef CONFIG_RELEASE
-        // ensure we do not use context local storage in irq handler
-        li      0,              0
-        mtspr   PPC_SPRG(4),    0
-#endif
 
-        CPU_LOCAL       lwz     cpu_interrupt_handler, 9, 10
+        CPU_LOCAL_op       lwz     cpu_interrupt_handler, 9, 10
         li      3,      \number         // arg0 number
         mtctr   9
         bctrl
 
-#ifndef CONFIG_RELEASE
-        // restore cls
-        li      0,              ppc_context_regs@l
-        sub     0,      2,      0
-        mtspr   PPC_SPRG(4),    0
-#endif
 .endm
 
 
@@ -260,7 +249,7 @@
 #ifdef CONFIG_HEXO_CONTEXT_PREEMPT
 
         // check if a preempt handler has been registered
-        CPU_LOCAL       lwz     cpu_preempt_handler, 9, 10
+        CPU_LOCAL_op       lwz     cpu_preempt_handler, 9, 10
         and.    9,      9,      9
         beq     2f
 
@@ -270,7 +259,7 @@
 
         // got pointer to context to switch to ?
         and.    3,      3,      3
-        beq     2f
+        beq     3f
 
         // save callee saved registers r14 to r31
         stmw    14,             CPU_PPC_CONTEXT_GPR(14)(2)
@@ -293,7 +282,7 @@
 
 #  ifdef CONFIG_HEXO_LAZY_SWITCH
         // keep track of last context using fpu on this processor
-        CPU_LOCAL       stw     ppc_lazy_last, 2, 10
+        CPU_LOCAL_op       stw     ppc_lazy_last, 2, 10
 #  endif
 
         // save fpu registers 0 to 31
@@ -311,6 +300,9 @@
         // switch to new context
         b       cpu_context_jumpto
 2:
+        // invalidate handler outside interrupt
+        CPU_LOCAL_op       stw     cpu_preempt_handler, 1, 10
+3:
 #endif
 .endm
 
@@ -347,48 +339,41 @@
 
 .section .excep,"ax",@progbits
 
-
+CPU_NAME_DECL(exception_vector):
+        .globl CPU_NAME_DECL(exception_vector)
 
         /* critical interrupt (critical, async) */
-FUNC_START_ORG(ppc_critical_entry, 0x100)
+        .org 0x100
         PPC_EXCEPT_SAVE mfsrr2 mfsrr3
         PPC_EXCEPT_FAULT 0
 1:      b 1b
-FUNC_END(ppc_critical_entry)
-
 
 
         /* machine check (critical, async, imprecise) */
-FUNC_START_ORG(ppc_machine_entry, 0x200)
+        .org 0x200
         PPC_EXCEPT_SAVE mfsrr2 mfsrr3
         PPC_EXCEPT_FAULT 0
 1:      b 1b
-FUNC_END(ppc_machine_entry)
-
 
 
         /* data storage */
-FUNC_START_ORG(ppc_data_storage_entry, 0x300)
+        .org 0x300
         PPC_EXCEPT_SAVE mfsrr0 mfsrr1
         PPC_EXCEPT_PREEMPT_CLEAR
         PPC_EXCEPT_FAULT CPU_EXCEPTION_DATA_ERROR
         b ppc_preempt_and_restore
-FUNC_END(ppc_data_storage_entry)
-
 
 
         /* instr storage */
-FUNC_START_ORG(ppc_instr_storage_entry, 0x400)
+        .org 0x400
         PPC_EXCEPT_SAVE mfsrr0 mfsrr1
         PPC_EXCEPT_PREEMPT_CLEAR
         PPC_EXCEPT_FAULT CPU_EXCEPTION_INS_ERROR
         b ppc_preempt_and_restore
-FUNC_END(ppc_instr_storage_entry)
-
 
 
         /* external (async) */
-FUNC_START_ORG(ppc_external_entry, 0x500)
+        .org 0x500
         PPC_EXCEPT_SAVE mfsrr0 mfsrr1
         PPC_EXCEPT_PREEMPT_CLEAR
 #ifdef CONFIG_HEXO_IRQ
@@ -397,22 +382,18 @@ FUNC_START_ORG(ppc_external_entry, 0x500)
         PPC_EXCEPT_FAULT CPU_EXCEPTION_IRQ        
 #endif
         b ppc_preempt_and_restore
-FUNC_END(ppc_external_entry)
-
 
 
         /* alignment */
-FUNC_START_ORG(ppc_align_entry, 0x600)
+        .org 0x600
         PPC_EXCEPT_SAVE mfsrr0 mfsrr1
         PPC_EXCEPT_PREEMPT_CLEAR
         PPC_EXCEPT_FAULT CPU_EXCEPTION_DATA_ALIGN
         b ppc_preempt_and_restore
-FUNC_END(ppc_align_entry)
-
 
 
         /* program */
-FUNC_START_ORG(ppc_program_entry, 0x700)
+        .org 0x700
         PPC_EXCEPT_SAVE mfsrr0 mfsrr1
 #if defined(CONFIG_HEXO_LAZY_SWITCH) && defined(CONFIG_HEXO_FPU)
         // real error if fpu already enabled
@@ -427,22 +408,19 @@ FUNC_START_ORG(ppc_program_entry, 0x700)
         PPC_EXCEPT_PREEMPT_CLEAR
         PPC_EXCEPT_FAULT CPU_EXCEPTION_ILLEGAL_INS
         b ppc_preempt_and_restore
-FUNC_END(ppc_program_entry)
 
 
 
         /* fpu unusable */
-FUNC_START_ORG(ppc_fpu_entry, 0x800)
+        .org 0x800
         PPC_EXCEPT_SAVE mfsrr0 mfsrr1
         PPC_EXCEPT_PREEMPT_CLEAR
         PPC_EXCEPT_FAULT CPU_EXCEPTION_ILLEGAL_INS
         b ppc_preempt_and_restore
-FUNC_END(ppc_fpu_entry)
-
 
 
         /* syscall */
-FUNC_START_ORG(ppc_syscall_entry, 0xc00)
+        .org 0xc00
         PPC_EXCEPT_SAVE mfsrr0 mfsrr1
         PPC_EXCEPT_PREEMPT_CLEAR
 #ifdef CONFIG_HEXO_USERMODE
@@ -451,35 +429,34 @@ FUNC_START_ORG(ppc_syscall_entry, 0xc00)
 #else
         PPC_EXCEPT_FAULT CPU_EXCEPTION_SYSCALL
 #endif
-        b ppc_preempt_and_restore
-FUNC_END(ppc_syscall_entry)
+        ; b ppc_preempt_and_restore
 
-FUNC_START(.excep, ppc_preempt_and_restore)
+
+ppc_preempt_and_restore:
         PPC_EXCEPT_PREEMPT
   ppc_restore_only:
         PPC_EXCEPT_RESTORE
-FUNC_END(ppc_preempt_and_restore)
 
 /* apu unavailable */
-.org 0xf20
+// .org 0xf20
 
 /* programmable-interval timer (async) */
-.org 0x1000
+// .org 0x1000
 
 /* fixed-interval timer (async) */
-.org 0x1010
+// .org 0x1010
 
 /* watchdog (critical, async) */
-.org 0x1020
+// .org 0x1020
 
 /* data tlb */
-.org 0x1100
+// .org 0x1100
 
 /* ins tlb */
-.org 0x1200
+// .org 0x1200
 
 /* debug (critical, (a)sync) */
-.org 0x2000
+// .org 0x2000
 
 // Local Variables:
 // indent-tabs-mode: nil;

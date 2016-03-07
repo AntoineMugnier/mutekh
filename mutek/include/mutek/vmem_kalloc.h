@@ -24,7 +24,7 @@
 
 /**
  * @file
- * @module{Mutek}
+ * @module{Kernel services}
  * @short Virtual memory kernel land page allocator API
  */
 
@@ -41,7 +41,7 @@
  */
 
 /* initialisation of virtual memory kernel allocator */
-void vpage_init();
+void vpage_init(void);
 
 /* map a physical address range somewhere in kernel space and return
    its address or 0 on error, may flush tlb  */

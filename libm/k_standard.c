@@ -17,7 +17,7 @@
 
 #include <mutek/printk.h>
 
-#ifdef CONFIG_MUTEK_PRINTK
+#ifdef CONFIG_MUTEK_PRINTK_HANDLER
 # define	WRITE2(u,v)	printk("%s", u)
 #else
 # define	WRITE2(u,v)

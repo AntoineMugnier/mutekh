@@ -45,7 +45,9 @@
   asm (							\
 	   "addu	%0,	$27,	%1	\n"	\
 	   : "=r" (_ptr_)				\
-	   : "r" (&n)					\
+	   : "r" (&n)                                   \
+  /* prevent optimize if memory has been reloaded (possible context switch), $27 may have changed too */ \
+             , "m" (*(reg_t*)4)                         \
 	   );						\
 							\
   _ptr_;						\
@@ -57,7 +59,9 @@
 							\
   asm (							\
 	   "addu	%0,	$27,	$0	\n"	\
-	   : "=r" (_ptr_)				\
+	   : "=r" (_ptr_)                               \
+  /* prevent optimize if memory has been reloaded (possible context switch), $27 may have changed too */ \
+           : "m" (*(reg_t*)4)                           \
 	   );						\
 							\
   _ptr_;						\

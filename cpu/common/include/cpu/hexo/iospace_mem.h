@@ -35,7 +35,7 @@
 
 #include <hexo/ordering.h>
 
-static inline void
+ALWAYS_INLINE void
 cpu_mem_write_8(uintptr_t addr, uint8_t data)
 {
   volatile uint8_t	*ptr = (uint8_t*)addr;
@@ -44,7 +44,7 @@ cpu_mem_write_8(uintptr_t addr, uint8_t data)
   order_io_mem_write();
 }
 
-static inline uint8_t
+ALWAYS_INLINE uint8_t
 cpu_mem_read_8(uintptr_t addr)
 {
   volatile uint8_t	*ptr = (uint8_t*)addr;
@@ -53,7 +53,7 @@ cpu_mem_read_8(uintptr_t addr)
   return *ptr;
 }
 
-static inline void
+ALWAYS_INLINE void
 cpu_mem_write_16(uintptr_t addr, uint16_t data)
 {
   volatile uint16_t	*ptr = (uint16_t*)addr;
@@ -62,7 +62,7 @@ cpu_mem_write_16(uintptr_t addr, uint16_t data)
   order_io_mem_write();
 }
 
-static inline uint16_t
+ALWAYS_INLINE uint16_t
 cpu_mem_read_16(uintptr_t addr)
 {
   volatile uint16_t	*ptr = (uint16_t*)addr;
@@ -71,7 +71,7 @@ cpu_mem_read_16(uintptr_t addr)
   return *ptr;
 }
 
-static inline void
+ALWAYS_INLINE void
 cpu_mem_write_32(uintptr_t addr, uint32_t data)
 {
   volatile uint32_t	*ptr = (uint32_t*)addr;
@@ -80,7 +80,7 @@ cpu_mem_write_32(uintptr_t addr, uint32_t data)
   order_io_mem_write();
 }
 
-static inline uint32_t
+ALWAYS_INLINE uint32_t
 cpu_mem_read_32(uintptr_t addr)
 {
   volatile uint32_t	*ptr = (uint32_t*)addr;
@@ -89,7 +89,7 @@ cpu_mem_read_32(uintptr_t addr)
   return *ptr;
 }
 
-static inline void
+ALWAYS_INLINE void
 cpu_mem_write_64(uintptr_t addr, uint64_t data)
 {
   volatile uint64_t	*ptr = (uint64_t*)addr;
@@ -98,7 +98,7 @@ cpu_mem_write_64(uintptr_t addr, uint64_t data)
   order_io_mem_write();
 }
 
-static inline uint64_t
+ALWAYS_INLINE uint64_t
 cpu_mem_read_64(uintptr_t addr)
 {
   volatile uint64_t	*ptr = (uint64_t*)addr;
@@ -109,37 +109,37 @@ cpu_mem_read_64(uintptr_t addr)
 
 /****************************************************/
 
-static inline void
+ALWAYS_INLINE void
 cpu_io_write_8(uintptr_t addr, uint8_t data)
 {
   cpu_mem_write_8(addr, data);
 }
 
-static inline uint8_t
+ALWAYS_INLINE uint8_t
 cpu_io_read_8(uintptr_t addr)
 {
   return cpu_mem_read_8(addr);
 }
 
-static inline void
+ALWAYS_INLINE void
 cpu_io_write_16(uintptr_t addr, uint16_t data)
 {
   cpu_mem_write_16(addr, data);
 }
 
-static inline uint16_t
+ALWAYS_INLINE uint16_t
 cpu_io_read_16(uintptr_t addr)
 {
   return cpu_mem_read_16(addr);
 }
 
-static inline void
+ALWAYS_INLINE void
 cpu_io_write_32(uintptr_t addr, uint32_t data)
 {
   cpu_mem_write_32(addr, data);
 }
 
-static inline uint32_t
+ALWAYS_INLINE uint32_t
 cpu_io_read_32(uintptr_t addr)
 {
   return cpu_mem_read_32(addr);

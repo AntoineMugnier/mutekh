@@ -23,8 +23,8 @@
 
 #include <hexo/types.h>
 
-#include <device/spi.h>
-#include <device/icu.h>
+#include <device/class/spi.h>
+#include <device/class/icu.h>
 #include <device/device.h>
 #include <device/driver.h>
 
@@ -208,7 +208,7 @@ static CMD_HANDLER(spi_oc_spi_controller_wait_value_rx)
 #ifdef OC_SPI_CTRL_DEBUG
 	printk("SPI wait_value_rx data : %x\n", data);
 #endif
-	enum devspi_wait_value_answer_e ret = pv->wait_cb(dev, rq, data);
+	enum dev_spi_wait_value_answer_e ret = pv->wait_cb(dev, rq, data);
 	switch (ret) {
 	case DEV_SPI_VALUE_FAIL:
 		pv->abort = 1;
@@ -438,7 +438,7 @@ struct dev_spi_rq_cmd_s *spi_oc_spi_controller_get_next_cmd(struct device_s *dev
 	return NULL;
 }
 
-DEVSPI_REQUEST(spi_oc_spi_controller_request)
+DEV_SPI_REQUEST(spi_oc_spi_controller_request)
 {
 	struct spi_oc_spi_controller_context_s *pv = dev->drv_pv;
   bool_t queue_empty;
@@ -484,7 +484,7 @@ DEV_IRQ(spi_oc_spi_controller_irq)
 	return 0;
 }
 
-DEVSPI_SET_BAUDRATE(spi_oc_spi_controller_set_baudrate)
+DEV_SPI_SET_BAUDRATE(spi_oc_spi_controller_set_baudrate)
 {
     	struct spi_oc_spi_controller_context_s *pv = dev->drv_pv;
 	struct spi_oc_spi_controller_dev_config_s *config = pv->dev_config;
@@ -519,7 +519,7 @@ uint32_t return_value = br;
 	return return_value;
 }
 
-DEVSPI_SET_DATA_FORMAT(spi_oc_spi_controller_set_data_format)
+DEV_SPI_SET_DATA_FORMAT(spi_oc_spi_controller_set_data_format)
 {
 	struct spi_oc_spi_controller_context_s *pv = dev->drv_pv;
 	struct spi_oc_spi_controller_dev_config_s *config = pv->dev_config;
@@ -545,39 +545,19 @@ DEVSPI_SET_DATA_FORMAT(spi_oc_spi_controller_set_data_format)
 	return 0;
 }
 
-#ifdef CONFIG_DRIVER_ENUM_FDT
+#define spi_oc_spi_controller_use dev_use_generic
+
+DRIVER_DECLARE(spi_oc_spi_controller_drv, 0, "OpenCores SPI controller", spi_oc_spi_controller,
+               DRIVER_SPI_CTRL_METHODS(spi_oc_spi_controller));
+
 static const struct driver_param_binder_s spi_oc_spi_controller_param_binder[] =
 {
 	PARAM_BIND(struct spi_oc_spi_controller_param_s, lun_count, PARAM_DATATYPE_INT),
 	{ 0 }
 };
 
-static const struct devenum_ident_s	spi_oc_spi_controller_ids[] =
-{
-	DEVENUM_FDTNAME_ENTRY("oc_spi_controller", sizeof(struct spi_oc_spi_controller_param_s), spi_oc_spi_controller_param_binder),
-	{ 0 }
-};
-#endif
-
-const struct driver_s   spi_oc_spi_controller_drv =
-{
-    .class      = device_class_spi,
-#ifdef CONFIG_DRIVER_ENUM_FDT
-    .id_table   = spi_oc_spi_controller_ids,
-#endif
-    .f_init     = spi_oc_spi_controller_init,
-    .f_cleanup  = spi_oc_spi_controller_cleanup,
-    .f_irq      = spi_oc_spi_controller_irq,
-	.f.spi = {
-		.f_request = spi_oc_spi_controller_request,
-		.f_set_baudrate = spi_oc_spi_controller_set_baudrate,
-		.f_set_data_format = spi_oc_spi_controller_set_data_format,
-	},
-};
-
-#ifdef CONFIG_DRIVER_ENUM_FDT
-REGISTER_DRIVER(spi_oc_spi_controller_drv);
-#endif
+DRIVER_REGISTER(spi_oc_spi_controller_drv,
+                DEV_ENUM_FDTNAME_ENTRY("oc_spi_controller", sizeof(struct spi_oc_spi_controller_param_s), spi_oc_spi_controller_param_binder));
 
 DEV_INIT(spi_oc_spi_controller_init)
 {
@@ -592,7 +572,6 @@ DEV_INIT(spi_oc_spi_controller_init)
     printk("Status: %d\n", cpu_mips_mfc0(CPU_MIPS_STATUS, 0));
     printk("Cause: %d\n", cpu_mips_mfc0(CPU_MIPS_CAUSE, 0));
 
-	dev->drv = &spi_oc_spi_controller_drv;
 
 	if ( param->lun_count > 8 ) {
 		printk("SPI-OC_SPI_CONTROLLER: Invalid lun count: %d\n", param->lun_count);

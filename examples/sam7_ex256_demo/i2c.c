@@ -1,6 +1,6 @@
 
-#include <device/gpio.h>
-#include <device/i2c.h>
+#include <device/class/gpio.h>
+#include <device/class/i2c.h>
 #include <device/driver.h>
 #include <device/device.h>
 

@@ -1,3 +1,4 @@
+#include <mutek/startup.h>
 
 #include <drivers/char/random/random.h>
 #include <drivers/char/null/null.h>
@@ -8,7 +9,7 @@
 
 struct device_s random_dev, zero_dev, null_dev;
 
-void app_start()
+void app_start(void)
 {
   uint8_t buf[256];
 
@@ -22,13 +23,13 @@ void app_start()
 
   memset(buf, 0x55, sizeof(buf));
 
-  dev_char_wait_read(&null_dev, buf, sizeof(buf));
+  dev_char_wait_op(&null_dev, DEV_CHAR_READ, buf, sizeof(buf));
   printk("%P\n", buf, sizeof(buf));
 
-  dev_char_wait_read(&zero_dev, buf, sizeof(buf));
+  dev_char_wait_op(&zero_dev, DEV_CHAR_READ, buf, sizeof(buf));
   printk("%P\n", buf, sizeof(buf));
 
-  dev_char_wait_read(&random_dev, buf, sizeof(buf));
+  dev_char_wait_op(&random_dev, DEV_CHAR_READ, buf, sizeof(buf));
   printk("%P\n", buf, sizeof(buf));
 }
 

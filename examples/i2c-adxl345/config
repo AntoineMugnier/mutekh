@@ -1,0 +1,19 @@
+
+  %set OUTPUT_NAME i2c-adxl345
+
+  # New source code module to be compiled
+  %append MODULES $(OUTPUT_NAME):$(CONFIGPATH)
+
+  # Application license
+  CONFIG_LICENSE_APP_LGPL
+
+  # Libs
+  CONFIG_PTHREAD
+  CONFIG_PTHREAD_MAIN
+  CONFIG_PTHREAD_STACK_SIZE 16384
+
+  %include scripts/options.build
+  %include arch/arch.build
+
+  CONFIG_DRIVER_ADXL345
+

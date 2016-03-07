@@ -1,5 +1,7 @@
 CPUTOOLS=i686-unknown-elf-
 
+BCFLAGS+= -w 2
+
 ifeq ($(CONFIG_ARCH_EMU_DARWIN), defined)
 CPUCFLAGS= -fno-stack-protector -m32
 else

@@ -19,15 +19,22 @@
  *         Nicolas Pouillon <nipo@ssji.net>, 2010
  */
 
+/**
+ * @file
+ * @module{Hardware abstraction layer}
+ * @short Various assembly source defs
+ * @internal
+ */
+
 #ifndef ASM_H_
 #define ASM_H_
-
-#include <cpu/hexo/asm.h>
 
 # define ASM_STR_(x) #x
 # define ASM_STR(x) ASM_STR_(x)
 
-#ifdef __MUTEK_ASM__
+#include <cpu/hexo/asm.h>
+
+/****************************************************/
 
 # ifndef ASM_SECTION
 #  define ASM_SECTION(name) \
@@ -60,4 +67,3 @@
 
 #endif
 
-#endif

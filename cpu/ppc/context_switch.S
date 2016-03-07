@@ -25,7 +25,7 @@
 #include <hexo/cpu.h>
 
 #ifdef CONFIG_SOCLIB_MEMCHECK
-# include <arch/mem_checker.h>
+# include <arch/soclib/mem_checker.h>
 #endif
 
 /*
@@ -50,7 +50,7 @@
 FUNC_START(.text, cpu_context_switch)
 
         // context local storage
-        mfspr   2,              0x114
+        mfspr   2,              PPC_SPRG(4)
         // context registers save array
         addi    2,      2,      ppc_context_regs@l
 
@@ -84,7 +84,7 @@ FUNC_START(.text, cpu_context_switch)
 
 # ifdef CONFIG_HEXO_LAZY_SWITCH
         // keep track of last context using fpu on this processor
-        CPU_LOCAL       stw     ppc_lazy_last, 2, 10
+        CPU_LOCAL_op    stw     ppc_lazy_last, 2, 10
 # endif
 
         // save callee saved fpu registers 14 to 31
@@ -129,7 +129,7 @@ FUNC_START(.text, cpu_context_jumpto)
 
         // restore tls pointer from context struct
         lwz     2,              HEXO_CONTEXT_S_TLS * 4 (3)
-        mtspr   0x114,          2
+        mtspr   PPC_SPRG(4),    2
         // context registers save array
         addi    2,      2,      ppc_context_regs@l
 
@@ -141,10 +141,6 @@ FUNC_START(.text, cpu_context_jumpto)
         addi    0,      0,      0
         stw     0,              SOCLIB_MC_MAGIC (0)
 #endif
-
-        // restore condition register
-        lwz     0,              CPU_PPC_CONTEXT_CR(2)
-        mtcr    0
 
         // restore link register
         lwz     0,              CPU_PPC_CONTEXT_LR(2)
@@ -166,7 +162,7 @@ FUNC_START(.text, cpu_context_jumpto)
 
 # ifdef CONFIG_HEXO_LAZY_SWITCH
         // do not need to restore if no other context used processor fpu since
-        CPU_LOCAL       lwz     ppc_lazy_last, 9, 10
+        CPU_LOCAL_op    lwz     ppc_lazy_last, 9, 10
         sub.    10,     9,      2
         beq     1f
 # endif
@@ -204,6 +200,10 @@ FUNC_START(.text, cpu_context_jumpto)
         andi.   5,      4,      CPU_PPC_CONTEXT_RESTORE_CALLER
         beq     1f
 
+        // restore condition register
+        lwz     0,              CPU_PPC_CONTEXT_CR(2)
+        mtcr    0
+
         // restore caller saved counter register
         lwz     0,              CPU_PPC_CONTEXT_CTR(2)
         mtctr   0
@@ -235,13 +235,13 @@ FUNC_START(.text, cpu_context_set)
         // create a new temporary memchecker context using passed stack
         stw     3,              SOCLIB_MC_R1 (0)
         stw     4,              SOCLIB_MC_R2 (0)
-        stw     3,              SOCLIB_MC_CTX_CREATE_TMP (0)
+        stw     3,              SOCLIB_MC_CTX_CREATE (0)
 
         // switch to new temporary memchecker context
         stw     3,              SOCLIB_MC_CTX_SET (0)
 #endif
 
-        // Set stack pointer, 64 bits aligned
+        // Set stack pointer
         add     3,      3,      4
         addi    1,      3,      -CONFIG_HEXO_STACK_ALIGN
 
@@ -289,7 +289,7 @@ FUNC_START(.text, cpu_context_stack_use)
 #ifndef CONFIG_RELEASE
         // ensure we do not use context local storage from here
         li      0,              0
-        mtspr   0x114,          0
+        mtspr   PPC_SPRG(4),    0
 #endif
 
         // private param

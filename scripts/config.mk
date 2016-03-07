@@ -9,27 +9,45 @@ config:
 
 checkconfig:
 	cd $(MUTEK_SRC_DIR) ; perl $(MUTEK_SRC_DIR)/scripts/config.pl	\
-		--src-path=$(MUTEK_SRC_DIR) \
+		--src-path=$(CONF_PATH):$(MUTEK_SRC_DIR) \
 		--input=$(CONF) --check		\
+		--build=$(BUILD)
+
+findbadtokens:
+	cd $(MUTEK_SRC_DIR) ; perl $(MUTEK_SRC_DIR)/scripts/config.pl	\
+		--src-path=$(CONF_PATH):$(MUTEK_SRC_DIR) \
+		--input=$(CONF) --find-bad-tokens		\
 		--build=$(BUILD)
 
 listconfig:
 	cd $(MUTEK_SRC_DIR) ; perl $(MUTEK_SRC_DIR)/scripts/config.pl	\
-		--src-path=$(MUTEK_SRC_DIR) \
+		--src-path=$(CONF_PATH):$(MUTEK_SRC_DIR) \
 		--input=$(CONF) --list		\
+		--build=$(BUILD)
+
+
+listflatconfig:
+	cd $(MUTEK_SRC_DIR) ; perl $(MUTEK_SRC_DIR)/scripts/config.pl	\
+		--src-path=$(CONF_PATH):$(MUTEK_SRC_DIR) \
+		--input=$(CONF) --list=flat		\
 		--build=$(BUILD)
 
 
 listallconfig:
 	cd $(MUTEK_SRC_DIR) ; perl $(MUTEK_SRC_DIR)/scripts/config.pl	\
-		--src-path=$(MUTEK_SRC_DIR) \
+		--src-path=$(CONF_PATH):$(MUTEK_SRC_DIR) \
 		--input=$(CONF) --list=all		\
 		--build=$(BUILD)
 
+listinit:
+	cd $(MUTEK_SRC_DIR) ; perl $(MUTEK_SRC_DIR)/scripts/config.pl	\
+		--src-path=$(CONF_PATH):$(MUTEK_SRC_DIR) \
+		--input=$(CONF) --list=init		\
+		--build=$(BUILD)
 
 showconfig:
 	cd $(MUTEK_SRC_DIR) ; perl $(MUTEK_SRC_DIR)/scripts/config.pl	\
-		--src-path=$(MUTEK_SRC_DIR) \
+		--src-path=$(CONF_PATH):$(MUTEK_SRC_DIR) \
 		--input=$(CONF) --info=$(TOKEN)		\
 		--build=$(BUILD)
 

@@ -33,8 +33,6 @@
 
 # define CPU_FAULT_COUNT 7
 
-#ifndef __MUTEK_ASM__
-
 # define CPU_FAULT_NAMES {                      \
     "Break point",                              \
       "Ins bus error",                          \
@@ -45,14 +43,12 @@
       "Lost irq",                               \
       }
 
-# ifdef CONFIG_DRIVER_ICU_LM32
-struct device_s;
-extern CPU_LOCAL struct device_s cpu_icu_dev;
-# endif
 
 # include "hexo/local.h"
 
-static inline void
+typedef reg_t cpu_irq_state_t;
+
+ALWAYS_INLINE void
 cpu_interrupt_disable(void)
 {
 # ifdef CONFIG_HEXO_IRQ
@@ -63,7 +59,7 @@ cpu_interrupt_disable(void)
 # endif
 }
 
-static inline void
+ALWAYS_INLINE void
 cpu_interrupt_enable(void)
 {
 # ifdef CONFIG_HEXO_IRQ
@@ -77,7 +73,7 @@ cpu_interrupt_enable(void)
 # endif
 }
 
-static inline void
+ALWAYS_INLINE void
 cpu_interrupt_process(void)
 {
 # ifdef CONFIG_HEXO_IRQ
@@ -94,19 +90,8 @@ cpu_interrupt_process(void)
 # endif
 }
 
-static inline void
-cpu_interrupt_savestate(reg_t *state)
-{
-# ifdef CONFIG_HEXO_IRQ
-  __asm__ volatile (
-                    "rcsr %0, IE		\n\t"
-		    : "=r" (*state)
-		    );
-# endif
-}
-
-static inline void
-cpu_interrupt_savestate_disable(reg_t *state)
+ALWAYS_INLINE void
+cpu_interrupt_savestate_disable(cpu_irq_state_t *state)
 {
 # ifdef CONFIG_HEXO_IRQ
 
@@ -120,8 +105,8 @@ cpu_interrupt_savestate_disable(reg_t *state)
 # endif
 }
 
-static inline void
-cpu_interrupt_restorestate(const reg_t *state)
+ALWAYS_INLINE bool_t
+cpu_interrupt_restorestate(const cpu_irq_state_t *state)
 {
 # ifdef CONFIG_HEXO_IRQ
   __asm__ volatile (
@@ -130,10 +115,14 @@ cpu_interrupt_restorestate(const reg_t *state)
 		    : "r" (*state)
                     : "memory"     /* compiler memory barrier */
 		    );
+
+  return *state & 1;
+# else
+  return 0;
 # endif
 }
 
-static inline bool_t
+ALWAYS_INLINE bool_t
 cpu_interrupt_getstate(void)
 {
 # ifdef CONFIG_HEXO_IRQ
@@ -150,7 +139,7 @@ cpu_interrupt_getstate(void)
 # endif
 }
 
-static inline bool_t
+ALWAYS_INLINE bool_t
 cpu_is_interruptible(void)
 {
 # ifdef CONFIG_HEXO_IRQ
@@ -159,8 +148,6 @@ cpu_is_interruptible(void)
 	return 0;
 # endif
 }
-
-#endif  /* __MUTEK_ASM__ */
 
 #endif
 

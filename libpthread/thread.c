@@ -28,7 +28,6 @@
 #include <hexo/local.h>
 #include <hexo/types.h>
 #include <mutek/scheduler.h>
-#include <hexo/segment.h>
 
 /** pointer to current thread */
 CONTEXT_LOCAL pthread_t __pthread_current = NULL;
@@ -50,13 +49,13 @@ __pthread_switch(void)
   cpu_interrupt_enable();
 }
 
-void
+static void
 __pthread_cleanup(void *param)
 {
   struct pthread_s *thread = param;
 
   /* cleanup current context */
-  arch_contextstack_free(context_destroy(&thread->sched_ctx.context));
+  mem_free(context_destroy(thread->sched_ctx.context));
 
   lock_destroy(&thread->lock);
 
@@ -77,14 +76,16 @@ pthread_exit(void *retval)
   _pthread_keys_cleanup(this);
 #endif
 
-  atomic_bit_set(&this->state, _PTHREAD_STATE_CANCELED);
-
   /* remove thread from runnable list */
   cpu_interrupt_disable();
   lock_spin(&this->lock);
 
+#ifdef CONFIG_PTHREAD_CANCEL
+  this->state |= _PTHREAD_STATE_CANCELED;
+#endif
+
 #ifdef CONFIG_PTHREAD_JOIN
-  if (!atomic_bit_test(&this->state, _PTHREAD_STATE_DETACHED))
+  if (!(this->state & _PTHREAD_STATE_DETACHED))
     {
       pthread_t joined_thread = this->joined;
 
@@ -92,7 +93,7 @@ pthread_exit(void *retval)
       /* thread not joined yet */
 	{
 	  /* mark thread as joinable */
-	  atomic_bit_set(&this->state, _PTHREAD_STATE_JOINABLE);
+	  this->state |= _PTHREAD_STATE_JOINABLE;
 
 	  this->joined_retval = retval;
 
@@ -132,16 +133,14 @@ pthread_join(pthread_t thread, void **value_ptr)
   CPU_INTERRUPT_SAVESTATE_DISABLE;
   lock_spin(&thread->lock);
 
-# ifdef CONFIG_PTHREAD_CHECK
-  if (atomic_bit_test(&thread->state, _PTHREAD_STATE_DETACHED))
+  if (thread->state & _PTHREAD_STATE_DETACHED)
     {
       lock_release(&thread->lock);
       res = EINVAL;
     }
   else
-# endif
     {
-      if (atomic_bit_test(&thread->state, _PTHREAD_STATE_JOINABLE))
+      if (thread->state & _PTHREAD_STATE_JOINABLE)
         {
           if (value_ptr)
             *value_ptr = thread->joined_retval;
@@ -189,9 +188,11 @@ pthread_detach(pthread_t thread)
 
   LOCK_SPIN_IRQ(&thread->lock);
 
-  if (!atomic_bit_testset(&thread->state, _PTHREAD_STATE_DETACHED))
+  if (!(thread->state & _PTHREAD_STATE_DETACHED))
     {
-      if (atomic_bit_test(&thread->state, _PTHREAD_STATE_JOINABLE))
+      thread->state |= _PTHREAD_STATE_DETACHED;
+
+      if (thread->state & _PTHREAD_STATE_JOINABLE)
 	sched_context_start(&thread->sched_ctx);
     }
   else
@@ -232,7 +233,7 @@ pthread_create(pthread_t *thread_, const pthread_attr_t *attr,
   uint8_t		*stack = NULL;
   size_t		stack_size = CONFIG_PTHREAD_STACK_SIZE;
 
-#ifdef CONFIG_PTHREAD_ATTRIBUTES
+#if defined(CONFIG_PTHREAD_ATTRIBUTES) && defined(CONFIG_ARCH_SMP)
   if (attr && attr->flags & _PTHREAD_ATTRFLAG_AFFINITY)
     {
       thread = mem_alloc_cpu(sizeof (struct pthread_s), (mem_scope_cpu), attr->cpulist[0]);
@@ -260,15 +261,18 @@ pthread_create(pthread_t *thread_, const pthread_attr_t *attr,
         {
           stack_size = attr->stack_size;
           stack = attr->stack_buf;
-        } else if (attr->flags & _PTHREAD_ATTRFLAG_AFFINITY)
+        }
+# ifdef CONFIG_ARCH_SMP
+      else if (attr->flags & _PTHREAD_ATTRFLAG_AFFINITY)
         {
           stack = mem_alloc_cpu(stack_size, mem_scope_cpu, attr->cpulist[0]);
         }
+# endif
     }
   if (stack == NULL)
 #endif
     {
-      stack = arch_contextstack_alloc(stack_size);
+      stack = mem_alloc(stack_size, mem_scope_sys);
 
       if (stack == NULL)
         {
@@ -280,40 +284,42 @@ pthread_create(pthread_t *thread_, const pthread_attr_t *attr,
   assert(stack_size % sizeof(reg_t) == 0);
 
   /* setup context for new thread */
-  res = context_init(&thread->sched_ctx.context, stack,
+  res = context_init(&thread->ctx, stack,
 		     stack + stack_size, pthread_context_entry, thread);
 
   if (res)
     {
       mem_free(thread);
-      arch_contextstack_free(stack);
+      mem_free(stack);
       return res;
     }
 
-  sched_context_init(&thread->sched_ctx);
+  sched_context_init(&thread->sched_ctx, &thread->ctx);
   thread->sched_ctx.priv = thread;
 
   thread->start_routine = start_routine;
   thread->arg = arg;
   thread->joined = NULL;
-  atomic_set(&thread->state, 0);
+  thread->state = 0;
 
 #ifdef CONFIG_PTHREAD_ATTRIBUTES
   if (attr && attr->flags & _PTHREAD_ATTRFLAG_DETACHED)
-    atomic_bit_set(&thread->state, _PTHREAD_STATE_DETACHED);
+    thread->state |= _PTHREAD_STATE_DETACHED;
 
+# ifdef CONFIG_ARCH_SMP
   /* add cpu affinity */
   if (attr && attr->flags & _PTHREAD_ATTRFLAG_AFFINITY)
     {
       sched_affinity_single(&thread->sched_ctx, attr->cpulist[0]);
       
-#ifdef CONFIG_MUTEK_SCHEDULER_MIGRATION
+#  ifdef CONFIG_MUTEK_CONTEXT_SCHED_MIGRATION
       cpu_id_t i;
       for (i = 1; i < attr->cpucount; i++)
 	sched_affinity_add(&thread->sched_ctx, attr->cpulist[i]);
-#endif
+#  endif
 
     }
+# endif
 #endif
 
 #ifdef CONFIG_PTHREAD_KEYS
@@ -330,26 +336,28 @@ pthread_create(pthread_t *thread_, const pthread_attr_t *attr,
   return 0;
 }
 
+#warning affinity should use cpu device_s pointers
 #ifdef CONFIG_PTHREAD_ATTRIBUTES
 error_t pthread_attr_affinity(pthread_attr_t *attr, cpu_id_t cpu)
 {
+#ifdef CONFIG_ARCH_SMP
   if (!(attr->flags & _PTHREAD_ATTRFLAG_AFFINITY))
     {
       attr->flags |= _PTHREAD_ATTRFLAG_AFFINITY;
       attr->cpucount = 0;
     }
 
-  if (attr->cpucount >= CONFIG_CPU_MAXCOUNT)
+  if (attr->cpucount >= CONFIG_ARCH_LAST_CPU_ID+1)
     return ENOMEM;
 
-#ifdef CONFIG_MUTEK_SCHEDULER_MIGRATION
+#ifdef CONFIG_MUTEK_CONTEXT_SCHED_MIGRATION
   attr->cpulist[attr->cpucount++] = cpu;
 #endif
 
-#ifdef CONFIG_MUTEK_SCHEDULER_STATIC
+#ifdef CONFIG_MUTEK_CONTEXT_SCHED_STATIC
   attr->cpulist[0] = cpu;
 #endif
-
+#endif
   return 0;
 }
 

@@ -47,6 +47,13 @@ void * memset(void *dst, int_fast8_t data, size_t size);
 void * memcpy(void *dst, const void *src, size_t size);
 #define memcpy __builtin_memcpy
 
+void *memccpy(void *dst, const void *src, char c, size_t count);
+
+/* Reverse memcpy */
+void memrevcpy(void *dest, const void *src, size_t size);
+
+void memxor(void *dest, const void *a, const void *b, size_t len);
+
 void *__memcpy_reverse(void *dst, const void *src, size_t size);
 
 void *memmove(void *dst, const void *src, size_t size);
@@ -54,10 +61,6 @@ void *memmove(void *dst, const void *src, size_t size);
 int_fast8_t memcmp(const void *s1, const void *s2, size_t n) __attribute__ ((pure));
 
 int_fast8_t memcstcmp(const void *s1, int_fast8_t, size_t n) __attribute__ ((pure));
-
-/** copy data from text address space, different from memcpy() for
-    Harvard architecture processors */
-void * memcpy_from_code(void *dst, const void *src, size_t size);
 
 /***************************************** string operations */
 
@@ -87,7 +90,7 @@ int_fast8_t __attribute__ ((pure))
 strcmp(const char *s1, const char *s2);
 #define strcmp __builtin_strcmp
 
-static inline int_fast8_t
+ALWAYS_INLINE int_fast8_t
 __attribute__ ((deprecated,pure))
 strcoll(const char *s1, const char *s2)
 {
@@ -182,17 +185,28 @@ stpcpy(char *dest, const char *src);
 
 /***************************************** bit string operations */
 
-#define ffs(n)                                                          \
+/** Find first bit set in an integer. This generic macro adapts to the
+    integer type width. @see #__CLZ */
+#define __FFS(n)                                                        \
 ({                                                                      \
   typedef typeof(n) _t;                                                 \
+  _t _n = (n);                                                          \
                                                                         \
-  __builtin_types_compatible_p(typeof(n), __compiler_slong_t) ? __builtin_ffsl(n) : \
-  __builtin_types_compatible_p(typeof(n), __compiler_slonglong_t) ? __builtin_ffsll(n) : \
-  __builtin_ffs(n);                                                     \
+  __builtin_types_compatible_p(_t, __compiler_slong_t) ||               \
+    __builtin_types_compatible_p(_t, __compiler_ulong_t)                \
+    ? __builtin_ffsl(_n)                                                \
+    : __builtin_types_compatible_p(_t, __compiler_slonglong_t) ||       \
+    __builtin_types_compatible_p(_t, __compiler_ulonglong_t)            \
+    ? __builtin_ffsll(_n)                                               \
+    : __builtin_ffs(_n);                                                \
 })
 
-#define ffsl(x) ffs(x)
-#define ffsll(x) ffs(x)
+/** standard @tt ffs function @see #__FFS */
+#define ffs(x) __builtin_ffs(x)
+/** standard @tt ffsl function @see #__FFS */
+#define ffsl(x) __builtin_ffsl(x)
+/** standard @tt ffsll function @see #__FFS */
+#define ffsll(x) __builtin_ffsll(x)
 
 const char *strerror(error_t errnum);
 

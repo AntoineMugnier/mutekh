@@ -1,0 +1,19 @@
+
+  %set OUTPUT_NAME kroutine_sem
+
+  # New source code module to be compiled
+  %append MODULES $(OUTPUT_NAME):$(CONFIGPATH)
+
+  # Application license
+  CONFIG_LICENSE_APP_LGPL
+
+  # Libs
+  CONFIG_MUTEK_THREAD
+  CONFIG_MUTEK_SEMAPHORE
+  CONFIG_MUTEK_KROUTINE_QUEUE
+  CONFIG_MUTEK_KROUTINE_SEMAPHORE
+  CONFIG_APP_START
+
+  %include scripts/options.build
+  %include arch/arch.build
+

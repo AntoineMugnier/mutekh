@@ -25,7 +25,7 @@
 #include <hexo/cpu.h>
 
 #ifdef CONFIG_SOCLIB_MEMCHECK
-# include <arch/mem_checker.h>
+# include <arch/soclib/mem_checker.h>
 #endif
 
 /*
@@ -38,9 +38,13 @@ FUNC_START(.text, cpu_context_switch)
         .set noat
 
         // get context local storage
-        CPU_LOCAL lw,   __context_data_base, $1, $1
+        CPU_LOCAL_op lw,   __context_data_base, $1, $1
         // get context registers save array
+#ifdef CONFIG_HEXO_CONTEXT_NESTED
+        lw      $2,             %lo(mips_context_regs_ptr)($1)
+#else
         addiu   $2,     $1,     %lo(mips_context_regs)
+#endif
 
         // save "callee saved" registers
         // save gp ptr, stack ptr, frame ptr, return address
@@ -63,7 +67,7 @@ FUNC_START(.text, cpu_context_switch)
 
 # ifdef CONFIG_HEXO_LAZY_SWITCH
         // keep track of last context using fpu on this processor
-        CPU_LOCAL sw    mips_lazy_last, $2, $7
+        CPU_LOCAL_op sw    mips_lazy_last, $2, $7
 # endif
 
         // save fpu registers 20 to 30
@@ -116,10 +120,19 @@ FUNC_START(.text, cpu_context_jumpto)
 
         // restore tls pointer from context struct
         lw      $25,    HEXO_CONTEXT_S_TLS * 4 ($4)
-        CPU_LOCAL sw,   __context_data_base, $25, $1
+        CPU_LOCAL_op sw,   __context_data_base, $25, $1
+
+#ifdef CONFIG_HEXO_CONTEXT_IRQEN
+        // clear irq enable hook
+        CPU_LOCAL_op sw,   cpu_irqen_handler, $0, $1
+#endif
 
         // context registers save array
+#ifdef CONFIG_HEXO_CONTEXT_NESTED
+        lw      $25,    %lo(mips_context_regs_ptr)($25)
+#else
         addiu   $25,    %lo(mips_context_regs)
+#endif
 
         // restore gp ptr, stack ptr, frame ptr, return address
         .irp    r, 28, 29, 30, 31
@@ -133,6 +146,13 @@ FUNC_START(.text, cpu_context_jumpto)
 
         // restore status
         lw      $4,     CPU_MIPS_CONTEXT_SR($25)
+
+        // keep IM2-IM7/IPL bits from status
+        mfc0    $5,     $CPU_MIPS_STATUS
+        xor     $5,     $4
+        andi    $5,     0xfc00
+        xor     $4,     $5
+
 #ifdef CONFIG_CPU_MIPS_USE_ERET
         // context will be restored as an exception return
         ori     $4,     CPU_MIPS_STATUS_EXL
@@ -227,24 +247,20 @@ FUNC_START(.text, cpu_context_set)
         li      $1,     SOCLIB_MC_MAGIC_VAL  
         sw      $1,     SOCLIB_MC_MAGIC($0) 
 
-        /* switch to associated memchecker context */
-        sw      $4,     SOCLIB_MC_CTX_SET($0) 
-
         /* mark current memchecker context as invalid */
         addiu   $1,     $0,     SOCLIB_MC_CTX_ID_CURRENT
         sw      $1,             SOCLIB_MC_CTX_INVALIDATE ($0) 
 
-        /* create a new temporary memchecker context using passed stack */
+        /* create a new memchecker context using passed stack */
         sw      $4,      SOCLIB_MC_R1 ($0) 
         sw      $5,      SOCLIB_MC_R2 ($0) 
-        sw      $4,      SOCLIB_MC_CTX_CREATE_TMP ($0) 
+        sw      $4,      SOCLIB_MC_CTX_CREATE ($0) 
 
-        /* switch to new temporary memchecker context */
+        /* switch to new memchecker context */
         sw      $4,      SOCLIB_MC_CTX_SET ($0) 
 #endif
 
-        /* Set stack pointer, 64 bits aligned */
-        addu    $4,     $4,     $5 
+        addu    $sp,     $4,     $5 
 #ifdef CONFIG_COMPILE_FRAMEPTR
         move    $fp,            $sp
 #endif
@@ -255,7 +271,7 @@ FUNC_START(.text, cpu_context_set)
 #endif
 
         /* Jump */
-        addiu   $sp,    $4,     -4 * INT_REG_SIZE/8
+        addiu   $sp,    $sp,     -4 * INT_REG_SIZE/8
         j       $6
         .set pop                        
 FUNC_END(cpu_context_set)
@@ -280,7 +296,11 @@ FUNC_START(.text, cpu_context_stack_use)
         // get tls pointer from context struct
         lw      $25,     HEXO_CONTEXT_S_TLS * 4 ($4)
         // get context registers save array
+#ifdef CONFIG_HEXO_CONTEXT_NESTED
+        lw      $25,    %lo(mips_context_regs_ptr)($25)
+#else
         addiu   $25,    %lo(mips_context_regs)
+#endif
 
         // use context stack
         lw      $sp,    CPU_MIPS_CONTEXT_GPR(CPU_MIPS_SP)($25)
@@ -295,7 +315,7 @@ FUNC_START(.text, cpu_context_stack_use)
 
 #ifndef CONFIG_RELEASE
         // prevent use of previous context local storage
-        CPU_LOCAL sw,   __context_data_base, $0, $1
+        CPU_LOCAL_op sw,   __context_data_base, $0, $1
 #endif
 
         // private param

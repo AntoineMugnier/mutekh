@@ -22,89 +22,180 @@
 #include <hexo/asm.h>
 #include <hexo/cpu.h>
 
-#ifdef CONFIG_SOCLIB_MEMCHECK
-# include <arch/mem_checker.h>
+#ifdef CONFIG_LOAD_RESET_SEPARATE
+.section .reset,"ax",@progbits
+CPU_NAME_DECL(reset_vector):
+        .globl CPU_NAME_DECL(reset_vector)
+        .set noreorder
+
+        la      $8,             mutekh_entry
+        j       $8
+        nop
 #endif
 
-FUNC_START(.boot, cpu_boot)
+#if defined(CONFIG_ARCH_SMP) && !defined(CONFIG_LOAD_SMP_RESET_MERGED)
+.section .smpreset,"ax",@progbits
+CPU_NAME_DECL(smp_reset_vector):
+        .globl CPU_NAME_DECL(smp_reset_vector)
+        la      $8,             mutekh_entry
+        j       $8
+        nop
+#endif
+
+FUNC_START(.text, mutekh_entry)
 
         .set push
         .set noreorder
 
+#ifdef CONFIG_CPU_EXCEPTION_RELOCATABLE
+        /* set cpu interrupts entry point */
+        la      $4,             CPU_NAME_DECL(exception_vector)
+        mtc0    $4,     $15,    1
+#endif
+
+#if defined(CONFIG_CPU_CACHE) && CONFIG_CPU_MIPS_VERSION >= 32
+        /* Test if CONFIG 1 */
+        mfc0    $2,     $16,    0
+        srl     $3,     $2,     31
+        beqz    $3,     2f
+        nop
+        mfc0    $2,     $16,    1
+
+        /* Icache way */
+        srl     $3,     $2,     16
+        andi    $3,     7
+        addiu   $3,     1
+        /* Icache line count */
+        srl     $4,     $2,     22
+        andi    $4,     7
+        li      $5,     64
+        sllv    $4,     $5,     $4
+        /* Icache line size */
+        srl     $5,     $2,     19
+        andi    $5,     7
+        li      $6,     2
+        sllv    $5,     $6,     $5
+        /* way * line count */
+        mul     $3,     $3,     $4
+        addiu   $3,     $3,     -1
+        move    $4,     $0
+3:      cache   MIPS32_CACHE_INSTRUCTION | MIPS32_CACHE_OP_INDEX_INVALIDATE, 0($4)
+        addu    $4,     $5    
+        bne     $3,     $0,    3b
+        addiu   $3,     -1   
+
+        mtc0    $0,     $28,    0
+        /* Dcache way */
+        srl     $3,     $2,     7
+        andi    $3,     7
+        addiu   $3,     1
+        /* Dcache line count */
+        srl     $4,     $2,     13
+        andi    $4,     7
+        li      $5,     64
+        sllv    $4,     $5,     $4
+        /* Icache line size */
+        srl     $5,     $2,     10
+        andi    $5,     7
+        li      $6,     2
+        sllv    $5,     $6,     $5
+        /* way * line count */
+        mul     $3,     $3,     $4
+        addiu   $3,     $3,     -1
+        move    $4,     $0
+3:      cache   MIPS32_CACHE_DATA | MIPS32_CACHE_OP_INDEX_STORE_TAG, 0($4)
+        addiu   $3,     -1   
+        bne     $3,     $0,    3b
+        addu    $4,     $5    
+
+        /* Enable write through cache */
+        mfc0    $2,     $16,    0
+        ori     $2,     7
+        xori    $2,     (7 - CPU_MIPS_CACHE_WTNA)
+        mtc0    $2,     $16,    0
+2:
+#endif
+
         /* set up IT disable and kernel mode */
+        MTC0_   $0,             CPU_MIPS_CAUSE
         li      $8,             CPU_MIPS_STATUS_IM
         MTC0_   $8,             CPU_MIPS_STATUS
-        MTC0_   $0,             CPU_MIPS_CAUSE
-
-        /* get CPU id and stack end */
-        CPU_ID  $9
-        la      $sp,            __initial_stack
 
 #ifdef CONFIG_ARCH_SMP_CAPABLE
-        /* spin if cpuid >= CONFIG_CPU_MAXCOUNT */
-        slt     $8,     $9,     CONFIG_CPU_MAXCOUNT
-        beq     $0,     $8,     cpu_boot_idle
+
+        CPU_ID  $8
+
+        /* bootstrap processor ? */
+        li      $4,             CONFIG_ARCH_BOOTSTRAP_CPU_ID
+        beq     $8,     $4,     1f
+        nop
+
+# ifdef CONFIG_ARCH_SMP
+
+        /* get cpu tree root */
+        la      $5,     cpu_tree
+        lw      $5,     ($5)
+
+        /* get xor scrambled cpu id */
+        li      $2,     CPU_TREE_XOR_VALUE
+        xor     $4,     $2,     $8
+
+4:
+        /* not in tree */
+        beq     $0,     $5,     2f
+        nop
+
+        /* get node cpu id */
+        lw      $3,     CPU_TREE_CPU_ID($5)
+        xor     $3,     $2,     $3
+
+        /* matching node */
+        beq     $4,     $3,     3f
+        nop
+
+        /* compare and get next child */
+        slt     $6,     $3,     $4
+        sll     $6,     $6,     2
+        add     $6,     $6,     $5
+        lw      $5,     CPU_TREE_CHILDS(0)($6)
+
+        b       4b
+        nop
+
+3:        
+        /* get address of the cpu stack */
+        lw      $sp,    CPU_TREE_STACK($5)
+        li      $4,     CONFIG_HEXO_CPU_STACK_SIZE - (4 * INT_REG_SIZE/8)
+        add     $sp,    $4,     $sp
+#  ifdef CONFIG_COMPILE_FRAMEPTR
+        move    $fp,            $sp
+#  endif
+
+        /* jump to C code */
+        la      $8,             mutekh_startup_smp
+        j       $8
+        nop
+
+# endif
+2:
+# ifdef CONFIG_CPU_WAIT_IRQ
+        wait
+# endif
+        b               2b
+        nop
+1:
 #endif
 
-#ifdef CONFIG_ARCH_SMP
-        /* adjust initial stack from cpuid */
-        sll     $8,     $9,     CONFIG_HEXO_RESET_STACK_SIZE
-        subu    $sp,    $sp,    $8
-#endif
-
-#ifdef CONFIG_SOCLIB_MEMCHECK
-        .set push
-        .set noat
-        addiu   $8,     $0,     1 << CONFIG_HEXO_RESET_STACK_SIZE
-
-        /* enter memchecker command mode */
-        li      $1,             SOCLIB_MC_MAGIC_VAL
-        sw      $1,             SOCLIB_MC_MAGIC ($0)
-
-        /* create a new initial memchecker context using cpuid as context id */
-        sw      $8,             SOCLIB_MC_R2 ($0)
-        subu    $8,             $sp,    $8
-        sw      $8,             SOCLIB_MC_R1 ($0)
-        sw      $9,             SOCLIB_MC_CTX_CREATE ($0)
-
-        /* switch to new memchecker context */
-        sw      $9,             SOCLIB_MC_CTX_SET ($0)
-
-        /* enable all memchecker checks */
-        li      $1,             SOCLIB_MC_CHECK_ALL
-        sw      $1,             SOCLIB_MC_ENABLE ($0)
-#endif
-
-        /* adjust stack pointer, 64 bits aligned, mips abi requires 4 free words */
-        addiu   $sp,    $sp,    -16
+        li      $sp,            CONFIG_STARTUP_STACK_ADDR + CONFIG_STARTUP_STACK_SIZE - (4 * INT_REG_SIZE/8)
 #ifdef CONFIG_COMPILE_FRAMEPTR
         move    $fp,            $sp
 #endif
 
-#ifdef CONFIG_SOCLIB_MEMCHECK
-        /* leave memchecker command mode */
-        sw      $0,             SOCLIB_MC_MAGIC ($0)
-        .set pop
-#endif
-
-#if CONFIG_CPU_MIPS_VERSION >= 32
-        /* set cpu interrupts entry point */
-        la      $4,             __exception_base_ptr
-        mtc0    $4,     $15,    1
-#endif
-
-        /* jump to architecture code */
-        la      $8,             boot_from_reset_vector
+        /* jump to C code */
+        la      $8,             mutekh_startup
         j       $8
         nop
 
         .set pop
-FUNC_END(cpu_boot)
+FUNC_END(mutekh_entry)
 
-
-FUNC_START(.boot, cpu_boot_idle)
-#ifdef CONFIG_CPU_WAIT_IRQ
-        wait
-#endif
-        b               cpu_boot_idle
-FUNC_END(cpu_boot_idle)

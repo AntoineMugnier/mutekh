@@ -1,4 +1,2 @@
-
-ifeq ($(CONFIG_DRIVER_GPIO_SAM7), defined)
- subdirs += sam7
-endif
+objs-$(CONFIG_DRIVER_PCA9557) += pca9557.o
+objs-$(CONFIG_DRIVER_MCP23S17) += mcp23s17.o mcp23s17_spi.o

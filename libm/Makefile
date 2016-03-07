@@ -22,5 +22,4 @@ objs = 	k_standard.o k_rem_pio2.o \
 		s_rint.o s_scalbn.o s_signgam.o s_significand.o s_sin.o \
 		s_tan.o s_tanh.o
 
-doc_headers = math.h fdlibm.h
 

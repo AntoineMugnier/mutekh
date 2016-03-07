@@ -1,0 +1,475 @@
+
+@section TP {Configuration token declaration}
+
+  @section {Introduction}
+
+    This section describes the MutekH build system configuration files
+    and is intended for kernel developers.
+
+    Be sure to first read the @xref{BuildSystem} page which contains
+    more basic information.
+
+    MutekH has a component-based architecture where each module declares
+    its configuration tokens.
+
+    Tokens are declared in @b{configuration description files} which are
+    located at various places in the MutekH source tree.  These
+    constraints configuration files have a different syntax from the
+    build configuration files.  They are designed to declare
+    configuration tokens, express relationships between available tokens
+    and describe associated constraints.
+
+    Declared tokens may be assigned in build configuration files to
+    build with a given configuration.  Their values can later be tested
+    from source code and @tt{Makefile} files using C macros and
+    @tt{make} variables.
+
+  @end section
+
+  @section {The .config files syntax}
+
+    Configuration description and constraints files contains blocks.
+    Each block begins with @tt{%config} or @tt{%init} and declares a new
+    token. See examples below for syntax details.
+
+    @section {Configuration tokens declaration}
+
+      Their are several types of configuration tokens:
+
+      @list
+        @item normal features enabling tokens which can be either
+          defined or undefined in build configuration files.
+        @item meta tokens which can only get defined through definition
+          of other tokens.
+        @item value tokens which can have any value.
+
+      @end list
+
+      @section {Token flags}
+
+        Several flags can be attached to tokens, most important ones
+        are:
+
+        @list
+          @item @tt{value} : Indicate the token is a value token. Value
+            tokens can not have dependencies but can take values other
+            than @tt{defined} and @tt{undefined}
+          @item @tt{meta} : Indicate the token is a meta token which may
+            only be defined by an other token using the @tt{provide}
+            tag.
+          @item @tt{auto} : Indicate the token may be automatically
+            defined to satisfy dependencies.
+
+        @end list
+        Other flags can be attached to tokens:
+
+        @list
+          @item @tt{harddep} : Indicate the token can not be safely
+            undefined due to a unsatisfied dependency.
+          @item @tt{mandatory} : Indicate the token can not be undefined
+            at all. Useful to enforce requirements on other tokens,
+            mainly for mandatory modules.
+          @item @tt{root} : Indicate the token has no parent.
+          @item @tt{internal} : Indicate the token is for internal use
+            and can not be defined in build configuration file
+            directly.
+          @item @tt{noexport} : Indicate the token should not be written
+            out in generated files.
+          @item @tt{private} : Indicate the token can not be used with
+            @tt{parent}, @tt{depend} or @tt{provide} tag from an other
+            @tt{.config} file.
+          @item @tt{flags enum} : This flag can be used to have multiple
+            value tokens initialized with sequential values.
+
+        @end list
+
+        Some flags may be used with value tokens to instruct how
+        @tt{provide} conflicts must be handled instead of producing an
+        error:
+
+        @list
+          @item @tt{maxval} : Keep the maximum value.
+          @item @tt{minval} : Keep the minimum value.
+          @item @tt{sumval} : Compute the sum of provided values.
+        @end list
+
+      @end section
+
+      @section {Constraint tags}
+
+        For each configuration token, one may use the following tags:
+        @list
+          @item @tt{desc Description string without quotes} : Short
+            description about the token, multiple @tt{desc} tags will
+            be concatenated.
+          @item @tt{flags FLAGS [...]} : Set some flags with special
+            meaning for the token (see above).
+          @item @tt{parent CONFIG_TOKEN} : Hierarchical dependency, it
+            ensures all token with a parent gets silently undefined if
+            the parent is undefined. This prevents options enabled by
+            default to stay enabled if the parent is disabled; this
+            way it avoids errors due to unneeded requirements. This is
+            also used to hide irrelevant tokens from the help screen
+            if the parent token is undefined.
+          @item @tt{default value} : Set the token default
+            value. @tt{defined} and @tt{undefined} values act as
+            booleans. default value is @tt{undefined} if this line is
+            omitted.
+          @item @tt{module name [long name]} : The feature token is
+            associated with a module name. A module with the given
+            name and the actual config file directory will be
+            considered for building when the token gets defined.
+
+        @end list
+        The following tags may be used to specify features constraints:
+        @list
+          @item @tt{depend CONFIG_TOKEN [...]} : The tag must be used to
+            express feature dependencies, at least one of the given
+            feature tokens is required. Unsatisfied dependency
+            undefine the current token and emit a notice, unless flags
+            modify this behavior.
+          @item @tt{single CONFIG_TOKEN [...]} : Same as depend with the
+            additional constraint that only one of the given tokens
+            may be defined.
+          @item @tt{exclude CONFIG_TOKEN} : Specify excluded tokens,
+            the current token must not be defined at the same time as
+            any given token.
+          @item @tt{when CONFIG_TOKEN_CONDITION [...]} : The current
+            feature token will be automatically defined if all
+            specified conditions are met. Missing dependencies will
+            emit a notice as if it was defined in the build
+            configuration file.
+          @item @tt{provide CONFIG_TOKEN} : Define a meta token if the
+            current token is defined.
+
+        @end list
+
+        Some tags may be used to deals with values tokens. Value
+        tokens must have the @tt{value} flag set:
+
+        @list
+          @item @tt{require CONFIG_TOKEN_CONDITION [...]} : Requirements
+            on value tokens, having at least one condition evaluates
+            to true on the line is mandatory if the current token is
+            defined.
+          @item @tt{provide CONFIG_TOKEN=value} :
+            Set a value token to the specified value if the current token is defined.
+
+        @end list
+
+        Some tags can be used to give some configurations advice to the user when building MutekH:
+
+        @list
+          @item @tt{suggest CONFIG_TOKEN_CONDITION} : Defining the
+            current feature token suggest the given condition to the
+            user.
+          @item @tt{suggest_when CONFIG_TOKEN_CONDITION [...]} : The
+            current token will be suggested to the user if
+            dependencies are actually satisfied and all given
+            conditions are met.
+
+        @end list
+
+        The @tt{CONFIG_TOKEN_CONDITION} might check different conditions:
+
+        @list
+          @item  Token definition check: @tt{CONFIG_TOKEN} or @tt{CONFIG_TOKEN!}
+          @item  Token value equality check: @tt{CONFIG_TOKEN=value}
+          @item  Token numerical value magnitude check: @tt{CONFIG_TOKEN<value} or @tt{CONFIG_TOKEN>value}
+
+        @end list
+
+        The configuration tool will check both constraint rules
+        consistency and build configuration file respect of the rules
+        when building MutekH.
+
+      @end section
+
+      @section {Example}
+
+        Configuration constraints example:
+        @code R
+%config CONFIG_FEATURE
+  desc This is a great module for MutekH
+  depend CONFIG_MUTEK_CONTEXT_SCHED
+  module great The great library
+  require CONFIG_CPU_MAXCOUNT>1
+%config end
+
+%config CONFIG_FEATURE_DEBUG
+  desc Enable debug mode for the great feature
+  parent CONFIG_FEATURE
+  provide CONFIG_FEATURE_STACK_SIZE=4096
+  when CONFIG_DEBUG
+%config end
+
+%config CONFIG_FEATURE_STACK_SIZE
+  desc This is the thread stack size for the great feature
+  parent CONFIG_FEATURE
+  flags value
+  default 512
+%config end
+
+        @end code
+
+      @end section
+
+      @section {Enum example}
+
+        @code R
+%config CONFIG_PTEST
+  flags enum
+  default 0x80
+%config end
+
+%config CONFIG_PTEST1_COUNT
+ flags value
+ provide CONFIG_PTEST
+ default 15
+ parent CONFIG_LIBC
+%config end
+
+%config CONFIG_PTEST2_COUNT
+ flags value
+ provide CONFIG_PTEST
+ default 10
+ parent CONFIG_LIBC
+%config end
+        @end code
+
+        @code R
+CONFIG_PTEST                             0x80
+CONFIG_PTEST1_COUNT                      15
+CONFIG_PTEST1_FIRST                      128
+CONFIG_PTEST2_COUNT                      10
+CONFIG_PTEST2_FIRST                      143
+CONFIG_PTEST_COUNT                       153
+        @end code
+
+      @end section
+
+    @end section
+
+    @section {Initialization tokens declaration}
+
+      Initialization order of different software components at system
+      start needs close attention.  Having all modules and features
+      initialized in proper order is challenging in a modular and
+      configurable project like MutekH.
+
+      The configuration tool offers a way to specify initialization
+      code ordering constraints and to associate them to configuration
+      tokens.  This has several advantages:
+      @list
+        @item It allows inserting external modules initialization code
+          in the right place without patching the main tree.
+        @item It avoids the burdensome work of maintaining
+          initialization function calls and associated @tt{#ifdef}
+          directives.
+        @item It ensures initialization function invocations do not
+          get badly reordered to satisfy a new constraint, while
+          ignoring an older constraints.
+      @end list
+
+      Initialization tokens can be declared for that purpose, each
+      specifying a different stage in the MutekH initialization
+      process.  These tokens live in a separate name space from
+      configuration tokens and are not exported in the configuration
+      header output.  Instead a set of function prototypes and
+      properly ordered function calls code are written as C macros
+      which can then be invoked at the right place in the kernel code.
+      An error will be emitted if constraints can not be satisfied.
+
+      The MutekH startup process based on this tool is described in
+      the @xref{KernelStart}Up page.
+
+      @section {Constraint tags}
+
+        For each configuration token, one may use the following tags:
+        @list
+          @item @tt{parent CONFIG_TOKEN} : Defines the parent
+            configuration token associated to the initialization
+            token. The initialization is disabled if the associated
+            configuration token is not defined.
+          @item @tt{condition CONFIG_TOKEN_CONDITION [...]} : This tag
+            can be used to define some conditions which have to be
+            true for the initialization to actually take place. When
+            Multiple condition tag lines are specified, the
+            initialization token is enabled if at least one of lines
+            define a set of conditions which are all true.
+          @item @tt{after INIT_TOKEN} : This tag imposes the
+            requirement that the code from current token be executed
+            @b{after} the code associated with INIT_TOKEN.
+          @item @tt{before INIT_TOKEN} : This tag imposes the
+            requirement that the code from current token be executed
+            @b{before} the code associated with INIT_TOKEN.
+          @item @tt{during INIT_TOKEN} : This tag makes the current
+            token inherits from constraints expressed for the given
+            INIT_TOKEN. This tag is used to define a hierarchy between
+            initialization tokens.
+          @item @tt{function init_function_name cleanup_function_name}
+            : This tag associates some initialization and cleanup C
+            function names to the token. The cleanup function is
+            optional. When this tag is not present, the token is a
+            place holder token.
+          @item @tt{prototype type arg0, type *arg1} : This tag sets a
+            list of arguments used as init and cleanup functions
+            prototype. It may be used on place holder tokens so that
+            the prototype is valid for all function provided by
+            inheriting tokens in the hierarchy.
+          @item @tt{flags calls} : This flag specifies that C macros
+            with names such as @tt{token_PROTOTYPES}, @tt{token_INIT}
+            and @tt{token_CLEANUP} must be generated. The generated
+            macros contain prototypes and function calls for all
+            enabled inheriting tokens.
+          @item @tt{flags notempty} : This flag can be used to prevent
+            an initialization stage to be empty. When this flag is
+            present and the token is enabled, at least one function
+            call must be generated by an other enabled inheriting
+            token in the hierachy.
+        @end list
+      @end section
+
+      @section {Example}
+
+        Initialization constraints example:
+        @code R
+%init INIT_LIBRARIES
+  parent CONFIG_MUTEK
+  after INIT_SCHEDULER
+  before INIT_APPLICATION
+  flags calls
+%init end
+        @end code
+        @code R
+%init INIT_FEATURE
+  parent CONFIG_FEATURE
+  during INIT_LIBRARIES
+  after INIT_LIBC_STDIO      # an explanation why this is needed
+  function great_feature_init great_feature_cleanup
+%init end
+        @end code
+
+        This will generate the following C macros for use in the
+        kernel source code, provided that the CONFIG_FEATURE token is
+        defined in the build configuration:
+
+        @code R
+#define INIT_LIBRARIES_PROTOTYPES \
+  void great_feature_init(); \
+  void great_feature_cleanup();
+
+#define INIT_LIBRARIES_INIT(...) \
+  great_feature_init(__VA_ARGS__); \
+
+#define INIT_LIBRARIES_CLEANUP(...) \
+  great_feature_claenup(__VA_ARGS__); \
+        @end code
+
+        The @xref{BuildSystem} page describes how to display active
+        intialization tokens for a given configuration along with
+        function calls order and tokens hierarchy.
+
+      @end section
+
+    @end section
+
+  @end section
+
+  @section {Source tree Makefile syntax and rules}
+
+    Makefiles in source directories may use the following variables:
+    @list
+      @item @tt{objs} : A list of @tt{.o} files compiled from @tt{.c},
+        @tt{.s} or @tt{.S} files
+      @item @tt{meta} : A list of files that may be translated from
+        @tt{.m4}, @tt{.cpp} or @tt{.def} files
+      @item @tt{copy} : A list of files that must be copied verbatim
+        from source directory to object directory
+      @item @tt{subdirs} : A list of subdirectories where more files
+        are to be processed. These directories must exist and contain
+        a @tt{Makefile}.
+    @end list
+
+    @tt{Makefiles} may contain optional flags that may be used for compilation:
+
+    @list
+      @item @tt{file.o_CFLAGS=...} : CFLAGS to use for a given object
+      @item @tt{DIR_CFLAGS=...} : CFLAGS to use for all the objects
+        compiled by the current Makefile. Flags added by this setting
+        add-up with the object-specific ones above.
+
+    @end list
+    Moreover, one may use @tt{ifeq (...,...)} make constructs to
+    conditionally compile different things. Configuration tokens are
+    usable.
+
+    Example:
+    @code R
+objs = main.o
+
+ifeq ($(CONFIG_SRL_SOCLIB),defined)
+objs += barrier.o sched_wait.o srl_log.o hw_init.o
+else
+objs += posix_wait_cycles.o
+endif
+
+main.o_CFLAGS = -O0 -ggdb
+    @end code
+
+  @end section
+
+  @section {The arch/ and cpu/ specific parts}
+
+    Architecture and CPU directories have some special files which are
+    injected in the building process:
+
+    @list
+      @item  config.mk, included by make. It can define some compilation flags
+      @item  ldscript, invoked at link-time.
+      @item  Architecture ldscript must create a loadable binary
+      @item  CPU ldscript usually only specifies the entry point name
+    @end list
+
+    @section {The config.mk file}
+
+      The arch @tt{config.mk}  may override the following variables:
+      @list
+        @item @tt{ARCHCFLAGS} : C-compiler flags
+        @item @tt{ARCHLDFLAGS} : Linker flags
+        @item @tt{LD_NO_Q} : Linker for the current architecture does
+          not support -q switch, this slightly changes the linking
+          process.
+        @item @tt{HOSTCPPFLAGS} : Flags to give to host's cpp
+          (HOSTCPP) program. This is only used for expansion of
+          @tt{.def} files.
+      @end list
+
+      The cpu @tt{config.mk}  may override the following variables:
+
+      @list
+        @item @tt{CPUCFLAGS} : C-compiler flags
+        @item @tt{CPULDFLAGS} : Linker flags
+      @end list
+
+    @end section
+
+  @end section
+
+  @section {Notes}
+    @section {Prerequisites}
+
+      The MutekH build-system is based on GNU Make features. It makes intensive use of:
+      @list
+        @item  includes
+        @item  $(foreach) $(subst) $(eval) $(call) macros
+        @item  macro definitions
+      @end list
+      Therefore, a Make-3.81 at least is mandatory.
+
+      The configuration script requires perl >= 5.8.
+    @end section
+
+  @end section
+
+@end section

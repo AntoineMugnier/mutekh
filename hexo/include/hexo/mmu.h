@@ -22,7 +22,7 @@
 
 /**
  * @file
- * @module{Hexo}
+ * @module{Hardware abstraction layer}
  * @short Memory Management Unit and memory contexts stuff
  */
 
@@ -71,20 +71,20 @@ extern struct vmem_ops_s vmem_ops;
 extern struct vmem_page_region_s *initial_ppage_region;
 
 /* get current memory context */
-static inline struct mmu_context_s * mmu_context_get(void)
+ALWAYS_INLINE struct mmu_context_s * mmu_context_get(void)
 {
   return CPU_LOCAL_GET(mmu_context_cur);
 }
 
 /* initialize virtual memory structures */
-uint_fast32_t mmu_global_init();
+uint_fast32_t mmu_global_init(void);
 
 /* switch to virtual memory mode by enabling mmu */
 void mmu_cpu_init(void);
 
 
 /* get kernel context */
-struct mmu_context_s * mmu_get_kernel_context();
+struct mmu_context_s * mmu_get_kernel_context(void);
 
 /* create a memory context and initialize context object */
 error_t mmu_context_init(struct mmu_context_s *ctx, struct vmem_page_region_s *ppage_region);
@@ -118,16 +118,16 @@ bool_t mmu_is_user_vaddr(uintptr_t vaddr);
 
 
 /* get the data exception type*/
-static inline error_t mmu_get_data_error_type(void);
+ALWAYS_INLINE error_t mmu_get_data_error_type(void);
 
 /* get the instruction exception type*/
-static inline error_t mmu_get_ins_error_type(void);
+ALWAYS_INLINE error_t mmu_get_ins_error_type(void);
 
 /* get the data exception faulty address*/
-static inline uintptr_t mmu_get_data_bad_address(void);
+ALWAYS_INLINE uintptr_t mmu_get_data_bad_address(void);
 
 /* get the instruction exception faulty address*/
-static inline uintptr_t mmu_get_ins_bad_address(void);
+ALWAYS_INLINE uintptr_t mmu_get_ins_bad_address(void);
 
 
 

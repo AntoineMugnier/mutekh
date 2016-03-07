@@ -47,8 +47,6 @@
 #endif
 /** */
 
-#ifndef __MUTEK_ASM__
-
 # include <hexo/cpu.h>
 
 /** PowerPc processor context state */
@@ -69,11 +67,24 @@ struct cpu_context_s
 # endif
 };
 
-# define CPU_CONTEXT_REG_NAMES "savemask", CPU_GPREG_NAMES, "cr", "ctr", "msr", "lr", "pc"
-# define CPU_CONTEXT_REG_FIRST 1
-# define CPU_CONTEXT_REG_COUNT 38
+/** name of registers accessible using cpu_context_s::gpr */
+# define CPU_CONTEXT_REG_NAMES CPU_GPREG_NAMES, "cr", "ctr", "msr", "lr", "pc"
+/** number of registers in cpu_context_s::gpr */
+# define CPU_CONTEXT_REG_COUNT 37
 
-# endif  /* __MUTEK_ASM__ */
+# ifdef CONFIG_HEXO_CONTEXT_PREEMPT
+/** @internal */
+extern CPU_LOCAL context_preempt_t *cpu_preempt_handler;
+
+ALWAYS_INLINE error_t context_set_preempt(context_preempt_t *func)
+{
+  context_preempt_t **f = CPU_LOCAL_ADDR(cpu_preempt_handler);
+  if (*f != NULL)
+    return -EBUSY;
+  *f = func;
+  return 0;
+}
+# endif
 
 #endif
 

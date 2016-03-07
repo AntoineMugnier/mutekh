@@ -22,7 +22,7 @@
 
 #include <hexo/types.h>
 
-#include <device/block.h>
+#include <device/class/block.h>
 #include <device/device.h>
 #include <device/driver.h>
 
@@ -35,10 +35,10 @@
 #include "block-cache.h"
 #include "block-cache-private.h"
 
-CONTAINER_FUNC(blk_cache_lba, BLIST, static inline, lba);
-CONTAINER_KEY_FUNC(blk_cache_lba, BLIST, static inline, lba, lba);
+GCT_CONTAINER_FCNS(blk_cache_lba, BLIST, static inline, lba);
+GCT_CONTAINER_KEY_FCNS(blk_cache_lba, BLIST, static inline, lba, lba);
 
-CONTAINER_FUNC(blk_cache_age, BLIST, static inline, age);
+GCT_CONTAINER_FCNS(blk_cache_age, BLIST, static inline, age);
 
 /**************************************************************/
 
@@ -92,7 +92,7 @@ block_cache_newent(struct block_cache_context_s *pv,
  * add new cache entries for data
  */
 
-static DEVBLOCK_CALLBACK(block_cache_update)
+static DEV_BLOCK_CALLBACK(block_cache_update)
 {
   struct block_cache_rq_s *crq = rq_extra;
   struct block_cache_context_s *pv = crq->pv;
@@ -172,7 +172,7 @@ static DEVBLOCK_CALLBACK(block_cache_update)
   return crq->callback(rq, count, crq + 1);
 }
 
-DEVBLOCK_REQUEST(block_cache_request)
+DEV_BLOCK_REQUEST(block_cache_request)
 {
   struct block_cache_context_s	*pv = dev->drv_pv;
   struct block_cache_rq_s *crq = (void*)((uint8_t*)rq + pv->parent_rq_size);
@@ -300,14 +300,14 @@ DEVBLOCK_REQUEST(block_cache_request)
     }
 }
 
-DEVBLOCK_GETRQSIZE(block_cache_getrqsize)
+DEV_BLOCK_GETRQSIZE(block_cache_getrqsize)
 {
   struct block_cache_context_s	*pv = dev->drv_pv;
 
   return pv->parent_rq_size + sizeof(struct block_cache_rq_s);
 }
 
-DEVBLOCK_GETPARAMS(block_cache_getparams)
+DEV_BLOCK_GETPARAMS(block_cache_getparams)
 {
   struct block_cache_context_s	*pv = dev->drv_pv;
 
@@ -347,7 +347,6 @@ DEV_CREATE(block_cache_create)
 
   dev->drv_pv = pv;
   dev->irq = DEVICE_IRQ_INVALID;
-  dev->drv = &block_cache_drv;
 
   pv->bp = dev_block_getparams(parent);
   pv->parent_rq_size = dev_block_getrqsize(dev->parent);
@@ -372,16 +371,10 @@ DEV_CREATE(block_cache_create)
   return 1;
 }
 
+#define block_cache_use dev_use_generic
 
-const struct driver_s block_cache_drv =
-{
-  .class		= device_class_block,
-  .f_create		= block_cache_create,
-  .f_cleanup		= block_cache_cleanup,
-  .f.blk = {
-    .f_request		= block_cache_request,
-    .f_getparams	= block_cache_getparams,
-    .f_getrqsize	= block_cache_getrqsize,
-  }
-};
+DRIVER_DECLARE(block_cache_drv, 0, "Block Cache", block_cache,
+               DRIVER_MEM_METHODS(block_cache));
+
+DRIVER_REGISTER(block_cache_drv);
 

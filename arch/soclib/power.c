@@ -20,7 +20,7 @@
 
 */
 
-#include <arch/mem_checker.h>
+#include <arch/soclib/mem_checker.h>
 #include <hexo/power.h>
 #include <hexo/iospace.h>
 
@@ -42,3 +42,7 @@ error_t power_shutdown()
   return 0;
 }
 
+enum power_reset_cause_e power_reset_cause(void)
+{
+  return POWER_RESET_CAUSE_UNKNOWN;
+}

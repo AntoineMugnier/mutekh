@@ -63,22 +63,22 @@ struct mmu_context_s
   struct vmem_page_region_s *ppage_region; /* physical page region to allocate ppage */
 };
 
-static inline error_t mmu_get_data_error_type(void)
+ALWAYS_INLINE error_t mmu_get_data_error_type(void)
 {
   return mmu_vcache_get_dexcep_type();
 }
 
-static inline error_t mmu_get_ins_error_type(void)
+ALWAYS_INLINE error_t mmu_get_ins_error_type(void)
 {
   return mmu_vcache_get_iexcep_type();
 }
 
-static inline uintptr_t mmu_get_data_bad_address(void)
+ALWAYS_INLINE uintptr_t mmu_get_data_bad_address(void)
 {
   return mmu_vcache_get_data_bad_vaddr();
 }
 
-static inline uintptr_t mmu_get_ins_bad_address(void)
+ALWAYS_INLINE uintptr_t mmu_get_ins_bad_address(void)
 {
   return mmu_vcache_get_ins_bad_vaddr();
 }

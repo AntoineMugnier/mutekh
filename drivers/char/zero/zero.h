@@ -23,12 +23,12 @@
 #ifndef DRIVER_CHAR_ZERO_H_
 #define DRIVER_CHAR_ZERO_H_
 
-#include <device/char.h>
+#include <device/class/char.h>
 #include <device/device.h>
 
 DEV_INIT(dev_zero_init);
 DEV_CLEANUP(dev_zero_cleanup);
-DEVCHAR_REQUEST(dev_zero_request);
+DEV_CHAR_REQUEST(dev_zero_request);
 
 #endif
 

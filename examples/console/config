@@ -1,0 +1,24 @@
+
+  %set OUTPUT_NAME console
+
+  # New source code module to be compiled
+  %append MODULES $(OUTPUT_NAME):$(CONFIGPATH)
+
+  # Application license
+  CONFIG_LICENSE_APP_GPL
+
+  # Libs
+  CONFIG_LIBTERMUI
+  CONFIG_LIBTERMUI_CONSOLE
+  CONFIG_MUTEK_CONSOLE
+
+  CONFIG_PTHREAD
+  CONFIG_PTHREAD_MAIN
+  CONFIG_PTHREAD_STACK_SIZE 16384
+
+  CONFIG_MUTEK_CONTEXT_SCHED
+  CONFIG_HEXO_IRQ
+
+  %include scripts/options.build
+  %include arch/arch.build
+

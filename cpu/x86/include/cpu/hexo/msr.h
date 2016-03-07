@@ -32,9 +32,8 @@
 #define SYSENTER_ESP_MSR	0x175
 #define SYSENTER_EIP_MSR	0x176
 
-#ifndef __MUTEK_ASM__
 
-static inline uint64_t
+ALWAYS_INLINE uint64_t
 cpu_x86_read_msr(uint32_t index)
 {
   reg_t low, high;
@@ -48,7 +47,7 @@ cpu_x86_read_msr(uint32_t index)
   return low | ((uint64_t)high << 32);
 }
 
-static inline void
+ALWAYS_INLINE void
 cpu_x86_write_msr(uint32_t index, uint64_t value)
 {
   reg_t high = value >> 32;
@@ -61,8 +60,6 @@ cpu_x86_write_msr(uint32_t index, uint64_t value)
 	       , "c" (index)
 	       );
 }
-
-#endif
 
 #endif
 

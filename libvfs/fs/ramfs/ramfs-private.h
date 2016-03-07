@@ -16,56 +16,84 @@
   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
   02110-1301 USA
 
-  Copyright Nicolas Pouillon, <nipo@ssji.net>, 2009
+  Copyright Nicolas Pouillon, <nipo@ssji.net>, 2009,2014
 */
 
 #ifndef _RAMFS_PRIVATE_H_
 #define _RAMFS_PRIVATE_H_
 
 #include <hexo/types.h>
-#define GPCT_CONFIG_NODEPRECATED
-#include <hexo/gpct_platform_hexo.h>
-#include <hexo/gpct_lock_hexo.h>
-#include <gpct/cont_hashlist.h>
-#include <gpct/object_refcount.h>
 
-#include <vfs/types.h>
+#include <vfs/node.h>
 #include <vfs/file.h>
+
+#include <gct/container_avl_p.h>
+
+struct ramfs_fs_s {
+    struct vfs_fs_s fs;
+};
 
 VFS_FS_NODE_OPEN(ramfs_node_open);
 
-OBJECT_TYPE     (ramfs_node, REFCOUNT, struct fs_node_s);
+#define GCT_CONTAINER_LOCK_ramfs_dir_hash HEXO_LOCK_IRQ
+#define GCT_CONTAINER_ALGO_ramfs_dir_hash AVL_P
+#define GCT_CONTAINER_COUNTER_ramfs_dir_hash
+#define GCT_CONTAINER_REFCOUNT_ramfs_dir_hash ramfs_node
 
-#define CONTAINER_LOCK_ramfs_dir_hash HEXO_SPIN_IRQ
-
-CONTAINER_TYPE    (ramfs_dir_hash, HASHLIST,
-struct fs_node_s
+GCT_CONTAINER_TYPES    (ramfs_dir_hash,
+struct ramfs_node_s
 {
-    ramfs_node_entry_t obj_entry;
-    char name[CONFIG_VFS_NAMELEN];
-	CONTAINER_ENTRY_TYPE(HASHLIST) hash_entry;
-    enum vfs_node_type_e type;
-    struct fs_node_s *parent;
+    struct vfs_node_s node;       /* keep first field */
+
+    struct ramfs_node_s *parent;
     union {
         struct ramfs_data_s *data;
         ramfs_dir_hash_root_t children;
     };
-}, hash_entry, 5);
 
-#define CONTAINER_OBJ_ramfs_dir_hash ramfs_node
+    char name[CONFIG_VFS_NAMELEN];
+	GCT_CONTAINER_ENTRY(ramfs_dir_hash, hash_entry);
+} *, hash_entry);
 
-CONTAINER_KEY_TYPE(ramfs_dir_hash, PTR, BLOB, name, CONFIG_VFS_NAMELEN);
-//CONTAINER_PROTOTYPE(ramfs_dir_hash, HASHLIST, static inline);
+static inline struct ramfs_node_s *ramfs_node_from_vfs(struct vfs_node_s *node)
+{
+    return (void*)node;
+}
 
-OBJECT_CONSTRUCTOR(ramfs_node);
-OBJECT_DESTRUCTOR(ramfs_node);
+static inline struct ramfs_fs_s *ramfs_fs_from_vfs(struct vfs_fs_s *fs)
+{
+    return (void*)fs;
+}
 
-OBJECT_PROTOTYPE         (ramfs_node, static inline, ramfs_node);
-OBJECT_FUNC              (ramfs_node, REFCOUNT, static inline, ramfs_node, obj_entry);
+#define ramfs_node_refinc(n) ramfs_node_refinc_(n, __FUNCTION__)
+#define ramfs_node_refdec(n) ramfs_node_refdec_(n, __FUNCTION__)
 
-struct fs_node_s;
+static inline struct ramfs_node_s *ramfs_node_refinc_(struct ramfs_node_s *node, const char *func)
+{
+    vfs_printk("<%s %s %p %d>", __FUNCTION__, func, node, vfs_node_refcount(&node->node));
+    return ramfs_node_from_vfs(vfs_node_refinc(&node->node));
+}
 
-bool_t ramfs_dir_get_nth(struct fs_node_s *node, struct vfs_dirent_s *dirent, size_t n);
+static inline bool_t ramfs_node_refdec_(struct ramfs_node_s *node, const char *func)
+{
+    vfs_printk("<%s %s %p %d>", __FUNCTION__, func, node, vfs_node_refcount(&node->node));
+    return vfs_node_refdec(&node->node);
+}
+
+static const bool_t _gct_refcount_ramfs_dir_hash_ramfs_node_enabled = 1;
+
+GCT_CONTAINER_KEY_TYPES(ramfs_dir_hash, PTR, BLOB, name, CONFIG_VFS_NAMELEN);
+
+struct ramfs_node_s *ramfs_node_create(
+    enum vfs_node_type_e type,
+    struct vfs_fs_s *fs,
+    struct ramfs_data_s *data,
+    const char *name, size_t namelen);
+
+bool_t ramfs_dir_get_nth(
+    struct ramfs_node_s *node,
+    struct vfs_dirent_s *dirent,
+    size_t n);
 
 #endif
 

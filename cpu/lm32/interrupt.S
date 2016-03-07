@@ -23,8 +23,6 @@
 #include <hexo/interrupt.h>
 #include <hexo/cpu.h>
 
-.section .excep,"ax",@progbits
-
 .macro LM32_GET_REGARRAY  // get context registers save array
 #if 0
         addi    r31,    r25,     lo(lm32_context_regs)
@@ -50,41 +48,44 @@
 
 .endm
 
-__exception_base_ptr:
+.section .excep,"ax",@progbits
 
-      /* reset */
+CPU_NAME_DECL(exception_vector):
+        .globl CPU_NAME_DECL(exception_vector)
+
+#ifndef CONFIG_LOAD_RESET_SEPARATE
+CPU_NAME_DECL(reset_vector):
+        .globl CPU_NAME_DECL(reset_vector)
+#endif
+        /* reset */
         xor     r0,     r0,     r0
-        seta    r1, cpu_boot
+        seta    r1,     mutekh_entry
         b       r1
-        nop
-        nop
-        nop
-        nop
 
         /* breakpoint */
-        .org __exception_base_ptr + 1*32
+        .org CPU_NAME_DECL(exception_vector) + 1*32
         mv      r30,    r31
         LM32_EXCEPT_ENTRY CPU_FAULT_BREAKPOINT
 
         /* iberr*/
-        .org __exception_base_ptr + 2*32
+        .org CPU_NAME_DECL(exception_vector) + 2*32
         LM32_EXCEPT_ENTRY CPU_FAULT_INS_BERR
 
         /* watchpoint */
-        .org __exception_base_ptr + 3*32
+        .org CPU_NAME_DECL(exception_vector) + 3*32
         mv      r30,    r31
         LM32_EXCEPT_ENTRY CPU_FAULT_WATCHPOINT
 
         /* dberr */
-        .org __exception_base_ptr + 4*32
+        .org CPU_NAME_DECL(exception_vector) + 4*32
         LM32_EXCEPT_ENTRY CPU_FAULT_DATA_BERR
 
         /* div by 0 */
-        .org __exception_base_ptr + 5*32
+        .org CPU_NAME_DECL(exception_vector) + 5*32
         LM32_EXCEPT_ENTRY CPU_FAULT_DIV_BY_0
 
         /* irq */
-        .org __exception_base_ptr + 6*32
+        .org CPU_NAME_DECL(exception_vector) + 6*32
 
 #ifdef CONFIG_HEXO_IRQ
         seta    r31, lm32_irq_entry
@@ -94,11 +95,11 @@ __exception_base_ptr:
 #endif
 
         /* syscall */
-        .org __exception_base_ptr + 7*32
+        .org CPU_NAME_DECL(exception_vector) + 7*32
 
         LM32_EXCEPT_ENTRY CPU_FAULT_SYSCALL
 
-        .org __exception_base_ptr + 8*32
+        .org CPU_NAME_DECL(exception_vector) + 8*32
 
 FUNC_START(.text, lm32_excep_entry)
 
@@ -173,9 +174,9 @@ FUNC_START(.text, lm32_restore_preempt)
 #ifdef CONFIG_HEXO_CONTEXT_PREEMPT
 
         // check if a preempt handler has been registered
-        seta    r1, cpu_preempt_handler
-        lw      r1, (r1+0)
-        be      r1,     r0,     1f
+        seta    r2, cpu_preempt_handler
+        lw      r1, (r2+0)
+        be      r1,     r0,     2f
 
         // call preempt handler
         call    r1
@@ -210,7 +211,10 @@ FUNC_START(.text, lm32_restore_preempt)
 
         // switch to new context
         bi      cpu_context_jumpto
-1:      
+2:
+        // invalidate handler outside interrupt
+        sw      (r2+0), r2
+1:
 #endif
 
         // restore regs

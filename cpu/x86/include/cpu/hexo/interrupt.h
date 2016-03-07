@@ -33,6 +33,28 @@
 
 #define CPU_INTERRUPT_H_
 
+/** @multiple x86 cpu exception id */
+#define CPU_EXCEPTION_DIVIDE_ERROR          0
+#define CPU_EXCEPTION_DEBUG                 1
+#define CPU_EXCEPTION_NMI_INTERRUPT         2
+#define CPU_EXCEPTION_BREAKPOINT            3
+#define CPU_EXCEPTION_OVERFLOW              4
+#define CPU_EXCEPTION_BOUND_RANGE           5
+#define CPU_EXCEPTION_INVALID_OPCODE        6
+#define CPU_EXCEPTION_NO_FPU                7
+#define CPU_EXCEPTION_DOUBLE_FAULT          8
+#define CPU_EXCEPTION_COPROCESSOR_SEGMENT   9
+#define CPU_EXCEPTION_INVALID_TSS           10
+#define CPU_EXCEPTION_NO_SEGMENT            11
+#define CPU_EXCEPTION_STACK_SEGMENT         12
+#define CPU_EXCEPTION_GENERAL_PROTECTION    13
+#define CPU_EXCEPTION_PAGE_FAULT            14
+#define CPU_EXCEPTION_INTEL_RESERVED        15
+#define CPU_EXCEPTION_X87_FPU_ERROR         16
+#define CPU_EXCEPTION_ALIGNMENT_CHECK       17
+#define CPU_EXCEPTION_MACHINE_CHECK         18
+#define CPU_EXCEPTION_SIMD_FP_EXCEPTION     19
+
 /** first interrupt vector used for exceptions */
 #define CPU_EXCEPT_VECTOR		0
 /** exceptions vector count */
@@ -51,14 +73,12 @@
 /** max interrupt line handled by the CPU */
 #define CPU_MAX_INTERRUPTS		256
 
-/** interrupts entry tampline code size  */
+/** interrupts entry trampoline size  */
 #define CPU_INTERRUPT_ENTRY_ALIGN	16
 
 /** direct iret entry, used for cpu wakeup ipis */
 #define CPU_HWINT_VECTOR_IRET           0x5f
 
-
-#ifndef __MUTEK_ASM__
 
 # include <hexo/local.h>
 
@@ -67,7 +87,9 @@ void x86_interrupt_ex_entry(void);
 void x86_interrupt_sys_entry(void);
 void x86_interrupt_sys_enter(void);
 
-static inline void
+typedef reg_t cpu_irq_state_t;
+
+ALWAYS_INLINE void
 cpu_interrupt_disable(void)
 {
 # ifdef CONFIG_HEXO_IRQ
@@ -80,7 +102,7 @@ cpu_interrupt_disable(void)
 # endif
 }
 
-static inline void
+ALWAYS_INLINE void
 cpu_interrupt_enable(void)
 {
 # ifdef CONFIG_HEXO_IRQ
@@ -93,7 +115,7 @@ cpu_interrupt_enable(void)
 # endif
 }
 
-static inline void
+ALWAYS_INLINE void
 cpu_interrupt_process(void)
 {
 # ifdef CONFIG_HEXO_IRQ
@@ -113,20 +135,8 @@ cpu_interrupt_process(void)
 # endif
 }
 
-static inline void
-cpu_interrupt_savestate(reg_t *state)
-{
-# ifdef CONFIG_HEXO_IRQ
-  __asm__ volatile (
-		    "pushfl	\n"
-		    "popl	%0\n"
-		    : "=m,r" (*state)
-		    );
-# endif
-}
-
-static inline void
-cpu_interrupt_savestate_disable(reg_t *state)
+ALWAYS_INLINE void
+cpu_interrupt_savestate_disable(cpu_irq_state_t *state)
 {
 # ifdef CONFIG_HEXO_IRQ
   __asm__ volatile (
@@ -140,8 +150,8 @@ cpu_interrupt_savestate_disable(reg_t *state)
 # endif
 }
 
-static inline void
-cpu_interrupt_restorestate(const reg_t *state)
+ALWAYS_INLINE bool_t
+cpu_interrupt_restorestate(const cpu_irq_state_t *state)
 {
 # ifdef CONFIG_HEXO_IRQ
   __asm__ volatile (
@@ -151,10 +161,14 @@ cpu_interrupt_restorestate(const reg_t *state)
 		    : "m,r" (*state)
                     : "memory"     /* compiler memory barrier */
 		    );
+
+  return (*state >> 9) & 1;
+# else
+  return 0;
 # endif
 }
 
-static inline bool_t
+ALWAYS_INLINE bool_t
 cpu_interrupt_getstate(void)
 {
 # ifdef CONFIG_HEXO_IRQ
@@ -166,13 +180,13 @@ cpu_interrupt_getstate(void)
 		    : "=r" (flags)
 		    );
 
-  return flags & 0x200 ? 1 : 0;
+  return (flags >> 9) & 1;
 # else
   return 0;
 # endif
 }
 
-static inline bool_t
+ALWAYS_INLINE bool_t
 cpu_is_interruptible(void)
 {
 # ifdef CONFIG_HEXO_IRQ
@@ -183,7 +197,7 @@ cpu_is_interruptible(void)
 }
 
 # ifdef CONFIG_CPU_WAIT_IRQ
-static inline void cpu_interrupt_wait(void)
+ALWAYS_INLINE void cpu_interrupt_wait(void)
 {
 #  ifdef CONFIG_HEXO_IRQ
   /* sti ; hlt is guaranteed to be atomic */
@@ -193,8 +207,6 @@ static inline void cpu_interrupt_wait(void)
 #  endif
 }
 # endif
-
-#endif  /* __MUTEK_ASM__ */
 
 #endif
 

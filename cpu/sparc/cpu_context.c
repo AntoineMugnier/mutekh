@@ -23,6 +23,10 @@
 #include <hexo/context.h>
 #include <hexo/local.h>
 
+#ifdef CONFIG_HEXO_CONTEXT_PREEMPT
+CPU_LOCAL context_preempt_t *cpu_preempt_handler = (context_preempt_t*)1;
+#endif
+
 #ifdef CONFIG_HEXO_USERMODE
 CPU_LOCAL void *__context_data_base;
 #endif
@@ -60,7 +64,7 @@ cpu_context_init(struct context_s *context, context_entry_t *entry, void *param)
 
   regs->save_mask = CPU_SPARC_CONTEXT_RESTORE_CALLER;
   regs->g[7] = (uintptr_t)context->tls;
-  regs->o[6] = CONTEXT_LOCAL_TLS_GET(context->tls, context_stack_end) - CONFIG_HEXO_STACK_ALIGN;
+  regs->o[6] = CONTEXT_LOCAL_TLS_GET(context->tls, context_stack_end) - SPARC_STACK_REDZONE;
 #ifdef CONFIG_COMPILE_FRAMEPTR
   regs->i[7] = regs->o[6];
 #endif

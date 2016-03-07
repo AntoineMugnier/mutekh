@@ -32,14 +32,14 @@ extern struct mem_alloc_region_s mem_region_ram;
 #define (mem_scope_sys)		(&mem_region_ram)
 
 /** set default allocation policy */
-static inline void
+ALWAYS_INLINE void
 mem_alloc_set_default(struct mem_alloc_region_s *region)
 {
 }
 
 #ifdef CONFIG_MUTEK_MEMALLOC_GUARD
 
-static inline bool_t mem_guard_check(void)
+ALWAYS_INLINE bool_t mem_guard_check(void)
 {
   return mem_alloc_region_guard_check(&mem_region_ram);
 }

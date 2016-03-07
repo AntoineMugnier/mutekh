@@ -22,7 +22,7 @@
 
 /**
  * @file
- * @module{Mutek}
+ * @module{Kernel services}
  * @short High level memory allocation stuff
  */
 
@@ -49,10 +49,24 @@ enum mem_scope_e
     mem_scope_e_count,
   };
 
+/** @This checks memory allocator structures.
+    @see #CONFIG_MUTEK_MEMALLOC_CRC
+    @see #CONFIG_MUTEK_MEMALLOC_GUARD
+    @see #CONFIG_MUTEK_MEMALLOC_SCRAMBLE
+    @see #CONFIG_MUTEK_MEMALLOC_STATS
+*/
+ALWAYS_INLINE
+void mem_check(void)
+{
+  memory_allocator_region_check(default_region);
+}
 
-/** @this allocate a new memory block in given scope*/
-static inline
-void *mem_alloc(size_t size, enum mem_scope_e scope)
+/** @this allocates a new memory block in given scope with specified
+    alignment constraint. 
+    @see #CONFIG_MUTEK_MEMALLOC_ALIGN
+*/
+inline void *
+mem_alloc_align(size_t size, size_t align, enum mem_scope_e scope)
 {
   if (size == 0) 
     return NULL;
@@ -60,7 +74,7 @@ void *mem_alloc(size_t size, enum mem_scope_e scope)
   void *ptr = NULL;
 
   if (default_region != NULL)
-    ptr = memory_allocator_pop (default_region, size);
+    ptr = memory_allocator_pop (default_region, size, align);
 
 # if defined (CONFIG_MUTEK_MEM_REGION)
   else
@@ -70,7 +84,7 @@ void *mem_alloc(size_t size, enum mem_scope_e scope)
       region_item = mem_region_get_first (scope);
       while( region_item )
 	{
-	  ptr = memory_allocator_pop (region_item->region, size);
+	  ptr = memory_allocator_pop (region_item->region, size, align);
 	  if (ptr != NULL)
 	    break;
 	  region_item = mem_region_get_next (scope, region_item);
@@ -83,9 +97,16 @@ void *mem_alloc(size_t size, enum mem_scope_e scope)
   return ptr;
 }
 
-/** @this allocate a new memory block for another cpu in given scope*/
-static inline
-void *mem_alloc_cpu(size_t size, enum mem_scope_e scope, cpu_id_t cpu_id)
+/** @This allocates a new memory block in given scope. */
+ALWAYS_INLINE
+void *mem_alloc(size_t size, enum mem_scope_e scope)
+{
+  return mem_alloc_align(size, 1, scope);
+}
+
+/** @This allocate a new memory block for another cpu in given scope*/
+inline void *
+mem_alloc_cpu(size_t size, enum mem_scope_e scope, cpu_id_t cpu_id)
 {
   if (size == 0)
     return NULL;
@@ -93,7 +114,7 @@ void *mem_alloc_cpu(size_t size, enum mem_scope_e scope, cpu_id_t cpu_id)
   void *ptr = NULL;
 
   if (default_region != NULL)
-    ptr = memory_allocator_pop (default_region, size);
+    ptr = memory_allocator_pop (default_region, size, 1);
 
 # if defined (CONFIG_MUTEK_MEM_REGION)
   else
@@ -103,7 +124,7 @@ void *mem_alloc_cpu(size_t size, enum mem_scope_e scope, cpu_id_t cpu_id)
       region_item = mem_region_id_get_first(cpu_id, scope);
       while( region_item )
 	{
-	  ptr = memory_allocator_pop (region_item->region, size);
+	  ptr = memory_allocator_pop (region_item->region, size, 1);
 	  if (ptr != NULL)
 	    break;
 	  region_item = mem_region_id_get_next(cpu_id, scope, region_item);
@@ -116,22 +137,25 @@ void *mem_alloc_cpu(size_t size, enum mem_scope_e scope, cpu_id_t cpu_id)
   return ptr;
 }
 
-/** @this free allocated memory block */
-static inline
+/** @This frees allocated memory block */
+ALWAYS_INLINE
 void mem_free(void *ptr)
 {
   memory_allocator_push(ptr);
 }
 
-/** @this return the size of given memory block */
-static inline
+/** @This returns the size of given memory block */
+ALWAYS_INLINE
 size_t mem_getsize(void *ptr)
 {
   return memory_allocator_getsize(ptr);
 }
 
-/** @this resize the given memory block, return NULL if failed */
-static inline
+/** @This resizes the given memory block, return NULL if failed. The
+    allocated memory block is not moved; if not enough free memory
+    blocks are available next to allocated memory, this function
+    fails. */
+ALWAYS_INLINE
 void *mem_resize(void *ptr, size_t size)
 {
   return memory_allocator_resize(ptr, size);

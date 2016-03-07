@@ -36,16 +36,15 @@ CONFIG_LIBTINYGL_VGAFB
     CONFIG_ROM_ADDR 0x00400000
     CONFIG_ROM_SIZE 0x00100000
 
-    CONFIG_MUTEK_PRINTK_KEEP_EARLY
-    CONFIG_SOCLIB_EARLY_CONSOLE
-    CONFIG_SOCLIB_EARLY_CONSOLE_ADDR 0xd0200000
+    CONFIG_SOCLIB_PRINTK
+    CONFIG_MUTEK_PRINTK_ADDR 0xd0200000
     %set platform_name pf_soclib_tinygl
 
     # Device and drivers
-    CONFIG_DRIVER_CHAR_SOCLIBTTY
-    CONFIG_DRIVER_ICU_SOCLIB_XICU
-    CONFIG_DRIVER_TIMER_SOCLIB
-    CONFIG_DRIVER_FB_SOCLIB
+    CONFIG_DRIVER_SOCLIB_VCI_MULTI_TTY
+    CONFIG_DRIVER_SOCLIB_VCI_XICU
+    CONFIG_DRIVER_SOCLIB_VCI_TIMER
+    CONFIG_DRIVER_SOCLIB_VCI_FRAME_BUFFER
 
     # use FPU
     CONFIG_COMPILE_SOFTFLOAT undefined
@@ -55,8 +54,8 @@ CONFIG_LIBTINYGL_VGAFB
 # re-switch to common
 %common
 
-%include $(SRC_DIR)/examples/common/build_options.conf
-%include $(SRC_DIR)/examples/common/platforms.conf
+  %include scripts/options.build
+  %include arch/arch.build
 
 # tweaking for ibmpc
 %section ibmpc-*

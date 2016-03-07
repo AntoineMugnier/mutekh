@@ -16,7 +16,7 @@
   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
   02110-1301 USA
 
-  Copyright Nicolas Pouillon, <nipo@ssji.net>, 2009
+  Copyright Nicolas Pouillon, <nipo@ssji.net>, 2009,2014
 */
 
 #include <hexo/types.h>
@@ -24,75 +24,73 @@
 #include <mutek/mem_alloc.h>
 #include <mutek/printk.h>
 
-#include <vfs/types.h>
+#include <vfs/node.h>
 #include <vfs/file.h>
 
 #include "ramfs_file.h"
 #include "ramfs-private.h"
 #include "ramfs_data.h"
 
-VFS_FILE_CLOSE(ramfs_file_close)
-{
-	if ( file->node->type == VFS_NODE_FILE ) {
-        struct ramfs_data_s *rfs_data = file->priv;
-		ramfs_data_refdrop(rfs_data);
-    }
-	vfs_file_refdrop(file);
-	
-	return 0;
-}
-
 VFS_FILE_READ(ramfs_file_read)
 {
-	struct ramfs_data_s *data = file->priv;
-	ssize_t left = data->actual_size - file->offset;
-	if ( size < left )
-		left = size;
-	if ( left < 0 )
+    struct ramfs_node_s *ramfs_node = ramfs_node_from_vfs(file->node);
+	struct ramfs_data_s *data = ramfs_node->data;
+	ssize_t to_copy = data->actual_size - file->offset;
+
+	if (to_copy <= 0)
 		return -EINVAL;
 
-	memcpy(buffer, (void*)(((uintptr_t)data->data)+file->offset), left);
+	if (size < to_copy)
+		to_copy = size;
 
-	file->offset += left;
+	memcpy(buffer, (void*)(((uintptr_t)data->data)+file->offset), to_copy);
+	file->offset += to_copy;
 
-	return left;
+	return to_copy;
 }
 
 VFS_FILE_READ(ramfs_dir_read)
 {
-	if ( size != sizeof(struct vfs_dirent_s) )
+    struct ramfs_node_s *ramfs_node = ramfs_node_from_vfs(file->node);
+
+	if (size != sizeof(struct vfs_dirent_s))
 		return -EINVAL;
 
-	uintptr_t cur = (uintptr_t)file->priv;
+	uintptr_t cur = file->offset;
+    bool_t success = ramfs_dir_get_nth(ramfs_node, buffer, cur);
 
-	struct fs_node_s *rfs_node = file->node;
-    bool_t gotit = ramfs_dir_get_nth(rfs_node, buffer, cur);
-
-    if ( gotit )
-        file->priv = (void *)(uintptr_t)(cur+1);
-    else
-        file->priv = (void *)(uintptr_t)0;
-
-	return gotit ? sizeof(struct vfs_dirent_s) : 0;
+    if (success) {
+        file->offset++;
+        return sizeof(struct vfs_dirent_s);
+    } else {
+        file->offset = 0;
+        return 0;
+    }
 }
 
 VFS_FILE_WRITE(ramfs_file_write)
 {
-	struct ramfs_data_s *data = file->priv;
+    struct ramfs_node_s *ramfs_node = ramfs_node_from_vfs(file->node);
+	struct ramfs_data_s *data = ramfs_node->data;
+
+    if (file->flags & VFS_OPEN_APPEND)
+        file->offset = data->actual_size;
+
 	ssize_t offset_after = file->offset + size;
-	if ( offset_after > (off_t)data->allocated_size ) {
+
+	if (offset_after > (off_t)data->allocated_size) {
 		size_t new_size = offset_after;
 		new_size |= 0xfff;
 		new_size += 1;
 
 		error_t err = ramfs_data_realloc(data, new_size);
-		if ( err )
+		if (err)
 			return err;
 	}
 
-	memcpy((void*)(((uintptr_t)data->data)+file->offset), buffer, size);
-
+	memcpy((void*)(((uintptr_t)data->data) + file->offset), buffer, size);
 	file->offset += size;
+
 	if ( file->offset > (off_t)data->actual_size )
 		data->actual_size = file->offset;
 
@@ -101,16 +99,18 @@ VFS_FILE_WRITE(ramfs_file_write)
 
 VFS_FILE_TRUNCATE(ramfs_file_truncate)
 {
-    struct ramfs_data_s *data = file->priv;
-    if ( new_size > (off_t)data->allocated_size ) {
+    struct ramfs_node_s *ramfs_node = ramfs_node_from_vfs(file->node);
+    struct ramfs_data_s *data = ramfs_node->data;
+
+    if (new_size > (off_t)data->allocated_size) {
         new_size |= 0xfff;
         new_size += 1;
 
         error_t err = ramfs_data_realloc(data, new_size);
-        if ( err )
+        if (err)
             return err;
 
-        memset(data->data+data->actual_size, 0, new_size - data->actual_size);
+        memset(data->data + data->actual_size, 0, new_size - data->actual_size);
     }
 
     data->actual_size = new_size;
@@ -118,16 +118,10 @@ VFS_FILE_TRUNCATE(ramfs_file_truncate)
     return 0;
 }
 
-VFS_FILE_WRITE(ramfs_file_append)
-{
- 	struct ramfs_data_s *data = file->priv;
-    file->offset = data->actual_size;
-    return ramfs_file_write(file, buffer, size);
-}
-
 VFS_FILE_SEEK(ramfs_file_seek)
 {
-	struct ramfs_data_s *data = file->priv;
+    struct ramfs_node_s *ramfs_node = ramfs_node_from_vfs(file->node);
+	struct ramfs_data_s *data = ramfs_node->data;
 
 	switch (whence) {
 	case VFS_SEEK_SET:
@@ -140,9 +134,9 @@ VFS_FILE_SEEK(ramfs_file_seek)
 		break;
 	}
 
-	if ( offset > (off_t)data->actual_size )
+	if (offset > (off_t)data->actual_size)
 		offset = data->actual_size;
-	if ( offset < 0 )
+	if (offset < 0)
 		offset = 0;
 
 	file->offset = offset;
@@ -150,41 +144,51 @@ VFS_FILE_SEEK(ramfs_file_seek)
 	return offset;
 }
 
+static const struct vfs_file_ops_s ramfs_file_ops =
+{
+    .read = ramfs_file_read,
+    .write = ramfs_file_write,
+    .truncate = ramfs_file_truncate,
+    .seek = ramfs_file_seek,
+};
+
+static const struct vfs_file_ops_s ramfs_dir_ops =
+{
+    .read = ramfs_dir_read,
+};
 
 VFS_FS_NODE_OPEN(ramfs_node_open)
 {
-	vfs_printk("<ramfs_node_open %p %x ", node, flags);
+    __unused__ struct ramfs_node_s *ramfs_node = ramfs_node_from_vfs(node);
+    const struct vfs_file_ops_s *ops = NULL;
+    struct vfs_file_s *f;
 
-	struct vfs_file_s *f = vfs_file_new(NULL, node, ramfs_node_refnew, ramfs_node_refdrop);
-	if ( f == NULL ) {
+	vfs_printk("<ramfs_node_open %p %x ", ramfs_node, flags);
+
+	f = mem_alloc(sizeof(*f), mem_scope_sys);
+	if (!f) {
 		vfs_printk("err>");
 		return -ENOMEM;
 	}
 
-	switch (node->type) {
-	case VFS_NODE_FILE: {
-		vfs_printk("file ");
-		if ( flags & VFS_OPEN_READ )
-            f->read = ramfs_file_read;
-		if ( flags & VFS_OPEN_WRITE )
-            f->write = ramfs_file_write;
-        if ( flags & VFS_OPEN_APPEND )
-            f->write = ramfs_file_append;
-		f->seek = ramfs_file_seek;
-		f->priv = ramfs_data_refnew(node->data);
-        f->close = ramfs_file_close;
-        f->truncate = ramfs_file_truncate;
-        if ( flags & VFS_OPEN_TRUNCATE )
+    switch (node->type) {
+	case VFS_NODE_FILE:
+        ops = &ramfs_file_ops;
+        if (flags & VFS_OPEN_TRUNCATE)
             ramfs_file_truncate(f, 0);
         break;
-    }
+
 	case VFS_NODE_DIR:
-		vfs_printk("dir ");
-		f->read = ramfs_dir_read;
-		f->priv = (void *)(uintptr_t)0;
-        f->close = ramfs_file_close;
+        ops = &ramfs_dir_ops;
 		break;
-	}
+    }
+
+    error_t err = vfs_file_init(f, ops, flags, node);
+    if (err) {
+		vfs_printk("err %d>", err);
+        mem_free(f);
+        return err;
+    }
 
 	*file = f;
 	vfs_printk("ok: %p>", f);

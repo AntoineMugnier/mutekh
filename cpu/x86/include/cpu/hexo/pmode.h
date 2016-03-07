@@ -99,8 +99,6 @@
 
 #define CPU_X86_SEGSEL(index, rpl)      ((index) << 3 | (rpl))
 
-#ifndef __MUTEK_ASM__
-
 #include <hexo/types.h>
 
 /** x86 segement selector integer type */
@@ -144,7 +142,7 @@ struct cpu_x86_segdesc_s
    @param bitint32_t 1: 32 bits segment, 0: 16 bits segment
 */
 
-static inline void cpu_x86_seg_setup(volatile struct cpu_x86_segdesc_s *desc,
+ALWAYS_INLINE void cpu_x86_seg_setup(volatile struct cpu_x86_segdesc_s *desc,
 				     uint32_t base, uint32_t limit, uint_fast8_t type,
 				     uint_fast8_t dpl, bool_t bitint32_t)
 {
@@ -201,7 +199,7 @@ struct cpu_x86_gatedesc_s
 */
 
 
-static inline void cpu_x86_gate_setup(volatile struct cpu_x86_gatedesc_s *desc,
+ALWAYS_INLINE void cpu_x86_gate_setup(volatile struct cpu_x86_gatedesc_s *desc,
 				      cpu_x86_segsel_t segment, uint32_t offset,
 				      uint_fast8_t type, uint_fast8_t dpl, uint_fast8_t params)
 {
@@ -250,7 +248,7 @@ struct cpu_x86_table_reg_s
    @param count GDT entry count
 */
 
-static inline void
+ALWAYS_INLINE void
 cpu_x86_set_gdt(union cpu_x86_desc_s *address, uint_fast16_t count)
 {
   struct cpu_x86_table_reg_s	val =
@@ -274,7 +272,7 @@ cpu_x86_set_gdt(union cpu_x86_desc_s *address, uint_fast16_t count)
    @param count IDT entry count
 */
 
-static inline union cpu_x86_desc_s *
+ALWAYS_INLINE union cpu_x86_desc_s *
 cpu_x86_get_gdt(void)
 {
   struct cpu_x86_table_reg_s	val;
@@ -295,7 +293,7 @@ cpu_x86_get_gdt(void)
    @param count IDT entry count
 */
 
-static inline void
+ALWAYS_INLINE void
 cpu_x86_set_idt(struct cpu_x86_gatedesc_s *address, uint_fast16_t count)
 {
   struct cpu_x86_table_reg_s	val =
@@ -319,7 +317,7 @@ cpu_x86_set_idt(struct cpu_x86_gatedesc_s *address, uint_fast16_t count)
    @param count IDT entry count
 */
 
-static inline struct cpu_x86_gatedesc_s *
+ALWAYS_INLINE struct cpu_x86_gatedesc_s *
 cpu_x86_get_idt(void)
 {
   struct cpu_x86_table_reg_s	val;
@@ -351,7 +349,7 @@ struct			cpu_x86_seg_offset_s
    @param rpl requested privilege level
 */
 
-static inline void
+ALWAYS_INLINE void
 cpu_x86_dataseg_use(uint_fast16_t index, uint_fast8_t rpl)
 {
   cpu_x86_segsel_t	val = (index << 3) | (rpl);
@@ -365,7 +363,7 @@ cpu_x86_dataseg_use(uint_fast16_t index, uint_fast8_t rpl)
 		    );
 }
 
-static inline void
+ALWAYS_INLINE void
 cpu_x86_datasegfs_use(uint_fast16_t index, uint_fast8_t rpl)
 {
   cpu_x86_segsel_t	val = (index << 3) | (rpl);
@@ -379,7 +377,7 @@ cpu_x86_datasegfs_use(uint_fast16_t index, uint_fast8_t rpl)
 }
 
 
-static inline void
+ALWAYS_INLINE void
 cpu_x86_dataseggs_use(uint_fast16_t index, uint_fast8_t rpl)
 {
   cpu_x86_segsel_t	val = (index << 3) | (rpl);
@@ -399,7 +397,7 @@ cpu_x86_dataseggs_use(uint_fast16_t index, uint_fast8_t rpl)
    @param rpl requested privilege level
 */
 
-static inline void
+ALWAYS_INLINE void
 cpu_x86_stackseg_use(uint_fast16_t index, uint_fast8_t rpl)
 {
   cpu_x86_segsel_t	val = (index << 3) | (rpl);
@@ -419,7 +417,7 @@ cpu_x86_stackseg_use(uint_fast16_t index, uint_fast8_t rpl)
    @param rpl requested privilege level
 */
 
-static inline void
+ALWAYS_INLINE void
 cpu_x86_codeseg_use(uint_fast16_t index, uint_fast8_t rpl)
 {
   __asm__ volatile (
@@ -439,7 +437,7 @@ cpu_x86_codeseg_use(uint_fast16_t index, uint_fast8_t rpl)
    @param index segment descriptor index in GDT
 */
 
-static inline void
+ALWAYS_INLINE void
 cpu_x86_taskseg_use(uint_fast16_t index)
 {
   __asm__ volatile ("ltr %0		\n"
@@ -500,8 +498,6 @@ cpu_x86_segsel_t cpu_x86_segment_alloc(uintptr_t addr,
 void cpu_x86_segdesc_free(cpu_x86_segsel_t sel);
 
 /**************************************/
-
-# endif
 
 #endif
 

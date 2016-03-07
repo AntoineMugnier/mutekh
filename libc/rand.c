@@ -29,6 +29,21 @@ __rand_type_t rand_r(__rand_type_t *seedp)
 {
   __rand_type_t	res;
 
+#ifdef CONFIG_LIBC_RAND_LFSR
+  __rand_type_t	taps;
+
+  if (sizeof(__rand_type_t) == 1)
+    taps = (__rand_type_t)0xb8;
+  else if (sizeof(__rand_type_t) == 2)
+    taps = (__rand_type_t)0xb008;
+  else if (sizeof(__rand_type_t) == 4)
+    taps = (__rand_type_t)0x80200003UL;
+  else if (sizeof(__rand_type_t) == 8)
+    taps = (__rand_type_t)0xd800000000000000ULL;
+
+  res = (*seedp >> 1) ^ ((__rand_type_t)(-(*seedp & 1)) & taps);
+  *seedp = res;
+#else
   if (sizeof(__rand_type_t) > 1)
     {
       /* Knuth & Lewis */
@@ -43,6 +58,7 @@ __rand_type_t rand_r(__rand_type_t *seedp)
       *seedp = x;
       res = x;
     }
+#endif
 
   return res;
 }
@@ -54,6 +70,10 @@ __rand_type_t rand(void)
 
 void srand(__rand_type_t seed)
 {
+#ifdef CONFIG_LIBC_RAND_LFSR
+  if (!seed)
+    seed++;
+#endif
   random_seed = seed;
 }
 

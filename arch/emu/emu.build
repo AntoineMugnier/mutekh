@@ -1,0 +1,55 @@
+
+# EMU
+
+%section emu-*-*
+  %types architecture
+
+  CONFIG_ARCH_EMU
+
+  CONFIG_EMU_PRINTK
+  CONFIG_DRIVER_CHAR_EMUTTY
+  CONFIG_COMPILE_SOFTFLOAT undefined
+  CONFIG_LOAD_CUSTOM
+
+  CONFIG_ARCH_EMU_UNLOCK_YIELD
+  CONFIG_LOAD_SMP_RESET_MERGED
+  CONFIG_ARCH_BOOTSTRAP_CPU_ID __bootstrap_pid
+
+  #################################################
+  # Host OS
+
+  %subsection emu-linux-*
+    %types host_os
+
+    %notice You may use BUILD=$(CONFIGSECTION):emusmp to enable emu SMP support
+
+    CONFIG_ARCH_EMU_LINUX
+  %end
+  
+  %subsection emu-darwin-*
+    %types host_os
+
+    %notice No SMP support available on Darwin emu
+  
+    CONFIG_ARCH_EMU_DARWIN
+  %end
+  
+  #################################################
+  # CPUs
+
+  %subsection emu-*-x86_64
+    %types cpu
+  
+    CONFIG_CPU_X86_64_EMU
+    %set BUILD_NAME emu-x86_64
+  %end
+  
+  %subsection emu-*-x86
+    %types cpu
+  
+    CONFIG_CPU_X86_EMU
+    %set BUILD_NAME emu-x86
+  %end
+
+  %requiretypes host_os cpu
+

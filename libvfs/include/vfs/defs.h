@@ -16,7 +16,7 @@
   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
   02110-1301 USA
 
-  Copyright Nicolas Pouillon, <nipo@ssji.net>, 2009
+  Copyright Nicolas Pouillon, <nipo@ssji.net>, 2009,2014
 */
 
 /**
@@ -32,23 +32,23 @@
 
 C_HEADER_BEGIN
 
+#include <gct_platform.h>
+#include <gct_lock_hexo_lock_irq.h>
+#include <gct_atomic.h>
+
 #include <hexo/types.h>
+#include <hexo/error.h>
 
-/** @hidden */
-struct fs_node_s;
-
-/** @hidden */
 struct vfs_node_s;
+struct vfs_fs_s;
+enum vfs_node_type_e;
+enum vfs_open_flags_e;
+struct vfs_node_s;
+struct vfs_file_s;
+struct vfs_stat_s;
+struct vfs_fs_ops_s;
 
 typedef size_t vfs_file_size_t;
-
-enum vfs_node_type_e
-{
-    /** A directory node */
-    VFS_NODE_DIR,
-    /** A regular file node */
-    VFS_NODE_FILE,
-};
 
 #if defined(CONFIG_VFS_STATS)
 # define VFS_STATS_INC(obj, field) atomic_inc(&(obj)->field)

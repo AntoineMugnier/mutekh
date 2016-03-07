@@ -38,8 +38,6 @@
 #define CPU_NIOS2_CONTEXT_STATUS         (CPU_NIOS2_CONTEXT_GPR(32))
 #define CPU_NIOS2_CONTEXT_PC             (CPU_NIOS2_CONTEXT_GPR(33))
 
-#ifndef __MUTEK_ASM__
-
 # include <hexo/cpu.h>
 
 struct cpu_context_s
@@ -52,11 +50,24 @@ struct cpu_context_s
   reg_t pc;
 };
 
+/** name of registers accessible using cpu_context_s::gpr */
 # define CPU_CONTEXT_REG_NAMES CPU_GPREG_NAMES, "status", "pc"
-# define CPU_CONTEXT_REG_FIRST 1
+/** number of registers in cpu_context_s::gpr */
 # define CPU_CONTEXT_REG_COUNT 34
 
-# endif  /* __MUTEK_ASM__ */
+# ifdef CONFIG_HEXO_CONTEXT_PREEMPT
+/** @internal */
+extern CPU_LOCAL context_preempt_t *cpu_preempt_handler;
+
+ALWAYS_INLINE error_t context_set_preempt(context_preempt_t *func)
+{
+  context_preempt_t **f = CPU_LOCAL_ADDR(cpu_preempt_handler);
+  if (*f != NULL)
+    return -EBUSY;
+  *f = func;
+  return 0;
+}
+# endif
 
 #endif
 

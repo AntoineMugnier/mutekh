@@ -25,7 +25,7 @@
 
 /**
  * @file
- * @module{Mutek}
+ * @module{Kernel services}
  */
 
 #include <hexo/types.h>

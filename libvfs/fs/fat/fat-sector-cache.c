@@ -16,7 +16,7 @@
   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
   02110-1301 USA
 
-  Copyright Nicolas Pouillon, <nipo@ssji.net>, 2009
+  Copyright Nicolas Pouillon, <nipo@ssji.net>, 2009,2014
 */
 
 #include "fat-sector-cache.h"
@@ -25,7 +25,7 @@
 
 static
 error_t fat_sector_flush_nolock(struct fat_tmp_sector_s *sector,
-                                struct device_s *dev)
+                                struct device_block_s *dev)
 {
 	error_t err = 0;
 	uint8_t *blocks[1] = {sector->data};
@@ -42,7 +42,7 @@ error_t fat_sector_flush_nolock(struct fat_tmp_sector_s *sector,
 }
 
 error_t fat_sector_flush(struct fat_tmp_sector_s *sector,
-                         struct device_s *dev)
+                         struct device_block_s *dev)
 {
     semaphore_take(&sector->semaphore, 1);
     error_t err = fat_sector_flush_nolock(sector, dev);
@@ -52,7 +52,7 @@ error_t fat_sector_flush(struct fat_tmp_sector_s *sector,
 }
 
 error_t fat_sector_lock_and_load(struct fat_tmp_sector_s *sector,
-                                 struct device_s *dev,
+                                 struct device_block_s *dev,
                                  dev_block_lba_t lba)
 {
 	error_t err;

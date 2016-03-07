@@ -41,6 +41,7 @@
 #define CPU_SIZEOF_SHORT	16
 #define CPU_SIZEOF_INT		16
 #define CPU_SIZEOF_LONG		32
+#define CPU_SIZEOF_LONGLONG	64
 #define INT_PTR_SIZE		16
 #define INT_REG_SIZE		8
 

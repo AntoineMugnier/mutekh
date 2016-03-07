@@ -1,42 +1,169 @@
 
 @include template.mkdoc
-@include modules.mkdoc
+
+@parse{
+  doc/gct.mkdoclib
+}
+
+@include ../libc/libc.mkdoc
+@include ../hexo/hexo.mkdoc
+@include ../mutek/mutek.mkdoc
+@include ../gct/gct.mkdoc
+@include ../libdevice/libdevice.mkdoc
+@include ../libm/libm.mkdoc
+@include ../libvfs/libvfs.mkdoc
+@include ../libpthread/libpthread.mkdoc
+@include ../libnetwork/libnetwork.mkdoc
+@include ../libfdt/libfdt.mkdoc
+@include ../libtermui/libtermui.mkdoc
+@include ../libgomp/libgomp.mkdoc
+
+@moduledef{Device driver directory}
+
+  Devices drivers may be found at various place in the source tree:
+  @list
+    @item @tt arch/*/drivers/ : platform vendor related device drivers, not covered here.
+    @item @tt cpu/*/drivers/ : processor vendor related device drivers, not covered here.
+    @item @tt drivers/ : cross platform device drivers, covered in this module.
+  @end list
+
+  A device driver implement one or multiple @xref{Device
+  classes}{device class} API.
+
+@end moduledef
+
+@parse{
+doc/config.h 
+}
 
 @insert title
 
-@section TP {Copying this document} 
- Copyright (c) Alexandre Becoulet 2009. Permission is granted to copy,
- distribute and/or modify this document under the terms of the GNU Free
- Documentation License, Version 1.3 or any later version published by
- the Free Software Foundation; with no Invariant Sections, no
- Front-Cover Texts, and no Back-Cover Texts.  A copy of the license is
- included in the section entitled @xref{GNU Free Documentation License}.
+@section TU {Introduction}
+
+  MutekH is a free, highly portable and flexible operating system kernel
+  targetting platforms ranging from micro-controller to multiprocessor
+  systems.
+
+  MutekH has a modular
+  @url{http://en.wikipedia.org/wiki/Exokernel}{exokernel}
+  architecture. It is built on a clean @ref{+Hardware abstraction
+  layer}{processor and platform abstraction layer}, a set of
+  @ref{+Kernel services}{base kernel services} and a set of additional
+  service libraries.
+
+  The exokernel comes with several operating system interface
+  libraries and service libraries, including a @xref{Devices support
+  library} with device drivers APIs for
+  various classes of devices. This allows development of applications
+  which are portable across hardware platforms.
+
+  The kernel was designed to be easily extended with new libraries and
+  platform support. It is fully @xref{Build configuration
+  files}{configurable} in order to match application needs and
+  platform constraints. Moreover it has an easy to use @xref{Build
+  system}{build system} and a @xref{Testsuite}{testsuite}.
+
+  MutekH takes advantage of advanced compilation techniques like C99
+  inlining and preprocessor metaprogramming in order to optimize
+  binaries while keeping the source code modular. It relies on a
+  comprehensive @ref{+Generic C templates library}{container template
+  library}.
+
+  MutekH is able to run on various @xref{Supported
+  processors}{processors} and @xref{Supported platforms}{platforms}.
+
+  @section {Source code}
+    The source code can be browsed online:
+    @url{https://www.mutekh.org/hg/mutekh/file/}
+
+    See the @xref{Building MutekH} section to get started.
+  @end section
+
+  @section {Contact}
+    The @url{mailto:users@lists.mutekh.org}{users@lists.mutekh.org}
+    mailing list is available for discussing MutekH. You may subscribe
+    by sending a message to
+    @url{mailto:users-subscribe@lists.mutekh.org}
+    {users-subscribe@lists.mutekh.org}.
+  @end section
+
+  @section {Copying this document}
+   Copyright (c) Alexandre Becoulet 2009-2016. Permission is granted to copy,
+   distribute and/or modify this document under the terms of the GNU Free
+   Documentation License, Version 1.3 or any later version published by
+   the Free Software Foundation; with no Invariant Sections, no
+   Front-Cover Texts, and no Back-Cover Texts.  A copy of the license is
+   included in the section entitled @xref{GNU Free Documentation License}.
+  @end section
+
 @end section
 
 @section HP {Table of contents}
   @insert toc
 @end section
 
+@section TP {Building MutekH}
+
+  Building a MutekH kernel require a single invocation of @tt{make}
+  with a path to a build configuration file along with some
+  target architecture and feature selection tokens.
+
+  The following subsections give detailed descriptions of the build
+  system usage:
+
+  @insert localtoc
+
+  @include quickstart.mkdoc
+  @include install.mkdoc
+  @include build_config.mkdoc
+  @section THP {Configuration tokens}
+
+    This section gives a list of available configuration tokens. Most
+    token can be used in @xref{build configuration files}{Build
+    configuration files} in order to customize the kernel features.
+
+    @insert {@doc/config.h} compound_member_list
+  @end section
+@end section
+
+@section TP {Supported hardware}
+  @include ../arch/arch.mkdoc
+  @include ../cpu/cpu.mkdoc
+@end section
+
 @section TP {Modules documentation}
- @section TH {Modules list}
-  @insert {module} compound_table
- @end section
- @insert {module} all_compound_sections
+
+  This section contains documentation for various MutekH modules, most
+  of which are kernel service libraries.
+
+  @insert localtoc
+  @insert {module} module_sections
 @end section
 
-@section TP {Headers documentation}
- @section T {Headers list}
-  @insert {header} compound_table
- @end section
-  @insert {header} all_compound_sections
+@section TP {Developer reference}
+
+  This section contains material for kernel developers and application
+  developers. The following topics are covered:
+  @insert localtoc
+
+  @include config_desc.mkdoc
+  @include testsuite.mkdoc
+  @section TP {Headers}
+    @insert {header} compound_table
+    @insert {header} all_compound_sections
+  @end section
+  @section PTHe {Declarations}
+    @insert global_scope_doc
+  @end section
 @end section
 
-@section THP {Configuration}
-  @insert {@doc/config.h} compound_member_list
-@end section
+@section TP {History}
+  The MutekH project has originally been developed at the SoC
+  department of the @url {http://www.lip6.fr/}{LIP6} Laboratory, UPMC,
+  Paris.
 
-@section PTHe {All declarations}
-  @insert global_scope_doc
+  It has originally been designed to support heterogeneous
+  multiprocessor platforms with shared memory.
 @end section
 
 @section TP {GNU Free Documentation License}

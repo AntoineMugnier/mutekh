@@ -23,69 +23,30 @@
 #include <hexo/asm.h>
 #include <hexo/cpu.h>
 
-#ifdef CONFIG_SOCLIB_MEMCHECK
-# include <arch/mem_checker.h>
-#endif
-
-FUNC_START(.text, cpu_boot)
-
+#ifdef CONFIG_LOAD_RESET_SEPARATE
+.section .reset,"ax",@progbits
+CPU_NAME_DECL(reset_vector):
+        .globl CPU_NAME_DECL(reset_vector)
         xor     r0,     r0,     r0
-        /* get CPU id and adjust stack */
-
-        mv      r3,     r0 /* FIXME read cpu id */
-        seta    sp,     __initial_stack
-
-#ifdef CONFIG_ARCH_SMP_CAPABLE
-        /* only first CPU is allowed to boot */
-        bne     r3,     r0,     cpu_boot_idle
+        seta    r1,     mutekh_entry
+        b       r1
 #endif
 
-#ifdef CONFIG_ARCH_SMP
-        /* adjust initial stack from cpuid */
-        // FIXME use calli   __ashlsi3
-        sli     r1,     r3,     CONFIG_HEXO_RESET_STACK_SIZE,
-        sub     sp,     sp,     r1
-#endif
+FUNC_START(.text, mutekh_entry)
 
+        /* set exception base pointer */
+        seta    r1,     CPU_NAME_DECL(exception_vector)
+        wcsr    EBA,    r1
+
+        /* set startup stack pointer */
+        seta    sp,     CONFIG_STARTUP_STACK_ADDR \
+                      + CONFIG_STARTUP_STACK_SIZE
 #ifdef CONFIG_COMPILE_FRAMEPTR
         mv      fp,     sp
 #endif
 
-#ifdef CONFIG_SOCLIB_MEMCHECK
+        /* jump to C code */
+        bi      mutekh_startup
 
-        /* enter memchecker command mode */
-        seti    r1,     SOCLIB_MC_MAGIC_VAL
-        sw      (r0 + SOCLIB_MC_MAGIC),      r1
-
-        /* create a new initial memchecker context using cpuid as context id */
-        seti    r1,     1 << CONFIG_HEXO_RESET_STACK_SIZE
-        sw      (r0 + SOCLIB_MC_R2),         r1
-        sub     r1,     sp,     r1
-        sw      (r0 + SOCLIB_MC_R1),         r1
-        sw      (r0 + SOCLIB_MC_CTX_CREATE), r3
-
-        /* switch to new memchecker context */
-        sw      (r0 + SOCLIB_MC_CTX_SET),    r3
-
-        /* enable all memchecker checks except FP (gcc generated
-	code sometimes gives invalid FP for a few cycles) */
-        seti    r1,     SOCLIB_MC_CHECK_ALL & ~SOCLIB_MC_CHECK_FP
-        sw      (r0 + SOCLIB_MC_ENABLE),     r1
-
-        /* leave memchecker command mode */
-        sw      (r0 + SOCLIB_MC_MAGIC),      r0
-#endif
-
-        /* set cpu interrupts entry point */
-        seta    r1,     __exception_base_ptr
-        wcsr    EBA,    r1
-
-        /* jump to architecture code */
-        bi      boot_from_reset_vector
-FUNC_END(cpu_boot)
-
-
-FUNC_START(.text, cpu_boot_idle)
-        bi      cpu_boot_idle
-FUNC_END(cpu_boot_idle)
+FUNC_END(mutekh_entry)
 

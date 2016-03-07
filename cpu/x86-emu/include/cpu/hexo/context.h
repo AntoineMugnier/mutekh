@@ -24,8 +24,6 @@
 #error This file can not be included directly
 #else
 
-#ifndef __MUTEK_ASM__
-
 struct cpu_context_regs_s
 {
   uint32_t edi;
@@ -44,38 +42,33 @@ struct cpu_context_s
 {
   uint32_t mask;
   /* sorted in iret order */
-  struct cpu_context_regs_s kregs;
+  union {
+    reg_t gpr[10];
+    struct cpu_context_regs_s kregs;
+  };
 # ifdef CONFIG_HEXO_FPU
   __attribute__((aligned(16)))
   uint8_t mm[512];  /* fpu and multimedia state */
 # endif
 };
 
-# define CPU_CONTEXT_REG_NAMES "savemask", CPU_GPREG_NAMES, "eip", "eflags"
-# define CPU_CONTEXT_REG_FIRST 1
-# define CPU_CONTEXT_REG_COUNT 11
+/** name of registers accessible using cpu_context_s::gpr */
+# define CPU_CONTEXT_REG_NAMES CPU_GPREG_NAMES, "eip", "eflags"
+/** number of registers in cpu_context_s::gpr */
+# define CPU_CONTEXT_REG_COUNT 10
 
-#else
+# ifdef CONFIG_HEXO_CONTEXT_PREEMPT
+/** @internal */
+extern CPU_LOCAL context_preempt_t *cpu_preempt_handler;
 
-.extern x86emu_context
-.equ CPU_X86EMU_CONTEXT_mask,    0
-
-.equ CPU_X86EMU_CONTEXT_edi,     4
-.equ CPU_X86EMU_CONTEXT_esi,     8 
-.equ CPU_X86EMU_CONTEXT_ebp,     12
-.equ CPU_X86EMU_CONTEXT_esp,     16
-.equ CPU_X86EMU_CONTEXT_ebx,     20
-.equ CPU_X86EMU_CONTEXT_edx,     24
-.equ CPU_X86EMU_CONTEXT_ecx,     28
-.equ CPU_X86EMU_CONTEXT_eax,     32
-.equ CPU_X86EMU_CONTEXT_EIP,     36
-.equ CPU_X86EMU_CONTEXT_EFLAGS,  40
-
-.equ CPU_X86EMU_CONTEXT_REGS_OFFSET, 4
-
-.equ CPU_X86EMU_CONTEXT_MM,         48
-
-
+ALWAYS_INLINE error_t context_set_preempt(context_preempt_t *func)
+{
+  context_preempt_t **f = CPU_LOCAL_ADDR(cpu_preempt_handler);
+  if (*f != NULL)
+    return -EBUSY;
+  *f = func;
+  return 0;
+}
 #endif
 
 #endif

@@ -41,14 +41,16 @@ C_HEADER_BEGIN
 
 # if defined(CONFIG_LIBC_ASSERT)
 
-void
-__assert_fail(const char *file,
-			  uint_fast16_t line,
-			  const char *func,
-			  const char *expr);
+#  if defined(CONFIG_LIBC_ASSERT_SIMPLE) || !defined(CONFIG_MUTEK_PRINTK_HANDLER)
+void __assert_fail(void);
+#  define assert(expr) ((void) ((expr) ? 0 : __assert_fail()))
+#  else
+void __assert_fail(const char *file, uint_fast16_t line,
+                   const char *func, const char *expr);
+#  define assert(expr) ((void) ((expr) ? 0 : __assert_fail(MUTEK_CFILE, __LINE__, __func__, #expr)))
+#  endif
 
 /** @multiple @this is the standard @tt assert macro */
-#  define assert(expr) ((void) ((expr) ? 0 : __assert_fail(__FILE__, __LINE__, __func__, #expr)))
 # else
 #  define assert(expr) ((void) 0)
 # endif

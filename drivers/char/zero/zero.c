@@ -26,35 +26,37 @@
 #include <device/device.h>
 #include <device/driver.h>
 
-DEVCHAR_REQUEST(dev_zero_request)
+#define dev_zero_cancel (dev_char_cancel_t*)&dev_driver_notsup_fcn
+
+DEV_CHAR_REQUEST(dev_zero_request)
 {
   switch (rq->type)
     {
       /* Get zeros */
-    case DEV_CHAR_READ: {
-      size_t size = rq->size;
-
+    case DEV_CHAR_READ_PARTIAL:
+    case DEV_CHAR_READ:
       memset(rq->data, 0, rq->size);
 
+      rq->data += rq->size;
       rq->size = 0;
       rq->error = 0;
-
-      rq->callback(dev, rq, size);
       break;
-    }
 
       /* Eat everything */
-    case DEV_CHAR_WRITE: {
-      size_t size = rq->size;
-
+    case DEV_CHAR_WRITE_PARTIAL_FLUSH:
+    case DEV_CHAR_WRITE_FLUSH:
+    case DEV_CHAR_WRITE_PARTIAL:
+    case DEV_CHAR_WRITE:
+      rq->data += rq->size;
       rq->size = 0;
       rq->error = 0;
-
-      rq->callback(dev, rq, size);
       break;
+
+    default:
+      rq->error = -ENOTSUP;
     }
 
-    }
+  kroutine_exec(&rq->base.kr);
 }
 
 /* 
@@ -69,19 +71,15 @@ DEV_CLEANUP(dev_zero_cleanup)
  * device open operation
  */
 
-const struct driver_s	dev_zero_drv =
-{
-  .class		= device_class_char,
-  .f_init		= dev_zero_init,
-  .f_cleanup		= dev_zero_cleanup,
-  .f.chr = {
-    .f_request		= dev_zero_request,
-  }
-};
+#define dev_zero_use dev_use_generic
+
+DRIVER_DECLARE(dev_zero_drv, 0, "dev-zero", dev_zero,
+               DRIVER_CHAR_METHODS(dev_zero));
+
+DRIVER_REGISTER(dev_zero_drv);
 
 DEV_INIT(dev_zero_init)
 {
-  dev->drv = &dev_zero_drv;
 
   return 0;
 }

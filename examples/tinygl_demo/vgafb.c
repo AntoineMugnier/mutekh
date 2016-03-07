@@ -4,9 +4,10 @@
 
 /* for struct device_s definition */
 #include <drivers/fb/vga/fb-vga.h>
-#include <device/enum.h>
+#include <device/class/enum.h>
 #include <device/device.h>
 #include <device/driver.h>
+#include <mutek/startup.h>
 
 #include <GL/gl.h>
 #include <GL/vgafb.h>
@@ -83,7 +84,7 @@ void* demo_vgafb(void *param)
     return 0;
 }
 
-void app_start()
+void app_start(void)
 {
     static pthread_t a;
     pthread_create(&a, NULL, demo_vgafb, NULL);

@@ -16,20 +16,24 @@
   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
   02110-1301 USA
 
-  Copyright Nicolas Pouillon, <nipo@ssji.net>, 2009
+  Copyright Nicolas Pouillon, <nipo@ssji.net>, 2009,2014
 */
 
 #include <hexo/types.h>
 #include <hexo/endian.h>
+
+#include <vfs/node.h>
 #include <vfs/fs.h>
 #include <vfs/file.h>
+
 #include "fat-private.h"
 #include "fat-defs.h"
 #include "fat-sector-cache.h"
 
-void fat_name_to_vfs(char *dst, const char *src)
+void fat_name_to_vfs(size_t dst_size, char *dst, const char *src)
 {
-    memset(dst, 0, FAT_83_NAMELEN);
+    assert(dst_size >= FAT_83_NAMELEN);
+    memset(dst, 0, dst_size);
     size_t i;
     for ( i=0; i<11; ++i ) {
         if ( src[i] != ' ' )
@@ -65,8 +69,10 @@ VFS_FS_UNLINK(fat_unlink)
 
 VFS_FS_STAT(fat_stat)
 {
+    struct fat_node_s *fnode = (void*)node;
+
     stat->type = node->type;
-    stat->size = node->type == VFS_NODE_DIR ? 0 : node->file_size;
+    stat->size = node->type == VFS_NODE_DIR ? 0 : fnode->file_size;
     stat->nlink = 1;
 
     return 0;
@@ -74,8 +80,9 @@ VFS_FS_STAT(fat_stat)
 
 VFS_FS_LOOKUP(fat_lookup)
 {
-    struct fat_file_s *ffile = fat_file_new(NULL, ref);
-    struct fat_s *fat = ref->fat;
+    struct fat_file_s *ffile = fat_file_create((struct fat_node_s *)ref,
+                                    VFS_OPEN_READ | VFS_OPEN_DIR);
+    struct fat_s *fat = (void*)ref->fs;
 
     if ( ffile == NULL )
         return -ENOMEM;
@@ -88,7 +95,7 @@ VFS_FS_LOOKUP(fat_lookup)
     do {
         ssize_t r = fat_get_next_dirent(ffile, &offset, fat_dirent, name_83, mangled_name);
         if ( r != 1 ) {
-            fat_file_refdrop(ffile);
+            fat_file_refdec(ffile);
             return -ENOENT;
         }
 
@@ -99,15 +106,15 @@ VFS_FS_LOOKUP(fat_lookup)
             break;
     } while (1);
 
-    fat_file_refdrop(ffile);
+    fat_file_refdec(ffile);
 
     common_cluster_t cluster =
         (endian_le16(fat_dirent->old.clust_hi) << 16)
         | endian_le16(fat_dirent->old.clust_lo);
 
-    struct fs_node_s *rnode = fat_node_pool_lookup(&fat->nodes, cluster);
+    struct fat_node_s *rnode = fat_node_pool_lookup(&fat->nodes, cluster);
     if ( rnode == NULL ) {
-        rnode = fat_node_new(NULL, fat, cluster,
+        rnode = fat_node_create(fat, cluster,
                              (fat_dirent->old.attr & ATTR_DIRECTORY) ? 0 : endian_le32(fat_dirent->old.file_size),
                              (fat_dirent->old.attr & ATTR_DIRECTORY) ? VFS_NODE_DIR : VFS_NODE_FILE);
     }
@@ -115,14 +122,14 @@ VFS_FS_LOOKUP(fat_lookup)
     if ( rnode == NULL )
         return -ENOMEM;
     
-    *node = rnode;
+    *node = (struct vfs_node_s*)rnode;
 
     return 0;
 }
 
 VFS_FILE_READ(fat_dir_read)
 {
-    struct fat_file_s *ffile = file->priv;
+    struct fat_file_s *ffile = (void*)file;
 
     union fat_dirent_u fat_dirent[1];
     struct vfs_dirent_s *vfs_dirent = buffer;

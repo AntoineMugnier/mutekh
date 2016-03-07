@@ -29,6 +29,16 @@
 # warning compiler mips version doesnt match configuration
 #endif
 
+/* Cacheable, non-coherent, write-through, no write allocate */
+#define CPU_MIPS_CACHE_WTNA     0
+/* Cacheable, non-coherent, write-through, write allocate */
+#define CPU_MIPS_CACHE_WTA      1
+/* Uncached */
+#define CPU_MIPS_NO_CACHE       2
+/* Cacheable, non-coherent, write-back, write allocate */
+#define CPU_MIPS_CACHE_WB       3
+
+
 #define CPU_MIPS_GP             28
 #define CPU_MIPS_SP             29
 #define CPU_MIPS_FP             30
@@ -67,13 +77,7 @@
 
 # define CPU_MIPS_CAUSE_BD      0x80000000
 
-#ifndef __MUTEK_ASM__
-
 #include <hexo/endian.h>
-
-# ifdef CONFIG_ARCH_SMP
-extern void * cpu_local_storage[CONFIG_CPU_MAXCOUNT];
-# endif
 
 /** general purpose regsiters count */
 # define CPU_GPREG_COUNT	32
@@ -185,67 +189,65 @@ extern void * cpu_local_storage[CONFIG_CPU_MAXCOUNT];
 
 # endif
 
-static inline
-reg_t cpu_get_stackptr()
+ALWAYS_INLINE
+reg_t cpu_get_stackptr(void)
 {
     reg_t ret;
     asm("move %0, $sp": "=r"(ret));
     return ret;
 }
 
-# define CPU_TYPE_NAME mips32
-
-static inline cpu_id_t
+ALWAYS_INLINE cpu_id_t
 cpu_id(void)
 {
 	return (reg_t)cpu_mips_mfc0(15, 1) & (reg_t)0x000003ff;
 }
 
-static inline bool_t
+ALWAYS_INLINE bool_t
 cpu_isbootstrap(void)
 {
-  return cpu_id() == 0;
+  return cpu_id() == CONFIG_ARCH_BOOTSTRAP_CPU_ID;
 }
 
-static inline cpu_cycle_t
-cpu_cycle_count(void)
-{
-  return cpu_mips_mfc0(9, 0);
-}
-
-static inline void
-cpu_trap()
+ALWAYS_INLINE void
+cpu_trap(void)
 {
   asm volatile ("break 0");
 }
 
-static inline void *cpu_get_cls(cpu_id_t cpu_id)
-{
-# ifdef CONFIG_ARCH_SMP
-  return cpu_local_storage[cpu_id];
-# endif
-  return NULL;
-}
+#define  MIPS32_CACHE_OP_INDEX_INVALIDATE  (0 << 2)
+#define  MIPS32_CACHE_OP_INDEX_STORE_TAG   (2 << 2)
+#define  MIPS32_CACHE_OP_HIT_INVALIDATE    (4 << 2)
+#define  MIPS32_CACHE_OP_HIT_WRITEBACK     (5 << 2)
 
-static inline void cpu_dcache_invld(void *ptr)
+#define  MIPS32_CACHE_INSTRUCTION  0
+#define  MIPS32_CACHE_DATA         1
+#define  MIPS32_CACHE_TERTIARY     2
+#define  MIPS32_CACHE_SECONDARY    3
+
+ALWAYS_INLINE void cpu_dcache_invld(void *ptr)
 {
   asm volatile (
 # if CONFIG_CPU_MIPS_VERSION >= 32
 		" cache %0, %1"
 		: : "i" (0x11) , "R" (*(uint8_t*)(ptr))
-# else
-#  ifdef CONFIG_ARCH_SOCLIB
-		" lw $0, (%0)"
-		: : "r" (ptr)
-#  else
-		"nop"::
-#  endif
 # endif
 		: "memory"
 		);
 }
 
-static inline size_t cpu_dcache_line_size()
+ALWAYS_INLINE void cpu_dcache_flush(void *ptr)
+{
+  asm volatile (
+# if CONFIG_CPU_MIPS_VERSION >= 32
+		" cache %0, %1"
+		: : "i" (0x19) , "R" (*(uint8_t*)(ptr))
+# endif
+		: "memory"
+		);
+}
+
+ALWAYS_INLINE size_t cpu_dcache_line_size(void)
 {
   reg_t r0 = cpu_mips_mfc0(16, 0);
   reg_t r1 = cpu_mips_mfc0(16, 1);
@@ -260,8 +262,6 @@ static inline size_t cpu_dcache_line_size()
 
   return 8;
 }
-
-# endif  /* __MUTEK_ASM__ */
 
 # endif
 

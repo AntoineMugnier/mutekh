@@ -78,6 +78,7 @@ int_fast64_t ato_intl64(const char *nptr);
 # define strtoul _STRTOINT_(strto_uintl, CPU_SIZEOF_LONG)
 # define strtoll strto_intl64
 # define strtoull strto_uintl64
+# define strtoptr _STRTOINT_(strto_uintl, INT_PTR_SIZE)
 
 # define atoi _STRTOINT_(ato_intl, CPU_SIZEOF_INT)
 # define atol _STRTOINT_(ato_intl, CPU_SIZEOF_LONG)
@@ -85,7 +86,7 @@ int_fast64_t ato_intl64(const char *nptr);
 
 double strtod(const char *d, const char **ret);
 
-static inline
+ALWAYS_INLINE
 float atof(const char *f)
 {
   return strtod(f, NULL);
@@ -129,7 +130,11 @@ void *bsearch(
 
 typedef reg_t	__rand_type_t;
 
-#define RAND_MAX	(sizeof (__rand_type_t) > 1 ? 32767 : 255)
+#ifdef CONFIG_LIBC_RAND_LFSR
+# define RAND_MAX	((__rand_type_t)-1)
+#else
+# define RAND_MAX	(sizeof (__rand_type_t) > 1 ? 32767 : 255)
+#endif
 
 __rand_type_t rand(void);
 __rand_type_t rand_r(__rand_type_t *seedp);
@@ -143,7 +148,7 @@ char *setstate(char *state);
 /******************** abort */
 
 __attribute__((noreturn))
-void abort();
+void abort(void);
 
 /******************* exit */
 
@@ -168,31 +173,65 @@ error_t system(const char *cmd);
 
 /****************** abs */
 
-#define abs(n)                                                          \
+/** Compute the absolute value of an integer. This generic macro
+    adapts to the integer type width. @see #abs */
+#define __ABS(n)                                                        \
 ({                                                                      \
   typedef typeof(n) _t;                                                 \
-  _t gpct_n = (n);                                                      \
+  _t _n = (n);                                                          \
                                                                         \
-  __builtin_types_compatible_p(typeof(n), __compiler_slong_t) ? __builtin_absl(n) : \
-  __builtin_types_compatible_p(typeof(n), __compiler_slonglong_t) ? __builtin_absll(n) : \
-  __builtin_abs(n);                                                     \
+  __builtin_types_compatible_p(_t, __compiler_slong_t) ||               \
+    __builtin_types_compatible_p(_t, __compiler_ulong_t)                \
+    ? __builtin_labs(_n)                                                \
+    : __builtin_types_compatible_p(_t, __compiler_slonglong_t) ||       \
+      __builtin_types_compatible_p(_t, __compiler_ulonglong_t)          \
+    ? __builtin_llabs(_n) :                                             \
+      __builtin_abs(_n);                                                \
 })
 
-#define labs(x) abs(x)
-#define llabs(x) abs(x)
+/** standard @tt abs function @see #__ABS */
+#define abs(x) __builtin_abs(x)
+/** standard @tt labs function @see #__ABS */
+#define labs(x) __builtin_labs(x)
+/** standard @tt llabs function @see #__ABS */
+#define llabs(x) __builtin_llabs(x)
 
-#define log2i(n)                                                        \
+/** Compute integer log2. This generic macro adapts to the integer
+    type width. @see #__CLZ */
+#define __LOG2I(n)                                                      \
 ({                                                                      \
   typedef typeof(n) _t;                                                 \
-  _t gpct_n = (n);                                                      \
+  _t _n = (n);                                                          \
                                                                         \
-  __builtin_types_compatible_p(_t, __compiler_slong_t) ? sizeof(__compiler_slong_t) * 8 - 1 - __builtin_clzl(gpct_n) : \
-  __builtin_types_compatible_p(_t, __compiler_slonglong_t) ? sizeof(__compiler_slonglong_t) * 8 - 1 - __builtin_clzll(gpct_n) : \
-  sizeof(__compiler_sint_t) * 8 - 1 - __builtin_clz(gpct_n);                               \
+  __builtin_types_compatible_p(_t, __compiler_slong_t) ||               \
+    __builtin_types_compatible_p(_t, __compiler_ulong_t)                \
+    ? sizeof(__compiler_slong_t) * 8 - 1 - __builtin_clzl(_n)           \
+    : __builtin_types_compatible_p(_t, __compiler_slonglong_t) ||       \
+      __builtin_types_compatible_p(_t, __compiler_ulonglong_t)          \
+    ? sizeof(__compiler_slonglong_t) * 8 - 1 - __builtin_clzll(_n)      \
+    : sizeof(__compiler_sint_t) * 8 - 1 - __builtin_clz(_n);            \
 })
 
-// div / ldiv
+/** Count leading zero bits in integer. This generic macro adapts to
+    the integer type width. @see #__FFS @see #__LOG2I */
+#define __CLZ(n)                                                        \
+({                                                                      \
+  typedef typeof(n) _t;                                                 \
+  _t _n = (n);                                                          \
+                                                                        \
+  __builtin_types_compatible_p(_t, __compiler_slong_t) ||               \
+    __builtin_types_compatible_p(_t, __compiler_ulong_t)                \
+    ? __builtin_clzl(_n)                                                \
+    : __builtin_types_compatible_p(_t, __compiler_slonglong_t) ||       \
+      __builtin_types_compatible_p(_t, __compiler_ulonglong_t)          \
+    ? __builtin_clzll(_n)                                               \
+    : __builtin_clz(_n) + (sizeof(_t) - sizeof(__compiler_sint_t)) * 8; \
+})
 
+uint32_t gcd32(uint32_t a, uint32_t b);
+uint64_t gcd64(uint64_t a, uint64_t b);
+
+/** @see div */
 typedef struct {
   __compiler_sint_t quot;
   __compiler_sint_t rem;
@@ -200,6 +239,7 @@ typedef struct {
 
 div_t div(__compiler_sint_t number, __compiler_sint_t denom);
 
+/** @see ldiv */
 typedef struct {
   __compiler_slong_t quot;
   __compiler_slong_t rem;

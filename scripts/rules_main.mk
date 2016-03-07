@@ -1,19 +1,12 @@
 POST_TARGET=__foo.out
 
 LDFLAGS=
-TARGET_EXT ?= out
 
-TARGET_SECTIONS=.boot .text .rodata .excep .cpudata .contextdata .data
-
-LINKING=1
-ifeq ($(TARGET_EXT),o)
-LINKING=0
-endif
-export LINKING
+TARGET_SECTIONS=.multiboot .reset .smpreset .text .rodata .excep .cpudata .contextdata .data
 
 OUT_NAME := $(shell cd $(MUTEK_SRC_DIR) ; \
 		perl $(MUTEK_SRC_DIR)/scripts/config.pl	\
-		--src-path=$(CONF_PATH):$(MUTEK_SRC_DIR):$(MUTEKH_CONFIG_PATH)  \
+		--src-path=$(CONF_PATH):$(MUTEK_SRC_DIR)  \
 		--input=$(CONF)					 \
 		--build-path=$(BUILD_DIR)/obj-   \
 		--build-name=$(BUILD_NAME) \
@@ -24,18 +17,28 @@ $(error Configure script failed)
 endif
 
 OBJ_DIR := $(BUILD_DIR)/obj-$(OUT_NAME)
+include $(OBJ_DIR)/config.mk
+
+TARGET_EXT ?= $(CONFIG_COMPILE_FORMAT)
+LINKING=1
+ifeq ($(TARGET_EXT),o)
+LINKING=0
+endif
+export LINKING
+
 target = $(subst /,-,$(OUT_NAME))
 KERNEL_FILE=$(target).$(TARGET_EXT)
 FINAL_KERNEL_FILE=$(target).$(TARGET_EXT)
 LOG_FILE=$(OBJ_DIR)/build.log
 #LOG_REDIR= 3>>$(LOG_FILE) 1>&3 2>&3
 
-include $(OBJ_DIR)/config.mk
-
 DEP_FILE_LIST:=
 
 include $(MUTEK_SRC_DIR)/scripts/config.mk
 include $(MUTEK_SRC_DIR)/scripts/discover.mk
+
+$(OBJ_DIR)/enums.h: $(ENUM_HEADER_LIST) $(MUTEK_SRC_DIR)/scripts/enum.pl
+	perl $(MUTEK_SRC_DIR)/scripts/enum.pl -o $@ $(ENUM_HEADER_LIST)
 
 ifneq ($(CLEANING),1)
 define do_inc_dep
@@ -138,7 +141,7 @@ $(OBJ_DIR)/$(target).out: $(OBJ_DIR)/config.m4 \
 		$(filter-out %_before.o %_after.o,$(filter %.o,$^)) \
 		$(filter %.a,$^) \
 		$(filter %_after.o,$(filter %.o,$^)) \
-		-o $@ `$(CC) $(CFLAGS) $(CPUCFLAGS) -print-libgcc-file-name` \
+		-o $@ $(LIBGCC_PATH) \
 	-flat_namespace \
 	-e _arch_init \
 	-undefined warning $(LOG_REDIR)
@@ -157,7 +160,7 @@ $(OBJ_DIR)/$(target).out: $(OBJ_DIR)/config.m4 \
 		$(CFLAGS) $(CPUCFLAGS) \
 		$(filter %.o,$^) $(filter %.a,$^) \
 		$(addprefix -T ,$(filter %ldscript,$^)) \
-		-o $@ `$(CC) $(CFLAGS) $(CPUCFLAGS) -print-libgcc-file-name` $(LOG_REDIR)
+		-o $@ $(LIBGCC_PATH) $(LOG_REDIR)
 endif
 else
 $(FINAL_LINK_TARGET): $(FINAL_LINK_SOURCE) FORCE \
@@ -183,7 +186,7 @@ $(OBJ_DIR)/$(target).o: $(OBJ_DIR)/config.m4 \
 		$(LDFLAGS) $(ARCHLDFLAGS) $(CPULDFLAGS) \
 		-q $(filter %.o,$^) $(filter %.a,$^) \
 		$(addprefix -T ,$(filter %ldscript,$^)) \
-		-o $@ `$(CC) $(CFLAGS) $(CPUCFLAGS) -print-libgcc-file-name` $(LOG_REDIR)
+		-o $@ $(LIBGCC_PATH) $(LOG_REDIR)
 
 $(OBJ_DIR)/$(target).pre.o: $(OBJ_DIR)/config.m4 $(TARGET_OBJECT_LIST) \
 	    FORCE $(arch_SRC_DIR)/ldscript_obj
@@ -192,7 +195,7 @@ $(OBJ_DIR)/$(target).pre.o: $(OBJ_DIR)/config.m4 $(TARGET_OBJECT_LIST) \
 		$(LDFLAGS) $(ARCHLDFLAGS) $(CPULDFLAGS) \
 		-q $(filter %.o,$^) $(filter %.a,$^) \
 		-T $(arch_SRC_DIR)/ldscript_obj \
-		-o $@ `$(CC) $(CFLAGS) $(CPUCFLAGS) -print-libgcc-file-name` $(LOG_REDIR)
+		-o $@ $(LIBGCC_PATH) $(LOG_REDIR)
 
 kernel-postlink: $(POST_TARGET)
 
@@ -200,15 +203,14 @@ $(POST_TARGET): $(OBJ_DIR)/$(target).o $(POST_LDSCRIPT)
 	@echo '    LD post ' $(notdir $@) $(LOG_REDIR)
 	$(LD) -o $@ --gc-sections -T $(POST_LDSCRIPT) $< $(LOG_REDIR)
 
-$(OBJ_DIR)/$(target).hex: $(OBJ_DIR)/$(target).out
-	echo 'OBJCOPY HEX ' $(notdir $@) $(LOG_REDIR)
-	$(OBJCOPY) $(addprefix -j ,$(TARGET_SECTIONS)) $(OBJCOPYFLAGS) -O ihex $< $@ $(LOG_REDIR)
-
-$(OBJ_DIR)/$(target).srec: $(OBJ_DIR)/$(target).out
-	echo 'OBJCOPY HEX ' $(notdir $@) $(LOG_REDIR)
-	$(OBJCOPY) $(addprefix -j ,$(TARGET_SECTIONS)) $(OBJCOPYFLAGS) -O srec $< $@ $(LOG_REDIR)
-
-$(OBJ_DIR)/$(target).bin: $(OBJ_DIR)/$(target).out
-	echo 'OBJCOPY BIN ' $(notdir $@) $(LOG_REDIR)
-	$(OBJCOPY) $(addprefix -j ,$(TARGET_SECTIONS)) $(OBJCOPYFLAGS) -O binary $< $@ $(LOG_REDIR)
-
+ifeq ($(CONFIG_COMPILE_FORMAT),out)
+ifneq ($(TARGET_EXT),out)
+$(OBJ_DIR)/$(target).$(TARGET_EXT): $(OBJ_DIR)/$(target).out
+	echo 'CP          ' $(notdir $@) $(LOG_REDIR)
+	cp $< $@ $(LOG_REDIR)
+endif
+else
+$(OBJ_DIR)/$(target).$(TARGET_EXT): $(OBJ_DIR)/$(target).out
+	echo 'OBJCOPY     ' $(notdir $@) $(LOG_REDIR)
+	$(OBJCOPY) $(addprefix -j ,$(TARGET_SECTIONS)) $(OBJCOPYFLAGS) -O $(CONFIG_COMPILE_FORMAT) $< $@ $(LOG_REDIR)
+endif

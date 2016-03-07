@@ -22,7 +22,7 @@
 
 /**
  * @file
- * @module{Hexo}
+ * @module{Hardware abstraction layer}
  * @short Interrupts, exceptions and syscall events management
  */
 
@@ -33,12 +33,12 @@
 
 C_HEADER_BEGIN
 
-#ifndef __MUTEK_ASM__
-
 #include "local.h"
 #include "types.h"
 
 /************************************************************ hw irq */
+
+#include "cpu/hexo/interrupt.h"
 
 # ifdef CONFIG_HEXO_IRQ
 
@@ -56,64 +56,53 @@ C_HEADER_BEGIN
 */
 typedef CPU_INTERRUPT_HANDLER(cpu_interrupt_handler_t);
 
-/** @this sets the hardware interrupt handler for the current cpu */
+/** @This sets the hardware interrupt handler for the current cpu. */
 void cpu_interrupt_sethandler(cpu_interrupt_handler_t *handler);
 
-extern CPU_LOCAL struct device_s *cpu_interrupt_handler_dev;
+/** @This sets the hardware interrupt handler for an other cpu. The
+    processor local storage of the processor which will have its
+    interrupt handler updated must be specified. */
+config_depend(CONFIG_ARCH_SMP)
+void cpu_interrupt_cls_sethandler(void *cls, cpu_interrupt_handler_t *handler);
 
-struct device_s;
-
-/** @this sets hardware interrupt handler device for the current cpu */
-void cpu_interrupt_sethandler_device(struct device_s *dev);
 # endif
 
 
 /** @this disables all maskable interrupts for the current cpu.
     This acts as a compiler memory barrier. */
-__attribute__ ((always_inline))
-static inline void cpu_interrupt_disable();
+ALWAYS_INLINE void cpu_interrupt_disable(void);
 
 /** @this enables all maskable interrupts for the current cpu.
     This acts as a compiler memory barrier. */
-__attribute__ ((always_inline))
-static inline void cpu_interrupt_enable();
-
-/** @this saves interrupts enable state (may use stack) */
-__attribute__ ((always_inline))
-static inline void cpu_interrupt_savestate(reg_t *state);
+ALWAYS_INLINE void cpu_interrupt_enable(void);
 
 /** @this saves interrupts enable state end disable interrupts.
     This acts as a compiler memory barrier. */
-__attribute__ ((always_inline))
-static inline void cpu_interrupt_savestate_disable(reg_t *state);
+ALWAYS_INLINE void cpu_interrupt_savestate_disable(cpu_irq_state_t *state);
 
 /** @this restores interrupts enable state (may use stack).
     This acts as a compiler memory barrier. */
-__attribute__ ((always_inline))
-static inline void cpu_interrupt_restorestate(const reg_t *state);
+ALWAYS_INLINE bool_t cpu_interrupt_restorestate(const cpu_irq_state_t *state);
 
 /** @this reads current interrupts state as boolean */
-__attribute__ ((always_inline))
-static inline bool_t cpu_interrupt_getstate();
+ALWAYS_INLINE bool_t cpu_interrupt_getstate(void);
 
 /** @this checks if the cpu is interruptible */
-__attribute__ ((always_inline))
-static inline bool_t cpu_is_interruptible();
+ALWAYS_INLINE bool_t cpu_is_interruptible(void);
 
 /** @this enables interrupts and give a chance to pending requests to
     execute. This function must be used to avoid the "sti; cli"
     sequence which don't let interrupts raise on some
     processors. Memory is marked as clobbered by this function to
     force global variable reload after interrupts occured. */
-__attribute__ ((always_inline))
-static inline void cpu_interrupt_process();
+ALWAYS_INLINE void cpu_interrupt_process(void);
 
 # ifdef CONFIG_CPU_WAIT_IRQ
 /** @this enables interrupts and enters in interrupt wait state. The
     @ref #CONFIG_CPU_WAIT_IRQ token may be used to check for
-    availability.  */
-__attribute__ ((always_inline))
-static inline void cpu_interrupt_wait();
+    availability. Memory is marked as clobbered by this function to
+    force global variable reload after interrupts occured. */
+ALWAYS_INLINE void cpu_interrupt_wait(void);
 # endif
 
 /** @showcontent
@@ -122,7 +111,7 @@ static inline void cpu_interrupt_wait();
     This acts as a compiler memory barrier. */
 #define CPU_INTERRUPT_SAVESTATE_DISABLE				\
 {								\
-  reg_t	__interrupt_state;					\
+  cpu_irq_state_t	__interrupt_state;				\
   cpu_interrupt_savestate_disable(&__interrupt_state);
 
 /** @showcontent
@@ -154,7 +143,7 @@ struct cpu_context_s;
    @param dataptr Bad memory data access address, validity depends on
     processor and fault.
 
-   @param regs Can be used with the @ref cpu_exception_set_resume
+   @param regs Can be used with the @ref cpu_exception_resume_pc
     function. Some general purpose registers may be saved depending on
     processor.
 
@@ -164,7 +153,7 @@ struct cpu_context_s;
    instance and will be used when a fault occurs in user mode. The cpu
    local handler is used for other cases.
 
-   @see #CPU_EXCEPTION_HANDLER @see cpu_exception_set_resume
+   @see #CPU_EXCEPTION_HANDLER @see cpu_exception_resume_pc
 */
 typedef CPU_EXCEPTION_HANDLER(cpu_exception_handler_t);
 
@@ -207,7 +196,7 @@ void cpu_user_exception_sethandler_ctx(struct context_s *context,
 
     @param regs Contains valid values for argument passing registers
      on current processor ABI and can be used with the @ref
-     cpu_exception_set_resume function.  The return value register is
+     cpu_exception_resume_pc function.  The return value register is
      restored from this object on syscall return.
 
     Syscall handler is context local and must be defined for each @ref
@@ -228,10 +217,6 @@ void cpu_syscall_sethandler_ctx(struct context_s *context,
 #endif
 
 /************************************************************/
-
-#endif  /* __MUTEK_ASM__ */
-
-# include "cpu/hexo/interrupt.h"
 
 C_HEADER_END
 

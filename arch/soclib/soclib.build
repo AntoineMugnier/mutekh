@@ -1,0 +1,128 @@
+
+# Default SoCLib platform
+
+%section soclib-*
+  %types architecture
+
+  CONFIG_ARCH_SOCLIB
+
+  #################################################
+  # CPUs
+
+  %subsection soclib-mips32el
+    %types cpu
+
+    CONFIG_CPU_MIPS32EL_SOCLIB
+
+    # FIXME mips32 ebase should be > 2Go in soclib pf
+    CONFIG_LOAD_EXCEPTIONS_SEPARATE
+    CONFIG_LOAD_EXCEPTIONS_TEXT undefined
+    %set BUILD_NAME soclib-mips32el
+  %end
+
+  %subsection soclib-mips32eb
+    %types cpu
+
+    CONFIG_CPU_MIPS32EB_SOCLIB
+    CONFIG_LOAD_EXCEPTIONS_SEPARATE
+    CONFIG_LOAD_EXCEPTIONS_TEXT undefined
+    %set BUILD_NAME soclib-mips32eb
+  %end
+
+  %subsection soclib-arm
+    %types cpu
+  
+    CONFIG_CPU_ARM32_SOCLIB
+    %set BUILD_NAME soclib-arm
+  %end
+
+  %subsection soclib-armbe
+    %types cpu
+  
+    CONFIG_CPU_ARM32_SOCLIB
+    CONFIG_CPU_ARM32_BIG_BE8
+    %set BUILD_NAME soclib-armbe
+  %end
+
+  %subsection soclib-ppc
+    %types cpu
+  
+    CONFIG_CPU_PPC_SOCLIB
+    %set BUILD_NAME soclib-ppc
+  %end
+
+  %subsection soclib-nios2
+    %types cpu
+
+    CONFIG_CPU_NIOS2_SOCLIB
+    %set BUILD_NAME soclib-nios2
+  %end
+
+  %subsection soclib-sparc
+    %types cpu
+  
+    CONFIG_CPU_SPARC_SOCLIB
+    %set BUILD_NAME soclib-sparc
+
+    %subsection 2wins
+      CONFIG_CPU_SPARC_WINCOUNT 2
+    %end
+  %end
+
+  %subsection soclib-lm32
+    %types cpu
+  
+    CONFIG_CPU_LM32_SOCLIB
+    %set BUILD_NAME soclib-lm32
+  %end
+
+  #################################################
+  # platforms
+
+  %subsection pf-tutorial
+    %types platform
+
+    CONFIG_ARCH_SMP
+    CONFIG_ARCH_LAST_CPU_ID 31
+
+    # Memory layout
+    CONFIG_LOAD_ROM
+
+#    CONFIG_LOAD_SMP_RESET_MERGED undefined
+#    CONFIG_LOAD_SMP_RESET_COPY
+#    CONFIG_CPU_SMP_RESET_ADDR 0x02000000
+
+    CONFIG_LOAD_ROM_RO_ADDR 0x60000000
+    CONFIG_LOAD_ROM_RO_SIZE 0x00100000
+
+    CONFIG_LOAD_ROM_RW_ADDR 0x7f000000
+    CONFIG_LOAD_ROM_RW_SIZE 0x00100000
+
+    CONFIG_STARTUP_HEAP_ADDR  0x7f100000
+    CONFIG_STARTUP_HEAP_SIZE  0x00efe000
+
+    CONFIG_STARTUP_STACK_ADDR 0x7fffe000
+    CONFIG_STARTUP_STACK_SIZE 0x00001000
+
+    CONFIG_SOCLIB_PRINTK
+    CONFIG_MUTEK_PRINTK_ADDR 0xd0200000
+
+    # Device and drivers
+    CONFIG_DRIVER_MEM_RAM
+    CONFIG_DRIVER_SOCLIB_MULTI_TTY
+    CONFIG_DRIVER_SOCLIB_DMA
+    CONFIG_DRIVER_SOCLIB_ICU
+    CONFIG_DRIVER_SOCLIB_XICU
+    CONFIG_DRIVER_SOCLIB_TIMER
+    CONFIG_DRIVER_ENST_RTTIMER
+#    CONFIG_DRIVER_SOCLIB_ETHERNET
+    CONFIG_DRIVER_SOCLIB_BLOCK_DEVICE
+    CONFIG_DRIVER_SOCLIB_SPI
+  %end
+
+  %requiretypes platform cpu
+
+%section memcheck
+  CONFIG_SOCLIB_MEMCHECK
+  CONFIG_COMPILE_NOBITFIELD
+

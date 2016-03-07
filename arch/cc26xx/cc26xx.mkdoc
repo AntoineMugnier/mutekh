@@ -1,0 +1,30 @@
+
+@section tP {Ti SimpleLink CC26xx and CC13xx}
+
+  @section {Building}
+
+    @code R
+make CONF=examples/hello/config BUILD=cc2650-f128-rgz:binary TARGET_EXT=bin
+    @end code
+
+  @end section
+
+  @section {Programming}
+
+    @code R
+JLinkExe -if jtag -device CC2650F128 -speed 4000
+    @end code
+
+    On JLink prompt:
+    @code R
+erase
+loadbin hello-cc26xx.bin 0
+r
+g
+q 0
+    @end code
+
+  @end section
+
+@end section
+

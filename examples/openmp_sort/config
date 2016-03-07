@@ -11,12 +11,12 @@
   CONFIG_OPENMP
   CONFIG_PTHREAD_MAIN
   CONFIG_PTHREAD_STACK_SIZE 16384
-  CONFIG_MUTEK_SCHEDULER_TMP_STACK_SIZE 16384
+  CONFIG_MUTEK_CONTEXT_SCHED_TMP_STACK_SIZE 16384
   CONFIG_HEXO_INTTYPES_DEPRECATED undefined
   CONFIG_LIBC_FORMATTER_FLOAT
 
-%include $(SRC_DIR)/examples/common/build_options.conf
-%include $(SRC_DIR)/examples/common/platforms.conf
+  %include scripts/options.build
+  %include arch/arch.build
 
   CONFIG_ARCH_EMU_UNLOCK_YIELD undefined
 

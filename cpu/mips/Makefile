@@ -1,11 +1,11 @@
 
-objs = interrupt.o context_switch.o cpu_init.o cpu_context.o
+objs = interrupt.o context_switch.o cpu_context.o boot.o
 
-ifeq ($(CONFIG_CPU_RESET_HANDLER),defined)
-objs += boot.o
+objs-$(CONFIG_DRIVER_CPU_MIPS) += driver.o
+
+ifeq ($(LINKING),1)
+meta = ldscript
 endif
-
-copy = ldscript
 
 subdirs = libc libelf
 

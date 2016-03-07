@@ -1,0 +1,24 @@
+
+  %set OUTPUT_NAME spi
+
+  # New source code module to be compiled
+  %append MODULES $(OUTPUT_NAME):$(CONFIGPATH)
+
+  # Application license
+  CONFIG_LICENSE_APP_LGPL
+#  CONFIG_HEXO_FPU
+
+  # Libs
+  CONFIG_PTHREAD
+  CONFIG_PTHREAD_MAIN
+
+  %include arch/arch.build
+
+  CONFIG_DEVICE_SPI_REQUEST
+
+  CONFIG_MUTEK_BYTECODE_CHECKING
+  CONFIG_MUTEK_BYTECODE_DEBUG
+
+  CONFIG_COMPILE_OPTIMIZE s
+  CONFIG_COMPILE_DEBUG
+  CONFIG_HEXO_IRQ defined

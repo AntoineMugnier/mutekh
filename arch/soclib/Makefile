@@ -1,20 +1,13 @@
 
 objs = 											\
 arch_init.o										\
-entry_points.o                                  \
-mem_init.o \
 power.o
 
-ifneq ($(CONFIG_SOCLIB_EARLY_CONSOLE),undefined)
-objs += early_console.o
-endif
-
-ifeq ($(CONFIG_HEXO_MMU), defined)
-objs += mmu.o
-endif
+objs-$(CONFIG_SOCLIB_PRINTK) += early_console.o
+objs-$(CONFIG_HEXO_MMU) += mmu.o
 
 ifeq ($(LINKING),1)
-
 meta = ldscript
-
 endif
+
+subdirs = drivers

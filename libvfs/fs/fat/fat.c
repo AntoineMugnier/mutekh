@@ -16,7 +16,7 @@
   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
   02110-1301 USA
 
-  Copyright Nicolas Pouillon, <nipo@ssji.net>, 2009
+  Copyright Nicolas Pouillon, <nipo@ssji.net>, 2009,2014
 */
 
 #include <hexo/endian.h>
@@ -24,10 +24,10 @@
 #include <mutek/printk.h>
 #include <mutek/mem_alloc.h>
 
-#include <device/block.h>
+#include <device/class/block.h>
 #include <device/driver.h>
 #include <device/device.h>
-#include <vfs/types.h>
+#include <vfs/node.h>
 #include <vfs/file.h>
 #include <vfs/fs.h>
 
@@ -54,7 +54,7 @@ extern const struct fat_ops_s fat32_fat_ops;
 static error_t fat_parse_bpb(struct fat_s *state, struct fat_tmp_sector_s *sector)
 {
 	struct fat_bpb_s *bpb = (struct fat_bpb_s *)sector->data;
-	const struct dev_block_params_s *params = dev_block_getparams(state->dev);
+	const struct dev_block_params_s *params = DEVICE_OP(state->dev, getparams);
 
 	error_t err = fat_sector_lock_and_load(sector, state->dev, 0);
 	if ( err )
@@ -171,82 +171,83 @@ static error_t fat_parse_bpb(struct fat_s *state, struct fat_tmp_sector_s *secto
 	return 0;
 }
 
-error_t fat_open(struct device_s *dev, struct vfs_fs_s **fs)
+error_t fat_open(struct device_block_s *dev, struct vfs_fs_s **fs, bool_t ro)
 {
-	error_t err = -ENOMEM;
-	const struct dev_block_params_s *params = dev_block_getparams(dev);
-    struct fat_s *fat = mem_alloc(
-        sizeof(struct fat_s)
-        +sizeof(struct fat_tmp_sector_s)
-        +params->blk_size,
-        mem_scope_sys);
-    struct fs_node_s *root;
+  error_t err = -ENOMEM;
+  const struct dev_block_params_s *params = DEVICE_OP(dev, getparams);
 
-	if ( fat == NULL )
-		goto cant_alloc;
+  struct fat_s *fat = mem_alloc(
+    sizeof(struct fat_s) + sizeof(struct fat_tmp_sector_s)
+    + params->blk_size, mem_scope_sys);
 
-    struct vfs_fs_s *mnt = vfs_fs_new(&fat->fs);
-
-    fat->sector = (struct fat_tmp_sector_s*)(fat+1);
-    fat->sector->lba = (dev_block_lba_t)-1;
-    fat->sector->dirty = 0;
-    semaphore_init(&fat->sector->semaphore, 1);
-	fat->dev = dev;
-
-	err = fat_parse_bpb(fat, fat->sector);
-	if ( err )
-		goto cant_open;
-
-	atomic_set(&mnt->ref, 0);
-	mnt->ops = &fat_ops;
-
-    switch (fat->type) {
-#if defined(CONFIG_DRIVER_FS_FAT12)
-    case FAT12:
-        fat->ops = &fat12_fat_ops;
-        break;
-#endif
-#if defined(CONFIG_DRIVER_FS_FAT16)
-    case FAT16:
-        fat->ops = &fat16_fat_ops;
-        break;
-#endif
-#if defined(CONFIG_DRIVER_FS_FAT32)
-    case FAT32:
-        fat->ops = &fat32_fat_ops;
-        break;
-#endif
-    default:
-        err = -ENOTSUP;
-        goto cant_open;
-    }
-
-    printk("fat: opening new fat%d volume\n", fat->type);
-
-	mnt->old_node = NULL;
-    fat_node_pool_init(&fat->nodes);
-
-    root = fat_node_new(
-        NULL, fat,
-        fat->type == FAT16 ? 0 : fat->root_dir_base,
-        fat->root_dir_secsize << fat->sect_size_pow2,
-        VFS_NODE_DIR);
-	if ( root == NULL )
-		goto cant_open;
+  if ( fat == NULL )
+    goto cant_alloc;
 
 #if !defined(CONFIG_DRIVER_FS_FAT_RW)
-    mnt->flag_ro = 0;
+  ro = 1;
 #endif
 
-	mnt->root = root;
+  err = vfs_fs_init(&fat->fs, &fat_ops, ro);
+  if (err)
+    goto cant_init;
 
-	*fs = mnt;
-	return 0;
+  struct fat_node_s *root;
 
-  cant_open:
-	mem_free(mnt);
-  cant_alloc:
-	return err;
+  fat->sector = (struct fat_tmp_sector_s*)(fat+1);
+  fat->sector->lba = (dev_block_lba_t)-1;
+  fat->sector->dirty = 0;
+  semaphore_init(&fat->sector->semaphore, 1);
+
+  fat->dev = dev;
+
+  err = fat_parse_bpb(fat, fat->sector);
+  if ( err )
+    goto cant_open;
+
+  switch (fat->type) {
+#if defined(CONFIG_DRIVER_FS_FAT12)
+  case FAT12:
+    fat->ops = &fat12_fat_ops;
+    break;
+#endif
+#if defined(CONFIG_DRIVER_FS_FAT16)
+  case FAT16:
+    fat->ops = &fat16_fat_ops;
+    break;
+#endif
+#if defined(CONFIG_DRIVER_FS_FAT32)
+  case FAT32:
+    fat->ops = &fat32_fat_ops;
+    break;
+#endif
+  default:
+    err = -ENOTSUP;
+    goto cant_open;
+  }
+
+  printk("fat: opening new fat%d volume\n", fat->type);
+
+  fat_node_pool_init(&fat->nodes);
+
+  root = fat_node_create(fat,
+    fat->type == FAT16 ? 0 : fat->root_dir_base,
+    fat->root_dir_secsize << fat->sect_size_pow2,
+    VFS_NODE_DIR);
+  if ( root == NULL )
+    goto cant_open;
+
+  vfs_fs_root_set(&fat->fs, &root->node);
+
+  *fs = &fat->fs;
+
+  return 0;
+
+ cant_open:
+  vfs_fs_cleanup(&fat->fs);
+ cant_init:
+  mem_free(fat);
+ cant_alloc:
+  return err;
 }
 
 VFS_FS_CAN_UNMOUNT(fat_can_unmount)
@@ -268,8 +269,7 @@ static const struct vfs_fs_ops_s fat_ops =
 #endif
     .stat = fat_stat,
     .can_unmount = fat_can_unmount,
-    .node_refdrop = fat_node_refdrop,
-    .node_refnew = fat_node_refnew,
+    .node_cleanup = fat_node_cleanup,
 };
 
 void fat_str_to_lower(char *str, size_t size)

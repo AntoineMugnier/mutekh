@@ -23,14 +23,14 @@
 #ifndef __ENUM_PCI_H_
 #define __ENUM_PCI_H_
 
-#include <device/enum.h>
+#include <device/class/enum.h>
 #include <device/device.h>
 
 #include <stdint.h>
 
 DEV_CLEANUP(enum_pci_cleanup);
 DEV_INIT(enum_pci_init);
-DEVENUM_LOOKUP(enum_pci_lookup);
+DEV_ENUM_LOOKUP(enum_pci_lookup);
 
 /* PCI device identification object */
 

@@ -65,6 +65,30 @@ error_t system(const char *cmd)
   return -1;
 }
 
+#define GCD_ALGO(utype, stype)                                          \
+{                                                                       \
+  while (a)                                                             \
+    {                                                                   \
+      /* swap A and B if A < B */                                       \
+      utype m = (stype)(a - b) >> (sizeof(m) * 8 - 1);                  \
+      a ^= b & m;                                                       \
+      b ^= a & m;                                                       \
+      a ^= b & m;                                                       \
+                                                                        \
+      /* subtract B*2^N from A, with B*2^N smaller than A and N large */ \
+      utype c = b << (__CLZ(b) - __CLZ(a));                             \
+      c >>= c > a;                                                      \
+      a -= c;                                                           \
+    }                                                                   \
+                                                                        \
+  return b;                                                             \
+}
+
+uint32_t gcd32(uint32_t a, uint32_t b)
+  GCD_ALGO(uint32_t, int32_t);
+
+uint64_t gcd64(uint64_t a, uint64_t b)
+  GCD_ALGO(uint64_t, int64_t);
 
 #define div_algo(i_t, result, dividend, divisor)                       \
     i_t remainder_sign = 1, quotient_sign = 1;                         \

@@ -6,11 +6,11 @@
 
 /**
  * @file
- * @module{Mutek}
+ * @module{Kernel services}
  * @short Debugging messages output API
  */
 
-#if defined(CONFIG_MUTEK_PRINTK)
+#if defined(CONFIG_MUTEK_PRINTK_HANDLER)
 
 /**
    @this defines the backend function for printk() output
@@ -27,6 +27,7 @@ void printk_set_output(printf_output_func_t *f, void *ctx);
 
    @param format Format syntax, and variadic parameters, like printf()
    @returns count of bytes actually emitted
+   @see formatter_printf
  */
 ssize_t printk(const char *format, ...);
 
@@ -38,8 +39,9 @@ ssize_t printk(const char *format, ...);
    @param format Format syntax
    @param ap variadic parameters, like vprintf()
    @returns count of bytes actually emitted
+   @see formatter_printf
  */
-inline ssize_t vprintk(const char *format, va_list ap);
+ssize_t vprintk(const char *format, va_list ap);
 
 /**
    @this prints a binary memory dump of memory to the current printk()
@@ -53,6 +55,7 @@ inline ssize_t vprintk(const char *format, va_list ap);
    @param data Data buffer to print
    @param len Length of buffer to print
  */
+config_depend(CONFIG_MUTEK_PRINTK_HEXDUMP)
 void hexdumpk(uintptr_t address, const void *data, size_t len);
 
 /**
@@ -65,28 +68,28 @@ void writek(const char *data, size_t len);
 
 #else /* no printk */
 
-static inline
+ALWAYS_INLINE
 void printk_set_output(printf_output_func_t *f, void *ctx)
 {}
 
-static inline
+ALWAYS_INLINE
 ssize_t printk(const char *format, ...)
 {
 	return 0;
 }
 
-static inline
+ALWAYS_INLINE
 void hexdumpk(uintptr_t address, const void *data, size_t len)
 {
 }
 
-static inline
+ALWAYS_INLINE
 inline ssize_t vprintk(const char *format, va_list ap)
 {
 	return 0;
 }
 
-static inline
+ALWAYS_INLINE
 void writek(const char *data, size_t len)
 {
 }

@@ -1,0 +1,5 @@
+
+@moduledef{OpenMP runtime library}
+  @short GNU OpenMP runtime library
+  @hidden
+@end moduledef

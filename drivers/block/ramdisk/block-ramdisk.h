@@ -23,13 +23,13 @@
 #ifndef DRIVER_BLOCK_RAMDISK_H_
 #define DRIVER_BLOCK_RAMDISK_H_
 
-#include <device/block.h>
+#include <device/class/block.h>
 #include <device/device.h>
 
 DEV_IRQ(block_ramdisk_irq);
 DEV_INIT(block_ramdisk_init);
 DEV_CLEANUP(block_ramdisk_cleanup);
-DEVBLOCK_REQUEST(block_ramdisk_request);
+DEV_BLOCK_REQUEST(block_ramdisk_request);
 
 #endif
 

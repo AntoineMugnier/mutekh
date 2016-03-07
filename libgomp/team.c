@@ -32,6 +32,7 @@
 #include "libgomp.h"
 #include <stdlib.h>
 #include <string.h>
+#include <mutek/startup.h>
 
 /* This attribute contains PTHREAD_CREATE_DETACHED.  */
 pthread_attr_t gomp_thread_attr;
@@ -507,8 +508,11 @@ gomp_team_end (void)
 void gomp_initialize_env();
 void gomp_initialize_critical();
 
-void initialize_libgomp (void)
+void libgomp_initsmp (void)
 {
+  if (!cpu_isbootstrap())
+    return;
+
   struct gomp_thread *thr;
 
   gomp_initialize_env();

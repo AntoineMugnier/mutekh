@@ -19,13 +19,9 @@
 	Copyright (c) Nicolas Pouillon, <nipo@ssji.net>, 2009
 */
 
+#include <hexo/local.h>
 #include <hexo/interrupt.h>
 #include <hexo/context.h>
-
-#include <device/icu.h>
-
-#include <device/device.h>
-#include <device/driver.h>
 
 #include <mutek/printk.h>
 
@@ -33,25 +29,28 @@
 
 #ifdef CONFIG_HEXO_IRQ
 
-CPU_LOCAL cpu_interrupt_handler_t  *cpu_interrupt_handler;
-CPU_LOCAL struct device_s *cpu_interrupt_handler_dev;
-
-void
-cpu_interrupt_sethandler_device(struct device_s *dev)
+static CPU_INTERRUPT_HANDLER(empty_interrupt_handler)
 {
-	printk("Setting CPU IRQ handler for cpuid %d: %p drv: %p\n",
-		   cpu_id(), dev, dev->drv);
-	assert(dev && dev->drv);
-
-	CPU_LOCAL_SET(cpu_interrupt_handler, (cpu_interrupt_handler_t *)dev->drv->f_irq);
-	CPU_LOCAL_SET(cpu_interrupt_handler_dev, dev);
 }
+
+CPU_LOCAL cpu_interrupt_handler_t  *cpu_interrupt_handler = &empty_interrupt_handler;
 
 void
 cpu_interrupt_sethandler(cpu_interrupt_handler_t *handler)
 {
+  if (!handler)
+    handler = &empty_interrupt_handler;
   CPU_LOCAL_SET(cpu_interrupt_handler, handler);
 }
+
+# ifdef CONFIG_ARCH_SMP
+void cpu_interrupt_cls_sethandler(void *cls, cpu_interrupt_handler_t *handler)
+{
+  if (!handler)
+    handler = &empty_interrupt_handler;
+  CPU_LOCAL_CLS_SET(cls, cpu_interrupt_handler, handler);
+}
+# endif
 
 #endif
 

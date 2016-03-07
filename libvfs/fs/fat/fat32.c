@@ -16,7 +16,7 @@
   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
   02110-1301 USA
 
-  Copyright Nicolas Pouillon, <nipo@ssji.net>, 2009
+  Copyright Nicolas Pouillon, <nipo@ssji.net>, 2009,2014
 */
 
 #define FAT_32
@@ -26,10 +26,10 @@
 #include <mutek/printk.h>
 #include <mutek/mem_alloc.h>
 
-#include <device/block.h>
+#include <device/class/block.h>
 #include <device/driver.h>
 #include <device/device.h>
-#include <vfs/types.h>
+#include <vfs/node.h>
 #include <vfs/file.h>
 #include <vfs/fs.h>
 

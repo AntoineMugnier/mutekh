@@ -16,14 +16,14 @@
   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
   02110-1301 USA
 
-  Copyright Nicolas Pouillon, <nipo@ssji.net>, 2009
+  Copyright Nicolas Pouillon, <nipo@ssji.net>, 2009,2014
 */
 
 #ifndef _FAT_DEFS_H_
 #define _FAT_DEFS_H_
 
 #include <hexo/types.h>
-#include <device/block.h>
+#include <device/class/block.h>
 
 struct fat_bpb16_s {
     uint8_t drive_number;

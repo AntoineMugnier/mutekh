@@ -20,54 +20,179 @@
     Copyright Alexandre Becoulet <alexandre.becoulet@lip6.fr> (c) 2011
 */
 
+#include <mutek/startup.h>
+#include <mutek/printk.h>
 #include <sys/time.h>
 #include <time.h>
 
-#include <mutek/timer.h>
+#include <device/class/timer.h>
+#include <device/device.h>
+#include <device/resources.h>
+#include <device/driver.h>
 
-#ifdef CONFIG_MUTEK_TIMER
+struct device_timer_s    libc_timer_dev = DEVICE_ACCESSOR_INIT;
+static dev_timer_value_t libc_timer_offset;      // time value offset
+static dev_timer_cfgrev_t libc_timer_rev;
 
-static time_t rtc_base_time = 0;
+static uint64_t          libc_time_sec_num;
+static uint64_t          libc_time_sec_den;
+static uint64_t          libc_time_usec_num;
+static uint64_t          libc_time_usec_den;
+static uint64_t          libc_time_nsec_num;
+static uint64_t          libc_time_nsec_den;
+
+static void adjust_frac(uint64_t *num, uint64_t *den)
+{
+  uint64_t a = *num, b = *den;
+
+  // gcd
+  while (b)
+    {
+      uint64_t t = b;
+      b = a % b;
+      a = t;
+    }
+
+  *num /= a;
+  *den /= a;
+}
+
+void libc_time_initsmp()
+{
+  if (!cpu_isbootstrap())
+    return;
+
+  if (device_get_accessor_by_path(&libc_timer_dev, NULL,
+                                  CONFIG_LIBC_TIMER_DEVICE_PATHS,
+                                  DRIVER_CLASS_TIMER))
+    {
+      printk("error: libc: No initialized device found matching `"
+             CONFIG_LIBC_TIMER_DEVICE_PATHS "' in the device tree.\n");
+      goto err;
+    }
+
+  if (device_start(&libc_timer_dev))
+    goto err_acc;
+
+  struct dev_timer_config_s cfg;
+
+  if (DEVICE_OP(&libc_timer_dev, config, &cfg, 0))
+    goto err_stop;
+
+  if (!DEV_FREQ_IS_VALID(cfg.freq) || (cfg.cap & DEV_TIMER_CAP_VARFREQ))
+    {
+      printk("libc: timer device must have a fixed and known frequency.\n");
+      goto err_stop;
+    }
+
+  libc_timer_rev = cfg.rev;
+
+  if (DEVICE_OP(&libc_timer_dev, get_value, &libc_timer_offset, libc_timer_rev))
+    goto err_stop;
+
+  libc_time_sec_num = cfg.res * cfg.freq.denom;
+  libc_time_sec_den = cfg.freq.num;
+  adjust_frac(&libc_time_sec_num, &libc_time_sec_den);
+
+  libc_time_usec_num = 1000000ULL * cfg.res * cfg.freq.denom;
+  libc_time_usec_den = cfg.freq.num;
+  adjust_frac(&libc_time_usec_num, &libc_time_usec_den);
+
+  libc_time_nsec_num = 1000000000ULL * cfg.res * cfg.freq.denom;
+  libc_time_nsec_den = cfg.freq.num;
+  adjust_frac(&libc_time_nsec_num, &libc_time_nsec_den);
+
+  uint64_t w = cfg.max < libc_time_sec_den
+    ? cfg.max * libc_time_sec_num / libc_time_sec_den
+    : cfg.max / libc_time_sec_den * libc_time_sec_num;
+
+  printk("libc: using timer device `%p' for libc time functions, wrapping period is %llu seconds\n", libc_timer_dev.dev, w);
+  return;
+
+ err_stop:
+  device_stop(&libc_timer_dev);
+ err_acc:
+  printk("libc: unable to use `%p' timer device for libc time.\n", libc_timer_dev.dev);
+  device_put_accessor(&libc_timer_dev);
+ err:
+  return;
+}
+
+void libc_time_cleanupsmp()
+{
+  if (!cpu_isbootstrap())
+    return;
+
+  if (device_check_accessor(&libc_timer_dev))
+    {
+      device_stop(&libc_timer_dev);
+      device_put_accessor(&libc_timer_dev);
+    }
+}
+
+struct device_timer_s *libc_timer()
+{
+  return &libc_timer_dev;
+}
 
 error_t gettimeofday(struct timeval *tv, struct timezone *tz)
 {
-  timer_delay_t t = timer_get_tick(&timer_ms);
+  if (!device_check_accessor(&libc_timer_dev))
+    return -1;
 
-  tv->tv_sec = rtc_base_time + timer_tu2sec(t);
-  tv->tv_usec = timer_tu2usec(t % (timer_delay_t)(1/CONFIG_MUTEK_TIMER_UNIT));
+  dev_timer_value_t t;
+  if (DEVICE_OP(&libc_timer_dev, get_value, &t, libc_timer_rev))
+    return -1;
+
+  t += libc_timer_offset;
+  t = (libc_time_usec_num * t) / libc_time_usec_den;
+
+  tv->tv_sec  = t / 1000000;
+  tv->tv_usec = t % 1000000;
 
   return 0;
 }
 
 error_t settimeofday(const struct timeval *tv, const struct timezone *tz)
 {
-  rtc_base_time = tv->tv_sec;
+  struct timespec tp;
+  tp.tv_sec = tv->tv_sec;
+  tp.tv_nsec = tv->tv_usec * 1000;
 
-  return 0;
+  return clock_settime(CLOCK_REALTIME, &tp);
 }
 
 time_t time(time_t *r_)
 {
-  timer_delay_t t = timer_get_tick(&timer_ms);
-  time_t r = rtc_base_time + timer_tu2sec(t);
+  if (!device_check_accessor(&libc_timer_dev))
+    return (time_t)-1;
+
+  dev_timer_value_t t;
+  if (DEVICE_OP(&libc_timer_dev, get_value, &t, libc_timer_rev))
+    return (time_t)-1;
+
+  t += libc_timer_offset;
+  t = (libc_time_sec_num * t) / libc_time_sec_den;
 
   if (r_)
-    *r_ = r;
+    *r_ = t;
 
-  return r;
+  return t;
 }
 
 error_t clock_getres(clockid_t clk_id, struct timespec *res)
 {
+  if (!device_check_accessor(&libc_timer_dev))
+    return -1;
+
   switch (clk_id)
     {
-    case CLOCK_REALTIME:
-      res->tv_sec = timer_tu2sec(1);
-      if (CONFIG_MUTEK_TIMER_UNIT >= 1e-9)
-        res->tv_nsec = timer_tu2nsec(1);
-      else
-        res->tv_nsec = 1;
+    case CLOCK_REALTIME: {
       return 0;
+      dev_timer_value_t t = libc_time_nsec_num / libc_time_nsec_den;
+      res->tv_sec  = t / 1000000000;
+      res->tv_nsec = t % 1000000000;
+    }
 
     default:
       return -1;
@@ -76,13 +201,21 @@ error_t clock_getres(clockid_t clk_id, struct timespec *res)
 
 error_t clock_gettime(clockid_t clk_id, struct timespec *tp)
 {
+  if (!device_check_accessor(&libc_timer_dev))
+    return -1;
+
   switch (clk_id)
     {
     case CLOCK_REALTIME: {
-      timer_delay_t t = timer_get_tick(&timer_ms);
+      dev_timer_value_t t;
+      if (DEVICE_OP(&libc_timer_dev, get_value, &t, libc_timer_rev))
+        return -1;
 
-      tp->tv_sec = rtc_base_time + timer_tu2sec(t);
-      tp->tv_nsec = timer_tu2nsec(t % (timer_delay_t)(1/CONFIG_MUTEK_TIMER_UNIT));
+      t += libc_timer_offset;
+      t = (libc_time_nsec_num * t) / libc_time_nsec_den;
+
+      tp->tv_sec  = t / 1000000000;
+      tp->tv_nsec = t % 1000000000;
       return 0;
     }
 
@@ -93,38 +226,103 @@ error_t clock_gettime(clockid_t clk_id, struct timespec *tp)
 
 error_t clock_settime(clockid_t clk_id, const struct timespec *tp)
 {
+  if (!device_check_accessor(&libc_timer_dev))
+    return -1;
+
   switch (clk_id)
     {
-    case CLOCK_REALTIME:
-      rtc_base_time = tp->tv_sec;
+    case CLOCK_REALTIME: {
+      dev_timer_value_t t;
+      if (DEVICE_OP(&libc_timer_dev, get_value, &t, libc_timer_rev))
+        return -1;
+
+      dev_timer_value_t v;
+      if (libc_time_to_timer(tp, &v))
+        return -1;
+
+      libc_timer_offset = v - t;
       return 0;
+    }
 
     default:
       return -1;
     }
 }
 
-#endif
+error_t libc_time_to_timer(const struct timespec *delay, dev_timer_value_t *value)
+{
+  if (!device_check_accessor(&libc_timer_dev))
+    return -EIO;
 
-#ifdef CONFIG_MUTEK_TIMER_EVENTS
+  if (delay->tv_sec < 60)
+    {
+      uint64_t ns = 1000000000ULL * delay->tv_sec + delay->tv_nsec;
+      *value = libc_time_nsec_den * ns / libc_time_nsec_num - libc_timer_offset;
+    }
+  else
+    {
+      uint64_t us = 1000000ULL * delay->tv_sec + delay->tv_nsec / 1000;
+      *value = libc_time_usec_den * us / libc_time_usec_num - libc_timer_offset;
+    }
+
+  return 0;
+}
+
+error_t libc_time_to_timer_rq(const struct timespec *delay, struct dev_timer_rq_s *rq)
+{
+  rq->delay = 0;
+  rq->rev = libc_timer_rev;
+  return libc_time_to_timer(delay, &rq->deadline);
+}
 
 /* unistd.h */
 error_t usleep(uint_fast32_t usec)
 {
-  return timer_sleep(&timer_ms, timer_usec2tu(usec));
+  if (!device_check_accessor(&libc_timer_dev))
+    return -1;
+
+  struct dev_timer_rq_s rq;
+  rq.delay = libc_time_usec_den * usec / libc_time_usec_num;
+  rq.rev = 0;
+
+  if (dev_timer_wait_request(&libc_timer_dev, &rq)) 
+    return -1;
+
+  return 0;
 }
 
 /* unistd.h */
-error_t sleep(uint_fast32_t usec)
+error_t sleep(uint_fast32_t sec)
 {
-  return timer_sleep(&timer_ms, timer_sec2tu(usec));
+  if (!device_check_accessor(&libc_timer_dev))
+    return -1;
+
+  struct dev_timer_rq_s rq;
+  rq.delay = libc_time_sec_den * sec / libc_time_sec_num;
+  rq.rev = 0;
+
+  if (dev_timer_wait_request(&libc_timer_dev, &rq))
+    return -1;
+
+  return 0;
 }
 
 error_t nanosleep(const struct timespec *rqtp, struct timespec *rmtp)
 {
-  return timer_sleep(&timer_ms, timer_sec2tu(rqtp->tv_sec) +
-                                timer_nsec2tu(rqtp->tv_nsec));
-}
+  if (!device_check_accessor(&libc_timer_dev))
+    return -1;
 
-#endif
+  struct dev_timer_rq_s rq;
+  uint64_t ns = 1000000000ULL * rqtp->tv_sec + rqtp->tv_nsec;
+  rq.delay = libc_time_nsec_den * ns / libc_time_nsec_num;
+  rq.rev = 0;
+
+  if (dev_timer_wait_request(&libc_timer_dev, &rq))
+    return -1;
+
+  if (rmtp)
+    rmtp->tv_sec = rmtp->tv_nsec = 0;
+
+  return 0;
+}
 

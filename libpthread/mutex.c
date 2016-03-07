@@ -198,7 +198,7 @@ __pthread_mutex_errorcheck_unlock(pthread_mutex_t *mutex)
   sched_queue_unlock(&mutex->wait);
   CPU_INTERRUPT_RESTORESTATE;
 
-  return 0;
+  return res;
 }
 
 pthread_mutexattr_t __pthread_mutex_attr_errorcheck =

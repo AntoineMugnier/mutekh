@@ -52,8 +52,6 @@
 
 #define CPU_FAULT_COUNT 22
 
-#ifndef __MUTEK_ASM__
-
 # define CPU_FAULT_NAMES {       \
 /* 0  */ "Undefined exception",          \
 /* 1  */ "Instruction access exception", \
@@ -79,14 +77,9 @@
 /* 21 */ "Instruction mmu miss",         \
 }
 
-# include "hexo/local.h"
+typedef reg_t cpu_irq_state_t;
 
-# ifdef CONFIG_DRIVER_ICU_SPARC
-struct device_s;
-extern CPU_LOCAL struct device_s cpu_icu_dev;
-# endif
-
-static inline void
+ALWAYS_INLINE void
 cpu_interrupt_disable(void)
 {
 # ifdef CONFIG_HEXO_IRQ
@@ -103,7 +96,7 @@ cpu_interrupt_disable(void)
 # endif
 }
 
-static inline void
+ALWAYS_INLINE void
 cpu_interrupt_enable(void)
 {
 # ifdef CONFIG_HEXO_IRQ
@@ -121,7 +114,7 @@ cpu_interrupt_enable(void)
 # endif
 }
 
-static inline void
+ALWAYS_INLINE void
 cpu_interrupt_process(void)
 {
 # ifdef CONFIG_HEXO_IRQ
@@ -138,19 +131,8 @@ cpu_interrupt_process(void)
 # endif
 }
 
-static inline void
-cpu_interrupt_savestate(reg_t *state)
-{
-# ifdef CONFIG_HEXO_IRQ
-  __asm__ volatile (
-                    "rd %%psr, %0		\n\t"
-		    : "=r" (*state)
-		    );
-# endif
-}
-
-static inline void
-cpu_interrupt_savestate_disable(reg_t *state)
+ALWAYS_INLINE void
+cpu_interrupt_savestate_disable(cpu_irq_state_t *state)
 {
 # ifdef CONFIG_HEXO_IRQ
   reg_t tmp;
@@ -168,8 +150,8 @@ cpu_interrupt_savestate_disable(reg_t *state)
 # endif
 }
 
-static inline void
-cpu_interrupt_restorestate(const reg_t *state)
+ALWAYS_INLINE bool_t
+cpu_interrupt_restorestate(const cpu_irq_state_t *state)
 {
 # ifdef CONFIG_HEXO_IRQ
   __asm__ volatile (
@@ -179,10 +161,14 @@ cpu_interrupt_restorestate(const reg_t *state)
 		    : "r" (*state)
                     : "memory", "cc"     /* compiler memory barrier */
 		    );
+
+  return (*state & 0xf00) < 0xf00;
+# else
+  return 0;
 # endif
 }
 
-static inline bool_t
+ALWAYS_INLINE bool_t
 cpu_interrupt_getstate(void)
 {
 # ifdef CONFIG_HEXO_IRQ
@@ -199,7 +185,7 @@ cpu_interrupt_getstate(void)
 # endif
 }
 
-static inline bool_t
+ALWAYS_INLINE bool_t
 cpu_is_interruptible(void)
 {
 # ifdef CONFIG_HEXO_IRQ
@@ -217,16 +203,27 @@ cpu_is_interruptible(void)
 }
 
 # ifdef CONFIG_CPU_WAIT_IRQ
-static inline void cpu_interrupt_wait(void)
+ALWAYS_INLINE void cpu_interrupt_wait(void)
 {
-  __asm__ volatile (
-                    "WAIT\n"	/* defined in asm.h */
-		    ::: "memory"
-                    );
+#  ifdef CONFIG_HEXO_IRQ
+  reg_t tmp;
+
+#   if defined (CONFIG_CPU_SPARC_LEON3) || defined (CONFIG_CPU_SPARC_SOCLIB)
+  asm volatile (
+		"rd %%psr, %0		\n\t"
+                "andn %0, 0xf00, %0      \n\t"
+		"wr %0, %%psr	         \n"
+                "wr %%g0, %%asr19        \n"
+                "nop \n nop \n"
+		: "=r" (tmp)
+                :: "memory"     /* compiler memory barrier */
+	  );
+#   else
+#    error No wait opcode defined for selected sparc processor
+#   endif
+#  endif
 }
 # endif
-
-#endif  /* __MUTEK_ASM__ */
 
 #endif
 

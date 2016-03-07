@@ -20,6 +20,13 @@
 
 */
 
+/**
+ * @file
+ * @module{Kernel services}
+ * @short Console device defs
+ * @internal
+ */
+
 #ifndef MUTEK_CONSOLE_H_
 #define MUTEK_CONSOLE_H_
 
@@ -30,8 +37,9 @@ extern const struct fileops_s console_file_ops;
 
 #if defined(CONFIG_MUTEK_CONSOLE)
 
-struct device_s;
-extern struct device_s *console_dev;
+#include <device/class/char.h>
+
+extern struct device_char_s console_dev;
 
 PRINTF_OUTPUT_FUNC(__printf_out_tty);
 

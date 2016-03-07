@@ -1,0 +1,43 @@
+
+@section TP {Supported platforms}
+
+  MutekH has separate code modules for processor and platform support.
+  The following subsections cover supported platforms:
+
+  @insert localtoc
+
+  A platform support package is composed of:
+  @list
+    @item Implementation of some features provided by the
+      @ref{+Hardware abstraction layer}{hardware abstraction layer} module, stored in
+      header files located in @tt{arch/*/include/hexo/}.
+    @item Optionally, some platform specific definitions, stored in
+      header files located in @tt{arch/*/include/arch_name/}.
+    @item Optionally, some static @xref{Device tree}{device
+      declarations} for the platform.
+    @item Optionally, some board descriptions specific source files
+      with static declarations of relevant devices, located in @tt{arch/*/boards}.
+    @item A linker script, usually based on the generic script
+      provided in @sourcelink arch/common/ldscript.cpp .
+    @item Definition for platform specific @xref{Configuration
+      tokens}{configuration tokens} and features.
+    @item Optionally, definition for platform specific
+      @xref{Initialization tokens declaration}{initialization tokens}
+      and associated initialization functions.
+    @item Optionally, some @xref{Device drivers}{device drivers}
+      specific to a particular platform may be found in
+      @tt{arch/*/drivers}.
+  @end list
+
+  @include bcm283x/bcm283x.mkdoc
+  @include efm32/efm32.mkdoc
+  @include emu/emu.mkdoc
+  @include gaisler/gaisler.mkdoc
+  @include soclib/soclib.mkdoc
+  @include stm32/stm32.mkdoc
+  @include zynq/zynq.mkdoc
+  @include pic32/pic32.mkdoc
+  @include cc26xx/cc26xx.mkdoc
+
+@end section
+

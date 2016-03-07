@@ -35,8 +35,6 @@
 
 #define CPU_FAULT_COUNT 6
 
-#ifndef __MUTEK_ASM__
-
 # define CPU_FAULT_NAMES {       \
 "Illegal instruction",          \
 "Data storage",                 \
@@ -48,12 +46,9 @@
 
 # include "hexo/local.h"
 
-# ifdef CONFIG_DRIVER_ICU_PPC
-struct device_s;
-extern CPU_LOCAL struct device_s cpu_icu_dev;
-# endif
+typedef reg_t cpu_irq_state_t;
 
-static inline void
+ALWAYS_INLINE void
 cpu_interrupt_disable(void)
 {
 # ifdef CONFIG_HEXO_IRQ
@@ -70,7 +65,7 @@ cpu_interrupt_disable(void)
 # endif
 }
 
-static inline void
+ALWAYS_INLINE void
 cpu_interrupt_enable(void)
 {
 # ifdef CONFIG_HEXO_IRQ
@@ -87,7 +82,7 @@ cpu_interrupt_enable(void)
 # endif
 }
 
-static inline void
+ALWAYS_INLINE void
 cpu_interrupt_process(void)
 {
 # ifdef CONFIG_HEXO_IRQ
@@ -104,19 +99,8 @@ cpu_interrupt_process(void)
 # endif
 }
 
-static inline void
-cpu_interrupt_savestate(reg_t *state)
-{
-# ifdef CONFIG_HEXO_IRQ
-  __asm__ volatile (
-		    "mfmsr	%0\n"
-		    : "=r" (*state)
-		    );
-# endif
-}
-
-static inline void
-cpu_interrupt_savestate_disable(reg_t *state)
+ALWAYS_INLINE void
+cpu_interrupt_savestate_disable(cpu_irq_state_t *state)
 {
 # ifdef CONFIG_HEXO_IRQ
   reg_t tmp;
@@ -134,8 +118,8 @@ cpu_interrupt_savestate_disable(reg_t *state)
 # endif
 }
 
-static inline void
-cpu_interrupt_restorestate(const reg_t *state)
+ALWAYS_INLINE bool_t
+cpu_interrupt_restorestate(const cpu_irq_state_t *state)
 {
 # ifdef CONFIG_HEXO_IRQ
   __asm__ volatile (
@@ -144,10 +128,13 @@ cpu_interrupt_restorestate(const reg_t *state)
 		    : "r" (*state)
                     : "memory"     /* compiler memory barrier */
 		    );
+  return (*state >> 15) & 1;
+# else
+  return 0;
 # endif
 }
 
-static inline bool_t
+ALWAYS_INLINE bool_t
 cpu_interrupt_getstate(void)
 {
 # ifdef CONFIG_HEXO_IRQ
@@ -158,13 +145,13 @@ cpu_interrupt_getstate(void)
 		    : "=r" (state)
 		    );
 
-  return !!(state & 0x8000);
+  return (state >> 15) & 1;
 # else
   return 0;
 # endif
 }
 
-static inline bool_t
+ALWAYS_INLINE bool_t
 cpu_is_interruptible(void)
 {
 # ifdef CONFIG_HEXO_IRQ
@@ -175,22 +162,26 @@ cpu_is_interruptible(void)
 }
 
 # ifdef CONFIG_CPU_WAIT_IRQ
-static inline void cpu_interrupt_wait(void)
+ALWAYS_INLINE void cpu_interrupt_wait(void)
 {
 #  ifdef CONFIG_HEXO_IRQ
+  reg_t tmp;
 #   ifdef CONFIG_CPU_PPC_WAIT_OPCODE
   __asm__ volatile (
+                    "mfmsr %0		\n"
+                    "ori %0, %0, 0x8000     \n"
+                    "mtmsr %0		\n"
                     "wait\n"	/* Power ISA 2.0 */
-		    ::: "memory"
+		    : "=r" (tmp)
+		    :: "memory"
                     );
 #   elif defined(CONFIG_CPU_PPC_WAIT_MSRWE)
-  reg_t tmp;
   __asm__ volatile (
                     "mfmsr %0\n"
-                    "ori %0, %0, %1\n"
+                    "or %0, %0, %1\n"
                     "mtmsr %0\n"
-		    : "=r" (tmp)
-                    : "r" (1<<18) /* WE bit */
+		    : "=&r" (tmp)
+                    : "r" (0x48000) /* WE & int enable bits */
                     : "memory"
                     );
 #   else
@@ -199,8 +190,6 @@ static inline void cpu_interrupt_wait(void)
 #  endif
 }
 # endif
-
-#endif  /* __MUTEK_ASM__ */
 
 #endif
 

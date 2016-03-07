@@ -1,3 +1,4 @@
+#include <mutek/startup.h>
 
 #include <pthread.h>
 #include <mutek/printk.h>
@@ -7,13 +8,13 @@
 #endif
 
 #ifdef CONFIG_DRIVER_ENUM_ROOT
-#include <device/enum.h>
+#include <device/class/enum.h>
 #include <device/device.h>
 #include <device/driver.h>
 
 extern struct device_s enum_root;
 
-static const char *device_class_str[] = {
+static const char *const device_class_str[] = {
 	"none", "block", "char", "enum", "fb", "icu", "input", "net",
 	"sound", "timer", "spi", "lcd", "gpio", "i2c", "mem",
 };
@@ -31,7 +32,7 @@ static void dump_enumerator(struct device_s *root, uint_fast8_t prefix)
 }
 #endif
 
-void app_start()
+void app_start(void)
 {
 #ifdef CONFIG_DRIVER_ENUM_ROOT
 	dump_enumerator(&enum_root, 0);

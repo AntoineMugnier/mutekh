@@ -22,25 +22,111 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include <enums.h>
 #include <hexo/types.h>
 
 #include <libc/formatter.h>
 
+#ifdef CONFIG_LIBC_FORMATTER_SIMPLE
+typedef uintptr_t __printf_uint_t;
 typedef intptr_t __printf_int_t;
+# define PRINTF_SIZEOF_VAL INT_REG_SIZE
+#else
+typedef uint64_t __printf_uint_t;
+typedef int64_t __printf_int_t;
+# define PRINTF_SIZEOF_VAL 64
+#endif
 
-#define PRINTF_INT_BUFFER_LEN	20
+#ifdef CONFIG_LIBC_FORMATTER_SIMPLE
+# define PRINTF_INT_BUFFER_LEN	22 // large enough for 64 bits decimal number with sign and space
+#else
+# define PRINTF_INT_BUFFER_LEN	PRINTF_SIZEOF_VAL+2 // large enough for binary format with 0b prefix
+#endif
 
-static inline size_t
-__printf_putint(char *buf, __printf_int_t val,
-		const char *base, uint_fast8_t basesize)
+static size_t
+printf_base10(char *buf, __printf_uint_t x)
 {
   int_fast8_t	i;
 
   for (i = PRINTF_INT_BUFFER_LEN; i > 0; )
     {
-      buf[--i] = base[val % basesize];
+#ifdef CONFIG_LIBC_FORMATTER_DIV10
+      uint8_t z = x % 10;
+#else
+      /* B. Arazi and D. Naccache, Binary to Decimal Conversion Based on
+         the Divisibility of 255 by 5, Electronic Letters, Vol. 28, Num. 23, 1992 */
 
-      if (!(val /= basesize))
+      /* mod 255 */
+      uint16_t sum;
+      __printf_uint_t y;
+      for (y = x; y > 255; y = sum)
+        for (sum = 0; y != 0; y >>= 8)
+          sum += y & 0xff;
+
+      /* mod 5 */
+      uint8_t z = y;
+# if 1
+      z -= ((z * 205) >> 10) * 5;
+# else
+      z = (z & 15) + (z >> 4);
+      z = (z & 15) + (z >> 4);
+      z = (z &  3) - (z >> 2);
+      z += (((int8_t)z >> 7) & 5);
+# endif
+
+      /* mod 10 */
+      uint8_t w = ((x ^ z) & 1);
+      w |= w << 2;
+      z += w;
+#endif
+
+      buf[--i] = z + '0';
+
+      x -= z;
+      if (x == 0)
+        break;
+
+#ifdef CONFIG_LIBC_FORMATTER_DIV10
+      x = x / 10;
+#else
+
+      /* multiply by 510 / 20 */
+# if 0
+      x = x / 2 * 3 * 17;   /* 64 bits mul */
+# else
+      x >>= 1;
+      x += x << 1;
+      x += x << 4;
+# endif
+
+      /* div by 255 */
+      __printf_uint_t s = -x;
+      __printf_uint_t r = 0;
+      uint_fast8_t i;
+
+      for (i = 0; i < sizeof(x); i++)
+        {
+          r = (r >> 8) | (s << (8 * sizeof(__printf_uint_t) - 8));
+          s = ((s & 0xff) + (s >> 8));
+        }
+      x = r;
+#endif
+    }
+
+  return PRINTF_INT_BUFFER_LEN - i;
+}
+
+static size_t
+printf_base_pow2(char *buf, __printf_uint_t val,
+                 const char *base, uint_fast8_t base_shift)
+{
+  int_fast8_t	i;
+
+  for (i = PRINTF_INT_BUFFER_LEN; i > 0; )
+    {
+      buf[--i] = base[val & ((1ULL << base_shift) - 1)];
+
+      if (!(val >>= base_shift))
 	break;
     }
 
@@ -87,14 +173,27 @@ void _printf_float(void *ctx, printf_output_func_t * const fcn, __fpmax_t x)
 
 
 
-static const char *hex_lower_base = "0123456789abcdef";
-static const char *hex_upper_base = "0123456789ABCDEF";
+static const char *hex_lower_base = "0123456789abcdef0x";
+
+#ifndef CONFIG_LIBC_FORMATTER_SIMPLE
+static const char *hex_upper_base = "0123456789ABCDEF0X";
+#else
+# define hex_upper_base hex_lower_base
+#endif
+
+#define PRINTF_FLAG_SPACE     1
+#define PRINTF_FLAG_PLUS      2
+#define PRINTF_FLAG_NEGATIVE  4
+#define PRINTF_FLAG_ALTERNATE 8
+#define PRINTF_FLAG_PRECISION 16
 
 ssize_t
 formatter_printf(void *ctx, printf_output_func_t * const fcn,
 	     const char *format, va_list ap)
 {
+
   size_t	offset = 0;
+  uint_fast8_t  flags;
 #ifndef CONFIG_LIBC_FORMATTER_SIMPLE
   uint_fast8_t	typesize, padindex;
   ssize_t	padding[2];
@@ -125,6 +224,7 @@ formatter_printf(void *ctx, printf_output_func_t * const fcn,
   return offset;
 
  printf_state_modifier:
+  flags = 0;
 #ifndef CONFIG_LIBC_FORMATTER_SIMPLE
   padindex = 0;
   zeropad = rightpad = 0;
@@ -141,46 +241,112 @@ formatter_printf(void *ctx, printf_output_func_t * const fcn,
 	  goto printf_state_main;
 	}
 
+        case '#':
 #ifndef CONFIG_LIBC_FORMATTER_SIMPLE
-	case '-':
-	  rightpad = 1;
+          flags |= PRINTF_FLAG_ALTERNATE; /* alternate form */
+#endif
 	  format++;
+	  break;
+
+	case '-':
+#ifndef CONFIG_LIBC_FORMATTER_SIMPLE
+	  rightpad = 1;
+#endif
+	  format++;
+	  break;
+
+	case ' ':
+#ifndef CONFIG_LIBC_FORMATTER_SIMPLE
+	  flags |= PRINTF_FLAG_SPACE;
+#endif
+          format++;
+	  break;
+
+	case '+':
+#ifndef CONFIG_LIBC_FORMATTER_SIMPLE
+	  flags |= PRINTF_FLAG_PLUS;
+#endif
+          format++;
 	  break;
 
 	case '0':
+#ifndef CONFIG_LIBC_FORMATTER_SIMPLE
 	  if (!padindex && !padding[padindex])
 	    zeropad = 1;
+#endif
 
 	case '1' ... '9':
-	  padding[padindex] = padding[padindex] * 10 + *format++ - '0';
+#ifndef CONFIG_LIBC_FORMATTER_SIMPLE
+	  padding[padindex] = padding[padindex] * 10 + *format - '0';
+#endif
+	  format++;
 	  break;
 
 	case '.':
+#ifndef CONFIG_LIBC_FORMATTER_SIMPLE
 	  padindex ^= 1;
+#endif
 	  format++;
+          flags |= PRINTF_FLAG_PRECISION;
 	  break;
 
 	case 'l':
-	  typesize = CPU_SIZEOF_LONG / 8;
+#ifndef CONFIG_LIBC_FORMATTER_SIMPLE
+	  typesize = format[-1] == 'l' ? CPU_SIZEOF_LONGLONG / 8 : CPU_SIZEOF_LONG / 8;
+#endif
 	  format++;
 	  break;
-#endif
 
-#if defined(CONFIG_LIBC_FORMATTER_FLOAT)
+	case 'h':
+#ifndef CONFIG_LIBC_FORMATTER_SIMPLE
+	  typesize = format[-1] == 'h' ? 1 : CPU_SIZEOF_SHORT / 8;
+#endif
+	  format++;
+	  break;
+
+        case 'q':
+#ifndef CONFIG_LIBC_FORMATTER_SIMPLE
+          typesize = CPU_SIZEOF_LONGLONG;
+#endif
+	  format++;
+	  break;
+
+        case 'z':
+#ifndef CONFIG_LIBC_FORMATTER_SIMPLE
+          typesize = sizeof(size_t);
+#endif
+	  format++;
+	  break;
+
+        case 't':
+#ifndef CONFIG_LIBC_FORMATTER_SIMPLE
+          typesize = sizeof(ptrdiff_t);
+#endif
+	  format++;
+	  break;
+
+        case 'j':
+#ifndef CONFIG_LIBC_FORMATTER_SIMPLE
+          typesize = sizeof(intmax_t);
+#endif
+	  format++;
+	  break;
+
         case 'e':
         case 'E':
         case 'f':
         case 'F':
         case 'g':
         case 'G':
+#if defined(CONFIG_LIBC_FORMATTER_FLOAT)
           _printf_float(ctx, fcn, va_arg(ap, double));
+#endif
 	  format++;
         goto printf_state_main;
-#endif
 
+#if defined(CONFIG_LIBC_FORMATTER_FLOAT)
 	case 's':
 	case 'p':
-#ifndef CONFIG_LIBC_FORMATTER_SIMPLE
 	case 'S':
 	case 'P':
 	  typesize = sizeof(void *);
@@ -192,8 +358,8 @@ formatter_printf(void *ctx, printf_output_func_t * const fcn,
   return offset;
 
  printf_state_conv: {
-    __printf_int_t	val;
-    char		*buf;
+    __printf_uint_t	val;
+    char		*buf = 0;
     char		buf_[PRINTF_INT_BUFFER_LEN];
     size_t		len;
 
@@ -202,21 +368,21 @@ formatter_printf(void *ctx, printf_output_func_t * const fcn,
       {
 #if INT_REG_SIZE <= 8
       case 1:
-	val = va_arg(ap, int8_t);
+	val = va_arg(ap, uint8_t);
 	break;
 #endif
 #if INT_REG_SIZE <= 16
       case 2:
-	val = va_arg(ap, int16_t);
+	val = va_arg(ap, uint16_t);
 	break;
 #endif
 #if INT_REG_SIZE <= 32
       case 4:
-	val = va_arg(ap, int32_t);
+	val = va_arg(ap, uint32_t);
 	break;
 #endif
       case 8:
-	val = va_arg(ap, int64_t);
+	val = va_arg(ap, uint64_t);
 	break;
 
       default:
@@ -240,28 +406,117 @@ formatter_printf(void *ctx, printf_output_func_t * const fcn,
 
 	/* decimal signed integer */
 
+#ifdef CONFIG_LIBC_FORMATTER_SIMPLE
+      case ('N'):
+        va_arg(ap, uint8_t *);
+#endif
       case ('d'):
-      case ('i'):
+      case ('i'): {
 #ifndef CONFIG_LIBC_FORMATTER_SIMPLE
-	/* FIXME precision should not be handled this way with %d %i */
 	if (padding[1])
 	  {
 	    zeropad = 1;
 	    padding[0] = padding[1];
 	  }
-#endif
-	if (val < 0)
-	  {
-	    val = -val;
-	    fcn(ctx, "-", offset++, 1);
-	  }
 
-	len = __printf_putint(buf_, val, hex_lower_base, 10);
+        /* sign extend */
+        switch (typesize)
+          {
+# if PRINTF_SIZEOF_VAL > 8
+          case 1:
+            val = (__printf_int_t)(int8_t)val;
+            break;
+# endif
+# if PRINTF_SIZEOF_VAL > 16
+          case 2:
+            val = (__printf_int_t)(int16_t)val;
+            break;
+# endif
+# if PRINTF_SIZEOF_VAL > 32
+          case 4:
+            val = (__printf_int_t)(int32_t)val;
+            break;
+# endif
+          }
+#endif
+
+        if ((__printf_int_t)val < 0)
+          {
+            val = -val;
+            flags |= PRINTF_FLAG_NEGATIVE;
+          }
+
+        buf = buf_;
+
+        if ((__printf_int_t)val < 0)
+          {
+#if PRINTF_SIZEOF_VAL == 8
+            static const char max[] = "128";
+#elif PRINTF_SIZEOF_VAL == 16
+            static const char max[] = "32768";
+#elif PRINTF_SIZEOF_VAL == 32
+            static const char max[] = "2147483648";
+#elif PRINTF_SIZEOF_VAL == 64
+            static const char max[] = "9223372036854775808";
+#else
+# error bad value for PRINTF_SIZEOF_VAL
+#endif
+            buf = buf_ + PRINTF_INT_BUFFER_LEN - sizeof(max);
+            memcpy(buf, max, sizeof(max));
+          }
+        else
+          {
+            buf = buf_ + PRINTF_INT_BUFFER_LEN - printf_base10(buf_, val);
+          }
+
+#ifndef CONFIG_LIBC_FORMATTER_SIMPLE
+        if (flags & (flags > 1)) // PRINTF_FLAG_SPACE == 1
+          *--buf = ' ';
+#endif
+        len = PRINTF_INT_BUFFER_LEN - (buf - buf_);
+
+        break;
+      }
+
+	/* octal integer */
+      case ('o'):
+	len = printf_base_pow2(buf_, val, hex_lower_base, 3);
 	buf = buf_ + PRINTF_INT_BUFFER_LEN - len;
+#ifndef CONFIG_LIBC_FORMATTER_SIMPLE
+        if (val && (flags & PRINTF_FLAG_ALTERNATE))
+          {
+            *--buf = '0';
+            len++;
+          }
+#endif
 	break;
 
-	/* decimal unsigned integer */
+	/* binary integer */
+      case ('b'):
+#ifndef CONFIG_LIBC_FORMATTER_SIMPLE
+	len = printf_base_pow2(buf_, val, hex_lower_base, 1);
+	buf = buf_ + PRINTF_INT_BUFFER_LEN - len;
+        if (zeropad)
+          {
+            if (val && (flags & PRINTF_FLAG_ALTERNATE))
+              {
+                fcn(ctx, "0b", offset, 2);
+                offset += 2;
+                if (padding[0])
+                  padding[0]--;
+                if (padding[0])
+                  padding[0]--;
+              }
+          }
+        else if (!zeropad && (flags & PRINTF_FLAG_ALTERNATE))
+          {
+            *--buf = 'b'; *--buf = '0';
+            len += 2;
+          }
+	break;
+#endif
 
+	/* decimal unsigned integer */
       case ('u'):
 #ifndef CONFIG_LIBC_FORMATTER_SIMPLE
 	/* FIXME precision should not be handled this way with %u */
@@ -271,47 +526,67 @@ formatter_printf(void *ctx, printf_output_func_t * const fcn,
 	    padding[0] = padding[1];
 	  }
 #endif
-	len = __printf_putint(buf_, val, hex_lower_base, 10);
+	len = printf_base10(buf_, val);
 	buf = buf_ + PRINTF_INT_BUFFER_LEN - len;
 	break;
 
 	/* hexadecimal unsigned integer */
 
-      case ('X'):
-#ifndef CONFIG_LIBC_FORMATTER_SIMPLE
-	len = __printf_putint(buf_, val, hex_upper_base, 16);
-	buf = buf_ + PRINTF_INT_BUFFER_LEN - len;
-	break;
-#endif
-
-#ifndef CONFIG_LIBC_FORMATTER_SIMPLE
       case ('p'):
-	fcn(ctx, "0x", offset, 2);
-	offset += 2;
+#ifndef CONFIG_LIBC_FORMATTER_SIMPLE
+        flags |= PRINTF_FLAG_ALTERNATE;
 	zeropad = 1;
-	padding[0] = sizeof(void*) * 2;
+	padding[0] = /* 0x */ 2 + /* ptr digits */ sizeof(void*) * 2;
 	rightpad = 0;
 #endif
 
       case ('x'):
-	len = __printf_putint(buf_, val, hex_lower_base, 16);
+      case ('X'): {
+#ifndef CONFIG_LIBC_FORMATTER_SIMPLE
+        const char *base = format[-1] == 'X' ? hex_upper_base : hex_lower_base;
+	len = printf_base_pow2(buf_, val, base, 4);
 	buf = buf_ + PRINTF_INT_BUFFER_LEN - len;
-	break;
-
-	/* octal integer */
-
-      case ('o'):
-	len = __printf_putint(buf_, val, hex_lower_base, 8);
+        if (zeropad)
+          {
+            if ((val || format[-1] == 'p') && (flags & PRINTF_FLAG_ALTERNATE))
+              {
+                fcn(ctx, base + 16, offset, 2);
+                offset += 2;
+                if (padding[0])
+                  padding[0]--;
+                if (padding[0])
+                  padding[0]--;
+              }
+          }
+        else if (flags & PRINTF_FLAG_ALTERNATE)
+          {
+            *--buf = base[17]; *--buf = '0';
+            len += 2;
+          }
+#else
+	len = printf_base_pow2(buf_, val, hex_lower_base, 4);
 	buf = buf_ + PRINTF_INT_BUFFER_LEN - len;
+#endif
 	break;
+      }
 
 	/* string */
-
       case ('s'): {
-	char	*str = (char*)val;
+#ifdef CONFIG_LIBC_FORMATTER_SIMPLE
+        if (flags & PRINTF_FLAG_PRECISION)
+          goto printf_state_main;  /* do not handle string length limit */
+#endif
+	char	*str = (char*)(uintptr_t)val;
+
+        if (!str)
+          {
+            len = 6;
+            buf = "(null)";
+            break;
+          }
+
 #ifndef CONFIG_LIBC_FORMATTER_SIMPLE
 	size_t	maxlen;
-
 	zeropad = 0;
 
 	if ((maxlen = padding[1]))
@@ -322,25 +597,98 @@ formatter_printf(void *ctx, printf_output_func_t * const fcn,
 	  while (*str)
 	    str++;
 
-	len = str - (char*)val;
-	buf = (char*)val;
+	buf = (char*)(uintptr_t)val;
+	len = str - buf;
       }	break;
 
 	/* hexdump data buffer */
-#ifndef CONFIG_LIBC_FORMATTER_SIMPLE
       case ('P'):
 	len = va_arg(ap, size_t);
+#ifndef CONFIG_LIBC_FORMATTER_SIMPLE
 	buf = __builtin_alloca(len * 3);
-	len = printf_hexdump(buf, (uint8_t*)val, len);
+	len = printf_hexdump(buf, (uint8_t*)(uintptr_t)val, len);
+#endif
 	break;
 
 	/* string data buffer */
 
       case ('S'):
 	len = va_arg(ap, size_t);
-	buf = (char*)val;
+#ifndef CONFIG_LIBC_FORMATTER_SIMPLE
+	buf = (char*)(uintptr_t)val;
 	zeropad = 0;
+#endif
 	break;
+
+#ifndef CONFIG_LIBC_FORMATTER_SIMPLE
+      case ('N'): {
+        uint8_t *desc = va_arg(ap, uint8_t *);
+# if ENUM_USED_FLAGS & ENUM_FLAGS_OR
+        if (ENUM_FLAGS(desc) & ENUM_FLAGS_OR)
+          {
+            static const size_t ENUM_MAX_STRLEN = 64;
+            len = 0;
+            buf = __builtin_alloca(ENUM_MAX_STRLEN);
+            ENUM_FOREACH(uintptr_t, desc, {
+                if (value & val)
+                  {
+                    size_t k = strlen(name);
+                    if (len + k + 1 >= ENUM_MAX_STRLEN - 3)
+                      goto enum_end;
+                    if (len != 0)
+                      buf[len++] = '|';
+                    memcpy(buf + len, name, k);
+                    len += k;
+                    val &= ~value;
+                  }
+            });
+            if (val)
+              {
+                uint32_t v = val;
+                size_t k = 8;
+                if (!(v & 0xffff0000))
+                  (k -= 4, v <<= 16);
+                if (!(v & 0xff000000))
+                  (k -= 2, v <<= 8);
+                if (!(v & 0xf0000000))
+                  (k -= 1, v <<= 4);
+                if (len + 1 + 2 + k >= ENUM_MAX_STRLEN - 3)
+                  goto enum_end;
+                if (len != 0)
+                  buf[len++] = '|';
+                buf[len++] = '0';
+                buf[len++] = 'x';
+                while (k--)
+                  {
+                    buf[len++] = hex_lower_base[(v >> 28) & 15];
+                    v <<= 4;
+                  }
+              }
+            else if (len == 0)
+              buf[len++] = '0';
+            break;
+          enum_end:
+            buf[len++] = '.';
+            buf[len++] = '.';
+            buf[len++] = '.';
+            break;
+          }
+        else
+# endif
+          {
+            len = 1;
+            buf = "?";
+            ENUM_FOREACH(uintptr_t, desc, {
+                if (value == val)
+                  {
+                    buf = (char*)name;
+                    len = strlen(name);
+                    break;
+                  }
+            });
+            break;
+          }
+      }
 #endif
 
       default:
@@ -350,12 +698,26 @@ formatter_printf(void *ctx, printf_output_func_t * const fcn,
 #ifndef CONFIG_LIBC_FORMATTER_SIMPLE
     size_t padlen = __MAX((ssize_t)(padding[0] - len), 0);
 
-    if (!rightpad)
+    if (!rightpad && !zeropad)
       {
 	while (padlen--)
-	  fcn(ctx, zeropad ? "0" : " ", offset++, 1);
+	  fcn(ctx, " ", offset++, 1);
       }
 #endif
+
+    if (flags & PRINTF_FLAG_NEGATIVE)
+      fcn(ctx, "-", offset++, 1);
+#ifndef CONFIG_LIBC_FORMATTER_SIMPLE
+    else if (flags & PRINTF_FLAG_PLUS)
+      fcn(ctx, "+", offset++, 1);
+
+    if (!rightpad && zeropad)
+      {
+	while (padlen--)
+	  fcn(ctx, "0", offset++, 1);
+      }
+#endif
+
 
     fcn(ctx, buf, offset, len);
     offset += len;
@@ -401,7 +763,7 @@ static inline void hexdump_new_line(
     }
 
     memset(line+addrw+3, ' ', w*3);
-    memset(line+addrw+3+w*3+3, '.', w);
+    memset(line+addrw+3+w*3+3, ' ', w);
 }
 
 static inline void hexdump_put_char(
@@ -412,9 +774,7 @@ static inline void hexdump_put_char(
 
     line[addrw+3+index*3]   = hex_lower_base[val >> 4];
     line[addrw+3+index*3+1] = hex_lower_base[val & 0xf];
-
-    if ( (val >= 32) && (val < 128) )
-        line[addrw+3+w*3+3+index] = val;
+    line[addrw+3+w*3+3+index] = (val >= 32 && val < 128) ? val : '.';
 }
 
 void
@@ -432,31 +792,31 @@ formatter_hexdump(void *ctx, printf_output_func_t * const fcn,
     const uint8_t *data = base;
     const uint8_t *end = data + size;
 
-    for ( ; data < end; ++data, ++address ) {
+    for ( ; data < end; ++data, ++address) {
         size_t index = (uintptr_t)address % w;
         hexdump_put_char(line, index, *data, w);
 
-        if ( index == w-1 ) {
+        if (index == w - 1) {
             fcn(ctx, line, 0, line_width);
             bool_t once = 0;
 
-            while ( memcstcmp(data+1, 0, w) == 0 ) {
+            while (data + 1 + w < end && memcstcmp(data + 1, 0, w) == 0) {
                 data += w;
                 address += w;
                 once = 1;
             }
 
-            if ( once ) {
+            if (once) {
                 fcn(ctx, "***\n", 0, 4);
             }
 
-            if ( data+1 < end )
-                hexdump_new_line(line, address+1, w);
+            if (data + 1 < end)
+                hexdump_new_line(line, address + 1, w);
         }
                       
     }
 
-    if ( (uintptr_t)data & (w-1) )
+    if (address & (w - 1))
         fcn(ctx, line, 0, line_width);
 }
 

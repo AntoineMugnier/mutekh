@@ -16,105 +16,98 @@
   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
   02110-1301 USA
 
-  Copyright Nicolas Pouillon, <nipo@ssji.net>, 2009
+  Copyright Nicolas Pouillon, <nipo@ssji.net>, 2009,2014
 */
 
 #ifndef _FAT_PRIVATE_H_
 #define _FAT_PRIVATE_H_
 
 #include <hexo/types.h>
+#include <vfs/node.h>
 #include <vfs/fs.h>
-#include <vfs/types.h>
 #include <vfs/file.h>
 
 #include <mutek/semaphore.h>
 
-#include <hexo/gpct_platform_hexo.h>
-#include <hexo/gpct_lock_hexo.h>
-#include <gpct/cont_hashlist.h>
-#include <gpct/cont_clist.h>
-#include <gpct/object_refcount.h>
+#include <gct/container_avl_p.h>
+#include <gct/container_clist.h>
 
 #include "fat-defs.h"
 
 struct fat_s;
-struct fs_node_s;
+struct fat_node_s;
 struct fat_ops_s;
 
 struct fat_file_s;
 
-OBJECT_TYPE     (fat_file, REFCOUNT, struct fat_file_s);
-OBJECT_PROTOTYPE(fat_file, static inline, fat_file);
+#define GCT_CONTAINER_LOCK_fat_file_list HEXO_LOCK_IRQ
+#define GCT_CONTAINER_ALGO_fat_file_list CLIST
 
-#define CONTAINER_LOCK_fat_file_list HEXO_SPIN_IRQ
-#define CONTAINER_OBJ_fat_file_list fat_file
-
-CONTAINER_TYPE(fat_file_list, CLIST,
 struct fat_file_s
 {
-    CONTAINER_ENTRY_TYPE(CLIST) list_entry;
+    struct vfs_file_s file;     /* keep first field */
+
     common_cluster_t cluster_index;      // index from start of *file*
-	common_cluster_t zone_start; // index of first contiguous block in fat
-	common_cluster_t zone_end;   // index of last contiguous block in fat + 1
-    struct fs_node_s *extent;
-    fat_file_entry_t obj_entry;
-}, list_entry);
+    common_cluster_t zone_start; // index of first contiguous block in fat
+    common_cluster_t zone_end;   // index of last contiguous block in fat + 1
 
-OBJECT_CONSTRUCTOR(fat_file);
-OBJECT_DESTRUCTOR(fat_file);
+    GCT_CONTAINER_ENTRY(fat_file_list, list_entry);
+};
 
-CONTAINER_FUNC(fat_file_list, CLIST, static inline, fat_file_list, list_entry);
+/* This list is used to keep track of all existing file objects for a node. */
+GCT_CONTAINER_TYPES(fat_file_list, struct fat_file_s *, list_entry);
+GCT_CONTAINER_KEY_TYPES(fat_file_list, PTR, SCALAR, cluster_index);
+GCT_CONTAINER_KEY_FCNS(fat_file_list, ASC, static inline, fat_file_list, cluster_index,
+                   init, destroy, push, remove, isempty);
 
-#ifdef __MKDOC__
-struct fat_file_s *
-fat_file_new(void *storage, struct fs_node_s *node);
-#endif
+struct fat_file_s *fat_file_create(struct fat_node_s *node,
+                                   enum vfs_open_flags_e flags);
 
-
-
-
-OBJECT_TYPE     (fat_node, REFCOUNT, struct fs_node_s);
-OBJECT_PROTOTYPE(fat_node, static inline, fat_node);
-
-#define CONTAINER_LOCK_fat_node_pool HEXO_SPIN_IRQ
-#define CONTAINER_OBJ_fat_node_pool fat_node
-
-CONTAINER_TYPE(fat_node_pool, HASHLIST,
-struct fs_node_s
+static inline struct fat_file_s *fat_file_refinc(struct fat_file_s *file)
 {
-    CONTAINER_ENTRY_TYPE(HASHLIST) hash_entry;
-    fat_node_entry_t obj_entry;
-    struct fat_s *fat;
+    return (struct fat_file_s *)vfs_file_refinc(&file->file);
+}
+
+static inline bool_t fat_file_refdec(struct fat_file_s *file)
+{
+    return vfs_file_refdec(&file->file);
+}
+
+#define GCT_CONTAINER_LOCK_fat_node_pool HEXO_LOCK_IRQ
+#define GCT_CONTAINER_ALGO_fat_node_pool AVL_P
+
+struct fat_node_s
+{
+    struct vfs_node_s node;       /* keep first field */
+
     fat_file_list_root_t files;
     struct semaphore_s lock;
     uint32_t file_size;
     common_cluster_t first_cluster;
-    enum vfs_node_type_e type;
-}, hash_entry, 5);
 
-CONTAINER_KEY_TYPE(fat_node_pool, PTR, SCALAR, first_cluster);
+    GCT_CONTAINER_ENTRY(fat_node_pool, hash_entry);
+};
 
-OBJECT_CONSTRUCTOR(fat_node);
-OBJECT_DESTRUCTOR(fat_node);
+static inline struct fat_node_s *fat_node_refinc(struct fat_node_s *node)
+{
+    return (struct fat_node_s *)vfs_node_refinc(&node->node);
+}
 
-CONTAINER_FUNC(fat_node_pool, HASHLIST, static inline, fat_node_pool, first_cluster);
-CONTAINER_KEY_FUNC(fat_node_pool, HASHLIST, static inline, fat_node_pool, first_cluster);
+static inline bool_t fat_node_refdec(struct fat_node_s *node)
+{
+    return vfs_node_refdec(&node->node);
+}
 
-#ifdef __MKDOC__
-struct fs_node_s *
-fat_node_new(void *storage,
-             struct fat_s *fat,
-             common_cluster_t first_cluster,
-             size_t file_size,
-             enum vfs_node_type_e type);
-#endif
+/* This map is used to find when a node already exist for a given cluster index. */
+GCT_CONTAINER_TYPES(fat_node_pool, struct fat_node_s *, hash_entry);
+GCT_CONTAINER_KEY_TYPES(fat_node_pool, PTR, SCALAR, first_cluster);
+GCT_CONTAINER_KEY_FCNS(fat_node_pool, ASC, static inline, fat_node_pool, first_cluster,
+                       init, destroy, push, lookup, remove);
 
-
-OBJECT_FUNC(fat_file, REFCOUNT, static inline, fat_file, obj_entry);
-OBJECT_FUNC(fat_node, REFCOUNT, static inline, fat_node, obj_entry);
-
-
-
+struct fat_node_s *fat_node_create(struct fat_s *fat,
+                                   common_cluster_t first_cluster,
+                                   size_t file_size,
+                                   enum vfs_node_type_e type);
 
 #define FAT_ENTRY_GET(x) common_cluster_t (x)                       \
     (struct fat_s *fat,                                             \
@@ -148,7 +141,8 @@ enum fat_type_e
 struct fat_s
 {
     struct vfs_fs_s fs;
-	struct device_s *dev;
+
+    struct device_block_s *dev;
     const struct fat_ops_s *ops;
 	common_cluster_t root_dir_secsize;
     // This holds a sector for fat16.
@@ -172,7 +166,7 @@ struct fat_s *fs2fat(struct vfs_fs_s *fs)
     return (struct fat_s *)fs;
 }
 
-void fat_name_to_vfs(char *dst, const char *src);
+void fat_name_to_vfs(size_t dst_size, char *dst, const char *src);
 
 union fat_dirent_u;
 
@@ -211,7 +205,6 @@ VFS_FS_MOVE(fat_move);
 VFS_FS_UNLINK(fat_unlink);
 VFS_FS_STAT(fat_stat);
 
-VFS_FILE_CLOSE(fat_file_close);
 VFS_FILE_READ(fat_dir_read);
 VFS_FILE_READ(fat_file_read);
 VFS_FILE_WRITE(fat_file_write);

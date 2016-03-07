@@ -24,8 +24,6 @@
 
 #define CPU_CPU_H_
 
-#ifndef __MUTEK_ASM__
-
 /** general purpose regsiters count */
 # define CPU_GPREG_COUNT	32
 
@@ -35,10 +33,7 @@
     "r16", "r17", "r18", "r19", "r20", "r21", "r22", "r23",   \
     "r24", "r25", "r26", "fp", "sp", "ra", "ea", "ba"
 
-# undef lm32
-# define CPU_TYPE_NAME lm32
-
-static inline cpu_id_t
+ALWAYS_INLINE cpu_id_t
 cpu_id(void)
 {
   /** FIXME */
@@ -46,8 +41,8 @@ cpu_id(void)
   return 0;
 }
 
-static inline
-reg_t cpu_get_stackptr()
+ALWAYS_INLINE
+reg_t cpu_get_stackptr(void)
 {
     reg_t ret;
     asm("mv %0, sp"
@@ -55,43 +50,26 @@ reg_t cpu_get_stackptr()
     return ret;
 }
 
-static inline bool_t
+ALWAYS_INLINE bool_t
 cpu_isbootstrap(void)
 {
-  return cpu_id() == 0;
+  return cpu_id() == CONFIG_ARCH_BOOTSTRAP_CPU_ID;
 }
 
-static inline cpu_cycle_t
-cpu_cycle_count(void)
-{
-    reg_t ret;
-    asm volatile ("rcsr %0, CC"
-        : "=r" (ret));
-    return ret;
-}
-
-static inline void
-cpu_trap()
+ALWAYS_INLINE void
+cpu_trap(void)
 {
   asm volatile ("break");
 }
 
-static inline void *cpu_get_cls(cpu_id_t cpu_id)
-{
-  return NULL;
-}
-
-static inline void cpu_dcache_invld(void *ptr)
+ALWAYS_INLINE void cpu_dcache_invld(void *ptr)
 {
 }
 
-static inline size_t cpu_dcache_line_size()
+ALWAYS_INLINE size_t cpu_dcache_line_size(void)
 {
   return CONFIG_CPU_CACHE_LINE;
 }
-
-
-#endif  /* __MUTEK_ASM__ */
 
 #endif
 

@@ -3,6 +3,7 @@
 #include <libvfs/fs/soclib-fdaccess/soclib-fdaccess.h>
 
 #include <mutek/printk.h>
+#include <mutek/startup.h>
 #include <stdio.h>
 
 static
@@ -63,7 +64,7 @@ bool_t do_read()
   return 0;
 }
 
-void app_start()
+void app_start(void)
 {
   if (vfs_init() == NULL)
     return;

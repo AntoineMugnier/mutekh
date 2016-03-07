@@ -21,10 +21,16 @@
 
 */
 
-#include <device/icu.h>
+#include <device/class/icu.h>
 #include <device/driver.h>
 #include <device/device.h>
 #include <hexo/ipi.h>
+
+GCT_CONTAINER_PROTOTYPES(ipi_queue, extern inline, ipi_queue,
+                   init, destroy, pushback, pop, wrlock, unlock);
+
+GCT_CONTAINER_PROTOTYPES(ipi_queue, extern inline, ipi_queue_nolock,
+                          isempty);
 
 CPU_LOCAL struct ipi_endpoint_s ipi_endpoint = {};
 

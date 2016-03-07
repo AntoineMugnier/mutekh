@@ -1,0 +1,30 @@
+
+@section tP {STMicroelectronics STM32}
+
+  @section {Building}
+
+    Building for a supported board:
+    @code R
+make CONF=examples/hello/config BUILD=stm32-nucleof103rb
+    @end code
+
+    Building without board support:
+    @code R
+make CONF=examples/hello/config BUILD=stm32-f103rb
+    @end code
+
+  @end section
+
+  @section {Programming with Openocd}
+
+    @code R
+openocd -f interface/ftdi/dp_busblaster.cfg -f target/stm32f1x.cfg \
+        -c init -c targets -c halt \
+        -c "flash write_image erase hello-stm32-f1.out" \
+        -c reset run -c shutdown
+    @end code
+
+  @end section
+
+@end section
+

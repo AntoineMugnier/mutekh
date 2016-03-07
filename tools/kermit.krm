@@ -1,0 +1,20 @@
+#!/usr/bin/env kermit +
+
+# Serial port setup.  These settings will likely need to be
+# changed to match the configuration of your workstation
+# and the ARM board you're working with.
+#set line /dev/tty.usbmodemfd113
+set line \%1
+#set speed 115200
+set speed \%2
+set serial 8n1
+
+# General C-Kermit settings.  These probably don't need to change.
+set flow-control none
+set file type bin
+set carrier-watch off
+set prefixing all
+set modem none
+
+connect
+

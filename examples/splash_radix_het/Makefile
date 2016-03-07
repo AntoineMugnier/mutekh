@@ -1,6 +1,4 @@
 
 objs = radix_pthread.o
 
-ifeq ($(CONFIG_HET_BUILD), defined)
-objs += platform-mips+arm.o
-endif
+objs-$(CONFIG_HET_BUILD) += platform-mips+arm.o

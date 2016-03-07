@@ -1,8 +1,7 @@
 
 #include <string.h>
 #include <errno.h>
-
-#define ARRAY_SIZE(x) (sizeof(x)/sizeof((x)[0]))
+#include <hexo/decls.h>
 
 error_t errno = 0;
 
@@ -21,6 +20,7 @@ static const char *const strerror_tab[] = {
 	[ECANCELED] = "Operation has been canceled",
 	[EACCES] = "Access denied",
 	[EIO] = "Io error",
+	[ENOSPC] = "No space left on device",
 	[EEOF] = "End of data",
 	[EEXISTS] = "File exists",
 	[EISDIR] = "Is a directory",

@@ -82,6 +82,15 @@ C_HEADER_BEGIN
 #define PTRDIFF_MIN		__MINOF_TYPE(ptrdiff_t)
 #define PTRDIFF_MAX		__MAXOF_TYPE(ptrdiff_t)
 
+typedef int_fast8_t   int_least8_t  ;
+typedef uint_fast8_t  uint_least8_t ;
+typedef int_fast16_t  int_least16_t ;
+typedef uint_fast16_t uint_least16_t;
+typedef int_fast32_t  int_least32_t ;
+typedef uint_fast32_t uint_least32_t;
+typedef int_fast64_t  int_least64_t ;
+typedef uint_fast64_t uint_least64_t;
+
 C_HEADER_END
 
 #endif

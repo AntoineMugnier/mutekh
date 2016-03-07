@@ -86,18 +86,28 @@
 
 .section .excep,"ax",@progbits
 
-__exception_base_ptr:
+CPU_NAME_DECL(exception_vector):
+        .globl CPU_NAME_DECL(exception_vector)
 
       /* reset 0x00 */
-        PUT_ENTRY       0,          cpu_boot
+#ifndef CONFIG_LOAD_RESET_SEPARATE
+CPU_NAME_DECL(reset_vector):
+        .globl CPU_NAME_DECL(reset_vector)
+#endif
+        PUT_ENTRY       0,          mutekh_entry
 
       /* 11 faults 0x01 - 0x0b */
         PUT_ENTRIES     1,    11,   sparc_excep_entry
         PUT_EQ_ENTRIES  0x0c, 0x10, sparc_excep_entry,  0
 
-#ifdef CONFIG_HEXO_IRQ
       /* 15 irqs 0x11 - 0x1f */
+#ifdef CONFIG_HEXO_IRQ
+# ifdef CONFIG_CPU_SPARC_BLOCK_NMI
+        PUT_ENTRIES     0,    13,   sparc_irq_entry
+        PUT_ENTRY       14,         sparc_nmi_entry
+# else
         PUT_ENTRIES     0,    14,   sparc_irq_entry
+# endif
 #else
         PUT_EQ_ENTRIES  0,    14,   sparc_excep_entry, 0
 #endif
@@ -119,12 +129,8 @@ __exception_base_ptr:
         PUT_EQ_ENTRIES  0x0, 0x7f, sparc_excep_entry, 0
 #endif
 
-__exception_base_ptr_end:
-        .globl __exception_base_ptr_end
 
-.section .text,"ax",@progbits
-
-
+/************************************************************************/
 
 /* This macro use all local regs to save caller saved register before calling C code */
 .macro SPARC_EXCEPT_SAVE
@@ -163,14 +169,10 @@ __exception_base_ptr_end:
         mov     %y,     %l0
         mov     %g1,    %l3
         mov     %psr,   %l5
-        // %i6 and %i7 are caller saved registers, preserve %o6 and %o7 in interrupted code
-        mov     %i6,    %l6
-        mov     %i7,    %l7
 
 #ifdef CONFIG_HEXO_CONTEXT_PREEMPT
         // clear context preempt handler
-        set     cpu_preempt_handler, %o0
-        st      %g0,    [%o0]
+        CPU_LOCAL_st    cpu_preempt_handler, %g0, %o0
 #endif
 
         // use interrupted code stack
@@ -191,9 +193,9 @@ __exception_base_ptr_end:
 1:      
 #endif
 
-#ifdef CONFIG_COMPILE_FRAMEPTR
-        mov     %sp,    %i7
-#endif
+        // skip register window save area
+        add     %sp,    -SPARC_STACK_REDZONE,    %sp
+
 .endm
 
 
@@ -219,13 +221,12 @@ FUNC_START(.text, sparc_excep_entry)
 1:      
 #endif
 
+        // skip register window save area
+        add     %sp,    -SPARC_STACK_REDZONE,    %sp
+
         // use cpu local handler
         CPU_LOCAL_ld cpu_exception_handler, %o5
 2:      
-
-#ifdef CONFIG_COMPILE_FRAMEPTR
-        mov     %sp,    %i7
-#endif
 
         // dump some registers
         st     %l5, [%g5 + CPU_SPARC_CONTEXT_PSR]
@@ -238,7 +239,7 @@ FUNC_START(.text, sparc_excep_entry)
         mov     %g5,    %o3 // arg4 regtable
         // call exception handler
         call    %o5
-        mov     %l6,    %o4 // arg5 stack
+        mov     %i6,    %o4 // arg5 stack
 
         // read some registers back in case they were modified by c code
         ld     [%g5 + CPU_SPARC_CONTEXT_PSR], %l5
@@ -282,6 +283,12 @@ FUNC_END(sparc_syscall_entry)
 
 
 #ifdef CONFIG_HEXO_IRQ
+FUNC_START(.text, sparc_nmi_entry)
+        // FIXME handle nmi here
+        jmp     %l1
+        rett    %l2
+FUNC_END(sparc_nmi_entry)
+
 FUNC_START(.text, sparc_irq_entry)
 
         SPARC_EXCEPT_SAVE
@@ -308,8 +315,7 @@ FUNC_START(.text, sparc_except_restore)
 #ifdef CONFIG_HEXO_CONTEXT_PREEMPT
         
         // check if a preempt handler has been registered
-        set     cpu_preempt_handler, %o0
-        ld      [%o0],  %o0
+        CPU_LOCAL_ld    cpu_preempt_handler, %o0
 
         tst     %o0
         beq     1f
@@ -321,7 +327,7 @@ FUNC_START(.text, sparc_except_restore)
 
         // got pointer to context to switch to ?
         tst     %o0
-        beq     1f
+        beq     2f
         // save all registers available from this exception window
         st      %l0,    [%g5 + CPU_SPARC_CONTEXT_Y]
         st      %l1,    [%g5 + CPU_SPARC_CONTEXT_PC]
@@ -329,10 +335,10 @@ FUNC_START(.text, sparc_except_restore)
         st      %l3,    [%g5 + CPU_SPARC_CONTEXT_G(1)]
         st      %l5,    [%g5 + CPU_SPARC_CONTEXT_PSR]
 
-        std     %l6,    [%g5 + CPU_SPARC_CONTEXT_O(6)]
         std     %i0,    [%g5 + CPU_SPARC_CONTEXT_O(0)]
         std     %i2,    [%g5 + CPU_SPARC_CONTEXT_O(2)]
         std     %i4,    [%g5 + CPU_SPARC_CONTEXT_O(4)]
+        std     %i6,    [%g5 + CPU_SPARC_CONTEXT_O(6)]
 
 # ifdef CONFIG_HEXO_CONTEXT_STATS
         // update context stats
@@ -362,7 +368,10 @@ FUNC_START(.text, sparc_except_restore)
         // switch to new context
         b       cpu_context_jumpto
         st      %l0, [%g5 + CPU_SPARC_CONTEXT_SAVE_MASK]
-1:      
+1:
+        // invalidate handler outside interrupt
+        CPU_LOCAL_st    cpu_preempt_handler, %g5, %o0
+2:
 #endif
         
         // restore caller saved registers
@@ -370,8 +379,6 @@ FUNC_START(.text, sparc_except_restore)
         mov     %l5,   %psr
 
         mov     %l3,    %g1
-        mov     %l6,    %i6
-        mov     %l7,    %i7
 
 #if CONFIG_CPU_SPARC_WINCOUNT < 3
         /* need to restore %o* overlapping registers */

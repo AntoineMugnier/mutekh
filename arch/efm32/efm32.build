@@ -1,0 +1,381 @@
+
+%section efm32-stk3200
+  %inherit efm32-zero-222-f32
+
+  CONFIG_EFM32_BOARD stk3200
+
+  CONFIG_MUTEK_PRINTK_ADDR 0x40084000
+  CONFIG_DRIVER_EFM32_LEUART_PRINTK_PIN 52
+  CONFIG_DRIVER_EFM32_LEUART_PRINTK_LOC 0
+
+  CONFIG_EFM32_BOOT_BUTTON
+  CONFIG_EFM32_BOOT_BUTTON_PIN 40
+
+%section efm32-g8xxstk
+  %inherit efm32-gecko-890-f128
+
+  CONFIG_EFM32_BOARD g8xxstk
+
+# CONFIG_MUTEK_PRINTK_ADDR 0x40084000
+  CONFIG_DRIVER_EFM32_LEUART_PRINTK_PIN 52
+  CONFIG_DRIVER_EFM32_LEUART_PRINTK_LOC 0
+
+  CONFIG_MUTEK_PRINTK_ADDR 0x4000e000
+  CONFIG_DRIVER_EFM32_USART_PRINTK_PIN 64
+  CONFIG_DRIVER_EFM32_USART_PRINTK_LOC 1
+
+  CONFIG_EFM32_BOOT_BUTTON
+  CONFIG_EFM32_BOOT_BUTTON_PIN 25
+
+%section efm32-stk3600
+  %inherit efm32-leopard-990-f256
+
+  CONFIG_EFM32_BOARD stk3x00_678
+
+  # CONFIG_MUTEK_PRINTK_ADDR 0x40084000
+  CONFIG_DRIVER_EFM32_LEUART_PRINTK_PIN 52
+  CONFIG_DRIVER_EFM32_LEUART_PRINTK_LOC 0
+
+  CONFIG_MUTEK_PRINTK_ADDR 0x4000e000
+  CONFIG_DRIVER_EFM32_USART_PRINTK_PIN 64
+  CONFIG_DRIVER_EFM32_USART_PRINTK_LOC 1
+
+  CONFIG_EFM32_BOOT_BUTTON
+  CONFIG_EFM32_BOOT_BUTTON_PIN 25
+
+%section efm32-stk3700
+  %inherit efm32-giant-990-f1024
+
+  CONFIG_EFM32_BOARD stk3x00_678
+
+  # CONFIG_MUTEK_PRINTK_ADDR 0x40084000
+  CONFIG_DRIVER_EFM32_LEUART_PRINTK_PIN 52
+  CONFIG_DRIVER_EFM32_LEUART_PRINTK_LOC 0
+
+  CONFIG_MUTEK_PRINTK_ADDR 0x4000e000
+  CONFIG_DRIVER_EFM32_USART_PRINTK_PIN 64
+  CONFIG_DRIVER_EFM32_USART_PRINTK_LOC 1
+
+  CONFIG_EFM32_BOOT_BUTTON
+  CONFIG_EFM32_BOOT_BUTTON_PIN 25
+
+%section efm32-stk3800
+  %inherit efm32-wonder-990-f256
+
+  CONFIG_EFM32_BOARD stk3x00_678
+
+  # CONFIG_MUTEK_PRINTK_ADDR 0x40084000
+  CONFIG_DRIVER_EFM32_LEUART_PRINTK_PIN 52
+  CONFIG_DRIVER_EFM32_LEUART_PRINTK_LOC 0
+
+  CONFIG_MUTEK_PRINTK_ADDR 0x4000e000
+  CONFIG_DRIVER_EFM32_USART_PRINTK_PIN 64
+  CONFIG_DRIVER_EFM32_USART_PRINTK_LOC 1
+
+  CONFIG_EFM32_BOOT_BUTTON
+  CONFIG_EFM32_BOOT_BUTTON_PIN 25
+
+%section efm32-*-*-* efm32-*
+  %types architecture
+
+  CONFIG_ARCH_EFM32
+
+  # Memory layout
+
+  CONFIG_LOAD_ROM
+  CONFIG_MUTEK_DEFAULT_MEMALLOC_INIT
+
+  CONFIG_LOAD_ROM_RO_ADDR   0x00000000
+  CONFIG_LOAD_ROM_RW_ADDR   0x20000000
+  CONFIG_STARTUP_STACK_ADDR (0x20000000 + CONFIG_LOAD_ROM_RW_SIZE)
+  CONFIG_STARTUP_STACK_SIZE  0x400
+  CONFIG_LOAD_ROM_RW_SIZE   (CONFIG_EFM32_RAMSIZE - CONFIG_STARTUP_STACK_SIZE)
+  CONFIG_STARTUP_HEAP_SIZE  0
+
+  CONFIG_COMPILE_OPTIMIZE s
+
+  CONFIG_LOAD_EXCEPTIONS_SEPARATE undefined
+  CONFIG_LOAD_EXCEPTIONS_TEXT
+
+  CONFIG_DEVICE_TREE undefined
+  CONFIG_DEVICE_CLOCK_GATING
+  CONFIG_DEVICE_CLOCK_VARFREQ
+  CONFIG_DRIVER_EFM32_RECMU
+  CONFIG_DRIVER_EFM32_MSC
+  CONFIG_DRIVER_EFM32_LEUART
+  CONFIG_DRIVER_EFM32_USART
+  CONFIG_DRIVER_EFM32_TIMER
+  CONFIG_DRIVER_EFM32_PWM
+  CONFIG_DRIVER_EFM32_RTC
+  CONFIG_DRIVER_EFM32_GPIO
+  CONFIG_DRIVER_EFM32_AES
+  CONFIG_DRIVER_EFM32_DMA
+  CONFIG_DRIVER_EFM32_I2C
+
+  %subsection debug
+    CONFIG_CPU_ARM32M_MPU_STACK_GUARD
+    CONFIG_CPU_ARM32M_MPU_NULL_PTR
+    CONFIG_HEXO_STACK_ALIGN 32
+  %end
+
+  #################################################
+  # CPUs
+
+  %subsection efm32-zero-*-*
+    %types family
+
+    CONFIG_CPU_ARM32M_CORTEXM0
+    CONFIG_EFM32_ZERO_GECKO
+
+    CONFIG_HEXO_CPU_STACK_SIZE 0x200
+    CONFIG_PTHREAD_STACK_SIZE  0x200
+
+    CONFIG_CPU_ARM32M_M_IRQ_COUNT 17
+
+    %set BUILD_NAME efm32-zero
+
+    %subsection efm32-zero-*-f4
+      %types flash
+      CONFIG_LOAD_ROM_RO_SIZE 0x00001000
+    %end
+
+    %subsection efm32-zero-*-f8
+      %types flash
+
+      CONFIG_LOAD_ROM_RO_SIZE 0x00002000
+    %end
+
+    %subsection efm32-zero-*-f16
+      %types flash
+
+      CONFIG_LOAD_ROM_RO_SIZE 0x00004000
+    %end
+
+    %subsection efm32-zero-*-f32
+      %types flash
+
+      CONFIG_LOAD_ROM_RO_SIZE 0x00008000
+    %end
+
+    %subsection efm32-zero-*-f4 efm32-zero-*-f8
+      %types sram
+
+      CONFIG_EFM32_RAMSIZE 0x800
+    %end
+
+    %subsection efm32-zero-*-f16 efm32-zero-*-f32
+      %types sram
+
+      CONFIG_EFM32_RAMSIZE 0x1000
+    %end
+
+    %subsection efm32-*-108-*
+      %types features
+    %end
+  
+    %subsection efm32-*-110-*
+      %types features
+    %end
+  
+    %subsection efm32-*-222-*
+      %types features
+    %end
+
+  %end
+
+  %subsection efm32-gecko-*-*
+    %types family
+
+    CONFIG_CPU_ARM32M_CORTEXM3
+    CONFIG_EFM32_GECKO
+
+    CONFIG_HEXO_CPU_STACK_SIZE 0x400
+    CONFIG_PTHREAD_STACK_SIZE  0x800
+
+    CONFIG_CPU_ARM32M_M_IRQ_COUNT 30
+
+    %set BUILD_NAME efm32-gecko
+
+    %subsection efm32-gecko-*-f16
+      %types flash
+      CONFIG_LOAD_ROM_RO_SIZE 0x00004000
+    %end
+
+    %subsection efm32-gecko-*-f32
+      %types flash
+
+      CONFIG_LOAD_ROM_RO_SIZE 0x00008000
+    %end
+
+    %subsection efm32-gecko-*-f64
+      %types flash
+
+      CONFIG_LOAD_ROM_RO_SIZE 0x00010000
+    %end
+
+    %subsection efm32-gecko-*-f128
+      %types flash
+
+      CONFIG_LOAD_ROM_RO_SIZE 0x00020000
+    %end
+
+    %subsection efm32-gecko-*-f16 efm32-gecko-*-f32
+      %types sram
+
+      CONFIG_EFM32_RAMSIZE 0x2000
+    %end
+
+    %subsection efm32-gecko-*-f64 efm32-gecko-*-f128
+      %types sram
+
+      CONFIG_EFM32_RAMSIZE 0x4000
+    %end
+
+    %subsection efm32-gecko-200-* efm32-gecko-210-*
+      %types features
+    %end
+  
+    %subsection efm32-gecko-230-*
+      %types features
+    %end
+
+    %subsection efm32-gecko-280-* efm32-gecko-290-*
+      %types features
+    %end
+
+    %subsection efm32-gecko-840-*
+      %types features
+    %end
+
+    %subsection efm32-gecko-880-* efm32-gecko-890-*
+      %types features
+    %end
+
+  %end
+
+
+
+  %subsection efm32-leopard-*-*
+    %types family
+
+    %set BUILD_NAME efm32-leopard
+
+    CONFIG_CPU_ARM32M_CORTEXM3
+    CONFIG_EFM32_LEOPARD_GECKO
+
+  %end
+
+  %subsection efm32-wonder-*-*
+    %types family
+
+    %set BUILD_NAME efm32-wonder
+
+    CONFIG_CPU_ARM32M_CORTEXM4
+    CONFIG_EFM32_WONDER_GECKO
+
+  %end
+
+  %subsection efm32-wonder-*-* efm32-leopard-*-*
+    %types sram
+
+    CONFIG_CPU_ARM32M_M_IRQ_COUNT 39
+
+    CONFIG_HEXO_CPU_STACK_SIZE 0x400
+    CONFIG_PTHREAD_STACK_SIZE  0x800
+
+    CONFIG_EFM32_RAMSIZE 0x8000
+
+    %subsection efm32-*-*-f64
+      %types flash
+
+      CONFIG_LOAD_ROM_RO_SIZE 0x00010000
+    %end
+
+    %subsection efm32-*-*-f128
+      %types flash
+
+      CONFIG_LOAD_ROM_RO_SIZE 0x00020000
+    %end
+
+  %end
+
+
+  %subsection efm32-giant-*-*
+    %types family
+    %types sram
+
+    %set BUILD_NAME efm32-giant
+
+    CONFIG_CPU_ARM32M_CORTEXM3
+    CONFIG_EFM32_GIANT_GECKO
+
+    CONFIG_CPU_ARM32M_M_IRQ_COUNT 39
+
+    CONFIG_HEXO_CPU_STACK_SIZE 0x400
+    CONFIG_PTHREAD_STACK_SIZE  0x1000
+
+    CONFIG_EFM32_RAMSIZE 0x20000
+
+    %subsection efm32-*-*-f512
+      %types flash
+
+      CONFIG_LOAD_ROM_RO_SIZE 0x00080000
+    %end
+
+    %subsection efm32-*-*-f1024
+      %types flash
+
+      CONFIG_LOAD_ROM_RO_SIZE 0x00100000
+    %end
+
+  %end
+
+
+  %subsection efm32-wonder-*-* efm32-leopard-*-* efm32-giant-*-*
+
+    %subsection efm32-*-*-f256
+      %types flash
+
+      CONFIG_LOAD_ROM_RO_SIZE 0x00040000
+    %end
+
+    %subsection efm32-*-230-* efm32-*-232-*
+      %types features
+    %end
+  
+    %subsection efm32-*-280-* efm32-*-290-* efm32-*-295-*
+      %types features
+    %end
+
+    %subsection efm32-*-330-* efm32-*-332-*
+      %types features
+    %end
+
+    %subsection efm32-*-380-* efm32-*-390-* efm32-*-395-*
+      %types features
+    %end
+
+    %subsection efm32-*-840-* efm32-*-842-*
+      %types features
+    %end
+
+    %subsection efm32-*-880-* efm32-*-890-* efm32-*-895-*
+      %types features
+    %end
+
+    %subsection efm32-*-940-* efm32-*-942-*
+      %types features
+    %end
+
+    %subsection efm32-*-980-* efm32-*-990-* efm32-*-995-*
+      %types features
+    %end
+
+  %end
+
+
+  %requiretypes family
+  %requiretypes sram
+  %requiretypes flash
+  %requiretypes features
+

@@ -78,14 +78,26 @@ extern CONTEXT_LOCAL pthread_t __pthread_current;
 #define CONTEXT_LOCAL_PTHREAD_GET(th, n) \
   CONTEXT_LOCAL_TLS_GET((th)->sched_ctx.context.tls, n)
 
+enum pthread_state_e
+{
+  _PTHREAD_STATE_DETACHED        = 1, //< thread is marked as detached
+  _PTHREAD_STATE_JOINABLE        = 2, //< thread is joinable
+  _PTHREAD_STATE_CANCELED        = 4, //< thread has been canceled
+  _PTHREAD_STATE_NOCANCEL        = 8, //< thread ignore cancel
+  _PTHREAD_STATE_CANCELASYNC     = 16, //< thread use asynchronous cancelation
+  _PTHREAD_STATE_TIMEDWAIT       = 32, //< thread can be woken up by timer callback
+  _PTHREAD_STATE_TIMEOUT         = 64, //< thread timed wait has reached timeout
+};
+
 /** @internal pthread descriptor structure */
 struct pthread_s
 {
   /** context */
+  struct context_s              ctx;
   struct sched_context_s	sched_ctx;
 
   /* thread state flags (detached, joinable, canceled ...) */
-  atomic_t                      state;
+  enum pthread_state_e          state;
   lock_t lock;
 
 #ifdef CONFIG_PTHREAD_JOIN
@@ -101,14 +113,6 @@ struct pthread_s
   pthread_start_routine_t	*start_routine;
 };
 
-#define _PTHREAD_STATE_DETACHED         0 //< thread is marked as detached
-#define _PTHREAD_STATE_JOINABLE         1 //< thread is joinable
-#define _PTHREAD_STATE_CANCELED         2 //< thread has been canceled
-#define _PTHREAD_STATE_NOCANCEL         3 //< thread ignore cancel
-#define _PTHREAD_STATE_CANCELASYNC      4 //< thread use asynchronous cancelation
-#define _PTHREAD_STATE_TIMEDWAIT        5 //< thread can be woken up by timer callback
-#define _PTHREAD_STATE_TIMEOUT          6 //< thread timed wait has reached timeout
-
 #define _PTHREAD_ATTRFLAG_AFFINITY	0x01
 #define _PTHREAD_ATTRFLAG_STACK		0x02
 #define _PTHREAD_ATTRFLAG_DETACHED	0x04
@@ -118,8 +122,10 @@ struct pthread_attr_s
 {
 #ifdef CONFIG_PTHREAD_ATTRIBUTES
   uint8_t flags;
+# ifdef CONFIG_ARCH_SMP
   cpu_id_t cpucount;
-  cpu_id_t cpulist[CONFIG_CPU_MAXCOUNT];
+  cpu_id_t cpulist[CONFIG_ARCH_LAST_CPU_ID+1];
+# endif
   void *stack_buf;
   size_t stack_size;
 #endif
@@ -160,29 +166,30 @@ pthread_create(pthread_t *thread, const pthread_attr_t *attr,
 	       pthread_start_routine_t *start_routine, void *arg);
 
 /** @this ends pthread execution */
+__attribute__((noreturn))
 void pthread_exit(void *retval);
 
 /** @this returns current pthread */
-static inline pthread_t
-pthread_self(void)
+config_depend_alwaysinline(CONFIG_PTHREAD,
+pthread_t pthread_self(void),
 {
   return CONTEXT_LOCAL_GET(__pthread_current);
-}
+});
 
 /** @this switchs to next thread */
-static inline void
-pthread_yield(void)
+config_depend_alwaysinline(CONFIG_PTHREAD,
+void pthread_yield(void),
 {
   void __pthread_switch(void);
   __pthread_switch();
-}
+});
 
 /** @this compare two thread objects */
-static inline error_t
-pthread_equal(pthread_t t1, pthread_t t2)
+config_depend_alwaysinline(CONFIG_PTHREAD,
+error_t pthread_equal(pthread_t t1, pthread_t t2),
 {
   return t1 == t2;
-}
+});
 
 /** @this detachs a pthread */
 config_depend(CONFIG_PTHREAD_JOIN)
@@ -228,7 +235,7 @@ extern CONTEXT_LOCAL struct __pthread_cleanup_s *__pthread_cleanup_list;
 /** @this must be matched with @ref #pthread_cleanup_pop */
 #define pthread_cleanup_push(routine_, arg_)		\
 {							\
-  reg_t				__irq_state;            \
+  cpu_irq_state_t			__irq_state;    \
   cpu_interrupt_savestate_disable(&__irq_state);	\
 							\
   const struct __pthread_cleanup_s	__cleanup =	\
@@ -254,14 +261,8 @@ extern CONTEXT_LOCAL struct __pthread_cleanup_s *__pthread_cleanup_list;
   cpu_interrupt_restorestate(&__irq_state);			\
 }
 
-config_depend_inline(CONFIG_PTHREAD_CANCEL,
-void pthread_testcancel(void),
-{
-  void __pthread_cancel_self(void);
-
-  if (atomic_bit_test(&pthread_self()->state, _PTHREAD_STATE_CANCELED))
-    __pthread_cancel_self();
-});
+config_depend(CONFIG_PTHREAD_CANCEL)
+void pthread_testcancel(void);
 
 config_depend(CONFIG_PTHREAD_CANCEL)
 error_t
@@ -271,11 +272,8 @@ config_depend(CONFIG_PTHREAD_CANCEL)
 error_t
 pthread_setcanceltype(int_fast8_t type, int_fast8_t *oldtype);
 
-config_depend_inline(CONFIG_PTHREAD_CANCEL,
-error_t pthread_cancel(pthread_t thread),
-{
-  return atomic_bit_testset(&thread->state, _PTHREAD_STATE_CANCELED);
-});
+config_depend(CONFIG_PTHREAD_CANCEL)
+error_t pthread_cancel(pthread_t thread);
 
 /************************************************************************
 		PThread Mutex related public API
@@ -333,21 +331,21 @@ extern pthread_mutexattr_t __pthread_mutex_attr_recursive;
 /** @this is the normal mutex object static initializer */
 #  define PTHREAD_MUTEX_INITIALIZER						       \
   {										       \
-    .wait = CONTAINER_ROOT_INITIALIZER(sched_queue, DLIST), \
+    .wait = GCT_CONTAINER_ROOT_INITIALIZER(sched_queue, DLIST), \
     .attr = &__pthread_mutex_attr_normal					       \
   }
 
 /** @this is the recurvive mutex object static initializer */
 #  define PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP				      \
   {										       \
-    .wait = CONTAINER_ROOT_INITIALIZER(sched_queue, DLIST), \
+    .wait = GCT_CONTAINER_ROOT_INITIALIZER(sched_queue, DLIST), \
     .attr = &__pthread_mutex_attr_recursive						\
   }
 
 /** @this is error checking mutex object static initializer */
 #  define PTHREAD_ERRORCHECK_MUTEX_INITIALIZER_NP				       \
   {										       \
-    .wait = CONTAINER_ROOT_INITIALIZER(sched_queue, DLIST), \
+    .wait = GCT_CONTAINER_ROOT_INITIALIZER(sched_queue, DLIST), \
     .attr = &__pthread_mutex_attr_errorcheck					       \
   }
 
@@ -355,7 +353,7 @@ extern pthread_mutexattr_t __pthread_mutex_attr_recursive;
 
 #  define PTHREAD_MUTEX_INITIALIZER						       \
   {										       \
-    .wait = CONTAINER_ROOT_INITIALIZER(sched_queue, DLIST), \
+    .wait = GCT_CONTAINER_ROOT_INITIALIZER(sched_queue, DLIST), \
   }
 
 #  define PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP				      \
@@ -377,28 +375,35 @@ config_depend(CONFIG_PTHREAD_MUTEX)
 error_t
 pthread_mutex_destroy(pthread_mutex_t *mutex);
 
+/** @internal */
+error_t __pthread_mutex_normal_lock(pthread_mutex_t *mutex);
+/** @internal */
+error_t __pthread_mutex_normal_trylock(pthread_mutex_t *mutex);
+/** @internal */
+error_t __pthread_mutex_normal_unlock(pthread_mutex_t *mutex);
+
 # ifdef CONFIG_PTHREAD_MUTEX_ATTR
 
 /** @this takes a mutex */
-static inline error_t
-pthread_mutex_lock(pthread_mutex_t *mutex)
+config_depend_alwaysinline(CONFIG_PTHREAD,
+error_t pthread_mutex_lock(pthread_mutex_t *mutex),
 {
   return mutex->attr->type.mutex_lock(mutex);
-}
+});
 
 /** @this tries to take a mutex */
-static inline error_t
-pthread_mutex_trylock(pthread_mutex_t *mutex)
+config_depend_alwaysinline(CONFIG_PTHREAD,
+error_t pthread_mutex_trylock(pthread_mutex_t *mutex),
 {
   return mutex->attr->type.mutex_trylock(mutex);
-}
+});
 
 /** @this free a mutex */
-static inline error_t
-pthread_mutex_unlock(pthread_mutex_t *mutex)
+config_depend_alwaysinline(CONFIG_PTHREAD,
+error_t pthread_mutex_unlock(pthread_mutex_t *mutex),
 {
   return mutex->attr->type.mutex_unlock(mutex);
-}
+});
 
 /** @this sets the mutek type */
 config_depend(CONFIG_PTHREAD_MUTEX_ATTR)
@@ -406,14 +411,14 @@ error_t
 pthread_mutexattr_settype(pthread_mutexattr_t *attr, int_fast8_t type);
 
 /** @this initialize a mutex attribute object */
-config_depend_inline(CONFIG_PTHREAD_MUTEX_ATTR,
+config_depend_alwaysinline(CONFIG_PTHREAD_MUTEX_ATTR,
 error_t pthread_mutexattr_init(pthread_mutexattr_t *attr),
 {
   return pthread_mutexattr_settype(attr, PTHREAD_MUTEX_DEFAULT);
 });
 
 /** @this destroy a mutex attribute object */
-config_depend_inline(CONFIG_PTHREAD_MUTEX_ATTR,
+config_depend_alwaysinline(CONFIG_PTHREAD_MUTEX_ATTR,
 error_t pthread_mutexattr_destroy(pthread_mutexattr_t *attr),
 {
   return 0;
@@ -421,24 +426,21 @@ error_t pthread_mutexattr_destroy(pthread_mutexattr_t *attr),
 
 # else /* !CONFIG_PTHREAD_MUTEX_ATTR */
 
-config_depend_inline(CONFIG_PTHREAD_MUTEX,
+config_depend_alwaysinline(CONFIG_PTHREAD_MUTEX,
 error_t pthread_mutex_lock(pthread_mutex_t *mutex),
 {
-  error_t __pthread_mutex_normal_lock(pthread_mutex_t *mutex);
   return __pthread_mutex_normal_lock(mutex);
 });
 
-config_depend_inline(CONFIG_PTHREAD_MUTEX,
+config_depend_alwaysinline(CONFIG_PTHREAD_MUTEX,
 error_t pthread_mutex_trylock(pthread_mutex_t *mutex),
 {
-  error_t __pthread_mutex_normal_trylock(pthread_mutex_t *mutex);
   return __pthread_mutex_normal_trylock(mutex);
 });
 
-config_depend_inline(CONFIG_PTHREAD_MUTEX,
+config_depend_alwaysinline(CONFIG_PTHREAD_MUTEX,
 error_t pthread_mutex_unlock(pthread_mutex_t *mutex),
 {
-  error_t __pthread_mutex_normal_unlock(pthread_mutex_t *mutex);
   return __pthread_mutex_normal_unlock(mutex);
 });
 
@@ -477,11 +479,11 @@ pthread_cond_signal(pthread_cond_t *cond);
 
 struct timespec;
 
-config_depend_and2(CONFIG_PTHREAD_COND, CONFIG_PTHREAD_TIME)
+config_depend(CONFIG_PTHREAD_COND_TIME)
 error_t
 pthread_cond_timedwait(pthread_cond_t *cond, 
 		       pthread_mutex_t *mutex,
-		       const struct timespec *delay);
+		       const struct timespec *abstime);
 
 config_depend(CONFIG_PTHREAD_COND)
 error_t
@@ -490,7 +492,7 @@ pthread_cond_wait(pthread_cond_t *cond, pthread_mutex_t *mutex);
 /** normal cond object static initializer */
 # define PTHREAD_COND_INITIALIZER						       \
   {										       \
-    .wait = CONTAINER_ROOT_INITIALIZER(sched_queue, DLIST), \
+    .wait = GCT_CONTAINER_ROOT_INITIALIZER(sched_queue, DLIST), \
   }
 
 /************************************************************************
@@ -505,20 +507,20 @@ struct rwlock_s;
 typedef struct pthread_rwlockattr_s pthread_rwlockattr_t;
 typedef struct rwlock_s pthread_rwlock_t;
 
-config_depend_inline(CONFIG_PTHREAD_RWLOCK,
+config_depend_alwaysinline(CONFIG_PTHREAD_RWLOCK,
 error_t pthread_rwlock_destroy(pthread_rwlock_t *rwlock),
 {
   return rwlock_destroy(rwlock);
 });
 
-config_depend_inline(CONFIG_PTHREAD_RWLOCK,
+config_depend_alwaysinline(CONFIG_PTHREAD_RWLOCK,
 error_t pthread_rwlock_init(pthread_rwlock_t *rwlock,
                             const pthread_rwlockattr_t *attr),
 {
   return rwlock_init(rwlock);
 });
 
-config_depend_inline(CONFIG_PTHREAD_RWLOCK,
+config_depend_alwaysinline(CONFIG_PTHREAD_RWLOCK,
 error_t pthread_rwlock_rdlock(pthread_rwlock_t *rwlock),
 {
 # ifdef CONFIG_PTHREAD_CANCEL
@@ -527,13 +529,13 @@ error_t pthread_rwlock_rdlock(pthread_rwlock_t *rwlock),
   return rwlock_rdlock(rwlock);
 });
 
-config_depend_inline(CONFIG_PTHREAD_RWLOCK,
+config_depend_alwaysinline(CONFIG_PTHREAD_RWLOCK,
 error_t pthread_rwlock_tryrdlock(pthread_rwlock_t *rwlock),
 {
   return rwlock_tryrdlock(rwlock);
 });
 
-config_depend_inline(CONFIG_PTHREAD_RWLOCK,
+config_depend_alwaysinline(CONFIG_PTHREAD_RWLOCK,
 error_t pthread_rwlock_wrlock(pthread_rwlock_t *rwlock),
 {
 # ifdef CONFIG_PTHREAD_CANCEL
@@ -542,13 +544,13 @@ error_t pthread_rwlock_wrlock(pthread_rwlock_t *rwlock),
   return rwlock_wrlock(rwlock);
 });
 
-config_depend_inline(CONFIG_PTHREAD_RWLOCK,
+config_depend_alwaysinline(CONFIG_PTHREAD_RWLOCK,
 error_t pthread_rwlock_trywrlock(pthread_rwlock_t *rwlock),
 {
   return rwlock_trywrlock(rwlock);
 });
 
-config_depend_inline(CONFIG_PTHREAD_RWLOCK,
+config_depend_alwaysinline(CONFIG_PTHREAD_RWLOCK,
 error_t pthread_rwlock_unlock(pthread_rwlock_t *rwlock),
 {
   return rwlock_unlock(rwlock);
@@ -619,7 +621,7 @@ error_t
 pthread_barrierattr_settype(pthread_barrierattr_t *attr, int_fast8_t type);
 
 /** @this initialize a barrier attribute object */
-config_depend_inline(CONFIG_PTHREAD_BARRIER_ATTR,
+config_depend_alwaysinline(CONFIG_PTHREAD_BARRIER_ATTR,
 error_t pthread_barrierattr_init(pthread_barrierattr_t *attr)
 {
   return pthread_barrierattr_settype(attr, PTHREAD_BARRIER_DEFAULT);
@@ -640,7 +642,7 @@ config_depend(CONFIG_PTHREAD_BARRIER)
 error_t _pthread_barrier_normal_wait(pthread_barrier_t *barrier);
 
 
-config_depend_inline(CONFIG_PTHREAD_BARRIER,
+config_depend_alwaysinline(CONFIG_PTHREAD_BARRIER,
 error_t pthread_barrier_destroy(pthread_barrier_t *barrier),
 {
 #ifdef CONFIG_PTHREAD_BARRIER_ATTR
@@ -650,7 +652,7 @@ error_t pthread_barrier_destroy(pthread_barrier_t *barrier),
 #endif
 });
 
-config_depend_inline(CONFIG_PTHREAD_BARRIER,
+config_depend_alwaysinline(CONFIG_PTHREAD_BARRIER,
 error_t pthread_barrier_wait(pthread_barrier_t *barrier),
 {
 #ifdef CONFIG_PTHREAD_BARRIER_ATTR
@@ -669,7 +671,7 @@ error_t pthread_barrier_wait(pthread_barrier_t *barrier),
 # define PTHREAD_BARRIER_INITIALIZER(n)                                 \
   {                                                                     \
     .funcs = barrier_normal_funcs,                                      \
-      .normal.wait = CONTAINER_ROOT_INITIALIZER(sched_queue, DLIST),    \
+      .normal.wait = GCT_CONTAINER_ROOT_INITIALIZER(sched_queue, DLIST),    \
       .normal.count = (n),                                              \
   }
 
@@ -678,7 +680,7 @@ error_t pthread_barrier_wait(pthread_barrier_t *barrier),
 /** normal rwlock object static initializer */
 # define PTHREAD_BARRIER_INITIALIZER(n)							  \
   {											  \
-    .normal.wait = CONTAINER_ROOT_INITIALIZER(sched_queue, DLIST),	  \
+    .normal.wait = GCT_CONTAINER_ROOT_INITIALIZER(sched_queue, DLIST),	  \
     .normal.count = (n),									  \
   }
 
@@ -688,45 +690,40 @@ error_t pthread_barrier_wait(pthread_barrier_t *barrier),
 		PThread Spinlock related public API
 ************************************************************************/
 
-typedef atomic_int_t pthread_spinlock_t;
+typedef lock_t pthread_spinlock_t;
 
-config_depend_inline(CONFIG_PTHREAD_SPIN,
+config_depend_alwaysinline(CONFIG_PTHREAD_SPIN,
 error_t pthread_spin_init(pthread_spinlock_t *spinlock,
-                  bool_t pshared),
+                          bool_t pshared),
 {
-  *spinlock = 0;
-  order_smp_write();
+  lock_init(spinlock);
   return 0;
 });
 
-config_depend_inline(CONFIG_PTHREAD_SPIN,
+config_depend_alwaysinline(CONFIG_PTHREAD_SPIN,
 error_t pthread_spin_destroy(pthread_spinlock_t *spinlock),
 {
+  lock_destroy(spinlock);
   return 0;
 });
 
-config_depend_inline(CONFIG_PTHREAD_SPIN,
+config_depend_alwaysinline(CONFIG_PTHREAD_SPIN,
 error_t pthread_spin_lock(pthread_spinlock_t *spinlock),
 {
-  cpu_atomic_bit_waitset(spinlock, 0);
-  order_smp_mem();
+  lock_spin(spinlock);
   return 0;
 });
 
-config_depend_inline(CONFIG_PTHREAD_SPIN,
+config_depend_alwaysinline(CONFIG_PTHREAD_SPIN,
 error_t pthread_spin_trylock(pthread_spinlock_t *spinlock),
 {
-  bool_t res = cpu_atomic_bit_testset(spinlock, 0);
-  order_smp_mem();
-  return res ? -EBUSY : 0;
+  return lock_try(spinlock) ? -EBUSY : 0;
 });
 
-config_depend_inline(CONFIG_PTHREAD_SPIN,
+config_depend_alwaysinline(CONFIG_PTHREAD_SPIN,
 error_t pthread_spin_unlock(pthread_spinlock_t *spinlock),
 {
-  order_smp_mem();
-  *spinlock = 0;
-  order_smp_write();
+  lock_release(spinlock);
   return 0;
 });
 
@@ -757,8 +754,8 @@ typedef struct pthread_once_s pthread_once_t;
    @param func Function to call once
    @returns 0 when done
 */
-config_depend_inline(CONFIG_PTHREAD_ONCE,
-error_t pthread_once(pthread_once_t *once, void (*func)()),
+config_depend_alwaysinline(CONFIG_PTHREAD_ONCE,
+error_t pthread_once(pthread_once_t *once, void (*func)(void)),
 {
   /* No contention here... */
   if ( once->done )
@@ -829,7 +826,7 @@ extern CONTEXT_LOCAL const void *_key_values[CONFIG_PTHREAD_KEYS_MAX];
    @param key Key handle to retrieve
    @returns Value associated to key, NULL if none
  */
-config_depend_inline(CONFIG_PTHREAD_KEYS,
+config_depend_alwaysinline(CONFIG_PTHREAD_KEYS,
 void *pthread_getspecific(pthread_key_t key),
 {
   if ( key >= CONFIG_PTHREAD_KEYS_MAX )
@@ -845,7 +842,7 @@ void *pthread_getspecific(pthread_key_t key),
    @param key Key handle to set
    @param value Value associated to key, NULL if resetting needed
  */
-config_depend_inline(CONFIG_PTHREAD_KEYS,
+config_depend_alwaysinline(CONFIG_PTHREAD_KEYS,
 error_t pthread_setspecific(pthread_key_t key, const void *value),
 {
   if ( key >= CONFIG_PTHREAD_KEYS_MAX )

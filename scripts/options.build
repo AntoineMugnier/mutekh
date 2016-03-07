@@ -1,0 +1,44 @@
+
+%section noassert
+  CONFIG_LIBC_ASSERT! undefined
+
+%section lto
+  CONFIG_COMPILE_LTO!
+
+%section debug
+  CONFIG_DEBUG!
+
+%else
+  CONFIG_COMPILE_OPTIMIZE 2
+
+%section optsize
+  CONFIG_COMPILE_OPTIMIZE! s
+
+%section release
+  CONFIG_RELEASE!
+  CONFIG_DEBUG! undefined
+  CONFIG_LIBC_ASSERT! undefined
+  CONFIG_COMPILE_DEBUG! undefined
+
+%else
+  CONFIG_COMPILE_DEBUG
+
+%section noopt
+  CONFIG_COMPILE_OPTIMIZE! 0
+
+%section savetemps
+  CONFIG_COMPILE_SAVETEMPS!
+
+%section int
+  CONFIG_HEXO_INTTYPES_DEPRECATED! undefined
+
+%section binary
+  CONFIG_COMPILE_FORMAT! binary
+
+%section ihex
+  CONFIG_COMPILE_FORMAT! ihex
+
+%section shell
+  CONFIG_MUTEK_CONSOLE
+  CONFIG_MUTEK_SHELL
+  CONFIG_MUTEK_SHELL_THREAD

@@ -44,6 +44,8 @@
   asm (							\
 	   "	mov	%%g6, %0		\n"	\
 	   : "=&r" (_ptr_)				\
+  /* prevent optimize if memory has been reloaded (possible context switch), g6 may have changed too */ \
+           : "m" (*(reg_t*)4)                           \
 	   );						\
 							\
   _ptr_;						\

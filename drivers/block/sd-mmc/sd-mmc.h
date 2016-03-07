@@ -23,7 +23,7 @@
 #ifndef DRIVER_SD_MMC_H_
 #define DRIVER_SD_MMC_H_
 
-#include <device/block.h>
+#include <device/class/block.h>
 #include <device/device.h>
 
 struct sd_mmc_param_s
@@ -34,8 +34,8 @@ struct sd_mmc_param_s
 
 DEV_INIT(sd_mmc_init);
 DEV_CLEANUP(sd_mmc_cleanup);
-DEVBLOCK_REQUEST(sd_mmc_request);
-DEVBLOCK_GETPARAMS(sd_mmc_get_params);
+DEV_BLOCK_REQUEST(sd_mmc_request);
+DEV_BLOCK_GETPARAMS(sd_mmc_get_params);
 error_t sd_mmc_rehash(struct device_s *dev);
 
 #endif

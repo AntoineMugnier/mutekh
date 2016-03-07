@@ -1,0 +1,385 @@
+
+@section TP {Build system}
+
+  @section {Introduction}
+
+    This section describes the MutekH build system invocation and base
+    features and is intended for MutekH user and application
+    developers.
+
+    The build system is responsible for building MutekH with requested
+    features configuration.  MutekH source code is highly configurable,
+    this implies the application developer has to provide a @b{build
+    configuration file} along with the application source code.
+
+    Available features, options and associated constraints are
+    represented by @b{configuration tokens} which are declared by kernel
+    developers in @b{configuration description files} (.config) in the
+    kernel source tree.  These files define set the set of configuration
+    tokens which can be assigned in a @b{build configuration file}.  The
+    configuration description syntax is detailed on the
+    @xref{BuildSystemDev} page which cover more advanced topics related
+    to kernel developpment.
+
+    This page focus on the build system invocation and the format of the
+    build configuration file.  Reading the @xref{BuildingExamples} page
+    may be of some interest too.
+
+  @end section
+
+  @section {Invocation}
+
+    @section {Building}
+
+      Invocation of the build system is performed by running GNU make at
+      the root of the MutekH source tree.
+
+      When building MutekH, several options may be used to change the
+      behavior of the build system.  These options are given through
+      variables when calling @tt{make}, in the form:
+
+      @code R
+$ make VAR1=value1 VAR2=value2
+      @end code
+
+      Build process invocation actually require the user to specify a
+      build configuration file to use.
+
+      Using a flat build configuration file which contains the whole
+      kernel configuration, including supported hardware and device
+      drivers definitions, is the most simple way to invoke the build
+      system:
+
+      @code R
+$ make CONF=path/to/config.build
+      @end code
+
+      This however requires the user to write a long build configuration
+      file which is target specific.  Relying on a sectioned build
+      configuration files (see below) make this file short and easier to
+      write.  We then need to specify which sections of the file must be
+      considered for the build:
+
+      @code R
+$ make CONF=path/to/config.build BUILD=ibmpc-x86
+$ make CONF=path/to/config.build BUILD=gaisler-leon3
+$ make CONF=path/to/config.build BUILD=soclib-mips32el:pf-tutorial
+      @end code
+
+    @end section
+
+    @section {Configuration display}
+
+      This section explains how to display information about the MutekH configuration being used.
+
+      You can display a list of relevant tokens with their value for a given configuration:
+
+      @code R
+$ make CONF=path/to/config.build BUILD=... listconfig
+      @end code
+
+      You can display a detailed description of initializations which
+      take place during @xref{KernelStart}Up; this also depend on the
+      build configuration in use:
+
+      @code R
+$ make CONF=path/to/config.build BUILD=... listinit
+      @end code
+
+      More targets are available, see below.
+
+    @end section
+
+    @section {Build log}
+
+      When the compilation process ran successfully, a build log is
+      written to a @tt{.log} file named after the generated kernel
+      file.  This file contains various information about the
+      configuration used for the build which can be useful to
+      developpers.
+
+    @end section
+
+  @end section
+
+  @section {Main variables}
+
+    The following option is mandatory:
+    @list
+      @item @tt{CONF=}:
+        An absolute path to the build configuration file.
+
+    @end list
+
+    The following option may be required depending on build configuration file:
+    @list
+      @item @tt{BUILD=}:
+        A colon separated list of build section names to consider in the build configuration file.
+    @end list
+
+    The following options may be useful:
+    @list
+      @item @tt{VERBOSE=1}: Prints all the commands executed
+      @item @tt{TARGET_EXT=}: Changes the file extension of the
+        generated kernel. This doesn't change the internal file format,
+        see CONFIG_COMPILE_FORMAT.
+
+    @end list
+
+    The following options are useful when building out of the source tree:
+    @list
+      @item @tt{MUTEK_SRC_DIR}:
+        An absolute path to the MutekH source tree. This defaults to @tt{.}
+      @item @tt{BUILD_DIR}:
+        An absolute path to the directory containing the objects and results, this defaults to @tt{.}
+      @item @tt{CONF_PATH}:
+        An absolute paths to extra directories containing external source modules.
+
+    @end list
+  @end section
+
+  @section {Make targets}
+    The following targets are available:
+
+    @list
+      @item @tt{kernel}:
+        This is the default target. It builds the kernel for the specified configuration file.
+      @item @tt{kernel-het}:
+        This target builds multiple kernels for heterogeneous multiprocessors platforms.
+      @item @tt{clean}:
+        This target cleans all the compilation results
+    @end list
+
+    The following targets are for informational purposes:
+    @list
+      @item @tt{showpaths}:
+        This prints the modules that will be built along with associated paths.
+      @item @tt{cflags}:
+        This prints the flags used for compilation.
+    @end list
+
+    The following targets are available to get help about configuration:
+    @list
+      @item @tt{listconfig}: Prints values of configuration tokens
+        which would be used to build MutekH according to current build
+        configuration.
+      @item @tt{listallconfig}: Prints all the configuration tokens,
+        including internal tokens and tokens with undefined parents.
+      @item @tt{listflatconfig}: Prints the content of a minimal flat
+        configuration file which could be used to define current
+        configuration.
+      @item @tt{listinit}: Prints initialization tokens and
+        initilization function calls which will take place during
+        @xref{KernelStartUp} according to current build configuration.
+
+    @end list
+    See usage below.
+
+  @end section
+
+  @section {Build configuration files}
+
+    @section {Content}
+
+      The MutekH build configuration file defines token values
+      describing feature included in the kernel which is being
+      built. It must contain:
+
+      @list
+        @item the license for the application, enforcing license
+          compatibility between some kernel parts and your code,
+        @item the target architecture
+        @item libraries to build, and related options
+        @item device drivers
+        @item some global compilation switches (optimization, debugging, ...)
+        @item ...
+      @end list
+    @end section
+
+    @section {Basic syntax}
+
+      Syntax is @tt{token} @b{space} @tt{value}. Tokens begin with
+      @tt{CONFIG_}. Value may be omitted thus defaults to
+      @tt{defined}. e.g.
+
+      @code R
+...
+
+CONFIG_LICENSE_APP_LGPL
+
+# Platform type
+CONFIG_ARCH_EMU
+
+# Processor type
+CONFIG_CPU_X86_EMU
+
+# Mutek features
+CONFIG_PTHREAD
+
+# Device drivers
+CONFIG_DRIVER_CHAR_EMUTTY
+
+# Code compilation options
+CONFIG_COMPILE_DEBUG undefined
+
+...
+      @end code
+
+      Most common values are @tt{defined} and @tt{undefined} to enable
+      and disables features, but some tokens may take numerical or
+      string values.
+
+      The easiest way to describe your configuration is to rely on
+      sectioned @b{build configuration files} which are provided in
+      the kernel source tree.  These files are split in multiple
+      sections which are conditionnaly parsed depending on the value
+      of the @tt{BUILD} variable passed to the build system.
+
+      They provide default configurations for supported processors and
+      platforms so that you just have to write a minimal file which
+      take care of enabling modules and features which are needed by
+      your application. This way, all configuration token related to
+      target hardware will get their value from those files.  This do
+      not prevent the user to override a token value after inclusion
+      of one of those files.  The user can also define its own
+      sections on its build configuration, see syntax at the end of
+      this page.
+
+      @code R
+...
+
+CONFIG_LICENSE_APP_LGPL
+
+CONFIG_PTHREAD
+
+%include arch/arch.build
+
+CONFIG_CPU_MAXCOUNT 4
+      @end code
+
+      Have a look to @sourcelink examples/hello for examples of real
+      build configuration files.
+
+      The @xref {Configuration} section describes all available configuration tokens.
+
+    @end section
+
+    @section {Module declaration}
+
+      MutekH has a modular and component-based architecture.
+
+      A build configuration file must declare a new module for the
+      application.  Modules can be located anywhere outside of the
+      main source tree.  We must tell the build system the directory
+      where the configuration file is located.  The path to the module
+      directory is usually the same as its configuration file and the
+      @tt{CONFIGPATH} special variable is well suited:
+
+      @code R
+# New source code module to be compiled
+# %append MODULES name:module_dir
+  %append MODULES hello:$(CONFIGPATH)
+      @end code
+
+    @end section
+
+    @section {Output name}
+
+      the MutekH build system takes care of building in directory
+      named after application name and build target.  This determine
+      the application output file name too. You may want to set your
+      application output name in build configuration file:
+
+      @code R
+  %set OUTPUT_NAME hello
+      @end code
+
+    @end section
+
+    @section {Advanced syntax}
+
+      As explained previoudly, basic build configuration format is
+      simple.  Complex applications or support for multiple target
+      architectures require maintaining multiple configuration files
+      which can be difficult and annoying.  The directives presented
+      here can be used to define conditional sections in build
+      configuration files.
+
+      Sectioning directives are useful to consider a set of
+      configuration definitions depending on the @tt{BUILD} variable
+      of @tt{make} invocation:
+
+      @list
+        @item @tt{%section pattern [pattern ...]}: Start a section
+          which will be conditionaly considered depending on the
+          @tt{BUILD} variable. @tt{pattern} is a pattern matching
+          expression which may contain text, hypens and wildcards
+          (e.i. @tt{text-text-*}, @tt{text-???}). Wildcards match
+          non-empty and non-hypens text. A new @tt{%section token
+          automatically terminate previous section.}
+        @item @tt{%common}: Revert to unconditional common file part,
+          default at beginning of a file.
+        @item @tt{%else}: Change current conditional state.
+        @item @tt{%subsection [pattern ...]}: Begin a nested
+          section. Multiple levels of subsections can be
+          used. Subsections thus defined must be end by @tt{%end}.
+        @item @tt{%end}: End a subsection started with
+          @tt{%subsection}.
+        @item @tt{%inherit}: Append a string to the BUILD
+          variable. This can be used when a section needs to enable
+          other sections.
+      @end list
+
+      Section types directives can be used to enforce use of sections:
+
+      @list
+        @item @tt{%types type [type ...]}: Specify that the current
+          section exhibits the given types. No more than one section
+          can be in use with the same type.
+        @item @tt{%requiretypes type [type ...]}: All specified types
+          must have been defined. May be used in sections or common
+          part.
+      @end list
+
+      Build configuration files may contain variables:
+
+      @list
+        @item @tt{%set variable content}: Set a variable which can be
+          expanded using @tt{$(variable)} syntax. Environment is
+          initially imported as variables. Moreover @tt{$(CONFIGPATH)}
+          and @tt{$(CONFIGSECTION)} are predefined special variables.
+        @item @tt{%append variable content}:
+          Appends content to a variable.
+      @end list
+
+      Build configuration files may include other files:
+
+      @list
+        @item @tt{%include filename}: Include a configuration file,
+          the new file always begin in @tt{%common} state.
+      @end list
+
+      Build configuration files may report things to the user:
+
+      @list
+        @item @tt{%notice text}: Produce a notice message.
+        @item @tt{%warning text}: Produce a warning message.
+        @item @tt{%die text}: Produce an error message.
+        @item @tt{%error text}: Produce an error message with file
+          location information.
+      @end list
+
+      The @tt{default} section name is in use when no section name is
+      passed through the @tt{BUILD} variable.
+
+      Some build configuration files are provided in the kernel source
+      tree and can be included to target hardware platforms without
+      having to deals with all related configuration token.
+      Configuration tokens can be assigned multiple times, this allows
+      overriding values previously assigned in included files.
+
+    @end section
+
+  @end section
+
+@end section

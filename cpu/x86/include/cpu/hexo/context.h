@@ -24,8 +24,6 @@
 #error This file can not be included directly
 #else
 
-#ifndef __MUTEK_ASM__
-
 struct cpu_context_regs_s
 {
   uint32_t edi;
@@ -44,7 +42,10 @@ struct cpu_context_s
 {
   uint32_t mask;
   /* sorted in iret order */
-  struct cpu_context_regs_s kregs;
+  union {
+    reg_t gpr[10];
+    struct cpu_context_regs_s kregs;
+  };
 # ifdef CONFIG_HEXO_USERMODE
   struct cpu_context_regs_s uregs;
 # endif
@@ -54,39 +55,26 @@ struct cpu_context_s
 # endif
 };
 
-# define CPU_CONTEXT_REG_NAMES "savemask", CPU_GPREG_NAMES, "eip", "eflags"
-# define CPU_CONTEXT_REG_FIRST 1
-# define CPU_CONTEXT_REG_COUNT 11
-
-#else
+/** name of registers accessible using cpu_context_s::gpr */
+# define CPU_CONTEXT_REG_NAMES CPU_GPREG_NAMES, "eip", "eflags"
+/** number of registers in cpu_context_s::gpr */
+# define CPU_CONTEXT_REG_COUNT 10
 
 #define CPU_X86_CONTEXT_MASK_USER       1
 
-.extern x86_context_regs
-.equ CPU_X86_CONTEXT_mask,    0
+# ifdef CONFIG_HEXO_CONTEXT_PREEMPT
+/** @internal */
+extern CPU_LOCAL context_preempt_t *cpu_preempt_handler;
 
-.equ CPU_X86_CONTEXT_edi,     4
-.equ CPU_X86_CONTEXT_esi,     8 
-.equ CPU_X86_CONTEXT_ebp,     12
-.equ CPU_X86_CONTEXT_esp,     16
-.equ CPU_X86_CONTEXT_ebx,     20
-.equ CPU_X86_CONTEXT_edx,     24
-.equ CPU_X86_CONTEXT_ecx,     28
-.equ CPU_X86_CONTEXT_eax,     32
-.equ CPU_X86_CONTEXT_EIP,     36
-.equ CPU_X86_CONTEXT_EFLAGS,  40
-
-.equ CPU_X86_CONTEXT_REGS_OFFSET, 4
-
-# ifdef CONFIG_HEXO_USERMODE
-.equ CPU_X86_CONTEXT_USER_SHIFT, 40
-.equ CPU_X86_CONTEXT_MM,         96
-# else
-.equ CPU_X86_CONTEXT_MM,         48
+ALWAYS_INLINE error_t context_set_preempt(context_preempt_t *func)
+{
+  context_preempt_t **f = CPU_LOCAL_ADDR(cpu_preempt_handler);
+  if (*f != NULL)
+    return -EBUSY;
+  *f = func;
+  return 0;
+}
 # endif
-
-
-#endif
 
 #endif
 

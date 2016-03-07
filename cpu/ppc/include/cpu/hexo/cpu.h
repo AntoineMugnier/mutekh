@@ -30,12 +30,6 @@
 #define PPC_MSR_USERMODE        0x4000
 #define PPC_MSR_FPU_ENABLED     0x2000
 
-#ifndef __MUTEK_ASM__
-
-# ifdef CONFIG_ARCH_SMP
-extern void * cpu_local_storage[CONFIG_CPU_MAXCOUNT];
-# endif
-
 /** general purpose regsiters count */
 # define CPU_GPREG_COUNT	32
 
@@ -46,9 +40,7 @@ extern void * cpu_local_storage[CONFIG_CPU_MAXCOUNT];
     "l10", "l11", "l12", "l13", "l14", "l15", "l16", "l17"
 
 
-# define CPU_TYPE_NAME powerpc
-
-static inline cpu_id_t
+ALWAYS_INLINE cpu_id_t
 cpu_id(void)
 {
   reg_t         reg;
@@ -61,48 +53,27 @@ cpu_id(void)
   return reg;
 }
 
-static inline
-reg_t cpu_get_stackptr()
+ALWAYS_INLINE
+reg_t cpu_get_stackptr(void)
 {
     reg_t ret;
     asm("mr %0, 1": "=r"(ret));
     return ret;
 }
 
-static inline bool_t
+ALWAYS_INLINE bool_t
 cpu_isbootstrap(void)
 {
-  return cpu_id() == 0;
+  return cpu_id() == CONFIG_ARCH_BOOTSTRAP_CPU_ID;
 }
 
-static inline cpu_cycle_t
-cpu_cycle_count(void)
-{
-  uint32_t      result;
-
-  asm volatile (
-                "mftbl %0"
-                : "=r" (result)
-                );
-
-  return result;
-}
-
-static inline void
-cpu_trap()
+ALWAYS_INLINE void
+cpu_trap(void)
 {
   asm volatile ("trap");
 }
 
-static inline void *cpu_get_cls(cpu_id_t cpu_id)
-{
-# ifdef CONFIG_ARCH_SMP
-  return cpu_local_storage[cpu_id];
-# endif
-  return NULL;
-}
-
-static inline void cpu_dcache_invld(void *ptr)
+ALWAYS_INLINE void cpu_dcache_invld(void *ptr)
 {
   asm volatile (
                 "dcbi 0, %0"
@@ -112,12 +83,10 @@ static inline void cpu_dcache_invld(void *ptr)
                 );
 }
 
-static inline size_t cpu_dcache_line_size()
+ALWAYS_INLINE size_t cpu_dcache_line_size(void)
 {
   return CONFIG_CPU_CACHE_LINE;
 }
-
-#endif  /* __MUTEK_ASM__ */
 
 #endif
 

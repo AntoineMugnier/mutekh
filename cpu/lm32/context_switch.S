@@ -23,7 +23,7 @@
 #include <hexo/cpu.h>
 
 #ifdef CONFIG_SOCLIB_MEMCHECK
-# include <arch/mem_checker.h>
+# include <arch/soclib/mem_checker.h>
 #endif
 
 /*
@@ -141,7 +141,7 @@ FUNC_START(.text, cpu_context_set)
         // create a new temporary memchecker context using passed stack
         sw      (r0 + SOCLIB_MC_R1), r1
         sw      (r0 + SOCLIB_MC_R2), r2
-        sw      (r0 + SOCLIB_MC_CTX_CREATE_TMP), r1
+        sw      (r0 + SOCLIB_MC_CTX_CREATE), r1
 
         // switch to new temporary memchecker context
         sw      (r0 + SOCLIB_MC_CTX_SET), r1

@@ -32,72 +32,48 @@
 #define CPU_GPREG_COUNT	8
 #define CPU_GPREG_NAMES "edi", "esi", "ebp", "esp", "ebx", "edx", "ecx", "eax"
 
-#define CPU_TYPE_NAME x86
+#include <arch/hexo/emu_syscalls.h>
 
-
-#ifndef __MUTEK_ASM__
-
-#ifdef CONFIG_ARCH_SMP
-extern CPU_LOCAL cpu_id_t _cpu_id;
-#endif  
-
-static inline cpu_id_t cpu_id(void)
+ALWAYS_INLINE cpu_id_t cpu_id(void)
 {
-#ifdef CONFIG_ARCH_SMP
-  /* do not use CPU_LOCAL_GET here has _cpu_id is stored in process
-     local memory and assigned before CLS allocation */
-  return _cpu_id;
-#else
-  return 0;
-#endif  
+  return emu_do_syscall(EMU_SYSCALL_GETPID, 0);
 }
 
-static inline bool_t
+extern __compiler_sint_t __bootstrap_pid;
+
+ALWAYS_INLINE bool_t
 cpu_isbootstrap(void)
 {
 #ifdef CONFIG_ARCH_SMP
-  return (cpu_id() == 0);
+  return (cpu_id() == __bootstrap_pid);
 #endif
   return 1;
 }
 
-void cpu_trap();
-
-static inline cpu_cycle_t
-cpu_cycle_count(void)
-{ 
-  uint32_t      low, high;
-
-  asm volatile("rdtsc" : "=a" (low), "=d" (high));
-
-  return (low | ((uint64_t)high << 32));
-}
-
-#ifdef CONFIG_ARCH_SMP
-extern void * cpu_local_storage[CONFIG_CPU_MAXCOUNT];
-#endif
-
-static inline void *cpu_get_cls(cpu_id_t cpu_id)
+ALWAYS_INLINE void cpu_trap(void)
 {
-#ifdef CONFIG_ARCH_SMP
-    return cpu_local_storage[cpu_id];
+#ifdef CONFIG_ARCH_EMU_TRAP_KILL
+  /* kill process group */
+  if (__bootstrap_pid > 1)
+    emu_do_syscall(EMU_SYSCALL_KILL, 2, -__bootstrap_pid, EMU_SIG_TERM);
+  emu_do_syscall(EMU_SYSCALL_EXIT, 1, 0);
+#else
+  asm volatile ("int3");
 #endif
-  return NULL;
 }
 
-static inline void cpu_dcache_invld(void *ptr)
+ALWAYS_INLINE void cpu_dcache_invld(void *ptr)
 {
 #ifndef CONFIG_CPU_CACHE_COHERENCY
 # error
 #endif
 }
 
-static inline size_t cpu_dcache_line_size()
+ALWAYS_INLINE size_t cpu_dcache_line_size(void)
 {
   return 0;			/* FIXME */
 }
 
-#endif
 #endif
 
 

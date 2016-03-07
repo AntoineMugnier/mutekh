@@ -23,14 +23,14 @@
 #ifndef DRIVER_BLOCK_CACHE_H_
 #define DRIVER_BLOCK_CACHE_H_
 
-#include <device/block.h>
+#include <device/class/block.h>
 #include <device/device.h>
 
 DEV_CREATE(block_cache_create);
 DEV_CLEANUP(block_cache_cleanup);
-DEVBLOCK_REQUEST(block_cache_request);
-DEVBLOCK_GETPARAMS(block_cache_getparams);
-DEVBLOCK_GETRQSIZE(block_cache_getrqsize);
+DEV_BLOCK_REQUEST(block_cache_request);
+DEV_BLOCK_GETPARAMS(block_cache_getparams);
+DEV_BLOCK_GETRQSIZE(block_cache_getrqsize);
 
 #endif
 

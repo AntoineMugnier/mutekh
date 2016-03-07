@@ -1,0 +1,12 @@
+
+@moduledef{Math library}
+ @short Standard math library
+  @order 89
+  Math library by Sun Microsystems.
+@end moduledef
+
+@parse {
+math.h
+fdlibm.h
+}
+

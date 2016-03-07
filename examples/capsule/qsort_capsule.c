@@ -183,14 +183,15 @@ ssize_t qs_partition(struct array_s *array, const ssize_t oleft, const ssize_t o
   Capsule implementation
  */
 
-#define CONTAINER_LOCK_qsort_param_queue HEXO_SPIN
+#define GCT_CONTAINER_LOCK_qsort_param_queue HEXO_LOCK
+#define GCT_CONTAINER_ALGO_qsort_param_queue SLIST
 
 typedef void qs_func_t(struct array_s *array, ssize_t left, ssize_t right);
 
 struct qsort_param_s
 {
     union {
-        CONTAINER_ENTRY_TYPE(SLIST) list_entry;
+        GCT_CONTAINER_ENTRY(qsort_param_queue, list_entry);
         struct {
             qs_func_t *func;
             struct array_s *array;
@@ -200,8 +201,9 @@ struct qsort_param_s
     };
 };
 
-CONTAINER_TYPE(qsort_param_queue, SLIST, struct qsort_param_s, list_entry);
-CONTAINER_FUNC(qsort_param_queue, SLIST, static inline, qsort_param_queue, list_entry);
+GCT_CONTAINER_TYPES(qsort_param_queue, struct qsort_param_s *, list_entry);
+GCT_CONTAINER_FCNS(qsort_param_queue, static inline, qsort_param_queue,
+                   init, push, pop);
 
 qsort_param_queue_root_t qsort_param_queue;
 

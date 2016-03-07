@@ -27,44 +27,73 @@
 # Target architecture
 TARGET=mipsel
 
+# Build make invocation options
+BLDMAKE_OPTS= -j8
+
 # Install PATH
 PREFIX=/opt/mutekh
 
 # Temp directory
 WORKDIR=/tmp/crossgen
 
-# Build make invocation options
-BLDMAKE_OPTS= -j8
+common_CONF=
+binutils_VER_common  = 2.25
 
 # GNU Binutils
-binutils_VER_mipsel  = 2.20.1
-binutils_VER_powerpc = 2.20.1
-binutils_VER_arm     = 2.20.1
-binutils_VER_i686    = 2.20.1
-binutils_VER_x86_64  = 2.20.1
-binutils_VER_nios2   = 2.20.1
-binutils_VER_sparc   = 2.20.1
-binutils_VER_avr     = 2.20.1
-binutils_VER_lm32    = 2.20.1
-binutils_VER_microblaze = 2.20.1
+binutils_VER_mipsel  = $(binutils_VER_common)
+binutils_VER_powerpc = $(binutils_VER_common)
+binutils_VER_arm     = $(binutils_VER_common)
+binutils_VER_i686    = $(binutils_VER_common)
+binutils_VER_x86_64  = $(binutils_VER_common)
+binutils_VER_nios2   = $(binutils_VER_common)
+binutils_VER_sparc   = $(binutils_VER_common)
+binutils_VER_lm32    = $(binutils_VER_common)
+binutils_VER_microblaze = $(binutils_VER_common)
+binutils_VER_m68k    = $(binutils_VER_common)
+binutils_VER_avr32   = 2.22
 
 binutils_VER=$(binutils_VER_$(TARGET))
-binutils_CONF=
+binutils_CONF=$(common_CONF) --enable-plugins=no
+
+gcc_VER_common  = 4.9.3
 
 # GNU Compiler
-gcc_VER_mipsel  = 4.5.2
-gcc_VER_powerpc = 4.5.2
-gcc_VER_arm     = 4.5.2
-gcc_VER_i686    = 4.5.2
-gcc_VER_x86_64  = 4.5.2
-gcc_VER_nios2   = 4.4.4
-gcc_VER_sparc   = 4.5.2
-gcc_VER_avr     = 4.5.2
-gcc_VER_lm32    = 4.5.2
-gcc_VER_microblaze = 4.5.2
+gcc_VER_mipsel  = $(gcc_VER_common)
+SUFFIX_mipsel   = unknown-elf
+
+gcc_VER_powerpc = $(gcc_VER_common)
+SUFFIX_powerpc  = unknown-elf
+
+gcc_VER_arm     = $(gcc_VER_common)
+gcc_CONF_arm    = --with-arch=armv4t --with-fpu=vfp --with-float=soft
+SUFFIX_arm      = mutekh-eabi
+
+gcc_VER_i686    = $(gcc_VER_common)
+SUFFIX_i686     = unknown-elf
+
+gcc_VER_x86_64  = $(gcc_VER_common)
+SUFFIX_x86_64   = unknown-elf
+
+gcc_VER_nios2   = $(gcc_VER_common)
+SUFFIX_nios2    = unknown-elf
+
+gcc_VER_sparc   = $(gcc_VER_common)
+SUFFIX_sparc    = unknown-elf
+
+gcc_VER_lm32    = $(gcc_VER_common)
+SUFFIX_lm32     = unknown-elf
+
+gcc_VER_microblaze = $(gcc_VER_common)
+SUFFIX_microblaze  = unknown-elf
+
+gcc_VER_m68k    = $(gcc_VER_common)
+SUFFIX_m68k     = unknown-elf
+
+gcc_VER_avr32   = 4.4.3
+SUFFIX_avr32    = unknown-elf
 
 gcc_VER=$(gcc_VER_$(TARGET))
-gcc_CONF=--enable-languages=c --disable-libssp --enable-multilib
+gcc_CONF=$(common_CONF) --enable-languages=c --disable-libssp --enable-multilib --disable-lto --disable-libquadmath
 
 # GCC requirements
 mpfr_VER=2.4.2
@@ -72,19 +101,20 @@ gmp_VER=4.3.2
 mpc_VER=0.9
 
 # GNU Debugger
-gdb_VER_mipsel  = 7.2
-gdb_VER_powerpc = 7.2
-gdb_VER_arm     = 7.2
-gdb_VER_i686    = 7.2
-gdb_VER_x86_64  = 7.2
-gdb_VER_nios2   = 7.0
-gdb_VER_sparc   = 7.2
-gdb_VER_avr     = 7.2
-gdb_VER_lm32    = 7.2
-gdb_VER_microblaze = 7.3
+gdb_VER_mipsel  = 7.8.2
+gdb_VER_powerpc = 7.8.2
+gdb_VER_arm     = 7.8.2
+gdb_VER_i686    = 7.8.2
+gdb_VER_x86_64  = 7.8.2
+gdb_VER_nios2   = 7.8.2
+gdb_VER_sparc   = 7.8.2
+gdb_VER_lm32    = 7.8.2
+gdb_VER_microblaze = 7.8.2
+gdb_VER_m68k   = 7.8.2
+gdb_VER_avr32   = 6.7.1
 
 gdb_VER=$(gdb_VER_$(TARGET))
-gdb_CONF=--with-python=no --disable-sim
+gdb_CONF=$(common_CONF) --with-python=no --disable-sim
 
 # Device Tree Compiler
 dtc_VER=1.2.0
@@ -99,7 +129,7 @@ qemu_VER=0.14.0
 qemu_CONF=--disable-docs --disable-kvm
 
 # Testsuite simulation wrapper
-testwrap_VER=1.0
+testwrap_VER=1.1
 
 HELP_END=91 #### LINE 86 IS HERE ####
 
@@ -107,21 +137,23 @@ unexport MAKEFLAGS
 unexport MFLAGS
 unexport MAKELEVEL
 
+SUFFIX=$(SUFFIX_$(TARGET))
+
 # packages configurations
 
 binutils_ARCHIVE=binutils-$(binutils_VER).tar.bz2
 binutils_URL=ftp://ftp.gnu.org/gnu/binutils/$(binutils_ARCHIVE)
-binutils_TESTBIN=bin/$(TARGET)-unknown-elf-as
+binutils_TESTBIN=bin/$(TARGET)-$(SUFFIX)-as
 
 gcc_ARCHIVE=gcc-$(gcc_VER).tar.bz2
 gcc_URL=ftp://ftp.gnu.org/gnu/gcc/gcc-$(gcc_VER)/$(gcc_ARCHIVE)
-gcc_TESTBIN=bin/$(TARGET)-unknown-elf-gcc
+gcc_TESTBIN=bin/$(TARGET)-$(SUFFIX)-gcc
 gcc_DEPS=binutils mpfr gmp mpc
 gcc_CONF+=--with-mpfr=$(PREFIX) --with-gmp=$(PREFIX) --with-mpc=$(PREFIX)
 
-gdb_ARCHIVE=gdb-$(gdb_VER).tar.bz2
-gdb_URL=ftp://ftp.gnu.org/gnu/gdb/gdb-$(gdb_VER)a.tar.bz2
-gdb_TESTBIN=bin/$(TARGET)-unknown-elf-gdb
+gdb_ARCHIVE=gdb-$(gdb_VER).tar.gz
+gdb_URL=ftp://ftp.gnu.org/gnu/gdb/gdb-$(gdb_VER).tar.gz
+gdb_TESTBIN=bin/$(TARGET)-$(SUFFIX)-gdb
 
 mpfr_ARCHIVE=mpfr-$(mpfr_VER).tar.bz2
 mpfr_URL=ftp://ftp.gnu.org/gnu/mpfr/$(mpfr_ARCHIVE)
@@ -169,7 +201,7 @@ help:
 	@echo ""
 	@echo "Main targets:"
 	@echo "  config    - display configuration"
-	@echo "  toolchain - download, configure, build and install gcc, binutils, gdb, dtc"
+	@echo "  toolchain - download, configure, build and install gcc, binutils, gdb"
 	@echo "  testtools - download, configure, build and install testwrap, bochs, qemu"
 	@echo "  all       - download, configure, build and install all packages"
 	@echo "  cleanup   - remove all build files, keep downloaded archives"
@@ -180,7 +212,7 @@ help:
 config:
 	@head -n $$(($(HELP_END)-1)) $(MAKEFILE_LIST) | tail -n $$(($(HELP_END)-26))
 
-toolchain: gcc binutils gdb dtc
+toolchain: gcc binutils gdb
 
 testtools: testwrap bochs qemu
 
@@ -218,20 +250,20 @@ $$($(1)_TGZ): $$($(1)_STAMP)-wget
 
 $$($(1)_STAMP)-$$(TARGET)-patch: $$($(1)_DIR)
         # try to fetch a patch
-	wget $$(WGET_OPTS) $$(PATCH_URL)/$(1)-$$($(1)_VER)-$$(TARGET)-latest.diff.gz -O $$($(1)_PATCH).gz || rm -f $$($(1)_PATCH).gz
+	test -f $$($(1)_PATCH).gz || wget $$(WGET_OPTS) $$(PATCH_URL)/$(1)-$$($(1)_VER)-$$(TARGET)-latest.diff.gz -O $$($(1)_PATCH).gz || rm -f $$($(1)_PATCH).gz
         # test if a patch is available and apply
 	test ! -f $$($(1)_PATCH).gz || ( cd $$($(1)_DIR) ; cat $$($(1)_PATCH).gz | gunzip | patch -p 0 )
 	touch $$@
 
 $$($(1)_STAMP)-$$(TARGET)-conf: $$($(1)_DIR) $$($(1)_STAMP)-$$(TARGET)-patch $$($(1)_DEPS)
 	mkdir -p $$($(1)_BDIR)
-	( cd $$($(1)_BDIR) ; LD_LIBRARY_PATH=$$(PREFIX)/lib $$($(1)_DIR)/configure --disable-nls --prefix=$$(PREFIX) --target=$$(TARGET)-unknown-elf --disable-checking --disable-werror $$($(1)_CONF) ) && touch $$@
+	( cd $$($(1)_BDIR) ; LD_LIBRARY_PATH=$$(PREFIX)/lib $$($(1)_DIR)/configure MAKEINFO="makeinfo --version" --disable-nls --prefix=$$(PREFIX) --target=$$(TARGET)-$$(SUFFIX) --disable-checking --disable-werror $$($(1)_CONF) $$($(1)_CONF_$$(TARGET))  ) && touch $$@
 
 $$($(1)_STAMP)-$$(TARGET)-build: $$($(1)_STAMP)-$$(TARGET)-conf
 	LD_LIBRARY_PATH=$$(PREFIX)/lib make $$(BLDMAKE_OPTS) -C $$($(1)_BDIR) && touch $$@
 
 $$(PREFIX)/$$($(1)_TESTBIN): $$($(1)_STAMP)-$$(TARGET)-build
-	LD_LIBRARY_PATH=$$(PREFIX)/lib make -C $$($(1)_BDIR) install && touch $$@
+	LD_LIBRARY_PATH=$$(PREFIX)/lib make -C $$($(1)_BDIR) -j1 install && touch $$@
 
 $(1): $$(shell test -f $$(PREFIX)/$$($(1)_TESTBIN) || echo $$(PREFIX)/$$($(1)_TESTBIN))
 
@@ -258,7 +290,7 @@ $$($(1)_STAMP)-wget:
 
 $$($(1)_STAMP)-patch: $$($(1)_DIR)
         # try to fetch a patch
-	wget $$(WGET_OPTS) $$(PATCH_URL)/$(1)-$$($(1)_VER)-latest.diff.gz -O $$($(1)_PATCH).gz || rm -f $$($(1)_PATCH).gz
+	test -f $$($(1)_PATCH).gz || wget $$(WGET_OPTS) $$(PATCH_URL)/$(1)-$$($(1)_VER)-latest.diff.gz -O $$($(1)_PATCH).gz || rm -f $$($(1)_PATCH).gz
         # test is a patch is available and apply
 	test ! -f $$($(1)_PATCH).gz || ( cd $$($(1)_DIR) ; cat $$($(1)_PATCH).gz | gunzip | patch -p 0 )
 	touch $$@
@@ -274,7 +306,7 @@ $$($(1)_STAMP)-build: $$($(1)_STAMP)-conf
 	LD_LIBRARY_PATH=$$(PREFIX)/lib make $$(BLDMAKE_OPTS) -C $$($(1)_BDIR) && touch $$@
 
 $$(PREFIX)/$$($(1)_TESTBIN): $$($(1)_STAMP)-build
-	LD_LIBRARY_PATH=$$(PREFIX)/lib make -C $$($(1)_BDIR) install && touch $$@
+	LD_LIBRARY_PATH=$$(PREFIX)/lib make -C $$($(1)_BDIR) -j1 install && touch $$@
 
 $(1): $$(shell test -f $$(PREFIX)/$$($(1)_TESTBIN) || echo $$(PREFIX)/$$($(1)_TESTBIN))
 

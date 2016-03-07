@@ -13,6 +13,7 @@ export MODULE_NAMES
 define declare_module_dir
 
 MKDOC_ARGS += -I $(2)/include
+BCPATH += -p $(2)
 $(1)_SRC_DIR:=$(2)
 $(1)_OBJ_DIR:=$(OBJ_DIR)/$(1)
 
@@ -35,9 +36,10 @@ include $(MUTEK_SRC_DIR)/scripts/cflags.mk
 META_OBJECT_LIST:=
 COPY_OBJECT_LIST:=
 TARGET_OBJECT_LIST:=
-PRE_HEADER_LIST:=
+PRE_HEADER_LIST:=$(OBJ_DIR)/enums.h
 CLEAN_FILE_LIST:=
 GLOBAL_DOC_HEADERS:=
+ENUM_HEADER_LIST:=
 
 include $(MUTEK_SRC_DIR)/scripts/local.mk
 

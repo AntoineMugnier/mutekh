@@ -4,9 +4,12 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <vfs/vfs.h>
+#include <vfs/node.h>
+#include <vfs/file.h>
+#include <vfs/path.h>
 
 #include "my_rand.h"
+#include "cwd.h"
 
 //#define dprintk(...) do{}while(0)
 #define dprintk(...) printk(__VA_ARGS__)
@@ -53,8 +56,8 @@ static error_t get_random_name(struct vfs_node_s *base, char *name)
         ssize_t rlen = vfs_file_read(dir, &dirent, sizeof(dirent));
         if ( rlen != sizeof(dirent) )
             break;
+        printk("Dir dir %d \"%s\"\n", n, dirent.name);
         done = 1;
-//        printk("readdir %d: %s\n", n, dirent.name);
         if ( n == 0 )
             break;
         --n;
@@ -73,7 +76,7 @@ static void post_print(struct vfs_node_s *node)
         if ( parent != node )
             post_print(parent);
 		printk("/");
-        vfs_node_refdrop(parent);
+        vfs_node_refdec(parent);
 	}
 	printk("%s", node->name);
 }
@@ -102,10 +105,12 @@ void action_cwd()
 	dprintk("%s \"%s\"...\n", __FUNCTION__, name);
 
 	err = vfs_lookup(vfs_get_root(), base, name, &node);
-	if ( err )
+	if (err)
 		return;
 
     assert(node);
+
+	dprintk("%s got node %p ref %d...\n", __FUNCTION__, node, vfs_node_refcount(node));
 
     struct vfs_stat_s stat;
     vfs_node_stat(node, &stat);
@@ -117,7 +122,7 @@ void action_cwd()
         dprintk("\n");
 		vfs_set_cwd(node);
     }
-	vfs_node_refdrop(node);
+	vfs_node_refdec(node);
 }
 
 void action_mkdir()
@@ -131,7 +136,7 @@ void action_mkdir()
 	error_t err = vfs_create(vfs_get_root(), vfs_get_cwd(),
 							 name, VFS_NODE_DIR, &node);
 	if (err == 0) {
-		vfs_node_refdrop(node);
+		vfs_node_refdec(node);
 	} else {
 		dprintk("%s error %s\n", __FUNCTION__, strerror(err));
 	}
@@ -171,48 +176,51 @@ void action_rm()
 
 error_t action_rmrf_inner(struct vfs_node_s *_cwd, const char *name)
 {
-	struct vfs_node_s *cwd = vfs_node_refnew(_cwd);
+	struct vfs_node_s *cwd = vfs_node_refinc(_cwd);
 	struct vfs_stat_s stat = {0};
 	error_t err;
 
 	err = vfs_stat(vfs_get_root(), cwd, name, &stat);
-    dprintk("rmrf stat 'name': %s\n", name, strerror(err));
-	if ( err )
+    dprintk("rmrf stat \"%s\": %s\n", name, strerror(-err));
+	if (err)
 		goto end;
 
-	if ( stat.type == VFS_NODE_DIR ) {
+	if (stat.type == VFS_NODE_DIR) {
         dprintk(" is directory\n");
 		struct vfs_node_s *node = NULL;
-		if ( vfs_lookup(vfs_get_root(), cwd, name, &node) == 0 ) {
+
+		if (!vfs_lookup(vfs_get_root(), cwd, name, &node)) {
 			assert(node);
 
-			while ( 1 ) {
+			for (;;) {
 				struct vfs_file_s *dir = NULL;
 				struct vfs_dirent_s dirent;
 		
 				err = vfs_open(vfs_get_root(), node, ".",
 							   VFS_OPEN_READ | VFS_OPEN_DIR, &dir);
-				if ( err )
+				if (err)
 					break;
+
 				ssize_t len = vfs_file_read(dir, &dirent, sizeof(dirent));
                 dprintk("Read len: %d\n", len);
 				vfs_file_close(dir);
-				if ( !len )
+				if (!len)
 					break;
 
 				err = action_rmrf_inner(node, dirent.name);
-                if ( err )
+                if (err)
                     break;
 			}
 
-			vfs_node_refdrop(node);
+			vfs_node_refdec(node);
 		}
 	}
+
 	err = vfs_unlink(vfs_get_root(), cwd, name);
     dprintk(" unlink '%s': %s\n", name, strerror(err));
 
   end:
-	vfs_node_refdrop(cwd);
+	vfs_node_refdec(cwd);
     return err;
 }
 
@@ -257,7 +265,7 @@ void action_ls()
 	}
 
     while ( vfs_file_read(dir, &dirent, sizeof(dirent)) == sizeof(dirent) ) {
-//        printk("%s [%s] %d\n", dirent.name, dirent.type == VFS_NODE_DIR ? "dir" : "reg", dirent.size);
+        printk("%s [%s] %d\n", dirent.name, dirent.type == VFS_NODE_DIR ? "dir" : "reg", dirent.size);
     }
 
     vfs_file_close(dir);

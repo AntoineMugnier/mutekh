@@ -21,12 +21,12 @@
 */
 
 #include <hexo/types.h>
-#include <hexo/init.h>
+#include <mutek/startup.h>
 #include <hexo/cpu.h>
 #include <hexo/lock.h>
 #include <mutek/mem_alloc.h>
 
-#if defined(CONFIG_MUTEK_SCHEDULER)
+#if defined(CONFIG_MUTEK_CONTEXT_SCHED)
 #include <mutek/scheduler.h>
 #endif
 
@@ -46,7 +46,7 @@ void arch_specific_init();
 void arch_init(uintptr_t init_sp) 
 {
 #ifdef CONFIG_DATA_FROM_ROM
-	memcpy_from_code((uint8_t*)&__data_start, (uint8_t*)&__data_load_start, (uint8_t*)&__data_load_end-(uint8_t*)&__data_load_start);
+	memcpy((uint8_t*)&__data_start, (uint8_t*)&__data_load_start, (uint8_t*)&__data_load_end-(uint8_t*)&__data_load_start);
 	memset((uint8_t*)&__bss_start, 0, (uint8_t*)&__bss_end-(uint8_t*)&__bss_start);
 #endif
 
@@ -58,12 +58,12 @@ void arch_init(uintptr_t init_sp)
 
   mem_init();
 
-  hexo_global_init();
+  device_tree_init();
 
   /* configure first CPU */
   cpu_init();
 
-#if defined(CONFIG_MUTEK_SCHEDULER)
+#if defined(CONFIG_MUTEK_CONTEXT_SCHED)
   sched_global_init();
   sched_cpu_init();
 #endif
@@ -87,7 +87,7 @@ void arch_start_other_cpu(void)
 {
 }
 
-inline size_t arch_get_cpu_count(void)
+inline size_t device_get_cpu_count(void)
 {
   return 1;
 }

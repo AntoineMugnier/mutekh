@@ -23,8 +23,8 @@
 
 #include <hexo/types.h>
 
-#include <device/spi.h>
-#include <device/block.h>
+#include <device/class/spi.h>
+#include <device/class/block.h>
 #include <device/device.h>
 #include <device/driver.h>
 
@@ -68,7 +68,7 @@ static inline uint8_t crc7(uint8_t * data, size_t size)
     return (crc << 1) | 1;
 }
 
-static DEVSPI_WAIT_VALUE_CALLBACK(check_cmd_accepted)
+static DEV_SPI_WAIT_VALUE_CALLBACK(check_cmd_accepted)
 {
     struct cmd_state_s *state = rq->pvdata;
 
@@ -82,7 +82,7 @@ static DEVSPI_WAIT_VALUE_CALLBACK(check_cmd_accepted)
     return DEV_SPI_VALUE_RETRY;
 }
 
-static DEVSPI_WAIT_VALUE_CALLBACK(wait_token_data_start)
+static DEV_SPI_WAIT_VALUE_CALLBACK(wait_token_data_start)
 {
     if ( value == 0xff )
         return DEV_SPI_VALUE_RETRY;
@@ -91,7 +91,7 @@ static DEVSPI_WAIT_VALUE_CALLBACK(wait_token_data_start)
     return DEV_SPI_VALUE_FAIL;
 }
 
-static DEVSPI_WAIT_VALUE_CALLBACK(get_data_response)
+static DEV_SPI_WAIT_VALUE_CALLBACK(get_data_response)
 {
     if ( (value & 0x11) != 0x1 )
         return DEV_SPI_VALUE_RETRY;
@@ -100,14 +100,14 @@ static DEVSPI_WAIT_VALUE_CALLBACK(get_data_response)
     return DEV_SPI_VALUE_FOUND;
 }
 
-static DEVSPI_WAIT_VALUE_CALLBACK(wait_not_busy)
+static DEV_SPI_WAIT_VALUE_CALLBACK(wait_not_busy)
 {
     if ( value == 0x00 )
         return DEV_SPI_VALUE_RETRY;
     return DEV_SPI_VALUE_FOUND;
 }
 
-static DEVSPI_CALLBACK(sd_mmc_read_done)
+static DEV_SPI_CALLBACK(sd_mmc_read_done)
 {
     struct rw_cmd_state_s *state = priv;
     struct device_s *dev = state->dev;
@@ -152,7 +152,7 @@ static DEVSPI_CALLBACK(sd_mmc_read_done)
     }
 }
 
-static DEVSPI_CALLBACK(sd_mmc_cmd_done)
+static DEV_SPI_CALLBACK(sd_mmc_cmd_done)
 {
     struct cmd_state_s *state = rq->pvdata;
 
@@ -632,7 +632,7 @@ sd_mmc_handle_next_req(struct device_s *dev)
     }
 }
 
-DEVBLOCK_REQUEST(sd_mmc_request)
+DEV_BLOCK_REQUEST(sd_mmc_request)
 {
     struct sd_mmc_context_s *pv = dev->drv_pv;
     bool_t must_start = 0;
@@ -651,19 +651,23 @@ DEVBLOCK_REQUEST(sd_mmc_request)
         sd_mmc_handle_next_req(dev);
 }
 
-DEVBLOCK_GETPARAMS(sd_mmc_get_params)
+DEV_BLOCK_GETPARAMS(sd_mmc_get_params)
 {
     struct sd_mmc_context_s *pv = dev->drv_pv;
 
     return &(pv->params);
 }
 
-DEVBLOCK_GETRQSIZE(sd_mmc_get_rqsize)
+DEV_BLOCK_GETRQSIZE(sd_mmc_get_rqsize)
 {
   return sizeof(struct dev_block_rq_s);
 }
 
-#ifdef CONFIG_DRIVER_ENUM_FDT
+#define sd_mmc_use dev_use_generic
+
+DRIVER_DECLARE(sd_mmc_drv, 0, "SD/MMC block", sd_mmc,
+               DRIVER_MEM_METHODS(sd_mmc));
+
 static const struct driver_param_binder_s sd_mmc_binder[] =
 {
     PARAM_BIND(struct sd_mmc_param_s, spi, PARAM_DATATYPE_DEVICE_PTR),
@@ -671,38 +675,14 @@ static const struct driver_param_binder_s sd_mmc_binder[] =
     { 0 }
 };
 
-static const struct devenum_ident_s sdmmc_ids[] =
-{
-    DEVENUM_FDTNAME_ENTRY("sdmmc_spi", sizeof(struct sd_mmc_param_s), sd_mmc_binder),
-    { 0 }
-};
-#endif
-
-const struct driver_s   sd_mmc_drv =
-{
-    .class      = device_class_block,
-#ifdef CONFIG_DRIVER_ENUM_FDT
-    .id_table   = sdmmc_ids,
-#endif
-    .f_init     = sd_mmc_init,
-    .f_cleanup      = sd_mmc_cleanup,
-    .f.blk = {
-        .f_request      = sd_mmc_request,
-        .f_getparams    = sd_mmc_get_params,
-        .f_getrqsize    = sd_mmc_get_rqsize,
-    },
-};
-
-#ifdef CONFIG_DRIVER_ENUM_FDT
-REGISTER_DRIVER(sd_mmc_drv);
-#endif
+DRIVER_REGISTER(sd_mmc_drv,
+                DEV_ENUM_FDTNAME_ENTRY("sdmmc_spi", sizeof(struct sd_mmc_param_s), sd_mmc_binder));
 
 DEV_INIT(sd_mmc_init)
 {
     struct sd_mmc_context_s   *pv;
     struct sd_mmc_param_s *param = params;
 
-    dev->drv = &sd_mmc_drv;
 
     /* allocate private driver data */
     pv = mem_alloc(sizeof(*pv), (mem_scope_sys));

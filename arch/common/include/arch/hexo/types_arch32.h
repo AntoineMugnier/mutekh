@@ -30,17 +30,13 @@
 /* architecture specific integer types */
 
 /** boolean value */
-typedef int8_t		bool_t;
+typedef uint8_t		bool_t;
 /** data size integer type */
 typedef uint_fast32_t	size_t;
 /** signed data size integer type */
 typedef int_fast32_t	ssize_t;
 /** offset integer type */
 typedef int_fast32_t	off_t;
-/** biggest unsigned integer type available */
-typedef uint64_t	uintmax_t;
-/** biggest signed integer type available */
-typedef int64_t		intmax_t;
 /** cpu integer id */
 typedef uint16_t	cpu_id_t;
 
