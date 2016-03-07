@@ -325,6 +325,7 @@ DEV_VALIO_REQUEST(adxl345_request)
 static DEV_INIT(adxl345_init);
 static DEV_CLEANUP(adxl345_cleanup);
 static DEV_USE(adxl345_use);
+#define adxl345_cancel (dev_valio_cancel_t*)&dev_driver_notsup_fcn
 
 DRIVER_DECLARE(adxl345_drv, 0, "ADXL345 accelerometer", adxl345,
                DRIVER_VALIO_METHODS(adxl345));

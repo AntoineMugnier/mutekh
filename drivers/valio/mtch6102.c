@@ -232,7 +232,7 @@ static void mtch6102_request_run(
 
     dprintk("%s %p %d\n", __FUNCTION__, rq, rq->type);
 
-    if (!from_irq && rq->type == DEVICE_VALIO_WAIT_UPDATE) {
+    if (!from_irq && rq->type == DEVICE_VALIO_WAIT_EVENT) {
         dprintk("%s wait update\n", __FUNCTION__);
         return;
     }
@@ -288,7 +288,7 @@ static DEV_VALIO_REQUEST(mtch6102_request)
 
         break;
 
-    case DEVICE_VALIO_WAIT_UPDATE:
+    case DEVICE_VALIO_WAIT_EVENT:
         switch (req->attribute) {
         case VALIO_TOUCHPAD_STATE:
             dev_request_queue_pushback(&pv->queue, &req->base);
@@ -331,6 +331,7 @@ static DEV_INIT(mtch6102_init);
 static DEV_CLEANUP(mtch6102_cleanup);
 
 #define mtch6102_use dev_use_generic
+#define mtch6102_cancel (dev_valio_cancel_t*)&dev_driver_notsup_fcn
 
 DRIVER_DECLARE(mtch6102_drv, 0, "MTCH6102 Touchpad", mtch6102,
                DRIVER_VALIO_METHODS(mtch6102));

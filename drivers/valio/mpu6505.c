@@ -506,7 +506,7 @@ void mpu6505_request_run_first(struct device_s *dev)
 
   switch (rq->type) {
   case DEVICE_VALIO_READ:
-  case DEVICE_VALIO_WAIT_UPDATE:
+  case DEVICE_VALIO_WAIT_EVENT:
     if (pv->power_mode <= MPU6505_GYRO_CALIBRATED)
       pv->next_mode = MPU6505_STREAMING;
     break;
@@ -523,7 +523,7 @@ void mpu6505_request_run_first(struct device_s *dev)
     mpu6505_do_sensor_read(dev, rq);
     return;
 
-  case DEVICE_VALIO_WAIT_UPDATE:
+  case DEVICE_VALIO_WAIT_EVENT:
     dprintk("%s wait update\n", __FUNCTION__);
 
     if (pv->read_pending)
@@ -548,7 +548,7 @@ DEV_VALIO_REQUEST(mpu6505_request)
 
   switch (req->attribute) {
   case VALIO_MS_STATE:
-    if (!((1 << req->type) & ((1 << DEVICE_VALIO_READ) | (1 << DEVICE_VALIO_WAIT_UPDATE))))
+    if (!((1 << req->type) & ((1 << DEVICE_VALIO_READ) | (1 << DEVICE_VALIO_WAIT_EVENT))))
       break;
     err = 0;
     break;
@@ -619,6 +619,8 @@ static KROUTINE_EXEC(mpu6505_tick)
 static DEV_INIT(mpu6505_init);
 static DEV_CLEANUP(mpu6505_cleanup);
 static DEV_USE(mpu6505_use);
+
+#define mpu6505_cancel (dev_valio_cancel_t*)&dev_driver_notsup_fcn
 
 DRIVER_DECLARE(mpu6505_drv, 0, "MPU6505 motion", mpu6505,
                DRIVER_VALIO_METHODS(mpu6505));

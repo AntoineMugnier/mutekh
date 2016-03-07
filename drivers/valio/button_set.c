@@ -102,7 +102,7 @@ static bool_t bs_read_or_update(struct bs_context_s *pv,
 
   pv->changed = 0;
 
-  if (rq->type == DEVICE_VALIO_WAIT_UPDATE
+  if (rq->type == DEVICE_VALIO_WAIT_EVENT
       && !memcmp(pv->cur_state, pv->last_read_state, pv->state_size))
     return 0;
 
@@ -163,7 +163,7 @@ static DEV_VALIO_REQUEST(button_set_request)
     req->error = -ENOTSUP;
     goto done;
 
-  case DEVICE_VALIO_WAIT_UPDATE:
+  case DEVICE_VALIO_WAIT_EVENT:
     if (!pv->changed) {
       LOCK_SPIN_IRQ(&dev->lock);
       dev_request_queue_pushback(&pv->queue, &req->base);
@@ -187,6 +187,7 @@ static DEV_INIT(button_set_init);
 static DEV_CLEANUP(button_set_cleanup);
 
 #define button_set_use dev_use_generic
+#define button_set_cancel (dev_valio_cancel_t*)&dev_driver_notsup_fcn
 
 DRIVER_DECLARE(button_set_drv, 0, "Button-set keyboard", button_set,
                DRIVER_VALIO_METHODS(button_set));

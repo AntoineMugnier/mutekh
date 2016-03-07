@@ -49,7 +49,7 @@ static inline void adxl362_end_rq(struct device_s *dev)
         v = &((struct valio_motion_data_s*)rq->data)->accel;
         break;
 
-      case DEVICE_VALIO_WAIT_UPDATE:
+      case DEVICE_VALIO_WAIT_EVENT:
         v = &((struct valio_motion_evt_s*)rq->data)->data.accel;
         break;
 
@@ -119,7 +119,7 @@ static bool_t adxl362_process(struct device_s *dev)
              
                      break;}
            
-                   case DEVICE_VALIO_WAIT_UPDATE:
+                   case DEVICE_VALIO_WAIT_EVENT:
 
                      bc_set_pc(&srq->vm, &adxl362_spi_entry_wait);
                      bc_set_reg(&srq->vm, R_ARG0, ((struct valio_motion_evt_s *)rq->data)->evts);
@@ -249,7 +249,7 @@ static DEV_VALIO_REQUEST(adxl362_request)
             }
           break;
     
-      case DEVICE_VALIO_WAIT_UPDATE:
+      case DEVICE_VALIO_WAIT_EVENT:
           switch (req->attribute)
             {
               case VALIO_MOTION_EVENT:
@@ -325,6 +325,7 @@ static DEV_INIT(adxl362_init);
 static DEV_CLEANUP(adxl362_cleanup);
 
 #define adxl362_use dev_use_generic
+#define adxl362_cancel (dev_valio_cancel_t*)&dev_driver_notsup_fcn
 
 DRIVER_DECLARE(adxl362_drv, 0, "ADXL362 motion", adxl362,
                DRIVER_VALIO_METHODS(adxl362));

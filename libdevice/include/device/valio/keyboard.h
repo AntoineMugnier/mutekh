@@ -20,12 +20,14 @@
 
 /**
    @file
-   @module{Devices support library}
+   @module{Devices support library::Valio device attributes}
    @short Value IO interface for a keyboard
 */
 
 #ifndef LIBDEVICE_VALIO_KEYBOARD_H_
 #define LIBDEVICE_VALIO_KEYBOARD_H_
+
+#include <device/class/valio.h>
 
 enum valio_keyboard_att_e
 {

@@ -20,12 +20,14 @@
 
 /**
    @file
-   @module{Devices support library}
+   @module{Devices support library::Valio device attributes}
    @short Value IO interface for a button
 */
 
 #ifndef LIBDEVICE_VALIO_BUTTON_H_
 #define LIBDEVICE_VALIO_BUTTON_H_
+
+#include <device/class/valio.h>
 
 enum valio_button_state {
   VALIO_BUTTON_PUSHED,
@@ -33,7 +35,7 @@ enum valio_button_state {
 };
 
 enum valio_button_att {
-    /** This attribute is used only for @tt DEVICE_VALIO_WAIT_UPDATE request type.
+    /** This attribute is used only for @tt DEVICE_VALIO_WAIT_EVENT request type.
         When used, the request callback will be called when button is toggled,
         pushed or released. Request must returns the time since last event on
         button in the @tt timestamp field of data. If no measure of time is possible
@@ -44,7 +46,7 @@ enum valio_button_att {
     VALIO_BUTTON_RELEASE,
 };
 
-/* Return structure for @tt DEVICE_VALIO_WAIT_UPDATE request type */ 
+/* Return structure for @tt DEVICE_VALIO_WAIT_EVENT request type */ 
 struct valio_button_update_s
 {
   uint16_t timestamp;

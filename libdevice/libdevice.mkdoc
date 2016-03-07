@@ -3,6 +3,10 @@
   @short Devices and drivers management library
   @order 98
 
+  @moduledef{Valio device attributes}
+    @short Valio
+  @end moduledef
+
   @section Pt {Accessing devices}
 
     @section t {Device instance}
@@ -358,4 +362,13 @@ device/class/persist.h
 device/class/rfpacket.h
 device/class/uart.h
 device/class/valio.h
+
+device/valio/adc.h
+device/valio/button.h
+device/valio/hwclock.h
+device/valio/keyboard.h
+device/valio/led.h
+device/valio/motion.h
+device/valio/motion_sensor.h
+device/valio/touchpad.h
 }

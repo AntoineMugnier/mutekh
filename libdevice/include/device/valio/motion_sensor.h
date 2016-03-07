@@ -20,12 +20,14 @@
 
 /**
    @file
-   @module{Devices support library}
+   @module{Devices support library::Valio device attributes}
    @short Value IO interface definition for motion sensors
 */
 
 #ifndef LIBDEVICE_VALIO_MOTION_SENSOR_H_
 #define LIBDEVICE_VALIO_MOTION_SENSOR_H_
+
+#include <device/class/valio.h>
 
 enum valio_ms_axis_e {
     VALIO_MS_ACCEL_X,

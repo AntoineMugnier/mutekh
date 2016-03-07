@@ -207,7 +207,7 @@ static DEV_VALIO_REQUEST(push_button_request)
       data->state = pv->state; 
       break;
   
-    case DEVICE_VALIO_WAIT_UPDATE:
+    case DEVICE_VALIO_WAIT_EVENT:
       done = 0;
       dev_request_queue_pushback(&pv->queue, &req->base);
       break;
@@ -227,6 +227,7 @@ static DEV_INIT(push_button_init);
 static DEV_CLEANUP(push_button_cleanup);
 
 #define push_button_use dev_use_generic
+#define push_button_cancel (dev_valio_cancel_t*)&dev_driver_notsup_fcn
 
 DRIVER_DECLARE(push_button_drv, 0, "Push-button", push_button,
                DRIVER_VALIO_METHODS(push_button));

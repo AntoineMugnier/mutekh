@@ -274,7 +274,7 @@ static void mxk_scan_done(struct mxk_context_s *pv)
   if (pv->one_pressed && pv->refresh_count)
     mxk_rescan_later(pv);
 
-  if (rq->type == DEVICE_VALIO_WAIT_UPDATE) {
+  if (rq->type == DEVICE_VALIO_WAIT_EVENT) {
     if (!memcmp(pv->last_state, pv->cur_state, pv->state_size)) {
       if (pv->refresh_count)
         pv->refresh_count--;
@@ -338,7 +338,7 @@ static DEV_VALIO_REQUEST(matrix_keyboard_request)
     break;
 
   case DEVICE_VALIO_READ:
-  case DEVICE_VALIO_WAIT_UPDATE:
+  case DEVICE_VALIO_WAIT_EVENT:
     LOCK_SPIN_IRQ(&dev->lock);
     if (dev_request_queue_isempty(&pv->queue))
       device_start(&pv->timer);
@@ -365,6 +365,7 @@ static DEV_INIT(matrix_keyboard_init);
 static DEV_CLEANUP(matrix_keyboard_cleanup);
 
 #define matrix_keyboard_use dev_use_generic
+#define matrix_keyboard_cancel (dev_valio_cancel_t*)&dev_driver_notsup_fcn
 
 DRIVER_DECLARE(matrix_keyboard_drv, 0, "Matrix-keyboard", matrix_keyboard,
                DRIVER_VALIO_METHODS(matrix_keyboard));

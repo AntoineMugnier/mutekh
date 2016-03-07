@@ -27,7 +27,7 @@ void main()
   ensure(device_get_accessor_by_path(&pbdev, NULL, "btn btn*", DRIVER_CLASS_VALIO) == 0);
 
   pbrq.attribute = VALIO_BUTTON_PUSH;
-  pbrq.type      = DEVICE_VALIO_WAIT_UPDATE;
+  pbrq.type      = DEVICE_VALIO_WAIT_EVENT;
   pbrq.data      = &btn_upd;
 
   kroutine_init_immediate(&pbrq.base.kr, &push_button_pressed);

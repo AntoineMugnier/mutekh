@@ -20,12 +20,14 @@
 
 /**
    @file
-   @module{Devices support library}
+   @module{Devices support library::Valio device attributes}
    @short Value IO interface for a accelerometer
 */
 
 #ifndef LIBDEVICE_VALIO_MOTION_H_
 #define LIBDEVICE_VALIO_MOTION_H_
+
+#include <device/class/valio.h>
 
 /** The motion valio class is an interface for controlling and acquire data
     from motion tracking devices like an acceleromter, gyroscope or compass.
@@ -67,7 +69,7 @@ enum valio_motion_att_e
         Z axis.  */
     VALIO_MOTION_DATA,
 
-    /* Use with @tt DEVICE_VALIO_WAIT_UPDATE request type. @tt data is a pointer to a 
+    /* Use with @tt DEVICE_VALIO_WAIT_EVENT request type. @tt data is a pointer to a 
        @tt struct valio_motion_evt_s that defines the value of each of the X, Y
         Z axis. */
     VALIO_MOTION_EVENT,
