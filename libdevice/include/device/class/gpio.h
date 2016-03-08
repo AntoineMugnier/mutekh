@@ -26,47 +26,57 @@
    @module{Devices support library}
    @short General purpose IO driver API
 
-   @section {Description}
+   @section {Purpose}
 
-   GPIO Controller class abstracts explicit access to input/output
-   pins.
+   This class provides functions to read and update pins of a GPIO
+   controller device.
 
-   This class does not provide any notification framework.  This
-   feature is provided by ICU class.  A GPIO device may implement both
-   classes.
+   This class does not provide any pin change notification
+   feature. This feature is provided by the @xref {Interrupt
+   controller driver API}{Interrupt controller driver API}. A GPIO
+   device driver may implement both classes.
 
-   GPIOs may be accessed through this class for three basic
-   operations:
+   This class enables performing the following operations on a GPIO device:
    @list
-   @item Setting mode,
-   @item Reading current value,
-   @item Setting a value.
+   @item setting the mode of a pin,
+   @item reading the current value of a pin,
+   @item setting or toggling the value of a pin.
    @end list
 
-   All operations can be done atomically on an set of pins, the only
-   constraint is that they must all reside in the same pin bank.  Pin
-   banking constraints are implementation dependant.
+   An operation involving multiple pins must be performed atomically
+   by the driver, provided that it is supported by the hardware.
+   Groups of pins which reside in the same IO bank can usually be
+   accessed atomically. These constraints are implementation
+   dependent.
 
    @end section
 
-   @section {Asynchronous Operations}
+   @section {Synchronous and asynchronous operation}
 
-   Most GPIO devices are memory-mapped. Most client use cases are
-   synchronous.  Nevertheless, some GPIO devices are behind
-   asynchronous busses (like I2C, SPI).
+   Most GPIO controller devices are memory-mapped. Most client use
+   cases are synchronous.  Nevertheless, some GPIO controller devices
+   are behind I2C or SPI buses which can not be accessed
+   instantaneously; that's why the GPIO driver API provide both, a
+   synchronous and an asynchronous request based set of functions.
 
    As most driver do not care for asynchronous operations, @tt
    libdevice provides a generic asynchonous wrapper that relies on
-   synchronous operations.  This way, all synchronous drivers are able
-   to provide asynchonous request handling.
+   synchronous operations provided by the driver. This way, all
+   drivers are able to provide asynchonous request handling without
+   additional code.
 
-   On the other hand, devices behind asynchonous busses cannot
-   implement synchronous operations and can only provide asynchonous
-   request handling.
+   On the other hand, drivers for GPIO controllers behind buses cannot
+   implement synchronous operations and can only implement the
+   asynchronous request handling approach.
 
    Client code relying upon GPIO class should consider whether
-   supporting only synchonous devices is a strong limitation for code
-   portability.
+   supporting only synchronous capable drivers is a strong limitation
+   for code portability. The asynchronous request based API is more
+   cumbersome to use directly and may be slower but it will work with
+   any driver. Some convenient helpers are provided which rely on the
+   scheduler to put the current context in wait state during an
+   asynchronous request. This offers the most portable and easy to
+   use API when the client code runs in a scheduler context (thread).
 
    @end section
  */
@@ -299,7 +309,7 @@ DRIVER_CLASS_TYPES(DRIVER_CLASS_GPIO, gpio,
     .f_request = prefix ## _request,                              \
   })
 
-/** Synchronous gpio device request function. This function use a
+/** Blocking GPIO device request function. This function uses a
     busy wait loop during the request. @see dev_gpio_wait_rq */
 config_depend_inline(CONFIG_DEVICE_GPIO,
 error_t dev_gpio_spin_rq(struct device_gpio_s *accessor,
@@ -310,11 +320,12 @@ error_t dev_gpio_spin_rq(struct device_gpio_s *accessor,
   DEVICE_OP(accessor, request, rq);
   dev_request_spin_wait(&st);
   return rq->error;
- })
+})
 
-/** Synchronous gpio device request function. This function use the
+/** Blocking GPIO device request function. This function uses the
     scheduler api to put the current context in wait state during the
-    request. */
+    request. @see dev_gpio_request_t
+    @xsee {Synchronous and asynchronous operation} */
 config_depend_and2_inline(CONFIG_DEVICE_GPIO, CONFIG_MUTEK_CONTEXT_SCHED,
 error_t dev_gpio_wait_rq(struct device_gpio_s *accessor,
                          struct dev_gpio_rq_s *rq),
@@ -326,8 +337,103 @@ error_t dev_gpio_wait_rq(struct device_gpio_s *accessor,
   return rq->error;
 })
 
+/** @This sets the value of a single gpio pin relying on the
+    synchronous driver API. This will not work with all GPIO controllers.
+    @see dev_gpio_set_output_t @see dev_gpio_wait_out
+    @xsee {Synchronous and asynchronous operation} */
+config_depend_alwaysinline(CONFIG_DEVICE_GPIO,
+error_t dev_gpio_out(struct device_gpio_s *accessor, gpio_id_t id, bool_t x),
+{
+  const uint8_t *p = x ? dev_gpio_mask1 : dev_gpio_mask0;
+  return DEVICE_OP(accessor, set_output, id, id, p, p);
+})
 
-/** @This changes the mode of multiple GPIO pins. */
+/** @This sets the value of a single gpio pin. This function uses the
+    scheduler api to put the current context in wait state during the
+    request. @see dev_gpio_set_output_t @see dev_gpio_out
+    @xsee {Synchronous and asynchronous operation} */
+config_depend_and2_inline(CONFIG_DEVICE_GPIO, CONFIG_MUTEK_CONTEXT_SCHED,
+error_t dev_gpio_wait_out(struct device_gpio_s *accessor, gpio_id_t id, bool_t x),
+{
+  struct dev_gpio_rq_s rq;
+  struct dev_request_status_s st;
+  const uint8_t *p = x ? dev_gpio_mask1 : dev_gpio_mask0;
+  rq.io_first = rq.io_last = id;
+  rq.type = DEV_GPIO_SET_OUTPUT;
+  rq.output.set_mask = rq.output.clear_mask = p;
+  dev_request_sched_init(&rq.base, &st);
+  DEVICE_OP(accessor, request, rq);
+  dev_request_sched_wait(&st);
+  return rq->error;
+})
+
+/** @This changes the mode of a single gpio pin relying on the
+    synchronous driver API. This will not work with all GPIO controllers.
+    @see dev_gpio_set_mode_t @see dev_gpio_wait_mode
+    @xsee {Synchronous and asynchronous operation} */
+config_depend_alwaysinline(CONFIG_DEVICE_GPIO,
+error_t dev_gpio_mode(struct device_gpio_s *accessor, gpio_id_t id,
+                      enum dev_pin_driving_e mode),
+{
+  return DEVICE_OP(accessor, set_mode, id, id, dev_gpio_mask1, mode);
+})
+
+/** @This changes the mode of a single gpio pin. This function uses the
+    scheduler api to put the current context in wait state during the
+    request. @see dev_gpio_set_mode_t @see dev_gpio_mode
+    @xsee {Synchronous and asynchronous operation} */
+config_depend_and2_inline(CONFIG_DEVICE_GPIO, CONFIG_MUTEK_CONTEXT_SCHED,
+error_t dev_gpio_wait_mode(struct device_gpio_s *accessor, gpio_id_t id,
+                           enum dev_pin_driving_e mode),
+{
+  struct dev_gpio_rq_s rq;
+  struct dev_request_status_s st;
+  rq.io_first = rq.io_last = id;
+  rq.type = DEV_GPIO_SET_MODE;
+  rq.mode.mask = dev_gpio_mask1;
+  rq.mode.mode = mode;
+  dev_request_sched_init(&rq.base, &st);
+  DEVICE_OP(accessor, request, rq);
+  dev_request_sched_wait(&st);
+  return rq->error;
+})
+
+/** @This reads the value of a single gpio pin relying on the
+    synchronous driver API. This will not work with all GPIO controllers.
+    @see dev_gpio_get_input_t @see dev_gpio_wait_input
+    @xsee {Synchronous and asynchronous operation} */
+config_depend_alwaysinline(CONFIG_DEVICE_GPIO,
+bool_t dev_gpio_input(struct device_gpio_s *accessor, gpio_id_t id, error_t *err),
+{
+  uint8_t x[8];
+  error_t e = DEVICE_OP(accessor, get_input, id, id, x);
+  if (err != NULL)
+    *err = e;
+  return x[0] & 1;
+})
+
+/** @This reads the value of a single gpio pin. This function uses the
+    scheduler api to put the current context in wait state during the
+    request. @see dev_gpio_get_input_t @see dev_gpio_input
+    @xsee {Synchronous and asynchronous operation} */
+config_depend_and2_inline(CONFIG_DEVICE_GPIO, CONFIG_MUTEK_CONTEXT_SCHED,
+bool_t dev_gpio_wait_input(struct device_gpio_s *accessor, gpio_id_t id, error_t *err),
+{
+  struct dev_gpio_rq_s rq;
+  struct dev_request_status_s st;
+  uint8_t x[8];
+  rq.io_first = rq.io_last = id;
+  rq.type = DEV_GPIO_GET_INPUT;
+  rq.input.data = x;
+  dev_request_sched_init(&rq.base, &st);
+  DEVICE_OP(accessor, request, rq);
+  dev_request_sched_wait(&st);
+  if (err != NULL)
+    *err = rq->error;
+  return x[0] & 1;
+})
+
+/** @This changes the mode of multiple GPIO pins using the synchronous API. */
 config_depend(CONFIG_DEVICE_GPIO)
 error_t device_gpio_map_set_mode(struct device_gpio_s *accessor,
                                  const gpio_id_t *map, const gpio_width_t *wmap,
