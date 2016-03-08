@@ -253,6 +253,7 @@ DRIVER_CLASS_TYPES(DRIVER_CLASS_CHAR, char,
     .f_cancel = prefix ## _cancel,                               \
   })
 
+BUSY_WAITING_FUNCTION
 config_depend_inline(CONFIG_DEVICE_CHAR,
 ssize_t dev_char_spin_request(const struct device_char_s *accessor,
                               struct dev_char_rq_s *rq),
@@ -261,9 +262,7 @@ ssize_t dev_char_spin_request(const struct device_char_s *accessor,
     ssize_t todo = rq->size;
 
     dev_request_spin_init(&rq->base, &status);
-
     DEVICE_OP(accessor, request, rq);
-
     dev_request_spin_wait(&status);
 
     return rq->error ? rq->error : (todo - rq->size);
@@ -277,9 +276,7 @@ ssize_t dev_char_wait_request(const struct device_char_s *accessor,
     ssize_t todo = rq->size;
 
     dev_request_sched_init(&rq->base, &status);
-
     DEVICE_OP(accessor, request, rq);
-
     dev_request_sched_wait(&status);
 
     return rq->error ? rq->error : (todo - rq->size);
@@ -310,18 +307,24 @@ ssize_t dev_char_wait_op(const struct device_char_s *accessor,
 
     @returns transferred size or a negative error code
 */
+BUSY_WAITING_FUNCTION
 config_depend_inline(CONFIG_DEVICE_CHAR,
 ssize_t dev_char_spin_op(const struct device_char_s *accessor,
                          enum dev_char_rq_type_e type, uint8_t *data, size_t size),
 {
+    struct dev_request_status_s status;
     struct dev_char_rq_s rq =
-    {
+      {
         .type = type,
         .data = data,
         .size = size,
-    };
+      };
 
-    return dev_char_spin_request(accessor, &rq);
+    dev_request_spin_init(&rq.base, &status);
+    DEVICE_OP(accessor, request, &rq);
+    dev_request_spin_wait(&status);
+
+    return rq.error ? rq.error : (size - rq.size);
 })
 
 #endif

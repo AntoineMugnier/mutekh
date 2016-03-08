@@ -273,6 +273,7 @@ DRIVER_CLASS_TYPES(DRIVER_CLASS_VALIO, valio,
   })
 
 /** @This is busy wait wrapper for the @ref dev_valio_request_t function */
+BUSY_WAITING_FUNCTION
 config_depend_inline(CONFIG_DEVICE_VALIO,
 error_t dev_valio_spin_request(
     const struct device_valio_s *accessor,
@@ -290,6 +291,7 @@ error_t dev_valio_spin_request(
 
 /** @This perform a @ref DEVICE_VALIO_READ operation and wait for
     completion using a busy wait loop. */
+BUSY_WAITING_FUNCTION
 config_depend_inline(CONFIG_DEVICE_VALIO,
 error_t dev_valio_spin_read(
     const struct device_valio_s *accessor,
@@ -308,6 +310,7 @@ error_t dev_valio_spin_read(
 
 /** @This perform a @ref DEVICE_VALIO_WRITE operation and wait for
     completion using a busy wait loop. */
+BUSY_WAITING_FUNCTION
 config_depend_inline(CONFIG_DEVICE_VALIO,
 error_t dev_valio_spin_write(
     const struct device_valio_s *accessor,
@@ -326,6 +329,7 @@ error_t dev_valio_spin_write(
 
 /** @This perform a @ref DEVICE_VALIO_WAIT_EVENT operation and wait
     for completion using a busy wait loop. */
+BUSY_WAITING_FUNCTION
 config_depend_inline(CONFIG_DEVICE_VALIO,
 error_t dev_valio_spin_update(
     const struct device_valio_s *accessor,

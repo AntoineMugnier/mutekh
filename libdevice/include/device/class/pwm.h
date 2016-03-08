@@ -213,7 +213,9 @@ error_t dev_pwm_wait_config(struct device_pwm_s *pdev, const struct dev_pwm_conf
 });
 
 /** @see dev_pwm_wait_config */
-inline error_t dev_pwm_spin_config(struct device_pwm_s *pdev, const struct dev_pwm_config_s *cfg, uint_fast8_t mask)
+BUSY_WAITING_FUNCTION
+config_depend_inline(CONFIG_DEVICE_PWM,
+error_t dev_pwm_spin_config(struct device_pwm_s *pdev, const struct dev_pwm_config_s *cfg, uint_fast8_t mask),
 {
      struct dev_request_status_s status;
 
@@ -232,7 +234,7 @@ inline error_t dev_pwm_spin_config(struct device_pwm_s *pdev, const struct dev_p
      dev_request_spin_wait(&status);
 
      return rq.error;
-}
+})
 
 #endif
 

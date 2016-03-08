@@ -311,6 +311,7 @@ DRIVER_CLASS_TYPES(DRIVER_CLASS_GPIO, gpio,
 
 /** Blocking GPIO device request function. This function uses a
     busy wait loop during the request. @see dev_gpio_wait_rq */
+BUSY_WAITING_FUNCTION
 config_depend_inline(CONFIG_DEVICE_GPIO,
 error_t dev_gpio_spin_rq(struct device_gpio_s *accessor,
                          struct dev_gpio_rq_s *rq),

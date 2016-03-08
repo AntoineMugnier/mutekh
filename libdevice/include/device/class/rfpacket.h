@@ -385,6 +385,7 @@ DRIVER_CLASS_TYPES(DRIVER_CLASS_RFPACKET, rfpacket,
     .f_get_skew = prefix ## _get_skew,                             \
   })
 
+BUSY_WAITING_FUNCTION
 config_depend_inline(CONFIG_DEVICE_RFPACKET,
 error_t dev_rfpacket_spin_send_packet(
        const struct device_rfpacket_s *accessor,
@@ -413,6 +414,7 @@ error_t dev_rfpacket_spin_send_packet(
     return rq.err;
 });
 
+BUSY_WAITING_FUNCTION
 config_depend_inline(CONFIG_DEVICE_RFPACKET,
 error_t dev_rfpacket_spin_config(
     const struct device_rfpacket_s *accessor,

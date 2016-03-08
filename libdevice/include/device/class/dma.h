@@ -191,6 +191,7 @@ DRIVER_CLASS_TYPES(DRIVER_CLASS_DMA, dma,
     .f_request = prefix ## _request,                             \
   })
 
+BUSY_WAITING_FUNCTION
 inline error_t dev_dma_spin_copy(const struct device_dma_s *accessor, 
                                  struct dev_dma_rq_s* rq)
 {

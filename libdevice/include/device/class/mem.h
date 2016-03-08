@@ -281,6 +281,7 @@ DRIVER_CLASS_TYPES(DRIVER_CLASS_MEM, mem,
 
 /** Synchronous memory device operation function. This function use a
     busy wait loop during the request. @see dev_mem_wait_op */
+BUSY_WAITING_FUNCTION
 config_depend_inline(CONFIG_DEVICE_MEM,
 error_t dev_mem_spin_op(struct device_mem_s *accessor,
                         struct dev_mem_rq_s *rq),

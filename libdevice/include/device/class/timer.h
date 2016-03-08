@@ -522,6 +522,7 @@ error_t dev_timer_wait_delay(struct device_timer_s *accessor,
     requested delay is greater than half the maximum timer value
     because counter overlap can not be handled properly in this
     case. */
+BUSY_WAITING_FUNCTION
 config_depend(CONFIG_DEVICE_TIMER)
 error_t dev_timer_busy_wait_delay(struct device_timer_s *accessor, dev_timer_delay_t delay);
 

@@ -260,4 +260,10 @@ ALWAYS_INLINE void hexo_atomic_scope_check(char *scope_exited_cleanly)
 
 #endif
 
+#define BUSY_WAITING_FUNCTION                                           \
+  /*+ Use of a @url {https://en.wikipedia.org/wiki/Busy_waiting}        \
+    {busy-waiting} function is bad programming practice. @This should   \
+    be used for test purpose only. */                                   \
+  DEPRECATED("Use of a busy-waiting function")
+
 #endif /* HEXO_DECLS_H_ */

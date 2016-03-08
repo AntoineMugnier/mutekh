@@ -325,6 +325,7 @@ DRIVER_CLASS_TYPES(DRIVER_CLASS_CRYPTO, crypto,
     .f_request = prefix ## _request,                                \
   })
 
+BUSY_WAITING_FUNCTION
 config_depend_inline(CONFIG_DEVICE_CRYPTO,
 error_t
 dev_crypto_spin_op(struct device_crypto_s *accessor,

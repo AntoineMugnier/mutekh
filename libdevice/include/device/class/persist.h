@@ -256,6 +256,7 @@ DRIVER_CLASS_TYPES(DRIVER_CLASS_PERSIST, persist,
     .f_request = prefix ## _request,                              \
   })
 
+BUSY_WAITING_FUNCTION
 config_depend(CONFIG_DEVICE_PERSIST)
 inline error_t
 dev_persist_spin_op(struct device_persist_s *accessor,
