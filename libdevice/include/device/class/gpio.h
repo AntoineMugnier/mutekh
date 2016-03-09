@@ -363,9 +363,9 @@ error_t dev_gpio_wait_out(struct device_gpio_s *accessor, gpio_id_t id, bool_t x
   rq.type = DEV_GPIO_SET_OUTPUT;
   rq.output.set_mask = rq.output.clear_mask = p;
   dev_request_sched_init(&rq.base, &st);
-  DEVICE_OP(accessor, request, rq);
+  DEVICE_OP(accessor, request, &rq);
   dev_request_sched_wait(&st);
-  return rq->error;
+  return rq.error;
 })
 
 /** @This changes the mode of a single gpio pin relying on the
@@ -390,13 +390,13 @@ error_t dev_gpio_wait_mode(struct device_gpio_s *accessor, gpio_id_t id,
   struct dev_gpio_rq_s rq;
   struct dev_request_status_s st;
   rq.io_first = rq.io_last = id;
-  rq.type = DEV_GPIO_SET_MODE;
+  rq.type = DEV_GPIO_MODE;
   rq.mode.mask = dev_gpio_mask1;
   rq.mode.mode = mode;
   dev_request_sched_init(&rq.base, &st);
-  DEVICE_OP(accessor, request, rq);
+  DEVICE_OP(accessor, request, &rq);
   dev_request_sched_wait(&st);
-  return rq->error;
+  return rq.error;
 })
 
 /** @This reads the value of a single gpio pin relying on the
@@ -427,10 +427,10 @@ bool_t dev_gpio_wait_input(struct device_gpio_s *accessor, gpio_id_t id, error_t
   rq.type = DEV_GPIO_GET_INPUT;
   rq.input.data = x;
   dev_request_sched_init(&rq.base, &st);
-  DEVICE_OP(accessor, request, rq);
+  DEVICE_OP(accessor, request, &rq);
   dev_request_sched_wait(&st);
   if (err != NULL)
-    *err = rq->error;
+    *err = rq.error;
   return x[0] & 1;
 })
 
