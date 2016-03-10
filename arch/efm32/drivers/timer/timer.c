@@ -60,10 +60,9 @@ struct efm32_timer_private_s
   dev_request_pqueue_root_t queue;
 #endif
 
-#ifdef CONFIG_DEVICE_CLOCK
   struct dev_clock_sink_ep_s clk_ep;
+
   struct dev_freq_s freq;
-#endif
 
   enum dev_timer_capabilities_e cap:8;
   uint8_t prescaler:4;
@@ -393,20 +392,9 @@ static DEV_TIMER_CONFIG(efm32_timer_config)
 
   error_t err = 0;
 
-#ifndef CONFIG_DEVICE_CLOCK
-  if (cfg)
-    {
-      if (device_get_res_freq(accessor->dev, &cfg->freq, 0))
-        cfg->freq = DEV_FREQ_INVALID;
-    }
-#endif
-
   LOCK_SPIN_IRQ(&dev->lock);
 
-#ifdef CONFIG_DEVICE_CLOCK
-  if (cfg)
-    cfg->freq = pv->freq;
-#endif
+  cfg->freq = pv->freq;
 
   if (res)
     {
@@ -479,19 +467,14 @@ static DEV_INIT(efm32_timer_init)
   pv->cap = DEV_TIMER_CAP_STOPPABLE | DEV_TIMER_CAP_HIGHRES | DEV_TIMER_CAP_KEEPVALUE | DEV_TIMER_CAP_TICKLESS;
   dev->drv_pv = pv;
 
-#ifdef CONFIG_DEVICE_CLOCK
-  /* enable clock */
-  dev_clock_sink_init(dev, &pv->clk_ep, DEV_CLOCK_EP_SINK_NOTIFY |
-                      DEV_CLOCK_EP_POWER_CLOCK | DEV_CLOCK_EP_SINK_SYNC);
-
-  if (dev_clock_sink_link(&pv->clk_ep, 0, &pv->freq))
+  if (dev_drv_clock_init(dev, &pv->clk_ep, 0, DEV_CLOCK_EP_SINK_NOTIFY |
+                     DEV_CLOCK_EP_POWER_CLOCK | DEV_CLOCK_EP_SINK_SYNC, &pv->freq))
     goto err_mem;
 
 # ifdef CONFIG_DEVICE_CLOCK_VARFREQ
   if (pv->clk_ep.flags & DEV_CLOCK_EP_VARFREQ)
     pv->cap |= DEV_TIMER_CAP_VARFREQ | DEV_TIMER_CAP_CLKSKEW;
 # endif
-#endif
 
 #ifdef CONFIG_DEVICE_IRQ
   pv->cap |= DEV_TIMER_CAP_REQUEST;
@@ -539,9 +522,7 @@ static DEV_INIT(efm32_timer_init)
 
  err_clk:
 #ifdef CONFIG_DEVICE_IRQ
-# ifdef CONFIG_DEVICE_CLOCK
-  dev_clock_sink_unlink(&pv->clk_ep);
-# endif
+  dev_drv_clock_cleanup(dev, &pv->clk_ep);
 #endif
  err_mem:
   mem_free(pv);
@@ -552,9 +533,7 @@ static DEV_CLEANUP(efm32_timer_cleanup)
 {
   struct efm32_timer_private_s *pv = dev->drv_pv;
 
-#ifdef CONFIG_DEVICE_CLOCK
-  dev_clock_sink_unlink(&pv->clk_ep);
-#endif
+  dev_drv_clock_cleanup(dev, &pv->clk_ep);
 
 #ifdef CONFIG_DEVICE_IRQ
   dev_request_pqueue_destroy(&pv->queue);

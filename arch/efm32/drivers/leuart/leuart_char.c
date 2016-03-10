@@ -75,9 +75,7 @@ struct efm32_leuart_context_s
 #endif
   struct dev_freq_s             freq;
 
-#ifdef CONFIG_DEVICE_CLOCK
   struct dev_clock_sink_ep_s    clk_ep;
-#endif
 };
 
 #if CONFIG_DEVICE_START_LOG2INC < 2
@@ -402,17 +400,9 @@ static DEV_INIT(efm32_leuart_init)
   if (device_res_get_uint(dev, DEV_RES_MEM, 0, &pv->addr, NULL))
     goto err_mem;
 
-#ifdef CONFIG_DEVICE_CLOCK
-  /* enable clock */
-  dev_clock_sink_init(dev, &pv->clk_ep, DEV_CLOCK_EP_SINK_NOTIFY |
-                      DEV_CLOCK_EP_POWER_CLOCK | DEV_CLOCK_EP_SINK_SYNC);
-
-  if (dev_clock_sink_link(&pv->clk_ep, 0, &pv->freq))
+  if (dev_drv_clock_init(dev, &pv->clk_ep, 0, DEV_CLOCK_EP_SINK_NOTIFY |
+                     DEV_CLOCK_EP_POWER_CLOCK | DEV_CLOCK_EP_SINK_SYNC, &pv->freq))
     goto err_mem;
-#else
-  if (device_get_res_freq(dev, &pv->freq, 0))
-    goto err_mem;
-#endif
 
   /* wait for current TX to complete */
   if (cpu_mem_read_32(pv->addr + EFM32_LEUART_STATUS_ADDR)
@@ -500,9 +490,7 @@ static DEV_INIT(efm32_leuart_init)
   dev_request_queue_destroy(&pv->write_q);
 #endif
  err_clk:
-#ifdef CONFIG_DEVICE_CLOCK
-  dev_clock_sink_unlink(&pv->clk_ep);
-#endif
+  dev_drv_clock_cleanup(dev, &pv->clk_ep);
  err_mem:
   mem_free(pv);
   return -1;
@@ -523,9 +511,7 @@ DEV_CLEANUP(efm32_leuart_cleanup)
   efm32_leuart_write_reg(pv->addr, EFM32_LEUART_CMD_ADDR,
                          endian_le32(EFM32_LEUART_CMD_RXDIS | EFM32_LEUART_CMD_TXDIS));
 
-#ifdef CONFIG_DEVICE_CLOCK
-  dev_clock_sink_unlink(&pv->clk_ep);
-#endif
+  dev_drv_clock_cleanup(dev, &pv->clk_ep);
 
 #if CONFIG_DRIVER_EFM32_LEUART_SWFIFO > 0
 # ifdef CONFIG_DEVICE_IRQ

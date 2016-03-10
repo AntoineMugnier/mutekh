@@ -75,9 +75,7 @@ struct efm32_usart_context_s
 #endif
   struct dev_freq_s             freq;
 
-#ifdef CONFIG_DEVICE_CLOCK
   struct dev_clock_sink_ep_s    clk_ep;
-#endif
 };
 
 static uint32_t efm32_usart_char_bauds(struct device_s *dev, uint32_t bauds)
@@ -429,17 +427,9 @@ static DEV_INIT(efm32_usart_char_init)
     goto err_fifo;
 #endif
 
-#ifdef CONFIG_DEVICE_CLOCK
-  /* enable clock */
-  dev_clock_sink_init(dev, &pv->clk_ep, DEV_CLOCK_EP_SINK_NOTIFY |
-                      DEV_CLOCK_EP_POWER_CLOCK | DEV_CLOCK_EP_SINK_SYNC);
-
-  if (dev_clock_sink_link(&pv->clk_ep, 0, &pv->freq))
+  if (dev_drv_clock_init(dev, &pv->clk_ep, 0, DEV_CLOCK_EP_SINK_NOTIFY |
+                     DEV_CLOCK_EP_POWER_CLOCK | DEV_CLOCK_EP_SINK_SYNC, &pv->freq))
     goto err_irq;
-#else
-  if (device_get_res_freq(dev, &pv->freq, 0))
-    goto err_irq;
-#endif
 
   /* wait for current TX to complete */
   if (cpu_mem_read_32(pv->addr + EFM32_USART_STATUS_ADDR)
@@ -522,9 +512,7 @@ DEV_CLEANUP(efm32_usart_char_cleanup)
   cpu_mem_write_32(pv->addr + EFM32_USART_CMD_ADDR,
                    endian_le32(EFM32_USART_CMD_RXDIS | EFM32_USART_CMD_TXDIS));
 
-#ifdef CONFIG_DEVICE_CLOCK
-  dev_clock_sink_unlink(&pv->clk_ep);
-#endif
+  dev_drv_clock_cleanup(dev, &pv->clk_ep);
 
 #if CONFIG_DRIVER_EFM32_USART_CHAR_SWFIFO > 0
 # ifdef CONFIG_DEVICE_IRQ

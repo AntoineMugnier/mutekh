@@ -79,9 +79,7 @@ struct efm32_aes_private_s
 {
   struct dev_request_dlqueue_s queue;
 
-#ifdef CONFIG_DEVICE_CLOCK
   struct dev_clock_sink_ep_s clk_ep;
-#endif
 
   struct efm32_aes_context_s actx[CONFIG_DRIVER_EFM32_AES_CTXCOUNT];
   struct dev_crypto_context_s *ctx[CONFIG_DRIVER_CRYPTO_SOFT_AES_CTXCOUNT];

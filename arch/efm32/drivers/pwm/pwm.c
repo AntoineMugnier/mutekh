@@ -58,9 +58,8 @@ struct efm32_pwm_private_s
   struct dev_freq_s         pwm_freq;
   struct dev_freq_ratio_s   duty[EFM32_PWM_CHANNEL_MAX];
   struct dev_freq_s         core_freq;
-#ifdef CONFIG_DEVICE_CLOCK
+
   struct dev_clock_sink_ep_s clk_ep;
-#endif
 };
 
 static error_t efm32_pwm_validate_parameter(struct device_pwm_s *pdev, struct dev_pwm_rq_s *rq)
@@ -329,17 +328,10 @@ static DEV_INIT(efm32_pwm_init)
   if (device_res_get_uint(dev, DEV_RES_MEM, 0, &pv->addr, NULL))
     return -ENOENT;
 
-#ifdef CONFIG_DEVICE_CLOCK
   /* enable clock */
-  dev_clock_sink_init(dev, &pv->clk_ep, DEV_CLOCK_EP_SINK_NOTIFY |
-                      DEV_CLOCK_EP_POWER_CLOCK | DEV_CLOCK_EP_SINK_SYNC);
-
-  if (dev_clock_sink_link(&pv->clk_ep, 0, &pv->core_freq))
+  if (dev_drv_clock_init(dev, &pv->clk_ep, 0, DEV_CLOCK_EP_SINK_NOTIFY |
+                     DEV_CLOCK_EP_POWER_CLOCK | DEV_CLOCK_EP_SINK_SYNC, &pv->core_freq))
     goto err_mem;
-#else
-  if (device_get_res_freq(dev, &pv->core_freq, 0))
-    goto err_mem;
-#endif
 
   /* Stop pwm and clear interrupt */
   cpu_mem_write_32(pv->addr + EFM32_TIMER_CMD_ADDR, endian_le32(EFM32_TIMER_CMD_STOP));
@@ -383,9 +375,7 @@ static DEV_INIT(efm32_pwm_init)
   return 0;
 
  err_clku:
-#ifdef CONFIG_DEVICE_CLOCK
-  dev_clock_sink_unlink(&pv->clk_ep);
-#endif
+  dev_drv_clock_cleanup(dev, &pv->clk_ep);
  err_mem:
   mem_free(pv);
   return -1;
@@ -398,9 +388,7 @@ static DEV_CLEANUP(efm32_pwm_cleanup)
   /* Stop pwm */
   cpu_mem_write_32(pv->addr + EFM32_TIMER_CMD_ADDR, endian_le32(EFM32_TIMER_CMD_STOP));
 
-#ifdef CONFIG_DEVICE_CLOCK
-  dev_clock_sink_unlink(&pv->clk_ep);
-#endif
+  dev_drv_clock_cleanup(dev, &pv->clk_ep);
 
   mem_free(pv);
 

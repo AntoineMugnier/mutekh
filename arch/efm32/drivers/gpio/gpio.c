@@ -56,9 +56,7 @@ struct efm32_gpio_private_s
   struct dev_irq_src_s src[2];
 #endif
 
-#ifdef CONFIG_DEVICE_CLOCK
   struct dev_clock_sink_ep_s    clk_ep;
-#endif
 };
 
 /* This function returns a 32 bits mask from a 8 bits value 
@@ -485,13 +483,8 @@ static DEV_INIT(efm32_gpio_init)
   assert(device_res_get_uint(dev, DEV_RES_MEM, 0, &addr, NULL) == 0 &&
          EFM32_GPIO_ADDR == addr);
 
-#ifdef CONFIG_DEVICE_CLOCK
-  /* enable clock */
-  dev_clock_sink_init(dev, &pv->clk_ep, DEV_CLOCK_EP_POWER_CLOCK | DEV_CLOCK_EP_SINK_SYNC);
-
-  if (dev_clock_sink_link(&pv->clk_ep, 0, NULL))
+  if (dev_drv_clock_init(dev, &pv->clk_ep, 0, DEV_CLOCK_EP_POWER_CLOCK | DEV_CLOCK_EP_SINK_SYNC, NULL))
     goto err_mem;
-#endif
 
 #ifdef CONFIG_DRIVER_EFM32_GPIO_ICU
   device_irq_source_init(dev, pv->src, GPIO_SRC_IRQ_COUNT,
@@ -513,9 +506,7 @@ static DEV_INIT(efm32_gpio_init)
   device_irq_source_unlink(dev, pv->src, GPIO_SRC_IRQ_COUNT);
 #endif
  err_clk:
-#ifdef CONFIG_DEVICE_CLOCK
-  dev_clock_sink_unlink(&pv->clk_ep);
-#endif
+  dev_drv_clock_cleanup(dev, &pv->clk_ep);
  err_mem:
   mem_free(pv);
   return -1;
@@ -531,9 +522,7 @@ static DEV_CLEANUP(efm32_gpio_cleanup)
   device_irq_source_unlink(dev, pv->src, GPIO_SRC_IRQ_COUNT);
 #endif
 
-#ifdef CONFIG_DEVICE_CLOCK
-  dev_clock_sink_unlink(&pv->clk_ep);
-#endif
+  dev_drv_clock_cleanup(dev, &pv->clk_ep);
 
   mem_free(pv);
 

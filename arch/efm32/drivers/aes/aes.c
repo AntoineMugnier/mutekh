@@ -288,17 +288,12 @@ static DEV_INIT(efm32_aes_init)
 
   dev_request_delayed_init(&pv->queue, &efm32_aes_process);
 
-#ifdef CONFIG_DEVICE_CLOCK
-  /* enable clock */
-  dev_clock_sink_init(dev, &pv->clk_ep, DEV_CLOCK_EP_SINK_SYNC
+  if (dev_drv_clock_init(dev, &pv->clk_ep, 0, DEV_CLOCK_EP_SINK_SYNC
 # ifndef CONFIG_DEVICE_CLOCK_GATING
                       | DEV_CLOCK_EP_POWER_CLOCK
 # endif
-                      );
-
-  if (dev_clock_sink_link(&pv->clk_ep, 0, NULL))
+                     , NULL))
     goto err_mem;
-#endif
 
   return 0;
 
@@ -316,9 +311,7 @@ static DEV_CLEANUP(efm32_aes_cleanup)
 
   dev_request_delayed_cleanup(&pv->queue);
 
-#ifdef CONFIG_DEVICE_CLOCK
-  dev_clock_sink_unlink(&pv->clk_ep);
-#endif
+  dev_drv_clock_cleanup(dev, &pv->clk_ep);
 
   mem_free(pv);
 

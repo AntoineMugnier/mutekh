@@ -76,9 +76,7 @@ struct efm32_i2c_context_s
   /* Core frequency */
   struct dev_freq_s freq;
 
-#ifdef CONFIG_DEVICE_CLOCK
   struct dev_clock_sink_ep_s clk_ep;
-#endif
 };
 
 static void efm32_i2c_update_rate(struct efm32_i2c_context_s *pv)
@@ -403,17 +401,10 @@ static DEV_INIT(efm32_i2c_init)
 
   dev->drv_pv = pv;
 
-#ifdef CONFIG_DEVICE_CLOCK
   /* enable clock */
-  dev_clock_sink_init(dev, &pv->clk_ep, DEV_CLOCK_EP_SINK_NOTIFY |
-                      DEV_CLOCK_EP_POWER_CLOCK | DEV_CLOCK_EP_SINK_SYNC);
-
-  if (dev_clock_sink_link(&pv->clk_ep, 0, &pv->freq))
+  if (dev_drv_clock_init(dev, &pv->clk_ep, 0, DEV_CLOCK_EP_SINK_NOTIFY |
+                     DEV_CLOCK_EP_POWER_CLOCK | DEV_CLOCK_EP_SINK_SYNC, &pv->freq))
     goto err_mem;
-#else
-  if (device_get_res_freq(dev, &pv->freq, 0))
-    goto err_mem;
-#endif
 
   dev_request_queue_init(&pv->queue);
 
@@ -467,9 +458,7 @@ static DEV_INIT(efm32_i2c_init)
   return 0;
 
  err_clk:
-#ifdef CONFIG_DEVICE_CLOCK
-  dev_clock_sink_unlink(&pv->clk_ep);
-#endif
+  dev_drv_clock_cleanup(dev, &pv->clk_ep);
  err_mem:
   mem_free(pv);
   return -EINVAL;
@@ -486,9 +475,7 @@ static DEV_CLEANUP(efm32_i2c_cleanup)
   cpu_mem_write_32(pv->addr + EFM32_I2C_IEN_ADDR, 0);  
   cpu_mem_write_32(pv->addr + EFM32_I2C_IF_ADDR, 0);  
 
-#ifdef CONFIG_DEVICE_CLOCK
-  dev_clock_sink_unlink(&pv->clk_ep);
-#endif
+  dev_drv_clock_cleanup(dev, &pv->clk_ep);
 
   device_irq_source_unlink(dev, &pv->irq_ep, 1);
 

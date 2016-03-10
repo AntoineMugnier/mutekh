@@ -48,9 +48,8 @@ struct efm32_dma_context
 
   struct dev_irq_src_s          irq_ep;
   dev_request_queue_root_t      queue[CONFIG_DRIVER_EFM32_DMA_CHANNEL_COUNT];
-#ifdef CONFIG_DEVICE_CLOCK
   struct dev_clock_sink_ep_s    clk_ep;
-#endif
+
   /* lock for reentrant kroutine */
   uint16_t                      busy;
   /* Waiting and running interleaved request */
@@ -421,13 +420,8 @@ static DEV_INIT(efm32_dma_init)
   if (device_res_get_uint(dev, DEV_RES_MEM, 0, &pv->addr, NULL))
     goto err_mem;
 
-#ifdef CONFIG_DEVICE_CLOCK
-  /* enable clock */
-  dev_clock_sink_init(dev, &pv->clk_ep, DEV_CLOCK_EP_POWER_CLOCK | DEV_CLOCK_EP_SINK_SYNC);
-
-  if (dev_clock_sink_link(&pv->clk_ep, 0, NULL))
+  if (dev_drv_clock_init(dev, &pv->clk_ep, 0, DEV_CLOCK_EP_POWER_CLOCK | DEV_CLOCK_EP_SINK_SYNC, NULL))
     goto err_mem;
-#endif
 
   /* Check number of channel */
 
@@ -483,9 +477,7 @@ static DEV_INIT(efm32_dma_init)
  err_prim:
   mem_free(pv->primary);
  err_clk:
-#ifdef CONFIG_DEVICE_CLOCK
-  dev_clock_sink_unlink(&pv->clk_ep);
-#endif
+  dev_drv_clock_cleanup(dev, &pv->clk_ep);
   err_mem:
   mem_free(pv);
   return -1;
@@ -497,9 +489,7 @@ static DEV_CLEANUP(efm32_dma_cleanup)
 
   device_irq_source_unlink(dev, &pv->irq_ep, 1);
 
-#ifdef CONFIG_DEVICE_CLOCK
-  dev_clock_sink_unlink(&pv->clk_ep);
-#endif
+  dev_drv_clock_cleanup(dev, &pv->clk_ep);
 
   for (uint8_t i = 0; i < CONFIG_DRIVER_EFM32_DMA_CHANNEL_COUNT; i++) 
     dev_request_queue_destroy(pv->queue + i);

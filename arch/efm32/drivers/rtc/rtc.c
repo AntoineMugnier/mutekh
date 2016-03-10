@@ -47,7 +47,9 @@ struct efm32_rtc_private_s
 {
   /* Timer address */
   uintptr_t addr;
+#ifdef CONFIG_DEVICE_CLOCK
   dev_timer_cfgrev_t rev;
+#endif
 #ifdef CONFIG_DEVICE_IRQ
   /* Timer Software value */
   uint32_t swvalue;
@@ -57,10 +59,8 @@ struct efm32_rtc_private_s
   dev_request_pqueue_root_t queue;
 #endif
 
-#ifdef CONFIG_DEVICE_CLOCK
   struct dev_clock_sink_ep_s clk_ep;
   struct dev_freq_s freq;
-#endif
 
   enum dev_timer_capabilities_e cap:8;
 };
@@ -276,9 +276,11 @@ static DEV_TIMER_REQUEST(efm32_rtc_request)
 
   LOCK_SPIN_IRQ(&dev->lock);
 
+#ifdef CONFIG_DEVICE_CLOCK
   if (rq->rev && rq->rev != pv->rev)
     err = -EAGAIN;
   else
+#endif
     {
       /* Start timer if needed */
       if (dev->start_count == 0)
@@ -381,20 +383,10 @@ static DEV_TIMER_CONFIG(efm32_rtc_config)
 
   error_t err = 0;
 
-#ifndef CONFIG_DEVICE_CLOCK
-  if (cfg)
-    {
-      if (device_get_res_freq(accessor->dev, &cfg->freq, 0))
-        cfg->freq = DEV_FREQ_INVALID;
-    }
-#endif
-
   LOCK_SPIN_IRQ(&dev->lock);
 
-#ifdef CONFIG_DEVICE_CLOCK
   if (cfg)
     cfg->freq = pv->freq;
-#endif
 
   if (res > 1)
     err = -ERANGE;
@@ -450,14 +442,12 @@ static DEV_INIT(efm32_rtc_init)
   pv->addr = addr;
   dev->drv_pv = pv;
 
-#ifdef CONFIG_DEVICE_CLOCK
   /* enable clock */
-  dev_clock_sink_init(dev, &pv->clk_ep, DEV_CLOCK_EP_SINK_NOTIFY |
-                      DEV_CLOCK_EP_POWER_CLOCK | DEV_CLOCK_EP_SINK_SYNC);
-
-  if (dev_clock_sink_link(&pv->clk_ep, 0, &pv->freq))
+  if (dev_drv_clock_init(dev, &pv->clk_ep, 0, DEV_CLOCK_EP_SINK_NOTIFY |
+                     DEV_CLOCK_EP_POWER_CLOCK | DEV_CLOCK_EP_SINK_SYNC, &pv->freq))
     goto err_mem;
 
+#ifdef CONFIG_DEVICE_CLOCK
   pv->rev = 1;
 
 # ifdef CONFIG_DEVICE_CLOCK_VARFREQ
@@ -499,9 +489,7 @@ static DEV_INIT(efm32_rtc_init)
   return 0;
 
  err_clk:
-#ifdef CONFIG_DEVICE_CLOCK
-  dev_clock_sink_unlink(&pv->clk_ep);
-#endif
+  dev_drv_clock_cleanup(dev, &pv->clk_ep);
  err_mem:
   mem_free(pv);
   return -1;
@@ -511,9 +499,7 @@ static DEV_CLEANUP(efm32_rtc_cleanup)
 {
   struct efm32_rtc_private_s *pv = dev->drv_pv;
 
-#ifdef CONFIG_DEVICE_CLOCK
-  dev_clock_sink_unlink(&pv->clk_ep);
-#endif
+  dev_drv_clock_cleanup(dev, &pv->clk_ep);
 
 #ifdef CONFIG_DEVICE_IRQ
   dev_request_pqueue_destroy(&pv->queue);
