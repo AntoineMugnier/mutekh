@@ -46,6 +46,23 @@ DEV_DECLARE_STATIC(cpu_dev, "cpu", DEVICE_FLAG_CPU, arm32m_drv,
 
 #include <device/class/uart.h>
 
+/* USART1. */
+DEV_DECLARE_STATIC(usart1_dev, "uart1", 0, stm32_usart_drv,
+                   DEV_STATIC_RES_MEM(STM32_USART1_ADDR, STM32_USART1_ADDR + STM32_USART1_SIZE),
+
+                   DEV_STATIC_RES_FREQ(72000000, 1),
+
+                   DEV_STATIC_RES_DEV_ICU("/cpu"),
+                   DEV_STATIC_RES_IRQ(0, STM32_IRQ_USART1, DEV_IRQ_SENSE_HIGH_LEVEL, 0, 0x1),
+
+                   DEV_STATIC_RES_DEV_IOMUX("/gpio"),
+                   DEV_STATIC_RES_IOMUX("tx", 0, /* PA9 */ 0*16+9, 0 /* no remap */, 0),
+                   DEV_STATIC_RES_IOMUX("rx", 0, /* PA10 */ 0*16+10, 0 /* no remap */, 0),
+
+                   /* default configuration. */
+                   DEV_STATIC_RES_UART(115200, 8, DEV_UART_PARITY_NONE, 1, 0, 0)
+                   );
+
 /* USART2. */
 DEV_DECLARE_STATIC(usart2_dev, "uart2", 0, stm32_usart_drv,
                    DEV_STATIC_RES_MEM(STM32_USART2_ADDR, STM32_USART2_ADDR + STM32_USART2_SIZE),
