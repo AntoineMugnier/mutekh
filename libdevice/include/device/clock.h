@@ -34,35 +34,52 @@
    Physical clock and power signal connections points are represented
    in the software by source end-point (@ref dev_clock_src_ep_s) and
    sink end-point (@ref dev_clock_sink_ep_s) objects allocated in
-   device private data by the drivers.
+   device private data by the drivers. The former are handled by clock
+   and power provider devices while the latter are handled by clock
+   and power consumer devices.
 
    This API provides gating, throttling and frequency notification
    features only for the clock and power signals associated to the
    sink end-points owned by the consumer device.
 
-   These are linked together dynamically when the device drivers which
-   own the sink end-point calls the @ref dev_clock_sink_link helper on
+   @section {End-points setup in device drivers}
+
+   End-points are linked together dynamically when the device drivers
+   which own the sink end-point calls the @ref dev_drv_clock_init on
    initialization. End-point links will match actual hardware
    connections as described using @ref DEV_RES_CLK_SRC device
-   resources attached to the consumer device.
+   resources attached to the clock consumer device.
+
+   Depending on the flags passed to the function, some clock and power
+   signals may be enabled on initialization (see below). Moreover the
+   device driver may learn the current frequency of the input clock
+   signal.
+
+   In order to simplify drivers code, an empty @ref dev_clock_src_ep_s
+   structure along with dummy implementations of the @ref
+   dev_drv_clock_init and the @ref dev_drv_clock_cleanup functions are
+   also available when the @ref #CONFIG_DEVICE_CLOCK token is not
+   defined.
+
+   @csee dev_clock_sink_link
+   @csee dev_clock_sink_unlink
+   @end section
+
+   @section {Enabling clock and power signals}
 
    Depending on the hardware, some gates may only be enabled
    asynchronously. In this case, the device driver will have to handle
-   delayed gate enabling events, including on end-point linking.
-
-   Unlike sink end-point which may belong to any kind of device,
-   source end-points are owned by clock provider devices which
-   implement the @ref DRIVER_CLASS_CMU driver API defined in @ref
-   {@device/class/cmu.h}.
+   delayed gate enabling events. This also applies when signals
+   are enabled at link time (on driver initialization).
 
    Once linked, the sink end-point owned by the driver of the consumer
    device can be used in various ways:
 
-   @list
-   @item When @ref #CONFIG_DEVICE_CLOCK_GATING is defined, clock and
-   power signals gating can be requested by calling the @ref
-   dev_clock_sink_gate function. In the other case, gates are left
-   enabled until the end-point is unlinked.
+   @list @item When @ref #CONFIG_DEVICE_CLOCK_GATING is defined, clock
+   and power signals gating can be requested by calling the @ref
+   dev_clock_sink_gate function. In the other case, gates can only be
+   enabled at end-point link time and are left enabled until the
+   end-point is unlinked.
 
    @item When @ref #CONFIG_DEVICE_CLOCK_THROTTLE is defined,
    predefined clock throttling modes can be advised by calling the
@@ -75,8 +92,18 @@
    used. This function is useful when the only prescaler available is
    on the clock manager side, for instance for the baud rate generator
    of an UART.
-
    @end list
+
+   @end section
+
+   @section {Source end-points}
+
+   Unlike sink end-points which may belong to any kind of device,
+   source end-points are owned by clock provider devices which
+   implement the @ref DRIVER_CLASS_CMU driver API defined in @ref
+   {@device/class/cmu.h}.
+
+   @end section
 */
 
 #ifndef __DEVICE_CLOCK_H__
@@ -87,6 +114,7 @@
 #include <device/device.h>
 #include <device/driver.h>
 #include <device/types.h>
+#include <device/resources.h>
 
 /* forward declaration. */
 struct dev_clock_notify_s;
@@ -259,9 +287,13 @@ typedef DEV_CLOCK_SRC_SETUP(dev_clock_src_setup_t);
     internal clock tree node which can be used as a connection point
     from the provider device to an external consumer device.
 
+    When @ref #CONFIG_DEVICE_CLOCK is not defined, this structure
+    contains no fields.
+
     @see dev_clock_sink_ep_s */
 struct dev_clock_src_ep_s
 {
+#ifdef CONFIG_DEVICE_CLOCK
   /** pointer to associated clock/power provider */
   struct device_s         *dev;
 
@@ -272,14 +304,15 @@ struct dev_clock_src_ep_s
       signal provider device. */
   dev_clock_src_setup_t     *f_setup;
 
-#ifdef CONFIG_DEVICE_CLOCK_VARFREQ
+# ifdef CONFIG_DEVICE_CLOCK_VARFREQ
   /** @internal number of sink endpoints which currently expect to have a
       frequency change notification. */
   uint8_t                notify_count;
-#endif
+# endif
 
   /** end-point flags */
   enum dev_clock_ep_flags_e BITFIELD(flags,8);
+#endif
 };
 
 /** Clock and power signal sink end-point structure. Sink
@@ -290,30 +323,35 @@ struct dev_clock_src_ep_s
     internal clock tree node which can be used as an external clock
     source.
 
+    When @ref #CONFIG_DEVICE_CLOCK is not defined, this structure
+    contains no fields.
+
     @see dev_clock_src_ep_s */
 struct dev_clock_sink_ep_s
 {
+#ifdef CONFIG_DEVICE_CLOCK
   /** pointer to associated clock/power consumer */
   struct device_s *dev;
 
   /** @internal pointer to linked source ep in clock provider device */
   struct dev_clock_src_ep_s *src;
 
-#ifdef CONFIG_DEVICE_CLOCK_SHARING
+# ifdef CONFIG_DEVICE_CLOCK_SHARING
   /** @internal pointer to sibling sink ep in device sharing the same clock signal */
   struct dev_clock_sink_ep_s *next;
-#endif
+# endif
 
-#ifdef CONFIG_DEVICE_CLOCK_THROTTLE
+# ifdef CONFIG_DEVICE_CLOCK_THROTTLE
   /** @internal lookup table used to convert between device driver
       specific mode id to bit position in resource mode mask */
   uint32_t BITFIELD(mode_ids, CONFIG_DEVICE_CLOCK_MODES * CONFIG_DEVICE_CLOCK_MASKB);
   /** @internal bit index of currently selected mode in resource mode mask */
   uint32_t BITFIELD(mode, CONFIG_DEVICE_CLOCK_MASKB);
-#endif
+# endif
 
   /** end-point flags */
   enum dev_clock_ep_flags_e BITFIELD(flags,8);
+#endif
 };
 
 
@@ -415,8 +453,7 @@ void dev_clock_sink_init(struct device_s *dev,
     current clock tree multiplexers and scalers configuration, no
     matter if the clock gate is currently enabled. If the clock
     provider does not support reporting frequency, a @ref DEV_RES_FREQ
-    resource entry is searched. If none are found, the function still
-    succeed but the passed @tt freq object is not modified.
+    resource entry is searched. If none are found, an error is returned.
 
     When @ref #CONFIG_DEVICE_CLOCK_VARFREQ is defined, and the @ref
     DEV_CLOCK_EP_SINK_NOTIFY flag is set, any subsequent clock
@@ -427,9 +464,48 @@ error_t dev_clock_sink_link(struct dev_clock_sink_ep_s *sink,
                             uint_fast8_t id, struct dev_freq_s *freq);
 
 /** @This unlink a clock sink end-point. Some gates on the source
-    end-points will be disabled as needed. */
+    end-points will be disabled as needed. @see dev_drv_clock_cleanup */
 config_depend(CONFIG_DEVICE_CLOCK)
 void dev_clock_sink_unlink(struct dev_clock_sink_ep_s *sink);
+
+/** This helper function may be called from the device driver
+    initialization function. When @ref #CONFIG_DEVICE_CLOCK is defined
+    It takes care of calling @ref dev_clock_sink_init and @ref
+    dev_clock_sink_link. It forwards the return value of the latter.
+
+    When @ref #CONFIG_DEVICE_CLOCK is not defined and @tt is not NULL,
+    the frequency is searched in the device resources.
+
+    @see dev_drv_clock_cleanup */
+ALWAYS_INLINE error_t
+dev_drv_clock_init(struct device_s *dev,
+                   struct dev_clock_sink_ep_s *sink, uint_fast8_t id,
+                   enum dev_clock_ep_flags_e flags, struct dev_freq_s *freq)
+{
+#ifdef CONFIG_DEVICE_CLOCK
+  /* enable clock */
+  dev_clock_sink_init(dev, sink, flags);
+
+  return dev_clock_sink_link(sink, id, freq);
+#else
+  if (freq == NULL)
+    return 0;
+  return device_get_res_freq(dev, freq, id);
+#endif
+}
+
+/** This helper function may be called from the device driver
+    initialization and cleanup functions. When @ref
+    #CONFIG_DEVICE_CLOCK is defined, @ref dev_clock_sink_unlink is
+    called. */
+ALWAYS_INLINE void
+dev_drv_clock_cleanup(struct device_s *dev,
+                      struct dev_clock_sink_ep_s *sink)
+{
+#ifdef CONFIG_DEVICE_CLOCK
+  dev_clock_sink_unlink(sink);
+#endif
+}
 
 /** @This adds a clock end-point link in the device resources.
 

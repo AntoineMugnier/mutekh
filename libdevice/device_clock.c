@@ -248,7 +248,6 @@ error_t dev_clock_sink_link(struct dev_clock_sink_ep_s *sink,
             }
 
           struct device_cmu_s cmu;
-          struct device_s *cmu_dev = cmu.dev;
 
           done = 1;
           if (device_get_accessor_by_path(&cmu, &dev->node, r->u.clock_src.src, DRIVER_CLASS_CMU))
@@ -260,15 +259,34 @@ error_t dev_clock_sink_link(struct dev_clock_sink_ep_s *sink,
           struct dev_cmu_node_info_s info;
           enum dev_cmu_node_info_e mask = DEV_CLOCK_INFO_SRC;
 
-          LOCK_SPIN_IRQ(&cmu_dev->lock);
+          if (freq != NULL)
+            mask |= DEV_CLOCK_INFO_FREQ | DEV_CLOCK_INFO_ACCURACY;
+
+          LOCK_SPIN_IRQ(&cmu.dev->lock);
 
           if (DEVICE_OP(&cmu, node_info, r->u.clock_src.src_ep, &mask, &info) ||
               !(mask & DEV_CLOCK_INFO_SRC))
             {
               printk("device: clock provider %p does not have a source end-point with node id %u.\n",
-                     cmu_dev, r->u.clock_src.src_ep);
+                     cmu.dev, r->u.clock_src.src_ep);
               err = -EINVAL;
               goto unlock;
+            }
+
+          if (freq != NULL)
+            {
+              if (mask & DEV_CLOCK_INFO_FREQ)
+                {
+                  *freq = info.freq;
+                  if (!(mask & DEV_CLOCK_INFO_ACCURACY))
+                    freq->acc_e = 0;
+                }
+              else if (device_get_res_freq(dev, freq, id))
+                {
+                  printk("device: unable to get frequency %u for device %p.\n", id, dev);
+                  err = -EINVAL;
+                  goto unlock;
+                }
             }
 
           struct dev_clock_src_ep_s  *src = info.src;
@@ -285,15 +303,6 @@ error_t dev_clock_sink_link(struct dev_clock_sink_ep_s *sink,
                   src->notify_count++ == 0)
                 src->f_setup(src, DEV_CLOCK_SETUP_NOTIFY, NULL);
 #endif
-              if (freq != NULL)
-                {
-                  mask = DEV_CLOCK_INFO_FREQ | DEV_CLOCK_INFO_ACCURACY;
-                  if (DEVICE_OP(&cmu, node_info, r->u.clock_src.src_ep, &mask, &info) ||
-                      !(mask & DEV_CLOCK_INFO_FREQ))
-                    device_get_res_freq(dev, freq, id);
-                  else
-                    *freq = info.freq;
-                }
 
               if (~src->flags & sink->flags & DEV_CLOCK_EP_ANY)
                 {
@@ -303,7 +312,7 @@ error_t dev_clock_sink_link(struct dev_clock_sink_ep_s *sink,
             }
 
           unlock:;
-          LOCK_RELEASE_IRQ(&cmu_dev->lock);
+          LOCK_RELEASE_IRQ(&cmu.dev->lock);
 
           device_put_accessor(&cmu);
           break;
