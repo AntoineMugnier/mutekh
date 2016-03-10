@@ -37,7 +37,11 @@
 
 DEV_DECLARE_STATIC(cpu_dev, "cpu", DEVICE_FLAG_CPU, arm32m_drv,
                    DEV_STATIC_RES_ID(0, 0),
+# ifdef CONFIG_DEVICE_CLOCK
                    DEV_STATIC_RES_CLK_SRC("/recmu", EFM32_CLOCK_CPU, 0)
+# else
+                   DEV_STATIC_RES_FREQ(14000000, 1),
+# endif
                    );
 
 #endif
@@ -81,7 +85,9 @@ DEV_DECLARE_STATIC(msc_dev, "mem", 0, efm32_msc_drv,
 
 DEV_DECLARE_STATIC(dma_dev, "dma", 0, efm32_dma_drv,
                    DEV_STATIC_RES_MEM(0x400c2000, 0x400c4000),
+# ifdef CONFIG_DEVICE_CLOCK
                    DEV_STATIC_RES_CLK_SRC("/recmu", EFM32_CLOCK_DMA, 0),
+# endif
 
                    DEV_STATIC_RES_DEV_ICU("/cpu"),
                    DEV_STATIC_RES_IRQ(0, EFM32_IRQ_DMA, DEV_IRQ_SENSE_RISING_EDGE, 0, 1)
@@ -93,7 +99,11 @@ DEV_DECLARE_STATIC(dma_dev, "dma", 0, efm32_dma_drv,
 
 DEV_DECLARE_STATIC(usart1_dev, "spi1", 0, efm32_usart_spi_drv,
                    DEV_STATIC_RES_MEM(0x4000c400, 0x4000c800),
+# ifdef CONFIG_DEVICE_CLOCK
                    DEV_STATIC_RES_CLK_SRC("/recmu", EFM32_CLOCK_USART1, 0),
+# else
+                   DEV_STATIC_RES_FREQ(14000000, 1),
+# endif
 
                    DEV_STATIC_RES_DEV_ICU("/cpu"),
                    DEV_STATIC_RES_IRQ(0, EFM32_IRQ_USART1_RX, DEV_IRQ_SENSE_RISING_EDGE, 0, 1),
@@ -120,7 +130,11 @@ DEV_DECLARE_STATIC(usart1_dev, "spi1", 0, efm32_usart_spi_drv,
 
 DEV_DECLARE_STATIC(usart1_dev, "uart1", 0, efm32_usart_drv,
                    DEV_STATIC_RES_MEM(0x4000c400, 0x4000c800),
+# ifdef CONFIG_DEVICE_CLOCK
                    DEV_STATIC_RES_CLK_SRC("/recmu", EFM32_CLOCK_USART1, 0),
+# else
+                   DEV_STATIC_RES_FREQ(14000000, 1),
+# endif
 
                    DEV_STATIC_RES_DEV_ICU("/cpu"),
                    DEV_STATIC_RES_IRQ(0, EFM32_IRQ_USART1_RX, DEV_IRQ_SENSE_RISING_EDGE, 0, 1),
@@ -137,9 +151,13 @@ DEV_DECLARE_STATIC(usart1_dev, "uart1", 0, efm32_usart_drv,
 
 #ifdef CONFIG_DRIVER_EFM32_LEUART_CHAR
 
-DEV_DECLARE_STATIC(leuart0_dev, "uart0", 0, efm32_leuart_drv,
+DEV_DECLARE_STATIC(leuart0_dev, "leuart0", 0, efm32_leuart_drv,
                    DEV_STATIC_RES_MEM(0x40084000, 0x40084400),
+# ifdef CONFIG_DEVICE_CLOCK
                    DEV_STATIC_RES_CLK_SRC("/recmu", EFM32_CLOCK_LEUART0, 0),
+# else
+                   DEV_STATIC_RES_FREQ(32768, 1),
+# endif
 
                    DEV_STATIC_RES_DEV_ICU("/cpu"),
                    DEV_STATIC_RES_IRQ(0, EFM32_IRQ_LEUART0, DEV_IRQ_SENSE_RISING_EDGE, 0, 1),
@@ -157,7 +175,11 @@ DEV_DECLARE_STATIC(leuart0_dev, "uart0", 0, efm32_leuart_drv,
 
 DEV_DECLARE_STATIC(timer0_dev, "timer0", 0, efm32_timer_drv,
                    DEV_STATIC_RES_MEM(0x40010000, 0x40010400),
+# ifdef CONFIG_DEVICE_CLOCK
                    DEV_STATIC_RES_CLK_SRC("/recmu", EFM32_CLOCK_TIMER0, 0),
+# else
+                   DEV_STATIC_RES_FREQ(14000000, 1),
+# endif
 
                    DEV_STATIC_RES_DEV_ICU("/cpu"),
                    DEV_STATIC_RES_IRQ(0, EFM32_IRQ_TIMER0, DEV_IRQ_SENSE_RISING_EDGE, 0, 1),
@@ -171,7 +193,11 @@ DEV_DECLARE_STATIC(timer0_dev, "timer0", 0, efm32_timer_drv,
 
 DEV_DECLARE_STATIC(rtc_dev, "rtc", 0, efm32_rtc_drv,
                    DEV_STATIC_RES_MEM(0x40080000, 0x40080400),
+# ifdef CONFIG_DEVICE_CLOCK
                    DEV_STATIC_RES_CLK_SRC("/recmu", EFM32_CLOCK_RTC, 0),
+# else
+                   DEV_STATIC_RES_FREQ(32768, 1),
+# endif
 
                    DEV_STATIC_RES_DEV_ICU("/cpu"),
                    DEV_STATIC_RES_IRQ(0, EFM32_IRQ_RTC, DEV_IRQ_SENSE_RISING_EDGE, 0, 1),
@@ -184,7 +210,9 @@ DEV_DECLARE_STATIC(rtc_dev, "rtc", 0, efm32_rtc_drv,
 
 DEV_DECLARE_STATIC(gpio_dev, "gpio", 0, efm32_gpio_drv,
                    DEV_STATIC_RES_MEM(0x40006000, 0x40007000),
+# ifdef CONFIG_DEVICE_CLOCK
                    DEV_STATIC_RES_CLK_SRC("/recmu", EFM32_CLOCK_GPIO, 0),
+#endif
 
                    DEV_STATIC_RES_DEV_ICU("/cpu"),
                    DEV_STATIC_RES_IRQ(0, EFM32_IRQ_GPIO_EVEN, DEV_IRQ_SENSE_RISING_EDGE, 0, 1),
@@ -198,7 +226,9 @@ DEV_DECLARE_STATIC(gpio_dev, "gpio", 0, efm32_gpio_drv,
 
 DEV_DECLARE_STATIC(aes_dev, "aes", 0, efm32_aes_drv,
                    DEV_STATIC_RES_MEM(0x400e0000, 0x400e0400),
+# ifdef CONFIG_DEVICE_CLOCK
                    DEV_STATIC_RES_CLK_SRC("/recmu", EFM32_CLOCK_AES, 0),
+# endif
 
                    DEV_STATIC_RES_DEV_ICU("/cpu"),
                    DEV_STATIC_RES_IRQ(0, EFM32_IRQ_AES, DEV_IRQ_SENSE_RISING_EDGE, 0, 1)
