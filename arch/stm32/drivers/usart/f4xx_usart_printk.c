@@ -26,11 +26,12 @@
 
 #include <mutek/printk.h>
 
-#include <arch/stm32/f4xx_gpio.h>
-#include <arch/stm32/f4xx_rcc.h>
-#include <arch/stm32/memory_map.h>
+#include <arch/stm32/generic/usart.h>
 
-#include <arch/stm32/usart.h>
+#include <arch/stm32/f4/periph.h>
+#include <arch/stm32/f4/gpio.h>
+#include <arch/stm32/f4/rcc.h>
+
 
 extern uint32_t stm32f4xx_clock_freq_apb1;
 

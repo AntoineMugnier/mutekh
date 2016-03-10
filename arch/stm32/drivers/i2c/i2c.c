@@ -35,10 +35,7 @@
 #include <device/class/i2c.h>
 #include <device/class/iomux.h>
 
-#include <arch/stm32/memory_map.h>
-
-#include <arch/stm32/i2c.h>
-#include <arch/stm32/f4xx_rcc.h>
+#include <arch/stm32/generic/i2c.h>
 
 
 enum stm32_i2c_state_e

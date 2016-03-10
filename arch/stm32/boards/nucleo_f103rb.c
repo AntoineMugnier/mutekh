@@ -30,8 +30,8 @@
 # include <device/class/cmu.h>
 #endif
 
-#include <arch/stm32/memory_map.h>
-#include <arch/stm32/irq.h>
+#include <arch/stm32/f1/periph.h>
+#include <arch/stm32/f1/irq.h>
 
 #if defined(CONFIG_DRIVER_CPU_ARM32M)
 
@@ -130,8 +130,10 @@ DEV_DECLARE_STATIC(btn0_dev, "btn0", 0, push_button_drv,
 
 #include <hexo/endian.h>
 #include <hexo/iospace.h>
-#include <arch/stm32/f1xx_rcc.h>
+
 #include <mutek/startup.h>
+
+#include <arch/stm32/f1/rcc.h>
 
 #define __IO volatile
 

@@ -35,11 +35,12 @@
 #include <device/class/icu.h>
 #include <device/class/iomux.h>
 
-#include <arch/stm32/memory_map.h>
-#include <arch/stm32/f4xx_rcc.h>
-#include <arch/stm32/syscfg.h>
-#include <arch/stm32/f4xx_gpio.h>
-#include <arch/stm32/exti.h>
+#include <arch/stm32/generic/exti.h>
+#include <arch/stm32/generic/syscfg.h>
+
+#include <arch/stm32/f4/periph.h>
+#include <arch/stm32/f4/rcc.h>
+#include <arch/stm32/f4/gpio.h>
 
 
 #define STM32_GPIO_BANK_SIZE        16
