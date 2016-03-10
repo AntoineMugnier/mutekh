@@ -30,8 +30,8 @@
 # include <device/class/cmu.h>
 #endif
 
-#include <arch/stm32/memory_map.h>
-#include <arch/stm32/irq.h>
+#include <arch/stm32/f1/periph.h>
+#include <arch/stm32/f1/irq.h>
 
 #if defined(CONFIG_DRIVER_CPU_ARM32M)
 
@@ -45,6 +45,23 @@ DEV_DECLARE_STATIC(cpu_dev, "cpu", DEVICE_FLAG_CPU, arm32m_drv,
 #if defined(CONFIG_DRIVER_STM32_USART)
 
 #include <device/class/uart.h>
+
+/* USART1. */
+DEV_DECLARE_STATIC(usart1_dev, "uart1", 0, stm32_usart_drv,
+                   DEV_STATIC_RES_MEM(STM32_USART1_ADDR, STM32_USART1_ADDR + STM32_USART1_SIZE),
+
+                   DEV_STATIC_RES_FREQ(72000000, 1),
+
+                   DEV_STATIC_RES_DEV_ICU("/cpu"),
+                   DEV_STATIC_RES_IRQ(0, STM32_IRQ_USART1, DEV_IRQ_SENSE_HIGH_LEVEL, 0, 0x1),
+
+                   DEV_STATIC_RES_DEV_IOMUX("/gpio"),
+                   DEV_STATIC_RES_IOMUX("tx", 0, /* PA9 */ 0*16+9, 0 /* no remap */, 0),
+                   DEV_STATIC_RES_IOMUX("rx", 0, /* PA10 */ 0*16+10, 0 /* no remap */, 0),
+
+                   /* default configuration. */
+                   DEV_STATIC_RES_UART(115200, 8, DEV_UART_PARITY_NONE, 1, 0, 0)
+                   );
 
 /* USART2. */
 DEV_DECLARE_STATIC(usart2_dev, "uart2", 0, stm32_usart_drv,
@@ -113,8 +130,10 @@ DEV_DECLARE_STATIC(btn0_dev, "btn0", 0, push_button_drv,
 
 #include <hexo/endian.h>
 #include <hexo/iospace.h>
-#include <arch/stm32/f1xx_rcc.h>
+
 #include <mutek/startup.h>
+
+#include <arch/stm32/f1/rcc.h>
 
 #define __IO volatile
 

@@ -37,13 +37,7 @@
 #include <mutek/kroutine.h>
 #include <mutek/printk.h>
 
-#include <arch/stm32/f4xx_rcc.h>
-#include <arch/stm32/timer.h>
-#include <arch/stm32/memory_map.h>
-
-extern uint32_t stm32f4xx_clock_freq_ahb1;
-extern uint32_t stm32f4xx_clock_freq_apb1;
-extern uint32_t stm32f4xx_clock_freq_apb2;
+#include <arch/stm32/generic/timer.h>
 
 
 #define STM32_PWM_CHANNEL_MAX 4
@@ -276,48 +270,6 @@ error_t stm32_pwm_start_stop(struct device_s *dev,
   return -EBUSY;
 }
 
-static inline
-void stm32_pwm_clock_init(struct stm32_pwm_private_s *pv)
-{
-  switch (pv->addr)
-    {
-    default:
-      break;
-
-    case STM32_TIM1_ADDR:
-      do { uint32_t register _reg = endian_le32(cpu_mem_read_32(( ((((STM32_RCC_ADDR)))) + (STM32_RCC_APB2ENR_ADDR) ))); STM32_RCC_APB2ENR_TIM1EN_SET( (_reg), 1 ); cpu_mem_write_32( ( ((((STM32_RCC_ADDR)))) + (STM32_RCC_APB2ENR_ADDR) ), endian_le32(_reg) ); } while (0);
-      break;
-
-    case STM32_TIM2_ADDR:
-      do { uint32_t register _reg = endian_le32(cpu_mem_read_32(( ((((STM32_RCC_ADDR)))) + (STM32_RCC_APB1ENR_ADDR) ))); STM32_RCC_APB1ENR_TIM2EN_SET( (_reg), 1 ); cpu_mem_write_32( ( ((((STM32_RCC_ADDR)))) + (STM32_RCC_APB1ENR_ADDR) ), endian_le32(_reg) ); } while (0);
-      break;
-
-    case STM32_TIM3_ADDR:
-      do { uint32_t register _reg = endian_le32(cpu_mem_read_32(( ((((STM32_RCC_ADDR)))) + (STM32_RCC_APB1ENR_ADDR) ))); STM32_RCC_APB1ENR_TIM3EN_SET( (_reg), 1 ); cpu_mem_write_32( ( ((((STM32_RCC_ADDR)))) + (STM32_RCC_APB1ENR_ADDR) ), endian_le32(_reg) ); } while (0);
-      break;
-
-    case STM32_TIM4_ADDR:
-      do { uint32_t register _reg = endian_le32(cpu_mem_read_32(( ((((STM32_RCC_ADDR)))) + (STM32_RCC_APB1ENR_ADDR) ))); STM32_RCC_APB1ENR_TIM4EN_SET( (_reg), 1 ); cpu_mem_write_32( ( ((((STM32_RCC_ADDR)))) + (STM32_RCC_APB1ENR_ADDR) ), endian_le32(_reg) ); } while (0);
-      break;
-
-    case STM32_TIM5_ADDR:
-      do { uint32_t register _reg = endian_le32(cpu_mem_read_32(( ((((STM32_RCC_ADDR)))) + (STM32_RCC_APB1ENR_ADDR) ))); STM32_RCC_APB1ENR_TIM5EN_SET( (_reg), 1 ); cpu_mem_write_32( ( ((((STM32_RCC_ADDR)))) + (STM32_RCC_APB1ENR_ADDR) ), endian_le32(_reg) ); } while (0);
-      break;
-
-    case STM32_TIM9_ADDR:
-      do { uint32_t register _reg = endian_le32(cpu_mem_read_32(( ((((STM32_RCC_ADDR)))) + (STM32_RCC_APB2ENR_ADDR) ))); STM32_RCC_APB2ENR_TIM9EN_SET( (_reg), 1 ); cpu_mem_write_32( ( ((((STM32_RCC_ADDR)))) + (STM32_RCC_APB2ENR_ADDR) ), endian_le32(_reg) ); } while (0);
-      break;
-
-    case STM32_TIM10_ADDR:
-      do { uint32_t register _reg = endian_le32(cpu_mem_read_32(( ((((STM32_RCC_ADDR)))) + (STM32_RCC_APB2ENR_ADDR) ))); STM32_RCC_APB2ENR_TIM10EN_SET( (_reg), 1 ); cpu_mem_write_32( ( ((((STM32_RCC_ADDR)))) + (STM32_RCC_APB2ENR_ADDR) ), endian_le32(_reg) ); } while (0);
-      break;
-
-    case STM32_TIM11_ADDR:
-      do { uint32_t register _reg = endian_le32(cpu_mem_read_32(( ((((STM32_RCC_ADDR)))) + (STM32_RCC_APB2ENR_ADDR) ))); STM32_RCC_APB2ENR_TIM11EN_SET( (_reg), 1 ); cpu_mem_write_32( ( ((((STM32_RCC_ADDR)))) + (STM32_RCC_APB2ENR_ADDR) ), endian_le32(_reg) ); } while (0);
-      break;
-    }
-}
-
 /************************************************************************/
 
 static DEV_INIT(stm32_pwm_init);
@@ -344,31 +296,11 @@ DEV_INIT(stm32_pwm_init)
   if (device_res_get_uint(dev, DEV_RES_MEM, 0, &pv->addr, NULL))
     goto err_mem;
 
-  /* FIXME: Set channel count. */
-  switch (pv->addr)
-    {
-    default: break;
-
-    case STM32_TIM1_ADDR:
-    case STM32_TIM2_ADDR:
-    case STM32_TIM3_ADDR:
-    case STM32_TIM4_ADDR:
-    case STM32_TIM5_ADDR:
-      pv->chan_count = 4;
-      break;
-
-    case STM32_TIM9_ADDR:
-      pv->chan_count = 2;
-      break;
-
-    case STM32_TIM10_ADDR:
-    case STM32_TIM11_ADDR:
-      pv->chan_count = 1;
-      break;
-    }
-
-  /* FIXME: Setup clock gating. */
-  stm32_pwm_clock_init(pv);
+  struct dev_resource_s *r = device_res_get_from_name(dev, DEV_RES_UINT_PARAM, 0, "channel-count");
+  if (r)
+    pv->chan_count = r->u.uint_param.value;
+  else
+    goto err_mem;
 
   /* FIXME: core freq. */
   if (device_get_res_freq(dev, &pv->core_freq, 0))

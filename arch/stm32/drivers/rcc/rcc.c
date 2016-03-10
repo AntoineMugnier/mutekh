@@ -32,9 +32,8 @@
 #include <device/resources.h>
 #include <device/class/cmu.h>
 
-#include <arch/stm32/f4xx_rcc.h>
+#include <arch/stm32/f4/rcc.h>
 
-#include <arch/stm32/f4xx_memory_map.h>
 
 #define STM32_CLOCK_SRC_AHB     0
 #define STM32_CLOCK_SRC_APB1    1

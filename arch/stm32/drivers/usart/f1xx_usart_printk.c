@@ -27,11 +27,12 @@
 #include <mutek/printk.h>
 #include <mutek/startup.h>
 
-#include <arch/stm32/usart.h>
-#include <arch/stm32/f1xx_gpio.h>
-#include <arch/stm32/f1xx_rcc.h>
-#include <arch/stm32/memory_map.h>
-#include <arch/stm32/f1xx_remap.h>
+#include <arch/stm32/generic/usart.h>
+
+#include <arch/stm32/f1/periph.h>
+#include <arch/stm32/f1/gpio.h>
+#include <arch/stm32/f1/rcc.h>
+#include <arch/stm32/f1/remap.h>
 
 
 static inline void stm32_usart_tx_wait_ready()

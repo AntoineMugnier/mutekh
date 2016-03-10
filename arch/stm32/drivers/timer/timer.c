@@ -37,9 +37,7 @@
 #include <mutek/mem_alloc.h>
 #include <mutek/kroutine.h>
 
-#include <arch/stm32/f4xx_rcc.h>
-#include <arch/stm32/timer.h>
-#include <arch/stm32/memory_map.h>
+#include <arch/stm32/generic/timer.h>
 
 #define STM32_TIMER_HW_WIDTH(pv)    (pv)->hw_width
 #define STM32_TIMER_HW_MASK(pv)     ((1ULL << pv->hw_width)-1)
@@ -413,52 +411,6 @@ DRIVER_DECLARE(stm32_timer_drv, 0, "STM32 Timer", stm32_timer,
 
 DRIVER_REGISTER(stm32_timer_drv);
 
-static inline
-void stm32_timer_clock_init(struct device_s *dev)
-{
-  struct stm32_timer_private_s *pv = dev->drv_pv;
-
-  assert(pv != 0);
-
-  switch (pv->addr)
-    {
-    default:
-      break;
-
-    case STM32_TIM1_ADDR:
-      do { uint32_t register _reg = endian_le32(cpu_mem_read_32(( ((((STM32_RCC_ADDR)))) + (STM32_RCC_APB2ENR_ADDR) ))); STM32_RCC_APB2ENR_TIM1EN_SET( (_reg), 1 ); cpu_mem_write_32( ( ((((STM32_RCC_ADDR)))) + (STM32_RCC_APB2ENR_ADDR) ), endian_le32(_reg) ); } while (0);
-      break;
-
-    case STM32_TIM2_ADDR:
-      do { uint32_t register _reg = endian_le32(cpu_mem_read_32(( ((((STM32_RCC_ADDR)))) + (STM32_RCC_APB1ENR_ADDR) ))); STM32_RCC_APB1ENR_TIM2EN_SET( (_reg), 1 ); cpu_mem_write_32( ( ((((STM32_RCC_ADDR)))) + (STM32_RCC_APB1ENR_ADDR) ), endian_le32(_reg) ); } while (0);
-      break;
-
-    case STM32_TIM3_ADDR:
-      do { uint32_t register _reg = endian_le32(cpu_mem_read_32(( ((((STM32_RCC_ADDR)))) + (STM32_RCC_APB1ENR_ADDR) ))); STM32_RCC_APB1ENR_TIM3EN_SET( (_reg), 1 ); cpu_mem_write_32( ( ((((STM32_RCC_ADDR)))) + (STM32_RCC_APB1ENR_ADDR) ), endian_le32(_reg) ); } while (0);
-      break;
-
-    case STM32_TIM4_ADDR:
-      do { uint32_t register _reg = endian_le32(cpu_mem_read_32(( ((((STM32_RCC_ADDR)))) + (STM32_RCC_APB1ENR_ADDR) ))); STM32_RCC_APB1ENR_TIM4EN_SET( (_reg), 1 ); cpu_mem_write_32( ( ((((STM32_RCC_ADDR)))) + (STM32_RCC_APB1ENR_ADDR) ), endian_le32(_reg) ); } while (0);
-      break;
-
-    case STM32_TIM5_ADDR:
-      do { uint32_t register _reg = endian_le32(cpu_mem_read_32(( ((((STM32_RCC_ADDR)))) + (STM32_RCC_APB1ENR_ADDR) ))); STM32_RCC_APB1ENR_TIM5EN_SET( (_reg), 1 ); cpu_mem_write_32( ( ((((STM32_RCC_ADDR)))) + (STM32_RCC_APB1ENR_ADDR) ), endian_le32(_reg) ); } while (0);
-      break;
-
-    case STM32_TIM9_ADDR:
-      do { uint32_t register _reg = endian_le32(cpu_mem_read_32(( ((((STM32_RCC_ADDR)))) + (STM32_RCC_APB2ENR_ADDR) ))); STM32_RCC_APB2ENR_TIM9EN_SET( (_reg), 1 ); cpu_mem_write_32( ( ((((STM32_RCC_ADDR)))) + (STM32_RCC_APB2ENR_ADDR) ), endian_le32(_reg) ); } while (0);
-      break;
-
-    case STM32_TIM10_ADDR:
-      do { uint32_t register _reg = endian_le32(cpu_mem_read_32(( ((((STM32_RCC_ADDR)))) + (STM32_RCC_APB2ENR_ADDR) ))); STM32_RCC_APB2ENR_TIM10EN_SET( (_reg), 1 ); cpu_mem_write_32( ( ((((STM32_RCC_ADDR)))) + (STM32_RCC_APB2ENR_ADDR) ), endian_le32(_reg) ); } while (0);
-      break;
-
-    case STM32_TIM11_ADDR:
-      do { uint32_t register _reg = endian_le32(cpu_mem_read_32(( ((((STM32_RCC_ADDR)))) + (STM32_RCC_APB2ENR_ADDR) ))); STM32_RCC_APB2ENR_TIM11EN_SET( (_reg), 1 ); cpu_mem_write_32( ( ((((STM32_RCC_ADDR)))) + (STM32_RCC_APB2ENR_ADDR) ), endian_le32(_reg) ); } while (0);
-      break;
-    }
-}
-
 static DEV_INIT(stm32_timer_init)
 {
   struct stm32_timer_private_s  *pv;
@@ -491,9 +443,6 @@ static DEV_INIT(stm32_timer_init)
 #else
   pv->cap |= DEV_TIMER_CAP_TICKLESS;
 #endif
-
-  /* FIXME: setup clock. */
-  stm32_timer_clock_init(dev);
 
   /* Stop timer */
   do { uint32_t register _reg = endian_le32(cpu_mem_read_32(( ((((pv->addr)))) + (STM32_TIMER_CR1_ADDR) ))); STM32_TIMER_CR1_CEN_SET( (_reg), 0 ); cpu_mem_write_32( ( ((((pv->addr)))) + (STM32_TIMER_CR1_ADDR) ), endian_le32(_reg) ); } while (0);
