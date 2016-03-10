@@ -51,8 +51,8 @@ struct mips_dev_private_s
 
   struct cpu_tree_s node;
   struct dev_freq_s freq;
-#ifdef CONFIG_DEVICE_CLOCK
   struct dev_clock_sink_ep_s clk_ep;
+#ifdef CONFIG_DEVICE_CLOCK
   dev_timer_cfgrev_t timer_rev;
 #endif
 };
@@ -213,7 +213,8 @@ static DEV_TIMER_CONFIG(mips_timer_config)
           cfg->max = 0xffffffff;
           cfg->cap = DEV_TIMER_CAP_HIGHRES | DEV_TIMER_CAP_KEEPVALUE | DEV_TIMER_CAP_TICKLESS;
 #ifdef CONFIG_DEVICE_CLOCK
-          cfg->cap |= DEV_TIMER_CAP_VARFREQ;
+          if (pv->clk_ep.flags & DEV_CLOCK_EP_VARFREQ)
+            cfg->cap |= DEV_TIMER_CAP_VARFREQ;
           cfg->rev = pv->timer_rev;
 #else
           cfg->rev = 1;
@@ -231,19 +232,26 @@ static DEV_TIMER_CONFIG(mips_timer_config)
 static DEV_CLEANUP(mips_cleanup);
 static DEV_INIT(mips_init);
 
-#ifdef CONFIG_DEVICE_CLOCK
-static DEV_CLOCK_SINK_CHANGED(mips_clk_changed)
+static DEV_USE(mips_use)
 {
-  struct device_s *dev = ep->base.dev;
-  struct mips_dev_private_s *pv = dev->drv_pv;
-  LOCK_SPIN_IRQ(&dev->lock);
-  pv->freq = *freq;
-  pv->timer_rev += 2;
-  LOCK_RELEASE_IRQ(&dev->lock);
-}
+  switch (op)
+    {
+#ifdef CONFIG_DEVICE_CLOCK_VARFREQ
+    case DEV_USE_CLOCK_NOTIFY: {
+      struct dev_clock_notify_s *chg = param;
+      struct dev_clock_sink_ep_s *sink = chg->sink;
+      struct device_s *dev = sink->dev;
+      struct mips_dev_private_s *pv = dev->drv_pv;
+      pv->freq = chg->freq;
+      pv->timer_rev += 2;
+      return 0;
+    }
 #endif
+    default:
+      return dev_use_generic(param, op);
+    }
+}
 
-#define mips_use dev_use_generic
 #define mips_timer_request (dev_timer_request_t*)&dev_driver_notsup_fcn
 #define mips_timer_cancel  (dev_timer_cancel_t*)&dev_driver_notsup_fcn
 
@@ -292,20 +300,12 @@ static DEV_INIT(mips_init)
   if (cpu_tree_node_init(&pv->node, id, dev))
     goto err_pv;
 
-#ifdef CONFIG_DEVICE_CLOCK
-  dev_clock_sink_init(dev, &pv->clk_ep, &mips_clk_changed);
-
-  struct dev_clock_link_info_s ckinfo;
-  if (dev_clock_sink_link(dev, &pv->clk_ep, &ckinfo, 0, 0))
+  if (dev_drv_clock_init(dev, &pv->clk_ep, 0, DEV_CLOCK_EP_SINK_NOTIFY |
+                         DEV_CLOCK_EP_POWER_CLOCK | DEV_CLOCK_EP_SINK_SYNC, &pv->freq))
     goto err_node;
-  pv->freq = ckinfo.freq;
-  pv->timer_rev = 1;
 
-  if (dev_clock_sink_hold(&pv->clk_ep, NULL))
-    goto err_clku;
-#else
-  if (device_get_res_freq(dev, &pv->freq, 0))
-    pv->freq = DEV_FREQ_INVALID;
+#ifdef CONFIG_DEVICE_CLOCK
+  pv->timer_rev = 1;
 #endif
 
 #ifdef CONFIG_DEVICE_IRQ
@@ -333,13 +333,7 @@ static DEV_INIT(mips_init)
   return 0;
 
  err_clk:
-#ifdef CONFIG_DEVICE_CLOCK
-  dev_clock_sink_release(&pv->clk_ep);
-#endif
- err_clku:
-#ifdef CONFIG_DEVICE_CLOCK
-  dev_clock_sink_unlink(dev, &pv->clk_ep, 1);
-#endif
+  dev_drv_clock_cleanup(dev, &pv->clk_ep);
  err_node:
   cpu_tree_node_cleanup(&pv->node);
  err_pv:
@@ -361,10 +355,7 @@ static DEV_CLEANUP(mips_cleanup)
 
 #endif
 
-#ifdef CONFIG_DEVICE_CLOCK
-  dev_clock_sink_release(&pv->clk_ep);
-  dev_clock_sink_unlink(dev, &pv->clk_ep, 1);
-#endif
+  dev_drv_clock_cleanup(dev, &pv->clk_ep);
 
   cpu_tree_remove(&pv->node);
   cpu_tree_node_cleanup(&pv->node);

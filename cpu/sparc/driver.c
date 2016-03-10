@@ -62,9 +62,7 @@ struct sparc_dev_private_s
 #endif
 
   struct cpu_tree_s node;
-#ifdef CONFIG_DEVICE_CLOCK
   struct dev_clock_sink_ep_s clk_ep;
-#endif
 };
 
 /************************************************************************
@@ -241,15 +239,9 @@ static DEV_INIT(sparc_init)
   if (cpu_tree_node_init(&pv->node, id, dev))
     goto err_pv;
 
-#ifdef CONFIG_DEVICE_CLOCK
-  dev_clock_sink_init(dev, &pv->clk_ep, NULL);
-
-  if (dev_clock_sink_link(dev, &pv->clk_ep, NULL, 0, 0))
+  if (dev_drv_clock_init(dev, &pv->clk_ep, 0, DEV_CLOCK_EP_POWER_CLOCK |
+                         DEV_CLOCK_EP_SINK_SYNC, NULL))
     goto err_node;
-
-  if (dev_clock_sink_hold(&pv->clk_ep, NULL))
-    goto err_clku;
-#endif
 
 #ifdef CONFIG_DEVICE_IRQ
   /* init sparc irq sink end-points */
@@ -275,13 +267,7 @@ static DEV_INIT(sparc_init)
   return 0;
 
  err_clk:
-#ifdef CONFIG_DEVICE_CLOCK
-  dev_clock_sink_release(&pv->clk_ep);
-#endif
- err_clku:
-#ifdef CONFIG_DEVICE_CLOCK
-  dev_clock_sink_unlink(dev, &pv->clk_ep, 1);
-#endif
+  dev_drv_clock_cleanup(dev, &pv->clk_ep);
  err_node:
   cpu_tree_node_cleanup(&pv->node);
  err_pv:
@@ -299,10 +285,7 @@ static DEV_CLEANUP(sparc_cleanup)
 # endif
 #endif
 
-#ifdef CONFIG_DEVICE_CLOCK
-  dev_clock_sink_release(&pv->clk_ep);
-  dev_clock_sink_unlink(dev, &pv->clk_ep, 1);
-#endif
+  dev_drv_clock_cleanup(dev, &pv->clk_ep);
 
   cpu_tree_remove(&pv->node);
   cpu_tree_node_cleanup(&pv->node);

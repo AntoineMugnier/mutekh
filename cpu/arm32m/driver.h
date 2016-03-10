@@ -62,9 +62,7 @@ struct arm_dev_private_s
 #endif
 
   struct dev_freq_s freq;
-#ifdef CONFIG_DEVICE_CLOCK
   struct dev_clock_sink_ep_s clk_ep;
-#endif
 #endif
 };
 

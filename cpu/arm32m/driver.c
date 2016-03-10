@@ -200,12 +200,10 @@ static DEV_USE(arm_use)
       struct dev_clock_sink_ep_s *sink = chg->sink;
       struct device_s *dev = sink->dev;
       struct arm_dev_private_s *pv = dev->drv_pv;
-      LOCK_SPIN_IRQ(&dev->lock);
       pv->freq = chg->freq;
 # if defined(CONFIG_CPU_ARM32M_TIMER_SYSTICK) && defined(CONFIG_DEVICE_IRQ)
       pv->systick_rev += 2;
 # endif
-      LOCK_RELEASE_IRQ(&dev->lock);
       return 0;
     }
 #endif
@@ -317,18 +315,13 @@ static DEV_INIT(arm_init)
     {
       if (BIT_EXTRACT(cl_missing, DRIVER_CLASS_CMU))
         return -EAGAIN;
-
-      dev_clock_sink_init(dev, &pv->clk_ep, DEV_CLOCK_EP_SINK_NOTIFY |
-                          DEV_CLOCK_EP_POWER_CLOCK | DEV_CLOCK_EP_SINK_SYNC);
-
-      if (dev_clock_sink_link(&pv->clk_ep, 0, &pv->freq))
-        return -EUNKNOWN;
-
+#endif
+      if (dev_drv_clock_init(dev, &pv->clk_ep, 0, DEV_CLOCK_EP_SINK_NOTIFY |
+                             DEV_CLOCK_EP_POWER_CLOCK | DEV_CLOCK_EP_SINK_SYNC, &pv->freq))
+        goto err_node;
+#ifdef CONFIG_DEVICE_CLOCK
       BIT_SET(dev->init_mask, ARM32M_INITID_CLOCK);
     }
-#else
-  if (device_get_res_freq(dev, &pv->freq, 0))
-    pv->freq = DEV_FREQ_INVALID;
 #endif
 
 #ifdef CONFIG_CPU_ARM32M_TIMER_SYSTICK
@@ -350,6 +343,8 @@ static DEV_INIT(arm_init)
 
   return 0;
 
+ err_node:
+  cpu_tree_node_cleanup(&pv->node);
  err_pv:
   mem_free(pv);
  err:
@@ -372,8 +367,8 @@ static DEV_CLEANUP(arm_cleanup)
 
 #ifdef CONFIG_DEVICE_CLOCK
   if (BIT_EXTRACT(dev->init_mask, ARM32M_INITID_CLOCK))
-    dev_clock_sink_unlink(&pv->clk_ep);
 #endif
+    dev_drv_clock_cleanup(dev, &pv->clk_ep);
 
   if (BIT_EXTRACT(dev->init_mask, ARM32M_INITID_CPU))
     {

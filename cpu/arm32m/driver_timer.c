@@ -371,7 +371,8 @@ DEV_TIMER_CONFIG(arm_timer_config)
         {
           cfg->cap = DEV_TIMER_CAP_STOPPABLE | DEV_TIMER_CAP_HIGHRES;
 #ifdef CONFIG_DEVICE_CLOCK
-          cfg->cap |= DEV_TIMER_CAP_VARFREQ;
+          if (pv->clk_ep.flags & DEV_CLOCK_EP_VARFREQ)
+            cfg->cap |= DEV_TIMER_CAP_VARFREQ;
 #endif
 # ifdef CONFIG_DEVICE_IRQ
           cfg->max = 0xffffffffffffffffULL;
