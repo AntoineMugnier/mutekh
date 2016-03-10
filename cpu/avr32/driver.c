@@ -313,16 +313,6 @@ static DEV_CLEANUP(avr32_cleanup)
 {
   struct avr32_dev_private_s *pv = dev->drv_pv;
 
-#ifdef CONFIG_DEVICE_IRQ
-# ifdef CONFIG_ARCH_SMP
-  /* Disable all irq lines. */
-  reg_t status;
-  asm volatile ("mustr	%0" : "=r" (status));
-  status |= 0x1e;
-  asm volatile ("musfr	%0" :: "r" (status));
-# endif
-#endif
-
   dev_drv_clock_cleanup(dev, &pv->clk_ep);
 
   cpu_tree_node_cleanup(&pv->node);

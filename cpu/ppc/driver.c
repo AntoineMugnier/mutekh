@@ -296,12 +296,6 @@ static DEV_CLEANUP(ppc_cleanup)
 {
   struct ppc_dev_private_s *pv = dev->drv_pv;
 
-#ifdef CONFIG_DEVICE_IRQ
-# ifdef CONFIG_ARCH_SMP
-  /* Disable all irq lines. */
-# endif
-#endif
-
   dev_drv_clock_cleanup(dev, &pv->clk_ep);
 
   cpu_tree_remove(&pv->node);

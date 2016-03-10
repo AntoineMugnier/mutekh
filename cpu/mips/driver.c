@@ -345,16 +345,6 @@ static DEV_CLEANUP(mips_cleanup)
 {
   struct mips_dev_private_s *pv = dev->drv_pv;
 
-#ifdef CONFIG_DEVICE_IRQ
-# ifdef CONFIG_ARCH_SMP
-  /* Disable all irq lines. */
-  reg_t status = cpu_mips_mfc0(CPU_MIPS_STATUS, 0);
-  status &= ~0xfc00;
-  cpu_mips_mtc0(CPU_MIPS_STATUS, 0, status);
-# endif
-
-#endif
-
   dev_drv_clock_cleanup(dev, &pv->clk_ep);
 
   cpu_tree_remove(&pv->node);

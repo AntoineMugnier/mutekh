@@ -384,13 +384,6 @@ static DEV_CLEANUP(x86_cleanup)
 {
   struct x86_dev_private_s *pv = dev->drv_pv;
 
-#ifdef CONFIG_DEVICE_IRQ
-
-# ifdef CONFIG_ARCH_SMP
-  /* Disable all irq lines. */
-# endif
-#endif
-
 #ifdef CONFIG_HEXO_USERMODE
   mem_free(pv->cpu_interrupt_stack);
   cpu_x86_segdesc_free(pv->tss_seg);
