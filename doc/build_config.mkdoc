@@ -313,10 +313,12 @@ CONFIG_CPU_MAXCOUNT 4
         @item @tt{%section pattern [pattern ...]}: Start a section
           which will be conditionaly considered depending on the
           @tt{BUILD} variable. @tt{pattern} is a pattern matching
-          expression which may contain text, hypens and wildcards
-          (e.i. @tt{text-text-*}, @tt{text-???}). Wildcards match
-          non-empty and non-hypens text. A new @tt{%section token
-          automatically terminate previous section.}
+          expression which may contain lower case text, hypens and
+          wildcards (e.i. @tt{text-text-*}, @tt{text-???}). The @tt *
+          wildcard match non-empty and non-hypens text. The @tt ?
+          wildcard matches a single text character. The @tt N wildcard
+          matches a single decimal digit. The next @tt{%section} token
+          automatically terminates the previous section.
         @item @tt{%common}: Revert to unconditional common file part,
           default at beginning of a file.
         @item @tt{%else}: Change current conditional state.

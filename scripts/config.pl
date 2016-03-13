@@ -1948,10 +1948,11 @@ sub read_build_config
 
 		    my $p_ = $p;
 		    $p_ =~ s/\*/[\\w\\d]\+/g;
+		    $p_ =~ s/N/[\\d]/g;
 		    $p_ =~ s/\?/[\\w\\d]/g;
 
 		    foreach (split(/:/, $$section)) {
-			if ( $_ =~ /^$p_$/ ) {
+			if ( $_ =~ /^$p_$/i ) {
 			    $i = 0;
 			    $used_build{$_} = 1;
 			    $vars{CONFIGSECTION} = $_ if ( !$s );
