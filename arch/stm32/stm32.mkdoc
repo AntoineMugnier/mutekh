@@ -3,12 +3,19 @@
 
   @section {Building}
 
-    Building for a supported board:
+    You can build a MutekH application for a supported STM32 board with this command:
     @code R
 make CONF=examples/hello/config BUILD=stm32-nucleof103rb
     @end code
 
-    Building without board support:
+    The default output is in ELF format. A binary file can be built as follow:
+    @code R
+make CONF=examples/hello/config BUILD=stm32-nucleof103rb:binary
+    @end code
+
+    If your board is not supported or if your application comes with
+    custom @xref {Device instance} {device declarations} for the
+    board, you may want to target the chip directly:
     @code R
 make CONF=examples/hello/config BUILD=stm32-f103rb
     @end code
@@ -22,6 +29,14 @@ openocd -f interface/ftdi/dp_busblaster.cfg -f target/stm32f1x.cfg \
         -c init -c targets -c halt \
         -c "flash write_image erase hello-stm32-f1.out" \
         -c reset run -c shutdown
+    @end code
+
+  @end section
+
+  @section {Programming with JLink}
+
+    @code R
+( echo 'device STM32F103RB' ; echo 'loadbin hello-stm32-f1.bin 0' ; echo 'r' ; echo 'exit' ) | JLinkExe
     @end code
 
   @end section
