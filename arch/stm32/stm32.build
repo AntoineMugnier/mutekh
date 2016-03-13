@@ -27,7 +27,7 @@
   CONFIG_DRIVER_PUSH_BUTTON_TIMER undefined
   CONFIG_DRIVER_STM32_USART_PRINTK_CLK_FREQ 42000000
 
-%section stm32-??????
+%section stm32-?NNN??
   %types architecture
 
   CONFIG_ARCH_STM32
@@ -52,67 +52,67 @@
 
   ########### Flash size
 
-  %subsection stm32-?????4
+  %subsection stm32-?NNN?4
     %types flash
     # 16KBytes
     CONFIG_STM32_FLASHSIZE 0x00004000
   %end
 
-  %subsection stm32-?????6
+  %subsection stm32-?NNN?6
     %types flash
     # 32KBytes
     CONFIG_STM32_FLASHSIZE 0x00008000
   %end
 
-  %subsection stm32-?????8
+  %subsection stm32-?NNN?8
     %types flash
     # 64KBytes
     CONFIG_STM32_FLASHSIZE 0x00010000
   %end
 
-  %subsection stm32-?????b
+  %subsection stm32-?NNN?b
     %types flash
     # 128KBytes
     CONFIG_STM32_FLASHSIZE 0x00020000
   %end
 
-  %subsection stm32-?????c
+  %subsection stm32-?NNN?c
     %types flash
     # 256KBytes
     CONFIG_STM32_FLASHSIZE 0x00040000
   %end
 
-  %subsection stm32-?????d
+  %subsection stm32-?NNN?d
     %types flash
     # 384KBytes
     CONFIG_STM32_FLASHSIZE 0x00060000
   %end
 
-  %subsection stm32-?????e
+  %subsection stm32-?NNN?e
     %types flash
     # 512KBytes
     CONFIG_STM32_FLASHSIZE 0x00080000
   %end
 
-  %subsection stm32-?????f
+  %subsection stm32-?NNN?f
     %types flash
     # 768KBytes
     CONFIG_STM32_FLASHSIZE 0x000c0000
   %end
 
-  %subsection stm32-?????g
+  %subsection stm32-?NNN?g
     %types flash
     # 1024KBytes
     CONFIG_STM32_FLASHSIZE 0x00100000
   %end
 
-  %subsection stm32-?????h
+  %subsection stm32-?NNN?h
     %types flash
     # 1536KBytes
     CONFIG_STM32_FLASHSIZE 0x00180000
   %end
 
-  %subsection stm32-?????i
+  %subsection stm32-?NNN?i
     %types flash
     # 2048KBytes
     CONFIG_STM32_FLASHSIZE 0x00200000
