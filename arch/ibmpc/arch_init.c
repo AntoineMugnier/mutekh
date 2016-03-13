@@ -67,7 +67,8 @@ void ibmpc_mem_init()
 #include <hexo/cpu.h>
 
 DEV_DECLARE_STATIC(cpu_dev, "cpu", DEVICE_FLAG_CPU, x86_drv,
-                   DEV_STATIC_RES_ID(0, 0)
+                   DEV_STATIC_RES_ID(0, 0),
+                   DEV_STATIC_RES_FREQ(8000000, 1)
                    );
 
 /////////////////////////////////////////////////////////////////////

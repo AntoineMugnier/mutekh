@@ -46,14 +46,6 @@ void bcm283x_mem_init(void)
 
 #include <arch/bcm283x/gpio.h>
 
-#ifdef CONFIG_DRIVER_CPU_ARM32
-
-DEV_DECLARE_STATIC(cpu_dev, "cpu", DEVICE_FLAG_CPU, arm32_drv,
-                   DEV_STATIC_RES_ID(0, 0)
-                   );
-
-#endif
-
 #ifdef CONFIG_DRIVER_BCM283X_ICU
 
 DEV_DECLARE_STATIC(icu_dev, "icu", 0, bcm283x_icu_drv,

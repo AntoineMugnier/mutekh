@@ -100,14 +100,20 @@ static DEV_INIT(a9mpcore_init)
   device_bind_driver(icu, &pl390_icu_drv);
 #endif
 
+  struct dev_freq_s freq;
+  error_t has_freq = device_get_res_freq(dev, &freq, 0);
+
   /* add processors */
   for (i = 0; i < cpu_count; i++)
     {
-      struct device_s *d = device_alloc(1);
+      struct device_s *d = device_alloc(2);
       assert(d != NULL);
 
       device_res_add_id(d, i, 0);
       d->node.flags |= DEVICE_FLAG_CPU;
+
+      if (has_freq == 0)
+        device_res_add_freq(d, &freq);
 
       char name[16];
       sprintf(name, "../cpu%u", i);

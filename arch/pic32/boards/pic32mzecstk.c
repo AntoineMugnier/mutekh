@@ -33,7 +33,8 @@
 
 /* CPU. */
 DEV_DECLARE_STATIC(cpu_dev, "cpu", DEVICE_FLAG_CPU, mips_drv,
-                   DEV_STATIC_RES_ID(0, 0)
+                   DEV_STATIC_RES_ID(0, 0),
+                   DEV_STATIC_RES_FREQ(200000000, 1)
                    );
 
 

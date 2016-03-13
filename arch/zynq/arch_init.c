@@ -32,7 +32,8 @@
 #ifdef CONFIG_DRIVER_CPU_ARM32
 
 DEV_DECLARE_STATIC(mpcore_dev, "mpcore0", 0, a9mpcore_drv,
-                   DEV_STATIC_RES_MEM(0xf8f00000, 0xf8f02000)
+                   DEV_STATIC_RES_MEM(0xf8f00000, 0xf8f02000),
+                   DEV_STATIC_RES_FREQ(500000000, 1)
                    );
 
 #endif

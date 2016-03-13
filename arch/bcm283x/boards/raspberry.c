@@ -38,6 +38,15 @@
 #define RASPBERRY_A1PLUS 4
 #define RASPBERRY_B1PLUS 5
 
+#ifdef CONFIG_DRIVER_CPU_ARM32
+
+DEV_DECLARE_STATIC(cpu_dev, "cpu", DEVICE_FLAG_CPU, arm32_drv,
+                   DEV_STATIC_RES_ID(0, 0),
+                   DEV_STATIC_RES_FREQ(700000000, 1)
+                   );
+
+#endif
+
 #ifdef CONFIG_DRIVER_BCM283X_SPI
 
 DEV_DECLARE_STATIC(spi_dev, "spi0", 0, bcm283x_spi_drv,

@@ -37,7 +37,8 @@
 
 /* CPU. */
 DEV_DECLARE_STATIC(cpu_dev, "cpu", DEVICE_FLAG_CPU, arm32m_drv,
-                   DEV_STATIC_RES_ID(0, 0)
+                   DEV_STATIC_RES_ID(0, 0),
+                   DEV_STATIC_RES_FREQ(72000000, 1)
                    );
 
 #endif
