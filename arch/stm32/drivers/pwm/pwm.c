@@ -37,7 +37,7 @@
 #include <mutek/kroutine.h>
 #include <mutek/printk.h>
 
-#include <arch/stm32/generic/timer.h>
+#include <arch/stm32/timer.h>
 
 
 #define STM32_PWM_CHANNEL_MAX 4

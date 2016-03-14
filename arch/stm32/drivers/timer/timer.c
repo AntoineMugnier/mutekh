@@ -37,7 +37,7 @@
 #include <mutek/mem_alloc.h>
 #include <mutek/kroutine.h>
 
-#include <arch/stm32/generic/timer.h>
+#include <arch/stm32/timer.h>
 
 #define STM32_TIMER_HW_WIDTH(pv)    (pv)->hw_width
 #define STM32_TIMER_HW_MASK(pv)     ((1ULL << pv->hw_width)-1)

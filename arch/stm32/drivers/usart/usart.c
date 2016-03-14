@@ -37,7 +37,7 @@
 #include <device/class/iomux.h>
 #include <device/class/uart.h>
 
-#include <arch/stm32/generic/usart.h>
+#include <arch/stm32/usart.h>
 
 #if CONFIG_DRIVER_STM32_USART_SWFIFO > 0
 # include <gct_platform.h>

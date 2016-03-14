@@ -35,7 +35,7 @@
 #include <device/class/icu.h>
 #include <device/class/iomux.h>
 
-#include <arch/stm32/generic/exti.h>
+#include <arch/stm32/exti.h>
 
 #include <arch/stm32/f1/periph.h>
 #include <arch/stm32/f1/gpio.h>

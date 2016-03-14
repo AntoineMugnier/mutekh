@@ -36,7 +36,7 @@
 #include <device/class/timer.h>
 #include <device/class/iomux.h>
 
-#include <arch/stm32/generic/spi.h>
+#include <arch/stm32/spi.h>
 
 
 struct stm32_spi_private_s
