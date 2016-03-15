@@ -516,6 +516,7 @@ struct dev_spi_ctrl_queue_s
 #endif
 
   union {
+    struct kroutine_s             kr;
 #ifdef CONFIG_DEVICE_SPI_REQUEST_TIMER
     struct dev_timer_rq_s         timer_rq;
 #endif
