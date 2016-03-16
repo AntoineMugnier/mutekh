@@ -104,11 +104,11 @@ FUNC_START(.text, cpu_context_jumpto)
 
 # ifdef CONFIG_ARCH_SMP
         // unlock some atomic value on context restore if requested
-        lw      $25,    HEXO_CONTEXT_S_UNLOCK * 4 ($4)
+        lw      $25,    _offsetof(context_s, unlock, 4) ($4)
         beq     $25,    $0,     1f
 
         // clear unlock address/memory barrier
-        sw      $0,     HEXO_CONTEXT_S_UNLOCK * 4 ($4)
+        sw      $0,     _offsetof(context_s, unlock, 4) ($4)
         sync
         // unlock
         sw      $0,     ($25)
@@ -119,7 +119,7 @@ FUNC_START(.text, cpu_context_jumpto)
 # endif
 
         // restore tls pointer from context struct
-        lw      $25,    HEXO_CONTEXT_S_TLS * 4 ($4)
+        lw      $25,    _offsetof(context_s, tls, 4) ($4)
         CPU_LOCAL_op sw,   __context_data_base, $25, $1
 
 #ifdef CONFIG_HEXO_CONTEXT_IRQEN
@@ -294,7 +294,7 @@ FUNC_START(.text, cpu_context_stack_use)
 #endif
 
         // get tls pointer from context struct
-        lw      $25,     HEXO_CONTEXT_S_TLS * 4 ($4)
+        lw      $25,     _offsetof(context_s, tls, 4) ($4)
         // get context registers save array
 #ifdef CONFIG_HEXO_CONTEXT_NESTED
         lw      $25,    %lo(mips_context_regs_ptr)($25)

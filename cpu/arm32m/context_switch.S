@@ -136,7 +136,7 @@ FUNC_END(cpu_context_stack_guard)
 FUNC_START(.text, cpu_context_jumpto_restore)
 
         /* restore tls pointer from context struct */
-        ldr     r0,     [r0, #(HEXO_CONTEXT_S_TLS * 4)]
+        ldr     r0,     [r0, #(_offsetof(context_s, tls, 4))]
         msr     psp,    r0
 
 #ifdef CONFIG_CPU_ARM32M_MPU_STACK_GUARD
@@ -250,7 +250,7 @@ FUNC_START(.text, cpu_context_stack_use)
         mov     r4,     r1
 
         /* get tls pointer from context struct */
-        ldr     r0,     [r0, #(HEXO_CONTEXT_S_TLS * 4)]
+        ldr     r0,     [r0, #(_offsetof(context_s, tls, 4))]
 
 #ifdef CONFIG_CPU_ARM32M_MPU_STACK_GUARD
         /* context stack top */

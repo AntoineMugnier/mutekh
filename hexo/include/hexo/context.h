@@ -37,11 +37,6 @@
 #ifndef CONTEXT_H_
 #define CONTEXT_H_
 
-/** @internal offset of tls field in @ref context_s */
-#define HEXO_CONTEXT_S_TLS              0
-/** @internal offset of unlock field in @ref context_s */
-#define HEXO_CONTEXT_S_UNLOCK           1
-
 # include <hexo/types.h>
 # include <hexo/local.h>
 # include <hexo/error.h>
@@ -52,7 +47,7 @@
 /** @internal context descriptor structure */
 struct context_s
 {
-  /** context local storage address. @csee #HEXO_CONTEXT_S_TLS */
+  /** context local storage address */
   void			*tls;
 
 # ifdef CONFIG_ARCH_SMP

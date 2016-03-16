@@ -110,13 +110,13 @@ FUNC_START(.text, cpu_context_jumpto)
 
 #ifdef CONFIG_ARCH_SMP
         // unlock some atomic value on context restore if requested
-        ld      [%o0 + HEXO_CONTEXT_S_UNLOCK * INT_REG_SIZE/8], %g1
+        ld      [%o0 + _offsetof(context_s, unlock, 4)], %g1
         tst     %g1
         bz      1f
         nop
 
         // unlock and clear unlock address
-        st      %g0, [%o0 + HEXO_CONTEXT_S_UNLOCK * INT_REG_SIZE/8]
+        st      %g0, [%o0 + _offsetof(context_s, unlock, 4)]
         st      %g0, [%g1]
 1:      
 #endif
@@ -131,7 +131,7 @@ FUNC_START(.text, cpu_context_jumpto)
 #endif
 
         // restore tls pointer from context struct
-        ld      [%o0 + HEXO_CONTEXT_S_TLS * INT_REG_SIZE/8], %g7
+        ld      [%o0 + _offsetof(context_s, tls, 4)], %g7
 
 #ifdef CONFIG_HEXO_USERMODE
         // save tls for restoration when back from user mode
@@ -263,7 +263,7 @@ FUNC_START(.text, cpu_context_stack_use)
 #endif
 
         // get context local storage
-        ld      [%o0 + HEXO_CONTEXT_S_TLS * INT_REG_SIZE/8], %g1
+        ld      [%o0 + _offsetof(context_s, tls, 4)], %g1
         // context registers save array
         add     %g1, %lo(sparc_context_regs), %g1
 

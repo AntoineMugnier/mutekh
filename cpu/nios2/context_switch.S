@@ -100,17 +100,17 @@ FUNC_START(.text, cpu_context_jumpto)
 
 #ifdef CONFIG_ARCH_SMP
         // unlock some atomic value on context restore if requested
-        ldw     r8,             HEXO_CONTEXT_S_UNLOCK * 4 (r4)
+        ldw     r8,             _offsetof(context_s, unlock, 4) (r4)
         beq     zero,   r8,     1f
 
         // unlock and clear unlock address
-        stw     zero,           HEXO_CONTEXT_S_UNLOCK * 4 (r4)
+        stw     zero,           _offsetof(context_s, unlock, 4) (r4)
         stw     zero,           (r8)
 1:      
 #endif
 
         // restore tls pointer from context struct
-        ldw     r8,             HEXO_CONTEXT_S_TLS * 4 (r4)
+        ldw     r8,             _offsetof(context_s, tls, 4) (r4)
         CPU_LOCAL_op stw,          __context_data_base, r8, r7
 
         addi    r2,     r8,     nios2_context_regs
@@ -207,7 +207,7 @@ FUNC_START(.text, cpu_context_stack_use)
 #endif
         
         // get tls pointer from context struct
-        ldw     r8,             HEXO_CONTEXT_S_TLS * 4 (r4)
+        ldw     r8,             _offsetof(context_s, tls, 4) (r4)
         // get context registers save array
         addi    r2,     r8,     nios2_context_regs
 

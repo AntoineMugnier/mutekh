@@ -79,18 +79,18 @@ FUNC_START(.text, cpu_context_jumpto)
 
 # ifdef CONFIG_ARCH_SMP
         // unlock some atomic value on context restore if requested
-        movq    HEXO_CONTEXT_S_UNLOCK * 8(%rdi), %rax
+        movq    _offsetof(context_s, unlock, 8)(%rdi), %rax
         test    %rax,   %rax
         jz      1f
 
         // unlock and clear unlock address
-        movq    $0,     HEXO_CONTEXT_S_UNLOCK * 8(%rdi)
+        movq    $0,     _offsetof(context_s, unlock, 8)(%rdi)
         movl    $0,     (%rax)
 1:      
 # endif
 
         // get register save array
-        movq    HEXO_CONTEXT_S_TLS * 8(%rdi), %rdx
+        movq    _offsetof(context_s, tls, 8)(%rdi), %rdx
 
         // switch context data base
         movq    %rdx, (%rcx)
@@ -147,7 +147,7 @@ FUNC_END(cpu_context_set)
 FUNC_START(.text, cpu_context_stack_use)
 
         // get register save array
-        movq    HEXO_CONTEXT_S_TLS * 8(%rdi), %rax
+        movq    _offsetof(context_s, tls, 8)(%rdi), %rax
         subq    $__context_data_start, %rax
 
         // use context stack

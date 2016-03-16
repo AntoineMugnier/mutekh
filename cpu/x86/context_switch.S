@@ -65,18 +65,18 @@ FUNC_START(.text, cpu_context_jumpto)
 
 # ifdef CONFIG_ARCH_SMP
         // unlock some atomic value on context restore if requested
-        movl    HEXO_CONTEXT_S_UNLOCK * 4(%edx), %eax
+        movl    _offsetof(context_s, unlock, 4)(%edx), %eax
         test    %eax,   %eax
         jz      1f
 
         // unlock and clear unlock address
-        movl    $0,     HEXO_CONTEXT_S_UNLOCK * 4(%edx)        
+        movl    $0,     _offsetof(context_s, unlock, 4)(%edx)        
         movl    $0,     (%eax)        
 1:      
 # endif
 
         // get register save array
-        mov     HEXO_CONTEXT_S_TLS * 4(%edx), %esi
+        mov     _offsetof(context_s, tls, 4)(%edx), %esi
 
         // restore tls segment
         mov     context_tls_seg(%esi), TLS_SEG()
@@ -173,7 +173,7 @@ FUNC_START(.text, cpu_context_stack_use)
         mov     12(%esp), %edx
 
         // get register save array
-        mov     HEXO_CONTEXT_S_TLS * 4(%eax), %eax
+        mov     _offsetof(context_s, tls, 4)(%eax), %eax
 
         // use context stack
         movl    (x86_context + _offsetof(cpu_context_s, kregs.esp))(%eax), %esp
