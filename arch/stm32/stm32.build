@@ -5,7 +5,7 @@
   CONFIG_STM32_BOARD nucleo_f103rb
 
   CONFIG_MUTEK_CONSOLE_DEVICE_PATHS "uart2 uart*"
-  CONFIG_MUTEK_PRINTK_ADDR STM32_USART2_ADDR
+  CONFIG_MUTEK_PRINTK_ADDR 0x40004400
 
   CONFIG_DRIVER_STM32_USART_PRINTK_CLK_FREQ 36000000
   CONFIG_DRIVER_STM32_USART_PRINTK_PIN 2
@@ -18,14 +18,16 @@
   %inherit stm32-f401re
 
   CONFIG_STM32_BOARD nucleo_f401re
+
   CONFIG_MUTEK_CONSOLE_DEVICE_PATHS "uart2 uart*"
-  CONFIG_MUTEK_PRINTK_ADDR STM32_USART2_ADDR
+  CONFIG_MUTEK_PRINTK_ADDR 0x40004400
+
+  CONFIG_DRIVER_STM32_USART_PRINTK_CLK_FREQ 42000000
   CONFIG_DRIVER_STM32_USART_PRINTK_PIN 2
   CONFIG_DRIVER_STM32_USART_PRINTK_AF 7
 
   CONFIG_DRIVER_PUSH_BUTTON
   CONFIG_DRIVER_PUSH_BUTTON_TIMER undefined
-  CONFIG_DRIVER_STM32_USART_PRINTK_CLK_FREQ 42000000
 
 %section stm32-guidog
   %inherit stm32-f103ve
@@ -432,6 +434,45 @@
   %end
 
   #########################################################
+  # F7 family
+
+  %subsection stm32-f7????
+    %types family
+
+    CONFIG_STM32_FAMILY 7
+    CONFIG_CPU_ARM32M_CORTEXM7
+
+    %set BUILD_NAME stm32-f7
+
+    ########### Features
+
+    %subsection stm32-f746??
+      %types features
+
+      CONFIG_STM32_SERIE 746
+
+      CONFIG_CPU_ARM32M_M_IRQ_COUNT 85
+    %end
+
+    %subsection stm32-f756??
+      %types features
+
+      CONFIG_STM32_SERIE 756
+
+      CONFIG_CPU_ARM32M_M_IRQ_COUNT 85
+    %end
+
+    ########### Ram size
+
+    %subsection stm32-f7????
+      %types sram
+      # 320k
+      CONFIG_STM32_AHBRAMSIZE 0x00050000
+    %end
+
+  %end
+
+  #########################################################
   # L4 family
 
   %subsection stm32-l4????
@@ -478,6 +519,8 @@
       # 128k
       CONFIG_STM32_AHBRAMSIZE 0x00020000
     %end
+
+  %end
 
   %requiretypes family
   %requiretypes flash
