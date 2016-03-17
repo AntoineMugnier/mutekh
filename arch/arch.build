@@ -1,6 +1,5 @@
 %include atmel/atmel.build
 %include emu/emu.build
-%include simple/simple.build
 %include ibmpc/ibmpc.build
 %include soclib/soclib.build
 %include gaisler/gaisler.build
