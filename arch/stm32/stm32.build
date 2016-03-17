@@ -432,6 +432,45 @@
   %end
 
   #########################################################
+  # F7 family
+
+  %subsection stm32-f7????
+    %types family
+
+    CONFIG_STM32_FAMILY 7
+    CONFIG_CPU_ARM32M_CORTEXM7
+
+    %set BUILD_NAME stm32-f7
+
+    ########### Features
+
+    %subsection stm32-f746??
+      %types features
+
+      CONFIG_STM32_SERIE 746
+
+      CONFIG_CPU_ARM32M_M_IRQ_COUNT 85
+    %end
+
+    %subsection stm32-f756??
+      %types features
+
+      CONFIG_STM32_SERIE 756
+
+      CONFIG_CPU_ARM32M_M_IRQ_COUNT 85
+    %end
+
+    ########### Ram size
+
+    %subsection stm32-f7????
+      %types sram
+      # 320k
+      CONFIG_STM32_AHBRAMSIZE 0x00050000
+    %end
+
+  %end
+
+  #########################################################
   # L4 family
 
   %subsection stm32-l4????
@@ -478,6 +517,8 @@
       # 128k
       CONFIG_STM32_AHBRAMSIZE 0x00020000
     %end
+
+  %end
 
   %requiretypes family
   %requiretypes flash
