@@ -1,1 +1,1 @@
-../../../../common/include/arch/hexo/atomic_cpu.h
+#include "arch/common/include/arch/hexo/atomic_cpu.h"

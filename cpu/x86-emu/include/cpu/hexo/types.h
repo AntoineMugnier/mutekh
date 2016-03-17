@@ -1,1 +1,1 @@
-../../../../x86/include/cpu/hexo/types.h
+#include "cpu/common/include/cpu/hexo/types_cpu32.h"
