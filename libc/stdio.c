@@ -5,11 +5,11 @@
 #include <assert.h>
 #include <string.h>
 #include <mutek/fileops.h>
+#include <mutek/mem_alloc.h>
 
 #ifdef CONFIG_LIBC_VFS
 #include <vfs/path.h>
 #include <vfs/file.h>
-#include <mutek/mem_alloc.h>
 #endif
 
 /***********************************************************************
@@ -287,7 +287,7 @@ error_t	fclose(FILE *stream)
   if ((err = stream->ops->close(stream->hndl)))
     return err;
 
-  free(stream);
+  mem_free(stream);
 
   return (err);
 }

@@ -32,21 +32,7 @@
 #include <device/device.h>
 #include <device/driver.h>
 
-#if defined(CONFIG_MUTEK_CONSOLE)
-
-extern struct device_char_s console_dev;
-
-PRINTF_OUTPUT_FUNC(__printf_out_tty)
-{
-#ifdef CONFIG_HEXO_IRQ
-  if ( !cpu_is_interruptible() )
-    return;
-#endif
-
-  dev_char_spin_op((struct device_char_s *)ctx, DEV_CHAR_WRITE, (uint8_t*)str, len);
-}
-
-#endif
+#ifdef CONFIG_MUTEK_CONTEXT_SCHED
 
 static FILEOPS_READ(tty_read)
 {
@@ -72,7 +58,7 @@ const struct fileops_s console_file_ops =
   .write = &tty_write,
 };
 
-
+#endif
 
 struct device_char_s console_dev = DEVICE_ACCESSOR_INIT;
 

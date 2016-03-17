@@ -25,6 +25,8 @@
 #include <mutek/startup.h>
 #include <mutek/mem_alloc.h>
 
+#include <device/class/char.h>
+
 #include <termui/term.h>
 #include <termui/getline.h>
 #include <termui/mutekh.h>

@@ -30,20 +30,19 @@
 #ifndef MUTEK_CONSOLE_H_
 #define MUTEK_CONSOLE_H_
 
-#include <mutek/fileops.h>
-#include <libc/formatter.h>
+struct fileops_s;
+struct device_char_s;
 
+/** @internal File operations needed to access the mutek console using
+    the libc stdio functions. */
+config_depend_and2(CONFIG_MUTEK_CONSOLE, CONFIG_MUTEK_CONTEXT_SCHED)
 extern const struct fileops_s console_file_ops;
 
-#if defined(CONFIG_MUTEK_CONSOLE)
-
-#include <device/class/char.h>
-
+/** This is the main mutek console device. This @xref{device accessor}
+    is initialized on startup according to the value of the @ref
+    #CONFIG_MUTEK_CONSOLE_DEVICE_PATHS token. */
+config_depend(CONFIG_MUTEK_CONSOLE)
 extern struct device_char_s console_dev;
-
-PRINTF_OUTPUT_FUNC(__printf_out_tty);
-
-#endif
 
 #endif
 
