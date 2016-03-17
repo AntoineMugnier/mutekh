@@ -84,7 +84,7 @@ void tty_soclib_try_read(struct device_s *dev, struct tty_soclib_tty_s *tty)
     /* use polling if no IRQ support available */
     size_t size = 0;
     while (size < rq->size)
-      if ((endian_le32(cpu_mem_read_32(addr + TTY_SOCLIB_REG_STATUS)) & 1)
+      if ((endian_le32(cpu_mem_read_32(addr + TTY_SOCLIB_REG_STATUS)) & 1))
         rq->data[size++] = cpu_mem_read_8(addr + TTY_SOCLIB_REG_READ);
 #endif
 
