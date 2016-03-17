@@ -1,0 +1,41 @@
+# -*- python -*-
+
+from mt.base.environment import *
+from mt.base.match import *
+from mt.base.expectation import *
+
+from mutekh.test.stages import configure, build, execute
+from mutekh.test.archs import *
+
+test_smp         = Config("test_smp")
+test_irq         = Config("test_irq")
+test_preempt     = Config("test_preempt")
+test_usermode    = Config("test_usermode")
+test_fpu         = Config("test_fpu")
+
+env = Environment(
+    name = "interrupts",
+    timeout = 20,
+    success_grep = "++SUCCESS++",
+
+    test_space = [
+        Dimension(*all_cpus.filter_by_feature("-arch:emu").expand()),
+        Dimension(Config("", [ "noexcept" ])),
+        Dimension(test_smp, None),
+        Dimension(test_irq, None),
+        Dimension(test_preempt, None),
+        Dimension(test_usermode, None),
+        Dimension(test_fpu, None),
+        Exclude(all_cpus.filter_by_feature("-preempt") & test_preempt),
+        Exclude(all_cpus.filter_by_feature("-usermode") & test_usermode),
+        Exclude(all_cpus.filter_by_feature("-fpu") & test_fpu),
+        Exclude(all_cpus.filter_by_feature("-smp") & test_smp)
+        ],
+
+    actions = [
+        configure,
+        build,
+        execute
+        ],
+
+    )

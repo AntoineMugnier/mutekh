@@ -1,0 +1,24 @@
+# -*- python -*-
+
+from mt.base.environment import *
+from mt.base.match import *
+from mt.base.expectation import *
+
+from mutekh.test.stages import configure, build, execute
+from mutekh.test.archs import *
+
+env = Environment(
+    name = "minimal",
+    timeout = 120,
+    success_grep = "__TEST__OK__",
+
+    test_space = [
+        Dimension(*all.filter_by_feature("+minimal").expand()),
+        ],
+
+    actions = [
+        configure,
+        build,
+        execute
+        ],
+    )

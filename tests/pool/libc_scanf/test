@@ -1,0 +1,25 @@
+# -*- python -*-
+
+from mt.base.environment import *
+from mt.base.match import *
+from mt.base.expectation import *
+
+from mutekh.test.stages import configure, build, execute
+from mutekh.test.archs import *
+
+env = Environment(
+    name = "libc_scanf",
+    timeout = 10,
+    success_grep = "++RESULT++0++",
+    covered_files = [ "libc/scanf.c" ],
+
+    test_space = [
+        Dimension(*default.expand()),
+        ],
+
+    actions = [
+        configure,
+        build,
+        execute
+        ],
+    )

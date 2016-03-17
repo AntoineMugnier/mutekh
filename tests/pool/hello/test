@@ -1,0 +1,37 @@
+# -*- python -*-
+
+from mt.base.environment import *
+from mt.base.match import *
+from mt.base.expectation import *
+
+from mutekh.test.stages import configure, build, execute
+from mutekh.test.archs import *
+
+test_smp                  = Config("test_smp", [ "cpu_count:4" ])
+test_sched_static         = Config("test_sched_static")
+
+env = Environment(
+    name = "hello",
+    timeout = 120,
+    success_grep = "++SUCCESS++400++",
+
+    test_space = [
+        Dimension(*all.expand()),
+
+#        Dimension(test_smp, None),
+#        Dimension(test_sched_static, None),
+
+        Exclude(all.filter_by_feature("-smp") & test_smp)
+        ],
+
+    actions = [
+        configure,
+        build,
+        execute
+        ],
+
+    rules = Rules(
+#        Xfail(mutekh.stages.configure, cpu_mips32el),
+#        Xfail(mutekh.stages.build,     cpu_arm & sched_static),
+        )
+    )

@@ -1,0 +1,39 @@
+
+  %set OUTPUT_NAME bytecode
+
+  # New source code module to be compiled
+  %append MODULES $(OUTPUT_NAME):$(CONFIGPATH)
+
+  # Application license
+  CONFIG_LICENSE_APP_LGPL
+
+  %include arch/arch.build
+  %include scripts/options.build
+
+  # Libs
+  CONFIG_COMPILE_OPTIMIZE 2
+  CONFIG_MUTEK_BYTECODE
+  CONFIG_APP_START
+  CONFIG_MUTEK_BYTECODE_TRACE
+
+%section t_checking
+  CONFIG_MUTEK_BYTECODE_CHECKING!
+%else
+  CONFIG_MUTEK_BYTECODE_CHECKING! undefined
+
+%section t_debug
+  CONFIG_MUTEK_BYTECODE_DEBUG!
+%else
+  CONFIG_MUTEK_BYTECODE_DEBUG! undefined
+
+%section t_trace
+  CONFIG_MUTEK_BYTECODE_TRACE!
+%else
+  CONFIG_MUTEK_BYTECODE_TRACE! undefined
+
+%section t_native
+  CONFIG_MUTEK_BYTECODE_NATIVE!
+  CONFIG_MUTEK_BYTECODE_VM! undefined
+%else
+  CONFIG_MUTEK_BYTECODE_NATIVE! undefined
+  CONFIG_MUTEK_BYTECODE_VM!

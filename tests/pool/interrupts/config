@@ -1,0 +1,45 @@
+
+  # New source code module to be compiled
+  %append MODULES test:$(CONFIGPATH)
+
+  # Application license
+  CONFIG_LICENSE_APP_LGPL
+
+  # Libs
+  CONFIG_PTHREAD
+  CONFIG_PTHREAD_MAIN
+
+%include scripts/options.build
+%include arch/arch.build
+
+  CONFIG_HEXO_CONTEXT_STATS!
+  CONFIG_MUTEK_CONTEXT_SCHED_MIGRATION!
+  CONFIG_COMPILE_NOBITFIELD! undefined
+
+%section test_smp
+  %subsection emu-*-*
+     CONFIG_ARCH_EMU_UNLOCK_YIELD
+  %end
+  CONFIG_ARCH_SMP!
+%else
+  CONFIG_ARCH_SMP! undefined
+
+%section test_irq
+  CONFIG_HEXO_IRQ!
+%else
+  CONFIG_HEXO_IRQ! undefined
+
+%section test_fpu
+  CONFIG_HEXO_FPU!
+%else
+  CONFIG_HEXO_FPU! undefined
+
+%section test_usermode
+  CONFIG_HEXO_USERMODE!
+%else
+  CONFIG_HEXO_USERMODE! undefined
+
+%section test_preempt
+  CONFIG_HEXO_CONTEXT_PREEMPT!
+  CONFIG_MUTEK_CONTEXT_SCHED_PREEMPT!
+

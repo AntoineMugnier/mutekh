@@ -1,0 +1,60 @@
+# -*- python -*-
+
+from mt.base.environment import *
+from mt.base.match import *
+from mt.base.expectation import *
+
+from mutekh.test.stages import configure, build, execute
+from mutekh.test.archs import *
+
+test_native         = Config("t_native")
+test_checking       = Config("t_checking")
+test_debug          = Config("t_debug")
+test_trace          = Config("t_trace")
+
+env_list = [
+
+Environment(
+    name = "bytecode1",
+    timeout = 30,
+    success_grep = "++SUCCESS++eda59108++",
+
+    test_space = [
+        Dimension(*all_cpus.expand()),
+        Dimension(test_native, None),
+        Exclude(all.filter_by_feature("-bytecode") & test_native),
+        ],
+
+    actions = [
+        configure,
+        build,
+        execute
+        ],
+
+    rules = Rules(
+        )
+    ),
+
+Environment(
+    name = "bytecode2",
+    timeout = 30,
+    success_grep = "++SUCCESS++",
+
+    test_space = [
+        Dimension(default.expand()[0]),
+        Dimension(test_debug, None),
+        Dimension(test_trace, None),
+        Dimension(test_checking, None),
+        Exclude(test_trace & ~test_debug),
+        ],
+
+    actions = [
+        configure,
+        build,
+        execute
+        ],
+
+    rules = Rules(
+        )
+    )
+]

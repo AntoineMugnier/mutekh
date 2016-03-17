@@ -1,0 +1,30 @@
+
+  # New source code module to be compiled
+  %append MODULES test:$(CONFIGPATH)
+
+  # Application license
+  CONFIG_LICENSE_APP_LGPL
+
+%include scripts/options.build
+%include arch/arch.build
+
+%section test_stream
+  CONFIG_LIBC_STREAM! defined
+%else
+  CONFIG_LIBC_STREAM! undefined
+
+%section test_stream_std
+  CONFIG_LIBC_STREAM_STD! defined
+%else
+  CONFIG_LIBC_STREAM_STD! undefined
+
+%section test_unixfd
+  CONFIG_LIBC_UNIXFD! defined
+%else
+  CONFIG_LIBC_UNIXFD! undefined
+
+%section test_vfs
+  CONFIG_VFS! defined
+%else
+  CONFIG_VFS! undefined
+

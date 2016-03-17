@@ -1,0 +1,2 @@
+To launch the tests run:
+$ flock -n /home/mutekh/run-tests.lock -c /home/mutekh/run-tests.sh

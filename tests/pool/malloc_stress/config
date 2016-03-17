@@ -1,0 +1,49 @@
+
+  %set OUTPUT_NAME malloc_stress
+
+  # New source code module to be compiled
+  %append MODULES $(OUTPUT_NAME):$(CONFIGPATH)
+
+  # Application license
+  CONFIG_LICENSE_APP_LGPL
+
+  %include arch/arch.build
+  %include scripts/options.build
+
+  CONFIG_PTHREAD
+  CONFIG_PTHREAD_MAIN
+  CONFIG_MUTEK_PRINTK_HEXDUMP
+  CONFIG_MUTEK_MEMALLOC_STATS
+
+%section t_simple
+  CONFIG_MUTEK_MEMALLOC_SIMPLE!
+%else
+  CONFIG_MUTEK_MEMALLOC_SIMPLE! undefined
+
+%section t_smart
+  CONFIG_MUTEK_MEMALLOC_SMART!
+%else
+  CONFIG_MUTEK_MEMALLOC_SMART! undefined
+
+%section t_guard
+  CONFIG_MUTEK_MEMALLOC_GUARD!
+%else
+  CONFIG_MUTEK_MEMALLOC_GUARD! undefined
+
+%section t_crc
+  CONFIG_MUTEK_MEMALLOC_CRC!
+%else
+  CONFIG_MUTEK_MEMALLOC_CRC! undefined
+
+%section t_scramble
+  CONFIG_MUTEK_MEMALLOC_SCRAMBLE!
+%else
+  CONFIG_MUTEK_MEMALLOC_SCRAMBLE! undefined
+
+%section t_firstfit
+  CONFIG_MUTEK_MEMALLOC_ALGO_FIRSTFIT
+  CONFIG_MUTEK_MEMALLOC_ALGO_BESTFIT undefined
+%else
+  CONFIG_MUTEK_MEMALLOC_ALGO_FIRSTFIT undefined
+  CONFIG_MUTEK_MEMALLOC_ALGO_BESTFIT
+

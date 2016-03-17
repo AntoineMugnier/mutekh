@@ -1,0 +1,35 @@
+# -*- python -*-
+
+from mt.base.environment import *
+from mt.base.match import *
+from mt.base.expectation import *
+
+from mutekh.test.stages import configure, build, execute
+
+linux_x86 = Config("emu-linux-x86")
+test_stream = Config("test_stream")
+test_stream_std = Config("test_stream_std")
+test_unixfd = Config("test_unixfd")
+test_vfs = Config("test_vfs")
+
+env = Environment(
+    name = "libc_stream_config",
+    covered_files = [ "libc/unistd.c", "libc/include/unistd.h",
+                      "libc/stdio.c", "libc/include/stdio.h",
+                      "libc/printf.c", "libc/scanf.c",
+                      "libc/libc.config" ],
+
+    test_space = [
+        Dimension(linux_x86),
+        Dimension(test_stream, None),
+        Dimension(test_stream_std, None),
+        Dimension(test_unixfd, None),
+        Dimension(test_vfs, None),
+        Exclude(test_stream_std & ~test_stream),
+        Exclude(test_vfs & ~test_unixfd & ~test_stream)
+        ],
+
+    actions = [
+        build,
+        ],
+    )

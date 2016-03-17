@@ -1,0 +1,69 @@
+
+  # New source code module to be compiled
+  %append MODULES test:$(CONFIGPATH)
+
+  %include arch/arch.build
+  %include scripts/options.build
+
+  # Application license
+  CONFIG_LICENSE_APP_LGPL
+
+  # Libs
+  CONFIG_PTHREAD!
+  CONFIG_PTHREAD_MAIN!
+  CONFIG_PTHREAD_STACK_SIZE! 4096
+
+  CONFIG_MUTEK_CONSOLE!
+  CONFIG_MUTEK_SHELL!
+
+%section t_clock
+  CONFIG_DEVICE_CLOCK!
+%else
+  CONFIG_DEVICE_CLOCK! undefined
+
+%section t_crypto
+  CONFIG_DEVICE_CRYPTO!
+%else
+  CONFIG_DEVICE_CRYPTO! undefined
+
+%section t_gpio
+  CONFIG_DEVICE_GPIO!
+%else
+  CONFIG_DEVICE_GPIO! undefined
+
+%section t_i2c
+  CONFIG_DEVICE_I2C!
+%else
+  CONFIG_DEVICE_I2C! undefined
+
+%section t_mem
+  CONFIG_DEVICE_MEM!
+%else
+  CONFIG_DEVICE_MEM! undefined
+
+%section t_pwm
+  CONFIG_DEVICE_PWM!
+%else
+  CONFIG_DEVICE_PWM! undefined
+
+%section t_rfpacket
+  CONFIG_DEVICE_RFPACKET!
+%else
+  CONFIG_DEVICE_RFPACKET! undefined
+
+%section t_spi
+  CONFIG_DEVICE_SPI!
+  CONFIG_DEVICE_SPI_REQUEST!
+%else
+  CONFIG_DEVICE_SPI! undefined
+
+%section t_timer
+  CONFIG_DEVICE_TIMER!
+%else
+  CONFIG_DEVICE_TIMER! undefined
+
+%section t_devtree
+  CONFIG_DEVICE_TREE!
+%else
+  CONFIG_DEVICE_TREE! undefined
+

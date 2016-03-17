@@ -1,0 +1,63 @@
+#!/usr/bin/env python
+
+from mt.base.environment import *
+from mt.base.match import *
+from mt.base.expectation import *
+
+from mutekh.stages import configure, build, execute
+from mutekh.archs import *
+
+test_smart        = Config("t_smart")
+test_simple       = Config("t_simple")
+test_guard        = Config("t_guard")
+test_crc          = Config("t_crc")
+test_scramble     = Config("t_scramble")
+test_firstfit     = Config("t_firstfit")
+
+env_list = [
+
+Environment(
+    name = "malloc_stress1",
+    timeout = 300,
+    success_grep = "++DONE++0++",
+
+    test_space = [
+        Dimension(*default.expand()),
+        Dimension(test_smart, test_simple),
+        ],
+
+    actions = [
+        configure,
+        build,
+        execute
+        ],
+
+    rules = Rules(
+        )
+    ),
+
+Environment(
+    name = "malloc_stress2",
+    timeout = 300,
+    success_grep = "++DONE++0++",
+
+    test_space = [
+        Dimension(*default.expand()),
+        Dimension(test_smart),
+        Dimension(test_guard, test_crc, test_scramble, test_firstfit),
+        ],
+
+    actions = [
+        configure,
+        build,
+        execute
+        ],
+
+    rules = Rules(
+        )
+    )
+]
+
+if __name__ == "__main__":
+    env.main()
+

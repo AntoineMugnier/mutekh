@@ -1,0 +1,15 @@
+
+  # New source code module to be compiled
+  %append MODULES test:$(CONFIGPATH)
+
+%include scripts/options.build
+%include arch/arch.build
+
+  CONFIG_LICENSE_APP_LGPL
+  CONFIG_APP_START!
+
+#  CONFIG_LIBC_STREAM!
+#  CONFIG_LIBC_STREAM_STD!
+  CONFIG_LIBC_SCANF!
+  CONFIG_LIBC_FORMATTER_FLOAT!
+

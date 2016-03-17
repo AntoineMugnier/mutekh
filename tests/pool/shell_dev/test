@@ -1,0 +1,59 @@
+# -*- python -*-
+
+from mt.base.environment import *
+from mt.base.match import *
+from mt.base.expectation import *
+
+from mutekh.test.stages import configure, build, execute
+from mutekh.test.archs import *
+
+test_shell_clock    = Config("t_clock")
+test_shell_crypto   = Config("t_crypto")
+test_shell_gpio     = Config("t_gpio")
+test_shell_i2c      = Config("t_i2c")
+test_shell_mem      = Config("t_mem")
+test_shell_pwm      = Config("t_pwm")
+test_shell_rfpacket = Config("t_rfpacket")
+test_shell_spi      = Config("t_spi")
+test_shell_timer    = Config("t_timer")
+test_shell_devtree  = Config("t_devtree")
+
+test_noopt          = Config("noopt")
+test_optsize        = Config("optsize")
+
+env = Environment(
+    name = "shell_dev",
+    timeout = 120,
+
+    test_space = [
+        Dimension(*default.expand()),
+        Dimension(
+            test_shell_clock,
+            test_shell_crypto,
+            test_shell_gpio,
+            test_shell_i2c,
+            test_shell_mem,
+            test_shell_pwm,
+            test_shell_rfpacket,
+            test_shell_spi,
+            test_shell_timer,
+            test_shell_devtree,
+            None),
+        Dimension(test_noopt, test_optsize),
+        Exclude(default.filter_by_feature("-clock") & test_shell_clock),
+        Exclude(default.filter_by_feature("-crypto") & test_shell_crypto),
+        Exclude(default.filter_by_feature("-gpio") & test_shell_gpio),
+        Exclude(default.filter_by_feature("-i2c") & test_shell_i2c),
+        Exclude(default.filter_by_feature("-mem") & test_shell_mem),
+        Exclude(default.filter_by_feature("-pwm") & test_shell_pwm),
+        Exclude(default.filter_by_feature("-rfpacket") & test_shell_rfpacket),
+        Exclude(default.filter_by_feature("-spi") & test_shell_spi),
+        Exclude(default.filter_by_feature("-timer") & test_shell_timer),
+        Exclude(default.filter_by_feature("+arch:emu") & ~test_shell_devtree),
+    ],
+
+    actions = [
+        configure,
+        build
+    ],
+)

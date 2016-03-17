@@ -1,0 +1,29 @@
+
+  # New source code module to be compiled
+  %append MODULES test:$(CONFIGPATH)
+
+  # Application license
+  CONFIG_LICENSE_APP_LGPL
+
+  # Libs
+  CONFIG_PTHREAD!
+  CONFIG_PTHREAD_MAIN!
+
+  %include scripts/options.build
+  %include arch/arch.build
+
+%section test_smp
+  %subsection emu-*-*
+     CONFIG_ARCH_EMU_UNLOCK_YIELD
+  %end
+  CONFIG_HEXO_IPI!
+  CONFIG_ARCH_SMP!
+%else
+  CONFIG_ARCH_SMP! undefined
+  CONFIG_HEXO_IPI! undefined
+
+%section test_sched_static
+  CONFIG_MUTEK_CONTEXT_SCHED_STATIC!
+%else
+  CONFIG_MUTEK_CONTEXT_SCHED_MIGRATION!
+

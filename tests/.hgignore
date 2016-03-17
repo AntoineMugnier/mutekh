@@ -1,0 +1,5 @@
+glob:**.pyc
+glob:**~
+glob:**.o
+tools/testwrap/testwrap
+tests.mk

@@ -1,0 +1,65 @@
+# -*- python -*-
+
+from mt.base.environment import *
+from mt.base.match import *
+from mt.base.expectation import *
+
+from mutekh.test.stages import configure, build, execute
+from mutekh.test.archs import *
+
+test_smp         = Config("t_smp")
+test_irq         = Config("t_irq")
+test_ipi         = Config("t_ipi")
+test_prio        = Config("t_prio")
+test_preempt     = Config("t_preempt")
+test_irqen       = Config("t_irqen")
+test_kidle       = Config("t_kidle")
+test_ktrigger    = Config("t_ktrigger")
+test_ksched      = Config("t_ksched")
+test_csched      = Config("t_csched")
+
+env = Environment(
+    name = "kroutine",
+    timeout = 120,
+    success_grep = "++SUCCESS++",
+
+    test_space = [
+        Dimension(*all_cpus.expand()),
+#        Dimension(test_smp, None),
+        Dimension(test_irq, None),
+        Dimension(test_ipi, None),
+        Dimension(test_prio, None),
+        Dimension(test_preempt, None),
+#        Dimension(test_irqen, None),
+        Dimension(test_kidle, None),
+        Dimension(test_ktrigger, test_ksched, None),
+        Dimension(test_csched, None),
+        Exclude(all.filter_by_feature("-smp") & test_smp),
+        Exclude(all.filter_by_feature("-preempt") & test_preempt),
+        Exclude(all.filter_by_feature("-waitirq") & test_ipi),
+        Exclude(all.filter_by_feature("-ipi") & test_ipi),
+        Exclude(all.filter_by_feature("-timer") & test_irq),
+        Exclude(test_ipi & ~test_smp),
+        Exclude(test_ipi & ~test_irq),
+        Exclude(test_preempt & ~test_irq),
+        Exclude(test_preempt & ~test_csched),
+        Exclude(test_irqen & ~test_irq),
+        Exclude(test_irqen & ~test_csched),
+        Exclude(test_smp & ~test_irq),
+        Exclude(test_prio & ~test_ksched),
+        Exclude(test_kidle & ~test_ksched),
+        Exclude(test_ktrigger & ~test_csched),
+        Exclude(~test_ksched & ~test_csched & (test_irq | test_irqen | test_ipi | test_prio | test_preempt | test_ktrigger)),
+        ],
+
+    actions = [
+        configure,
+        build,
+        execute
+        ],
+
+    rules = Rules(
+#        Xfail(mutekh.stages.configure, cpu_mips32el),
+#        Xfail(mutekh.stages.build,     cpu_arm & sched_static),
+        )
+    )

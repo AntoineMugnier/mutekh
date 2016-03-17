@@ -1,0 +1,67 @@
+
+# New source code module to be compiled
+  %append MODULES test:$(CONFIGPATH)
+
+  # Application license
+  CONFIG_LICENSE_APP_LGPL
+
+  %include scripts/options.build
+  %include arch/arch.build
+
+  CONFIG_APP_START!
+  CONFIG_HEXO_CONTEXT_STATS!
+
+%section t_smp
+  %subsection emu-*-*
+     CONFIG_ARCH_EMU_UNLOCK_YIELD
+  %end
+  CONFIG_ARCH_SMP!
+%else
+  CONFIG_ARCH_SMP! undefined
+
+%section t_irq
+  CONFIG_HEXO_IRQ!
+%else
+  CONFIG_HEXO_IRQ! undefined
+
+%section t_ipi
+  CONFIG_HEXO_IPI!
+%else
+  CONFIG_HEXO_IPI! undefined
+
+%section t_prio
+  CONFIG_MUTEK_SCHED_PRIORITIES! 2
+%else
+  CONFIG_MUTEK_SCHED_PRIORITIES! 1
+
+%section t_irqen
+  CONFIG_HEXO_CONTEXT_IRQEN!
+%else
+  CONFIG_HEXO_CONTEXT_IRQEN! undefined
+
+%section t_preempt
+  CONFIG_HEXO_CONTEXT_PREEMPT!
+%else
+  CONFIG_HEXO_CONTEXT_PREEMPT! undefined
+
+%section t_kidle
+  CONFIG_MUTEK_KROUTINE_IDLE!
+%else
+  CONFIG_MUTEK_KROUTINE_IDLE! undefined
+
+%section t_ktrigger
+  CONFIG_MUTEK_KROUTINE_TRIGGER!
+%else
+  CONFIG_MUTEK_KROUTINE_TRIGGER! undefined
+
+%section t_ksched
+  CONFIG_MUTEK_KROUTINE_SCHED!
+%else
+  CONFIG_MUTEK_KROUTINE_SCHED! undefined
+
+%section t_csched
+  CONFIG_MUTEK_CONTEXT_SCHED!
+  CONFIG_MUTEK_THREAD!
+  CONFIG_MUTEK_SEMAPHORE!
+%else
+  CONFIG_MUTEK_CONTEXT_SCHED! undefined

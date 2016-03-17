@@ -1,0 +1,41 @@
+
+  # New source code module to be compiled
+  %append MODULES test:$(CONFIGPATH)
+
+  # Application license
+  CONFIG_LICENSE_APP_GPL
+
+  # Libs
+  CONFIG_PTHREAD!                          defined
+  CONFIG_PTHREAD_MAIN!                     defined
+  CONFIG_PTHREAD_ATTRIBUTES!               undefined
+  CONFIG_PTHREAD_BARRIER!                  defined
+  CONFIG_PTHREAD_CANCEL!                   defined
+  CONFIG_PTHREAD_CHECK!                    defined
+  CONFIG_PTHREAD_COND!                     undefined
+  CONFIG_PTHREAD_JOIN!                     defined
+  CONFIG_PTHREAD_MUTEX!                    undefined
+  CONFIG_PTHREAD_MUTEX_ATTR!               undefined
+  CONFIG_PTHREAD_RWLOCK!                   undefined
+  CONFIG_PTHREAD_SPIN!                     undefined
+  CONFIG_PTHREAD_ATTRIBUTES!               defined
+
+%include scripts/options.build
+%include arch/arch.build
+
+%section test_smp
+  CONFIG_ARCH_SMP!
+%else
+  CONFIG_ARCH_SMP! undefined
+
+%section test_ipi
+  CONFIG_HEXO_IPI!
+%else
+  CONFIG_HEXO_IPI! undefined
+
+%section test_sched_static
+  CONFIG_MUTEK_CONTEXT_SCHED_STATIC!
+%else
+  CONFIG_MUTEK_CONTEXT_SCHED_MIGRATION!
+
+

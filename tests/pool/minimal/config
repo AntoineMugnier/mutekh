@@ -1,0 +1,20 @@
+%set OUTPUT_NAME minimal
+
+%append MODULES test:$(CONFIGPATH)
+
+CONFIG_LICENSE_APP_LGPL
+
+%include scripts/options.build
+%include arch/arch.build
+
+CONFIG_APP_START
+
+CONFIG_HEXO_IRQ undefined
+CONFIG_DEVICE_IRQ undefined
+CONFIG_DEVICE undefined
+CONFIG_CPU_ARM_DRIVER undefined
+
+CONFIG_MUTEK_MEMALLOC_SIMPLE
+CONFIG_LIBC_FORMATTER_SIMPLE
+
+CONFIG_COMPILE_COLLECT
