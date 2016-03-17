@@ -24,11 +24,11 @@
    @file ARCH lock
 */
 
-#if !defined(LOCK_H_) || defined(ARCH_LOCK_H_)
+#if !defined(LOCK_H_) || defined(ARCH_SPARC_LOCK_H_)
 #error This file can not be included directly
 #else
 
-#define ARCH_LOCK_H_
+#define ARCH_SPARC_LOCK_H_
 
 #include <assert.h>
 #include <hexo/ordering.h>
@@ -37,10 +37,11 @@
 
 struct		__arch_lock_s
 {
+# define __arch_lock_unlock a /* field unlocked from context switch asm */
   uint8_t       a;
 };
 
-#define ARCH_LOCK_INITIALIZER	{ .a = 0 }
+#define ARCH_LOCK_INITIALIZER	{ }
 
 ALWAYS_INLINE error_t __arch_lock_init(struct __arch_lock_s *lock)
 {

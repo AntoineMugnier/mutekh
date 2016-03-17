@@ -526,7 +526,9 @@ static void sched_context_idle()
               continue;
             }
         }
+# ifdef CONFIG_ARCH_SMP
       kroutine_list_unlock(&kroutine_idle);
+# endif
 #endif  /* !CONFIG_MUTEK_KROUTINE_IDLE */
 
   /************************** single processor case */

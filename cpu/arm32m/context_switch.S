@@ -22,6 +22,7 @@
 #include <hexo/context.h>
 #include <hexo/asm.h>
 #include <hexo/cpu.h>
+#include <hexo/lock.h>
 
 #include <cpu/arm32m/v7m.h>
 
@@ -134,6 +135,18 @@ FUNC_END(cpu_context_stack_guard)
         r1 = primask
 */
 FUNC_START(.text, cpu_context_jumpto_restore)
+
+#if defined(CONFIG_HEXO_LOCK_DEBUG) || defined(CONFIG_ARCH_SMP)
+        // unlock some atomic value on context restore if requested
+        ldr     r1,     [r0, #_offsetof(context_s, unlock, 4)]
+        tst     r1,     r1
+        beq     1f
+
+        movs    r2,     #0
+        str     r2,     [r0, #_offsetof(context_s, unlock, 4)]
+        str     r2,     [r1, #_offsetof(__arch_lock_s, __arch_lock_unlock, 4)]
+1:
+#endif
 
         /* restore tls pointer from context struct */
         ldr     r0,     [r0, #(_offsetof(context_s, tls, 4))]

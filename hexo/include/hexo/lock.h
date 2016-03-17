@@ -47,7 +47,7 @@ struct __arch_lock_s;
 
 struct			lock_s
 {
-#ifdef CONFIG_ARCH_SMP
+#if defined(CONFIG_ARCH_SMP) || defined(CONFIG_HEXO_LOCK_DEBUG)
   /** architecture specific lock data */
   struct __arch_lock_s	arch;
 #endif
@@ -60,7 +60,7 @@ struct			lock_irq_s
 #ifdef CONFIG_HEXO_IRQ
   cpu_irq_state_t	__interrupt_state;
 #endif
-#ifdef CONFIG_ARCH_SMP
+#if defined(CONFIG_ARCH_SMP) || defined(CONFIG_HEXO_LOCK_DEBUG)
   /** architecture specific lock data */
   struct __arch_lock_s	arch;
 #endif
@@ -68,7 +68,7 @@ struct			lock_irq_s
 
 typedef struct lock_irq_s lock_irq_t;
 
-#ifdef CONFIG_ARCH_SMP
+#if defined(CONFIG_ARCH_SMP) || defined(CONFIG_HEXO_LOCK_DEBUG)
 # define LOCK_INITIALIZER	{ .arch = ARCH_LOCK_INITIALIZER }
 #else
 # define LOCK_INITIALIZER	{ }
@@ -77,7 +77,7 @@ typedef struct lock_irq_s lock_irq_t;
 /** allocate a new lock */
 ALWAYS_INLINE error_t lock_init(lock_t *lock)
 {
-#ifdef CONFIG_ARCH_SMP
+#if defined(CONFIG_ARCH_SMP) || defined(CONFIG_HEXO_LOCK_DEBUG)
   return __arch_lock_init(&lock->arch);
 #else
   return 0;
@@ -87,7 +87,7 @@ ALWAYS_INLINE error_t lock_init(lock_t *lock)
 /** allocate a new lock with interrupt state */
 ALWAYS_INLINE error_t lock_init_irq(lock_irq_t *lock)
 {
-#ifdef CONFIG_ARCH_SMP
+#if defined(CONFIG_ARCH_SMP) || defined(CONFIG_HEXO_LOCK_DEBUG)
   return __arch_lock_init(&lock->arch);
 #else
   return 0;
@@ -98,7 +98,7 @@ ALWAYS_INLINE error_t lock_init_irq(lock_irq_t *lock)
 /** @this frees lock ressources */
 ALWAYS_INLINE void lock_destroy(lock_t *lock)
 {
-#ifdef CONFIG_ARCH_SMP
+#if defined(CONFIG_ARCH_SMP) || defined(CONFIG_HEXO_LOCK_DEBUG)
   return __arch_lock_destroy(&lock->arch);
 #endif
 }
@@ -106,7 +106,7 @@ ALWAYS_INLINE void lock_destroy(lock_t *lock)
 /** @this frees lock ressources */
 ALWAYS_INLINE void lock_destroy_irq(lock_irq_t *lock)
 {
-#ifdef CONFIG_ARCH_SMP
+#if defined(CONFIG_ARCH_SMP) || defined(CONFIG_HEXO_LOCK_DEBUG)
   return __arch_lock_destroy(&lock->arch);
 #endif
 }
@@ -115,7 +115,7 @@ ALWAYS_INLINE void lock_destroy_irq(lock_irq_t *lock)
 /** @this tries to take lock */
 ALWAYS_INLINE bool_t lock_try(lock_t *lock)
 {
-#ifdef CONFIG_ARCH_SMP
+#if defined(CONFIG_ARCH_SMP) || defined(CONFIG_HEXO_LOCK_DEBUG)
   order_smp_mem();
   return __arch_lock_try(&lock->arch);
 #else
@@ -127,7 +127,7 @@ ALWAYS_INLINE bool_t lock_try(lock_t *lock)
 /** @this spins to take the lock */
 ALWAYS_INLINE void lock_spin(lock_t *lock)
 {
-#ifdef CONFIG_ARCH_SMP
+#if defined(CONFIG_ARCH_SMP) || defined(CONFIG_HEXO_LOCK_DEBUG)
   order_smp_mem();
   __arch_lock_spin(&lock->arch);
 #endif
@@ -141,7 +141,7 @@ ALWAYS_INLINE void lock_spin_irq(lock_irq_t *lock)
   cpu_irq_state_t state;
   cpu_interrupt_savestate_disable(&state);
 #endif
-#ifdef CONFIG_ARCH_SMP
+#if defined(CONFIG_ARCH_SMP) || defined(CONFIG_HEXO_LOCK_DEBUG)
   order_smp_mem();
   __arch_lock_spin(&lock->arch);
 #endif
@@ -158,7 +158,7 @@ ALWAYS_INLINE void lock_spin_irq2(lock_t *lock, cpu_irq_state_t *irq_state)
   cpu_irq_state_t state;
   cpu_interrupt_savestate_disable(&state);
 #endif
-#ifdef CONFIG_ARCH_SMP
+#if defined(CONFIG_ARCH_SMP) || defined(CONFIG_HEXO_LOCK_DEBUG)
   order_smp_mem();
   __arch_lock_spin(&lock->arch);
 #endif
@@ -167,16 +167,6 @@ ALWAYS_INLINE void lock_spin_irq2(lock_t *lock, cpu_irq_state_t *irq_state)
 #endif
 }
 
-
-/** @this returns the current lock state */
-ALWAYS_INLINE bool_t lock_state(lock_t *lock)
-{
-#ifdef CONFIG_ARCH_SMP
-  return __arch_lock_state(&lock->arch);
-#else
-  return 0;
-#endif
-}
 
 /** @this saves interrupts state, disables interrupts, and spins to take
     lock. This macro must be matched with the LOCK_RELEASE_IRQ macro. */
@@ -194,7 +184,7 @@ ALWAYS_INLINE bool_t lock_state(lock_t *lock)
 /** @this releases a lock */
 ALWAYS_INLINE void lock_release(lock_t *lock)
 {
-#ifdef CONFIG_ARCH_SMP
+#if defined(CONFIG_ARCH_SMP) || defined(CONFIG_HEXO_LOCK_DEBUG)
   order_smp_mem();
   __arch_lock_release(&lock->arch);
 #endif
@@ -206,7 +196,7 @@ ALWAYS_INLINE void lock_release_irq(lock_irq_t *lock)
 #ifdef CONFIG_HEXO_IRQ
   cpu_irq_state_t state = lock->__interrupt_state;
 #endif
-#ifdef CONFIG_ARCH_SMP
+#if defined(CONFIG_ARCH_SMP) || defined(CONFIG_HEXO_LOCK_DEBUG)
   order_smp_mem();
   __arch_lock_release(&lock->arch);
 #endif
@@ -221,7 +211,7 @@ ALWAYS_INLINE void lock_release_irq2(lock_t *lock, const cpu_irq_state_t *irq_st
 #ifdef CONFIG_HEXO_IRQ
   cpu_irq_state_t state = *irq_state;
 #endif
-#ifdef CONFIG_ARCH_SMP
+#if defined(CONFIG_ARCH_SMP) || defined(CONFIG_HEXO_LOCK_DEBUG)
   order_smp_mem();
   __arch_lock_release(&lock->arch);
 #endif

@@ -22,6 +22,7 @@
 #include <hexo/context.h>
 #include <hexo/asm.h>
 #include <hexo/cpu.h>
+#include <hexo/lock.h>
 
 #ifdef CONFIG_SOCLIB_MEMCHECK
 # include <arch/soclib/mem_checker.h>
@@ -108,7 +109,7 @@ FUNC_END(cpu_context_switch)
 
 FUNC_START(.text, cpu_context_jumpto)
 
-#ifdef CONFIG_ARCH_SMP
+#if defined(CONFIG_HEXO_LOCK_DEBUG) || defined(CONFIG_ARCH_SMP)
         // unlock some atomic value on context restore if requested
         ld      [%o0 + _offsetof(context_s, unlock, 4)], %g1
         tst     %g1
@@ -117,7 +118,11 @@ FUNC_START(.text, cpu_context_jumpto)
 
         // unlock and clear unlock address
         st      %g0, [%o0 + _offsetof(context_s, unlock, 4)]
-        st      %g0, [%g1]
+        .if _sizeof(__arch_lock_s, __arch_lock_unlock) == 1
+          stb   %g0, [%g1 + _offsetof(__arch_lock_s, __arch_lock_unlock)]
+        .else
+          st    %g0, [%g1 + _offsetof(__arch_lock_s, __arch_lock_unlock)]
+        .endif
 1:      
 #endif
 

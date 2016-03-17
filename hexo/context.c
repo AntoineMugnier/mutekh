@@ -57,7 +57,7 @@ context_bootstrap(struct context_s *context, uintptr_t stack, size_t stack_size)
       return res;
     }
 
-# ifdef CONFIG_ARCH_SMP
+# if defined(CONFIG_HEXO_LOCK_DEBUG) || defined(CONFIG_ARCH_SMP)
   context->unlock = NULL;
 # endif
 
@@ -94,7 +94,7 @@ context_init(struct context_s *context,
   CONTEXT_LOCAL_TLS_SET(context->tls, context_stack_start, (uintptr_t)stack_start);
   CONTEXT_LOCAL_TLS_SET(context->tls, context_stack_end, (uintptr_t)stack_end);
 
-# ifdef CONFIG_ARCH_SMP
+# if defined(CONFIG_HEXO_LOCK_DEBUG) || defined(CONFIG_ARCH_SMP)
   context->unlock = NULL;
 # endif
 
@@ -132,7 +132,7 @@ context_destroy(struct context_s *context)
 {
   void *stack = (void*)CONTEXT_LOCAL_TLS_GET(context->tls, context_stack_start);
 
-# ifdef CONFIG_ARCH_SMP
+# if defined(CONFIG_HEXO_LOCK_DEBUG) || defined(CONFIG_ARCH_SMP)
   assert(context->unlock == NULL);
 # endif
 

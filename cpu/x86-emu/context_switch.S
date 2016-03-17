@@ -23,6 +23,7 @@
 #include <hexo/context.h>
 #include <hexo/asm.h>
 #include <hexo/cpu.h>
+#include <hexo/lock.h>
 
 .macro GET_TLS_VAR r
 #ifdef CONFIG_ARCH_SMP
@@ -77,7 +78,7 @@ FUNC_START(.text, cpu_context_jumpto)
         // get param
         movl    4(%esp), %edx
 
-# ifdef CONFIG_ARCH_SMP
+#if defined(CONFIG_HEXO_LOCK_DEBUG) || defined(CONFIG_ARCH_SMP)
         // unlock some atomic value on context restore if requested
         movl    _offsetof(context_s, unlock, 4)(%edx), %eax
         test    %eax,   %eax
@@ -85,7 +86,7 @@ FUNC_START(.text, cpu_context_jumpto)
 
         // unlock and clear unlock address
         movl    $0,     _offsetof(context_s, unlock, 4)(%edx)        
-        movl    $0,     (%eax)        
+        movl    $0,     _offsetof(__arch_lock_s, __arch_lock_unlock, 4)(%eax)
 1:      
 # endif
 

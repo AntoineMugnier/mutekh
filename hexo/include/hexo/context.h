@@ -50,9 +50,9 @@ struct context_s
   /** context local storage address */
   void			*tls;
 
-# ifdef CONFIG_ARCH_SMP
-  /** pointer to atomic int to clear on context switch */
-  atomic_int_t          *unlock;
+# if defined(CONFIG_HEXO_LOCK_DEBUG) || defined(CONFIG_ARCH_SMP)
+  /** lock to release on context restore */
+  lock_t                *unlock;
 # endif
 
 # ifdef CONFIG_HEXO_MMU
@@ -166,11 +166,10 @@ ALWAYS_INLINE void context_set_irqen(context_irqen_t *func);
 
 /** @This sets address of a lock which must be unlocked on next context
     restoration. The lock address is reset to NULL once unlock has been performed. */
-ALWAYS_INLINE void context_set_unlock(struct context_s *context, lock_t *lock)
+ALWAYS_INLINE void context_set_unlock(struct context_s *context, lock_t *unlock)
 {
-# ifdef CONFIG_ARCH_SMP
-  // FIXME use arch code to get atomic value address from lock
-  context->unlock = (void*)lock;
+# if defined(CONFIG_HEXO_LOCK_DEBUG) || defined(CONFIG_ARCH_SMP)
+  context->unlock = unlock;
 # endif
 }
 

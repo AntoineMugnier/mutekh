@@ -59,7 +59,7 @@ FUNC_END(cpu_context_switch)
 
 FUNC_START(.text, cpu_context_jumpto)
 
-#ifdef CONFIG_ARCH_SMP
+#if defined(CONFIG_HEXO_LOCK_DEBUG) || defined(CONFIG_ARCH_SMP)
         // unlock some atomic value on context restore if requested
 
         // unlock and clear unlock address

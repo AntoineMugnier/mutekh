@@ -22,6 +22,7 @@
 #include <hexo/context.h>
 #include <hexo/asm.h>
 #include <hexo/cpu.h>
+#include <hexo/lock.h>
 
 #ifdef CONFIG_SOCLIB_MEMCHECK
 # include <arch/soclib/mem_checker.h>
@@ -89,13 +90,13 @@ FUNC_END(arm_setup_exception_stack)
         
 FUNC_START(.text, cpu_context_jumpto)
 
-# ifdef CONFIG_ARCH_SMP
+#if defined(CONFIG_HEXO_LOCK_DEBUG) || defined(CONFIG_ARCH_SMP)
     // unlock some atomic value on context restore if requested
     ldr   r2, [r0, #_offsetof(context_s, unlock, 4)]
     cmp   r2, #0
     movne r1, #0
     strne r1, [r0, #_offsetof(context_s, unlock, 4)]
-    strne r1, [r2]
+    strne r1, [r2, #_offsetof(__arch_lock_s, __arch_lock_unlock, 4)]
 #endif
 
     // restore tls pointer from context struct

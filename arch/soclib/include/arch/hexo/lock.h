@@ -24,7 +24,7 @@
    @file ARCH lock
 */
 
-#if !defined(LOCK_H_) || defined(ARCH_LOCK_H_)
+#if !defined(LOCK_H_) || defined(ARCH_SOCLIB_LOCK_H_)
 #error This file can not be included directly
 #else
 
@@ -110,72 +110,11 @@ ALWAYS_INLINE bool_t __arch_lock_state(struct __arch_lock_s *lock)
 	USE CPU ATOMIC OPS
  **************************************************************/
 
-#include <assert.h>
-#include "hexo/atomic.h"
-
-#define ARCH_HAS_ATOMIC
-
-struct		__arch_lock_s
-{
-  atomic_int_t	a;
-};
-
-#define ARCH_LOCK_INITIALIZER	{ .a = 0 }
-
-ALWAYS_INLINE error_t __arch_lock_init(struct __arch_lock_s *lock)
-{
-  lock->a = 0;
-  order_smp_write();
-
-#ifdef CONFIG_SOCLIB_MEMCHECK
-  soclib_mem_check_declare_lock((void*)&lock->a, 1);
-#endif
-
-  return 0;
-}
-
-ALWAYS_INLINE void __arch_lock_destroy(struct __arch_lock_s *lock)
-{
-#ifdef CONFIG_SOCLIB_MEMCHECK
-  soclib_mem_check_declare_lock((void*)&lock->a, 0);
-#endif
-}
-
-ALWAYS_INLINE bool_t __arch_lock_try(struct __arch_lock_s *lock)
-{
-  bool_t res = __cpu_atomic_bit_testset(&lock->a, 0);
-  return res;
-}
-
-ALWAYS_INLINE void __arch_lock_spin(struct __arch_lock_s *lock)
-{
-#ifdef CONFIG_DEBUG_SPINLOCK_LIMIT
-  uint32_t deadline = CONFIG_DEBUG_SPINLOCK_LIMIT;
-
-  while (__cpu_atomic_bit_testset(&lock->a, 0))
-    assert(deadline-- > 0);
-#else
-  __cpu_atomic_bit_waitset(&lock->a, 0);
-#endif
-}
-
-ALWAYS_INLINE bool_t __arch_lock_state(struct __arch_lock_s *lock)
-{
-  bool_t res = lock->a & 1;
-  order_smp_read();
-  return res;
-}
-
-ALWAYS_INLINE void __arch_lock_release(struct __arch_lock_s *lock)
-{
-  order_smp_mem();
-  lock->a = 0;
-  order_smp_write();
-}
+#include "arch/common/include/arch/hexo/lock_cpuatomic.h"
 
 #endif
 
-# define ARCH_LOCK_H_
+# define ARCH_SOCLIB_LOCK_H_
 
 #endif
 

@@ -38,32 +38,100 @@
 
 struct		__arch_lock_s
 {
+#if defined(CONFIG_ARCH_SMP)
   atomic_int_t a;
+# define __arch_lock_unlock a /* field unlocked from context switch asm */
+#endif
+#if defined(CONFIG_HEXO_LOCK_DEBUG)
+  void *pc;
+# if defined(CONFIG_ARCH_SMP)
+  cpu_id_t cpu_id;
+# else
+#  define __arch_lock_unlock pc
+# endif
+#endif
 };
 
-#define ARCH_LOCK_INITIALIZER	{ .a = 0 }
+#if defined(CONFIG_ARCH_SMP)
+FIRST_FIELD_ASSERT(__arch_lock_s, a);
+#elif defined(CONFIG_HEXO_LOCK_DEBUG)
+FIRST_FIELD_ASSERT(__arch_lock_s, pc);
+#endif
+
+#define ARCH_LOCK_INITIALIZER	{ }
 
 ALWAYS_INLINE error_t __arch_lock_init(struct __arch_lock_s *lock)
 {
+#if defined(CONFIG_ARCH_SMP)
   lock->a = 0;
+#endif
+
+#if defined(CONFIG_HEXO_LOCK_DEBUG)
+  lock->pc = NULL;
+# if defined(CONFIG_ARCH_SMP)
+  lock->cpu_id = 0;
+# endif
+#endif
+
+#if defined(CONFIG_SOCLIB_MEMCHECK)
+# if defined(CONFIG_HEXO_LOCK_DEBUG) || defined(CONFIG_ARCH_SMP)
+  soclib_mem_check_declare_lock((void*)lock, 1);
+# endif
+#endif
+
   order_smp_write();
   return 0;
 }
 
 ALWAYS_INLINE void __arch_lock_destroy(struct __arch_lock_s *lock)
 {
+#if defined(CONFIG_SOCLIB_MEMCHECK)
+# if defined(CONFIG_HEXO_LOCK_DEBUG) || defined(CONFIG_ARCH_SMP)
+  soclib_mem_check_declare_lock((void*)lock, 0);
+# endif
+#endif
 }
 
 ALWAYS_INLINE bool_t __arch_lock_try(struct __arch_lock_s *lock)
 {
-  bool_t res = __cpu_atomic_bit_testset(&lock->a, 0);
+  bool_t res = 0;
+#if defined(CONFIG_HEXO_LOCK_DEBUG)
+# if defined(CONFIG_ARCH_SMP)
+  assert(!lock->a || lock->cpu_id != cpu_id() + 1);
+# else
+  assert(lock->pc == NULL);
+# endif
+#endif
+
+#if defined(CONFIG_ARCH_SMP)
+  res = __cpu_atomic_bit_testset(&lock->a, 0);
+#endif
+
+#if defined(CONFIG_HEXO_LOCK_DEBUG)
+  if (!res)
+    {
+      lock->pc = __builtin_return_address(0);
+# if defined(CONFIG_ARCH_SMP)
+      lock->cpu_id = cpu_id() + 1;
+# endif
+    }
+#endif
   order_smp_mem();
   return res;
 }
 
 ALWAYS_INLINE void __arch_lock_spin(struct __arch_lock_s *lock)
 {
-#ifdef CONFIG_DEBUG_SPINLOCK_LIMIT
+#if defined(CONFIG_HEXO_LOCK_DEBUG)
+# if defined(CONFIG_ARCH_SMP)
+  assert(!lock->a || lock->cpu_id != cpu_id() + 1);
+# else
+  assert(lock->pc == NULL);
+# endif
+#endif
+
+#if defined(CONFIG_ARCH_SMP)
+# ifdef CONFIG_DEBUG_SPINLOCK_LIMIT
   uint32_t deadline = CONFIG_DEBUG_SPINLOCK_LIMIT;
 
   while (__cpu_atomic_bit_testset(&lock->a, 0))
@@ -71,23 +139,38 @@ ALWAYS_INLINE void __arch_lock_spin(struct __arch_lock_s *lock)
       asm volatile("nop");
       assert(deadline-- > 0);
     }
-#else
+# else
   __cpu_atomic_bit_waitset(&lock->a, 0);
+# endif
 #endif
-  order_smp_mem();
-}
 
-ALWAYS_INLINE bool_t __arch_lock_state(struct __arch_lock_s *lock)
-{
-  bool_t res = lock->a & 1;
-  order_smp_read();
-  return res;
+#if defined(CONFIG_HEXO_LOCK_DEBUG)
+  lock->pc = __builtin_return_address(0);
+# if defined(CONFIG_ARCH_SMP)
+  lock->cpu_id = cpu_id() + 1;
+# endif
+#endif
+
+  order_smp_mem();
 }
 
 ALWAYS_INLINE void __arch_lock_release(struct __arch_lock_s *lock)
 {
   order_smp_mem();
+#if defined(CONFIG_HEXO_LOCK_DEBUG)
+# if defined(CONFIG_ARCH_SMP)
+  assert(lock->cpu_id == cpu_id() + 1);
+  lock->cpu_id = 0;
+# else
+  assert(lock->pc != NULL);
+# endif
+  lock->pc = NULL;
+#endif
+
+#if defined(CONFIG_ARCH_SMP)
   lock->a = 0;
+#endif
+
   order_smp_write();
 }
 
