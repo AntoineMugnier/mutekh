@@ -30,6 +30,8 @@
 #ifndef MUTEK_CONSOLE_H_
 #define MUTEK_CONSOLE_H_
 
+#include <hexo/decls.h>
+
 struct fileops_s;
 struct device_char_s;
 
