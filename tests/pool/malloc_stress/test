@@ -4,8 +4,8 @@ from mt.base.environment import *
 from mt.base.match import *
 from mt.base.expectation import *
 
-from mutekh.stages import configure, build, execute
-from mutekh.archs import *
+from mutekh.test.stages import configure, build, execute
+from mutekh.test.archs import *
 
 test_smart        = Config("t_smart")
 test_simple       = Config("t_simple")
@@ -14,12 +14,21 @@ test_crc          = Config("t_crc")
 test_scramble     = Config("t_scramble")
 test_firstfit     = Config("t_firstfit")
 
+deps = [
+    "mutek/memory_allocator_smart.c",
+    "mutek/memory_allocator_simple.c",
+    "mutek/mem_alloc.c",
+    "mutek/include/mutek/mem_alloc.h",
+    "mutek/include/mutek/memory_allocator.h"
+]
+
 env_list = [
 
 Environment(
     name = "malloc_stress1",
     timeout = 300,
     success_grep = "++DONE++0++",
+    test_deps = deps,
 
     test_space = [
         Dimension(*default.expand()),
@@ -40,6 +49,7 @@ Environment(
     name = "malloc_stress2",
     timeout = 300,
     success_grep = "++DONE++0++",
+    test_deps = deps,
 
     test_space = [
         Dimension(*default.expand()),

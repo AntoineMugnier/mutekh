@@ -18,6 +18,37 @@ env = Environment(
     timeout = 20,
     success_grep = "++SUCCESS++",
 
+    test_deps = [
+        "hexo/include/hexo/interrupt.h",
+
+        "cpu/arm32/interrupt.S",
+        "cpu/arm32/include/cpu/hexo/interrupt.h",
+
+        "cpu/arm32m/exception.S",
+        "cpu/arm32m/include/cpu/hexo/interrupt.h",
+
+        "cpu/avr32/interrupt.S",
+        "cpu/avr32/include/cpu/hexo/interrupt.h",
+
+        "cpu/lm32/interrupt.S",
+        "cpu/lm32/include/cpu/hexo/interrupt.h",
+
+        "cpu/mips/interrupt.S",
+        "cpu/mips/include/cpu/hexo/interrupt.h",
+
+        "cpu/nios2/interrupts.S",
+        "cpu/nios2/include/cpu/hexo/interrupt.h",
+
+        "cpu/ppc/interrupt.S",
+        "cpu/ppc/include/cpu/hexo/interrupt.h",
+
+        "cpu/sparc/interrupt.S",
+        "cpu/sparc/include/cpu/hexo/interrupt.h",
+
+        "cpu/x86/interrupts.S",
+        "cpu/x86/include/cpu/hexo/interrupt.h"
+        ],
+
     test_space = [
         Dimension(*all_cpus.filter_by_feature("-arch:emu").expand()),
         Dimension(Config("", [ "noexcept" ])),

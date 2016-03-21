@@ -14,7 +14,7 @@ test_vfs = Config("test_vfs")
 
 env = Environment(
     name = "libc_stream_config",
-    covered_files = [ "libc/unistd.c", "libc/include/unistd.h",
+    test_deps = [ "libc/unistd.c", "libc/include/unistd.h",
                       "libc/stdio.c", "libc/include/stdio.h",
                       "libc/printf.c", "libc/scanf.c",
                       "libc/libc.config" ],

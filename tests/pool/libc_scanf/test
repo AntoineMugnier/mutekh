@@ -11,7 +11,10 @@ env = Environment(
     name = "libc_scanf",
     timeout = 10,
     success_grep = "++RESULT++0++",
-    covered_files = [ "libc/scanf.c" ],
+
+    test_deps = [
+        "libc/scanf.c"
+        ],
 
     test_space = [
         Dimension(*default.expand()),

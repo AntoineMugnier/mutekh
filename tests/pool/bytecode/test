@@ -12,12 +12,20 @@ test_checking       = Config("t_checking")
 test_debug          = Config("t_debug")
 test_trace          = Config("t_trace")
 
+deps = [
+    "mutek/bytecode.c",
+    "mutek/include/mutek/bytecode.h",
+    "scripts/bc_asm.pl",
+    "scripts/bc_backend_bytecode.pm"
+]
+
 env_list = [
 
 Environment(
     name = "bytecode1",
     timeout = 30,
     success_grep = "++SUCCESS++eda59108++",
+    test_deps = deps,
 
     test_space = [
         Dimension(*all_cpus.expand()),
@@ -39,6 +47,7 @@ Environment(
     name = "bytecode2",
     timeout = 30,
     success_grep = "++SUCCESS++",
+    test_deps = deps,
 
     test_space = [
         Dimension(default.expand()[0]),

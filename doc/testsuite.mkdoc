@@ -10,7 +10,6 @@
     @item A python 2 interpreter, available in most GNU/Linux and BSD operating systems,
     @item Some target platform simulators,
     @item The @tt{testwrap} tool, a modified version of GNU coreutils timeout command,
-    @item Mercurial to clone the testsuite repository.
   @end list
 
   Depending on the target you wish to run the testsuite on, you may not need to install all of these tools.
@@ -23,16 +22,11 @@
 
     @section {Getting the test suite}
 
-    Once the required tools are installed and the MutekH source code is fetched, you need to get the testsuite:
+      Once the required tools are installed, the python module path must
+      point to the @tt{tests/lib/python} directory:
 
     @code R
 cd .../mutekh
-hg clone https://www.mutekh.org/hg/tests
-    @end code
-
-    The python module path must point to the @tt{tests/lib/python} directory:
-
-    @code R
 export PYTHONPATH=tests/lib/python/
     @end code
 
@@ -75,7 +69,7 @@ make -f tests.mk
 
   @section {Test infrastructure}
 
-  The testsuite repository contains the following directories:
+  @tt tests/ contains the following sub-directories:
 
   @list
     @item @tt{pool/} : Tests source code and description,

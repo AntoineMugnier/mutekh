@@ -1,5 +1,6 @@
 
 import operator
+import os.path
 
 class Point:
     
@@ -57,7 +58,7 @@ class Environment:
     """
     
     def __init__(self, name, test_space, actions, features = [], test_deps = [],
-                 rules = [], covered_files = [], timeout = 30, success_grep = ""):
+                 rules = [], timeout = 30, success_grep = ""):
         """
         :param str name: a name
     
@@ -73,12 +74,15 @@ class Environment:
         self.__dimensions = filter(lambda x:isinstance(x, Dimension), test_space)
         self.__excludes = filter(lambda x:isinstance(x, Exclude), test_space)
         self.__rules = rules
-        self.__covered_files = covered_files
         self.__actions = actions
         self.__path = "."
         self.__timeout = timeout
         self.__success_grep = success_grep
         self.__test_deps = test_deps
+
+        for x in self.__test_deps:
+            if (not os.path.isfile(x)):
+                raise ValueError("missing test dep file %s" % x)
 
         # stats
         self.__total_tests_count = 0
@@ -99,7 +103,13 @@ class Environment:
     def add_targets(self, mf):
         import makefile
         for t in self:
-            target = self._targetify("TEST-"+self.__name+'_'+str(t))
+
+            if (len(self.__test_deps) > 0):
+                prefix = 'TESTD'
+            else:
+                prefix = 'TESTN'
+
+            target = self._targetify(prefix+"-"+self.__name+'_'+str(t))
             commands = [
                 "@echo ============== %s =============="% str(t),
                 ]
@@ -145,8 +155,9 @@ class Environment:
 
                         cstr = " ".join(map(__escape, c))
                         if cstr not in cmd_done:
-                            commands.append(cstr + redir + target+'_'+context['action'] + ".log 2>&1")
+                            commands.append("echo " + cstr + redir + target+'_'+context['action'] + ".log")
                             redir = " >> ";
+                            commands.append(cstr + redir + target+'_'+context['action'] + ".log 2>&1")
                             cmd_done[cstr] = True
                             empty = False
 

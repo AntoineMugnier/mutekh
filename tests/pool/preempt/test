@@ -16,6 +16,52 @@ env = Environment(
     timeout = 120,
     success_grep = "++SUCCESS++8++",
 
+    test_deps = [
+        "cpu/arm32/context_switch.S",
+        "cpu/arm32/cpu_context.c",
+        "cpu/arm32/include/cpu/hexo/context.h",
+
+        "cpu/arm32m/context_switch.S",
+        "cpu/arm32m/cpu_context.c",
+        "cpu/arm32m/include/cpu/hexo/context.h",
+
+        "cpu/avr32/context_switch.S",
+        "cpu/avr32/cpu_context.c",
+        "cpu/avr32/include/cpu/hexo/context.h",
+
+        "cpu/lm32/context_switch.S",
+        "cpu/lm32/cpu_context.c",
+        "cpu/lm32/include/cpu/hexo/context.h",
+
+        "cpu/mips/context_switch.S",
+        "cpu/mips/cpu_context.c",
+        "cpu/mips/include/cpu/hexo/context.h",
+
+        "cpu/nios2/context_switch.S",
+        "cpu/nios2/cpu_context.c",
+        "cpu/nios2/include/cpu/hexo/context.h",
+
+        "cpu/ppc/context_switch.S",
+        "cpu/ppc/cpu_context.c",
+        "cpu/ppc/include/cpu/hexo/context.h",
+
+        "cpu/sparc/context_switch.S",
+        "cpu/sparc/cpu_context.c",
+        "cpu/sparc/include/cpu/hexo/context.h",
+
+        "cpu/x86/context_switch.S",
+        "cpu/x86/cpu_context.c",
+        "cpu/x86/include/cpu/hexo/context.h"
+
+#        "cpu/x86-emu/context_switch.S",
+#        "cpu/x86-emu/cpu_context.c",
+#        "cpu/x86-emu/include/cpu/hexo/context.h",
+#
+#        "cpu/x86_64-emu/context_switch.S",
+#        "cpu/x86_64-emu/cpu_context.c",
+#        "cpu/x86_64-emu/include/cpu/hexo/context.h"
+    ],
+
     test_space = [
         Dimension(*all_cpus.filter_by_feature("+preempt", "+timer").expand()),
         Dimension(test_smp, None),

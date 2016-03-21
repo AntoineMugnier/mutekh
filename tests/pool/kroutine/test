@@ -23,6 +23,13 @@ env = Environment(
     timeout = 120,
     success_grep = "++SUCCESS++",
 
+    test_deps = [
+        "mutek/kroutine.c",
+        "mutek/scheduler.c",
+        "mutek/include/mutek/kroutine.h",
+        "mutek/include/mutek/scheduler.h"
+    ],
+
     test_space = [
         Dimension(*all_cpus.expand()),
 #        Dimension(test_smp, None),
