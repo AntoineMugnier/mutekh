@@ -56,7 +56,7 @@ class Environment:
     The multidimensional environment to explore.
     """
     
-    def __init__(self, name, test_space, actions, features = [],
+    def __init__(self, name, test_space, actions, features = [], test_deps = [],
                  rules = [], covered_files = [], timeout = 30, success_grep = ""):
         """
         :param str name: a name
@@ -78,6 +78,7 @@ class Environment:
         self.__path = "."
         self.__timeout = timeout
         self.__success_grep = success_grep
+        self.__test_deps = test_deps
 
         # stats
         self.__total_tests_count = 0
@@ -156,7 +157,9 @@ class Environment:
 
             commands.append("touch "+target)
 
-            mf.append(makefile.Rule([target], [], commands))
+            prereqs = ["../" + x for x in self.__test_deps]
+
+            mf.append(makefile.Rule([target], prereqs, commands))
 
     def print_stats(self):
         print "  Total tests:     %i" % self.__total_tests_count
