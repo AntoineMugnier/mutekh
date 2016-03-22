@@ -45,26 +45,17 @@ pushd $destdir/mutekh 2>&1 >/dev/null
 # Update sources
 echo "INFO:: updating mutekh repository"
 (hg pull -u && hg purge) || exit 1
-echo "INFO:: updating tests repository"
-(cd tests; hg pull -u && hg purge) || exit 1
 
 # Dump changesets
 echo "INFO:: extract changesets from mecurial repositories"
 changeset_mutekh=`hg id | cut -d' ' -f1 | sed 's/\+//g'`
-changeset_tests=`(cd tests; hg id | cut -d' ' -f1 | sed 's/\+//g')`
-
 changeset_mutekh_last=""
-changeset_tests_last=""
 
 # Check changes from last run
 if [ -f $destdir/outputs/latest/changesets ]; then
-    last0=`cat $destdir/outputs/latest/changesets | grep mutekh | cut -d':' -f2`
-    last1=`cat $destdir/outputs/latest/changesets | grep tests | cut -d':' -f2`
+    changeset_mutekh_last=`cat $destdir/outputs/latest/changesets | grep mutekh | cut -d':' -f2`
 
-    changeset_mutekh_last=$last0
-    changeset_tests_last=$last1
-
-    if [ "$last0" = "$changeset_mutekh" -a "$last1" = "$changeset_tests" ]; then
+    if [ "$changeset_mutekh_last" = "$changeset_mutekh" ]; then
         echo "INFO:: No changes in mutekh and tests repositories"
         exit 0
     fi
@@ -79,19 +70,6 @@ fi
 #
 #        irc_log "New commit => repo:mutekh changeset:$changeset ($author)"
 #        irc_log "  url: http://www.mutekh.org/hg/mutekh/rev/$changeset"
-#        sync
-#    done
-#fi
-
-# Notify commits on mutekh
-#if [ -n "$changeset_tests_last" ]; then
-#    commits="$(cd tests; hg log -r $changeset_tests_last..tip --template '{author}:{rev}')"
-#    for c in $commits; do
-#        author="$(echo $c | cut -d':' -f1 | cut -d' ' -f1-2)"
-#        changeset="$(hg id -r `echo $c | cut -d':' -f2` | cut -d' ' -f1 | sed 's/\+//g')"
-#
-#        irc_log "New commit => repo:tests changeset:$changeset ($author)"
-#        irc_log "  url: http://www.mutekh.org/hg/tests/rev/$changeset"
 #        sync
 #    done
 #fi
@@ -117,6 +95,10 @@ $MTEST $mtest_args
 output_dir="$destdir/outputs/run-$suffix"
 echo "INFO:: Create output directory '$output_dir'"
 mkdir -p $output_dir
+
+# Copy previous
+cp -a $destdir/lastest/TESTD_* $output_dir/
+rm -f $output_dir/*.out
 
 # Create 'latest' symlink
 (cd $destdir/outputs; rm -f latest; ln -s `basename $output_dir` latest)
@@ -149,7 +131,6 @@ mv tests-${suffix}.mk $output_dir
 # Save changesets
 cat <<END > $output_dir/changesets
 mutekh:$changeset_mutekh
-tests:$changeset_tests
 END
 
 # Copy logs
@@ -163,7 +144,7 @@ popd 2>&1 >/dev/null
 . $HOME/.rvm/scripts/rvm
 
 # Make reports
-$destdir/utils/report.rb -r $destdir/outputs -d $destdir/www > $output_dir/report.txt
+$here/scripts/report.rb -r $destdir/outputs -d $destdir/www > $output_dir/report.txt
 
 if [ $? -ne 0 ]; then
     irc_log "Test run ends, changeset '$changeset_mutekh', see results at http://mutekh-tests.ssji.net/runs/${suffix}.html"
