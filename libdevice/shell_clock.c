@@ -87,7 +87,7 @@ static void dev_shell_clock_configs(struct termui_console_s *con,
               head = 1;
 
               struct dev_cmu_node_info_s info;
-              enum dev_cmu_node_info_e m = DEV_CLOCK_INFO_NAME;
+              enum dev_cmu_node_info_e m = DEV_CMU_INFO_NAME;
               const char *nname = "unknown";
               const char *pname = "unknown";
               if (!dev_cmu_node_info(&c->cmu, r->u.cmu_mux.node, &m, &info) && m)
@@ -109,7 +109,7 @@ static void dev_shell_clock_configs(struct termui_console_s *con,
               head = 1;
 
               struct dev_cmu_node_info_s info;
-              enum dev_cmu_node_info_e m = DEV_CLOCK_INFO_NAME;
+              enum dev_cmu_node_info_e m = DEV_CMU_INFO_NAME;
               const char *nname = "unknown";
               if (!dev_cmu_node_info(&c->cmu, r->u.cmu_osc.node, &m, &info) && m)
                 nname = info.name;
@@ -194,18 +194,18 @@ static TERMUI_CON_COMMAND_PROTOTYPE(dev_shell_clock_nodes)
     {
       struct dev_cmu_node_info_s info;
       enum dev_cmu_node_info_e mask =
-        DEV_CLOCK_INFO_FREQ | DEV_CLOCK_INFO_NAME |
-        DEV_CLOCK_INFO_PARENT | DEV_CLOCK_INFO_RUNNING;
+        DEV_CMU_INFO_FREQ | DEV_CMU_INFO_NAME |
+        DEV_CMU_INFO_PARENT | DEV_CMU_INFO_RUNNING;
 
       error_t err = DEVICE_OP(&c->cmu, node_info, i, &mask, &info);
       if (err == -EINVAL)
         break;
 
-      if (!(mask & DEV_CLOCK_INFO_NAME))
+      if (!(mask & DEV_CMU_INFO_NAME))
         info.name = "?";
       termui_con_printf(con, "  node %-3u : %16s", i, info.name);
 
-      if (mask & DEV_CLOCK_INFO_FREQ)
+      if (mask & DEV_CMU_INFO_FREQ)
         {
           termui_con_printf(con, " @ %llu", (uint64_t)info.freq.num);
           if (info.freq.denom != 1)
@@ -213,14 +213,14 @@ static TERMUI_CON_COMMAND_PROTOTYPE(dev_shell_clock_nodes)
           termui_con_printf(con, " Hz");
         }
 
-      if (mask & DEV_CLOCK_INFO_ACCURACY)
+      if (mask & DEV_CMU_INFO_ACCURACY)
         termui_con_printf(con, ", %u ppb",
                           dev_freq_acc_ppb(&info.freq));
-      if (mask & DEV_CLOCK_INFO_PARENT)
+      if (mask & DEV_CMU_INFO_PARENT)
         termui_con_printf(con, ", parent %u", info.parent_id);
-      if (mask & DEV_CLOCK_INFO_SRC)
+      if (mask & DEV_CMU_INFO_SRC)
         termui_con_printf(con, ", src_ep %p", info.src);
-      if (mask & DEV_CLOCK_INFO_SINK)
+      if (mask & DEV_CMU_INFO_SINK)
         termui_con_printf(con, ", sink_ep %p", info.sink);
       if (info.running)
         termui_con_printf(con, ", Running");

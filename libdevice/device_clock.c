@@ -257,15 +257,15 @@ error_t dev_clock_sink_link(struct dev_clock_sink_ep_s *sink,
             }
 
           struct dev_cmu_node_info_s info;
-          enum dev_cmu_node_info_e mask = DEV_CLOCK_INFO_SRC;
+          enum dev_cmu_node_info_e mask = DEV_CMU_INFO_SRC;
 
           if (freq != NULL)
-            mask |= DEV_CLOCK_INFO_FREQ | DEV_CLOCK_INFO_ACCURACY;
+            mask |= DEV_CMU_INFO_FREQ | DEV_CMU_INFO_ACCURACY;
 
           LOCK_SPIN_IRQ(&cmu.dev->lock);
 
           if (DEVICE_OP(&cmu, node_info, r->u.clock_src.src_ep, &mask, &info) ||
-              !(mask & DEV_CLOCK_INFO_SRC))
+              !(mask & DEV_CMU_INFO_SRC))
             {
               printk("device: clock provider %p does not have a source end-point with node id %u.\n",
                      cmu.dev, r->u.clock_src.src_ep);
@@ -275,10 +275,10 @@ error_t dev_clock_sink_link(struct dev_clock_sink_ep_s *sink,
 
           if (freq != NULL)
             {
-              if (mask & DEV_CLOCK_INFO_FREQ)
+              if (mask & DEV_CMU_INFO_FREQ)
                 {
                   *freq = info.freq;
-                  if (!(mask & DEV_CLOCK_INFO_ACCURACY))
+                  if (!(mask & DEV_CMU_INFO_ACCURACY))
                     freq->acc_e = 0;
                 }
               else if (device_get_res_freq(dev, freq, id))

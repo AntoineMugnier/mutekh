@@ -1274,19 +1274,19 @@ static DEV_CMU_NODE_INFO(efm32_recmu_node_info)
   if (node_id >= EFM32_CLOCK_count)
     return -EINVAL;
 
-  if (*mask & (DEV_CLOCK_INFO_FREQ | DEV_CLOCK_INFO_ACCURACY))
+  if (*mask & (DEV_CMU_INFO_FREQ | DEV_CMU_INFO_ACCURACY))
     if (efm32_recmu_get_node_freq(pv, &info->freq, node_id))
-      *mask &= ~(DEV_CLOCK_INFO_FREQ | DEV_CLOCK_INFO_ACCURACY);
+      *mask &= ~(DEV_CMU_INFO_FREQ | DEV_CMU_INFO_ACCURACY);
 
 #ifdef CONFIG_DRIVER_EFM32_RECMU_NAMES
   info->name = efm32_clock_names[node_id];
 #else
-  *mask &= ~DEV_CLOCK_INFO_NAME;  
+  *mask &= ~DEV_CMU_INFO_NAME;  
 #endif
 
   info->running = (pv->dep_mask >> node_id) & 1;
 
-  if (*mask & DEV_CLOCK_INFO_PARENT)
+  if (*mask & DEV_CMU_INFO_PARENT)
     switch (node_id)
       {
       case EFM32_CLOCK_HFCLK:
@@ -1304,18 +1304,18 @@ static DEV_CMU_NODE_INFO(efm32_recmu_node_info)
         break;
 #endif
       default:
-        *mask ^= DEV_CLOCK_INFO_PARENT;
+        *mask ^= DEV_CMU_INFO_PARENT;
         break;
       }
 
-  *mask &= ~DEV_CLOCK_INFO_SINK;
+  *mask &= ~DEV_CMU_INFO_SINK;
 
-  if (*mask & DEV_CLOCK_INFO_SRC)
+  if (*mask & DEV_CMU_INFO_SRC)
     {
       if (node_id > EFM32_CLOCK_FIRST_EP)
         info->src = pv->src + node_id - EFM32_CLOCK_FIRST_EP;
       else
-        *mask ^= DEV_CLOCK_INFO_SRC;
+        *mask ^= DEV_CMU_INFO_SRC;
     }
 
   return 0;

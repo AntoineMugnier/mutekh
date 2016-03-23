@@ -210,13 +210,13 @@ typedef DEV_CMU_ROLLBACK(dev_cmu_rollback_t);
     dev_cmu_node_info_t function. */
 enum dev_cmu_node_info_e
 {
-  DEV_CLOCK_INFO_FREQ    = 0x01,
-  DEV_CLOCK_INFO_NAME    = 0x02,
-  DEV_CLOCK_INFO_PARENT  = 0x04,
-  DEV_CLOCK_INFO_RUNNING = 0x08,
-  DEV_CLOCK_INFO_SINK    = 0x10,
-  DEV_CLOCK_INFO_SRC     = 0x20,
-  DEV_CLOCK_INFO_ACCURACY = 0x40,
+  DEV_CMU_INFO_FREQ    = 0x01,
+  DEV_CMU_INFO_NAME    = 0x02,
+  DEV_CMU_INFO_PARENT  = 0x04,
+  DEV_CMU_INFO_RUNNING = 0x08,
+  DEV_CMU_INFO_SINK    = 0x10,
+  DEV_CMU_INFO_SRC     = 0x20,
+  DEV_CMU_INFO_ACCURACY = 0x40,
 };
 
 /** @This stores node information retrieved by the @ref
