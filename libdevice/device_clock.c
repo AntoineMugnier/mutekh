@@ -291,7 +291,7 @@ error_t dev_clock_sink_link(struct dev_clock_sink_ep_s *sink,
 
           struct dev_clock_src_ep_s  *src = info.src;
 
-          err = src->f_setup(src, DEV_CLOCK_SETUP_LINK, (void*)sink);
+          err = src->f_setup(src, DEV_CLOCK_SETUP_LINK, (void*)&sink);
           if (!err)
             {
               dev_clock_link(src, sink);
@@ -379,7 +379,7 @@ void dev_clock_sink_unlink(struct dev_clock_sink_ep_s *sink)
     src->f_setup(src, DEV_CLOCK_SETUP_NONOTIFY, NULL);
 #endif
 
-  src->f_setup(src, DEV_CLOCK_SETUP_UNLINK, (void*)sink);
+  src->f_setup(src, DEV_CLOCK_SETUP_UNLINK, (void*)&sink);
 
   LOCK_RELEASE_IRQ(&src->dev->lock);
 }
