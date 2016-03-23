@@ -48,6 +48,10 @@ struct arm_dev_private_s
 
   struct cpu_tree_s node;
 
+#ifdef CONFIG_CPU_ARM32M_TIMER_DWTCYC
+  int_fast8_t dwt_cycnt_start;
+#endif
+
 #ifdef CONFIG_CPU_ARM32M_TIMER_SYSTICK
   int_fast8_t systick_start;
   dev_request_pqueue_root_t systick_queue;
@@ -57,12 +61,11 @@ struct arm_dev_private_s
   dev_timer_cfgrev_t systick_rev;
 # endif
 #endif
-#ifdef CONFIG_CPU_ARM32M_TIMER_DWTCYC
-  int_fast8_t dwt_cycnt_start;
-#endif
 
+# if defined(CONFIG_CPU_ARM32M_TIMER_SYSTICK) || defined(CONFIG_CPU_ARM32M_TIMER_DWTCYC)
   struct dev_freq_s freq;
   struct dev_clock_sink_ep_s clk_ep;
+# endif
 #endif
 };
 

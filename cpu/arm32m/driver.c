@@ -200,9 +200,11 @@ static DEV_USE(arm_use)
       struct dev_clock_sink_ep_s *sink = chg->sink;
       struct device_s *dev = sink->dev;
       struct arm_dev_private_s *pv = dev->drv_pv;
+# if defined(CONFIG_CPU_ARM32M_TIMER_SYSTICK) || defined(CONFIG_CPU_ARM32M_TIMER_DWTCYC)
       pv->freq = chg->freq;
-# if defined(CONFIG_CPU_ARM32M_TIMER_SYSTICK) && defined(CONFIG_DEVICE_IRQ)
+#  if defined(CONFIG_DEVICE_IRQ)
       pv->systick_rev += 2;
+#  endif
 # endif
       return 0;
     }
@@ -316,9 +318,12 @@ static DEV_INIT(arm_init)
       if (BIT_EXTRACT(cl_missing, DRIVER_CLASS_CMU))
         return -EAGAIN;
 #endif
+#if defined(CONFIG_CPU_ARM32M_TIMER_SYSTICK) || defined(CONFIG_CPU_ARM32M_TIMER_DWTCYC)
       if (dev_drv_clock_init(dev, &pv->clk_ep, 0, DEV_CLOCK_EP_SINK_NOTIFY |
-                             DEV_CLOCK_EP_POWER_CLOCK | DEV_CLOCK_EP_SINK_SYNC, &pv->freq))
+                             DEV_CLOCK_EP_POWER_CLOCK | DEV_CLOCK_EP_SINK_SYNC,
+                             &pv->freq))
         goto err_node;
+#endif
 #ifdef CONFIG_DEVICE_CLOCK
       BIT_SET(dev->init_mask, ARM32M_INITID_CLOCK);
     }
@@ -365,10 +370,12 @@ static DEV_CLEANUP(arm_cleanup)
   cpu_mem_write_32(ARMV7M_SYST_CSR_ADDR, 0);
 #endif
 
-#ifdef CONFIG_DEVICE_CLOCK
+#if defined(CONFIG_CPU_ARM32M_TIMER_SYSTICK) || defined(CONFIG_CPU_ARM32M_TIMER_DWTCYC)
+# ifdef CONFIG_DEVICE_CLOCK
   if (BIT_EXTRACT(dev->init_mask, ARM32M_INITID_CLOCK))
-#endif
+# endif
     dev_drv_clock_cleanup(dev, &pv->clk_ep);
+#endif
 
   if (BIT_EXTRACT(dev->init_mask, ARM32M_INITID_CPU))
     {
