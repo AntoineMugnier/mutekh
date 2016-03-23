@@ -109,6 +109,8 @@ hardware features.  Most development boards are supported as well.
     @list
       @item Basic AES block encrypt,
       @item a custom AES-based seedable DRBG,
+      @item BLE-CCM mode (it only supports CCM operation with
+        BLE-specific parameters),
       @item AES-CMAC, a keyed-hash algorithm used in Bluetooth
     @end list
 
