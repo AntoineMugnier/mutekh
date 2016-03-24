@@ -1,6 +1,6 @@
 #!/usr/bin/env ruby
 
-LIBPATH = File.join(File.dirname(__FILE__), "lib", "ruby")
+LIBPATH = File.join(File.dirname(__FILE__), "..", "lib", "ruby")
 $LOAD_PATH << LIBPATH unless $LOAD_PATH.include? LIBPATH
 
 require 'optparse'

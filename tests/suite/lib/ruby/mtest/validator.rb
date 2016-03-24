@@ -11,7 +11,9 @@ class Validator
     def validate(path)
         raise InvalidArgument, "invalid path #{path}" unless File.exists? path
         @tests.each do |t|
-            t.validate :finished if File.exists? File.join(path, "TEST_#{t.name}")
+            [ "N", "D" ].each do |tok|
+                t.validate :finished if File.exists? File.join(path, "TEST_#{tok}_#{t.name}")
+            end
         end
         @tests
     end

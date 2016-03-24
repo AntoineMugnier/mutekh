@@ -13,7 +13,7 @@ class MakefileParser
         File.open(fname).each do |line|
             line.chomp!
 
-            if /^TEST_(?<name>[^:]+):/ =~ line
+            if /^TEST_(D|N)_(?<name>[^:]+):/ =~ line
                 t = Test.new(name)
             end
 

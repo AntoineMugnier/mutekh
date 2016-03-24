@@ -105,11 +105,11 @@ class Environment:
         for t in self:
 
             if (len(self.__test_deps) > 0):
-                prefix = 'TESTD'
+                prefix = 'TEST_D'
             else:
-                prefix = 'TESTN'
+                prefix = 'TEST_N'
 
-            target = self._targetify(prefix+"-"+self.__name+'_'+str(t))
+            target = self._targetify(prefix+"_"+self.__name+'_'+str(t))
             commands = [
                 "@echo ============== %s =============="% str(t),
                 ]
@@ -168,9 +168,7 @@ class Environment:
 
             commands.append("touch "+target)
 
-            prereqs = ["../" + x for x in self.__test_deps]
-
-            mf.append(makefile.Rule([target], prereqs, commands))
+            mf.append(makefile.Rule([target], self.__test_deps, commands))
 
     def print_stats(self):
         print "  Total tests:     %i" % self.__total_tests_count
