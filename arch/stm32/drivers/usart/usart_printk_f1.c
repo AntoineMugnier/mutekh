@@ -27,7 +27,7 @@
 #include <mutek/printk.h>
 #include <mutek/startup.h>
 
-#include <arch/stm32/usart.h>
+#include <arch/stm32/f1/usart.h>
 
 #include <arch/stm32/f1/periph.h>
 #include <arch/stm32/f1/gpio.h>

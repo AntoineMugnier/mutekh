@@ -37,7 +37,7 @@
 #include <device/class/iomux.h>
 #include <device/class/uart.h>
 
-#include <arch/stm32/usart.h>
+#include <arch/stm32/f1/usart.h>
 
 #if CONFIG_DRIVER_STM32_USART_SWFIFO > 0
 # include <gct_platform.h>
@@ -520,8 +520,10 @@ DEV_INIT(stm32_usart_init)
     do { uint32_t register _reg = endian_le32(cpu_mem_read_32(( ((((pv->addr)))) + (STM32_USART_CR1_ADDR) ))); STM32_USART_CR1_TE_SET( (_reg), 1 ); cpu_mem_write_32( ( ((((pv->addr)))) + (STM32_USART_CR1_ADDR) ), endian_le32(_reg) ); } while (0);
 
   /* configure over-sampling. */
+#if CONFIG_STM32_FAMILY == 4
   do { uint32_t register _reg = endian_le32(cpu_mem_read_32(( ((((pv->addr)))) + (STM32_USART_CR1_ADDR) ))); STM32_USART_CR1_OVER8_SET( (_reg), 16 ); cpu_mem_write_32( ( ((((pv->addr)))) + (STM32_USART_CR1_ADDR) ), endian_le32(_reg) ); } while (0);
   do { uint32_t register _reg = endian_le32(cpu_mem_read_32(( ((((pv->addr)))) + (STM32_USART_CR3_ADDR) ))); STM32_USART_CR3_ONEBIT_SET( (_reg), 0 ); cpu_mem_write_32( ( ((((pv->addr)))) + (STM32_USART_CR3_ADDR) ), endian_le32(_reg) ); } while (0);
+#endif
 
   /* check for default configuration resource. */
   struct dev_resource_s *r = device_res_get(dev, DEV_RES_UART, 0);

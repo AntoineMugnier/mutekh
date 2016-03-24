@@ -26,7 +26,7 @@
 
 #include <mutek/printk.h>
 
-#include <arch/stm32/usart.h>
+#include <arch/stm32/f4/usart.h>
 
 #include <arch/stm32/f4/periph.h>
 #include <arch/stm32/f4/gpio.h>
