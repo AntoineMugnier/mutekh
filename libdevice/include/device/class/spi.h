@@ -25,7 +25,116 @@
    @module{Devices support library}
    @short SPI controller driver API
 
-   @section {SPI request bytecode instructions}
+   This class enables driving SPI bus controllers. SPI controllers may
+   be used from the application code but are most often used from
+   device drivers of slave SPI devices.
+
+   A generic SPI requests scheduler is provided which allows sharing a
+   single SPI bus by multiple slave devices. This has been designed to
+   support concurrence of access from multiple slave drivers.
+
+   @section {SPI driver API}
+
+   Unlike most driver classes, SPI bus controller drivers are not able
+   to queue more than one request at the same time. They provide the
+   @ref dev_spi_ctrl_transfer_t function which starts a single SPI
+   transfer on the BUS, if not already busy. A deferred @ref
+   kroutine_s is scheduled when the transfer is over.
+
+   The @ref dev_spi_ctrl_config_t function allows setting the bus
+   speed and modes for the next transfer.
+
+   The @ref dev_spi_ctrl_select_t function must be used to set the
+   chip select policy. It is only relevant when the controller is in
+   charge of driving the chip select pin which is not always the case.
+
+   Device drivers of SPI slaves must not use this driver low level API
+   directly as it does not allow sharing the bus with other
+   slaves. The scheduler API described below is builtin on top of the
+   present driver API. It requires the controller driver to store a
+   @ref dev_spi_ctrl_queue_s {scheduler queue} object in the device
+   private data and make it available through the @ref
+   dev_spi_ctrl_queue_t function.
+
+   @end section
+
+   @section {SPI request scheduler}
+
+   This API allows scheduling multiple SPI requests which will be
+   processed once the bus becomes idle. This allows sharing a SPI bus
+   between multiple slave device drivers and the application.
+
+   Two types of requests can be scheduled concrrently: single
+   transaction requests and bytecode based requests. Both are covered
+   in the following sections.
+
+   @section {SPI transaction request}
+
+   A transaction is a single SPI transfer processed by the controller
+   with an optional chip selection during the transfer.  The chip
+   selection policy may rely either on the bus controller or on a gpio
+   controller. The scheduler will take care of driving the chip select
+   signal when the transfer actually takes place.
+
+   A transaction may be started on the SPI bus by calling the @ref
+   dev_spi_transaction_start function. A deferred @ref kroutine_s
+   is scheduled when the transaction is over.
+
+   When the controller is used from a slave device driver, the @ref
+   dev_drv_spi_transaction_init helper function may be used to
+   initialize a request from the appropriate @xref {Device
+   resources}{resource entries} of the slave device.
+
+   @csee #CONFIG_DEVICE_SPI_TRANSACTION
+   @end section
+
+   @section {SPI bytecode request}
+
+   Driving a SPI slave device often requires many small transactions
+   with some control depending on values read from the slave. Due to
+   the asynchronous nature of the transaction requests API, this may
+   be cumbersome to write a driver which use deferred execution of
+   many small functions between transactions. A blocking C API would
+   be easier to use but is not option as this would imply allocation
+   of a thread stack for each slave device driver.
+
+   Moreover, the SPI bus interface being a de facto standard, some
+   slave may have some specific requirements, either yielding or
+   locking the bus for some time between transfers. Sharing the bus
+   between such slaves without relying on specific code requires
+   expressing timing and locking constraints to the scheduler for each
+   transfer.
+
+   These issues are addressed by providing a SPI specific bytecode
+   based on the Mutekh @xref {generic bytecode}. A bytecode request
+   come with a bytecode program containing some synchronous SPI
+   transfer instructions as well as time delay, chip selection and
+   gpio instructions. Generic bytecode instructions can be used for
+   control. The bytecode can then be used to write some SPI macros
+   operations specific to a given slave. A slave device driver may use
+   several different bytecode routines to perform its task.
+
+   A bytecode request may be started on the SPI bus by calling the
+   @ref dev_spi_bytecode_start function. The SPI request scheduler
+   designed to handle time delays and switching between scheduled
+   bytecode programs as appropriate.  A bytecode requests terminates
+   when its associated bytecode program terminates. A deferred @ref
+   kroutine_s is scheduled when this occurs.
+
+   When the controller is used from a slave device driver, the @ref
+   dev_drv_spi_bytecode_init helper function may be used to
+   initialize a request from the appropriate @xref {Device
+   resources}{resource entries} of the slave device.
+
+   @csee #CONFIG_DEVICE_SPI_BYTECODE
+   @end section
+
+   @end section
+
+   @section {SPI bytecode instructions}
+
+   This section describes SPI specific bytecode instructions.
+
    @table 3
     @item instruction              @item operands      @item opcode
 
@@ -66,7 +175,7 @@
    executed. The execution of the bytecode will not be suspended. When
    a @xref {spi_yield} or @xref {spi_wait} instruction is
    encountered, the execution is suspended if the delay has not
-   elapsed at that time. The @ref #CONFIG_DEVICE_SPI_BYTECODE_TIMER
+   elapsed at that time. The @cref #CONFIG_DEVICE_SPI_BYTECODE_TIMER token
    must be defined in order to use this instruction.
 
    The delay given in the register is expressed timer unit.
@@ -157,7 +266,7 @@
    @end section
 
    @section {spi_gpioset}
-   This instruction sets the value of a gpio pin. The @ref
+   This instruction sets the value of a gpio pin. The @cref
    #CONFIG_DEVICE_SPI_BYTECODE_GPIO token must be defined.
    @end section
 
@@ -177,21 +286,27 @@
    @end section
 
    @section {spi_rdm8, spi_rdm16, spi_rdm32}
-   This instruction reads multiple SPI words and store them in a
-   buffer of byte values. The value of the r14 register is used as
-   the padding write value.
+   These instructions read multiple SPI words and store them in an
+   array of values. The value of the r14 register is used as
+   the padding write value. The array element width depends on the
+   instruction used and is not related to the SPI word width
+   on the bus.
    @end section
 
    @section {spi_wrm8, spi_wrm16, spi_wrm32}
-   This instruction writes multiple SPI words from a buffer of
-   bytes. Input values are discarded.
+   This instruction writes multiple SPI words from an array of
+   values. Input values are discarded. The array element width
+   depends on the instruction used and is not related to the SPI
+   word width on the bus.
    @end section
 
    @section {spi_swpm8, spi_swpm16, spi_swpm32}
    This instruction reads and writes multiple SPI words using two
    buffer of bytes. The address of the read buffer is given by the
    value of the @tt raddr register and the address of the write buffer
-   is given by the value of the neighbor register (@tt raddr ^ 1).
+   is given by the value of the paired register (@tt raddr ^ 1).
+   The array element width depends on the instruction used and is not
+   related to the SPI word width on the bus.
    @end section
 
    @end section
@@ -332,6 +447,9 @@ typedef DEV_SPI_CTRL_SELECT(dev_spi_ctrl_select_t);
 
 /***************************************** transfer */
 
+/** @This describes the data buffers used during both @ref
+    dev_spi_ctrl_transfer_s and @ref dev_spi_ctrl_transaction_rq_s
+    requests. */
 struct dev_spi_ctrl_data_s
 {
   /** Number of SPI words to transfer. If this value is 0, the @ref in
@@ -358,6 +476,9 @@ struct dev_spi_ctrl_data_s
   uint_fast8_t             BITFIELD(out_width,3);
 };
 
+/** @This contains the SPI transfer request which may be started by
+    calling the @ref dev_spi_ctrl_transfer_t function of the driver.
+    @xsee {SPI driver API} */
 struct dev_spi_ctrl_transfer_s
 {
   /** The @ref kroutine_exec function is called on this kroutine when
@@ -365,9 +486,10 @@ struct dev_spi_ctrl_transfer_s
       the transfer is zero or the @tt err field is set. */
   struct kroutine_s        kr;
 
+  /** Transfer data buffer */
   struct dev_spi_ctrl_data_s data;
 
-  /** Callback private data */
+  /** User private data */
   void                     *pvdata;
 
   /** Transfer completion error */
@@ -454,23 +576,26 @@ struct dev_spi_ctrl_bytecode_rq_s;
 
 /***************************************** request */
 
+/** @This is the SPI scheduler request base structure. */
 struct dev_spi_ctrl_base_rq_s
 {
   struct dev_request_s base;
 
+  /** @internal */
   struct device_spi_ctrl_s *ctrl;
 
+  /** This configuration is applied during the execution of the request. */
   struct dev_spi_ctrl_config_s config;
 
 #ifdef CONFIG_DEVICE_GPIO
-  /** If this device accessor refers to a gpio device, it will be used
-      to drive the chip select pin and aux pins for this SPI slave. If
-      it's not valid, the controller chip select mechanism will be
-      used if available. */
+  /** @internal If this device accessor refers to a gpio device, it
+      will be used to drive the chip select pin and aux pins for this
+      SPI slave. If it's not valid, the controller chip select
+      mechanism will be used if available. @see dev_spi_request_gpio */
   struct device_gpio_s    gpio;
 #endif
 
-  /** request end callback */
+  /** Request completion error */
   error_t                  err;
 
   /** This is either the index of the spi controller chip select
@@ -491,10 +616,10 @@ struct dev_spi_ctrl_base_rq_s
   /** Use the controller to driver the chip select pin of the slave */
   bool_t                  BITFIELD(cs_ctrl,1);
 
-  /** This flag indicates that the request has not ended yet. */
+  /** @internal This flag indicates that the request has not ended yet. */
   bool_t                  BITFIELD(enqueued,1);
 
-  /** This flag indicates we have a bytecode request. */
+  /** @internal This flag indicates we have a bytecode request. */
   bool_t                  BITFIELD(bytecode,1);
 };
 
@@ -504,10 +629,15 @@ STRUCT_INHERIT(dev_spi_ctrl_base_rq_s, dev_request_s, base);
 
 #ifdef CONFIG_DEVICE_SPI_TRANSACTION
 
+/** @This is the @xcref {SPI transaction request} structure.
+
+    Fields common to all types of requests are inherited from @ref
+    dev_spi_ctrl_base_rq_s. */
 struct dev_spi_ctrl_transaction_rq_s
 {
   struct dev_spi_ctrl_base_rq_s base;
 
+  /** Transfer data buffer */
   struct dev_spi_ctrl_data_s data;
 };
 
@@ -517,7 +647,10 @@ STRUCT_INHERIT(dev_spi_ctrl_transaction_rq_s, dev_spi_ctrl_base_rq_s, base);
 
 #ifdef CONFIG_DEVICE_SPI_BYTECODE
 
-/** @This structure describes actions to perform on a SPI slave device. */
+/** @This is the @xcref {SPI bytecode request} structure.
+
+    Fields common to all types of requests are inherited from @cref
+    dev_spi_ctrl_base_rq_s. */
 struct dev_spi_ctrl_bytecode_rq_s
 {
   struct dev_spi_ctrl_base_rq_s base;
@@ -526,18 +659,22 @@ struct dev_spi_ctrl_bytecode_rq_s
   struct bc_context_s      vm;
 
 #ifdef CONFIG_DEVICE_SPI_BYTECODE_TIMER
+  /** @internal */
   dev_timer_value_t       sleep_before;
 #endif
 
 #ifdef CONFIG_DEVICE_SPI_BYTECODE_GPIO
-  /** If the @ref gpio device accessor is valid, these tables give the
-      index of gpio pin to use when a @tt spi_gpio* instruction is
-      encountered. */
+  /** When the @tt base.gpio device accessor is valid, this table
+      give the index of gpio pin to use when a @tt spi_gpio*
+      instruction is encountered. */
   const gpio_id_t         *gpio_map;
+  /** @csee gpio_map */
   const gpio_width_t      *gpio_wmap;
 #endif
 
+  /** @internal */
   bool_t                  BITFIELD(wakeup,1);
+  /** @internal */
   bool_t                  BITFIELD(wakeup_able,1);
 };
 
@@ -547,17 +684,24 @@ STRUCT_INHERIT(dev_spi_ctrl_bytecode_rq_s, dev_spi_ctrl_base_rq_s, base);
 
 #ifdef CONFIG_DEVICE_SPI_REQUEST
 
+/** @internal @This is the SPI scheduler queue contained in
+    private data of the SPI bus controller device. */
 struct dev_spi_ctrl_queue_s
 {
-  /** This device accessor is used to execute the delay bytecode
+  dev_request_queue_root_t      queue;
+  struct dev_spi_ctrl_base_rq_s *current;
+
+# ifdef CONFIG_DEVICE_SPI_BYTECODE_TIMER
+  struct dev_spi_ctrl_bytecode_rq_s *timeout;
+  /** This device accessor is used to execute the bytecode time delay
       instructions. It may not be valid, in this case any delay
       instruction with a delay greater than zero will make the request
-      fail. */
-# ifdef CONFIG_DEVICE_SPI_BYTECODE_TIMER
+      fail. @ref dev_spi_timer */
   struct device_timer_s         timer;
 # endif
 
   union {
+    /** used to schedule bytecode resume/execution */
     struct kroutine_s             kr;
 # ifdef CONFIG_DEVICE_SPI_BYTECODE_TIMER
     struct dev_timer_rq_s         timer_rq;
@@ -570,14 +714,8 @@ struct dev_spi_ctrl_queue_s
     };
   };
 
-  /** This keep track of the last used configuration. */
+  /** keeps track of the last used configuration. */
   struct dev_spi_ctrl_config_s *config;
-
-  struct dev_spi_ctrl_base_rq_s *current;
-# ifdef CONFIG_DEVICE_SPI_BYTECODE_TIMER
-  struct dev_spi_ctrl_bytecode_rq_s *timeout;
-# endif
-  dev_request_queue_root_t      queue;
 
   lock_irq_t                    lock;
 };
@@ -597,8 +735,7 @@ config_depend(CONFIG_DEVICE_SPI_REQUEST)
 error_t dev_spi_queue_init(struct device_s *dev, struct dev_spi_ctrl_queue_s *q);
 
 /** This helper function release the device accessor associated with
-    the SPI request queue. @see dev_spi_queue_init
- */
+    the SPI request queue. @see dev_spi_queue_init */
 config_depend(CONFIG_DEVICE_SPI_REQUEST)
 void dev_spi_queue_cleanup(struct dev_spi_ctrl_queue_s *q);
 
@@ -615,6 +752,14 @@ void dev_spi_transaction_start(struct device_spi_ctrl_s *ctrl,
 /** @This schedules a SPI bytecode request for execution. The kroutine
     of the request will be called when the bytecode terminates.
 
+    This function returns an error only if the bytecode request is
+    already running. All other errors are reported through @tt err
+    field of request by executing the associated kroutine.
+
+    If the @tt pc parameter is not @tt NULL, the @ref bc_set_pc
+    function is called before starting the bytecode, unless already
+    running.
+
     The kroutine of the request may be executed from within this
     function. Please read @xref {Nested device request completion}. */
 config_depend(CONFIG_DEVICE_SPI_BYTECODE)
@@ -629,10 +774,10 @@ void dev_spi_bytecode_init(struct dev_spi_ctrl_bytecode_rq_s *rq),
   memset(rq, 0, sizeof(*rq));
 })
 
-/** This helper function initializes a SPI bytecode request for use in
-    a SPI slave device driver. It is usually called from the slave
-    driver initialization function to initialize a request stored in
-    the driver private context.
+/** This helper function initializes a @xref{SPI bytecode request} for
+    use in a SPI slave device driver. It is usually called from the
+    slave driver initialization function to initialize a request
+    stored in the driver private data.
 
     The pointer to the SPI controller @tt ctrl will be initialized
     according to the @tt spi device resource entry of the slave.
@@ -643,11 +788,11 @@ void dev_spi_bytecode_init(struct dev_spi_ctrl_bytecode_rq_s *rq),
     present, the request is configured to use a gpio pin as chip
     select instead.
 
-    In order to use the gpio bytecode instructions, the
+    In order to use the gpio bytecode instructions, the @ref
     #CONFIG_DEVICE_SPI_BYTECODE_GPIO token must be defined and the @tt
     gpio parameter must be non-NULL. The pointer to a gpio accessor
     will be initialized and can then be used to setup the @tt
-    {rq->gpio_map} and @tt {rq->gpio_wmap} fields of the request
+    gpio_map and @tt gpio_wmap fields of the request
     before starting the bytecode. The accessor can later be retrieved
     again using @ref dev_spi_request_gpio.
 
@@ -676,10 +821,10 @@ void dev_spi_transaction_init(struct dev_spi_ctrl_transaction_rq_s *rq),
   memset(rq, 0, sizeof(*rq));
 })
 
-/** This helper function initializes a SPI transaction request for use
-    in a SPI slave device driver. It is usually called from the slave
-    driver initialization function to initialize a request stored in
-    the driver private context.
+/** This helper function initializes a @xref{SPI transaction request}
+    for use in a SPI slave device driver. It is usually called from
+    the slave driver initialization function to initialize a request
+    stored in the driver private data.
 
     The pointer to the SPI controller @tt ctrl will be initialized
     according to the @tt spi device resource entry of the slave.
@@ -718,8 +863,8 @@ dev_spi_request_gpio(struct dev_spi_ctrl_base_rq_s *rq),
   return &rq->gpio;
 })
 
-/** This helper function release the device accessors associated with
-    the SPI slave request. @see dev_spi_request_init */
+/** This helper function releases the device accessors associated with
+    the SPI slave request. @see dev_drv_spi_bytecode_init */
 config_depend(CONFIG_DEVICE_SPI_BYTECODE)
 void dev_drv_spi_bytecode_cleanup(struct device_spi_ctrl_s *ctrl,
                                   struct dev_spi_ctrl_bytecode_rq_s *rq);
@@ -735,13 +880,15 @@ void dev_drv_spi_transaction_cleanup(struct device_spi_ctrl_s *ctrl,
 
     This is reset when either a delay is canceled or the request is
     restarted. This returns an error if the request is not currently
-    running.
- */
+    running. */
 config_depend(CONFIG_DEVICE_SPI_BYTECODE)
 error_t device_spi_bytecode_wakeup(struct device_spi_ctrl_s *ctrl,
                                    struct dev_spi_ctrl_bytecode_rq_s *rq);
 
 #ifdef CONFIG_DEVICE_SPI
+/** @This specifies a @ref #DEV_STATIC_RES_DEVCLASS_PARAM @em spi
+    entry. This is typically used in slave device resources as a link
+    to the associated SPI bus controller. */
 # define DEV_STATIC_RES_DEV_SPI(path_)                          \
   DEV_STATIC_RES_DEVCLASS_PARAM("spi", path_, DRIVER_CLASS_SPI_CTRL)
 #else
