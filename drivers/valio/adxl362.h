@@ -56,7 +56,8 @@ struct adxl362_private_s
   uint32_t time;
 
   struct dev_irq_src_s src_ep;
-  struct dev_spi_ctrl_rq_s spi_rq;
+  struct device_spi_ctrl_s spi;
+  struct dev_spi_ctrl_bytecode_rq_s spi_rq;
 
   /* queue for requests */
   dev_request_queue_root_t queue;

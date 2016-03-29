@@ -73,7 +73,7 @@ static inline void adxl362_end_rq(struct device_s *dev)
 static bool_t adxl362_process(struct device_s *dev)
 {
   struct adxl362_private_s *pv = dev->drv_pv;
-  struct dev_spi_ctrl_rq_s *srq = &pv->spi_rq;
+  struct dev_spi_ctrl_bytecode_rq_s *srq = &pv->spi_rq;
 
   struct dev_valio_rq_s *rq = dev_valio_rq_s_cast(dev_request_queue_head(&pv->queue));
   
@@ -175,10 +175,10 @@ static bool_t adxl362_process(struct device_s *dev)
   }
 }
 
-void adxl362_run(struct device_s *dev)
+static void adxl362_run(struct device_s *dev)
 {
   struct adxl362_private_s *pv = dev->drv_pv;
-  struct dev_spi_ctrl_rq_s *srq = &pv->spi_rq;
+  struct dev_spi_ctrl_bytecode_rq_s *srq = &pv->spi_rq;
 
   while (1)
     {
@@ -192,9 +192,9 @@ void adxl362_run(struct device_s *dev)
 
       pv->flags |= ADXL362_FLAGS_BC_RUN;
       lock_release_irq2(&dev->lock, &pv->irq_save);
-      dev_spi_rq_start(srq);
+      dev_spi_bytecode_start(&pv->spi, srq, NULL);
 
-      if (!kroutine_trigger(&srq->base.kr, KROUTINE_IMMEDIATE))
+      if (!kroutine_trigger(&srq->base.base.kr, KROUTINE_IMMEDIATE))
         return;
 
       lock_spin_irq2(&dev->lock, &pv->irq_save);
@@ -303,16 +303,15 @@ static DEV_IRQ_SRC_PROCESS(adxl362_irq_source_process)
 
 static KROUTINE_EXEC(spi_rq_done)
 {
-  struct dev_request_s *grq = KROUTINE_CONTAINER(kr, *grq, kr);
-  struct dev_spi_ctrl_rq_s *srq = dev_spi_ctrl_rq_s_cast(grq);
-  struct device_s *dev = grq->pvdata;
+  struct dev_spi_ctrl_bytecode_rq_s *srq = KROUTINE_CONTAINER(kr, *srq, base.base.kr);
+  struct device_s *dev = srq->base.base.pvdata;
   struct adxl362_private_s *pv = dev->drv_pv;
 
   lock_spin_irq2(&dev->lock, &pv->irq_save);
 
   pv->flags ^= ADXL362_FLAGS_BC_RUN;
 
-  if (srq->err)
+  if (srq->base.err)
     abort();
 
   if (flags & KROUTINE_EXEC_TRIGGERED)
@@ -345,23 +344,24 @@ static DEV_INIT(adxl362_init)
 
   dev->drv_pv = pv;
 
-  struct dev_spi_ctrl_rq_s *srq = &pv->spi_rq;
+  struct dev_spi_ctrl_bytecode_rq_s *srq = &pv->spi_rq;
 
-  if (dev_spi_request_init(dev, srq, 0, 1))
+  if (dev_drv_spi_bytecode_init(dev, srq, &pv->spi, NULL, NULL))
     goto err_mem;
 
-  srq->config.bit_rate = 1000000;
-  srq->config.word_width = 8;
-  srq->config.bit_order = DEV_SPI_MSB_FIRST;
-  srq->config.ck_mode = DEV_SPI_CK_MODE_0;
-  srq->cs_polarity = DEV_SPI_ACTIVE_LOW;
-  srq->base.pvdata = dev;
+  srq->base.config.bit_rate = 1000000;
+  srq->base.config.word_width = 8;
+  srq->base.config.bit_order = DEV_SPI_MSB_FIRST;
+  srq->base.config.ck_mode = DEV_SPI_CK_MODE_0;
+  srq->base.cs_polarity = DEV_SPI_ACTIVE_LOW;
+  srq->base.base.pvdata = dev;
 
   dev_request_queue_init(&pv->queue);
 
   pv->state = ADXL362_STATE_DOWN;
 
-  kroutine_init_trigger(&srq->base.kr, &spi_rq_done);
+#warning remove trigger
+  kroutine_init_trigger(&srq->base.base.kr, &spi_rq_done);
   bc_init(&srq->vm, &adxl362_bytecode, 1, /* R_CTX_PV */ pv);
 
   /* Disable bytecode trace */
@@ -382,7 +382,7 @@ static DEV_INIT(adxl362_init)
   device_irq_source_unlink(dev, &pv->src_ep, 1);
 #endif
  err_srq:
-  dev_spi_request_cleanup(srq);
+  dev_drv_spi_bytecode_cleanup(&pv->spi, srq);
  err_mem:
   mem_free(pv);
   return -1;
@@ -393,7 +393,7 @@ static DEV_CLEANUP(adxl362_cleanup)
   struct adxl362_private_s *pv = dev->drv_pv;
 
   device_irq_source_unlink(dev, &pv->src_ep, 1);
-  dev_spi_request_cleanup(&pv->spi_rq);
+  dev_drv_spi_bytecode_cleanup(&pv->spi, &pv->spi_rq);
 
   mem_free(pv);
 }
