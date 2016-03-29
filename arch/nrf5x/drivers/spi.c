@@ -118,16 +118,16 @@ static void nrf5x_spi_tr_put_one(struct nrf5x_spi_context_s *pv,
 {
   uint8_t word = 0;
 
-  switch (tr->out_width) {
+  switch (tr->data.out_width) {
   case 1:
-    word = *(const uint8_t*)tr->out;
+    word = *(const uint8_t*)tr->data.out;
     break;
   case 2:
-    word = *(const uint16_t*)tr->out;
+    word = *(const uint16_t*)tr->data.out;
     break;
   case 0:
   case 4:
-    word = *(const uint32_t*)tr->out;
+    word = *(const uint32_t*)tr->data.out;
     break;
   }
 
@@ -135,7 +135,7 @@ static void nrf5x_spi_tr_put_one(struct nrf5x_spi_context_s *pv,
 
   nrf_reg_set(pv->addr, NRF_SPI_TXD, word);
 
-  tr->out = (const void*)((uintptr_t)tr->out + tr->out_width);
+  tr->data.out = (const void*)((uintptr_t)tr->data.out + tr->data.out_width);
 }
 
 static void nrf5x_spi_tr_get_one(struct nrf5x_spi_context_s *pv,
@@ -145,20 +145,20 @@ static void nrf5x_spi_tr_get_one(struct nrf5x_spi_context_s *pv,
 
   dprintk("SPI rx: %02x\n", word);
 
-  if (tr->in) {
-    switch (tr->in_width) {
+  if (tr->data.in) {
+    switch (tr->data.in_width) {
     case 1:
-      *(uint8_t*)tr->in = word;
+      *(uint8_t*)tr->data.in = word;
       break;
     case 2:
-      *(uint16_t*)tr->in = word;
+      *(uint16_t*)tr->data.in = word;
       break;
     case 4:
-      *(uint32_t*)tr->in = word;
+      *(uint32_t*)tr->data.in = word;
       break;
     }
 
-    tr->in = (void*)((uint8_t*)tr->in + tr->in_width);
+    tr->data.in = (void*)((uint8_t*)tr->data.in + tr->data.in_width);
   }
 }
 
@@ -169,11 +169,11 @@ void nrf5x_spi_transfer_start(
 {
   pv->words_in_transit = 0;
 
-  dprintk("SPI rq %d %d %P...", tr->count, tr->out_width, tr->out, tr->count);
+  dprintk("SPI rq %d %d %P...", tr->data.count, tr->data.out_width, tr->data.out, tr->data.count);
 
-  while (tr->count && pv->words_in_transit < 2) {
+  while (tr->data.count && pv->words_in_transit < 2) {
     nrf5x_spi_tr_put_one(pv, tr);
-    tr->count--;
+    tr->data.count--;
     pv->words_in_transit++;
   }
 }
@@ -197,9 +197,9 @@ static DEV_IRQ_SRC_PROCESS(nrf5x_spi_irq)
 
   nrf5x_spi_tr_get_one(pv, tr);
 
-  if (tr->count) {
+  if (tr->data.count) {
     nrf5x_spi_tr_put_one(pv, tr);
-    tr->count--;
+    tr->data.count--;
   } else {
     // Only decrement words in transit when nothing is fed back in
     // mosi.
@@ -232,12 +232,12 @@ static DEV_SPI_CTRL_TRANSFER(nrf5x_spi_transfer)
 
   if (pv->current_transfer != NULL) {
     tr->err = -EBUSY;
-  } else if (!((0x17 >> tr->out_width) & 1) || (tr->in && !((0x16 >> tr->in_width) & 1))) {
-    printk("Error: out_width: %d, in_width: %d\n", tr->out_width, tr->in_width);
-    printk("Error: out: %p, in: %p\n", tr->out, tr->in);
+  } else if (!((0x17 >> tr->data.out_width) & 1) || (tr->data.in && !((0x16 >> tr->data.in_width) & 1))) {
+    printk("Error: out_width: %d, in_width: %d\n", tr->data.out_width, tr->data.in_width);
+    printk("Error: out: %p, in: %p\n", tr->data.out, tr->data.in);
     tr->err = -EINVAL;
   } else {
-    assert(tr->count > 0);
+    assert(tr->data.count > 0);
 
     pv->current_transfer = tr;
     tr->err = 0;

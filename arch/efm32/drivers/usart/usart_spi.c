@@ -146,26 +146,26 @@ static bool_t efm32_usart_spi_transfer_rx(struct device_s *dev)
 
       pv->fifo_lvl--;
 
-      if (tr->in == NULL)
+      if (tr->data.in == NULL)
         continue;
 
-      switch (tr->in_width)
+      switch (tr->data.in_width)
         {
         case 1:
-          *(uint8_t*)tr->in = word;
+          *(uint8_t*)tr->data.in = word;
           break;
         case 2:
-          *(uint16_t*)tr->in = word;
+          *(uint16_t*)tr->data.in = word;
           break;
         case 4:
-          *(uint32_t*)tr->in = word;
+          *(uint32_t*)tr->data.in = word;
           break;
         }
 
-      tr->in = (void*)((uint8_t*)tr->in + tr->in_width);
+      tr->data.in = (void*)((uint8_t*)tr->data.in + tr->data.in_width);
     }
 
-  if (tr->count > 0)
+  if (tr->data.count > 0)
     return efm32_usart_spi_transfer_tx(dev);
 
   pv->tr = NULL;
@@ -187,31 +187,31 @@ static bool_t efm32_usart_spi_transfer_tx(struct device_s *dev)
 
   /* enable expected irq */
   cpu_mem_write_32(pv->addr + EFM32_USART_IEN_ADDR,
-                   tr->count >= EFM32_USART_FIFO_SIZE
+                   tr->data.count >= EFM32_USART_FIFO_SIZE
                    ? endian_le32(EFM32_USART_IEN_RXFULL)
                    : endian_le32(EFM32_USART_IEN_RXDATAV));
 
-  while (tr->count > 0 && pv->fifo_lvl < EFM32_USART_FIFO_SIZE)
+  while (tr->data.count > 0 && pv->fifo_lvl < EFM32_USART_FIFO_SIZE)
     {
       uint32_t word = 0;
-      switch (tr->out_width)
+      switch (tr->data.out_width)
         {
         case 1:
-          word = *(const uint8_t*)tr->out;
+          word = *(const uint8_t*)tr->data.out;
           break;
         case 2:
-          word = *(const uint16_t*)tr->out;
+          word = *(const uint16_t*)tr->data.out;
           break;
         case 0:
         case 4:
-          word = *(const uint32_t*)tr->out;
+          word = *(const uint32_t*)tr->data.out;
           break;
         }
 
       cpu_mem_write_32(pv->addr + EFM32_USART_TXDATA_ADDR, endian_le32(word));
 
-      tr->out = (const void*)((const uint8_t*)tr->out + tr->out_width);
-      tr->count--;
+      tr->data.out = (const void*)((const uint8_t*)tr->data.out + tr->data.out_width);
+      tr->data.count--;
       pv->fifo_lvl++;
     }
 
@@ -338,13 +338,13 @@ static void efm32_usart_spi_start_dma(struct device_s *dev)
 
   pv->drq.rq.error = 0;
   /* TX */
-  pv->drq.rq.tr[DEV_DMA_INTL_WRITE].size = pv->tr->count;
-  pv->drq.rq.tr[DEV_DMA_INTL_WRITE].src = (uintptr_t)pv->tr->out;
-  pv->drq.rq.param[DEV_DMA_INTL_WRITE].src_inc = (0x20103 >> (pv->tr->out_width * 4)) & 0xf;
+  pv->drq.rq.tr[DEV_DMA_INTL_WRITE].size = pv->tr->data.count;
+  pv->drq.rq.tr[DEV_DMA_INTL_WRITE].src = (uintptr_t)pv->tr->data.out;
+  pv->drq.rq.param[DEV_DMA_INTL_WRITE].src_inc = (0x20103 >> (pv->tr->data.out_width * 4)) & 0xf;
   /* RX */
-  pv->drq.rq.tr[DEV_DMA_INTL_READ].size = pv->tr->count;
-  pv->drq.rq.tr[DEV_DMA_INTL_READ].dst = (uintptr_t)pv->tr->in;
-  pv->drq.rq.param[DEV_DMA_INTL_READ].dst_inc = (0x20103 >> (pv->tr->in_width * 4)) & 0xf;
+  pv->drq.rq.tr[DEV_DMA_INTL_READ].size = pv->tr->data.count;
+  pv->drq.rq.tr[DEV_DMA_INTL_READ].dst = (uintptr_t)pv->tr->data.in;
+  pv->drq.rq.param[DEV_DMA_INTL_READ].dst_inc = (0x20103 >> (pv->tr->data.in_width * 4)) & 0xf;
   
   pv->drq.rq.base.pvdata = dev;
 
@@ -369,7 +369,7 @@ static DEV_SPI_CTRL_TRANSFER(efm32_usart_spi_transfer)
     tr->err = -EBUSY;
   else
     {
-      assert(tr->count > 0);
+      assert(tr->data.count > 0);
       tr->err = 0;
       pv->tr = tr;
       dev->start_count |= 1;
@@ -388,7 +388,7 @@ static DEV_SPI_CTRL_TRANSFER(efm32_usart_spi_transfer)
 
       done = 0;
 
-      if (tr->count > CONFIG_DRIVER_EFM32_USART_DMA_THRD)
+      if (tr->data.count > CONFIG_DRIVER_EFM32_USART_DMA_THRD)
         {
           efm32_usart_spi_start_dma(dev);
         }

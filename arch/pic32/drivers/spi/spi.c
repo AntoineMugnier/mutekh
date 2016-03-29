@@ -175,26 +175,26 @@ static bool_t pic32_spi_transfer_rx(struct device_s *dev)
 
       pv->fifo_lvl--;
 
-      if (tr->in == NULL)
+      if (tr->data.in == NULL)
         continue;
 
-      switch (tr->in_width)
+      switch (tr->data.in_width)
         {
         case 1:
-          *(uint8_t*)tr->in = word;
+          *(uint8_t*)tr->data.in = word;
           break;
         case 2:
-          *(uint16_t*)tr->in = word;
+          *(uint16_t*)tr->data.in = word;
           break;
         case 4:
-          *(uint32_t*)tr->in = word;
+          *(uint32_t*)tr->data.in = word;
           break;
         }
 
-      tr->in = (void*)((uint8_t*)tr->in + tr->in_width);
+      tr->data.in = (void*)((uint8_t*)tr->data.in + tr->data.in_width);
     }
 
-  if (tr->count > 0)
+  if (tr->data.count > 0)
     return pic32_spi_transfer_tx(dev);
 
   pv->tr = NULL;
@@ -208,20 +208,20 @@ static bool_t pic32_spi_transfer_tx(struct device_s *dev)
   struct pic32_spi_context_s *pv = dev->drv_pv;
   struct dev_spi_ctrl_transfer_s *tr = pv->tr;
 
-  while (tr->count > 0 && pv->fifo_lvl < PIC32_SPI_FIFO_SIZE)
+  while (tr->data.count > 0 && pv->fifo_lvl < PIC32_SPI_FIFO_SIZE)
     {
       uint32_t word = 0;
-      switch (tr->out_width)
+      switch (tr->data.out_width)
         {
         case 1:
-          word = *(const uint8_t*)tr->out;
+          word = *(const uint8_t*)tr->data.out;
           break;
         case 2:
-          word = *(const uint16_t*)tr->out;
+          word = *(const uint16_t*)tr->data.out;
           break;
         case 0:
         case 4:
-          word = *(const uint32_t*)tr->out;
+          word = *(const uint32_t*)tr->data.out;
           break;
         }
 
@@ -229,8 +229,8 @@ static bool_t pic32_spi_transfer_tx(struct device_s *dev)
 
       cpu_mem_write_32(pv->addr + PIC32_SPI_BUF_ADDR, endian_le32(word));
 
-      tr->out = (const void*)((const uint8_t*)tr->out + tr->out_width);
-      tr->count--;
+      tr->data.out = (const void*)((const uint8_t*)tr->data.out + tr->data.out_width);
+      tr->data.count--;
       pv->fifo_lvl++;
     }
 
@@ -336,31 +336,31 @@ static KROUTINE_EXEC(dma_callback)
 static void pic32_spi_start_dma(struct device_s *dev)
 {
   struct pic32_spi_context_s *pv = dev->drv_pv;
-  uint8_t in_width = (0x20103 >> (pv->tr->in_width * 4)) & 0xf; 
-  uint8_t out_width = (0x20103 >> (pv->tr->out_width * 4)) & 0xf; 
+  uint8_t in_width = (0x20103 >> (pv->tr->data.in_width * 4)) & 0xf; 
+  uint8_t out_width = (0x20103 >> (pv->tr->data.out_width * 4)) & 0xf; 
 
   pv->dma_use = 1;
 
-  if (pv->tr->in)
+  if (pv->tr->data.in)
   /* Interleaved request */
     {
       /* TX */
-      if (pv->tr->out_width)
+      if (pv->tr->data.out_width)
         {
-          pv->intlrq.rq.tr[DEV_DMA_INTL_WRITE].size = pv->tr->count * pv->tr->out_width;
-          pv->intlrq.rq.tr[DEV_DMA_INTL_WRITE].src = (uintptr_t)pv->tr->out;
+          pv->intlrq.rq.tr[DEV_DMA_INTL_WRITE].size = pv->tr->data.count * pv->tr->data.out_width;
+          pv->intlrq.rq.tr[DEV_DMA_INTL_WRITE].src = (uintptr_t)pv->tr->data.out;
           pv->intlrq.rq.param[DEV_DMA_INTL_WRITE].src_inc = out_width;
         }
       else
         {
-          pv->intlrq.rq.tr[DEV_DMA_INTL_WRITE].size = pv->tr->count * pv->tr->in_width;
-          pv->intlrq.rq.tr[DEV_DMA_INTL_WRITE].src = (uintptr_t)pv->tr->in;
+          pv->intlrq.rq.tr[DEV_DMA_INTL_WRITE].size = pv->tr->data.count * pv->tr->data.in_width;
+          pv->intlrq.rq.tr[DEV_DMA_INTL_WRITE].src = (uintptr_t)pv->tr->data.in;
           pv->intlrq.rq.param[DEV_DMA_INTL_WRITE].src_inc = in_width;
         }
 
       /* RX */
-      pv->intlrq.rq.tr[DEV_DMA_INTL_READ].size = pv->tr->count * pv->tr->in_width;
-      pv->intlrq.rq.tr[DEV_DMA_INTL_READ].dst = (uintptr_t)pv->tr->in;
+      pv->intlrq.rq.tr[DEV_DMA_INTL_READ].size = pv->tr->data.count * pv->tr->data.in_width;
+      pv->intlrq.rq.tr[DEV_DMA_INTL_READ].dst = (uintptr_t)pv->tr->data.in;
       pv->intlrq.rq.param[DEV_DMA_INTL_READ].dst_inc = in_width;
       /* Start DMA request */ 
       DEVICE_OP(&pv->dma, request, &pv->intlrq.rq);
@@ -369,8 +369,8 @@ static void pic32_spi_start_dma(struct device_s *dev)
   /* Basic request */
     {
       pv->brq.rq.error = 0;
-      pv->brq.rq.basic.size = pv->tr->count * pv->tr->out_width;
-      pv->brq.rq.basic.src = (uintptr_t)pv->tr->out;
+      pv->brq.rq.basic.size = pv->tr->data.count * pv->tr->data.out_width;
+      pv->brq.rq.basic.src = (uintptr_t)pv->tr->data.out;
       pv->brq.rq.param[0].src_inc = out_width;
       /* Start DMA request */ 
       DEVICE_OP(&pv->dma, request, &pv->brq.rq);
@@ -429,7 +429,7 @@ static DEV_SPI_CTRL_TRANSFER(pic32_spi_transfer)
     }
   else
     {
-      assert(tr->count > 0);
+      assert(tr->data.count > 0);
       tr->err = 0;
       pv->tr = tr;
 
@@ -437,8 +437,8 @@ static DEV_SPI_CTRL_TRANSFER(pic32_spi_transfer)
       pv->dma_use = 0;
       done = 0;
 
-      if ((tr->count > 4) &&
-          (pv->tr->out_width || pv->tr->in))
+      if ((tr->data.count > 4) &&
+          (pv->tr->data.out_width || pv->tr->data.in))
         {
           pic32_spi_start_dma(dev);
           goto end;

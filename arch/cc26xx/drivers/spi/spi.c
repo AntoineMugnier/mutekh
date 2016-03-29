@@ -136,26 +136,26 @@ static bool_t cc26xx_spi_transfer_rx(struct device_s *dev)
 
       pv->fifo_lvl--;
 
-      if (tr->in == NULL)
+      if (tr->data.in == NULL)
         continue;
 
-      switch (tr->in_width)
+      switch (tr->data.in_width)
         {
         case 1:
-          *(uint8_t*)tr->in = word;
+          *(uint8_t*)tr->data.in = word;
           break;
         case 2:
-          *(uint16_t*)tr->in = word;
+          *(uint16_t*)tr->data.in = word;
           break;
         case 4:
-          *(uint32_t*)tr->in = word;
+          *(uint32_t*)tr->data.in = word;
           break;
         }
 
-      tr->in = (void*)((uint8_t*)tr->in + tr->in_width);
+      tr->data.in = (void*)((uint8_t*)tr->data.in + tr->data.in_width);
     }
 
-  if (tr->count > 0)
+  if (tr->data.count > 0)
     return cc26xx_spi_transfer_tx(dev);
 
   pv->tr = NULL;
@@ -168,27 +168,27 @@ static bool_t cc26xx_spi_transfer_tx(struct device_s *dev)
   struct cc26xx_spi_context_s *pv = dev->drv_pv;
   struct dev_spi_ctrl_transfer_s *tr = pv->tr;
 
-  while (tr->count > 0 && pv->fifo_lvl < CC26XX_SPI_FIFO_SIZE)
+  while (tr->data.count > 0 && pv->fifo_lvl < CC26XX_SPI_FIFO_SIZE)
     {
       uint32_t word = 0;
-      switch (tr->out_width)
+      switch (tr->data.out_width)
         {
         case 1:
-          word = *(const uint8_t*)tr->out;
+          word = *(const uint8_t*)tr->data.out;
           break;
         case 2:
-          word = *(const uint16_t*)tr->out;
+          word = *(const uint16_t*)tr->data.out;
           break;
         case 0:
         case 4:
-          word = *(const uint32_t*)tr->out;
+          word = *(const uint32_t*)tr->data.out;
           break;
         }
 
       cpu_mem_write_32(pv->addr + CC26XX_SSI_DR_ADDR, word);
 
-      tr->out = (const void*)((const uint8_t*)tr->out + tr->out_width);
-      tr->count--;
+      tr->data.out = (const void*)((const uint8_t*)tr->data.out + tr->data.out_width);
+      tr->data.count--;
       pv->fifo_lvl++;
     }
 
@@ -266,7 +266,7 @@ static DEV_SPI_CTRL_TRANSFER(cc26xx_spi_transfer)
     tr->err = -EBUSY;
   else
     {
-      assert(tr->count > 0);
+      assert(tr->data.count > 0);
       tr->err = 0;
       pv->tr = tr;
       pv->fifo_lvl = 0;

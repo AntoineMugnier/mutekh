@@ -89,7 +89,7 @@
 
    @section {spi_yieldc}
    This works like @xref {spi_yield} but the delay can be canceled by
-   @ref device_spi_request_wakeup. When the delay is canceled, the
+   @ref device_spi_bytecode_wakeup. When the delay is canceled, the
    next instruction is skipped.
    @end section
 
@@ -99,7 +99,7 @@
 
    @section {spi_yieldc_delay}
    This works like @xref {spi_yield_delay} but the delay can be
-   canceled by @ref device_spi_request_wakeup.
+   canceled by @ref device_spi_bytecode_wakeup.
    @end section
 
    @section {spi_wait}
@@ -227,7 +227,7 @@ struct device_spi_ctrl_s;
 struct driver_spi_ctrl_s;
 struct dev_spi_ctrl_transfer_s;
 struct dev_spi_ctrl_config_s;
-struct dev_spi_ctrl_rq_s;
+struct dev_spi_ctrl_bytecode_rq_s;
 struct dev_spi_ctrl_queue_s;
 
 /***************************************** config */
@@ -325,13 +325,8 @@ typedef DEV_SPI_CTRL_SELECT(dev_spi_ctrl_select_t);
 
 /***************************************** transfer */
 
-struct dev_spi_ctrl_transfer_s
+struct dev_spi_ctrl_data_s
 {
-  /** The @ref kroutine_exec function is called on this kroutine when
-      a transfer ends. When this happens, either the @tt count field of
-      the transfer is zero or the @tt err field is set. */
-  struct kroutine_s        kr;
-
   /** Number of SPI words to transfer. If this value is 0, the @ref in
       and @ref out pointers may be @tt NULL and the callback function
       will not be invoked. This field will be updated during the
@@ -347,12 +342,6 @@ struct dev_spi_ctrl_transfer_s
       updated during the transfer. */
   const void               *out;
 
-  /** Callback private data */
-  void                     *pvdata;
-
-  /** Transfer completion error */
-  error_t                  err;
-
   /** Width in bytes of the data type used to store a single input SPI
       word. */
   uint_fast8_t             BITFIELD(in_width,3);
@@ -362,6 +351,22 @@ struct dev_spi_ctrl_transfer_s
   uint_fast8_t             BITFIELD(out_width,3);
 };
 
+struct dev_spi_ctrl_transfer_s
+{
+  /** The @ref kroutine_exec function is called on this kroutine when
+      a transfer ends. When this happens, either the @tt count field of
+      the transfer is zero or the @tt err field is set. */
+  struct kroutine_s        kr;
+
+  struct dev_spi_ctrl_data_s data;
+
+  /** Callback private data */
+  void                     *pvdata;
+
+  /** Transfer completion error */
+  error_t                  err;
+};
+
 /** @see dev_spi_ctrl_transfer_t */
 #define DEV_SPI_CTRL_TRANSFER(n) void (n) (struct device_spi_ctrl_s *accessor, \
                                           struct dev_spi_ctrl_transfer_s *tr)
@@ -369,7 +374,7 @@ struct dev_spi_ctrl_transfer_s
 /**
    @This starts an SPI transfer. A single spi data transfer can be
    started at the same time. This is the low level transfer function
-   of the SPI device class. The @ref dev_spi_rq_start function is
+   of the SPI device class. The @ref dev_spi_bytecode_start function is
    able to schedule complex requests for several SPI slaves on the
    same bus.
 
@@ -436,31 +441,21 @@ DRIVER_CLASS_TYPES(DRIVER_CLASS_SPI_CTRL, spi_ctrl,
 #endif
 
 struct dev_spi_ctrl_queue_s;
-struct dev_spi_ctrl_rq_s;
+struct dev_spi_ctrl_bytecode_rq_s;
 
 #ifdef CONFIG_DEVICE_SPI_REQUEST
 
 /***************************************** request */
 
-/** @This structure describes actions to perform on a SPI slave device. */
-struct dev_spi_ctrl_rq_s
+struct dev_spi_ctrl_base_rq_s
 {
   struct dev_request_s base;
 
-  /** bytecode virtual machine context */
-  struct bc_context_s      vm;
+  struct device_spi_ctrl_s accessor;
+
+  struct dev_spi_ctrl_queue_s *queue;
 
   struct dev_spi_ctrl_config_s config;
-
-  /** request end callback */
-  error_t                  err;
-
-#ifdef CONFIG_DEVICE_SPI_REQUEST_TIMER
-  dev_timer_value_t       sleep_before;
-#endif
-
-  struct device_spi_ctrl_s accessor;
-  struct dev_spi_ctrl_queue_s *queue;
 
 #ifdef CONFIG_DEVICE_GPIO
   /** If this device accessor refers to a gpio device, it will be used
@@ -470,13 +465,8 @@ struct dev_spi_ctrl_rq_s
   struct device_gpio_s    gpio;
 #endif
 
-#ifdef CONFIG_DEVICE_SPI_REQUEST_GPIO
-  /** If the @ref gpio device accessor is valid, these tables give the
-      index of gpio pin to use when a @tt spi_gpio* instruction is
-      encountered. */
-  const gpio_id_t         *gpio_map;
-  const gpio_width_t      *gpio_wmap;
-#endif
+  /** request end callback */
+  error_t                  err;
 
   /** This is either the index of the spi controller chip select
       output or the pin id of the gpio device used as chip select. */
@@ -499,11 +489,37 @@ struct dev_spi_ctrl_rq_s
   /** This flag indicates that the request has not ended yet. */
   bool_t                  BITFIELD(enqueued,1);
 
+  /** This flag indicates we have a bytecode request. */
+  bool_t                  BITFIELD(bytecode,1);
+};
+
+STRUCT_INHERIT(dev_spi_ctrl_base_rq_s, dev_request_s, base);
+
+/** @This structure describes actions to perform on a SPI slave device. */
+struct dev_spi_ctrl_bytecode_rq_s
+{
+  struct dev_spi_ctrl_base_rq_s base;
+
+  /** bytecode virtual machine context */
+  struct bc_context_s      vm;
+
+#ifdef CONFIG_DEVICE_SPI_REQUEST_TIMER
+  dev_timer_value_t       sleep_before;
+#endif
+
+#ifdef CONFIG_DEVICE_SPI_REQUEST_GPIO
+  /** If the @ref gpio device accessor is valid, these tables give the
+      index of gpio pin to use when a @tt spi_gpio* instruction is
+      encountered. */
+  const gpio_id_t         *gpio_map;
+  const gpio_width_t      *gpio_wmap;
+#endif
+
   bool_t                  BITFIELD(wakeup,1);
   bool_t                  BITFIELD(wakeup_able,1);
 };
 
-STRUCT_INHERIT(dev_spi_ctrl_rq_s, dev_request_s, base);
+STRUCT_INHERIT(dev_spi_ctrl_bytecode_rq_s, dev_spi_ctrl_base_rq_s, base);
 
 struct dev_spi_ctrl_queue_s
 {
@@ -529,8 +545,10 @@ struct dev_spi_ctrl_queue_s
   /** This keep track of the last used configuration. */
   struct dev_spi_ctrl_config_s *config;
 
-  struct dev_spi_ctrl_rq_s *current;
-  struct dev_spi_ctrl_rq_s *timeout;
+  struct dev_spi_ctrl_base_rq_s *current;
+#ifdef CONFIG_DEVICE_SPI_REQUEST_TIMER
+  struct dev_spi_ctrl_bytecode_rq_s *timeout;
+#endif
   dev_request_queue_root_t      queue;
 
   lock_irq_t                    lock;
@@ -570,14 +588,14 @@ void dev_spi_queue_cleanup(struct dev_spi_ctrl_queue_s *q);
    @param ep pointer to the SPI endpoint.
 */
 config_depend(CONFIG_DEVICE_SPI_REQUEST)
-void dev_spi_rq_start(struct dev_spi_ctrl_rq_s *rq);
+void dev_spi_bytecode_start(struct dev_spi_ctrl_bytecode_rq_s *rq);
 
 /** This helper function initializes a SPI request structure for use
     in a SPI slave device driver. It is usually called from the slave
     driver initialization function to initialize a request stored in
     the driver private context.
 
-    The @ref dev_spi_ctrl_rq_s::accessor accessor is initialized
+    The @ref dev_spi_ctrl_bytecode_rq_s::accessor accessor is initialized
     using the device pointed to by the @tt spi device resource
     entry of the slave.
 
@@ -604,14 +622,14 @@ void dev_spi_rq_start(struct dev_spi_ctrl_rq_s *rq);
 */
 config_depend(CONFIG_DEVICE_SPI_REQUEST)
 error_t dev_spi_request_init(struct device_s *slave,
-                             struct dev_spi_ctrl_rq_s *rq,
+                             struct dev_spi_ctrl_base_rq_s *rq,
                              bool_t use_gpio, bool_t use_timer);
 
 /** This function returns an accessor to the timer associated with the
     spi controller of the request. */
 config_depend_alwaysinline(CONFIG_DEVICE_SPI_REQUEST_TIMER,
 struct device_timer_s *
-dev_spi_request_timer(struct dev_spi_ctrl_rq_s *rq),
+dev_spi_request_timer(struct dev_spi_ctrl_base_rq_s *rq),
 {
   return &rq->queue->timer;
 })
@@ -619,7 +637,7 @@ dev_spi_request_timer(struct dev_spi_ctrl_rq_s *rq),
 /** This function returns an accessor to the gpio device of the request. */
 config_depend_alwaysinline(CONFIG_DEVICE_SPI_REQUEST_GPIO,
 struct device_gpio_s *
-dev_spi_request_gpio(struct dev_spi_ctrl_rq_s *rq),
+dev_spi_request_gpio(struct dev_spi_ctrl_base_rq_s *rq),
 {
   return &rq->gpio;
 })
@@ -627,7 +645,7 @@ dev_spi_request_gpio(struct dev_spi_ctrl_rq_s *rq),
 /** This helper function release the device accessors associated with
     the SPI slave request. @see dev_spi_request_init */
 config_depend(CONFIG_DEVICE_SPI_REQUEST)
-void dev_spi_request_cleanup(struct dev_spi_ctrl_rq_s *rq);
+void dev_spi_request_cleanup(struct dev_spi_ctrl_base_rq_s *rq);
 
 /** This function cancels the delay of the current or next @xref
     {spi_yieldc} instruction in the bytecode. If this function is
@@ -639,7 +657,7 @@ void dev_spi_request_cleanup(struct dev_spi_ctrl_rq_s *rq);
     running.
  */
 config_depend(CONFIG_DEVICE_SPI_REQUEST)
-error_t device_spi_request_wakeup(struct dev_spi_ctrl_rq_s *rq);
+error_t device_spi_bytecode_wakeup(struct dev_spi_ctrl_bytecode_rq_s *rq);
 
 #ifdef CONFIG_DEVICE_SPI
 # define DEV_STATIC_RES_DEV_SPI(path_)                          \

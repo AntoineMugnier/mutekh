@@ -149,20 +149,20 @@ static TERMUI_CON_COMMAND_PROTOTYPE(dev_shell_spi_transfer)
 
   if (used & SPI_OPT_WR_DATA)
     {
-      tr.out_width = 1;
-      tr.out = (const uint8_t*)c->data.str;
-      tr.count = count = c->data.len;
+      tr.data.out_width = 1;
+      tr.data.out = (const uint8_t*)c->data.str;
+      tr.data.count = count = c->data.len;
     }
   else
     {
-      tr.out_width = 0;
-      tr.out = (const uint8_t*)"\xff";
-      tr.count = count = c->count;
+      tr.data.out_width = 0;
+      tr.data.out = (const uint8_t*)"\xff";
+      tr.data.count = count = c->count;
     }
 
-  void *in = mem_alloc(tr.count, (mem_scope_sys));
-  tr.in = in;
-  tr.in_width = 1;
+  void *in = mem_alloc(tr.data.count, (mem_scope_sys));
+  tr.data.in = in;
+  tr.data.in_width = 1;
 
 # ifdef CONFIG_DEVICE_GPIO
   struct dev_gpio_rq_s rq = {

@@ -119,9 +119,9 @@ static void nrf5x_spim_transfer_ended(struct nrf5x_spim_context_s *pv)
   assert(tr);
 
   if (pv->buffered_in) {
-    switch (tr->in_width) {
+    switch (tr->data.in_width) {
     case 2: {
-      uint16_t *dst = (uint16_t *)tr->in;
+      uint16_t *dst = (uint16_t *)tr->data.in;
 
       for (size_t i = 0; i < pv->transferred; ++i)
         dst[i] = pv->buffer_in.byte[i];
@@ -130,7 +130,7 @@ static void nrf5x_spim_transfer_ended(struct nrf5x_spim_context_s *pv)
     }
 
     case 4: {
-      uint32_t *dst = (uint32_t *)tr->in;
+      uint32_t *dst = (uint32_t *)tr->data.in;
 
       for (size_t i = 0; i < pv->transferred; ++i)
         dst[i] = pv->buffer_in.byte[i];
@@ -140,9 +140,9 @@ static void nrf5x_spim_transfer_ended(struct nrf5x_spim_context_s *pv)
     }
   }
 
-  tr->in = (void *)((uintptr_t)tr->in + pv->transferred);
-  tr->out = (const void *)((uintptr_t)tr->out + pv->transferred);
-  tr->count -= pv->transferred;
+  tr->data.in = (void *)((uintptr_t)tr->data.in + pv->transferred);
+  tr->data.out = (const void *)((uintptr_t)tr->data.out + pv->transferred);
+  tr->data.count -= pv->transferred;
 }
 
 static void nrf5x_spim_next_start(struct nrf5x_spim_context_s *pv)
@@ -152,20 +152,20 @@ static void nrf5x_spim_next_start(struct nrf5x_spim_context_s *pv)
 
   assert(tr);
 
-  count = __MIN(255, tr->count);
+  count = __MIN(255, tr->data.count);
 
   nrf_reg_set(pv->addr, NRF_SPIM_RXD_LIST, NRF_SPIM_RXD_LIST_DISABLED);
 
-  switch (tr->out_width) {
+  switch (tr->data.out_width) {
   case 0:
     nrf_reg_set(pv->addr, NRF_SPIM_ORC, *(const uint32_t *)pv->out);
     nrf_reg_set(pv->addr, NRF_SPIM_TXD_PTR, 0);
     break;
 
   case 1:
-    if ((uintptr_t)tr->out < 0x20000000) {
-      uintptr_t offset = (uintptr_t)tr->out % sizeof(pv->buffer_out);
-      uint32_t *src = (uint32_t *)((uintptr_t)tr->out - offset);
+    if ((uintptr_t)tr->data.out < 0x20000000) {
+      uintptr_t offset = (uintptr_t)tr->data.out % sizeof(pv->buffer_out);
+      uint32_t *src = (uint32_t *)((uintptr_t)tr->data.out - offset);
 
       for (size_t i = offset / 4; i < sizeof(pv->buffer_out) / 4; ++i)
         pv->buffer_out.word[i] = src[i];
@@ -173,13 +173,13 @@ static void nrf5x_spim_next_start(struct nrf5x_spim_context_s *pv)
       nrf_reg_set(pv->addr, NRF_SPIM_TXD_PTR, (uintptr_t)pv->buffer_out.byte + offset);
       count = __MIN(count, sizeof(pv->buffer_out) - offset);
     } else {
-      nrf_reg_set(pv->addr, NRF_SPIM_TXD_PTR, (uintptr_t)tr->out);
+      nrf_reg_set(pv->addr, NRF_SPIM_TXD_PTR, (uintptr_t)tr->data.out);
     }
 
     break;
 
   case 2: {
-    const uint16_t *src = (const uint16_t *)tr->out;
+    const uint16_t *src = (const uint16_t *)tr->data.out;
 
     count = __MIN(count, sizeof(pv->buffer_out));
     for (size_t i = 0; i < sizeof(pv->buffer_out) / 4; ++i)
@@ -190,7 +190,7 @@ static void nrf5x_spim_next_start(struct nrf5x_spim_context_s *pv)
   }
 
   case 4: {
-    const uint32_t *src = (const uint32_t *)tr->out;
+    const uint32_t *src = (const uint32_t *)tr->data.out;
 
     count = __MIN(count, sizeof(pv->buffer_out));
     for (size_t i = 0; i < sizeof(pv->buffer_out) / 4; ++i)
@@ -203,10 +203,10 @@ static void nrf5x_spim_next_start(struct nrf5x_spim_context_s *pv)
 
   pv->buffered_in = 0;
 
-  if (tr->in) {
-    switch (tr->in_width) {
+  if (tr->data.in) {
+    switch (tr->data.in_width) {
     case 1:
-      nrf_reg_set(pv->addr, NRF_SPIM_RXD_PTR, (uintptr_t)tr->in);
+      nrf_reg_set(pv->addr, NRF_SPIM_RXD_PTR, (uintptr_t)tr->data.in);
       break;
 
     case 2:
@@ -218,8 +218,8 @@ static void nrf5x_spim_next_start(struct nrf5x_spim_context_s *pv)
     }
   }
 
-  nrf_reg_set(pv->addr, NRF_SPIM_TXD_MAXCNT, tr->out_width ? count : 0);
-  nrf_reg_set(pv->addr, NRF_SPIM_RXD_MAXCNT, tr->in ? count : 0);
+  nrf_reg_set(pv->addr, NRF_SPIM_TXD_MAXCNT, tr->data.out_width ? count : 0);
+  nrf_reg_set(pv->addr, NRF_SPIM_RXD_MAXCNT, tr->data.in ? count : 0);
 
   pv->transferred = count;
 
@@ -239,7 +239,7 @@ static DEV_IRQ_SRC_PROCESS(nrf5x_spim_irq)
     nrf_event_clear(pv->addr, NRF_SPIM_END);
 
     nrf5x_spim_transfer_ended(pv);
-    if (tr->count) {
+    if (tr->data.count) {
       nrf5x_spim_next_start(pv);
     } else {
       pv->current_transfer = NULL;
@@ -272,9 +272,9 @@ static DEV_SPI_CTRL_TRANSFER(nrf5x_spim_transfer)
     tr->err = -EBUSY;
     done = 1;
   } else {
-    assert(tr->count > 0);
+    assert(tr->data.count > 0);
 
-    if (!(0x17 >> tr->out_width) || !(0x16 >> tr->in_width))
+    if (!(0x17 >> tr->data.out_width) || !(0x16 >> tr->data.in_width))
       return -EINVAL;
 
     done = 0;

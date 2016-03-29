@@ -180,25 +180,25 @@ bool_t stm32_spi_transfer_rx(struct device_s *dev)
 
   uint32_t w = endian_le32(cpu_mem_read_32(pv->addr + STM32_SPI_DR_ADDR));
 
-  if (tr->in != NULL)
+  if (tr->data.in != NULL)
     {
-      switch (tr->in_width)
+      switch (tr->data.in_width)
         {
         case 1:
-          *(uint8_t *)tr->in = w;
+          *(uint8_t *)tr->data.in = w;
           break;
         case 2:
-          *(uint16_t *)tr->in = w;
+          *(uint16_t *)tr->data.in = w;
           break;
         case 4:
-          *(uint32_t *)tr->in = w;
+          *(uint32_t *)tr->data.in = w;
           break;
         }
 
-      tr->in = (void *)((uint8_t *)tr->in + tr->in_width);
+      tr->data.in = (void *)((uint8_t *)tr->data.in + tr->data.in_width);
     }
 
-  bool_t end = !tr->count;
+  bool_t end = !tr->data.count;
 
   if (!end)
     stm32_spi_transfer_tx(dev);
@@ -214,25 +214,25 @@ void stm32_spi_transfer_tx(struct device_s *dev)
 
   uint32_t w = 0;
 
-  switch (tr->out_width)
+  switch (tr->data.out_width)
     {
     case 1:
-      w = *(const uint8_t *)tr->out;
+      w = *(const uint8_t *)tr->data.out;
       break;
     case 2:
-      w = *(const uint16_t *)tr->out;
+      w = *(const uint16_t *)tr->data.out;
       break;
     case 0:
     case 4:
-      w = *(const uint32_t*)tr->out;
+      w = *(const uint32_t*)tr->data.out;
       break;
     }
 
   cpu_mem_write_32(pv->addr + STM32_SPI_DR_ADDR, endian_le32(w));
 
-  tr->out = (const void *)((const uint8_t *)tr->out + tr->out_width);
+  tr->data.out = (const void *)((const uint8_t *)tr->data.out + tr->data.out_width);
 
-  --tr->count;
+  --tr->data.count;
 }
 
 static
@@ -331,7 +331,7 @@ DEV_SPI_CTRL_TRANSFER(stm32_spi_transfer)
   struct device_s *dev = accessor->dev;
   struct stm32_spi_private_s *pv = dev->drv_pv;
 
-  assert(tr->count > 0);
+  assert(tr->data.count > 0);
   tr->err = -EBUSY;
 
   LOCK_SPIN_IRQ(&dev->lock);
