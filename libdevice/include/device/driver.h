@@ -457,9 +457,14 @@ struct driver_##cl##_s                                                  \
     @csee id @csee device_accessor_s @xsee {Device accessor} */         \
 struct device_##cl##_s                                                  \
 {                                                                       \
-  struct device_s *dev;                                                 \
-  struct driver_##cl##_s *api;                                          \
-  uint_fast8_t number;                                                  \
+  union {                                                               \
+    struct device_accessor_s base;                                      \
+    struct {                                                            \
+      struct device_s *dev;                                             \
+      struct driver_##cl##_s *api;                                      \
+      uint_fast8_t number;                                              \
+    };                                                                  \
+  };                                                                    \
 };                                                                      \
                                                                         \
 /** @This casts a generic device accessor to a cl device accessor */    \
@@ -530,6 +535,12 @@ error_t device_get_accessor(void *accessor, struct device_s *dev,
     @xcsee {Device accessor}
     @see device_put_accessor */
 error_t device_copy_accessor(void *accessor, const void *source);
+
+ALWAYS_INLINE bool_t device_cmp_accessor(const struct device_accessor_s *a,
+                                         const struct device_accessor_s *b)
+{
+  return a->dev == b->dev && a->number == b->number;
+}
 
 /** 
     @This initializes a device accessor object after lookup in the
