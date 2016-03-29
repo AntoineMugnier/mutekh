@@ -213,9 +213,10 @@
 
 #ifdef CONFIG_DEVICE_SPI_BYTECODE
 # include <mutek/bytecode.h>
-# ifdef CONFIG_DEVICE_SPI_BYTECODE_TIMER
-#  include <device/class/timer.h>
-# endif
+#endif
+
+#ifdef CONFIG_DEVICE_SPI_BYTECODE_TIMER
+# include <device/class/timer.h>
 #endif
 
 #ifdef CONFIG_DEVICE_SPI_REQUEST
@@ -457,9 +458,7 @@ struct dev_spi_ctrl_base_rq_s
 {
   struct dev_request_s base;
 
-  struct device_spi_ctrl_s accessor;
-
-  struct dev_spi_ctrl_queue_s *queue;
+  struct device_spi_ctrl_s *ctrl;
 
   struct dev_spi_ctrl_config_s config;
 
@@ -610,7 +609,8 @@ void dev_spi_queue_cleanup(struct dev_spi_ctrl_queue_s *q);
     The kroutine of the request may be executed from within this
     function. Please read @xref {Nested device request completion}. */
 config_depend(CONFIG_DEVICE_SPI_TRANSACTION)
-void dev_spi_transaction_start(struct dev_spi_ctrl_transaction_rq_s *rq);
+void dev_spi_transaction_start(struct device_spi_ctrl_s *ctrl,
+                               struct dev_spi_ctrl_transaction_rq_s *rq);
 
 /** @This schedules a SPI bytecode request for execution. The kroutine
     of the request will be called when the bytecode terminates.
@@ -618,54 +618,96 @@ void dev_spi_transaction_start(struct dev_spi_ctrl_transaction_rq_s *rq);
     The kroutine of the request may be executed from within this
     function. Please read @xref {Nested device request completion}. */
 config_depend(CONFIG_DEVICE_SPI_BYTECODE)
-void dev_spi_bytecode_start(struct dev_spi_ctrl_bytecode_rq_s *rq);
+error_t dev_spi_bytecode_start(struct device_spi_ctrl_s *ctrl,
+                               struct dev_spi_ctrl_bytecode_rq_s *rq,
+                               const void *pc);
 
-/** This helper function initializes a SPI request structure for use
-    in a SPI slave device driver. It is usually called from the slave
+/** @This initializes a SPI bytecode  request. */
+config_depend_alwaysinline(CONFIG_DEVICE_SPI_BYTECODE,
+void dev_spi_bytecode_init(struct dev_spi_ctrl_bytecode_rq_s *rq),
+{
+  memset(rq, 0, sizeof(*rq));
+})
+
+/** This helper function initializes a SPI bytecode request for use in
+    a SPI slave device driver. It is usually called from the slave
     driver initialization function to initialize a request stored in
     the driver private context.
 
-    The @ref dev_spi_ctrl_bytecode_rq_s::accessor accessor is initialized
-    using the device pointed to by the @tt spi device resource
-    entry of the slave.
+    The pointer to the SPI controller @tt ctrl will be initialized
+    according to the @tt spi device resource entry of the slave.
 
     If a @tt{'spi-cs-id'} entry is present in the device tree, the
     request is configured to use the chip select feature of the SPI
-    controller. If a @tt{'gpio-cs-id'} entry is present, the request
-    is configured to use a gpio pin as chip select instead.
+    controller. If a @tt{'gpio-cs-id'} and a @tt{'gpio'} entries are
+    present, the request is configured to use a gpio pin as chip
+    select instead.
 
     In order to use the gpio bytecode instructions, the
     #CONFIG_DEVICE_SPI_BYTECODE_GPIO token must be defined and the @tt
-    use_gpio parameter must be true. The @tt {rq->gpio} accessor will
-    be initialized can then be used to setup the @tt {rq->gpio_map}
-    and @tt {rq->gpio_wmap} fields of the request before running the
-    bytecode.
+    gpio parameter must be non-NULL. The pointer to a gpio accessor
+    will be initialized and can then be used to setup the @tt
+    {rq->gpio_map} and @tt {rq->gpio_wmap} fields of the request
+    before starting the bytecode. The accessor can later be retrieved
+    again using @ref dev_spi_request_gpio.
 
     When gpios are used either for chip select or from the bytecode,
     the @tt gpio resource entry of the device must point to a valid
     gpio device.
 
     In order to use delay related bytecode instructions, the @ref
-    #CONFIG_DEVICE_SPI_BYTECODE_TIMER token must be defined and the @tt
-    use_timer parameter must be true. The @ref dev_spi_request_timer
-    function can be used to access the spi associated timer.
-*/
-config_depend(CONFIG_DEVICE_SPI_BYTECODE)
-error_t dev_spi_bytecode_rq_init(struct device_s *slave,
-                                 struct dev_spi_ctrl_bytecode_rq_s *rq,
-                                 bool_t use_gpio, bool_t use_timer);
+    #CONFIG_DEVICE_SPI_BYTECODE_TIMER token must be defined and the
+    @tt timer parameter must be non-NULL. The pointer to a timer
+    accessor will be initialized. The accessor can later be retrieved
+    again using @ref dev_spi_timer.
 
-config_depend(CONFIG_DEVICE_SPI_TRANSACTION)
-error_t dev_spi_transaction_rq_init(struct device_s *slave,
-                                    struct dev_spi_ctrl_transaction_rq_s *rq);
+    @see dev_drv_spi_bytecode_cleanup */
+config_depend(CONFIG_DEVICE_SPI_BYTECODE)
+error_t dev_drv_spi_bytecode_init(struct device_s *dev,
+                                  struct dev_spi_ctrl_bytecode_rq_s *rq,
+                                  struct device_spi_ctrl_s *ctrl,
+                                  struct device_gpio_s **gpio,
+                                  struct device_timer_s **timer);
+
+/** @This initializes a SPI transaction request. */
+config_depend_alwaysinline(CONFIG_DEVICE_SPI_TRANSACTION,
+void dev_spi_transaction_init(struct dev_spi_ctrl_transaction_rq_s *rq),
+{
+  memset(rq, 0, sizeof(*rq));
+})
+
+/** This helper function initializes a SPI transaction request for use
+    in a SPI slave device driver. It is usually called from the slave
+    driver initialization function to initialize a request stored in
+    the driver private context.
+
+    The pointer to the SPI controller @tt ctrl will be initialized
+    according to the @tt spi device resource entry of the slave.
+
+    If a @tt{'spi-cs-id'} entry is present in the device tree, the
+    request is configured to use the chip select feature of the SPI
+    controller. If a @tt{'gpio-cs-id'} and a @tt{'gpio'} entries are
+    present, the request is configured to use a gpio pin as chip
+    select instead.
+
+    If the @tt gpio parameter is not @tt NULL, a pointer to a gpio
+    accessor will be initialized as well.
+
+    @see dev_drv_spi_transaction_cleanup */
+config_depend(CONFIG_DEVICE_SPI_BYTECODE)
+error_t dev_drv_spi_transaction_init(struct device_s *dev,
+                                     struct dev_spi_ctrl_transaction_rq_s *rq,
+                                     struct device_spi_ctrl_s *ctrl,
+                                     struct device_gpio_s **gpio);
 
 /** This function returns an accessor to the timer associated with the
     spi controller of the request. */
 config_depend_alwaysinline(CONFIG_DEVICE_SPI_BYTECODE_TIMER,
 struct device_timer_s *
-dev_spi_request_timer(struct dev_spi_ctrl_base_rq_s *rq),
+dev_spi_timer(struct device_spi_ctrl_s *ctrl),
 {
-  return &rq->queue->timer;
+  struct dev_spi_ctrl_queue_s *q = DEVICE_OP(ctrl, queue);
+  return &q->timer;
 })
 
 /** This function returns an accessor to the gpio device of the request. */
@@ -678,8 +720,13 @@ dev_spi_request_gpio(struct dev_spi_ctrl_base_rq_s *rq),
 
 /** This helper function release the device accessors associated with
     the SPI slave request. @see dev_spi_request_init */
-config_depend(CONFIG_DEVICE_SPI_REQUEST)
-void dev_spi_request_cleanup(struct dev_spi_ctrl_base_rq_s *rq);
+config_depend(CONFIG_DEVICE_SPI_BYTECODE)
+void dev_drv_spi_bytecode_cleanup(struct device_spi_ctrl_s *ctrl,
+                                  struct dev_spi_ctrl_bytecode_rq_s *rq);
+
+config_depend(CONFIG_DEVICE_SPI_TRANSACTION)
+void dev_drv_spi_transaction_cleanup(struct device_spi_ctrl_s *ctrl,
+                                     struct dev_spi_ctrl_transaction_rq_s *rq);
 
 /** This function cancels the delay of the current or next @xref
     {spi_yieldc} instruction in the bytecode. If this function is
@@ -691,7 +738,8 @@ void dev_spi_request_cleanup(struct dev_spi_ctrl_base_rq_s *rq);
     running.
  */
 config_depend(CONFIG_DEVICE_SPI_BYTECODE)
-error_t device_spi_bytecode_wakeup(struct dev_spi_ctrl_bytecode_rq_s *rq);
+error_t device_spi_bytecode_wakeup(struct device_spi_ctrl_s *ctrl,
+                                   struct dev_spi_ctrl_bytecode_rq_s *rq);
 
 #ifdef CONFIG_DEVICE_SPI
 # define DEV_STATIC_RES_DEV_SPI(path_)                          \
