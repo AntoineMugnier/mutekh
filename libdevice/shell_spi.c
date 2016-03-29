@@ -87,12 +87,12 @@ static TERMUI_CON_ARGS_CLEANUP_PROTOTYPE(spi_opts_cleanup)
 {
   struct termui_optctx_dev_spi_opts *c = ctx;
 
-  if (device_check_accessor(&c->spi))
-    device_put_accessor(&c->spi);
+  if (device_check_accessor(&c->spi.base))
+    device_put_accessor(&c->spi.base);
 
 #ifdef CONFIG_DEVICE_GPIO
-  if (device_check_accessor(&c->gpio))
-    device_put_accessor(&c->gpio);
+  if (device_check_accessor(&c->gpio.base))
+    device_put_accessor(&c->gpio.base);
 #endif
 }
 

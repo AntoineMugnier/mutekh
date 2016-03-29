@@ -55,8 +55,8 @@ static TERMUI_CON_ARGS_CLEANUP_PROTOTYPE(gpio_opts_cleanup)
 {
   struct termui_optctx_dev_gpio_opts *c = ctx;
 
-  if (device_check_accessor(&c->gpio))
-      device_put_accessor(&c->gpio);
+  if (device_check_accessor(&c->gpio.base))
+      device_put_accessor(&c->gpio.base);
 }
 
 static TERMUI_CON_COMMAND_PROTOTYPE(gpio_mode_cmd)

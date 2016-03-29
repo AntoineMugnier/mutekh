@@ -62,7 +62,7 @@ void libc_time_initsmp()
   if (!cpu_isbootstrap())
     return;
 
-  if (device_get_accessor_by_path(&libc_timer_dev, NULL,
+  if (device_get_accessor_by_path(&libc_timer_dev.base, NULL,
                                   CONFIG_LIBC_TIMER_DEVICE_PATHS,
                                   DRIVER_CLASS_TIMER))
     {
@@ -71,7 +71,7 @@ void libc_time_initsmp()
       goto err;
     }
 
-  if (device_start(&libc_timer_dev))
+  if (device_start(&libc_timer_dev.base))
     goto err_acc;
 
   struct dev_timer_config_s cfg;
@@ -110,10 +110,10 @@ void libc_time_initsmp()
   return;
 
  err_stop:
-  device_stop(&libc_timer_dev);
+  device_stop(&libc_timer_dev.base);
  err_acc:
   printk("libc: unable to use `%p' timer device for libc time.\n", libc_timer_dev.dev);
-  device_put_accessor(&libc_timer_dev);
+  device_put_accessor(&libc_timer_dev.base);
  err:
   return;
 }
@@ -123,10 +123,10 @@ void libc_time_cleanupsmp()
   if (!cpu_isbootstrap())
     return;
 
-  if (device_check_accessor(&libc_timer_dev))
+  if (device_check_accessor(&libc_timer_dev.base))
     {
-      device_stop(&libc_timer_dev);
-      device_put_accessor(&libc_timer_dev);
+      device_stop(&libc_timer_dev.base);
+      device_put_accessor(&libc_timer_dev.base);
     }
 }
 
@@ -137,7 +137,7 @@ struct device_timer_s *libc_timer()
 
 error_t gettimeofday(struct timeval *tv, struct timezone *tz)
 {
-  if (!device_check_accessor(&libc_timer_dev))
+  if (!device_check_accessor(&libc_timer_dev.base))
     return -1;
 
   dev_timer_value_t t;
@@ -164,7 +164,7 @@ error_t settimeofday(const struct timeval *tv, const struct timezone *tz)
 
 time_t time(time_t *r_)
 {
-  if (!device_check_accessor(&libc_timer_dev))
+  if (!device_check_accessor(&libc_timer_dev.base))
     return (time_t)-1;
 
   dev_timer_value_t t;
@@ -182,7 +182,7 @@ time_t time(time_t *r_)
 
 error_t clock_getres(clockid_t clk_id, struct timespec *res)
 {
-  if (!device_check_accessor(&libc_timer_dev))
+  if (!device_check_accessor(&libc_timer_dev.base))
     return -1;
 
   switch (clk_id)
@@ -201,7 +201,7 @@ error_t clock_getres(clockid_t clk_id, struct timespec *res)
 
 error_t clock_gettime(clockid_t clk_id, struct timespec *tp)
 {
-  if (!device_check_accessor(&libc_timer_dev))
+  if (!device_check_accessor(&libc_timer_dev.base))
     return -1;
 
   switch (clk_id)
@@ -226,7 +226,7 @@ error_t clock_gettime(clockid_t clk_id, struct timespec *tp)
 
 error_t clock_settime(clockid_t clk_id, const struct timespec *tp)
 {
-  if (!device_check_accessor(&libc_timer_dev))
+  if (!device_check_accessor(&libc_timer_dev.base))
     return -1;
 
   switch (clk_id)
@@ -251,7 +251,7 @@ error_t clock_settime(clockid_t clk_id, const struct timespec *tp)
 
 error_t libc_time_to_timer(const struct timespec *delay, dev_timer_value_t *value)
 {
-  if (!device_check_accessor(&libc_timer_dev))
+  if (!device_check_accessor(&libc_timer_dev.base))
     return -EIO;
 
   if (delay->tv_sec < 60)
@@ -278,7 +278,7 @@ error_t libc_time_to_timer_rq(const struct timespec *delay, struct dev_timer_rq_
 /* unistd.h */
 error_t usleep(uint_fast32_t usec)
 {
-  if (!device_check_accessor(&libc_timer_dev))
+  if (!device_check_accessor(&libc_timer_dev.base))
     return -1;
 
   struct dev_timer_rq_s rq;
@@ -294,7 +294,7 @@ error_t usleep(uint_fast32_t usec)
 /* unistd.h */
 error_t sleep(uint_fast32_t sec)
 {
-  if (!device_check_accessor(&libc_timer_dev))
+  if (!device_check_accessor(&libc_timer_dev.base))
     return -1;
 
   struct dev_timer_rq_s rq;
@@ -309,7 +309,7 @@ error_t sleep(uint_fast32_t sec)
 
 error_t nanosleep(const struct timespec *rqtp, struct timespec *rmtp)
 {
-  if (!device_check_accessor(&libc_timer_dev))
+  if (!device_check_accessor(&libc_timer_dev.base))
     return -1;
 
   struct dev_timer_rq_s rq;

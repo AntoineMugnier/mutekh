@@ -287,12 +287,12 @@ static error_t device_icu_source_link(struct dev_irq_src_s *src, dev_irq_route_t
         {
 #endif
           struct device_icu_s icu;
-          if (device_get_accessor(&icu, sink->base.dev, DRIVER_CLASS_ICU, 0))
+          if (device_get_accessor(&icu.base, sink->base.dev, DRIVER_CLASS_ICU, 0))
             return -EINVAL;
 
           err = DEVICE_OP(&icu, link, sink, src, route_mask, &bypass);
 
-          device_put_accessor(&icu);
+          device_put_accessor(&icu.base);
 
 #ifdef CONFIG_DEVICE_IRQ_BYPASS
           if (err != -EAGAIN)
@@ -371,7 +371,7 @@ error_t device_irq_source_link(struct device_s *dev, struct dev_irq_src_s *srcs,
         }
 
       struct device_icu_s icu;
-      if (device_get_accessor_by_path(&icu, &dev->node, icu_path, DRIVER_CLASS_ICU))
+      if (device_get_accessor_by_path(&icu.base, &dev->node, icu_path, DRIVER_CLASS_ICU))
         {
           printk("device: can not use %p device as an interrupt controller.\n", icu_path);
           err = -EINVAL;
@@ -382,7 +382,7 @@ error_t device_irq_source_link(struct device_s *dev, struct dev_irq_src_s *srcs,
       struct dev_irq_src_s *src = srcs + src_id;
       struct dev_irq_sink_s *sink = DEVICE_OP(&icu, get_sink, r->u.irq.sink_id);
 
-      device_put_accessor(&icu);
+      device_put_accessor(&icu.base);
 
       if (!sink)
         {
@@ -629,7 +629,7 @@ error_t device_icu_irq_bind(struct dev_irq_src_s *src, const char *icu_name,
     struct device_icu_s icu;
     struct dev_irq_sink_s *sink;
 
-    err = device_get_accessor_by_path(&icu, NULL, icu_name, DRIVER_CLASS_ICU);
+    err = device_get_accessor_by_path(&icu.base, NULL, icu_name, DRIVER_CLASS_ICU);
     if (err) {
         printk("Error while getting icu \"%s\": %d\n", icu_name, err);
         return err;
@@ -670,7 +670,7 @@ error_t device_icu_irq_bind(struct dev_irq_src_s *src, const char *icu_name,
     err = 0;
 
   out:
-    device_put_accessor(&icu);
+    device_put_accessor(&icu.base);
 
     return err;
 }

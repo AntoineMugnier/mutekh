@@ -398,7 +398,7 @@ static DEV_CLEANUP(mtch6102_cleanup)
 {
     struct mtch6102_priv_s *pv = dev->drv_pv;
 
-    device_put_accessor(&pv->i2c);
+    device_put_accessor(&pv->i2c.base);
     dev_request_queue_destroy(&pv->queue);
     mem_free(pv);
 }

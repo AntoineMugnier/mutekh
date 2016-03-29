@@ -100,7 +100,7 @@ void mutek_shell_thread_init()
     .scope = mem_scope_sys,
   };
 
-  if (device_check_accessor(&console_dev))
+  if (device_check_accessor(&console_dev.base))
     thread_create(shell_thread, &console_dev, &a);
 }
 

@@ -372,7 +372,7 @@ DEV_CLEANUP(adxl345_cleanup)
 {
     struct adxl345_private_s *pv = dev->drv_pv;
 
-    device_put_accessor(&pv->i2c);
+    device_put_accessor(&pv->i2c.base);
     dev_request_queue_destroy(&pv->queue);
     mem_free(pv);
 }

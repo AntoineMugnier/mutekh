@@ -135,7 +135,7 @@ static DEV_IRQ_SRC_PROCESS(push_button_irq)
 
   dev_timer_value_t value;
 
-  if (device_check_accessor(&pv->timer))
+  if (device_check_accessor(&pv->timer.base))
     {
       /* Get timer value */
       if (!DEVICE_OP(&pv->timer, get_value, &value, 0))
@@ -263,7 +263,7 @@ static DEV_INIT(push_button_init)
   if (!device_get_param_dev_accessor(dev, "button-timer", &pv->timer, DRIVER_CLASS_TIMER))
     {
       /* Start timer */
-      device_start(&pv->timer);
+      device_start(&pv->timer.base);
       dev_timer_shift_sec(&pv->timer, &pv->shifta, &pv->shiftb, 0, 1, 1000);
 #ifdef CONFIG_DRIVER_PUSH_BUTTON_SOFT_DEBOUNCING
       pv->trq.rq.pvdata = dev;

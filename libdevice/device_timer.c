@@ -236,7 +236,7 @@ error_t dev_timer_busy_wait_delay(struct device_timer_s *accessor, dev_timer_del
     return -ERANGE;
 
   if (cfg.cap & DEV_TIMER_CAP_STOPPABLE)
-    if (device_start(accessor))
+    if (device_start(&accessor->base))
       return -EBUSY;
 
   // compute wrapped deadline
@@ -266,7 +266,7 @@ error_t dev_timer_busy_wait_delay(struct device_timer_s *accessor, dev_timer_del
   err = 0;
  stop:
   if (cfg.cap & DEV_TIMER_CAP_STOPPABLE)
-    device_stop(accessor);
+    device_stop(&accessor->base);
 
   return err;
 }

@@ -67,8 +67,8 @@ TERMUI_CON_ARGS_CLEANUP_PROTOTYPE(pwm_opts_cleanup)
 {
   struct termui_optctx_dev_pwm_opts *data = ctx;
 
-  if (device_check_accessor(&data->pwm))
-    device_put_accessor(&data->pwm);
+  if (device_check_accessor(&data->pwm.base))
+    device_put_accessor(&data->pwm.base);
 }
 
 static

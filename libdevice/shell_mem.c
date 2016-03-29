@@ -58,8 +58,8 @@ static TERMUI_CON_ARGS_CLEANUP_PROTOTYPE(mem_opts_cleanup)
 {
   struct termui_optctx_dev_mem_opts *c = ctx;
 
-  if (device_check_accessor(&c->mem))
-      device_put_accessor(&c->mem);
+  if (device_check_accessor(&c->mem.base))
+      device_put_accessor(&c->mem.base);
 }
 
 static TERMUI_CON_COMMAND_PROTOTYPE(dev_shell_mem_info)

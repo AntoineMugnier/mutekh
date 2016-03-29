@@ -78,8 +78,8 @@ static TERMUI_CON_ARGS_CLEANUP_PROTOTYPE(i2c_config_opts_cleanup)
 {
   struct termui_optctx_dev_i2c_config_opts *data = ctx;
 
-  if (device_check_accessor(&data->i2c))
-    device_put_accessor(&data->i2c);
+  if (device_check_accessor(&data->i2c.base))
+    device_put_accessor(&data->i2c.base);
 }
 
 static TERMUI_CON_ARGS_CLEANUP_PROTOTYPE(i2c_opts_cleanup)
@@ -88,8 +88,8 @@ static TERMUI_CON_ARGS_CLEANUP_PROTOTYPE(i2c_opts_cleanup)
 
   uint32_t ti;
 
-  if (device_check_accessor(&data->i2c))
-    device_put_accessor(&data->i2c);
+  if (device_check_accessor(&data->i2c.base))
+    device_put_accessor(&data->i2c.base);
 
   for (ti = 0; ti < data->transfer_count; ++ti)
     {

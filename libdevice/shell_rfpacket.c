@@ -86,8 +86,8 @@ static TERMUI_CON_ARGS_CLEANUP_PROTOTYPE(rfpacket_opts_cleanup)
 {
   struct termui_optctx_dev_rfpacket_opts *c = ctx;
 
-  if (device_check_accessor(&c->accessor))
-    device_put_accessor(&c->accessor);
+  if (device_check_accessor(&c->accessor.base))
+    device_put_accessor(&c->accessor.base);
 }
 
 static TERMUI_CON_COMMAND_PROTOTYPE(shell_rfpacket_configure)

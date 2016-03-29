@@ -16,7 +16,7 @@ void main()
     while (1)
       ;
 
-  if (device_get_accessor_by_path(&i2c, 0, "i2c*", DRIVER_CLASS_I2C_CTRL))
+  if (device_get_accessor_by_path(&i2c.base, 0, "i2c*", DRIVER_CLASS_I2C_CTRL))
     abort();
 
   printk("i2c: start scanning (spin)...\n");

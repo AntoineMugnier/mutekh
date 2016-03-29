@@ -60,8 +60,8 @@ static TERMUI_CON_ARGS_CLEANUP_PROTOTYPE(crypto_opts_cleanup)
 {
   struct termui_optctx_dev_crypto_opts *c = ctx;
 
-  if (device_check_accessor(&c->accessor))
-    device_put_accessor(&c->accessor);
+  if (device_check_accessor(&c->accessor.base))
+    device_put_accessor(&c->accessor.base);
 }
 
 static TERMUI_CON_COMMAND_PROTOTYPE(shell_crypto_cipher)

@@ -299,7 +299,7 @@ static void mxk_scan_done(struct mxk_context_s *pv)
     start = 1;
 
   if (!rq)
-    device_stop(&pv->timer);
+    device_stop(&pv->timer.base);
 
  out:
   LOCK_RELEASE_IRQ(&dev->lock);
@@ -341,7 +341,7 @@ static DEV_VALIO_REQUEST(matrix_keyboard_request)
   case DEVICE_VALIO_WAIT_EVENT:
     LOCK_SPIN_IRQ(&dev->lock);
     if (dev_request_queue_isempty(&pv->queue))
-      device_start(&pv->timer);
+      device_start(&pv->timer.base);
 
     dev_request_queue_pushback(&pv->queue, &req->base);
     pv->refresh_count = pv->refresh_max;
@@ -429,7 +429,7 @@ static DEV_INIT(matrix_keyboard_init)
   if (err)
     goto free_pv;
 
-  err = device_get_accessor_by_path(&pv->gpio, NULL, r->u.irq.icu, DRIVER_CLASS_GPIO);
+  err = device_get_accessor_by_path(&pv->gpio.base, NULL, r->u.irq.icu, DRIVER_CLASS_GPIO);
   if (err)
     goto put_timer;
 
@@ -491,9 +491,9 @@ static DEV_INIT(matrix_keyboard_init)
   return 0;
 
  put_gpio:
-  device_put_accessor(&pv->gpio);
+  device_put_accessor(&pv->gpio.base);
  put_timer:
-  device_put_accessor(&pv->timer);
+  device_put_accessor(&pv->timer.base);
  free_pv:
   mem_free(pv);
   return err;
@@ -503,8 +503,8 @@ static DEV_CLEANUP(matrix_keyboard_cleanup)
 {
   struct mxk_context_s *pv = dev->drv_pv;
 
-  device_put_accessor(&pv->timer);
-  device_put_accessor(&pv->gpio);
+  device_put_accessor(&pv->timer.base);
+  device_put_accessor(&pv->gpio.base);
 
   device_irq_source_unlink(dev, &pv->irq_ep, 1);
   dev_request_queue_destroy(&pv->queue);

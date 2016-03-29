@@ -50,7 +50,7 @@ void main()
   struct termui_term_behavior_s	bhv;
   lua_State			*luast;
 
-  assert(device_check_accessor(&console_dev));
+  assert(device_check_accessor(&console_dev.base));
 
   /* create lua state */
   luast = luaL_newstate();

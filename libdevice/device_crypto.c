@@ -48,7 +48,7 @@ error_t dev_rng_init(struct dev_rng_s *rng, const char *dev)
 
   memset(rng, 0, sizeof(*rng));
 
-  err = device_get_accessor_by_path(&rng->device, NULL, dev, DRIVER_CLASS_CRYPTO);
+  err = device_get_accessor_by_path(&rng->device.base, NULL, dev, DRIVER_CLASS_CRYPTO);
   if (err)
     return err;
 
@@ -59,7 +59,7 @@ error_t dev_rng_init(struct dev_rng_s *rng, const char *dev)
 
     if (!rng->state_data) {
       err = -ENOMEM;
-      device_put_accessor(&rng->device);
+      device_put_accessor(&rng->device.base);
     }
   }
 
@@ -70,7 +70,7 @@ void dev_rng_cleanup(struct dev_rng_s *rng)
 {
   if (rng->state_data)
     mem_free(rng->state_data);
-  device_put_accessor(&rng->device);
+  device_put_accessor(&rng->device.base);
 }
 
 #ifdef CONFIG_MUTEK_CONTEXT_SCHED

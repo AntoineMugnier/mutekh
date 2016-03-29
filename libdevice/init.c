@@ -44,7 +44,7 @@ void libdevice_cpu_regs_initsmp()
   struct device_cpu_s cpu_dev;
 
   /* get cpu API in processor device driver */
-  if (device_get_accessor(&cpu_dev, cpu->cpu_dev, DRIVER_CLASS_CPU, 0))
+  if (device_get_accessor(&cpu_dev.base, cpu->cpu_dev, DRIVER_CLASS_CPU, 0))
     {
       printk("\nerror: Unable to use driver to initialize CPU %i (device %p).\n", id, cpu->cpu_dev);
       abort();
@@ -53,7 +53,7 @@ void libdevice_cpu_regs_initsmp()
   /* perform initialization of processor registers */
   DEVICE_OP(&cpu_dev, reg_init);
 
-  device_put_accessor(&cpu_dev);
+  device_put_accessor(&cpu_dev.base);
 
   printk(" %u ", id);
 

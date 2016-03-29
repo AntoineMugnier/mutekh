@@ -21,7 +21,7 @@ void main()
     while(1)
       ;
 
-  if (device_get_accessor_by_path(&accel, 0, "accel*", DRIVER_CLASS_VALIO))
+  if (device_get_accessor_by_path(&accel.base, 0, "accel*", DRIVER_CLASS_VALIO))
     {
       printk("i2c-adxl345: failed to get accessor.\n");
       goto err;
@@ -29,7 +29,7 @@ void main()
 
   printk("i2c-adxl345: start measuring ...\n");
 
-  if (device_start(&accel))
+  if (device_start(&accel.base))
     {
       printk("i2c-adxl345: cannot start device.\n");
       goto err_accessor;
@@ -44,10 +44,10 @@ void main()
              data.accel.x, data.accel.y, data.accel.z);
     }
 
-  device_stop(&accel);
+  device_stop(&accel.base);
 
 err_accessor:
-  device_put_accessor(&accel);
+  device_put_accessor(&accel.base);
 
 err:
   while (1)

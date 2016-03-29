@@ -24,7 +24,7 @@ KROUTINE_EXEC(push_button_pressed)
 
 void main()
 {
-  ensure(device_get_accessor_by_path(&pbdev, NULL, "btn btn*", DRIVER_CLASS_VALIO) == 0);
+  ensure(device_get_accessor_by_path(&pbdev.base, NULL, "btn btn*", DRIVER_CLASS_VALIO) == 0);
 
   pbrq.attribute = VALIO_BUTTON_PUSH;
   pbrq.type      = DEVICE_VALIO_WAIT_EVENT;

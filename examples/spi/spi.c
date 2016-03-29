@@ -24,7 +24,7 @@ void main()
 {
   struct device_spi_ctrl_s spi;
 
-  if (device_get_accessor_by_path(&spi, NULL, "usart1", DRIVER_CLASS_SPI_CTRL))
+  if (device_get_accessor_by_path(&spi.base, NULL, "usart1", DRIVER_CLASS_SPI_CTRL))
     abort();
 
   printk("spi found\n");
@@ -84,7 +84,7 @@ void main()
 {
   struct device_spi_ctrl_s spi;
 
-  if (device_get_accessor_by_path(&spi, NULL, "usart1", DRIVER_CLASS_SPI_CTRL))
+  if (device_get_accessor_by_path(&spi.base, NULL, "usart1", DRIVER_CLASS_SPI_CTRL))
     abort();
 
   printk("spi found\n");
@@ -103,7 +103,7 @@ void main()
 
   device_init_accessor(&rq.gpio);
 
-  if (device_get_accessor_by_path(&rq.gpio, NULL, "gpio*", DRIVER_CLASS_GPIO))
+  if (device_get_accessor_by_path(&rq.gpio.base, NULL, "gpio*", DRIVER_CLASS_GPIO))
     abort();
 
   kroutine_init_immediate(&rq.kr, &rq_callback);

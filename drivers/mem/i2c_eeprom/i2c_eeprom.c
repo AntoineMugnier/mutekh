@@ -337,7 +337,7 @@ static DEV_CLEANUP(i2c_eeprom_cleanup)
     if (pv->busy)
         return -EBUSY;
 
-    device_put_accessor(&pv->bus);
+    device_put_accessor(&pv->bus.base);
     dev_request_queue_destroy(&pv->queue);
     mem_free(pv);
 

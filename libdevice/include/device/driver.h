@@ -525,7 +525,7 @@ error_t device_get_api(struct device_s *dev,
 
     @xcsee {Device accessor}
     @see device_put_accessor */
-error_t device_get_accessor(void *accessor, struct device_s *dev,
+error_t device_get_accessor(struct device_accessor_s *acc, struct device_s *dev,
                             enum driver_class_e cl, uint_fast8_t number);
 
 /** @This copies a device accessor.  This gets a new reference to the
@@ -534,7 +534,8 @@ error_t device_get_accessor(void *accessor, struct device_s *dev,
 
     @xcsee {Device accessor}
     @see device_put_accessor */
-error_t device_copy_accessor(void *accessor, const void *source);
+error_t device_copy_accessor(struct device_accessor_s *dst,
+                             const struct device_accessor_s *src);
 
 ALWAYS_INLINE bool_t device_cmp_accessor(const struct device_accessor_s *a,
                                          const struct device_accessor_s *b)
@@ -557,7 +558,8 @@ ALWAYS_INLINE bool_t device_cmp_accessor(const struct device_accessor_s *a,
     @csee device_get_accessor
     @xcsee {Device accessor}
  */
-error_t device_get_accessor_by_path(void *accessor, struct device_node_s *root,
+error_t device_get_accessor_by_path(struct device_accessor_s *acc,
+                                    struct device_node_s *root,
                                     const char *path, enum driver_class_e cl);
 
 /**
@@ -566,7 +568,7 @@ error_t device_get_accessor_by_path(void *accessor, struct device_node_s *root,
    count.
    @see {device_get_accessor}
  */
-void device_put_accessor(void *accessor);
+void device_put_accessor(struct device_accessor_s *acc);
 
 /**
    @This returns true is the device accessor has been successfully
@@ -576,21 +578,18 @@ void device_put_accessor(void *accessor);
    since it was cleaned-up by @ref device_put_accessor or initialized
    with @ref #DEVICE_ACCESSOR_INIT.
 */
-ALWAYS_INLINE bool_t device_check_accessor(void *accessor)
+ALWAYS_INLINE bool_t device_check_accessor(const struct device_accessor_s *acc)
 {
-  struct device_accessor_s *a = accessor;
-
-  return a->dev != NULL;
+  return acc->dev != NULL;
 }
 
 /**
    @This initializes an accessor so that the @ref
    device_check_accessor function return false.
 */
-ALWAYS_INLINE void device_init_accessor(void *accessor)
+ALWAYS_INLINE void device_init_accessor(struct device_accessor_s *acc)
 {
-  struct device_accessor_s *a = accessor;
-  a->dev = NULL;
+  acc->dev = NULL;
 }
 
 /** @This specifies the value added to the device_s::start_count value
@@ -612,7 +611,7 @@ ALWAYS_INLINE void device_init_accessor(void *accessor)
 
     @see device_stop. @see #DEVICE_START_COUNT_INC
 */
-error_t device_start(void *accessor);
+error_t device_start(struct device_accessor_s *acc);
 
 /** @This reverts the effect of the @ref device_start function. @This
     internally decreases the value of @ref device_s::start_count and
@@ -620,7 +619,7 @@ error_t device_start(void *accessor);
 
     @see device_start.
 */
-error_t device_stop(void *accessor);
+error_t device_stop(struct device_accessor_s *acc);
 
 /** @This retreives the value of the last possibly valid sub-devices
     number. It returns @tt -ENOTSUP if the class does not implement

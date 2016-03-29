@@ -402,12 +402,12 @@ void main(void)
     }
 
   /* get accessor for the timer under test and the for the reference timer */
-  if (device_get_accessor_by_path(&timer_dev_g, NULL, TIMER, DRIVER_CLASS_TIMER))
+  if (device_get_accessor_by_path(&timer_dev_g.base, NULL, TIMER, DRIVER_CLASS_TIMER))
     {
       printk("Error: cannot get accessor\n");
       abort();
     }
-  if (device_get_accessor_by_path(&ref_dev_g, NULL, REF_TIMER, DRIVER_CLASS_TIMER))
+  if (device_get_accessor_by_path(&ref_dev_g.base, NULL, REF_TIMER, DRIVER_CLASS_TIMER))
     {
       printk("Error: cannot get accessor\n");
       abort();
@@ -427,7 +427,7 @@ void main(void)
     }
 
   /* start the reference timer */
-  if (device_start(&ref_dev_g))
+  if (device_start(&ref_dev_g.base))
     {
       printk("Error: cannot start ref timer\n");
       abort();

@@ -54,8 +54,8 @@ static TERMUI_CON_ARGS_CLEANUP_PROTOTYPE(char_opts_cleanup)
 {
   struct termui_optctx_dev_char_opts *c = ctx;
 
-  if (device_check_accessor(&c->accessor))
-    device_put_accessor(&c->accessor);
+  if (device_check_accessor(&c->accessor.base))
+    device_put_accessor(&c->accessor.base);
 }
 
 static enum dev_char_rq_type_e
@@ -159,12 +159,12 @@ static CONTEXT_ENTRY(shell_thread)
   struct thread_params_s *p = param;
   struct device_char_s accessor;
 
-  bool_t ok = !device_copy_accessor(&accessor, &p->c->accessor);
+  bool_t ok = !device_copy_accessor(&accessor.base, &p->c->accessor.base);
   semaphore_give(&p->sem, 1);
   if (ok)
     {
       mutek_shell_start(&accessor, "xterm", NULL, CONFIG_MUTEK_SHELL_PROMPT, NULL);
-      device_put_accessor(&accessor);
+      device_put_accessor(&accessor.base);
     }
 }
 

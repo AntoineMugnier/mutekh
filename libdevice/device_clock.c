@@ -250,7 +250,7 @@ error_t dev_clock_sink_link(struct dev_clock_sink_ep_s *sink,
           struct device_cmu_s cmu;
 
           done = 1;
-          if (device_get_accessor_by_path(&cmu, &dev->node, r->u.clock_src.src, DRIVER_CLASS_CMU))
+          if (device_get_accessor_by_path(&cmu.base, &dev->node, r->u.clock_src.src, DRIVER_CLASS_CMU))
             {
               printk("device: no initialized clock provider available for %p device.\n", dev);
               return -ENOENT;
@@ -314,7 +314,7 @@ error_t dev_clock_sink_link(struct dev_clock_sink_ep_s *sink,
           unlock:;
           LOCK_RELEASE_IRQ(&cmu.dev->lock);
 
-          device_put_accessor(&cmu);
+          device_put_accessor(&cmu.base);
           break;
         }
 

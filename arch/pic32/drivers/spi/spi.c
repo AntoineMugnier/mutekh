@@ -542,7 +542,7 @@ static DEV_INIT(pic32_spi_init)
   if (strcmp(tx->u.dma.label, rx->u.dma.label))
     goto err_dma;
 
-  if (device_get_accessor_by_path(&pv->dma, NULL, rx->u.dma.label, DRIVER_CLASS_DMA))
+  if (device_get_accessor_by_path(&pv->dma.base, NULL, rx->u.dma.label, DRIVER_CLASS_DMA))
     goto err_dma;
 
   /* Set interleaved request */

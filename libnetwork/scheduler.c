@@ -278,7 +278,7 @@ error_t net_scheduler_init(
 
   memset(sched, 0, sizeof(*sched));
 
-  err = device_get_accessor_by_path(&sched->timer, NULL, timer_dev, DRIVER_CLASS_TIMER);
+  err = device_get_accessor_by_path(&sched->timer.base, NULL, timer_dev, DRIVER_CLASS_TIMER);
   if (err)
     return err;
 
@@ -300,7 +300,7 @@ error_t net_scheduler_init(
   sched->timer_rq.rq.drvdata = NULL;
   kroutine_init_immediate(&sched->timer_rq.rq.kr, net_scheduler_timeout);
 
-  device_start(&sched->timer);
+  device_start(&sched->timer.base);
 
   const size_t stack_size = 1024;
 

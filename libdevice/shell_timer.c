@@ -49,8 +49,8 @@ static TERMUI_CON_ARGS_CLEANUP_PROTOTYPE(timer_opts_cleanup)
 {
   struct termui_optctx_dev_timer_opts *c = ctx;
 
-  if (device_check_accessor(&c->timer))
-      device_put_accessor(&c->timer);
+  if (device_check_accessor(&c->timer.base))
+      device_put_accessor(&c->timer.base);
 }
 
 static TERMUI_CON_COMMAND_PROTOTYPE(dev_shell_timer_value)

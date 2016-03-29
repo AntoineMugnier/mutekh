@@ -45,7 +45,7 @@ void app_start()
   thread_create(worker_thread, NULL, NULL);
 
   /* get timer device */
-  ensure(!device_get_accessor_by_path(&timer_dev, NULL, "timer*", DRIVER_CLASS_TIMER));
+  ensure(!device_get_accessor_by_path(&timer_dev.base, NULL, "timer*", DRIVER_CLASS_TIMER));
 
   /* timer events after 1s */
   ensure(dev_timer_init_sec(&timer_dev, &timer_rq.delay, NULL, 1, 1) == 0);

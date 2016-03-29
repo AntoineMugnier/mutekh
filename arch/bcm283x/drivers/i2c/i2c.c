@@ -182,7 +182,7 @@ static bool_t bcm283x_i2c_valid_request(struct bcm283x_i2c_context_s *pv)
       if (((tr + 1)->type == DEV_I2C_READ) && (tr->type == DEV_I2C_WRITE))
         {
           /* Restart is only possible with a timer */
-          if (!device_check_accessor(&pv->timer))
+          if (!device_check_accessor(&pv->timer.base))
             return 0;
         }
     }

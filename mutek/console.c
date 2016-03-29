@@ -67,7 +67,7 @@ void mutek_console_initsmp(void)
   if (!cpu_isbootstrap())
     return;
 
-  if (device_get_accessor_by_path(&console_dev, NULL,
+  if (device_get_accessor_by_path(&console_dev.base, NULL,
                                   CONFIG_MUTEK_CONSOLE_DEVICE_PATHS,
                                   DRIVER_CLASS_CHAR))
     printk("error: mutek console: No initialized device found matching `"
@@ -79,7 +79,7 @@ void mutek_console_cleanupsmp(void)
   if (!cpu_isbootstrap())
     return;
 
-  if (device_check_accessor(&console_dev))
-    device_put_accessor(&console_dev);
+  if (device_check_accessor(&console_dev.base))
+    device_put_accessor(&console_dev.base);
 }
 

@@ -10,7 +10,7 @@
 
 void main()
 {
-  assert(device_check_accessor(&console_dev));
+  assert(device_check_accessor(&console_dev.base));
 
   /* start a shell on the mutekh console */
   mutek_shell_start(&console_dev, "xterm");

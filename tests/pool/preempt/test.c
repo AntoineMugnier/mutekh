@@ -170,7 +170,7 @@ void main()
   CPU_INTERRUPT_RESTORESTATE;
 
 #ifdef __MUTEK__
-  ensure(!device_get_accessor_by_path(&timer_dev, NULL, "timer*", DRIVER_CLASS_TIMER));
+  ensure(!device_get_accessor_by_path(&timer_dev.base, NULL, "timer*", DRIVER_CLASS_TIMER));
 
   ensure(dev_timer_init_sec(&timer_dev, &timer_rq.delay, NULL, 10, 1000) == 0);
 

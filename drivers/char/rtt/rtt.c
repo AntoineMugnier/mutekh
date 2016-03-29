@@ -195,7 +195,7 @@ static DEV_CLEANUP(char_rtt_cleanup)
   rtt_channel_cleanup(pv->tx);
   rtt_channel_cleanup(pv->rx);
 
-  device_put_accessor(&pv->timer);
+  device_put_accessor(&pv->timer.base);
 
   mem_free(pv);
 

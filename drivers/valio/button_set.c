@@ -265,7 +265,7 @@ static DEV_INIT(button_set_init)
   return 0;
 
  put_gpio:
-  device_put_accessor(&pv->gpio);
+  device_put_accessor(&pv->gpio.base);
  free_pv:
   mem_free(pv);
   return err;
@@ -278,7 +278,7 @@ static DEV_CLEANUP(button_set_cleanup)
   if (!dev_request_queue_isempty(&pv->queue))
     return -EBUSY;
 
-  device_put_accessor(&pv->gpio);
+  device_put_accessor(&pv->gpio.base);
 
   device_irq_source_unlink(dev, &pv->irq_ep, 1);
   dev_request_queue_destroy(&pv->queue);

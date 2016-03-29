@@ -308,7 +308,7 @@ static DEV_CLEANUP(pca9557_cleanup)
 {
     struct pca9557_private_s  *pv = dev->drv_pv;
 
-    device_put_accessor(&pv->i2c_dev);
+    device_put_accessor(&pv->i2c_dev.base);
 
     mem_free(pv);
 }

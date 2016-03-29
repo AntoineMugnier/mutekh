@@ -56,14 +56,14 @@ static CONTEXT_ENTRY(shell_thread)
   void *my_private_data = NULL;
 
 #if defined(CONFIG_MUTEK_CONSOLE) && !defined(CONFIG_MUTEK_SHELL_THREAD)
-  assert(device_check_accessor(&console_dev));
+  assert(device_check_accessor(&console_dev.base));
 
   /* start a shell on the mutekh console char device */
   mutek_shell_start(&console_dev, "xterm", root_group, "$ ", my_private_data);
 #else
 
   struct device_char_s chardev;
-  if (device_get_accessor_by_path(&chardev, NULL,
+  if (device_get_accessor_by_path(&chardev.base, NULL,
         "console* tty* uart*", DRIVER_CLASS_CHAR))
     abort();
 

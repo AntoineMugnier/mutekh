@@ -57,7 +57,7 @@ error_t device_iomux_setup(struct device_s *dev, const char *io_list,
   struct device_iomux_s iomux;
 
   error_t err, ent = device_get_param_dev_accessor(dev, "iomux",
-                                        &iomux, DRIVER_CLASS_IOMUX);
+                                        &iomux.base, DRIVER_CLASS_IOMUX);
   if (ent && ent != -ENOENT)
     return ent;
 
@@ -106,7 +106,7 @@ error_t device_iomux_setup(struct device_s *dev, const char *io_list,
     }
 
   if (!ent)
-    device_put_accessor(&iomux);
+    device_put_accessor(&iomux.base);
 
   return 0;
 }

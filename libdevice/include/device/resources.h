@@ -36,6 +36,8 @@
 
 #include <device/types.h>
 
+struct device_s;
+struct device_accessor_s;
 enum driver_class_e;
 
 /** @This specifies the types of device resource entries.
@@ -946,7 +948,8 @@ error_t device_res_add_dev_param(struct device_s *dev, const char *name,
     device_get_accessor_by_path function with the device path
     specified in the device resource.  @csee DEV_RES_DEV_PARAM */
 error_t device_get_param_dev_accessor(struct device_s *dev,
-                                      const char *name, void *accessor,
+                                      const char *name,
+                                      struct device_accessor_s *acc,
                                       enum driver_class_e cl);
 
 /** @This specifies a generic integer array parameter resource in a

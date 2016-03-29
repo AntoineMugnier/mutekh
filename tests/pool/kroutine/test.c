@@ -272,7 +272,7 @@ static void test_init()
 #endif
 
 #ifdef CONFIG_HEXO_IRQ
-  ensure(!device_get_accessor_by_path(&timer_dev, NULL, "timer*", DRIVER_CLASS_TIMER));
+  ensure(!device_get_accessor_by_path(&timer_dev.base, NULL, "timer*", DRIVER_CLASS_TIMER));
 
   ensure(dev_timer_init_sec(&timer_dev, &timer_rq.delay, NULL, 100, 1000) == 0);
 

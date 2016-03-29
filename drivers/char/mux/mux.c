@@ -748,13 +748,13 @@ static DEV_USE(char_mux_use)
       struct device_s *dev = accessor->dev;
       struct char_mux_context_s *pv = dev->drv_pv;
       if (dev->start_count == 0)
-        return device_start(&pv->io);
+        return device_start(&pv->io.base);
     }
     case DEV_USE_STOP: {
       struct device_s *dev = accessor->dev;
       struct char_mux_context_s *pv = dev->drv_pv;
       if (dev->start_count == 0)
-        device_stop(&pv->io);
+        device_stop(&pv->io.base);
       return 0;
     }
 
@@ -865,7 +865,7 @@ static DEV_CLEANUP(char_mux_cleanup)
       DEVICE_OP(&pv->io, cancel, &pv->read_rq))
     return -EBUSY;
 
-  device_put_accessor(&pv->io);
+  device_put_accessor(&pv->io.base);
   mem_free(pv);
 
   return 0;

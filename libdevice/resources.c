@@ -230,7 +230,8 @@ error_t device_res_add_dev_param(struct device_s *dev, const char *name,
 #endif
 
 error_t device_get_param_dev_accessor(struct device_s *dev,
-                                      const char *name, void *accessor,
+                                      const char *name,
+                                      struct device_accessor_s *acc,
                                       enum driver_class_e cl)
 {
   struct dev_resource_s *r;
@@ -242,6 +243,6 @@ error_t device_get_param_dev_accessor(struct device_s *dev,
       r->u.dev_param.class_ != cl)
     return -EINVAL;
 
-  return device_get_accessor_by_path(accessor, &dev->node, r->u.str_param.value, cl);
+  return device_get_accessor_by_path(acc, &dev->node, r->u.str_param.value, cl);
 }
 

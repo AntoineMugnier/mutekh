@@ -78,7 +78,7 @@ static PRINTF_OUTPUT_FUNC(console_printk_out)
 {
   struct console_printk_status_s *pv = ctx;
 
-  if (!device_check_accessor(&console_dev))
+  if (!device_check_accessor(&console_dev.base))
     return;
 
   for (;;) {

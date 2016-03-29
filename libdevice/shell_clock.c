@@ -60,8 +60,8 @@ static TERMUI_CON_ARGS_CLEANUP_PROTOTYPE(clock_opts_cleanup)
 {
   struct termui_optctx_dev_clock_opts *c = ctx;
 
-  if (device_check_accessor(&c->cmu))
-      device_put_accessor(&c->cmu);
+  if (device_check_accessor(&c->cmu.base))
+      device_put_accessor(&c->cmu.base);
 }
 
 static void dev_shell_clock_configs(struct termui_console_s *con,

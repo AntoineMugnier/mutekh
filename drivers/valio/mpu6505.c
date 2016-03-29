@@ -681,7 +681,7 @@ static DEV_CLEANUP(mpu6505_cleanup)
   if (!dev_request_queue_isempty(&pv->queue))
     return -EBUSY;
 
-  device_put_accessor(&pv->i2c);
+  device_put_accessor(&pv->i2c.base);
   device_irq_source_unlink(dev, &pv->irq, 1);
   dev_request_queue_destroy(&pv->queue);
   mem_free(pv);
@@ -699,14 +699,14 @@ static DEV_USE(mpu6505_use)
     struct device_s *dev = accessor->dev;
     struct mpu6505_private_s *pv = dev->drv_pv;
     if (dev->start_count == 0)
-      return device_start(&pv->timer);
+      return device_start(&pv->timer.base);
   }
 
   case DEV_USE_STOP: {
     struct device_s *dev = accessor->dev;
     struct mpu6505_private_s *pv = dev->drv_pv;
     if (dev->start_count == 0)
-      device_stop(&pv->timer);
+      device_stop(&pv->timer.base);
     return 0;
   }
 

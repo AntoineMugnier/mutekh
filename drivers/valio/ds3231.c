@@ -237,7 +237,7 @@ static DEV_CLEANUP(ds3231_cleanup)
 {
     struct ds3231_priv_s *pv = dev->drv_pv;
 
-    device_put_accessor(&pv->i2c);
+    device_put_accessor(&pv->i2c.base);
     dev_request_queue_destroy(&pv->queue);
     mem_free(pv);
 }

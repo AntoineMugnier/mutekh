@@ -94,25 +94,23 @@ error_t device_last_number(struct device_s *dev,
   return err;
 }
 
-error_t device_start(void *accessor)
+error_t device_start(struct device_accessor_s *acc)
 {
-  struct device_accessor_s *acc = accessor;
   struct device_s *dev = acc->dev;
   dev_use_t *use = dev->drv->f_use;
   error_t err = 0;
   LOCK_SPIN_IRQ(&dev->lock);
   assert((dev->start_count + DEVICE_START_COUNT_INC) >>
          (CONFIG_DEVICE_USE_BITS + CONFIG_DEVICE_START_LOG2INC) == 0);
-  err = use(accessor, DEV_USE_START);
+  err = use(acc, DEV_USE_START);
   if (!err)
     dev->start_count += DEVICE_START_COUNT_INC;
   LOCK_RELEASE_IRQ(&dev->lock);
   return err;
 }
 
-error_t device_stop(void *accessor)
+error_t device_stop(struct device_accessor_s *acc)
 {
-  struct device_accessor_s *acc = accessor;
   struct device_s *dev = acc->dev;
   dev_use_t *use = dev->drv->f_use;
   error_t err = -EINVAL;
@@ -120,7 +118,7 @@ error_t device_stop(void *accessor)
   if (dev->start_count >= DEVICE_START_COUNT_INC)
     {
       dev->start_count -= DEVICE_START_COUNT_INC;
-      err = use(accessor, DEV_USE_STOP);
+      err = use(acc, DEV_USE_STOP);
       if (err)
         dev->start_count += DEVICE_START_COUNT_INC;
     }
@@ -128,10 +126,9 @@ error_t device_stop(void *accessor)
   return err;
 }
 
-error_t device_get_accessor(void *accessor, struct device_s *dev,
+error_t device_get_accessor(struct device_accessor_s *acc, struct device_s *dev,
                             enum driver_class_e cl, uint_fast8_t number)
 {
-  struct device_accessor_s *a = accessor;
   error_t err;
 
   LOCK_SPIN_IRQ(&dev->lock);
@@ -139,13 +136,13 @@ error_t device_get_accessor(void *accessor, struct device_s *dev,
   const struct driver_class_s *c;
   if (!(err = device_get_api(dev, cl, &c)))
     {
-      a->dev = dev;
-      a->api = c;
-      a->number = number;
-      if (!(err = dev->drv->f_use(accessor, DEV_USE_GET_ACCESSOR)))
+      acc->dev = dev;
+      acc->api = c;
+      acc->number = number;
+      if (!(err = dev->drv->f_use(acc, DEV_USE_GET_ACCESSOR)))
         dev->ref_count++;
       else
-        a->dev = NULL;
+        acc->dev = NULL;
     }
 
   LOCK_RELEASE_IRQ(&dev->lock);
@@ -153,10 +150,9 @@ error_t device_get_accessor(void *accessor, struct device_s *dev,
   return err;
 }
 
-error_t device_copy_accessor(void *accessor, const void *source)
+error_t device_copy_accessor(struct device_accessor_s *a,
+                             const struct device_accessor_s *b)
 {
-  struct device_accessor_s *a = accessor;
-  const struct device_accessor_s *b = source;
   struct device_s *dev = b->dev;
   error_t err = 0;
 
@@ -167,7 +163,7 @@ error_t device_copy_accessor(void *accessor, const void *source)
   a->number = b->number;
 
   if (dev->drv->f_use == NULL ||
-      !(err = dev->drv->f_use(accessor, DEV_USE_GET_ACCESSOR)))
+      !(err = dev->drv->f_use(a, DEV_USE_GET_ACCESSOR)))
     dev->ref_count++;
   else
     a->dev = NULL;
@@ -175,10 +171,9 @@ error_t device_copy_accessor(void *accessor, const void *source)
   return err;
 }
 
-void device_put_accessor(void *accessor)
+void device_put_accessor(struct device_accessor_s *acc)
 {
-  struct device_accessor_s *a = accessor;
-  struct device_s *dev = a->dev;
+  struct device_s *dev = acc->dev;
 
   assert(dev != NULL);
 
@@ -187,9 +182,9 @@ void device_put_accessor(void *accessor)
   assert(dev->ref_count);
 
   dev->ref_count--;
-  dev->drv->f_use(accessor, DEV_USE_PUT_ACCESSOR);
-  a->dev = NULL;
-  a->api = NULL;
+  dev->drv->f_use(acc, DEV_USE_PUT_ACCESSOR);
+  acc->dev = NULL;
+  acc->api = NULL;
 
   LOCK_RELEASE_IRQ(&dev->lock);
 }
@@ -204,10 +199,9 @@ static bool_t device_filter_accessor(struct device_node_s *node)
   return !(dev->node.flags & DEVICE_FLAG_IGNORE);
 }
 
-error_t device_get_accessor_by_path(void *accessor, struct device_node_s *root,
+error_t device_get_accessor_by_path(struct device_accessor_s *acc, struct device_node_s *root,
                                     const char *path, enum driver_class_e cl)
 {
-  struct device_accessor_s *acc = accessor;
   struct device_s *dev;
   uint_fast8_t number;
   error_t e = device_get_by_path(&dev, &number, root, path, &device_filter_accessor);
@@ -237,7 +231,7 @@ static bool_t device_find_driver_r(struct device_node_s *node, uint_fast8_t pass
           /* get associated enumerator device */
           if (!dev->enum_dev)
             break;
-          if (device_get_accessor(&e, dev->enum_dev, DRIVER_CLASS_ENUM, 0))
+          if (device_get_accessor(&e.base, dev->enum_dev, DRIVER_CLASS_ENUM, 0))
             break;
 
           /* iterate over available drivers */
@@ -258,7 +252,7 @@ static bool_t device_find_driver_r(struct device_node_s *node, uint_fast8_t pass
                 }
             }
 
-          device_put_accessor(&e);
+          device_put_accessor(&e.base);
 
           if (dev->status != DEVICE_DRIVER_INIT_PENDING)
 # endif

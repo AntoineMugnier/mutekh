@@ -17,7 +17,7 @@ struct termui_term_behavior_s	bhv;
 
 void main()
 {
-  assert(device_check_accessor(&console_dev));
+  assert(device_check_accessor(&console_dev.base));
 
   termui_dev_io_init(&tm, &console_dev, "xterm");
   termui_getline_init(&tm, &bhv, 256);

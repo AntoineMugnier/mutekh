@@ -143,13 +143,13 @@ DEV_DECLARE_STATIC(timer_dev, "timer", 0, my_timer_drv,
 
       @code
   struct device_timer_s t;
-  err = device_get_accessor(&t, timer_dev, DRIVER_CLASS_TIMER, 0);
+  err = device_get_accessor(&t.base, timer_dev, DRIVER_CLASS_TIMER, 0);
       @end code
 
       It is also possible to initialize a device accessor from the
       device path in the tree:
       @code
-  err = device_get_accessor_by_path(&t, NULL, "/timer[0]", DRIVER_CLASS_TIMER);
+  err = device_get_accessor_by_path(&t.base, NULL, "/timer[0]", DRIVER_CLASS_TIMER);
       @end code
 
       Classes specific functions can then be invoked on the device by
@@ -158,7 +158,7 @@ DEV_DECLARE_STATIC(timer_dev, "timer", 0, my_timer_drv,
   dev_timer_value_t date;
   err = DEVICE_OP(&t, get_value, &date, 0);
 
-  device_put_accessor(&t);   /* release the device */
+  device_put_accessor(&t.base);   /* release the device */
       @end code
 
     @end section
