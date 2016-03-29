@@ -30,7 +30,7 @@
 #include <device/class/gpio.h>
 #include <device/class/icu.h>
 
-#include <drivers/gpio/mcp23s17.h>
+#include "mcp23s17.h"
 
 /*
   This implements a driver for the Microchip MCP23S17 device,
@@ -108,8 +108,8 @@ static void mcp23s17_next(struct device_s *dev)
 
 static KROUTINE_EXEC(mcp23s17_spi_done)
 {
-  struct mcp23s17_private_s *pv = KROUTINE_CONTAINER(kr, *pv, spi_req.base.kr);
-  struct device_s           *dev = pv->spi_req.base.pvdata;
+  struct mcp23s17_private_s *pv = KROUTINE_CONTAINER(kr, *pv, spi_req.base.base.kr);
+  struct device_s           *dev = pv->spi_req.base.base.pvdata;
   struct dev_gpio_rq_s      *req;
 
   LOCK_SPIN_IRQ(&dev->lock);
@@ -118,7 +118,7 @@ static KROUTINE_EXEC(mcp23s17_spi_done)
     {
       case MCP23S17_REQUEST_OP:
         req = dev_gpio_rq_s_cast(dev_request_queue_head(&pv->rq_pending));
-        req->error = pv->spi_req.err;
+        req->error = pv->spi_req.base.err;
         switch (req->type)
           {
             case DEV_GPIO_GET_INPUT:
@@ -162,56 +162,19 @@ static KROUTINE_EXEC(mcp23s17_spi_done)
 static void mcp23s17_spi_irq_setup(
   struct mcp23s17_private_s *pv)
 {
-  bc_set_pc(&pv->spi_req.vm, &mcp23s17_bc_setup_irq);
   bc_set_reg(&pv->spi_req.vm, BC_REG_0, pv->int_update_mask);
   bc_set_reg(&pv->spi_req.vm, BC_REG_1, pv->int_update_en);
   pv->int_update_mask = 0;
   pv->int_update_en = 0;
-  dev_spi_rq_start(&pv->spi_req);
+  dev_spi_bytecode_start(&pv->spi, &pv->spi_req, &mcp23s17_bc_setup_irq);
 }
 
-static void mcp23s17_spi_irq_process(
+static inline void mcp23s17_spi_irq_process(
   struct mcp23s17_private_s *pv)
 {
-  bc_set_pc(&pv->spi_req.vm, &mcp23s17_bc_read_irq);
-  dev_spi_rq_start(&pv->spi_req);
+  dev_spi_bytecode_start(&pv->spi, &pv->spi_req, &mcp23s17_bc_read_irq);
 }
 #endif
-
-static void mcp23s17_spi_init(
-  struct mcp23s17_private_s *pv)
-{
-  bc_set_pc(&pv->spi_req.vm, &mcp23s17_bc_sync_cache);
-  dev_spi_rq_start(&pv->spi_req);
-}
-
-static void mcp23s17_spi_rq_write_output_mode(
-  struct dev_spi_ctrl_rq_s *spi_req)
-{
-  bc_set_pc(&spi_req->vm, &mcp23s17_bc_write_output_mode);
-  dev_spi_rq_start(spi_req);
-}
-
-static void mcp23s17_spi_rq_write_input_mode(
-  struct dev_spi_ctrl_rq_s *spi_req)
-{
-  bc_set_pc(&spi_req->vm, &mcp23s17_bc_write_input_mode);
-  dev_spi_rq_start(spi_req);
-}
-
-static void mcp23s17_spi_rq_write_output(
-  struct dev_spi_ctrl_rq_s *spi_req)
-{
-  bc_set_pc(&spi_req->vm, &mcp23s17_bc_write_output);
-  dev_spi_rq_start(spi_req);
-}
-
-static void mcp23s17_spi_rq_read_input(
-  struct dev_spi_ctrl_rq_s *spi_req)
-{
-  bc_set_pc(&spi_req->vm, &mcp23s17_bc_read_input);
-  dev_spi_rq_start(spi_req);
-}
 
 static void mcp23s17_rq_serve(
   struct device_s *dev,
@@ -222,7 +185,7 @@ static void mcp23s17_rq_serve(
   if (req->io_last >= MCP23S17_PIN_NB || req->io_last < req->io_first)
     {
       req->error = -ERANGE;
-      kroutine_exec(&pv->spi_req.base.kr);
+      kroutine_exec(&pv->spi_req.base.base.kr);
       return;
     }
 
@@ -243,7 +206,7 @@ static void mcp23s17_rq_serve(
               if (pv->iodir_cache & mask)
                 {
                   pv->iodir_cache &= ~mask;
-                  mcp23s17_spi_rq_write_output_mode(&pv->spi_req);
+                  dev_spi_bytecode_start(&pv->spi, &pv->spi_req, &mcp23s17_bc_write_output_mode);
                   return;
                 }
               break;
@@ -252,7 +215,8 @@ static void mcp23s17_rq_serve(
                 {
                   pv->gppu_cache |= mask;
                   pv->iodir_cache |= mask;
-                  mcp23s17_spi_rq_write_input_mode(&pv->spi_req);
+                  dev_spi_bytecode_start(&pv->spi, &pv->spi_req,
+                                         &mcp23s17_bc_write_input_mode);
                   return;
                 }
               break;
@@ -261,13 +225,14 @@ static void mcp23s17_rq_serve(
                 {
                   pv->gppu_cache &= ~mask;
                   pv->iodir_cache |= mask;
-                  mcp23s17_spi_rq_write_input_mode(&pv->spi_req);
+                  dev_spi_bytecode_start(&pv->spi, &pv->spi_req,
+                                         &mcp23s17_bc_write_input_mode);
                   return;
                 }
               break;
             default:
               req->error = -ENOTSUP;
-              kroutine_exec(&pv->spi_req.base.kr);
+              kroutine_exec(&pv->spi_req.base.base.kr);
               return;
           }
         break;
@@ -280,22 +245,24 @@ static void mcp23s17_rq_serve(
           {
             pv->olat_cache |= mask & range_mask;
             pv->olat_cache &= mask | ~range_mask;
-            mcp23s17_spi_rq_write_output(&pv->spi_req);
+            dev_spi_bytecode_start(&pv->spi, &pv->spi_req,
+                                   &mcp23s17_bc_write_output);
             return;
           }
         break;
 
       case DEV_GPIO_GET_INPUT:
-        mcp23s17_spi_rq_read_input(&pv->spi_req);
+        dev_spi_bytecode_start(&pv->spi, &pv->spi_req,
+                               &mcp23s17_bc_read_input);
         return;
 
       case DEV_GPIO_INPUT_IRQ_RANGE:
         req->error = -ENOTSUP;
-        kroutine_exec(&pv->spi_req.base.kr);
+        kroutine_exec(&pv->spi_req.base.base.kr);
         return;
     }
     req->error = 0;
-    kroutine_exec(&pv->spi_req.base.kr);
+    kroutine_exec(&pv->spi_req.base.base.kr);
     return;
 }
 
@@ -456,18 +423,18 @@ static error_t spi_config(
   struct device_s *dev,
   struct mcp23s17_private_s *pv)
 {
-  if (dev_spi_request_init(dev, &pv->spi_req, 1, 1))
+  if (dev_drv_spi_bytecode_init(dev, &pv->spi_req, &pv->spi, NULL, NULL))
     return -ENOTSUP;
 
-  pv->spi_req.config.bit_rate = 1000000;
-  pv->spi_req.config.word_width = 8;
-  pv->spi_req.config.bit_order = DEV_SPI_MSB_FIRST;
-  pv->spi_req.config.ck_mode = DEV_SPI_CK_MODE_0;
-  pv->spi_req.base.pvdata = dev;
+  pv->spi_req.base.config.bit_rate = 1000000;
+  pv->spi_req.base.config.word_width = 8;
+  pv->spi_req.base.config.bit_order = DEV_SPI_MSB_FIRST;
+  pv->spi_req.base.config.ck_mode = DEV_SPI_CK_MODE_0;
+  pv->spi_req.base.base.pvdata = dev;
 
   bc_init(&pv->spi_req.vm, &mcp23s17_bytecode, 1, pv);
 
-  kroutine_init_immediate(&pv->spi_req.base.kr, &mcp23s17_spi_done);
+  kroutine_init_immediate(&pv->spi_req.base.base.kr, &mcp23s17_spi_done);
 
   return 0;
 }
@@ -523,7 +490,7 @@ static DEV_INIT(mcp23s17_init)
   dev->drv_pv = pv;
 
   pv->current_op = MCP23S17_INIT_OP;
-  mcp23s17_spi_init(pv);
+  dev_spi_bytecode_start(&pv->spi, &pv->spi_req, &mcp23s17_bc_sync_cache);
 
   return 0;
 

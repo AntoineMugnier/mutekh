@@ -122,7 +122,8 @@ extern void mcp23s17_bc_setup_irq(void);
 struct mcp23s17_private_s
 {
   /* SPI */
-  struct dev_spi_ctrl_rq_s  spi_req;
+  struct device_spi_ctrl_s  spi;
+  struct dev_spi_ctrl_bytecode_rq_s  spi_req;
 
   /* Queue */
   dev_request_queue_root_t  rq_pending;
