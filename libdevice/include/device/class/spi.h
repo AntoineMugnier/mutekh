@@ -66,7 +66,7 @@
    executed. The execution of the bytecode will not be suspended. When
    a @xref {spi_yield} or @xref {spi_wait} instruction is
    encountered, the execution is suspended if the delay has not
-   elapsed at that time. The @ref #CONFIG_DEVICE_SPI_REQUEST_TIMER
+   elapsed at that time. The @ref #CONFIG_DEVICE_SPI_BYTECODE_TIMER
    must be defined in order to use this instruction.
 
    The delay given in the register is expressed timer unit.
@@ -158,7 +158,7 @@
 
    @section {spi_gpioset}
    This instruction sets the value of a gpio pin. The @ref
-   #CONFIG_DEVICE_SPI_REQUEST_GPIO token must be defined.
+   #CONFIG_DEVICE_SPI_BYTECODE_GPIO token must be defined.
    @end section
 
    @section {spi_gpioget}
@@ -209,25 +209,31 @@
 
 #include <enums.h>
 
-#ifdef CONFIG_DEVICE_SPI_REQUEST
+#include <device/class/gpio.h>
+
+#ifdef CONFIG_DEVICE_SPI_BYTECODE
 # include <mutek/bytecode.h>
-# ifdef CONFIG_DEVICE_GPIO
-#  include <device/class/gpio.h>
-# endif
-# ifdef CONFIG_DEVICE_SPI_REQUEST_TIMER
+# ifdef CONFIG_DEVICE_SPI_BYTECODE_TIMER
 #  include <device/class/timer.h>
 # endif
+#endif
+
+#ifdef CONFIG_DEVICE_SPI_REQUEST
 # include <gct_platform.h>
 # include <gct/container_clist.h>
 #endif
 
 struct device_s;
 struct driver_s;
+struct device_timer_s;
+struct device_gpio_s;
 struct device_spi_ctrl_s;
 struct driver_spi_ctrl_s;
 struct dev_spi_ctrl_transfer_s;
 struct dev_spi_ctrl_config_s;
+struct dev_spi_ctrl_base_rq_s;
 struct dev_spi_ctrl_bytecode_rq_s;
+struct dev_spi_ctrl_transaction_rq_s;
 struct dev_spi_ctrl_queue_s;
 
 /***************************************** config */
@@ -495,6 +501,23 @@ struct dev_spi_ctrl_base_rq_s
 
 STRUCT_INHERIT(dev_spi_ctrl_base_rq_s, dev_request_s, base);
 
+#endif
+
+#ifdef CONFIG_DEVICE_SPI_TRANSACTION
+
+struct dev_spi_ctrl_transaction_rq_s
+{
+  struct dev_spi_ctrl_base_rq_s base;
+
+  struct dev_spi_ctrl_data_s data;
+};
+
+STRUCT_INHERIT(dev_spi_ctrl_transaction_rq_s, dev_spi_ctrl_base_rq_s, base);
+
+#endif
+
+#ifdef CONFIG_DEVICE_SPI_BYTECODE
+
 /** @This structure describes actions to perform on a SPI slave device. */
 struct dev_spi_ctrl_bytecode_rq_s
 {
@@ -503,11 +526,11 @@ struct dev_spi_ctrl_bytecode_rq_s
   /** bytecode virtual machine context */
   struct bc_context_s      vm;
 
-#ifdef CONFIG_DEVICE_SPI_REQUEST_TIMER
+#ifdef CONFIG_DEVICE_SPI_BYTECODE_TIMER
   dev_timer_value_t       sleep_before;
 #endif
 
-#ifdef CONFIG_DEVICE_SPI_REQUEST_GPIO
+#ifdef CONFIG_DEVICE_SPI_BYTECODE_GPIO
   /** If the @ref gpio device accessor is valid, these tables give the
       index of gpio pin to use when a @tt spi_gpio* instruction is
       encountered. */
@@ -521,24 +544,30 @@ struct dev_spi_ctrl_bytecode_rq_s
 
 STRUCT_INHERIT(dev_spi_ctrl_bytecode_rq_s, dev_spi_ctrl_base_rq_s, base);
 
+#endif
+
+#ifdef CONFIG_DEVICE_SPI_REQUEST
+
 struct dev_spi_ctrl_queue_s
 {
   /** This device accessor is used to execute the delay bytecode
       instructions. It may not be valid, in this case any delay
       instruction with a delay greater than zero will make the request
       fail. */
-#ifdef CONFIG_DEVICE_SPI_REQUEST_TIMER
+# ifdef CONFIG_DEVICE_SPI_BYTECODE_TIMER
   struct device_timer_s         timer;
-#endif
+# endif
 
   union {
     struct kroutine_s             kr;
-#ifdef CONFIG_DEVICE_SPI_REQUEST_TIMER
+# ifdef CONFIG_DEVICE_SPI_BYTECODE_TIMER
     struct dev_timer_rq_s         timer_rq;
-#endif
+# endif
     struct {
       struct dev_spi_ctrl_transfer_s transfer;
+# ifdef CONFIG_DEVICE_SPI_BYTECODE
       uint32_t                      padding_word;
+# endif
     };
   };
 
@@ -546,9 +575,9 @@ struct dev_spi_ctrl_queue_s
   struct dev_spi_ctrl_config_s *config;
 
   struct dev_spi_ctrl_base_rq_s *current;
-#ifdef CONFIG_DEVICE_SPI_REQUEST_TIMER
+# ifdef CONFIG_DEVICE_SPI_BYTECODE_TIMER
   struct dev_spi_ctrl_bytecode_rq_s *timeout;
-#endif
+# endif
   dev_request_queue_root_t      queue;
 
   lock_irq_t                    lock;
@@ -574,20 +603,21 @@ error_t dev_spi_queue_init(struct device_s *dev, struct dev_spi_ctrl_queue_s *q)
 config_depend(CONFIG_DEVICE_SPI_REQUEST)
 void dev_spi_queue_cleanup(struct dev_spi_ctrl_queue_s *q);
 
-/**
-   SPI controller processing function type.
+/** @This schedules a SPI single transaction request for
+    execution. The kroutine of the request will be called when the
+    transaction is over.
 
-   When this function is called, the bytecode associated with the
-   request is executed. The endpoint kroutine will be called when the
-   processing is over.
+    The kroutine of the request may be executed from within this
+    function. Please read @xref {Nested device request completion}. */
+config_depend(CONFIG_DEVICE_SPI_TRANSACTION)
+void dev_spi_transaction_start(struct dev_spi_ctrl_transaction_rq_s *rq);
 
-   The kroutine of the request may be executed from within this
-   function. Please read @xref {Nested device request completion}.
+/** @This schedules a SPI bytecode request for execution. The kroutine
+    of the request will be called when the bytecode terminates.
 
-   @param accessor pointer to controller device accessor
-   @param ep pointer to the SPI endpoint.
-*/
-config_depend(CONFIG_DEVICE_SPI_REQUEST)
+    The kroutine of the request may be executed from within this
+    function. Please read @xref {Nested device request completion}. */
+config_depend(CONFIG_DEVICE_SPI_BYTECODE)
 void dev_spi_bytecode_start(struct dev_spi_ctrl_bytecode_rq_s *rq);
 
 /** This helper function initializes a SPI request structure for use
@@ -605,7 +635,7 @@ void dev_spi_bytecode_start(struct dev_spi_ctrl_bytecode_rq_s *rq);
     is configured to use a gpio pin as chip select instead.
 
     In order to use the gpio bytecode instructions, the
-    #CONFIG_DEVICE_SPI_REQUEST_GPIO token must be defined and the @tt
+    #CONFIG_DEVICE_SPI_BYTECODE_GPIO token must be defined and the @tt
     use_gpio parameter must be true. The @tt {rq->gpio} accessor will
     be initialized can then be used to setup the @tt {rq->gpio_map}
     and @tt {rq->gpio_wmap} fields of the request before running the
@@ -616,18 +646,22 @@ void dev_spi_bytecode_start(struct dev_spi_ctrl_bytecode_rq_s *rq);
     gpio device.
 
     In order to use delay related bytecode instructions, the @ref
-    #CONFIG_DEVICE_SPI_REQUEST_TIMER token must be defined and the @tt
+    #CONFIG_DEVICE_SPI_BYTECODE_TIMER token must be defined and the @tt
     use_timer parameter must be true. The @ref dev_spi_request_timer
     function can be used to access the spi associated timer.
 */
-config_depend(CONFIG_DEVICE_SPI_REQUEST)
-error_t dev_spi_request_init(struct device_s *slave,
-                             struct dev_spi_ctrl_base_rq_s *rq,
-                             bool_t use_gpio, bool_t use_timer);
+config_depend(CONFIG_DEVICE_SPI_BYTECODE)
+error_t dev_spi_bytecode_rq_init(struct device_s *slave,
+                                 struct dev_spi_ctrl_bytecode_rq_s *rq,
+                                 bool_t use_gpio, bool_t use_timer);
+
+config_depend(CONFIG_DEVICE_SPI_TRANSACTION)
+error_t dev_spi_transaction_rq_init(struct device_s *slave,
+                                    struct dev_spi_ctrl_transaction_rq_s *rq);
 
 /** This function returns an accessor to the timer associated with the
     spi controller of the request. */
-config_depend_alwaysinline(CONFIG_DEVICE_SPI_REQUEST_TIMER,
+config_depend_alwaysinline(CONFIG_DEVICE_SPI_BYTECODE_TIMER,
 struct device_timer_s *
 dev_spi_request_timer(struct dev_spi_ctrl_base_rq_s *rq),
 {
@@ -635,7 +669,7 @@ dev_spi_request_timer(struct dev_spi_ctrl_base_rq_s *rq),
 })
 
 /** This function returns an accessor to the gpio device of the request. */
-config_depend_alwaysinline(CONFIG_DEVICE_SPI_REQUEST_GPIO,
+config_depend_alwaysinline(CONFIG_DEVICE_SPI_BYTECODE_GPIO,
 struct device_gpio_s *
 dev_spi_request_gpio(struct dev_spi_ctrl_base_rq_s *rq),
 {
@@ -656,7 +690,7 @@ void dev_spi_request_cleanup(struct dev_spi_ctrl_base_rq_s *rq);
     restarted. This returns an error if the request is not currently
     running.
  */
-config_depend(CONFIG_DEVICE_SPI_REQUEST)
+config_depend(CONFIG_DEVICE_SPI_BYTECODE)
 error_t device_spi_bytecode_wakeup(struct dev_spi_ctrl_bytecode_rq_s *rq);
 
 #ifdef CONFIG_DEVICE_SPI
