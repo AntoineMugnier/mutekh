@@ -85,10 +85,9 @@ enum dev_dma_transfer_type_e
 /** @This is used when 2 DMA operations must be synchonized. This can be useful to
     perform a SPI transfer. In this case, a first DMA operation is in charge of writing
     data to SPI device and a second DMA operation is in charge of reading data from SPI.
-    The read DMA operation must be started before the write operation to avoid loosing data.
-    @tt tr[0] and @tt param[0] are used for read operation and @tt tr[1] and @tt param[1]
-    are used for write operation. The kroutine is called only when the read operation is
-    finished. */
+    @tt tr[DEV_DMA_INTL_READ] and @tt param[DEV_DMA_INTL_READ] are used for read operation
+    and @tt tr[DEV_DMA_INTL_WRITE] and @tt param[DEV_DMA_INTL_WRITE] are used for write
+    operation. The kroutine is called only when the read operation is finished. */
   DEV_DMA_INTERLEAVED,
 };
 
