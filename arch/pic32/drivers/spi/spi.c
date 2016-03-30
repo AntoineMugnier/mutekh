@@ -505,7 +505,7 @@ static DEV_INIT(pic32_spi_init)
 
 #ifdef CONFIG_DEVICE_SPI_REQUEST
   if (dev_spi_queue_init(dev, &pv->queue))
-    goto err_clk;
+    goto err_mem;
 #endif
 
   cpu_mem_write_32(pv->addr + PIC32_SPI_CON_ADDR, 0);
@@ -513,7 +513,7 @@ static DEV_INIT(pic32_spi_init)
 
   /* setup pinmux */
   if (device_iomux_setup(dev, ">clk? <miso? >mosi? >cs?", NULL, NULL, NULL))
-    goto err_clk;
+    goto err_mem;
 
   /* setup bit rate */
   pv->bit_rate = CONFIG_DRIVER_PIC32_SPI_BAUDRATE;
@@ -590,15 +590,13 @@ static DEV_INIT(pic32_spi_init)
 #ifdef CONFIG_DEVICE_IRQ
   device_irq_source_init(dev, &pv->irq_ep, 1, &pic32_spi_irq);
   if (device_irq_source_link(dev, &pv->irq_ep, 1, 0))
-    goto err_clk;
+    goto err_mem;
 #endif
-
 
   return 0;
 
  err_dma:
    printk("PIC32 SPI: Error on DMA ressource\n");
- err_clk:
  err_mem:
   mem_free(pv);
   return -1;
