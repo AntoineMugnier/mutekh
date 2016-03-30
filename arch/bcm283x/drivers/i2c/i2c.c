@@ -167,23 +167,22 @@ static void bcm283x_i2c_set_transfer_parameter(struct bcm283x_i2c_context_s *pv)
 
 }
 
-static bool_t bcm283x_i2c_valid_request(struct bcm283x_i2c_context_s *pv)
+static bool_t bcm283x_i2c_valid_request(struct bcm283x_i2c_context_s *pv,
+                                        struct dev_i2c_rq_s *rq)
 {
-  struct dev_request_s *base = dev_request_queue_head(&pv->queue);
-  struct dev_i2c_rq_s *rq = dev_i2c_rq_s_cast(base);
-
-  for (uint8_t i = 1; i < rq->transfer_count; i++)
+  for (uint8_t i = 0; i < rq->transfer_count - 1; i++)
     {
-      struct dev_i2c_transfer_s *tr = rq->transfer + i - 1;
+      struct dev_i2c_transfer_s *cur  = rq->transfer + i;
+      struct dev_i2c_transfer_s *next = rq->transfer + i + 1;
 
-      if (((tr + 1)->type == DEV_I2C_WRITE) && (tr->type == DEV_I2C_READ))
+      if ((cur->type == DEV_I2C_READ) && (next->type == DEV_I2C_WRITE))
         return 0;
-       
-      if (((tr + 1)->type == DEV_I2C_READ) && (tr->type == DEV_I2C_WRITE))
+
+      if ((cur->type == DEV_I2C_READ) && (next->type == DEV_I2C_WRITE))
         {
-          /* Restart is only possible with a timer */
-          if (!device_check_accessor(&pv->timer.base))
-            return 0;
+          /* Restart is only possible with a timer * */
+          if (!device_check_accessor(&pv->timer))
+              return 0;
         }
     }
 
@@ -483,7 +482,7 @@ static DEV_I2C_REQUEST(bcm283x_i2c_request)
 
   assert(req->transfer_count);
 
-  if (!bcm283x_i2c_valid_request(pv))
+  if (!bcm283x_i2c_valid_request(pv, req))
     {
       req->error = -ENOTSUP;
       kroutine_exec(&req->base.kr);
