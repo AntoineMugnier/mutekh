@@ -601,7 +601,9 @@ static DEV_INIT(efm32_usart_spi_init)
   return 0;
 
  err_irq:
+#ifdef CONFIG_DEVICE_IRQ
   device_irq_source_unlink(dev, &pv->irq_ep, 1);
+#endif
  err_clk:
   dev_drv_clock_cleanup(dev, &pv->clk_ep);
  err_mem:
