@@ -113,7 +113,7 @@ static DEV_SPI_CTRL_CONFIG(soclib_spi_config)
                                              cfg->ck_mode == DEV_SPI_CK_MODE_3);
 
           SOCLIB_SPI_CTRL_LSBF_SETVAL(ctrl, cfg->bit_order == DEV_SPI_LSB_FIRST);
-          SOCLIB_SPI_CTRL_DPOL_SETVAL(ctrl, cfg->miso_pol == DEV_SPI_ACTIVE_HIGH);
+          SOCLIB_SPI_CTRL_DPOL_SETVAL(ctrl, cfg->miso_pol == DEV_SPI_ACTIVE_LOW);
 
           cpu_mem_write_32(pv->addr + SOCLIB_SPI_CTRL_ADDR, endian_le32(ctrl));
 
