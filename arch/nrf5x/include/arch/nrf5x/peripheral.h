@@ -23,7 +23,7 @@
 
 /**
    @file
-   @module {Hexo}
+   @module {Hardware abstraction layer}
    @short nRF51/nRF52 peripheral access
 
    Inside a device register map, there are tasks, events, shorts,

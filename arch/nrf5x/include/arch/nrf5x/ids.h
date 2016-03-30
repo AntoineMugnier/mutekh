@@ -23,7 +23,7 @@
 
 /**
    @file
-   @module {Hexo}
+   @module {Hardware abstraction layer}
    @short nRF51/nRF52 peripheral IDs
 
    nRF5x devices all look the same and regular.  Device at address

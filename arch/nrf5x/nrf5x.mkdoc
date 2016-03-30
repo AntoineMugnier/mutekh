@@ -268,11 +268,6 @@ hardware features.  Most development boards are supported as well.
     outputs.  Allocation between those two modules is static.
   @end section
 
-  @section GPIOTE
-    GPIOTE channels are partitioned between GPIO ICU input and PWM
-    outputs.  Allocation between those two modules is static.
-  @end section
-
 @end section
 
 @end section
