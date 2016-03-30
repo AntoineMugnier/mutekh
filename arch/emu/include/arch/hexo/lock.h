@@ -40,6 +40,7 @@
 struct		__arch_lock_s
 {
   atomic_int_t	a;
+# define __arch_lock_unlock a  /* field unlocked from context switch asm */
 };
 
 #define ARCH_LOCK_INITIALIZER	{ .a = 0 }
