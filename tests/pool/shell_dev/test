@@ -25,10 +25,6 @@ env = Environment(
     name = "shell_dev",
     timeout = 120,
 
-    test_deps = [
-        "mutek/include/mutek/console.h"
-    ],
-
     test_space = [
         Dimension(*default.expand()),
         Dimension(
