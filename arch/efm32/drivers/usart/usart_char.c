@@ -90,11 +90,13 @@ static void efm32_usart_try_read(struct device_s *dev)
   struct efm32_usart_context_s	*pv = dev->drv_pv;
   struct dev_char_rq_s		*rq;
 
+#ifdef CONFIG_DEVICE_CLOCK_VARFREQ
   if (pv->clkdiv)
     {
       cpu_mem_write_32(pv->addr + EFM32_USART_CLKDIV_ADDR, pv->clkdiv);
       pv->clkdiv = 0;
     }
+#endif
 
   while ((rq = dev_char_rq_s_cast(dev_request_queue_head(&pv->read_q))))
     {
@@ -166,11 +168,13 @@ static void efm32_usart_try_write(struct device_s *dev)
   struct dev_char_rq_s		*rq;
   bool_t done = 0;
 
+#ifdef CONFIG_DEVICE_CLOCK_VARFREQ
   if (pv->clkdiv)
     {
       cpu_mem_write_32(pv->addr + EFM32_USART_CLKDIV_ADDR, pv->clkdiv);
       pv->clkdiv = 0;
     }
+#endif
 
 #ifdef CONFIG_DEVICE_IRQ
   cpu_mem_write_32(pv->addr + EFM32_USART_IFC_ADDR,
