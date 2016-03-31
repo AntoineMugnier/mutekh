@@ -72,6 +72,7 @@ struct efm32_usart_context_s
 
 #ifdef CONFIG_DEVICE_CLOCK_VARFREQ
   uint32_t                      bauds;
+  uint32_t                      clkdiv;
 #endif
   struct dev_freq_s             freq;
 
@@ -88,6 +89,12 @@ static void efm32_usart_try_read(struct device_s *dev)
 {
   struct efm32_usart_context_s	*pv = dev->drv_pv;
   struct dev_char_rq_s		*rq;
+
+  if (pv->clkdiv)
+    {
+      cpu_mem_write_32(pv->addr + EFM32_USART_CLKDIV_ADDR, pv->clkdiv);
+      pv->clkdiv = 0;
+    }
 
   while ((rq = dev_char_rq_s_cast(dev_request_queue_head(&pv->read_q))))
     {
@@ -158,6 +165,12 @@ static void efm32_usart_try_write(struct device_s *dev)
   struct efm32_usart_context_s	*pv = dev->drv_pv;
   struct dev_char_rq_s		*rq;
   bool_t done = 0;
+
+  if (pv->clkdiv)
+    {
+      cpu_mem_write_32(pv->addr + EFM32_USART_CLKDIV_ADDR, pv->clkdiv);
+      pv->clkdiv = 0;
+    }
 
 #ifdef CONFIG_DEVICE_IRQ
   cpu_mem_write_32(pv->addr + EFM32_USART_IFC_ADDR,
@@ -335,15 +348,7 @@ static DEV_USE(efm32_usart_char_use)
       struct device_s *dev = sink->dev;
       struct efm32_usart_context_s *pv = dev->drv_pv;
       pv->freq = chg->freq;
-# ifdef CONFIG_DEVICE_CLOCK_GATING
-      dev_clock_sink_gate(&pv->clk_ep, DEV_CLOCK_EP_POWER_CLOCK);
-# endif
-      cpu_mem_write_32(pv->addr + EFM32_USART_CLKDIV_ADDR,
-                       endian_le32(efm32_usart_char_bauds(dev, pv->bauds)));
-# ifdef CONFIG_DEVICE_CLOCK_GATING
-      if (dev->start_count == 0)
-        dev_clock_sink_gate(&pv->clk_ep, DEV_CLOCK_EP_POWER);
-# endif
+      pv->clkdiv = endian_le32(efm32_usart_char_bauds(dev, pv->bauds));
       return 0;
     }
 #endif
@@ -465,6 +470,7 @@ static DEV_INIT(efm32_usart_char_init)
   /* set baud rate */
 #ifdef CONFIG_DEVICE_CLOCK_VARFREQ
   pv->bauds = CONFIG_DRIVER_EFM32_USART_RATE;
+  pv->clkdiv = 0;
 #endif
   cpu_mem_write_32(pv->addr + EFM32_USART_CLKDIV_ADDR,
                    endian_le32(efm32_usart_char_bauds(dev, CONFIG_DRIVER_EFM32_USART_RATE)));
