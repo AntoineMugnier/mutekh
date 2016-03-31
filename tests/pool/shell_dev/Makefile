@@ -1,3 +1,1 @@
 
-objs = shell.o
-
