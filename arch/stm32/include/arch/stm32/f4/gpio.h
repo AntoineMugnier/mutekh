@@ -123,5 +123,27 @@
   #define STM32_GPIO_AFRH_AF_SET(fidx, x, v)       do { (x) = (((x) & ~(0xf << ((fidx) * 4))) | ((v) << ((fidx) * 4 + 0))); } while(0)
   #define STM32_GPIO_AFRH_AF_GET(fidx, x)          (((x) >> ((fidx) * 4 + 0)) & 0xf)
 
+# if CONFIG_STM32_FAMILY == L4
+#define STM32_GPIO_BRR_ADDR(ridx)                    (0x00000028 + (ridx) * 1024)
+#define STM32_GPIO_BRR_COUNT                         7
+#define STM32_GPIO_BRR_MASK                          0x0000ffff
+  #define STM32_GPIO_BRR_BR_MASK                   0x00000001
+  #define STM32_GPIO_BRR_BR_COUNT                  16
+  #define STM32_GPIO_BRR_BR(fidx)                  (0x00000001 << ((fidx)))
+  #define STM32_GPIO_BRR_BR_SET(fidx, x, v)        do { (x) = (((x) & ~(0x1 << ((fidx)))) | ((v) << ((fidx) + 0))); } while(0)
+  #define STM32_GPIO_BRR_BR_GET(fidx, x)           (((x) >> ((fidx) + 0)) & 0x1)
+# endif
+
+# if CONFIG_STM32_FAMILY == L4
+#define STM32_GPIO_ASCR_ADDR(ridx)                   (0x0000002c + (ridx) * 1024)
+#define STM32_GPIO_ASCR_COUNT                        7
+#define STM32_GPIO_ASCR_MASK                         0x0000ffff
+  #define STM32_GPIO_ASCR_ASC_MASK                 0x00000001
+  #define STM32_GPIO_ASCR_ASC_COUNT                16
+  #define STM32_GPIO_ASCR_ASC(fidx)                (0x00000001 << ((fidx)))
+  #define STM32_GPIO_ASCR_ASC_SET(fidx, x, v)      do { (x) = (((x) & ~(0x1 << ((fidx)))) | ((v) << ((fidx) + 0))); } while(0)
+  #define STM32_GPIO_ASCR_ASC_GET(fidx, x)         (((x) >> ((fidx) + 0)) & 0x1)
+# endif
+
 #endif
 
