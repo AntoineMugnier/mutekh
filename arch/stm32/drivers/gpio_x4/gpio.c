@@ -38,9 +38,8 @@
 #include <arch/stm32/exti.h>
 #include <arch/stm32/syscfg.h>
 
-#include <arch/stm32/f4/periph.h>
-#include <arch/stm32/f4/rcc.h>
-#include <arch/stm32/f4/gpio.h>
+#include <arch/stm32/mmap.h>
+#include <arch/stm32/gpio.h>
 
 
 #define STM32_GPIO_BANK_SIZE        16
