@@ -21,10 +21,12 @@
 */
 
 /**
- * @file
- * @module{Devices support library}
- * @short Enumerator driver API
- */                                                                 
+   @file
+   @module{Devices support library}
+   @short Device enumerator driver API
+   @index {Device enumerator} {Device classes}
+   @csee DRIVER_CLASS_ENUM
+*/
 
 #ifndef __DEVICE_ENUM_H__
 #define __DEVICE_ENUM_H__

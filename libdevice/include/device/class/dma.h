@@ -21,10 +21,12 @@
 */
 
 /**
- * @file
- * @module{Devices support library}
- * @short DMA device driver API
- */                                                                 
+  @file
+  @module{Devices support library}
+  @short Direct memory access driver API
+  @index {Direct memory access} {Device classes}
+  @csee DRIVER_CLASS_DMA
+*/
 
 #ifndef __DEVICE_DMA_H__
 #define __DEVICE_DMA_H__

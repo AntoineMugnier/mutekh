@@ -20,10 +20,12 @@
 */
 
 /**
- * @file
- * @module{Devices support library}
- * @short Memory device driver API
- */
+  @file
+  @module{Devices support library}
+  @short Memory device driver API
+  @index {Memory device} {Device classes}
+  @csee DRIVER_CLASS_MEM
+*/
 
 #ifndef __DEVICE_MEM_H__
 #define __DEVICE_MEM_H__

@@ -23,17 +23,14 @@
    @file
    @module{Devices support library}
    @short Character device driver API
+   @index {Character device} {Device classes}
+   @csee DRIVER_CLASS_CHAR
 
-   @section {Description}
+   This class provides access to byte-stream oriented devices.
 
-   Character device class abstracts access to a byte-stream oriented
-   device.
-
-   Two main types of requests are available on this driver: Read and
-   Write operations. Some variants operations exist as defined in @ref
-   dev_char_rq_type_e.
-
-   @end section
+   Two main types of operation are available on this driver: Byte
+   buffer read and byte buffer write. Some variants
+   operations exist as defined in @ref dev_char_rq_type_e.
 
    @section {Example}
 
@@ -57,13 +54,6 @@
 
    DEVICE_OP(&char_dev, request, &rq);
    @end code
-
-   @end section
-
-   @section {Request Completion Information}
-
-   Driver updates @tt data and @tt size fields of the request in order
-   to indicate what is left to transfer.
 
    @end section
  */

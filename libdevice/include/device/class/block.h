@@ -21,10 +21,12 @@
 */
 
 /**
- * @file
- * @module{Devices support library}
- * @short Block device driver API
+   @file
+   @module{Devices support library}
+   @short Block device driver API
    @deprecated
+   @index {Block device driver} {Device classes}
+   @csee DRIVER_CLASS_BLOCK
    Use the mem class instead.
  */
 

@@ -36,7 +36,7 @@
 ENUM_DESCRIPTOR(driver_class_e, strip:DRIVER_CLASS_, upper);
 
 /** @This specifies identifiers of device driver API classes.
-    @xcsee {Device classes} */
+    @xsee {Device classes} */
 enum driver_class_e
 {
   DRIVER_CLASS_NONE = 0,
@@ -443,18 +443,18 @@ extern const struct driver_registry_s driver_registry_table_end[];
     @see driver_class_e
     @xsee {Device classes} */
 #define DRIVER_CLASS_TYPES(id, cl, ...)                                 \
-  /** @This is the driver API descriptor for the cl device class.       \
-      @csee id @csee driver_class_s */                                  \
+  /** @This is the driver API descriptor for the @tt cl device class.       \
+      @see id @csee driver_class_s */                                  \
 struct driver_##cl##_s                                                  \
 {                                                                       \
   uint16_t class_; /* enum driver_class_e */                            \
   __VA_ARGS__                                                           \
 };                                                                      \
                                                                         \
-/** @This is the device accessor object type for the cl device class.   \
+/** @This is the device accessor object type for the @tt cl device class.   \
     This accessor must be initialized by calling the                    \
     @ref device_get_accessor function.                                  \
-    @csee id @csee device_accessor_s @xsee {Device accessor} */         \
+    @see id @csee device_accessor_s @xsee {Device accessor} */         \
 struct device_##cl##_s                                                  \
 {                                                                       \
   union {                                                               \

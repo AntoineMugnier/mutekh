@@ -25,6 +25,8 @@
    @file
    @module{Devices support library}
    @short Clock and power management driver API
+   @index {Clock and power management} {Device classes}
+   @csee DRIVER_CLASS_CMU
 
    This header defines the API implemented by clock management units
    drivers along with some related function provided by the device

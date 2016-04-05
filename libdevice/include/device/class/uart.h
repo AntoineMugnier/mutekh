@@ -23,7 +23,9 @@
 /**
    @file
    @module{Devices support library}
-   @short UART driver configuration API
+   @short UART configuration driver API
+   @index {UART configuration} {Device classes}
+   @csee DRIVER_CLASS_UART
 
    UART class only defines configuration parameters for UART devices.
    Data path of UART devices goes through the Character device class.

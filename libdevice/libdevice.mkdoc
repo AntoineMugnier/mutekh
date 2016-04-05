@@ -7,7 +7,7 @@
     @short Valio
   @end moduledef
 
-  @section Pt {Accessing devices}
+  @section Pt {Devices declaration}
 
     @section t {Device instance}
 
@@ -89,20 +89,38 @@ DEV_DECLARE_STATIC(timer_dev, "timer", 0, my_timer_drv,
 
     @end section
 
+  @end section
+  @section Pt {Devices access}
+
     @section t {Device classes}
       MutekH use different APIs to provide access to different types
-      of device. These APIs are defined in device class headers and
+      of device. A device class API is defined by a set of specific
+      function pointers. APIs are defined in device class headers and
       are implemented by device drivers.
 
       A device driver may actually implement multiple device classes
-      when the device has multiple functions. It does so by providing
-      a set of function pointers for each supported class of device.
+      when the device has multiple functions. Additionally, device
+      drivers must implement the @ref dev_init_t, @ref dev_use_t and
+      @ref dev_cleanup_t functions.
 
-      It is possible to have a virtual device with a driver which is
-      implemented in pure software. For instance, a software
-      implementation of a cryptographic algorithm. It is also possible
-      for a driver not to access the hardware directly, relying on an
-      other device.
+      The following device classes are available:
+      @insert {Device classes} index_list
+
+      Driver implementation of classes may or may not need to access
+      the hardware:
+      @list
+        @item A driver may access memory mapped registers of a device
+          directly.
+        @item A driver may not access the hardware directly, relying
+          on an other device like an I2C or SPI bus controller.
+        @item A driver may just wrap access to an other device in
+          order to provide additional features like cached accesses,
+          stream multiplexing, memory partitioning...
+        @item A pure software implementation of a device driver with
+          no dependencies may exist as well. Cryptographic algorithms,
+          or data sinks implementations are common examples.
+      @end list
+
     @end section
 
     @section t {Device status}

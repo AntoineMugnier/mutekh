@@ -22,9 +22,11 @@
 */
 
 /**
- * @file
- * @module{Devices support library}
- * @short IO muxing driver API
+   @file
+   @module{Devices support library}
+   @short IO muxing driver API
+   @index {IO muxing} {Device classes}
+   @csee DRIVER_CLASS_IOMUX
  */
 
 #ifndef __DEVICE_IOMUX_H__

@@ -22,10 +22,12 @@
 */
 
 /**
- * @file
- * @module{Devices support library}
- * @short PWM driver configuration API
- */
+   @file
+   @module{Devices support library}
+   @short Pulse Width Modulation controller driver API
+   @index {Pulse Width Modulation controller} {Device classes}
+   @csee DRIVER_CLASS_PWM
+*/
 
 #ifndef __DEVICE_PWM_H__
 #define __DEVICE_PWM_H__

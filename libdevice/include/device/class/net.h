@@ -22,6 +22,8 @@
    @file
    @module{Devices support library}
    @short Network device driver class
+   @index {Network device} {Device classes}
+   @csee DRIVER_CLASS_NET
 
    @section {Description}
 

@@ -24,6 +24,8 @@
    @file
    @module{Devices support library}
    @short Timer device driver API
+   @index {Timer device} {Device classes}
+   @csee DRIVER_CLASS_TIMER
 
    The timer device API allows, reading the current counter value and
    the current configuration of a timer device as well as queuing

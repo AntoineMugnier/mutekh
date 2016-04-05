@@ -21,10 +21,12 @@
 */
 
 /**
- * @file
- * @module{Devices support library}
- * @short Interrupt controller driver API
- */
+   @file
+   @module{Devices support library}
+   @short Interrupt controller driver API
+   @index {Interrupt controller} {Device classes}
+   @csee DRIVER_CLASS_ICU
+*/
 
 #ifndef __DEVICE_ICU_H__
 #define __DEVICE_ICU_H__

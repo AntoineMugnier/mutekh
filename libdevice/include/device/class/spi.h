@@ -23,7 +23,9 @@
 /**
    @file
    @module{Devices support library}
-   @short SPI controller driver API
+   @short SPI bus controller driver API
+   @index {SPI bus controller} {Device classes}
+   @csee DRIVER_CLASS_SPI_CTRL
 
    This class enables driving SPI bus controllers. SPI controllers may
    be used from the application code but are most often used from

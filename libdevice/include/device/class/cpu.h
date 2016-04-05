@@ -21,9 +21,11 @@
 */
 
 /**
- * @file
- * @module{Devices support library}
- * @short Processor driver API
+   @file
+   @module{Devices support library}
+   @short Processor driver API
+   @index {Processor} {Device classes}
+   @csee DRIVER_CLASS_CPU
  */
 
 #ifndef __DEVICE_CPU_H__

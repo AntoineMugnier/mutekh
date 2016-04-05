@@ -21,10 +21,12 @@
 */
 
 /**
- * @file
- * @module{Devices support library}
- * @short Cipher device driver API
- */
+   @file
+   @module{Devices support library}
+   @short Cryptographic processing device driver API
+   @index {Cryptographic processing device} {Device classes}
+   @csee DRIVER_CLASS_CRYPTO
+*/
 
 #ifndef __DEVICE_CRYPTO_H__
 #define __DEVICE_CRYPTO_H__

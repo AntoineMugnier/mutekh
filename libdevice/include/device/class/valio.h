@@ -21,7 +21,9 @@
 /**
    @file
    @module{Devices support library}
-   @short Value IO class
+   @short Value IO driver class
+   @index {Value IO} {Device classes}
+   @csee DRIVER_CLASS_VALIO
 
    @section{Purpose}
    The @em {Value IO} class gives access to a set of values exposed by

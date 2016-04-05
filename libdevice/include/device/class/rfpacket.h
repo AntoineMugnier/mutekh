@@ -22,6 +22,13 @@
     API for packet based Radio Frequency devices.
 */
 
+/**
+   @file
+   @module{Devices support library}
+   @short RF transceiver packet interface driver API
+   @index {RF transceiver packet interface} {Device classes}
+   @csee DRIVER_CLASS_RFPACKET
+*/
 
 #ifndef __DEVICE_RFPACKET_H__
 #define __DEVICE_RFPACKET_H__
