@@ -29,28 +29,250 @@
    @file
    @module{Kernel services}
    @short Generic bytecode
+   @index {Generic bytecode} {Kernel services}
 
-   This module provides a simple and small bytecode virtual machine
-   with a customisable instruction set. Bytecode instruction are 16
-   bits wide.
+   This kernel service provides a simple and small bytecode virtual
+   machine with a customisable instruction set. A set of generic
+   instructions is provided which can be extended.
 
-   There are 16 registers which are at least 32 bits wide and large
-   enough to hold a pointer.
+   The virtual machine state contains a program counter register as
+   well as 16 general purpose registers. Opcodes words are 16 bits
+   wide. The most significant bit of the opcode word is always zero
+   for generic instructions, leaving half of the opcode space for
+   custom opcodes.
 
-   A set of generic instructions is provided. The MSB of the generic
-   instructions is always zero, leaving half the opcode space for
-   application specific opcodes.
+   Once the virtual machine state has benn initialized using the @ref
+   bc_init function, the @ref bc_run function can start execution of
+   the bytecode. It will return on the first encountered custom
+   instruction, leaving the caller with the task of performing the
+   custom operation. This makes the meaning of custom instructions
+   context dependent; different parts of the kernel and application
+   can have there own interpretation of custom bytecode instructions.
 
-   See @sourcelink example/bytecode/test.bc for an example application.
+   The bytecode program can be resumed at any time once a custom
+   instruction has been handled. The C code is free to access the
+   virtual registers and change the value of the program counter to
+   point at any entry point.
 
+   Relying on bytecode is useful in various situations:
+
+   @list
+     @item A bytecode program may be executed in a sandbox
+       or live in the same memory space as the C code.
+     @item Repetitive operations requiring complex processing or
+       complex invocation can be encoded as a single 16 bits opcode.
+     @item When a simple program using a specific set of blocking
+       operations needs to be executed, custom instructions may
+       actually be implemented using asynchronous operations. The
+       bytecode may be resumed when the operation terminates.
+     @item The resumable bytecode has the advantage of requiring
+       less than 100 bytes of execution state on a 32 bits
+       architecture. It does not require a dedicated thread and
+       associated execution stack in order to implement
+       blocking operations.
+   @end list
+
+   When a processor specific backend is available, bytecode programs
+   which does not require sandboxing can be translated into machine
+   code at compile time rather than relying on the virtual
+   machine. This requires definition of the @ref
+   #CONFIG_MUTEK_BYTECODE_NATIVE token. This allows fast execution
+   while retaining the resumable bytecode feature.
+
+   @section {Bytecode debug and trace}
+   Bytecode instructions and C functions are available to dump the
+   virtual machine state and enable execution trace. This requires
+   definition of the @ref #CONFIG_MUTEK_BYTECODE_DEBUG and
+   @ref #CONFIG_MUTEK_BYTECODE_TRACE tokens.
+   @see bc_set_trace @see bc_dump
+   @end section
+
+   @section {Bytecode portability}
+   The virtual machine register width depends on the width of the
+   registers of the host processor. It is at least 32 bits wide and
+   large enough to hold a pointer. Memory accesses are performed using
+   the endianess of the host processor. These rules enable efficient
+   execution of the bytecode on any platform.
+
+   Nonetheless, the instruction set is designed to allow writing
+   bytecode programs which are portable across platforms.
+
+   Most ALU instructions only work on the lower 32 bits of the virtual
+   machine registers. On 64 bits architectures, the upper half of the
+   destination register is zeroed by these instructions. Other
+   instructions like @tt add and @tt sub work on the full register
+   width because they are useful to handle pointers. This requires
+   use of additional sign extension and zero extension instructions as
+   appropriate.
+
+   The @ref #CONFIG_MUTEK_BYTECODE_VM64 token can be used to test
+   portability of bytecode programs.
+   @end section
+
+   @section {Bytecode program syntax}
+   A bytecode source file is basically an assembly source file
+   composed of generic and custom bytecode instructions. Custom
+   instruction sets are described in @em perl modules which can be
+   loaded dynamically by the assembler tool.
+
+   C style expressions can be used where constants are
+   expected. Moreover, the @tt {bit()} operator is available which
+   computes a bit index from a power of 2 constant.
+
+   The bytecode source file is piped in the @sourcelink
+   scripts/decl_filter.pl script before being assembled. This allows
+   inclusion of C headers files as well as use of @tt _sizeof, @tt _offsetof
+   and @tt _const operators on C declarations in the bytecode program.
+
+   The following directives are available:
+   @list
+   @item @tt{.define name expr} : define an expression macro.
+     The C preprocessor is also available in bytecode programs
+     and @xref{configuration tokens} can be tested.
+   @item @tt{.backend name} : use a specific output backend.
+     @em bytecode may be specified in order to prevent generation
+     of native machine code for the program.
+   @item @tt{.name name} : set the bytecode program name.
+   @item @tt{.custom name} : load a custom instruction set module.
+   @item @tt{.export label} : export a label as a global symbol.
+   @end list
+
+   ALU instructions use a 2 registers form with the first register
+   used as both the source and destination register.
+
+   See @sourcelink tests/pool/bytecode for an example application.
+   @end section
+
+   @section {Generic instruction set}
+
+   The following operations are available to load values into registers:
+   @list
+     @item @tt{cst8 reg, value} : Set a register to an unsigned 8 bits
+       constant.
+     @item @tt{cst[16,32,64] reg, value, shift} : Set a register
+       to an unsigned constant which may be shifted by a mulitple of 8
+       bits. This uses more than one opcode word.
+     @item @tt{mov reg, reg} : Copy a value between 2 registers.
+   @end list
+
+   The following operations are available to perform usual integer
+   operations on register values:
+   @list
+     @item @tt{add8 reg, value} : Add a signed 8 bits value to a register.
+     @item @tt{add reg, reg} : Add the value of the source register to the destination register.
+     @item @tt{sub reg, reg} : Subtract the value of the source register from the destination register.
+     @item @tt{neg reg} : Subtract the value from zero.
+     @item @tt{mul32 reg, reg} : Multiply the values of the source register and destination registers.
+     @item @tt{or32 reg, reg} : 32 bits bitwise or.
+     @item @tt{xor32 reg, reg} : 32 bits bitwise exclusive or.
+     @item @tt{and32 reg, reg} : 32 bits bitwise and.
+     @item @tt{andn32 reg, reg} : 32 bits bitwise and with complemented source register.
+     @item @tt{not32 reg} : 32 bits bitwise not.
+     @item @tt{shl32 reg, reg} : 32 bits variable left shift.
+     @item @tt{shr32 reg, reg} : 32 bits variable right shift.
+     @item @tt{shi32l reg, bit_index} : Left shift a register by a constant amount.
+       Amount must be in the range [0,31].
+     @item @tt{shi32r reg, bit_index} : Right shift a register by a constant amount.
+       Amount must be in the range [0,31].
+     @item @tt{msbs32 reg} : Find the position of the most significant bit set in range [0, 31].
+     @item @tt{exts reg, bit_index} : Sign extend a register using the specified sign bit in the range [0,31].
+     @item @tt{extz reg, bit_index} : Clear all bits in a register above specified bit in the range [0,31].
+   @end list
+
+   The following comparison operations are available:
+   @list
+     @item @tt{eq reg, reg} : Compare two registers and skip the next instruction if they are not equal.
+     @item @tt{neq reg, reg} : Compare two registers and skip the next instruction if thay are equal.
+     @item @tt{eq0 reg} : Skip the next instruction if the register is not zero.
+     @item @tt{neq0 reg} : Skip the next instruction if the register is zero.
+     @item @tt{lt reg, reg} : Compare two registers and skip the next instruction if
+     first reg >= second reg.
+     @item @tt{lteq reg, reg} : Compare two registers and skip the next instruction if
+     first reg > second reg.
+   @end list
+
+   The following bit oriented operations are available:
+   @list
+     @item @tt{tst32c reg, bit_index} : Extract a bit from a register and skip the next instruction if the
+     bit is not cleared. Bit index is in the range [0,31].
+     @item @tt{tst32s reg, bit_index} : Extract a bit from a register and skip the next instruction if the
+     bit is not set. Bit index is in the range [0,31].
+     @item @tt{bit32c reg, bit_index} : Clear a bit in a register. Bit index is in the range [0,31].
+     @item @tt{bit32s reg, bit_index} : Set a bit in a register. Bit index is in the range [0,31].
+   @end list
+
+   The following branch instructions are available:
+   @list
+     @item @tt{end} : Terminate bytecode execution.
+     @item @tt{jmp8 label} : Jump relative. The branch target must be in
+       range [-128, +127] from this instruction.
+     @item @tt{jmp32 label} : Jump absolute.
+     @item @tt{call8 reg, label} : Jump absolute and save the return address in a register.
+       The branch target must be in range [-128, +127] from this instruction.
+     @item @tt{call32 reg, label} : Jump relative and save the return address in a register.
+     @item @tt{ret reg} : Return to the address saved in a register.
+     @item @tt{loop reg, label} : If the jump target is backward, this instruction decrements the
+       register which should not be initially zero and branch if the
+       result is not zero. If the jump target is forward, this instruction decrement the
+       register if its initial value is not zero. If the register initial
+       value is zero, the branch is taken and the register is left
+       untouched.
+   @end list
+
+   The following memory access instructions are available:
+   @list
+     @item @tt{ld[8,16,32,64] data_reg, addr_reg} : Load a value from a
+     memory address given by a register into an other register.
+     @item @tt{ld[8,16,32,64]i data_reg, addr_reg} : Load a value from a
+     memory address given by a register into an other register then
+     add the width of the access to the address register.
+     @item @tt{ld[8,16,32,64]e data_reg, addr_reg} : Load a value from a memory
+     address given by a register and a 16 bits signed offset into an
+     other register.
+     @item @tt{st[8,16,32,64] data_reg, addr_reg, offset} : Store a value to
+     a memory address given by a register from an other register.
+     @item @tt{st[8,16,32,64]i data_reg, addr_reg} : Store a value to a
+     memory address given by a register from an other register then
+     add the width of the access to the address register.
+     @item @tt{st[8,16,32,64]d data_reg, addr_reg} : Subtract the width of
+     the access to the address register then store a value from an
+     other register to the resulting memory address.
+     @item @tt{st[8,16,32,64]e data_reg, addr_reg, offset} : Store a value
+     from a register to a memory address given by an other register
+     and a 16 bits signed offset.
+   @end list
+
+   Zero extension is performed by load instructions. In
+   order to achieve portability, additional @tt{ld}, @tt{st},
+   @tt{ldi}, @tt{sti}, @tt{std}, @tt{lde} and @tt{ste} instructions
+   are available to perform memory accesses with a width suitable to
+   handle pointers.
+
+   The following miscellaneous instructions are available:
+   @list
+     @item @tt{dump} : Dump registers to debug output. @see #CONFIG_MUTEK_BYTECODE_DEBUG
+     @item @tt{abort} : Terminate bytecode execution and report an error.
+     @item @tt{trace flags} : Enable or disable debug trace. @see bc_set_trace
+     @item @tt{ccall reg, reg} : Call a C function. The address of the function is in the source
+     register. The value of the destination register is passed to the
+     function and the return value is stored back in this same register. (bytecode will not be portable)
+     @see bc_ccall_function_t
+     @item @tt{laddr[16,32] reg, label} : Set a register to the address of a bytecode label.
+     @item @tt{gaddr reg, label} : Set a register to the address of a
+     global symbol. (bytecode will not be portable)
+     @item @tt{.data16 value} : Dump a 16 bits word value in the program.
+   @end list
+   @end section
+
+   @section {Generic opcodes table}
    @table 4
-    @item instruction         @item operands      @item opcode                   @item  format
+    @item instruction         @item operands      @item opcode 16 bits word(s)   @item  format
 
     @item end                 @item               @item @tt{0000 0000 0000 0000} @item  0
     @item dump                @item               @item @tt{0000 0000 0000 0001} @item  0
     @item abort               @item               @item @tt{0000 0000 0000 0010} @item  0
     @item nop                 @item               @item @tt{0000 0000 0000 0100} @item  0
-    @item trace               @item               @item @tt{0000 0000 0000 10xx} @item  0
+    @item trace               @item x             @item @tt{0000 0000 0000 10xx} @item  0
     @item add8                @item r, +/-v       @item @tt{0000 vvvv vvvv rrrr} @item  0
     @item cst8                @item r, v          @item @tt{0001 vvvv vvvv rrrr} @item  0
     @item call8               @item r, lbl        @item @tt{0010 llll llll rrrr} @item  0
@@ -94,97 +316,18 @@
     @item st[8,16,32,64][i]   @item r, ra         @item @tt{0110 1ssi aaaa rrrr} @item  3
     @item st[8,16,32,64]d     @item r, ra         @item @tt{0111 1ss0 aaaa rrrr} @item  3
     @item gaddr               @item r, lbl        @item @tt{0111 0000 0000 rrrr} @item  3
-    @item laddr[16,32]        @item r, lbl        @item @tt{0111 0ss0 0000 rrrr} @item  3
-    @item jmp32               @item lbl           @item @tt{0111 0000 ---1 0000} @item  3
-    @item call32              @item r, lbl        @item @tt{0111 0000 ---1 rrrr} @item  3
-    @item cst[16,32,64]       @item r, v, b       @item @tt{0111 0ss0 bbb1 rrrr} @item  3
-    @item ld[8,16,32,64]e     @item r, ra, v      @item @tt{0111 0ss1 aaaa rrrr} @item  3
-    @item st[8,16,32,64]e     @item r, ra, v      @item @tt{0111 1ss1 aaaa rrrr} @item  3
+    @item laddr[16,32]        @item r, lbl        @item @tt{0111 0ss0 0000 rrrr, v, v?} @item  3
+    @item jmp32               @item lbl           @item @tt{0111 0000 ---1 0000, v, v} @item  3
+    @item call32              @item r, lbl        @item @tt{0111 0000 ---1 rrrr, v, v} @item  3
+    @item cst[16,32,64]       @item r, v, b       @item @tt{0111 0ss0 bbb1 rrrr, v, v?, v?} @item  3
+    @item ld[8,16,32,64]e     @item r, ra, v      @item @tt{0111 0ss1 aaaa rrrr, v} @item  3
+    @item st[8,16,32,64]e     @item r, ra, v      @item @tt{0111 1ss1 aaaa rrrr, v} @item  3
 
-    @item .data16             @item v             @item                          @item
+    @item .data16             @item v             @item @tt{v}                      @item
 
     @item custom              @item               @item @tt{1--- ---- ---- ----} @item
    @end table
-
-   Instruction details:
-
-   @list
-     @item end: Terminate bytecode execution.
-     @item dump: Dump registers to debug output. @see #CONFIG_MUTEK_BYTECODE_DEBUG
-     @item abort: Terminate bytecode execution and report an error.
-     @item trace: Enable or disable debug trace. @see bc_set_trace
-     @item add8: Add a signed 8 bits value to a register.
-     @item cst8: Set a register to an unsigned 8 bits constant.
-     @item jmp: Jump relative.
-     @item jmpf: Jump absolute.
-     @item jmpl: Jump relative and save the return address in a register.
-     @item call: Jump absolute and save the return address in a register.
-     @item ret: Return to the address saved in a register.
-     @item loop: If the jump target is backward, this instruction decrements the
-     register which should not be initially zero and branch if the
-     result is not zero. If the jump target is forward, this instruction decrement the
-     register if its initial value is not zero. If the register initial
-     value is zero, the branch is taken and the register is left
-     untouched.
-     @item eq: Compare two registers and skip the next instruction if they are not equal.
-     @item neq: Compare two registers and skip the next instruction if thay are equal.
-     @item eq0: Skip the next instruction if the register is not zero.
-     @item neq0: Skip the next instruction if the register is zero.
-     @item lt: Compare two registers and skip the next instruction if
-     first reg >= second reg.
-     @item lteq: Compare two registers and skip the next instruction if
-     first reg > second reg.
-     @item mov: Copy value between 2 registers.
-     @item add: Add the value of the source register to the destination register.
-     @item sub: Subtract the value of the source register from the destination register.
-     @item neg: Subtract the value from zero.
-     @item mul32: Multiply the values of the source register and destination registers.
-     @item ccall: Call a C function. The address of the function is in the source
-     register. The value of the destination register is passed to the
-     function and the return value is stored back in this same register. (bytecode will not be portable)
-     @see bc_call_function_t
-     @item or32: 32 bits bitwise or.
-     @item xor32: 32 bits bitwise exclusive or.
-     @item and32: 32 bits bitwise and.
-     @item andn32: 32 bits bitwise and with complemented source register.
-     @item not32: 32 bits bitwise not.
-     @item shl32: 32 bits variable left shift.
-     @item shr32: 32 bits variable right shift.
-     @item tst32c: Extract a bit from a register and skip the next instruction if the
-     bit is not cleared. Bit index is in the range [0,31].
-     @item tst32s: Extract a bit from a register and skip the next instruction if the
-     bit is not set. Bit index is in the range [0,31].
-     @item bit32c: Clear a bit in a register. Bit index is in the range [0,31].
-     @item bit32s: Set a bit in a register. Bit index is in the range [0,31].
-     @item shil: Left shift a register by a constant amount.
-     Amount must be in the range [0,31].
-     @item shi32r: Right shift a register by a constant amount.
-     Amount must be in the range [0,31].
-     @item msbs32: Find the position of the most significant bit set in range [0, 31].
-     @item exts: Sign extend a register using the specified sign bit in the range [0,31].
-     @item extz: Clear all bits in a register above specified bit in the range [0,31].
-     @item ld*: Load a value from a memory address given by a register into an
-     other register.
-     @item ld*i: Load a value from a memory address given by a register into an
-     other register then add the width of the access to the address
-     register.
-     @item ld*e: Load a value from a memory address given by a register and a 16
-     bits signed offset into an other register.
-     @item st*: Store a value to a memory address given by a register from an
-     other register.
-     @item st*i: Store a value to a memory address given by a register from an
-     other register then add the width of the access to the address
-     register.
-     @item st*d: Subtract the width of the access to the address register then
-     store a value from an other register to the resulting memory
-     address.
-     @item st*e: Store a value from a register to a memory address given by an
-     other register and a 16 bits signed offset.
-     @item cst*: Set a register to an unsigned constant which may
-     be shifted by a mulitple of 8 bits.
-     @item laddr*: Set a register to the address of a bytecode label.
-     @item gaddr: Set a register to the address of a global symbol. (bytecode will not be portable)
-   @end list
+   @end section
 */
 
 typedef uint16_t bc_opcode_t;
