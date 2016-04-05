@@ -7,6 +7,7 @@ from mt.base.expectation import *
 from mutekh.test.stages import configure, build, execute
 from mutekh.test.archs import *
 
+test_vm64           = Config("t_vm64")
 test_native         = Config("t_native")
 test_checking       = Config("t_checking")
 test_debug          = Config("t_debug")
@@ -29,7 +30,8 @@ Environment(
 
     test_space = [
         Dimension(*all_cpus.expand()),
-        Dimension(test_native, None),
+        Dimension(test_native, test_vm64, None),
+        Exclude(all.filter_by_feature("+reg64") & test_vm64),
         Exclude(all.filter_by_feature("-bytecode") & test_native),
         ],
 

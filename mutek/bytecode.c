@@ -32,7 +32,7 @@ void bc_init_va(struct bc_context_s *ctx,
 {
   uint_fast8_t i;
   for (i = 0; i < pcount; i++)
-    ctx->v[i] = va_arg(ap, bc_reg_t);
+    ctx->v[i] = va_arg(ap, intptr_t);
   for (; i < 16; i++)
     ctx->v[i] = i == 14 ? (bc_reg_t)0xffffffff : 0;
   ctx->pc = desc->code; /* pc */
@@ -159,7 +159,7 @@ void bc_dump(const struct bc_context_s *ctx, bool_t regs)
 
   if (regs)
     for (i = 0; i < 16; i++)
-      printk("r%02u=%p%c", i, ctx->v[i], (i + 1) % 4 ? ' ' : '\n');
+      printk("r%02u=%" BC_REG_FORMAT "%c", i, ctx->v[i], (i + 1) % 4 ? ' ' : '\n');
 #endif
 }
 
@@ -338,7 +338,7 @@ static uint_fast8_t bc_run_alu(struct bc_context_s *ctx, uint16_t op)
         return -1;
       }
 #endif
-    dst = ((bc_ccall_function_t*)src)(ctx, dst);
+    dst = ((bc_ccall_function_t*)(uintptr_t)src)(ctx, dst);
   dispatch_RES:
     break;
   } while (0);
@@ -418,12 +418,12 @@ bc_opcode_t bc_run_vm(struct bc_context_s *ctx, int_fast32_t max_cycles)
           if (disp)             /* jmp* */
             {
               if (op & 0xf)     /* jmpl */
-                *dst = (bc_reg_t)ctx->pc;
+                *dst = (bc_reg_t)(uintptr_t)ctx->pc;
               ctx->pc += (intptr_t)disp;
             }
           else                  /* ret */
             {
-              ctx->pc = (void*)*dst;
+              ctx->pc = (void*)(uintptr_t)*dst;
             }
           goto check_pc;
         }
@@ -519,7 +519,7 @@ bc_opcode_t bc_run_vm(struct bc_context_s *ctx, int_fast32_t max_cycles)
               else             /* BC_CALL */
                 {
                   if (op & 0xf)
-                    *dst = (bc_reg_t)ctx->pc;
+                    *dst = (bc_reg_t)(uintptr_t)ctx->pc;
                   ctx->pc = (uint16_t*)desc->code + x;
                   goto check_pc;
                 }

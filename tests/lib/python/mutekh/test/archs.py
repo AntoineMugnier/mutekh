@@ -60,7 +60,7 @@ ibmpc_x86            = Config("ibmpc-x86",                              _x86_fea
 # Linux (32 and 64 bits)
 
 emu_linux_x86        = Config("emu-linux-x86",                          ["arch:emu",    "cpu:x86-emu", "smp", "little", "fpu", "ipi"])
-emu_linux_x86_64     = Config("emu-linux-x86_64",                       ["arch:emu",    "cpu:x86_64-emu", "smp", "little", "fpu", "ipi"])
+emu_linux_x86_64     = Config("emu-linux-x86_64",                       ["arch:emu",    "cpu:x86_64-emu", "reg64", "smp", "little", "fpu", "ipi"])
 
 ##################################################
 # SiLab EFM32 low-power archs and platforms

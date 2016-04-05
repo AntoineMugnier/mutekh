@@ -23,6 +23,7 @@
 
 #include <hexo/types.h>
 #include <stdarg.h>
+#include <inttypes.h>
 
 /**
    @file
@@ -188,12 +189,14 @@
 
 typedef uint16_t bc_opcode_t;
 
-#if INT_REG_SIZE <= 32
+#if INT_REG_SIZE <= 32 && !defined(CONFIG_MUTEK_BYTECODE_VM64)
 typedef uint32_t bc_reg_t;
 typedef int32_t bc_sreg_t;
+# define BC_REG_FORMAT "08" PRIx32
 #else
 typedef uint64_t bc_reg_t;
 typedef int64_t bc_sreg_t;
+# define BC_REG_FORMAT "016" PRIx64
 #endif
 
 /** @internal */
