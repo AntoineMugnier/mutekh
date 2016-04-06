@@ -85,20 +85,20 @@ sub check_num
     our $num = qr/(?>[-+]?\b\d+\b)/xs;
 
     while (1) {
-	next if ($expr =~ s/'(.)'/ord($1)/ge);
+        next if ($expr =~ s/'(.)'/ord($1)/ge);
         next if ($expr =~ s/\s*([-+]?)(0[Xx][a-fA-F0-9]+)\s*/$1.hex($2)/ge);
 	next if ($expr =~ s/bit\(($num)\)/$bit->($1)/ge);
 	next if ($expr =~ s/\(\s*($num)\s*\)/$1/ge);
-	next if ($expr =~ s/($num)\s*\*\s*($num)/$1*$2/ge);
-	next if ($expr =~ s/($num)\s*\/\s*($num)/$2 ? int($1\/$2) : 0/ge);
-	next if ($expr =~ s/($num)\s*\%\s*($num)/$2 ? $1%$2 : 0/ge);
-	next if ($expr =~ s/($num)\s*\+\s*($num)/$1+$2/ge);
-	next if ($expr =~ s/($num)\s*\-\s*($num)/$1-$2/ge);
-	next if ($expr =~ s/($num)\s*\>>\s*($num)/int($1)>>int($2)/ge);
-	next if ($expr =~ s/($num)\s*\<<\s*($num)/int($1)<<int($2)/ge);
-	next if ($expr =~ s/($num)\s*&\s*($num)/$1&$2/ge);
-	next if ($expr =~ s/($num)\s*\|\s*($num)/$1|$2/ge);
-	next if ($expr =~ s/($num)\s*\^\s*($num)/$1^$2/ge);
+	next if ($expr =~ s/($num)\s*\*\s*($num)/int($1)*int($2)/ge);
+	next if ($expr =~ s/($num)\s*\/\s*($num)/int($2) ? int(int($1)\/int($2)) : 0/ge);
+	next if ($expr =~ s/($num)\s*%\s*($num)/int($2) ? int($1)%int($2) : 0/ge);
+	next if ($expr =~ s/($num)\s*\+\s*($num)/int($1)+int($2)/ge);
+	next if ($expr =~ s/($num)\s*-\s*($num)/int($1)-int($2)/ge);
+	next if ($expr =~ s/($num)\s*>>\s*($num)/int($1)>>int($2)/ge);
+	next if ($expr =~ s/($num)\s*<<\s*($num)/int($1)<<int($2)/ge);
+	next if ($expr =~ s/($num)\s*&\s*($num)/int($1)&int($2)/ge);
+	next if ($expr =~ s/($num)\s*\|\s*($num)/int($1)|int($2)/ge);
+	next if ($expr =~ s/($num)\s*\^\s*($num)/int($1)^int($2)/ge);
 	last;
     }
 
