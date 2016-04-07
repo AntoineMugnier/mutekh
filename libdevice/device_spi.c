@@ -133,10 +133,8 @@ device_spi_ctrl_transfer(struct dev_spi_ctrl_queue_s *q,
 
   DEVICE_OP(rq->ctrl, transfer, tr);
 
-  lock_spin_irq(&q->lock);
   return DEVICE_SPI_WAIT;
  err:
-  lock_spin_irq(&q->lock);
   return device_spi_ctrl_end(q, rq, err);
 }
 
@@ -411,6 +409,7 @@ device_spi_bytecode_exec(struct dev_spi_ctrl_queue_s *q,
                   tr->data.out_width = sizeof(rq->vm.v[0]);
                   tr->data.out = &rq->vm.v[dst];
                 }
+              lock_spin_irq(&q->lock);
               return device_spi_ctrl_transfer(q, &rq->base);
             }
             }
@@ -425,6 +424,7 @@ device_spi_bytecode_exec(struct dev_spi_ctrl_queue_s *q,
           if (count == 0)
             continue;
           tr->data.count = count;
+          lock_spin_irq(&q->lock);
           switch (op & 0x0c00)
             {
             case 0x0000:  /* pad */
@@ -451,8 +451,9 @@ device_spi_bytecode_exec(struct dev_spi_ctrl_queue_s *q,
               tr->data.in = addr;
               tr->data.out = addr2;
               return device_spi_ctrl_transfer(q, &rq->base);
+            default:
+              UNREACHABLE();
             }
-          continue;
         }
 
 #  ifdef CONFIG_DEVICE_SPI_BYTECODE_GPIO
@@ -516,7 +517,7 @@ static void device_spi_ctrl_run(struct dev_spi_ctrl_queue_s *q)
           {
 #ifdef CONFIG_DEVICE_SPI_TRANSACTION
             struct dev_spi_ctrl_transaction_rq_s *trq = dev_spi_ctrl_transaction_rq_s_cast(rq);
-            memcpy(&q->transfer.op, &trq->op, sizeof(trq->op));
+            memcpy(&q->transfer.data, &trq->data, sizeof(trq->data));
             r = device_spi_ctrl_transfer(q, rq);
 #endif
           }
@@ -766,11 +767,10 @@ error_t dev_drv_spi_bytecode_init(struct device_s *dev,
   if (err)
     return err;
 
-  struct dev_spi_ctrl_queue_s *q = DEVICE_OP(ctrl, queue);
-
   if (timer != NULL)
     {
 # ifdef CONFIG_DEVICE_SPI_BYTECODE_TIMER
+      struct dev_spi_ctrl_queue_s *q = DEVICE_OP(ctrl, queue);
       err = -ENOENT;
       if (!device_check_accessor(&q->timer.base))
         goto err;
@@ -794,8 +794,8 @@ error_t dev_drv_spi_bytecode_init(struct device_s *dev,
 void dev_drv_spi_bytecode_cleanup(struct device_spi_ctrl_s *ctrl,
                                   struct dev_spi_ctrl_bytecode_rq_s *rq)
 {
-#  ifndef CONFIG_DEVICE_GPIO
-  device_put_accessor(&rq->gpio.base);
+#  ifdef CONFIG_DEVICE_GPIO
+  device_put_accessor(&rq->base.gpio.base);
 #  endif
   device_put_accessor(&ctrl->base);
 }
@@ -824,11 +824,11 @@ error_t dev_drv_spi_transaction_init(struct device_s *dev,
   return err;
 }
 
-void dev_spi_transaction_rq_cleanup(struct device_spi_ctrl_s *ctrl,
-                                    struct dev_spi_ctrl_transaction_rq_s *rq)
+void dev_drv_spi_transaction_cleanup(struct device_spi_ctrl_s *ctrl,
+                                     struct dev_spi_ctrl_transaction_rq_s *rq)
 {
-#  ifndef CONFIG_DEVICE_GPIO
-  device_put_accessor(&rq->gpio.base);
+#  ifdef CONFIG_DEVICE_GPIO
+  device_put_accessor(&rq->base.gpio.base);
 #  endif
   device_put_accessor(&ctrl->base);
 }
