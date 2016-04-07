@@ -36,11 +36,18 @@ static void device_sleep_process(device_sleep_root_t *queue)
 {
   struct device_s *dev;
 
-  while ((dev = device_sleep_queue_pop(queue)))
-    {
-      const struct driver_s *drv = dev->drv;
-      drv->f_use(dev, DEV_USE_SLEEP);
-    };
+  do {
+      CPU_INTERRUPT_SAVESTATE_DISABLE;
+      dev = device_sleep_queue_pop(queue);
+      if (dev)
+        {
+          const struct driver_s *drv = dev->drv;
+          lock_spin(&dev->lock);
+          drv->f_use(dev, DEV_USE_SLEEP);
+          lock_release(&dev->lock);
+        }
+      CPU_INTERRUPT_RESTORESTATE;
+  } while (dev);
 }
 
 static KROUTINE_EXEC(device_sleep_cpuidle_process)

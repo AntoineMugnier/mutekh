@@ -212,6 +212,7 @@ GCT_CONTAINER_FCNS(device_sleep, ALWAYS_INLINE, device_sleep_queue,
     @cref DEV_USE_SLEEP for details. This call is delayed depending on
     the current device sleep policy.
 
+    This function must be called with the device lock held.
     It is harmless to call this function multiple times.
     @see device_sleep_policy_e
     @csee #CONFIG_DEVICE_SLEEP
