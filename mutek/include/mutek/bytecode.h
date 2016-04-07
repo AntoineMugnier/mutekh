@@ -146,101 +146,107 @@
    @section {Generic instruction set}
 
    The following operations are available to load values into registers:
-   @list
-     @item @tt{cst8 reg, value} : Set a register to an unsigned 8 bits
+   @table 2
+     @item Instruction @item Description
+     @item @tt{cst8 reg, value} @item Set a register to an unsigned 8 bits
        constant.
-     @item @tt{cst[16,32,64] reg, value, shift} : Set a register
+     @item @tt{cst[16,32,64] reg, value, shift} @item Set a register
        to an unsigned constant which may be shifted by a mulitple of 8
        bits. This uses more than one opcode word.
-     @item @tt{mov reg, reg} : Copy a value between 2 registers.
-   @end list
+     @item @tt{mov reg, reg} @item Copy a value between 2 registers.
+   @end table
 
    The following operations are available to perform usual integer
    operations on register values:
-   @list
-     @item @tt{add8 reg, value} : Add a signed 8 bits value to a register.
-     @item @tt{add reg, reg} : Add the value of the source register to the destination register.
-     @item @tt{sub reg, reg} : Subtract the value of the source register from the destination register.
-     @item @tt{neg reg} : Subtract the value from zero.
-     @item @tt{mul32 reg, reg} : Multiply the values of the source register and destination registers.
-     @item @tt{or32 reg, reg} : 32 bits bitwise or.
-     @item @tt{xor32 reg, reg} : 32 bits bitwise exclusive or.
-     @item @tt{and32 reg, reg} : 32 bits bitwise and.
-     @item @tt{andn32 reg, reg} : 32 bits bitwise and with complemented source register.
-     @item @tt{not32 reg} : 32 bits bitwise not.
-     @item @tt{shl32 reg, reg} : 32 bits variable left shift.
-     @item @tt{shr32 reg, reg} : 32 bits variable right shift.
-     @item @tt{shi32l reg, bit_index} : Left shift a register by a constant amount.
+   @table 2
+     @item Instruction @item Description
+     @item @tt{add8 reg, value} @item Add a signed 8 bits value to a register.
+     @item @tt{add reg, reg} @item Add the value of the source register to the destination register.
+     @item @tt{sub reg, reg} @item Subtract the value of the source register from the destination register.
+     @item @tt{neg reg} @item Subtract the value from zero.
+     @item @tt{mul32 reg, reg} @item Multiply the values of the source register and destination registers.
+     @item @tt{or32 reg, reg} @item 32 bits bitwise or.
+     @item @tt{xor32 reg, reg} @item 32 bits bitwise exclusive or.
+     @item @tt{and32 reg, reg} @item 32 bits bitwise and.
+     @item @tt{andn32 reg, reg} @item 32 bits bitwise and with complemented source register.
+     @item @tt{not32 reg} @item 32 bits bitwise not.
+     @item @tt{shl32 reg, reg} @item 32 bits variable left shift.
+     @item @tt{shr32 reg, reg} @item 32 bits variable right shift.
+     @item @tt{shi32l reg, bit_index} @item Left shift a register by a constant amount.
        Amount must be in the range [0,31].
-     @item @tt{shi32r reg, bit_index} : Right shift a register by a constant amount.
+     @item @tt{shi32r reg, bit_index} @item Right shift a register by a constant amount.
        Amount must be in the range [0,31].
-     @item @tt{msbs32 reg} : Find the position of the most significant bit set in range [0, 31].
-     @item @tt{exts reg, bit_index} : Sign extend a register using the specified sign bit in the range [0,31].
-     @item @tt{extz reg, bit_index} : Clear all bits in a register above specified bit in the range [0,31].
-   @end list
+     @item @tt{msbs32 reg} @item Find the position of the most significant bit set in range [0, 31].
+     @item @tt{exts reg, bit_index} @item Sign extend a register using the specified sign bit in the range [0,31].
+     @item @tt{extz reg, bit_index} @item Clear all bits in a register above specified bit in the range [0,31].
+   @end table
 
    The following comparison operations are available:
-   @list
-     @item @tt{eq reg, reg} : Compare two registers and skip the next instruction if they are not equal.
-     @item @tt{neq reg, reg} : Compare two registers and skip the next instruction if thay are equal.
-     @item @tt{eq0 reg} : Skip the next instruction if the register is not zero.
-     @item @tt{neq0 reg} : Skip the next instruction if the register is zero.
-     @item @tt{lt reg, reg} : Compare two registers and skip the next instruction if
+   @table 2
+     @item Instruction @item Description
+     @item @tt{eq reg, reg} @item Compare two registers and skip the next instruction if they are not equal.
+     @item @tt{neq reg, reg} @item Compare two registers and skip the next instruction if thay are equal.
+     @item @tt{eq0 reg} @item Skip the next instruction if the register is not zero.
+     @item @tt{neq0 reg} @item Skip the next instruction if the register is zero.
+     @item @tt{lt reg, reg} @item Compare two registers and skip the next instruction if
      first reg >= second reg.
-     @item @tt{lteq reg, reg} : Compare two registers and skip the next instruction if
+     @item @tt{lteq reg, reg} @item Compare two registers and skip the next instruction if
      first reg > second reg.
-   @end list
+   @end table
 
    The following bit oriented operations are available:
-   @list
-     @item @tt{tst32c reg, bit_index} : Extract a bit from a register and skip the next instruction if the
+   @table 2
+     @item Instruction @item Description
+     @item @tt{tst32c reg, bit_index} @item Extract a bit from a register and skip the next instruction if the
      bit is not cleared. Bit index is in the range [0,31].
-     @item @tt{tst32s reg, bit_index} : Extract a bit from a register and skip the next instruction if the
+     @item @tt{tst32s reg, bit_index} @item Extract a bit from a register and skip the next instruction if the
      bit is not set. Bit index is in the range [0,31].
-     @item @tt{bit32c reg, bit_index} : Clear a bit in a register. Bit index is in the range [0,31].
-     @item @tt{bit32s reg, bit_index} : Set a bit in a register. Bit index is in the range [0,31].
-   @end list
+     @item @tt{bit32c reg, bit_index} @item Clear a bit in a register. Bit index is in the range [0,31].
+     @item @tt{bit32s reg, bit_index} @item Set a bit in a register. Bit index is in the range [0,31].
+   @end table
 
    The following branch instructions are available:
-   @list
-     @item @tt{end} : Terminate bytecode execution.
-     @item @tt{jmp8 label} : Jump relative. The branch target must be in
+   @table 2
+     @item Instruction @item Description
+     @item @tt{end} @item Terminate bytecode execution.
+     @item @tt{jmp8 label} @item Jump relative. The branch target must be in
        range [-128, +127] from this instruction.
-     @item @tt{jmp32 label} : Jump absolute.
-     @item @tt{call8 reg, label} : Jump absolute and save the return address in a register.
+     @item @tt{jmp32 label} @item Jump absolute.
+     @item @tt{call8 reg, label} @item Jump absolute and save the return address in a register.
        The branch target must be in range [-128, +127] from this instruction.
-     @item @tt{call32 reg, label} : Jump relative and save the return address in a register.
-     @item @tt{ret reg} : Return to the address saved in a register.
-     @item @tt{loop reg, label} : If the jump target is backward, this instruction decrements the
+     @item @tt{call32 reg, label} @item Jump relative and save the return address in a register.
+     @item @tt{ret reg} @item Return to the address saved in a register.
+     @item @tt{loop reg, label} @item If the jump target is backward, this instruction decrements the
        register which should not be initially zero and branch if the
        result is not zero. If the jump target is forward, this instruction decrement the
        register if its initial value is not zero. If the register initial
        value is zero, the branch is taken and the register is left
        untouched.
-   @end list
+   @end table
 
    The following memory access instructions are available:
-   @list
-     @item @tt{ld[8,16,32,64] data_reg, addr_reg} : Load a value from a
+   @table 2
+     @item Instruction @item Description
+     @item @tt{ld[8,16,32,64] data_reg, addr_reg} @item Load a value from a
      memory address given by a register into an other register.
-     @item @tt{ld[8,16,32,64]i data_reg, addr_reg} : Load a value from a
+     @item @tt{ld[8,16,32,64]i data_reg, addr_reg} @item Load a value from a
      memory address given by a register into an other register then
      add the width of the access to the address register.
-     @item @tt{ld[8,16,32,64]e data_reg, addr_reg} : Load a value from a memory
+     @item @tt{ld[8,16,32,64]e data_reg, addr_reg, offset} @item Load a value from a memory
      address given by a register and a 16 bits signed offset into an
      other register.
-     @item @tt{st[8,16,32,64] data_reg, addr_reg, offset} : Store a value to
+     @item @tt{st[8,16,32,64] data_reg, addr_reg} @item Store a value to
      a memory address given by a register from an other register.
-     @item @tt{st[8,16,32,64]i data_reg, addr_reg} : Store a value to a
+     @item @tt{st[8,16,32,64]i data_reg, addr_reg} @item Store a value to a
      memory address given by a register from an other register then
      add the width of the access to the address register.
-     @item @tt{st[8,16,32,64]d data_reg, addr_reg} : Subtract the width of
+     @item @tt{st[8,16,32,64]d data_reg, addr_reg} @item Subtract the width of
      the access to the address register then store a value from an
      other register to the resulting memory address.
-     @item @tt{st[8,16,32,64]e data_reg, addr_reg, offset} : Store a value
+     @item @tt{st[8,16,32,64]e data_reg, addr_reg, offset} @item Store a value
      from a register to a memory address given by an other register
      and a 16 bits signed offset.
-   @end list
+   @end table
 
    Zero extension is performed by load instructions. In
    order to achieve portability, additional @tt{ld}, @tt{st},
@@ -249,19 +255,20 @@
    handle pointers.
 
    The following miscellaneous instructions are available:
-   @list
-     @item @tt{dump} : Dump registers to debug output. @see #CONFIG_MUTEK_BYTECODE_DEBUG
-     @item @tt{abort} : Terminate bytecode execution and report an error.
-     @item @tt{trace flags} : Enable or disable debug trace. @see bc_set_trace
-     @item @tt{ccall reg, reg} : Call a C function. The address of the function is in the source
+   @table 2
+     @item Instruction @item Description
+     @item @tt{dump} @item Dump registers to debug output. @see #CONFIG_MUTEK_BYTECODE_DEBUG
+     @item @tt{abort} @item Terminate bytecode execution and report an error.
+     @item @tt{trace flags} @item Enable or disable debug trace. @see bc_set_trace
+     @item @tt{ccall reg, reg} @item Call a C function. The address of the function is in the source
      register. The value of the destination register is passed to the
      function and the return value is stored back in this same register. (bytecode will not be portable)
      @see bc_ccall_function_t
-     @item @tt{laddr[16,32] reg, label} : Set a register to the address of a bytecode label.
-     @item @tt{gaddr reg, label} : Set a register to the address of a
+     @item @tt{laddr[16,32] reg, label} @item Set a register to the address of a bytecode label.
+     @item @tt{gaddr reg, label} @item Set a register to the address of a
      global symbol. (bytecode will not be portable)
-     @item @tt{.data16 value} : Dump a 16 bits word value in the program.
-   @end list
+     @item @tt{.data16 value} @item Dump a 16 bits word value in the program.
+   @end table
    @end section
 
    @section {Generic opcodes table}
