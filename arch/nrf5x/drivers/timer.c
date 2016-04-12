@@ -31,7 +31,7 @@
 #include <device/driver.h>
 #include <device/irq.h>
 #include <device/class/timer.h>
-#include <device/class/clock.h>
+#include <device/clock.h>
 
 #include <arch/nrf5x/timer.h>
 #include <arch/nrf5x/peripheral.h>
@@ -46,7 +46,7 @@ struct nrf5x_timer_context_s
   dev_timer_value_t base;
   uint8_t width;
   uint8_t div;
-  struct dev_freq_accuracy_s acc;
+  struct dev_freq_s freq;
 
 #if defined(CONFIG_DEVICE_CLOCK)
   struct dev_clock_sink_ep_s clock_sink;
@@ -60,7 +60,7 @@ struct nrf5x_timer_context_s
 static void nrf5x_timer_start(struct nrf5x_timer_context_s *pv)
 {
 #if defined(CONFIG_DEVICE_CLOCK)
-  dev_clock_sink_hold(&pv->clock_sink, 1);
+  dev_clock_sink_gate(&pv->clock_sink, DEV_CLOCK_EP_CLOCK);
 #endif
   nrf_task_trigger(pv->addr, NRF_TIMER_START);
   nrf_it_enable(pv->addr, NRF_TIMER_COMPARE(OVERFLOW));
@@ -71,7 +71,7 @@ static void nrf5x_timer_stop(struct nrf5x_timer_context_s *pv)
   nrf_task_trigger(pv->addr, NRF_TIMER_STOP);
   nrf_it_disable_mask(pv->addr, -1);
 #if defined(CONFIG_DEVICE_CLOCK)
-  dev_clock_sink_release(&pv->clock_sink);
+  dev_clock_sink_gate(&pv->clock_sink, DEV_CLOCK_EP_NONE);
 #endif
 }
 
@@ -115,10 +115,10 @@ static DEV_TIMER_REQUEST(nrf5x_timer_request)
   LOCK_SPIN_IRQ(&dev->lock);
 
   if (dev_request_pqueue_isempty(&pv->queue)) {
-    if (!pv->start_count)
+    if (!dev->start_count)
       nrf5x_timer_start(pv);
 
-    pv->start_count++;
+    dev->start_count |= 1;
   }
 
   value = nrf5x_timer_value_get(pv);
@@ -170,9 +170,9 @@ static DEV_TIMER_CANCEL(nrf5x_timer_cancel)
   err = 0;
 
   if (dev_request_pqueue_isempty(&pv->queue)) {
-    pv->start_count--;
+    dev->start_count &= ~1;
 
-    if (!pv->start_count)
+    if (!dev->start_count)
       nrf5x_timer_stop(pv);
   }
 
@@ -189,15 +189,15 @@ static DEV_USE(nrf5x_timer_use)
 
   switch (op) {
   default:
-    return 0;
+    return dev_use_generic(param, op);
 
   case DEV_USE_START:
-    if (!pv->start_count)
+    if (!dev->start_count)
       nrf5x_timer_start(pv);
     break;
 
   case DEV_USE_STOP:
-    if (!pv->start_count)
+    if (!dev->start_count)
       nrf5x_timer_stop(pv);
     break;
   }
@@ -255,7 +255,7 @@ static DEV_IRQ_SRC_PROCESS(nrf5x_timer_irq)
 
   if (rq)
     nrf5x_deadline_set(pv, rq->deadline);
-  else if (!pv->start_count) {
+  else if (!dev->start_count) {
     nrf5x_deadline_disable(pv);
   }
 
@@ -271,9 +271,8 @@ static DEV_TIMER_CONFIG(nrf5x_timer_config)
   LOCK_SPIN_IRQ(&dev->lock);
 
   if (cfg) {
-    cfg->freq.num = 1000000;
-    cfg->freq.denom = 1;
-    cfg->acc = pv->acc;
+    cfg->freq = pv->freq;
+    cfg->freq.num >>= 4;
     cfg->rev = 0;
     cfg->res = 1;
     cfg->cap = DEV_TIMER_CAP_STOPPABLE
@@ -291,15 +290,6 @@ static DEV_TIMER_CONFIG(nrf5x_timer_config)
 
   return err;
 }
-
-#if defined(CONFIG_DEVICE_CLOCK)
-static DEV_CLOCK_SINK_CHANGED(timer_clock_changed)
-{
-  struct nrf5x_timer_context_s *pv = ep->dev->drv_pv;
-
-  pv->acc = *acc;
-}
-#endif
 
 static DEV_INIT(nrf5x_timer_init);
 static DEV_CLEANUP(nrf5x_timer_cleanup);
@@ -323,8 +313,10 @@ static DEV_INIT(nrf5x_timer_init)
     goto free_pv;
 
   // 1% default
-  pv->acc.m = 7;
-  pv->acc.e = 20;
+  pv->freq.num = 16000000;
+  pv->freq.denom = 1;
+  pv->freq.acc_m = 7;
+  pv->freq.acc_e = 20;
 
   switch (pv->addr) {
   case NRF_PERIPHERAL_ADDR(NRF5X_TIMER0):
@@ -348,16 +340,11 @@ static DEV_INIT(nrf5x_timer_init)
   if (device_irq_source_link(dev, pv->irq_ep, 1, -1))
     goto free_pv;
 
-#if defined(CONFIG_DEVICE_CLOCK)
-  dev_clock_sink_init(dev, &pv->clock_sink, &timer_clock_changed);
-  struct dev_clock_link_info_s ckinfo;
-  if (dev_clock_sink_link(dev, &pv->clock_sink, &ckinfo, 0, 0))
-    goto free_pv;
-#endif
+  if (dev_drv_clock_init(dev, &pv->clock_sink, 0, 0, &pv->freq))
+    goto unlink_irq;
 
   dev_request_pqueue_init(&pv->queue);
   pv->base = 0;
-  pv->start_count = 0;
 
   nrf_reg_set(pv->addr, NRF_TIMER_CC(OVERFLOW), 0);
   nrf_reg_set(pv->addr, NRF_TIMER_MODE, NRF_TIMER_MODE_TIMER);
@@ -366,6 +353,8 @@ static DEV_INIT(nrf5x_timer_init)
 
   return 0;
 
+ unlink_irq:
+  device_irq_source_unlink(dev, pv->irq_ep, 1);
  free_pv:
   mem_free(pv);
   return -1;
@@ -380,9 +369,7 @@ DEV_CLEANUP(nrf5x_timer_cleanup)
 
   dev_request_pqueue_destroy(&pv->queue);
   nrf_it_disable_mask(pv->addr, -1);
-#if defined(CONFIG_DEVICE_CLOCK)
-  dev_clock_sink_unlink(dev, &pv->clock_sink, 1);
-#endif
+  dev_drv_clock_cleanup(dev, &pv->clock_sink);
 
   device_irq_source_unlink(dev, pv->irq_ep, 1);
 
