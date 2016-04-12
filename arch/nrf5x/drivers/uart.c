@@ -34,7 +34,7 @@
 #include <device/class/char.h>
 #include <device/class/uart.h>
 #include <device/class/iomux.h>
-#include <device/class/clock.h>
+#include <device/clock.h>
 
 #include <arch/nrf5x/uart.h>
 #include <arch/nrf5x/gpio.h>
@@ -45,6 +45,8 @@
 # define dprintk(...) do{}while(0)
 #endif
 
+#define USE_RX 1
+#define USE_TX 2
 
 #if defined(CONFIG_DRIVER_NRF5X_UART)
 #if CONFIG_DRIVER_NRF5X_UART_SWFIFO > 0
@@ -63,12 +65,6 @@ static PRINTF_OUTPUT_FUNC(nrf5x_printk_out);
 PRINTF_OUTPUT_FUNC(nrf5x_printk_out_nodrv);
 #endif
 
-enum {
-  CALLBACKING_NONE,
-  CALLBACKING_RX,
-  CALLBACKING_TX,
-};
-
 struct nrf5x_uart_priv
 {
   uintptr_t addr;
@@ -84,27 +80,19 @@ struct nrf5x_uart_priv
 
   struct dev_irq_src_s irq_ep;
 
-  uint8_t callbacking : 2;
   bool_t has_ctsrts:1;
   bool_t txdrdy:1;
   bool_t rxdrdy:1;
 };
 
 static void nrf5x_uart_request_finish(struct device_s *dev,
-                                      struct dev_char_rq_s *rq,
-                                      uint8_t cb_way)
+                                      struct dev_char_rq_s *rq)
 {
   struct nrf5x_uart_priv *pv = dev->drv_pv;
-
-  pv->callbacking = cb_way;
-  lock_release(&dev->lock);
 
   rq->error = 0;
   dprintk("rq %p done\n", rq);
   kroutine_exec(&rq->base.kr);
-
-  lock_spin(&dev->lock);
-  pv->callbacking = 0;
 }
 
 static bool_t nrf5x_uart_tx_fifo_refill(
@@ -141,7 +129,7 @@ static bool_t nrf5x_uart_tx_fifo_refill(
             || rq->type == DEV_CHAR_WRITE_PARTIAL_FLUSH) {
             dev_request_queue_pop(&pv->tx_q);
 
-            nrf5x_uart_request_finish(dev, rq, CALLBACKING_TX);
+            nrf5x_uart_request_finish(dev, rq);
         }
     }
 
@@ -177,7 +165,9 @@ static bool_t nrf5x_uart_rx_fifo_flush(
         if (rq->size == 0 || rq->type == DEV_CHAR_READ_PARTIAL) {
             dev_request_queue_pop(&pv->rx_q);
 
-            nrf5x_uart_request_finish(dev, rq, CALLBACKING_RX);
+            device_sleep_schedule(dev);
+
+            nrf5x_uart_request_finish(dev, rq);
         }
     }
 
@@ -235,19 +225,10 @@ static bool_t nrf5x_io_process_one(
         pv->txdrdy = 0;
         nrf_reg_set(pv->addr, NRF_UART_TXD, chr);
 
+        if (uart_fifo_isempty(&pv->tx_fifo))
+          device_sleep_schedule(dev);
+
         goto tx_again;
-    }
-
-    if (dev_request_queue_isempty(&pv->rx_q)) {
-      dprintk("%s STOP RX\n", __FUNCTION__);
-      nrf_task_trigger(pv->addr, NRF_UART_STOPRX);
-    }
-
-    if (dev_request_queue_isempty(&pv->tx_q)
-        && uart_fifo_isempty(&pv->tx_fifo)
-        && pv->txdrdy) {
-      dprintk("%s STOP TX\n", __FUNCTION__);
-      nrf_task_trigger(pv->addr, NRF_UART_STOPTX);
     }
 
     return processed;
@@ -271,7 +252,8 @@ static DEV_CHAR_REQUEST(nrf5x_uart_request)
   struct device_s *dev = accessor->dev;
   struct nrf5x_uart_priv *pv = dev->drv_pv;
   dev_request_queue_root_t *q = NULL;
-  bool_t start;
+  bool_t started = 0;
+  uint16_t use = 0;
 
   dprintk("%s REQUEST %x %p %p %d\n", __FUNCTION__, rq->type, rq, rq->data, rq->size);
 
@@ -279,7 +261,7 @@ static DEV_CHAR_REQUEST(nrf5x_uart_request)
   case DEV_CHAR_READ_PARTIAL:
   case DEV_CHAR_READ:
     q = &pv->rx_q;
-    start = pv->callbacking != CALLBACKING_RX;
+    use = USE_RX;
     break;
 
   case DEV_CHAR_WRITE_PARTIAL_FLUSH:
@@ -287,7 +269,7 @@ static DEV_CHAR_REQUEST(nrf5x_uart_request)
   case DEV_CHAR_WRITE_PARTIAL:
   case DEV_CHAR_WRITE:
     q = &pv->tx_q;
-    start = pv->callbacking != CALLBACKING_TX;
+    use = USE_TX;
     break;
 
   default:
@@ -302,17 +284,16 @@ static DEV_CHAR_REQUEST(nrf5x_uart_request)
 
   rq->error = 0;
 
-  start &= dev_request_queue_isempty(q);
   dev_request_queue_pushback(q, &rq->base);
-
-  if (start) {
-    if (q == &pv->rx_q) {
+  if (!(dev->start_count & use)) {
+    if (use == USE_RX) {
       dprintk("%s START RX\n", __FUNCTION__);
       nrf_task_trigger(pv->addr, NRF_UART_STARTRX);
     } else {
       dprintk("%s START TX\n", __FUNCTION__);
       nrf_task_trigger(pv->addr, NRF_UART_STARTTX);
     }
+    dev->start_count |= use;
 
     nrf5x_io_process_one(dev, pv);
   }
@@ -348,6 +329,7 @@ static DEV_CHAR_CANCEL(nrf5x_uart_cancel)
     err = -EBUSY;
   } else {
     dev_request_queue_remove(q, &rq->base);
+    device_sleep_schedule(dev);
     err = 0;
   }
 
@@ -429,7 +411,52 @@ static DEV_UART_CONFIG(nrf5x_uart_uart_config)
 static DEV_INIT(nrf5x_uart_char_init);
 static DEV_CLEANUP(nrf5x_uart_char_cleanup);
 
-#define nrf5x_uart_char_use dev_use_generic
+static DEV_USE(nrf5x_uart_char_use)
+{
+  struct device_accessor_s *accessor = param;
+  struct device_s *dev = accessor->dev;
+  struct nrf5x_uart_priv *pv = dev->drv_pv;
+
+  switch (op)
+    {
+    case DEV_USE_START:
+      if (!dev->start_count)
+        nrf_task_trigger(pv->addr, NRF_UART_STARTRX);
+      break;
+
+    case DEV_USE_STOP:
+      if (!dev->start_count)
+        device_sleep_schedule(dev);
+      break;
+
+    case DEV_USE_SLEEP: {
+      uint16_t before = dev->start_count;
+
+      if (dev_request_queue_isempty(&pv->rx_q))
+        dev->start_count &= ~USE_RX;
+
+      if (dev_request_queue_isempty(&pv->tx_q)
+          && uart_fifo_isempty(&pv->tx_fifo)
+          && pv->txdrdy)
+        dev->start_count &= ~USE_TX;
+
+      if (before & ~dev->start_count & USE_RX) {
+        dprintk("%s STOP RX\n", __FUNCTION__);
+        nrf_task_trigger(pv->addr, NRF_UART_STOPRX);
+      }
+
+      if (before & ~dev->start_count & USE_TX) {
+        dprintk("%s STOP TX\n", __FUNCTION__);
+        nrf_task_trigger(pv->addr, NRF_UART_STOPTX);
+      }
+
+      return 0;
+    }
+
+    default:
+      return dev_use_generic(param, op);
+    }
+}
 
 DRIVER_DECLARE(nrf5x_uart_drv, 0, "nRF5x Serial"
 #if defined(CONFIG_DEVICE_UART)
@@ -544,7 +571,6 @@ static DEV_INIT(nrf5x_uart_char_init)
 
     pv->txdrdy = 1;
     pv->rxdrdy = 0;
-    pv->callbacking = 0;
     nrf_it_enable(pv->addr, NRF_UART_TXDRDY);
     nrf_it_enable(pv->addr, NRF_UART_RXDRDY);
 
