@@ -291,7 +291,25 @@ static DEV_PWM_CONFIG(nrf5x_gpio_pwm_config)
 
 static DEV_INIT(nrf5x_gpio_pwm_init);
 static DEV_CLEANUP(nrf5x_gpio_pwm_cleanup);
-#define nrf5x_gpio_pwm_use dev_use_generic
+
+static DEV_USE(nrf5x_gpio_pwm_use)
+{
+  struct device_accessor_s *accessor = param;
+
+  switch (op) {
+  case DEV_USE_GET_ACCESSOR:
+    if (accessor->number >= CONFIG_DRIVER_NRF5X_GPIO_PWM_CHANNEL_COUNT)
+      return -ENOTSUP;
+    return 0;
+
+  case DEV_USE_LAST_NUMBER:
+    accessor->number = CONFIG_DRIVER_NRF5X_GPIO_PWM_CHANNEL_COUNT - 1;
+    return 0;
+
+  default:
+    return dev_use_generic(param, op);
+  }
+}
 
 DRIVER_DECLARE(nrf5x_gpio_pwm_drv, 0, "nRF5x GPIO PWM", nrf5x_gpio_pwm,
                DRIVER_PWM_METHODS(nrf5x_gpio_pwm));
