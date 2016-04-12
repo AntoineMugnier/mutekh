@@ -153,7 +153,7 @@ static error_t dev_cmu_config_res(struct device_cmu_s *accessor,
   });
 
   if (!done)
-    return -ENOENT;
+    return 0;
 
  done:
   return DEVICE_OP(accessor, commit);
