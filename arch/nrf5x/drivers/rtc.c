@@ -44,15 +44,15 @@ struct nrf5x_rtc_context_s
   dev_timer_value_t base;
   struct dev_freq_s freq;
 
-#if defined(CONFIG_DEVICE_CMU)
+#if defined(CONFIG_DEVICE_CLOCK)
   struct dev_clock_sink_ep_s clock_sink;
 #endif
 };
 
 static void nrf5x_rtc_start(struct nrf5x_rtc_context_s *pv)
 {
-#if defined(CONFIG_DEVICE_CMU)
-  dev_clock_sink_hold(&pv->clock_sink, 1);
+#if defined(CONFIG_DEVICE_CLOCK)
+  dev_clock_sink_gate(&pv->clock_sink, DEV_CLOCK_EP_CLOCK);
 #endif
   nrf_task_trigger(pv->addr, NRF_RTC_START);
   nrf_it_enable(pv->addr, NRF_RTC_OVERFLW);
@@ -62,8 +62,8 @@ static void nrf5x_rtc_stop(struct nrf5x_rtc_context_s *pv)
 {
   nrf_task_trigger(pv->addr, NRF_RTC_STOP);
   nrf_it_disable_mask(pv->addr, -1);
-#if defined(CONFIG_DEVICE_CMU)
-  dev_clock_sink_release(&pv->clock_sink);
+#if defined(CONFIG_DEVICE_CLOCK)
+  dev_clock_sink_gate(&pv->clock_sink, DEV_CLOCK_EP_NONE);
 #endif
 }
 
@@ -112,7 +112,7 @@ static DEV_TIMER_REQUEST(nrf5x_rtc_request)
     if (!dev->start_count)
       nrf5x_rtc_start(pv);
 
-    dev->start_count++;
+    dev->start_count |= 1;
   }
 
   value = nrf5x_rtc_value_get(pv);
@@ -124,7 +124,7 @@ static DEV_TIMER_REQUEST(nrf5x_rtc_request)
     err = -ETIMEDOUT;
 
     if (dev_request_pqueue_isempty(&pv->queue)) {
-      dev->start_count--;
+      dev->start_count &= ~1;
 
       if (!dev->start_count)
         nrf5x_rtc_stop(pv);
@@ -172,7 +172,7 @@ static DEV_TIMER_CANCEL(nrf5x_rtc_cancel)
   err = 0;
 
   if (dev_request_pqueue_isempty(&pv->queue)) {
-    dev->start_count--;
+    dev->start_count &= ~1;
 
     if (!dev->start_count)
       nrf5x_rtc_stop(pv);
@@ -301,15 +301,6 @@ static DEV_TIMER_CONFIG(nrf5x_rtc_config)
   return err;
 }
 
-#if defined(CONFIG_DEVICE_CMU)
-static DEV_CLOCK_SINK_CHANGED(rtc_clock_changed)
-{
-  struct nrf5x_rtc_context_s *pv = ep->dev->drv_pv;
-
-  pv->freq = *freq;
-}
-#endif
-
 static DEV_INIT(nrf5x_rtc_init);
 static DEV_CLEANUP(nrf5x_rtc_cleanup);
 
@@ -332,8 +323,8 @@ static DEV_INIT(nrf5x_rtc_init)
     goto free_pv;
 
   // 2% default
-  pv->freq.num = 1;
-  pv->freq.denom = 32768;
+  pv->freq.num = 32768;
+  pv->freq.denom = 1;
   pv->freq.acc_m = 0;
   pv->freq.acc_e = 22;
 
@@ -342,12 +333,8 @@ static DEV_INIT(nrf5x_rtc_init)
   if (device_irq_source_link(dev, pv->irq_ep, 1, -1))
     goto free_pv;
 
-#if defined(CONFIG_DEVICE_CMU)
-  dev_clock_sink_init(dev, &pv->clock_sink, &rtc_clock_changed);
-  struct dev_clock_link_info_s ckinfo;
-  if (dev_clock_sink_link(dev, &pv->clock_sink, &ckinfo, 0, 0))
-    goto free_pv;
-#endif
+  if (dev_drv_clock_init(dev, &pv->clock_sink, 0, 0, &pv->freq))
+    goto unlink_irq;
 
   dev_request_pqueue_init(&pv->queue);
   pv->base = 0;
@@ -357,6 +344,8 @@ static DEV_INIT(nrf5x_rtc_init)
 
   return 0;
 
+ unlink_irq:
+  device_irq_source_unlink(dev, pv->irq_ep, 1);
  free_pv:
   mem_free(pv);
   return -1;
@@ -374,10 +363,8 @@ DEV_CLEANUP(nrf5x_rtc_cleanup)
   nrf_it_disable_mask(pv->addr, -1);
   nrf_evt_disable_mask(pv->addr, -1);
 
+  dev_drv_clock_cleanup(dev, &pv->clock_sink);
   device_irq_source_unlink(dev, pv->irq_ep, 1);
-#if defined(CONFIG_DEVICE_CMU)
-  dev_clock_sink_unlink(dev, &pv->clock_sink, 1);
-#endif
 
   mem_free(pv);
 
