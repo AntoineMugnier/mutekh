@@ -171,13 +171,4 @@ enum nrf5x_clock_id_e
   NRF_CLOCK_EP_COUNT,
 };
 
-/**
-   @this defines the external oscillators IDs.
-*/
-enum nrf5x_xo_id_e
-{
-  NRF5X_LFXO,
-  NRF5X_HFXO,
-};
-
 #endif

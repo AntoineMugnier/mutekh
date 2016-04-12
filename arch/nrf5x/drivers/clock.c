@@ -174,7 +174,7 @@ static DEV_CMU_NODE_INFO(nrf5x_clock_node_info)
   struct nrf5x_clock_context_s *pv = dev->drv_pv;
 
   if (node_id >= NRF_CLOCK_EP_COUNT)
-    return -ENOENT;
+    return -EINVAL;
 
   *mask &= ~DEV_CMU_INFO_SINK;
   info->src = NULL;
@@ -729,21 +729,7 @@ static DEV_CMU_COMMIT(nrf5x_clock_commit)
 
 static DEV_CMU_CONFIG_OSC(nrf5x_clock_config_osc)
 {
-  struct device_s *dev = accessor->dev;
-  struct nrf5x_clock_context_s *pv = dev->drv_pv;
-
-  switch (node_id) {
-  case NRF5X_HFXO:
-    pv->hfxo_freq = *freq;
-    return 0;
-
-  case NRF5X_LFXO:
-    pv->lfxo_freq = *freq;
-    return 0;
-
-  default:
-    return -ENOENT;
-  }
+  return -ENOENT;
 }
 
 DRIVER_DECLARE(nrf5x_clock_drv, DRIVER_FLAGS_EARLY_INIT, "nRF5x clock"
