@@ -392,20 +392,22 @@ struct bc_context_s
 #endif
 };
 
-/** @see bc_init */
-void bc_init_va(struct bc_context_s *ctx,
-		const struct bc_descriptor_s *desc,
-		uint_fast8_t pcount, va_list ap);
-
-/** @This intializes the virtual machine. Up to 16 parameters of type
-    @ref bc_reg_t can be passed in order to initialize the virtual
-    machine registers. Other registers are initialized to 0 except r14
-    which defaults to -1.
-*/
+/** @This intializes the virtual machine. The initial value of the
+    registers is undefined. */
 void
 bc_init(struct bc_context_s *ctx,
-        const struct bc_descriptor_s *desc,
-        uint_fast8_t pcount, ...);
+        const struct bc_descriptor_s *desc);
+
+/** @see bc_set_regs */
+void
+bc_set_regs_va(struct bc_context_s *ctx, uint16_t mask, va_list ap);
+
+/** @This set the value of multiple registers of the virtual
+    machine. The @tt mask parameter specifies which register must be
+    initialized. An additional value of type @ref uintptr_t must be
+    passed for each bit set in @tt mask. */
+void
+bc_set_regs(struct bc_context_s *ctx, uint16_t mask, ...);
 
 /** @This returns the value of one of the 16 virtual machine registers */
 ALWAYS_INLINE bc_reg_t

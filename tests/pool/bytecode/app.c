@@ -28,7 +28,8 @@ void app_start()
   struct bc_context_s vm;
   char buf[128] = "testbarx";
 
-  bc_init(&vm, &test_bytecode, 2, buf, &c_func);
+  bc_init(&vm, &test_bytecode);
+  bc_set_regs(&vm, 0b11, buf, &c_func);
 
 #ifdef CONFIG_MUTEK_BYTECODE_CHECKING
   bc_set_addr_range(&vm, (uintptr_t)buf, (uintptr_t)buf + sizeof(buf) - 1);

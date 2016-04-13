@@ -26,16 +26,31 @@
 
 #include <stdarg.h>
 
-void bc_init_va(struct bc_context_s *ctx,
-		const struct bc_descriptor_s *desc,
-		uint_fast8_t pcount, va_list ap)
+void
+bc_set_regs_va(struct bc_context_s *ctx, uint16_t mask, va_list ap)
 {
-  uint_fast8_t i;
-  for (i = 0; i < pcount; i++)
-    ctx->v[i] = va_arg(ap, intptr_t);
-  for (; i < 16; i++)
-    ctx->v[i] = i == 14 ? (bc_reg_t)0xffffffff : 0;
-  ctx->pc = desc->code; /* pc */
+  while (mask)
+    {
+      uint_fast8_t r = __builtin_ctz(mask);
+      ctx->v[r] = va_arg(ap, uintptr_t);
+      mask ^= 1 << r;
+    }
+}
+
+void
+bc_set_regs(struct bc_context_s *ctx, uint16_t mask, ...)
+{
+  va_list ap;
+  va_start(ap, mask);
+  bc_set_regs_va(ctx, mask, ap);
+  va_end(ap);
+}
+
+void
+bc_init(struct bc_context_s *ctx,
+        const struct bc_descriptor_s *desc)
+{
+  ctx->pc = desc->code;
   ctx->skip = 2;
   ctx->desc = desc;
 #ifdef CONFIG_MUTEK_BYTECODE_CHECKING
@@ -47,17 +62,6 @@ void bc_init_va(struct bc_context_s *ctx,
   ctx->trace = 0;
   ctx->trace_regs = 0;
 #endif
-}
-
-void
-bc_init(struct bc_context_s *ctx,
-        const struct bc_descriptor_s *desc,
-	uint_fast8_t pcount, ...)
-{
-  va_list ap;
-  va_start(ap, pcount);
-  bc_init_va(ctx, desc, pcount, ap);
-  va_end(ap);
 }
 
 #ifdef CONFIG_MUTEK_BYTECODE_VM
