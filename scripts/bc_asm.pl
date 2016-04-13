@@ -326,11 +326,11 @@ sub parse_call8
     $thisop->{target} = check_label8($thisop, 1);
 
     if ( $thisop->{lr} == 0 ) {
-	die "$thisop->{line}: jmpl can not modify register 0\n";
+	die "$thisop->{line}: call8 can not modify register 0\n";
     }
 
     if ( $thisop->{disp} == 0 ) {
-	die "$thisop->{line}: jmpl can not have a zero displacement\n";
+	die "$thisop->{line}: call8 can not have a zero displacement\n";
     }
 }
 
@@ -342,7 +342,7 @@ sub parse_call32
     $thisop->{target} = check_label($thisop, 1);
 
     if ( $thisop->{lr} == 0 ) {
-	die "$thisop->{line}: call can not modify register 0\n";
+	die "$thisop->{line}: call32 can not modify register 0\n";
     }
 }
 
@@ -821,6 +821,7 @@ sub custom_cond_op
 sub parse_args
 {
     my $addr = 0;
+    my $prevop;
 
     foreach my $thisop (@src) {
 
@@ -828,8 +829,15 @@ sub parse_args
 
 	die "$thisop->{line}: unknown instruction `$thisop->{name}'\n"
 	    unless defined $op;
+
 	die "$thisop->{line}: bad operand count for `$thisop->{name}'\n"
 	    if (defined $op->{argscnt}) && $op->{argscnt} != @{$thisop->{args}};
+
+	die "$thisop->{line}: multi-word instruction after conditional\n"
+	    if $prevop && $prevop->{op}->{cond} && $op->{words} > 1;
+
+        die "$thisop->{line}: contiguous conditional instructions\n"
+	    if $prevop && $prevop->{op}->{cond} && $op->{cond};
 
 	$thisop->{op} = $op;
 	$thisop->{addr} = $addr;
@@ -839,6 +847,7 @@ sub parse_args
 	}
 
 	$addr += $op->{words} + $thisop->{words};
+        $prevop = $thisop;
     }
 
     $last_addr = $addr;
@@ -1075,7 +1084,6 @@ sub write_asm
       mov_done:
 
         if ( $thisop->{op}->{cond} ) {
-            die "$thisop->{line}: contiguous conditional instructions\n" if defined $cond;
 
             if ( $thisop->{op}->{reloadregs} ) {
                 # emit conditional now if we are not able to avoid reload
