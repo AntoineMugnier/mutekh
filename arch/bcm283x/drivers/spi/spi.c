@@ -336,7 +336,6 @@ static DEV_INIT(bcm283x_spi_init)
 {
   struct bcm283x_spi_context_s	*pv;
 
-  dev->status = DEVICE_DRIVER_INIT_FAILED;
 
   pv = mem_alloc(sizeof(*pv), (mem_scope_sys));
   dev->drv_pv = pv;
@@ -375,8 +374,6 @@ static DEV_INIT(bcm283x_spi_init)
     goto err_fifo;
 #endif
 
-  dev->drv = &bcm283x_spi_drv;
-  dev->status = DEVICE_DRIVER_INIT_DONE;
 
   return 0;
 

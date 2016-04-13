@@ -428,7 +428,6 @@ static DEV_INIT(cc26xx_timer_init)
 {
   struct cc26xx_timer_private_s  *pv;
 
-  dev->status = DEVICE_DRIVER_INIT_FAILED;
 
   uintptr_t addr;
 
@@ -496,8 +495,6 @@ static DEV_INIT(cc26xx_timer_init)
   /* Set counter wrapping value to CC26XX_TIMER_TOP */
   cpu_mem_write_32(pv->addr + CC26XX_GPT_TAILR_ADDR, endian_le32(CC26XX_TIMER_TOP));
 
-  dev->drv = &cc26xx_timer_drv;
-  dev->status = DEVICE_DRIVER_INIT_DONE;
 
   return 0;
 
