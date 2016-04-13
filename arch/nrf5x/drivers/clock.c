@@ -155,6 +155,7 @@ struct nrf5x_clock_context_s
 
   bool_t notifying;
   uint8_t running_sources;
+  uint8_t requested_sources;
   uint8_t ready_sources;
 
   struct kroutine_s state_checker;
@@ -230,7 +231,7 @@ static DEV_CMU_NODE_INFO(nrf5x_clock_node_info)
 
 static enum nrf5x_clock_mode_e clock_lf_expected_mode_get(struct nrf5x_clock_context_s *pv)
 {
-  if (pv->src[NRF_CLOCK_LF_PRECISE].flags & DEV_CLOCK_EP_CLOCK) {
+  if (pv->requested_sources & (1 << NRF_CLOCK_LF_PRECISE)) {
 #if LFXO_PRESENT
     return MODE_XTAL;
 #else
@@ -238,7 +239,7 @@ static enum nrf5x_clock_mode_e clock_lf_expected_mode_get(struct nrf5x_clock_con
 #endif
   }
 
-  if (pv->src[NRF_CLOCK_LF].flags & DEV_CLOCK_EP_CLOCK)
+  if (pv->requested_sources & (1 << NRF_CLOCK_LF_PRECISE))
     return MODE_RC;
 
   return MODE_OFF;
@@ -247,7 +248,7 @@ static enum nrf5x_clock_mode_e clock_lf_expected_mode_get(struct nrf5x_clock_con
 static enum nrf5x_clock_mode_e clock_hf_expected_mode_get(struct nrf5x_clock_context_s *pv)
 {
 #if HFXO_PRESENT
-  if (pv->src[NRF_CLOCK_HF_PRECISE].flags & DEV_CLOCK_EP_CLOCK)
+  if (pv->requested_sources & (1 << NRF_CLOCK_HF_PRECISE))
     return MODE_XTAL;
 
 # if !LFXO_PRESENT
@@ -517,7 +518,7 @@ static DEV_IRQ_SRC_PROCESS(nrf5x_temp_irq)
 
   nrf_task_trigger(TEMP_ADDR, NRF_TEMP_STOP);
 
-  if (!(pv->src[NRF_CLOCK_LF_PRECISE].flags & DEV_CLOCK_EP_CLOCK)) {
+  if (!(pv->requested_sources & (1 << NRF_CLOCK_LF_PRECISE))) {
     pv->lf_calib_state = CALIB_NONE;
     dprintk("-");
     hf_clock_mode_update(pv);
@@ -682,8 +683,15 @@ static DEV_CLOCK_SRC_SETUP(nrf5x_clock_ep_setup)
   case DEV_CLOCK_SETUP_UNLINK:
     return 0;
 
-  case DEV_CLOCK_SETUP_GATES:
+  case DEV_CLOCK_SETUP_GATES: {
+    uint8_t mask = 1 << id;
+
     dev_cmu_src_update(src, param->flags);
+
+    if (param->flags & DEV_CLOCK_EP_CLOCK)
+      pv->requested_sources |= mask;
+    else
+      pv->requested_sources &= ~mask;
 
     if (pv->notifying) {
       kroutine_exec(&pv->state_checker);
@@ -699,17 +707,13 @@ static DEV_CLOCK_SRC_SETUP(nrf5x_clock_ep_setup)
 #endif
 
       case NRF_CLOCK_LF_PRECISE:
-#if LFXO_PRESENT
-        lf_clock_mode_update(pv);
-        break;
-#endif
-
       case NRF_CLOCK_LF:
         lf_clock_mode_update(pv);
         break;
       }
     }
     break;
+  }
   }
 
   return 0;
