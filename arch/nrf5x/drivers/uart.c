@@ -212,6 +212,8 @@ static bool_t nrf5x_io_process_one(
     if (nrf_event_check(pv->addr, NRF_UART_TXDRDY)) {
       nrf_event_clear(pv->addr, NRF_UART_TXDRDY);
       pv->txdrdy = 1;
+
+      dprintk("%s txdrdy\n", __FUNCTION__);
     }
 
     if (pv->txdrdy && !uart_fifo_isempty(&pv->tx_fifo)) {
@@ -255,7 +257,10 @@ static DEV_CHAR_REQUEST(nrf5x_uart_request)
   bool_t started = 0;
   uint16_t use = 0;
 
-  dprintk("%s REQUEST %x %p %p %d\n", __FUNCTION__, rq->type, rq, rq->data, rq->size);
+  dprintk("%s REQUEST %p, type %x, use %x, %P\n", __FUNCTION__, rq,
+          rq->type,
+          dev->start_count & (USE_TX | USE_RX),
+          rq->data, rq->size);
 
   switch (rq->type) {
   case DEV_CHAR_READ_PARTIAL:
@@ -294,9 +299,9 @@ static DEV_CHAR_REQUEST(nrf5x_uart_request)
       nrf_task_trigger(pv->addr, NRF_UART_STARTTX);
     }
     dev->start_count |= use;
-
-    nrf5x_io_process_one(dev, pv);
   }
+
+  nrf5x_io_process_one(dev, pv);
 
   LOCK_RELEASE_IRQ(&dev->lock);
 }
@@ -413,23 +418,31 @@ static DEV_CLEANUP(nrf5x_uart_char_cleanup);
 
 static DEV_USE(nrf5x_uart_char_use)
 {
-  struct device_accessor_s *accessor = param;
-  struct device_s *dev = accessor->dev;
-  struct nrf5x_uart_priv *pv = dev->drv_pv;
-
   switch (op)
     {
-    case DEV_USE_START:
+    case DEV_USE_START: {
+      struct device_accessor_s *acc = param;
+      struct device_s *dev = acc->dev;
+      struct nrf5x_uart_priv *pv = dev->drv_pv;
+
       if (!dev->start_count)
         nrf_task_trigger(pv->addr, NRF_UART_STARTRX);
       break;
+    }
 
-    case DEV_USE_STOP:
+    case DEV_USE_STOP: {
+      struct device_accessor_s *acc = param;
+      struct device_s *dev = acc->dev;
+      struct nrf5x_uart_priv *pv = dev->drv_pv;
+
       if (!dev->start_count)
         device_sleep_schedule(dev);
       break;
+    }
 
     case DEV_USE_SLEEP: {
+      struct device_s *dev = param;
+      struct nrf5x_uart_priv *pv = dev->drv_pv;
       uint16_t before = dev->start_count;
 
       if (dev_request_queue_isempty(&pv->rx_q))
@@ -566,7 +579,7 @@ static DEV_INIT(nrf5x_uart_char_init)
 
 #if defined(CONFIG_DRIVER_NRF5X_PRINTK)
     if (pv->addr == CONFIG_MUTEK_PRINTK_ADDR)
-      printk_set_output(nrf5x_printk_out, pv);
+      printk_set_output(nrf5x_printk_out, dev);
 #endif
 
     pv->txdrdy = 1;
@@ -630,7 +643,8 @@ void nrf5x_printk_out_char(void *addr, char c);
 
 static PRINTF_OUTPUT_FUNC(nrf5x_printk_out)
 {
-    struct nrf5x_uart_priv *pv = ctx;
+    struct device_s *dev = ctx;
+    struct nrf5x_uart_priv *pv = dev->drv_pv;
 
     if (!len)
       return;
@@ -639,7 +653,7 @@ static PRINTF_OUTPUT_FUNC(nrf5x_printk_out)
 
     CPU_INTERRUPT_SAVESTATE_DISABLE;
 
-    bool_t enabled = !dev_request_queue_isempty(&pv->tx_q);
+    bool_t enabled = dev->start_count & USE_TX;
 
     if (enabled) {
       if (pv->txdrdy) {
@@ -649,17 +663,19 @@ static PRINTF_OUTPUT_FUNC(nrf5x_printk_out)
           ;
       }
     } else {
-      nrf_it_disable(pv->addr, NRF_UART_TXDRDY);
       nrf_task_trigger(pv->addr, NRF_UART_STARTTX);
     }
+
+    nrf_it_disable(pv->addr, NRF_UART_TXDRDY);
 
     nrf5x_printk_out_nodrv((void *)pv->addr, str, offset, len);
 
     if (!enabled) {
       nrf_event_clear(pv->addr, NRF_UART_TXDRDY);
       nrf_task_trigger(pv->addr, NRF_UART_STOPTX);
-      nrf_it_enable(pv->addr, NRF_UART_TXDRDY);
     }
+
+    nrf_it_enable(pv->addr, NRF_UART_TXDRDY);
 
     CPU_INTERRUPT_RESTORESTATE;
 }
