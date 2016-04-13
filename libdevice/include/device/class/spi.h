@@ -758,16 +758,17 @@ void dev_spi_transaction_start(struct device_spi_ctrl_s *ctrl,
     already running. All other errors are reported through @tt err
     field of request by executing the associated kroutine.
 
-    If the @tt pc parameter is not @tt NULL, the @ref bc_set_pc
-    function is called before starting the bytecode, unless already
-    running.
+    When not busy, this function may also set the registers of the
+    virtual machine before starting execution of the bytecode as if
+    the @ref bc_set_pc and @ref bc_set_regs function were used. If the
+    @tt pc parameter is @tt NULL, the pc is not changed.
 
     The kroutine of the request may be executed from within this
     function. Please read @xref {Nested device request completion}. */
 config_depend(CONFIG_DEVICE_SPI_BYTECODE)
 error_t dev_spi_bytecode_start(struct device_spi_ctrl_s *ctrl,
                                struct dev_spi_ctrl_bytecode_rq_s *rq,
-                               const void *pc);
+                               const void *pc, uint16_t mask, ...);
 
 /** @This initializes a SPI bytecode  request. */
 config_depend_alwaysinline(CONFIG_DEVICE_SPI_BYTECODE,
@@ -779,7 +780,8 @@ void dev_spi_bytecode_init(struct dev_spi_ctrl_bytecode_rq_s *rq),
 /** This helper function initializes a @xref{SPI bytecode request} for
     use in a SPI slave device driver. It is usually called from the
     slave driver initialization function to initialize a request
-    stored in the driver private data.
+    stored in the driver private data. The @ref bc_init function is
+    called with the @tt desc parameter.
 
     The pointer to the SPI controller @tt ctrl will be initialized
     according to the @tt spi device resource entry of the slave.
@@ -812,6 +814,7 @@ void dev_spi_bytecode_init(struct dev_spi_ctrl_bytecode_rq_s *rq),
 config_depend(CONFIG_DEVICE_SPI_BYTECODE)
 error_t dev_drv_spi_bytecode_init(struct device_s *dev,
                                   struct dev_spi_ctrl_bytecode_rq_s *rq,
+                                  const struct bc_descriptor_s *desc,
                                   struct device_spi_ctrl_s *ctrl,
                                   struct device_gpio_s **gpio,
                                   struct device_timer_s **timer);

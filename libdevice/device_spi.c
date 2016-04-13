@@ -596,7 +596,7 @@ void dev_spi_transaction_start(struct device_spi_ctrl_s *ctrl,
 # ifdef CONFIG_DEVICE_SPI_BYTECODE
 error_t dev_spi_bytecode_start(struct device_spi_ctrl_s *ctrl,
                                struct dev_spi_ctrl_bytecode_rq_s *rq,
-                               const void *pc)
+                               const void *pc, uint16_t mask, ...)
 {
   error_t err = -EBUSY;
 
@@ -628,6 +628,11 @@ error_t dev_spi_bytecode_start(struct device_spi_ctrl_s *ctrl,
 
       if (pc != NULL)
         bc_set_pc(&rq->vm, pc);
+
+      va_list ap;
+      va_start(ap, mask);
+      bc_set_regs_va(&rq->vm, mask, ap);
+      va_end(ap);
 
       rq->base.err = 0;
       rq->base.enqueued = 1;
@@ -757,6 +762,7 @@ static error_t dev_drv_spi_gpio_init(struct device_s *dev,
 # ifdef CONFIG_DEVICE_SPI_BYTECODE
 error_t dev_drv_spi_bytecode_init(struct device_s *dev,
                                   struct dev_spi_ctrl_bytecode_rq_s *rq,
+                                  const struct bc_descriptor_s *desc,
                                   struct device_spi_ctrl_s *ctrl,
                                   struct device_gpio_s **gpio,
                                   struct device_timer_s **timer)
@@ -784,6 +790,8 @@ error_t dev_drv_spi_bytecode_init(struct device_s *dev,
   err = dev_drv_spi_gpio_init(dev, &rq->base, gpio);
   if (err)
     goto err;
+
+  bc_init(&rq->vm, desc);
 
   return 0;
  err:
