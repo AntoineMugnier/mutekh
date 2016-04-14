@@ -38,6 +38,7 @@ void printk_set_output(printf_output_func_t *f, void *priv)
 {
 	printk_output = f;
 	printk_output_arg = priv;
+        printk_output(printk_output_arg, "\n", 0, 1);
 }
 
 #ifdef CONFIG_MUTEK_PRINTK_LOCK
