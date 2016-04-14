@@ -450,6 +450,8 @@ static void sched_context_idle()
           )
         {
 # ifdef CONFIG_ARCH_SMP
+          enum kroutine_policy_e policy = kr->policy;
+          struct kroutine_sequence_s *seq = kr->seq;
           kr->cls = (void*)CPU_GET_CLS();
 # endif
 # ifdef CONFIG_MUTEK_CONTEXT_SCHED
@@ -463,13 +465,13 @@ static void sched_context_idle()
           cpu_interrupt_disable();
 
 # ifdef CONFIG_ARCH_SMP
-          switch (kr->policy)
+          switch (policy)
             {
             case KROUTINE_SEQ_INTERRUPTIBLE:
             case KROUTINE_SEQ_SCHED_SWITCH:
             case KROUTINE_SEQ_DEFERRED:
               /* release sequence */
-              atomic_bit_clr(&kr->seq->state, 0);
+              atomic_bit_clr(&seq->state, 0);
             default:
               break;
             }
