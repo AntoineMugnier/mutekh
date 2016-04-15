@@ -173,7 +173,6 @@ DEV_INIT(bcm283x_icu_init)
 {
   struct bcm283x_icu_private_s  *pv;
 
-  dev->status = DEVICE_DRIVER_INIT_FAILED;
 
   pv = mem_alloc(sizeof (*pv), (mem_scope_sys));
   if (!pv)
@@ -200,8 +199,6 @@ DEV_INIT(bcm283x_icu_init)
   device_irq_sink_init(dev, pv->sinks, BCM283XICU_MAX_VECTOR,
                        &bcm283x_icu_sink_update, DEV_IRQ_SENSE_HIGH_LEVEL);
 
-  dev->drv = &bcm283x_icu_drv;
-  dev->status = DEVICE_DRIVER_INIT_DONE;
   return 0;
 
  err_mem:

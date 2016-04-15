@@ -52,16 +52,16 @@ doc/config.h
   service libraries.
 
   The exokernel comes with several operating system interface
-  libraries and service libraries, including a @xref{Devices support
-  library} with device drivers APIs for
+  libraries and service libraries, including a @xref{devices support
+  library}{} with device drivers APIs for
   various classes of devices. This allows development of applications
   which are portable across hardware platforms.
 
   The kernel was designed to be easily extended with new libraries and
   platform support. It is fully @xref{Build configuration
   files}{configurable} in order to match application needs and
-  platform constraints. Moreover it has an easy to use @xref{Build
-  system}{build system} and a @xref{Testsuite}{testsuite}.
+  platform constraints. Moreover it has an easy to use
+  @xref{build system}{} and a @xref{testsuite}{}.
 
   MutekH takes advantage of advanced compilation techniques like C99
   inlining and preprocessor metaprogramming in order to optimize

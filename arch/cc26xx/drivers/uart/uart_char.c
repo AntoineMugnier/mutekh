@@ -357,7 +357,6 @@ static DEV_INIT(cc26xx_uart_init)
 
   cpu_interrupt_disable();
 
-  dev->status = DEVICE_DRIVER_INIT_FAILED;
 
   pv = mem_alloc(sizeof(*pv), (mem_scope_sys));
   if (!pv)
@@ -442,8 +441,6 @@ static DEV_INIT(cc26xx_uart_init)
   CC26XX_UART_CTL_UARTEN_SET(reg, EN);
   cpu_mem_write_32(CC26XX_UART0_BASE + CC26XX_UART_CTL_ADDR, reg);
 
-  dev->drv = &cc26xx_uart_drv;
-  dev->status = DEVICE_DRIVER_INIT_DONE;
 
   return 0;
 

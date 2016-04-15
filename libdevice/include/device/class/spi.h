@@ -108,7 +108,7 @@
    transfer.
 
    These issues are addressed by providing a SPI specific bytecode
-   based on the Mutekh @xref {generic bytecode}. A bytecode request
+   based on the Mutekh @xref {generic bytecode}{}. A bytecode request
    come with a bytecode program containing some synchronous SPI
    transfer instructions as well as time delay, chip selection and
    gpio instructions. Generic bytecode instructions can be used for

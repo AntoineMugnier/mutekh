@@ -399,7 +399,6 @@ static DEV_INIT(cc26xx_rtc_init)
 {
   struct cc26xx_rtc_private_s  *pv;
 
-  dev->status = DEVICE_DRIVER_INIT_FAILED;
 
   uintptr_t addr;
 
@@ -458,8 +457,6 @@ static DEV_INIT(cc26xx_rtc_init)
 
   cpu_mem_read_32(pv->addr + CC26XX_AON_RTC_SYNC_ADDR);
 
-  dev->drv = &cc26xx_rtc_drv;
-  dev->status = DEVICE_DRIVER_INIT_DONE;
 
   return 0;
 

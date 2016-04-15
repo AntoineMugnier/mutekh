@@ -61,7 +61,6 @@ struct char_pipe_context_s
 #ifdef CONFIG_DRIVER_CHAR_PIPE_FIFO
   pipe_fifo_root_t fifo[2];
 #endif
-  bool_t nested;
 };
 
 static DEV_INIT(char_pipe_init);
@@ -196,7 +195,6 @@ static DEV_CHAR_REQUEST(char_pipe_request)
   assert(rq->size);
 
   LOCK_SPIN_IRQ(&dev->lock);
-  assert(!pv->nested++);
 
   switch (rq->type & ~_DEV_CHAR_FLUSH)
     {
@@ -250,7 +248,6 @@ static DEV_CHAR_REQUEST(char_pipe_request)
       break;
     }
 
-  pv->nested = 0;
   LOCK_RELEASE_IRQ(&dev->lock);
 
   if (done)
@@ -309,7 +306,6 @@ static DEV_INIT(char_pipe_init)
   if (!pv)
     return -ENOMEM;
 
-  pv->nested = 0;
   dev_request_queue_init(&pv->rq_q[0]);
   dev_request_queue_init(&pv->rq_q[1]);
 

@@ -508,7 +508,6 @@ static DEV_INIT(bcm283x_gpio_init)
 {
   struct bcm283x_gpio_private_s *pv;
 
-  dev->status = DEVICE_DRIVER_INIT_FAILED;
 
   pv = mem_alloc(sizeof (*pv), (mem_scope_sys));
 
@@ -541,8 +540,6 @@ static DEV_INIT(bcm283x_gpio_init)
 
 #endif
 
-  dev->drv = &bcm283x_gpio_drv;
-  dev->status = DEVICE_DRIVER_INIT_DONE;
   return 0;
 
  err_unlink:

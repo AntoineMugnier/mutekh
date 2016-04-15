@@ -199,7 +199,6 @@ static DEV_INIT(efm32_msc_init)
 {
   struct efm32_msc_context_s	*pv;
 
-  dev->status = DEVICE_DRIVER_INIT_FAILED;
 
   /* allocate private driver data */
   pv = mem_alloc(sizeof(*pv), (mem_scope_sys));
@@ -213,8 +212,6 @@ static DEV_INIT(efm32_msc_init)
 
   pv->page_log2 = (cpu_mem_read_8(0x0fe081e7) + 10) & 0xff;
 
-  dev->drv = &efm32_msc_drv;
-  dev->status = DEVICE_DRIVER_INIT_DONE;
 
   return 0;
 

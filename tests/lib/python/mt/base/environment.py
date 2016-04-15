@@ -1,6 +1,7 @@
 
 import operator
 import os.path
+import re
 
 class Point:
     
@@ -148,14 +149,14 @@ class Environment:
 
                     for c in cmds:
                         def __escape(str):
-                            import re
                             if re.search("\s", str):
                                 return "'"+str+"'"
                             return str
 
                         cstr = " ".join(map(__escape, c))
                         if cstr not in cmd_done:
-                            commands.append("echo " + cstr + redir + target+'_'+context['action'] + ".log")
+                            if (not re.search('^grep\\b', cstr)):
+                                commands.append("echo " + cstr + redir + target+'_'+context['action'] + ".log")
                             redir = " >> ";
                             commands.append(cstr + redir + target+'_'+context['action'] + ".log 2>&1")
                             cmd_done[cstr] = True
