@@ -62,10 +62,13 @@ struct arm_dev_private_s
 # endif
 #endif
 
-# if defined(CONFIG_CPU_ARM32M_TIMER_SYSTICK) || defined(CONFIG_CPU_ARM32M_TIMER_DWTCYC)
+#if defined (CONFIG_CPU_ARM32M_TIMER_SYSTICK) \
+  || defined(CONFIG_CPU_ARM32M_TIMER_DWTCYC)
   struct dev_freq_s freq;
+#endif
+#ifdef CONFIG_CPU_ARM32M_CLOCK
   struct dev_clock_sink_ep_s clk_ep;
-# endif
+#endif
 #endif
 };
 

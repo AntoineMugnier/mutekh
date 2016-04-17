@@ -324,7 +324,7 @@ static DEVICE_TREE_WALKER(irqmp_start_cpus_mask)
   uint32_t *mask = priv;
 
   if (dev->node.flags & DEVICE_FLAG_CPU &&
-      dev->status == DEVICE_DRIVER_INIT_DONE)
+      dev->status == DEVICE_INIT_DONE)
     {
       uintptr_t maj, min;
       if (!device_res_get_uint(dev, DEV_RES_ID, 0, &maj, &min))
@@ -339,7 +339,7 @@ void gaisler_irqmp_start_cpus()
   struct device_s *icu;
   
   if (device_get_by_path(&icu, NULL, NULL, "/icu", NULL) ||
-      icu->status != DEVICE_DRIVER_INIT_DONE ||
+      icu->status != DEVICE_INIT_DONE ||
       icu->drv != &gaisler_irqmp_drv)
     {
       printk("error: no default IRQMP device found to start other processors\n");

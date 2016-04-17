@@ -199,35 +199,51 @@ struct dev_enum_ident_s
 
 /**
    @This is the device driver initialization function type. This
-   function will allocate device private data and initialize the
-   hardware. It must be called before using any other functions on the
+   function allocates device private data and initialize the
+   hardware. It will be called before using any other functions on the
    device.
 
-   The value of @ref device_s::status will be updated depending on the
-   return value of this function.
+   The device initialization status will be updated depending on the
+   return value of this function:
 
-   When the function returns @tt -EAGAIN, the @ref
-   DEVICE_DRIVER_INIT_PARTIAL value is used to indicate that only some
-   drivers classes are properly initialized and ready for use. The
-   @ref device_s::init_mask bit mask must be updated along in this
-   case. The initialization function will be called again later
-   in this case.
+   @list
+     @item If 0 is returned, the device status changes to @ref
+        DEVICE_INIT_DONE.
 
-   This init function must return 0 when the initialization is
-   completed. Any other error code can be used in order to report a
-   permanent error. The status will the be set to @ref
-   DEVICE_DRIVER_INIT_FAILED and the function will not be called again
-   later.
+     @item The first call to this function might not be able to fully
+       complete the initialization of the device. In this case, it
+       should return @tt -EAGAIN to indicate that initialization will
+       complete later. The device status will then be changed to @ref
+       DEVICE_INIT_ONGOING. The initialization may complete either
+       when the @ref device_async_init_done is called by the driver or
+       when the dev_init_t function is called again. The later occurs
+       when some progress are made on initialization of related
+       devices and the @ref DRIVER_FLAGS_INIT_RETRY flag of the driver
+       is set. The @ref device_init_is_partial function should be used
+       to test for the initial invocation.
+
+     @item If an error is returned and the driver has not invoked the
+       @ref device_init_set_class function, the status is changed
+       to @ref DEVICE_INIT_FAILED. The driver must have released all
+       resource associated to the device in this case as the @ref
+       dev_cleanup_t function will not be called.
+
+     @item If an error is returned but some classes have been
+       reported as initialized, the status is changed to @ref
+       DEVICE_INIT_PARTIAL.
+   @end list
 
    The @ref DRIVER_FLAGS_NO_DEPEND flag can be used so that this
    function is called even if some resource dependencies are not
    satisfied. The driver is then responsible for testing missing
-   dependencies. In this case the @tt cl_missing mask indicates any
-   driver classes related to missing resource dependencies.
+   dependencies. In this case the @tt cl_missing mask parameter
+   indicates any driver classes related to a missing resource
+   dependencies.
 
-   This function may be called early during startup depending on the
-   driver. Some kernel service can not be used from this function if
-   the driver has the @ref DRIVER_FLAGS_EARLY_INIT flag set.
+   The @ref DRIVER_FLAGS_EARLY_INIT flag can be used so that this
+   function is called early during startup. Some kernel service can
+   not be used in this case, especially, asynchronous initialization
+   can not be used.
 
    @xsee {Device status}
 */
@@ -239,14 +255,27 @@ typedef DEV_INIT(dev_init_t);
 #define DEV_CLEANUP(n)	__attribute__((unused)) error_t    (n) (struct device_s *dev)
 
 /**
-   @This is device cleanup() function type. @This tries to release
+   @This is the device cleanup function type. @This tries to release
    all ressources allocated by the @ref dev_init_t function.
-   This function will only be called when @ref device_s::ref_count
-   and @ref device_s::start_count are both zero.
+
+   This function will only be called these conditions are met:
+   @list
+     @item the device status is either @ref DEVICE_INIT_DONE,
+       @ref DEVICE_INIT_PARTIAL or @ref DEVICE_INIT_DECLINE.
+     @item The @ref device_s::ref_count field is zero.
+     @item The @ref device_s::start_count field is zero.
+     @item The device has no children.
+   @end list
 
    This function is called with the device lock held.
    @This function must return @tt -EBUSY if it is not possible to
    release the device yet.
+
+   @This function may also return @tt -EAGAIN if cleanup has been
+   initiated but requires completion of some asynchronous operations.
+   The cleanup will complete when the @ref device_async_cleanup_done
+   function is called from a deferred kroutine. This requires
+   definition of the @ref #CONFIG_DEVICE_INIT_ASYNC token.
 */
 typedef DEV_CLEANUP(dev_cleanup_t);
 
@@ -320,6 +349,12 @@ enum dev_use_op_e
   DEV_USE_CLOCK_NOTIFY,
 # endif
 #endif
+
+#ifdef CONFIG_DEVICE_ENUM
+  /** This operation is used when a device child initialization completes.
+      The @tt param argument is a pointer to the child device. */
+  DEV_USE_ENUM_CHILD_INIT,
+#endif
 };
 
 struct device_accessor_s;
@@ -349,6 +384,9 @@ enum driver_flags_e
   /** Do not test for missing resource dependencies before calling the
       driver initialization function on a device. */
   DRIVER_FLAGS_NO_DEPEND = 2,
+  /** The dev_init_t function of the driver will be called again when
+      the @tt -EAGAIN error code is returned. */
+  DRIVER_FLAGS_RETRY_INIT = 4,
 };
 
 /** device driver object structure */
@@ -360,7 +398,7 @@ struct driver_s
 #endif
 
   dev_init_t	*f_init;
-#if defined(CONFIG_DEVICE_DRIVER_CLEANUP)
+#if defined(CONFIG_DEVICE_CLEANUP)
   dev_cleanup_t	*f_cleanup;
 #endif
   dev_use_t     *f_use;
@@ -377,7 +415,7 @@ struct driver_s
 # define DRIVER_DECLARE_DESC(x)
 #endif
 
-#if defined(CONFIG_DEVICE_DRIVER_CLEANUP)
+#if defined(CONFIG_DEVICE_CLEANUP)
 # define DRIVER_DECLARE_CLEANUP(x) .f_cleanup = (x),
 #else
 # define DRIVER_DECLARE_CLEANUP(x)
@@ -516,6 +554,87 @@ error_t device_get_api(struct device_s *dev,
                        enum driver_class_e cl,
                        const struct driver_class_s **api);
 
+/** @This function may be called from a deferred kroutine handler of
+    the device driver when the @ref dev_init_t has previously returned
+    @tt -EAGAIN and some progress has been made. It must be called
+    with the device lock held.
+
+    This is used to notify waiters, start a new pass on the device
+    tree for initialization of depending devices and optionally update
+    the device status.
+
+    @list
+      @item If no error is reported, the device status changes to @ref
+        DEVICE_INIT_DONE.
+
+      @item If the @tt -EAGAIN error code is used, the device is left
+        in the @ref DEVICE_INIT_ONGOING state.
+
+      @item If an error is reported and the driver has not invoked the
+        @ref device_init_set_class function yet, the status is changed
+        to @ref DEVICE_INIT_FAILED. The driver must have released all
+        resource associated to the device in this case as the @ref
+        dev_cleanup_t function will not be called.
+
+      @item If an error is reported and some classes have been
+        reported as initialized, the status is changed to @ref
+        DEVICE_INIT_PARTIAL.
+    @end list */
+config_depend(CONFIG_DEVICE_INIT_ASYNC)
+void device_async_init_done(struct device_s *dev, error_t error);
+
+/** @This function may be called from a deferred kroutine handler of
+    the device driver when the @ref dev_cleanup_t has previously
+    returned @tt -EAGAIN and the cleanup eventually terminates.
+    It must be called with the device lock held. */
+config_depend_and2(CONFIG_DEVICE_CLEANUP, CONFIG_DEVICE_INIT_ASYNC)
+void device_async_cleanup_done(struct device_s *dev);
+
+/** @This marks a class of the driver as available during partial
+    initialization. The @tt index specifies a class as passed to the
+    @ref #DRIVER_DECLARE macro of the driver.  @see
+    DEVICE_INIT_ONGOING */
+config_depend_alwaysinline(CONFIG_DEVICE_INIT_PARTIAL,
+void device_init_set_class(struct device_s *dev, uint_fast8_t index),
+{
+  dev->init_mask |= 1 << index;
+})
+
+/** @This can be used during the initialization phase of a device to
+    test if a specified class is initialized. The @tt index specifies
+    a class as passed to the @ref #DRIVER_DECLARE macro of the driver.
+    @This always returns true if @ref #CONFIG_DEVICE_INIT_PARTIAL is
+    not defined. */
+ALWAYS_INLINE bool_t device_init_test_class(struct device_s *dev, uint_fast8_t index)
+{
+#ifdef CONFIG_DEVICE_INIT_PARTIAL
+  return dev->status == DEVICE_INIT_DONE ||
+    (dev->init_mask >> index) & 1;
+#else
+  return 1;
+#endif
+}
+
+/** @This can be used from the @ref dev_init_t function to test if we
+    are doing additional passes of partial device initialization.
+    @This returns false if we are in the first call to the
+    initialization function which is always the case when @ref
+    #CONFIG_DEVICE_INIT_PARTIAL is not defined. */
+ALWAYS_INLINE bool_t device_init_is_partial(struct device_s *dev)
+{
+#ifdef CONFIG_DEVICE_INIT_PARTIAL
+  return dev->status == DEVICE_INIT_ONGOING;
+#else
+  return 0;
+#endif
+}
+
+/** @This function is similar to @ref device_get_accessor, the current
+    scheduler context is suspended until the device is initialized. */
+config_depend_and2(CONFIG_DEVICE_ENUM, CONFIG_MUTEK_CONTEXT_SCHED)
+error_t device_wait_accessor(struct device_accessor_s *acc, struct device_s *dev,
+                             enum driver_class_e cl, uint_fast8_t number);
+
 /** @This initializes a device accessor object. If the return value is
     0, the accessor object can then be used to access device driver
     functions of requested api class.
@@ -561,6 +680,13 @@ ALWAYS_INLINE bool_t device_cmp_accessor(const struct device_accessor_s *a,
 error_t device_get_accessor_by_path(struct device_accessor_s *acc,
                                     struct device_node_s *root,
                                     const char *path, enum driver_class_e cl);
+
+/** @This function is similar to @ref device_get_accessor_by_path, the current
+    scheduler context is suspended until the device is initialized. */
+config_depend_and2(CONFIG_DEVICE_ENUM, CONFIG_MUTEK_CONTEXT_SCHED)
+error_t device_wait_accessor_by_path(struct device_accessor_s *acc,
+                                     struct device_node_s *root,
+                                     const char *path, enum driver_class_e cl);
 
 /**
    @This must be called when device driver accessor is
@@ -656,14 +782,14 @@ void device_find_driver(struct device_node_s *node, uint_fast8_t pass);
 error_t device_bind_driver(struct device_s *dev, const struct driver_s *drv);
 
 /** @This leave the device without any associated driver. */
-config_depend(CONFIG_DEVICE_DRIVER_CLEANUP)
+config_depend(CONFIG_DEVICE_CLEANUP)
 error_t device_unbind_driver(struct device_s *dev);
 
 /** @This performs device initialization using previously bound driver. */
-error_t device_init_driver(struct device_s *dev);
+error_t device_init_driver(struct device_s *dev, uint_fast8_t pass);
 
 /** @This stops the device and cleanup driver allocated resources. */
-config_depend(CONFIG_DEVICE_DRIVER_CLEANUP)
+config_depend(CONFIG_DEVICE_CLEANUP)
 error_t device_release_driver(struct device_s *dev);
 
 /** @This function does nothing but returning @tt -ENOTUP */

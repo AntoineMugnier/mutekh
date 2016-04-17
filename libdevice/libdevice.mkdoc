@@ -124,25 +124,53 @@ DEV_DECLARE_STATIC(timer_dev, "timer", 0, my_timer_drv,
     @end section
 
     @section t {Device status}
-      In order to access a device in MutekH, the instance of the @ref
-      device_s object must be linked to a @ref driver_s object. When
-      the device is created by dynamic enumerations, the driver
-      registry is searched for a matching driver automatically. When
-      the device is declared statically by the @ref
-      #DEV_DECLARE_STATIC macro, a pointer to the driver is specified.
+      A device must go through several initialization steps in order
+      to be usable.
 
-      The initialization of the device by the driver is not performed
+      First, the instance of the @ref device_s object must be linked
+      to a @ref driver_s object. When the device is created by dynamic
+      enumerations, the driver registry is searched for a matching
+      driver automatically. When the device is declared statically by
+      the @ref #DEV_DECLARE_STATIC macro, a pointer to the driver is
+      specified.
+
+      The initialization of the device by the driver is not started
       until all dependencies expressed in the device resources are
       satisfied. This mean that all device path references in the
-      resources of the device must be valid and point to an
-      initialized device.
+      resources of the device must be valid and point to an other
+      device which is at least partially initialized.
 
-      Once a driver a available and the initialization function
-      has been successful, the device can accessed by other modules,
-      including the application.
+      Once a driver is available and its @ref dev_init_t function has
+      been called successfully, the device can accessed by other
+      modules, including the application.
 
-      The @ref device_s::status field reflects the device
-      initialization status.
+      However, a driver may not be able to complete initialization of
+      a device immediately:
+      @list
+        @item When the driver has started an asynchronous operation as
+          part of the device initialization. The completion of the
+          initialization will be signaled by the driver from a
+          deferred execution context. This requires definition of the
+          @ref #CONFIG_DEVICE_INIT_ASYNC token.
+
+        @item The driver may put the device in a partially initialized
+          state. This can be temporary or permanent. Some classes of
+          the driver may be usable at this point. This happens for
+          various reasons: when not all dependencies are satisfied yet
+          or when an error condition is detected. This requires
+          definition of the @ref #CONFIG_DEVICE_INIT_PARTIAL token.
+
+        @item Partial and asynchronous initialization can be combined.
+          Some more driver classes may become available over time in
+          this case.
+      @end list
+
+      When the @ref #CONFIG_DEVICE_CLEANUP token is defined,
+      the @ref dev_cleanup_t function of drivers is responsible for 
+
+      The @ref device_status_e enum specifies the possible
+      initialization states of a device.
+
     @end section
 
     @section t {Device accessor}
@@ -169,6 +197,11 @@ DEV_DECLARE_STATIC(timer_dev, "timer", 0, my_timer_drv,
       @code
   err = device_get_accessor_by_path(&t.base, NULL, "/timer[0]", DRIVER_CLASS_TIMER);
       @end code
+
+      When running from an scheduler context the @ref
+      device_wait_accessor and @ref device_wait_accessor_by_path
+      functions can be used to wait for a device initialization to
+      complete.
 
       Classes specific functions can then be invoked on the device by
       using the @ref #DEVICE_OP macro:

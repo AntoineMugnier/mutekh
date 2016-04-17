@@ -847,7 +847,7 @@ static DEV_INIT(char_mux_init)
   return -EINVAL;
 }
 
-#ifdef CONFIG_DEVICE_DRIVER_CLEANUP
+#ifdef CONFIG_DEVICE_CLEANUP
 static DEV_CLEANUP(char_mux_cleanup)
 {
   struct char_mux_context_s *pv = dev->drv_pv;

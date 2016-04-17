@@ -7,3 +7,4 @@ shell_dev
 bytecode
 malloc_stress
 kroutine
+devinit

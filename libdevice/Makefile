@@ -15,8 +15,12 @@ enum_headers = include/device/types.h \
 objs = driver.o device.o resources.o init.o request.o
 
 objs-$(CONFIG_DEVICE_IRQ) += irq.o
-objs-$(CONFIG_DEVICE_TREE) += enum_root.o
 objs-$(CONFIG_DEVICE_SLEEP) += sleep.o
+
+ifeq ($(CONFIG_DEVICE_ENUM), defined)
+objs += device_enum.o
+objs-$(CONFIG_DEVICE_SHELL) += shell_enum.o
+endif
 
 ifeq ($(CONFIG_DEVICE_CHAR), defined)
 objs += device_char.o

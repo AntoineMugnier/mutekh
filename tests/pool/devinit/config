@@ -1,0 +1,41 @@
+
+  # New source code module to be compiled
+  %append MODULES test:$(CONFIGPATH)
+
+  # Application license
+  CONFIG_LICENSE_APP_LGPL
+
+  CONFIG_APP_START!
+  CONFIG_MUTEK_THREAD!
+  CONFIG_MUTEK_KROUTINE_SCHED!
+
+  CONFIG_MUTEK_SHELL!
+  CONFIG_DEVICE_SHELL!
+
+  %include scripts/options.build
+  %include arch/arch.build
+
+%section t_async
+  CONFIG_DEVICE_INIT_ASYNC!
+%else
+  CONFIG_DEVICE_INIT_ASYNC! undefined
+
+%section t_partial
+  CONFIG_DEVICE_INIT_PARTIAL!
+%else
+  CONFIG_DEVICE_INIT_PARTIAL! undefined
+
+%section t_enum
+  CONFIG_DEVICE_ENUM!
+%else
+  CONFIG_DEVICE_ENUM! undefined
+
+%section t_tree
+  CONFIG_DEVICE_TREE!
+%else
+  CONFIG_DEVICE_TREE! undefined
+
+%section t_cleanup
+  CONFIG_DEVICE_CLEANUP!
+%else
+  CONFIG_DEVICE_CLEANUP! undefined

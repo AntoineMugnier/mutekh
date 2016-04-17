@@ -33,7 +33,7 @@
 void libdevice_cpu_regs_initsmp()
 {
   if (cpu_isbootstrap())
-    printk("device: initialization of processor(s): ");
+    printk("device: cpu(s) reg init: ");
 
   mutekh_startup_smp_barrier();
 

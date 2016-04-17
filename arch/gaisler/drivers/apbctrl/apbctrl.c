@@ -40,6 +40,11 @@
 #include <string.h>
 #include <stdio.h>
 
+struct apbctrl_pv_s
+{
+  dev_request_queue_root_t queue;
+};
+
 static DEV_ENUM_MATCH_DRIVER(apbctrl_match_driver)
 {
   size_t i;
@@ -62,6 +67,38 @@ static DEV_ENUM_MATCH_DRIVER(apbctrl_match_driver)
   return 0;
 }
 
+static DEV_ENUM_REQUEST(apbctrl_request)
+{
+  struct device_s *dev = accessor->dev;
+  struct apbctrl_pv_s *pv = dev->drv_pv;
+
+  return dev_drv_enum_request_generic(&pv->queue, dev, rq);
+}
+
+static DEV_ENUM_CANCEL(apbctrl_cancel)
+{
+  struct device_s *dev = accessor->dev;
+  struct apbctrl_pv_s *pv = dev->drv_pv;
+
+  return dev_drv_enum_cancel_generic(&pv->queue, dev, rq);
+}
+
+static DEV_USE(apbctrl_use)
+{
+  switch (op)
+    {
+    case DEV_USE_ENUM_CHILD_INIT: {
+      struct device_s *cdev = param;
+      struct device_s *dev = (void*)cdev->node.parent;
+      struct apbctrl_pv_s *pv = dev->drv_pv;
+      dev_drv_enum_child_init(&pv->queue, cdev);
+      return 0;
+    }
+
+    default:
+      return dev_use_generic(param, op);
+    }
+}
 
 #ifdef CONFIG_DEVICE_IRQ
 
@@ -223,7 +260,7 @@ static void apbctrl_scan(struct device_s *dev, uintptr_t begin)
       if (mask & (mask+1))
         {
           printk("apbctrl: %p device address mask with non contiguous range is not supported\n", d);
-          d->status = DEVICE_ENUM_ERROR;
+          d->status = DEVICE_INIT_ENUM;
         }
       else
         {
@@ -237,7 +274,6 @@ static void apbctrl_scan(struct device_s *dev, uintptr_t begin)
             }
         }
 
-      d->enum_dev = dev;
       device_attach(d, dev);
       device_shrink(d);
 
@@ -263,8 +299,6 @@ static void apbctrl_scan(struct device_s *dev, uintptr_t begin)
 DEV_CLEANUP(apbctrl_cleanup);
 DEV_INIT(apbctrl_init);
 
-#define apbctrl_use dev_use_generic
-
 DRIVER_DECLARE(apbctrl_drv, 0, "Gaisler APB bus controller", apbctrl,
                DRIVER_ENUM_METHODS(apbctrl));
 
@@ -273,6 +307,7 @@ DRIVER_REGISTER(apbctrl_drv,
 
 DEV_INIT(apbctrl_init)
 {
+  struct apbctrl_pv_s *pv;
 
   uintptr_t begin, end;
 
@@ -282,15 +317,28 @@ DEV_INIT(apbctrl_init)
   if (end - begin < 0x100000) // range needed for pnp data
     return -EINVAL;
 
+  pv = mem_alloc(sizeof(*pv), mem_scope_sys);
+  if (!pv)
+    return -ENOMEM;
+
+  dev->drv_pv = pv;
+
+  dev_request_queue_init(&pv->queue);
+
   apbctrl_scan(dev, begin);
 
-
   return 0;
-
-  return -1;
 }
 
 DEV_CLEANUP(apbctrl_cleanup)
 {
+  struct apbctrl_pv_s *pv = dev->drv_pv;
+
+  if (!dev_request_queue_isempty(&pv->queue))
+    return -EBUSY;
+
+  mem_free(pv);
+
+  return 0;
 }
 

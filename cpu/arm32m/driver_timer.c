@@ -370,10 +370,10 @@ DEV_TIMER_CONFIG(arm_timer_config)
       if (cfg)
         {
           cfg->cap = DEV_TIMER_CAP_STOPPABLE | DEV_TIMER_CAP_HIGHRES;
-#ifdef CONFIG_DEVICE_CLOCK
+# if defined(CONFIG_CPU_ARM32M_CLOCK) && defined(CONFIG_DEVICE_CLOCK_VARFREQ)
           if (pv->clk_ep.flags & DEV_CLOCK_EP_VARFREQ)
-            cfg->cap |= DEV_TIMER_CAP_VARFREQ;
-#endif
+            cfg->cap |= DEV_TIMER_CAP_VARFREQ | DEV_TIMER_CAP_CLKSKEW;
+# endif
 # ifdef CONFIG_DEVICE_IRQ
           cfg->max = 0xffffffffffffffffULL;
 # else
@@ -412,8 +412,9 @@ DEV_TIMER_CONFIG(arm_timer_config)
           cfg->rev = pv->systick_rev;
           cfg->res = pv->systick_period;
           cfg->cap = DEV_TIMER_CAP_REQUEST | DEV_TIMER_CAP_STOPPABLE;
-#ifdef CONFIG_DEVICE_CLOCK
-          cfg->cap |= DEV_TIMER_CAP_VARFREQ | DEV_TIMER_CAP_CLKSKEW;
+# if defined(CONFIG_CPU_ARM32M_CLOCK) && defined(CONFIG_DEVICE_CLOCK_VARFREQ)
+          if (pv->clk_ep.flags & DEV_CLOCK_EP_VARFREQ)
+            cfg->cap |= DEV_TIMER_CAP_VARFREQ | DEV_TIMER_CAP_CLKSKEW;
 #endif
         }
       break;
@@ -431,8 +432,9 @@ DEV_TIMER_CONFIG(arm_timer_config)
           cfg->res = 1;
           cfg->cap = DEV_TIMER_CAP_STOPPABLE | DEV_TIMER_CAP_HIGHRES
             | DEV_TIMER_CAP_TICKLESS;
-#ifdef CONFIG_DEVICE_CLOCK
-          cfg->cap |= DEV_TIMER_CAP_VARFREQ;
+# if defined(CONFIG_CPU_ARM32M_CLOCK) && defined(CONFIG_DEVICE_CLOCK_VARFREQ)
+          if (pv->clk_ep.flags & DEV_CLOCK_EP_VARFREQ)
+            cfg->cap |= DEV_TIMER_CAP_VARFREQ | DEV_TIMER_CAP_CLKSKEW;
 #endif
         }
       break;
@@ -442,6 +444,7 @@ DEV_TIMER_CONFIG(arm_timer_config)
       err = -ENOTSUP;
     }
 
+ err:
   LOCK_RELEASE_IRQ(&dev->lock);
 
   return err;

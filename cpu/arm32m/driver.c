@@ -194,22 +194,20 @@ static DEV_USE(arm_use)
     case DEV_USE_PUT_ACCESSOR:
       return 0;
 
-#ifdef CONFIG_DEVICE_CLOCK_VARFREQ
+#ifdef CONFIG_CPU_ARM32M_CLOCK
+# if (defined (CONFIG_CPU_ARM32M_TIMER_SYSTICK) \
+      || defined(CONFIG_CPU_ARM32M_TIMER_DWTCYC)) &&    \
+  defined(CONFIG_DEVICE_CLOCK_VARFREQ)
     case DEV_USE_CLOCK_NOTIFY: {
       struct dev_clock_notify_s *chg = param;
       struct dev_clock_sink_ep_s *sink = chg->sink;
       struct device_s *dev = sink->dev;
       struct arm_dev_private_s *pv = dev->drv_pv;
-# if defined(CONFIG_CPU_ARM32M_TIMER_SYSTICK) || defined(CONFIG_CPU_ARM32M_TIMER_DWTCYC)
       pv->freq = chg->freq;
-#  if defined(CONFIG_DEVICE_IRQ)
       pv->systick_rev += 2;
-#  endif
-# endif
       return 0;
     }
-#endif
-#ifdef CONFIG_DEVICE_CLOCK
+# endif
     case DEV_USE_CLOCK_GATES:
       return 0;
 #endif
@@ -248,14 +246,14 @@ enum {   /* same order as driver methods below */
   ARM32M_INITID_TIMER,
 #endif
   ARM32M_INITID_CPU,
-#ifdef CONFIG_DEVICE_CLOCK
   ARM32M_INITID_CLOCK,
-#endif
 };
 
-DRIVER_DECLARE(arm32m_drv, DRIVER_FLAGS_EARLY_INIT |
-                           DRIVER_FLAGS_NO_DEPEND,
-               "Arm-m processor", arm,
+DRIVER_DECLARE(arm32m_drv,
+#ifdef CONFIG_DEVICE_INIT_PARTIAL
+                           DRIVER_FLAGS_NO_DEPEND | DRIVER_FLAGS_RETRY_INIT |
+#endif
+               DRIVER_FLAGS_EARLY_INIT, "Arm-m processor", arm,
 #ifdef CONFIG_DEVICE_IRQ
                DRIVER_ICU_METHODS(arm_icu),
 #endif
@@ -271,7 +269,9 @@ static DEV_INIT(arm_init)
 {
   struct arm_dev_private_s  *pv = dev->drv_pv;
 
-  if (dev->status == DEVICE_DRIVER_INIT_PENDING)
+#ifdef CONFIG_DEVICE_INIT_PARTIAL
+  if (!device_init_is_partial(dev))
+#endif
     {
       /* get processor device id specifed in resources */
       uintptr_t id = 0;
@@ -294,7 +294,9 @@ static DEV_INIT(arm_init)
           cpu_tree_node_cleanup(&pv->node);
           goto err_pv;
         }
-      BIT_SET(dev->init_mask, ARM32M_INITID_CPU);
+#ifdef CONFIG_DEVICE_INIT_PARTIAL
+      device_init_set_class(dev, ARM32M_INITID_CPU);
+#endif
 
 #ifdef CONFIG_DEVICE_IRQ
       /* init arm irq sink end-points */
@@ -308,24 +310,42 @@ static DEV_INIT(arm_init)
           cpu_interrupt_sethandler(arm_irq_handler);
         }
 
-      BIT_SET(dev->init_mask, ARM32M_INITID_ICU);
+# ifdef CONFIG_DEVICE_INIT_PARTIAL
+      device_init_set_class(dev, ARM32M_INITID_ICU);
+# endif
 #endif
     }
 
-#ifdef CONFIG_DEVICE_CLOCK
-  if (!BIT_EXTRACT(dev->init_mask, ARM32M_INITID_CLOCK))
+#ifdef CONFIG_DEVICE_INIT_PARTIAL
+  if (!device_init_test_class(dev, ARM32M_INITID_CLOCK))
     {
+# ifdef CONFIG_CPU_ARM32M_CLOCK
+      /* postpone initialization of the clock input if the clock
+         manager is not available yet */
       if (BIT_EXTRACT(cl_missing, DRIVER_CLASS_CMU))
         return -EAGAIN;
+# endif
 #endif
-#if defined(CONFIG_CPU_ARM32M_TIMER_SYSTICK) || defined(CONFIG_CPU_ARM32M_TIMER_DWTCYC)
-      if (dev_drv_clock_init(dev, &pv->clk_ep, 0, DEV_CLOCK_EP_SINK_NOTIFY |
-                             DEV_CLOCK_EP_POWER_CLOCK | DEV_CLOCK_EP_SINK_SYNC,
-                             &pv->freq))
-        goto err_node;
+
+#ifdef CONFIG_CPU_ARM32M_CLOCK
+      /* clock input init */
+      dev_clock_sink_init(dev, &pv->clk_ep, DEV_CLOCK_EP_SINK_NOTIFY |
+                          DEV_CLOCK_EP_POWER_CLOCK | DEV_CLOCK_EP_SINK_SYNC);
+      if (dev_clock_sink_link(&pv->clk_ep, 0,
+# if defined (CONFIG_CPU_ARM32M_TIMER_SYSTICK) || defined(CONFIG_CPU_ARM32M_TIMER_DWTCYC)
+                              &pv->freq /* need to get timer freq from CMU */
+# else
+                              NULL /* no timer, no need to store clock */
+# endif
+                              ))
+        goto err_clock;
+#elif defined (CONFIG_CPU_ARM32M_TIMER_SYSTICK) || defined(CONFIG_CPU_ARM32M_TIMER_DWTCYC)
+      if (device_get_res_freq(dev, &pv->freq, 0)) /* no CMU, get timer freq from resources */
+        goto err_clock;
 #endif
-#ifdef CONFIG_DEVICE_CLOCK
-      BIT_SET(dev->init_mask, ARM32M_INITID_CLOCK);
+
+#ifdef CONFIG_DEVICE_INIT_PARTIAL
+      device_init_set_class(dev, ARM32M_INITID_CLOCK);
     }
 #endif
 
@@ -339,7 +359,10 @@ static DEV_INIT(arm_init)
   cpu_mem_write_32(ARMV7M_NVIC_ISER_ADDR(0),
                    ARMV7M_NVIC_ISER_SETENA(15));
 # endif
-  BIT_SET(dev->init_mask, ARM32M_INITID_TIMER);
+
+# ifdef CONFIG_DEVICE_INIT_PARTIAL
+  device_init_set_class(dev, ARM32M_INITID_TIMER);
+# endif
 #endif
 
 #ifdef CONFIG_CPU_ARM32M_TIMER_DWTCYC
@@ -348,6 +371,10 @@ static DEV_INIT(arm_init)
 
   return 0;
 
+ err_clock:
+#ifdef CONFIG_DEVICE_INIT_PARTIAL
+  return -ENOENT;
+#endif
  err_node:
   cpu_tree_node_cleanup(&pv->node);
  err_pv:
@@ -361,7 +388,7 @@ static DEV_CLEANUP(arm_cleanup)
   struct arm_dev_private_s *pv = dev->drv_pv;
 
 #ifdef CONFIG_CPU_ARM32M_TIMER_SYSTICK
-  if (BIT_EXTRACT(dev->init_mask, ARM32M_INITID_TIMER))
+  if (device_init_test_class(dev, ARM32M_INITID_TIMER))
     {
       if (pv->systick_start & 1)
         return -EBUSY;
@@ -370,14 +397,12 @@ static DEV_CLEANUP(arm_cleanup)
   cpu_mem_write_32(ARMV7M_SYST_CSR_ADDR, 0);
 #endif
 
-#if defined(CONFIG_CPU_ARM32M_TIMER_SYSTICK) || defined(CONFIG_CPU_ARM32M_TIMER_DWTCYC)
-# ifdef CONFIG_DEVICE_CLOCK
-  if (BIT_EXTRACT(dev->init_mask, ARM32M_INITID_CLOCK))
-# endif
+#ifdef CONFIG_CPU_ARM32M_CLOCK
+  if (device_init_test_class(dev, ARM32M_INITID_CLOCK))
     dev_drv_clock_cleanup(dev, &pv->clk_ep);
 #endif
 
-  if (BIT_EXTRACT(dev->init_mask, ARM32M_INITID_CPU))
+  if (device_init_test_class(dev, ARM32M_INITID_CPU))
     {
       cpu_tree_remove(&pv->node);
       cpu_tree_node_cleanup(&pv->node);

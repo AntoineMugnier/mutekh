@@ -117,7 +117,7 @@ static void dev_console_opt_comp(struct termui_con_complete_ctx_s *cctx,
           if (len)
             {
               DEVICE_NODE_FOREACH(root, node, {
-                  if (!node->name || (node->flags & DEVICE_FLAG_IGNORE))
+                  if (!node->name)
                     continue;
                   if (!strncmp(node->name, cctx->start, len) &&
                       !node->name[len])
@@ -144,7 +144,7 @@ static void dev_console_opt_comp(struct termui_con_complete_ctx_s *cctx,
 
   DEVICE_NODE_FOREACH(root, node, {
       struct device_node_s *n = node;
-      if (!n->name || (n->flags & DEVICE_FLAG_IGNORE))
+      if (!n->name)
         continue;
       if (termui_con_comp_match(cctx, n->name, NULL, 0) <= 0)
         continue;
@@ -314,7 +314,7 @@ static TERMUI_CON_COMMAND_PROTOTYPE(dev_shell_alias)
   return 0;
 }
 
-# ifdef CONFIG_DEVICE_DRIVER_CLEANUP
+# ifdef CONFIG_DEVICE_CLEANUP
 static TERMUI_CON_COMMAND_PROTOTYPE(dev_shell_remove)
 {
   struct termui_optctx_dev_opts *c = ctx;
@@ -353,7 +353,7 @@ dev_shell_dump_drv_class(struct termui_console_s *con, const struct driver_s *dr
   for (i = 0; (c = drv->classes[i]); i++)
     {
       termui_con_printf(con, "%N%s, ", c->class_, driver_class_e,
-                        pending_mask & 1 ? " (pending)" : "");
+                        pending_mask & 1 ? " (inoperative)" : "");
       pending_mask >>= 1;
     }
 }
@@ -368,13 +368,11 @@ dev_shell_dump_device(struct termui_console_s *con, struct device_s *dev,
   for (i = 0; i < indent; i++)
     termui_con_printf(con, "  ");
   termui_con_printf(con, "Device %p `%s'", dev, dev->node.name);
-  if (dev->node.flags & DEVICE_FLAG_IGNORE)
-    termui_con_printf(con, " (ignored)");
   termui_con_printf(con, "\n");
 
   for (i = 0; i < indent; i++)
     termui_con_printf(con, "  ");
-  termui_con_printf(con, "  status: %N, use: %u, start: %u",
+  termui_con_printf(con, "  Status: %N, use: %u, start: %u",
                     dev->status, device_status_e, dev->ref_count,
                     dev->start_count >> CONFIG_DEVICE_START_LOG2INC);
 
@@ -397,7 +395,13 @@ dev_shell_dump_device(struct termui_console_s *con, struct device_s *dev,
       for (i = 0; i < indent + 2; i++)
         termui_con_printf(con, "  ");
       termui_con_printf(con, "Classes: ");
-      dev_shell_dump_drv_class(con, dev->drv, dev->status == DEVICE_DRIVER_INIT_PARTIAL ? ~dev->init_mask : 0);
+      uint8_t init_mask =
+# ifdef CONFIG_DEVICE_INIT_PARTIAL
+        dev->status == DEVICE_INIT_ONGOING ||
+        dev->status == DEVICE_INIT_PARTIAL ? ~dev->init_mask :
+# endif
+        0;
+      dev_shell_dump_drv_class(con, dev->drv, init_mask);
       termui_con_printf(con, "\n");
     }
 
@@ -688,7 +692,7 @@ static TERMUI_CON_COMMAND_PROTOTYPE(dev_shell_driver_bind)
   return device_bind_driver(c->dev, c->drv) ? -EINVAL : 0;
 }
 
-# ifdef CONFIG_DEVICE_DRIVER_CLEANUP
+# ifdef CONFIG_DEVICE_CLEANUP
 static TERMUI_CON_COMMAND_PROTOTYPE(dev_shell_driver_unbind)
 {
   struct termui_optctx_dev_opts *c = ctx;
@@ -701,14 +705,30 @@ static TERMUI_CON_COMMAND_PROTOTYPE(dev_shell_driver_unbind)
 static TERMUI_CON_COMMAND_PROTOTYPE(dev_shell_driver_init)
 {
   struct termui_optctx_dev_opts *c = ctx;
-  return device_init_driver(c->dev) ? -EINVAL : 0;
+  switch (device_init_driver(c->dev, 1))
+    {
+    case -EAGAIN:
+      termui_con_printf(con, "Deferred\n");
+    case 0:
+      return 0;
+    default:
+      return -EINVAL;
+    }
 }
 
-#ifdef CONFIG_DEVICE_DRIVER_CLEANUP
+#ifdef CONFIG_DEVICE_CLEANUP
 static TERMUI_CON_COMMAND_PROTOTYPE(dev_shell_driver_release)
 {
   struct termui_optctx_dev_opts *c = ctx;
-  return device_release_driver(c->dev) ? -EINVAL : 0;
+  switch (device_release_driver(c->dev))
+    {
+    case -EAGAIN:
+      termui_con_printf(con, "Deferred\n");
+    case 0:
+      return 0;
+    default:
+      return -EINVAL;
+    }
 }
 #endif
 
@@ -745,7 +765,7 @@ static TERMUI_CON_GROUP_DECL(dev_driver_group) =
   TERMUI_CON_ENTRY(dev_shell_driver_init, "init",
                    TERMUI_CON_OPTS_CTX(dev_opts, DEV_OPT_DEV, 0, NULL)
                    )
-#if defined(CONFIG_DEVICE_DRIVER_CLEANUP)
+#if defined(CONFIG_DEVICE_CLEANUP)
   TERMUI_CON_ENTRY(dev_shell_driver_release, "release",
                    TERMUI_CON_OPTS_CTX(dev_opts, DEV_OPT_DEV, 0, NULL)
                    )
@@ -779,6 +799,7 @@ extern TERMUI_CON_GROUP_DECL(dev_shell_gpio_group);
 extern TERMUI_CON_GROUP_DECL(dev_shell_rfpacket_group);
 extern TERMUI_CON_GROUP_DECL(dev_shell_spi_ctrl_group);
 extern TERMUI_CON_GROUP_DECL(dev_shell_char_group);
+extern TERMUI_CON_GROUP_DECL(dev_shell_enum_group);
 
 static TERMUI_CON_GROUP_DECL(dev_shell_subgroup) =
 {
@@ -792,7 +813,7 @@ static TERMUI_CON_GROUP_DECL(dev_shell_subgroup) =
                    TERMUI_CON_OPTS_CTX(dev_opts, DEV_OPT_DEV, DEV_OPT_CLASS, NULL)
                    )
 #ifdef CONFIG_DEVICE_TREE
-# ifdef CONFIG_DEVICE_DRIVER_CLEANUP
+# ifdef CONFIG_DEVICE_CLEANUP
   TERMUI_CON_ENTRY(dev_shell_remove, "remove",
                    TERMUI_CON_OPTS_CTX(dev_opts, DEV_OPT_DEV, 0, NULL)
                    )
@@ -836,6 +857,9 @@ static TERMUI_CON_GROUP_DECL(dev_shell_subgroup) =
 #endif
 #ifdef CONFIG_DEVICE_CHAR
   TERMUI_CON_GROUP_ENTRY(dev_shell_char_group, "char")
+#endif
+#ifdef CONFIG_DEVICE_ENUM
+  TERMUI_CON_GROUP_ENTRY(dev_shell_enum_group, "enum")
 #endif
   TERMUI_CON_LIST_END
 };

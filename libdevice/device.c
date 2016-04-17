@@ -43,7 +43,7 @@ const char dev_enum_type_e[] = ENUM_DESC_DEV_ENUM_TYPE_E;
 #ifdef CONFIG_DEVICE_TREE
 
 DEV_DECLARE_STATIC(device_enum_root, "root",
-                   0, device_enum_root_drv);
+                   0, enum_root_drv);
 
 struct device_node_s *device_tree_root()
 {
@@ -63,8 +63,6 @@ void device_tree_init(void)
 
   for (d = &dev_devices_table; d < &dev_devices_table_end; d++)
     {
-      if (d->node.flags & DEVICE_FLAG_IGNORE)
-        continue;
       if (d == &device_enum_root)
         continue;
       device_attach(d, &device_enum_root);
@@ -75,7 +73,7 @@ void device_tree_init(void)
 static void device_init_(struct device_s *dev)
 {
   lock_init(&dev->lock);
-  dev->status = DEVICE_NO_DRIVER;
+  dev->status = DEVICE_INIT_NODRV;
   dev->drv = NULL;
   dev->ref_count = dev->start_count = 0;
   dev->node.flags = DEVICE_FLAG_DEVICE;
@@ -84,10 +82,6 @@ static void device_init_(struct device_s *dev)
   dev->node.name = NULL;
   dev->node.parent = NULL;
   device_list_init(&dev->node.children);
-#endif
-
-#ifdef CONFIG_DEVICE_ENUM
-  dev->enum_dev = &device_enum_root;
 #endif
 }
 
@@ -136,15 +130,15 @@ struct device_s *device_alloc(size_t resources)
   return dev;
 }
 
-#ifdef CONFIG_DEVICE_DRIVER_CLEANUP
+#ifdef CONFIG_DEVICE_CLEANUP
 void device_cleanup(struct device_s *dev)
 {
 # ifdef CONFIG_DEVICE_TREE
   assert(!dev->node.parent);
 # endif
 
-  assert(dev->status == DEVICE_DRIVER_INIT_FAILED ||
-         dev->status == DEVICE_NO_DRIVER);
+  assert(dev->status == DEVICE_INIT_FAILED ||
+         dev->status == DEVICE_INIT_NODRV);
 
 # ifdef CONFIG_DEVICE_RESOURCE_ALLOC
   struct dev_resource_table_s *next, *tbl;
@@ -279,8 +273,8 @@ error_t device_detach(struct device_s *dev)
 {
   assert(dev->node.parent);
 
-  if (dev->status != DEVICE_DRIVER_INIT_FAILED &&
-      dev->status != DEVICE_NO_DRIVER)
+  if (dev->status != DEVICE_INIT_FAILED &&
+      dev->status != DEVICE_INIT_NODRV)
     return -EBUSY;
 
   device_list_remove(&dev->node.parent->children, &dev->node);
@@ -517,7 +511,7 @@ error_t device_node_from_path(struct device_node_s **node, const char *path,
       DEVICE_NODE_FOREACH(r, node, {
         uint_fast8_t i;
 
-        if (!node->name || (node->flags & DEVICE_FLAG_IGNORE))
+        if (!node->name)
           continue;
 
         if (brackets)
@@ -628,8 +622,6 @@ static inline bool_t _device_tree_walk(struct device_node_s *node, device_tree_w
   struct device_s *d;
 
   DEVICE_NODE_FOREACH(node, child, {
-    if (node->flags & DEVICE_FLAG_IGNORE)
-      continue;
     if (!(d = device_from_node(child)))
       continue;
 
@@ -662,7 +654,7 @@ static DEVICE_TREE_WALKER(count_cpus_r)
   uint_fast8_t *count = priv;
 
   if ((dev->node.flags & DEVICE_FLAG_CPU) &&
-      dev->status == DEVICE_DRIVER_INIT_DONE)
+      dev->status == DEVICE_INIT_DONE)
     (*count)++;
 
   return 0;

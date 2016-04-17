@@ -39,6 +39,11 @@
 
 #include <fdt/reader.h>
 
+struct enum_fdt_pv_s
+{
+  dev_request_queue_root_t queue;
+};
+
 enum enum_fdt_section_e
 {
   FDT_SECTION_NONE,
@@ -134,8 +139,6 @@ static FDT_ON_NODE_ENTRY_FUNC(enum_fdt_node_entry)
       if (strchr(name, '@'))
         {
           struct device_s *d = device_alloc(CONFIG_DRIVER_ENUM_FDT_MAX_RESOURCES);
-
-          d->enum_dev = ctx->dev;
 
           if (d)
             {
@@ -539,16 +542,6 @@ static DEV_ENUM_MATCH_DRIVER(enum_fdt_match_driver)
   return 0;
 }
 
-static DEV_CLEANUP(enum_fdt_cleanup);
-static DEV_INIT(enum_fdt_init);
-
-#define enum_fdt_use dev_use_generic
-
-DRIVER_DECLARE(enum_fdt_drv, DRIVER_FLAGS_EARLY_INIT, "FDT Enumerator", enum_fdt,
-               DRIVER_ENUM_METHODS(enum_fdt));
-
-DRIVER_REGISTER(enum_fdt_drv);
-
 static void resolve_dev_links(struct device_s *root, struct device_s *dev)
 {
   GCT_FOREACH_NOLOCK(device_list, &dev->node.children, item, {
@@ -597,8 +590,51 @@ static void resolve_dev_links(struct device_s *root, struct device_s *dev)
   });
 }
 
+static DEV_USE(enum_fdt_use)
+{
+  switch (op)
+    {
+    case DEV_USE_ENUM_CHILD_INIT: {
+      struct device_s *cdev = param;
+      struct device_s *dev = (void*)cdev->node.parent;
+      struct enum_fdt_pv_s *pv = dev->drv_pv;
+      dev_drv_enum_child_init(&pv->queue, cdev);
+      return 0;
+    }
+
+    default:
+      return dev_use_generic(param, op);
+    }
+}
+
+static DEV_ENUM_REQUEST(enum_fdt_request)
+{
+  struct device_s *dev = accessor->dev;
+  struct enum_fdt_pv_s *pv = dev->drv_pv;
+
+  return dev_drv_enum_request_generic(&pv->queue, dev, rq);
+}
+
+static DEV_ENUM_CANCEL(enum_fdt_cancel)
+{
+  struct device_s *dev = accessor->dev;
+  struct enum_fdt_pv_s *pv = dev->drv_pv;
+
+  return dev_drv_enum_cancel_generic(&pv->queue, dev, rq);
+}
+
 static DEV_INIT(enum_fdt_init)
 {
+  struct enum_fdt_pv_s *pv;
+
+  pv = mem_alloc(sizeof(*pv), mem_scope_sys);
+  if (!pv)
+    return -ENOMEM;
+
+  dev->drv_pv = pv;
+
+  dev_request_queue_init(&pv->queue);
+
   struct enum_fdt_parse_ctx_s ctx = {
     .dev = dev,
     .stack = {
@@ -639,6 +675,18 @@ static DEV_INIT(enum_fdt_init)
 
 static DEV_CLEANUP(enum_fdt_cleanup)
 {
-  return -EBUSY; /* prevent multiple enumerations */
+  struct enum_fdt_pv_s *pv = dev->drv_pv;
+
+  if (!dev_request_queue_isempty(&pv->queue))
+    return -EBUSY;
+
+  mem_free(pv);
+
+  return 0;
 }
+
+DRIVER_DECLARE(enum_fdt_drv, DRIVER_FLAGS_EARLY_INIT, "FDT Enumerator", enum_fdt,
+               DRIVER_ENUM_METHODS(enum_fdt));
+
+DRIVER_REGISTER(enum_fdt_drv);
 

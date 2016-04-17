@@ -39,6 +39,11 @@
 #include <string.h>
 #include <stdio.h>
 
+struct ahbctrl_pv_s
+{
+  dev_request_queue_root_t queue;
+};
+
 static DEV_ENUM_MATCH_DRIVER(ahbctrl_match_driver)
 {
   size_t i;
@@ -59,6 +64,39 @@ static DEV_ENUM_MATCH_DRIVER(ahbctrl_match_driver)
     }
 
   return 0;
+}
+
+static DEV_ENUM_REQUEST(ahbctrl_request)
+{
+  struct device_s *dev = accessor->dev;
+  struct ahbctrl_pv_s *pv = dev->drv_pv;
+
+  return dev_drv_enum_request_generic(&pv->queue, dev, rq);
+}
+
+static DEV_ENUM_CANCEL(ahbctrl_cancel)
+{
+  struct device_s *dev = accessor->dev;
+  struct ahbctrl_pv_s *pv = dev->drv_pv;
+
+  return dev_drv_enum_cancel_generic(&pv->queue, dev, rq);
+}
+
+static DEV_USE(ahbctrl_use)
+{
+  switch (op)
+    {
+    case DEV_USE_ENUM_CHILD_INIT: {
+      struct device_s *cdev = param;
+      struct device_s *dev = (void*)cdev->node.parent;
+      struct ahbctrl_pv_s *pv = dev->drv_pv;
+      dev_drv_enum_child_init(&pv->queue, cdev);
+      return 0;
+    }
+
+    default:
+      return dev_use_generic(param, op);
+    }
 }
 
 static void ahbctrl_scan(struct device_s *dev, uintptr_t begin, uintptr_t end)
@@ -168,7 +206,7 @@ static void ahbctrl_scan(struct device_s *dev, uintptr_t begin, uintptr_t end)
           if (mask & (mask+1))
             {
               printk("ahbctrl: %p device address mask with non contiguous range is not supported\n", d);
-              d->status = DEVICE_ENUM_ERROR;
+              d->status = DEVICE_INIT_ENUM;
             }
           else
             {
@@ -200,7 +238,6 @@ static void ahbctrl_scan(struct device_s *dev, uintptr_t begin, uintptr_t end)
         }
 #endif
 
-      d->enum_dev = dev;
       device_shrink(d);
       device_attach(d, dev);
     }
@@ -208,8 +245,6 @@ static void ahbctrl_scan(struct device_s *dev, uintptr_t begin, uintptr_t end)
 
 static DEV_CLEANUP(ahbctrl_cleanup);
 static DEV_INIT(ahbctrl_init);
-
-#define ahbctrl_use dev_use_generic
 
 DRIVER_DECLARE(ahbctrl_drv, DRIVER_FLAGS_EARLY_INIT, "Gaisler AHB controller", ahbctrl,
                DRIVER_ENUM_METHODS(ahbctrl));
@@ -224,15 +259,30 @@ static DEV_INIT(ahbctrl_init)
   if (device_res_get_uint(dev, DEV_RES_MEM, 0, &begin, &end))
     return -EINVAL;
 
+  struct ahbctrl_pv_s *pv;
+
+  pv = mem_alloc(sizeof(*pv), mem_scope_sys);
+  if (!pv)
+    return -ENOMEM;
+
+  dev->drv_pv = pv;
+
+  dev_request_queue_init(&pv->queue);
+
   ahbctrl_scan(dev, begin, end);
 
-
   return 0;
-
-  return -1;
 }
 
 static DEV_CLEANUP(ahbctrl_cleanup)
 {
+  struct ahbctrl_pv_s *pv = dev->drv_pv;
+
+  if (!dev_request_queue_isempty(&pv->queue))
+    return -EBUSY;
+
+  mem_free(pv);
+
+  return 0;
 }
 

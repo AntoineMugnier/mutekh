@@ -90,8 +90,8 @@ struct dev_resource_s *device_res_get_from_name(const struct device_s *dev,
 error_t device_res_alloc(struct device_s *dev, struct dev_resource_s **res,
                          enum dev_resource_type_e type)
 {
-  if (dev->status == DEVICE_DRIVER_INIT_DONE ||
-      dev->status == DEVICE_DRIVER_INIT_PARTIAL)
+  if (dev->status == DEVICE_INIT_DONE ||
+      dev->status == DEVICE_INIT_ONGOING)
     return -EBUSY;
 
   struct dev_resource_table_s *tbl, **tbl_ = &dev->res_tbl;

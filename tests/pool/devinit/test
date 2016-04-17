@@ -1,0 +1,48 @@
+# -*- python -*-
+
+from mt.base.environment import *
+from mt.base.match import *
+from mt.base.expectation import *
+
+from mutekh.test.stages import configure, build, execute
+from mutekh.test.archs import *
+
+test_async       = Config("t_async")
+test_partial     = Config("t_partial")
+test_enum        = Config("t_enum")
+test_tree        = Config("t_tree")
+test_cleanup     = Config("t_cleanup")
+
+env = Environment(
+    name = "devinit",
+    timeout = 30,
+    success_grep = "++SUCCESS++",
+
+    test_deps = [
+        "libdevice/driver.c",
+        "libdevice/device.c",
+        "libdevice/device_enum.c",
+        "libdevice/shell_enum.c",
+        "libdevice/shell.c",
+        "drivers/enum/root/root.c",
+        "drivers/enum/fdt/fdt.c",
+    ],
+
+    test_space = [
+        Dimension(soclib_arm32, efm32_leopard),
+        Dimension(test_async, None),
+        Dimension(test_partial, None),
+        Dimension(test_enum, None),
+        Dimension(test_tree, None),
+        Dimension(test_cleanup, None),
+        Exclude(test_enum & ~test_tree),
+        Exclude(~test_enum & soclib_arm32),
+        ],
+
+    actions = [
+        configure,
+        build,
+        execute
+        ],
+
+    )

@@ -37,7 +37,7 @@
 
 DEV_DECLARE_STATIC(cpu_dev, "cpu", DEVICE_FLAG_CPU, arm32m_drv,
                    DEV_STATIC_RES_ID(0, 0),
-# ifdef CONFIG_DEVICE_CLOCK
+# ifdef CONFIG_CPU_ARM32M_CLOCK
                    DEV_STATIC_RES_CLK_SRC("/recmu", EFM32_CLOCK_CPU, 0)
 # else
                    DEV_STATIC_RES_FREQ(14000000, 1),

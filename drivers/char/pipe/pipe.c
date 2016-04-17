@@ -323,7 +323,7 @@ static DEV_INIT(char_pipe_init)
   return 0;
 }
 
-#ifdef CONFIG_DEVICE_DRIVER_CLEANUP
+#ifdef CONFIG_DEVICE_CLEANUP
 static DEV_CLEANUP(char_pipe_cleanup)
 {
   struct char_pipe_context_s *pv = dev->drv_pv;

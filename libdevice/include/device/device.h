@@ -43,6 +43,7 @@ struct dev_resource_table_s;
 #include <device/types.h>
 
 typedef uint8_t address_space_id_t;
+typedef uint16_t device_enum_rev_t;
 
 #include <gct_platform.h>
 #include <gct_lock_hexo_lock.h>
@@ -66,24 +67,46 @@ enum device_sleep_policy_e
 ENUM_DESCRIPTOR(device_status_e, strip:DEVICE_, upper);
 
 /** @This specifies the initialization status of a @ref device_s
-    @xcsee {Device status} */
+    @xsee {Device status} */
 enum device_status_e
 {
-  /** Device enumeration error, some resource entries may be wrong or missing. */
-  DEVICE_ENUM_ERROR,
-  /** No driver is currently attached to the device */
-  DEVICE_NO_DRIVER,
+  /** Device enumeration incomplete, some resource entries may be
+      wrong or missing. */
+  DEVICE_INIT_ENUM,
+  /** No driver is currently attached to the device. */
+  DEVICE_INIT_NODRV,
   /** A driver has been attached to the device but initialization has
-      not been performed yet */
-  DEVICE_DRIVER_INIT_PENDING,
-  /** A driver has been attached to the device and the initialization
-      needs more calls to the device initialization function in order
-      to complete for all implemented classes. */
-  DEVICE_DRIVER_INIT_PARTIAL,
-  /** A driver has been attached to the device and initialization took place */
-  DEVICE_DRIVER_INIT_DONE,
-  /** A driver has been attached to the device but initialization failed */
-  DEVICE_DRIVER_INIT_FAILED,
+      not been performed yet. Initialization will start as soon as all
+      dependencies are satisfied. It is not possible to get a device
+      accessor at this point. */
+  DEVICE_INIT_PENDING,
+  /** The driver initialization is ongoing. Some classes of the driver
+      may already be usable. This can only result from the @ref
+      dev_init_t function returning @tt -EAGAIN. It is possible to get
+      a device accessor for the initialized classes at this point if
+      the driver supports partial initialization. */
+  DEVICE_INIT_ONGOING,
+  /** Some classes of the driver have not been properly initialized
+      but other classes are usable. This occurs when the @ref
+      device_init_set_class function is called during an
+      initialization which eventually terminate with an error. */
+  DEVICE_INIT_PARTIAL,
+  /** The device is fully initialized and functional. This results
+      from the @ref dev_init_t function returning @tt 0 or by invoking
+      the @ref device_async_init_done function. */
+  DEVICE_INIT_DONE,
+  /** The driver cleanup is ongoing. This can only result from the
+      @ref dev_cleanup_t function returning @tt -EAGAIN. It is
+      not possible to get a device accessor anymore. */
+  DEVICE_INIT_DECLINE,
+  /** A driver is attached to the device but the initialization
+      failed. It is not possible to get a device accessor but the
+      device initialization may be retried. */
+  DEVICE_INIT_FAILED,
+  /** The device was previously initialized but has been explicitely
+      released. This is similar to @ref DEVICE_INIT_PENDING but
+      the initialization will not be performed automatically. */
+  DEVICE_INIT_RELEASED,
 };
 
 /** @This specifies @ref device_node_s type and flags */
@@ -103,15 +126,12 @@ enum device_flags_e
   DEVICE_FLAG_DEVICE = 8,
   /** @internal The tree node is an alias node */
   DEVICE_FLAG_ALIAS = 16,
-  /** Mark the device as not available. The device will not be
-      initialized on startup and lookup functions will ignore the node. */
-  DEVICE_FLAG_IGNORE = 32,
   /** Automatic binding of a driver to the device will not be performed,
       the @ref device_bind_driver function must be called explicitly. */
-  DEVICE_FLAG_NO_AUTOBIND = 64,
+  DEVICE_FLAG_NO_AUTOBIND = 32,
   /** Automatic initialization of the device will not be performed,
       the @ref device_init_driver function must be called explicitly. */
-  DEVICE_FLAG_NO_AUTOINIT = 128,
+  DEVICE_FLAG_NO_AUTOINIT = 64,
 };
 
 #define GCT_CONTAINER_ALGO_device_list CLIST
@@ -147,7 +167,6 @@ GCT_CONTAINER_FCNS(device_list, inline, device_list,
 #endif
 ;
 
-
 /** device node structure
     @xcsee {Device instance} */
 struct device_s
@@ -156,13 +175,16 @@ struct device_s
   struct device_node_s          node;
 
   /** Device/driver initialization status @xsee {Device status} */
-  enum device_status_e          BITFIELD(status,3);
+  enum device_status_e          BITFIELD(status,4);
 
-  /** When the @ref status is @ref DEVICE_DRIVER_INIT_PARTIAL, this is
-      a mask of initialized classes in driver API order. Extra bits
-      can be used by the driver in order to flag internal initialization
-      states. */
-  uint8_t                       BITFIELD(init_mask,5);
+  /** @internal When the @ref status is @ref DEVICE_INIT_ONGOING or
+      @ref DEVICE_INIT_PARTIAL, this is a mask of initialized classes
+      in driver API order. Extra bits can be used by the driver in
+      order to flag internal initialization states.  @see
+      device_init_set_classes */
+#ifdef CONFIG_DEVICE_INIT_PARTIAL
+  uint8_t                       BITFIELD(init_mask,8);
+#endif
 
   /** device uses counter, @see {device_get_accessor} */
   uint16_t                      BITFIELD(ref_count,CONFIG_DEVICE_USE_BITS);
@@ -189,8 +211,8 @@ struct device_s
   void				*drv_pv;
 
 #ifdef CONFIG_DEVICE_ENUM
-  /** pointer to device enumerator if any */
-  struct device_s               *enum_dev;
+  /** enumerator list revision */
+  device_enum_rev_t             enum_rev;
   /** pointer to device enumerator private data if any */
   void				*enum_pv;
 #endif
@@ -258,7 +280,7 @@ void device_sleep_schedule(struct device_s *dev);
                               .prev = &declname_.node.children.ht } },  \
       },                                                                \
       .lock = LOCK_INITIALIZER,                                         \
-      .status = DEVICE_DRIVER_INIT_PENDING,                             \
+      .status = DEVICE_INIT_PENDING,                             \
       .drv = &driver_,                                                  \
       .ref_count = 0,                                                   \
       .res_tbl = ARRAY_SIZE(DEV_STATIC_RESOURCES_ARRAY(resources_))     \
@@ -276,7 +298,7 @@ void device_sleep_schedule(struct device_s *dev);
         .name = name_,                                                  \
       },                                                                \
       .lock = LOCK_INITIALIZER,                                         \
-      .status = DEVICE_DRIVER_INIT_PENDING,                             \
+      .status = DEVICE_INIT_PENDING,                             \
       .drv = &driver_,                                                  \
       .ref_count = 0,                                                   \
       .res_tbl = ARRAY_SIZE(DEV_STATIC_RESOURCES_ARRAY(resources_))     \
@@ -342,7 +364,7 @@ struct device_s *device_alloc(size_t resources);
     and its reference count must be zero when this function is
     called.
     @xcsee {Device instance} */
-config_depend(CONFIG_DEVICE_DRIVER_CLEANUP)
+config_depend(CONFIG_DEVICE_CLEANUP)
 void device_cleanup(struct device_s *dev);
 
 /** @This reduces resource slots count to number of used slots

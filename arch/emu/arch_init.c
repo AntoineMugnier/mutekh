@@ -161,7 +161,7 @@ static DEVICE_TREE_WALKER(emu_start_cpus_cont)
   uint32_t *mask = priv;
 
   if (dev->node.flags & DEVICE_FLAG_CPU &&
-      dev->status == DEVICE_DRIVER_INIT_DONE)
+      dev->status == DEVICE_INIT_DONE)
     {
       uintptr_t maj, min;
       if (!device_res_get_uint(dev, DEV_RES_ID, 0, &maj, &min) &&
