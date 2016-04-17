@@ -228,6 +228,9 @@ static bool_t device_find_driver_r(struct device_node_s *node, uint_fast8_t pass
           const struct driver_registry_s *reg;
           struct device_enum_s e;
 
+          if (dev->node.flags & DEVICE_FLAG_NO_AUTOBIND)
+            break;
+
           /* get associated enumerator device */
           if (!dev->enum_dev)
             break;
@@ -261,6 +264,8 @@ static bool_t device_find_driver_r(struct device_node_s *node, uint_fast8_t pass
 
           /* try to intialize device using associated driver */
         case DEVICE_DRIVER_INIT_PENDING: 
+          if (dev->node.flags & DEVICE_FLAG_NO_AUTOINIT)
+            break;
 
           if (!pass && !(dev->drv->flags & DRIVER_FLAGS_EARLY_INIT))
             break;
@@ -315,6 +320,9 @@ static void libdevice_drivers_init(uint_fast8_t pass)
           default:
             continue;
           case DEVICE_DRIVER_INIT_PENDING:
+            if (dev->node.flags & DEVICE_FLAG_NO_AUTOINIT)
+              continue;
+
             if (!pass && !(dev->drv->flags & DRIVER_FLAGS_EARLY_INIT))
               continue;
           case DEVICE_DRIVER_INIT_PARTIAL:

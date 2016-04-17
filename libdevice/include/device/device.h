@@ -106,6 +106,12 @@ enum device_flags_e
   /** Mark the device as not available. The device will not be
       initialized on startup and lookup functions will ignore the node. */
   DEVICE_FLAG_IGNORE = 32,
+  /** Automatic binding of a driver to the device will not be performed,
+      the @ref device_bind_driver function must be called explicitly. */
+  DEVICE_FLAG_NO_AUTOBIND = 64,
+  /** Automatic initialization of the device will not be performed,
+      the @ref device_init_driver function must be called explicitly. */
+  DEVICE_FLAG_NO_AUTOINIT = 128,
 };
 
 #define GCT_CONTAINER_ALGO_device_list CLIST
