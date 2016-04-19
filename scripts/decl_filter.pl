@@ -353,7 +353,7 @@ sub process_asm
             $s = $type->{struct};
         }
         my $fs = $f->{bitsize} / 8;
-        die "$loc: field `$f->{name}' size doesn't match expected $size $fs.\n" if ($size && $size != $fs);
+        die "$loc: size of field `$f->{name}' is $fs, expected $size.\n" if ($size && $size != $fs);
         return $bitoff / 8;
     };
 
