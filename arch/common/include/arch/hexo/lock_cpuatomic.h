@@ -110,7 +110,7 @@ ALWAYS_INLINE bool_t __arch_lock_try(struct __arch_lock_s *lock)
 #if defined(CONFIG_HEXO_LOCK_DEBUG)
   if (!res)
     {
-      lock->pc = __builtin_return_address(0);
+      lock->pc = ({ __label__ _pc; _pc: &&_pc; });
 # if defined(CONFIG_ARCH_SMP)
       lock->cpu_id = cpu_id() + 1;
 # endif
@@ -145,7 +145,7 @@ ALWAYS_INLINE void __arch_lock_spin(struct __arch_lock_s *lock)
 #endif
 
 #if defined(CONFIG_HEXO_LOCK_DEBUG)
-  lock->pc = __builtin_return_address(0);
+  lock->pc = ({ __label__ _pc; _pc: &&_pc; });
 # if defined(CONFIG_ARCH_SMP)
   lock->cpu_id = cpu_id() + 1;
 # endif
