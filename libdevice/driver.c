@@ -138,8 +138,10 @@ static bool_t device_filter_accessor(struct device_node_s *node)
   if (dev == NULL || dev->drv == NULL)
     return 0;
   return (dev->status == DEVICE_INIT_DONE
-#ifdef CONFIG_DEVICE_INIT_PARTIAL
+#if defined(CONFIG_DEVICE_INIT_ASYNC) || defined(CONFIG_DEVICE_INIT_PARTIAL)
           || dev->status == DEVICE_INIT_ONGOING
+#endif
+#if defined(CONFIG_DEVICE_INIT_PARTIAL)
           || dev->status == DEVICE_INIT_PARTIAL
 #endif
           );
