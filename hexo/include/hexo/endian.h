@@ -71,15 +71,26 @@ ALWAYS_INLINE uint16_t __endian_swap16(uint16_t x)
   return (x >> 8) | (x << 8);
 }
 
-/** @this swaps bytes in 16 bits value */
-ALWAYS_INLINE uint16_t endian_swap16(uint16_t x)
-{
+#define __ENDIAN_SWAP16(x) \
+  ((x >> 8) | (x << 8))
+
 # ifdef HAS_CPU_ENDIAN_SWAP16
-  return __builtin_constant_p(x) ? __endian_swap16(x) : cpu_endian_swap16(x);
+/** @this swaps bytes in 16 bits value */
+#  define endian_swap16(x) \
+  ((uint16_t)__builtin_choose_expr(__builtin_constant_p((x)),                     \
+                                   __ENDIAN_SWAP16((uint16_t)(x)), \
+                                   cpu_endian_swap16(x)))
 #else
-  return __endian_swap16(x);
+#  define endian_swap16(x) \
+  ((uint16_t)__builtin_choose_expr(__builtin_constant_p((x)), \
+                                   __ENDIAN_SWAP16((uint16_t)(x)),      \
+                                   __endian_swap16(x)))
 # endif
-}
+
+
+#define __ENDIAN_SWAP32(x)                                   \
+  (((x >> 24) & 0x000000ff) | ((x >> 8 ) & 0x0000ff00) | \
+   ((x << 8 ) & 0x00ff0000) | ((x << 24) & 0xff000000))
 
 /** @internal */
 ALWAYS_INLINE uint32_t __endian_swap32(uint32_t x)
@@ -90,15 +101,19 @@ ALWAYS_INLINE uint32_t __endian_swap32(uint32_t x)
 	  ((x << 24) & 0xff000000));
 }
 
-/** @this swaps bytes in 32 bits value */
-ALWAYS_INLINE uint32_t endian_swap32(uint32_t x)
-{
 # ifdef HAS_CPU_ENDIAN_SWAP32
-  return __builtin_constant_p(x) ? __endian_swap32(x) : cpu_endian_swap32(x);
+/** @this swaps bytes in 32 bits value */
+#  define endian_swap32(x) \
+  ((uint32_t)__builtin_choose_expr(__builtin_constant_p((x)),                     \
+                                   __ENDIAN_SWAP32((uint32_t)(x)), \
+                                   cpu_endian_swap32(x)))
 #else
-  return __endian_swap32(x);
+#  define endian_swap32(x) \
+  ((uint32_t)__builtin_choose_expr(__builtin_constant_p((x)), \
+                                   __ENDIAN_SWAP32((uint32_t)(x)),      \
+                                   __endian_swap32(x)))
 # endif
-}
+
 
 /** @internal */
 ALWAYS_INLINE uint64_t __endian_swap64(uint64_t x)
@@ -107,15 +122,22 @@ ALWAYS_INLINE uint64_t __endian_swap64(uint64_t x)
 	  ((uint64_t)endian_swap32(x >> 32)      ));
 }
 
-/** @this swaps bytes in 64 bits value */
-ALWAYS_INLINE uint64_t endian_swap64(uint64_t x)
-{
+#define __ENDIAN_SWAP64(x)                             \
+  (((uint64_t)__ENDIAN_SWAP32((uint32_t)x) << 32) |    \
+   ((uint64_t)__ENDIAN_SWAP32(x >> 32)))
+
 # ifdef HAS_CPU_ENDIAN_SWAP64
-  return __builtin_constant_p(x) ? __endian_swap64(x) : cpu_endian_swap64(x);
+/** @this swaps bytes in 64 bits value */
+#  define endian_swap64(x) \
+  ((uint64_t)__builtin_choose_expr(__builtin_constant_p((x)),                     \
+                                   __ENDIAN_SWAP64((uint64_t)(x)), \
+                                   cpu_endian_swap64(x)))
 #else
-  return __endian_swap64(x);
+#  define endian_swap64(x) \
+  ((uint64_t)__builtin_choose_expr(__builtin_constant_p((x)), \
+                                   __ENDIAN_SWAP64((uint64_t)(x)),      \
+                                   __endian_swap64(x)))
 # endif
-}
 
 /***********************************************************************
  *		Endian dependent words access functions
