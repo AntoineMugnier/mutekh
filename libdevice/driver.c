@@ -690,11 +690,25 @@ error_t device_init_driver(struct device_s *dev, uint_fast8_t pass)
             case DEVICE_INIT_PARTIAL:
               if (cl != DRIVER_CLASS_NONE && !device_get_api(dep, cl, NULL))
                 continue;
+              if (dev->status == DEVICE_INIT_ONGOING)
+                break;
 #endif
+            case DEVICE_INIT_FAILED:
+            missing:
+              printk("device: init %p %-24s dep error `%s'\n",
+                     dev, dev->node.name, path);
+              dev->status = DEVICE_INIT_FAILED;
+              err = -ENOENT;
+              goto end;
+
             default:
               break;
             }
         }
+#ifndef CONFIG_DEVICE_TREE
+      else
+        goto missing;
+#endif
 
 #ifdef CONFIG_DEVICE_INIT_PARTIAL
       if (cl >= sizeof(cl_missing) * 8)
