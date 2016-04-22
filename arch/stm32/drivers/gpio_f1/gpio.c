@@ -51,7 +51,7 @@
 
 struct stm32_gpio_private_s
 {
-#if defined(CONFIG_DRIVER_STM32_GPIO_ICU)
+#if defined(CONFIG_DRIVER_STM32_GPIO_F1_ICU)
   /* This specifies which bank is selected for each interrupt line. A
      value of -1 means that no bank is currently bound to an
      interrupt. */
@@ -356,7 +356,7 @@ end:
 
 /********************************* ICU class. **********/
 
-#if defined(CONFIG_DRIVER_STM32_GPIO_ICU)
+#if defined(CONFIG_DRIVER_STM32_GPIO_F1_ICU)
 
 static
 uint_fast8_t stm32_gpio_icu_src_id_of_sink_id(uint_fast8_t sink_id)
@@ -552,7 +552,7 @@ static DEV_CLEANUP(stm32_gpio_cleanup);
 
 DRIVER_DECLARE(stm32_gpio_drv, 0, "STM32 GPIO", stm32_gpio,
                DRIVER_GPIO_METHODS(stm32_gpio_gpio),
-#if defined(CONFIG_DRIVER_STM32_GPIO_ICU)
+#if defined(CONFIG_DRIVER_STM32_GPIO_F1_ICU)
                DRIVER_ICU_METHODS(stm32_gpio_icu),
 #endif
                DRIVER_IOMUX_METHODS(stm32_gpio_iomux));
@@ -562,16 +562,17 @@ DRIVER_REGISTER(stm32_gpio_drv);
 static
 DEV_INIT(stm32_gpio_init)
 {
-  struct stm32_gpio_private_s *pv;
+  struct stm32_gpio_private_s *pv = 0;
 
-
+#if defined(CONFIG_DRIVER_STM32_GPIO_F1_ICU)
   pv = mem_alloc(sizeof(*pv), (mem_scope_sys));
   if (!pv)
     return -ENOMEM;
 
   memset(pv, 0, sizeof(*pv));
+#endif
 
-#if defined(CONFIG_DRIVER_STM32_GPIO_ICU)
+#if defined(CONFIG_DRIVER_STM32_GPIO_F1_ICU)
   device_irq_source_init(dev, pv->src, STM32_GPIO_IRQ_SRC_COUNT,
     &stm32_gpio_icu_src_process);
   if (device_irq_source_link(dev, pv->src, STM32_GPIO_IRQ_SRC_COUNT, -1))
@@ -582,8 +583,6 @@ DEV_INIT(stm32_gpio_init)
     DEV_IRQ_SENSE_FALLING_EDGE | DEV_IRQ_SENSE_RISING_EDGE);
 #endif
 
-  dev->drv    = &stm32_gpio_drv;
-  dev->drv_pv = pv;
   return 0;
 
 err_mem:
@@ -596,7 +595,7 @@ DEV_CLEANUP(stm32_gpio_cleanup)
 {
   struct stm32_gpio_private_s *pv = dev->drv_pv;
 
-#if defined(CONFIG_DRIVER_STM32_GPIO_ICU)
+#if defined(CONFIG_DRIVER_STM32_GPIO_F1_ICU)
   device_irq_source_unlink(dev, pv->src, STM32_GPIO_IRQ_SRC_COUNT);
 #endif
 

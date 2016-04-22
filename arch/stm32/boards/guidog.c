@@ -64,7 +64,7 @@ DEV_DECLARE_STATIC(usart1_dev, "uart1", 0, stm32_usart_drv,
 
 #endif
 
-#if defined(CONFIG_DRIVER_STM32_GPIO)
+#if defined(CONFIG_DRIVER_STM32_GPIO_F1)
 
 /* GPIO A..E. */
 DEV_DECLARE_STATIC(gpio_dev, "gpio", 0, stm32_gpio_drv,
