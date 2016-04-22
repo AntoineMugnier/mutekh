@@ -37,7 +37,7 @@
 
 #include <arch/stm32/exti.h>
 
-#include <arch/stm32/f1/periph.h>
+#include <arch/stm32/f1/mmap.h>
 #include <arch/stm32/f1/gpio.h>
 #include <arch/stm32/f1/rcc.h>
 #include <arch/stm32/f1/remap.h>
