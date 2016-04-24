@@ -52,6 +52,10 @@ ifeq ($(CONFIG_OPENMP), defined)
 CFLAGS += -fopenmp
 endif
 
+ifeq ($(CONFIG_GCT_CHECKING), defined)
+CFLAGS += -DGCT_CONFIG_CHECKING
+endif
+
 ifeq ($(CONFIG_HET_BUILD), defined)
 CFLAGS += -fno-section-anchors -ffunction-sections -fdata-sections
 endif

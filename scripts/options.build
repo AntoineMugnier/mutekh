@@ -41,6 +41,9 @@
 %section ihex
   CONFIG_COMPILE_FORMAT! ihex
 
+%section gct-checking
+  CONFIG_GCT_CHECKING
+
 %section shell
   CONFIG_MUTEK_CONSOLE
   CONFIG_MUTEK_SHELL
