@@ -2099,14 +2099,14 @@ sub read_build_config
 		}
 
 		$val = "defined" if (!defined $val);
-		$opt->{value} = $val;
-		$opt->{vlocation} = "$file:$lnum";
 
                 error("$file:$lnum: The `".$opt->{name}."' token value has already been defined at $opt->{vlocation}.")
-                    if ($opt->{enforce});
+                    if ($opt->{enforce} && $opt->{value} ne $val);
 
+		$opt->{vlocation} = "$file:$lnum";
+		$opt->{value} = $val;
 		$opt->{userdefined} = 1;
-                $opt->{enforce} = $enforce;
+                $opt->{enforce} ||= $enforce;
 
                 if ($opt->{flags}->{deprecated}) {
                     warning_loc($opt, "use of deprecated token in configuration.");
