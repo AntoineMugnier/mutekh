@@ -49,6 +49,7 @@
 struct a9mpcore_private_s
 {
   uintptr_t addr;
+  dev_request_queue_root_t queue;
 };
 
 static DEV_ENUM_MATCH_DRIVER(a9mpcore_match_driver)
@@ -56,9 +57,41 @@ static DEV_ENUM_MATCH_DRIVER(a9mpcore_match_driver)
   return 0;
 }
 
+static DEV_ENUM_REQUEST(a9mpcore_request)
+{
+  struct device_s *dev = accessor->dev;
+  struct a9mpcore_private_s *pv = dev->drv_pv;
+
+  return dev_drv_enum_request_generic(&pv->queue, dev, rq);
+}
+
+static DEV_ENUM_CANCEL(a9mpcore_cancel)
+{
+  struct device_s *dev = accessor->dev;
+  struct a9mpcore_private_s *pv = dev->drv_pv;
+
+  return dev_drv_enum_cancel_generic(&pv->queue, dev, rq);
+}
+
+static DEV_USE(a9mpcore_use)
+{
+  switch (op)
+    {
+    case DEV_USE_ENUM_CHILD_INIT: {
+      struct device_s *cdev = param;
+      struct device_s *dev = (void*)cdev->node.parent;
+      struct a9mpcore_private_s *pv = dev->drv_pv;
+      dev_drv_enum_child_init(&pv->queue, cdev);
+      return 0;
+    }
+
+    default:
+      return dev_use_generic(param, op);
+    }
+}
+
 static DEV_CLEANUP(a9mpcore_cleanup);
 static DEV_INIT(a9mpcore_init);
-#define a9mpcore_use dev_use_generic
 
 DRIVER_DECLARE(a9mpcore_drv, DRIVER_FLAGS_EARLY_INIT, "ARM Cortex-A9 MPCore", a9mpcore,
                DRIVER_ENUM_METHODS(a9mpcore));
@@ -77,6 +110,8 @@ static DEV_INIT(a9mpcore_init)
 
   dev->drv_pv = pv;
 
+  dev_request_queue_init(&pv->queue);
+
   if (device_res_get_uint(dev, DEV_RES_MEM, 0, &pv->addr, NULL))
     goto err_mem;
 
@@ -93,7 +128,6 @@ static DEV_INIT(a9mpcore_init)
   device_res_add_mem(icu, pv->addr + 0x1000, pv->addr + 0x2000); // gic distributor
   device_res_add_mem(icu, pv->addr + 0x0100, pv->addr + 0x0200); // gic cpu interface
 
-  icu->enum_dev = dev;
   device_attach(icu, dev);
 
   extern const struct driver_s pl390_icu_drv;
@@ -119,7 +153,6 @@ static DEV_INIT(a9mpcore_init)
       sprintf(name, "../cpu%u", i);
       device_set_name(d, name + 3);
 
-      d->enum_dev = dev;
       device_attach(d, dev);
 
 #ifdef CONFIG_DRIVER_ARM_A9MPCORE_IRQ
@@ -142,6 +175,11 @@ static DEV_CLEANUP(a9mpcore_cleanup)
 {
   struct a9mpcore_private_s *pv = dev->drv_pv;
 
+  if (!dev_request_queue_isempty(&pv->queue))
+    return -EBUSY;
+
   mem_free(pv);
+
+  return 0;
 }
 
