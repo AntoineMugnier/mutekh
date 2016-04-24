@@ -493,6 +493,7 @@ error_t dev_timer_wait_deadline(struct device_timer_s *accessor,
                                 dev_timer_cfgrev_t rev),
 {
   struct dev_timer_rq_s rq;
+  rq.delay = 0;
   rq.deadline = deadline;
   rq.rev = rev;
 
@@ -508,6 +509,7 @@ error_t dev_timer_wait_delay(struct device_timer_s *accessor,
                              dev_timer_cfgrev_t rev),
 {
   struct dev_timer_rq_s rq;
+  rq.deadline = 0;
   rq.delay = delay;
   rq.rev = rev;
 
