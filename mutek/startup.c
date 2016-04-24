@@ -191,6 +191,13 @@ void mutekh_startup_smp()
   abort();
 }
 
+#ifndef CONFIG_DEVICE
+void mutekh_startup_nodev()
+{
+  INIT_DEVREADY_INIT();
+}
+#endif
+
 /////////////////////////////////////// user application start
 
 #ifdef CONFIG_APP_START

@@ -72,7 +72,10 @@ enum device_status_e
 {
   /** Device enumeration incomplete, some resource entries may be
       wrong or missing. */
-  DEVICE_INIT_ENUM,
+  DEVICE_INIT_ENUM_ERR,
+  /** No driver is currently attached to the device but the driver
+      registry will be searched for an appropriate driver. */
+  DEVICE_INIT_ENUM_DRV,
   /** No driver is currently attached to the device. */
   DEVICE_INIT_NODRV,
   /** A driver has been attached to the device but initialization has
@@ -99,9 +102,10 @@ enum device_status_e
       @ref dev_cleanup_t function returning @tt -EAGAIN. It is
       not possible to get a device accessor anymore. */
   DEVICE_INIT_DECLINE,
-  /** A driver is attached to the device but the initialization
-      failed. It is not possible to get a device accessor but the
-      device initialization may be retried. */
+  /** A driver is attached to the device but the initialization has
+      failed or a dependency is not available. It is not possible to
+      get a device accessor but the device initialization may be
+      retried. */
   DEVICE_INIT_FAILED,
   /** The device was previously initialized but has been explicitely
       released. This is similar to @ref DEVICE_INIT_PENDING but
@@ -132,6 +136,9 @@ enum device_flags_e
   /** Automatic initialization of the device will not be performed,
       the @ref device_init_driver function must be called explicitly. */
   DEVICE_FLAG_NO_AUTOINIT = 64,
+  /** Do not wait for initialization of this device before starting
+      execution of the @tt INIT_DEVREADY_INIT group during startup. */
+  DEVICE_FLAG_NO_STARTUP_WAIT = 128,
 };
 
 #define GCT_CONTAINER_ALGO_device_list CLIST
@@ -491,7 +498,8 @@ error_t device_set_name(struct device_s *dev, const char *name);
     @xcsee {Device tree} */
 config_depend(CONFIG_DEVICE_TREE)
 void device_attach(struct device_s *dev,
-                   struct device_s *parent);
+                   struct device_s *parent,
+                   const struct driver_s *drv);
 
 /** @This detaches a device from its parent enumerator device
     @xcsee {Device tree} */

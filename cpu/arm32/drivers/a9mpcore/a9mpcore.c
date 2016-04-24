@@ -128,10 +128,8 @@ static DEV_INIT(a9mpcore_init)
   device_res_add_mem(icu, pv->addr + 0x1000, pv->addr + 0x2000); // gic distributor
   device_res_add_mem(icu, pv->addr + 0x0100, pv->addr + 0x0200); // gic cpu interface
 
-  device_attach(icu, dev);
-
   extern const struct driver_s pl390_icu_drv;
-  device_bind_driver(icu, &pl390_icu_drv);
+  device_attach(icu, dev, &pl390_icu_drv);
 #endif
 
   struct dev_freq_s freq;
@@ -153,17 +151,14 @@ static DEV_INIT(a9mpcore_init)
       sprintf(name, "../cpu%u", i);
       device_set_name(d, name + 3);
 
-      device_attach(d, dev);
-
 #ifdef CONFIG_DRIVER_ARM_A9MPCORE_IRQ
       device_res_add_dev_param(icu, "icu", name, DRIVER_CLASS_ICU);
       device_res_add_irq(icu, i, 0, DEV_IRQ_SENSE_LOW_LEVEL, 0, 0);
 #endif
 
       extern const struct driver_s arm32_drv;
-      device_bind_driver(d, &arm32_drv);
+      device_attach(d, dev, &arm32_drv);
     }
-
 
   return 0;
  err_mem:

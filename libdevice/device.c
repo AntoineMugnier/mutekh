@@ -65,7 +65,7 @@ void device_tree_init(void)
     {
       if (d == &device_enum_root)
         continue;
-      device_attach(d, &device_enum_root);
+      device_attach(d, &device_enum_root, d->drv);
     }
 }
 #endif
@@ -247,7 +247,8 @@ error_t device_set_name(struct device_s *dev, const char *name)
 #ifdef CONFIG_DEVICE_TREE
 
 void device_attach(struct device_s *dev,
-                   struct device_s *parent)
+                   struct device_s *parent,
+                   const struct driver_s *drv)
 {
   static uint_fast16_t id;
   char name [16];
@@ -265,6 +266,14 @@ void device_attach(struct device_s *dev,
       dev->node.name = strdup(name);
       dev->node.flags |= DEVICE_FLAG_NAME_ALLOCATED;
     }
+
+  dev->drv = drv;
+  if (drv != NULL)
+    dev->status = DEVICE_INIT_PENDING;
+#ifdef CONFIG_DEVICE_ENUM
+  else if (dev->status == DEVICE_INIT_NODRV)
+    dev->status = DEVICE_INIT_ENUM_DRV;
+#endif
 
   device_list_pushback(&parent->node.children, (struct device_node_s*)dev);
 }

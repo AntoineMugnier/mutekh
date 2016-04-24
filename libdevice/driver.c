@@ -22,10 +22,12 @@
 */
 
 #include <hexo/error.h>
+#include <hexo/ordering.h>
 
 #include <mutek/startup.h>
 #include <mutek/mem_alloc.h>
 #include <mutek/printk.h>
+#include <mutek/startup.h>
 
 #include <device/device.h>
 #include <device/resources.h>
@@ -38,7 +40,16 @@
 #include <string.h>
 #include <stdlib.h>
 
+static uint_fast8_t device_init_pass = 0;
+
 const char driver_class_e[] = ENUM_DESC_DRIVER_CLASS_E;
+
+enum drv_init_loop_e {
+  DRV_INIT_LOOP_AGAIN = 1,
+  DRV_INIT_LOOP_ONGOING = 2
+};
+
+static error_t device_init_driver_nolock(struct device_s *dev);
 
 error_t device_get_api(struct device_s *dev,
                        enum driver_class_e cl,
@@ -58,7 +69,10 @@ error_t device_get_api(struct device_s *dev,
  found:
   switch (dev->status)
     {
-    case DEVICE_INIT_ENUM:
+#ifdef CONFIG_DEVICE_ENUM
+    case DEVICE_INIT_ENUM_ERR:
+    case DEVICE_INIT_ENUM_DRV:
+#endif
     case DEVICE_INIT_NODRV:
       UNREACHABLE();
 #if defined(CONFIG_DEVICE_INIT_PARTIAL) || defined(CONFIG_DEVICE_INIT_ASYNC)
@@ -274,28 +288,31 @@ error_t device_get_accessor_by_path(struct device_accessor_s *acc, struct device
 
 #ifdef CONFIG_DEVICE_TREE
 
-static bool_t device_find_driver_r(struct device_node_s *node, uint_fast8_t pass)
+static enum drv_init_loop_e device_find_driver_r(struct device_node_s *node)
 {
-  bool_t done = 1;
+  enum drv_init_loop_e lp = 0;
 
   struct device_s *dev = device_from_node(node);
 
   if (dev)
     {
+      LOCK_SPIN_IRQ(&dev->lock);
+
       switch (dev->status)
         {
-        case DEVICE_INIT_NODRV: {
-# if defined(CONFIG_DEVICE_DRIVER_REGISTRY) && defined(CONFIG_DEVICE_ENUM)
+# ifdef CONFIG_DEVICE_ENUM
+        case DEVICE_INIT_ENUM_DRV: {
+#  ifdef CONFIG_DEVICE_DRIVER_REGISTRY
           const struct driver_registry_s *reg;
           struct device_enum_s e;
+
+          dev->status = DEVICE_INIT_NODRV;
 
           if (dev->node.flags & DEVICE_FLAG_NO_AUTOBIND)
             break;
 
           /* get associated enumerator device */
           struct device_s *enum_dev = (void*)dev->node.parent;
-          if (!enum_dev)
-            break;
           if (device_get_accessor(&e.base, enum_dev, DRIVER_CLASS_ENUM, 0))
             break;
 
@@ -311,32 +328,39 @@ static bool_t device_find_driver_r(struct device_node_s *node, uint_fast8_t pass
               /* use enumerator to decide if driver is appropriate for this device */
               if (DEVICE_OP(&e, match_driver, reg->id_table, reg->id_count, dev))
                 {
-                  device_bind_driver(dev, reg->driver);
-                  done = 0;
-                  break;
+                  dev->drv = reg->driver;
+                  dev->status = DEVICE_INIT_PENDING;
+                  lp |= DRV_INIT_LOOP_AGAIN;
                 }
             }
 
           device_put_accessor(&e.base);
 
           if (dev->status != DEVICE_INIT_PENDING)
-# endif
             break;
+#  else
+          dev->status = DEVICE_INIT_NODRV;
+          break;
+#  endif
         }
+# endif
 
           /* try to intialize the device using the associated driver */
         case DEVICE_INIT_PENDING:
           if (dev->node.flags & DEVICE_FLAG_NO_AUTOINIT)
             break;
 
-          if (!pass && !(dev->drv->flags & DRIVER_FLAGS_EARLY_INIT))
+          if (device_init_pass == 0 &&
+              !(dev->drv->flags & DRIVER_FLAGS_EARLY_INIT))
             break;
 
-#ifdef CONFIG_DEVICE_INIT_PARTIAL
         case DEVICE_INIT_ONGOING:
-#endif
-          if (device_init_driver(dev, pass) == 0)
-            done = 0;
+# ifdef CONFIG_DEVICE_INIT_ASYNC
+          if (!(dev->node.flags & DEVICE_FLAG_NO_STARTUP_WAIT))
+            lp |= DRV_INIT_LOOP_ONGOING;
+# endif
+          if (device_init_driver_nolock(dev) == 0)
+            lp |= DRV_INIT_LOOP_AGAIN;
           break;
 
 #if defined(CONFIG_DEVICE_INIT_ASYNC) && defined(CONFIG_DEVICE_CLEANUP)
@@ -345,72 +369,101 @@ static bool_t device_find_driver_r(struct device_node_s *node, uint_fast8_t pass
             dev->status = DEVICE_INIT_RELEASED;
           break;
 #endif
+
         default:
           break;
         }
+
+      LOCK_RELEASE_IRQ(&dev->lock);
     }
 
   DEVICE_NODE_FOREACH(node, child, {
-      done &= device_find_driver_r(child, pass);
+      lp |= device_find_driver_r(child);
   });
 
-  return done;
+  return lp;
 }
 
-void device_find_driver(struct device_node_s *node, uint_fast8_t pass)
+static enum drv_init_loop_e device_find_driver(struct device_node_s *node)
 {
   if (!node)
     node = device_tree_root();
 
   /* try to bind and init as many devices as possible */
-  while (!device_find_driver_r(node, pass))
-    ;
+  enum drv_init_loop_e lp;
+  do {
+    lp = device_find_driver_r(node);
+  } while (lp & DRV_INIT_LOOP_AGAIN);
+
+  return lp;
 }
 
 #endif
 
-static void libdevice_drivers_init(uint_fast8_t pass)
+static void libdevice_drivers_init()
 {
+  enum drv_init_loop_e lp;
 #ifdef CONFIG_DEVICE_TREE
-  device_find_driver(NULL, pass);
+  lp = device_find_driver(NULL);
 #else
-  bool_t done;
   struct device_s *dev;
 
   do {
-    done = 1;
+    lp = 0;
     DEVICE_NODE_FOREACH(, node, {
+
         if (!(dev = device_from_node(node)))
           continue;
 
+        LOCK_SPIN_IRQ(&dev->lock);
+
         switch (dev->status)
           {
-          default:
-            continue;
           case DEVICE_INIT_PENDING:
             if (dev->node.flags & DEVICE_FLAG_NO_AUTOINIT)
-              continue;
+              break;
 
-            if (!pass && !(dev->drv->flags & DRIVER_FLAGS_EARLY_INIT))
-              continue;
+            order_smp_read();
+            if (device_init_pass == 0 &&
+                !(dev->drv->flags & DRIVER_FLAGS_EARLY_INIT))
+              break;
 
-#ifdef CONFIG_DEVICE_INIT_PARTIAL
           case DEVICE_INIT_ONGOING:
-#endif
-            if (device_init_driver(dev, pass) == 0)
-              done = 0;
+# ifdef CONFIG_DEVICE_INIT_ASYNC
+            if (!(dev->node.flags & DEVICE_FLAG_NO_STARTUP_WAIT))
+              lp |= DRV_INIT_LOOP_ONGOING;
+# endif
+            if (device_init_driver_nolock(dev) == 0)
+              lp |= DRV_INIT_LOOP_AGAIN;
             break;
 
-#if defined(CONFIG_DEVICE_INIT_ASYNC) && defined(CONFIG_DEVICE_CLEANUP)
+# if defined(CONFIG_DEVICE_INIT_ASYNC) && defined(CONFIG_DEVICE_CLEANUP)
           case DEVICE_INIT_DECLINE:
             if (!dev->drv->f_cleanup(dev))
               dev->status = DEVICE_INIT_RELEASED;
             break;
-#endif
+# endif
+
+          default:
+            break;
           }
+
+        LOCK_RELEASE_IRQ(&dev->lock);
     });
-  } while (!done);
+  } while (lp & DRV_INIT_LOOP_AGAIN);
 #endif
+
+  order_smp_read();
+  if (device_init_pass == 1
+#ifdef CONFIG_DEVICE_INIT_ASYNC
+      && !(lp & DRV_INIT_LOOP_ONGOING)
+#endif
+      )
+    {
+      INIT_DEVREADY_INIT();
+      device_init_pass = 2;
+      order_smp_write();
+    }
 }
 
 #ifdef CONFIG_DEVICE_INIT_ASYNC
@@ -419,7 +472,7 @@ static struct kroutine_s device_deferred_init_kr;
 
 static KROUTINE_EXEC(device_deferred_init)
 {
-  libdevice_drivers_init(1);
+  libdevice_drivers_init();
 }
 
 static void device_async_init_event(struct device_s *dev)
@@ -437,7 +490,7 @@ static void device_async_init_event(struct device_s *dev)
 
 #endif
 
-static void device_update_status(struct device_s *dev, error_t err, uint_fast8_t pass)
+static void device_update_status(struct device_s *dev, error_t err)
 {
  switch (err)
     {
@@ -475,7 +528,8 @@ static void device_update_status(struct device_s *dev, error_t err, uint_fast8_t
     }
 
 #ifdef CONFIG_DEVICE_INIT_ASYNC
-  if (pass)
+  order_smp_read();
+  if (device_init_pass != 0)
     device_async_init_event(dev);
 #endif
 }
@@ -489,7 +543,7 @@ void device_async_init_done(struct device_s *dev, error_t err)
   printk("device: init %p %-24s ",
          dev, dev->node.name);
 
-  device_update_status(dev, err, 1);
+  device_update_status(dev, err);
 }
 
 # if defined(CONFIG_DEVICE_CLEANUP)
@@ -505,31 +559,43 @@ void device_async_cleanup_done(struct device_s *dev)
 
 void libdevice_drivers_init0(void)
 {
-  libdevice_drivers_init(0);
+  libdevice_drivers_init();
 }
 
 void libdevice_drivers_init1(void)
 {
   if (cpu_isbootstrap())
     {
+      device_init_pass = 1;
+      order_smp_write();
+
 #ifdef CONFIG_DEVICE_INIT_ASYNC
       kroutine_init_deferred(&device_deferred_init_kr, device_deferred_init);
 #endif
-      libdevice_drivers_init(1);
+      libdevice_drivers_init();
     }
 }
 
 error_t device_bind_driver(struct device_s *dev, const struct driver_s *drv)
 {
-  error_t err = -EBUSY;
+  error_t err;
 
   LOCK_SPIN_IRQ(&dev->lock);
 
-  if (dev->status == DEVICE_INIT_NODRV)
+  switch (dev->status)
     {
+#ifdef CONFIG_DEVICE_ENUM
+    case DEVICE_INIT_ENUM_DRV:
+#endif
+    case DEVICE_INIT_NODRV:
+    case DEVICE_INIT_RELEASED:
+    case DEVICE_INIT_PENDING:
       err = 0;
       dev->drv = drv;
-      dev->status = DEVICE_INIT_PENDING;
+      dev->status = DEVICE_INIT_RELEASED;
+      break;
+    default:
+      err = -EBUSY;
     }
 
   LOCK_RELEASE_IRQ(&dev->lock);
@@ -547,14 +613,16 @@ error_t device_unbind_driver(struct device_s *dev)
   switch (dev->status)
     {
     default:
-      err = -EINVAL;
+      err = -EBUSY;
       break;
-    case DEVICE_INIT_NODRV:
     case DEVICE_INIT_PENDING:
     case DEVICE_INIT_RELEASED:
-    case DEVICE_INIT_FAILED:
-      dev->status = DEVICE_INIT_NODRV;
       dev->drv = NULL;
+    case DEVICE_INIT_FAILED:
+#ifdef CONFIG_DEVICE_ENUM
+    case DEVICE_INIT_ENUM_DRV:
+#endif
+      dev->status = DEVICE_INIT_NODRV;
       err = 0;
     }
 
@@ -592,6 +660,7 @@ error_t device_release_driver(struct device_s *dev)
 # ifdef CONFIG_DEVICE_INIT_ASYNC
         case -EAGAIN:
           dev->status = DEVICE_INIT_DECLINE;
+          err = 0;
 # endif
         default:
           break;
@@ -614,7 +683,16 @@ error_t device_release_driver(struct device_s *dev)
 }
 #endif
 
-error_t device_init_driver(struct device_s *dev, uint_fast8_t pass)
+error_t device_init_driver(struct device_s *dev)
+{
+  error_t err;
+  LOCK_SPIN_IRQ(&dev->lock);
+  err = device_init_driver_nolock(dev);
+  LOCK_RELEASE_IRQ(&dev->lock);
+  return err;
+}
+
+static error_t device_init_driver_nolock(struct device_s *dev)
 {
   const struct driver_s *drv = dev->drv;
   error_t err = 0;
@@ -622,20 +700,19 @@ error_t device_init_driver(struct device_s *dev, uint_fast8_t pass)
   static typeof(dev->sleep_order) device_sleep_order = 0;
 #endif
 
-  LOCK_SPIN_IRQ(&dev->lock);
-
   switch (dev->status)
     {
 #if defined(CONFIG_DEVICE_INIT_PARTIAL) || defined(CONFIG_DEVICE_INIT_ASYNC)
     case DEVICE_INIT_ONGOING:
       if (drv->flags & DRIVER_FLAGS_RETRY_INIT)
         break;
-      err = -EAGAIN;
-      goto end;
+      return -EAGAIN;
 #endif
     default:
-      err = -EBUSY;
-      goto end;
+      return -EBUSY;
+
+    case DEVICE_INIT_FAILED:
+      dev->status = DEVICE_INIT_PENDING;
     case DEVICE_INIT_PENDING:
     case DEVICE_INIT_RELEASED:
 #ifdef CONFIG_DEVICE_SLEEP
@@ -692,16 +769,19 @@ error_t device_init_driver(struct device_s *dev, uint_fast8_t pass)
                 continue;
               if (dev->status == DEVICE_INIT_ONGOING)
                 break;
+#elif defined(CONFIG_DEVICE_INIT_ASYNC)
+            case DEVICE_INIT_ONGOING:
+              break;
 #endif
-            case DEVICE_INIT_FAILED:
+            default:
             missing:
               printk("device: init %p %-24s dep error `%s'\n",
                      dev, dev->node.name, path);
               dev->status = DEVICE_INIT_FAILED;
-              err = -ENOENT;
-              goto end;
+              return -ENOENT;
 
-            default:
+            case DEVICE_INIT_ENUM_DRV:
+            case DEVICE_INIT_PENDING:
               break;
             }
         }
@@ -715,10 +795,8 @@ error_t device_init_driver(struct device_s *dev, uint_fast8_t pass)
 #else
       if (!(drv->flags & DRIVER_FLAGS_NO_DEPEND))
 #endif
-        {
-          err = -EAGAIN;
-          goto end;
-        }
+        return -EAGAIN;
+
 #ifdef CONFIG_DEVICE_INIT_PARTIAL
       cl_missing |= 1 << cl;
 #endif
@@ -726,10 +804,7 @@ error_t device_init_driver(struct device_s *dev, uint_fast8_t pass)
 
 #ifdef CONFIG_DEVICE_INIT_PARTIAL
   if (!(drv->flags & DRIVER_FLAGS_NO_DEPEND) && cl_missing)
-    {
-      err = -EAGAIN;
-      goto end;
-    }
+    return -EAGAIN;
 #endif
 
   printk("device: init %p %-24s ",
@@ -738,10 +813,7 @@ error_t device_init_driver(struct device_s *dev, uint_fast8_t pass)
   /* device init */
   err = drv->f_init(dev, cl_missing);
 
-  device_update_status(dev, err, pass);
-
- end:;
-  LOCK_RELEASE_IRQ(&dev->lock);
+  device_update_status(dev, err);
 
   return err;
 }

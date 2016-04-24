@@ -57,10 +57,11 @@ static DEV_INIT(devinit_test_init)
   if (dev_timer_init_sec(&pv->timer, &pv->rq.delay, NULL, 5, 1))
     goto err_acc;
 
+  pv->rq.rev = 0;
   pv->rq.rq.pvdata = dev;
   kroutine_init_deferred(&pv->rq.rq.kr, devinit_test_timeout);
 
-  DEVICE_OP(&pv->timer, request, &pv->rq);
+  ensure(DEVICE_OP(&pv->timer, request, &pv->rq) == 0);
 #endif
 
 # ifdef CONFIG_DEVICE_INIT_PARTIAL

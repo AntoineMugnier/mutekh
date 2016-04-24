@@ -260,7 +260,7 @@ static void apbctrl_scan(struct device_s *dev, uintptr_t begin)
       if (mask & (mask+1))
         {
           printk("apbctrl: %p device address mask with non contiguous range is not supported\n", d);
-          d->status = DEVICE_INIT_ENUM;
+          d->status = DEVICE_INIT_ENUM_ERR;
         }
       else
         {
@@ -274,7 +274,7 @@ static void apbctrl_scan(struct device_s *dev, uintptr_t begin)
             }
         }
 
-      device_attach(d, dev);
+      device_attach(d, dev, NULL);
       device_shrink(d);
 
       if (vendor == GAISLER_VENDOR_GAISLER)

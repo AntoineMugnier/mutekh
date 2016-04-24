@@ -94,7 +94,7 @@ dev_drv_enum_init_enqueue(dev_request_queue_root_t *q, struct dev_enum_rq_s *rq)
         }
       break;
     }
-    case DEVICE_INIT_NODRV:
+    case DEVICE_INIT_ENUM_DRV:
     case DEVICE_INIT_PENDING:
     postpone:
       cdev->ref_count++;

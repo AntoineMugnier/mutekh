@@ -764,19 +764,6 @@ error_t device_last_number(struct device_s *dev,
                            enum driver_class_e cl,
                            uint_fast8_t *num);
 
-/**
-   @This walks down the device tree from specified node (from root if
-   @tt dev is NULL) and try to find appropriate driver for each
-   device and eventually initializes it provided that all resources
-   are available.
-
-   The device initialization can be skipped if dependencies have not
-   been initialized yet. The tree is traversed multiple times until no
-   more actions can be taken.
-*/
-config_depend(CONFIG_DEVICE_TREE)
-void device_find_driver(struct device_node_s *node, uint_fast8_t pass);
-
 /** @This binds a device to a device driver. No check is performed to
     determine if the driver is appropriate. */
 error_t device_bind_driver(struct device_s *dev, const struct driver_s *drv);
@@ -786,7 +773,7 @@ config_depend(CONFIG_DEVICE_CLEANUP)
 error_t device_unbind_driver(struct device_s *dev);
 
 /** @This performs device initialization using previously bound driver. */
-error_t device_init_driver(struct device_s *dev, uint_fast8_t pass);
+error_t device_init_driver(struct device_s *dev);
 
 /** @This stops the device and cleanup driver allocated resources. */
 config_depend(CONFIG_DEVICE_CLEANUP)

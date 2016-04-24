@@ -36,7 +36,6 @@ env = Environment(
         Dimension(test_tree, None),
         Dimension(test_cleanup, None),
         Exclude(test_enum & ~test_tree),
-        Exclude(~test_enum & soclib_arm32),
         ],
 
     actions = [

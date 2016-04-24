@@ -336,7 +336,7 @@ static TERMUI_CON_COMMAND_PROTOTYPE(dev_shell_new)
   if (used & DEV_OPT_NAME)
     device_set_name(dev, c->name);
 
-  device_attach(dev, c->dev);
+  device_attach(dev, c->dev, NULL);
   return 0;
 }
 #endif
@@ -705,7 +705,7 @@ static TERMUI_CON_COMMAND_PROTOTYPE(dev_shell_driver_unbind)
 static TERMUI_CON_COMMAND_PROTOTYPE(dev_shell_driver_init)
 {
   struct termui_optctx_dev_opts *c = ctx;
-  switch (device_init_driver(c->dev, 1))
+  switch (device_init_driver(c->dev))
     {
     case -EAGAIN:
       termui_con_printf(con, "Deferred\n");

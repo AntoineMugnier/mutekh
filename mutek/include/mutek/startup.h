@@ -37,6 +37,7 @@ C_HEADER_BEGIN
 
 INIT_BOOTSTRAP_PROTOTYPES;
 INIT_SMP_PROTOTYPES;
+INIT_DEVREADY_PROTOTYPES;
 
 /** boot address, (located in cpu/current/boot.S) */
 void cpu_boot(void);

@@ -143,7 +143,7 @@ static FDT_ON_NODE_ENTRY_FUNC(enum_fdt_node_entry)
           if (d)
             {
               device_set_name(d, name);
-              device_attach(d, p->dev);
+              device_attach(d, p->dev, NULL);
 
               d->enum_pv = (void*)-1;
               if (p->section == FDT_SECTION_CPUS)

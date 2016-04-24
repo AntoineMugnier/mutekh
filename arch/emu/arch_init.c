@@ -100,8 +100,7 @@ void emu_cpus_enum_init()
   device_res_add_id(d, __bootstrap_pid, 0);
   d->node.flags |= DEVICE_FLAG_CPU;
   device_set_name(d, "cpu0");
-  device_attach(d, NULL);
-  device_bind_driver(d, &emu_cpu_drv);
+  device_attach(d, NULL, &emu_cpu_drv);
 
 #ifdef CONFIG_ARCH_SMP
   /* add other processors to device tree */
@@ -127,8 +126,7 @@ void emu_cpus_enum_init()
         sprintf(name, "cpu%u", i);
         device_set_name(d, name);
 
-        device_attach(d, NULL);
-        device_bind_driver(d, &emu_cpu_drv);
+        device_attach(d, NULL, &emu_cpu_drv);
 
         /* wait for the child to stop */
         //        emu_do_syscall(EMU_SYSCALL_WAITPID, 3, pid, 0, EMU_WAITPID_WUNTRACED);
