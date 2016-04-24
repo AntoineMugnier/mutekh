@@ -28,17 +28,17 @@
 #include <mutek/startup.h>
 #include <string.h>
 
-static lock_t early_console_lock;
+static lock_t printk_lock;
 
 #ifdef CONFIG_IBMPC_PRINTK_VGA
 static uint_fast16_t cursor = 0;
 #endif
 
-static PRINTF_OUTPUT_FUNC(early_console_output)
+static PRINTF_OUTPUT_FUNC(printk_output)
 {
   size_t i;
 
-  lock_spin(&early_console_lock);
+  lock_spin(&printk_lock);
 
 #ifdef CONFIG_IBMPC_PRINTK_E9HACK
   for (i = 0; i < len; ++i)
@@ -86,12 +86,12 @@ static PRINTF_OUTPUT_FUNC(early_console_output)
     }
 #endif
 
-  lock_release(&early_console_lock);
+  lock_release(&printk_lock);
 }
 
-void ibmpc_early_console_init(void)
+void ibmpc_printk_init(void)
 {
-  lock_init(&early_console_lock);
-  printk_set_output(early_console_output, NULL);
+  lock_init(&printk_lock);
+  printk_set_output(printk_output, NULL);
 }
 

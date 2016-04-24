@@ -16,6 +16,7 @@
   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
   02110-1301 USA
 
+  Copyright (c) 2013 Jeremie Brunel <jeremie.brunel@telecom-paristech.fr>
   Copyright (c) 2011 Alexandre Becoulet <alexandre.becoulet@telecom-paristech.fr>
   Copyright (c) 2011 Institut Telecom / Telecom ParisTech
 
@@ -29,20 +30,17 @@
 #include <hexo/iospace.h>
 #include <hexo/endian.h>
 
-static void early_console_out_char(uintptr_t addr, uint8_t c)
+extern volatile char toto;
+
+static void printk_out_char(uintptr_t addr, uint8_t c)
 {
-  /* wait for transmit fifo empty */
-  while (!(cpu_mem_read_32(addr + 4) & endian_be32(0x4)))
+  while ((cpu_mem_read_32(addr + 0x18) & 0x20))
     ;
 
-  cpu_mem_write_32(addr, endian_be32(c));
-
-  /* wait for transmit register empty */
-  while (!(cpu_mem_read_32(addr + 4) & endian_be32(0x2)))
-    ;
+  cpu_mem_write_32(addr, endian_le32((uint32_t)c));
 }
 
-static PRINTF_OUTPUT_FUNC(early_console_out)
+static PRINTF_OUTPUT_FUNC(printk_out)
 {
   uintptr_t addr = (uintptr_t)ctx;
   size_t i;
@@ -50,25 +48,39 @@ static PRINTF_OUTPUT_FUNC(early_console_out)
   for (i = 0; i < len; i++)
     {
       if (str[i] == '\n')
-	early_console_out_char(addr, '\r');
+	printk_out_char(addr, '\r');
 
-      early_console_out_char(addr, str[i]);
+      printk_out_char(addr, str[i]);
     }
+
+  while (endian_le32(cpu_mem_read_32(addr + 0x18)) & 0x8)
+    ;
 }
 
-void gaisler_early_console_init()
+void bcm283x_printk_init()
 {
   uintptr_t addr = CONFIG_MUTEK_PRINTK_ADDR;
 
-#ifndef CONFIG_GAISLER_PRINTK_DEBUG
-  /* uart scaler FIXME */
-  cpu_mem_write_32(addr + 12, endian_be32(CONFIG_GAISLER_PRINTK_SCALER));
-  /* uart control */
-  cpu_mem_write_32(addr + 8, endian_be32(0x3));
-  /* clear uart status */
-  cpu_mem_write_32(addr + 4, 0);
-#endif
+  /* before init disable uart */
+  cpu_mem_write_32(addr + 0x30, 0);
 
-  printk_set_output(early_console_out, (void*)addr);
+  /* set baudrate
+     ibrd = uart_clk / (16 * baud_rate)
+     fbrd = rnd((64 * (uart_clk % (16 * baud_rate)) / (16 * baud_rate)))
+     uart_clk = 3000000
+     baud_rate = 115200
+     ibrd = 1
+     fbrd = 40
+   */
+  cpu_mem_write_32(addr + 0x24, 1);
+  cpu_mem_write_32(addr + 0x28, 40);
+
+  /* set uart to be 8 bits, 1 stop bit, no parity, fifo enabled */
+  cpu_mem_write_32(addr + 0x2c, (3 << 5) | (1 << 4));
+
+  /* enable uart */
+  cpu_mem_write_32(addr + 0x30, (1 << 8) | (1 << 9) | (1));
+
+  printk_set_output(printk_out, (void*)addr);
 }
 

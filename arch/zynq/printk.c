@@ -30,7 +30,7 @@
 #include <hexo/iospace.h>
 #include <hexo/endian.h>
 
-static void early_console_out_char(uintptr_t addr, uint8_t c)
+static void printk_out_char(uintptr_t addr, uint8_t c)
 {
   /* wait tx fifo not full */
   while ((endian_le32(cpu_mem_read_32(addr + 0x2c)) & 0x10))
@@ -39,7 +39,7 @@ static void early_console_out_char(uintptr_t addr, uint8_t c)
   cpu_mem_write_32(addr + 0x30, endian_le32((uint32_t)c));
 }
 
-static PRINTF_OUTPUT_FUNC(early_console_out)
+static PRINTF_OUTPUT_FUNC(printk_out)
 {
   uintptr_t addr = (uintptr_t)ctx;
   size_t i;
@@ -51,9 +51,9 @@ static PRINTF_OUTPUT_FUNC(early_console_out)
   for (i = 0; i < len; i++)
   {
     if (str[i] == '\n')
-      early_console_out_char(addr, '\r');
+      printk_out_char(addr, '\r');
 
-    early_console_out_char(addr, str[i]);
+    printk_out_char(addr, str[i]);
   }
 
   /* wait tx active or tx fifo not empty */
@@ -61,10 +61,10 @@ static PRINTF_OUTPUT_FUNC(early_console_out)
     ;
 }
 
-void zynq_early_console_init()
+void zynq_printk_init()
 {
   uintptr_t addr = CONFIG_MUTEK_PRINTK_ADDR;
 
-  printk_set_output(early_console_out, (void*)addr);
+  printk_set_output(printk_out, (void*)addr);
 }
 

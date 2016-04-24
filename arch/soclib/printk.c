@@ -25,7 +25,7 @@
 #include <mutek/printk.h>
 #include <mutek/startup.h>
 
-static PRINTF_OUTPUT_FUNC(early_console_out)
+static PRINTF_OUTPUT_FUNC(printk_out)
 {
 	uintptr_t out = (uintptr_t)ctx;
 	size_t i;
@@ -33,12 +33,12 @@ static PRINTF_OUTPUT_FUNC(early_console_out)
 		cpu_mem_write_8(out, str[i]);
 }
 
-static void soclib_early_console(uintptr_t addr)
+static void soclib_printk(uintptr_t addr)
 {
-	printk_set_output(early_console_out, (void*)addr);
+	printk_set_output(printk_out, (void*)addr);
 }
 
-void soclib_early_console_init()
+void soclib_printk_init()
 {
-	soclib_early_console(CONFIG_MUTEK_PRINTK_ADDR);
+	soclib_printk(CONFIG_MUTEK_PRINTK_ADDR);
 }

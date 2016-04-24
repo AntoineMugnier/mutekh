@@ -32,7 +32,7 @@
 #include <arch/pic32/freq.h>
 
 
-static void early_console_out_char(char c)
+static void printk_out_char(char c)
 {
   while ((cpu_mem_read_32(CONFIG_MUTEK_PRINTK_ADDR + PIC32_UART_STATUS_ADDR)
            & PIC32_UART_STATUS_UTXBF))
@@ -41,15 +41,15 @@ static void early_console_out_char(char c)
   cpu_mem_write_32(CONFIG_MUTEK_PRINTK_ADDR + PIC32_UART_TX_ADDR, c);
 }
 
-static PRINTF_OUTPUT_FUNC(early_console_out)
+static PRINTF_OUTPUT_FUNC(printk_out)
 {
   uint_fast8_t i;
 
   for (i = 0; i < len; i++)
   {
     if (str[i] == '\n')
-      early_console_out_char('\r');
-    early_console_out_char(str[i]);
+      printk_out_char('\r');
+    printk_out_char(str[i]);
   }
 }
 
@@ -97,6 +97,6 @@ void pic32_uart_printk_init()
   cpu_mem_write_32(CONFIG_MUTEK_PRINTK_ADDR + PIC32_UART_STATUS_ADDR, PIC32_UART_STATUS_UTXEN);
 
 
-  printk_set_output(early_console_out, NULL);
+  printk_set_output(printk_out, NULL);
 }
 

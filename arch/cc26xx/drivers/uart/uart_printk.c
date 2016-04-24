@@ -11,7 +11,7 @@
 #include <arch/cc26xx/uart.h>
 
 
-static void early_console_out_char(uint8_t c)
+static void printk_out_char(uint8_t c)
 {
   while (cpu_mem_read_32(CC26XX_UART0_BASE + CC26XX_UART_FR_ADDR)
     & CC26XX_UART_FR_TXFF);
@@ -19,15 +19,15 @@ static void early_console_out_char(uint8_t c)
   cpu_mem_write_8(CC26XX_UART0_BASE + CC26XX_UART_DR_ADDR, c);
 }
 
-static PRINTF_OUTPUT_FUNC(early_console_out)
+static PRINTF_OUTPUT_FUNC(printk_out)
 {
   uint_fast8_t i;
 
   for (i = 0; i < len; i++)
     {
       if (str[i] == '\n')
-        early_console_out_char('\r');
-      early_console_out_char(str[i]);
+        printk_out_char('\r');
+      printk_out_char(str[i]);
     }
 }
 
@@ -127,6 +127,6 @@ void cc26xx_printk_init()
   CC26XX_UART_CTL_UARTEN_SET(reg, EN);
   cpu_mem_write_32(CC26XX_UART0_BASE + CC26XX_UART_CTL_ADDR, reg);
 
-  printk_set_output(early_console_out, NULL);
+  printk_set_output(printk_out, NULL);
 }
 

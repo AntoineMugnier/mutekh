@@ -33,7 +33,7 @@
 #define LEUART_CLOCK            32768
 #define LEUART_RATE             9600
 
-static void early_console_out_char(char c)
+static void printk_out_char(char c)
 {
   uint32_t b = CONFIG_MUTEK_PRINTK_ADDR;
 
@@ -44,15 +44,15 @@ static void early_console_out_char(char c)
   cpu_mem_write_32(b + EFM32_LEUART_TXDATA_ADDR, c);
 }
 
-static PRINTF_OUTPUT_FUNC(early_console_out)
+static PRINTF_OUTPUT_FUNC(printk_out)
 {
   uint_fast8_t i;
 
   for (i = 0; i < len; i++)
   {
     if (str[i] == '\n')
-      early_console_out_char('\r');
-    early_console_out_char(str[i]);
+      printk_out_char('\r');
+    printk_out_char(str[i]);
   }
 }
 
@@ -172,6 +172,6 @@ void efm32_leuart_printk_init()
   /* Enable TX */
   cpu_mem_write_32(b + EFM32_LEUART_CMD_ADDR, EFM32_LEUART_CMD_TXEN);
 
-  printk_set_output(early_console_out, NULL);
+  printk_set_output(printk_out, NULL);
 }
 

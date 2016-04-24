@@ -26,7 +26,7 @@
 #include <mutek/printk.h>
 
 #ifdef CONFIG_ATMEL_PRINTK_AVR32_SIM
-static PRINTF_OUTPUT_FUNC(early_console_out)
+static PRINTF_OUTPUT_FUNC(printk_out)
 {
 #ifdef CONFIG_ATMEL_PRINTK_AVR32_SIM
   asm volatile("mov r12, 1  \n"
@@ -40,9 +40,9 @@ static PRINTF_OUTPUT_FUNC(early_console_out)
 #endif
 }
 
-void atmel_early_console_avr32sim_init()
+void atmel_printk_avr32sim_init()
 {
-  printk_set_output(early_console_out, NULL);
+  printk_set_output(printk_out, NULL);
 }
 #endif
 
@@ -67,7 +67,7 @@ void atmel_early_console_avr32sim_init()
 #define AVR32_USART_MR_NBSTOP_1        0x00000000
 #define AVR32_USART_MR_NBSTOP_OFFSET   12
 
-static PRINTF_OUTPUT_FUNC(early_console_out)
+static PRINTF_OUTPUT_FUNC(printk_out)
 {
   uint_fast8_t i;
 
@@ -79,7 +79,7 @@ static PRINTF_OUTPUT_FUNC(early_console_out)
     }
 }
 
-void atmel_early_console_usart_init()
+void atmel_printk_usart_init()
 {
   cpu_mem_write_32(CONFIG_MUTEK_PRINTK_ADDR + AVR32_USART_CR, AVR32_USART_CR_RSTTX_MASK);
   cpu_mem_write_32(CONFIG_MUTEK_PRINTK_ADDR + AVR32_USART_MR,
@@ -87,7 +87,7 @@ void atmel_early_console_usart_init()
                    (AVR32_USART_MR_PAR_NONE << AVR32_USART_MR_PAR_OFFSET)    |
                    (AVR32_USART_MR_NBSTOP_1 << AVR32_USART_MR_NBSTOP_OFFSET));
   cpu_mem_write_32(CONFIG_MUTEK_PRINTK_ADDR + AVR32_USART_CR, AVR32_USART_CR_TXEN_MASK);
-  printk_set_output(early_console_out, NULL);
+  printk_set_output(printk_out, NULL);
 }
 #endif
 
