@@ -1,0 +1,21 @@
+%set OUTPUT_NAME barcode
+%append MODULES app:$(CONFIGPATH)
+
+CONFIG_COMPILE_COLLECT
+CONFIG_COMPILE_DEBUG
+CONFIG_MUTEK_THREAD
+CONFIG_MUTEK_KROUTINE_IDLE
+
+CONFIG_LICENSE_APP_BSD
+
+CONFIG_APP_START
+CONFIG_BLE_GATTDB_STREAM
+
+%inherit nrf5x-barcode
+%inherit ble-peripheral
+%inherit ble-crypto
+%include examples/ble/ble.build
+%include arch/arch.build
+%include scripts/options.build
+
+CONFIG_HEXO_CPU_STACK_SIZE 0x800
