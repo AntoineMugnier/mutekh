@@ -26,6 +26,9 @@
 %section noopt
   CONFIG_COMPILE_OPTIMIZE! 0
 
+%section nosmp
+  CONFIG_ARCH_SMP! undefined
+
 %section savetemps
   CONFIG_COMPILE_SAVETEMPS!
 
