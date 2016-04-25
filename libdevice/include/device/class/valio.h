@@ -300,6 +300,7 @@ error_t dev_valio_spin_read(
     uint16_t attribute,
     void *data),
 {
+    struct dev_request_status_s status;
     struct dev_valio_rq_s req =
     {
         .type = DEVICE_VALIO_READ,
@@ -307,7 +308,11 @@ error_t dev_valio_spin_read(
         .data = data,
     };
 
-    return dev_valio_spin_request(accessor, &req);
+    dev_request_spin_init(&req.base, &status);
+    DEVICE_OP(accessor, request, &req);
+    dev_request_spin_wait(&status);
+
+    return req.error;
 });
 
 /** @This perform a @ref DEVICE_VALIO_WRITE operation and wait for
@@ -319,6 +324,7 @@ error_t dev_valio_spin_write(
     uint16_t attribute,
     const void *data),
 {
+    struct dev_request_status_s status;
     struct dev_valio_rq_s req =
     {
         .type = DEVICE_VALIO_WRITE,
@@ -326,7 +332,11 @@ error_t dev_valio_spin_write(
         .data = (void*)data,
     };
 
-    return dev_valio_spin_request(accessor, &req);
+    dev_request_spin_init(&req.base, &status);
+    DEVICE_OP(accessor, request, &req);
+    dev_request_spin_wait(&status);
+
+    return req.error;
 });
 
 /** @This perform a @ref DEVICE_VALIO_WAIT_EVENT operation and wait
@@ -338,6 +348,7 @@ error_t dev_valio_spin_update(
     uint16_t attribute,
     void *data),
 {
+    struct dev_request_status_s status;
     struct dev_valio_rq_s req =
     {
         .type = DEVICE_VALIO_WAIT_EVENT,
@@ -345,7 +356,11 @@ error_t dev_valio_spin_update(
         .data = data,
     };
 
-    return dev_valio_spin_request(accessor, &req);
+    dev_request_spin_init(&req.base, &status);
+    DEVICE_OP(accessor, request, &req);
+    dev_request_spin_wait(&status);
+
+    return req.error;
 });
 
 /** @This is scheduler wait wrapper for the @ref dev_valio_request_t function */
