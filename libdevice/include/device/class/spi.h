@@ -353,6 +353,7 @@ struct dev_spi_ctrl_base_rq_s;
 struct dev_spi_ctrl_bytecode_rq_s;
 struct dev_spi_ctrl_transaction_rq_s;
 struct dev_spi_ctrl_queue_s;
+struct bc_descriptor_s;
 
 /***************************************** config */
 
