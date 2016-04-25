@@ -112,38 +112,28 @@
   #define STM32_USART_CR1_PEIE_GET(x)          (((x) >> 8) & 0x1)
   #define STM32_USART_CR1_PS_MASK              0x00000001
   #define STM32_USART_CR1_PS(v)                ((STM32_USART_CR1_PS_##v) << 9)
-  #define STM32_USART_CR1_PS_SET(x, v)         do { (x) = (((x) & ~0x200) | ((STM32_USART_CR1_PS_##v) << 9)); } while(0)
+  #define STM32_USART_CR1_PS_SET(x, v)         do { (x) = (((x) & ~0x200) | ((v) << 9)); } while(0)
   #define STM32_USART_CR1_PS_GET(x)            (((x) >> 9) & 0x1)
-    #define STM32_USART_CR1_PS_EVEN              0x00000000
-    #define STM32_USART_CR1_PS_ODD               0x00000001
   #define STM32_USART_CR1_PCE_MASK             0x00000001
   #define STM32_USART_CR1_PCE(v)               ((STM32_USART_CR1_PCE_##v) << 10)
-  #define STM32_USART_CR1_PCE_SET(x, v)        do { (x) = (((x) & ~0x400) | ((STM32_USART_CR1_PCE_##v) << 10)); } while(0)
+  #define STM32_USART_CR1_PCE_SET(x, v)        do { (x) = (((x) & ~0x400) | ((v) << 10)); } while(0)
   #define STM32_USART_CR1_PCE_GET(x)           (((x) >> 10) & 0x1)
-    #define STM32_USART_CR1_PCE_NONE             0x00000000
-    #define STM32_USART_CR1_PCE_ENABLE           0x00000001
   #define STM32_USART_CR1_WAKE_MASK            0x00000001
   #define STM32_USART_CR1_WAKE(v)              ((STM32_USART_CR1_WAKE_##v) << 11)
-  #define STM32_USART_CR1_WAKE_SET(x, v)       do { (x) = (((x) & ~0x800) | ((STM32_USART_CR1_WAKE_##v) << 11)); } while(0)
+  #define STM32_USART_CR1_WAKE_SET(x, v)       do { (x) = (((x) & ~0x800) | ((v) << 11)); } while(0)
   #define STM32_USART_CR1_WAKE_GET(x)          (((x) >> 11) & 0x1)
-    #define STM32_USART_CR1_WAKE_IDLE            0x00000000
-    #define STM32_USART_CR1_WAKE_ADDR            0x00000001
   #define STM32_USART_CR1_M_MASK               0x00000001
   #define STM32_USART_CR1_M(v)                 ((STM32_USART_CR1_M_##v) << 12)
-  #define STM32_USART_CR1_M_SET(x, v)          do { (x) = (((x) & ~0x1000) | ((STM32_USART_CR1_M_##v) << 12)); } while(0)
+  #define STM32_USART_CR1_M_SET(x, v)          do { (x) = (((x) & ~0x1000) | ((v) << 12)); } while(0)
   #define STM32_USART_CR1_M_GET(x)             (((x) >> 12) & 0x1)
-    #define STM32_USART_CR1_M_8_BITS             0x00000000
-    #define STM32_USART_CR1_M_9_BITS             0x00000001
   #define STM32_USART_CR1_UE_MASK              0x00000001
   #define STM32_USART_CR1_UE                   0x00002000
   #define STM32_USART_CR1_UE_SET(x, v)         do { (x) = (((x) & ~0x2000) | ((v) << 13)); } while(0)
   #define STM32_USART_CR1_UE_GET(x)            (((x) >> 13) & 0x1)
   #define STM32_USART_CR1_OVER8_MASK           0x00000001
   #define STM32_USART_CR1_OVER8(v)             ((STM32_USART_CR1_OVER8_##v) << 15)
-  #define STM32_USART_CR1_OVER8_SET(x, v)      do { (x) = (((x) & ~0x8000) | ((STM32_USART_CR1_OVER8_##v) << 15)); } while(0)
+  #define STM32_USART_CR1_OVER8_SET(x, v)      do { (x) = (((x) & ~0x8000) | ((v) << 15)); } while(0)
   #define STM32_USART_CR1_OVER8_GET(x)         (((x) >> 15) & 0x1)
-    #define STM32_USART_CR1_OVER8_16             0x00000000
-    #define STM32_USART_CR1_OVER8_8              0x00000001
 
 #define STM32_USART_CR2_ADDR                     0x00000010
 #define STM32_USART_CR2_MASK                     0x00007f6f
@@ -177,12 +167,8 @@
   #define STM32_USART_CR2_CLKEN_GET(x)         (((x) >> 11) & 0x1)
   #define STM32_USART_CR2_STOP_MASK            0x00000003
   #define STM32_USART_CR2_STOP(v)              ((STM32_USART_CR2_STOP_##v) << 12)
-  #define STM32_USART_CR2_STOP_SET(x, v)       do { (x) = (((x) & ~0x3000) | ((STM32_USART_CR2_STOP_##v) << 12)); } while(0)
+  #define STM32_USART_CR2_STOP_SET(x, v)       do { (x) = (((x) & ~0x3000) | ((v) << 12)); } while(0)
   #define STM32_USART_CR2_STOP_GET(x)          (((x) >> 12) & 0x3)
-    #define STM32_USART_CR2_STOP_1_BIT           0x00000000
-    #define STM32_USART_CR2_STOP_0_5_BIT         0x00000001
-    #define STM32_USART_CR2_STOP_2_BITS          0x00000002
-    #define STM32_USART_CR2_STOP_1_5_BIT         0x00000003
   #define STM32_USART_CR2_LINEN_MASK           0x00000001
   #define STM32_USART_CR2_LINEN                0x00004000
   #define STM32_USART_CR2_LINEN_SET(x, v)      do { (x) = (((x) & ~0x4000) | ((v) << 14)); } while(0)

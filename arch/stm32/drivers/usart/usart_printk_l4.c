@@ -17,7 +17,6 @@
     02110-1301 USA.
 
     Copyright Julien Peeters <contact@julienpeeters.net> (c) 2014
-    Copyright Alexandre Becoulet <alexandre.becoulet@lip6.fr> (c) 2012
 */
 
 #include <hexo/types.h>
@@ -25,12 +24,11 @@
 #include <hexo/endian.h>
 
 #include <mutek/printk.h>
+#include <mutek/startup.h>
 
-#include <arch/stm32/f4/usart.h>
-
-#include <arch/stm32/f4/mmap.h>
-#include <arch/stm32/f4/gpio.h>
-#include <arch/stm32/f4/rcc.h>
+#include <arch/stm32/l4/mmap.h>
+#include <arch/stm32/l4/gpio.h>
+#include <arch/stm32/l4/usart.h>
 
 
 #define STM32_GPIO_BANK_WIDTH 16
@@ -39,19 +37,19 @@ void stm32_usart_printk_init(void);
 
 static inline void stm32_usart_tx_wait_ready()
 {
-  uintptr_t const a = CONFIG_MUTEK_PRINTK_ADDR + STM32_USART_SR_ADDR;
+  uintptr_t const a = CONFIG_MUTEK_PRINTK_ADDR + STM32_USART_ISR_ADDR;
 
-  reg_t status;
+  uint32_t x;
   do
     {
-      status = endian_le32(cpu_mem_read_32(a));
+      x = endian_le32(cpu_mem_read_32(a));
     }
-  while (!(status & STM32_USART_SR_TXE));
+  while (!(x & STM32_USART_ISR_TXE));
 }
 
-static PRINTF_OUTPUT_FUNC(printk_out)
+static PRINTF_OUTPUT_FUNC(early_console_out)
 {
-  uintptr_t const a = CONFIG_MUTEK_PRINTK_ADDR + STM32_USART_DR_ADDR;
+  uintptr_t const a = CONFIG_MUTEK_PRINTK_ADDR + STM32_USART_TDR_ADDR;
 
   uint_fast8_t i;
 
@@ -74,8 +72,6 @@ void stm32_usart_printk_init(void)
 {
   uintptr_t a;
   uint32_t  cr1 = 0, cr2 = 0, cr3 = 0, x;
-
-  /* gpio PA2/PA3 as TX/RX. */
 
   /* set gpio alternate function */
   a = STM32_GPIO_ADDR + STM32_GPIO_MODER_ADDR(
@@ -127,14 +123,15 @@ void stm32_usart_printk_init(void)
     endian_le32(CONFIG_DRIVER_STM32_USART_PRINTK_CLK_FREQ /
       CONFIG_DRIVER_STM32_USART_PRINTK_BAUDRATE));
 
-  /* oversampling x16. */
-  STM32_USART_CR1_OVER8_SET(cr1, 0);
-  STM32_USART_CR3_ONEBIT_SET(cr3, 0);
+  /* oversampling by 16 with 3 samples/bit. */
+  STM32_USART_CR1_OVER8_SET(cr1, 0 /* by 16 */);
+  STM32_USART_CR3_ONEBIT_SET(cr3, 0 /* 3 samples/bit */);
 
   /* configure USART 8 bits, no parity, 1 stop bit. */
-  STM32_USART_CR1_M_SET(cr1, 0);
-  STM32_USART_CR1_PCE_SET(cr1, 0);
-  STM32_USART_CR2_STOP_SET(cr2, 0);
+  STM32_USART_CR1_M0_SET(cr1, 0);
+  STM32_USART_CR1_M1_SET(cr1, 0);
+  STM32_USART_CR1_PCE_SET(cr1, 0 /* None */);
+  STM32_USART_CR2_STOP_SET(cr2, 0 /* 1 bit */);
 
   /* enable TX. */
   STM32_USART_CR1_TE_SET(cr1, 1);
@@ -148,6 +145,6 @@ void stm32_usart_printk_init(void)
   STM32_USART_CR1_UE_SET(cr1, 1);
   cpu_mem_write_32(CONFIG_MUTEK_PRINTK_ADDR + STM32_USART_CR1_ADDR, endian_le32(cr1));
 
-  printk_set_output(printk_out, NULL);
+  printk_set_output(early_console_out, NULL);
 }
 

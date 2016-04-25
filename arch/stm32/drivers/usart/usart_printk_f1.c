@@ -116,9 +116,9 @@ void stm32_usart_printk_init(void)
   STM32_USART_CR1_TE_SET(cr1, 1);
 
   /* configure USART 8 bits, no parity, 1 stop bit. */
-  STM32_USART_CR1_M_SET(cr1, 8_BITS);
-  STM32_USART_CR1_PCE_SET(cr1, NONE);
-  STM32_USART_CR2_STOP_SET(cr2, 1_BIT);
+  STM32_USART_CR1_M_SET(cr1, 0);
+  STM32_USART_CR1_PCE_SET(cr1, 0);
+  STM32_USART_CR2_STOP_SET(cr2, 0);
 
   /* configure baud rate */
   cpu_mem_write_32(CONFIG_MUTEK_PRINTK_ADDR + STM32_USART_BRR_ADDR,

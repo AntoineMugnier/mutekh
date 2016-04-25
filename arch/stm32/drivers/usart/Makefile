@@ -9,3 +9,7 @@ ifeq ($(CONFIG_STM32_FAMILY), 4)
 objs-$(CONFIG_DRIVER_STM32_USART_PRINTK) += usart_printk_f4.o
 endif
 
+ifeq ($(CONFIG_STM32_FAMILY), L4)
+objs-$(CONFIG_DRIVER_STM32_USART_PRINTK) += usart_printk_l4.o
+endif
+
