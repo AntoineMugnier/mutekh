@@ -157,12 +157,20 @@ sub out_call8 {
 
 sub out_call32 {
     my ($thisop) = @_;
-    return out_call8($thisop);
+    return "    adr r0, 2f\n".
+           "    adds r0, #1\n".
+           "    str r0, [r4, #".($thisop->{lr} * 4)."]\n".
+           "    ldr r0, = $thisop->{args}->[1] + 1\n".
+	   "    bx r0\n".
+           "    .balign 4\n".
+           "2:\n";
 }
 
 sub out_jmp32 {
     my ($thisop) = @_;
-    return out_jmp8($thisop);
+    return "    ldr r0, = $thisop->{args}->[0] + 1\n".
+	   "    bx r0\n".
+	   "    .ltorg\n";
 }
 
 sub out_ret {

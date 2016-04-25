@@ -236,5 +236,15 @@ sub out_cst {
     return mov_imm( $reg[$wo], $x );
 }
 
+sub out_call32 {
+    my ($thisop) = @_;
+    return bc_backend_armv6m::out_call8($thisop);
+}
+
+sub out_jmp32 {
+    my ($thisop) = @_;
+    return bc_backend_armv6m::out_jmp8($thisop);
+}
+
 return 1;
 
