@@ -113,7 +113,7 @@ DEV_DECLARE_STATIC(i2c1_dev, "i2c1", 0, stm32_i2c_ctrl_drv,
 
 #endif
 
-#if defined(CONFIG_DRIVER_STM32_GPIO)
+#if defined(CONFIG_DRIVER_STM32_GPIO_X4)
 
 /* GPIO A..E. */
 DEV_DECLARE_STATIC(gpio_dev, "gpio", 0, stm32_gpio_drv,

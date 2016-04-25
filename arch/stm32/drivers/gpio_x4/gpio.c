@@ -50,7 +50,7 @@
 
 struct stm32_gpio_private_s
 {
-#if defined(CONFIG_DRIVER_STM32_GPIO_ICU)
+#if defined(CONFIG_DRIVER_STM32_GPIO_X4_ICU)
   /* This specifies which bank is selected for each interrupt line. A
      value of -1 means that no bank is currently bound to an
      interrupt. */
@@ -243,7 +243,7 @@ update:;
       break;
     }
 
-  io_first += STM32_GPIO_BANK_SIZE;
+  io_first = (io_first | (STM32_GPIO_BANK_SIZE - 1)) + 1;
 
   if (mlen >= STM32_GPIO_BANK_SIZE)
     goto loop;
@@ -297,7 +297,7 @@ error_t stm32_gpio_apply_alt_func(gpio_id_t io_id, uint8_t mux)
 
   uintptr_t a = STM32_GPIO_ADDR + STM32_GPIO_AFRL_ADDR(bank);
   uint64_t  x = endian_le64_na_load((void*)a);
-  x = (x & ~(0xfULL << shift)) | (mux << shift);
+  x = (x & ~(0xfULL << shift)) | ((uint64_t)mux << shift);
   //printk("alt func id:%u f:%u\n", io_id, mux);
   endian_le64_na_store((void*)a, x);
 
@@ -330,7 +330,7 @@ DEV_GPIO_SET_OUTPUT(stm32_gpio_gpio_set_output)
   uint32_t smask = 0, cmask = 0;
 
   uint_fast8_t mshift = io_first % STM32_GPIO_BANK_SIZE;
-  int_fast8_t mlen    = io_last - io_first + 1;
+  int_fast8_t  mlen   = io_last - io_first + 1;
 
   if (io_first > io_last || io_last > STM32_GPIO_MAX_ID)
     return -ERANGE;
@@ -343,6 +343,7 @@ mask:
 loop:
   smask |= ((uint32_t)endian_le16_na_load(set_mask) & tmask) << mshift;
   cmask |= ((uint32_t)endian_le16_na_load(clear_mask) & tmask) << mshift;
+  cmask |= ~(tmask << mshift);
 
   set_mask   += 2;
   clear_mask += 2;
@@ -361,7 +362,7 @@ update:;
   smask >>= STM32_GPIO_BANK_SIZE;
   cmask >>= STM32_GPIO_BANK_SIZE;
 
-  io_first += STM32_GPIO_BANK_SIZE;
+  io_first = (io_first | (STM32_GPIO_BANK_SIZE - 1)) + 1;
 
   if (mlen >= STM32_GPIO_BANK_SIZE)
     goto loop;
@@ -444,7 +445,7 @@ end:
 
 /********************************* ICU class. **********/
 
-#if defined(CONFIG_DRIVER_STM32_GPIO_ICU)
+#if defined(CONFIG_DRIVER_STM32_GPIO_X4_ICU)
 
 static
 uint_fast8_t stm32_gpio_icu_src_id_of_sink_id(uint_fast8_t sink_id)
@@ -510,28 +511,52 @@ DEV_IRQ_SINK_UPDATE(stm32_gpio_icu_sink_update)
   /* Disable interrupt. */
   if (r == 0 && f == 0)
     {
+#if CONFIG_STM32_FAMILY == 4
       a = STM32_EXTI_ADDR + STM32_EXTI_IMR_ADDR;
       x = endian_le32(cpu_mem_read_32(a));
       STM32_EXTI_IMR_MR_SET(sink_id, x, 0);
+#elif CONFIG_STM32_FAMILY == L4
+      a = STM32_EXTI_ADDR + STM32_EXTI_IMR1_ADDR;
+      x = endian_le32(cpu_mem_read_32(a));
+      STM32_EXTI_IMR1_IM_SET(sink_id, x, 0);
+#endif
       cpu_mem_write_32(a, endian_le32(x));
       return;
     }
 
   /* Set trigger. */
+#if CONFIG_STM32_FAMILY == 4
   a = STM32_EXTI_ADDR + STM32_EXTI_FTSR_ADDR;
   x = endian_le32(cpu_mem_read_32(a));
   STM32_EXTI_FTSR_TR_SET(sink_id, x, f);
+#elif CONFIG_STM32_FAMILY == L4
+  a = STM32_EXTI_ADDR + STM32_EXTI_FTSR1_ADDR;
+  x = endian_le32(cpu_mem_read_32(a));
+  STM32_EXTI_FTSR1_FT_SET(sink_id, x, f);
+#endif
   cpu_mem_write_32(a, endian_le32(x));
 
+#if CONFIG_STM32_FAMILY == 4
   a = STM32_EXTI_ADDR + STM32_EXTI_RTSR_ADDR;
   x = endian_le32(cpu_mem_read_32(a));
   STM32_EXTI_RTSR_TR_SET(sink_id, x, r);
+#elif CONFIG_STM32_FAMILY == L4
+  a = STM32_EXTI_ADDR + STM32_EXTI_RTSR1_ADDR;
+  x = endian_le32(cpu_mem_read_32(a));
+  STM32_EXTI_RTSR1_RT_SET(sink_id, x, r);
+#endif
   cpu_mem_write_32(a, endian_le32(x));
 
   /* Enable interrupt. */
+#if CONFIG_STM32_FAMILY == 4
   a = STM32_EXTI_ADDR + STM32_EXTI_IMR_ADDR;
   x = endian_le32(cpu_mem_read_32(a));
   STM32_EXTI_IMR_MR_SET(sink_id, x, 1);
+#elif CONFIG_STM32_FAMILY == L4
+  a = STM32_EXTI_ADDR + STM32_EXTI_IMR1_ADDR;
+  x = endian_le32(cpu_mem_read_32(a));
+  STM32_EXTI_IMR1_IM_SET(sink_id, x, 1);
+#endif
   cpu_mem_write_32(a, endian_le32(x));
 }
 
@@ -590,7 +615,11 @@ DEV_ICU_LINK(stm32_gpio_icu_link)
   cpu_mem_write_32(a, endian_le32(x));
 
   /* Clear interrupt. */
+#if CONFIG_STM32_FAMILY == 4
   a = STM32_EXTI_ADDR + STM32_EXTI_PR_ADDR;
+#elif CONFIG_STM32_FAMILY == L4
+  a = STM32_EXTI_ADDR + STM32_EXTI_PR1_ADDR;
+#endif
   x = endian_le32(cpu_mem_read_32(a));
   x &= ~(1 << sink_id);
   cpu_mem_write_32(a, endian_le32(x));
@@ -605,7 +634,11 @@ DEV_IRQ_SRC_PROCESS(stm32_gpio_icu_src_process)
 
   while (1)
     {
+#if CONFIG_STM32_FAMILY == 4
       uintptr_t a = STM32_EXTI_ADDR + STM32_EXTI_PR_ADDR;
+#elif CONFIG_STM32_FAMILY == L4
+      uintptr_t a = STM32_EXTI_ADDR + STM32_EXTI_PR1_ADDR;
+#endif
       uint32_t  x = cpu_mem_read_32(a);
 
       if (!x)
@@ -640,7 +673,7 @@ static DEV_CLEANUP(stm32_gpio_cleanup);
 
 DRIVER_DECLARE(stm32_gpio_drv, 0, "STM32 GPIO", stm32_gpio,
                DRIVER_GPIO_METHODS(stm32_gpio_gpio),
-#if defined(CONFIG_DRIVER_STM32_GPIO_ICU)
+#if defined(CONFIG_DRIVER_STM32_GPIO_X4_ICU)
                DRIVER_ICU_METHODS(stm32_gpio_icu),
 #endif
                DRIVER_IOMUX_METHODS(stm32_gpio_iomux));
@@ -650,14 +683,14 @@ DRIVER_REGISTER(stm32_gpio_drv);
 static
 DEV_INIT(stm32_gpio_init)
 {
-  struct stm32_gpio_private_s *pv;
+  struct stm32_gpio_private_s *pv = NULL;
 
-
+#if defined(CONFIG_DRIVER_STM32_GPIO_X4_ICU)
   pv = mem_alloc(sizeof(*pv), (mem_scope_sys));
   if (!pv)
     return -ENOMEM;
-
   memset(pv, 0, sizeof(*pv));
+#endif
 
   /* enable high-speed i/o on all ports. */
   uint8_t   bi;
@@ -665,9 +698,10 @@ DEV_INIT(stm32_gpio_init)
   for (bi = 0; bi < 5; ++bi)
     cpu_mem_write_32(a + STM32_GPIO_OSPEEDR_ADDR(bi), endian_le32(-1));
 
-#if defined(CONFIG_DRIVER_STM32_GPIO_ICU)
+#if defined(CONFIG_DRIVER_STM32_GPIO_X4_ICU)
   device_irq_source_init(dev, pv->src, STM32_GPIO_IRQ_SRC_COUNT,
     &stm32_gpio_icu_src_process);
+
   if (device_irq_source_link(dev, pv->src, STM32_GPIO_IRQ_SRC_COUNT, -1))
     goto err_mem;
 
@@ -690,7 +724,7 @@ DEV_CLEANUP(stm32_gpio_cleanup)
 {
   struct stm32_gpio_private_s *pv = dev->drv_pv;
 
-#if defined(CONFIG_DRIVER_STM32_GPIO_ICU)
+#if defined(CONFIG_DRIVER_STM32_GPIO_X4_ICU)
   device_irq_source_unlink(dev, pv->src, STM32_GPIO_IRQ_SRC_COUNT);
 #endif
 

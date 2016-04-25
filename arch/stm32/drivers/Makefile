@@ -10,7 +10,7 @@ subdirs-$(CONFIG_DRIVER_STM32_GPIO_F1) += gpio_f1
 endif
 
 ifeq ($(CONFIG_STM32_FAMILY), 4)
-subdirs-$(CONFIG_DRIVER_STM32_GPIO_F4) += gpio_x4
+subdirs-$(CONFIG_DRIVER_STM32_GPIO_X4) += gpio_x4
 endif
 
 ifeq ($(CONFIG_STM32_FAMILY), L4)
