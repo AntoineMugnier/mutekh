@@ -29,8 +29,11 @@
    @xsee {GATT Database}
 */
 
+#include <hexo/error.h>
 #include <hexo/types.h>
 #include <ble/uuid.h>
+
+struct buffer_s;
 
 /**
    @this defines various characteristic data modes.
@@ -50,6 +53,13 @@ enum ble_gattdb_characteristic_mode_e
       {ble_gattdb_characteristic_s::data::dynamic}.
    */
   BLE_GATTDB_CHARACTERISTIC_DYNAMIC,
+#if defined(CONFIG_BLE_GATTDB_STREAM)
+  /** Streaming data mode, characteristic may be read from, or
+      notified/indicated, but not written to.  Gatt DB will call user
+      code back to get more data to send to client.
+   */
+  BLE_GATTDB_CHARACTERISTIC_STREAM,
+#endif
 #if defined(CONFIG_BLE_ATT_LONG_WRITE)
   /** Dynamic Prepared data mode, this is still unimplemented.
    */
@@ -182,6 +192,30 @@ struct ble_gattdb_characteristic_s
                          uint16_t offset,
                          void *data, size_t *size);
     } dynamic;
+
+#if defined(CONFIG_BLE_GATTDB_STREAM)
+    /** Characteristic data stream mode */
+    struct {
+      /** Callback on subscription */
+      uint8_t (*on_subscribe)(struct ble_gattdb_registry_s *reg,
+                              uint8_t charid,
+                              bool_t subscribed);
+
+      /** Callback on read from characteristic (used on explicit read,
+          if supported). */
+      uint8_t (*on_read)(struct ble_gattdb_client_s *client,
+                         struct ble_gattdb_registry_s *reg, uint8_t charid,
+                         uint16_t offset,
+                         void *data, size_t *size);
+
+      /** Callback getting next item to stream.  May return -EAGAIN to
+          tell gattdb that there is no more data to stream available. */
+      error_t (*on_get_data)(struct ble_gattdb_client_s *client,
+                             struct ble_gattdb_registry_s *reg,
+                             uint8_t charid,
+                             struct buffer_s *buffer);
+    } stream;
+#endif
 
 #if defined(CONFIG_BLE_ATT_LONG_WRITE)
     /** Characteristic dynamic prepared mode, unimplemented */
@@ -317,6 +351,17 @@ enum ble_gattdb_service_flags_e {
   .data.dynamic.on_read = (read_),                        \
   .data.dynamic.on_write = (write_),                      \
   .data.dynamic.on_subscribe = (subs_)
+
+#if defined(CONFIG_BLE_GATTDB_STREAM)
+/**
+   Helper to define a characteristic data in streaming mode.
+ */
+#define BLE_GATTDB_CHAR_DATA_STREAM(read_, get_data_, subs_)  \
+  .mode = BLE_GATTDB_CHARACTERISTIC_STREAM,                   \
+  .data.stream.on_read = (read_),                            \
+  .data.stream.on_get_data = (get_data_),                    \
+  .data.stream.on_subscribe = (subs_)
+#endif
 
 /**
    Helper to define descriptors in a characteristic.

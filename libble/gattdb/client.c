@@ -440,9 +440,42 @@ static BLE_GATTDB_LISTENER_FUNC(ble_gattdb_client_value_changed_handler)
   return;
  ok:
 
-  client->handler->att_value_changed(client, registry->start_handle + handle_index,
-                                     sub->mode, data, size);
+#if defined(CONFIG_BLE_GATTDB_STREAM)
+  if (!data && chr->permissions & BLE_GATTDB_NOTIFIABLE)
+    client->handler->att_stream_resume(client,
+                                       registry->start_handle + handle_index);
+  else
+#endif
+    client->handler->att_value_changed(client,
+                                       registry->start_handle + handle_index,
+                                       sub->mode, data, size);
 }
+
+#if defined(CONFIG_BLE_GATTDB_STREAM)
+error_t ble_gattdb_client_att_stream_get(struct ble_gattdb_client_s *client,
+                                         uint16_t value_handle,
+                                         struct buffer_s *buffer)
+{
+  error_t err;
+
+  err = ble_gattdb_client_seek(client, value_handle);
+
+  if (err)
+    return err;
+
+  struct ble_gattdb_registry_s *reg
+    = client->cursor.registry;
+  const struct ble_gattdb_hndl_s *hndl
+    = &reg->handle[client->cursor.handle - reg->start_handle];
+  const struct ble_gattdb_characteristic_s *chr
+    = &reg->service->characteristic[hndl->index];
+
+  if (chr->mode != BLE_GATTDB_CHARACTERISTIC_STREAM)
+    return -ENOTSUP;
+
+  return chr->data.stream.on_get_data(client, reg, hndl->index, buffer);
+}
+#endif
 
 enum ble_att_error_e ble_gattdb_client_register(struct ble_gattdb_client_s *client,
                                               uint16_t mode)
