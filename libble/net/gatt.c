@@ -47,6 +47,9 @@ struct ble_gatt_s
   struct ble_gattdb_client_s client;
   struct ble_peer_s *peer;
   struct net_task_s *delayed_client_update;
+#if defined(CONFIG_BLE_GATTDB_STREAM)
+  uint32_t stream_pending;
+#endif
 };
 
 STRUCT_COMPOSE(ble_gatt_s, layer);
@@ -298,6 +301,67 @@ static void ble_gatt_dandling(struct net_layer_s *layer)
   }
 }
 
+#if defined(CONFIG_BLE_GATTDB_STREAM)
+static void ble_gatt_att_stream_resume(struct ble_gattdb_client_s *client,
+                                       uint16_t value_handle);
+
+static void stream_task_free(struct net_task_s *task)
+{
+  struct ble_gatt_s *gatt = ble_gatt_s_from_layer(task->source);
+  struct net_scheduler_s *sched = task->source->scheduler;
+  uint16_t value_handle = task->packet.src_addr.att;
+
+  gatt->stream_pending--;
+
+  slab_free(&sched->task_pool, task);
+  ble_gatt_att_stream_resume(&gatt->client, value_handle);
+}
+
+static void ble_gatt_att_stream_resume(struct ble_gattdb_client_s *client,
+                                       uint16_t value_handle)
+{
+  struct net_task_s *task;
+  struct buffer_s *buffer;
+  error_t err;
+  struct net_addr_s src_addr = {
+    .att = value_handle,
+  };
+  struct net_addr_s dst_addr = {
+  };
+
+  struct ble_gatt_s *gatt = ble_gatt_s_from_client(client);
+
+  if (gatt->stream_pending > 4)
+    return;
+
+  gatt->stream_pending++;
+
+  buffer = net_layer_packet_alloc(&gatt->layer,
+                                  gatt->layer.context.prefix_size,
+                                  gatt->layer.context.mtu);
+  if (!buffer)
+    return;
+
+  task = slab_alloc(&gatt->layer.scheduler->task_pool);
+  if (!task) {
+    buffer_refdec(buffer);
+    return;
+  }
+
+  task->destroy_func = (void*)stream_task_free;
+
+  err = ble_gattdb_client_att_stream_get(client, value_handle, buffer);
+  if (!err) {
+    net_task_outbound_push(task, gatt->layer.parent, &gatt->layer,
+                           0, &src_addr, &dst_addr, buffer);
+  } else {
+    slab_free(&gatt->layer.scheduler->task_pool, task);
+    gatt->stream_pending--;
+  }
+  buffer_refdec(buffer);
+}
+#endif
+
 static const struct net_layer_handler_s gatt_handler = {
   .destroyed = ble_gatt_destroyed,
   .task_handle = ble_gatt_task_handle,
@@ -307,6 +371,9 @@ static const struct net_layer_handler_s gatt_handler = {
 
 static const struct ble_gattdb_client_handler_s gatt_db_handler = {
   .att_value_changed = ble_gatt_att_value_changed,
+#if defined(CONFIG_BLE_GATTDB_STREAM)
+  .att_stream_resume = ble_gatt_att_stream_resume,
+#endif
   .att_subscription_changed = ble_gatt_att_subscription_changed,
 };
 
@@ -633,6 +700,10 @@ error_t ble_gatt_create(struct net_scheduler_s *scheduler,
 
   gatt->peer = params->peer;
   gatt->delayed_client_update = NULL;
+
+#if defined(CONFIG_BLE_GATTDB_STREAM)
+  gatt->stream_pending = 0;
+#endif
 
   ble_gattdb_client_open(&gatt->client, &gatt_db_handler, params->db);
   ble_gattdb_client_subscription_set(&gatt->client, gatt->peer->subscriptions, BLE_SUBSCRIBED_CHAR_COUNT);

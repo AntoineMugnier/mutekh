@@ -55,12 +55,12 @@ struct ble_gattdb_listener_s;
            bool_t reliable,                              \
            const void *data, size_t size)
 
-typedef BLE_GATTDB_LISTENER_FUNC(ble_gattdb_registry_handler_func_t);
+typedef BLE_GATTDB_LISTENER_FUNC(ble_gattdb_registry_value_changed_func_t);
 
 struct ble_gattdb_listener_s
 {
   GCT_CONTAINER_ENTRY(ble_gattdb_listener_list, item);
-  ble_gattdb_registry_handler_func_t *handler;
+  ble_gattdb_registry_value_changed_func_t *value_changed;
   struct ble_gattdb_registry_s *registry;
   uint8_t chr_index;
 };
@@ -163,9 +163,14 @@ void ble_gattdb_char_changed(struct ble_gattdb_registry_s *reg,
                               uint8_t charid, bool_t reliable,
                               const void *data, size_t size);
 
+#if defined(CONFIG_BLE_GATTDB_STREAM)
+void ble_gattdb_char_stream_resume(struct ble_gattdb_registry_s *reg,
+                                   uint8_t charid);
+#endif
+
 void ble_gattdb_listener_register(struct ble_gattdb_registry_s *reg,
                                    struct ble_gattdb_listener_s *listener,
-                                   ble_gattdb_registry_handler_func_t *func,
+                                   ble_gattdb_registry_value_changed_func_t *func,
                                    uint8_t chr_index);
 
 void ble_gattdb_listener_unregister(struct ble_gattdb_registry_s *reg,

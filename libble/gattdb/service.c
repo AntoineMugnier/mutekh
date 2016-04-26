@@ -71,6 +71,11 @@ enum ble_att_error_e ble_gattdb_char_write(struct ble_gattdb_client_s *client,
       ble_gattdb_char_changed(reg, charid, 1, data, size);
     return err;
 
+#if defined(CONFIG_BLE_GATTDB_STREAM)
+  case BLE_GATTDB_CHARACTERISTIC_STREAM:
+    return BLE_ATT_ERR_WRITE_NOT_PERMITTED;
+#endif
+
 #if defined(CONFIG_BLE_ATT_LONG_WRITE)
   case BLE_GATTDB_CHARACTERISTIC_DYNAMIC_PREPARED:
 # error implement me
@@ -118,6 +123,13 @@ enum ble_att_error_e ble_gattdb_char_read(struct ble_gattdb_client_s *client,
 
   case BLE_GATTDB_CHARACTERISTIC_DYNAMIC:
     return chr->data.dynamic.on_read(client, reg, charid, offset, data, size);
+
+#if defined(CONFIG_BLE_GATTDB_STREAM)
+  case BLE_GATTDB_CHARACTERISTIC_STREAM:
+    if (chr->data.stream.on_read)
+      return chr->data.stream.on_read(client, reg, charid, offset, data, size);
+    return BLE_ATT_ERR_READ_NOT_PERMITTED;
+#endif
 
 #if defined(CONFIG_BLE_GATTDB_DYNAMIC)
   case BLE_GATTDB_CHARACTERISTIC_DYNAMIC_PREPARED:
