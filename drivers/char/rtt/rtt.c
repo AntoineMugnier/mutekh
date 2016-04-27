@@ -28,7 +28,11 @@
 #include <device/resources.h>
 #include <device/driver.h>
 #include <device/class/char.h>
-#include <device/class/timer.h>
+#if defined(CONFIG_DRIVER_CHAR_RTT_TIMER)
+# include <device/class/timer.h>
+#elif defined(CONFIG_DRIVER_CHAR_RTT_IDLE)
+# include <mutek/kroutine.h>
+#endif
 
 #include <mutek/printk.h>
 
@@ -37,31 +41,31 @@
 struct rtt_private_s {
   uint8_t tx_buffer[CONFIG_DRIVER_CHAR_RTT_TX_BUFFER_SIZE];
   uint8_t rx_buffer[CONFIG_DRIVER_CHAR_RTT_RX_BUFFER_SIZE];
+#if defined(CONFIG_DRIVER_CHAR_RTT_TIMER)
   struct device_timer_s timer;
   struct dev_timer_rq_s timer_rq;
+#elif defined(CONFIG_DRIVER_CHAR_RTT_IDLE)
+  struct kroutine_s poller;
+  struct device_s *dev;
+#endif
   dev_request_queue_root_t tx_queue, rx_queue;
   struct rtt_channel_s *tx, *rx;
   bool_t callbacking;
 };
 
-/* static void rtt_poll_disable(struct device_s *dev) */
-/* { */
-/*   struct rtt_private_s *pv = dev->drv_pv; */
-
-/*   if (pv->timer_rq.rq.pvdata */
-/*       && DEVICE_OP(&pv->timer, cancel, &pv->timer_rq) == 0) */
-/*     pv->timer_rq.rq.pvdata = NULL; */
-/* } */
-
 static void rtt_poll_enable(struct device_s *dev)
 {
   struct rtt_private_s *pv = dev->drv_pv;
 
+#if defined(CONFIG_DRIVER_CHAR_RTT_TIMER)
   if (!pv->timer_rq.rq.pvdata) {
     pv->timer_rq.rq.pvdata = dev;
     pv->timer_rq.deadline = 0;
     ensure(DEVICE_OP(&pv->timer, request, &pv->timer_rq) == 0);
   }
+#elif defined(CONFIG_DRIVER_CHAR_RTT_IDLE)
+  kroutine_exec(&pv->poller);
+#endif
 }
 
 static void rtt_request_finish(
@@ -122,21 +126,28 @@ static void rtt_try_io(struct device_s *dev)
 
 static KROUTINE_EXEC(rtt_tick)
 {
+#if defined(CONFIG_DRIVER_CHAR_RTT_TIMER)
   struct rtt_private_s *pv = KROUTINE_CONTAINER(kr, *pv, timer_rq.rq.kr);
   struct device_s *dev = pv->timer_rq.rq.pvdata;
+#elif defined(CONFIG_DRIVER_CHAR_RTT_IDLE)
+  struct rtt_private_s *pv = KROUTINE_CONTAINER(kr, *pv, poller);
+  struct device_s *dev = pv->dev;
+#endif
 
   if (!dev)
     return;
 
   LOCK_SPIN_IRQ(&dev->lock);
+#if defined(CONFIG_DRIVER_CHAR_RTT_TIMER)
   pv->timer_rq.rq.pvdata = NULL;
+#endif
   rtt_try_io(dev);
   LOCK_RELEASE_IRQ(&dev->lock);
 }
 
 #define char_rtt_cancel (dev_char_cancel_t*)&dev_driver_notsup_fcn
 
-DEV_CHAR_REQUEST(char_rtt_request)
+static DEV_CHAR_REQUEST(char_rtt_request)
 {
   struct device_s *dev = accessor->dev;
   struct rtt_private_s *pv = dev->drv_pv;
@@ -188,7 +199,9 @@ static DEV_CLEANUP(char_rtt_cleanup)
   rtt_channel_cleanup(pv->tx);
   rtt_channel_cleanup(pv->rx);
 
+#if defined(CONFIG_DRIVER_CHAR_RTT_TIMER)
   device_put_accessor(&pv->timer.base);
+#endif
 
   mem_free(pv);
 
@@ -206,9 +219,11 @@ static DEV_INIT(char_rtt_init)
 
   memset(pv, 0, sizeof(*pv));
 
+#if defined(CONFIG_DRIVER_CHAR_RTT_TIMER)
   if (device_get_param_dev_accessor(dev, "timer", &pv->timer, DRIVER_CLASS_TIMER)) {
     goto err_pv;
   }
+#endif
 
   dev_request_queue_init(&pv->tx_queue);
   dev_request_queue_init(&pv->rx_queue);
@@ -223,8 +238,14 @@ static DEV_INIT(char_rtt_init)
 
   dev->drv_pv = pv;
 
+#if defined(CONFIG_DRIVER_CHAR_RTT_TIMER)
   kroutine_init_sched_switch(&pv->timer_rq.rq.kr, rtt_tick);
   dev_timer_init_sec(&pv->timer, &pv->timer_rq.delay, 0, 1, 20);
+#elif defined(CONFIG_DRIVER_CHAR_RTT_IDLE)
+  kroutine_init_idle(&pv->poller, rtt_tick);
+  kroutine_exec(&pv->poller);
+  pv->dev = dev;
+#endif
 
   return 0;
 
@@ -239,6 +260,8 @@ DRIVER_DECLARE(char_rtt_drv, 0, "RTT Char", char_rtt,
 DRIVER_REGISTER(char_rtt_drv);
 
 DEV_DECLARE_STATIC(rtt_console_dev, "console1", 0, char_rtt_drv,
+#if defined(CONFIG_DRIVER_CHAR_RTT_TIMER)
                    DEV_STATIC_RES_DEV_TIMER("rtc* timer*"),
+#endif
                    );
 
