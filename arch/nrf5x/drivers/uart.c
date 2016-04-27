@@ -88,8 +88,6 @@ struct nrf5x_uart_priv
 static void nrf5x_uart_request_finish(struct device_s *dev,
                                       struct dev_char_rq_s *rq)
 {
-  struct nrf5x_uart_priv *pv = dev->drv_pv;
-
   rq->error = 0;
   dprintk("rq %p done\n", rq);
   kroutine_exec(&rq->base.kr);
@@ -254,7 +252,6 @@ static DEV_CHAR_REQUEST(nrf5x_uart_request)
   struct device_s *dev = accessor->dev;
   struct nrf5x_uart_priv *pv = dev->drv_pv;
   dev_request_queue_root_t *q = NULL;
-  bool_t started = 0;
   uint16_t use = 0;
 
   dprintk("%s REQUEST %p, type %x, use %x, %P\n", __FUNCTION__, rq,
@@ -425,17 +422,16 @@ static DEV_USE(nrf5x_uart_char_use)
 
       if (!dev->start_count)
         nrf_task_trigger(pv->addr, NRF_UART_STARTRX);
-      break;
+      return 0;
     }
 
     case DEV_USE_STOP: {
       struct device_accessor_s *acc = param;
       struct device_s *dev = acc->dev;
-      struct nrf5x_uart_priv *pv = dev->drv_pv;
 
       if (!dev->start_count)
         device_sleep_schedule(dev);
-      break;
+      return 0;
     }
 
     case DEV_USE_SLEEP: {
