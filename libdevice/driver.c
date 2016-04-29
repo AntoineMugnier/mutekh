@@ -402,7 +402,7 @@ static enum drv_init_loop_e device_find_driver(struct device_node_s *node)
 
 static void libdevice_drivers_init()
 {
-  enum drv_init_loop_e lp;
+  __unused__ enum drv_init_loop_e lp;
 #ifdef CONFIG_DEVICE_TREE
   lp = device_find_driver(NULL);
 #else
