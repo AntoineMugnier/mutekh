@@ -6,3 +6,5 @@ meta = ldscript
 endif
 
 subdirs = drivers
+enum_headers = include/arch/gaisler/device_ids.h
+

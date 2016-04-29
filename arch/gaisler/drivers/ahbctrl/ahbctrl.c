@@ -161,7 +161,7 @@ static void ahbctrl_scan(struct device_s *dev, uintptr_t begin, uintptr_t end)
               if (device >= GAISLER_DEVICE_count)
                 break;
 
-              const char *name = gaisler_devices_names[device];
+              const char *name = enums_get_name(gaisler_device_ids_e, device);
               if (!name)
                 break;
 

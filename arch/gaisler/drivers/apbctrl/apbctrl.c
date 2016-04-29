@@ -168,7 +168,7 @@ static void apbctrl_scan(struct device_s *dev, uintptr_t begin)
       if (vendor == GAISLER_VENDOR_GAISLER)
         {
           if (device < GAISLER_DEVICE_count)
-            name = gaisler_devices_names[device];
+            name = enums_get_name(gaisler_device_ids_e, device);
 
           switch (device)
             {
@@ -285,8 +285,9 @@ static void apbctrl_scan(struct device_s *dev, uintptr_t begin)
             case GAISLER_DEVICE_APBUART:
             case GAISLER_DEVICE_IRQMP: {
               struct device_s *tmp;
-              if (device_get_by_path(&tmp, NULL, NULL, gaisler_devices_names[device], NULL))
-                device_new_alias_to_node(NULL, gaisler_devices_names[device], &d->node);
+              const char *name = enums_get_name(gaisler_device_ids_e, device);
+              if (device_get_by_path(&tmp, NULL, NULL, name, NULL))
+                device_new_alias_to_node(NULL, name, &d->node);
               break;
             }
 
