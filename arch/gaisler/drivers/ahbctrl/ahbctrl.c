@@ -225,7 +225,7 @@ static void ahbctrl_scan(struct device_s *dev, uintptr_t begin, uintptr_t end)
       /* skip entries without mem/io resource */
       if (!mtype && !(d->node.flags & DEVICE_FLAG_CPU))
         {
-          mem_free(d);
+          device_cleanup(d);
           continue;
         }
 
