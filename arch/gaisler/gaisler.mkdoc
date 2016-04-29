@@ -1,5 +1,36 @@
 
 @section tP {Gaisler}
 
+  @section {Building}
+    @code R
+make CONF=examples/hello/config BUILD=gaisler-leon3
+    @end code
+  @end section
+
+  @section {Running on a Nexys4 fpga board}
+
+    First, load the gaisler design in the fpga:
+    @code R
+xc3sprog -c nexys4 leon3mp.bit
+    @end code
+
+    Then load and run the kernel using gdb:
+    @code R
+grmon -u -uart /dev/ttyUSB0 -gdb &
+sparc-unknown-elf-gdb hello-gaisler-leon3.out
+(gdb) target extended-remote 127.1:2222
+(gdb) load
+(gdb) continue
+    @end code
+
+    You can also load and run the kernel using grmon:
+    @code R
+grmon -u -uart /dev/ttyUSB0
+grmon2> load hello-gaisler-leon3.out
+grmon2> run
+    @end code
+
+  @end section
+
 @end section
 
