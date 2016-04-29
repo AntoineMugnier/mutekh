@@ -22,7 +22,7 @@
 
 #include <stdlib.h>
 #include <string.h>
-#include <enums.h>
+#include <hexo/enum.h>
 #include <hexo/types.h>
 
 #include <libc/formatter.h>
@@ -622,7 +622,7 @@ formatter_printf(void *ctx, printf_output_func_t * const fcn,
 
 #ifndef CONFIG_LIBC_FORMATTER_SIMPLE
       case ('N'): {
-        uint8_t *desc = va_arg(ap, uint8_t *);
+        const char *desc = va_arg(ap, const char *);
 # if ENUM_USED_FLAGS & ENUM_FLAGS_OR
         if (ENUM_FLAGS(desc) & ENUM_FLAGS_OR)
           {
@@ -676,16 +676,14 @@ formatter_printf(void *ctx, printf_output_func_t * const fcn,
         else
 # endif
           {
-            len = 1;
-            buf = "?";
-            ENUM_FOREACH(uintptr_t, desc, {
-                if (value == val)
-                  {
-                    buf = (char*)name;
-                    len = strlen(name);
-                    break;
-                  }
-            });
+            buf = (char*)enums_get_name(desc, val);
+            if (!buf)
+              {
+                len = 1;
+                buf = "?";
+              }
+            else
+              len = strlen(buf);
             break;
           }
       }

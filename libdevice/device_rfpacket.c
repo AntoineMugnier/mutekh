@@ -20,7 +20,7 @@
 */
 
 #include <device/class/rfpacket.h>
-#include <enums.h>
+#include <hexo/enum.h>
 
 const char dev_rfpacket_modulation_e[] = ENUM_DESC_DEV_RFPACKET_MODULATION_E;
 

@@ -34,7 +34,7 @@
 #include <device/driver.h>
 #include <device/irq.h>
 #include <device/class/enum.h>
-#include <enums.h>
+#include <hexo/enum.h>
 
 #include <assert.h>
 #include <string.h>

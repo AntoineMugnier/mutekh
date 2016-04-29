@@ -30,6 +30,7 @@
 #define HEXO_POWER_H_
 
 #include <hexo/error.h>
+#include <hexo/enum.h>
 
 /** Hard reboot the platform. May return ENOTSUP. */
 error_t power_reboot(void);

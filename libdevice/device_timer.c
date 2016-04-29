@@ -33,7 +33,7 @@
 
 #include <mutek/kroutine.h>
 #include <stdlib.h> /* abs */
-#include <enums.h>
+#include <hexo/enum.h>
 
 const char dev_timer_capabilities_e[] = ENUM_DESC_DEV_TIMER_CAPABILITIES_E;
 

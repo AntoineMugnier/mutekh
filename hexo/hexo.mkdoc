@@ -36,5 +36,6 @@ hexo/local.h
 hexo/lock.h
 hexo/ordering.h
 hexo/types.h
+hexo/enum.h
 }
 

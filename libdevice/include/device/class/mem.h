@@ -34,6 +34,7 @@
 #include <hexo/error.h>
 
 #include <mutek/kroutine.h>
+#include <hexo/enum.h>
 
 #include <device/driver.h>
 #include <device/request.h>

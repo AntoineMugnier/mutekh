@@ -27,7 +27,7 @@
 
 #include <mutek/console.h>
 #include <mutek/shell.h>
-#include <enums.h>
+#include <hexo/enum.h>
 
 enum gpio_opts_e
 {

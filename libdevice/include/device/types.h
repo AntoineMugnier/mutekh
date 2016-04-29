@@ -30,6 +30,7 @@
  */
 
 #include <hexo/types.h>
+#include <hexo/enum.h>
 
 ENUM_DESCRIPTOR(dev_pin_driving_e, strip:DEV_PIN_, upper);
 

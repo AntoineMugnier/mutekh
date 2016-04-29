@@ -28,7 +28,7 @@
 #include <mutek/console.h>
 #include <mutek/shell.h>
 #include <mutek/mem_alloc.h>
-#include <enums.h>
+#include <hexo/enum.h>
 
 enum enum_opts_e
 {

@@ -249,27 +249,32 @@ foreach my $filein (@ARGV) {
         }
 
         if ($state == 2) {
-            if ($line =~ /^\s*(\w+)\b\s*(?:=\s*(\w+))?,?\s*$/) {
-                my $name = $1;
-                if (defined $2) {
-                    $val = $2;
-                }
-                if (my $s = $enum->{opts}->{strip}) {
-                    $name =~ s/^$s//;
-                }
-                if (my $s = $enum->{opts}->{lower}) {
-                    $name = lc($name);
-                } elsif (my $s = $enum->{opts}->{upper}) {
-                    $name = uc($name);
-                } elsif (my $s = $enum->{opts}->{cap}) {
-                    $name = lc($name);
-                    $name =~ s/(^|_)(\w)/uc($2)/ge;
+            if ($line =~ /^\s*(\w+)\b\s*(?:=\s*(\w+))?,?(?:\s*\/\*\s*name:(\w+)\s*\*\/)?\s*$/) {
+                $val = $2 if (defined $2);
+                my $name;
+                if (defined $3) {
+                    $name = $3;
+                } else {
+                    goto skip if ($enum->{opts}->{explicit});
+                    $name = $1;
+                    if (my $s = $enum->{opts}->{strip}) {
+                        $name =~ s/^$s//;
+                    }
+                    if (my $s = $enum->{opts}->{lower}) {
+                        $name = lc($name);
+                    } elsif (my $s = $enum->{opts}->{upper}) {
+                        $name = uc($name);
+                    } elsif (my $s = $enum->{opts}->{cap}) {
+                        $name = lc($name);
+                        $name =~ s/(^|_)(\w)/uc($2)/ge;
+                    }
                 }
                 my $e = {
                     name => $name,
                     val => strtol($val, 0),
                 };
                 push @{$enum->{vals}}, $e;
+              skip:
                 # print "$enum->{name} $1 $val\n";
                 $val++;
             } elsif ($line =~ /^\s*\};\s*$/) {

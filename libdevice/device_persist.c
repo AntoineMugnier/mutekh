@@ -20,7 +20,7 @@
 */
 
 #include <device/class/persist.h>
-#include <enums.h>
+#include <hexo/enum.h>
 
 //const char dev_persist_type_e[] = ENUM_DESC_DEV_PERSIST_TYPE_E;
 //const char dev_persist_op_e[] = ENUM_DESC_DEV_PERSIST_OP_E;

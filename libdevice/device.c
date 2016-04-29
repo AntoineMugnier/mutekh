@@ -31,7 +31,7 @@
 #include <device/driver.h>
 #include <device/irq.h>
 #include <device/class/enum.h>
-#include <enums.h>
+#include <hexo/enum.h>
 
 #include <mutek/mem_alloc.h>
 #include <mutek/startup.h>

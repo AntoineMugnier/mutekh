@@ -21,7 +21,7 @@
 */
 
 #include <device/class/crypto.h>
-#include <enums.h>
+#include <hexo/enum.h>
 
 #include <mutek/mem_alloc.h>
 

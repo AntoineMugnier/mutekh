@@ -43,7 +43,7 @@
 #include <gct_platform.h>
 #include <gct/container_clist.h>
 
-#include <enums.h>
+#include <hexo/enum.h>
 
 
 /* Forward declarations. */

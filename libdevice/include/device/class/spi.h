@@ -323,8 +323,7 @@
 #include <device/request.h>
 #include <device/driver.h>
 #include <mutek/kroutine.h>
-
-#include <enums.h>
+#include <hexo/enum.h>
 
 #include <device/class/gpio.h>
 

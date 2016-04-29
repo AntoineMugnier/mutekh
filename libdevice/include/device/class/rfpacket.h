@@ -41,7 +41,7 @@
 #include <device/class/timer.h>
 #include <device/request.h>
 
-#include <enums.h>
+#include <hexo/enum.h>
 
 ENUM_DESCRIPTOR(dev_rfpacket_modulation_e, strip:DEV_RFPACKET_, upper);
 

@@ -20,7 +20,7 @@
     Copyright Alexandre Becoulet <alexandre.becoulet@free.fr> (c) 2012
 */
 
-#include <enums.h>
+#include <hexo/enum.h>
 #include <hexo/types.h>
 #include <mutek/mem_alloc.h>
 #include <mutek/printk.h>

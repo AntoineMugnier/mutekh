@@ -25,7 +25,7 @@
 #include <device/class/mem.h>
 
 #include <alloca.h>
-#include <enums.h>
+#include <hexo/enum.h>
 
 const char dev_mem_type_e[] = ENUM_DESC_DEV_MEM_TYPE_E;
 const char dev_mem_flags_e[] = ENUM_DESC_DEV_MEM_FLAGS_E;

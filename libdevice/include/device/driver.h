@@ -31,6 +31,7 @@
 
 #include <hexo/types.h>
 #include <hexo/error.h>
+#include <hexo/enum.h>
 #include <device/device.h>
 
 ENUM_DESCRIPTOR(driver_class_e, strip:DRIVER_CLASS_, upper);

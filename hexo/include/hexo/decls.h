@@ -157,10 +157,6 @@ const_##cont_s##_from_##field(typeof(((const struct cont_s*)0)->field) *x) \
   return (const void*)((const uint8_t*)x - __builtin_offsetof(const struct cont_s, field)); \
 }
 
-
-#undef ENUM_DESCRIPTOR
-#define ENUM_DESCRIPTOR(name, ...) extern const char name[];
-
 #endif /* 1 */
 
 #ifdef __MKDOC__
@@ -209,7 +205,6 @@ cont_s##_from_##field(void *x);
 
 # define STATIC_ASSERT(error, expr)
 # define FIRST_FIELD_ASSERT(struct_name, field)
-# define ENUM_DESCRIPTOR(...)
 #endif
 
 #ifdef CONFIG_COMPILE_NOBITFIELD

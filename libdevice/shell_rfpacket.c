@@ -28,7 +28,7 @@
 #include <mutek/mem_alloc.h>
 #include <mutek/console.h>
 #include <mutek/shell.h>
-#include <enums.h>
+#include <hexo/enum.h>
 
 enum rfpacket_opts_e
 {
