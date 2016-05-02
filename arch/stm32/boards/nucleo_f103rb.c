@@ -30,7 +30,7 @@
 # include <device/class/cmu.h>
 #endif
 
-#include <arch/stm32/f1/periph.h>
+#include <arch/stm32/f1/mmap.h>
 #include <arch/stm32/f1/irq.h>
 
 #if defined(CONFIG_DRIVER_CPU_ARM32M)
