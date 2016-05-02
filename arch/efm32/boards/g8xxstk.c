@@ -109,9 +109,9 @@ DEV_DECLARE_STATIC(usart1_dev, "spi1", 0, efm32_usart_spi_drv,
 
 #if defined(CONFIG_DRIVER_EFM32_DMA)
                    DEV_STATIC_RES_DMA("/dma", CONFIG_DRIVER_EFM32_DMA_CHANNEL_COUNT - 1,
-                                      EFM32_DMA_SOURCE_USART1 | (EFM32_DMA_SIGNAL_USART1RXDATAV << 16)),
+                                      (EFM32_DMA_SOURCE_USART1 << 16) | EFM32_DMA_SIGNAL_USART1RXDATAV),
                    DEV_STATIC_RES_DMA("/dma", CONFIG_DRIVER_EFM32_DMA_CHANNEL_COUNT - 2,
-                                      EFM32_DMA_SOURCE_USART1 | (EFM32_DMA_SIGNAL_USART1TXEMPTY << 16)),
+                                      (EFM32_DMA_SOURCE_USART1 << 16) | EFM32_DMA_SIGNAL_USART1TXEMPTY),
 #endif
 
                    DEV_STATIC_RES_DEV_IOMUX("/gpio"),
