@@ -187,14 +187,6 @@ static DEV_USE(efm32_msc_use)
     }
 }
 
-static DEV_INIT(efm32_msc_init);
-static DEV_CLEANUP(efm32_msc_cleanup);
-
-DRIVER_DECLARE(efm32_msc_drv, 0, "EFM32 Memory System Controller", efm32_msc,
-               DRIVER_MEM_METHODS(efm32_msc));
-
-DRIVER_REGISTER(efm32_msc_drv);
-
 static DEV_INIT(efm32_msc_init)
 {
   struct efm32_msc_context_s	*pv;
@@ -228,4 +220,9 @@ static DEV_CLEANUP(efm32_msc_cleanup)
 
   return 0;
 }
+
+DRIVER_DECLARE(efm32_msc_drv, 0, "EFM32 Memory System Controller", efm32_msc,
+               DRIVER_MEM_METHODS(efm32_msc));
+
+DRIVER_REGISTER(efm32_msc_drv);
 

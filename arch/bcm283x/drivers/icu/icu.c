@@ -158,18 +158,10 @@ static DEV_IRQ_SRC_PROCESS(bcm283x_icu_source_process)
     }
 }
 
-static DEV_INIT(bcm283x_icu_init);
-static DEV_CLEANUP(bcm283x_icu_cleanup);
 
 #define bcm283x_icu_use dev_use_generic
 
-DRIVER_DECLARE(bcm283x_icu_drv, 0, "BCM283X irq controller", bcm283x_icu,
-               DRIVER_ICU_METHODS(bcm283x_icu));
-
-DRIVER_REGISTER(bcm283x_icu_drv,
-                DEV_ENUM_FDTNAME_ENTRY("bcm283x_icu"));
-
-DEV_INIT(bcm283x_icu_init)
+static DEV_INIT(bcm283x_icu_init)
 {
   struct bcm283x_icu_private_s  *pv;
 
@@ -223,4 +215,10 @@ static DEV_CLEANUP(bcm283x_icu_cleanup)
 
   mem_free(pv);
 }
+
+DRIVER_DECLARE(bcm283x_icu_drv, 0, "BCM283X irq controller", bcm283x_icu,
+               DRIVER_ICU_METHODS(bcm283x_icu));
+
+DRIVER_REGISTER(bcm283x_icu_drv,
+                DEV_ENUM_FDTNAME_ENTRY("bcm283x_icu"));
 

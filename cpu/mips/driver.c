@@ -229,8 +229,6 @@ static DEV_TIMER_CONFIG(mips_timer_config)
 
 /************************************************************************/
 
-static DEV_CLEANUP(mips_cleanup);
-static DEV_INIT(mips_init);
 
 static DEV_USE(mips_use)
 {
@@ -254,29 +252,6 @@ static DEV_USE(mips_use)
 
 #define mips_timer_request (dev_timer_request_t*)&dev_driver_notsup_fcn
 #define mips_timer_cancel  (dev_timer_cancel_t*)&dev_driver_notsup_fcn
-
-DRIVER_DECLARE(mips_drv, DRIVER_FLAGS_EARLY_INIT, "MIPS processor", mips,
-#ifdef CONFIG_DEVICE_IRQ
-               DRIVER_ICU_METHODS(mips_icu),
-#endif
-#ifdef CONFIG_CPU_MIPS_TIMER_CYCLECOUNTER
-               DRIVER_TIMER_METHODS(mips_timer),
-#endif
-               DRIVER_CPU_METHODS(mips_cpu));
-
-DRIVER_REGISTER(mips_drv
-#ifdef CONFIG_LIBFDT
-                ,DEV_ENUM_FDTNAME_ENTRY("cpu:mips")
-# ifdef CONFIG_CPU_ENDIAN_LITTLE
-                ,DEV_ENUM_FDTNAME_ENTRY("cpu:mipsel")
-                ,DEV_ENUM_FDTNAME_ENTRY("cpu:mips32el")
-# endif
-# ifdef CONFIG_CPU_ENDIAN_BIG
-                ,DEV_ENUM_FDTNAME_ENTRY("cpu:mipseb")
-                ,DEV_ENUM_FDTNAME_ENTRY("cpu:mips32eb")
-# endif
-#endif
-                );
 
 static DEV_INIT(mips_init)
 {
@@ -354,4 +329,27 @@ static DEV_CLEANUP(mips_cleanup)
 
   return 0;
 }
+
+DRIVER_DECLARE(mips_drv, DRIVER_FLAGS_EARLY_INIT, "MIPS processor", mips,
+#ifdef CONFIG_DEVICE_IRQ
+               DRIVER_ICU_METHODS(mips_icu),
+#endif
+#ifdef CONFIG_CPU_MIPS_TIMER_CYCLECOUNTER
+               DRIVER_TIMER_METHODS(mips_timer),
+#endif
+               DRIVER_CPU_METHODS(mips_cpu));
+
+DRIVER_REGISTER(mips_drv
+#ifdef CONFIG_LIBFDT
+                ,DEV_ENUM_FDTNAME_ENTRY("cpu:mips")
+# ifdef CONFIG_CPU_ENDIAN_LITTLE
+                ,DEV_ENUM_FDTNAME_ENTRY("cpu:mipsel")
+                ,DEV_ENUM_FDTNAME_ENTRY("cpu:mips32el")
+# endif
+# ifdef CONFIG_CPU_ENDIAN_BIG
+                ,DEV_ENUM_FDTNAME_ENTRY("cpu:mipseb")
+                ,DEV_ENUM_FDTNAME_ENTRY("cpu:mips32eb")
+# endif
+#endif
+                );
 

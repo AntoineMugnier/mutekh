@@ -360,15 +360,8 @@ static DEV_SPI_CTRL_QUEUE(stm32_spi_queue)
 
 #endif
 
-static DEV_INIT(stm32_spi_init);
-static DEV_CLEANUP(stm32_spi_cleanup);
 
 #define stm32_spi_use dev_use_generic
-
-DRIVER_DECLARE(stm32_spi_drv, 0, "STM32 SPI", stm32_spi,
-               DRIVER_SPI_CTRL_METHODS(stm32_spi));
-
-DRIVER_REGISTER(stm32_spi_drv);
 
 static DEV_INIT(stm32_spi_init)
 {
@@ -435,7 +428,6 @@ static DEV_INIT(stm32_spi_init)
   /* enable rx irqs */
   cpu_mem_write_32(pv->addr + STM32_SPI_CR2_ADDR, STM32_SPI_CR2_RXNEIE);
 
-  dev->drv    = &stm32_spi_drv;
   dev->drv_pv = pv;
 
   return 0;
@@ -445,8 +437,7 @@ static DEV_INIT(stm32_spi_init)
   return -1;
 }
 
-static
-DEV_CLEANUP(stm32_spi_cleanup)
+static DEV_CLEANUP(stm32_spi_cleanup)
 {
   struct stm32_spi_private_s	*pv = dev->drv_pv;
 
@@ -468,3 +459,9 @@ DEV_CLEANUP(stm32_spi_cleanup)
 
   return 0;
 }
+
+DRIVER_DECLARE(stm32_spi_drv, 0, "STM32 SPI", stm32_spi,
+               DRIVER_SPI_CTRL_METHODS(stm32_spi));
+
+DRIVER_REGISTER(stm32_spi_drv);
+

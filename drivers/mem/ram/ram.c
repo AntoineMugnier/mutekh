@@ -106,14 +106,6 @@ static DEV_USE(ram_use)
     }
 }
 
-static DEV_INIT(ram_init);
-static DEV_CLEANUP(ram_cleanup);
-
-DRIVER_DECLARE(ram_drv, 0, "Generic RAM", ram,
-               DRIVER_MEM_METHODS(ram));
-
-DRIVER_REGISTER(ram_drv,
-                DEV_ENUM_FDTNAME_ENTRY("generic:ram"));
 
 static DEV_INIT(ram_init)
 {
@@ -155,4 +147,10 @@ static DEV_CLEANUP(ram_cleanup)
 
   return 0;
 }
+
+DRIVER_DECLARE(ram_drv, 0, "Generic RAM", ram,
+               DRIVER_MEM_METHODS(ram));
+
+DRIVER_REGISTER(ram_drv,
+                DEV_ENUM_FDTNAME_ENTRY("generic:ram"));
 

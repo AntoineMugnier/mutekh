@@ -330,8 +330,6 @@ static DEV_IRQ_SRC_PROCESS(efm32_leuart_irq)
 
 #endif
 
-static DEV_INIT(efm32_leuart_init);
-static DEV_CLEANUP(efm32_leuart_cleanup);
 
 static DEV_USE(efm32_leuart_use)
 {
@@ -381,11 +379,6 @@ static DEV_USE(efm32_leuart_use)
       return dev_use_generic(param, op);
     }
 }
-
-DRIVER_DECLARE(efm32_leuart_drv, 0, "EFM32 Low Energy UART", efm32_leuart,
-               DRIVER_CHAR_METHODS(efm32_leuart));
-
-DRIVER_REGISTER(efm32_leuart_drv);
 
 static DEV_INIT(efm32_leuart_init)
 {
@@ -496,7 +489,7 @@ static DEV_INIT(efm32_leuart_init)
   return -1;
 }
 
-DEV_CLEANUP(efm32_leuart_cleanup)
+static DEV_CLEANUP(efm32_leuart_cleanup)
 {
   struct efm32_leuart_context_s	*pv = dev->drv_pv;
 
@@ -527,4 +520,9 @@ DEV_CLEANUP(efm32_leuart_cleanup)
 
   return 0;
 }
+
+DRIVER_DECLARE(efm32_leuart_drv, 0, "EFM32 Low Energy UART", efm32_leuart,
+               DRIVER_CHAR_METHODS(efm32_leuart));
+
+DRIVER_REGISTER(efm32_leuart_drv);
 

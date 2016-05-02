@@ -354,21 +354,7 @@ static DEVCRYPTO_REQUEST(nrf5x_aes_request)
                            &pv->queue, dev_crypto_rq_s_base(rq), 1);
 }
 
-static DEV_INIT(nrf5x_aes_init);
-static DEV_CLEANUP(nrf5x_aes_cleanup);
 #define nrf5x_aes_use dev_use_generic
-
-DRIVER_DECLARE(nrf5x_aes_drv, 0, "nRF5x AES"
-#ifdef CONFIG_DRIVER_NRF5X_AES_RANDOM
-               ",DRBG"
-#endif
-#ifdef CONFIG_DRIVER_NRF5X_AES_CMAC
-               ",CMAC"
-#endif
-               , nrf5x_aes,
-               DRIVER_CRYPTO_METHODS(nrf5x_aes));
-
-DRIVER_REGISTER(nrf5x_aes_drv);
 
 static DEV_INIT(nrf5x_aes_init)
 {
@@ -408,3 +394,16 @@ static DEV_CLEANUP(nrf5x_aes_cleanup)
 
   return 0;
 }
+
+DRIVER_DECLARE(nrf5x_aes_drv, 0, "nRF5x AES"
+#ifdef CONFIG_DRIVER_NRF5X_AES_RANDOM
+               ",DRBG"
+#endif
+#ifdef CONFIG_DRIVER_NRF5X_AES_CMAC
+               ",CMAC"
+#endif
+               , nrf5x_aes,
+               DRIVER_CRYPTO_METHODS(nrf5x_aes));
+
+DRIVER_REGISTER(nrf5x_aes_drv);
+

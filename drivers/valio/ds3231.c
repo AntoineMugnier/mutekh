@@ -188,16 +188,9 @@ static DEV_VALIO_REQUEST(ds3231_request)
     }
 }
 
-static DEV_INIT(ds3231_init);
-static DEV_CLEANUP(ds3231_cleanup);
 
 #define ds3231_use dev_use_generic
 #define ds3231_cancel (dev_valio_cancel_t*)&dev_driver_notsup_fcn
-
-DRIVER_DECLARE(ds3231_drv, 0, "DS3231 Calendar Clock", ds3231,
-               DRIVER_VALIO_METHODS(ds3231));
-
-DRIVER_REGISTER(ds3231_drv);
 
 static DEV_INIT(ds3231_init)
 {
@@ -241,3 +234,9 @@ static DEV_CLEANUP(ds3231_cleanup)
     dev_request_queue_destroy(&pv->queue);
     mem_free(pv);
 }
+
+DRIVER_DECLARE(ds3231_drv, 0, "DS3231 Calendar Clock", ds3231,
+               DRIVER_VALIO_METHODS(ds3231));
+
+DRIVER_REGISTER(ds3231_drv);
+

@@ -452,14 +452,6 @@ static DEV_TIMER_CONFIG(soclib_timer_config)
 
 /************************************************************************/
 
-static DEV_INIT(soclib_timer_init);
-static DEV_CLEANUP(soclib_timer_cleanup);
-
-DRIVER_DECLARE(soclib_timer_drv, 0, "Soclib Timer", soclib_timer,
-               DRIVER_TIMER_METHODS(soclib_timer));
-
-DRIVER_REGISTER(soclib_timer_drv,
-                DEV_ENUM_FDTNAME_ENTRY("soclib:timer"));
 
 static DEV_INIT(soclib_timer_init)
 {
@@ -557,4 +549,10 @@ static DEV_CLEANUP(soclib_timer_cleanup)
 
   return 0;
 }
+
+DRIVER_DECLARE(soclib_timer_drv, 0, "Soclib Timer", soclib_timer,
+               DRIVER_TIMER_METHODS(soclib_timer));
+
+DRIVER_REGISTER(soclib_timer_drv,
+                DEV_ENUM_FDTNAME_ENTRY("soclib:timer"));
 

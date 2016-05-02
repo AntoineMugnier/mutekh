@@ -438,8 +438,6 @@ static DEVCRYPTO_REQUEST(soft_salsa_request)
                            &pv->queue, dev_crypto_rq_s_base(rq), 0);
 }
 
-static DEV_INIT(soft_salsa_init);
-static DEV_CLEANUP(soft_salsa_cleanup);
 
 static DEV_USE(soft_salsa_use)
 {
@@ -471,13 +469,6 @@ static DEV_USE(soft_salsa_use)
       return -ENOTSUP;
     }
 }
-
-DRIVER_DECLARE(soft_salsa_drv, 0, "Software Salsa family of ciphers", soft_salsa,
-               DRIVER_CRYPTO_METHODS(soft_salsa));
-
-DRIVER_REGISTER(soft_salsa_drv);
-
-DEV_DECLARE_STATIC(soft_salsa_dev, "salsa_soft", 0, soft_salsa_drv);
 
 static DEV_INIT(soft_salsa_init)
 {
@@ -514,3 +505,11 @@ static DEV_CLEANUP(soft_salsa_cleanup)
 
   return 0;
 }
+
+DRIVER_DECLARE(soft_salsa_drv, 0, "Software Salsa family of ciphers", soft_salsa,
+               DRIVER_CRYPTO_METHODS(soft_salsa));
+
+DRIVER_REGISTER(soft_salsa_drv);
+
+DEV_DECLARE_STATIC(soft_salsa_dev, "salsa_soft", 0, soft_salsa_drv);
+

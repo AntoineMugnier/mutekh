@@ -358,8 +358,6 @@ static DEV_I2C_REQUEST(efm32_i2c_request)
   LOCK_RELEASE_IRQ(&dev->lock);
 }
 
-static DEV_INIT(efm32_i2c_init);
-static DEV_CLEANUP(efm32_i2c_cleanup);
 
 static DEV_USE(efm32_i2c_use)
 {
@@ -381,11 +379,6 @@ static DEV_USE(efm32_i2c_use)
       return dev_use_generic(param, op);
     }
 }
-
-DRIVER_DECLARE(efm32_i2c_drv, 0, "EFM32 i2c", efm32_i2c,
-               DRIVER_I2C_METHODS(efm32_i2c));
-
-DRIVER_REGISTER(efm32_i2c_drv);
 
 static DEV_INIT(efm32_i2c_init)
 {
@@ -487,4 +480,9 @@ static DEV_CLEANUP(efm32_i2c_cleanup)
 
   return 0;
 }
+
+DRIVER_DECLARE(efm32_i2c_drv, 0, "EFM32 i2c", efm32_i2c,
+               DRIVER_I2C_METHODS(efm32_i2c));
+
+DRIVER_REGISTER(efm32_i2c_drv);
 

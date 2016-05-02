@@ -327,16 +327,9 @@ static DEV_IRQ_SRC_PROCESS(mtch6102_irq)
     lock_release(&dev->lock);
 }
 
-static DEV_INIT(mtch6102_init);
-static DEV_CLEANUP(mtch6102_cleanup);
 
 #define mtch6102_use dev_use_generic
 #define mtch6102_cancel (dev_valio_cancel_t*)&dev_driver_notsup_fcn
-
-DRIVER_DECLARE(mtch6102_drv, 0, "MTCH6102 Touchpad", mtch6102,
-               DRIVER_VALIO_METHODS(mtch6102));
-
-DRIVER_REGISTER(mtch6102_drv);
 
 static DEV_INIT(mtch6102_init)
 {
@@ -402,3 +395,9 @@ static DEV_CLEANUP(mtch6102_cleanup)
     dev_request_queue_destroy(&pv->queue);
     mem_free(pv);
 }
+
+DRIVER_DECLARE(mtch6102_drv, 0, "MTCH6102 Touchpad", mtch6102,
+               DRIVER_VALIO_METHODS(mtch6102));
+
+DRIVER_REGISTER(mtch6102_drv);
+

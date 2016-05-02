@@ -384,13 +384,6 @@ static DEV_TIMER_CONFIG(cc26xx_timer_config)
 
 /************************************************************************/
 
-static DEV_INIT(cc26xx_timer_init);
-static DEV_CLEANUP(cc26xx_timer_cleanup);
-
-DRIVER_DECLARE(cc26xx_timer_drv, 0, "CC26XX TIMER", cc26xx_timer,
-               DRIVER_TIMER_METHODS(cc26xx_timer));
-
-DRIVER_REGISTER(cc26xx_timer_drv);
 
 static void power_domain_on(void)
 {
@@ -520,4 +513,9 @@ static DEV_CLEANUP(cc26xx_timer_cleanup)
 
   return 0;
 }
+
+DRIVER_DECLARE(cc26xx_timer_drv, 0, "CC26XX TIMER", cc26xx_timer,
+               DRIVER_TIMER_METHODS(cc26xx_timer));
+
+DRIVER_REGISTER(cc26xx_timer_drv);
 

@@ -28,7 +28,7 @@
 
 #define dev_zero_cancel (dev_char_cancel_t*)&dev_driver_notsup_fcn
 
-DEV_CHAR_REQUEST(dev_zero_request)
+static DEV_CHAR_REQUEST(dev_zero_request)
 {
   switch (rq->type)
     {
@@ -59,17 +59,15 @@ DEV_CHAR_REQUEST(dev_zero_request)
   kroutine_exec(&rq->base.kr);
 }
 
-/* 
- * device close operation
- */
-
-DEV_CLEANUP(dev_zero_cleanup)
+static DEV_INIT(dev_zero_init)
 {
+  return 0;
 }
 
-/* 
- * device open operation
- */
+static DEV_CLEANUP(dev_zero_cleanup)
+{
+  return 0;
+}
 
 #define dev_zero_use dev_use_generic
 
@@ -77,10 +75,4 @@ DRIVER_DECLARE(dev_zero_drv, 0, "dev-zero", dev_zero,
                DRIVER_CHAR_METHODS(dev_zero));
 
 DRIVER_REGISTER(dev_zero_drv);
-
-DEV_INIT(dev_zero_init)
-{
-
-  return 0;
-}
 

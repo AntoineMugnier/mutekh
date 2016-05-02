@@ -245,8 +245,6 @@ static DEV_TIMER_CONFIG(arm_timer_config)
 
 /************************************************************************/
 
-static DEV_CLEANUP(arm_cleanup);
-static DEV_INIT(arm_init);
 
 static DEV_USE(arm_use)
 {
@@ -267,18 +265,6 @@ static DEV_USE(arm_use)
       return dev_use_generic(param, op);
     }
 }
-
-DRIVER_DECLARE(arm32_drv, DRIVER_FLAGS_EARLY_INIT, "Arm processor", arm,
-#ifdef CONFIG_DEVICE_IRQ
-               DRIVER_ICU_METHODS(arm_icu),
-#endif
-#ifdef CONFIG_CPU_ARM32_TIMER_CYCLECOUNTER
-               DRIVER_TIMER_METHODS(arm_timer),
-#endif
-               DRIVER_CPU_METHODS(arm_cpu));
-
-DRIVER_REGISTER(arm32_drv,
-                DEV_ENUM_FDTNAME_ENTRY("cpu:arm"));
 
 static DEV_INIT(arm_init)
 {
@@ -356,4 +342,16 @@ static DEV_CLEANUP(arm_cleanup)
 
   return 0;
 }
+
+DRIVER_DECLARE(arm32_drv, DRIVER_FLAGS_EARLY_INIT, "Arm processor", arm,
+#ifdef CONFIG_DEVICE_IRQ
+               DRIVER_ICU_METHODS(arm_icu),
+#endif
+#ifdef CONFIG_CPU_ARM32_TIMER_CYCLECOUNTER
+               DRIVER_TIMER_METHODS(arm_timer),
+#endif
+               DRIVER_CPU_METHODS(arm_cpu));
+
+DRIVER_REGISTER(arm32_drv,
+                DEV_ENUM_FDTNAME_ENTRY("cpu:arm"));
 

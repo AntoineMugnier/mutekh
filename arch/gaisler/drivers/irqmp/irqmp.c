@@ -195,16 +195,8 @@ static DEV_IRQ_SRC_PROCESS(gaisler_irqmp_source_process)
 
 #endif /*  CONFIG_DRIVER_GAISLER_IRQMP_ICU */
 
-static DEV_CLEANUP(gaisler_irqmp_cleanup);
-static DEV_INIT(gaisler_irqmp_init);
 
 #define gaisler_irqmp_use dev_use_generic
-
-DRIVER_DECLARE(gaisler_irqmp_drv, 0, "Gaisler IRQMP irq controller", gaisler_irqmp,
-               DRIVER_ICU_METHODS(gaisler_irqmp_icu));
-
-DRIVER_REGISTER(gaisler_irqmp_drv,
-                DEV_ENUM_GAISLER_ENTRY(0x01, 0x00d));
 
 static void gaisler_irqmp_disable_irqs(struct gaisler_irqmp_private_s *pv)
 {
@@ -313,6 +305,13 @@ static DEV_CLEANUP(gaisler_irqmp_cleanup)
 #endif
   mem_free(pv);
 }
+
+DRIVER_DECLARE(gaisler_irqmp_drv, 0, "Gaisler IRQMP irq controller", gaisler_irqmp,
+               DRIVER_ICU_METHODS(gaisler_irqmp_icu));
+
+DRIVER_REGISTER(gaisler_irqmp_drv,
+                DEV_ENUM_GAISLER_ENTRY(0x01, 0x00d));
+
 
 #ifdef CONFIG_ARCH_SMP
 

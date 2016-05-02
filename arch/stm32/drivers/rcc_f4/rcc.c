@@ -228,15 +228,8 @@ static DEV_CLOCK_GET_ENDPOINT(stm32_rcc_get_endpoint)
     }
 }
 
-static DEV_INIT(stm32_rcc_init);
-static DEV_CLEANUP(stm32_rcc_cleanup);
 
 #define stm32_rcc_use dev_use_generic
-
-DRIVER_DECLARE(stm32_rcc_drv, 0, "STM32 RCC", stm32_rcc,
-               DRIVER_CMU_METHODS(stm32_rcc));
-
-DRIVER_REGISTER(stm32_rcc_drv);
 
 static DEV_INIT(stm32_rcc_init)
 {
@@ -279,4 +272,9 @@ static DEV_CLEANUP(stm32_rcc_cleanup)
 
   return 0;
 }
+
+DRIVER_DECLARE(stm32_rcc_drv, 0, "STM32 RCC", stm32_rcc,
+               DRIVER_CMU_METHODS(stm32_rcc));
+
+DRIVER_REGISTER(stm32_rcc_drv);
 

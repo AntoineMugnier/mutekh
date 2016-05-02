@@ -259,15 +259,8 @@ static DEVCRYPTO_REQUEST(efm32_aes_request)
                            &pv->queue, dev_crypto_rq_s_base(rq), 1);
 }
 
-static DEV_INIT(efm32_aes_init);
-static DEV_CLEANUP(efm32_aes_cleanup);
 
 #define efm32_aes_use dev_use_generic
-
-DRIVER_DECLARE(efm32_aes_drv, 0, "EFM32 AES", efm32_aes,
-               DRIVER_CRYPTO_METHODS(efm32_aes));
-
-DRIVER_REGISTER(efm32_aes_drv);
 
 static DEV_INIT(efm32_aes_init)
 {
@@ -317,3 +310,9 @@ static DEV_CLEANUP(efm32_aes_cleanup)
 
   return 0;
 }
+
+DRIVER_DECLARE(efm32_aes_drv, 0, "EFM32 AES", efm32_aes,
+               DRIVER_CRYPTO_METHODS(efm32_aes));
+
+DRIVER_REGISTER(efm32_aes_drv);
+

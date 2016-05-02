@@ -320,16 +320,9 @@ static KROUTINE_EXEC(spi_rq_done)
     adxl362_run(dev);
 }
 
-static DEV_INIT(adxl362_init);
-static DEV_CLEANUP(adxl362_cleanup);
 
 #define adxl362_use dev_use_generic
 #define adxl362_cancel (dev_valio_cancel_t*)&dev_driver_notsup_fcn
-
-DRIVER_DECLARE(adxl362_drv, 0, "ADXL362 motion", adxl362,
-               DRIVER_VALIO_METHODS(adxl362));
-
-DRIVER_REGISTER(adxl362_drv);
 
 static DEV_INIT(adxl362_init)
 {
@@ -397,3 +390,9 @@ static DEV_CLEANUP(adxl362_cleanup)
 
   mem_free(pv);
 }
+
+DRIVER_DECLARE(adxl362_drv, 0, "ADXL362 motion", adxl362,
+               DRIVER_VALIO_METHODS(adxl362));
+
+DRIVER_REGISTER(adxl362_drv);
+

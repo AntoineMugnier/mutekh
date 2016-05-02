@@ -413,8 +413,6 @@ static DEV_UART_CONFIG(nrf5x_uart_uart_config)
 
 #endif
 
-static DEV_INIT(nrf5x_uart_char_init);
-static DEV_CLEANUP(nrf5x_uart_char_cleanup);
 
 static DEV_USE(nrf5x_uart_char_use)
 {
@@ -470,18 +468,6 @@ static DEV_USE(nrf5x_uart_char_use)
       return dev_use_generic(param, op);
     }
 }
-
-DRIVER_DECLARE(nrf5x_uart_drv, 0, "nRF5x Serial"
-#if defined(CONFIG_DEVICE_UART)
-               ",UART"
-#endif
-               , nrf5x_uart_char,
-#if defined(CONFIG_DEVICE_UART)
-               DRIVER_UART_METHODS(nrf5x_uart_uart),
-#endif
-               DRIVER_CHAR_METHODS(nrf5x_uart));
-
-DRIVER_REGISTER(nrf5x_uart_drv);
 
 static DEV_INIT(nrf5x_uart_char_init)
 {
@@ -604,7 +590,7 @@ static DEV_INIT(nrf5x_uart_char_init)
     return -1;
 }
 
-DEV_CLEANUP(nrf5x_uart_char_cleanup)
+static DEV_CLEANUP(nrf5x_uart_char_cleanup)
 {
     struct nrf5x_uart_priv *pv = dev->drv_pv;
 
@@ -636,6 +622,18 @@ DEV_CLEANUP(nrf5x_uart_char_cleanup)
 
     return 0;
 }
+
+DRIVER_DECLARE(nrf5x_uart_drv, 0, "nRF5x Serial"
+#if defined(CONFIG_DEVICE_UART)
+               ",UART"
+#endif
+               , nrf5x_uart_char,
+#if defined(CONFIG_DEVICE_UART)
+               DRIVER_UART_METHODS(nrf5x_uart_uart),
+#endif
+               DRIVER_CHAR_METHODS(nrf5x_uart));
+
+DRIVER_REGISTER(nrf5x_uart_drv);
 
 #if defined(CONFIG_DRIVER_NRF5X_PRINTK)
 

@@ -147,16 +147,8 @@ static DEV_IRQ_SRC_PROCESS(pic32_icu_source_process)
 #define pic32_icu_use dev_use_generic
 #define pic32_icu_link device_icu_dummy_link
 
-static DEV_INIT(pic32_icu_init);
-static DEV_CLEANUP(pic32_icu_cleanup);
 
-DRIVER_DECLARE(pic32_icu_drv, 0, "PIC32 irq controller", pic32_icu,
-               DRIVER_ICU_METHODS(pic32_icu));
-
-DRIVER_REGISTER(pic32_icu_drv,
-                DEV_ENUM_FDTNAME_ENTRY("pic32_icu"));
-
-DEV_INIT(pic32_icu_init)
+static DEV_INIT(pic32_icu_init)
 {
   struct pic32_icu_private_s  *pv;
 
@@ -211,4 +203,10 @@ static DEV_CLEANUP(pic32_icu_cleanup)
 
   mem_free(pv);
 }
+
+DRIVER_DECLARE(pic32_icu_drv, 0, "PIC32 irq controller", pic32_icu,
+               DRIVER_ICU_METHODS(pic32_icu));
+
+DRIVER_REGISTER(pic32_icu_drv,
+                DEV_ENUM_FDTNAME_ENTRY("pic32_icu"));
 

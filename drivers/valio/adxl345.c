@@ -322,18 +322,9 @@ DEV_VALIO_REQUEST(adxl345_request)
     }
 }
 
-static DEV_INIT(adxl345_init);
-static DEV_CLEANUP(adxl345_cleanup);
-static DEV_USE(adxl345_use);
 #define adxl345_cancel (dev_valio_cancel_t*)&dev_driver_notsup_fcn
 
-DRIVER_DECLARE(adxl345_drv, 0, "ADXL345 accelerometer", adxl345,
-               DRIVER_VALIO_METHODS(adxl345));
-
-DRIVER_REGISTER(adxl345_drv);
-
-static
-DEV_INIT(adxl345_init)
+static DEV_INIT(adxl345_init)
 {
     struct adxl345_private_s *pv;
 
@@ -358,7 +349,6 @@ DEV_INIT(adxl345_init)
     dev_request_queue_init(&pv->queue);
 
     dev->drv_pv = pv;
-    dev->drv    = &adxl345_drv;
 
     return 0;
 
@@ -367,8 +357,7 @@ err_pv:
     return 1;
 }
 
-static
-DEV_CLEANUP(adxl345_cleanup)
+static DEV_CLEANUP(adxl345_cleanup)
 {
     struct adxl345_private_s *pv = dev->drv_pv;
 
@@ -376,4 +365,9 @@ DEV_CLEANUP(adxl345_cleanup)
     dev_request_queue_destroy(&pv->queue);
     mem_free(pv);
 }
+
+DRIVER_DECLARE(adxl345_drv, 0, "ADXL345 accelerometer", adxl345,
+               DRIVER_VALIO_METHODS(adxl345));
+
+DRIVER_REGISTER(adxl345_drv);
 

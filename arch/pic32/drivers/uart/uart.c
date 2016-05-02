@@ -302,14 +302,7 @@ static DEV_IRQ_SRC_PROCESS(pic32_uart_tx_irq)
 
 #endif
 
-static DEV_INIT(pic32_uart_char_init);
-static DEV_CLEANUP(pic32_uart_char_cleanup);
 #define pic32_uart_char_use dev_use_generic
-
-DRIVER_DECLARE(pic32_uart_drv, 0, "PIC32 UART", pic32_uart_char,
-               DRIVER_CHAR_METHODS(pic32_uart));
-
-DRIVER_REGISTER(pic32_uart_drv);
 
 static DEV_INIT(pic32_uart_char_init)
 {
@@ -394,7 +387,7 @@ static DEV_INIT(pic32_uart_char_init)
   return -1;
 }
 
-DEV_CLEANUP(pic32_uart_char_cleanup)
+static DEV_CLEANUP(pic32_uart_char_cleanup)
 {
   struct pic32_uart_context_s	*pv = dev->drv_pv;
 
@@ -419,4 +412,9 @@ DEV_CLEANUP(pic32_uart_char_cleanup)
 
   mem_free(pv);
 }
+
+DRIVER_DECLARE(pic32_uart_drv, 0, "PIC32 UART", pic32_uart_char,
+               DRIVER_CHAR_METHODS(pic32_uart));
+
+DRIVER_REGISTER(pic32_uart_drv);
 

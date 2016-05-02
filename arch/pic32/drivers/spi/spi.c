@@ -467,16 +467,8 @@ static DEV_SPI_CTRL_QUEUE(pic32_spi_queue)
 
 #endif
 
-static DEV_INIT(pic32_spi_init);
-static DEV_CLEANUP(pic32_spi_cleanup);
 
 #define pic32_spi_use dev_use_generic
-
-DRIVER_DECLARE(pic32_spi_drv, 0, "PIC32 SPI", pic32_spi,
-               DRIVER_SPI_CTRL_METHODS(pic32_spi));
-
-DRIVER_REGISTER(pic32_spi_drv);
-
 
 static DEV_INIT(pic32_spi_init)
 {
@@ -602,7 +594,7 @@ static DEV_INIT(pic32_spi_init)
   return -1;
 }
 
-DEV_CLEANUP(pic32_spi_cleanup)
+static DEV_CLEANUP(pic32_spi_cleanup)
 {
   struct pic32_spi_context_s	*pv = dev->drv_pv;
 
@@ -620,3 +612,10 @@ DEV_CLEANUP(pic32_spi_cleanup)
 
   mem_free(pv);
 }
+
+DRIVER_DECLARE(pic32_spi_drv, 0, "PIC32 SPI", pic32_spi,
+               DRIVER_SPI_CTRL_METHODS(pic32_spi));
+
+DRIVER_REGISTER(pic32_spi_drv);
+
+

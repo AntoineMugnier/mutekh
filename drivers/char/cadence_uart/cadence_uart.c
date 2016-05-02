@@ -267,16 +267,8 @@ static DEV_IRQ_SRC_PROCESS(cadence_uart_irq)
 
 #endif
 
-static DEV_INIT(cadence_uart_init);
-static DEV_CLEANUP(cadence_uart_cleanup);
 
 #define cadence_uart_use dev_use_generic
-
-DRIVER_DECLARE(cadence_uart_drv, 0, "Cadence UART", cadence_uart,
-               DRIVER_CHAR_METHODS(cadence_uart));
-
-DRIVER_REGISTER(cadence_uart_drv,
-                DEV_ENUM_FDTNAME_ENTRY("cadence_uart"));
 
 /* Set divider value, update pv->mode and return actual divider. Returns 0 on error. */
 static uint32_t cadence_uart_set_divider(struct cadence_uart_context_s *pv, uint32_t divisor)
@@ -419,7 +411,7 @@ static DEV_INIT(cadence_uart_init)
   return -1;
 }
 
-DEV_CLEANUP(cadence_uart_cleanup)
+static DEV_CLEANUP(cadence_uart_cleanup)
 {
   struct cadence_uart_context_s	*pv = dev->drv_pv;
 
@@ -448,3 +440,10 @@ DEV_CLEANUP(cadence_uart_cleanup)
 
   return 0;
 }
+
+DRIVER_DECLARE(cadence_uart_drv, 0, "Cadence UART", cadence_uart,
+               DRIVER_CHAR_METHODS(cadence_uart));
+
+DRIVER_REGISTER(cadence_uart_drv,
+                DEV_ENUM_FDTNAME_ENTRY("cadence_uart"));
+

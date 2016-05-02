@@ -247,8 +247,6 @@ static DEV_TIMER_CONFIG(x86_timer_config)
 
 /************************************************************************/
 
-static DEV_CLEANUP(x86_cleanup);
-static DEV_INIT(x86_init);
 
 static DEV_USE(x86_use)
 {
@@ -272,18 +270,6 @@ static DEV_USE(x86_use)
 
 #define x86_timer_request (dev_timer_request_t*)&dev_driver_notsup_fcn
 #define x86_timer_cancel  (dev_timer_cancel_t*)&dev_driver_notsup_fcn
-
-DRIVER_DECLARE(x86_drv, DRIVER_FLAGS_EARLY_INIT, "x86 32-bit processor", x86,
-#ifdef CONFIG_DEVICE_IRQ
-               DRIVER_ICU_METHODS(x86_icu),
-#endif
-#ifdef CONFIG_CPU_X86_TIMER_CYCLECOUNTER
-               DRIVER_TIMER_METHODS(x86_timer),
-#endif
-               DRIVER_CPU_METHODS(x86_cpu));
-
-DRIVER_REGISTER(x86_drv,
-                DEV_ENUM_FDTNAME_ENTRY("cpu:x86"));
 
 static DEV_INIT(x86_init)
 {
@@ -402,4 +388,16 @@ static DEV_CLEANUP(x86_cleanup)
 
   return 0;
 }
+
+DRIVER_DECLARE(x86_drv, DRIVER_FLAGS_EARLY_INIT, "x86 32-bit processor", x86,
+#ifdef CONFIG_DEVICE_IRQ
+               DRIVER_ICU_METHODS(x86_icu),
+#endif
+#ifdef CONFIG_CPU_X86_TIMER_CYCLECOUNTER
+               DRIVER_TIMER_METHODS(x86_timer),
+#endif
+               DRIVER_CPU_METHODS(x86_cpu));
+
+DRIVER_REGISTER(x86_drv,
+                DEV_ENUM_FDTNAME_ENTRY("cpu:x86"));
 

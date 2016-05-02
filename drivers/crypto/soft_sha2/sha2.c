@@ -570,15 +570,6 @@ static DEV_USE(soft_sha2_use)
     }
 }
 
-static DEV_INIT(soft_sha2_init);
-static DEV_CLEANUP(soft_sha2_cleanup);
-
-DRIVER_DECLARE(soft_sha2_drv, 0, "Software SHA2 hashes", soft_sha2,
-               DRIVER_CRYPTO_METHODS(soft_sha2));
-
-DRIVER_REGISTER(soft_sha2_drv);
-
-DEV_DECLARE_STATIC(soft_sha2_dev, "sha2_soft", 0, soft_sha2_drv);
 
 static DEV_INIT(soft_sha2_init)
 {
@@ -615,3 +606,11 @@ static DEV_CLEANUP(soft_sha2_cleanup)
 
   return 0;
 }
+
+DRIVER_DECLARE(soft_sha2_drv, 0, "Software SHA2 hashes", soft_sha2,
+               DRIVER_CRYPTO_METHODS(soft_sha2));
+
+DRIVER_REGISTER(soft_sha2_drv);
+
+DEV_DECLARE_STATIC(soft_sha2_dev, "sha2_soft", 0, soft_sha2_drv);
+

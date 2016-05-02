@@ -322,15 +322,8 @@ static DEV_SPI_CTRL_QUEUE(bcm283x_spi_queue)
 
 #endif
 
-static DEV_INIT(bcm283x_spi_init);
-static DEV_CLEANUP(bcm283x_spi_cleanup);
 
 #define bcm283x_spi_use dev_use_generic
-
-DRIVER_DECLARE(bcm283x_spi_drv, 0, "BCM283X SPI", bcm283x_spi,
-               DRIVER_SPI_CTRL_METHODS(bcm283x_spi));
-
-DRIVER_REGISTER(bcm283x_spi_drv);
 
 static DEV_INIT(bcm283x_spi_init)
 {
@@ -385,7 +378,7 @@ static DEV_INIT(bcm283x_spi_init)
   return -1;
 }
 
-DEV_CLEANUP(bcm283x_spi_cleanup)
+static DEV_CLEANUP(bcm283x_spi_cleanup)
 {
   struct bcm283x_spi_context_s	*pv = dev->drv_pv;
 
@@ -400,3 +393,9 @@ DEV_CLEANUP(bcm283x_spi_cleanup)
 
   mem_free(pv);
 }
+
+DRIVER_DECLARE(bcm283x_spi_drv, 0, "BCM283X SPI", bcm283x_spi,
+               DRIVER_SPI_CTRL_METHODS(bcm283x_spi));
+
+DRIVER_REGISTER(bcm283x_spi_drv);
+

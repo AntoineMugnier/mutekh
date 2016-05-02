@@ -879,28 +879,6 @@ static DEV_REQUEST_DELAYED_FUNC(nrf5x_nvmc_process)
   dev_request_delayed_end(&pv->queue, rq_);
 }
 
-static DEV_INIT(nrf5x_nvmc_init);
-static DEV_CLEANUP(nrf5x_nvmc_cleanup);
-static DEV_USE(nrf5x_nvmc_use);
-
-DRIVER_DECLARE(nrf5x_nvmc_drv, 0, "nRF5x NVMC"
-#ifdef CONFIG_DRIVER_NRF5X_NVMC
-               ",MEM"
-#endif
-#ifdef CONFIG_DRIVER_NRF5X_PERSIST
-               ",PERSIST"
-#endif
-               , nrf5x_nvmc
-#ifdef CONFIG_DRIVER_NRF5X_NVMC
-               , DRIVER_MEM_METHODS(nrf5x_mem)
-#endif
-#ifdef CONFIG_DRIVER_NRF5X_PERSIST
-               , DRIVER_PERSIST_METHODS(nrf5x_persist)
-#endif
-               );
-
-DRIVER_REGISTER(nrf5x_nvmc_drv);
-
 static DEV_USE(nrf5x_nvmc_use)
 {
   struct device_accessor_s *accessor = param;
@@ -979,4 +957,23 @@ static DEV_CLEANUP(nrf5x_nvmc_cleanup)
 
   return 0;
 }
+
+DRIVER_DECLARE(nrf5x_nvmc_drv, 0, "nRF5x NVMC"
+#ifdef CONFIG_DRIVER_NRF5X_NVMC
+               ",MEM"
+#endif
+#ifdef CONFIG_DRIVER_NRF5X_PERSIST
+               ",PERSIST"
+#endif
+               , nrf5x_nvmc
+#ifdef CONFIG_DRIVER_NRF5X_NVMC
+               , DRIVER_MEM_METHODS(nrf5x_mem)
+#endif
+#ifdef CONFIG_DRIVER_NRF5X_PERSIST
+               , DRIVER_PERSIST_METHODS(nrf5x_persist)
+#endif
+               );
+
+DRIVER_REGISTER(nrf5x_nvmc_drv);
+
 #endif

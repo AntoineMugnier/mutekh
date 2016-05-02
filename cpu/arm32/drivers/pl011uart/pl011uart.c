@@ -282,15 +282,7 @@ static DEV_IRQ_SRC_PROCESS(pl011uart_irq)
 
 #endif
 
-static DEV_INIT(pl011uart_init);
-static DEV_CLEANUP(pl011uart_cleanup);
 #define pl011uart_use dev_use_generic
-
-DRIVER_DECLARE(pl011uart_drv, 0, "PL011 UART", pl011uart,
-               DRIVER_CHAR_METHODS(pl011uart));
-
-DRIVER_REGISTER(pl011uart_drv,
-                DEV_ENUM_FDTNAME_ENTRY("pl011"));
 
 static DEV_INIT(pl011uart_init)
 {
@@ -380,7 +372,7 @@ static DEV_INIT(pl011uart_init)
   return -1;
 }
 
-DEV_CLEANUP(pl011uart_cleanup)
+static DEV_CLEANUP(pl011uart_cleanup)
 {
   struct pl011uart_context_s	*pv = dev->drv_pv;
 
@@ -403,3 +395,10 @@ DEV_CLEANUP(pl011uart_cleanup)
 
   mem_free(pv);
 }
+
+DRIVER_DECLARE(pl011uart_drv, 0, "PL011 UART", pl011uart,
+               DRIVER_CHAR_METHODS(pl011uart));
+
+DRIVER_REGISTER(pl011uart_drv,
+                DEV_ENUM_FDTNAME_ENTRY("pl011"));
+

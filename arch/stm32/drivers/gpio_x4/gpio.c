@@ -663,25 +663,13 @@ DEV_IRQ_SRC_PROCESS(stm32_gpio_icu_src_process)
 
 /********************************* DRIVER */
 
-static DEV_INIT(stm32_gpio_init);
-static DEV_CLEANUP(stm32_gpio_cleanup);
 
 #define stm32_gpio_gpio_request dev_gpio_request_async_to_sync
 #define stm32_gpio_gpio_input_irq_range (dev_gpio_input_irq_range_t*)dev_driver_notsup_fcn
 
 #define stm32_gpio_use dev_use_generic
 
-DRIVER_DECLARE(stm32_gpio_drv, 0, "STM32 GPIO", stm32_gpio,
-               DRIVER_GPIO_METHODS(stm32_gpio_gpio),
-#if defined(CONFIG_DRIVER_STM32_GPIO_X4_ICU)
-               DRIVER_ICU_METHODS(stm32_gpio_icu),
-#endif
-               DRIVER_IOMUX_METHODS(stm32_gpio_iomux));
-
-DRIVER_REGISTER(stm32_gpio_drv);
-
-static
-DEV_INIT(stm32_gpio_init)
+static DEV_INIT(stm32_gpio_init)
 {
   struct stm32_gpio_private_s *pv = NULL;
 
@@ -710,7 +698,6 @@ DEV_INIT(stm32_gpio_init)
     DEV_IRQ_SENSE_FALLING_EDGE | DEV_IRQ_SENSE_RISING_EDGE);
 #endif
 
-  dev->drv    = &stm32_gpio_drv;
   dev->drv_pv = pv;
   return 0;
 
@@ -719,8 +706,7 @@ err_mem:
   return -1;
 }
 
-static
-DEV_CLEANUP(stm32_gpio_cleanup)
+static DEV_CLEANUP(stm32_gpio_cleanup)
 {
   struct stm32_gpio_private_s *pv = dev->drv_pv;
 
@@ -732,4 +718,13 @@ DEV_CLEANUP(stm32_gpio_cleanup)
 
   return 0;
 }
+
+DRIVER_DECLARE(stm32_gpio_drv, 0, "STM32 GPIO", stm32_gpio,
+               DRIVER_GPIO_METHODS(stm32_gpio_gpio),
+#if defined(CONFIG_DRIVER_STM32_GPIO_X4_ICU)
+               DRIVER_ICU_METHODS(stm32_gpio_icu),
+#endif
+               DRIVER_IOMUX_METHODS(stm32_gpio_iomux));
+
+DRIVER_REGISTER(stm32_gpio_drv);
 

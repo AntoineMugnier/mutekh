@@ -430,22 +430,8 @@ static DEV_IRQ_SINK_UPDATE(soclib_spi_icu_sink_update)
 #define soclib_spi_gpio_request dev_gpio_request_async_to_sync
 #define soclib_spi_gpio_input_irq_range (dev_gpio_input_irq_range_t*)dev_driver_notsup_fcn
 
-static DEV_INIT(soclib_spi_init);
-static DEV_CLEANUP(soclib_spi_cleanup);
 
 #define soclib_spi_use dev_use_generic
-
-DRIVER_DECLARE(soclib_spi_drv, 0, "Soclib Spi", soclib_spi,
-#ifdef CONFIG_DRIVER_SOCLIB_SPI_GPIO
-               DRIVER_GPIO_METHODS(soclib_spi_gpio),
-#endif
-#ifdef CONFIG_DRIVER_SOCLIB_SPI_ICU
-               DRIVER_ICU_METHODS(soclib_spi_icu),
-#endif
-               DRIVER_SPI_CTRL_METHODS(soclib_spi));
-
-DRIVER_REGISTER(soclib_spi_drv,
-                DEV_ENUM_FDTNAME_ENTRY("soclib:spi"));
 
 #ifdef CONFIG_DEVICE_IRQ
 
@@ -572,7 +558,7 @@ static DEV_INIT(soclib_spi_init)
   return -1;
 }
 
-DEV_CLEANUP(soclib_spi_cleanup)
+static DEV_CLEANUP(soclib_spi_cleanup)
 {
   struct soclib_spi_context_s	*pv = dev->drv_pv;
 
@@ -591,3 +577,16 @@ DEV_CLEANUP(soclib_spi_cleanup)
   mem_free(pv);
   return 0;
 }
+
+DRIVER_DECLARE(soclib_spi_drv, 0, "Soclib Spi", soclib_spi,
+#ifdef CONFIG_DRIVER_SOCLIB_SPI_GPIO
+               DRIVER_GPIO_METHODS(soclib_spi_gpio),
+#endif
+#ifdef CONFIG_DRIVER_SOCLIB_SPI_ICU
+               DRIVER_ICU_METHODS(soclib_spi_icu),
+#endif
+               DRIVER_SPI_CTRL_METHODS(soclib_spi));
+
+DRIVER_REGISTER(soclib_spi_drv,
+                DEV_ENUM_FDTNAME_ENTRY("soclib:spi"));
+

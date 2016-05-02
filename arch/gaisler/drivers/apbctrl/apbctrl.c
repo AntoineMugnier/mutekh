@@ -297,16 +297,7 @@ static void apbctrl_scan(struct device_s *dev, uintptr_t begin)
     }
 }
 
-DEV_CLEANUP(apbctrl_cleanup);
-DEV_INIT(apbctrl_init);
-
-DRIVER_DECLARE(apbctrl_drv, 0, "Gaisler APB bus controller", apbctrl,
-               DRIVER_ENUM_METHODS(apbctrl));
-
-DRIVER_REGISTER(apbctrl_drv,
-                DEV_ENUM_GAISLER_ENTRY(GAISLER_VENDOR_GAISLER, GAISLER_DEVICE_APBMST));
-
-DEV_INIT(apbctrl_init)
+static DEV_INIT(apbctrl_init)
 {
   struct apbctrl_pv_s *pv;
 
@@ -331,7 +322,7 @@ DEV_INIT(apbctrl_init)
   return 0;
 }
 
-DEV_CLEANUP(apbctrl_cleanup)
+static DEV_CLEANUP(apbctrl_cleanup)
 {
   struct apbctrl_pv_s *pv = dev->drv_pv;
 
@@ -342,4 +333,10 @@ DEV_CLEANUP(apbctrl_cleanup)
 
   return 0;
 }
+
+DRIVER_DECLARE(apbctrl_drv, 0, "Gaisler APB bus controller", apbctrl,
+               DRIVER_ENUM_METHODS(apbctrl));
+
+DRIVER_REGISTER(apbctrl_drv,
+                DEV_ENUM_GAISLER_ENTRY(GAISLER_VENDOR_GAISLER, GAISLER_DEVICE_APBMST));
 

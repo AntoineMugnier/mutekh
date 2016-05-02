@@ -287,15 +287,8 @@ static DEV_SPI_CTRL_QUEUE(cc26xx_spi_queue)
 
 #endif
 
-static DEV_INIT(cc26xx_spi_init);
-static DEV_CLEANUP(cc26xx_spi_cleanup);
 
 #define cc26xx_spi_use dev_use_generic
-
-DRIVER_DECLARE(cc26xx_spi_drv, 0, "CC26XX SPI", cc26xx_spi,
-               DRIVER_SPI_CTRL_METHODS(cc26xx_spi));
-
-DRIVER_REGISTER(cc26xx_spi_drv);
 
 static void power_domain_on(void)
 {
@@ -404,7 +397,7 @@ static DEV_INIT(cc26xx_spi_init)
   return -1;
 }
 
-DEV_CLEANUP(cc26xx_spi_cleanup)
+static DEV_CLEANUP(cc26xx_spi_cleanup)
 {
   struct cc26xx_spi_context_s	*pv = dev->drv_pv;
 
@@ -430,3 +423,9 @@ DEV_CLEANUP(cc26xx_spi_cleanup)
 
   return 0;
 }
+
+DRIVER_DECLARE(cc26xx_spi_drv, 0, "CC26XX SPI", cc26xx_spi,
+               DRIVER_SPI_CTRL_METHODS(cc26xx_spi));
+
+DRIVER_REGISTER(cc26xx_spi_drv);
+

@@ -187,8 +187,6 @@ static DEV_TIMER_CONFIG(ppc_timer_config)
 
 /************************************************************************/
 
-static DEV_CLEANUP(ppc_cleanup);
-static DEV_INIT(ppc_init);
 
 static DEV_USE(ppc_use)
 {
@@ -212,22 +210,6 @@ static DEV_USE(ppc_use)
 
 #define ppc_timer_request (dev_timer_request_t*)&dev_driver_notsup_fcn
 #define ppc_timer_cancel  (dev_timer_cancel_t*)&dev_driver_notsup_fcn
-
-DRIVER_DECLARE(ppc_drv, DRIVER_FLAGS_EARLY_INIT, "PowerPC processor", ppc,
-#ifdef CONFIG_DEVICE_IRQ
-               DRIVER_ICU_METHODS(ppc_icu),
-#endif
-#ifdef CONFIG_CPU_PPC_TIMER_CYCLECOUNTER
-               DRIVER_TIMER_METHODS(ppc_timer),
-#endif
-               DRIVER_CPU_METHODS(ppc_cpu));
-
-DRIVER_REGISTER(ppc_drv
-#ifdef CONFIG_LIBFDT
-                ,DEV_ENUM_FDTNAME_ENTRY("cpu:ppc")
-                ,DEV_ENUM_FDTNAME_ENTRY("cpu:powerpc")
-#endif
-                );
 
 static DEV_INIT(ppc_init)
 {
@@ -305,4 +287,20 @@ static DEV_CLEANUP(ppc_cleanup)
 
   return 0;
 }
+
+DRIVER_DECLARE(ppc_drv, DRIVER_FLAGS_EARLY_INIT, "PowerPC processor", ppc,
+#ifdef CONFIG_DEVICE_IRQ
+               DRIVER_ICU_METHODS(ppc_icu),
+#endif
+#ifdef CONFIG_CPU_PPC_TIMER_CYCLECOUNTER
+               DRIVER_TIMER_METHODS(ppc_timer),
+#endif
+               DRIVER_CPU_METHODS(ppc_cpu));
+
+DRIVER_REGISTER(ppc_drv
+#ifdef CONFIG_LIBFDT
+                ,DEV_ENUM_FDTNAME_ENTRY("cpu:ppc")
+                ,DEV_ENUM_FDTNAME_ENTRY("cpu:powerpc")
+#endif
+                );
 

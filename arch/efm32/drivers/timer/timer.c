@@ -440,13 +440,6 @@ static DEV_TIMER_CONFIG(efm32_timer_config)
 
 /************************************************************************/
 
-static DEV_INIT(efm32_timer_init);
-static DEV_CLEANUP(efm32_timer_cleanup);
-
-DRIVER_DECLARE(efm32_timer_drv, 0, "EFM32 Timer", efm32_timer,
-               DRIVER_TIMER_METHODS(efm32_timer));
-
-DRIVER_REGISTER(efm32_timer_drv);
 
 static DEV_INIT(efm32_timer_init)
 {
@@ -545,4 +538,9 @@ static DEV_CLEANUP(efm32_timer_cleanup)
 
   return 0;
 }
+
+DRIVER_DECLARE(efm32_timer_drv, 0, "EFM32 Timer", efm32_timer,
+               DRIVER_TIMER_METHODS(efm32_timer));
+
+DRIVER_REGISTER(efm32_timer_drv);
 

@@ -289,8 +289,6 @@ static DEV_PWM_CONFIG(nrf5x_gpio_pwm_config)
                            &pv->queue, dev_pwm_rq_s_base(rq), 1);
 }
 
-static DEV_INIT(nrf5x_gpio_pwm_init);
-static DEV_CLEANUP(nrf5x_gpio_pwm_cleanup);
 
 static DEV_USE(nrf5x_gpio_pwm_use)
 {
@@ -310,11 +308,6 @@ static DEV_USE(nrf5x_gpio_pwm_use)
     return dev_use_generic(param, op);
   }
 }
-
-DRIVER_DECLARE(nrf5x_gpio_pwm_drv, 0, "nRF5x GPIO PWM", nrf5x_gpio_pwm,
-               DRIVER_PWM_METHODS(nrf5x_gpio_pwm));
-
-DRIVER_REGISTER(nrf5x_gpio_pwm_drv);
 
 static DEV_INIT(nrf5x_gpio_pwm_init)
 {
@@ -387,7 +380,7 @@ static DEV_INIT(nrf5x_gpio_pwm_init)
   return err;
 }
 
-DEV_CLEANUP(nrf5x_gpio_pwm_cleanup)
+static DEV_CLEANUP(nrf5x_gpio_pwm_cleanup)
 {
   struct nrf5x_gpio_pwm_context_s *pv = dev->drv_pv;
 
@@ -410,3 +403,9 @@ DEV_CLEANUP(nrf5x_gpio_pwm_cleanup)
 
   return 0;
 }
+
+DRIVER_DECLARE(nrf5x_gpio_pwm_drv, 0, "nRF5x GPIO PWM", nrf5x_gpio_pwm,
+               DRIVER_PWM_METHODS(nrf5x_gpio_pwm));
+
+DRIVER_REGISTER(nrf5x_gpio_pwm_drv);
+

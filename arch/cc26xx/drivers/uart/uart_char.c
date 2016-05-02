@@ -296,16 +296,8 @@ static DEV_IRQ_SRC_PROCESS(cc26xx_uart_irq)
 }
 #endif
 
-static DEV_INIT(cc26xx_uart_init);
-static DEV_CLEANUP(cc26xx_uart_cleanup);
 
 #define cc26xx_uart_use dev_use_generic
-
-DRIVER_DECLARE(cc26xx_uart_drv, 0, "cc26xx UART", cc26xx_uart,
-               DRIVER_CHAR_METHODS(cc26xx_uart));
-
-DRIVER_REGISTER(cc26xx_uart_drv,
-                DEV_ENUM_FDTNAME_ENTRY("cc26xx_uart"));
 
 static void power_domain_on(void)
 {
@@ -458,7 +450,7 @@ static DEV_INIT(cc26xx_uart_init)
   return -1;
 }
 
-DEV_CLEANUP(cc26xx_uart_cleanup)
+static DEV_CLEANUP(cc26xx_uart_cleanup)
 {
   struct cc26xx_uart_context_s  *pv = dev->drv_pv;
 
@@ -487,4 +479,10 @@ DEV_CLEANUP(cc26xx_uart_cleanup)
   mem_free(pv);
   return 0;
 }
+
+DRIVER_DECLARE(cc26xx_uart_drv, 0, "cc26xx UART", cc26xx_uart,
+               DRIVER_CHAR_METHODS(cc26xx_uart));
+
+DRIVER_REGISTER(cc26xx_uart_drv,
+                DEV_ENUM_FDTNAME_ENTRY("cc26xx_uart"));
 

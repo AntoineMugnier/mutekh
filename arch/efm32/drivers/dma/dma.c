@@ -366,8 +366,6 @@ static DEV_IRQ_SRC_PROCESS(efm32_dma_irq)
   lock_release(&dev->lock);
 }
 
-static DEV_INIT(efm32_dma_init);
-static DEV_CLEANUP(efm32_dma_cleanup);
 
 static DEV_USE(efm32_dma_use)
 {
@@ -397,11 +395,6 @@ static DEV_USE(efm32_dma_use)
       return dev_use_generic(param, op);
     }
 }
-
-DRIVER_DECLARE(efm32_dma_drv, 0, "EFM32 DMA", efm32_dma,
-               DRIVER_DMA_METHODS(efm32_dma));
-
-DRIVER_REGISTER(efm32_dma_drv);
 
 static DEV_INIT(efm32_dma_init)
 {
@@ -499,3 +492,9 @@ static DEV_CLEANUP(efm32_dma_cleanup)
 
   return 0;
 }
+
+DRIVER_DECLARE(efm32_dma_drv, 0, "EFM32 DMA", efm32_dma,
+               DRIVER_DMA_METHODS(efm32_dma));
+
+DRIVER_REGISTER(efm32_dma_drv);
+

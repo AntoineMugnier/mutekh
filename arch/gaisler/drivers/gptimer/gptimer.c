@@ -532,14 +532,6 @@ static DEV_TIMER_CONFIG(gptimer_config)
 
 /************************************************************************/
 
-static DEV_INIT(gptimer_init);
-static DEV_CLEANUP(gptimer_cleanup);
-
-DRIVER_DECLARE(gptimer_drv, 0, "Gaisler GPTIMER", gptimer,
-               DRIVER_TIMER_METHODS(gptimer));
-
-DRIVER_REGISTER(gptimer_drv,
-                DEV_ENUM_GAISLER_ENTRY(0x1, 0x011));
 
 static DEV_INIT(gptimer_init)
 {
@@ -644,4 +636,10 @@ static DEV_CLEANUP(gptimer_cleanup)
 
   return 0;
 }
+
+DRIVER_DECLARE(gptimer_drv, 0, "Gaisler GPTIMER", gptimer,
+               DRIVER_TIMER_METHODS(gptimer));
+
+DRIVER_REGISTER(gptimer_drv,
+                DEV_ENUM_GAISLER_ENTRY(0x1, 0x011));
 

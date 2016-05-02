@@ -151,17 +151,8 @@ static DEVCRYPTO_REQUEST(soft_aes_request)
                            &pv->queue, dev_crypto_rq_s_base(rq), 0);
 }
 
-static DEV_INIT(soft_aes_init);
-static DEV_CLEANUP(soft_aes_cleanup);
 
 #define soft_aes_use dev_use_generic
-
-DRIVER_DECLARE(soft_aes_drv, 0, "Software AES cipher", soft_aes,
-               DRIVER_CRYPTO_METHODS(soft_aes));
-
-DRIVER_REGISTER(soft_aes_drv);
-
-DEV_DECLARE_STATIC(soft_aes_dev, "aes_soft", 0, soft_aes_drv);
 
 static DEV_INIT(soft_aes_init)
 {
@@ -198,4 +189,11 @@ static DEV_CLEANUP(soft_aes_cleanup)
 
   return 0;
 }
+
+DRIVER_DECLARE(soft_aes_drv, 0, "Software AES cipher", soft_aes,
+               DRIVER_CRYPTO_METHODS(soft_aes));
+
+DRIVER_REGISTER(soft_aes_drv);
+
+DEV_DECLARE_STATIC(soft_aes_dev, "aes_soft", 0, soft_aes_drv);
 

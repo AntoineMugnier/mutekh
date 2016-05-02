@@ -387,13 +387,6 @@ static DEV_TIMER_CONFIG(cc26xx_rtc_config)
 
 /************************************************************************/
 
-static DEV_INIT(cc26xx_rtc_init);
-static DEV_CLEANUP(cc26xx_rtc_cleanup);
-
-DRIVER_DECLARE(cc26xx_rtc_drv, 0, "CC26XX RTC", cc26xx_rtc,
-               DRIVER_TIMER_METHODS(cc26xx_rtc));
-
-DRIVER_REGISTER(cc26xx_rtc_drv);
 
 static DEV_INIT(cc26xx_rtc_init)
 {
@@ -482,4 +475,9 @@ static DEV_CLEANUP(cc26xx_rtc_cleanup)
 
   return 0;
 }
+
+DRIVER_DECLARE(cc26xx_rtc_drv, 0, "CC26XX RTC", cc26xx_rtc,
+               DRIVER_TIMER_METHODS(cc26xx_rtc));
+
+DRIVER_REGISTER(cc26xx_rtc_drv);
 

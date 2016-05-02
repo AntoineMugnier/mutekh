@@ -719,8 +719,6 @@ static DEV_CLOCK_SRC_SETUP(nrf5x_clock_ep_setup)
   return 0;
 }
 
-static DEV_INIT(nrf5x_clock_init);
-static DEV_CLEANUP(nrf5x_clock_cleanup);
 
 #define nrf5x_clock_config_mux (dev_cmu_config_mux_t*)dev_driver_notsup_fcn
 #define nrf5x_clock_rollback (dev_cmu_rollback_t*)dev_driver_notsup_fcn
@@ -735,25 +733,6 @@ static DEV_CMU_CONFIG_OSC(nrf5x_clock_config_osc)
 {
   return -ENOENT;
 }
-
-DRIVER_DECLARE(nrf5x_clock_drv, DRIVER_FLAGS_EARLY_INIT, "nRF5x clock"
-#if CONFIG_DRIVER_NRF5X_CLOCK_HFCLK_FREQ == 16
-               " HFXO=16MHz"
-#elif CONFIG_DRIVER_NRF5X_CLOCK_HFCLK_FREQ == 32
-               " HFXO=32MHz"
-#else
-               " HFRC"
-#endif
-
-#if LFXO_PRESENT
-               " LFXO"
-#else
-               " LFRC/Cal"
-#endif
-               , nrf5x_clock,
-               DRIVER_CMU_METHODS(nrf5x_clock));
-
-DRIVER_REGISTER(nrf5x_clock_drv);
 
 static DEV_INIT(nrf5x_clock_init)
 {
@@ -826,7 +805,7 @@ static DEV_INIT(nrf5x_clock_init)
   return -1;
 }
 
-DEV_CLEANUP(nrf5x_clock_cleanup)
+static DEV_CLEANUP(nrf5x_clock_cleanup)
 {
   struct nrf5x_clock_context_s *pv = dev->drv_pv;
 
@@ -839,6 +818,25 @@ DEV_CLEANUP(nrf5x_clock_cleanup)
 
   return 0;
 }
+
+DRIVER_DECLARE(nrf5x_clock_drv, DRIVER_FLAGS_EARLY_INIT, "nRF5x clock"
+#if CONFIG_DRIVER_NRF5X_CLOCK_HFCLK_FREQ == 16
+               " HFXO=16MHz"
+#elif CONFIG_DRIVER_NRF5X_CLOCK_HFCLK_FREQ == 32
+               " HFXO=32MHz"
+#else
+               " HFRC"
+#endif
+
+#if LFXO_PRESENT
+               " LFXO"
+#else
+               " LFRC/Cal"
+#endif
+               , nrf5x_clock,
+               DRIVER_CMU_METHODS(nrf5x_clock));
+
+DRIVER_REGISTER(nrf5x_clock_drv);
 #endif
 
 void arch_nrf5x_clock_init(void)
@@ -862,3 +860,4 @@ void arch_nrf5x_clock_init(void)
   nrf_event_wait_clear(CLOCK_ADDR, NRF_CLOCK_LFCLKSTARTED);
 #endif
 }
+

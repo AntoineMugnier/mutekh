@@ -95,20 +95,6 @@ static DEV_USE(soclib_xicu_use)
     }
 }
 
-static DEV_INIT(soclib_xicu_init);
-static DEV_CLEANUP(soclib_xicu_cleanup);
-
-DRIVER_DECLARE(soclib_xicu_drv, 0, "Soclib Xicu", soclib_xicu
-#ifdef CONFIG_DRIVER_SOCLIB_XICU_ICU
-               , DRIVER_ICU_METHODS(soclib_xicu_icu)
-#endif
-#ifdef CONFIG_DRIVER_SOCLIB_XICU_TIMER
-               , DRIVER_TIMER_METHODS(soclib_xicu_timer)
-#endif
-               );
-
-DRIVER_REGISTER(soclib_xicu_drv,
-                DEV_ENUM_FDTNAME_ENTRY("soclib:xicu"));
 
 static DEV_INIT(soclib_xicu_init)
 {
@@ -261,4 +247,16 @@ static DEV_CLEANUP(soclib_xicu_cleanup)
   mem_free(pv);
   return 0;
 }
+
+DRIVER_DECLARE(soclib_xicu_drv, 0, "Soclib Xicu", soclib_xicu
+#ifdef CONFIG_DRIVER_SOCLIB_XICU_ICU
+               , DRIVER_ICU_METHODS(soclib_xicu_icu)
+#endif
+#ifdef CONFIG_DRIVER_SOCLIB_XICU_TIMER
+               , DRIVER_TIMER_METHODS(soclib_xicu_timer)
+#endif
+               );
+
+DRIVER_REGISTER(soclib_xicu_drv,
+                DEV_ENUM_FDTNAME_ENTRY("soclib:xicu"));
 

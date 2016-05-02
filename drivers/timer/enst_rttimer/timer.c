@@ -394,21 +394,6 @@ static DEV_TIMER_CONFIG(enst_rttimer_config)
 
 /************************************************************************/
 
-static DEV_INIT(enst_rttimer_init);
-static DEV_CLEANUP(enst_rttimer_cleanup);
-
-DRIVER_DECLARE(enst_rttimer_drv, 0, "Telecom ParisTech Real-time Timer", enst_rttimer,
-               DRIVER_TIMER_METHODS(enst_rttimer));
-
-DRIVER_REGISTER(enst_rttimer_drv
-#ifdef CONFIG_ARCH_SOCLIB
-                , DEV_ENUM_FDTNAME_ENTRY("soclib:rttimer")
-#endif
-#ifdef CONFIG_ARCH_GAISLER
-                , DEV_ENUM_GAISLER_ENTRY(0x09, 0x003)
-#endif
-                );
-
 
 static DEV_INIT(enst_rttimer_init)
 {
@@ -513,4 +498,17 @@ static DEV_CLEANUP(enst_rttimer_cleanup)
 
   return 0;
 }
+
+DRIVER_DECLARE(enst_rttimer_drv, 0, "Telecom ParisTech Real-time Timer", enst_rttimer,
+               DRIVER_TIMER_METHODS(enst_rttimer));
+
+DRIVER_REGISTER(enst_rttimer_drv
+#ifdef CONFIG_ARCH_SOCLIB
+                , DEV_ENUM_FDTNAME_ENTRY("soclib:rttimer")
+#endif
+#ifdef CONFIG_ARCH_GAISLER
+                , DEV_ENUM_GAISLER_ENTRY(0x09, 0x003)
+#endif
+                );
+
 

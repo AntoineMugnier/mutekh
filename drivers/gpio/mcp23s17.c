@@ -403,21 +403,12 @@ static DEV_ICU_GET_SINK(mcp23s17_icu_get_sink)
 
 #endif
 
-static DEV_INIT(mcp23s17_init);
-static DEV_CLEANUP(mcp23s17_cleanup);
 
 #define mcp23s17_set_mode (dev_gpio_set_mode_t *)dev_driver_notsup_fcn
 #define mcp23s17_set_output (dev_gpio_set_output_t *)dev_driver_notsup_fcn
 #define mcp23s17_get_input (dev_gpio_get_input_t *)dev_driver_notsup_fcn
 #define mcp23s17_input_irq_range (dev_gpio_input_irq_range_t *)dev_driver_notsup_fcn
 #define mcp23s17_use  dev_use_generic
-
-DRIVER_DECLARE(mcp23s17_drv, 0, "mcp23s17", mcp23s17,
-  DRIVER_GPIO_METHODS(mcp23s17)
-#ifdef CONFIG_DRIVER_MCP23S17_ICU
-  ,DRIVER_ICU_METHODS(mcp23s17_icu)
-#endif
-);
 
 static error_t spi_config(
   struct device_s *dev,
@@ -518,3 +509,12 @@ static DEV_CLEANUP(mcp23s17_cleanup)
   return 0;
 }
 
+
+DRIVER_DECLARE(mcp23s17_drv, 0, "mcp23s17", mcp23s17,
+  DRIVER_GPIO_METHODS(mcp23s17)
+#ifdef CONFIG_DRIVER_MCP23S17_ICU
+  ,DRIVER_ICU_METHODS(mcp23s17_icu)
+#endif
+);
+
+DRIVER_REGISTER(mcp23s17_drv);

@@ -84,15 +84,6 @@ static DEV_MEM_REQUEST(nrf5x_ram_request)
   kroutine_exec(&rq->base.kr);
 }
 
-static DEV_INIT(nrf5x_ram_init);
-static DEV_CLEANUP(nrf5x_ram_cleanup);
-static DEV_USE(nrf5x_ram_use);
-
-DRIVER_DECLARE(nrf5x_ram_drv, 0, "nRF5x Ram", nrf5x_ram,
-               DRIVER_MEM_METHODS(nrf5x_ram));
-
-DRIVER_REGISTER(nrf5x_ram_drv);
-
 static DEV_USE(nrf5x_ram_use)
 {
   struct device_accessor_s *accessor = param;
@@ -115,3 +106,9 @@ static DEV_CLEANUP(nrf5x_ram_cleanup)
 {
   return 0;
 }
+
+DRIVER_DECLARE(nrf5x_ram_drv, 0, "nRF5x Ram", nrf5x_ram,
+               DRIVER_MEM_METHODS(nrf5x_ram));
+
+DRIVER_REGISTER(nrf5x_ram_drv);
+

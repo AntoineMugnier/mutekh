@@ -230,17 +230,8 @@ static DEVCRYPTO_REQUEST(soft_md5_request)
                            &pv->queue, dev_crypto_rq_s_base(rq), 0);
 }
 
-static DEV_INIT(soft_md5_init);
-static DEV_CLEANUP(soft_md5_cleanup);
 
 #define soft_md5_use dev_use_generic
-
-DRIVER_DECLARE(soft_md5_drv, 0, "Software MD5 hash", soft_md5,
-               DRIVER_CRYPTO_METHODS(soft_md5));
-
-DRIVER_REGISTER(soft_md5_drv);
-
-DEV_DECLARE_STATIC(soft_md5_dev, "md5_soft", 0, soft_md5_drv);
 
 static DEV_INIT(soft_md5_init)
 {
@@ -277,3 +268,11 @@ static DEV_CLEANUP(soft_md5_cleanup)
 
   return 0;
 }
+
+DRIVER_DECLARE(soft_md5_drv, 0, "Software MD5 hash", soft_md5,
+               DRIVER_CRYPTO_METHODS(soft_md5));
+
+DRIVER_REGISTER(soft_md5_drv);
+
+DEV_DECLARE_STATIC(soft_md5_dev, "md5_soft", 0, soft_md5_drv);
+

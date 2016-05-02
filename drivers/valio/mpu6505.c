@@ -616,16 +616,8 @@ static KROUTINE_EXEC(mpu6505_tick)
   lock_release(&dev->lock);
 }
 
-static DEV_INIT(mpu6505_init);
-static DEV_CLEANUP(mpu6505_cleanup);
-static DEV_USE(mpu6505_use);
 
 #define mpu6505_cancel (dev_valio_cancel_t*)&dev_driver_notsup_fcn
-
-DRIVER_DECLARE(mpu6505_drv, 0, "MPU6505 motion", mpu6505,
-               DRIVER_VALIO_METHODS(mpu6505));
-
-DRIVER_REGISTER(mpu6505_drv);
 
 static DEV_INIT(mpu6505_init)
 {
@@ -714,3 +706,9 @@ static DEV_USE(mpu6505_use)
     return dev_use_generic(param, op);
   }
 }
+
+DRIVER_DECLARE(mpu6505_drv, 0, "MPU6505 motion", mpu6505,
+               DRIVER_VALIO_METHODS(mpu6505));
+
+DRIVER_REGISTER(mpu6505_drv);
+

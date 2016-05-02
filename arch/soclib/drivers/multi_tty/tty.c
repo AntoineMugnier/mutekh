@@ -225,8 +225,6 @@ static DEV_IRQ_SRC_PROCESS(tty_soclib_irq)
 
 #endif
 
-static DEV_INIT(tty_soclib_init);
-static DEV_CLEANUP(tty_soclib_cleanup);
 
 static DEV_USE(tty_soclib_use)
 {
@@ -250,12 +248,6 @@ static DEV_USE(tty_soclib_use)
       return -ENOTSUP;
     }
 }
-
-DRIVER_DECLARE(tty_soclib_drv, 0, "Soclib Tty", tty_soclib,
-               DRIVER_CHAR_METHODS(tty_soclib));
-
-DRIVER_REGISTER(tty_soclib_drv,
-                DEV_ENUM_FDTNAME_ENTRY("soclib:multi_tty"));
 
 static DEV_INIT(tty_soclib_init)
 {
@@ -332,3 +324,10 @@ static DEV_CLEANUP(tty_soclib_cleanup)
 
   return 0;
 }
+
+DRIVER_DECLARE(tty_soclib_drv, 0, "Soclib Tty", tty_soclib,
+               DRIVER_CHAR_METHODS(tty_soclib));
+
+DRIVER_REGISTER(tty_soclib_drv,
+                DEV_ENUM_FDTNAME_ENTRY("soclib:multi_tty"));
+

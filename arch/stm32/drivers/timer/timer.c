@@ -403,13 +403,6 @@ static DEV_TIMER_CONFIG(stm32_timer_config)
 
 /************************************************************************/
 
-static DEV_INIT(stm32_timer_init);
-static DEV_CLEANUP(stm32_timer_cleanup);
-
-DRIVER_DECLARE(stm32_timer_drv, 0, "STM32 Timer", stm32_timer,
-               DRIVER_TIMER_METHODS(stm32_timer));
-
-DRIVER_REGISTER(stm32_timer_drv);
 
 static DEV_INIT(stm32_timer_init)
 {
@@ -518,4 +511,9 @@ static DEV_CLEANUP(stm32_timer_cleanup)
 
   return 0;
 }
+
+DRIVER_DECLARE(stm32_timer_drv, 0, "STM32 Timer", stm32_timer,
+               DRIVER_TIMER_METHODS(stm32_timer));
+
+DRIVER_REGISTER(stm32_timer_drv);
 

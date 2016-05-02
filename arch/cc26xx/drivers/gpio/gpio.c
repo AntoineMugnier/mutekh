@@ -354,20 +354,8 @@ static DEV_IRQ_SRC_PROCESS(cc26xx_gpio_source_process)
 
 /******** GPIO generic driver part *********************/
 
-static DEV_INIT(cc26xx_gpio_init);
-static DEV_CLEANUP(cc26xx_gpio_cleanup);
 
 #define cc26xx_gpio_request dev_gpio_request_async_to_sync
-
-DRIVER_DECLARE(cc26xx_gpio_drv, 0, "CC26XX GPIO", cc26xx_gpio,
-               DRIVER_GPIO_METHODS(cc26xx_gpio),
-               DRIVER_IOMUX_METHODS(cc26xx_gpio_iomux),
-#ifdef CONFIG_DRIVER_CC26XX_GPIO_ICU
-               DRIVER_ICU_METHODS(cc26xx_gpio_icu)
-#endif
-);
-
-DRIVER_REGISTER(cc26xx_gpio_drv);
 
 static void power_domain_on(void)
 {
@@ -457,3 +445,14 @@ static DEV_CLEANUP(cc26xx_gpio_cleanup)
   mem_free(pv);
   return 0;
 }
+
+DRIVER_DECLARE(cc26xx_gpio_drv, 0, "CC26XX GPIO", cc26xx_gpio,
+               DRIVER_GPIO_METHODS(cc26xx_gpio),
+               DRIVER_IOMUX_METHODS(cc26xx_gpio_iomux),
+#ifdef CONFIG_DRIVER_CC26XX_GPIO_ICU
+               DRIVER_ICU_METHODS(cc26xx_gpio_icu)
+#endif
+);
+
+DRIVER_REGISTER(cc26xx_gpio_drv);
+

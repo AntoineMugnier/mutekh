@@ -309,16 +309,7 @@ static DEV_I2C_CONFIG(nrf5x_i2c_config)
   return 0;
 }
 
-static DEV_INIT(nrf5x_i2c_init);
-static DEV_CLEANUP(nrf5x_i2c_cleanup);
 #define nrf5x_i2c_use dev_use_generic
-
-#define nrf5x_i2c_use dev_use_generic
-
-DRIVER_DECLARE(nrf5x_i2c_drv, 0, "nRF5x i2c", nrf5x_i2c,
-               DRIVER_I2C_METHODS(nrf5x_i2c));
-
-DRIVER_REGISTER(nrf5x_i2c_drv);
 
 static void nrf5x_i2c_reset(uintptr_t addr, uint8_t scl, uint8_t sda)
 {
@@ -395,7 +386,7 @@ static DEV_INIT(nrf5x_i2c_init)
   return err;
 }
 
-DEV_CLEANUP(nrf5x_i2c_cleanup)
+static DEV_CLEANUP(nrf5x_i2c_cleanup)
 {
   struct nrf5x_i2c_priv_s *pv = dev->drv_pv;
 
@@ -417,3 +408,9 @@ DEV_CLEANUP(nrf5x_i2c_cleanup)
 
   return 0;
 }
+
+DRIVER_DECLARE(nrf5x_i2c_drv, 0, "nRF5x i2c", nrf5x_i2c,
+               DRIVER_I2C_METHODS(nrf5x_i2c));
+
+DRIVER_REGISTER(nrf5x_i2c_drv);
+

@@ -464,28 +464,12 @@ static DEV_IOMUX_SETUP(nrf5x_gpio_iomux_setup)
 
 #define nrf5x_gpio_request dev_gpio_request_async_to_sync
 
-static DEV_INIT(nrf5x_gpio_init);
-static DEV_CLEANUP(nrf5x_gpio_cleanup);
 #define nrf5x_gpio_use dev_use_generic
 #define nrf5x_gpio_icu_link device_icu_dummy_link
 
 #if !defined(CONFIG_DRIVER_NRF5X_GPIO_INPUT_RANGE)
 #define nrf5x_gpio_input_irq_range (dev_gpio_input_irq_range_t*)dev_driver_notsup_fcn
 #endif
-
-DRIVER_DECLARE(nrf5x_gpio_drv, 0, "nRF5x GPIO"
-#if CONFIG_DRIVER_NRF5X_GPIO_ICU_CHANNEL_COUNT
-               ",ICU"
-#endif
-#if defined(CONFIG_DRIVER_NRF5X_GPIO_INPUT_RANGE)
-               ",RANGE"
-#endif
-               , nrf5x_gpio,
-#if CONFIG_DRIVER_NRF5X_GPIO_ICU_CHANNEL_COUNT
-               DRIVER_ICU_METHODS(nrf5x_gpio_icu),
-#endif
-               DRIVER_GPIO_METHODS(nrf5x_gpio),
-               DRIVER_IOMUX_METHODS(nrf5x_gpio_iomux));
 
 static DEV_INIT(nrf5x_gpio_init)
 {
@@ -566,3 +550,18 @@ static DEV_CLEANUP(nrf5x_gpio_cleanup)
 
   return 0;
 }
+
+DRIVER_DECLARE(nrf5x_gpio_drv, 0, "nRF5x GPIO"
+#if CONFIG_DRIVER_NRF5X_GPIO_ICU_CHANNEL_COUNT
+               ",ICU"
+#endif
+#if defined(CONFIG_DRIVER_NRF5X_GPIO_INPUT_RANGE)
+               ",RANGE"
+#endif
+               , nrf5x_gpio,
+#if CONFIG_DRIVER_NRF5X_GPIO_ICU_CHANNEL_COUNT
+               DRIVER_ICU_METHODS(nrf5x_gpio_icu),
+#endif
+               DRIVER_GPIO_METHODS(nrf5x_gpio),
+               DRIVER_IOMUX_METHODS(nrf5x_gpio_iomux));
+

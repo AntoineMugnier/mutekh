@@ -502,15 +502,8 @@ static DEV_I2C_REQUEST(bcm283x_i2c_request)
 
 }
 
-static DEV_INIT(bcm283x_i2c_init);
-static DEV_CLEANUP(bcm283x_i2c_cleanup);
 
 #define bcm283x_i2c_use dev_use_generic
-
-DRIVER_DECLARE(bcm283x_i2c_drv, 0, "BCM283X I2C Master", bcm283x_i2c,
-               DRIVER_I2C_METHODS(bcm283x_i2c));
-
-DRIVER_REGISTER(bcm283x_i2c_drv);
 
 static DEV_INIT(bcm283x_i2c_init)
 {
@@ -587,4 +580,9 @@ static DEV_CLEANUP(bcm283x_i2c_cleanup)
   /* deallocate private driver context. */
   mem_free(pv);
 }
+
+DRIVER_DECLARE(bcm283x_i2c_drv, 0, "BCM283X I2C Master", bcm283x_i2c,
+               DRIVER_I2C_METHODS(bcm283x_i2c));
+
+DRIVER_REGISTER(bcm283x_i2c_drv);
 

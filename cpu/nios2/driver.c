@@ -214,8 +214,6 @@ static DEV_TIMER_CONFIG(nios2_timer_config)
 
 /************************************************************************/
 
-static DEV_CLEANUP(nios2_cleanup);
-static DEV_INIT(nios2_init);
 
 static DEV_USE(nios2_use)
 {
@@ -239,18 +237,6 @@ static DEV_USE(nios2_use)
 
 #define nios2_timer_request (dev_timer_request_t*)dev_driver_notsup_fcn
 #define nios2_timer_cancel  (dev_timer_cancel_t*)dev_driver_notsup_fcn
-
-DRIVER_DECLARE(nios2_drv, DRIVER_FLAGS_EARLY_INIT, "Nios II processor", nios2,
-#ifdef CONFIG_DEVICE_IRQ
-               DRIVER_ICU_METHODS(nios2_icu),
-#endif
-#ifdef CONFIG_CPU_NIOS_TIMER_CYCLECOUNTER
-               DRIVER_TIMER_METHODS(nios2_timer),
-#endif
-               DRIVER_CPU_METHODS(nios2_cpu));
-
-DRIVER_REGISTER(nios2_drv,
-                DEV_ENUM_FDTNAME_ENTRY("cpu:nios2"));
 
 static DEV_INIT(nios2_init)
 {
@@ -328,4 +314,16 @@ static DEV_CLEANUP(nios2_cleanup)
 
   return 0;
 }
+
+DRIVER_DECLARE(nios2_drv, DRIVER_FLAGS_EARLY_INIT, "Nios II processor", nios2,
+#ifdef CONFIG_DEVICE_IRQ
+               DRIVER_ICU_METHODS(nios2_icu),
+#endif
+#ifdef CONFIG_CPU_NIOS_TIMER_CYCLECOUNTER
+               DRIVER_TIMER_METHODS(nios2_timer),
+#endif
+               DRIVER_CPU_METHODS(nios2_cpu));
+
+DRIVER_REGISTER(nios2_drv,
+                DEV_ENUM_FDTNAME_ENTRY("cpu:nios2"));
 

@@ -243,13 +243,6 @@ static void ahbctrl_scan(struct device_s *dev, uintptr_t begin, uintptr_t end)
     }
 }
 
-static DEV_CLEANUP(ahbctrl_cleanup);
-static DEV_INIT(ahbctrl_init);
-
-DRIVER_DECLARE(ahbctrl_drv, DRIVER_FLAGS_EARLY_INIT, "Gaisler AHB controller", ahbctrl,
-               DRIVER_ENUM_METHODS(ahbctrl));
-
-DRIVER_REGISTER(ahbctrl_drv);
 
 static DEV_INIT(ahbctrl_init)
 {
@@ -285,4 +278,9 @@ static DEV_CLEANUP(ahbctrl_cleanup)
 
   return 0;
 }
+
+DRIVER_DECLARE(ahbctrl_drv, DRIVER_FLAGS_EARLY_INIT, "Gaisler AHB controller", ahbctrl,
+               DRIVER_ENUM_METHODS(ahbctrl));
+
+DRIVER_REGISTER(ahbctrl_drv);
 

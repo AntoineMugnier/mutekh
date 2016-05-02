@@ -260,13 +260,6 @@ static DEV_TIMER_CONFIG(bcm283x_systimer_config)
 /************************************************************************/
 
 #define bcm283x_systimer_use dev_use_generic
-static DEV_INIT(bcm283x_systimer_init);
-static DEV_CLEANUP(bcm283x_systimer_cleanup);
-
-DRIVER_DECLARE(bcm283x_systimer_drv, 0, "BCM283X system timer", bcm283x_systimer,
-               DRIVER_TIMER_METHODS(bcm283x_systimer));
-
-DRIVER_REGISTER(bcm283x_systimer_drv);
 
 static DEV_INIT(bcm283x_systimer_init)
 {
@@ -319,4 +312,9 @@ static DEV_CLEANUP(bcm283x_systimer_cleanup)
 
   mem_free(pv);
 }
+
+DRIVER_DECLARE(bcm283x_systimer_drv, 0, "BCM283X system timer", bcm283x_systimer,
+               DRIVER_TIMER_METHODS(bcm283x_systimer));
+
+DRIVER_REGISTER(bcm283x_systimer_drv);
 

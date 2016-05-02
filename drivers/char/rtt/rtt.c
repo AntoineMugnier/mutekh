@@ -174,14 +174,7 @@ DEV_CHAR_REQUEST(char_rtt_request)
   LOCK_RELEASE_IRQ(&dev->lock);
 }
 
-static DEV_CLEANUP(char_rtt_cleanup);
-static DEV_INIT(char_rtt_init);
 #define char_rtt_use dev_use_generic
-
-DRIVER_DECLARE(char_rtt_drv, 0, "RTT Char", char_rtt,
-               DRIVER_CHAR_METHODS(char_rtt));
-
-DRIVER_REGISTER(char_rtt_drv);
 
 static DEV_CLEANUP(char_rtt_cleanup)
 {
@@ -240,6 +233,12 @@ static DEV_INIT(char_rtt_init)
   return 1;
 }
 
+DRIVER_DECLARE(char_rtt_drv, 0, "RTT Char", char_rtt,
+               DRIVER_CHAR_METHODS(char_rtt));
+
+DRIVER_REGISTER(char_rtt_drv);
+
 DEV_DECLARE_STATIC(rtt_console_dev, "console1", 0, char_rtt_drv,
                    DEV_STATIC_RES_DEV_TIMER("rtc* timer*"),
                    );
+

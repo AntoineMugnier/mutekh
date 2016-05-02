@@ -90,13 +90,6 @@ static DEV_USE(a9mpcore_use)
     }
 }
 
-static DEV_CLEANUP(a9mpcore_cleanup);
-static DEV_INIT(a9mpcore_init);
-
-DRIVER_DECLARE(a9mpcore_drv, DRIVER_FLAGS_EARLY_INIT, "ARM Cortex-A9 MPCore", a9mpcore,
-               DRIVER_ENUM_METHODS(a9mpcore));
-
-DRIVER_REGISTER(a9mpcore_drv);
 
 static DEV_INIT(a9mpcore_init)
 {
@@ -177,4 +170,9 @@ static DEV_CLEANUP(a9mpcore_cleanup)
 
   return 0;
 }
+
+DRIVER_DECLARE(a9mpcore_drv, DRIVER_FLAGS_EARLY_INIT, "ARM Cortex-A9 MPCore", a9mpcore,
+               DRIVER_ENUM_METHODS(a9mpcore));
+
+DRIVER_REGISTER(a9mpcore_drv);
 

@@ -211,8 +211,6 @@ static DEV_TIMER_CONFIG(lm32_timer_config)
 
 /************************************************************************/
 
-static DEV_CLEANUP(lm32_cleanup);
-static DEV_INIT(lm32_init);
 
 static DEV_USE(lm32_use)
 {
@@ -236,18 +234,6 @@ static DEV_USE(lm32_use)
 
 #define lm32_timer_request (dev_timer_request_t*)&dev_driver_notsup_fcn
 #define lm32_timer_cancel  (dev_timer_cancel_t*)&dev_driver_notsup_fcn
-
-DRIVER_DECLARE(lm32_drv, DRIVER_FLAGS_EARLY_INIT, "LM32 processor", lm32,
-#ifdef CONFIG_DEVICE_IRQ
-               DRIVER_ICU_METHODS(lm32_icu),
-#endif
-#ifdef CONFIG_CPU_LM32_TIMER_CYCLECOUNTER
-               DRIVER_TIMER_METHODS(lm32_timer),
-#endif
-               DRIVER_CPU_METHODS(lm32_cpu));
-
-DRIVER_REGISTER(lm32_drv,
-                DEV_ENUM_FDTNAME_ENTRY("cpu:lm32"));
 
 static DEV_INIT(lm32_init)
 {
@@ -322,4 +308,16 @@ static DEV_CLEANUP(lm32_cleanup)
 
   return 0;
 }
+
+DRIVER_DECLARE(lm32_drv, DRIVER_FLAGS_EARLY_INIT, "LM32 processor", lm32,
+#ifdef CONFIG_DEVICE_IRQ
+               DRIVER_ICU_METHODS(lm32_icu),
+#endif
+#ifdef CONFIG_CPU_LM32_TIMER_CYCLECOUNTER
+               DRIVER_TIMER_METHODS(lm32_timer),
+#endif
+               DRIVER_CPU_METHODS(lm32_cpu));
+
+DRIVER_REGISTER(lm32_drv,
+                DEV_ENUM_FDTNAME_ENTRY("cpu:lm32"));
 

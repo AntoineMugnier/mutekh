@@ -266,15 +266,8 @@ static DEV_SPI_CTRL_QUEUE(nrf5x_spi_queue)
 
 #endif
 
-static DEV_INIT(nrf5x_spi_init);
-static DEV_CLEANUP(nrf5x_spi_cleanup);
 
 #define nrf5x_spi_use dev_use_generic
-
-DRIVER_DECLARE(nrf5x_spi_drv, 0, "nRF5x SPI", nrf5x_spi,
-               DRIVER_SPI_CTRL_METHODS(nrf5x_spi));
-
-DRIVER_REGISTER(nrf5x_spi_drv);
 
 static DEV_INIT(nrf5x_spi_init)
 {
@@ -330,7 +323,7 @@ static DEV_INIT(nrf5x_spi_init)
   return -1;
 }
 
-DEV_CLEANUP(nrf5x_spi_cleanup)
+static DEV_CLEANUP(nrf5x_spi_cleanup)
 {
   struct nrf5x_spi_context_s *pv = dev->drv_pv;
 
@@ -353,3 +346,9 @@ DEV_CLEANUP(nrf5x_spi_cleanup)
 
   return 0;
 }
+
+DRIVER_DECLARE(nrf5x_spi_drv, 0, "nRF5x SPI", nrf5x_spi,
+               DRIVER_SPI_CTRL_METHODS(nrf5x_spi));
+
+DRIVER_REGISTER(nrf5x_spi_drv);
+

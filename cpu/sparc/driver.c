@@ -195,25 +195,7 @@ static DEV_CPU_GET_NODE(sparc_cpu_get_node)
 
 /************************************************************************/
 
-static DEV_CLEANUP(sparc_cleanup);
-static DEV_INIT(sparc_init);
 #define sparc_use dev_use_generic
-
-DRIVER_DECLARE(sparc_drv, DRIVER_FLAGS_EARLY_INIT, "Sparc processor", sparc,
-#ifdef CONFIG_DEVICE_IRQ
-               DRIVER_ICU_METHODS(sparc_icu),
-#endif
-               DRIVER_CPU_METHODS(sparc_cpu));
-
-DRIVER_REGISTER(sparc_drv
-#ifdef CONFIG_LIBFDT
-                ,DEV_ENUM_FDTNAME_ENTRY("cpu:sparc")
-#endif
-#ifdef CONFIG_ARCH_GAISLER
-                ,DEV_ENUM_GAISLER_ENTRY(0x1, 0x003) /* leon 3 */
-                ,DEV_ENUM_GAISLER_ENTRY(0x1, 0x048) /* leon 4 */
-#endif
-                );
 
 static DEV_INIT(sparc_init)
 {
@@ -288,4 +270,20 @@ static DEV_CLEANUP(sparc_cleanup)
 
   return 0;
 }
+
+DRIVER_DECLARE(sparc_drv, DRIVER_FLAGS_EARLY_INIT, "Sparc processor", sparc,
+#ifdef CONFIG_DEVICE_IRQ
+               DRIVER_ICU_METHODS(sparc_icu),
+#endif
+               DRIVER_CPU_METHODS(sparc_cpu));
+
+DRIVER_REGISTER(sparc_drv
+#ifdef CONFIG_LIBFDT
+                ,DEV_ENUM_FDTNAME_ENTRY("cpu:sparc")
+#endif
+#ifdef CONFIG_ARCH_GAISLER
+                ,DEV_ENUM_GAISLER_ENTRY(0x1, 0x003) /* leon 3 */
+                ,DEV_ENUM_GAISLER_ENTRY(0x1, 0x048) /* leon 4 */
+#endif
+                );
 

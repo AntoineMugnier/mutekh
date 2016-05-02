@@ -487,22 +487,8 @@ static DEV_IRQ_SRC_PROCESS(bcm283x_gpio_source_process)
 
 /***********************************************************************/
 
-static DEV_INIT(bcm283x_gpio_init);
-static DEV_CLEANUP(bcm283x_gpio_cleanup);
 
 #define bcm283x_gpio_use dev_use_generic
-
-DRIVER_DECLARE(bcm283x_gpio_drv, 0, "BCM283X GPIO", bcm283x_gpio
-               , DRIVER_GPIO_METHODS(bcm283x_gpio)
-#ifdef CONFIG_DEVICE_IOMUX
-               , DRIVER_IOMUX_METHODS(bcm283x_gpio_iomux)
-#endif
-#ifdef CONFIG_DRIVER_BCM283X_GPIO_ICU
-               , DRIVER_ICU_METHODS(bcm283x_gpio_icu)
-#endif
-               );
-
-DRIVER_REGISTER(bcm283x_gpio_drv);
 
 static DEV_INIT(bcm283x_gpio_init)
 {
@@ -563,3 +549,16 @@ static DEV_CLEANUP(bcm283x_gpio_cleanup)
 
   mem_free(pv);
 }
+
+DRIVER_DECLARE(bcm283x_gpio_drv, 0, "BCM283X GPIO", bcm283x_gpio
+               , DRIVER_GPIO_METHODS(bcm283x_gpio)
+#ifdef CONFIG_DEVICE_IOMUX
+               , DRIVER_IOMUX_METHODS(bcm283x_gpio_iomux)
+#endif
+#ifdef CONFIG_DRIVER_BCM283X_GPIO_ICU
+               , DRIVER_ICU_METHODS(bcm283x_gpio_icu)
+#endif
+               );
+
+DRIVER_REGISTER(bcm283x_gpio_drv);
+

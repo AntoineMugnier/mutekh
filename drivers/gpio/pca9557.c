@@ -253,17 +253,12 @@ static DEV_GPIO_REQUEST(pca9557_request)
     LOCK_RELEASE_IRQ(&dev->lock);
 }
 
-static DEV_INIT(pca9557_init);
-static DEV_CLEANUP(pca9557_cleanup);
 
 #define pca9557_set_mode   (dev_gpio_set_mode_t*)dev_driver_notsup_fcn
 #define pca9557_set_output (dev_gpio_set_output_t*)dev_driver_notsup_fcn
 #define pca9557_get_input  (dev_gpio_get_input_t*)dev_driver_notsup_fcn
 #define pca9557_input_irq_range  (dev_gpio_input_irq_range_t*)dev_driver_notsup_fcn
 #define pca9557_use dev_use_generic
-
-DRIVER_DECLARE(pca9557_drv, 0, "pca9557", pca9557,
-               DRIVER_GPIO_METHODS(pca9557));
 
 static DEV_INIT(pca9557_init)
 {
@@ -312,3 +307,9 @@ static DEV_CLEANUP(pca9557_cleanup)
 
     mem_free(pv);
 }
+
+DRIVER_DECLARE(pca9557_drv, 0, "pca9557", pca9557,
+               DRIVER_GPIO_METHODS(pca9557));
+
+DRIVER_REGISTER(pca9557_drv);
+

@@ -272,17 +272,8 @@ error_t stm32_pwm_start_stop(struct device_s *dev,
 
 /************************************************************************/
 
-static DEV_INIT(stm32_pwm_init);
-static DEV_CLEANUP(stm32_pwm_cleanup);
-static DEV_USE(stm32_pwm_use);
 
-DRIVER_DECLARE(stm32_pwm_drv, 0, "STM32 PWM", stm32_pwm,
-               DRIVER_PWM_METHODS(stm32_pwm));
-
-DRIVER_REGISTER(stm32_pwm_drv);
-
-static
-DEV_INIT(stm32_pwm_init)
+static DEV_INIT(stm32_pwm_init)
 {
   struct stm32_pwm_private_s *pv;
 
@@ -366,7 +357,6 @@ DEV_INIT(stm32_pwm_init)
   do { uint32_t register _reg = endian_le32(cpu_mem_read_32(( ((((pv->addr)))) + (STM32_TIMER_RCR_ADDR) ))); STM32_TIMER_RCR_REP_SET( (_reg), 0 ); cpu_mem_write_32( ( ((((pv->addr)))) + (STM32_TIMER_RCR_ADDR) ), endian_le32(_reg) ); } while (0);
 
   dev->drv_pv = pv;
-  dev->drv    = &stm32_pwm_drv;
 
   return 0;
 
@@ -375,8 +365,7 @@ err_mem:
   return -1;
 }
 
-static
-DEV_CLEANUP(stm32_pwm_cleanup)
+static DEV_CLEANUP(stm32_pwm_cleanup)
 {
   struct stm32_pwm_private_s *pv = dev->drv_pv;
 
@@ -386,8 +375,7 @@ DEV_CLEANUP(stm32_pwm_cleanup)
   return 0;
 }
 
-static
-DEV_USE(stm32_pwm_use)
+static DEV_USE(stm32_pwm_use)
 {
   struct device_accessor_s *accessor = param;
 
@@ -409,4 +397,9 @@ DEV_USE(stm32_pwm_use)
       return dev_use_generic(param, op);
     }
 }
+
+DRIVER_DECLARE(stm32_pwm_drv, 0, "STM32 PWM", stm32_pwm,
+               DRIVER_PWM_METHODS(stm32_pwm));
+
+DRIVER_REGISTER(stm32_pwm_drv);
 

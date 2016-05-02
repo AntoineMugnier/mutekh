@@ -183,16 +183,9 @@ static DEV_VALIO_REQUEST(button_set_request)
 }
 
 
-static DEV_INIT(button_set_init);
-static DEV_CLEANUP(button_set_cleanup);
 
 #define button_set_use dev_use_generic
 #define button_set_cancel (dev_valio_cancel_t*)&dev_driver_notsup_fcn
-
-DRIVER_DECLARE(button_set_drv, 0, "Button-set keyboard", button_set,
-               DRIVER_VALIO_METHODS(button_set));
-
-DRIVER_REGISTER(button_set_drv);
 
 static DEV_INIT(button_set_init)
 {
@@ -288,3 +281,9 @@ static DEV_CLEANUP(button_set_cleanup)
 
   return 0;
 }
+
+DRIVER_DECLARE(button_set_drv, 0, "Button-set keyboard", button_set,
+               DRIVER_VALIO_METHODS(button_set));
+
+DRIVER_REGISTER(button_set_drv);
+

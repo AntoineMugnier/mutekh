@@ -209,8 +209,6 @@ static DEV_TIMER_CONFIG(arv32_timer_config)
 
 /************************************************************************/
 
-static DEV_CLEANUP(avr32_cleanup);
-static DEV_INIT(avr32_init);
 
 static DEV_USE(avr32_use)
 {
@@ -234,18 +232,6 @@ static DEV_USE(avr32_use)
 
 #define avr32_timer_request (dev_timer_request_t*)&dev_driver_notsup_fcn
 #define avr32_timer_cancel  (dev_timer_cancel_t*)&dev_driver_notsup_fcn
-
-DRIVER_DECLARE(avr32_drv, DRIVER_FLAGS_EARLY_INIT, "AVR32 processor", avr32,
-#ifdef CONFIG_DEVICE_IRQ
-               DRIVER_ICU_METHODS(avr32_icu),
-#endif
-#ifdef CONFIG_CPU_AVR32_TIMER_CYCLECOUNTER
-               DRIVER_TIMER_METHODS(avr32_timer),
-#endif
-               DRIVER_CPU_METHODS(avr32_cpu));
-
-DRIVER_REGISTER(avr32_drv,
-                DEV_ENUM_FDTNAME_ENTRY("cpu:avr32"));
 
 static DEV_INIT(avr32_init)
 {
@@ -321,4 +307,16 @@ static DEV_CLEANUP(avr32_cleanup)
 
   return 0;
 }
+
+DRIVER_DECLARE(avr32_drv, DRIVER_FLAGS_EARLY_INIT, "AVR32 processor", avr32,
+#ifdef CONFIG_DEVICE_IRQ
+               DRIVER_ICU_METHODS(avr32_icu),
+#endif
+#ifdef CONFIG_CPU_AVR32_TIMER_CYCLECOUNTER
+               DRIVER_TIMER_METHODS(avr32_timer),
+#endif
+               DRIVER_CPU_METHODS(avr32_cpu));
+
+DRIVER_REGISTER(avr32_drv,
+                DEV_ENUM_FDTNAME_ENTRY("cpu:avr32"));
 

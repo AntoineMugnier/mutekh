@@ -338,8 +338,6 @@ static DEV_IRQ_SRC_PROCESS(efm32_usart_irq)
 
 #endif
 
-static DEV_INIT(efm32_usart_char_init);
-static DEV_CLEANUP(efm32_usart_char_cleanup);
 
 static DEV_USE(efm32_usart_char_use)
 {
@@ -381,11 +379,6 @@ static DEV_USE(efm32_usart_char_use)
       return dev_use_generic(param, op);
     }
 }
-
-DRIVER_DECLARE(efm32_usart_drv, 0, "EFM32 USART (char)", efm32_usart_char,
-               DRIVER_CHAR_METHODS(efm32_usart));
-
-DRIVER_REGISTER(efm32_usart_drv);
 
 static DEV_INIT(efm32_usart_char_init)
 {
@@ -507,7 +500,7 @@ static DEV_INIT(efm32_usart_char_init)
   return -1;
 }
 
-DEV_CLEANUP(efm32_usart_char_cleanup)
+static DEV_CLEANUP(efm32_usart_char_cleanup)
 {
   struct efm32_usart_context_s	*pv = dev->drv_pv;
 
@@ -538,4 +531,9 @@ DEV_CLEANUP(efm32_usart_char_cleanup)
 
   return 0;
 }
+
+DRIVER_DECLARE(efm32_usart_drv, 0, "EFM32 USART (char)", efm32_usart_char,
+               DRIVER_CHAR_METHODS(efm32_usart));
+
+DRIVER_REGISTER(efm32_usart_drv);
 

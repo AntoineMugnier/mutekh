@@ -721,8 +721,6 @@ static KROUTINE_EXEC(char_mux_io_write_done)
     DEVICE_OP(&pv->io, request, &pv->write_rq);
 }
 
-static DEV_INIT(char_mux_init);
-static DEV_CLEANUP(char_mux_cleanup);
 
 static DEV_USE(char_mux_use)
 {
@@ -762,12 +760,6 @@ static DEV_USE(char_mux_use)
       return dev_use_generic(param, op);
     }
 }
-
-DRIVER_DECLARE(char_mux_drv, 0, "Char Mux", char_mux,
-               DRIVER_CHAR_METHODS(char_mux));
-
-DRIVER_REGISTER(char_mux_drv,
-                DEV_ENUM_FDTNAME_ENTRY("char_mux"));
 
 static DEV_INIT(char_mux_init)
 {
@@ -847,7 +839,6 @@ static DEV_INIT(char_mux_init)
   return -EINVAL;
 }
 
-#ifdef CONFIG_DEVICE_CLEANUP
 static DEV_CLEANUP(char_mux_cleanup)
 {
   struct char_mux_context_s *pv = dev->drv_pv;
@@ -870,4 +861,10 @@ static DEV_CLEANUP(char_mux_cleanup)
 
   return 0;
 }
-#endif
+
+DRIVER_DECLARE(char_mux_drv, 0, "Char Mux", char_mux,
+               DRIVER_CHAR_METHODS(char_mux));
+
+DRIVER_REGISTER(char_mux_drv,
+                DEV_ENUM_FDTNAME_ENTRY("char_mux"));
+

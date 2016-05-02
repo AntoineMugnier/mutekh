@@ -63,8 +63,6 @@ struct char_pipe_context_s
 #endif
 };
 
-static DEV_INIT(char_pipe_init);
-static DEV_CLEANUP(char_pipe_cleanup);
 
 static DEV_CHAR_CANCEL(char_pipe_cancel)
 {
@@ -278,12 +276,6 @@ static DEV_USE(char_pipe_use)
     }
 }
 
-DRIVER_DECLARE(char_pipe_drv, 0, "Char pipe", char_pipe,
-               DRIVER_CHAR_METHODS(char_pipe));
-
-DRIVER_REGISTER(char_pipe_drv,
-                DEV_ENUM_FDTNAME_ENTRY("char_pipe"));
-
 static DEV_INIT(char_pipe_init)
 {
   struct char_pipe_context_s	*pv;
@@ -323,7 +315,6 @@ static DEV_INIT(char_pipe_init)
   return 0;
 }
 
-#ifdef CONFIG_DEVICE_CLEANUP
 static DEV_CLEANUP(char_pipe_cleanup)
 {
   struct char_pipe_context_s *pv = dev->drv_pv;
@@ -341,5 +332,10 @@ static DEV_CLEANUP(char_pipe_cleanup)
 
   return 0;
 }
-#endif
+
+DRIVER_DECLARE(char_pipe_drv, 0, "Char pipe", char_pipe,
+               DRIVER_CHAR_METHODS(char_pipe));
+
+DRIVER_REGISTER(char_pipe_drv,
+                DEV_ENUM_FDTNAME_ENTRY("char_pipe"));
 

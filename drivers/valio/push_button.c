@@ -223,16 +223,9 @@ static DEV_VALIO_REQUEST(push_button_request)
     kroutine_exec(&req->base.kr);
 }
 
-static DEV_INIT(push_button_init);
-static DEV_CLEANUP(push_button_cleanup);
 
 #define push_button_use dev_use_generic
 #define push_button_cancel (dev_valio_cancel_t*)&dev_driver_notsup_fcn
-
-DRIVER_DECLARE(push_button_drv, 0, "Push-button", push_button,
-               DRIVER_VALIO_METHODS(push_button));
-
-DRIVER_REGISTER(push_button_drv);
 
 static DEV_INIT(push_button_init)
 {
@@ -304,4 +297,9 @@ static DEV_CLEANUP(push_button_cleanup)
   /* deallocate private driver context. */
   mem_free(pv);
 }
+
+DRIVER_DECLARE(push_button_drv, 0, "Push-button", push_button,
+               DRIVER_VALIO_METHODS(push_button));
+
+DRIVER_REGISTER(push_button_drv);
 

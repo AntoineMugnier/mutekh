@@ -145,15 +145,8 @@ static DEVCRYPTO_REQUEST(nrf5x_rng_request)
   LOCK_RELEASE_IRQ(&dev->lock);
 }
 
-static DEV_INIT(nrf5x_rng_init);
-static DEV_CLEANUP(nrf5x_rng_cleanup);
 
 #define nrf5x_rng_use dev_use_generic
-
-DRIVER_DECLARE(nrf5x_rng_drv, 0, "nRF5x RNG", nrf5x_rng,
-               DRIVER_CRYPTO_METHODS(nrf5x_rng));
-
-DRIVER_REGISTER(nrf5x_rng_drv);
 
 static DEV_INIT(nrf5x_rng_init)
 {
@@ -201,3 +194,9 @@ static DEV_CLEANUP(nrf5x_rng_cleanup)
 
   return 0;
 }
+
+DRIVER_DECLARE(nrf5x_rng_drv, 0, "nRF5x RNG", nrf5x_rng,
+               DRIVER_CRYPTO_METHODS(nrf5x_rng));
+
+DRIVER_REGISTER(nrf5x_rng_drv);
+

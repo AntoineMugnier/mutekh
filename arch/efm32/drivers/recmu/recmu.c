@@ -1386,8 +1386,6 @@ static DEV_CLOCK_SRC_SETUP(efm32_recmu_ep_setup)
     }
 }
 
-static DEV_INIT(efm32_recmu_init);
-static DEV_CLEANUP(efm32_recmu_cleanup);
 
 static DEV_USE(efm32_recmu_use)
 {
@@ -1411,12 +1409,6 @@ static DEV_USE(efm32_recmu_use)
       return dev_use_generic(param, op);
     }
 }
-
-DRIVER_DECLARE(efm32_recmu_drv, DRIVER_FLAGS_EARLY_INIT,
-               "EFM32 Reset, Energy and Clock management units", efm32_recmu,
-               DRIVER_CMU_METHODS(efm32_recmu));
-
-DRIVER_REGISTER(efm32_recmu_drv);
 
 static DEV_INIT(efm32_recmu_init)
 {
@@ -1499,6 +1491,7 @@ static DEV_INIT(efm32_recmu_init)
 
   efm32_recmu_read_config(pv);
 
+  extern const struct driver_s efm32_recmu_drv;
   if (dev_cmu_init(&efm32_recmu_drv, dev))
     goto err_mem;
 
@@ -1517,4 +1510,10 @@ static DEV_CLEANUP(efm32_recmu_cleanup)
 
   return 0;
 }
+
+DRIVER_DECLARE(efm32_recmu_drv, DRIVER_FLAGS_EARLY_INIT,
+               "EFM32 Reset, Energy and Clock management units", efm32_recmu,
+               DRIVER_CMU_METHODS(efm32_recmu));
+
+DRIVER_REGISTER(efm32_recmu_drv);
 

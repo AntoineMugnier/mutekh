@@ -618,15 +618,8 @@ DEV_I2C_REQUEST(stm32_i2c_request)
     kroutine_exec(&req->base.kr);
 }
 
-static DEV_INIT(stm32_i2c_init);
-static DEV_CLEANUP(stm32_i2c_cleanup);
 
 #define stm32_i2c_use dev_use_generic
-
-DRIVER_DECLARE(stm32_i2c_ctrl_drv, 0, "STM32 I2C Master", stm32_i2c,
-               DRIVER_I2C_METHODS(stm32_i2c));
-
-DRIVER_REGISTER(stm32_i2c_ctrl_drv);
 
 static DEV_INIT(stm32_i2c_init)
 {
@@ -688,7 +681,6 @@ static DEV_INIT(stm32_i2c_init)
   /* enable I2C device. */
   do { uint32_t register _reg = endian_le32(cpu_mem_read_32(( ((((pv->addr)))) + (STM32_I2C_CR1_ADDR) ))); STM32_I2C_CR1_PE_SET( (_reg), 1 ); cpu_mem_write_32( ( ((((pv->addr)))) + (STM32_I2C_CR1_ADDR) ), endian_le32(_reg) ); } while (0);
 
-  dev->drv    = &stm32_i2c_ctrl_drv;
   dev->drv_pv = pv;
 
   return 0;
@@ -698,8 +690,7 @@ err_mem:
   return -1;
 }
 
-static
-DEV_CLEANUP(stm32_i2c_cleanup)
+static DEV_CLEANUP(stm32_i2c_cleanup)
 {
   struct stm32_i2c_private_s *pv = dev->drv_pv;
 
@@ -722,4 +713,9 @@ DEV_CLEANUP(stm32_i2c_cleanup)
 
   return 0;
 }
+
+DRIVER_DECLARE(stm32_i2c_ctrl_drv, 0, "STM32 I2C Master", stm32_i2c,
+               DRIVER_I2C_METHODS(stm32_i2c));
+
+DRIVER_REGISTER(stm32_i2c_ctrl_drv);
 

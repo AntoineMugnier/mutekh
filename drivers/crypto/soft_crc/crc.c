@@ -406,15 +406,6 @@ static DEV_USE(soft_crc_use)
     }
 }
 
-static DEV_INIT(soft_crc_init);
-static DEV_CLEANUP(soft_crc_cleanup);
-
-DRIVER_DECLARE(soft_crc_drv, 0, "Software CRC hash", soft_crc,
-               DRIVER_CRYPTO_METHODS(soft_crc));
-
-DRIVER_REGISTER(soft_crc_drv);
-
-DEV_DECLARE_STATIC(soft_crc_dev, "crc_soft", 0, soft_crc_drv);
 
 static DEV_INIT(soft_crc_init)
 {
@@ -451,3 +442,11 @@ static DEV_CLEANUP(soft_crc_cleanup)
 
   return 0;
 }
+
+DRIVER_DECLARE(soft_crc_drv, 0, "Software CRC hash", soft_crc,
+               DRIVER_CRYPTO_METHODS(soft_crc));
+
+DRIVER_REGISTER(soft_crc_drv);
+
+DEV_DECLARE_STATIC(soft_crc_dev, "crc_soft", 0, soft_crc_drv);
+

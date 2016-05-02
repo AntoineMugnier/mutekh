@@ -510,21 +510,12 @@ DEV_UART_CONFIG(stm32_usart_config)
   return err;
 }
 
-static DEV_INIT(stm32_usart_init);
-static DEV_CLEANUP(stm32_usart_cleanup);
 
 #define stm32_usart_use dev_use_generic
 
-DRIVER_DECLARE(stm32_usart_drv, 0, "STM32 USART", stm32_usart,
-               DRIVER_CHAR_METHODS(stm32_usart),
-               DRIVER_UART_METHODS(stm32_usart));
-
-DRIVER_REGISTER(stm32_usart_drv);
-
 /* ************************************************************************* */
 
-static
-DEV_INIT(stm32_usart_init)
+static DEV_INIT(stm32_usart_init)
 {
   struct stm32_usart_context_s *pv;
 
@@ -627,7 +618,6 @@ DEV_INIT(stm32_usart_init)
   cpu_mem_write_32(a, endian_le32(x));
 
   /* link the driver. */
-  dev->drv    = &stm32_usart_drv;
   dev->drv_pv = pv;
 
   return 0;
@@ -676,4 +666,10 @@ static DEV_CLEANUP(stm32_usart_cleanup)
 
   return 0;
 }
+
+DRIVER_DECLARE(stm32_usart_drv, 0, "STM32 USART", stm32_usart,
+               DRIVER_CHAR_METHODS(stm32_usart),
+               DRIVER_UART_METHODS(stm32_usart));
+
+DRIVER_REGISTER(stm32_usart_drv);
 

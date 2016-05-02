@@ -190,15 +190,8 @@ static DEV_VALIO_REQUEST(nrf5x_adc_request)
   LOCK_RELEASE_IRQ(&dev->lock);
 }
 
-static DEV_INIT(nrf5x_adc_init);
-static DEV_CLEANUP(nrf5x_adc_cleanup);
 #define nrf5x_adc_use dev_use_generic
 #define nrf5x_adc_cancel dev_driver_notsup_fcn
-
-DRIVER_DECLARE(nrf5x_adc_drv, 0, "nRF5x ADC", nrf5x_adc,
-               DRIVER_VALIO_METHODS(nrf5x_adc));
-
-DRIVER_REGISTER(nrf5x_adc_drv);
 
 static DEV_INIT(nrf5x_adc_init)
 {
@@ -257,3 +250,9 @@ static DEV_CLEANUP(nrf5x_adc_cleanup)
 
   return 0;
 }
+
+DRIVER_DECLARE(nrf5x_adc_drv, 0, "nRF5x ADC", nrf5x_adc,
+               DRIVER_VALIO_METHODS(nrf5x_adc));
+
+DRIVER_REGISTER(nrf5x_adc_drv);
+

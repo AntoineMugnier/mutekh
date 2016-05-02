@@ -304,14 +304,6 @@ static error_t efm32_pwm_stop(struct device_s *dev, uint_fast8_t channel)
 
 /************************************************************************/
 
-static DEV_INIT(efm32_pwm_init);
-static DEV_CLEANUP(efm32_pwm_cleanup);
-static DEV_USE(efm32_pwm_use);
-
-DRIVER_DECLARE(efm32_pwm_drv, 0, "EFM32 PWM", efm32_pwm,
-               DRIVER_PWM_METHODS(efm32_pwm));
-
-DRIVER_REGISTER(efm32_pwm_drv);
 
 static DEV_INIT(efm32_pwm_init)
 {
@@ -432,4 +424,9 @@ static DEV_USE(efm32_pwm_use)
         return dev_use_generic(param, op);
       }
 }
+
+DRIVER_DECLARE(efm32_pwm_drv, 0, "EFM32 PWM", efm32_pwm,
+               DRIVER_PWM_METHODS(efm32_pwm));
+
+DRIVER_REGISTER(efm32_pwm_drv);
 

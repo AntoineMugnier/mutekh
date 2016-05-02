@@ -235,8 +235,6 @@ static DEV_USE(arm_use)
     }
 }
 
-static DEV_CLEANUP(arm_cleanup);
-static DEV_INIT(arm_init);
 
 enum {   /* same order as driver methods below */
 #ifdef CONFIG_DEVICE_IRQ
@@ -248,22 +246,6 @@ enum {   /* same order as driver methods below */
   ARM32M_INITID_CPU,
   ARM32M_INITID_CLOCK,
 };
-
-DRIVER_DECLARE(arm32m_drv,
-#ifdef CONFIG_DEVICE_INIT_PARTIAL
-                           DRIVER_FLAGS_NO_DEPEND | DRIVER_FLAGS_RETRY_INIT |
-#endif
-               DRIVER_FLAGS_EARLY_INIT, "Arm-m processor", arm,
-#ifdef CONFIG_DEVICE_IRQ
-               DRIVER_ICU_METHODS(arm_icu),
-#endif
-#if defined(CONFIG_CPU_ARM32M_TIMER_SYSTICK) || defined(CONFIG_CPU_ARM32M_TIMER_DWTCYC)
-               DRIVER_TIMER_METHODS(arm_timer),
-#endif
-               DRIVER_CPU_METHODS(arm_cpu));
-
-DRIVER_REGISTER(arm32m_drv,
-                DEV_ENUM_FDTNAME_ENTRY("cpu:arm"));
 
 static DEV_INIT(arm_init)
 {
@@ -412,4 +394,20 @@ static DEV_CLEANUP(arm_cleanup)
 
   return 0;
 }
+
+DRIVER_DECLARE(arm32m_drv,
+#ifdef CONFIG_DEVICE_INIT_PARTIAL
+                           DRIVER_FLAGS_NO_DEPEND | DRIVER_FLAGS_RETRY_INIT |
+#endif
+               DRIVER_FLAGS_EARLY_INIT, "Arm-m processor", arm,
+#ifdef CONFIG_DEVICE_IRQ
+               DRIVER_ICU_METHODS(arm_icu),
+#endif
+#if defined(CONFIG_CPU_ARM32M_TIMER_SYSTICK) || defined(CONFIG_CPU_ARM32M_TIMER_DWTCYC)
+               DRIVER_TIMER_METHODS(arm_timer),
+#endif
+               DRIVER_CPU_METHODS(arm_cpu));
+
+DRIVER_REGISTER(arm32m_drv,
+                DEV_ENUM_FDTNAME_ENTRY("cpu:arm"));
 

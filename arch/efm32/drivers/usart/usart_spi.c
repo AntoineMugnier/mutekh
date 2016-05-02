@@ -420,8 +420,6 @@ static DEV_SPI_CTRL_QUEUE(efm32_usart_spi_queue)
 
 #endif
 
-static DEV_INIT(efm32_usart_spi_init);
-static DEV_CLEANUP(efm32_usart_spi_cleanup);
 
 static DEV_USE(efm32_usart_spi_use)
 {
@@ -463,11 +461,6 @@ static DEV_USE(efm32_usart_spi_use)
       return dev_use_generic(param, op);
     }
 }
-
-DRIVER_DECLARE(efm32_usart_spi_drv, 0, "EFM32 USART (SPI)", efm32_usart_spi,
-               DRIVER_SPI_CTRL_METHODS(efm32_usart_spi));
-
-DRIVER_REGISTER(efm32_usart_spi_drv);
 
 static DEV_INIT(efm32_usart_spi_init)
 {
@@ -611,7 +604,7 @@ static DEV_INIT(efm32_usart_spi_init)
   return -1;
 }
 
-DEV_CLEANUP(efm32_usart_spi_cleanup)
+static DEV_CLEANUP(efm32_usart_spi_cleanup)
 {
   struct efm32_usart_spi_context_s	*pv = dev->drv_pv;
 
@@ -638,3 +631,9 @@ DEV_CLEANUP(efm32_usart_spi_cleanup)
 
   return 0;
 }
+
+DRIVER_DECLARE(efm32_usart_spi_drv, 0, "EFM32 USART (SPI)", efm32_usart_spi,
+               DRIVER_SPI_CTRL_METHODS(efm32_usart_spi));
+
+DRIVER_REGISTER(efm32_usart_spi_drv);
+

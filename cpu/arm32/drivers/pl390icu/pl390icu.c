@@ -195,15 +195,7 @@ static const struct dev_enum_ident_s  pl390_icu_ids[] =
   { 0 }
 };
 
-static DEV_INIT(pl390_icu_init);
-static DEV_CLEANUP(pl390_icu_cleanup);
 #define pl390_icu_use dev_use_generic
-
-DRIVER_DECLARE(pl390_icu_drv, 0, "PL390 ARM generic interrupts controller", pl390_icu,
-               DRIVER_ICU_METHODS(pl390_icu));
-
-DRIVER_REGISTER(pl390_icu_drv,
-                DEV_ENUM_FDTNAME_ENTRY("pl390"));
 
 static
 void pl390_icu_cpu_init(struct device_s *dev)
@@ -337,4 +329,9 @@ static DEV_CLEANUP(pl390_icu_cleanup)
   mem_free(pv);
 }
 
+DRIVER_DECLARE(pl390_icu_drv, 0, "PL390 ARM generic interrupts controller", pl390_icu,
+               DRIVER_ICU_METHODS(pl390_icu));
+
+DRIVER_REGISTER(pl390_icu_drv,
+                DEV_ENUM_FDTNAME_ENTRY("pl390"));
 

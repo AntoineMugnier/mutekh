@@ -301,13 +301,6 @@ static DEV_TIMER_CONFIG(nrf5x_rtc_config)
   return err;
 }
 
-static DEV_INIT(nrf5x_rtc_init);
-static DEV_CLEANUP(nrf5x_rtc_cleanup);
-
-DRIVER_DECLARE(nrf5x_rtc_drv, 0, "nRF5x RTC", nrf5x_rtc,
-               DRIVER_TIMER_METHODS(nrf5x_rtc));
-
-DRIVER_REGISTER(nrf5x_rtc_drv);
 
 static DEV_INIT(nrf5x_rtc_init)
 {
@@ -351,7 +344,7 @@ static DEV_INIT(nrf5x_rtc_init)
   return -1;
 }
 
-DEV_CLEANUP(nrf5x_rtc_cleanup)
+static DEV_CLEANUP(nrf5x_rtc_cleanup)
 {
   struct nrf5x_rtc_context_s *pv = dev->drv_pv;
 
@@ -370,3 +363,9 @@ DEV_CLEANUP(nrf5x_rtc_cleanup)
 
   return 0;
 }
+
+DRIVER_DECLARE(nrf5x_rtc_drv, 0, "nRF5x RTC", nrf5x_rtc,
+               DRIVER_TIMER_METHODS(nrf5x_rtc));
+
+DRIVER_REGISTER(nrf5x_rtc_drv);
+

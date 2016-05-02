@@ -33,7 +33,6 @@
 #include <device/driver.h>
 #include <device/class/char.h>
 
-#include "apbuart.h"
 #include "apbuart_private.h"
 
 static void gaisler_apbuart_try_read(struct device_s *dev)
@@ -219,13 +218,7 @@ static DEV_IRQ_SRC_PROCESS(gaisler_apbuart_irq)
 
 #define gaisler_apbuart_use dev_use_generic
 
-DRIVER_DECLARE(gaisler_apbuart_drv, 0, "Gaisler APB UART", gaisler_apbuart,
-               DRIVER_CHAR_METHODS(gaisler_apbuart));
-
-DRIVER_REGISTER(gaisler_apbuart_drv,
-                DEV_ENUM_GAISLER_ENTRY(0x1, 0x00c));
-
-DEV_INIT(gaisler_apbuart_init)
+static DEV_INIT(gaisler_apbuart_init)
 {
   struct gaisler_apbuart_context_s	*pv;
 
@@ -291,7 +284,7 @@ DEV_INIT(gaisler_apbuart_init)
   return -1;
 }
 
-DEV_CLEANUP(gaisler_apbuart_cleanup)
+static DEV_CLEANUP(gaisler_apbuart_cleanup)
 {
   struct gaisler_apbuart_context_s	*pv = dev->drv_pv;
 
@@ -321,3 +314,10 @@ DEV_CLEANUP(gaisler_apbuart_cleanup)
 
   mem_free(pv);
 }
+
+DRIVER_DECLARE(gaisler_apbuart_drv, 0, "Gaisler APB UART", gaisler_apbuart,
+               DRIVER_CHAR_METHODS(gaisler_apbuart));
+
+DRIVER_REGISTER(gaisler_apbuart_drv,
+                DEV_ENUM_GAISLER_ENTRY(0x1, 0x00c));
+
