@@ -73,6 +73,14 @@ efm32_giant          = Config("efm32-stk3700",                          _efm32_f
 efm32_wonder         = Config("efm32-stk3800",                          _efm32_features)
 
 ##################################################
+# Nordic nrf5x
+
+_nrf5x_features      = _arm32m_features + ["arch:nrf5x", "spi", "i2c", "pwm", "timer", "char", "minimal"]
+
+nrf51                = Config("nrf5x-51822-128-16",                     _nrf5x_features)
+nrf52                = Config("nrf5x-52832-512-64",                     _nrf5x_features)
+
+##################################################
 # Microchip PIC32 (mips-based) archs and platforms
 
 _pic32_features      = _mips32_features + ["arch:pic32", "spi", "timer", "char", "little"]
@@ -148,6 +156,7 @@ all_archs            = OrMatch(soclib_mips32eb,
                                ibmpc_x86,
                                emu_linux_x86_64,
                                efm32_leopard,
+                               nrf52,
                                pic32_mz,
                                gaisler_leon3,
                                stm32_nucleof401re,
@@ -161,6 +170,7 @@ all                  = OrMatch(soclib_mips32eb, soclib_mips32el, soclib_arm32, s
                                emu_linux_x86, emu_linux_x86_64,
 #                               efm32_zero,
                                efm32_leopard, efm32_giant, efm32_wonder,
+                               nrf51, nrf52,
                                pic32_mz,
                                gaisler_leon3,
                                stm32_nucleof103rb, stm32_nucleof401re,
