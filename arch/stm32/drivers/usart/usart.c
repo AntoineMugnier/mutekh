@@ -64,6 +64,16 @@ GCT_CONTAINER_FCNS(usart_fifo, static inline, usart_fifo,
                    init, destroy, pop_array, pushback, pushback_array, isempty, pop);
 #endif
 
+#if CONFIG_DEVICE_START_LOG2INC < 2
+# error cannot use start bits to manage device state
+#endif
+
+enum stm32_usart_start_e
+{
+  STM32_USART_STARTED_READ  = 1,
+  STM32_USART_STARTED_WRITE = 2
+};
+
 DRIVER_PV(struct stm32_usart_context_s
 {
   /* usart controller address. */
@@ -87,9 +97,6 @@ DRIVER_PV(struct stm32_usart_context_s
 
   /* interrupt endpoints (TX and RX on the same wire). */
   struct dev_irq_src_s   irq_ep[1];
-
-  bool_t                read_started:1;
-  bool_t                write_started:1;
 
 #if !defined(CONFIG_DEVICE_CLOCK)
   struct dev_freq_s     busfreq;
@@ -147,7 +154,7 @@ void stm32_usart_try_read(struct device_s *dev)
 #endif
     }
 
-  pv->read_started = 0;
+  dev->start_count &= ~STM32_USART_STARTED_READ;
 
   /* if no request need the data, discard it or save it in the read fifo. */
   a = pv->addr + STM32_USART_SR_ADDR;
@@ -245,7 +252,7 @@ void stm32_usart_try_write(struct device_s *dev)
 #endif
     }
 
-  pv->write_started = 0;
+  dev->start_count &= ~STM32_USART_STARTED_WRITE;
 
 #if defined(CONFIG_DEVICE_IRQ)
   /* if there is no more write request in the queue or fifo, then
@@ -282,9 +289,9 @@ DEV_CHAR_REQUEST(stm32_usart_request)
     case DEV_CHAR_READ_PARTIAL:
     case DEV_CHAR_READ: {
       dev_request_queue_pushback(&pv->read_q, dev_char_rq_s_base(rq));
-      if (!pv->read_started)
+      if (!(dev->start_count & STM32_USART_STARTED_READ))
         {
-          pv->read_started = 1;
+          dev->start_count |= STM32_USART_STARTED_READ;
           stm32_usart_try_read(dev);
         }
       break;
@@ -295,9 +302,9 @@ DEV_CHAR_REQUEST(stm32_usart_request)
     case DEV_CHAR_WRITE_PARTIAL:
     case DEV_CHAR_WRITE: {
       dev_request_queue_pushback(&pv->write_q, dev_char_rq_s_base(rq));
-      if (!pv->write_started)
+      if (!(dev->start_count & STM32_USART_STARTED_WRITE))
         {
-          pv->write_started = 1;
+          dev->start_count |= STM32_USART_STARTED_WRITE;
           stm32_usart_try_write(dev);
         }
       break;
@@ -532,9 +539,6 @@ static DEV_INIT(stm32_usart_init)
 #endif
     goto err_mem;
 
-  /* setup startup state. */
-  pv->read_started = pv->write_started = 0;
-
   /* disable and reset the usart. */
   cpu_mem_write_32(pv->addr + STM32_USART_CR1_ADDR, 0);
   cpu_mem_write_32(pv->addr + STM32_USART_CR2_ADDR, 0);
@@ -641,7 +645,7 @@ static DEV_CLEANUP(stm32_usart_cleanup)
 {
   struct stm32_usart_context_s *pv = dev->drv_pv;
 
-  if (pv->read_started || pv->write_started)
+  if (dev->start_count & (STM32_USART_STARTED_READ | STM32_USART_STARTED_WRITE))
     return -EBUSY;
 
   /* disable and reset the usart. */
