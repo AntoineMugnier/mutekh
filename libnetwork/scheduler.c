@@ -134,7 +134,7 @@ error_t net_scheduler_cleanup(struct net_scheduler_s *sched)
 
   if (!net_layer_sched_list_isempty(&sched->layers))
     return -EBUSY;
-  
+
   dprintk("%s\n", __FUNCTION__);
 
   sched->exiter = sched_get_current();
@@ -219,7 +219,7 @@ static CONTEXT_ENTRY(net_scheduler_worker)
     }
 
     dprintk("   Nothing to do, waiting\n");
-    
+
     CPU_INTERRUPT_SAVESTATE_DISABLE;
     lock_spin(&sched->lock);
     sched->scheduled = 0;
@@ -342,7 +342,7 @@ void net_scheduler_task_push(
     net_timeout_queue_insert(&sched->delayed_tasks, task);
   else
     net_task_queue_pushback(&sched->pending_tasks, task);
-  
+
   net_sched_wakeup(sched);
 }
 
