@@ -1,0 +1,1 @@
+subdirs-$(CONFIG_DRIVER_RFPACKET_SX127X) += sx127x

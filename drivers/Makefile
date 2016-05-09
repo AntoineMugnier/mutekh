@@ -9,6 +9,7 @@ mem \
 net \
 printk \
 rtt \
+rfpacket \
 spi \
 timer \
 usb \
