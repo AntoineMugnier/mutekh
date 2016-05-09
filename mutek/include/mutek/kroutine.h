@@ -25,7 +25,7 @@
 
 /**
    @file
-   @module{Kernel services}
+   @module {Core::Kernel services}
    @short Kernel deferred routines
 
    This header provides a deferred callback function service where the

@@ -1,5 +1,15 @@
 
-@section TP {Configuration token declaration}
+@section TP {Configuration tokens}
+
+ Valid configuration tokens are declared in module source files and
+ can be used in build configuration files. @xsee {Build system}
+
+ The following subsections describe how tokens are declared by module
+ developers and provide the detailed documentation of available tokens:
+
+ @insert localtoc
+
+ @section TP {Token declaration}
 
   @section {Introduction}
 
@@ -471,5 +481,17 @@ main.o_CFLAGS = -O0 -ggdb
     @end section
 
   @end section
+
+ @end section
+
+ @section TP {List of tokens}
+
+    This section describes available configuration tokens. Most token
+    can be used in @xref{build configuration files}{Build
+    configuration files} in order to customize the kernel features.
+
+    @insert {@doc/config.h} _compound_details
+
+ @end section
 
 @end section

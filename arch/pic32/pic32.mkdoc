@@ -1,5 +1,5 @@
 
-@section tP {Microchip PIC32MZ}
+@moduledef {Microchip PIC32MZ} {Platforms}
 
   @section {Building for a PIC32MZ Starter kit}
 
@@ -44,4 +44,4 @@ q
 
   @end section
 
-@end section
+@end moduledef

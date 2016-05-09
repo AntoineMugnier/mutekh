@@ -22,7 +22,7 @@
 
 /**
  * @file
- * @module{Devices support library}
+ * @module {Core::Devices support library}
  * @short Generic device request
  */
 

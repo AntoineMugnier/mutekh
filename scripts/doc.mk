@@ -4,11 +4,9 @@ include $(MUTEK_SRC_DIR)/doc/header_list.mk
 
 include $(MUTEK_SRC_DIR)/scripts/discover.mk
 
-$(BUILD_DIR)/doc/config.h:
-	test -d $(BUILD_DIR)/doc || mkdir -p $(BUILD_DIR)/doc
-	perl $(MUTEK_SRC_DIR)/scripts/config.pl --src-path=$(MUTEK_SRC_DIR) --docheader=$@
-
-doc: $(BUILD_DIR)/doc/config.h
+doc:
+	mkdir -p $(BUILD_DIR)/doc
+	perl $(MUTEK_SRC_DIR)/scripts/config.pl --src-path=$(MUTEK_SRC_DIR) --docheader=$(BUILD_DIR)/doc/config.h
 	cd $(MUTEK_SRC_DIR) ; \
 	$(MKDOC) $(MKDOCFLAGS) \
 	  --mkdoclib-create mutek-api \

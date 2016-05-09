@@ -23,8 +23,8 @@
 
 /**
    @file
-   @module {Hardware abstraction layer}
    @short nRF51/nRF52 peripheral IDs
+   @module {Platforms::nRF5X platform}
 
    nRF5x devices all look the same and regular.  Device at address
    0x4000000 has number 0 and interrupt 0, device at address

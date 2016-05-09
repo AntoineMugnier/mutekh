@@ -1,5 +1,5 @@
 
-@moduledef{Math library}
+@moduledef{C library math} {Libraries}
  @short Standard math library
   @order 89
   Math library by Sun Microsystems.

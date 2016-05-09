@@ -20,7 +20,7 @@
 
 /**
    @file
-   @module{Devices support library}
+   @module {Core::Devices support library}
    @short Value IO driver class
    @index {Value IO} {Device classes}
    @csee DRIVER_CLASS_VALIO
@@ -111,7 +111,7 @@
    from the following headers:
 
    @list
-   @foreach id name type {header} {+Devices support library::Valio device attributes} {0}
+   @foreach id name type {header} {+Core::Devices support library::Valio device attributes} {0}
      @group
        @ref @id@ {@name@} : @insert {@id@} decl_short_desc
      @end group

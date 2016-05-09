@@ -22,7 +22,7 @@ C_HEADER_BEGIN
 
 /**
   @file
-  @module {Math library}
+  @module {Libraries::C library math}
   @short Fdlibm header
 
   Developed at SunPro, a Sun Microsystems, Inc. business.

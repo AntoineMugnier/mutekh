@@ -22,7 +22,7 @@
 
 /**
  * @file
- * @module{Hardware abstraction layer}
+ * @module {Core::Hardware abstraction layer}
  * @short Processor local and context local, language global variables features
  */
 

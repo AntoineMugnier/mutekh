@@ -22,7 +22,7 @@
 
 /**
    @file
-   @module{Devices support library}
+   @module {Core::Devices support library}
    @short Timer device driver API
    @index {Timer device} {Device classes}
    @csee DRIVER_CLASS_TIMER

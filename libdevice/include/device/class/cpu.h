@@ -22,7 +22,7 @@
 
 /**
    @file
-   @module{Devices support library}
+   @module {Core::Devices support library}
    @short Processor driver API
    @index {Processor} {Device classes}
    @csee DRIVER_CLASS_CPU

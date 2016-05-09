@@ -1,4 +1,4 @@
 
-@section tP {LatticeMico32 soft core}
+@moduledef {LatticeMico32 soft core} {Processors}
 
-@end section
+@end moduledef

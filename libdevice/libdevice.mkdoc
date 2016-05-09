@@ -1,5 +1,5 @@
 
-@moduledef{Devices support library}
+@moduledef{Devices support library} {Core}
   @short Devices and drivers management library
   @order 98
 

@@ -22,7 +22,7 @@
 
 /**
  * @file
- * @module{Kernel services}
+ * @module {Core::Kernel services}
  * @short Memory allocation stuff
  */
 

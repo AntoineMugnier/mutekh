@@ -1,4 +1,4 @@
 
-@section tP {MIPS processor}
+@moduledef {MIPS processor} {Processors}
 
-@end section
+@end moduledef

@@ -1,0 +1,4 @@
+
+@moduledef {x86 32 bit processor} {Processors}
+
+@end moduledef

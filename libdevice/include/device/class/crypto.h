@@ -22,7 +22,7 @@
 
 /**
    @file
-   @module{Devices support library}
+   @module {Core::Devices support library}
    @short Cryptographic processing device driver API
    @index {Cryptographic processing device} {Device classes}
    @csee DRIVER_CLASS_CRYPTO

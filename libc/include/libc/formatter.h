@@ -25,7 +25,7 @@
 
 /**
  * @file
- * @module{C library}
+ * @module {Core::C library}
  */
 
 #include <stdarg.h>

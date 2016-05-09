@@ -1,5 +1,5 @@
 
-@moduledef{Pthread library}
+@moduledef{POSIX Threads} {Libraries}
  @short POSIX threads library
  @order 87
 @end moduledef

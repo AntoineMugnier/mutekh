@@ -1,14 +1,10 @@
-@section TP {nRF51/nRF52 Architecture support}
 
-@parse{
-arch/nrf5x/ids.h
-arch/nrf5x/peripheral.h
-}
+@moduledef {nRF5X platform} {Platforms}
 
 Nordic's nRF51 and nRF52 architectures are supported for most of their
 hardware features.  Most development boards are supported as well.
 
-@section {Drivers}
+@section tP {Drivers}
 
   @section {Clocks}
     Clocking in nRF5x is quite simple because most clock dependencies
@@ -53,13 +49,13 @@ hardware features.  Most development boards are supported as well.
   @section {GPIO}
     GPIO controller implements both the GPIO class and the ICU class,
     so that an external peripheral can use a GPIO as an interrupt
-    sink.  This feature uses GPIOTE channels in Event mode.  @see
-    GPIOTE.
+    sink.  This feature uses GPIOTE channels in Event mode.  @xsee
+    {GPIOTE}.
   @end section
 
   @section {PWM}
     PWM is a composite device using a timer, PPIs and GPIOTE channels.
-    GPIOTE are used in Task mode.  @see GPIOTE.
+    GPIOTE are used in Task mode.  @xsee {GPIOTE}.
   @end section
 
   @section {UART}
@@ -142,7 +138,7 @@ hardware features.  Most development boards are supported as well.
 
 @end section
 
-@section {Unsupported hardware features}
+@section tP {Unsupported hardware features}
   @list
     @item @tt {SPI Slave}: MutekH has no driver class for this;
     @item @tt AAR: This is of no usefulness for current MutekH BLE
@@ -155,7 +151,7 @@ hardware features.  Most development boards are supported as well.
   @end list
 @end section
 
-@section {Boards}
+@section tP {Boards}
 
   @section {nRF51822-Dongle}
     PCA10000 is the most simple board.  UART is driven as a character
@@ -216,42 +212,9 @@ hardware features.  Most development boards are supported as well.
 
 @end section
 
-@section {Implementation notes}
+@section tP {Implementation notes}
 
   @section {Device register access}
-    nRF5x devices all look the same and regular.  Device at address
-    0x4000000 has number 0 and interrupt 0, device at address 0x40001000
-    has number 1 and interrupt 1, and so on.  Inside a device register
-    map, there are tasks, events, shorts, interrupt handling, and then
-    configuration registers.
-
-    This regular pattern explains why nRF5x architecture declaration
-    adds an overlay on top of cpu_mem_read_32 and cpu_mem_write_32 to
-    access hardware registers.  nRF5x code use the following accessors:
-    @list
-      @item nrf_task_trigger,
-      @item nrf_event_check,
-      @item nrf_event_clear,
-      @item nrf_event_wait,
-      @item nrf_event_wait_clear,
-      @item nrf_it_is_enabled,
-      @item nrf_it_set_mask,
-      @item nrf_it_enable,
-      @item nrf_it_enable_mask,
-      @item nrf_it_disable,
-      @item nrf_it_disable_mask,
-      @item nrf_short_set,
-      @item nrf_short_enable,
-      @item nrf_short_enable_mask,
-      @item nrf_short_disable,
-      @item nrf_short_disable_mask,
-      @item nrf_reg_get,
-      @item nrf_reg_set.
-    @end list
-
-    All these accessors take device base address and task/event/register
-    number as arguments.  These accessors make the code obvious about
-    what the driver intends to do.
 
     @insert {@arch/nrf5x/ids.h} decl_inline_doc
     @insert {@arch/nrf5x/peripheral.h} decl_inline_doc
@@ -270,4 +233,10 @@ hardware features.  Most development boards are supported as well.
 
 @end section
 
-@end section
+@end moduledef
+
+@parse{
+arch/nrf5x/ids.h
+arch/nrf5x/peripheral.h
+}
+

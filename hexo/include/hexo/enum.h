@@ -21,7 +21,7 @@
 
 /**
    @file
-   @module{Hardware abstraction layer}
+   @module {Core::Hardware abstraction layer}
    @short C enum reflection
 
    This header provides functions which can be used to convert between

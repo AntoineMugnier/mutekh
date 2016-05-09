@@ -23,7 +23,7 @@
 
 /**
    @file
-   @module{Devices support library}
+   @module {Core::Devices support library}
    @short Device clock and power graph
 
    This header provides functions designed to manage power and clock

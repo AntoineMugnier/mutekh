@@ -1,4 +1,4 @@
 
-@section tP {Sparc processor}
+@moduledef {Sparc processor} {Processors}
 
-@end section
+@end moduledef

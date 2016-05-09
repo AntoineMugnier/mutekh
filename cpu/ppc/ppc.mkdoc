@@ -1,4 +1,4 @@
 
-@section tP {PowerPc processor}
+@moduledef {PowerPc processor} {Processors}
 
-@end section
+@end moduledef

@@ -5,6 +5,14 @@
   doc/gct.mkdoclib
 }
 
+@moduledef {Core}
+  @hidden
+@end moduledef
+
+@moduledef {Libraries}
+  @hidden
+@end moduledef
+
 @include ../libc/libc.mkdoc
 @include ../hexo/hexo.mkdoc
 @include ../mutek/mutek.mkdoc
@@ -17,19 +25,13 @@
 @include ../libfdt/libfdt.mkdoc
 @include ../libtermui/libtermui.mkdoc
 @include ../libgomp/libgomp.mkdoc
+@include ../liblua/liblua.mkdoc
 
-@moduledef{Device driver directory}
+@include ../arch/arch.mkdoc
+@include ../cpu/cpu.mkdoc
 
-  Devices drivers may be found at various place in the source tree:
-  @list
-    @item @tt arch/*/drivers/ : platform vendor related device drivers, not covered here.
-    @item @tt cpu/*/drivers/ : processor vendor related device drivers, not covered here.
-    @item @tt drivers/ : cross platform device drivers, covered in this module.
-  @end list
-
-  A device driver implement one or multiple @xref{Device
-  classes}{device class} API.
-
+@moduledef{Cross-platform drivers}
+  @hidden
 @end moduledef
 
 @parse{
@@ -46,9 +48,9 @@ doc/config.h
 
   MutekH has a modular
   @url{http://en.wikipedia.org/wiki/Exokernel}{exokernel}
-  architecture. It is built on a clean @ref{+Hardware abstraction
+  architecture. It is built on a clean @ref{+Core::Hardware abstraction
   layer}{processor and platform abstraction layer}, a set of
-  @ref{+Kernel services}{base kernel services} and a set of additional
+  @ref{+Core::Kernel services}{base kernel services} and a set of additional
   service libraries.
 
   The exokernel comes with several operating system interface
@@ -66,7 +68,7 @@ doc/config.h
   MutekH takes advantage of advanced compilation techniques like C99
   inlining and preprocessor metaprogramming in order to optimize
   binaries while keeping the source code modular. It relies on a
-  comprehensive @ref{+Generic C templates library}{container template
+  comprehensive @ref{+Core::Generic C templates}{container template
   library}.
 
   MutekH is able to run on various @xref{Supported
@@ -116,28 +118,119 @@ doc/config.h
   @include quickstart.mkdoc
   @include install.mkdoc
   @include build_config.mkdoc
-  @section THP {Configuration tokens}
-
-    This section gives a list of available configuration tokens. Most
-    token can be used in @xref{build configuration files}{Build
-    configuration files} in order to customize the kernel features.
-
-    @insert {@doc/config.h} compound_member_list
-  @end section
 @end section
 
-@section TP {Supported hardware}
-  @include ../arch/arch.mkdoc
-  @include ../cpu/cpu.mkdoc
+@section TP {Core modules}
+  This section contains documentation for core MutekH modules:
+  @insert localtoc
+  @insert {+Core} {TP} module_sections
 @end section
 
-@section TP {Modules documentation}
+@section TP {Library modules}
+  This section contains documentation for various MutekH libraries:
+  @insert localtoc
+  @insert {+Libraries} {TP} module_sections
+@end section
 
-  This section contains documentation for various MutekH modules, most
-  of which are kernel service libraries.
+@section TP {Hardware support}
+
+  MutekH has separate code modules for processor support code,
+  platform support code and device drivers. The following subsections
+  describe the source tree organization for the hardware related code
+  and detail what hardware is actually supported:
 
   @insert localtoc
-  @insert {module} module_sections
+
+  @section TP {Source organization}
+
+    A platform support package is composed of:
+    @list
+      @item Implementation of some features provided by the
+        @ref{+Core::Hardware abstraction layer}{hardware abstraction layer} module, stored in
+        header files located in @tt{arch/*/include/hexo/}.
+      @item Optionally, some platform specific definitions, stored in
+        header files located in @tt{arch/*/include/arch_name/}.
+      @item Optionally, some static @xref{Device tree}{device
+        declarations} for the platform.
+      @item Optionally, some board descriptions specific source files
+        with static declarations of relevant devices, located in @tt{arch/*/boards}.
+      @item A linker script, usually based on the generic script
+        provided in @sourcelink arch/common/ldscript.cpp .
+      @item Definition for platform specific @xref{Configuration
+        tokens}{configuration tokens} and features.
+      @item Optionally, definition for platform specific
+        @xref{Initialization tokens declaration}{initialization tokens}
+        and associated initialization functions.
+      @item Optionally, some @xref{Device drivers}{device drivers}
+        specific to a particular platform may be found in
+        @tt{arch/*/drivers}.
+    @end list
+
+    A processor support package is composed of:
+    @list
+      @item Implementation of some features provided by the
+        @ref{+Core::Hardware abstraction layer}{hardware abstraction layer} module, stored in
+        header files located in @tt{cpu/*/include/hexo/}.
+      @item Optionally, some processor specific definitions, stored in
+        header files located in @tt{cpu/*/include/cpu_name/}.
+      @item Plain assembly code for processor boot and initialization.
+      @item Plain assembly code for interrupts and exceptions handling.
+      @item Plain assembly code for context switching.
+      @item Some assembly implementations of some library features like
+        the libc @ref setjmp and @ref longjmp functions.
+      @item A device driver which implements the
+        @ref{@device/class/cpu.h}{processor device class} for that
+        processor and optionally some other classes.
+      @item Processor dependent compiler options.
+      @item Optionally, Definition for processor specific
+        @xref{Configuration tokens}{configuration tokens} and features.
+      @item Optionally, some @xref{Device drivers}{device drivers}
+        specific to a particular processor vendor may be found in
+        @tt{cpu/*/drivers}.
+      @item Optionally, a native bytecode compiler backend for the generic
+        @ref{@mutek/bytecode.h}{mutekh bytecode} in the form of a perl module.
+    @end list
+
+    Devices drivers may be processor vendor specific, platform
+    specific or cross-platform. They may be found at different
+    locations in the source tree:
+    @list
+      @item @tt cpu/*/drivers/ : @xref {Supported processors} {processor vendor related device drivers}.
+      @item @tt arch/*/drivers/ : @xref {Supported platforms} {platform related device drivers}.
+      @item @sourcelink drivers/ : @xref {Cross-platform drivers} {cross-platform device drivers}.
+    @end list
+
+  @end section
+
+  @section TP {Supported processors}
+    The following processors have a support module in MutekH:
+    @list
+      @foreach id name type {!hidden module} {+Processors} {0}
+        @group
+          @ref @id@ {@name@}
+        @end group
+      @end foreach
+    @end list
+    @insert {+Processors} {tP} module_sections
+  @end section
+
+  @section TP {Supported platforms}
+    The following platforms have a support module in MutekH:
+    @list
+      @foreach id name type {!hidden module} {+Platforms} {0}
+        @group
+          @ref @id@ {@name@}
+        @end group
+      @end foreach
+    @end list
+    @insert {+Platforms} {tP} module_sections
+  @end section
+
+  @section TP {Cross-platform drivers}
+    @insert {1} localtoc
+    @c @invoke {+Cross-platform drivers} _compound_doc
+  @end section
+
 @end section
 
 @section TP {Developer reference}
@@ -148,11 +241,11 @@ doc/config.h
 
   @include config_desc.mkdoc
   @include testsuite.mkdoc
-  @section TP {Headers}
+  @section TP {List of headers}
     @insert {header} compound_table
     @insert {header} all_compound_sections
   @end section
-  @section PTHe {Declarations}
+  @section PTHe {List of declarations}
     @insert global_scope_doc
   @end section
 @end section

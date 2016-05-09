@@ -1,5 +1,5 @@
 
-@moduledef{Hardware abstraction layer}
+@moduledef{Hardware abstraction layer} {Core}
   @short Processor and platform hardware abstraction layer
   @order 100
 
@@ -9,11 +9,11 @@
 
   This module does not handle access to devices like timers, uarts or
   even interrupt controllers. Those are handled by @xref{device
-  drivers} and the @ref {+Devices support library}.
+  drivers} and the @ref {+Core::Devices support library} module.
 
   The following topics are covered:
   @list
-    @foreach hid hname htype {header} {+Hardware abstraction layer} {1}
+    @foreach hid hname htype {header} {+Core::Hardware abstraction layer} {1}
       @group
         @insert {@hid@} decl_short_desc, provided by the @ref {@hid@} {@hname@} header.
       @end group

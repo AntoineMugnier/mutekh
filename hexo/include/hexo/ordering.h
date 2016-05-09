@@ -29,7 +29,7 @@ C_HEADER_BEGIN
 
 /**
  * @file
- * @module{Hardware abstraction layer}
+ * @module {Core::Hardware abstraction layer}
  * @short Serializing operations and memory barrier primitives
  */
 

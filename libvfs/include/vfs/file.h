@@ -21,7 +21,7 @@
 
 /**
    @file
-   @module {Virtual File System}
+   @module {Libraries::Virtual File System}
    @short Operations on file handles
 
    @section {The node_open operation}

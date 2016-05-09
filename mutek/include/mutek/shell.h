@@ -23,7 +23,7 @@
 
 /**
  * @file
- * @module{Kernel services}
+ * @module {Core::Kernel services}
  * @short Interactive shell
  */
 

@@ -29,7 +29,7 @@
 
 /**
   @file
-  @module{Hardware abstraction layer}
+  @module {Core::Hardware abstraction layer}
   @short Atomic memory operations primitives
 
   When SMP is enabled, atomic operations are provided either by

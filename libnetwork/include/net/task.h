@@ -23,7 +23,7 @@
 
 /**
    @file
-   @module {Network stack library}
+   @module {Libraries::Abstract network stack}
    @short Network task
 
    @this contains all declarations about @ref {net_task_s} {Network

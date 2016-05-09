@@ -22,7 +22,7 @@
 
 /**
    @file
-   @module{Devices support library}
+   @module {Core::Devices support library}
    @short SPI bus controller driver API
    @index {SPI bus controller} {Device classes}
    @csee DRIVER_CLASS_SPI_CTRL

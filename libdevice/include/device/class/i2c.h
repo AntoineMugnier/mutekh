@@ -24,7 +24,7 @@
 
 /**
    @file
-   @module{Devices support library}
+   @module {Core::Devices support library}
    @short I2C bus controller driver API
    @index {I2C bus controller} {Device classes}
    @csee DRIVER_CLASS_I2C

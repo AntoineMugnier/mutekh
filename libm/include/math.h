@@ -22,7 +22,7 @@
 
 /**
   @file
-  @module {Math library}
+  @module {Libraries::C library math}
   @short Standard math header
 
   This header only defines some macro to use the gcc builtin math

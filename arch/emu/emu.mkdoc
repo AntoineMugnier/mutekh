@@ -1,5 +1,5 @@
 
-@section tP {Emulated as a Linux process}
+@moduledef {Linux process} {Platforms}
 
-@end section
+@end moduledef
 

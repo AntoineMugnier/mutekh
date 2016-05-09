@@ -1,5 +1,5 @@
 
-@section tP {Ti SimpleLink CC26xx and CC13xx}
+@moduledef {Ti SimpleLink CC26xx and CC13xx} {Platforms}
 
   @section {Building}
 
@@ -26,5 +26,5 @@ q 0
 
   @end section
 
-@end section
+@end moduledef
 

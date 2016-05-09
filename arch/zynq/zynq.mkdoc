@@ -1,5 +1,5 @@
 
-@section tP {Xilinx Zynq}
+@moduledef {Xilinx Zynq} {Platforms}
 
-@end section
+@end moduledef
 

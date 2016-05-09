@@ -27,7 +27,7 @@
 
 /**
    @file
-   @module{Kernel services}
+   @module {Core::Kernel services}
    @short Generic bytecode
    @index {Generic bytecode} {Kernel services}
 

@@ -1,5 +1,5 @@
-@moduledef{Network stack library}
-@short Network stack library
+@moduledef{Abstract network stack} {Libraries}
+@short Abstract network stack
 
 Network library is a framework for designing network stacks.
 It is built around 3 main objects:

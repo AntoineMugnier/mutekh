@@ -1,5 +1,5 @@
 
-@section tP {BCM283X (Raspberry Pi)}
+@moduledef {BCM283X Raspberry Pi} {Platforms}
 
-@end section
+@end moduledef
 

@@ -22,7 +22,7 @@
 
 /**
    @file
-   @module{Devices support library}
+   @module {Core::Devices support library}
    @short Block device driver API
    @deprecated
    @index {Block device driver} {Device classes}

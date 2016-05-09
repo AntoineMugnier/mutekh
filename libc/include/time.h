@@ -33,7 +33,7 @@ C_HEADER_BEGIN
 
 /**
    @file
-   @module{C library}
+   @module {Core::C library}
    @short Time-related function stubs
  */
 

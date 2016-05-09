@@ -6,7 +6,7 @@
 
 /**
  * @file
- * @module{Kernel services}
+ * @module {Core::Kernel services}
  * @short Debugging messages output API
  */
 

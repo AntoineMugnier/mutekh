@@ -1,5 +1,5 @@
 
-@moduledef{FDT access library}
+@moduledef{Flattened device tree IO} {Libraries}
  @short Flattened device tree access library
  This library offers a mid-level access to Flattened Device Tree blobs
  without the need of dynamic memory allocation. This is mostly intended

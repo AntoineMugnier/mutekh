@@ -22,7 +22,7 @@
 
 /**
    @file
-   @module{Devices support library}
+   @module {Core::Devices support library}
    @short Device enumerator driver API
    @index {Device enumerator} {Device classes}
    @csee DRIVER_CLASS_ENUM

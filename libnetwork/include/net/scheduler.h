@@ -23,7 +23,7 @@
 
 /**
    @file
-   @module {Network stack library}
+   @module {Libraries::Abstract network stack}
    @short Network scheduler
 
    @this contains all relevant declarations about @ref

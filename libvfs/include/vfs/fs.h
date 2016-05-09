@@ -21,7 +21,7 @@
 
 /**
    @file
-   @module {Virtual File System}
+   @module {Libraries::Virtual File System}
    @short Filesystem driver operations interface
 
    Filesystems are drivers to the low-level aspects of a given

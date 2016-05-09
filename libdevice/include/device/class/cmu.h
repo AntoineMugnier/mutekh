@@ -23,7 +23,7 @@
 
 /**
    @file
-   @module{Devices support library}
+   @module {Core::Devices support library}
    @short Clock and power management driver API
    @index {Clock and power management} {Device classes}
    @csee DRIVER_CLASS_CMU

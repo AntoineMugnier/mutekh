@@ -1,5 +1,5 @@
 
-@section tP {STMicroelectronics STM32}
+@moduledef {STMicroelectronics STM32} {Platforms}
 
   @section {Building}
 
@@ -41,5 +41,5 @@ openocd -f interface/ftdi/dp_busblaster.cfg -f target/stm32f1x.cfg \
 
   @end section
 
-@end section
+@end moduledef
 

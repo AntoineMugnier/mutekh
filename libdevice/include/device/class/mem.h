@@ -21,7 +21,7 @@
 
 /**
   @file
-  @module{Devices support library}
+  @module {Core::Devices support library}
   @short Memory device driver API
   @index {Memory device} {Device classes}
   @csee DRIVER_CLASS_MEM

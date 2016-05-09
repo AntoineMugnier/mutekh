@@ -1,5 +1,5 @@
 
-@moduledef{Kernel services}
+@moduledef{Kernel services} {Core}
   @short Hardware independent kernel services
   @order 99
 
@@ -12,7 +12,7 @@
 
   The following topics are covered:
   @list
-    @foreach hid hname htype {header} {+Kernel services} {1}
+    @foreach hid hname htype {header} {+Core::Kernel services} {1}
       @group
         @insert {@hid@} decl_short_desc, provided by the @ref {@hid@} {@hname@} header.
       @end group

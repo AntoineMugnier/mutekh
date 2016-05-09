@@ -22,7 +22,7 @@
 
 /**
    @file
-   @module{Devices support library}
+   @module {Core::Devices support library}
    @short Interrupt controller driver API
    @index {Interrupt controller} {Device classes}
    @csee DRIVER_CLASS_ICU

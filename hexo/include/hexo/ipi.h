@@ -22,7 +22,7 @@
 
 /**
  * @file
- * @module{Hardware abstraction layer}
+ * @module {Core::Hardware abstraction layer}
  * @short Inter-processor interrupts
  */
 

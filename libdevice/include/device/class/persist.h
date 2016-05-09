@@ -21,7 +21,7 @@
 
 /**
    @file
-   @module{Devices support library}
+   @module {Core::Devices support library}
    @short Persistent configuration device driver
    @index {Persistent configuration device} {Device classes}
    @csee DRIVER_CLASS_PERSIST

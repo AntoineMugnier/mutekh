@@ -1,5 +1,4 @@
 
-@section tP {Silabs EFM32}
+@moduledef {Silabs EFM32} {Platforms}
 
-@end section
-
+@end moduledef

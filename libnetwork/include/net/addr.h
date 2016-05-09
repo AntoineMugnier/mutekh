@@ -20,7 +20,7 @@
 
 /**
    @file
-   @module {Network stack library}
+   @module {Libraries::Abstract network stack}
    @short Network address structure definition
 */
 

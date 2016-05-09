@@ -23,7 +23,7 @@
 
 /**
    @file
-   @module{Devices support library}
+   @module {Core::Devices support library}
    @short Pulse Width Modulation controller driver API
    @index {Pulse Width Modulation controller} {Device classes}
    @csee DRIVER_CLASS_PWM

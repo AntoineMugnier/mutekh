@@ -25,7 +25,7 @@
 
 /**
  * @file
- * @module{Hardware abstraction layer}
+ * @module {Core::Hardware abstraction layer}
  * @short Various build system related defs
  * @internal
  */

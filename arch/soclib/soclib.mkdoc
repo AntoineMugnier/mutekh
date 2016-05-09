@@ -1,5 +1,5 @@
 
-@section tP {SoCLib based platforms}
+@moduledef {SoCLib based platforms} {Platforms}
 
-@end section
+@end moduledef
 

@@ -1,4 +1,4 @@
 
-@section tP {Altera Nios II soft core}
+@moduledef {Altera Nios II soft core} {Processors}
 
-@end section
+@end moduledef

@@ -22,7 +22,7 @@
 
 /**
    @file
-   @module{Hardware abstraction layer}
+   @module {Core::Hardware abstraction layer}
    @short Integer values byte-swaping and endian stuff
 
    @section {Non-aligned memory access}

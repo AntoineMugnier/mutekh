@@ -21,7 +21,7 @@
 
 /**
  * @file
- * @module{Hardware abstraction layer}
+ * @module {Core::Hardware abstraction layer}
  * @short Various assembly source defs
  * @internal
  */

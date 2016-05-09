@@ -22,7 +22,7 @@
 
 /**
   @file
-  @module{Devices support library}
+  @module {Core::Devices support library}
   @short Direct memory access driver API
   @index {Direct memory access} {Device classes}
   @csee DRIVER_CLASS_DMA

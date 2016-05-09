@@ -22,7 +22,7 @@
 
 /**
   @file
-  @module{Hardware abstraction layer}
+  @module {Core::Hardware abstraction layer}
   @short Spinlock stuff
   
   Spinlock operations include memory barriers to ensure the consistency of

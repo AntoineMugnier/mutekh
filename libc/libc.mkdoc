@@ -1,5 +1,5 @@
 
-@moduledef{C library}
+@moduledef{C library} {Core}
  @short Standard C library
  @order 90
 @end moduledef

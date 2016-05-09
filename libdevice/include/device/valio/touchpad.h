@@ -20,7 +20,7 @@
 
 /**
    @file
-   @module{Devices support library::Valio device attributes}
+   @module {Core::Devices support library::Valio device attributes}
    @short Value IO interface for a touchpad
 */
 

@@ -20,7 +20,7 @@
 
 /**
    @file
-   @module {Network stack library}
+   @module {Libraries::Abstract network stack}
    @short Network layer base structure
 
    @this contains all definitions around @ref {net_layer_s} {Network

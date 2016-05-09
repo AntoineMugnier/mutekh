@@ -22,7 +22,7 @@
 
 /**
    @file
-   @module{Devices support library}
+   @module {Core::Devices support library}
    @short UART configuration driver API
    @index {UART configuration} {Device classes}
    @csee DRIVER_CLASS_UART

@@ -25,7 +25,7 @@
 
 /**
  * @file
- * @module{Kernel services}
+ * @module {Core::Kernel services}
  * @short Kernel execution context scheduler
  */
 

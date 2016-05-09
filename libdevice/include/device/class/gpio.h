@@ -23,7 +23,7 @@
 
 /**
    @file
-   @module{Devices support library}
+   @module {Core::Devices support library}
    @short General purpose IO driver API
    @index {General purpose IO} {Device classes}
    @csee DRIVER_CLASS_GPIO

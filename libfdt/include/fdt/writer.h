@@ -3,7 +3,7 @@
 
 /**
    @file
-   @module{FDT access library}
+   @module {Libraries::Flattened device tree IO}
    @short Write-only access to FDT blobs
  */
 

@@ -21,7 +21,7 @@
 
 /**
    @file
-   @module{Devices support library}
+   @module {Core::Devices support library}
    @short Character device driver API
    @index {Character device} {Device classes}
    @csee DRIVER_CLASS_CHAR

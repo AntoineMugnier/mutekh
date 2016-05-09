@@ -103,19 +103,19 @@
 
 @macro all_compound_sections types scope
 
-  @foreach id name type {@types@} {@scope@} {0}
+  @foreach id name type {!hidden @types@} {@scope@} {0}
     @info Inserting `@name@' @type@ documentation
     @invoke {@type@} {@id@} {@name@} {P} _compound_section
   @end foreach
 
 @end macro
 
-@macro module_sections
+@macro module_sections scope flags
 
-  @foreach id name type {visible module} {} {1}
+  @foreach id name type {!hidden module} {@scope@} {1}
     @info Inserting `@name@' @type@ documentation
 
-    @section PT {@name@} {@id@}
+    @section @flags@ {@name@} {@id@}
       The @name@ module is described through the following subsections:
       @insert localtoc
       @insert {@id@} decl_inline_doc

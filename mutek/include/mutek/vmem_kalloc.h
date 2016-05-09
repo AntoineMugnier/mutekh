@@ -24,7 +24,7 @@
 
 /**
  * @file
- * @module{Kernel services}
+ * @module {Core::Kernel services}
  * @short Virtual memory kernel land page allocator API
  */
 

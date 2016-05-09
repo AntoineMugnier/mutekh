@@ -1,5 +1,5 @@
 
-@moduledef{Generic C templates library}
+@moduledef{Generic C templates} {Core}
   @short Data structures template library
   See @url http://savannah.nongnu.org/cvs/?group=gct
 @end moduledef

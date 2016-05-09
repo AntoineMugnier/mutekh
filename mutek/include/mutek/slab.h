@@ -20,7 +20,7 @@
 
 /**
  @file
- @module{Kernel services}
+ @module {Core::Kernel services}
  @short Slab allocator
 
  Slab allocator is a specialized memory allocator able to efficiently

@@ -29,7 +29,7 @@ C_HEADER_BEGIN
 
 /**
  * @file
- * @module{Pthread library}
+ * @module {Libraries::POSIX Threads}
  */
 
 #ifndef CONFIG_PTHREAD

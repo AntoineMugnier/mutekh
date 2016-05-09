@@ -1,4 +1,4 @@
 
-@section tP {ARM 32 bits processor}
+@moduledef {ARM 32 bit processor} {Processors}
 
-@end section
+@end moduledef

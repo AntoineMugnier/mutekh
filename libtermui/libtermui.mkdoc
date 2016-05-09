@@ -1,5 +1,5 @@
 
-@moduledef{Terminal driver library}
+@moduledef{Terminal user interface} {Libraries}
   @short Terminal user interface services with readline feature
   See @url http://savannah.nongnu.org/projects/libtermui/
 @end moduledef
