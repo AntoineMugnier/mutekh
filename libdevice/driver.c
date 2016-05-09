@@ -767,7 +767,7 @@ static error_t device_init_driver_nolock(struct device_s *dev)
             case DEVICE_INIT_PARTIAL:
               if (cl != DRIVER_CLASS_NONE && !device_get_api(dep, cl, NULL))
                 continue;
-              if (dev->status == DEVICE_INIT_ONGOING)
+              if (dep->status == DEVICE_INIT_ONGOING)
                 break;
 #elif defined(CONFIG_DEVICE_INIT_ASYNC)
             case DEVICE_INIT_ONGOING:
