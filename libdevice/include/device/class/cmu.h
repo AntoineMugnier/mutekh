@@ -219,6 +219,8 @@ enum dev_cmu_node_info_e
   DEV_CMU_INFO_SINK    = 0x10,
   DEV_CMU_INFO_SRC     = 0x20,
   DEV_CMU_INFO_ACCURACY = 0x40,
+  /** For scale-enabled source endpoints */
+  DEV_CMU_INFO_SCALE   = 0x80,
 };
 
 /** @This stores node information retrieved by the @ref
@@ -237,6 +239,8 @@ struct dev_cmu_node_info_s
   struct dev_clock_sink_ep_s *sink;
   /** Pointer to source end-point object when relevant */
   struct dev_clock_src_ep_s  *src;
+  /** Source endpoint frequency scale */
+  struct dev_freq_ratio_s    scale;
 };
 
 /** @see dev_cmu_node_info_t */
