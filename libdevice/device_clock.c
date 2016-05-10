@@ -72,6 +72,21 @@ error_t dev_clock_sink_gate(struct dev_clock_sink_ep_s *sink,
 }
 #endif
 
+error_t dev_clock_sink_scaler(struct dev_clock_sink_ep_s *sink,
+                              const struct dev_freq_ratio_s *scale)
+{
+  struct dev_clock_src_ep_s *src = sink->src;
+  error_t err;
+
+  LOCK_SPIN_IRQ(&src->dev->lock);
+
+  err = src->f_setup(src, DEV_CLOCK_SETUP_SCALER, (const union dev_clock_setup_u *)scale);
+
+  LOCK_RELEASE_IRQ(&src->dev->lock);
+
+  return err;
+}
+
 void dev_cmu_src_ready(struct dev_clock_src_ep_s *src,
                          enum dev_clock_ep_flags_e gates)
 {
