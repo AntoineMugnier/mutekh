@@ -49,6 +49,8 @@
 #include <device/driver.h>
 #include <device/resources.h>
 
+ENUM_DESCRIPTOR(dev_uart_parity_e, strip:DEV_UART_PARITY_, upper);
+
 /** UART parity. */
 enum dev_uart_parity_e
 {

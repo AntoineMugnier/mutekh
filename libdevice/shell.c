@@ -800,6 +800,7 @@ extern TERMUI_CON_GROUP_DECL(dev_shell_rfpacket_group);
 extern TERMUI_CON_GROUP_DECL(dev_shell_spi_ctrl_group);
 extern TERMUI_CON_GROUP_DECL(dev_shell_char_group);
 extern TERMUI_CON_GROUP_DECL(dev_shell_enum_group);
+extern TERMUI_CON_GROUP_DECL(dev_shell_uart_group);
 
 static TERMUI_CON_GROUP_DECL(dev_shell_subgroup) =
 {
@@ -860,6 +861,9 @@ static TERMUI_CON_GROUP_DECL(dev_shell_subgroup) =
 #endif
 #ifdef CONFIG_DEVICE_ENUM
   TERMUI_CON_GROUP_ENTRY(dev_shell_enum_group, "enum")
+#endif
+#ifdef CONFIG_DEVICE_UART
+  TERMUI_CON_GROUP_ENTRY(dev_shell_uart_group, "uart")
 #endif
   TERMUI_CON_LIST_END
 };

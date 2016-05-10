@@ -10,6 +10,7 @@ enum_headers = include/device/types.h \
                include/device/class/timer.h \
                include/device/class/rfpacket.h \
                include/device/class/persist.h \
+               include/device/class/uart.h \
                include/device/class/spi.h
 
 objs = driver.o device.o resources.o init.o request.o
@@ -78,6 +79,11 @@ endif
 ifeq ($(CONFIG_DEVICE_CRYPTO), defined)
 objs += device_crypto.o
 objs-$(CONFIG_DEVICE_SHELL) += shell_crypto.o
+endif
+
+ifeq ($(CONFIG_DEVICE_UART), defined)
+objs += device_uart.o
+objs-$(CONFIG_DEVICE_SHELL) += shell_uart.o
 endif
 
 ifeq ($(CONFIG_DEVICE_PERSIST), defined)
