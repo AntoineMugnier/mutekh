@@ -350,8 +350,6 @@ static error_t nrf5x_uart_config(
     uint32_t config = 0;
     uintptr_t baudrate = cfg->baudrate;
 
-    CPU_INTERRUPT_SAVESTATE_DISABLE;
-
     if (cfg->data_bits != 8)
         return -ENOTSUP;
 
@@ -381,6 +379,8 @@ static error_t nrf5x_uart_config(
 
         config |= NRF_UART_CONFIG_CTSRTS_ENABLED;
     }
+
+    CPU_INTERRUPT_SAVESTATE_DISABLE;
 
     nrf_task_trigger(pv->addr, NRF_UART_STOPRX);
     nrf_task_trigger(pv->addr, NRF_UART_STOPTX);
