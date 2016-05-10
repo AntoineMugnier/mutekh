@@ -263,7 +263,7 @@ union dev_clock_setup_u
 /** @internal @see dev_clock_src_setup_t */
 #define DEV_CLOCK_SRC_SETUP(n) error_t (n) (struct dev_clock_src_ep_s *src, \
                                             enum dev_clock_setup_op_e op, \
-                                            union dev_clock_setup_u *param)
+                                            const union dev_clock_setup_u *param)
 
 /** @internal @This is the source end-point operation function.
     @This is implemented by clock provider drivers and
