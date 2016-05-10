@@ -194,7 +194,9 @@ static TERMUI_CON_COMMAND_PROTOTYPE(dev_shell_clock_nodes)
     {
       struct dev_cmu_node_info_s info;
       enum dev_cmu_node_info_e mask =
-        DEV_CMU_INFO_FREQ | DEV_CMU_INFO_NAME |
+        DEV_CMU_INFO_FREQ | DEV_CMU_INFO_SCALE |
+        DEV_CMU_INFO_NAME | DEV_CMU_INFO_ACCURACY |
+        DEV_CMU_INFO_SRC | DEV_CMU_INFO_SINK |
         DEV_CMU_INFO_PARENT | DEV_CMU_INFO_RUNNING;
 
       error_t err = DEVICE_OP(&c->cmu, node_info, i, &mask, &info);
@@ -213,9 +215,25 @@ static TERMUI_CON_COMMAND_PROTOTYPE(dev_shell_clock_nodes)
           termui_con_printf(con, " Hz");
         }
 
+      if (mask & DEV_CMU_INFO_SCALE && info.scale.denom != info.scale.num)
+        {
+          termui_con_printf(con, " x %llu", (uint64_t)info.scale.num);
+          if (info.scale.denom != 1)
+            termui_con_printf(con, "/%llu", (uint64_t)info.scale.denom);
+        }
+
       if (mask & DEV_CMU_INFO_ACCURACY)
-        termui_con_printf(con, ", %u ppb",
-                          dev_freq_acc_ppb(&info.freq));
+        {
+          uint32_t ppb = dev_freq_acc_ppb(&info.freq);
+
+          if (ppb > 10000000)
+            termui_con_printf(con, ", %u %%", (ppb + 5000000) / 10000000);
+          else if (ppb > 1000)
+            termui_con_printf(con, ", %u ppm", (ppb + 500) / 1000);
+          else if (ppb)
+            termui_con_printf(con, ", %u ppb", ppb);
+        }
+
       if (mask & DEV_CMU_INFO_PARENT)
         termui_con_printf(con, ", parent %u", info.parent_id);
       if (mask & DEV_CMU_INFO_SRC)
