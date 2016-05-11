@@ -263,6 +263,7 @@ static DEV_IRQ_SRC_PROCESS(nrf5x_rtc_irq)
   if (rq)
     nrf5x_deadline_set(pv, rq->deadline);
   else {
+    dev->start_count &= ~1;
     if (!dev->start_count)
       nrf5x_rtc_stop(pv);
     nrf5x_deadline_disable(pv);
