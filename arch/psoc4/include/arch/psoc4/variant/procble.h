@@ -138,6 +138,7 @@ enum psoc4_clock_e {
   PSOC4_CLOCK_SRC_HFCLK,
   // Mask of all HFCLK-based sources
 #define PSOC4_CLOCK_SRC_HF_MASK ((1 << (PSOC4_CLOCK_SRC_HFCLK + 1)) - 1)
+#define PSOC4_CLOCK_SRC_NOSLEEP_MASK (PSOC4_CLOCK_SRC_HF_MASK & ~(1 << PSOC4_CLOCK_SRC_SYSCLK))
   // Also configurable as mux between ILO and WCO
   PSOC4_CLOCK_SRC_LFCLK,
 #define PSOC4_CLOCK_SRC_COUNT (PSOC4_CLOCK_SRC_LFCLK + 1)
