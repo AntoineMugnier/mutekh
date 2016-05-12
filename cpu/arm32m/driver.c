@@ -204,7 +204,9 @@ static DEV_USE(arm_use)
       struct device_s *dev = sink->dev;
       struct arm_dev_private_s *pv = dev->drv_pv;
       pv->freq = chg->freq;
+# ifdef CONFIG_DEVICE_IRQ
       pv->systick_rev += 2;
+# endif
       return 0;
     }
 # endif
