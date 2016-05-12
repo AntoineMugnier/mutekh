@@ -38,6 +38,8 @@ error_t power_reboot(void);
 /** Turn system power off. May return ENOTSUP. */
 error_t power_shutdown(void);
 
+ENUM_DESCRIPTOR(power_reset_cause_e, strip:POWER_RESET_CAUSE_, upper);
+
 enum power_reset_cause_e
 {
   POWER_RESET_CAUSE_UNKNOWN,
@@ -48,8 +50,6 @@ enum power_reset_cause_e
   POWER_RESET_CAUSE_WAKEUP,
   POWER_RESET_CAUSE_FAULT,
 };
-
-ENUM_DESCRIPTOR(power_reset_cause_e, strip:POWER_RESET_CAUSE_, upper);
 
 /** Get chip reset cause. */
 enum power_reset_cause_e power_reset_cause(void);
