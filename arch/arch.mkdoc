@@ -13,4 +13,5 @@
 @include pic32/pic32.mkdoc
 @include cc26xx/cc26xx.mkdoc
 @include nrf5x/nrf5x.mkdoc
+@include psoc4/psoc4.mkdoc
 @include ibmpc/ibmpc.mkdoc

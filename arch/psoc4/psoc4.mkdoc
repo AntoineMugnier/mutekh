@@ -1,0 +1,17 @@
+@moduledef {Cypress PSoC4/PRoC-BLE platform} {Platforms}
+
+@section {PSoC4 series}
+
+  PSoC4 series SoC exist in three main variants:
+  @list
+    @item PSoC4, Cortex-M0 based SoC with some programmable logic;
+    @item PSoC4-BLE, Cortex-M0 based SoC with some programmable logic
+      and a BLE Link-layer IP;
+    @item PRoC-BLE, Cortex-M0 based SoC a BLE Link-layer IP.
+  @end list
+
+  All these variants are under the @tt psoc4 architecture directory.
+
+@end section
+
+@end moduledef
