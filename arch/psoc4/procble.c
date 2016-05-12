@@ -22,6 +22,7 @@
 #include <device/class/cpu.h>
 #include <device/irq.h>
 #include <device/class/cmu.h>
+#include <device/class/iomux.h>
 #include <arch/psoc4/variant/procble.h>
 
 #if defined(CONFIG_DRIVER_CPU_ARM32M)
@@ -74,5 +75,18 @@ DEV_DECLARE_STATIC(
   DEV_STATIC_RES_DEV_ICU("/cpu"),
   DEV_STATIC_RES_BLOB_PARAM("pclk_src", pclk_src),
   );
+
+#endif
+
+#if defined(CONFIG_DRIVER_PSOC4_GPIO)
+
+DEV_DECLARE_STATIC(gpio_dev, "gpio", 0, psoc4_gpio_drv,
+                   DEV_STATIC_RES_IRQ(0, PSOC4_IRQ_GPIO(0), DEV_IRQ_SENSE_HIGH_LEVEL, 0, 1),
+                   DEV_STATIC_RES_IRQ(1, PSOC4_IRQ_GPIO(1), DEV_IRQ_SENSE_HIGH_LEVEL, 0, 1),
+                   DEV_STATIC_RES_IRQ(2, PSOC4_IRQ_GPIO(2), DEV_IRQ_SENSE_HIGH_LEVEL, 0, 1),
+                   DEV_STATIC_RES_IRQ(3, PSOC4_IRQ_GPIO(3), DEV_IRQ_SENSE_HIGH_LEVEL, 0, 1),
+                   DEV_STATIC_RES_IRQ(4, PSOC4_IRQ_GPIO(4), DEV_IRQ_SENSE_HIGH_LEVEL, 0, 1),
+                   DEV_STATIC_RES_IRQ(5, PSOC4_IRQ_GPIO(5), DEV_IRQ_SENSE_HIGH_LEVEL, 0, 1),
+                   );
 
 #endif
