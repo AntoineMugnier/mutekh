@@ -745,21 +745,21 @@
 #define SRSS_WDT_CTRLOW_ADDR                         0x00000200
 #define SRSS_WDT_CTRLOW_MASK                         0xffffffff
 /** Current value of WDT Counter 0 @multiple */
-  #define SRSS_WDT_CTRLOW_WDT_CTR0(v)              ((v) << 0)
-  #define SRSS_WDT_CTRLOW_WDT_CTR0_SET(x, v)       do { (x) = (((x) & ~0xffff) | ((v) << 0)); } while(0)
-  #define SRSS_WDT_CTRLOW_WDT_CTR0_GET(x)          (((x) >> 0) & 0xffff)
+  #define SRSS_WDT_CTRLOW_CTR0(v)                  ((v) << 0)
+  #define SRSS_WDT_CTRLOW_CTR0_SET(x, v)           do { (x) = (((x) & ~0xffff) | ((v) << 0)); } while(0)
+  #define SRSS_WDT_CTRLOW_CTR0_GET(x)              (((x) >> 0) & 0xffff)
 /** Current value of WDT Counter 1 @multiple */
-  #define SRSS_WDT_CTRLOW_WDT_CTR1(v)              ((v) << 16)
-  #define SRSS_WDT_CTRLOW_WDT_CTR1_SET(x, v)       do { (x) = (((x) & ~0xffff0000) | ((v) << 16)); } while(0)
-  #define SRSS_WDT_CTRLOW_WDT_CTR1_GET(x)          (((x) >> 16) & 0xffff)
+  #define SRSS_WDT_CTRLOW_CTR1(v)                  ((v) << 16)
+  #define SRSS_WDT_CTRLOW_CTR1_SET(x, v)           do { (x) = (((x) & ~0xffff0000) | ((v) << 16)); } while(0)
+  #define SRSS_WDT_CTRLOW_CTR1_GET(x)              (((x) >> 16) & 0xffff)
 
 /** Watchdog Counter 2 @multiple */
 #define SRSS_WDT_CTRHIGH_ADDR                        0x00000204
 #define SRSS_WDT_CTRHIGH_MASK                        0xffffffff
 /** Current value of WDT Counter 2 @multiple */
-  #define SRSS_WDT_CTRHIGH_WDT_CTR2(v)             ((v) << 0)
-  #define SRSS_WDT_CTRHIGH_WDT_CTR2_SET(x, v)      do { (x) = (((x) & ~0xffffffff) | ((v) << 0)); } while(0)
-  #define SRSS_WDT_CTRHIGH_WDT_CTR2_GET(x)         (((x) >> 0) & 0xffffffff)
+  #define SRSS_WDT_CTRHIGH_CTR2(v)                 ((v) << 0)
+  #define SRSS_WDT_CTRHIGH_CTR2_SET(x, v)          do { (x) = (((x) & ~0xffffffff) | ((v) << 0)); } while(0)
+  #define SRSS_WDT_CTRHIGH_CTR2_GET(x)             (((x) >> 0) & 0xffffffff)
 
 /** Watchdog counter match values @multiple */
 #define SRSS_WDT_MATCH_ADDR                          0x00000208
@@ -777,50 +777,57 @@
 #define SRSS_WDT_CONFIG_ADDR                         0x0000020c
 #define SRSS_WDT_CONFIG_MASK                         0xdf010f0f
 /** Watchdog Counter Action on Match (WDT_CTR0 = WDT_MATCH0). @multiple */
-  #define SRSS_WDT_CONFIG_WDT_MODE0(v)             ((SRSS_WDT_CONFIG_WDT_MODE0_##v) << 0)
-  #define SRSS_WDT_CONFIG_WDT_MODE0_SET(x, v)      do { (x) = (((x) & ~0x3) | ((SRSS_WDT_CONFIG_WDT_MODE0_##v) << 0)); } while(0)
-  #define SRSS_WDT_CONFIG_WDT_MODE0_SETVAL(x, v)   do { (x) = (((x) & ~0x3) | ((v) << 0)); } while(0)
-  #define SRSS_WDT_CONFIG_WDT_MODE0_GET(x)         (((x) >> 0) & 0x3)
+  #define SRSS_WDT_CONFIG_MODE0(v)                 ((SRSS_WDT_CONFIG_MODE0_##v) << 0)
+  #define SRSS_WDT_CONFIG_MODE0_SET(x, v)          do { (x) = (((x) & ~0x3) | ((SRSS_WDT_CONFIG_MODE0_##v) << 0)); } while(0)
+  #define SRSS_WDT_CONFIG_MODE0_SETVAL(x, v)       do { (x) = (((x) & ~0x3) | ((v) << 0)); } while(0)
+  #define SRSS_WDT_CONFIG_MODE0_GET(x)             (((x) >> 0) & 0x3)
 /** Do nothing */
-    #define SRSS_WDT_CONFIG_WDT_MODE0_NOTHING        0x00000000
+    #define SRSS_WDT_CONFIG_MODE0_NOTHING            0x00000000
 /** Assert WDT_INTx */
-    #define SRSS_WDT_CONFIG_WDT_MODE0_INT            0x00000001
+    #define SRSS_WDT_CONFIG_MODE0_INT                0x00000001
 /** Assert WDT Reset */
-    #define SRSS_WDT_CONFIG_WDT_MODE0_RESET          0x00000002
+    #define SRSS_WDT_CONFIG_MODE0_RESET              0x00000002
 /** Assert WDT_INTx, assert WDT Reset after 3rd unhandled interrupt */
-    #define SRSS_WDT_CONFIG_WDT_MODE0_INT_THEN_RESET 0x00000003
+    #define SRSS_WDT_CONFIG_MODE0_INT_THEN_RESET     0x00000003
 /** Clear Watchdog Counter when WDT_CTR0 = WDT_MATCH0. In other words WDT_CTR0
    divides LFCLK by (WDT_MATCH0 + 1). @multiple */
-  #define SRSS_WDT_CONFIG_WDT_CLEAR0               0x00000004
+  #define SRSS_WDT_CONFIG_CLEAR0                   0x00000004
 /** Cascade Watchdog Counters 0,1. Counter 1 increments the cycle after WDT_CTR0
    = WDT_MATCH0. @multiple */
-  #define SRSS_WDT_CONFIG_WDT_CASCADE0_1           0x00000008
+  #define SRSS_WDT_CONFIG_CASCADE0_1               0x00000008
 /** Watchdog Counter Action on Match (WDT_CTR1 = WDT_MATCH1). @multiple */
-  #define SRSS_WDT_CONFIG_WDT_MODE1(v)             ((SRSS_WDT_CONFIG_WDT_MODE1_##v) << 8)
-  #define SRSS_WDT_CONFIG_WDT_MODE1_SET(x, v)      do { (x) = (((x) & ~0x300) | ((SRSS_WDT_CONFIG_WDT_MODE1_##v) << 8)); } while(0)
-  #define SRSS_WDT_CONFIG_WDT_MODE1_SETVAL(x, v)   do { (x) = (((x) & ~0x300) | ((v) << 8)); } while(0)
-  #define SRSS_WDT_CONFIG_WDT_MODE1_GET(x)         (((x) >> 8) & 0x3)
+  #define SRSS_WDT_CONFIG_MODE1(v)                 ((SRSS_WDT_CONFIG_MODE1_##v) << 8)
+  #define SRSS_WDT_CONFIG_MODE1_SET(x, v)          do { (x) = (((x) & ~0x300) | ((SRSS_WDT_CONFIG_MODE1_##v) << 8)); } while(0)
+  #define SRSS_WDT_CONFIG_MODE1_SETVAL(x, v)       do { (x) = (((x) & ~0x300) | ((v) << 8)); } while(0)
+  #define SRSS_WDT_CONFIG_MODE1_GET(x)             (((x) >> 8) & 0x3)
 /** Do nothing */
-    #define SRSS_WDT_CONFIG_WDT_MODE1_NOTHING        0x00000000
+    #define SRSS_WDT_CONFIG_MODE1_NOTHING            0x00000000
 /** Assert WDT_INTx */
-    #define SRSS_WDT_CONFIG_WDT_MODE1_INT            0x00000001
+    #define SRSS_WDT_CONFIG_MODE1_INT                0x00000001
 /** Assert WDT Reset */
-    #define SRSS_WDT_CONFIG_WDT_MODE1_RESET          0x00000002
+    #define SRSS_WDT_CONFIG_MODE1_RESET              0x00000002
 /** Assert WDT_INTx, assert WDT Reset after 3rd unhandled interrupt */
-    #define SRSS_WDT_CONFIG_WDT_MODE1_INT_THEN_RESET 0x00000003
+    #define SRSS_WDT_CONFIG_MODE1_INT_THEN_RESET     0x00000003
 /** Clear Watchdog Counter when WDT_CTR1 = WDT_MATCH1. In other words WDT_CTR1
    divides LFCLK by (WDT_MATCH1 + 1). @multiple */
-  #define SRSS_WDT_CONFIG_WDT_CLEAR1               0x00000400
+  #define SRSS_WDT_CONFIG_CLEAR1                   0x00000400
 /** Cascade Watchdog Counters 1,2. Counter 2 increments the cycle after
    WDT_CTR1=WDT_MATCH1. @multiple */
-  #define SRSS_WDT_CONFIG_WDT_CASCADE1_2           0x00000800
-/** Enable WDT2 interrupt. @multiple */
-  #define SRSS_WDT_CONFIG_WDT_INT_EN               0x00010000
+  #define SRSS_WDT_CONFIG_CASCADE1_2               0x00000800
+/** Watchdog Counter Action on CTR2 selected bit flip @multiple */
+  #define SRSS_WDT_CONFIG_MODE2(v)                 ((SRSS_WDT_CONFIG_MODE2_##v) << 16)
+  #define SRSS_WDT_CONFIG_MODE2_SET(x, v)          do { (x) = (((x) & ~0x10000) | ((SRSS_WDT_CONFIG_MODE2_##v) << 16)); } while(0)
+  #define SRSS_WDT_CONFIG_MODE2_SETVAL(x, v)       do { (x) = (((x) & ~0x10000) | ((v) << 16)); } while(0)
+  #define SRSS_WDT_CONFIG_MODE2_GET(x)             (((x) >> 16) & 0x1)
+/** Do nothing */
+    #define SRSS_WDT_CONFIG_MODE2_NOTHING            0x00000000
+/** Assert WDT_INTx */
+    #define SRSS_WDT_CONFIG_MODE2_INT                0x00000001
 /** Bit to observe for WDT_INT2, makes one interrupt every 2 ^ WDT_BITS2 tick.
    @multiple */
-  #define SRSS_WDT_CONFIG_WDT_BITS2(v)             ((v) << 24)
-  #define SRSS_WDT_CONFIG_WDT_BITS2_SET(x, v)      do { (x) = (((x) & ~0x1f000000) | ((v) << 24)); } while(0)
-  #define SRSS_WDT_CONFIG_WDT_BITS2_GET(x)         (((x) >> 24) & 0x1f)
+  #define SRSS_WDT_CONFIG_BITS2(v)                 ((v) << 24)
+  #define SRSS_WDT_CONFIG_BITS2_SET(x, v)          do { (x) = (((x) & ~0x1f000000) | ((v) << 24)); } while(0)
+  #define SRSS_WDT_CONFIG_BITS2_GET(x)             (((x) >> 24) & 0x1f)
 /** Select source for LFCLK. @multiple */
   #define SRSS_WDT_CONFIG_LFCLK_SEL(v)             ((SRSS_WDT_CONFIG_LFCLK_SEL_##v) << 30)
   #define SRSS_WDT_CONFIG_LFCLK_SEL_SET(x, v)      do { (x) = (((x) & ~0xc0000000) | ((SRSS_WDT_CONFIG_LFCLK_SEL_##v) << 30)); } while(0)
@@ -837,25 +844,25 @@
 /** Enable Counter Note: This field takes considerable time (up to 3 LFCLK
    cycles) to take effect. It must not be changed more than once in that period.
    @multiple */
-  #define SRSS_WDT_CONTROL_WDT_ENABLE_COUNT        3
-  #define SRSS_WDT_CONTROL_WDT_ENABLE(fidx)        (0x00000001 << ((fidx) * 8))
+  #define SRSS_WDT_CONTROL_ENABLE_COUNT            3
+  #define SRSS_WDT_CONTROL_ENABLE(fidx)            (0x00000001 << ((fidx) * 8))
 /** Indicates actual state of counter. May lag WDT_ENABLE by up to 3 LFCLK
    cycles. After changing WDT_ENABLE, do not enter DEEPSLEEP mode until this
    field acknowledges the change. @multiple */
-  #define SRSS_WDT_CONTROL_WDT_ENABLED_COUNT       3
-  #define SRSS_WDT_CONTROL_WDT_ENABLED(fidx)       (0x00000002 << ((fidx) * 8))
+  #define SRSS_WDT_CONTROL_ENABLED_COUNT           3
+  #define SRSS_WDT_CONTROL_ENABLED(fidx)           (0x00000002 << ((fidx) * 8))
 /** WDT Interrupt Request. This bit is set by hardware as configured by this
    registers. This bit must be cleared by firmware. Clearing this bit also
    prevents Reset from happening when WDT_MODE=3. After W1C, WDT_CONTROL must be
    read for the hardware to internally remove the clear flag. Failure to do this
    may result in missing the next interrupt. @multiple */
-  #define SRSS_WDT_CONTROL_WDT_INT_COUNT           3
-  #define SRSS_WDT_CONTROL_WDT_INT(fidx)           (0x00000004 << ((fidx) * 8))
+  #define SRSS_WDT_CONTROL_INT_COUNT               3
+  #define SRSS_WDT_CONTROL_INT(fidx)               (0x00000004 << ((fidx) * 8))
 /** Resets counter back to 0. Hardware will reset this bit after counter was
    reset. This will take several LFCLK cycles to take effect. Wait until the
    reset completes before enabling the WDT. @multiple */
-  #define SRSS_WDT_CONTROL_WDT_RESET_COUNT         3
-  #define SRSS_WDT_CONTROL_WDT_RESET(fidx)         (0x00000008 << ((fidx) * 8))
+  #define SRSS_WDT_CONTROL_RESET_COUNT             3
+  #define SRSS_WDT_CONTROL_RESET(fidx)             (0x00000008 << ((fidx) * 8))
 
 #define SRSS_RES_CAUSE_ADDR                          0x00000300
 #define SRSS_RES_CAUSE_MASK                          0x000000ff

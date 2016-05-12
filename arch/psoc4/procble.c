@@ -90,3 +90,19 @@ DEV_DECLARE_STATIC(gpio_dev, "gpio", 0, psoc4_gpio_drv,
                    );
 
 #endif
+
+#if defined(CONFIG_DRIVER_PSOC4_RTC)
+
+DEV_DECLARE_STATIC(rtc0, "rtc0", 0, psoc4_rtc_drv,
+                   DEV_STATIC_RES_MEM(PSOC4_SRSS_ADDR, PSOC4_SRSS_ADDR + 0x1000),
+
+                   DEV_STATIC_RES_DEV_ICU("/cpu"),
+                   DEV_STATIC_RES_IRQ(0, PSOC4_IRQ_WDT, DEV_IRQ_SENSE_HIGH_LEVEL, 0, 1),
+# ifdef CONFIG_DEVICE_CLOCK
+                   DEV_STATIC_RES_CLK_SRC("/clock", PSOC4_CLOCK_SRC_LFCLK, 0),
+# else
+                   DEV_STATIC_RES_FREQ(32768, 1),
+# endif
+                   );
+
+#endif
