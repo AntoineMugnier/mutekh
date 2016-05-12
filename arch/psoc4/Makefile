@@ -1,4 +1,4 @@
-objs += procble.o
+objs += procble.o power.o
 
 subdirs = drivers board
 
