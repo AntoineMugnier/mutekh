@@ -31,7 +31,7 @@
 #include <arch/psoc4/hsiom_port.h>
 #include <arch/psoc4/gpio_port.h>
 #include <arch/psoc4/peri.h>
-#include <arch/psoc4/variant/procble.h>
+#include <arch/psoc4/variant.h>
 
 #if CONFIG_MUTEK_PRINTK_ADDR == PSOC4_SCB0_ADDR
 # define PRINTK_PCLK_CHAN PSOC4_CLOCK_SCB0

@@ -35,7 +35,7 @@
 #include <arch/psoc4/gpio.h>
 #include <arch/psoc4/hsiom_port.h>
 #include <arch/psoc4/hsiom.h>
-#include <arch/psoc4/variant/procble.h>
+#include <arch/psoc4/variant.h>
 
 #include <mutek/printk.h>
 #include <string.h>

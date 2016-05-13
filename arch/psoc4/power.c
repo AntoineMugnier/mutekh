@@ -18,7 +18,7 @@
     Copyright Nicolas Pouillon <nipo@ssji.net> (c) 2016
 */
 
-#include <arch/psoc4/variant/procble.h>
+#include <arch/psoc4/variant.h>
 #include <arch/psoc4/srss.h>
 
 #include <cpu/arm32m/v7m.h>

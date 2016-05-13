@@ -23,7 +23,7 @@
 #include <device/irq.h>
 #include <device/class/cmu.h>
 #include <device/class/iomux.h>
-#include <arch/psoc4/variant/procble.h>
+#include <arch/psoc4/variant.h>
 
 #if defined(CONFIG_DRIVER_CPU_ARM32M)
 

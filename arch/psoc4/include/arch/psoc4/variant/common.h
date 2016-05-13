@@ -18,24 +18,17 @@
     Copyright (c) Nicolas Pouillon <nipo@ssji.net>, 2016
 */
 
-#ifndef PSOC4_4200_CLOCK_H
-#define PSOC4_4200_CLOCK_H
+#ifndef PSOC4_VARIANT_COMMON_H
+#define PSOC4_VARIANT_COMMON_H
 
-#define PSOC4_CLOCK_ID_IMO 0
-#define PSOC4_CLOCK_ID_SARPUMP 1
-#define PSOC4_CLOCK_ID_SCB0 2
-#define PSOC4_CLOCK_ID_SCB1 3
-#define PSOC4_CLOCK_ID_LCD 4
-#define PSOC4_CLOCK_ID_CSD 5
-#define PSOC4_CLOCK_ID_CSD 6
-#define PSOC4_CLOCK_ID_SAR 7
-#define PSOC4_CLOCK_ID_TCPWM0 8
-#define PSOC4_CLOCK_ID_TCPWM1 9
-#define PSOC4_CLOCK_ID_TCPWM2 10
-#define PSOC4_CLOCK_ID_TCPWM3 11
-#define PSOC4_CLOCK_ID_UDB0 12
-#define PSOC4_CLOCK_ID_UDB1 13
-#define PSOC4_CLOCK_ID_UDB2 14
-#define PSOC4_CLOCK_ID_UDB3 15
+#include <arch/psoc4/hsiom_port.h>
+
+/*
+  Pin mux
+ */
+
+#define PSOC4_IO(port_, pin_) (((port_)<<3) | (pin_))
+#define PSOC4_IO_PORT(io_) ((io_) >> 3)
+#define PSOC4_IO_PIN(io_) ((io_) & 7)
 
 #endif

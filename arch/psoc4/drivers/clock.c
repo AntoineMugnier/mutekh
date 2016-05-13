@@ -39,12 +39,14 @@
 
 #include <arch/psoc4/srss.h>
 #include <arch/psoc4/peri.h>
+#include <arch/psoc4/pclk.h>
 #include <arch/psoc4/sflash.h>
-#include <arch/psoc4/variant/procble.h>
+#include <arch/psoc4/variant.h>
 #include <arch/psoc4/cpuss.h>
 
 #define SRSS PSOC4_SRSS_ADDR
 #define PERI PSOC4_PERI_ADDR
+#define PCLK PSOC4_PCLK_ADDR
 #define SFLASH PSOC4_SFLASH_ADDR
 #define CPUSS PSOC4_CPUSS_ADDR
 

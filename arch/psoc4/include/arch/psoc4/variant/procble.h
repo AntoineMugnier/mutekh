@@ -22,6 +22,7 @@
 #define PSOC4_PROCBLE_H
 
 #include <arch/psoc4/hsiom_port.h>
+#include "common.h"
 
 /*
   Peripheral addresses
@@ -169,10 +170,6 @@ enum psoc4_clock_e {
 /*
   Pin mux
  */
-
-#define PSOC4_IO(port_, pin_) (((port_)<<3) | (pin_))
-#define PSOC4_IO_PORT(io_) ((io_) >> 3)
-#define PSOC4_IO_PIN(io_) ((io_) & 7)
 
 #define PSOC4_P0_0 PSOC4_IO(0, 0)
 #define PSOC4_P0_1 PSOC4_IO(0, 1)

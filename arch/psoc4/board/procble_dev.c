@@ -23,7 +23,7 @@
 #include <device/class/iomux.h>
 #include <device/clock.h>
 #include <device/class/uart.h>
-#include <arch/psoc4/variant/procble.h>
+#include <arch/psoc4/variant.h>
 
 #ifdef CONFIG_DRIVER_PSOC4_UART
 

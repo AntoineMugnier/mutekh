@@ -34,7 +34,7 @@
 #include <device/class/cmu.h>
 
 #include <arch/psoc4/srss.h>
-#include <arch/psoc4/variant/procble.h>
+#include <arch/psoc4/variant.h>
 
 #define SRSS PSOC4_SRSS_ADDR
 
