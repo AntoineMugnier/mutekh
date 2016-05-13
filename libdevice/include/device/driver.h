@@ -224,7 +224,7 @@ struct dev_enum_ident_s
        to test for the initial invocation.
 
      @item If an error is returned and the driver has not invoked the
-       @ref device_init_set_class function, the status is changed
+       @ref device_init_enable_api function, the status is changed
        to @ref DEVICE_INIT_FAILED. The driver must have released all
        resource associated to the device in this case as the @ref
        dev_cleanup_t function will not be called.
@@ -572,7 +572,7 @@ error_t device_get_api(struct device_s *dev,
         in the @ref DEVICE_INIT_ONGOING state.
 
       @item If an error is reported and the driver has not invoked the
-        @ref device_init_set_class function yet, the status is changed
+        @ref device_init_enable_api function yet, the status is changed
         to @ref DEVICE_INIT_FAILED. The driver must have released all
         resource associated to the device in this case as the @ref
         dev_cleanup_t function will not be called.
@@ -591,22 +591,22 @@ void device_async_init_done(struct device_s *dev, error_t error);
 config_depend_and2(CONFIG_DEVICE_CLEANUP, CONFIG_DEVICE_INIT_ASYNC)
 void device_async_cleanup_done(struct device_s *dev);
 
-/** @This marks a class of the driver as available during partial
-    initialization. The @tt index specifies a class as passed to the
+/** @This marks an API of the driver as available during partial
+    initialization. The @tt index specifies an API as passed to the
     @ref #DRIVER_DECLARE macro of the driver.  @see
     DEVICE_INIT_ONGOING */
 config_depend_alwaysinline(CONFIG_DEVICE_INIT_PARTIAL,
-void device_init_set_class(struct device_s *dev, uint_fast8_t index),
+void device_init_enable_api(struct device_s *dev, uint_fast8_t index),
 {
   dev->init_mask |= 1 << index;
 })
 
 /** @This can be used during the initialization phase of a device to
-    test if a specified class is initialized. The @tt index specifies
-    a class as passed to the @ref #DRIVER_DECLARE macro of the driver.
+    test if a specified API is initialized. The @tt index specifies
+    an API as passed to the @ref #DRIVER_DECLARE macro of the driver.
     @This always returns true if @ref #CONFIG_DEVICE_INIT_PARTIAL is
     not defined. */
-ALWAYS_INLINE bool_t device_init_test_class(struct device_s *dev, uint_fast8_t index)
+ALWAYS_INLINE bool_t device_init_test_api(struct device_s *dev, uint_fast8_t index)
 {
 #ifdef CONFIG_DEVICE_INIT_PARTIAL
   return dev->status == DEVICE_INIT_DONE ||

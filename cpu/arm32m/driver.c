@@ -279,7 +279,7 @@ static DEV_INIT(arm_init)
           goto err_pv;
         }
 #ifdef CONFIG_DEVICE_INIT_PARTIAL
-      device_init_set_class(dev, ARM32M_INITID_CPU);
+      device_init_enable_api(dev, ARM32M_INITID_CPU);
 #endif
 
 #ifdef CONFIG_DEVICE_IRQ
@@ -295,13 +295,13 @@ static DEV_INIT(arm_init)
         }
 
 # ifdef CONFIG_DEVICE_INIT_PARTIAL
-      device_init_set_class(dev, ARM32M_INITID_ICU);
+      device_init_enable_api(dev, ARM32M_INITID_ICU);
 # endif
 #endif
     }
 
 #ifdef CONFIG_DEVICE_INIT_PARTIAL
-  if (!device_init_test_class(dev, ARM32M_INITID_CLOCK))
+  if (!device_init_test_api(dev, ARM32M_INITID_CLOCK))
     {
 # ifdef CONFIG_CPU_ARM32M_CLOCK
       /* postpone initialization of the clock input if the clock
@@ -329,7 +329,7 @@ static DEV_INIT(arm_init)
 #endif
 
 #ifdef CONFIG_DEVICE_INIT_PARTIAL
-      device_init_set_class(dev, ARM32M_INITID_CLOCK);
+      device_init_enable_api(dev, ARM32M_INITID_CLOCK);
     }
 #endif
 
@@ -345,7 +345,7 @@ static DEV_INIT(arm_init)
 # endif
 
 # ifdef CONFIG_DEVICE_INIT_PARTIAL
-  device_init_set_class(dev, ARM32M_INITID_TIMER);
+  device_init_enable_api(dev, ARM32M_INITID_TIMER);
 # endif
 #endif
 
@@ -372,7 +372,7 @@ static DEV_CLEANUP(arm_cleanup)
   struct arm_dev_private_s *pv = dev->drv_pv;
 
 #ifdef CONFIG_CPU_ARM32M_TIMER_SYSTICK
-  if (device_init_test_class(dev, ARM32M_INITID_TIMER))
+  if (device_init_test_api(dev, ARM32M_INITID_TIMER))
     {
       if (pv->systick_start & 1)
         return -EBUSY;
@@ -382,11 +382,11 @@ static DEV_CLEANUP(arm_cleanup)
 #endif
 
 #ifdef CONFIG_CPU_ARM32M_CLOCK
-  if (device_init_test_class(dev, ARM32M_INITID_CLOCK))
+  if (device_init_test_api(dev, ARM32M_INITID_CLOCK))
     dev_drv_clock_cleanup(dev, &pv->clk_ep);
 #endif
 
-  if (device_init_test_class(dev, ARM32M_INITID_CPU))
+  if (device_init_test_api(dev, ARM32M_INITID_CPU))
     {
       cpu_tree_remove(&pv->node);
       cpu_tree_node_cleanup(&pv->node);

@@ -91,7 +91,7 @@ enum device_status_e
   DEVICE_INIT_ONGOING,
   /** Some classes of the driver have not been properly initialized
       but other classes are usable. This occurs when the @ref
-      device_init_set_class function is called during an
+      device_init_enable_api function is called during an
       initialization which eventually terminate with an error. */
   DEVICE_INIT_PARTIAL,
   /** The device is fully initialized and functional. This results
@@ -188,7 +188,7 @@ struct device_s
       @ref DEVICE_INIT_PARTIAL, this is a mask of initialized classes
       in driver API order. Extra bits can be used by the driver in
       order to flag internal initialization states.  @see
-      device_init_set_classes */
+      device_init_enable_apies */
 #ifdef CONFIG_DEVICE_INIT_PARTIAL
   uint8_t                       BITFIELD(init_mask,8);
 #endif
