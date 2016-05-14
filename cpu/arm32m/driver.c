@@ -403,12 +403,12 @@ DRIVER_DECLARE(arm32m_drv,
 #endif
                DRIVER_FLAGS_EARLY_INIT, "Arm-m processor", arm,
 #ifdef CONFIG_DEVICE_IRQ
-               DRIVER_ICU_METHODS(arm_icu),
+               [ARM32M_INITID_ICU] = DRIVER_ICU_METHODS(arm_icu),
 #endif
 #if defined(CONFIG_CPU_ARM32M_TIMER_SYSTICK) || defined(CONFIG_CPU_ARM32M_TIMER_DWTCYC)
-               DRIVER_TIMER_METHODS(arm_timer),
+               [ARM32M_INITID_TIMER] = DRIVER_TIMER_METHODS(arm_timer),
 #endif
-               DRIVER_CPU_METHODS(arm_cpu));
+               [ARM32M_INITID_CPU] = DRIVER_CPU_METHODS(arm_cpu));
 
 DRIVER_REGISTER(arm32m_drv,
                 DEV_ENUM_FDTNAME_ENTRY("cpu:arm"));
