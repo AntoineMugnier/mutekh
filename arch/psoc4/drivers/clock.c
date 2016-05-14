@@ -387,17 +387,70 @@ static DEV_CMU_ROLLBACK(psoc4_clock_rollback)
   return 0;
 }
 
+static void psoc4_clock_hfclk_update(struct device_s *dev)
+{
+  struct psoc4_clock_private_s *pv = dev->drv_pv;
+  struct dev_clock_notify_s notif = {
+    .freq = pv->hfclk_freq,
+  };
+
+  // Update internal caches
+#if defined(CONFIG_DRIVER_PSOC4_CLOCK_EXTCLK)
+  switch (pv->hfclk_sel) {
+  case SRSS_CLK_SELECT_DIRECT_SEL_IMO:
+    notif.freq = DEV_FREQ(pv->imo_freq * 1000000, 1, 2, 25);
+    break;
+# if defined(CONFIG_DRIVER_PSOC4_CLOCK_EXTCLK)
+  case SRSS_CLK_SELECT_DIRECT_SEL_EXTCLK:
+    notif.freq = pv->extclk_freq;
+    break;
+# endif
+  }
+#else
+  notif.freq = DEV_FREQ(pv->imo_freq * 1000000, 1, 2, 25);
+#endif
+
+  dprintk("HFClk freq changed: %d -> %d\n", pv->hfclk_freq.num, notif.freq.num);
+
+  if (memcmp(&pv->hfclk_freq, &notif.freq, sizeof(notif.freq))) {
+
+    pv->hfclk_freq = notif.freq;
+
+    for (uint8_t src = 0; src < PSOC4_CLOCK_SRC_COUNT; ++src) {
+      if (pv->notify_mask & (1 << src)) {
+        dev_cmu_src_notify(&pv->src[src], &notif);
+      }
+    }
+  }
+}
+
+static void psoc4_clock_lfclk_update(struct device_s *dev)
+{
+  struct psoc4_clock_private_s *pv = dev->drv_pv;
+  struct dev_clock_notify_s notif = {
+    .freq = pv->lfclk_freq,
+  };
+
+  if (memcmp(&pv->lfclk_freq, &notif.freq, sizeof(notif.freq))) {
+
+    pv->lfclk_freq = notif.freq;
+
+    const uint8_t src = PSOC4_CLOCK_SRC_LFCLK;
+
+    if (pv->notify_mask & (1 << src)) {
+      dev_cmu_src_notify(&pv->src[src], &notif);
+    }
+  }
+}
+
 static DEV_CMU_COMMIT(psoc4_clock_commit)
 {
   struct device_s *dev = accessor->dev;
   struct psoc4_clock_private_s *pv = dev->drv_pv;
   uint32_t tmp;
-  struct dev_clock_notify_s hfclk = {
-    .freq = pv->hfclk_freq,
-  };
 
   // Enable ILO if about to use it
-  if ((pv->source_use_mask & (1 << PSOC4_CLOCK_SRC_LFCLK))) {
+  if (pv->source_use_mask & (1 << PSOC4_CLOCK_SRC_LFCLK)) {
     tmp = cpu_mem_read_32(SRSS + SRSS_CLK_ILO_CONFIG_ADDR);
     tmp |= SRSS_CLK_ILO_CONFIG_ENABLE;
     cpu_mem_write_32(SRSS + SRSS_CLK_ILO_CONFIG_ADDR, tmp);
@@ -428,21 +481,8 @@ static DEV_CMU_COMMIT(psoc4_clock_commit)
   psoc4_imo_mhz_set(pv->imo_freq_next);
   pv->imo_freq = pv->imo_freq_next;
 
-  // Update internal caches
-  hfclk.freq = DEV_FREQ(pv->imo_freq * 1000000, 1, 2, 25);
-
-  dprintk("HFClk freq changed: %d -> %d\n", pv->hfclk_freq.num, hfclk.freq.num);
-
-  if (memcmp(&pv->hfclk_freq, &hfclk.freq, sizeof(hfclk.freq))) {
-
-    pv->hfclk_freq = hfclk.freq;
-
-    for (uint8_t src = 0; src < PSOC4_CLOCK_SRC_COUNT; ++src) {
-      if (pv->notify_mask & (1 << src)) {
-        dev_cmu_src_notify(&pv->src[src], &hfclk);
-      }
-    }
-  }
+  psoc4_clock_hfclk_update(dev);
+  psoc4_clock_lfclk_update(dev);
 
   return 0;
 }
@@ -697,80 +737,83 @@ static DEV_CLOCK_SRC_SETUP(psoc4_clock_ep_setup)
 
 static DEV_USE(psoc4_clock_use)
 {
-  switch (op)
-    {
+  switch (op) {
 #ifdef CONFIG_DEVICE_SLEEP
-    case DEV_USE_SLEEP: {
-      struct device_s *dev = param;
-      struct psoc4_clock_private_s *pv = dev->drv_pv;
+  case DEV_USE_SLEEP: {
+    struct device_s *dev = param;
+    struct psoc4_clock_private_s *pv = dev->drv_pv;
 
-      if ((pv->source_use_mask & PSOC4_CLOCK_SRC_NOSLEEP_MASK) == 0
+    if ((pv->source_use_mask & PSOC4_CLOCK_SRC_NOSLEEP_MASK) == 0
 #if defined(CONFIG_DRIVER_PSOC4_CLOCK_EXTCLK)
-          && pv->hfclk_sel == SRSS_CLK_SELECT_DIRECT_SEL_IMO
+        && pv->hfclk_sel == SRSS_CLK_SELECT_DIRECT_SEL_IMO
 #endif
-          )
-        cpu_mem_write_32(ARMV7M_SCR_ADDR, ARMV7M_SCR_SLEEPDEEP);
+        )
+      cpu_mem_write_32(ARMV7M_SCR_ADDR, ARMV7M_SCR_SLEEPDEEP);
 
-      return 0;
-    }
+    return 0;
+  }
 #endif
 
-    default:
-      return dev_use_generic(param, op);
-    }
+  default:
+    return dev_use_generic(param, op);
+  }
 }
 
-static DEV_INIT(psoc4_clock_init);
-static DEV_CLEANUP(psoc4_clock_cleanup);
-
-DRIVER_DECLARE(psoc4_clock_drv, DRIVER_FLAGS_EARLY_INIT,
-               "PSOC4 Clock", psoc4_clock,
-               DRIVER_CMU_METHODS(psoc4_clock));
-
-DRIVER_REGISTER(psoc4_clock_drv);
+const struct driver_s psoc4_clock_drv;
 
 static DEV_INIT(psoc4_clock_init)
 {
-  struct psoc4_clock_private_s *pv;
+  struct psoc4_clock_private_s *pv = dev->drv_pv;
   const void *pclk_src = NULL; // Keep GCC happy
+  error_t err = -1;
 
   __unused__ uintptr_t addr = 0;
   assert(device_res_get_uint(dev, DEV_RES_MEM, 0, &addr, NULL) == 0 &&
          SRSS == addr);
   assert(device_res_get_uint(dev, DEV_RES_MEM, 1, &addr, NULL) == 0 &&
          PERI == addr);
-  assert(device_get_param_blob(dev, "pclk_src", 0, &pclk_src) == 0);
 
-  pv = mem_alloc(sizeof (*pv), (mem_scope_sys));
-  if (!pv)
-    return -ENOMEM;
+  if (!pv) {
+    err = device_get_param_blob(dev, "pclk_src", 0, &pclk_src);
+    if (err)
+      return err;
 
-  memset(pv, 0, sizeof (*pv));
-  dev->drv_pv = pv;
-  pv->pclk_src = pclk_src;
+    pv = mem_alloc(sizeof (*pv), (mem_scope_sys));
+    if (!pv)
+      return -ENOMEM;
 
-  // Default IMO is 24MHz, 2%
-  pv->imo_freq = 24;
-  psoc4_imo_mhz_set(pv->imo_freq);
-  pv->hfclk_freq = DEV_FREQ(pv->imo_freq * 1000000, 1, 2, 25);
-  pv->lfclk_freq = ILO_FREQ;
+    memset(pv, 0, sizeof (*pv));
+    dev->drv_pv = pv;
+    pv->pclk_src = pclk_src;
+
+    // Default IMO is 24MHz, 2%
+    pv->imo_freq = 24;
+    psoc4_imo_mhz_set(pv->imo_freq);
+    pv->hfclk_freq = DEV_FREQ(pv->imo_freq * 1000000, 1, 2, 25);
+    pv->lfclk_freq = ILO_FREQ;
+  }
+
+  if (!(dev->init_mask & (1 << 0))) {
+    for (uint_fast8_t i = 0; i < PSOC4_CLOCK_SRC_COUNT; ++i)
+      dev_clock_source_init(dev, &pv->src[i], &psoc4_clock_ep_setup);
+
+    for (uint_fast8_t i = 0; i < PSOC4_CLOCK_PCLK_COUNT; ++i)
+      cpu_mem_write_32(PERI + PERI_PCLK_CTL_ADDR(i), pv->pclk_src[i]);
+
+    psoc4_clock_config_read(dev);
+
+    err = dev_cmu_init(&psoc4_clock_drv, dev);
+    if (err)
+      goto err_mem;
+
+    device_init_enable_api(dev, 0);
+  }
   
-  for (uint_fast8_t i = 0; i < PSOC4_CLOCK_SRC_COUNT; ++i)
-    dev_clock_source_init(dev, &pv->src[i], &psoc4_clock_ep_setup);
-
-  for (uint_fast8_t i = 0; i < PSOC4_CLOCK_PCLK_COUNT; ++i)
-    cpu_mem_write_32(PERI + PERI_PCLK_CTL_ADDR(i), pv->pclk_src[i]);
-
-  psoc4_clock_config_read(dev);
-
-  if (dev_cmu_init(&psoc4_clock_drv, dev))
-    goto err_mem;
-
   return 0;
 
  err_mem:
   mem_free(pv);
-  return -1;
+  return err;
 }
 
 static DEV_CLEANUP(psoc4_clock_cleanup)
@@ -781,6 +824,12 @@ static DEV_CLEANUP(psoc4_clock_cleanup)
 
   return 0;
 }
+
+DRIVER_DECLARE(psoc4_clock_drv, DRIVER_FLAGS_NO_DEPEND | DRIVER_FLAGS_EARLY_INIT | DRIVER_FLAGS_RETRY_INIT,
+               "PSoC4 Clock", psoc4_clock,
+               DRIVER_CMU_METHODS(psoc4_clock));
+
+DRIVER_REGISTER(psoc4_clock_drv);
 
 #endif
 
