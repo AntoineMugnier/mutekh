@@ -408,6 +408,19 @@ struct dev_clock_notify_s
   struct dev_clock_sink_ep_s *sink;
   struct dev_freq_s freq;
 };
+
+/** @This is an equivalent to @ref dev_clock_sink_scaler when calling
+    from @ref dev_use_t function of a driver while in a @ref
+    #DEV_USE_CLOCK_NOTIFY. */
+config_depend_alwaysinline(CONFIG_DEVICE_CLOCK,
+error_t dev_clock_notify_scaler(struct dev_clock_notify_s *notify,
+                                const struct dev_freq_ratio_s *scale)
+{
+  struct dev_clock_src_ep_s *src = notify->sink->src;
+
+  return src->f_setup(src, DEV_CLOCK_SETUP_SCALER,
+                      (const union dev_clock_setup_u *)scale);
+});
 #endif
 
 /** @This initializes a clock source end-point node. */
