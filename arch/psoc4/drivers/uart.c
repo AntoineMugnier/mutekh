@@ -451,20 +451,16 @@ static DEV_CHAR_CANCEL(psoc4_uart_cancel)
   return err;
 }
 
-static void psoc4_uart_pclk_update(struct device_s *dev)
+static void psoc4_uart_ratio_compute(struct device_s *dev,
+                                     struct dev_freq_ratio_s *ratio)
 {
   struct psoc4_uart_pv_s *pv = dev->drv_pv;
-
-  struct dev_freq_ratio_s ratio = {
-    .num = pv->freq.denom * OVS,
-    .denom = pv->freq.num / pv->baudrate,
-  };
+  ratio->num = pv->freq.denom * OVS;
+  ratio->denom = pv->freq.num / pv->baudrate;
 
   dprintk("%s freq %d/%d baudrate %d ratio %d/%d\n",
          __FUNCTION__, (uint32_t)pv->freq.num, (uint32_t)pv->freq.denom,
-         pv->baudrate, (uint32_t)ratio.num, (uint32_t)ratio.denom);
-
-  dev_clock_sink_scaler(&pv->clock_sink, &ratio);
+         pv->baudrate, (uint32_t)ratio->num, (uint32_t)ratio->denom);
 }
 
 static error_t psoc4_uart_config(struct device_s *dev,
@@ -556,7 +552,9 @@ static error_t psoc4_uart_config(struct device_s *dev,
 
   pv->baudrate = cfg->baudrate;
 
-  psoc4_uart_pclk_update(dev);
+  struct dev_freq_ratio_s ratio;
+  psoc4_uart_ratio_compute(dev, &ratio);
+  dev_clock_sink_scaler(&pv->clock_sink, &ratio);
 
   old_ctrl = cpu_mem_read_32(scb + SCB_CTRL_ADDR);
 
@@ -638,12 +636,15 @@ static DEV_USE(psoc4_uart_char_use)
     struct dev_clock_sink_ep_s *sink = notify->sink;
     struct device_s *dev = sink->dev;
     struct psoc4_uart_pv_s *pv = dev->drv_pv;
+    struct dev_freq_ratio_s ratio;
 
     dprintk("UART clock notify %d/%d\n",
            (uint32_t)notify->freq.num, (uint32_t)notify->freq.denom);
 
     pv->freq = notify->freq;
-    psoc4_uart_pclk_update(dev);
+
+    psoc4_uart_ratio_compute(dev, &ratio);
+    dev_clock_notify_scaler(notify, &ratio);
 
     return 0;
   }
