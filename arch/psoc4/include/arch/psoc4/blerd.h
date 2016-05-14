@@ -901,31 +901,19 @@
 /** This will be used to monitor various outputs in the chip and inject them to on-chip ADC */
     #define BLERD_IM_DIAG_LOOPBACK_MONITOR           0x00000001
 /** Inj OTA ref. voltage @multiple */
-  #define BLERD_IM_IM_DIAG_BUMP(v)                 ((BLERD_IM_IM_DIAG_BUMP_##v) << 11)
-  #define BLERD_IM_IM_DIAG_BUMP_SET(x, v)          do { (x) = (((x) & ~0x1800) | ((BLERD_IM_IM_DIAG_BUMP_##v) << 11)); } while(0)
-  #define BLERD_IM_IM_DIAG_BUMP_SETVAL(x, v)       do { (x) = (((x) & ~0x1800) | ((v) << 11)); } while(0)
-  #define BLERD_IM_IM_DIAG_BUMP_GET(x)             (((x) >> 11) & 0x3)
+  #define BLERD_IM_IM_DIAG_BUMP_COUNT              2
+  #define BLERD_IM_IM_DIAG_BUMP(fidx, v)           ((BLERD_IM_IM_DIAG_BUMP_##v) << ((fidx) * 2 + 11))
+  #define BLERD_IM_IM_DIAG_BUMP_SET(fidx, x, v)    do { (x) = (((x) & ~(0x1800 << ((fidx) * 2))) | ((BLERD_IM_IM_DIAG_BUMP_##v) << ((fidx) * 2 + 11))); } while(0)
+  #define BLERD_IM_IM_DIAG_BUMP_SETVAL(fidx, x, v) do { (x) = (((x) & ~(0x1800 << ((fidx) * 2))) | ((v) << ((fidx) * 2 + 11))); } while(0)
+  #define BLERD_IM_IM_DIAG_BUMP_GET(fidx, x)       (((x) >> ((fidx) * 2 + 11)) & 0x3)
 /** 0.9V */
-    #define BLERD_IM_IM_DIAG_BUMP_0_9V               0x00000000
+  #define BLERD_IM_IM_DIAG_BUMP_0_9V               0x00000000
 /** 1.0V */
-    #define BLERD_IM_IM_DIAG_BUMP_1_0V               0x00000001
+  #define BLERD_IM_IM_DIAG_BUMP_1_0V               0x00000001
 /** 1.1V */
-    #define BLERD_IM_IM_DIAG_BUMP_1_1V               0x00000002
+  #define BLERD_IM_IM_DIAG_BUMP_1_1V               0x00000002
 /** 0.8V */
-    #define BLERD_IM_IM_DIAG_BUMP_0_8V               0x00000003
-/** Mon OTA ref. voltage @multiple */
-  #define BLERD_IM_IM_DIAG_BUMP(v)                 ((BLERD_IM_IM_DIAG_BUMP_##v) << 13)
-  #define BLERD_IM_IM_DIAG_BUMP_SET(x, v)          do { (x) = (((x) & ~0x6000) | ((BLERD_IM_IM_DIAG_BUMP_##v) << 13)); } while(0)
-  #define BLERD_IM_IM_DIAG_BUMP_SETVAL(x, v)       do { (x) = (((x) & ~0x6000) | ((v) << 13)); } while(0)
-  #define BLERD_IM_IM_DIAG_BUMP_GET(x)             (((x) >> 13) & 0x3)
-/** 0.9V */
-    #define BLERD_IM_IM_DIAG_BUMP_0_9V               0x00000000
-/** 1.0V */
-    #define BLERD_IM_IM_DIAG_BUMP_1_0V               0x00000001
-/** 1.1V */
-    #define BLERD_IM_IM_DIAG_BUMP_1_1V               0x00000002
-/** 0.8V */
-    #define BLERD_IM_IM_DIAG_BUMP_0_8V               0x00000003
+  #define BLERD_IM_IM_DIAG_BUMP_0_8V               0x00000003
 
 #define BLERD_LDO_BYPASS_ADDR                        0x00000068
 #define BLERD_LDO_BYPASS_MASK                        0x0000000f
@@ -1056,47 +1044,13 @@
 /** 5uA */
     #define BLERD_BB_BUMP1_V2I_REG_ERROR_5U          0x00000001
 /** LF LDO Output @multiple */
-  #define BLERD_BB_BUMP1_LFLDO(v)                  ((BLERD_BB_BUMP1_LFLDO_##v) << 5)
-  #define BLERD_BB_BUMP1_LFLDO_SET(x, v)           do { (x) = (((x) & ~0xe0) | ((BLERD_BB_BUMP1_LFLDO_##v) << 5)); } while(0)
-  #define BLERD_BB_BUMP1_LFLDO_SETVAL(x, v)        do { (x) = (((x) & ~0xe0) | ((v) << 5)); } while(0)
+  #define BLERD_BB_BUMP1_LFLDO(v)                  ((v) << 5)
+  #define BLERD_BB_BUMP1_LFLDO_SET(x, v)           do { (x) = (((x) & ~0xe0) | ((v) << 5)); } while(0)
   #define BLERD_BB_BUMP1_LFLDO_GET(x)              (((x) >> 5) & 0x7)
-/** 1.800V */
-    #define BLERD_BB_BUMP1_LFLDO_1_800V              0x00000000
-/** 1.846V */
-    #define BLERD_BB_BUMP1_LFLDO_1_846V              0x00000001
-/** 1.894V */
-    #define BLERD_BB_BUMP1_LFLDO_1_894V              0x00000002
-/** 1.946V */
-    #define BLERD_BB_BUMP1_LFLDO_1_946V              0x00000003
-/** 1.649V */
-    #define BLERD_BB_BUMP1_LFLDO_1_649V              0x00000004
-/** 1.649V */
-    #define BLERD_BB_BUMP1_LFLDO_1_649V              0x00000005
-/** 1.701V */
-    #define BLERD_BB_BUMP1_LFLDO_1_701V              0x00000006
-/** 1.756V */
-    #define BLERD_BB_BUMP1_LFLDO_1_756V              0x00000007
 /** LS LDO Output @multiple */
-  #define BLERD_BB_BUMP1_LSLDO(v)                  ((BLERD_BB_BUMP1_LSLDO_##v) << 8)
-  #define BLERD_BB_BUMP1_LSLDO_SET(x, v)           do { (x) = (((x) & ~0x700) | ((BLERD_BB_BUMP1_LSLDO_##v) << 8)); } while(0)
-  #define BLERD_BB_BUMP1_LSLDO_SETVAL(x, v)        do { (x) = (((x) & ~0x700) | ((v) << 8)); } while(0)
+  #define BLERD_BB_BUMP1_LSLDO(v)                  ((v) << 8)
+  #define BLERD_BB_BUMP1_LSLDO_SET(x, v)           do { (x) = (((x) & ~0x700) | ((v) << 8)); } while(0)
   #define BLERD_BB_BUMP1_LSLDO_GET(x)              (((x) >> 8) & 0x7)
-/** 1.708V */
-    #define BLERD_BB_BUMP1_LSLDO_1_708V              0x00000000
-/** 1.747V */
-    #define BLERD_BB_BUMP1_LSLDO_1_747V              0x00000001
-/** 1.802V */
-    #define BLERD_BB_BUMP1_LSLDO_1_802V              0x00000002
-/** 1.849V */
-    #define BLERD_BB_BUMP1_LSLDO_1_849V              0x00000003
-/** 1.904V */
-    #define BLERD_BB_BUMP1_LSLDO_1_904V              0x00000004
-/** 1.552V */
-    #define BLERD_BB_BUMP1_LSLDO_1_552V              0x00000005
-/** 1.591V */
-    #define BLERD_BB_BUMP1_LSLDO_1_591V              0x00000006
-/** 1.650V */
-    #define BLERD_BB_BUMP1_LSLDO_1_650V              0x00000007
 /** 1: force BG start up @multiple */
   #define BLERD_BB_BUMP1_FORCE_BGSTARTUP           0x4000
 /** 1: Force Power down for refcore @multiple */
@@ -1375,27 +1329,10 @@
 
 #define BLERD_SY_BUMP1_ADDR                          0x00000080
 #define BLERD_SY_BUMP1_MASK                          0x0000ffff
-/** Bump bits for SY VCO block. Rt VCO (2 bits) - sy_bump1_vco [3:2] @multiple */
-  #define BLERD_SY_BUMP1_VCO(v)                    ((BLERD_SY_BUMP1_VCO_##v) << 0)
-  #define BLERD_SY_BUMP1_VCO_SET(x, v)             do { (x) = (((x) & ~0xf) | ((BLERD_SY_BUMP1_VCO_##v) << 0)); } while(0)
-  #define BLERD_SY_BUMP1_VCO_SETVAL(x, v)          do { (x) = (((x) & ~0xf) | ((v) << 0)); } while(0)
+/** Bump bits for SY VCO block. @multiple */
+  #define BLERD_SY_BUMP1_VCO(v)                    ((v) << 0)
+  #define BLERD_SY_BUMP1_VCO_SET(x, v)             do { (x) = (((x) & ~0xf) | ((v) << 0)); } while(0)
   #define BLERD_SY_BUMP1_VCO_GET(x)                (((x) >> 0) & 0xf)
-/** ~ 50 Ohms */
-    #define BLERD_SY_BUMP1_VCO_50_OHMS               0x00000000
-/** ~ 58 Ohms */
-    #define BLERD_SY_BUMP1_VCO_58_OHMS               0x00000000
-/** ~ 30 Ohms */
-    #define BLERD_SY_BUMP1_VCO_30_OHMS               0x00000001
-/** ~ 39 Ohms */
-    #define BLERD_SY_BUMP1_VCO_39_OHMS               0x00000001
-/** ~ 22 Ohms */
-    #define BLERD_SY_BUMP1_VCO_22_OHMS               0x00000002
-/** ~ 22 Ohms */
-    #define BLERD_SY_BUMP1_VCO_22_OHMS               0x00000002
-/** ~ 16 Ohms and Rb VCO (2 bits) - sy_bump1_vco[1:0] */
-    #define BLERD_SY_BUMP1_VCO_16_OHMS               0x00000003
-/** ~ 16 Ohms */
-    #define BLERD_SY_BUMP1_VCO_16_OHMS               0x00000003
   #define BLERD_SY_BUMP1_LOFB_POWERSAVE(v)         ((BLERD_SY_BUMP1_LOFB_POWERSAVE_##v) << 4)
   #define BLERD_SY_BUMP1_LOFB_POWERSAVE_SET(x, v)  do { (x) = (((x) & ~0x10) | ((BLERD_SY_BUMP1_LOFB_POWERSAVE_##v) << 4)); } while(0)
   #define BLERD_SY_BUMP1_LOFB_POWERSAVE_SETVAL(x, v) do { (x) = (((x) & ~0x10) | ((v) << 4)); } while(0)
@@ -1404,80 +1341,29 @@
     #define BLERD_SY_BUMP1_LOFB_POWERSAVE_DISABLE_POWERSAVE_FOR_LOFB_BUFFER 0x00000000
 /** enable powersave for LOFB buffer */
     #define BLERD_SY_BUMP1_LOFB_POWERSAVE_ENABLE_POWERSAVE_FOR_LOFB_BUFFER 0x00000001
-/** bump bits for clkbias in lopath bump clk bias pM clk bias nM @multiple */
-  #define BLERD_SY_BUMP1_IBIAS_LOPATH(v)           ((BLERD_SY_BUMP1_IBIAS_LOPATH_##v) << 5)
-  #define BLERD_SY_BUMP1_IBIAS_LOPATH_SET(x, v)    do { (x) = (((x) & ~0x60) | ((BLERD_SY_BUMP1_IBIAS_LOPATH_##v) << 5)); } while(0)
-  #define BLERD_SY_BUMP1_IBIAS_LOPATH_SETVAL(x, v) do { (x) = (((x) & ~0x60) | ((v) << 5)); } while(0)
+/** bump bits for clkbias in lopath @multiple */
+  #define BLERD_SY_BUMP1_IBIAS_LOPATH(v)           ((v) << 5)
+  #define BLERD_SY_BUMP1_IBIAS_LOPATH_SET(x, v)    do { (x) = (((x) & ~0x60) | ((v) << 5)); } while(0)
   #define BLERD_SY_BUMP1_IBIAS_LOPATH_GET(x)       (((x) >> 5) & 0x3)
-/** 0        vddo-vgsp              vgsn */
-    #define BLERD_SY_BUMP1_IBIAS_LOPATH_0_VDDO_VGSP_VGSN 0x00000000
-/** 1        vddlo-vgsp-100m    vgsn+100m */
-    #define BLERD_SY_BUMP1_IBIAS_LOPATH_1_VDDLO_VGSP_100M_VGSN_100M 0x00000000
-/** 0        vddlo-vgsp-200m    vgsn+200m */
-    #define BLERD_SY_BUMP1_IBIAS_LOPATH_0_VDDLO_VGSP_200M_VGSN_200M 0x00000001
-/** 1        vddlo-vgsp-400m    vgsn+400m */
-    #define BLERD_SY_BUMP1_IBIAS_LOPATH_1_VDDLO_VGSP_400M_VGSN_400M 0x00000001
-  #define BLERD_SY_BUMP1_LDOLO_FORCE_STARTUP(v)    ((BLERD_SY_BUMP1_LDOLO_FORCE_STARTUP_##v) << 7)
-  #define BLERD_SY_BUMP1_LDOLO_FORCE_STARTUP_SET(x, v) do { (x) = (((x) & ~0x80) | ((BLERD_SY_BUMP1_LDOLO_FORCE_STARTUP_##v) << 7)); } while(0)
-  #define BLERD_SY_BUMP1_LDOLO_FORCE_STARTUP_SETVAL(x, v) do { (x) = (((x) & ~0x80) | ((v) << 7)); } while(0)
-  #define BLERD_SY_BUMP1_LDOLO_FORCE_STARTUP_GET(x) (((x) >> 7) & 0x1)
-/** no force start-up */
-    #define BLERD_SY_BUMP1_LDOLO_FORCE_STARTUP_NO_FORCE_START_UP 0x00000000
-/** force start-up of the VT/R circuit in VCOLOPATH LCO */
-    #define BLERD_SY_BUMP1_LDOLO_FORCE_STARTUP_FORCE_START_UP_OF_THE_VT_R_CIRCUIT_IN_VCOLOPATH_LCO 0x00000001
-/** Bump bits for LO path bulk bias. Goes to DIVN/FCAL/LOPATH for bumps. 2 bits
-   for pBulk [3:2] and 2 bits for nBulk[1:0]. bump pbulk @multiple */
-  #define BLERD_SY_BUMP1_LOPATH(v)                 ((BLERD_SY_BUMP1_LOPATH_##v) << 8)
-  #define BLERD_SY_BUMP1_LOPATH_SET(x, v)          do { (x) = (((x) & ~0xf00) | ((BLERD_SY_BUMP1_LOPATH_##v) << 8)); } while(0)
-  #define BLERD_SY_BUMP1_LOPATH_SETVAL(x, v)       do { (x) = (((x) & ~0xf00) | ((v) << 8)); } while(0)
+/** force start-up of the VT/R circuit in VCOLOPATH LCO @multiple */
+  #define BLERD_SY_BUMP1_LDOLO_FORCE_STARTUP       0x0080
+/** Bump bits for LO path bulk bias. Goes to DIVN/FCAL/LOPATH for bumps @multiple
+   */
+  #define BLERD_SY_BUMP1_LOPATH(v)                 ((v) << 8)
+  #define BLERD_SY_BUMP1_LOPATH_SET(x, v)          do { (x) = (((x) & ~0xf00) | ((v) << 8)); } while(0)
   #define BLERD_SY_BUMP1_LOPATH_GET(x)             (((x) >> 8) & 0xf)
-/** vddx-380mV */
-    #define BLERD_SY_BUMP1_LOPATH_VDDX_380MV         0x00000000
-/** vddx-320mV */
-    #define BLERD_SY_BUMP1_LOPATH_VDDX_320MV         0x00000001
-/** vddx-440mV */
-    #define BLERD_SY_BUMP1_LOPATH_VDDX_440MV         0x00000002
-/** vddx */
-    #define BLERD_SY_BUMP1_LOPATH_VDDX               0x00000003
 /** Bump for PD CP and LPF blocks.[2:0] is used to get range of -20%to +15% in 5%
-   steps. ICP_BUMP[2:0] ICP @multiple */
-  #define BLERD_SY_BUMP1_PDCPLPF(v)                ((BLERD_SY_BUMP1_PDCPLPF_##v) << 12)
-  #define BLERD_SY_BUMP1_PDCPLPF_SET(x, v)         do { (x) = (((x) & ~0xf000) | ((BLERD_SY_BUMP1_PDCPLPF_##v) << 12)); } while(0)
-  #define BLERD_SY_BUMP1_PDCPLPF_SETVAL(x, v)      do { (x) = (((x) & ~0xf000) | ((v) << 12)); } while(0)
+   steps @multiple */
+  #define BLERD_SY_BUMP1_PDCPLPF(v)                ((v) << 12)
+  #define BLERD_SY_BUMP1_PDCPLPF_SET(x, v)         do { (x) = (((x) & ~0xf000) | ((v) << 12)); } while(0)
   #define BLERD_SY_BUMP1_PDCPLPF_GET(x)            (((x) >> 12) & 0xf)
-/** 00% */
-    #define BLERD_SY_BUMP1_PDCPLPF_00                0x00000000
-/** 05% */
-    #define BLERD_SY_BUMP1_PDCPLPF_05                0x00000001
-/** 10% */
-    #define BLERD_SY_BUMP1_PDCPLPF_10                0x00000002
-/** 15%. */
-    #define BLERD_SY_BUMP1_PDCPLPF_15                0x00000003
-/** -20% */
-    #define BLERD_SY_BUMP1_PDCPLPF_20                0x00000004
-/** -15% */
-    #define BLERD_SY_BUMP1_PDCPLPF_15                0x00000005
-/** -10% */
-    #define BLERD_SY_BUMP1_PDCPLPF_10                0x00000006
-/** -05% */
-    #define BLERD_SY_BUMP1_PDCPLPF_05                0x00000007
 
 #define BLERD_SY_BUMP2_ADDR                          0x00000084
 #define BLERD_SY_BUMP2_MASK                          0x0000ffff
-/** VCTRL bias voltage is selected based on these bits. Code[1:0] fcal_bias
-   @multiple */
-  #define BLERD_SY_BUMP2_FCAL_BIAS_SEL(v)          ((BLERD_SY_BUMP2_FCAL_BIAS_SEL_##v) << 0)
-  #define BLERD_SY_BUMP2_FCAL_BIAS_SEL_SET(x, v)   do { (x) = (((x) & ~0x3) | ((BLERD_SY_BUMP2_FCAL_BIAS_SEL_##v) << 0)); } while(0)
-  #define BLERD_SY_BUMP2_FCAL_BIAS_SEL_SETVAL(x, v) do { (x) = (((x) & ~0x3) | ((v) << 0)); } while(0)
+/** VCTRL bias voltage is selected based on these bits. @multiple */
+  #define BLERD_SY_BUMP2_FCAL_BIAS_SEL(v)          ((v) << 0)
+  #define BLERD_SY_BUMP2_FCAL_BIAS_SEL_SET(x, v)   do { (x) = (((x) & ~0x3) | ((v) << 0)); } while(0)
   #define BLERD_SY_BUMP2_FCAL_BIAS_SEL_GET(x)      (((x) >> 0) & 0x3)
-/** Vddvco/2 */
-    #define BLERD_SY_BUMP2_FCAL_BIAS_SEL_VDDVCO_2    0x00000000
-/** Vddvco/2 +  5.6%(+100mV) */
-    #define BLERD_SY_BUMP2_FCAL_BIAS_SEL_VDDVCO_2_5  0x00000001
-/** Vddvco/2 -  2.8%(-050mV) */
-    #define BLERD_SY_BUMP2_FCAL_BIAS_SEL_VDDVCO_2_2  0x00000002
-/** Vddvco/2 -  5.6%(-100mV) */
-    #define BLERD_SY_BUMP2_FCAL_BIAS_SEL_VDDVCO_2_5  0x00000003
 /** ACAP bias voltage is selected based on these bits. Code[1:0] acapbias
    @multiple */
   #define BLERD_SY_BUMP2_ACAP_BIAS_SEL(v)          ((BLERD_SY_BUMP2_ACAP_BIAS_SEL_##v) << 2)
@@ -1499,20 +1385,10 @@
   #define BLERD_SY_BUMP2_ICP_XFACTOR(v)            ((v) << 4)
   #define BLERD_SY_BUMP2_ICP_XFACTOR_SET(x, v)     do { (x) = (((x) & ~0x30) | ((v) << 4)); } while(0)
   #define BLERD_SY_BUMP2_ICP_XFACTOR_GET(x)        (((x) >> 4) & 0x3)
-/** Bump bits to set the offset pulse width in RX mode Code[1:0] delay @multiple
-   */
-  #define BLERD_SY_BUMP2_ICP_OFFSET(v)             ((BLERD_SY_BUMP2_ICP_OFFSET_##v) << 6)
-  #define BLERD_SY_BUMP2_ICP_OFFSET_SET(x, v)      do { (x) = (((x) & ~0xc0) | ((BLERD_SY_BUMP2_ICP_OFFSET_##v) << 6)); } while(0)
-  #define BLERD_SY_BUMP2_ICP_OFFSET_SETVAL(x, v)   do { (x) = (((x) & ~0xc0) | ((v) << 6)); } while(0)
+/** Bump bits to set the offset pulse width in RX mode @multiple */
+  #define BLERD_SY_BUMP2_ICP_OFFSET(v)             ((v) << 6)
+  #define BLERD_SY_BUMP2_ICP_OFFSET_SET(x, v)      do { (x) = (((x) & ~0xc0) | ((v) << 6)); } while(0)
   #define BLERD_SY_BUMP2_ICP_OFFSET_GET(x)         (((x) >> 6) & 0x3)
-/** 2.45n */
-    #define BLERD_SY_BUMP2_ICP_OFFSET_2              0x00000000
-/** 1.75ns */
-    #define BLERD_SY_BUMP2_ICP_OFFSET_1              0x00000001
-/** 1.3ns */
-    #define BLERD_SY_BUMP2_ICP_OFFSET_1              0x00000002
-/** 25ps */
-    #define BLERD_SY_BUMP2_ICP_OFFSET_25PS           0x00000003
 /** Control the NC_clock_mux. @multiple */
   #define BLERD_SY_BUMP2_CLKNC_MODE(v)             ((BLERD_SY_BUMP2_CLKNC_MODE_##v) << 8)
   #define BLERD_SY_BUMP2_CLKNC_MODE_SET(x, v)      do { (x) = (((x) & ~0x100) | ((BLERD_SY_BUMP2_CLKNC_MODE_##v) << 8)); } while(0)

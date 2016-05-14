@@ -915,11 +915,11 @@
 /** Reserved. */
     #define BLELL_DATA_MEM_DESCRIPTOR_LLID_RESERVED  0x00000000
 /** Continuation fragment of an L2CAP message or an Empty PDU. */
-    #define BLELL_DATA_MEM_DESCRIPTOR_LLID_LL_DATA_PDU 0x00000001
+    #define BLELL_DATA_MEM_DESCRIPTOR_LLID_CONT      0x00000001
 /** Start of an L@CAP message or a complete L2CAP message with no fragmentation. */
-    #define BLELL_DATA_MEM_DESCRIPTOR_LLID_LL_DATA_PDU 0x00000002
+    #define BLELL_DATA_MEM_DESCRIPTOR_LLID_START     0x00000002
 /** LL Control PDU. */
-    #define BLELL_DATA_MEM_DESCRIPTOR_LLID_LL_CONTROL_PDU 0x00000003
+    #define BLELL_DATA_MEM_DESCRIPTOR_LLID_CONTROL   0x00000003
 /** This field indicates the length of the data packet. Range 0x0 to 0xF.
    @multiple */
   #define BLELL_DATA_MEM_DESCRIPTOR_DATA_LENGTH(v) ((v) << 2)

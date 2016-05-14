@@ -143,6 +143,12 @@ enum psoc4_clock_e {
   // Also configurable as mux between ILO and WCO
   PSOC4_CLOCK_SRC_LFCLK,
 #define PSOC4_CLOCK_SRC_COUNT (PSOC4_CLOCK_SRC_LFCLK + 1)
+#if defined(CONFIG_DRIVER_PSOC4_BLE)
+  // Sink endpoints from BLE
+  PSOC4_CLOCK_SINK_ECO,
+  PSOC4_CLOCK_SINK_WCO,
+#define PSOC4_CLOCK_SINK_COUNT (PSOC4_CLOCK_SINK_WCO - PSOC4_CLOCK_SINK_ECO + 1)
+#endif
   // Oscillators
   // Configurable frequency and accuracy
   PSOC4_CLOCK_OSC_IMO,
@@ -152,6 +158,18 @@ enum psoc4_clock_e {
   PSOC4_CLOCK_OSC_ILO,
 
   PSOC4_CLOCK_NODE_COUNT,
+};
+
+enum psoc4_ble_clock_e {
+  // Can also be used as divisor (2^-[0-3])
+  PSOC4_BLE_CLK_SRC_ECO,
+  // Is also an oscillator node, for accuracy setting
+  PSOC4_BLE_CLK_SRC_WCO,
+#define PSOC4_BLE_CLK_SRC_COUNT 2
+  PSOC4_BLE_CLK_OSC_ECO,
+  PSOC4_BLE_CLK_SINK_LFCLK,
+#define PSOC4_BLE_CLK_SINK_COUNT 1
+  PSOC4_BLE_CLK_NODE_COUNT,
 };
 
 #define PSOC4_CLOCK_IMO_SS      PSOC4_CLOCK_SRC_PER_0
