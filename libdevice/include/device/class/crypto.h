@@ -191,6 +191,17 @@ enum dev_crypto_mode_e
       DEV_CRYPTO_INVERSE flag. */
   DEV_CRYPTO_MODE_HMAC,
 
+  /** Cipher based authentication code. When this mode is used, the @tt in, @tt
+      len, @tt iv_ctr and @tt auth fields are used. The @ref
+      DEV_CRYPTO_FINALIZE operation flag is relevant. The @tt iv_ctr
+      field must always be valid and will be updated when not @tt
+      DEV_CRYPTO_FINALIZE. The @tt auth field must be valid when @tt
+      DEV_CRYPTO_FINALIZE. The authentication tag is either stored in
+      the @tt auth buffer or checked against it depending on the @ref
+      DEV_CRYPTO_INVERSE flag. The data length may not be a multiple of a block
+      size. The iv must be equal to a block size. */
+  DEV_CRYPTO_MODE_CMAC,
+
   /** Random data generator mode. When the @ref DEV_CRYPTO_INVERSE
       operation flag is set, the random generator is seeded with data
       from the buffer specified by the @tt ad and @tt ad_len fields of

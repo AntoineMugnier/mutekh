@@ -100,6 +100,8 @@ void soft_aes_ctr(struct soft_aes_context_s *actx,
                   struct dev_crypto_rq_s *rq);
 void soft_aes_ocb(struct soft_aes_context_s *actx,
                   struct dev_crypto_rq_s *rq, bool_t ctx_ok);
+void soft_aes_cmac(struct soft_aes_context_s *actx,
+                   struct dev_crypto_rq_s *rq);
 
 #endif
 

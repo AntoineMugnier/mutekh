@@ -39,6 +39,9 @@ static DEVCRYPTO_INFO(soft_aes_info)
 #ifdef CONFIG_DRIVER_CRYPTO_SOFT_AES_CBC
     | (1 << DEV_CRYPTO_MODE_CBC)
 #endif
+#ifdef CONFIG_DRIVER_CRYPTO_SOFT_AES_CMAC
+    | (1 << DEV_CRYPTO_MODE_CMAC)
+#endif
 #ifdef CONFIG_DRIVER_CRYPTO_SOFT_AES_CTR
     | (1 << DEV_CRYPTO_MODE_CTR)
 #endif
@@ -122,6 +125,11 @@ static DEV_REQUEST_DELAYED_FUNC(soft_aes_process)
 #ifdef CONFIG_DRIVER_CRYPTO_SOFT_AES_CBC
     case DEV_CRYPTO_MODE_CBC:
       soft_aes_cbc(actx, rq);
+      break;
+#endif
+#ifdef CONFIG_DRIVER_CRYPTO_SOFT_AES_CMAC
+    case DEV_CRYPTO_MODE_CMAC:
+      soft_aes_cmac(actx, rq);
       break;
 #endif
 #ifdef CONFIG_DRIVER_CRYPTO_SOFT_AES_CTR
