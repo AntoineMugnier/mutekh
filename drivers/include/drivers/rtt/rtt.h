@@ -66,6 +66,14 @@ uint32_t rtt_channel_write(
   const uint8_t *buf, uint32_t len);
 
 /**
+   @this ensures all data written to channel is consumed by peer.
+
+   @param chan Channel
+ */
+void rtt_channel_flush(
+  struct rtt_channel_s *chan);
+
+/**
    @this initializes a channel
 
    @param id Channel ID

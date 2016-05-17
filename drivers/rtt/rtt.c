@@ -99,6 +99,16 @@ uint32_t rtt_channel_write(
   return copied;
 }
 
+void rtt_channel_flush(struct rtt_channel_s *chan)
+{
+  uint32_t rptr, wptr;
+
+  do {
+    wptr = cpu_mem_read_32((uintptr_t)&chan->write_ptr);
+    rptr = cpu_mem_read_32((uintptr_t)&chan->read_ptr);
+  } while (rptr != wptr);
+}
+
 uint32_t rtt_channel_read(
   struct rtt_channel_s *chan,
   uint8_t *buf, uint32_t len)
