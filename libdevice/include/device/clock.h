@@ -219,13 +219,13 @@ enum dev_clock_setup_op_e
 
       The clock provider driver must perform the gate changes then
       update the source end-point @tt flags by calling the @ref
-      dev_cmu_src_update function.
+      dev_cmu_src_update_sync function.
 
       If an enabling operation can be completed immediately, the
       function returns 0. When the requested change takes time, the
       function must return @tt -EAGAIN, unless the @ref
       DEV_CLOCK_EP_SINK_SYNC flag is used. When doing so, the @ref
-      dev_cmu_src_ready function must later be called so that drivers
+      dev_cmu_src_update_async function must later be called so that drivers
       associated to sink end-points are notified that enabling is
       effective. Disabling operations can be silently delayed and do
       not require notification.

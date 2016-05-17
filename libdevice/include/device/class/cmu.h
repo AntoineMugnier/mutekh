@@ -302,27 +302,28 @@ config_depend(CONFIG_DEVICE_CLOCK_VARFREQ)
 void dev_cmu_src_notify(struct dev_clock_src_ep_s *src,
                         struct dev_clock_notify_s *param);
 
-/** @internal This helper updates the gates state of a source
-    end-point. @This is called by the clock provider device driver
-    when the state of the requested gates has been updated. */
+/** This helper updates the gates state of a source end-point when
+    enabled synchronously from endpoint setup handler. @This is called
+    by the clock provider device driver when the state of the
+    requested gates has been updated. */
 config_depend_alwaysinline(CONFIG_DEVICE_CLOCK,
-void dev_cmu_src_update(struct dev_clock_src_ep_s *src,
-                        enum dev_clock_ep_flags_e gates),
+void dev_cmu_src_update_sync(struct dev_clock_src_ep_s *src,
+                             enum dev_clock_ep_flags_e gates),
 {
   enum dev_clock_ep_flags_e old = src->flags;
   src->flags = gates | (old & ~(DEV_CLOCK_EP_POWER | DEV_CLOCK_EP_CLOCK));
 });
 
-/** @internal @This function is called by the clock provider device
-    driver when the requested gates has been enabled.
+/** @This function is called by the clock provider device driver when
+    the requested gates has been enabled asynchronously.
 
     This function will propagate the change to all connected sink
     end-points by calling the @ref dev_use_t function of the
     associated device driver with the @ref DEV_USE_CLOCK_GATES
     operation. */
 config_depend(CONFIG_DEVICE_CLOCK_GATING)
-void dev_cmu_src_ready(struct dev_clock_src_ep_s *src,
-                       enum dev_clock_ep_flags_e gates);
+void dev_cmu_src_update_async(struct dev_clock_src_ep_s *src,
+                              enum dev_clock_ep_flags_e gates);
 
 /** @This is a wrapper for the @ref dev_cmu_node_info_t function
     which takes care of locking the device. */

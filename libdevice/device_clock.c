@@ -65,6 +65,12 @@ error_t dev_clock_sink_gate(struct dev_clock_sink_ep_s *sink,
           err = src->f_setup(src, DEV_CLOCK_SETUP_GATES, &setup);
         }
     }
+  else
+    {
+      enum dev_clock_ep_flags_e src_gates = src->flags & DEV_CLOCK_EP_ANY;
+      if (!((src_gates ^ gates) & DEV_CLOCK_EP_ANY))
+        err = 0;
+    }
 
   LOCK_RELEASE_IRQ(&src->dev->lock);
 
@@ -87,11 +93,14 @@ error_t dev_clock_sink_scaler(struct dev_clock_sink_ep_s *sink,
   return err;
 }
 
-void dev_cmu_src_ready(struct dev_clock_src_ep_s *src,
-                         enum dev_clock_ep_flags_e gates)
+void dev_cmu_src_update_async(struct dev_clock_src_ep_s *src,
+                              enum dev_clock_ep_flags_e gates)
 {
   enum dev_clock_ep_flags_e old = src->flags;
   struct dev_clock_sink_ep_s *sink = src->sink_head;
+
+  gates &= DEV_CLOCK_EP_ANY;
+  src->flags = gates | (old & ~DEV_CLOCK_EP_ANY);
 
 # ifdef CONFIG_DEVICE_CLOCK_SHARING
   while (1)
@@ -104,9 +113,7 @@ void dev_cmu_src_ready(struct dev_clock_src_ep_s *src,
       const struct driver_s *drv = dev->drv;
 
       LOCK_SPIN_IRQ(&dev->lock);
-      enum dev_clock_ep_flags_e flags = sink->flags;
-      /* check that all new requirements are satisfied */
-      if (((gates & flags) == flags) && ((old & flags) != flags))
+      if ((sink->flags & DEV_CLOCK_EP_ANY) == gates)
         drv->f_use(sink, DEV_USE_CLOCK_GATES);
       LOCK_RELEASE_IRQ(&dev->lock);
 

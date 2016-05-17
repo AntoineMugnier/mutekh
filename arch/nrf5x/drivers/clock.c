@@ -420,9 +420,9 @@ static void nrf5x_clock_notify(struct nrf5x_clock_context_s *pv)
 
   for (uint_fast8_t i = 0; i < NRF_CLOCK_EP_COUNT; ++i) {
     if (changed & (1 << i))
-      dev_cmu_src_ready(pv->src + i, DEV_CLOCK_EP_CLOCK);
+      dev_cmu_src_update_async(pv->src + i, DEV_CLOCK_EP_CLOCK);
 
-    dev_cmu_src_update(pv->src + i,
+    dev_cmu_src_update_sync(pv->src + i,
                        (pv->running_sources & (1 << i)) ? DEV_CLOCK_EP_CLOCK : 0);
   }
 
@@ -686,7 +686,7 @@ static DEV_CLOCK_SRC_SETUP(nrf5x_clock_ep_setup)
   case DEV_CLOCK_SETUP_GATES: {
     uint8_t mask = 1 << id;
 
-    dev_cmu_src_update(src, param->flags);
+    dev_cmu_src_update_sync(src, param->flags);
 
     if (param->flags & DEV_CLOCK_EP_CLOCK)
       pv->requested_sources |= mask;

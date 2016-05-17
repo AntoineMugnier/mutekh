@@ -1367,7 +1367,7 @@ static DEV_CLOCK_SRC_SETUP(efm32_recmu_ep_setup)
 #endif
         }
 
-      dev_cmu_src_update(src, param->flags);
+      dev_cmu_src_update_sync(src, param->flags);
       return 0;
 
     case DEV_CLOCK_SETUP_LINK:
