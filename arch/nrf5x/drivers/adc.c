@@ -153,7 +153,6 @@ static void nrf5x_adc_request_start(struct device_s *dev)
   nrf5x_adc_sample_next(dev);
 }
 
-
 static DEV_VALIO_REQUEST(nrf5x_adc_request)
 {
   struct device_s *dev = accessor->dev;
@@ -190,8 +189,25 @@ static DEV_VALIO_REQUEST(nrf5x_adc_request)
   LOCK_RELEASE_IRQ(&dev->lock);
 }
 
+static DEV_VALIO_CANCEL(nrf5x_adc_cancel)
+{
+  struct device_s *dev = accessor->dev;
+  struct nrf5x_adc_private_s *pv = dev->drv_pv;
+  error_t err = -ENOENT;
+
+  LOCK_SPIN_IRQ(&dev->lock);
+
+  if (req->base.drvdata == dev) {
+    err = 0;
+    dev_request_queue_remove(&pv->queue, &req->base);
+  }
+
+  LOCK_RELEASE_IRQ(&dev->lock);
+
+  return err;
+}
+
 #define nrf5x_adc_use dev_use_generic
-#define nrf5x_adc_cancel dev_driver_notsup_fcn
 
 static DEV_INIT(nrf5x_adc_init)
 {
