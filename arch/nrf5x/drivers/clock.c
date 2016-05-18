@@ -734,6 +734,8 @@ static DEV_CMU_CONFIG_OSC(nrf5x_clock_config_osc)
   return -ENOENT;
 }
 
+const struct driver_s nrf5x_clock_drv;
+
 static DEV_INIT(nrf5x_clock_init)
 {
   struct nrf5x_clock_context_s *pv;
