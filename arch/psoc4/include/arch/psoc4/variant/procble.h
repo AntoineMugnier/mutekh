@@ -137,6 +137,7 @@ enum psoc4_clock_e {
   PSOC4_CLOCK_SRC_SYSCLK,
   // Also configurable as mux between IMO, EXTCLK and ECO
   PSOC4_CLOCK_SRC_HFCLK,
+#define PSOC4_CLOCK_HFBASED_LAST PSOC4_CLOCK_SRC_HFCLK
   // Mask of all HFCLK-based sources
 #define PSOC4_CLOCK_SRC_HF_MASK ((1 << (PSOC4_CLOCK_SRC_HFCLK + 1)) - 1)
 #define PSOC4_CLOCK_SRC_NOSLEEP_MASK (PSOC4_CLOCK_SRC_HF_MASK & ~(1 << PSOC4_CLOCK_SRC_SYSCLK))

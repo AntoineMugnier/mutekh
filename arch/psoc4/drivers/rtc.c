@@ -50,6 +50,8 @@ DRIVER_PV(struct psoc4_rtc_context_s
   dev_timer_value_t base;
   uint32_t last_set_ts;
 
+  bool_t clock_active;
+
   struct dev_clock_sink_ep_s clock_sink;
 });
 
@@ -95,12 +97,10 @@ static bool_t psoc4_rtc_enable_is_acked(void)
       && (!!(control & SRSS_WDT_CONTROL_ENABLED(2)) == !!(control & SRSS_WDT_CONTROL_ENABLE(2)));
 }
 
-static void psoc4_rtc_start(struct psoc4_rtc_context_s *pv)
+static void psoc4_rtc_setup(struct psoc4_rtc_context_s *pv)
 {
   uint32_t config;
   uint32_t control;
-
-  dev_clock_sink_gate(&pv->clock_sink, DEV_CLOCK_EP_CLOCK);
 
   while (!psoc4_rtc_enable_is_acked())
     ;
@@ -123,6 +123,18 @@ static void psoc4_rtc_start(struct psoc4_rtc_context_s *pv)
          __FUNCTION__, control, config);
 }
 
+static void psoc4_rtc_start(struct psoc4_rtc_context_s *pv)
+{
+  error_t err;
+
+  err = dev_clock_sink_gate(&pv->clock_sink, DEV_CLOCK_EP_CLOCK);
+
+  if (err == 0) {
+    pv->clock_active = 1;
+    psoc4_rtc_setup(pv);
+  }
+}
+
 static void psoc4_rtc_stop(struct psoc4_rtc_context_s *pv)
 {
   while (!psoc4_rtc_enable_is_acked());
@@ -131,6 +143,7 @@ static void psoc4_rtc_stop(struct psoc4_rtc_context_s *pv)
     ;
 
   dev_clock_sink_gate(&pv->clock_sink, DEV_CLOCK_EP_NONE);
+  pv->clock_active = 0;
 
   dprintk("%s\n", __FUNCTION__);
 }
@@ -330,6 +343,22 @@ static DEV_USE(psoc4_rtc_use)
     if (!dev->start_count)
       psoc4_rtc_stop(pv);
     break;
+
+  case DEV_USE_CLOCK_GATES: {
+    struct dev_clock_sink_ep_s *sink = param;
+    struct device_s *dev = sink->dev;
+    struct psoc4_rtc_context_s *pv = dev->drv_pv;
+
+    if (sink->flags & DEV_CLOCK_EP_CLOCK) {
+      if (!pv->clock_active)
+        psoc4_rtc_setup(pv);
+      pv->clock_active = 1;
+    } else {
+      pv->clock_active = 0;
+    }
+
+    return 0;
+  }
   }
 
   return 0;

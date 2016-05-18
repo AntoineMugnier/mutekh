@@ -122,30 +122,42 @@ static void psoc4_uart_tx_irq_enable(uintptr_t scb)
                    );
 }
 
-static void psoc4_uart_start(struct device_s *dev)
+static error_t psoc4_uart_start(struct device_s *dev)
 {
   struct psoc4_uart_pv_s *pv = dev->drv_pv;
+  error_t err;
 
-  if (dev->start_count)
-    return;
+  dprintk("%s\n", __FUNCTION__);
 
-  dev_clock_sink_gate(&pv->clock_sink, DEV_CLOCK_EP_CLOCK);
+  if (cpu_mem_read_32(pv->addr + SCB_CTRL_ADDR) & SCB_CTRL_ENABLED)
+    return 0;
 
-  psoc4_uart_rx_irq_enable(pv->addr);
+  err = dev_clock_sink_gate(&pv->clock_sink, DEV_CLOCK_EP_CLOCK);
+  if (err) {
+    dprintk("%s clock not ready\n", __FUNCTION__);
+    return err;
+  }
+
   cpu_mem_write_32(pv->addr + SCB_CTRL_ADDR,
                    cpu_mem_read_32(pv->addr + SCB_CTRL_ADDR) | SCB_CTRL_ENABLED);
+  psoc4_uart_rx_irq_enable(pv->addr);
+
+  return 0;
 }
 
 static void psoc4_uart_stop(struct device_s *dev)
 {
   struct psoc4_uart_pv_s *pv = dev->drv_pv;
 
-  if (dev->start_count)
+  dprintk("%s\n", __FUNCTION__);
+
+  if (!(cpu_mem_read_32(pv->addr + SCB_CTRL_ADDR) & SCB_CTRL_ENABLED))
     return;
 
   cpu_mem_write_32(pv->addr + SCB_CTRL_ADDR,
                    cpu_mem_read_32(pv->addr + SCB_CTRL_ADDR) & ~SCB_CTRL_ENABLED);
   psoc4_uart_rx_irq_disable(pv->addr);
+
   dev_clock_sink_gate(&pv->clock_sink, DEV_CLOCK_EP_NONE);
 }
 
@@ -371,6 +383,7 @@ static DEV_CHAR_REQUEST(psoc4_uart_request)
   struct device_s *dev = accessor->dev;
   struct psoc4_uart_pv_s *pv = dev->drv_pv;
   dev_request_queue_root_t *q = NULL;
+  error_t err;
 
   dprintk("%s REQUEST %p, type %x, use %x, %P\n", __FUNCTION__, rq,
           rq->type,
@@ -402,13 +415,14 @@ static DEV_CHAR_REQUEST(psoc4_uart_request)
 
   LOCK_SPIN_IRQ(&dev->lock);
 
-  psoc4_uart_start(dev);
+  err = psoc4_uart_start(dev);
 
   dev->start_count |= USE_HAS_REQ;
 
   rq->error = 0;
   dev_request_queue_pushback(q, &rq->base);
-  psoc4_uart_process_one(dev);
+  if (err == 0)
+    psoc4_uart_process_one(dev);
 
   LOCK_RELEASE_IRQ(&dev->lock);
 }
@@ -645,6 +659,23 @@ static DEV_USE(psoc4_uart_char_use)
 
     psoc4_uart_ratio_compute(dev, &ratio);
     dev_clock_notify_scaler_set(notify, &ratio);
+
+    return 0;
+  }
+
+  case DEV_USE_CLOCK_GATES: {
+    struct dev_clock_sink_ep_s *sink = param;
+    struct device_s *dev = sink->dev;
+    struct psoc4_uart_pv_s *pv = dev->drv_pv;
+
+    dprintk("%s DEV_USE_CLOCK_GATES\n", __FUNCTION__);
+
+    if (dev->start_count && (sink->flags & DEV_CLOCK_EP_CLOCK)) {
+      if (psoc4_uart_start(dev) == 0) {
+        if (!dev_request_queue_isempty(&pv->tx_q))
+          psoc4_uart_process_one(dev);
+      }
+    }
 
     return 0;
   }

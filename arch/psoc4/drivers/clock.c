@@ -95,6 +95,29 @@ static void psoc4_busy_wait(uint32_t loops)
     asm volatile("");
 }
 
+static void psoc4_flash_set_freq(uint_fast8_t freq_trim2)
+{
+  uint32_t select, flash_ctl;
+
+  select = cpu_mem_read_32(SRSS + SRSS_CLK_SELECT_ADDR);
+  if (freq_trim2 > clk_imo_trim2(24))
+    select |= SRSS_CLK_SELECT_HALF_EN;
+  else
+    select &= ~SRSS_CLK_SELECT_HALF_EN;
+  cpu_mem_write_32(SRSS + SRSS_CLK_SELECT_ADDR, select);
+
+  flash_ctl = cpu_mem_read_32(CPUSS + CPUSS_FLASH_CTL_ADDR);
+  if (freq_trim2 <= clk_imo_trim2(16))
+    CPUSS_FLASH_CTL_FLASH_WS_SETVAL(flash_ctl, 0);
+  else if (freq_trim2 <= clk_imo_trim2(32))
+    CPUSS_FLASH_CTL_FLASH_WS_SETVAL(flash_ctl, 1);
+  else
+    CPUSS_FLASH_CTL_FLASH_WS_SETVAL(flash_ctl, 2);
+  cpu_mem_write_32(CPUSS + CPUSS_FLASH_CTL_ADDR, flash_ctl);
+
+  psoc4_busy_wait(5*4*5);
+}
+
 static
 void psoc4_imo_mhz_set(uint_fast8_t freq_mhz)
 {
@@ -111,7 +134,6 @@ void psoc4_imo_mhz_set(uint_fast8_t freq_mhz)
     cpu_mem_read_8(SFLASH + SFLASH_IMO_ABS4_ADDR));
   uint_fast32_t pwr_trim5 = SRSS_PWR_BG_TRIM5_TMPCO_TRIM_IMO(
     cpu_mem_read_8(SFLASH + SFLASH_IMO_TMPCO4_ADDR));
-  uint32_t select, flash_ctl;
 
   for (uint_fast8_t i = 0; i < SFLASH_IMO_MAXF_COUNT; ++i) {
     if (freq_mhz <= cpu_mem_read_8(SFLASH + SFLASH_IMO_MAXF_ADDR(i))) {
@@ -133,17 +155,11 @@ void psoc4_imo_mhz_set(uint_fast8_t freq_mhz)
 
   CPU_INTERRUPT_SAVESTATE_DISABLE;
 
-  dprintk("Setting flash half\n");
-  select = cpu_mem_read_32(SRSS + SRSS_CLK_SELECT_ADDR);
-  select |= SRSS_CLK_SELECT_HALF_EN;
-  cpu_mem_write_32(SRSS + SRSS_CLK_SELECT_ADDR, select);
-
-  flash_ctl = cpu_mem_read_32(CPUSS + CPUSS_FLASH_CTL_ADDR);
-  CPUSS_FLASH_CTL_FLASH_WS_SETVAL(flash_ctl, 2);
-  cpu_mem_write_32(CPUSS + CPUSS_FLASH_CTL_ADDR, flash_ctl);
+  psoc4_flash_set_freq(__MAX(old_trim2, imo_trim2));
 
   if (old_trim2 >= high_trim2 || imo_trim2 >= high_trim2) {
     dprintk("Using 24MHz temporarily\n");
+
     old_trim2 = SRSS_CLK_IMO_TRIM2_FREQ(clk_imo_trim2(24));
     cpu_mem_write_32(SRSS + SRSS_CLK_IMO_TRIM2_ADDR,
                      old_trim2);
@@ -168,15 +184,7 @@ void psoc4_imo_mhz_set(uint_fast8_t freq_mhz)
     psoc4_busy_wait(50*4*5);
   }
 
-  CPUSS_FLASH_CTL_FLASH_WS_SETVAL(flash_ctl, freq_mhz / 16);
-  cpu_mem_write_32(CPUSS + CPUSS_FLASH_CTL_ADDR, flash_ctl);
-
-  if (imo_trim2 < high_trim2) {
-    dprintk("Removing flash half\n");
-    select &= ~SRSS_CLK_SELECT_HALF_EN;
-    cpu_mem_write_32(SRSS + SRSS_CLK_SELECT_ADDR, select);
-    psoc4_busy_wait(5*4*5);
-  }
+  psoc4_flash_set_freq(imo_trim2);
 
   CPU_INTERRUPT_RESTORESTATE;
 }
@@ -214,6 +222,10 @@ DRIVER_PV(struct psoc4_clock_private_s
   uint8_t sysclk_div;
   uint8_t imo_freq_next;
   uint8_t imo_freq;
+  bool_t lfclk_running;
+
+  struct kroutine_s updater;
+  struct kroutine_s committer;
 });
 
 static DEV_CMU_CONFIG_OSC(psoc4_clock_config_osc)
@@ -264,8 +276,6 @@ static DEV_CMU_CONFIG_MUX(psoc4_clock_config_mux)
     switch (parent_id) {
 #if defined(CONFIG_DRIVER_PSOC4_BLE)
     case PSOC4_CLOCK_SINK_ECO:
-      if (!pv->sink[SINK_ECO].src)
-        return -ENOTSUP;
       pv->hfclk_sel = SRSS_CLK_SELECT_DIRECT_SEL_ECO;
       return 0;
 #endif
@@ -290,8 +300,6 @@ static DEV_CMU_CONFIG_MUX(psoc4_clock_config_mux)
     switch (parent_id) {
 #if defined(CONFIG_DRIVER_PSOC4_BLE)
     case PSOC4_CLOCK_SINK_WCO:
-      if (!pv->sink[SINK_WCO].src)
-        return -ENOTSUP;
       pv->lfclk_sel = SRSS_WDT_CONFIG_LFCLK_SEL_WCO;
       return 0;
 #endif
@@ -372,7 +380,7 @@ static void psoc4_pclk_disable(struct device_s *dev,
 }
 
 static void psoc4_pclk_enable(struct device_s *dev,
-                               uint_fast8_t pclk_id)
+                              uint_fast8_t pclk_id)
 {
   struct psoc4_clock_private_s *pv = dev->drv_pv;
 
@@ -402,8 +410,11 @@ static void psoc4_pclk_div_set(struct device_s *dev,
   uint32_t div_target = div - 0x20;
   uint32_t div_ctl = cpu_mem_read_32(PERI + PERI_DIV_CTL_ADDR(pv->pclk_src[pclk_id]));
 
+  if (PERI_DIV_CTL_DIV_GET(div_ctl) == div_target)
+    return;
+
   // Disable if not matching
-  if (running && (PERI_DIV_CTL_DIV_GET(div_ctl) != div_target))
+  if (running)
     psoc4_pclk_disable(dev, pclk_id);
 
   dprintk("%s %d div: %d\n", __FUNCTION__, pclk_id, div);
@@ -422,27 +433,32 @@ static DEV_CMU_ROLLBACK(psoc4_clock_rollback)
   return 0;
 }
 
-static void psoc4_clock_hfclk_update(struct device_s *dev)
+static KROUTINE_EXEC(psoc4_clock_updater)
 {
-  struct psoc4_clock_private_s *pv = dev->drv_pv;
-  struct dev_clock_notify_s notif = {
-    .freq = pv->hfclk_freq,
-  };
+  struct psoc4_clock_private_s *pv = KROUTINE_CONTAINER(kr, *pv, updater);
+  struct dev_clock_notify_s notif;
+  bool_t running = 0;
+
+  notif.freq = pv->hfclk_freq;
 
   // Update internal caches
 #if defined(CONFIG_DRIVER_PSOC4_BLE) || defined(CONFIG_DRIVER_PSOC4_CLOCK_EXTCLK)
-  switch (pv->hfclk_sel) {
+  switch (SRSS_CLK_SELECT_DIRECT_SEL_GET(
+    cpu_mem_read_32(SRSS + SRSS_CLK_SELECT_ADDR))) {
   case SRSS_CLK_SELECT_DIRECT_SEL_IMO:
     notif.freq = DEV_FREQ(pv->imo_freq * 1000000, 1, 2, 25);
+    running = 1;
     break;
 # if defined(CONFIG_DRIVER_PSOC4_BLE)
   case SRSS_CLK_SELECT_DIRECT_SEL_ECO:
     notif.freq = pv->eco_freq;
+    running = !!(pv->sink[SINK_ECO].flags & DEV_CLOCK_EP_CLOCK);
     break;
 # endif
 # if defined(CONFIG_DRIVER_PSOC4_CLOCK_EXTCLK)
   case SRSS_CLK_SELECT_DIRECT_SEL_EXTCLK:
     notif.freq = pv->extclk_freq;
+    running = 1;
     break;
 # endif
   }
@@ -450,115 +466,191 @@ static void psoc4_clock_hfclk_update(struct device_s *dev)
   notif.freq = DEV_FREQ(pv->imo_freq * 1000000, 1, 2, 25);
 #endif
 
-  dprintk("HFClk freq changed: %d -> %d\n", pv->hfclk_freq.num, notif.freq.num);
-
   if (memcmp(&pv->hfclk_freq, &notif.freq, sizeof(notif.freq))) {
+    dprintk("HFClk freq changed: %d/%d -> %d/%d\n",
+            (uint32_t)pv->hfclk_freq.num,
+            (uint32_t)dev_freq_acc_ppb(&pv->hfclk_freq),
+            (uint32_t)notif.freq.num,
+            (uint32_t)dev_freq_acc_ppb(&notif.freq));
 
     pv->hfclk_freq = notif.freq;
 
-    for (uint8_t src = 0; src < PSOC4_CLOCK_SRC_COUNT; ++src) {
-      if (pv->notify_mask & bit(src)) {
+    for (uint8_t src = 0; src <= PSOC4_CLOCK_HFBASED_LAST; ++src) {
+      if (bit_get(pv->notify_mask, src))
         dev_cmu_src_notify(&pv->src[src], &notif);
-      }
     }
   }
-}
 
-static void psoc4_clock_lfclk_update(struct device_s *dev)
-{
-  struct psoc4_clock_private_s *pv = dev->drv_pv;
-  struct dev_clock_notify_s notif = {
-    .freq = pv->lfclk_freq,
-  };
+  notif.freq = pv->lfclk_freq;
+  running = 0;
 
 #if defined(CONFIG_DRIVER_PSOC4_BLE)
-  switch (pv->lfclk_sel) {
+  switch (SRSS_WDT_CONFIG_LFCLK_SEL_GET(
+    cpu_mem_read_32(SRSS + SRSS_WDT_CONFIG_ADDR))) {
   case SRSS_WDT_CONFIG_LFCLK_SEL_WCO:
     notif.freq = pv->wco_freq;
+    running = !!(pv->sink[SINK_ECO].flags & DEV_CLOCK_EP_CLOCK);
     break;
   case SRSS_WDT_CONFIG_LFCLK_SEL_ILO:
     notif.freq = ILO_FREQ;
+    running = !!(cpu_mem_read_32(SRSS + SRSS_CLK_ILO_CONFIG_ADDR)
+                 & SRSS_CLK_ILO_CONFIG_ENABLE);
     break;
   }
 #endif
 
+  if (running != pv->lfclk_running) {
+    const uint8_t src = PSOC4_CLOCK_SRC_LFCLK;
+
+    dprintk("LFCLK now %s\n", running ? "running" : "idle");
+
+    pv->lfclk_running = running;
+
+    dev_cmu_src_update_async(&pv->src[src], running ? DEV_CLOCK_EP_CLOCK : 0);
+  }
+
   if (memcmp(&pv->lfclk_freq, &notif.freq, sizeof(notif.freq))) {
+    dprintk("LFClk freq changed: %d/%d -> %d/%d\n",
+            (uint32_t)pv->lfclk_freq.num,
+            (uint32_t)dev_freq_acc_ppb(&pv->lfclk_freq),
+            (uint32_t)notif.freq.num,
+            (uint32_t)dev_freq_acc_ppb(&notif.freq));
 
     pv->lfclk_freq = notif.freq;
 
     const uint8_t src = PSOC4_CLOCK_SRC_LFCLK;
 
-    if (pv->notify_mask & bit(src)) {
+    if (bit_get(pv->notify_mask, src))
       dev_cmu_src_notify(&pv->src[src], &notif);
-    }
   }
 }
 
-static DEV_CMU_COMMIT(psoc4_clock_commit)
+static KROUTINE_EXEC(psoc4_clock_committer)
 {
-  struct psoc4_clock_private_s *pv = dev->drv_pv;
+  struct psoc4_clock_private_s *pv = KROUTINE_CONTAINER(kr, *pv, committer);
   uint32_t tmp;
+  uint_fast8_t trim2_after;
 
 #if defined(CONFIG_DRIVER_PSOC4_BLE)
   // Enable before switch
 
   // Always enable ECO if selected, there is no automatic shutoff.
-  if (pv->sink[SINK_ECO].src && pv->hfclk_sel == SRSS_CLK_SELECT_DIRECT_SEL_ECO)
+  if (pv->hfclk_sel == SRSS_CLK_SELECT_DIRECT_SEL_ECO) {
+    dprintk("%s ECO required\n", __FUNCTION__);
     dev_clock_sink_gate(&pv->sink[SINK_ECO], DEV_CLOCK_EP_CLOCK);
+  }
 
   // Enable WCO if we are about to select it and requested
-  if (pv->sink[SINK_WCO].src
-      && pv->lfclk_sel == SRSS_WDT_CONFIG_LFCLK_SEL_WCO
+  if (pv->lfclk_sel == SRSS_WDT_CONFIG_LFCLK_SEL_WCO
       && bit_get(pv->source_use_mask, PSOC4_CLOCK_SRC_LFCLK))
+    dprintk("%s WCO required\n", __FUNCTION__);
     dev_clock_sink_gate(&pv->sink[SINK_WCO], DEV_CLOCK_EP_CLOCK);
+  }
 #endif
 
   // Enable ILO if about to use it
   if (bit_get(pv->source_use_mask, PSOC4_CLOCK_SRC_LFCLK)
 #if defined(CONFIG_DRIVER_PSOC4_BLE)
-      && (pv->lfclk_sel == SRSS_WDT_CONFIG_LFCLK_SEL_ILO)
+      && (pv->lfclk_sel == SRSS_WDT_CONFIG_LFCLK_SEL_ILO
+          || !(pv->sink[SINK_WCO].src->flags & DEV_CLOCK_EP_CLOCK))
 #endif
       ) {
+    dprintk("%s ILO enabled\n", __FUNCTION__);
     tmp = cpu_mem_read_32(SRSS + SRSS_CLK_ILO_CONFIG_ADDR);
     tmp |= SRSS_CLK_ILO_CONFIG_ENABLE;
     cpu_mem_write_32(SRSS + SRSS_CLK_ILO_CONFIG_ADDR, tmp);
   }
 
+
   // Do the switch for both clock sources
   tmp = cpu_mem_read_32(SRSS + SRSS_CLK_SELECT_ADDR);
+  trim2_after = clk_imo_trim2(pv->imo_freq);
 #if defined(CONFIG_DRIVER_PSOC4_BLE) || defined(CONFIG_DRIVER_PSOC4_CLOCK_EXTCLK)
-  SRSS_CLK_SELECT_DIRECT_SEL_SETVAL(tmp, pv->hfclk_sel);
+  switch (pv->hfclk_sel) {
+  case SRSS_CLK_SELECT_DIRECT_SEL_ECO:
+    if (!(pv->sink[SINK_ECO].src->flags & DEV_CLOCK_EP_CLOCK)) {
+      dprintk("%s ECO not ready yet\n", __FUNCTION__);
+      break;
+    }
+    dprintk("%s switch HFCLK to ECO\n", __FUNCTION__);
+    psoc4_flash_set_freq(clk_imo_trim2(__MAX(24, pv->imo_freq)));
+    SRSS_CLK_SELECT_DIRECT_SEL_SET(tmp, ECO);
+    SRSS_CLK_SELECT_SYSCLK_DIV_SET(tmp, pv->sysclk_div);
+    trim2_after = clk_imo_trim2(24);
+    break;
+  case SRSS_CLK_SELECT_DIRECT_SEL_IMO:
+    dprintk("%s switch HFCLK to IMO\n", __FUNCTION__);
+    psoc4_flash_set_freq(clk_imo_trim2(__MAX(pv->hfclk_freq.num / 1000000, pv->imo_freq)));
+    SRSS_CLK_SELECT_DIRECT_SEL_SET(tmp, IMO);
+    SRSS_CLK_SELECT_SYSCLK_DIV_SET(tmp, pv->sysclk_div);
+    trim2_after = clk_imo_trim2(pv->imo_freq);
+    break;
+#if defined(CONFIG_DRIVER_PSOC4_CLOCK_EXTCLK)
+  case SRSS_CLK_SELECT_DIRECT_SEL_EXTCLK:
+    dprintk("%s switch HFCLK to EXTCLK\n", __FUNCTION__);
+    SRSS_CLK_SELECT_DIRECT_SEL_SET(tmp, EXTCLK);
+    SRSS_CLK_SELECT_SYSCLK_DIV_SET(tmp, pv->sysclk_div);
+    trim2_after = clk_imo_trim2(pv->extclk_freq.num / 1000000);
+    break;
+#endif
+  }
 #else
   SRSS_CLK_SELECT_DIRECT_SEL_SET(tmp, IMO);
-#endif
   SRSS_CLK_SELECT_SYSCLK_DIV_SET(tmp, pv->sysclk_div);
-  cpu_mem_write_32(SRSS + SRSS_CLK_SELECT_ADDR, tmp);
-
-  tmp = cpu_mem_read_32(SRSS + SRSS_WDT_CONFIG_ADDR);
-#if defined(CONFIG_DRIVER_PSOC4_BLE)
-  SRSS_WDT_CONFIG_LFCLK_SEL_SETVAL(tmp, pv->lfclk_sel);
-#else
-  SRSS_WDT_CONFIG_LFCLK_SEL_SET(tmp, ILO);
 #endif
-  cpu_mem_write_32(SRSS + SRSS_WDT_CONFIG_ADDR, tmp);
+  cpu_mem_write_32(SRSS + SRSS_CLK_SELECT_ADDR, tmp);
+  psoc4_flash_set_freq(trim2_after);
+
+  if (pv->source_use_mask & (1 << PSOC4_CLOCK_SRC_LFCLK)) {
+    tmp = cpu_mem_read_32(SRSS + SRSS_WDT_CONFIG_ADDR);
+#if defined(CONFIG_DRIVER_PSOC4_BLE)
+    switch (pv->lfclk_sel) {
+    case SRSS_WDT_CONFIG_LFCLK_SEL_WCO:
+      if (!(pv->sink[SINK_WCO].flags & DEV_CLOCK_EP_CLOCK)) {
+        dprintk("%s WCO not ready yet\n", __FUNCTION__);
+        break;
+      }
+      // fallthrough
+    case SRSS_WDT_CONFIG_LFCLK_SEL_ILO:
+      dprintk("%s LFCLK switched to %d\n", __FUNCTION__, pv->lfclk_sel);
+      SRSS_WDT_CONFIG_LFCLK_SEL_SETVAL(tmp, pv->lfclk_sel);
+      break;
+    }
+#else
+    SRSS_WDT_CONFIG_LFCLK_SEL_SET(tmp, ILO);
+#endif
+    cpu_mem_write_32(SRSS + SRSS_WDT_CONFIG_ADDR, tmp);
+  }
 
 #if defined(CONFIG_DRIVER_PSOC4_BLE)
   // Shutdown unused sinks
-  if (pv->sink[SINK_ECO].src && pv->hfclk_sel != SRSS_CLK_SELECT_DIRECT_SEL_ECO)
+  if (pv->hfclk_sel != SRSS_CLK_SELECT_DIRECT_SEL_ECO
+      && SRSS_CLK_SELECT_DIRECT_SEL_GET(cpu_mem_read_32(SRSS + SRSS_CLK_SELECT_ADDR))
+      != SRSS_CLK_SELECT_DIRECT_SEL_ECO) {
+    dprintk("%s ECO unrequired\n", __FUNCTION__);
     dev_clock_sink_gate(&pv->sink[SINK_ECO], DEV_CLOCK_EP_NONE);
+  }
 
-  if (pv->sink[SINK_WCO].src
-      && (pv->lfclk_sel != SRSS_WDT_CONFIG_LFCLK_SEL_WCO
-          || !bit_get(pv->source_use_mask, PSOC4_CLOCK_SRC_LFCLK)))
+  if ((pv->lfclk_sel != SRSS_WDT_CONFIG_LFCLK_SEL_WCO
+       && (SRSS_WDT_CONFIG_LFCLK_SEL_GET(cpu_mem_read_32(SRSS + SRSS_WDT_CONFIG_ADDR))
+           != SRSS_WDT_CONFIG_LFCLK_SEL_WCO))
+      || !bit_get(pv->source_use_mask, PSOC4_CLOCK_SRC_LFCLK)) {
+    dprintk("%s WCO unrequired\n", __FUNCTION__);
     dev_clock_sink_gate(&pv->sink[SINK_WCO], DEV_CLOCK_EP_NONE);
+  }
 #endif
 
+
+  tmp = cpu_mem_read_32(SRSS + SRSS_WDT_CONFIG_ADDR);
   // Disable ILO if unused
   if (!bit_get(pv->source_use_mask, PSOC4_CLOCK_SRC_LFCLK)
 #if defined(CONFIG_DRIVER_PSOC4_BLE)
-      || (pv->lfclk_sel != SRSS_WDT_CONFIG_LFCLK_SEL_ILO)
+      || (pv->lfclk_sel != SRSS_WDT_CONFIG_LFCLK_SEL_ILO
+          && (SRSS_WDT_CONFIG_LFCLK_SEL_GET(cpu_mem_read_32(SRSS + SRSS_WDT_CONFIG_ADDR))
+              != SRSS_WDT_CONFIG_LFCLK_SEL_ILO))
 #endif
-    ) {
+      ) {
+    dprintk("%s ILO disabled\n", __FUNCTION__);
     tmp = cpu_mem_read_32(SRSS + SRSS_CLK_ILO_CONFIG_ADDR);
     tmp &= ~SRSS_CLK_ILO_CONFIG_ENABLE;
     cpu_mem_write_32(SRSS + SRSS_CLK_ILO_CONFIG_ADDR, tmp);
@@ -568,8 +660,15 @@ static DEV_CMU_COMMIT(psoc4_clock_commit)
   psoc4_imo_mhz_set(pv->imo_freq_next);
   pv->imo_freq = pv->imo_freq_next;
 
-  psoc4_clock_hfclk_update(dev);
-  psoc4_clock_lfclk_update(dev);
+  kroutine_exec(&pv->updater);
+}
+
+static DEV_CMU_COMMIT(psoc4_clock_commit)
+{
+  struct device_s *dev = accessor->dev;
+  struct psoc4_clock_private_s *pv = dev->drv_pv;
+
+  kroutine_exec(&pv->committer);
 
   return 0;
 }
@@ -762,112 +861,107 @@ static DEV_CLOCK_SRC_SETUP(psoc4_clock_ep_setup)
   if (src_id >= PSOC4_CLOCK_SRC_COUNT)
     return -EINVAL;
 
-  switch (op)
-    {
+  switch (op) {
 #ifdef CONFIG_DEVICE_CLOCK_VARFREQ
-    case DEV_CLOCK_SRC_SETUP_NOTIFY:
-      pv->notify_mask |= bit(src_id);
-      return 0;
+  case DEV_CLOCK_SRC_SETUP_NOTIFY:
+    pv->notify_mask |= bit(src_id);
+    return 0;
 
-    case DEV_CLOCK_SRC_SETUP_NONOTIFY:
-      pv->notify_mask &= ~bit(src_id);
-      return 0;
+  case DEV_CLOCK_SRC_SETUP_NONOTIFY:
+    pv->notify_mask &= ~bit(src_id);
+    return 0;
 #endif
 
-    case DEV_CLOCK_SRC_SETUP_GATES:
-      dprintk("%s gates src %d; %x\n",
-             __FUNCTION__, src_id, param->flags);
-
-      switch (src_id) {
-      case PSOC4_CLOCK_SRC_PER_0 ... PSOC4_CLOCK_SRC_PER_15:
-        if (!psoc4_pclk_is_enabled(dev, src_id) && (param->flags & DEV_CLOCK_EP_CLOCK))
-          psoc4_pclk_enable(dev, src_id);
-        else if (psoc4_pclk_is_enabled(dev, src_id) && !(param->flags & DEV_CLOCK_EP_CLOCK))
-          psoc4_pclk_disable(dev, src_id);
-        break;
-
-      case PSOC4_CLOCK_SRC_LFCLK:
-        if (param->flags & DEV_CLOCK_EP_CLOCK) {
-#if defined(CONFIG_DRIVER_PSOC4_BLE)
-          if (pv->lfclk_sel == SRSS_WDT_CONFIG_LFCLK_SEL_WCO) {
-            if (pv->sink[SINK_WCO].src)
-              dev_clock_sink_gate(&pv->sink[SINK_WCO], DEV_CLOCK_EP_CLOCK);
-          } else
-#endif
-          {
-            uint32_t tmp = cpu_mem_read_32(SRSS + SRSS_CLK_ILO_CONFIG_ADDR);
-            tmp |= SRSS_CLK_ILO_CONFIG_ENABLE;
-            cpu_mem_write_32(SRSS + SRSS_CLK_ILO_CONFIG_ADDR, tmp);
-          }
-        } else {
-#if defined(CONFIG_DRIVER_PSOC4_BLE)
-          if (pv->lfclk_sel == SRSS_WDT_CONFIG_LFCLK_SEL_WCO) {
-            if (pv->sink[SINK_WCO].src)
-              dev_clock_sink_gate(&pv->sink[SINK_WCO], DEV_CLOCK_EP_NONE);
-          } else
-#endif
-          {
-            uint32_t tmp = cpu_mem_read_32(SRSS + SRSS_CLK_ILO_CONFIG_ADDR);
-            tmp &= ~SRSS_CLK_ILO_CONFIG_ENABLE;
-            cpu_mem_write_32(SRSS + SRSS_CLK_ILO_CONFIG_ADDR, tmp);
-          }
-        }
-        break;
-      }
-
-      if (param->flags & DEV_CLOCK_EP_CLOCK) {
-        assert(!(pv->source_use_mask & bit(src_id)));
-        pv->source_use_mask |= bit(src_id);
-      } else {
-        assert(pv->source_use_mask & bit(src_id));
-        pv->source_use_mask &= ~bit(src_id);
-      }
+  case DEV_CLOCK_SRC_SETUP_GATES:
+    if (param->flags & DEV_CLOCK_EP_CLOCK) {
+      pv->source_use_mask |= 1 << src_id;
+    } else {
+      pv->source_use_mask &= ~(1 << src_id);
 
 #ifdef CONFIG_DEVICE_SLEEP
-      if (!(pv->source_use_mask & PSOC4_CLOCK_SRC_HF_MASK))
-        device_sleep_schedule(dev);
+      device_sleep_schedule(dev);
 #endif
+    }
+
+    switch (src_id) {
+    case PSOC4_CLOCK_SRC_PER_0 ... PSOC4_CLOCK_SRC_PER_15:
+      dprintk("%s gates per %d; %x\n", __FUNCTION__, src_id, param->flags);
+
+      if (!psoc4_pclk_is_enabled(dev, src_id) && (param->flags & DEV_CLOCK_EP_CLOCK))
+        psoc4_pclk_enable(dev, src_id);
+      else if (psoc4_pclk_is_enabled(dev, src_id) && !(param->flags & DEV_CLOCK_EP_CLOCK))
+        psoc4_pclk_disable(dev, src_id);
+      dev_cmu_src_update_sync(src, param->flags);
+      return 0;
+
+    case PSOC4_CLOCK_SRC_HFCLK:
+      dprintk("%s gates HFCLK: %x\n", __FUNCTION__, src_id, param->flags);
 
       dev_cmu_src_update_sync(src, param->flags);
       return 0;
 
-    case DEV_CLOCK_SRC_SETUP_SCALER: {
-      if (src_id >= PSOC4_CLOCK_PCLK_COUNT)
-        return -EINVAL;
+    case PSOC4_CLOCK_SRC_LFCLK:
+      dprintk("%s gates LFCLK; %x\n", __FUNCTION__, param->flags);
 
-      uint8_t div_id = pv->pclk_src[src_id];
-      uint32_t ratio;
-      if (param->scale.num > 1)
-        ratio = ((uint64_t)param->scale.denom * 32) / param->scale.num;
-      else
-        ratio = param->scale.denom * 32;
+      if (param->flags & DEV_CLOCK_EP_CLOCK) {
+#if defined(CONFIG_DRIVER_PSOC4_BLE)
+        kroutine_exec(&pv->committer);
+        return -EAGAIN;
+#endif
+        uint32_t tmp = cpu_mem_read_32(SRSS + SRSS_CLK_ILO_CONFIG_ADDR);
+        tmp |= SRSS_CLK_ILO_CONFIG_ENABLE;
+        cpu_mem_write_32(SRSS + SRSS_CLK_ILO_CONFIG_ADDR, tmp);
+      } else {
+#if defined(CONFIG_DRIVER_PSOC4_BLE)
+        kroutine_exec(&pv->committer);
+        return 0;
+#endif
+        uint32_t tmp = cpu_mem_read_32(SRSS + SRSS_CLK_ILO_CONFIG_ADDR);
+        tmp &= ~SRSS_CLK_ILO_CONFIG_ENABLE;
+        cpu_mem_write_32(SRSS + SRSS_CLK_ILO_CONFIG_ADDR, tmp);
+      }
 
-      dprintk("%s PCLK %d div %d.%d ratio %d\n", __FUNCTION__, src_id,
-             PSOC4_DIV_TYPE(div_id), PSOC4_DIV_NO(div_id), ratio);
-
-      if (div_id == PSOC4_DIV_NONE)
-        return -ENOENT;
-
-      if (ratio & ~div_mask[PSOC4_DIV_TYPE(div_id)])
-        return -ENOTSUP;
-
-      if (ratio < 32)
-        return -EINVAL;
-
-      psoc4_pclk_div_set(dev, src_id, ratio);
-
+      dev_cmu_src_update_sync(src, param->flags);
       return 0;
     }
 
-    case DEV_CLOCK_SRC_SETUP_LINK:
-      return 0;
+  case DEV_CLOCK_SRC_SETUP_SCALER: {
+    if (src_id >= PSOC4_CLOCK_PCLK_COUNT)
+      return -EINVAL;
 
-    case DEV_CLOCK_SRC_SETUP_UNLINK:
-      return 0;
+    uint8_t div_id = pv->pclk_src[src_id];
+    uint32_t ratio;
+    if (param->scale.num > 1)
+      ratio = ((uint64_t)param->scale.denom * 32) / param->scale.num;
+    else
+      ratio = param->scale.denom * 32;
 
-    default:
+    dprintk("%s PCLK %d div %d.%d ratio %d\n", __FUNCTION__, src_id,
+            PSOC4_DIV_TYPE(div_id), PSOC4_DIV_NO(div_id), ratio);
+
+    if (div_id == PSOC4_DIV_NONE)
+      return -ENOENT;
+
+    if (ratio & ~div_mask[PSOC4_DIV_TYPE(div_id)])
       return -ENOTSUP;
-    }
+
+    if (ratio < 32)
+      return -EINVAL;
+
+    psoc4_pclk_div_set(dev, src_id, ratio);
+
+    return 0;
+  }
+
+  case DEV_CLOCK_SRC_SETUP_LINK:
+    return 0;
+
+  case DEV_CLOCK_SRC_SETUP_UNLINK:
+    return 0;
+
+  default:
+    return -ENOTSUP;
+  }
 }
 
 static DEV_USE(psoc4_clock_use)
@@ -881,6 +975,8 @@ static DEV_USE(psoc4_clock_use)
     if ((pv->source_use_mask & PSOC4_CLOCK_SRC_NOSLEEP_MASK) == 0
 #if defined(CONFIG_DRIVER_PSOC4_BLE) || defined(CONFIG_DRIVER_PSOC4_CLOCK_EXTCLK)
         && pv->hfclk_sel == SRSS_CLK_SELECT_DIRECT_SEL_IMO
+        && SRSS_CLK_SELECT_DIRECT_SEL_GET(cpu_mem_read_32(SRSS + SRSS_CLK_SELECT_ADDR))
+        == SRSS_CLK_SELECT_DIRECT_SEL_IMO
 #endif
         )
       cpu_mem_write_32(ARMV7M_SCR_ADDR, ARMV7M_SCR_SLEEPDEEP);
@@ -896,20 +992,34 @@ static DEV_USE(psoc4_clock_use)
     struct device_s *dev = sink->dev;
     struct psoc4_clock_private_s *pv = dev->drv_pv;
 
-    printk("PSoC4 CLOCK notify %d %d/%d\n", sink - pv->sink,
-           (uint32_t)notify->freq.num, (uint32_t)notify->freq.denom);
+    dprintk("PSoC4 CLOCK notify %d %d/%d\n", sink - pv->sink,
+            (uint32_t)notify->freq.num, (uint32_t)notify->freq.denom);
 
     switch (sink - pv->sink) {
     case SINK_WCO:
       pv->wco_freq = notify->freq;
-      psoc4_clock_lfclk_update(dev);
+      kroutine_exec(&pv->updater);
       break;
 
     case SINK_ECO:
       pv->eco_freq = notify->freq;
-      psoc4_clock_hfclk_update(dev);
+      kroutine_exec(&pv->updater);
       break;
     }
+
+    return 0;
+  }
+#endif
+
+#if defined(CONFIG_DRIVER_PSOC4_BLE)
+  case DEV_USE_CLOCK_GATES: {
+    struct dev_clock_sink_ep_s *sink = param;
+    struct device_s *dev = sink->dev;
+    struct psoc4_clock_private_s *pv = dev->drv_pv;
+
+    dprintk("PSoC4 CLOCK gated %d\n", sink - pv->sink);
+
+    kroutine_exec(&pv->committer);
 
     return 0;
   }
@@ -954,6 +1064,9 @@ static DEV_INIT(psoc4_clock_init)
     psoc4_imo_mhz_set(pv->imo_freq);
     pv->hfclk_freq = DEV_FREQ(pv->imo_freq * 1000000, 1, 2, 25);
     pv->lfclk_freq = ILO_FREQ;
+
+    kroutine_init_deferred(&pv->updater, psoc4_clock_updater);
+    kroutine_init_deferred(&pv->committer, psoc4_clock_committer);
   }
 
   if (!(dev->init_mask & bit(0))) {
@@ -979,13 +1092,13 @@ static DEV_INIT(psoc4_clock_init)
   }
 
   err = dev_drv_clock_init(dev, &pv->sink[SINK_WCO],
-                           PSOC4_CLOCK_SINK_WCO, DEV_CLOCK_EP_SINK_SYNC,
+                           PSOC4_CLOCK_SINK_WCO, DEV_CLOCK_EP_SINK_NOTIFY,
                            &pv->wco_freq);
   if (err)
     return err;
 
   err = dev_drv_clock_init(dev, &pv->sink[SINK_ECO],
-                           PSOC4_CLOCK_SINK_ECO, DEV_CLOCK_EP_SINK_SYNC | DEV_CLOCK_EP_VARFREQ | DEV_CLOCK_EP_SINK_NOTIFY,
+                           PSOC4_CLOCK_SINK_ECO, DEV_CLOCK_EP_VARFREQ | DEV_CLOCK_EP_SINK_NOTIFY,
                            &pv->eco_freq);
   if (err)
     return err;
