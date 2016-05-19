@@ -376,8 +376,8 @@ static DEV_ICU_GET_SINK(efm32_gpio_icu_get_sink)
 
   struct dev_irq_sink_s *sink = pv->sink + line;
 
-  /* We actually keep only one end-point object per line for all
-     banks. We have to keep track of which bank the end-point is
+  /* We actually keep only one endpoint object per line for all
+     banks. We have to keep track of which bank the endpoint is
      associated to. */
   if (sink->base.link_count == 0)
     pv->irq[line].bank = bank;

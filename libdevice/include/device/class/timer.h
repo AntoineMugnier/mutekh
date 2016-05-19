@@ -53,7 +53,7 @@
    @section {Timer frequency}
 
    There are two common ways for the driver to find the timer input
-   frequency. When the driver contains a clock sink end-point, the
+   frequency. When the driver contains a clock sink endpoint, the
    associated frequency will be computed by the clock provider device
    and may be stored by the driver of the timer. In this case the
    configuration will be updated when the clock frequency changes.

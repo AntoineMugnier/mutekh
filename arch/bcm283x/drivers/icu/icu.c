@@ -207,7 +207,7 @@ static DEV_CLEANUP(bcm283x_icu_cleanup)
   cpu_mem_write_32(pv->addr + BCM283XICU_DIS1, 0xffffffff);
   cpu_mem_write_32(pv->addr + BCM283XICU_DIS2, 0xffffffff);
 
-  /* detach bcm283x_icu irq end-points */
+  /* detach bcm283x_icu irq endpoints */
   device_irq_source_unlink(dev, &pv->src, 1);
 
   if (pv->sinks)

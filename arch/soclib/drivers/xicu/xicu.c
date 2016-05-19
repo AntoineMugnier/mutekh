@@ -133,7 +133,7 @@ static DEV_INIT(soclib_xicu_init)
   device_get_param_uint_default(dev, "irq-count", &pv->irq_count, 1);
   if (pv->irq_count)
     {
-      /* init soclib_xicu irq source end-points */
+      /* init soclib_xicu irq source endpoints */
       pv->srcs = mem_alloc(sizeof(pv->srcs[0]) * pv->irq_count, (mem_scope_sys));
       if (!pv->srcs)
         goto err_mem;
@@ -153,7 +153,7 @@ static DEV_INIT(soclib_xicu_init)
   device_get_param_uint_default(dev, "hwi-count", &pv->hwi_count, 0);
   if (pv->hwi_count)
     {
-      /* init soclib_xicu irq sink end-points */
+      /* init soclib_xicu irq sink endpoints */
       pv->sinks = mem_alloc(sizeof(pv->sinks[0]) * pv->hwi_count, (mem_scope_sys));
       if (!pv->sinks)
         goto err_unlink;
@@ -235,7 +235,7 @@ static DEV_CLEANUP(soclib_xicu_cleanup)
     }
 # endif
 
-  /* detach soclib_xicu irq end-points */
+  /* detach soclib_xicu irq endpoints */
   device_irq_source_unlink(dev, pv->srcs, pv->irq_count);
 
   if (pv->srcs)

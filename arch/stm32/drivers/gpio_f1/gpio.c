@@ -461,8 +461,8 @@ DEV_ICU_GET_SINK(stm32_gpio_icu_get_sink)
 
   struct dev_irq_sink_s *sink = &pv->sink[sink_id];
 
-  /* We actually keep track of only one end-point per interrupt for all banks.
-     We have to keep track of the bank number which the end-point is linked to.
+  /* We actually keep track of only one endpoint per interrupt for all banks.
+     We have to keep track of the bank number which the endpoint is linked to.
    */
   if (sink->base.link_count == 0)
     pv->irq[sink_id].bank = bank;

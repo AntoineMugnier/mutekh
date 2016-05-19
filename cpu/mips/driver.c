@@ -284,7 +284,7 @@ static DEV_INIT(mips_init)
 #endif
 
 #ifdef CONFIG_DEVICE_IRQ
-  /* init mips irq sink end-points */
+  /* init mips irq sink endpoints */
   device_irq_sink_init(dev, pv->sinks, ICU_MIPS_MAX_VECTOR,
                        &mips_icu_sink_update,
                        DEV_IRQ_SENSE_HIGH_LEVEL);

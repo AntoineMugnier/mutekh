@@ -68,7 +68,7 @@ struct stm32_i2c_private_s
     /* the stop condition is already sent. */
     bool_t                   stopped:1;
 
-    /* interrupt end-point (event and error). */
+    /* interrupt endpoint (event and error). */
     struct dev_irq_src_s     irq_ep[2];
 
     struct dev_freq_s        busfreq;
@@ -540,7 +540,7 @@ wait_event:
     return 0;
 }
 
-/***************************************** irq end-point process */
+/***************************************** irq endpoint process */
 
 static
 DEV_IRQ_SRC_PROCESS(stm32_i2c_irq)

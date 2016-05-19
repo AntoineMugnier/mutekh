@@ -59,7 +59,7 @@ error_t dev_clock_sink_gate(struct dev_clock_sink_ep_s *sink,
 
       if (src_gates ^ gates)
         {
-          /* initiate source end-point gates change */
+          /* initiate source endpoint gates change */
           union dev_clock_setup_u setup;
           setup.flags = gates | (sink->flags & DEV_CLOCK_EP_SINK_SYNC);
           err = src->f_setup(src, DEV_CLOCK_SETUP_GATES, &setup);
@@ -289,7 +289,7 @@ error_t dev_clock_sink_link(struct dev_clock_sink_ep_s *sink,
           if (DEVICE_OP(&cmu, node_info, r->u.clock_src.src_ep, &mask, &info) ||
               !(mask & DEV_CMU_INFO_SRC))
             {
-              printk("device: clock provider %p does not have a source end-point with node id %u.\n",
+              printk("device: clock provider %p does not have a source endpoint with node id %u.\n",
                      cmu.dev, r->u.clock_src.src_ep);
               err = -EINVAL;
               goto unlock;

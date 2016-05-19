@@ -44,7 +44,7 @@ struct push_button_context_s
   bool_t state;
   /* Value when released */
   bool_t release_state;
-  /* Interrupt end-point */
+  /* Interrupt endpoint */
   struct dev_irq_src_s irq_ep;
   /* request queue */
   dev_request_queue_root_t queue;

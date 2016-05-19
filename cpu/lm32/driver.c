@@ -264,7 +264,7 @@ static DEV_INIT(lm32_init)
 #endif
 
 #ifdef CONFIG_DEVICE_IRQ
-  /* init lm32 irq sink end-points */
+  /* init lm32 irq sink endpoints */
   device_irq_sink_init(dev, pv->sinks, CONFIG_CPU_LM32_IRQ_COUNT,
                        &lm32_icu_sink_update, LM32_IRQ_SENSE_MODE);
 

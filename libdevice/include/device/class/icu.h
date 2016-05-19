@@ -46,8 +46,8 @@ struct dev_irq_ep_s;
 /** @see dev_icu_get_sink_t */
 #define DEV_ICU_GET_SINK(n)	struct dev_irq_sink_s * (n) (struct device_icu_s *accessor, uint_fast8_t id)
 
-/** @This returns the interrupt sink end-point with given id. @This
-    returns @tt NULL if no end-point is available with the passed id. */
+/** @This returns the interrupt sink endpoint with given id. @This
+    returns @tt NULL if no endpoint is available with the passed id. */
 typedef DEV_ICU_GET_SINK(dev_icu_get_sink_t);
 
 
@@ -56,27 +56,27 @@ typedef DEV_ICU_GET_SINK(dev_icu_get_sink_t);
                                      struct dev_irq_src_s *src, dev_irq_route_t *route_mask, \
                                      struct dev_irq_src_s **bypass)
 /** @This configure the hardware after the link between a sink and a
-    source end-points have changed. This is called from the @ref
+    source endpoints have changed. This is called from the @ref
     device_irq_source_link and @ref device_irq_source_unlink functions.
 
 
     @This is called with a @tt NULL pointer for the @tt route_mask
-    parameter when a link between two end-point is to be broken. When
-    two end-points have been linked, this parameter indicates which
-    source end-points of this interrupt controller can be used to
+    parameter when a link between two endpoint is to be broken. When
+    two endpoints have been linked, this parameter indicates which
+    source endpoints of this interrupt controller can be used to
     route the interrupt.
 
     When @tt *bypass is @tt NULL, a link has changed between the @tt
-    sink end-point of this interrupt controller and the @tt src
-    end-point of a device.
+    sink endpoint of this interrupt controller and the @tt src
+    endpoint of a device.
 
     When @ref #CONFIG_DEVICE_IRQ_BYPASS is defined and @tt *bypass is
-    not @tt NULL, a link has changed between the sink end-point of an
+    not @tt NULL, a link has changed between the sink endpoint of an
     other interrupt controller in the chain to the device and the @tt
-    src end-point of a device. This happens when the next interrupt
+    src endpoint of a device. This happens when the next interrupt
     controller allows to be bypassed. In this case, it is possible to
-    either ignore this request or keep a link to the @tt src end-point
-    so that the processing function of the @tt src end-point can be
+    either ignore this request or keep a link to the @tt src endpoint
+    so that the processing function of the @tt src endpoint can be
     called directly when an interrupt occurs.
 
     The return value of this function indicates if the interrupt link
@@ -85,10 +85,10 @@ typedef DEV_ICU_GET_SINK(dev_icu_get_sink_t);
     bypassed, the function have to update the content of the @tt
     {bypass}, @tt irq_id and @tt route_mask parameters, then return
     @tt {-EAGAIN}. In this case the @tt bypass parameter must be
-    updated to point to the source end-point which may be passed. In
+    updated to point to the source endpoint which may be passed. In
     any case the interrupt controller must be able to handle
     interrupts by providing a suitable @ref dev_irq_src_process_t
-    function for its source end-points.
+    function for its source endpoints.
 */
 typedef DEV_ICU_LINK(dev_icu_link_t);
 

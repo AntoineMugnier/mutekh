@@ -243,7 +243,7 @@ static DEV_INIT(ppc_init)
 #endif
 
 #ifdef CONFIG_DEVICE_IRQ
-  /* init ppc irq sink end-points */
+  /* init ppc irq sink endpoints */
   device_irq_sink_init(dev, pv->sinks, ICU_PPC_MAX_VECTOR,
                        &ppc_icu_sink_update, DEV_IRQ_SENSE_HIGH_LEVEL);
 

@@ -124,7 +124,7 @@ static DEV_INIT(soclib_icu_init)
   if (device_irq_source_link(dev, &pv->src, 1, 0))
     goto err_mem;
 
-  /* init soclib_icu irq sink end-points */
+  /* init soclib_icu irq sink endpoints */
   pv->sinks = mem_alloc(sizeof(pv->sinks[0]) * pv->nirq, (mem_scope_sys));
   if (!pv->sinks)
     goto err_unlink;
@@ -149,7 +149,7 @@ static DEV_CLEANUP(soclib_icu_cleanup)
   /* disable all irqs */
   cpu_mem_write_32(pv->addr + ICU_SOCLIB_REG_IER_CLR, 0xffffffff);
 
-  /* detach soclib_icu irq end-points */
+  /* detach soclib_icu irq endpoints */
   device_irq_source_unlink(dev, &pv->src, 1);
 
   if (pv->sinks)

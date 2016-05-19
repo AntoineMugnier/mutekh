@@ -325,7 +325,7 @@ static DEV_INIT(x86_init)
 #endif
 
 #ifdef CONFIG_DEVICE_IRQ
-  /* init x86 irq sink end-points */
+  /* init x86 irq sink endpoints */
   device_irq_sink_init(dev, pv->sinks, CPU_X86_IRQ_SINKS,
                        &x86_sink_update, DEV_IRQ_SENSE_ID_BUS);
 

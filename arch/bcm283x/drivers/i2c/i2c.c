@@ -67,7 +67,7 @@ enum bcm283x_i2c_state_e
 struct bcm283x_i2c_context_s
 {
   uintptr_t addr;
-  /* Interrupt end-point */
+  /* Interrupt endpoint */
   struct dev_irq_src_s irq_ep;
   /* request queue */
   dev_request_queue_root_t queue;

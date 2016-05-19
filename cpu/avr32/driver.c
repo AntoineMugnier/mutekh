@@ -264,7 +264,7 @@ static DEV_INIT(avr32_init)
 #endif
 
 #ifdef CONFIG_DEVICE_IRQ
-  /* init avr32 irq sink end-points */
+  /* init avr32 irq sink endpoints */
   device_irq_sink_init(dev, pv->sinks, AVR32_IRQ_COUNT,
                        &avr32_icu_sink_update, DEV_IRQ_SENSE_ID_BUS);
 

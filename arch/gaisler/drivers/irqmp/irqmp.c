@@ -231,7 +231,7 @@ static DEV_INIT(gaisler_irqmp_init)
   pv->srcs_count = 1;
 # endif
 
-  /* init gaisler_irqmp irq source end-points */
+  /* init gaisler_irqmp irq source endpoints */
   pv->srcs = mem_alloc(sizeof(pv->srcs[0]) * pv->srcs_count, (mem_scope_sys));
   if (!pv->srcs)
     goto err_mem;
@@ -262,7 +262,7 @@ static DEV_INIT(gaisler_irqmp_init)
   if (device_irq_source_link(dev, pv->srcs, pv->srcs_count, 0))
     goto err_mem2;
 
-  /* init gaisler_irqmp irq sink end-points */
+  /* init gaisler_irqmp irq sink endpoints */
   pv->sinks = mem_alloc(sizeof(pv->sinks[0]) * GAISLER_IRQMP_SINKS_COUNT, (mem_scope_sys));
   if (!pv->sinks)
     goto err_unlink;
@@ -297,7 +297,7 @@ static DEV_CLEANUP(gaisler_irqmp_cleanup)
   gaisler_irqmp_disable_irqs(pv);
 
 #ifdef CONFIG_DRIVER_GAISLER_IRQMP_ICU
-  /* detach gaisler_irqmp irq end-points */
+  /* detach gaisler_irqmp irq endpoints */
   device_irq_source_unlink(dev, pv->srcs, pv->srcs_count);
 
   mem_free(pv->srcs);

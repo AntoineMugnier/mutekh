@@ -57,7 +57,7 @@ struct cc26xx_timer_private_s
 #ifdef CONFIG_DEVICE_IRQ
   /* Timer Software value */
   uint64_t swvalue;
-  /* Interrupt end-point */
+  /* Interrupt endpoint */
   struct dev_irq_src_s irq_eps;
   /* Request queue */
   dev_request_pqueue_root_t queue;

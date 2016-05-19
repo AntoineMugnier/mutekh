@@ -42,7 +42,7 @@
 #include "pl390icu_gicd_regs.h"
 
 /*
-  Sink end-points numbers are:
+  Sink endpoints numbers are:
 
     32   to 1024: Shared peripheral interrupts
     1024 to 1039: Private interrupts of cpu0
@@ -287,13 +287,13 @@ static DEV_INIT(pl390_icu_init)
   /* enable distributor */
   cpu_mem_write_32(pv->gicd_addr + PL390_GICD_CTRL_ADDR, endian_le32(PL390_GICD_CTRL_ENABLE));
 
-  /* create irq end-points */
+  /* create irq endpoints */
 
   pv->srcs = mem_alloc(sizeof(pv->srcs[0]) * pv->cpu_count, (mem_scope_sys));
   if (!pv->srcs)
     goto err_mem;
 
-  /* FIXME don't allocate end-point for non implemented irqs */
+  /* FIXME don't allocate endpoint for non implemented irqs */
   pv->sinks = mem_alloc(sizeof(pv->sinks[0]) * ((n - 1) * 32 + pv->cpu_count * 16), (mem_scope_sys));
   if (!pv->sinks)
     goto err_mem2;

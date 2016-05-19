@@ -42,13 +42,13 @@
   When used as an ICU, #CONFIG_DRIVER_MCP23S17_IRQ_COUNT defines the
   the number of available IRQs on the device (between 1 and 16).
 
-  For proper use, the sink end-point linked with the source end-point of the
+  For proper use, the sink endpoint linked with the source endpoint of the
   device has to be configured with a RISING_EDGE sensibility.
 
   The device's sink endpoints sensibilities are HIGH_LEVEL, LOW_LEVEL and
   ANY_EDGE. Due to some race conditions inherent to the device hardware, the
   driver uses a sofware implementation for the ANY_EDGE trigger. It uses
-  HIGH_LEVEL and LOW_LEVEL alternatively by reconfiguring the sink end-point
+  HIGH_LEVEL and LOW_LEVEL alternatively by reconfiguring the sink endpoint
   sensitivity on the fly, during the interruption. Altough it works well with
   long pulses (like push button pressed and released), a too short pulse could
   be masked by another one when they appear simultaneously !

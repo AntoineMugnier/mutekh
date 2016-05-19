@@ -157,15 +157,15 @@ struct dev_resource_s
 
     /** @see DEV_RES_IRQ */
     struct {
-      /** id of irq source end-point of the device */
+      /** id of irq source endpoint of the device */
       uintptr_t                 BITFIELD(src_id,CONFIG_DEVICE_IRQ_MAX_OUTPUT_ID);
-      /** id of irq sink end-point of interrupt controller */
+      /** id of irq sink endpoint of interrupt controller */
       uintptr_t                 BITFIELD(sink_id,CONFIG_DEVICE_IRQ_MAX_INPUT_ID);
       /** initial irq trigger mode, @see dev_irq_sense_modes_e */
       uintptr_t                 BITFIELD(trig_mode,8);
       /** logical irq id, used when @tt trig_mode is @ref DEV_IRQ_SENSE_ID_BUS */
       uintptr_t                 BITFIELD(irq_id,CONFIG_DEVICE_IRQ_MAX_LOGICAL_ID);
-      /** specifies source end-points of the controller that can be used to forward this irq. */
+      /** specifies source endpoints of the controller that can be used to forward this irq. */
       uintptr_t                 BITFIELD(route_mask,CONFIG_DEVICE_IRQ_MAX_ROUTES);
     }                           irq;
 
@@ -264,10 +264,10 @@ struct dev_resource_s
     struct {
       /** path to the clock source device */
       const char                *src;
-      /** node id of the source end-point, relevant to the device
+      /** node id of the source endpoint, relevant to the device
           pointed to by @tt src. */
       uintptr_t                 BITFIELD(src_ep,CONFIG_DEVICE_CLOCK_MAX_ID);
-      /** node id of the sink end-point, relevant to the device which
+      /** node id of the sink endpoint, relevant to the device which
           holds this resource. */
       uintptr_t                 BITFIELD(sink_ep,CONFIG_DEVICE_CLOCK_MAX_ID);
     }                           clock_src;

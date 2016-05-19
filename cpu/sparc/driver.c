@@ -226,7 +226,7 @@ static DEV_INIT(sparc_init)
     goto err_node;
 
 #ifdef CONFIG_DEVICE_IRQ
-  /* init sparc irq sink end-points */
+  /* init sparc irq sink endpoints */
   device_irq_sink_init(dev, pv->sinks, ICU_SPARC_SINKS_COUNT,
                        &sparc_icu_sink_update, SPARC_IRQ_SENSE_MODE);
 

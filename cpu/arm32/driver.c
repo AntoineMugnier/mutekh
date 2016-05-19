@@ -297,7 +297,7 @@ static DEV_INIT(arm_init)
 #endif
 
 #ifdef CONFIG_DEVICE_IRQ
-  /* init arm irq sink end-points */
+  /* init arm irq sink endpoints */
   device_irq_sink_init(dev, pv->sinks, ICU_ARM_MAX_VECTOR,
                        &arm_icu_sink_update, ARM_IRQ_SENSE_MODE);
 

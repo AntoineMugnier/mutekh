@@ -324,7 +324,7 @@ enum dev_use_op_e
 
       What is actually performed by the driver is device
       dependent. This may include releasing clock and power
-      end-points, calling @ref device_stop on associated spi or i2c
+      endpoints, calling @ref device_stop on associated spi or i2c
       bus controllers or enabling a device specific low power mode.
 
       When this operation is performed on multiple devices, driver
@@ -337,13 +337,13 @@ enum dev_use_op_e
 #ifdef CONFIG_DEVICE_CLOCK
   /** This operation is used when a clock or power enable operation
       requested by the driver has been satisfied. The @tt param
-      argument is a pointer to the sink end-point. @see
+      argument is a pointer to the sink endpoint. @see
       dev_clock_sink_gate */
   DEV_USE_CLOCK_GATES,
 
 # ifdef CONFIG_DEVICE_CLOCK_VARFREQ
   /** This operation is used when a clock frequency change occurred on
-      a clock sink end-point and the change notifications is
+      a clock sink endpoint and the change notifications is
       enabled. The change might not have been solicited by the
       driver. The @tt param argument is a pointer to a @ref
       dev_clock_notify_s object. */

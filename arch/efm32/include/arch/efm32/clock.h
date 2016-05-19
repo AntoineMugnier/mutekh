@@ -39,7 +39,7 @@ enum efm32_clock_node_e {
 # define EFM32_CLOCK_USBC EFM32_CLOCK_USBC
 #endif
 
-  /* source end-points under HFCORECLK */
+  /* source endpoints under HFCORECLK */
   EFM32_CLOCK_ENUM_NEXT(EFM32_CLOCK_HFCORECLK_first),
 
   EFM32_CLOCK_CPU,
@@ -63,7 +63,7 @@ enum efm32_clock_node_e {
 
   EFM32_CLOCK_ENUM_PREV(EFM32_CLOCK_HFCORECLK_last),
 
-  /* source end-points under HFPERCLK */
+  /* source endpoints under HFPERCLK */
   EFM32_CLOCK_ENUM_NEXT(EFM32_CLOCK_HFPERCLK_first),
 
 #if defined(CONFIG_DRIVER_EFM32_TIMER) || defined(CONFIG_DRIVER_EFM32_PWM)
@@ -143,7 +143,7 @@ enum efm32_clock_node_e {
 
   EFM32_CLOCK_ENUM_PREV(EFM32_CLOCK_HFPERCLK_last),
 
-  /* source end-points under LFACLK */
+  /* source endpoints under LFACLK */
 
   EFM32_CLOCK_ENUM_NEXT(EFM32_CLOCK_LFACLK_first),
 
@@ -163,7 +163,7 @@ enum efm32_clock_node_e {
 
   EFM32_CLOCK_ENUM_PREV(EFM32_CLOCK_LFACLK_last),
 
-  /* source end-points under LFBCLK */
+  /* source endpoints under LFBCLK */
 
   EFM32_CLOCK_ENUM_NEXT(EFM32_CLOCK_LFBCLK_first),
 

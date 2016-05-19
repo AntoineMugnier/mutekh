@@ -85,7 +85,7 @@ struct stm32_usart_context_s
 #endif
 #endif
 
-  /* interrupt end-points (TX and RX on the same wire). */
+  /* interrupt endpoints (TX and RX on the same wire). */
   struct dev_irq_src_s   irq_ep[1];
 
   bool_t                read_started:1;

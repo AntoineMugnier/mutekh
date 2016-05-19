@@ -357,7 +357,7 @@ error_t device_irq_source_link(struct device_s *dev, struct dev_irq_src_s *srcs,
 
       if (src_id >= src_count)
         {
-          printk("device: driver for device %p does not provide source end-point for IRQ output %u.\n",
+          printk("device: driver for device %p does not provide source endpoint for IRQ output %u.\n",
                  dev, src_id);
           err = -ENOENT;
           goto error;
@@ -365,7 +365,7 @@ error_t device_irq_source_link(struct device_s *dev, struct dev_irq_src_s *srcs,
 
       if (done[src_id])
         {
-          printk("device: multiple resource entries for IRQ source end-point %u.\n", dev, src_id);
+          printk("device: multiple resource entries for IRQ source endpoint %u.\n", dev, src_id);
           err = -ENOENT;
           goto error;
         }
@@ -386,12 +386,12 @@ error_t device_irq_source_link(struct device_s *dev, struct dev_irq_src_s *srcs,
 
       if (!sink)
         {
-          printk("device: interrupt controller %p does not have sink end-point for IRQ input %u.\n", icu_dev, r->u.irq.sink_id);
+          printk("device: interrupt controller %p does not have sink endpoint for IRQ input %u.\n", icu_dev, r->u.irq.sink_id);
           err = -EINVAL;
           goto error;
         }
 
-      /* create link between end-points */
+      /* create link between endpoints */
       if ((err = device_irq_ep_link(src, sink)))
         goto error;
 
@@ -422,7 +422,7 @@ error_t device_irq_source_link(struct device_s *dev, struct dev_irq_src_s *srcs,
           trig_mode &= sink->sense_link;
           if (!trig_mode)
             {
-              printk("device: icu %p can't share a sink end-point with a different trigger mode.\n", icu_dev);
+              printk("device: icu %p can't share a sink endpoint with a different trigger mode.\n", icu_dev);
               err = -EINVAL;
               goto error;
             }
@@ -476,7 +476,7 @@ error_t device_irq_source_link(struct device_s *dev, struct dev_irq_src_s *srcs,
   for (i = 0; i < src_count; i++)
     if (!done[i])
       {
-        printk("device: Unable to link IRQ source end-point %u of device %p, no IRQ resource entry.\n", i, dev);
+        printk("device: Unable to link IRQ source endpoint %u of device %p, no IRQ resource entry.\n", i, dev);
         err = -ENOENT;
         goto error;
       }

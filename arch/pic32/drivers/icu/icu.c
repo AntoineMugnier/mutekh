@@ -195,7 +195,7 @@ static DEV_CLEANUP(pic32_icu_cleanup)
   for (uint8_t i = 0; i< PIC32_ICU_IEC_COUNT; i++)
     cpu_mem_write_32(pv->addr + PIC32_ICU_IEC_ADDR(i), 0);
 
-  /* detach pic32_icu irq end-points */
+  /* detach pic32_icu irq endpoints */
   device_irq_source_unlink(dev, &pv->src, 1);
 
   if (pv->sinks)

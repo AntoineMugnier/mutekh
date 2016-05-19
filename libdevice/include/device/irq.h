@@ -49,7 +49,7 @@ enum dev_irq_sense_modes_e
   /** IRQ is disabled */
   DEV_IRQ_SENSE_NONE                  = 0x0000,
   /** IRQ number transmitted over a dedicated bus. When multiple
-      logical interrupts are multiplexed on the same end-point, the @tt
+      logical interrupts are multiplexed on the same endpoint, the @tt
       id parameter of the @ref dev_irq_src_process_t function indicates
       the logocal id of the triggered interrupt. */
   DEV_IRQ_SENSE_ID_BUS                = 0x0001,
@@ -67,7 +67,7 @@ enum dev_irq_sense_modes_e
   DEV_IRQ_SENSE_ANY_EDGE              = 0x0020,
 };
 
-/** Device irq end-point object. Irq endpoints are linked together to
+/** Device irq endpoint object. Irq endpoints are linked together to
     make irqs topology graph */
 struct dev_irq_ep_s
 {
@@ -91,7 +91,7 @@ struct dev_irq_ep_s
 #define DEV_IRQ_SRC_PROCESS(n) void (n) (struct dev_irq_src_s *ep, dev_irq_id_t id)
 
 /**
-   @This is the interrupt end-point processing function. It is
+   @This is the interrupt endpoint processing function. It is
    implemented by device drivers to handle interrupts. It is called
    from the @ref device_irq_sink_process function in interrupt
    controller code.
@@ -101,12 +101,12 @@ struct dev_irq_ep_s
  */
 typedef DEV_IRQ_SRC_PROCESS(dev_irq_src_process_t);
 
-/** Device irq source end-point of device generating interrupts. */
+/** Device irq source endpoint of device generating interrupts. */
 struct dev_irq_src_s
 {
   struct dev_irq_ep_s base;
 
-  /** Current irq trigger mode configured on linked sink end-points. */
+  /** Current irq trigger mode configured on linked sink endpoints. */
   uint8_t trig_mode;
 
   /** Logical id of interrupt, valid when @ref trig_mode is @ref DEV_IRQ_SENSE_ID_BUS */
@@ -124,13 +124,13 @@ STRUCT_INHERIT(dev_irq_src_s, dev_irq_ep_s, base);
                                          enum dev_irq_sense_modes_e sense,  \
                                          dev_irq_id_t irq_id)
 
-/** @This updates the interrupt sense mode of a sink end-point. It is
+/** @This updates the interrupt sense mode of a sink endpoint. It is
     implemented by the driver of the interrupt controller. This function
     should not be called directly. @see device_irq_src_update
     @see device_irq_src_enable @see device_irq_src_disable. */
 typedef DEV_IRQ_SINK_UPDATE(dev_irq_sink_update_t);
 
-/** Device irq sink end-point. Sink end-points are stored in interrupt
+/** Device irq sink endpoint. Sink endpoints are stored in interrupt
     controllers device private data and can be accessed by calling the
     @ref dev_icu_get_sink_t function. */
 struct dev_irq_sink_s
@@ -154,35 +154,35 @@ struct dev_irq_sink_s
 
 STRUCT_INHERIT(dev_irq_sink_s, dev_irq_ep_s, base);
 
-/** @This updates the sense mode of all sink end-points linked to the
-    given source end-point. This can be used when the trigger mode of
-    the source end-point in the device resources has been declared as
+/** @This updates the sense mode of all sink endpoints linked to the
+    given source endpoint. This can be used when the trigger mode of
+    the source endpoint in the device resources has been declared as
     @ref DEV_IRQ_SENSE_NONE. In this case the irq can not be shared. */
 error_t device_irq_src_update(struct dev_irq_src_s *src, enum dev_irq_sense_modes_e trig_mode);
 
-/** @This enables the IRQ sensing of all linked sink end-points. This
+/** @This enables the IRQ sensing of all linked sink endpoints. This
     can be used when at least one valid trigger mode has been
-    specified for the source end-point in the device resources. The
+    specified for the source endpoint in the device resources. The
     IRQ can not be shared. */
 error_t device_irq_src_enable(struct dev_irq_src_s *src);
 
-/** @This disables the IRQ sensing of all linked sink end-points. The
+/** @This disables the IRQ sensing of all linked sink endpoints. The
     IRQ can not be shared. */
 ALWAYS_INLINE error_t device_irq_src_disable(struct dev_irq_src_s *src)
 {
   return device_irq_src_update(src, DEV_IRQ_SENSE_NONE);
 }
 
-/** @This initializes an array of interrupt source end-points. This is
+/** @This initializes an array of interrupt source endpoints. This is
     called from the device driver initialization function. The device
     drivers must provide a function which implement the source
-    end-point irq handler. */
+    endpoint irq handler. */
 config_depend(CONFIG_DEVICE_IRQ)
 void device_irq_source_init(struct device_s *dev, struct dev_irq_src_s *sources,
                             uint_fast8_t count, dev_irq_src_process_t *process);
 
 /** @This initializes an array of device interrupt sink
-    end-points. This is called from the interrupt controller
+    endpoints. This is called from the interrupt controller
     initialization function. The drivers must provide a function which
     is able to update the interrupt sense mode according to the value
     of @tt sense_mask. */
@@ -191,13 +191,13 @@ void device_irq_sink_init(struct device_s *dev, struct dev_irq_sink_s *sinks,
                           uint_fast8_t count, dev_irq_sink_update_t *update,
                           enum dev_irq_sense_modes_e sense_mask);
 
-/** @This links device interrupt source end-points to appropriate sink
-    end-points of interrupt controllers as described in device
+/** @This links device interrupt source endpoints to appropriate sink
+    endpoints of interrupt controllers as described in device
     resources. @This is usually called from the device driver
-    initialization function passing an array of source end-points
+    initialization function passing an array of source endpoints
     allocated in the private driver data for the device.
 
-    The enable mask specifies which source end-point must have its
+    The enable mask specifies which source endpoint must have its
     sense mode updated. When an interrupt is shared, the interrupt may
     have been enabled previously. When calling this function, the
     device driver must be ready to handle interrupts.
@@ -212,30 +212,30 @@ void device_irq_sink_init(struct device_s *dev, struct dev_irq_sink_s *sinks,
     calling the @ref device_irq_src_update function.
 
     In any case, the device driver can test the current mode
-    of end-point by calling the @ref device_irq_modes function.
+    of endpoint by calling the @ref device_irq_modes function.
 */
 config_depend(CONFIG_DEVICE_IRQ)
 error_t device_irq_source_link(struct device_s *dev, struct dev_irq_src_s *sources,
                                uint_fast8_t count, uint32_t enable_mask);
 
 /** @This function returns the current trigger mode of the source
-    end-point and the sense modes supported by the linked sink
-    end-point. If the source-end point is not linked, 0 is returned in
+    endpoint and the sense modes supported by the linked sink
+    endpoint. If the source-end point is not linked, 0 is returned in
     @tt *modes. Either pointers may be @tt NULL. */
 config_depend(CONFIG_DEVICE_IRQ)
 void device_irq_modes(struct dev_irq_src_s *src,
                       enum dev_irq_sense_modes_e *cur,
                       enum dev_irq_sense_modes_e *modes);
 
-/** @This unlink device interrupt end-points. @This is usually
+/** @This unlink device interrupt endpoints. @This is usually
     called from the device driver cleanup function, passing an array
-    of source end-points allocated in the private driver data. */
+    of source endpoints allocated in the private driver data. */
 config_depend(CONFIG_DEVICE_IRQ)
 void device_irq_source_unlink(struct device_s *dev, struct dev_irq_src_s *sources, uint_fast8_t count);
 
 /** @This is called from the interrupt controller code to forward an
-    irq to all source end-points connected to one of the controller
-    sink end-point. */
+    irq to all source endpoints connected to one of the controller
+    sink endpoint. */
 inline void device_irq_sink_process(struct dev_irq_sink_s *sink, dev_irq_id_t id)
 {
 #ifdef CONFIG_DEVICE_IRQ_SHARING
@@ -264,12 +264,12 @@ inline void device_irq_sink_process(struct dev_irq_sink_s *sink, dev_irq_id_t id
 
     This entry specifies how an output irq wire (source) of the
     device is connected to an input (sink) of the interrupt
-    controller. This is used to connect software irq end-points
+    controller. This is used to connect software irq endpoints
     of the two device drivers.
 
     A mask of irq trigger modes supported by the source is specified.
     When the linking occurs, a single mode will be selected based on
-    what is supported by both the sink and the source end-points. If
+    what is supported by both the sink and the source endpoints. If
     zero is used here, no particular mode will be configured and the
     driver will be responsible for updating the sense mode of the sink.
 
@@ -278,9 +278,9 @@ inline void device_irq_sink_process(struct dev_irq_sink_s *sink, dev_irq_id_t id
     in @tt irq_id_ . Zero is used if the hardware irq link is a single
     wire.
 
-    For interrupt controllers with multiple source end-points, irq
+    For interrupt controllers with multiple source endpoints, irq
     routing must be configured. A single output is used when the irq
-    is triggered. Which source end-point is actually selected may be
+    is triggered. Which source endpoint is actually selected may be
     choosen statically or dynamically by the implementation among
     allowed routes defined by the route mask parameter.
 

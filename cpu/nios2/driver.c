@@ -269,7 +269,7 @@ static DEV_INIT(nios2_init)
 #endif
 
 #ifdef CONFIG_DEVICE_IRQ
-  /* init nios2 irq sink end-points */
+  /* init nios2 irq sink endpoints */
   device_irq_sink_init(dev, pv->sinks, ICU_NIOS2_MAX_VECTOR,
                        &nios2_icu_sink_update,
                        DEV_IRQ_SENSE_HIGH_LEVEL);

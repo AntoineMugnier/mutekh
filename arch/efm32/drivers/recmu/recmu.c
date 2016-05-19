@@ -317,7 +317,7 @@ struct efm32_recmu_private_s
   bool_t busy;
 
   efm32_clock_mask_t use_mask;   /* what is enabled by direct use */
-  efm32_clock_mask_t link_mask;  /* what has a linked end-point */
+  efm32_clock_mask_t link_mask;  /* what has a linked endpoint */
   efm32_clock_mask_t dep_mask;   /* what is enabled, including dependencies */
   efm32_clock_mask_t wait_mask;
 

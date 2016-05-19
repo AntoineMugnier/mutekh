@@ -50,7 +50,7 @@ struct bcm283x_systimer_private_s
   /* Timer address */
   uintptr_t addr;
 #ifdef CONFIG_DEVICE_IRQ
-  /* Interrupt end-points */
+  /* Interrupt endpoints */
   struct dev_irq_src_s irq_eps[4];
   /* Request queue */
   dev_request_pqueue_root_t queue;

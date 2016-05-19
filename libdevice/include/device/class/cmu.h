@@ -42,7 +42,7 @@
 
    A clock management unit device is a black box which contains a
    clock tree made of internal nodes of four different types:
-   oscillators, mux, sink end-points and source end-points. Each node
+   oscillators, mux, sink endpoints and source endpoints. Each node
    in the internal tree is assigned a compile time numerical id.
 
    The driver provides functions to specify and apply a configuration
@@ -64,12 +64,12 @@
    factor is usually restricted by the hardware. They are used to
    represent clock multiplexer, divider and PLLs in the hardware tree.
 
-   @item Sink end-point nodes have an associated @ref
+   @item Sink endpoint nodes have an associated @ref
    dev_clock_sink_ep_s object. They represent an input connected to
    the output of an other clock management unit. They do not have a
    parent in the tree and do not need configuration.
 
-   @item Source end-point nodes have an associated @ref
+   @item Source endpoint nodes have an associated @ref
    dev_clock_src_ep_s object. They represent a clock output which can
    be connected to the input of consumer device. They have a fixed
    parent in the tree. They do not need configuration but may raise
@@ -77,10 +77,10 @@
    dev_clock_src_setup_t function.
    @end list
 
-   Links between end-point may convey a clock signal, a power supply
+   Links between endpoint may convey a clock signal, a power supply
    or both. The driver of the clock management unit must be able to
-   handle clock management operations on its source end-points needed
-   by driver of linked consumer devices. This includes end-point
+   handle clock management operations on its source endpoints needed
+   by driver of linked consumer devices. This includes endpoint
    linking operations, gating operations and frequency change
    notifications. This operations are defined in @ref {@device/clock.h}.
 
@@ -140,7 +140,7 @@ typedef uint_fast8_t dev_cmu_node_id_t;
 /** @internal @This sets the next configuration of a clock mux node
     internal to the device.
 
-    This function acts on end-point nodes and internal clock signals
+    This function acts on endpoint nodes and internal clock signals
     nodes.  The function have to select the mux to the parent clock
     node inside the device and optionally update the clock scale
     factor associated to this mux.
@@ -190,7 +190,7 @@ typedef DEV_CMU_CONFIG_OSC(dev_cmu_config_osc_t);
     error.
 
     The @ref dev_cmu_src_notify function is called by the driver
-    for all impacted source end-points once the change has occurred.
+    for all impacted source endpoints once the change has occurred.
     The device lock must be held when calling this function. */
 typedef DEV_CMU_COMMIT(dev_cmu_commit_t);
 
@@ -235,9 +235,9 @@ struct dev_cmu_node_info_s
   dev_cmu_node_id_t        parent_id;
   /** Specifies if the clock is currently running. */
   bool_t                     running;
-  /** Pointer to sink end-point object when relevant */
+  /** Pointer to sink endpoint object when relevant */
   struct dev_clock_sink_ep_s *sink;
-  /** Pointer to source end-point object when relevant */
+  /** Pointer to source endpoint object when relevant */
   struct dev_clock_src_ep_s  *src;
   /** Source endpoint frequency scale */
   struct dev_freq_ratio_s    scale;
@@ -290,11 +290,11 @@ config_depend(CONFIG_DEVICE_CLOCK)
 error_t dev_cmu_init(const struct driver_s *drv, struct device_s *dev);
 
 /** @internal This helper function is called by the clock provider
-    device driver when the frequency of a clock source end-point
+    device driver when the frequency of a clock source endpoint
     changes.
 
     This function will propagate the change to all connected sink
-    end-points by calling the @ref dev_use_t function of the
+    endpoints by calling the @ref dev_use_t function of the
     associated device driver with the @ref DEV_USE_CLOCK_NOTIFY
     operation. The @tt sink field of @tt param is set by the function.
  */
@@ -302,7 +302,7 @@ config_depend(CONFIG_DEVICE_CLOCK_VARFREQ)
 void dev_cmu_src_notify(struct dev_clock_src_ep_s *src,
                         struct dev_clock_notify_s *param);
 
-/** This helper updates the gates state of a source end-point when
+/** This helper updates the gates state of a source endpoint when
     enabled synchronously from endpoint setup handler. @This is called
     by the clock provider device driver when the state of the
     requested gates has been updated. */
@@ -318,7 +318,7 @@ void dev_cmu_src_update_sync(struct dev_clock_src_ep_s *src,
     the requested gates has been enabled asynchronously.
 
     This function will propagate the change to all connected sink
-    end-points by calling the @ref dev_use_t function of the
+    endpoints by calling the @ref dev_use_t function of the
     associated device driver with the @ref DEV_USE_CLOCK_GATES
     operation. */
 config_depend(CONFIG_DEVICE_CLOCK_GATING)

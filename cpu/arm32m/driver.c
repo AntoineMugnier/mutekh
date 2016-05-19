@@ -283,7 +283,7 @@ static DEV_INIT(arm_init)
 #endif
 
 #ifdef CONFIG_DEVICE_IRQ
-      /* init arm irq sink end-points */
+      /* init arm irq sink endpoints */
       device_irq_sink_init(dev, pv->sinks, CONFIG_CPU_ARM32M_M_IRQ_COUNT,
                            arm_icu_sink_update, DEV_IRQ_SENSE_HIGH_LEVEL | DEV_IRQ_SENSE_RISING_EDGE);
 

@@ -62,10 +62,10 @@ struct stm32_rcc_private_s
     dev_clock_frac_t    denum;
   }                     signals[STM32_CLOCK_SIG_MAX];
 
-  /** internal clock source end-points (i.e. oscillator). */
+  /** internal clock source endpoints (i.e. oscillator). */
   struct dev_clock_ep_s oscs[STM32_CLOCK_OSC_COUNT];
 
-  /** clock sink end-points. */
+  /** clock sink endpoints. */
   struct dev_clock_ep_s srcs[STM32_CLOCK_SRC_COUNT];
 };
 
@@ -248,7 +248,7 @@ static DEV_INIT(stm32_rcc_init)
 
   /* several inits and register config here. */
 
-  /* initialize end-points. */
+  /* initialize endpoints. */
   dev_clock_source_init(dev, &pv->srcs[0]);
   dev_clock_source_init(dev, &pv->srcs[1]);
   dev_clock_source_init(dev, &pv->srcs[2]);
