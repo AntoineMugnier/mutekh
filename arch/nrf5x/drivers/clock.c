@@ -239,7 +239,7 @@ static enum nrf5x_clock_mode_e clock_lf_expected_mode_get(struct nrf5x_clock_con
 #endif
   }
 
-  if (pv->requested_sources & (1 << NRF_CLOCK_LF_PRECISE))
+  if (pv->requested_sources & (1 << NRF_CLOCK_LF))
     return MODE_RC;
 
   return MODE_OFF;
