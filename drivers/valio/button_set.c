@@ -54,15 +54,33 @@ struct bs_context_s
   bool_t changed;
 };
 
-static void bs_notif_disable(struct bs_context_s *pv)
+static void bs_notif_disable(struct device_s *dev)
 {
+  struct bs_context_s *pv = dev->drv_pv;
+
+  if (!(dev->start_count & 1))
+    return;
+
+  dprintk("%s\n", __FUNCTION__);
+
+  dev->start_count &= ~1;
+
   DEVICE_OP(&pv->gpio, input_irq_range,
             pv->first, pv->last, (const uint8_t *)&pv->mask,
             0, pv->range_id);
 }
 
-static void bs_notif_enable(struct bs_context_s *pv)
+static void bs_notif_enable(struct device_s *dev)
 {
+  struct bs_context_s *pv = dev->drv_pv;
+
+  if (dev->start_count & 1)
+    return;
+
+  dprintk("%s\n", __FUNCTION__);
+
+  dev->start_count |= 1;
+
   DEVICE_OP(&pv->gpio, input_irq_range,
             pv->first, pv->last, (const uint8_t *)&pv->mask,
             DEV_IRQ_SENSE_LOW_LEVEL | DEV_IRQ_SENSE_HIGH_LEVEL, pv->range_id);
@@ -140,7 +158,7 @@ static DEV_IRQ_SRC_PROCESS(bs_irq)
   }
 
   if (!rq)
-    bs_notif_disable(pv);
+    device_sleep_schedule(dev);
 
   LOCK_RELEASE_IRQ(&dev->lock);
 }
@@ -149,6 +167,7 @@ static DEV_VALIO_REQUEST(button_set_request)
 {
   struct device_s *dev = accessor->dev;
   struct bs_context_s *pv = dev->drv_pv;
+  bool_t queued = 0;
   req->error = 0;
 
   dprintk("%s\n", __FUNCTION__);
@@ -164,13 +183,15 @@ static DEV_VALIO_REQUEST(button_set_request)
     goto done;
 
   case DEVICE_VALIO_WAIT_EVENT:
+    LOCK_SPIN_IRQ(&dev->lock);
     if (!pv->changed) {
-      LOCK_SPIN_IRQ(&dev->lock);
       dev_request_queue_pushback(&pv->queue, &req->base);
-      bs_notif_enable(pv);
-      LOCK_RELEASE_IRQ(&dev->lock);
-      return;
+      bs_notif_enable(dev);
+      queued = 1;
     }
+    LOCK_RELEASE_IRQ(&dev->lock);
+    if (queued)
+      return;
 
   case DEVICE_VALIO_READ:
     bs_read_or_update(pv, req);
@@ -182,10 +203,48 @@ static DEV_VALIO_REQUEST(button_set_request)
   kroutine_exec(&req->base.kr);
 }
 
+static DEV_VALIO_CANCEL(button_set_cancel)
+{
+  struct device_s *dev = accessor->dev;
+  struct bs_context_s *pv = dev->drv_pv;
+  error_t err = -ENOENT;
 
+  LOCK_SPIN_IRQ(&dev->lock);
 
-#define button_set_use dev_use_generic
-#define button_set_cancel (dev_valio_cancel_t*)&dev_driver_notsup_fcn
+  GCT_FOREACH(dev_request_queue, &pv->queue, item,
+              if (item == &req->base) {
+                err = 0;
+                GCT_FOREACH_BREAK;
+              });
+
+  if (err == 0) {
+    dev_request_queue_remove(&pv->queue, &req->base);
+
+    device_sleep_schedule(dev);
+  }
+
+  LOCK_RELEASE_IRQ(&dev->lock);
+
+  return err;
+}
+
+static DEV_USE(button_set_use)
+{
+  switch (op) {
+  case DEV_USE_SLEEP: {
+    struct device_s *dev = param;
+    struct bs_context_s *pv = dev->drv_pv;
+
+    if (dev_request_queue_isempty(&pv->queue))
+      bs_notif_disable(dev);
+
+    return 0;
+  }
+
+  default:
+    return dev_use_generic(param, op);
+  }
+}
 
 static DEV_INIT(button_set_init)
 {
@@ -241,7 +300,7 @@ static DEV_INIT(button_set_init)
 
   dev_request_queue_init(&pv->queue);
 
-  device_irq_source_init(dev, &pv->irq_ep, 1, &bs_irq /* , DEV_IRQ_SENSE_ANY_EDGE*/);
+  device_irq_source_init(dev, &pv->irq_ep, 1, &bs_irq);
 
   err = device_irq_source_link(dev, &pv->irq_ep, 1, -1);
   if (err)
