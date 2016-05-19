@@ -64,6 +64,9 @@ static void peri_state_update(struct ble_peripheral_s *peri)
   if (state == peri->last_state)
     return;
 
+  if (peri->mode == 0 && state == BLE_PERIPHERAL_IDLE)
+    ble_stack_context_release(peri->context);
+
   peri->last_state = state;
 
   printk("Peripheral state now %d\n", state);
@@ -262,13 +265,10 @@ void ble_peripheral_mode_set(struct ble_peripheral_s *peri, uint8_t mode)
   if (mode == peri->mode)
     return;
 
-  if (peri->mode == BLE_PERIPHERAL_IDLE)
+  if (peri->mode == 0)
     ble_stack_context_use(peri->context);
 
   peri->mode = mode;
-
-  if (mode == BLE_PERIPHERAL_IDLE)
-    ble_stack_context_release(peri->context);
 
   if (!(mode & BLE_PERIPHERAL_CONNECTABLE))
     ble_stack_connection_drop(&peri->conn);
@@ -280,4 +280,9 @@ void ble_peripheral_mode_set(struct ble_peripheral_s *peri, uint8_t mode)
 
   if (mode & BLE_PERIPHERAL_CONNECTABLE && !peri->conn.phy)
     adv_start(peri);
+}
+
+void ble_peripheral_cleanup(struct ble_peripheral_s *peri)
+{
+  assert(peri->mode == 0 && peri->last_state == BLE_PERIPHERAL_IDLE);
 }
