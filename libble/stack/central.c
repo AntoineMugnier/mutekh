@@ -70,6 +70,9 @@ static void ctr_state_update(struct ble_central_s *ctr)
   if (state == ctr->last_state)
     return;
 
+  if (ctr->mode == 0 && state == BLE_CENTRAL_IDLE)
+    ble_stack_context_release(ctr->context);
+
   ctr->last_state = state;
 
   printk("Central state now %d\n", state);
@@ -267,6 +270,9 @@ void ble_central_mode_set(struct ble_central_s *ctr, uint8_t mode)
 
   if (mode == ctr->mode)
     return;
+
+  if (ctr->mode == 0)
+    ble_stack_context_use(ctr->context);
 
   ctr->mode = mode;
 
