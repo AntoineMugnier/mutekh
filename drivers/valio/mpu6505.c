@@ -616,8 +616,33 @@ static KROUTINE_EXEC(mpu6505_tick)
   lock_release(&dev->lock);
 }
 
+static DEV_VALIO_CANCEL(mpu6505_cancel)
+{
+  struct device_s *dev = accessor->dev;
+  struct mpu6505_private_s *pv = dev->drv_pv;
+  error_t err = -ENOENT;
 
-#define mpu6505_cancel (dev_valio_cancel_t*)&dev_driver_notsup_fcn
+  LOCK_SPIN_IRQ(&dev->lock);
+
+  if (req == pv->running) {
+    err = -EBUSY;
+  } else {
+    GCT_FOREACH(dev_request_queue, &pv->queue, item,
+                if (item == &req->base) {
+                  err = 0;
+                  GCT_FOREACH_BREAK;
+                });
+
+    if (err == 0) {
+      dev_request_queue_remove(&pv->queue, &req->base);
+      mpu6505_request_run_first(dev);
+    }
+  }
+
+  LOCK_RELEASE_IRQ(&dev->lock);
+
+  return err;
+}
 
 static DEV_INIT(mpu6505_init)
 {
@@ -711,4 +736,3 @@ DRIVER_DECLARE(mpu6505_drv, 0, "MPU6505 motion", mpu6505,
                DRIVER_VALIO_METHODS(mpu6505));
 
 DRIVER_REGISTER(mpu6505_drv);
-
