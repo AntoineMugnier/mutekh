@@ -295,7 +295,7 @@ error_t dev_cmu_init(const struct driver_s *drv, struct device_s *dev);
 
     This function will propagate the change to all connected sink
     endpoints by calling the @ref dev_use_t function of the
-    associated device driver with the @ref DEV_USE_CLOCK_NOTIFY
+    associated device driver with the @ref DEV_USE_CLOCK_SINK_FREQ_CHANGED
     operation. The @tt sink field of @tt param is set by the function.
  */
 config_depend(CONFIG_DEVICE_CLOCK_VARFREQ)
@@ -319,7 +319,7 @@ void dev_cmu_src_update_sync(struct dev_clock_src_ep_s *src,
 
     This function will propagate the change to all connected sink
     endpoints by calling the @ref dev_use_t function of the
-    associated device driver with the @ref DEV_USE_CLOCK_GATES
+    associated device driver with the @ref DEV_USE_CLOCK_SINK_GATE_DONE
     operation. */
 config_depend(CONFIG_DEVICE_CLOCK_GATING)
 void dev_cmu_src_update_async(struct dev_clock_src_ep_s *src,
@@ -328,7 +328,7 @@ void dev_cmu_src_update_async(struct dev_clock_src_ep_s *src,
 /** @This is a wrapper for the @ref dev_cmu_node_info_t function
     which takes care of locking the device. */
 config_depend(CONFIG_DEVICE_CLOCK)
-error_t dev_cmu_node_info(struct device_cmu_s *accessor,
+error_t dev_cmu_node_info_get(struct device_cmu_s *accessor,
                           dev_cmu_node_id_t node_id,
                           enum dev_cmu_node_info_e *mask,
                           struct dev_cmu_node_info_s *info);
@@ -340,7 +340,7 @@ error_t dev_cmu_node_info(struct device_cmu_s *accessor,
     The configuration id selects all resources with the corresponding
     bit set in the config mask. */
 config_depend(CONFIG_DEVICE_CLOCK_VARFREQ)
-error_t dev_cmu_config(struct device_cmu_s *accessor,
+error_t dev_cmu_configure(struct device_cmu_s *accessor,
                        dev_cmu_config_id_t config_id);
 
 

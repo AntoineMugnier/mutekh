@@ -281,7 +281,7 @@ static DEV_INIT(efm32_aes_init)
 
   dev_request_delayed_init(&pv->queue, &efm32_aes_process);
 
-  if (dev_drv_clock_init(dev, &pv->clk_ep, 0, DEV_CLOCK_EP_SINK_SYNC
+  if (dev_drv_clock_init(dev, &pv->clk_ep, 0, DEV_CLOCK_EP_GATING_SYNC
 # ifndef CONFIG_DEVICE_CLOCK_GATING
                       | DEV_CLOCK_EP_POWER_CLOCK
 # endif

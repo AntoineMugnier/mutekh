@@ -90,9 +90,9 @@ static void dev_shell_clock_configs(struct termui_console_s *con,
               enum dev_cmu_node_info_e m = DEV_CMU_INFO_NAME;
               const char *nname = "unknown";
               const char *pname = "unknown";
-              if (!dev_cmu_node_info(&c->cmu, r->u.cmu_mux.node, &m, &info) && m)
+              if (!dev_cmu_node_info_get(&c->cmu, r->u.cmu_mux.node, &m, &info) && m)
                 nname = info.name;
-              if (!dev_cmu_node_info(&c->cmu, r->u.cmu_mux.parent, &m, &info) && m)
+              if (!dev_cmu_node_info_get(&c->cmu, r->u.cmu_mux.parent, &m, &info) && m)
                 pname = info.name;
               termui_con_printf(con, "  mux: node %u `%s': parent %u `%s', ratio %"PRIu64"/%"PRIu64"\n",
                                 r->u.cmu_mux.node, nname, r->u.cmu_mux.parent, pname,
@@ -111,7 +111,7 @@ static void dev_shell_clock_configs(struct termui_console_s *con,
               struct dev_cmu_node_info_s info;
               enum dev_cmu_node_info_e m = DEV_CMU_INFO_NAME;
               const char *nname = "unknown";
-              if (!dev_cmu_node_info(&c->cmu, r->u.cmu_osc.node, &m, &info) && m)
+              if (!dev_cmu_node_info_get(&c->cmu, r->u.cmu_osc.node, &m, &info) && m)
                 nname = info.name;
               uint64_t integral  = r->u.cmu_osc.num / r->u.cmu_osc.denom;
               uint32_t frac      = 1000 * (r->u.cmu_osc.num % r->u.cmu_osc.denom) /
@@ -138,7 +138,7 @@ static TERMUI_CON_COMMAND_PROTOTYPE(dev_shell_clock_config)
 #ifdef CONFIG_DEVICE_CLOCK_VARFREQ
   if (used & CLOCK_OPT_CFG)
     {
-      if (dev_cmu_config(&c->cmu, c->cfg))
+      if (dev_cmu_configure(&c->cmu, c->cfg))
         return -EINVAL;
       return 0;
     }

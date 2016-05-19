@@ -339,7 +339,7 @@ enum dev_use_op_e
       requested by the driver has been satisfied. The @tt param
       argument is a pointer to the sink endpoint. @see
       dev_clock_sink_gate */
-  DEV_USE_CLOCK_GATES,
+  DEV_USE_CLOCK_SINK_GATE_DONE,
 
 # ifdef CONFIG_DEVICE_CLOCK_VARFREQ
   /** This operation is used when a clock frequency change occurred on
@@ -347,7 +347,7 @@ enum dev_use_op_e
       enabled. The change might not have been solicited by the
       driver. The @tt param argument is a pointer to a @ref
       dev_clock_notify_s object. */
-  DEV_USE_CLOCK_NOTIFY,
+  DEV_USE_CLOCK_SINK_FREQ_CHANGED,
 # endif
 #endif
 

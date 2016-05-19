@@ -336,7 +336,7 @@ static DEV_USE(efm32_leuart_use)
   switch (op)
     {
 #ifdef CONFIG_DEVICE_CLOCK_VARFREQ
-    case DEV_USE_CLOCK_NOTIFY: {
+    case DEV_USE_CLOCK_SINK_FREQ_CHANGED: {
       struct dev_clock_notify_s *chg = param;
       struct dev_clock_sink_ep_s *sink = chg->sink;
       struct device_s *dev = sink->dev;
@@ -393,8 +393,8 @@ static DEV_INIT(efm32_leuart_init)
   if (device_res_get_uint(dev, DEV_RES_MEM, 0, &pv->addr, NULL))
     goto err_mem;
 
-  if (dev_drv_clock_init(dev, &pv->clk_ep, 0, DEV_CLOCK_EP_SINK_NOTIFY |
-                     DEV_CLOCK_EP_POWER_CLOCK | DEV_CLOCK_EP_SINK_SYNC, &pv->freq))
+  if (dev_drv_clock_init(dev, &pv->clk_ep, 0, DEV_CLOCK_EP_FREQ_NOTIFY |
+                     DEV_CLOCK_EP_POWER_CLOCK | DEV_CLOCK_EP_GATING_SYNC, &pv->freq))
     goto err_mem;
 
   /* wait for current TX to complete */

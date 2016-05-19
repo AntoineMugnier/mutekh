@@ -60,9 +60,9 @@ error_t dev_clock_sink_gate(struct dev_clock_sink_ep_s *sink,
       if (src_gates ^ gates)
         {
           /* initiate source endpoint gates change */
-          union dev_clock_setup_u setup;
-          setup.flags = gates | (sink->flags & DEV_CLOCK_EP_SINK_SYNC);
-          err = src->f_setup(src, DEV_CLOCK_SETUP_GATES, &setup);
+          union dev_clock_src_setup_u setup;
+          setup.flags = gates | (sink->flags & DEV_CLOCK_EP_GATING_SYNC);
+          err = src->f_setup(src, DEV_CLOCK_SRC_SETUP_GATES, &setup);
         }
     }
   else
@@ -78,7 +78,7 @@ error_t dev_clock_sink_gate(struct dev_clock_sink_ep_s *sink,
 }
 #endif
 
-error_t dev_clock_sink_scaler(struct dev_clock_sink_ep_s *sink,
+error_t dev_clock_sink_scaler_set(struct dev_clock_sink_ep_s *sink,
                               const struct dev_freq_ratio_s *scale)
 {
   struct dev_clock_src_ep_s *src = sink->src;
@@ -86,7 +86,7 @@ error_t dev_clock_sink_scaler(struct dev_clock_sink_ep_s *sink,
 
   LOCK_SPIN_IRQ(&src->dev->lock);
 
-  err = src->f_setup(src, DEV_CLOCK_SETUP_SCALER, (const union dev_clock_setup_u *)scale);
+  err = src->f_setup(src, DEV_CLOCK_SRC_SETUP_SCALER, (const union dev_clock_src_setup_u *)scale);
 
   LOCK_RELEASE_IRQ(&src->dev->lock);
 
@@ -114,7 +114,7 @@ void dev_cmu_src_update_async(struct dev_clock_src_ep_s *src,
 
       LOCK_SPIN_IRQ(&dev->lock);
       if ((sink->flags & DEV_CLOCK_EP_ANY) == gates)
-        drv->f_use(sink, DEV_USE_CLOCK_GATES);
+        drv->f_use(sink, DEV_USE_CLOCK_SINK_GATE_DONE);
       LOCK_RELEASE_IRQ(&dev->lock);
 
 # ifdef CONFIG_DEVICE_CLOCK_SHARING
@@ -186,7 +186,7 @@ static error_t dev_cmu_config_res(struct device_cmu_s *accessor,
 }
 
 #ifdef CONFIG_DEVICE_CLOCK_VARFREQ
-error_t dev_cmu_config(struct device_cmu_s *accessor,
+error_t dev_cmu_configure(struct device_cmu_s *accessor,
                          dev_cmu_config_id_t config_id)
 {
   struct device_s *dev = accessor->dev;
@@ -225,7 +225,7 @@ void dev_cmu_src_notify(struct dev_clock_src_ep_s *src,
 
       LOCK_SPIN_IRQ(&dev->lock);
       param->sink = sink;
-      drv->f_use(param, DEV_USE_CLOCK_NOTIFY);
+      drv->f_use(param, DEV_USE_CLOCK_SINK_FREQ_CHANGED);
       LOCK_RELEASE_IRQ(&dev->lock);
 
 # ifdef CONFIG_DEVICE_CLOCK_SHARING
@@ -313,7 +313,7 @@ error_t dev_clock_sink_link(struct dev_clock_sink_ep_s *sink,
 
           struct dev_clock_src_ep_s  *src = info.src;
 
-          err = src->f_setup(src, DEV_CLOCK_SETUP_LINK, (void*)&sink);
+          err = src->f_setup(src, DEV_CLOCK_SRC_SETUP_LINK, (void*)&sink);
           if (!err)
             {
               dev_clock_link(src, sink);
@@ -321,15 +321,15 @@ error_t dev_clock_sink_link(struct dev_clock_sink_ep_s *sink,
 #ifdef CONFIG_DEVICE_CLOCK_VARFREQ
               sink->flags |= src->flags & DEV_CLOCK_EP_VARFREQ;
 
-              if ((sink->flags & DEV_CLOCK_EP_SINK_NOTIFY) &&
+              if ((sink->flags & DEV_CLOCK_EP_FREQ_NOTIFY) &&
                   src->notify_count++ == 0)
-                src->f_setup(src, DEV_CLOCK_SETUP_NOTIFY, NULL);
+                src->f_setup(src, DEV_CLOCK_SRC_SETUP_NOTIFY, NULL);
 #endif
 
               if (~src->flags & sink->flags & DEV_CLOCK_EP_ANY)
                 {
                   enum dev_clock_ep_flags_e flags = src->flags | sink->flags;
-                  err = src->f_setup(src, DEV_CLOCK_SETUP_GATES, (void*)&flags);
+                  err = src->f_setup(src, DEV_CLOCK_SRC_SETUP_GATES, (void*)&flags);
                 }
             }
 
@@ -393,20 +393,20 @@ void dev_clock_sink_unlink(struct dev_clock_sink_ep_s *sink)
   src->dev->ref_count--;
 
   if (~flags & src->flags & DEV_CLOCK_EP_ANY)
-    src->f_setup(src, DEV_CLOCK_SETUP_GATES, (void*)&flags);
+    src->f_setup(src, DEV_CLOCK_SRC_SETUP_GATES, (void*)&flags);
 
 #ifdef CONFIG_DEVICE_CLOCK_VARFREQ
-  if ((sink->flags & DEV_CLOCK_EP_SINK_NOTIFY) &&
+  if ((sink->flags & DEV_CLOCK_EP_FREQ_NOTIFY) &&
       --src->notify_count == 0)
-    src->f_setup(src, DEV_CLOCK_SETUP_NONOTIFY, NULL);
+    src->f_setup(src, DEV_CLOCK_SRC_SETUP_NONOTIFY, NULL);
 #endif
 
-  src->f_setup(src, DEV_CLOCK_SETUP_UNLINK, (void*)&sink);
+  src->f_setup(src, DEV_CLOCK_SRC_SETUP_UNLINK, (void*)&sink);
 
   LOCK_RELEASE_IRQ(&src->dev->lock);
 }
 
-error_t dev_cmu_node_info(struct device_cmu_s *accessor,
+error_t dev_cmu_node_info_get(struct device_cmu_s *accessor,
                             dev_cmu_node_id_t node_id,
                             enum dev_cmu_node_info_e *mask,
                             struct dev_cmu_node_info_s *info)
@@ -417,4 +417,3 @@ error_t dev_cmu_node_info(struct device_cmu_s *accessor,
   LOCK_RELEASE_IRQ(&accessor->dev->lock);
   return err;
 }
-

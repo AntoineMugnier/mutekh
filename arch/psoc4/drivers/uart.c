@@ -554,7 +554,7 @@ static error_t psoc4_uart_config(struct device_s *dev,
 
   struct dev_freq_ratio_s ratio;
   psoc4_uart_ratio_compute(dev, &ratio);
-  dev_clock_sink_scaler(&pv->clock_sink, &ratio);
+  dev_clock_sink_scaler_set(&pv->clock_sink, &ratio);
 
   old_ctrl = cpu_mem_read_32(scb + SCB_CTRL_ADDR);
 
@@ -631,7 +631,7 @@ static DEV_USE(psoc4_uart_char_use)
     return 0;
   }
 
-  case DEV_USE_CLOCK_NOTIFY: {
+  case DEV_USE_CLOCK_SINK_FREQ_CHANGED: {
     struct dev_clock_notify_s *notify = param;
     struct dev_clock_sink_ep_s *sink = notify->sink;
     struct device_s *dev = sink->dev;
@@ -644,7 +644,7 @@ static DEV_USE(psoc4_uart_char_use)
     pv->freq = notify->freq;
 
     psoc4_uart_ratio_compute(dev, &ratio);
-    dev_clock_notify_scaler(notify, &ratio);
+    dev_clock_notify_scaler_set(notify, &ratio);
 
     return 0;
   }
@@ -715,7 +715,7 @@ static DEV_INIT(psoc4_uart_char_init)
     goto free_pv;
 
   if (dev_drv_clock_init(dev, &pv->clock_sink, 0,
-                         DEV_CLOCK_EP_SINK_SYNC | DEV_CLOCK_EP_SINK_NOTIFY | DEV_CLOCK_EP_VARFREQ,
+                         DEV_CLOCK_EP_GATING_SYNC | DEV_CLOCK_EP_FREQ_NOTIFY | DEV_CLOCK_EP_VARFREQ,
                          &pv->freq))
     goto unlink_irq;
 

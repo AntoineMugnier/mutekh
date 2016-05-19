@@ -833,10 +833,10 @@ DEV_USE(dev_use_generic)
         return -ENOTSUP;
     }
 #ifdef CONFIG_DEVICE_CLOCK
-    case DEV_USE_CLOCK_GATES:
+    case DEV_USE_CLOCK_SINK_GATE_DONE:
 #endif
 #ifdef CONFIG_DEVICE_CLOCK_VARFREQ
-    case DEV_USE_CLOCK_NOTIFY:
+    case DEV_USE_CLOCK_SINK_FREQ_CHANGED:
 #endif
     case DEV_USE_PUT_ACCESSOR:
     case DEV_USE_START:

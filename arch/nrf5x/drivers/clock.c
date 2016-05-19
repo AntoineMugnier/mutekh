@@ -661,29 +661,29 @@ static DEV_CLOCK_SRC_SETUP(nrf5x_clock_ep_setup)
     return -EINVAL;
 
   switch (op) {
-  case DEV_CLOCK_SETUP_SCALER:
+  case DEV_CLOCK_SRC_SETUP_SCALER:
 #ifdef CONFIG_DEVICE_CLOCK_VARFREQ
-  case DEV_CLOCK_SETUP_NOTIFY:
+  case DEV_CLOCK_SRC_SETUP_NOTIFY:
 #endif
 #ifdef CONFIG_DEVICE_CLOCK_THROTTLE
-  case DEV_CLOCK_SETUP_THROTTLE:
+  case DEV_CLOCK_SRC_SETUP_THROTTLE:
     return -ENOTSUP;
 #endif
 
 #ifdef CONFIG_DEVICE_CLOCK_VARFREQ
-  case DEV_CLOCK_SETUP_NONOTIFY:
+  case DEV_CLOCK_SRC_SETUP_NONOTIFY:
     return 0;
 #endif
 
-  case DEV_CLOCK_SETUP_LINK:
-    if (param->sink->flags & (DEV_CLOCK_EP_SINK_SYNC | DEV_CLOCK_EP_SINK_NOTIFY))
+  case DEV_CLOCK_SRC_SETUP_LINK:
+    if (param->sink->flags & (DEV_CLOCK_EP_GATING_SYNC | DEV_CLOCK_EP_FREQ_NOTIFY))
       return -ENOTSUP;
     return 0;
 
-  case DEV_CLOCK_SETUP_UNLINK:
+  case DEV_CLOCK_SRC_SETUP_UNLINK:
     return 0;
 
-  case DEV_CLOCK_SETUP_GATES: {
+  case DEV_CLOCK_SRC_SETUP_GATES: {
     uint8_t mask = 1 << id;
 
     dev_cmu_src_update_sync(src, param->flags);

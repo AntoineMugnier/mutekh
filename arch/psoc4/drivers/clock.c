@@ -646,16 +646,16 @@ static DEV_CLOCK_SRC_SETUP(psoc4_clock_ep_setup)
   switch (op)
     {
 #ifdef CONFIG_DEVICE_CLOCK_VARFREQ
-    case DEV_CLOCK_SETUP_NOTIFY:
+    case DEV_CLOCK_SRC_SETUP_NOTIFY:
       pv->notify_mask |= 1 << src_id;
       return 0;
 
-    case DEV_CLOCK_SETUP_NONOTIFY:
+    case DEV_CLOCK_SRC_SETUP_NONOTIFY:
       pv->notify_mask &= ~(1 << src_id);
       return 0;
 #endif
 
-    case DEV_CLOCK_SETUP_GATES:
+    case DEV_CLOCK_SRC_SETUP_GATES:
       dprintk("%s gates src %d; %x\n",
              __FUNCTION__, src_id, param->flags);
 
@@ -696,7 +696,7 @@ static DEV_CLOCK_SRC_SETUP(psoc4_clock_ep_setup)
       dev_cmu_src_update(src, param->flags);
       return 0;
 
-    case DEV_CLOCK_SETUP_SCALER: {
+    case DEV_CLOCK_SRC_SETUP_SCALER: {
       if (src_id >= PSOC4_CLOCK_PCLK_COUNT)
         return -EINVAL;
 
@@ -724,10 +724,10 @@ static DEV_CLOCK_SRC_SETUP(psoc4_clock_ep_setup)
       return 0;
     }
 
-    case DEV_CLOCK_SETUP_LINK:
+    case DEV_CLOCK_SRC_SETUP_LINK:
       return 0;
 
-    case DEV_CLOCK_SETUP_UNLINK:
+    case DEV_CLOCK_SRC_SETUP_UNLINK:
       return 0;
 
     default:

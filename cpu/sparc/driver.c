@@ -222,7 +222,7 @@ static DEV_INIT(sparc_init)
     goto err_pv;
 
   if (dev_drv_clock_init(dev, &pv->clk_ep, 0, DEV_CLOCK_EP_POWER_CLOCK |
-                         DEV_CLOCK_EP_SINK_SYNC, NULL))
+                         DEV_CLOCK_EP_GATING_SYNC, NULL))
     goto err_node;
 
 #ifdef CONFIG_DEVICE_IRQ

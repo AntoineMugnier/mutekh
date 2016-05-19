@@ -1335,15 +1335,15 @@ static DEV_CLOCK_SRC_SETUP(efm32_recmu_ep_setup)
   switch (op)
     {
 #ifdef CONFIG_DEVICE_CLOCK_VARFREQ
-    case DEV_CLOCK_SETUP_NOTIFY:
+    case DEV_CLOCK_SRC_SETUP_NOTIFY:
       pv->notify_mask |= mask;
       return 0;
-    case DEV_CLOCK_SETUP_NONOTIFY:
+    case DEV_CLOCK_SRC_SETUP_NONOTIFY:
       pv->notify_mask &= ~mask;
       return 0;
 #endif
 
-    case DEV_CLOCK_SETUP_GATES:
+    case DEV_CLOCK_SRC_SETUP_GATES:
       if (param->flags & DEV_CLOCK_EP_CLOCK)
         {
           pv->use_mask |= mask;
@@ -1370,13 +1370,13 @@ static DEV_CLOCK_SRC_SETUP(efm32_recmu_ep_setup)
       dev_cmu_src_update_sync(src, param->flags);
       return 0;
 
-    case DEV_CLOCK_SETUP_LINK:
+    case DEV_CLOCK_SRC_SETUP_LINK:
       pv->link_mask |= mask;
       efm32_recmu_clock_dep(pv, pv->link_mask);
       efm32_recmu_clock_wait(pv);
       return 0;
 
-    case DEV_CLOCK_SETUP_UNLINK:
+    case DEV_CLOCK_SRC_SETUP_UNLINK:
       pv->link_mask &= ~mask;
       efm32_recmu_clock_dep(pv, pv->link_mask);
       return 0;

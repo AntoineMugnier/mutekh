@@ -88,7 +88,7 @@
    @item Device drivers can not trigger frequency changes which would
    impact other devices. However, when the clock manager hardware
    provide a frequency scaler for the specific signal associated to
-   the endpoint, the @ref dev_clock_sink_scaler function may be
+   the endpoint, the @ref dev_clock_sink_scaler_set function may be
    used. This function is useful when the only prescaler available is
    on the clock manager side, for instance for the baud rate generator
    of an UART.
@@ -148,15 +148,15 @@ enum dev_clock_ep_flags_e
       operations performed by the @ref dev_clock_src_setup_t function
       of the clock provider can not be asynchronous. The clock
       provider driver must return an error if synchronous clock
-      enabling is not supported when @ref DEV_CLOCK_SETUP_LINK is
+      enabling is not supported when @ref DEV_CLOCK_SRC_SETUP_LINK is
       invoked. This flag can not be changed once the endpoint has
       been linked. */
-  DEV_CLOCK_EP_SINK_SYNC   = 0x04,
+  DEV_CLOCK_EP_GATING_SYNC   = 0x04,
 
   /** @internal For a sink endpoint, this specifies if the clock
       frequency change notification is required. This is ignored
       unless @ref #CONFIG_DEVICE_CLOCK_VARFREQ is defined. */
-  DEV_CLOCK_EP_SINK_NOTIFY = 0x08,
+  DEV_CLOCK_EP_FREQ_NOTIFY = 0x08,
 
   /** @This specifies if the frequency of the endpoint can
       change. This is ignored unless @ref #CONFIG_DEVICE_CLOCK_VARFREQ
@@ -166,7 +166,7 @@ enum dev_clock_ep_flags_e
 
 /** @internal @This specifies operations for the @ref
     dev_clock_src_setup_t function. */
-enum dev_clock_setup_op_e
+enum dev_clock_src_setup_op_e
 {
   /** This operation is invoked from the @ref dev_clock_sink_link
       function when a new sink endpoint is about to be linked. A
@@ -181,31 +181,31 @@ enum dev_clock_setup_op_e
 
       Some checks should also be performed. If synchronous gate
       enabling operations is not supported (see @ref
-      DEV_CLOCK_SETUP_GATES) and the @ref DEV_CLOCK_EP_SINK_SYNC flag
+      DEV_CLOCK_SRC_SETUP_GATES) and the @ref DEV_CLOCK_EP_GATING_SYNC flag
       of the sink is set, then the @tt -ENOTSUP error must be
       returned. */
-  DEV_CLOCK_SETUP_LINK,
+  DEV_CLOCK_SRC_SETUP_LINK,
 
   /** This operation is used when a sink endpoint has been
-      unlinked. @see DEV_CLOCK_SETUP_LINK */
-  DEV_CLOCK_SETUP_UNLINK,
+      unlinked. @see DEV_CLOCK_SRC_SETUP_LINK */
+  DEV_CLOCK_SRC_SETUP_UNLINK,
 
 #ifdef CONFIG_DEVICE_CLOCK_VARFREQ
   /** This operation is used when the frequency change notification
       flags of the source endpoint is set. This hook can be used by
       the clock provider if it needs to update internal data to
       support frequency change notification. */
-  DEV_CLOCK_SETUP_NOTIFY,
+  DEV_CLOCK_SRC_SETUP_NOTIFY,
 
-  /** This is similar to @ref DEV_CLOCK_SETUP_NOTIFY */
-  DEV_CLOCK_SETUP_NONOTIFY,
+  /** This is similar to @ref DEV_CLOCK_SRC_SETUP_NOTIFY */
+  DEV_CLOCK_SRC_SETUP_NONOTIFY,
 #endif
 
   /** This operation sets the value of the frequency scaler. This is
       initiated on a linked sink by a call to @ref
-      dev_clock_sink_scaler. A default implementation should return
+      dev_clock_sink_scaler_set. A default implementation should return
       @tt -ENOTSUP. */
-  DEV_CLOCK_SETUP_SCALER,
+  DEV_CLOCK_SRC_SETUP_SCALER,
 
   /** This operation requests a gates change on a clock source
       endpoint. This operation is invoked from the @ref
@@ -224,7 +224,7 @@ enum dev_clock_setup_op_e
       If an enabling operation can be completed immediately, the
       function returns 0. When the requested change takes time, the
       function must return @tt -EAGAIN, unless the @ref
-      DEV_CLOCK_EP_SINK_SYNC flag is used. When doing so, the @ref
+      DEV_CLOCK_EP_GATING_SYNC flag is used. When doing so, the @ref
       dev_cmu_src_update_async function must later be called so that drivers
       associated to sink endpoints are notified that enabling is
       effective. Disabling operations can be silently delayed and do
@@ -234,36 +234,36 @@ enum dev_clock_setup_op_e
       may be used multiple times even before the gate changes are
       effective. In the other case this operation is only used when
       endpoints are linked and unlinked. */
-  DEV_CLOCK_SETUP_GATES,
+  DEV_CLOCK_SRC_SETUP_GATES,
 
 #ifdef CONFIG_DEVICE_CLOCK_THROTTLE
   /** This operation sets the frequency throttle mode of the endpoint.
       This is initiated on a linked sink by a call to @ref
       dev_clock_sink_throttle. */
-  DEV_CLOCK_SETUP_THROTTLE,
+  DEV_CLOCK_SRC_SETUP_THROTTLE,
 #endif
 };
 
 /** @internal @This contains parameters passed to the @ref
     dev_clock_src_setup_t function. */
-union dev_clock_setup_u
+union dev_clock_src_setup_u
 {
-  /** @see DEV_CLOCK_SETUP_LINK @see DEV_CLOCK_SETUP_UNLINK */
+  /** @see DEV_CLOCK_SRC_SETUP_LINK @see DEV_CLOCK_SRC_SETUP_UNLINK */
   struct dev_clock_sink_ep_s *sink;
-  /** @see DEV_CLOCK_SETUP_GATES */
+  /** @see DEV_CLOCK_SRC_SETUP_GATES */
   enum dev_clock_ep_flags_e flags;
-  /** @see DEV_CLOCK_SETUP_SCALER */
+  /** @see DEV_CLOCK_SRC_SETUP_SCALER */
   struct dev_freq_ratio_s scale;
 #ifdef CONFIG_DEVICE_CLOCK_THROTTLE
-  /** @see DEV_CLOCK_SETUP_THROTTLE */
+  /** @see DEV_CLOCK_SRC_SETUP_THROTTLE */
   uint_fast8_t mode_id;
 #endif
 };
 
 /** @internal @see dev_clock_src_setup_t */
 #define DEV_CLOCK_SRC_SETUP(n) error_t (n) (struct dev_clock_src_ep_s *src, \
-                                            enum dev_clock_setup_op_e op, \
-                                            const union dev_clock_setup_u *param)
+                                            enum dev_clock_src_setup_op_e op, \
+                                            const union dev_clock_src_setup_u *param)
 
 /** @internal @This is the source endpoint operation function.
     @This is implemented by clock provider drivers and
@@ -271,7 +271,7 @@ union dev_clock_setup_u
 
     The device lock must be held when calling this function.
 
-    @see dev_clock_setup_op_e */
+    @see dev_clock_src_setup_op_e */
 typedef DEV_CLOCK_SRC_SETUP(dev_clock_src_setup_t);
 
 /** Clock and power signals source endpoint object. It may
@@ -364,13 +364,13 @@ struct dev_clock_sink_ep_s
       @item when disabling gates,
       @item when some gates are already enabled,
       @item when immediate enabling was possible.
-        This is always the case when @ref DEV_CLOCK_EP_SINK_SYNC is set.
+        This is always the case when @ref DEV_CLOCK_EP_GATING_SYNC is set.
     @end list
 
     When enabling a gate requires time and the @ref
-    DEV_CLOCK_EP_SINK_SYNC sink flag is not set, the function returns
+    DEV_CLOCK_EP_GATING_SYNC sink flag is not set, the function returns
     @tt -EAGAIN and the @ref dev_use_t function of the associated
-    device driver will be called with the @ref DEV_USE_CLOCK_GATES
+    device driver will be called with the @ref DEV_USE_CLOCK_SINK_GATE_DONE
     operation once all requested gates are enabled. */
 config_depend(CONFIG_DEVICE_CLOCK_GATING)
 error_t dev_clock_sink_gate(struct dev_clock_sink_ep_s *sink,
@@ -396,12 +396,12 @@ error_t dev_clock_sink_throttle(struct dev_clock_sink_ep_s *sink,
     the clock signal of a source endpoint. This is only permitted
     when the source endpoint has no other linked sink. */
 config_depend(CONFIG_DEVICE_CLOCK)
-error_t dev_clock_sink_scaler(struct dev_clock_sink_ep_s *sink,
+error_t dev_clock_sink_scaler_set(struct dev_clock_sink_ep_s *sink,
                               const struct dev_freq_ratio_s *scale);
 
 /** @This is used as argument to the @ref dev_cmu_src_notify
     function and @ref dev_use_t function when used with the @ref
-    DEV_USE_CLOCK_NOTIFY operation. */
+    DEV_USE_CLOCK_SINK_FREQ_CHANGED operation. */
 #ifdef CONFIG_DEVICE_CLOCK_VARFREQ
 struct dev_clock_notify_s
 {
@@ -409,17 +409,17 @@ struct dev_clock_notify_s
   struct dev_freq_s freq;
 };
 
-/** @This is an equivalent to @ref dev_clock_sink_scaler when calling
+/** @This is an equivalent to @ref dev_clock_sink_scaler_set when calling
     from @ref dev_use_t function of a driver while in a @ref
-    #DEV_USE_CLOCK_NOTIFY. */
+    #DEV_USE_CLOCK_SINK_FREQ_CHANGED. */
 config_depend_alwaysinline(CONFIG_DEVICE_CLOCK,
-error_t dev_clock_notify_scaler(struct dev_clock_notify_s *notify,
+error_t dev_clock_notify_scaler_set(struct dev_clock_notify_s *notify,
                                 const struct dev_freq_ratio_s *scale)
 {
   struct dev_clock_src_ep_s *src = notify->sink->src;
 
-  return src->f_setup(src, DEV_CLOCK_SETUP_SCALER,
-                      (const union dev_clock_setup_u *)scale);
+  return src->f_setup(src, DEV_CLOCK_SRC_SETUP_SCALER,
+                      (const union dev_clock_src_setup_u *)scale);
 });
 #endif
 
@@ -457,9 +457,9 @@ void dev_clock_sink_init(struct device_s *dev,
     If the sink endpoint has been initialized with some initially
     enabled gate flags, the clock provider of the source will be
     required to enable the gates. In this case, when enabling a gate
-    requires time and the @ref DEV_CLOCK_EP_SINK_SYNC sink flag is not
+    requires time and the @ref DEV_CLOCK_EP_GATING_SYNC sink flag is not
     set, the @ref dev_use_t function of the associated device driver
-    will be called with the @ref DEV_USE_CLOCK_GATES operation once
+    will be called with the @ref DEV_USE_CLOCK_SINK_GATE_DONE operation once
     all requested gates are enabled.
 
     When not @tt NULL, the @tt freq parameter is set according to the
@@ -469,7 +469,7 @@ void dev_clock_sink_init(struct device_s *dev,
     resource entry is searched. If none are found, an error is returned.
 
     When @ref #CONFIG_DEVICE_CLOCK_VARFREQ is defined, and the @ref
-    DEV_CLOCK_EP_SINK_NOTIFY flag is set, any subsequent clock
+    DEV_CLOCK_EP_FREQ_NOTIFY flag is set, any subsequent clock
     frequency change will be reported to the device driver.
 */
 config_depend(CONFIG_DEVICE_CLOCK)

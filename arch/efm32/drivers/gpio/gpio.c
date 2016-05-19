@@ -472,7 +472,7 @@ static DEV_INIT(efm32_gpio_init)
   assert(device_res_get_uint(dev, DEV_RES_MEM, 0, &addr, NULL) == 0 &&
          EFM32_GPIO_ADDR == addr);
 
-  if (dev_drv_clock_init(dev, &pv->clk_ep, 0, DEV_CLOCK_EP_POWER_CLOCK | DEV_CLOCK_EP_SINK_SYNC, NULL))
+  if (dev_drv_clock_init(dev, &pv->clk_ep, 0, DEV_CLOCK_EP_POWER_CLOCK | DEV_CLOCK_EP_GATING_SYNC, NULL))
     goto err_mem;
 
 #ifdef CONFIG_DRIVER_EFM32_GPIO_ICU

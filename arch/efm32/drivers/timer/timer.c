@@ -332,7 +332,7 @@ static DEV_USE(efm32_timer_use)
   switch (op)
     {
 #ifdef CONFIG_DEVICE_CLOCK_VARFREQ
-    case DEV_USE_CLOCK_NOTIFY: {
+    case DEV_USE_CLOCK_SINK_FREQ_CHANGED: {
       struct dev_clock_notify_s *chg = param;
       struct dev_clock_sink_ep_s *sink = chg->sink;
       struct device_s *dev = sink->dev;
@@ -460,8 +460,8 @@ static DEV_INIT(efm32_timer_init)
   pv->cap = DEV_TIMER_CAP_STOPPABLE | DEV_TIMER_CAP_HIGHRES | DEV_TIMER_CAP_KEEPVALUE | DEV_TIMER_CAP_TICKLESS;
   dev->drv_pv = pv;
 
-  if (dev_drv_clock_init(dev, &pv->clk_ep, 0, DEV_CLOCK_EP_SINK_NOTIFY |
-                     DEV_CLOCK_EP_POWER_CLOCK | DEV_CLOCK_EP_SINK_SYNC, &pv->freq))
+  if (dev_drv_clock_init(dev, &pv->clk_ep, 0, DEV_CLOCK_EP_FREQ_NOTIFY |
+                     DEV_CLOCK_EP_POWER_CLOCK | DEV_CLOCK_EP_GATING_SYNC, &pv->freq))
     goto err_mem;
 
 # ifdef CONFIG_DEVICE_CLOCK_VARFREQ

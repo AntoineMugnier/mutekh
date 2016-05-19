@@ -198,7 +198,7 @@ static DEV_USE(arm_use)
 # if (defined (CONFIG_CPU_ARM32M_TIMER_SYSTICK) \
       || defined(CONFIG_CPU_ARM32M_TIMER_DWTCYC)) &&    \
   defined(CONFIG_DEVICE_CLOCK_VARFREQ)
-    case DEV_USE_CLOCK_NOTIFY: {
+    case DEV_USE_CLOCK_SINK_FREQ_CHANGED: {
       struct dev_clock_notify_s *chg = param;
       struct dev_clock_sink_ep_s *sink = chg->sink;
       struct device_s *dev = sink->dev;
@@ -210,7 +210,7 @@ static DEV_USE(arm_use)
       return 0;
     }
 # endif
-    case DEV_USE_CLOCK_GATES:
+    case DEV_USE_CLOCK_SINK_GATE_DONE:
       return 0;
 #endif
 
@@ -313,8 +313,8 @@ static DEV_INIT(arm_init)
 
 #ifdef CONFIG_CPU_ARM32M_CLOCK
       /* clock input init */
-      dev_clock_sink_init(dev, &pv->clk_ep, DEV_CLOCK_EP_SINK_NOTIFY |
-                          DEV_CLOCK_EP_POWER_CLOCK | DEV_CLOCK_EP_SINK_SYNC);
+      dev_clock_sink_init(dev, &pv->clk_ep, DEV_CLOCK_EP_FREQ_NOTIFY |
+                          DEV_CLOCK_EP_POWER_CLOCK | DEV_CLOCK_EP_GATING_SYNC);
       if (dev_clock_sink_link(&pv->clk_ep, 0,
 # if defined (CONFIG_CPU_ARM32M_TIMER_SYSTICK) || defined(CONFIG_CPU_ARM32M_TIMER_DWTCYC)
                               &pv->freq /* need to get timer freq from CMU */
