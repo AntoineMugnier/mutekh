@@ -149,4 +149,6 @@ error_t ble_peripheral_init(
  */
 void ble_peripheral_mode_set(struct ble_peripheral_s *peri, uint8_t mode);
 
+void ble_peripheral_cleanup(struct ble_peripheral_s *peri);
+
 #endif
