@@ -123,38 +123,44 @@ static void nrf5x_gpio_input_range_update(struct device_s *dev, uint32_t to_upda
   struct nrf5x_gpio_private_s *pv = dev->drv_pv;
 
   nrf_it_disable(GPIOTE_ADDR, NRF_GPIOTE_PORT);
+  nrf_event_clear(GPIOTE_ADDR, NRF_GPIOTE_PORT);
 
-  uint32_t new_state = nrf_reg_get(GPIO_ADDR, NRF_GPIO_IN);
-  uint32_t old_state = new_state ^ to_update;
+  uint32_t state_after = nrf_reg_get(GPIO_ADDR, NRF_GPIO_IN);
 
-  dprintk("%s %x %d\n", __FUNCTION__, to_update, nrf_event_check(GPIOTE_ADDR, NRF_GPIOTE_PORT));
+  dprintk("%s %x %x\n", __FUNCTION__,
+          to_update, state_after & pv->range_mask);
 
-  while (new_state != old_state) {
-    to_update = new_state ^ old_state;
+  do {
+    uint32_t state_before = state_after;
 
     while (to_update) {
       uint8_t pin = __builtin_ctz(to_update);
-      uint32_t cnf = nrf_reg_get(GPIO_ADDR, NRF_GPIO_PIN_CNF(pin))
-        & ~NRF_GPIO_PIN_CNF_SENSE_MASK;
+      uint32_t bit = 1 << pin;
+      uint32_t cnf = nrf_reg_get(GPIO_ADDR, NRF_GPIO_PIN_CNF(pin));
+
+      cnf &= ~NRF_GPIO_PIN_CNF_SENSE_MASK;
+
       nrf_reg_set(GPIO_ADDR, NRF_GPIO_PIN_CNF(pin), cnf);
 
-      if (pv->range_mask & (1 << pin)) {
-        if (new_state & (1 << pin))
+      if (pv->range_mask & bit) {
+        if (state_before & bit)
           cnf |= NRF_GPIO_PIN_CNF_SENSE_LOW;
         else
           cnf |= NRF_GPIO_PIN_CNF_SENSE_HIGH;
       }
 
-      to_update &= ~(1 << pin);
-
-      dprintk(" %d %x\n", pin, cnf);
-
       nrf_reg_set(GPIO_ADDR, NRF_GPIO_PIN_CNF(pin), cnf);
+
+      to_update &= ~bit;
+      dprintk(" %d %x %d\n", pin, cnf,
+          nrf_event_check(GPIOTE_ADDR, NRF_GPIOTE_PORT));
     }
 
-    old_state = new_state;
-    new_state = nrf_reg_get(GPIO_ADDR, NRF_GPIO_IN);
-  }
+    state_after = nrf_reg_get(GPIO_ADDR, NRF_GPIO_IN);
+    to_update = (state_before ^ state_after) & pv->range_mask;
+    dprintk("%s %x -> %x %x\n", __FUNCTION__,
+            state_before & pv->range_mask, state_after & pv->range_mask, to_update);
+  } while (to_update);
 
   if (pv->range_mask) {
     nrf_event_clear(GPIOTE_ADDR, NRF_GPIOTE_PORT);
@@ -380,6 +386,8 @@ static DEV_IRQ_SINK_UPDATE(nrf5x_gpio_icu_range_sink_update)
 
   assert(sink == &pv->range_irq_out);
 
+  dprintk("%s %d\n", __FUNCTION__, sense);
+
   if (sense)
     nrf_it_enable(GPIOTE_ADDR, NRF_GPIOTE_PORT);
   else
@@ -435,7 +443,6 @@ static DEV_IRQ_SRC_PROCESS(nrf5x_gpio_process)
 
 #if defined(CONFIG_DRIVER_NRF5X_GPIO_INPUT_RANGE)
     if (nrf_event_check(GPIOTE_ADDR, NRF_GPIOTE_PORT)) {
-      nrf_event_clear(GPIOTE_ADDR, NRF_GPIOTE_PORT);
       dprintk("%s port %08x %d\n", __FUNCTION__, pv->range_mask, pv->range_mode);
 
       nrf5x_gpio_input_range_update(ep->base.dev, pv->range_mask);
