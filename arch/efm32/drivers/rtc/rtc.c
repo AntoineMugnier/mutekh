@@ -71,17 +71,20 @@ static inline void efm32_rtc_start_counter(struct efm32_rtc_private_s *pv)
 #ifdef CONFIG_DEVICE_CLOCK_GATING
   dev_clock_sink_gate(&pv->clk_ep, DEV_CLOCK_EP_POWER_CLOCK);
 #endif
+  while (cpu_mem_read_32(pv->addr + EFM32_RTC_SYNCBUSY_ADDR) &
+         endian_le32(EFM32_RTC_SYNCBUSY_CTRL))
+    ;
   cpu_mem_write_32(pv->addr + EFM32_RTC_CTRL_ADDR, endian_le32(EFM32_RTC_CTRL_EN(COUNT)));
 }
 
 /* This function stops the hardware rtc counter. */
 static inline void efm32_rtc_stop_counter(struct efm32_rtc_private_s *pv)
 {
+  while (cpu_mem_read_32(pv->addr + EFM32_RTC_SYNCBUSY_ADDR) &
+         endian_le32(EFM32_RTC_SYNCBUSY_CTRL))
+    ;
   cpu_mem_write_32(pv->addr + EFM32_RTC_CTRL_ADDR, 0);
 #ifdef CONFIG_DEVICE_CLOCK_GATING
-  if (cpu_mem_read_32(pv->addr + EFM32_RTC_IF_ADDR)
-      & endian_le32(EFM32_RTC_IEN_COMP0 | EFM32_RTC_IF_OF))
-    return;
   dev_clock_sink_gate(&pv->clk_ep, DEV_CLOCK_EP_POWER);
 #endif
 }
@@ -110,48 +113,44 @@ static uint64_t get_timer_value(struct efm32_rtc_private_s *pv)
 
 #ifdef CONFIG_DEVICE_IRQ
 
-/* This function writes a value in the Compare channel 0 of the 
-   rtc. When the rtc counter value will be greater than this value 
-   a compare interrup will be raised. */
-static inline void efm32_rtc_enable_compare(struct efm32_rtc_private_s *pv, dev_timer_value_t v)
-{
-  /* Write v in Compare 0 channel */
-  cpu_mem_write_32(pv->addr + EFM32_RTC_COMP0_ADDR, endian_le32(v & EFM32_RTC_COMP0_MASK));
-
-  /* Clear previous pending interrupts */
-  cpu_mem_write_32(pv->addr + EFM32_RTC_IFC_ADDR, endian_le32(EFM32_RTC_IFC_COMP0));
-
-  /* Enable Compare/Capture ch 0 interrupts */
-  cpu_mem_write_32(pv->addr + EFM32_RTC_IEN_ADDR, endian_le32(EFM32_RTC_IEN_COMP0 | EFM32_RTC_IF_OF));
-}
-
 /* This function disables the interruption associated to compare/capture
    channel 0. */
 static inline void efm32_rtc_disable_compare(struct efm32_rtc_private_s *pv)
 {
-  cpu_mem_write_32(pv->addr + EFM32_RTC_IEN_ADDR, endian_le32(EFM32_RTC_IF_OF));
+  cpu_mem_write_32(pv->addr + EFM32_RTC_IEN_ADDR, endian_le32(EFM32_RTC_IEN_OF));
 }
 
-static bool_t efm32_rtc_request_start(struct efm32_rtc_private_s *pv,
-                                    struct dev_timer_rq_s *rq,
-                                    dev_timer_value_t value)
+static void efm32_rtc_request_start(struct efm32_rtc_private_s *pv,
+                                      struct dev_timer_rq_s *rq,
+                                      dev_timer_value_t value)
 {
   /* enable hw comparator if software part of the counter match */
   if (((rq->deadline ^ value) & EFM32_RTC_SW_MASK))
-    return 0;
+    return;
 
-  efm32_rtc_enable_compare(pv, rq->deadline);
+  uint32_t d = rq->deadline & EFM32_RTC_COMP0_MASK;
+  uint32_t s = 5;
 
-  /* hw compare for == only, check for race condition */
-  if (rq->deadline <= get_timer_value(pv))
-    return 1;
+  /* enable compare interrupt */
+  cpu_mem_write_32(pv->addr + EFM32_RTC_IEN_ADDR, endian_le32(EFM32_RTC_IEN_COMP0 | EFM32_RTC_IEN_OF));
 
-  return 0;
-}
+  do {
+    /* write deadline in Compare 0 channel */
+    while (cpu_mem_read_32(pv->addr + EFM32_RTC_SYNCBUSY_ADDR) &
+           endian_le32(EFM32_RTC_SYNCBUSY_COMP0))
+      ;
 
-static inline void efm32_rtc_raise_irq(struct efm32_rtc_private_s *pv)
-{
-  cpu_mem_write_32(pv->addr + EFM32_RTC_IFS_ADDR, endian_le32(EFM32_RTC_IFC_COMP0));
+    cpu_mem_write_32(pv->addr + EFM32_RTC_COMP0_ADDR, endian_le32(d + s));
+
+    /* hw compare for == only, check for race condition */
+    uint32_t c = cpu_mem_read_32(pv->addr + EFM32_RTC_CNT_ADDR);
+
+    if ((d - c /* LE domain write skew */ - 4) & (1 << (EFM32_RTC_HW_WIDTH - 1)))
+      {
+        s *= 2;
+        continue;
+      }
+  } while (0);
 }
 
 static DEV_IRQ_SRC_PROCESS(efm32_rtc_irq)
@@ -160,19 +159,17 @@ static DEV_IRQ_SRC_PROCESS(efm32_rtc_irq)
   struct efm32_rtc_private_s *pv = dev->drv_pv;
  
   lock_spin(&dev->lock);
-#ifdef CONFIG_DEVICE_CLOCK_GATING
-  assert(dev->start_count);
-#endif
 
-  while (1)
+  uint64_t value = endian_le32(cpu_mem_read_32(pv->addr + EFM32_RTC_CNT_ADDR));
+  uint32_t irq = endian_le32(cpu_mem_read_32(pv->addr + EFM32_RTC_IF_ADDR))
+    & (EFM32_RTC_IF_COMP0 | EFM32_RTC_IF_OF);
+
+  if (irq)
     {
-      uint32_t irq = endian_le32(cpu_mem_read_32(pv->addr + EFM32_RTC_IF_ADDR))
-        & (EFM32_RTC_IEN_COMP0 | EFM32_RTC_IF_OF);
-
-      if (!irq)
-        break;
-
       cpu_mem_write_32(pv->addr + EFM32_RTC_IFC_ADDR, endian_le32(irq));
+
+      if (dev->start_count == 0)
+        goto err;
 
       /* Compare channel interrupt */
       if (irq & EFM32_RTC_IF_COMP0)
@@ -180,7 +177,13 @@ static DEV_IRQ_SRC_PROCESS(efm32_rtc_irq)
 
       /* Update the software part of the counter */
       if (irq & EFM32_RTC_IF_OF)
-        pv->swvalue++;
+        {
+          pv->swvalue++;
+          if (value > EFM32_RTC_HW_MASK / 2)      /* wrap just occured */
+            value = 0;
+        }
+
+      value += (uint64_t)pv->swvalue << EFM32_RTC_HW_WIDTH;
 
       while (1)
         {
@@ -194,15 +197,14 @@ static DEV_IRQ_SRC_PROCESS(efm32_rtc_irq)
               break;
             }
 
-          uint64_t value = get_timer_value(pv);
-
           /* setup compare for first request */
           if (rq->deadline > value)
-            if (!efm32_rtc_request_start(pv, rq, value))
+            {
+              efm32_rtc_request_start(pv, rq, value);
               break;
+            }
 
           dev_timer_pqueue_remove(&pv->queue, dev_timer_rq_s_base(rq));
-          efm32_rtc_disable_compare(pv);
           rq->rq.drvdata = NULL;
 
           lock_release(&dev->lock);
@@ -212,6 +214,7 @@ static DEV_IRQ_SRC_PROCESS(efm32_rtc_irq)
 
     }
 
+ err:
   lock_release(&dev->lock);
 }
 #endif
@@ -243,8 +246,8 @@ static DEV_TIMER_CANCEL(efm32_rtc_cancel)
           if (rqnext != NULL)
             {
               /* start next request, raise irq on race condition */
-              if (efm32_rtc_request_start(pv, rqnext, get_timer_value(pv)))
-                efm32_rtc_raise_irq(pv);
+              cpu_mem_write_32(pv->addr + EFM32_RTC_IFC_ADDR, endian_le32(EFM32_RTC_IFC_COMP0));
+              efm32_rtc_request_start(pv, rqnext, get_timer_value(pv));
             }
           else
             {
@@ -290,21 +293,24 @@ static DEV_TIMER_REQUEST(efm32_rtc_request)
 
       if (rq->delay)
         rq->deadline = value + rq->delay;
-
-      if (rq->deadline <= value)
-        err = -ETIMEDOUT;
-      else
+      else if (rq->deadline <= value)
         {
-          dev->start_count |= 1;
-          dev_timer_pqueue_insert(&pv->queue, dev_timer_rq_s_base(rq));
-          rq->rq.drvdata = pv;
-
-          /* start request, raise irq on race condition */
-          if (dev_request_pqueue_prev(&pv->queue, dev_timer_rq_s_base(rq)) == NULL)
-            if (efm32_rtc_request_start(pv, rq, value))
-              efm32_rtc_raise_irq(pv);
+          err = -ETIMEDOUT;
+          goto done;
         }
 
+      dev->start_count |= 1;
+      dev_timer_pqueue_insert(&pv->queue, dev_timer_rq_s_base(rq));
+      rq->rq.drvdata = pv;
+
+      /* start request, raise irq on race condition */
+      if (dev_request_pqueue_prev(&pv->queue, dev_timer_rq_s_base(rq)) == NULL)
+        {
+          cpu_mem_write_32(pv->addr + EFM32_RTC_IFC_ADDR, endian_le32(EFM32_RTC_IFC_COMP0));
+          efm32_rtc_request_start(pv, rq, value);
+        }
+
+    done:
       if (dev->start_count == 0)
         efm32_rtc_stop_counter(pv);
     }
