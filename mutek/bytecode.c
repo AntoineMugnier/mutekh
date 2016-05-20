@@ -64,9 +64,7 @@ bc_init(struct bc_context_s *ctx,
 #endif
 }
 
-#ifdef CONFIG_MUTEK_BYTECODE_VM
-
-#ifdef CONFIG_MUTEK_BYTECODE_DEBUG
+#if defined(CONFIG_MUTEK_BYTECODE_VM) && defined(CONFIG_MUTEK_BYTECODE_DEBUG)
 static const char * bc_opname(uint16_t op)
 {
   struct op_s
@@ -139,24 +137,29 @@ void bc_dump(const struct bc_context_s *ctx, bool_t regs)
 #ifdef CONFIG_MUTEK_BYTECODE_DEBUG
   uint_fast8_t i;
 
+# ifdef CONFIG_MUTEK_BYTECODE_NATIVE
   if (ctx->desc->flags & BC_FLAGS_NATIVE)
     {
       printk("bytecode: pc=%p", ctx->pc);
     }
   else
+# endif
     {
+# ifdef CONFIG_MUTEK_BYTECODE_VM
+
       printk("bytecode: pc=%p (%u)", ctx->pc, ctx->pc - (uint16_t*)ctx->desc->code);
 
-# ifdef CONFIG_MUTEK_BYTECODE_CHECKING
+#  ifdef CONFIG_MUTEK_BYTECODE_CHECKING
       if (ctx->pc >= (uint16_t*)ctx->desc->code &&
           ctx->pc < (uint16_t*)ctx->desc->code + ctx->desc->op_count &&
           !((uintptr_t)ctx->pc & 1))
-# endif
+#  endif
         {
           uint16_t op = endian_le16(*ctx->pc);
 
           printk(", opcode=%04x (%s)", op, bc_opname(op));
         }
+# endif
     }
 
   printk("\n");
@@ -166,6 +169,8 @@ void bc_dump(const struct bc_context_s *ctx, bool_t regs)
       printk("r%02u=%" BC_REG_FORMAT "%c", i, ctx->v[i], (i + 1) % 4 ? ' ' : '\n');
 #endif
 }
+
+#ifdef CONFIG_MUTEK_BYTECODE_VM
 
 #define BC_DISPATCH(name) ((&&dispatch_##name - &&dispatch_begin))
 #define BC_DISPATCH_GOTO(index) goto *(&&dispatch_begin + dispatch[index])
