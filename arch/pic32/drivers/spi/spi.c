@@ -57,9 +57,7 @@ DRIVER_PV(struct pic32_spi_context_s
   uint32_t                       route;
   uint_fast8_t                   fifo_lvl;
 
-#ifdef CONFIG_DEVICE_SPI_REQUEST
   struct dev_spi_ctrl_context_s    spi_ctrl_ctx;
-#endif
 
   struct dev_freq_s              freq;
   uint32_t                       bit_rate;

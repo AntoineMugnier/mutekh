@@ -51,9 +51,7 @@ DRIVER_PV(struct cc26xx_spi_context_s
   struct dev_spi_ctrl_transfer_s *tr;
   uint_fast8_t                   fifo_lvl;
 
-#ifdef CONFIG_DEVICE_SPI_REQUEST
   struct dev_spi_ctrl_context_s    spi_ctrl_ctx;
-#endif
 
   struct dev_freq_s              freq;
   uint32_t                       bit_rate;

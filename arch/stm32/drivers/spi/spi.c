@@ -48,9 +48,7 @@ DRIVER_PV(struct stm32_spi_private_s
   struct dev_irq_src_s           irq_ep;
   struct dev_spi_ctrl_transfer_s *tr;
 
-#ifdef CONFIG_DEVICE_SPI_REQUEST
   struct dev_spi_ctrl_context_s    spi_ctrl_ctx;
-#endif
 
   struct dev_freq_s              busfreq;
 });

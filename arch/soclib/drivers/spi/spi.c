@@ -75,9 +75,7 @@ DRIVER_PV(struct soclib_spi_context_s
 
   struct dev_freq_s              freq;
 
-#ifdef CONFIG_DEVICE_SPI_REQUEST
   struct dev_spi_ctrl_context_s    spi_ctrl_ctx;
-#endif
 });
 
 /****************************************************** SPI controller */

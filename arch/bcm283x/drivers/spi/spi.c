@@ -53,9 +53,7 @@ DRIVER_PV(struct bcm283x_spi_context_s
   enum dev_spi_bit_order_e       bit_order;
   enum dev_spi_cs_policy_e       cs_policy;
 
-#ifdef CONFIG_DEVICE_SPI_REQUEST
   struct dev_spi_ctrl_context_s    spi_ctrl_ctx;
-#endif
 });
 
 static DEV_SPI_CTRL_CONFIG(bcm283x_spi_config)

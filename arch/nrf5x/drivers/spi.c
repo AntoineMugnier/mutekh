@@ -48,9 +48,7 @@ DRIVER_PV(struct nrf5x_spi_context_s
   uint32_t ctrl;
   uint32_t route;
 
-#ifdef CONFIG_DEVICE_SPI_REQUEST
   struct dev_spi_ctrl_context_s spi_ctrl_ctx;
-#endif
 });
 
 static DEV_SPI_CTRL_CONFIG(nrf5x_spi_config)

@@ -51,9 +51,7 @@ DRIVER_PV(struct nrf5x_spim_context_s
   bool_t callbacking : 1;
   bool_t buffered_in : 1;
 
-#ifdef CONFIG_DEVICE_SPI_REQUEST
   struct dev_spi_ctrl_context_s spi_ctrl_ctx;
-#endif
 });
 
 static DEV_SPI_CTRL_CONFIG(nrf5x_spim_config)

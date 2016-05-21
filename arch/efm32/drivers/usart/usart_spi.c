@@ -57,9 +57,7 @@ DRIVER_PV(struct efm32_usart_spi_context_s
 #endif
   struct dev_spi_ctrl_transfer_s *tr;
 
-#ifdef CONFIG_DEVICE_SPI_REQUEST
   struct dev_spi_ctrl_context_s  spi_ctrl_ctx;
-#endif
 
   struct dev_freq_s              freq;
   uint32_t                       bit_rate;
