@@ -37,7 +37,7 @@
 #define TTY_SOCLIB_REG_RESET	12
 #define TTY_SOCLIB_REG_NOIRQ	16
 
-DRIVER_PV(struct dma_soclib_context_s
+DRIVER_PV(struct soclib_dma_context_s
 {
   /* dma input request queue and dma fifo */
   dev_request_queue_root_t		queue;
@@ -46,9 +46,9 @@ DRIVER_PV(struct dma_soclib_context_s
   bool_t                      busy;
 });
 
-static void dma_soclib_start(struct device_s *dev, const struct dev_dma_rq_s *rq)
+static void soclib_dma_start(struct device_s *dev, const struct dev_dma_rq_s *rq)
 {
-  struct dma_soclib_context_s	*pv = dev->drv_pv;
+  struct soclib_dma_context_s	*pv = dev->drv_pv;
 
   cpu_mem_write_32(pv->addr + TTY_SOCLIB_REG_NOIRQ, 0);
   cpu_mem_write_32(pv->addr + TTY_SOCLIB_REG_SRC, endian_le32((uintptr_t)rq->basic.src));
@@ -56,7 +56,7 @@ static void dma_soclib_start(struct device_s *dev, const struct dev_dma_rq_s *rq
   cpu_mem_write_32(pv->addr + TTY_SOCLIB_REG_LEN, endian_le32(rq->basic.size));
 }
 
-static bool_t dma_soclib_validate_request(struct dev_dma_rq_s *rq)
+static bool_t soclib_dma_validate_request(struct dev_dma_rq_s *rq)
 {
   if (rq->type != DEV_DMA_BASIC)
     {
@@ -78,17 +78,17 @@ static bool_t dma_soclib_validate_request(struct dev_dma_rq_s *rq)
   return 0;
 }
 
-static DEVDMA_REQUEST(dma_soclib_request)
+static DEVDMA_REQUEST(soclib_dma_request)
 {
   struct device_s             *dev = accessor->dev;
-  struct dma_soclib_context_s	*pv = dev->drv_pv;
+  struct soclib_dma_context_s	*pv = dev->drv_pv;
 
 
   LOCK_SPIN_IRQ(&dev->lock);
 
   req->error = 0;
 
-  if (dma_soclib_validate_request(req))
+  if (soclib_dma_validate_request(req))
     goto end;
 
   bool_t empty = dev_request_queue_isempty(&pv->queue);
@@ -96,7 +96,7 @@ static DEVDMA_REQUEST(dma_soclib_request)
   dev_request_queue_pushback(&pv->queue, &req->base);
 
   if (empty && !pv->busy)
-    dma_soclib_start(dev, req);
+    soclib_dma_start(dev, req);
 
 end:
 
@@ -106,10 +106,10 @@ end:
     kroutine_exec(&req->base.kr);
 }
 
-static DEV_IRQ_SRC_PROCESS(dma_soclib_irq)
+static DEV_IRQ_SRC_PROCESS(soclib_dma_irq)
 {
   struct device_s *dev = ep->base.dev;
-  struct dma_soclib_context_s *pv = dev->drv_pv;
+  struct soclib_dma_context_s *pv = dev->drv_pv;
   struct dev_dma_rq_s *rq;
 
   lock_spin(&dev->lock);
@@ -131,7 +131,7 @@ static DEV_IRQ_SRC_PROCESS(dma_soclib_irq)
   cpu_mem_write_32(pv->addr + TTY_SOCLIB_REG_RESET, 0);
 
   if ((rq = dev_dma_rq_s_cast(dev_request_queue_head(&pv->queue))))
-    dma_soclib_start(dev, rq);
+    soclib_dma_start(dev, rq);
 
   lock_release(&dev->lock);
 }
@@ -140,11 +140,11 @@ static DEV_IRQ_SRC_PROCESS(dma_soclib_irq)
  * device open operation
  */
 
-#define dma_soclib_use dev_use_generic
+#define soclib_dma_use dev_use_generic
 
-static DEV_INIT(dma_soclib_init)
+static DEV_INIT(soclib_dma_init)
 {
-  struct dma_soclib_context_s	*pv;
+  struct soclib_dma_context_s	*pv;
 
 
   /* alocate private driver data */
@@ -159,7 +159,7 @@ static DEV_INIT(dma_soclib_init)
   if (device_res_get_uint(dev, DEV_RES_MEM, 0, &pv->addr, NULL))
     goto err_mem;
 
-  device_irq_source_init(dev, &pv->irq_ep, 1, &dma_soclib_irq);
+  device_irq_source_init(dev, &pv->irq_ep, 1, &soclib_dma_irq);
 
   if (device_irq_source_link(dev, &pv->irq_ep, 1, 1))
     goto err_mem;
@@ -174,9 +174,9 @@ static DEV_INIT(dma_soclib_init)
   return -1;
 }
 
-static DEV_CLEANUP(dma_soclib_cleanup)
+static DEV_CLEANUP(soclib_dma_cleanup)
 {
-  struct dma_soclib_context_s	*pv = dev->drv_pv;
+  struct soclib_dma_context_s	*pv = dev->drv_pv;
 
   if (!dev_request_queue_isempty(&pv->queue) || pv->busy)
     return -EBUSY;
@@ -190,9 +190,9 @@ static DEV_CLEANUP(dma_soclib_cleanup)
   return 0;
 }
 
-DRIVER_DECLARE(dma_soclib_drv, 0, "Soclib Dma", dma_soclib,
-               DRIVER_DMA_METHODS(dma_soclib));
+DRIVER_DECLARE(soclib_dma_drv, 0, "Soclib Dma", soclib_dma,
+               DRIVER_DMA_METHODS(soclib_dma));
 
-DRIVER_REGISTER(dma_soclib_drv,
+DRIVER_REGISTER(soclib_dma_drv,
                 DEV_ENUM_FDTNAME_ENTRY("soclib:dma"));
 

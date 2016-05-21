@@ -41,7 +41,7 @@ GCT_CONTAINER_FCNS(tty_fifo, static inline, tty_fifo,
                    init, destroy, pop_array, pushback, isfull, isempty);
 #endif
 
-struct tty_soclib_tty_s
+struct soclib_tty_tty_s
 {
   /* tty input request queue and char fifo */
   dev_request_queue_root_t	read_q;
@@ -50,12 +50,12 @@ struct tty_soclib_tty_s
 #endif
 };
 
-DRIVER_PV(struct tty_soclib_context_s
+DRIVER_PV(struct soclib_tty_context_s
 {
   struct dev_irq_src_s          irq_ep;
   uintptr_t                     addr;
   uint_fast8_t                  count;
-  struct tty_soclib_tty_s       ttys[0];
+  struct soclib_tty_tty_s       ttys[0];
 });
 
 #define TTY_SOCLIB_REG_WRITE	0
@@ -64,9 +64,9 @@ DRIVER_PV(struct tty_soclib_context_s
 #define TTY_SOCLIB_REG_SPAN	16
 
 static
-void tty_soclib_try_read(struct device_s *dev, struct tty_soclib_tty_s *tty)
+void soclib_tty_try_read(struct device_s *dev, struct soclib_tty_tty_s *tty)
 {
-  struct tty_soclib_context_s	*pv = dev->drv_pv;
+  struct soclib_tty_context_s	*pv = dev->drv_pv;
   __unused__ uintptr_t addr = pv->addr + TTY_SOCLIB_REG_SPAN * (tty - pv->ttys);
   struct dev_char_rq_s *rq;
 
@@ -104,12 +104,12 @@ void tty_soclib_try_read(struct device_s *dev, struct tty_soclib_tty_s *tty)
   }
 }
 
-static DEV_CHAR_CANCEL(tty_soclib_cancel)
+static DEV_CHAR_CANCEL(soclib_tty_cancel)
 {
   struct device_s               *dev = accessor->dev;
-  struct tty_soclib_context_s	*pv = dev->drv_pv;
+  struct soclib_tty_context_s	*pv = dev->drv_pv;
   error_t err = -ENOTSUP;
-  struct tty_soclib_tty_s *tty = pv->ttys + accessor->number;
+  struct soclib_tty_tty_s *tty = pv->ttys + accessor->number;
 
   LOCK_SPIN_IRQ(&dev->lock);
 
@@ -133,15 +133,15 @@ static DEV_CHAR_CANCEL(tty_soclib_cancel)
   return err;
 }
 
-static DEV_CHAR_REQUEST(tty_soclib_request)
+static DEV_CHAR_REQUEST(soclib_tty_request)
 {
   struct device_s               *dev = accessor->dev;
-  struct tty_soclib_context_s	*pv = dev->drv_pv;
+  struct soclib_tty_context_s	*pv = dev->drv_pv;
   struct dev_char_rq_s          *done_rq = NULL;
 
   assert(rq->size);
 
-  struct tty_soclib_tty_s *tty = pv->ttys + accessor->number;
+  struct soclib_tty_tty_s *tty = pv->ttys + accessor->number;
 
   LOCK_SPIN_IRQ(&dev->lock);
 
@@ -156,7 +156,7 @@ static DEV_CHAR_REQUEST(tty_soclib_request)
   case DEV_CHAR_READ:
     dev_request_queue_pushback(&tty->read_q, dev_char_rq_s_base(rq));
     rq->base.drvdata = tty;
-    tty_soclib_try_read(dev, tty);
+    soclib_tty_try_read(dev, tty);
     break;
 
   case DEV_CHAR_WRITE_PARTIAL_FLUSH:
@@ -191,10 +191,10 @@ static DEV_CHAR_REQUEST(tty_soclib_request)
 
 #ifdef CONFIG_DEVICE_IRQ
 
-static DEV_IRQ_SRC_PROCESS(tty_soclib_irq)
+static DEV_IRQ_SRC_PROCESS(soclib_tty_irq)
 {
   struct device_s *dev = ep->base.dev;
-  struct tty_soclib_context_s *pv = dev->drv_pv;
+  struct soclib_tty_context_s *pv = dev->drv_pv;
   uint_fast8_t i;
   uint8_t c;
 
@@ -202,7 +202,7 @@ static DEV_IRQ_SRC_PROCESS(tty_soclib_irq)
 
   for (i = 0; i < pv->count; i++)
     {
-      struct tty_soclib_tty_s *tty = pv->ttys + i;
+      struct soclib_tty_tty_s *tty = pv->ttys + i;
       uintptr_t addr = pv->addr + TTY_SOCLIB_REG_SPAN * i;
 
       while (endian_le32(cpu_mem_read_32(addr + TTY_SOCLIB_REG_STATUS)) & 1) {
@@ -216,7 +216,7 @@ static DEV_IRQ_SRC_PROCESS(tty_soclib_irq)
         } while ((endian_le32(cpu_mem_read_32(addr + TTY_SOCLIB_REG_STATUS)) & 1)
                  && ! tty_fifo_isfull(&tty->read_fifo));
 
-        tty_soclib_try_read(dev, tty);
+        soclib_tty_try_read(dev, tty);
       }
     }
 
@@ -226,21 +226,21 @@ static DEV_IRQ_SRC_PROCESS(tty_soclib_irq)
 #endif
 
 
-static DEV_USE(tty_soclib_use)
+static DEV_USE(soclib_tty_use)
 {
   struct device_accessor_s *accessor = param;
 
   switch (op)
     {
     case DEV_USE_GET_ACCESSOR: {
-      struct tty_soclib_context_s *pv = accessor->dev->drv_pv;
+      struct soclib_tty_context_s *pv = accessor->dev->drv_pv;
       if (accessor->number >= pv->count)
         return -ENOTSUP;
     }
     case DEV_USE_PUT_ACCESSOR:
       return 0;
     case DEV_USE_LAST_NUMBER: {
-      struct tty_soclib_context_s *pv = accessor->dev->drv_pv;
+      struct soclib_tty_context_s *pv = accessor->dev->drv_pv;
       accessor->number = pv->count - 1;
       return 0;
     }
@@ -249,9 +249,9 @@ static DEV_USE(tty_soclib_use)
     }
 }
 
-static DEV_INIT(tty_soclib_init)
+static DEV_INIT(soclib_tty_init)
 {
-  struct tty_soclib_context_s	*pv;
+  struct soclib_tty_context_s	*pv;
 
 
   uintptr_t addr;
@@ -262,7 +262,7 @@ static DEV_INIT(tty_soclib_init)
   if (!count)
     count = 1;
 
-  pv = mem_alloc(sizeof(*pv) + count * sizeof(struct tty_soclib_tty_s), (mem_scope_sys));
+  pv = mem_alloc(sizeof(*pv) + count * sizeof(struct soclib_tty_tty_s), (mem_scope_sys));
   if (!pv)
     return -ENOMEM;
 
@@ -272,7 +272,7 @@ static DEV_INIT(tty_soclib_init)
 
 #ifdef CONFIG_DEVICE_IRQ
   device_irq_source_init(dev, &pv->irq_ep, 1,
-                         &tty_soclib_irq);
+                         &soclib_tty_irq);
 
   if (device_irq_source_link(dev, &pv->irq_ep, 1, 1))
     goto err_mem;
@@ -280,7 +280,7 @@ static DEV_INIT(tty_soclib_init)
 
   for (i = 0; i < count; i++)
     {
-      struct tty_soclib_tty_s *tty = pv->ttys + i;
+      struct soclib_tty_tty_s *tty = pv->ttys + i;
       dev_request_queue_init(&tty->read_q);
 #ifdef CONFIG_DEVICE_IRQ
       tty_fifo_init(&tty->read_fifo);
@@ -295,21 +295,21 @@ static DEV_INIT(tty_soclib_init)
   return -1;
 }
 
-static DEV_CLEANUP(tty_soclib_cleanup)
+static DEV_CLEANUP(soclib_tty_cleanup)
 {
-  struct tty_soclib_context_s	*pv = dev->drv_pv;
+  struct soclib_tty_context_s	*pv = dev->drv_pv;
   uint_fast8_t i;
 
   for (i = 0; i < pv->count; i++)
     {
-      struct tty_soclib_tty_s *tty = pv->ttys + i;
+      struct soclib_tty_tty_s *tty = pv->ttys + i;
       if (!dev_request_queue_isempty(&tty->read_q))
         return -EBUSY;
     }
 
   for (i = 0; i < pv->count; i++)
     {
-      struct tty_soclib_tty_s *tty = pv->ttys + i;
+      struct soclib_tty_tty_s *tty = pv->ttys + i;
 #ifdef CONFIG_DEVICE_IRQ
       tty_fifo_destroy(&tty->read_fifo);
 #endif
@@ -325,9 +325,9 @@ static DEV_CLEANUP(tty_soclib_cleanup)
   return 0;
 }
 
-DRIVER_DECLARE(tty_soclib_drv, 0, "Soclib Tty", tty_soclib,
-               DRIVER_CHAR_METHODS(tty_soclib));
+DRIVER_DECLARE(soclib_tty_drv, 0, "Soclib Tty", soclib_tty,
+               DRIVER_CHAR_METHODS(soclib_tty));
 
-DRIVER_REGISTER(tty_soclib_drv,
+DRIVER_REGISTER(soclib_tty_drv,
                 DEV_ENUM_FDTNAME_ENTRY("soclib:multi_tty"));
 

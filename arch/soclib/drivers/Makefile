@@ -1,4 +1,4 @@
-subdirs-$(CONFIG_DRIVER_SOCLIB_BLOCK_DEVICE) += block_device
+subdirs-$(CONFIG_DRIVER_SOCLIB_BLOCK_DEVICE) += block
 subdirs-$(CONFIG_DRIVER_SOCLIB_ICU) += icu
 subdirs-$(CONFIG_DRIVER_SOCLIB_MULTI_TTY) += multi_tty
 subdirs-$(CONFIG_DRIVER_SOCLIB_TIMER) += timer
