@@ -54,7 +54,7 @@
    directly as it does not allow sharing the bus with other
    slaves. The scheduler API described below is builtin on top of the
    present driver API. It requires the controller driver to store a
-   @ref dev_spi_ctrl_queue_s {scheduler queue} object in the device
+   @ref dev_spi_ctrl_context_s {scheduler queue} object in the device
    private data and make it available through the @ref
    dev_spi_ctrl_queue_t function.
 
@@ -351,7 +351,7 @@ struct dev_spi_ctrl_config_s;
 struct dev_spi_ctrl_base_rq_s;
 struct dev_spi_ctrl_bytecode_rq_s;
 struct dev_spi_ctrl_transaction_rq_s;
-struct dev_spi_ctrl_queue_s;
+struct dev_spi_ctrl_context_s;
 struct bc_descriptor_s;
 
 /***************************************** config */
@@ -531,47 +531,24 @@ error_t dev_spi_wait_transfer(struct device_spi_ctrl_s *accessor,
                               struct dev_spi_ctrl_transfer_s * tr);
 
 
-/***************************************** queue getter */
-
-#define DEV_SPI_CTRL_QUEUE(n) struct dev_spi_ctrl_queue_s * (n)(struct device_spi_ctrl_s *accessor)
-
-/**
-   @This returns SPI request queue allocated in the SPI controller
-   device private data.
- */
-typedef DEV_SPI_CTRL_QUEUE(dev_spi_ctrl_queue_t);
-
 /***************************************** device class */
 
-DRIVER_CLASS_TYPES(DRIVER_CLASS_SPI_CTRL, spi_ctrl,
+DRIVER_CTX_CLASS_TYPES(DRIVER_CLASS_SPI_CTRL, spi_ctrl,
 		   dev_spi_ctrl_config_t         *f_config;
 		   dev_spi_ctrl_select_t         *f_select;
 		   dev_spi_ctrl_transfer_t       *f_transfer;
-#ifdef CONFIG_DEVICE_SPI_REQUEST
-		   dev_spi_ctrl_queue_t        *f_queue;
-#endif
 		   );
 
-#ifdef CONFIG_DEVICE_SPI_REQUEST
-# define DRIVER_SPI_CTRL_METHODS(prefix)                      \
+#define DRIVER_SPI_CTRL_METHODS(prefix)                     \
   ((const struct driver_class_s*)&(const struct driver_spi_ctrl_s){     \
-    .class_ = DRIVER_CLASS_SPI_CTRL,                          \
-    .f_config = prefix ## _config,                            \
-    .f_select = prefix ## _select,                            \
-    .f_transfer = prefix ## _transfer,                        \
-    .f_queue = prefix ## _queue,                              \
-  })
-#else
-# define DRIVER_SPI_CTRL_METHODS(prefix)                      \
-  ((const struct driver_class_s*)&(const struct driver_spi_ctrl_s){     \
+    .ctx_offset = offsetof(driver_pv_t , spi_ctrl_ctx),                 \
     .class_ = DRIVER_CLASS_SPI_CTRL,                          \
     .f_config = prefix ## _config,                            \
     .f_select = prefix ## _select,                            \
     .f_transfer = prefix ## _transfer,                        \
   })
-#endif
 
-struct dev_spi_ctrl_queue_s;
+struct dev_spi_ctrl_context_s;
 struct dev_spi_ctrl_bytecode_rq_s;
 
 #ifdef CONFIG_DEVICE_SPI_REQUEST
@@ -684,12 +661,11 @@ STRUCT_INHERIT(dev_spi_ctrl_bytecode_rq_s, dev_spi_ctrl_base_rq_s, base);
 
 #endif
 
-#ifdef CONFIG_DEVICE_SPI_REQUEST
-
 /** @internal @This is the SPI scheduler queue contained in
     private data of the SPI bus controller device. */
-struct dev_spi_ctrl_queue_s
+struct dev_spi_ctrl_context_s
 {
+#ifdef CONFIG_DEVICE_SPI_REQUEST
   dev_request_queue_root_t      queue;
   struct dev_spi_ctrl_base_rq_s *current;
 
@@ -720,26 +696,25 @@ struct dev_spi_ctrl_queue_s
   struct dev_spi_ctrl_config_s *config;
 
   lock_irq_t                    lock;
+#endif
 };
-
-#endif /* CONFIG_DEVICE_SPI_REQUEST */
 
 /** This helper function initializes a SPI request queue struct for
     use in a SPI controller device driver. It is usually called from
     the controller driver initialization function to initialize a
     queue stored in the driver private context.
 
-    The @ref dev_spi_ctrl_queue_s::timer accessor is initialized using
+    The @ref dev_spi_ctrl_context_s::timer accessor is initialized using
     the device pointed to by the @tt{'timer'} device resource
     entry of the controller, if available.
 */
 config_depend(CONFIG_DEVICE_SPI_REQUEST)
-error_t dev_spi_queue_init(struct device_s *dev, struct dev_spi_ctrl_queue_s *q);
+error_t dev_spi_context_init(struct device_s *dev, struct dev_spi_ctrl_context_s *q);
 
 /** This helper function release the device accessor associated with
-    the SPI request queue. @see dev_spi_queue_init */
+    the SPI request queue. @see dev_spi_context_init */
 config_depend(CONFIG_DEVICE_SPI_REQUEST)
-void dev_spi_queue_cleanup(struct dev_spi_ctrl_queue_s *q);
+void dev_spi_context_cleanup(struct dev_spi_ctrl_context_s *q);
 
 /** @This schedules a SPI single transaction request for
     execution. The kroutine of the request will be called when the
@@ -856,7 +831,7 @@ config_depend_alwaysinline(CONFIG_DEVICE_SPI_BYTECODE_TIMER,
 struct device_timer_s *
 dev_spi_timer(struct device_spi_ctrl_s *ctrl),
 {
-  struct dev_spi_ctrl_queue_s *q = DEVICE_OP(ctrl, queue);
+  struct dev_spi_ctrl_context_s *q = device_spi_ctrl_context(ctrl);
   return &q->timer;
 })
 

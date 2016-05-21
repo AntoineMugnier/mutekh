@@ -49,7 +49,7 @@ DRIVER_PV(struct stm32_spi_private_s
   struct dev_spi_ctrl_transfer_s *tr;
 
 #ifdef CONFIG_DEVICE_SPI_REQUEST
-  struct dev_spi_ctrl_queue_s    queue;
+  struct dev_spi_ctrl_context_s    spi_ctrl_ctx;
 #endif
 
   struct dev_freq_s              busfreq;
@@ -349,17 +349,6 @@ DEV_SPI_CTRL_TRANSFER(stm32_spi_transfer)
     kroutine_exec(&tr->kr);
 }
 
-#ifdef CONFIG_DEVICE_SPI_REQUEST
-
-static DEV_SPI_CTRL_QUEUE(stm32_spi_queue)
-{
-  struct device_s *dev = accessor->dev;
-  struct stm32_spi_private_s *pv = dev->drv_pv;
-  return &pv->queue;
-}
-
-#endif
-
 
 #define stm32_spi_use dev_use_generic
 
@@ -384,7 +373,7 @@ static DEV_INIT(stm32_spi_init)
   pv->tr = NULL;
 
 #ifdef CONFIG_DEVICE_SPI_REQUEST
-  if (dev_spi_queue_init(dev, &pv->queue))
+  if (dev_spi_context_init(dev, &pv->spi_ctrl_ctx))
     goto err_mem;
 #endif
 
@@ -452,7 +441,7 @@ static DEV_CLEANUP(stm32_spi_cleanup)
   cpu_mem_write_32(pv->addr + STM32_SPI_CR1_ADDR, 0);
 
 #ifdef CONFIG_DEVICE_SPI_REQUEST
-  dev_spi_queue_cleanup(&pv->queue);
+  dev_spi_context_cleanup(&pv->spi_ctrl_ctx);
 #endif
 
   mem_free(pv);

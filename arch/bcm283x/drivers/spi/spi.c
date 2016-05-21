@@ -54,7 +54,7 @@ DRIVER_PV(struct bcm283x_spi_context_s
   enum dev_spi_cs_policy_e       cs_policy;
 
 #ifdef CONFIG_DEVICE_SPI_REQUEST
-  struct dev_spi_ctrl_queue_s    queue;
+  struct dev_spi_ctrl_context_s    spi_ctrl_ctx;
 #endif
 });
 
@@ -311,17 +311,6 @@ static DEV_SPI_CTRL_TRANSFER(bcm283x_spi_transfer)
     kroutine_exec(&tr->kr);
 }
 
-#ifdef CONFIG_DEVICE_SPI_REQUEST
-
-static DEV_SPI_CTRL_QUEUE(bcm283x_spi_queue)
-{
-  struct device_s *dev = accessor->dev;
-  struct bcm283x_spi_context_s *pv = dev->drv_pv;
-  return &pv->queue;
-}
-
-#endif
-
 
 #define bcm283x_spi_use dev_use_generic
 
@@ -349,7 +338,7 @@ static DEV_INIT(bcm283x_spi_init)
   pv->bit_order = DEV_SPI_MSB_FIRST;
 
 #ifdef CONFIG_DEVICE_SPI_REQUEST
-  if (dev_spi_queue_init(dev, &pv->queue))
+  if (dev_spi_context_init(dev, &pv->spi_ctrl_ctx))
     goto err_mem;
 #endif
   pv->ctrl = (BCM283X_SPI_CS_CLEAR(RXTX) |
@@ -388,7 +377,7 @@ static DEV_CLEANUP(bcm283x_spi_cleanup)
   cpu_mem_write_32(pv->addr + BCM283X_SPI_CS_ADDR, 0x1000);
 #endif
 #ifdef CONFIG_DEVICE_SPI_REQUEST
-  dev_spi_queue_cleanup(&pv->queue);
+  dev_spi_context_cleanup(&pv->spi_ctrl_ctx);
 #endif
 
   mem_free(pv);

@@ -58,7 +58,7 @@ DRIVER_PV(struct efm32_usart_spi_context_s
   struct dev_spi_ctrl_transfer_s *tr;
 
 #ifdef CONFIG_DEVICE_SPI_REQUEST
-  struct dev_spi_ctrl_queue_s    queue;
+  struct dev_spi_ctrl_context_s  spi_ctrl_ctx;
 #endif
 
   struct dev_freq_s              freq;
@@ -409,18 +409,6 @@ static DEV_SPI_CTRL_TRANSFER(efm32_usart_spi_transfer)
     kroutine_exec(&tr->kr);
 }
 
-#ifdef CONFIG_DEVICE_SPI_REQUEST
-
-static DEV_SPI_CTRL_QUEUE(efm32_usart_spi_queue)
-{
-  struct device_s *dev = accessor->dev;
-  struct efm32_usart_spi_context_s *pv = dev->drv_pv;
-  return &pv->queue;
-}
-
-#endif
-
-
 static DEV_USE(efm32_usart_spi_use)
 {
   switch (op)
@@ -485,7 +473,7 @@ static DEV_INIT(efm32_usart_spi_init)
   pv->tr = NULL;
 
 #ifdef CONFIG_DEVICE_SPI_REQUEST
-  if (dev_spi_queue_init(dev, &pv->queue))
+  if (dev_spi_context_init(dev, &pv->spi_ctrl_ctx))
     goto err_clk;
 #endif
 
@@ -624,7 +612,7 @@ static DEV_CLEANUP(efm32_usart_spi_cleanup)
   dev_drv_clock_cleanup(dev, &pv->clk_ep);
 
 #ifdef CONFIG_DEVICE_SPI_REQUEST
-  dev_spi_queue_cleanup(&pv->queue);
+  dev_spi_context_cleanup(&pv->spi_ctrl_ctx);
 #endif
 
   mem_free(pv);

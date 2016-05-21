@@ -58,7 +58,7 @@ DRIVER_PV(struct pic32_spi_context_s
   uint_fast8_t                   fifo_lvl;
 
 #ifdef CONFIG_DEVICE_SPI_REQUEST
-  struct dev_spi_ctrl_queue_s    queue;
+  struct dev_spi_ctrl_context_s    spi_ctrl_ctx;
 #endif
 
   struct dev_freq_s              freq;
@@ -456,17 +456,6 @@ end:
     kroutine_exec(&tr->kr);
 }
 
-#ifdef CONFIG_DEVICE_SPI_REQUEST
-
-static DEV_SPI_CTRL_QUEUE(pic32_spi_queue)
-{
-  struct device_s *dev = accessor->dev;
-  struct pic32_spi_context_s *pv = dev->drv_pv;
-  return &pv->queue;
-}
-
-#endif
-
 
 #define pic32_spi_use dev_use_generic
 
@@ -496,7 +485,7 @@ static DEV_INIT(pic32_spi_init)
     goto err_mem;
 
 #ifdef CONFIG_DEVICE_SPI_REQUEST
-  if (dev_spi_queue_init(dev, &pv->queue))
+  if (dev_spi_context_init(dev, &pv->spi_ctrl_ctx))
     goto err_mem;
 #endif
 
@@ -607,7 +596,7 @@ static DEV_CLEANUP(pic32_spi_cleanup)
   cpu_mem_write_32(pv->addr + PIC32_SPI_CON2_ADDR, 0);
 
 #ifdef CONFIG_DEVICE_SPI_REQUEST
-  dev_spi_queue_cleanup(&pv->queue);
+  dev_spi_context_cleanup(&pv->spi_ctrl_ctx);
 #endif
 
   mem_free(pv);

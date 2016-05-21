@@ -49,7 +49,7 @@ DRIVER_PV(struct nrf5x_spi_context_s
   uint32_t route;
 
 #ifdef CONFIG_DEVICE_SPI_REQUEST
-  struct dev_spi_ctrl_queue_s queue;
+  struct dev_spi_ctrl_context_s spi_ctrl_ctx;
 #endif
 });
 
@@ -255,17 +255,6 @@ static DEV_SPI_CTRL_TRANSFER(nrf5x_spi_transfer)
     kroutine_exec(&tr->kr);
 }
 
-#ifdef CONFIG_DEVICE_SPI_REQUEST
-
-static DEV_SPI_CTRL_QUEUE(nrf5x_spi_queue)
-{
-  struct device_s *dev = accessor->dev;
-  struct nrf5x_spi_context_s *pv = dev->drv_pv;
-  return &pv->queue;
-}
-
-#endif
-
 
 #define nrf5x_spi_use dev_use_generic
 
@@ -286,7 +275,7 @@ static DEV_INIT(nrf5x_spi_init)
   pv->current_transfer = NULL;
 
 #ifdef CONFIG_DEVICE_SPI_REQUEST
-  if (dev_spi_queue_init(dev, &pv->queue))
+  if (dev_spi_context_init(dev, &pv->spi_ctrl_ctx))
     goto free_pv;
 #endif
 
@@ -316,7 +305,7 @@ static DEV_INIT(nrf5x_spi_init)
 
  free_queue:
 #ifdef CONFIG_DEVICE_SPI_REQUEST
-  dev_spi_queue_cleanup(&pv->queue);
+  dev_spi_context_cleanup(&pv->spi_ctrl_ctx);
 #endif
  free_pv:
   mem_free(pv);
@@ -331,7 +320,7 @@ static DEV_CLEANUP(nrf5x_spi_cleanup)
   if (!dev_request_queue_isempty(&pv->queue.queue))
     return -EBUSY;
 
-  dev_spi_queue_cleanup(&pv->queue);
+  dev_spi_context_cleanup(&pv->spi_ctrl_ctx);
 #endif
 
   nrf_it_disable(pv->addr, NRF_SPI_READY);

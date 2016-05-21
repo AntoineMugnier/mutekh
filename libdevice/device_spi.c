@@ -49,9 +49,9 @@ enum device_spi_ret_e {
   DEVICE_SPI_WAIT,
 };
 
-static enum device_spi_ret_e device_spi_ctrl_sched(struct dev_spi_ctrl_queue_s *q);
-static void device_spi_ctrl_run(struct dev_spi_ctrl_queue_s *q);
-static enum device_spi_ret_e device_spi_ctrl_end(struct dev_spi_ctrl_queue_s *q,
+static enum device_spi_ret_e device_spi_ctrl_sched(struct dev_spi_ctrl_context_s *q);
+static void device_spi_ctrl_run(struct dev_spi_ctrl_context_s *q);
+static enum device_spi_ret_e device_spi_ctrl_end(struct dev_spi_ctrl_context_s *q,
                                                  struct dev_spi_ctrl_base_rq_s *rq, error_t err);
 
 static error_t device_spi_ctrl_select(struct dev_spi_ctrl_base_rq_s *rq,
@@ -91,7 +91,7 @@ static KROUTINE_EXEC(device_spi_ctrl_transfer_end)
 {
   struct dev_spi_ctrl_transfer_s *tr = KROUTINE_CONTAINER(kr, *tr, kr);
   struct dev_spi_ctrl_base_rq_s *rq = tr->pvdata;
-  struct dev_spi_ctrl_queue_s *q = DEVICE_OP(rq->ctrl, queue);
+  struct dev_spi_ctrl_context_s *q = device_spi_ctrl_context(rq->ctrl);
 
   lock_spin_irq(&q->lock);
 
@@ -109,7 +109,7 @@ static KROUTINE_EXEC(device_spi_ctrl_transfer_end)
 }
 
 static enum device_spi_ret_e
-device_spi_ctrl_transfer(struct dev_spi_ctrl_queue_s *q,
+device_spi_ctrl_transfer(struct dev_spi_ctrl_context_s *q,
                          struct dev_spi_ctrl_base_rq_s *rq)
 {
   struct dev_spi_ctrl_transfer_s *tr = &q->transfer;
@@ -139,7 +139,7 @@ device_spi_ctrl_transfer(struct dev_spi_ctrl_queue_s *q,
 }
 
 static enum device_spi_ret_e
-device_spi_ctrl_end(struct dev_spi_ctrl_queue_s *q,
+device_spi_ctrl_end(struct dev_spi_ctrl_context_s *q,
                     struct dev_spi_ctrl_base_rq_s *rq, error_t err)
 {
   assert(rq->enqueued);
@@ -181,7 +181,7 @@ device_spi_ctrl_end(struct dev_spi_ctrl_queue_s *q,
 static KROUTINE_EXEC(device_spi_ctrl_timeout)
 {
   struct dev_timer_rq_s *trq = KROUTINE_CONTAINER(kr, *trq, rq.kr);
-  struct dev_spi_ctrl_queue_s *q = trq->rq.pvdata;
+  struct dev_spi_ctrl_context_s *q = trq->rq.pvdata;
 
   lock_spin_irq(&q->lock);
 
@@ -192,7 +192,7 @@ static KROUTINE_EXEC(device_spi_ctrl_timeout)
 }
 
 static enum device_spi_ret_e
-device_spi_ctrl_delay(struct dev_spi_ctrl_queue_s *q,
+device_spi_ctrl_delay(struct dev_spi_ctrl_context_s *q,
                       struct dev_spi_ctrl_bytecode_rq_s *rq)
 {
   struct dev_timer_rq_s *trq = &q->timer_rq;
@@ -230,7 +230,7 @@ device_spi_ctrl_delay(struct dev_spi_ctrl_queue_s *q,
 # endif
 
 static enum device_spi_ret_e
-device_spi_ctrl_sched(struct dev_spi_ctrl_queue_s *q)
+device_spi_ctrl_sched(struct dev_spi_ctrl_context_s *q)
 {
   error_t err;
   struct dev_spi_ctrl_base_rq_s *rq = NULL;
@@ -286,7 +286,7 @@ found:
 
 # ifdef CONFIG_DEVICE_SPI_BYTECODE
 static enum device_spi_ret_e
-device_spi_bytecode_exec(struct dev_spi_ctrl_queue_s *q,
+device_spi_bytecode_exec(struct dev_spi_ctrl_context_s *q,
                          struct dev_spi_ctrl_bytecode_rq_s *rq)
 {
   error_t err;
@@ -498,7 +498,7 @@ device_spi_bytecode_exec(struct dev_spi_ctrl_queue_s *q,
 }
 # endif
 
-static void device_spi_ctrl_run(struct dev_spi_ctrl_queue_s *q)
+static void device_spi_ctrl_run(struct dev_spi_ctrl_context_s *q)
 {
   enum device_spi_ret_e r;
 
@@ -531,7 +531,7 @@ static void device_spi_ctrl_run(struct dev_spi_ctrl_queue_s *q)
 
 static KROUTINE_EXEC(device_spi_ctrl_resume)
 {
-  struct dev_spi_ctrl_queue_s *q = KROUTINE_CONTAINER(kr, *q, kr);
+  struct dev_spi_ctrl_context_s *q = KROUTINE_CONTAINER(kr, *q, kr);
   error_t err;
 
   lock_spin_irq(&q->lock);
@@ -545,7 +545,7 @@ static KROUTINE_EXEC(device_spi_ctrl_resume)
   device_spi_ctrl_run(q);
 }
 
-static bool_t device_spi_ctrl_entry(struct dev_spi_ctrl_queue_s *q,
+static bool_t device_spi_ctrl_entry(struct dev_spi_ctrl_context_s *q,
                                     struct dev_spi_ctrl_base_rq_s *rq)
 {
   if (q->current != NULL)
@@ -576,7 +576,7 @@ void dev_spi_transaction_start(struct device_spi_ctrl_s *ctrl,
 #  endif
 
   rq->base.ctrl = ctrl;
-  struct dev_spi_ctrl_queue_s *q = DEVICE_OP(ctrl, queue);
+  struct dev_spi_ctrl_context_s *q = device_spi_ctrl_context(rq->ctrl);
 
   lock_spin_irq(&q->lock);
 
@@ -605,7 +605,7 @@ error_t dev_spi_bytecode_start(struct device_spi_ctrl_s *ctrl,
 #  endif
 
   rq->base.ctrl = ctrl;
-  struct dev_spi_ctrl_queue_s *q = DEVICE_OP(ctrl, queue);
+  struct dev_spi_ctrl_context_s *q = device_spi_ctrl_context(ctrl);
 
   lock_spin_irq(&q->lock);
 
@@ -653,7 +653,7 @@ error_t dev_spi_bytecode_start(struct device_spi_ctrl_s *ctrl,
 error_t device_spi_bytecode_wakeup(struct device_spi_ctrl_s *ctrl,
                                    struct dev_spi_ctrl_bytecode_rq_s *rq)
 {
-  struct dev_spi_ctrl_queue_s *q = DEVICE_OP(ctrl, queue);
+  struct dev_spi_ctrl_context_s *q = device_spi_ctrl_context(ctrl);
   error_t err = 0;
 
   lock_spin_irq(&q->lock);
@@ -681,7 +681,7 @@ error_t device_spi_bytecode_wakeup(struct device_spi_ctrl_s *ctrl,
 }
 # endif
 
-error_t dev_spi_queue_init(struct device_s *dev, struct dev_spi_ctrl_queue_s *q)
+error_t dev_spi_context_init(struct device_s *dev, struct dev_spi_ctrl_context_s *q)
 {
   __unused__ error_t err;
 
@@ -700,7 +700,7 @@ error_t dev_spi_queue_init(struct device_s *dev, struct dev_spi_ctrl_queue_s *q)
   return 0;
 }
 
-void dev_spi_queue_cleanup(struct dev_spi_ctrl_queue_s *q)
+void dev_spi_context_cleanup(struct dev_spi_ctrl_context_s *q)
 {
   lock_destroy_irq(&q->lock);
   dev_request_queue_destroy(&q->queue);
@@ -776,7 +776,7 @@ error_t dev_drv_spi_bytecode_init(struct device_s *dev,
   if (timer != NULL)
     {
 # ifdef CONFIG_DEVICE_SPI_BYTECODE_TIMER
-      struct dev_spi_ctrl_queue_s *q = DEVICE_OP(ctrl, queue);
+      struct dev_spi_ctrl_context_s *q = device_spi_ctrl_context(ctrl);
       err = -ENOENT;
       if (!device_check_accessor(&q->timer.base))
         goto err;

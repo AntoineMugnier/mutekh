@@ -76,7 +76,7 @@ DRIVER_PV(struct soclib_spi_context_s
   struct dev_freq_s              freq;
 
 #ifdef CONFIG_DEVICE_SPI_REQUEST
-  struct dev_spi_ctrl_queue_s    queue;
+  struct dev_spi_ctrl_context_s    spi_ctrl_ctx;
 #endif
 });
 
@@ -294,17 +294,6 @@ static DEV_SPI_CTRL_TRANSFER(soclib_spi_transfer)
   if (done)
     kroutine_exec(&tr->kr);     /* tail call */
 }
-
-#ifdef CONFIG_DEVICE_SPI_REQUEST
-
-static DEV_SPI_CTRL_QUEUE(soclib_spi_queue)
-{
-  struct device_s *dev = accessor->dev;
-  struct soclib_spi_context_s *pv = dev->drv_pv;
-  return &pv->queue;
-}
-
-#endif
 
 /****************************************************** GPIO */
 
@@ -526,7 +515,7 @@ static DEV_INIT(soclib_spi_init)
 #endif
 
 #ifdef CONFIG_DEVICE_SPI_REQUEST
-  if (dev_spi_queue_init(dev, &pv->queue))
+  if (dev_spi_context_init(dev, &pv->spi_ctrl_ctx))
     goto err_mem;
 #endif
 
@@ -550,7 +539,7 @@ static DEV_INIT(soclib_spi_init)
 
  err_queue:
 #ifdef CONFIG_DEVICE_SPI_REQUEST
-  dev_spi_queue_cleanup(&pv->queue);
+  dev_spi_context_cleanup(&pv->spi_ctrl_ctx);
 #endif
  err_mem:
   mem_free(pv);
@@ -571,7 +560,7 @@ static DEV_CLEANUP(soclib_spi_cleanup)
 #endif
 
 #ifdef CONFIG_DEVICE_SPI_REQUEST
-  dev_spi_queue_cleanup(&pv->queue);
+  dev_spi_context_cleanup(&pv->spi_ctrl_ctx);
 #endif
 
   mem_free(pv);
