@@ -484,7 +484,7 @@ extern const struct driver_registry_s driver_registry_table_end[];
   __attribute__((used)) const struct driver_s driver_
 #endif
 
-/** @internal @This declares a device accessor type.
+/** @internal @This declares a driver class.
     @see driver_class_e
     @xsee {Device classes} */
 #define DRIVER_CLASS_TYPES(id, cl, ...)                                 \
@@ -493,6 +493,7 @@ extern const struct driver_registry_s driver_registry_table_end[];
 struct driver_##cl##_s                                                  \
 {                                                                       \
   uint16_t class_; /* enum driver_class_e */                            \
+  uint16_t ctx_offset; /* offsetof(driver_pv_s, libdevice_class_context) */ \
   __VA_ARGS__                                                           \
 };                                                                      \
                                                                         \
@@ -526,10 +527,27 @@ device_##cl##_s_base(struct device_##cl##_s *x)                         \
   return (void*)x;                                                      \
 }
 
+/** @internal @This declares a driver class which uses a libdevice context.
+    @see #DRIVER_CLASS_TYPES */
+#define DRIVER_CTX_CLASS_TYPES(id, cl, ...)                             \
+DRIVER_CLASS_TYPES(id, cl, __VA_ARGS__)                                 \
+                                                                        \
+struct dev_##cl##_context_s;                                            \
+                                                                        \
+/** @This returns a pointer to the public context stored in the device  \
+    private data. This is used by the libdevice generic code of the     \
+    class, not relevant for all classes. */                             \
+ALWAYS_INLINE struct dev_##cl##_context_s *                             \
+device_##cl##_context(struct device_##cl##_s *x)                        \
+{                                                                       \
+  return (void*)((uint8_t*)x->dev->drv_pv + x->api->ctx_offset);        \
+}
+
 /** @internal @This is the generic device driver class struct header. */
 struct driver_class_s
 {
   uint16_t class_;  /* enum driver_class_e */
+  uint16_t ctx_offset; /* offsetof(driver_pv_s, libdevice_class_context) */
   void *functions[];
 };
 
