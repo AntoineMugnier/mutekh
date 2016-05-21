@@ -39,10 +39,10 @@
 
 #include <fdt/reader.h>
 
-struct enum_fdt_pv_s
+DRIVER_PV(struct enum_fdt_pv_s
 {
   dev_request_queue_root_t queue;
-};
+});
 
 enum enum_fdt_section_e
 {

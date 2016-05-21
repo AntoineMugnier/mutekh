@@ -49,13 +49,13 @@ struct icu_emu_handler_s
   void			*data;
 };
 
-struct icu_emu_private_s
+DRIVER_PV(struct icu_emu_private_s
 {
   cpu_id_t cpuid;
   atomic_t mask;
   atomic_t pending;
   struct icu_emu_handler_s	table[CONFIG_DRIVER_ICU_EMU_IRQCOUNT];
-};
+});
 
 #ifdef CONFIG_HEXO_IPI
 DEV_ICU_SETUP_IPI_EP(icu_emu_setup_ipi_ep)

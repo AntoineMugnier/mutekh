@@ -119,7 +119,7 @@ extern void mcp23s17_bc_setup_irq(void);
 #  define MCP23S17_IRQ_SETUP_OP     0x8
 #endif
 
-struct mcp23s17_private_s
+DRIVER_PV(struct mcp23s17_private_s
 {
   /* SPI */
   struct device_spi_ctrl_s  spi;
@@ -156,6 +156,6 @@ struct mcp23s17_private_s
 
   uint8_t     pending_op;     /* Pending operations mask */
   uint8_t     current_op;     /* Current operation mask */
-};
+});
 
 #endif /* _MCP23S17_H_ */

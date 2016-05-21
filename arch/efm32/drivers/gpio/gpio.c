@@ -41,7 +41,7 @@
 #define GPIO_SRC_IRQ_COUNT 2
 #define GPIO_BANK_SIZE 16
 
-struct efm32_gpio_private_s
+DRIVER_PV(struct efm32_gpio_private_s
 {
 #ifdef CONFIG_DRIVER_EFM32_GPIO_ICU
   struct dev_irq_sink_s sink[CONFIG_DRIVER_EFM32_GPIO_IRQ_COUNT];
@@ -57,7 +57,7 @@ struct efm32_gpio_private_s
 #endif
 
   struct dev_clock_sink_ep_s    clk_ep;
-};
+});
 
 /* This function returns a 32 bits mask from a 8 bits value 
    if msk = 0b10101010 for instance, get_msk(msk) returns

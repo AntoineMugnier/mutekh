@@ -55,7 +55,7 @@
 # error
 #endif
 
-struct sparc_dev_private_s
+DRIVER_PV(struct sparc_dev_private_s
 {
 #ifdef CONFIG_DEVICE_IRQ
   struct dev_irq_sink_s	sinks[ICU_SPARC_SINKS_COUNT];
@@ -63,7 +63,7 @@ struct sparc_dev_private_s
 
   struct cpu_tree_s node;
   struct dev_clock_sink_ep_s clk_ep;
-};
+});
 
 /************************************************************************
         Interrupts controller driver part

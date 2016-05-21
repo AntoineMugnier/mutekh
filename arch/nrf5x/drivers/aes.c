@@ -39,10 +39,10 @@
 #include <arch/nrf5x/ecb.h>
 #define ECB_ADDR NRF_PERIPHERAL_ADDR(NRF5X_ECB)
 
-struct nrf5x_aes_private_s
+DRIVER_PV(struct nrf5x_aes_private_s
 {
   struct dev_request_dlqueue_s queue;
-};
+});
 
 struct nrf5x_aes_state_s
 {

@@ -42,7 +42,7 @@
 # include <arch/soclib/mem_checker.h>
 #endif
 
-struct mips_dev_private_s
+DRIVER_PV(struct mips_dev_private_s
 {
 #ifdef CONFIG_DEVICE_IRQ
 #define ICU_MIPS_MAX_VECTOR	6
@@ -55,7 +55,7 @@ struct mips_dev_private_s
 #ifdef CONFIG_DEVICE_CLOCK
   dev_timer_cfgrev_t timer_rev;
 #endif
-};
+});
 
 /************************************************************************
         Interrupts controller driver part

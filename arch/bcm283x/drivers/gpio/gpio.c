@@ -42,7 +42,7 @@
 #define GPIO_BANK_SIZE 32
 #define GPIO_IO_COUNT 54
 
-struct bcm283x_gpio_private_s
+DRIVER_PV(struct bcm283x_gpio_private_s
 {
   uintptr_t addr;
 
@@ -55,7 +55,7 @@ struct bcm283x_gpio_private_s
   struct dev_irq_sink_s sink[GPIO_IO_COUNT];
   struct dev_irq_src_s src[GPIO_SRC_IRQ_COUNT];
 #endif
-};
+});
 
 /* This function returns a 30 bits mask from a 10 bits value for
    instance, get_msk(0b1010) returns 0b111000111000 */

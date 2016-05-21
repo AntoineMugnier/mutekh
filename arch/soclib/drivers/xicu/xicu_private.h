@@ -81,7 +81,7 @@ struct soclib_xicu_pti_s
 };
 #endif
 
-struct soclib_xicu_private_s
+DRIVER_PV(struct soclib_xicu_private_s
 {
   uintptr_t addr;
 
@@ -101,7 +101,7 @@ struct soclib_xicu_private_s
   uintptr_t pti_count;
   struct soclib_xicu_pti_s pti[0];
 #endif
-};
+});
 
 error_t soclib_xicu_timer_use(struct device_accessor_s *accessor, enum dev_use_op_e op);
 

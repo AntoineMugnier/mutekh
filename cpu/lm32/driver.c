@@ -44,7 +44,7 @@
 # define LM32_IRQ_SENSE_MODE DEV_IRQ_SENSE_LOW_LEVEL
 #endif
 
-struct lm32_dev_private_s
+DRIVER_PV(struct lm32_dev_private_s
 {
 #ifdef CONFIG_DEVICE_IRQ
   struct dev_irq_sink_s	sinks[CONFIG_CPU_LM32_IRQ_COUNT];
@@ -56,7 +56,7 @@ struct lm32_dev_private_s
 #ifdef CONFIG_DEVICE_CLOCK
   dev_timer_cfgrev_t timer_rev;
 #endif
-};
+});
 
 /************************************************************************
         Interrupts controller driver part

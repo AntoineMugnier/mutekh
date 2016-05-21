@@ -31,7 +31,7 @@ GCT_CONTAINER_FCNS(uart_fifo, static inline, uart_fifo,
                     pop, pop_array, pushback, pushback_array);
 #endif
 
-struct cc26xx_uart_context_s
+DRIVER_PV(struct cc26xx_uart_context_s
 {
   uintptr_t addr;
   /* tty input request queue and char fifo */
@@ -50,7 +50,7 @@ struct cc26xx_uart_context_s
 
   bool_t                      read_started:1;
   bool_t                      write_started:1;
-};
+});
 
 static void cc26xx_uart_try_read(struct device_s *dev)
 {

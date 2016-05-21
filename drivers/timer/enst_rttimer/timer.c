@@ -56,7 +56,7 @@ struct enst_rttimer_state_s
 #endif
 };
 
-struct enst_rttimer_private_s
+DRIVER_PV(struct enst_rttimer_private_s
 {
   uintptr_t addr;
   uint_fast8_t t_count;         // timers count
@@ -65,7 +65,7 @@ struct enst_rttimer_private_s
   struct dev_irq_src_s *irq_eps;
 #endif
   struct enst_rttimer_state_s t[0];
-};
+});
 
 #ifdef CONFIG_DEVICE_IRQ
 static inline void enst_rttimer_irq_process(struct device_s *dev, uint_fast8_t number)

@@ -42,14 +42,14 @@ CPU_LOCAL void *__cpu_data_base;
 
 #define ICU_X86_64_EMU_MAX_VECTOR 1
 
-struct x86_64_emu_dev_private_s
+DRIVER_PV(struct x86_64_emu_dev_private_s
 {
 #ifdef CONFIG_DEVICE_IRQ
   struct dev_irq_sink_s	sinks[ICU_X86_64_EMU_MAX_VECTOR];
 #endif
 
   struct cpu_tree_s node;
-};
+});
 
 /************************************************************************
         CPU driver part

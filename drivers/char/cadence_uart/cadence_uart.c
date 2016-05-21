@@ -47,7 +47,7 @@ GCT_CONTAINER_FCNS(uart_fifo, static inline, uart_fifo,
                    init, destroy, isempty, pop, pop_array, pushback, pushback_array);
 #endif
 
-struct cadence_uart_context_s
+DRIVER_PV(struct cadence_uart_context_s
 {
   uintptr_t addr;
   /* tty input request queue and char fifo */
@@ -66,7 +66,7 @@ struct cadence_uart_context_s
 
   bool_t                        read_started:1;
   bool_t                        write_started:1;
-};
+});
 
 static void cadence_uart_try_read(struct device_s *dev)
 {

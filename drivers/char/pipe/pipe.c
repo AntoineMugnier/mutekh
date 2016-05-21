@@ -55,13 +55,13 @@ GCT_CONTAINER_FCNS(pipe_fifo, static inline, pipe_fifo,
                    isempty, isfull, pop_array, pushback_array);
 #endif
 
-struct char_pipe_context_s
+DRIVER_PV(struct char_pipe_context_s
 {
   dev_request_queue_root_t rq_q[2];
 #ifdef CONFIG_DRIVER_CHAR_PIPE_FIFO
   pipe_fifo_root_t fifo[2];
 #endif
-};
+});
 
 
 static DEV_CHAR_CANCEL(char_pipe_cancel)

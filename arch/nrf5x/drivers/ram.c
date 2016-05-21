@@ -34,6 +34,8 @@
 #include <arch/nrf5x/ficr.h>
 #include <arch/nrf5x/uicr.h>
 
+DRIVER_PV(struct {});
+
 static DEV_MEM_INFO(nrf5x_ram_info)
 {
   size_t count = cpu_mem_read_32(NRF_FICR_NUMRAMBLOCK);

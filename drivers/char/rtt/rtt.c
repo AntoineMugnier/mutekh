@@ -38,7 +38,7 @@
 
 #include <drivers/rtt/rtt.h>
 
-struct rtt_private_s {
+DRIVER_PV(struct rtt_private_s {
   uint8_t tx_buffer[CONFIG_DRIVER_CHAR_RTT_TX_BUFFER_SIZE];
   uint8_t rx_buffer[CONFIG_DRIVER_CHAR_RTT_RX_BUFFER_SIZE];
 #if defined(CONFIG_DRIVER_CHAR_RTT_TIMER)
@@ -51,7 +51,7 @@ struct rtt_private_s {
   dev_request_queue_root_t tx_queue, rx_queue;
   struct rtt_channel_s *tx, *rx;
   bool_t callbacking;
-};
+});
 
 static void rtt_poll_enable(struct device_s *dev)
 {

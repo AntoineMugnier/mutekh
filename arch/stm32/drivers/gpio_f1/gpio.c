@@ -49,7 +49,7 @@
 #define STM32_GPIO_MAX_ID           (STM32_GPIO_BANK_SIZE * STM32_GPIO_BANK_COUNT - 1)
 #define STM32_GPIO_IRQ_SRC_COUNT    7
 
-struct stm32_gpio_private_s
+DRIVER_PV(struct stm32_gpio_private_s
 {
 #if defined(CONFIG_DRIVER_STM32_GPIO_F1_ICU)
   /* This specifies which bank is selected for each interrupt line. A
@@ -62,7 +62,7 @@ struct stm32_gpio_private_s
   struct dev_irq_sink_s sink[STM32_GPIO_BANK_SIZE];
   struct dev_irq_src_s  src[STM32_GPIO_IRQ_SRC_COUNT];
 #endif
-};
+});
 
 
 /********************************* GPIO class. **********/

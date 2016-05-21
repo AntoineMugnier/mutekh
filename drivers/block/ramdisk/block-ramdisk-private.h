@@ -26,10 +26,10 @@
 #include <hexo/types.h>
 #include <hexo/lock.h>
 
-struct block_ramdisk_context_s
+DRIVER_PV(struct block_ramdisk_context_s
 {
   uint8_t		*mem;
   struct dev_block_params_s params;
-};
+});
 
 #endif

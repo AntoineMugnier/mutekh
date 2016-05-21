@@ -174,7 +174,7 @@ void psoc4_imo_mhz_set(uint_fast8_t freq_mhz)
 
 #if defined(CONFIG_DRIVER_PSOC4_CLOCK)
 
-struct psoc4_clock_private_s
+DRIVER_PV(struct psoc4_clock_private_s
 {
   struct dev_clock_src_ep_s src[PSOC4_CLOCK_SRC_COUNT];
   struct dev_freq_s hfclk_freq;
@@ -196,7 +196,7 @@ struct psoc4_clock_private_s
   uint8_t sysclk_div;
   uint8_t imo_freq_next;
   uint8_t imo_freq;
-};
+});
 
 static DEV_CMU_CONFIG_OSC(psoc4_clock_config_osc)
 {

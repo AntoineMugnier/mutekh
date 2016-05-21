@@ -40,7 +40,7 @@
 
 #define dprintk(...) do {} while(0)
 
-struct psoc4_rtc_context_s
+DRIVER_PV(struct psoc4_rtc_context_s
 {
   struct dev_irq_src_s irq_ep;
   dev_request_pqueue_root_t queue;
@@ -50,7 +50,7 @@ struct psoc4_rtc_context_s
   uint32_t last_set_ts;
 
   struct dev_clock_sink_ep_s clock_sink;
-};
+});
 
 /*
   There is no LFCLK-based timer.  How are we supposed to track time in

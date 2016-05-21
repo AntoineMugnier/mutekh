@@ -64,7 +64,7 @@ enum bcm283x_i2c_state_e
   DEV_I2C_BCM283X_END,
 };
 
-struct bcm283x_i2c_context_s
+DRIVER_PV(struct bcm283x_i2c_context_s
 {
   uintptr_t addr;
   /* Interrupt endpoint */
@@ -88,7 +88,7 @@ struct bcm283x_i2c_context_s
   /* timer request */
   struct dev_timer_rq_s trq;
   uint32_t bperiod;
-};
+});
 
 
 static inline uint32_t bcm283x_i2c_get_rxd(struct bcm283x_i2c_context_s *pv)

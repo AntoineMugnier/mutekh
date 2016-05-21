@@ -32,10 +32,10 @@
 
 typedef uint32_t soft_salsa_state_t[12];
 
-struct soft_salsa_private_s
+DRIVER_PV(struct soft_salsa_private_s
 {
   struct dev_request_dlqueue_s queue;
-};
+});
 
 static DEVCRYPTO_INFO(soft_salsa_info)
 {

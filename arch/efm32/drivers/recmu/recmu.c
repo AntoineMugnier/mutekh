@@ -293,7 +293,7 @@ static const uint8_t efm32_en_bits[EFM32_CLOCK_count] = {
 #endif
 };
 
-struct efm32_recmu_private_s
+DRIVER_PV(struct efm32_recmu_private_s
 {
   struct dev_clock_src_ep_s src[EFM32_CLOCK_EP_COUNT];
 
@@ -339,7 +339,7 @@ struct efm32_recmu_private_s
   uint32_t r_lfclksel;
   uint32_t r_lfapresc0;
   uint32_t r_lfbpresc0;
-};
+});
 
 static error_t
 efm32_recmu_get_node_freq(struct efm32_recmu_private_s *pv,

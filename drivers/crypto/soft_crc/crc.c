@@ -57,10 +57,10 @@ ALWAYS_INLINE uint32_t bit_swap_32(uint32_t x)
 # define CRC_POLY(r, n) poly_##n##_rev##r
 #endif
 
-struct soft_crc_private_s
+DRIVER_PV(struct soft_crc_private_s
 {
   struct dev_request_dlqueue_s queue;
-};
+});
 
 enum soft_crc_variants_e
 {

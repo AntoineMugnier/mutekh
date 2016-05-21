@@ -39,10 +39,10 @@
 #include <string.h>
 #include <stdio.h>
 
-struct ahbctrl_pv_s
+DRIVER_PV(struct ahbctrl_pv_s
 {
   dev_request_queue_root_t queue;
-};
+});
 
 static DEV_ENUM_MATCH_DRIVER(ahbctrl_match_driver)
 {

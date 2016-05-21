@@ -83,7 +83,7 @@ enum soclib_block_type_e
 };
 
 
-struct soclib_block_context_s
+DRIVER_PV(struct soclib_block_context_s
 {
   uintptr_t                 addr;
   struct dev_irq_src_s      irq_ep;
@@ -99,7 +99,7 @@ struct soclib_block_context_s
   size_t                    progress;
   bool_t                    running;
   enum dev_mem_rq_type_e    rqtype;
-};
+});
 
 /**************************************************************/
 

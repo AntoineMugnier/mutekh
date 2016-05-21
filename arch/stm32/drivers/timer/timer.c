@@ -46,7 +46,7 @@
 #define STM32_TIMER_CHANNEL         0
 
 
-struct stm32_timer_private_s
+DRIVER_PV(struct stm32_timer_private_s
 {
   /* Timer address */
   uintptr_t addr;
@@ -63,7 +63,7 @@ struct stm32_timer_private_s
 
   enum dev_timer_capabilities_e cap:8;
   dev_timer_cfgrev_t rev;
-};
+});
 
 /* This function starts the hardware timer counter. */
 static inline void stm32_timer_start_counter(struct stm32_timer_private_s *pv)

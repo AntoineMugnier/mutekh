@@ -37,14 +37,14 @@
 #define TTY_SOCLIB_REG_RESET	12
 #define TTY_SOCLIB_REG_NOIRQ	16
 
-struct dma_soclib_context_s
+DRIVER_PV(struct dma_soclib_context_s
 {
   /* dma input request queue and dma fifo */
   dev_request_queue_root_t		queue;
   struct dev_irq_src_s        irq_ep;
   uintptr_t                   addr;
   bool_t                      busy;
-};
+});
 
 static void dma_soclib_start(struct device_s *dev, const struct dev_dma_rq_s *rq)
 {

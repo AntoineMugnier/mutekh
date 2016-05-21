@@ -67,7 +67,7 @@
 GCT_CONTAINER_FCNS(dev_request_queue, static, dev_request_queue,
                    remove, push);
 
-struct mtch6102_priv_s
+DRIVER_PV(struct mtch6102_priv_s
 {
     struct valio_touchpad_state_s last_state;
     struct dev_i2c_rq_s i2c_req;
@@ -81,7 +81,7 @@ struct mtch6102_priv_s
     uint8_t width, height;
 
     dev_request_queue_root_t queue;
-};
+});
 
 static void mtch6102_request_run(
     struct device_s *dev,

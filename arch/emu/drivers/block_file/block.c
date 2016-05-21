@@ -41,11 +41,11 @@
 
 #define BLOCK_FILE_EMU_MAX_RQ_COUNT 64
 
-struct block_file_emu_context_s
+DRIVER_PV(struct block_file_emu_context_s
 {
   struct dev_block_params_s params;
   __compiler_sint_t fd;
-};
+});
 
 /**************************************************************/
 

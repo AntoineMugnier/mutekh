@@ -41,7 +41,7 @@
 #define BCM283X_CS_COUNT 3
 #define BCM283X_SPI_CORE_CLK 250000000
 
-struct bcm283x_spi_context_s
+DRIVER_PV(struct bcm283x_spi_context_s
 {
   uintptr_t                      addr;
 #ifdef CONFIG_DEVICE_IRQ
@@ -56,7 +56,7 @@ struct bcm283x_spi_context_s
 #ifdef CONFIG_DEVICE_SPI_REQUEST
   struct dev_spi_ctrl_queue_s    queue;
 #endif
-};
+});
 
 static DEV_SPI_CTRL_CONFIG(bcm283x_spi_config)
 {

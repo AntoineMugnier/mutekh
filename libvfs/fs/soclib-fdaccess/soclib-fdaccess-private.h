@@ -84,11 +84,11 @@ GCT_CONTAINER_FCNS(soclib_fdaccess_rq_queue, CLIST, static inline, soclib_fdacce
 int32_t soclib_fdaccess_rq(struct device_s *dev,
                            struct soclib_fdaccess_rq_s *rq);
 
-struct soclib_fdaccess_devpv_s
+DRIVER_PV(struct soclib_fdaccess_devpv_s
 {
   struct soclib_fdaccess_fs_s         fs;
   soclib_fdaccess_rq_queue_root_t     queue;
-};
+});
 
 enum {
     SOCLIB_FDACCESS_FD = 0,

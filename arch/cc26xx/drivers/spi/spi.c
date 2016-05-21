@@ -42,7 +42,7 @@
 
 #define CC26XX_SPI_FIFO_SIZE 8
 
-struct cc26xx_spi_context_s
+DRIVER_PV(struct cc26xx_spi_context_s
 {
   uintptr_t                      addr;
 #ifdef CONFIG_DEVICE_IRQ
@@ -62,7 +62,7 @@ struct cc26xx_spi_context_s
   struct dev_clock_sink_ep_s     clk_ep;
 #endif
 
-};
+});
 
 static void cc26xx_spi_update_rate(struct cc26xx_spi_context_s *pv)
 {

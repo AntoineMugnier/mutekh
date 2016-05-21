@@ -42,13 +42,13 @@
 
 #define PIC32ICU_MAX_VECTOR	(191)
 
-struct pic32_icu_private_s
+DRIVER_PV(struct pic32_icu_private_s
 {
   uintptr_t addr;
 
   struct dev_irq_sink_s sinks[PIC32ICU_MAX_VECTOR];
   struct dev_irq_src_s src;
-};
+});
 
 static DEV_ICU_GET_SINK(pic32_icu_get_sink)
 {

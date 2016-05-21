@@ -45,8 +45,8 @@
 #define EFM32_TIMER_TOP      0xffff
 #define EFM32_TIMER_CHANNEL  0
 
- 
-struct efm32_timer_private_s
+
+DRIVER_PV(struct efm32_timer_private_s
 {
   /* Timer address */
   uintptr_t addr;
@@ -67,7 +67,7 @@ struct efm32_timer_private_s
   enum dev_timer_capabilities_e cap:8;
   uint8_t prescaler:4;
   dev_timer_cfgrev_t rev;
-};
+});
 
 #define EFM32_TIMER_CTRL_CONST (EFM32_TIMER_CTRL_MODE(UP) |             \
                                 EFM32_TIMER_CTRL_CLKSEL(PRESCHFPERCLK) | \

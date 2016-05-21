@@ -64,7 +64,7 @@ GCT_CONTAINER_FCNS(usart_fifo, static inline, usart_fifo,
                    init, destroy, pop_array, pushback, pushback_array, isempty, pop);
 #endif
 
-struct stm32_usart_context_s
+DRIVER_PV(struct stm32_usart_context_s
 {
   /* usart controller address. */
   uintptr_t             addr;
@@ -94,7 +94,7 @@ struct stm32_usart_context_s
 #if !defined(CONFIG_DEVICE_CLOCK)
   struct dev_freq_s     busfreq;
 #endif
-};
+});
 
 
 static

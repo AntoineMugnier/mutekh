@@ -58,7 +58,7 @@ GCT_CONTAINER_FCNS(uart_fifo, static inline, uart_fifo,
 #define USE_HAS_REQ 1
 #define OVS 8
 
-struct psoc4_uart_pv_s
+DRIVER_PV(struct psoc4_uart_pv_s
 {
   uintptr_t addr;
 
@@ -75,7 +75,7 @@ struct psoc4_uart_pv_s
 
   uint32_t baudrate;
   bool_t has_ctsrts;
-};
+});
 
 static void psoc4_uart_rx_irq_disable(uintptr_t scb)
 {

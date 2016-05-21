@@ -43,7 +43,7 @@
 #define STM32_PWM_CHANNEL_MAX 4
 #define STM32_PWM_CHANNEL_MASK ((1<<STM32_PWM_CHANNEL_MAX)-1)
 
-struct stm32_pwm_private_s
+DRIVER_PV(struct stm32_pwm_private_s
 {
   /* PWM/timer base address. */
   uintptr_t                  addr;
@@ -64,7 +64,7 @@ struct stm32_pwm_private_s
 
   /* PWM cached period. */
   uint32_t                   period;
-};
+});
 
 static
 error_t stm32_pwm_validate(struct device_pwm_s *pdev,

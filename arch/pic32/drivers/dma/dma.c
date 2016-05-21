@@ -44,7 +44,7 @@ static uintptr_t pic32_dma_vir_to_phys(uintptr_t addr)
   return (addr & 0x20000000) ? addr - 0xA0000000 : addr - 0x80000000;
 }
 
-struct pic32_dma_context_s
+DRIVER_PV(struct pic32_dma_context_s
 {
   struct dev_irq_src_s          irq_ep[CONFIG_DRIVER_PIC32_DMA_CHANNEL_COUNT];
   dev_request_queue_root_t      queue[CONFIG_DRIVER_PIC32_DMA_CHANNEL_COUNT];
@@ -54,7 +54,7 @@ struct pic32_dma_context_s
   uint8_t                       intlwait;
   /* lock for reentrant kroutine */
   uint8_t                       busy;
-};
+});
 
 
 static void pic32_dev_dma_channel_cfg(struct device_s *dev,

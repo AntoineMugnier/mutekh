@@ -39,7 +39,7 @@
 #include <device/irq.h>
 #endif
 
-struct arm_dev_private_s
+DRIVER_PV(struct arm_dev_private_s
 {
 #if defined(CONFIG_DEVICE)
 #ifdef CONFIG_DEVICE_IRQ
@@ -70,7 +70,7 @@ struct arm_dev_private_s
   struct dev_clock_sink_ep_s clk_ep;
 #endif
 #endif
-};
+});
 
 void arm_timer_systick_irq(struct device_s *dev);
 error_t arm_timer_systick_use(const struct device_accessor_s *accessor,

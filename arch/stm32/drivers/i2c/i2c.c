@@ -54,7 +54,7 @@ enum stm32_i2c_state_e
     STM32_I2C_S_FINALIZE
 };
 
-struct stm32_i2c_private_s
+DRIVER_PV(struct stm32_i2c_private_s
 {
     /* device address. */
     uintptr_t                addr;
@@ -72,7 +72,7 @@ struct stm32_i2c_private_s
     struct dev_irq_src_s     irq_ep[2];
 
     struct dev_freq_s        busfreq;
-};
+});
 
 
 /***************************************** config */

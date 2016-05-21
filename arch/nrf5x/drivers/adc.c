@@ -40,7 +40,7 @@
 
 #define dprintk(...) do{}while(0)
 
-struct nrf5x_adc_private_s
+DRIVER_PV(struct nrf5x_adc_private_s
 {
   struct dev_irq_src_s irq_ep[1];
   dev_request_queue_root_t queue;
@@ -49,7 +49,7 @@ struct nrf5x_adc_private_s
   uint16_t todo;
   uint8_t index;
   bool_t callbacking;
-};
+});
 
 static void nrf5x_adc_sample_next(struct device_s *dev);
 

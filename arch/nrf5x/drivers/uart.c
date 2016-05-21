@@ -65,7 +65,7 @@ static PRINTF_OUTPUT_FUNC(nrf5x_printk_out);
 PRINTF_OUTPUT_FUNC(nrf5x_printk_out_nodrv);
 #endif
 
-struct nrf5x_uart_priv
+DRIVER_PV(struct nrf5x_uart_priv
 {
   uintptr_t addr;
 
@@ -83,7 +83,7 @@ struct nrf5x_uart_priv
   bool_t has_ctsrts:1;
   bool_t txdrdy:1;
   bool_t rxdrdy:1;
-};
+});
 
 static void nrf5x_uart_request_finish(struct device_s *dev,
                                       struct dev_char_rq_s *rq)

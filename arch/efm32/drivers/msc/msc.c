@@ -37,11 +37,11 @@ uint32_t efm32_flash_erase(uintptr_t msc_addr, uintptr_t flash_addr);
 uint32_t efm32_flash_write(uintptr_t msc_addr, uintptr_t flash_addr,
                            const uint32_t *data, uint32_t words_count);
 
-struct efm32_msc_context_s
+DRIVER_PV(struct efm32_msc_context_s
 {
   uintptr_t                 addr;
   uint8_t                   page_log2;
-};
+});
 
 #define EFM32_MSC_ADDR 0x400c0000
 

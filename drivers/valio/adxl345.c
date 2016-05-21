@@ -45,7 +45,7 @@
 GCT_CONTAINER_FCNS(dev_request_queue, static, dev_request_queue,
                    push);
 
-struct adxl345_private_s
+DRIVER_PV(struct adxl345_private_s
 {
     struct device_i2c_s         i2c;
     uint8_t                     i2c_saddr;
@@ -56,7 +56,7 @@ struct adxl345_private_s
     uint8_t                     rdata[6];
 
     dev_request_queue_root_t    queue;
-};
+});
 
 static
 void adxl345_request_run(struct device_s *dev, struct adxl345_private_s *pv);

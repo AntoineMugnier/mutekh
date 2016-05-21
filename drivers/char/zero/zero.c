@@ -26,6 +26,8 @@
 #include <device/device.h>
 #include <device/driver.h>
 
+DRIVER_PV(struct {});
+
 #define dev_zero_cancel (dev_char_cancel_t*)&dev_driver_notsup_fcn
 
 static DEV_CHAR_REQUEST(dev_zero_request)

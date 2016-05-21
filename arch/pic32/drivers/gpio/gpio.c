@@ -44,7 +44,7 @@
 #define GPIO_BANK_COUNT 10
 #define GPIO_IRQ_PIN_COUNT GPIO_BANK_SIZE * GPIO_BANK_COUNT
 
-struct pic32_gpio_private_s
+DRIVER_PV(struct pic32_gpio_private_s
 {
 #ifdef CONFIG_DRIVER_PIC32_GPIO_ICU
   struct dev_irq_sink_s sinks[CONFIG_DRIVER_PIC32_GPIO_IRQ_COUNT];
@@ -55,7 +55,7 @@ struct pic32_gpio_private_s
 #ifdef CONFIG_DEVICE_CLOCK
   struct dev_clock_sink_ep_s    clk_ep;
 #endif
-};
+});
 
 static void pic32_gpio_write_reg(uintptr_t ba, gpio_id_t io_first, gpio_id_t io_last,
                                  const uint8_t *mask)

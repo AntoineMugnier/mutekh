@@ -144,7 +144,7 @@ enum nrf5x_calib_state_e
   CALIB_AGAIN_RUNNING,
 };
 
-struct nrf5x_clock_context_s
+DRIVER_PV(struct nrf5x_clock_context_s
 {
   struct dev_irq_src_s irq_ep[_CONFIG_DRIVER_NRF5X_CLOCK_LFCLK_XOSC ? 1 : 2];
 
@@ -165,7 +165,7 @@ struct nrf5x_clock_context_s
   enum nrf5x_calib_state_e lf_calib_state;
 #endif
   enum nrf5x_clock_mode_e lf_mode, hf_mode;
-};
+});
 
 static void hf_clock_mode_update(struct nrf5x_clock_context_s *pv);
 

@@ -5,11 +5,11 @@
 #include <device/driver.h>
 #include <mutek/mem_alloc.h>
 
-struct devinit_test_pv_s
+DRIVER_PV(struct devinit_test_pv_s
 {
   struct device_timer_s timer;
   struct dev_timer_rq_s rq;
-};
+});
 
 # ifdef CONFIG_DEVICE_INIT_ASYNC
 static KROUTINE_EXEC(devinit_test_timeout)

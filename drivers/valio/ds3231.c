@@ -38,7 +38,7 @@ struct ds3231_regs {
 GCT_CONTAINER_FCNS(dev_request_queue, static, dev_request_queue,
                    remove, push);
 
-struct ds3231_priv_s
+DRIVER_PV(struct ds3231_priv_s
 {
     struct dev_i2c_rq_s i2c_req;
     struct dev_i2c_transfer_s i2c_transfer[2];
@@ -49,7 +49,7 @@ struct ds3231_priv_s
     struct dev_valio_rq_s *pending;
 
     dev_request_queue_root_t queue;
-};
+});
 
 static void ds3231_request_run(
     struct device_s *dev,

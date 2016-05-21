@@ -46,7 +46,7 @@
 
 #define PIC32_SPI_FIFO_SIZE 16
 
-struct pic32_spi_context_s
+DRIVER_PV(struct pic32_spi_context_s
 {
   uintptr_t                      addr;
 #ifdef CONFIG_DEVICE_IRQ
@@ -72,7 +72,7 @@ struct pic32_spi_context_s
   struct pic32_dev_dma_rq_s      intlrq; 
   struct pic32_dev_dma_rq_s      brq; 
 #endif
-};
+});
 
 static void pic32_spi_update_rate(struct pic32_spi_context_s *pv)
 {

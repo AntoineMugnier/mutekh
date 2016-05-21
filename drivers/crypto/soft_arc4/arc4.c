@@ -36,10 +36,10 @@ struct soft_arc4_state_s
   uint8_t a, b;
 };
 
-struct soft_arc4_private_s
+DRIVER_PV(struct soft_arc4_private_s
 {
   struct dev_request_dlqueue_s queue;
-};
+});
 
 static DEVCRYPTO_INFO(soft_arc4_info)
 {

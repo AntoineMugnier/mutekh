@@ -44,7 +44,7 @@
 #define EFM32_PWM_CHANNEL_MAX 3
 #define EFM32_PWM_CHANNEL_MSK 0x7
 
-struct efm32_pwm_private_s
+DRIVER_PV(struct efm32_pwm_private_s
 {
   /* PWM/timer base address. */
   uintptr_t                 addr;
@@ -60,7 +60,7 @@ struct efm32_pwm_private_s
   struct dev_freq_s         core_freq;
 
   struct dev_clock_sink_ep_s clk_ep;
-};
+});
 
 static error_t efm32_pwm_validate_parameter(struct device_pwm_s *pdev, struct dev_pwm_rq_s *rq)
 {

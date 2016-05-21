@@ -62,6 +62,8 @@
 
 #define emu_tty_cancel (dev_char_cancel_t*)&dev_driver_notsup_fcn
 
+DRIVER_PV(struct {});
+
 static DEV_CHAR_REQUEST(emu_tty_request)
 {
   //  struct device_s *dev = accessor->dev;

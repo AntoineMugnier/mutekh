@@ -46,7 +46,7 @@ enum {
   CALLBACKING_TX,
 };
 
-struct nrf5x_uarte_priv
+DRIVER_PV(struct nrf5x_uarte_priv
 {
   uintptr_t addr;
 
@@ -64,7 +64,7 @@ struct nrf5x_uarte_priv
   bool_t has_ctsrts : 1;
   bool_t must_flush : 1;
   bool_t from_rom : 1;
-};
+});
 
 static void nrf5x_uarte_request_finish(struct device_s *dev,
                                        struct dev_char_rq_s *rq,

@@ -37,7 +37,7 @@
 
 #define dprintk(...) do{}while(0)
 
-struct nrf5x_spi_context_s
+DRIVER_PV(struct nrf5x_spi_context_s
 {
   uintptr_t addr;
 
@@ -51,7 +51,7 @@ struct nrf5x_spi_context_s
 #ifdef CONFIG_DEVICE_SPI_REQUEST
   struct dev_spi_ctrl_queue_s queue;
 #endif
-};
+});
 
 static DEV_SPI_CTRL_CONFIG(nrf5x_spi_config)
 {

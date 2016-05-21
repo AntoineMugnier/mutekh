@@ -52,7 +52,7 @@ GCT_CONTAINER_KEY_TYPES(blk_cache_lba, PTR, SCALAR, lba);
 
 GCT_CONTAINER_TYPES(blk_cache_age, BLIST, struct cache_entry_s, list_entry_age);
 
-struct block_cache_context_s
+DRIVER_PV(struct block_cache_context_s
 {
   struct device_s dev;
 
@@ -82,7 +82,7 @@ struct block_cache_context_s
 
   /** use delyed write */
   bool_t sync;
-};
+});
 
 struct block_cache_rq_s
 {

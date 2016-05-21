@@ -48,14 +48,14 @@
 #define GA PSOC4_GPIO_ADDR
 #define HA PSOC4_HSIOM_ADDR
 
-#if CONFIG_DRIVER_PSOC4_GPIO_ICU_CHANNEL_COUNT
-struct psoc4_gpio_private_s
+DRIVER_PV(struct psoc4_gpio_private_s
 {
+#if CONFIG_DRIVER_PSOC4_GPIO_ICU_CHANNEL_COUNT
   struct dev_irq_src_s irq_in[PSOC4_GPIO_PORT_COUNT];
   struct dev_irq_sink_s irq_out[CONFIG_DRIVER_PSOC4_GPIO_ICU_CHANNEL_COUNT];
   uint8_t irq_sink_pin[CONFIG_DRIVER_PSOC4_GPIO_ICU_CHANNEL_COUNT];
-};
 #endif
+});
 
 static
 int psoc4_gpio_mode(enum dev_pin_driving_e mode,

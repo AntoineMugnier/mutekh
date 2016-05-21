@@ -24,14 +24,14 @@
 #define DIO_NB 32
 #define GPIO_IRQ_DIO_COUNT 32
 
-struct cc26xx_gpio_private_s
+DRIVER_PV(struct cc26xx_gpio_private_s
 {
 #ifdef CONFIG_DRIVER_CC26XX_GPIO_ICU
   struct dev_irq_sink_s sinks_ep[CONFIG_DRIVER_CC26XX_GPIO_IRQ_COUNT];
   struct dev_irq_src_s  src_ep;
   uint8_t               sinks_map[GPIO_IRQ_DIO_COUNT];
 #endif
-};
+});
 
 static void cc26xx_gpio_mode_reg(gpio_id_t io_first, gpio_id_t io_last,
               const uint8_t *mask, uint32_t iocfg_reg, bool_t oe)

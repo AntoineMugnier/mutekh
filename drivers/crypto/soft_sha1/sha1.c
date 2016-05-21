@@ -37,10 +37,10 @@ struct soft_sha1_state_s
   uint8_t buffer[64];
 };
 
-struct soft_sha1_private_s
+DRIVER_PV(struct soft_sha1_private_s
 {
   struct dev_request_dlqueue_s queue;
-};
+});
 
 static DEVCRYPTO_INFO(soft_sha1_info)
 {

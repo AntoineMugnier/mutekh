@@ -46,11 +46,11 @@
 #define A9MPCORE_PRIV_TIMER_ADDR   0x0600
 #define A9MPCORE_INT_DISTRIB_ADDR  0x1000
 
-struct a9mpcore_private_s
+DRIVER_PV(struct a9mpcore_private_s
 {
   uintptr_t addr;
   dev_request_queue_root_t queue;
-};
+});
 
 static DEV_ENUM_MATCH_DRIVER(a9mpcore_match_driver)
 {

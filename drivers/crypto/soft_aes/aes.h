@@ -61,14 +61,14 @@ struct soft_aes_context_s
   };
 };
 
-struct soft_aes_private_s
+DRIVER_PV(struct soft_aes_private_s
 {
   struct dev_request_dlqueue_s queue;
 
   struct soft_aes_context_s actx[CONFIG_DRIVER_CRYPTO_SOFT_AES_CTXCOUNT];
   struct dev_crypto_context_s *ctx[CONFIG_DRIVER_CRYPTO_SOFT_AES_CTXCOUNT];
   dev_crypto_context_id_t next;
-};
+});
 
 struct soft_aes_state_s
 {

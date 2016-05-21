@@ -62,13 +62,13 @@
 #define BCM283XICU_DIS2     0x220
 #define BCM283XICU_BAS_DIS  0x224
 
-struct bcm283x_icu_private_s
+DRIVER_PV(struct bcm283x_icu_private_s
 {
   uintptr_t addr;
 
   struct dev_irq_sink_s sinks[BCM283XICU_MAX_VECTOR];
   struct dev_irq_src_s src;
-};
+});
 
 static DEV_ICU_GET_SINK(bcm283x_icu_get_sink)
 {

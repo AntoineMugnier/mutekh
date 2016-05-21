@@ -46,7 +46,7 @@
 #define CC26XX_RTC_SW_MASK  0xffffffff00000000ULL
 #define CC26XX_RTC_TOP      0xffffffff
 
-struct cc26xx_rtc_private_s
+DRIVER_PV(struct cc26xx_rtc_private_s
 {
   /* RTC address */
   uintptr_t addr;
@@ -63,7 +63,7 @@ struct cc26xx_rtc_private_s
   struct dev_freq_accuracy_s acc;
   enum dev_timer_capabilities_e cap:8;
   dev_timer_cfgrev_t rev;
-};
+});
 
 /* This function starts the hardware rtc */
 static inline void cc26xx_rtc_start_counter(struct cc26xx_rtc_private_s *pv)

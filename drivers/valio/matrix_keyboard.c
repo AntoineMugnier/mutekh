@@ -46,7 +46,7 @@ struct mxk_range_s
   uint8_t first, last, count;
 };
 
-struct mxk_context_s
+DRIVER_PV(struct mxk_context_s
 {
   dev_request_queue_root_t queue;
   struct dev_irq_src_s irq_ep;
@@ -75,7 +75,7 @@ struct mxk_context_s
 
   bool_t scan_running : 1;
   bool_t one_pressed : 1;
-};
+});
 
 static void mxk_notif_disable(struct mxk_context_s *pv)
 {

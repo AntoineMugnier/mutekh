@@ -53,7 +53,7 @@ GCT_CONTAINER_FCNS(uart_fifo, static inline, uart_fifo,
                    init, destroy, isempty, pop, pop_array, pushback, pushback_array);
 #endif
 
-struct efm32_leuart_context_s
+DRIVER_PV(struct efm32_leuart_context_s
 {
   uintptr_t addr;
   /* tty input request queue and char fifo */
@@ -76,7 +76,7 @@ struct efm32_leuart_context_s
   struct dev_freq_s             freq;
 
   struct dev_clock_sink_ep_s    clk_ep;
-};
+});
 
 #if CONFIG_DEVICE_START_LOG2INC < 2
 # error

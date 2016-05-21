@@ -40,10 +40,10 @@
 #include <string.h>
 #include <stdio.h>
 
-struct apbctrl_pv_s
+DRIVER_PV(struct apbctrl_pv_s
 {
   dev_request_queue_root_t queue;
-};
+});
 
 static DEV_ENUM_MATCH_DRIVER(apbctrl_match_driver)
 {

@@ -33,7 +33,7 @@
 #define dprintk(k...) do {} while (0)
 //#define dprintk printk
 
-struct i2c_eeprom_priv_s
+DRIVER_PV(struct i2c_eeprom_priv_s
 {
     struct device_i2c_s bus;
     uint8_t saddr;
@@ -50,7 +50,7 @@ struct i2c_eeprom_priv_s
 
     bool_t last_was_write;
     bool_t busy;
-};
+});
 
 static DEV_MEM_INFO(i2c_eeprom_info)
 {

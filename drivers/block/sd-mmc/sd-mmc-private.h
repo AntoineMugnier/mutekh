@@ -113,7 +113,7 @@ struct sd_mmc_rw_command_buffer_s
 };
 
 
-struct sd_mmc_context_s
+DRIVER_PV(struct sd_mmc_context_s
 {
 	struct dev_block_params_s params;
 	size_t access_timeout;
@@ -126,7 +126,7 @@ struct sd_mmc_context_s
 	enum card_mode_e mode;
 	uint_fast8_t spi_lun;
 	bool_t usable;
-};
+});
 
 #define SDMMC_CMD_GO_IDLE_STATE      0
 #define SDMMC_CMD_ACMD               55

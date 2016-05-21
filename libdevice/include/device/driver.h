@@ -404,7 +404,8 @@ struct driver_s
 #endif
   dev_use_t     *f_use;
 
-  enum driver_flags_e flags;
+  enum driver_flags_e flags:8;
+  uint16_t      pv_size;
 
   /** NULL terminated array of pointers to driver classes structs */
   const struct driver_class_s *classes[];
@@ -422,11 +423,16 @@ struct driver_s
 # define DRIVER_DECLARE_CLEANUP(x)
 #endif
 
+/** @This is used to declare a driver private data structure */
+#define DRIVER_PV(...) \
+typedef __VA_ARGS__ driver_pv_t;
+
 /** @This declares a @ref driver_s object. Implemented device
     classes must be specified as extra parameters. */
 #define DRIVER_DECLARE(symbol_, flags_, pretty_, prefix_, ...)   \
   const struct driver_s symbol_ = {                    \
     DRIVER_DECLARE_DESC(pretty_)                       \
+    .pv_size = sizeof(driver_pv_t),                    \
     .f_init = prefix_ ## _init,                        \
     DRIVER_DECLARE_CLEANUP(prefix_ ## _cleanup)        \
     .f_use = prefix_ ## _use,                          \

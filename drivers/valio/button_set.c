@@ -40,7 +40,7 @@
 #define dprintk(x...) do{}while(0)
 //#define dprintk printk
 
-struct bs_context_s
+DRIVER_PV(struct bs_context_s
 {
   dev_request_queue_root_t queue;
   struct dev_irq_src_s irq_ep;
@@ -52,7 +52,7 @@ struct bs_context_s
   uint8_t first, last, range_id, count, state_size;
   bool_t active_low;
   bool_t changed;
-};
+});
 
 static void bs_notif_disable(struct device_s *dev)
 {

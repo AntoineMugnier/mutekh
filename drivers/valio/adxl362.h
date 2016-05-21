@@ -51,7 +51,7 @@ enum adxl362_state_s
 
 extern const struct bc_descriptor_s adxl362_bytecode;
 
-struct adxl362_private_s
+DRIVER_PV(struct adxl362_private_s
 {
   uint32_t time;
 
@@ -72,7 +72,7 @@ struct adxl362_private_s
   int8_t y;
   int8_t z;
   enum adxl362_state_s state:8;
-};
+});
 
 void adxl362_spi_entry_reset();
 void adxl362_spi_entry_cfg();

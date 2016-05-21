@@ -85,7 +85,7 @@ struct soclib_timer_state_s
 #endif
 };
 
-struct soclib_timer_private_s
+DRIVER_PV(struct soclib_timer_private_s
 {
   uintptr_t addr;
   uintptr_t t_count;
@@ -93,7 +93,7 @@ struct soclib_timer_private_s
   struct dev_irq_src_s *irq_eps;
 #endif
   struct soclib_timer_state_s t[0];
-};
+});
 
 #ifdef CONFIG_DEVICE_IRQ
 static DEV_IRQ_SRC_PROCESS(soclib_timer_irq)

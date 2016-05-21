@@ -37,12 +37,12 @@
 
 #define RNG_ADDR NRF_PERIPHERAL_ADDR(NRF5X_RNG)
 
-struct nrf5x_rng_private_s
+DRIVER_PV(struct nrf5x_rng_private_s
 {
   struct dev_irq_src_s irq_ep[1];
   dev_request_queue_root_t queue;
   bool_t callbacking;
-};
+});
 
 static DEVCRYPTO_INFO(nrf5x_rng_info)
 {

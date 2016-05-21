@@ -44,14 +44,14 @@
 #define ICU_SOCLIB_REG_IER_CLR	12
 #define ICU_SOCLIB_REG_VECTOR	16
 
-struct soclib_icu_private_s
+DRIVER_PV(struct soclib_icu_private_s
 {
   uintptr_t addr;
   uintptr_t nirq;
 
   struct dev_irq_sink_s *sinks;
   struct dev_irq_src_s src;
-};
+});
 
 static DEV_ICU_GET_SINK(soclib_icu_icu_get_sink)
 {

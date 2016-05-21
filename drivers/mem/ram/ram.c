@@ -36,11 +36,11 @@ struct ram_bank_s
   uintptr_t end;
 };
 
-struct ram_context_s
+DRIVER_PV(struct ram_context_s
 {
   size_t bank_count;
   struct ram_bank_s bank[0];
-};
+});
 
 static DEV_MEM_INFO(ram_info)
 {

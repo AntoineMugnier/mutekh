@@ -41,7 +41,7 @@ enum pca9557_reg
     REG_CONFIG,
 };
 
-struct pca9557_private_s
+DRIVER_PV(struct pca9557_private_s
 {
     // Path to slave device
     struct device_i2c_s i2c_dev;
@@ -60,7 +60,7 @@ struct pca9557_private_s
     // Outgoing request
     struct dev_i2c_rq_s i2c_req;
     struct dev_i2c_transfer_s i2c_transfer[2];
-};
+});
 
 STRUCT_COMPOSE(pca9557_private_s, i2c_req);
 

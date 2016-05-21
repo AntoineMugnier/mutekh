@@ -45,7 +45,7 @@
 #include "apic.h"
 #include "cpu_private.h"
 
-struct x86_dev_private_s
+DRIVER_PV(struct x86_dev_private_s
 {
 #ifdef CONFIG_HEXO_USERMODE
   struct cpu_x86_tss_s tss;
@@ -76,7 +76,7 @@ struct x86_dev_private_s
 #ifdef CONFIG_DEVICE_CLOCK
   dev_timer_cfgrev_t timer_rev;
 #endif
-};
+});
 
 cpu_id_t cpu_id(void)
 {

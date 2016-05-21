@@ -37,7 +37,7 @@
 
 #define dprintk(...) do{}while(0)
 
-struct nrf5x_rtc_context_s
+DRIVER_PV(struct nrf5x_rtc_context_s
 {
   uintptr_t addr;
 
@@ -49,7 +49,7 @@ struct nrf5x_rtc_context_s
 #if defined(CONFIG_DEVICE_CLOCK)
   struct dev_clock_sink_ep_s clock_sink;
 #endif
-};
+});
 
 static void nrf5x_rtc_start(struct device_s *dev)
 {

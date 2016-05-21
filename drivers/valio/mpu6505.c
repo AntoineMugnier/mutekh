@@ -62,7 +62,7 @@ enum mpu6505_power_mode_e
 #define GYRO_AUTO_TIME (GYRO_AUTO * 4)
 #define WOM_AUTO (STREAMING_FPS * 10)
 
-struct mpu6505_private_s
+DRIVER_PV(struct mpu6505_private_s
 {
   struct device_i2c_s i2c;
   struct device_timer_s timer;
@@ -93,7 +93,7 @@ struct mpu6505_private_s
       uint8_t size;
     } sequence;
   };
-};
+});
 
 static KROUTINE_EXEC(mpu6505_tick);
 

@@ -78,13 +78,13 @@ struct gptimer_state_s
   int_fast8_t start_count;
 };
 
-struct gptimer_private_s
+DRIVER_PV(struct gptimer_private_s
 {
   uintptr_t addr;
   uintptr_t t_count;
   struct dev_irq_src_s *irq_eps;
   struct gptimer_state_s t[0];
-};
+});
 
 #ifdef CONFIG_DEVICE_IRQ
 static inline bool_t gptimer_irq_process(struct device_s *dev, uint_fast8_t number)

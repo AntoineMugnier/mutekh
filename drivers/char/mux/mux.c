@@ -108,7 +108,7 @@ struct char_mux_channel_s
   uint8_t BITFIELD(started,1);
 };
 
-struct char_mux_context_s
+DRIVER_PV(struct char_mux_context_s
 {
   struct device_char_s io;
 
@@ -131,7 +131,7 @@ struct char_mux_context_s
   enum char_mux_rx_state_e BITFIELD(rx_state,4);
 
   struct char_mux_channel_s chans[0];
-};
+});
 
 static bool_t char_mux_start_rx(struct device_s *dev);
 static bool_t char_mux_start_tx(struct device_s *dev);

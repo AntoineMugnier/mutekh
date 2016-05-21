@@ -44,10 +44,10 @@ struct soft_sha512_state_s
   uint8_t buffer[128];
 };
 
-struct soft_sha2_private_s
+DRIVER_PV(struct soft_sha2_private_s
 {
   struct dev_request_dlqueue_s queue;
-};
+});
 
 
 static DEVCRYPTO_INFO(soft_sha2_info)

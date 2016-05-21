@@ -55,7 +55,7 @@ struct gaisler_irqmp_sink_s
 
 #endif
 
-struct gaisler_irqmp_private_s
+DRIVER_PV(struct gaisler_irqmp_private_s
 {
   uintptr_t addr;
 
@@ -65,7 +65,7 @@ struct gaisler_irqmp_private_s
   uint_fast8_t srcs_count;
   uint_fast8_t eirq;
 #endif
-};
+});
 
 #ifdef CONFIG_DRIVER_GAISLER_IRQMP_ICU
 

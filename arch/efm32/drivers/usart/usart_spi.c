@@ -49,7 +49,7 @@
 
 #define EFM32_USART_FIFO_SIZE 2
 
-struct efm32_usart_spi_context_s
+DRIVER_PV(struct efm32_usart_spi_context_s
 {
   uintptr_t                      addr;
 #ifdef CONFIG_DEVICE_IRQ
@@ -77,7 +77,7 @@ struct efm32_usart_spi_context_s
   uint16_t                       route;
   uint8_t                        fifo_lvl;
   bool_t                         dma_use;
-};
+});
 
 static void efm32_usart_spi_update_rate(struct device_s *dev, uint32_t bit_rate)
 {

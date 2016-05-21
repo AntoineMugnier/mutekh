@@ -43,7 +43,7 @@
 #define EFM32_RTC_HW_MASK  0xffffff
 #define EFM32_RTC_SW_MASK  0xffffffffff000000ULL
 
-struct efm32_rtc_private_s
+DRIVER_PV(struct efm32_rtc_private_s
 {
   /* Timer address */
   uintptr_t addr;
@@ -63,7 +63,7 @@ struct efm32_rtc_private_s
   struct dev_freq_s freq;
 
   enum dev_timer_capabilities_e cap:8;
-};
+});
 
 /* This function starts the hardware rtc counter. */
 static inline void efm32_rtc_start_counter(struct efm32_rtc_private_s *pv)

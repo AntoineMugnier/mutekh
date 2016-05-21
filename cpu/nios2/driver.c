@@ -38,7 +38,7 @@
 #include <mutek/mem_alloc.h>
 #include <mutek/printk.h>
 
-struct nios2_dev_private_s
+DRIVER_PV(struct nios2_dev_private_s
 {
 #ifdef CONFIG_DEVICE_IRQ
 #define ICU_NIOS2_MAX_VECTOR	32
@@ -51,7 +51,7 @@ struct nios2_dev_private_s
 #ifdef CONFIG_DEVICE_CLOCK
   dev_timer_cfgrev_t timer_rev;
 #endif
-};
+});
 
 /************************************************************************
         Interrupts controller driver part

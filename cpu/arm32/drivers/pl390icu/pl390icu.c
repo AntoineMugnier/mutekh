@@ -51,7 +51,7 @@
     1024+16*cpuid to 1024+16*cpuid+15: Private interrupts of cpu #id
  */
 
-struct pl390_icu_private_s
+DRIVER_PV(struct pl390_icu_private_s
 {
   uintptr_t gicd_addr;
   uintptr_t gicc_addr;
@@ -63,7 +63,7 @@ struct pl390_icu_private_s
 
   struct dev_irq_sink_s *sinks; // spi_count entries, then ppi_count * cpu_count
   struct dev_irq_src_s *srcs;
-};
+});
 
 static DEV_ICU_GET_SINK(pl390_icu_get_sink)
 {

@@ -40,7 +40,7 @@
 
 #define AVR32_IRQ_COUNT 4
 
-struct avr32_dev_private_s
+DRIVER_PV(struct avr32_dev_private_s
 {
 #ifdef CONFIG_DEVICE_IRQ
   struct dev_irq_sink_s	sinks[AVR32_IRQ_COUNT];
@@ -52,7 +52,7 @@ struct avr32_dev_private_s
 #ifdef CONFIG_DEVICE_CLOCK
   dev_timer_cfgrev_t timer_rev;
 #endif
-};
+});
 
 /************************************************************************
         Interrupts controller driver part

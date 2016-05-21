@@ -58,7 +58,7 @@ enum efm32_i2c_state_e
   DEV_I2C_EFM32_END,
 };
 
-struct efm32_i2c_context_s
+DRIVER_PV(struct efm32_i2c_context_s
 {
   uintptr_t addr;
   /* Interrupt endpoint */
@@ -77,7 +77,7 @@ struct efm32_i2c_context_s
   struct dev_freq_s freq;
 
   struct dev_clock_sink_ep_s clk_ep;
-};
+});
 
 static void efm32_i2c_update_rate(struct efm32_i2c_context_s *pv)
 {

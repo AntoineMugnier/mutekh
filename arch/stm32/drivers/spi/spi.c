@@ -39,7 +39,7 @@
 #include <arch/stm32/spi.h>
 
 
-struct stm32_spi_private_s
+DRIVER_PV(struct stm32_spi_private_s
 {
   uintptr_t                      addr;
 
@@ -53,7 +53,7 @@ struct stm32_spi_private_s
 #endif
 
   struct dev_freq_s              busfreq;
-};
+});
 
 static
 error_t stm32_spi_update_bitrate(struct stm32_spi_private_s *pv,

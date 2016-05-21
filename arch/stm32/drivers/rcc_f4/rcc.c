@@ -49,7 +49,7 @@
 #define STM32_CLOCK_SRC_COUNT   3
 #define STM32_CLOCK_SIG_MAX     16
 
-struct stm32_rcc_private_s
+DRIVER_PV(struct stm32_rcc_private_s
 {
   /** device base address. */
   uintptr_t             addr;
@@ -67,7 +67,7 @@ struct stm32_rcc_private_s
 
   /** clock sink endpoints. */
   struct dev_clock_ep_s srcs[STM32_CLOCK_SRC_COUNT];
-};
+});
 
 static DEV_CLOCK_GATING(stm32_rcc_gating)
 {

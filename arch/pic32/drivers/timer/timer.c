@@ -47,7 +47,7 @@
 #define PIC32_TIMER_TOP      0xFFFFFFFF
 
  
-struct pic32_timer_private_s
+DRIVER_PV(struct pic32_timer_private_s
 {
   /* Last known msb of hw timer value */
   bool_t    t31; 
@@ -68,7 +68,7 @@ struct pic32_timer_private_s
   struct dev_freq_s freq;
   /* cpu irq save mask */
   cpu_irq_state_t irq_save;
-};
+});
 
 /* This function returns a concatenation of the software timer value and 
    of the hardware timer value. If a top value overflow interrupt is pending

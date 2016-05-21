@@ -39,7 +39,7 @@
 #include <device/class/valio.h>
 #include <device/valio/button.h>
 
-struct push_button_context_s
+DRIVER_PV(struct push_button_context_s
 {
   bool_t state;
   /* Value when released */
@@ -64,7 +64,7 @@ struct push_button_context_s
   struct dev_timer_rq_s trq;
 #endif
 #endif
-};
+});
 
 #ifdef CONFIG_DRIVER_PUSH_BUTTON_SOFT_DEBOUNCING
 

@@ -39,12 +39,12 @@
 #define dprintk(k...) do {} while (0)
 //#define dprintk printk
 
-struct nrf5x_i2c_priv_s
+DRIVER_PV(struct nrf5x_i2c_priv_s
 {
   uintptr_t addr;
   struct dev_irq_src_s irq_ep[1];
   dev_request_queue_root_t queue;
-};
+});
 
 static
 void nrf5x_i2c_flit_first(struct nrf5x_i2c_priv_s *pv,

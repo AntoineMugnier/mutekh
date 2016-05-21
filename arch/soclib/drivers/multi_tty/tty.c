@@ -50,13 +50,13 @@ struct tty_soclib_tty_s
 #endif
 };
 
-struct tty_soclib_context_s
+DRIVER_PV(struct tty_soclib_context_s
 {
   struct dev_irq_src_s          irq_ep;
   uintptr_t                     addr;
   uint_fast8_t                  count;
   struct tty_soclib_tty_s       ttys[0];
-};
+});
 
 #define TTY_SOCLIB_REG_WRITE	0
 #define TTY_SOCLIB_REG_STATUS	4

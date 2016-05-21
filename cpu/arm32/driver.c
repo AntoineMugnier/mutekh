@@ -49,7 +49,7 @@
 #endif
 
 
-struct arm_dev_private_s
+DRIVER_PV(struct arm_dev_private_s
 {
 #ifdef CONFIG_DEVICE_IRQ
 #define ICU_ARM_MAX_VECTOR	1
@@ -62,7 +62,7 @@ struct arm_dev_private_s
 #ifdef CONFIG_DEVICE_CLOCK
   dev_timer_cfgrev_t timer_rev;
 #endif
-};
+});
 
 /************************************************************************
         Interrupts controller driver part

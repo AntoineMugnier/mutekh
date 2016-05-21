@@ -54,7 +54,7 @@ enum efm32_usart_start_e
   EFM32_USART_STARTED_WRITE = 2,
 };
 
-struct efm32_usart_context_s
+DRIVER_PV(struct efm32_usart_context_s
 {
   uintptr_t addr;
   /* tty input request queue and char fifo */
@@ -77,7 +77,7 @@ struct efm32_usart_context_s
   struct dev_freq_s             freq;
 
   struct dev_clock_sink_ep_s    clk_ep;
-};
+});
 
 static uint32_t efm32_usart_char_bauds(struct device_s *dev, uint32_t bauds)
 {

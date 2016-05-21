@@ -45,7 +45,7 @@
 /* channels 0 and 2 are used by the GPU, 1 and 3 are free */
 #define BCM283X_SYSTIMER_CMP_CHANNEL 1
 
-struct bcm283x_systimer_private_s
+DRIVER_PV(struct bcm283x_systimer_private_s
 {
   /* Timer address */
   uintptr_t addr;
@@ -56,7 +56,7 @@ struct bcm283x_systimer_private_s
   dev_request_pqueue_root_t queue;
   uint32_t skew;
 #endif
-};
+});
 
 static uint64_t get_timer_value(struct bcm283x_systimer_private_s *pv)
 {

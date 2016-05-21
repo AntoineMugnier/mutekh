@@ -44,7 +44,7 @@
 
 #define PPI(x, y) (CONFIG_DRIVER_NRF5X_GPIO_PWM_PPI_FIRST + (x) * 2 + (y))
 
-struct nrf5x_gpio_pwm_context_s
+DRIVER_PV(struct nrf5x_gpio_pwm_context_s
 {
   uintptr_t timer_addr;
   struct dev_request_dlqueue_s queue;
@@ -71,7 +71,7 @@ struct nrf5x_gpio_pwm_context_s
     uint32_t toggle_tk;
     uint32_t gpiote_config;
   } channel[CONFIG_DRIVER_NRF5X_GPIO_PWM_CHANNEL_COUNT];
-};
+});
 
 #define OVERFLOW 3
 #define GPIOTE_ID(x) (CONFIG_DRIVER_NRF5X_GPIO_ICU_CHANNEL_COUNT + (x))

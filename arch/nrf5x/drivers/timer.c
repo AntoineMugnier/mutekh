@@ -37,7 +37,7 @@
 #include <arch/nrf5x/peripheral.h>
 #include <arch/nrf5x/ids.h>
 
-struct nrf5x_timer_context_s
+DRIVER_PV(struct nrf5x_timer_context_s
 {
   uintptr_t addr;
 
@@ -51,7 +51,7 @@ struct nrf5x_timer_context_s
 #if defined(CONFIG_DEVICE_CLOCK)
   struct dev_clock_sink_ep_s clock_sink;
 #endif
-};
+});
 
 #define OVERFLOW 0
 #define DEADLINE 1

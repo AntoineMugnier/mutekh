@@ -39,7 +39,7 @@
 
 #define CHANNEL_SIZE 16
 
-struct efm32_dma_context
+DRIVER_PV(struct efm32_dma_context
 {
   /* base address of DMA */
   uintptr_t                     addr;
@@ -57,7 +57,7 @@ struct efm32_dma_context
   uint16_t                      intlrun;
   /* Used for double buffering */
   bool_t                        alt;
-};
+});
 
 static void efm32_dev_dma_set_ctrl(struct device_s *dev,
                                    struct dev_dma_rq_s * rq,
