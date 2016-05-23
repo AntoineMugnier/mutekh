@@ -52,9 +52,9 @@ enum nrf5x_flash_bank
 # define dhexdumpk(k...) do {} while (0)
 #endif
 
+#if defined(CONFIG_DRIVER_NRF5X_NVMC) || defined(CONFIG_DRIVER_NRF5X_PERSIST)
 DRIVER_PV(struct nrf5x_nvmc_private_s
 {
-#if defined(CONFIG_DRIVER_NRF5X_NVMC) || defined(CONFIG_DRIVER_NRF5X_PERSIST)
   struct dev_request_dlqueue_s queue;
 
   uintptr_t addr;
@@ -65,8 +65,8 @@ DRIVER_PV(struct nrf5x_nvmc_private_s
   size_t used;
   size_t reclaimable;
   size_t available;
-#endif
 });
+#endif
 
 size_t nrf5x_flash_page_size(void)
 {
