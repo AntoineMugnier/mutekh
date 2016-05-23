@@ -66,7 +66,7 @@ static DEV_INIT(devinit_test_init)
 
 # ifdef CONFIG_DEVICE_INIT_PARTIAL
   /* makes timer API usable immediately */
-  device_init_set_class(dev, 1);
+  device_init_enable_api(dev, 1);
 # endif
 
 # ifdef CONFIG_DEVICE_INIT_ASYNC
