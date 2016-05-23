@@ -146,7 +146,7 @@ struct nrf5x_ble_backlog_s {
 };
 #endif
 
-struct nrf5x_ble_context_s {
+DRIVER_PV(struct nrf5x_ble_context_s {
   GCT_CONTAINER_ENTRY(nrf5x_ble_context_list, entry);
 
   dev_timer_value_t event_begin;
@@ -164,7 +164,7 @@ struct nrf5x_ble_context_s {
   struct nrf5x_ble_backlog_s backlog[NRF5X_BLE_BACKLOG];
   size_t backlog_cur;
 #endif
-};
+});
 
 #ifdef NRF5X_BLE_BACKLOG
 void nrf5x_ble_backlog(struct nrf5x_ble_context_s *ctx,
