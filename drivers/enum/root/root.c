@@ -27,12 +27,14 @@
 #include <device/driver.h>
 #include <mutek/mem_alloc.h>
 
-#ifdef CONFIG_DEVICE_ENUM
-
 DRIVER_PV(struct enum_root_pv_s
 {
+#ifdef CONFIG_DEVICE_ENUM
   dev_request_queue_root_t queue;
+#endif
 });
+
+#ifdef CONFIG_DEVICE_ENUM
 
 static DEV_ENUM_MATCH_DRIVER(enum_root_match_driver)
 {
