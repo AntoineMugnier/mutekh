@@ -90,3 +90,6 @@ ifeq ($(CONFIG_DEVICE_PERSIST), defined)
 objs += device_persist.o
 endif
 
+ifeq ($(CONFIG_DEVICE_VALIO), defined)
+objs += device_valio.o
+endif
