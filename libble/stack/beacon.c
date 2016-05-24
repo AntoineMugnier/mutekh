@@ -34,7 +34,7 @@ struct beacon_data_s
   uint16_t vendor;
   uint8_t type;
   uint8_t len;
-  struct ble_uuid_s uuid;
+  struct ble_uuid_s group;
   uint16_t major, minor;
   uint8_t rssi;
 };
