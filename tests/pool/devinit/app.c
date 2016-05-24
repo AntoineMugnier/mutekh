@@ -32,7 +32,7 @@ DEV_DECLARE_STATIC(timer_dev, "timer", 0, enst_rttimer_drv,
                    DEV_STATIC_RES_FREQ(1000000, 1)
                    );
 
-DEV_DECLARE_STATIC(tty_dev, "tty", 0, tty_soclib_drv,
+DEV_DECLARE_STATIC(tty_dev, "tty", 0, soclib_tty_drv,
                    DEV_STATIC_RES_MEM(0xd0200000, 0xd0200010),
                    DEV_STATIC_RES_DEV_ICU("/xicu"),
                    DEV_STATIC_RES_IRQ(0, 0, DEV_IRQ_SENSE_HIGH_LEVEL, 0, 1),
