@@ -131,12 +131,28 @@ type_s##_base(struct type_s *x)                                         \
   return &x->field;                                                     \
 }                                                                       \
                                                                         \
+ALWAYS_INLINE const struct base_s *                                     \
+const_##type_s##_base(const struct type_s *x)                           \
+{                                                                       \
+  if (__builtin_offsetof(const struct type_s, field) && x == NULL)      \
+    return NULL;                                                        \
+  return &x->field;                                                     \
+}                                                                       \
+                                                                        \
 ALWAYS_INLINE struct type_s *                                           \
 type_s##_cast(struct base_s *x)                                         \
 {                                                                       \
   if (__builtin_offsetof(struct type_s, field) && x == NULL)            \
     return NULL;                                                        \
   return (void*)((uint8_t*)x - __builtin_offsetof(struct type_s, field)); \
+}                                                                       \
+                                                                        \
+ALWAYS_INLINE const struct type_s *                                     \
+const_##type_s##_cast(const struct base_s *x)                           \
+{                                                                       \
+  if (__builtin_offsetof(const struct type_s, field) && x == NULL)      \
+    return NULL;                                                        \
+  return (const void*)((const uint8_t*)x - __builtin_offsetof(const struct type_s, field)); \
 }
 
 #define STRUCT_COMPOSE(cont_s, field)                                   \
