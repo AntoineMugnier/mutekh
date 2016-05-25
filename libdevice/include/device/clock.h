@@ -239,9 +239,17 @@ enum dev_clock_src_setup_op_e
 #ifdef CONFIG_DEVICE_CLOCK_THROTTLE
   /** This operation sets the frequency throttle mode of the endpoint.
       This is initiated on a linked sink by a call to @ref
-      dev_clock_sink_throttle. */
+      dev_clock_sink_throttle.  Throttling may be done asynchronously. */
   DEV_CLOCK_SRC_SETUP_THROTTLE,
 #endif
+};
+
+struct dev_clock_src_throttle_s
+{
+  /** CMU device config ID requested (at least) before the switch. */
+  uint_fast8_t configid_old;
+  /** CMU device config ID requested (at least) after the switch. */
+  uint_fast8_t configid_new;
 };
 
 /** @internal @This contains parameters passed to the @ref
@@ -256,7 +264,7 @@ union dev_clock_src_setup_u
   struct dev_freq_ratio_s scale;
 #ifdef CONFIG_DEVICE_CLOCK_THROTTLE
   /** @see DEV_CLOCK_SRC_SETUP_THROTTLE */
-  uint_fast8_t mode_id;
+  struct dev_clock_src_throttle_s throttle;
 #endif
 };
 
@@ -310,6 +318,20 @@ struct dev_clock_src_ep_s
   uint8_t                notify_count;
 # endif
 
+# if defined(CONFIG_DEVICE_CLOCK_THROTTLE)
+#  if defined(CONFIG_DEVICE_CLOCK_SHARING)
+  /** @internal counter of sinks requesting a given minimal config ID,
+      per config ID. */
+  uint32_t BITFIELD(configid_ctr,
+                    CONFIG_DEVICE_CLOCK_SHARING_MAX_LOG2
+                    * CONFIG_DEVICE_CMU_CONFIGID_COUNT);
+#  endif
+
+  /** @internal current minimal config ID requested by source endpoint */
+  uint32_t BITFIELD(configid_min,
+                    CONFIG_DEVICE_CMU_CONFIGID_COUNT_LOG2);
+# endif
+
   /** endpoint flags */
   enum dev_clock_ep_flags_e BITFIELD(flags,8);
 #endif
@@ -343,10 +365,17 @@ struct dev_clock_sink_ep_s
 
 # ifdef CONFIG_DEVICE_CLOCK_THROTTLE
   /** @internal lookup table used to convert between device driver
-      specific mode id to bit position in resource mode mask */
-  uint32_t BITFIELD(mode_ids, CONFIG_DEVICE_CLOCK_MODES * CONFIG_DEVICE_CLOCK_MASKB);
-  /** @internal bit index of currently selected mode in resource mode mask */
-  uint32_t BITFIELD(mode, CONFIG_DEVICE_CLOCK_MASKB);
+      specific mode id to minimal CMU config mode ID.  This is copied
+      from DEV_RES_CLK_MODES resource matching the endpoint at
+      initialization */
+  uint32_t BITFIELD(mode_ids,
+                    CONFIG_DEVICE_CLOCK_MODE_COUNT
+                    * CONFIG_DEVICE_CMU_CONFIGID_COUNT_LOG2);
+
+#  ifdef CONFIG_DEVICE_CLOCK_SHARING
+  /** @internal current minimal CMU config mode requested by sink */
+  uint32_t BITFIELD(configid_min, CONFIG_DEVICE_CMU_CONFIGID_COUNT_LOG2);
+#  endif
 # endif
 
   /** endpoint flags */
@@ -380,14 +409,13 @@ error_t dev_clock_sink_gate(struct dev_clock_sink_ep_s *sink,
     This is usually called from a clock/power consumer device driver.
 
     The value of @tt mode_id is driver specific; a @ref
-    DEV_RES_CLK_MODES resource entry for the sink endpoint must
-    defines the associated bits of the mode mask for the associated
-    clock provider devices.
+    DEV_RES_CLK_MODES resource entry for the sink endpoint must define
+    minimal config ID for the attached CMU device for each device mode.
 
     This *may* change some clock frequencies, depending on state of
     other sink endpoints linked to the same source as well as clock
-    mode masks expressed in the device tree. Any frequency change will
-    be reported as usual if notifications are enabled on the sink. */
+    mode expressed in the device tree. Any frequency change will be
+    reported as usual if notifications are enabled on the sink. */
 config_depend(CONFIG_DEVICE_CLOCK_THROTTLE)
 error_t dev_clock_sink_throttle(struct dev_clock_sink_ep_s *sink,
                                 uint_fast8_t mode_id);
@@ -575,7 +603,9 @@ error_t device_res_add_clock_src(struct device_s *dev, const char *src_name,
 
 #ifdef CONFIG_DEVICE_CLOCK_THROTTLE
 
-# define _DEV_STATIC_RES_CMU_MODE(i, a) ((a) << (CONFIG_DEVICE_CLOCK_MASKB * i))
+# define _DEV_STATIC_RES_CMU_MODE(i, a) (\
+  (a) ? ((a) << (CONFIG_DEVICE_CMU_CONFIGID_COUNT_LOG2 * i)) : 0)
+
 # define _DEV_STATIC_RES_CLOCK_MODES_VA(a, b, c, d, e, f, g, h, ...)    \
   _DEV_STATIC_RES_CMU_MODE(0, a) | _DEV_STATIC_RES_CMU_MODE(1, b) |   \
   _DEV_STATIC_RES_CMU_MODE(2, c) | _DEV_STATIC_RES_CMU_MODE(3, d) |   \
@@ -583,7 +613,7 @@ error_t device_res_add_clock_src(struct device_s *dev, const char *src_name,
   _DEV_STATIC_RES_CMU_MODE(6, g) | _DEV_STATIC_RES_CMU_MODE(7, h)
 
 /** @experimental @This specifies the mapping between device driver
-    throttling clock mode ids and clock provider mask bits.  @csee
+    throttling clock mode ids and CMU device config ID.  @csee
     DEV_RES_CLK_MODES @see #DEV_DECLARE_STATIC */
 # define DEV_STATIC_RES_CLOCK_MODES(__sink_id, ...)           \
   {                                                         \

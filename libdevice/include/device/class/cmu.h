@@ -106,7 +106,7 @@
 
 struct device_cmu_s;
 
-#define CONFIG_DEVICE_CLOCK_MASKW (1 << (CONFIG_DEVICE_CLOCK_MASKB))
+#define CONFIG_DEVICE_CLOCK_MASKW (1 << (CONFIG_DEVICE_CMU_CONFIGID_COUNT_LOG2))
 
 /** Index of the configuration associated with a set of @ref
     DEV_RES_CMU_MUX and @ref DEV_RES_CMU_OSC resources in the
@@ -114,14 +114,14 @@ struct device_cmu_s;
 typedef uint_fast8_t dev_cmu_config_id_t;
 
 /** Mask of configuration ids @see dev_cmu_config_id_t */
-# if CONFIG_DEVICE_CLOCK_MASKB == 6
+# if CONFIG_DEVICE_CMU_CONFIGID_COUNT_LOG2 == 6
 typedef uint64_t dev_cmu_config_mask_t;
-# elif CONFIG_DEVICE_CLOCK_MASKB == 5
+# elif CONFIG_DEVICE_CMU_CONFIGID_COUNT_LOG2 == 5
 typedef uint32_t dev_cmu_config_mask_t;
-# elif CONFIG_DEVICE_CLOCK_MASKB < 5
+# elif CONFIG_DEVICE_CMU_CONFIGID_COUNT_LOG2 < 5
 typedef uint16_t dev_cmu_config_mask_t;
 # else
-#  error CONFIG_DEVICE_CLOCK_MASKB: unsupported value
+#  error CONFIG_DEVICE_CMU_CONFIGID_COUNT_LOG2: unsupported value
 # endif
 
 /** Index of the clock tree node inside a device. Nodes are numbered

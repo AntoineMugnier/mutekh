@@ -227,6 +227,10 @@ static void dev_clock_link(struct dev_clock_src_ep_s *src,
 #endif
   src->sink_head = sink;
   src->dev->ref_count++;
+#if defined(CONFIG_DEVICE_CLOCK_THROTTLE) && defined(CONFIG_DEVICE_CLOCK_SHARING)
+  sink->configid_min = 0;
+  src->configid_ctr += 1 << (CONFIG_DEVICE_CLOCK_SHARING_MAX_LOG2 * sink->configid_min);
+#endif
 }
 
 error_t dev_clock_sink_link(struct dev_clock_sink_ep_s *sink,
@@ -330,7 +334,10 @@ error_t dev_clock_sink_link(struct dev_clock_sink_ep_s *sink,
           if (id != r->u.clock_modes.sink_ep)
             continue;
 
-          sink->mode = sink->mode_ids = r->u.clock_modes.modes;
+          sink->mode_ids = r->u.clock_modes.modes;
+# ifdef CONFIG_DEVICE_CLOCK_SHARING
+          sink->configid_min = 0;
+# endif
           break;
         }
 #endif
@@ -404,3 +411,94 @@ error_t dev_cmu_node_info_get(struct device_cmu_s *accessor,
   LOCK_RELEASE_IRQ(&accessor->dev->lock);
   return err;
 }
+
+#if defined(CONFIG_DEVICE_CLOCK_THROTTLE)
+static
+error_t dev_clock_src_throttle(struct dev_clock_src_ep_s *src,
+                               uint32_t configid_min_old,
+                               uint32_t configid_min_new)
+{
+  error_t err = 0;
+  struct dev_clock_src_throttle_s throttle;
+
+  LOCK_SPIN_IRQ(&src->dev->lock);
+
+#if defined(CONFIG_DEVICE_CLOCK_SHARING)
+  const uint32_t offs_new = configid_min_new * CONFIG_DEVICE_CLOCK_SHARING_MAX_LOG2;
+  const uint32_t offs_old = configid_min_old * CONFIG_DEVICE_CLOCK_SHARING_MAX_LOG2;
+
+  assert(src->configid_ctr);
+
+  src->configid_ctr -= 1 << offs_old;
+  src->configid_ctr += 1 << offs_new;
+
+  throttle.configid_old = src->configid_min;
+
+  if (configid_min_new > src->configid_min)
+    {
+      // Calling sink makes a new max(configid_min)
+      throttle.configid_new = configid_min_new;
+      src->configid_min = configid_min_new;
+    }
+  else if (configid_min_new < configid_min_old
+           && (src->configid_ctr >> offs_old))
+    {
+      // Calling sink reduces its configid_min, but there are still some
+      // other sinks requesting at least the same
+      throttle.configid_new = src->configid_min;
+    }
+  else
+    {
+      // Calling sink changes configid_min on source
+      // TODO: optimize this loop ?
+      for (int8_t configid = CONFIG_DEVICE_CMU_CONFIGID_COUNT - 1;
+           configid >= 0;
+           --configid) {
+        if (src->configid_ctr >> (configid * CONFIG_DEVICE_CLOCK_SHARING_MAX_LOG2)) {
+          src->configid_min = configid;
+          throttle.configid_new = __MAX(configid, configid_min_new);
+          break;
+        }
+      }
+    }
+#else
+  throttle.configid_old = configid_min_old;
+  throttle.configid_new = configid_min_new;
+  src->configid_min = configid_min_new;
+#endif
+
+  if (throttle.configid_old != throttle.configid_new)
+    err = src->f_setup(src, DEV_CLOCK_SRC_SETUP_THROTTLE,
+                       (const union dev_clock_src_setup_u *)&throttle);
+
+  LOCK_RELEASE_IRQ(&src->dev->lock);
+
+  return err;
+}
+
+error_t dev_clock_sink_throttle(struct dev_clock_sink_ep_s *sink,
+                                uint_fast8_t mode_id)
+{
+  uint32_t configid_min_new;
+  uint32_t configid_min_old;
+
+  configid_min_new = sink->mode_ids >> (CONFIG_DEVICE_CMU_CONFIGID_COUNT_LOG2 * mode_id);
+  configid_min_new &= (1 << CONFIG_DEVICE_CMU_CONFIGID_COUNT_LOG2) - 1;
+
+#if defined(CONFIG_DEVICE_CLOCK_SHARING)
+  configid_min_old = sink->configid_min;
+#else
+  configid_min_old = sink->src->configid_min;
+#endif
+
+  if (configid_min_old == configid_min_new)
+    return 0;
+
+#if defined(CONFIG_DEVICE_CLOCK_SHARING)
+  sink->configid_min = configid_min_new;
+#endif
+
+  return dev_clock_src_throttle(sink->src, configid_min_old, configid_min_new);
+}
+#endif
+

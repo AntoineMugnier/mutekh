@@ -241,7 +241,7 @@ struct dev_resource_s
       /** denominator of the frequency scaling */
       uint64_t                  BITFIELD(denom,CONFIG_DEVICE_CLOCK_FRAC_WIDTH);
       /** mask of associated configurations */
-      uint64_t                  BITFIELD(config,CONFIG_DEVICE_CLOCK_MAX_CONFIG);
+      uint64_t                  BITFIELD(config,CONFIG_DEVICE_CMU_CONFIGID_COUNT);
     }                           cmu_mux;
 
     /** @see DEV_RES_CMU_OSC */
@@ -253,7 +253,7 @@ struct dev_resource_s
       /** node id */
       uint32_t                  BITFIELD(node,CONFIG_DEVICE_CLOCK_MAX_ID);
       /** mask of associated configurations */
-      uint32_t                  BITFIELD(config,CONFIG_DEVICE_CLOCK_MAX_CONFIG);
+      uint32_t                  BITFIELD(config,CONFIG_DEVICE_CMU_CONFIGID_COUNT);
       /** accuracy, @see dev_freq_s */
       uint32_t                  BITFIELD(acc_m,3);
       /** accuracy, @see dev_freq_s */
@@ -277,7 +277,7 @@ struct dev_resource_s
     struct {
       uintptr_t                 BITFIELD(sink_ep,CONFIG_DEVICE_CLOCK_MAX_ID);
       /** device driver throttling modes to clock provider mask bits */
-      uintptr_t                 BITFIELD(modes,CONFIG_DEVICE_CLOCK_MODES*CONFIG_DEVICE_CLOCK_MASKB);
+      uintptr_t                 BITFIELD(modes,CONFIG_DEVICE_CLOCK_MODE_COUNT*CONFIG_DEVICE_CMU_CONFIGID_COUNT_LOG2);
     }                           clock_modes;
 #endif
 
