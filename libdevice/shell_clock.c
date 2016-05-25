@@ -153,7 +153,7 @@ static TERMUI_CON_COMMAND_PROTOTYPE(dev_shell_clock_config)
 #ifdef CONFIG_DEVICE_CLOCK_VARFREQ
   if (used & CLOCK_OPT_CFG)
     {
-      if (dev_cmu_configure(&c->cmu, c->cfg))
+      if (DEVICE_OP(&c->cmu, app_configid_set, c->cfg))
         return -EINVAL;
       return 0;
     }
@@ -162,43 +162,6 @@ static TERMUI_CON_COMMAND_PROTOTYPE(dev_shell_clock_config)
   dev_shell_clock_configs(con, c);
   return 0;
 }
-
-#ifdef CONFIG_DEVICE_CLOCK_VARFREQ
-
-static TERMUI_CON_COMMAND_PROTOTYPE(dev_shell_clock_mux)
-{
-  struct termui_optctx_dev_clock_opts *c = ctx;
-
-  error_t err;
-  LOCK_SPIN_IRQ(&c->cmu.dev->lock);
-  err = DEVICE_OP(&c->cmu, config_mux, c->node, c->parent, &c->ratio);
-  LOCK_RELEASE_IRQ(&c->cmu.dev->lock);
-  if (err)
-    return -EINVAL;
-
-  if (!(used & CLOCK_OPT_NOCOMMIT) && DEVICE_OP(&c->cmu, commit))
-    return -EINVAL;
-
-  return 0;
-}
-
-static TERMUI_CON_COMMAND_PROTOTYPE(dev_shell_clock_osc)
-{
-  struct termui_optctx_dev_clock_opts *c = ctx;
-
-  error_t err;
-  LOCK_SPIN_IRQ(&c->cmu.dev->lock);
-  err = DEVICE_OP(&c->cmu, config_osc, c->node, &c->freq);
-  LOCK_RELEASE_IRQ(&c->cmu.dev->lock);
-  if (err)
-    return -EINVAL;
-
-  if (!(used & CLOCK_OPT_NOCOMMIT) && DEVICE_OP(&c->cmu, commit))
-    return -EINVAL;
-
-  return 0;
-}
-#endif
 
 static TERMUI_CON_COMMAND_PROTOTYPE(dev_shell_clock_nodes)
 {
@@ -314,18 +277,6 @@ TERMUI_CON_GROUP_DECL(dev_shell_clock_group) =
 #endif
                                        , clock_opts_cleanup)
                    )
-
-#ifdef CONFIG_DEVICE_CLOCK_VARFREQ
-  TERMUI_CON_ENTRY(dev_shell_clock_mux, "mux",
-		   TERMUI_CON_OPTS_CTX(dev_clock_opts, CLOCK_OPT_DEV | CLOCK_OPT_NODE | CLOCK_OPT_RATIO | CLOCK_OPT_PARENT,
-                                       CLOCK_OPT_NOCOMMIT, clock_opts_cleanup)
-                   )
-
-  TERMUI_CON_ENTRY(dev_shell_clock_osc, "osc",
-		   TERMUI_CON_OPTS_CTX(dev_clock_opts, CLOCK_OPT_DEV | CLOCK_OPT_NODE | CLOCK_OPT_FREQ,
-                                       CLOCK_OPT_NOCOMMIT, clock_opts_cleanup)
-                   )
-#endif
 
   TERMUI_CON_ENTRY(dev_shell_clock_nodes, "nodes",
 		   TERMUI_CON_OPTS_CTX(dev_clock_opts, CLOCK_OPT_DEV, 0, clock_opts_cleanup)

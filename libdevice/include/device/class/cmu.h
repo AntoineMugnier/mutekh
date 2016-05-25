@@ -131,7 +131,7 @@ typedef uint_fast8_t dev_cmu_node_id_t;
 
 /** @see dev_cmu_config_mux_t */
 #define DEV_CMU_CONFIG_MUX(n) error_t (n) (              \
-    struct device_cmu_s *accessor,                         \
+    struct device_s *dev,                         \
     dev_cmu_node_id_t   node_id,                           \
     dev_cmu_node_id_t   parent_id,                         \
     struct dev_freq_ratio_s *ratio                         \
@@ -154,7 +154,7 @@ typedef DEV_CMU_CONFIG_MUX(dev_cmu_config_mux_t);
 
 /** @see dev_cmu_config_osc_t */
 #define DEV_CMU_CONFIG_OSC(n) error_t (n) (                   \
-    struct device_cmu_s *accessor,                            \
+    struct device_s *dev,                            \
     dev_cmu_node_id_t   node_id,                              \
     struct dev_freq_s *freq                                   \
 )
@@ -173,7 +173,7 @@ typedef DEV_CMU_CONFIG_OSC(dev_cmu_config_osc_t);
 
 
 /** @see dev_cmu_commit_t */
-#define DEV_CMU_COMMIT(n) error_t (n) (struct device_cmu_s *accessor)
+#define DEV_CMU_COMMIT(n) error_t (n) (struct device_s *dev)
 
 /** @internal @This starts the configuration of the clocks based on
     parameters passed to previous calls to the @ref
@@ -197,7 +197,7 @@ typedef DEV_CMU_COMMIT(dev_cmu_commit_t);
 
 
 /** @see dev_cmu_rollback_t */
-#define DEV_CMU_ROLLBACK(n) error_t (n) (struct device_cmu_s *accessor)
+#define DEV_CMU_ROLLBACK(n) error_t (n) (struct device_s *dev)
 
 /** @internal @This discard all configuration changes requests made by
     calling the @ref dev_cmu_config_mux_t and @ref
@@ -262,23 +262,49 @@ struct dev_cmu_node_info_s
     @see dev_cmu_node_info */
 typedef DEV_CMU_NODE_INFO(dev_cmu_node_info_t);
 
+/** @see dev_cmu_app_configid_set_t */
+#define DEV_CMU_APP_CONFIGID_SET(n) error_t (n) (                              \
+    struct device_cmu_s *accessor,                                      \
+    uint_fast8_t config_id)
+
+/** @internal @This makes the device change its configuration id.
+
+    @see dev_cmu_app_configid_set_s
+    @see dev_cmu_app_configid_set_e
+    @see dev_cmu_app_configid_set */
+typedef DEV_CMU_APP_CONFIGID_SET(dev_cmu_app_configid_set_t);
+
+/**
+   @internal @this defines an API for a CMU driver. It must be passed
+   to libdevice helpers to accomplish various management tasks.
+ */
+struct device_cmu_config_ops_s
+{
+  dev_cmu_config_mux_t *config_mux;
+  dev_cmu_config_osc_t *config_osc;
+  dev_cmu_commit_t     *commit;
+  dev_cmu_rollback_t   *rollback;
+};
+
+#define DRIVER_CMU_CONFIG_OPS_DECLARE(prefix)                           \
+  static const struct device_cmu_config_ops_s prefix##_config_ops = {   \
+    .config_mux = prefix ## _config_mux,                                \
+    .config_osc = prefix ## _config_osc,                                \
+    .commit = prefix ## _commit,                                        \
+    .rollback = prefix ## _rollback,                                    \
+  }
 
 DRIVER_CLASS_TYPES(DRIVER_CLASS_CMU, cmu,
-                   dev_cmu_node_info_t   *f_node_info;
-                   dev_cmu_config_mux_t *f_config_mux;
-                   dev_cmu_config_osc_t *f_config_osc;
-                   dev_cmu_commit_t      *f_commit;
-                   dev_cmu_rollback_t    *f_rollback;
+                   dev_cmu_node_info_t        *f_node_info;
+                   dev_cmu_app_configid_set_t *f_app_configid_set;
                    );
+
 
 #define DRIVER_CMU_METHODS(prefix)                                  \
   ((const struct driver_class_s*)&(const struct driver_cmu_s){      \
-    .class_ = DRIVER_CLASS_CMU,                                   \
+    .class_ = DRIVER_CLASS_CMU,                                     \
     .f_node_info = prefix ## _node_info,                            \
-    .f_config_mux = prefix ## _config_mux,                          \
-    .f_config_osc = prefix ## _config_osc,                          \
-    .f_commit = prefix ## _commit,                                  \
-    .f_rollback = prefix ## _rollback,                              \
+    .f_app_configid_set = prefix ## _app_configid_set,              \
   })
 
 /** @This must be used to perform initial clock configuration.
@@ -287,7 +313,16 @@ DRIVER_CLASS_TYPES(DRIVER_CLASS_CMU, cmu,
     to be called from the initialization function of cmu
     device drivers. It selects resource associated to config id 0. */
 config_depend(CONFIG_DEVICE_CLOCK)
-error_t dev_cmu_init(const struct driver_s *drv, struct device_s *dev);
+error_t dev_cmu_init(struct device_s *dev,
+                     const struct device_cmu_config_ops_s *ops);
+
+/**
+   @internal This helper iterates on resources to configure relevant
+   muxes and oscillator nodes, then commits the changes.
+ */
+error_t dev_cmu_configid_set(struct device_s *dev,
+                             const struct device_cmu_config_ops_s *ops,
+                             uint_fast8_t config_id);
 
 /** @internal This helper function is called by the clock provider
     device driver when the frequency of a clock source endpoint
@@ -332,17 +367,6 @@ error_t dev_cmu_node_info_get(struct device_cmu_s *accessor,
                           dev_cmu_node_id_t node_id,
                           enum dev_cmu_node_info_e *mask,
                           struct dev_cmu_node_info_s *info);
-
-/** @This updates the configuration of the device internal nodes using
-    resource entries from the device tree associated with a given
-    configuration id.
-
-    The configuration id selects all resources with the corresponding
-    bit set in the config mask. */
-config_depend(CONFIG_DEVICE_CLOCK_VARFREQ)
-error_t dev_cmu_configure(struct device_cmu_s *accessor,
-                       dev_cmu_config_id_t config_id);
-
 
 /** @This adds an internal clock mux entry in the device resource list.
 

@@ -537,7 +537,6 @@ efm32_recmu_get_node_freq(struct efm32_recmu_private_s *pv,
 
 static DEV_CMU_CONFIG_OSC(efm32_recmu_config_osc)
 {
-  struct device_s *dev = accessor->dev;
   struct efm32_recmu_private_s *pv = dev->drv_pv;
 
   if (pv->busy)
@@ -673,7 +672,6 @@ static DEV_CMU_CONFIG_OSC(efm32_recmu_config_osc)
 
 static DEV_CMU_CONFIG_MUX(efm32_recmu_config_mux)
 {
-  struct device_s *dev = accessor->dev;
   struct efm32_recmu_private_s *pv = dev->drv_pv;
 
   if (pv->busy)
@@ -1124,7 +1122,6 @@ static void efm32_recmu_clock_dep(struct efm32_recmu_private_s *pv,
 
 static DEV_CMU_COMMIT(efm32_recmu_commit)
 {
-  struct device_s *dev = accessor->dev;
   struct efm32_recmu_private_s *pv = dev->drv_pv;
 
   if (pv->busy)
@@ -1256,7 +1253,6 @@ static void efm32_recmu_read_config(struct efm32_recmu_private_s *pv)
 
 static DEV_CMU_ROLLBACK(efm32_recmu_rollback)
 {
-  struct device_s *dev = accessor->dev;
   struct efm32_recmu_private_s *pv = dev->drv_pv;
 
   if (pv->busy)
@@ -1320,6 +1316,20 @@ static DEV_CMU_NODE_INFO(efm32_recmu_node_info)
     }
 
   return 0;
+}
+
+DRIVER_CMU_CONFIG_OPS_DECLARE(efm32_recmu);
+
+static DEV_CMU_APP_CONFIGID_SET(efm32_recmu_app_configid_set)
+{
+  struct device_s *dev = accessor->dev;
+  error_t err;
+
+  LOCK_SPIN_IRQ(&dev->lock);
+  err = dev_cmu_configid_set(dev, &efm32_recmu_config_ops, config_id);
+  LOCK_RELEASE_IRQ(&dev->lock);
+
+  return err;
 }
 
 static DEV_CLOCK_SRC_SETUP(efm32_recmu_ep_setup)
@@ -1492,8 +1502,7 @@ static DEV_INIT(efm32_recmu_init)
 
   efm32_recmu_read_config(pv);
 
-  extern const struct driver_s efm32_recmu_drv;
-  if (dev_cmu_init(&efm32_recmu_drv, dev))
+  if (dev_cmu_init(dev, &efm32_recmu_config_ops))
     goto err_mem;
 
   return 0;

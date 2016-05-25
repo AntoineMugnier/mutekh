@@ -723,6 +723,7 @@ static DEV_CLOCK_SRC_SETUP(nrf5x_clock_ep_setup)
 
 #define nrf5x_clock_config_mux (dev_cmu_config_mux_t*)dev_driver_notsup_fcn
 #define nrf5x_clock_rollback (dev_cmu_rollback_t*)dev_driver_notsup_fcn
+#define nrf5x_clock_app_configid_set (dev_cmu_rollback_t*)dev_driver_notsup_fcn
 #define nrf5x_clock_use dev_use_generic
 
 static DEV_CMU_COMMIT(nrf5x_clock_commit)
@@ -734,6 +735,8 @@ static DEV_CMU_CONFIG_OSC(nrf5x_clock_config_osc)
 {
   return -ENOENT;
 }
+
+DRIVER_CMU_CONFIG_OPS_DECLARE(nrf5x_clock);
 
 const struct driver_s nrf5x_clock_drv;
 
@@ -798,7 +801,7 @@ static DEV_INIT(nrf5x_clock_init)
   for (i = 0; i < NRF_CLOCK_EP_COUNT; i++)
     dev_clock_source_init(dev, &pv->src[i], &nrf5x_clock_ep_setup);
 
-  if (dev_cmu_init(&nrf5x_clock_drv, dev))
+  if (dev_cmu_init(dev, &nrf5x_clock_config_ops))
     goto free_pv;
 
   return 0;

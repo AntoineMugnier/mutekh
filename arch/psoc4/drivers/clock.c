@@ -201,7 +201,6 @@ DRIVER_PV(struct psoc4_clock_private_s
 
 static DEV_CMU_CONFIG_OSC(psoc4_clock_config_osc)
 {
-  struct device_s *dev = accessor->dev;
   struct psoc4_clock_private_s *pv = dev->drv_pv;
   uint32_t hz = freq->num;
 
@@ -238,7 +237,6 @@ static DEV_CMU_CONFIG_OSC(psoc4_clock_config_osc)
 
 static DEV_CMU_CONFIG_MUX(psoc4_clock_config_mux)
 {
-  struct device_s *dev = accessor->dev;
   struct psoc4_clock_private_s *pv = dev->drv_pv;
 
   switch (node_id) {
@@ -381,8 +379,6 @@ static void psoc4_pclk_div_set(struct device_s *dev,
 
 static DEV_CMU_ROLLBACK(psoc4_clock_rollback)
 {
-  struct device_s *dev = accessor->dev;
-
   psoc4_clock_config_read(dev);
 
   return 0;
@@ -446,7 +442,6 @@ static void psoc4_clock_lfclk_update(struct device_s *dev)
 
 static DEV_CMU_COMMIT(psoc4_clock_commit)
 {
-  struct device_s *dev = accessor->dev;
   struct psoc4_clock_private_s *pv = dev->drv_pv;
   uint32_t tmp;
 
@@ -694,7 +689,7 @@ static DEV_CLOCK_SRC_SETUP(psoc4_clock_ep_setup)
         device_sleep_schedule(dev);
 #endif
 
-      dev_cmu_src_update(src, param->flags);
+      dev_cmu_src_update_sync(src, param->flags);
       return 0;
 
     case DEV_CLOCK_SRC_SETUP_SCALER: {
@@ -762,6 +757,8 @@ static DEV_USE(psoc4_clock_use)
 
 const struct driver_s psoc4_clock_drv;
 
+DRIVER_CMU_CONFIG_OPS_DECLARE(psoc4_clock);
+
 static DEV_INIT(psoc4_clock_init)
 {
   struct psoc4_clock_private_s *pv = dev->drv_pv;
@@ -803,7 +800,7 @@ static DEV_INIT(psoc4_clock_init)
 
     psoc4_clock_config_read(dev);
 
-    err = dev_cmu_init(&psoc4_clock_drv, dev);
+    err = dev_cmu_init(dev, &psoc4_clock_config_ops);
     if (err)
       goto err_mem;
 
@@ -824,6 +821,18 @@ static DEV_CLEANUP(psoc4_clock_cleanup)
   mem_free(pv);
 
   return 0;
+}
+
+static DEV_CMU_APP_CONFIGID_SET(psoc4_clock_app_configid_set)
+{
+  struct device_s *dev = accessor->dev;
+  error_t err;
+
+  LOCK_SPIN_IRQ(&dev->lock);
+  err = dev_cmu_configid_set(dev, &psoc4_clock_config_ops, config_id);
+  LOCK_RELEASE_IRQ(&dev->lock);
+
+  return err;
 }
 
 DRIVER_DECLARE(psoc4_clock_drv, DRIVER_FLAGS_NO_DEPEND | DRIVER_FLAGS_EARLY_INIT | DRIVER_FLAGS_RETRY_INIT,
