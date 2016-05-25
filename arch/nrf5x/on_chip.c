@@ -33,24 +33,10 @@ DEV_DECLARE_STATIC(cpu_dev, "cpu", DEVICE_FLAG_CPU, arm32m_drv,
                    DEV_STATIC_RES_ID(0, 0),
 #if defined(CONFIG_ARCH_NRF52) && defined(CONFIG_CPU_ARM32M_CLOCK)
 # if defined(CONFIG_DRIVER_CLOCK)
-                   DEV_STATIC_RES_CLK_SRC("/clock", NRF_CLOCK_HF, 0),
+                   DEV_STATIC_RES_CLK_SRC("/clock", NRF_CLOCK_SRC_HFCLK, 0),
 #else
                    DEV_STATIC_RES_FREQ_ACC(64000000, 1, 7, 24),
 # endif
-#endif
-                   );
-
-#endif
-
-#if defined(CONFIG_DRIVER_NRF5X_CLOCK)
-
-DEV_DECLARE_STATIC(clock_dev, "clock", 0, nrf5x_clock_drv,
-                   NRF_STATIC_RES_PERIPHERAL_MEM(NRF5X_CLOCK),
-                   NRF_STATIC_RES_PERIPHERAL_MEM(NRF5X_TEMP),
-                   DEV_STATIC_RES_DEV_ICU("/cpu"),
-                   DEV_STATIC_RES_IRQ(0, NRF5X_CLOCK, DEV_IRQ_SENSE_HIGH_LEVEL, 0, 1),
-#if !defined(CONFIG_DRIVER_NRF5X_CLOCK_LFCLK_XOSC)
-                   DEV_STATIC_RES_IRQ(1, NRF5X_TEMP, DEV_IRQ_SENSE_HIGH_LEVEL, 0, 1),
 #endif
                    );
 
@@ -80,7 +66,7 @@ DEV_DECLARE_STATIC(rtc1, "rtc1", 0, nrf5x_rtc_drv,
                    DEV_STATIC_RES_DEV_ICU("/cpu"),
                    DEV_STATIC_RES_IRQ(0, NRF5X_RTC1, DEV_IRQ_SENSE_HIGH_LEVEL, 0, 1),
 # ifdef CONFIG_DEVICE_CLOCK
-                   DEV_STATIC_RES_CLK_SRC("/clock", NRF_CLOCK_LF, 0),
+                   DEV_STATIC_RES_CLK_SRC("/clock", NRF_CLOCK_SRC_LFCLK, 0),
 # else
                    DEV_STATIC_RES_FREQ_ACC(32768, 1, 2, 25),
 # endif
@@ -113,7 +99,7 @@ DEV_DECLARE_STATIC(timer1, "timer1", 0, nrf5x_timer_drv,
                    DEV_STATIC_RES_DEV_ICU("/cpu"),
                    DEV_STATIC_RES_IRQ(0, NRF5X_TIMER1, DEV_IRQ_SENSE_HIGH_LEVEL, 0, 1),
 #if defined(CONFIG_DEVICE_CLOCK)
-                   DEV_STATIC_RES_CLK_SRC("/clock", NRF_CLOCK_HF, 0),
+                   DEV_STATIC_RES_CLK_SRC("/clock", NRF_CLOCK_SRC_HFCLK, 0),
 # else
                    DEV_STATIC_RES_FREQ_ACC(16000000, 1, 2, 25),
 # endif

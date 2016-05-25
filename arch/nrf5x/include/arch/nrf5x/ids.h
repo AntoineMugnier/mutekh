@@ -155,20 +155,18 @@ enum nrf5x_peripheral_id_e
 #define NRF_GPIO_RANGE_IRQ_ID 32
 
 /**
-   @this defines identifiers for nRF51/nRF52 clocks as modeled by
-   clock driver in MutekH.
+   @this defines identifiers for nRF51/nRF52 clocks.
  */
 enum nrf5x_clock_id_e
 {
-  NRF_CLOCK_LF,
-  NRF_CLOCK_LF_PRECISE,
-  NRF_CLOCK_HF,
-#if CONFIG_DRIVER_NRF5X_CLOCK_HFCLK_FREQ != 0
-  NRF_CLOCK_HF_PRECISE,
-#else
-  NRF_CLOCK_HF_PRECISE = NRF_CLOCK_HF,
-#endif
-  NRF_CLOCK_EP_COUNT,
+  NRF_CLOCK_SRC_LFCLK,
+  NRF_CLOCK_SRC_HFCLK,
+  NRF_CLOCK_SRC_COUNT,
+  NRF_CLOCK_OSC_LFRC = NRF_CLOCK_SRC_COUNT,
+  NRF_CLOCK_OSC_HFRC,
+  NRF_CLOCK_OSC_HFXO,
+  NRF_CLOCK_OSC_LFXO,
+  NRF_CLOCK_NODE_COUNT,
 };
 
 #endif

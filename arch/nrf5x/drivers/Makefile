@@ -1,4 +1,9 @@
+ifeq ($(CONFIG_DRIVER_NRF5X_CLOCK), defined)
 objs += clock.o
+else
+objs += clock_nodrv.o
+endif
+
 objs-$(CONFIG_DRIVER_NRF5X_GPIO) += gpio.o
 objs-$(CONFIG_DRIVER_NRF5X_GPIO_PWM) += gpio_pwm.o
 objs-$(CONFIG_DRIVER_NRF5X_UART) += uart.o
