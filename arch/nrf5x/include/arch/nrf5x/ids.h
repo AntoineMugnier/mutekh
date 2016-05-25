@@ -190,4 +190,14 @@ enum nrf5x_radio_clock_sink_e
   NRF5X_BLE_CLK_COUNT,
 };
 
+/**
+   @this defines device modes for radio driver
+ */
+enum nrf5x_radio_device_mode_e
+{
+  NRF5X_BLE_MODE_IDLE,
+  NRF5X_BLE_MODE_WAIT,
+  NRF5X_BLE_MODE_RADIO,
+};
+
 #endif

@@ -140,10 +140,13 @@ DEV_DECLARE_STATIC(ble_radio, "ble", 0, nrf5x_ble_drv,
                    DEV_STATIC_RES_IRQ(NRF5X_BLE_IRQ_TIMER, NRF5X_TIMER0, DEV_IRQ_SENSE_HIGH_LEVEL, 0, 1),
                    DEV_STATIC_RES_IRQ(NRF5X_BLE_IRQ_RTC, NRF5X_RTC0, DEV_IRQ_SENSE_HIGH_LEVEL, 0, 1),
 #if defined(CONFIG_DEVICE_CLOCK)
-                   DEV_STATIC_RES_CLK_SRC("/clock", NRF_CLOCK_LF_PRECISE, NRF5X_BLE_CLK_SLEEP),
-                   DEV_STATIC_RES_CLK_SRC("/clock", NRF_CLOCK_HF_PRECISE, NRF5X_BLE_CLK_RADIO),
+                   DEV_STATIC_RES_CLK_SRC("/clock", NRF_CLOCK_SRC_LFCLK, NRF5X_BLE_CLK_SLEEP),
+                   DEV_STATIC_RES_CLK_SRC("/clock", NRF_CLOCK_SRC_HFCLK, NRF5X_BLE_CLK_RADIO),
+                   // 3 device modes: Idle, Wait, Radio
+                   DEV_STATIC_RES_CLOCK_MODES(NRF5X_BLE_CLK_SLEEP, 0, 1, 1),
+                   DEV_STATIC_RES_CLOCK_MODES(NRF5X_BLE_CLK_RADIO, 0, 0, 2),
 # else
-                   DEV_STATIC_RES_FREQ_ACC(32768, 1, 7, 18), // 246ppm
+                   DEV_STATIC_RES_FREQ_ACC(32768, 1, 2, 16), // 41ppm
                    DEV_STATIC_RES_FREQ_ACC(16000000, 1, 2, 16), // 41ppm
 # endif
                    );
