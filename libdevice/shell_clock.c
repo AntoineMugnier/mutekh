@@ -117,8 +117,23 @@ static void dev_shell_clock_configs(struct termui_console_s *con,
               uint32_t frac      = 1000 * (r->u.cmu_osc.num % r->u.cmu_osc.denom) /
                                    r->u.cmu_osc.denom;
 
-              termui_con_printf(con, "  osc: node %u `%s' @ %"PRIu64".%03"PRIu32" Hz\n",
+              termui_con_printf(con, "  osc: node %u `%s' @ %"PRIu64".%03"PRIu32" Hz",
                                 (uint_fast8_t)r->u.cmu_osc.node, nname, (uint64_t)integral, (uint32_t)frac);
+
+              if (r->u.cmu_osc.acc_e || r->u.cmu_osc.acc_m)
+                {
+                  uint32_t ppb = dev_acc_ppb(r->u.cmu_osc.acc_m,
+                                             r->u.cmu_osc.acc_e);
+
+                  if (ppb > 10000000)
+                    termui_con_printf(con, ", %u %%", (ppb + 5000000) / 10000000);
+                  else if (ppb > 1000)
+                    termui_con_printf(con, ", %u ppm", (ppb + 500) / 1000);
+                  else
+                    termui_con_printf(con, ", %u ppb", ppb);
+                }
+
+              termui_con_printf(con, "\n");
 
               break;
             }

@@ -117,14 +117,19 @@ struct dev_freq_s
 /** @This tests if the frequency accuracy value is valid @see dev_freq_s */
 #define DEV_FREQ_ACC_IS_VALID(a) ((a).acc_e != 0)
 
+ALWAYS_INLINE uint32_t dev_acc_ppb(uint_fast8_t m, uint_fast8_t e)
+{
+  uint32_t r = (m | 8);
+  if (e >= 4)
+    r <<= e - 4;
+  else
+    r >>= 4 - e;
+  return r;
+}
+
 ALWAYS_INLINE uint32_t dev_freq_acc_ppb(const struct dev_freq_s *freq)
 {
-  uint32_t r = (freq->acc_m | 8);
-  if (freq->acc_e >= 4)
-    r <<= freq->acc_e - 4;
-  else
-    r >>= 4 - freq->acc_e;
-  return r;
+  return dev_acc_ppb(freq->acc_m, freq->acc_e);
 }
 
 ALWAYS_INLINE void dev_freq_acc_set(struct dev_freq_s *freq, uint8_t acc_m, uint8_t acc_e)
