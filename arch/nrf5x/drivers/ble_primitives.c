@@ -46,6 +46,7 @@ void nrf5x_ble_rtc_start(struct nrf5x_ble_private_s *pv)
 {
 #if defined(CONFIG_DEVICE_CLOCK)
   dev_clock_sink_gate(&pv->clock_sink[NRF5X_BLE_CLK_SLEEP], DEV_CLOCK_EP_CLOCK);
+  dev_clock_sink_throttle(&pv->clock_sink[NRF5X_BLE_CLK_SLEEP], NRF5X_BLE_MODE_WAIT);
 #endif
 
   nrf5x_ble_backlog(pv->current, "RTC start", 0);
@@ -60,6 +61,7 @@ void nrf5x_ble_rtc_stop(struct nrf5x_ble_private_s *pv)
 {
 #if defined(CONFIG_DEVICE_CLOCK)
   dev_clock_sink_gate(&pv->clock_sink[NRF5X_BLE_CLK_SLEEP], DEV_CLOCK_EP_NONE);
+  dev_clock_sink_throttle(&pv->clock_sink[NRF5X_BLE_CLK_SLEEP], NRF5X_BLE_MODE_IDLE);
 #endif
 
   nrf5x_ble_backlog(pv->current, "RTC stop", 0);
@@ -421,19 +423,16 @@ void nrf5x_ble_pipelined_reset(struct nrf5x_ble_private_s *pv)
 bool_t nrf5x_ble_clock_request(struct nrf5x_ble_private_s *pv)
 {
   gpio(I_CLOCK_REQ, I_CLOCK_REQ);
-  error_t err = dev_clock_sink_gate(&pv->clock_sink[NRF5X_BLE_CLK_RADIO], DEV_CLOCK_EP_CLOCK);
+  dev_clock_sink_throttle(&pv->clock_sink[NRF5X_BLE_CLK_RADIO], NRF5X_BLE_MODE_RADIO);
 
-  if (err == 0)
-    gpio(I_CLOCK_RUN, 1);
-
-  return err == 0;
+  return pv->hfclk_is_precise;
 }
 
 void nrf5x_ble_clock_release(struct nrf5x_ble_private_s *pv)
 {
   gpio(I_CLOCK_REQ, 0);
   gpio(I_CLOCK_RUN, 0);
-  dev_clock_sink_gate(&pv->clock_sink[NRF5X_BLE_CLK_RADIO], DEV_CLOCK_EP_NONE);
+  dev_clock_sink_throttle(&pv->clock_sink[NRF5X_BLE_CLK_RADIO], NRF5X_BLE_MODE_IDLE);
 }
 
 #endif
