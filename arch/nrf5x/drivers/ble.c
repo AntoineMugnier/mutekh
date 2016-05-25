@@ -176,21 +176,29 @@ static DEV_USE(nrf5x_ble_use)
   switch (op)
     {
 #if defined(CONFIG_DEVICE_CLOCK)
-    case DEV_USE_CLOCK_SINK_GATE_DONE: {
-# if defined(CONFIG_DRIVER_NRF5X_BLE_DEBUG)
-      struct dev_clock_sink_ep_s *sink = param;
+# ifdef CONFIG_DEVICE_CLOCK_VARFREQ
+    case DEV_USE_CLOCK_SINK_FREQ_CHANGED: {
+      struct dev_clock_notify_s *notif = param;
+      struct dev_clock_sink_ep_s *sink = notif->sink;
       struct device_s *dev = sink->dev;
       struct nrf5x_ble_private_s *pv = dev->drv_pv;
+      uint_fast8_t sink_id = sink - pv->clock_sink;
 
-      switch (sink - pv->clock_sink) {
+      switch (sink_id) {
+      case NRF5X_BLE_CLK_SLEEP:
+        pv->sleep_freq = notif->freq;
+        pv->sca = ble_sca_from_accuracy(&pv->sleep_freq);
+        break;
+
       case NRF5X_BLE_CLK_RADIO:
+        pv->hfclk_is_precise = notif->freq.acc_e < 17;
         gpio(I_CLOCK_RUN, 1);
         break;
       }
-# endif
 
       return 0;
     }
+# endif
 #endif
 
     case DEV_USE_START: {
@@ -324,11 +332,13 @@ static DEV_INIT(nrf5x_ble_init)
   if (err)
     goto err_free_pv;
 
-  err = dev_drv_clock_init(dev, &pv->clock_sink[NRF5X_BLE_CLK_RADIO], NRF5X_BLE_CLK_RADIO, 0, NULL);
+  err = dev_drv_clock_init(dev, &pv->clock_sink[NRF5X_BLE_CLK_RADIO], NRF5X_BLE_CLK_RADIO,
+                           DEV_CLOCK_EP_FREQ_NOTIFY, NULL);
   if (err)
     goto err_free_pv;
 
-  err = dev_drv_clock_init(dev, &pv->clock_sink[NRF5X_BLE_CLK_SLEEP], NRF5X_BLE_CLK_SLEEP, 0, &pv->sleep_freq);
+  err = dev_drv_clock_init(dev, &pv->clock_sink[NRF5X_BLE_CLK_SLEEP], NRF5X_BLE_CLK_SLEEP,
+                           DEV_CLOCK_EP_FREQ_NOTIFY, &pv->sleep_freq);
   if (err)
     goto err_cleanup_sleep_clock;
 

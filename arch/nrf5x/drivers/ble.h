@@ -42,11 +42,11 @@ struct net_scheduler_s;
 
 #if defined(CONFIG_DEVICE_CLOCK)
 # if defined(CONFIG_ARCH_NRF51)
-#  if CONFIG_DRIVER_NRF5X_CLOCK_HFCLK_FREQ == 32
-#   define HFCLK_RAMPUP_US     750
-#  else
+/* #  if CONFIG_DRIVER_NRF5X_CLOCK_HFCLK_FREQ == 32 */
+/* #   define HFCLK_RAMPUP_US     750 */
+/* #  else */
 #   define HFCLK_RAMPUP_US     800
-#  endif
+/* #  endif */
 # elif defined(CONFIG_ARCH_NRF52)
 #  define HFCLK_RAMPUP_US      500
 # endif
@@ -219,6 +219,7 @@ struct nrf5x_ble_private_s {
   bool_t pipelining : 1;
   bool_t pipelining_race : 1;
   bool_t wait_end : 1;
+  bool_t hfclk_is_precise : 1;
 
 #if defined(CONFIG_DEVICE_CLOCK)
   struct dev_freq_s sleep_freq;
