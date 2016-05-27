@@ -20,6 +20,7 @@
 
 #include <hexo/types.h>
 #include <hexo/endian.h>
+#include <hexo/bit.h>
 #include <hexo/iospace.h>
 
 #include <mutek/mem_alloc.h>
@@ -211,7 +212,7 @@ static void nrf5x_persist_storage_write(uintptr_t base,
 
 static inline size_t item_size(const struct dev_persist_descriptor_s *desc)
 {
-  return sizeof(*desc) + ALIGN_VALUE_UP(desc->size, 4);
+  return sizeof(*desc) + align_pow2_up(desc->size, 4);
 }
 
 static void nrf5x_persist_item_invalidate(struct nrf5x_nvmc_private_s *pv,
@@ -563,8 +564,8 @@ static void nrf5x_persist_counter_zero_range(const struct dev_persist_descriptor
   uint32_t last_word = last / 32;
   uint32_t first_bit = first % 32;
   uint32_t last_bit = last % 32;
-  uint32_t first_mask = ~((1 << first_bit) - 1);
-  uint32_t last_mask = (1 << last_bit) - 1;
+  uint32_t first_mask = ~bit_mask(first_bit);
+  uint32_t last_mask = bit_mask(last_bit);
   uint32_t mask = first_mask;
 
   dprintk("zero range %d - %d\n", first_bit, last_bit);
@@ -814,7 +815,7 @@ static void nrf5x_nvmc_flash_op(
 
   if (rq->type & DEV_MEM_OP_PAGE_WRITE)
     {
-      uintptr_t sc_mask = (1 << rq->sc_log2) - 1;
+      uintptr_t sc_mask = bit_mask(rq->sc_log2);
       uint32_t page_word_count = cpu_mem_read_32(NRF_FICR_CODEPAGESIZE) / 4;
 
 

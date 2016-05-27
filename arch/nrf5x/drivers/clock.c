@@ -22,6 +22,7 @@
 #include <hexo/endian.h>
 #include <hexo/iospace.h>
 #include <hexo/interrupt.h>
+#include <hexo/bit.h>
 
 #include <mutek/mem_alloc.h>
 #include <mutek/printk.h>
@@ -779,11 +780,11 @@ static DEV_INIT(nrf5x_clock_init)
   nrf_it_disable_mask(CLOCK_ADDR, -1);
   nrf_it_enable_mask(CLOCK_ADDR, 0
 #if !LFXO_PRESENT
-                     | (1 << NRF_CLOCK_CTTO)
-                     | (1 << NRF_CLOCK_DONE)
+                     | bit(NRF_CLOCK_CTTO)
+                     | bit(NRF_CLOCK_DONE)
 #endif
-                     | (1 << NRF_CLOCK_HFCLKSTARTED)
-                     | (1 << NRF_CLOCK_LFCLKSTARTED)
+                     | bit(NRF_CLOCK_HFCLKSTARTED)
+                     | bit(NRF_CLOCK_LFCLKSTARTED)
                      );
 
 #if !LFXO_PRESENT

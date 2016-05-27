@@ -37,6 +37,7 @@
 
 #include <hexo/types.h>
 #include <hexo/endian.h>
+#include <hexo/bit.h>
 #include <mutek/mem_alloc.h>
 #include <mutek/printk.h>
 
@@ -287,7 +288,7 @@ static DEV_INIT(char_pipe_init)
   uint16_t fcnt;
   if (device_get_param_uint_array(dev, "fifos", &fcnt, &fsizes) || fcnt != 2)
     return -EINVAL;
-  if (!ALIGN_ISPOWTWO(fsizes[0]) || !ALIGN_ISPOWTWO(fsizes[1]))
+  if (!is_pow2(fsizes[0]) || !is_pow2(fsizes[1]))
     return -EINVAL;
   fsize = fsizes[0] + fsizes[1];
 #endif

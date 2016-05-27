@@ -24,7 +24,7 @@
 #include <string.h>
 #include <hexo/types.h>
 #include <hexo/lock.h>
-#include <hexo/endian.h>
+#include <hexo/bit.h>
 #include <mutek/printk.h>
 
 #include <gct_platform.h>
@@ -72,8 +72,8 @@ static const size_t mem_hdr_size_no_crc = sizeof (struct memory_allocator_header
 static const size_t mem_hdr_size_no_crc = sizeof (struct memory_allocator_header_s);
 #endif
 
-static const size_t	mem_hdr_size_align = POW2_M1_CONSTANT_UP((sizeof (struct memory_allocator_header_s) - 1) |
-                                                                 (CONFIG_MUTEK_MEMALLOC_ALIGN - 1)) + 1;
+static const size_t mem_hdr_size_align = pow2_m1_up((sizeof (struct memory_allocator_header_s) - 1) |
+                                                    (CONFIG_MUTEK_MEMALLOC_ALIGN - 1)) + 1;
 
 GCT_CONTAINER_TYPES(free_list, struct memory_allocator_header_s *, free_entry);
 GCT_CONTAINER_TYPES(block_list, struct memory_allocator_header_s *, block_entry);
@@ -99,7 +99,7 @@ struct memory_allocator_region_s
 #endif
 };
 
-static const size_t region_hdr_size = ALIGN_VALUE_UP ( sizeof( struct memory_allocator_region_s ),
+static const size_t region_hdr_size = align_pow2_up ( sizeof( struct memory_allocator_region_s ),
 						       CONFIG_MUTEK_MEMALLOC_ALIGN);
 
 struct memory_allocator_region_s *default_region;
@@ -160,7 +160,7 @@ size_t size_alloc2real(size_t size)
 #ifdef CONFIG_MUTEK_MEMALLOC_GUARD
     + CONFIG_MUTEK_MEMALLOC_GUARD_SIZE * 2
 #endif
-    + ALIGN_VALUE_UP(size, CONFIG_MUTEK_MEMALLOC_ALIGN);
+    + align_pow2_up(size, CONFIG_MUTEK_MEMALLOC_ALIGN);
 }
 
 /*@this converts actual block size to usable memory block size*/
@@ -722,7 +722,7 @@ void *memory_allocator_pop(struct memory_allocator_region_s *region, size_t size
       if (align > mem_hdr_size_align)
         {
           uint8_t *mem = (uint8_t*)hdr2mem(hdr);
-          uint8_t *amem = (uint8_t*)ALIGN_ADDRESS_UP(mem, align);
+          uint8_t *amem = (uint8_t*)address_align_up(mem, align);
           uintptr_t offset = amem - mem;
 
           if (offset)
@@ -882,8 +882,8 @@ void *memory_allocator_reserve(struct memory_allocator_region_s *region, void *s
   if ((uint8_t*)hdr2mem(h) > start)
     return NULL;
 
-  start = ALIGN_ADDRESS_LOW(mem2hdr(start), mem_hdr_size_align);
-  end = ALIGN_ADDRESS_UP(end + CONFIG_MUTEK_MEMALLOC_GUARD_SIZE, mem_hdr_size_align);
+  start = address_align_down(mem2hdr(start), mem_hdr_size_align);
+  end = address_align_up(end + CONFIG_MUTEK_MEMALLOC_GUARD_SIZE, mem_hdr_size_align);
 
   assert(start < end);
   size = end - start;
@@ -968,8 +968,8 @@ memory_allocator_init(struct memory_allocator_region_s *container_region,
   struct memory_allocator_region_s *region;
   struct memory_allocator_header_s	*hdr, *hdr_end;
 
-    start = ALIGN_ADDRESS_UP(start, CONFIG_MUTEK_MEMALLOC_ALIGN);
-    end = ALIGN_ADDRESS_LOW(end, CONFIG_MUTEK_MEMALLOC_ALIGN);
+    start = address_align_up(start, CONFIG_MUTEK_MEMALLOC_ALIGN);
+    end = address_align_down(end, CONFIG_MUTEK_MEMALLOC_ALIGN);
 
   if (container_region == NULL)
     {

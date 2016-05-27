@@ -20,7 +20,7 @@
 */
 
 #include <mutek/mem_alloc.h>
-#include <hexo/endian.h>
+#include <hexo/bit.h>
 #include <hexo/iospace.h>
 #include <mutek/startup.h>
 #include <assert.h>
@@ -42,13 +42,13 @@ void mutek_mem_alloc_init()
   /* Use the end of the LOAD_ROM_RW region when the startup heap size
      is 0.  The actual heap will be located after data and bss
      sections. This is only used when CONFIG_LOAD_ROM is defined. */
-  start = ALIGN_VALUE_UP((uintptr_t)&__bss_end, CONFIG_MUTEK_MEMALLOC_ALIGN);
+  start = align_pow2_up((uintptr_t)&__bss_end, CONFIG_MUTEK_MEMALLOC_ALIGN);
   end = CONFIG_LOAD_ROM_RW_ADDR + CONFIG_LOAD_ROM_RW_SIZE;
 # elif defined(CONFIG_LOAD_ROM) && CONFIG_LOAD_ROM_RW_ADDR + CONFIG_LOAD_ROM_RW_SIZE == CONFIG_STARTUP_HEAP_ADDR
   /* Merge the end of the LOAD_ROM_RW region with the startup heap
      when they are contiguous. This is only used when CONFIG_LOAD_ROM
      is defined. */
-  start = ALIGN_VALUE_UP((uintptr_t)&__bss_end, CONFIG_MUTEK_MEMALLOC_ALIGN);
+  start = align_pow2_up((uintptr_t)&__bss_end, CONFIG_MUTEK_MEMALLOC_ALIGN);
   end = CONFIG_STARTUP_HEAP_ADDR + CONFIG_STARTUP_HEAP_SIZE;
 # else
 #  define LOAD_ROM_RW_EXTEND
@@ -62,8 +62,8 @@ void mutek_mem_alloc_init()
 
 #if defined(CONFIG_LOAD_ROM) && defined(LOAD_ROM_RW_EXTEND)
   /* Add the end of the LOAD_ROM_RW region */
-  start = ALIGN_VALUE_UP((uintptr_t)&__bss_end, CONFIG_MUTEK_MEMALLOC_ALIGN);
-  uintptr_t size = ALIGN_VALUE_LOW(CONFIG_LOAD_ROM_RW_ADDR + CONFIG_LOAD_ROM_RW_SIZE - start, CONFIG_MUTEK_MEMALLOC_ALIGN);
+  start = align_pow2_up((uintptr_t)&__bss_end, CONFIG_MUTEK_MEMALLOC_ALIGN);
+  uintptr_t size = align_pow2_down(CONFIG_LOAD_ROM_RW_ADDR + CONFIG_LOAD_ROM_RW_SIZE - start, CONFIG_MUTEK_MEMALLOC_ALIGN);
   if (size >= 64)
     memory_allocator_extend(default_region, start, size);
 #endif

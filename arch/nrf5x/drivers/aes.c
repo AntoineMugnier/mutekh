@@ -26,6 +26,7 @@
 #include <hexo/types.h>
 #include <hexo/endian.h>
 #include <hexo/lock.h>
+#include <hexo/bit.h>
 
 #include <device/device.h>
 #include <device/resources.h>
@@ -78,12 +79,12 @@ static DEVCRYPTO_INFO(nrf5x_aes_info)
 
   info->name = "aes";
   info->modes_mask = 0
-    | (1 << DEV_CRYPTO_MODE_ECB)
+    | bit(DEV_CRYPTO_MODE_ECB)
 #ifdef CONFIG_DRIVER_NRF5X_AES_RANDOM
-    | (1 << DEV_CRYPTO_MODE_RANDOM)
+    | bit(DEV_CRYPTO_MODE_RANDOM)
 #endif
 #ifdef CONFIG_DRIVER_NRF5X_AES_CMAC
-    | (1 << DEV_CRYPTO_MODE_HMAC)
+    | bit(DEV_CRYPTO_MODE_HMAC)
 #endif
     ;
   info->cap = DEV_CRYPTO_CAP_INPLACE

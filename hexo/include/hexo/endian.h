@@ -595,63 +595,6 @@ ALWAYS_INLINE void endian_be64_na_store(void *addr, uint64_t val)
 #endif
 }
 
-/***********************************************************************
- *		Address and values alignment
- */
-
-/** @this returns true if value is a power of 2 */
-#define ALIGN_ISPOWTWO(x)	!((x) & ((x) - 1))
-
-/** @this returns true if value is aligned */
-#define IS_ALIGNED(x, b)	!(((uintptr_t)(x)) & ((b) - 1))
-
-/** @internal @this does not use aligment code if b==1 at compilation time. */
-#define __ALIGN_CONSTANT(x, b, A) (__builtin_constant_p(b) ? ((b) == 1 ? (x) : A(x, b)) : A(x, b))
-
-/** @internal */
-#define __ALIGN_VALUE_UP(x, b)	((((x) - 1) | ((b) - 1)) + 1)
-/** @this aligns value on the next power of two boundary  */
-#define ALIGN_VALUE_UP(x, b)	__ALIGN_CONSTANT(x, b, __ALIGN_VALUE_UP)
-
-/** @internal */
-#define __ALIGN_VALUE_LOW(x, b)	((x) & ~((b) - 1))
-/** @this aligns value on the next power of two boundary */
-#define ALIGN_VALUE_LOW(x, b)	__ALIGN_CONSTANT(x, b, __ALIGN_VALUE_LOW)
-
-/** @this aligns address on the next power of two boundary  */
-#define ALIGN_ADDRESS_UP(x, b)	((void*)ALIGN_VALUE_UP((uintptr_t)(x), (b)))
-
-/** @this aligns address on the next power of two boundary  */
-#define ALIGN_ADDRESS_LOW(x, b)	((void*)ALIGN_VALUE_LOW((uintptr_t)(x), (b)))
-
-#define __POW2_M1_CONSTANT_UP1(x)  ((x) | ((x) >> 1))
-#define __POW2_M1_CONSTANT_UP2(x)  (__POW2_M1_CONSTANT_UP1(x) | (__POW2_M1_CONSTANT_UP1(x) >> 2))
-#define __POW2_M1_CONSTANT_UP4(x)  (__POW2_M1_CONSTANT_UP2(x) | (__POW2_M1_CONSTANT_UP2(x) >> 4))
-#define __POW2_M1_CONSTANT_UP8(x)  (__POW2_M1_CONSTANT_UP4(x) | (__POW2_M1_CONSTANT_UP4(x) >> (8 % (sizeof(x)*8))))
-#define __POW2_M1_CONSTANT_UP16(x) (__POW2_M1_CONSTANT_UP8(x) | (__POW2_M1_CONSTANT_UP8(x) >> (16 % (sizeof(x)*8))))
-/** @this returns a power of 2 minus one where the pow2 is greater than the specified value */
-#define POW2_M1_CONSTANT_UP(x)    (__POW2_M1_CONSTANT_UP16(x) | (__POW2_M1_CONSTANT_UP16(x) >> (32 % (sizeof(x)*8))))
-
-/** @this returns a power of 2 greater or equal to the specified value */
-#define POW2_CONSTANT_UP(x) (POW2_M1_CONSTANT_UP(x - 1) + 1)
-
-/***********************************************************************
- *		Bits extraction macro
- */
-
-/** @this extracts bit at specified index */
-#define BIT_EXTRACT(v, index) ((v) & (1ULL << (index)))
-
-#define BIT_SET(v, index) ((v) |= (1ULL << (index)))
-
-#define BIT_CLEAR(v, index) ((v) &= ~(1ULL << (index)))
-
-/** @this extracts count bits from specified index */
-#define BITS_EXTRACT_FC(v, first, count) (((v) >> (first)) & ((1ULL << (count)) - 1))
-
-/** @this extracts bits between specified first and last index */
-#define BITS_EXTRACT_FL(v, first, last) BITS_EXTRACT_FC(v, first, (last) - (first) + 1)
-
 C_HEADER_END
 
 #endif

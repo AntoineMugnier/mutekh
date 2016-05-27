@@ -22,7 +22,7 @@
 
 #include <mutek/memory_allocator.h>
 #include <string.h>
-#include <hexo/endian.h>
+#include <hexo/bit.h>
 
 struct memory_allocator_region_s
 {
@@ -41,11 +41,11 @@ void *memory_allocator_pop(struct memory_allocator_region_s *region, size_t size
   if (align < CONFIG_MUTEK_MEMALLOC_ALIGN)
     align = CONFIG_MUTEK_MEMALLOC_ALIGN;
 
-  size = ALIGN_VALUE_UP(size, align);
+  size = align_pow2_up(size, align);
 
   lock_spin(&region->lock);
 
-  res = ALIGN_ADDRESS_UP((size_t*)region->next + 1, align);
+  res = address_align_up((size_t*)region->next + 1, align);
   next = (uint8_t*)res + size;
 
   if (next <= region->last)
@@ -75,8 +75,8 @@ memory_allocator_init(struct memory_allocator_region_s *container_region,
 {
   struct memory_allocator_region_s *region;
 
-  start = ALIGN_ADDRESS_UP(start, CONFIG_MUTEK_MEMALLOC_ALIGN);
-  end = ALIGN_ADDRESS_LOW(end, CONFIG_MUTEK_MEMALLOC_ALIGN);
+  start = address_align_up(start, CONFIG_MUTEK_MEMALLOC_ALIGN);
+  end = address_align_down(end, CONFIG_MUTEK_MEMALLOC_ALIGN);
 
   if (container_region == NULL)
     {

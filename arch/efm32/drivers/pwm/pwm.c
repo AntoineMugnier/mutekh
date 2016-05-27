@@ -25,6 +25,7 @@
 #include <hexo/types.h>
 #include <hexo/endian.h>
 #include <hexo/iospace.h>
+#include <hexo/bit.h>
 
 #include <device/device.h>
 #include <device/resources.h>
@@ -75,7 +76,7 @@ static error_t efm32_pwm_validate_parameter(struct device_pwm_s *pdev, struct de
 
   for (uint8_t i = 0; i < EFM32_PWM_CHANNEL_MAX; i++)
     {
-      if (!(rq->chan_mask & (1 << i)))
+      if (!(rq->chan_mask & bit(i)))
         continue;
 
       const struct dev_pwm_config_s * cfg = &rq->cfg[i];
@@ -184,7 +185,7 @@ static DEV_PWM_CONFIG(efm32_pwm_config)
 
   for (uint8_t i = 0; i < EFM32_PWM_CHANNEL_MAX - pdev->number; i++)
     {
-      if (!(rq->chan_mask & (1 << i)))
+      if (!(rq->chan_mask & bit(i)))
         continue;
 
       const struct dev_pwm_config_s * cfg = &rq->cfg[i];
@@ -217,10 +218,10 @@ static DEV_PWM_CONFIG(efm32_pwm_config)
       if (rq->mask & DEV_PWM_MASK_POL)
         efm32_pwm_polarity(dev, channel, cfg->pol);
 
-      if (!(pv->config & (1 << channel)))
+      if (!(pv->config & bit(channel)))
       /* Start channel */
         {
-          pv->config |= (1 << channel);
+          pv->config |= bit(channel);
           cpu_mem_write_32(pv->addr + EFM32_TIMER_CC_CTRL_ADDR(channel), EFM32_TIMER_CC_CTRL_MODE(PWM));
         }
     }
@@ -250,7 +251,7 @@ static void efm32_pwm_clk_changed(struct device_s *dev)
 
   for (uint8_t i = 0; i < EFM32_PWM_CHANNEL_MAX; i++)
     {
-      if (pv->config & (1 << i))
+      if (pv->config & bit(i))
         efm32_pwm_duty(dev, i);
     }
 }

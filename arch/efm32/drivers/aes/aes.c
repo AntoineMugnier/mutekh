@@ -23,6 +23,7 @@
 #include "aes.h"
 
 #include <mutek/mem_alloc.h>
+#include <hexo/bit.h>
 
 static DEVCRYPTO_INFO(efm32_aes_info)
 {
@@ -35,19 +36,19 @@ static DEVCRYPTO_INFO(efm32_aes_info)
   info->name = "aes";
   info->modes_mask = 0
 #ifdef CONFIG_DRIVER_EFM32_AES_ECB
-    | (1 << DEV_CRYPTO_MODE_ECB)
+    | bit(DEV_CRYPTO_MODE_ECB)
 #endif
 #ifdef CONFIG_DRIVER_EFM32_AES_CBC
-    | (1 << DEV_CRYPTO_MODE_CBC)
+    | bit(DEV_CRYPTO_MODE_CBC)
 #endif
 #ifdef CONFIG_DRIVER_EFM32_AES_CTR
-    | (1 << DEV_CRYPTO_MODE_CTR)
+    | bit(DEV_CRYPTO_MODE_CTR)
 #endif
 #ifdef CONFIG_DRIVER_EFM32_AES_OCB3
-    | (1 << DEV_CRYPTO_MODE_OCB3)
+    | bit(DEV_CRYPTO_MODE_OCB3)
 #endif
 #ifdef CONFIG_DRIVER_EFM32_AES_RANDOM
-    | (1 << DEV_CRYPTO_MODE_RANDOM)
+    | bit(DEV_CRYPTO_MODE_RANDOM)
 #endif
     ;
   info->align_log2 = 0;

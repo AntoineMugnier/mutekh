@@ -20,6 +20,7 @@
 
 #include "include/mutek/mem_alloc.h"
 #include "include/mutek/slab.h"
+#include <hexo/bit.h>
 
 void slab_init(
     struct slab_s *slab,
@@ -32,7 +33,7 @@ void slab_init(
     slab_group_list_init(&slab->group_list);
     slab_unit_list_init(&slab->unit_list);
 
-    slab->unit_size = ALIGN_VALUE_UP(unit_size, 8);
+    slab->unit_size = align_pow2_up(unit_size, 8);
     slab->grow = grow;
     slab->scope = scope;
 }
@@ -63,7 +64,7 @@ void *slab_nolock_grow(struct slab_s *slab)
     if (next_count == 0)
         return NULL;
 
-    group_size = ALIGN_VALUE_UP(sizeof(*group), 8);
+    group_size = align_pow2_up(sizeof(*group), 8);
     unit_bytes = slab->unit_size * next_count;
     group = mem_alloc(group_size + unit_bytes, slab->scope);
 

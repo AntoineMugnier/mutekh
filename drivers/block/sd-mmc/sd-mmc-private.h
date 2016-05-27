@@ -25,6 +25,7 @@
 
 #include <hexo/types.h>
 #include <hexo/lock.h>
+#include <hexo/bit.h>
 
 #define SD_MMC_MAX_RQ_COUNT 64
 
@@ -136,13 +137,13 @@ DRIVER_PV(struct sd_mmc_context_s
 #define SDMMC_CMD_READ_SINGLE_BLOCK  17
 #define SDMMC_CMD_WRITE_SINGLE_BLOCK 24
 
-#define SDMMC_R1_IDLE        (1<<0)
-#define SDMMC_R1_ERASE_RESET (1<<1)
-#define SDMMC_R1_ILLEGAL     (1<<2)
-#define SDMMC_R1_CRC_ERROR   (1<<3)
-#define SDMMC_R1_ERASE_ERROR (1<<4)
-#define SDMMC_R1_ADDR_ERROR  (1<<5)
-#define SDMMC_R1_PARAM_ERROR (1<<6)
+#define SDMMC_R1_IDLE        bit(0)
+#define SDMMC_R1_ERASE_RESET bit(1)
+#define SDMMC_R1_ILLEGAL     bit(2)
+#define SDMMC_R1_CRC_ERROR   bit(3)
+#define SDMMC_R1_ERASE_ERROR bit(4)
+#define SDMMC_R1_ADDR_ERROR  bit(5)
+#define SDMMC_R1_PARAM_ERROR bit(6)
 
 #define SDMMC_TOKEN_DATA_START 0xfe
 #define SDMMC_TOKEN_MULT_WRITE_DATA_START 0xfc

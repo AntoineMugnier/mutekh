@@ -22,6 +22,7 @@
 
 #include <hexo/error.h>
 #include <hexo/endian.h>
+#include <hexo/bit.h>
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -91,7 +92,7 @@ void device_init(struct device_s *dev, const struct dev_resource_table_s *tbl)
   dev->res_tbl = (void*)tbl;
 }
 
-static const size_t devsize = ALIGN_VALUE_UP(sizeof(struct device_s), sizeof(uint64_t));
+static const size_t devsize = align_pow2_up(sizeof(struct device_s), sizeof(uint64_t));
 
 struct device_s *device_alloc(size_t resources)
 {

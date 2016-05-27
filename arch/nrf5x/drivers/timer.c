@@ -22,6 +22,7 @@
 #include <hexo/endian.h>
 #include <hexo/iospace.h>
 #include <hexo/interrupt.h>
+#include <hexo/bit.h>
 
 #include <mutek/mem_alloc.h>
 #include <mutek/printk.h>
@@ -85,7 +86,7 @@ static dev_timer_value_t nrf5x_timer_value_get(
   counter = nrf_reg_get(pv->addr, NRF_TIMER_CC(VALUE));
   if (!(counter >> (pv->width - 1))
       && nrf_event_check(pv->addr, NRF_TIMER_COMPARE(OVERFLOW)))
-    counter += (dev_timer_value_t)1 << pv->width;
+    counter += bit(pv->width);
   CPU_INTERRUPT_RESTORESTATE;
 
   return pv->base + counter;

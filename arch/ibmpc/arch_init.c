@@ -26,7 +26,7 @@
 static void *
 mem_ibmpc_memsize_probe(void *start)
 {
-  volatile uint8_t	*x = ALIGN_ADDRESS_UP(start, 4096);
+  volatile uint8_t	*x = address_align_up(start, 4096);
   size_t		step = 4096;
 
   while (1) {

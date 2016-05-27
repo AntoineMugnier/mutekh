@@ -23,6 +23,7 @@
 
 #include <hexo/types.h>
 #include <hexo/endian.h>
+#include <hexo/bit.h>
 
 #include <device/device.h>
 #include <device/resources.h>
@@ -119,7 +120,7 @@ static void nrf5x_adc_sample_next(struct device_s *dev)
   struct nrf5x_adc_private_s *pv = dev->drv_pv;
 
   uint8_t line = __builtin_ctz(pv->todo);
-  pv->todo &= ~(1 << line);
+  pv->todo &= ~bit(line);
 
   dprintk("ADC sample %d line %d conf %08x\n", pv->index, line, pv->config[line]);
 

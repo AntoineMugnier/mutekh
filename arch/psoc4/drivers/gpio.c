@@ -21,6 +21,7 @@
 #include <hexo/types.h>
 #include <hexo/endian.h>
 #include <hexo/iospace.h>
+#include <hexo/bit.h>
 
 #include <mutek/mem_alloc.h>
 
@@ -113,7 +114,7 @@ static DEV_GPIO_SET_MODE(psoc4_gpio_set_mode)
     return err;
 
   uint64_t m
-    = (endian_le64_na_load(mask) & ((1 << (io_last + 1)) - 1))
+    = (endian_le64_na_load(mask) & bit_mask(io_last - io_first + 1))
     << io_first;
 
   LOCK_SPIN_IRQ(&dev->lock);
@@ -131,10 +132,10 @@ static DEV_GPIO_SET_MODE(psoc4_gpio_set_mode)
 
     if (pin_value)
       cpu_mem_write_32(GPA(PSOC4_IO_PORT(pin)) + GPIO_PORT_DR_SET_ADDR,
-                       1 << PSOC4_IO_PIN(pin));
+                       bit(PSOC4_IO_PIN(pin)));
     else
       cpu_mem_write_32(GPA(PSOC4_IO_PORT(pin)) + GPIO_PORT_DR_CLR_ADDR,
-                       1 << PSOC4_IO_PIN(pin));
+                       bit(PSOC4_IO_PIN(pin)));
   }
 
   LOCK_RELEASE_IRQ(&dev->lock);
@@ -146,7 +147,7 @@ static DEV_GPIO_SET_OUTPUT(psoc4_gpio_set_output)
 {
   struct device_s *dev = gpio->dev;
 
-  uint64_t mask = ((uint64_t)1 << (io_last + 1)) - ((uint64_t)1 << io_first);
+  uint64_t mask = bit_range(io_first, io_last - io_first + 1);
   uint64_t _setm = (endian_le64_na_load(set_mask) << io_first) & mask;
   uint64_t _clearm = (endian_le64_na_load(clear_mask) << io_first) & mask;
   uint64_t setm = _setm & _clearm;
@@ -187,7 +188,7 @@ static DEV_GPIO_GET_INPUT(psoc4_gpio_get_input)
   dprintk("Read %llx\n", tmp);
 
   tmp >>= io_first;
-  tmp &= ((uint64_t)1 << (io_last - io_first + 1)) - 1;
+  tmp &= bit_mask(io_last - io_first + 1);
   endian_le64_na_store(data, tmp);
 
   dprintk("Read2 %llx\n", tmp);
@@ -268,14 +269,14 @@ static DEV_IRQ_SRC_PROCESS(psoc4_gpio_process)
   struct psoc4_gpio_private_s *pv = dev->drv_pv;
   uint8_t port = ep - pv->irq_in;
 
-  cpu_mem_write_32(GA + GPIO_INTR_CAUSE_ADDR, 1 << port);
+  cpu_mem_write_32(GA + GPIO_INTR_CAUSE_ADDR, bit(port));
 
   uint32_t pins = cpu_mem_read_32(GPA(port) + GPIO_PORT_INTR_ADDR);
   cpu_mem_write_32(GPA(port) + GPIO_PORT_INTR_ADDR, pins);
 
   while (pins) {
     uint8_t pin = __builtin_ctzl(pins);
-    pins &= ~(1 << pin);
+    pins &= ~bit(pin);
 
     uint8_t io = PSOC4_IO(port, pin);
 
@@ -313,10 +314,10 @@ static DEV_IOMUX_SETUP(psoc4_gpio_iomux_setup)
   /* Default value (for pullups) */
   if (pin_value)
     cpu_mem_write_32(GPA(PSOC4_IO_PORT(io_id)) + GPIO_PORT_DR_SET_ADDR,
-                     1 << PSOC4_IO_PIN(io_id));
+                     bit(PSOC4_IO_PIN(io_id)));
   else
     cpu_mem_write_32(GPA(PSOC4_IO_PORT(io_id)) + GPIO_PORT_DR_CLR_ADDR,
-                     1 << PSOC4_IO_PIN(io_id));
+                     bit(PSOC4_IO_PIN(io_id)));
 
   /* HSIOM Mux mode */
   tmp = cpu_mem_read_32(HPA(PSOC4_IO_PORT(io_id)) + HSIOM_PORT_SEL_ADDR);

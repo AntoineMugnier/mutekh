@@ -25,6 +25,7 @@
 #include <hexo/iospace.h>
 #include <mutek/mem_alloc.h>
 #include <hexo/interrupt.h>
+#include <hexo/bit.h>
 
 #include <device/resources.h>
 #include <device/device.h>
@@ -202,15 +203,15 @@ static bool_t efm32_dma_start_intl(struct device_s *dev, struct dev_dma_rq_s *rq
 
   bool_t wempty = dev_request_queue_isempty(&pv->queue[wchan]);
 
-  bool_t idle = !((pv->busy | pv->intlrun) & (1 << wchan));
+  bool_t idle = !((pv->busy | pv->intlrun) & bit(wchan));
 
   if (wempty && idle)
   {
-    pv->intlrun |= (1 << wchan);
+    pv->intlrun |= bit(wchan);
     return 1;
   }
 
-  pv->intlwait |= (1 << wchan);
+  pv->intlwait |= bit(wchan);
   return 0;
 
 }
@@ -245,7 +246,7 @@ static DEVDMA_REQUEST(efm32_dma_request)
 
   uint8_t chan = req->param[0].channel;
   bool_t empty = dev_request_queue_isempty(&pv->queue[chan]);
-  bool_t idle = !((pv->busy | pv->intlrun) & (1 << chan));
+  bool_t idle = !((pv->busy | pv->intlrun) & bit(chan));
 
   dev_request_queue_pushback(&pv->queue[chan], base);
 
@@ -301,7 +302,7 @@ static DEV_IRQ_SRC_PROCESS(efm32_dma_irq)
         rq =  dev_dma_rq_s_cast(dev_request_queue_head(&pv->queue[i]));
        
         bool_t end = 1;
-        uint16_t mask = 1 << i;
+        uint16_t mask = bit(i);
 
         /* Not the end of a write interleaved transfer */
         if (!(pv->intlrun & mask))

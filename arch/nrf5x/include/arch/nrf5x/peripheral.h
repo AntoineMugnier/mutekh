@@ -60,6 +60,7 @@
  */
 
 #include <hexo/iospace.h>
+#include <hexo/bit.h>
 
 /** @internal @multiple */
 #define NRF_TASK     0x0
@@ -92,7 +93,7 @@ ALWAYS_INLINE
 bool_t nrf_it_is_enabled(uintptr_t base, uint8_t it)
 {
     uintptr_t addr = base | NRF_INTENSET;
-    return !!(cpu_mem_read_32(addr) & (1 << it));
+    return bit_get(cpu_mem_read_32(addr), it);
 }
 
 /**
@@ -124,7 +125,7 @@ void nrf_it_enable_mask(uintptr_t base, uint32_t mask)
 ALWAYS_INLINE
 void nrf_it_enable(uintptr_t base, uint8_t it)
 {
-    nrf_it_enable_mask(base, 1 << it);
+    nrf_it_enable_mask(base, bit(it));
 }
 
 /**
@@ -145,7 +146,7 @@ void nrf_it_disable_mask(uintptr_t base, uint32_t mask)
 ALWAYS_INLINE
 void nrf_it_disable(uintptr_t base, uint8_t it)
 {
-    nrf_it_disable_mask(base, 1 << it);
+    nrf_it_disable_mask(base, bit(it));
 }
 
 /**
@@ -156,7 +157,7 @@ ALWAYS_INLINE
 bool_t nrf_evt_is_enabled(uintptr_t base, uint8_t evt)
 {
     uintptr_t addr = base | NRF_EVTENSET;
-    return !!(cpu_mem_read_32(addr) & (1 << evt));
+    return bit_get(cpu_mem_read_32(addr), evt);
 }
 
 /**
@@ -177,7 +178,7 @@ void nrf_evt_enable_mask(uintptr_t base, uint32_t mask)
 ALWAYS_INLINE
 void nrf_evt_enable(uintptr_t base, uint8_t evt)
 {
-    nrf_evt_enable_mask(base, 1 << evt);
+    nrf_evt_enable_mask(base, bit(evt));
 }
 
 /**
@@ -198,7 +199,7 @@ void nrf_evt_disable_mask(uintptr_t base, uint32_t mask)
 ALWAYS_INLINE
 void nrf_evt_disable(uintptr_t base, uint8_t evt)
 {
-    nrf_evt_disable_mask(base, 1 << evt);
+    nrf_evt_disable_mask(base, bit(evt));
 }
 
 /**
@@ -263,7 +264,7 @@ void nrf_short_enable_mask(uintptr_t base, uint32_t mask)
 ALWAYS_INLINE
 void nrf_short_enable(uintptr_t base, uint8_t id)
 {
-  nrf_short_enable_mask(base, 1 << id);
+  nrf_short_enable_mask(base, bit(id));
 }
 
 /**
@@ -274,7 +275,7 @@ ALWAYS_INLINE
 bool_t nrf_short_is_enabled(uintptr_t base, uint8_t id)
 {
     uintptr_t addr = base | NRF_SHORT;
-    return !!(cpu_mem_read_32(addr) & (1 << id));
+    return bit_get(cpu_mem_read_32(addr), id);
 }
 
 /**
@@ -295,7 +296,7 @@ void nrf_short_disable_mask(uintptr_t base, uint32_t mask)
 ALWAYS_INLINE
 void nrf_short_disable(uintptr_t base, uint8_t id)
 {
-  nrf_short_disable_mask(base, 1 << id);
+  nrf_short_disable_mask(base, bit(id));
 }
 
 /**

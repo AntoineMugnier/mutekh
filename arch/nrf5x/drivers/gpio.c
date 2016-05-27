@@ -21,6 +21,7 @@
 #include <hexo/types.h>
 #include <hexo/endian.h>
 #include <hexo/iospace.h>
+#include <hexo/bit.h>
 
 #include <mutek/mem_alloc.h>
 #include <arch/nrf5x/gpio.h>
@@ -135,7 +136,7 @@ static void nrf5x_gpio_input_range_update(struct device_s *dev, uint32_t to_upda
 
     while (to_update) {
       uint8_t pin = __builtin_ctz(to_update);
-      uint32_t bit = 1 << pin;
+      uint32_t bit = bit(pin);
       uint32_t cnf = nrf_reg_get(GPIO_ADDR, NRF_GPIO_PIN_CNF(pin));
 
       cnf &= ~NRF_GPIO_PIN_CNF_SENSE_MASK;
@@ -181,12 +182,12 @@ static DEV_GPIO_SET_MODE(nrf5x_gpio_set_mode)
     return -ENOTSUP;
 
   uint32_t m = (endian_le32_na_load(mask) << io_first)
-    & ((1 << (io_last + 1)) - ((1 << io_first)));
+    & bit_range(io_first, io_last - io_first + 1);
 
   LOCK_SPIN_IRQ(&dev->lock);
 
   for (uint8_t pin = io_first; pin <= io_last; ++pin) {
-    if (!((m >> pin) & 1))
+    if (!bit_get(m, pin))
       continue;
 
     dprintk("%s %d %x\n", __FUNCTION__, pin, nrf_mode);
@@ -215,7 +216,7 @@ static DEV_GPIO_SET_OUTPUT(nrf5x_gpio_set_output)
   if (io_first > NRF_GPIO_COUNT)
     return -ERANGE;
 
-  uint32_t mask = (1 << (io_last + 1)) - (1 << io_first);
+  uint32_t mask = bit_range(io_first, io_last - io_first + 1);
   uint32_t setm = (endian_le32_na_load(set_mask) << io_first) & mask;
   uint32_t clearm = (endian_le32_na_load(clear_mask) << io_first) | ~mask;
 
@@ -244,7 +245,7 @@ static DEV_GPIO_GET_INPUT(nrf5x_gpio_get_input)
 
   LOCK_SPIN_IRQ(&dev->lock);
 
-  uint32_t mask = (1 << (io_last - io_first + 1)) - 1;
+  uint32_t mask = bit_mask(io_last - io_first + 1);
   uint32_t in = nrf_reg_get(GPIO_ADDR, NRF_GPIO_IN) >> io_first;
   endian_le32_na_store(data, in & mask);
 
@@ -273,7 +274,7 @@ static DEV_GPIO_INPUT_IRQ_RANGE(nrf5x_gpio_input_irq_range)
     return -ENOTSUP;
 
   uint32_t selected = (endian_le32_na_load(mask) << io_first)
-    & ((1 << (io_last + 1)) - ((1 << io_first)));
+    & bit_range(io_first, io_last - io_first + 1);
 
   dprintk("%s %08x %d\n", __FUNCTION__, selected, mode);
 

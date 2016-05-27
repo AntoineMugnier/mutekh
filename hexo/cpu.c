@@ -21,7 +21,7 @@
 */
 
 #include <hexo/cpu.h>
-#include <hexo/endian.h>
+#include <hexo/bit.h>
 
 #include <mutek/mem_alloc.h>
 
@@ -37,7 +37,7 @@ void cpu_dcache_invld_buf(void *ptr, size_t size)
   {
     uint8_t *ptr_;
 
-    for (ptr_ = ALIGN_ADDRESS_LOW(ptr, ls);
+    for (ptr_ = address_align_down(ptr, ls);
         ptr_ < (uint8_t*)ptr + size;
         ptr_ += ls)
       cpu_dcache_invld(ptr_);
@@ -52,7 +52,7 @@ void cpu_dcache_flush_buf(void *ptr, size_t size)
   {
     uint8_t *ptr_;
 
-    for (ptr_ = ALIGN_ADDRESS_LOW(ptr, ls);
+    for (ptr_ = address_align_down(ptr, ls);
         ptr_ < (uint8_t*)ptr + size;
         ptr_ += ls)
       cpu_dcache_flush(ptr_);

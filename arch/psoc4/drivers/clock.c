@@ -19,9 +19,10 @@
 */
 
 #include <hexo/types.h>
-#include <hexo/endian.h>
+#include <hexo/bit.h>
 #include <hexo/iospace.h>
 #include <hexo/interrupt.h>
+#include <hexo/bit.h>
 
 #include <mutek/startup.h>
 
@@ -275,7 +276,7 @@ static DEV_CMU_CONFIG_MUX(psoc4_clock_config_mux)
     if (ratio->num != 1)
       return -ENOTSUP;
 
-    if (!ALIGN_ISPOWTWO(ratio->denom))
+    if (!is_pow2(ratio->denom))
       return -ENOTSUP;
 
     if (!ratio->denom > 128)
@@ -417,7 +418,7 @@ static void psoc4_clock_hfclk_update(struct device_s *dev)
     pv->hfclk_freq = notif.freq;
 
     for (uint8_t src = 0; src < PSOC4_CLOCK_SRC_COUNT; ++src) {
-      if (pv->notify_mask & (1 << src)) {
+      if (pv->notify_mask & bit(src)) {
         dev_cmu_src_notify(&pv->src[src], &notif);
       }
     }
@@ -437,7 +438,7 @@ static void psoc4_clock_lfclk_update(struct device_s *dev)
 
     const uint8_t src = PSOC4_CLOCK_SRC_LFCLK;
 
-    if (pv->notify_mask & (1 << src)) {
+    if (pv->notify_mask & bit(src)) {
       dev_cmu_src_notify(&pv->src[src], &notif);
     }
   }
@@ -450,7 +451,7 @@ static DEV_CMU_COMMIT(psoc4_clock_commit)
   uint32_t tmp;
 
   // Enable ILO if about to use it
-  if (pv->source_use_mask & (1 << PSOC4_CLOCK_SRC_LFCLK)) {
+  if (bit_get(pv->source_use_mask, PSOC4_CLOCK_SRC_LFCLK)) {
     tmp = cpu_mem_read_32(SRSS + SRSS_CLK_ILO_CONFIG_ADDR);
     tmp |= SRSS_CLK_ILO_CONFIG_ENABLE;
     cpu_mem_write_32(SRSS + SRSS_CLK_ILO_CONFIG_ADDR, tmp);
@@ -471,7 +472,7 @@ static DEV_CMU_COMMIT(psoc4_clock_commit)
   cpu_mem_write_32(SRSS + SRSS_WDT_CONFIG_ADDR, tmp);
 
   // Disable ILO if unused
-  if (!(pv->source_use_mask & (1 << PSOC4_CLOCK_SRC_LFCLK))) {
+  if (!bit_get(pv->source_use_mask, PSOC4_CLOCK_SRC_LFCLK)) {
     tmp = cpu_mem_read_32(SRSS + SRSS_CLK_ILO_CONFIG_ADDR);
     tmp &= ~SRSS_CLK_ILO_CONFIG_ENABLE;
     cpu_mem_write_32(SRSS + SRSS_CLK_ILO_CONFIG_ADDR, tmp);
@@ -647,11 +648,11 @@ static DEV_CLOCK_SRC_SETUP(psoc4_clock_ep_setup)
     {
 #ifdef CONFIG_DEVICE_CLOCK_VARFREQ
     case DEV_CLOCK_SRC_SETUP_NOTIFY:
-      pv->notify_mask |= 1 << src_id;
+      pv->notify_mask |= bit(src_id);
       return 0;
 
     case DEV_CLOCK_SRC_SETUP_NONOTIFY:
-      pv->notify_mask &= ~(1 << src_id);
+      pv->notify_mask &= ~bit(src_id);
       return 0;
 #endif
 
@@ -681,11 +682,11 @@ static DEV_CLOCK_SRC_SETUP(psoc4_clock_ep_setup)
       }
 
       if (param->flags & DEV_CLOCK_EP_CLOCK) {
-        assert(!(pv->source_use_mask & (1 << src_id)));
-        pv->source_use_mask |= 1 << src_id;
+        assert(!(pv->source_use_mask & bit(src_id)));
+        pv->source_use_mask |= bit(src_id);
       } else {
-        assert(pv->source_use_mask & (1 << src_id));
-        pv->source_use_mask &= ~(1 << src_id);
+        assert(pv->source_use_mask & bit(src_id));
+        pv->source_use_mask &= ~bit(src_id);
       }
 
 #ifdef CONFIG_DEVICE_SLEEP
@@ -793,7 +794,7 @@ static DEV_INIT(psoc4_clock_init)
     pv->lfclk_freq = ILO_FREQ;
   }
 
-  if (!(dev->init_mask & (1 << 0))) {
+  if (!(dev->init_mask & bit(0))) {
     for (uint_fast8_t i = 0; i < PSOC4_CLOCK_SRC_COUNT; ++i)
       dev_clock_source_init(dev, &pv->src[i], &psoc4_clock_ep_setup);
 

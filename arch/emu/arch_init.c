@@ -28,7 +28,7 @@
 /////////////////////////////////////////////////////////////////////
 
 #include <string.h>
-#include <hexo/endian.h>
+#include <hexo/bit.h>
 
 #ifdef CONFIG_ARCH_SMP
 void emu_remap_shared_init(void)
@@ -36,8 +36,8 @@ void emu_remap_shared_init(void)
   extern __ldscript_symbol_t __data_start /*, __data_end*/;
   extern __ldscript_symbol_t /*__bss_start, */__bss_end;
 
-    uint8_t *data_start = ALIGN_ADDRESS_LOW(&__data_start, CONFIG_ARCH_EMU_PAGESIZE);
-    uint8_t *bss_end = ALIGN_ADDRESS_UP(&__bss_end, CONFIG_ARCH_EMU_PAGESIZE);
+    uint8_t *data_start = address_align_down(&__data_start, CONFIG_ARCH_EMU_PAGESIZE);
+    uint8_t *bss_end = address_align_up(&__bss_end, CONFIG_ARCH_EMU_PAGESIZE);
     size_t size = bss_end - data_start;
 
     uint8_t copy[size];
@@ -74,8 +74,8 @@ void emu_mem_init(void)
 
   mem_end = (uint8_t*)mem_start + CONFIG_ARCH_EMU_MEMORY;
 
-  mem_end = ALIGN_ADDRESS_LOW(mem_end, CONFIG_MUTEK_MEMALLOC_ALIGN);
-  mem_start = ALIGN_ADDRESS_UP(mem_start, CONFIG_MUTEK_MEMALLOC_ALIGN);
+  mem_end = address_align_down(mem_end, CONFIG_MUTEK_MEMALLOC_ALIGN);
+  mem_start = address_align_up(mem_start, CONFIG_MUTEK_MEMALLOC_ALIGN);
 
   default_region = memory_allocator_init(NULL, mem_start, mem_end);
 }

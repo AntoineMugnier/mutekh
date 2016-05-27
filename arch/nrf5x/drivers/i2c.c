@@ -22,6 +22,7 @@
 #include <hexo/endian.h>
 #include <hexo/iospace.h>
 #include <hexo/interrupt.h>
+#include <hexo/bit.h>
 
 #include <mutek/mem_alloc.h>
 #include <mutek/printk.h>
@@ -72,9 +73,9 @@ void nrf5x_i2c_flit_first(struct nrf5x_i2c_priv_s *pv,
     nrf_short_set(pv->addr, 0);
     nrf_event_clear(pv->addr, NRF_I2C_TXDSENT);
     nrf_it_set_mask(pv->addr, 0
-                    | (1 << NRF_I2C_STOPPED)
-                    | (1 << NRF_I2C_ERROR)
-                    | (1 << NRF_I2C_TXDSENT));
+                    | bit(NRF_I2C_STOPPED)
+                    | bit(NRF_I2C_ERROR)
+                    | bit(NRF_I2C_TXDSENT));
 
     CPU_INTERRUPT_SAVESTATE_DISABLE;
     nrf_task_trigger(pv->addr, NRF_I2C_STARTTX);
@@ -85,16 +86,16 @@ void nrf5x_i2c_flit_first(struct nrf5x_i2c_priv_s *pv,
   case DEV_I2C_READ:
     if ((ssize_t)rq->error_offset == (ssize_t)tr->size - 1 && !next) {
       /* dprintk("%s rx bb->stop\n", __FUNCTION__); */
-      nrf_short_set(pv->addr, 1 << NRF_I2C_BB_STOP);
+      nrf_short_set(pv->addr, bit(NRF_I2C_BB_STOP));
     } else {
-      nrf_short_set(pv->addr, 1 << NRF_I2C_BB_SUSPEND);
+      nrf_short_set(pv->addr, bit(NRF_I2C_BB_SUSPEND));
     }
 
     nrf_event_clear(pv->addr, NRF_I2C_RXDRDY);
     nrf_it_set_mask(pv->addr, 0
-                    | (1 << NRF_I2C_STOPPED)
-                    | (1 << NRF_I2C_ERROR)
-                    | (1 << NRF_I2C_RXDRDY));
+                    | bit(NRF_I2C_STOPPED)
+                    | bit(NRF_I2C_ERROR)
+                    | bit(NRF_I2C_RXDRDY));
 
     nrf_task_trigger(pv->addr, NRF_I2C_STARTRX);
     break;
@@ -167,9 +168,9 @@ bool_t nrf5x_i2c_request_progress(struct nrf5x_i2c_priv_s *pv,
     switch ((ssize_t)tr->size - (ssize_t)rq->error_offset) {
     case 1:
       if (next)
-        nrf_short_set(pv->addr, 1 << NRF_I2C_BB_SUSPEND);
+        nrf_short_set(pv->addr, bit(NRF_I2C_BB_SUSPEND));
       else
-        nrf_short_set(pv->addr, 1 << NRF_I2C_BB_STOP);
+        nrf_short_set(pv->addr, bit(NRF_I2C_BB_STOP));
       break;
 
     case 0:
@@ -183,7 +184,7 @@ bool_t nrf5x_i2c_request_progress(struct nrf5x_i2c_priv_s *pv,
       goto stop;
 
     default:
-      nrf_short_set(pv->addr, 1 << NRF_I2C_BB_SUSPEND);
+      nrf_short_set(pv->addr, bit(NRF_I2C_BB_SUSPEND));
       break;
     }
 
@@ -191,7 +192,7 @@ bool_t nrf5x_i2c_request_progress(struct nrf5x_i2c_priv_s *pv,
 
     for (uint8_t i = 0; i < 20; ++i) {
       uint32_t in = nrf_reg_get(NRF5X_GPIO_ADDR, NRF_GPIO_IN);
-      if (!(in & (1 << scl)))
+      if (!(in & bit(scl)))
         break;
       dprintk("\nscl wait %d\n", (in >> scl) & 1);
     }
@@ -319,17 +320,17 @@ static void nrf5x_i2c_reset(uintptr_t addr, uint8_t scl, uint8_t sda)
   for (uint16_t i = 0; i < 32; ++i)
     asm volatile("");
 
-  nrf_reg_set(NRF5X_GPIO_ADDR, NRF_GPIO_OUTSET, 1 << sda);
-  nrf_reg_set(NRF5X_GPIO_ADDR, NRF_GPIO_OUTSET, 1 << scl);
+  nrf_reg_set(NRF5X_GPIO_ADDR, NRF_GPIO_OUTSET, bit(sda));
+  nrf_reg_set(NRF5X_GPIO_ADDR, NRF_GPIO_OUTSET, bit(scl));
   for (uint16_t i = 0; i < 8; ++i)
     asm volatile("");
 
-  uint32_t mask = (1 << scl) | (1 << sda);
+  uint32_t mask = bit(scl) | bit(sda);
   for (uint8_t i = 0; i < 18 && (nrf_reg_get(NRF5X_GPIO_ADDR, NRF_GPIO_IN) & mask) != mask; ++i) {
-    nrf_reg_set(NRF5X_GPIO_ADDR, NRF_GPIO_OUTCLR, 1 << scl);
+    nrf_reg_set(NRF5X_GPIO_ADDR, NRF_GPIO_OUTCLR, bit(scl));
     for (uint16_t j = 0; j < 8; ++j)
       asm volatile("");
-    nrf_reg_set(NRF5X_GPIO_ADDR, NRF_GPIO_OUTSET, 1 << scl);
+    nrf_reg_set(NRF5X_GPIO_ADDR, NRF_GPIO_OUTSET, bit(scl));
     for (uint16_t j = 0; j < 8; ++j)
       asm volatile("");
   }

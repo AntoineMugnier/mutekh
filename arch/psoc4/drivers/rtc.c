@@ -22,6 +22,7 @@
 #include <hexo/endian.h>
 #include <hexo/iospace.h>
 #include <hexo/interrupt.h>
+#include <hexo/bit.h>
 
 #include <mutek/mem_alloc.h>
 #include <mutek/printk.h>
@@ -138,8 +139,8 @@ static dev_timer_value_t psoc4_rtc_value_get(struct psoc4_rtc_context_s *pv)
 {
   uint32_t high = cpu_mem_read_32(SRSS + SRSS_WDT_CTRHIGH_ADDR);
 
-  if (~high & (uint32_t)pv->base & ((uint32_t)1 << 31))
-    return pv->base + ((uint64_t)1 << 31) + high;
+  if (~high & (uint32_t)pv->base & bit(31))
+    return pv->base + bit(31) + high;
 
   return pv->base | high;
 }
@@ -367,8 +368,8 @@ static DEV_IRQ_SRC_PROCESS(psoc4_rtc_irq)
   cpu_mem_write_32(SRSS + SRSS_WDT_CONTROL_ADDR, control);
 
   high = cpu_mem_read_32(SRSS + SRSS_WDT_CTRHIGH_ADDR);
-  if (~high & (uint32_t)pv->base & ((uint32_t)1 << 31))
-    pv->base += (uint64_t)1 << 31;
+  if (~high & (uint32_t)pv->base & bit(31))
+    pv->base += bit(31);
 
   while ((rq = dev_timer_rq_s_cast(dev_request_pqueue_head(&pv->queue)))) {
     dev_timer_value_t value = psoc4_rtc_value_get(pv);

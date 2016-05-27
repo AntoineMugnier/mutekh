@@ -21,6 +21,7 @@
 
 #include <hexo/types.h>
 #include <hexo/error.h>
+#include <hexo/bit.h>
 
 #include <mutek/mem_alloc.h>
 #include <mutek/printk.h>
@@ -125,7 +126,7 @@ VFS_FILE_READ(iso9660_dir_read)
     struct iso9660_fs_s *isofs = (void*)file->node->fs;
     struct vfs_dirent_s *dirent = buffer;
 
-    size_t count = ALIGN_VALUE_UP(isonode->entry.file_size, ISO9660_BLOCK_SIZE) / ISO9660_BLOCK_SIZE;
+    size_t count = align_pow2_up(isonode->entry.file_size, ISO9660_BLOCK_SIZE) / ISO9660_BLOCK_SIZE;
     dev_block_lba_t first = isonode->entry.data_blk;
     uint_fast16_t o = file->offset % ISO9660_BLOCK_SIZE;
     size_t b;

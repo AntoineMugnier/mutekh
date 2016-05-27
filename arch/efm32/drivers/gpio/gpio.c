@@ -23,6 +23,7 @@
 #include <hexo/types.h>
 #include <hexo/endian.h>
 #include <hexo/iospace.h>
+#include <hexo/bit.h>
 
 #include <mutek/mem_alloc.h>
 #include <arch/efm32/gpio.h>
@@ -87,7 +88,7 @@ static void efm32_gpio_out_reg(gpio_id_t io_first, gpio_id_t io_last,
 
  mask:
   /* compute mask word for next clear_mask and set_mask */
-  tmask = mlen > GPIO_BANK_SIZE ? 0xffff : ((1 << mlen) - 1);
+  tmask = mlen > GPIO_BANK_SIZE ? 0xffff : bit_mask(mlen);
 
  loop:
   /* compute set and clear masks */
@@ -138,7 +139,7 @@ static void efm32_gpio_mode_reg(gpio_id_t io_first, gpio_id_t io_last,
 
  mask:
   /* compute mask word for next mask cell */
-  tmask = mlen > GPIO_BANK_SIZE/2 ? 0xff : ((1 << mlen) - 1);
+  tmask = mlen > GPIO_BANK_SIZE/2 ? 0xff : bit_mask(mlen);
 
  loop:
   m = get_mask(*mask++ & tmask);
@@ -318,7 +319,7 @@ static DEV_IRQ_SINK_UPDATE(efm32_gpio_icu_sink_update)
   struct device_s *dev = sink->base.dev;
   struct efm32_gpio_private_s *pv = dev->drv_pv;
   uint_fast8_t sink_id = sink - pv->sink;
-  uint32_t mask = 1 << sink_id;
+  uint32_t mask = bit(sink_id);
 
   /* Select polarity of interrupt edge */
   uint32_t e, d;
@@ -415,9 +416,9 @@ static DEV_ICU_LINK(efm32_gpio_icu_link)
   cpu_mem_write_32(EFM32_GPIO_ADDR + a, endian_le32(x));
 
   /* Clear interrupt */
-  cpu_mem_write_32(EFM32_GPIO_ADDR + EFM32_GPIO_IFC_ADDR, endian_le32(1 << sink_id));
+  cpu_mem_write_32(EFM32_GPIO_ADDR + EFM32_GPIO_IFC_ADDR, endian_le32(bit(sink_id)));
   x = endian_le32(cpu_mem_read_32(EFM32_GPIO_ADDR + EFM32_GPIO_IEN_ADDR));
-  x |= (1 << sink_id);
+  x |= bit(sink_id);
   cpu_mem_write_32(EFM32_GPIO_ADDR + EFM32_GPIO_IEN_ADDR, endian_le32(x));
 
   return 0;
@@ -443,7 +444,7 @@ static DEV_IRQ_SRC_PROCESS(efm32_gpio_source_process)
           struct dev_irq_sink_s *sink = pv->sink + i;
           int_fast16_t id = (cpu_mem_read_32(EFM32_GPIO_ADDR + EFM32_GPIO_DIN_ADDR(pv->irq[i].bank)) >> i) & 1;
           device_irq_sink_process(sink, id);
-          x ^= 1 << i;
+          x ^= bit(i);
         }
     }
 }

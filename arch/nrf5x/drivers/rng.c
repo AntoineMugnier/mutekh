@@ -23,6 +23,7 @@
 
 #include <hexo/types.h>
 #include <hexo/endian.h>
+#include <hexo/bit.h>
 
 #include <device/device.h>
 #include <device/resources.h>
@@ -52,7 +53,7 @@ static DEVCRYPTO_INFO(nrf5x_rng_info)
   memset(info, 0, sizeof(*info));
 
   info->name = "rng";
-  info->modes_mask = 1 << DEV_CRYPTO_MODE_RANDOM;
+  info->modes_mask = bit(DEV_CRYPTO_MODE_RANDOM);
   info->cap = 0;
   info->state_size = 0;
   info->block_len = 0;

@@ -24,6 +24,7 @@
 
 #include <mutek/mem_alloc.h>
 #include <mutek/printk.h>
+#include <hexo/bit.h>
 
 #include <cpu/arm32m/v7m.h>
 
@@ -306,7 +307,7 @@ static DEV_INIT(arm_init)
 # ifdef CONFIG_CPU_ARM32M_CLOCK
       /* postpone initialization of the clock input if the clock
          manager is not available yet */
-      if (BIT_EXTRACT(cl_missing, DRIVER_CLASS_CMU))
+      if (bit_get(cl_missing, DRIVER_CLASS_CMU))
         return -EAGAIN;
 # endif
 #endif

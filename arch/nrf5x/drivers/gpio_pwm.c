@@ -22,6 +22,7 @@
 #include <hexo/endian.h>
 #include <hexo/iospace.h>
 #include <hexo/interrupt.h>
+#include <hexo/bit.h>
 
 #include <mutek/mem_alloc.h>
 #include <mutek/printk.h>
@@ -133,7 +134,7 @@ static DEV_REQUEST_DELAYED_FUNC(nrf5x_gpio_pwm_setup)
         pv->period_tk >>= 1;
       }
 
-      duty_changed |= (1 << CONFIG_DRIVER_NRF5X_GPIO_PWM_CHANNEL_COUNT) - 1;
+      duty_changed |= bit_mask(CONFIG_DRIVER_NRF5X_GPIO_PWM_CHANNEL_COUNT);
 
       dprintk("PWM period %d/%d: %d ticks, wraps at %d*2^-%d\n",
              (uint32_t)pv->freq.num, (uint32_t)pv->freq.denom,
@@ -141,14 +142,14 @@ static DEV_REQUEST_DELAYED_FUNC(nrf5x_gpio_pwm_setup)
     }
 
     if (rq->mask & DEV_PWM_MASK_DUTY) {
-      duty_changed |= 1 << i;
+      duty_changed |= bit(i);
       pv->channel[i].duty = cfg->duty;
       dprintk("PWM config: %04d/%05d\r",
               (uint32_t)pv->channel[i].duty.num, (uint32_t)pv->channel[i].duty.denom);
     }
 
     if (rq->mask & DEV_PWM_MASK_POL) {
-      duty_changed |= 1 << i;
+      duty_changed |= bit(i);
       pv->channel[i].gpio_init_val = cfg->pol == DEV_PWM_POL_HIGH ? 1 : 0;
     }
   }
@@ -159,7 +160,7 @@ static DEV_REQUEST_DELAYED_FUNC(nrf5x_gpio_pwm_setup)
     if ((duty_changed >> i) & 1)
       pv->channel[i].toggle_tk = pv->period_tk * pv->channel[i].duty.num / pv->channel[i].duty.denom;
 
-    uint32_t ppis = (1 << PPI(i, 1)) | (1 << PPI(i, 0));
+    uint32_t ppis = bit(PPI(i, 1)) | bit(PPI(i, 0));
     bool_t initval = pv->channel[i].gpio_init_val;
 
     if (pv->channel[i].toggle_tk == 0) {
@@ -192,7 +193,7 @@ static DEV_REQUEST_DELAYED_FUNC(nrf5x_gpio_pwm_setup)
 
   if (pv->running) {
     nrf_event_clear(pv->timer_addr, NRF_TIMER_COMPARE(OVERFLOW));
-    nrf_short_set(pv->timer_addr, 1 << NRF_TIMER_COMPARE_STOP(OVERFLOW));
+    nrf_short_set(pv->timer_addr, bit(NRF_TIMER_COMPARE_STOP(OVERFLOW)));
     // Stop may happen here, see below.
     nrf_it_enable(pv->timer_addr, NRF_TIMER_COMPARE(OVERFLOW));
 
@@ -224,7 +225,7 @@ static void nrf5x_gpio_pwm_update(struct nrf5x_gpio_pwm_context_s *pv, bool_t sy
 
   nrf_event_clear(pv->timer_addr, NRF_TIMER_COMPARE(OVERFLOW));
   nrf_it_disable(pv->timer_addr, NRF_TIMER_COMPARE(OVERFLOW));
-  nrf_short_set(pv->timer_addr, 1 << NRF_TIMER_COMPARE_CLEAR(OVERFLOW));
+  nrf_short_set(pv->timer_addr, bit(NRF_TIMER_COMPARE_CLEAR(OVERFLOW)));
   nrf_task_trigger(pv->timer_addr, NRF_TIMER_CLEAR);
 
   for (uint8_t i = 0; i < CONFIG_DRIVER_NRF5X_GPIO_PWM_CHANNEL_COUNT; ++i) {
@@ -394,7 +395,7 @@ static DEV_CLEANUP(nrf5x_gpio_pwm_cleanup)
 
   for (uint8_t i = 0; i < CONFIG_DRIVER_NRF5X_GPIO_PWM_CHANNEL_COUNT; ++i) {
     nrf_reg_set(GPIOTE_ADDR, NRF_GPIOTE_CONFIG(GPIOTE_ID(i)), 0);
-    nrf_ppi_disable_mask((1 << PPI(i, 0)) | (1 << PPI(i, 1)));
+    nrf_ppi_disable_mask(bit(PPI(i, 0)) | bit(PPI(i, 1)));
   }
 
   device_irq_source_unlink(dev, pv->irq_ep, 1);

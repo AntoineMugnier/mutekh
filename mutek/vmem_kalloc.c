@@ -1,30 +1,29 @@
-/*                                                                                                                                                                                                             
-    This file is part of MutekH.                                                                                                                                                                               
-                                                                                                                                                                                                               
-    MutekH is free software; you can redistribute it and/or modify it                                                                                                                                          
-    under the terms of the GNU General Public License as published by                                                                                                                                          
-    the Free Software Foundation; either version 2 of the License, or                                                                                                                                          
-    (at your option) any later version.                                                                                                                                                                        
-                                                                                                                                                                                                               
-    MutekH is distributed in the hope that it will be useful, but                                                                                                                                              
-    WITHOUT ANY WARRANTY; without even the implied warranty of                                                                                                                                                 
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU                                                                                                                                          
-    General Public License for more details.                                                                                                                                                                   
-                                                                                                                                                                                                               
-    You should have received a copy of the GNU General Public License                                                                                                                                          
-    along with MutekH; if not, write to the Free Software Foundation,                                                                                                                                          
-    Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA                                                                                                                                               
-                                                                                                                                                                                                               
+/*
+    This file is part of MutekH.
+
+    MutekH is free software; you can redistribute it and/or modify it
+    under the terms of the GNU General Public License as published by
+    the Free Software Foundation; either version 2 of the License, or
+    (at your option) any later version.
+
+    MutekH is distributed in the hope that it will be useful, but
+    WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+    General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with MutekH; if not, write to the Free Software Foundation,
+    Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
+
     Copyright Dimitri Refauvelet <dimitri.refauvelet@lip6.fr> (c) 2009
-                                                                                                                                                                                                               
+
 */
 
 #include <assert.h>
 #include <hexo/mmu.h>
-#include <hexo/endian.h>
 #include <mutek/vmem_kalloc.h>
 #include <mutek/page_alloc.h>
-
+#include <hexo/bit.h>
 
 static uintptr_t next_v_page;
 
@@ -86,7 +85,7 @@ uintptr_t vpage_io_map(paddr_t paddr, size_t size)
 {
   uintptr_t vaddr, res;
 
-  size = ALIGN_VALUE_UP(size, CONFIG_HEXO_MMU_PAGESIZE);
+  size = align_pow2_up(size, CONFIG_HEXO_MMU_PAGESIZE);
   
   assert( size <= MMU_KERNEL_END_ADDR - next_v_page );
 

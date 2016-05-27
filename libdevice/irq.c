@@ -31,6 +31,7 @@
 #include <mutek/printk.h>
 #include <mutek/mem_alloc.h>
 #include <hexo/endian.h>
+#include <hexo/bit.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -523,7 +524,7 @@ error_t device_irq_src_update(struct dev_irq_src_s *src,
         {
           if (!(sink->sense_link & trig_mode))
             return -ENOTSUP;
-          assert(ALIGN_ISPOWTWO(trig_mode));
+          assert(is_pow2(trig_mode));
         }
     }
 
@@ -571,7 +572,7 @@ inline error_t device_irq_src_enable(struct dev_irq_src_s *src)
     }
 
   enum dev_irq_sense_modes_e trig_mode = sink->sense_link;
-  assert(trig_mode && ALIGN_ISPOWTWO(trig_mode));
+  assert(trig_mode && is_pow2(trig_mode));
 
   if (src->trig_mode == trig_mode)
     return 0;

@@ -23,6 +23,7 @@
 #include <hexo/types.h>
 #include <hexo/endian.h>
 #include <hexo/iospace.h>
+#include <hexo/bit.h>
 
 #include <mutek/mem_alloc.h>
 #include <arch/efm32/cmu.h>
@@ -678,7 +679,7 @@ static DEV_CMU_CONFIG_MUX(efm32_recmu_config_mux)
   if (pv->busy)
     return -EBUSY;
 
-  if (ratio->num != 1 || !ALIGN_ISPOWTWO(ratio->denom))
+  if (ratio->num != 1 || !is_pow2(ratio->denom))
     return -EINVAL;
 
   switch (node_id)

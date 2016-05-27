@@ -27,6 +27,7 @@
 #ifndef LIBDEVICE_VALIO_MOTION_H_
 #define LIBDEVICE_VALIO_MOTION_H_
 
+#include <hexo/bit.h>
 #include <device/class/valio.h>
 
 /** The motion valio class is an interface for controlling and acquire data
@@ -82,23 +83,23 @@ enum valio_motion_att_e
 */
 enum valio_motion_axis_e
 {
-    VALIO_MOTION_ACC_X = (1 << 0),
-    VALIO_MOTION_ACC_Y = (1 << 1),
-    VALIO_MOTION_ACC_Z = (1 << 2),
+    VALIO_MOTION_ACC_X = bit(0),
+    VALIO_MOTION_ACC_Y = bit(1),
+    VALIO_MOTION_ACC_Z = bit(2),
 
     VALIO_MOTION_ACC_XYZ = VALIO_MOTION_ACC_X | VALIO_MOTION_ACC_Y |
         VALIO_MOTION_ACC_Z,
 
-    VALIO_MOTION_GYR_X = (1 << 3),
-    VALIO_MOTION_GYR_Y = (1 << 4),
-    VALIO_MOTION_GYR_Z = (1 << 5),
+    VALIO_MOTION_GYR_X = bit(3),
+    VALIO_MOTION_GYR_Y = bit(4),
+    VALIO_MOTION_GYR_Z = bit(5),
 
     VALIO_MOTION_GYR_XYZ = VALIO_MOTION_GYR_X | VALIO_MOTION_GYR_Y |
         VALIO_MOTION_GYR_Z,
 
-    VALIO_MOTION_CMP_X = (1 << 6),
-    VALIO_MOTION_CMP_Y = (1 << 7),
-    VALIO_MOTION_CMP_Z = (1 << 8),
+    VALIO_MOTION_CMP_X = bit(6),
+    VALIO_MOTION_CMP_Y = bit(7),
+    VALIO_MOTION_CMP_Z = bit(8),
 
     VALIO_MOTION_CMP_XYZ = VALIO_MOTION_CMP_X | VALIO_MOTION_CMP_Y |
         VALIO_MOTION_CMP_Z,
@@ -107,19 +108,19 @@ enum valio_motion_axis_e
 enum valio_motion_event_e
 {
     /* Activity event */
-    VALIO_MOTION_ACC_ACT    = (1 << 0),
+    VALIO_MOTION_ACC_ACT    = bit(0),
     /* Inactivity event */
-    VALIO_MOTION_ACC_INACT  = (1 << 1),
+    VALIO_MOTION_ACC_INACT  = bit(1),
     /* Tap event */
-    VALIO_MOTION_ACC_TAP    = (1 << 2),
+    VALIO_MOTION_ACC_TAP    = bit(2),
     /* Double tap event */
-    VALIO_MOTION_ACC_DBLTAP = (1 << 2),
+    VALIO_MOTION_ACC_DBLTAP = bit(2),
     /* Free fall event */
-    VALIO_MOTION_ACC_FF     = (1 << 3),
+    VALIO_MOTION_ACC_FF     = bit(3),
     /* Activity event */
-    VALIO_MOTION_GYR_ACT    = (1 << 4),
+    VALIO_MOTION_GYR_ACT    = bit(4),
     /* Activity event */
-    VALIO_MOTION_CMP_ACT    = (1 << 5),
+    VALIO_MOTION_CMP_ACT    = bit(5),
 };
 
 struct valio_motion_thresh_s
@@ -141,17 +142,17 @@ struct valio_motion_thresh_s
 /* Capabilities */
 enum valio_motion_caps_e
 {
-    VALIO_MOTION_CAP_ACC_ACT    = (1 << 0),
-    VALIO_MOTION_CAP_ACC_INACT  = (1 << 1),
-    VALIO_MOTION_CAP_ACC_TAP    = (1 << 2),
-    VALIO_MOTION_CAP_ACC_DBLTAP = (1 << 3),
-    VALIO_MOTION_CAP_ACC_FF     = (1 << 4),
+    VALIO_MOTION_CAP_ACC_ACT    = bit(0),
+    VALIO_MOTION_CAP_ACC_INACT  = bit(1),
+    VALIO_MOTION_CAP_ACC_TAP    = bit(2),
+    VALIO_MOTION_CAP_ACC_DBLTAP = bit(3),
+    VALIO_MOTION_CAP_ACC_FF     = bit(4),
 
     /* Gyroscope caps */
-    VALIO_MOTION_CAP_GYR_ACT    = (1 << 5),
+    VALIO_MOTION_CAP_GYR_ACT    = bit(5),
 
     /* Compass caps */
-    VALIO_MOTION_CAP_CMP_ACT    = (1 << 6),
+    VALIO_MOTION_CAP_CMP_ACT    = bit(6),
 };
 
 struct valio_motion_caps_s
@@ -161,11 +162,11 @@ struct valio_motion_caps_s
 
 enum valio_motion_accel_opt_e
 {
-    VALIO_MOTION_ACC_OPT_ACT    = (1 << 0),
-    VALIO_MOTION_ACC_OPT_INACT  = (1 << 1),
-    VALIO_MOTION_ACC_OPT_TAP    = (1 << 2),
-    VALIO_MOTION_ACC_OPT_DBLTAP = (1 << 3),
-    VALIO_MOTION_ACC_OPT_FF     = (1 << 4),
+    VALIO_MOTION_ACC_OPT_ACT    = bit(0),
+    VALIO_MOTION_ACC_OPT_INACT  = bit(1),
+    VALIO_MOTION_ACC_OPT_TAP    = bit(2),
+    VALIO_MOTION_ACC_OPT_DBLTAP = bit(3),
+    VALIO_MOTION_ACC_OPT_FF     = bit(4),
 };
 
 struct valio_motion_accel_s
@@ -191,7 +192,7 @@ struct valio_motion_accel_s
 
 enum valio_motion_gyro_opt_e
 {
-    VALIO_MOTION_GYR_OPT_MOVE = (1 << 0),
+    VALIO_MOTION_GYR_OPT_MOVE = bit(0),
 };
 
 struct valio_motion_gyro_s
@@ -204,7 +205,7 @@ struct valio_motion_gyro_s
 
 enum valio_motion_comp_opt_e
 {
-    VALIO_MOTION_CMP_OPT_GAIN = (1 << 0),
+    VALIO_MOTION_CMP_OPT_GAIN = bit(0),
 };
 
 struct valio_motion_comp_s

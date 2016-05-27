@@ -18,9 +18,9 @@
     Copyright Nicolas Pouillon <nipo@ssji.net> (c) 2014
 */
 
-#include <hexo/endian.h>
 #include <mutek/thread.h>
 #include <mutek/scheduler.h>
+#include <hexo/bit.h>
 
 struct thread_s
 {
@@ -57,13 +57,13 @@ error_t thread_create(context_entry_t *entry, void *arg,
                       const struct thread_attr_s *attr)
 {
   struct thread_s *th;
-  size_t s = ALIGN_VALUE_UP(sizeof(*th), CONFIG_HEXO_STACK_ALIGN);
+  size_t s = align_pow2_up(sizeof(*th), CONFIG_HEXO_STACK_ALIGN);
   enum mem_scope_e scope;
   size_t stack_size;
 
   if (attr)
     {
-      stack_size = ALIGN_VALUE_UP(attr->stack_size, CONFIG_HEXO_STACK_ALIGN);
+      stack_size = align_pow2_up(attr->stack_size, CONFIG_HEXO_STACK_ALIGN);
       scope = attr->scope;
     }
   else
