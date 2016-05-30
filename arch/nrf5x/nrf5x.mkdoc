@@ -1,4 +1,3 @@
-
 @moduledef {nRF5X platform} {Platforms}
 
 Nordic's nRF51 and nRF52 architectures are supported for most of their
@@ -25,25 +24,22 @@ hardware features.  Most development boards are supported as well.
     @end list
 
     Clock tree is designed to be as straightforward as possible to
-    use. Clock driver exports four clocks:
+    use. Clock driver exports two clocks:
     @list
       @item @ref {NRF_CLOCK_LF} {Low Frequency clock, with unspecified
         precision},
-      @item @ref {NRF_CLOCK_LF_PRECISE} {Low Frequency clock, with
-        specified precision}, calibrated or not (depending on whether
-        LFCLK source is internal RC or an external crystal),
       @item @ref {NRF_CLOCK_HF} {High Frequency clock, with
-        unspecified precision},
-      @item @ref {NRF_CLOCK_HF_PRECISE} {High Frequency clock, with
-        specified precision}.
+        unspecified precision}.
     @end list
 
-    Both the low frequency and both the high frequency clocks
-    described here actually are the same internal clock tree, but
-    requesting the precise version enables crystal oscillator or
-    calibration.  This way, in the device tree, platform designer may
-    connect either the low precision or high precision clock,
-    depending on needs.
+    Clock driver implements two muxes (one for HFCLK, the other for
+    LFCLK).  Both can select external crystal or internal RC.  If
+    accuracy selected for internal low frequency RC is below 250ppm,
+    calibration is automatically enabled (if @ref
+    #CONFIG_DRIVER_NRF5X_CLOCK_LFRC_CAL is selected).
+
+    Clock driver also implements throttling.  It can be used to
+    dynamically change clock sources and accuracy.
   @end section
 
   @section {GPIO}
