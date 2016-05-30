@@ -77,7 +77,7 @@
 
 # define CPU_MIPS_CAUSE_BD      0x80000000
 
-#include <hexo/endian.h>
+#include <hexo/bit.h>
 
 /** general purpose regsiters count */
 # define CPU_GPREG_COUNT	32
@@ -252,9 +252,9 @@ ALWAYS_INLINE size_t cpu_dcache_line_size(void)
   reg_t r0 = cpu_mips_mfc0(16, 0);
   reg_t r1 = cpu_mips_mfc0(16, 1);
 
-  if (BIT_EXTRACT(r0, 31))
+  if (bit_get(r0, 31))
     {
-      r1 = BITS_EXTRACT_FL(r1, 10, 12);
+      r1 = bit_get_range(r1, 10, 12);
 
       if (r1)
 	return 2 << r1;
