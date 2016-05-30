@@ -71,10 +71,10 @@
 
    @item Source endpoint nodes have an associated @ref
    dev_clock_src_ep_s object. They represent a clock output which can
-   be connected to the input of consumer device. They have a fixed
-   parent in the tree. They do not need configuration but may raise
-   management request operations through the @ref
-   dev_clock_src_setup_t function.
+   be connected to the input of consumer device. Depending on clock
+   tree, they may need configuration (selectable parent, ratio,
+   etc.). They may also raise management request operations through
+   the @ref dev_clock_src_setup_t function.
    @end list
 
    Links between endpoint may convey a clock signal, a power supply
@@ -84,16 +84,35 @@
    linking operations, gating operations and frequency change
    notifications. This operations are defined in @ref {@device/clock.h}.
 
+   @section {CMU device configuration selection}
+
    Some sets of valid node configuration entries may be defined by
    attaching @ref DEV_RES_CMU_MUX and @ref DEV_RES_CMU_OSC resources
    to a clock management device. Each entry may be associated to one
-   or more configuration id which can be activated. The configuration
-   0 must be loaded from the cmu driver initialization be calling the
-   @ref dev_cmu_init function.
+   or more configuration id which can be activated.
 
-   When @ref #CONFIG_DEVICE_CLOCK_VARFREQ is defined, the user may
-   change the set of active node configuration entries at any time by
-   calling @ref dev_cmu_config.
+   Power/Clock configuration IDs are defined with an order.  When
+   multiple configurations are possible, driver will select the one
+   with the lowest ID.
+
+   The configuration 0 is loaded from the cmu driver initialization be
+   calling the @ref dev_cmu_init function.
+
+   On a running platform, CMU device configuration mode is a merge of:
+   @list
+   @item Application-required configuration ID,
+   @item Connected sink endpoint clocking modes (when @ref
+   #CONFIG_DEVICE_CLOCK_THROTTLE is defined).
+   @end list
+
+   The user may change the set of active node configuration entries at
+   any time by calling @ref dev_cmu_app_configid_set_t.
+
+   Because of configuration ID ordering, platform designer should
+   order its configuration IDs from lowest power consumption to
+   highest.
+
+   @end section
 */
 
 #ifndef __DEVICE_CMU_H__
@@ -255,6 +274,9 @@ struct dev_cmu_node_info_s
     node. The @tt mask parameter specifies which information are
     fetched and is updated according to what is actually available.
 
+    Driver may set more fields than actually requested by @tt mask
+    upon calling.
+
     The device lock must be held when calling this function.
 
     @see dev_cmu_node_info_s
@@ -267,10 +289,11 @@ typedef DEV_CMU_NODE_INFO(dev_cmu_node_info_t);
     struct device_cmu_s *accessor,                                      \
     uint_fast8_t config_id)
 
-/** @internal @This makes the device change its configuration id.
+/** @internal @This informs the device of configuration id required by
+    the application code.  Driver should merge it with requirements
+    from source endpoints, if @ref #CONFIG_DEVICE_CLOCK_THROTTLE is
+    defined.
 
-    @see dev_cmu_app_configid_set_s
-    @see dev_cmu_app_configid_set_e
     @see dev_cmu_app_configid_set */
 typedef DEV_CMU_APP_CONFIGID_SET(dev_cmu_app_configid_set_t);
 
@@ -286,6 +309,10 @@ struct device_cmu_config_ops_s
   dev_cmu_rollback_t   *rollback;
 };
 
+/**
+   @this is a helper to declare a @ref device_cmu_config_ops_s
+   structure.
+ */
 #define DRIVER_CMU_CONFIG_OPS_DECLARE(prefix)                           \
   static const struct device_cmu_config_ops_s prefix##_config_ops = {   \
     .config_mux = prefix ## _config_mux,                                \
@@ -298,7 +325,6 @@ DRIVER_CLASS_TYPES(DRIVER_CLASS_CMU, cmu,
                    dev_cmu_node_info_t        *f_node_info;
                    dev_cmu_app_configid_set_t *f_app_configid_set;
                    );
-
 
 #define DRIVER_CMU_METHODS(prefix)                                  \
   ((const struct driver_class_s*)&(const struct driver_cmu_s){      \

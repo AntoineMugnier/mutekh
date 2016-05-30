@@ -104,6 +104,28 @@
    {@device/class/cmu.h}.
 
    @end section
+
+   @section {Device clocking modes and sink endpoints}
+
+   Device drivers may define a set of clocking modes.  Meaning and
+   count of said modes is device-specific.  With @ref
+   #CONFIG_DEVICE_CLOCK_THROTTLE enabled, devices may dynamically
+   change clocking mode for each sink endpoint.  A mapping from device
+   clocking mode to peer CMU device configuration IDs is defined in
+   the device resources, see @ref #DEV_STATIC_RES_CLOCK_MODES.
+
+   This way, a device driver defines its behavioral modes, and
+   platform designer defines the mapping between device modes and
+   acceptable peer CMU device configuration.  Each sink endpoint list
+   compatible clocking configurations, CMU driver takes the one
+   matching all the requirements.
+
+   Mode selection is done asynchronously and sink endpoints will be
+   notified of clock changes through usual clock notification ways,
+   see @ref DEV_USE_CLOCK_SINK_FREQ_CHANGED and @ref
+   DEV_CLOCK_EP_FREQ_NOTIFY.
+
+   @end section
 */
 
 #ifndef __DEVICE_CLOCK_H__
