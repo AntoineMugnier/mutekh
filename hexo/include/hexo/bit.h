@@ -79,7 +79,7 @@ C_HEADER_BEGIN
 /** @this extracts bits between specified @tt first and @tt last index
     (included) in @tt value */
 #define bit_get_range(value, first, last) \
-  bits_extract_count(value, first, (last) - (first) + 1)
+  bit_get_range(value, first, (last) - (first) + 1)
 
 
 
