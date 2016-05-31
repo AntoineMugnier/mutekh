@@ -73,7 +73,7 @@ C_HEADER_BEGIN
 
 /** @this extracts @tt count bits from specified @tt index in @tt
     value */
-#define bit_get_count(value, index, count)  \
+#define bit_get_mask(value, index, count)  \
   (((value) >> (index)) & bit_mask(0, count))
 
 /** @this extracts bits between specified @tt first and @tt last index
