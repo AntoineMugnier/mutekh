@@ -24,6 +24,7 @@
 
 @parse{
 hexo/atomic.h
+hexo/bit.h
 hexo/context.h
 hexo/cpu.h
 hexo/decls.h
