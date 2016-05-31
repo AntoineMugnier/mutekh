@@ -66,7 +66,7 @@ C_HEADER_BEGIN
 #define bit_mask(index, count) ((bit(count) - 1) << (index))
 
 /** @this makes a bit mask from @tt first bit to @tt last bit (included) */
-#define bit_range(first, last) (bit(last + 1) - bit(first))
+#define bit_range(first, last) (bit((last) + 1) - bit(first))
 
 /** @this extracts bit at specified index */
 #define bit_get(value, index) (((value) >> (index)) & 1)
@@ -74,7 +74,7 @@ C_HEADER_BEGIN
 /** @this extracts @tt count bits from specified @tt index in @tt
     value */
 #define bit_get_count(value, index, count)  \
-  (((value) >> (index)) & bit_mask(count))
+  (((value) >> (index)) & bit_mask(0, count))
 
 /** @this extracts bits between specified @tt first and @tt last index
     (included) in @tt value */
