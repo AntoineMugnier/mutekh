@@ -62,11 +62,11 @@ C_HEADER_BEGIN
 /** @this selects bit @tt n */
 #define bit(n) (1ull << (n))
 
-/** @this makes a bit mask of @tt count bits width */
-#define bit_mask(count) (bit(count) - 1)
-
 /** @this makes a bit mask of @tt count bits width from bit @tt index */
-#define bit_range(index, count) (bit_mask(count) << (index))
+#define bit_mask(index, count) ((bit(count) - 1) << (index))
+
+/** @this makes a bit mask from @tt first bit to @tt last bit (included) */
+#define bit_range(first, last) (bit(last + 1) - bit(first))
 
 /** @this extracts bit at specified index */
 #define bit_get(value, index) (((value) >> (index)) & 1)
@@ -84,7 +84,7 @@ C_HEADER_BEGIN
 
 
 /** @this returns whether an address is aligned */
-#define address_is_aligned(x, b) is_multiple_of_pow2((uintptr_t)(x), b)
+#define address_is_aligned(x, b) is_pow2_multiple((uintptr_t)(x), b)
 
 /** @this aligns address on the next power of two boundary  */
 #define address_align_up(x, b) ((void *)align_pow2_up((uintptr_t)(x), (b)))
@@ -103,8 +103,8 @@ C_HEADER_BEGIN
 /** @this inserts @tt count bits value @tt ins at specified @tt index
     in @tt value */
 #define BIT_INSERT(value, ins, index, count)            \
-  (((value) & ~bit_range(index, count))                 \
-   |(((ind) << (index)) & bit_range(index, count)))
+  (((value) & ~bit_mask(index, count))                 \
+   |(((ind) << (index)) & bit_mask(index, count)))
 
 C_HEADER_END
 

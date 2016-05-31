@@ -182,7 +182,7 @@ static DEV_GPIO_SET_MODE(nrf5x_gpio_set_mode)
     return -ENOTSUP;
 
   uint32_t m = (endian_le32_na_load(mask) << io_first)
-    & bit_range(io_first, io_last - io_first + 1);
+    & bit_range(io_first, io_last);
 
   LOCK_SPIN_IRQ(&dev->lock);
 
@@ -216,7 +216,7 @@ static DEV_GPIO_SET_OUTPUT(nrf5x_gpio_set_output)
   if (io_first > NRF_GPIO_COUNT)
     return -ERANGE;
 
-  uint32_t mask = bit_range(io_first, io_last - io_first + 1);
+  uint32_t mask = bit_range(io_first, io_last);
   uint32_t setm = (endian_le32_na_load(set_mask) << io_first) & mask;
   uint32_t clearm = (endian_le32_na_load(clear_mask) << io_first) | ~mask;
 
@@ -245,7 +245,7 @@ static DEV_GPIO_GET_INPUT(nrf5x_gpio_get_input)
 
   LOCK_SPIN_IRQ(&dev->lock);
 
-  uint32_t mask = bit_mask(io_last - io_first + 1);
+  uint32_t mask = bit_mask(0, io_last - io_first + 1);
   uint32_t in = nrf_reg_get(GPIO_ADDR, NRF_GPIO_IN) >> io_first;
   endian_le32_na_store(data, in & mask);
 
@@ -274,7 +274,7 @@ static DEV_GPIO_INPUT_IRQ_RANGE(nrf5x_gpio_input_irq_range)
     return -ENOTSUP;
 
   uint32_t selected = (endian_le32_na_load(mask) << io_first)
-    & bit_range(io_first, io_last - io_first + 1);
+    & bit_range(io_first, io_last);
 
   dprintk("%s %08x %d\n", __FUNCTION__, selected, mode);
 

@@ -88,7 +88,7 @@ static void efm32_gpio_out_reg(gpio_id_t io_first, gpio_id_t io_last,
 
  mask:
   /* compute mask word for next clear_mask and set_mask */
-  tmask = mlen > GPIO_BANK_SIZE ? 0xffff : bit_mask(mlen);
+  tmask = mlen > GPIO_BANK_SIZE ? 0xffff : bit_mask(0, mlen);
 
  loop:
   /* compute set and clear masks */
@@ -139,7 +139,7 @@ static void efm32_gpio_mode_reg(gpio_id_t io_first, gpio_id_t io_last,
 
  mask:
   /* compute mask word for next mask cell */
-  tmask = mlen > GPIO_BANK_SIZE/2 ? 0xff : bit_mask(mlen);
+  tmask = mlen > GPIO_BANK_SIZE/2 ? 0xff : bit_mask(0, mlen);
 
  loop:
   m = get_mask(*mask++ & tmask);

@@ -134,7 +134,7 @@ static DEV_REQUEST_DELAYED_FUNC(nrf5x_gpio_pwm_setup)
         pv->period_tk >>= 1;
       }
 
-      duty_changed |= bit_mask(CONFIG_DRIVER_NRF5X_GPIO_PWM_CHANNEL_COUNT);
+      duty_changed |= bit_mask(0, CONFIG_DRIVER_NRF5X_GPIO_PWM_CHANNEL_COUNT);
 
       dprintk("PWM period %d/%d: %d ticks, wraps at %d*2^-%d\n",
              (uint32_t)pv->freq.num, (uint32_t)pv->freq.denom,

@@ -564,8 +564,8 @@ static void nrf5x_persist_counter_zero_range(const struct dev_persist_descriptor
   uint32_t last_word = last / 32;
   uint32_t first_bit = first % 32;
   uint32_t last_bit = last % 32;
-  uint32_t first_mask = ~bit_mask(first_bit);
-  uint32_t last_mask = bit_mask(last_bit);
+  uint32_t first_mask = ~bit_mask(0, first_bit);
+  uint32_t last_mask = bit_mask(0, last_bit);
   uint32_t mask = first_mask;
 
   dprintk("zero range %d - %d\n", first_bit, last_bit);
@@ -815,7 +815,7 @@ static void nrf5x_nvmc_flash_op(
 
   if (rq->type & DEV_MEM_OP_PAGE_WRITE)
     {
-      uintptr_t sc_mask = bit_mask(rq->sc_log2);
+      uintptr_t sc_mask = bit_mask(0, rq->sc_log2);
       uint32_t page_word_count = cpu_mem_read_32(NRF_FICR_CODEPAGESIZE) / 4;
 
 
