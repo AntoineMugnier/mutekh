@@ -59,7 +59,7 @@ error_device:
 adxl362_spi_entry_cfg:
 	.export adxl362_spi_entry_cfg
 
-	tst32c                  %R_TMP0,	bit(_const(VALIO_MOTION_ACC_OPT_ACT))
+	tst32c                  %R_TMP0,	bitpos(_const(VALIO_MOTION_ACC_OPT_ACT))
          jmp8                   cfg_inactivity
 
 cfg_activity:
@@ -69,7 +69,7 @@ cfg_activity:
 	ADXL362_WRITE(4)
 
 cfg_inactivity:
-        tst32c                  %R_TMP0,        bit(_const(VALIO_MOTION_ACC_OPT_INACT))
+        tst32c                  %R_TMP0,        bitpos(_const(VALIO_MOTION_ACC_OPT_INACT))
          end
 
         cst8                    %R_TMP1,        0x23
@@ -89,11 +89,11 @@ adxl362_spi_entry_wait:
 
         cst8                    %R_TMP2,	0
 
-        tst32s                  %R_ARG0,        bit(_const(VALIO_MOTION_ACC_ACT))
-         bit32s                 %R_TMP2,        bit(0x10)
+        tst32s                  %R_ARG0,        bitpos(_const(VALIO_MOTION_ACC_ACT))
+         bit32s                 %R_TMP2,        bitpos(0x10)
 
-        tst32s                  %R_ARG0,        bit(_const(VALIO_MOTION_ACC_INACT))
-         bit32s                 %R_TMP2,        bit(0x20)
+        tst32s                  %R_ARG0,        bitpos(_const(VALIO_MOTION_ACC_INACT))
+         bit32s                 %R_TMP2,        bitpos(0x20)
 
         cst8                    %R_TMP1,        0x2A
 	ADXL362_WRITE(3)
@@ -130,7 +130,7 @@ adxl362_spi_entry_read_value:
 
 clear_irq:
         ld8e                    %R_TMP0,        %R_CTX_PV,      _offsetof(adxl362_private_s, flags, 1)
-        bit32c                  %R_TMP0,        bit(ADXL362_FLAGS_IRQ)
+        bit32c                  %R_TMP0,        bitpos(ADXL362_FLAGS_IRQ)
         st8e                    %R_TMP0,        %R_CTX_PV,      _offsetof(adxl362_private_s, flags, 1)
 
         cst8                    %R_TMP1,        0x0B

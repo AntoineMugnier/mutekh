@@ -116,7 +116,7 @@
    loaded dynamically by the assembler tool.
 
    C style expressions can be used where constants are
-   expected. Moreover, the @tt {bit()} operator is available which
+   expected. Moreover, the @tt {bitpos()} operator is available which
    computes a bit index from a power of 2 constant.
 
    The bytecode source file is piped in the @sourcelink

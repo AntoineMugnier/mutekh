@@ -78,7 +78,7 @@ sub check_num
 
     my $bit = sub {
         my $x = shift;
-        die "$thisop->{line}: bit() expects a power of 2.\n" if !$x or ($x & ($x - 1));
+        die "$thisop->{line}: bitpos() expects a power of 2.\n" if !$x or ($x & ($x - 1));
         return log2($x);
     };
 
@@ -87,7 +87,7 @@ sub check_num
     while (1) {
         next if ($expr =~ s/'(.)'/ord($1)/ge);
         next if ($expr =~ s/\s*([-+]?)(0[Xx][a-fA-F0-9]+)\s*/$1.hex($2)/ge);
-	next if ($expr =~ s/bit\(($num)\)/$bit->($1)/ge);
+	next if ($expr =~ s/bitpos\(($num)\)/$bit->($1)/ge);
 	next if ($expr =~ s/\(\s*($num)\s*\)/$1/ge);
 	next if ($expr =~ s/($num)\s*\*\s*($num)/int($1)*int($2)/ge);
 	next if ($expr =~ s/($num)\s*\/\s*($num)/int($2) ? int(int($1)\/int($2)) : 0/ge);
