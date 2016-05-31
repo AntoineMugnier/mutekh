@@ -54,9 +54,8 @@
    directly as it does not allow sharing the bus with other
    slaves. The scheduler API described below is builtin on top of the
    present driver API. It requires the controller driver to store a
-   @ref dev_spi_ctrl_context_s {scheduler queue} object in the device
-   private data and make it available through the @ref
-   dev_spi_ctrl_queue_t function.
+   @ref dev_spi_ctrl_context_s {spi scheduler context} object in the
+   device private data for use by libdevice.
 
    @end section
 
