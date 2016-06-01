@@ -26,6 +26,7 @@
 # include <device/class/iomux.h>
 # include <device/class/cmu.h>
 # include <device/class/dma.h>
+# include <device/class/i2c.h>
 #endif
 
 #include <arch/efm32/irq.h>
@@ -232,6 +233,8 @@ DEV_DECLARE_STATIC(i2c_dev, "i2c0", 0, efm32_i2c_drv,
 # else
                    DEV_STATIC_RES_FREQ(14000000, 1),
 # endif
+                   DEV_STATIC_RES_I2C_BITRATE(100000),
+                   DEV_STATIC_RES_DEV_TIMER("/rtc"),
 
                    DEV_STATIC_RES_DEV_ICU("/cpu"),
                    DEV_STATIC_RES_IRQ(0, EFM32_IRQ_I2C0, DEV_IRQ_SENSE_RISING_EDGE, 0, 1),
