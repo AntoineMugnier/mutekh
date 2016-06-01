@@ -576,7 +576,7 @@ void dev_spi_transaction_start(struct device_spi_ctrl_s *ctrl,
 #  endif
 
   rq->base.ctrl = ctrl;
-  struct dev_spi_ctrl_context_s *q = device_spi_ctrl_context(rq->ctrl);
+  struct dev_spi_ctrl_context_s *q = device_spi_ctrl_context(ctrl);
 
   lock_spin_irq(&q->lock);
 
