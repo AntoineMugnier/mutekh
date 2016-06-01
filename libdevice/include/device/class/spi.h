@@ -818,7 +818,7 @@ void dev_spi_transaction_init(struct dev_spi_ctrl_transaction_rq_s *rq),
     accessor will be initialized as well.
 
     @see dev_drv_spi_transaction_cleanup */
-config_depend(CONFIG_DEVICE_SPI_BYTECODE)
+config_depend(CONFIG_DEVICE_SPI_TRANSACTION)
 error_t dev_drv_spi_transaction_init(struct device_s *dev,
                                      struct dev_spi_ctrl_transaction_rq_s *rq,
                                      struct device_spi_ctrl_s *ctrl,
