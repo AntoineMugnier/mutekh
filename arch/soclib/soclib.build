@@ -5,6 +5,8 @@
   %types architecture
 
   CONFIG_ARCH_SOCLIB
+  CONFIG_MUTEK_MEMALLOC_SCRAMBLE undefined
+  CONFIG_MUTEK_MEMALLOC_CRC undefined
 
   #################################################
   # CPUs
