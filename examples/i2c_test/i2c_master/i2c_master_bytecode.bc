@@ -1,0 +1,296 @@
+/*
+    This file is part of MutekH.
+
+    MutekH is free software; you can redistribute it and/or modify it
+    under the terms of the GNU Lesser General Public License as
+    published by the Free Software Foundation; version 2.1 of the
+    License.
+
+    MutekH is distributed in the hope that it will be useful, but
+    WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+    Lesser General Public License for more details.
+
+    You should have received a copy of the GNU Lesser General Public
+    License along with MutekH; if not, write to the Free Software
+    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+    02110-1301 USA.
+
+    Copyright Vincent DEFILIPPI <vincentdefilippi@gmail.com> (c) 2016
+*/
+
+.custom i2c
+.name i2c_master_bytecode
+
+#include <device/class/i2c.h>
+
+#include "i2c_master.h"
+
+/*
+    reg:
+      %0 - %7 RW registers
+    mem:
+      %0      buffer address
+      %1      size
+
+    %8    test register
+
+    %10   static function call return address
+    %11   debug info SIZE
+    %12   debug info LAST_CHECKSUM
+    %13   debug info log buffer address
+    %14   debug info checksum buffer address
+*/
+
+i2c_master_bc_scan:
+  .export i2c_master_bc_scan
+
+  cst8          %1,   0x0   /* candidate slave address */
+  cst8          %2,   0x40  /* last valid address is 0x3f */
+  cst8          %3,   0x00  /* byte send */
+i2c_master_scan:
+  i2c_addr_set  %1
+  i2c_wrrc      %3,   2,    DEV_I2C_BC_COND_STOP
+  jmp8          i2c_master_scan_next
+  st8i          %1,   %0
+i2c_master_scan_next:
+  add8          %1,   1
+  neq           %1,   %2
+  jmp8          i2c_master_scan
+  end
+
+i2c_master_bc_init_slave:
+  .export i2c_master_bc_init_slave
+
+  call8        %10,   i2c_master_bc_debug_mode_on
+  i2c_rdr      %0,    1, DEV_I2C_BC_COND_STOP
+  call8        %10,   i2c_master_bc_debug_mode_off
+  end
+
+i2c_master_bc_read_debug_info:
+  .export i2c_master_bc_read_debug_info
+
+  call8        %10,  i2c_master_bc_debug_mode_on
+
+  i2c_rdr      %0,    1,  DEV_I2C_BC_COND_CONTINUOUS /* debug info SIZE */
+  i2c_rdr      %1,    1,  DEV_I2C_BC_COND_CONTINUOUS /* debug info LAST_CHECKSUM */
+  i2c_rdm      %13,   %0, DEV_I2C_BC_COND_CONTINUOUS /* debug info LOG */
+  i2c_rdm      %14,   %0, DEV_I2C_BC_COND_STOP       /* debug info CHECKSUM */
+
+  st8          %0,    %11
+  st8          %1,    %12
+
+  call8        %10,   i2c_master_bc_debug_mode_off
+  end
+
+i2c_master_bc_debug_mode_on:
+  /* Set the debug bit in the slave address. */
+  i2c_addr_get  %0
+  cst8          %1, I2C_SLAVE_DEBUG_MODE_MASK
+  or32          %0, %1
+  i2c_addr_set  %0
+  ret           %10
+
+i2c_master_bc_debug_mode_off:
+  /* Set the debug bit in the slave address. */
+  i2c_addr_get  %0
+  cst8          %1, I2C_SLAVE_DEBUG_MODE_MASK
+  andn32        %0, %1
+  i2c_addr_set  %0
+  ret           %10
+
+
+/*----------------------------------------------------------------------------*/
+
+
+i2c_master_test_yield:
+  /* perform a yield when the bit 0 of saddr is 1 */
+  i2c_addr_get      %9
+  tst32c            %9,   0
+  ret               %10
+  cst32             %9,   0x1000,   0
+  i2c_yield_delay   %9
+  ret               %10
+
+i2c_master_test_wait:
+  /* perform a wait when the bit 0 of saddr is 1 */
+  i2c_addr_get      %9
+  tst32c            %9,   0
+  ret               %10
+  cst32             %9,   0x1000,   0
+  i2c_wait_delay   %9
+  ret               %10
+
+i2c_master_bc_test_1_reg:
+  .export i2c_master_bc_test_1_reg
+
+  i2c_wrr   %0,   8,    DEV_I2C_BC_COND_CONTINUOUS
+  i2c_wrr   %0,   8,    DEV_I2C_BC_COND_RESTART
+  i2c_wrr   %0,   8,    DEV_I2C_BC_COND_STOP
+  call8     %10,  i2c_master_test_yield
+  end
+
+i2c_master_bc_test_1_mem:
+  .export i2c_master_bc_test_1_mem
+
+  i2c_wrm   %0,   %1,   DEV_I2C_BC_COND_CONTINUOUS
+  i2c_wrm   %0,   %1,   DEV_I2C_BC_COND_RESTART
+  i2c_wrm   %0,   %1,   DEV_I2C_BC_COND_STOP
+  call8     %10,  i2c_master_test_wait
+  end
+
+i2c_master_bc_test_2_reg:
+  .export i2c_master_bc_test_2_reg
+
+  i2c_rdr   %0,   8,    DEV_I2C_BC_COND_CONTINUOUS
+  i2c_rdr   %0,   8,    DEV_I2C_BC_COND_RESTART
+  i2c_rdr   %0,   8,    DEV_I2C_BC_COND_STOP
+  call8     %10,  i2c_master_test_yield
+  end
+
+i2c_master_bc_test_2_mem:
+  .export i2c_master_bc_test_2_mem
+
+  i2c_rdm   %0,   %1,   DEV_I2C_BC_COND_CONTINUOUS
+  i2c_rdm   %0,   %1,   DEV_I2C_BC_COND_RESTART
+  i2c_rdm   %0,   %1,   DEV_I2C_BC_COND_STOP
+  call8     %10,  i2c_master_test_wait
+  end
+
+i2c_master_bc_test_3_reg:
+  .export i2c_master_bc_test_3_reg
+
+  i2c_wrr   %0,   8,    DEV_I2C_BC_COND_RESTART
+  i2c_rdr   %0,   8,    DEV_I2C_BC_COND_STOP
+  call8     %10,  i2c_master_test_yield
+  end
+
+i2c_master_bc_test_3_mem:
+  .export i2c_master_bc_test_3_mem
+
+  i2c_wrm   %0,   %1,   DEV_I2C_BC_COND_RESTART
+  i2c_rdm   %0,   %1,   DEV_I2C_BC_COND_STOP
+  call8     %10,  i2c_master_test_wait
+  end
+
+i2c_master_bc_test_4_reg:
+  .export i2c_master_bc_test_4_reg
+
+  i2c_rdr   %0,   8,    DEV_I2C_BC_COND_RESTART
+  i2c_wrr   %0,   8,    DEV_I2C_BC_COND_STOP
+  call8     %10,  i2c_master_test_yield
+  end
+
+i2c_master_bc_test_4_mem:
+  .export i2c_master_bc_test_4_mem
+
+  i2c_rdm   %0,   %1,   DEV_I2C_BC_COND_RESTART
+  i2c_wrm   %0,   %1,   DEV_I2C_BC_COND_STOP
+  call8     %10,  i2c_master_test_wait
+  end
+
+i2c_master_bc_test_5_reg:
+  .export i2c_master_bc_test_5_reg
+
+  i2c_wrr   %0,   8,    DEV_I2C_BC_COND_STOP
+  call8     %10,  i2c_master_test_yield
+  end
+
+i2c_master_bc_test_5_mem:
+  .export i2c_master_bc_test_5_mem
+
+  i2c_wrm   %0,   %1,   DEV_I2C_BC_COND_STOP
+  call8     %10,  i2c_master_test_wait
+  end
+
+i2c_master_bc_test_6_reg:
+  .export i2c_master_bc_test_6_reg
+
+  i2c_rdr   %0,   8,    DEV_I2C_BC_COND_STOP
+  call8     %10,  i2c_master_test_yield
+  end
+
+i2c_master_bc_test_6_mem:
+  .export i2c_master_bc_test_6_mem
+
+  i2c_rdm   %0,   %1,   DEV_I2C_BC_COND_STOP
+  call8     %10,  i2c_master_test_wait
+  end
+
+i2c_master_bc_conditionnal_err:
+  cst8      %8,   0x0
+  call8     %10,  i2c_master_test_yield
+  end
+
+i2c_master_bc_test_7_reg:
+  .export i2c_master_bc_test_7_reg
+
+  i2c_wrrc  %0,   8,    DEV_I2C_BC_COND_STOP
+  jmp8      i2c_master_bc_conditionnal_err
+  cst8      %8,   0x1
+  call8     %10,  i2c_master_test_wait
+  end
+
+i2c_master_bc_test_7_mem:
+  .export i2c_master_bc_test_7_mem
+
+  i2c_wrmc  %0,   %1,   DEV_I2C_BC_COND_STOP
+  jmp8      i2c_master_bc_conditionnal_err
+  cst8      %8,   0x1
+  call8     %10,  i2c_master_test_yield
+  end
+
+i2c_master_bc_test_8_reg:
+  .export i2c_master_bc_test_8_reg
+
+  i2c_wrrc  %0,   8,    DEV_I2C_BC_COND_STOP
+  jmp8      i2c_master_bc_conditionnal_err
+  cst8      %8,   0x1
+  end
+
+i2c_master_bc_test_8_mem:
+  .export i2c_master_bc_test_8_mem
+
+  i2c_wrmc  %0,   %1,   DEV_I2C_BC_COND_STOP
+  jmp8      i2c_master_bc_conditionnal_err
+  cst8      %8,   0x1
+  call8     %10,  i2c_master_test_yield
+  end
+
+i2c_master_bc_test_9_reg:
+  .export i2c_master_bc_test_9_reg
+
+  i2c_rdrc  %0,   8,    DEV_I2C_BC_COND_STOP
+  jmp8      i2c_master_bc_conditionnal_err
+  cst8      %8,   0x1
+  call8     %10,  i2c_master_test_wait
+  end
+
+i2c_master_bc_test_9_mem:
+  .export i2c_master_bc_test_9_mem
+
+  i2c_rdmc  %0,   %1,   DEV_I2C_BC_COND_STOP
+  jmp8      i2c_master_bc_conditionnal_err
+  cst8      %8,   0x1
+  call8     %10,  i2c_master_test_yield
+  end
+
+i2c_master_bc_test_10_reg:
+  .export i2c_master_bc_test_10_reg
+
+  i2c_rdrc  %0,   8,    DEV_I2C_BC_COND_STOP
+  jmp8      i2c_master_bc_conditionnal_err
+  cst8      %8,   0x1
+  call8     %10,  i2c_master_test_wait
+  end
+
+i2c_master_bc_test_10_mem:
+  .export i2c_master_bc_test_10_mem
+
+  i2c_rdmc  %0,   %1,   DEV_I2C_BC_COND_STOP
+  jmp8      i2c_master_bc_conditionnal_err
+  cst8      %8,   0x1
+  call8     %10,  i2c_master_test_yield
+  end
+
+
