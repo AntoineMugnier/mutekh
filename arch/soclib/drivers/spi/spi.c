@@ -138,8 +138,8 @@ static bool_t soclib_spi_transfer_rx(struct device_s *dev)
 
   while (pv->fifo_lvl > 0)
     {
-      uint32_t st = cpu_mem_read_32(pv->addr + SOCLIB_SPI_STATUS_ADDR)
-                      & endian_le32(SOCLIB_SPI_STATUS_RXEMPTY);
+      uint32_t st = endian_le32(cpu_mem_read_32(pv->addr + SOCLIB_SPI_STATUS_ADDR))
+                      & SOCLIB_SPI_STATUS_RXEMPTY;
 
       if (st)
 #ifdef CONFIG_DEVICE_IRQ
@@ -393,19 +393,19 @@ static DEV_IRQ_SINK_UPDATE(soclib_spi_icu_sink_update)
     SOCLIB_SPI_GPIRQ_MODE_PIN_SET(sink_id, mode, LEVEL);
   else
     SOCLIB_SPI_GPIRQ_MODE_PIN_SET(sink_id, mode, EDGE);
-  cpu_mem_write_32(pv->addr + SOCLIB_SPI_GPIRQ_MODE_ADDR, mode);
+  cpu_mem_write_32(pv->addr + SOCLIB_SPI_GPIRQ_MODE_ADDR, endian_le32(mode));
 
   uint32_t pol = endian_le32(cpu_mem_read_32(pv->addr + SOCLIB_SPI_GPIRQ_POL_ADDR));
   if (sense & (DEV_IRQ_SENSE_HIGH_LEVEL | DEV_IRQ_SENSE_RISING_EDGE))
     SOCLIB_SPI_GPIRQ_POL_PIN_SET(sink_id, pol, RISING);
   else
     SOCLIB_SPI_GPIRQ_POL_PIN_SET(sink_id, pol, FALLING);
-  cpu_mem_write_32(pv->addr + SOCLIB_SPI_GPIRQ_POL_ADDR, pol);
+  cpu_mem_write_32(pv->addr + SOCLIB_SPI_GPIRQ_POL_ADDR, endian_le32(pol));
 
   pv->irq_mask |= 1 << sink_id;
 
  end:
-  cpu_mem_write_32(pv->addr + SOCLIB_SPI_GPIN_ADDR, pv->irq_mask);
+  cpu_mem_write_32(pv->addr + SOCLIB_SPI_GPIN_ADDR, endian_le32(pv->irq_mask));
 }
 
 #define soclib_spi_icu_link device_icu_dummy_link
@@ -471,7 +471,7 @@ static DEV_INIT(soclib_spi_init)
     goto err_;
 
   /* reset controller */
-  cpu_mem_write_32(addr + SOCLIB_SPI_CTRL_ADDR, SOCLIB_SPI_CTRL_RESET(RESET));
+  cpu_mem_write_32(addr + SOCLIB_SPI_CTRL_ADDR, endian_le32(SOCLIB_SPI_CTRL_RESET(RESET)));
 
   uint32_t cfg = endian_le32(cpu_mem_read_32(addr + SOCLIB_SPI_CONFIG_ADDR));
   __unused__ uint_fast8_t gpin_cnt = SOCLIB_SPI_CONFIG_GPINCNT_GET(cfg) + 1;
@@ -524,12 +524,12 @@ static DEV_INIT(soclib_spi_init)
   if (device_irq_source_link(dev, &pv->src_ep, 1, -1))
     goto err_queue;
 
-  cpu_mem_write_32(pv->addr + SOCLIB_SPI_IRQMASK_ADDR,
+  cpu_mem_write_32(pv->addr + SOCLIB_SPI_IRQMASK_ADDR, endian_le32(
                    SOCLIB_SPI_IRQMASK_DONE | SOCLIB_SPI_IRQMASK_RXFULL
 # ifdef CONFIG_DRIVER_SOCLIB_SPI_ICU
                    | SOCLIB_SPI_IRQMASK_GPIRQ
 # endif
-                   );
+                   ));
 #endif
 
 
