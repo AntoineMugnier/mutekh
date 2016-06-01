@@ -743,7 +743,7 @@ our %asm = (
     }),
     _multi_keys( 'lde' => 'ld8e' => 'ld16e' => 'ld32e' => 'ld64e' => {
         words => 2, code => 0x7100, argscnt => 3,
-        parse => \&parse_ld, out => $backend->can('out_lde'),
+        parse => \&parse_lde, out => $backend->can('out_lde'),
     }),
     _multi_keys( 'st' => 'st8' => 'st16' => 'st32' => 'st64' => {
         words => 1, code => 0x6800, argscnt => 2,
@@ -759,7 +759,7 @@ our %asm = (
     }),
     _multi_keys( 'ste' => 'st8e' => 'st16e' => 'st32e' => 'st64e' => {
         words => 2, code => 0x7900, argscnt => 3,
-        parse => \&parse_st, out => $backend->can('out_ste'),
+        parse => \&parse_ste, out => $backend->can('out_ste'),
     }),
     'cst16' => {
         words => 2, code => 0x7210, argscnt => 3,
