@@ -529,6 +529,13 @@ config_depend_and2(CONFIG_DEVICE_SPI, CONFIG_MUTEK_CONTEXT_SCHED)
 error_t dev_spi_wait_transfer(struct device_spi_ctrl_s *accessor,
                               struct dev_spi_ctrl_transfer_s * tr);
 
+/** Synchronous spi wait function. @This uses the scheduler API to
+    put the current context in wait state waiting for the given
+    bytecode request to terminate. */
+config_depend_and2(CONFIG_MUTEK_CONTEXT_SCHED, CONFIG_DEVICE_SPI_BYTECODE)
+error_t dev_spi_wait_bytecode(struct device_spi_ctrl_s *ctrl,
+                              struct dev_spi_ctrl_bytecode_rq_s *rq,
+                              const void *pc, uint16_t mask, ...);
 
 /***************************************** device class */
 

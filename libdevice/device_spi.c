@@ -594,9 +594,10 @@ void dev_spi_transaction_start(struct device_spi_ctrl_s *ctrl,
 # endif
 
 # ifdef CONFIG_DEVICE_SPI_BYTECODE
-error_t dev_spi_bytecode_start(struct device_spi_ctrl_s *ctrl,
+static
+error_t dev_spi_bytecode_start_va(struct device_spi_ctrl_s *ctrl,
                                struct dev_spi_ctrl_bytecode_rq_s *rq,
-                               const void *pc, uint16_t mask, ...)
+                               const void *pc, uint16_t mask, va_list ap)
 {
   error_t err = -EBUSY;
 
@@ -629,10 +630,7 @@ error_t dev_spi_bytecode_start(struct device_spi_ctrl_s *ctrl,
       if (pc != NULL)
         bc_set_pc(&rq->vm, pc);
 
-      va_list ap;
-      va_start(ap, mask);
       bc_set_regs_va(&rq->vm, mask, ap);
-      va_end(ap);
 
       rq->base.err = 0;
       rq->base.enqueued = 1;
@@ -646,6 +644,18 @@ error_t dev_spi_bytecode_start(struct device_spi_ctrl_s *ctrl,
 
  err:
   lock_release_irq(&q->lock);
+
+  return err;
+}
+
+error_t dev_spi_bytecode_start(struct device_spi_ctrl_s *ctrl,
+                               struct dev_spi_ctrl_bytecode_rq_s *rq,
+                               const void *pc, uint16_t mask, ...)
+{
+  va_list ap;
+  va_start(ap, mask);
+  error_t err = dev_spi_bytecode_start_va(ctrl, rq, pc, mask, ap);
+  va_end(ap);
 
   return err;
 }
@@ -890,6 +900,25 @@ error_t dev_spi_wait_transfer(struct device_spi_ctrl_s *accessor,
 
   return tr->err;
 }
+
+# ifdef CONFIG_DEVICE_SPI_BYTECODE
+error_t
+dev_spi_wait_bytecode(struct device_spi_ctrl_s *ctrl,
+                      struct dev_spi_ctrl_bytecode_rq_s *rq,
+                      const void *pc, uint16_t mask, ...)
+{
+  struct dev_request_status_s st;
+
+  dev_request_sched_init(&rq->base.base, &st);
+  va_list ap;
+  va_start(ap, mask);
+  error_t err = dev_spi_bytecode_start_va(ctrl, rq, pc, mask, ap);
+  va_end(ap);
+  if (!err)
+    dev_request_sched_wait(&st);
+  return err;
+}
+# endif
 
 #endif
 
