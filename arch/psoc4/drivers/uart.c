@@ -663,7 +663,7 @@ static DEV_USE(psoc4_uart_char_use)
     return 0;
   }
 
-  case DEV_USE_CLOCK_GATES: {
+  case DEV_USE_CLOCK_SINK_GATE_DONE: {
     struct dev_clock_sink_ep_s *sink = param;
     struct device_s *dev = sink->dev;
     struct psoc4_uart_pv_s *pv = dev->drv_pv;

@@ -35,8 +35,8 @@ DEV_DECLARE_STATIC(uart_dev, "uart0", 0, psoc4_uart_drv,
                    DEV_STATIC_RES_UART(1000000, 8, DEV_UART_PARITY_NONE, 1, 1, 0),
                    DEV_STATIC_RES_IOMUX("tx", 0, PSOC4_P1_5, PSOC4_P1_5_SCB0_UART_TX, 0),
                    DEV_STATIC_RES_IOMUX("rx", 0, PSOC4_P1_4, PSOC4_P1_4_SCB0_UART_RX, 0),
-# ifdef CONFIG_DEVICE_CLOCK
-                   DEV_STATIC_RES_CLK_SRC("/clock", PSOC4_CLOCK_SCB0, 0),
+# ifdef CONFIG_DEVICE_PERI
+                   DEV_STATIC_RES_CLK_SRC("/peri", PSOC4_PERI_SCB0, 0),
 # else
                    DEV_STATIC_RES_FREQ(32768, 1),
 # endif

@@ -23,9 +23,6 @@
 #include <hexo/iospace.h>
 #include <hexo/interrupt.h>
 
-#include <mutek/startup.h>
-#include <hexo/interrupt.h>
-
 #include <mutek/mem_alloc.h>
 #include <mutek/printk.h>
 
@@ -54,7 +51,7 @@
 
 #define SINK_LFCLK 0
 
-struct psoc4_ble_private_s
+DRIVER_PV(struct psoc4_ble_private_s
 {
   struct dev_clock_src_ep_s src[PSOC4_BLE_CLK_SRC_COUNT];
   struct dev_clock_sink_ep_s sink[PSOC4_BLE_CLK_SINK_COUNT];
@@ -72,11 +69,10 @@ struct psoc4_ble_private_s
   bool_t eco_running;
 
   struct kroutine_s updater;
-};
+});
 
 static DEV_CMU_CONFIG_OSC(psoc4_ble_config_osc)
 {
-  struct device_s *dev = accessor->dev;
   struct psoc4_ble_private_s *pv = dev->drv_pv;
   if (freq->denom != 1)
     return -EINVAL;
@@ -106,7 +102,6 @@ static DEV_CMU_CONFIG_OSC(psoc4_ble_config_osc)
 
 static DEV_CMU_CONFIG_MUX(psoc4_ble_config_mux)
 {
-  struct device_s *dev = accessor->dev;
   struct psoc4_ble_private_s *pv = dev->drv_pv;
 
   switch (node_id) {
@@ -147,8 +142,6 @@ static void psoc4_ble_config_read(struct device_s *dev)
 
 static DEV_CMU_ROLLBACK(psoc4_ble_rollback)
 {
-  struct device_s *dev = accessor->dev;
-
   psoc4_ble_config_read(dev);
 
   return 0;
@@ -156,7 +149,6 @@ static DEV_CMU_ROLLBACK(psoc4_ble_rollback)
 
 static DEV_CMU_COMMIT(psoc4_ble_commit)
 {
-  struct device_s *dev = accessor->dev;
   struct psoc4_ble_private_s *pv = dev->drv_pv;
   uint32_t tmp;
   struct dev_clock_notify_s notif = {
@@ -247,151 +239,6 @@ static DEV_CMU_NODE_INFO(psoc4_ble_node_info)
   return 0;
 }
 
-__attribute__((unused))
-static bool_t psoc4_ble_power_is_up(struct psoc4_ble_private_s *pv)
-{
-  return (pv->sink[SINK_LFCLK].src->flags & DEV_CLOCK_EP_CLOCK)
-    && (cpu_mem_read_32(BLESS + BLESS_RF_CONFIG_ADDR)
-        & BLESS_RF_CONFIG_RF_ENABLE);
-}
-
-static bool_t psoc4_ble_power_is_needed(struct psoc4_ble_private_s *pv)
-{
-  return 0
-    || (cpu_mem_read_32(BLERD + BLERD_DBUS_ADDR) & BLERD_DBUS_XTAL_ENABLE)
-    || pv->eco_required
-    ;
-}
-
-static error_t psoc4_ble_power_enable(struct psoc4_ble_private_s *pv)
-{
-  error_t err;
-  uint32_t tmp;
-
-  err = dev_clock_sink_gate(&pv->sink[SINK_LFCLK], DEV_CLOCK_EP_CLOCK);
-
-  dprintk("%s LFCLK %s\n", __FUNCTION__, err ? "not ready" : "ok");
-
-  if (err)
-    return err;
-
-  // Enable RF
-  tmp = cpu_mem_read_32(BLESS + BLESS_RF_CONFIG_ADDR);
-  tmp |= BLESS_RF_CONFIG_RF_ENABLE;
-  cpu_mem_write_32(BLESS + BLESS_RF_CONFIG_ADDR, tmp);
-
-  return 0;
-}
-
-static error_t psoc4_ble_power_disable(struct psoc4_ble_private_s *pv)
-{
-  uint32_t tmp;
-
-  dprintk("%s\n", __FUNCTION__);
-
-  // Enable RF
-  tmp = cpu_mem_read_32(BLESS + BLESS_RF_CONFIG_ADDR);
-  tmp |= BLESS_RF_CONFIG_RF_ENABLE;
-  cpu_mem_write_32(BLESS + BLESS_RF_CONFIG_ADDR, tmp);
-
-  return dev_clock_sink_gate(&pv->sink[SINK_LFCLK], DEV_CLOCK_EP_NONE);
-}
-
-static void psoc4_ble_eco_irq_handle(struct psoc4_ble_private_s *pv,
-                                     bool_t sync)
-{
-  uint32_t tmp;
-
-  dprintk("%s\n", __FUNCTION__);
-
-  // Disable IRQ
-  tmp = cpu_mem_read_32(BLESS + BLESS_LL_DSM_CTRL_ADDR);
-  tmp &= ~BLESS_LL_DSM_CTRL_XTAL_ON_INTR_EN;
-  cpu_mem_write_32(BLESS + BLESS_LL_DSM_CTRL_ADDR, tmp);
-
-  // Clear irq bit
-  cpu_mem_write_32(BLESS + BLESS_LL_DSM_INTR_STAT_ADDR,
-                   BLESS_LL_DSM_INTR_STAT_XTAL_ON_INTR);
-
-  pv->eco_running = 1;
-
-  if (!sync)
-    dev_cmu_src_update_async(&pv->src[PSOC4_BLE_CLK_SRC_ECO], DEV_CLOCK_EP_CLOCK);
-}
-
-static error_t psoc4_ble_eco_start(struct psoc4_ble_private_s *pv, bool_t sync)
-{
-  uint32_t dbus;
-  uint32_t tmp;
-  error_t err;
-
-  dprintk("%s\n", __FUNCTION__);
-
-  err = psoc4_ble_power_enable(pv);
-  if (err) {
-    dprintk("%s power not ready\n", __FUNCTION__);
-    return err;
-  }
-
-  if (pv->eco_running) {
-    assert(cpu_mem_read_32(BLERD + BLERD_DBUS_ADDR) & BLERD_DBUS_XTAL_ENABLE);
-
-    dprintk("%s ECO Running\n", __FUNCTION__);
-    return 0;
-  }
-
-  // Clear irq bit
-  cpu_mem_write_32(BLESS + BLESS_LL_DSM_INTR_STAT_ADDR,
-                   BLESS_LL_DSM_INTR_STAT_XTAL_ON_INTR);
-
-  if (!sync) {
-    // Enable IRQ
-    tmp = cpu_mem_read_32(BLESS + BLESS_LL_DSM_CTRL_ADDR);
-    tmp |= BLESS_LL_DSM_CTRL_XTAL_ON_INTR_EN;
-    cpu_mem_write_32(BLESS + BLESS_LL_DSM_CTRL_ADDR, tmp);
-  } else {
-    // Disable IRQ
-    tmp = cpu_mem_read_32(BLESS + BLESS_LL_DSM_CTRL_ADDR);
-    tmp &= ~BLESS_LL_DSM_CTRL_XTAL_ON_INTR_EN;
-    cpu_mem_write_32(BLESS + BLESS_LL_DSM_CTRL_ADDR, tmp);
-  }
-
-  // Enable xtal
-  dbus = cpu_mem_read_32(BLERD + BLERD_DBUS_ADDR);
-  dbus |= BLERD_DBUS_XTAL_ENABLE;
-  cpu_mem_write_32(BLERD + BLERD_DBUS_ADDR, dbus);
-
-  if (sync) {
-    while (!(cpu_mem_read_32(BLESS + BLESS_LL_DSM_INTR_STAT_ADDR)
-            & BLESS_LL_DSM_INTR_STAT_XTAL_ON_INTR))
-      ;
-
-    psoc4_ble_eco_irq_handle(pv, sync);
-
-    return 0;
-  }
-
-  return -EAGAIN;
-}
-
-static void psoc4_ble_eco_stop(struct psoc4_ble_private_s *pv)
-{
-  uint32_t dbus;
-
-  dprintk("%s\n", __FUNCTION__);
-
-  // Disable xtal
-  dbus = cpu_mem_read_32(BLERD + BLERD_DBUS_ADDR);
-  dbus &= ~BLERD_DBUS_XTAL_ENABLE;
-  cpu_mem_write_32(BLERD + BLERD_DBUS_ADDR, dbus);
-
-  pv->eco_running = 0;
-
-  dev_cmu_src_update_async(&pv->src[PSOC4_BLE_CLK_SRC_ECO], 0);
-
-  device_sleep_schedule(pv->src[0].dev);
-}
-
 static KROUTINE_EXEC(psoc4_ble_updater)
 {
   struct psoc4_ble_private_s *pv = KROUTINE_CONTAINER(kr, *pv, updater);
@@ -431,16 +278,16 @@ static DEV_CLOCK_SRC_SETUP(psoc4_ble_ep_setup)
   switch (op)
     {
 #ifdef CONFIG_DEVICE_CLOCK_VARFREQ
-    case DEV_CLOCK_SETUP_NOTIFY:
+    case DEV_CLOCK_SRC_SETUP_NOTIFY:
       pv->notify_mask |= 1 << src_id;
       return 0;
 
-    case DEV_CLOCK_SETUP_NONOTIFY:
+    case DEV_CLOCK_SRC_SETUP_NONOTIFY:
       pv->notify_mask &= ~(1 << src_id);
       return 0;
 #endif
 
-    case DEV_CLOCK_SETUP_GATES:
+    case DEV_CLOCK_SRC_SETUP_GATES:
       dprintk("%s gates src %d; %x\n",
              __FUNCTION__, src_id, param->flags);
 
@@ -448,7 +295,7 @@ static DEV_CLOCK_SRC_SETUP(psoc4_ble_ep_setup)
       case PSOC4_BLE_CLK_SRC_ECO: {
         if (param->flags & DEV_CLOCK_EP_ANY) {
           pv->eco_required = 1;
-          return psoc4_ble_eco_start(pv, !!(param->flags & DEV_CLOCK_EP_SINK_SYNC));
+          return psoc4_ble_eco_start(pv, !!(param->flags & DEV_CLOCK_EP_GATING_SYNC));
         } else {
           pv->eco_required = 0;
           kroutine_exec(&pv->updater);
@@ -465,7 +312,7 @@ static DEV_CLOCK_SRC_SETUP(psoc4_ble_ep_setup)
           wco_config |= BLESS_WCO_CONFIG_ENABLE;
           cpu_mem_write_32(BLESS + BLESS_WCO_CONFIG_ADDR, wco_config);
 
-          if (param->flags & DEV_CLOCK_EP_SINK_SYNC) {
+          if (param->flags & DEV_CLOCK_EP_GATING_SYNC) {
             while (!(cpu_mem_read_32(BLESS + BLESS_WCO_STATUS_ADDR)
                      & BLESS_WCO_STATUS_OUT_BLNK_A))
               ;
@@ -494,15 +341,29 @@ static DEV_CLOCK_SRC_SETUP(psoc4_ble_ep_setup)
         return -EINVAL;
       }
 
-    case DEV_CLOCK_SETUP_LINK:
+    case DEV_CLOCK_SRC_SETUP_LINK:
       return 0;
 
-    case DEV_CLOCK_SETUP_UNLINK:
+    case DEV_CLOCK_SRC_SETUP_UNLINK:
       return 0;
 
     default:
       return -ENOTSUP;
     }
+}
+
+DRIVER_CMU_CONFIG_OPS_DECLARE(psoc4_ble);
+
+static DEV_CMU_APP_CONFIGID_SET(psoc4_ble_app_configid_set)
+{
+  struct device_s *dev = accessor->dev;
+  error_t err;
+
+  LOCK_SPIN_IRQ(&dev->lock);
+  err = dev_cmu_configid_set(dev, &psoc4_ble_config_ops, config_id);
+  LOCK_RELEASE_IRQ(&dev->lock);
+
+  return err;
 }
 
 static DEV_USE(psoc4_ble_use)
@@ -522,7 +383,7 @@ static DEV_USE(psoc4_ble_use)
   }
 #endif
 
-  case DEV_USE_CLOCK_NOTIFY: {
+  case DEV_USE_CLOCK_SINK_FREQ_CHANGED: {
     struct dev_clock_notify_s *notify = param;
     struct dev_clock_sink_ep_s *sink = notify->sink;
     struct device_s *dev = sink->dev;
@@ -538,7 +399,7 @@ static DEV_USE(psoc4_ble_use)
     return 0;
   }
 
-  case DEV_USE_CLOCK_GATES: {
+  case DEV_USE_CLOCK_SINK_GATE_DONE: {
     struct dev_clock_sink_ep_s *sink = param;
     struct device_s *dev = sink->dev;
     struct psoc4_ble_private_s *pv = dev->drv_pv;
@@ -554,8 +415,6 @@ static DEV_USE(psoc4_ble_use)
     return dev_use_generic(param, op);
   }
 }
-
-const struct driver_s psoc4_ble_drv;
 
 static DEV_INIT(psoc4_ble_init)
 {
@@ -576,7 +435,7 @@ static DEV_INIT(psoc4_ble_init)
   if (!(dev->init_mask & (1 << 0))) {
     psoc4_ble_config_read(dev);
 
-    err = dev_cmu_init(&psoc4_ble_drv, dev);
+    err = dev_cmu_init(dev, &psoc4_ble_config_ops);
     if (err) {
       if (err != -EAGAIN)
         goto err_mem;
@@ -595,7 +454,7 @@ static DEV_INIT(psoc4_ble_init)
 
   if (!pv->sink[SINK_LFCLK].src) {
     err = dev_drv_clock_init(dev, &pv->sink[SINK_LFCLK], PSOC4_BLE_CLK_SINK_LFCLK,
-                             DEV_CLOCK_EP_VARFREQ | DEV_CLOCK_EP_SINK_NOTIFY, &pv->lfclk_freq);
+                             DEV_CLOCK_EP_VARFREQ | DEV_CLOCK_EP_FREQ_NOTIFY, &pv->lfclk_freq);
     if (err) {
       dprintk("%s: LFCLK not ready yet\n", __FUNCTION__);
       return -EAGAIN;
