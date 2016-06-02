@@ -15,6 +15,7 @@ sub out_begin {
            "    .syntax unified\n".
            "    .section .rodata,\"a\"\n".
 	   "    .globl $main::bc_name\n".
+           "    .balign 4\n".
            "$main::bc_name:\n".
 	   # struct bc_descriptor_s
 	   "    .long 1f\n".
