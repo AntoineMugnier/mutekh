@@ -70,9 +70,9 @@ static KROUTINE_EXEC(device_i2c_ctrl_transfer_end)
 
       if (tr->err != 0)
         {
-          q->tr_in_progress = 0;
           if ((q->op & 0x3000) != 0x3000)
             device_i2c_ctrl_end(q, rq, tr->err);
+          q->tr_in_progress = 0;
           device_i2c_ctrl_run(q);
           return;
         }
@@ -148,7 +148,8 @@ device_i2c_ctrl_end(struct dev_i2c_ctrl_context_s *q,
 # ifdef CONFIG_DEVICE_I2C_BYTECODE
       if (rq->bytecode && q->tr_in_progress)
         {
-          assert((DEVICE_OP(rq->ctrl, reset) == 0));
+          error_t err = DEVICE_OP(rq->ctrl, reset);
+          assert(!err);
           q->tr_in_progress = 0;
         }
 #endif
