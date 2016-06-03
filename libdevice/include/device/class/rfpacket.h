@@ -44,6 +44,7 @@
 #include <hexo/enum.h>
 
 struct device_rfpacket_s;
+struct dev_rfpacket_rq_s;
 
 /** RF power in 0.125 dBm steps */
 typedef int16_t dev_rfpacket_pwr_t;
@@ -188,6 +189,21 @@ struct dev_rfpacket_rf_cfg_ask_s
 
 STRUCT_INHERIT(dev_rfpacket_rf_cfg_ask_s, dev_rfpacket_rf_cfg_s, base);
 
+/** @This extends the @ref dev_rfpacket_cfg_s object when the @ref
+ * DEV_RFPACKET_LORA modulation is in use. */
+struct dev_rfpacket_rf_cfg_lora_s
+{
+  struct dev_rfpacket_rf_cfg_s base;
+
+  /** spreading factor (in log2 basis). */
+  uint8_t                      BITFIELD(spreading,4);
+
+  /** inverted I/Q signals */
+  bool_t                       BITFIELD(iq_inverted,1);
+};
+
+STRUCT_INHERIT(dev_rfpacket_rf_cfg_lora_s, dev_rfpacket_rf_cfg_s, base);
+
 /***************************************** packet format config */
 
 enum dev_rfpacket_format_e
@@ -195,6 +211,10 @@ enum dev_rfpacket_format_e
   /* Sync word, 1 byte Len, Payload, CRC
      @see dev_rfpacket_pk_cfg_basic_s */
   DEV_RFPACKET_FMT_SLPC,
+
+  /* Sync word, optional header, Payload, CRC. This is used when
+     @ref dev_rfpacket_pk_cfg_lora_s is used. */
+  DEV_RFPACKET_FMT_LORA,
 };
 
 enum dev_rfpacket_encoding_e
@@ -222,6 +242,7 @@ struct dev_rfpacket_pk_cfg_s
 struct dev_rfpacket_pk_cfg_basic_s
 {
   struct dev_rfpacket_pk_cfg_s  base;
+
   /** Specifies the CRC polynomial when relevant. for instance IBM
       CRC16 has value 0x8005. Zero means that the CRC field is not
       checked. */
@@ -250,6 +271,37 @@ struct dev_rfpacket_pk_cfg_basic_s
 
 STRUCT_INHERIT(dev_rfpacket_pk_cfg_basic_s, dev_rfpacket_pk_cfg_s, base);
 
+enum dev_rfpacket_lora_encoding_e
+{
+  DEV_RFPACKET_LORA_CR_45 = 1,
+  DEV_RFPACKET_LORA_CR_46,
+  DEV_RFPACKET_LORA_CR_47,
+  DEV_RFPACKET_LORA_CR_48,
+};
+
+struct dev_rfpacket_pk_cfg_lora_s
+{
+  struct dev_rfpacket_pk_cfg_s      base;
+
+  /** Set when using explicit header */
+  bool_t                            BITFIELD(header,1);
+
+  /** Set when payload CRC is enabled. */
+  bool_t                            BITFIELD(crc,1);
+
+  /** Coding rate of the payload. Values must be specified as 4/@tt crate. */
+  enum dev_rfpacket_lora_encoding_e BITFIELD(crate,3);
+
+  /** Sync word value. Most significant bit are transmitted first */
+  uint8_t                           sw_value;
+
+  /** Size of preamble in symbols. When the requested value
+      is not supported, it must be rounded to a higher value. */
+  uint16_t                          pb_len;
+};
+
+STRUCT_INHERIT(dev_rfpacket_pk_cfg_lora_s, dev_rfpacket_pk_cfg_s, base);
+
 /***************************************** stats */
 
 /** @see dev_rfpacket_stats_t */
@@ -275,7 +327,6 @@ typedef DEV_RFPACKET_STATS(dev_rfpacket_stats_t);
 
 /***************************************** RX packet buffers */
 
-struct dev_rfpacket_rq_s;
 /** @see dev_rfpacket_rx_alloc_t */
 #define DEV_RFPACKET_RX_ALLOC(n)                \
   struct dev_rfpacket_rx_s * (n)(struct dev_rfpacket_rq_s *rq, size_t size)
