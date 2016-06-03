@@ -21,14 +21,14 @@
 
 */
 
-#if defined(CONFIG_DEVICE)
-# include <device/device.h>
-# include <device/driver.h>
-# include <device/resources.h>
-# include <device/irq.h>
-# include <device/class/iomux.h>
-# include <device/class/cmu.h>
-#endif
+#include <device/device.h>
+#include <device/driver.h>
+#include <device/resources.h>
+#include <device/irq.h>
+
+#include <device/class/gpio.h>
+#include <device/class/iomux.h>
+#include <device/class/timer.h>
 
 #include <arch/stm32/l4/mmap.h>
 #include <arch/stm32/l4/irq.h>
@@ -58,7 +58,7 @@ DEV_DECLARE_STATIC(usart2_dev, "uart1", 0, stm32_usart_drv,
 
                    /* default configuration. */
                    DEV_STATIC_RES_UART(115200, 8, DEV_UART_PARITY_NONE, 1, 0, 0)
-                   );
+);
 
 #endif
 
@@ -74,7 +74,59 @@ DEV_DECLARE_STATIC(gpio_dev, "gpio", 0, stm32_gpio_drv,
                    DEV_STATIC_RES_IRQ(4, STM32_IRQ_EXTI4,     DEV_IRQ_SENSE_HIGH_LEVEL, 0, 0x1),
                    DEV_STATIC_RES_IRQ(5, STM32_IRQ_EXTI9_5,   DEV_IRQ_SENSE_HIGH_LEVEL, 0, 0x1),
                    DEV_STATIC_RES_IRQ(6, STM32_IRQ_EXTI15_10, DEV_IRQ_SENSE_HIGH_LEVEL, 0, 0x1)
-                   );
+);
+
+#endif
+
+#if defined(CONFIG_DRIVER_STM32_TIMER)
+
+DEV_DECLARE_STATIC(timer2_dev, "timer2", 0, stm32_timer_drv,
+                   DEV_STATIC_RES_MEM(STM32_TIM2_ADDR, STM32_TIM2_ADDR + 0x400),
+
+                   DEV_STATIC_RES_FREQ(80000000, 1),
+
+                   DEV_STATIC_RES_DEV_ICU("/cpu"),
+                   DEV_STATIC_RES_IRQ(0, STM32_IRQ_TIM2, DEV_IRQ_SENSE_HIGH_LEVEL, 0, 0x1)
+);
+
+#endif
+
+#if defined(CONFIG_DRIVER_STM32_SPI)
+
+DEV_DECLARE_STATIC(spi1_dev, "spi1", 0, stm32_spi_drv,
+                   DEV_STATIC_RES_MEM(STM32_SPI1_ADDR, STM32_SPI1_ADDR + 0x400),
+
+                   DEV_STATIC_RES_FREQ(80000000, 1),
+
+                   DEV_STATIC_RES_DEV_ICU("/cpu"),
+                   DEV_STATIC_RES_IRQ(0, STM32_IRQ_SPI1, DEV_IRQ_SENSE_HIGH_LEVEL, 0, 0x1),
+
+                   DEV_STATIC_RES_DEV_IOMUX("/gpio"),
+                   DEV_STATIC_RES_IOMUX("clk", 0, 0*16+5 /* PA5 */, 5 /* AF5 */, 0),
+                   DEV_STATIC_RES_IOMUX("miso", 0, 0*16+6 /* PA6 */, 5 /* AF5 */, 0),
+                   DEV_STATIC_RES_IOMUX("mosi", 0, 0*16+7 /* PA7 */, 5 /* AF5 */, 0),
+
+                   DEV_STATIC_RES_DEV_TIMER("/timer*")
+);
+
+#endif
+
+#if defined(CONFIG_DRIVER_RFPACKET_SI446X)
+
+DEV_DECLARE_STATIC(si446x_dev, "rfpacket", 0, si446x_drv,
+                   DEV_STATIC_RES_DEV_PARAM("spi", "/spi*"),
+
+                   DEV_STATIC_RES_DEV_PARAM("gpio", "/gpio"),
+
+                   DEV_STATIC_RES_DEV_PARAM("icu", "/gpio"),
+                   DEV_STATIC_RES_IRQ(0, 1*16+10 /* PB10 */, DEV_IRQ_SENSE_FALLING_EDGE, 0, 0x1),
+
+                   DEV_STATIC_RES_GPIO("nirq", 1*16+10 /* PB10 */, 1),
+                   DEV_STATIC_RES_GPIO("cts",  1*16+4  /* PB4  */, 1),
+                   DEV_STATIC_RES_GPIO("sdn",  1*16+5  /* PB5  */, 1),
+
+                   DEV_STATIC_RES_UINT_PARAM("gpio-cs-id", 0*16+8 /* PA8 */)
+);
 
 #endif
 
