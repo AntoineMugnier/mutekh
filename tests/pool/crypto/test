@@ -1,0 +1,35 @@
+# -*- python -*-
+
+from mt.base.environment import *
+from mt.base.match import *
+from mt.base.expectation import *
+
+from mutekh.test.stages import configure, build, execute
+from mutekh.test.archs import *
+
+test_cmac       = Config("t_cmac")
+
+env_list = [
+    Environment(
+        name = "soft_aes",
+        timeout = 30,
+        success_grep = "++SUCCESS++",
+
+        test_deps = [
+            "drivers/crypto/soft_aes/aes.c",
+            "drivers/crypto/soft_aes/aes_cmac.c"
+        ],
+
+        test_space = [
+            Dimension(soclib_arm32),
+            Dimension(test_cmac),
+            ],
+
+        actions = [
+            configure,
+            build,
+            execute
+            ],
+
+        )
+]

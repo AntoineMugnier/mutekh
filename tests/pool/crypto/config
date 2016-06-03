@@ -1,0 +1,24 @@
+
+  # New source code module to be compiled
+  %append MODULES test:$(CONFIGPATH)
+
+  # Application license
+  CONFIG_LICENSE_APP_LGPL
+
+  CONFIG_APP_START!
+  CONFIG_MUTEK_THREAD!
+  CONFIG_MUTEK_KROUTINE_SCHED!
+
+  CONFIG_DRIVER_CRYPTO_SOFT_AES
+  CONFIG_DRIVER_CRYPTO_SOFT_AES_ECB undefined
+  CONFIG_DRIVER_CRYPTO_SOFT_AES_CBC undefined
+  CONFIG_DRIVER_CRYPTO_SOFT_AES_CTR undefined
+  CONFIG_DRIVER_CRYPTO_SOFT_AES_OCB3 undefined
+  CONFIG_DRIVER_CRYPTO_SOFT_AES_AD undefined
+
+  %include scripts/options.build
+  %include arch/arch.build
+
+%section t_cmac
+  CONFIG_DRIVER_CRYPTO_SOFT_AES_ECB!
+  CONFIG_DRIVER_CRYPTO_SOFT_AES_CMAC!

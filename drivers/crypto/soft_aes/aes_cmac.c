@@ -25,29 +25,28 @@
 #include "aes.h"
 
 static inline
-uint32_t __lt32(uint32_t a, uint32_t b)
+void soft_aes_cmac_shift_left(const uint32_t * in, uint32_t * out, uint32_t * ov)
 {
-  return (a^((a^b)|((a-b)^b))) >> 31;
+  int_fast8_t i;
+
+  uint32_t s = 0;
+
+  for (i = 3; i >= 0; --i)
+    {
+      uint32_t tmp = in[i];
+      out[i] = (tmp << 1) | s;
+      s = tmp >> 31;
+    }
+  *ov = s;
 }
 
-static
-void soft_aes_cmac_shit_left(const uint32_t * in, uint32_t * out, uint32_t * ov)
-{
-  uint_fast8_t i;
-
-  *ov = in[0] >> 31;
-  for (i = 0; i < 3; i++)
-    out[i] = (in[i] << 1) | (in[i+1] >> 31);
-  out[3] = in[3] << 1;
-}
-
-static
+static inline
 void soft_aes_gen_subkey(const uint32_t * data, uint32_t * subkey)
 {
   uint32_t ov = 0;
 
-  soft_aes_cmac_shit_left(data, subkey, &ov);
-  subkey[3] ^= endian_be32(ov * 0x87);
+  soft_aes_cmac_shift_left(data, subkey, &ov);
+  subkey[3] ^= (uint32_t)((ov ^ 1) - 1) & 0x87;
 }
 
 void soft_aes_cmac(struct soft_aes_context_s *actx,
@@ -57,24 +56,19 @@ void soft_aes_cmac(struct soft_aes_context_s *actx,
   uint_fast8_t i;
   size_t len = rq->len;
   const uint8_t *in = rq->in;
-  uint8_t *out;
 
+  /* Does not support AES-CMAC block padding if not on finalize operation (i.e.
+     at the end of the data buffer). */
+  if (!(rq->op & DEV_CRYPTO_FINALIZE) && (rq->len & 0xf))
+    return;
   if (ctx->iv_len != 16)
     return;
-  if (ctx->auth_len != 16)
+  if (ctx->auth_len > 16 || ctx->auth_len & 0x3)
     return;
 
   uint32_t iv[4];
   for (i = 0; i < 4; i++)
     iv[i] = endian_be32_na_load(rq->iv_ctr + i * 4);
-
-  uint32_t k1[4]     = { 0 }, k2[4];
-  uint8_t  blank[17] = { 0 }; /* Need one extra byte for padding overflow. */
-
-  /* Sub key generation */
-  soft_aes_encrypt(actx, k1);
-  soft_aes_gen_subkey(k1, k1);
-  soft_aes_gen_subkey(k1, k2);
 
   /* N-1th blocks */
   for (; len > 16; len -= 16)
@@ -85,46 +79,62 @@ void soft_aes_cmac(struct soft_aes_context_s *actx,
       in += 16;
     }
 
-  /* Select the right subkey. */
-  uint32_t const lt16_mask = __lt32(i, 16) * (uint32_t)-1;
-  /* If not equal to 16, the block is < 16 bytes */
-  uint32_t const eq16_mask = ~lt16_mask;
-
-  for (i = 0; i < 4; i++)
-    k1[i] = (k1[i] & eq16_mask) | (k2[i] & lt16_mask);
-
-  /* Padding */
-  for (i = 0; len-- > 0; i++)
-    blank[i] = in[i];
-  blank[i] = 0x80;
-
-  /* Nth block */
-  in = blank;
-  for (i = 0; i < 4; ++i)
-    iv[i] ^= endian_be32_na_load(in + i * 4) ^ endian_be32(k1[i]);
-  soft_aes_encrypt(actx, iv);
-
   rq->err = 0;
 
   if (rq->op & DEV_CRYPTO_FINALIZE)
     {
+      uint32_t subkey[4] = { 0 };
+      uint8_t  blank[16] = { 0 };
+
+      /* Generate K1 subkey */
+      soft_aes_encrypt(actx, subkey);
+      soft_aes_gen_subkey(subkey, subkey);
+
+      /* If last block is not 16-byte long, add padding */
+      if (len < 16)
+        {
+          // Generate K2 subkey for padded data
+          soft_aes_gen_subkey(subkey, subkey);
+
+          // Pad remaing bytes, blank trailing bytes are already 0
+          for (i = 0; len-- > 0; i++)
+            blank[i] = in[i];
+          blank[i] = 0x80;
+
+          // Use padded block
+          in = blank;
+        }
+
+      /* Nth block */
+      for (i = 0; i < 4; ++i)
+        iv[i] ^= endian_be32_na_load(in + i * 4) ^ subkey[i];
+      soft_aes_encrypt(actx, iv);
+
       if (rq->op & DEV_CRYPTO_INVERSE)
         {
-          if (dev_crypto_memcmp(iv, rq->auth, 16))
+          uint32_t c = 0;
+
+          for (i = 0; i < ctx->auth_len/4; ++i)
+            c |= endian_be32_na_load(rq->auth + i * 4) ^ iv[i];
+
+          if (c)
             rq->err = -EBADDATA;
-          return;
         }
       else
         {
-          out = rq->auth;
+          for (i = 0; i < ctx->auth_len/4; ++i)
+            endian_be32_na_store(rq->auth + i * 4, iv[i]);
         }
     }
   else
     {
-      out = rq->iv_ctr;
-    }
+      /* Nth block */
+      for (i = 0; i < 4; ++i)
+        iv[i] ^= endian_be32_na_load(in + i * 4);
+      soft_aes_encrypt(actx, iv);
 
-  for (i = 0; i < 4; i++)
-    endian_be32_na_store(out + i * 4, iv[i]);
+      for (i = 0; i < 4; i++)
+        endian_be32_na_store(rq->iv_ctr + i * 4, iv[i]);
+    }
 }
 
