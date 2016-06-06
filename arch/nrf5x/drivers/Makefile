@@ -18,3 +18,4 @@ objs-$(CONFIG_DRIVER_NRF5X_TIMER) += timer.o
 objs-$(CONFIG_DRIVER_NRF5X_AES) += aes.o
 objs-$(CONFIG_DRIVER_NRF5X_RNG) += rng.o
 objs-$(CONFIG_DRIVER_NRF5X_ADC) += adc.o
+objs-$(CONFIG_DRIVER_NRF5X_TWIM) += twim.o
