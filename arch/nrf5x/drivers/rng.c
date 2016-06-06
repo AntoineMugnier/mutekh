@@ -45,7 +45,7 @@ DRIVER_PV(struct nrf5x_rng_private_s
   bool_t callbacking;
 });
 
-static DEVCRYPTO_INFO(nrf5x_rng_info)
+static DEV_CRYPTO_INFO(nrf5x_rng_info)
 {
   if (accessor->number > 0)
     return -ENOENT;
@@ -122,7 +122,7 @@ static void nrf5x_rng_byte_start(struct device_s *dev)
   nrf_task_trigger(RNG_ADDR, NRF_RNG_START);
 }
 
-static DEVCRYPTO_REQUEST(nrf5x_rng_request)
+static DEV_CRYPTO_REQUEST(nrf5x_rng_request)
 {
   struct device_s *dev = accessor->dev;
   struct nrf5x_rng_private_s *pv = dev->drv_pv;
