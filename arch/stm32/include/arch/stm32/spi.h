@@ -3,7 +3,7 @@
 ***************************************/
 
 /*
-   bfgen -o cdefs cdefs_use_reg_mask=1 cdefs_use_field_set=1                   \
+   bfgen -o cdefs cdefs_use_reg_meask=1 cdefs_use_field_set=1                  \
      cdefs_use_field_get=1 reg_prefix=STM32 field_prefix=STM32                 \
      cdefs_use_field_mask=1 cdefs_use_field_setval=1
 */
@@ -11,176 +11,295 @@
 #ifndef _SPI_BFGEN_DEFS_
 #define _SPI_BFGEN_DEFS_
 
+/** control register 1 @multiple */
 #define STM32_SPI_CR1_ADDR                           0x00000000
-#define STM32_SPI_CR1_MASK                           0x0000ffff
+/** Clock phase @multiple */
   #define STM32_SPI_CR1_CPHA_MASK                  0x00000001
-  #define STM32_SPI_CR1_CPHA(v)                    ((STM32_SPI_CR1_CPHA_##v) << 0)
-  #define STM32_SPI_CR1_CPHA_SET(x, v)             do { (x) = (((x) & ~0x1) | ((STM32_SPI_CR1_CPHA_##v) << 0)); } while(0)
-  #define STM32_SPI_CR1_CPHA_SETVAL(x, v)          do { (x) = (((x) & ~0x1) | ((v) << 0)); } while(0)
+  #define STM32_SPI_CR1_CPHA                       0x00000001
+  #define STM32_SPI_CR1_CPHA_SET(x, v)             do { (x) = (((x) & ~0x1) | ((v) << 0)); } while(0)
   #define STM32_SPI_CR1_CPHA_GET(x)                (((x) >> 0) & 0x1)
-    #define STM32_SPI_CR1_CPHA_FIRST_TRANS           0x00000000
-    #define STM32_SPI_CR1_CPHA_SECOND_TRANS          0x00000001
+/** Clock polarity @multiple */
   #define STM32_SPI_CR1_CPOL_MASK                  0x00000001
   #define STM32_SPI_CR1_CPOL                       0x00000002
   #define STM32_SPI_CR1_CPOL_SET(x, v)             do { (x) = (((x) & ~0x2) | ((v) << 1)); } while(0)
   #define STM32_SPI_CR1_CPOL_GET(x)                (((x) >> 1) & 0x1)
+/** Master selection @multiple */
   #define STM32_SPI_CR1_MSTR_MASK                  0x00000001
-  #define STM32_SPI_CR1_MSTR(v)                    ((STM32_SPI_CR1_MSTR_##v) << 2)
-  #define STM32_SPI_CR1_MSTR_SET(x, v)             do { (x) = (((x) & ~0x4) | ((STM32_SPI_CR1_MSTR_##v) << 2)); } while(0)
-  #define STM32_SPI_CR1_MSTR_SETVAL(x, v)          do { (x) = (((x) & ~0x4) | ((v) << 2)); } while(0)
+  #define STM32_SPI_CR1_MSTR                       0x00000004
+  #define STM32_SPI_CR1_MSTR_SET(x, v)             do { (x) = (((x) & ~0x4) | ((v) << 2)); } while(0)
   #define STM32_SPI_CR1_MSTR_GET(x)                (((x) >> 2) & 0x1)
-    #define STM32_SPI_CR1_MSTR_SLAVE                 0x00000000
-    #define STM32_SPI_CR1_MSTR_MASTER                0x00000001
+/** Baud rate control @multiple */
   #define STM32_SPI_CR1_BR_MASK                    0x00000007
-  #define STM32_SPI_CR1_BR(v)                      ((STM32_SPI_CR1_BR_##v) << 3)
-  #define STM32_SPI_CR1_BR_SET(x, v)               do { (x) = (((x) & ~0x38) | ((STM32_SPI_CR1_BR_##v) << 3)); } while(0)
-  #define STM32_SPI_CR1_BR_SETVAL(x, v)            do { (x) = (((x) & ~0x38) | ((v) << 3)); } while(0)
+  #define STM32_SPI_CR1_BR(v)                      ((v) << 3)
+  #define STM32_SPI_CR1_BR_SET(x, v)               do { (x) = (((x) & ~0x38) | ((v) << 3)); } while(0)
   #define STM32_SPI_CR1_BR_GET(x)                  (((x) >> 3) & 0x7)
-    #define STM32_SPI_CR1_BR_PCLK_DIV_2              0x00000000
-    #define STM32_SPI_CR1_BR_PCLK_DIV_4              0x00000001
-    #define STM32_SPI_CR1_BR_PCLK_DIV_8              0x00000002
-    #define STM32_SPI_CR1_BR_PCLK_DIV_16             0x00000003
-    #define STM32_SPI_CR1_BR_PCLK_DIV_32             0x00000004
-    #define STM32_SPI_CR1_BR_PCLK_DIV_64             0x00000005
-    #define STM32_SPI_CR1_BR_PCLK_DIV_128            0x00000006
-    #define STM32_SPI_CR1_BR_PCLK_DIV_256            0x00000007
+/** SPI enable @multiple */
   #define STM32_SPI_CR1_SPE_MASK                   0x00000001
   #define STM32_SPI_CR1_SPE                        0x00000040
   #define STM32_SPI_CR1_SPE_SET(x, v)              do { (x) = (((x) & ~0x40) | ((v) << 6)); } while(0)
   #define STM32_SPI_CR1_SPE_GET(x)                 (((x) >> 6) & 0x1)
+/** Frame format @multiple */
   #define STM32_SPI_CR1_LSBFIRST_MASK              0x00000001
   #define STM32_SPI_CR1_LSBFIRST                   0x00000080
   #define STM32_SPI_CR1_LSBFIRST_SET(x, v)         do { (x) = (((x) & ~0x80) | ((v) << 7)); } while(0)
   #define STM32_SPI_CR1_LSBFIRST_GET(x)            (((x) >> 7) & 0x1)
+/** Internal slave select @multiple */
   #define STM32_SPI_CR1_SSI_MASK                   0x00000001
   #define STM32_SPI_CR1_SSI                        0x00000100
   #define STM32_SPI_CR1_SSI_SET(x, v)              do { (x) = (((x) & ~0x100) | ((v) << 8)); } while(0)
   #define STM32_SPI_CR1_SSI_GET(x)                 (((x) >> 8) & 0x1)
+/** Software slave management @multiple */
   #define STM32_SPI_CR1_SSM_MASK                   0x00000001
   #define STM32_SPI_CR1_SSM                        0x00000200
   #define STM32_SPI_CR1_SSM_SET(x, v)              do { (x) = (((x) & ~0x200) | ((v) << 9)); } while(0)
   #define STM32_SPI_CR1_SSM_GET(x)                 (((x) >> 9) & 0x1)
+/** Receive only @multiple */
   #define STM32_SPI_CR1_RXONLY_MASK                0x00000001
-  #define STM32_SPI_CR1_RXONLY(v)                  ((STM32_SPI_CR1_RXONLY_##v) << 10)
-  #define STM32_SPI_CR1_RXONLY_SET(x, v)           do { (x) = (((x) & ~0x400) | ((STM32_SPI_CR1_RXONLY_##v) << 10)); } while(0)
-  #define STM32_SPI_CR1_RXONLY_SETVAL(x, v)        do { (x) = (((x) & ~0x400) | ((v) << 10)); } while(0)
+  #define STM32_SPI_CR1_RXONLY                     0x00000400
+  #define STM32_SPI_CR1_RXONLY_SET(x, v)           do { (x) = (((x) & ~0x400) | ((v) << 10)); } while(0)
   #define STM32_SPI_CR1_RXONLY_GET(x)              (((x) >> 10) & 0x1)
-    #define STM32_SPI_CR1_RXONLY_FULL_DUPLEX         0x00000000
-    #define STM32_SPI_CR1_RXONLY_OUTPUT_DISABLED     0x00000001
+/** Data frame format @multiple */
   #define STM32_SPI_CR1_DFF_MASK                   0x00000001
-  #define STM32_SPI_CR1_DFF(v)                     ((STM32_SPI_CR1_DFF_##v) << 11)
-  #define STM32_SPI_CR1_DFF_SET(x, v)              do { (x) = (((x) & ~0x800) | ((STM32_SPI_CR1_DFF_##v) << 11)); } while(0)
-  #define STM32_SPI_CR1_DFF_SETVAL(x, v)           do { (x) = (((x) & ~0x800) | ((v) << 11)); } while(0)
+  #define STM32_SPI_CR1_DFF                        0x00000800
+  #define STM32_SPI_CR1_DFF_SET(x, v)              do { (x) = (((x) & ~0x800) | ((v) << 11)); } while(0)
   #define STM32_SPI_CR1_DFF_GET(x)                 (((x) >> 11) & 0x1)
-    #define STM32_SPI_CR1_DFF_8_BITS                 0x00000000
-    #define STM32_SPI_CR1_DFF_16_BITS                0x00000001
+/** CRC transfer next @multiple */
   #define STM32_SPI_CR1_CRCNEXT_MASK               0x00000001
-  #define STM32_SPI_CR1_CRCNEXT(v)                 ((STM32_SPI_CR1_CRCNEXT_##v) << 12)
-  #define STM32_SPI_CR1_CRCNEXT_SET(x, v)          do { (x) = (((x) & ~0x1000) | ((STM32_SPI_CR1_CRCNEXT_##v) << 12)); } while(0)
-  #define STM32_SPI_CR1_CRCNEXT_SETVAL(x, v)       do { (x) = (((x) & ~0x1000) | ((v) << 12)); } while(0)
+  #define STM32_SPI_CR1_CRCNEXT                    0x00001000
+  #define STM32_SPI_CR1_CRCNEXT_SET(x, v)          do { (x) = (((x) & ~0x1000) | ((v) << 12)); } while(0)
   #define STM32_SPI_CR1_CRCNEXT_GET(x)             (((x) >> 12) & 0x1)
-    #define STM32_SPI_CR1_CRCNEXT_DATA_PHASE         0x00000000
-    #define STM32_SPI_CR1_CRCNEXT_NEXT_TRANSFER      0x00000001
+/** Hardware CRC calculation enable @multiple */
   #define STM32_SPI_CR1_CRCEN_MASK                 0x00000001
   #define STM32_SPI_CR1_CRCEN                      0x00002000
   #define STM32_SPI_CR1_CRCEN_SET(x, v)            do { (x) = (((x) & ~0x2000) | ((v) << 13)); } while(0)
   #define STM32_SPI_CR1_CRCEN_GET(x)               (((x) >> 13) & 0x1)
+/** Output enable in bidirectional mode @multiple */
   #define STM32_SPI_CR1_BIDIOE_MASK                0x00000001
   #define STM32_SPI_CR1_BIDIOE                     0x00004000
   #define STM32_SPI_CR1_BIDIOE_SET(x, v)           do { (x) = (((x) & ~0x4000) | ((v) << 14)); } while(0)
   #define STM32_SPI_CR1_BIDIOE_GET(x)              (((x) >> 14) & 0x1)
+/** Bidirectional data mode enable @multiple */
   #define STM32_SPI_CR1_BIDIMODE_MASK              0x00000001
-  #define STM32_SPI_CR1_BIDIMODE(v)                ((STM32_SPI_CR1_BIDIMODE_##v) << 15)
-  #define STM32_SPI_CR1_BIDIMODE_SET(x, v)         do { (x) = (((x) & ~0x8000) | ((STM32_SPI_CR1_BIDIMODE_##v) << 15)); } while(0)
-  #define STM32_SPI_CR1_BIDIMODE_SETVAL(x, v)      do { (x) = (((x) & ~0x8000) | ((v) << 15)); } while(0)
+  #define STM32_SPI_CR1_BIDIMODE                   0x00008000
+  #define STM32_SPI_CR1_BIDIMODE_SET(x, v)         do { (x) = (((x) & ~0x8000) | ((v) << 15)); } while(0)
   #define STM32_SPI_CR1_BIDIMODE_GET(x)            (((x) >> 15) & 0x1)
-    #define STM32_SPI_CR1_BIDIMODE_2_LINE_BIDIRECTIONAL 0x00000000
-    #define STM32_SPI_CR1_BIDIMODE_1_LINE_BIDIRECTIONAL 0x00000001
 
+/** control register 2 @multiple */
 #define STM32_SPI_CR2_ADDR                           0x00000004
-#define STM32_SPI_CR2_MASK                           0x000000fb
+/** Rx buffer DMA enable @multiple */
   #define STM32_SPI_CR2_RXDMAEN_MASK               0x00000001
   #define STM32_SPI_CR2_RXDMAEN                    0x00000001
   #define STM32_SPI_CR2_RXDMAEN_SET(x, v)          do { (x) = (((x) & ~0x1) | ((v) << 0)); } while(0)
   #define STM32_SPI_CR2_RXDMAEN_GET(x)             (((x) >> 0) & 0x1)
+/** Tx buffer DMA enable @multiple */
   #define STM32_SPI_CR2_TXDMAEN_MASK               0x00000001
   #define STM32_SPI_CR2_TXDMAEN                    0x00000002
   #define STM32_SPI_CR2_TXDMAEN_SET(x, v)          do { (x) = (((x) & ~0x2) | ((v) << 1)); } while(0)
   #define STM32_SPI_CR2_TXDMAEN_GET(x)             (((x) >> 1) & 0x1)
+/** SS output enable @multiple */
   #define STM32_SPI_CR2_SSOE_MASK                  0x00000001
-  #define STM32_SPI_CR2_SSOE                       0x00000008
-  #define STM32_SPI_CR2_SSOE_SET(x, v)             do { (x) = (((x) & ~0x8) | ((v) << 3)); } while(0)
-  #define STM32_SPI_CR2_SSOE_GET(x)                (((x) >> 3) & 0x1)
-  #define STM32_SPI_CR2_FRF_MASK                   0x00000001
-  #define STM32_SPI_CR2_FRF(v)                     ((STM32_SPI_CR2_FRF_##v) << 4)
-  #define STM32_SPI_CR2_FRF_SET(x, v)              do { (x) = (((x) & ~0x10) | ((STM32_SPI_CR2_FRF_##v) << 4)); } while(0)
-  #define STM32_SPI_CR2_FRF_SETVAL(x, v)           do { (x) = (((x) & ~0x10) | ((v) << 4)); } while(0)
-  #define STM32_SPI_CR2_FRF_GET(x)                 (((x) >> 4) & 0x1)
-    #define STM32_SPI_CR2_FRF_MOTOROLA_MODE          0x00000000
-    #define STM32_SPI_CR2_FRF_TI_MODE                0x00000001
+  #define STM32_SPI_CR2_SSOE                       0x00000004
+  #define STM32_SPI_CR2_SSOE_SET(x, v)             do { (x) = (((x) & ~0x4) | ((v) << 2)); } while(0)
+  #define STM32_SPI_CR2_SSOE_GET(x)                (((x) >> 2) & 0x1)
+/** Error interrupt enable @multiple */
   #define STM32_SPI_CR2_ERRIE_MASK                 0x00000001
   #define STM32_SPI_CR2_ERRIE                      0x00000020
   #define STM32_SPI_CR2_ERRIE_SET(x, v)            do { (x) = (((x) & ~0x20) | ((v) << 5)); } while(0)
   #define STM32_SPI_CR2_ERRIE_GET(x)               (((x) >> 5) & 0x1)
+/** RX buffer not empty interrupt enable @multiple */
   #define STM32_SPI_CR2_RXNEIE_MASK                0x00000001
   #define STM32_SPI_CR2_RXNEIE                     0x00000040
   #define STM32_SPI_CR2_RXNEIE_SET(x, v)           do { (x) = (((x) & ~0x40) | ((v) << 6)); } while(0)
   #define STM32_SPI_CR2_RXNEIE_GET(x)              (((x) >> 6) & 0x1)
+/** Tx buffer empty interrupt enable @multiple */
   #define STM32_SPI_CR2_TXEIE_MASK                 0x00000001
   #define STM32_SPI_CR2_TXEIE                      0x00000080
   #define STM32_SPI_CR2_TXEIE_SET(x, v)            do { (x) = (((x) & ~0x80) | ((v) << 7)); } while(0)
   #define STM32_SPI_CR2_TXEIE_GET(x)               (((x) >> 7) & 0x1)
+# if CONFIG_STM32_FAMILY == L4
+/** DS @multiple */
+  #define STM32_SPI_CR2_DS_MASK                    0x0000000f
+  #define STM32_SPI_CR2_DS(v)                      ((v) << 8)
+  #define STM32_SPI_CR2_DS_SET(x, v)               do { (x) = (((x) & ~0xf00) | ((v) << 8)); } while(0)
+  #define STM32_SPI_CR2_DS_GET(x)                  (((x) >> 8) & 0xf)
+/** Fifo RX threshold @multiple */
+  #define STM32_SPI_CR2_FRXTH_MASK                 0x00000001
+  #define STM32_SPI_CR2_FRXTH                      0x00001000
+  #define STM32_SPI_CR2_FRXTH_SET(x, v)            do { (x) = (((x) & ~0x1000) | ((v) << 12)); } while(0)
+  #define STM32_SPI_CR2_FRXTH_GET(x)               (((x) >> 12) & 0x1)
+/** LDMA RX @multiple */
+  #define STM32_SPI_CR2_LDMA_RX_MASK               0x00000001
+  #define STM32_SPI_CR2_LDMA_RX                    0x00002000
+  #define STM32_SPI_CR2_LDMA_RX_SET(x, v)          do { (x) = (((x) & ~0x2000) | ((v) << 13)); } while(0)
+  #define STM32_SPI_CR2_LDMA_RX_GET(x)             (((x) >> 13) & 0x1)
+/** LDMA TX @multiple */
+  #define STM32_SPI_CR2_LDMA_TX_MASK               0x00000001
+  #define STM32_SPI_CR2_LDMA_TX                    0x00004000
+  #define STM32_SPI_CR2_LDMA_TX_SET(x, v)          do { (x) = (((x) & ~0x4000) | ((v) << 14)); } while(0)
+  #define STM32_SPI_CR2_LDMA_TX_GET(x)             (((x) >> 14) & 0x1)
+# endif
 
+/** status register @multiple */
 #define STM32_SPI_SR_ADDR                            0x00000008
-#define STM32_SPI_SR_MASK                            0x000001ff
+/** Receive buffer not empty @multiple */
   #define STM32_SPI_SR_RXNE_MASK                   0x00000001
   #define STM32_SPI_SR_RXNE                        0x00000001
   #define STM32_SPI_SR_RXNE_SET(x, v)              do { (x) = (((x) & ~0x1) | ((v) << 0)); } while(0)
   #define STM32_SPI_SR_RXNE_GET(x)                 (((x) >> 0) & 0x1)
+/** Transmit buffer empty @multiple */
   #define STM32_SPI_SR_TXE_MASK                    0x00000001
   #define STM32_SPI_SR_TXE                         0x00000002
   #define STM32_SPI_SR_TXE_SET(x, v)               do { (x) = (((x) & ~0x2) | ((v) << 1)); } while(0)
   #define STM32_SPI_SR_TXE_GET(x)                  (((x) >> 1) & 0x1)
+/** Channel side @multiple */
   #define STM32_SPI_SR_CHSIDE_MASK                 0x00000001
   #define STM32_SPI_SR_CHSIDE                      0x00000004
   #define STM32_SPI_SR_CHSIDE_SET(x, v)            do { (x) = (((x) & ~0x4) | ((v) << 2)); } while(0)
   #define STM32_SPI_SR_CHSIDE_GET(x)               (((x) >> 2) & 0x1)
+/** Underrun flag @multiple */
   #define STM32_SPI_SR_UDR_MASK                    0x00000001
   #define STM32_SPI_SR_UDR                         0x00000008
   #define STM32_SPI_SR_UDR_SET(x, v)               do { (x) = (((x) & ~0x8) | ((v) << 3)); } while(0)
   #define STM32_SPI_SR_UDR_GET(x)                  (((x) >> 3) & 0x1)
+/** CRC error flag @multiple */
   #define STM32_SPI_SR_CRCERR_MASK                 0x00000001
   #define STM32_SPI_SR_CRCERR                      0x00000010
   #define STM32_SPI_SR_CRCERR_SET(x, v)            do { (x) = (((x) & ~0x10) | ((v) << 4)); } while(0)
   #define STM32_SPI_SR_CRCERR_GET(x)               (((x) >> 4) & 0x1)
-  #define STM32_SPI_SR_MODEF_MASK                  0x00000001
-  #define STM32_SPI_SR_MODEF                       0x00000020
-  #define STM32_SPI_SR_MODEF_SET(x, v)             do { (x) = (((x) & ~0x20) | ((v) << 5)); } while(0)
-  #define STM32_SPI_SR_MODEF_GET(x)                (((x) >> 5) & 0x1)
+/** Mode fault @multiple */
+  #define STM32_SPI_SR_MODF_MASK                   0x00000001
+  #define STM32_SPI_SR_MODF                        0x00000020
+  #define STM32_SPI_SR_MODF_SET(x, v)              do { (x) = (((x) & ~0x20) | ((v) << 5)); } while(0)
+  #define STM32_SPI_SR_MODF_GET(x)                 (((x) >> 5) & 0x1)
+/** Overrun flag @multiple */
   #define STM32_SPI_SR_OVR_MASK                    0x00000001
   #define STM32_SPI_SR_OVR                         0x00000040
   #define STM32_SPI_SR_OVR_SET(x, v)               do { (x) = (((x) & ~0x40) | ((v) << 6)); } while(0)
   #define STM32_SPI_SR_OVR_GET(x)                  (((x) >> 6) & 0x1)
+/** Busy flag @multiple */
   #define STM32_SPI_SR_BSY_MASK                    0x00000001
   #define STM32_SPI_SR_BSY                         0x00000080
   #define STM32_SPI_SR_BSY_SET(x, v)               do { (x) = (((x) & ~0x80) | ((v) << 7)); } while(0)
   #define STM32_SPI_SR_BSY_GET(x)                  (((x) >> 7) & 0x1)
+# if CONFIG_STM32_FAMILY == 4 || CONFIG_STM32_FAMILY == L4
+/** Frame error flag @multiple */
   #define STM32_SPI_SR_FRE_MASK                    0x00000001
   #define STM32_SPI_SR_FRE                         0x00000100
   #define STM32_SPI_SR_FRE_SET(x, v)               do { (x) = (((x) & ~0x100) | ((v) << 8)); } while(0)
   #define STM32_SPI_SR_FRE_GET(x)                  (((x) >> 8) & 0x1)
+# endif
+# if CONFIG_STM32_FAMILY == L4
+/** Fifo RX level @multiple */
+  #define STM32_SPI_SR_FRLVL_MASK                  0x00000003
+  #define STM32_SPI_SR_FRLVL(v)                    ((v) << 9)
+  #define STM32_SPI_SR_FRLVL_SET(x, v)             do { (x) = (((x) & ~0x600) | ((v) << 9)); } while(0)
+  #define STM32_SPI_SR_FRLVL_GET(x)                (((x) >> 9) & 0x3)
+/** Fifo TX level @multiple */
+  #define STM32_SPI_SR_FTLVL_MASK                  0x00000003
+  #define STM32_SPI_SR_FTLVL(v)                    ((v) << 11)
+  #define STM32_SPI_SR_FTLVL_SET(x, v)             do { (x) = (((x) & ~0x1800) | ((v) << 11)); } while(0)
+  #define STM32_SPI_SR_FTLVL_GET(x)                (((x) >> 11) & 0x3)
+# endif
 
+/** data register @multiple */
 #define STM32_SPI_DR_ADDR                            0x0000000c
-#define STM32_SPI_DR_MASK                            0x00000000
+/** Data register @multiple */
+  #define STM32_SPI_DR_DR_MASK                     0x0000ffff
+  #define STM32_SPI_DR_DR(v)                       ((v) << 0)
+  #define STM32_SPI_DR_DR_SET(x, v)                do { (x) = (((x) & ~0xffff) | ((v) << 0)); } while(0)
+  #define STM32_SPI_DR_DR_GET(x)                   (((x) >> 0) & 0xffff)
 
+/** CRC polynomial register @multiple */
 #define STM32_SPI_CRCPR_ADDR                         0x00000010
-#define STM32_SPI_CRCPR_MASK                         0x00000000
+/** CRC polynomial register @multiple */
+  #define STM32_SPI_CRCPR_CRCPOLY_MASK             0x0000ffff
+  #define STM32_SPI_CRCPR_CRCPOLY(v)               ((v) << 0)
+  #define STM32_SPI_CRCPR_CRCPOLY_SET(x, v)        do { (x) = (((x) & ~0xffff) | ((v) << 0)); } while(0)
+  #define STM32_SPI_CRCPR_CRCPOLY_GET(x)           (((x) >> 0) & 0xffff)
 
+/** RX CRC register @multiple */
 #define STM32_SPI_RXCRCR_ADDR                        0x00000014
-#define STM32_SPI_RXCRCR_MASK                        0x00000000
+/** Rx CRC register @multiple */
+  #define STM32_SPI_RXCRCR_RXCRC_MASK              0x0000ffff
+  #define STM32_SPI_RXCRCR_RXCRC(v)                ((v) << 0)
+  #define STM32_SPI_RXCRCR_RXCRC_SET(x, v)         do { (x) = (((x) & ~0xffff) | ((v) << 0)); } while(0)
+  #define STM32_SPI_RXCRCR_RXCRC_GET(x)            (((x) >> 0) & 0xffff)
 
+/** TX CRC register @multiple */
 #define STM32_SPI_TXCRCR_ADDR                        0x00000018
-#define STM32_SPI_TXCRCR_MASK                        0x00000000
+/** Tx CRC register @multiple */
+  #define STM32_SPI_TXCRCR_TXCRC_MASK              0x0000ffff
+  #define STM32_SPI_TXCRCR_TXCRC(v)                ((v) << 0)
+  #define STM32_SPI_TXCRCR_TXCRC_SET(x, v)         do { (x) = (((x) & ~0xffff) | ((v) << 0)); } while(0)
+  #define STM32_SPI_TXCRCR_TXCRC_GET(x)            (((x) >> 0) & 0xffff)
+
+/** I2S configuration register @multiple */
+#define STM32_SPI_I2SCFGR_ADDR                       0x0000001c
+/** Channel length (number of bits per audio channel) @multiple */
+  #define STM32_SPI_I2SCFGR_CHLEN_MASK             0x00000001
+  #define STM32_SPI_I2SCFGR_CHLEN                  0x00000001
+  #define STM32_SPI_I2SCFGR_CHLEN_SET(x, v)        do { (x) = (((x) & ~0x1) | ((v) << 0)); } while(0)
+  #define STM32_SPI_I2SCFGR_CHLEN_GET(x)           (((x) >> 0) & 0x1)
+/** Data length to be transferred @multiple */
+  #define STM32_SPI_I2SCFGR_DATLEN_MASK            0x00000003
+  #define STM32_SPI_I2SCFGR_DATLEN(v)              ((v) << 1)
+  #define STM32_SPI_I2SCFGR_DATLEN_SET(x, v)       do { (x) = (((x) & ~0x6) | ((v) << 1)); } while(0)
+  #define STM32_SPI_I2SCFGR_DATLEN_GET(x)          (((x) >> 1) & 0x3)
+/** Steady state clock polarity @multiple */
+  #define STM32_SPI_I2SCFGR_CKPOL_MASK             0x00000001
+  #define STM32_SPI_I2SCFGR_CKPOL                  0x00000008
+  #define STM32_SPI_I2SCFGR_CKPOL_SET(x, v)        do { (x) = (((x) & ~0x8) | ((v) << 3)); } while(0)
+  #define STM32_SPI_I2SCFGR_CKPOL_GET(x)           (((x) >> 3) & 0x1)
+/** I2S standard selection @multiple */
+  #define STM32_SPI_I2SCFGR_I2SSTD_MASK            0x00000003
+  #define STM32_SPI_I2SCFGR_I2SSTD(v)              ((v) << 4)
+  #define STM32_SPI_I2SCFGR_I2SSTD_SET(x, v)       do { (x) = (((x) & ~0x30) | ((v) << 4)); } while(0)
+  #define STM32_SPI_I2SCFGR_I2SSTD_GET(x)          (((x) >> 4) & 0x3)
+/** PCM frame synchronization @multiple */
+  #define STM32_SPI_I2SCFGR_PCMSYNC_MASK           0x00000001
+  #define STM32_SPI_I2SCFGR_PCMSYNC                0x00000080
+  #define STM32_SPI_I2SCFGR_PCMSYNC_SET(x, v)      do { (x) = (((x) & ~0x80) | ((v) << 7)); } while(0)
+  #define STM32_SPI_I2SCFGR_PCMSYNC_GET(x)         (((x) >> 7) & 0x1)
+/** I2S configuration mode @multiple */
+  #define STM32_SPI_I2SCFGR_I2SCFG_MASK            0x00000003
+  #define STM32_SPI_I2SCFGR_I2SCFG(v)              ((v) << 8)
+  #define STM32_SPI_I2SCFGR_I2SCFG_SET(x, v)       do { (x) = (((x) & ~0x300) | ((v) << 8)); } while(0)
+  #define STM32_SPI_I2SCFGR_I2SCFG_GET(x)          (((x) >> 8) & 0x3)
+/** I2S Enable @multiple */
+  #define STM32_SPI_I2SCFGR_I2SE_MASK              0x00000001
+  #define STM32_SPI_I2SCFGR_I2SE                   0x00000400
+  #define STM32_SPI_I2SCFGR_I2SE_SET(x, v)         do { (x) = (((x) & ~0x400) | ((v) << 10)); } while(0)
+  #define STM32_SPI_I2SCFGR_I2SE_GET(x)            (((x) >> 10) & 0x1)
+/** I2S mode selection @multiple */
+  #define STM32_SPI_I2SCFGR_I2SMOD_MASK            0x00000001
+  #define STM32_SPI_I2SCFGR_I2SMOD                 0x00000800
+  #define STM32_SPI_I2SCFGR_I2SMOD_SET(x, v)       do { (x) = (((x) & ~0x800) | ((v) << 11)); } while(0)
+  #define STM32_SPI_I2SCFGR_I2SMOD_GET(x)          (((x) >> 11) & 0x1)
+# if CONFIG_STM32_FAMILY == L4
+/** ASTRTEN @multiple */
+  #define STM32_SPI_I2SCFGR_ASTRTEN_MASK           0x00000001
+  #define STM32_SPI_I2SCFGR_ASTRTEN                0x00001000
+  #define STM32_SPI_I2SCFGR_ASTRTEN_SET(x, v)      do { (x) = (((x) & ~0x1000) | ((v) << 12)); } while(0)
+  #define STM32_SPI_I2SCFGR_ASTRTEN_GET(x)         (((x) >> 12) & 0x1)
+# endif
+
+/** I2S prescaler register @multiple */
+#define STM32_SPI_I2SPR_ADDR                         0x00000020
+/** I2S Linear prescaler @multiple */
+  #define STM32_SPI_I2SPR_I2SDIV_MASK              0x000000ff
+  #define STM32_SPI_I2SPR_I2SDIV(v)                ((v) << 0)
+  #define STM32_SPI_I2SPR_I2SDIV_SET(x, v)         do { (x) = (((x) & ~0xff) | ((v) << 0)); } while(0)
+  #define STM32_SPI_I2SPR_I2SDIV_GET(x)            (((x) >> 0) & 0xff)
+/** Odd factor for the prescaler @multiple */
+  #define STM32_SPI_I2SPR_ODD_MASK                 0x00000001
+  #define STM32_SPI_I2SPR_ODD                      0x00000100
+  #define STM32_SPI_I2SPR_ODD_SET(x, v)            do { (x) = (((x) & ~0x100) | ((v) << 8)); } while(0)
+  #define STM32_SPI_I2SPR_ODD_GET(x)               (((x) >> 8) & 0x1)
+/** Master clock output enable @multiple */
+  #define STM32_SPI_I2SPR_MCKOE_MASK               0x00000001
+  #define STM32_SPI_I2SPR_MCKOE                    0x00000200
+  #define STM32_SPI_I2SPR_MCKOE_SET(x, v)          do { (x) = (((x) & ~0x200) | ((v) << 9)); } while(0)
+  #define STM32_SPI_I2SPR_MCKOE_GET(x)             (((x) >> 9) & 0x1)
 
 #endif
 
