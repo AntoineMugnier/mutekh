@@ -39,6 +39,7 @@ static const char *const strerror_tab[] = {
 	[EISCONN] = "Transport endpoint is already connected",
 	[ENOTCONN] = "Transport endpoint not connected",
 	[ESHUTDOWN] = "Cannot send after transport endpoint shutdown",
+    [ETIMEDOUT] = "Timed out",
 	[EHOSTUNREACH] = "No route to host",
 	
 };
