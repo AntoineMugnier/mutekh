@@ -120,7 +120,7 @@ void nrf5x_twim_tx_setup(struct nrf5x_twim_priv_s *pv)
     }
   default:
   case DEV_I2C_WRITE_RESTART:
-  case DEV_I2C_WRITE:
+  case DEV_I2C_WRITE_CONTINUOUS:
     dprintk("%s %p suspending after write\n", __FUNCTION__, tr);
     nrf_short_set(pv->addr, bit(NRF_TWIM_LASTTX_SUSPEND));
     break;
@@ -240,13 +240,48 @@ static DEV_IRQ_SRC_PROCESS(nrf5x_twim_irq)
   lock_release(&dev->lock);
 }
 
+static void nrf5x_twim_ip_reset(struct nrf5x_twim_priv_s *pv)
+{
+  uint8_t scl = pv->pin[0];
+  uint8_t sda = pv->pin[1];
+
+  nrf_event_clear(pv->addr, NRF_TWIM_ERROR);
+  nrf_reg_set(pv->addr, NRF_TWIM_ENABLE, NRF_TWIM_ENABLE_DISABLED);
+  nrf_reg_set(pv->addr, NRF_TWIM_POWER, 0);
+  for (uint16_t i = 0; i < 32; ++i)
+    asm volatile("");
+
+  nrf_reg_set(NRF5X_GPIO_ADDR, NRF_GPIO_OUTSET, bit(sda));
+  nrf_reg_set(NRF5X_GPIO_ADDR, NRF_GPIO_OUTSET, bit(scl));
+  for (uint16_t i = 0; i < 8; ++i)
+    asm volatile("");
+
+  nrf_reg_set(pv->addr, NRF_TWIM_POWER, 1);
+  nrf_reg_set(pv->addr, NRF_TWIM_ENABLE, NRF_TWIM_ENABLE_ENABLED);
+  nrf_reg_set(pv->addr, NRF_TWIM_PSELSCL, scl);
+  nrf_reg_set(pv->addr, NRF_TWIM_PSELSDA, sda);
+  nrf_reg_set(pv->addr, NRF_TWIM_FREQUENCY, NRF_TWIM_FREQUENCY_(pv->rate));
+}
+
 static DEV_I2C_CTRL_TRANSFER(nrf5x_twim_transfer)
 {
   struct device_s *dev = accessor->dev;
   struct nrf5x_twim_priv_s *pv = dev->drv_pv;
 
   switch (tr->type) {
-  case DEV_I2C_READ:
+  case DEV_I2C_RESET:
+    dprintk("%s reset\n", __FUNCTION__);
+
+    LOCK_SPIN_IRQ(&dev->lock);
+    pv->started = 0;
+    nrf5x_twim_ip_reset(pv);
+    LOCK_RELEASE_IRQ(&dev->lock);
+
+    kroutine_exec(&tr->kr);
+
+    return;
+
+  case DEV_I2C_READ_CONTINUOUS:
   case DEV_I2C_READ_RESTART:
     tr->err = -ENOTSUP;
     dprintk("%s %p read restart unsupported, kroutine_exec(), err=%d\n", __FUNCTION__, tr, tr->err);
@@ -271,48 +306,6 @@ static DEV_I2C_CTRL_TRANSFER(nrf5x_twim_transfer)
   nrf5x_twim_transfer_start(pv);
 
   LOCK_RELEASE_IRQ(&dev->lock);
-}
-
-static void nrf5x_twim_ip_reset(struct nrf5x_twim_priv_s *pv)
-{
-  uint8_t scl = pv->pin[0];
-  uint8_t sda = pv->pin[1];
-
-  nrf_event_clear(pv->addr, NRF_TWIM_ERROR);
-  nrf_reg_set(pv->addr, NRF_TWIM_ENABLE, NRF_TWIM_ENABLE_DISABLED);
-  nrf_reg_set(pv->addr, NRF_TWIM_POWER, 0);
-  for (uint16_t i = 0; i < 32; ++i)
-    asm volatile("");
-
-  nrf_reg_set(NRF5X_GPIO_ADDR, NRF_GPIO_OUTSET, bit(sda));
-  nrf_reg_set(NRF5X_GPIO_ADDR, NRF_GPIO_OUTSET, bit(scl));
-  for (uint16_t i = 0; i < 8; ++i)
-    asm volatile("");
-
-  nrf_reg_set(pv->addr, NRF_TWIM_POWER, 1);
-  nrf_reg_set(pv->addr, NRF_TWIM_ENABLE, NRF_TWIM_ENABLE_ENABLED);
-  nrf_reg_set(pv->addr, NRF_TWIM_PSELSCL, scl);
-  nrf_reg_set(pv->addr, NRF_TWIM_PSELSDA, sda);
-  nrf_reg_set(pv->addr, NRF_TWIM_FREQUENCY, NRF_TWIM_FREQUENCY_(pv->rate));
-}
-
-static DEV_I2C_CTRL_RESET(nrf5x_twim_reset)
-{
-  struct device_s *dev = accessor->dev;
-  struct nrf5x_twim_priv_s *pv = dev->drv_pv;
-
-  dprintk("%s\n", __FUNCTION__);
-
-  if (pv->current)
-    return -EBUSY;
-
-  dprintk("%s\n", __FUNCTION__);
-
-  pv->started = 0;
-
-  nrf5x_twim_ip_reset(pv);
-
-  return 0;
 }
 
 #define nrf5x_twim_use dev_use_generic
