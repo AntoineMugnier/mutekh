@@ -32,6 +32,8 @@
 #include <arch/stm32/f1/mmap.h>
 #include <arch/stm32/f1/irq.h>
 
+#include <arch/stm32/pin.h>
+
 #if defined(CONFIG_DRIVER_CPU_ARM32M)
 
 /* CPU. */
@@ -55,8 +57,8 @@ DEV_DECLARE_STATIC(usart1_dev, "uart1", 0, stm32_usart_drv,
                    DEV_STATIC_RES_IRQ(0, STM32_IRQ_USART1, DEV_IRQ_SENSE_HIGH_LEVEL, 0, 0x1),
 
                    DEV_STATIC_RES_DEV_IOMUX("/gpio"),
-                   DEV_STATIC_RES_IOMUX("tx", 0, /* PA9 */ 0*16+9, 0 /* no remap */, 0),
-                   DEV_STATIC_RES_IOMUX("rx", 0, /* PA10 */ 0*16+10, 0 /* no remap */, 0),
+                   DEV_STATIC_RES_IOMUX("tx", 0, STM32_PA9, 0 /* no remap */, 0),
+                   DEV_STATIC_RES_IOMUX("rx", 0, STM32_PA10, 0 /* no remap */, 0),
 
                    /* default configuration. */
                    DEV_STATIC_RES_UART(115200, 8, DEV_UART_PARITY_NONE, 1, 0, 0)
