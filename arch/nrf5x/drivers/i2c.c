@@ -275,34 +275,6 @@ static DEV_IRQ_SRC_PROCESS(nrf5x_i2c_irq)
   lock_release(&dev->lock);
 }
 
-static DEV_I2C_CTRL_TRANSFER(nrf5x_i2c_transfer)
-{
-  struct device_s *dev = accessor->dev;
-  struct nrf5x_i2c_priv_s *pv = dev->drv_pv;
-
-  if (tr->type == DEV_I2C_READ_RESTART) {
-    tr->err = -ENOTSUP;
-    dprintk("%s %p read restart unsupported, kroutine_exec(), err=%d\n", __FUNCTION__, tr, tr->err);
-    kroutine_exec(&tr->kr);
-    return;
-  }
-
-  if (tr->size == 0) {
-    tr->err = -EINVAL;
-    dprintk("%s %p len=0, kroutine_exec(), err=%d\n", __FUNCTION__, tr, tr->err);
-    kroutine_exec(&tr->kr);
-    return;
-  }
-
-  LOCK_SPIN_IRQ(&dev->lock);
-
-  pv->current = tr;
-
-  nrf5x_i2c_transfer_start(pv);
-
-  LOCK_RELEASE_IRQ(&dev->lock);
-}
-
 static void nrf5x_i2c_ip_reset(struct nrf5x_i2c_priv_s *pv)
 {
   uint8_t scl = pv->pin[0];
@@ -336,26 +308,47 @@ static void nrf5x_i2c_ip_reset(struct nrf5x_i2c_priv_s *pv)
   nrf_reg_set(pv->addr, NRF_I2C_FREQUENCY, NRF_I2C_FREQUENCY_(pv->rate));
 }
 
-static DEV_I2C_CTRL_RESET(nrf5x_i2c_reset)
+static DEV_I2C_CTRL_TRANSFER(nrf5x_i2c_transfer)
 {
   struct device_s *dev = accessor->dev;
   struct nrf5x_i2c_priv_s *pv = dev->drv_pv;
 
-  dprintk("%s\n", __FUNCTION__);
+  switch (tr->type) {
+  case DEV_I2C_RESET:
+    dprintk("%s reset\n", __FUNCTION__);
 
-  if (pv->current)
-    return -EBUSY;
+    LOCK_SPIN_IRQ(&dev->lock);
+    pv->started = 0;
+    nrf5x_i2c_ip_reset(pv);
+    LOCK_RELEASE_IRQ(&dev->lock);
 
-  dprintk("%s\n", __FUNCTION__);
+    kroutine_exec(&tr->kr);
+    return;
 
-  pv->started = 0;
+  case DEV_I2C_READ_RESTART:
+    tr->err = -ENOTSUP;
+    dprintk("%s %p read restart unsupported, kroutine_exec(), err=%d\n", __FUNCTION__, tr, tr->err);
+    kroutine_exec(&tr->kr);
+    return;
 
-  /* nrf_task_trigger(pv->addr, NRF_I2C_STOP); */
-  /* nrf_event_clear(pv->addr, NRF_I2C_ERROR); */
+  default:
+    break;
+  }
 
-  nrf5x_i2c_ip_reset(pv);
+  if (tr->size == 0) {
+    tr->err = -EINVAL;
+    dprintk("%s %p len=0, kroutine_exec(), err=%d\n", __FUNCTION__, tr, tr->err);
+    kroutine_exec(&tr->kr);
+    return;
+  }
 
-  return 0;
+  LOCK_SPIN_IRQ(&dev->lock);
+
+  pv->current = tr;
+
+  nrf5x_i2c_transfer_start(pv);
+
+  LOCK_RELEASE_IRQ(&dev->lock);
 }
 
 #define nrf5x_i2c_use dev_use_generic
