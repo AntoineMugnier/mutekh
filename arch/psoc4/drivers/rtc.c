@@ -39,7 +39,10 @@
 
 #define SRSS PSOC4_SRSS_ADDR
 
-#define dprintk(...) do {} while(0)
+//#define dprintk printk
+#ifndef dprintk
+# define dprintk(...) do{}while(0)
+#endif
 
 DRIVER_PV(struct psoc4_rtc_context_s
 {
@@ -48,6 +51,7 @@ DRIVER_PV(struct psoc4_rtc_context_s
   struct dev_freq_s freq;
 
   dev_timer_value_t base;
+  dev_timer_value_t last_known;
   uint32_t last_set_ts;
 
   bool_t clock_active;
@@ -119,13 +123,27 @@ static void psoc4_rtc_setup(struct psoc4_rtc_context_s *pv)
   cpu_mem_write_32(SRSS + SRSS_WDT_CONTROL_ADDR, control);
   cpu_mem_write_32(SRSS + SRSS_WDT_CONFIG_ADDR, config);
 
-  dprintk("%s control %08x config %08x\n",
-         __FUNCTION__, control, config);
+  dprintk("%s control %08x config %08x\n", __FUNCTION__, control, config);
+}
+
+static dev_timer_value_t psoc4_rtc_value_get(struct psoc4_rtc_context_s *pv)
+{
+  if (!pv->clock_active)
+    return pv->last_known;
+
+  uint32_t high = cpu_mem_read_32(SRSS + SRSS_WDT_CTRHIGH_ADDR);
+
+  if (~high & (uint32_t)pv->base & bit(31))
+    return pv->base + bit(31) + high;
+
+  return pv->base | high;
 }
 
 static void psoc4_rtc_start(struct psoc4_rtc_context_s *pv)
 {
   error_t err;
+
+  dprintk("%s\n", __FUNCTION__);
 
   err = dev_clock_sink_gate(&pv->clock_sink, DEV_CLOCK_EP_CLOCK);
 
@@ -137,25 +155,16 @@ static void psoc4_rtc_start(struct psoc4_rtc_context_s *pv)
 
 static void psoc4_rtc_stop(struct psoc4_rtc_context_s *pv)
 {
+  pv->last_known = psoc4_rtc_value_get(pv);
+
   while (!psoc4_rtc_enable_is_acked());
 
-  cpu_mem_write_32(SRSS + SRSS_WDT_CONTROL_ADDR, 0)
-    ;
+  cpu_mem_write_32(SRSS + SRSS_WDT_CONTROL_ADDR, 0);
 
   dev_clock_sink_gate(&pv->clock_sink, DEV_CLOCK_EP_NONE);
   pv->clock_active = 0;
 
   dprintk("%s\n", __FUNCTION__);
-}
-
-static dev_timer_value_t psoc4_rtc_value_get(struct psoc4_rtc_context_s *pv)
-{
-  uint32_t high = cpu_mem_read_32(SRSS + SRSS_WDT_CTRHIGH_ADDR);
-
-  if (~high & (uint32_t)pv->base & bit(31))
-    return pv->base + bit(31) + high;
-
-  return pv->base | high;
 }
 
 static void psoc4_rtc_deadline_set(struct psoc4_rtc_context_s *pv,
@@ -167,6 +176,9 @@ static void psoc4_rtc_deadline_set(struct psoc4_rtc_context_s *pv,
   uint32_t config;
   uint32_t control;
   uint32_t bit;
+
+  if (!pv->clock_active)
+    return;
 
   do {
     config = cpu_mem_read_32(SRSS + SRSS_WDT_CONFIG_ADDR);
@@ -253,7 +265,7 @@ static DEV_TIMER_REQUEST(psoc4_rtc_request)
       psoc4_rtc_start(pv);
 
     dev->start_count |= 1;
-  }
+ }
 
   value = psoc4_rtc_value_get(pv);
 
@@ -332,7 +344,7 @@ static DEV_USE(psoc4_rtc_use)
 
   switch (op) {
   default:
-    return 0;
+    return dev_use_generic(param, op);
 
   case DEV_USE_START:
     if (!dev->start_count)
@@ -344,17 +356,25 @@ static DEV_USE(psoc4_rtc_use)
       psoc4_rtc_stop(pv);
     break;
 
-  case DEV_USE_CLOCK_GATES: {
+  case DEV_USE_CLOCK_SINK_GATE_DONE: {
     struct dev_clock_sink_ep_s *sink = param;
     struct device_s *dev = sink->dev;
     struct psoc4_rtc_context_s *pv = dev->drv_pv;
 
-    if (sink->flags & DEV_CLOCK_EP_CLOCK) {
-      if (!pv->clock_active)
-        psoc4_rtc_setup(pv);
-      pv->clock_active = 1;
-    } else {
+    dprintk("%s sink gate done\n", __FUNCTION__);
+
+    if (!(sink->flags & DEV_CLOCK_EP_CLOCK)) {
       pv->clock_active = 0;
+    } else if (!pv->clock_active) {
+      struct dev_timer_rq_s *head;
+
+      pv->clock_active = 1;
+      psoc4_rtc_setup(pv);
+
+      head = dev_timer_rq_s_cast(dev_request_pqueue_head(&pv->queue));
+
+      if (head)
+        psoc4_rtc_deadline_set(pv, head->deadline);
     }
 
     return 0;
@@ -479,7 +499,9 @@ static DEV_INIT(psoc4_rtc_init)
   if (device_irq_source_link(dev, &pv->irq_ep, 1, -1))
     goto free_pv;
 
-  if (dev_drv_clock_init(dev, &pv->clock_sink, 0, 0, &pv->freq))
+  if (dev_drv_clock_init(dev, &pv->clock_sink, 0,
+                         DEV_CLOCK_EP_FREQ_NOTIFY,
+                         &pv->freq))
     goto unlink_irq;
 
   CPU_INTERRUPT_SAVESTATE_DISABLE;
