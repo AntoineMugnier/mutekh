@@ -41,16 +41,27 @@
 # define dprintk(...) do{}while(0)
 #endif
 
+static const uint8_t gaps[] = {12, 24, 33, 40, 40};
+
 uint_fast8_t clk_imo_trim2(uint_fast8_t freq_mhz)
 {
-  static const uint8_t gaps[] = {12, 24, 33, 40, 40};
-
   for (uint_fast8_t i = 0; i < sizeof(gaps); ++i) {
     if (freq_mhz <= gaps[i])
       return freq_mhz + i;
   }
 
   return freq_mhz + sizeof(gaps);
+}
+
+uint_fast8_t clk_imo_mhz(uint_fast8_t freq_trim2)
+{
+  for (uint_fast8_t i = 0; i < sizeof(gaps); ++i) {
+    if (freq_trim2 <= gaps[i])
+      return freq_trim2;
+    --freq_trim2;
+  }
+
+  return freq_trim2;
 }
 
 __attribute__((noinline))

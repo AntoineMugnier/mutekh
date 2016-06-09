@@ -109,10 +109,10 @@ enum psoc4_clock_e {
   // Also configurable as mux between IMO, EXTCLK and ECO
   PSOC4_CLOCK_SRC_HFCLK,
 #if defined(CONFIG_DRIVER_PSOC4_CLOCK_BLE)
-  // Also configurable as divisor from ECO
-  PSOC4_CLOCK_SRC_BLE_LL,
+  // Also configurable as prescaler from ECO
+  PSOC4_CLOCK_SRC_BLELL,
 #endif
-  // Also configurable as scaler
+  // Also configurable as divisor
   PSOC4_CLOCK_SRC_SYSCLK,
   // Also configurable as mux between ILO and WCO
   PSOC4_CLOCK_SRC_LFCLK,
@@ -134,14 +134,14 @@ enum psoc4_clock_e {
 
 #define PSOC4_CLOCK_HFBASED_MASK (bit(PSOC4_CLOCK_SRC_HFCLK) | bit(PSOC4_CLOCK_SRC_SYSCLK))
 #if defined(CONFIG_DRIVER_PSOC4_CLOCK_BLE)
-# define PSOC4_CLOCK_SRC_MASK (PSOC4_CLOCK_HFBASED_MASK | bit(PSOC4_CLOCK_SRC_LLCLK) | bit(PSOC4_CLOCK_SRC_LFCLK))
+# define PSOC4_CLOCK_SRC_MASK (PSOC4_CLOCK_HFBASED_MASK | bit(PSOC4_CLOCK_SRC_BLELL) | bit(PSOC4_CLOCK_SRC_LFCLK))
 #else
 # define PSOC4_CLOCK_SRC_MASK (PSOC4_CLOCK_HFBASED_MASK | bit(PSOC4_CLOCK_SRC_LFCLK))
 #endif
 
 enum psoc4_ble_clock_sink_e {
   PSOC4_BLE_SINK_LFCLK,
-  PSOC4_BLE_SINK_LLCLK,
+  PSOC4_BLE_SINK_LL,
   PSOC4_BLE_SINK_POWER,
 };
 

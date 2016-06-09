@@ -23,6 +23,7 @@
 
 #include <hexo/types.h>
 
+uint_fast8_t clk_imo_mhz(uint_fast8_t freq_trim2);
 uint_fast8_t clk_imo_trim2(uint_fast8_t freq_mhz);
 void psoc4_flash_set_freq(uint_fast8_t freq_trim2);
 void psoc4_imo_mhz_set(uint_fast8_t freq_mhz);
