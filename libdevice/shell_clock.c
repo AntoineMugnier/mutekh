@@ -120,11 +120,11 @@ static void dev_shell_clock_configs(struct termui_console_s *con,
               termui_con_printf(con, "  osc: node %u `%s' @ %"PRIu64".%03"PRIu32" Hz",
                                 (uint_fast8_t)r->u.cmu_osc.node, nname, (uint64_t)integral, (uint32_t)frac);
 
-              if (r->u.cmu_osc.acc_e || r->u.cmu_osc.acc_m)
-                {
-                  uint32_t ppb = dev_acc_ppb(r->u.cmu_osc.acc_m,
-                                             r->u.cmu_osc.acc_e);
+              uint32_t ppb = dev_acc_ppb(r->u.cmu_osc.acc_m,
+                                         r->u.cmu_osc.acc_e);
 
+              if (ppb < 200000000)
+                {
                   if (ppb > 10000000)
                     termui_con_printf(con, ", %u %%", (ppb + 5000000) / 10000000);
                   else if (ppb > 1000)
@@ -183,7 +183,17 @@ static TERMUI_CON_COMMAND_PROTOTYPE(dev_shell_clock_nodes)
 
       if (!(mask & DEV_CMU_INFO_NAME))
         info.name = "?";
-      termui_con_printf(con, "  node %-3u : %16s", i, info.name);
+
+      bool_t running = (mask & DEV_CMU_INFO_RUNNING) && info.running;
+      bool_t has_ck = (mask & DEV_CMU_INFO_SRC) && info.src
+        && (info.src->flags & DEV_CLOCK_EP_CLOCK);
+      bool_t has_pw = (mask & DEV_CMU_INFO_SRC) && info.src
+        && (info.src->flags & DEV_CLOCK_EP_POWER);
+
+      termui_con_printf(con, " node %2u: %16s %c%c%c", i, info.name,
+                        running ? 'R' : ' ',
+                        has_ck ? 'C' : ' ',
+                        has_pw ? 'P' : ' ');
 
       if (mask & DEV_CMU_INFO_FREQ)
         {
@@ -218,8 +228,6 @@ static TERMUI_CON_COMMAND_PROTOTYPE(dev_shell_clock_nodes)
         termui_con_printf(con, ", src_ep %p", info.src);
       if (mask & DEV_CMU_INFO_SINK)
         termui_con_printf(con, ", sink_ep %p", info.sink);
-      if (info.running)
-        termui_con_printf(con, ", Running");
       termui_con_printf(con, "\n");
     }
 
