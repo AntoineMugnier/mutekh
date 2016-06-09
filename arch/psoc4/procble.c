@@ -93,6 +93,7 @@ DEV_DECLARE_STATIC(
   peri_dev, "peri", 0, psoc4_peri_drv,
   DEV_STATIC_RES_MEM(PSOC4_PERI_ADDR, PSOC4_PERI_ADDR + 0x1000),
   DEV_STATIC_RES_BLOB_PARAM("pclk_src", pclk_src),
+  DEV_STATIC_RES_CLK_SRC("/clock", PSOC4_CLOCK_SRC_HFCLK, 0),
   );
 
 #endif

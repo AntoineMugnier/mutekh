@@ -94,7 +94,7 @@ static DEV_CMU_NODE_INFO(psoc4_peri_node_info)
     [PSOC4_PERI_SINK_HFCLK] = "HFCLK",
   };
 
-  if (node_id > PSOC4_PERI_NODE_COUNT)
+  if (node_id >= PSOC4_PERI_NODE_COUNT)
     return -EINVAL;
 
   info->name = node_name[node_id];
@@ -301,8 +301,6 @@ static DEV_CLOCK_SRC_SETUP(psoc4_peri_ep_setup)
     }
 
     case DEV_CLOCK_SRC_SETUP_LINK:
-      if (param->sink->flags & DEV_CLOCK_EP_GATING_SYNC)
-        return -ENOTSUP;
       return 0;
 
     case DEV_CLOCK_SRC_SETUP_UNLINK:
@@ -349,6 +347,7 @@ static DEV_USE(psoc4_peri_use)
     struct psoc4_peri_private_s *pv = dev->drv_pv;
     struct dev_clock_notify_s notify2;
 
+    pv->hfclk_freq = notify->freq;
     notify2.freq = notify->freq;
 
     for (uint_fast8_t i = 0; i < PSOC4_PERI_SRC_COUNT; ++i)
@@ -389,8 +388,13 @@ static DEV_INIT(psoc4_peri_init)
     dev_clock_source_init(dev, &pv->src[i], &psoc4_peri_ep_setup);
     cpu_mem_write_32(PERI + PERI_PCLK_CTL_ADDR(i), pv->pclk_src[i]);
   }
+
+  err = dev_drv_clock_init(dev, &pv->hfclk, 0,
+                           DEV_CLOCK_EP_GATING_SYNC
+                           | DEV_CLOCK_EP_FREQ_NOTIFY,
+                           &pv->hfclk_freq);
   
-  return 0;
+  return err;
 }
 
 static DEV_CLEANUP(psoc4_peri_cleanup)
