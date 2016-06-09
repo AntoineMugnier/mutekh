@@ -32,49 +32,49 @@
   CONFIG_HEXO_CPU_STACK_SIZE 0x400
   CONFIG_PTHREAD_STACK_SIZE  0x400
 
-  %subsection psoc4-CYBL-*-*-*
+  %subsection psoc4-cybl-*-*-*
     %types variant
 
     CONFIG_ARCH_PSOC4_PROCBLE
   %end
 
-  %subsection psoc4-CY8C-42??-*-???
+  %subsection psoc4-cy8c-42??-*-???
     %types variant
 
     CONFIG_ARCH_PSOC4_PSOC
   %end
 
-  %subsection psoc4-CY8C-42??-*-BL???
+  %subsection psoc4-cy8c-42??-*-bl???
     %types variant
 
     CONFIG_ARCH_PSOC4_BLE
   %end
 
-  %subsection psoc4-CY8C-42??-*-???
+  %subsection psoc4-cy8c-42??-*-???
     %types sram
 
     CONFIG_PSOC4_RAMSIZE     0x1000
   %end
 
-  %subsection psoc4-CYBL-10?6?-*-* psoc4-CY8C-42??-*-BL???
+  %subsection psoc4-cybl-10?6?-*-* psoc4-cy8c-42??-*-bl???
     %types sram
 
     CONFIG_PSOC4_RAMSIZE     0x4000
   %end
 
-  %subsection psoc4-CY8C-42?4-*-???
+  %subsection psoc4-cy8c-42?4-*-???
     %types flash
 
     CONFIG_LOAD_ROM_RO_SIZE 0x4000
   %end
 
-  %subsection psoc4-CY8C-42?5-*-???
+  %subsection psoc4-cy8c-42?5-*-???
     %types flash
 
     CONFIG_LOAD_ROM_RO_SIZE 0x8000
   %end
 
-  %subsection psoc4-CYBL-10?6?-*-* psoc4-CY8C-42??-*-BL???
+  %subsection psoc4-cybl-10?6?-*-* psoc4-cy8c-42??-*-bl???
     %types flash
 
     CONFIG_LOAD_ROM_RO_SIZE 0x20000
