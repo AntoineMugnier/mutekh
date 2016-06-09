@@ -119,7 +119,7 @@ enum nrf5x_peripheral_id_e
     NRF5X_SPIM1 = 4,
     NRF5X_TWIM1 = 4,
     NRF5X_TWIS1 = 4,
-    NRF5X_NRFT = 5,
+    NRF5X_NFCT = 5,
     NRF5X_COMP = 19,
     NRF5X_EGU0 = 20,
     NRF5X_SWI0 = 20,
