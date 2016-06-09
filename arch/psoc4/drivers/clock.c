@@ -70,7 +70,7 @@ typedef uint16_t deps_t;
                              | bit(PSOC4_CLOCK_SRC_HFCLK))
 #endif
 
-#define dprintk printk
+//#define dprintk printk
 #ifndef dprintk
 # define dwritek(...) do{}while(0)
 # define dprintk(...) do{}while(0)
