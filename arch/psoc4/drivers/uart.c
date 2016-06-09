@@ -716,6 +716,7 @@ static DEV_INIT(psoc4_uart_char_init)
 {
   struct psoc4_uart_pv_s *pv;
   iomux_io_id_t id[4];
+  error_t err = 0;
   struct dev_uart_config_s config = {
     .baudrate = 1000000,
     .data_bits = 8,
@@ -732,24 +733,27 @@ static DEV_INIT(psoc4_uart_char_init)
   dev->drv_pv = pv;
   memset(pv, 0, sizeof(*pv));
 
-  if (device_res_get_uint(dev, DEV_RES_MEM, 0, &pv->addr, NULL))
+  err = device_res_get_uint(dev, DEV_RES_MEM, 0, &pv->addr, NULL);
+  if (err)
     goto free_pv;
 
-  if (device_iomux_setup(dev, "<rx? >tx? >rts? <cts?", NULL, id, NULL))
+  err = device_iomux_setup(dev, "<rx? >tx? >rts? <cts?", NULL, id, NULL);
+  if (err)
     goto free_pv;
 
   pv->has_ctsrts = id[2] != IOMUX_INVALID_ID && id[3] != IOMUX_INVALID_ID;
   config.flow_ctrl = pv->has_ctsrts;
 
   device_irq_source_init(dev, &pv->irq_ep, 1, &psoc4_uart_irq);
-  if (device_irq_source_link(dev, &pv->irq_ep, 1, -1))
+  err = device_irq_source_link(dev, &pv->irq_ep, 1, -1);
+  if (err)
     goto free_pv;
 
-  if (dev_drv_clock_init(dev, &pv->clock_sink, 0,
-                         DEV_CLOCK_EP_GATING_SYNC | DEV_CLOCK_EP_FREQ_NOTIFY | DEV_CLOCK_EP_VARFREQ,
-                         &pv->freq))
+  err = dev_drv_clock_init(dev, &pv->clock_sink, 0,
+                           DEV_CLOCK_EP_FREQ_NOTIFY | DEV_CLOCK_EP_VARFREQ,
+                           &pv->freq);
+  if (err)
     goto unlink_irq;
-
 
   dprintk("UART clock init freq %d/%d\n",
          (uint32_t)pv->freq.num, (uint32_t)pv->freq.denom);
@@ -793,7 +797,7 @@ static DEV_INIT(psoc4_uart_char_init)
  free_pv:
   mem_free(pv);
 
-  return -1;
+  return err;
 }
 
 static DEV_CLEANUP(psoc4_uart_char_cleanup)
