@@ -273,7 +273,7 @@ static KROUTINE_EXEC(reqs_changed)
       & ~(bit(PSOC4_CLOCK_SRC_HFCLK)
           | bit(PSOC4_CLOCK_SRC_SYSCLK));
 
-  printk("%s cur %04x, needs %04x, start %04x, stop %04x\n",
+  dprintk("%s cur %04x, needs %04x, start %04x, stop %04x\n",
          __FUNCTION__,
          node_cur_mask, node_need_mask,
          to_start_mask, to_stop_mask);
@@ -884,7 +884,7 @@ static DEV_CLOCK_SRC_SETUP(psoc4_clock_ep_setup)
   case DEV_CLOCK_SRC_SETUP_GATES: {
     enum dev_clock_ep_flags_e flags = 0;
 
-    printk("%s setup gates %d %02x\n", __FUNCTION__, src_id, param->flags);
+    dprintk("%s setup gates %d %02x\n", __FUNCTION__, src_id, param->flags);
 
     kroutine_exec(&pv->reqs_changed);
 
@@ -1022,7 +1022,7 @@ static DEV_INIT(psoc4_clock_init)
 
   err = dev_cmu_init(dev, &psoc4_clock_config_ops);
   if (err) {
-    printk("dev_cmu_init failed %d\n", err);
+    dprintk("dev_cmu_init failed %d\n", err);
     goto err_mem;
   }
 
