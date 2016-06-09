@@ -685,8 +685,8 @@ error_t dev_spi_bytecode_start(struct device_spi_ctrl_s *ctrl,
   return err;
 }
 
-error_t device_spi_bytecode_wakeup(struct device_spi_ctrl_s *ctrl,
-                                   struct dev_spi_ctrl_bytecode_rq_s *rq)
+error_t dev_spi_bytecode_wakeup(struct device_spi_ctrl_s *ctrl,
+                                struct dev_spi_ctrl_bytecode_rq_s *rq)
 {
   struct dev_spi_ctrl_context_s *q = device_spi_ctrl_context(ctrl);
   error_t err = 0;

@@ -218,7 +218,7 @@
 
    @section {spi_yieldc}
    This works like @xref {spi_yield} but the delay can be canceled by
-   @ref device_spi_bytecode_wakeup. When the delay is canceled, the
+   @ref dev_spi_bytecode_wakeup. When the delay is canceled, the
    next instruction is skipped.
    @end section
 
@@ -232,7 +232,7 @@
 
    @section {spi_yieldc_delay}
    This works like @xref {spi_yield_delay} but the delay can be
-   canceled by @ref device_spi_bytecode_wakeup.
+   canceled by @ref dev_spi_bytecode_wakeup.
    @end section
 
    @section {spi_yieldc_deadline}
@@ -904,8 +904,8 @@ void dev_drv_spi_transaction_cleanup(struct device_spi_ctrl_s *ctrl,
     restarted. This returns an error if the request is not currently
     running. */
 config_depend(CONFIG_DEVICE_SPI_BYTECODE)
-error_t device_spi_bytecode_wakeup(struct device_spi_ctrl_s *ctrl,
-                                   struct dev_spi_ctrl_bytecode_rq_s *rq);
+error_t dev_spi_bytecode_wakeup(struct device_spi_ctrl_s *ctrl,
+                                struct dev_spi_ctrl_bytecode_rq_s *rq);
 
 #ifdef CONFIG_DEVICE_SPI
 /** @This specifies a @ref #DEV_STATIC_RES_DEVCLASS_PARAM @em spi
