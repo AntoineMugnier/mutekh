@@ -34,6 +34,7 @@
 # include <mutek/scheduler.h>
 #endif
 #include <hexo/lock.h>
+#include <hexo/bit.h>
 #include <hexo/interrupt.h>
 #include <hexo/endian.h>
 
@@ -43,17 +44,33 @@ enum device_i2c_ret_e {
   DEVICE_I2C_IDLE,
   DEVICE_I2C_CONTINUE,
   DEVICE_I2C_WAIT,
+  DEVICE_I2C_RESET,
 };
 
 static enum device_i2c_ret_e device_i2c_ctrl_sched(struct dev_i2c_ctrl_context_s *q);
 static void device_i2c_ctrl_run(struct dev_i2c_ctrl_context_s *q);
 static enum device_i2c_ret_e device_i2c_ctrl_end(struct dev_i2c_ctrl_context_s *q,
-                                                 struct dev_i2c_ctrl_base_rq_s *rq,
-                                                 error_t err);
+                                                 struct dev_i2c_ctrl_base_rq_s *rq);
 static enum device_i2c_ret_e device_i2c_ctrl_transfer(struct dev_i2c_ctrl_context_s *q,
                                                       struct dev_i2c_ctrl_base_rq_s *rq,
                                                       uint8_t *data, uint16_t size,
                                                       enum dev_i2c_op_e type);
+
+static inline bool_t access_is_conditional(uint16_t op)
+{
+  return (bit_get(op, 12));
+}
+
+static inline bool_t access_is_read_reg(uint16_t op)
+{
+  return (bit_get(op, 13) && bit_get(op, 8));
+}
+
+static inline bool_t op_has_delay(uint16_t op)
+{
+  return bit_get_mask(op, 4, 1);
+}
+
 
 static KROUTINE_EXEC(device_i2c_ctrl_transfer_end)
 {
@@ -68,19 +85,36 @@ static KROUTINE_EXEC(device_i2c_ctrl_transfer_end)
     {
       struct dev_i2c_ctrl_bytecode_rq_s   *bcrq = dev_i2c_ctrl_bytecode_rq_s_cast(rq);
 
+      if (tr->type == DEV_I2C_RESET)
+        {
+          assert(q->tr_in_progress == 0);
+          device_i2c_ctrl_end(q, rq);
+          device_i2c_ctrl_run(q);
+          return;
+        }
+
       if (tr->err != 0)
         {
-          if ((q->op & 0x3000) != 0x3000)
-            device_i2c_ctrl_end(q, rq, tr->err);
+          if (!access_is_conditional(q->op)
+              || (tr->err != -EHOSTUNREACH && tr->err != -EAGAIN))
+            {
+              rq->err = tr->err;
+              if (device_i2c_ctrl_end(q, rq) == DEVICE_I2C_RESET)
+                {
+                  q->tr_in_progress = 0;
+                  lock_release_irq(&q->lock);
+                  return;
+                }
+            }
           q->tr_in_progress = 0;
           device_i2c_ctrl_run(q);
           return;
         }
 
-      if (tr->type & _DEV_I2C_STOP_CONDITION)
+      if ((tr->type & _DEV_I2C_ENDING_MASK) == _DEV_I2C_STOP)
         q->tr_in_progress = 0;
 
-      if (((q->op & 0xfc00) == 0xa800) || ((q->op & 0xfc00) == 0xb800))
+      if (access_is_read_reg(q->op))
         {
           uint8_t reg_count = q->op & 0xf;
           uint8_t reg_index = (q->op >> 4) & 0xf;
@@ -88,7 +122,7 @@ static KROUTINE_EXEC(device_i2c_ctrl_transfer_end)
             bc_set_reg(&bcrq->vm, reg_index + i, q->data[i]);
         }
 
-      if ((q->op & 0x3000) == 0x3000)
+      if (access_is_conditional(q->op))
         bc_skip(&bcrq->vm);
 
       device_i2c_ctrl_run(q);
@@ -97,18 +131,19 @@ static KROUTINE_EXEC(device_i2c_ctrl_transfer_end)
 
 # ifdef CONFIG_DEVICE_I2C_TRANSACTION
   if (!rq->bytecode)
+  {
+    struct dev_i2c_ctrl_transaction_rq_s   *trq = dev_i2c_ctrl_transaction_rq_s_cast(rq);
+
+    if (tr->err == 0 && trq->transfer_index + 1 != trq->transfer_count)
+      trq->transfer_index++;
+    else
     {
-      struct dev_i2c_ctrl_transaction_rq_s   *trq = dev_i2c_ctrl_transaction_rq_s_cast(rq);
-
-      if (tr->err != 0)
-        device_i2c_ctrl_end(q, rq, tr->err);
-      else if (trq->transfer_index + 1 == trq->transfer_count)
-        device_i2c_ctrl_end(q, rq, 0);
-      else
-        trq->transfer_index++;
-
-      device_i2c_ctrl_run(q);
+      rq->err = tr->err;
+      device_i2c_ctrl_end(q, rq);
     }
+
+    device_i2c_ctrl_run(q);
+  }
 # endif
 }
 
@@ -135,7 +170,7 @@ device_i2c_ctrl_transfer(struct dev_i2c_ctrl_context_s *q,
 
 static enum device_i2c_ret_e
 device_i2c_ctrl_end(struct dev_i2c_ctrl_context_s *q,
-                    struct dev_i2c_ctrl_base_rq_s *rq, error_t err)
+                    struct dev_i2c_ctrl_base_rq_s *rq)
 {
   assert(rq->enqueued);
 # ifdef CONFIG_DEVICE_I2C_BYTECODE_TIMER
@@ -144,15 +179,12 @@ device_i2c_ctrl_end(struct dev_i2c_ctrl_context_s *q,
 
   if (rq == q->current)
     {
-      q->current = NULL;
-# ifdef CONFIG_DEVICE_I2C_BYTECODE
       if (rq->bytecode && q->tr_in_progress)
         {
-          error_t err = DEVICE_OP(rq->ctrl, reset);
-          assert(!err);
-          q->tr_in_progress = 0;
+          device_i2c_ctrl_transfer(q, rq, NULL, 0, DEV_I2C_RESET);
+          return DEVICE_I2C_RESET;
         }
-#endif
+      q->current = NULL;
     }
   else
     {
@@ -160,7 +192,6 @@ device_i2c_ctrl_end(struct dev_i2c_ctrl_context_s *q,
       dev_request_queue_remove(&q->queue, &rq->base);
     }
 
-  rq->err = err;
   rq->enqueued = 0;
 
 # ifdef CONFIG_DEVICE_I2C_BYTECODE_TIMER
@@ -221,7 +252,8 @@ device_i2c_ctrl_delay(struct dev_i2c_ctrl_context_s *q,
         }
     }
 
-  return device_i2c_ctrl_end(q, &rq->base, err);
+  rq->base.err = err;
+  return device_i2c_ctrl_end(q, &rq->base);
 }
 #  endif
 
@@ -291,6 +323,7 @@ device_i2c_bytecode_exec(struct dev_i2c_ctrl_context_s *q,
   for (err = 0; err == 0; )
     {
       op = bc_run(&rq->vm, -1);
+      q->op = op;
       if (!(op & 0x8000))       /* bytecode end */
         {
           if (op)
@@ -298,150 +331,155 @@ device_i2c_bytecode_exec(struct dev_i2c_ctrl_context_s *q,
           break;
         }
 
-      switch (op & 0x7000)
+      if (bit_get(op, 14))
         {
-          case 0x0000: /* (no)delay, yield(c)(_delay), wait(_delay) */
-#  ifdef CONFIG_DEVICE_I2C_BYTECODE_TIMER
-            if (op & 0x0080)
-              {
-                if (!device_check_accessor(&q->timer.base))
-                  {
-                    err = -ETIMEDOUT;
-                    continue;
-                  }
-                dev_timer_value_t t = 0;
-                DEVICE_OP(&q->timer, get_value, &t, 0);
-                rq->sleep_before = t + bc_get_reg(&rq->vm, op & 0xf);
-              }
-#  endif
-            switch (op & 0x0300)
-              {
-                case 0x0000:    /* yield */
-                  assert(q->tr_in_progress == 0);
-                  lock_spin_irq(&q->lock);
-                  rq->wakeup_able = !(op & 0x0020);
-                  if (rq->wakeup_able && rq->wakeup)
-                    {
-                      rq->wakeup = 0;
-                      bc_skip(&rq->vm);
-                      lock_release_irq(&q->lock);
-                      continue;
-                    }
-                  dev_request_queue_pushback(&q->queue, &rq->base.base);
-                  q->current = NULL;
-                  return DEVICE_I2C_CONTINUE;
+          if (access_is_conditional(q->op) && !(bit_get_mask(q->op, 8, 4) & _DEV_I2C_SYNC))
+            abort();
 
-                case 0x0200: {  /* wait */
-                  lock_spin_irq(&q->lock);
-#  ifdef CONFIG_DEVICE_I2C_BYTECODE_TIMER
-                  return device_i2c_ctrl_delay(q, rq);
-#  else
-                  return DEVICE_I2C_CONTINUE;
-#  endif
+          type = bit_get_mask(op, 8, 4);
+
+          if (q->tr_in_progress)
+            {
+              if (((q->last_type == DEV_I2C_WRITE_CONTINUOUS ||
+                    q->last_type == DEV_I2C_WRITE_CONTINUOUS_SYNC) && (type & _DEV_I2C_READ_OP)) ||
+                  ((q->last_type == DEV_I2C_READ_CONTINUOUS ||
+                    q->last_type == DEV_I2C_READ_CONTINUOUS_SYNC) && !(type & _DEV_I2C_READ_OP)))
+                abort();
+            }
+          q->last_type = type;
+
+          uint8_t   *data;
+          uint8_t   reg = (op >> 4) & 0xf;
+          uint16_t  size = op & 0xf;
+          if (bit_get(op, 13))
+            {
+              /* data from/to registers */
+              data = q->data;
+              if (!bit_get(op, 8))
+                {
+                  for (uint8_t i = 0; i < size; i++)
+                    q->data[i] = (uint8_t)bc_get_reg(&rq->vm, reg + i);
                 }
+            }
+          else
+            {
+              /* data from/to memory */
+              size = (uint16_t)bc_get_reg(&rq->vm, size);
+              data = (uint8_t *)bc_get_reg(&rq->vm, reg);
+            }
+
+          q->tr_in_progress = 1;
+          lock_spin_irq(&q->lock);
+          return device_i2c_ctrl_transfer(q, &rq->base, data, size, type);
+        }
+
+      // non-accesses
+      switch (bit_get_mask(op, 8, 4))
+        {
+        case 0: // (no)delay, wait
+        case 1: // yield
 #  ifdef CONFIG_DEVICE_I2C_BYTECODE_TIMER
-                case 0x0300:    /* delay */
-                  if (!(op & 0x0080))
-                    rq->sleep_before = 0;
+          if (op_has_delay(op))
+            {
+              if (!device_check_accessor(&q->timer.base))
+                {
+                  err = -ETIMEDOUT;
                   continue;
+                }
+              dev_timer_value_t t = 0;
+              DEVICE_OP(&q->timer, get_value, &t, 0);
+              rq->sleep_before = t + bc_get_reg(&rq->vm, op & 0xf);
+            }
 #  endif
-                default:
+          switch (bit_get_mask(op, 7, 2))
+            {
+            case 2:    /* yield */
+            case 3:    /* yieldc */
+              assert(q->tr_in_progress == 0);
+              lock_spin_irq(&q->lock);
+              rq->wakeup_able = bit_get(op, 7);
+              if (rq->wakeup_able && rq->wakeup)
+                {
+                  rq->wakeup = 0;
+                  bc_skip(&rq->vm);
+                  lock_release_irq(&q->lock);
                   continue;
-              }
-            continue;
+                }
+              dev_request_queue_pushback(&q->queue, &rq->base.base);
+              q->current = NULL;
+              return DEVICE_I2C_CONTINUE;
 
-          case 0x1000:
-            if (op & 0x0800)  /* addr_get */
-              bc_set_reg(&rq->vm, op & 0xf, rq->base.saddr);
-            else              /* addr_set */
-              rq->base.saddr = bc_get_reg(&rq->vm, op & 0xf);
-            continue;
+            case 1:  /* wait */
+              lock_spin_irq(&q->lock);
+#  ifdef CONFIG_DEVICE_I2C_BYTECODE_TIMER
+              return device_i2c_ctrl_delay(q, rq);
+#  else
+              return DEVICE_I2C_CONTINUE;
+#  endif
 
-          case 0x2000:    /* transfer */
-          case 0x3000:    /* transfer (c) */
+#  ifdef CONFIG_DEVICE_I2C_BYTECODE_TIMER
+            case 0:    /* delay */
+              if (!op_has_delay(op))
+                rq->sleep_before = 0;
+              continue;
+#  endif
+            default:
+              continue;
+            }
+          continue;
 
-            type = _DEV_I2C_READ_OP;
-            if (op & 0x0400)
-              type = _DEV_I2C_WRITE_OP;
-
-            if (op & 0x0100)
-              type |= _DEV_I2C_STOP_CONDITION;
-            else if (op & 0x0200)
-              type |= _DEV_I2C_RESTART_CONDITION;
-
-            if (q->tr_in_progress)
-              {
-                if (((q->last_type == DEV_I2C_WRITE_CONTINUOUS) && (type & _DEV_I2C_READ_OP)) ||
-                    ((q->last_type == DEV_I2C_READ_CONTINUOUS) && (type & _DEV_I2C_WRITE_OP)))
-                  abort();
-              }
-            q->last_type = type;
-
-            uint8_t   *data;
-            uint8_t   reg = (op >> 4) & 0xf;
-            uint16_t  size = op & 0xf;
-            if (op & 0x0800)
-              {
-                /* data from/to registers */
-                data = q->data;
-                if (type & _DEV_I2C_WRITE_OP)
-                  {
-                    for (uint8_t i = 0; i < size; i++)
-                      q->data[i] = (uint8_t)bc_get_reg(&rq->vm, reg + i);
-                  }
-              }
-            else
-              {
-                /* data from/to memory */
-                size = (uint16_t)bc_get_reg(&rq->vm, size);
-                data = (uint8_t *)bc_get_reg(&rq->vm, reg);
-              }
-
-            q->op = op;
-            q->tr_in_progress = 1;
-            lock_spin_irq(&q->lock);
-            return device_i2c_ctrl_transfer(q, &rq->base, data, size, type);
+        case 7: // address
+          if (!bit_get(op, 4))  /* addr_get */
+            bc_set_reg(&rq->vm, op & 0xf, rq->base.saddr);
+          else              /* addr_set */
+            rq->base.saddr = bc_get_reg(&rq->vm, op & 0xf);
+          continue;
 
 #  ifdef CONFIG_DEVICE_I2C_BYTECODE_GPIO
-          case 0x4000:            /* gpio* */
-          case 0x5000:
-          case 0x6000:
-            err = 0;
-            if (!device_check_accessor(&rq->base.gpio))
+        case 4: // gpioset
+        case 5: // gpioget
+        case 6: // gpiomode
+          err = 0;
+          if (!device_check_accessor(&rq->base.gpio))
+            {
               err = -ENOTSUP;
-            else
-              {
-                gpio_id_t id = rq->gpio_map[(op >> 4) & 0xff];
-                gpio_width_t w = rq->gpio_wmap[(op >> 4) & 0xff];
-                uint8_t value[8];
+            }
+          else
+            {
+              gpio_id_t id = rq->gpio_map[bit_get_mask(op, 4, 4)];
+              gpio_width_t w = rq->gpio_wmap[bit_get_mask(op, 4, 4)];
+              uint8_t value[8];
 
-                if (op & 0x5000)      /* gpioget */
-                  {
-                    err = DEVICE_OP(&rq->base.gpio, get_input, id,
-                                    id + w - 1, value);
-                    bc_set_reg(&rq->vm, op & 0xf,
-                               endian_le32_na_load(value) & ((1 << w) - 1));
-                  }
-                else if (op & 0x6000) /* gpiomode */
-                  {
-                    err = DEVICE_OP(&rq->base.gpio, set_mode, id,
-                                    id + w - 1, dev_gpio_mask1, op & 0xf);
-                  }
-                else                  /* gpioset */
-                  {
-                    endian_le32_na_store(value, bc_get_reg(&rq->vm, op & 0xf));
-                    err = DEVICE_OP(&rq->base.gpio, set_output, id,
-                                    id + w - 1, value, value);
-                  }
-              }
-            continue;
+              switch (bit_get_mask(op, 8, 2))
+                {
+                case 0: /* gpioset */
+                  endian_le32_na_store(value, bc_get_reg(&rq->vm, op & 0xf));
+                  err = DEVICE_OP(&rq->base.gpio, set_output, id,
+                                  id + w - 1, value, value);
+                  break;
+                case 1: /* gpioget */
+                  err = DEVICE_OP(&rq->base.gpio, get_input, id,
+                                  id + w - 1, value);
+                  bc_set_reg(&rq->vm, op & 0xf,
+                             endian_le32_na_load(value) & ((1 << w) - 1));
+                  break;
+                case 2: /* gpiomode */
+                  err = DEVICE_OP(&rq->base.gpio, set_mode, id,
+                                  id + w - 1, dev_gpio_mask1, op & 0xf);
+                  break;
+                }
+            }
+          continue;
 #  endif
         }
+
       err = -EINVAL;  /* invalid op */
     }
 
   lock_spin_irq(&q->lock);
-  return device_i2c_ctrl_end(q, &rq->base, err);
+
+  rq->base.err = err;
+  return device_i2c_ctrl_end(q, &rq->base);
 }
 # endif
 
@@ -464,14 +502,16 @@ device_i2c_transaction_exec(struct dev_i2c_ctrl_context_s *q,
         break;
 
       case DEV_I2C_CTRL_TRANSACTION_WRITE:
-        type = _DEV_I2C_WRITE_OP;
+        type = 0;
         break;
     }
 
   if (rq->transfer_index + 1 == rq->transfer_count)
-    type |= _DEV_I2C_STOP_CONDITION;
+    type |= _DEV_I2C_STOP | _DEV_I2C_SYNC;
   else if (tr->type != rq->transfer[rq->transfer_index + 1].type)
-    type |= _DEV_I2C_RESTART_CONDITION;
+    type |= _DEV_I2C_RESTART;
+  else
+    type |= _DEV_I2C_CONTINUOUS;
 
   return device_i2c_ctrl_transfer(q, &rq->base, data, size, type);
 }
@@ -481,7 +521,6 @@ static
 void device_i2c_ctrl_run(struct dev_i2c_ctrl_context_s *q)
 {
   enum device_i2c_ret_e r;
-
   do {
     r = DEVICE_I2C_IDLE;
     struct dev_i2c_ctrl_base_rq_s *rq = q->current;
@@ -724,11 +763,11 @@ error_t dev_drv_i2c_bytecode_init(struct device_s *dev,
   if (err)
     return err;
 
-  struct dev_i2c_ctrl_context_s *q = device_i2c_ctrl_context(ctrl);
 
   if (timer != NULL)
     {
 # ifdef CONFIG_DEVICE_I2C_BYTECODE_TIMER
+      struct dev_i2c_ctrl_context_s *q = device_i2c_ctrl_context(ctrl);
       err = -ENOENT;
       if (!device_check_accessor(&q->timer.base))
         goto err;

@@ -132,39 +132,38 @@
   This section describes I2C specific bytecode instructions.
 
   @table 3
-  @item instruction              @item operands   @item opcode
+  @item instruction              @item operands     @item opcode
 
-  @item generic instructions     @item            @item @tt{0--- ---- ---- ----}
+  @item generic instructions     @item              @item @tt{0--- ---- ---- ----}
 
-  @item i2c_delay                @item r          @item @tt{1000 0011 10-- rrrr}
-  @item i2c_nodelay              @item            @item @tt{1000 0011 00-- ----}
+  @item i2c_nodelay              @item              @item @tt{1000 0000 0--0 ----}
+  @item i2c_delay                @item r            @item @tt{1000 0000 0--1 rrrr}
 
-  @item i2c_yield                @item            @item @tt{1000 0000 001- ----}
-  @item i2c_yield_delay          @item r          @item @tt{1000 0000 101- rrrr}
-  @item i2c_yieldc               @item            @item @tt{1000 0000 000- ----}
-  @item i2c_yieldc_delay         @item r          @item @tt{1000 0000 100- rrrr}
+  @item i2c_wait                 @item              @item @tt{1000 0000 1--0 ----}
+  @item i2c_wait_delay           @item r            @item @tt{1000 0000 1--1 rrrr}
 
-  @item i2c_wait                 @item            @item @tt{1000 0010 00-- ----}
-  @item i2c_wait_delay           @item r          @item @tt{1000 0010 10-- rrrr}
+  @item i2c_yield                @item              @item @tt{1000 0001 0--0 ----}
+  @item i2c_yield_delay          @item r            @item @tt{1000 0001 0--1 rrrr}
+  @item i2c_yieldc               @item              @item @tt{1000 0001 1--0 ----}
+  @item i2c_yieldc_delay         @item r            @item @tt{1000 0001 1--1 rrrr}
 
-  @item i2c_addr_set             @item r          @item @tt{1001 0--- ---- rrrr}
-  @item i2c_addr_get             @item r          @item @tt{1001 1--- ---- rrrr}
+  @item i2c_addr_get             @item r            @item @tt{1000 0111 ---0 rrrr}
+  @item i2c_addr_set             @item r            @item @tt{1000 0111 ---1 rrrr}
 
-  @item i2c_rdm                  @item ra, rl, s  @item @tt{1010 00ss aaaa llll}
-  @item i2c_wrm                  @item ra, rl, s  @item @tt{1010 01ss aaaa llll}
+  @item i2c_gpioset              @item i, r         @item @tt{1000 0100 iiii rrrr}
+  @item i2c_gpioget              @item i, r         @item @tt{1000 0101 iiii rrrr}
+  @item i2c_gpiomode             @item i, m         @item @tt{1000 0110 iiii mmmm}
 
-  @item i2c_rdr                  @item r, l, s    @item @tt{1010 10ss rrrr llll}
-  @item i2c_wrr                  @item r, l, s    @item @tt{1010 11ss rrrr llll}
+  @item i2c_rdm                  @item ra, rl, e    @item @tt{1100 eee1 aaaa llll}
+  @item i2c_wrm                  @item ra, rl, e    @item @tt{1100 eee0 aaaa llll}
+  @item i2c_rdr                  @item r,  l,  e    @item @tt{1110 eee1 rrrr -lll}
+  @item i2c_wrr                  @item r,  l,  e    @item @tt{1110 eee0 rrrr -lll}
 
-  @item i2c_rdmc                 @item ra, rl, s  @item @tt{1011 00ss aaaa llll}
-  @item i2c_wrmc                 @item ra, rl, s  @item @tt{1011 01ss aaaa llll}
+  @item i2c_rdmc                 @item ra, rl, e    @item @tt{1101 eee1 aaaa llll}
+  @item i2c_wrmc                 @item ra, rl, e    @item @tt{1101 eee0 aaaa llll}
+  @item i2c_rdrc                 @item r,  l,  e    @item @tt{1111 eee1 rrrr -lll}
+  @item i2c_wrrc                 @item r,  l,  e    @item @tt{1111 eee0 rrrr -lll}
 
-  @item i2c_rdrc                 @item r, l, s    @item @tt{1011 10ss rrrr 0lll}
-  @item i2c_wrrc                 @item r, l, s    @item @tt{1011 11ss rrrr 0lll}
-
-  @item i2c_gpioset              @item i, r       @item @tt{1100 iiii iiii rrrr}
-  @item i2c_gpioget              @item i, r       @item @tt{1101 iiii iiii rrrr}
-  @item i2c_gpiomode             @item i, m       @item @tt{1110 iiii iiii mmmm}
   @end table
 
   @section {i2c_delay}
@@ -206,25 +205,39 @@
   @end section
 
   @section {i2c_rd* and i2c_wr*}
-  This starts a new transfer, ending as indicated in the third argument
-  (DEV_I2C_BC_COND_CONTINUOUS, DEV_I2C_BC_COND_STOP, DEV_I2C_BC_COND_RESTART).
-  In the case of the first transfer of the transaction, a START condition is
-  generated.
-  Successive CONTINUOUS transfers of differents kind (WRITE or READ) are
-  forbidden and generate an error. If a transfer error is reported by the
-  i2c controller, the bytecode is terminated and the request ends with an error.
+    @label{i2c_rw_instructions}
+  This schedules a transfer on the i2c bus. The third argument is of
+  type @ref dev_i2c_bc_completion_e which indicates how this transfer
+  ends. In the case of the first transfer of the transaction, a start
+  condition is generated on the bus.
+
+  When the transaction is split in multiple transfer instructions, the
+  transfer may actually not be performed before the @ref
+  DEV_I2C_BC_STOP instruction. In case of a write instruction, the
+  memory buffer or registers containing the output data must remain
+  valid. In case of a read instruction, the memory buffer or registers
+  used to store the input data may not be updated immediately.
+
+  Successive @ref DEV_I2C_BC_CONTINUOUS transfers in different
+  directions are forbidden. If a transfer error is reported by the i2c
+  controller, the bytecode is terminated and the request ends with an
+  error.
   @end section
 
-  @section {i2c_rd*c* and i2c_wr*c*}
-  These conditional instructions are similar to the @tt {i2c_rd*} and @tt
-  {i2c_wr*} instructions. If a NAK condition is detected, the next instruction
-  is executed. When the transfer is sucessfull, the next instruction is
-  skipped.
+  @section {i2c_rd*c and i2c_wr*c}
+  These conditional instructions are similar to other read and write
+  instructions. If a NAK condition is detected on the bus, the next
+  instruction is not skipped. When the transfer is successful, the
+  next instruction is skipped. These instructions are usually used
+  with the @ref DEV_I2C_BC_STOP value as third argument. @ref
+  DEV_I2C_BC_CONTINUOUS and @ref DEV_I2C_BC_RESTART are
+  forbidden. @ref DEV_I2C_BC_CONTINUOUS_SYNC and @ref
+  DEV_I2C_BC_RESTART_SYNC are not supported by all controllers.
   @end section
 
   @section {i2c_rdm* and i2c_wrm*}
   These instuctions read data to memory and write data from memory. The buffer
-  address and buffer byte length are passed in registers.
+  address and buffer byte length are passed via registers.
   @end section
 
   @section {i2c_rdr* and i2c_wrr*}
@@ -285,49 +298,99 @@ struct dev_i2c_ctrl_bytecode_rq_s;
 struct dev_i2c_ctrl_transaction_rq_s;
 struct dev_i2c_ctrl_context_s;
 
-/** @This specifies the @ref DEV_I2C_READ_CONTINUOUS or @ref
-    DEV_I2C_WRITE_CONTINUOUS behavior for bytecode transfer instructions. */
-#define DEV_I2C_BC_COND_CONTINUOUS  0
-/** @This specifies the @ref DEV_I2C_READ_STOP or @ref
-    DEV_I2C_WRITE_STOP behavior for bytecode transfer instructions. */
-#define DEV_I2C_BC_COND_STOP        1
-/** @This specifies the @ref DEV_I2C_READ_RESTART or @ref
-    DEV_I2C_WRITE_RESTART behavior for bytecode transfer instructions. */
-#define DEV_I2C_BC_COND_RESTART     2
 
 /*----------------------------------------------------------------------------*/
 
-#define _DEV_I2C_READ_OP           (1 << 0)
-#define _DEV_I2C_WRITE_OP          (1 << 1)
-#define _DEV_I2C_STOP_CONDITION    (1 << 2)
-#define _DEV_I2C_RESTART_CONDITION (1 << 3)
+#define _DEV_I2C_RESET                0
+#define _DEV_I2C_READ_OP              (1 << 0)
+#define _DEV_I2C_ENDING_MASK          (3 << 1)
+#define _DEV_I2C_CONTINUOUS           (1 << 1)
+#define _DEV_I2C_STOP                 (2 << 1)
+#define _DEV_I2C_RESTART              (3 << 1)
+#define _DEV_I2C_SYNC                 (1 << 3)
 
-/** @This specifies the type of I2C @ref dev_i2c_ctrl_transfer_s {transfer}. */
+/** @This specifies the operation performed by an I2C @ref dev_i2c_ctrl_transfer_s. */
 enum dev_i2c_op_e
 {
-    /** Receive data from the slave.
-        Must be Followed by another READ operation.
-        Consecutive transfers are seen as a single transfer on the i2c bus. */
-    DEV_I2C_READ_CONTINUOUS = _DEV_I2C_READ_OP,
-    /** Transmit data to the slave.
-        Must be followed by another WRITE operation.
-        Consecutive transfers are seen as a single transfer on the i2c bus. */
-    DEV_I2C_WRITE_CONTINUOUS = _DEV_I2C_WRITE_OP,
+  /** This schedules a read transfer on the i2c bus. The actual
+      transfer may not be performed before the next stop operation; in
+      this case the driver keep a reference to the buffer until
+      done. This operation can only be followed by another read
+      operation. A continuous transfer and the following transfer is
+      seen as a single transfer on the i2c bus. */
+  DEV_I2C_READ_CONTINUOUS = _DEV_I2C_READ_OP | _DEV_I2C_CONTINUOUS,
+  /** This is similar to @ref DEV_I2C_READ_CONTINUOUS.  The sync flag
+      requires the transfer to be performed before the @ref
+      dev_i2c_ctrl_transfer_s terminates. @b{Not all controller may support this}. */
+  DEV_I2C_READ_CONTINUOUS_SYNC = _DEV_I2C_READ_OP | _DEV_I2C_CONTINUOUS | _DEV_I2C_SYNC,
+  /** This schedules a write transfer on the i2c bus. The actual
+      transfer may not be performed before the next stop operation; in
+      this case the driver keep a reference to the buffer until
+      done. This operation can only be followed by another write
+      operation. A continuous transfer and the following transfer is
+      seen as a single transfer on the i2c bus. */
+  DEV_I2C_WRITE_CONTINUOUS = _DEV_I2C_CONTINUOUS,
+  /** This is similar to @ref DEV_I2C_WRITE_CONTINUOUS.  The sync flag
+      requires the transfer to be performed before the @ref
+      dev_i2c_ctrl_transfer_s terminates. @b{Not all controller may support this}. */
+  DEV_I2C_WRITE_CONTINUOUS_SYNC = _DEV_I2C_CONTINUOUS | _DEV_I2C_SYNC,
 
-    /** Receive data from the slave
-        and generate a STOP condition at the end. */
-    DEV_I2C_READ_STOP = _DEV_I2C_READ_OP | _DEV_I2C_STOP_CONDITION,
-    /** Transmit data to the slave
-        and generate a STOP condition at the end. */
-    DEV_I2C_WRITE_STOP = _DEV_I2C_WRITE_OP | _DEV_I2C_STOP_CONDITION,
+  /** This schedules a read transfer on the i2c bus. The actual
+      transfer may not be performed before the next stop operation; in
+      this case the driver keep a reference to the buffer until
+      done. This generates a restart on the bus at the end of this
+      transfer or at the beginning of the next one. */
+  DEV_I2C_READ_RESTART = _DEV_I2C_READ_OP | _DEV_I2C_RESTART,
+  /** This is similar to @ref DEV_I2C_READ_RESTART.  The sync flag
+      requires the transfer to be performed before the @ref
+      dev_i2c_ctrl_transfer_s terminates. @b{Not all controller may support this}. */
+  DEV_I2C_READ_RESTART_SYNC = _DEV_I2C_READ_OP | _DEV_I2C_RESTART | _DEV_I2C_SYNC,
+  /** This schedules a write transfer on the i2c bus. The actual
+      transfer may not be performed before the next stop operation; in
+      this case the driver keep a reference to the buffer until
+      done. This generates a restart on the bus at the end of this
+      transfer or at the beginning of the next one. */
+  DEV_I2C_WRITE_RESTART = _DEV_I2C_RESTART,
+  /** This is similar to @ref DEV_I2C_WRITE_RESTART.  The sync flag
+      requires the transfer to be performed before the @ref
+      dev_i2c_ctrl_transfer_s terminates. @b{Not all controller may support this}. */
+  DEV_I2C_WRITE_RESTART_SYNC = _DEV_I2C_RESTART | _DEV_I2C_SYNC,
 
-    /** Receive data from the slave and generate a RESTART condition at
-        the end of the current transfer or at the beginning of the
-        next one. */
-    DEV_I2C_READ_RESTART = _DEV_I2C_READ_OP | _DEV_I2C_RESTART_CONDITION,
-    /** Transmit data to the slave and generate a RESTART condition at the
-        end of the current transfer or at the beginning of the next one. */
-    DEV_I2C_WRITE_RESTART = _DEV_I2C_WRITE_OP | _DEV_I2C_RESTART_CONDITION,
+  /** This performs a read transfer on the i2c bus and generates a
+      stop on the bus. */
+  DEV_I2C_READ_STOP = _DEV_I2C_READ_OP | _DEV_I2C_STOP | _DEV_I2C_SYNC,
+  /** This performs a write transfer on the i2c bus and generates a
+      stop on the bus. */
+  DEV_I2C_WRITE_STOP = _DEV_I2C_STOP | _DEV_I2C_SYNC,
+
+  /** This reset the state of the controller when in the middle of a
+      transaction. The bus become idle and a new transfer can start
+      properly. The way the current transfer is terminated on the bus
+      is undefined. */
+  DEV_I2C_RESET = _DEV_I2C_RESET,
+};
+
+/** @This specifies how a bytecode transfer instruction terminates.
+    @xsee {i2c_rw_instructions} */
+enum dev_i2c_bc_completion_e
+{
+  /** @This specifies the @ref DEV_I2C_READ_CONTINUOUS or @ref
+      DEV_I2C_WRITE_CONTINUOUS behavior for bytecode transfer instructions. */
+  DEV_I2C_BC_CONTINUOUS =       _DEV_I2C_CONTINUOUS,
+  /** @This specifies the @ref DEV_I2C_READ_CONTINUOUS_SYNC or @ref
+      DEV_I2C_WRITE_CONTINUOUS_SYNC behavior for bytecode transfer instructions.
+      @b{Not all controller may support this.} */
+  DEV_I2C_BC_CONTINUOUS_SYNC =  _DEV_I2C_CONTINUOUS | _DEV_I2C_SYNC,
+  /** @This specifies the @ref DEV_I2C_READ_STOP or @ref
+      DEV_I2C_WRITE_STOP behavior for bytecode transfer instructions. */
+  DEV_I2C_BC_STOP =             _DEV_I2C_STOP | _DEV_I2C_SYNC,
+  /** @This specifies the @ref DEV_I2C_READ_RESTART or @ref
+      DEV_I2C_WRITE_RESTART behavior for bytecode transfer instructions. */
+  DEV_I2C_BC_RESTART =          _DEV_I2C_RESTART,
+  /** @This specifies the @ref DEV_I2C_READ_RESTART_SYNC or @ref
+      DEV_I2C_WRITE_RESTART_SYNC behavior for bytecode transfer instructions.
+      @b{Not all controller may support this.} */
+  DEV_I2C_BC_RESTART_SYNC =     _DEV_I2C_RESTART | _DEV_I2C_SYNC,
 };
 
 /** @This contains the I2C transfer request which may be started by
@@ -411,21 +474,8 @@ typedef DEV_I2C_CTRL_TRANSFER(dev_i2c_ctrl_transfer_t);
 
 /*----------------------------------------------------------------------------*/
 
-/** @see dev_i2c_ctrl_reset_t */
-#define DEV_I2C_CTRL_RESET(n) \
-  error_t (n)(struct device_i2c_ctrl_s *accessor)
-/**
-  @This resets the internal state of the driver synchronously. It may
-  release the bus as needed. In a transfer is currently being
-  processed, this function fail and return @tt -EBUSY.
-*/
-typedef DEV_I2C_CTRL_RESET(dev_i2c_ctrl_reset_t);
-
-/*----------------------------------------------------------------------------*/
-
 DRIVER_CTX_CLASS_TYPES(DRIVER_CLASS_I2C_CTRL, i2c_ctrl,
     dev_i2c_ctrl_transfer_t *f_transfer;
-    dev_i2c_ctrl_reset_t    *f_reset;
 );
 
 /** @see driver_i2c_ctrl_s */
@@ -434,7 +484,6 @@ DRIVER_CTX_CLASS_TYPES(DRIVER_CLASS_I2C_CTRL, i2c_ctrl,
     .ctx_offset = offsetof(driver_pv_t , i2c_ctrl_ctx),                 \
     .class_ = DRIVER_CLASS_I2C_CTRL,                                    \
     .f_transfer = prefix ## _transfer,                                  \
-    .f_reset = prefix ## _reset,                                        \
   })
 
 /*----------------------------------------------------------------------------*/
@@ -597,7 +646,7 @@ struct dev_i2c_ctrl_context_s
   /** @internal */
   bool_t                            tr_in_progress:1;
   /** @internal */
-  enum dev_i2c_op_e                 BITFIELD(last_type, 4);
+  enum dev_i2c_op_e                 BITFIELD(last_type, 5);
 #endif
 
   lock_irq_t                        lock;
@@ -833,5 +882,3 @@ error_t dev_i2c_res_bitrate(uint32_t bitrate),
 #endif
 
 #endif
-
-
