@@ -24,8 +24,8 @@
 #define __I2C_MASTER_H__
 
 
-#define I2C_MASTER_I2C_DEV        "i2c0"
-#define I2C_MASTER_MAX_THREADS 2  /* without the main thread */
+#define I2C_MASTER_I2C_DEV        "i2c*"
+#define I2C_MASTER_MAX_THREADS    3  /* without the main thread */
 
 /*
 -----------------------------------------------------------------

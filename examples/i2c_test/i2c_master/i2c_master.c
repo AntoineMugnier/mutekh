@@ -436,7 +436,7 @@ i2c_master_test_bc_7(struct i2c_master_test_ctx_s *ctx)
 
   if (ctx->i2c_bc_rq.base.err)
     return ctx->i2c_bc_rq.base.err;
-  if (bc_get_reg(&ctx->i2c_bc_rq.vm, 8) != 1)
+  if ((bc_get_reg(&ctx->i2c_bc_rq.vm, 8) & 0xff) != 1)
     return TEST_FAILED;
 
   dev_i2c_wait_bytecode(&ctx->i2c_ctrl, &ctx->i2c_bc_rq, &i2c_master_bc_read_debug_info, 0);
@@ -455,7 +455,7 @@ i2c_master_test_bc_7(struct i2c_master_test_ctx_s *ctx)
   dev_i2c_wait_bytecode(&ctx->i2c_ctrl, &ctx->i2c_bc_rq, &i2c_master_bc_test_7_mem, 0);
   if (ctx->i2c_bc_rq.base.err)
     return ctx->i2c_bc_rq.base.err;
-  if (bc_get_reg(&ctx->i2c_bc_rq.vm, 8) != 1)
+  if ((bc_get_reg(&ctx->i2c_bc_rq.vm, 8) & 0xff) != 1)
     return TEST_FAILED;
 
   dev_i2c_wait_bytecode(&ctx->i2c_ctrl, &ctx->i2c_bc_rq, &i2c_master_bc_read_debug_info, 0);
@@ -489,7 +489,7 @@ i2c_master_test_bc_8(struct i2c_master_test_ctx_s *ctx)
 
   if (ctx->i2c_bc_rq.base.err)
     return ctx->i2c_bc_rq.base.err;
-  if (bc_get_reg(&ctx->i2c_bc_rq.vm, 8) != 0)
+  if ((bc_get_reg(&ctx->i2c_bc_rq.vm, 8) & 0xff) != 0)
     return TEST_FAILED;
 
   dev_i2c_wait_bytecode(&ctx->i2c_ctrl, &ctx->i2c_bc_rq, &i2c_master_bc_read_debug_info, 0);
@@ -509,7 +509,7 @@ i2c_master_test_bc_8(struct i2c_master_test_ctx_s *ctx)
   dev_i2c_wait_bytecode(&ctx->i2c_ctrl, &ctx->i2c_bc_rq, &i2c_master_bc_test_8_mem, 0);
   if (ctx->i2c_bc_rq.base.err)
     return ctx->i2c_bc_rq.base.err;
-  if (bc_get_reg(&ctx->i2c_bc_rq.vm, 8) != 0)
+  if ((bc_get_reg(&ctx->i2c_bc_rq.vm, 8) & 0xff) != 0)
     return TEST_FAILED;
 
   dev_i2c_wait_bytecode(&ctx->i2c_ctrl, &ctx->i2c_bc_rq, &i2c_master_bc_read_debug_info, 0);
@@ -543,7 +543,7 @@ i2c_master_test_bc_9(struct i2c_master_test_ctx_s *ctx)
 
   if (ctx->i2c_bc_rq.base.err)
     return ctx->i2c_bc_rq.base.err;
-  if (bc_get_reg(&ctx->i2c_bc_rq.vm, 8) != 1)
+  if ((bc_get_reg(&ctx->i2c_bc_rq.vm, 8) & 0xff) != 1)
     return TEST_FAILED;
 
   dev_i2c_wait_bytecode(&ctx->i2c_ctrl, &ctx->i2c_bc_rq, &i2c_master_bc_read_debug_info, 0);
@@ -562,7 +562,7 @@ i2c_master_test_bc_9(struct i2c_master_test_ctx_s *ctx)
   dev_i2c_wait_bytecode(&ctx->i2c_ctrl, &ctx->i2c_bc_rq, &i2c_master_bc_test_9_mem, 0);
   if (ctx->i2c_bc_rq.base.err)
     return ctx->i2c_bc_rq.base.err;
-  if (bc_get_reg(&ctx->i2c_bc_rq.vm, 8) != 1)
+  if ((bc_get_reg(&ctx->i2c_bc_rq.vm, 8) & 0xff) != 1)
     return TEST_FAILED;
 
   dev_i2c_wait_bytecode(&ctx->i2c_ctrl, &ctx->i2c_bc_rq, &i2c_master_bc_read_debug_info, 0);
@@ -592,22 +592,16 @@ i2c_master_test_bc_10(struct i2c_master_test_ctx_s *ctx)
 
   ctx->i2c_bc_rq.base.saddr = I2C_SLAVE_INVALID_ADDR;
 
-  printk("start 1\n");
-
   dev_i2c_wait_bytecode(&ctx->i2c_ctrl, &ctx->i2c_bc_rq, &i2c_master_bc_test_10_reg,
                         0x1ff, 0, 1, 2, 3, 4, 5, 6, 7, 8);
 
   ctx->i2c_bc_rq.base.saddr = slave_addr;
 
-  printk("end 1 %d\n", ctx->i2c_bc_rq.base.err);
-
   if (ctx->i2c_bc_rq.base.err)
     return ctx->i2c_bc_rq.base.err;
 
-  if (bc_get_reg(&ctx->i2c_bc_rq.vm, 8) != 0)
+  if ((bc_get_reg(&ctx->i2c_bc_rq.vm, 8) & 0xff) != 0)
     return TEST_FAILED;
-
-  printk("start 2\n");
 
   /* mem */
   dev_i2c_wait_bytecode(&ctx->i2c_ctrl, &ctx->i2c_bc_rq, &i2c_master_bc_init_slave, 0);
@@ -623,7 +617,7 @@ i2c_master_test_bc_10(struct i2c_master_test_ctx_s *ctx)
   if (ctx->i2c_bc_rq.base.err)
     return ctx->i2c_bc_rq.base.err;
 
-  if (bc_get_reg(&ctx->i2c_bc_rq.vm, 8) != 0)
+  if ((bc_get_reg(&ctx->i2c_bc_rq.vm, 8) & 0xff) != 0)
     return TEST_FAILED;
 
   return 0;
@@ -980,7 +974,7 @@ i2c_master_run_tests(struct i2c_master_test_ctx_s *ctx, pthread_mutex_t *lock,
   for (uint8_t i = 0; i < test_count; i++)
   {
     pthread_mutex_lock(lock);
-    printk("[0x%02x] %s %02d starting...\n", ctx->i2c_bc_rq.base.saddr, prefix, i + 1);
+    //printk("[0x%02x] %s %02d starting...\n", ctx->i2c_bc_rq.base.saddr, prefix, i + 1);
     pthread_mutex_unlock(lock);
 
     error_t err = test[i](ctx);
@@ -999,7 +993,7 @@ i2c_master_run_tests(struct i2c_master_test_ctx_s *ctx, pthread_mutex_t *lock,
   }
 
   pthread_mutex_lock(lock);
-  printk("[0x%02x] All %s tests done\n", ctx->i2c_bc_rq.base.saddr, prefix);
+  //printk("[0x%02x] All %s tests done\n", ctx->i2c_bc_rq.base.saddr, prefix);
   pthread_mutex_unlock(lock);
 }
 
@@ -1009,9 +1003,9 @@ i2c_master_test_bc(struct i2c_master_test_ctx_s *ctx, pthread_mutex_t *lock)
   static i2c_master_test_t * const tests_bc[] =
   {
     i2c_master_test_bc_1,
-    //    i2c_master_test_bc_2,
+    i2c_master_test_bc_2,
     i2c_master_test_bc_3,
-    //    i2c_master_test_bc_4,
+    i2c_master_test_bc_4,
     i2c_master_test_bc_5,
     i2c_master_test_bc_6,
     i2c_master_test_bc_7,
@@ -1031,7 +1025,7 @@ i2c_master_test_tr(struct i2c_master_test_ctx_s *ctx, pthread_mutex_t *lock)
     i2c_master_test_tr_1,
     i2c_master_test_tr_2,
     i2c_master_test_tr_3,
-    //    i2c_master_test_tr_4,
+    i2c_master_test_tr_4,
     i2c_master_test_tr_5,
     i2c_master_test_tr_6,
     i2c_master_test_tr_7,
@@ -1070,7 +1064,7 @@ i2c_master_test(void *arg)
       i2c_master_test_tr(&ctx, &slaves->lock);
 
       pthread_mutex_lock(&slaves->lock);
-      printk("[0x%02x] All done\n", slave_addr);
+      //printk("[0x%02x] All done\n", slave_addr);
       pthread_mutex_unlock(&slaves->lock);
   }
 }
@@ -1125,4 +1119,5 @@ main(void)
 
   semaphore_take(&slaves.sem, I2C_MASTER_MAX_THREADS);
   semaphore_destroy(&slaves.sem);
+  printk("DONE\n");
 }
