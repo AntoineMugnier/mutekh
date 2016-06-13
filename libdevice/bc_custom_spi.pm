@@ -6,18 +6,23 @@ package bc_custom_spi;
 #
 #    generic instructions              0--- ---- ---- ----
 #
-#    delay               r             1000 0011 10-- rrrr
 #    nodelay                           1000 0011 00-- ----
+#    deadline            r             1000 0011 01-- rrrr
+#    delay               r             1000 0011 10-- rrrr
+#    timestamp           r             1000 0011 11-- rrrr
 #
 #    yield                             1000 0000 001- ----
 #    yield_delay         r             1000 0000 101- rrrr
+#    yield_deadline      r             1000 0000 011- rrrr
 #    yieldc                            1000 0000 000- ----
 #    yieldc_delay        r             1000 0000 100- rrrr
+#    yieldc_deadline     r             1000 0000 010- rrrr
 #
 #    wait                cs            1000 0010 00cc ----
 #    wait_delay          r, cs         1000 0010 10cc rrrr
+#    wait_deadline       r, cs         1000 0010 01cc rrrr
 #
-#    setcs               cs            1000 0010 01cc ----
+#    setcs               cs            1000 0010 11cc ----
 #
 #    width               w, o          1000 0100 00ow wwww
 #    brate               r             1000 0100 10-- rrrr
@@ -37,19 +42,24 @@ package bc_custom_spi;
 #    gpiomode            i, m          1100 iiii iiii mmmm
 #
 
-main::custom_op('spi_delay',          1,      0x0380, \&parse_reg );
 main::custom_op('spi_nodelay',        0,      0x0300 );
+main::custom_op('spi_deadline',       1,      0x0340, \&parse_reg );
+main::custom_op('spi_delay',          1,      0x0380, \&parse_reg );
+main::custom_op('spi_timestamp',      1,      0x03c0, \&parse_reg );
 
 main::custom_op('spi_yield',          0,      0x0020 );
 main::custom_op('spi_yield_delay',    1,      0x00a0, \&parse_reg );
+main::custom_op('spi_yield_deadline', 1,      0x0060, \&parse_reg );
 
-main::custom_cond_op('spi_yieldc',       0,   0x0000 );
-main::custom_cond_op('spi_yieldc_delay', 1,   0x0080, \&parse_reg );
+main::custom_cond_op('spi_yieldc',          0,   0x0000 );
+main::custom_cond_op('spi_yieldc_delay' ,   1,   0x0080, \&parse_reg );
+main::custom_cond_op('spi_yieldc_deadline', 1,   0x0040, \&parse_reg );
 
 main::custom_op('spi_wait',           1,      0x0200, \&parse_cs );
 main::custom_op('spi_wait_delay',     2,      0x0280, \&parse_reg_cs );
+main::custom_op('spi_wait_deadline',  2,      0x0240, \&parse_reg_cs );
 
-main::custom_op('spi_setcs',          1,      0x0240, \&parse_cs );
+main::custom_op('spi_setcs',          1,      0x02c0, \&parse_cs );
 
 main::custom_op('spi_width',          2,      0x0400, \&parse_width  );
 main::custom_op('spi_brate',          1,      0x0480, \&parse_reg );
