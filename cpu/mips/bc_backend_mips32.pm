@@ -5,6 +5,7 @@ use strict;
 
 our @reg = ( '$8', '$9', '$10', '$11', '$12', '$13', '$14', '$15' );
 our $caller_saved = 0xff; # vm working regs are caller saved
+our $max_op_regs = (scalar @reg) - 2;
 
 sub out_begin {
     my ( $b ) = @_;
@@ -153,6 +154,104 @@ sub out_jmp32 {
 sub out_ret {
     my ($thisop, $wi) = @_;
     return "    jr $reg[$wi]\n";
+}
+
+sub out_pack_ {
+    my ($thisop, @wi) = @_;
+
+    my $sym = $main::packops{$thisop->{name}};
+    return "# pack: nothing to do\n" if !$sym;
+
+    if ( $thisop->{count} > 6 || $sym =~ /swap/ ) {
+        return "    move \$a0, \$17\n".
+               "    li \$a1, ".($thisop->{reg} + $thisop->{count} * 16)."\n".
+               "    jal $sym\n";
+    } else {
+        my $r;
+        for ( my $i = 0; $i < $thisop->{count}; $i++ ) {
+            my %op = (
+                'bc_pack_op8' => sub {
+                    $r .= "    sb $reg[$wi[$i]], ".(4 * $thisop->{reg} + $i)."(\$17)\n";
+                }, 'bc_unpack_op8' => sub {
+                    $r .= "    lbu $reg[$wi[$i]], ".(4 * $thisop->{reg} + $i)."(\$17)\n";
+                }, 'bc_pack_op16' => sub {
+                    $r .= "    sh $reg[$wi[$i]], ".(4 * $thisop->{reg} + $i * 2)."(\$17)\n";
+                }, 'bc_unpack_op16' => sub {
+                    $r .= "    lhu $reg[$wi[$i]], ".(4 * $thisop->{reg} + $i * 2)."(\$17)\n";
+                });
+            $op{$sym}->();
+        }
+        return $r;
+    }
+}
+
+sub parse_pack {
+    my ($thisop) = @_;
+
+    my $sym = $main::packops{$thisop->{name}};
+
+    if ( !$sym ) {
+        # nop
+        $thisop->{in} = [];
+    } elsif ( $thisop->{count} > $max_op_regs || $sym =~ /swap/ ) {
+        # use function call
+        $thisop->{flushin} = (1 << $thisop->{count}) - 1;
+        $thisop->{clobber} = $caller_saved;
+    } else {
+        # prevent overwritting of packed data
+        $thisop->{wbin} = (1 << $thisop->{count}) - 1;
+    }
+}
+
+sub out_pack {
+    return out_pack_( @_ );
+}
+
+sub parse_unpack {
+    my ($thisop) = @_;
+
+    my $sym = $main::packops{$thisop->{name}};
+
+    if ( !$sym ) {
+        # nop
+        $thisop->{out} = [];
+    } elsif ( $thisop->{count} > $max_op_regs || $sym =~ /swap/ ) {
+        # use function call
+        $thisop->{reloadout} = (1 << $thisop->{count}) - 1;
+        $thisop->{clobber} = $caller_saved;
+    }
+}
+
+sub out_unpack {
+    return out_pack_( @_ );
+}
+
+sub parse_swap {
+    my ($thisop) = @_;
+
+    if ( ($thisop->{name} =~ /le$/ && $main::backend_endian eq 'little') ||
+         ($thisop->{name} =~ /be$/ && $main::backend_endian eq 'big') ) {
+        # nop
+        $thisop->{in} = [];
+        $thisop->{out} = [];
+    } else {
+        # use function call
+        $thisop->{flushin} = 1;
+        $thisop->{reloadout} = 1;
+        $thisop->{clobber} = $caller_saved;
+    }
+}
+
+sub out_swap {
+    my ($thisop) = @_;
+
+    return "    # swap: nothing to do\n" unless $thisop->{flushin};
+
+    die unless $thisop->{name} =~ /^swap(\d\d)/;
+
+    return "    move \$a0, \$17\n".
+           "    li \$a1, ".($thisop->{in}->[0] + 16)."\n".
+           "    jal bc_swap_op$1\n";
 }
 
 sub out_loop {

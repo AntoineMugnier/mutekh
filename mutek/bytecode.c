@@ -86,7 +86,8 @@ static const char * bc_opname(uint16_t op)
     { 0xfff0, BC_OP_JMP   << 8, "ret" },
     { 0xf00f, BC_OP_JMP   << 8, "jmp8" },
     { 0xf000, BC_OP_JMP   << 8, "call8" },
-    { 0xf000, BC_OP_LOOP  << 8, "loop" },
+    { 0xf800, BC_OP_LOOP  << 8, "loop" },
+    { 0xf800, BC_OP_PACK  << 8, "(un)pack/swap" },
     { 0xff00, BC_OP_EQ    << 8, "eq", "eq0" },
     { 0xff00, BC_OP_NEQ   << 8, "neq", "neq0" },
     { 0xff00, BC_OP_LT    << 8, "lt" },
@@ -170,7 +171,246 @@ void bc_dump(const struct bc_context_s *ctx, bool_t regs)
 #endif
 }
 
+
+#define BC_PACK(n)				\
+static void bc_pack##n(void *t, uint_fast8_t c)	\
+{						\
+  const bc_reg_t *s = t;                        \
+  uint##n##_t *d = t;				\
+  uint_fast8_t i;				\
+  for (i = 0; i < c; i++)			\
+    d[i] = s[i];				\
+}
+
+#define BC_UNPACK(n)					\
+static void bc_unpack##n(void *t, uint_fast8_t c)	\
+{							\
+  const uint##n##_t *s = t;				\
+  bc_reg_t *d = t;                                      \
+  uint_fast8_t i;					\
+  for (i = c; i--; )					\
+    d[i] = s[i];					\
+}
+
+BC_PACK(8);
+BC_UNPACK(8);
+BC_PACK(16);
+BC_UNPACK(16);
+#if INT_REG_SIZE > 32 || defined(CONFIG_MUTEK_BYTECODE_VM64)
+BC_PACK(32);
+BC_UNPACK(32);
+#else
+# define bc_pack32(...)
+# define bc_unpack32(...)
+#endif
+
+static void bc_swap16(void *t, uint_fast8_t c)
+{
+  const bc_reg_t *s = t;
+  bc_reg_t *d = t;
+  uint_fast8_t i;
+  for (i = 0; i < c; i++)
+    d[i] = endian_swap16(s[i]);
+}
+
+static void bc_swap32(void *t, uint_fast8_t c)
+{
+  const bc_reg_t *s = t;
+  bc_reg_t *d = t;
+  uint_fast8_t i;
+  for (i = 0; i < c; i++)
+    d[i] = endian_swap32(s[i]);
+}
+
+#ifdef CONFIG_MUTEK_BYTECODE_NATIVE
+
+void bc_unpack_op8(struct bc_context_s *ctx, reg_t op);
+void bc_unpack_op8(struct bc_context_s *ctx, reg_t op)
+{
+  uint_fast8_t c = op >> 4;
+  bc_reg_t *t = ctx->v + (op & 15);
+  bc_unpack8(t, c);
+}
+
+void bc_unpack_swap_op16(struct bc_context_s *ctx, reg_t op);
+void bc_unpack_swap_op16(struct bc_context_s *ctx, reg_t op)
+{
+  uint_fast8_t c = op >> 4;
+  bc_reg_t *t = ctx->v + (op & 15);
+  bc_unpack16(t, c);
+  bc_swap16(t, c);
+}
+
+void bc_unpack_op16(struct bc_context_s *ctx, reg_t op);
+void bc_unpack_op16(struct bc_context_s *ctx, reg_t op)
+{
+  uint_fast8_t c = op >> 4;
+  bc_reg_t *t = ctx->v + (op & 15);
+  bc_unpack16(t, c);
+}
+
+void bc_pack_op8(struct bc_context_s *ctx, reg_t op);
+void bc_pack_op8(struct bc_context_s *ctx, reg_t op)
+{
+  uint_fast8_t c = op >> 4;
+  bc_reg_t *t = ctx->v + (op & 15);
+  bc_pack8(t, c);
+}
+
+void bc_swap_pack_op16(struct bc_context_s *ctx, reg_t op);
+void bc_swap_pack_op16(struct bc_context_s *ctx, reg_t op)
+{
+  uint_fast8_t c = op >> 4;
+  bc_reg_t *t = ctx->v + (op & 15);
+  bc_swap16(t, c);
+  bc_pack16(t, c);
+}
+
+void bc_pack_op16(struct bc_context_s *ctx, reg_t op);
+void bc_pack_op16(struct bc_context_s *ctx, reg_t op)
+{
+  uint_fast8_t c = op >> 4;
+  bc_reg_t *t = ctx->v + (op & 15);
+  bc_pack16(t, c);
+}
+
+void bc_swap_pack_op32(struct bc_context_s *ctx, reg_t op);
+void bc_swap_pack_op32(struct bc_context_s *ctx, reg_t op)
+{
+  uint_fast8_t c = op >> 4;
+  bc_reg_t *t = ctx->v + (op & 15);
+  bc_swap32(t, c);
+# if INT_REG_SIZE > 32 || defined(CONFIG_MUTEK_BYTECODE_VM64)
+  bc_pack32(t, c);
+# endif
+}
+
+# if INT_REG_SIZE > 32 || defined(CONFIG_MUTEK_BYTECODE_VM64)
+void bc_pack_op32(struct bc_context_s *ctx, reg_t op);
+void bc_pack_op32(struct bc_context_s *ctx, reg_t op)
+{
+  uint_fast8_t c = op >> 4;
+  bc_reg_t *t = ctx->v + (op & 15);
+  bc_pack32(t, c);
+}
+# endif
+
+void bc_unpack_swap_op32(struct bc_context_s *ctx, reg_t op);
+void bc_unpack_swap_op32(struct bc_context_s *ctx, reg_t op)
+{
+  uint_fast8_t c = op >> 4;
+  bc_reg_t *t = ctx->v + (op & 15);
+# if INT_REG_SIZE > 32 || defined(CONFIG_MUTEK_BYTECODE_VM64)
+  bc_unpack32(t, c);
+# endif
+  bc_swap32(t, c);
+}
+
+# if INT_REG_SIZE > 32 || defined(CONFIG_MUTEK_BYTECODE_VM64)
+void bc_unpack_op32(struct bc_context_s *ctx, reg_t op);
+void bc_unpack_op32(struct bc_context_s *ctx, reg_t op)
+{
+  uint_fast8_t c = op >> 4;
+  bc_reg_t *t = ctx->v + (op & 15);
+  bc_unpack32(t, c);
+}
+# endif
+
+void bc_swap_op16(struct bc_context_s *ctx, reg_t op);
+void bc_swap_op16(struct bc_context_s *ctx, reg_t op)
+{
+  uint_fast8_t c = op >> 4;
+  bc_reg_t *t = ctx->v + (op & 15);
+  bc_swap16(t, c);
+}
+
+void bc_swap_op32(struct bc_context_s *ctx, reg_t op);
+void bc_swap_op32(struct bc_context_s *ctx, reg_t op)
+{
+  uint_fast8_t c = op >> 4;
+  bc_reg_t *t = ctx->v + (op & 15);
+  bc_swap32(t, c);
+}
+
+#endif
+
 #ifdef CONFIG_MUTEK_BYTECODE_VM
+
+__attribute__((noinline))
+static void bc_run_packing(struct bc_context_s *ctx, uint16_t op)
+{
+  uint_fast8_t c = ((op >> 8) & 0x7) + 1;
+  uint_fast8_t r = (op & 0xf);
+  bc_reg_t *t = ctx->v + r;
+#ifdef CONFIG_MUTEK_BYTECODE_CHECKING
+  if (r + c > 16)
+    return;
+#endif
+  op = (op >> 4) & 0xf;
+
+  switch (op)
+    {
+    case BC_OP_UNPACK8:
+      bc_unpack8(t, c);
+      break;
+    case BC_OP_UNPACK16LE:
+    case BC_OP_UNPACK16BE:
+      bc_unpack16(t, c);
+      break;
+#if INT_REG_SIZE > 32 || defined(CONFIG_MUTEK_BYTECODE_VM64)
+    case BC_OP_UNPACK32LE:
+    case BC_OP_UNPACK32BE:
+      bc_unpack32(t, c);
+      break;
+#endif
+    }
+
+  switch (op)
+    {
+    case BC_OP_SWAP16:
+#if !defined (CONFIG_CPU_ENDIAN_BIG)
+    case BC_OP_SWAP16BE:
+    case BC_OP_UNPACK16BE:
+    case BC_OP_PACK16BE:
+#else
+    case BC_OP_SWAP16LE:
+    case BC_OP_UNPACK16LE:
+    case BC_OP_PACK16LE:
+#endif
+      bc_swap16(t, c);
+      break;
+
+    case BC_OP_SWAP32:
+#if !defined (CONFIG_CPU_ENDIAN_BIG)
+    case BC_OP_SWAP32BE:
+    case BC_OP_UNPACK32BE:
+    case BC_OP_PACK32BE:
+#else
+    case BC_OP_SWAP32LE:
+    case BC_OP_UNPACK32LE:
+    case BC_OP_PACK32LE:
+#endif
+      bc_swap32(t, c);
+      break;
+    }
+
+  switch (op)
+    {
+    case BC_OP_PACK8:
+      bc_pack8(t, c);
+      break;
+    case BC_OP_PACK16LE:
+    case BC_OP_PACK16BE:
+      bc_pack16(t, c);
+      break;
+#if INT_REG_SIZE > 32 || defined(CONFIG_MUTEK_BYTECODE_VM64)
+    case BC_OP_PACK32LE:
+    case BC_OP_PACK32BE:
+      bc_pack32(t, c);
+      break;
+#endif
+    }
+}
 
 #define BC_DISPATCH(name) ((&&dispatch_##name - &&dispatch_begin))
 #define BC_DISPATCH_GOTO(index) goto *(&&dispatch_begin + dispatch[index])
@@ -391,7 +631,7 @@ bc_opcode_t bc_run_vm(struct bc_context_s *ctx, int_fast32_t max_cycles)
       do {
 	static const bs_dispatch_t dispatch[8] = {
 	  [BC_OP_ADD8 >> 4] = BC_DISPATCH(add8), [BC_OP_CST8 >> 4] = BC_DISPATCH(cst8),
-	  [BC_OP_JMP  >> 4]  = BC_DISPATCH(jmp), [BC_OP_LOOP >> 4] = BC_DISPATCH(loop),
+	  [BC_OP_JMP  >> 4]  = BC_DISPATCH(jmp), [BC_OP_LOOP >> 4] = BC_DISPATCH(loop_pack),
 	  [BC_OP_FMT1 >> 4] = BC_DISPATCH(alu),  [BC_OP_FMT2 >> 4] = BC_DISPATCH(fmt2),
 	  [BC_OP_LD >> 4]   = BC_DISPATCH(ldst), [BC_OP_CST >> 4] = BC_DISPATCH(cstn_call),
 	};
@@ -437,8 +677,16 @@ bc_opcode_t bc_run_vm(struct bc_context_s *ctx, int_fast32_t max_cycles)
           goto check_pc;
         }
 
-      dispatch_loop: {
-	  int8_t d = op >> 4;
+      dispatch_loop_pack: {
+          if (op & 0x800)         /* packing */
+            {
+              bc_run_packing(ctx, op);
+              break;
+            }
+
+          /* loop */
+	  int8_t d = op >> 3;
+          d >>= 1;
 	  if (d < 0)
 	    {
 #ifdef CONFIG_MUTEK_BYTECODE_CHECKING

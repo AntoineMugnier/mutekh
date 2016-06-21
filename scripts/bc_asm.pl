@@ -144,10 +144,10 @@ sub check_label
 
 sub check_label8
 {
-    my ( $thisop, $argidx ) = @_;
+    my ( $thisop, $argidx, $bound ) = @_;
     my $l = check_label( $thisop, $argidx );
 
-    if ($thisop->{disp} > 127 || $thisop->{disp} < -128) {
+    if ($thisop->{disp} > $bound - 1 || $thisop->{disp} < -$bound) {
         die "$thisop->{line}: jump target out of range for `$thisop->{name}'.\n";
     }
 
@@ -311,7 +311,7 @@ sub parse_jmp8
 {
     my $thisop = shift;
 
-    $thisop->{target} = check_label8($thisop, 0);
+    $thisop->{target} = check_label8($thisop, 0, 128);
 
     if ( $thisop->{disp} == 0 ) {
 	die "$thisop->{line}: jmp can not have a zero displacement\n";
@@ -323,7 +323,7 @@ sub parse_call8
     my $thisop = shift;
 
     $thisop->{lr} = check_reg($thisop, 0);
-    $thisop->{target} = check_label8($thisop, 1);
+    $thisop->{target} = check_label8($thisop, 1, 128);
 
     if ( $thisop->{lr} == 0 ) {
 	die "$thisop->{line}: call8 can not modify register 0\n";
@@ -370,7 +370,55 @@ sub parse_loop
 
 #   push @{$thisop->{out}}, check_reg($thisop, 0);
     push @{$thisop->{in}}, check_reg($thisop, 0);
-    $thisop->{target} = check_label8($thisop, 1);
+    $thisop->{target} = check_label8($thisop, 1, 64);
+}
+
+our $le = ($main::backend_endian eq 'little');
+die unless $le or $main::backend_endian eq 'big';
+
+our %packops = (
+    'pack8' =>      'bc_pack_op8',
+    'unpack8' =>    'bc_unpack_op8',
+    'pack16le' =>   $le ? 'bc_pack_op16'        : 'bc_swap_pack_op16',
+    'pack16be' =>   $le ? 'bc_swap_pack_op16'   : 'bc_pack_op16',
+    'pack32le' =>   $le ? undef                 : 'bc_swap_pack_op32',
+    'pack32be' =>   $le ? 'bc_swap_pack_op32'   : undef,
+    'unpack16le' => $le ? 'bc_unpack_op16'      : 'bc_unpack_swap_op16',
+    'unpack16be' => $le ? 'bc_unpack_swap_op16' : 'bc_unpack_op16',
+    'unpack32le' => $le ? undef                 : 'bc_unpack_swap_op32',
+    'unpack32be' => $le ? 'bc_unpack_swap_op32' : undef,
+);
+
+sub parse_pack
+{
+    my $thisop = shift;
+
+    my $r = check_reg($thisop, 0);
+    my $count = check_num($thisop, 1, 1, 8);
+    if ($r + $count > 16) {
+        die "$thisop->{line}: out of range register\n";
+    }
+    for (my $i = 0; $i < $count; $i++) {
+        push @{$thisop->{in}}, $r + $i;
+    }
+    $thisop->{reg} = $r;
+    $thisop->{count} = $count;
+}
+
+sub parse_unpack
+{
+    my $thisop = shift;
+
+    my $r = check_reg($thisop, 0);
+    my $count = check_num($thisop, 1, 1, 8);
+    if ($r + $count > 16) {
+        die "$thisop->{line}: out of range register\n";
+    }
+    for (my $i = 0; $i < $count; $i++) {
+        push @{$thisop->{out}}, $r + $i;
+    }
+    $thisop->{reg} = $r;
+    $thisop->{count} = $count;
 }
 
 sub parse_ld
@@ -611,6 +659,23 @@ our %asm = (
         parse => \&parse_loop, backend => ('loop'),
         flushregs => 1,
     },
+    _multi_keys( 'pack8' => 'pack16le' => 'pack16be' =>
+                 'pack32le' => 'pack32be' => {
+        words => 1, code => 0x3800, argscnt => 2,
+        parse => \&parse_pack, backend => ('pack'),
+        nocond => 1,
+    }),
+    _multi_keys( 'unpack8' => 'unpack16le' => 'unpack16be' =>
+                 'unpack32le' => 'unpack32be' => {
+        words => 1, code => 0x3800, argscnt => 2,
+        parse => \&parse_unpack, backend => ('unpack'),
+        nocond => 1,
+    }),
+    _multi_keys( 'swap16le' => 'swap16be' => 'swap16' =>
+                 'swap32le' => 'swap32be' => 'swap32' => {
+        words => 1, code => 0x3800, argscnt => 1,
+        parse => \&parse_alu1, backend => ('swap'),
+    }),
     'eq'  => {
         words => 1, code => 0x4000, argscnt => 2,
         parse => \&parse_cmp2, backend => ('eq'),
@@ -836,8 +901,8 @@ sub parse_args
 	die "$thisop->{line}: multi-word instruction after conditional\n"
 	    if $prevop && $prevop->{op}->{cond} && $op->{words} > 1;
 
-        die "$thisop->{line}: contiguous conditional instructions\n"
-	    if $prevop && $prevop->{op}->{cond} && $op->{cond};
+        die "$thisop->{line}: instruction can not be conditional\n"
+	    if $prevop && $prevop->{op}->{cond} && ($op->{cond} || $op->{nocond});
 
 	$thisop->{op} = $op;
 	$thisop->{addr} = $addr;

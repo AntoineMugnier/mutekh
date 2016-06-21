@@ -5,6 +5,7 @@ use strict;
 
 our @reg = ( 'r1', 'r2', 'r3', 'r5', 'r6', 'r7' );
 our $caller_saved = 0x0007; # vm working regs are caller saved
+our $max_op_regs = (scalar @reg) - 2;
 
 sub out_begin {
     my ( $b ) = @_;
@@ -184,6 +185,113 @@ sub out_ret {
     my ($thisop, $wi) = @_;
     return "    bx $reg[$wi]\n".
 	   "    .ltorg\n";
+}
+
+sub out_pack_ {
+    my ($thisop, @w) = @_;
+
+    my $sym = $main::packops{$thisop->{name}};
+    return "    # pack: nothing to do\n" if !$sym;
+
+    if ( $thisop->{count} > $max_op_regs ) {
+        return "    mov r0, r4\n".
+               "    movs r1, #".($thisop->{reg} + $thisop->{count} * 16)."\n".
+               "    bl $sym\n";
+    } else {
+        my $r;
+        for ( my $i = 0; $i < $thisop->{count}; $i++ ) {
+            my %op = (
+                'bc_pack_op8' => sub {
+                    $r .= "    strb $reg[$w[$i]], [r4, #".(4 * $thisop->{reg} + $i)."]\n";
+                }, 'bc_unpack_op8' => sub {
+                    $r .= "    ldrb $reg[$w[$i]], [r4, #".(4 * $thisop->{reg} + $i)."]\n";
+                }, 'bc_pack_op16' => sub {
+                    $r .= "    strh $reg[$w[$i]], [r4, #".(4 * $thisop->{reg} + $i * 2)."]\n";
+                }, 'bc_unpack_op16' => sub {
+                    $r .= "    ldrh $reg[$w[$i]], [r4, #".(4 * $thisop->{reg} + $i * 2)."]\n";
+                }, 'bc_swap_pack_op16' => sub {
+                    $r .= "    rev16 r0, $reg[$w[$i]]\n";
+                    $r .= "    strh r0, [r4, #".(4 * $thisop->{reg} + $i * 2)."]\n";
+                }, 'bc_unpack_swap_op16' => sub {
+                    $r .= "    ldrh r0, [r4, #".(4 * $thisop->{reg} + $i * 2)."]\n";
+                    $r .= "    rev16 $reg[$w[$i]], r0\n";
+                }, 'bc_swap_pack_op32' => sub {
+                    $r .= "    rev r0, $reg[$w[$i]]\n";
+                    $r .= "    str r0, [r4, #".(4 * $thisop->{reg} + $i * 4)."]\n";
+                }, 'bc_unpack_swap_op32' => sub {
+                    $r .= "    ldr r0, [r4, #".(4 * $thisop->{reg} + $i * 4)."]\n";
+                    $r .= "    rev $reg[$w[$i]], r0\n";
+                });
+            $op{$sym}->();
+        }
+        return $r;
+    }
+}
+
+sub parse_pack {
+    my ($thisop) = @_;
+
+    my $sym = $main::packops{$thisop->{name}};
+
+    if ( !$sym ) {
+        # nop
+        $thisop->{in} = [];
+    } elsif ( $thisop->{count} > $max_op_regs ) {
+        # use function call
+        $thisop->{flushin} = (1 << $thisop->{count}) - 1;
+        $thisop->{clobber} = $caller_saved;
+    } else {
+        # prevent overwritting of packed data
+        $thisop->{wbin} = (1 << $thisop->{count}) - 1;
+    }
+}
+
+sub out_pack {
+    return out_pack_( @_ );
+}
+
+sub parse_unpack {
+    my ($thisop) = @_;
+
+    my $sym = $main::packops{$thisop->{name}};
+
+    if ( !$sym ) {
+        # nop
+        $thisop->{out} = [];
+    } elsif ( $thisop->{count} > $max_op_regs ) {
+        # use function call
+        $thisop->{reloadout} = (1 << $thisop->{count}) - 1;
+        $thisop->{clobber} = $caller_saved;
+    }
+}
+
+sub out_unpack {
+    return out_pack_( @_ );
+}
+
+sub parse_swap {
+    my ($thisop) = @_;
+
+    if ( $thisop->{name} =~ /le$/ ) {
+        # nop
+        $thisop->{in} = [];
+        $thisop->{out} = [];
+    }
+}
+
+sub out_swap {
+    my ($thisop, $wo, $wi) = @_;
+    my $r;
+
+    if ( !defined $wi ) {
+        $r = "    # swaple: nothing to do\n";
+    } elsif ( $thisop->{name} =~ /^swap32/ ) {
+        $r = "    rev $reg[$wo], $reg[$wi]\n";
+    } else {
+        $r = "    rev16 $reg[$wo], $reg[$wi]\n";
+    }
+
+    return $r;
 }
 
 sub out_loop {

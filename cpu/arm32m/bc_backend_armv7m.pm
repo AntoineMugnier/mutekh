@@ -10,6 +10,7 @@ use strict;
 @bc_backend_armv6m::reg = ('r1', 'r2', 'r3', 'r5', 'r6', 'r7', 'r8', 'r12');
 our @reg = @bc_backend_armv6m::reg;
 
+$bc_backend_armv6m::max_op_regs = (scalar @reg) - 2;
 $bc_backend_armv6m::caller_saved = 0x87;
 
 sub out_begin {

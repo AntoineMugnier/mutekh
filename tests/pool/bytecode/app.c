@@ -7,6 +7,8 @@
 #define BC_CUSTOM_PRINTI 0x1000
 #define BC_CUSTOM_PRINTS 0x2000
 #define BC_CUSTOM_SKIPODD 0x3000
+#define BC_CUSTOM_LOADSTR 0x4000
+#define BC_CUSTOM_CHECKSTR 0x5000
 
 uint32_t cksum = 5381;
 
@@ -75,6 +77,27 @@ void app_start()
           cksum_update(r & 1);
           if (r & 1)
             bc_skip(&vm);
+          break;
+        }
+        case BC_CUSTOM_LOADSTR: {
+          uint8_t *t = (uint8_t*)(vm.v + (r & 0xf));
+          uint_fast8_t i, c = (r & 0x3f0) >> 4;
+          for (i = 0; i < c; i++)
+            t[i] = i;
+          break;
+        }
+        case BC_CUSTOM_CHECKSTR: {
+          uint8_t *t = (uint8_t*)(vm.v + (r & 0xf));
+          uint_fast8_t i, c = (r & 0x3f0) >> 4;
+          for (i = 0; i < c; i++)
+            if (t[i] != i)
+              {
+#ifdef CONFIG_MUTEK_BYTECODE_DEBUG
+                bc_dump(&vm, 1);
+#endif
+                printk("bad string %P\n", t, c);
+                goto done;
+              }
           break;
         }
         default:
