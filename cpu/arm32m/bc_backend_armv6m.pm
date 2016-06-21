@@ -4,6 +4,7 @@ package bc_backend_armv6m;
 use strict;
 
 our @reg = ( 'r1', 'r2', 'r3', 'r5', 'r6', 'r7' );
+our $caller_saved = 0x0007; # vm working regs are caller saved
 
 sub out_begin {
     my ( $b ) = @_;
@@ -97,6 +98,11 @@ sub out_end {
     return "    movs r0, #0\n".
            "    pop    {r4, r5, r6, r7, pc}\n".
 	   "    .ltorg\n";
+}
+
+sub parse_dump {
+    my ($thisop) = @_;
+    $thisop->{clobber} = $caller_saved;
 }
 
 sub out_dump {
@@ -300,12 +306,15 @@ sub out_not {
     return "    mvns $reg[$wo], $reg[$wi]\n";
 }
 
+sub parse_msbs {
+    my ($thisop) = @_;
+    $thisop->{clobber} = $caller_saved;    # some vm working regs are caller saved
+}
+
 sub out_msbs {
     my ($thisop, $wo, $wi) = @_;
     return "    mov r0, $reg[$wi]\n".
-           "    push {r1, r2, r3}\n".
            "    bl __clzsi2\n".
-           "    pop {r1, r2, r3}\n".
            "    movs $reg[$wo], #31\n".
            "    eors $reg[$wo], r0\n";
 }

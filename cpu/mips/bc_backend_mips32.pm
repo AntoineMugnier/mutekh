@@ -3,7 +3,8 @@ package bc_backend_mips32;
 
 use strict;
 
-my @reg = ( '$8', '$9', '$10', '$11', '$12', '$13', '$14', '$15' );
+our @reg = ( '$8', '$9', '$10', '$11', '$12', '$13', '$14', '$15' );
+our $caller_saved = 0xff; # vm working regs are caller saved
 
 sub out_begin {
     my ( $b ) = @_;
@@ -84,6 +85,11 @@ sub out_end {
     return "    move \$v0, \$0\n".
            "    sw \$v0, ".(16 * 4)."(\$17)\n".
            "    b Lbytecode_end\n";
+}
+
+sub parse_dump {
+    my ($thisop) = @_;
+    $thisop->{clobber} = $caller_saved;
 }
 
 sub out_dump {
@@ -252,6 +258,11 @@ sub out_msbs {
     my ($thisop, $wo, $wi0) = @_;
     return "    clz $reg[$wo], $reg[$wi0]\n".
            "    xori $reg[$wo], $reg[$wo], 31\n";
+}
+
+sub parse_ccall {
+    my ($thisop) = @_;
+    $thisop->{clobber} = $caller_saved;
 }
 
 sub out_ccall {

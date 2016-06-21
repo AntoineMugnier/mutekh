@@ -107,6 +107,9 @@ sub out_andn {
     return "    bics $reg[$wo], $reg[$wi0], $reg[$wi1]\n";
 }
 
+sub parse_msbs {
+}
+
 sub out_msbs {
     my ($thisop, $wo, $wi) = @_;
     return "    clz $reg[$wo], $reg[$wi]\n".

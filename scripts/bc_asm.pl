@@ -553,240 +553,240 @@ sub _multi_keys # for easy init of multiple hash keys with same value
 our %asm = (
     'end' => {
         words => 1, code => 0x0000, argscnt => 0,
-        parse => \&parse_noarg, out => $backend->can('out_end'),
+        parse => \&parse_noarg, backend => ('end'),
 	flushregs => 1
     },
     'dump'  => {
         words => 1, code => 0x0001, argscnt => 0,
-        parse => \&parse_noarg, out => $backend->can('out_dump'),
-        reloadregs => 1,
+        parse => \&parse_noarg, backend => ('dump'),
+        flushregs => 1,
     },
     'abort'  => {
         words => 1, code => 0x0002, argscnt => 0,
-        parse => \&parse_noarg, out => $backend->can('out_abort'),
+        parse => \&parse_noarg, backend => ('abort'),
     },
     'nop'  => {
         words => 1, code => 0x0004, argscnt => 0,
-        parse => \&parse_noarg, out => $backend->can('out_nop'),
+        parse => \&parse_noarg, backend => ('nop'),
     },
     'trace'  => {
         words => 1, code => 0x0008, argscnt => 2,
-        parse => \&parse_trace, out => $backend->can('out_trace'),
+        parse => \&parse_trace, backend => ('trace'),
     },
     'add8'  => {
         words => 1, code => 0x0000, argscnt => 2,
-        parse => \&parse_add8, out => $backend->can('out_add8'),
+        parse => \&parse_add8, backend => ('add8'),
     },
     'cst8'  => {
         words => 1, code => 0x1000, argscnt => 2,
-        parse => \&parse_cst8, out => $backend->can('out_cst8'),
+        parse => \&parse_cst8, backend => ('cst8'),
     },
     'jmp8'  => {
         words => 1, code => 0x2000, argscnt => 1,
-        parse => \&parse_jmp8, out => $backend->can('out_jmp8'),
+        parse => \&parse_jmp8, backend => ('jmp8'),
         flushregs => 1,
     },
     'call8'  => {
         words => 1, code => 0x2000, argscnt => 2,
-        parse => \&parse_call8, out => $backend->can('out_call8'),
+        parse => \&parse_call8, backend => ('call8'),
         reloadregs => 1,
     },
     'jmp32'  => {
         words => 3, code => 0x7010, argscnt => 1,
-        parse => \&parse_jmp32, out => $backend->can('out_jmp32'),
+        parse => \&parse_jmp32, backend => ('jmp32'),
         flushregs => 1,
     },
     'call32'  => {
         words => 3, code => 0x7010, argscnt => 2,
-        parse => \&parse_call32, out => $backend->can('out_call32'),
+        parse => \&parse_call32, backend => ('call32'),
         reloadregs => 1,
     },
     'ret' => {
         words => 1, code => 0x2000, argscnt => 1,
-        parse => \&parse_ret, out => $backend->can('out_ret'),
+        parse => \&parse_ret, backend => ('ret'),
         flushregs => 1,
     },
     'loop' => {
         words => 1, code => 0x3000, argscnt => 2,
-        parse => \&parse_loop, out => $backend->can('out_loop'),
+        parse => \&parse_loop, backend => ('loop'),
         flushregs => 1,
     },
     'eq'  => {
         words => 1, code => 0x4000, argscnt => 2,
-        parse => \&parse_cmp2, out => $backend->can('out_eq'),
+        parse => \&parse_cmp2, backend => ('eq'),
         cond => 1,
     },
     'eq0'  => {
         words => 1, code => 0x4000, argscnt => 1,
-        parse => \&parse_cmp1, out => $backend->can('out_eq0'),
+        parse => \&parse_cmp1, backend => ('eq0'),
         cond => 1,
     },
     'neq'  => {
         words => 1, code => 0x4100, argscnt => 2,
-        parse => \&parse_cmp2, out => $backend->can('out_neq'),
+        parse => \&parse_cmp2, backend => ('neq'),
         cond => 1,
     },
     'neq0'  => {
         words => 1, code => 0x4100, argscnt => 1,
-        parse => \&parse_cmp1, out => $backend->can('out_neq0'),
+        parse => \&parse_cmp1, backend => ('neq0'),
         cond => 1,
     },
     'lt'  => {
         words => 1, code => 0x4200, argscnt => 2,
-        parse => \&parse_cmp2, out => $backend->can('out_lt'),
+        parse => \&parse_cmp2, backend => ('lt'),
         cond => 1,
     },
     'lteq'  => {
         words => 1, code => 0x4300, argscnt => 2,
-        parse => \&parse_cmp2, out => $backend->can('out_lteq'),
+        parse => \&parse_cmp2, backend => ('lteq'),
         cond => 1,
     },
     'add' => {
         words => 1, code => 0x4400, argscnt => 2,
-        parse => \&parse_alu2, out => $backend->can('out_add')
+        parse => \&parse_alu2, backend => ('add')
     },
     'sub' => {
         words => 1, code => 0x4500, argscnt => 2,
-        parse => \&parse_alu2, out => $backend->can('out_sub')
+        parse => \&parse_alu2, backend => ('sub')
     },
     'neg' => {
         words => 1, code => 0x4500, argscnt => 1,
-        parse => \&parse_alu1, out => $backend->can('out_neg')
+        parse => \&parse_alu1, backend => ('neg')
     },
     'mul32' => {
         words => 1, code => 0x4700, argscnt => 2,
-        parse => \&parse_alu, out => $backend->can('out_mul')
+        parse => \&parse_alu, backend => ('mul')
     },
     'or32' => {
         words => 1, code => 0x4800, argscnt => 2,
-        parse => \&parse_alu2, out => $backend->can('out_or')
+        parse => \&parse_alu2, backend => ('or')
     },
     'xor32' => {
         words => 1, code => 0x4900, argscnt => 2,
-        parse => \&parse_alu, out => $backend->can('out_xor')
+        parse => \&parse_alu, backend => ('xor')
     },
     'and32' => {
         words => 1, code => 0x4a00, argscnt => 2,
-        parse => \&parse_alu2, out => $backend->can('out_and')
+        parse => \&parse_alu2, backend => ('and')
     },
     'ccall' => {
         words => 1, code => 0x4b00, argscnt => 2,
-        parse => \&parse_alu, out => $backend->can('out_ccall'),
-        reloadregs => 1,
+        parse => \&parse_alu, backend => ('ccall'),
+        flushregs => 1,
     },
     'shl32' => {
         words => 1, code => 0x4c00, argscnt => 2,
-        parse => \&parse_alu, out => $backend->can('out_shl'),
+        parse => \&parse_alu, backend => ('shl'),
     },
     'shr32' => {
         words => 1, code => 0x4d00, argscnt => 2,
-        parse => \&parse_alu, out => $backend->can('out_shr'),
+        parse => \&parse_alu, backend => ('shr'),
     },
     'andn32' => {
         words => 1, code => 0x4e00, argscnt => 2,
-        parse => \&parse_alu2, out => $backend->can('out_andn')
+        parse => \&parse_alu2, backend => ('andn')
     },
     'not32' => {
         words => 1, code => 0x4e00, argscnt => 1,
-        parse => \&parse_alu1, out => $backend->can('out_not')
+        parse => \&parse_alu1, backend => ('not')
     },
     'mov' => {
         words => 1, code => 0x4f00, argscnt => 2,
-        parse => \&parse_mov, out => $backend->can('out_mov')
+        parse => \&parse_mov, backend => ('mov')
     },
     'msbs32' => {
         words => 1, code => 0x4f00, argscnt => 1,
-        parse => \&parse_alu1, out => $backend->can('out_msbs')
+        parse => \&parse_alu1, backend => ('msbs')
     },
     'tst32c' => {
         words => 1, code => 0x5000, argscnt => 2,
-        parse => \&parse_tst, out => $backend->can('out_tstc'),
+        parse => \&parse_tst, backend => ('tstc'),
         cond => 1,
     },
     'tst32s' => {
         words => 1, code => 0x5200, argscnt => 2,
-        parse => \&parse_tst, out => $backend->can('out_tsts'),
+        parse => \&parse_tst, backend => ('tsts'),
         cond => 1,
     },
     'bit32c' => {
         words => 1, code => 0x5400, argscnt => 2,
-        parse => \&parse_bitop, out => $backend->can('out_bitc'),
+        parse => \&parse_bitop, backend => ('bitc'),
     },
     'bit32s' => {
         words => 1, code => 0x5600, argscnt => 2,
-        parse => \&parse_bitop, out => $backend->can('out_bits'),
+        parse => \&parse_bitop, backend => ('bits'),
     },
     'shi32l' => {
         words => 1, code => 0x5800, argscnt => 2,
-        parse => \&parse_bitop, out => $backend->can('out_shil'),
+        parse => \&parse_bitop, backend => ('shil'),
     },
     'shi32r' => {
         words => 1, code => 0x5a00, argscnt => 2,
-        parse => \&parse_bitop, out => $backend->can('out_shir'),
+        parse => \&parse_bitop, backend => ('shir'),
     },
     'exts' => {
         words => 1, code => 0x5e00, argscnt => 2,
-        parse => \&parse_bitop, out => $backend->can('out_exts'),
+        parse => \&parse_bitop, backend => ('exts'),
     },
     'extz' => {
         words => 1, code => 0x5c00, argscnt => 2,
-        parse => \&parse_bitop, out => $backend->can('out_extz'),
+        parse => \&parse_bitop, backend => ('extz'),
     },
     _multi_keys( 'ld' => 'ld8' => 'ld16' => 'ld32' => 'ld64' => {
         words => 1, code => 0x6000, argscnt => 2,
-        parse => \&parse_ld, out => $backend->can('out_ld'),
+        parse => \&parse_ld, backend => ('ld'),
     }),
     _multi_keys( 'ldi' => 'ld8i' => 'ld16i' => 'ld32i' => 'ld64i' => {
         words => 1, code => 0x6100, argscnt => 2,
-        parse => \&parse_ldi, out => $backend->can('out_ldi'),
+        parse => \&parse_ldi, backend => ('ldi'),
     }),
     _multi_keys( 'lde' => 'ld8e' => 'ld16e' => 'ld32e' => 'ld64e' => {
         words => 2, code => 0x7100, argscnt => 3,
-        parse => \&parse_ld, out => $backend->can('out_lde'),
+        parse => \&parse_ld, backend => ('lde'),
     }),
     _multi_keys( 'st' => 'st8' => 'st16' => 'st32' => 'st64' => {
         words => 1, code => 0x6800, argscnt => 2,
-        parse => \&parse_st, out => $backend->can('out_st'),
+        parse => \&parse_st, backend => ('st'),
     }),
     _multi_keys( 'sti' => 'st8i' => 'st16i' => 'st32i' => 'st64i' => {
         words => 1, code => 0x6900, argscnt => 2,
-        parse => \&parse_sti, out => $backend->can('out_sti'),
+        parse => \&parse_sti, backend => ('sti'),
     }),
     _multi_keys( 'std' => 'st8d' => 'st16d' => 'st32d' => 'st64d' => {
         words => 1, code => 0x7800, argscnt => 2,
-        parse => \&parse_sti, out => $backend->can('out_std'),
+        parse => \&parse_sti, backend => ('std'),
     }),
     _multi_keys( 'ste' => 'st8e' => 'st16e' => 'st32e' => 'st64e' => {
         words => 2, code => 0x7900, argscnt => 3,
-        parse => \&parse_st, out => $backend->can('out_ste'),
+        parse => \&parse_st, backend => ('ste'),
     }),
     'cst16' => {
         words => 2, code => 0x7210, argscnt => 3,
-        parse => \&parse_cst, out => $backend->can('out_cst'),
+        parse => \&parse_cst, backend => ('cst'),
     },
     'cst32' => {
         words => 3, code => 0x7410, argscnt => 3,
-        parse => \&parse_cst, out => $backend->can('out_cst'),
+        parse => \&parse_cst, backend => ('cst'),
     },
     'cst64' => {
         words => 5, code => 0x7610, argscnt => 3,
-        parse => \&parse_cst, out => $backend->can('out_cst'),
+        parse => \&parse_cst, backend => ('cst'),
     },
     'laddr16' => {
         words => 2, code => 0x7200, argscnt => 2,
-        parse => \&parse_laddr, out => $backend->can('out_laddr'),
+        parse => \&parse_laddr, backend => ('laddr'),
     },
     'laddr32' => {
         words => 3, code => 0x7400, argscnt => 2,
-        parse => \&parse_laddr, out => $backend->can('out_laddr'),
+        parse => \&parse_laddr, backend => ('laddr'),
     },
     'gaddr' => {
         words => 1 + (4 << $backend_width) / 8, code => 0x7000, argscnt => 2,
-        parse => \&parse_gaddr, out => $backend->can('out_gaddr'),
+        parse => \&parse_gaddr, backend => ('gaddr'),
     },
     '.data16' => {
         words => 1, argscnt => 1,
-        parse => \&parse_data, out => $backend->can('out_data'),
+        parse => \&parse_data, backend => ('data'),
     },
 );
 
@@ -800,7 +800,7 @@ sub custom_op
 
     $asm{$name} = {
         words => 1, code => 0x8000 | $code, argscnt => $args,
-        parse => $parse, out => $backend->can('out_custom'),
+        parse => $parse, backend => ('custom'),
         reloadregs => 1,
     };
 }
@@ -813,7 +813,7 @@ sub custom_cond_op
 
     $asm{$name} = {
         words => 1, code => 0x8000 | $code, argscnt => $args,
-        parse => $parse, out => $backend->can('out_custom_cond'),
+        parse => $parse, backend => ('custom_cond'),
         reloadregs => 1, cond => 1,
     };
 }
@@ -842,6 +842,23 @@ sub parse_args
 	$thisop->{op} = $op;
 	$thisop->{addr} = $addr;
 
+        # bit mask of arguments which require a register write back
+        # rather than a register load, updated by the backend parse
+        # handler
+        $thisop->{flushin} = 0;
+
+        # bit mask of arguments which are written back by the instruction,
+        # ignored when flushin is set for the argument
+        $thisop->{wbin} = 0;
+
+        # bit mask of arguments which require a register reload rather
+        # than an output register allocation, updated by the backend
+        # parse handler
+        $thisop->{reloadout} = 0;
+
+        # bit mask of clobbered cpu registers
+        $thisop->{clobber} = 0;
+
         foreach my $l ( @{$thisop->{labels}} ) {
 	    $l->{addr} = $addr;
 	}
@@ -864,6 +881,11 @@ sub parse_args
 	}
 
 	$thisop->{op}->{parse}->( $thisop );
+
+        my $opbackend = $thisop->{op}->{backend};
+        if (my $bparse = $backend->can('parse_'.$opbackend)) {
+            $bparse->( $thisop );
+        }
     }
 }
 
@@ -902,7 +924,7 @@ sub write_bc
 
         # print STDERR $thisop->{name}."\n";
         printf OUT "    %-20s  # %s %s\n",
-          $thisop->{op}->{out}->( $thisop ),
+          $backend->can('out_'.$thisop->{op}->{backend})->( $thisop ),
           $thisop->{name}, join(', ', @{$thisop->{args}});
     }
 
@@ -953,18 +975,30 @@ sub write_asm
     };
 
     my $reg_flush = sub {
-        while (my ($r, $d) = each(%wb)) {
+        my $r = shift;
+        if ( $wb{$r} ) {
             my $w = $r2w{$r};
-            print OUT $backend->out_store($r, $w) if ($d);
+            print OUT $backend->out_store($r, $w);
             $wb{$r} = 0;
         }
     };
 
-    my $reg_reload = sub {
+    my $regs_flush = sub {
         while (my ($r, $d) = each(%wb)) {
-            my $w = $r2w{$r};
-            delete $r2w{$r};
-            $w2r{$w} = {};
+            $reg_flush->( $r );
+        }
+    };
+
+    my $reg_reload = sub {
+        my $r = shift;
+        my $w = $r2w{$r};
+        delete $r2w{$r};
+        $w2r{$w} = {};
+    };
+
+    my $regs_reload = sub {
+        while (my ($r, $d) = each(%wb)) {
+            $reg_reload->($r);
         }
     };
 
@@ -984,18 +1018,25 @@ sub write_asm
         #     die "$r $w" unless $w2r{$w}->{$r};
         # }
 
+        my $op = $thisop->{op};
+        my $opbackend = $op->{backend};
+
+        my $update = $backend->can('update_'.$opbackend);
+        $update->($thisop) if $update;
+
         my @wregin;
         my @wregout;
 
         my $lbl_refs;
         $lbl_refs += $_->{used} foreach ( @{$thisop->{labels}} );
 
-        if ( $thisop->{op}->{flushregs} ||
-             $thisop->{op}->{reloadregs} ||
+        if ( $op->{flushregs} ||
+             $op->{reloadregs} ||
+             $thisop->{clobber} ||
              $lbl_refs ) {
             # registers flush is required by the instruction
             # print "  #registers flush\n";
-            $reg_flush->();
+            $regs_flush->();
         }
 
         if ( $lbl_refs ) {
@@ -1010,7 +1051,7 @@ sub write_asm
                 }
             }
 
-            $reg_reload->();
+            $regs_reload->();
         }
 
         print OUT '  #'.$thisop->{name}.' ';
@@ -1018,7 +1059,13 @@ sub write_asm
         print OUT "\n";
 
         # map instruction input vm registers to cpu registers
-        foreach my $i (@{$thisop->{in}}) {
+        for (my $j = 0; $j < scalar @{$thisop->{in}} ; $j++) {
+          my $i = $thisop->{in}->[$j];
+          if ( ($thisop->{flushin} >> $j) & 1 ) {
+            # flush the register before the instruction
+            $reg_flush->($i);
+            push @wregin, -1;
+          } else {
             my $iw = $r2w{$i};
             if (not defined $iw) {
                 # allocate new cpu register and load vm reg
@@ -1028,10 +1075,13 @@ sub write_asm
                 $wb{$i} = 0;
                 print OUT $backend->out_load($i, $new);
             } else {
+                # the instruction will take care of register write back
+                $wb{$i} = 0 if ( ($thisop->{wbin} >> $j) & 1 );
                 # keep cpu register hot
                 $reg_use->($iw);
             }
             push @wregin, $r2w{$i};
+          }
         }
 
         my $inst;
@@ -1054,10 +1104,18 @@ sub write_asm
             }
         }
 
-        $reg_reload->() if ( $thisop->{op}->{reloadregs} );
+        if ( $op->{reloadregs} || $thisop->{clobber} ) {
+            $regs_reload->();
+        }
 
         # map instruction output vm registers to cpu registers
-        foreach my $o (@{$thisop->{out}}) {
+        for (my $j = 0; $j < scalar @{$thisop->{out}} ; $j++) {
+          my $o = $thisop->{out}->[$j];
+          if ( ($thisop->{reloadout} >> $j) & 1 ) {
+            # force reload of this register after the instruction
+            $reg_reload->($o);
+            push @wregout, -1;
+          } else {
             my $ow = $r2w{$o};
             if (not defined $ow) {
                 # allocated new cpu register
@@ -1076,23 +1134,23 @@ sub write_asm
             }
             $wb{$o} = 1;
             push @wregout, $r2w{$o};
+          }
         }
 
         # get cpu instruction string
-        $inst = $thisop->{op}->{out}->( $thisop, @wregout, @wregin );
+        $inst = $backend->can('out_'.$opbackend)->( $thisop, @wregout, @wregin );
 
       mov_done:
 
         if ( $thisop->{op}->{cond} ) {
 
-            if ( $thisop->{op}->{reloadregs} ) {
-                # emit conditional now if we are not able to avoid reload
+            if ( $op->{reloadregs} ) {
+                # emit conditional now if reload has been forced
                 print OUT $inst;
                 $cond = "";
             } else {
                 # keep conditional code for the next instruction so
-                # that register load associated with the next
-                # instruction are performed before the conditional branch
+                # that register mapping changes are never skipped
                 $cond = $inst;
             }
         } else {
@@ -1103,8 +1161,8 @@ sub write_asm
                 if ( $cond eq "" ) {
                     # flush registers again if the conditional
                     # instruction is able to modify registers
-                    $reg_flush->();
-                    $reg_reload->();
+                    $regs_flush->();
+                    $regs_reload->();
                 }
                 print OUT "1:\n";
             }
