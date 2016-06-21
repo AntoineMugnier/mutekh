@@ -7,7 +7,10 @@ use base 'bc_backend_armv6m';
 
 use strict;
 
-our @reg = ( 'r1', 'r2', 'r3', 'r5', 'r6', 'r7' );
+@bc_backend_armv6m::reg = ('r1', 'r2', 'r3', 'r5', 'r6', 'r7', 'r8', 'r12');
+our @reg = @bc_backend_armv6m::reg;
+
+$bc_backend_armv6m::caller_saved = 0x87;
 
 sub out_begin {
     my ( $b ) = @_;
@@ -31,7 +34,7 @@ sub out_begin {
            "    .func _$main::bc_name\n".
            "    .type _$main::bc_name, \%function\n".
            "_$main::bc_name:\n".
-           "    push    {r4, r5, r6, r7, lr}\n".
+           "    push    {r4, r5, r6, r7, r8, lr}\n".
            # vm regs array
            "    mov     r4, r0\n".
 	   # jump to vm start
@@ -50,7 +53,7 @@ sub out_custom {
            # resume address
 	   "    adr r1, 2f\n".
            "    str r1, [r4, #".(16 * 4)."]\n".
-           "    pop    {r4, r5, r6, r7, pc}\n".
+           "    pop    {r4, r5, r6, r7, r8, pc}\n".
 	   "    .balign 4\n".
 	   "2:\n";
 }
@@ -67,24 +70,40 @@ sub out_custom_cond {
            # resume address
 	   "    adr r1, 2f\n".
            "    str r1, [r4, #".(16 * 4)."]\n".
-           "    pop    {r4, r5, r6, r7, pc}\n".
+           "    pop    {r4, r5, r6, r7, r8, pc}\n".
 	   "    .balign 4\n".
 	   "2:\n";
 }
 
+sub out_end {
+    return "    movs r0, #0\n".
+           "    pop    {r4, r5, r6, r7, r8, pc}\n".
+	   "    .ltorg\n";
+}
+
 sub out_eq0 {
     my ($thisop, $wi0) = @_;
-    return "    cbnz $reg[$wi0], 1f\n";
+    if ( $wi0 >= 6 ) {
+        return "    tst $reg[$wi0], $reg[$wi0]\n".
+               "    bne 1f\n";
+    } else {
+        return "    cbnz $reg[$wi0], 1f\n";
+    }
 }
 
 sub out_neq0 {
     my ($thisop, $wi0) = @_;
-    return "    cbz $reg[$wi0], 1f\n";
+    if ( $wi0 >= 6 ) {
+        return "    tst $reg[$wi0], $reg[$wi0]\n".
+               "    beq 1f\n";
+    } else {
+        return "    cbz $reg[$wi0], 1f\n";
+    }
 }
 
 sub out_mul {
     my ($thisop, $wo, $wi0, $wi1) = @_;
-    return "    muls $reg[$wo], $reg[$wi0], $reg[$wi1]\n";
+    return "    mul $reg[$wo], $reg[$wi0], $reg[$wi1]\n";
 }
 
 sub out_or {
