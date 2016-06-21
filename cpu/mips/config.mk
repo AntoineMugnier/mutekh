@@ -12,14 +12,14 @@ endif
 ifeq ($(CONFIG_CPU_MIPS_VERSION), 322)
 CPUCFLAGS=-mips32r2
   ifeq ($(CONFIG_MUTEK_BYTECODE_NATIVE), defined)
-  BCFLAGS+= -b mips32
+  BCFLAGS+= -b mips32r2
   endif
 endif
 
 ifeq ($(CONFIG_CPU_MIPS_VERSION), 323)
 CPUCFLAGS=-mips32r2
   ifeq ($(CONFIG_MUTEK_BYTECODE_NATIVE), defined)
-  BCFLAGS+= -b mips32
+  BCFLAGS+= -b mips32r2
   endif
 endif
 
