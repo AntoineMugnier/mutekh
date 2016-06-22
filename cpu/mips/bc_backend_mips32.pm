@@ -95,8 +95,8 @@ sub parse_dump {
 
 sub out_dump {
     my ($thisop) = @_;
-    return "    move \$v0, \$17\n".
-           "    li \$v1, 1\n".
+    return "    li \$a1, 1\n".
+           "    move \$a0, \$17\n".
            "    .set noreorder\n".
            "    jal bc_dump\n".
            "    sw \$31, ".(16 * 4)."(\$17)\n".
