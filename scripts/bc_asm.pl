@@ -53,6 +53,7 @@ while (defined $ARGV[0]) {
 }
 
 die "missing -w option\n" if !$backend_width;
+$defs{_SIZEOF_PTR} = 1 << $backend_width;
 
 sub log2
 {
