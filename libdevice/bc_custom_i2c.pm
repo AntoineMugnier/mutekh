@@ -49,7 +49,7 @@ sub parse_xxr
 {
     my $thisop = shift;
     my $r = main::check_reg( $thisop, 0 );
-    my $l = main::check_num( $thisop, 1, 0, 8 );
+    my $l = main::check_num( $thisop, 1, 1, 16 ) - 1;
     my $e = main::check_num( $thisop, 2, 0, 15 );
     $thisop->{code} |= ( $e << 8 ) | ($r << 4) | $l;
 }

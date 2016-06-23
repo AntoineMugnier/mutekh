@@ -30,6 +30,8 @@
 #include <mutek/bytecode.h>
 #include <mutek/printk.h>
 
+#include <assert.h>
+
 #if defined(CONFIG_MUTEK_CONTEXT_SCHED)
 # include <mutek/scheduler.h>
 #endif
@@ -113,14 +115,6 @@ static KROUTINE_EXEC(device_i2c_ctrl_transfer_end)
 
       if ((tr->type & _DEV_I2C_ENDING_MASK) == _DEV_I2C_STOP)
         q->tr_in_progress = 0;
-
-      if (access_is_read_reg(q->op))
-        {
-          uint8_t reg_count = q->op & 0xf;
-          uint8_t reg_index = (q->op >> 4) & 0xf;
-          for (uint_fast8_t i = 0; i < reg_count; i++)
-            bc_set_reg(&bcrq->vm, reg_index + i, q->data[i]);
-        }
 
       if (access_is_conditional(q->op))
         bc_skip(&bcrq->vm);
@@ -333,18 +327,18 @@ device_i2c_bytecode_exec(struct dev_i2c_ctrl_context_s *q,
 
       if (bit_get(op, 14))
         {
-          if (access_is_conditional(q->op) && !(bit_get_mask(q->op, 8, 4) & _DEV_I2C_SYNC))
-            abort();
+          /* Conditionnal operations without the sync flag are forbidden. */
+          assert(!access_is_conditional(op) || bit_get(op, 11));
 
           type = bit_get_mask(op, 8, 4);
 
           if (q->tr_in_progress)
             {
-              if (((q->last_type == DEV_I2C_WRITE_CONTINUOUS ||
+              /* Change of direction during continuous transfer is forbidden. */
+              assert(!(((q->last_type == DEV_I2C_WRITE_CONTINUOUS ||
                     q->last_type == DEV_I2C_WRITE_CONTINUOUS_SYNC) && (type & _DEV_I2C_READ_OP)) ||
                   ((q->last_type == DEV_I2C_READ_CONTINUOUS ||
-                    q->last_type == DEV_I2C_READ_CONTINUOUS_SYNC) && !(type & _DEV_I2C_READ_OP)))
-                abort();
+                    q->last_type == DEV_I2C_READ_CONTINUOUS_SYNC) && !(type & _DEV_I2C_READ_OP))));
             }
           q->last_type = type;
 
@@ -354,12 +348,9 @@ device_i2c_bytecode_exec(struct dev_i2c_ctrl_context_s *q,
           if (bit_get(op, 13))
             {
               /* data from/to registers */
-              data = q->data;
-              if (!bit_get(op, 8))
-                {
-                  for (uint8_t i = 0; i < size; i++)
-                    q->data[i] = (uint8_t)bc_get_reg(&rq->vm, reg + i);
-                }
+              size++;
+              assert(reg + size < 16);
+              data = bc_get_bytepack(&rq->vm, reg);
             }
           else
             {
@@ -717,6 +708,7 @@ error_t dev_i2c_context_init(struct device_s *dev, struct dev_i2c_ctrl_context_s
   dev_request_queue_init(&q->queue);
   lock_init_irq(&q->lock);
   memset(&q->transfer, 0, sizeof(q->transfer));
+  q->tr_in_progress = 0;
   return 0;
 }
 

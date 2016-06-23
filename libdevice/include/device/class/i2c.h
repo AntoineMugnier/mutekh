@@ -27,7 +27,7 @@
   @module {Core::Devices support library}
   @short I2C bus controller driver API
   @index {I2C bus controller} {Device classes}
-  @csee DRIVER_CLASS_I2C
+  @csee DRIVER_CLASS_I2C_CTRL
 
   This class enables driving I2C bus controllers. I2C controllers may
   be used from the application code but are most often used from
@@ -156,13 +156,13 @@
 
   @item i2c_rdm                  @item ra, rl, e    @item @tt{1100 eee1 aaaa llll}
   @item i2c_wrm                  @item ra, rl, e    @item @tt{1100 eee0 aaaa llll}
-  @item i2c_rdr                  @item r,  l,  e    @item @tt{1110 eee1 rrrr -lll}
-  @item i2c_wrr                  @item r,  l,  e    @item @tt{1110 eee0 rrrr -lll}
+  @item i2c_rdr                  @item r,  l,  e    @item @tt{1110 eee1 rrrr llll}
+  @item i2c_wrr                  @item r,  l,  e    @item @tt{1110 eee0 rrrr llll}
 
   @item i2c_rdmc                 @item ra, rl, e    @item @tt{1101 eee1 aaaa llll}
   @item i2c_wrmc                 @item ra, rl, e    @item @tt{1101 eee0 aaaa llll}
-  @item i2c_rdrc                 @item r,  l,  e    @item @tt{1111 eee1 rrrr -lll}
-  @item i2c_wrrc                 @item r,  l,  e    @item @tt{1111 eee0 rrrr -lll}
+  @item i2c_rdrc                 @item r,  l,  e    @item @tt{1111 eee1 rrrr llll}
+  @item i2c_wrrc                 @item r,  l,  e    @item @tt{1111 eee0 rrrr llll}
 
   @end table
 
@@ -241,10 +241,13 @@
   @end section
 
   @section {i2c_rdr* and i2c_wrr*}
-  These instuctions read data to contiguous registers and write data from
-  contiguous registers. Each register contains a single byte of data. The index
-  of the first register and the number of registers are expected as operands.
-  Up to 7 registers can be used for the transfer.
+  These instuctions respectively read and write the specified amount of bytes
+  to virtual registers. The format of data in registers is hardware dependent
+  and needs to be converted by using the @tt pack* and @tt unpack* @xref {Generic
+  instruction set} {generic instructions}. The transfered bytes are stored in contiguous
+  registers, using at most one register for each group of 4 bytes. The index of
+  the first register used to store the data and the number of bytes are expected
+  as operands.
   @end section
 
   @section {i2c_gpioset}
@@ -318,11 +321,11 @@ enum dev_i2c_op_e
       done. This operation can only be followed by another read
       operation. A continuous transfer and the following transfer is
       seen as a single transfer on the i2c bus. */
-  DEV_I2C_READ_CONTINUOUS = _DEV_I2C_READ_OP | _DEV_I2C_CONTINUOUS,
+  DEV_I2C_READ_CONTINUOUS = (_DEV_I2C_READ_OP | _DEV_I2C_CONTINUOUS),
   /** This is similar to @ref DEV_I2C_READ_CONTINUOUS.  The sync flag
       requires the transfer to be performed before the @ref
       dev_i2c_ctrl_transfer_s terminates. @b{Not all controller may support this}. */
-  DEV_I2C_READ_CONTINUOUS_SYNC = _DEV_I2C_READ_OP | _DEV_I2C_CONTINUOUS | _DEV_I2C_SYNC,
+  DEV_I2C_READ_CONTINUOUS_SYNC = (_DEV_I2C_READ_OP | _DEV_I2C_CONTINUOUS | _DEV_I2C_SYNC),
   /** This schedules a write transfer on the i2c bus. The actual
       transfer may not be performed before the next stop operation; in
       this case the driver keep a reference to the buffer until
@@ -333,18 +336,18 @@ enum dev_i2c_op_e
   /** This is similar to @ref DEV_I2C_WRITE_CONTINUOUS.  The sync flag
       requires the transfer to be performed before the @ref
       dev_i2c_ctrl_transfer_s terminates. @b{Not all controller may support this}. */
-  DEV_I2C_WRITE_CONTINUOUS_SYNC = _DEV_I2C_CONTINUOUS | _DEV_I2C_SYNC,
+  DEV_I2C_WRITE_CONTINUOUS_SYNC = (_DEV_I2C_CONTINUOUS | _DEV_I2C_SYNC),
 
   /** This schedules a read transfer on the i2c bus. The actual
       transfer may not be performed before the next stop operation; in
       this case the driver keep a reference to the buffer until
       done. This generates a restart on the bus at the end of this
       transfer or at the beginning of the next one. */
-  DEV_I2C_READ_RESTART = _DEV_I2C_READ_OP | _DEV_I2C_RESTART,
+  DEV_I2C_READ_RESTART = (_DEV_I2C_READ_OP | _DEV_I2C_RESTART),
   /** This is similar to @ref DEV_I2C_READ_RESTART.  The sync flag
       requires the transfer to be performed before the @ref
       dev_i2c_ctrl_transfer_s terminates. @b{Not all controller may support this}. */
-  DEV_I2C_READ_RESTART_SYNC = _DEV_I2C_READ_OP | _DEV_I2C_RESTART | _DEV_I2C_SYNC,
+  DEV_I2C_READ_RESTART_SYNC = (_DEV_I2C_READ_OP | _DEV_I2C_RESTART | _DEV_I2C_SYNC),
   /** This schedules a write transfer on the i2c bus. The actual
       transfer may not be performed before the next stop operation; in
       this case the driver keep a reference to the buffer until
@@ -354,14 +357,14 @@ enum dev_i2c_op_e
   /** This is similar to @ref DEV_I2C_WRITE_RESTART.  The sync flag
       requires the transfer to be performed before the @ref
       dev_i2c_ctrl_transfer_s terminates. @b{Not all controller may support this}. */
-  DEV_I2C_WRITE_RESTART_SYNC = _DEV_I2C_RESTART | _DEV_I2C_SYNC,
+  DEV_I2C_WRITE_RESTART_SYNC = (_DEV_I2C_RESTART | _DEV_I2C_SYNC),
 
   /** This performs a read transfer on the i2c bus and generates a
       stop on the bus. */
-  DEV_I2C_READ_STOP = _DEV_I2C_READ_OP | _DEV_I2C_STOP | _DEV_I2C_SYNC,
+  DEV_I2C_READ_STOP = (_DEV_I2C_READ_OP | _DEV_I2C_STOP | _DEV_I2C_SYNC),
   /** This performs a write transfer on the i2c bus and generates a
       stop on the bus. */
-  DEV_I2C_WRITE_STOP = _DEV_I2C_STOP | _DEV_I2C_SYNC,
+  DEV_I2C_WRITE_STOP = (_DEV_I2C_STOP | _DEV_I2C_SYNC),
 
   /** This reset the state of the controller when in the middle of a
       transaction. The bus become idle and a new transfer can start
@@ -380,17 +383,17 @@ enum dev_i2c_bc_completion_e
   /** @This specifies the @ref DEV_I2C_READ_CONTINUOUS_SYNC or @ref
       DEV_I2C_WRITE_CONTINUOUS_SYNC behavior for bytecode transfer instructions.
       @b{Not all controller may support this.} */
-  DEV_I2C_BC_CONTINUOUS_SYNC =  _DEV_I2C_CONTINUOUS | _DEV_I2C_SYNC,
+  DEV_I2C_BC_CONTINUOUS_SYNC =  (_DEV_I2C_CONTINUOUS | _DEV_I2C_SYNC),
   /** @This specifies the @ref DEV_I2C_READ_STOP or @ref
       DEV_I2C_WRITE_STOP behavior for bytecode transfer instructions. */
-  DEV_I2C_BC_STOP =             _DEV_I2C_STOP | _DEV_I2C_SYNC,
+  DEV_I2C_BC_STOP =             (_DEV_I2C_STOP | _DEV_I2C_SYNC),
   /** @This specifies the @ref DEV_I2C_READ_RESTART or @ref
       DEV_I2C_WRITE_RESTART behavior for bytecode transfer instructions. */
   DEV_I2C_BC_RESTART =          _DEV_I2C_RESTART,
   /** @This specifies the @ref DEV_I2C_READ_RESTART_SYNC or @ref
       DEV_I2C_WRITE_RESTART_SYNC behavior for bytecode transfer instructions.
       @b{Not all controller may support this.} */
-  DEV_I2C_BC_RESTART_SYNC =     _DEV_I2C_RESTART | _DEV_I2C_SYNC,
+  DEV_I2C_BC_RESTART_SYNC =     (_DEV_I2C_RESTART | _DEV_I2C_SYNC),
 };
 
 /** @This contains the I2C transfer request which may be started by
@@ -637,8 +640,6 @@ struct dev_i2c_ctrl_context_s
 #ifdef CONFIG_DEVICE_I2C_BYTECODE
       /** @internal */
       uint16_t                        op;
-      /** @internal */
-      uint8_t                         data[8];
 #endif
     };
   };
@@ -646,7 +647,7 @@ struct dev_i2c_ctrl_context_s
   /** @internal */
   bool_t                            tr_in_progress:1;
   /** @internal */
-  enum dev_i2c_op_e                 BITFIELD(last_type, 5);
+  enum dev_i2c_op_e                 BITFIELD(last_type, 4);
 #endif
 
   lock_irq_t                        lock;
