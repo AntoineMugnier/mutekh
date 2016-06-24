@@ -5,3 +5,4 @@ subdirs-$(CONFIG_DRIVER_CHAR_NULL) += null
 subdirs-$(CONFIG_DRIVER_CHAR_CADENCE_UART) += cadence_uart
 subdirs-$(CONFIG_DRIVER_CHAR_MUX) += mux
 subdirs-$(CONFIG_DRIVER_CHAR_PIPE) += pipe
+subdirs-$(CONFIG_DRIVER_CHAR_USBDEV_CDC) += usbdev_cdc

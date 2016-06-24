@@ -23,3 +23,37 @@
 #include <hexo/types.h>
 #include <device/usb/usb.h>
 #include <device/class/usbdev.h>
+#include <device/usb/usb_cdc.h>
+
+USBDEV_REPLACE(usbdev_cdc_desc_update)
+{
+  size_t offset;
+  uint8_t *p = (uint8_t *)hdr;
+
+  switch (p[sizeof(struct usb_descriptor_header_s)])
+    {
+    case USB_FUNC_DESC_CALL_MGMT:
+      /* Replace interface number */
+      offset = offsetof(struct usb_class_cdc_call_mgmt_descriptor_s,
+                        bDataInterface) - bidx;
+
+      if (offset >= 0 && cnt > offset)
+        dst[offset] += index->itf;
+      break;
+    case USB_FUNC_DESC_UNION:{
+      offset = offsetof(struct usb_class_cdc_union_descriptor_s,
+                        bMasterInterface);
+      size_t nbr = hdr->bLength - offset; 
+      /* Replace interface number */
+      for (uint8_t i=0; i<nbr; i++)
+        {
+          size_t idx = i + offset - bidx;
+          if (idx >= 0 && cnt > idx)
+            dst[idx] += index->itf;
+        }
+      break;
+    }
+    default:
+      return;
+    }
+}
