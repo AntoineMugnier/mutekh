@@ -278,6 +278,8 @@
   %subsection efm32-wonder-*-* efm32-leopard-*-*
     %types sram
 
+    CONFIG_DRIVER_USB_SYNOPSYS_EFM32
+
     CONFIG_CPU_ARM32M_M_IRQ_COUNT 39
 
     CONFIG_HEXO_CPU_STACK_SIZE 0x400

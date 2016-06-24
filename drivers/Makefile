@@ -10,6 +10,7 @@ printk \
 rtt \
 spi \
 timer \
+usb \
 valio \
 crypto
 

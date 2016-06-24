@@ -1,0 +1,3 @@
+objs-$(CONFIG_DRIVER_USB_SYNOPSYS) += dwc.o
+objs-$(CONFIG_DRIVER_USB_SYNOPSYS_EFM32) += dwc_efm32.o
+

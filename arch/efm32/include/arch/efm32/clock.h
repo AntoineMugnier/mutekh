@@ -34,7 +34,7 @@ enum efm32_clock_node_e {
   EFM32_CLOCK_OUT0,             /* source ep */
   EFM32_CLOCK_OUT1,             /* source ep */
 
-#ifdef CONFIG_DRIVER_EFM32_USB
+#ifdef CONFIG_DRIVER_USB_SYNOPSYS_EFM32
   EFM32_CLOCK_USBC,             /* source ep */
 # define EFM32_CLOCK_USBC EFM32_CLOCK_USBC
 #endif
@@ -46,7 +46,7 @@ enum efm32_clock_node_e {
 
   EFM32_CLOCK_AES,
 # define EFM32_CLOCK_AES EFM32_CLOCK_AES
-#ifdef CONFIG_DRIVER_EFM32_USB
+#ifdef CONFIG_DRIVER_USB_SYNOPSYS_EFM32
   EFM32_CLOCK_USB,
 # define EFM32_CLOCK_USB EFM32_CLOCK_USB
 #endif

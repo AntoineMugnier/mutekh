@@ -26,6 +26,7 @@
 # include <device/class/iomux.h>
 # include <device/class/cmu.h>
 # include <device/class/dma.h>
+# include <device/class/usbdev.h>
 #endif
 
 #include <arch/efm32/irq.h>
@@ -274,5 +275,16 @@ DEV_DECLARE_STATIC(aes_dev, "aes", 0, efm32_aes_drv,
                    DEV_STATIC_RES_DEV_ICU("/cpu"),
                    DEV_STATIC_RES_IRQ(0, EFM32_IRQ_AES, DEV_IRQ_SENSE_RISING_EDGE, 0, 1)
                    );
+#endif
 
+#ifdef CONFIG_DRIVER_USB_SYNOPSYS_EFM32
+DEV_DECLARE_STATIC(usb_dev, "usb", 0, efm32_usbdev_drv,
+                   DEV_STATIC_RES_MEM(0x400c4000, 0x400c4400),
+                   DEV_STATIC_RES_CLK_SRC("/recmu", EFM32_CLOCK_USB, 0),
+                   DEV_STATIC_RES_CLK_SRC("/recmu", EFM32_CLOCK_USBC, 1),
+                   DEV_STATIC_RES_DEV_PARAM("icu", "/cpu"),
+                   DEV_STATIC_RES_IRQ(0, EFM32_IRQ_USB, DEV_IRQ_SENSE_RISING_EDGE, 0, 1),
+                   DEV_STATIC_RES_DEV_PARAM("iomux", "/gpio"),
+                   DEV_STATIC_RES_IOMUX("vbusen",  EFM32_LOC0, EFM32_PF5, 0, 0)
+                   );
 #endif

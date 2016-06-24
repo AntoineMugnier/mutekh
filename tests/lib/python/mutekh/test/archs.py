@@ -65,7 +65,7 @@ emu_linux_x86_64     = Config("emu-linux-x86_64",                       ["arch:e
 ##################################################
 # SiLab EFM32 low-power archs and platforms
 
-_efm32_features      = _arm32m_features + ["arch:efm32", "spi", "i2c", "pwm", "timer", "char", "minimal"]
+_efm32_features      = _arm32m_features + ["arch:efm32", "spi", "i2c", "pwm", "timer", "char", "usbdev", "minimal"]
 
 efm32_zero           = Config("efm32-stk3200",                          _efm32_features)
 efm32_leopard        = Config("efm32-stk3600",                          _efm32_features)
