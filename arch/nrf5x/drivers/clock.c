@@ -548,10 +548,14 @@ static DEV_CMU_COMMIT(nrf5x_clock_commit)
     while (nrf5x_clock_hfxo_is_running())
       ;
   }
+
+#if defined(CONFIG_ARCH_NRF51)
   nrf_reg_set(CLOCK_ADDR, NRF_CLOCK_XTALFREQ,
               pv->hfxo_freq.num == 16000000
               ? NRF_CLOCK_XTALFREQ_16MHZ
               : NRF_CLOCK_XTALFREQ_32MHZ);
+#endif
+
   if (pv->hf_src == NRF_CLOCK_HF_SRC_XTAL)
     nrf5x_clock_hfxo_start();
 
