@@ -83,7 +83,7 @@ nrf52                = Config("nrf5x-52832-512-64",                     _nrf5x_f
 ##################################################
 # Microchip PIC32 (mips-based) archs and platforms
 
-_pic32_features      = _mips32_features + ["arch:pic32", "spi", "timer", "char", "little"]
+_pic32_features      = _mips32_features + ["arch:pic32", "spi", "timer", "char", "usbdev", "little"]
 
 pic32_mz             = Config("pic32-stkmzec",                          _pic32_features)
 

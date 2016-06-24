@@ -143,5 +143,13 @@ DEV_DECLARE_STATIC(gpio_dev, "gpio", 0, pic32_gpio_drv,
                    DEV_STATIC_RES_IRQ(9, PIC32_IRQ_PORTK, DEV_IRQ_SENSE_HIGH_LEVEL, 0, 1)
 #endif
                    );
-#endif
 
+#if defined(CONFIG_DRIVER_PIC32_USBDEV)
+DEV_DECLARE_STATIC(usb_dev, "usb", 0, pic32_usbdev_drv,
+                   DEV_STATIC_RES_MEM(0xBF8E0000, 0xBF8F0000),
+                   DEV_STATIC_RES_DEV_ICU("/icu"),
+                   DEV_STATIC_RES_IRQ(0, PIC32_IRQ_USB, DEV_IRQ_SENSE_HIGH_LEVEL, 0, 1),
+                   DEV_STATIC_RES_IRQ(1, PIC32_IRQ_USB_DMA, DEV_IRQ_SENSE_HIGH_LEVEL, 0, 1),
+);
+#endif
+#endif

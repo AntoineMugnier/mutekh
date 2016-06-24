@@ -33,6 +33,9 @@
 #define PIC32_IRQ_PORTJ                126
 #define PIC32_IRQ_PORTK                127
 
+#define PIC32_IRQ_USB                  132
+#define PIC32_IRQ_USB_DMA              133
+
 #define PIC32_IRQ_DMA0                 134
 #define PIC32_IRQ_DMA1                 135
 #define PIC32_IRQ_DMA2                 136
