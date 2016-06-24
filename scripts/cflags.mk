@@ -34,7 +34,7 @@ LIBGCC_PATH=$(if $(LIBGCC_DIR), \
     $(dir $(shell $(CC) -print-libgcc-file-name))/$(subst $(_empty_before_space_) ,,$(LIBGCC_DIR))/libgcc.a, \
     $(shell $(CC) $(CFLAGS) $(CPUCFLAGS) -print-libgcc-file-name) )
 
-CFLAGS=	-std=gnu99 -nostdlib -fno-builtin -foptimize-sibling-calls \
+CFLAGS=	-std=gnu99 -nostdlib -fno-builtin -foptimize-sibling-calls -fno-short-enums \
         -Wall -Wmissing-prototypes -Wno-main -Wno-unused-label -O$(CONFIG_COMPILE_OPTIMIZE)
 DTC=dtc
 
