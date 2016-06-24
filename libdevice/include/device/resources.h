@@ -118,6 +118,8 @@ enum dev_resource_type_e
     /** DMA channel mapping. The @tt config parameter is driver
         specific. */
     DEV_RES_DMA,
+    /** USB device endpoint mapping.*/
+    DEV_RES_USBDEV,
     /** Number of resource types */
     DEV_RES_TYPES_COUNT,
 };
@@ -191,6 +193,13 @@ struct dev_resource_s
       uintptr_t                 config;
       uintptr_t                 BITFIELD(channel,5);
     }                           dma;
+
+    /** @see DEV_RES_USBDEV */
+    struct {
+      uint32_t                  config;
+      uint32_t                  mapin;
+      uint32_t                  mapout;
+    }                           usbdev;
 
     /** @see DEV_RES_UART */
     struct {

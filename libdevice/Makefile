@@ -90,6 +90,8 @@ ifeq ($(CONFIG_DEVICE_PERSIST), defined)
 objs += device_persist.o
 endif
 
+objs-$(CONFIG_DEVICE_USBDEV) += device_usbdev.o device_usbdev_helpers.o
+
 ifeq ($(CONFIG_DEVICE_VALIO), defined)
 objs += device_valio.o
 endif

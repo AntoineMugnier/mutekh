@@ -8,3 +8,4 @@ bytecode
 malloc_stress
 kroutine
 devinit
+usbdev

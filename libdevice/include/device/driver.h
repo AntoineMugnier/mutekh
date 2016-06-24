@@ -67,6 +67,7 @@ enum driver_class_e
   DRIVER_CLASS_CPU,
   DRIVER_CLASS_VALIO,
   DRIVER_CLASS_PERSIST,
+  DRIVER_CLASS_USBDEV,
 
   /* Custom driver class IDs should be registered in @ref
       #CONFIG_DEVICE_CUSTOM_CLASS_COUNT enum config token.

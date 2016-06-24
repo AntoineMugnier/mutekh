@@ -1,0 +1,32 @@
+# -*- python -*-
+
+from mt.base.environment import *
+from mt.base.match import *
+from mt.base.expectation import *
+
+from mutekh.test.stages import configure, build, execute
+from mutekh.test.archs import *
+
+env = Environment(
+    name = "usbdev",
+
+    test_deps = [
+         "libdevice/device_usbdev.c",
+         "libdevice/device_usbdev_helpers.c",
+         "libdevice/include/device/class/usbdev.h",
+         "libdevice/include/device/usb/usb.h",
+    ],
+
+    test_space = [
+        Dimension(*all_archs.filter_by_feature("+usbdev").expand()),
+    ],
+
+    actions = [
+        configure,
+        build,
+    ],
+
+    rules = Rules(
+    )
+)
+
