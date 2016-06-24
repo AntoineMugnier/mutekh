@@ -113,8 +113,10 @@ enum dev_resource_type_e
     /** Generic integer array parameter. The exact meaning of the
         value is driver dependent. */
     DEV_RES_UINT_ARRAY_PARAM,
-    /** I2C device address. */
+    /** @see #DEV_STATIC_RES_I2C @see device_i2c_res_addr */
     DEV_RES_I2C_ADDR,
+    /** @see #DEV_STATIC_RES_I2C @see device_i2c_res_bitrate */
+    DEV_RES_I2C_BITRATE,
     /** DMA channel mapping. The @tt config parameter is driver
         specific. */
     DEV_RES_DMA,
@@ -333,6 +335,18 @@ struct dev_resource_s
       const uintptr_t           *array;
       uint16_t                  count;
     }                           uint_array_param;
+
+    /** @see DEV_RES_I2C_ADDR */
+    struct {
+      /** Device path to i2c controller */
+      const char                *ctrl;
+      const uint16_t            addr;
+    }                           i2c_addr;
+
+    /** @see DEV_RES_I2C_BITRATE */
+    struct {
+      const uint32_t            bitrate;
+    }                           i2c_bitrate;
 
 #ifndef CONFIG_COMPILE_NOBITFIELD /* mkdoc:skip */
     uint8_t                     _align[4 * sizeof(uintptr_t) - 2];

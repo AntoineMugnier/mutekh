@@ -17,6 +17,7 @@
     02110-1301 USA.
 
     Copyright Julien Peeters <contact@julienpeeters.net> (c) 2014
+    Copyright Vincent Defilippi <vincentdefilippi@gmail.com> (c) 2016
 
 */
 
@@ -35,7 +36,7 @@
 
 #include <termui/console_opt.h>
 
-enum pwm_opt_e
+enum i2c_opt_e
 {
   I2C_OPT_DEV       = 0x01,
   I2C_OPT_BIT_RATE  = 0x02,
@@ -44,43 +45,20 @@ enum pwm_opt_e
   I2C_OPT_WRITE     = 0x10
 };
 
-/****************************** config ************************/
-
-struct termui_optctx_dev_i2c_config_opts
-{
-  /* i2c device. */
-  struct device_i2c_s       i2c;
-
-  /* i2c bit rate. */
-  union
-  {
-      struct dev_i2c_config_s cfg;
-      uint32_t                bit_rate;
-  };
-};
-
 struct termui_optctx_dev_i2c_opts
 {
-  /* i2c device. */
-  struct device_i2c_s       i2c;
+  /* i2c controller. */
+  struct device_i2c_ctrl_s                ctrl;
 
   /* i2c slave address. */
-  uint8_t                   saddr;
+  uint8_t                                 saddr;
 
   /* i2c transfers. */
-  struct dev_i2c_transfer_s transfer[CONFIG_DEVICE_SHELL_I2C_TRANSFER_MAX];
+  struct dev_i2c_ctrl_transaction_data_s  transfer[CONFIG_DEVICE_SHELL_I2C_TRANSFER_MAX];
 
   /* i2c transfer count. */
-  size_t                    transfer_count;
+  size_t                                  transfer_count;
 };
-
-static TERMUI_CON_ARGS_CLEANUP_PROTOTYPE(i2c_config_opts_cleanup)
-{
-  struct termui_optctx_dev_i2c_config_opts *data = ctx;
-
-  if (device_check_accessor(&data->i2c.base))
-    device_put_accessor(&data->i2c.base);
-}
 
 static TERMUI_CON_ARGS_CLEANUP_PROTOTYPE(i2c_opts_cleanup)
 {
@@ -88,33 +66,21 @@ static TERMUI_CON_ARGS_CLEANUP_PROTOTYPE(i2c_opts_cleanup)
 
   uint32_t ti;
 
-  if (device_check_accessor(&data->i2c.base))
-    device_put_accessor(&data->i2c.base);
+  if (device_check_accessor(&data->ctrl.base))
+    device_put_accessor(&data->ctrl.base);
 
   for (ti = 0; ti < data->transfer_count; ++ti)
     {
-      if (data->transfer[ti].type == DEV_I2C_READ)
+      if (data->transfer[ti].type == DEV_I2C_CTRL_TRANSACTION_READ)
         mem_free(data->transfer[ti].data);
     }
-}
-
-static TERMUI_CON_COMMAND_PROTOTYPE(dev_shell_i2c_config)
-{
-  struct termui_optctx_dev_i2c_config_opts *data = ctx;
-
-  error_t err = dev_i2c_config(&data->i2c, &data->cfg);
-
-  if (err)
-    termui_con_printf(con, "error: failed to apply i2c configuration.\n");
-
-  return err;
 }
 
 static TERMUI_CON_PARSE_OPT_PROTOTYPE(dev_shell_i2c_parse_transfer)
 {
   struct termui_optctx_dev_i2c_opts *data = ctx;
 
-  struct dev_i2c_transfer_s *tr = &data->transfer[data->transfer_count];
+  struct dev_i2c_ctrl_transaction_data_s *tr = &data->transfer[data->transfer_count];
 
   if (data->transfer_count >= CONFIG_DEVICE_SHELL_I2C_TRANSFER_MAX)
     {
@@ -138,13 +104,13 @@ static TERMUI_CON_PARSE_OPT_PROTOTYPE(dev_shell_i2c_parse_transfer)
           return -ENOMEM;
         }
       tr->size = size;
-      tr->type = DEV_I2C_READ;
+      tr->type = DEV_I2C_CTRL_TRANSACTION_READ;
     }
   else
     {
       tr->data = (uint8_t *) argv[0];
       tr->size = argl[0];
-      tr->type = DEV_I2C_WRITE;
+      tr->type = DEV_I2C_CTRL_TRANSACTION_WRITE;
     }
 
   ++data->transfer_count;
@@ -155,25 +121,33 @@ static TERMUI_CON_COMMAND_PROTOTYPE(dev_shell_i2c_scan)
 {
   struct termui_optctx_dev_i2c_opts *data = ctx;
 
-  struct dev_i2c_transfer_s tr = {
-    .type = DEV_I2C_WRITE,
-    .data = NULL,
-    .size = 0
+  uint8_t tr_data[] = {0xAA};
+
+  struct dev_i2c_ctrl_transaction_data_s tr = {
+    .data = tr_data,
+    .size = sizeof(tr_data),
+    .type = DEV_I2C_CTRL_TRANSACTION_WRITE,
   };
 
-  uint_fast8_t saddr, count = 0;
+  struct dev_i2c_ctrl_transaction_rq_s rq;
+  dev_i2c_transaction_init(&rq);
+  rq.transfer = &tr;
+  rq.transfer_count = 1;
 
-  for (saddr = 0; saddr < 0x7f; ++saddr)
+  uint8_t count = 0;
+  for (uint8_t saddr = 0; saddr < 128; ++saddr)
     {
+      rq.base.saddr = saddr;
 #if defined(CONFIG_MUTEK_CONTEXT_SCHED)
-      error_t err = dev_i2c_wait_request(&data->i2c, saddr, &tr, 1);
+      dev_i2c_wait_transaction(&data->ctrl, &rq);
 #else
-      error_t err = dev_i2c_spin_request(&data->i2c, saddr, &tr, 1);
+      dev_i2c_spin_transaction(&data->ctrl, &rq);
 #endif
-      if (!err)
+
+      if (!rq.base.err)
         {
-          ++count;
-          termui_con_printf(con, "found slave at address 0x%02x\n", saddr);
+          termui_con_printf(con, "found slave @ 0x%02x\n", saddr);
+          count++;
         }
     }
 
@@ -185,86 +159,82 @@ static TERMUI_CON_COMMAND_PROTOTYPE(dev_shell_i2c_io)
 {
   struct termui_optctx_dev_i2c_opts *data = ctx;
 
-  struct dev_request_status_s status;
-  struct dev_i2c_rq_s         req =
-    {
-      .saddr          = data->saddr,
-      .transfer       = data->transfer,
-      .transfer_count = data->transfer_count
-    };
-
-  size_t count;
-  struct dev_i2c_transfer_s *tr = &data->transfer[0];
+  struct dev_i2c_ctrl_transaction_rq_s rq;
+  dev_i2c_transaction_init(&rq);
+  rq.base.saddr = data->saddr;
+  rq.transfer = data->transfer;
+  rq.transfer_count = data->transfer_count;
 
 #if defined(CONFIG_MUTEK_CONTEXT_SCHED)
-  dev_request_sched_init(&req.base, &status);
+  dev_i2c_wait_transaction(&data->ctrl, &rq);
 #else
-  dev_request_spin_init(&req.base, &status);
+  dev_i2c_spin_transaction(&data->ctrl, &rq);
 #endif
 
-  DEVICE_OP(&data->i2c, request, &req);
-
-#if defined(CONFIG_MUTEK_CONTEXT_SCHED)
-  dev_request_sched_wait(&status);
-#else
-  dev_request_spin_wait(&status);
-#endif
-
-  count = req.error ? req.error_transfer : req.transfer_count;
-  while (count-- > 0)
+  switch (rq.base.err)
     {
-      if (tr->type == DEV_I2C_READ)
-          termui_con_printf(con, "read  (%u bytes): %P", tr->size, tr->data,
-                            tr->size);
-      else
-        termui_con_printf(con, "write (%u bytes): done", tr->size);
+      case -EBUSY:
+        termui_con_printf(con, "Error: I2C controller busy.\n");
+        return rq.base.err;
 
-      if (count > 0)
-        termui_con_printf(con, "\n");
+      case -EHOSTUNREACH:
+        termui_con_printf(con, "Error: Invalid slave address.\n");
+        return rq.base.err;
 
-      ++tr;
+      case -EIO:
+        termui_con_printf(con, "Error: Unexpected I/O error.\n");
+        return rq.base.err;
+
+      case -ENOTSUP:
+        termui_con_printf(con, "Error: Operation not supported.\n");
+        return rq.base.err;
+
+      case -EAGAIN:
+      default:
+        break;
     }
 
-  if (req.error)
-  {
-    termui_con_printf(con, "error: cannot perform remaining i2c transfers");
-    termui_con_printf(con, "\n  %s transfer at index %u (%u bytes) failed (%s)",
-                      (tr->type == DEV_I2C_READ ? "read" : "write"),
-                      req.error_transfer, tr->size,
-                      strerror(req.error));
-  }
+  bool_t restart = 0;
+  termui_con_printf(con, "START\n");
+  for (uint8_t i = 0; i < rq.transfer_count; i++)
+    {
+      struct dev_i2c_ctrl_transaction_data_s *tr = &data->transfer[i];
 
-  return req.error;
+      if (restart)
+        termui_con_printf(con, "RESTART\n");
+
+      if (tr->type == DEV_I2C_CTRL_TRANSACTION_WRITE &&
+          rq.base.err == -EAGAIN &&
+          i == rq.transfer_index)
+        {
+          termui_con_printf(con, "Error: NACK received\n");
+          termui_con_printf(con, "STOP\n");
+          return rq.base.err;
+        }
+      else
+        termui_con_printf(con, "%s (%u/%u bytes): %P\n",
+          (tr->type == DEV_I2C_CTRL_TRANSACTION_READ ? "read " : "write"),
+          tr->size, tr->size, tr->data, tr->size);
+
+      restart = 0;
+      if (i + 1 < rq.transfer_count && tr->type != data->transfer[i + 1].type)
+        restart = 1;
+    }
+    termui_con_printf(con, "STOP\n");
+
+  return rq.base.err;
 }
-
-static TERMUI_CON_OPT_DECL(dev_i2c_config_opts) =
-{
-  TERMUI_CON_OPT_DEV_ACCESSOR_ENTRY("-d", "--i2c-dev", I2C_OPT_DEV,
-    struct termui_optctx_dev_i2c_config_opts, i2c, DRIVER_CLASS_I2C,
-    TERMUI_CON_OPT_CONSTRAINTS(I2C_OPT_DEV, 0)
-    TERMUI_CON_OPT_HELP("This option selects an i2c device", NULL)
-  )
-
-  TERMUI_CON_OPT_INTEGER_ENTRY("-b", "--bit-rate", I2C_OPT_BIT_RATE,
-    struct termui_optctx_dev_i2c_config_opts, bit_rate, 1,
-    TERMUI_CON_OPT_CONSTRAINTS(I2C_OPT_BIT_RATE, I2C_OPT_DEV)
-    TERMUI_CON_OPT_HELP("This option defines the bit rate on the i2c bus",
-                        NULL)
-  )
-
-  TERMUI_CON_LIST_END
-};
 
 static TERMUI_CON_OPT_DECL(dev_i2c_opts) =
 {
   TERMUI_CON_OPT_DEV_ACCESSOR_ENTRY("-d", "--i2c-dev", I2C_OPT_DEV,
-    struct termui_optctx_dev_i2c_opts, i2c, DRIVER_CLASS_I2C,
+    struct termui_optctx_dev_i2c_opts, ctrl, DRIVER_CLASS_I2C_CTRL,
     TERMUI_CON_OPT_CONSTRAINTS(I2C_OPT_DEV, 0)
     TERMUI_CON_OPT_HELP("This option selects an i2c device", NULL)
   )
 
   TERMUI_CON_OPT_INTEGER_RANGE_ENTRY("-a", "--addr", I2C_OPT_ADDR,
-    struct termui_optctx_dev_i2c_opts, saddr, 1, 1 /* min */, 128 /* max */,
+    struct termui_optctx_dev_i2c_opts, saddr, 1, 0 /* min */, 127 /* max */,
     TERMUI_CON_OPT_CONSTRAINTS(I2C_OPT_ADDR, I2C_OPT_DEV)
     TERMUI_CON_OPT_HELP("This option defines the i2c slave address",
                         NULL)
@@ -287,13 +257,6 @@ static TERMUI_CON_OPT_DECL(dev_i2c_opts) =
 
 TERMUI_CON_GROUP_DECL(dev_shell_i2c_group) =
 {
-  TERMUI_CON_ENTRY(dev_shell_i2c_config, "config",
-    TERMUI_CON_OPTS_CTX(dev_i2c_config_opts,
-                        I2C_OPT_DEV | I2C_OPT_BIT_RATE,
-                        0,
-                        i2c_config_opts_cleanup)
-  )
-
   TERMUI_CON_ENTRY(dev_shell_i2c_scan, "scan",
     TERMUI_CON_OPTS_CTX(dev_i2c_opts,
                         I2C_OPT_DEV,

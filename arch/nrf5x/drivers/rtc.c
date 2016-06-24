@@ -37,6 +37,7 @@
 #include <arch/nrf5x/rtc.h>
 
 #define dprintk(...) do{}while(0)
+//#define dprintk printk
 
 DRIVER_PV(struct nrf5x_rtc_context_s
 {
@@ -220,7 +221,9 @@ static DEV_USE(nrf5x_rtc_use)
   case DEV_USE_STOP: {
     struct device_accessor_s *acc = param;
     struct device_s *dev = acc->dev;
-    nrf5x_rtc_stop(dev);
+    struct nrf5x_rtc_context_s *pv = dev->drv_pv;
+
+    nrf_it_enable(pv->addr, NRF_RTC_TICK);
     return 0;
   }
 

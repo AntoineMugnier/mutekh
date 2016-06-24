@@ -42,7 +42,7 @@ DRIVER_PV(struct soft_md5_private_s
   struct dev_request_dlqueue_s queue;
 });
 
-static DEVCRYPTO_INFO(soft_md5_info)
+static DEV_CRYPTO_INFO(soft_md5_info)
 {
   memset(info, 0, sizeof(*info));
   info->name = "md5";
@@ -221,7 +221,7 @@ static DEV_REQUEST_DELAYED_FUNC(soft_md5_process)
   dev_request_delayed_end(&pv->queue, rq_);
 }
 
-static DEVCRYPTO_REQUEST(soft_md5_request)
+static DEV_CRYPTO_REQUEST(soft_md5_request)
 {
   struct device_s *dev = accessor->dev;
   struct soft_md5_private_s *pv = dev->drv_pv;
