@@ -64,9 +64,10 @@ main::custom_op('spi_setcs',          1,      0x02c0, \&parse_cs );
 main::custom_op('spi_width',          2,      0x0400, \&parse_width  );
 main::custom_op('spi_brate',          1,      0x0480, \&parse_reg );
 
-main::custom_op('spi_write',          1,      0x080f, \&parse_write );
-main::custom_op('spi_swp',            2,      0x0800, \&parse_swp );
-main::custom_op('spi_swpl',           3,      0x0800, \&parse_swpl );
+main::custom_op('spi_swp',            2,      0x2000, \&parse_swp );
+main::custom_op('spi_swpl',           3,      0x2000, \&parse_swpl );
+main::custom_op('spi_wr',             1,      0x3000, \&parse_wr );
+main::custom_op('spi_wrl',            2,      0x3000, \&parse_wrl );
 
 main::custom_op('spi_pad',            1,      0x1000, \&parse_reg );
 
@@ -86,8 +87,8 @@ main::custom_op('spi_swpm8',          2,      0x1c00, \&parse_xxm );
 main::custom_op('spi_swpm16',         2,      0x1d00, \&parse_xxm );
 main::custom_op('spi_swpm32',         2,      0x1f00, \&parse_xxm );
 
-main::custom_op('spi_gpioset',        2,      0x2000, \&parse_gpio );
-main::custom_op('spi_gpioget',        2,      0x3000, \&parse_gpio );
+main::custom_op('spi_gpioset',        2,      0x6000, \&parse_gpio );
+main::custom_op('spi_gpioget',        2,      0x5000, \&parse_gpio );
 main::custom_op('spi_gpiomode',       2,      0x4000, \&parse_gpio_mode );
 
 sub parse_reg
@@ -120,13 +121,6 @@ sub parse_width
     $thisop->{code} |= ( $o << 5 ) | $w;
 }
 
-sub parse_write
-{
-    my $thisop = shift;
-    my $wr = main::check_reg( $thisop, 0 );
-    $thisop->{code} |= ($wr << 4);
-}
-
 sub parse_swp
 {
     my $thisop = shift;
@@ -140,8 +134,29 @@ sub parse_swpl
     my $thisop = shift;
     my $wr = main::check_reg( $thisop, 0 );
     my $rd = main::check_reg( $thisop, 1 );
-    my $l = main::check_num( $thisop, 2, 1, 8 ) - 1;
-    $thisop->{code} |= ($l << 8) | ($wr << 4) | $rd;
+    my $l = main::check_num( $thisop, 2, 1, 16 );
+    die "$thisop->{line}: out of range read byte array\n"
+        if ($rd * 4 + $l > 16 * 4);
+    die "$thisop->{line}: out of range write byte array\n"
+        if ($wr * 4 + $l > 16 * 4);
+    $thisop->{code} |= (($l - 1) << 8) | ($wr << 4) | $rd;
+}
+
+sub parse_wr
+{
+    my $thisop = shift;
+    my $wr = main::check_reg( $thisop, 0 );
+    $thisop->{code} |= ($wr << 4);
+}
+
+sub parse_wrl
+{
+    my $thisop = shift;
+    my $wr = main::check_reg( $thisop, 0 );
+    my $l = main::check_num( $thisop, 1, 1, 16 );
+    die "$thisop->{line}: out of range byte array\n"
+        if ($wr * 4 + $l > 16 * 4);
+    $thisop->{code} |= (($l - 1) << 8) | ($wr << 4);
 }
 
 sub parse_xxm

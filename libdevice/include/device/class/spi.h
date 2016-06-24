@@ -162,8 +162,10 @@
     @item spi_width                @item w, o          @item @tt{1000 0100 00ow wwww}
     @item spi_brate                @item r             @item @tt{1000 0100 10-- rrrr}
 
-    @item spi_swp                  @item wr, rd        @item @tt{1000 1000 rrrr rrrr}
-    @item spi_swpl                 @item wr, rd, l     @item @tt{1000 1lll rrrr rrrr}
+    @item spi_swp                  @item wr, rd        @item @tt{1010 0000 rrrr rrrr}
+    @item spi_swpl                 @item wr, rd, l     @item @tt{1010 llll rrrr rrrr}
+    @item spi_wr                   @item wr            @item @tt{1011 0000 rrrr ----}
+    @item spi_wrl                  @item wr, l         @item @tt{1011 llll rrrr ----}
 
     @item spi_pad                  @item r             @item @tt{1001 0000 ---- rrrr}
 
@@ -171,9 +173,9 @@
     @item spi_wrm[8,16,32]         @item ra, r         @item @tt{1001 10ss aaaa rrrr}
     @item spi_swpm[8,16,32]        @item ra, r         @item @tt{1001 11ss aaaa rrrr}
 
-    @item spi_gpioset              @item i, r          @item @tt{1010 iiii iiii rrrr}
-    @item spi_gpioget              @item i, r          @item @tt{1011 iiii iiii rrrr}
     @item spi_gpiomode             @item i, r          @item @tt{1100 iiii iiii mmmm}
+    @item spi_gpioget              @item i, r          @item @tt{1101 iiii iiii rrrr}
+    @item spi_gpioset              @item i, r          @item @tt{1110 iiii iiii rrrr}
    @end table
 
    @section {spi_nodelay}
@@ -284,24 +286,22 @@
    stored in the register.
    @end section
 
-   @section {spi_swp}
-   This instruction transfers a single word on the SPI bus. The word
-   value of the @tt wr register is transmitted. The @tt rd register is
-   used to store the received word value, unless @tt rd is 15.
+   @section {spi_swpl and spi_wrl}
+   These instructions transfer up to 16 bytes between virtual machine
+   registers and the SPI bus. The @tt spi_swpl instruction performs a
+   bidirectional transfer whereas the @tt spi_wrl instruction discards
+   incoming bytes.
+
+   The format of data in registers is hardware dependent and needs to
+   be converted by using the @tt pack* and @tt unpack* @xref {Generic
+   instruction set} {generic instructions}. The transfered bytes are
+   stored in contiguous registers, using at most one register for each
+   group of 4 bytes. The index of the first register used to store the
+   data and the number of bytes are expected as operands.
    @end section
 
-   @section {spi_swpl}
-   This instruction transfers up to 8 words on the SPI bus. Word
-   values are loaded and stored in contiguous registers. The word
-   values of the registers starting at @tt wr are transmitted. The
-   registers starting at @tt rd are used to store the received word
-   values.
-
-   If the index of the last register to transmit is greater than 14,
-   the content of the register 14 is used as padding value for all
-   transmitted words. If the index of the last destination register is
-   greater than 14, incoming data are discarded and no register is
-   modified.
+   @section {spi_swp and spi_wr}
+   These are similar to @xref{spi_swpl and spi_wrl} with a byte length of 1.
    @end section
 
    @section {spi_gpioset}

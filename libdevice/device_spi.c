@@ -412,29 +412,6 @@ device_spi_bytecode_exec(struct dev_spi_ctrl_context_s *q,
                   q->config = NULL;
                 }
               continue;
-            case 0x0800:        /* swp, swpl */
-            case 0x0c00: {
-              uint_fast8_t l = ((op >> 8) & 7) + 1;
-              uint_fast8_t src = op & 0xf;
-              uint_fast8_t dst = (op >> 4) & 0xf;
-              void *addr = src + l >= 16 ? NULL : &rq->vm.v[src];
-              q->padding_word = bc_get_reg(&rq->vm, 14);
-              tr->data.in_width = sizeof(rq->vm.v[0]);
-              tr->data.in = addr;
-              tr->data.count = l;
-              if (dst + l >= 16)
-                {
-                  tr->data.out_width = 0;
-                  tr->data.out = &q->padding_word;
-                }
-              else
-                {
-                  tr->data.out_width = sizeof(rq->vm.v[0]);
-                  tr->data.out = &rq->vm.v[dst];
-                }
-              lock_spin_irq(&q->lock);
-              return device_spi_ctrl_transfer(q, &rq->base);
-            }
             }
           continue;
 
@@ -479,10 +456,24 @@ device_spi_bytecode_exec(struct dev_spi_ctrl_context_s *q,
             }
         }
 
+        case 0x2000:        /* swp, swpl, wr, wrl */
+        case 0x3000: {
+          uint_fast8_t l = ((op >> 8) & 0xf) + 1;
+          uint_fast8_t src = op & 0xf;
+          uint_fast8_t dst = (op >> 4) & 0xf;
+          tr->data.in_width = 1;
+          tr->data.in = op & 0x1000 ? NULL : bc_get_bytepack(&rq->vm, src);
+          tr->data.count = l;
+          tr->data.out_width = 1;
+          tr->data.out = bc_get_bytepack(&rq->vm, dst);
+          lock_spin_irq(&q->lock);
+          return device_spi_ctrl_transfer(q, &rq->base);
+        }
+
 #  ifdef CONFIG_DEVICE_SPI_BYTECODE_GPIO
         case 0x4000:            /* gpio* */
-        case 0x2000:
-        case 0x3000: {
+        case 0x5000:
+        case 0x6000: {
           err = 0;
           if (!device_check_accessor(&rq->base.gpio.base))
             err = -ENOTSUP;
@@ -497,14 +488,14 @@ device_spi_bytecode_exec(struct dev_spi_ctrl_context_s *q,
                   err = DEVICE_OP(&rq->base.gpio, get_input, id, id + w - 1, value);
                   bc_set_reg(&rq->vm, op & 0xf, endian_le32_na_load(value) & ((1 << w) - 1));
                 }
-              else if (op & 0x4000) /* gpiomode */
-                {
-                  err = DEVICE_OP(&rq->base.gpio, set_mode, id, id + w - 1, dev_gpio_mask1, op & 0xf);
-                }
-              else              /* gpioset */
+              else if (op & 0x2000) /* gpioset */
                 {
                   endian_le32_na_store(value, bc_get_reg(&rq->vm, op & 0xf));
                   err = DEVICE_OP(&rq->base.gpio, set_output, id, id + w - 1, value, value);
+                }
+              else              /* gpiomode */
+                {
+                  err = DEVICE_OP(&rq->base.gpio, set_mode, id, id + w - 1, dev_gpio_mask1, op & 0xf);
                 }
             }
           continue;
