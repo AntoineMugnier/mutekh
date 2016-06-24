@@ -305,6 +305,7 @@ DEV_I2C_CTRL_TRANSFER(efm32_i2c_transfer)
   dev_clock_sink_gate(&pv->clk_ep, DEV_CLOCK_EP_POWER_CLOCK);
 # endif
 
+  tr->err = 0;
   if (tr->type == DEV_I2C_RESET)
     {
       if (pv->state != EFM32_I2C_STATE_IDLE)
@@ -317,7 +318,6 @@ DEV_I2C_CTRL_TRANSFER(efm32_i2c_transfer)
 
   pv->tr = tr;
   pv->byte_cnt = 0;
-  tr->err = 0;
 
   if (pv->state == EFM32_I2C_STATE_IDLE)
     {
