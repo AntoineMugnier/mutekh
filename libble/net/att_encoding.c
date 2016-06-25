@@ -18,6 +18,7 @@
     Copyright (c) Nicolas Pouillon <nipo@ssji.net> 2015
 */
 
+#include <hexo/bit.h>
 #include <ble/protocol/att.h>
 #include <ble/net/att.h>
 #include <net/task.h>
@@ -356,7 +357,7 @@ enum ble_att_error_e att_request_parse(struct ble_att_s *att,
     txn->find_by_type_value.value = p->data + p->begin + 7;
     txn->find_by_type_value.value_size = value_size;
     txn->find_by_type_value.information_count = 0;
-    txn->find_by_type_value.information = ALIGN_ADDRESS_UP(txn->find_by_type_value.value + value_size, 8);
+    txn->find_by_type_value.information = address_align_up(txn->find_by_type_value.value + value_size, 8);
     txn->find_by_type_value.information_max_count = max_count;
 
     break;
@@ -426,7 +427,7 @@ enum ble_att_error_e att_request_parse(struct ble_att_s *att,
     if (!txn)
       return BLE_ATT_ERR_INSUF_RESOURCES;
 
-    txn->read_multiple.handle = ALIGN_ADDRESS_UP((void*)(txn + 1), 2);
+    txn->read_multiple.handle = address_align_up((void*)(txn + 1), 2);
     txn->read_multiple.handle_count = 0;
     while (txn->read_multiple.handle_count * 2 + 1 < size) {
       txn->read_multiple.handle[txn->read_multiple.handle_count]
