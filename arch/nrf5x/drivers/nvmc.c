@@ -168,7 +168,7 @@ static error_t nrf5x_persist_erase(struct nrf5x_nvmc_private_s *pv,
 
 static bool_t nrf5x_persist_storage_is_clean(uintptr_t base, size_t size)
 {
-  assert(IS_ALIGNED(base, 4) && IS_ALIGNED(size, 4));
+  assert(address_is_aligned(base, 4) && address_is_aligned(size, 4));
 
   const uint32_t *begin = (const uint32_t *)base;
   const uint32_t *end = (const uint32_t *)(base + size);
@@ -184,7 +184,7 @@ static void nrf5x_persist_storage_erase(uintptr_t base, size_t size)
 {
   uint32_t page_size = cpu_mem_read_32(NRF_FICR_CODEPAGESIZE);
 
-  assert(IS_ALIGNED(base, page_size) && IS_ALIGNED(size, page_size));
+  assert(address_is_aligned(base, page_size) && address_is_aligned(size, page_size));
 
   while (size) {
     nrf5x_flash_page_erase(base);
@@ -197,7 +197,7 @@ static void nrf5x_persist_storage_write(uintptr_t base,
                                         const void *data,
                                         size_t size)
 {
-  assert(IS_ALIGNED(base, 4) && IS_ALIGNED(data, 4) && IS_ALIGNED(size, 4));
+  assert(address_is_aligned(base, 4) && address_is_aligned(data, 4) && address_is_aligned(size, 4));
 
   dprintk("Write to %p:\n", base);
   dhexdumpk(0, data, size);
