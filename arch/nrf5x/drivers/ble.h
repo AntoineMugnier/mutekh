@@ -42,13 +42,9 @@ struct net_scheduler_s;
 
 #if defined(CONFIG_DEVICE_CLOCK)
 # if defined(CONFIG_ARCH_NRF51)
-/* #  if CONFIG_DRIVER_NRF5X_CLOCK_HFCLK_FREQ == 32 */
-/* #   define HFCLK_RAMPUP_US     750 */
-/* #  else */
-#   define HFCLK_RAMPUP_US     800
-/* #  endif */
+#  define HFCLK_RAMPUP_US     800
 # elif defined(CONFIG_ARCH_NRF52)
-#  define HFCLK_RAMPUP_US      500
+#  define HFCLK_RAMPUP_US     500
 # endif
 #endif
 
@@ -289,7 +285,7 @@ void nrf5x_ble_clock_release(struct nrf5x_ble_private_s *pv)
 
 struct nrf5x_ble_context_handler_s
 {
-  void (*event_opened)(struct nrf5x_ble_context_s *radio);
+  bool_t (*event_opened)(struct nrf5x_ble_context_s *radio);
   void (*event_closed)(struct nrf5x_ble_context_s *radio,
                        enum event_status_e status);
   bool_t (*radio_params)(struct nrf5x_ble_context_s *radio,

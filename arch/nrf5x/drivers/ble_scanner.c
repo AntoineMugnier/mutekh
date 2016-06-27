@@ -108,7 +108,7 @@ static void scanner_schedule(struct nrf5x_ble_scanner_s *scan)
   nrf5x_ble_context_schedule(&scan->context, begin, end, 0, 0, 10);
 }
 
-static void scanner_ctx_event_opened(struct nrf5x_ble_context_s *context)
+static bool_t scanner_ctx_event_opened(struct nrf5x_ble_context_s *context)
 {
   struct nrf5x_ble_scanner_s *scan = nrf5x_ble_scanner_s_from_context(context);
 
@@ -137,6 +137,8 @@ static void scanner_ctx_event_opened(struct nrf5x_ble_context_s *context)
   // Should schedule where not colliding
   scan->conn_params.win_size = 3;
   scan->conn_params.win_offset = 5;
+
+  return 1;
 }
 
 static void scanner_ctx_event_closed(struct nrf5x_ble_context_s *context,
@@ -405,8 +407,6 @@ error_t nrf5x_ble_scanner_create(struct net_scheduler_s *scheduler,
   scan->channel = 37;
 
   scan_param_update(&scan->layer, params_);
-
-  net_layer_refinc(&scan->layer);
 
   scanner_schedule(scan);
 
