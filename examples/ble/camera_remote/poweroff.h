@@ -1,0 +1,1 @@
+void poweroff(void);
