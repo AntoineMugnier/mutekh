@@ -1,0 +1,26 @@
+%set OUTPUT_NAME camera_remote
+%append MODULES app:$(CONFIGPATH)
+
+CONFIG_COMPILE_COLLECT
+CONFIG_COMPILE_DEBUG
+CONFIG_MUTEK_THREAD
+CONFIG_BLE_GATTDB_DESCRIPTOR
+
+CONFIG_LICENSE_APP_BSD
+
+# Libs
+CONFIG_APP_START
+CONFIG_DEVICE_PERSIST
+
+%inherit ble-peripheral
+%inherit nrf5x-clock
+%inherit ble-security
+
+%include arch/arch.build
+%include scripts/options.build
+%include examples/ble/ble.build
+
+# Board is in coin-cell mode, drop DC-DC support
+CONFIG_NRF5X_RADIO_DCDC undefined
+CONFIG_DRIVER_NRF5X_I2C undefined
+CONFIG_DRIVER_NRF5X_ADC
