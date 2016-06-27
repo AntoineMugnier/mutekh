@@ -459,8 +459,14 @@ void nrf5x_ble_context_start_first(struct nrf5x_ble_private_s *pv)
 
   //  printk("Frame open\n");
 
-  if (ctx->handler->event_opened)
-    ctx->handler->event_opened(ctx);
+  assert(ctx->handler->event_opened);
+
+  if (!ctx->handler->event_opened(ctx)) {
+    pv->current = NULL;
+    nrf5x_ble_radio_disable(pv);
+    kroutine_exec(&pv->rescheduler);
+    return;
+  }
 
   // Ensure timing is correct
 

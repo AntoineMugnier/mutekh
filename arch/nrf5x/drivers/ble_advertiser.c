@@ -78,10 +78,8 @@ static void advertiser_schedule(struct nrf5x_ble_advertiser_s *adv)
 
   //printk("%s %d\n", __FUNCTION__, net_layer_refcount(&adv->layer));
   
-  if (net_layer_refcount(&adv->layer) == 1) {
-    net_layer_refdec(&adv->layer);
+  if (!net_layer_refcount(&adv->layer))
     return;
-  }
 
   now = nrf5x_ble_rtc_value_get(adv->context.pv);
   begin = now + adv->interval_tk + (adv->delay_max_tk & rand());
@@ -89,16 +87,19 @@ static void advertiser_schedule(struct nrf5x_ble_advertiser_s *adv)
   nrf5x_ble_context_schedule(&adv->context, begin, 0, 0, 0, 100000);
 }
 
-static void advertiser_ctx_event_opened(struct nrf5x_ble_context_s *context)
+static bool_t advertiser_ctx_event_opened(struct nrf5x_ble_context_s *context)
 {
   struct nrf5x_ble_advertiser_s *adv = nrf5x_ble_advertiser_s_from_context(context);
 
   //printk("%s %d\n", __FUNCTION__, net_layer_refcount(&adv->layer));
 
+  if (!net_layer_refcount(&adv->layer))
+    return 0;
+
   adv->channel = 37;
   adv->state = ADV_IND;
 
-  assert(net_layer_refcount(&adv->layer));
+  return 1;
 }
 
 static void advertiser_ctx_event_closed(struct nrf5x_ble_context_s *context,
@@ -330,8 +331,6 @@ error_t nrf5x_ble_advertiser_create(struct net_scheduler_s *scheduler,
 
   adv->rx_buffer = net_layer_packet_alloc(&adv->layer, 0, 0);
 
-  net_layer_refinc(&adv->layer);
-  
   advertiser_schedule(adv);
 
   dprintk("Advertiser init done\n");
