@@ -89,11 +89,11 @@ static DEV_IRQ_SRC_PROCESS(nrf5x_rng_irq)
  callback:
   dev_request_queue_pop(&pv->queue);
 
-  rq->rq.drvdata = 0;
+  rq->base.drvdata = 0;
 
   pv->callbacking = 1;
   lock_release(&dev->lock);
-  kroutine_exec(&rq->rq.kr);
+  kroutine_exec(&rq->base.kr);
   lock_spin(&dev->lock);
   pv->callbacking = 0;
 
@@ -129,7 +129,7 @@ static DEV_CRYPTO_REQUEST(nrf5x_rng_request)
   bool_t start;
 
   if (!rq->len) {
-    kroutine_exec(&rq->rq.kr);
+    kroutine_exec(&rq->base.kr);
     return;
   }
 
@@ -137,8 +137,8 @@ static DEV_CRYPTO_REQUEST(nrf5x_rng_request)
 
   start = dev_request_queue_isempty(&pv->queue);
 
-  dev_request_queue_pushback(&pv->queue, &rq->rq);
-  rq->rq.drvdata = dev;
+  dev_request_queue_pushback(&pv->queue, &rq->base);
+  rq->base.drvdata = dev;
 
   if (start)
     nrf5x_rng_byte_start(dev);
