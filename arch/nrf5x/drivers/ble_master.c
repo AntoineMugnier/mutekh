@@ -125,10 +125,8 @@ static void master_schedule(struct nrf5x_ble_master_s *master)
   if (master->opened)
     return;
 
-  if (net_layer_refcount(&master->layer) == 1) {
-    net_layer_refdec(&master->layer);
+  if (!net_layer_refcount(&master->layer))
     return;
-  }
 
   uint32_t event_advance;
   dev_timer_value_t now;
@@ -277,8 +275,6 @@ error_t nrf5x_ble_master_create(struct net_scheduler_s *scheduler,
   master->tx_queue_count = 0;
 
   master->since_last_event_intervals = 0;
-
-  net_layer_refinc(&master->layer);
 
   master_schedule(master);
 
@@ -435,9 +431,12 @@ static error_t master_layer_bound(struct net_layer_s *layer,
   return 0;
 }
 
-static void master_ctx_event_opened(struct nrf5x_ble_context_s *context)
+static bool_t master_ctx_event_opened(struct nrf5x_ble_context_s *context)
 {
   struct nrf5x_ble_master_s *master = nrf5x_ble_master_s_from_context(context);
+
+  if (!net_layer_refcount(&master->layer))
+    return 0;
 
   master->opened = 1;
   master->event_acked_count = 0;
@@ -447,6 +446,8 @@ static void master_ctx_event_opened(struct nrf5x_ble_context_s *context)
   master->event_packet_count = 0;
   master->event_channel = ble_channel_mapper_chan_get(&master->channel_mapper,
                                                      master->scheduled_event_counter);
+
+  return 1;
 }
 
 static

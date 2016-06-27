@@ -120,7 +120,7 @@ void nrf5x_ble_slave_error(struct nrf5x_ble_slave_s *slave, uint8_t reason)
   const struct ble_phy_delegate_vtable_s *vtable
     = const_ble_phy_delegate_vtable_s_from_base(slave->layer.delegate_vtable);
 
-  cprintk("Slave error, reason %d", reason);
+  dprintk("Slave error, reason %d\n", reason);
 
   if (slave->reason)
     return;
@@ -137,10 +137,10 @@ static void slave_schedule(struct nrf5x_ble_slave_s *slave)
   if (slave->opened)
     return;
 
-  if (net_layer_refcount(&slave->layer) == 1) {
-    net_layer_refdec(&slave->layer);
+  dprintk("%s %d\n", __FUNCTION__, net_layer_refcount(&slave->layer));
+
+  if (!net_layer_refcount(&slave->layer))
     return;
-  }
 
   uint32_t event_advance;
   dev_timer_value_t now;
@@ -311,8 +311,6 @@ error_t nrf5x_ble_slave_create(struct net_scheduler_s *scheduler,
 
   slave->since_last_event_intervals = 0;
 
-  net_layer_refinc(&slave->layer);
-
   slave_schedule(slave);
 
   slave->rx_buffer = net_layer_packet_alloc(&slave->layer, 1, 0);
@@ -336,6 +334,8 @@ static
 void slave_layer_destroyed(struct net_layer_s *layer)
 {
   struct nrf5x_ble_slave_s *slave = nrf5x_ble_slave_s_from_layer(layer);
+
+  dprintk("%s\n", __FUNCTION__);
 
   if (slave->rx_buffer)
     buffer_refdec(slave->rx_buffer);
@@ -465,9 +465,14 @@ static error_t slave_layer_bound(struct net_layer_s *layer,
   return 0;
 }
 
-static void slave_ctx_event_opened(struct nrf5x_ble_context_s *context)
+static bool_t slave_ctx_event_opened(struct nrf5x_ble_context_s *context)
 {
   struct nrf5x_ble_slave_s *slave = nrf5x_ble_slave_s_from_context(context);
+
+  if (!net_layer_refcount(&slave->layer))
+    return 0;
+
+  dprintk("%s\n", __FUNCTION__);
 
   slave->opened = 1;
   slave->event_acked_count = 0;
@@ -478,6 +483,8 @@ static void slave_ctx_event_opened(struct nrf5x_ble_context_s *context)
   slave->event_packet_count = 0;
   slave->event_channel = ble_channel_mapper_chan_get(&slave->channel_mapper,
                                                      slave->scheduled_event_counter);
+
+  return 1;
 }
 
 static
@@ -485,6 +492,8 @@ void slave_ctx_event_closed(struct nrf5x_ble_context_s *context,
                             enum event_status_e status)
 {
   struct nrf5x_ble_slave_s *slave = nrf5x_ble_slave_s_from_context(context);
+
+  dprintk("%s\n", __FUNCTION__);
 
   cprintk("Event %d done: %d, %d pkts, latency %s\n   (%d rx, %d data, %d tx, %d acked, %d crc err)\n",
           slave->scheduled_event_counter, status,
