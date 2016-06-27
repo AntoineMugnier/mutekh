@@ -27,6 +27,7 @@
 #include <ble/protocol/advertise.h>
 
 #include <hexo/decls.h>
+#include <hexo/bit.h>
 
 const uint16_t ble_sca_wc[8] = {
   500, 250, 150, 100, 75, 50, 30, 20,
@@ -250,7 +251,7 @@ bool_t ble_data_aa_is_valid(uint32_t aa)
   if (aa == BLE_ADVERTISE_AA)
     return 0;
 
-  if (ALIGN_ISPOWTWO(aa ^ BLE_ADVERTISE_AA))
+  if (is_pow2(aa ^ BLE_ADVERTISE_AA))
     return 0;
 
   if (__builtin_popcountl(transitions) > 24)
