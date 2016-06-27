@@ -277,9 +277,14 @@ static void ble_llcp_packet_handle(struct ble_llcp_s *llcp, struct net_task_s *t
 
     up->task.destroy_func = memory_allocator_push;
 
-    dprintk("connection parameters update\n");
-
     ble_data_conn_params_update_parse(&p->data[p->begin], &up->update);
+
+    dprintk("connection parameters update %d lat %d to %d at %d\n",
+            up->update.timing.interval,
+            up->update.timing.latency,
+            up->update.timing.timeout,
+            up->update.instant);
+
     net_task_query_push(&up->task, llcp->layer.parent->parent, &llcp->layer,
                         BLE_LLCP_CONNECTION_PARAMETERS_UPDATE);
     break;
