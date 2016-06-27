@@ -54,10 +54,11 @@ static void conn_state_update(struct ble_stack_connection_s *conn)
 static void ble_stack_connection_dropped(struct ble_stack_connection_s *conn,
                                           uint8_t reason)
 {
+  printk("Connection dropped: %d, phy %p llcp %p\n", reason,
+         conn->phy, conn->llcp);
+
   if (!conn->phy || !conn->llcp)
     return;
-
-  printk("Connection dropped: %d\n", reason);
 
   net_layer_refdec(conn->phy);
   conn->phy = NULL;
@@ -74,7 +75,8 @@ static void conn_phy_lost(void *delegate, struct net_layer_s *layer, uint8_t rea
 {
   struct ble_stack_connection_s *conn = delegate;
 
-  printk("Connection PHY dropped: %d\n", reason);
+  printk("Connection PHY dropped: %d, layer %p, phy %p\n", reason,
+         layer, conn->phy);
 
   if (layer != conn->phy)
     return;
@@ -469,7 +471,7 @@ void ble_stack_connection_pairing_request(struct ble_stack_connection_s *conn,
 }
 
 void ble_stack_connection_pairing_abort(struct ble_stack_connection_s *conn,
-                                       uint8_t reason)
+                                        enum sm_reason reason)
 {
   printk("Pairing abort\n");
 
