@@ -204,7 +204,7 @@ static void link_task_forward(struct ble_link_s *link, struct net_task_s *task)
 #if defined(CONFIG_BLE_CRYPTO)
 static KROUTINE_EXEC(link_crypto_done)
 {
-  struct ble_link_s *link = KROUTINE_CONTAINER(kr, *link, crypto_rq.rq.kr);
+  struct ble_link_s *link = KROUTINE_CONTAINER(kr, *link, crypto_rq.base.kr);
   struct net_task_s *task;
   struct buffer_s *tmp;
   error_t err;
@@ -558,7 +558,7 @@ error_t link_crypto_setup(struct ble_link_s *link,
   
   err = dev_crypto_wait_op(&link->crypto, &link->crypto_rq);
 
-  kroutine_init_sched_switch(&link->crypto_rq.rq.kr, link_crypto_done);
+  kroutine_init_sched_switch(&link->crypto_rq.base.kr, link_crypto_done);
 
   return err;
 }
