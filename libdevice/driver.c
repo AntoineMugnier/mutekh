@@ -286,6 +286,93 @@ error_t device_get_accessor_by_path(struct device_accessor_s *acc, struct device
   return device_get_accessor(acc, dev, cl, number);
 }
 
+static void libdevice_drivers_loop(struct device_s *dev, enum drv_init_loop_e *lp)
+{
+  switch (dev->status)
+    {
+# ifdef CONFIG_DEVICE_ENUM
+    case DEVICE_INIT_ENUM_DRV: {
+#  ifdef CONFIG_DEVICE_DRIVER_REGISTRY
+      const struct driver_registry_s *reg;
+      struct device_enum_s e;
+
+      dev->status = DEVICE_INIT_NODRV;
+
+      if (dev->node.flags & DEVICE_FLAG_NO_AUTOBIND)
+        break;
+
+      /* get associated enumerator device */
+      struct device_s *enum_dev = (void*)dev->node.parent;
+      if (device_get_accessor(&e.base, enum_dev, DRIVER_CLASS_ENUM, 0))
+        break;
+
+      /* iterate over available drivers */
+      for (reg = driver_registry_table;
+           reg < driver_registry_table_end;
+           reg++)
+        {
+          /* driver entry may be NULL on heterogeneous systems */
+          if (!reg->driver || !reg->id_table || !reg->id_count)
+            continue;
+
+          /* use enumerator to decide if driver is appropriate for this device */
+          if (DEVICE_OP(&e, match_driver, reg->id_table, reg->id_count, dev))
+            {
+              dev->drv = reg->driver;
+              dev->status = DEVICE_INIT_PENDING;
+              *lp |= DRV_INIT_LOOP_AGAIN;
+            }
+        }
+
+      device_put_accessor(&e.base);
+
+      if (dev->status != DEVICE_INIT_PENDING)
+        break;
+#  else
+      dev->status = DEVICE_INIT_NODRV;
+      break;
+#  endif
+    }
+# endif
+
+      /* try to intialize the device using the associated driver */
+    case DEVICE_INIT_PENDING:
+      if (dev->node.flags & DEVICE_FLAG_NO_AUTOINIT)
+        break;
+
+      order_smp_read();
+      if (device_init_pass == 0 &&
+          !(dev->drv->flags & DRIVER_FLAGS_EARLY_INIT))
+        break;
+
+    case DEVICE_INIT_ONGOING:
+      switch (device_init_driver_nolock(dev))
+        {
+        case 0:
+          *lp |= DRV_INIT_LOOP_AGAIN;
+          break;
+# ifdef CONFIG_DEVICE_INIT_ASYNC
+        case -EAGAIN:
+          if (!(dev->node.flags & DEVICE_FLAG_NO_STARTUP_WAIT))
+            *lp |= DRV_INIT_LOOP_ONGOING;
+# endif
+        default:
+          break;
+        }
+      break;
+
+#if defined(CONFIG_DEVICE_INIT_ASYNC) && defined(CONFIG_DEVICE_CLEANUP)
+    case DEVICE_INIT_DECLINE:
+      if (!dev->drv->f_cleanup(dev))
+        dev->status = DEVICE_INIT_RELEASED;
+      break;
+#endif
+
+    default:
+      break;
+    }
+}
+
 #ifdef CONFIG_DEVICE_TREE
 
 static enum drv_init_loop_e device_find_driver_r(struct device_node_s *node)
@@ -297,83 +384,7 @@ static enum drv_init_loop_e device_find_driver_r(struct device_node_s *node)
   if (dev)
     {
       LOCK_SPIN_IRQ(&dev->lock);
-
-      switch (dev->status)
-        {
-# ifdef CONFIG_DEVICE_ENUM
-        case DEVICE_INIT_ENUM_DRV: {
-#  ifdef CONFIG_DEVICE_DRIVER_REGISTRY
-          const struct driver_registry_s *reg;
-          struct device_enum_s e;
-
-          dev->status = DEVICE_INIT_NODRV;
-
-          if (dev->node.flags & DEVICE_FLAG_NO_AUTOBIND)
-            break;
-
-          /* get associated enumerator device */
-          struct device_s *enum_dev = (void*)dev->node.parent;
-          if (device_get_accessor(&e.base, enum_dev, DRIVER_CLASS_ENUM, 0))
-            break;
-
-          /* iterate over available drivers */
-          for (reg = driver_registry_table;
-               reg < driver_registry_table_end;
-               reg++)
-            {
-              /* driver entry may be NULL on heterogeneous systems */
-              if (!reg->driver || !reg->id_table || !reg->id_count)
-                continue;
-
-              /* use enumerator to decide if driver is appropriate for this device */
-              if (DEVICE_OP(&e, match_driver, reg->id_table, reg->id_count, dev))
-                {
-                  dev->drv = reg->driver;
-                  dev->status = DEVICE_INIT_PENDING;
-                  lp |= DRV_INIT_LOOP_AGAIN;
-                }
-            }
-
-          device_put_accessor(&e.base);
-
-          if (dev->status != DEVICE_INIT_PENDING)
-            break;
-#  else
-          dev->status = DEVICE_INIT_NODRV;
-          break;
-#  endif
-        }
-# endif
-
-          /* try to intialize the device using the associated driver */
-        case DEVICE_INIT_PENDING:
-          if (dev->node.flags & DEVICE_FLAG_NO_AUTOINIT)
-            break;
-
-          if (device_init_pass == 0 &&
-              !(dev->drv->flags & DRIVER_FLAGS_EARLY_INIT))
-            break;
-
-        case DEVICE_INIT_ONGOING:
-# ifdef CONFIG_DEVICE_INIT_ASYNC
-          if (!(dev->node.flags & DEVICE_FLAG_NO_STARTUP_WAIT))
-            lp |= DRV_INIT_LOOP_ONGOING;
-# endif
-          if (device_init_driver_nolock(dev) == 0)
-            lp |= DRV_INIT_LOOP_AGAIN;
-          break;
-
-#if defined(CONFIG_DEVICE_INIT_ASYNC) && defined(CONFIG_DEVICE_CLEANUP)
-        case DEVICE_INIT_DECLINE:
-          if (!dev->drv->f_cleanup(dev))
-            dev->status = DEVICE_INIT_RELEASED;
-          break;
-#endif
-
-        default:
-          break;
-        }
-
+      libdevice_drivers_loop(dev, &lp);
       LOCK_RELEASE_IRQ(&dev->lock);
     }
 
@@ -411,43 +422,11 @@ static void libdevice_drivers_init()
   do {
     lp = 0;
     DEVICE_NODE_FOREACH(, node, {
-
         if (!(dev = device_from_node(node)))
           continue;
 
         LOCK_SPIN_IRQ(&dev->lock);
-
-        switch (dev->status)
-          {
-          case DEVICE_INIT_PENDING:
-            if (dev->node.flags & DEVICE_FLAG_NO_AUTOINIT)
-              break;
-
-            order_smp_read();
-            if (device_init_pass == 0 &&
-                !(dev->drv->flags & DRIVER_FLAGS_EARLY_INIT))
-              break;
-
-          case DEVICE_INIT_ONGOING:
-# ifdef CONFIG_DEVICE_INIT_ASYNC
-            if (!(dev->node.flags & DEVICE_FLAG_NO_STARTUP_WAIT))
-              lp |= DRV_INIT_LOOP_ONGOING;
-# endif
-            if (device_init_driver_nolock(dev) == 0)
-              lp |= DRV_INIT_LOOP_AGAIN;
-            break;
-
-# if defined(CONFIG_DEVICE_INIT_ASYNC) && defined(CONFIG_DEVICE_CLEANUP)
-          case DEVICE_INIT_DECLINE:
-            if (!dev->drv->f_cleanup(dev))
-              dev->status = DEVICE_INIT_RELEASED;
-            break;
-# endif
-
-          default:
-            break;
-          }
-
+        libdevice_drivers_loop(dev, &lp);
         LOCK_RELEASE_IRQ(&dev->lock);
     });
   } while (lp & DRV_INIT_LOOP_AGAIN);
