@@ -2016,6 +2016,8 @@ void usbdev_stack_config_done(struct dev_usbdev_context_s *ctx)
 void usbdev_stack_request_done(struct dev_usbdev_context_s *ctx,
                                 struct dev_usbdev_request_s *tr)
 {
+  assert(tr != NULL);
+
   if (tr->ep == 0)
     return usbdev_stack_transfer_0_done(ctx, tr);
 
