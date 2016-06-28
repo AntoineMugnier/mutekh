@@ -81,7 +81,8 @@ static void efm32_usart_spi_update_rate(struct device_s *dev, uint32_t bit_rate)
 {
   struct efm32_usart_spi_context_s *pv = dev->drv_pv;
   pv->bit_rate = bit_rate;
-  pv->clkdiv = (128 * pv->freq.num) / (bit_rate * pv->freq.denom) - 256;
+  uint64_t d = (128 * pv->freq.num) / (bit_rate * pv->freq.denom);
+  pv->clkdiv = d < 256 ? 0 : (d >> 20 ? 0x1fffc0 : d - 256);
 }
 
 static DEV_SPI_CTRL_CONFIG(efm32_usart_spi_config)
