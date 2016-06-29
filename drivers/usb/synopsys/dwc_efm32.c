@@ -214,6 +214,11 @@ static DEV_INIT(efm32_usbdev_init)
                         SYNOPSYS_USBDEV_EP_MSK, &efm32_usbdev_ops_s))
     goto err_clk1;
 
+  /* Check if device is connected */
+  uint32_t x = cpu_mem_read_32(pv->synpv.addr - EFM32_USB_SYNOPSYS_ADDR + EFM32_USB_STATUS_ADDR);
+  if (endian_le32(x) & EFM32_USB_IF_VREGOSH)
+    synopsys_usbdev_event(&pv->synpv, USBDEV_EVENT_CONNECT);
+  
   device_irq_source_init(dev, &pv->irq_eps, 1, &efm32_usb_irq);
 
   if (device_irq_source_link(dev, &pv->irq_eps, 1, 1))
