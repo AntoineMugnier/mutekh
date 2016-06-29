@@ -703,7 +703,7 @@ done:
       uint32_t x;
       /* Set drop bit for isochronous transfert */
       x = endian_le32(cpu_mem_read_32(pv->addr + PIC32_USB_IECS0_ADDR));
-      if (x & PIC32_USB_IENCS0_UNDERRUN)
+      if ((x & PIC32_USB_IENCS0_ISO) && (x & PIC32_USB_IENCS0_UNDERRUN))
         {
           tr->error = -ETIMEDOUT;
           x &= ~PIC32_USB_IENCS0_UNDERRUN;
@@ -813,7 +813,7 @@ static void pic32_usbdev_edpout_irq(struct pic32_usbdev_private_s *pv, uint8_t i
       pic32_usbdev_select_edp(pv, idx);
       /* Set drop bit for isochronous transfert */
       x = endian_le32(cpu_mem_read_32(pv->addr + PIC32_USB_IECS1_ADDR));
-      if (x & PIC32_USB_IECS1_OVERRUN)
+      if ((x & PIC32_USB_IENCS0_ISO) && (x & PIC32_USB_IENCS0_UNDERRUN))
         {
           tr->error = -ETIMEDOUT;
           x &= ~PIC32_USB_IECS1_OVERRUN;
