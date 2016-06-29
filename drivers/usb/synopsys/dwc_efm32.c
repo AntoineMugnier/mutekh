@@ -210,10 +210,6 @@ static DEV_INIT(efm32_usbdev_init)
 
   efm32_usb_reset_device(dev);
 
-  if (usbdev_stack_init(dev, &pv->synpv.usbdev_ctx, SYNOPSYS_USBDEV_EP_MSK,
-                        SYNOPSYS_USBDEV_EP_MSK, &efm32_usbdev_ops_s))
-    goto err_clk1;
-
   /* Check if device is connected */
   uint32_t x = cpu_mem_read_32(pv->synpv.addr - EFM32_USB_SYNOPSYS_ADDR + EFM32_USB_STATUS_ADDR);
   if (endian_le32(x) & EFM32_USB_IF_VREGOSH)
@@ -224,10 +220,15 @@ static DEV_INIT(efm32_usbdev_init)
   if (device_irq_source_link(dev, &pv->irq_eps, 1, 1))
     goto err_clk1;
 
-  dev->drv = &efm32_usbdev_drv;
+  /* USB stack context */
+  if (usbdev_stack_init(dev, &pv->synpv.usbdev_ctx, SYNOPSYS_USBDEV_EP_MSK,
+                        SYNOPSYS_USBDEV_EP_MSK, &efm32_usbdev_ops_s))
+    goto err_irq;
 
   return 0;
 
+err_irq:
+  device_irq_source_unlink(dev, &pv->irq_eps, 1);
 err_clk1:
   dev_drv_clock_cleanup(dev, &pv->clk_ep[1]);
 err_clk0:
@@ -241,8 +242,11 @@ static DEV_CLEANUP(efm32_usbdev_cleanup)
 {
   struct efm32_usbdev_private_s *pv = dev->drv_pv;
 
-  dev_drv_clock_cleanup(dev, &pv->clk_ep[1]);
+  if (usbdev_stack_cleanup(&pv->usbdev_ctx))
+    return -EBUSY;
+
   dev_drv_clock_cleanup(dev, &pv->clk_ep[0]);
+  dev_drv_clock_cleanup(dev, &pv->clk_ep[1]);
 
   device_irq_source_unlink(dev, &pv->irq_eps, 1);
 
