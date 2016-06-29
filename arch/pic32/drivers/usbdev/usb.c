@@ -1017,21 +1017,24 @@ static DEV_INIT(pic32_usbdev_init)
 
   pic32_usb_reset_device(dev);
 
-  uint16_t msk = ((1 << (CONFIG_DRIVER_PIC32_USBDEV_EP_COUNT + 1)) - 1);
-
-  if (usbdev_stack_init(dev, &pv->usbdev_ctx, msk, msk, &pic32_usbdev_ops_s))
-    goto err_mem;
-
   device_irq_source_init(dev, &pv->irq_eps[0], 1, &pic32_usb_irq);
   device_irq_source_init(dev, &pv->irq_eps[1], 1, &pic32_usb_dma_irq);
 
   if (device_irq_source_link(dev, pv->irq_eps, 2, -1))
     goto err_mem;
 
+  uint16_t msk = ((1 << (CONFIG_DRIVER_PIC32_USBDEV_EP_COUNT + 1)) - 1);
+
+  if (usbdev_stack_init(dev, &pv->usbdev_ctx, msk, msk, &pic32_usbdev_ops_s))
+    goto err_irq;
+
   return 0;
 
 err_nep:
   printk("Error CONFIG_DRIVER_PIC32_USBDEV_EP_COUNT > available endpoint count\n");
+  goto err_mem;
+err_irq:
+  device_irq_source_unlink(dev, pv->irq_eps, 2);
 err_mem:
   mem_free(pv);
   return -1;
@@ -1041,9 +1044,12 @@ static DEV_CLEANUP(pic32_usbdev_cleanup)
 {
   struct pic32_usbdev_private_s *pv = dev->drv_pv;
 
-  device_irq_source_unlink(dev, pv->irq_eps, 2);
+  if (usbdev_stack_cleanup(&pv->usbdev_ctx))
+    return -EBUSY;
 
+  device_irq_source_unlink(dev, pv->irq_eps, 2);
   mem_free(pv);
+
   return 0;
 }
 
