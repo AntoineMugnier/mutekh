@@ -2250,6 +2250,39 @@ static void usbdev_ep_init_cleanup(struct dev_usbdev_context_s *ctx,
     }
 }
 
+#ifdef CONFIG_USBDEV_DEFAULT_DEVICE_INFO
+
+/* This is the default device information structure. */
+
+static const struct usbdev_device_info_s usb_default_devinfo =
+{
+  .desc =
+    {
+      .head.bLength = sizeof(struct usb_device_descriptor_s),
+      .head.bDescriptorType = USB_DEVICE_DESCRIPTOR,
+      .bcdUSB = endian_le16(CONFIG_USBDEV_USB_REVISION),
+      .bDeviceClass = 0,
+      .bDeviceSubClass = 0,
+      .bDeviceProtocol = 0,
+      .bMaxPacketSize0 = 64,
+      .idVendor = endian_le16(0x5a5a),
+      .idProduct = endian_le16(0),
+      .bcdDevice = endian_le16(0),
+      .iManufacturer = 1,
+      .iProduct = 2,
+      .iSerialNumber = 0,
+      .bNumConfigurations = 1
+    },
+
+  .configuration = 0,
+  .iconfig = 0,
+  .power = 50,
+  .str_cnt = 2,
+  .string = "MutekH\0\Test\0"
+};
+
+#endif
+
 /* This is executed with lock */
 
 error_t usbdev_stack_init(struct device_s *dev,
@@ -2265,7 +2298,11 @@ error_t usbdev_stack_init(struct device_s *dev,
 
   ctx->dev = dev;
   ctx->ops = ops;
+#ifdef CONFIG_USBDEV_DEFAULT_DEVICE_INFO
+  ctx->devinfo = &usb_default_devinfo;
+#else
   ctx->devinfo = NULL;
+#endif
 
   ctx->epi_msk = epi_msk & 0xFE;
   ctx->epo_msk = epo_msk & 0xFE;
