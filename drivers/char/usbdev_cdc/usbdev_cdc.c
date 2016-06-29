@@ -680,17 +680,17 @@ static DEV_INIT(usbdev_cdc_init)
 
   err = device_get_param_dev_accessor(dev, "usb-ctrl", &pv->usb.base, DRIVER_CLASS_USBDEV);
   if (err)
-    goto err0;
+    goto err_pv;
 
   /* Default setting */
   pv->wbuffer = usbdev_stack_allocate(&pv->usb, USBDEV_SERV_CHAR_BUFFER_SIZE);
 
   if (!pv->wbuffer)
-    goto err0;
+    goto err_ctrl;
 
   pv->rbuffer = usbdev_stack_allocate(&pv->usb, USBDEV_SERV_CHAR_BUFFER_SIZE);
   if (!pv->rbuffer)
-    goto err1;
+    goto err_wbuffer;
 
   pv->wtr.base.pvdata = dev;
   pv->rtr.base.pvdata = dev;
@@ -712,7 +712,7 @@ static DEV_INIT(usbdev_cdc_init)
   err = usbdev_stack_service_register(&pv->usb, &pv->service);
 
   if (err)
-    goto err2;
+    goto err_rbuffer;
 
   dev_request_queue_init(&pv->read_q);
   dev_request_queue_init(&pv->write_q);
@@ -734,14 +734,13 @@ static DEV_INIT(usbdev_cdc_init)
 
   return 0;
 
-err2:
+err_rbuffer:
   usbdev_stack_free(&pv->usb, pv->rbuffer);
+err_wbuffer:
   usbdev_stack_free(&pv->usb, pv->wbuffer);
-  mem_free(pv);
-  return err;
-err1:
-  usbdev_stack_free(&pv->usb, pv->wbuffer);
-err0:
+err_ctrl:
+  device_put_accessor(&pv->usb.base);
+err_pv:
   mem_free(pv);
   return err;
 }
@@ -750,13 +749,16 @@ static DEV_CLEANUP(usbdev_cdc_cleanup)
 {
   struct usbdev_cdc_private_s *pv = dev->drv_pv;
 
+  if (usbdev_stack_service_unregister(&pv->usb, &pv->service))
+    return -EBUSY;
+
   dev_request_queue_destroy(&pv->read_q);
   dev_request_queue_destroy(&pv->write_q);
 
   usbdev_stack_free(&pv->usb, pv->rbuffer);
   usbdev_stack_free(&pv->usb, pv->wbuffer);
 
-  usbdev_stack_service_unregister(&pv->usb, &pv->service);
+  device_put_accessor(&pv->usb.base);
 
   mem_free(pv);
 
