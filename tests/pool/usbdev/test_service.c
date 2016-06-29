@@ -223,7 +223,7 @@ static KROUTINE_EXEC(usbdev_service_test_write_cb)
       break;
     }
 
-  usbdev_test_printk("Write %d on %s\n", done, info->desc);
+  usbdev_test_printk("Write %d on %s\n", info->base - tr->size, info->desc);
 
 #if USBDEV_SERV_TEST_ISOCHRONOUS_ENDPOINT
   if (info == &pv->wiso[0] || info == &pv->wiso[1])
@@ -650,7 +650,7 @@ void app_start()
       return;
     }
 
-#ifdef CONFIG_ARCH_EFM32
+#if defined(CONFIG_DRIVER_USB_SYNOPSYS_EFM32) 
   struct device_cmu_s clock;
   ensure(!device_get_accessor_by_path(&clock.base, NULL, "recmu*", DRIVER_CLASS_CMU));
   /* Switch to clock configuration 3 */

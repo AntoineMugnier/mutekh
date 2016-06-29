@@ -33,8 +33,8 @@
 #define USBDEV_SERV_TEST_CTRL_ITF  (USBDEV_SERV_TEST_IRQ_ITF + USBDEV_SERV_TEST_INTERRUPT_ENDPOINT)
 
 #define USBDEV_TEST_DEVICE_PATH "usb"
-#define USBDEV_TEST_VENDOR_ID 0x10EB
-#define USBDEV_TEST_PRODUCT_ID 0x0026
+#define USBDEV_TEST_VENDOR_ID 0x5A5A
+#define USBDEV_TEST_PRODUCT_ID 0x0000
 
 #define USBDEV_TEST_BULK_BUFFER_SIZE 64
 
@@ -68,7 +68,7 @@ static const struct usbdev_device_info_s usbdevinfo =
       .bNumConfigurations = 1
     },
 
-  .configuration = USB_REMOTE_WAKEUP,
+  .configuration = 0,
   .iconfig = 0,
   .power = 50,
   .str_cnt = 2,
