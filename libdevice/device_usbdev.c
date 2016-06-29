@@ -467,19 +467,23 @@ error_t usbdev_stack_service_register(struct device_usbdev_s *dev,
                                       struct usbdev_service_s *service)
 {
   struct dev_usbdev_context_s *ctx = device_usbdev_context(dev);
+  error_t err = 0;
 
   LOCK_SPIN_IRQ(&dev->dev->lock);
 
   if (ctx->state > DEV_USBDEV_POWERED)
-    return -EBUSY;
-
-  service->rq = NULL;
-
-  usbdev_service_push(&ctx->service, service);
+    {
+      err = -EBUSY;
+    }
+  else
+    {
+      service->rq = NULL;
+      usbdev_service_push(&ctx->service, service);
+    }
 
   LOCK_RELEASE_IRQ(&dev->dev->lock);
 
-  return 0;
+  return err;
 }
 
 /* Remove a USB service on a USB controller */
@@ -488,17 +492,18 @@ error_t usbdev_stack_service_unregister(struct device_usbdev_s *dev,
                                         struct usbdev_service_s *service)
 {
   struct dev_usbdev_context_s *ctx = device_usbdev_context(dev);
+  error_t err = 0;
 
   LOCK_SPIN_IRQ(&dev->dev->lock);
 
   if (ctx->state > DEV_USBDEV_POWERED)
-    return -EBUSY;
-
-  usbdev_service_remove(&ctx->service, service);
+    err = -EBUSY;
+  else
+    usbdev_service_remove(&ctx->service, service);
 
   LOCK_RELEASE_IRQ(&dev->dev->lock);
 
-  return 0;
+  return err;
 }
 
 /* This returns a global endpoint address from an endpoint descriptor */
@@ -1415,6 +1420,7 @@ static inline void usbdev_string_out_desc(struct dev_usbdev_context_s *ctx, size
   /* Langid table */
   if (index == 0)
     {
+      assert(CONFIG_USBDEV_USB_LANGID == 0x0409);
       /* Only one language supported */
       uint32_t d;
       struct usb_string_descriptor_s *desc = (struct usb_string_descriptor_s*)&d;
@@ -2330,8 +2336,11 @@ error_t usbdev_stack_init(struct device_s *dev,
 
 /* This is executed with lock */
 
-void usbdev_stack_cleanup(struct dev_usbdev_context_s *ctx)
+error_t usbdev_stack_cleanup(struct dev_usbdev_context_s *ctx)
 {
+  if (ctx->state > DEV_USBDEV_POWERED)
+    return -EBUSY;
+
   usbdev_service_destroy(&ctx->service);
 
   /* Free endpoint 0 buffer */
@@ -2341,7 +2350,7 @@ void usbdev_stack_cleanup(struct dev_usbdev_context_s *ctx)
   usbdev_ep_init_cleanup(ctx, USB_EP_IN, 0);
   usbdev_ep_init_cleanup(ctx, USB_EP_OUT, 0);
 
-  mem_free(ctx);
+  return 0;
 }
 
 enum usb_transfert_direction_e dev_usbdev_get_transfer_dir(struct dev_usbdev_request_s *tr)

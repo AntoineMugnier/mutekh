@@ -488,7 +488,7 @@ error_t usbdev_stack_init(struct device_s *dev,
                           const struct dev_usbdev_driver_ops_s *ops);
 
 config_depend(CONFIG_DEVICE_USBDEV)
-void usbdev_stack_cleanup(struct dev_usbdev_context_s *ctx);
+error_t usbdev_stack_cleanup(struct dev_usbdev_context_s *ctx);
 
 struct usbdev_interface_s
 {
