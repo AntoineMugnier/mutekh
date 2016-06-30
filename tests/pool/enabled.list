@@ -9,3 +9,4 @@ malloc_stress
 kroutine
 devinit
 usbdev
+drv_max3420

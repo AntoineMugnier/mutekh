@@ -1,1 +1,1 @@
-subdirs = synopsys
+subdirs = max3420 synopsys
