@@ -307,6 +307,10 @@ device_spi_bytecode_exec(struct dev_spi_ctrl_context_s *q,
           break;
         }
 
+#  ifdef CONFIG_DEVICE_SPI_BYTECODE_TIMER
+      dev_timer_value_t t = 0;
+#  endif
+
       switch (op & 0x7000)
         {
         case 0x0000:
@@ -321,11 +325,22 @@ device_spi_bytecode_exec(struct dev_spi_ctrl_context_s *q,
                       err = -ETIMEDOUT;
                       continue;
                     }
-                  dev_timer_value_t t = 0;
+
                   DEVICE_OP(&q->timer, get_value, &t, 0);
+                }
+
+              switch (op & 0x00c0)
+                {
+                case 0x0080: /* delay */
                   rq->sleep_before = t + bc_get_reg(&rq->vm, op & 0xf);
+                  break;
+
+                case 0x0040: /* deadline */
+                  rq->sleep_before = *(dev_timer_value_t*)bc_get_reg(&rq->vm, op & 0xf);
+                  break;
                 }
 #  endif
+
               switch (op & 0x0300)
                 {
                 case 0x0000:    /* yield */
@@ -352,7 +367,7 @@ device_spi_bytecode_exec(struct dev_spi_ctrl_context_s *q,
                   uint8_t csp = (op >> 4) & 3;
                   if ((err = device_spi_ctrl_select(&rq->base, csp)))
                     continue;
-                  if (op & 0x0040) /* setcs */
+                  if (op & 0x00c0) /* setcs */
                     {
                       rq->base.cs_policy = csp;
                       continue;
@@ -366,9 +381,17 @@ device_spi_bytecode_exec(struct dev_spi_ctrl_context_s *q,
                 }
 
 #  ifdef CONFIG_DEVICE_SPI_BYTECODE_TIMER
-                case 0x0300:    /* delay */
-                  if (!(op & 0x0080))
-                    rq->sleep_before = 0;
+                case 0x0300:
+                  switch (op & 0x00c0)
+                    {
+                    case 0x0000: /* nodelay */
+                      rq->sleep_before = 0;
+                      break;
+
+                    case 0x0c00: /* timestamp */
+                      *(dev_timer_value_t*)bc_get_reg(&rq->vm, op & 0xf) = t;
+                      break;
+                    }
                   continue;
 #  endif
 
@@ -389,29 +412,6 @@ device_spi_bytecode_exec(struct dev_spi_ctrl_context_s *q,
                   q->config = NULL;
                 }
               continue;
-            case 0x0800:        /* swp, swpl */
-            case 0x0c00: {
-              uint_fast8_t l = ((op >> 8) & 7) + 1;
-              uint_fast8_t src = op & 0xf;
-              uint_fast8_t dst = (op >> 4) & 0xf;
-              void *addr = src + l >= 16 ? NULL : &rq->vm.v[src];
-              q->padding_word = bc_get_reg(&rq->vm, 14);
-              tr->data.in_width = sizeof(rq->vm.v[0]);
-              tr->data.in = addr;
-              tr->data.count = l;
-              if (dst + l >= 16)
-                {
-                  tr->data.out_width = 0;
-                  tr->data.out = &q->padding_word;
-                }
-              else
-                {
-                  tr->data.out_width = sizeof(rq->vm.v[0]);
-                  tr->data.out = &rq->vm.v[dst];
-                }
-              lock_spin_irq(&q->lock);
-              return device_spi_ctrl_transfer(q, &rq->base);
-            }
             }
           continue;
 
@@ -456,10 +456,24 @@ device_spi_bytecode_exec(struct dev_spi_ctrl_context_s *q,
             }
         }
 
+        case 0x2000:        /* swp, swpl, wr, wrl */
+        case 0x3000: {
+          uint_fast8_t l = ((op >> 8) & 0xf) + 1;
+          uint_fast8_t src = op & 0xf;
+          uint_fast8_t dst = (op >> 4) & 0xf;
+          tr->data.in_width = 1;
+          tr->data.in = op & 0x1000 ? NULL : bc_get_bytepack(&rq->vm, src);
+          tr->data.count = l;
+          tr->data.out_width = 1;
+          tr->data.out = bc_get_bytepack(&rq->vm, dst);
+          lock_spin_irq(&q->lock);
+          return device_spi_ctrl_transfer(q, &rq->base);
+        }
+
 #  ifdef CONFIG_DEVICE_SPI_BYTECODE_GPIO
         case 0x4000:            /* gpio* */
-        case 0x2000:
-        case 0x3000: {
+        case 0x5000:
+        case 0x6000: {
           err = 0;
           if (!device_check_accessor(&rq->base.gpio.base))
             err = -ENOTSUP;
@@ -474,14 +488,14 @@ device_spi_bytecode_exec(struct dev_spi_ctrl_context_s *q,
                   err = DEVICE_OP(&rq->base.gpio, get_input, id, id + w - 1, value);
                   bc_set_reg(&rq->vm, op & 0xf, endian_le32_na_load(value) & ((1 << w) - 1));
                 }
-              else if (op & 0x4000) /* gpiomode */
-                {
-                  err = DEVICE_OP(&rq->base.gpio, set_mode, id, id + w - 1, dev_gpio_mask1, op & 0xf);
-                }
-              else              /* gpioset */
+              else if (op & 0x2000) /* gpioset */
                 {
                   endian_le32_na_store(value, bc_get_reg(&rq->vm, op & 0xf));
                   err = DEVICE_OP(&rq->base.gpio, set_output, id, id + w - 1, value, value);
+                }
+              else              /* gpiomode */
+                {
+                  err = DEVICE_OP(&rq->base.gpio, set_mode, id, id + w - 1, dev_gpio_mask1, op & 0xf);
                 }
             }
           continue;
@@ -576,7 +590,7 @@ void dev_spi_transaction_start(struct device_spi_ctrl_s *ctrl,
 #  endif
 
   rq->base.ctrl = ctrl;
-  struct dev_spi_ctrl_context_s *q = device_spi_ctrl_context(rq->ctrl);
+  struct dev_spi_ctrl_context_s *q = device_spi_ctrl_context(ctrl);
 
   lock_spin_irq(&q->lock);
 
@@ -594,9 +608,10 @@ void dev_spi_transaction_start(struct device_spi_ctrl_s *ctrl,
 # endif
 
 # ifdef CONFIG_DEVICE_SPI_BYTECODE
-error_t dev_spi_bytecode_start(struct device_spi_ctrl_s *ctrl,
-                               struct dev_spi_ctrl_bytecode_rq_s *rq,
-                               const void *pc, uint16_t mask, ...)
+static
+error_t dev_spi_bytecode_start_va(struct device_spi_ctrl_s *ctrl,
+                                  struct dev_spi_ctrl_bytecode_rq_s *rq,
+                                  const void *pc, uint16_t mask, va_list ap)
 {
   error_t err = -EBUSY;
 
@@ -629,10 +644,7 @@ error_t dev_spi_bytecode_start(struct device_spi_ctrl_s *ctrl,
       if (pc != NULL)
         bc_set_pc(&rq->vm, pc);
 
-      va_list ap;
-      va_start(ap, mask);
       bc_set_regs_va(&rq->vm, mask, ap);
-      va_end(ap);
 
       rq->base.err = 0;
       rq->base.enqueued = 1;
@@ -646,6 +658,18 @@ error_t dev_spi_bytecode_start(struct device_spi_ctrl_s *ctrl,
 
  err:
   lock_release_irq(&q->lock);
+
+  return err;
+}
+
+error_t dev_spi_bytecode_start(struct device_spi_ctrl_s *ctrl,
+                               struct dev_spi_ctrl_bytecode_rq_s *rq,
+                               const void *pc, uint16_t mask, ...)
+{
+  va_list ap;
+  va_start(ap, mask);
+  error_t err = dev_spi_bytecode_start_va(ctrl, rq, pc, mask, ap);
+  va_end(ap);
 
   return err;
 }
@@ -890,6 +914,25 @@ error_t dev_spi_wait_transfer(struct device_spi_ctrl_s *accessor,
 
   return tr->err;
 }
+
+# ifdef CONFIG_DEVICE_SPI_BYTECODE
+error_t
+dev_spi_wait_bytecode(struct device_spi_ctrl_s *ctrl,
+                      struct dev_spi_ctrl_bytecode_rq_s *rq,
+                      const void *pc, uint16_t mask, ...)
+{
+  struct dev_request_status_s st;
+
+  dev_request_sched_init(&rq->base.base, &st);
+  va_list ap;
+  va_start(ap, mask);
+  error_t err = dev_spi_bytecode_start_va(ctrl, rq, pc, mask, ap);
+  va_end(ap);
+  if (!err)
+    dev_request_sched_wait(&st);
+  return err;
+}
+# endif
 
 #endif
 

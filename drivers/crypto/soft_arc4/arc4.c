@@ -41,7 +41,7 @@ DRIVER_PV(struct soft_arc4_private_s
   struct dev_request_dlqueue_s queue;
 });
 
-static DEVCRYPTO_INFO(soft_arc4_info)
+static DEV_CRYPTO_INFO(soft_arc4_info)
 {
   if (accessor->number > 0)
     return -ENOENT;
@@ -195,7 +195,7 @@ static DEV_REQUEST_DELAYED_FUNC(soft_arc4_process)
   dev_request_delayed_end(&pv->queue, rq_);
 }
 
-static DEVCRYPTO_REQUEST(soft_arc4_request)
+static DEV_CRYPTO_REQUEST(soft_arc4_request)
 {
   struct device_s *dev = accessor->dev;
   struct soft_arc4_private_s *pv = dev->drv_pv;

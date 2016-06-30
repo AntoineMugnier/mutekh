@@ -574,4 +574,3 @@ DRIVER_DECLARE(nrf5x_uarte_drv, 0, "nRF52 Serial"
                DRIVER_CHAR_METHODS(nrf5x_uarte));
 
 DRIVER_REGISTER(nrf5x_uarte_drv);
-

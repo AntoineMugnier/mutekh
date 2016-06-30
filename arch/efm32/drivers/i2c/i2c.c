@@ -17,7 +17,7 @@
     02110-1301 USA.
 
     Copyright Sebastien Cerdan <sebcerdan@gmail.com> (c) 2014
-
+    Copyright Vincent DEFILIPPI <vincentdefilippi@gmail.com> (c) 2016
 */
 
 #include <hexo/types.h>
@@ -38,326 +38,317 @@
 
 #include <arch/efm32/i2c.h>
 
-#define EFM32_I2C_IRQ_MASK 0x5A8 
-
-  /* Interrupt Mask 
-  EFM32_I2C_IEN_RXDATAV |
-  EFM32_I2C_IEN_TXC     |
-  EFM32_I2C_IEN_BUSERR  |
-  EFM32_I2C_IEN_MSTOP   |
-  EFM32_I2C_IEN_NACK; */
-
+#define EFM32_I2C_IRQ_MASK \
+(\
+  EFM32_I2C_IEN_ACK     |\
+  EFM32_I2C_IEN_RXDATAV |\
+  EFM32_I2C_IEN_NACK    |\
+  EFM32_I2C_IEN_MSTOP   |\
+  EFM32_I2C_IEN_BUSERR  \
+)
 
 enum efm32_i2c_state_e
 {
-  DEV_I2C_EFM32_IDLE,                    
-  DEV_I2C_EFM32_START,
-  DEV_I2C_EFM32_WRITE_DATA,
-  DEV_I2C_EFM32_READ_DATA,
-  DEV_I2C_EFM32_STOP,
-  DEV_I2C_EFM32_END,
+  EFM32_I2C_STATE_IDLE,
+  EFM32_I2C_STATE_START,
+  EFM32_I2C_STATE_WRITE,
+  EFM32_I2C_STATE_READ,
+  EFM32_I2C_STATE_STOP,
 };
 
-DRIVER_PV(struct efm32_i2c_context_s
+DRIVER_PV(struct efm32_i2c_private_s
 {
-  uintptr_t addr;
-  /* Interrupt endpoint */
-  struct dev_irq_src_s irq_ep;
-  /* request queue */
-  dev_request_queue_root_t queue;
-  /* transfert size */
-  uint16_t len;
-  /* transfert count */
-  uint8_t cnt;
-  /* Fsm state */
-  enum efm32_i2c_state_e state;
-  /* Bit rate */
-  uint32_t bit_rate;
-  /* Core frequency */
-  struct dev_freq_s freq;
-
-  struct dev_clock_sink_ep_s clk_ep;
+  uintptr_t                       addr;
+#ifdef CONFIG_DEVICE_CLOCK
+  struct dev_clock_sink_ep_s      clk_ep;
+#endif
+  struct dev_i2c_ctrl_context_s   i2c_ctrl_ctx;
+  struct dev_irq_src_s            irq_ep;
+  struct dev_i2c_ctrl_transfer_s  *tr;
+  enum efm32_i2c_state_e          state;
+  uint32_t                        bitrate;
+  uint32_t                        byte_cnt;
 });
 
-static void efm32_i2c_update_rate(struct efm32_i2c_context_s *pv)
+static void efm32_i2c_start(struct efm32_i2c_private_s *pv);
+static void efm32_i2c_write(struct efm32_i2c_private_s *pv);
+
+static void
+efm32_i2c_update_rate(struct efm32_i2c_private_s *pv, const struct dev_freq_s *freq)
 {
-  /* NLOW + NHIGH */ 
+  /* NLOW + NHIGH */
   static const uint32_t clhr = 4 + 4;
 
-  /* FSCL = FHFPERCLK /(((NLOW + NHIGH ) x (DIV + 1)) + 4) */ 
-  uint32_t div = ((pv->freq.num / (pv->bit_rate * pv->freq.denom)) - 4) / clhr - 1;
+  /* FSCL = FHFPERCLK /(((NLOW + NHIGH ) x (DIV + 1)) + 4) */
+  uint32_t div = ((freq->num / (pv->bitrate * freq->denom)) - 4) / clhr - 1;
   cpu_mem_write_32(pv->addr + EFM32_I2C_CLKDIV_ADDR, endian_le32(div));
 }
 
-static inline uint32_t efm32_i2c_get_txc(struct efm32_i2c_context_s *pv)
+static inline bool_t
+efm32_i2c_get_txbl(struct efm32_i2c_private_s *pv)
 {
-   uint32_t x = cpu_mem_read_32(pv->addr + EFM32_I2C_STATUS_ADDR);
-   return (endian_le32(x) & EFM32_I2C_STATUS_TXC);
+  /* Return 1 when the transmit buffer is empty.
+     Return 0 when the transmit buffer is full. */
+  uint32_t x = cpu_mem_read_32(pv->addr + EFM32_I2C_STATUS_ADDR);
+  return !!(endian_le32(x) & EFM32_I2C_STATUS_TXBL);
 }
 
-static inline uint32_t efm32_i2c_get_txbl(struct efm32_i2c_context_s *pv)
+static inline void
+efm32_i2c_terminate(struct device_s *dev, struct efm32_i2c_private_s *pv)
 {
-   uint32_t x = cpu_mem_read_32(pv->addr + EFM32_I2C_STATUS_ADDR);
-   return (endian_le32(x) & EFM32_I2C_STATUS_TXBL);
+  kroutine_exec(&pv->tr->kr);
+  pv->tr = NULL;
 }
 
-static inline uint32_t efm32_i2c_get_rxdatav(struct efm32_i2c_context_s *pv)
+static inline void
+efm32_i2c_abort(struct device_s *dev, struct efm32_i2c_private_s *pv)
 {
-   uint32_t x = cpu_mem_read_32(pv->addr + EFM32_I2C_STATUS_ADDR);
-   return (endian_le32(x) & EFM32_I2C_STATUS_RXDATAV);
+  uint32_t cmd = \
+                 //EFM32_I2C_CMD_ABORT |
+                 EFM32_I2C_CMD_STOP |
+                 EFM32_I2C_CMD_CLEARTX |
+                 EFM32_I2C_CMD_CLEARPC;
+
+  cpu_mem_write_32(pv->addr + EFM32_I2C_CMD_ADDR, endian_le32(cmd));
 }
 
-static void efm32_i2c_fsm(struct efm32_i2c_context_s *pv, bool_t stop)
+static inline void
+efm32_i2c_read_done(struct device_s *dev, struct efm32_i2c_private_s *pv)
 {
-  uint32_t x;
+  uint8_t data = cpu_mem_read_32(pv->addr + EFM32_I2C_RXDATA_ADDR);
+  pv->tr->data[pv->byte_cnt] = endian_le32(data);
+  pv->byte_cnt++;
 
-  while(1)
+  if (pv->byte_cnt < pv->tr->size)
     {
-        struct dev_request_s *base = dev_request_queue_head(&pv->queue);
-        struct dev_i2c_rq_s *rq = dev_i2c_rq_s_cast(base);
-        struct dev_i2c_transfer_s *ctr = rq->transfer + pv->cnt;
-        
-        if (rq == NULL)
-          return;
-
-//        printk("state: %d\n", pv->state);
-        switch (pv->state)
-          {
-            case DEV_I2C_EFM32_IDLE: /* 0 */
-              rq->error = 0;
-              rq->error_transfer = 0;
-              rq->error_offset = 0;
-              pv->cnt = 0;
-              pv->state = DEV_I2C_EFM32_START;
-              break;
-
-            case DEV_I2C_EFM32_START: /* 1 */
-
-              /* TX buffer must be empty when restart */
-              if (!efm32_i2c_get_txbl(pv))
-                return;
-
-              /** Send start condition */ 
-              x = EFM32_I2C_CMD_START; 
-              cpu_mem_write_32(pv->addr + EFM32_I2C_CMD_ADDR, endian_le32(x));
-
-              pv->state = DEV_I2C_EFM32_STOP;
-              pv->len = ctr->size;
-
-              /* Prepare address byte */
-              x = (rq->saddr << 1) & 0xFE;
-
-              if (ctr->size)
-                {
-                  if (ctr->type == DEV_I2C_WRITE)
-                    pv->state = DEV_I2C_EFM32_WRITE_DATA;
-                  else
-                    {
-                      pv->state = DEV_I2C_EFM32_READ_DATA;
-                      x |= 1; 
-                    }
-                }
-
-              /* Send address byte */
-              cpu_mem_write_32(pv->addr + EFM32_I2C_TXDATA_ADDR, endian_le32(x));
-
-              break;
-            
-            case DEV_I2C_EFM32_WRITE_DATA:{ /* 2 */
-
-              if (!efm32_i2c_get_txbl(pv))
-                return;
-
-              x = ctr->data[ctr->size - pv->len];
-              cpu_mem_write_32(pv->addr + EFM32_I2C_TXDATA_ADDR, endian_le32(x)); 
-              pv->len--;
-
-              if (!pv->len)
-                {
-                  pv->cnt++;
-
-                  if (pv->cnt == rq->transfer_count)
-                    {
-                      pv->state = DEV_I2C_EFM32_STOP;
-                      break;
-                    }
-
-                  struct dev_i2c_transfer_s * next = ctr + 1;
-
-                  if (next->type != ctr->type)
-                    {
-                      /* Restart must be send */
-                      pv->state = DEV_I2C_EFM32_START;
-                      break;
-                    }
-
-                  ctr = next;
-                  pv->len = ctr->size;
-                }
-              
-              break;}
-
-            case DEV_I2C_EFM32_READ_DATA:{ /* 3 */
-
-              if (!efm32_i2c_get_rxdatav(pv))
-                return;
-
-              x = cpu_mem_read_32(pv->addr + EFM32_I2C_RXDATA_ADDR);
-              ctr->data[ctr->size - pv->len] = endian_le32(x);
-              pv->len--;
-
-              /* Acknoledge */
-              x = EFM32_I2C_CMD_ACK;
-
-              if (!pv->len)
-                {
-                  pv->cnt++;
-
-                  if (pv->cnt == rq->transfer_count)
-                    {
-                      x = EFM32_I2C_CMD_NACK; 
-                      pv->state = DEV_I2C_EFM32_STOP;
-                    }
-                  else
-                    {
-                      struct dev_i2c_transfer_s * next = ctr + 1;
-                     
-                      if (next->type != ctr->type)
-                        {
-                          x = EFM32_I2C_CMD_NACK; 
-                          /* Restart must be send */
-                          pv->state = DEV_I2C_EFM32_START;
-                        }
-
-                      pv->len = next->size;
-                    }
-                }
-
-              cpu_mem_write_32(pv->addr + EFM32_I2C_CMD_ADDR, endian_le32(x));
-
-              break;}
-
-            case DEV_I2C_EFM32_STOP: /* 4 */
-              /* TX buffer must be empty. */
-              if (!efm32_i2c_get_txc(pv))
-                return;
-
-              /* Send stop condition. */
-              cpu_mem_write_32(pv->addr + EFM32_I2C_CMD_ADDR, endian_le32(EFM32_I2C_CMD_STOP));
-              pv->state = DEV_I2C_EFM32_END;
-              break;
-
-            
-            case DEV_I2C_EFM32_END: /* 5 */
-              if (stop)
-                {
-                  /* Clear controller. */
-                  x = EFM32_I2C_CMD_ABORT |
-                      EFM32_I2C_CMD_CLEARTX |
-                      EFM32_I2C_CMD_CLEARPC;
-
-                  cpu_mem_write_32(pv->addr + EFM32_I2C_CMD_ADDR, endian_le32(x));
-
-                  pv->state = DEV_I2C_EFM32_IDLE;
-                }
-              return;
-
-          } 
+      cpu_mem_write_32(pv->addr + EFM32_I2C_CMD_ADDR, endian_le32(EFM32_I2C_CMD_ACK));
+      return;
     }
+
+  if ((pv->tr->type & _DEV_I2C_ENDING_MASK) == _DEV_I2C_STOP)
+    {
+      pv->state = EFM32_I2C_STATE_STOP;
+      cpu_mem_write_32(pv->addr + EFM32_I2C_CMD_ADDR, endian_le32(EFM32_I2C_CMD_NACK));
+      cpu_mem_write_32(pv->addr + EFM32_I2C_CMD_ADDR, endian_le32(EFM32_I2C_CMD_STOP));
+      return;
+    }
+  else if ((pv->tr->type & _DEV_I2C_ENDING_MASK) == _DEV_I2C_RESTART)
+    {
+      pv->state = EFM32_I2C_STATE_IDLE;
+      cpu_mem_write_32(pv->addr + EFM32_I2C_CMD_ADDR, endian_le32(EFM32_I2C_CMD_NACK));
+    }
+
+  efm32_i2c_terminate(dev, pv);
 }
 
-/***************************************** config */
-
-static DEV_I2C_CONFIG(efm32_i2c_config)
+static inline void
+efm32_i2c_write_done(struct device_s *dev, struct efm32_i2c_private_s *pv)
 {
-  struct device_s               *dev = accessor->dev;
-  struct efm32_i2c_context_s    *pv  = dev->drv_pv;
+  if (pv->byte_cnt < pv->tr->size)
+    {
+      efm32_i2c_write(pv);
+      return;
+    }
 
-  pv->bit_rate = config->bit_rate;
-  efm32_i2c_update_rate(pv);
+  if ((pv->tr->type & _DEV_I2C_ENDING_MASK) == _DEV_I2C_STOP)
+    {
+      pv->state = EFM32_I2C_STATE_STOP;
+      cpu_mem_write_32(pv->addr + EFM32_I2C_CMD_ADDR, endian_le32(EFM32_I2C_CMD_STOP));
+      return;
+    }
+  else if ((pv->tr->type & _DEV_I2C_ENDING_MASK) == _DEV_I2C_RESTART)
+    {
+      pv->state = EFM32_I2C_STATE_IDLE;
+    }
 
-  return 0;
+  efm32_i2c_terminate(dev, pv);
 }
 
-/***************************************** transfer */
-
-static DEV_IRQ_SRC_PROCESS(efm32_i2c_irq)
+static void
+efm32_i2c_start_done(struct device_s *dev, struct efm32_i2c_private_s *pv)
 {
-  struct device_s             *dev = ep->base.dev;
-  struct efm32_i2c_context_s  *pv  = dev->drv_pv;
+  if (!(pv->tr->type & _DEV_I2C_READ_OP))
+    {
+      pv->state = EFM32_I2C_STATE_WRITE;
+      if (pv->tr->size == 0)
+        efm32_i2c_write_done(dev, pv);
+      else
+        efm32_i2c_write(pv);
+    }
+  else
+    pv->state = EFM32_I2C_STATE_READ;
+}
+
+static
+DEV_IRQ_SRC_PROCESS(efm32_i2c_irq)
+{
+  struct device_s                  *dev = ep->base.dev;
+  struct efm32_i2c_private_s       *pv  = dev->drv_pv;
 
   lock_spin(&dev->lock);
 
-  struct dev_request_s *base = dev_request_queue_head(&pv->queue);
-  struct dev_i2c_rq_s *rq = dev_i2c_rq_s_cast(base);
-
-  bool_t stop = 0;
-
-  while (1)
+  while (dev->start_count != 0)
     {
-      /* get interurpt flags */
-      uint32_t x = endian_le32(cpu_mem_read_32(pv->addr + EFM32_I2C_IF_ADDR));
-      x &= EFM32_I2C_IRQ_MASK;
-
+      uint32_t irq = endian_le32(cpu_mem_read_32(pv->addr + EFM32_I2C_IF_ADDR));
       /* Reset interrupts flags */
-      cpu_mem_write_32(pv->addr + EFM32_I2C_IFC_ADDR, endian_le32(EFM32_I2C_IFC_MASK));
+      cpu_mem_write_32(pv->addr + EFM32_I2C_IFC_ADDR, endian_le32(irq));
+      irq &= EFM32_I2C_IRQ_MASK;
 
-      if (!x || (rq == NULL))
+      if (!irq || (pv->tr == NULL))
         break;
-     
-      if (x & (EFM32_I2C_IF_MSTOP | EFM32_I2C_IF_BUSERR | EFM32_I2C_IF_NACK))
-        stop = 1;
-      
-      if (x & (EFM32_I2C_IF_BUSERR | EFM32_I2C_IF_NACK))
+
+      uint32_t status = endian_le32(cpu_mem_read_32(pv->addr + EFM32_I2C_STATUS_ADDR));
+
+      if (irq & EFM32_I2C_IF_BUSERR)
         {
-           rq->error = -EHOSTUNREACH;
-           rq->error_transfer = pv->cnt;
-           rq->error_offset = 0;
-           pv->state = DEV_I2C_EFM32_END;
+          pv->tr->err = -EIO;
+          efm32_i2c_abort(dev, pv);
+          pv->state = EFM32_I2C_STATE_STOP;
         }
-
-      efm32_i2c_fsm(pv, stop);
-
-      if (stop)
+      else if (irq & EFM32_I2C_IF_NACK)
         {
-          dev_request_queue_pop(&pv->queue);
-          break;
+          pv->tr->err = -EAGAIN;
+          if (pv->state == EFM32_I2C_STATE_START)
+            pv->tr->err = -EHOSTUNREACH;
+          efm32_i2c_abort(dev, pv);
+          pv->state = EFM32_I2C_STATE_STOP;
+        }
+      else
+        {
+          switch (pv->state)
+            {
+              case EFM32_I2C_STATE_START:
+                if (status & EFM32_I2C_IF_ACK)
+                  efm32_i2c_start_done(dev, pv);
+                break;
+
+              case EFM32_I2C_STATE_WRITE:
+                if (status & EFM32_I2C_IF_ACK)
+                  efm32_i2c_write_done(dev, pv);
+                break;
+
+              case EFM32_I2C_STATE_READ:
+                if (status & EFM32_I2C_STATUS_RXDATAV)
+                  efm32_i2c_read_done(dev, pv);
+                break;
+
+              case EFM32_I2C_STATE_STOP:
+                if (irq & EFM32_I2C_IF_MSTOP)
+                  {
+                    efm32_i2c_terminate(dev, pv);
+                    pv->state = EFM32_I2C_STATE_IDLE;
+                    dev->start_count &= ~1;
+                  }
+                break;
+
+              default:
+                break;
+            }
         }
     }
-   
-  if (stop)
-    {
-      kroutine_exec(&base->kr);
 
-      base = dev_request_queue_head(&pv->queue);
-      rq = dev_i2c_rq_s_cast(base);
-
-      if (rq != NULL && (pv->state == DEV_I2C_EFM32_IDLE))
-        efm32_i2c_fsm(pv, 0);
-    }
+# ifdef CONFIG_DEVICE_CLOCK_GATING
+  if (dev->start_count == 0)
+    dev_clock_sink_gate(&pv->clk_ep, DEV_CLOCK_EP_POWER);
+# endif
 
   lock_release(&dev->lock);
 }
 
-static DEV_I2C_REQUEST(efm32_i2c_request)
+static void
+efm32_i2c_write(struct efm32_i2c_private_s *pv)
+{
+  /* TX buffer must not be full. */
+  assert(efm32_i2c_get_txbl(pv));
+
+  while (pv->byte_cnt < pv->tr->size && efm32_i2c_get_txbl(pv))
+    {
+      uint8_t data = pv->tr->data[pv->byte_cnt];
+      cpu_mem_write_32(pv->addr + EFM32_I2C_TXDATA_ADDR, endian_le32(data));
+      pv->byte_cnt++;
+    }
+}
+
+static void
+efm32_i2c_start(struct efm32_i2c_private_s *pv)
+{
+  /* TX buffer must not be full. */
+  assert(efm32_i2c_get_txbl(pv));
+
+  cpu_mem_write_32(pv->addr + EFM32_I2C_CMD_ADDR, endian_le32(EFM32_I2C_CMD_START));
+
+  uint32_t saddr = (pv->tr->saddr << 1) & 0xFE;
+  if (pv->tr->type & _DEV_I2C_READ_OP)
+    saddr++;
+
+  cpu_mem_write_32(pv->addr + EFM32_I2C_TXDATA_ADDR, endian_le32(saddr));
+}
+
+static
+DEV_I2C_CTRL_TRANSFER(efm32_i2c_transfer)
 {
   struct device_s               *dev = accessor->dev;
-  struct efm32_i2c_context_s    *pv  = dev->drv_pv;
-
-  assert(req->transfer_count);
+  struct efm32_i2c_private_s    *pv  = dev->drv_pv;
 
   LOCK_SPIN_IRQ(&dev->lock);
 
-  bool_t start = dev_request_queue_isempty(&pv->queue);
- 
-  dev_request_queue_pushback(&pv->queue, &req->base);
+  if (pv->tr != NULL)
+    {
+      tr->err = -EBUSY;
+      kroutine_exec(&tr->kr);
+      goto out;
+    }
 
-  if (start)
-    efm32_i2c_fsm(pv, 0);
 
+  dev->start_count |= 1;
+# ifdef CONFIG_DEVICE_CLOCK_GATING
+  dev_clock_sink_gate(&pv->clk_ep, DEV_CLOCK_EP_POWER_CLOCK);
+# endif
+
+  if (tr->type == DEV_I2C_RESET)
+    {
+      if (pv->state != EFM32_I2C_STATE_IDLE)
+        efm32_i2c_abort(dev, pv);
+      pv->state = EFM32_I2C_STATE_IDLE;
+      kroutine_exec(&tr->kr);
+      dev->start_count &= ~1;
+      goto out;
+    }
+
+  pv->tr = tr;
+  pv->byte_cnt = 0;
+  tr->err = 0;
+
+  if (pv->state == EFM32_I2C_STATE_IDLE)
+    {
+      pv->state = EFM32_I2C_STATE_START;
+      efm32_i2c_start(pv);
+    }
+  else if (!(pv->tr->type & _DEV_I2C_READ_OP) && pv->state == EFM32_I2C_STATE_WRITE)
+    {
+      pv->state = EFM32_I2C_STATE_WRITE;
+      efm32_i2c_write(pv);
+    }
+  else if (pv->tr->type & _DEV_I2C_READ_OP && pv->state == EFM32_I2C_STATE_READ)
+    {
+      pv->state = EFM32_I2C_STATE_READ;
+      /* Generate the ACK for the previous request */
+      cpu_mem_write_32(pv->addr + EFM32_I2C_CMD_ADDR, endian_le32(EFM32_I2C_CMD_ACK));
+    }
+  else
+    {
+      if (pv->state != EFM32_I2C_STATE_IDLE)
+        efm32_i2c_abort(dev, pv);
+      pv->state = EFM32_I2C_STATE_IDLE;
+      pv->tr->err = -ENOTSUP;
+      kroutine_exec(&tr->kr);
+      dev->start_count &= ~1;
+      goto out;
+    }
+
+ out:
   LOCK_RELEASE_IRQ(&dev->lock);
 }
-
 
 static DEV_USE(efm32_i2c_use)
 {
@@ -368,9 +359,35 @@ static DEV_USE(efm32_i2c_use)
       struct dev_clock_notify_s *chg = param;
       struct dev_clock_sink_ep_s *sink = chg->sink;
       struct device_s *dev = sink->dev;
-      struct efm32_i2c_context_s *pv = dev->drv_pv;
-      pv->freq = chg->freq;
-      efm32_i2c_update_rate(pv);
+      struct efm32_i2c_private_s *pv = dev->drv_pv;
+# ifdef CONFIG_DEVICE_CLOCK_GATING
+      dev_clock_sink_gate(&pv->clk_ep, DEV_CLOCK_EP_POWER_CLOCK);
+# endif
+     efm32_i2c_update_rate(pv, &chg->freq);
+# ifdef CONFIG_DEVICE_CLOCK_GATING
+      if (dev->start_count == 0)
+        dev_clock_sink_gate(&pv->clk_ep, DEV_CLOCK_EP_POWER);
+# endif
+      return 0;
+    }
+#endif
+
+#ifdef CONFIG_DEVICE_CLOCK_GATING
+    case DEV_USE_START: {
+      struct device_accessor_s *acc = param;
+      struct device_s *dev = acc->dev;
+      struct efm32_i2c_private_s *pv = dev->drv_pv;
+      if (dev->start_count == 0)
+        dev_clock_sink_gate(&pv->clk_ep, DEV_CLOCK_EP_POWER_CLOCK);
+      return 0;
+    }
+
+    case DEV_USE_STOP: {
+      struct device_accessor_s *acc = param;
+      struct device_s *dev = acc->dev;
+      struct efm32_i2c_private_s *pv = dev->drv_pv;
+      if (dev->start_count == 0)
+        dev_clock_sink_gate(&pv->clk_ep, DEV_CLOCK_EP_POWER);
       return 0;
     }
 #endif
@@ -380,10 +397,11 @@ static DEV_USE(efm32_i2c_use)
     }
 }
 
-static DEV_INIT(efm32_i2c_init)
-{
-  struct efm32_i2c_context_s    *pv;
 
+static
+DEV_INIT(efm32_i2c_init)
+{
+  struct efm32_i2c_private_s    *pv;
 
   /* allocate driver private context. */
   pv = mem_alloc(sizeof(*pv), (mem_scope_sys));
@@ -394,95 +412,124 @@ static DEV_INIT(efm32_i2c_init)
 
   dev->drv_pv = pv;
 
+  struct dev_freq_s freq;
+#ifdef CONFIG_DEVICE_CLOCK
   /* enable clock */
   if (dev_drv_clock_init(dev, &pv->clk_ep, 0, DEV_CLOCK_EP_FREQ_NOTIFY |
-                     DEV_CLOCK_EP_POWER_CLOCK | DEV_CLOCK_EP_GATING_SYNC, &pv->freq))
+                     DEV_CLOCK_EP_POWER_CLOCK | DEV_CLOCK_EP_GATING_SYNC, &freq))
     goto err_mem;
-
-  dev_request_queue_init(&pv->queue);
+#else
+  if (device_get_res_freq(dev, &freq, 0))
+    goto err_mem;
+#endif
 
   /* retreive the device base address from device tree. */
   if(device_res_get_uint(dev, DEV_RES_MEM, 0, &pv->addr, NULL))
     goto err_clk;
 
-  /* Reset Device by disabling controller */
-  cpu_mem_write_32(pv->addr + EFM32_I2C_CTRL_ADDR, 0);  
-  
-  /* Send ABORT command as specified in reference manual*/
-  uint32_t x = EFM32_I2C_CMD_ABORT |
-               EFM32_I2C_CMD_CLEARTX |
-               EFM32_I2C_CMD_CLEARPC;
+#ifdef CONFIG_DEVICE_I2C_REQUEST
+  if (dev_i2c_context_init(dev, &pv->i2c_ctrl_ctx))
+    goto err_queue;
+#endif
 
-  cpu_mem_write_32(pv->addr + EFM32_I2C_CMD_ADDR, endian_le32(x));
+  /* Reset Device by disabling controller (bus idle timeout has not effect). */
+  cpu_mem_write_32(pv->addr + EFM32_I2C_CTRL_ADDR, 0);
+
+  /* Send ABORT command as specified in reference manual*/
+  uint32_t cmd = EFM32_I2C_CMD_ABORT |
+                 EFM32_I2C_CMD_CLEARTX |
+                 EFM32_I2C_CMD_CLEARPC;
+
+  cpu_mem_write_32(pv->addr + EFM32_I2C_CMD_ADDR, endian_le32(cmd));
 
   /* Disable and clear interrupts */
-  cpu_mem_write_32(pv->addr + EFM32_I2C_IEN_ADDR, 0);  
+  cpu_mem_write_32(pv->addr + EFM32_I2C_IEN_ADDR, 0);
 
   /* setup pinmux */
   iomux_demux_t loc[2];
   if (device_iomux_setup(dev, ",scl ,sda", loc, NULL, NULL))
-    goto err_clk;
+    goto err_queue;
 
   uint32_t route = EFM32_I2C_ROUTE_SCLPEN | EFM32_I2C_ROUTE_SDAPEN;
-
   EFM32_I2C_ROUTE_LOCATION_SETVAL(route, loc[0]);
-
   cpu_mem_write_32(pv->addr + EFM32_I2C_ROUTE_ADDR, endian_le32(route));
 
   device_irq_source_init(dev, &pv->irq_ep, 1, &efm32_i2c_irq);
-
   if (device_irq_source_link(dev, &pv->irq_ep, 1, -1))
-    goto err_clk;
+    goto err_queue;
 
-  pv->bit_rate = 100000;
-  efm32_i2c_update_rate(pv);
 
-  /* Enable controller - Send stop on nack reception - clock stretching timeout */
-  x = EFM32_I2C_CTRL_EN | EFM32_I2C_CTRL_AUTOSN;
-       
-  cpu_mem_write_32(pv->addr + EFM32_I2C_CTRL_ADDR, endian_le32(x));  
+  if(device_res_get_uint(dev, DEV_RES_I2C_BITRATE, 0, &pv->bitrate, NULL))
+    goto err_link;
+
+  efm32_i2c_update_rate(pv, &freq);
+
+  /* Enable controller */
+  uint32_t x = EFM32_I2C_CTRL_EN;
+  cpu_mem_write_32(pv->addr + EFM32_I2C_CTRL_ADDR, endian_le32(x));
 
   /* Clear interrupts flags */
   cpu_mem_write_32(pv->addr + EFM32_I2C_IFC_ADDR, endian_le32(EFM32_I2C_IFC_MASK));
-  
-  cpu_mem_write_32(pv->addr + EFM32_I2C_IEN_ADDR, endian_le32(EFM32_I2C_IRQ_MASK)); 
+  cpu_mem_write_32(pv->addr + EFM32_I2C_IEN_ADDR, endian_le32(EFM32_I2C_IRQ_MASK));
 
+  pv->state = EFM32_I2C_STATE_IDLE;
+
+#ifdef CONFIG_DEVICE_CLOCK_GATING
+  dev_clock_sink_gate(&pv->clk_ep, DEV_CLOCK_EP_POWER);
+#endif
 
   return 0;
 
- err_clk:
+err_link:
+  device_irq_source_unlink(dev, &pv->irq_ep, 1);
+
+err_queue:
+#ifdef CONFIG_DEVICE_I2C_REQUEST
+  dev_i2c_context_cleanup(&pv->i2c_ctrl_ctx);
+#endif
+
+err_clk:
+#ifdef CONFIG_DEVICE_CLOCK
   dev_drv_clock_cleanup(dev, &pv->clk_ep);
- err_mem:
+#endif
+
+err_mem:
   mem_free(pv);
   return -EINVAL;
 }
 
-static DEV_CLEANUP(efm32_i2c_cleanup)
+static
+DEV_CLEANUP(efm32_i2c_cleanup)
 {
-  struct efm32_i2c_context_s    *pv;
+  struct efm32_i2c_private_s    *pv = dev->drv_pv;
 
-  pv = dev->drv_pv;
+  if (pv->tr)
+    return -EBUSY;
 
-  /* disable I2C device and clear interurpts. */
-  cpu_mem_write_32(pv->addr + EFM32_I2C_CTRL_ADDR, 0);  
-  cpu_mem_write_32(pv->addr + EFM32_I2C_IEN_ADDR, 0);  
-  cpu_mem_write_32(pv->addr + EFM32_I2C_IF_ADDR, 0);  
-
-  dev_drv_clock_cleanup(dev, &pv->clk_ep);
+#ifdef CONFIG_DEVICE_CLOCK_GATING
+  dev_clock_sink_gate(&pv->clk_ep, DEV_CLOCK_EP_POWER_CLOCK);
+#endif
 
   device_irq_source_unlink(dev, &pv->irq_ep, 1);
 
-  /* Destroy request queue */
-  dev_request_queue_destroy(&pv->queue);
+  /* disable I2C device and interrupts. */
+  cpu_mem_write_32(pv->addr + EFM32_I2C_IEN_ADDR, 0);
+  cpu_mem_write_32(pv->addr + EFM32_I2C_CTRL_ADDR, 0);
 
-  /* deallocate private driver context. */
+#ifdef CONFIG_DEVICE_I2C_REQUEST
+  dev_i2c_context_cleanup(&pv->i2c_ctrl_ctx);
+#endif
+
+#ifdef CONFIG_DEVICE_CLOCK
+  dev_drv_clock_cleanup(dev, &pv->clk_ep);
+#endif
+
   mem_free(pv);
-
   return 0;
 }
 
 DRIVER_DECLARE(efm32_i2c_drv, 0, "EFM32 i2c", efm32_i2c,
-               DRIVER_I2C_METHODS(efm32_i2c));
+               DRIVER_I2C_CTRL_METHODS(efm32_i2c));
 
 DRIVER_REGISTER(efm32_i2c_drv);
 

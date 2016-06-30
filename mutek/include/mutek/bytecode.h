@@ -179,6 +179,9 @@
      @item @tt{msbs32 reg} @item Find the position of the most significant bit set in range [0, 31].
      @item @tt{exts reg, bit_index} @item Sign extend a register using the specified sign bit in the range [0,31].
      @item @tt{extz reg, bit_index} @item Clear all bits in a register above specified bit in the range [0,31].
+     @item @tt{swapN reg} @item Exchange bytes of a 16 bits or 32 bits values.
+     @item @tt{swapNle reg} @item Exchange bytes only when running on a big endian processor, used to access little endian data in portable way.
+     @item @tt{swapNbe reg} @item Exchange bytes only when running on a little endian processor, used to access big endian data in portable way.
    @end table
 
    The following comparison operations are available:
@@ -269,6 +272,23 @@
      global symbol. (bytecode will not be portable)
      @item @tt{.data16 value} @item Dump a 16 bits word value in the program.
    @end table
+
+   Some instructions are provided to handle packing of some register values
+   to an array of bytes. These are used with custom operations which needs to
+   deal with byte buffers. When in packed form, register value are meaning less
+   for the bytecode program but may be accessed from the C code using the
+   @ref bc_get_bytepack function. These instructions allow writing portable
+   bytecode programs:
+   @table 2
+     @item Instruction @item Description
+     @item @tt{pack* reg_1st, reg_count} @item Converts from one or multiple vm register values to
+       an array of bytes with various encoding. Each register is stored in the buffer encoded as a 8 bits,
+       16 bits or 32 bits value with the specified endianess. The storage space of vm registers is
+       used to store the array, clobbering the original register values.
+     @item @tt{unpack* reg_1st, reg_count} @item Converts from an array of bytes with the specified
+       encoding to one or multiple vm register values. This clobbers the content of the array.
+   @end table
+
    @end section
 
    @section {Generic opcodes table}
@@ -285,7 +305,11 @@
     @item call8               @item r, lbl        @item @tt{0010 llll llll rrrr} @item  0
     @item jmp8                @item lbl           @item @tt{0010 llll llll 0000} @item  0
     @item ret                 @item r             @item @tt{0010 0000 0000 rrrr} @item  0
-    @item loop                @item r, lbl        @item @tt{0011 llll llll rrrr} @item  0
+    @item loop                @item r, lbl        @item @tt{0011 0lll llll rrrr} @item  0
+
+    @item {un,}pack8          @item r, c          @item @tt{0011 1ccc oooo rrrr} @item  4
+    @item {un,}pack{16,32}{le,be} @item r, c      @item @tt{0011 1ccc oooo rrrr} @item  4
+    @item swap{16,32}{le,be,} @item r             @item @tt{0011 1000 oooo rrrr} @item  4
 
     @item eq                  @item r, r          @item @tt{0100 0000 rrrr rrrr} @item  1
     @item eq0                 @item r             @item @tt{0100 0000 rrrr rrrr} @item  1
@@ -416,6 +440,14 @@ bc_get_reg(struct bc_context_s *ctx, uint_fast8_t i)
   return ctx->v[i];
 }
 
+/** @This returns a pointer to a packed array of bytes stored in virtual
+    machine register storage. See the @tt pack and @tt unpack instructions. */
+ALWAYS_INLINE uint8_t *
+bc_get_bytepack(struct bc_context_s *ctx, uint_fast8_t i)
+{
+  return (uint8_t*)(ctx->v + i);
+}
+
 /** @This sets the value of one of the 16 virtual machine registers */
 ALWAYS_INLINE void
 bc_set_reg(struct bc_context_s *ctx, uint_fast8_t i, bc_reg_t value)
@@ -523,6 +555,7 @@ enum bc_opcode_e
   BC_OP_CST8 = 0x10,
   BC_OP_JMP  = 0x20,
   BC_OP_LOOP = 0x30,
+  BC_OP_PACK = 0x38,
 
   BC_OP_FMT1 = 0x40,
     BC_OP_EQ   = 0x40,
@@ -562,8 +595,29 @@ enum bc_opcode_e
     BC_OP_STE  = 0x79,
 };
 
+/** @internal @This specifies packing and byteswap opcode operations */
+enum bc_opcode_pack_e
+{
+  BC_OP_PACK8       = 0,
+  BC_OP_PACK16LE    = 1,
+  BC_OP_PACK16BE    = 2,
+  BC_OP_UNPACK16LE  = 3,
+  BC_OP_UNPACK16BE  = 4,
+  BC_OP_SWAP16LE    = 5,
+  BC_OP_SWAP16BE    = 6,
+  BC_OP_SWAP16      = 7,
+  BC_OP_UNPACK8     = 8,
+  BC_OP_PACK32LE    = 9,
+  BC_OP_PACK32BE    = 10,
+  BC_OP_UNPACK32LE  = 11,
+  BC_OP_UNPACK32BE  = 12,
+  BC_OP_SWAP32LE    = 13,
+  BC_OP_SWAP32BE    = 14,
+  BC_OP_SWAP32      = 15,
+};
+
 /** @see #BC_CCALL_FUNCTION */
-#define BC_CCALL_FUNCTION(n) bc_reg_t (n)(struct bc_context_s *ctx, bc_reg_t dst)
+#define BC_CCALL_FUNCTION(n) bc_reg_t (n)(const struct bc_context_s *ctx, bc_reg_t dst)
 /** C function type invoked by the @tt ccall instruction. */
 typedef BC_CCALL_FUNCTION(bc_ccall_function_t);
 

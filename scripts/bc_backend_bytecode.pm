@@ -70,6 +70,12 @@ sub fmt3
     return word( $thisop->{op}->{code} | ($s << 9) | (($a & 0xf) << 4) | ($r & 0xf) );
 }
 
+sub fmt4
+{
+    my ($thisop, $c, $o, $r) = @_;
+    return word( $thisop->{op}->{code} | ($c << 8) | (($o & 0xf) << 4) | ($r & 0xf) );
+}
+
 sub out_end {
     return fmt0( shift, 0, 0 );
 }
@@ -142,7 +148,41 @@ sub out_ret {
 
 sub out_loop {
     my ($thisop) = @_;
-    return fmt0( $thisop, $thisop->{disp}, $thisop->{in}->[0] );
+    return fmt0( $thisop, $thisop->{disp} & 0x7f, $thisop->{in}->[0] );
+}
+
+our %packops = (
+    'pack8' => 0,
+    'pack16le' => 1,
+    'pack16be' => 2,
+    'unpack16le' => 3,
+    'unpack16be' => 4,
+    'swap16le' => 5,
+    'swap16be' => 6,
+    'swap16' => 7,
+    'unpack8' => 8,
+    'pack32le' => 9,
+    'pack32be' => 10,
+    'unpack32le' => 11,
+    'unpack32be' => 12,
+    'swap32le' => 13,
+    'swap32be' => 14,
+    'swap32' => 15
+    );
+
+sub out_pack {
+    my ($thisop) = @_;
+    return fmt4( $thisop, $thisop->{count} - 1, $packops{$thisop->{name}}, $thisop->{reg} );
+}
+
+sub out_unpack {
+    my ($thisop) = @_;
+    return fmt4( $thisop, $thisop->{count} - 1, $packops{$thisop->{name}}, $thisop->{reg} );
+}
+
+sub out_swap {
+    my ($thisop) = @_;
+    return fmt4( $thisop, 0, $packops{$thisop->{name}}, $thisop->{in}->[0] );
 }
 
 sub out_eq {

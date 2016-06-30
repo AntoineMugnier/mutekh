@@ -141,24 +141,31 @@
 
     @item generic instructions     @item               @item @tt{0--- ---- ---- ----}
 
-    @item spi_delay                @item r             @item @tt{1000 0011 10-- rrrr}
     @item spi_nodelay              @item               @item @tt{1000 0011 00-- ----}
+    @item spi_deadline             @item r             @item @tt{1000 0011 01-- rrrr}
+    @item spi_delay                @item r             @item @tt{1000 0011 10-- rrrr}
+    @item spi_timestamp            @item r             @item @tt{1000 0011 11-- rrrr}
 
     @item spi_yield                @item               @item @tt{1000 0000 001- ----}
     @item spi_yield_delay          @item r             @item @tt{1000 0000 101- rrrr}
+    @item spi_yield_deadline       @item r             @item @tt{1000 0000 011- rrrr}
     @item spi_yieldc               @item               @item @tt{1000 0000 000- ----}
     @item spi_yieldc_delay         @item r             @item @tt{1000 0000 100- rrrr}
+    @item spi_yieldc_deadline      @item r             @item @tt{1000 0000 010- rrrr}
 
     @item spi_wait                 @item cs            @item @tt{1000 0010 00cc ----}
     @item spi_wait_delay           @item r, cs         @item @tt{1000 0010 10cc rrrr}
+    @item spi_wait_deadline        @item r, cs         @item @tt{1000 0010 01cc rrrr}
 
-    @item spi_setcs                @item cs            @item @tt{1000 0010 01cc ----}
+    @item spi_setcs                @item cs            @item @tt{1000 0010 11cc ----}
 
     @item spi_width                @item w, o          @item @tt{1000 0100 00ow wwww}
     @item spi_brate                @item r             @item @tt{1000 0100 10-- rrrr}
 
-    @item spi_swp                  @item wr, rd        @item @tt{1000 1000 rrrr rrrr}
-    @item spi_swpl                 @item wr, rd, l     @item @tt{1000 1lll rrrr rrrr}
+    @item spi_swp                  @item wr, rd        @item @tt{1010 0000 rrrr rrrr}
+    @item spi_swpl                 @item wr, rd, l     @item @tt{1010 llll rrrr rrrr}
+    @item spi_wr                   @item wr            @item @tt{1011 0000 rrrr ----}
+    @item spi_wrl                  @item wr, l         @item @tt{1011 llll rrrr ----}
 
     @item spi_pad                  @item r             @item @tt{1001 0000 ---- rrrr}
 
@@ -166,10 +173,27 @@
     @item spi_wrm[8,16,32]         @item ra, r         @item @tt{1001 10ss aaaa rrrr}
     @item spi_swpm[8,16,32]        @item ra, r         @item @tt{1001 11ss aaaa rrrr}
 
-    @item spi_gpioset              @item i, r          @item @tt{1010 iiii iiii rrrr}
-    @item spi_gpioget              @item i, r          @item @tt{1011 iiii iiii rrrr}
     @item spi_gpiomode             @item i, r          @item @tt{1100 iiii iiii mmmm}
+    @item spi_gpioget              @item i, r          @item @tt{1101 iiii iiii rrrr}
+    @item spi_gpioset              @item i, r          @item @tt{1110 iiii iiii rrrr}
    @end table
+
+   @section {spi_nodelay}
+   This instruction reset the current delay so that the
+   @xref {spi_yield} instruction will not suspend the execution of the
+   bytecode if there are no other request to process.
+   @end section
+
+   @section {spi_deadline}
+   This instruction setup a deadline deadline using the @ref dev_timer_value_t
+   pointed at the address in the provided register. The execution of next
+   instructions follows the same semantics as @xref{spi_delay}.
+
+   The deadline is expressed in timer units.
+
+   The @cref #CONFIG_DEVICE_SPI_BYTECODE_TIMER token must be defined in order
+   to use this instruction.
+   @end section
 
    @section {spi_delay}
    This instruction setup a delay starting when the instruction is
@@ -182,10 +206,13 @@
    The delay given in the register is expressed timer unit.
    @end section
 
-   @section {spi_nodelay}
-   This instruction reset the current delay so that the
-   @xref {spi_yield} instruction will not suspend the execution of the
-   bytecode if there are no other request to process.
+   @section {spi_timestamp}
+   This instruction fetches the current value of the timer associated with the
+   bytecode virtual machine. The timer value is copied in the
+   @ref dev_timer_value_t pointed at the address in the provided register.
+
+   The @cref #CONFIG_DEVICE_SPI_BYTECODE_TIMER token must be defined in order
+   to use this instruction.
    @end section
 
    @section {spi_yield}
@@ -207,9 +234,18 @@
    This instruction acts as @xref {spi_delay} followed by @xref {spi_yield}.
    @end section
 
+   @section {spi_yield_deadline}
+   This instruction acts as @xref {spi_deadline} followed by @xref {spi_yield}.
+   @end section
+
    @section {spi_yieldc_delay}
    This works like @xref {spi_yield_delay} but the delay can be
    canceled by @ref device_spi_bytecode_wakeup.
+   @end section
+
+   @section {spi_yieldc_deadline}
+   This works like @xref {spi_yield_deadline} but the delay can be
+   canceled by @ref dev_spi_bytecode_wakeup.
    @end section
 
    @section {spi_wait}
@@ -225,7 +261,11 @@
    @end section
 
    @section {spi_wait_delay}
-   This instruction acts as @xref {spi_wait_delay} followed by @xref {spi_wait}.
+   This instruction acts as @xref {spi_delay} followed by @xref {spi_wait}.
+   @end section
+
+   @section {spi_wait_deadline}
+   This instruction acts as @xref {spi_deadline} followed by @xref {spi_wait}.
    @end section
 
    @section {spi_setcs}
@@ -246,24 +286,22 @@
    stored in the register.
    @end section
 
-   @section {spi_swp}
-   This instruction transfers a single word on the SPI bus. The word
-   value of the @tt wr register is transmitted. The @tt rd register is
-   used to store the received word value, unless @tt rd is 15.
+   @section {spi_swpl and spi_wrl}
+   These instructions transfer up to 16 bytes between virtual machine
+   registers and the SPI bus. The @tt spi_swpl instruction performs a
+   bidirectional transfer whereas the @tt spi_wrl instruction discards
+   incoming bytes.
+
+   The format of data in registers is hardware dependent and needs to
+   be converted by using the @tt pack* and @tt unpack* @xref {Generic
+   instruction set} {generic instructions}. The transfered bytes are
+   stored in contiguous registers, using at most one register for each
+   group of 4 bytes. The index of the first register used to store the
+   data and the number of bytes are expected as operands.
    @end section
 
-   @section {spi_swpl}
-   This instruction transfers up to 8 words on the SPI bus. Word
-   values are loaded and stored in contiguous registers. The word
-   values of the registers starting at @tt wr are transmitted. The
-   registers starting at @tt rd are used to store the received word
-   values.
-
-   If the index of the last register to transmit is greater than 14,
-   the content of the register 14 is used as padding value for all
-   transmitted words. If the index of the last destination register is
-   greater than 14, incoming data are discarded and no register is
-   modified.
+   @section {spi_swp and spi_wr}
+   These are similar to @xref{spi_swpl and spi_wrl} with a byte length of 1.
    @end section
 
    @section {spi_gpioset}
@@ -529,6 +567,13 @@ config_depend_and2(CONFIG_DEVICE_SPI, CONFIG_MUTEK_CONTEXT_SCHED)
 error_t dev_spi_wait_transfer(struct device_spi_ctrl_s *accessor,
                               struct dev_spi_ctrl_transfer_s * tr);
 
+/** Synchronous spi wait function. @This uses the scheduler API to
+    put the current context in wait state waiting for the given
+    bytecode request to terminate. */
+config_depend_and2(CONFIG_MUTEK_CONTEXT_SCHED, CONFIG_DEVICE_SPI_BYTECODE)
+error_t dev_spi_wait_bytecode(struct device_spi_ctrl_s *ctrl,
+                              struct dev_spi_ctrl_bytecode_rq_s *rq,
+                              const void *pc, uint16_t mask, ...);
 
 /***************************************** device class */
 
@@ -818,7 +863,7 @@ void dev_spi_transaction_init(struct dev_spi_ctrl_transaction_rq_s *rq),
     accessor will be initialized as well.
 
     @see dev_drv_spi_transaction_cleanup */
-config_depend(CONFIG_DEVICE_SPI_BYTECODE)
+config_depend(CONFIG_DEVICE_SPI_TRANSACTION)
 error_t dev_drv_spi_transaction_init(struct device_s *dev,
                                      struct dev_spi_ctrl_transaction_rq_s *rq,
                                      struct device_spi_ctrl_s *ctrl,

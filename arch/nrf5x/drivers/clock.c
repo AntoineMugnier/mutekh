@@ -100,8 +100,7 @@ static bool_t nrf5x_clock_lfclk_is_running(void)
 
 static uint_fast8_t nrf5x_clock_lf_src(void)
 {
-  return nrf_reg_get(CLOCK_ADDR, NRF_CLOCK_LFCLKSTAT)
-    & NRF_CLOCK_LF_SRC_MASK;
+  return nrf_reg_get(CLOCK_ADDR, NRF_CLOCK_LFCLKSRCCOPY);
 }
 
 static bool_t nrf5x_clock_lf_is_running(uint_fast8_t type)
@@ -142,11 +141,13 @@ static uint_fast8_t nrf5x_clock_hf_src(void)
 
 static void nrf5x_clock_hfxo_start(void)
 {
+  dprintk("%s\n", __FUNCTION__);
   nrf_task_trigger(CLOCK_ADDR, NRF_CLOCK_HFCLKSTART);
 }
 
 static void nrf5x_clock_hfxo_stop(void)
 {
+  dprintk("%s\n", __FUNCTION__);
   nrf_task_trigger(CLOCK_ADDR, NRF_CLOCK_HFCLKSTOP);
 }
 
@@ -298,11 +299,13 @@ static DEV_IRQ_SRC_PROCESS(nrf5x_clock_irq)
 
   if (nrf_event_check(CLOCK_ADDR, NRF_CLOCK_LFCLKSTARTED)) {
     nrf_event_clear(CLOCK_ADDR, NRF_CLOCK_LFCLKSTARTED);
+    dprintk("%s LFCLK started\n", __FUNCTION__);
     lf_check = 1;
   }
 
   if (nrf_event_check(CLOCK_ADDR, NRF_CLOCK_HFCLKSTARTED)) {
     nrf_event_clear(CLOCK_ADDR, NRF_CLOCK_HFCLKSTARTED);
+    dprintk("%s HFCLK started\n", __FUNCTION__);
     hf_check = 1;
   }
 
@@ -530,7 +533,7 @@ static DEV_CMU_COMMIT(nrf5x_clock_commit)
 {
   struct nrf5x_clock_context_s *pv = dev->drv_pv;
 
-  if (pv->lf_src != nrf5x_clock_lf_src() && nrf5x_clock_hfxo_is_running()) {
+  if (pv->lf_src != nrf5x_clock_lf_src() && nrf5x_clock_lfclk_is_running()) {
     nrf5x_clock_lfclk_stop();
     while (nrf5x_clock_lfclk_is_running())
       ;
@@ -539,7 +542,7 @@ static DEV_CMU_COMMIT(nrf5x_clock_commit)
 #if LFRC_CAL
   pv->cal_en = pv->cal_en_next;
 #endif
-  if (pv->lfclk_required)
+  if (pv->lfclk_required && !nrf5x_clock_lfclk_is_running())
     nrf5x_clock_lfclk_start();
 
   if (nrf5x_clock_hf_is_running(NRF_CLOCK_HF_SRC_XTAL)
@@ -548,10 +551,14 @@ static DEV_CMU_COMMIT(nrf5x_clock_commit)
     while (nrf5x_clock_hfxo_is_running())
       ;
   }
+
+#if defined(CONFIG_ARCH_NRF51)
   nrf_reg_set(CLOCK_ADDR, NRF_CLOCK_XTALFREQ,
               pv->hfxo_freq.num == 16000000
               ? NRF_CLOCK_XTALFREQ_16MHZ
               : NRF_CLOCK_XTALFREQ_32MHZ);
+#endif
+
   if (pv->hf_src == NRF_CLOCK_HF_SRC_XTAL)
     nrf5x_clock_hfxo_start();
 

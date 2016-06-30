@@ -73,7 +73,7 @@ struct nrf5x_aes_state_s
   };
 };
 
-static DEVCRYPTO_INFO(nrf5x_aes_info)
+static DEV_CRYPTO_INFO(nrf5x_aes_info)
 {
   memset(info, 0, sizeof(*info));
 
@@ -346,7 +346,7 @@ static DEV_REQUEST_DELAYED_FUNC(nrf5x_aes_process)
     dev_request_delayed_end(&pv->queue, rq_);
 }
 
-static DEVCRYPTO_REQUEST(nrf5x_aes_request)
+static DEV_CRYPTO_REQUEST(nrf5x_aes_request)
 {
   struct device_s *dev = accessor->dev;
   struct nrf5x_aes_private_s *pv = dev->drv_pv;

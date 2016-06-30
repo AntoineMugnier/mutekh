@@ -30,19 +30,21 @@
         lde                     %R_TRANSFER,     %R_CTX_PV, _offsetof(max3420_usbdev_private_s, tr) + ((N) * _SIZEOF_PTR) ;\
         ld8e                    %R_ARG4,         %R_CTX_PV, _offsetof(max3420_usbdev_private_s, mps) + (N)
 
+#define MAX3420_WRITE(REG, A, B)                \
+	cst16			%REG,            (((B) << 8) | (A)),  0 ;\
+	pack16le		%REG,    	 1                      ;\
+        spi_wrl                 %REG,            2
+          
 
 max3420_disconnect:
-        cst8                    %R_TMP0,         MAX3420_USBCTRL | 2
-        cst8                    %R_TMP1,         0x0
-        spi_swpl                %R_TMP0,         %15,             2
+        /* Hide device to host */
+        MAX3420_WRITE(R_TMP0, MAX3420_USBCTRL | 2, 0x0)
         ret                     %R_LINK
 
 max3420_entry_connect:
         .export max3420_entry_connect
         /* Show device to host */
-        cst8                    %R_TMP0,         MAX3420_USBCTRL | 2
-        cst8                    %R_TMP1,         0x48
-        spi_swpl                %R_TMP0,         %15,             2
+        MAX3420_WRITE(R_TMP0, MAX3420_USBCTRL | 2, 0x48),
         jmp8                    max3420_entry_irq
 
 max3420_entry_disconnect:
@@ -58,23 +60,18 @@ max3420_entry_unconfigure:
         jmp32                   max3420_set_done
 
 max3420_disable_endpoints:
-        cst8                    %R_TMP0,         MAX3420_CLRTOGS | 2
-        cst8                    %R_TMP1,         0xFC
-        spi_swpl                %R_TMP0,         %15,             2
-        cst8                    %R_TMP0,         MAX3420_EPIEN | 2
-        cst8                    %R_TMP1,         0x0
-        spi_swpl                %R_TMP0,         %15,         2
-        cst8                    %R_TMP0,         MAX3420_EPIRQ | 2
-        cst8                    %R_TMP1,         0x3F
-        spi_swpl                %R_TMP0,         %15,             2
+        MAX3420_WRITE(R_TMP0, MAX3420_CLRTOGS | 2, 0xFC)
+        MAX3420_WRITE(R_TMP0, MAX3420_EPIEN | 2, 0x0)
+        MAX3420_WRITE(R_TMP0, MAX3420_EPIRQ | 2, 0x3F)
         ret                     %R_LINK
 
 max3420_process_usbirq:
         /* R_TMP1: Interrupt flags */
         /* Clean and reenable interrupts in case of bus reset */
-        cst8                    %R_TMP0,         MAX3420_USBIRQ | 2
-        cst8                    %R_TMP2,         MAX3420_USBIRQ_MASK
-        spi_swpl                %R_TMP0,         %15,         3
+	cst8			%R_TMP0,	 MAX3420_USBIRQ | 2
+	cst8			%R_TMP2,	 MAX3420_USBIRQ_MASK
+	pack8			%R_TMP0,         3
+        spi_wrl                 %R_TMP0,         3
         ld8e                    %R_TMP0,         %R_CTX_PV,     _offsetof(max3420_usbdev_private_s, event, 1)
         or32                    %R_TMP0,         %R_TMP1
         st8e                    %R_TMP0,         %R_CTX_PV,     _offsetof(max3420_usbdev_private_s, event, 1)
@@ -103,19 +100,21 @@ poll_gpx_loop:
         abort
 gpx_poll_done:
         /* Set irq level sensitive, spi full-duplex */
-        cst8                    %R_TMP2,         MAX3420_PINCTRL | 2
-        cst8                    %R_TMP3,         0x18
-        spi_swpl                %R_TMP2,         %15,             2
+        MAX3420_WRITE(R_TMP2, MAX3420_PINCTRL | 2, 0x18)
         /* Read device id */
         cst8                    %R_TMP0,         MAX3420_REVISION
+	pack8			%R_TMP0,         1
         spi_swpl                %R_TMP0,         %R_TMP0,         2
+	unpack8			%R_TMP0,         2
         cst8                    %R_TMP0,         MAX3420_CURRENT_REVISION
         neq                     %R_TMP0,         %R_TMP1
           abort
 poll_osc:
         spi_yield_delay         %R_TMP1
         cst8                    %R_TMP2,         MAX3420_USBIRQ
+	pack8			%R_TMP0,         1
         spi_swpl                %R_TMP2,         %R_TMP2,         2
+	unpack8			%R_TMP2,         2
         tst32c                  %R_TMP3,         0
           jmp8                  poll_osc
         /* Disconnect device */
@@ -123,15 +122,11 @@ poll_osc:
         /* Disable all endpoint and clean endpoint interrupts */
         call8                   %R_LINK,         max3420_disable_endpoints
         /* Enable interrupt */
-        cst8                    %R_TMP0,         MAX3420_USBIEN | 2
-        cst8                    %R_TMP1,         MAX3420_USBIRQ_MASK
-        spi_swpl                %R_TMP0,         %15,         2
-        cst8                    %R_TMP0,         MAX3420_CPUCTRL | 2
-        cst8                    %R_TMP1,         1
-        spi_swpl                %R_TMP0,         %R_TMP0,         2
+        MAX3420_WRITE(R_TMP0, MAX3420_USBIEN | 2, MAX3420_USBIRQ_MASK)
+        MAX3420_WRITE(R_TMP0, MAX3420_CPUCTRL | 2, 1)
         /* Initialisation done */
         cst8                    %R_ARG3,         MAX3420_INIT_MASK
-        jmp8                    max3420_set_done
+        jmp32                   max3420_set_done
 
 max3420_entry_irq:
         .export max3420_entry_irq
@@ -143,12 +138,16 @@ max3420_entry_irq:
 max3420_process_irq:
         /* Read IRQ and IEN register */
         cst8                    %R_TMP0,         MAX3420_USBIRQ
+	pack8			%R_TMP0,         1
         spi_swpl                %R_TMP0,         %R_TMP0,         3
+	unpack8			%R_TMP0,         3
         and32                   %R_TMP1,         %R_TMP2
         neq0                    %R_TMP1
           jmp8                  max3420_process_usbirq
         cst8                    %R_TMP0,         MAX3420_EPIRQ
+	pack8			%R_TMP0,         1
         spi_swpl                %R_TMP0,         %R_TMP0,         3
+	unpack8			%R_TMP0,         3
         and32                   %R_TMP1,         %R_TMP2
         eq0                     %R_TMP1
           end
@@ -215,37 +214,6 @@ max3420_entry_data_in_3_irq:
 
 /*-----------------------------------------------------------------------------*/
 
-max3420_get_transfer_info:
-        lde                     %R_BUFF,         %R_TRANSFER,   _offsetof(dev_usbdev_request_s, data)
-        ld32e                   %R_SIZE,         %R_TRANSFER,   _offsetof(dev_usbdev_request_s, size, 4)
-        ret                     %R_LINK
-
-max3420_set_done:
-        /* R_ARG3: Mask of done operation */
-        ld8e                    %R_TMP0,         %R_CTX_PV,     _offsetof(max3420_usbdev_private_s, done, 1)
-        or32                    %R_TMP0,         %R_ARG3
-        st8e                    %R_TMP0,         %R_CTX_PV,     _offsetof(max3420_usbdev_private_s, done, 1)
-        /* Check interrupt before leaving */
-        jmp8                    max3420_entry_irq
-
-max3420_clean_irq:
-        /*R_ARG2: interrupt to clean */
-        mov                     %R_TMP1,         %R_ARG2
-        cst8                    %R_TMP0,         MAX3420_EPIRQ | 2
-        spi_swpl                %R_TMP0,         %R_TMP0,     2
-        ret                     %R_LINK
-
-max3420_clean_pending:
-        /* R_ARG3: Mask of done operation */
-        mov                     %R_TMP0,         %R_ARG3
-        not32                   %R_TMP0
-        ld8e                    %R_TMP1,         %R_CTX_PV,   _offsetof(max3420_usbdev_private_s, pending, 1)
-        and32                   %R_TMP1,         %R_TMP0
-        st8e                    %R_TMP1,         %R_CTX_PV,   _offsetof(max3420_usbdev_private_s, pending, 1)
-        ret                     %R_LINK
-
-/*-----------------------------------------------------------------------------*/
-
 max3420_process_setup:
         /*R_ARG2: IRQ mask */
         MAX3420_GET_TRANSFER(0)  
@@ -254,7 +222,8 @@ max3420_process_setup:
         call8                   %R_LINK,         max3420_get_transfer_info
         spi_setcs               _const(DEV_SPI_CS_ASSERT)
         cst8                    %R_TMP0,         MAX3420_SUDFIFO
-        spi_swp                 %R_TMP0,         %15
+	pack8			%R_TMP0,         1
+        spi_wr                  %R_TMP0         
         cst8                    %R_TMP0,         8
         spi_rdm8                %R_BUFF,         %R_TMP0
         spi_setcs               _const(DEV_SPI_CS_TRANSFER)
@@ -282,7 +251,39 @@ max3420_data_out_irq:
         call32                  %R_LINK,         max3420_disable_irq
         neq0                    %R_TRANSFER
           jmp8                    max3420_data_out
+        jmp8                    max3420_entry_irq
+
+/*-----------------------------------------------------------------------------*/
+
+max3420_get_transfer_info:
+        lde                     %R_BUFF,         %R_TRANSFER,   _offsetof(dev_usbdev_request_s, data)
+        ld32e                   %R_SIZE,         %R_TRANSFER,   _offsetof(dev_usbdev_request_s, size, 4)
+        ret                     %R_LINK
+
+max3420_set_done:
+        /* R_ARG3: Mask of done operation */
+        ld8e                    %R_TMP0,         %R_CTX_PV,     _offsetof(max3420_usbdev_private_s, done, 1)
+        or32                    %R_TMP0,         %R_ARG3
+        st8e                    %R_TMP0,         %R_CTX_PV,     _offsetof(max3420_usbdev_private_s, done, 1)
+        /* Check interrupt before leaving */
         jmp32                   max3420_entry_irq
+
+max3420_clean_irq:
+        /*R_ARG2: interrupt to clean */
+        mov                     %R_TMP1,         %R_ARG2
+        cst8                    %R_TMP0,         MAX3420_EPIRQ | 2
+	pack8			%R_TMP0,         2
+        spi_wrl                 %R_TMP0,         2
+        ret                     %R_LINK
+
+max3420_clean_pending:
+        /* R_ARG3: Mask of done operation */
+        mov                     %R_TMP0,         %R_ARG3
+        not32                   %R_TMP0
+        ld8e                    %R_TMP1,         %R_CTX_PV,   _offsetof(max3420_usbdev_private_s, pending, 1)
+        and32                   %R_TMP1,         %R_TMP0
+        st8e                    %R_TMP1,         %R_CTX_PV,   _offsetof(max3420_usbdev_private_s, pending, 1)
+        ret                     %R_LINK
 
 /*-----------------------------------------------------------------------------*/
 
@@ -330,6 +331,7 @@ max3420_data_out:
         jmp8                    max3420_try_data_out
 
 /*-----------------------------------------------------------------------------*/
+
 max3420_entry_epn:
         .export max3420_entry_epn
         ld8e                    %R_TMP0,         %R_CTX_PV,   _offsetof(max3420_usbdev_private_s, pending, 1)
@@ -346,7 +348,9 @@ max3420_entry_setup:
         cst8                    %R_ARG2,         MAX3420_IRQ_SETUP
         /* Read EPIRQ register */
         cst8                    %R_TMP0,         MAX3420_EPIRQ
+	pack8			%R_TMP0,         1
         spi_swpl                %R_TMP0,         %R_TMP0,         2
+	unpack8			%R_TMP0,         2
         tst32s                  %R_TMP1,         bitpos(MAX3420_IRQ_SETUP)
           jmp8                    max3420_process_setup
         jmp8                    max3420_enable_irq
@@ -398,10 +402,12 @@ max3420_entry_data_in_3:
         jmp8                    max3420_data_in  
 
 max3420_entry_set_address:
+        /* R_ARG0: new address */
         .export max3420_entry_set_address
         mov                     %R_TMP1,         %R_ARG0
         cst8                    %R_TMP0,         MAX3420_FNADDR | 2
-        spi_swpl                %R_TMP0,         %15,         2
+	pack8			%R_TMP0,	 2
+        spi_wrl                 %R_TMP0,         2
         cst8                    %R_ARG3,         MAX3420_CFG_MASK
         jmp32                   max3420_set_done
 
@@ -410,7 +416,8 @@ max3420_entry_status:
         .export max3420_entry_status
         mov                     %R_TMP1,         %R_ARG0
         cst8                    %R_TMP0,         MAX3420_EPSTALLS | 2
-        spi_swpl                %R_TMP0,         %15,         2
+	pack8			%R_TMP0,	 2
+        spi_wrl                 %R_TMP0,         2
         cst8                    %R_ARG3,         MAX3420_EP0_MASK
         jmp32                   max3420_set_done
 
@@ -420,9 +427,11 @@ max3420_try_data_out:
         /*R_ARG0: FIFO address */
         /*R_ARG1: Byte Count address */
         /*R_ARG2: Irq mask */
-        call32                  %R_LINK,         max3420_clean_pending
+        call8                   %R_LINK,         max3420_clean_pending
         cst8                    %R_TMP0,         MAX3420_EPIRQ
+	pack8			%R_TMP0,         1
         spi_swpl                %R_TMP0,         %R_TMP0,         2
+	unpack8			%R_TMP0,         2
         and32                   %R_TMP1,         %R_ARG2
         neq0                    %R_TMP1
           jmp8                    max3420_data_out
@@ -443,6 +452,7 @@ max3420_write_fifo:
         cst8                    %R_TMP0,         2
         or32                    %R_ARG0,         %R_TMP0
         spi_setcs               _const(DEV_SPI_CS_ASSERT)
+	pack8			%R_ARG0,	 1
         spi_swp                 %R_ARG0,         %15
         spi_wrm8                %R_BUFF,         %R_SIZE
         spi_setcs               _const(DEV_SPI_CS_TRANSFER)
@@ -450,7 +460,8 @@ max3420_write_fifo:
         cst8                    %R_TMP0,         2
         or32                    %R_TMP0,         %R_ARG1
         mov                     %R_TMP1,         %R_SIZE
-        spi_swpl                %R_TMP0,         %15,         2
+	pack8			%R_TMP0,	 2
+        spi_wrl                 %R_TMP0,         2
         ret                     %R_LINK
 
 max3420_read_fifo:
@@ -458,11 +469,14 @@ max3420_read_fifo:
         /* R_ARG0: FIFO address */
         /* R_ARG1: BC register address */
         mov                     %R_TMP0,         %R_ARG1        
+	pack8			%R_TMP0,	 1
         spi_swpl                %R_TMP0,         %R_TMP0,         2
+	unpack8			%R_TMP0,         2
         lteq                    %R_TMP1,         %R_SIZE
         mov                     %R_SIZE,         %R_TMP1
         /* Read fifo */
         spi_setcs               _const(DEV_SPI_CS_ASSERT)
+	pack8			%R_ARG0,	 1
         spi_swp                 %R_ARG0,         %15
         spi_rdm8                %R_BUFF,         %R_SIZE
         spi_setcs               _const(DEV_SPI_CS_TRANSFER)
@@ -489,23 +503,29 @@ max3420_update_transfer:
 
 /*---------------------------------------------------------------------------*/
 
-max3420_disable_irq:
-        /*R_ARG2: interrupt to disable */
-        cst8                    %R_TMP0,         MAX3420_EPIEN
-        spi_swpl                %R_TMP0,         %R_TMP0,     2
-        cst8                    %R_TMP0,         MAX3420_EPIEN | 2
-        xor32                   %R_TMP1,         %R_ARG2
-        spi_swpl                %R_TMP0,         %15,         2
-        ret                     %R_LINK
-
 max3420_enable_irq:
         /*R_ARG2: interrupt to enable */
         cst8                    %R_TMP0,         MAX3420_EPIEN
+	pack8			%R_TMP0,         1
         spi_swpl                %R_TMP0,         %R_TMP0,     2
+	unpack8			%R_TMP0,         2
         cst8                    %R_TMP0,         MAX3420_EPIEN | 2
         or32                    %R_TMP1,         %R_ARG2
-        spi_swpl                %R_TMP0,         %15,         2
+	pack8			%R_TMP0,	 2
+        spi_wrl                 %R_TMP0,         2
         jmp32                   max3420_entry_irq
+
+max3420_disable_irq:
+        /*R_ARG2: interrupt to disable */
+        cst8                    %R_TMP0,         MAX3420_EPIEN
+	pack8			%R_TMP0,         1
+        spi_swpl                %R_TMP0,         %R_TMP0,     2
+	unpack8			%R_TMP0,         2
+        cst8                    %R_TMP0,         MAX3420_EPIEN | 2
+        xor32                   %R_TMP1,         %R_ARG2
+	pack8			%R_TMP0,	 2
+        spi_wrl                 %R_TMP0,         2
+        ret                     %R_LINK
 
 /* -------------------------------------------------------------------------------*/
 

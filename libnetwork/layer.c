@@ -25,6 +25,8 @@
 
 #include "network.h"
 
+#define dprintk(...) do{}while(0)
+
 void net_layer_context_changed(struct net_layer_s *layer)
 {
   if (net_layer_list_isempty(&layer->children))
@@ -60,8 +62,8 @@ error_t net_layer_bind(
   if (err)
     return err;
 
-  //printk("Layer %p %p bound to %p %p\n", child, child->handler,
-  //       layer, layer->handler);
+  dprintk("Layer %p %p bound to %p %p\n", child, child->handler,
+        layer, layer->handler);
 
   child->parent = layer;
   net_layer_list_pushback(&layer->children, child);
@@ -81,8 +83,8 @@ void net_layer_unbind(
     struct net_layer_s *layer,
     struct net_layer_s *child)
 {
-  //printk("Layer %p %p unbound from %p %p\n", child, child->handler,
-  //       layer, layer->handler);
+  dprintk("Layer %p %p unbound from %p %p\n", child, child->handler,
+        layer, layer->handler);
 
   assert(child->parent == layer);
 
@@ -126,7 +128,7 @@ error_t net_layer_init(
 
   net_scheduler_layer_created(sched, layer);
   
-  /* printk("Layer %p %p init\n", layer, layer->handler); */
+  dprintk("Layer %p %p init\n", layer, layer->handler);
 
   net_scheduler_timer_use(layer->scheduler);
 
@@ -150,10 +152,10 @@ void net_layer_destroy_real(
 
   layer->scheduler = NULL;
 
-  //printk("Layer %p %p destroy\n", layer, layer->handler);
+  dprintk("Layer %p %p destroy\n", layer, layer->handler);
 
   while ((child = net_layer_list_head(&layer->children))) {
-    //printk(" cleaning ref to %p %p\n", layer, layer->handler);
+    dprintk(" cleaning ref to %p %p\n", layer, layer->handler);
     net_layer_unbind(layer, child);
     net_layer_refdec(child);
   }

@@ -25,7 +25,7 @@
 #include <mutek/mem_alloc.h>
 #include <mutek/kroutine.h>
 
-static DEVCRYPTO_INFO(soft_aes_info)
+static DEV_CRYPTO_INFO(soft_aes_info)
 {
   if (accessor->number > 0)
     return -ENOENT;
@@ -38,6 +38,9 @@ static DEVCRYPTO_INFO(soft_aes_info)
 #endif
 #ifdef CONFIG_DRIVER_CRYPTO_SOFT_AES_CBC
     | (1 << DEV_CRYPTO_MODE_CBC)
+#endif
+#ifdef CONFIG_DRIVER_CRYPTO_SOFT_AES_CMAC
+    | (1 << DEV_CRYPTO_MODE_CMAC)
 #endif
 #ifdef CONFIG_DRIVER_CRYPTO_SOFT_AES_CTR
     | (1 << DEV_CRYPTO_MODE_CTR)
@@ -124,6 +127,11 @@ static DEV_REQUEST_DELAYED_FUNC(soft_aes_process)
       soft_aes_cbc(actx, rq);
       break;
 #endif
+#ifdef CONFIG_DRIVER_CRYPTO_SOFT_AES_CMAC
+    case DEV_CRYPTO_MODE_CMAC:
+      soft_aes_cmac(actx, rq);
+      break;
+#endif
 #ifdef CONFIG_DRIVER_CRYPTO_SOFT_AES_CTR
     case DEV_CRYPTO_MODE_CTR:
       soft_aes_ctr(actx, rq);
@@ -142,7 +150,7 @@ static DEV_REQUEST_DELAYED_FUNC(soft_aes_process)
   dev_request_delayed_end(&pv->queue, rq_);
 }
 
-static DEVCRYPTO_REQUEST(soft_aes_request)
+static DEV_CRYPTO_REQUEST(soft_aes_request)
 {
   struct device_s *dev = accessor->dev;
   struct soft_aes_private_s *pv = dev->drv_pv;

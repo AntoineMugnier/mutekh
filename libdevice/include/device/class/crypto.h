@@ -191,6 +191,17 @@ enum dev_crypto_mode_e
       DEV_CRYPTO_INVERSE flag. */
   DEV_CRYPTO_MODE_HMAC,
 
+  /** Cipher based authentication code. When this mode is used, the @tt in, @tt
+      len, @tt iv_ctr and @tt auth fields are used. The @ref
+      DEV_CRYPTO_FINALIZE operation flag is relevant. The @tt iv_ctr
+      field must always be valid and will be updated when not @tt
+      DEV_CRYPTO_FINALIZE. The @tt auth field must be valid when @tt
+      DEV_CRYPTO_FINALIZE. The authentication tag is either stored in
+      the @tt auth buffer or checked against it depending on the @ref
+      DEV_CRYPTO_INVERSE flag. The data length may not be a multiple of a block
+      size. The iv must be equal to a block size. */
+  DEV_CRYPTO_MODE_CMAC,
+
   /** Random data generator mode. When the @ref DEV_CRYPTO_INVERSE
       operation flag is set, the random generator is seeded with data
       from the buffer specified by the @tt ad and @tt ad_len fields of
@@ -263,7 +274,7 @@ enum dev_crypto_op_e
 
 struct dev_crypto_rq_s
 {
-  struct dev_request_s                  rq;
+  struct dev_request_s                  base;
 
   enum dev_crypto_op_e                  BITFIELD(op,3);
 
@@ -294,29 +305,29 @@ struct dev_crypto_rq_s
   uint8_t                               *auth;
 };
 
-STRUCT_INHERIT(dev_crypto_rq_s, dev_request_s, rq);
+STRUCT_INHERIT(dev_crypto_rq_s, dev_request_s, base);
 
-/** @see devcrypto_info_t */
-#define DEVCRYPTO_INFO(n)	error_t  (n) (struct device_crypto_s *accessor, \
-                                              struct dev_crypto_info_s *info)
+/** @see dev_crypto_info_t */
+#define DEV_CRYPTO_INFO(n) error_t (n) (struct device_crypto_s *accessor, \
+                                        struct dev_crypto_info_s *info)
 
 /** @This retrieves information about the cryptographic algorithm
     implemented by the device. */
-typedef DEVCRYPTO_INFO(devcrypto_info_t);
+typedef DEV_CRYPTO_INFO(dev_crypto_info_t);
 
-/** @see devcrypto_request_t */
-#define DEVCRYPTO_REQUEST(n) void  (n) (struct device_crypto_s *accessor,   \
+/** @see dev_crypto_request_t */
+#define DEV_CRYPTO_REQUEST(n) void (n) (struct device_crypto_s *accessor,   \
                                         struct dev_crypto_rq_s *rq)
 
 /** @This starts cryptographic processing.
 
     The kroutine of the request may be executed from within this
     function. Please read @xref {Nested device request completion}. */
-typedef DEVCRYPTO_REQUEST(devcrypto_request_t);
+typedef DEV_CRYPTO_REQUEST(dev_crypto_request_t);
 
 DRIVER_CLASS_TYPES(DRIVER_CLASS_CRYPTO, crypto,
-                   devcrypto_info_t *f_info;
-                   devcrypto_request_t *f_request;
+                   dev_crypto_info_t *f_info;
+                   dev_crypto_request_t *f_request;
                    );
 
 /** @see driver_crypto_s */
@@ -334,7 +345,7 @@ dev_crypto_spin_op(struct device_crypto_s *accessor,
                    struct dev_crypto_rq_s *rq),
 {
   struct dev_request_status_s st;
-  dev_request_spin_init(&rq->rq, &st);
+  dev_request_spin_init(&rq->base, &st);
   DEVICE_OP(accessor, request, rq);
   dev_request_spin_wait(&st);
   return rq->err;
@@ -349,7 +360,7 @@ dev_crypto_wait_op(struct device_crypto_s *accessor,
                    struct dev_crypto_rq_s *rq),
 {
   struct dev_request_status_s st;
-  dev_request_sched_init(&rq->rq, &st);
+  dev_request_sched_init(&rq->base, &st);
   DEVICE_OP(accessor, request, rq);
   dev_request_sched_wait(&st);
   return rq->err;
