@@ -323,7 +323,7 @@ static DEV_CLEANUP(nrf5x_spi_cleanup)
   struct nrf5x_spi_context_s *pv = dev->drv_pv;
 
 #ifdef CONFIG_DEVICE_SPI_REQUEST
-  if (!dev_request_queue_isempty(&pv->queue.queue))
+  if (!dev_request_queue_isempty(&pv->spi_ctrl_ctx.queue))
     return -EBUSY;
 
   dev_spi_context_cleanup(&pv->spi_ctrl_ctx);
