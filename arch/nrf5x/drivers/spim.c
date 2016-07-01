@@ -108,7 +108,7 @@ static DEV_SPI_CTRL_CONFIG(nrf5x_spim_config)
   return err;
 }
 
-#define nrf5x_spim_select dev_driver_notsup_fcn
+#define nrf5x_spim_select (dev_spi_ctrl_select_t*)dev_driver_notsup_fcn
 
 static void nrf5x_spim_transfer_ended(struct nrf5x_spim_context_s *pv)
 {
@@ -146,7 +146,7 @@ static void nrf5x_spim_transfer_ended(struct nrf5x_spim_context_s *pv)
 static void nrf5x_spim_next_start(struct nrf5x_spim_context_s *pv)
 {
   struct dev_spi_ctrl_transfer_s *tr = pv->current_transfer;
-  size_t count, tx_count;
+  size_t count;
 
   assert(tr);
 
@@ -156,7 +156,7 @@ static void nrf5x_spim_next_start(struct nrf5x_spim_context_s *pv)
 
   switch (tr->data.out_width) {
   case 0:
-    nrf_reg_set(pv->addr, NRF_SPIM_ORC, *(const uint32_t *)pv->out);
+    nrf_reg_set(pv->addr, NRF_SPIM_ORC, *(const uint32_t *)tr->data.out);
     nrf_reg_set(pv->addr, NRF_SPIM_TXD_PTR, 0);
     break;
 
@@ -272,8 +272,11 @@ static DEV_SPI_CTRL_TRANSFER(nrf5x_spim_transfer)
   } else {
     assert(tr->data.count > 0);
 
-    if (!(0x17 >> tr->data.out_width) || !(0x16 >> tr->data.in_width))
-      return -EINVAL;
+    if (!(0x17 >> tr->data.out_width) || !(0x16 >> tr->data.in_width)) {
+      tr->err = -EINVAL;
+      done = 1;
+      goto out;
+    }
 
     done = 0;
 
@@ -286,6 +289,7 @@ static DEV_SPI_CTRL_TRANSFER(nrf5x_spim_transfer)
     }
   }
 
+ out:
   LOCK_RELEASE_IRQ(&dev->lock);
 
   if (done)
@@ -351,7 +355,7 @@ static DEV_CLEANUP(nrf5x_spim_cleanup)
   struct nrf5x_spim_context_s *pv = dev->drv_pv;
 
 #ifdef CONFIG_DEVICE_SPI_REQUEST
-  if (!dev_spi_queue_isempty(&pv->queue))
+  if (!dev_request_queue_isempty(&pv->spi_ctrl_ctx.queue))
     return -EBUSY;
 
   dev_spi_context_cleanup(&pv->spi_ctrl_ctx);
