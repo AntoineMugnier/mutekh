@@ -16,9 +16,10 @@
 #endif
 
 
+#ifdef CONFIG_ARCH_EFM32
+
 DEV_DECLARE_STATIC(max3420_dev, "max3420", 0, max3420_drv,
 
-#ifdef CONFIG_ARCH_EFM32
   DEV_STATIC_RES_DEV_PARAM("spi", "/spi*"),
   DEV_STATIC_RES_DEV_PARAM("gpio", "/gpio"),
   DEV_STATIC_RES_DEV_PARAM("icu", "/gpio"),
@@ -28,11 +29,17 @@ DEV_DECLARE_STATIC(max3420_dev, "max3420", 0, max3420_drv,
   DEV_STATIC_RES_GPIO("nirq", EFM32_PC5 , 1),
   DEV_STATIC_RES_GPIO("gpx",  EFM32_PC4 , 1),
   DEV_STATIC_RES_UINT_PARAM("gpio-cs-id", EFM32_PD3),
-#else
-# warning Add platform related device resources here
-#endif
 
 );
+
+DEV_DECLARE_STATIC(usbdev_cdc0, "console", 0, usbdev_cdc_drv,
+                   DEV_STATIC_RES_USBDEV_EP_MAP(0, 0x32, 0x01),
+                   DEV_STATIC_RES_DEV_PARAM("usb-ctrl", "/max3420")
+);
+
+#else
+extern struct device_s usbdev_cdc0;
+#endif
 
 static const struct usbdev_device_info_s usbdevinfo =
 {
@@ -60,11 +67,6 @@ static const struct usbdev_device_info_s usbdevinfo =
   .str_cnt = 2,
   .string = "MutekH\0\Test\0"
 };
-
-DEV_DECLARE_STATIC(usbdev_cdc0, "console", 0, usbdev_cdc_drv,
-                   DEV_STATIC_RES_USBDEV_EP_MAP(0, 0x32, 0x01),
-                   DEV_STATIC_RES_DEV_PARAM("usb-ctrl", "/max3420")
-);
 
 void app_start()
 {
