@@ -57,6 +57,7 @@ static DEV_SPI_CTRL_CONFIG(nrf5x_spi_config)
   struct nrf5x_spi_context_s *pv = dev->drv_pv;
   error_t err = 0;
   uint32_t config = 0;
+  uint32_t rate;
 
   LOCK_SPIN_IRQ(&dev->lock);
 
@@ -100,8 +101,15 @@ static DEV_SPI_CTRL_CONFIG(nrf5x_spi_config)
     : NRF_SPI_CONFIG_ORDER_LSBFIRST;
 
   nrf_reg_set(pv->addr, NRF_SPI_CONFIG, config);
+
+  rate = cfg->bit_rate;
+  if (rate > 1000000) {
+    printk("nRF5x SPI Warning: bit rate capped to 1MHz (was %d)\n", rate);
+    rate = 1000000;
+  }
+
   nrf_reg_set(pv->addr, NRF_SPI_FREQUENCY,
-              NRF_SPI_FREQUENCY_(cfg->bit_rate));
+              NRF_SPI_FREQUENCY_(rate));
 
  out:
   LOCK_RELEASE_IRQ(&dev->lock);
