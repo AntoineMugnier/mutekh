@@ -48,7 +48,6 @@ DRIVER_PV(struct nrf5x_spim_context_s
 
   struct dev_irq_src_s irq_ep[1];
   struct dev_spi_ctrl_transfer_s *current_transfer;
-  bool_t callbacking : 1;
   bool_t buffered_in : 1;
 
   struct dev_spi_ctrl_context_s spi_ctrl_ctx;
@@ -122,6 +121,11 @@ static void nrf5x_spim_transfer_ended(struct nrf5x_spim_context_s *pv)
 {
   struct dev_spi_ctrl_transfer_s *tr = pv->current_transfer;
 
+  dprintk("%s, count %d transferred %d\n", __FUNCTION__, tr->data.count, pv->transferred);
+
+  if (tr->data.in && tr->data.in_width)
+    dprintk("in: %P\n", nrf_reg_get(pv->addr, NRF_SPIM_RXD_PTR), pv->transferred);
+
   assert(tr);
 
   if (pv->buffered_in) {
@@ -146,8 +150,8 @@ static void nrf5x_spim_transfer_ended(struct nrf5x_spim_context_s *pv)
     }
   }
 
-  tr->data.in = (void *)((uintptr_t)tr->data.in + pv->transferred);
-  tr->data.out = (const void *)((uintptr_t)tr->data.out + pv->transferred);
+  tr->data.in = (void *)((uintptr_t)tr->data.in + pv->transferred * tr->data.in_width);
+  tr->data.out = (const void *)((uintptr_t)tr->data.out + pv->transferred * tr->data.out_width);
   tr->data.count -= pv->transferred;
 }
 
@@ -211,6 +215,10 @@ static void nrf5x_spim_next_start(struct nrf5x_spim_context_s *pv)
 
   if (tr->data.in) {
     switch (tr->data.in_width) {
+    case 0:
+      nrf_reg_set(pv->addr, NRF_SPIM_RXD_PTR, 0);
+      break;
+
     case 1:
       nrf_reg_set(pv->addr, NRF_SPIM_RXD_PTR, (uintptr_t)tr->data.in);
       break;
@@ -222,10 +230,20 @@ static void nrf5x_spim_next_start(struct nrf5x_spim_context_s *pv)
       pv->buffered_in = 1;
       break;
     }
+  } else {
+    nrf_reg_set(pv->addr, NRF_SPIM_RXD_PTR, 0);
   }
 
+  dprintk("%s count %d out w %d in w %d%s\n", __FUNCTION__,
+          count,
+          tr->data.out_width,
+          tr->data.in_width, pv->buffered_in ? " buffered" : "");
+
+  if (tr->data.out_width)
+    dprintk("out: %P\n", nrf_reg_get(pv->addr, NRF_SPIM_TXD_PTR), count);
+
   nrf_reg_set(pv->addr, NRF_SPIM_TXD_MAXCNT, tr->data.out_width ? count : 0);
-  nrf_reg_set(pv->addr, NRF_SPIM_RXD_MAXCNT, tr->data.in ? count : 0);
+  nrf_reg_set(pv->addr, NRF_SPIM_RXD_MAXCNT, tr->data.in && tr->data.in_width ? count : 0);
 
   pv->transferred = count;
 
@@ -239,27 +257,22 @@ static DEV_IRQ_SRC_PROCESS(nrf5x_spim_irq)
   struct nrf5x_spim_context_s *pv = dev->drv_pv;
   struct dev_spi_ctrl_transfer_s *tr = pv->current_transfer;
 
+  //dprintk("%s\n", __FUNCTION__);
+
   lock_spin(&dev->lock);
 
   if (nrf_event_check(pv->addr, NRF_SPIM_END)) {
     nrf_event_clear(pv->addr, NRF_SPIM_END);
 
-    nrf5x_spim_transfer_ended(pv);
-    if (tr->data.count) {
-      nrf5x_spim_next_start(pv);
-    } else {
-      pv->current_transfer = NULL;
+    if (tr) {
+      nrf5x_spim_transfer_ended(pv);
 
-      pv->callbacking = 1;
-      lock_release(&dev->lock);
-      kroutine_exec(&tr->kr);
-      lock_spin(&dev->lock);
-      pv->callbacking = 0;
-
-      if (pv->current_transfer)
+      if (tr->data.count) {
         nrf5x_spim_next_start(pv);
-      else
-        nrf_task_trigger(pv->addr, NRF_SPIM_STOP);
+      } else {
+        pv->current_transfer = NULL;
+        kroutine_exec(&tr->kr);
+      }
     }
   }
 
@@ -271,6 +284,8 @@ static DEV_SPI_CTRL_TRANSFER(nrf5x_spim_transfer)
   struct device_s *dev = accessor->dev;
   struct nrf5x_spim_context_s *pv = dev->drv_pv;
   bool_t done;
+
+  dprintk("%s\n", __FUNCTION__);
 
   LOCK_SPIN_IRQ(&dev->lock);
 
@@ -291,10 +306,7 @@ static DEV_SPI_CTRL_TRANSFER(nrf5x_spim_transfer)
     pv->current_transfer = tr;
     tr->err = 0;
 
-    if (!pv->callbacking) {
-      nrf_task_trigger(pv->addr, NRF_SPIM_START);
-      nrf5x_spim_next_start(pv);
-    }
+    nrf5x_spim_next_start(pv);
   }
 
  out:
@@ -339,6 +351,8 @@ static DEV_INIT(nrf5x_spim_init)
   nrf_reg_set(
               pv->addr, NRF_SPIM_PSEL_MOSI,
               id[2] != IOMUX_INVALID_ID ? id[2] : (uint32_t)-1);
+
+  nrf_reg_set(pv->addr, NRF_SPIM_ENABLE, NRF_SPIM_ENABLE_ENABLED);
 
   nrf_it_disable(pv->addr, NRF_SPIM_END);
 
