@@ -116,6 +116,13 @@ _zynq_features       = _arm32_features + ["arch:zynq", "little", "big", "char", 
 
 zynq                 = Config("zynq", _zynq_features)
 
+##################################################
+# Ti cc1310 and cc26x0
+
+_cc26xx_features      = _arm32m_features + ["arch:nrf5x", "spi", "timer", "char", "gpio", "minimal"]
+
+cc1310                = Config("cc1310-f128-rgz",            _cc26xx_features)
+
 ###############################################################################
 #
 # CPU's
@@ -161,7 +168,8 @@ all_archs            = OrMatch(soclib_mips32eb,
                                gaisler_leon3,
                                stm32_nucleof401re,
                                bcm283x_raspberry,
-                               zynq
+                               zynq,
+                               cc1310
 )
 
 all                  = OrMatch(soclib_mips32eb, soclib_mips32el, soclib_arm32, soclib_arm32_big,
@@ -175,7 +183,8 @@ all                  = OrMatch(soclib_mips32eb, soclib_mips32el, soclib_arm32, s
                                gaisler_leon3,
                                stm32_nucleof103rb, stm32_nucleof401re,
                                bcm283x_raspberry,
-                               zynq
+                               zynq,
+                               cc1310
 )
 
 default              = OrMatch(soclib_arm32,
