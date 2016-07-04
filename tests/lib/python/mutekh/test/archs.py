@@ -77,8 +77,8 @@ efm32_wonder         = Config("efm32-stk3800",                          _efm32_f
 
 _nrf5x_features      = _arm32m_features + ["arch:nrf5x", "spi", "i2c", "pwm", "timer", "char", "minimal"]
 
-nrf51                = Config("nrf5x-51822-128-16",                     _nrf5x_features)
-nrf52                = Config("nrf5x-52832-512-64",                     _nrf5x_features)
+nrf51                = Config("nrf5x-51822-128-16:arch_drv",            _nrf5x_features)
+nrf52                = Config("nrf5x-52832-512-64:arch_drv",            _nrf5x_features)
 
 ##################################################
 # Microchip PIC32 (mips-based) archs and platforms
