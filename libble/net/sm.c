@@ -41,8 +41,8 @@
 #define EXPECT_IDENTITY_ADDRESS_INFORMATION 8
 #define EXPECT_CSRK 16
 
-#define dprintk(...) do{}while(0)
-//#define dprintk printk
+//#define dprintk(...) do{}while(0)
+#define dprintk printk
 
 #include <ble/peer.h>
 #include <device/class/crypto.h>
@@ -236,11 +236,11 @@ static uint8_t sm_mconf_setup(struct ble_sm_s *sm)
   dprintk("mrand:      %P\n", sm->master.mrand, 16);
   dprintk("preq:       %P\n", sm->preq, 7);
   dprintk("pres:       %P\n", sm->pres, 7);
-  dprintk("init@:      "BLE_ADDR_FMT"\n", BLE_ADDR_ARG(&sm->peer->lookup_addr));
-  dprintk("resp@:      "BLE_ADDR_FMT"\n", BLE_ADDR_ARG(&sm->local_addr));
+  dprintk("init@:      "BLE_ADDR_FMT"\n", BLE_ADDR_ARG(&sm->local_addr));
+  dprintk("resp@:      "BLE_ADDR_FMT"\n", BLE_ADDR_ARG(&sm->peer->lookup_addr));
 
   err = ble_c1(&sm->aes_dev, sm->tk, sm->master.mrand, sm->preq, sm->pres,
-               &sm->peer->lookup_addr, &sm->local_addr,
+               &sm->local_addr, &sm->peer->lookup_addr,
                sm->mconf);
   if (err)
     return BLE_SM_REASON_UNSPECIFIED_REASON;
@@ -262,12 +262,12 @@ static uint8_t sm_sconf_check(struct ble_sm_s *sm, const uint8_t *srand)
   dprintk("srand:      %P\n", srand, 16);
   dprintk("preq:       %P\n", sm->preq, 7);
   dprintk("pres:       %P\n", sm->pres, 7);
-  dprintk("init@:      "BLE_ADDR_FMT"\n", BLE_ADDR_ARG(&sm->peer->lookup_addr));
-  dprintk("resp@:      "BLE_ADDR_FMT"\n", BLE_ADDR_ARG(&sm->local_addr));
+  dprintk("init@:      "BLE_ADDR_FMT"\n", BLE_ADDR_ARG(&sm->local_addr));
+  dprintk("resp@:      "BLE_ADDR_FMT"\n", BLE_ADDR_ARG(&sm->peer->lookup_addr));
   dprintk("sconf_rx:   %P\n", sm->master.sconf, 16);
 
   err = ble_c1(&sm->aes_dev, sm->tk, srand, sm->preq, sm->pres,
-               &sm->peer->lookup_addr, &sm->local_addr,
+               &sm->local_addr, &sm->peer->lookup_addr,
                sconf_calc);
   if (err)
     return BLE_SM_REASON_UNSPECIFIED_REASON;
