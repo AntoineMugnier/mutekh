@@ -33,8 +33,8 @@
 #define MAX3420_WRITE(REG, A, B)                \
 	cst16			%REG,            (((B) << 8) | (A)),  0 ;\
 	pack16le		%REG,    	 1                      ;\
-        spi_wrl                 %REG,            2
-          
+        spi_wr                  %REG,            2,	CS_PULSE
+
 
 max3420_disconnect:
         /* Hide device to host */
@@ -71,7 +71,7 @@ max3420_process_usbirq:
 	cst8			%R_TMP0,	 MAX3420_USBIRQ | 2
 	cst8			%R_TMP2,	 MAX3420_USBIRQ_MASK
 	pack8			%R_TMP0,         3
-        spi_wrl                 %R_TMP0,         3
+        spi_wr                  %R_TMP0,         3,	CS_PULSE
         ld8e                    %R_TMP0,         %R_CTX_PV,     _offsetof(max3420_usbdev_private_s, event, 1)
         or32                    %R_TMP0,         %R_TMP1
         st8e                    %R_TMP0,         %R_CTX_PV,     _offsetof(max3420_usbdev_private_s, event, 1)
@@ -103,8 +103,8 @@ gpx_poll_done:
         MAX3420_WRITE(R_TMP2, MAX3420_PINCTRL | 2, 0x18)
         /* Read device id */
         cst8                    %R_TMP0,         MAX3420_REVISION
-	pack8			%R_TMP0,         1
-        spi_swpl                %R_TMP0,         %R_TMP0,         2
+	pack16le		%R_TMP0,         1
+        spi_swp                 %R_TMP0,         %R_TMP0,         2,	CS_PULSE
 	unpack8			%R_TMP0,         2
         cst8                    %R_TMP0,         MAX3420_CURRENT_REVISION
         neq                     %R_TMP0,         %R_TMP1
@@ -112,8 +112,8 @@ gpx_poll_done:
 poll_osc:
         spi_yield_delay         %R_TMP1
         cst8                    %R_TMP2,         MAX3420_USBIRQ
-	pack8			%R_TMP0,         1
-        spi_swpl                %R_TMP2,         %R_TMP2,         2
+	pack16le		%R_TMP0,         1
+        spi_swp                 %R_TMP2,         %R_TMP2,         2,	CS_PULSE
 	unpack8			%R_TMP2,         2
         tst32c                  %R_TMP3,         0
           jmp8                  poll_osc
@@ -138,15 +138,15 @@ max3420_entry_irq:
 max3420_process_irq:
         /* Read IRQ and IEN register */
         cst8                    %R_TMP0,         MAX3420_USBIRQ
-	pack8			%R_TMP0,         1
-        spi_swpl                %R_TMP0,         %R_TMP0,         3
+	pack32le		%R_TMP0,         1
+        spi_swp                 %R_TMP0,         %R_TMP0,         3,	CS_PULSE
 	unpack8			%R_TMP0,         3
         and32                   %R_TMP1,         %R_TMP2
         neq0                    %R_TMP1
           jmp8                  max3420_process_usbirq
         cst8                    %R_TMP0,         MAX3420_EPIRQ
-	pack8			%R_TMP0,         1
-        spi_swpl                %R_TMP0,         %R_TMP0,         3
+	pack32le		%R_TMP0,         1
+        spi_swp                 %R_TMP0,         %R_TMP0,         3,	CS_PULSE
 	unpack8			%R_TMP0,         3
         and32                   %R_TMP1,         %R_TMP2
         eq0                     %R_TMP1
@@ -220,13 +220,11 @@ max3420_process_setup:
         eq0                     %R_TRANSFER
           jmp8                    max3420_entry_irq
         call8                   %R_LINK,         max3420_get_transfer_info
-        spi_setcs               _const(DEV_SPI_CS_ASSERT)
         cst8                    %R_TMP0,         MAX3420_SUDFIFO
 	pack8			%R_TMP0,         1
-        spi_wr                  %R_TMP0         
+        spi_wr                  %R_TMP0,         1,	CS_START
         cst8                    %R_TMP0,         8
-        spi_rdm8                %R_BUFF,         %R_TMP0
-        spi_setcs               _const(DEV_SPI_CS_TRANSFER)
+        spi_rdm                 %R_BUFF,         %R_TMP0,	CS_END
         call8                   %R_LINK,         max3420_clean_irq
         cst8                    %R_ARG3,         MAX3420_EP0_MASK
         jmp8                    max3420_set_done
@@ -273,7 +271,7 @@ max3420_clean_irq:
         mov                     %R_TMP1,         %R_ARG2
         cst8                    %R_TMP0,         MAX3420_EPIRQ | 2
 	pack8			%R_TMP0,         2
-        spi_wrl                 %R_TMP0,         2
+        spi_wr                  %R_TMP0,         2,	CS_PULSE
         ret                     %R_LINK
 
 max3420_clean_pending:
@@ -348,8 +346,8 @@ max3420_entry_setup:
         cst8                    %R_ARG2,         MAX3420_IRQ_SETUP
         /* Read EPIRQ register */
         cst8                    %R_TMP0,         MAX3420_EPIRQ
-	pack8			%R_TMP0,         1
-        spi_swpl                %R_TMP0,         %R_TMP0,         2
+	pack16le		%R_TMP0,         1
+        spi_swp                 %R_TMP0,         %R_TMP0,         2,	CS_PULSE
 	unpack8			%R_TMP0,         2
         tst32s                  %R_TMP1,         bitpos(MAX3420_IRQ_SETUP)
           jmp8                    max3420_process_setup
@@ -407,7 +405,7 @@ max3420_entry_set_address:
         mov                     %R_TMP1,         %R_ARG0
         cst8                    %R_TMP0,         MAX3420_FNADDR | 2
 	pack8			%R_TMP0,	 2
-        spi_wrl                 %R_TMP0,         2
+        spi_wr                  %R_TMP0,         2,	CS_PULSE
         cst8                    %R_ARG3,         MAX3420_CFG_MASK
         jmp32                   max3420_set_done
 
@@ -417,7 +415,7 @@ max3420_entry_status:
         mov                     %R_TMP1,         %R_ARG0
         cst8                    %R_TMP0,         MAX3420_EPSTALLS | 2
 	pack8			%R_TMP0,	 2
-        spi_wrl                 %R_TMP0,         2
+        spi_wr                  %R_TMP0,         2,	CS_PULSE
         cst8                    %R_ARG3,         MAX3420_EP0_MASK
         jmp32                   max3420_set_done
 
@@ -429,8 +427,8 @@ max3420_try_data_out:
         /*R_ARG2: Irq mask */
         call8                   %R_LINK,         max3420_clean_pending
         cst8                    %R_TMP0,         MAX3420_EPIRQ
-	pack8			%R_TMP0,         1
-        spi_swpl                %R_TMP0,         %R_TMP0,         2
+	pack16le		%R_TMP0,         1
+        spi_swp                 %R_TMP0,         %R_TMP0,         2,	CS_PULSE
 	unpack8			%R_TMP0,         2
         and32                   %R_TMP1,         %R_ARG2
         neq0                    %R_TMP1
@@ -451,17 +449,15 @@ max3420_write_fifo:
         /* Write fifo */
         cst8                    %R_TMP0,         2
         or32                    %R_ARG0,         %R_TMP0
-        spi_setcs               _const(DEV_SPI_CS_ASSERT)
 	pack8			%R_ARG0,	 1
-        spi_swp                 %R_ARG0,         %15
-        spi_wrm8                %R_BUFF,         %R_SIZE
-        spi_setcs               _const(DEV_SPI_CS_TRANSFER)
+        spi_wr                  %R_ARG0,         1,	CS_START
+        spi_wrm                 %R_BUFF,         %R_SIZE,	CS_END
         /* Set byte count */
         cst8                    %R_TMP0,         2
         or32                    %R_TMP0,         %R_ARG1
         mov                     %R_TMP1,         %R_SIZE
 	pack8			%R_TMP0,	 2
-        spi_wrl                 %R_TMP0,         2
+        spi_wr                  %R_TMP0,         2,	CS_PULSE
         ret                     %R_LINK
 
 max3420_read_fifo:
@@ -469,17 +465,15 @@ max3420_read_fifo:
         /* R_ARG0: FIFO address */
         /* R_ARG1: BC register address */
         mov                     %R_TMP0,         %R_ARG1        
-	pack8			%R_TMP0,	 1
-        spi_swpl                %R_TMP0,         %R_TMP0,         2
+	pack16le		%R_TMP0,	 1
+        spi_swp                 %R_TMP0,         %R_TMP0,         2,	CS_PULSE
 	unpack8			%R_TMP0,         2
         lteq                    %R_TMP1,         %R_SIZE
         mov                     %R_SIZE,         %R_TMP1
         /* Read fifo */
-        spi_setcs               _const(DEV_SPI_CS_ASSERT)
 	pack8			%R_ARG0,	 1
-        spi_swp                 %R_ARG0,         %15
-        spi_rdm8                %R_BUFF,         %R_SIZE
-        spi_setcs               _const(DEV_SPI_CS_TRANSFER)
+        spi_wr                  %R_ARG0,         1,	CS_START
+        spi_rdm                 %R_BUFF,         %R_SIZE,	CS_END
         ret                     %R_LINK
 
 max3420_update_transfer:
@@ -506,25 +500,25 @@ max3420_update_transfer:
 max3420_enable_irq:
         /*R_ARG2: interrupt to enable */
         cst8                    %R_TMP0,         MAX3420_EPIEN
-	pack8			%R_TMP0,         1
-        spi_swpl                %R_TMP0,         %R_TMP0,     2
+	pack16le		%R_TMP0,         1
+        spi_swp                 %R_TMP0,         %R_TMP0,     2,	CS_PULSE
 	unpack8			%R_TMP0,         2
         cst8                    %R_TMP0,         MAX3420_EPIEN | 2
         or32                    %R_TMP1,         %R_ARG2
 	pack8			%R_TMP0,	 2
-        spi_wrl                 %R_TMP0,         2
+        spi_wr                  %R_TMP0,         2,	CS_PULSE
         jmp32                   max3420_entry_irq
 
 max3420_disable_irq:
         /*R_ARG2: interrupt to disable */
         cst8                    %R_TMP0,         MAX3420_EPIEN
-	pack8			%R_TMP0,         1
-        spi_swpl                %R_TMP0,         %R_TMP0,     2
+	pack16le		%R_TMP0,         1
+        spi_swp                 %R_TMP0,         %R_TMP0,     2,	CS_PULSE
 	unpack8			%R_TMP0,         2
         cst8                    %R_TMP0,         MAX3420_EPIEN | 2
         xor32                   %R_TMP1,         %R_ARG2
 	pack8			%R_TMP0,	 2
-        spi_wrl                 %R_TMP0,         2
+        spi_wr                  %R_TMP0,         2,	CS_PULSE
         ret                     %R_LINK
 
 /* -------------------------------------------------------------------------------*/

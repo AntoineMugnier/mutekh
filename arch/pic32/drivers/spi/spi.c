@@ -242,52 +242,6 @@ static bool_t pic32_spi_transfer_tx(struct device_s *dev)
 }
 
 
-static DEV_SPI_CTRL_SELECT(pic32_spi_select)
-{
-  struct device_s *dev = accessor->dev;
-  struct pic32_spi_context_s *pv = dev->drv_pv;
-  error_t err = 0;
-
-  if (cs_id > 0)
-    return -ENOTSUP;
-
-  /* enable the spi */
-  uint32_t x = endian_le32(cpu_mem_read_32(pv->addr + PIC32_SPI_CON_ADDR));
-
-
-  LOCK_SPIN_IRQ(&dev->lock);
-
-  if (pv->tr != NULL)
-    err = -EBUSY;
-  else
-    {
-      switch (pc)
-        {
-        case DEV_SPI_CS_TRANSFER:
-          x |= PIC32_SPI_CON_MSSEN;
-          x = pt == DEV_SPI_ACTIVE_LOW ? x & ~PIC32_SPI_CON_FRMPOL : x | PIC32_SPI_CON_FRMPOL;
-          break;
-
-        case DEV_SPI_CS_DEASSERT:
-        case DEV_SPI_CS_ASSERT:
-          err = -ENOTSUP;
-          break;
-
-        case DEV_SPI_CS_RELEASE:
-          x &= ~PIC32_SPI_CON_MSSEN;
-          break;
-
-        }
-
-      cpu_mem_write_32(pv->addr + PIC32_SPI_CON_ADDR, x);
-    }
-
-  LOCK_RELEASE_IRQ(&dev->lock);
-
-  return err;
-}
-
-
 #ifdef CONFIG_DRIVER_PIC32_DMA
 
 static void pic32_spi_restart(struct pic32_spi_context_s * pv)
@@ -421,10 +375,9 @@ static DEV_SPI_CTRL_TRANSFER(pic32_spi_transfer)
   LOCK_SPIN_IRQ(&dev->lock);
 
   if (pv->tr != NULL)
-    {
-      tr->err = -EBUSY;
-      printk("SPI ERROR BUSY\n");
-    }
+    tr->err = -EBUSY;
+  else if (tr->cs_op != DEV_SPI_CS_NOP_NOP)
+    tr->err = -ENOTSUP;
   else
     {
       assert(tr->data.count > 0);

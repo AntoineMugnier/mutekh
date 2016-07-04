@@ -283,7 +283,7 @@ static DEV_SPI_CTRL_TRANSFER(nrf5x_spim_transfer)
 {
   struct device_s *dev = accessor->dev;
   struct nrf5x_spim_context_s *pv = dev->drv_pv;
-  bool_t done;
+  bool_t done = 1;
 
   dprintk("%s\n", __FUNCTION__);
 
@@ -291,16 +291,12 @@ static DEV_SPI_CTRL_TRANSFER(nrf5x_spim_transfer)
 
   if (pv->current_transfer) {
     tr->err = -EBUSY;
-    done = 1;
+  } else if (tr->cs_op != DEV_SPI_CS_NOP_NOP) {
+    tr->err = -ENOTSUP;
+  } else if (!(0x17 >> tr->data.out_width) || !(0x16 >> tr->data.in_width)) {
+    tr->err = -EINVAL;
   } else {
     assert(tr->data.count > 0);
-
-    if (!(0x17 >> tr->data.out_width) || !(0x16 >> tr->data.in_width)) {
-      tr->err = -EINVAL;
-      done = 1;
-      goto out;
-    }
-
     done = 0;
 
     pv->current_transfer = tr;

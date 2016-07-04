@@ -1,47 +1,6 @@
 
 package bc_custom_spi;
 
-#    instruction         params        opcode                  format
-# -------------------------------------------------------------------
-#
-#    generic instructions              0--- ---- ---- ----
-#
-#    nodelay                           1000 0011 00-- ----
-#    deadline            r             1000 0011 01-- rrrr
-#    delay               r             1000 0011 10-- rrrr
-#    timestamp           r             1000 0011 11-- rrrr
-#
-#    yield                             1000 0000 001- ----
-#    yield_delay         r             1000 0000 101- rrrr
-#    yield_deadline      r             1000 0000 011- rrrr
-#    yieldc                            1000 0000 000- ----
-#    yieldc_delay        r             1000 0000 100- rrrr
-#    yieldc_deadline     r             1000 0000 010- rrrr
-#
-#    wait                cs            1000 0010 00cc ----
-#    wait_delay          r, cs         1000 0010 10cc rrrr
-#    wait_deadline       r, cs         1000 0010 01cc rrrr
-#
-#    setcs               cs            1000 0010 11cc ----
-#
-#    width               w, o          1000 0100 00ow wwww
-#    brate               r             1000 0100 10-- rrrr
-#
-#    write               r             1000 1000 rrrr 1111
-#    swp                 wr, rd        1000 1000 rrrr rrrr
-#    swpl                wr, rd, l     1000 1lll rrrr rrrr
-#
-#    pad                 r             1001 0000 ---- rrrr
-#
-#    rdm[8,16,32]        ra, r         1001 01ss aaaa rrrr
-#    wrm[8,16,32]        ra, r         1001 10ss aaaa rrrr
-#    swpm[8,16,32]       ra, r         1001 11ss aaaa rrrr
-#
-#    gpioset             i, r          1010 iiii iiii rrrr
-#    gpioget             i, r          1011 iiii iiii rrrr
-#    gpiomode            i, m          1100 iiii iiii mmmm
-#
-
 main::custom_op('spi_nodelay',        0,      0x0300 );
 main::custom_op('spi_deadline',       1,      0x0340, \&parse_reg );
 main::custom_op('spi_delay',          1,      0x0380, \&parse_reg );
@@ -55,62 +14,57 @@ main::custom_cond_op('spi_yieldc',          0,   0x0000 );
 main::custom_cond_op('spi_yieldc_delay' ,   1,   0x0080, \&parse_reg );
 main::custom_cond_op('spi_yieldc_deadline', 1,   0x0040, \&parse_reg );
 
-main::custom_op('spi_wait',           1,      0x0200, \&parse_cs );
-main::custom_op('spi_wait_delay',     2,      0x0280, \&parse_reg_cs );
-main::custom_op('spi_wait_deadline',  2,      0x0240, \&parse_reg_cs );
-
-main::custom_op('spi_setcs',          1,      0x02c0, \&parse_cs );
+main::custom_op('spi_wait',           0,      0x0200 );
+main::custom_op('spi_wait_delay',     1,      0x0280, \&parse_reg );
+main::custom_op('spi_wait_deadline',  1,      0x0240, \&parse_reg );
 
 main::custom_op('spi_width',          2,      0x0400, \&parse_width  );
 main::custom_op('spi_brate',          1,      0x0480, \&parse_reg );
 
-main::custom_op('spi_swp',            2,      0x2000, \&parse_swp );
-main::custom_op('spi_swpl',           3,      0x2000, \&parse_swpl );
-main::custom_op('spi_wr',             1,      0x3000, \&parse_wr );
-main::custom_op('spi_wrl',            2,      0x3000, \&parse_wrl );
+main::custom_op('spi_rd',             3,      0x1000, \&parse_rd );
+main::custom_op('spi_wr',             3,      0x2000, \&parse_wr );
+main::custom_op('spi_swp',            4,      0x3000, \&parse_swp );
 
-main::custom_op('spi_pad',            1,      0x1000, \&parse_reg );
+main::custom_op('spi_pad',            2,      0x4000, \&parse_pad );
+main::custom_op('spi_rdm',            3,      0x4400, \&parse_xxm );
+main::custom_op('spi_wrm',            3,      0x4800, \&parse_xxm );
+main::custom_op('spi_swpm',           4,      0x4c00, \&parse_swpm );
 
-main::custom_op('spi_rdm8',           2,      0x1400, \&parse_rdm );
-main::custom_op('spi_rdm16',          2,      0x1500, \&parse_rdm );
-main::custom_op('spi_rdm32',          2,      0x1700, \&parse_rdm );
+main::custom_op('spi_gpiomode',       2,      0x0800, \&parse_gpio_mode );
+main::custom_op('spi_gpioget',        2,      0x0a00, \&parse_gpio );
+main::custom_op('spi_gpioset',        2,      0x0c00, \&parse_gpio );
 
-main::custom_op('spi_rdm8',           2,      0x1400, \&parse_xxm );
-main::custom_op('spi_rdm16',          2,      0x1500, \&parse_xxm );
-main::custom_op('spi_rdm32',          2,      0x1700, \&parse_xxm );
+our %csops1 = (
+    'CS_END'   => 0,
+    'CS_PULSE' => 0,
+    'CS_START' => 1,
+    'CS_CONTINUE' => 1,
+    );
 
-main::custom_op('spi_wrm8',           2,      0x1800, \&parse_xxm );
-main::custom_op('spi_wrm16',          2,      0x1900, \&parse_xxm );
-main::custom_op('spi_wrm32',          2,      0x1b00, \&parse_xxm );
+our %csops2 = (
+    'CS_NOP' => 0,
+    'CS_DESELECT'  => 1,
+    'CS_END'   => 2,
+    'CS_PULSE' => 2,
+    'CS_START' => 3,
+    'CS_CONTINUE' => 3,
+    );
 
-main::custom_op('spi_swpm8',          2,      0x1c00, \&parse_xxm );
-main::custom_op('spi_swpm16',         2,      0x1d00, \&parse_xxm );
-main::custom_op('spi_swpm32',         2,      0x1f00, \&parse_xxm );
-
-main::custom_op('spi_gpioset',        2,      0x6000, \&parse_gpio );
-main::custom_op('spi_gpioget',        2,      0x5000, \&parse_gpio );
-main::custom_op('spi_gpiomode',       2,      0x4000, \&parse_gpio_mode );
+sub check_csop
+{
+    my ( $thisop, $argidx, $ops ) = @_;
+    my $expr = $thisop->{args}->[$argidx];
+    my $op = $ops->{$expr};
+    die "$thisop->{line}: bad chip select operation, expected: ".join(', ', keys %{$ops})."\n"
+        unless defined $op;
+    return $op;
+}
 
 sub parse_reg
 {
     my $thisop = shift;
     my $r = main::check_reg( $thisop, 0 );
     $thisop->{code} |= $r;
-}
-
-sub parse_cs
-{
-    my $thisop = shift;
-    my $cs = main::check_num( $thisop, 0, 0, 3 );
-    $thisop->{code} |= ( $cs << 4 );
-}
-
-sub parse_reg_cs
-{
-    my $thisop = shift;
-    my $r = main::check_reg( $thisop, 0 );
-    my $cs = main::check_num( $thisop, 1, 0, 3 );
-    $thisop->{code} |= ( $cs << 4 ) | $r;
 }
 
 sub parse_width
@@ -121,56 +75,75 @@ sub parse_width
     $thisop->{code} |= ( $o << 5 ) | $w;
 }
 
-sub parse_swp
+sub parse_rd
 {
     my $thisop = shift;
-    my $wr = main::check_reg( $thisop, 0 );
-    my $rd = main::check_reg( $thisop, 1 );
-    $thisop->{code} |= ($wr << 4) | $rd;
-}
-
-sub parse_swpl
-{
-    my $thisop = shift;
-    my $wr = main::check_reg( $thisop, 0 );
-    my $rd = main::check_reg( $thisop, 1 );
-    my $l = main::check_num( $thisop, 2, 1, 16 );
-    die "$thisop->{line}: out of range read byte array\n"
-        if ($rd * 4 + $l > 16 * 4);
-    die "$thisop->{line}: out of range write byte array\n"
-        if ($wr * 4 + $l > 16 * 4);
-    $thisop->{code} |= (($l - 1) << 8) | ($wr << 4) | $rd;
+    my $r = main::check_reg( $thisop, 0 );
+    my $l = main::check_num( $thisop, 1, 1, 16 );
+    my $cs = check_csop( $thisop, 2, \%csops1 );
+    die "$thisop->{line}: out of range byte array\n"
+        if ($r * 4 + $l > 16 * 4);
+    $thisop->{code} |= ($cs << 14) | (($l - 1) << 8) | ($r << 4);
 }
 
 sub parse_wr
 {
     my $thisop = shift;
-    my $wr = main::check_reg( $thisop, 0 );
-    $thisop->{code} |= ($wr << 4);
+    my $r = main::check_reg( $thisop, 0 );
+    my $l = main::check_num( $thisop, 1, 1, 16 );
+    my $cs = check_csop( $thisop, 2, \%csops1 );
+    die "$thisop->{line}: out of range byte array\n"
+        if ($r * 4 + $l > 16 * 4);
+    $thisop->{code} |= ($cs << 14) | (($l - 1) << 8) | ($r << 0);
 }
 
-sub parse_wrl
+sub parse_swp
 {
     my $thisop = shift;
     my $wr = main::check_reg( $thisop, 0 );
-    my $l = main::check_num( $thisop, 1, 1, 16 );
-    die "$thisop->{line}: out of range byte array\n"
+    my $rd = main::check_reg( $thisop, 1 );
+    my $l = main::check_num( $thisop, 2, 1, 16 );
+    my $cs = check_csop( $thisop, 3, \%csops1 );
+    die "$thisop->{line}: out of range read byte array\n"
+        if ($rd * 4 + $l > 16 * 4);
+    die "$thisop->{line}: out of range write byte array\n"
         if ($wr * 4 + $l > 16 * 4);
-    $thisop->{code} |= (($l - 1) << 8) | ($wr << 4);
+    $thisop->{code} |= ($cs << 14) | (($l - 1) << 8) | ($wr << 4) | $rd;
+}
+
+sub parse_pad
+{
+    my $thisop = shift;
+    my $r = main::check_reg( $thisop, 0 );
+    my $cs = check_csop( $thisop, 1, \%csops2 );
+    $thisop->{code} |= ($cs << 8) | $r;
 }
 
 sub parse_xxm
 {
     my $thisop = shift;
-    my $a = main::check_reg( $thisop, 0 );
-    my $r = main::check_reg( $thisop, 1 );
-    $thisop->{code} |= ($a << 4) | $r;
+    my $ra = main::check_reg( $thisop, 0 );
+    my $rl = main::check_reg( $thisop, 1 );
+    my $cs = check_csop( $thisop, 2, \%csops2 );
+    $thisop->{code} |= ($cs << 8) | ($ra << 4) | $rl;
+}
+
+sub parse_swpm
+{
+    my $thisop = shift;
+    my $rar = main::check_reg( $thisop, 0 );
+    my $raw = main::check_reg( $thisop, 1 );
+    die "$thisop->{line}: read and write address registers must be a contiguous pair\n"
+        if ($raw ^ 1 != $rar);
+    my $rl = main::check_reg( $thisop, 2 );
+    my $cs = check_csop( $thisop, 3, \%csops2 );
+    $thisop->{code} |= ($cs << 8) | ($rar << 4) | $rl;
 }
 
 sub parse_gpio
 {
     my $thisop = shift;
-    my $i = main::check_num( $thisop, 0, 0, 255 );
+    my $i = main::check_num( $thisop, 0, 0, 31 );
     my $r = main::check_reg( $thisop, 1 );
     $thisop->{code} |= ($i << 4) | $r;
 }
@@ -178,7 +151,7 @@ sub parse_gpio
 sub parse_gpio_mode
 {
     my $thisop = shift;
-    my $i = main::check_num( $thisop, 0, 0, 255 );
+    my $i = main::check_num( $thisop, 0, 0, 31 );
     my $m = main::check_num( $thisop, 0, 0, 15 );
     $thisop->{code} |= ($a << 4) | $m;
 }

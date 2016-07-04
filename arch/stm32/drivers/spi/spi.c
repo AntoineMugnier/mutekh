@@ -266,84 +266,31 @@ DEV_IRQ_SRC_PROCESS(stm32_spi_irq)
 }
 
 static
-DEV_SPI_CTRL_SELECT(stm32_spi_select)
-{
-  struct device_s            *dev = accessor->dev;
-  struct stm32_spi_private_s *pv  = dev->drv_pv;
-
-  error_t err = 0;
-
-  if (cs_id > 0 || !pv->use_cs)
-    return -ENOTSUP;
-
-  uintptr_t a = pv->addr + STM32_SPI_CR2_ADDR;
-  uint32_t  x = endian_le32(cpu_mem_read_32(a));
-
-  bool_t enable = 0;
-
-  LOCK_SPIN_IRQ(&dev->lock);
-
-  if (pv->tr != NULL)
-    err = -EBUSY;
-  else
-    {
-      switch (pc)
-        {
-        case DEV_SPI_CS_ASSERT:
-          STM32_SPI_CR2_SSOE_SET(x, 1);
-          enable = 1;
-          break;
-
-        case DEV_SPI_CS_RELEASE:
-          STM32_SPI_CR2_SSOE_SET(x, 0);
-          break;
-
-        case DEV_SPI_CS_TRANSFER:
-        case DEV_SPI_CS_DEASSERT:
-          err = -ENOTSUP;
-          break;
-        }
-
-      if (!err)
-        cpu_mem_write_32(a, endian_le32(x));
-
-      /* we need to re-enable the SPI device as SSOE = 0 disabled it. */
-      if (enable)
-        {
-          a = pv->addr + STM32_SPI_CR1_ADDR;
-          x = endian_le32(cpu_mem_read_32(a));
-          STM32_SPI_CR1_SPE_SET(x, 1);
-          STM32_SPI_CR1_MSTR_SET(x, MASTER);
-          cpu_mem_write_32(a, endian_le32(x));
-        }
-    }
-
-  LOCK_RELEASE_IRQ(&dev->lock);
-
-  return err;
-}
-
-static
 DEV_SPI_CTRL_TRANSFER(stm32_spi_transfer)
 {
   struct device_s *dev = accessor->dev;
   struct stm32_spi_private_s *pv = dev->drv_pv;
 
   assert(tr->data.count > 0);
-  tr->err = -EBUSY;
+  bool_t done = 1;
 
   LOCK_SPIN_IRQ(&dev->lock);
 
-  if (pv->tr == NULL)
+  if (pv->tr != NULL)
+    tr->err = -EBUSY;
+  else if (tr->cs_op != DEV_SPI_CS_NOP_NOP)
+    tr->err = -ENOTSUP;
+  else
     {
       tr->err = 0;
       pv->tr = tr;
       stm32_spi_transfer_tx(dev);
+      done = 0;
     }
 
   LOCK_RELEASE_IRQ(&dev->lock);
 
-  if (tr->err)
+  if (done)
     kroutine_exec(&tr->kr);
 }
 
