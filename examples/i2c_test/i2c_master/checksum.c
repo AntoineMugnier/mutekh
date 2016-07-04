@@ -30,7 +30,7 @@
 #include "i2c_master.h"
 
 static inline uint8_t
-calcul_checksum(uint8_t *seq, uint8_t len)
+calcul_checksum(volatile uint8_t *seq, uint8_t len)
 {
   uint16_t checksum = 0;
   bool_t flag = 0;
@@ -56,7 +56,7 @@ calcul_checksum(uint8_t *seq, uint8_t len)
 uint8_t
 get_test_bc_1_checksum(uint8_t slave_addr)
 {
-  uint8_t seq[] = {
+  volatile uint8_t seq[] = {
     I2C_SLAVE_BASIC_OP_START,
     I2C_SLAVE_BASIC_OP_RECV_ADDR,
     slave_addr << 1,
@@ -147,7 +147,7 @@ get_test_bc_1_checksum(uint8_t slave_addr)
 uint8_t
 get_test_bc_2_checksum(uint8_t slave_addr)
 {
-  uint8_t seq[] = {
+  volatile uint8_t seq[] = {
     I2C_SLAVE_BASIC_OP_START,
     I2C_SLAVE_BASIC_OP_RECV_ADDR,
     (slave_addr << 1) | 1,
@@ -176,6 +176,7 @@ get_test_bc_2_checksum(uint8_t slave_addr)
     I2C_SLAVE_BASIC_OP_SEND_DATA,
     0x00, /* last checksum (slave dependant) */
     I2C_SLAVE_BASIC_OP_RECV_ACK,
+#if I2C_MASTER_READ_RESTART_SUPPORT
     I2C_SLAVE_BASIC_OP_SEND_DATA,
     0x00, /* last checksum (slave dependant) */
     I2C_SLAVE_BASIC_OP_RECV_ACK,
@@ -204,6 +205,7 @@ get_test_bc_2_checksum(uint8_t slave_addr)
     I2C_SLAVE_BASIC_OP_RECV_ADDR,
     (slave_addr << 1) | 1,
     I2C_SLAVE_BASIC_OP_SEND_ACK,
+#endif
     I2C_SLAVE_BASIC_OP_SEND_DATA,
     0x00, /* last checksum (slave dependant) */
     I2C_SLAVE_BASIC_OP_RECV_ACK,
@@ -238,7 +240,7 @@ get_test_bc_2_checksum(uint8_t slave_addr)
 uint8_t
 get_test_bc_3_checksum(uint8_t slave_addr)
 {
-  uint8_t seq[] = {
+  volatile uint8_t seq[] = {
     I2C_SLAVE_BASIC_OP_START,
     I2C_SLAVE_BASIC_OP_RECV_ADDR,
     slave_addr << 1,
@@ -305,7 +307,7 @@ get_test_bc_3_checksum(uint8_t slave_addr)
 uint8_t
 get_test_bc_4_checksum(uint8_t slave_addr)
 {
-  uint8_t seq[] =
+  volatile uint8_t seq[] =
   {
     I2C_SLAVE_BASIC_OP_START,
     I2C_SLAVE_BASIC_OP_RECV_ADDR,
@@ -335,6 +337,9 @@ get_test_bc_4_checksum(uint8_t slave_addr)
     I2C_SLAVE_BASIC_OP_SEND_DATA,
     0x00, /* last checksum (slave dependant) */
     I2C_SLAVE_BASIC_OP_RECV_NACK,
+#if I2C_MASTER_READ_RESTART_SUPPORT == 0
+    I2C_SLAVE_BASIC_OP_STOP,
+#endif
     I2C_SLAVE_BASIC_OP_START,
     I2C_SLAVE_BASIC_OP_RECV_ADDR,
     slave_addr << 1,
@@ -407,7 +412,7 @@ get_test_bc_4_checksum(uint8_t slave_addr)
 uint8_t
 get_test_bc_5_checksum(uint8_t slave_addr)
 {
-  uint8_t seq[] = {
+  volatile uint8_t seq[] = {
     I2C_SLAVE_BASIC_OP_START,
     I2C_SLAVE_BASIC_OP_RECV_ADDR,
     slave_addr << 1,
@@ -434,7 +439,7 @@ get_test_bc_5_checksum(uint8_t slave_addr)
 uint8_t
 get_test_bc_7_checksum(uint8_t slave_addr)
 {
-  uint8_t seq[] = {
+  volatile uint8_t seq[] = {
     I2C_SLAVE_BASIC_OP_START,
     I2C_SLAVE_BASIC_OP_RECV_ADDR,
     slave_addr << 1,
@@ -473,7 +478,7 @@ get_test_bc_7_checksum(uint8_t slave_addr)
 uint8_t
 get_test_bc_8_checksum(uint8_t slave_addr)
 {
-  uint8_t seq[] = {
+  volatile uint8_t seq[] = {
     I2C_SLAVE_BASIC_OP_START,
     I2C_SLAVE_BASIC_OP_RECV_ADDR,
     slave_addr << 1,
@@ -500,7 +505,7 @@ get_test_bc_8_checksum(uint8_t slave_addr)
 uint8_t
 get_test_bc_9_checksum(uint8_t slave_addr)
 {
-  uint8_t seq[] = {
+  volatile uint8_t seq[] = {
     I2C_SLAVE_BASIC_OP_START,
     I2C_SLAVE_BASIC_OP_RECV_ADDR,
     (slave_addr << 1) | 1,
@@ -539,7 +544,7 @@ get_test_bc_9_checksum(uint8_t slave_addr)
 uint8_t
 get_test_tr_1_checksum(uint8_t slave_addr)
 {
-  uint8_t seq[] = {
+  volatile uint8_t seq[] = {
     I2C_SLAVE_BASIC_OP_START,
     I2C_SLAVE_BASIC_OP_RECV_ADDR,
     slave_addr << 1,
@@ -602,7 +607,7 @@ get_test_tr_1_checksum(uint8_t slave_addr)
 uint8_t
 get_test_tr_2_checksum(uint8_t slave_addr)
 {
-  uint8_t seq[] = {
+  volatile uint8_t seq[] = {
     I2C_SLAVE_BASIC_OP_START,
     I2C_SLAVE_BASIC_OP_RECV_ADDR,
     (slave_addr << 1) | 1,
@@ -665,7 +670,7 @@ get_test_tr_2_checksum(uint8_t slave_addr)
 uint8_t
 get_test_tr_3_checksum(uint8_t slave_addr)
 {
-  uint8_t seq[] = {
+  volatile uint8_t seq[] = {
     I2C_SLAVE_BASIC_OP_START,
     I2C_SLAVE_BASIC_OP_RECV_ADDR,
     slave_addr << 1,
@@ -732,7 +737,7 @@ get_test_tr_3_checksum(uint8_t slave_addr)
 uint8_t
 get_test_tr_4_checksum(uint8_t slave_addr)
 {
-  uint8_t seq[] = {
+  volatile uint8_t seq[] = {
     I2C_SLAVE_BASIC_OP_START,
     I2C_SLAVE_BASIC_OP_RECV_ADDR,
     (slave_addr << 1) | 1,
@@ -761,6 +766,9 @@ get_test_tr_4_checksum(uint8_t slave_addr)
     I2C_SLAVE_BASIC_OP_SEND_DATA,
     0x00, /* last checksum (slave dependant) */
     I2C_SLAVE_BASIC_OP_RECV_NACK,
+#if I2C_MASTER_READ_RESTART_SUPPORT == 0
+    I2C_SLAVE_BASIC_OP_STOP,
+#endif
     I2C_SLAVE_BASIC_OP_START,
     I2C_SLAVE_BASIC_OP_RECV_ADDR,
     slave_addr << 1,
@@ -833,7 +841,7 @@ get_test_tr_4_checksum(uint8_t slave_addr)
 uint8_t
 get_test_tr_6_checksum(uint8_t slave_addr)
 {
-  uint8_t seq[] = {
+  volatile uint8_t seq[] = {
     I2C_SLAVE_BASIC_OP_START,
     I2C_SLAVE_BASIC_OP_RECV_ADDR,
     slave_addr << 1,
@@ -860,7 +868,7 @@ get_test_tr_6_checksum(uint8_t slave_addr)
 uint8_t
 get_test_tr_7_checksum(uint8_t slave_addr)
 {
-  uint8_t seq[] = {
+  volatile uint8_t seq[] = {
     I2C_SLAVE_BASIC_OP_START,
     I2C_SLAVE_BASIC_OP_RECV_ADDR,
     slave_addr << 1,

@@ -74,12 +74,13 @@ i2c_master_bc_read_debug_info:
 
   call8        %10,  i2c_master_bc_debug_mode_on
 
-  i2c_rdr      %0,    1,  _const(DEV_I2C_BC_CONTINUOUS_SYNC) /* debug info SIZE */
+  i2c_rdr      %0,    1,  _const(DEV_I2C_BC_CONTINUOUS)  /* debug info SIZE */
+  i2c_rdr      %1,    1,  _const(DEV_I2C_BC_CONTINUOUS)  /* debug info LAST_CHECKSUM */
+  cst8         %2,    I2C_SLAVE_BUFFER_SIZE
+  i2c_rdm      %13,   %2, _const(DEV_I2C_BC_CONTINUOUS)  /* debug info LOG */
+  i2c_rdm      %14,   %2, _const(DEV_I2C_BC_STOP)        /* debug info CHECKSUM */
   unpack8      %0,    1
-  i2c_rdr      %1,    1,  _const(DEV_I2C_BC_CONTINUOUS_SYNC) /* debug info LAST_CHECKSUM */
   unpack8      %1,    1
-  i2c_rdm      %13,   %0, _const(DEV_I2C_BC_CONTINUOUS_SYNC) /* debug info LOG */
-  i2c_rdm      %14,   %0, _const(DEV_I2C_BC_STOP)       /* debug info CHECKSUM */
 
   st8          %0,    %11
   st8          %1,    %12
@@ -131,8 +132,8 @@ i2c_master_bc_test_1_reg:
   .export i2c_master_bc_test_1_reg
 
   pack8     %0,   8
-  i2c_wrr   %0,   8,    _const(DEV_I2C_BC_CONTINUOUS_SYNC)
-  i2c_wrr   %0,   8,    _const(DEV_I2C_BC_RESTART_SYNC)
+  i2c_wrr   %0,   8,    _const(DEV_I2C_BC_CONTINUOUS)
+  i2c_wrr   %0,   8,    _const(DEV_I2C_BC_RESTART)
   i2c_wrr   %0,   8,    _const(DEV_I2C_BC_STOP)
   call8     %10,  i2c_master_test_yield
   end
@@ -140,8 +141,8 @@ i2c_master_bc_test_1_reg:
 i2c_master_bc_test_1_mem:
   .export i2c_master_bc_test_1_mem
 
-  i2c_wrm   %0,   %1,   _const(DEV_I2C_BC_CONTINUOUS_SYNC)
-  i2c_wrm   %0,   %1,   _const(DEV_I2C_BC_RESTART_SYNC)
+  i2c_wrm   %0,   %1,   _const(DEV_I2C_BC_CONTINUOUS)
+  i2c_wrm   %0,   %1,   _const(DEV_I2C_BC_RESTART)
   i2c_wrm   %0,   %1,   _const(DEV_I2C_BC_STOP)
   call8     %10,  i2c_master_test_wait
   end
@@ -149,20 +150,21 @@ i2c_master_bc_test_1_mem:
 i2c_master_bc_test_2_reg:
   .export i2c_master_bc_test_2_reg
 
-  i2c_rdr   %0,   8,    _const(DEV_I2C_BC_CONTINUOUS_SYNC)
-  unpack8   %0,   8
-  i2c_rdr   %0,   8,    _const(DEV_I2C_BC_RESTART_SYNC)
-  unpack8   %0,   8
+  i2c_rdr   %0,   8,    _const(DEV_I2C_BC_CONTINUOUS)
+#if I2C_MASTER_READ_RESTART_SUPPORT
+  i2c_rdr   %0,   8,    _const(DEV_I2C_BC_RESTART)
+#endif
   i2c_rdr   %0,   8,    _const(DEV_I2C_BC_STOP)
-  unpack8   %0,   8
   call8     %10,  i2c_master_test_yield
   end
 
 i2c_master_bc_test_2_mem:
   .export i2c_master_bc_test_2_mem
 
-  i2c_rdm   %0,   %1,   _const(DEV_I2C_BC_CONTINUOUS_SYNC)
-  i2c_rdm   %0,   %1,   _const(DEV_I2C_BC_RESTART_SYNC)
+  i2c_rdm   %0,   %1,   _const(DEV_I2C_BC_CONTINUOUS)
+#if I2C_MASTER_READ_RESTART_SUPPORT
+  i2c_rdm   %0,   %1,   _const(DEV_I2C_BC_RESTART)
+#endif
   i2c_rdm   %0,   %1,   _const(DEV_I2C_BC_STOP)
   call8     %10,  i2c_master_test_wait
   end
@@ -171,7 +173,7 @@ i2c_master_bc_test_3_reg:
   .export i2c_master_bc_test_3_reg
 
   pack8     %0,   8
-  i2c_wrr   %0,   8,    _const(DEV_I2C_BC_RESTART_SYNC)
+  i2c_wrr   %0,   8,    _const(DEV_I2C_BC_RESTART)
   i2c_rdr   %0,   8,    _const(DEV_I2C_BC_STOP)
   unpack8   %0,   8
   call8     %10,  i2c_master_test_yield
@@ -180,7 +182,7 @@ i2c_master_bc_test_3_reg:
 i2c_master_bc_test_3_mem:
   .export i2c_master_bc_test_3_mem
 
-  i2c_wrm   %0,   %1,   _const(DEV_I2C_BC_RESTART_SYNC)
+  i2c_wrm   %0,   %1,   _const(DEV_I2C_BC_RESTART)
   i2c_rdm   %0,   %1,   _const(DEV_I2C_BC_STOP)
   call8     %10,  i2c_master_test_wait
   end
@@ -188,9 +190,11 @@ i2c_master_bc_test_3_mem:
 i2c_master_bc_test_4_reg:
   .export i2c_master_bc_test_4_reg
 
-  i2c_rdr   %0,   8,    _const(DEV_I2C_BC_RESTART_SYNC)
-  unpack8   %0,   8
-  pack8     %0,   8
+#if I2C_MASTER_READ_RESTART_SUPPORT
+  i2c_rdr   %0,   8,    _const(DEV_I2C_BC_RESTART)
+#else
+  i2c_rdr   %0,   8,    _const(DEV_I2C_BC_STOP)
+#endif
   i2c_wrr   %0,   8,    _const(DEV_I2C_BC_STOP)
   call8     %10,  i2c_master_test_yield
   end
@@ -198,7 +202,11 @@ i2c_master_bc_test_4_reg:
 i2c_master_bc_test_4_mem:
   .export i2c_master_bc_test_4_mem
 
-  i2c_rdm   %0,   %1,   _const(DEV_I2C_BC_RESTART_SYNC)
+#if I2C_MASTER_READ_RESTART_SUPPORT
+  i2c_rdm   %0,   %1,   _const(DEV_I2C_BC_RESTART)
+#else
+  i2c_rdm   %0,   %1,   _const(DEV_I2C_BC_STOP)
+#endif
   i2c_wrm   %0,   %1,   _const(DEV_I2C_BC_STOP)
   call8     %10,  i2c_master_test_wait
   end

@@ -368,7 +368,7 @@ go_to_send_data(struct i2c_slave_private_s *pv)
           case I2C_SLAVE_DEBUG_STATE_LOG:
             pv->shift_buffer = slave->log[slave->rptr];
             slave->rptr++;
-            if (slave->rptr == slave->wptr)
+            if (slave->rptr > I2C_SLAVE_BUFFER_SIZE)
               {
                 slave->rptr = 0;
                 slave->debug_state = I2C_SLAVE_DEBUG_STATE_CHECKSUM;
@@ -378,7 +378,7 @@ go_to_send_data(struct i2c_slave_private_s *pv)
           case I2C_SLAVE_DEBUG_STATE_CHECKSUM:
             pv->shift_buffer = slave->checksum[slave->rptr];
             slave->rptr++;
-            if (slave->rptr == slave->wptr)
+            if (slave->rptr > I2C_SLAVE_BUFFER_SIZE)
               {
                 slave->rptr = 0;
                 slave->debug_state = I2C_SLAVE_DEBUG_STATE_LOG;

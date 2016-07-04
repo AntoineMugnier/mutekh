@@ -155,9 +155,6 @@ i2c_master_test_bc_1(struct i2c_master_test_ctx_s *ctx)
                         0xff, 0, 1, 2, 3, 4, 5, 6, 7);
 
   if (ctx->i2c_bc_rq.base.err)
-    printk("error %d\n", ctx->i2c_bc_rq.base.err);
-
-  if (ctx->i2c_bc_rq.base.err)
     return ctx->i2c_bc_rq.base.err;
 
   dev_i2c_wait_bytecode(&ctx->i2c_ctrl, &ctx->i2c_bc_rq, &i2c_master_bc_read_debug_info, 0);
@@ -780,6 +777,9 @@ i2c_master_test_tr_4(struct i2c_master_test_ctx_s *ctx)
   dev_i2c_wait_bytecode(&ctx->i2c_ctrl, &ctx->i2c_bc_rq, &i2c_master_bc_init_slave, 0);
   i2c_master_init_buffer(ctx);
 
+
+#if I2C_MASTER_READ_RESTART_SUPPORT
+
   struct dev_i2c_ctrl_transaction_data_s tr[] =
   {
     {
@@ -800,6 +800,42 @@ i2c_master_test_tr_4(struct i2c_master_test_ctx_s *ctx)
   dev_i2c_wait_transaction(&ctx->i2c_ctrl, &ctx->i2c_tr_rq);
   if (ctx->i2c_tr_rq.base.err)
     return ctx->i2c_tr_rq.base.err;
+
+#else
+
+  struct dev_i2c_ctrl_transaction_data_s tr1[] =
+  {
+    {
+      .data = ctx->buffer,
+      .size = 8,
+      .type = DEV_I2C_CTRL_TRANSACTION_READ,
+    },
+  };
+
+  ctx->i2c_tr_rq.transfer = tr1;
+  ctx->i2c_tr_rq.transfer_count = sizeof(tr1) / sizeof(tr1[0]);
+
+  dev_i2c_wait_transaction(&ctx->i2c_ctrl, &ctx->i2c_tr_rq);
+  if (ctx->i2c_tr_rq.base.err)
+    return ctx->i2c_tr_rq.base.err;
+
+  struct dev_i2c_ctrl_transaction_data_s tr2[] =
+  {
+    {
+      .data = ctx->buffer,
+      .size = 8,
+      .type = DEV_I2C_CTRL_TRANSACTION_WRITE,
+    },
+  };
+
+  ctx->i2c_tr_rq.transfer = tr2;
+  ctx->i2c_tr_rq.transfer_count = sizeof(tr2) / sizeof(tr2[0]);
+
+  dev_i2c_wait_transaction(&ctx->i2c_ctrl, &ctx->i2c_tr_rq);
+  if (ctx->i2c_tr_rq.base.err)
+    return ctx->i2c_tr_rq.base.err;
+
+#endif
 
   dev_i2c_wait_bytecode(&ctx->i2c_ctrl, &ctx->i2c_bc_rq, &i2c_master_bc_read_debug_info, 0);
 #if I2C_MASTER_DISPLAY_DEBUG
