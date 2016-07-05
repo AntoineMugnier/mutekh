@@ -300,7 +300,7 @@ struct dev_i2c_ctrl_base_rq_s;
 struct dev_i2c_ctrl_bytecode_rq_s;
 struct dev_i2c_ctrl_transaction_rq_s;
 struct dev_i2c_ctrl_context_s;
-
+struct bc_descriptor_s;
 
 /*----------------------------------------------------------------------------*/
 
