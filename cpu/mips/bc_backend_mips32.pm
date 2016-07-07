@@ -191,8 +191,7 @@ sub parse_pack {
     my $sym = $main::packops{$thisop->{name}};
 
     if ( !$sym ) {
-        # nop
-        $thisop->{in} = [];
+        $thisop->{nop} = 1;
     } elsif ( $thisop->{count} > $max_op_regs || $sym =~ /swap/ ) {
         # use function call
         $thisop->{flushin} = (1 << $thisop->{count}) - 1;
@@ -213,8 +212,7 @@ sub parse_unpack {
     my $sym = $main::packops{$thisop->{name}};
 
     if ( !$sym ) {
-        # nop
-        $thisop->{out} = [];
+        $thisop->{nop} = 1;
     } elsif ( $thisop->{count} > $max_op_regs || $sym =~ /swap/ ) {
         # use function call
         $thisop->{reloadout} = (1 << $thisop->{count}) - 1;
@@ -231,9 +229,7 @@ sub parse_swap {
 
     if ( ($thisop->{name} =~ /le$/ && $main::backend_endian eq 'little') ||
          ($thisop->{name} =~ /be$/ && $main::backend_endian eq 'big') ) {
-        # nop
-        $thisop->{in} = [];
-        $thisop->{out} = [];
+        $thisop->{nop} = 1;
     } else {
         # use function call
         $thisop->{flushin} = 1;

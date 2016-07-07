@@ -1123,6 +1123,9 @@ sub write_asm
         print OUT '  #'.$thisop->{name}.' ';
         print OUT "$_, " foreach (@{$thisop->{args}});
         print OUT "\n";
+        my $inst;
+
+        goto done if $thisop{nop};
 
         # map instruction input vm registers to cpu registers
         for (my $j = 0; $j < scalar @{$thisop->{in}} ; $j++) {
@@ -1150,8 +1153,6 @@ sub write_asm
           }
         }
 
-        my $inst;
-
         if ( $thisop->{name} eq 'mov' ) {
             my $i = $thisop->{in}->[0];
             my $o = $thisop->{out}->[0];
@@ -1166,7 +1167,7 @@ sub write_asm
                 $r2w{$o} = $iw;
                 $w2r{$iw}->{$o} = 1;
                 $wb{$o} = 1;
-                goto mov_done;
+                goto done;
             }
         }
 
@@ -1206,7 +1207,7 @@ sub write_asm
         # get cpu instruction string
         $inst = $backend->can('out_'.$opbackend)->( $thisop, @wregout, @wregin );
 
-      mov_done:
+      done:
 
         if ( $thisop->{op}->{cond} ) {
 
