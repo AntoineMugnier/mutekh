@@ -89,7 +89,6 @@ static void gap_update_conn_in(struct ble_gap_s *gap, uint32_t sec)
   if (gap->conn_update_task) {
     net_scheduler_task_cancel(gap->layer.scheduler,
                               gap->conn_update_task);
-    net_task_destroy(gap->conn_update_task);
     gap->conn_update_task = NULL;
   }
 
@@ -184,7 +183,6 @@ static void ble_gap_dandling(struct net_layer_s *layer)
   if (gap->conn_update_task) {
     net_scheduler_task_cancel(gap->layer.scheduler,
                               gap->conn_update_task);
-    net_task_destroy(gap->conn_update_task);
     gap->conn_update_task = NULL;
   }
 }

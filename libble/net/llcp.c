@@ -1026,7 +1026,6 @@ static void llcp_feature_req_later(struct ble_llcp_s *llcp)
   if (llcp->feature_req_later) {
     net_scheduler_task_cancel(llcp->layer.scheduler,
                               llcp->feature_req_later);
-    net_task_destroy(llcp->feature_req_later);
     llcp->feature_req_later = NULL;
   }
 
@@ -1070,7 +1069,6 @@ static void ble_llcp_dandling(struct net_layer_s *layer)
   if (llcp->feature_req_later) {
     net_scheduler_task_cancel(llcp->layer.scheduler,
                               llcp->feature_req_later);
-    net_task_destroy(llcp->feature_req_later);
     llcp->feature_req_later = NULL;
   }
 
