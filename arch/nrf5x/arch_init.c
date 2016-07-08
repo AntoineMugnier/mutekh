@@ -76,6 +76,7 @@ void nrf52_init(void)
     *(uint32_t *)0x4007C074 = 0xbaadf00d;
 
     // PAN 31
+    // CLOCK: Calibration values are not correctly loaded from FICR at reset
     *(volatile uint32_t *)0x4000053C = ((*(volatile uint32_t *)0x10000244) & 0x0000E000) >> 13;
 
     // FTPAN 36

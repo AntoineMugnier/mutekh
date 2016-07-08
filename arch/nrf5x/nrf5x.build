@@ -10,7 +10,10 @@
   %inherit nrf5x-51822-256-32
 
 %section nrf52-??aa
-  %inherit nrf5x-52832-512-32
+  %inherit nrf5x-52832-512-64
+
+%section nrf52-??ab
+  %inherit nrf5x-52832-256-32
 
 %section nrf5x-*-*-*
   %types architecture

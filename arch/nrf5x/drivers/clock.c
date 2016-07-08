@@ -743,6 +743,11 @@ static DEV_INIT(nrf5x_clock_init)
   if (err)
     goto free_pv;
 
+#if LFRC_CAL && defined(CONFIG_ARCH_NRF52)
+  // PAN 36: CLOCK: Some registers are not reset when expected
+  nrf_event_clear(CLOCK_ADDR, NRF_CLOCK_CTTO);
+  nrf_event_clear(CLOCK_ADDR, NRF_CLOCK_DONE);
+#endif
   nrf_it_disable_mask(CLOCK_ADDR, -1);
   nrf_it_enable_mask(CLOCK_ADDR, 0
 #if LFRC_CAL
