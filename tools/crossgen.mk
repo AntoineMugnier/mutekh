@@ -93,7 +93,7 @@ gcc_VER_avr32   = 4.4.3
 SUFFIX_avr32    = unknown-elf
 
 gcc_VER=$(gcc_VER_$(TARGET))
-gcc_CONF=$(common_CONF) --enable-languages=c --disable-libssp --enable-multilib --disable-lto --disable-libquadmath
+gcc_CONF=$(common_CONF) --enable-languages=c --disable-libssp --enable-multilib --disable-lto --disable-libquadmath --enable-checking=release --with-system-zlib
 
 # GCC requirements
 mpfr_VER=2.4.2
@@ -126,12 +126,12 @@ bochs_CONF= --enable-x86-64 --enable-smp --enable-acpi --enable-pci --enable-dis
 
 # Qemu emulator
 qemu_VER=0.14.0
-qemu_CONF=--disable-docs --disable-kvm
+qemu_CONF=--disable-docs --disable-kvm --disable-linux-user --disable-vnc-tls --extra-ldflags=-lrt
 
 # Testsuite simulation wrapper
 testwrap_VER=1.1
 
-HELP_END=91 #### LINE 86 IS HERE ####
+HELP_END=134 #### LINE 134 IS HERE ####
 
 unexport MAKEFLAGS
 unexport MFLAGS
@@ -172,11 +172,11 @@ mpc_DEPS=mpfr gmp
 mpc_CONF+=--with-mpfr=$(PREFIX) --with-gmp=$(PREFIX)
 
 dtc_ARCHIVE=dtc-$(dtc_VER).tar.gz
-dtc_URL=https://www.mutekh.org/www/tools/$(dtc_ARCHIVE)
+dtc_URL=https://www.mutekh.org/tools/$(dtc_ARCHIVE)
 dtc_TESTBIN=bin/dtc
 
 testwrap_ARCHIVE=testwrap-$(testwrap_VER).tar.gz
-testwrap_URL=https://www.mutekh.org/www/tools/$(testwrap_ARCHIVE)
+testwrap_URL=https://www.mutekh.org/tools/$(testwrap_ARCHIVE)
 testwrap_TESTBIN=bin/testwrap
 
 bochs_ARCHIVE=bochs-$(bochs_VER).tar.gz
@@ -188,7 +188,7 @@ qemu_URL=http://download.savannah.gnu.org/releases/qemu/$(qemu_ARCHIVE)
 qemu_TESTBIN=bin/qemu
 qemu_INTREE_BUILD=1
 
-PATCH_URL=https://www.mutekh.org/www/tools/patchs/
+PATCH_URL=https://www.mutekh.org/tools/diffs/
 
 WGET_OPTS=-c -t 5 -w 5 --no-check-certificate
 
@@ -232,14 +232,14 @@ define TGTTOOL_template
 
 .PHONY: $(1)
 .PRECIOUS: $$($(1)_TGZ)
-.DELETE_ON_ERROR: $$($(1)_STAMP)-wget $$($(1)_STAMP)-$$(TARGET)-conf $$($(1)_STAMP)-$$(TARGET)-build $$($(1)_STAMP)-$$(TARGET)-patch
+.DELETE_ON_ERROR: $$($(1)_STAMP)-wget $$($(1)_STAMP)-$$(TARGET)-conf $$($(1)_STAMP)-$$(TARGET)-build $$($(1)_STAMP)-patch
 
 $(1)_DIR=$$(WORKDIR)/$(1)-$$($(1)_VER)
 $(1)_BDIR=$$(WORKDIR)/$(1)-bld-$$(TARGET)-$$($(1)_VER)
 $(1)_STAMP=$$(WORKDIR)/$(1)-$$($(1)_VER)-stamp
-$(1)_PATCH=$$(WORKDIR)/$(1)-$$($(1)_VER)-$$(TARGET)-latest.diff
+$(1)_PATCH=$$(WORKDIR)/$(1)-$$($(1)_VER)-latest.diff
 $(1)_TGZ=$$(WORKDIR)/$$($(1)_ARCHIVE)
-CLEANUP_FILES+=$$($(1)_BDIR) $$($(1)_STAMP)-$$(TARGET)-conf $$($(1)_STAMP)-$$(TARGET)-build $$($(1)_STAMP)-$$(TARGET)-patch $$($(1)_PATCH)*
+CLEANUP_FILES+=$$($(1)_BDIR) $$($(1)_STAMP)-$$(TARGET)-conf $$($(1)_STAMP)-$$(TARGET)-build $$($(1)_STAMP)-patch $$($(1)_PATCH)*
 
 $$($(1)_STAMP)-wget:
 	wget $$(WGET_OPTS) $$($(1)_URL) -O $$($(1)_TGZ)
@@ -248,16 +248,16 @@ $$($(1)_STAMP)-wget:
 $$($(1)_TGZ): $$($(1)_STAMP)-wget
 	touch $$@
 
-$$($(1)_STAMP)-$$(TARGET)-patch: $$($(1)_DIR)
+$$($(1)_STAMP)-patch: $$($(1)_DIR)
         # try to fetch a patch
-	test -f $$($(1)_PATCH).gz || wget $$(WGET_OPTS) $$(PATCH_URL)/$(1)-$$($(1)_VER)-$$(TARGET)-latest.diff.gz -O $$($(1)_PATCH).gz || rm -f $$($(1)_PATCH).gz
+	wget $$(WGET_OPTS) $$(PATCH_URL)/$(1)-$$($(1)_VER)-latest.diff.gz -O $$($(1)_PATCH).gz || rm -f $$($(1)_PATCH).gz
         # test if a patch is available and apply
-	test ! -f $$($(1)_PATCH).gz || ( cd $$($(1)_DIR) ; cat $$($(1)_PATCH).gz | gunzip | patch -p 0 )
+	( cd $$($(1)_DIR) ; cat $$($(1)_PATCH).gz | gunzip | patch -p 0 --merge )
 	touch $$@
 
-$$($(1)_STAMP)-$$(TARGET)-conf: $$($(1)_DIR) $$($(1)_STAMP)-$$(TARGET)-patch $$($(1)_DEPS)
+$$($(1)_STAMP)-$$(TARGET)-conf: $$($(1)_DIR) $$($(1)_STAMP)-patch $$($(1)_DEPS)
 	mkdir -p $$($(1)_BDIR)
-	( cd $$($(1)_BDIR) ; LD_LIBRARY_PATH=$$(PREFIX)/lib $$($(1)_DIR)/configure MAKEINFO="makeinfo --version" --disable-nls --prefix=$$(PREFIX) --target=$$(TARGET)-$$(SUFFIX) --disable-checking --disable-werror $$($(1)_CONF) $$($(1)_CONF_$$(TARGET))  ) && touch $$@
+	( cd $$($(1)_BDIR) ; LD_LIBRARY_PATH=$$(PREFIX)/lib $$($(1)_DIR)/configure MAKEINFO="makeinfo --version" --disable-nls --prefix=$$(PREFIX) --target=$$(TARGET)-$$(SUFFIX) --disable-werror $$($(1)_CONF) $$($(1)_CONF_$$(TARGET))  ) && touch $$@
 
 $$($(1)_STAMP)-$$(TARGET)-build: $$($(1)_STAMP)-$$(TARGET)-conf
 	LD_LIBRARY_PATH=$$(PREFIX)/lib make $$(BLDMAKE_OPTS) -C $$($(1)_BDIR) && touch $$@
@@ -290,9 +290,9 @@ $$($(1)_STAMP)-wget:
 
 $$($(1)_STAMP)-patch: $$($(1)_DIR)
         # try to fetch a patch
-	test -f $$($(1)_PATCH).gz || wget $$(WGET_OPTS) $$(PATCH_URL)/$(1)-$$($(1)_VER)-latest.diff.gz -O $$($(1)_PATCH).gz || rm -f $$($(1)_PATCH).gz
+	wget $$(WGET_OPTS) $$(PATCH_URL)/$(1)-$$($(1)_VER)-latest.diff.gz -O $$($(1)_PATCH).gz || rm -f $$($(1)_PATCH).gz
         # test is a patch is available and apply
-	test ! -f $$($(1)_PATCH).gz || ( cd $$($(1)_DIR) ; cat $$($(1)_PATCH).gz | gunzip | patch -p 0 )
+	( cd $$($(1)_DIR) ; cat $$($(1)_PATCH).gz | gunzip | patch -p 0 --merge )
 	touch $$@
 
 $$($(1)_TGZ): $$($(1)_STAMP)-wget
