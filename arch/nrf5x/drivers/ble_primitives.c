@@ -233,6 +233,7 @@ void nrf5x_ble_radio_disable(struct nrf5x_ble_private_s *pv)
                        );
 
   nrf_task_trigger(BLE_RADIO_ADDR, NRF_RADIO_STOP);
+  nrf_task_trigger(BLE_RADIO_ADDR, NRF_RADIO_RSSISTOP);
   nrf_task_trigger(BLE_RADIO_ADDR, NRF_RADIO_DISABLE);
   while (nrf_reg_get(BLE_RADIO_ADDR, NRF_RADIO_STATE)
          != NRF_RADIO_STATE_DISABLED);
@@ -263,6 +264,13 @@ error_t nrf5x_ble_data_setup(struct nrf5x_ble_private_s *pv)
 
   nrf_it_disable(BLE_RADIO_ADDR, NRF_RADIO_BCMATCH);
   nrf_short_enable(BLE_RADIO_ADDR, NRF_RADIO_ADDRESS_BCSTART);
+
+  if (pv->current_params.rx_rssi) {
+    nrf_short_enable_mask(BLE_RADIO_ADDR, 0
+                          | bit(NRF_RADIO_ADDRESS_RSSISTART)
+                          | bit(NRF_RADIO_DISABLED_RSSISTOP));
+  }
+
   nrf_it_enable_mask(BLE_RADIO_ADDR, 0
                      | (1 << NRF_RADIO_ADDRESS)
                      | (1 << NRF_RADIO_END)
