@@ -227,7 +227,7 @@ error_t nrf5x_ble_master_create(struct net_scheduler_s *scheduler,
 
   memset(master, 0, sizeof(*master));
 
-  err = device_get_accessor(&self_as_timer, priv->dev, DRIVER_CLASS_TIMER, 0);
+  err = device_get_accessor(&self_as_timer.base, priv->dev, DRIVER_CLASS_TIMER, 0);
   if (err)
     return err;
 
@@ -249,7 +249,7 @@ error_t nrf5x_ble_master_create(struct net_scheduler_s *scheduler,
   if (err)
     goto err_timing_mapper;
 
-  device_put_accessor(&self_as_timer);
+  device_put_accessor(&self_as_timer.base);
 
   nrf5x_ble_context_init(priv, &master->context, &ble_master_ctx_handler);
 
@@ -294,7 +294,7 @@ error_t nrf5x_ble_master_create(struct net_scheduler_s *scheduler,
  err_channel_mapper:
   ble_channel_mapper_cleanup(&master->channel_mapper);
  err_out:
-  device_put_accessor(&self_as_timer);
+  device_put_accessor(&self_as_timer.base);
   free(master);
 
   return err;
@@ -594,6 +594,7 @@ void master_ctx_ifs_event(struct nrf5x_ble_context_s *context, bool_t timeout)
 static
 void master_ctx_payload_received(struct nrf5x_ble_context_s *context,
                                 dev_timer_value_t timestamp,
+                                 int16_t rssi,
                                 bool_t crc_valid)
 {
   struct nrf5x_ble_master_s *master = nrf5x_ble_master_s_from_context(context);
