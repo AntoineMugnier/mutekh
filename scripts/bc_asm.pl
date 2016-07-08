@@ -504,12 +504,44 @@ sub load_module
 
 my @custom;
 
+sub args_split
+{
+    return map { s/^\s*|\s*$//g; $_ } split(/,/, shift);
+}
+
+sub regs_mask_parse
+{
+    my ($loc, $class, $str, $maskref, $alias) = @_;
+    my $mask = 0;
+    foreach my $reg (args_split($str)) {
+        die "$loc: bad register `$reg'\n"
+            if ( $reg !~ /^%(\d+)(?:\s+([_a-z]\w*))?$/ || $1 > 15 );
+
+        if ( defined $2 ) {
+            die "$loc: register alias can't be used with .$class\n"
+                unless defined $alias;
+            die "$loc: register alias `$2' already defined\n"
+                if defined $alias->{$2};
+            $alias->{$2} = $1;
+        }
+
+        die "$loc: $class register \%$1 used more than once\n"
+            if ($$maskref & (1 << $1));
+        $$maskref |= 1 << $1;
+    }
+}
+
+my $global_regmask;
+my %global_regalias;
+
 sub parse
 {
     my @lbls;
     my $line;
     my $file = "<STDIN>.bc";
     my $loc;
+    my $func;
+    my $entry_regmask;
 
     foreach (<STDIN>) {
 
@@ -529,7 +561,7 @@ sub parse
 
       foreach my $l ( split(/;/) ) {
 
-        next if ($l =~ /^\s*$/);
+          next if ($l =~ /^\s*$/);
 
         if ($l =~ /^\s*(\w+):\s*$/) {
             my $name = $1;
@@ -542,6 +574,50 @@ sub parse
         if ($l =~ /^\s*\.define\s+(\w+)\s+(.*?)\s*$/) {
             die "$loc: expr already defined\n" if defined $defs{$1};
             $defs{$1} = $2;
+            next;
+        }
+        if ($l =~ /^\s*\.func\s+(\w+)\s*$/) {
+            my $name = $1;
+            die "$loc: label `$name' already defined\n" if defined $labels{$name};
+            die "$loc: nested function\n" if defined $func;
+            die "$loc: label before a function\n" if scalar @lbls;
+	    my $l = { name => $name,
+                      func => 1,
+                      regalias => { }
+            };
+            $labels{$name} = $l;
+	    push @lbls, $l;
+            $func = $l;
+            next;
+        }
+        if ($l =~ /^\s*\.endfunc\s*$/) {
+            die "$loc: no function to end\n" if !defined $func;
+            die "$loc: label at end of function\n" if scalar @lbls;
+            # declare global aliases for function input/output regs
+            while (my ($k, $v) = each(%{$func->{regalias}})) {
+                $global_regalias{$func->{name}.':'.$k} = $v
+                    unless ($func->{temp} & (1 << $v));
+            }
+            $func = undef;
+            next;
+        }
+        if ($l =~ /^\s*\.entry\s+(.*?)\s*$/) {
+            die "$loc: entry point inside a function\n" if defined $func;
+            die "$loc: missing label before entry point\n" if !scalar @lbls;
+            my $l = @lbls[-1];
+            $l->{export} = 1;
+            $l->{used}++;
+            regs_mask_parse($loc, 'entry', $1, \$entry_regmask, undef);
+            next;
+        }
+        if ($l =~ /^\s*\.global\s+(.*?)\s*$/) {
+            die "$loc: global register inside a function\n" if defined $func;
+            regs_mask_parse($loc, 'global', $1, \$global_regmask, \%global_regalias);
+            next;
+        }
+        if ($l =~ /^\s*\.(input|output|temp)\s+(.*?)\s*$/) {
+            die "$loc: $1 regs not inside a function\n" if !defined $func;
+            regs_mask_parse($loc, $1, $2, \$func->{$1}, $func->{regalias} );
             next;
         }
         if ($l =~ /^\s*\.backend\s+(\w+)\s*$/) {
@@ -563,9 +639,12 @@ sub parse
             $l->{used}++;
             next;
         }
+        if ($l =~ /^\s*\.(\w+)/) {
+            die "$loc: bad directive syntax `.$1'\n";
+        }
         if ($l =~ /^\s*(\.?\w+)\b\s*(.*?)\s*$/) {
             my $opname = $1;
-            my @args = map { s/^\s*|\s*$//g; $_ } split(/,/, $2);
+            my @args = args_split($2);
             my $thisop = {
                 src => "$1 $2",
                 name => $opname,
@@ -574,9 +653,12 @@ sub parse
                 in => [],
                 out => [],
                 labels => [ @lbls ],
+                entry => $entry_regmask,
+                func => $func,
             };
             push @src, $thisop;
             @lbls = ();
+            $entry_regmask = undef;
             next;
         }
 
@@ -584,6 +666,7 @@ sub parse
       }
     }
 
+    die "$loc: function not ended\n" if defined $func;
     if ( scalar @lbls ) {
         die "$loc: found trailing label\n";
     }
@@ -850,7 +933,7 @@ our %asm = (
         words => 1 + (4 << $backend_width) / 8, code => 0x7000, argscnt => 2,
         parse => \&parse_gaddr, backend => ('gaddr'),
     },
-    '.data16' => {
+    'data16' => {
         words => 1, argscnt => 1,
         parse => \&parse_data, backend => ('data'),
     },
@@ -938,11 +1021,27 @@ sub parse_args
     foreach my $thisop (@src) {
 
 	# substitute defs in args
-	my $r = sub {
+ 	my $r = sub {
 	    my $s = shift;
 	    return defined $defs{$s} ? $defs{$s} : $s;
 	};
+ 	my $a = sub {
+            my $s = shift;
+            my $t;
+            my $g = $global_regalias{$s};
+            if ( my $f = $thisop->{func} ) {
+                $t = $f->{regalias}->{$s};
+                print STDERR "$thisop->{line}: warning: not using global register alias `$s'\n"
+                    if ( defined $g );
+            } elsif ( defined $g ) {
+                $t = $g;
+            }
+            die "$thisop->{line}: undefined register alias `$s'\n"
+                unless ( defined $t );
+	    return '%'.$t;
+	};
 	foreach my $arg (@{$thisop->{args}}) {
+	    $arg =~ s/%([a-z_][\w:]*)\b/$a->($1)/ge;
 	    $arg =~ s/\b([a-zA-Z_]\w*)\b/$r->($1)/ge;
 	}
 
@@ -1125,7 +1224,7 @@ sub write_asm
         print OUT "\n";
         my $inst;
 
-        goto done if $thisop{nop};
+        goto done if $thisop->{nop};
 
         # map instruction input vm registers to cpu registers
         for (my $j = 0; $j < scalar @{$thisop->{in}} ; $j++) {

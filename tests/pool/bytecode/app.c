@@ -3,6 +3,7 @@
 
 #include <mutek/printk.h>
 #include <mutek/bytecode.h>
+#include <mutek/startup.h>
 
 #define BC_CUSTOM_PRINTI 0x1000
 #define BC_CUSTOM_PRINTS 0x2000
@@ -25,6 +26,8 @@ static BC_CCALL_FUNCTION(c_func)
 
 extern const struct bc_descriptor_s test_bytecode;
 
+extern bytecode_entry_t test_bytecode_entry;
+
 void app_start()
 {
   struct bc_context_s vm;
@@ -32,6 +35,7 @@ void app_start()
 
   bc_init(&vm, &test_bytecode);
   bc_set_regs(&vm, 0b11, buf, &c_func);
+  bc_set_pc(&vm, &test_bytecode_entry);
 
 #ifdef CONFIG_MUTEK_BYTECODE_CHECKING
   bc_set_addr_range(&vm, (uintptr_t)buf, (uintptr_t)buf + sizeof(buf) - 1);

@@ -381,6 +381,9 @@ enum bc_flags_s
 
 struct bc_context_s;
 
+/** @This can be used to declare bytecode entry points. @see bc_set_pc */
+typedef struct bytecode_entry_s bytecode_entry_t;
+
 /** @internal */
 typedef reg_t (bc_run_t)(struct bc_context_s *ctx, int_fast32_t max_cycles);
 
