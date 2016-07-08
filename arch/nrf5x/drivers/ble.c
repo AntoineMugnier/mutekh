@@ -720,6 +720,9 @@ void nrf5x_ble_event_address_matched(struct nrf5x_ble_private_s *pv)
 
   pv->address_ts = nrf5x_ble_rtc_value_get(pv) - 1;
 
+  if (pv->current_params.rx_rssi)
+    pv->rx_rssi = -(int8_t)nrf_reg_get(BLE_RADIO_ADDR, NRF_RADIO_RSSISAMPLE) * 8;
+
   gpio(I_TRANSFER | I_TX, pv->current_params.mode == MODE_TX ? (I_TRANSFER | I_TX) : I_TRANSFER);
 
   nrf5x_ble_ppi_cleanup(pv);
@@ -852,10 +855,12 @@ void nrf5x_ble_event_packet_ended(struct nrf5x_ble_private_s *pv)
   if (pv->pipelining)
     pv->current_params = pv->next_params;
 
-  if (rx)
+  if (rx) {
     current->handler->payload_received(current,
                                        pv->address_ts,
+                                       pv->rx_rssi,
                                        nrf_reg_get(BLE_RADIO_ADDR, NRF_RADIO_CRCSTATUS));
+  }
 
   pv->transmitting = NULL;
 
