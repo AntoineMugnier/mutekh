@@ -43,6 +43,7 @@ struct net_addr_s
   uint8_t master : 1;
   uint8_t unreliable : 1;
   uint8_t random_addr : 1;
+  int16_t rssi;
   uint16_t cid;
   uint16_t att;
 #endif

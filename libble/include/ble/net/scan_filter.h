@@ -50,6 +50,7 @@ struct ble_scan_filter_device_s
   dev_timer_value_t last_seen;
   uint8_t ad[62];
   uint8_t ad_len;
+  int16_t rssi;
   bool_t active : 1;
   bool_t connectable : 1;
   bool_t scannable : 1;
