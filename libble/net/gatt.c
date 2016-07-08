@@ -255,7 +255,6 @@ static void gatt_save_peer_later(struct ble_gatt_s *gatt)
   if (gatt->delayed_client_update) {
     net_scheduler_task_cancel(gatt->layer.scheduler,
                               gatt->delayed_client_update);
-    net_task_destroy(gatt->delayed_client_update);
     gatt->delayed_client_update = NULL;
   }
 
@@ -296,7 +295,6 @@ static void ble_gatt_dandling(struct net_layer_s *layer)
   if (gatt->delayed_client_update) {
     net_scheduler_task_cancel(gatt->layer.scheduler,
                               gatt->delayed_client_update);
-    net_task_destroy(gatt->delayed_client_update);
     gatt->delayed_client_update = NULL;
   }
 }

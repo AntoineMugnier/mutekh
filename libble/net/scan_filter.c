@@ -33,7 +33,8 @@
 #include <gct_platform.h>
 #include <gct/container_avl_p.h>
 
-#define dprintk printk
+//#define dprintk printk
+#define dprintk(...) do{}while(0)
 
 #define GCT_CONTAINER_ALGO_ble_scan_list AVL_P
 
@@ -51,7 +52,7 @@ struct ble_scan_item_s
 GCT_CONTAINER_TYPES(ble_scan_list, struct ble_scan_item_s *, entry);
 GCT_CONTAINER_KEY_TYPES(ble_scan_list, CUSTOM, BLOB, &ble_scan_list_item->device.addr, addr, sizeof(struct ble_addr_s));
 GCT_CONTAINER_KEY_FCNS(ble_scan_list, ASC, static, ble_scan_list, addr,
-                       init, destroy, remove, insert, lookup, clear);
+                       init, destroy, remove, insert, lookup);
 
 /**
    BLE scanner layer
@@ -78,6 +79,11 @@ static
 void ble_scan_filter_destroyed(struct net_layer_s *layer)
 {
   struct ble_scan_filter_s *sf = ble_scan_filter_s_from_layer(layer);
+
+  GCT_FOREACH(ble_scan_list, &sf->devices, item,
+              ble_scan_list_remove(&sf->devices, item);
+              mem_free(item);
+              );
 
   ble_scan_list_destroy(&sf->devices);
 
@@ -261,9 +267,9 @@ void ble_scan_filter_adv_handle(struct ble_scan_filter_s *sf,
 
  params_update:
 #if 0
-  printk("New policy table (default %d)\n", sf->scan_params.default_policy);
+  dprintk("New policy table (default %d)\n", sf->scan_params.default_policy);
   for (size_t i = 0; i < sf->scan_params.target_count; ++i)
-    printk(" "BLE_ADDR_FMT": %d\n", BLE_ADDR_ARG(&sf->scan_params.target[i].addr), sf->scan_params.target[i].policy);
+    dprintk(" "BLE_ADDR_FMT": %d\n", BLE_ADDR_ARG(&sf->scan_params.target[i].addr), sf->scan_params.target[i].policy);
 #endif
 
   ble_scanner_params_update(sf->layer.parent, &sf->scan_params);
@@ -341,7 +347,14 @@ static void ble_scan_filter_dandling(struct net_layer_s *layer)
 {
   struct ble_scan_filter_s *sf = ble_scan_filter_s_from_layer(layer);
 
-  ble_scan_list_clear(&sf->devices);
+  dprintk("Scan filter %p dandling\n", sf);
+
+  net_scheduler_from_layer_cancel(sf->layer.scheduler, &sf->layer);
+
+  GCT_FOREACH(ble_scan_list, &sf->devices, item,
+              ble_scan_list_remove(&sf->devices, item);
+              mem_free(item);
+              );
 }
 
 static const struct net_layer_handler_s scan_filter_handler = {
