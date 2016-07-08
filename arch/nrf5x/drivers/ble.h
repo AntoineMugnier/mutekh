@@ -204,6 +204,8 @@ struct nrf5x_ble_private_s {
 
   enum ble_sca_e sca;
 
+  int16_t rx_rssi;
+
   dev_timer_value_t base;
   dev_timer_value_t address_ts;
 
@@ -296,6 +298,7 @@ struct nrf5x_ble_context_handler_s
   void (*ifs_event)(struct nrf5x_ble_context_s *radio, bool_t rx_timeout);
   void (*payload_received)(struct nrf5x_ble_context_s *radio,
                            dev_timer_value_t timestamp,
+                           int16_t rssi,
                            bool_t crc_valid);
 };
 

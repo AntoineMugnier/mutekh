@@ -223,6 +223,7 @@ static void advertiser_ctx_ifs_event(struct nrf5x_ble_context_s *context,
 
 static void advertiser_ctx_payload_received(struct nrf5x_ble_context_s *context,
                                             dev_timer_value_t ts,
+                                            int16_t rssi,
                                             bool_t crc_valid)
 {
   struct nrf5x_ble_advertiser_s *adv

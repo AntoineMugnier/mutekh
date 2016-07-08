@@ -79,8 +79,8 @@ static void scanner_schedule(struct nrf5x_ble_scanner_s *scan)
 {
   dev_timer_value_t now, begin, end;
 
-  if (net_layer_refcount(&scan->layer) == 1) {
-    net_layer_refdec(&scan->layer);
+  if (!net_layer_refcount(&scan->layer)) {
+    dprintk("%s Scanner unreffed\n", __FUNCTION__);
     return;
   }
 
@@ -111,6 +111,11 @@ static void scanner_schedule(struct nrf5x_ble_scanner_s *scan)
 static void scanner_ctx_event_opened(struct nrf5x_ble_context_s *context)
 {
   struct nrf5x_ble_scanner_s *scan = nrf5x_ble_scanner_s_from_context(context);
+
+  if (!net_layer_refcount(&scan->layer)) {
+    dprintk("%s Scanner unreffed\n", __FUNCTION__);
+    return 0;
+  }
 
   scan->state = SCAN_IND;
 
@@ -171,14 +176,17 @@ static bool_t scanner_ctx_radio_params(struct nrf5x_ble_context_s *context,
   params->access = BLE_ADVERTISE_AA;
   params->crc_init = BLE_ADVERTISE_CRCINIT;
   params->tx_power = 0;
+  params->rx_rssi = 0;
 
   switch (scan->state) {
   case SCAN_IND:
     params->mode = MODE_RX;
+    params->rx_rssi = 1;
     return 1;
 
   case SCAN_RSP:
     params->mode = MODE_RX;
+    params->rx_rssi = 1;
     return 1;
 
   case SCAN_REQ:
@@ -280,6 +288,7 @@ static enum ble_scanner_policy_e scanner_policy_get(struct nrf5x_ble_scanner_s *
 
 static void scanner_ctx_payload_received(struct nrf5x_ble_context_s *context,
                                          dev_timer_value_t ts,
+                                            int16_t rssi,
                                          bool_t crc_valid)
 {
   struct nrf5x_ble_scanner_s *scan
@@ -330,13 +339,16 @@ static void scanner_ctx_payload_received(struct nrf5x_ble_context_s *context,
   if (scan->client) {
     struct buffer_s *buffer;
     struct net_task_s *task;
+    struct net_addr_s src = {
+      .rssi = rssi,
+    };
 
     buffer = net_layer_packet_alloc(&scan->layer, 1, 0);
     if (buffer) {
       task = net_scheduler_task_alloc(scan->layer.scheduler);
       if (task) {
         net_task_inbound_push(task, scan->client, &scan->layer,
-                              ts, NULL, NULL, scan->rx_buffer);
+                              ts, &src, NULL, scan->rx_buffer);
         buffer_refdec(scan->rx_buffer);
         scan->rx_buffer = buffer;
       } else {
@@ -352,6 +364,8 @@ static
 void scanner_layer_destroyed(struct net_layer_s *layer)
 {
   struct nrf5x_ble_scanner_s *scan = nrf5x_ble_scanner_s_from_layer(layer);
+
+  dprintk("%s\n", __FUNCTION__);
 
   nrf5x_ble_context_cleanup(&scan->context);
   if (scan->rx_buffer)
@@ -377,7 +391,7 @@ error_t nrf5x_ble_scanner_create(struct net_scheduler_s *scheduler,
 
   memset(scan, 0, sizeof(*scan));
 
-  dprintk("Scanner init start\n");
+  dprintk("%s Scanner init start\n", __FUNCTION__);
 
   err = net_layer_init(&scan->layer, &ble_scanner_layer_handler.base, scheduler, delegate, delegate_vtable_);
   if (err)
@@ -396,7 +410,7 @@ error_t nrf5x_ble_scanner_create(struct net_scheduler_s *scheduler,
 
   scanner_schedule(scan);
 
-  dprintk("Scanner init done\n");
+  dprintk("%s Scanner init done\n", __FUNCTION__);
 
   *layer = &scan->layer;
 
@@ -428,7 +442,9 @@ error_t scan_param_update(struct net_layer_s *layer, const struct ble_scanner_pa
   scan->conn_params.access_address = params->access_address;
   scan->conn_params.crc_init = params->crc_init;
 
-  dprintk("SCAN interval: %d, duration: %d\n", scan->interval_tk, scan->duration_tk);
+  dprintk("%s scan interval: %d, duration: %d\n",
+          __FUNCTION__,
+          scan->interval_tk, scan->duration_tk);
 
   return 0;
 }
