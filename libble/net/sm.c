@@ -41,8 +41,8 @@
 #define EXPECT_IDENTITY_ADDRESS_INFORMATION 8
 #define EXPECT_CSRK 16
 
-//#define dprintk(...) do{}while(0)
-#define dprintk printk
+#define dprintk(...) do{}while(0)
+//#define dprintk printk
 
 #include <ble/peer.h>
 #include <device/class/crypto.h>
@@ -416,6 +416,7 @@ static void sm_command_handle(struct ble_sm_s *sm, struct net_task_s *task)
   const struct ble_sm_delegate_vtable_s *vtable
     = const_ble_sm_delegate_vtable_s_from_base(sm->layer.delegate_vtable);
   uint8_t err;
+  __unused__
   bool_t receive_ok = sm_is_slave(sm)
     ? (sm->pairing_state == BLE_SM_DISTRIBUTION_DONE)
     : (sm->pairing_state == BLE_SM_STK_DONE);
