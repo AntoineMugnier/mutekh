@@ -203,6 +203,9 @@ static error_t scan_start(struct ble_central_s *ctr)
   }
 
   err = net_layer_bind(ctr->scan, NULL, ctr->scan_filter);
+
+  net_layer_refdec(ctr->scan_filter);
+
   if (!err)
     goto out;
 
