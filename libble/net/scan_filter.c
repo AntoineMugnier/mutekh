@@ -123,7 +123,7 @@ struct ble_scan_item_s *ble_scan_filter_device_get(struct ble_scan_filter_s *sf,
 
 static
 void ble_scan_filter_adv_handle(struct ble_scan_filter_s *sf,
-                                struct buffer_s *buffer)
+                                struct buffer_s *buffer, int16_t rssi)
 {
   struct ble_scan_item_s *item;
   struct ble_addr_s adva;
@@ -157,11 +157,12 @@ void ble_scan_filter_adv_handle(struct ble_scan_filter_s *sf,
   if (!item)
     return;
 
-  /* printk("Got adv %p %P\n", item, */
+  /* dprintk("Got adv %p %P\n", item, */
   /*        buffer->data + buffer->begin, */
   /*        buffer->end - buffer->begin); */
 
   item->device.last_seen = net_scheduler_time_get(sf->layer.scheduler);
+  item->device.rssi = rssi;
 
   switch (ble_advertise_packet_type_get(buffer)) {
   case BLE_ADV_IND:
@@ -325,7 +326,7 @@ void ble_scan_filter_task_handle(struct net_layer_s *layer,
 
   switch (task->type) {
   case NET_TASK_INBOUND:
-    ble_scan_filter_adv_handle(sf, task->packet.buffer);
+    ble_scan_filter_adv_handle(sf, task->packet.buffer, task->packet.src_addr.rssi);
     break;
 
   case NET_TASK_TIMEOUT:
