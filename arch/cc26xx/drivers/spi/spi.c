@@ -214,54 +214,18 @@ static DEV_IRQ_SRC_PROCESS(cc26xx_spi_irq)
   lock_release(&dev->lock);
 }
 
-static DEV_SPI_CTRL_SELECT(cc26xx_spi_select)
-{
-  struct device_s *dev = accessor->dev;
-  struct cc26xx_spi_context_s *pv = dev->drv_pv;
-  error_t err = 0;
-
-  if (cs_id > 0)
-    return -ENOTSUP;
-
-  LOCK_SPIN_IRQ(&dev->lock);
-
-  if (pv->tr != NULL)
-    err = -EBUSY;
-  else
-    {
-      switch (pc)
-        {
-        case DEV_SPI_CS_TRANSFER:
-          break;
-
-        case DEV_SPI_CS_DEASSERT:
-          err = -ENOTSUP;
-          break;
-
-        case DEV_SPI_CS_RELEASE:
-          err = -ENOTSUP;
-          break;
-
-        case DEV_SPI_CS_ASSERT:
-          err = -ENOTSUP;
-          break;
-        }
-    }
-
-  LOCK_RELEASE_IRQ(&dev->lock);
-
-  return err;
-}
-
 static DEV_SPI_CTRL_TRANSFER(cc26xx_spi_transfer)
 {
   struct device_s *dev = accessor->dev;
   struct cc26xx_spi_context_s *pv = dev->drv_pv;
+  bool_t done = 1;
 
   LOCK_SPIN_IRQ(&dev->lock);
 
   if (pv->tr != NULL)
     tr->err = -EBUSY;
+  else if (tr->cs_op != DEV_SPI_CS_NOP_NOP)
+    tr->err = -ENOTSUP;
   else
     {
       assert(tr->data.count > 0);
@@ -269,9 +233,13 @@ static DEV_SPI_CTRL_TRANSFER(cc26xx_spi_transfer)
       pv->tr = tr;
       pv->fifo_lvl = 0;
       cc26xx_spi_transfer_tx(dev);
+      done = 0;
     }
 
   LOCK_RELEASE_IRQ(&dev->lock);
+
+  if (done)
+    kroutine_exec(&tr->kr);
 }
 
 

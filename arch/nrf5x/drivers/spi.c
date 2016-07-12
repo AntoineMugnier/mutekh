@@ -57,6 +57,7 @@ static DEV_SPI_CTRL_CONFIG(nrf5x_spi_config)
   struct nrf5x_spi_context_s *pv = dev->drv_pv;
   error_t err = 0;
   uint32_t config = 0;
+  uint32_t rate;
 
   LOCK_SPIN_IRQ(&dev->lock);
 
@@ -100,16 +101,21 @@ static DEV_SPI_CTRL_CONFIG(nrf5x_spi_config)
     : NRF_SPI_CONFIG_ORDER_LSBFIRST;
 
   nrf_reg_set(pv->addr, NRF_SPI_CONFIG, config);
+
+  rate = cfg->bit_rate;
+  if (rate > 1000000) {
+    printk("nRF5x SPI Warning: bit rate capped to 1MHz (was %d)\n", rate);
+    rate = 1000000;
+  }
+
   nrf_reg_set(pv->addr, NRF_SPI_FREQUENCY,
-              NRF_SPI_FREQUENCY_(cfg->bit_rate));
+              NRF_SPI_FREQUENCY_(rate));
 
  out:
   LOCK_RELEASE_IRQ(&dev->lock);
 
   return err;
 }
-
-#define nrf5x_spi_select (dev_spi_ctrl_select_t*)dev_driver_notsup_fcn
 
 static void nrf5x_spi_tr_put_one(struct nrf5x_spi_context_s *pv,
                                  struct dev_spi_ctrl_transfer_s *tr)
@@ -230,6 +236,8 @@ static DEV_SPI_CTRL_TRANSFER(nrf5x_spi_transfer)
 
   if (pv->current_transfer != NULL) {
     tr->err = -EBUSY;
+  } else if (tr->cs_op != DEV_SPI_CS_NOP_NOP) {
+    tr->err = -ENOTSUP;
   } else if (!((0x17 >> tr->data.out_width) & 1) || (tr->data.in && !((0x16 >> tr->data.in_width) & 1))) {
     printk("Error: out_width: %d, in_width: %d\n", tr->data.out_width, tr->data.in_width);
     printk("Error: out: %p, in: %p\n", tr->data.out, tr->data.in);
@@ -315,7 +323,7 @@ static DEV_CLEANUP(nrf5x_spi_cleanup)
   struct nrf5x_spi_context_s *pv = dev->drv_pv;
 
 #ifdef CONFIG_DEVICE_SPI_REQUEST
-  if (!dev_request_queue_isempty(&pv->queue.queue))
+  if (!dev_request_queue_isempty(&pv->spi_ctrl_ctx.queue))
     return -EBUSY;
 
   dev_spi_context_cleanup(&pv->spi_ctrl_ctx);

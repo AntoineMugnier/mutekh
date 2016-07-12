@@ -290,6 +290,15 @@ static DEV_PWM_CONFIG(nrf5x_gpio_pwm_config)
                            &pv->queue, dev_pwm_rq_s_base(rq), 1);
 }
 
+/*
+  TODO: add delayed device stop and low power
+  add PAN workaround
+
+#if defined(CONFIG_ARCH_NRF52)
+  // PAN 78
+  nrf_task_trigger(pv->addr, NRF_TIMER_SHUTDOWN);
+#endif
+*/
 
 static DEV_USE(nrf5x_gpio_pwm_use)
 {

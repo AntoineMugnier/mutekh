@@ -60,7 +60,6 @@ DRIVER_PV(struct cc26xx_rtc_private_s
 #endif
 
   struct dev_freq_s freq;
-  struct dev_freq_accuracy_s acc;
   enum dev_timer_capabilities_e cap:8;
   dev_timer_cfgrev_t rev;
 });
@@ -365,14 +364,15 @@ static DEV_TIMER_CONFIG(cc26xx_rtc_config)
 
   LOCK_SPIN_IRQ(&dev->lock);
 
+  if (res > 1)
+    err = -ERANGE;
+
   if (cfg)
     {
       cfg->rev = pv->rev;
       cfg->res = 1;
       cfg->cap = pv->cap;
-      cfg->freq.num = pv->freq.num;
-      cfg->freq.denom = pv->freq.denom;
-      cfg->acc.e = 0;
+      cfg->freq = pv->freq;
 #ifdef CONFIG_DEVICE_IRQ
       cfg->max = 0xffffffffffffffffULL;
 #else

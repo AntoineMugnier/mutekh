@@ -342,11 +342,16 @@ static DEV_INIT(adxl362_init)
   if (dev_drv_spi_bytecode_init(dev, srq, &pv->spi, NULL, NULL))
     goto err_mem;
 
-  srq->base.config.bit_rate = 1000000;
-  srq->base.config.word_width = 8;
-  srq->base.config.bit_order = DEV_SPI_MSB_FIRST;
-  srq->base.config.ck_mode = DEV_SPI_CK_MODE_0;
-  srq->base.cs_polarity = DEV_SPI_ACTIVE_LOW;
+  static const struct dev_spi_ctrl_config_s spi_config = {
+    .ck_mode = DEV_SPI_CK_MODE_0,
+    .bit_order = DEV_SPI_MSB_FIRST,
+    .miso_pol = DEV_SPI_ACTIVE_HIGH,
+    .mosi_pol = DEV_SPI_ACTIVE_HIGH,
+    .bit_rate = 1000000,
+    .word_width = 8,
+  };
+
+  srq->base.config = &spi_config;
   srq->base.base.pvdata = dev;
 
   dev_request_queue_init(&pv->queue);

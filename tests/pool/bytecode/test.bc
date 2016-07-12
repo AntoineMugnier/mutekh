@@ -7,6 +7,11 @@
         // force use of virtual machine
         // .backend bytecode
 
+	.global %0 buf
+
+test_bytecode_entry:
+	.entry %1
+
         // enable vm debug traces
         // trace	1, 1
 
@@ -140,7 +145,7 @@ next9:
         abort
 
     // LD8, LD8I
-        mov	%1, %0
+        mov	%1, %buf
         add8	%1, 5
         mov	%4, %1
         ld8	%2, %1
@@ -167,7 +172,7 @@ next9:
 
     // ST32I, ST32, LD32
         cst32	%2, 0x12345678, 0
-        mov	%1, %0
+        mov	%1, %buf
         st32i	%2, %1
         shi32l	%2, 1
         st32	%2, %1
@@ -176,7 +181,7 @@ next9:
         neq	%5, %2
         abort
         add8	%1, -4
-        neq	%1, %0
+        neq	%1, %buf
         abort
         ld32	%4, %1
         cst32	%2, 0x12345678, 0
@@ -184,13 +189,13 @@ next9:
         abort
 
     // STE32, LDE32
-        ld32e	%4, %0, 4
+        ld32e	%4, %buf, 4
         neq	%5, %4
         abort
         add8	%1, 12
         shi32l	%4, 1
         st32e	%4, %1, -8
-        ld32e	%5, %0, 4
+        ld32e	%5, %buf, 4
         cst32	%2, 0x48d159e0, 0
         neq	%5, %2
         abort
@@ -618,8 +623,8 @@ next12:
 	abort
 
     // hello world using the custom prints instruction
-        mov	%2, %0
-        mov	%1, %0
+        mov	%2, %buf
+        mov	%1, %buf
         cst8	%5, 'H'
         st8i	%5, %1
         cst8	%5, 'e'
@@ -635,32 +640,38 @@ next12:
         prints	%2
 
     // recursive factorial invocation
-        mov	%13, %0
+        mov	%13, %buf
         add8	%13, 120
-        cst8	%1, 5
-        call32	%10, fact
+        cst8	%fact:arg, 5
+        call32	%fact:link, fact
         cst8	%3, 120
-        neq	%1, %3
+        neq	%fact:result, %3
         abort
         end
 
-    // recursive factorial function
-fact:
-        std	%10, %13
-        cst8	%2, 1
-        eq	%1, %2
-        jmp8	fact_end
-        std	%1, %13
-        add8	%1, -1
-        call8	%10, fact
-        ldi	%2, %13
-        mul32	%1, %2
+	// recursive factorial function
+.func fact
+	.input %10 link, %13 sp
+	.input %1 arg
+	.output %1 result
+	.temp %2 tmp
+
+        std	%link, %sp
+        cst8	%tmp, 1
+        eq	%arg, %tmp
+         jmp8	fact_end
+        std	%result, %sp
+        add8	%arg, -1
+        call8	%link, fact
+        ldi	%tmp, %sp
+        mul32	%result, %tmp
 fact_end:
-        printi	%1
-        ldi	%10, %13
-        ret	%10
+        printi	%result
+        ldi	%link, %sp
+        ret	%link
+.endfunc
 
 data:
 	.export data
-	.data16  0x5353
+	data16  0x5353
 

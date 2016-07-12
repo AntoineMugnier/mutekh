@@ -361,12 +361,14 @@ void net_scheduler_from_layer_cancel(
               if (item->source != layer && item->target != layer)
                 GCT_FOREACH_CONTINUE;
               net_timeout_queue_nolock_remove(&sched->delayed_tasks, item);
+              net_task_destroy(item);
               );
 
   GCT_FOREACH(net_task_queue, &sched->pending_tasks, item,
               if (item->source != layer && item->target != layer)
                 GCT_FOREACH_CONTINUE;
               net_task_queue_nolock_remove(&sched->pending_tasks, item);
+              net_task_destroy(item);
               );
 }
 
@@ -380,6 +382,7 @@ void net_scheduler_task_cancel(
               if (item != task)
                 GCT_FOREACH_CONTINUE;
               net_timeout_queue_nolock_remove(&sched->delayed_tasks, item);
+              net_task_destroy(item);
               found = 1;
               GCT_FOREACH_BREAK;
               );
@@ -391,6 +394,7 @@ void net_scheduler_task_cancel(
               if (item != task)
                 GCT_FOREACH_CONTINUE;
               net_task_queue_nolock_remove(&sched->pending_tasks, item);
+              net_task_destroy(item);
               GCT_FOREACH_BREAK;
               );
 }

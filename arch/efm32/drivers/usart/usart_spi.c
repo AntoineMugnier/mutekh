@@ -259,51 +259,6 @@ static DEV_IRQ_SRC_PROCESS(efm32_usart_spi_irq)
 
 #endif
 
-static DEV_SPI_CTRL_SELECT(efm32_usart_spi_select)
-{
-  struct device_s *dev = accessor->dev;
-  struct efm32_usart_spi_context_s *pv = dev->drv_pv;
-  error_t err = 0;
-
-  if (cs_id > 0)
-    return -ENOTSUP;
-
-  LOCK_SPIN_IRQ(&dev->lock);
-
-  if (pv->tr != NULL)
-    err = -EBUSY;
-  else
-    {
-      /* set polarity */
-      EFM32_USART_CTRL_CSINV_SETVAL(pv->ctrl, !pt);
-
-      switch (pc)
-        {
-        case DEV_SPI_CS_TRANSFER:
-          pv->ctrl |= EFM32_USART_CTRL_AUTOCS;
-          pv->route |= EFM32_USART_ROUTE_CSPEN;
-          break;
-
-        case DEV_SPI_CS_DEASSERT:
-          pv->ctrl &= ~EFM32_USART_CTRL_AUTOCS;
-          pv->route |= EFM32_USART_ROUTE_CSPEN;
-          break;
-
-        case DEV_SPI_CS_RELEASE:
-          pv->ctrl &= ~EFM32_USART_CTRL_AUTOCS;
-          pv->route &= ~EFM32_USART_ROUTE_CSPEN;
-          break;
-
-        case DEV_SPI_CS_ASSERT:
-          err = -ENOTSUP;
-        }
-    }
-
-  LOCK_RELEASE_IRQ(&dev->lock);
-
-  return err;
-}
-
 #ifdef CONFIG_DRIVER_EFM32_DMA
 
 static KROUTINE_EXEC(dma_callback)
@@ -366,6 +321,8 @@ static DEV_SPI_CTRL_TRANSFER(efm32_usart_spi_transfer)
 
   if (pv->tr != NULL)
     tr->err = -EBUSY;
+  else if (tr->cs_op != DEV_SPI_CS_NOP_NOP)
+    tr->err = -ENOTSUP;
   else
     {
       assert(tr->data.count > 0);

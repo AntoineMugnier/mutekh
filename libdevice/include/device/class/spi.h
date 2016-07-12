@@ -46,10 +46,6 @@
    The @ref dev_spi_ctrl_config_t function allows setting the bus
    speed and modes for the next transfer.
 
-   The @ref dev_spi_ctrl_select_t function must be used to set the
-   chip select policy. It is only relevant when the controller is in
-   charge of driving the chip select pin which is not always the case.
-
    Device drivers of SPI slaves must not use this driver low level API
    directly as it does not allow sharing the bus with other
    slaves. The scheduler API described below is builtin on top of the
@@ -73,7 +69,7 @@
 
    A transaction is a single SPI transfer processed by the controller
    with an optional chip selection during the transfer.  The chip
-   selection policy may rely either on the bus controller or on a gpio
+   select operation may rely either on the bus controller or on a gpio
    controller. The scheduler will take care of driving the chip select
    signal when the transfer actually takes place.
 
@@ -153,29 +149,25 @@
     @item spi_yieldc_delay         @item r             @item @tt{1000 0000 100- rrrr}
     @item spi_yieldc_deadline      @item r             @item @tt{1000 0000 010- rrrr}
 
-    @item spi_wait                 @item cs            @item @tt{1000 0010 00cc ----}
-    @item spi_wait_delay           @item r, cs         @item @tt{1000 0010 10cc rrrr}
-    @item spi_wait_deadline        @item r, cs         @item @tt{1000 0010 01cc rrrr}
-
-    @item spi_setcs                @item cs            @item @tt{1000 0010 11cc ----}
+    @item spi_wait                 @item               @item @tt{1000 0010 00-- ----}
+    @item spi_wait_delay           @item r             @item @tt{1000 0010 10-- rrrr}
+    @item spi_wait_deadline        @item r             @item @tt{1000 0010 01-- rrrr}
 
     @item spi_width                @item w, o          @item @tt{1000 0100 00ow wwww}
     @item spi_brate                @item r             @item @tt{1000 0100 10-- rrrr}
 
-    @item spi_swp                  @item wr, rd        @item @tt{1010 0000 rrrr rrrr}
-    @item spi_swpl                 @item wr, rd, l     @item @tt{1010 llll rrrr rrrr}
-    @item spi_wr                   @item wr            @item @tt{1011 0000 rrrr ----}
-    @item spi_wrl                  @item wr, l         @item @tt{1011 llll rrrr ----}
+    @item spi_rd                   @item rd, l, e      @item @tt{1e01 llll rrrr ----}
+    @item spi_wr                   @item wr, l, e      @item @tt{1e10 llll ---- rrrr}
+    @item spi_swp                  @item wr, rd, l, e  @item @tt{1e11 llll rrrr rrrr}
 
-    @item spi_pad                  @item r             @item @tt{1001 0000 ---- rrrr}
+    @item spi_pad                  @item rl, e         @item @tt{1100 00ee ---- llll}
+    @item spi_rdm                  @item ra, rl, e     @item @tt{1100 01ee aaaa llll}
+    @item spi_wrm                  @item ra, rl, e     @item @tt{1100 10ee aaaa llll}
+    @item spi_swpm                 @item rar, raw, rl, e @item @tt{1100 11ee aaaa llll}
 
-    @item spi_rdm[8,16,32]         @item ra, r         @item @tt{1001 01ss aaaa rrrr}
-    @item spi_wrm[8,16,32]         @item ra, r         @item @tt{1001 10ss aaaa rrrr}
-    @item spi_swpm[8,16,32]        @item ra, r         @item @tt{1001 11ss aaaa rrrr}
-
-    @item spi_gpiomode             @item i, r          @item @tt{1100 iiii iiii mmmm}
-    @item spi_gpioget              @item i, r          @item @tt{1101 iiii iiii rrrr}
-    @item spi_gpioset              @item i, r          @item @tt{1110 iiii iiii rrrr}
+    @item spi_gpiomode             @item i, r          @item @tt{1000 100i iiii mmmm}
+    @item spi_gpioget              @item i, r          @item @tt{1000 101i iiii rrrr}
+    @item spi_gpioset              @item i, r          @item @tt{1000 110i iiii rrrr}
    @end table
 
    @section {spi_nodelay}
@@ -217,8 +209,8 @@
 
    @section {spi_yield}
    This instruction allows other requests targeting slave on the same
-   SPI bus to be processed. The chip select will be deasserted in order
-   to address other devices on the same SPI bus.
+   SPI bus to be processed. The chip select must be in released state
+   when this instruction is executed.
 
    If a @xref {spi_delay} instruction has been executed previously,
    the bytecode execution will not resume until the delay has elapsed.
@@ -255,9 +247,6 @@
    of the bus by other devices is allowed.
 
    A previous @xref {spi_delay} instruction must be used to setup the delay.
-
-   The chip select policy to apply during the delay must be specified
-   by using a value defined in @ref dev_spi_cs_policy_e.
    @end section
 
    @section {spi_wait_delay}
@@ -268,29 +257,30 @@
    This instruction acts as @xref {spi_deadline} followed by @xref {spi_wait}.
    @end section
 
-   @section {spi_setcs}
-   This instruction set the current chip select policy.
-   Some controllers may not be able to support all chip select
-   policies.
-   @end section
-
    @section {spi_width}
-   This instruction set the SPI word width in bits and the bit
-   order. The width value is a constant between 1 and 32. The order is
-   MSB first when @tt order is 1.
+   This instruction set the SPI word width and the bit
+   order in the @ref dev_spi_ctrl_config_s object associated to
+   the request. The width value is a constant between 1 and 32. The order
+   is MSB first when @tt order is 1.
    @end section
 
    @section {spi_brate}
-   This instruction sets the bit transfer rate. The register must
-   contain the new bitrate value in bits per second. The old value is
-   stored in the register.
+   This instruction sets the bit transfer rate in the @ref
+   dev_spi_ctrl_config_s object associated to the request. The register must
+   contain the new bitrate value in bits per second.
    @end section
 
-   @section {spi_swpl and spi_wrl}
-   These instructions transfer up to 16 bytes between virtual machine
-   registers and the SPI bus. The @tt spi_swpl instruction performs a
-   bidirectional transfer whereas the @tt spi_wrl instruction discards
-   incoming bytes.
+   @section {spi_swp}
+   This instructions transfer up to 16 bytes between some virtual machine
+   registers and a SPI slave. The operands are the source register,
+   the destination register, the transfer byte length and the chip
+   select operation.
+
+   Available chip select operations are:
+   @list
+     @item @tt CS_START, @tt CS_CONTINUE: see @xref DEV_SPI_CS_SET_NOP
+     @item @tt CS_END, @tt CS_PULSE: see @xref DEV_SPI_CS_SET_CLR
+   @end list
 
    The format of data in registers is hardware dependent and needs to
    be converted by using the @tt pack* and @tt unpack* @xref {Generic
@@ -300,52 +290,65 @@
    data and the number of bytes are expected as operands.
    @end section
 
-   @section {spi_swp and spi_wr}
-   These are similar to @xref{spi_swpl and spi_wrl} with a byte length of 1.
+   @section {spi_wr}
+   The @tt spi_wr instruction is similar to @xref{spi_swp} but discards
+   data read from the slave.
+   @end section
+
+   @section {spi_rd}
+   The @tt spi_rd instruction is similar to @xref{spi_swp} but send
+   padding bytes with the @tt 0xff value.
+   @end section
+
+   @section {spi_swpm}
+   This instruction reads and writes multiple SPI words using two
+   buffers of bytes. The address of the read buffer is given by the
+   value of the @tt rar register operand and the address of the write
+   buffer is given by the value of the @tt raw register operand. These
+   two registers must be contiguous. The amount of SPI words to
+   transfer is given by the @tt rl register operand.
+
+   The last operand specifies the chip select operation:
+   @list
+     @item @tt CS_START, @tt CS_CONTINUE: see @xref DEV_SPI_CS_SET_NOP
+     @item @tt CS_END, @tt CS_PULSE: see @xref DEV_SPI_CS_SET_CLR
+     @item @tt CS_NOP: see @xref DEV_SPI_CS_NOP_NOP
+     @item @tt CS_DESELECT: see @xref DEV_SPI_CS_CLR_NOP
+   @end list
+   @end section
+
+   @section {spi_wrm}
+   The @tt spi_wrm instruction is similar to @xref{spi_swpm} but discards
+   data read from the slave.
+   @end section
+
+   @section {spi_rdm}
+   The @tt spi_rdm instruction is similar to @xref{spi_swpm} but send
+   padding bytes with the @tt 0xff value.
+   @end section
+
+   @section {spi_pad}
+   The @tt spi_wrm instruction is similar to @xref{spi_swpm} but
+   discards data read from the slave and send padding bytes.
    @end section
 
    @section {spi_gpioset}
    This instruction sets the value of a gpio pin. The @cref
    #CONFIG_DEVICE_SPI_BYTECODE_GPIO token must be defined.
+   The first operand selects the pin as an index of the @ref
+   dev_spi_ctrl_bytecode_rq_s::gpio_map array.
    @end section
 
    @section {spi_gpioget}
    This instruction gets the value of a gpio pin.
+   The first operand selects the pin as an index of the @ref
+   dev_spi_ctrl_bytecode_rq_s::gpio_map array.
    @end section
 
    @section {spi_gpiomode}
    This instruction mode the value of a gpio pin.
-   @end section
-
-   @section {spi_pad}
-   This instruction transfers multiple words on the SPI bus. The
-   number of SPI words to transfer is given in the @tt rcnt
-   register. The value of the r14 register is used as the padding
-   write value.
-   @end section
-
-   @section {spi_rdm8, spi_rdm16, spi_rdm32}
-   These instructions read multiple SPI words and store them in an
-   array of values. The value of the r14 register is used as
-   the padding write value. The array element width depends on the
-   instruction used and is not related to the SPI word width
-   on the bus.
-   @end section
-
-   @section {spi_wrm8, spi_wrm16, spi_wrm32}
-   This instruction writes multiple SPI words from an array of
-   values. Input values are discarded. The array element width
-   depends on the instruction used and is not related to the SPI
-   word width on the bus.
-   @end section
-
-   @section {spi_swpm8, spi_swpm16, spi_swpm32}
-   This instruction reads and writes multiple SPI words using two
-   buffer of bytes. The address of the read buffer is given by the
-   value of the @tt raddr register and the address of the write buffer
-   is given by the value of the paired register (@tt raddr ^ 1).
-   The array element width depends on the instruction used and is not
-   related to the SPI word width on the bus.
+   The first operand selects the pin as an index of the @ref
+   dev_spi_ctrl_bytecode_rq_s::gpio_map array.
    @end section
 
    @end section
@@ -393,10 +396,10 @@ struct bc_descriptor_s;
 
 /***************************************** config */
 
-ENUM_DESCRIPTOR(dev_spi_polarity_e, strip:DEV_SPI_CS_, upper);
+ENUM_DESCRIPTOR(dev_spi_polarity_e, strip:DEV_SPI_, upper);
 ENUM_DESCRIPTOR(dev_spi_ckmode_e, strip:DEV_SPI_CK_, upper);
 ENUM_DESCRIPTOR(dev_spi_bit_order_e, strip:DEV_SPI_, upper);
-ENUM_DESCRIPTOR(dev_spi_cs_policy_e, strip:DEV_SPI_CS_, upper);
+ENUM_DESCRIPTOR(dev_spi_cs_op_e, strip:DEV_SPI_CS_, upper);
 
 enum dev_spi_bit_order_e
 {
@@ -406,44 +409,50 @@ enum dev_spi_bit_order_e
 
 enum dev_spi_polarity_e
 {
-  DEV_SPI_ACTIVE_LOW,
-  DEV_SPI_ACTIVE_HIGH,
+  DEV_SPI_ACTIVE_LOW  = 0,
+  DEV_SPI_ACTIVE_HIGH = 1,
 };
 
 enum dev_spi_ckmode_e
 {
-  /* CPOL = 0, CPHA = 0 */
+  /** CPOL = 0, CPHA = 0 */
   DEV_SPI_CK_MODE_0,
-  /* CPOL = 0, CPHA = 1 */
+  /** CPOL = 0, CPHA = 1 */
   DEV_SPI_CK_MODE_1,
-  /* CPOL = 1, CPHA = 0 */
+  /** CPOL = 1, CPHA = 0 */
   DEV_SPI_CK_MODE_2,
-  /* CPOL = 1, CPHA = 1 */
+  /** CPOL = 1, CPHA = 1 */
   DEV_SPI_CK_MODE_3,
 };
 
-
-enum dev_spi_cs_policy_e
+/** @This specifies how the chip select line associated to a SPI slave
+    is driven on a transfer. @see dev_spi_cs_config_s */
+enum dev_spi_cs_op_e
 {
-  /** The chip select is asserted during the SPI transfer and will be
-      deasserted at the end of the transfer. Some buggy controllers
-      are not able to hold the chip select between two words of the
-      same transfer. */
-  DEV_SPI_CS_TRANSFER,
-  /** The chip select remains asserted. Not all controller support
-      asserting the chip select when there is no ongoing transfer. An
-      error will be reported in this case. */
-  DEV_SPI_CS_ASSERT,
-  /** The chip select is deasserted. Not all controller support
-      deasserting the chip select during a transfer. An
-      error will be reported in this case. */
-  DEV_SPI_CS_DEASSERT,
-  /** The chip select pin is not used/driven. */
-  DEV_SPI_CS_RELEASE,
+  /** Do not update chip select. */
+  DEV_SPI_CS_NOP_NOP = 0,
+  /** Deselect chip before transfer, do not change state at the end. */
+  DEV_SPI_CS_CLR_NOP = 1,
+  /** Select chip before transfer, deselect at the end. */
+  DEV_SPI_CS_SET_CLR = 2,
+  /** Select chip before transfer, do not change state at the end. */
+  DEV_SPI_CS_SET_NOP = 3,
+};
+
+/** @This specifies the id and configuration of chip select line
+    associated to a SPI slave. */
+struct dev_spi_cs_config_s
+{
+  enum dev_spi_polarity_e  polarity:1;
+  /** This is either the index of the spi controller chip select
+      output or the pin id of the gpio device used as chip select. */
+  uint8_t                  id:7;
 };
 
 struct dev_spi_ctrl_config_s
 {
+  bool_t                   BITFIELD(dirty,1);
+
   enum dev_spi_ckmode_e    BITFIELD(ck_mode,2);
 
   enum dev_spi_bit_order_e BITFIELD(bit_order,1);
@@ -459,7 +468,7 @@ struct dev_spi_ctrl_config_s
 
 /** @csee dev_spi_ctrl_config_t */
 #define DEV_SPI_CTRL_CONFIG(n) error_t (n) (struct device_spi_ctrl_s *accessor, \
-                                           struct dev_spi_ctrl_config_s *cfg)
+                                            const struct dev_spi_ctrl_config_s *cfg)
 /**
    @This changes the configuration of the controller. If the
    controller doesn't support the requested configuration, this
@@ -469,20 +478,6 @@ struct dev_spi_ctrl_config_s
    processed.
 */
 typedef DEV_SPI_CTRL_CONFIG(dev_spi_ctrl_config_t);
-
-/***************************************** select */
-
-#define DEV_SPI_CTRL_SELECT(n) error_t (n) (struct device_spi_ctrl_s *accessor, \
-                                           enum dev_spi_cs_policy_e pc, \
-                                           enum dev_spi_polarity_e pt,  \
-                                           uint_fast8_t cs_id)
-/**
-   @This changes the chip select value.
-
-   This function may return @tt -ENOTSUP depending on hardware capabilities.
-*/
-typedef DEV_SPI_CTRL_SELECT(dev_spi_ctrl_select_t);
-
 
 /***************************************** transfer */
 
@@ -531,6 +526,12 @@ struct dev_spi_ctrl_transfer_s
   /** User private data */
   void                     *pvdata;
 
+  /** Chip select operation to perform for this transfer. */
+  enum dev_spi_cs_op_e     cs_op:2;
+
+  /** Chip select line configuration */
+  struct dev_spi_cs_config_s cs_cfg;
+
   /** Transfer completion error */
   error_t                  err;
 };
@@ -575,11 +576,17 @@ error_t dev_spi_wait_bytecode(struct device_spi_ctrl_s *ctrl,
                               struct dev_spi_ctrl_bytecode_rq_s *rq,
                               const void *pc, uint16_t mask, ...);
 
+/** Synchronous spi wait function. @This uses the scheduler API to
+    put the current context in wait state waiting for the given
+    transaction request to terminate. */
+config_depend_and2(CONFIG_MUTEK_CONTEXT_SCHED, CONFIG_DEVICE_SPI_TRANSACTION)
+error_t dev_spi_wait_transaction(struct device_spi_ctrl_s *ctrl,
+                                 struct dev_spi_ctrl_transaction_rq_s *rq);
+
 /***************************************** device class */
 
 DRIVER_CTX_CLASS_TYPES(DRIVER_CLASS_SPI_CTRL, spi_ctrl,
 		   dev_spi_ctrl_config_t         *f_config;
-		   dev_spi_ctrl_select_t         *f_select;
 		   dev_spi_ctrl_transfer_t       *f_transfer;
 		   );
 
@@ -588,7 +595,6 @@ DRIVER_CTX_CLASS_TYPES(DRIVER_CLASS_SPI_CTRL, spi_ctrl,
     .ctx_offset = offsetof(driver_pv_t , spi_ctrl_ctx),                 \
     .class_ = DRIVER_CLASS_SPI_CTRL,                          \
     .f_config = prefix ## _config,                            \
-    .f_select = prefix ## _select,                            \
     .f_transfer = prefix ## _transfer,                        \
   })
 
@@ -607,8 +613,9 @@ struct dev_spi_ctrl_base_rq_s
   /** @internal */
   struct device_spi_ctrl_s *ctrl;
 
-  /** This configuration is applied during the execution of the request. */
-  struct dev_spi_ctrl_config_s config;
+  /** This configuration is applied during the execution of the request.
+      No configuration takes place when @tt NULL. */
+  struct dev_spi_ctrl_config_s *config;
 
 #ifdef CONFIG_DEVICE_GPIO
   /** @internal If this device accessor refers to a gpio device, it
@@ -621,22 +628,20 @@ struct dev_spi_ctrl_base_rq_s
   /** Request completion error */
   error_t                  err;
 
-  /** This is either the index of the spi controller chip select
-      output or the pin id of the gpio device used as chip select. */
-  uint8_t                 cs_id;
+  /** Chip select configuration of the slave */
+  struct dev_spi_cs_config_s cs_cfg;
 
-  /** Current cs policy */
-  enum dev_spi_cs_policy_e BITFIELD(cs_policy,2);
-
-  /** Chip select polarity of the slave device */
-  enum dev_spi_polarity_e BITFIELD(cs_polarity,1);
+#ifdef CONFIG_LIBC_ASSERT
+  /** Reflect current chip select status, used for checking only. */
+  bool_t                  BITFIELD(cs_state,1);
+#endif
 
 #ifdef CONFIG_DEVICE_GPIO
   /** Use a gpio device to drive the chip select pin of the slave */
   bool_t                  BITFIELD(cs_gpio,1);
 #endif
 
-  /** Use the controller to driver the chip select pin of the slave */
+  /** Use the controller to drive the chip select pin of the slave */
   bool_t                  BITFIELD(cs_ctrl,1);
 
   /** @internal This flag indicates that the request has not ended yet. */
@@ -728,16 +733,11 @@ struct dev_spi_ctrl_context_s
 # ifdef CONFIG_DEVICE_SPI_BYTECODE_TIMER
     struct dev_timer_rq_s         timer_rq;
 # endif
-    struct {
-      struct dev_spi_ctrl_transfer_s transfer;
-# ifdef CONFIG_DEVICE_SPI_BYTECODE
-      uint32_t                      padding_word;
-# endif
-    };
+    struct dev_spi_ctrl_transfer_s transfer;
   };
 
   /** keeps track of the last used configuration. */
-  struct dev_spi_ctrl_config_s *config;
+  const struct dev_spi_ctrl_config_s *config;
 
   lock_irq_t                    lock;
 #endif

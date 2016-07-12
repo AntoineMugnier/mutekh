@@ -129,6 +129,22 @@ static DEV_SPI_CTRL_CONFIG(soclib_spi_config)
   return err;
 }
 
+static void soclib_spi_transfer_end(struct soclib_spi_context_s *pv,
+                                    struct dev_spi_ctrl_transfer_s *tr)
+{
+  enum dev_spi_cs_op_e cs_op = tr->cs_op;
+  if (cs_op == DEV_SPI_CS_SET_CLR)
+    {
+      uint_fast8_t cs_id = tr->cs_cfg.id;
+      uint32_t csmask = 1 << cs_id;
+      uint32_t csval = (tr->cs_cfg.polarity ^ 1) << cs_id;
+      uint32_t gpout = (endian_le32(cpu_mem_read_32(pv->addr + SOCLIB_SPI_GPOUT_ADDR)) & ~csmask) | csval;
+      cpu_mem_write_32(pv->addr + SOCLIB_SPI_GPOUT_ADDR, endian_le32(gpout));
+    }
+
+  kroutine_exec(&tr->kr);
+}
+
 static bool_t soclib_spi_transfer_tx(struct device_s *dev);
 
 static bool_t soclib_spi_transfer_rx(struct device_s *dev)
@@ -215,52 +231,6 @@ static bool_t soclib_spi_transfer_tx(struct device_s *dev)
 #endif
 }
 
-static DEV_SPI_CTRL_SELECT(soclib_spi_select)
-{
-  struct device_s *dev = accessor->dev;
-  struct soclib_spi_context_s *pv = dev->drv_pv;
-  error_t err = 0;
-
-  if (cs_id >= pv->gpout_cnt)
-    return -ENOTSUP;
-
-  LOCK_SPIN_IRQ(&dev->lock);
-
-  if (pv->tr != NULL)
-    {
-      err = -EBUSY;
-    }
-  else
-    {
-      uint32_t mask = 1 << cs_id;
-      uint32_t gpout = endian_le32(cpu_mem_read_32(pv->addr + SOCLIB_SPI_GPOUT_ADDR)) & ~mask;
-      uint32_t csmask = (pt == DEV_SPI_ACTIVE_LOW) << cs_id;
-
-      switch (pc)
-        {
-        case DEV_SPI_CS_TRANSFER:
-          cpu_mem_write_32(pv->addr + SOCLIB_SPI_GPOUT_ADDR, endian_le32(gpout | csmask));
-          cpu_mem_write_32(pv->addr + SOCLIB_SPI_CSTGL_ADDR, endian_le32(mask));
-          break;
-
-        case DEV_SPI_CS_RELEASE:
-        case DEV_SPI_CS_DEASSERT:
-          cpu_mem_write_32(pv->addr + SOCLIB_SPI_GPOUT_ADDR, endian_le32(gpout | csmask));
-          cpu_mem_write_32(pv->addr + SOCLIB_SPI_CSTGL_ADDR, 0);
-          break;
-
-        case DEV_SPI_CS_ASSERT:
-          cpu_mem_write_32(pv->addr + SOCLIB_SPI_GPOUT_ADDR, endian_le32(gpout | (csmask ^ mask)));
-          cpu_mem_write_32(pv->addr + SOCLIB_SPI_CSTGL_ADDR, 0);
-          break;
-        }
-    }
-
-  LOCK_RELEASE_IRQ(&dev->lock);
-
-  return err;
-}
-
 static DEV_SPI_CTRL_TRANSFER(soclib_spi_transfer)
 {
   struct device_s *dev = accessor->dev;
@@ -272,25 +242,39 @@ static DEV_SPI_CTRL_TRANSFER(soclib_spi_transfer)
   if (pv->tr != NULL)
     {
       tr->err = -EBUSY;
+      goto done;
     }
-  else
+
+  assert(tr->data.count > 0);
+
+  pv->tr = tr;
+
+  pv->fifo_lvl = 0;
+  tr->err = 0;
+
+  enum dev_spi_cs_op_e cs_op = tr->cs_op;
+  if (cs_op != DEV_SPI_CS_NOP_NOP)
     {
-      assert(tr->data.count > 0);
-
-      pv->tr = tr;
-
-      pv->fifo_lvl = 0;
-      tr->err = 0;
-
-      cpu_mem_write_32(pv->addr + SOCLIB_SPI_TLEN_ADDR, endian_le32(tr->data.count));
-
-      done = soclib_spi_transfer_tx(dev);
+      uint_fast8_t cs_id = tr->cs_cfg.id;
+      if (cs_id >= pv->gpout_cnt)
+        {
+          tr->err = -ENOTSUP;
+          goto done;
+        }
+      uint32_t csmask = 1 << cs_id;
+      uint32_t csval = (tr->cs_cfg.polarity ^ (cs_op >> 1) ^ 1) << cs_id;
+      uint32_t gpout = (endian_le32(cpu_mem_read_32(pv->addr + SOCLIB_SPI_GPOUT_ADDR)) & ~csmask) | csval;
+      cpu_mem_write_32(pv->addr + SOCLIB_SPI_GPOUT_ADDR, endian_le32(gpout));
     }
 
+  cpu_mem_write_32(pv->addr + SOCLIB_SPI_TLEN_ADDR, endian_le32(tr->data.count));
+  done = soclib_spi_transfer_tx(dev);
+
+ done:;
   LOCK_RELEASE_IRQ(&dev->lock);
 
   if (done)
-    kroutine_exec(&tr->kr);     /* tail call */
+    soclib_spi_transfer_end(pv, tr);
 }
 
 /****************************************************** GPIO */
@@ -441,7 +425,7 @@ static DEV_IRQ_SRC_PROCESS(soclib_spi_irq)
           struct dev_spi_ctrl_transfer_s *tr = pv->tr;
 
           if (tr != NULL && soclib_spi_transfer_rx(dev))
-            kroutine_exec(&tr->kr);
+            soclib_spi_transfer_end(pv, tr);
         }
 
 # ifdef CONFIG_DRIVER_SOCLIB_SPI_ICU
@@ -532,6 +516,7 @@ static DEV_INIT(soclib_spi_init)
                    ));
 #endif
 
+  cpu_mem_write_32(pv->addr + SOCLIB_SPI_CSTGL_ADDR, 0);
 
   return 0;
 

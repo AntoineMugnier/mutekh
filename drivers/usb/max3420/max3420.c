@@ -563,13 +563,16 @@ static DEV_INIT(max3420_usbdev_init)
   /* Base 500 us time */
   dev_timer_init_sec(timer, &pv->bt, 0, 500, 1000000);
 
-  srq->base.config.bit_rate = CONFIG_DRIVER_USBDEV_MAX3420_SPI_BITRATE;
-  srq->base.config.word_width = 8;
-  srq->base.config.bit_order = DEV_SPI_MSB_FIRST;
-  srq->base.cs_polarity = DEV_SPI_ACTIVE_LOW;
-  srq->base.config.miso_pol = DEV_SPI_ACTIVE_HIGH;
-  srq->base.config.mosi_pol = DEV_SPI_ACTIVE_HIGH;
-  srq->base.config.ck_mode = DEV_SPI_CK_MODE_0;
+  static const struct dev_spi_ctrl_config_s spi_config = {
+    .ck_mode = DEV_SPI_CK_MODE_0,
+    .bit_order = DEV_SPI_MSB_FIRST,
+    .miso_pol = DEV_SPI_ACTIVE_HIGH,
+    .mosi_pol = DEV_SPI_ACTIVE_HIGH,
+    .bit_rate = CONFIG_DRIVER_USBDEV_MAX3420_SPI_BITRATE,
+    .word_width = 8,
+  };
+
+  srq->base.config = &spi_config;
   srq->base.base.pvdata = dev;
 
   /* init GPIO stuff */

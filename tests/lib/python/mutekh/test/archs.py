@@ -65,7 +65,7 @@ emu_linux_x86_64     = Config("emu-linux-x86_64",                       ["arch:e
 ##################################################
 # SiLab EFM32 low-power archs and platforms
 
-_efm32_features      = _arm32m_features + ["arch:efm32", "spi", "i2c", "pwm", "timer", "char", "usbdev", "minimal"]
+_efm32_features      = _arm32m_features + ["arch:efm32", "spi", "i2c", "pwm", "timer", "char", "gpio", "usbdev", "minimal"]
 
 efm32_zero           = Config("efm32-stk3200",                          _efm32_features)
 efm32_leopard        = Config("efm32-stk3600",                          _efm32_features)
@@ -75,15 +75,15 @@ efm32_wonder         = Config("efm32-stk3800",                          _efm32_f
 ##################################################
 # Nordic nrf5x
 
-_nrf5x_features      = _arm32m_features + ["arch:nrf5x", "spi", "i2c", "pwm", "timer", "char", "minimal"]
+_nrf5x_features      = _arm32m_features + ["arch:nrf5x", "spi", "i2c", "pwm", "timer", "char", "gpio", "minimal"]
 
-nrf51                = Config("nrf5x-51822-128-16",                     _nrf5x_features)
-nrf52                = Config("nrf5x-52832-512-64",                     _nrf5x_features)
+nrf51                = Config("nrf5x-51822-128-16:arch_drv",            _nrf5x_features)
+nrf52                = Config("nrf5x-52832-512-64:arch_drv",            _nrf5x_features)
 
 ##################################################
 # Microchip PIC32 (mips-based) archs and platforms
 
-_pic32_features      = _mips32_features + ["arch:pic32", "spi", "timer", "char", "usbdev", "little"]
+_pic32_features      = _mips32_features + ["arch:pic32", "spi", "timer", "char", "gpio", "usbdev", "little"]
 
 pic32_mz             = Config("pic32-stkmzec",                          _pic32_features)
 
@@ -115,6 +115,13 @@ bcm283x_raspberry    = Config("bcm283x-raspberry-b2", _bcm283x_features)
 _zynq_features       = _arm32_features + ["arch:zynq", "little", "big", "char", "minimal"]
 
 zynq                 = Config("zynq", _zynq_features)
+
+##################################################
+# Ti cc1310 and cc26x0
+
+_cc26xx_features      = _arm32m_features + ["arch:nrf5x", "spi", "timer", "char", "gpio", "minimal"]
+
+cc1310                = Config("cc1310-f128-rgz",            _cc26xx_features)
 
 ###############################################################################
 #
@@ -161,7 +168,8 @@ all_archs            = OrMatch(soclib_mips32eb,
                                gaisler_leon3,
                                stm32_nucleof401re,
                                bcm283x_raspberry,
-                               zynq
+                               zynq,
+                               cc1310
 )
 
 all                  = OrMatch(soclib_mips32eb, soclib_mips32el, soclib_arm32, soclib_arm32_big,
@@ -175,7 +183,8 @@ all                  = OrMatch(soclib_mips32eb, soclib_mips32el, soclib_arm32, s
                                gaisler_leon3,
                                stm32_nucleof103rb, stm32_nucleof401re,
                                bcm283x_raspberry,
-                               zynq
+                               zynq,
+                               cc1310
 )
 
 default              = OrMatch(soclib_arm32,

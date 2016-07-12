@@ -1,6 +1,4 @@
-objs = arch_init.o
-objs += ti_init.o
-objs += dev_cc26xx.o
+objs = arch_init.o ti_init.o dev_cc26xx.o power.o
 
 meta = ldscript
 

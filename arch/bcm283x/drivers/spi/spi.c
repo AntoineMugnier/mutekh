@@ -51,7 +51,6 @@ DRIVER_PV(struct bcm283x_spi_context_s
   uint32_t                       ctrl;
   uint_fast8_t                   fifo_lvl;
   enum dev_spi_bit_order_e       bit_order;
-  enum dev_spi_cs_policy_e       cs_policy;
 
   struct dev_spi_ctrl_context_s    spi_ctrl_ctx;
 });
@@ -91,7 +90,7 @@ static DEV_SPI_CTRL_CONFIG(bcm283x_spi_config)
     i = 16;
 
   div = 1 << (sizeof(div) * 8 - 1 - i);
- 
+
   cpu_mem_write_32(pv->addr + BCM283X_SPI_CLK_ADDR, endian_le32(div));
 
   LOCK_RELEASE_IRQ(&dev->lock);
@@ -222,11 +221,8 @@ static DEV_IRQ_SRC_PROCESS(bcm283x_spi_irq)
 
       if (tr != NULL && bcm283x_spi_transfer_rx(dev))
         {
-          if (pv->cs_policy == DEV_SPI_CS_TRANSFER)
-            {  
-              BCM283X_SPI_CS_TA_SET(pv->ctrl, IDLE);
-              cpu_mem_write_32(pv->addr + BCM283X_SPI_CS_ADDR, endian_le32(pv->ctrl));
-            }
+          BCM283X_SPI_CS_TA_SET(pv->ctrl, IDLE);
+          cpu_mem_write_32(pv->addr + BCM283X_SPI_CS_ADDR, endian_le32(pv->ctrl));
 
           kroutine_exec(&tr->kr);
         }
@@ -236,48 +232,6 @@ static DEV_IRQ_SRC_PROCESS(bcm283x_spi_irq)
 }
 
 #endif
-
-static DEV_SPI_CTRL_SELECT(bcm283x_spi_select)
-{
-  struct device_s *dev = accessor->dev;
-  struct bcm283x_spi_context_s *pv = dev->drv_pv;
-  error_t err = 0;
-
-  if (cs_id > BCM283X_CS_COUNT)
-    return -ENOTSUP;
-
-  LOCK_SPIN_IRQ(&dev->lock);
-
-  if (pv->tr != NULL)
-    err = -EBUSY;
-  else
-    {
-      BCM283X_SPI_CS_CSPOL_SETVAL(cs_id, pv->ctrl, pt == DEV_SPI_ACTIVE_HIGH);
-      BCM283X_SPI_CS_CS_SETVAL(pv->ctrl, cs_id);
-  
-
-      switch (pc)
-        {
-        case DEV_SPI_CS_ASSERT:
-          BCM283X_SPI_CS_TA_SET(pv->ctrl, ACTIVE);
-          break;
-        case DEV_SPI_CS_RELEASE:
-        case DEV_SPI_CS_TRANSFER:
-          BCM283X_SPI_CS_TA_SET(pv->ctrl, IDLE);
-          break;
-        case DEV_SPI_CS_DEASSERT:
-          err = -ENOTSUP;
-          break;
-        }
-
-      pv->cs_policy = pc;
-      cpu_mem_write_32(pv->addr + BCM283X_SPI_CS_ADDR, endian_le32(pv->ctrl));
-    }
-
-  LOCK_RELEASE_IRQ(&dev->lock);
-
-  return err;
-}
 
 static DEV_SPI_CTRL_TRANSFER(bcm283x_spi_transfer)
 {
@@ -289,6 +243,8 @@ static DEV_SPI_CTRL_TRANSFER(bcm283x_spi_transfer)
 
   if (pv->tr != NULL)
     tr->err = -EBUSY;
+  else if (tr->cs_op != DEV_SPI_CS_NOP_NOP)
+    tr->err = -ENOTSUP;
   else
     {
       assert(tr->data.count > 0);
@@ -297,7 +253,7 @@ static DEV_SPI_CTRL_TRANSFER(bcm283x_spi_transfer)
       pv->fifo_lvl = 0;
       tr->err = 0;
 
-      BCM283X_SPI_CS_TA_SET(pv->ctrl, ACTIVE); 
+      BCM283X_SPI_CS_TA_SET(pv->ctrl, ACTIVE);
       BCM283X_SPI_CS_CLEAR_SET(pv->ctrl, NONE);
       cpu_mem_write_32(pv->addr + BCM283X_SPI_CS_ADDR, endian_le32(pv->ctrl));
 
@@ -309,7 +265,6 @@ static DEV_SPI_CTRL_TRANSFER(bcm283x_spi_transfer)
   if (done)
     kroutine_exec(&tr->kr);
 }
-
 
 #define bcm283x_spi_use dev_use_generic
 

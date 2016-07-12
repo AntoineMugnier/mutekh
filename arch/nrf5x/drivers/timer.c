@@ -70,6 +70,10 @@ static void nrf5x_timer_start(struct nrf5x_timer_context_s *pv)
 static void nrf5x_timer_stop(struct nrf5x_timer_context_s *pv)
 {
   nrf_task_trigger(pv->addr, NRF_TIMER_STOP);
+#if defined(CONFIG_ARCH_NRF52)
+  // PAN 78
+  nrf_task_trigger(pv->addr, NRF_TIMER_SHUTDOWN);
+#endif
   nrf_it_disable_mask(pv->addr, -1);
 #if defined(CONFIG_DEVICE_CLOCK)
   dev_clock_sink_gate(&pv->clock_sink, DEV_CLOCK_EP_NONE);

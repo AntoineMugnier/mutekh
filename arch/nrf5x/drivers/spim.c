@@ -48,7 +48,6 @@ DRIVER_PV(struct nrf5x_spim_context_s
 
   struct dev_irq_src_s irq_ep[1];
   struct dev_spi_ctrl_transfer_s *current_transfer;
-  bool_t callbacking : 1;
   bool_t buffered_in : 1;
 
   struct dev_spi_ctrl_context_s spi_ctrl_ctx;
@@ -60,6 +59,7 @@ static DEV_SPI_CTRL_CONFIG(nrf5x_spim_config)
   struct nrf5x_spim_context_s *pv = dev->drv_pv;
   error_t err = 0;
   uint32_t config = 0;
+  uint32_t rate;
 
   LOCK_SPIN_IRQ(&dev->lock);
 
@@ -99,8 +99,15 @@ static DEV_SPI_CTRL_CONFIG(nrf5x_spim_config)
     : NRF_SPIM_CONFIG_ORDER_LSBFIRST;
 
   nrf_reg_set(pv->addr, NRF_SPIM_CONFIG, config);
+
+  rate = cfg->bit_rate;
+  if (rate > 1000000) {
+    printk("nRF5x SPI Warning: bit rate capped to 1MHz (was %d)\n", rate);
+    rate = 1000000;
+  }
+
   nrf_reg_set(pv->addr, NRF_SPIM_FREQUENCY,
-              NRF_SPIM_FREQUENCY_(cfg->bit_rate));
+              NRF_SPIM_FREQUENCY_(rate));
 
  out:
   LOCK_RELEASE_IRQ(&dev->lock);
@@ -108,11 +115,16 @@ static DEV_SPI_CTRL_CONFIG(nrf5x_spim_config)
   return err;
 }
 
-#define nrf5x_spim_select dev_driver_notsup_fcn
+#define nrf5x_spim_select (dev_spi_ctrl_select_t*)dev_driver_notsup_fcn
 
 static void nrf5x_spim_transfer_ended(struct nrf5x_spim_context_s *pv)
 {
   struct dev_spi_ctrl_transfer_s *tr = pv->current_transfer;
+
+  dprintk("%s, count %d transferred %d\n", __FUNCTION__, tr->data.count, pv->transferred);
+
+  if (tr->data.in && tr->data.in_width)
+    dprintk("in: %P\n", nrf_reg_get(pv->addr, NRF_SPIM_RXD_PTR), pv->transferred);
 
   assert(tr);
 
@@ -138,15 +150,15 @@ static void nrf5x_spim_transfer_ended(struct nrf5x_spim_context_s *pv)
     }
   }
 
-  tr->data.in = (void *)((uintptr_t)tr->data.in + pv->transferred);
-  tr->data.out = (const void *)((uintptr_t)tr->data.out + pv->transferred);
+  tr->data.in = (void *)((uintptr_t)tr->data.in + pv->transferred * tr->data.in_width);
+  tr->data.out = (const void *)((uintptr_t)tr->data.out + pv->transferred * tr->data.out_width);
   tr->data.count -= pv->transferred;
 }
 
 static void nrf5x_spim_next_start(struct nrf5x_spim_context_s *pv)
 {
   struct dev_spi_ctrl_transfer_s *tr = pv->current_transfer;
-  size_t count, tx_count;
+  size_t count;
 
   assert(tr);
 
@@ -156,7 +168,7 @@ static void nrf5x_spim_next_start(struct nrf5x_spim_context_s *pv)
 
   switch (tr->data.out_width) {
   case 0:
-    nrf_reg_set(pv->addr, NRF_SPIM_ORC, *(const uint32_t *)pv->out);
+    nrf_reg_set(pv->addr, NRF_SPIM_ORC, *(const uint32_t *)tr->data.out);
     nrf_reg_set(pv->addr, NRF_SPIM_TXD_PTR, 0);
     break;
 
@@ -203,6 +215,10 @@ static void nrf5x_spim_next_start(struct nrf5x_spim_context_s *pv)
 
   if (tr->data.in) {
     switch (tr->data.in_width) {
+    case 0:
+      nrf_reg_set(pv->addr, NRF_SPIM_RXD_PTR, 0);
+      break;
+
     case 1:
       nrf_reg_set(pv->addr, NRF_SPIM_RXD_PTR, (uintptr_t)tr->data.in);
       break;
@@ -214,10 +230,20 @@ static void nrf5x_spim_next_start(struct nrf5x_spim_context_s *pv)
       pv->buffered_in = 1;
       break;
     }
+  } else {
+    nrf_reg_set(pv->addr, NRF_SPIM_RXD_PTR, 0);
   }
 
+  dprintk("%s count %d out w %d in w %d%s\n", __FUNCTION__,
+          count,
+          tr->data.out_width,
+          tr->data.in_width, pv->buffered_in ? " buffered" : "");
+
+  if (tr->data.out_width)
+    dprintk("out: %P\n", nrf_reg_get(pv->addr, NRF_SPIM_TXD_PTR), count);
+
   nrf_reg_set(pv->addr, NRF_SPIM_TXD_MAXCNT, tr->data.out_width ? count : 0);
-  nrf_reg_set(pv->addr, NRF_SPIM_RXD_MAXCNT, tr->data.in ? count : 0);
+  nrf_reg_set(pv->addr, NRF_SPIM_RXD_MAXCNT, tr->data.in && tr->data.in_width ? count : 0);
 
   pv->transferred = count;
 
@@ -231,27 +257,22 @@ static DEV_IRQ_SRC_PROCESS(nrf5x_spim_irq)
   struct nrf5x_spim_context_s *pv = dev->drv_pv;
   struct dev_spi_ctrl_transfer_s *tr = pv->current_transfer;
 
+  //dprintk("%s\n", __FUNCTION__);
+
   lock_spin(&dev->lock);
 
   if (nrf_event_check(pv->addr, NRF_SPIM_END)) {
     nrf_event_clear(pv->addr, NRF_SPIM_END);
 
-    nrf5x_spim_transfer_ended(pv);
-    if (tr->data.count) {
-      nrf5x_spim_next_start(pv);
-    } else {
-      pv->current_transfer = NULL;
+    if (tr) {
+      nrf5x_spim_transfer_ended(pv);
 
-      pv->callbacking = 1;
-      lock_release(&dev->lock);
-      kroutine_exec(&tr->kr);
-      lock_spin(&dev->lock);
-      pv->callbacking = 0;
-
-      if (pv->current_transfer)
+      if (tr->data.count) {
         nrf5x_spim_next_start(pv);
-      else
-        nrf_task_trigger(pv->addr, NRF_SPIM_STOP);
+      } else {
+        pv->current_transfer = NULL;
+        kroutine_exec(&tr->kr);
+      }
     }
   }
 
@@ -262,30 +283,29 @@ static DEV_SPI_CTRL_TRANSFER(nrf5x_spim_transfer)
 {
   struct device_s *dev = accessor->dev;
   struct nrf5x_spim_context_s *pv = dev->drv_pv;
-  bool_t done;
+  bool_t done = 1;
+
+  dprintk("%s\n", __FUNCTION__);
 
   LOCK_SPIN_IRQ(&dev->lock);
 
   if (pv->current_transfer) {
     tr->err = -EBUSY;
-    done = 1;
+  } else if (tr->cs_op != DEV_SPI_CS_NOP_NOP) {
+    tr->err = -ENOTSUP;
+  } else if (!(0x17 >> tr->data.out_width) || !(0x16 >> tr->data.in_width)) {
+    tr->err = -EINVAL;
   } else {
     assert(tr->data.count > 0);
-
-    if (!(0x17 >> tr->data.out_width) || !(0x16 >> tr->data.in_width))
-      return -EINVAL;
-
     done = 0;
 
     pv->current_transfer = tr;
     tr->err = 0;
 
-    if (!pv->callbacking) {
-      nrf_task_trigger(pv->addr, NRF_SPIM_START);
-      nrf5x_spim_next_start(pv);
-    }
+    nrf5x_spim_next_start(pv);
   }
 
+ out:
   LOCK_RELEASE_IRQ(&dev->lock);
 
   if (done)
@@ -328,6 +348,8 @@ static DEV_INIT(nrf5x_spim_init)
               pv->addr, NRF_SPIM_PSEL_MOSI,
               id[2] != IOMUX_INVALID_ID ? id[2] : (uint32_t)-1);
 
+  nrf_reg_set(pv->addr, NRF_SPIM_ENABLE, NRF_SPIM_ENABLE_ENABLED);
+
   nrf_it_disable(pv->addr, NRF_SPIM_END);
 
   device_irq_source_init(dev, pv->irq_ep, 1, &nrf5x_spim_irq);
@@ -351,7 +373,7 @@ static DEV_CLEANUP(nrf5x_spim_cleanup)
   struct nrf5x_spim_context_s *pv = dev->drv_pv;
 
 #ifdef CONFIG_DEVICE_SPI_REQUEST
-  if (!dev_spi_queue_isempty(&pv->queue))
+  if (!dev_request_queue_isempty(&pv->spi_ctrl_ctx.queue))
     return -EBUSY;
 
   dev_spi_context_cleanup(&pv->spi_ctrl_ctx);

@@ -35,7 +35,9 @@ enum nrf_uarte_task {
 enum nrf_uarte_event {
     NRF_UARTE_CTS = 0,
     NRF_UARTE_NCTS = 1,
+    NRF_UARTE_RXDRDY = 2,
     NRF_UARTE_ENDRX = 4,
+    NRF_UARTE_TXDRDY = 7,
     NRF_UARTE_ENDTX = 8,
     NRF_UARTE_ERROR = 9,
     NRF_UARTE_RXTO = 17,

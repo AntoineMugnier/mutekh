@@ -173,11 +173,13 @@ device_i2c_ctrl_end(struct dev_i2c_ctrl_context_s *q,
 
   if (rq == q->current)
     {
+#ifdef CONFIG_DEVICE_I2C_BYTECODE
       if (rq->bytecode && q->tr_in_progress)
         {
           device_i2c_ctrl_transfer(q, rq, NULL, 0, DEV_I2C_RESET);
           return DEVICE_I2C_RESET;
         }
+#endif
       q->current = NULL;
     }
   else
@@ -708,7 +710,9 @@ error_t dev_i2c_context_init(struct device_s *dev, struct dev_i2c_ctrl_context_s
   dev_request_queue_init(&q->queue);
   lock_init_irq(&q->lock);
   memset(&q->transfer, 0, sizeof(q->transfer));
+#ifdef CONFIG_DEVICE_I2C_BYTECODE
   q->tr_in_progress = 0;
+#endif
   return 0;
 }
 

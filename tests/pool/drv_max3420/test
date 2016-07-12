@@ -1,0 +1,33 @@
+# -*- python -*-
+
+from mt.base.environment import *
+from mt.base.match import *
+from mt.base.expectation import *
+
+from mutekh.test.stages import configure, build, execute
+from mutekh.test.archs import *
+
+env = Environment(
+    name = "drv_max3420",
+
+    test_deps = [
+        "drivers/usb/max3420/Makefile",
+        "drivers/usb/max3420/max3420.c",
+        "drivers/usb/max3420/max3420.config",
+        "drivers/usb/max3420/max3420_spi.bc",
+        "drivers/usb/max3420/max3420_spi.h"
+    ],
+
+    test_space = [
+        Dimension(all_archs.filter_by_feature("+spi").expand()[0]),
+    ],
+
+    actions = [
+        configure,
+        build,
+    ],
+
+    rules = Rules(
+    )
+)
+
