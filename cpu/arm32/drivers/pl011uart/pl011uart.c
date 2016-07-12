@@ -394,6 +394,7 @@ static DEV_CLEANUP(pl011uart_cleanup)
   dev_request_queue_destroy(&pv->write_q);
 
   mem_free(pv);
+  return 0;
 }
 
 DRIVER_DECLARE(pl011uart_drv, 0, "PL011 UART", pl011uart,

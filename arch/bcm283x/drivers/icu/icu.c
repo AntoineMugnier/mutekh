@@ -214,6 +214,7 @@ static DEV_CLEANUP(bcm283x_icu_cleanup)
     mem_free(pv->sinks);
 
   mem_free(pv);
+  return 0;
 }
 
 DRIVER_DECLARE(bcm283x_icu_drv, 0, "BCM283X irq controller", bcm283x_icu,

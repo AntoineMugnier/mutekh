@@ -255,6 +255,7 @@ static DEV_SPI_CTRL_SELECT(bcm283x_spi_select)
       BCM283X_SPI_CS_CSPOL_SETVAL(cs_id, pv->ctrl, pt == DEV_SPI_ACTIVE_HIGH);
       BCM283X_SPI_CS_CS_SETVAL(pv->ctrl, cs_id);
   
+
       switch (pc)
         {
         case DEV_SPI_CS_ASSERT:
@@ -379,6 +380,7 @@ static DEV_CLEANUP(bcm283x_spi_cleanup)
 #endif
 
   mem_free(pv);
+  return 0;
 }
 
 DRIVER_DECLARE(bcm283x_spi_drv, 0, "BCM283X SPI", bcm283x_spi,

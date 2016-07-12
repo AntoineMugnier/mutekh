@@ -548,6 +548,7 @@ static DEV_CLEANUP(bcm283x_gpio_cleanup)
 #endif
 
   mem_free(pv);
+  return 0;
 }
 
 DRIVER_DECLARE(bcm283x_gpio_drv, 0, "BCM283X GPIO", bcm283x_gpio

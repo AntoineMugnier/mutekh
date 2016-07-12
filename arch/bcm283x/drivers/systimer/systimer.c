@@ -311,6 +311,7 @@ static DEV_CLEANUP(bcm283x_systimer_cleanup)
 #endif
 
   mem_free(pv);
+  return 0;
 }
 
 DRIVER_DECLARE(bcm283x_systimer_drv, 0, "BCM283X system timer", bcm283x_systimer,
