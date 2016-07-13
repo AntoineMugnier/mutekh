@@ -61,9 +61,7 @@ DRIVER_PV(struct bcm283x_i2c_private_s
 #ifdef CONFIG_DEVICE_CLOCK
   struct dev_clock_sink_ep_s      clk_ep;
 #endif
-#ifdef CONFIG_DEVICE_I2C_REQUEST
   struct dev_i2c_ctrl_context_s   i2c_ctrl_ctx;
-#endif
   struct device_timer_s           dev_timer;
   struct dev_timer_rq_s           timer_rq;
 
