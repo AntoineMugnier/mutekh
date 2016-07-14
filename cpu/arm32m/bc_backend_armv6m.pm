@@ -187,7 +187,7 @@ sub out_ret {
 	   "    .ltorg\n";
 }
 
-sub out_pack_ {
+sub out_pack {
     my ($thisop, @w) = @_;
 
     my $sym = $main::packops{$thisop->{name}};
@@ -195,31 +195,52 @@ sub out_pack_ {
 
     if ( $thisop->{count} > $max_op_regs ) {
         return "    mov r0, r4\n".
-               "    movs r1, #".($thisop->{reg} + $thisop->{count} * 16)."\n".
+               "    movs r1, #".($thisop->{packout_reg} + $thisop->{count} * 16)."\n".
                "    bl $sym\n";
     } else {
         my $r;
         for ( my $i = 0; $i < $thisop->{count}; $i++ ) {
             my %op = (
                 'bc_pack_op8' => sub {
-                    $r .= "    strb $reg[$w[$i]], [r4, #".(4 * $thisop->{reg} + $i)."]\n";
-                }, 'bc_unpack_op8' => sub {
-                    $r .= "    ldrb $reg[$w[$i]], [r4, #".(4 * $thisop->{reg} + $i)."]\n";
+                    $r .= "    strb $reg[$w[$i]], [r4, #".(4 * $thisop->{packout_reg} + $i)."]\n";
                 }, 'bc_pack_op16' => sub {
-                    $r .= "    strh $reg[$w[$i]], [r4, #".(4 * $thisop->{reg} + $i * 2)."]\n";
-                }, 'bc_unpack_op16' => sub {
-                    $r .= "    ldrh $reg[$w[$i]], [r4, #".(4 * $thisop->{reg} + $i * 2)."]\n";
+                    $r .= "    strh $reg[$w[$i]], [r4, #".(4 * $thisop->{packout_reg} + $i * 2)."]\n";
                 }, 'bc_swap_pack_op16' => sub {
                     $r .= "    rev16 r0, $reg[$w[$i]]\n";
-                    $r .= "    strh r0, [r4, #".(4 * $thisop->{reg} + $i * 2)."]\n";
-                }, 'bc_unpack_swap_op16' => sub {
-                    $r .= "    ldrh r0, [r4, #".(4 * $thisop->{reg} + $i * 2)."]\n";
-                    $r .= "    rev16 $reg[$w[$i]], r0\n";
+                    $r .= "    strh r0, [r4, #".(4 * $thisop->{packout_reg} + $i * 2)."]\n";
                 }, 'bc_swap_pack_op32' => sub {
                     $r .= "    rev r0, $reg[$w[$i]]\n";
-                    $r .= "    str r0, [r4, #".(4 * $thisop->{reg} + $i * 4)."]\n";
+                    $r .= "    str r0, [r4, #".(4 * $thisop->{packout_reg} + $i * 4)."]\n";
+                });
+            $op{$sym}->();
+        }
+        return $r;
+    }
+}
+
+sub out_unpack {
+    my ($thisop, @w) = @_;
+
+    my $sym = $main::packops{$thisop->{name}};
+    return "    # unpack: nothing to do\n" if !$sym;
+
+    if ( $thisop->{count} > $max_op_regs ) {
+        return "    mov r0, r4\n".
+               "    movs r1, #".($thisop->{packin_reg} + $thisop->{count} * 16)."\n".
+               "    bl $sym\n";
+    } else {
+        my $r;
+        for ( my $i = 0; $i < $thisop->{count}; $i++ ) {
+            my %op = (
+                'bc_unpack_op8' => sub {
+                    $r .= "    ldrb $reg[$w[$i]], [r4, #".(4 * $thisop->{packin_reg} + $i)."]\n";
+                }, 'bc_unpack_op16' => sub {
+                    $r .= "    ldrh $reg[$w[$i]], [r4, #".(4 * $thisop->{packin_reg} + $i * 2)."]\n";
+                }, 'bc_unpack_swap_op16' => sub {
+                    $r .= "    ldrh r0, [r4, #".(4 * $thisop->{packin_reg} + $i * 2)."]\n";
+                    $r .= "    rev16 $reg[$w[$i]], r0\n";
                 }, 'bc_unpack_swap_op32' => sub {
-                    $r .= "    ldr r0, [r4, #".(4 * $thisop->{reg} + $i * 4)."]\n";
+                    $r .= "    ldr r0, [r4, #".(4 * $thisop->{packin_reg} + $i * 4)."]\n";
                     $r .= "    rev $reg[$w[$i]], r0\n";
                 });
             $op{$sym}->();
@@ -245,10 +266,6 @@ sub parse_pack {
     }
 }
 
-sub out_pack {
-    return out_pack_( @_ );
-}
-
 sub parse_unpack {
     my ($thisop) = @_;
 
@@ -261,10 +278,6 @@ sub parse_unpack {
         $thisop->{reloadout} = (1 << $thisop->{count}) - 1;
         $thisop->{clobber} = $caller_saved;
     }
-}
-
-sub out_unpack {
-    return out_pack_( @_ );
 }
 
 sub parse_swap {

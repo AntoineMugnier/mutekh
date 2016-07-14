@@ -390,6 +390,19 @@ our %packops = (
     'unpack32be' => $le ? 'bc_unpack_swap_op32' : undef,
 );
 
+our %packbytes = (
+    'pack8' =>      1,
+    'unpack8' =>    1,
+    'pack16le' =>   2,
+    'pack16be' =>   2,
+    'pack32le' =>   4,
+    'pack32be' =>   4,
+    'unpack16le' => 2,
+    'unpack16be' => 2,
+    'unpack32le' => 4,
+    'unpack32be' => 4,
+);
+
 sub parse_pack
 {
     my $thisop = shift;
@@ -402,8 +415,9 @@ sub parse_pack
     for (my $i = 0; $i < $count; $i++) {
         push @{$thisop->{in}}, $r + $i;
     }
-    $thisop->{reg} = $r;
     $thisop->{count} = $count;
+    $thisop->{packout_reg} = $r;
+    $thisop->{packout_bytes} = $count * $packbytes{$thisop->{name}};
 }
 
 sub parse_unpack
@@ -418,8 +432,9 @@ sub parse_unpack
     for (my $i = 0; $i < $count; $i++) {
         push @{$thisop->{out}}, $r + $i;
     }
-    $thisop->{reg} = $r;
     $thisop->{count} = $count;
+    $thisop->{packin_reg} = $r;
+    $thisop->{packin_bytes} = $count * $packbytes{$thisop->{name}};
 }
 
 sub parse_ld

@@ -172,12 +172,12 @@ our %packops = (
 
 sub out_pack {
     my ($thisop) = @_;
-    return fmt4( $thisop, $thisop->{count} - 1, $packops{$thisop->{name}}, $thisop->{reg} );
+    return fmt4( $thisop, $thisop->{count} - 1, $packops{$thisop->{name}}, $thisop->{in}->[0] );
 }
 
 sub out_unpack {
     my ($thisop) = @_;
-    return fmt4( $thisop, $thisop->{count} - 1, $packops{$thisop->{name}}, $thisop->{reg} );
+    return fmt4( $thisop, $thisop->{count} - 1, $packops{$thisop->{name}}, $thisop->{out}->[0] );
 }
 
 sub out_swap {

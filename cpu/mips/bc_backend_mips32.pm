@@ -156,7 +156,7 @@ sub out_ret {
     return "    jr $reg[$wi]\n";
 }
 
-sub out_pack_ {
+sub out_pack {
     my ($thisop, @wi) = @_;
 
     my $sym = $main::packops{$thisop->{name}};
@@ -164,20 +164,41 @@ sub out_pack_ {
 
     if ( $thisop->{count} > 6 || $sym =~ /swap/ ) {
         return "    move \$a0, \$17\n".
-               "    li \$a1, ".($thisop->{reg} + $thisop->{count} * 16)."\n".
+               "    li \$a1, ".($thisop->{packout_reg} + $thisop->{count} * 16)."\n".
                "    jal $sym\n";
     } else {
         my $r;
         for ( my $i = 0; $i < $thisop->{count}; $i++ ) {
             my %op = (
                 'bc_pack_op8' => sub {
-                    $r .= "    sb $reg[$wi[$i]], ".(4 * $thisop->{reg} + $i)."(\$17)\n";
-                }, 'bc_unpack_op8' => sub {
-                    $r .= "    lbu $reg[$wi[$i]], ".(4 * $thisop->{reg} + $i)."(\$17)\n";
+                    $r .= "    sb $reg[$wi[$i]], ".(4 * $thisop->{packout_reg} + $i)."(\$17)\n";
                 }, 'bc_pack_op16' => sub {
-                    $r .= "    sh $reg[$wi[$i]], ".(4 * $thisop->{reg} + $i * 2)."(\$17)\n";
+                    $r .= "    sh $reg[$wi[$i]], ".(4 * $thisop->{packout_reg} + $i * 2)."(\$17)\n";
+                });
+            $op{$sym}->();
+        }
+        return $r;
+    }
+}
+
+sub out_unpack {
+    my ($thisop, @wi) = @_;
+
+    my $sym = $main::packops{$thisop->{name}};
+    return "# unpack: nothing to do\n" if !$sym;
+
+    if ( $thisop->{count} > 6 || $sym =~ /swap/ ) {
+        return "    move \$a0, \$17\n".
+               "    li \$a1, ".($thisop->{packin_reg} + $thisop->{count} * 16)."\n".
+               "    jal $sym\n";
+    } else {
+        my $r;
+        for ( my $i = 0; $i < $thisop->{count}; $i++ ) {
+            my %op = (
+                'bc_unpack_op8' => sub {
+                    $r .= "    lbu $reg[$wi[$i]], ".(4 * $thisop->{packin_reg} + $i)."(\$17)\n";
                 }, 'bc_unpack_op16' => sub {
-                    $r .= "    lhu $reg[$wi[$i]], ".(4 * $thisop->{reg} + $i * 2)."(\$17)\n";
+                    $r .= "    lhu $reg[$wi[$i]], ".(4 * $thisop->{packin_reg} + $i * 2)."(\$17)\n";
                 });
             $op{$sym}->();
         }
@@ -202,10 +223,6 @@ sub parse_pack {
     }
 }
 
-sub out_pack {
-    return out_pack_( @_ );
-}
-
 sub parse_unpack {
     my ($thisop) = @_;
 
@@ -218,10 +235,6 @@ sub parse_unpack {
         $thisop->{reloadout} = (1 << $thisop->{count}) - 1;
         $thisop->{clobber} = $caller_saved;
     }
-}
-
-sub out_unpack {
-    return out_pack_( @_ );
 }
 
 sub parse_swap {

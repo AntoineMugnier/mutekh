@@ -9,7 +9,7 @@ use strict;
 
 our @reg = @bc_backend_mips32::reg;
 
-sub out_pack_ {
+sub out_pack {
     my ($thisop, @w) = @_;
 
     my $sym = $main::packops{$thisop->{name}};
@@ -17,32 +17,53 @@ sub out_pack_ {
 
     if ( $thisop->{count} > 6 ) {
         return "    move \$a0, \$17\n".
-               "    li \$a1, ".($thisop->{reg} + $thisop->{count} * 16)."\n".
+               "    li \$a1, ".($thisop->{packout_reg} + $thisop->{count} * 16)."\n".
                "    jal $sym\n";
     } else {
         my $r;
         for ( my $i = 0; $i < $thisop->{count}; $i++ ) {
             my %op = (
                 'bc_pack_op8' => sub {
-                    $r .= "    sb $reg[$w[$i]], ".(4 * $thisop->{reg} + $i)."(\$17)\n";
-                }, 'bc_unpack_op8' => sub {
-                    $r .= "    lbu $reg[$w[$i]], ".(4 * $thisop->{reg} + $i)."(\$17)\n";
+                    $r .= "    sb $reg[$w[$i]], ".(4 * $thisop->{packout_reg} + $i)."(\$17)\n";
                 }, 'bc_pack_op16' => sub {
-                    $r .= "    sh $reg[$w[$i]], ".(4 * $thisop->{reg} + $i * 2)."(\$17)\n";
-                }, 'bc_unpack_op16' => sub {
-                    $r .= "    lhu $reg[$w[$i]], ".(4 * $thisop->{reg} + $i * 2)."(\$17)\n";
+                    $r .= "    sh $reg[$w[$i]], ".(4 * $thisop->{packout_reg} + $i * 2)."(\$17)\n";
                 }, 'bc_swap_pack_op16' => sub {
                     $r .= "    wsbh \$at, $reg[$w[$i]]\n";
-                    $r .= "    sh \$at, ".(4 * $thisop->{reg} + $i * 2)."(\$17)\n";
-                }, 'bc_unpack_swap_op16' => sub {
-                    $r .= "    lhu \$at, ".(4 * $thisop->{reg} + $i * 2)."(\$17)\n";
-                    $r .= "    wsbh $reg[$w[$i]], \$at\n";
+                    $r .= "    sh \$at, ".(4 * $thisop->{packout_reg} + $i * 2)."(\$17)\n";
                 }, 'bc_swap_pack_op32' => sub {
                     $r .= "    wsbh \$at, $reg[$w[$i]]\n";
                     $r .= "    rotr \$at, \$at, 16\n";
-                    $r .= "    sw \$at, ".(4 * $thisop->{reg} + $i * 4)."(\$17)\n";
+                    $r .= "    sw \$at, ".(4 * $thisop->{packout_reg} + $i * 4)."(\$17)\n";
+                });
+            $op{$sym}->();
+        }
+        return $r;
+    }
+}
+
+sub out_unpack {
+    my ($thisop, @w) = @_;
+
+    my $sym = $main::packops{$thisop->{name}};
+    return "# unpack: nothing to do\n" if !$sym;
+
+    if ( $thisop->{count} > 6 ) {
+        return "    move \$a0, \$17\n".
+               "    li \$a1, ".($thisop->{packin_reg} + $thisop->{count} * 16)."\n".
+               "    jal $sym\n";
+    } else {
+        my $r;
+        for ( my $i = 0; $i < $thisop->{count}; $i++ ) {
+            my %op = (
+                'bc_unpack_op8' => sub {
+                    $r .= "    lbu $reg[$w[$i]], ".(4 * $thisop->{packin_reg} + $i)."(\$17)\n";
+                }, 'bc_unpack_op16' => sub {
+                    $r .= "    lhu $reg[$w[$i]], ".(4 * $thisop->{packin_reg} + $i * 2)."(\$17)\n";
+                }, 'bc_unpack_swap_op16' => sub {
+                    $r .= "    lhu \$at, ".(4 * $thisop->{packin_reg} + $i * 2)."(\$17)\n";
+                    $r .= "    wsbh $reg[$w[$i]], \$at\n";
                 }, 'bc_unpack_swap_op32' => sub {
-                    $r .= "    lw \$at, ".(4 * $thisop->{reg} + $i * 4)."(\$17)\n";
+                    $r .= "    lw \$at, ".(4 * $thisop->{packin_reg} + $i * 4)."(\$17)\n";
                     $r .= "    wsbh \$at, \$at\n";
                     $r .= "    rotr $reg[$w[$i]], \$at, 16\n";
                 });
@@ -67,10 +88,6 @@ sub parse_pack {
         # prevent overwritting of packed data
         $thisop->{wbin} = (1 << $thisop->{count}) - 1;
     }
-}
-
-sub out_pack {
-    return out_pack_( @_ );
 }
 
 sub parse_unpack {
@@ -122,10 +139,6 @@ sub out_swap {
         $r .= "    rotr $reg[$wo], $reg[$wo], 16\n";
     }
     return $r;
-}
-
-sub out_unpack {
-    return out_pack_( @_ );
 }
 
 return 1;
