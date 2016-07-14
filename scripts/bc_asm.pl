@@ -369,7 +369,7 @@ sub parse_loop
 {
     my $thisop = shift;
 
-#   push @{$thisop->{out}}, check_reg($thisop, 0);
+    push @{$thisop->{out}}, check_reg($thisop, 0);
     push @{$thisop->{in}}, check_reg($thisop, 0);
     $thisop->{target} = check_label8($thisop, 1, 64);
 }

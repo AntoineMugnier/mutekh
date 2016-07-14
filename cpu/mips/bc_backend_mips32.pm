@@ -260,8 +260,7 @@ sub out_loop {
     } else {
         return
                "    beq $reg[$wi], \$0, $thisop->{args}->[1]\n".
-               "    addiu $reg[$wo], $reg[$wi], -1\n".
-               "    sw $reg[$wo], ".($thisop->{in}->[0] * 4)."(\$17)\n";
+               "    addiu $reg[$wo], $reg[$wi], -1\n";
     }
 }
 

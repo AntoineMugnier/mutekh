@@ -300,8 +300,7 @@ sub out_loop {
         return
                "    tst $reg[$wi], $reg[$wi]\n".
                "    beq $thisop->{args}->[1]\n".
-               "    subs $reg[$wi], #1\n".
-               "    str $reg[$wi], [r4, #".($thisop->{in}->[0] * 4)."]\n";
+               "    subs $reg[$wi], #1\n";
     }
 }
 
