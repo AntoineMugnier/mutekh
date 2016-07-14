@@ -31,8 +31,8 @@ main::custom_op('spi_wrm',            3,      0x4800, \&parse_xxm );
 main::custom_op('spi_swpm',           4,      0x4c00, \&parse_swpm );
 
 main::custom_op('spi_gpiomode',       2,      0x0800, \&parse_gpio_mode );
-main::custom_op('spi_gpioget',        2,      0x0a00, \&parse_gpio );
-main::custom_op('spi_gpioset',        2,      0x0c00, \&parse_gpio );
+main::custom_op('spi_gpioget',        2,      0x0a00, \&parse_gpio_get );
+main::custom_op('spi_gpioset',        2,      0x0c00, \&parse_gpio_set );
 
 our %csops1 = (
     'CS_END'   => 0,
@@ -64,6 +64,7 @@ sub parse_reg
 {
     my $thisop = shift;
     my $r = main::check_reg( $thisop, 0 );
+    $thisop->{in}->[0] = $r;
     $thisop->{code} |= $r;
 }
 
@@ -80,6 +81,8 @@ sub parse_rd
     my $thisop = shift;
     my $r = main::check_reg( $thisop, 0 );
     my $l = main::check_num( $thisop, 1, 1, 16 );
+    $thisop->{packout_reg} = $r;
+    $thisop->{packout_bytes} = $l;
     my $cs = check_csop( $thisop, 2, \%csops1 );
     die "$thisop->{line}: out of range byte array\n"
         if ($r * 4 + $l > 16 * 4);
@@ -91,6 +94,8 @@ sub parse_wr
     my $thisop = shift;
     my $r = main::check_reg( $thisop, 0 );
     my $l = main::check_num( $thisop, 1, 1, 16 );
+    $thisop->{packin_reg} = $r;
+    $thisop->{packin_bytes} = $l;
     my $cs = check_csop( $thisop, 2, \%csops1 );
     die "$thisop->{line}: out of range byte array\n"
         if ($r * 4 + $l > 16 * 4);
@@ -103,6 +108,10 @@ sub parse_swp
     my $wr = main::check_reg( $thisop, 0 );
     my $rd = main::check_reg( $thisop, 1 );
     my $l = main::check_num( $thisop, 2, 1, 16 );
+    $thisop->{packin_reg} = $wr;
+    $thisop->{packin_bytes} = $l;
+    $thisop->{packout_reg} = $rd;
+    $thisop->{packout_bytes} = $l;
     my $cs = check_csop( $thisop, 3, \%csops1 );
     die "$thisop->{line}: out of range read byte array\n"
         if ($rd * 4 + $l > 16 * 4);
@@ -115,6 +124,7 @@ sub parse_pad
 {
     my $thisop = shift;
     my $r = main::check_reg( $thisop, 0 );
+    $thisop->{in}->[0] = $r;
     my $cs = check_csop( $thisop, 1, \%csops2 );
     $thisop->{code} |= ($cs << 8) | $r;
 }
@@ -124,6 +134,8 @@ sub parse_xxm
     my $thisop = shift;
     my $ra = main::check_reg( $thisop, 0 );
     my $rl = main::check_reg( $thisop, 1 );
+    $thisop->{in}->[0] = $ra;
+    $thisop->{in}->[1] = $rl;
     my $cs = check_csop( $thisop, 2, \%csops2 );
     $thisop->{code} |= ($cs << 8) | ($ra << 4) | $rl;
 }
@@ -136,15 +148,28 @@ sub parse_swpm
     die "$thisop->{line}: read and write address registers must be a contiguous pair\n"
         if ($raw ^ 1 != $rar);
     my $rl = main::check_reg( $thisop, 2 );
+    $thisop->{in}->[0] = $rar;
+    $thisop->{in}->[1] = $raw;
+    $thisop->{in}->[2] = $rl;
     my $cs = check_csop( $thisop, 3, \%csops2 );
     $thisop->{code} |= ($cs << 8) | ($rar << 4) | $rl;
 }
 
-sub parse_gpio
+sub parse_gpio_set
 {
     my $thisop = shift;
     my $i = main::check_num( $thisop, 0, 0, 31 );
     my $r = main::check_reg( $thisop, 1 );
+    $thisop->{in}->[0] = $r;
+    $thisop->{code} |= ($i << 4) | $r;
+}
+
+sub parse_gpio_get
+{
+    my $thisop = shift;
+    my $i = main::check_num( $thisop, 0, 0, 31 );
+    my $r = main::check_reg( $thisop, 1 );
+    $thisop->{out}->[0] = $r;
     $thisop->{code} |= ($i << 4) | $r;
 }
 
