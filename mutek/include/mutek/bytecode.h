@@ -124,7 +124,7 @@
    inclusion of C headers files as well as use of @tt _sizeof, @tt _offsetof
    and @tt _const operators on C declarations in the bytecode program.
 
-   The following directives are available:
+   The following general purpose directives are available:
    @list
    @item @tt{.define name expr} : define an expression macro.
      The C preprocessor is also available in bytecode programs
@@ -141,6 +141,37 @@
    used as both the source and destination register.
 
    See @sourcelink tests/pool/bytecode for an example application.
+   @end section
+
+   @section {Static analysis}
+
+   The bytecode assembler is capable of performing register usage
+   checking provided that some directive are used to declare the role
+   of registers. Checking is most efficient when the whole bytecode
+   program is written using functions.
+
+   The following directives are available to declare register usage:
+   @list
+   @item @tt{.global %1 [aliasA] [, %7 [aliasB] ...]} : declare some registers
+     as always initialized.
+   @item @tt{.const %1 [aliasA] [, %7 [aliasB] ...]} : declare some registers
+     as always initialized which should not be modified by the bytecode.
+   @item @tt{.entry %1 [, %7 ...]} : export the previous label as
+     a global symbol and declare some registers as initialized
+     at this point. This is better to use functions as
+     bytecode entry-points.
+   @item @tt{.func name}, @tt {.endfunc} : declare a function. This
+     is similar to declaring a label but allows better static analysis
+     on function calls.
+   @item @tt{.input %1 [aliasA] [, %7 [aliasB] ...]} : declare some registers used as
+     input parameters by the current @tt{.func}.
+   @item @tt{.output %1 [aliasA] [, %7 [aliasB] ...]} : declare some registers used
+     return values by the current @tt{.func}.
+   @item @tt{.clobber %1 [aliasA] [, %7 [aliasB] ...]} : declare some registers used
+     as temporaries which are left clobbered by the current @tt{.func}.
+   @item @tt{.preserve %1 [aliasA] [, %7 [aliasB] ...]} : declare some registers used
+     as temporaries which are saved and restored by the current @tt{.func}.
+   @end list
    @end section
 
    @section {Generic instruction set}

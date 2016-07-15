@@ -12,6 +12,7 @@ our $bc_name = "mybytecode";
 our $fout = "bc.out";
 our $last_addr;
 our $modpath = $ENV{MUTEK_BYTECODE_PATH};
+our %srcaddr;
 
 BEGIN {
     use Cwd;
@@ -58,6 +59,12 @@ $defs{_SIZEOF_PTR} = 1 << $backend_width;
 sub log2
 {
     return int (log(shift) / log(2));
+}
+
+sub warning
+{
+    my ( $obj, $msg ) = @_;
+    print STDERR "$obj->{line}: warning: $msg";
 }
 
 sub check_reg
@@ -546,7 +553,8 @@ sub regs_mask_parse
     }
 }
 
-my $global_regmask;
+my $global_regmask = 0;
+my $global_const_regmask = 0;
 my %global_regalias;
 
 sub parse
@@ -556,7 +564,6 @@ sub parse
     my $file = "<STDIN>.bc";
     my $loc;
     my $func;
-    my $entry_regmask;
 
     foreach (<STDIN>) {
 
@@ -596,8 +603,13 @@ sub parse
             die "$loc: label `$name' already defined\n" if defined $labels{$name};
             die "$loc: nested function\n" if defined $func;
             die "$loc: label before a function\n" if scalar @lbls;
-	    my $l = { name => $name,
+	    my $l = { line => $loc,
+                      name => $name,
                       func => 1,
+                      input => 0,
+                      output => 0,
+                      clobber => 0,
+                      preserve => 0,
                       regalias => { }
             };
             $labels{$name} = $l;
@@ -622,15 +634,18 @@ sub parse
             my $l = @lbls[-1];
             $l->{export} = 1;
             $l->{used}++;
-            regs_mask_parse($loc, 'entry', $1, \$entry_regmask, undef);
+            regs_mask_parse($loc, 'entry', $1, \$l->{entry}, undef);
             next;
         }
-        if ($l =~ /^\s*\.global\s+(.*?)\s*$/) {
-            die "$loc: global register inside a function\n" if defined $func;
-            regs_mask_parse($loc, 'global', $1, \$global_regmask, \%global_regalias);
+        if ($l =~ /^\s*\.(global|const)\s+(.*?)\s*$/) {
+            die "$loc: global register declared inside a function\n" if defined $func;
+            my $regs;
+            regs_mask_parse($loc, 'global', $2, \$regs, \%global_regalias);
+            $global_regmask |= $regs;
+            $global_const_regmask |= $regs if $1 eq 'const';
             next;
         }
-        if ($l =~ /^\s*\.(input|output|temp)\s+(.*?)\s*$/) {
+        if ($l =~ /^\s*\.(input|output|clobber|preserve)\s+(.*?)\s*$/) {
             die "$loc: $1 regs not inside a function\n" if !defined $func;
             regs_mask_parse($loc, $1, $2, \$func->{$1}, $func->{regalias} );
             next;
@@ -667,13 +682,12 @@ sub parse
                 args => [ @args ],
                 in => [],
                 out => [],
+                regs => [ (0) x 16 ],
                 labels => [ @lbls ],
-                entry => $entry_regmask,
                 func => $func,
             };
             push @src, $thisop;
             @lbls = ();
-            $entry_regmask = undef;
             next;
         }
 
@@ -701,7 +715,7 @@ our %asm = (
     'end' => {
         words => 1, code => 0x0000, argscnt => 0,
         parse => \&parse_noarg, backend => ('end'),
-	flushregs => 1
+	flushregs => 1, op_tail => 1, op_ret => 1
     },
     'dump'  => {
         words => 1, code => 0x0001, argscnt => 0,
@@ -711,6 +725,7 @@ our %asm = (
     'abort'  => {
         words => 1, code => 0x0002, argscnt => 0,
         parse => \&parse_noarg, backend => ('abort'),
+        op_tail => 1
     },
     'nop'  => {
         words => 1, code => 0x0004, argscnt => 0,
@@ -731,44 +746,49 @@ our %asm = (
     'jmp8'  => {
         words => 1, code => 0x2000, argscnt => 1,
         parse => \&parse_jmp8, backend => ('jmp8'),
-        flushregs => 1,
+        flushregs => 1, op_jmp => 1, op_tail => 1
     },
     'call8'  => {
         words => 1, code => 0x2000, argscnt => 2,
         parse => \&parse_call8, backend => ('call8'),
-        reloadregs => 1,
+        reloadregs => 1, op_call => 1,
     },
     'jmp32'  => {
         words => 3, code => 0x7010, argscnt => 1,
         parse => \&parse_jmp32, backend => ('jmp32'),
-        flushregs => 1,
+        flushregs => 1, op_jmp => 1, op_tail => 1
     },
     'call32'  => {
         words => 3, code => 0x7010, argscnt => 2,
         parse => \&parse_call32, backend => ('call32'),
-        reloadregs => 1,
+        reloadregs => 1, op_call => 1,
     },
     'ret' => {
         words => 1, code => 0x2000, argscnt => 1,
         parse => \&parse_ret, backend => ('ret'),
-        flushregs => 1,
+        flushregs => 1, op_tail => 1, op_ret => 1
+    },
+    'jmp' => {  # same implementation as ret, different semantics
+        words => 1, code => 0x2000, argscnt => 1,
+        parse => \&parse_ret, backend => ('ret'),
+        flushregs => 1, op_tail => 1
     },
     'loop' => {
         words => 1, code => 0x3000, argscnt => 2,
         parse => \&parse_loop, backend => ('loop'),
-        flushregs => 1,
+        flushregs => 1, op_jmp => 1
     },
     _multi_keys( 'pack8' => 'pack16le' => 'pack16be' =>
                  'pack32le' => 'pack32be' => {
         words => 1, code => 0x3800, argscnt => 2,
         parse => \&parse_pack, backend => ('pack'),
-        nocond => 1,
+        nocond => 1
     }),
     _multi_keys( 'unpack8' => 'unpack16le' => 'unpack16be' =>
                  'unpack32le' => 'unpack32be' => {
         words => 1, code => 0x3800, argscnt => 2,
         parse => \&parse_unpack, backend => ('unpack'),
-        nocond => 1,
+        nocond => 1
     }),
     _multi_keys( 'swap16le' => 'swap16be' => 'swap16' =>
                  'swap32le' => 'swap32be' => 'swap32' => {
@@ -778,32 +798,32 @@ our %asm = (
     'eq'  => {
         words => 1, code => 0x4000, argscnt => 2,
         parse => \&parse_cmp2, backend => ('eq'),
-        cond => 1,
+        op_cond => 1,
     },
     'eq0'  => {
         words => 1, code => 0x4000, argscnt => 1,
         parse => \&parse_cmp1, backend => ('eq0'),
-        cond => 1,
+        op_cond => 1,
     },
     'neq'  => {
         words => 1, code => 0x4100, argscnt => 2,
         parse => \&parse_cmp2, backend => ('neq'),
-        cond => 1,
+        op_cond => 1,
     },
     'neq0'  => {
         words => 1, code => 0x4100, argscnt => 1,
         parse => \&parse_cmp1, backend => ('neq0'),
-        cond => 1,
+        op_cond => 1,
     },
     'lt'  => {
         words => 1, code => 0x4200, argscnt => 2,
         parse => \&parse_cmp2, backend => ('lt'),
-        cond => 1,
+        op_cond => 1,
     },
     'lteq'  => {
         words => 1, code => 0x4300, argscnt => 2,
         parse => \&parse_cmp2, backend => ('lteq'),
-        cond => 1,
+        op_cond => 1,
     },
     'add' => {
         words => 1, code => 0x4400, argscnt => 2,
@@ -856,7 +876,8 @@ our %asm = (
     },
     'mov' => {
         words => 1, code => 0x4f00, argscnt => 2,
-        parse => \&parse_mov, backend => ('mov')
+        parse => \&parse_mov, backend => ('mov'),
+        op_mov => 1
     },
     'msbs32' => {
         words => 1, code => 0x4f00, argscnt => 1,
@@ -865,12 +886,12 @@ our %asm = (
     'tst32c' => {
         words => 1, code => 0x5000, argscnt => 2,
         parse => \&parse_tst, backend => ('tstc'),
-        cond => 1,
+        op_cond => 1,
     },
     'tst32s' => {
         words => 1, code => 0x5200, argscnt => 2,
         parse => \&parse_tst, backend => ('tsts'),
-        cond => 1,
+        op_cond => 1,
     },
     'bit32c' => {
         words => 1, code => 0x5400, argscnt => 2,
@@ -951,6 +972,7 @@ our %asm = (
     'data16' => {
         words => 1, argscnt => 1,
         parse => \&parse_data, backend => ('data'),
+        op_data => 1
     },
 );
 
@@ -978,7 +1000,7 @@ sub custom_cond_op
     $asm{$name} = {
         words => 1, code => 0x8000 | $code, argscnt => $args,
         parse => $parse, backend => ('custom_cond'),
-        reloadregs => 1, cond => 1,
+        reloadregs => 1, op_cond => 1,
     };
 }
 
@@ -998,10 +1020,10 @@ sub parse_args
 	    if (defined $op->{argscnt}) && $op->{argscnt} != @{$thisop->{args}};
 
 	die "$thisop->{line}: multi-word instruction after conditional\n"
-	    if $prevop && $prevop->{op}->{cond} && $op->{words} > 1;
+	    if $prevop && $prevop->{op}->{op_cond} && $op->{words} > 1;
 
         die "$thisop->{line}: instruction can not be conditional\n"
-	    if $prevop && $prevop->{op}->{cond} && ($op->{cond} || $op->{nocond});
+	    if $prevop && $prevop->{op}->{op_cond} && ($op->{op_cond} || $op->{nocond});
 
 	$thisop->{op} = $op;
 	$thisop->{addr} = $addr;
@@ -1023,6 +1045,7 @@ sub parse_args
         # bit mask of clobbered cpu registers
         $thisop->{clobber} = 0;
 
+        $srcaddr{$addr} = $thisop;
         foreach my $l ( @{$thisop->{labels}} ) {
 	    $l->{addr} = $addr;
 	}
@@ -1267,7 +1290,7 @@ sub write_asm
           }
         }
 
-        if ( $thisop->{name} eq 'mov' ) {
+        if ( $op->{op_mov} ) {
             my $i = $thisop->{in}->[0];
             my $o = $thisop->{out}->[0];
 
@@ -1323,7 +1346,7 @@ sub write_asm
 
       done:
 
-        if ( $thisop->{op}->{cond} ) {
+        if ( $op->{op_cond} ) {
 
             if ( $op->{reloadregs} ) {
                 # emit conditional now if reload has been forced
@@ -1356,6 +1379,244 @@ sub write_asm
 
     close( OUT );
 }
+
+sub check_regs
+{
+     use constant REGVAL_PACK =>  15;
+     use constant REGVAL_UNDEF => 16;
+     use constant REGVAL_VALUE => 32;
+
+     my @entries;
+     my %entries_done;
+
+     my $exc; $exc = sub {
+         my ( $pc, $regs, $func ) = @_;
+
+         my $wr_mask = 0;
+         my $rd_mask = 0;
+
+         while ( 1 ) {
+             my $thisop = $srcaddr{$pc};
+             my $op = $thisop->{op};
+
+             # print STDERR $pc, " ", $op->{backend}, " ", @$regs, "\n";
+
+             if ( !$thisop ) {
+                 warning($thisop, "execution out of bytecode\n");
+                 return;
+             } elsif ( $op->{op_data} ) {
+                 warning($thisop, "execution of data\n");
+                 return;
+             }
+
+             if ( $thisop->{func} != $func ) {
+                 warning($thisop, "execution across function boundary\n");
+                 $func = $thisop->{func};
+             }
+
+             # skip if the instruction has already been checked
+             # with a similar registers state
+             my $update;
+             for (my $i = 0; $i < 16; $i++) {
+                 $update |= ($regs->[$i] & ~$thisop->{regs}->[$i]);
+             }
+             last if ( !$update );
+
+             my @in = @{$thisop->{in}};
+             my @out = @{$thisop->{out}};
+             my @clobber;
+
+             my $l = $thisop->{target};
+             my $tailcall = $func && $op->{op_jmp} && $l->{func};
+
+             # check function call
+             if ( $op->{op_call} || $tailcall ) {
+
+                 $regs->[$thisop->{lr}] = REGVAL_VALUE;
+
+                 # check how registers are affected by the function call
+                 if ( $l->{func} ) {
+                     for (my $i = 0; $i < 16; $i++) {
+                         warning($thisop, "possibly undefined value in register %$i used as parameter to function `$l->{name}'\n")
+                             if ( ( $l->{input} >> $i ) & 1) && ( $regs->[$i] & REGVAL_UNDEF );
+
+                         $regs->[$i] = REGVAL_VALUE if ( ( $l->{output} >> $i ) & 1);
+                         push @clobber, $i if ( ( $l->{clobber} >> $i ) & 1);
+
+                         if ( $func ) {
+                             warning($thisop, "nested call to function `$l->{name}' returns a value in register %$i, not declared in function `$func->{name}'\n")
+                                 if ( ( ( ~($func->{clobber} | $func->{output}) & $l->{output} ) >> $i ) & 1 );
+                             warning($thisop, "nested call to function `$l->{name}' clobbers register %$i, not declared in function `$func->{name}'\n")
+                                 if ( ( ( ~$func->{clobber} & $l->{clobber} ) >> $i ) & 1 );
+                         }
+                     }
+
+                     if ( $l != $func ) {
+                         $wr_mask |= $l->{clobber} | $l->{output};
+                         $rd_mask |= $l->{input};
+                     }
+
+                     # schedule checking of the called function
+                     push @entries, $l unless ( $entries_done{$l}++ );
+
+                 } elsif ( $func ) {
+                     warning($thisop, "call target is not a function, unable to track registers state\n");
+                     for (my $i = 0; $i < 16; $i++) {
+                         $regs->[$i] = REGVAL_UNDEF;
+                     }
+                 }
+             }
+
+             # check function return
+             if ( ( $func && $op->{op_ret} ) || $tailcall ) {
+                 for (my $i = 0; $i < 16; $i++) {
+                     warning($thisop, "possibly undefined value in register %$i used as return value of function `$func->{name}' \n")
+                         if ( ( $func->{output} >> $i ) & 1) && ( $regs->[$i] & REGVAL_UNDEF );
+                 }
+                 $rd_mask |= $func->{output};
+             }
+
+             # check instruction input registers
+             foreach my $in ( @in ) {
+                 warning($thisop, "instruction uses the undeclared register %$in\n")
+                 if ( $func && !( ( ( $func->{input} | $func->{preserve} |
+                                      $func->{clobber} | $global_regmask ) >> $in ) & 1 ) );
+
+                 warning($thisop, "use of possibly undefined value in register %$in\n")
+                     if ( $regs->[$in] & REGVAL_UNDEF );
+
+                 warning($thisop, "possible presence of packed data in register %$in, value is expected\n")
+                     if ( $regs->[$in] & REGVAL_PACK );
+
+                 $rd_mask |= 1 << $in;
+             }
+
+             for (my $i = 0; $i < $thisop->{packin_bytes}; $i += 4) {
+                 my $r = ($thisop->{packin_reg} * 4 + $i) / 4;
+                 my $d = $thisop->{packin_bytes} - $i;
+                 $d = 4 if $d > 4;
+                 if ( $regs->[$r] & REGVAL_VALUE ) {
+                     warning($thisop, "possible presence of value in register %$r, packed data is expected\n")
+                 } elsif ( ( $regs->[$r] & REGVAL_PACK ) != ( REGVAL_PACK >> (4 - $d) ) ) {
+                     warning($thisop, "packed data size mismatch in register %$r\n");
+                 }
+             }
+
+             # check instruction output registers
+             foreach my $out ( @out ) {
+                 $regs->[$out] = REGVAL_VALUE;
+                 warning($thisop, "instruction writes to the undeclared register %$out\n")
+                     if ( $func && !( ( ( $func->{output} | $func->{preserve} |
+                                          $func->{clobber} | $global_regmask ) >> $out ) & 1 ) );
+                 warning($thisop, "instruction writes to the constant global register %$out\n")
+                     if ( ( ( $global_const_regmask ) >> $out ) & 1 );
+                 $wr_mask |= 1 << $out;
+             }
+
+             for (my $i = 0; $i < $thisop->{packout_bytes}; $i += 4) {
+                 my $r = ($thisop->{packout_reg} * 4 + $i) / 4;
+                 my $d = $thisop->{packout_bytes} - $i;
+                 $d = 4 if $d > 4;
+                 $regs->[$r] = REGVAL_PACK >> (4 - $d);
+
+                 warning($thisop, "instruction writes to the undeclared register %$r\n")
+                     if ( $func && !( ( ( $func->{output} | $func->{preserve} |
+                                          $func->{clobber} | $global_regmask ) >> $r ) & 1 ) );
+                 $wr_mask |= 1 << $r;
+             }
+
+             foreach my $clob ( @clobber ) {
+                 $regs->[$clob] = REGVAL_UNDEF;
+                 $wr_mask |= 1 << $clob;
+             }
+
+             # update the set of possible register states for this instruction
+             for (my $i = 0; $i < 16; $i++) {
+                 $thisop->{regs}->[$i] |= $regs->[$i];
+             }
+
+             # explore branch target
+             if ( $op->{op_cond} ) {
+                 my ( $rd, $wr ) = $exc->( $pc + $op->{words} + 1, [ @$regs ], $func );
+                 $rd_mask |= $rd;
+                 $wr_mask |= $wr;
+             } elsif ( ( $op->{op_call} && !$l->{func} ) ||
+                       ( $op->{op_jmp} && !$tailcall ) ) {
+                 my ( $rd, $wr ) = $exc->( $thisop->{target}->{addr}, [ @$regs ], $func );
+                 $rd_mask |= $rd;
+                 $wr_mask |= $wr;
+             }
+
+             # explore next instruction
+             if ( $op->{op_tail} ) {
+                 last;
+             } else {
+                 $pc += $op->{words};
+             }
+         }
+
+         return ( $rd_mask, $wr_mask );
+     };
+
+     # schedule analysis of exported labels
+     foreach my $l ( values %labels ) {
+         next unless $l->{export};
+         next if $entries_done{$l}++;
+         push @entries, $l
+     }
+
+     # perform analysis
+     while ( my $l = pop @entries ) {
+
+         # compute mask of initially defined registers
+         my $mask;
+         if ( $l->{func} ) {
+             $mask = $global_regmask | $l->{input};
+         } else {
+             $mask = $global_regmask | $l->{entry};
+         }
+
+         my @regs;
+
+         # setup initial register state
+         for (my $i = 0; $i < 16; $i++) {
+             @regs[$i] = ($mask >> $i) & 1 ? REGVAL_VALUE : REGVAL_UNDEF;
+         }
+
+         # start program exploration from this entry point
+         my $func = $l->{func} ? $l : undef;
+         my ( $rd_mask, $wr_mask ) = $exc->( $l->{addr}, \@regs, $func );
+
+         # emit some post exploration warnings
+         if ( $func ) {
+             for (my $i = 0; $i < 16; $i++) {
+                 my $m = ( 1 << $i );
+                 warning($func, "function `$func->{name}' register %$i is declared with incompatible roles\n")
+                     if ( $func->{output} & $func->{clobber} & $m ) ||
+                        ( $func->{output} & $func->{preserve} & $m ) ||
+                        ( $func->{clobber} & $func->{preserve} & $m );
+                 warning($func, "function `$func->{name}' register %$i is already declared global\n")
+                     if ( ( $func->{output} | $func->{input} | $func->{clobber} | $func->{preserve} ) & $global_regmask & $m );
+                 warning($func, "register %$i is declared as input of function `$func->{name}' but never used\n")
+                     if ( $func->{input} & ~$rd_mask & $m );
+                 warning($func, "register %$i is declared as output of function `$func->{name}' but never written\n")
+                     if ( $func->{output} & ~($wr_mask | $func->{input}) & $m );
+                 warning($func, "register %$i is declared clobbered in function `$func->{name}' but never written\n")
+                     if ( $func->{clobber} & ~$wr_mask & $m );
+             }
+         }
+     }
+
+     # report unreachable code
+     foreach my $thisop ( @src ) {
+         my $op = $thisop->{op};
+         if ( !$op->{op_data} && !$thisop->{regs}->[0] ) {
+             warning($thisop, "instruction is unreachable\n");
+         }
+     }
+}
+
+check_regs();
 
 $backend->write();
 

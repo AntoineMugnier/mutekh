@@ -7,7 +7,8 @@
         // force use of virtual machine
         // .backend bytecode
 
-	.global %0 buf
+//	.global %0 buf
+	.const %0 buf
 
 test_bytecode_entry:
 	.entry %1
@@ -643,18 +644,28 @@ next12:
         mov	%13, %buf
         add8	%13, 120
         cst8	%fact:arg, 5
-        call32	%fact:link, fact
+        call32	%fact:link, wrap
         cst8	%3, 120
         neq	%fact:result, %3
         abort
         end
+
+.func wrap
+	.input %10, %13
+	.input %1
+	.output %1
+	.clobber %2
+        jmp8 fact     // tail call
+        nop
+.endfunc
 
 	// recursive factorial function
 .func fact
 	.input %10 link, %13 sp
 	.input %1 arg
 	.output %1 result
-	.temp %2 tmp
+	.clobber %2 tmp
+	.preserve %10, %13
 
         std	%link, %sp
         cst8	%tmp, 1
@@ -672,6 +683,6 @@ fact_end:
 .endfunc
 
 data:
-	.export data
+        .export data
 	data16  0x5353
 
