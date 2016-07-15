@@ -61,10 +61,34 @@ sub log2
     return int (log(shift) / log(2));
 }
 
+our @warnings;
+
 sub warning
 {
-    my ( $obj, $msg ) = @_;
-    print STDERR "$obj->{line}: warning: $msg";
+    my ( $loc, $msg ) = @_;
+    if ( ref $loc ) {
+        push @warnings, { obj => $loc, msg => $msg };
+    } else {
+        print STDERR $loc.": ".$msg;
+    }
+}
+
+sub warnings_print
+{
+    foreach my $w ( sort { $a->{obj}->{line} <=> $b->{obj}->{line} } @warnings ) {
+        print STDERR "$w->{obj}->{file}:$w->{obj}->{line}: $w->{msg}";
+    }
+}
+
+sub error
+{
+    my ( $loc, $msg ) = @_;
+    if ( ref $loc ) {
+        $loc = "$loc->{file}:$loc->{line}: ";
+    } else {
+        $loc .= ": ";
+    }
+    die $loc.$msg;
 }
 
 sub check_reg
@@ -73,7 +97,7 @@ sub check_reg
     my $reg = $thisop->{args}->[$argidx];
 
     if ( $reg !~ /^%(\d+)$/ || $1 > 15 ) {
-        die "$thisop->{line}: expected register as operand $argidx of `$thisop->{name}'.\n";
+        error($thisop, "expected register as operand $argidx of `$thisop->{name}'.\n");
     }
 
     return $1;
@@ -86,7 +110,7 @@ sub check_num
 
     my $bit = sub {
         my $x = shift;
-        die "$thisop->{line}: bitpos() expects a power of 2.\n" if !$x or ($x & ($x - 1));
+        error($thisop, "bitpos() expects a power of 2.\n") if !$x or ($x & ($x - 1));
         return log2($x);
     };
 
@@ -111,14 +135,14 @@ sub check_num
     }
 
     if ( $expr !~ /^($num)$/ ) {
-        die "$thisop->{line}: expected number as operand $argidx of `$thisop->{name}', got `$expr'.\n";
+        error($thisop, "expected number as operand $argidx of `$thisop->{name}', got `$expr'.\n");
     }
 
     $expr = int($expr);
 
     if ( ( ( defined $max ) && $expr > $max ) ||
          ( ( defined $min ) && $expr < $min ) ) {
-        die "$thisop->{line}: operand $argidx of `$thisop->{name}' is out of range [$min, $max].\n";
+        error($thisop, "operand $argidx of `$thisop->{name}' is out of range [$min, $max].\n");
     }
 
     $thisop->{args}->[$argidx] = $expr;
@@ -131,13 +155,13 @@ sub check_label
     my $lbl = $thisop->{args}->[$argidx];
 
     if ( $lbl !~ /^[a-zA-Z_]\w*$/ ) {
-        die "$thisop->{line}: expected label as operand $argidx of `$thisop->{name}'.\n";
+        error($thisop, "expected label as operand $argidx of `$thisop->{name}'.\n");
     }
 
     my $l = $labels{$lbl};
 
     if ( not defined $l ) {
-        die "$thisop->{line}: undefined label `$lbl' used with `$thisop->{name}'.\n";
+        error($thisop, "undefined label `$lbl' used with `$thisop->{name}'.\n");
     }
 
     if ( not $l->{export} ) {
@@ -156,7 +180,7 @@ sub check_label8
     my $l = check_label( $thisop, $argidx );
 
     if ($thisop->{disp} > $bound - 1 || $thisop->{disp} < -$bound) {
-        die "$thisop->{line}: jump target out of range for `$thisop->{name}'.\n";
+        error($thisop, "jump target out of range for `$thisop->{name}'.\n");
     }
 
     return $l;
@@ -185,7 +209,7 @@ sub parse_cmp2
     push @{$thisop->{in}}, check_reg($thisop, 0);
 
     if ( $thisop->{in}->[0] == $thisop->{in}->[1] ) {
-        die "$thisop->{line}: compare to the same register is not allowed\n";
+        error($thisop, "compare to the same register is not allowed\n");
     }
 }
 
@@ -215,7 +239,7 @@ sub parse_alu2
     push @{$thisop->{out}}, check_reg($thisop, 0);
 
     if ( $thisop->{in}->[0] == $thisop->{in}->[1] ) {
-        die "$thisop->{line}: the register same register can not be used twice\n";
+        error($thisop, "the register same register can not be used twice\n");
     }
 }
 
@@ -227,7 +251,7 @@ sub parse_mov
     push @{$thisop->{out}}, check_reg($thisop, 0);
 
     if ( $thisop->{in}->[0] == $thisop->{out}->[0] ) {
-        die "$thisop->{line}: the register same register can not be used twice\n";
+        error($thisop, "the register same register can not be used twice\n");
     }
 }
 
@@ -255,7 +279,7 @@ sub parse_cst
     push @{$thisop->{out}}, check_reg($thisop, 0);
 
     if ( check_num($thisop, 2, 0, 56) % 8 ) {
-        die "$thisop->{line}: cst shift must be a multiple of 8\n";
+        error($thisop, "cst shift must be a multiple of 8\n");
     }
 
     $thisop->{name} =~ /^[a-z]+(\d+)/;
@@ -290,7 +314,7 @@ sub parse_gaddr
     my $thisop = shift;
 
     if ( $thisop->{args}->[1] !~ /^[a-zA-Z_]\w*$/ ) {
-        die "$thisop->{line}: expected symbol name as operand 1 of `gaddr'.\n";
+        error($thisop, "expected symbol name as operand 1 of `gaddr'.\n");
     }
 
     push @{$thisop->{out}}, check_reg($thisop, 0);
@@ -322,7 +346,7 @@ sub parse_jmp8
     $thisop->{target} = check_label8($thisop, 0, 128);
 
     if ( $thisop->{disp} == 0 ) {
-	die "$thisop->{line}: jmp can not have a zero displacement\n";
+	error($thisop, "jmp can not have a zero displacement\n");
     }
 }
 
@@ -334,11 +358,11 @@ sub parse_call8
     $thisop->{target} = check_label8($thisop, 1, 128);
 
     if ( $thisop->{lr} == 0 ) {
-	die "$thisop->{line}: call8 can not modify register 0\n";
+	error($thisop, "call8 can not modify register 0\n");
     }
 
     if ( $thisop->{disp} == 0 ) {
-	die "$thisop->{line}: call8 can not have a zero displacement\n";
+	error($thisop, "call8 can not have a zero displacement\n");
     }
 }
 
@@ -350,7 +374,7 @@ sub parse_call32
     $thisop->{target} = check_label($thisop, 1);
 
     if ( $thisop->{lr} == 0 ) {
-	die "$thisop->{line}: call32 can not modify register 0\n";
+	error($thisop, "call32 can not modify register 0\n");
     }
 }
 
@@ -417,7 +441,7 @@ sub parse_pack
     my $r = check_reg($thisop, 0);
     my $count = check_num($thisop, 1, 1, 8);
     if ($r + $count > 16) {
-        die "$thisop->{line}: out of range register\n";
+        error($thisop, "out of range register\n");
     }
     for (my $i = 0; $i < $count; $i++) {
         push @{$thisop->{in}}, $r + $i;
@@ -434,7 +458,7 @@ sub parse_unpack
     my $r = check_reg($thisop, 0);
     my $count = check_num($thisop, 1, 1, 8);
     if ($r + $count > 16) {
-        die "$thisop->{line}: out of range register\n";
+        error($thisop, "out of range register\n");
     }
     for (my $i = 0; $i < $count; $i++) {
         push @{$thisop->{out}}, $r + $i;
@@ -536,18 +560,18 @@ sub regs_mask_parse
     my ($loc, $class, $str, $maskref, $alias) = @_;
     my $mask = 0;
     foreach my $reg (args_split($str)) {
-        die "$loc: bad register `$reg'\n"
+        error($loc, "bad register `$reg'\n")
             if ( $reg !~ /^%(\d+)(?:\s+([_a-z]\w*))?$/ || $1 > 15 );
 
         if ( defined $2 ) {
-            die "$loc: register alias can't be used with .$class\n"
+            error($loc, "register alias can't be used with .$class\n")
                 unless defined $alias;
-            die "$loc: register alias `$2' already defined\n"
+            error($loc, "register alias `$2' already defined\n")
                 if defined $alias->{$2};
             $alias->{$2} = $1;
         }
 
-        die "$loc: $class register \%$1 used more than once\n"
+        error($loc, "$class register \%$1 used more than once\n")
             if ($$maskref & (1 << $1));
         $$maskref |= 1 << $1;
     }
@@ -587,23 +611,24 @@ sub parse
 
         if ($l =~ /^\s*(\w+):\s*$/) {
             my $name = $1;
-            die "$loc: label `$name' already defined\n" if defined $labels{$name};
+            error($loc, "label `$name' already defined\n") if defined $labels{$name};
 	    my $l = { name => $name };
             $labels{$name} = $l;
 	    push @lbls, $l;
             next;
         }
         if ($l =~ /^\s*\.define\s+(\w+)\s+(.*?)\s*$/) {
-            die "$loc: expr already defined\n" if defined $defs{$1};
+            error($loc, "expr already defined\n") if defined $defs{$1};
             $defs{$1} = $2;
             next;
         }
         if ($l =~ /^\s*\.func\s+(\w+)\s*$/) {
             my $name = $1;
-            die "$loc: label `$name' already defined\n" if defined $labels{$name};
-            die "$loc: nested function\n" if defined $func;
-            die "$loc: label before a function\n" if scalar @lbls;
-	    my $l = { line => $loc,
+            error($loc, "label `$name' already defined\n") if defined $labels{$name};
+            error($loc, "nested function\n") if defined $func;
+            error($loc, "label before a function\n") if scalar @lbls;
+	    my $l = { file => $file,
+                      line => $line,
                       name => $name,
                       func => 1,
                       input => 0,
@@ -618,8 +643,8 @@ sub parse
             next;
         }
         if ($l =~ /^\s*\.endfunc\s*$/) {
-            die "$loc: no function to end\n" if !defined $func;
-            die "$loc: label at end of function\n" if scalar @lbls;
+            error($loc, "no function to end\n") if !defined $func;
+            error($loc, "label at end of function\n") if scalar @lbls;
             # declare global aliases for function input/output regs
             while (my ($k, $v) = each(%{$func->{regalias}})) {
                 $global_regalias{$func->{name}.':'.$k} = $v
@@ -629,8 +654,8 @@ sub parse
             next;
         }
         if ($l =~ /^\s*\.entry\s+(.*?)\s*$/) {
-            die "$loc: entry point inside a function\n" if defined $func;
-            die "$loc: missing label before entry point\n" if !scalar @lbls;
+            error($loc, "entry point inside a function\n") if defined $func;
+            error($loc, "missing label before entry point\n") if !scalar @lbls;
             my $l = @lbls[-1];
             $l->{export} = 1;
             $l->{used}++;
@@ -638,7 +663,7 @@ sub parse
             next;
         }
         if ($l =~ /^\s*\.(global|const)\s+(.*?)\s*$/) {
-            die "$loc: global register declared inside a function\n" if defined $func;
+            error($loc, "global register declared inside a function\n") if defined $func;
             my $regs;
             regs_mask_parse($loc, 'global', $2, \$regs, \%global_regalias);
             $global_regmask |= $regs;
@@ -646,7 +671,7 @@ sub parse
             next;
         }
         if ($l =~ /^\s*\.(input|output|clobber|preserve)\s+(.*?)\s*$/) {
-            die "$loc: $1 regs not inside a function\n" if !defined $func;
+            error($loc, "$1 regs not inside a function\n") if !defined $func;
             regs_mask_parse($loc, $1, $2, \$func->{$1}, $func->{regalias} );
             next;
         }
@@ -664,13 +689,13 @@ sub parse
         }
         if ($l =~ /^\s*\.export\s+(\w+)\s*$/) {
 	    my $l = $labels{$1};
-            die "$loc: undefined label `$1'\n" if not defined $l;
+            error($loc, "undefined label `$1'\n") if not defined $l;
             $l->{export} = 1;
             $l->{used}++;
             next;
         }
         if ($l =~ /^\s*\.(\w+)/) {
-            die "$loc: bad directive syntax `.$1'\n";
+            error($loc, "bad directive syntax `.$1'\n");
         }
         if ($l =~ /^\s*(\.?\w+)\b\s*(.*?)\s*$/) {
             my $opname = $1;
@@ -678,7 +703,8 @@ sub parse
             my $thisop = {
                 src => "$1 $2",
                 name => $opname,
-                line => $loc,
+                file => $file,
+                line => $line,
                 args => [ @args ],
                 in => [],
                 out => [],
@@ -691,13 +717,13 @@ sub parse
             next;
         }
 
-        die "$loc: syntax error: `$l'\n";
+        error($loc, "syntax error: `$l'\n");
       }
     }
 
-    die "$loc: function not ended\n" if defined $func;
+    error($loc, "function not ended\n") if defined $func;
     if ( scalar @lbls ) {
-        die "$loc: found trailing label\n";
+        error($loc, "found trailing label\n");
     }
 }
 
@@ -1013,16 +1039,16 @@ sub parse_args
 
 	my $op = $asm{$thisop->{name}};
 
-	die "$thisop->{line}: unknown instruction `$thisop->{name}'\n"
+	error($thisop, "unknown instruction `$thisop->{name}'\n")
 	    unless defined $op;
 
-	die "$thisop->{line}: bad operand count for `$thisop->{name}'\n"
+	error($thisop, "bad operand count for `$thisop->{name}'\n")
 	    if (defined $op->{argscnt}) && $op->{argscnt} != @{$thisop->{args}};
 
-	die "$thisop->{line}: multi-word instruction after conditional\n"
+	error($thisop, "multi-word instruction after conditional\n")
 	    if $prevop && $prevop->{op}->{op_cond} && $op->{words} > 1;
 
-        die "$thisop->{line}: instruction can not be conditional\n"
+        error($thisop, "instruction can not be conditional\n")
 	    if $prevop && $prevop->{op}->{op_cond} && ($op->{op_cond} || $op->{nocond});
 
 	$thisop->{op} = $op;
@@ -1069,12 +1095,12 @@ sub parse_args
             my $g = $global_regalias{$s};
             if ( my $f = $thisop->{func} ) {
                 $t = $f->{regalias}->{$s};
-                print STDERR "$thisop->{line}: warning: not using global register alias `$s'\n"
+                warning($thisop, "not using global register alias `$s'\n")
                     if ( defined $g );
             } elsif ( defined $g ) {
                 $t = $g;
             }
-            die "$thisop->{line}: undefined register alias `$s'\n"
+            error($thisop, "undefined register alias `$s'\n")
                 unless ( defined $t );
 	    return '%'.$t;
 	};
@@ -1243,7 +1269,7 @@ sub write_asm
         }
 
         if ( $lbl_refs ) {
-            die "$thisop->{line}: label inside conditional\n" if defined $cond;
+            error($thisop, "label inside conditional\n") if defined $cond;
 
             foreach my $l (@{$thisop->{labels}}) {
                 if ( $l->{export} ) {
@@ -1619,6 +1645,8 @@ sub check_regs
 check_regs();
 
 $backend->write();
+
+warnings_print();
 
 exit 0;
 

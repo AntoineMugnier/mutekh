@@ -195,7 +195,7 @@ sub out_ste {
 	} elsif ($s == 2) {
 	    $r .= "    str $reg[$wi0], [$reg[$wi1], r0]\n";
 	} else {
-	    print STDERR "$thisop->{line}: 64 bit store truncated to 32 bits.\n";
+	    main::warning($thisop, "64 bit store truncated to 32 bits.\n");
 	    $r .= "    movs r12, #0\n".
 		  "    str $reg[$wi0], [$reg[$wi1], r0]\n".
 		  "    str r12, [$reg[$wi1], r0]\n";
@@ -208,7 +208,7 @@ sub out_ste {
 	} elsif ($s == 2) {
 	    $r = "    str $reg[$wi0], [$reg[$wi1], #$x]\n";
 	} else {
-	    print STDERR "$thisop->{line}: 64 bit store truncated to 32 bits.\n";
+	    main::warning($thisop, "64 bit store truncated to 32 bits.\n");
 	    $r = "    movs r0, #0\n".
 		 "    str $reg[$wi0], [$reg[$wi1], #$x]\n".
 		 "    str r0, [$reg[$wi1], #$x]\n";
@@ -231,7 +231,7 @@ sub out_lde {
 	} elsif ($s == 2) {
 	    $r .= "    ldr $reg[$wo], [$reg[$wi], r0]\n";
 	} else {
-	    print STDERR "$thisop->{line}: 64 bit store truncated to 32 bits.\n";
+	    main::warning($thisop, "64 bit store truncated to 32 bits.\n");
 	    $r .= "    movs r0, #0\n".
 		  "    ldr $reg[$wo], [$reg[$wi], r0]\n";
 	}
@@ -243,7 +243,7 @@ sub out_lde {
 	} elsif ($s == 2) {
 	    $r = "    ldr $reg[$wo], [$reg[$wi], #$x]\n";
 	} else {
-	    print STDERR "$thisop->{line}: 64 bit store truncated to 32 bits.\n";
+	    main::warning($thisop, "64 bit store truncated to 32 bits.\n");
 	    $r = "    movs r0, #0\n".
 		 "    ldr $reg[$wo], [$reg[$wi], #$x]\n";
 	}
@@ -255,7 +255,7 @@ sub out_cst {
     my ($thisop, $wo) = @_;
     my $x = ($thisop->{args}->[1] << $thisop->{args}->[2]) & 0xffffffff;
     if ( $thisop->{width} == 3 ) {
-        print STDERR "$thisop->{line}: 64 bit constant truncated to 32 bits.\n";
+        main::warning($thisop, "64 bit constant truncated to 32 bits.\n");
     }
     return mov_imm( $reg[$wo], $x );
 }

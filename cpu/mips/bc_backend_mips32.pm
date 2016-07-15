@@ -483,7 +483,7 @@ sub out_st {
     } elsif ($s == 2) {
         $r = "    sw $reg[$wi0], ($reg[$wi1])\n";
     } else {
-        print STDERR "$thisop->{line}: 64 bit store truncated to 32 bits.\n";
+        main::warning($thisop, "64 bit store truncated to 32 bits.\n");
         if ( $main::backend_endian eq "little" ) {
             $r = "    sw $reg[$wi0], ($reg[$wi1])\n".
                  "    sw \$0, 4($reg[$wi1])\n";
@@ -506,7 +506,7 @@ sub out_ste {
     } elsif ($s == 2) {
         $r = "    sw $reg[$wi0], ($thisop->{args}->[2])($reg[$wi1])\n";
     } else {
-        print STDERR "$thisop->{line}: 64 bit store truncated to 32 bits.\n";
+        main::warning($thisop, "64 bit store truncated to 32 bits.\n");
         if ( $main::backend_endian eq "little" ) {
             $r = "    sw $reg[$wi0], ($thisop->{args}->[2])($reg[$wi1])\n".
                  "    sw \$0, (4 + $thisop->{args}->[2])($reg[$wi1])\n";
@@ -529,7 +529,7 @@ sub out_sti {
     } elsif ($s == 2) {
         $r = "    sw $reg[$wi0], ($reg[$wi1])\n";
     } else {
-        print STDERR "$thisop->{line}: 64 bit store truncated to 32 bits.\n";
+        main::warning($thisop, "64 bit store truncated to 32 bits.\n");
         if ( $main::backend_endian eq "little" ) {
             $r = "    sw $reg[$wi0], ($reg[$wi1])\n".
                  "    sw \$0, 4($reg[$wi1])\n";
@@ -553,7 +553,7 @@ sub out_std {
     } elsif ($s == 2) {
         $r .= "    sw $reg[$wi0], ($reg[$wo])\n";
     } else {
-        print STDERR "$thisop->{line}: 64 bit store truncated to 32 bits.\n";
+        main::warning($thisop, "64 bit store truncated to 32 bits.\n");
         if ( $main::backend_endian eq "little" ) {
             $r .= "    sw $reg[$wi0], ($reg[$wo])\n".
                   "    sw \$0, 4($reg[$wi1])\n";
@@ -576,7 +576,7 @@ sub out_ld {
     } elsif ($s == 2) {
         $r = "    lw $reg[$wo], ($reg[$wi])\n";
     } else {
-        print STDERR "$thisop->{line}: 64 bit load truncated to 32 bits.\n";
+        main::warning($thisop, "64 bit load truncated to 32 bits.\n");
         if ( $main::backend_endian eq "little" ) {
             $r = "    lw $reg[$wo], ($reg[$wi])\n";
         } else {
@@ -597,7 +597,7 @@ sub out_lde {
     } elsif ($s == 2) {
         $r = "    lw $reg[$wo], ($thisop->{args}->[2])($reg[$wi])\n";
     } else {
-        print STDERR "$thisop->{line}: 64 bit load truncated to 32 bits.\n";
+        main::warning($thisop, "64 bit load truncated to 32 bits.\n");
         if ( $main::backend_endian eq "little" ) {
             $r = "    lw $reg[$wo], ($thisop->{args}->[2])($reg[$wi])\n";
         } else {
@@ -618,7 +618,7 @@ sub out_ldi {
     } elsif ($s == 2) {
         $r = "    lw $reg[$wo0], ($reg[$wi])\n";
     } else {
-        print STDERR "$thisop->{line}: 64 bit load truncated to 32 bits.\n";
+        main::warning($thisop, "64 bit load truncated to 32 bits.\n");
         if ( $main::backend_endian eq "little" ) {
             $r = "    lw $reg[$wo0], ($reg[$wi])\n";
         } else {
@@ -634,7 +634,7 @@ sub out_cst {
     my $r;
     my $x = $thisop->{args}->[1] << $thisop->{args}->[2];
     if ( $thisop->{width} == 3 ) {
-        print STDERR "$thisop->{line}: 64 bit constant truncated to 32 bits.\n";
+        main::warning($thisop, "64 bit constant truncated to 32 bits.\n");
     }
     if ( !($x & 0xffff0000) ) {
         $r = "    li $reg[$wo], $x\n";

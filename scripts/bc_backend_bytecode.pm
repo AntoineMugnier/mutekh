@@ -121,7 +121,7 @@ sub out_call32 {
     my ($thisop) = @_;
     my $a = $thisop->{target}->{addr} - 1;
 
-    print STDERR "$thisop->{line}: warning: `call8' could be used instead of `call32'.\n"
+    main::warning($thisop, "`call8' could be used instead of `call32'.\n")
         if ($thisop->{disp} <= 127 && $thisop->{disp} > -128);
 
     return fmt3( $thisop, 0, 0, $thisop->{lr} ).
@@ -133,7 +133,7 @@ sub out_jmp32 {
     my ($thisop) = @_;
     my $a = $thisop->{target}->{addr} - 1;
 
-    print STDERR "$thisop->{line}: warning: `jmp8' could be used instead of `jmp32'.\n"
+    main::warning($thisop, "`jmp8' could be used instead of `jmp32'.\n")
         if ($thisop->{disp} <= 127 && $thisop->{disp} > -128);
 
     return fmt3( $thisop, 0, 0, 0 ).
