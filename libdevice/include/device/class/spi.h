@@ -278,8 +278,8 @@
 
    Available chip select operations are:
    @list
-     @item @tt CS_START, @tt CS_CONTINUE: see @xref DEV_SPI_CS_SET_NOP
-     @item @tt CS_END, @tt CS_PULSE: see @xref DEV_SPI_CS_SET_CLR
+     @item @tt CS_START, @tt CS_CONTINUE: see @ref DEV_SPI_CS_SET_NOP
+     @item @tt CS_END, @tt CS_PULSE: see @ref DEV_SPI_CS_SET_CLR
    @end list
 
    The format of data in registers is hardware dependent and needs to
@@ -310,10 +310,10 @@
 
    The last operand specifies the chip select operation:
    @list
-     @item @tt CS_START, @tt CS_CONTINUE: see @xref DEV_SPI_CS_SET_NOP
-     @item @tt CS_END, @tt CS_PULSE: see @xref DEV_SPI_CS_SET_CLR
-     @item @tt CS_NOP: see @xref DEV_SPI_CS_NOP_NOP
-     @item @tt CS_DESELECT: see @xref DEV_SPI_CS_CLR_NOP
+     @item @tt CS_START, @tt CS_CONTINUE: see @ref DEV_SPI_CS_SET_NOP
+     @item @tt CS_END, @tt CS_PULSE: see @ref DEV_SPI_CS_SET_CLR
+     @item @tt CS_NOP: see @ref DEV_SPI_CS_NOP_NOP
+     @item @tt CS_DESELECT: see @ref DEV_SPI_CS_CLR_NOP
    @end list
    @end section
 

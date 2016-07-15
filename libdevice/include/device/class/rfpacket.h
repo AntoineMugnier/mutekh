@@ -265,7 +265,7 @@ struct dev_rfpacket_rq_s;
     The incoming packet is discarded when this function returns @tt
     NULL. In the other case, the driver always execute the @ref
     dev_rfpacket_rx_s::kr kroutine function at some point, even if the
-    associated RX request as ended.
+    associated RX request has ended.
 */
 typedef DEV_RFPACKET_RX_ALLOC(dev_rfpacket_rx_alloc_t);
 
