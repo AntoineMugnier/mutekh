@@ -112,7 +112,7 @@ gpx_poll_done:
 poll_osc:
         spi_yield_delay         %R_TMP1
         cst8                    %R_TMP2,         MAX3420_USBIRQ
-	pack16le		%R_TMP0,         1
+	pack16le		%R_TMP2,         1
         spi_swp                 %R_TMP2,         %R_TMP2,         2,	CS_PULSE
 	unpack8			%R_TMP2,         2
         tst32c                  %R_TMP3,         0
