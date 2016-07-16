@@ -31,6 +31,17 @@ struct memory_allocator_region_s
   void			*last;
 };
 
+size_t memory_allocator_region_size(struct memory_allocator_region_s *region)
+{
+  return 0;
+}
+
+void* memory_allocator_region_address(struct memory_allocator_region_s *region)
+{
+  return NULL;
+}
+
+
 struct memory_allocator_region_s *default_region;
 /***************** Memory allocation interface ******************/
 
