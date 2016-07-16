@@ -35,6 +35,8 @@
 
 #include <arch/nrf5x/spim.h>
 
+#define dprintk(...) do{}while(0)
+
 DRIVER_PV(struct nrf5x_spim_context_s
 {
   uintptr_t addr;
