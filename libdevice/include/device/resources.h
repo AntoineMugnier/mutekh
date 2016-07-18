@@ -340,12 +340,12 @@ struct dev_resource_s
     struct {
       /** Device path to i2c controller */
       const char                *ctrl;
-      const uint16_t            addr;
+      uint16_t                  addr;
     }                           i2c_addr;
 
     /** @see DEV_RES_I2C_BITRATE */
     struct {
-      const uint32_t            bitrate;
+      uint32_t                  bitrate;
     }                           i2c_bitrate;
 
 #ifndef CONFIG_COMPILE_NOBITFIELD /* mkdoc:skip */

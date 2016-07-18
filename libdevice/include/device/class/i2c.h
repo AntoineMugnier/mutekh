@@ -816,7 +816,7 @@ error_t dev_i2c_wait_bytecode(struct device_i2c_ctrl_s *ctrl,
 /*----------------------------------------------------------------------------*/
 
 config_depend_and2_alwaysinline(CONFIG_DEVICE_I2C, CONFIG_DEVICE_RESOURCE_ALLOC,
-error_t dev_i2c_res_addr(struct device_s *dev, const char *ctrl, uint16_t addr),
+error_t device_res_add_i2c_addr(struct device_s *dev, const char *ctrl, uint16_t addr),
 {
   struct dev_resource_s *r;
 
@@ -831,7 +831,7 @@ error_t dev_i2c_res_addr(struct device_s *dev, const char *ctrl, uint16_t addr),
 })
 
 config_depend_and2_alwaysinline(CONFIG_DEVICE_I2C, CONFIG_DEVICE_RESOURCE_ALLOC,
-error_t dev_i2c_res_bitrate(uint32_t bitrate),
+error_t device_res_add_i2c_bitrate(struct device_s *dev, uint32_t bitrate),
 {
   struct dev_resource_s *r;
 
