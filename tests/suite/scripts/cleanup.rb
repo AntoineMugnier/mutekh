@@ -11,6 +11,8 @@ def cleanup_directory(path, keep)
         File.new(a).ctime <=> File.new(b).ctime
     end
 
+    entries.select! { |x| not File.symlink?(x) }
+
     return if keep >= entries.length
 
     entries[0..-(keep+1)].each do |e|
@@ -22,7 +24,7 @@ end
 
 puts("Cleaning up!")
 
-KEEP = 20
+KEEP = 5
 cleanup_directory File.join(ENV['HOME'], "outputs"), KEEP
 cleanup_directory File.join(ENV['HOME'], "www", "runs"), KEEP
 cleanup_directory File.join(ENV['HOME'], "www", "logs"), KEEP
