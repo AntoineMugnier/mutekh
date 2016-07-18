@@ -178,6 +178,7 @@ ALWAYS_INLINE void lock_spin_irq2(lock_t *lock, cpu_irq_state_t *irq_state)
   lock_spin(lock);
 #else
 # define LOCK_SPIN_IRQ(lock)					\
+  HEXO_ATOMIC_SCOPE_BEGIN                                       \
   lock_spin(lock);
 #endif
 
@@ -228,16 +229,11 @@ ALWAYS_INLINE void lock_release_irq2(lock_t *lock, const cpu_irq_state_t *irq_st
   cpu_interrupt_restorestate(&__interrupt_state);		\
   HEXO_ATOMIC_SCOPE_END
 
-# define LOCK_RELEASE_IRQ_X(lock)				\
-  lock_release(lock);						\
-  cpu_interrupt_restorestate(&__interrupt_state);
-
 #else
 # define LOCK_RELEASE_IRQ(lock)					\
-  lock_release(lock);
+  lock_release(lock);                                           \
+  HEXO_ATOMIC_SCOPE_END
 
-# define LOCK_RELEASE_IRQ_X(lock)				\
-  lock_release(lock);
 #endif
 
 C_HEADER_END
