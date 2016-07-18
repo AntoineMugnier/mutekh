@@ -14,6 +14,13 @@ IRC_LOGGER_FIFO_NAME="logger.pipe"
 here=$(dirname `readlink -f $0`)
 destdir=$PWD
 
+copy_prev_deps=$1
+if [ -z "$copy_prev_deps" -o $copy_prev_deps -eq 0 ]; then
+    copy_prev_deps=0
+else
+    copy_prev_deps=1
+fi
+
 # Setup environment
 . $here/setup-env.sh
 
@@ -52,7 +59,7 @@ echo "########################################################################"
 echo
 
 # Check mandatory directories
-echo "INFO:: checking mandatory directories"
+echo "INFO:: Checking mandatory directories"
 for d in $MANDATORY_DIRS; do
   if [ ! -d $destdir/$md ]; then
     echo "ERROR:: missing directory $destdir/$d."
@@ -64,13 +71,13 @@ done
 pushd $destdir/mutekh 2>&1 >/dev/null
 
 # Update sources
-echo "INFO:: updating mutekh repository"
+echo "INFO:: Updating mutekh repository"
 #(hg pull -u && hg purge) || exit 1
 run_command hg pull -u
 run_command hg purge
 
 # Dump changesets
-echo "INFO:: extract changesets from mecurial repositories"
+echo "INFO:: Extract changesets from mecurial repositories"
 changeset_mutekh=`hg id | cut -d' ' -f1 | sed 's/\+//g'`
 changeset_mutekh_last=""
 
@@ -122,13 +129,15 @@ echo "INFO:: Creating output directory '$that_run_dir'..."
 mkdir -p $that_run_dir
 
 # Copy previous
-echo "INFO:: Copying latest test run state..."
-if [ -e $destdir/outputs/latest ]; then
-    last_run_dep_tests=$(find $destdir/outputs/latest -name "TEST_D_*")
-    if [ -n $last_run_dep_tests ]; then
-        cp -a $destdir/outputs/latest/TEST_D_* $that_run_dir/
-        rm -f $that_run_dir/*.out
-    fi
+if [ $copy_prev_deps -eq 1 ]; then
+  echo "INFO:: Copying latest test run state..."
+  if [ -e $destdir/outputs/latest ]; then
+      prev_run_dep_tests=$(find $destdir/outputs/latest -name "TEST_D_*")
+      if [ -n $prev_run_dep_tests ]; then
+          cp -a $destdir/outputs/latest/TEST_D_* $that_run_dir/
+          rm -f $that_run_dir/*.out
+      fi
+  fi
 fi
 
 # Create 'latest' symlink
@@ -138,7 +147,6 @@ echo "INFO:: Linking the current test run..."
 # Compute vcpu number
 echo "INFO:: Computing the number of available vcpus..."
 ncpus=`cat /proc/cpuinfo | grep -c ^processor`
-ncpus=1
 
 # Run tests
 echo "INFO:: Running tests..."
@@ -159,6 +167,7 @@ for f in $that_run_dir/*.log; do
     destfile=$(echo `basename $f` | sed 's/TEST_\(D\|N\)/TEST/g')
     echo "  - $f -> $destdir/www/logs/$suffix/$destfile"
     run_command cp $f $destdir/www/logs/$suffix/$destfile
+    run_command chmod 0644 $destdir/www/logs/$suffix/$destfile
 done
 
 popd 2>&1 >/dev/null
@@ -178,7 +187,6 @@ for d in `find $that_run_dir -name "obj-*" -type d`; do
 done
 
 # Sync with public hosting
-rsync -avz --delete $destdir/www/ nsa@ssh.ssji.net:public_html/mutekh-tests.ssji.net/
 rsync -avz --delete $destdir/www/. nsa@ssh.ssji.net:/srv/web-ssl/mutekh.org/www/testsuite/.
 
 # Print footer
