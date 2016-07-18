@@ -6,6 +6,7 @@
 #include <device/driver.h>
 #include <mutek/thread.h>
 #include <mutek/printk.h>
+#include <mutek/startup.h>
 #include <hexo/power.h>
 
 #if defined(CONFIG_ARCH_SOCLIB) && !defined(CONFIG_DEVICE_ENUM)
