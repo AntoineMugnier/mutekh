@@ -249,7 +249,8 @@
      @item @tt{call8 reg, label} @item Jump absolute and save the return address in a register.
        The branch target must be in range [-128, +127] from this instruction.
      @item @tt{call32 reg, label} @item Jump relative and save the return address in a register.
-     @item @tt{ret reg} @item Return to the address saved in a register.
+     @item @tt{ret reg} @item Return to the address saved in a link register.
+     @item @tt{jmp reg} @item Jump to the address saved in a register.
      @item @tt{loop reg, label} @item If the jump target is backward, this instruction decrements the
        register which should not be initially zero and branch if the
        result is not zero. If the jump target is forward, this instruction decrement the
