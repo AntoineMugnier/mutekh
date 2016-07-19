@@ -435,11 +435,16 @@ sub out_msbs {
            "    eors $reg[$wo], r0\n";
 }
 
+sub parse_ccall {
+    my ($thisop) = @_;
+    $thisop->{clobber} = $caller_saved;    # some vm working regs are caller saved
+}
+
 sub out_ccall {
     my ($thisop, $wo, $wi0, $wi1) = @_;
     my $r = "    mov r0, r4\n";
     $r .= "    mov r12, $reg[$wi1]\n";
-    $r .= "    mov r1, $reg[$wi0]\n" if $reg[$wi1] ne "r1";
+    $r .= "    mov r1, $reg[$wi0]\n" if $reg[$wi0] ne "r1";
     $r .= "    blx r12\n".
           "    mov $reg[$wo], r0\n";
     return $r;
