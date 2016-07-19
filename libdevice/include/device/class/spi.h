@@ -631,10 +631,8 @@ struct dev_spi_ctrl_base_rq_s
   /** Chip select configuration of the slave */
   struct dev_spi_cs_config_s cs_cfg;
 
-#ifdef CONFIG_LIBC_ASSERT
   /** Reflect current chip select status, used for checking only. */
   bool_t                  BITFIELD(cs_state,1);
-#endif
 
 #ifdef CONFIG_DEVICE_GPIO
   /** Use a gpio device to drive the chip select pin of the slave */
