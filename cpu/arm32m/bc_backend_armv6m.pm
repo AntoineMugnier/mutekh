@@ -120,6 +120,12 @@ sub out_nop {
 }
 
 sub out_abort {
+    return "    movs r0, #3\n".
+           "    pop    {r4, r5, r6, r7, pc}\n".
+	   "    .ltorg\n";
+}
+
+sub out_die {
     my ($thisop) = @_;
     return "    bl abort\n".
 	   "    .ltorg\n";

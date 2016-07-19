@@ -753,6 +753,11 @@ our %asm = (
         parse => \&parse_noarg, backend => ('abort'),
         op_tail => 1
     },
+    'die'  => {
+        words => 1, code => 0x0003, argscnt => 0,
+        parse => \&parse_noarg, backend => ('die'),
+        op_tail => 1
+    },
     'nop'  => {
         words => 1, code => 0x0004, argscnt => 0,
         parse => \&parse_noarg, backend => ('nop'),

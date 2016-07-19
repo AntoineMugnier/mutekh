@@ -293,6 +293,7 @@
      @item Instruction @item Description
      @item @tt{dump} @item Dump registers to debug output. @see #CONFIG_MUTEK_BYTECODE_DEBUG
      @item @tt{abort} @item Terminate bytecode execution and report an error.
+     @item @tt{die} @item Terminate by calling the libc @ref abort function.
      @item @tt{trace flags} @item Enable or disable debug trace. @see bc_set_trace
      @item @tt{ccall reg, reg} @item Call a C function. The address of the function is in the source
      register. The value of the destination register is passed to the
@@ -329,6 +330,7 @@
     @item end                 @item               @item @tt{0000 0000 0000 0000} @item  0
     @item dump                @item               @item @tt{0000 0000 0000 0001} @item  0
     @item abort               @item               @item @tt{0000 0000 0000 0010} @item  0
+    @item die                 @item               @item @tt{0000 0000 0000 0011} @item  0
     @item nop                 @item               @item @tt{0000 0000 0000 0100} @item  0
     @item trace               @item x             @item @tt{0000 0000 0000 10xx} @item  0
     @item add8                @item r, +/-v       @item @tt{0000 vvvv vvvv rrrr} @item  0

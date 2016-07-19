@@ -88,6 +88,11 @@ sub out_end {
            "    b Lbytecode_end\n";
 }
 
+sub out_abort {
+    return "    move \$v0, \$3\n".
+           "    b Lbytecode_end\n";
+}
+
 sub parse_dump {
     my ($thisop) = @_;
     $thisop->{clobber} = $caller_saved;
@@ -106,7 +111,7 @@ sub out_dump {
 sub out_nop {
 }
 
-sub out_abort {
+sub out_die {
     my ($thisop) = @_;
     return "    jal abort\n";
 }

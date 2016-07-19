@@ -638,25 +638,38 @@ bc_opcode_t bc_run_vm(struct bc_context_s *ctx, int_fast32_t max_cycles)
 	BC_DISPATCH_GOTO((op >> 12) & 0x7);
 
       dispatch_begin:
-      dispatch_add8:
-	if (op == 0)
-          return 0;
+      dispatch_add8: {
+          int8_t x = (op >> 4) & 0xff;
+          if (x)
+            {
+              *dst += (bc_sreg_t)x;
+              break;
+            }
+          if (op == 0)
+            return 0;
 #ifdef CONFIG_MUTEK_BYTECODE_DEBUG
-	else if (op == 1)
-	  bc_dump(ctx, 1);
+          else if (op == 1)
+            bc_dump(ctx, 1);
 #endif
 #ifdef CONFIG_MUTEK_BYTECODE_TRACE
-	else if ((op & 0xfffc) == 8)
-          {
-            ctx->trace = op & 1;
-            ctx->trace_regs = (op & 2) >> 1;
-          }
+          else if (op & 8)
+            {
+              ctx->trace = op & 1;
+              ctx->trace_regs = (op & 2) >> 1;
+            }
 #endif
-	else if (op == 2)
-	  goto err_abort;
-        else
-          *dst += (bc_sreg_t)(int8_t)((op >> 4) & 0xff);
-	break;
+          else if (op & 2)
+            {
+              if ((op & 1)
+#ifdef CONFIG_MUTEK_BYTECODE_CHECKING
+                  && !ctx->sandbox
+#endif
+                  )
+                abort();
+              goto err_abort;
+            }
+          break;
+        }
 
       dispatch_cst8:
 	*dst = (bc_reg_t)((op >> 4) & 0xff);

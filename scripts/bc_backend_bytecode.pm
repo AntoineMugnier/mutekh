@@ -88,6 +88,10 @@ sub out_abort {
     return fmt0( shift, 0, 2 );
 }
 
+sub out_die {
+    return fmt0( shift, 0, 3 );
+}
+
 sub out_nop {
     return fmt0( shift, 0, 4 );
 }

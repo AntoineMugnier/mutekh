@@ -82,6 +82,13 @@ sub out_end {
 	   "    .ltorg\n";
 }
 
+sub out_abort {
+    my ($thisop) = @_;
+    return "    movs r0, #3\n".
+           "    pop    {r4, r5, r6, r7, r8, pc}\n".
+	   "    .ltorg\n";
+}
+
 sub out_eq0 {
     my ($thisop, $wi0) = @_;
     if ( $wi0 >= 6 ) {
