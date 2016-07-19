@@ -1528,8 +1528,11 @@ sub check_regs
              # check function return
              if ( ( $func && $op->{op_ret} ) || $tailcall ) {
                  for (my $i = 0; $i < 16; $i++) {
+                     next unless ( $func->{output} >> $i ) & 1;
                      warning($thisop, "possibly undefined value in register %$i used as return value of function `$func->{name}' \n")
-                         if ( ( $func->{output} >> $i ) & 1) && ( $regs->[$i] & REGVAL_UNDEF );
+                         if ( $regs->[$i] & REGVAL_UNDEF );
+                     warning($thisop, "possible use of packed data in register %$i as return value of function `$func->{name}' \n")
+                         if ( $regs->[$i] & REGVAL_PACK );
                  }
                  $rd_mask |= $func->{output};
              }
