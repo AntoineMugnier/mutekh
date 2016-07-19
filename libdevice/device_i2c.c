@@ -351,7 +351,7 @@ device_i2c_bytecode_exec(struct dev_i2c_ctrl_context_s *q,
             {
               /* data from/to registers */
               size++;
-              assert(reg + size < 16);
+              assert(reg * 4 + size <= 16 * 4);
               data = bc_get_bytepack(&rq->vm, reg);
             }
           else
