@@ -23,17 +23,17 @@
   #define BLELL_COMMAND_COMMAND_SETVAL(x, v)       do { (x) = (((x) & ~0xff) | ((v) << 0)); } while(0)
   #define BLELL_COMMAND_COMMAND_GET(x)             (((x) >> 0) & 0xff)
 /** Start Advertiser operation. The associated Advertiser configuration registers are programmed before the command is issued */
-    #define BLELL_COMMAND_COMMAND_START_ADV          0x00000040
+    #define BLELL_COMMAND_COMMAND_ADV_START          0x00000040
 /** Stop advertiser operation */
-    #define BLELL_COMMAND_COMMAND_STOP_ADV           0x00000041
+    #define BLELL_COMMAND_COMMAND_ADV_STOP           0x00000041
 /** Start scanner operation. The associated configuration registers must be programmed before the command is issued */
-    #define BLELL_COMMAND_COMMAND_START_SCAN         0x00000042
+    #define BLELL_COMMAND_COMMAND_SCAN_START         0x00000042
 /** Stop the scanner operation */
-    #define BLELL_COMMAND_COMMAND_STOP_SCAN          0x00000043
+    #define BLELL_COMMAND_COMMAND_SCAN_STOP          0x00000043
 /** Start connection creation operation. The associated configuration registers must be programmed before the command is issued */
-    #define BLELL_COMMAND_COMMAND_START_INIT         0x00000044
+    #define BLELL_COMMAND_COMMAND_INIT_START         0x00000044
 /** Cancel connection creation operation */
-    #define BLELL_COMMAND_COMMAND_STOP_INIT          0x00000045
+    #define BLELL_COMMAND_COMMAND_INIT_STOP          0x00000045
 /** Start Direct Test Mode Transmit Test. The associated configuration registers must be programmed before the command is issued */
     #define BLELL_COMMAND_COMMAND_DTM_TX_START       0x00000046
 /** Start Direct Test Mode Receive Test. The associated configuration registers must be programmed before the command is issued */
@@ -41,49 +41,49 @@
 /** Stop Direct Test Mode */
     #define BLELL_COMMAND_COMMAND_DTM_STOP           0x00000048
 /** Update channel map for the connection */
-    #define BLELL_COMMAND_COMMAND_UPDATE_CHAN_MAP    0x0000004b
+    #define BLELL_COMMAND_COMMAND_CHAN_MAP_UPDATE    0x0000004b
 /** Start connection update procedure for the connection */
-    #define BLELL_COMMAND_COMMAND_UPDATE_CONN_PROC   0x0000004c
+    #define BLELL_COMMAND_COMMAND_CONN_PARAMS_UPDATE 0x0000004c
 /** Indicates a received connection packet is read by firmware from connection receive FIFO */
     #define BLELL_COMMAND_COMMAND_PACKET_RECEIVED    0x0000004d
 /** Enter deep sleep mode */
-    #define BLELL_COMMAND_COMMAND_ENTER_DSM          0x00000050
+    #define BLELL_COMMAND_COMMAND_DSM_ENTER          0x00000050
 /** Enter sleep mode */
-    #define BLELL_COMMAND_COMMAND_CORE_CLK_OFF       0x00000051
+    #define BLELL_COMMAND_COMMAND_CLK_CORE_OFF       0x00000051
 /** Exit sleep mode */
-    #define BLELL_COMMAND_COMMAND_CORE_CLK_ON        0x00000052
+    #define BLELL_COMMAND_COMMAND_CLK_CORE_ON        0x00000052
 /** Turn on clock to encryption block */
-    #define BLELL_COMMAND_COMMAND_ENC_CLK_ON         0x00000053
+    #define BLELL_COMMAND_COMMAND_CLK_ENC_ON         0x00000053
 /** Turn off clock to encryption block */
-    #define BLELL_COMMAND_COMMAND_ENC_CLK_OFF        0x00000054
+    #define BLELL_COMMAND_COMMAND_CLK_ENC_OFF        0x00000054
 /** Turn on clock to advertiser block in NAP mode */
-    #define BLELL_COMMAND_COMMAND_ADV_CLK_ON         0x00000055
+    #define BLELL_COMMAND_COMMAND_CLK_ADV_ON         0x00000055
 /** Turn off clock to advertiser block in NAP mode */
-    #define BLELL_COMMAND_COMMAND_ADV_CLK_OFF        0x00000056
+    #define BLELL_COMMAND_COMMAND_CLK_ADV_OFF        0x00000056
 /** Turn on clock to scanner block in NAP mode */
-    #define BLELL_COMMAND_COMMAND_SCAN_CLK_ON        0x00000057
+    #define BLELL_COMMAND_COMMAND_CLK_SCAN_ON        0x00000057
 /** Turn off clock to scanner block in NAP mode */
-    #define BLELL_COMMAND_COMMAND_SCAN_CLK_OFF       0x00000058
+    #define BLELL_COMMAND_COMMAND_CLK_SCAN_OFF       0x00000058
 /** Turn on clock to initiator block in NAP mode */
-    #define BLELL_COMMAND_COMMAND_INIT_CLK_ON        0x00000059
+    #define BLELL_COMMAND_COMMAND_CLK_INIT_ON        0x00000059
 /** Turn off clock to initiator block in NAP mode */
-    #define BLELL_COMMAND_COMMAND_INIT_CLK_OFF       0x0000005a
+    #define BLELL_COMMAND_COMMAND_CLK_INIT_OFF       0x0000005a
 /** Turn on clock to connection block in NAP mode */
-    #define BLELL_COMMAND_COMMAND_CONN_CLK_ON        0x0000005b
+    #define BLELL_COMMAND_COMMAND_CLK_CONN_ON        0x0000005b
 /** Turn off clock to connection  block in NAP mode */
-    #define BLELL_COMMAND_COMMAND_CONN_CLK_OFF       0x0000005c
+    #define BLELL_COMMAND_COMMAND_CLK_CONN_OFF       0x0000005c
 /** Update connection parameters. Deprecated */
-    #define BLELL_COMMAND_COMMAND_UPDATE_CONN        0x00000068
+    #define BLELL_COMMAND_COMMAND_CONN_UPDATE        0x00000068
 /** Kill connection immediately */
-    #define BLELL_COMMAND_COMMAND_KILL_CONN          0x00000070
+    #define BLELL_COMMAND_COMMAND_CONN_KILL          0x00000070
 /** Kill connection after a transmit operation is over */
-    #define BLELL_COMMAND_COMMAND_KILL_CONN_AFTER_TX 0x00000071
+    #define BLELL_COMMAND_COMMAND_CONN_KILL_AFTER_TX 0x00000071
 /** Start PDU response timer. The PDU_RESP_TIMER register must be programmed with timeout value before issuing this command */
     #define BLELL_COMMAND_COMMAND_RESP_TIMER_ON      0x00000072
 /** Stop PDU response timer */
     #define BLELL_COMMAND_COMMAND_RESP_TIMER_OFF     0x00000073
 /** Reset the white list memory read pointer to 0 */
-    #define BLELL_COMMAND_COMMAND_RESET_READ_PTR     0x00000074
+    #define BLELL_COMMAND_COMMAND_READ_PTR_RESET     0x00000074
 /** Start connection ping timer */
     #define BLELL_COMMAND_COMMAND_CONN_PING_TIMER_ON 0x00000075
 /** Stop connection ping timer */
@@ -91,7 +91,7 @@
 /** Software reset. Resets all the hardware registers (except a few registers related to radio initialization) */
     #define BLELL_COMMAND_COMMAND_SOFT_RESET         0x00000080
 /** Reset microsecond counter */
-    #define BLELL_COMMAND_COMMAND_RESET_US_COUNTER   0x000000c3
+    #define BLELL_COMMAND_COMMAND_US_COUNTER_RESET   0x000000c3
 
 #define BLELL_EVENT_INTR_ADDR                        0x00000008
 #define BLELL_EVENT_INTR_MASK                        0x0000007f
@@ -99,50 +99,50 @@
    the advertising procedure. The source of the event needs to be read from the
    ADV_INTR register. This bit is cleared, when firmware clears ALL interrupts by
    writing to the ADV_INTR register. @multiple */
-  #define BLELL_EVENT_INTR_ADV_INTR                0x0001
+  #define BLELL_EVENT_INTR_ADV                     0x0001
 /** Scanner interrupt. If bit is set to 1, it indicates an event occurred in the
    scanning procedure. The source of the event needs to be read from the
    SCAN_INTR register. This bit is cleared, when firmware clears ALL interrupts
    by writing to the SCAN_INTR register. @multiple */
-  #define BLELL_EVENT_INTR_SCAN_INTR               0x0002
+  #define BLELL_EVENT_INTR_SCAN                    0x0002
 /** Initiator interrupt. If bit is set to 1, it indicates an event occurred in
    the initiating procedure. The source of the event needs to be read from the
    INIT_INTR register. This bit is cleared, when firmware clears ALL interrupts
    by writing to the INIT_INTR register. @multiple */
-  #define BLELL_EVENT_INTR_INIT_INTR               0x0004
+  #define BLELL_EVENT_INTR_INIT                    0x0004
 /** Connection interrupt. If bit is set to 1, it indicates an event occurred in
    the connection operation. This interrupt is aggregation of interrupts for all
    the connections. The source of the event for the specific connection, needs to
    be read from the CONN_INTR register specific to the connection. This bit is
    cleared, when firmware clears ALL interrupts by writing to the CONN_INTR
    register. @multiple */
-  #define BLELL_EVENT_INTR_CONN_INTR               0x0008
+  #define BLELL_EVENT_INTR_CONN                    0x0008
 /** Sleep-mode-exit interrupt. This bit is set, when link layer hardware exits
    from sleep mode. Write: Clear sleep-mode-exit interrupt. Write 1 to clear.
    @multiple */
-  #define BLELL_EVENT_INTR_SM_INTR                 0x0010
+  #define BLELL_EVENT_INTR_SM                      0x0010
 /** Deep sleep mode exit interrupt. This bit is set, when link layer hardware
    exits from deep sleep mode. Write 1 to clear. @multiple */
-  #define BLELL_EVENT_INTR_DSM_INTR                0x0020
+  #define BLELL_EVENT_INTR_DSM                     0x0020
 /** Encryption module interrupt. @multiple */
-  #define BLELL_EVENT_INTR_ENC_INTR                0x0040
+  #define BLELL_EVENT_INTR_ENC                     0x0040
 
 #define BLELL_EVENT_ENABLE_ADDR                      0x00000010
 #define BLELL_EVENT_ENABLE_MASK                      0x0000007f
 /** Advertiser interrupt enable @multiple */
-  #define BLELL_EVENT_ENABLE_ADV_INT_EN            0x0001
+  #define BLELL_EVENT_ENABLE_ADV                   0x0001
 /** Scanner interrupt enable @multiple */
-  #define BLELL_EVENT_ENABLE_SCN_INT_EN            0x0002
+  #define BLELL_EVENT_ENABLE_SCAN                  0x0002
 /** Initiator interrupt enable @multiple */
-  #define BLELL_EVENT_ENABLE_INIT_INT_EN           0x0004
+  #define BLELL_EVENT_ENABLE_INIT                  0x0004
 /** Connection interrupt enable @multiple */
-  #define BLELL_EVENT_ENABLE_CONN_INT_EN           0x0008
+  #define BLELL_EVENT_ENABLE_CONN                  0x0008
 /** Sleep-mode-exit interrupt enable @multiple */
-  #define BLELL_EVENT_ENABLE_SM_INT_EN             0x0010
+  #define BLELL_EVENT_ENABLE_SM                    0x0010
 /** Deep Sleep-mode-exit interrupt enable @multiple */
-  #define BLELL_EVENT_ENABLE_DSM_INT_EN            0x0020
+  #define BLELL_EVENT_ENABLE_DSM                   0x0020
 /** Encryption module interrupt enable @multiple */
-  #define BLELL_EVENT_ENABLE_ENC_INT_EN            0x0040
+  #define BLELL_EVENT_ENABLE_ENC                   0x0040
 
 #define BLELL_ADV_PARAMS_ADDR                        0x00000018
 #define BLELL_ADV_PARAMS_MASK                        0x000085ff
@@ -161,13 +161,13 @@
   #define BLELL_ADV_PARAMS_ADV_TYPE_SETVAL(x, v)   do { (x) = (((x) & ~0x6) | ((v) << 1)); } while(0)
   #define BLELL_ADV_PARAMS_ADV_TYPE_GET(x)         (((x) >> 1) & 0x3)
 /** Connectable undirected advertising */
-    #define BLELL_ADV_PARAMS_ADV_TYPE_ADV_IND        0x00000000
+    #define BLELL_ADV_PARAMS_ADV_TYPE_CONN           0x00000000
 /** Connectable directed advertising */
-    #define BLELL_ADV_PARAMS_ADV_TYPE_ADV_DIRECT_IND 0x00000001
+    #define BLELL_ADV_PARAMS_ADV_TYPE_DIRECT         0x00000001
 /** Discoverable undirected advertising */
-    #define BLELL_ADV_PARAMS_ADV_TYPE_ADV_DISCOVER_IND 0x00000002
+    #define BLELL_ADV_PARAMS_ADV_TYPE_DISCOVER       0x00000002
 /** Non connectable undirected advertising */
-    #define BLELL_ADV_PARAMS_ADV_TYPE_ADV_NONCONN_ADV 0x00000003
+    #define BLELL_ADV_PARAMS_ADV_TYPE_NONCONN        0x00000003
 /** Allow scan request from white-listed devices only @multiple */
   #define BLELL_ADV_PARAMS_SCAN_WHITE_LIST         0x0008
 /** Allow connection request from white-listed devices only @multiple */
@@ -209,20 +209,20 @@
 #define BLELL_ADV_INTR_MASK                          0x000001ff
 /** A new advertising event started after interval expiry. Write 1 to clear.
    @multiple */
-  #define BLELL_ADV_INTR_ADV_STRT_INTR             0x0001
+  #define BLELL_ADV_INTR_EVENT_START               0x0001
 /** Current advertising event is closed. Write 1 to clear. @multiple */
-  #define BLELL_ADV_INTR_ADV_CLOSE_INTR            0x0002
+  #define BLELL_ADV_INTR_EVENT_CLOSED              0x0002
 /** ADV packet is transmitted. Write 1 to clear. @multiple */
-  #define BLELL_ADV_INTR_ADV_TX_INTR               0x0004
+  #define BLELL_ADV_INTR_ADV                       0x0004
 /** Scan response packet transmitted in response to previously received scan
    request packet. Write 1 to clear. @multiple */
-  #define BLELL_ADV_INTR_SCAN_RSP_TX_INTR          0x0008
+  #define BLELL_ADV_INTR_SCAN_RSP                  0x0008
 /** Scan request packet received. Write 1 to clear. @multiple */
-  #define BLELL_ADV_INTR_SCAN_REQ_RX_INTR          0x0010
+  #define BLELL_ADV_INTR_SCAN_REQ                  0x0010
 /** Connect request packet is received. Write 1 to clear. @multiple */
-  #define BLELL_ADV_INTR_CONN_REQ_RX_INTR          0x0020
+  #define BLELL_ADV_INTR_CONN_REQ                  0x0020
 /** Connection is created as slave. Write 1 to clear. @multiple */
-  #define BLELL_ADV_INTR_SLV_CONNECTED             0x0040
+  #define BLELL_ADV_INTR_SLAVE_CONNECTED           0x0040
 /** The directed advertising event has timed out after 1.28 seconds. Applicable
    in adv_direct_ind advertising. Write 1 to clear. @multiple */
   #define BLELL_ADV_INTR_ADV_TIMEOUT               0x0080
@@ -280,19 +280,19 @@
 #define BLELL_SCAN_INTR_ADDR                         0x00000038
 #define BLELL_SCAN_INTR_MASK                         0x0000011f
 /** scan window is opened. Write 1 to clear. @multiple */
-  #define BLELL_SCAN_INTR_SCAN_STRT_INTR           0x0001
+  #define BLELL_SCAN_INTR_WINDOW_OPENED            0x0001
 /** scan window is closed. Write 1 to clear. @multiple */
-  #define BLELL_SCAN_INTR_SCAN_CLOSE_INTR          0x0002
+  #define BLELL_SCAN_INTR_WINDOW_CLOSED            0x0002
 /** scan request packet is transmitted. Write 1 to clear. @multiple */
-  #define BLELL_SCAN_INTR_SCAN_TX_INTR             0x0004
+  #define BLELL_SCAN_INTR_SCAN                     0x0004
 /** ADV packet received. Firmware can read the content of the packet from the
    INIT_SCN_ADV_RX_FIFO. This interrupt is generated while active/passive
    scanning upon receiving adv packets. Write 1 to clear. @multiple */
-  #define BLELL_SCAN_INTR_ADV_RX_INTR              0x0008
+  #define BLELL_SCAN_INTR_ADV                      0x0008
 /** SCAN_RSP packet is received. Firmware can read the content of the packet from
    the INIT_SCN_ADV_RX_FIFO. This interrupt is generated while active scanning
    upon receiving scan response packet. Write 1 to clear. @multiple */
-  #define BLELL_SCAN_INTR_SCAN_RSP_RX_INTR         0x0010
+  #define BLELL_SCAN_INTR_SCAN_RSP                 0x0010
 /** Whether Scan procedure is active @multiple */
   #define BLELL_SCAN_INTR_SCAN_ON                  0x0100
 
@@ -349,14 +349,14 @@
 #define BLELL_INIT_INTR_ADDR                         0x00000050
 #define BLELL_INIT_INTR_MASK                         0x00000017
 /** Initiator scan window has started. Write 1 to clear. @multiple */
-  #define BLELL_INIT_INTR_INIT_INTERVAL_EXPIRE_INTR 0x0001
+  #define BLELL_INIT_INTR_WINDOW_OPENED            0x0001
 /** Initiator scan window has finished. Write 1 to clear. @multiple */
-  #define BLELL_INIT_INTR_INIT_CLOSE_WINDOW_INR    0x0002
+  #define BLELL_INIT_INTR_WINDOW_CLOSED            0x0002
 /** Initiator packet (CONREQ) transmission has started. Write 1 to clear.
    @multiple */
-  #define BLELL_INIT_INTR_INIT_TX_START_INTR       0x0004
+  #define BLELL_INIT_INTR_TX                       0x0004
 /** Connection is created as master. Write 1 to clear. @multiple */
-  #define BLELL_INIT_INTR_MASTER_CONN_CREATED      0x0010
+  #define BLELL_INIT_INTR_CONN_CREATED             0x0010
 
 /** Shows the instant with respect to internal reference clock of resolution 625
    us at which next initiator scanning event begins. @multiple */
@@ -502,58 +502,58 @@
 #define BLELL_CONN_INTR_ADDR                         0x000000a8
 #define BLELL_CONN_INTR_MASK                         0x0000ffff
 /** the link is disconnected. Write 1 to clear @multiple */
-  #define BLELL_CONN_INTR_CONN_CLOSED              0x0001
+  #define BLELL_CONN_INTR_CLOSED                   0x0001
 /** the connection has been established. The bit is also set when a connection
    update procedure is completed, at the start of the first anchor point with the
    updated parameters. Write 1 to clear @multiple */
-  #define BLELL_CONN_INTR_CONN_ESTB                0x0002
+  #define BLELL_CONN_INTR_ESTABLISHED              0x0002
 /** Channel map update completed. Write 1 to clear @multiple */
-  #define BLELL_CONN_INTR_MAP_UPDT_DONE            0x0004
+  #define BLELL_CONN_INTR_MAP_UPDATE_DONE          0x0004
 /** Connection event started. Write 1 to clear @multiple */
-  #define BLELL_CONN_INTR_CE_STARTED               0x0008
+  #define BLELL_CONN_INTR_EVENT_STARTED            0x0008
 /** Connection event was closed. Write 1 to clear @multiple */
-  #define BLELL_CONN_INTR_CE_CLOSED                0x0010
+  #define BLELL_CONN_INTR_EVENT_CLOSED             0x0010
 /** The connection event transmission acknowledgement is received for the
    previous non-empty packet transmitted. Write 1 to clear @multiple */
-  #define BLELL_CONN_INTR_CE_TX_ACK                0x0020
+  #define BLELL_CONN_INTR_EVENT_TX_ACK             0x0020
 /** A packet is received in the connection event. Write 1 to clear @multiple */
-  #define BLELL_CONN_INTR_CE_RX                    0x0040
+  #define BLELL_CONN_INTR_EVENT_RX                 0x0040
 /** Last connection event with previous connection parameters is reached. The bit
    is set immediately after the receive operation at the anchor point of the last
    connection event. Write 1 to clear @multiple */
-  #define BLELL_CONN_INTR_CON_UPDT_DONE            0x0080
+  #define BLELL_CONN_INTR_CONN_UPDATE_DONE         0x0080
 /** Reason for disconnect indicates the reason the link is disconnected by
    hardware. @multiple */
-  #define BLELL_CONN_INTR_DISCON_STATUS(v)         ((BLELL_CONN_INTR_DISCON_STATUS_##v) << 8)
-  #define BLELL_CONN_INTR_DISCON_STATUS_SET(x, v)  do { (x) = (((x) & ~0x700) | ((BLELL_CONN_INTR_DISCON_STATUS_##v) << 8)); } while(0)
-  #define BLELL_CONN_INTR_DISCON_STATUS_SETVAL(x, v) do { (x) = (((x) & ~0x700) | ((v) << 8)); } while(0)
-  #define BLELL_CONN_INTR_DISCON_STATUS_GET(x)     (((x) >> 8) & 0x7)
+  #define BLELL_CONN_INTR_DISCONN_STATUS(v)        ((BLELL_CONN_INTR_DISCONN_STATUS_##v) << 8)
+  #define BLELL_CONN_INTR_DISCONN_STATUS_SET(x, v) do { (x) = (((x) & ~0x700) | ((BLELL_CONN_INTR_DISCONN_STATUS_##v) << 8)); } while(0)
+  #define BLELL_CONN_INTR_DISCONN_STATUS_SETVAL(x, v) do { (x) = (((x) & ~0x700) | ((v) << 8)); } while(0)
+  #define BLELL_CONN_INTR_DISCONN_STATUS_GET(x)    (((x) >> 8) & 0x7)
 /** connection failed to be established */
-    #define BLELL_CONN_INTR_DISCON_STATUS_NOT_ESTABLISHED 0x00000001
+    #define BLELL_CONN_INTR_DISCONN_STATUS_NOT_ESTABLISHED 0x00000001
 /** supervision timeout */
-    #define BLELL_CONN_INTR_DISCON_STATUS_SUPERVISION_TIMEOUT 0x00000002
+    #define BLELL_CONN_INTR_DISCONN_STATUS_SUPERVISION_TIMEOUT 0x00000002
 /** kill connection by host */
-    #define BLELL_CONN_INTR_DISCON_STATUS_KILLED_BY_HOST 0x00000003
+    #define BLELL_CONN_INTR_DISCONN_STATUS_KILLED_BY_HOST 0x00000003
 /** kill connection after ACK transmitted */
-    #define BLELL_CONN_INTR_DISCON_STATUS_KILLED_AFTER_ACK 0x00000004
+    #define BLELL_CONN_INTR_DISCONN_STATUS_KILLED_AFTER_ACK 0x00000004
 /** PDU response timer expired */
-    #define BLELL_CONN_INTR_DISCON_STATUS_RESPONSE_TIMEOUT 0x00000005
+    #define BLELL_CONN_INTR_DISCONN_STATUS_RESPONSE_TIMEOUT 0x00000005
 /** Status of PDU received. This information is valid along with receive
    interrupt. 0bxx1: Bad Packet (packet with CRC error) @multiple */
-  #define BLELL_CONN_INTR_RX_PDU_STATUS(v)         ((BLELL_CONN_INTR_RX_PDU_STATUS_##v) << 11)
-  #define BLELL_CONN_INTR_RX_PDU_STATUS_SET(x, v)  do { (x) = (((x) & ~0x3800) | ((BLELL_CONN_INTR_RX_PDU_STATUS_##v) << 11)); } while(0)
-  #define BLELL_CONN_INTR_RX_PDU_STATUS_SETVAL(x, v) do { (x) = (((x) & ~0x3800) | ((v) << 11)); } while(0)
-  #define BLELL_CONN_INTR_RX_PDU_STATUS_GET(x)     (((x) >> 11) & 0x7)
+  #define BLELL_CONN_INTR_PDU_STATUS(v)            ((BLELL_CONN_INTR_PDU_STATUS_##v) << 11)
+  #define BLELL_CONN_INTR_PDU_STATUS_SET(x, v)     do { (x) = (((x) & ~0x3800) | ((BLELL_CONN_INTR_PDU_STATUS_##v) << 11)); } while(0)
+  #define BLELL_CONN_INTR_PDU_STATUS_SETVAL(x, v)  do { (x) = (((x) & ~0x3800) | ((v) << 11)); } while(0)
+  #define BLELL_CONN_INTR_PDU_STATUS_GET(x)        (((x) >> 11) & 0x7)
 /** empty PDU */
-    #define BLELL_CONN_INTR_RX_PDU_STATUS_EMPTY_PDU  0x00000000
+    #define BLELL_CONN_INTR_PDU_STATUS_EMPTY_PDU     0x00000000
 /** new data (non-empty) PDU */
-    #define BLELL_CONN_INTR_RX_PDU_STATUS_NEW_DATA   0x00000002
+    #define BLELL_CONN_INTR_PDU_STATUS_NEW_DATA      0x00000002
 /** Duplicate Packet */
-    #define BLELL_CONN_INTR_RX_PDU_STATUS_DUPLICATE_PACKET 0x00000006
+    #define BLELL_CONN_INTR_PDU_STATUS_DUPLICATE_PACKET 0x00000006
 /** If this is set, it indicates that ping timer has expired. @multiple */
-  #define BLELL_CONN_INTR_PING_TIMER_EXPIRD_INTR   0x4000
+  #define BLELL_CONN_INTR_PING_EXPIRED             0x4000
 /** If this is set, it indicates that ping timer has nearly expired. @multiple */
-  #define BLELL_CONN_INTR_PING_NEARLY_EXPIRD_INTR  0x8000
+  #define BLELL_CONN_INTR_PING_EXPIRING            0x8000
 
 #define BLELL_CONN_STATUS_ADDR                       0x000000ac
 #define BLELL_CONN_STATUS_MASK                       0x0000f000
@@ -574,20 +574,14 @@
 
 #define BLELL_WAKEUP_CONFIG_ADDR                     0x000000b8
 #define BLELL_WAKEUP_CONFIG_MASK                     0x0000fcff
-/** Oscillator stabilization/startup delay. This is in X.Y format where X is in
-   terms of number of BT slots (625 us) and Y is in terms of number of clock
-   periods of 16KHz clock input, required for RF oscillator to stabilize the
-   clock output to the controller on its output pin, after oscillator is turned
-   ON. In this period the clock is assumed to be unstable, and so the controller
-   does not turn on the clock to internal logic till this period is over. This
-   means, the wake up from deep sleep mode must account for this delay before the
-   wakeup instant. Osc_startup_delay[7:5] is number of slots (625us)
-   Osc_startup_delay[4:0] is number of clock periods of 16KHz clock (Warning:
-   Min. value of Osc_startup_delay [4:0] supported is 1 and Max. value is 9.
-   Therefore programmable range is 1 to 9) @multiple */
-  #define BLELL_WAKEUP_CONFIG_OSC_STARTUP_DELAY(v) ((v) << 0)
-  #define BLELL_WAKEUP_CONFIG_OSC_STARTUP_DELAY_SET(x, v) do { (x) = (((x) & ~0xff) | ((v) << 0)); } while(0)
-  #define BLELL_WAKEUP_CONFIG_OSC_STARTUP_DELAY_GET(x) (((x) >> 0) & 0xff)
+/** Oscillator stabilization/startup delay ticks from 16KHz clock. @multiple */
+  #define BLELL_WAKEUP_CONFIG_OSC_STARTUP_16KHZ(v) ((v) << 0)
+  #define BLELL_WAKEUP_CONFIG_OSC_STARTUP_16KHZ_SET(x, v) do { (x) = (((x) & ~0x1f) | ((v) << 0)); } while(0)
+  #define BLELL_WAKEUP_CONFIG_OSC_STARTUP_16KHZ_GET(x) (((x) >> 0) & 0x1f)
+/** Oscillator stabilization/startup delay slots. @multiple */
+  #define BLELL_WAKEUP_CONFIG_OSC_STARTUP_SLOTS(v) ((v) << 5)
+  #define BLELL_WAKEUP_CONFIG_OSC_STARTUP_SLOTS_SET(x, v) do { (x) = (((x) & ~0xe0) | ((v) << 5)); } while(0)
+  #define BLELL_WAKEUP_CONFIG_OSC_STARTUP_SLOTS_GET(x) (((x) >> 5) & 0x7)
 /** Number of slots before the wake up instant before which the hardware needs to
    exit from deep sleep mode. The slot is of 0.625ms period. This is a onetime
    configuration field, which is used every time hardware does an auto-wakeup
@@ -704,8 +698,10 @@
 
 /** IO mapped FIFO of depth 16 (2 byte wide), to store ADV data of maximum length
    31 bytes for transmitting. Firmware writes consecutive words by writing to the
-   same address location. Note: ADV_TX_DATA_FIFO and ADV_SCN_RSP_TX_FIFO shares
-   same physical FIFO of depth 32. 16 locations for each FIFO are allocated.
+   same address location. First byte of written payload is the payload size, in
+   bytes. Note: ADV_TX_DATA_FIFO and ADV_SCN_RSP_TX_FIFO shares same physical
+   FIFO of depth 32. 16 locations for each FIFO are allocated. FIFO must be
+   cleared by reading at least 16 words from it before setting a new value.
    @multiple */
 #define BLELL_ADV_TX_DATA_FIFO_ADDR                  0x000000e0
 #define BLELL_ADV_TX_DATA_FIFO_MASK                  0x00000000
@@ -1034,9 +1030,21 @@
 #define BLELL_DEV_PUB_ADDR_H_ADDR                    0x000001c8
 #define BLELL_DEV_PUB_ADDR_H_MASK                    0x00000000
 
-/** Units: dBm, accuracy: +/- 4 dBm. @multiple */
 #define BLELL_ADV_CH_TX_POWER_ADDR                   0x000001cc
-#define BLELL_ADV_CH_TX_POWER_MASK                   0x00000000
+#define BLELL_ADV_CH_TX_POWER_MASK                   0x000000ff
+/** Units: dBm, accuracy: +/- 4 dBm. @multiple */
+  #define BLELL_ADV_CH_TX_POWER_POWER(v)           ((BLELL_ADV_CH_TX_POWER_POWER_##v) << 0)
+  #define BLELL_ADV_CH_TX_POWER_POWER_SET(x, v)    do { (x) = (((x) & ~0xff) | ((BLELL_ADV_CH_TX_POWER_POWER_##v) << 0)); } while(0)
+  #define BLELL_ADV_CH_TX_POWER_POWER_SETVAL(x, v) do { (x) = (((x) & ~0xff) | ((v) << 0)); } while(0)
+  #define BLELL_ADV_CH_TX_POWER_POWER_GET(x)       (((x) >> 0) & 0xff)
+    #define BLELL_ADV_CH_TX_POWER_POWER_NEG_18_DBM   0x00000001
+    #define BLELL_ADV_CH_TX_POWER_POWER_NEG_12_DBM   0x00000002
+    #define BLELL_ADV_CH_TX_POWER_POWER_NEG_6_DBM    0x00000003
+    #define BLELL_ADV_CH_TX_POWER_POWER_NEG_3_DBM    0x00000004
+    #define BLELL_ADV_CH_TX_POWER_POWER_NEG_2_DBM    0x00000005
+    #define BLELL_ADV_CH_TX_POWER_POWER_NEG_1_DBM    0x00000006
+    #define BLELL_ADV_CH_TX_POWER_POWER_0_DBM        0x00000007
+    #define BLELL_ADV_CH_TX_POWER_POWER_3_DBM        0x00000008
 
 /** The offset w.r.t the internal reference clock at which instant the first
    event occurs. This register will give flexibility to the firmware to position
@@ -1219,7 +1227,7 @@
    */
   #define BLELL_CONN_INTR_MASK_CE_RX_INT_EN        0x0040
 /** Connection update interrupt is enabled. @multiple */
-  #define BLELL_CONN_INTR_MASK_CONN_UPDATE_INTR_EN 0x0080
+  #define BLELL_CONN_INTR_MASK_CONN_UPDATE_EN      0x0080
 /** Packet receive good pdu interrupt is enabled. Effective only when bit 6 is
    set. @multiple */
   #define BLELL_CONN_INTR_MASK_RX_GOOD_PDU_INT_EN  0x0100
@@ -1227,9 +1235,9 @@
    set. @multiple */
   #define BLELL_CONN_INTR_MASK_RX_BAD_PDU_INT_EN   0x0200
 /** Ping timer expired interrupt is enabled. @multiple */
-  #define BLELL_CONN_INTR_MASK_PING_TIMER_EXPIRD_INTR 0x4000
+  #define BLELL_CONN_INTR_MASK_PING_TIMER_EXPIRD   0x4000
 /** Ping timer nearly expired interrupt is enabled @multiple */
-  #define BLELL_CONN_INTR_MASK_PING_NEARLY_EXPIRD_INTR 0x8000
+  #define BLELL_CONN_INTR_MASK_PING_NEARLY_EXPIRD  0x8000
 
 #define BLELL_SLAVE_TIMING_CONTROL_ADDR              0x000001f4
 #define BLELL_SLAVE_TIMING_CONTROL_MASK              0x0000ffff
@@ -1509,27 +1517,27 @@
 #define BLELL_ENC_INTR_EN_ADDR                       0x00000498
 #define BLELL_ENC_INTR_EN_MASK                       0x00000007
 /** Authentication interrupt enable @multiple */
-  #define BLELL_ENC_INTR_EN_AUTH_PASS_INTR_EN      0x0001
+  #define BLELL_ENC_INTR_EN_AUTH_PASS              0x0001
 /** ECB processed interrupt enable @multiple */
-  #define BLELL_ENC_INTR_EN_ECB_PROC_INTR_EN       0x0002
+  #define BLELL_ENC_INTR_EN_ECB                    0x0002
 /** CCM processed interupt enable @multiple */
-  #define BLELL_ENC_INTR_EN_CCM_PROC_INTR_EN       0x0004
+  #define BLELL_ENC_INTR_EN_CCM                    0x0004
 
 #define BLELL_ENC_INTR_ADDR                          0x000004a0
 #define BLELL_ENC_INTR_MASK                          0x0000000f
 /** Authentication interrupt. Write 1 to clear @multiple */
-  #define BLELL_ENC_INTR_AUTH_PASS_INTR(v)         ((BLELL_ENC_INTR_AUTH_PASS_INTR_##v) << 0)
-  #define BLELL_ENC_INTR_AUTH_PASS_INTR_SET(x, v)  do { (x) = (((x) & ~0x1) | ((BLELL_ENC_INTR_AUTH_PASS_INTR_##v) << 0)); } while(0)
-  #define BLELL_ENC_INTR_AUTH_PASS_INTR_SETVAL(x, v) do { (x) = (((x) & ~0x1) | ((v) << 0)); } while(0)
-  #define BLELL_ENC_INTR_AUTH_PASS_INTR_GET(x)     (((x) >> 0) & 0x1)
+  #define BLELL_ENC_INTR_AUTH_PASS(v)              ((BLELL_ENC_INTR_AUTH_PASS_##v) << 0)
+  #define BLELL_ENC_INTR_AUTH_PASS_SET(x, v)       do { (x) = (((x) & ~0x1) | ((BLELL_ENC_INTR_AUTH_PASS_##v) << 0)); } while(0)
+  #define BLELL_ENC_INTR_AUTH_PASS_SETVAL(x, v)    do { (x) = (((x) & ~0x1) | ((v) << 0)); } while(0)
+  #define BLELL_ENC_INTR_AUTH_PASS_GET(x)          (((x) >> 0) & 0x1)
 /** indicated MIC mismatched */
-    #define BLELL_ENC_INTR_AUTH_PASS_INTR_MIC_FAILED 0x00000000
+    #define BLELL_ENC_INTR_AUTH_PASS_MIC_FAILED      0x00000000
 /** indicates MIC matched */
-    #define BLELL_ENC_INTR_AUTH_PASS_INTR_MIC_MATCHED 0x00000001
+    #define BLELL_ENC_INTR_AUTH_PASS_MIC_MATCHED     0x00000001
 /** ECB processed interrupt. Write 1 to clear @multiple */
-  #define BLELL_ENC_INTR_ECB_PROC_INTR             0x0002
+  #define BLELL_ENC_INTR_ECB                       0x0002
 /** CCM processed interrupt. Write 1 to clear @multiple */
-  #define BLELL_ENC_INTR_CCM_PROC_INTR             0x0004
+  #define BLELL_ENC_INTR_CCM                       0x0004
 /** Clears the input data. Used for Zero padding of encryption for less than
    block sized data. @multiple */
   #define BLELL_ENC_INTR_IN_DATA_CLEAR             0x0008

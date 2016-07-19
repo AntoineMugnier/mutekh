@@ -11,9 +11,11 @@
 #define _BLESS_BFGEN_DEFS_
 
 #define BLESS_WCO_CONFIG_ADDR                        0x00000000
-#define BLESS_WCO_CONFIG_MASK                        0x805f0005
+#define BLESS_WCO_CONFIG_MASK                        0x805f0007
 /** Force block into Low Power Mode @multiple */
   #define BLESS_WCO_CONFIG_LPM_EN                  0x00000001
+/** Allow entering into Low Power Mode @multiple */
+  #define BLESS_WCO_CONFIG_LPM_AUTO                0x00000002
 /** Disables the load resistor and allows external clock input for pad_xin
    @multiple */
   #define BLESS_WCO_CONFIG_EXT_INPUT_EN            0x00000004
@@ -161,11 +163,15 @@
 
 /** BLESS LF clock control @multiple */
 #define BLESS_LF_CLK_CTRL_ADDR                       0x00000074
-#define BLESS_LF_CLK_CTRL_MASK                       0x00000001
+#define BLESS_LF_CLK_CTRL_MASK                       0xe0000001
 /** When set to 1, gates the LF clock input to the Link Layer. Ths is done for
    extended DSM mode where the DSM state machine needs to be forzen to prevent a
    default auto exit. @multiple */
   #define BLESS_LF_CLK_CTRL_DISABLE_LF_CLK         0x00000001
+/** BLESS IP Revision ID @multiple */
+  #define BLESS_LF_CLK_CTRL_M0S8BLESS_REV_ID(v)    ((v) << 29)
+  #define BLESS_LF_CLK_CTRL_M0S8BLESS_REV_ID_SET(x, v) do { (x) = (((x) & ~0xe0000000) | ((v) << 29)); } while(0)
+  #define BLESS_LF_CLK_CTRL_M0S8BLESS_REV_ID_GET(x) (((x) >> 29) & 0x7)
 
 #define BLESS_WCO_TRIM_ADDR                          0x00000f00
 #define BLESS_WCO_TRIM_MASK                          0x00000037

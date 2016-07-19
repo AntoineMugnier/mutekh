@@ -140,9 +140,9 @@ enum psoc4_clock_e {
 #endif
 
 enum psoc4_ble_clock_sink_e {
-  PSOC4_BLE_SINK_LFCLK,
-  PSOC4_BLE_SINK_LL,
-  PSOC4_BLE_SINK_POWER,
+  PSOC4_BLE_CLK_SINK_LFCLK,
+  PSOC4_BLE_CLK_SINK_LL,
+  PSOC4_BLE_CLK_SINK_COUNT,
 };
 
 /*

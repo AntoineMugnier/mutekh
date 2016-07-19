@@ -21,6 +21,7 @@
 #include <hexo/types.h>
 #include <hexo/endian.h>
 #include <hexo/iospace.h>
+#include <hexo/bit.h>
 #include <hexo/interrupt.h>
 
 #include <mutek/mem_alloc.h>
@@ -28,8 +29,10 @@
 
 #include <device/resources.h>
 #include <device/device.h>
+#include <device/class/timer.h>
+#include <device/class/crypto.h>
+#include <device/clock.h>
 #include <device/irq.h>
-#include <device/class/cmu.h>
 
 #include <arch/psoc4/bless.h>
 #include <arch/psoc4/blell.h>
@@ -37,9 +40,14 @@
 #include <arch/psoc4/sflash.h>
 #include <arch/psoc4/variant.h>
 
-#define BLESS PSOC4_BLESS_ADDR
-#define BLERD PSOC4_BLERD_ADDR
-#define BLELL PSOC4_BLELL_ADDR
+#define BLESS(a) (PSOC4_BLESS_ADDR + BLESS_##a##_ADDR)
+#define BLERD(a) (PSOC4_BLERD_ADDR + BLERD_##a##_ADDR)
+#define BLELL(a) (PSOC4_BLELL_ADDR + BLELL_##a##_ADDR)
+#define SFLASH(a) (PSOC4_SFLASH_ADDR + SFLASH_##a##_ADDR)
+
+#define BLESSn(a, n) (PSOC4_BLESS_ADDR + BLESS_##a##_ADDR(n))
+#define BLERDn(a, n) (PSOC4_BLERD_ADDR + BLERD_##a##_ADDR(n))
+#define BLELLn(a, n) (PSOC4_BLELL_ADDR + BLELL_##a##_ADDR(n))
 
 //#define dprintk printk
 #ifndef dprintk
@@ -49,321 +57,644 @@
 # define dwritek writek
 #endif
 
-#define SINK_LFCLK 0
-
-DRIVER_PV(struct psoc4_ble_private_s
+enum start_bit_e
 {
-  struct dev_clock_src_ep_s src[PSOC4_BLE_CLK_SRC_COUNT];
+  START_AES,
+  START_BLE,
+};
+
+struct psoc4_ble_private_s
+{
   struct dev_clock_sink_ep_s sink[PSOC4_BLE_CLK_SINK_COUNT];
-
-  struct dev_freq_s eco_freq;
-  struct dev_freq_s wco_freq;
-
+  struct dev_freq_s sleep_freq;
   struct dev_irq_src_s irq_ep;
 
-  struct dev_freq_s lfclk_freq;
-  uint8_t eco_ll_div;
-  uint8_t eco_clk_div;
-  uint8_t notify_mask;
-  bool_t eco_required;
-  bool_t eco_running;
+  dev_request_queue_root_t aes_q;
 
-  struct kroutine_s updater;
-});
+  uint8_t bb_clk_mhz;
+  bool_t ll_powered;
+  bool_t adv;
+  bool_t aes_busy;
+};
 
-static DEV_CMU_CONFIG_OSC(psoc4_ble_config_osc)
+DRIVER_PV(struct psoc4_ble_private_s);
+
+static DEVCRYPTO_INFO(psoc4_ble_aes_info)
+{
+  memset(info, 0, sizeof(*info));
+
+  info->name = "aes";
+  info->modes_mask = 0
+    | bit(DEV_CRYPTO_MODE_ECB)
+    ;
+  info->cap = DEV_CRYPTO_CAP_INPLACE
+    | DEV_CRYPTO_CAP_NOTINPLACE
+    | DEV_CRYPTO_CAP_STATEFUL
+    | DEV_CRYPTO_CAP_128BITS_KEY
+    ;
+  info->state_size = 0;
+  info->block_len = 16;
+
+  return 0;
+};
+
+static void psoc4_ble_stop(struct device_s *dev, uint32_t clear_mask)
+{
+  dprintk("%s %x %d\n", __FUNCTION__, clear_mask, dev->start_count);
+
+  dev->start_count &= ~clear_mask;
+
+  device_sleep_schedule(dev);
+}
+
+static bool_t psoc4_ble_start(struct device_s *dev, uint32_t set_mask)
 {
   struct psoc4_ble_private_s *pv = dev->drv_pv;
-  if (freq->denom != 1)
-    return -EINVAL;
 
-  switch (node_id) {
-  case PSOC4_BLE_CLK_OSC_ECO: {
-    if (freq->num != 24000000)
-      return -EINVAL;
+  dprintk("%s %x %d\n", __FUNCTION__, set_mask, dev->start_count);
 
-    pv->eco_freq = *freq;
-    return 0;
+  dev->start_count |= set_mask;
+
+  if (dev->start_count >> CONFIG_DEVICE_START_LOG2INC)
+    dev_clock_sink_gate(&pv->sink[PSOC4_BLE_CLK_SINK_LFCLK], DEV_CLOCK_EP_CLOCK);
+  
+  if (dev->start_count & (bit(START_BLE) | bit(START_AES)))
+    dev_clock_sink_gate(&pv->sink[PSOC4_BLE_CLK_SINK_LL], DEV_CLOCK_EP_ANY);
+
+  return ((pv->sink[PSOC4_BLE_CLK_SINK_LL].src->flags
+           & DEV_CLOCK_EP_ANY) == DEV_CLOCK_EP_ANY
+          && (pv->sink[PSOC4_BLE_CLK_SINK_LFCLK].src->flags
+              & DEV_CLOCK_EP_CLOCK));
+}
+
+static void psoc4_ble_aes_exec_first(struct device_s *dev)
+{
+  struct psoc4_ble_private_s *pv = dev->drv_pv;
+  struct dev_crypto_rq_s *rq
+    = dev_crypto_rq_s_cast(dev_request_queue_head(&pv->aes_q));
+
+  dprintk("%s\n", __FUNCTION__);
+
+  if (!rq) {
+    dprintk(" -> no rq\n");
+    cpu_mem_write_16(BLELL(COMMAND), BLELL_COMMAND_COMMAND_CLK_ENC_OFF);
+    return psoc4_ble_stop(dev, bit(START_AES));
   }
 
-  case PSOC4_BLE_CLK_SRC_WCO:
-    if (freq->num != 32768)
-      return -EINVAL;
+  if (!psoc4_ble_start(dev, bit(START_AES))) {
+    dprintk(" -> no clock\n");
+    return;
+  }
 
-    pv->wco_freq = *freq;
-    return 0;
+  if (pv->aes_busy) {
+    dprintk(" -> busy\n");
+    return;
+  }
+
+  struct dev_crypto_context_s *ctx = rq->ctx;
+
+  cpu_mem_write_16(BLELL(COMMAND), BLELL_COMMAND_COMMAND_CLK_ENC_ON);
+
+  dprintk(" -> starting %d\n", ctx->mode);
+
+  pv->aes_busy = 1;
+
+  switch ((int)ctx->mode) {
+  case DEV_CRYPTO_MODE_ECB:
+    cpu_mem_write_16(BLELL(ENC_INTR), 0
+                     | BLELL_ENC_INTR_IN_DATA_CLEAR
+                     );
+
+    cpu_mem_write_16(BLELL(ENC_INTR_EN), 0
+                     | BLELL_ENC_INTR_EN_ECB
+                     );
+
+    cpu_mem_write_16(BLELL(ENC_PARAMS), 0
+                     );
+
+    cpu_mem_write_16(BLELL(ENC_CONFIG), 0
+                     | BLELL_ENC_CONFIG_MODE(ECB)
+                     );
+
+    for (uint_fast8_t i = 0; i < 8; i++)
+      cpu_mem_write_16(BLELLn(ENC_KEY, i),
+                       endian_le16_na_load((const uint8_t *)rq->ctx->key_data + i * 2));
+
+    for (uint_fast8_t i = 0; i < 8; i++)
+      cpu_mem_write_16(BLELLn(DATA, i),
+                       endian_le16_na_load((const uint8_t *)rq->in + i * 2));
+
+    cpu_mem_write_16(BLELL(ENC_CONFIG), 0
+                     | BLELL_ENC_CONFIG_MODE(ECB)
+                     | BLELL_ENC_CONFIG_START_PROC
+                     );
+
+    break;
 
   default:
-    return -ENOENT;
+    assert(0);
   }
-
-  return -ENOENT;
 }
 
-static DEV_CMU_CONFIG_MUX(psoc4_ble_config_mux)
-{
-  struct psoc4_ble_private_s *pv = dev->drv_pv;
-
-  switch (node_id) {
-  case PSOC4_BLE_CLK_SRC_ECO: {
-    uint32_t div = ratio->denom;
-
-    if (ratio->num > 1)
-      div /= ratio->num;
-
-    if (div & (div - 1))
-      return -EINVAL;
-
-    if (div > 8)
-      return -EINVAL;
-
-    if (parent_id != PSOC4_BLE_CLK_OSC_ECO)
-      return -EINVAL;
-
-    pv->eco_clk_div = __builtin_ctz(div);
-    return 0;
-  }
-
-  default:
-    return -ENOENT;
-  }
-
-  return 0;
-}
-
-static void psoc4_ble_config_read(struct device_s *dev)
-{
-  struct psoc4_ble_private_s *pv = dev->drv_pv;
-  uint32_t xtal_config = cpu_mem_read_32(BLESS + BLESS_XTAL_CLK_DIV_CONFIG_ADDR);
-
-  pv->eco_clk_div = BLESS_XTAL_CLK_DIV_CONFIG_SYSCLK_DIV_GET(xtal_config);
-  pv->eco_ll_div = BLESS_XTAL_CLK_DIV_CONFIG_LLCLK_DIV_GET(xtal_config);
-}
-
-static DEV_CMU_ROLLBACK(psoc4_ble_rollback)
-{
-  psoc4_ble_config_read(dev);
-
-  return 0;
-}
-
-static DEV_CMU_COMMIT(psoc4_ble_commit)
-{
-  struct psoc4_ble_private_s *pv = dev->drv_pv;
-  uint32_t tmp;
-  struct dev_clock_notify_s notif = {
-    .freq = pv->eco_freq,
-  };
-
-  tmp = 0;
-  BLESS_XTAL_CLK_DIV_CONFIG_LLCLK_DIV_SETVAL(tmp, pv->eco_ll_div);
-  BLESS_XTAL_CLK_DIV_CONFIG_SYSCLK_DIV_SETVAL(tmp, pv->eco_clk_div);
-  cpu_mem_write_32(BLESS + BLESS_XTAL_CLK_DIV_CONFIG_ADDR, tmp);
-
-  notif.freq.denom <<= pv->eco_clk_div;
-
-  if (pv->notify_mask & (1 << PSOC4_BLE_CLK_SRC_ECO))
-    dev_cmu_src_notify(&pv->src[PSOC4_BLE_CLK_SRC_ECO], &notif);
-
-  return 0;
-}
-
-static DEV_CMU_NODE_INFO(psoc4_ble_node_info)
+static DEVCRYPTO_REQUEST(psoc4_ble_aes_request)
 {
   struct device_s *dev = accessor->dev;
   struct psoc4_ble_private_s *pv = dev->drv_pv;
-  uint32_t returned = 0
-    | DEV_CMU_INFO_FREQ
-    | DEV_CMU_INFO_NAME
-    | DEV_CMU_INFO_RUNNING
-    | DEV_CMU_INFO_ACCURACY
-    ;
+  struct dev_crypto_context_s *ctx = rq->ctx;
+  bool_t empty;
 
-  static const char *const node_name[] = {
-    [PSOC4_BLE_CLK_SRC_ECO] = "ECO_CLK",
-    [PSOC4_BLE_CLK_SRC_WCO] = "WCO",
-    [PSOC4_BLE_CLK_OSC_ECO] = "ECO",
-    [PSOC4_BLE_CLK_SINK_LFCLK] = "LFCLK",
-  };
+  switch ((int)ctx->mode) {
+  case DEV_CRYPTO_MODE_ECB:
+    if (rq->op & DEV_CRYPTO_INVERSE)
+      goto nosup;
 
-  if (node_id >= PSOC4_BLE_CLK_NODE_COUNT)
-    return -EINVAL;
-
-  if (node_id < PSOC4_BLE_CLK_SRC_COUNT) {
-    returned |= DEV_CMU_INFO_SRC;
-    info->src = &pv->src[node_id];
-  }
-
-  info->name = node_name[node_id];
-
-  switch ((enum psoc4_ble_clock_e)node_id) {
-  case PSOC4_BLE_CLK_SRC_ECO:
-    info->freq = pv->eco_freq;
-    info->running = !!(cpu_mem_read_32(BLERD + BLERD_DBUS_ADDR)
-                       & BLERD_DBUS_XTAL_ENABLE);
-    returned |= DEV_CMU_INFO_PARENT;
-    info->parent_id = PSOC4_BLE_CLK_OSC_ECO;
-    break;
-
-  case PSOC4_BLE_CLK_SRC_WCO:
-    info->freq = pv->wco_freq;
-    info->running = !!(cpu_mem_read_32(BLESS + BLESS_WCO_STATUS_ADDR)
-                       & BLESS_WCO_STATUS_OUT_BLNK_A);
-    break;
-
-  case PSOC4_BLE_CLK_OSC_ECO:
-    info->freq = pv->eco_freq;
-    info->freq.denom <<= pv->eco_clk_div;
-    info->running = !!(cpu_mem_read_32(BLERD + BLERD_DBUS_ADDR)
-                       & BLERD_DBUS_XTAL_ENABLE);
-    break;
-
-  case PSOC4_BLE_CLK_SINK_LFCLK:
-    info->freq = pv->lfclk_freq;
-    returned |= DEV_CMU_INFO_SINK;
-    info->sink = &pv->sink[SINK_LFCLK];
+    empty = dev_request_queue_isempty(&pv->aes_q);
+    dev_request_queue_pushback(&pv->aes_q, &rq->rq);
+    if (empty)
+      psoc4_ble_aes_exec_first(dev);
     break;
 
   default:
-    return -EINVAL;
+  nosup:
+    rq->err = -ENOTSUP;
+    kroutine_exec(&rq->rq.kr);
+    break;
   }
-
-  *mask &= returned;
-
-  if (info->freq.denom > 1 && *mask & DEV_CMU_INFO_FREQ) {
-    uint64_t g = gcd64(info->freq.num, info->freq.denom);
-    info->freq.num /= g;
-    info->freq.denom /= g;
-  }
-
-  return 0;
 }
 
-static KROUTINE_EXEC(psoc4_ble_updater)
+static
+void blell_enc_intr(struct device_s *dev)
 {
-  struct psoc4_ble_private_s *pv = KROUTINE_CONTAINER(kr, *pv, updater);
+  struct psoc4_ble_private_s *pv = dev->drv_pv;
+  struct dev_crypto_rq_s *rq;
+  uint32_t tmp;
 
-  dprintk("%s eco %s, %s\n", __FUNCTION__,
-          pv->eco_required ? "required" : "not required",
-          pv->eco_running ? "running" : "idle");
+  dprintk("%s %d\n", __FUNCTION__, pv->aes_busy);
 
-  if (pv->eco_required && !pv->eco_running)
-    psoc4_ble_eco_start(pv, 0);
-  else if (!pv->eco_required && pv->eco_running)
-    psoc4_ble_eco_stop(pv);
+  if (!pv->aes_busy)
+    goto again;
+
+  pv->aes_busy = 0;
+
+  tmp = cpu_mem_read_16(BLELL(ENC_INTR));
+  tmp &= ~BLELL_ENC_INTR_IN_DATA_CLEAR;
+  cpu_mem_write_16(BLELL(ENC_INTR), tmp);
+
+  dprintk("%s intr = %x\n", __FUNCTION__, tmp);
+
+  rq = dev_crypto_rq_s_cast(dev_request_queue_pop(&pv->aes_q));
+  if (!rq)
+    goto again;
+
+  if (tmp & BLELL_ENC_INTR_ECB) {
+    switch ((int)rq->ctx->mode) {
+    case DEV_CRYPTO_MODE_ECB:
+      for (uint_fast8_t i = 0; i < 8; i++)
+        endian_le16_na_store((uint8_t *)rq->out + i * 2,
+                             cpu_mem_read_16(BLELLn(DATA, i)));
+      rq->err = 0;
+      kroutine_exec(&rq->rq.kr);
+      break;
+    }
+  }
+
+ again:
+  psoc4_ble_aes_exec_first(dev);
+}
+
+static
+void psoc4_blerd_init(struct psoc4_ble_private_s *pv)
+{
+  uint32_t tmp;
+  uint32_t bb_bump2, ldo;
+
+  dprintk("%s\n", __FUNCTION__);
+
+  cpu_mem_write_16(BLELL(COMMAND), BLELL_COMMAND_COMMAND_CLK_CORE_ON);
+
+  /* Disable Auto LPM. */
+  // TODO check whether it belongs here
+  CPU_INTERRUPT_SAVESTATE_DISABLE;
+  tmp = cpu_mem_read_32(BLESS(WCO_CONFIG));
+  tmp &= ~BLESS_WCO_CONFIG_LPM_EN;
+  tmp &= ~BLESS_WCO_CONFIG_LPM_AUTO;
+  cpu_mem_write_32(BLESS(WCO_CONFIG), tmp);
+  CPU_INTERRUPT_RESTORESTATE;
+
+  // IRQ control, nothing to do here
+  cpu_mem_write_32(BLESS(LL_DSM_CTRL), 0 // 0xe
+//                   | BLESS_LL_DSM_CTRL_DSM_ENTERED_INTR_EN
+//                   | BLESS_LL_DSM_CTRL_DSM_EXITED_INTR_EN
+//                   | BLESS_LL_DSM_CTRL_XTAL_ON_INTR_EN
+                   );
+
+  cpu_mem_write_32(BLERD(BB_XO_CAPTRIM), 0 // 0x6555
+                   | BLERD_BB_XO_CAPTRIM_X1(101) // 13.82pF
+                   | BLERD_BB_XO_CAPTRIM_X2(85) // 12.215pF
+                   );
+
+  // From CyComponentLibrary Boot code
+  bb_bump2 = cpu_mem_read_16(SFLASH(BLESS_BB_BUMP2));
+  ldo = cpu_mem_read_16(SFLASH(BLESS_LDO));
+
+  if ((ldo == 0x0b58 && bb_bump2 == 0x0007)
+      || (ldo == 0x0d40 && bb_bump2 == 0x0004)) {
+    ldo = 0x0d58;
+    bb_bump2 = 0x0004;
+  }
+
+  cpu_mem_write_32(BLERD(LDO), ldo);
+  cpu_mem_write_32(BLERD(BB_BUMP2), bb_bump2);
+
+  tmp = cpu_mem_read_16(SFLASH(BLESS_SY_BUMP1));
+  if (tmp == 0x0f0f || tmp == 0x0505 || tmp == 0x0005)
+    tmp = 0x0f05;
+  cpu_mem_write_32(BLERD(SY_BUMP1), tmp);
+
+
+  cpu_mem_write_32(BLERD(CFG1), 0
+                   | BLERD_CFG1_LNA_GAIN(VHG)
+                   | BLERD_CFG1_CBPF_GAIN(15DB)
+                   | BLERD_CFG1_ADC_DC_CAPTURE_EN
+                   | BLERD_CFG1_ADC_IQ_INVERSE
+                   );
+
+  cpu_mem_write_32(BLERD(CFG2), 0
+                   | BLERD_CFG2_DAC_REG_DATA(2)
+                   );
+
+  tmp = cpu_mem_read_32(BLERD(DBUS));
+  tmp |= BLERD_DBUS_ISOLATE_N;
+  cpu_mem_write_32(BLERD(DBUS), tmp);
+
+  // From test code sent by Cypress
+  // Magic constants from original code have been translated
+  // back to defines.
+  cpu_mem_write_32(BLERD(SY_BUMP2), 0 // 0x20
+                   | BLERD_SY_BUMP2_FCAL_BIAS_SEL(0)
+                   | BLERD_SY_BUMP2_ACAP_BIAS_SEL(630MV)
+                   | BLERD_SY_BUMP2_ICP_XFACTOR(2)
+                   | BLERD_SY_BUMP2_ICP_OFFSET(0)
+                   | BLERD_SY_BUMP2_CLKNC_MODE(ON_SYNC)
+                   | BLERD_SY_BUMP2_RST_DLY(500PS)
+                   | BLERD_SY_BUMP2_PDCP_OFFSET(38)
+                   );
+
+  cpu_mem_write_32(BLERD(ADC_BUMP2), 0 // 0x14
+                   | BLERD_ADC_BUMP2_DUTCYCLE(25)
+                   | BLERD_ADC_BUMP2_IBUMP
+                   | BLERD_ADC_BUMP2_RETURN_SKEW(0)
+                   | BLERD_ADC_BUMP2_PREAMP_BWCTRL(0)
+                   );
+  cpu_mem_write_32(BLERD(CTR1), 0 // 0x01C0
+                   | BLERD_CTR1_VCO_WARMUP_TIME(5US)
+                   | BLERD_CTR1_PLL_SETTLING_TIME(25US)
+                   | BLERD_CTR1_TX_FREEZE_TIME(30US)
+                   | BLERD_CTR1_TX_PREDRV_TIME(AFTER_KVCAL)
+                   | BLERD_CTR1_TX_MODSTART_US(3)
+                   | BLERD_CTR1_TX_DF2_SEL(242KHZ)
+                   | BLERD_CTR1_DBG_SELECT(DEMOD)
+                   | BLERD_CTR1_AGC_RST_DLY(0)
+                   );
+  cpu_mem_write_32(BLERD(THRSHD1), 0 // 0x3F2F
+                   | BLERD_THRSHD1_AGC60_66(47)
+                   | BLERD_THRSHD1_AGC66_60(63)
+                   );
+  cpu_mem_write_32(BLERD(THRSHD2), 0 // 0x012E
+                   | BLERD_THRSHD2_AGC48_60(46)
+                   | BLERD_THRSHD2_AGC60_48(1)
+                   );
+  cpu_mem_write_32(BLERD(THRSHD3), 0 // 0x3F30
+                   | BLERD_THRSHD3_AGC36_48(48)
+                   | BLERD_THRSHD3_AGC48_36(63)
+                   );
+  cpu_mem_write_32(BLERD(THRSHD4), 0 // 0x0231
+                   | BLERD_THRSHD4_AGC18_36(49)
+                   | BLERD_THRSHD4_AGC36_18(2)
+                   );
+  cpu_mem_write_32(BLERD(THRSHD5), 0 // 0x0332
+                   | BLERD_THRSHD5_AGC0_18(50)
+                   | BLERD_THRSHD5_AGC18_0(3)
+                   );
+  cpu_mem_write_32(BLERD(RCCAL), 0 // 0x5210
+                   | BLERD_RCCAL_CODE_TX(16)
+                   | BLERD_RCCAL_CODE_RX(16)
+                   | BLERD_RCCAL_SOFTRST_POWER_DIFF(6DB)
+                   | BLERD_RCCAL_SOFTRST_EN_TOSTR
+                   | BLERD_RCCAL_AGC_GAIN_INC_TIMES_THRES(2ND)
+                   );
+  cpu_mem_write_32(BLERD(MODEM), 0
+                   | BLERD_MODEM_NARROW_SPD(X1)
+                   | BLERD_MODEM_RST_CNT2_SEL(32BITS)
+                   | BLERD_MODEM_LOAD_PREV_GAIN_EN
+                   | BLERD_MODEM_READ_DC_OFFSET_SEL(DIGITAL)
+                   | BLERD_MODEM_ADCDFT_SEL(BEFORE)
+                   | BLERD_MODEM_ADC_FULL_SWING_DETECT_EN
+                   | BLERD_MODEM_DC_PARAM(430K)
+                   | BLERD_MODEM_RESET2_EN
+                   // 0x16EC
+                   | BLERD_MODEM_DC_SCALING_EN
+                   | BLERD_MODEM_WIDE_SPD(X14)
+                   // 0x12E4
+                   //| BLERD_MODEM_WIDE_SPD(X10)
+                   );
+  cpu_mem_write_32(BLERD(AGC), 0 // 0x12FA
+                   | BLERD_AGC_START_WAIT_US(0)
+                   | BLERD_AGC_SAT_CHK_TIM(3_12MHZ_CLOCK)
+                   | BLERD_AGC_GAIN_STABLE_TIM(18)
+                   | BLERD_AGC_PWR_MEAS_TIM(1US)
+                   | BLERD_AGC_GAIN_SAT_THRES(3)
+                   | BLERD_AGC_GAIN_MAPPING_MODE(REV_A)
+                   | BLERD_AGC_CHECK_SAT_EN(QUICK)
+                   );
+
+#if 1
+  // 89dBm RX sensitivity/0dBm output power
+  cpu_mem_write_32(BLERD(TX_BUMP1), 0 // 0xD031
+                   | BLERD_TX_BUMP1_SY_DIVN_TXPOWERSAVE(D1_D2_BUF)
+                   | BLERD_TX_BUMP1_TX_VTXREF(4) // 300mV
+                   | BLERD_TX_BUMP1_TX_LPF_REF(400MV)
+                   | BLERD_TX_BUMP1_TX_LPF_BIAS(10U)
+                   | BLERD_TX_BUMP1_SY_RST_DLY_TX(300PS)
+                   | BLERD_TX_BUMP1_TX_DRIVER(1)
+                   );
+  cpu_mem_write_32(BLERD(TX_BUMP2), 0 // 0xE33A
+                   | BLERD_TX_BUMP2_SY_CP_TXPOWERSAVE(BUFFER)
+                   | BLERD_TX_BUMP2_DAC_RES(8) // 0%
+                   | BLERD_TX_BUMP2_SY_ICP_OFFSET_TX(25PS)
+                   | BLERD_TX_BUMP2_DRV_VCASCH(0V)
+                   | BLERD_TX_BUMP2_DRV_AB_VBIAS(718)
+                   );
+  cpu_mem_write_32(BLERD(RX_BUMP1), 0 // 0xC800
+                   | BLERD_RX_BUMP1_LNA_CASCODE
+                   | BLERD_RX_BUMP1_LNA_PULL_DOWN
+                   | BLERD_RX_BUMP1_MIXER(0_2V)
+                   );
+
+  cpu_mem_write_32(BLELL(ADV_CH_TX_POWER), 0 // 0x0007
+                   | BLELL_ADV_CH_TX_POWER_POWER(0_DBM)
+                   );
+#else
+  // 92dBm RX sensitivity/3dBm TX power
+  cpu_mem_write_32(BLERD(TX_BUMP1), 0 // 0xD033
+                   | BLERD_TX_BUMP1_SY_DIVN_TXPOWERSAVE(D1_D2_BUF)
+                   | BLERD_TX_BUMP1_TX_VTXREF(4) // 300mV
+                   | BLERD_TX_BUMP1_TX_LPF_REF(400MV)
+                   | BLERD_TX_BUMP1_TX_LPF_BIAS(10U)
+                   | BLERD_TX_BUMP1_SY_RST_DLY_TX(300PS)
+                   | BLERD_TX_BUMP1_TX_DRIVER(3)
+                   );
+  cpu_mem_write_32(BLERD(TX_BUMP2), 0 // 0xE33F
+                   | BLERD_TX_BUMP2_SY_CP_TXPOWERSAVE(BUFFER)
+                   | BLERD_TX_BUMP2_DAC_RES(8) // 0%
+                   | BLERD_TX_BUMP2_SY_ICP_OFFSET_TX(25PS)
+                   | BLERD_TX_BUMP2_DRV_VCASCH(0V)
+                   | BLERD_TX_BUMP2_DRV_AB_VBIAS(769)
+                   );
+  cpu_mem_write_32(BLERD(RX_BUMP1), 0 // 0xE800
+                   | BLERD_RX_BUMP1_LNA_CASCODE
+                   | BLERD_RX_BUMP1_LNA_PULL_DOWN
+                   | BLERD_RX_BUMP1_LNA_BOOST
+                   | BLERD_RX_BUMP1_MIXER_SET(0_2V)
+                   );
+#endif
+
+  cpu_mem_write_32(BLERDn(AGC_GAIN_COMP, 0), 0 // 0x5699
+                   | BLERD_AGC_GAIN_COMP_GAIN(0, 25) // Gain5
+                   | BLERD_AGC_GAIN_COMP_GAIN(1, 20) // Gain4
+                   | BLERD_AGC_GAIN_COMP_GAIN(2, 21) // Gain3
+                   );
+  cpu_mem_write_32(BLERDn(AGC_GAIN_COMP, 1), 0 // 0x0FF8
+                   | BLERD_AGC_GAIN_COMP_GAIN(0, 24) // Gain2
+                   | BLERD_AGC_GAIN_COMP_GAIN(1, 31) // Gain1
+                   | BLERD_AGC_GAIN_COMP_GAIN(2, 3) // Gain0
+                   );
+  cpu_mem_write_32(BLERD(PA_RSSI), 0 // 0x0000
+                   );
+
+  cpu_mem_write_16(BLELL(RECEIVE_TRIG_CTRL), 0
+                   | BLELL_RECEIVE_TRIG_CTRL_ACC_TRIGGER_THRESHOLD(32)
+                   | BLELL_RECEIVE_TRIG_CTRL_ACC_TRIGGER_TIMEOUT(144)
+                   );
+
+  cpu_mem_write_16(BLELL(EVENT_ENABLE), 0
+                   | BLELL_EVENT_ENABLE_ADV
+                   | BLELL_EVENT_ENABLE_ENC
+                   );
+}
+
+static void blell_adv_intr(struct device_s *dev)
+{
+  struct psoc4_ble_private_s *pv = dev->drv_pv;
+  uint32_t tmp;
+  static const char *names[] = {
+    "New advertising event started",
+    "Current advertising event closed",
+    "ADV packet transmitted",
+    "Scan response packet transmitted",
+    "Scan request packet received",
+    "Connect request packet is received",
+    "Connection is created as slave",
+    "Directed advertising event timed out",
+    "Advertiser procedure is ON in hardware",
+  };
+
+  tmp = cpu_mem_read_16(BLELL(ADV_INTR));
+
+  dprintk("%s ADV_INTR: %03x, adv next instant: %08x\n", __FUNCTION__,
+         tmp,
+         cpu_mem_read_16(BLELL(ADV_NEXT_INSTANT)));
+
+  for (uint_fast8_t i = 0; i < ARRAY_SIZE(names); ++i)
+    if (bit_get(tmp, i))
+      dprintk(" - %s\n", names[i]);
+  cpu_mem_write_16(BLELL(ADV_INTR), tmp);
+
+  if ((tmp & BLELL_ADV_INTR_ADV_ON)
+      && (tmp & BLELL_ADV_INTR_EVENT_CLOSED)
+      && !pv->adv) {
+    cpu_mem_write_16(BLELL(COMMAND), BLELL_COMMAND_COMMAND_ADV_STOP);
+    cpu_mem_write_16(BLELL(COMMAND), BLELL_COMMAND_COMMAND_CLK_ADV_OFF);
+  }
+
+  if (!(tmp & BLELL_ADV_INTR_ADV_ON) && !pv->adv)
+    psoc4_ble_stop(dev, bit(START_BLE));
 }
 
 static DEV_IRQ_SRC_PROCESS(psoc4_bless_irq)
 {
   struct device_s *dev = ep->base.dev;
-  struct psoc4_ble_private_s *pv = dev->drv_pv;
   uint32_t tmp;
 
-  tmp = cpu_mem_read_32(BLESS + BLESS_LL_DSM_INTR_STAT_ADDR);
+  tmp = cpu_mem_read_32(BLESS(LL_DSM_INTR_STAT));
+  if (tmp & BLESS_LL_DSM_INTR_STAT_DSM_ENTERED_INTR)
+    dprintk("BLESS DSM entered\n");
+  if (tmp & BLESS_LL_DSM_INTR_STAT_DSM_EXITED_INTR)
+    dprintk("BLESS DSM exited\n");
+  if (tmp & BLESS_LL_DSM_INTR_STAT_XTAL_ON_INTR)
+    dprintk("BLESS DSM xtal on\n");
+  cpu_mem_write_32(BLESS(LL_DSM_INTR_STAT), tmp);
 
-  if (tmp & BLESS_LL_DSM_INTR_STAT_XTAL_ON_INTR) {
-    psoc4_ble_eco_irq_handle(pv, 0);
-  }
+  tmp = cpu_mem_read_16(BLELL(EVENT_INTR));
+  if (tmp & BLELL_EVENT_INTR_DSM)
+    dprintk("BLELL DSM exited\n");
+  if (tmp & BLELL_EVENT_INTR_SM)
+    dprintk("BLELL SM exited\n");
+  cpu_mem_write_16(BLELL(EVENT_INTR), tmp);
+
+  if (tmp & BLELL_EVENT_INTR_ADV)
+    blell_adv_intr(dev);
+
+  if (tmp & BLELL_EVENT_INTR_ENC)
+    blell_enc_intr(dev);
+
 }
 
-static DEV_CLOCK_SRC_SETUP(psoc4_ble_ep_setup)
+static DEV_TIMER_GET_VALUE(psoc4_ble_timer_get_value)
 {
-  struct device_s *dev = src->dev;
-  struct psoc4_ble_private_s *pv = dev->drv_pv;
-  uint_fast8_t src_id = src - pv->src;
-
-  if (src_id >= PSOC4_BLE_CLK_SRC_COUNT)
-    return -EINVAL;
-
-  switch (op)
-    {
-#ifdef CONFIG_DEVICE_CLOCK_VARFREQ
-    case DEV_CLOCK_SRC_SETUP_NOTIFY:
-      pv->notify_mask |= 1 << src_id;
-      return 0;
-
-    case DEV_CLOCK_SRC_SETUP_NONOTIFY:
-      pv->notify_mask &= ~(1 << src_id);
-      return 0;
-#endif
-
-    case DEV_CLOCK_SRC_SETUP_GATES:
-      dprintk("%s gates src %d; %x\n",
-             __FUNCTION__, src_id, param->flags);
-
-      switch (src_id) {
-      case PSOC4_BLE_CLK_SRC_ECO: {
-        if (param->flags & DEV_CLOCK_EP_ANY) {
-          pv->eco_required = 1;
-          return psoc4_ble_eco_start(pv, !!(param->flags & DEV_CLOCK_EP_GATING_SYNC));
-        } else {
-          pv->eco_required = 0;
-          kroutine_exec(&pv->updater);
-          dev_cmu_src_update_sync(src, param->flags);
-          return 0;
-        }
-      }
-
-      case PSOC4_BLE_CLK_SRC_WCO: {
-        uint32_t wco_config = cpu_mem_read_32(BLESS + BLESS_WCO_CONFIG_ADDR);
-        uint32_t wco_status = cpu_mem_read_32(BLESS + BLESS_WCO_STATUS_ADDR);
-
-        if ((param->flags & DEV_CLOCK_EP_ANY) && !(wco_status & BLESS_WCO_STATUS_OUT_BLNK_A)) {
-          wco_config |= BLESS_WCO_CONFIG_ENABLE;
-          cpu_mem_write_32(BLESS + BLESS_WCO_CONFIG_ADDR, wco_config);
-
-          if (param->flags & DEV_CLOCK_EP_GATING_SYNC) {
-            while (!(cpu_mem_read_32(BLESS + BLESS_WCO_STATUS_ADDR)
-                     & BLESS_WCO_STATUS_OUT_BLNK_A))
-              ;
-            dev_cmu_src_update_sync(src, param->flags);
-
-            return 0;
-          } else {
-            if (!(cpu_mem_read_32(BLESS + BLESS_WCO_STATUS_ADDR)
-                     & BLESS_WCO_STATUS_OUT_BLNK_A))
-              return -EAGAIN;
-          }
-        } else if (!(param->flags & DEV_CLOCK_EP_ANY) && (wco_config & BLESS_WCO_CONFIG_ENABLE)) {
-          wco_config &= ~BLESS_WCO_CONFIG_ENABLE;
-          cpu_mem_write_32(BLESS + BLESS_WCO_CONFIG_ADDR, wco_config);
-
-          device_sleep_schedule(dev);
-
-          dev_cmu_src_update_sync(src, param->flags);
-
-          return 0;
-        }
-        break;
-      }
-
-      default:
-        return -EINVAL;
-      }
-
-    case DEV_CLOCK_SRC_SETUP_LINK:
-      return 0;
-
-    case DEV_CLOCK_SRC_SETUP_UNLINK:
-      return 0;
-
-    default:
-      return -ENOTSUP;
-    }
+  return -ENOTSUP;
 }
 
-DRIVER_CMU_CONFIG_OPS_DECLARE(psoc4_ble);
+#define psoc4_ble_timer_config (dev_timer_config_t*)dev_driver_notsup_fcn
 
-static DEV_CMU_APP_CONFIGID_SET(psoc4_ble_app_configid_set)
+#define psoc4_ble_timer_request (dev_timer_request_t*)dev_driver_notsup_fcn
+#define psoc4_ble_timer_cancel (dev_timer_cancel_t*)dev_driver_notsup_fcn
+
+static void lfclk_source_update(struct psoc4_ble_private_s *pv)
 {
-  struct device_s *dev = accessor->dev;
-  error_t err;
+  uint16_t tmp;
 
-  LOCK_SPIN_IRQ(&dev->lock);
-  err = dev_cmu_configid_set(dev, &psoc4_ble_config_ops, config_id);
-  LOCK_RELEASE_IRQ(&dev->lock);
+  if (!pv->ll_powered)
+    return;
 
-  return err;
+  for (uint_fast8_t i = 0; i < 32; ++i)
+    asm volatile("");
+
+  dprintk("%s\n", __FUNCTION__);
+
+  cpu_mem_write_16(BLELL(TX_RX_ON_DELAY), 0 // 0x8990
+                   | BLELL_TX_RX_ON_DELAY_TXON_DELAY(0x89)
+                   | BLELL_TX_RX_ON_DELAY_RXON_DELAY(0x90)
+                   );
+  cpu_mem_write_16(BLELL(TX_RX_SYNTH_DELAY), 0 // 0x1840
+                   | BLELL_TX_RX_SYNTH_DELAY_RX_EN_DELAY(0x40)
+                   | BLELL_TX_RX_SYNTH_DELAY_TX_EN_DELAY(0x18)
+                   );
+  cpu_mem_write_16(BLELL(TX_EN_EXT_DELAY), 3);
+  cpu_mem_write_16(BLELL(DPLL_CONFIG), 0x0FFF);
+  cpu_mem_write_16(BLELL(RECEIVE_TRIG_CTRL), 0 // 0x9020
+                   | BLELL_RECEIVE_TRIG_CTRL_ACC_TRIGGER_THRESHOLD(0x20)
+                   | BLELL_RECEIVE_TRIG_CTRL_ACC_TRIGGER_TIMEOUT(0x90)
+                   );
+
+  cpu_mem_write_16(BLELL(WAKEUP_CONFIG), 0
+                   | BLELL_WAKEUP_CONFIG_OSC_STARTUP_SLOTS(1)
+                   | BLELL_WAKEUP_CONFIG_OSC_STARTUP_16KHZ(6)
+                   );
+
+  cpu_mem_write_16(BLELL(CLOCK_CONFIG), 0
+                   | BLELL_CLOCK_CONFIG_DEEP_SLEEP_MODE_EN
+                   | BLELL_CLOCK_CONFIG_SLEEP_MODE_EN
+                   | BLELL_CLOCK_CONFIG_SM_INTR_EN
+                   | BLELL_CLOCK_CONFIG_SM_AUTO_WKUP_EN
+                   | BLELL_CLOCK_CONFIG_LPO_SEL_EXTERNAL
+                   | BLELL_CLOCK_CONFIG_LPO_CLK_FREQ_SEL(32_768KHZ)
+                   | BLELL_CLOCK_CONFIG_SYSCLK_GATE_EN
+                   | BLELL_CLOCK_CONFIG_CORECLK_GATE_EN
+                   | BLELL_CLOCK_CONFIG_INIT_CLK_GATE_EN
+                   | BLELL_CLOCK_CONFIG_SCAN_CLK_GATE_EN
+                   | BLELL_CLOCK_CONFIG_ADV_CLK_GATE_EN
+                   );
+
+  cpu_mem_write_16(BLELL(OFFSET_TO_FIRST_INSTANT), 1);
+}
+
+static void llclk_source_update(struct psoc4_ble_private_s *pv, bool_t powered)
+{
+  pv->ll_powered = powered;
+
+  if (!powered)
+    return;
+
+  dprintk("%s\n", __FUNCTION__);
+
+  cpu_mem_write_32(BLESS(LL_CLK_EN), 0
+                   | BLESS_LL_CLK_EN_CLK_EN
+                   //| BLESS_LL_CLK_EN_CY_CORREL_EN
+                   );
+
+  for (uint_fast8_t i = 0; i < 32; ++i)
+    asm volatile("");
+
+  cpu_mem_write_32(BLELL(DPLL_CONFIG), 0x92e0);
+
+  cpu_mem_write_16(BLELL(TIM_CONTROL), 0
+                   | BLELL_TIM_CONTROL_BB_CLK_FREQ_MINUS_1(pv->bb_clk_mhz - 1)
+                   );
+
+//+0x402e1a10:	0x00020002
+//+0x402e1a14:	0x20642064
+//+0x402e1a18:	0x00100010
+
+}
+
+static void adv_start(struct device_s *dev)
+{
+  //  struct psoc4_ble_private_s *pv = dev->drv_pv;
+  uint32_t tmp;
+
+  dprintk("%s\n", __FUNCTION__);
+
+  if (!psoc4_ble_start(dev, bit(START_BLE)))
+    return;
+
+  tmp = cpu_mem_read_16(BLELL(ADV_INTR));
+
+  if (tmp & BLELL_ADV_INTR_ADV_ON)
+    return;
+
+  cpu_mem_write_16(BLELL(COMMAND), BLELL_COMMAND_COMMAND_CLK_ADV_ON);
+
+  // Put some easy to spot addresses
+  cpu_mem_write_16(BLELL(DEVICE_RAND_ADDR_L), 0x0505);
+  cpu_mem_write_16(BLELL(DEVICE_RAND_ADDR_M), 0x0505);
+  cpu_mem_write_16(BLELL(DEVICE_RAND_ADDR_H), 0x0505);
+  cpu_mem_write_16(BLELL(DEV_PUB_ADDR_L), 0x5050);
+  cpu_mem_write_16(BLELL(DEV_PUB_ADDR_M), 0x5050);
+  cpu_mem_write_16(BLELL(DEV_PUB_ADDR_H), 0x5050);
+
+  cpu_mem_write_16(BLELL(ADV_PARAMS), 0
+                   | BLELL_ADV_PARAMS_TX_ADDR(PUBLIC)
+                   | BLELL_ADV_PARAMS_ADV_TYPE(CONN)
+                   | BLELL_ADV_PARAMS_ADV_CHANNEL_37
+                   | BLELL_ADV_PARAMS_ADV_CHANNEL_38
+                   | BLELL_ADV_PARAMS_ADV_CHANNEL_39
+                   );
+
+  cpu_mem_write_16(BLELL(ADV_CONFIG), 0
+                   | BLELL_ADV_CONFIG_ADV_PKT_INTERVAL(4)
+                   | BLELL_ADV_CONFIG_ADV_STRT_EN
+                   | BLELL_ADV_CONFIG_ADV_CLS_EN
+                   | BLELL_ADV_CONFIG_ADV_TX_EN
+                   | BLELL_ADV_CONFIG_SCN_RSP_TX_EN
+                   | BLELL_ADV_CONFIG_ADV_SCN_REQ_RX_EN
+                   | BLELL_ADV_CONFIG_ADV_TIMEOUT_EN
+                   );
+
+  cpu_mem_write_16(BLELL(ADV_INTERVAL_TIMEOUT), 32);
+
+  // Flush fifo
+  for (uint_fast8_t i = 0; i < 16; ++i)
+    cpu_mem_read_16(BLELL(ADV_TX_DATA_FIFO));
+
+  char ad[] = {0x07, // 7 total AD bytes
+               0x06, 0x09, // Complete name, 5 bytes AD payload
+               'h', 'e', 'l', 'l', 'o'
+  };
+  for (uint_fast8_t i = 0; i < sizeof(ad); i += 2)
+    cpu_mem_write_16(BLELL(ADV_TX_DATA_FIFO), endian_le16_na_load(ad + i));
+
+  cpu_mem_write_16(BLELL(COMMAND), BLELL_COMMAND_COMMAND_ADV_START);
 }
 
 static DEV_USE(psoc4_ble_use)
@@ -374,10 +705,13 @@ static DEV_USE(psoc4_ble_use)
     struct device_s *dev = param;
     struct psoc4_ble_private_s *pv = dev->drv_pv;
 
-    dprintk("%s DEV_USE_SLEEP\n", __FUNCTION__);
+    dprintk("%s DEV_USE_SLEEP %x\n", __FUNCTION__, dev->start_count);
 
-    if (!psoc4_ble_power_is_needed(pv))
-      psoc4_ble_power_disable(pv);
+    if (!dev->start_count)
+      dev_clock_sink_gate(&pv->sink[PSOC4_BLE_CLK_SINK_LFCLK], 0);
+  
+    if (!(dev->start_count & bit(START_BLE)))
+      dev_clock_sink_gate(&pv->sink[PSOC4_BLE_CLK_SINK_LL], 0);
 
     return 0;
   }
@@ -388,13 +722,21 @@ static DEV_USE(psoc4_ble_use)
     struct dev_clock_sink_ep_s *sink = notify->sink;
     struct device_s *dev = sink->dev;
     struct psoc4_ble_private_s *pv = dev->drv_pv;
+    uint_fast8_t id = sink - pv->sink;
 
-    assert(sink == &pv->sink[SINK_LFCLK]);
+    switch (id) {
+    case PSOC4_BLE_CLK_SINK_LFCLK: {
+      dprintk("%s LFCLK freq changed %d/%d\n", __FUNCTION__,
+              (uint32_t)notify->freq.num, (uint32_t)notify->freq.denom);
+      pv->sleep_freq = notify->freq;
+      lfclk_source_update(pv);
+      break;
+    }
 
-    dprintk("%s LFCLK notify %d/%d\n", __FUNCTION__,
-           (uint32_t)notify->freq.num, (uint32_t)notify->freq.denom);
-
-    pv->lfclk_freq = notify->freq;
+    case PSOC4_BLE_CLK_SINK_LL:
+      dprintk("%s LLCLK changed freq ???\n", __FUNCTION__);
+      break;
+    }
 
     return 0;
   }
@@ -403,11 +745,56 @@ static DEV_USE(psoc4_ble_use)
     struct dev_clock_sink_ep_s *sink = param;
     struct device_s *dev = sink->dev;
     struct psoc4_ble_private_s *pv = dev->drv_pv;
+    uint_fast8_t id = sink - pv->sink;
 
-    dprintk("%s CLOCK gated %d\n", __FUNCTION__, sink - pv->sink);
+    switch (id) {
+    case PSOC4_BLE_CLK_SINK_LFCLK:
+      dprintk("%s LFCLK gated\n", __FUNCTION__);
+      break;
 
-    kroutine_exec(&pv->updater);
+    case PSOC4_BLE_CLK_SINK_LL: {
+      bool_t was_powered = pv->ll_powered;
+      bool_t powered = (sink->src->flags & DEV_CLOCK_EP_ANY) == DEV_CLOCK_EP_ANY;
 
+      llclk_source_update(pv, powered);
+      lfclk_source_update(pv);
+
+      if (powered && !was_powered) {
+        psoc4_blerd_init(pv);
+      }
+
+      break;
+    }
+
+    default:
+      break;
+    }
+
+    if (pv->adv)
+      adv_start(dev);
+
+    if (bit_get(dev->start_count, START_AES))
+      psoc4_ble_aes_exec_first(dev);
+
+    return 0;
+  }
+
+  case DEV_USE_START: {
+    struct device_accessor_s *accessor = param;
+    struct device_s *dev = accessor->dev;
+    struct psoc4_ble_private_s *pv = dev->drv_pv;
+
+    pv->adv = 1;
+    adv_start(dev);
+    return 0;
+  }
+
+  case DEV_USE_STOP: {
+    struct device_accessor_s *accessor = param;
+    struct device_s *dev = accessor->dev;
+    struct psoc4_ble_private_s *pv = dev->drv_pv;
+
+    pv->adv = 0;
     return 0;
   }
 
@@ -420,50 +807,54 @@ static DEV_INIT(psoc4_ble_init)
 {
   struct psoc4_ble_private_s *pv = dev->drv_pv;
   error_t err;
+  struct dev_freq_s ll_freq;
 
-  if (!pv) {
-    pv = mem_alloc(sizeof (*pv), (mem_scope_sys));
-    if (!pv)
-      return -ENOMEM;
+  pv = mem_alloc(sizeof (*pv), (mem_scope_sys));
+  if (!pv)
+    return -ENOMEM;
 
-    memset(pv, 0, sizeof (*pv));
-    dev->drv_pv = pv;
+  memset(pv, 0, sizeof (*pv));
+  dev->drv_pv = pv;
 
-    kroutine_init_deferred(&pv->updater, &psoc4_ble_updater);
+  err = dev_drv_clock_init(dev, &pv->sink[PSOC4_BLE_CLK_SINK_LFCLK],
+                           PSOC4_BLE_CLK_SINK_LFCLK,
+                           DEV_CLOCK_EP_FREQ_NOTIFY, &pv->sleep_freq);
+  if (err) {
+    dprintk("%s: LFCLK error %d\n", __FUNCTION__, err);
+    return err;
   }
 
-  if (!(dev->init_mask & (1 << 0))) {
-    psoc4_ble_config_read(dev);
-
-    err = dev_cmu_init(dev, &psoc4_ble_config_ops);
-    if (err) {
-      if (err != -EAGAIN)
-        goto err_mem;
-
-      return err;
-    }
-
-    for (uint_fast8_t i = 0; i < PSOC4_BLE_CLK_SRC_COUNT; ++i)
-      dev_clock_source_init(dev, &pv->src[i], &psoc4_ble_ep_setup);
-
-    device_init_enable_api(dev, 0);
+  err = dev_drv_clock_init(dev, &pv->sink[PSOC4_BLE_CLK_SINK_LL],
+                           PSOC4_BLE_CLK_SINK_LL,
+                           DEV_CLOCK_EP_FREQ_NOTIFY, &ll_freq);
+  if (err) {
+    dprintk("%s: LLCLK error %d\n", __FUNCTION__, err);
+    return err;
   }
 
-  if (cl_missing & (1 << DRIVER_CLASS_CMU))
-    return -EAGAIN;
+  uint32_t mhz = ll_freq.num;
+  if (ll_freq.denom != 1)
+    mhz /= ll_freq.denom;
+  mhz /= 1000000;
 
-  if (!pv->sink[SINK_LFCLK].src) {
-    err = dev_drv_clock_init(dev, &pv->sink[SINK_LFCLK], PSOC4_BLE_CLK_SINK_LFCLK,
-                             DEV_CLOCK_EP_VARFREQ | DEV_CLOCK_EP_FREQ_NOTIFY, &pv->lfclk_freq);
-    if (err) {
-      dprintk("%s: LFCLK not ready yet\n", __FUNCTION__);
-      return -EAGAIN;
-    }
+  dprintk("%s LLCLK freq: %d MHz\n", __FUNCTION__, mhz);
+  struct dev_freq_ratio_s scale = {.num = 1, .denom = 1,};
+  while (!(mhz & 1) && scale.denom < 4) {
+    mhz >>= 1;
+    scale.denom <<= 1;
   }
 
-  device_irq_source_init(dev, &pv->irq_ep, 1, &psoc4_bless_irq);
+  printk("%s LLCLK / %d, Freq = %d MHz\n", __FUNCTION__, scale.denom, mhz);
+
+  dev_clock_sink_scaler_set(&pv->sink[PSOC4_BLE_CLK_SINK_LL], &scale);
+  pv->bb_clk_mhz = mhz;
+
+  device_irq_source_init(dev, &pv->irq_ep, 1, psoc4_bless_irq);
   if (device_irq_source_link(dev, &pv->irq_ep, 1, -1))
     goto err_mem;
+
+  dev_request_queue_init(&pv->aes_q);
+  cpu_mem_write_32(BLESS(LL_DSM_CTRL), 0);
 
   return 0;
 
@@ -484,8 +875,9 @@ static DEV_CLEANUP(psoc4_ble_cleanup)
   return 0;
 }
 
-DRIVER_DECLARE(psoc4_ble_drv, DRIVER_FLAGS_NO_DEPEND | DRIVER_FLAGS_RETRY_INIT,
+DRIVER_DECLARE(psoc4_ble_drv, 0,
                "PSoC4 BLE", psoc4_ble,
-               DRIVER_CMU_METHODS(psoc4_ble));
+               DRIVER_CRYPTO_METHODS(psoc4_ble_aes),
+               DRIVER_TIMER_METHODS(psoc4_ble_timer));
 
 DRIVER_REGISTER(psoc4_ble_drv);

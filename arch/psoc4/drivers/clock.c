@@ -100,7 +100,6 @@ struct psoc4_clock_private_s
 #if defined(CONFIG_DRIVER_PSOC4_CLOCK_BLE)
   struct dev_freq_s eco_freq;
   struct dev_freq_s wco_freq;
-  struct dev_irq_src_s irq_ep;
 #endif
   deps_t node_cur_mask;
   deps_t node_notify_mask;
@@ -378,26 +377,27 @@ static KROUTINE_EXEC(reqs_changed)
     started_mask |= bit(PSOC4_BLE_LL_POWER);
   }
 
-  if (bit_get(to_start_mask, PSOC4_CLOCK_OSC_ECO)
-      && bit_get(node_cur_mask, PSOC4_BLE_LL_POWER)
-      && !(cpu_mem_read_32(BLERD + BLERD_DBUS_ADDR) & BLERD_DBUS_XTAL_ENABLE)) {
-    dprintk("%s ECO enable\n", __FUNCTION__);
+  if (bit_get(to_start_mask, PSOC4_CLOCK_OSC_ECO) && bit_get(node_cur_mask, PSOC4_BLE_LL_POWER)) {
+    if (!(cpu_mem_read_32(BLERD + BLERD_DBUS_ADDR) & BLERD_DBUS_XTAL_ENABLE)) {
+      dprintk("%s ECO enable\n", __FUNCTION__);
 
-    // Clear IRQ
-    cpu_mem_write_32(BLESS + BLESS_LL_DSM_INTR_STAT_ADDR,
-                     BLESS_LL_DSM_INTR_STAT_XTAL_ON_INTR);
+      // Enable Put calibration values back in regs
+      cpu_mem_write_32(BLERD + BLERD_BB_XO_ADDR,
+                       0x2002
+//                       cpu_mem_read_16(SFLASH + SFLASH_BLESS_BB_XO_ADDR)
+                       );
 
-    // Enable IRQ
-    tmp = cpu_mem_read_32(BLESS + BLESS_LL_DSM_CTRL_ADDR);
-    tmp |= BLESS_LL_DSM_CTRL_XTAL_ON_INTR_EN;
-    cpu_mem_write_32(BLESS + BLESS_LL_DSM_CTRL_ADDR, tmp);
+      // Enable xtal
+      tmp = cpu_mem_read_32(BLERD + BLERD_DBUS_ADDR);
+      tmp |= BLERD_DBUS_XTAL_ENABLE;
+      cpu_mem_write_32(BLERD + BLERD_DBUS_ADDR, tmp);
+    } else if (cpu_mem_read_32(BLERD + BLERD_FSM_ADDR) & BLERD_FSM_XO_AMP_DETECT) {
+      dprintk("%s ECO enabled\n", __FUNCTION__);
 
-    // Enable xtal
-    tmp = cpu_mem_read_32(BLERD + BLERD_DBUS_ADDR);
-    tmp |= BLERD_DBUS_XTAL_ENABLE;
-    cpu_mem_write_32(BLERD + BLERD_DBUS_ADDR, tmp);
-
-    // Update running mask on incoming IRQ
+      started_mask |= bit(PSOC4_CLOCK_OSC_ECO);
+    } else {
+      dprintk("%s ECO not ready yet\n", __FUNCTION__);
+    }
   }
 
   if (bit_get(to_start_mask, PSOC4_CLOCK_OSC_WCO)) {
@@ -480,11 +480,8 @@ static KROUTINE_EXEC(reqs_changed)
     }
   }
 
-  if (bit_get(to_start_mask, PSOC4_CLOCK_SRC_BLELL)
-      && bit_get(node_cur_mask, PSOC4_CLOCK_OSC_ECO)) {
-    dprintk("%s LLCLK started\n", __FUNCTION__);
-    started_mask |= bit(PSOC4_CLOCK_SRC_BLELL);
-  }
+  if (bit_get(node_cur_mask, PSOC4_CLOCK_OSC_ECO))
+    started_mask |= bit(PSOC4_CLOCK_SRC_BLELL) & ~node_cur_mask;
 #endif
 
   // Disables
@@ -632,10 +629,11 @@ static KROUTINE_EXEC(reqs_changed)
        & (bit(PSOC4_CLOCK_OSC_ILO)
 #if defined(CONFIG_DRIVER_PSOC4_CLOCK_BLE)
           | bit(PSOC4_CLOCK_OSC_WCO)
+          | bit(PSOC4_CLOCK_OSC_ECO)
           | bit(PSOC4_BLE_LL_POWER)
 #endif
           | bit(PSOC4_CLOCK_OSC_IMO)))
-      || (to_stop_mask & ~stopped_mask)
+      || (to_stop_mask & ~stopped_mask & ~bit(PSOC4_CLOCK_SRC_BLELL))
       || (freq_notify))
     kroutine_exec(&pv->reqs_changed);
 
@@ -662,24 +660,6 @@ static KROUTINE_EXEC(reqs_changed)
         | (bit_get(node_cur_mask, PSOC4_BLE_LL_POWER) ? DEV_CLOCK_EP_POWER : 0));
 #endif
 }
-
-#if defined(CONFIG_DRIVER_PSOC4_CLOCK_BLE)
-static DEV_IRQ_SRC_PROCESS(psoc4_bless_irq)
-{
-  struct device_s *dev = ep->base.dev;
-  struct psoc4_clock_private_s *pv = dev->drv_pv;
-  uint32_t tmp;
-
-  tmp = cpu_mem_read_32(BLESS + BLESS_LL_DSM_INTR_STAT_ADDR);
-
-  if (tmp & BLESS_LL_DSM_INTR_STAT_XTAL_ON_INTR) {
-    cpu_mem_write_32(BLESS + BLESS_LL_DSM_INTR_STAT_ADDR,
-                     BLESS_LL_DSM_INTR_STAT_XTAL_ON_INTR);
-    pv->node_cur_mask |= bit(PSOC4_CLOCK_OSC_ECO);
-    kroutine_exec(&pv->reqs_changed);
-  }
-}
-#endif
 
 static DEV_CMU_CONFIG_OSC(psoc4_clock_config_osc)
 {
@@ -1012,12 +992,11 @@ static DEV_INIT(psoc4_clock_init)
 #if defined(CONFIG_DRIVER_PSOC4_CLOCK_BLE)
   pv->hfclk_sel_next = pv->hfclk_sel = SRSS_CLK_SELECT_DIRECT_SEL_IMO;
   pv->lfclk_sel_next = pv->lfclk_sel = SRSS_WDT_CONFIG_LFCLK_SEL_ILO;
-#endif
 
-#if defined(CONFIG_DRIVER_PSOC4_CLOCK_BLE)
-  device_irq_source_init(dev, &pv->irq_ep, 1, &psoc4_bless_irq);
-  if (device_irq_source_link(dev, &pv->irq_ep, 1, -1))
-    goto err_mem;
+  cpu_mem_write_32(BLESS + BLESS_WCO_TRIM_ADDR, 0
+                   | BLESS_WCO_TRIM_XGM(2250_NA)
+                   | BLESS_WCO_TRIM_LPM_GM(2)
+                   );
 #endif
 
   err = dev_cmu_init(dev, &psoc4_clock_config_ops);
@@ -1036,10 +1015,6 @@ static DEV_INIT(psoc4_clock_init)
 static DEV_CLEANUP(psoc4_clock_cleanup)
 {
   struct psoc4_clock_private_s *pv = dev->drv_pv;
-
-#if defined(CONFIG_DRIVER_PSOC4_CLOCK_BLE)
-  device_irq_source_unlink(dev, &pv->irq_ep, 1);
-#endif
 
   mem_free(pv);
 

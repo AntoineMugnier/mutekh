@@ -108,26 +108,26 @@
   #define BLERD_MODEM_NARROW_SPD_SETVAL(x, v)      do { (x) = (((x) & ~0x3) | ((v) << 0)); } while(0)
   #define BLERD_MODEM_NARROW_SPD_GET(x)            (((x) >> 0) & 0x3)
 /** dc value times 1 */
-    #define BLERD_MODEM_NARROW_SPD_TIMES_1           0x00000000
+    #define BLERD_MODEM_NARROW_SPD_X1                0x00000000
 /** dc value times 2 */
-    #define BLERD_MODEM_NARROW_SPD_TIMES_2           0x00000001
+    #define BLERD_MODEM_NARROW_SPD_X2                0x00000001
 /** dc value times 3 */
-    #define BLERD_MODEM_NARROW_SPD_TIMES_3           0x00000002
+    #define BLERD_MODEM_NARROW_SPD_X3                0x00000002
 /** dc value times 4 */
-    #define BLERD_MODEM_NARROW_SPD_TIMES_4           0x00000003
+    #define BLERD_MODEM_NARROW_SPD_X4                0x00000003
 /** Demodulation alpha value for DC offset tracking in wide speed @multiple */
   #define BLERD_MODEM_WIDE_SPD(v)                  ((BLERD_MODEM_WIDE_SPD_##v) << 2)
   #define BLERD_MODEM_WIDE_SPD_SET(x, v)           do { (x) = (((x) & ~0xc) | ((BLERD_MODEM_WIDE_SPD_##v) << 2)); } while(0)
   #define BLERD_MODEM_WIDE_SPD_SETVAL(x, v)        do { (x) = (((x) & ~0xc) | ((v) << 2)); } while(0)
   #define BLERD_MODEM_WIDE_SPD_GET(x)              (((x) >> 2) & 0x3)
 /** dc value times 8 */
-    #define BLERD_MODEM_WIDE_SPD_TIMES_8             0x00000000
+    #define BLERD_MODEM_WIDE_SPD_X8                  0x00000000
 /** dc value times 10 */
-    #define BLERD_MODEM_WIDE_SPD_TIMES_10            0x00000001
+    #define BLERD_MODEM_WIDE_SPD_X10                 0x00000001
 /** dc value times 12 */
-    #define BLERD_MODEM_WIDE_SPD_TIMES_12            0x00000002
+    #define BLERD_MODEM_WIDE_SPD_X12                 0x00000002
 /** dc value times 14 */
-    #define BLERD_MODEM_WIDE_SPD_TIMES_14            0x00000003
+    #define BLERD_MODEM_WIDE_SPD_X14                 0x00000003
 /** Soft reset condition selection @multiple */
   #define BLERD_MODEM_RST_CNT2_SEL(v)              ((BLERD_MODEM_RST_CNT2_SEL_##v) << 4)
   #define BLERD_MODEM_RST_CNT2_SEL_SET(x, v)       do { (x) = (((x) & ~0x10) | ((BLERD_MODEM_RST_CNT2_SEL_##v) << 4)); } while(0)
@@ -166,9 +166,9 @@
   #define BLERD_MODEM_READ_DC_OFFSET_SEL_SETVAL(x, v) do { (x) = (((x) & ~0x2000) | ((v) << 13)); } while(0)
   #define BLERD_MODEM_READ_DC_OFFSET_SEL_GET(x)    (((x) >> 13) & 0x1)
 /** read back of DC capture in digital */
-    #define BLERD_MODEM_READ_DC_OFFSET_SEL_DC_CAPTURE_IN_DIGITAL 0x00000000
+    #define BLERD_MODEM_READ_DC_OFFSET_SEL_DIGITAL   0x00000000
 /** read back of analog DC CAL result. */
-    #define BLERD_MODEM_READ_DC_OFFSET_SEL_ANALOG_DC_CAL_RESULT 0x00000001
+    #define BLERD_MODEM_READ_DC_OFFSET_SEL_ANALOG    0x00000001
 /** Whether ADC DFT captures data before or after image filter @multiple */
   #define BLERD_MODEM_ADCDFT_SEL(v)                ((BLERD_MODEM_ADCDFT_SEL_##v) << 14)
   #define BLERD_MODEM_ADCDFT_SEL_SET(x, v)         do { (x) = (((x) & ~0x4000) | ((BLERD_MODEM_ADCDFT_SEL_##v) << 14)); } while(0)
@@ -1298,34 +1298,18 @@
 
 #define BLERD_BB_XO_CAPTRIM_ADDR                     0x0000007c
 #define BLERD_BB_XO_CAPTRIM_MASK                     0x0000ffff
-  #define BLERD_BB_XO_CAPTRIM_X2_FINE(v)           ((BLERD_BB_XO_CAPTRIM_X2_FINE_##v) << 0)
-  #define BLERD_BB_XO_CAPTRIM_X2_FINE_SET(x, v)    do { (x) = (((x) & ~0x7f) | ((BLERD_BB_XO_CAPTRIM_X2_FINE_##v) << 0)); } while(0)
-  #define BLERD_BB_XO_CAPTRIM_X2_FINE_SETVAL(x, v) do { (x) = (((x) & ~0x7f) | ((v) << 0)); } while(0)
-  #define BLERD_BB_XO_CAPTRIM_X2_FINE_GET(x)       (((x) >> 0) & 0x7f)
-    #define BLERD_BB_XO_CAPTRIM_X2_FINE_3_6900PF     0x00000000
-    #define BLERD_BB_XO_CAPTRIM_X2_FINE_3_7911PF     0x00000001
-    #define BLERD_BB_XO_CAPTRIM_X2_FINE_3_8922PF     0x00000002
-    #define BLERD_BB_XO_CAPTRIM_X2_FINE_16_4280PF    0x0000007f
-  #define BLERD_BB_XO_CAPTRIM_X2_COARSE(v)         ((BLERD_BB_XO_CAPTRIM_X2_COARSE_##v) << 7)
-  #define BLERD_BB_XO_CAPTRIM_X2_COARSE_SET(x, v)  do { (x) = (((x) & ~0x80) | ((BLERD_BB_XO_CAPTRIM_X2_COARSE_##v) << 7)); } while(0)
-  #define BLERD_BB_XO_CAPTRIM_X2_COARSE_SETVAL(x, v) do { (x) = (((x) & ~0x80) | ((v) << 7)); } while(0)
-  #define BLERD_BB_XO_CAPTRIM_X2_COARSE_GET(x)     (((x) >> 7) & 0x1)
-/** Add 8.1 pF */
-    #define BLERD_BB_XO_CAPTRIM_X2_COARSE_8_1PF      0x00000001
-  #define BLERD_BB_XO_CAPTRIM_X1_FINE(v)           ((BLERD_BB_XO_CAPTRIM_X1_FINE_##v) << 8)
-  #define BLERD_BB_XO_CAPTRIM_X1_FINE_SET(x, v)    do { (x) = (((x) & ~0x7f00) | ((BLERD_BB_XO_CAPTRIM_X1_FINE_##v) << 8)); } while(0)
-  #define BLERD_BB_XO_CAPTRIM_X1_FINE_SETVAL(x, v) do { (x) = (((x) & ~0x7f00) | ((v) << 8)); } while(0)
-  #define BLERD_BB_XO_CAPTRIM_X1_FINE_GET(x)       (((x) >> 8) & 0x7f)
-    #define BLERD_BB_XO_CAPTRIM_X1_FINE_3_6900PF     0x00000000
-    #define BLERD_BB_XO_CAPTRIM_X1_FINE_3_7911PF     0x00000001
-    #define BLERD_BB_XO_CAPTRIM_X1_FINE_3_8922PF     0x00000002
-    #define BLERD_BB_XO_CAPTRIM_X1_FINE_16_4280PF    0x0000007f
-  #define BLERD_BB_XO_CAPTRIM_X1_COARSE(v)         ((BLERD_BB_XO_CAPTRIM_X1_COARSE_##v) << 15)
-  #define BLERD_BB_XO_CAPTRIM_X1_COARSE_SET(x, v)  do { (x) = (((x) & ~0x8000) | ((BLERD_BB_XO_CAPTRIM_X1_COARSE_##v) << 15)); } while(0)
-  #define BLERD_BB_XO_CAPTRIM_X1_COARSE_SETVAL(x, v) do { (x) = (((x) & ~0x8000) | ((v) << 15)); } while(0)
-  #define BLERD_BB_XO_CAPTRIM_X1_COARSE_GET(x)     (((x) >> 15) & 0x1)
-/** Add 8.1 pF */
-    #define BLERD_BB_XO_CAPTRIM_X1_COARSE_8_1PF      0x00000001
+/** Base X2 capacitance in 0.1003pF steps in [3.69-16.428] range @multiple */
+  #define BLERD_BB_XO_CAPTRIM_X2(v)                ((v) << 0)
+  #define BLERD_BB_XO_CAPTRIM_X2_SET(x, v)         do { (x) = (((x) & ~0x7f) | ((v) << 0)); } while(0)
+  #define BLERD_BB_XO_CAPTRIM_X2_GET(x)            (((x) >> 0) & 0x7f)
+/** Add 8.1 pF @multiple */
+  #define BLERD_BB_XO_CAPTRIM_X2_PLUS_8_1PF        0x0080
+/** Base X1 capacitance in 0.1003pF steps in [3.69-16.428] range @multiple */
+  #define BLERD_BB_XO_CAPTRIM_X1(v)                ((v) << 8)
+  #define BLERD_BB_XO_CAPTRIM_X1_SET(x, v)         do { (x) = (((x) & ~0x7f00) | ((v) << 8)); } while(0)
+  #define BLERD_BB_XO_CAPTRIM_X1_GET(x)            (((x) >> 8) & 0x7f)
+/** Add 8.1 pF @multiple */
+  #define BLERD_BB_XO_CAPTRIM_X1_PLUS_8_1PF        0x8000
 
 #define BLERD_SY_BUMP1_ADDR                          0x00000080
 #define BLERD_SY_BUMP1_MASK                          0x0000ffff
@@ -1395,9 +1379,9 @@
   #define BLERD_SY_BUMP2_CLKNC_MODE_SETVAL(x, v)   do { (x) = (((x) & ~0x100) | ((v) << 8)); } while(0)
   #define BLERD_SY_BUMP2_CLKNC_MODE_GET(x)         (((x) >> 8) & 0x1)
 /** The NC clock is given from DIVN once openloop is made low. */
-    #define BLERD_SY_BUMP2_CLKNC_MODE_THE_NC_CLOCK_IS_GIVEN_FROM_DIVN_ONCE_OPENLOOP_IS_MADE_LOW 0x00000000
+    #define BLERD_SY_BUMP2_CLKNC_MODE_ON_SYNC        0x00000000
 /** The NC clock is always connected to Crystal clock */
-    #define BLERD_SY_BUMP2_CLKNC_MODE_THE_NC_CLOCK_IS_ALWAYS_CONNECTED_TO_CRYSTAL_CLOCK 0x00000001
+    #define BLERD_SY_BUMP2_CLKNC_MODE_DIRECT         0x00000001
 /** 1:Test mode to monitor buffered 1x output on the injmon buffer @multiple */
   #define BLERD_SY_BUMP2_PUP_MON                   0x0200
 /** 1: Test mode to pull down for noise simulation @multiple */
@@ -1433,9 +1417,7 @@
 
 #define BLERD_TX_BUMP1_ADDR                          0x00000088
 #define BLERD_TX_BUMP1_MASK                          0x0000ffff
-/** Driver bias current selection bump bit tx_bump1_tx_driver[3] Driver bias
-   current tx_bump1_tx_driver[0] PTAT current selection Additional Class AB
-   driver bias voltage bump related to Tx_bump2_drv_ab_vbias[3:0] @multiple */
+/** Driver bias current selection bump bit @multiple */
   #define BLERD_TX_BUMP1_TX_DRIVER(v)              ((v) << 0)
   #define BLERD_TX_BUMP1_TX_DRIVER_SET(x, v)       do { (x) = (((x) & ~0xf) | ((v) << 0)); } while(0)
   #define BLERD_TX_BUMP1_TX_DRIVER_GET(x)          (((x) >> 0) & 0xf)
@@ -1478,39 +1460,24 @@
     #define BLERD_TX_BUMP1_TX_LPF_REF_300MV          0x00000002
 /** Bumps the opamp ref voltage to 350mV */
     #define BLERD_TX_BUMP1_TX_LPF_REF_350MV          0x00000003
-/** TX Modulation port varactor vtxref bias voltage bump settings @multiple */
-  #define BLERD_TX_BUMP1_TX_VTXREF_PROG(v)         ((BLERD_TX_BUMP1_TX_VTXREF_PROG_##v) << 10)
-  #define BLERD_TX_BUMP1_TX_VTXREF_PROG_SET(x, v)  do { (x) = (((x) & ~0x3c00) | ((BLERD_TX_BUMP1_TX_VTXREF_PROG_##v) << 10)); } while(0)
-  #define BLERD_TX_BUMP1_TX_VTXREF_PROG_SETVAL(x, v) do { (x) = (((x) & ~0x3c00) | ((v) << 10)); } while(0)
-  #define BLERD_TX_BUMP1_TX_VTXREF_PROG_GET(x)     (((x) >> 10) & 0xf)
-/** Sets  vtxref value to 100mV */
-    #define BLERD_TX_BUMP1_TX_VTXREF_PROG_100MV      0x00000000
-/** Sets  vtxref value to 150mV */
-    #define BLERD_TX_BUMP1_TX_VTXREF_PROG_150MV      0x00000001
-/** Sets  vtxref value to 200mV */
-    #define BLERD_TX_BUMP1_TX_VTXREF_PROG_200MV      0x00000002
-/** Sets  vtxref value to 250mV */
-    #define BLERD_TX_BUMP1_TX_VTXREF_PROG_250MV      0x00000003
-/** Sets  vtxref value to 300mV */
-    #define BLERD_TX_BUMP1_TX_VTXREF_PROG_300MV      0x00000004
-/** Sets  vtxref value to 350mV */
-    #define BLERD_TX_BUMP1_TX_VTXREF_PROG_350MV      0x00000005
-/** Sets  vtxref value to 400mV */
-    #define BLERD_TX_BUMP1_TX_VTXREF_PROG_400MV      0x00000006
-/** Sets  vtxref value to 450mV */
-    #define BLERD_TX_BUMP1_TX_VTXREF_PROG_450MV      0x00000007
-/** Sets  vtxref value to 500mV */
-    #define BLERD_TX_BUMP1_TX_VTXREF_PROG_500MV      0x00000008
-/** Sets  vtxref value to 550mV */
-    #define BLERD_TX_BUMP1_TX_VTXREF_PROG_550MV      0x00000009
-/** Sets  vtxref value to 600mV */
-    #define BLERD_TX_BUMP1_TX_VTXREF_PROG_600MV      0x0000000a
-/** Divn power save bits pup freeze txpowersave<1:0> PupBlocks 0 0 X X NONE 1 0 X
-   X ALL 1 1 0 0 ALL 1 1 0 1 ALL-D2 1 1 1 0 ALL-D2-D1 1 1 1 1 ALL-D2-D1-Buf
-   @multiple */
-  #define BLERD_TX_BUMP1_SY_DIVN_TXPOWERSAVE(v)    ((v) << 14)
-  #define BLERD_TX_BUMP1_SY_DIVN_TXPOWERSAVE_SET(x, v) do { (x) = (((x) & ~0xc000) | ((v) << 14)); } while(0)
+/** TX Modulation port varactor Vtxref bias voltage bump settings in 50mV steps
+   in [100-600] range @multiple */
+  #define BLERD_TX_BUMP1_TX_VTXREF(v)              ((v) << 10)
+  #define BLERD_TX_BUMP1_TX_VTXREF_SET(x, v)       do { (x) = (((x) & ~0x3c00) | ((v) << 10)); } while(0)
+  #define BLERD_TX_BUMP1_TX_VTXREF_GET(x)          (((x) >> 10) & 0xf)
+/** Divn power save bits, only if freeze = 1 @multiple */
+  #define BLERD_TX_BUMP1_SY_DIVN_TXPOWERSAVE(v)    ((BLERD_TX_BUMP1_SY_DIVN_TXPOWERSAVE_##v) << 14)
+  #define BLERD_TX_BUMP1_SY_DIVN_TXPOWERSAVE_SET(x, v) do { (x) = (((x) & ~0xc000) | ((BLERD_TX_BUMP1_SY_DIVN_TXPOWERSAVE_##v) << 14)); } while(0)
+  #define BLERD_TX_BUMP1_SY_DIVN_TXPOWERSAVE_SETVAL(x, v) do { (x) = (((x) & ~0xc000) | ((v) << 14)); } while(0)
   #define BLERD_TX_BUMP1_SY_DIVN_TXPOWERSAVE_GET(x) (((x) >> 14) & 0x3)
+/** Keep all blocks enabled */
+    #define BLERD_TX_BUMP1_SY_DIVN_TXPOWERSAVE_NONE  0x00000000
+/** Shut down D2 */
+    #define BLERD_TX_BUMP1_SY_DIVN_TXPOWERSAVE_D2    0x00000001
+/** Shut down D1 and D2 */
+    #define BLERD_TX_BUMP1_SY_DIVN_TXPOWERSAVE_D1_D2 0x00000002
+/** Shut down D1, D2 and Buf */
+    #define BLERD_TX_BUMP1_SY_DIVN_TXPOWERSAVE_D1_D2_BUF 0x00000003
 
 #define BLERD_TX_BUMP2_ADDR                          0x0000008c
 #define BLERD_TX_BUMP2_MASK                          0x0000ffff
@@ -1557,27 +1524,18 @@
   #define BLERD_TX_BUMP2_DRV_VCASCH_SET(x, v)      do { (x) = (((x) & ~0x30) | ((BLERD_TX_BUMP2_DRV_VCASCH_##v) << 4)); } while(0)
   #define BLERD_TX_BUMP2_DRV_VCASCH_SETVAL(x, v)   do { (x) = (((x) & ~0x30) | ((v) << 4)); } while(0)
   #define BLERD_TX_BUMP2_DRV_VCASCH_GET(x)         (((x) >> 4) & 0x3)
-/** Vdd_driver + 0.3V */
+/** Vdd_driver - 0.3V */
     #define BLERD_TX_BUMP2_DRV_VCASCH_0_3V           0x00000000
-/** Vdd_driver + 0.2V */
+/** Vdd_driver - 0.2V */
     #define BLERD_TX_BUMP2_DRV_VCASCH_0_2V           0x00000001
-/** Vdd_driver + 0.1V */
+/** Vdd_driver - 0.1V */
     #define BLERD_TX_BUMP2_DRV_VCASCH_0_1V           0x00000002
 /** Vdd_driver */
     #define BLERD_TX_BUMP2_DRV_VCASCH_0V             0x00000003
-/** Enables a bandgap (low temp coeff) for the @multiple */
-  #define BLERD_TX_BUMP2_SY_LDOBGREF_EN(v)         ((BLERD_TX_BUMP2_SY_LDOBGREF_EN_##v) << 6)
-  #define BLERD_TX_BUMP2_SY_LDOBGREF_EN_SET(x, v)  do { (x) = (((x) & ~0xc0) | ((BLERD_TX_BUMP2_SY_LDOBGREF_EN_##v) << 6)); } while(0)
-  #define BLERD_TX_BUMP2_SY_LDOBGREF_EN_SETVAL(x, v) do { (x) = (((x) & ~0xc0) | ((v) << 6)); } while(0)
-  #define BLERD_TX_BUMP2_SY_LDOBGREF_EN_GET(x)     (((x) >> 6) & 0x3)
-/** None */
-    #define BLERD_TX_BUMP2_SY_LDOBGREF_EN_NONE       0x00000000
-/** VCO ldo */
-    #define BLERD_TX_BUMP2_SY_LDOBGREF_EN_VCO_LDO    0x00000001
-/** LOPATH ldo */
-    #define BLERD_TX_BUMP2_SY_LDOBGREF_EN_LOPATH_LDO 0x00000002
-/** VCO+LOPATH ldo */
-    #define BLERD_TX_BUMP2_SY_LDOBGREF_EN_VCO_LOPATH_LDO 0x00000003
+/** Enables a bandgap (low temp coeff) for the VCO LDO @multiple */
+  #define BLERD_TX_BUMP2_SY_VCO_LDOBGREF_EN        0x0040
+/** Enables a bandgap (low temp coeff) for the LOPATH LDO @multiple */
+  #define BLERD_TX_BUMP2_SY_LOPATH_LDOBGREF_EN     0x0080
 /** Bump bits to set the offset pulse width in TX mode @multiple */
   #define BLERD_TX_BUMP2_SY_ICP_OFFSET_TX(v)       ((BLERD_TX_BUMP2_SY_ICP_OFFSET_TX_##v) << 8)
   #define BLERD_TX_BUMP2_SY_ICP_OFFSET_TX_SET(x, v) do { (x) = (((x) & ~0x300) | ((BLERD_TX_BUMP2_SY_ICP_OFFSET_TX_##v) << 8)); } while(0)
@@ -1591,49 +1549,24 @@
     #define BLERD_TX_BUMP2_SY_ICP_OFFSET_TX_1_3NS    0x00000002
 /** 25ps */
     #define BLERD_TX_BUMP2_SY_ICP_OFFSET_TX_25PS     0x00000003
-/** TX DAC load resistor bump settings @multiple */
-  #define BLERD_TX_BUMP2_DAC_RES(v)                ((BLERD_TX_BUMP2_DAC_RES_##v) << 10)
-  #define BLERD_TX_BUMP2_DAC_RES_SET(x, v)         do { (x) = (((x) & ~0x3c00) | ((BLERD_TX_BUMP2_DAC_RES_##v) << 10)); } while(0)
-  #define BLERD_TX_BUMP2_DAC_RES_SETVAL(x, v)      do { (x) = (((x) & ~0x3c00) | ((v) << 10)); } while(0)
+/** TX DAC load resistor bump settings in 2.5% steps in [-20-17.5] range
+   @multiple */
+  #define BLERD_TX_BUMP2_DAC_RES(v)                ((v) << 10)
+  #define BLERD_TX_BUMP2_DAC_RES_SET(x, v)         do { (x) = (((x) & ~0x3c00) | ((v) << 10)); } while(0)
   #define BLERD_TX_BUMP2_DAC_RES_GET(x)            (((x) >> 10) & 0xf)
-/** DAC output resistor bump by -20% */
-    #define BLERD_TX_BUMP2_DAC_RES_MIN_20            0x00000000
-/** DAC output resistor bump by -17.5% */
-    #define BLERD_TX_BUMP2_DAC_RES_MIN_17            0x00000001
-/** DAC output resistor bump by -15% */
-    #define BLERD_TX_BUMP2_DAC_RES_MIN_15            0x00000002
-/** DAC output resistor bump by -12.5% */
-    #define BLERD_TX_BUMP2_DAC_RES_MIN_12            0x00000003
-/** DAC output resistor bump by -10% */
-    #define BLERD_TX_BUMP2_DAC_RES_MIN_10            0x00000004
-/** DAC output resistor bump by -7.5% */
-    #define BLERD_TX_BUMP2_DAC_RES_MIN_7             0x00000005
-/** DAC output resistor bump by -5% */
-    #define BLERD_TX_BUMP2_DAC_RES_MIN_5             0x00000006
-/** DAC output resistor bump by -2.5% */
-    #define BLERD_TX_BUMP2_DAC_RES_MIN_2             0x00000007
-/** DAC output resistor bump by 0% */
-    #define BLERD_TX_BUMP2_DAC_RES_ZERO              0x00000008
-/** DAC output resistor bump by 2.5% */
-    #define BLERD_TX_BUMP2_DAC_RES_PLUS_2            0x00000009
-/** DAC output resistor bump by 5% */
-    #define BLERD_TX_BUMP2_DAC_RES_PLUS_5            0x0000000a
-/** DAC output resistor bump by 7.5% */
-    #define BLERD_TX_BUMP2_DAC_RES_PLUS_7            0x0000000b
-/** DAC output resistor bump by 10% */
-    #define BLERD_TX_BUMP2_DAC_RES_PLUS_10           0x0000000c
-/** DAC output resistor bump by 12.5% */
-    #define BLERD_TX_BUMP2_DAC_RES_PLUS_12           0x0000000d
-/** DAC output resistor bump by 15% */
-    #define BLERD_TX_BUMP2_DAC_RES_PLUS_15           0x0000000e
-/** DAC output resistor bump by 17.5% */
-    #define BLERD_TX_BUMP2_DAC_RES_PLUS_17           0x0000000f
-/** Charge pump power save bits pup freeze txpowersave<1:0> PupBlocks 0 0 X X
-   NONE 1 0 X X ALL 1 1 0 0 ALL 1 1 0 1 ALL-8x CP 1 1 1 0 ALL-8x-1x CP 1 1 1 1
-   ALL-buffer @multiple */
-  #define BLERD_TX_BUMP2_SY_CP_TXPOWERSAVE(v)      ((v) << 14)
-  #define BLERD_TX_BUMP2_SY_CP_TXPOWERSAVE_SET(x, v) do { (x) = (((x) & ~0xc000) | ((v) << 14)); } while(0)
+/** Charge pump power save bits, only if freeze = 1 @multiple */
+  #define BLERD_TX_BUMP2_SY_CP_TXPOWERSAVE(v)      ((BLERD_TX_BUMP2_SY_CP_TXPOWERSAVE_##v) << 14)
+  #define BLERD_TX_BUMP2_SY_CP_TXPOWERSAVE_SET(x, v) do { (x) = (((x) & ~0xc000) | ((BLERD_TX_BUMP2_SY_CP_TXPOWERSAVE_##v) << 14)); } while(0)
+  #define BLERD_TX_BUMP2_SY_CP_TXPOWERSAVE_SETVAL(x, v) do { (x) = (((x) & ~0xc000) | ((v) << 14)); } while(0)
   #define BLERD_TX_BUMP2_SY_CP_TXPOWERSAVE_GET(x)  (((x) >> 14) & 0x3)
+/** All blocks powered */
+    #define BLERD_TX_BUMP2_SY_CP_TXPOWERSAVE_NONE    0x00000000
+/** All blocks but 8x powered */
+    #define BLERD_TX_BUMP2_SY_CP_TXPOWERSAVE_8X      0x00000001
+/** All blocks but 8x and 1x powered */
+    #define BLERD_TX_BUMP2_SY_CP_TXPOWERSAVE_8X_1X   0x00000002
+/** All blocks but buffer powered */
+    #define BLERD_TX_BUMP2_SY_CP_TXPOWERSAVE_BUFFER  0x00000003
 
 #define BLERD_RX_BUMP1_ADDR                          0x00000090
 #define BLERD_RX_BUMP1_MASK                          0x0000ffff
@@ -1736,10 +1669,10 @@
    average current comsumption in field should not be impacted much but a 2dB
    boost in sensitivity is seen @multiple */
   #define BLERD_RX_BUMP1_LNA_BOOST                 0x2000
-/** forces pull donwn of inputs of LNA (post AC coupling) if LNA is powered up in
+/** forces pull down of inputs of LNA (post AC coupling) if LNA is powered up in
    Hi-Z mode to ensure good isolation during DC offset calibration of Receiver
    chain @multiple */
-  #define BLERD_RX_BUMP1_LNA_PULL_DONWN            0x4000
+  #define BLERD_RX_BUMP1_LNA_PULL_DOWN             0x4000
 /** enables the HG and LG LNA section's cascode biases to be alive independent of
    whether LNA is HG or LG mode. This enables fast transition from LG to HG in
    AGC events @multiple */
@@ -1928,32 +1861,18 @@
 #define BLERD_ADC_BUMP2_ADDR                         0x0000009c
 #define BLERD_ADC_BUMP2_MASK                         0x00007fff
 /** Enable redundant conversion cycle at b2 position. @multiple */
-  #define BLERD_ADC_BUMP2_CYCLE_B2_DELAY(v)        ((BLERD_ADC_BUMP2_CYCLE_B2_DELAY_##v) << 0)
-  #define BLERD_ADC_BUMP2_CYCLE_B2_DELAY_SET(x, v) do { (x) = (((x) & ~0x1) | ((BLERD_ADC_BUMP2_CYCLE_B2_DELAY_##v) << 0)); } while(0)
-  #define BLERD_ADC_BUMP2_CYCLE_B2_DELAY_SETVAL(x, v) do { (x) = (((x) & ~0x1) | ((v) << 0)); } while(0)
-  #define BLERD_ADC_BUMP2_CYCLE_B2_DELAY_GET(x)    (((x) >> 0) & 0x1)
-/** Enabled */
-    #define BLERD_ADC_BUMP2_CYCLE_B2_DELAY_ENABLED   0x00000000
-/** Disabled */
-    #define BLERD_ADC_BUMP2_CYCLE_B2_DELAY_DISABLED  0x00000001
+  #define BLERD_ADC_BUMP2_CYCLE_B2_DELAY_DIS       0x0001
 /** Enable redundant conversion cycle at b5 position. @multiple */
-  #define BLERD_ADC_BUMP2_CYCLE_B5_DELAY(v)        ((BLERD_ADC_BUMP2_CYCLE_B5_DELAY_##v) << 1)
-  #define BLERD_ADC_BUMP2_CYCLE_B5_DELAY_SET(x, v) do { (x) = (((x) & ~0x2) | ((BLERD_ADC_BUMP2_CYCLE_B5_DELAY_##v) << 1)); } while(0)
-  #define BLERD_ADC_BUMP2_CYCLE_B5_DELAY_SETVAL(x, v) do { (x) = (((x) & ~0x2) | ((v) << 1)); } while(0)
-  #define BLERD_ADC_BUMP2_CYCLE_B5_DELAY_GET(x)    (((x) >> 1) & 0x1)
-/** Disabled */
-    #define BLERD_ADC_BUMP2_CYCLE_B5_DELAY_DISABLED  0x00000000
-/** Enabled */
-    #define BLERD_ADC_BUMP2_CYCLE_B5_DELAY_ENABLED   0x00000001
-/** Clock duty cycle control @multiple */
-  #define BLERD_ADC_BUMP2_DUTCYCLE_25(v)           ((BLERD_ADC_BUMP2_DUTCYCLE_25_##v) << 2)
-  #define BLERD_ADC_BUMP2_DUTCYCLE_25_SET(x, v)    do { (x) = (((x) & ~0x4) | ((BLERD_ADC_BUMP2_DUTCYCLE_25_##v) << 2)); } while(0)
-  #define BLERD_ADC_BUMP2_DUTCYCLE_25_SETVAL(x, v) do { (x) = (((x) & ~0x4) | ((v) << 2)); } while(0)
-  #define BLERD_ADC_BUMP2_DUTCYCLE_25_GET(x)       (((x) >> 2) & 0x1)
-/** 50 % time for track phase  & 50 %  time for convert phase */
-    #define BLERD_ADC_BUMP2_DUTCYCLE_25_50_TRACK_50_CONVERT 0x00000000
-/** 25 % time for track phase & 75 %  time for convert phase */
-    #define BLERD_ADC_BUMP2_DUTCYCLE_25_25_TRACK_75_CONVERT 0x00000001
+  #define BLERD_ADC_BUMP2_CYCLE_B5_DELAY_EN        0x0002
+/** Clock duty cycle @multiple */
+  #define BLERD_ADC_BUMP2_DUTCYCLE(v)              ((BLERD_ADC_BUMP2_DUTCYCLE_##v) << 2)
+  #define BLERD_ADC_BUMP2_DUTCYCLE_SET(x, v)       do { (x) = (((x) & ~0x4) | ((BLERD_ADC_BUMP2_DUTCYCLE_##v) << 2)); } while(0)
+  #define BLERD_ADC_BUMP2_DUTCYCLE_SETVAL(x, v)    do { (x) = (((x) & ~0x4) | ((v) << 2)); } while(0)
+  #define BLERD_ADC_BUMP2_DUTCYCLE_GET(x)          (((x) >> 2) & 0x1)
+/** 50% */
+    #define BLERD_ADC_BUMP2_DUTCYCLE_50              0x00000000
+/** 25% */
+    #define BLERD_ADC_BUMP2_DUTCYCLE_25              0x00000001
 /** Enable meta detection @multiple */
   #define BLERD_ADC_BUMP2_METADET_EN               0x0008
 /** 6dB attenuation in CBPF gain only at lowest gain setting to improve the Max
@@ -1963,137 +1882,40 @@
    profile @multiple */
   #define BLERD_ADC_BUMP2_IBUMP                    0x0010
 /** Disconnect source coupled node of the preamp during track phase. @multiple */
-  #define BLERD_ADC_BUMP2_PREAMP_SOURCECTRL_N(v)   ((BLERD_ADC_BUMP2_PREAMP_SOURCECTRL_N_##v) << 5)
-  #define BLERD_ADC_BUMP2_PREAMP_SOURCECTRL_N_SET(x, v) do { (x) = (((x) & ~0x20) | ((BLERD_ADC_BUMP2_PREAMP_SOURCECTRL_N_##v) << 5)); } while(0)
-  #define BLERD_ADC_BUMP2_PREAMP_SOURCECTRL_N_SETVAL(x, v) do { (x) = (((x) & ~0x20) | ((v) << 5)); } while(0)
-  #define BLERD_ADC_BUMP2_PREAMP_SOURCECTRL_N_GET(x) (((x) >> 5) & 0x1)
-/** Functionality enabled */
-    #define BLERD_ADC_BUMP2_PREAMP_SOURCECTRL_N_ENABLED 0x00000000
-/** Functionality disabled */
-    #define BLERD_ADC_BUMP2_PREAMP_SOURCECTRL_N_DISABLED 0x00000001
+  #define BLERD_ADC_BUMP2_PREAMP_SOURCECTRL_DIS    0x0020
 /** Enable preamps low/high gain modes over conversion cycle. @multiple */
-  #define BLERD_ADC_BUMP2_PREAMP_GAINCTRL_N(v)     ((BLERD_ADC_BUMP2_PREAMP_GAINCTRL_N_##v) << 6)
-  #define BLERD_ADC_BUMP2_PREAMP_GAINCTRL_N_SET(x, v) do { (x) = (((x) & ~0x40) | ((BLERD_ADC_BUMP2_PREAMP_GAINCTRL_N_##v) << 6)); } while(0)
-  #define BLERD_ADC_BUMP2_PREAMP_GAINCTRL_N_SETVAL(x, v) do { (x) = (((x) & ~0x40) | ((v) << 6)); } while(0)
-  #define BLERD_ADC_BUMP2_PREAMP_GAINCTRL_N_GET(x) (((x) >> 6) & 0x1)
-/** Functionality enabled */
-    #define BLERD_ADC_BUMP2_PREAMP_GAINCTRL_N_ENABLED 0x00000000
-/** Functionality disabled */
-    #define BLERD_ADC_BUMP2_PREAMP_GAINCTRL_N_DISABLED 0x00000001
+  #define BLERD_ADC_BUMP2_PREAMP_GAINCTRL_DIS      0x0040
 /** Put the ADC in idle channel mode. Inputs are shorted to locally generated 1V
-   signal. @multiple */
-  #define BLERD_ADC_BUMP2_SHORT_INPUT(v)           ((BLERD_ADC_BUMP2_SHORT_INPUT_##v) << 7)
-  #define BLERD_ADC_BUMP2_SHORT_INPUT_SET(x, v)    do { (x) = (((x) & ~0x80) | ((BLERD_ADC_BUMP2_SHORT_INPUT_##v) << 7)); } while(0)
-  #define BLERD_ADC_BUMP2_SHORT_INPUT_SETVAL(x, v) do { (x) = (((x) & ~0x80) | ((v) << 7)); } while(0)
-  #define BLERD_ADC_BUMP2_SHORT_INPUT_GET(x)       (((x) >> 7) & 0x1)
-/** Normal operation */
-    #define BLERD_ADC_BUMP2_SHORT_INPUT_NORMAL_OPERATION 0x00000000
-/** Idle channel mode */
-    #define BLERD_ADC_BUMP2_SHORT_INPUT_IDLE_CHANNEL_MODE 0x00000001
+   signal @multiple */
+  #define BLERD_ADC_BUMP2_ADC_IDLE_EN              0x0080
 /** Delaying the sampling clock from the comparator wrt to the data. @multiple */
-  #define BLERD_ADC_BUMP2_RETURN_SKEW(v)           ((BLERD_ADC_BUMP2_RETURN_SKEW_##v) << 8)
-  #define BLERD_ADC_BUMP2_RETURN_SKEW_SET(x, v)    do { (x) = (((x) & ~0x700) | ((BLERD_ADC_BUMP2_RETURN_SKEW_##v) << 8)); } while(0)
-  #define BLERD_ADC_BUMP2_RETURN_SKEW_SETVAL(x, v) do { (x) = (((x) & ~0x700) | ((v) << 8)); } while(0)
+  #define BLERD_ADC_BUMP2_RETURN_SKEW(v)           ((v) << 8)
+  #define BLERD_ADC_BUMP2_RETURN_SKEW_SET(x, v)    do { (x) = (((x) & ~0x700) | ((v) << 8)); } while(0)
   #define BLERD_ADC_BUMP2_RETURN_SKEW_GET(x)       (((x) >> 8) & 0x7)
-/** Min delay */
-    #define BLERD_ADC_BUMP2_RETURN_SKEW_MIN_DELAY    0x00000000
-/** Max delay */
-    #define BLERD_ADC_BUMP2_RETURN_SKEW_MAX_DELAY    0x00000007
 /** Swaps the I and Q channel Vbg/R for ref.gen @multiple */
-  #define BLERD_ADC_BUMP2_IQSWAP(v)                ((BLERD_ADC_BUMP2_IQSWAP_##v) << 11)
-  #define BLERD_ADC_BUMP2_IQSWAP_SET(x, v)         do { (x) = (((x) & ~0x800) | ((BLERD_ADC_BUMP2_IQSWAP_##v) << 11)); } while(0)
-  #define BLERD_ADC_BUMP2_IQSWAP_SETVAL(x, v)      do { (x) = (((x) & ~0x800) | ((v) << 11)); } while(0)
-  #define BLERD_ADC_BUMP2_IQSWAP_GET(x)            (((x) >> 11) & 0x1)
-/** No swap */
-    #define BLERD_ADC_BUMP2_IQSWAP_NO_SWAP           0x00000000
-/** Enable swapping */
-    #define BLERD_ADC_BUMP2_IQSWAP_ENABLE_SWAPPING   0x00000001
+  #define BLERD_ADC_BUMP2_IQSWAP_EN                0x0800
 /** Bandwidth bump bits for the preamp. Each bit connects a 5fF cap to the output
    nodes. No cap is connected by default @multiple */
   #define BLERD_ADC_BUMP2_PREAMP_BWCTRL(v)         ((v) << 12)
   #define BLERD_ADC_BUMP2_PREAMP_BWCTRL_SET(x, v)  do { (x) = (((x) & ~0x3000) | ((v) << 12)); } while(0)
   #define BLERD_ADC_BUMP2_PREAMP_BWCTRL_GET(x)     (((x) >> 12) & 0x3)
 /** Enable clean Vdd for the cascodes & op-amp in refgen. The clean Vdd supplied
-   through the diag. ( Diag code = 0101 for channel I and Diag code =1101 for
+   through the diag. (Diag code = 0101 for channel I and Diag code =1101 for
    channel Q). Default connection to the internal Vdd @multiple */
-  #define BLERD_ADC_BUMP2_REV_ADC_BUMP2            0x4000
+  #define BLERD_ADC_BUMP2_REV_ADC_BUMP2_EN         0x4000
 
 #define BLERD_BALUN_ADDR                             0x000000a0
 #define BLERD_BALUN_MASK                             0x000000ff
 /** Programmable bits to change tuning capacitance in the Balun primary side in
-   RX operation (fF) @multiple */
-  #define BLERD_BALUN_BUMP_RX_CTUNE(v)             ((BLERD_BALUN_BUMP_RX_CTUNE_##v) << 0)
-  #define BLERD_BALUN_BUMP_RX_CTUNE_SET(x, v)      do { (x) = (((x) & ~0xf) | ((BLERD_BALUN_BUMP_RX_CTUNE_##v) << 0)); } while(0)
-  #define BLERD_BALUN_BUMP_RX_CTUNE_SETVAL(x, v)   do { (x) = (((x) & ~0xf) | ((v) << 0)); } while(0)
+   RX operation (fF) In 6.3fF steps in the [42.5-137] range. @multiple */
+  #define BLERD_BALUN_BUMP_RX_CTUNE(v)             ((v) << 0)
+  #define BLERD_BALUN_BUMP_RX_CTUNE_SET(x, v)      do { (x) = (((x) & ~0xf) | ((v) << 0)); } while(0)
   #define BLERD_BALUN_BUMP_RX_CTUNE_GET(x)         (((x) >> 0) & 0xf)
-/** 42.5 */
-    #define BLERD_BALUN_BUMP_RX_CTUNE_42_5           0x00000000
-/** 48.8 */
-    #define BLERD_BALUN_BUMP_RX_CTUNE_48_8           0x00000001
-/** 55.1 */
-    #define BLERD_BALUN_BUMP_RX_CTUNE_55_1           0x00000002
-/** 61.4 */
-    #define BLERD_BALUN_BUMP_RX_CTUNE_61_4           0x00000003
-/** 67.7 */
-    #define BLERD_BALUN_BUMP_RX_CTUNE_67_7           0x00000004
-    #define BLERD_BALUN_BUMP_RX_CTUNE_74__74         0x00000005
-/** 80.3 */
-    #define BLERD_BALUN_BUMP_RX_CTUNE_80_3           0x00000006
-/** 86.6 */
-    #define BLERD_BALUN_BUMP_RX_CTUNE_86_6           0x00000007
-/** 92.9 */
-    #define BLERD_BALUN_BUMP_RX_CTUNE_92_9           0x00000008
-/** 99.2 */
-    #define BLERD_BALUN_BUMP_RX_CTUNE_99_2           0x00000009
-/** 105.5 */
-    #define BLERD_BALUN_BUMP_RX_CTUNE_105_5          0x0000000a
-/** 111.8 */
-    #define BLERD_BALUN_BUMP_RX_CTUNE_111_8          0x0000000b
-/** 118.1 */
-    #define BLERD_BALUN_BUMP_RX_CTUNE_118_1          0x0000000c
-/** 124.4 */
-    #define BLERD_BALUN_BUMP_RX_CTUNE_124_4          0x0000000d
-/** 130.7 */
-    #define BLERD_BALUN_BUMP_RX_CTUNE_130_7          0x0000000e
-/** 137 */
-    #define BLERD_BALUN_BUMP_RX_CTUNE_137            0x0000000f
 /** Programmable bits to change tuning capacitance in the Balun primary side in
-   TX operation (fF) @multiple */
-  #define BLERD_BALUN_BUMP_TX_CTUNE(v)             ((BLERD_BALUN_BUMP_TX_CTUNE_##v) << 4)
-  #define BLERD_BALUN_BUMP_TX_CTUNE_SET(x, v)      do { (x) = (((x) & ~0xf0) | ((BLERD_BALUN_BUMP_TX_CTUNE_##v) << 4)); } while(0)
-  #define BLERD_BALUN_BUMP_TX_CTUNE_SETVAL(x, v)   do { (x) = (((x) & ~0xf0) | ((v) << 4)); } while(0)
+   TX operation (fF) In 6.3fF steps in the [42.5-137] range. @multiple */
+  #define BLERD_BALUN_BUMP_TX_CTUNE(v)             ((v) << 4)
+  #define BLERD_BALUN_BUMP_TX_CTUNE_SET(x, v)      do { (x) = (((x) & ~0xf0) | ((v) << 4)); } while(0)
   #define BLERD_BALUN_BUMP_TX_CTUNE_GET(x)         (((x) >> 4) & 0xf)
-/** 42.5 */
-    #define BLERD_BALUN_BUMP_TX_CTUNE_42_5           0x00000000
-/** 48.8 */
-    #define BLERD_BALUN_BUMP_TX_CTUNE_48_8           0x00000001
-/** 55.1 */
-    #define BLERD_BALUN_BUMP_TX_CTUNE_55_1           0x00000002
-/** 61.4 */
-    #define BLERD_BALUN_BUMP_TX_CTUNE_61_4           0x00000003
-/** 67.7 */
-    #define BLERD_BALUN_BUMP_TX_CTUNE_67_7           0x00000004
-    #define BLERD_BALUN_BUMP_TX_CTUNE_74__74         0x00000005
-/** 80.3 */
-    #define BLERD_BALUN_BUMP_TX_CTUNE_80_3           0x00000006
-/** 86.6 */
-    #define BLERD_BALUN_BUMP_TX_CTUNE_86_6           0x00000007
-/** 92.9 */
-    #define BLERD_BALUN_BUMP_TX_CTUNE_92_9           0x00000008
-/** 99.2 */
-    #define BLERD_BALUN_BUMP_TX_CTUNE_99_2           0x00000009
-/** 105.5 */
-    #define BLERD_BALUN_BUMP_TX_CTUNE_105_5          0x0000000a
-/** 111.8 */
-    #define BLERD_BALUN_BUMP_TX_CTUNE_111_8          0x0000000b
-/** 118.1 */
-    #define BLERD_BALUN_BUMP_TX_CTUNE_118_1          0x0000000c
-/** 124.4 */
-    #define BLERD_BALUN_BUMP_TX_CTUNE_124_4          0x0000000d
-/** 130.7 */
-    #define BLERD_BALUN_BUMP_TX_CTUNE_130_7          0x0000000e
-/** 137 */
-    #define BLERD_BALUN_BUMP_TX_CTUNE_137            0x0000000f
 
 #define BLERD_CTR1_ADDR                              0x000000a4
 #define BLERD_CTR1_MASK                              0x0000ffff
@@ -2139,11 +1961,11 @@
     #define BLERD_CTR1_TX_PREDRV_TIME_AFTER_KVCAL    0x00000000
 /** Powered up after LDO */
     #define BLERD_CTR1_TX_PREDRV_TIME_AFTER_LDO      0x00000001
-/** this controls the time between the PUP_TX_DRIVER going high and when F_N_TXEN
-   is asserted, in us. @multiple */
-  #define BLERD_CTR1_TX_MODSTART_TIME(v)           ((v) << 6)
-  #define BLERD_CTR1_TX_MODSTART_TIME_SET(x, v)    do { (x) = (((x) & ~0xc0) | ((v) << 6)); } while(0)
-  #define BLERD_CTR1_TX_MODSTART_TIME_GET(x)       (((x) >> 6) & 0x3)
+/** This controls the time between the PUP_TX_DRIVER going high and when F_N_TXEN
+   is asserted, in µs. @multiple */
+  #define BLERD_CTR1_TX_MODSTART_US(v)             ((v) << 6)
+  #define BLERD_CTR1_TX_MODSTART_US_SET(x, v)      do { (x) = (((x) & ~0xc0) | ((v) << 6)); } while(0)
+  #define BLERD_CTR1_TX_MODSTART_US_GET(x)         (((x) >> 6) & 0x3)
   #define BLERD_CTR1_TX_DF2_SEL(v)                 ((BLERD_CTR1_TX_DF2_SEL_##v) << 8)
   #define BLERD_CTR1_TX_DF2_SEL_SET(x, v)          do { (x) = (((x) & ~0x100) | ((BLERD_CTR1_TX_DF2_SEL_##v) << 8)); } while(0)
   #define BLERD_CTR1_TX_DF2_SEL_SETVAL(x, v)       do { (x) = (((x) & ~0x100) | ((v) << 8)); } while(0)
@@ -2172,19 +1994,10 @@
 /** Demodulation soft reset to frequency tracking enabled, high active @multiple
    */
   #define BLERD_CTR1_RX_ENV_FREEZE_EN              0x2000
-/** Delay @multiple */
-  #define BLERD_CTR1_AGC_RST_DLY(v)                ((BLERD_CTR1_AGC_RST_DLY_##v) << 14)
-  #define BLERD_CTR1_AGC_RST_DLY_SET(x, v)         do { (x) = (((x) & ~0xc000) | ((BLERD_CTR1_AGC_RST_DLY_##v) << 14)); } while(0)
-  #define BLERD_CTR1_AGC_RST_DLY_SETVAL(x, v)      do { (x) = (((x) & ~0xc000) | ((v) << 14)); } while(0)
+/** Delay in 1µs steps in the [0.25-3.25] range. @multiple */
+  #define BLERD_CTR1_AGC_RST_DLY(v)                ((v) << 14)
+  #define BLERD_CTR1_AGC_RST_DLY_SET(x, v)         do { (x) = (((x) & ~0xc000) | ((v) << 14)); } while(0)
   #define BLERD_CTR1_AGC_RST_DLY_GET(x)            (((x) >> 14) & 0x3)
-/** 0.25us */
-    #define BLERD_CTR1_AGC_RST_DLY_0_25US            0x00000000
-/** 1.25us */
-    #define BLERD_CTR1_AGC_RST_DLY_1_25US            0x00000001
-/** 2.25us */
-    #define BLERD_CTR1_AGC_RST_DLY_2_25US            0x00000002
-/** 3.25us */
-    #define BLERD_CTR1_AGC_RST_DLY_3_25US            0x00000003
 
 #define BLERD_AGC_ADDR                               0x000000a8
 #define BLERD_AGC_MASK                               0x0000ffff
@@ -2238,24 +2051,24 @@
   #define BLERD_AGC_GAIN_STABLE_TIM_SET(x, v)      do { (x) = (((x) & ~0x1f00) | ((v) << 8)); } while(0)
   #define BLERD_AGC_GAIN_STABLE_TIM_GET(x)         (((x) >> 8) & 0x1f)
 /** Start AGC waiting time when RFCTRL set AGC enable, in us @multiple */
-  #define BLERD_AGC_START_WAIT_TIM(v)              ((v) << 13)
-  #define BLERD_AGC_START_WAIT_TIM_SET(x, v)       do { (x) = (((x) & ~0xe000) | ((v) << 13)); } while(0)
-  #define BLERD_AGC_START_WAIT_TIM_GET(x)          (((x) >> 13) & 0x7)
+  #define BLERD_AGC_START_WAIT_US(v)               ((v) << 13)
+  #define BLERD_AGC_START_WAIT_US_SET(x, v)        do { (x) = (((x) & ~0xe000) | ((v) << 13)); } while(0)
+  #define BLERD_AGC_START_WAIT_US_GET(x)           (((x) >> 13) & 0x7)
 
 #define BLERD_THRSHD1_ADDR                           0x000000ac
 #define BLERD_THRSHD1_MASK                           0x00003f3f
-/** threshold gain changge from 66dB to60dB @multiple */
+/** threshold gain changge from 66dB to 60dB @multiple */
   #define BLERD_THRSHD1_AGC60_66(v)                ((v) << 0)
   #define BLERD_THRSHD1_AGC60_66_SET(x, v)         do { (x) = (((x) & ~0x3f) | ((v) << 0)); } while(0)
   #define BLERD_THRSHD1_AGC60_66_GET(x)            (((x) >> 0) & 0x3f)
-/** threshold gain changge from 60dB to 48dB @multiple */
+/** threshold gain changge from 60dB to 66dB @multiple */
   #define BLERD_THRSHD1_AGC66_60(v)                ((v) << 8)
   #define BLERD_THRSHD1_AGC66_60_SET(x, v)         do { (x) = (((x) & ~0x3f00) | ((v) << 8)); } while(0)
   #define BLERD_THRSHD1_AGC66_60_GET(x)            (((x) >> 8) & 0x3f)
 
 #define BLERD_THRSHD2_ADDR                           0x000000b0
 #define BLERD_THRSHD2_MASK                           0x00003f3f
-/** threshold gain changge from 60dB to48dB @multiple */
+/** threshold gain changge from 60dB to 48dB @multiple */
   #define BLERD_THRSHD2_AGC48_60(v)                ((v) << 0)
   #define BLERD_THRSHD2_AGC48_60_SET(x, v)         do { (x) = (((x) & ~0x3f) | ((v) << 0)); } while(0)
   #define BLERD_THRSHD2_AGC48_60_GET(x)            (((x) >> 0) & 0x3f)
@@ -2270,7 +2083,7 @@
   #define BLERD_THRSHD3_AGC36_48(v)                ((v) << 0)
   #define BLERD_THRSHD3_AGC36_48_SET(x, v)         do { (x) = (((x) & ~0x3f) | ((v) << 0)); } while(0)
   #define BLERD_THRSHD3_AGC36_48_GET(x)            (((x) >> 0) & 0x3f)
-/** threshold gain changge from 366dB to 48dB @multiple */
+/** threshold gain changge from 36dB to 48dB @multiple */
   #define BLERD_THRSHD3_AGC48_36(v)                ((v) << 8)
   #define BLERD_THRSHD3_AGC48_36_SET(x, v)         do { (x) = (((x) & ~0x3f00) | ((v) << 8)); } while(0)
   #define BLERD_THRSHD3_AGC48_36_GET(x)            (((x) >> 8) & 0x3f)
@@ -2606,6 +2419,24 @@
 #define BLERD_READ_IQ_ADDR(ridx)                     (0x00000100 + (ridx) * 4)
 #define BLERD_READ_IQ_COUNT                          4
 #define BLERD_READ_IQ_MASK                           0x00000000
+
+#define BLERD_AGC_GAIN_COMP_ADDR(ridx)               (0x00000180 + (ridx) * 4)
+#define BLERD_AGC_GAIN_COMP_COUNT                    2
+#define BLERD_AGC_GAIN_COMP_MASK                     0x00007fff
+  #define BLERD_AGC_GAIN_COMP_GAIN_COUNT           3
+  #define BLERD_AGC_GAIN_COMP_GAIN(fidx, v)        ((v) << ((fidx) * 5 + 0))
+  #define BLERD_AGC_GAIN_COMP_GAIN_SET(fidx, x, v) do { (x) = (((x) & ~(0x1f << ((fidx) * 5))) | ((v) << ((fidx) * 5 + 0))); } while(0)
+  #define BLERD_AGC_GAIN_COMP_GAIN_GET(fidx, x)    (((x) >> ((fidx) * 5 + 0)) & 0x1f)
+
+#define BLERD_PA_RSSI_ADDR                           0x00000188
+#define BLERD_PA_RSSI_MASK                           0x0000007f
+  #define BLERD_PA_RSSI_RAMP_STEP(v)               ((v) << 0)
+  #define BLERD_PA_RSSI_RAMP_STEP_SET(x, v)        do { (x) = (((x) & ~0x7) | ((v) << 0)); } while(0)
+  #define BLERD_PA_RSSI_RAMP_STEP_GET(x)           (((x) >> 0) & 0x7)
+  #define BLERD_PA_RSSI_RAMP_NEW                   0x00000008
+  #define BLERD_PA_RSSI_MIN_RSSI                   0x00000010
+  #define BLERD_PA_RSSI_AGCDIS_RSSI_EN             0x00000020
+  #define BLERD_PA_RSSI_DEMOD_DC_PARAM             0x00000040
 
 #endif
 
