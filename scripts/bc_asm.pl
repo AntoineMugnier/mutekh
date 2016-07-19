@@ -777,7 +777,7 @@ our %asm = (
     'call8'  => {
         words => 1, code => 0x2000, argscnt => 2,
         parse => \&parse_call8, backend => ('call8'),
-        reloadregs => 1, op_call => 1,
+        flushregs => 1, reloadregs => 1, op_call => 1,
     },
     'jmp32'  => {
         words => 3, code => 0x7010, argscnt => 1,
@@ -787,7 +787,7 @@ our %asm = (
     'call32'  => {
         words => 3, code => 0x7010, argscnt => 2,
         parse => \&parse_call32, backend => ('call32'),
-        reloadregs => 1, op_call => 1,
+        flushregs => 1, reloadregs => 1, op_call => 1,
     },
     'ret' => {
         words => 1, code => 0x2000, argscnt => 1,
@@ -1010,24 +1010,36 @@ sub custom_op
 
     $parse ||= sub {};
 
-    $asm{$name} = {
-        words => 1, code => 0x8000 | $code, argscnt => $args,
-        parse => $parse, backend => ('custom'),
+    my $op = {
+        words => 1, code => 0x8000 | $code,
+        argscnt => $args,
+        parse => sub {
+            my $thisop = shift;
+            $parse->( $thisop );
+
+            # prevent load of instruction input register
+            $thisop->{flushin} = (1 << scalar @{$thisop->{in}}) - 1;
+        },
+        backend => 'custom',
+        flushregs => 1,
         reloadregs => 1,
     };
+
+    $asm{$name} = $op;
+
+    return $op;
 }
 
 sub custom_cond_op
 {
     my ( $name, $args, $code, $parse ) = @_;
 
-    $parse ||= sub {};
+    my $op = custom_op( $name, $args, $code, $parse );
 
-    $asm{$name} = {
-        words => 1, code => 0x8000 | $code, argscnt => $args,
-        parse => $parse, backend => ('custom_cond'),
-        reloadregs => 1, op_cond => 1,
-    };
+    $op->{backend} = 'custom_cond';
+    $op->{op_cond} = 1;
+
+    return $op;
 }
 
 sub parse_args
@@ -1172,27 +1184,26 @@ sub write_asm
 
     die unless $wcnt >= 4;
 
-    for (my $w = 0; $w < $wcnt; $w++) {
-        $w2r{$w} = {};
-        $wfifo[$w] = $w;
-    }
-
     open(OUT, ">$fout") || die "unable to open output file `$fout'.\n";
+
+    my $wreg_flush = sub {
+        my $w = shift;
+        # write back the vm regs previously associated to the cpu working reg
+        foreach my $r (keys %{$w2r{$w}}) {
+            if ($wb{$r}) {
+                print OUT $backend->out_store($r, $r2w{$r});
+                $wb{$r} = 0;
+            }
+            delete $r2w{$r};
+        }
+    };
 
     my $reg_alloc = sub {
         my $res = shift @wfifo;
         push @wfifo, $res;
 
         # print "  #alloc $res\n";
-        # write back the vm reg previously associated to the reallocated cpu reg
-        foreach my $old (keys %{$w2r{$res}}) {
-            if ($wb{$old}) {
-                print OUT $backend->out_store($old, $r2w{$old});
-                $wb{$old} = 0;
-            }
-            delete $r2w{$old};
-        }
-
+        $wreg_flush->($res);
         return $res;
     };
 
@@ -1220,6 +1231,7 @@ sub write_asm
 
     my $reg_reload = sub {
         my $r = shift;
+        die "register $r not flushed" if $wb{$r};
         my $w = $r2w{$r};
         delete $r2w{$r};
         $w2r{$w} = {};
@@ -1227,9 +1239,16 @@ sub write_asm
 
     my $regs_reload = sub {
         while (my ($r, $d) = each(%wb)) {
-            $reg_reload->($r);
+            die "register $r not flushed" if $d;
         }
+        for (my $w = 0; $w < $wcnt; $w++) {
+            $w2r{$w} = {};
+            $wfifo[$w] = $w;
+        }
+        %r2w = ();
     };
+
+    $regs_reload->();
 
     my $cond;
 
@@ -1259,15 +1278,13 @@ sub write_asm
         my $lbl_refs;
         $lbl_refs += $_->{used} foreach ( @{$thisop->{labels}} );
 
-        if ( $op->{flushregs} ||
-             $op->{reloadregs} ||
-             $thisop->{clobber} ||
-             $lbl_refs ) {
-            # registers flush is required by the instruction
-            # print "  #registers flush\n";
+        # if the instruction may read any vm regs directly from memory
+        # or if we are the target of a jump, then flush all cpu working regs
+        if ( $op->{flushregs} || $lbl_refs ) {
             $regs_flush->();
         }
 
+        # write labels
         if ( $lbl_refs ) {
             error($thisop, "label inside conditional\n") if defined $cond;
 
@@ -1283,9 +1300,9 @@ sub write_asm
             $regs_reload->();
         }
 
-        print OUT '  #'.$thisop->{name}.' ';
+        print OUT '  # '.$thisop->{name}.' ';
         print OUT "$_, " foreach (@{$thisop->{args}});
-        print OUT "\n";
+        print OUT " # L$thisop->{line}\n";
         my $inst;
 
         goto done if $thisop->{nop};
@@ -1294,7 +1311,7 @@ sub write_asm
         for (my $j = 0; $j < scalar @{$thisop->{in}} ; $j++) {
           my $i = $thisop->{in}->[$j];
           if ( ($thisop->{flushin} >> $j) & 1 ) {
-            # flush the register before the instruction
+            # flush the input register before the instruction
             $reg_flush->($i);
             push @wregin, -1;
           } else {
@@ -1316,26 +1333,35 @@ sub write_asm
           }
         }
 
-        if ( $op->{op_mov} ) {
+        # handle mov using copy on write unless involved in a conditional
+        if ( $op->{op_mov} && !defined $cond ) {
             my $i = $thisop->{in}->[0];
             my $o = $thisop->{out}->[0];
 
-            if ( not defined $cond ) {
-                # prepare copy on write for mov instructions unless
-                # involved in a conditional
-                my $iw = $r2w{$i};
-                my $ow = $r2w{$o};
-                # print "  #cow $iw $ow\n";
-                delete $w2r{$ow}->{$o} if ( defined $ow );
-                $r2w{$o} = $iw;
-                $w2r{$iw}->{$o} = 1;
-                $wb{$o} = 1;
-                goto done;
-            }
+            my $iw = $r2w{$i};
+            my $ow = $r2w{$o};
+            # print "  #cow $iw $ow\n";
+            delete $w2r{$ow}->{$o} if ( defined $ow );
+            $r2w{$o} = $iw;
+            $w2r{$iw}->{$o} = 1;
+            $wb{$o} = 1;
+            goto done;
         }
 
-        if ( $op->{reloadregs} || $thisop->{clobber} ) {
+        # if the instruction write vm regs directly in memory,
+        # don't mess with output registers mapping
+        if ( $op->{reloadregs} ) {
             $regs_reload->();
+            goto reload;
+        }
+
+        # flush cpu registers which are clobbered by the instruction
+        for (my $j = 0; (1 << $j) <= $thisop->{clobber} ; $j++) {
+            if ( ( $thisop->{clobber} >> $j ) & 1 ) {
+                # print OUT "  #clobber $j\n";
+                $wreg_flush->($j);
+                $w2r{$j} = {};
+            }
         }
 
         # map instruction output vm registers to cpu registers
@@ -1367,6 +1393,7 @@ sub write_asm
           }
         }
 
+      reload:
         # get cpu instruction string
         $inst = $backend->can('out_'.$opbackend)->( $thisop, @wregout, @wregin );
 
