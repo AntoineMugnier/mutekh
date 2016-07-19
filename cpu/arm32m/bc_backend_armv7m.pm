@@ -134,6 +134,16 @@ sub out_andn {
     return "    bics $reg[$wo], $reg[$wi0], $reg[$wi1]\n";
 }
 
+sub out_shl {
+    my ($thisop, $wo, $wi0, $wi1) = @_;
+    return "    lsls $reg[$wo], $reg[$wi0], $reg[$wi1]\n";
+}
+
+sub out_shr {
+    my ($thisop, $wo, $wi0, $wi1) = @_;
+    return "    lsrs $reg[$wo], $reg[$wi0], $reg[$wi1]\n";
+}
+
 sub parse_msbs {
 }
 
