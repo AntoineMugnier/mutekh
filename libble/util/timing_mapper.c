@@ -248,9 +248,11 @@ static uint32_t cu_tk_dynamic(struct ble_timing_mapper_s *tm, uint32_t units)
 {
   dev_timer_delay_t tk;
 
-  dev_timer_init_sec(&tm->timer, &tk, NULL, units, 1000000 / BLE_T_CONN_UNIT);
+  dev_timer_init_sec(&tm->timer, &tk, NULL,
+                     units,
+                     1000000 / BLE_T_CONN_UNIT / 2);
 
-  return tk;
+  return (tk + 1) / 2;
 }
 
 #if defined(CONFIG_BLE_SLEEP_CLOCK_HZ) && CONFIG_BLE_SLEEP_CLOCK_HZ == 32768
@@ -258,20 +260,15 @@ __unused__
 static uint32_t cu_tk_32k(struct ble_timing_mapper_s *tm, uint32_t units)
 {
   /*
-    Do units * 32768 / 800
-     = units * 40.96
-     = units * 41 - units * .04
-     = units * 41 - units * .00001010001111010111b
-    
-    First shift left to enhance precision.
+    Do units * 32768 / 800 + .5
+     = units * 40.96 + .5
+     = units * 41 - units * .04 + .5
+     = units * 41 - units * .00001010001111010111b + .1b
   */
   units <<= 12;
-  return (units * 41
-          - (units >> 5)
-          - (units >> 7)
-          + (units >> 10) - (units >> 14)
-          - (units >> 16)
-          ) >> 12;
+  uint32_t tmp = (units >> 5) + (units >> 7) + (units >> 10);
+
+  return (units * 41 - tmp + (tmp >> 10) + (1 << 11)) >> 12;
 }
 #endif
 
@@ -279,7 +276,7 @@ static uint32_t cu_tk_32k(struct ble_timing_mapper_s *tm, uint32_t units)
 __unused__
 static uint32_t cu_tk_fixed(struct ble_timing_mapper_s *tm, uint32_t units)
 {
-  return units * CONFIG_BLE_SLEEP_CLOCK_HZ / 800;
+  return (units * CONFIG_BLE_SLEEP_CLOCK_HZ + 400) / 800;
 }
 #endif
 
