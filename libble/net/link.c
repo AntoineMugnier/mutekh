@@ -47,7 +47,8 @@ enum ble_link_state_e
   LINK_ENC_STARTING1,
   LINK_ENC_STARTING2,
   LINK_ENC_RUNNING,
-  LINK_ENC_STOPPING1,
+  LINK_ENC_STOPPING,
+  LINK_ENC_PAUSED,
 #endif
   LINK_FAILED,
 };
@@ -162,10 +163,10 @@ static void link_task_forward(struct ble_link_s *link, struct net_task_s *task)
 
         case LINK_ENC_RUNNING:
           if (opcode == BLE_LL_PAUSE_ENC_REQ)
-            link_state_set(link, LINK_ENC_STOPPING1);
+            link_state_set(link, LINK_ENC_STOPPING);
           break;
 
-        case LINK_ENC_STOPPING1:
+        case LINK_ENC_STOPPING:
           if (opcode == BLE_LL_PAUSE_ENC_RSP)
             link_state_set(link, LINK_ENC_STARTING1);
           break;
@@ -271,6 +272,11 @@ static KROUTINE_EXEC(link_crypto_done)
         if (opcode == BLE_LL_START_ENC_RSP)
           link_state_set(link, LINK_ENC_RUNNING);
         break;
+
+      case LINK_ENC_STOPPING:
+        if (opcode == BLE_LL_PAUSE_ENC_RSP)
+          link_state_set(link, LINK_ENC_PAUSED);
+        break;
       }
     }
 
@@ -311,7 +317,7 @@ static void link_task_crypt(struct ble_link_s *link, struct net_task_s *task)
     link->crypto_rq.iv_ctr = (void*)&link->ccm_state[LINK_OUT];
     out->end = out->begin + (in->end - in->begin) + 4;
 
-    if (!link_is_master(link) && (in->data[in->begin] & 3) == BLE_LL_CONTROL) {
+    if ((in->data[in->begin] & 3) == BLE_LL_CONTROL && !link_is_master(link)) {
       uint8_t opcode = in->data[in->begin + 2];
 
       switch (link->state) {
@@ -352,6 +358,7 @@ static bool_t is_enc_control(const struct buffer_s *buffer)
     | (1 << BLE_LL_ENC_RSP)
     | (1 << BLE_LL_START_ENC_REQ)
     | (1 << BLE_LL_START_ENC_RSP)
+    | (1 << BLE_LL_PAUSE_ENC_RSP)
     ;
 
   return (enc_control >> opcode) & 1;
@@ -385,7 +392,8 @@ static void link_crypto_next(struct ble_link_s *link)
 #if defined(CONFIG_BLE_CRYPTO)
   case LINK_ENC_STARTING1:
   case LINK_ENC_STARTING2:
-  case LINK_ENC_STOPPING1:
+  case LINK_ENC_PAUSED:
+  case LINK_ENC_STOPPING:
     dprintk("%s in state %d, getting non-data or inbound packets\n", __FUNCTION__, link->state);
     GCT_FOREACH(net_task_queue, &link->queue, t,
                 if (t->type == NET_TASK_INBOUND
@@ -432,8 +440,15 @@ static void link_crypto_next(struct ble_link_s *link)
     }
     
   case LINK_ENC_RUNNING:
+    if (link_is_master(link)
+        && task->type == NET_TASK_OUTBOUND
+        && (task->packet.buffer->data[task->packet.buffer->begin] & 3) == BLE_LL_CONTROL
+        && task->packet.buffer->data[task->packet.buffer->begin + 2] == BLE_LL_PAUSE_ENC_REQ)
+      link_state_set(link, LINK_ENC_STOPPING);
+      goto crypt;
+
+  case LINK_ENC_STOPPING:
   case LINK_ENC_STARTING2:
-  case LINK_ENC_STOPPING1:
     if (task->type == NET_TASK_INBOUND
         && (task->packet.buffer->end - task->packet.buffer->begin) < 6) {
       link_state_set(link, LINK_FAILED);
@@ -441,6 +456,7 @@ static void link_crypto_next(struct ble_link_s *link)
       goto again;
     }
 
+    crypt:
     link_task_crypt(link, task);
     break;
 #endif

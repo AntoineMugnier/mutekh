@@ -135,6 +135,7 @@ struct ble_llcp_handler_s
 
   void (*connection_close)(struct net_layer_s *layer);
   error_t (*encryption_enable)(struct net_layer_s *layer);
+  error_t (*encryption_restart)(struct net_layer_s *layer);
 };
 
 STRUCT_COMPOSE(ble_llcp_handler_s, base);
@@ -149,6 +150,12 @@ ALWAYS_INLINE error_t ble_llcp_encryption_enable(struct net_layer_s *layer)
 {
   const struct ble_llcp_handler_s *handler = const_ble_llcp_handler_s_from_base(layer->handler);
   return handler->encryption_enable(layer);
+}
+
+ALWAYS_INLINE error_t ble_llcp_encryption_restart(struct net_layer_s *layer)
+{
+  const struct ble_llcp_handler_s *handler = const_ble_llcp_handler_s_from_base(layer->handler);
+  return handler->encryption_restart(layer);
 }
 
 struct ble_llcp_params_s

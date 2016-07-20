@@ -199,6 +199,36 @@ static error_t llcp_start_enc(struct ble_llcp_s *llcp)
 
   return 0;
 }
+
+static error_t llcp_restart_enc(struct ble_llcp_s *llcp)
+{
+  struct net_task_s *in;
+  struct buffer_s *p;
+  struct net_addr_s dst = { .llid = BLE_LL_CONTROL };
+
+  if (llcp->error)
+    return -EIO;
+
+  p = net_layer_packet_alloc(&llcp->layer,
+                             llcp->layer.context.prefix_size,
+                             1);
+  if (!p)
+    return -ENOMEM;
+
+  in = net_scheduler_task_alloc(llcp->layer.scheduler);
+  if (!in) {
+    buffer_refdec(p);
+    return -ENOMEM;
+  }
+
+  p->data[p->begin + 0] = BLE_LL_PAUSE_ENC_REQ;
+
+  net_task_outbound_push(in, llcp->layer.parent, &llcp->layer,
+                         0, NULL, &dst, p);
+  buffer_refdec(p);
+
+  return 0;
+}
 #endif
 
 static bool_t llcp_is_slave(struct ble_llcp_s *llcp)
@@ -539,7 +569,14 @@ static void ble_llcp_packet_handle(struct ble_llcp_s *llcp, struct net_task_s *t
     p->data[p->begin + 0] = BLE_LL_PAUSE_ENC_RSP;
     p->end = p->begin + 1;
 
-    goto respond;
+    if (llcp->layer.parent)
+      net_task_packet_respond(task, llcp->layer.parent, 0, &dst);
+    else
+      net_task_destroy(task);
+
+    llcp_start_enc(llcp);
+
+    return;
 #endif
 
   case BLE_LL_CONNECTION_PARAM_REQ:
@@ -1096,6 +1133,20 @@ static error_t _ble_llcp_encryption_enable(struct net_layer_s *layer)
 #endif
 }
 
+static error_t _ble_llcp_encryption_restart(struct net_layer_s *layer)
+{
+  struct ble_llcp_s *llcp = ble_llcp_s_from_layer(layer);
+
+  if (llcp_is_slave(llcp))
+    return -ENOTSUP;
+
+#if defined(CONFIG_BLE_CRYPTO)
+  return llcp_restart_enc(llcp);
+#else
+  return -ENOTSUP;
+#endif
+}
+
 static const struct ble_llcp_handler_s llcp_handler = {
   .base.destroyed = ble_llcp_destroyed,
   .base.task_handle = ble_llcp_task_handle,
@@ -1105,6 +1156,7 @@ static const struct ble_llcp_handler_s llcp_handler = {
   .base.dandling = ble_llcp_dandling,
   .connection_close = _ble_llcp_connection_close,
   .encryption_enable = _ble_llcp_encryption_enable,
+  .encryption_restart = _ble_llcp_encryption_restart,
 };
 
 error_t ble_llcp_create(struct net_scheduler_s *scheduler,
