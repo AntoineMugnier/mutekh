@@ -1097,6 +1097,9 @@ sub parse_args
         $prevop = $thisop;
     }
 
+    error($prevop, "conditional at end of program\n")
+        if ( $prevop && $prevop->{op}->{op_cond} );
+
     $last_addr = $addr;
 
     foreach my $thisop (@src) {
@@ -1468,28 +1471,35 @@ sub check_regs
      my %entries_done;
 
      my $exc; $exc = sub {
-         my ( $pc, $regs, $func ) = @_;
+         my ( $pc, $regs, $func, $last ) = @_;
 
          my $wr_mask = 0;
          my $rd_mask = 0;
 
          while ( 1 ) {
              my $thisop = $srcaddr{$pc};
-             my $op = $thisop->{op};
 
              # print STDERR $pc, " ", $op->{backend}, " ", @$regs, "\n";
 
              if ( !$thisop ) {
-                 warning($thisop, "execution out of bytecode\n");
-                 return;
-             } elsif ( $op->{op_data} ) {
-                 warning($thisop, "execution of data\n");
-                 return;
+                 warning($last, "jump out of bytecode to pc=$pc\n");
+                 last;
              }
 
+             my $op = $thisop->{op};
+
              if ( $thisop->{func} != $func ) {
-                 warning($thisop, "execution across function boundary\n");
+                 warning($last, "execution across function boundary\n");
                  $func = $thisop->{func};
+                 if ( $func ) {
+                     push @entries, $func unless ( $entries_done{$func}++ );
+                     last;
+                 }
+             }
+
+             if ( $op->{op_data} ) {
+                 warning($thisop, "execution of data\n");
+                 last;
              }
 
              # skip if the instruction has already been checked
@@ -1618,12 +1628,12 @@ sub check_regs
 
              # explore branch target
              if ( $op->{op_cond} ) {
-                 my ( $rd, $wr ) = $exc->( $pc + $op->{words} + 1, [ @$regs ], $func );
+                 my ( $rd, $wr ) = $exc->( $pc + $op->{words} + 1, [ @$regs ], $func, $thisop );
                  $rd_mask |= $rd;
                  $wr_mask |= $wr;
              } elsif ( ( $op->{op_call} && !$l->{func} ) ||
                        ( $op->{op_jmp} && !$tailcall ) ) {
-                 my ( $rd, $wr ) = $exc->( $thisop->{target}->{addr}, [ @$regs ], $func );
+                 my ( $rd, $wr ) = $exc->( $thisop->{target}->{addr}, [ @$regs ], $func, $thisop );
                  $rd_mask |= $rd;
                  $wr_mask |= $wr;
              }
@@ -1633,6 +1643,7 @@ sub check_regs
                  last;
              } else {
                  $pc += $op->{words};
+                 $last = $thisop;
              }
          }
 
@@ -1666,7 +1677,7 @@ sub check_regs
 
          # start program exploration from this entry point
          my $func = $l->{func} ? $l : undef;
-         my ( $rd_mask, $wr_mask ) = $exc->( $l->{addr}, \@regs, $func );
+         my ( $rd_mask, $wr_mask ) = $exc->( $l->{addr}, \@regs, $func, $l );
 
          # emit some post exploration warnings
          if ( $func ) {
