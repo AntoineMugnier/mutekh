@@ -1280,6 +1280,26 @@ sub write_asm
         my @wregin;
         my @wregout;
 
+        # skip flush of vm regs that will be clobbered by the called function
+        if ( $op->{op_call} && !defined $cond ) {
+            my $l = $thisop->{target};
+            if ( $l->{func} ) {
+                my $m = ( $l->{output} | $l->{clobber} ) & ~$l->{input};
+                for (my $i = 0; $i < 16; $i++) {
+                    $wb{$i} = 0 if ( ( $m >> $i ) & 1 );
+                }
+            }
+        }
+
+        # skip flush of vm regs which are clobbered by the returning function
+        if ( $op->{op_ret} && !defined $cond ) {
+            if ( my $l = $thisop->{func} ) {
+                for (my $i = 0; $i < 16; $i++) {
+                    $wb{$i} = 0 if ( ( ( $l->{clobber} ) >> $i ) & 1 );
+                }
+            }
+        }
+
         my $lbl_refs;
         $lbl_refs += $_->{used} foreach ( @{$thisop->{labels}} );
 
