@@ -65,25 +65,25 @@ enum usb_class_cdc_subclass_e
 enum usb_class_cdc_protocol_e
 {
   /* No class specific protocol required */
-  USB_PROTOCOLE_CDC_NONE             = 0x00,
+  USB_PROTOCOL_CDC_NONE             = 0x00,
   /* AT Commands: V.250 etc */
-  USB_PROTOCOLE_CDC_AT               = 0x01,
+  USB_PROTOCOL_CDC_AT               = 0x01,
   /* AT Commands defined by PCCA-101 */
-  USB_PROTOCOLE_CDC_ATPCCA           = 0x02,
+  USB_PROTOCOL_CDC_ATPCCA           = 0x02,
   /* AT Commands defined by PCCA-101 & Annex O */
-  USB_PROTOCOLE_CDC_ATPCCAO          = 0x03,
+  USB_PROTOCOL_CDC_ATPCCAO          = 0x03,
   /* AT Commands defined by GSM 07.07 */
-  USB_PROTOCOLE_CDC_ATGSM            = 0x04,
+  USB_PROTOCOL_CDC_ATGSM            = 0x04,
   /* AT Commands defined by 3GPP 27.007 */
-  USB_PROTOCOLE_CDC_AT3GPP           = 0x05,
+  USB_PROTOCOL_CDC_AT3GPP           = 0x05,
   /* AT Commands defined by TIA for CDMA */
-  USB_PROTOCOLE_CDC_ATCDMA           = 0x06,
+  USB_PROTOCOL_CDC_ATCDMA           = 0x06,
   /* Ethernet Emulation Model */ 
-  USB_PROTOCOLE_CDC_EEM              = 0x07,
+  USB_PROTOCOL_CDC_EEM              = 0x07,
   /* External Protocol: Commands defined by Command Set Functional Descriptor */
-  USB_PROTOCOLE_CDC_EXT              = 0xFE,
+  USB_PROTOCOL_CDC_EXT              = 0xFE,
   /* Vendor-specific */
-  USB_PROTOCOLE_CDC_VENDOR           = 0xFF,
+  USB_PROTOCOL_CDC_VENDOR           = 0xFF,
 };
 
 /* Fonctionnal descriptor */
