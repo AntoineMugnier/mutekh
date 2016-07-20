@@ -180,7 +180,7 @@ static const struct usbdev_interface_default_s interface_cdc_ctrl =
       .bNumEndpoints = 1,
       .bInterfaceClass = USB_CLASS_CDC,
       .bInterfaceSubClass = USB_SUBCLASS_CDC_ACM,
-      .bInterfaceProtocol = USB_PROTOCOLE_CDC_NONE,
+      .bInterfaceProtocol = USB_PROTOCOL_CDC_NONE,
       .iInterface = 2
     },
     USBDEV_ENDPOINT(&ep_irq_in)
