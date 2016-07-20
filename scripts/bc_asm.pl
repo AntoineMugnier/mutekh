@@ -1588,7 +1588,7 @@ sub check_regs
                  $d = 4 if $d > 4;
                  if ( $regs->[$r] & REGVAL_VALUE ) {
                      warning($thisop, "possible presence of value in register %$r, packed data is expected\n")
-                 } elsif ( ( $regs->[$r] & REGVAL_PACK ) != ( REGVAL_PACK >> (4 - $d) ) ) {
+                 } elsif ( ( $regs->[$r] & REGVAL_PACK ) < ( REGVAL_PACK >> (4 - $d) ) ) {
                      warning($thisop, "packed data size mismatch in register %$r\n");
                  }
              }
