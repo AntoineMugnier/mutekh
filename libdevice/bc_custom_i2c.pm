@@ -29,6 +29,24 @@ main::custom_cond_op('i2c_wrmc',          3,    0xd000, \&parse_xxm );
 main::custom_cond_op('i2c_rdrc',          3,    0xf100, \&parse_rdr );
 main::custom_cond_op('i2c_wrrc',          3,    0xf000, \&parse_wrr );
 
+sub check_op
+{
+    our %ops = (
+        'CONTINUOUS'      => 2,
+        'CONTINUOUS_SYNC' => 10,
+        'STOP'            => 12,
+        'RESTART'         => 6,
+        'RESTART_SYNC'    => 14,
+        );
+
+    my ( $thisop, $argidx ) = @_;
+    my $expr = $thisop->{args}->[$argidx];
+    my $op = $ops{$expr};
+    die "$thisop->{line}: bad transfer operation, expected: ".join(', ', keys %ops)."\n"
+        unless defined $op;
+    return $op;
+}
+
 sub parse_reg
 {
     my $thisop = shift;
@@ -52,7 +70,7 @@ sub parse_xxm
     my $rl = main::check_reg( $thisop, 1 );
     $thisop->{in}->[0] = $ra;
     $thisop->{in}->[1] = $rl;
-    my $e = main::check_num( $thisop, 2, 0, 15 );
+    my $e = check_op( $thisop, 2 );
     $thisop->{code} |= ( $e << 8 ) | ($ra << 4) | $rl;
 }
 
@@ -63,7 +81,7 @@ sub parse_rdr
     my $l = main::check_num( $thisop, 1, 1, 16 );
     $thisop->{packout_reg} = $r;
     $thisop->{packout_bytes} = $l;
-    my $e = main::check_num( $thisop, 2, 0, 15 );
+    my $e = check_op( $thisop, 2 );
     $thisop->{code} |= ( $e << 8 ) | ($r << 4) | ($l - 1);
 }
 
@@ -74,7 +92,7 @@ sub parse_wrr
     my $l = main::check_num( $thisop, 1, 1, 16 );
     $thisop->{packin_reg} = $r;
     $thisop->{packin_bytes} = $l;
-    my $e = main::check_num( $thisop, 2, 0, 15 );
+    my $e = check_op( $thisop, 2 );
     $thisop->{code} |= ( $e << 8 ) | ($r << 4) | ($l - 1);
 }
 

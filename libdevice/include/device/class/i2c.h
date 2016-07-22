@@ -373,29 +373,6 @@ enum dev_i2c_op_e
   DEV_I2C_RESET = _DEV_I2C_RESET,
 };
 
-/** @This specifies how a bytecode transfer instruction terminates.
-    @xsee {i2c_rw_instructions} */
-enum dev_i2c_bc_completion_e
-{
-  /** @This specifies the @ref DEV_I2C_READ_CONTINUOUS or @ref
-      DEV_I2C_WRITE_CONTINUOUS behavior for bytecode transfer instructions. */
-  DEV_I2C_BC_CONTINUOUS =       _DEV_I2C_CONTINUOUS,
-  /** @This specifies the @ref DEV_I2C_READ_CONTINUOUS_SYNC or @ref
-      DEV_I2C_WRITE_CONTINUOUS_SYNC behavior for bytecode transfer instructions.
-      @b{Not all controller may support this.} */
-  DEV_I2C_BC_CONTINUOUS_SYNC =  (_DEV_I2C_CONTINUOUS | _DEV_I2C_SYNC),
-  /** @This specifies the @ref DEV_I2C_READ_STOP or @ref
-      DEV_I2C_WRITE_STOP behavior for bytecode transfer instructions. */
-  DEV_I2C_BC_STOP =             (_DEV_I2C_STOP | _DEV_I2C_SYNC),
-  /** @This specifies the @ref DEV_I2C_READ_RESTART or @ref
-      DEV_I2C_WRITE_RESTART behavior for bytecode transfer instructions. */
-  DEV_I2C_BC_RESTART =          _DEV_I2C_RESTART,
-  /** @This specifies the @ref DEV_I2C_READ_RESTART_SYNC or @ref
-      DEV_I2C_WRITE_RESTART_SYNC behavior for bytecode transfer instructions.
-      @b{Not all controller may support this.} */
-  DEV_I2C_BC_RESTART_SYNC =     (_DEV_I2C_RESTART | _DEV_I2C_SYNC),
-};
-
 /** @This contains the I2C transfer request which may be started by
     calling the @ref dev_i2c_ctrl_transfer_t function of the driver.
     @xsee {I2C controller driver API} */
