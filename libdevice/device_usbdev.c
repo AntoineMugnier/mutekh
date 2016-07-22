@@ -56,6 +56,15 @@ static bool_t usbdev_get_string(const char ** str, uint8_t idx, size_t *len)
   return 0;
 }
 
+static void usbdev_dump_setup(uint32_t *setup)
+{
+  printk("  bRequestType: %x\n", USB_REQUEST_REQTYPE_GET(setup));
+  printk("  bRequest: %x\n", USB_REQUEST_REQUEST_GET(setup));
+  printk("  wValue: %x\n", USB_REQUEST_VALUE_GET(setup));
+  printk("  wIndex: %x\n", USB_REQUEST_INDEX_GET(setup));
+  printk("  wLength: %x\n", USB_REQUEST_LENGTH_GET(setup));
+}
+
 static size_t usbdev_copy_buffer(struct dev_usbdev_context_s *ctx,
                                  const struct usb_descriptor_header_s * hd)
 {
@@ -334,7 +343,6 @@ static void usbdev_disable_service(struct dev_usbdev_context_s *ctx)
     });
 }
 
-
 static error_t usbdev_ctrl_transaction(struct dev_usbdev_context_s *ctx,
                                        enum dev_usbdev_rq_type_e type)
 {
@@ -381,6 +389,29 @@ static error_t usbdev_ctrl_transaction(struct dev_usbdev_context_s *ctx,
   return err;
 }
 
+static bool_t usbdev_is_service_setup(uint32_t *setup)
+{
+  if (USB_REQUEST_TYPE_GET(setup) != USB_STANDARD)
+    return 1;
+
+  switch (USB_REQUEST_REQUEST_GET(setup))
+    {
+      case USB_GET_DESCRIPTOR:
+        switch (USB_REQUEST_RECIPIENT_GET(setup))
+          {
+            case USB_INTERFACE:
+              return 1;
+            default:
+              break;
+          }
+        break;
+
+      default:
+        break;
+    }
+  return 0;
+}
+
 static void usbdev_ep0_idle(struct dev_usbdev_context_s *ctx);
 
 static inline void usbdev_ep0_status_done(struct dev_usbdev_context_s *ctx)
@@ -390,7 +421,7 @@ static inline void usbdev_ep0_status_done(struct dev_usbdev_context_s *ctx)
   ensure(ctx->tr.type == DEV_USBDEV_CTRL_STATUS_OUT ||
          ctx->tr.type == DEV_USBDEV_CTRL_STATUS_IN);
 
-  if (USB_REQUEST_TYPE_GET(setup) == USB_STANDARD)
+  if (!usbdev_is_service_setup(setup))
   /* Change device state if necessary */
     {
       switch (USB_REQUEST_REQUEST_GET(setup))
@@ -615,11 +646,13 @@ static void usbdev_service_data(struct dev_usbdev_context_s *ctx, error_t err)
 
 /* This is always executed from an interrupt handler * */
 
-static void usbdev_ep0_non_standard_setup(struct dev_usbdev_context_s *ctx)
+static void usbdev_ep0_service_setup(struct dev_usbdev_context_s *ctx)
 {
 //  usbdev_printk("USBDEV SERVICE_SETUP\n");
 
   uint32_t *setup = ctx->setup;
+
+  //  usbdev_dump_setup(setup);
 
   ctx->ep0_state = EP0_SRVC_STATUS_IN;
 
@@ -642,10 +675,11 @@ static void usbdev_ep0_non_standard_setup(struct dev_usbdev_context_s *ctx)
         return usbdev_service_ctrl(ctx, USBDEV_PROCESS_CONTROL);
       }
     });
+
   abort();
 }
 
-static void usbdev_ep0_setup(struct dev_usbdev_context_s *ctx);
+static void usbdev_ep0_standard_setup(struct dev_usbdev_context_s *ctx);
 
 static void usbdev_fsm_reset_ep0(struct dev_usbdev_context_s *ctx)
 {
@@ -1013,7 +1047,11 @@ static void usbdev_ep0_idle(struct dev_usbdev_context_s *ctx)
   switch (err)
     {
     case 0:
-      return usbdev_ep0_setup(ctx);
+      if (usbdev_is_service_setup(setup))
+      /* Non standard setup packet */
+        return usbdev_ep0_service_setup(ctx);
+      else
+        return usbdev_ep0_standard_setup(ctx);
     case -EIO:
       return usbdev_fsm_handle_event(ctx, ctx->tr.event);
     case -EAGAIN:
@@ -1081,9 +1119,7 @@ static void usbdev_ep0_zero_len_packet(struct dev_usbdev_context_s *ctx)
 
 static void usbdev_ep0_data_in_done(struct dev_usbdev_context_s *ctx)
 {
-  uint32_t *setup = ctx->setup;
-
-  if (USB_REQUEST_TYPE_GET(setup) != USB_STANDARD)
+  if (ctx->ep0_state == EP0_SRVC_DATA_IN_WAIT)
     {
       ctx->ep0_state = EP0_SRVC_DATA_IN;
       /* Call service kroutine */
@@ -1094,7 +1130,7 @@ static void usbdev_ep0_data_in_done(struct dev_usbdev_context_s *ctx)
     return usbdev_ep0_zero_len_packet(ctx);
   else
     /* Standard data stage not terminated */
-    return usbdev_ep0_setup(ctx);
+    return usbdev_ep0_standard_setup(ctx);
 }
 
 static void usbdev_ep0_data_in(struct dev_usbdev_context_s *ctx)
@@ -1108,10 +1144,10 @@ static void usbdev_ep0_data_in(struct dev_usbdev_context_s *ctx)
       ctx->it.done = 1;
     }
 
-  if (USB_REQUEST_TYPE_GET(setup) == USB_STANDARD)
-    ctx->ep0_state = EP0_DATA_IN_WAIT;
-  else
+  if (ctx->ep0_state == EP0_SRVC_DATA_IN)
     ctx->ep0_state = EP0_SRVC_DATA_IN_WAIT;
+  else
+    ctx->ep0_state = EP0_DATA_IN_WAIT;
 
   error_t err = usbdev_ctrl_transaction(ctx, DEV_USBDEV_DATA_IN);
 
@@ -1193,9 +1229,7 @@ static void usbdev_ep0_data_out_done(struct dev_usbdev_context_s *ctx)
   /* Check if data stage is valid */
   usbdev_ep0_data_out_stage_done(ctx);
 
-  uint32_t *setup = ctx->setup;
-
-  if (USB_REQUEST_TYPE_GET(setup) != USB_STANDARD)
+  if (ctx->ep0_state == EP0_SRVC_DATA_OUT_WAIT)
     {
       ctx->ep0_state = EP0_SRVC_DATA_OUT;
       /* Call service kroutine */
@@ -1203,17 +1237,15 @@ static void usbdev_ep0_data_out_done(struct dev_usbdev_context_s *ctx)
     }
 
   /* Standard data stage not terminated */
-  return usbdev_ep0_setup(ctx);
+  return usbdev_ep0_standard_setup(ctx);
 }
 
 static void usbdev_ep0_data_out(struct dev_usbdev_context_s *ctx)
 {
-  uint32_t *setup = ctx->setup;
-
-  if (USB_REQUEST_TYPE_GET(setup) == USB_STANDARD)
-    ctx->ep0_state = EP0_DATA_OUT_WAIT;
-  else
+  if (ctx->ep0_state == EP0_SRVC_DATA_OUT)
     ctx->ep0_state = EP0_SRVC_DATA_OUT_WAIT;
+  else
+    ctx->ep0_state = EP0_DATA_OUT_WAIT;
 
   error_t err = usbdev_ctrl_transaction(ctx, DEV_USBDEV_DATA_OUT);
 
@@ -1385,7 +1417,7 @@ static bool_t usbdev_service_out_desc(struct dev_usbdev_context_s *ctx)
           /* Replace interface string index */
           offset = offsetof(struct usb_interface_descriptor_s,
                             iInterface) - idx;
-          if (offset >= 0 && cnt > offset)
+          if (dst[offset] && offset >= 0 && cnt > offset)
             dst[offset] += sid->str;
         }
       else
@@ -1542,7 +1574,6 @@ static inline void usbdev_out_desc(struct dev_usbdev_context_s *ctx, uint32_t *s
     }
   return usbdev_ep0_data_in(ctx);
 }
-
 
 static inline void usbdev_set_address(struct dev_usbdev_context_s *ctx, uint32_t *setup)
 {
@@ -1722,12 +1753,12 @@ static void usbdev_set_interface(struct dev_usbdev_context_s *ctx, uint32_t *set
     return usbdev_ep0_stall(ctx, DEV_USBDEV_CTRL_STATUS_IN_STALL);
 }
 
-static void usbdev_ep0_setup(struct dev_usbdev_context_s *ctx)
+
+static void usbdev_ep0_standard_setup(struct dev_usbdev_context_s *ctx)
 {
   uint32_t *setup = ctx->setup;
 
-  if (USB_REQUEST_TYPE_GET(setup) != USB_STANDARD)
-    return usbdev_ep0_non_standard_setup(ctx);
+  //  usbdev_dump_setup(setup);
 
   switch (USB_REQUEST_REQUEST_GET(setup))
     {
@@ -1751,11 +1782,7 @@ static void usbdev_ep0_setup(struct dev_usbdev_context_s *ctx)
 
       default:
         printk("Unsupported USB request:\n");
-        printk("  bRequestType: %d\n", USB_REQUEST_REQTYPE_GET(setup));
-        printk("  bRequest: %d\n", USB_REQUEST_REQUEST_GET(setup));
-        printk("  wValue: %d\n", USB_REQUEST_VALUE_GET(setup));
-        printk("  wIndex: %d\n", USB_REQUEST_INDEX_GET(setup));
-        printk("  wLength: %d\n", USB_REQUEST_LENGTH_GET(setup));
+        usbdev_dump_setup(setup);
 
         if (USB_REQUEST_LENGTH_GET(setup))
           {
@@ -1876,7 +1903,7 @@ static KROUTINE_EXEC(usbdev_transfer_done)
           switch (ctx->ep0_state)
             {
             case EP0_SETUP_WAIT:
-              return usbdev_ep0_setup(ctx);
+              return usbdev_ep0_standard_setup(ctx);
 
             case EP0_STALL_WAIT:
               return usbdev_ep0_idle(ctx);
@@ -1957,32 +1984,26 @@ static void usbdev_stack_transfer_0_done(struct dev_usbdev_context_s *ctx,
         {
         case EP0_SETUP_WAIT:
           ensure(tr->type == DEV_USBDEV_CTRL_SETUP);
-          if (USB_REQUEST_TYPE_GET(setup) != USB_STANDARD)
+          if (usbdev_is_service_setup(setup))
           /* Non standard setup packet */
-            return usbdev_ep0_non_standard_setup(ctx);
+            return usbdev_ep0_service_setup(ctx);
           break;
 
         case EP0_SRVC_DATA_OUT_WAIT:
+          ctx->ep0_state = EP0_SRVC_DATA_OUT;
+          /* Check if data stage is valid */
+          usbdev_ep0_data_out_stage_done(ctx);
+          /* Call service kroutine */
+          return usbdev_service_data(ctx, 0);
+
+        case EP0_DATA_IN_WAIT:
         case EP0_DATA_OUT_WAIT:
-          if (USB_REQUEST_TYPE_GET(setup) != USB_STANDARD)
-            {
-              ctx->ep0_state = EP0_SRVC_DATA_OUT;
-              /* Check if data stage is valid */
-              usbdev_ep0_data_out_stage_done(ctx);
-              /* Call service kroutine */
-              return usbdev_service_data(ctx, 0);
-            }
           break;
 
         case EP0_SRVC_DATA_IN_WAIT:
-        case EP0_DATA_IN_WAIT:
-          if (USB_REQUEST_TYPE_GET(setup) != USB_STANDARD)
-            {
-              ctx->ep0_state = EP0_SRVC_DATA_IN;
-              /* Call service kroutine */
-              return usbdev_service_data(ctx, 0);
-            }
-          break;
+          ctx->ep0_state = EP0_SRVC_DATA_IN;
+          /* Call service kroutine */
+          return usbdev_service_data(ctx, 0);
 
         case EP0_DATA_IN_ZERO_WAIT:
         case EP0_STATUS_WAIT:
