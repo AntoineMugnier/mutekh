@@ -84,3 +84,5 @@ void mutek_startup_stack_reclaim()
 
 #endif
 
+extern inline void mem_free(void *ptr);
+

@@ -138,7 +138,7 @@ mem_alloc_cpu(size_t size, enum mem_scope_e scope, cpu_id_t cpu_id)
 }
 
 /** @This frees allocated memory block */
-ALWAYS_INLINE
+inline
 void mem_free(void *ptr)
 {
   memory_allocator_push(ptr);
