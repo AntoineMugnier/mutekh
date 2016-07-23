@@ -106,7 +106,10 @@ static void llcp_termination_indicate(struct ble_llcp_s *llcp, uint8_t reason)
 {
   struct net_task_s *in;
   struct buffer_s *p;
-  struct net_addr_s dst = { .llid = BLE_LL_CONTROL };
+  struct net_addr_s dst = {
+    .llid = BLE_LL_CONTROL,
+    .fatal = 1,
+  };
 
   p = net_layer_packet_alloc(&llcp->layer,
                              llcp->layer.context.prefix_size,
