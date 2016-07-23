@@ -96,6 +96,7 @@ struct nrf5x_ble_slave_s
   bool_t opened : 1;
   bool_t flow_updating : 1;
   bool_t empty_first : 1;
+  bool_t close_after_flush : 1;
 
   struct ble_link_flow_update_s flow_update;
 };
@@ -411,6 +412,9 @@ void slave_layer_task_handle(struct net_layer_s *layer,
     if (slave->reason)
       break;
 
+    if (task->packet.dst_addr.fatal)
+      slave->close_after_flush = 1;
+
     CPU_INTERRUPT_SAVESTATE_DISABLE;
     buffer_queue_pushback(&slave->tx_queue, task->packet.buffer);
     slave->tx_queue_count++;
@@ -498,6 +502,9 @@ void slave_ctx_event_closed(struct nrf5x_ble_context_s *context,
     slave->stuck_events_left--;
   if (slave->stuck_events_left == 0)
     nrf5x_ble_slave_error(slave, BLE_RESPONSE_TIMEOUT);
+
+  if (slave->tx_queue_count == 0 && slave->close_after_flush)
+    nrf5x_ble_slave_error(slave, BLE_CONNECTION_TERMINATED_BY_LOCAL_HOST);
 
   slave->established |= !!slave->event_acked_count;
 
