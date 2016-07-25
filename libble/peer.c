@@ -345,7 +345,7 @@ error_t ble_peer_master_sk_get(struct ble_peer_s *peer,
     memrevcpy(pk, peer->ltk, 16);
     memcpy(rand, peer->rand, 8);
     *ediv = peer->ediv;
-    printk("LTK:        %P\n", peer->stk, 16);
+    printk("LTK:        %P\n", peer->ltk, 16);
   } else {
     return -ENOENT;
   }
