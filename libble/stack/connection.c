@@ -206,8 +206,9 @@ error_t ble_stack_connection_create(struct ble_stack_connection_s *conn,
   phy_params.connect_packet_timestamp = anchor;
   phy_params.conn_req = *conn_params;
 #if defined(CONFIG_BLE_CRYPTO)
-  ble_peer_init(&conn->peer, &context->security_db,
-                is_master ? &conn_params->slave : &conn_params->master);
+  ble_security_db_load(&context->security_db,
+                       is_master ? &conn_params->slave : &conn_params->master,
+                       &conn->peer);
 #else
   ble_peer_init(&conn->peer, NULL,
                 is_master ? &conn_params->slave : &conn_params->master);
@@ -407,6 +408,12 @@ error_t ble_stack_connection_create(struct ble_stack_connection_s *conn,
     conn->chandler = chandler;
     conn->handler = handler;
     conn_state_update(conn);
+
+    printk("Conn ok master %d paired %d ltk %d\n",
+           is_master, conn->peer.paired, conn->peer.ltk_present);
+
+    if (is_master && conn->peer.paired && conn->peer.ltk_present)
+      ble_llcp_encryption_enable(conn->llcp);
   }
 
   return err;
