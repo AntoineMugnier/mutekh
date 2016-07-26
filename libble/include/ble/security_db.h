@@ -92,7 +92,7 @@ void ble_security_db_cleanup(struct ble_security_db_s *security_db);
    @this looks up a peer entry by address, either random (using IRK)
    or public.
  */
-error_t ble_security_db_lookup(struct ble_security_db_s *security_db,
+error_t ble_security_db_load(struct ble_security_db_s *security_db,
                                const struct ble_addr_s *addr,
                                struct ble_peer_s *peer);
 

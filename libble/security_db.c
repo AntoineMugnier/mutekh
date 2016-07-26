@@ -47,13 +47,15 @@ struct ble_security_db_entry_s
 {
   uint8_t irk[16];
   uint8_t ltk[16];
-
   uint64_t id;
-
   uint8_t addr[6];
+  uint8_t rand[8];
+  uint16_t ediv;
 
   bool_t addr_present : 1;
   bool_t irk_present : 1;
+  bool_t ltk_present : 1;
+  bool_t identity_present : 1;
   bool_t addr_random : 1;
   bool_t bonded : 1;
   bool_t mitm_protection : 1;
@@ -108,12 +110,17 @@ static
 void peer_entry_store(struct ble_security_db_entry_s *entry,
                       const struct ble_peer_s *peer)
 {
+  memcpy(entry->ltk, peer->ltk, 16);
   memcpy(entry->irk, peer->irk, 16);
   memcpy(entry->addr, peer->addr.addr, 6);
+  memcpy(entry->rand, peer->rand, 8);
 
   entry->addr_random = peer->addr.type == BLE_ADDR_RANDOM;
   entry->addr_present = peer->addr_present;
+  entry->ltk_present = peer->ltk_present;
   entry->irk_present = peer->irk_present;
+  entry->identity_present = peer->identity_present;
+  entry->ediv = peer->ediv;
 
   entry->id = peer->id;
   entry->bonded = peer->bonded;
@@ -126,10 +133,15 @@ void peer_entry_load(const struct ble_security_db_entry_s *entry,
                      struct ble_peer_s *peer)
 {
   memcpy(peer->irk, entry->irk, 16);
+  memcpy(peer->ltk, entry->ltk, 16);
+  memcpy(peer->rand, entry->rand, 8);
   peer_entry_addr_load(entry, &peer->addr);
 
   peer->id = entry->id;
+  peer->identity_present = entry->identity_present;
+  peer->ediv = entry->ediv;
   peer->addr_present = entry->addr_present;
+  peer->ltk_present = entry->ltk_present;
   peer->irk_present = entry->irk_present;
   peer->bonded = entry->bonded;
   peer->mitm_protection = entry->mitm_protection;
@@ -356,7 +368,6 @@ bool_t ble_security_db_contains(struct ble_security_db_s *db,
   return 0;
 }
 
-static
 error_t ble_security_db_load(struct ble_security_db_s *db,
                                const struct ble_addr_s *addr,
                                struct ble_peer_s *peer)
