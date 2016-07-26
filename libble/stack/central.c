@@ -194,8 +194,13 @@ static error_t scan_start(struct ble_central_s *ctr)
     goto out;
   }
 
+  struct ble_scan_filter_param_s filter_params = {
+    .peerdb = &ctr->context->security_db,
+    .scan_params = ctr->params,
+  };
+
   err = ble_scan_filter_create(&ctr->context->scheduler,
-                               &ctr->params, ctr, &central_scan_filter_vtable.base,
+                               &filter_params, ctr, &central_scan_filter_vtable.base,
                                &ctr->scan_filter);
   if (err) {
     printk("Scanning filter creation failed: %d\n", err);
