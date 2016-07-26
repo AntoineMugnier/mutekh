@@ -5,6 +5,7 @@
 #include <device/driver.h>
 #include <device/irq.h>
 #include <hexo/endian.h>
+#include <mutek/startup.h>
 
 #include <device/class/usbdev.h>
 #include <device/class/cmu.h>
@@ -68,7 +69,7 @@ static const struct usbdev_device_info_s usbdevinfo =
   .string = "MutekH\0\Test\0"
 };
 
-void app_start()
+void app_start(void)
 {
   struct device_usbdev_s usb;
   if (!device_get_accessor_by_path(&usb.base, NULL, "max3420", DRIVER_CLASS_USBDEV))
