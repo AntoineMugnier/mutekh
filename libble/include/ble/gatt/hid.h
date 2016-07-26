@@ -25,6 +25,13 @@
 #include <ble/gatt/characteristic.h>
 #include <ble/gatt/descriptor.h>
 
+enum ble_hid_report_type_e
+{
+  BLE_HID_REPORT_INPUT   = 0x01,
+  BLE_HID_REPORT_OUTPUT  = 0x02,
+  BLE_HID_REPORT_FEATURE = 0x03,
+};
+
 #define BLE_HID_EXTERNAL_REPORT_REFERENCE(type_)            \
     {                                                       \
       .type = BLE_UUID_BT_BASED_P(BLE_GATT_DESC_EXTERNAL_REPORT_REFERENCE), \
@@ -39,8 +46,8 @@
         .size = 2,                                          \
     }
 
-#define BLE_HID_INPUT_REPORT(id) BLE_HID_REPORT_REFERENCE(1, id)
-#define BLE_HID_OUTPUT_REPORT(id) BLE_HID_REPORT_REFERENCE(2, id)
-#define BLE_HID_FEATURE_REPORT(id) BLE_HID_REPORT_REFERENCE(3, id)
+#define BLE_HID_INPUT_REPORT(id) BLE_HID_REPORT_REFERENCE(BLE_HID_REPORT_INPUT, id)
+#define BLE_HID_OUTPUT_REPORT(id) BLE_HID_REPORT_REFERENCE(BLE_HID_REPORT_OUTPUT, id)
+#define BLE_HID_FEATURE_REPORT(id) BLE_HID_REPORT_REFERENCE(BLE_HID_REPORT_FEATURE, id)
 
 #endif
