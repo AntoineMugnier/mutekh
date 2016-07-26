@@ -23,7 +23,7 @@
 #include <hexo/types.h>
 #include <device/usb/usb.h>
 #include <device/class/usbdev.h>
-#include <device/usb/usb_cdc.h>
+#include <device/usb/cdc.h>
 
 USBDEV_REPLACE(usbdev_cdc_desc_update)
 {
@@ -32,16 +32,16 @@ USBDEV_REPLACE(usbdev_cdc_desc_update)
 
   switch (p[sizeof(struct usb_descriptor_header_s)])
     {
-    case USB_FUNC_DESC_CALL_MGMT:
+    case USB_CDC_FUNC_CALL_MGMT:
       /* Replace interface number */
-      offset = offsetof(struct usb_class_cdc_call_mgmt_descriptor_s,
+      offset = offsetof(struct usb_cdc_call_mgmt_descriptor_s,
                         bDataInterface) - bidx;
 
       if (offset >= 0 && cnt > offset)
         dst[offset] += index->itf;
       break;
-    case USB_FUNC_DESC_UNION:{
-      offset = offsetof(struct usb_class_cdc_union_descriptor_s,
+    case USB_CDC_FUNC_UNION:{
+      offset = offsetof(struct usb_cdc_union_descriptor_s,
                         bMasterInterface);
       size_t nbr = hdr->bLength - offset; 
       /* Replace interface number */

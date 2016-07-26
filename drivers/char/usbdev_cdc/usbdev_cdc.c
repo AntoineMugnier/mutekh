@@ -33,7 +33,7 @@
 #include <device/irq.h>
 
 #include <device/usb/usb.h>
-#include <device/usb/usb_cdc.h>
+#include <device/usb/cdc.h>
 
 #include <device/class/usbdev.h>
 #include <device/class/char.h>
@@ -79,9 +79,9 @@ static const struct usbdev_class_cdc_func_info_s cdc_header =
 {
   .f_replace = NULL,
   .hdr = {
-    .head.bLength = sizeof(struct usb_class_cdc_header_descriptor_s),
-    .head.bDescriptorType = USB_CS_INTERFACE_DESCRIPTOR,
-    .bDescriptorSubtype = USB_FUNC_DESC_HEADER,
+    .head.bLength = sizeof(struct usb_cdc_header_descriptor_s),
+    .head.bDescriptorType = USB_CDC_INTERFACE_DESCRIPTOR,
+    .bDescriptorSubtype = USB_CDC_FUNC_HEADER,
     .bcdCDC = endian_le16(0x0120),
   }
 };
@@ -89,9 +89,9 @@ static const struct usbdev_class_cdc_func_info_s cdc_call_mgmt =
 {
   .f_replace = usbdev_cdc_desc_update,
   .call = {
-    .head.bLength = sizeof(struct usb_class_cdc_call_mgmt_descriptor_s),
-    .head.bDescriptorType = USB_CS_INTERFACE_DESCRIPTOR,
-    .bDescriptorSubtype = USB_FUNC_DESC_CALL_MGMT,
+    .head.bLength = sizeof(struct usb_cdc_call_mgmt_descriptor_s),
+    .head.bDescriptorType = USB_CDC_INTERFACE_DESCRIPTOR,
+    .bDescriptorSubtype = USB_CDC_FUNC_CALL_MGMT,
     .bmCapabilities = USBDEV_SERV_CHAR_ITF_CTRL,
     .bDataInterface = USBDEV_SERV_CHAR_ITF_DATA
   }
@@ -100,9 +100,9 @@ static const struct usbdev_class_cdc_func_info_s cdc_acm =
 {
   .f_replace = NULL,
   .acm = {
-    .head.bLength = sizeof(struct usb_class_cdc_acm_descriptor_s),
-    .head.bDescriptorType = USB_CS_INTERFACE_DESCRIPTOR,
-    .bDescriptorSubtype = USB_FUNC_DESC_ACM,
+    .head.bLength = sizeof(struct usb_cdc_acm_descriptor_s),
+    .head.bDescriptorType = USB_CDC_INTERFACE_DESCRIPTOR,
+    .bDescriptorSubtype = USB_CDC_FUNC_ACM,
     .bmCapabilities = 2,
   }
 };
@@ -110,9 +110,9 @@ static const struct usbdev_class_cdc_func_info_s cdc_union =
 {
   .f_replace = usbdev_cdc_desc_update,
   .un = {
-    .head.bLength = sizeof(struct usb_class_cdc_union_descriptor_s),
-    .head.bDescriptorType = USB_CS_INTERFACE_DESCRIPTOR,
-    .bDescriptorSubtype = USB_FUNC_DESC_UNION,
+    .head.bLength = sizeof(struct usb_cdc_union_descriptor_s),
+    .head.bDescriptorType = USB_CDC_INTERFACE_DESCRIPTOR,
+    .bDescriptorSubtype = USB_CDC_FUNC_UNION,
     .bMasterInterface = USBDEV_SERV_CHAR_ITF_CTRL,
     .bSlaveInterface = USBDEV_SERV_CHAR_ITF_DATA
   }
@@ -179,8 +179,8 @@ static const struct usbdev_interface_default_s interface_cdc_ctrl =
       .bAlternateSetting = 0,
       .bNumEndpoints = 1,
       .bInterfaceClass = USB_CLASS_CDC,
-      .bInterfaceSubClass = USB_SUBCLASS_CDC_ACM,
-      .bInterfaceProtocol = USB_PROTOCOL_CDC_NONE,
+      .bInterfaceSubClass = USB_CDC_SUBCLASS_ACM,
+      .bInterfaceProtocol = USB_CDC_PROTOCOL_NONE,
       .iInterface = 2
     },
     USBDEV_ENDPOINT(&ep_irq_in)

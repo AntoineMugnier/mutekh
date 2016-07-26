@@ -1,23 +1,21 @@
 /*
     This file is part of MutekH.
-    
+
     MutekH is free software; you can redistribute it and/or modify it
     under the terms of the GNU Lesser General Public License as
     published by the Free Software Foundation; version 2.1 of the
     License.
-    
+
     MutekH is distributed in the hope that it will be useful, but
     WITHOUT ANY WARRANTY; without even the implied warranty of
     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
     Lesser General Public License for more details.
-    
+
     You should have received a copy of the GNU Lesser General Public
-    License along with MutekH; if not, write to the Free Software
-    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
-    02110-1301 USA.
+    License along with this program.  If not, see
+    <http://www.gnu.org/licenses/>.
 
-    Copyright Sebastien Cerdan <sebcerdan@gmail.com> (c) 2016
-
+    Copyright (c) Nicolas Pouillon <nipo@ssji.net>, 2016
 */
 
 /**
@@ -34,15 +32,15 @@
 
 enum usb_hid_subclass_e
 {
-  USB_SUBCLASS_HID_REPORT   = 0x00,
-  USB_SUBCLASS_HID_BOOT     = 0x01,
+  USB_HID_SUBCLASS_REPORT   = 0x00,
+  USB_HID_SUBCLASS_BOOT     = 0x01,
 };
 
 enum usb_hid_boot_protocol_e
 {
-  USB_PROTOCOL_HID_NONE     = 0x00,
-  USB_PROTOCOL_HID_KEYBOARD = 0x01,
-  USB_PROTOCOL_HID_MOUSE    = 0x02,
+  USB_HID_PROTOCOL_NONE     = 0x00,
+  USB_HID_PROTOCOL_KEYBOARD = 0x01,
+  USB_HID_PROTOCOL_MOUSE    = 0x02,
 };
 
 enum usb_hid_lang_e
