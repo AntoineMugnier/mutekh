@@ -465,7 +465,7 @@ struct usbdev_device_info_s
   uint8_t  power;
   uint8_t  iconfig;
   /* String containing all device descriptor */
-  char * string;
+  const char * string;
   size_t str_cnt;
 };
 
