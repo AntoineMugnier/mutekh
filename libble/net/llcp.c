@@ -81,6 +81,7 @@ struct ble_llcp_s
 
   bool_t version_sent : 1;
   bool_t features_exchanged : 1;
+  bool_t encryption_started : 1;
 };
 
 STRUCT_COMPOSE(ble_llcp_s, layer);
@@ -167,6 +168,9 @@ static error_t llcp_start_enc(struct ble_llcp_s *llcp)
   if (!llcp->peer->stk_present && !(llcp->peer->ltk_present && llcp->peer->identity_present))
     return -EPERM;
 
+  if (llcp->encryption_started)
+    return -EAGAIN;
+
   err = dev_rng_wait_read(llcp->rng, llcp->local_skd, 8);
   if (err)
     return err;
@@ -186,6 +190,8 @@ static error_t llcp_start_enc(struct ble_llcp_s *llcp)
     buffer_refdec(p);
     return -ENOMEM;
   }
+
+  llcp->encryption_started = 1;
 
   p->data[p->begin + 0] = BLE_LL_ENC_REQ;
   if (llcp->peer->stk_present) {
@@ -212,6 +218,9 @@ static error_t llcp_restart_enc(struct ble_llcp_s *llcp)
   if (llcp->error)
     return -EIO;
 
+  if (!llcp->encryption_started)
+    return -EAGAIN;
+
   p = net_layer_packet_alloc(&llcp->layer,
                              llcp->layer.context.prefix_size,
                              1);
@@ -223,6 +232,8 @@ static error_t llcp_restart_enc(struct ble_llcp_s *llcp)
     buffer_refdec(p);
     return -ENOMEM;
   }
+
+  llcp->encryption_started = 0;
 
   p->data[p->begin + 0] = BLE_LL_PAUSE_ENC_REQ;
 
