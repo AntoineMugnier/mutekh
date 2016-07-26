@@ -123,12 +123,11 @@ enum dev_usbdev_rq_type_e
 
 struct device_usbdev_s;
 
-  /** @This is the USB device request structure. From an USB point of view and
-      except for @ref DEV_USBDEV_EVENT, requests are used as response to USB
-      transactions. This type of request are appropriated to device controller
-      exposing a transaction level interface.
-   */
-
+/** @This is the USB device request structure. From an USB point of view and
+    except for @ref DEV_USBDEV_EVENT, requests are used as response to USB
+    transactions. This type of request are appropriated to device controller
+    exposing a transaction level interface.
+ */
 struct dev_usbdev_request_s
 {
   struct dev_request_s          base;
@@ -370,7 +369,6 @@ struct dev_usbdev_config_s
 
   If an configuration is not supported by a controller @tt -ENOTSUP error must
   be returned.
-
 **/
 typedef DEV_USBDEV_CONFIG(dev_usbdev_config_t);
 
@@ -380,11 +378,13 @@ void usbdev_stack_config_done(struct dev_usbdev_context_s *ctx);
 #define DEV_USBDEV_ALLOC(n) void * (n)(struct dev_usbdev_context_s *ctx, size_t size)
 
 /**
-   USB device class allocate() function type. Allocate a buffer compliant with USB device
-   controller. Most of USB device controller need special alignement or minimum size for
-   receive or send buffer. Returns 0 when the required allocation failed otherwise returns
-   a pointer on the buffer. Allocated size must always be multiple of the Maximum Packet
-   Size of the endpoint for which the buffer is allocated.
+   USB device class allocate() function type. Allocate a buffer
+   compliant with USB device controller. Most of USB device controller
+   need special alignement or minimum size for receive or send
+   buffer. Returns 0 when the required allocation failed otherwise
+   returns a pointer on the buffer. Allocated size must always be
+   multiple of the Maximum Packet Size of the endpoint for which the
+   buffer is allocated.
 */
 typedef DEV_USBDEV_ALLOC(dev_usbdev_alloc_t);
 
@@ -408,12 +408,14 @@ struct usbdev_endpoint_s
 #define DEV_USBDEV_ENDPOINT(n) struct usbdev_endpoint_s * (n)(struct dev_usbdev_context_s *ctx, enum usb_endpoint_dir_e dir, uint8_t address)
 
 /**
-   USB device class endpoint() function type. Return endpoint structure of a specified
-   endpoint allocated in the USB controller device private data. Each USB device controller
-   specifies a number of endpoint that it is able to support in addition to endpoint 0. For
-   each of these  additional endpoints, it must allocate a @ref struct usbdev_endpoint_s
-   structure. Endpoint 0 must not be allocated by driver. Return NULL if the requested endpoint
-   does not exist.
+   USB device class endpoint() function type. Return endpoint
+   structure of a specified endpoint allocated in the USB controller
+   device private data. Each USB device controller specifies a number
+   of endpoint that it is able to support in addition to endpoint
+   0. For each of these additional endpoints, it must allocate a @ref
+   struct usbdev_endpoint_s structure. Endpoint 0 must not be
+   allocated by driver. Return NULL if the requested endpoint does not
+   exist.
  */
 typedef DEV_USBDEV_ENDPOINT(dev_usbdev_endpoint_t);
 
@@ -425,18 +427,19 @@ DRIVER_CTX_CLASS_TYPES(DRIVER_CLASS_USBDEV, usbdev, );
     .ctx_offset = offsetof(driver_pv_t , usbdev_ctx),                 \
   })
 
-# define USBDEV_FOREACH_INTERFACE(itf, ... /* loop body */ )                                        \
-  do {                                                                                              \
-    const struct usbdev_interface_default_s * _i = (const struct usbdev_interface_default_s *)itf;  \
-    uint_fast8_t _itfidx = 0;                                                                       \
-    while(1)                                                                                        \
-      {                                                                                             \
-        { __VA_ARGS__ }                                                                             \
-        if (_itfidx == _i->alt_cnt)                                                                 \
-          goto _end;                                                                                \
-        itf = (const struct usbdev_interface_s *)_i->alt[_itfidx++];                                \
-      }                                                                                             \
-  _end:;                                                                                            \
+# define USBDEV_FOREACH_INTERFACE(itf, ... /* loop body */ )            \
+  do {                                                                  \
+    const struct usbdev_interface_default_s * _i                        \
+      = (const struct usbdev_interface_default_s *)itf;                 \
+    uint_fast8_t _itfidx = 0;                                           \
+    while(1)                                                            \
+      {                                                                 \
+        { __VA_ARGS__ }                                                 \
+        if (_itfidx == _i->alt_cnt)                                     \
+          goto _end;                                                    \
+        itf = (const struct usbdev_interface_s *)_i->alt[_itfidx++];    \
+      }                                                                 \
+  _end:;                                                                \
   } while(0)
 
 # define USBDEV_FOREACH_ENDPOINT(itf, mapin, mapout, ... /* loop body */)         \
@@ -460,10 +463,12 @@ struct usbdev_device_info_s
 {
   /* Device descriptor */
   struct usb_device_descriptor_s desc;
+
   /* Configuration descriptor information */
   uint8_t  configuration;
   uint8_t  power;
   uint8_t  iconfig;
+
   /* String containing all device descriptor */
   const char * string;
   size_t str_cnt;
@@ -471,7 +476,7 @@ struct usbdev_device_info_s
 
 struct dev_usbdev_driver_ops_s
 {
-  dev_usbdev_request_t *f_transfer;
+  dev_usbdev_request_t  *f_transfer;
   dev_usbdev_config_t   *f_config;
   dev_usbdev_alloc_t    *f_alloc;
   dev_usbdev_free_t     *f_free;
@@ -659,8 +664,10 @@ error_t usbdev_stack_request(struct device_usbdev_s *dev, struct usbdev_service_
     either by this function or by kroutine. In this case, the
     @ref dev_usbdev_request_s::size might not be updated. */
 config_depend(CONFIG_DEVICE_USBDEV)
-error_t usbdev_stack_transfer(struct device_usbdev_s *dev, struct usbdev_service_s *service,
-                              struct dev_usbdev_request_s *tr, const struct usb_endpoint_descriptor_s *desc);
+error_t usbdev_stack_transfer(struct device_usbdev_s *dev,
+                              struct usbdev_service_s *service,
+                              struct dev_usbdev_request_s *tr,
+                              const struct usb_endpoint_descriptor_s *desc);
 
 #define USBDEV_SERVICE_DESCRIPTOR(...)   \
    .desc = ((const struct usb_descriptor_header_s *[]){__VA_ARGS__}),  \
@@ -757,41 +764,52 @@ enum dev_usbdev_ctrl_ep_state_e
 struct dev_usbdev_context_s
 {
   const struct dev_usbdev_driver_ops_s *ops;
+
   /** Accessor on usb device controller */
   struct device_s *dev;
+
   /* USB device information */
   const struct usbdev_device_info_s * devinfo;
   /* Iterator used for enumeration */
   struct dev_usbdev_desc_iterator_s it;
+
   /** Device state */
   enum dev_usbdev_state_e state;
+
   /** Number of services registerd on USB device */
   uint8_t service_cnt;
   uint32_t service_state;
+
   /** List of usb services */
   usbdev_service_root_t service;
   struct kroutine_s kr;
+
   /** Endpoint 0 setup packet */
   uint32_t setup[2];
   /** Endpoint 0 state */
   enum dev_usbdev_ctrl_ep_state_e ep0_state:8;
+
   union {
     /** Configuration request for USB driver */
     struct dev_usbdev_config_s cfg;
     /** Endpoint 0 transfer */
     struct dev_usbdev_request_s tr;
   };
+
   /** Endpoint buffer */
   uint8_t *data;
   bool_t halted;
+
   /** Controller endpoint mask */
   uint16_t epi_msk;
   uint16_t epo_msk;
+
   /** Pending Bus event */
   uint8_t event;
 #if (CONFIG_USBDEV_MAX_ALTERNATE_COUNT > 0)
   uint8_t itf_cfg[CONFIG_USBDEV_MAX_INTERFACE_COUNT];
 #endif
+
   struct dev_usbdev_interface_cfg_s itf[CONFIG_USBDEV_MAX_INTERFACE_COUNT];
 };
 
@@ -850,7 +868,8 @@ enum usb_transfert_direction_e
 dev_usbdev_get_transfer_dir(struct dev_usbdev_request_s *tr);
 
 config_depend(CONFIG_DEVICE_USBDEV)
-error_t dev_res_get_usbdev_epmap(struct device_s *dev, struct usbdev_service_s * service);
+error_t dev_res_get_usbdev_epmap(struct device_s *dev,
+                                 struct usbdev_service_s * service);
 
 #ifdef CONFIG_DEVICE_USBDEV
 /** @This specifies a USBDEV resource entry in a static
@@ -879,7 +898,5 @@ error_t dev_res_get_usbdev_epmap(struct device_s *dev, struct usbdev_service_s *
     .type = DEV_RES_UNUSED,                              \
   }
 #endif
-
-
 
 #endif
