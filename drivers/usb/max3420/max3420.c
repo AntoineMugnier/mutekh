@@ -281,16 +281,16 @@ static error_t max3420_usbdev_check_config(struct max3420_usbdev_private_s *pv,
   
       USBDEV_FOREACH_ENDPOINT(icfg->i, icfg->epi, icfg->epo,
        {
-         if (USB_GET_EDP_TYPE(epdesc) == USB_EP_CONTROL ||
-             USB_GET_EDP_TYPE(epdesc) == USB_EP_ISOCHRONOUS)
+         if (usb_ep_type_get(epdesc) == USB_EP_CONTROL ||
+             usb_ep_type_get(epdesc) == USB_EP_ISOCHRONOUS)
           return -ENOTSUP;
 
-         uint16_t mps = USB_GET_EDP_MPS(epdesc);
+         uint16_t mps = usb_ep_mps_get(epdesc);
 
          if (mps > 64 || !is_pow2(mps))
             return -ENOTSUP;
 
-         if (USB_GET_EDP_DIR(epdesc) == USB_EP_IN)
+         if (usb_ep_dir_get(epdesc) == USB_EP_IN)
          /* IN endpoint */
            {
             if ((epaddr != 2) && (epaddr != 3))

@@ -445,9 +445,9 @@ DRIVER_CTX_CLASS_TYPES(DRIVER_CLASS_USBDEV, usbdev, );
     const dev_usbdev_edp_map_t *_mapin = (mapin);                                 \
     const dev_usbdev_edp_map_t *_mapout = (mapout);                               \
     const struct usb_interface_descriptor_s *_d = &(_itf->desc);                  \
-    for (uint_fast8_t _epidx = 0; _epidx < USB_GET_ITF_EP_CNT(_d) ; _epidx++)     \
+    for (uint_fast8_t _epidx = 0; _epidx < usb_interface_ep_count_get(_d) ; _epidx++)     \
       {                                                                           \
-        uint8_t _idx = USB_GET_ITF_ALT(_d);                                       \
+        uint8_t _idx = usb_interface_alt_get(_d);                                       \
         const struct usb_endpoint_descriptor_s *epdesc = _itf->edp[_epidx];       \
         dev_usbdev_edp_addr_t epaddr                                              \
           = usbdev_stack_get_edp_addr(epdesc, _mapin[_idx], _mapout[_idx]);       \

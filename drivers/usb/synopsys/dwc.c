@@ -92,21 +92,21 @@ static void synopsys_usbdev_edp_activation(struct synopsys_usbdev_private_s *pv,
     {
       USBDEV_FOREACH_ENDPOINT(itf->i, itf->epi, itf->epo,
        {
-         if (USB_GET_EDP_TYPE(epdesc) == USB_EP_CONTROL)
+         if (usb_ep_type_get(epdesc) == USB_EP_CONTROL)
              pv->ctrl |= 1 << epaddr;
 
-         if (usbdev_is_endpoint_in(epdesc))
+         if (usb_ep_is_in(epdesc))
            /* TX endpoint */
            {
              /* Clear drop bit */
              x = SYNOPSYS_USB_DIEPINT_PKTDRPSTS;
              cpu_mem_write_32(pv->addr + SYNOPSYS_USB_DIEPINT_ADDR(epaddr), endian_le32(x));
 
-             x = SYNOPSYS_USB_DIEPCTL_MPS_SHIFT_VAL(USB_GET_EDP_MPS(epdesc)) |
+             x = SYNOPSYS_USB_DIEPCTL_MPS_SHIFT_VAL(usb_ep_mps_get(epdesc)) |
                  SYNOPSYS_USB_DIEPCTL_TXFNUM_SHIFT_VAL(epaddr) |
                  SYNOPSYS_USB_DIEPCTL_SETD0PIDEF | 
                  SYNOPSYS_USB_DIEPCTL_USBACTEP; 
-             SYNOPSYS_USB_DIEPCTL_ETYPE_SETVAL(x, USB_GET_EDP_TYPE(epdesc));
+             SYNOPSYS_USB_DIEPCTL_ETYPE_SETVAL(x, usb_ep_type_get(epdesc));
              
              cpu_mem_write_32(pv->addr + SYNOPSYS_USB_DIEPCTL_ADDR(epaddr), endian_le32(x));
 
@@ -114,17 +114,17 @@ static void synopsys_usbdev_edp_activation(struct synopsys_usbdev_private_s *pv,
              daint |= SYNOPSYS_USB_DAINTMSK_INEPMSK(epaddr);
 
            }
-         if (usbdev_is_endpoint_out(epdesc))
+         if (usb_ep_is_out(epdesc))
            /* RX endpoint */
            {
              /* Clear drop bit */
              x = SYNOPSYS_USB_DOEPINT_PKTDRPSTS;
              cpu_mem_write_32(pv->addr + SYNOPSYS_USB_DOEPINT_ADDR(epaddr), endian_le32(x));
 
-             x = SYNOPSYS_USB_DOEPCTL_MPS_SHIFT_VAL(USB_GET_EDP_MPS(epdesc)) |
+             x = SYNOPSYS_USB_DOEPCTL_MPS_SHIFT_VAL(usb_ep_mps_get(epdesc)) |
                  SYNOPSYS_USB_DOEPCTL_USBACTEP | 
                  SYNOPSYS_USB_DOEPCTL_SETD0PIDEF; 
-             SYNOPSYS_USB_DOEPCTL_ETYPE_SETVAL(x, USB_GET_EDP_TYPE(epdesc)); 
+             SYNOPSYS_USB_DOEPCTL_ETYPE_SETVAL(x, usb_ep_type_get(epdesc)); 
              
              cpu_mem_write_32(pv->addr + SYNOPSYS_USB_DOEPCTL_ADDR(epaddr), endian_le32(x));
 
@@ -178,21 +178,21 @@ static error_t synopsys_usbdev_configure(struct synopsys_usbdev_private_s *pv,
                  /* RX and TX memory size to allocate for endpoint */
                  tx = rx = 0;
               
-                 if (USB_GET_EDP_TYPE(epdesc) == USB_EP_CONTROL)
+                 if (usb_ep_type_get(epdesc) == USB_EP_CONTROL)
                  /* INOUT endpoint */
                    {
-                     rx = 4 + (USB_GET_EDP_MPS(epdesc) >> 2) + 1 + 1;
-                     tx = USB_GET_EDP_MPS(epdesc) >> 2;
+                     rx = 4 + (usb_ep_mps_get(epdesc) >> 2) + 1 + 1;
+                     tx = usb_ep_mps_get(epdesc) >> 2;
                    }
-                 else if (USB_GET_EDP_DIR(epdesc) == USB_EP_IN)
+                 else if (usb_ep_dir_get(epdesc) == USB_EP_IN)
                  /* IN endpoint */{
-                   tx = USB_GET_EDP_MPS(epdesc) >> 2;
+                   tx = usb_ep_mps_get(epdesc) >> 2;
                    }
                  else
                  /* OUT endpoint */
                    {
-                     rx  = (USB_GET_EDP_MPS(epdesc) >> 2);
-                     if (USB_GET_EDP_TYPE(epdesc) == USB_EP_ISOCHRONOUS)
+                     rx  = (usb_ep_mps_get(epdesc) >> 2);
+                     if (usb_ep_type_get(epdesc) == USB_EP_ISOCHRONOUS)
                        rx <<= 1;
                      rx += 1;
                    }
@@ -532,7 +532,7 @@ static void synopsys_usbdev_end_transfer(struct synopsys_usbdev_private_s *pv, b
       /* Cancel pending transfer */
       USBDEV_FOREACH_ENDPOINT(itf->i, itf->epi, itf->epo,
         {
-         if (usbdev_is_endpoint_in(epdesc))
+         if (usb_ep_is_in(epdesc))
            {
              tr = pv->tri[epaddr];
              /* Terminate transfer */
@@ -540,14 +540,14 @@ static void synopsys_usbdev_end_transfer(struct synopsys_usbdev_private_s *pv, b
              synopsys_usbdev_end_in_transfer(pv, tr);
            }
   
-         if (usbdev_is_endpoint_out(epdesc)) 
+         if (usb_ep_is_out(epdesc)) 
            {
              tr = pv->tro[epaddr];
              /* Terminate transfer */
              tr->error = -EAGAIN;
              synopsys_usbdev_end_out_transfer(pv, tr);
            }
-         if (USB_GET_EDP_TYPE(epdesc) == USB_EP_CONTROL)
+         if (usb_ep_type_get(epdesc) == USB_EP_CONTROL)
              pv->ctrl &= ~(1 << epaddr);
         });
 
@@ -557,12 +557,12 @@ static void synopsys_usbdev_end_transfer(struct synopsys_usbdev_private_s *pv, b
    
       USBDEV_FOREACH_ENDPOINT(itf->i, itf->epi, itf->epo,
         {
-          if (usbdev_is_endpoint_in(epdesc))
+          if (usb_ep_is_in(epdesc))
             {
               assert(pv->tri[epaddr] == NULL);
               synopsys_usbdev_flush_tx_fifo(pv, epaddr);
             }
-          if (usbdev_is_endpoint_out(epdesc))
+          if (usb_ep_is_out(epdesc))
             assert(pv->tro[epaddr] == NULL);
         });
     }
@@ -607,9 +607,9 @@ static bool_t synopsys_usbdev_set_dis(struct synopsys_usbdev_private_s *pv, bool
 
       USBDEV_FOREACH_ENDPOINT(itf->i, itf->epi, itf->epo,
         {
-          if (usbdev_is_endpoint_in(epdesc) && pv->tri[epaddr]) 
+          if (usb_ep_is_in(epdesc) && pv->tri[epaddr]) 
             synopsys_usbdev_set_flag(pv, 1, SYNOPSYS_USB_DIEPCTL_EPDIS, epaddr);
-          if (usbdev_is_endpoint_out(epdesc) && pv->tro[epaddr]) 
+          if (usb_ep_is_out(epdesc) && pv->tro[epaddr]) 
             synopsys_usbdev_set_flag(pv, 0, SYNOPSYS_USB_DOEPCTL_EPDIS, epaddr);
         });
     }
@@ -673,13 +673,13 @@ static bool_t synopsys_usbdev_set_nak(struct synopsys_usbdev_private_s *pv, bool
       /* Set IN NAK  */
       USBDEV_FOREACH_ENDPOINT(itf->i, itf->epi, itf->epo,
        {
-         if (usbdev_is_endpoint_in(epdesc) && pv->tri[epaddr]) 
+         if (usb_ep_is_in(epdesc) && pv->tri[epaddr]) 
            synopsys_usbdev_set_flag(pv, 1, SYNOPSYS_USB_DIEPCTL_SNAK, epaddr);
        });
       /* Global OUT NAK */
       USBDEV_FOREACH_ENDPOINT(itf->i, itf->epi, itf->epo,
        {
-         if (usbdev_is_endpoint_out(epdesc) && pv->tro[epaddr]) 
+         if (usb_ep_is_out(epdesc) && pv->tro[epaddr]) 
            {
              synopsys_usbdev_set_gout_nak(pv);
              break;

@@ -477,19 +477,19 @@ static KROUTINE_EXEC(usbdev_cdc_ctrl_cb)
         ensure (rq->itf == USBDEV_SERV_CHAR_ITF_CTRL);
    
         /* We use provided buffer to send/retrieve USB data */
-        uint32_t *setup = rq->ctrl.setup;
-        uint16_t len = USB_REQUEST_LENGTH_GET(setup);
+        const struct usb_ctrl_setup_s *setup = (const void *)rq->ctrl.setup;
+        uint16_t len = usb_setup_length_get(setup);
 
         ensure(len <= CONFIG_USBDEV_EP0_BUFFER_SIZE);
 
         rq->error = -EINVAL;
        
-        switch (USB_REQUEST_REQUEST_GET(setup))
+        switch (usb_setup_request_get(setup))
           {
           case USB_CDC_GET_LINE_CODING:
             usbdev_cdc_printk("USB REQUEST: GET LINE CODING\n");
-            if (USB_REQUEST_VALUE_GET(setup) ||
-                USB_REQUEST_DIRECTION_GET(setup) != USB_DEVICE_TO_HOST)
+            if (usb_setup_value_get(setup) ||
+                usb_setup_direction_get(setup) != USB_DEVICE_TO_HOST)
               break;
 
             /* Copy data in provided buffer */
@@ -503,8 +503,8 @@ static KROUTINE_EXEC(usbdev_cdc_ctrl_cb)
        
           case USB_CDC_SET_LINE_CODING:
             usbdev_cdc_printk("USB REQUEST: SET LINE CODING\n");
-            if (USB_REQUEST_VALUE_GET(setup) ||
-                USB_REQUEST_DIRECTION_GET(setup) != USB_HOST_TO_DEVICE)
+            if (usb_setup_value_get(setup) ||
+                usb_setup_direction_get(setup) != USB_HOST_TO_DEVICE)
               break;
        
             rq->type = USBDEV_TRANSFER_DATA;
@@ -519,7 +519,7 @@ static KROUTINE_EXEC(usbdev_cdc_ctrl_cb)
             break;
        
           default:
-            usbdev_cdc_printk("USB CHAR SERVICE UNSUPPORTED REQUEST TYPE %d\n", USB_REQUEST_REQUEST_GET(setup));
+            usbdev_cdc_printk("USB CHAR SERVICE UNSUPPORTED REQUEST TYPE %d\n", usb_setup_request_get(setup));
             break;
           }
       }

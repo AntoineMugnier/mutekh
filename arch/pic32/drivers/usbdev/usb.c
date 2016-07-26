@@ -127,10 +127,10 @@ static error_t pic32_usbdev_configure_edp(struct pic32_usbdev_private_s *pv,
   uint32_t iecs2 = endian_le32(cpu_mem_read_32(pv->addr + PIC32_USB_IECS2_ADDR));
   uint32_t iecs3 = endian_le32(cpu_mem_read_32(pv->addr + PIC32_USB_IECS3_ADDR));
 
-  if (USB_GET_EDP_TYPE(desc) == USB_EP_CONTROL)
+  if (usb_ep_type_get(desc) == USB_EP_CONTROL)
     return -ENOTSUP;
 
-  if (USB_GET_EDP_DIR(desc) == USB_EP_IN)
+  if (usb_ep_dir_get(desc) == USB_EP_IN)
     {
       if (addr > CONFIG_DRIVER_PIC32_USBDEV_EP_COUNT)
         return -ENOTSUP;
@@ -142,12 +142,12 @@ static error_t pic32_usbdev_configure_edp(struct pic32_usbdev_private_s *pv,
 
       iecs0 = PIC32_USB_IENCS0_CLRDT;
 
-      if (USB_GET_EDP_TYPE(desc) == USB_EP_ISOCHRONOUS)
+      if (usb_ep_type_get(desc) == USB_EP_ISOCHRONOUS)
         iecs0 |= PIC32_USB_IENCS0_ISO;
       else
         iecs0 &= ~PIC32_USB_IENCS0_ISO;
 
-      PIC32_USB_IENCS0_TXMAXP_SET(iecs0, USB_GET_EDP_MPS(desc));
+      PIC32_USB_IENCS0_TXMAXP_SET(iecs0, usb_ep_mps_get(desc));
 
       /* Enable TX interrupt */
       pic32_usbdev_enable_irq(pv, addr, 0);
@@ -161,12 +161,12 @@ static error_t pic32_usbdev_configure_edp(struct pic32_usbdev_private_s *pv,
 
       iecs1 = PIC32_USB_IECS1_CLRDT;
 
-      if (USB_GET_EDP_TYPE(desc) == USB_EP_ISOCHRONOUS)
+      if (usb_ep_type_get(desc) == USB_EP_ISOCHRONOUS)
         iecs1 |= PIC32_USB_IECS1_ISO;
       else
         iecs1 &= ~PIC32_USB_IECS1_ISO;
 
-      PIC32_USB_IECS1_RXMAXP_SET(iecs1, USB_GET_EDP_MPS(desc));
+      PIC32_USB_IECS1_RXMAXP_SET(iecs1, usb_ep_mps_get(desc));
 
       /* Set FIFO address and size */
       pic32_usbdev_set_edp_fifo(pv, addr, 1);
@@ -343,7 +343,7 @@ static error_t pic32_usbdev_read_fifo_done(struct pic32_usbdev_private_s *pv, st
         {
         case DEV_USBDEV_CTRL_SETUP:
           assert(tr->size == 0);
-          if (USB_REQUEST_LENGTH_GET(s) == 0)
+          if (usb_setup_length_get(s) == 0)
             pv->status_stage = 1;
           return 0;
         case DEV_USBDEV_PARTIAL_DATA_OUT:

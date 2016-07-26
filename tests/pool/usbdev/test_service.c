@@ -314,7 +314,7 @@ static KROUTINE_EXEC(usbdev_test_ctrl_n_cb)
       return;
     }
 
-  uint16_t len = USB_REQUEST_LENGTH_GET(pv->setup);
+  uint16_t len = usb_setup_length_get(pv->setup);
 
   switch(tr->type)
     {
@@ -327,7 +327,7 @@ static KROUTINE_EXEC(usbdev_test_ctrl_n_cb)
             tr->type = DEV_USBDEV_CTRL_STATUS_IN;
             tr->size = 0;
           }
-        else if (USB_REQUEST_DIRECTION_GET(pv->setup) == USB_DEVICE_TO_HOST)
+        else if (usb_setup_direction_get(pv->setup) == USB_DEVICE_TO_HOST)
         /* Send data */ 
           {
             tr->type = DEV_USBDEV_DATA_IN;
@@ -446,7 +446,7 @@ static KROUTINE_EXEC(usbdev_test_read_ctrl_0_cb)
 
   pv->cnt0 += size;
 
-  uint16_t len = USB_REQUEST_LENGTH_GET(rq->ctrl.setup);
+  uint16_t len = usb_setup_length_get(rq->ctrl.setup);
 
   rq->error = 0;
 
@@ -483,7 +483,7 @@ static KROUTINE_EXEC(usbdev_test_write_ctrl_0_cb)
 
   pv->cnt0 += pv->base0;
      
-  uint16_t len = USB_REQUEST_LENGTH_GET(rq->ctrl.setup);
+  uint16_t len = usb_setup_length_get(rq->ctrl.setup);
   uint16_t size = len - pv->cnt0;
 
   if (size)
@@ -593,7 +593,7 @@ static KROUTINE_EXEC(usbdev_test_ctrl_cb)
     case USBDEV_PROCESS_CONTROL:
       {
         uint32_t *setup = rq->ctrl.setup;
-        uint16_t len = USB_REQUEST_LENGTH_GET(setup);
+        uint16_t len = usb_setup_length_get(setup);
         size_t size = len;
      
         pv->cnt0 = 0;
@@ -604,7 +604,7 @@ static KROUTINE_EXEC(usbdev_test_ctrl_cb)
         /* Data stage */
         rq->type = USBDEV_TRANSFER_DATA;
      
-        if (USB_REQUEST_DIRECTION_GET(setup) == USB_DEVICE_TO_HOST)
+        if (usb_setup_direction_get(setup) == USB_DEVICE_TO_HOST)
         /* We must send data */ 
           {
             if (len > rq->ctrl.size)

@@ -29,6 +29,8 @@
 #ifndef __USB_H__
 #define __USB_H__
 
+#include <hexo/endian.h>
+
 enum usb_configuration_parameter_e
 {
   USB_SELF_POWERED  = 1 << 6,
@@ -133,13 +135,41 @@ struct usb_endpoint_descriptor_s
   uint8_t  bInterval;
 }__attribute__((packed));
 
-#define USB_GET_EDP_DIR(desc)  ((desc)->bEndpointAddress & 0x80)
-#define USB_GET_EDP_NUM(desc)  ((desc)->bEndpointAddress & 0x0F)
-#define USB_GET_EDP_SIZE(desc) (endian_le16((desc)->wMaxPacketSize))
-#define USB_GET_EDP_TYPE(desc) ((desc)->bmAttributes & 0x3)
-#define USB_GET_EDP_INTV(desc) ((desc)->bInterval)
+ALWAYS_INLINE
+uint8_t usb_ep_dir_get(const struct usb_endpoint_descriptor_s *ep)
+{
+  return ep->bEndpointAddress & 0x80;
+}
 
-#define USB_GET_EDP_MPS(desc)  (USB_GET_EDP_SIZE(desc) & 0x7FF)
+ALWAYS_INLINE
+uint8_t usb_ep_num_get(const struct usb_endpoint_descriptor_s *ep)
+{
+  return ep->bEndpointAddress & 0xf;
+}
+
+ALWAYS_INLINE
+uint16_t usb_ep_size_get(const struct usb_endpoint_descriptor_s *ep)
+{
+  return endian_le16(ep->wMaxPacketSize);
+}
+
+ALWAYS_INLINE
+uint16_t usb_ep_mps_get(const struct usb_endpoint_descriptor_s *ep)
+{
+  return usb_ep_size_get(ep) & 0x7ff;
+}
+
+ALWAYS_INLINE
+enum usb_endpoint_type_e usb_ep_type_get(const struct usb_endpoint_descriptor_s *ep)
+{
+  return ep->bmAttributes & 0x3;
+}
+
+ALWAYS_INLINE
+uint8_t usb_ep_interval_get(const struct usb_endpoint_descriptor_s *ep)
+{
+  return ep->bInterval;
+}
 
 struct usb_interface_descriptor_s
 {
@@ -153,9 +183,23 @@ struct usb_interface_descriptor_s
   uint8_t  iInterface;
 }__attribute__((packed));
 
-#define USB_GET_ITF_EP_CNT(desc)  ((desc)->bNumEndpoints)
-#define USB_GET_ITF_ALT(desc)     ((desc)->bAlternateSetting)
-#define USB_GET_ITF_NUM(desc)     ((desc)->bInterfaceNumber)
+ALWAYS_INLINE
+uint8_t usb_interface_ep_count_get(const struct usb_interface_descriptor_s *intf)
+{
+  return intf->bNumEndpoints;
+}
+
+ALWAYS_INLINE
+uint8_t usb_interface_alt_get(const struct usb_interface_descriptor_s *intf)
+{
+  return intf->bAlternateSetting;
+}
+
+ALWAYS_INLINE
+uint8_t usb_interface_number_get(const struct usb_interface_descriptor_s *intf)
+{
+  return intf->bInterfaceNumber;
+}
 
 struct usb_configuration_descriptor_s
 {
@@ -218,33 +262,26 @@ enum usb_standard_request_e
   USB_SYNCH_FRAME       = 12,
 };
 
-ALWAYS_INLINE bool_t
-usbdev_is_endpoint_in(const struct usb_endpoint_descriptor_s *desc)
+ALWAYS_INLINE
+bool_t usb_ep_is_in(const struct usb_endpoint_descriptor_s *desc)
 {
-  return (USB_GET_EDP_TYPE(desc) == USB_EP_CONTROL || USB_GET_EDP_DIR(desc) == USB_EP_IN);
+  return usb_ep_type_get(desc) == USB_EP_CONTROL
+    || usb_ep_dir_get(desc) == USB_EP_IN;
 }
 
-ALWAYS_INLINE bool_t
-usbdev_is_endpoint_out(const struct usb_endpoint_descriptor_s *desc)
+ALWAYS_INLINE
+bool_t usb_ep_is_out(const struct usb_endpoint_descriptor_s *desc)
 {
-  return (USB_GET_EDP_TYPE(desc) == USB_EP_CONTROL || USB_GET_EDP_DIR(desc) == USB_EP_OUT);
+  return usb_ep_type_get(desc) == USB_EP_CONTROL
+    || usb_ep_dir_get(desc) == USB_EP_OUT;
 }
-
-#define USB_REQUEST_SETUP_CAST(s)    ((struct usb_ctrl_setup_s *)(s))
-#define USB_REQUEST_REQTYPE_GET(s)   ((USB_REQUEST_SETUP_CAST(s)->bRequestType))
-#define USB_REQUEST_TYPE_GET(s)      ((USB_REQUEST_SETUP_CAST(s)->bRequestType) >> 5  & 3)
-#define USB_REQUEST_RECIPIENT_GET(s) ((USB_REQUEST_SETUP_CAST(s)->bRequestType) >> 0  & 0x1F)
-#define USB_REQUEST_DIRECTION_GET(s) ((USB_REQUEST_SETUP_CAST(s)->bRequestType) >> 7  & 1)
-#define USB_REQUEST_REQUEST_GET(s)   (USB_REQUEST_SETUP_CAST(s)->bRequest)
-#define USB_REQUEST_VALUE_GET(s)     (endian_le16(USB_REQUEST_SETUP_CAST(s)->wValue))
-#define USB_REQUEST_INDEX_GET(s)     (endian_le16(USB_REQUEST_SETUP_CAST(s)->wIndex))
-#define USB_REQUEST_LENGTH_GET(s)    (endian_le16(USB_REQUEST_SETUP_CAST(s)->wLength))
 
 enum usb_transfert_direction_e
 {
   USB_HOST_TO_DEVICE,
   USB_DEVICE_TO_HOST,
 };
+
 enum usb_tranfert_type_e
 {
   USB_STANDARD,
@@ -259,6 +296,54 @@ enum usb_tranfert_recipient_e
   USB_ENDPOINT,
   USB_OTHER,
 };
+
+ALWAYS_INLINE
+uint8_t usb_setup_reqtype_get(const struct usb_ctrl_setup_s *s)
+{
+  return s->bRequestType;
+}
+
+ALWAYS_INLINE
+enum usb_tranfert_type_e usb_setup_type_get(const struct usb_ctrl_setup_s *s)
+{
+  return (s->bRequestType >> 5) & 3;
+}
+
+ALWAYS_INLINE
+enum usb_tranfert_recipient_e usb_setup_recipient_get(const struct usb_ctrl_setup_s *s)
+{
+  return s->bRequestType & 0x1F;
+}
+
+ALWAYS_INLINE
+enum usb_transfert_direction_e usb_setup_direction_get(const struct usb_ctrl_setup_s *s)
+{
+  return (s->bRequestType >> 7) & 1;
+}
+
+ALWAYS_INLINE
+uint8_t usb_setup_request_get(const struct usb_ctrl_setup_s *s)
+{
+  return s->bRequest;
+}
+
+ALWAYS_INLINE
+uint16_t usb_setup_value_get(const struct usb_ctrl_setup_s *s)
+{
+  return endian_le16(s->wValue);
+}
+
+ALWAYS_INLINE
+uint16_t usb_setup_index_get(const struct usb_ctrl_setup_s *s)
+{
+  return endian_le16(s->wIndex);
+}
+
+ALWAYS_INLINE
+uint16_t usb_setup_length_get(const struct usb_ctrl_setup_s *s)
+{
+  return endian_le16(s->wLength);
+}
 
 #define USBDEV_DESC_CONFIGURATION(length, ifcount, id, icfg, attr, power)    \
   .desc = (const uint8_t[]){                                                 \
@@ -302,7 +387,7 @@ enum usb_tranfert_recipient_e
 
 #define USBDEV_CONFIGURATIONS(...)  \
    .config = ((const struct usbdev_configuration_s *[]){__VA_ARGS__}),  \
-   .cfgcount = sizeof((const struct usbdev_configuration_s *[]){__VA_ARGS__})             
+   .cfgcount = sizeof((const struct usbdev_configuration_s *[]){__VA_ARGS__})
 
 #define USBDEV_LANGID(code)   \
   (code) & 0xFF,              \
