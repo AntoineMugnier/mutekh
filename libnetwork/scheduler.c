@@ -247,7 +247,9 @@ static void scheduler_task_free(
 
   dprintk("%s %p\n", __FUNCTION__, task);
 
+#if defined(CONFIG_COMPILE_DEBUG)
   memset(task, 0x55, sizeof(*task));
+#endif
 
   slab_free(&sched->task_pool, task);
 }

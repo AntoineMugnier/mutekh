@@ -40,8 +40,10 @@ void net_task_destroy(struct net_task_s *task)
     break;
   }
 
+#if defined(CONFIG_COMPILE_DEBUG)
   task->packet.buffer = (void*)0x55aa55aa;
   task->target = (void*)0x55aa55aa;
+#endif
 
   task->destroy_func(task);
 
