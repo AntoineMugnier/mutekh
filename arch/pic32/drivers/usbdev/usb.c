@@ -185,7 +185,7 @@ static error_t pic32_usbdev_configure_ep(struct pic32_usbdev_private_s *pv,
 static error_t pic32_usbdev_configure(struct pic32_usbdev_private_s *pv,
                                       struct dev_usbdev_config_s *cfg)
 {
-  if (cfg->itf == NULL)
+  if (cfg->intf == NULL)
   /* Enable interrupt for endpoint 0 */
     {
       pic32_usbdev_enable_irq(pv, 0, 0);
@@ -196,7 +196,7 @@ static error_t pic32_usbdev_configure(struct pic32_usbdev_private_s *pv,
 
   for (uint8_t i = 0; i< CONFIG_USBDEV_MAX_INTERFACE_COUNT; i++)
     {
-      icfg = cfg->itf + i;
+      icfg = cfg->intf + i;
 
       if (icfg->i == NULL)
         break;

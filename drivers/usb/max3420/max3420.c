@@ -262,7 +262,7 @@ static DEV_USBDEV_ENDPOINT(max3420_usbdev_endpoint)
 static error_t max3420_usbdev_check_config(struct max3420_usbdev_private_s *pv,
                                            struct dev_usbdev_config_s *cfg)
 {
-  if (cfg->itf == NULL)
+  if (cfg->intf == NULL)
     {
       pv->mps[0] = usbdev_stack_get_ep0_mps(&pv->usbdev_ctx);
 
@@ -274,7 +274,7 @@ static error_t max3420_usbdev_check_config(struct max3420_usbdev_private_s *pv,
 
   for (uint8_t i = 0; i< CONFIG_USBDEV_MAX_INTERFACE_COUNT; i++)
     {
-      struct dev_usbdev_interface_cfg_s *icfg = cfg->itf + i;
+      struct dev_usbdev_interface_cfg_s *icfg = cfg->intf + i;
 
       if (icfg->i == NULL)
         break;

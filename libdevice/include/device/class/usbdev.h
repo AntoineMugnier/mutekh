@@ -309,8 +309,8 @@ struct usbdev_interface_s;
 
 enum dev_usbdev_interface_e
 {
-  DEV_USBDEV_ITF_ENABLE      = 0,
-  DEV_USBDEV_ITF_DISABLE     = 1,
+  DEV_USBDEV_INTF_ENABLE      = 0,
+  DEV_USBDEV_INTF_DISABLE     = 1,
 };
 
 struct dev_usbdev_interface_cfg_s
@@ -342,7 +342,7 @@ struct dev_usbdev_config_s
         of interface is NULL terminated and contains all interfaces of the
         configuration that must be enable. When NULL, endpoint 0 must be
         configured. */
-      struct dev_usbdev_interface_cfg_s *itf;
+      struct dev_usbdev_interface_cfg_s *intf;
     /* Address to set */
       uint16_t  addr;
     };
@@ -427,31 +427,31 @@ DRIVER_CTX_CLASS_TYPES(DRIVER_CLASS_USBDEV, usbdev, );
     .ctx_offset = offsetof(driver_pv_t , usbdev_ctx),                 \
   })
 
-# define USBDEV_FOREACH_INTERFACE(itf, ... /* loop body */ )            \
+# define USBDEV_FOREACH_INTERFACE(intf, ... /* loop body */ )            \
   do {                                                                  \
     const struct usbdev_interface_default_s * _i                        \
-      = (const struct usbdev_interface_default_s *)itf;                 \
-    uint_fast8_t _itfidx = 0;                                           \
+      = (const struct usbdev_interface_default_s *)intf;                 \
+    uint_fast8_t _intfidx = 0;                                           \
     while(1)                                                            \
       {                                                                 \
         { __VA_ARGS__ }                                                 \
-        if (_itfidx == _i->alt_cnt)                                     \
+        if (_intfidx == _i->alt_cnt)                                     \
           goto _end;                                                    \
-        itf = (const struct usbdev_interface_s *)_i->alt[_itfidx++];    \
+        intf = (const struct usbdev_interface_s *)_i->alt[_intfidx++];    \
       }                                                                 \
   _end:;                                                                \
   } while(0)
 
-# define USBDEV_FOREACH_ENDPOINT(itf, mapin, mapout, ... /* loop body */)         \
+# define USBDEV_FOREACH_ENDPOINT(intf, mapin, mapout, ... /* loop body */)         \
   do {                                                                            \
-    const struct usbdev_interface_s *_itf = (itf);                                \
+    const struct usbdev_interface_s *_intf = (intf);                                \
     const dev_usbdev_ep_map_t *_mapin = (mapin);                                 \
     const dev_usbdev_ep_map_t *_mapout = (mapout);                               \
-    const struct usb_interface_descriptor_s *_d = &(_itf->desc);                  \
+    const struct usb_interface_descriptor_s *_d = &(_intf->desc);                  \
     for (uint_fast8_t _epidx = 0; _epidx < usb_interface_ep_count_get(_d) ; _epidx++)     \
       {                                                                           \
         uint8_t _idx = usb_interface_alt_get(_d);                                       \
-        const struct usb_endpoint_descriptor_s *epdesc = _itf->ep[_epidx];       \
+        const struct usb_endpoint_descriptor_s *epdesc = _intf->ep[_epidx];       \
         dev_usbdev_ep_addr_t epaddr                                              \
           = usbdev_stack_get_ep_addr(epdesc, _mapin[_idx], _mapout[_idx]);       \
         { __VA_ARGS__ }                                                           \
@@ -505,7 +505,7 @@ struct usbdev_interface_s
 
 struct usbdev_interface_default_s
 {
-  struct usbdev_interface_s itf;
+  struct usbdev_interface_s intf;
   /* Table of interface alternate setting */
   const struct usbdev_interface_s *const* alt;
   /* Number of alternate setting */
@@ -523,9 +523,9 @@ struct usbdev_service_descriptor_s
   /* Number of string descriptor in string */
   uint8_t str_cnt;
   /* Table of interfaces */
-  const struct usbdev_interface_default_s *const* itf;
+  const struct usbdev_interface_default_s *const* intf;
   /* Number of interface used by service. */
-  uint8_t itf_cnt;
+  uint8_t intf_cnt;
 };
 
 /* Container algorithm used for service */
@@ -575,7 +575,7 @@ enum usbdev_service_cmd_type_e
 /** @This is used to inform a service that one of its interfaces has been
     reconfigured on usb controller due to a SET INTERFACE command on usb device.
     All pending endpoint transfers that do not use the new configuration ends with
-    @tt -EAGAIN error. The usbdev_service_rq_s::itf is the local target interface.
+    @tt -EAGAIN error. The usbdev_service_rq_s::intf is the local target interface.
     The usbdev_service_rq_s::alternate is the alternate seting number. */
   USBDEV_CHANGE_INTERFACE  = 4,
 };
@@ -600,7 +600,7 @@ struct usbdev_service_rq_s
 
   error_t                         error;
 
-  uint8_t                         itf;
+  uint8_t                         intf;
 
   union
     {
@@ -626,7 +626,7 @@ struct usbdev_service_index_s
   /* Service id */
   uint8_t id;
   /* Start index for interface */
-  uint8_t itf;
+  uint8_t intf;
   /* Start index for string */
   uint8_t str;
 };
@@ -674,8 +674,8 @@ error_t usbdev_stack_transfer(struct device_usbdev_s *dev,
    .desc_cnt = sizeof((const struct usb_descriptor_header_s *[]){__VA_ARGS__})/sizeof((const struct usb_descriptor_header_s *[]){__VA_ARGS__}[0])
 
 #define USBDEV_INTERFACE(...)   \
-   .itf = ((const struct usbdev_interface_default_s *[]){__VA_ARGS__}),  \
-   .itf_cnt = sizeof((const struct usbdev_interface_default_s *[]){__VA_ARGS__})/sizeof((const struct usbdev_interface_default_s *[]){__VA_ARGS__}[0])
+   .intf = ((const struct usbdev_interface_default_s *[]){__VA_ARGS__}),  \
+   .intf_cnt = sizeof((const struct usbdev_interface_default_s *[]){__VA_ARGS__})/sizeof((const struct usbdev_interface_default_s *[]){__VA_ARGS__}[0])
 
 #define USBDEV_INTERFACE_ALTERNATE(...)   \
    .alt = ((const struct usbdev_interface_s *[]){__VA_ARGS__}),  \
@@ -807,10 +807,10 @@ struct dev_usbdev_context_s
   /** Pending Bus event */
   uint8_t event;
 #if (CONFIG_USBDEV_MAX_ALTERNATE_COUNT > 0)
-  uint8_t itf_cfg[CONFIG_USBDEV_MAX_INTERFACE_COUNT];
+  uint8_t intf_cfg[CONFIG_USBDEV_MAX_INTERFACE_COUNT];
 #endif
 
-  struct dev_usbdev_interface_cfg_s itf[CONFIG_USBDEV_MAX_INTERFACE_COUNT];
+  struct dev_usbdev_interface_cfg_s intf[CONFIG_USBDEV_MAX_INTERFACE_COUNT];
 };
 
 STRUCT_COMPOSE(dev_usbdev_context_s, kr);

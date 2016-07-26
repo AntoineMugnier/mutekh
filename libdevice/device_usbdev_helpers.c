@@ -38,7 +38,7 @@ USBDEV_REPLACE(usbdev_cdc_desc_update)
                         bDataInterface) - bidx;
 
       if (offset >= 0 && cnt > offset)
-        dst[offset] += index->itf;
+        dst[offset] += index->intf;
       break;
     case USB_CDC_FUNC_UNION:{
       offset = offsetof(struct usb_cdc_union_descriptor_s,
@@ -49,7 +49,7 @@ USBDEV_REPLACE(usbdev_cdc_desc_update)
         {
           size_t idx = i + offset - bidx;
           if (idx >= 0 && cnt > idx)
-            dst[idx] += index->itf;
+            dst[idx] += index->intf;
         }
       break;
     }

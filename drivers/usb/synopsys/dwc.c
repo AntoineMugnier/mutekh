@@ -66,13 +66,13 @@ static void synopsys_usbdev_flush_tx_fifo(struct synopsys_usbdev_private_s *pv, 
 #endif
 
 static void synopsys_usbdev_ep_activation(struct synopsys_usbdev_private_s *pv, 
-                                        struct dev_usbdev_interface_cfg_s *itf)
+                                        struct dev_usbdev_interface_cfg_s *intf)
 {
   uint32_t x;
   /* Get dma interrupt mask */
   uint32_t daint = endian_le32(cpu_mem_read_32(pv->addr + SYNOPSYS_USB_DAINTMSK_ADDR));
 
-  if (itf == NULL)
+  if (intf == NULL)
   /* Enable endpoint 0 */
     {
       uint32_t mps = usbdev_stack_get_ep0_mps(&pv->usbdev_ctx) >> 4;
@@ -90,7 +90,7 @@ static void synopsys_usbdev_ep_activation(struct synopsys_usbdev_private_s *pv,
   else
   /* Enable endpoints n */
     {
-      USBDEV_FOREACH_ENDPOINT(itf->i, itf->epi, itf->epo,
+      USBDEV_FOREACH_ENDPOINT(intf->i, intf->epi, intf->epo,
        {
          if (usb_ep_type_get(epdesc) == USB_EP_CONTROL)
              pv->ctrl |= 1 << epaddr;
@@ -151,13 +151,13 @@ static error_t synopsys_usbdev_configure(struct synopsys_usbdev_private_s *pv,
 
   struct dev_usbdev_interface_cfg_s *icfg;
 
-  if (cfg->itf == NULL)
+  if (cfg->intf == NULL)
      synopsys_usbdev_ep_activation(pv, NULL);
   else
     {
       for (uint8_t i = 0; i< CONFIG_USBDEV_MAX_INTERFACE_COUNT; i++)
         {
-          icfg = cfg->itf + i;
+          icfg = cfg->intf + i;
 
           if (icfg->i == NULL)
             break;
@@ -165,12 +165,12 @@ static error_t synopsys_usbdev_configure(struct synopsys_usbdev_private_s *pv,
           /* Configure endpoint */
            synopsys_usbdev_ep_activation(pv, icfg);
     
-          const struct usbdev_interface_s *itf = icfg->i;
+          const struct usbdev_interface_s *intf = icfg->i;
     
           /* Allocate memory */
-          USBDEV_FOREACH_INTERFACE(itf,
+          USBDEV_FOREACH_INTERFACE(intf,
             {
-              USBDEV_FOREACH_ENDPOINT(itf, icfg->epi, icfg->epo,
+              USBDEV_FOREACH_ENDPOINT(intf, icfg->epi, icfg->epo,
                {
                  if (epaddr > CONFIG_DRIVER_USB_SYNOPSYS_EP_COUNT)
                    return -ENOTSUP;
@@ -528,9 +528,9 @@ static void synopsys_usbdev_end_transfer(struct synopsys_usbdev_private_s *pv, b
 #if (CONFIG_USBDEV_MAX_ALTERNATE_COUNT > 0)
   else if (pv->cfg->type == DEV_USBDEV_CHANGE_INTERFACE)
     {
-      struct dev_usbdev_interface_cfg_s *itf = pv->cfg->itf + DEV_USBDEV_ITF_DISABLE;
+      struct dev_usbdev_interface_cfg_s *intf = pv->cfg->intf + DEV_USBDEV_INTF_DISABLE;
       /* Cancel pending transfer */
-      USBDEV_FOREACH_ENDPOINT(itf->i, itf->epi, itf->epo,
+      USBDEV_FOREACH_ENDPOINT(intf->i, intf->epi, intf->epo,
         {
          if (usb_ep_is_in(epdesc))
            {
@@ -552,10 +552,10 @@ static void synopsys_usbdev_end_transfer(struct synopsys_usbdev_private_s *pv, b
         });
 
         /* Enable new interface */
-      itf = pv->cfg->itf + DEV_USBDEV_ITF_ENABLE;
-       synopsys_usbdev_ep_activation(pv, itf);
+      intf = pv->cfg->intf + DEV_USBDEV_INTF_ENABLE;
+       synopsys_usbdev_ep_activation(pv, intf);
    
-      USBDEV_FOREACH_ENDPOINT(itf->i, itf->epi, itf->epo,
+      USBDEV_FOREACH_ENDPOINT(intf->i, intf->epi, intf->epo,
         {
           if (usb_ep_is_in(epdesc))
             {
@@ -603,9 +603,9 @@ static bool_t synopsys_usbdev_set_dis(struct synopsys_usbdev_private_s *pv, bool
 #if (CONFIG_USBDEV_MAX_ALTERNATE_COUNT > 0)
   else if (pv->cfg->type == DEV_USBDEV_CHANGE_INTERFACE)
     {
-      struct dev_usbdev_interface_cfg_s *itf = pv->cfg->itf + DEV_USBDEV_ITF_DISABLE;
+      struct dev_usbdev_interface_cfg_s *intf = pv->cfg->intf + DEV_USBDEV_INTF_DISABLE;
 
-      USBDEV_FOREACH_ENDPOINT(itf->i, itf->epi, itf->epo,
+      USBDEV_FOREACH_ENDPOINT(intf->i, intf->epi, intf->epo,
         {
           if (usb_ep_is_in(epdesc) && pv->tri[epaddr]) 
             synopsys_usbdev_set_flag(pv, 1, SYNOPSYS_USB_DIEPCTL_EPDIS, epaddr);
@@ -669,15 +669,15 @@ static bool_t synopsys_usbdev_set_nak(struct synopsys_usbdev_private_s *pv, bool
 #if (CONFIG_USBDEV_MAX_ALTERNATE_COUNT > 0)
   else if (pv->cfg->type == DEV_USBDEV_CHANGE_INTERFACE)
     {
-      struct dev_usbdev_interface_cfg_s *itf = pv->cfg->itf + DEV_USBDEV_ITF_DISABLE;
+      struct dev_usbdev_interface_cfg_s *intf = pv->cfg->intf + DEV_USBDEV_INTF_DISABLE;
       /* Set IN NAK  */
-      USBDEV_FOREACH_ENDPOINT(itf->i, itf->epi, itf->epo,
+      USBDEV_FOREACH_ENDPOINT(intf->i, intf->epi, intf->epo,
        {
          if (usb_ep_is_in(epdesc) && pv->tri[epaddr]) 
            synopsys_usbdev_set_flag(pv, 1, SYNOPSYS_USB_DIEPCTL_SNAK, epaddr);
        });
       /* Global OUT NAK */
-      USBDEV_FOREACH_ENDPOINT(itf->i, itf->epi, itf->epo,
+      USBDEV_FOREACH_ENDPOINT(intf->i, intf->epi, intf->epo,
        {
          if (usb_ep_is_out(epdesc) && pv->tro[epaddr]) 
            {

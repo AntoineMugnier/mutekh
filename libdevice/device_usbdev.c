@@ -179,7 +179,7 @@ static void usbdev_disable_all_endpoints(struct dev_usbdev_context_s *ctx,
     }
 }
 
-static void usbdev_disable_itf_endpoints(struct dev_usbdev_context_s *ctx,
+static void usbdev_disable_intf_endpoints(struct dev_usbdev_context_s *ctx,
                                          struct dev_usbdev_interface_cfg_s *cfg,
                                          uint8_t rev)
 {
@@ -211,8 +211,8 @@ static void usbdev_disable_endpoint(struct dev_usbdev_context_s *ctx,
   if (cfg)
   /* Lock old and new interface */
     {
-      usbdev_disable_itf_endpoints(ctx, cfg + DEV_USBDEV_ITF_DISABLE, rev);
-      usbdev_disable_itf_endpoints(ctx, cfg + DEV_USBDEV_ITF_ENABLE, rev);
+      usbdev_disable_intf_endpoints(ctx, cfg + DEV_USBDEV_INTF_DISABLE, rev);
+      usbdev_disable_intf_endpoints(ctx, cfg + DEV_USBDEV_INTF_ENABLE, rev);
     }
   else
     /* Disable all endpoint */
@@ -243,7 +243,7 @@ static void usbdev_enable_all_endpoints(struct dev_usbdev_context_s *ctx,
     }
 }
 
-static void usbdev_enable_itf_endpoints(struct dev_usbdev_context_s *ctx,
+static void usbdev_enable_intf_endpoints(struct dev_usbdev_context_s *ctx,
                                         struct dev_usbdev_interface_cfg_s *cfg)
 {
   struct usbdev_endpoint_s *ep;
@@ -275,8 +275,8 @@ static void usbdev_enable_endpoint(struct dev_usbdev_context_s *ctx,
   if (cfg)
   /* Unlock old and new interface */
     {
-      usbdev_enable_itf_endpoints(ctx, cfg + DEV_USBDEV_ITF_DISABLE);
-      usbdev_enable_itf_endpoints(ctx, cfg + DEV_USBDEV_ITF_ENABLE);
+      usbdev_enable_intf_endpoints(ctx, cfg + DEV_USBDEV_INTF_DISABLE);
+      usbdev_enable_intf_endpoints(ctx, cfg + DEV_USBDEV_INTF_ENABLE);
     }
   else
   /* Unlock all endpoint */
@@ -306,13 +306,13 @@ static void usbdev_service_ctrl(struct dev_usbdev_context_s *ctx,
       switch (type)
         {
         case USBDEV_PROCESS_CONTROL:
-          rq->itf = ctx->it.iidx;
+          rq->intf = ctx->it.iidx;
           rq->ctrl.setup = (void *)setup;
           rq->ctrl.buffer = ctx->data;
           rq->ctrl.size = CONFIG_USBDEV_EP0_BUFFER_SIZE;
           break;
         case USBDEV_CHANGE_INTERFACE:
-          rq->itf = ctx->it.iidx;
+          rq->intf = ctx->it.iidx;
           rq->alternate = usb_setup_value_get(setup);
         default:
           break;
@@ -593,30 +593,30 @@ static void usbdev_wait_service_ready(struct dev_usbdev_context_s *ctx)
 
 static void usbdev_service_parse(struct dev_usbdev_context_s *ctx)
 {
-  uint8_t itf_cnt = 0;
+  uint8_t intf_cnt = 0;
 
   ctx->service_cnt = 0;
 
   GCT_FOREACH(usbdev_service, &ctx->service, service, {
       service->start.id = ctx->service_cnt++;
       /* Retrieve total number of interface */
-      itf_cnt += service->desc->itf_cnt;
+      intf_cnt += service->desc->intf_cnt;
     });
 
-  ensure(itf_cnt <= CONFIG_USBDEV_MAX_INTERFACE_COUNT);
+  ensure(intf_cnt <= CONFIG_USBDEV_MAX_INTERFACE_COUNT);
 
   uint8_t str = ctx->devinfo->str_cnt;
-  uint8_t itf = 0;
+  uint8_t intf = 0;
   const struct usbdev_service_descriptor_s * s;
 
   GCT_FOREACH(usbdev_service, &ctx->service, service, {
 
-    service->start.itf = itf;
+    service->start.intf = intf;
     service->start.str = str;
 
     s = service->desc;
 
-    itf +=  s->itf_cnt;
+    intf +=  s->intf_cnt;
     str +=  s->str_cnt;
   });
 
@@ -666,13 +666,13 @@ static void usbdev_ep0_service_setup(struct dev_usbdev_context_s *ctx)
         ctx->ep0_state = EP0_SRVC_DATA_OUT;
     }
 
-  uint8_t itf = usb_setup_index_get(setup);
+  uint8_t intf = usb_setup_index_get(setup);
 
   GCT_FOREACH(usbdev_service, &ctx->service, service, {
-    if (usbdev_is_included(itf, service->start.itf, service->desc->itf_cnt))
+    if (usbdev_is_included(intf, service->start.intf, service->desc->intf_cnt))
       {
         ctx->it.service = service;
-        ctx->it.iidx = itf - service->start.itf;
+        ctx->it.iidx = intf - service->start.intf;
         /* Call service kroutine */
         return usbdev_service_ctrl(ctx, USBDEV_PROCESS_CONTROL);
       }
@@ -687,7 +687,7 @@ static void usbdev_fsm_reset_ep0(struct dev_usbdev_context_s *ctx)
 {
   /* Enable endpoint 0 */
   ctx->cfg.type = DEV_USBDEV_CONFIGURE;
-  ctx->cfg.itf = NULL;
+  ctx->cfg.intf = NULL;
   ctx->cfg.error = 0;
 
   error_t err;
@@ -1292,21 +1292,21 @@ static void usbdev_set_configuration(struct dev_usbdev_context_s *ctx, const str
       usbdev_disable_endpoint(ctx, NULL, 0);
       GCT_FOREACH(usbdev_service, &ctx->service, service, {
         /* Build table of interface */
-        for (uint8_t j = 0; j< service->desc->itf_cnt; j++)
+        for (uint8_t j = 0; j< service->desc->intf_cnt; j++)
           {
-            ctx->itf[i + j].i = &service->desc->itf[j]->itf;
-            ctx->itf[i + j].epi = service->start.epi;
-            ctx->itf[i + j].epo = service->start.epo;
+            ctx->intf[i + j].i = &service->desc->intf[j]->intf;
+            ctx->intf[i + j].epi = service->start.epi;
+            ctx->intf[i + j].epo = service->start.epo;
           }
-        i += service->desc->itf_cnt;
+        i += service->desc->intf_cnt;
       });
 
       /* Termination */
       if (i < CONFIG_USBDEV_MAX_INTERFACE_COUNT)
-        ctx->itf[i].i = NULL;
+        ctx->intf[i].i = NULL;
 
       /* Start configuration on controller */
-      ctx->cfg.itf = ctx->itf;
+      ctx->cfg.intf = ctx->intf;
       ctx->cfg.type = DEV_USBDEV_CONFIGURE;
       ctx->cfg.error = 0;
 
@@ -1343,7 +1343,7 @@ static void usbdev_set_configuration(struct dev_usbdev_context_s *ctx, const str
 static bool_t usbdev_configuration_out_desc(struct dev_usbdev_context_s *ctx)
 {
   size_t len = sizeof(struct usb_configuration_descriptor_s);
-  size_t itf = 0;
+  size_t intf = 0;
 
   const struct usbdev_service_descriptor_s *s;
   const struct usbdev_device_info_s *d = ctx->devinfo;
@@ -1352,14 +1352,14 @@ static bool_t usbdev_configuration_out_desc(struct dev_usbdev_context_s *ctx)
     s = service->desc;
     for (size_t j=0; j<s->desc_cnt; j++)
       len += s->desc[j]->bLength;
-    itf += s->itf_cnt;
+    intf += s->intf_cnt;
     });
 
   struct usb_configuration_descriptor_s desc = {
       .head.bLength = sizeof(struct usb_configuration_descriptor_s),
       .head.bDescriptorType = USB_CONFIGURATION_DESCRIPTOR,
       .wTotalLength = endian_le16(len),
-      .bNumInterfaces = itf,
+      .bNumInterfaces = intf,
       .bConfigurationValue = 1,
       .iConfiguration = d->iconfig,
       .bmAttributes = 0x80 | d->configuration,
@@ -1414,7 +1414,7 @@ static bool_t usbdev_service_out_desc(struct dev_usbdev_context_s *ctx)
                             bInterfaceNumber) - idx;
 
           if (offset >= 0 && cnt > offset)
-            dst[offset] += sid->itf;
+            dst[offset] += sid->intf;
 
           /* Replace interface string index */
           offset = offsetof(struct usb_interface_descriptor_s,
@@ -1631,14 +1631,14 @@ static inline void usbdev_get_interface(struct dev_usbdev_context_s *ctx, const 
         ctx->it.done = 1;
         ctx->data[0] = 0;
 #if (CONFIG_USBDEV_MAX_ALTERNATE_COUNT > 0)
-        uint8_t itf = usb_setup_index_get(setup);
+        uint8_t intf = usb_setup_index_get(setup);
         const struct usbdev_service_descriptor_s * s;
 
         GCT_FOREACH(usbdev_service, &ctx->service, service, {
           s = service->desc;
-          if (usbdev_is_included(itf, service->start.itf, s->itf_cnt))
+          if (usbdev_is_included(intf, service->start.intf, s->intf_cnt))
             {
-              ctx->data[0] = ctx->itf_cfg[itf];
+              ctx->data[0] = ctx->intf_cfg[intf];
               return usbdev_ep0_data_in(ctx);
             }
           });
@@ -1681,7 +1681,7 @@ static void usbdev_set_interface(struct dev_usbdev_context_s *ctx, const struct 
 {
   uint8_t alt = usb_setup_value_get(setup);
 #if (CONFIG_USBDEV_MAX_ALTERNATE_COUNT > 0)
-  uint8_t itf = usb_setup_index_get(setup);
+  uint8_t intf = usb_setup_index_get(setup);
   const struct usbdev_service_descriptor_s * s;
   uint8_t idx, old;
 
@@ -1692,38 +1692,38 @@ static void usbdev_set_interface(struct dev_usbdev_context_s *ctx, const struct 
   GCT_FOREACH(usbdev_service, &ctx->service, service,
     {
       s = service->desc;
-      if (usbdev_is_included(itf, service->start.itf, s->itf_cnt))
+      if (usbdev_is_included(intf, service->start.intf, s->intf_cnt))
         {
-          ctx->it.iidx = itf;
+          ctx->it.iidx = intf;
           ctx->it.service = service;
 
-          old = ctx->itf_cfg[itf];
+          old = ctx->intf_cfg[intf];
           /* Local interface number */
-          idx = itf - service->start.itf;
+          idx = intf - service->start.intf;
 
           if (old)
-            i = s->itf[idx]->alt[old - 1];
+            i = s->intf[idx]->alt[old - 1];
           else
-            i = &s->itf[idx]->itf;
+            i = &s->intf[idx]->intf;
 
-          ctx->cfg.itf[DEV_USBDEV_ITF_DISABLE].i = i;
-          ctx->cfg.itf[DEV_USBDEV_ITF_DISABLE].epi = service->start.epi;
-          ctx->cfg.itf[DEV_USBDEV_ITF_DISABLE].epo = service->start.epo;
+          ctx->cfg.intf[DEV_USBDEV_INTF_DISABLE].i = i;
+          ctx->cfg.intf[DEV_USBDEV_INTF_DISABLE].epi = service->start.epi;
+          ctx->cfg.intf[DEV_USBDEV_INTF_DISABLE].epo = service->start.epo;
 
           if (alt)
-            i = s->itf[idx]->alt[alt - 1];
+            i = s->intf[idx]->alt[alt - 1];
           else
-            i = &s->itf[idx]->itf;
+            i = &s->intf[idx]->intf;
 
-          ctx->cfg.itf[DEV_USBDEV_ITF_ENABLE].i = i;
-          ctx->cfg.itf[DEV_USBDEV_ITF_ENABLE].epi = service->start.epi;
-          ctx->cfg.itf[DEV_USBDEV_ITF_ENABLE].epo = service->start.epo;
+          ctx->cfg.intf[DEV_USBDEV_INTF_ENABLE].i = i;
+          ctx->cfg.intf[DEV_USBDEV_INTF_ENABLE].epi = service->start.epi;
+          ctx->cfg.intf[DEV_USBDEV_INTF_ENABLE].epo = service->start.epo;
 
           /* Disable endpoints and change configuration number */
-          usbdev_disable_endpoint(ctx, ctx->cfg.itf, alt);
+          usbdev_disable_endpoint(ctx, ctx->cfg.intf, alt);
 
           /* Notify service */
-          ctx->it.iidx = ctx->it.iidx - ctx->it.service->start.itf;
+          ctx->it.iidx = ctx->it.iidx - ctx->it.service->start.intf;
           usbdev_service_ctrl(ctx, USBDEV_CHANGE_INTERFACE);
 
           ctx->cfg.type = DEV_USBDEV_CHANGE_INTERFACE;
@@ -1806,9 +1806,9 @@ static void usbdev_set_interface_end_transfer(struct dev_usbdev_context_s *ctx)
 {
   const struct usb_ctrl_setup_s *setup = (const void *)ctx->setup;
   /* Reenable old and new interface endpoints */
-  usbdev_enable_endpoint(ctx, ctx->cfg.itf);
+  usbdev_enable_endpoint(ctx, ctx->cfg.intf);
   /* Update interface number */
-  ctx->itf_cfg[ctx->it.iidx] = usb_setup_value_get(setup);
+  ctx->intf_cfg[ctx->it.iidx] = usb_setup_value_get(setup);
 
   return usbdev_ep0_status_in(ctx);
 }

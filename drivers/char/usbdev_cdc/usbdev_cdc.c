@@ -62,8 +62,8 @@
 /* Bulk endpoint max packet size */
 #define USBDEV_SERV_CHAR_BULK_SIZE 64
 
-#define USBDEV_SERV_CHAR_ITF_CTRL 0
-#define USBDEV_SERV_CHAR_ITF_DATA 1
+#define USBDEV_SERV_CHAR_INTF_CTRL 0
+#define USBDEV_SERV_CHAR_INTF_DATA 1
 
 //#define CONFIG_USBDEV_CDC_DEBUG
 
@@ -92,8 +92,8 @@ static const struct usbdev_class_cdc_func_info_s cdc_call_mgmt =
     .head.bLength = sizeof(struct usb_cdc_call_mgmt_descriptor_s),
     .head.bDescriptorType = USB_CDC_INTERFACE_DESCRIPTOR,
     .bDescriptorSubtype = USB_CDC_FUNC_CALL_MGMT,
-    .bmCapabilities = USBDEV_SERV_CHAR_ITF_CTRL,
-    .bDataInterface = USBDEV_SERV_CHAR_ITF_DATA
+    .bmCapabilities = USBDEV_SERV_CHAR_INTF_CTRL,
+    .bDataInterface = USBDEV_SERV_CHAR_INTF_DATA
   }
 };
 static const struct usbdev_class_cdc_func_info_s cdc_acm =
@@ -113,8 +113,8 @@ static const struct usbdev_class_cdc_func_info_s cdc_union =
     .head.bLength = sizeof(struct usb_cdc_union_descriptor_s),
     .head.bDescriptorType = USB_CDC_INTERFACE_DESCRIPTOR,
     .bDescriptorSubtype = USB_CDC_FUNC_UNION,
-    .bMasterInterface = USBDEV_SERV_CHAR_ITF_CTRL,
-    .bSlaveInterface = USBDEV_SERV_CHAR_ITF_DATA
+    .bMasterInterface = USBDEV_SERV_CHAR_INTF_CTRL,
+    .bSlaveInterface = USBDEV_SERV_CHAR_INTF_DATA
   }
 };
 
@@ -142,11 +142,11 @@ static struct usb_endpoint_descriptor_s ep_bulk_out =
 
 static const struct usbdev_interface_default_s interface_cdc_data0 =
 {
-  .itf = {
+  .intf = {
     .desc = {
       .head.bLength = sizeof(struct usb_interface_descriptor_s),
       .head.bDescriptorType = USB_INTERFACE_DESCRIPTOR,
-      .bInterfaceNumber = USBDEV_SERV_CHAR_ITF_DATA,
+      .bInterfaceNumber = USBDEV_SERV_CHAR_INTF_DATA,
       .bAlternateSetting = 0,
       .bNumEndpoints = 2,
       .bInterfaceClass = USB_CLASS_CDC_DATA,
@@ -171,11 +171,11 @@ static struct usb_endpoint_descriptor_s ep_irq_in =
 
 static const struct usbdev_interface_default_s interface_cdc_ctrl =
 {
-  .itf = {
+  .intf = {
     .desc = {
       .head.bLength = sizeof(struct usb_interface_descriptor_s),
       .head.bDescriptorType = USB_INTERFACE_DESCRIPTOR,
-      .bInterfaceNumber = USBDEV_SERV_CHAR_ITF_CTRL,
+      .bInterfaceNumber = USBDEV_SERV_CHAR_INTF_CTRL,
       .bAlternateSetting = 0,
       .bNumEndpoints = 1,
       .bInterfaceClass = USB_CLASS_CDC,
@@ -474,7 +474,7 @@ static KROUTINE_EXEC(usbdev_cdc_ctrl_cb)
     case USBDEV_PROCESS_CONTROL:
       {
         /* Only CDC control interface support specific request*/
-        ensure (rq->itf == USBDEV_SERV_CHAR_ITF_CTRL);
+        ensure (rq->intf == USBDEV_SERV_CHAR_INTF_CTRL);
    
         /* We use provided buffer to send/retrieve USB data */
         const struct usb_ctrl_setup_s *setup = (const void *)rq->ctrl.setup;
@@ -541,13 +541,13 @@ static const struct usbdev_service_descriptor_s usb_cdc_service =
 {
   /* Local descriptor */
   USBDEV_SERVICE_DESCRIPTOR(
-      &interface_cdc_ctrl.itf.desc.head,
+      &interface_cdc_ctrl.intf.desc.head,
       &cdc_header.hdr.head,
       &cdc_call_mgmt.call.head,
       &cdc_acm.acm.head,
       &cdc_union.un.head,
       &ep_irq_in.head,
-      &interface_cdc_data0.itf.desc.head,
+      &interface_cdc_data0.intf.desc.head,
       &ep_bulk_out.head,
       &ep_bulk_in.head
     ),
