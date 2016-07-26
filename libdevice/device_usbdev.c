@@ -45,6 +45,8 @@ GCT_CONTAINER_PROTOTYPES(usbdev_service, extern inline, usbdev_service,
 /* Return string and size at index idx */
 static bool_t usbdev_get_string(const char ** str, uint8_t idx, size_t *len)
 {
+  assert(*str);
+
   for (uint8_t i=0; i<idx + 1; i++)
     {
       if (i)
@@ -1490,7 +1492,10 @@ static inline void usbdev_string_out_desc(struct dev_usbdev_context_s *ctx, size
 
         }
 
-      usbdev_get_string(&str, idx, &len);
+      if (str)
+        usbdev_get_string(&str, idx, &len);
+      else
+        len = 0;
 
       uint8_t s = 2 * len + sizeof(struct usb_descriptor_header_s);
       uint8_t desc[s];
