@@ -92,6 +92,13 @@ enum usb_hid_descriptor_type_e
   USB_HID_DESCRIPTOR_PHYSICAL     = 0x23,
 };
 
+enum usb_hid_report_type_e
+{
+  USB_HID_REPORT_INPUT   = 0x01,
+  USB_HID_REPORT_OUTPUT  = 0x02,
+  USB_HID_REPORT_FEATURE = 0x03,
+};
+
 enum usb_hid_request_e
 {
   USB_HID_GET_REPORT   = 0x1,
