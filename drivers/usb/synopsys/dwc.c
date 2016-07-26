@@ -65,7 +65,7 @@ static void synopsys_usbdev_flush_tx_fifo(struct synopsys_usbdev_private_s *pv, 
 }
 #endif
 
-static void synopsys_usbdev_edp_activation(struct synopsys_usbdev_private_s *pv, 
+static void synopsys_usbdev_ep_activation(struct synopsys_usbdev_private_s *pv, 
                                         struct dev_usbdev_interface_cfg_s *itf)
 {
   uint32_t x;
@@ -152,7 +152,7 @@ static error_t synopsys_usbdev_configure(struct synopsys_usbdev_private_s *pv,
   struct dev_usbdev_interface_cfg_s *icfg;
 
   if (cfg->itf == NULL)
-     synopsys_usbdev_edp_activation(pv, NULL);
+     synopsys_usbdev_ep_activation(pv, NULL);
   else
     {
       for (uint8_t i = 0; i< CONFIG_USBDEV_MAX_INTERFACE_COUNT; i++)
@@ -163,7 +163,7 @@ static error_t synopsys_usbdev_configure(struct synopsys_usbdev_private_s *pv,
             break;
     
           /* Configure endpoint */
-           synopsys_usbdev_edp_activation(pv, icfg);
+           synopsys_usbdev_ep_activation(pv, icfg);
     
           const struct usbdev_interface_s *itf = icfg->i;
     
@@ -553,7 +553,7 @@ static void synopsys_usbdev_end_transfer(struct synopsys_usbdev_private_s *pv, b
 
         /* Enable new interface */
       itf = pv->cfg->itf + DEV_USBDEV_ITF_ENABLE;
-       synopsys_usbdev_edp_activation(pv, itf);
+       synopsys_usbdev_ep_activation(pv, itf);
    
       USBDEV_FOREACH_ENDPOINT(itf->i, itf->epi, itf->epo,
         {
@@ -842,7 +842,7 @@ end:
   return err;
 }
 
-static void synopsys_usbdev_edpin_irq(struct synopsys_usbdev_private_s *pv, uint8_t idx)
+static void synopsys_usbdev_epin_irq(struct synopsys_usbdev_private_s *pv, uint8_t idx)
 {
   uint32_t irq = endian_le32(cpu_mem_read_32(pv->addr + SYNOPSYS_USB_DIEPINT_ADDR(idx)));
 
@@ -898,7 +898,7 @@ static void synopsys_usbdev_edpin_irq(struct synopsys_usbdev_private_s *pv, uint
     }
 }
 
-static void synopsys_usbdev_edpout_irq(struct synopsys_usbdev_private_s *pv, uint8_t idx)
+static void synopsys_usbdev_epout_irq(struct synopsys_usbdev_private_s *pv, uint8_t idx)
 {
   uint32_t irq = endian_le32(cpu_mem_read_32(pv->addr + SYNOPSYS_USB_DOEPINT_ADDR(idx)));
 
@@ -1050,7 +1050,7 @@ bool_t synopsys_usb_irq(struct synopsys_usbdev_private_s *pv)
       while(irqio)
         {
           epidx = __builtin_ctz(irqio);
-          synopsys_usbdev_edpin_irq(pv, epidx);
+          synopsys_usbdev_epin_irq(pv, epidx);
           irqio ^= 1 << epidx; 
         }
 
@@ -1060,7 +1060,7 @@ bool_t synopsys_usb_irq(struct synopsys_usbdev_private_s *pv)
       while(irqio)
         {
           epidx = __builtin_ctz(irqio);
-          synopsys_usbdev_edpout_irq(pv, epidx);
+          synopsys_usbdev_epout_irq(pv, epidx);
           irqio ^= 1 << epidx; 
         }
     }

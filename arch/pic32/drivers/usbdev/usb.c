@@ -75,7 +75,7 @@ static DEV_USBDEV_ENDPOINT(pic32_usbdev_endpoint)
   return ep;
 }
 
-static void pic32_usbdev_select_edp(struct pic32_usbdev_private_s *pv, uint8_t i)
+static void pic32_usbdev_select_ep(struct pic32_usbdev_private_s *pv, uint8_t i)
 {
   cpu_mem_write_8(pv->addr + PIC32_USB_CS3_ADDR + 2, i);
 }
@@ -91,7 +91,7 @@ static void pic32_usbdev_enable_irq(struct pic32_usbdev_private_s *pv, uint8_t i
   cpu_mem_write_8(addr, x);
 }
 
-static void pic32_usbdev_set_edp_fifo(struct pic32_usbdev_private_s *pv, uint8_t idx, bool_t rx)
+static void pic32_usbdev_set_ep_fifo(struct pic32_usbdev_private_s *pv, uint8_t idx, bool_t rx)
 {
   uint32_t addr;
   
@@ -115,12 +115,12 @@ static void pic32_usbdev_set_edp_fifo(struct pic32_usbdev_private_s *pv, uint8_t
   cpu_mem_write_16(addr, endian_le16(a));
 }
 
-static error_t pic32_usbdev_configure_edp(struct pic32_usbdev_private_s *pv,
+static error_t pic32_usbdev_configure_ep(struct pic32_usbdev_private_s *pv,
                                           const struct usb_endpoint_descriptor_s *desc,
-                                          dev_usbdev_edp_addr_t addr)
+                                          dev_usbdev_ep_addr_t addr)
 {
   /* Select endpoint */
-  pic32_usbdev_select_edp(pv, addr);
+  pic32_usbdev_select_ep(pv, addr);
 
   uint32_t iecs0 = endian_le32(cpu_mem_read_32(pv->addr + PIC32_USB_IECS0_ADDR));
   uint32_t iecs1 = endian_le32(cpu_mem_read_32(pv->addr + PIC32_USB_IECS1_ADDR));
@@ -136,7 +136,7 @@ static error_t pic32_usbdev_configure_edp(struct pic32_usbdev_private_s *pv,
         return -ENOTSUP;
 
       /* Set FIFO address and size */
-      pic32_usbdev_set_edp_fifo(pv, addr, 0);
+      pic32_usbdev_set_ep_fifo(pv, addr, 0);
 
       /* CS0 */
 
@@ -169,7 +169,7 @@ static error_t pic32_usbdev_configure_edp(struct pic32_usbdev_private_s *pv,
       PIC32_USB_IECS1_RXMAXP_SET(iecs1, usb_ep_mps_get(desc));
 
       /* Set FIFO address and size */
-      pic32_usbdev_set_edp_fifo(pv, addr, 1);
+      pic32_usbdev_set_ep_fifo(pv, addr, 1);
       /* Enable RX interrupt */
       pic32_usbdev_enable_irq(pv, addr, 1);
     }
@@ -205,7 +205,7 @@ static error_t pic32_usbdev_configure(struct pic32_usbdev_private_s *pv,
   
       USBDEV_FOREACH_ENDPOINT(icfg->i, icfg->epi, icfg->epo,
         {
-          err = pic32_usbdev_configure_edp(pv, epdesc, epaddr);
+          err = pic32_usbdev_configure_ep(pv, epdesc, epaddr);
           if (err)
            return err;
         });
@@ -481,7 +481,7 @@ static DEV_IRQ_SRC_PROCESS(pic32_usb_dma_irq)
 
       /* Retrieve endpoint number and select it */
       uint8_t epidx = PIC32_USB_DMAC_EP_GET(c); 
-      pic32_usbdev_select_edp(pv, epidx);
+      pic32_usbdev_select_ep(pv, epidx);
 
       if (c & PIC32_USB_DMAC_DIR)
         {
@@ -575,7 +575,7 @@ static DEV_USBDEV_REQUEST(pic32_usbdev_transfer)
   assert(*tra == NULL);
 
   /* Select endpoint */
-  pic32_usbdev_select_edp(pv, tr->ep);
+  pic32_usbdev_select_ep(pv, tr->ep);
 
   switch (tr->type)
     {
@@ -738,10 +738,10 @@ static void pic32_usbdev_status(struct pic32_usbdev_private_s *pv)
     }
 }
 
-static void pic32_usbdev_edpin_irq(struct pic32_usbdev_private_s *pv, uint8_t idx)
+static void pic32_usbdev_epin_irq(struct pic32_usbdev_private_s *pv, uint8_t idx)
 {
   /* Select endpoint */
-  pic32_usbdev_select_edp(pv, idx);
+  pic32_usbdev_select_ep(pv, idx);
 
   if (idx)
   /* Endpoint N IN interrupt */
@@ -797,7 +797,7 @@ done:
   pic32_usbdev_transfer_done(pv, 0, 1);
 }
 
-static void pic32_usbdev_edpout_irq(struct pic32_usbdev_private_s *pv, uint8_t idx)
+static void pic32_usbdev_epout_irq(struct pic32_usbdev_private_s *pv, uint8_t idx)
 {
   if (idx == 0)
     return;
@@ -810,7 +810,7 @@ static void pic32_usbdev_edpout_irq(struct pic32_usbdev_private_s *pv, uint8_t i
     {
       uint32_t x;
       /* Select endpoint */
-      pic32_usbdev_select_edp(pv, idx);
+      pic32_usbdev_select_ep(pv, idx);
       /* Set drop bit for isochronous transfert */
       x = endian_le32(cpu_mem_read_32(pv->addr + PIC32_USB_IECS1_ADDR));
       if ((x & PIC32_USB_IENCS0_ISO) && (x & PIC32_USB_IENCS0_UNDERRUN))
@@ -908,7 +908,7 @@ static DEV_IRQ_SRC_PROCESS(pic32_usb_irq)
       while(irqo)
         {
            epidx = __builtin_ctz(irqo);
-           pic32_usbdev_edpout_irq(pv, epidx);
+           pic32_usbdev_epout_irq(pv, epidx);
            irqo ^= 1 << epidx; 
         }
 
@@ -919,7 +919,7 @@ static DEV_IRQ_SRC_PROCESS(pic32_usb_irq)
       while(irqi)
         {
            epidx = __builtin_ctz(irqi);
-           pic32_usbdev_edpin_irq(pv, epidx);
+           pic32_usbdev_epin_irq(pv, epidx);
            irqi ^= 1 << epidx; 
         }
     }

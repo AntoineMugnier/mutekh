@@ -541,9 +541,9 @@ error_t usbdev_stack_service_unregister(struct device_usbdev_s *dev,
 
 /* This returns a global endpoint address from an endpoint descriptor */
 
-uint8_t usbdev_stack_get_edp_addr(const struct usb_endpoint_descriptor_s *desc,
-                                  dev_usbdev_edp_map_t mapi,
-                                  dev_usbdev_edp_map_t mapo)
+uint8_t usbdev_stack_get_ep_addr(const struct usb_endpoint_descriptor_s *desc,
+                                  dev_usbdev_ep_map_t mapi,
+                                  dev_usbdev_ep_map_t mapo)
 {
   uint8_t ret;
 
@@ -1399,7 +1399,7 @@ static bool_t usbdev_service_out_desc(struct dev_usbdev_context_s *ctx)
 
           if (offset >= 0 && cnt > offset)
             dst[offset] = usb_ep_dir_get(desc) |
-              usbdev_stack_get_edp_addr(desc, sid->epi[ctx->it.iidx],
+              usbdev_stack_get_ep_addr(desc, sid->epi[ctx->it.iidx],
                                         sid->epo[ctx->it.iidx]);
         }
       else if (type == USB_INTERFACE_DESCRIPTOR)
@@ -2219,11 +2219,11 @@ error_t usbdev_stack_transfer(struct device_usbdev_s *dev,
 
   tr->error = 0;
 
-  dev_usbdev_edp_map_t mapi = service->start.epi[tr->rev];
-  dev_usbdev_edp_map_t mapo = service->start.epo[tr->rev];
+  dev_usbdev_ep_map_t mapi = service->start.epi[tr->rev];
+  dev_usbdev_ep_map_t mapo = service->start.epo[tr->rev];
 
   /* Retrieve global address */
-  tr->ep = usbdev_stack_get_edp_addr(desc, mapi, mapo);
+  tr->ep = usbdev_stack_get_ep_addr(desc, mapi, mapo);
 
   struct usbdev_endpoint_s *ep;
   enum usb_endpoint_dir_e dir = USB_EP_IN;

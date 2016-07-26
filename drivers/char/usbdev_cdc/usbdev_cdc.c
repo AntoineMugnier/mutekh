@@ -220,8 +220,8 @@ DRIVER_PV(struct usbdev_cdc_private_s
 
   /* Service mapping */
   uint8_t interface_start_index;
-  dev_usbdev_edp_map_t epi_map;
-  dev_usbdev_edp_map_t epo_map;
+  dev_usbdev_ep_map_t epi_map;
+  dev_usbdev_ep_map_t epo_map;
 });
 
 static void usbdev_service_char_read(struct device_s *dev);

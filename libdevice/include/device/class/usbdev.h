@@ -67,9 +67,9 @@ enum dev_usbdev_event_e
 };
 
 /** Endpoint maps */
-typedef uint16_t dev_usbdev_edp_map_t;
+typedef uint16_t dev_usbdev_ep_map_t;
 /** Endpoint address */
-typedef uint8_t dev_usbdev_edp_addr_t;
+typedef uint8_t dev_usbdev_ep_addr_t;
 /** Endpoint configuration revision number */
 typedef int8_t dev_usbdev_cfgrev_t;
 
@@ -322,9 +322,9 @@ struct dev_usbdev_interface_cfg_s
      address and its global address as provided to host during enumeration.
      All endpoint address provided with @ref dev_usbdev_config_t are local and
      must be translated by driver to global address. This can be achieved with
-     the @ref usbdev_stack_get_edp_addr function */
-  dev_usbdev_edp_map_t  *epi;
-  dev_usbdev_edp_map_t  *epo;
+     the @ref usbdev_stack_get_ep_addr function */
+  dev_usbdev_ep_map_t  *epi;
+  dev_usbdev_ep_map_t  *epo;
 };
 
 struct dev_usbdev_config_s
@@ -442,15 +442,15 @@ DRIVER_CTX_CLASS_TYPES(DRIVER_CLASS_USBDEV, usbdev, );
 # define USBDEV_FOREACH_ENDPOINT(itf, mapin, mapout, ... /* loop body */)         \
   do {                                                                            \
     const struct usbdev_interface_s *_itf = (itf);                                \
-    const dev_usbdev_edp_map_t *_mapin = (mapin);                                 \
-    const dev_usbdev_edp_map_t *_mapout = (mapout);                               \
+    const dev_usbdev_ep_map_t *_mapin = (mapin);                                 \
+    const dev_usbdev_ep_map_t *_mapout = (mapout);                               \
     const struct usb_interface_descriptor_s *_d = &(_itf->desc);                  \
     for (uint_fast8_t _epidx = 0; _epidx < usb_interface_ep_count_get(_d) ; _epidx++)     \
       {                                                                           \
         uint8_t _idx = usb_interface_alt_get(_d);                                       \
-        const struct usb_endpoint_descriptor_s *epdesc = _itf->edp[_epidx];       \
-        dev_usbdev_edp_addr_t epaddr                                              \
-          = usbdev_stack_get_edp_addr(epdesc, _mapin[_idx], _mapout[_idx]);       \
+        const struct usb_endpoint_descriptor_s *epdesc = _itf->ep[_epidx];       \
+        dev_usbdev_ep_addr_t epaddr                                              \
+          = usbdev_stack_get_ep_addr(epdesc, _mapin[_idx], _mapout[_idx]);       \
         { __VA_ARGS__ }                                                           \
       }                                                                           \
   } while(0)
@@ -495,7 +495,7 @@ struct usbdev_interface_s
   /* Current configuration */
   const struct usb_interface_descriptor_s desc;
   /* Table of endpoint descriptor */
-  const struct usb_endpoint_descriptor_s *const* edp;
+  const struct usb_endpoint_descriptor_s *const* ep;
 };
 
 struct usbdev_interface_default_s
@@ -609,15 +609,15 @@ struct usbdev_service_rq_s
           uint32_t               *setup;
           uint8_t                *buffer;
           size_t                 size;
-        }ctrl;
+        } ctrl;
     };
 };
 
 struct usbdev_service_index_s
 {
   /* Endpoint map */
-  dev_usbdev_edp_map_t epi[1 + CONFIG_USBDEV_MAX_ALTERNATE_COUNT];
-  dev_usbdev_edp_map_t epo[1 + CONFIG_USBDEV_MAX_ALTERNATE_COUNT];
+  dev_usbdev_ep_map_t epi[1 + CONFIG_USBDEV_MAX_ALTERNATE_COUNT];
+  dev_usbdev_ep_map_t epo[1 + CONFIG_USBDEV_MAX_ALTERNATE_COUNT];
   /* Service id */
   uint8_t id;
   /* Start index for interface */
@@ -675,7 +675,7 @@ error_t usbdev_stack_transfer(struct device_usbdev_s *dev, struct usbdev_service
    .alt_cnt = sizeof((const struct usbdev_interface_s *[]){__VA_ARGS__})/sizeof((const struct usbdev_interface_s *[]){__VA_ARGS__}[0])
 
 #define USBDEV_ENDPOINT(...)   \
-   .edp = ((const struct usb_endpoint_descriptor_s *[]){__VA_ARGS__})
+   .ep = ((const struct usb_endpoint_descriptor_s *[]){__VA_ARGS__})
 
 GCT_CONTAINER_TYPES(usbdev_service, struct usbdev_service_s *, entry);
 GCT_CONTAINER_FCNS(usbdev_service, inline, usbdev_service,
@@ -840,9 +840,9 @@ uint8_t usbdev_stack_get_ep0_mps(struct dev_usbdev_context_s *ctx),
 
 /* @This returns a global endpoint address from an endpoint descriptor. */
 config_depend(CONFIG_DEVICE_USBDEV)
-uint8_t usbdev_stack_get_edp_addr(const struct usb_endpoint_descriptor_s *desc,
-                                  dev_usbdev_edp_map_t mapi,
-                                  dev_usbdev_edp_map_t mapo);
+uint8_t usbdev_stack_get_ep_addr(const struct usb_endpoint_descriptor_s *desc,
+                                 dev_usbdev_ep_map_t mapi,
+                                 dev_usbdev_ep_map_t mapo);
 
 
 config_depend(CONFIG_DEVICE_USBDEV)
