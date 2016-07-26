@@ -29,6 +29,8 @@
 #include <ble/net/generic.h>
 #include <ble/protocol/radio.h>
 #include <ble/protocol/advertise.h>
+#include <ble/security_db.h>
+#include <ble/peer.h>
 
 #include <gct_platform.h>
 #include <gct/container_avl_p.h>
@@ -68,6 +70,8 @@ struct ble_scan_filter_s
   struct ble_scanner_param_s scan_params;
 
   struct net_task_s cleanup_task;
+
+  struct ble_security_db_s *peerdb;
 };
 
 STRUCT_COMPOSE(ble_scan_filter_s, cleanup_task);
@@ -115,10 +119,33 @@ struct ble_scan_item_s *ble_scan_filter_device_get(struct ble_scan_filter_s *sf,
   item->device.first_seen = net_scheduler_time_get(sf->layer.scheduler);
   ble_scan_list_insert(&sf->devices, item);
   item->policy = BLE_SCAN_FILTER_MONITOR;
+  item->device.known = ble_security_db_contains(sf->peerdb, addr);
 
   ble_scan_filter_cleanup_later(sf);
 
   return item;
+}
+
+static
+bool_t ble_scan_filter_address_resolve(struct ble_scan_filter_s *sf,
+                                       struct ble_addr_s *adva)
+{
+  struct ble_peer_s peer;
+  error_t err;
+
+  err = ble_security_db_load(sf->peerdb, adva, &peer);
+  if (err)
+    return 0;
+
+  if (!peer.identity_present)
+    return 0;
+
+  dprintk("Resolved address "BLE_ADDR_FMT" to "BLE_ADDR_FMT"\n",
+         BLE_ADDR_ARG(adva),
+         BLE_ADDR_ARG(&peer.addr));
+
+  *adva = peer.addr;
+  return 1;
 }
 
 static
@@ -151,15 +178,23 @@ void ble_scan_filter_adv_handle(struct ble_scan_filter_s *sf,
     break;
   }
 
+  dprintk("Got adv %p %P\n", item,
+         buffer->data + buffer->begin,
+         buffer->end - buffer->begin);
+
   ble_advertise_packet_txaddr_get(buffer, &adva);
+
+  if (adva.type == BLE_ADDR_RANDOM
+      && ble_addr_random_type(&adva) == BLE_ADDR_RANDOM_RESOLVABLE) {
+    dprintk("From random "BLE_ADDR_FMT"\n", BLE_ADDR_ARG(&adva));
+
+    if (!ble_scan_filter_address_resolve(sf, &adva))
+      return;
+  }
 
   item = ble_scan_filter_device_get(sf, &adva, create);
   if (!item)
     return;
-
-  /* dprintk("Got adv %p %P\n", item, */
-  /*        buffer->data + buffer->begin, */
-  /*        buffer->end - buffer->begin); */
 
   item->device.last_seen = net_scheduler_time_get(sf->layer.scheduler);
   item->device.rssi = rssi;
@@ -365,12 +400,13 @@ static const struct net_layer_handler_s scan_filter_handler = {
 };
 
 error_t ble_scan_filter_create(struct net_scheduler_s *scheduler,
-                               const void *params,
+                               const void *params_,
                                void *delegate,
                                const struct net_layer_delegate_vtable_s *delegate_vtable,
                                struct net_layer_s **layer)
 {
   struct ble_scan_filter_s *sf = mem_alloc(sizeof(*sf), mem_scope_sys);
+  const struct ble_scan_filter_param_s *params = params_;
   error_t err;
 
   if (!sf)
@@ -388,6 +424,8 @@ error_t ble_scan_filter_create(struct net_scheduler_s *scheduler,
   sf->scan_params.default_policy = BLE_SCANNER_IGNORE;
 
   dev_timer_init_sec(&scheduler->timer, &sf->lifetime_tk, NULL, 10, 1);
+  sf->peerdb = params->peerdb;
+  sf->scan_params = params->scan_params;
 
   *layer = &sf->layer;
 
