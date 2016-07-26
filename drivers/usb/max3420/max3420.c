@@ -572,7 +572,7 @@ static DEV_INIT(max3420_usbdev_init)
     .word_width = 8,
   };
 
-  srq->base.config = &spi_config;
+  srq->base.config = (struct dev_spi_ctrl_config_s *)&spi_config;
   srq->base.base.pvdata = dev;
 
   /* init GPIO stuff */
