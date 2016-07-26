@@ -279,7 +279,7 @@ enum usb_tranfert_recipient_e
     sizeof(struct usb_device_descriptor_s),   \
     USB_DEVICE_DESCRIPTOR,                    \
     (version) & 0xFF,                         \
-    ((version) << 8) & 0xFF,                  \
+    ((version) >> 8) & 0xFF,                  \
     class,                                    \
     subclass,                                 \
     prot,                                     \
