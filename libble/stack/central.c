@@ -85,10 +85,16 @@ static void ctr_conn_state_changed(struct ble_stack_connection_s *conn,
 {
   struct ble_central_s *ctr = ble_central_s_from_conn(conn);
 
-  ctr_state_update(ctr);
-
   if (!connected && ctr->mode & BLE_CENTRAL_CONNECTABLE)
     scan_start(ctr);
+
+  if (connected
+      && !(ctr->mode & BLE_CENTRAL_PAIRABLE)
+      && conn->peer.paired
+      && conn->peer.ltk_present)
+    ble_llcp_encryption_enable(conn->llcp);
+
+  ctr_state_update(ctr);
 }
 
 static
@@ -270,6 +276,7 @@ void ble_central_mode_set(struct ble_central_s *ctr, uint8_t mode)
 #if defined(CONFIG_BLE_SECURITY_DB)
   if (ble_security_db_count(&ctr->context->security_db) == 0
       && mode & BLE_CENTRAL_CONNECTABLE) {
+    printk("No peer in sec db, pairing mode forced\n");
     mode |= BLE_CENTRAL_PAIRABLE;
   }
 #else
