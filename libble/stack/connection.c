@@ -408,12 +408,6 @@ error_t ble_stack_connection_create(struct ble_stack_connection_s *conn,
     conn->chandler = chandler;
     conn->handler = handler;
     conn_state_update(conn);
-
-    printk("Conn ok master %d paired %d ltk %d\n",
-           is_master, conn->peer.paired, conn->peer.ltk_present);
-
-    if (is_master && conn->peer.paired && conn->peer.ltk_present)
-      ble_llcp_encryption_enable(conn->llcp);
   }
 
   return err;
