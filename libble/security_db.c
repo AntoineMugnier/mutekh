@@ -377,7 +377,7 @@ error_t ble_security_db_load(struct ble_security_db_s *db,
 
   ble_peer_init(peer, db, addr);
 
-  printk("%s looking up "BLE_ADDR_FMT"\n", __FUNCTION__, BLE_ADDR_ARG(addr));
+  dprintk("%s looking up "BLE_ADDR_FMT"\n", __FUNCTION__, BLE_ADDR_ARG(addr));
 
   if (addr->type == BLE_ADDR_PUBLIC || rt == BLE_ADDR_RANDOM_STATIC) {
     peer->addr = *addr;
