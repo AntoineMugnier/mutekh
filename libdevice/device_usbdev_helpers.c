@@ -32,7 +32,7 @@ USBDEV_REPLACE(usbdev_cdc_desc_update)
 
   switch (p[sizeof(struct usb_descriptor_header_s)])
     {
-    case USB_CDC_FUNC_CALL_MGMT:
+    case USB_CDC_DESC_FUNC_CALL_MGMT:
       /* Replace interface number */
       offset = offsetof(struct usb_cdc_call_mgmt_descriptor_s,
                         bDataInterface) - bidx;
@@ -40,9 +40,9 @@ USBDEV_REPLACE(usbdev_cdc_desc_update)
       if (offset >= 0 && cnt > offset)
         dst[offset] += index->intf;
       break;
-    case USB_CDC_FUNC_UNION:{
+    case USB_CDC_DESC_FUNC_UNION:{
       offset = offsetof(struct usb_cdc_union_descriptor_s,
-                        bMasterInterface);
+                        bControlInterface);
       size_t nbr = hdr->bLength - offset; 
       /* Replace interface number */
       for (uint8_t i=0; i<nbr; i++)

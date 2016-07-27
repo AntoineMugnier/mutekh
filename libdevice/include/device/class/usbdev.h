@@ -40,6 +40,8 @@
 
 #include <gct/container_clist.h>
 
+struct usb_ctrl_setup_s;
+
 //#define CONFIG_USBDEV_DEBUG
 
 #ifdef CONFIG_USBDEV_DEBUG
@@ -611,9 +613,9 @@ struct usbdev_service_rq_s
           size, multiple transfers must be done. */
       struct
         {
-          uint32_t               *setup;
-          uint8_t                *buffer;
-          size_t                 size;
+          struct usb_ctrl_setup_s *setup;
+          uint8_t                 *buffer;
+          size_t                  size;
         } ctrl;
     };
 };

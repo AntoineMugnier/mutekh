@@ -75,46 +75,46 @@
 
 /* Functionnal descriptor */
 
-static const struct usbdev_class_cdc_func_info_s cdc_header =
+static const struct usbdev_cdc_func_info_s cdc_header =
 {
   .f_replace = NULL,
   .hdr = {
     .head.bLength = sizeof(struct usb_cdc_header_descriptor_s),
     .head.bDescriptorType = USB_CDC_INTERFACE_DESCRIPTOR,
-    .bDescriptorSubtype = USB_CDC_FUNC_HEADER,
+    .bDescriptorSubtype = USB_CDC_DESC_FUNC_HEADER,
     .bcdCDC = endian_le16(0x0120),
   }
 };
-static const struct usbdev_class_cdc_func_info_s cdc_call_mgmt = 
+static const struct usbdev_cdc_func_info_s cdc_call_mgmt = 
 {
   .f_replace = usbdev_cdc_desc_update,
   .call = {
     .head.bLength = sizeof(struct usb_cdc_call_mgmt_descriptor_s),
     .head.bDescriptorType = USB_CDC_INTERFACE_DESCRIPTOR,
-    .bDescriptorSubtype = USB_CDC_FUNC_CALL_MGMT,
+    .bDescriptorSubtype = USB_CDC_DESC_FUNC_CALL_MGMT,
     .bmCapabilities = USBDEV_SERV_CHAR_INTF_CTRL,
     .bDataInterface = USBDEV_SERV_CHAR_INTF_DATA
   }
 };
-static const struct usbdev_class_cdc_func_info_s cdc_acm =
+static const struct usbdev_cdc_func_info_s cdc_acm =
 {
   .f_replace = NULL,
   .acm = {
     .head.bLength = sizeof(struct usb_cdc_acm_descriptor_s),
     .head.bDescriptorType = USB_CDC_INTERFACE_DESCRIPTOR,
-    .bDescriptorSubtype = USB_CDC_FUNC_ACM,
+    .bDescriptorSubtype = USB_CDC_DESC_FUNC_ACM,
     .bmCapabilities = 2,
   }
 };
-static const struct usbdev_class_cdc_func_info_s cdc_union =
+static const struct usbdev_cdc_func_info_s cdc_union =
 {
   .f_replace = usbdev_cdc_desc_update,
   .un = {
     .head.bLength = sizeof(struct usb_cdc_union_descriptor_s),
     .head.bDescriptorType = USB_CDC_INTERFACE_DESCRIPTOR,
-    .bDescriptorSubtype = USB_CDC_FUNC_UNION,
-    .bMasterInterface = USBDEV_SERV_CHAR_INTF_CTRL,
-    .bSlaveInterface = USBDEV_SERV_CHAR_INTF_DATA
+    .bDescriptorSubtype = USB_CDC_DESC_FUNC_UNION,
+    .bControlInterface = USBDEV_SERV_CHAR_INTF_CTRL,
+    .bSubordinateInterface = USBDEV_SERV_CHAR_INTF_DATA
   }
 };
 
