@@ -684,6 +684,13 @@ void nrf5x_ble_context_cleanup(struct nrf5x_ble_context_s *ctx)
 {
   struct nrf5x_ble_private_s *pv = ctx->pv;
 
+  if (ctx == pv->current) {
+    nrf5x_ble_radio_disable(pv);
+    nrf5x_ble_rtc_boundary_clear();
+
+    pv->current = NULL;
+  }
+
   assert(ctx != pv->current);
 
   _ble_context_unschedule(pv, ctx);
