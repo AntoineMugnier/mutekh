@@ -6,6 +6,7 @@ char \
 enum \
 gpio \
 mem \
+net \
 printk \
 rtt \
 spi \
