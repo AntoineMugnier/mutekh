@@ -58,6 +58,9 @@ struct net_addr_s
 #if defined(CONFIG_NET_ETHERNET) || defined(CONFIG_BLE)
   uint8_t mac[6];
 #endif
+#if defined(CONFIG_NET_ETHERNET)
+  uint16_t ethertype;
+#endif
 };
 
 #endif
