@@ -33,13 +33,13 @@ DEV_DECLARE_STATIC(max3420_dev, "max3420", 0, max3420_drv,
 
 );
 
-DEV_DECLARE_STATIC(usbdev_cdc0, "console", 0, usbdev_cdc_drv,
+DEV_DECLARE_STATIC(usbdev_acm0, "console", 0, usbdev_acm_drv,
                    DEV_STATIC_RES_USBDEV_EP_MAP(0, 0x32, 0x01),
                    DEV_STATIC_RES_DEV_PARAM("usb-ctrl", "/max3420")
 );
 
 #else
-extern struct device_s usbdev_cdc0;
+extern struct device_s usbdev_acm0;
 #endif
 
 static const struct usbdev_device_info_s usbdevinfo =
