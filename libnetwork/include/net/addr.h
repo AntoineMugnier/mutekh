@@ -46,13 +46,13 @@ struct net_addr_s
   uint16_t cid;
   uint16_t att;
 #endif
-#if defined(CONFIG_NET_TCP) || defined(CONFIG_NET_UDP)
+#if defined(CONFIG_INET_TCP) || defined(CONFIG_INET_UDP)
   uint16_t port;
 #endif
-#if defined(CONFIG_NET_IPV4)
+#if defined(CONFIG_INET_IPV4)
   uint8_t ipv4[4];
 #endif
-#if defined(CONFIG_NET_IPV6)
+#if defined(CONFIG_INET_IPV6)
   uint8_t ipv6[16];
 #endif
 #if defined(CONFIG_NET_ETHERNET) || defined(CONFIG_BLE)
