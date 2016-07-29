@@ -278,7 +278,7 @@ static error_t max3420_usbdev_check_config(struct max3420_usbdev_private_s *pv,
 
       if (icfg->i == NULL)
         break;
-  
+
       USBDEV_FOREACH_ENDPOINT(icfg->i, icfg->epi, icfg->epo,
        {
          if (usb_ep_type_get(epdesc) == USB_EP_CONTROL ||
@@ -306,6 +306,34 @@ static error_t max3420_usbdev_check_config(struct max3420_usbdev_private_s *pv,
   return 0;
 }
 
+static error_t max3420_usbdev_change_interface(struct max3420_usbdev_private_s *pv,
+                                               struct dev_usbdev_config_s *cfg)
+{
+  struct dev_usbdev_interface_cfg_s *icfg = cfg->intf + DEV_USBDEV_INTF_ENABLE;
+
+  USBDEV_FOREACH_ENDPOINT(icfg->i, icfg->epi, icfg->epo, {
+      if (usb_ep_type_get(epdesc) == USB_EP_CONTROL ||
+          usb_ep_type_get(epdesc) == USB_EP_ISOCHRONOUS)
+        return -ENOTSUP;
+
+      uint16_t mps = usb_ep_mps_get(epdesc);
+
+      if (mps > 64 || !is_pow2(mps))
+        return -ENOTSUP;
+
+      if (usb_ep_dir_get(epdesc) == USB_EP_IN) {
+        /* IN endpoint */
+        if ((epaddr != 2) && (epaddr != 3))
+          return -ENOTSUP;
+      } else if (epaddr != 1)
+        return -ENOTSUP;
+
+      pv->mps[epaddr] = mps;
+    });
+
+  return 0;
+}
+
 static DEV_USBDEV_CONFIG(max3420_usbdev_config)
 {
   struct device_s *dev = ctx->dev;
@@ -325,7 +353,10 @@ static DEV_USBDEV_CONFIG(max3420_usbdev_config)
     case DEV_USBDEV_CONFIGURE:
       err = max3420_usbdev_check_config(pv, cfg);
       break;
-    default:
+    case DEV_USBDEV_CHANGE_INTERFACE:
+      err = max3420_usbdev_change_interface(pv, cfg);
+      break;
+   default:
       err = -EINVAL;
       break;
     }
@@ -396,7 +427,7 @@ static void max3420_usbdev_tr_done(struct device_s *dev)
       uint8_t idx = __builtin_ctz(msk);
       tr = pv->tr[idx];
 
-      msk ^= 1 << idx; 
+      msk ^= 1 << idx;
 
       if (tr == NULL)
         continue;
@@ -496,9 +527,9 @@ static KROUTINE_EXEC(max3420_spi_rq_done)
           device_async_init_done(dev, -EIO);
           goto end;
         }
-  
+
       pv->done &= ~MAX3420_INIT_MASK;
-  
+
       /* Initialise USB stack here */
       usbdev_stack_init(dev, &pv->usbdev_ctx, MAX3420_EPIN_MSK, MAX3420_EPOUT_MSK,
                         &max3420_usbdev_ops_s);
@@ -604,7 +635,7 @@ static DEV_INIT(max3420_usbdev_init)
 
   /* Start initialisation */
 
-  bc_set_reg(&srq->vm, R_CTX_PV, (uintptr_t)pv); 
+  bc_set_reg(&srq->vm, R_CTX_PV, (uintptr_t)pv);
 
   pv->pending = MAX3420_INIT_MASK;
 
@@ -630,4 +661,3 @@ static DEV_CLEANUP(max3420_usbdev_cleanup)
 
   return 0;
 }
-
