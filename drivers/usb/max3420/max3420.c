@@ -306,6 +306,7 @@ static error_t max3420_usbdev_check_config(struct max3420_usbdev_private_s *pv,
   return 0;
 }
 
+#if (CONFIG_USBDEV_MAX_ALTERNATE_COUNT > 0)
 static error_t max3420_usbdev_change_interface(struct max3420_usbdev_private_s *pv,
                                                struct dev_usbdev_config_s *cfg)
 {
@@ -333,6 +334,7 @@ static error_t max3420_usbdev_change_interface(struct max3420_usbdev_private_s *
 
   return 0;
 }
+#endif
 
 static DEV_USBDEV_CONFIG(max3420_usbdev_config)
 {
@@ -353,9 +355,11 @@ static DEV_USBDEV_CONFIG(max3420_usbdev_config)
     case DEV_USBDEV_CONFIGURE:
       err = max3420_usbdev_check_config(pv, cfg);
       break;
+#if (CONFIG_USBDEV_MAX_ALTERNATE_COUNT > 0)
     case DEV_USBDEV_CHANGE_INTERFACE:
       err = max3420_usbdev_change_interface(pv, cfg);
       break;
+#endif
    default:
       err = -EINVAL;
       break;
