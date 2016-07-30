@@ -1,0 +1,14 @@
+@moduledef{Internet protocol suite} {Libraries}
+@short IP networking library
+
+@end moduledef
+
+@parse{
+inet/protocol/icmp.h
+inet/protocol/ipv4.h
+inet/protocol/ip.h
+inet/protocol/checksum.h
+inet/layer/icmp.h
+inet/layer/ipv4.h
+}
+
