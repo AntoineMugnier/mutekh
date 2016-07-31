@@ -1,0 +1,16 @@
+@moduledef{Cross-platform drivers}
+@short Portable device drivers
+
+@section {Overview}
+
+  Some device drivers are portable accross various architectures and
+  processors.  They are defined in a common place rather than in @tt
+  arch/ or @tt cpu/ directories.
+  
+@end section
+
+@end moduledef
+
+@parse{
+}
+

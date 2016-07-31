@@ -30,10 +30,7 @@
 
 @include ../arch/arch.mkdoc
 @include ../cpu/cpu.mkdoc
-
-@moduledef{Cross-platform drivers}
-  @hidden
-@end moduledef
+@include ../drivers/drivers.mkdoc
 
 @parse{
 doc/config.h 
@@ -228,8 +225,8 @@ doc/config.h
   @end section
 
   @section TP {Cross-platform drivers}
+    @invoke {+Cross-platform drivers} _compound_doc
     @insert {1} localtoc
-    @c @invoke {+Cross-platform drivers} _compound_doc
   @end section
 
 @end section
