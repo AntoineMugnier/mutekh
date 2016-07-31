@@ -48,6 +48,7 @@
 
 struct net_task_s;
 struct net_layer_s;
+struct net_scheduler_s;
 
 /**
    @this defines context a layer can live in.  Context contains
@@ -57,9 +58,12 @@ struct net_layer_context_s
 {
   /** Upper-layer addresses */
   struct net_addr_s addr;
-  /** Byte count layer should leave available for upper layers */
+  /** Byte count layer should leave available for upper layers at the
+      begining of a packet */
   uint16_t prefix_size;
-  /** Maximum byte count this layer is allowed to use for its payloads */
+  /** Maximum byte count this layer is allowed to use for its
+      payloads, starting from @tt prefix_size offset in @tt
+      buffers. */
   uint16_t mtu;
 };
 
@@ -70,32 +74,34 @@ struct net_layer_handler_s
 {
   /**
      @this is called after a layer gets destroyed because its refcount
-     dropped down to 0.
+     dropped down to 0.  This method is mandatory.
    */
   void (*destroyed)(struct net_layer_s *layer);
 
   /**
      @this is called when a task requires handling from the layer.  It
      is responsability from this call to destroy the task (or reuse
-     it).
+     it).  This method is mandatory.
    */
   void (*task_handle)(struct net_layer_s *layer,
                       struct net_task_s *task);
 
   /**
-     @this is responsible for calculating children's context.
+     @this is responsible for calculating children's context.  This
+     method is optional.
    */
   void (*child_context_adjust)(const struct net_layer_s *layer,
                                struct net_layer_context_s *ctx);
 
   /**
-     @this notifies a layer its own context changed
+     @this notifies a layer its own context changed.  This method is
+     optional.
    */
   void (*context_changed)(struct net_layer_s *layer);
 
   /**
      @this notifies a layer its got unbound and has no parent any
-     more.
+     more.  This method is optional.
    */
   void (*dandling)(struct net_layer_s *layer);
 
@@ -105,6 +111,8 @@ struct net_layer_handler_s
      @ref{net_layer_bind}, it is context-dependent.
 
      If this function returns an error, layer binding is aborted.
+     This method is optional.  If not implemented, no layer may be
+     bound as child of this one.
    */
   error_t (*bound)(
     struct net_layer_s *layer,
@@ -112,7 +120,8 @@ struct net_layer_handler_s
     struct net_layer_s *child);
 
   /**
-     @this is called when a layer that was bound before gets unbound.
+     @this is called when a child layer gets unbound.  This method is
+     optional.
    */
   void (*unbound)(
     struct net_layer_s *layer,
@@ -145,19 +154,31 @@ GCT_CONTAINER_TYPES(net_layer_list,
  */
 struct net_layer_s
 {
+  /** @multiple @internal */
   GCT_REFCOUNT_ENTRY(obj_entry);
   GCT_CONTAINER_ENTRY(net_layer_list, entry);
   net_layer_list_root_t children;
   GCT_CONTAINER_ENTRY(net_layer_sched_list, scheduler_ref);
 
-  struct net_scheduler_s *scheduler;
   const struct net_layer_handler_s *handler;
+
+  /** Layer's scheduler. May be dereferenced for using its timing and
+      allocation functions. */
+  struct net_scheduler_s *scheduler;
+  /** Layer's parent in stack. Should be checked for NULL before
+      using. */
   struct net_layer_s *parent;
+  /** Layer's context, as set by parent.  Layer is notified of changes
+      in this structure through @ref
+      {net_layer_handler_s::context_changed} method. */
   struct net_layer_context_s context;
+
+  /** Delegate pointer */
   void *delegate;
+  /** Delegate vtable */
   const struct net_layer_delegate_vtable_s *delegate_vtable;
 
-  // Rest is done through derivation
+  // Internal data through inheritance
 } *, entry);
 
 GCT_REFCOUNT(net_layer, struct net_layer_s *, obj_entry);
@@ -166,18 +187,21 @@ GCT_CONTAINER_TYPES(net_layer_sched_list, struct net_layer_s *, scheduler_ref);
 GCT_CONTAINER_FCNS(net_layer_list, static inline, net_layer_list,
                    init, destroy, push, pop, pushback, next, head, isempty, remove, foreach);
 
-/* Refcount destroy function. Called from refcount
+/** @this is refcount destroy function, called from refcount
    management. @internal */
 void net_layer_destroy(struct net_layer_s *layer);
 
 /**
-   @this binds a child layer to another layer.
+   @this binds a child layer to another layer.  Caller should refdec
+   child layer after this call, whatever the return value.  If
+   accepted, reference will be retained by new parent, if rejected,
+   child layer should be destroyed anyway.
 
    @param parent Parent layer
    @param addr Address data (parent context specific)
    @param child Child layer
 
-   @returns whether parent accepted layer as a child
+   @returns error if parent refused layer as a child
  */
 error_t net_layer_bind(
   struct net_layer_s *parent,

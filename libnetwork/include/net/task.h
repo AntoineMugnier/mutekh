@@ -62,16 +62,29 @@ typedef void net_task_destroy_func_t(void *task);
  */
 enum net_task_type_e
 {
+  /** An invalid task. This has to be set on a newly created task not
+      initialized yet. */
   NET_TASK_INVALID,
+  /** An inbound packet task.  Task references a payload transitting
+      from root towards leaves of the network stack tree. */
   NET_TASK_INBOUND,
+  /** An outbound packet task.  Task references a payload transitting
+      from leaves towards root of the network stack tree. */
   NET_TASK_OUTBOUND,
+  /** A timeout task.  Contains an timeout after which the task will
+      be scheduled for handling. */
   NET_TASK_TIMEOUT,
+  /** A query task, should be responded to through @ref
+      net_task_query_respond_push. */
   NET_TASK_QUERY,
+  /** A query response task. */
   NET_TASK_RESPONSE,
+  /** A one-way notification. */
   NET_TASK_NOTIFICATION,
 };
 
 /**
+   @internal
    @this pushes a task to a given target, for a given type.
 
    @param task Task to push
@@ -85,13 +98,14 @@ void net_task_push(struct net_task_s *task,
                    enum net_task_type_e type);
 
 /**
-   @this destroys a task.  This calls its destroy function.
+   @this destroys a task.  This drops references to referenced data
+   (layers, buffer if any) and calls its destroy function.
  */
 void net_task_destroy(struct net_task_s *task);
 
 /**
-   @this is a network task structure.  Custom query types may inherit
-   this structure.
+   @this is a network task structure.  Custom query and notification
+   tasks may inherit this structure.
 
    A destroy function must be set for each task.  When a task is
    cleaned up, its destroy function will be called.
@@ -127,7 +141,7 @@ struct net_task_s
       struct net_addr_s src_addr;
       struct net_addr_s dst_addr;
 
-      /** Must be filled, must retain a reference */
+      /* Must be filled, must retain a reference */
       struct buffer_s *buffer;
     } packet;
 
@@ -175,6 +189,14 @@ void net_task_inbound_push(struct net_task_s *task,
    @this pushes an outbound packet task to a layer.
 
    @this sets all structure fields and pushes the task.
+   @param task Task to be pushed. Must be allocated and in @tt INVALID
+               state.
+   @param target Target layer, mandatory
+   @param source Source layer, mandatory
+   @param timestamp Source timestamp, 0 implies now.
+   @param src_addr Source address to set in packet, may be NULL.
+   @param dst_addr Destionation address to set in packet, may be NULL.
+   @param buffer Buffer to use as payload, mandatory.
  */
 void net_task_outbound_push(struct net_task_s *task,
                            struct net_layer_s *target,
@@ -204,7 +226,7 @@ void net_task_timeout_push(struct net_task_s *task,
 
 /**
    @this pushes a notification task to a layer.  @tt opcode meaning is
-   source-layer defined.
+   source or destination-layer defined.
  */
 void net_task_notification_push(struct net_task_s *task,
                                 struct net_layer_s *target,
@@ -228,6 +250,10 @@ void net_task_query_push(struct net_task_s *task,
  */
 void net_task_query_respond_push(struct net_task_s *task, error_t err);
 
+/**
+   @this steals a buffer from a packet task.  Once stolen, task cannot
+   be reused and should be destroyed.
+ */
 ALWAYS_INLINE
 struct buffer_s *net_task_packet_buffer_steal(struct net_task_s *task,
                                               size_t begin,
@@ -243,6 +269,11 @@ struct buffer_s *net_task_packet_buffer_steal(struct net_task_s *task,
   return ret;
 }
 
+/**
+   @this pushes an @tt OUTBOUND task as response of an @tt INBOUND
+   task.  @tt {task}'s original destination address is reused as
+   source.
+ */
 void net_task_packet_respond(struct net_task_s *task,
                              struct net_layer_s *next_hop,
                              dev_timer_value_t timestamp,

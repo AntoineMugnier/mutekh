@@ -26,7 +26,9 @@
    @module {Libraries::Abstract network stack}
    @short Network layer definition for Dumper interface
 
-   @this defines network layer API for physical layer.
+   @this defines network layer factory for a debug dumper layer.
+
+   Dumper layer only prints all incoming packets, nothing else.
 */
 
 #include <hexo/types.h>
@@ -34,6 +36,16 @@
 
 #include <net/layer.h>
 
+/**
+   @this creates a dumper layer. Delegate will be informed of layer
+   deletion.
+
+   @param scheduler Attached network scheduler
+   @param delegate Delegate object
+   @param delegate_vtable Delegate vtable
+   @param layer Returned layer reference
+   @returns 0 if completed.
+ */
 error_t net_dumper_create(struct net_scheduler_s *scheduler,
                           void *delegate,
                           const struct net_layer_delegate_vtable_s *delegate_vtable,

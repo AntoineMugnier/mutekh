@@ -168,8 +168,8 @@ void net_scheduler_from_layer_cancel(
   struct net_layer_s *layer);
 
 /**
-   @this retrieves the maximum packet size from scheduler's packet
-   pool buffers.
+   @this retrieves the maximum packet payload size that can be
+   transported in buffers allocated from scheduler's packet pool.
  */
 ALWAYS_INLINE size_t net_scheduler_packet_mtu(
   struct net_scheduler_s *sched)

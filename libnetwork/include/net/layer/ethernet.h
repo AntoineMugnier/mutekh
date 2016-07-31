@@ -26,7 +26,8 @@
    @module {Libraries::Abstract network stack}
    @short Network layer definition for Ethernet interface
 
-   @this defines network layer API for physical layer.
+   @this defines network layer API for ethernet physical layer.  Its
+   implementations are device-specific.
 */
 
 #include <hexo/types.h>
@@ -34,15 +35,22 @@
 
 #include <net/layer.h>
 
-enum net_ethernet_layer_id_e
-{
-  NET_LAYER_ETHERNET = CONFIG_NET_ETHERNET_LAYER_FIRST,
-};
+/**
+   Network layer ID for ethernet.
+ */
+#define NET_LAYER_ETHERNET CONFIG_NET_ETHERNET_LAYER_FIRST
 
+/**
+   @this is a vtable for an ethernet network layer.
+*/
 struct net_ethernet_delegate_vtable_s
 {
   struct net_layer_delegate_vtable_s base;
 
+  /**
+     @this is called when the link-layer status of the network device
+     changes.
+   */
   void (*link_changed)(void *delegate, struct net_layer_s *layer, bool_t connected);
 };
 

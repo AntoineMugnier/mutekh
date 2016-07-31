@@ -1,95 +1,239 @@
 @moduledef{Abstract network stack} {Libraries}
 @short Abstract network stack
 
-Network library is a framework for designing network stacks.
-It is built around 3 main objects:
-@list
-  @item a set of layers,
-  @item tasks,
-  @item a scheduler.
-@end list
+@section {Overview}
 
-@section {Layers}
-  A network layer is a part of a networking stack.  Depending on
-  actual needs, layer may be statically or dynamically allocated on a
-  per-session basis.
-
-  For instance, in a TCP/IP stack, Ethernet, IP and TCP layers are
-  long-lived, whereas TCP session layer (for a single source/target
-  IP/port tuple) is shorter-lived.
-
-  Layers communicate exclusively through tasks that are executed in a
-  unique scheduler for a given stack.
-
-  Layers are stacked in a tree fashion.  Root is close to the network
-  interfaces, leaves are closer to the application.  A layer has a
-  single parent layer in stack, but may have multiple children layers.
-
-  All layers are refcounted.  Parents hold a refcount on children (and
-  not the other way around).  An interface layer that gets destroyed
-  (because the communication medium disappears) implicitly drops
-  references on children layers which will, in turn, get destroyed.
-
-  Each layer should check for parent validity before sending a task to
-  it.
-
-  Communication at borders of libnetwork (between libnetwork and other
-  modules) is done through a delegate pattern.  Each layer is
-  responsible for declaration of its delegate vtable and API.
-
-  Layers provide a @ref {net_layer_handler_s} {set of entry points}
-  for scheduler to send tasks and update state.  Main entry point for
-  task handling is @ref {net_layer_handler_s::task_handle}
-  {task_handle}.
-@end section
-
-@section {Tasks}
-  A network task is a work load to be handled by a given layer.  It
-  may be of various types among:
+  Network library is a framework for designing network stacks.
+  It is built around 3 main objects:
   @list
-    @item a timeout,
-    @item a packet to handle, inbound or outbound,
-    @item a request to respond to,
-    @item a response to a request,
-    @item a one-way notification.
+    @item a set of layers,
+    @item tasks,
+    @item a scheduler.
   @end list
 
-  A task always has a source layer and a target layer.  A layer may
-  send a task to itself.
+  @section {Layers}
+    A network layer is a part of a networking stack.  Depending on
+    actual needs, layer may be statically or dynamically allocated on a
+    per-session basis.
 
-  Task always take references to source and target headers, therefore,
-  source and target layers of a given task may not disappear.
+    For instance, in a TCP/IP stack, Ethernet, IP and TCP layers are
+    long-lived, whereas TCP session layer (for a single source/target
+    IP/port tuple) is shorter-lived.
 
-  Tasks that are not handled yet may be cancelled.
+    Layers communicate exclusively through tasks that are executed in a
+    unique scheduler for a given stack.
 
-  There are various helpers to intialize and send tasks directly.
+    Layers are stacked in a tree fashion.  Root is close to the network
+    interfaces, leaves are closer to the application.  A layer has a
+    single parent layer in stack, but may have multiple children layers.
 
-  Memory allocation policy for tasks is flexible.  Scheduler contains
-  a slab for allocating basic tasks, but any layer may provide its own
-  allocation policy for its tasks.  Every task must have a @tt destroy
-  function that is called on task completion or cancel.
+    All layers are refcounted.  Parents hold a refcount on children (and
+    not the other way around).  An interface layer that gets destroyed
+    (because the communication medium disappears) implicitly drops
+    references on children layers which will, in turn, get destroyed.
+
+    Each layer should check for parent validity before sending a task to
+    it.
+
+    Communication at borders of libnetwork (between libnetwork and other
+    modules) is done through a delegate pattern.  Each layer is
+    responsible for declaration of its delegate vtable and API.
+
+    Layers provide a @ref {net_layer_handler_s} {set of entry points}
+    for scheduler to send tasks and update state.  Main entry point for
+    task handling is @ref {net_layer_handler_s::task_handle}
+    {task_handle}.
+  @end section
+
+  @section {Tasks}
+    A network task is a work load to be handled by a given layer.  It
+    may be of various types among:
+    @list
+      @item a timeout,
+      @item a packet to handle, inbound or outbound,
+      @item a request to respond to,
+      @item a response to a request,
+      @item a one-way notification.
+    @end list
+
+    A task always has a source layer and a target layer.  A layer may
+    send a task to itself.
+
+    Task always take references to source and target headers, therefore,
+    source and target layers of a given task may not disappear.
+
+    Tasks that are not handled yet may be cancelled.
+
+    There are various helpers to intialize and send tasks directly.
+  @end section
+
+  @section {Scheduler}
+    Network scheduler maintains state of tasks.  It has a time source
+    for tracking timeouts of tasks and handles delivery to destination
+    layers.
+
+    Scheduler ensures each layer is executing its @tt task_handle entry
+    point non-concurrently.  This avoids usage for locking in each
+    layer.
+
+    Whether multiple layers may run in parallel is an implementation
+    detail.  Whether layer entry points are called from a thread, a
+    kroutine or other scheduling routines in an implementation detail as
+    well.
+  @end section
+
 @end section
 
-@section {Scheduler}
-  Network scheduler maintains state of tasks.  It has a time source
-  for tracking timeouts of tasks and handles delivery to destination
-  layers.
+@section {Object management}
 
-  Scheduler ensures each layer is executing its @tt task_handle entry
-  point non-concurrently.  This avoids usage for locking in each
-  layer.
+  @section {Layers}
 
-  Whether multiple layers may run in parallel is an implementation
-  detail.  Whether layer entry points are called from a thread, a
-  kroutine or other scheduling routines in an implementation detail as
-  well.
+    A layer implementation is either generic or hardware-dependant.
+    When generic, there is a single factory function in library code,
+    like example @ref {net_dumper_create} {Dumper Layer}.  When
+    hardware-specific, layer is in a device driver implementing the
+    @ref {@device/class/net.h} {Network device class}. Device acts as
+    a factory, its @ref {driver_net_s::f_layer_create} {layer_create}
+    method can create a layer from its type, delegate and parameters.
+    This way, one single device driver can be factory for various
+    layer types.
+
+    In all cases, layers are created with a refcount of 1, and caller
+    is responsible for @ref {net_layer_refdec} {releasing} them if not
+    needed any more.
+
+    Layers are intended to be stacked one on another through calls to
+    @ref {net_layer_bind}.  This implicitly calls @ref
+    {net_layer_handler_s::bound} {bound handler} of parent layer to
+    check whether selected child layer is acceptable, returning an
+    error from @tt bound method aborts binding.  @ref {net_layer_bind}
+    gets passed an @tt address parameter, its interpretation is
+    specific to parent layer.  Another method notifies when a child
+    layer gets @ref {net_layer_handler_s::unbound} {unbound}.
+
+    As a parent layer takes reference on its children, initialization
+    code may drop its references on children layers once they got
+    bound.  This way if the only reference owner is the parent layer,
+    once parent layer gets destroyed, children will implicitly and
+    automatically get dandling and destroyed.
+
+    Delegate is an opaque object handling layer events.  A pointer and
+    a vtable must be provided on layer creation.  Delegate are
+    intended for handling of out-of band signalling, like layer
+    administrative tasks.  Basic delegate handles notification for
+    @ref {net_layer_delegate_vtable_s::release} {deletion of layer}.
+    Delegate vtable definition may be inherited and augmented by
+    specific layer definitions.  A delegate must always implement its
+    layer requirements.
+
+  @end section
+
+  @section {Task}
+
+    Memory allocation policy for tasks is flexible.  Scheduler
+    contains a slab for allocating basic tasks, but any layer may
+    provide its own allocation policy for its tasks.  Every task must
+    have a @tt destroy function that is called on task completion or
+    cancel.  When calling @ref {net_scheduler_task_alloc} {scheduler
+    task allocator}, @tt destroy function is set already.
+    
+    A task takes references on its @tt source and @tt destination
+    layers.  As such, a task is guaranteed to be delivered without
+    dandling pointers.  But in order to avoid dandling layers taking
+    references to themselves through tasks, some deletion
+    opportunities are taken when a layer gets dandling (i.e. when its
+    parent disappears). To get most of deletion done, tasks in queue
+    in the scheduler that reference dandling layer as source or
+    destination get cancelled. In order to cancel tasks that are not
+    in queue yet, @ref {net_layer_handler_s::dandling} {layer's
+    dandling} method is called.
+    
+  @end section
+
+  @section {Buffers}
+
+    Packet-based tasks reference payload buffers.  Buffers are
+    allocated in a @ref {buffer_pool_s} {buffer pool}.  Scheduler
+    provides a @ref {net_scheduler_packet_alloc} {allocation} in a
+    common buffer pool for the stack context.
+
+    In order to optimize handling of payloads while they bubble
+    through the stack, a layer should abide its @ref
+    {net_layer_s::context} {context}'s @ref
+    {net_layer_context_s::prefix_size} {prefix size} and @ref
+    {net_layer_context_s::mtu} {mtu} offsets.
+
+    If task contains a reference to a @ref {buffer_s} {buffer}, layer
+    may update buffer's @ref {buffer_s::begin} {begin} and @ref
+    {buffer_s::end} {end} pointers before forwarding the task.  This
+    allow to decode and remove, or insert layer-specific network
+    headers without copying included payload.
+
+    Buffers are refcounted and tasks take references to buffers.  Once
+    a buffer is handed to a task, must be refdropped.
+
+  @end section
+
+@end section
+
+@section {Workload management}
+
+  Tasks get passed from layer to layer through a scheduler.  Scheduler
+  implementation guarantees one layer code needs not be reentrant
+  (i.e. a layer's methods are never called concurrently from
+  scheduler).  This does not imply anything for different layers of
+  the stack.  Pushing task for future handling into scheduler is
+  always safe, from any environment.
+
+  A layer may receive tasks from itself or other layers through its
+  @ref {net_layer_handler_s::task_handle} {task_handle} method.  Each
+  received task should be either @ref {net_task_packet_forward}
+  {forwarded}, @ref {net_task_packet_respond} {answered to}, @ref
+  {net_task_query_respond_push} {responded to} or @ref
+  {net_task_destroy} {destroyed}.  Layer may also keep the task for
+  later processing, but care must be taken for not creating retention
+  loops.
+  
+@end section
+
+@section {Implementing a layer}
+
+  A layer consist of a factory function, either called directly when
+  in library code, or called from a device @ref
+  {driver_net_s::f_layer_create} {layer_create} method.  Factory
+  is responsible for calling @ref {net_layer_init} with scheduler
+  context, layer's @ref {net_layer_handler_s} {handler} and
+  vtable, if any.  Once called, layer is considered alive.
+
+  Layer's @ref {net_layer_handler_s} {handler} acts as a vtable and
+  provides a set of methods for the layer.  Some are mandatory, others
+  are optional.  Among these methods, there is the @ref
+  {net_layer_handler_s::destroyed} {destroyed} one. It is responsible
+  for cleaning layer contents and freeing any dynamically allocated
+  memory.
+
+  Layer handler also contains methods for managing layer lifetime in
+  the stack.  In particular, the @ref {net_layer_handler_s::bound}
+  {bound} and @ref {net_layer_handler_s::unbound} {unbound} methods
+  are called when children layers are attached and detached from the
+  considered layer.
+
+  As long as a child layer is attached, to its parent, stack context
+  may call @ref {net_layer_handler_s::child_context_adjust}
+  {child_context_adjust} method.  This method is responsible for
+  modifying the @ref {net_layer_context_s} {context} of a child layer
+  any time the context of the parent changes.  This is mostly useful
+  for ajusting context addresses and packet's prefix and mtu sizes.
+
+  @ref {net_layer_handler_s::dandling} is called when layer gets
+  unbound from its parent.  When called, layer may or may not be
+  expecting soon destruction, for instance, layer may be bound again
+  to another layer.  Implementer must take care of not mixing dandling
+  and destruction events.
+
 @end section
 
 @end moduledef
 
-@parse{
-net/addr.h
-net/layer.h
-net/task.h
-net/scheduler.h
-}
+@parse{ net/addr.h net/layer.h net/task.h net/scheduler.h
+net/layer/ethernet.h net/layer/dumper.h }
