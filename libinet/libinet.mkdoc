@@ -1,6 +1,15 @@
 @moduledef{Internet protocol suite} {Libraries}
 @short IP networking library
 
+@section {Overview}
+
+  Libinet provides declaration and implementation for Internet
+  Protocol Suite networking stack (IP, TCP, etc.).
+
+  They are modeled through @ref {+Libraries::Abstract network stack} layers.
+
+@end section
+
 @end moduledef
 
 @parse{
