@@ -70,18 +70,18 @@ static void usbdev_dump_setup(const struct usb_ctrl_setup_s *setup)
 static size_t usbdev_copy_buffer(struct dev_usbdev_context_s *ctx,
                                  const struct usb_descriptor_header_s * hd)
 {
-  size_t idx = ctx->it.cnt % CONFIG_USBDEV_EP0_BUFFER_SIZE;
+  size_t idx = ctx->it.data_pkt_size % CONFIG_USBDEV_EP0_BUFFER_SIZE;
 
   uint8_t *d = (uint8_t*)ctx->data + idx;
   size_t dz = CONFIG_USBDEV_EP0_BUFFER_SIZE - idx;
 
-  uint8_t *s = (uint8_t *)hd + ctx->it.bidx;
-  size_t sz =  hd->bLength - ctx->it.bidx;
+  uint8_t *s = (uint8_t *)hd + ctx->it.desc_offset;
+  size_t sz =  hd->bLength - ctx->it.desc_offset;
 
   size_t size = dz > sz ? sz : dz;
 
-  ctx->it.bidx = size == sz ? 0 : ctx->it.bidx + size;
-  ctx->it.cnt += size;
+  ctx->it.desc_offset = size == sz ? 0 : ctx->it.desc_offset + size;
+  ctx->it.data_pkt_size += size;
 
   memcpy(d, s, size);
 
@@ -306,13 +306,13 @@ static void usbdev_service_ctrl(struct dev_usbdev_context_s *ctx,
       switch (type)
         {
         case USBDEV_PROCESS_CONTROL:
-          rq->intf = ctx->it.iidx;
+          rq->intf = ctx->it.intf_index;
           rq->ctrl.setup = (void *)setup;
           rq->ctrl.buffer = ctx->data;
           rq->ctrl.size = CONFIG_USBDEV_EP0_BUFFER_SIZE;
           break;
         case USBDEV_CHANGE_INTERFACE:
-          rq->intf = ctx->it.iidx;
+          rq->intf = ctx->it.intf_index;
           rq->alternate = usb_setup_value_get(setup);
         default:
           break;
@@ -367,15 +367,15 @@ static error_t usbdev_ctrl_transaction(struct dev_usbdev_context_s *ctx,
       tr->size = sizeof(struct usb_ctrl_setup_s);
       break;
     case DEV_USBDEV_DATA_IN:
-      tr->rem = usb_setup_length_get(setup) - ctx->it.cnt;
-      tr->size = ctx->it.cnt % CONFIG_USBDEV_EP0_BUFFER_SIZE;
-      if (ctx->it.cnt && !tr->size)
+      tr->rem = usb_setup_length_get(setup) - ctx->it.data_pkt_size;
+      tr->size = ctx->it.data_pkt_size % CONFIG_USBDEV_EP0_BUFFER_SIZE;
+      if (ctx->it.data_pkt_size && !tr->size)
         tr->size = CONFIG_USBDEV_EP0_BUFFER_SIZE;
       tr->rem += tr->size;
       break;
     case DEV_USBDEV_DATA_OUT:
       tr->size = CONFIG_USBDEV_EP0_BUFFER_SIZE;
-      tr->rem = usb_setup_length_get(setup) - ctx->it.cnt;
+      tr->rem = usb_setup_length_get(setup) - ctx->it.data_pkt_size;
     default:
       break;
     }
@@ -636,7 +636,7 @@ static void usbdev_service_data(struct dev_usbdev_context_s *ctx, error_t err)
 
   if (usb_setup_direction_get(setup) == USB_HOST_TO_DEVICE)
     {
-      uint32_t r = ctx->it.cnt % CONFIG_USBDEV_EP0_BUFFER_SIZE;
+      uint32_t r = ctx->it.data_pkt_size % CONFIG_USBDEV_EP0_BUFFER_SIZE;
       if (r)
         rq->ctrl.size = r;
     }
@@ -672,7 +672,7 @@ static void usbdev_ep0_service_setup(struct dev_usbdev_context_s *ctx)
     if (usbdev_is_included(intf, service->start.intf, service->desc->intf_cnt))
       {
         ctx->it.service = service;
-        ctx->it.iidx = intf - service->start.intf;
+        ctx->it.intf_index = intf - service->start.intf;
         /* Call service kroutine */
         return usbdev_service_ctrl(ctx, USBDEV_PROCESS_CONTROL);
       }
@@ -1086,8 +1086,8 @@ static bool_t usbdev_data_in_stage_done(struct dev_usbdev_context_s *ctx)
 {
   const struct usb_ctrl_setup_s *setup = (const void *)ctx->setup;
 
-  if (ctx->it.cnt == usb_setup_length_get(setup) ||
-     (ctx->it.cnt % usbdev_stack_get_ep0_mps(ctx)))
+  if (ctx->it.data_pkt_size == usb_setup_length_get(setup) ||
+     (ctx->it.data_pkt_size % usbdev_stack_get_ep0_mps(ctx)))
     /* No need of zero-lenght packet */
     return 1;
 
@@ -1102,7 +1102,7 @@ static void usbdev_ep0_zero_len_packet(struct dev_usbdev_context_s *ctx)
 
   /* Zero length packet must be send */
   ctx->ep0_state = EP0_DATA_IN_ZERO_WAIT;
-  ctx->it.cnt = 0;
+  ctx->it.data_pkt_size = 0;
 
   error_t err = usbdev_ctrl_transaction(ctx, DEV_USBDEV_DATA_IN);
 
@@ -1140,9 +1140,9 @@ static void usbdev_ep0_data_in(struct dev_usbdev_context_s *ctx)
   const struct usb_ctrl_setup_s *setup = (const void *)ctx->setup;
 
   /* Send data to host */
-  if (ctx->it.cnt >= usb_setup_length_get(setup))
+  if (ctx->it.data_pkt_size >= usb_setup_length_get(setup))
     {
-      ctx->it.cnt = usb_setup_length_get(setup);
+      ctx->it.data_pkt_size = usb_setup_length_get(setup);
       ctx->it.done = 1;
     }
 
@@ -1216,11 +1216,11 @@ static void usbdev_ep0_unconfigure(struct dev_usbdev_context_s *ctx)
 /* Data stage is terminated or input buffer is full */
 static void usbdev_ep0_data_out_stage_done(struct dev_usbdev_context_s *ctx)
 {
-  ctx->it.cnt += CONFIG_USBDEV_EP0_BUFFER_SIZE - ctx->tr.size;
+  ctx->it.data_pkt_size += CONFIG_USBDEV_EP0_BUFFER_SIZE - ctx->tr.size;
 
   const struct usb_ctrl_setup_s *setup = (const void *)ctx->setup;
 
-  ctx->it.done = (usb_setup_length_get(setup) == ctx->it.cnt);
+  ctx->it.done = (usb_setup_length_get(setup) == ctx->it.data_pkt_size);
 
   if (ctx->tr.size)
     assert(ctx->it.done);
@@ -1369,86 +1369,54 @@ static bool_t usbdev_configuration_out_desc(struct dev_usbdev_context_s *ctx)
   usbdev_copy_buffer(ctx, &desc.head);
 
   /* Whole descriptor sent */
-  return (ctx->it.bidx == 0);
+  return (ctx->it.desc_offset == 0);
 }
 
 static bool_t usbdev_service_out_desc(struct dev_usbdev_context_s *ctx)
 {
-  size_t offset, idx, cnt;
   const struct usbdev_service_descriptor_s * s = ctx->it.service->desc;
-  struct usbdev_service_index_s * sid = &ctx->it.service->start;
 
-  while (ctx->it.didx < s->desc_cnt)
+  while (ctx->it.desc_index < s->desc_cnt)
     {
-      const struct usb_descriptor_header_s * hd = s->desc[ctx->it.didx];
-      uint8_t type = hd->bDescriptorType;
+      size_t begin, end;
+      const struct usb_descriptor_header_s *src = s->desc[ctx->it.desc_index];
+      struct usb_descriptor_header_s *dst;
 
-      uint8_t *dst = (uint8_t*)ctx->data + ctx->it.cnt %
-        CONFIG_USBDEV_EP0_BUFFER_SIZE;
+      begin = ctx->it.desc_offset;
+      dst = (void *)((uint8_t*)ctx->data
+                     + (ctx->it.data_pkt_size % CONFIG_USBDEV_EP0_BUFFER_SIZE)
+                     - begin);
+      end = begin + usbdev_copy_buffer(ctx, src);
 
-      idx = ctx->it.bidx;
-      cnt = usbdev_copy_buffer(ctx, hd);
+      if (src->bDescriptorType == USB_INTERFACE_DESCRIPTOR)
+        ctx->it.intf_index = usb_interface_alt_get((const struct usb_interface_descriptor_s *)src);
 
-      if (type == USB_ENDPOINT_DESCRIPTOR)
-        {
-          struct usb_endpoint_descriptor_s *desc =
-            (struct usb_endpoint_descriptor_s *)hd;
-          /* Replace endpoint number */
-          offset = offsetof(struct usb_endpoint_descriptor_s,
-                            bEndpointAddress) - idx;
-
-          if (offset >= 0 && cnt > offset)
-            dst[offset] = usb_ep_dir_get(desc) |
-              usbdev_stack_get_ep_addr(desc, sid->epi[ctx->it.iidx],
-                                        sid->epo[ctx->it.iidx]);
-        }
-      else if (type == USB_INTERFACE_DESCRIPTOR)
-        {
-          /* Store alternate setting number for endpoint descriptor */
-          struct usb_interface_descriptor_s *desc =
-            (struct usb_interface_descriptor_s *)hd;
-          ctx->it.iidx = usb_interface_alt_get(desc);
-
-          /* Replace interface number */
-          offset = offsetof(struct usb_interface_descriptor_s,
-                            bInterfaceNumber) - idx;
-
-          if (offset >= 0 && cnt > offset)
-            dst[offset] += sid->intf;
-
-          /* Replace interface string index */
-          offset = offsetof(struct usb_interface_descriptor_s,
-                            iInterface) - idx;
-          if (dst[offset] && offset >= 0 && cnt > offset)
-            dst[offset] += sid->str;
-        }
+      if (s->replace)
+        s->replace(&ctx->it, src, dst, begin, end);
       else
-      /* Class specific descriptor */
-        {
-          struct usbdev_class_descriptor_s * d =
-            usbdev_class_descriptor_s_from_hdr(hd);
+        usbdev_descriptor_replace(&ctx->it, src, dst, begin, end);
 
-          if (d->f_replace)
-            d->f_replace(sid, hd, dst, cnt, idx);
-        }
+      if (ctx->it.desc_offset == 0)
+        ctx->it.desc_index++;
 
-      if (ctx->it.bidx == 0)
-        ctx->it.didx++;
-
-      if (!(ctx->it.cnt % CONFIG_USBDEV_EP0_BUFFER_SIZE))
+      if (!(ctx->it.data_pkt_size % CONFIG_USBDEV_EP0_BUFFER_SIZE))
         break;
     }
 
-  if ((ctx->it.bidx) || (ctx->it.didx != s->desc_cnt))
+  if ((ctx->it.desc_offset) || (ctx->it.desc_index != s->desc_cnt))
     return 0;
 
   /* Whole service sent */
-  ctx->it.didx = 0;
+  ctx->it.desc_index = 0;
   return 1;
 }
 
 static inline void usbdev_string_out_desc(struct dev_usbdev_context_s *ctx, size_t index)
 {
+  size_t len = 0;
+  const char * str = NULL;
+  size_t idx = 0;
+
   usbdev_printk("USBDEV GET STRING DESCRIPTOR\n");
 
   /* Langid table */
@@ -1464,56 +1432,62 @@ static inline void usbdev_string_out_desc(struct dev_usbdev_context_s *ctx, size
       desc->wData[0] = endian_le16(CONFIG_USBDEV_USB_LANGID);
 
       usbdev_copy_buffer(ctx, &desc->head);
+
+      ctx->it.done = (ctx->it.desc_offset == 0);
+
+      return;
     }
-  /* Device or configuration string descriptor */
+
+  if (index < ctx->devinfo->str_cnt + 1)
+    {
+      str = ctx->devinfo->string;
+      idx = index - 1;
+      usbdev_get_string(&str, idx, &len);
+    }
   else
     {
-      size_t len = 0;
-      const char * str = NULL;
-      size_t idx = 0;
+      const struct usbdev_service_s *service = NULL;
 
-      if (index < ctx->devinfo->str_cnt + 1)
+      GCT_FOREACH(usbdev_service, &ctx->service, s, {
+          if (usbdev_is_included(index, s->start.str + 1, s->desc->str_cnt))
+            {
+              service = s;
+              idx = index - s->start.str - 1;
+              GCT_FOREACH_BREAK;
+            }
+        });
+
+      if (service)
         {
-          str = ctx->devinfo->string;
-          idx = index - 1;
+          if (service->desc->get_string) {
+            str = service->desc->get_string(service, idx + 1);
+            if (str)
+              len = strlen(str);
+          }
+
+          if (!str) {
+            str = service->desc->string;
+            usbdev_get_string(&str, idx, &len);
+          }
         }
-      else
-        {
-          const struct usbdev_service_descriptor_s * s;
-          GCT_FOREACH(usbdev_service, &ctx->service, service, {
-            s = service->desc;
-            if (usbdev_is_included(index, service->start.str + 1, s->str_cnt))
-              {
-                str = s->string;
-                idx = index - service->start.str - 1;
-                GCT_FOREACH_BREAK;
-              }
-            });
-
-        }
-
-      if (str)
-        usbdev_get_string(&str, idx, &len);
-      else
-        len = 0;
-
-      uint8_t s = 2 * len + sizeof(struct usb_descriptor_header_s);
-      uint8_t desc[s];
-
-      desc[0] = s;
-      desc[1] = USB_STRING_DESCRIPTOR;
-
-      for (size_t i = 0; i < len; i++)
-        {
-          size_t j = 2 + (i << 1);
-          desc[j] = str[i];
-          desc[j + 1] = 0;
-        }
-
-      usbdev_copy_buffer(ctx, (struct usb_descriptor_header_s*)desc);
     }
 
-  ctx->it.done = (ctx->it.bidx == 0);
+  uint8_t s = 2 * len + sizeof(struct usb_descriptor_header_s);
+  uint8_t desc[s];
+
+  desc[0] = s;
+  desc[1] = USB_STRING_DESCRIPTOR;
+
+  for (size_t i = 0; i < len; i++)
+    {
+      size_t j = 2 + (i << 1);
+      desc[j] = str[i];
+      desc[j + 1] = 0;
+    }
+
+  usbdev_copy_buffer(ctx, (struct usb_descriptor_header_s*)desc);
+
+  ctx->it.done = (ctx->it.desc_offset == 0);
 }
 
 static inline void usbdev_out_desc(struct dev_usbdev_context_s *ctx, const struct usb_ctrl_setup_s *setup)
@@ -1536,7 +1510,7 @@ static inline void usbdev_out_desc(struct dev_usbdev_context_s *ctx, const struc
           assert(ctx->devinfo);
 
           usbdev_copy_buffer(ctx, &ctx->devinfo->desc.head);
-          ctx->it.done = (ctx->it.bidx == 0);
+          ctx->it.done = (ctx->it.desc_offset == 0);
           break;
         }
       case USB_STRING_DESCRIPTOR :
@@ -1570,7 +1544,7 @@ static inline void usbdev_out_desc(struct dev_usbdev_context_s *ctx, const struc
                   }
               }
 
-            if (!(ctx->it.cnt % CONFIG_USBDEV_EP0_BUFFER_SIZE))
+            if (!(ctx->it.data_pkt_size % CONFIG_USBDEV_EP0_BUFFER_SIZE))
               break;
           };
         break;
@@ -1627,7 +1601,7 @@ static inline void usbdev_get_interface(struct dev_usbdev_context_s *ctx, const 
   switch (ctx->state)
     {
       case DEV_USBDEV_CONFIGURED:{
-        ctx->it.cnt = usb_setup_length_get(setup);
+        ctx->it.data_pkt_size = usb_setup_length_get(setup);
         ctx->it.done = 1;
         ctx->data[0] = 0;
 #if (CONFIG_USBDEV_MAX_ALTERNATE_COUNT > 0)
@@ -1694,7 +1668,7 @@ static void usbdev_set_interface(struct dev_usbdev_context_s *ctx, const struct 
       s = service->desc;
       if (usbdev_is_included(intf, service->start.intf, s->intf_cnt))
         {
-          ctx->it.iidx = intf;
+          ctx->it.intf_index = intf;
           ctx->it.service = service;
 
           old = ctx->intf_cfg[intf];
@@ -1723,7 +1697,7 @@ static void usbdev_set_interface(struct dev_usbdev_context_s *ctx, const struct 
           usbdev_disable_endpoint(ctx, ctx->cfg.intf, alt);
 
           /* Notify service */
-          ctx->it.iidx = ctx->it.iidx - ctx->it.service->start.intf;
+          ctx->it.intf_index = ctx->it.intf_index - ctx->it.service->start.intf;
           usbdev_service_ctrl(ctx, USBDEV_CHANGE_INTERFACE);
 
           ctx->cfg.type = DEV_USBDEV_CHANGE_INTERFACE;
@@ -1808,7 +1782,7 @@ static void usbdev_set_interface_end_transfer(struct dev_usbdev_context_s *ctx)
   /* Reenable old and new interface endpoints */
   usbdev_enable_endpoint(ctx, ctx->cfg.intf);
   /* Update interface number */
-  ctx->intf_cfg[ctx->it.iidx] = usb_setup_value_get(setup);
+  ctx->intf_cfg[ctx->it.intf_index] = usb_setup_value_get(setup);
 
   return usbdev_ep0_status_in(ctx);
 }
@@ -2167,7 +2141,7 @@ error_t usbdev_stack_request(struct device_usbdev_s *dev,
                     usbdev_ep0_zero_len_packet(ctx);
                   break;
                 case USBDEV_TRANSFER_DATA:
-                  ctx->it.cnt += rq->ctrl.size;
+                  ctx->it.data_pkt_size += rq->ctrl.size;
                   usbdev_ep0_data_in(ctx);
                   break;
                 default:

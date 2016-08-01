@@ -514,6 +514,41 @@ struct usbdev_interface_default_s
   uint8_t alt_cnt;
 };
 
+struct dev_usbdev_desc_iterator_s;
+struct usbdev_service_s;
+
+/** @This is provided by service with some class specific
+    descriptors. This function is used by stack when building global
+    configuration descriptor to dynamically replace some fields of
+    descriptor.
+
+    Buffer passed in @tt dst contains a copy of @tt src, and @this
+    should patch bytes between @tt begin (included) and @tt end
+    (excluded) only.  Others may be invalid.
+
+    @tt src is the original constant descriptor, its address is the
+    one from the descriptor array in @ref
+    {usbdev_service_descriptor_s} {service descriptor}.
+*/
+#define USBDEV_REPLACE(n) void (n)(           \
+  const struct dev_usbdev_desc_iterator_s *it,\
+  const struct usb_descriptor_header_s *src,  \
+  struct usb_descriptor_header_s *dst,        \
+  size_t begin, size_t end)
+
+typedef USBDEV_REPLACE(usbdev_replace_t);
+
+/** @This is provided by service to dynamically get strings.
+*/
+#define USBDEV_GET_STRING(n) const char * (n)(   \
+  const struct usbdev_service_s *service,        \
+  uint8_t idx)
+
+typedef USBDEV_GET_STRING(usbdev_get_string_t);
+
+USBDEV_REPLACE(usbdev_descriptor_replace);
+USBDEV_REPLACE(usbdev_cdc_descriptor_replace);
+
 struct usbdev_service_descriptor_s
 {
   /* Table of descriptor */
@@ -528,6 +563,10 @@ struct usbdev_service_descriptor_s
   const struct usbdev_interface_default_s *const* intf;
   /* Number of interface used by service. */
   uint8_t intf_cnt;
+  /** Service dynamic patcher function */
+  usbdev_replace_t *replace;
+  /** Service dynamic string getter */
+  usbdev_get_string_t *get_string;
 };
 
 /* Container algorithm used for service */
@@ -690,36 +729,19 @@ GCT_CONTAINER_TYPES(usbdev_service, struct usbdev_service_s *, entry);
 GCT_CONTAINER_FCNS(usbdev_service, inline, usbdev_service,
                    init, destroy, push, remove, head, next);
 
-/** @This is provided by service with some class specific descriptors. This
-    function is used by stack when building global configuration descriptor to
-    dynamically replace some fields of descriptor. */
-#define USBDEV_REPLACE(n) void (n)(const struct usbdev_service_index_s *index,  \
-                                   const struct usb_descriptor_header_s *hdr,   \
-                                   uint8_t *dst, size_t cnt, size_t bidx)
-
-typedef USBDEV_REPLACE(usbdev_replace_t);
-
-struct usbdev_class_descriptor_s
-{
-  usbdev_replace_t * f_replace;
-  const struct usb_descriptor_header_s hdr;
-};
-
-STRUCT_COMPOSE(usbdev_class_descriptor_s, hdr);
-
 /** @internal */
 struct dev_usbdev_desc_iterator_s
 {
   /* Current service */
   struct usbdev_service_s * service;
   /* Current byte in descriptor */
-  size_t bidx:16;
-  /* Number of sent byte */
-  size_t cnt:16;
+  size_t desc_offset:16;
+  /* Number of bytes sent */
+  size_t data_pkt_size:16;
   /* Current descriptor in service */
-  size_t didx:8;
+  size_t desc_index:8;
   /* Current interface in service */
-  size_t iidx:8;
+  size_t intf_index:8;
   /* Transfer done */
   bool_t done;
 };

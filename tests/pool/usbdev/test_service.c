@@ -56,7 +56,7 @@ struct usbdev_test_service_s
 #if USBDEV_SERV_TEST_CONTROL_N_ENDPOINT
   struct usbdev_test_info_s ctrl;
   uint16_t cntn;
-  uint32_t setup[2];
+  struct usb_ctrl_setup_s setup;
 #endif
 #if USBDEV_SERV_TEST_BULK_ENDPOINT
   /* write/read bulk endpoints */
@@ -314,7 +314,7 @@ static KROUTINE_EXEC(usbdev_test_ctrl_n_cb)
       return;
     }
 
-  uint16_t len = usb_setup_length_get(pv->setup);
+  uint16_t len = usb_setup_length_get(&pv->setup);
 
   switch(tr->type)
     {
@@ -327,7 +327,7 @@ static KROUTINE_EXEC(usbdev_test_ctrl_n_cb)
             tr->type = DEV_USBDEV_CTRL_STATUS_IN;
             tr->size = 0;
           }
-        else if (usb_setup_direction_get(pv->setup) == USB_DEVICE_TO_HOST)
+        else if (usb_setup_direction_get(&pv->setup) == USB_DEVICE_TO_HOST)
         /* Send data */ 
           {
             tr->type = DEV_USBDEV_DATA_IN;
@@ -406,7 +406,7 @@ static KROUTINE_EXEC(usbdev_test_ctrl_n_cb)
     case DEV_USBDEV_CTRL_STATUS_OUT:
       tr->type = DEV_USBDEV_CTRL_SETUP;
       tr->size = 8;
-      tr->data = (uint8_t *)pv->setup;
+      tr->data = (void*)&pv->setup;
       break;
 
     default:
@@ -542,7 +542,7 @@ static KROUTINE_EXEC(usbdev_test_ctrl_cb)
 
       pv->ctrl.tr.type = DEV_USBDEV_CTRL_SETUP;
       pv->ctrl.tr.size = 8;
-      pv->ctrl.tr.data = (uint8_t *)pv->setup;
+      pv->ctrl.tr.data = (uint8_t *)&pv->setup;
 
       usbdev_service_start_transfer(pv, &pv->ctrl);
 #endif
@@ -592,8 +592,7 @@ static KROUTINE_EXEC(usbdev_test_ctrl_cb)
 #if USBDEV_SERV_TEST_CONTROL_0_ENDPOINT
     case USBDEV_PROCESS_CONTROL:
       {
-        uint32_t *setup = rq->ctrl.setup;
-        uint16_t len = usb_setup_length_get(setup);
+        uint16_t len = usb_setup_length_get(rq->ctrl.setup);
         size_t size = len;
      
         pv->cnt0 = 0;
@@ -604,7 +603,7 @@ static KROUTINE_EXEC(usbdev_test_ctrl_cb)
         /* Data stage */
         rq->type = USBDEV_TRANSFER_DATA;
      
-        if (usb_setup_direction_get(setup) == USB_DEVICE_TO_HOST)
+        if (usb_setup_direction_get(rq->ctrl.setup) == USB_DEVICE_TO_HOST)
         /* We must send data */ 
           {
             if (len > rq->ctrl.size)

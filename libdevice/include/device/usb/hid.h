@@ -111,8 +111,6 @@ enum usb_hid_request_e
 
 struct usb_hid_descriptor_s
 {
-  usbdev_replace_t * f_replace;
-
   struct usb_descriptor_header_s head;
   uint16_t bcdHID;
   uint8_t  bCountryCode;

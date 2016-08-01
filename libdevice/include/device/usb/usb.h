@@ -120,6 +120,12 @@ struct usb_descriptor_header_s
   uint8_t  bDescriptorType;
 }__attribute__((packed));
 
+struct usb_class_descriptor_header_s
+{
+  struct usb_descriptor_header_s head;
+  uint8_t  bDescriptorSubtype;
+};
+
 struct usb_string_descriptor_s
 {
   struct usb_descriptor_header_s head;

@@ -51,7 +51,16 @@ enum interface_id_e
   INTF_ID_DATA,
 };
 
-#define SERVICE_STRINGS "CDC Control\0Dumb\0Ethernet"
+enum string_id_e
+{
+  STRING_ID_INTF_CTRL = 1,
+  STRING_ID_INTF_DUMB,
+  STRING_ID_INTF_DATA,
+  STRING_ID_MAC, // Dynamic
+  STRING_COUNT = STRING_ID_MAC,
+};
+
+#define STRING_CONSTANT "CDC Control\0""Dumb\0""Ethernet"
 
 //#define dprintk printk
 #ifndef dprintk
@@ -60,65 +69,33 @@ enum interface_id_e
 
 /* Functionnal descriptor */
 
-static const struct usbdev_cdc_func_info_s cdc_header =
+static const struct usb_cdc_header_descriptor_s cdc_header =
 {
-  .f_replace = NULL,
-  .hdr = {
-    .head.bLength = sizeof(struct usb_cdc_header_descriptor_s),
-    .head.bDescriptorType = USB_CDC_INTERFACE_DESCRIPTOR,
-    .bDescriptorSubtype = USB_CDC_DESC_FUNC_HEADER,
-    .bcdCDC = endian_le16(0x0120),
-  },
+  .head.bLength = sizeof(struct usb_cdc_header_descriptor_s),
+  .head.bDescriptorType = USB_CDC_INTERFACE_DESCRIPTOR,
+  .bDescriptorSubtype = USB_CDC_DESC_FUNC_HEADER,
+  .bcdCDC = endian_le16(0x0120),
 };
 
-static const struct usbdev_cdc_func_info_s cdc_union =
+static const struct usb_cdc_union_descriptor_s cdc_union =
 {
-  .f_replace = usbdev_cdc_desc_update,
-  .un = {
-    .head.bLength = sizeof(struct usb_cdc_union_descriptor_s),
-    .head.bDescriptorType = USB_CDC_INTERFACE_DESCRIPTOR,
-    .bDescriptorSubtype = USB_CDC_DESC_FUNC_UNION,
-    .bControlInterface = INTF_ID_CONTROL,
-    .bSubordinateInterface = INTF_ID_DATA,
-  },
+  .head.bLength = sizeof(struct usb_cdc_union_descriptor_s),
+  .head.bDescriptorType = USB_CDC_INTERFACE_DESCRIPTOR,
+  .bDescriptorSubtype = USB_CDC_DESC_FUNC_UNION,
+  .bControlInterface = INTF_ID_CONTROL,
+  .bSubordinateInterface = INTF_ID_DATA,
 };
 
-static
-USBDEV_REPLACE(cdc_ecm_desc_replace)
+static const struct usb_cdc_ecm_descriptor_s cdc_ecm_desc =
 {
-  size_t offset;
-  uint8_t *p = (uint8_t *)hdr;
-
-#warning Replace MTU
-
-  switch (p[sizeof(struct usb_descriptor_header_s)]) {
-  case USB_CDC_DESC_FUNC_ETHERNET:
-    /* Replace iMACAddress */
-    offset = offsetof(struct usb_cdc_ecm_descriptor_s,
-                      iMACAddress) - bidx;
-
-    if (offset >= 0 && cnt > offset)
-      dst[offset] += index->str;
-    break;
-
-  default:
-    return;
-  }
-}
-
-static const struct usbdev_cdc_func_info_s cdc_ecm_desc =
-{
-  .f_replace = cdc_ecm_desc_replace,
-  .ecm = {
-    .head.bLength = sizeof(struct usb_cdc_ecm_descriptor_s),
-    .head.bDescriptorType = USB_CDC_INTERFACE_DESCRIPTOR,
-    .bDescriptorSubtype = USB_CDC_DESC_FUNC_ETHERNET,
-    .iMACAddress = 4,
-    .bmEthernetStatistics = 0,
-    .wMaxSegmentSize = endian_le16(1500),
-    .wNumberMCFilters = 0,
-    .bNumberPowerFilters = 0,
-  },
+  .head.bLength = sizeof(struct usb_cdc_ecm_descriptor_s),
+  .head.bDescriptorType = USB_CDC_INTERFACE_DESCRIPTOR,
+  .bDescriptorSubtype = USB_CDC_DESC_FUNC_ETHERNET,
+  .iMACAddress = STRING_ID_MAC,
+  .bmEthernetStatistics = 0,
+  .wMaxSegmentSize = endian_le16(1500),
+  .wNumberMCFilters = 0,
+  .bNumberPowerFilters = 0,
 };
 
 /* Standart descriptors */
@@ -155,7 +132,7 @@ static const struct usbdev_interface_default_s ecm_intf_control =
       .bInterfaceClass = USB_CLASS_CDC,
       .bInterfaceSubClass = USB_CDC_SUBCLASS_ECM,
       .bInterfaceProtocol = USB_CDC_PROTOCOL_NONE,
-      .iInterface = 1,
+      .iInterface = STRING_ID_INTF_CTRL,
     },
   },
   USBDEV_INTERFACE_ALTERNATE(),
@@ -175,7 +152,7 @@ static const struct usbdev_interface_default_s ecm_intf_data_nop =
       .bInterfaceClass = USB_CLASS_CDC_DATA,
       .bInterfaceSubClass = 0,
       .bInterfaceProtocol = 0,
-      .iInterface = 2,
+      .iInterface = STRING_ID_INTF_DUMB,
     },
     USBDEV_ENDPOINT(),
   },
@@ -193,7 +170,7 @@ static const struct usbdev_interface_s ecm_intf_data =
     .bInterfaceClass = USB_CLASS_CDC_DATA,
     .bInterfaceSubClass = 0,
     .bInterfaceProtocol = 0,
-    .iInterface = 3,
+    .iInterface = STRING_ID_INTF_DATA,
   },
   USBDEV_ENDPOINT(&ep_bulk_in, &ep_bulk_out),
 };
@@ -201,9 +178,9 @@ static const struct usbdev_interface_s ecm_intf_data =
 static const struct usb_descriptor_header_s *service_desc_array[] =
 {
   &ecm_intf_control.intf.desc.head,
-  &cdc_header.hdr.head,
-  &cdc_union.un.head,
-  &cdc_ecm_desc.un.head,
+  &cdc_header.head,
+  &cdc_union.head,
+  &cdc_ecm_desc.head,
   &ecm_intf_data_nop.intf.desc.head,
   &ecm_intf_data.desc.head,
   &ep_bulk_out.head,
@@ -229,8 +206,6 @@ struct ecm_private_s
   uint8_t rx_ether_header[14];
 
   struct usbdev_service_s service;
-  struct usbdev_service_descriptor_s service_desc;
-  char strings[40];
 
   struct kroutine_sequence_s seq;
   struct usbdev_service_rq_s rq;
@@ -247,6 +222,8 @@ struct ecm_private_s
   dev_usbdev_ep_map_t epo_map;
   uint8_t hwaddr[6];
   uint16_t mtu;
+
+  char macAddressString[13];
 };
 
 STRUCT_COMPOSE(ecm_private_s, layer);
@@ -256,6 +233,64 @@ STRUCT_COMPOSE(ecm_private_s, tx_rq);
 STRUCT_COMPOSE(ecm_private_s, rx_rq);
 
 DRIVER_PV(struct ecm_private_s);
+
+static
+USBDEV_REPLACE(cdc_ecm_desc_replace)
+{
+  const struct ecm_private_s *pv = const_ecm_private_s_from_service(it->service);
+  size_t offset;
+
+  switch (src->bDescriptorType) {
+  case USB_CDC_INTERFACE_DESCRIPTOR: {
+    const struct usb_class_descriptor_header_s *cd = (const void *)src;
+
+    usbdev_cdc_descriptor_replace(it, src, dst, begin, end);
+
+    switch (cd->bDescriptorSubtype) {
+    case USB_CDC_DESC_FUNC_ETHERNET: {
+      struct usb_cdc_ecm_descriptor_s *to_patch = (void *)dst;
+
+      /* Replace wMaxSegmentSize */
+      offset = offsetof(struct usb_cdc_ecm_descriptor_s, wMaxSegmentSize);
+      if (begin <= offset && offset < end)
+        *(uint8_t *)&to_patch->wMaxSegmentSize = pv->mtu & 0xff;
+      if (begin <= offset + 1 && offset + 1 < end)
+        *((uint8_t *)&to_patch->wMaxSegmentSize + 1) = pv->mtu >> 8;
+
+      break;
+    }
+    }
+    break;
+  }
+  }
+
+  usbdev_descriptor_replace(it, src, dst, begin, end);
+}
+
+static
+USBDEV_GET_STRING(cdc_ecm_get_string)
+{
+  const struct ecm_private_s *pv = const_ecm_private_s_from_service(service);
+
+  printk("%s %d\n", __FUNCTION__, idx);
+
+  if (idx == STRING_ID_MAC)
+    return pv->macAddressString;
+
+  return NULL;
+}
+
+static const struct usbdev_service_descriptor_s service_desc =
+{
+  .desc = service_desc_array,
+  .desc_cnt = ARRAY_SIZE(service_desc_array),
+  .string = STRING_CONSTANT,
+  .str_cnt = STRING_COUNT,
+  .intf = interface_desc_array,
+  .intf_cnt = ARRAY_SIZE(interface_desc_array),
+  .replace = cdc_ecm_desc_replace,
+  .get_string = cdc_ecm_get_string,
+};
 
 static KROUTINE_EXEC(ecm_ctrl_cb)
 {
@@ -663,24 +698,14 @@ static DEV_INIT(ecm_init)
   else
     pv->mtu = mtu;
 
-  pv->service_desc.desc = service_desc_array;
-  pv->service_desc.desc_cnt = ARRAY_SIZE(service_desc_array);
-  pv->service_desc.string = pv->strings;
-  pv->service_desc.str_cnt = 4;
-  pv->service_desc.intf = interface_desc_array;
-  pv->service_desc.intf_cnt = ARRAY_SIZE(interface_desc_array);
-
-  assert(sizeof(pv->strings) > sizeof(SERVICE_STRINGS) + 12 + 1);
-
-  memcpy(pv->strings, SERVICE_STRINGS, sizeof(SERVICE_STRINGS));
   for (uint_fast8_t i = 0; i < 6; ++i) {
     static const char *hex = "0123456789abcdef";
-    pv->strings[sizeof(SERVICE_STRINGS) + i * 2] = hex[pv->hwaddr[i] >> 4];
-    pv->strings[sizeof(SERVICE_STRINGS) + i * 2 + 1] = hex[pv->hwaddr[i] & 0xf];
+    pv->macAddressString[i * 2] = hex[pv->hwaddr[i] >> 4];
+    pv->macAddressString[i * 2 + 1] = hex[pv->hwaddr[i] & 0xf];
   }
-  pv->strings[sizeof(SERVICE_STRINGS) + 12] = 0;
+  pv->macAddressString[12] = 0;
 
-  pv->service.desc = &pv->service_desc;
+  pv->service.desc = &service_desc;
   pv->service.pv = dev;
   
   dev_res_get_usbdev_epmap(dev, &pv->service);

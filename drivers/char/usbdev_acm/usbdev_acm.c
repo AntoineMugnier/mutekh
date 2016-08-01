@@ -75,47 +75,38 @@
 
 /* Functionnal descriptor */
 
-static const struct usbdev_cdc_func_info_s cdc_header =
+static const struct usb_cdc_header_descriptor_s cdc_header =
 {
-  .f_replace = NULL,
-  .hdr = {
-    .head.bLength = sizeof(struct usb_cdc_header_descriptor_s),
-    .head.bDescriptorType = USB_CDC_INTERFACE_DESCRIPTOR,
-    .bDescriptorSubtype = USB_CDC_DESC_FUNC_HEADER,
-    .bcdCDC = endian_le16(0x0120),
-  }
+  .head.bLength = sizeof(struct usb_cdc_header_descriptor_s),
+  .head.bDescriptorType = USB_CDC_INTERFACE_DESCRIPTOR,
+  .bDescriptorSubtype = USB_CDC_DESC_FUNC_HEADER,
+  .bcdCDC = endian_le16(0x0120),
 };
-static const struct usbdev_cdc_func_info_s cdc_call_mgmt = 
+
+static const struct usb_cdc_call_mgmt_descriptor_s cdc_call_mgmt = 
 {
-  .f_replace = usbdev_cdc_desc_update,
-  .call = {
-    .head.bLength = sizeof(struct usb_cdc_call_mgmt_descriptor_s),
-    .head.bDescriptorType = USB_CDC_INTERFACE_DESCRIPTOR,
-    .bDescriptorSubtype = USB_CDC_DESC_FUNC_CALL_MGMT,
-    .bmCapabilities = USBDEV_SERV_CHAR_INTF_CTRL,
-    .bDataInterface = USBDEV_SERV_CHAR_INTF_DATA
-  }
+  .head.bLength = sizeof(struct usb_cdc_call_mgmt_descriptor_s),
+  .head.bDescriptorType = USB_CDC_INTERFACE_DESCRIPTOR,
+  .bDescriptorSubtype = USB_CDC_DESC_FUNC_CALL_MGMT,
+  .bmCapabilities = USBDEV_SERV_CHAR_INTF_CTRL,
+  .bDataInterface = USBDEV_SERV_CHAR_INTF_DATA,
 };
-static const struct usbdev_cdc_func_info_s cdc_acm =
+
+static const struct usb_cdc_acm_descriptor_s cdc_acm =
 {
-  .f_replace = NULL,
-  .acm = {
-    .head.bLength = sizeof(struct usb_cdc_acm_descriptor_s),
-    .head.bDescriptorType = USB_CDC_INTERFACE_DESCRIPTOR,
-    .bDescriptorSubtype = USB_CDC_DESC_FUNC_ACM,
-    .bmCapabilities = 2,
-  }
+  .head.bLength = sizeof(struct usb_cdc_acm_descriptor_s),
+  .head.bDescriptorType = USB_CDC_INTERFACE_DESCRIPTOR,
+  .bDescriptorSubtype = USB_CDC_DESC_FUNC_ACM,
+  .bmCapabilities = 2,
 };
-static const struct usbdev_cdc_func_info_s cdc_union =
+
+static const struct usb_cdc_union_descriptor_s cdc_union =
 {
-  .f_replace = usbdev_cdc_desc_update,
-  .un = {
-    .head.bLength = USB_CDC_UNION_DESCRIPTOR_LEN(1),
-    .head.bDescriptorType = USB_CDC_INTERFACE_DESCRIPTOR,
-    .bDescriptorSubtype = USB_CDC_DESC_FUNC_UNION,
-    .bControlInterface = USBDEV_SERV_CHAR_INTF_CTRL,
-    .bSubordinateInterface = USBDEV_SERV_CHAR_INTF_DATA,
-  }
+  .head.bLength = sizeof(struct usb_cdc_union_descriptor_s),
+  .head.bDescriptorType = USB_CDC_INTERFACE_DESCRIPTOR,
+  .bDescriptorSubtype = USB_CDC_DESC_FUNC_UNION,
+  .bControlInterface = USBDEV_SERV_CHAR_INTF_CTRL,
+  .bSubordinateInterface = USBDEV_SERV_CHAR_INTF_DATA,
 };
 
 /* Standart descriptors */
@@ -187,6 +178,13 @@ static const struct usbdev_interface_default_s interface_cdc_ctrl =
   },
   USBDEV_INTERFACE_ALTERNATE()
 };
+
+static
+USBDEV_REPLACE(usbdev_acm_replace)
+{
+  usbdev_descriptor_replace(it, src, dst, begin, end);
+  usbdev_cdc_descriptor_replace(it, src, dst, begin, end);
+}
 
 DRIVER_PV(struct usbdev_acm_private_s
 {
@@ -542,10 +540,10 @@ static const struct usbdev_service_descriptor_s usb_cdc_acm_service =
   /* Local descriptor */
   USBDEV_SERVICE_DESCRIPTOR(
       &interface_cdc_ctrl.intf.desc.head,
-      &cdc_header.hdr.head,
-      &cdc_call_mgmt.call.head,
-      &cdc_acm.acm.head,
-      &cdc_union.un.head,
+      &cdc_header.head,
+      &cdc_call_mgmt.head,
+      &cdc_acm.head,
+      &cdc_union.head,
       &ep_irq_in.head,
       &interface_cdc_data0.intf.desc.head,
       &ep_bulk_out.head,
@@ -561,6 +559,8 @@ static const struct usbdev_service_descriptor_s usb_cdc_acm_service =
   .string = 
     "CDC ACM Data\0"
     "CDC ACM Control\0",
+
+  .replace = usbdev_acm_replace,
 };
 
 static DEV_CHAR_CANCEL(usbdev_acm_cancel)
@@ -710,7 +710,6 @@ static DEV_INIT(usbdev_acm_init)
   dev_res_get_usbdev_epmap(dev, &pv->service);
 
   err = usbdev_stack_service_register(&pv->usb, &pv->service);
-
   if (err)
     goto err_rbuffer;
 
@@ -730,7 +729,9 @@ static DEV_INIT(usbdev_acm_init)
   kroutine_init_deferred_seq(&pv->rtr.base.kr, &usbdev_acm_read_cb, &pv->seq);
 
   /* Push initial request on stack */
-  usbdev_stack_request(&pv->usb, &pv->service, &pv->rq);
+  err = usbdev_stack_request(&pv->usb, &pv->service, &pv->rq);
+  if (err)
+    goto err_rbuffer;
 
   return 0;
 

@@ -27,10 +27,10 @@
 #define USBDEV_SERV_TEST_INTERRUPT_ENDPOINT 1
 #define USBDEV_SERV_TEST_CONTROL_N_ENDPOINT 1
 
-#define USBDEV_SERV_TEST_BULK_ITF  0
-#define USBDEV_SERV_TEST_ISO_ITF   (USBDEV_SERV_TEST_BULK_ITF + USBDEV_SERV_TEST_BULK_ENDPOINT)
-#define USBDEV_SERV_TEST_IRQ_ITF   (USBDEV_SERV_TEST_ISO_ITF + USBDEV_SERV_TEST_ISOCHRONOUS_ENDPOINT)
-#define USBDEV_SERV_TEST_CTRL_ITF  (USBDEV_SERV_TEST_IRQ_ITF + USBDEV_SERV_TEST_INTERRUPT_ENDPOINT)
+#define USBDEV_SERV_TEST_BULK_INTF  0
+#define USBDEV_SERV_TEST_ISO_INTF   (USBDEV_SERV_TEST_BULK_INTF + USBDEV_SERV_TEST_BULK_ENDPOINT)
+#define USBDEV_SERV_TEST_IRQ_INTF   (USBDEV_SERV_TEST_ISO_INTF + USBDEV_SERV_TEST_ISOCHRONOUS_ENDPOINT)
+#define USBDEV_SERV_TEST_CTRL_INTF  (USBDEV_SERV_TEST_IRQ_INTF + USBDEV_SERV_TEST_INTERRUPT_ENDPOINT)
 
 #define USBDEV_TEST_DEVICE_PATH "usb"
 #define USBDEV_TEST_VENDOR_ID 0x5A5A
@@ -108,7 +108,7 @@ static const struct usbdev_interface_s interface_test_a1 =
   .desc = {
     .head.bLength = sizeof(struct usb_interface_descriptor_s),
     .head.bDescriptorType = USB_INTERFACE_DESCRIPTOR,
-    .bInterfaceNumber = USBDEV_SERV_TEST_BULK_ITF,
+    .bInterfaceNumber = USBDEV_SERV_TEST_BULK_INTF,
     .bAlternateSetting = 1,
     .bNumEndpoints = 2,
     .bInterfaceClass = 0,
@@ -145,11 +145,11 @@ static const struct usb_endpoint_descriptor_s ep_out_0 =
 
 static const struct usbdev_interface_default_s interface_test_a0 =
 {
-  .itf = {
+  .intf = {
     .desc = {
       .head.bLength = sizeof(struct usb_interface_descriptor_s),
       .head.bDescriptorType = USB_INTERFACE_DESCRIPTOR,
-      .bInterfaceNumber = USBDEV_SERV_TEST_BULK_ITF,
+      .bInterfaceNumber = USBDEV_SERV_TEST_BULK_INTF,
       .bAlternateSetting = 0,
       .bNumEndpoints = 2,
       .bInterfaceClass = 0,
@@ -196,11 +196,11 @@ static const struct usb_endpoint_descriptor_s ep_out_2 =
 
 static const struct usbdev_interface_default_s interface_test_b0 =
 {
-  .itf = {
+  .intf = {
     .desc = {
       .head.bLength = sizeof(struct usb_interface_descriptor_s),
       .head.bDescriptorType = USB_INTERFACE_DESCRIPTOR,
-      .bInterfaceNumber = USBDEV_SERV_TEST_ISO_ITF,
+      .bInterfaceNumber = USBDEV_SERV_TEST_ISO_INTF,
       .bAlternateSetting = 0,
       .bNumEndpoints = 2,
       .bInterfaceClass = 0,
@@ -246,11 +246,11 @@ static const struct usb_endpoint_descriptor_s ep_out_3 =
 
 static const struct usbdev_interface_default_s interface_test_c0 =
 {
-  .itf = {
+  .intf = {
     .desc = {
       .head.bLength = sizeof(struct usb_interface_descriptor_s),
       .head.bDescriptorType = USB_INTERFACE_DESCRIPTOR,
-      .bInterfaceNumber = USBDEV_SERV_TEST_IRQ_ITF,
+      .bInterfaceNumber = USBDEV_SERV_TEST_IRQ_INTF,
       .bAlternateSetting = 0,
       .bNumEndpoints = 2,
       .bInterfaceClass = 0,
@@ -286,11 +286,11 @@ static const struct usb_endpoint_descriptor_s ep_4 =
 
 static const struct usbdev_interface_default_s interface_test_d0 =
 {
-  .itf = {
+  .intf = {
     .desc = {
       .head.bLength = sizeof(struct usb_interface_descriptor_s),
       .head.bDescriptorType = USB_INTERFACE_DESCRIPTOR,
-      .bInterfaceNumber = USBDEV_SERV_TEST_CTRL_ITF,
+      .bInterfaceNumber = USBDEV_SERV_TEST_CTRL_INTF,
       .bAlternateSetting = 0,
       .bNumEndpoints = 1,
       .bInterfaceClass = 0,
@@ -311,7 +311,7 @@ static const struct usbdev_service_descriptor_s usb_test_service =
   /* Local descriptor */
   USBDEV_SERVICE_DESCRIPTOR(
 #if USBDEV_SERV_TEST_BULK_ENDPOINT
-      &interface_test_a0.itf.desc.head,
+      &interface_test_a0.intf.desc.head,
       &ep_in_0.head,
       &ep_out_0.head,
 # if (CONFIG_USBDEV_MAX_ALTERNATE_COUNT > 0)
@@ -321,17 +321,17 @@ static const struct usbdev_service_descriptor_s usb_test_service =
 # endif
 #endif
 #if USBDEV_SERV_TEST_ISOCHRONOUS_ENDPOINT
-      &interface_test_b0.itf.desc.head,
+      &interface_test_b0.intf.desc.head,
       &ep_in_2.head,
       &ep_out_2.head,
 #endif
 #if USBDEV_SERV_TEST_INTERRUPT_ENDPOINT
-      &interface_test_c0.itf.desc.head,
+      &interface_test_c0.intf.desc.head,
       &ep_in_3.head,
       &ep_out_3.head,
 #endif
 #if USBDEV_SERV_TEST_CONTROL_N_ENDPOINT
-      &interface_test_d0.itf.desc.head,
+      &interface_test_d0.intf.desc.head,
       &ep_4.head,
 #endif
     ),

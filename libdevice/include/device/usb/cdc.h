@@ -300,19 +300,6 @@ enum usb_cdc_ecm_filter_e
   Generic descriptor union
 */
 
-struct usbdev_cdc_func_info_s
-{
-  usbdev_replace_t * f_replace;
-
-  union {
-    struct usb_cdc_union_descriptor_s un;
-    struct usb_cdc_header_descriptor_s hdr;
-    struct usb_cdc_call_mgmt_descriptor_s call;
-    struct usb_cdc_acm_descriptor_s acm;
-    struct usb_cdc_ecm_descriptor_s ecm;
-  };
-};
-
 config_depend(CONFIG_DEVICE_USBDEV)
 USBDEV_REPLACE(usbdev_cdc_desc_update);
 
