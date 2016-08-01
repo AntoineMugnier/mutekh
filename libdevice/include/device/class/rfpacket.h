@@ -114,11 +114,9 @@ struct dev_rfpacket_rf_cfg_s
       configuration changes. */
   struct dev_rfpacket_cfg_cache_s cache;
 
-  /** RX RSSI threshold. During a TX listen before talk, signal below
-      this level will allow start of transmission.  During a RX, a
-      continuous signal above this level is considered jamming and
-      will be reported as an error. */
-  dev_rfpacket_pwr_t            rssi_th;
+  /** During a RX, a continuous signal above this level is considered
+      jamming and will be reported as an error. */
+  dev_rfpacket_pwr_t            jam_rssi;
 
   /** Datarate in bps */
   uint32_t                      BITFIELD(drate,24);
@@ -133,12 +131,40 @@ struct dev_rfpacket_rf_cfg_s
   uint32_t                      bw;
 };
 
+/** @This specifies the policy of fair TX */
+enum dev_rfpacket_fairtx_e
+{
+  DEV_RFPACKET_NO_FAIRTX = 0,
+  DEV_RFPACKET_LBT,
+};
+
+/** @This store the configuration associated to the policy of fair TX.
+    It may be used in some modulation configuration structures. */
+struct dev_rfpacket_rf_cfg_fairtx_s
+{
+  union {
+    struct {
+      /** Listening time in us. Defined as the minimum time that the device 
+          must listen prior to determine whether the intended channel is
+          available for use.**/
+      dev_timer_delay_t             duration;
+      /** RX RSSI threshold. During a TX listen before talk, signal below
+          this level will allow start of transmission. */
+      dev_rfpacket_pwr_t            rssi;
+    } __attribute__((packed)) lbt;
+  } __attribute__((packed));
+
+
+  enum dev_rfpacket_fairtx_e BITFIELD(mode, 8);
+};
+
 /** @This extends the @ref dev_rfpacket_rf_cfg_s object when the @ref
     DEV_RFPACKET_FSK or @ref DEV_RFPACKET_GFSK modulations are in
     use. */
 struct dev_rfpacket_rf_cfg_fsk_s
 {
   struct dev_rfpacket_rf_cfg_s  base;
+  struct dev_rfpacket_rf_cfg_fairtx_s fairtx;
 
   /** frequency deviation in Hz */
   uint32_t                      BITFIELD(deviation,24);
@@ -154,6 +180,7 @@ STRUCT_INHERIT(dev_rfpacket_rf_cfg_fsk_s, dev_rfpacket_rf_cfg_s, base);
 struct dev_rfpacket_rf_cfg_ask_s
 {
   struct dev_rfpacket_rf_cfg_s  base;
+  struct dev_rfpacket_rf_cfg_fairtx_s fairtx;
 
   /** number of symbols, 2 for OOK */
   uint32_t                      BITFIELD(symbols,8);
@@ -172,6 +199,7 @@ enum dev_rfpacket_format_e
 
 enum dev_rfpacket_encoding_e
 {
+  DEV_RFPACKET_CLEAR,
   DEV_RFPACKET_MANCHESTER,
   DEV_RFPACKET_LFSR8,
 };
@@ -294,7 +322,14 @@ struct dev_rfpacket_rx_s
 
   /** RX signal power over noise power ratio. */
   dev_rfpacket_pwr_t                snr;
+
+  /** RX error. This is set by the driver if the packet is malformed
+      or contains bit errors. If no data is available due to the
+      error, the @tt size field must be 0. */
+  bool_t                            err;
 };
+
+STRUCT_COMPOSE(dev_rfpacket_rx_s, kr);
 
 /***************************************** requests */
 
@@ -308,12 +343,14 @@ enum dev_rfpacket_rq_rtype_e
       DEV_RFPACKET_RQ_RX_CONT request is running. */
   DEV_RFPACKET_RQ_TX,
 
-  /** Schedule a packet transmit, monitoring the channel RSSI before
-      transmit for the requested period. This is pushed on the
-      requests queue and will be processed in order. It will not run
-      until the @ref dev_rfpacket_rq_s::deadline has been reached. The
-      request will terminate with the @tt -ETIMEDOUT error if the
-      channel does not become clear.
+  /** Schedule a packet transmit, monitoring the channel before
+      transmit. This is pushed on the requests queue and will be
+      processed in order. It will not run until the @ref
+      dev_rfpacket_rq_s::deadline has been reached. The request will
+      terminate with the @tt -ETIMEDOUT error if the channel does not
+      become clear during the whole lifetime period. The mechanism 
+      used to determine if the transmission can start is defined in 
+      the configuration.
 
       When the hardware support this, some packet may be received
       during the monitoring period if a @ref DEV_RFPACKET_RQ_RX_CONT
@@ -323,7 +360,7 @@ enum dev_rfpacket_rq_rtype_e
 
       This request can not be used with a deadline when a @ref
       DEV_RFPACKET_RQ_RX_CONT request is running. */
-  DEV_RFPACKET_RQ_TX_LBT,
+  DEV_RFPACKET_RQ_TX_FAIR,
 
   /** Schedule a time limited RX period. This is pushed on the
       requests queue and will be processed in order. It will not run
@@ -380,26 +417,23 @@ struct dev_rfpacket_rq_s
         will be started immediately if the current timer value is
         greater than this value. This field is not used by @ref
         DEV_RFPACKET_RQ_RX_CONT requests. */
-    dev_timer_value_t                  deadline;
+    dev_timer_value_t               deadline;
 
     /** This field is updated by the driver to the actual start of
         transmit time for @ref DEV_RFPACKET_RQ_TX and @ref
-        DEV_RFPACKET_RQ_TX_LBT requests. */
-    dev_timer_value_t                  tx_timestamp;
+        DEV_RFPACKET_RQ_TX_FAIR requests. */
+    dev_timer_value_t               tx_timestamp;
   };
 
   /** For @ref DEV_RFPACKET_RQ_RX requests, this field defines the
       duration of the RX period. Multiple packets may be received during
       the request.
-
       For @ref DEV_RFPACKET_RQ_TX_LBT requests, this field specifies
       how long to wait for the channel to become clear before aborting
       the transmit.
-
-      In both cases, the actual execution time of a request may be
+      In both cases the actual execution time of a request may be
       longer than the lifetime because an ongoing RX may start at the
       end of the period and will not be aborted.
-
       This field is not used by @ref DEV_RFPACKET_RQ_RX_CONT and @ref
       DEV_RFPACKET_RQ_TX requests. */
   dev_timer_delay_t                 lifetime;
