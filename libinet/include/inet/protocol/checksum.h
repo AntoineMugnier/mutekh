@@ -18,6 +18,11 @@
     Copyright (c) Nicolas Pouillon <nipo@ssji.net> 2016
 */
 
+/**
+   @file
+   @module {Libraries::Internet protocol suite}
+*/
+
 #ifndef INET_PROTOCOL_CHECKSUM_H_
 #define INET_PROTOCOL_CHECKSUM_H_
 

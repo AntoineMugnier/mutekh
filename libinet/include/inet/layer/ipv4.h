@@ -18,6 +18,11 @@
     Copyright (c) Nicolas Pouillon <nipo@ssji.net> 2016
 */
 
+/**
+   @file
+   @module {Libraries::Internet protocol suite}
+*/
+
 #ifndef INET_LAYER_IPV4_H_
 #define INET_LAYER_IPV4_H_
 
