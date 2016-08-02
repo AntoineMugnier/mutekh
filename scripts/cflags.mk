@@ -91,6 +91,10 @@ ifeq ($(CONFIG_COMPILE_INSTRUMENT), defined)
 CFLAGS += -finstrument-functions
 endif
 
+ifeq ($(CONFIG_LOAD_NO_ZERO_IN_BSS), defined)
+CFLAGS += -fno-zero-initialized-in-bss
+endif
+
 INCS=-nostdinc -D__MUTEK__ \
 	-I$(MUTEK_SRC_DIR)/include -I $(OBJ_DIR) \
 	$(foreach mod,$(MODULE_NAMES),-I$($(mod)_SRC_DIR)/include) \
