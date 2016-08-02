@@ -134,14 +134,11 @@ printf_base_pow2(char *buf, __printf_uint_t val,
 }
 
 #ifndef CONFIG_LIBC_FORMATTER_SIMPLE
-static size_t
+static void
 str_hexdump(char *buf, const uint8_t *val, size_t len)
 {
   static const char	*hex = "0123456789abcdef";
   size_t		i;
-
-  if (!len)
-    return 0;
 
   for (i = 0; i < len; i++)
     {
@@ -150,8 +147,6 @@ str_hexdump(char *buf, const uint8_t *val, size_t len)
       val++;
       *buf++ = ' ';
     }
-
-  return len * 3;
 }
 #endif
 
@@ -602,29 +597,35 @@ formatter_printf(void *ctx, printf_output_func_t * const fcn,
       }	break;
 
 	/* hexdump data buffer */
-      case ('P'):
+      case ('P'): {
 	len = va_arg(ap, size_t);
 #ifndef CONFIG_LIBC_FORMATTER_SIMPLE
-        {
-          const size_t chunk_size = 16;
-          const uint8_t *data = (const uint8_t*)(uintptr_t)val;
-          char tmp[chunk_size * 3];
+        const size_t chunk_size = 16;
+        const uint8_t *data = (const uint8_t*)(uintptr_t)val;
+        while (len)
+          {
+            bool_t last = len <= chunk_size;
+            size_t slen = last ? len : chunk_size;
 
-          for (size_t chunk = 0; chunk < len; chunk += chunk_size) {
-            size_t slen = str_hexdump(tmp, data + chunk, __MIN(len - chunk, chunk_size));
-            fcn(ctx, tmp, 0, slen - (chunk > len - chunk_size));
+            char tmp[slen * 3];
+            str_hexdump(tmp, data, slen);
+            data += slen;
+            len -= slen;
+
+            size_t hlen = slen * 3 - last;
+            fcn(ctx, tmp, offset, hlen);
+            offset += hlen;
           }
-          len = 0;
-        }
 #endif
-	break;
+        goto printf_state_main;
+      }
 
 	/* string data buffer */
 
       case ('S'):
 	len = va_arg(ap, size_t);
-#ifndef CONFIG_LIBC_FORMATTER_SIMPLE
 	buf = (char*)(uintptr_t)val;
+#ifndef CONFIG_LIBC_FORMATTER_SIMPLE
 	zeropad = 0;
 #endif
 	break;
