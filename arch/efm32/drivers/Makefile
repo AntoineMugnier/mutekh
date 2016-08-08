@@ -9,3 +9,4 @@ subdirs-$(CONFIG_DRIVER_EFM32_MSC) += msc
 subdirs-$(CONFIG_DRIVER_EFM32_AES) += aes
 subdirs-$(CONFIG_DRIVER_EFM32_PWM) += pwm
 subdirs-$(CONFIG_DRIVER_EFM32_DMA) += dma
+subdirs-$(CONFIG_DRIVER_EFM32_ADC) += adc
