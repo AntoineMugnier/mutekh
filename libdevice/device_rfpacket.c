@@ -24,29 +24,14 @@
 
 const char dev_rfpacket_modulation_e[] = ENUM_DESC_DEV_RFPACKET_MODULATION_E;
 
-extern inline error_t dev_rfpacket_spin_send_packet(
+extern inline error_t dev_rfpacket_spin_request(
        const struct device_rfpacket_s *accessor,
-       const uint8_t *buf,
-       const size_t size,
-       int16_t pwr,
-       uint32_t lifetime);
-
-extern inline error_t dev_rfpacket_spin_config(
-    const struct device_rfpacket_s *accessor,
-    const struct dev_rfpacket_config_s *cfg,
-    enum dev_rfpacket_cfg_msk_e mask);
+       struct dev_rfpacket_rq_s *rq);
 
 # ifdef CONFIG_MUTEK_CONTEXT_SCHED
-extern inline error_t dev_rfpacket_wait_send_packet(
-       const struct device_rfpacket_s *accessor,
-       const uint8_t *buf,
-       const size_t size,
-       int16_t pwr,
-       uint32_t lifetime);
 
-extern inline error_t dev_rfpacket_wait_config(
-    const struct device_rfpacket_s *accessor,
-    const struct dev_rfpacket_config_s *cfg,
-    enum dev_rfpacket_cfg_msk_e mask);
+extern inline error_t dev_rfpacket_wait_request(
+       const struct device_rfpacket_s *accessor,
+       struct dev_rfpacket_rq_s *rq);
 
 #endif
