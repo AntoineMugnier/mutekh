@@ -32,8 +32,6 @@ FINAL_KERNEL_FILE=$(target).$(TARGET_EXT)
 LOG_FILE=$(OBJ_DIR)/build.log
 #LOG_REDIR= 3>>$(LOG_FILE) 1>&3 2>&3
 
-DEP_FILE_LIST:=
-
 include $(MUTEK_SRC_DIR)/scripts/config.mk
 include $(MUTEK_SRC_DIR)/scripts/discover.mk
 
@@ -51,10 +49,6 @@ endif
 
 endef
 
-$(eval \
-$(foreach depfile,$(DEP_FILE_LIST),\
-$(call do_inc_dep,$(depfile))))
-
 $(eval $(call do_inc_dep,$(OBJ_DIR)/config.deps))
 
 endif
@@ -70,7 +64,6 @@ $(OBJ_DIR)/.done_pre_header_list: $(PRE_HEADER_LIST)
 
 objs:
 	echo "TARGET_OBJECT_LIST = $(TARGET_OBJECT_LIST)"
-	echo "DEP_FILE_LIST = $(DEP_FILE_LIST)"
 	echo "CLEAN_FILE_LIST = $(CLEAN_FILE_LIST)"
 	echo "PRE_HEADER_LIST = $(PRE_HEADER_LIST)"
 
