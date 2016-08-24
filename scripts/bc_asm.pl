@@ -1759,11 +1759,11 @@ sub check_regs
          if ( $func ) {
              for (my $i = 0; $i < 16; $i++) {
                  my $m = ( 1 << $i );
-                 warning($func, "function `$func->{name}' register %$i is declared with incompatible roles\n")
+                 error($func, "function `$func->{name}' register %$i is declared with incompatible roles\n")
                      if ( $func->{output} & $func->{clobber} & $m ) ||
                         ( $func->{output} & $func->{preserve} & $m ) ||
                         ( $func->{clobber} & $func->{preserve} & $m );
-                 warning($func, "function `$func->{name}' register %$i is already declared global\n")
+                 error($func, "function `$func->{name}' register %$i is already declared global\n")
                      if ( ( $func->{output} | $func->{input} | $func->{clobber} | $func->{preserve} ) & $global_regmask & $m );
                  warning($func, "register %$i is declared as input of function `$func->{name}' but never used\n")
                      if ( $func->{input} & ~$rd_mask & $m );
