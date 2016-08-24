@@ -152,7 +152,7 @@ $(3)/$(1): $(2)/$(1:.o=.bc)
 	$(call run_command,$$@, perl $(MUTEK_SRC_DIR)/scripts/decl_filter.pl --parse-decl $(CC) \
                 $(CFLAGS) $(CPUCFLAGS) $(ARCHCFLAGS) $(INCS) -I$(3) \
                 $($(1)_CFLAGS) $(DIR_CFLAGS) < $$@.i > $$@.bc)
-	$(call run_command,$$@, perl $(MUTEK_SRC_DIR)/scripts/bc_asm.pl $(BCPATH) $(BCFLAGS) -o $$@.s < $$@.bc )
+	$(call run_command,$$@, perl $(MUTEK_SRC_DIR)/scripts/bc_asm.pl $(BCPATH) $(BCFLAGS) -h $$@.h -o $$@.s < $$@.bc )
 	$(call compile,$(CC),$$@,$$@.s,$($(1)_CFLAGS) $(DIR_CFLAGS))
 	$(value do_hetlink_mangling)
 

@@ -10,6 +10,7 @@ our $backend_width = 0;		# 8 << 2 bits
 our $backend_name = "bytecode";
 our $bc_name = "mybytecode";
 our $fout = "bc.out";
+our $fheader;
 our $last_addr;
 our $modpath = $ENV{MUTEK_BYTECODE_PATH};
 our %srcaddr;
@@ -36,6 +37,10 @@ while (defined $ARGV[0]) {
     }
     if ($opt eq '-e') {
         $backend_endian = shift @ARGV;
+        next;
+    }
+    if ($opt eq '-h') {
+        $fheader = shift @ARGV;
         next;
     }
     if ($opt eq '-n') {
@@ -559,16 +564,23 @@ sub regs_mask_parse
 {
     my ($loc, $class, $str, $maskref, $alias) = @_;
     my $mask = 0;
+    our $alias_id;
+
     foreach my $reg (args_split($str)) {
         error($loc, "bad register `$reg'\n")
-            if ( $reg !~ /^%(\d+)(?:\s+([_a-z]\w*))?$/ || $1 > 15 );
+            if ( $reg !~ /^%(\d+)\s*((?:\s*\b[_a-z]\w*)*)\s*$/ || $1 > 15 );
 
-        if ( defined $2 ) {
+        foreach ( split(/\s+/, $2) ) {
             error($loc, "register alias can't be used with .$class\n")
                 unless defined $alias;
-            error($loc, "register alias `$2' already defined\n")
-                if defined $alias->{$2};
-            $alias->{$2} = $1;
+            error($loc, "register alias `$_' already defined\n")
+                if defined $alias->{$_};
+            $alias->{$_} = {
+                name => $_,
+                reg => $1,
+                id => $alias_id++,
+                class => $class
+            };
         }
 
         error($loc, "$class register \%$1 used more than once\n")
@@ -665,7 +677,7 @@ sub parse
         if ($l =~ /^\s*\.(global|const)\s+(.*?)\s*$/) {
             error($loc, "global register declared inside a function\n") if defined $func;
             my $regs;
-            regs_mask_parse($loc, 'global', $2, \$regs, \%global_regalias);
+            regs_mask_parse($loc, $1, $2, \$regs, \%global_regalias);
             $global_regmask |= $regs;
             $global_const_regmask |= $regs if $1 eq 'const';
             next;
@@ -1115,14 +1127,18 @@ sub parse_args
             my $g = $global_regalias{$s};
             if ( my $f = $thisop->{func} ) {
                 $t = $f->{regalias}->{$s};
-                warning($thisop, "not using global register alias `$s'\n")
-                    if ( defined $g );
+                if ( defined $t ) {
+                    warning($thisop, "not using global register alias `$s'\n")
+                        if ( defined $g );
+                } else {
+                    $t = $g;
+                }
             } elsif ( defined $g ) {
                 $t = $g;
             }
             error($thisop, "undefined register alias `$s'\n")
                 unless ( defined $t );
-	    return '%'.$t;
+	    return '%'.$t->{reg};
 	};
 	foreach my $arg (@{$thisop->{args}}) {
 	    $arg =~ s/%([a-z_][\w:]*)\b/$a->($1)/ge;
@@ -1181,6 +1197,66 @@ sub write_bc
 
     close( OUT );
 }
+
+sub write_header
+{
+    open(OUT, ">$fheader") || die "unable to open output file `$fheader'.\n";
+
+    print OUT "
+#ifndef __BC_DEFS_${bc_name}__
+#define __BC_DEFS_${bc_name}__
+#include <mutek/bytecode.h>
+";
+
+    # emit defs for global registers
+    foreach my $a ( keys %global_regalias ) {
+        my $r = $global_regalias{$a};
+
+        if ($r->{class} eq "const") {
+            print OUT "#define ".uc($bc_name)."_BCCONST_".uc($a)." ".$r->{reg}."\n";
+        }
+
+        if ($r->{class} eq "global") {
+            print OUT "#define ".uc($bc_name)."_BCGLOBAL_".uc($a)." ".$r->{reg}."\n";
+        }
+    }
+
+    # emit defs for the exported label/function
+    foreach my $l ( values %labels ) {
+        next unless $l->{export};
+        print OUT "extern bytecode_entry_t $l->{name};\n";
+
+        next unless $l->{func};
+        my @inputs;
+
+        # input and output function registers
+        foreach my $a ( keys %{$l->{regalias}} ) {
+            my $r = $l->{regalias}->{$a};
+
+            if ($r->{class} eq "output") {
+                print OUT "#define ".uc($l->{name})."_BCOUT_".uc($a)." ".$r->{reg}."\n";
+            }
+
+            if ($r->{class} eq "input") {
+                print OUT "#define ".uc($l->{name})."_BCIN_".uc($a)." ".$r->{reg}."\n";
+                push @inputs, $r;
+            }
+        }
+
+        # for use with the bc_set_regs_va function
+        print OUT "#define ".uc($l->{name})."_BCARGS(";
+        print OUT join(', ', map { $_->{name} } sort { $a->{id} <=> $b->{id} } @inputs);
+        printf OUT ") 0x%x, ", $l->{input};
+        print OUT join(', ', map { '('.$_->{name}.')' } sort { $a->{reg} <=> $b->{reg} } @inputs);
+        print OUT "\n";
+    }
+
+    print OUT "#endif
+";
+
+    close( OUT );
+}
+
 
 sub write_asm
 {
@@ -1711,6 +1787,7 @@ sub check_regs
 check_regs();
 
 $backend->write();
+write_header() if defined $fheader;
 
 warnings_print();
 

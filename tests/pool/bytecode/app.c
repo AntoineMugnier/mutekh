@@ -5,6 +5,8 @@
 #include <mutek/bytecode.h>
 #include <mutek/startup.h>
 
+#include "test.o.h"
+
 #define BC_CUSTOM_PRINTI 0x1000
 #define BC_CUSTOM_PRINTS 0x2000
 #define BC_CUSTOM_SKIPODD 0x3000
