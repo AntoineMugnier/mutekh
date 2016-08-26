@@ -113,7 +113,11 @@ sub out_cst8 {
 
 sub out_jmp8 {
     my ($thisop) = @_;
-    return fmt0( $thisop, $thisop->{disp}, 0 );
+    if ( my $d = $thisop->{disp} ) {
+        return fmt0( $thisop, $d, 0 );
+    } else {
+        return fmt0( $thisop, 0, 4 );
+    }
 }
 
 sub out_call8 {

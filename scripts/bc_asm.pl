@@ -351,7 +351,7 @@ sub parse_jmp8
     $thisop->{target} = check_label8($thisop, 0, 128);
 
     if ( $thisop->{disp} == 0 ) {
-	error($thisop, "jmp can not have a zero displacement\n");
+	$thisop->{nop} = 1;
     }
 }
 
