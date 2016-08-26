@@ -93,6 +93,14 @@ C_HEADER_BEGIN
 #define address_align_down(x, b) ((void*)align_pow2_down((uintptr_t)(x), (b)))
 
 
+/** @this pack 4 bytes and return a 32 bits word */
+#define byte_pack32(msb, a, b, lsb) \
+  ((((msb) & 0xff) << 24) | (((a) & 0xff ) << 16) | (((b) & 0xff) << 8) | ((lsb) & 0xff))
+
+/** @this pack 42 bytes and return a 16 bits word */
+#define byte_pack16(msb, lsb) \
+  ((((msb) & 0xff) << 8) | ((lsb) & 0xff))
+
 
 /** @this sets bit @tt bit in @tt value */
 #define BIT_SET(value, bit) ((v) |= bit(bit))
