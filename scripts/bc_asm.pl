@@ -1227,7 +1227,8 @@ sub write_header
         print OUT "extern bytecode_entry_t $l->{name};\n";
 
         next unless $l->{func};
-        my @inputs;
+        my %inputs;
+        my $inmask;
 
         # input and output function registers
         foreach my $a ( keys %{$l->{regalias}} ) {
@@ -1239,16 +1240,20 @@ sub write_header
 
             if ($r->{class} eq "input") {
                 print OUT "#define ".uc($l->{name})."_BCIN_".uc($a)." ".$r->{reg}."\n";
-                push @inputs, $r;
+                $inputs{$r->{reg}} = $r;
+                $inmask |= 1 << $r->{reg};
             }
         }
 
+        print STDERR "$inmask $l->{input}\n";
         # for use with the bc_set_regs_va function
-        print OUT "#define ".uc($l->{name})."_BCARGS(";
-        print OUT join(', ', map { $_->{name} } sort { $a->{id} <=> $b->{id} } @inputs);
-        printf OUT ") 0x%x, ", $l->{input};
-        print OUT join(', ', map { '('.$_->{name}.')' } sort { $a->{reg} <=> $b->{reg} } @inputs);
-        print OUT "\n";
+        if ($inmask == $l->{input}) {
+            print OUT "#define ".uc($l->{name})."_BCARGS(";
+            print OUT join(', ', map { $_->{name} } sort { $a->{id} <=> $b->{id} } values %inputs);
+            print OUT ") ";
+            print OUT join(', ', ($inmask, map { '('.$_->{name}.')' } sort { $a->{reg} <=> $b->{reg} } values %inputs));
+            print OUT "\n";
+        }
     }
 
     print OUT "#endif
