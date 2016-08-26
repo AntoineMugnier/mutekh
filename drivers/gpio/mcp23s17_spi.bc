@@ -1,5 +1,5 @@
 .custom spi
-.name mcp23s17_bytecode
+.name mcp23s17
 
 #include <drivers/gpio/mcp23s17.h>
 

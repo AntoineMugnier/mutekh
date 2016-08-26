@@ -1,6 +1,6 @@
         /* -*- asm -*- */
 	.custom spi
-	.name adxl362_bytecode
+	.name adxl362
 
 #include "adxl362.h"
 

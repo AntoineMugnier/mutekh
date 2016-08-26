@@ -4,7 +4,7 @@
 #include "sx127x_spi.h"
 
         .custom spi
-        .name sx127x_bytecode
+        .name sx127x
 
         /* --------------------- Reset subroutine ------------------------*/
 sx127x_entry_reset:

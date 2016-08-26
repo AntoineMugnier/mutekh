@@ -2,7 +2,7 @@
         // load custom instruction definitions
 	.custom print
 
-        .name test_bytecode
+        .name test
 
         // force use of virtual machine
         // .backend bytecode

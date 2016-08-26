@@ -18,12 +18,12 @@ sub out_begin {
     return "    .cpu cortex-m3\n".
            "    .syntax unified\n".
            "    .section .rodata,\"a\"\n".
-	   "    .globl $main::bc_name\n".
+	   "    .globl ${main::bc_name}_bytecode\n".
            "    .balign 4\n".
-           "$main::bc_name:\n".
+           "${main::bc_name}_bytecode:\n".
 	   # struct bc_descriptor_s
 	   "    .long 1f\n".
-	   "    .long _$main::bc_name\n".
+	   "    .long _${main::bc_name}_bytecode\n".
 	   "    .byte 0x01\n".
 	   "    .byte 16\n".
 	   "    .short 0\n".
@@ -31,10 +31,10 @@ sub out_begin {
            "    .section .text\n".
            "    .code 16\n".
            "    .thumb_func\n".
-           "    .globl _$main::bc_name\n".
-           "    .func _$main::bc_name\n".
-           "    .type _$main::bc_name, \%function\n".
-           "_$main::bc_name:\n".
+           "    .globl _${main::bc_name}_bytecode\n".
+           "    .func _${main::bc_name}_bytecode\n".
+           "    .type _${main::bc_name}_bytecode, \%function\n".
+           "_${main::bc_name}_bytecode:\n".
            "    push    {r4, r5, r6, r7, r8, lr}\n".
            # vm regs array
            "    mov     r4, r0\n".

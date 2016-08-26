@@ -24,7 +24,7 @@
 #include "max3420_spi.h"
 
         .custom spi
-        .name max3420_bytecode
+        .name max3420
 
 	.const %R_CTX_PV
 

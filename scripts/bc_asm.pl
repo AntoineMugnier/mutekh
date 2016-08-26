@@ -1206,6 +1206,7 @@ sub write_header
 #ifndef __BC_DEFS_${bc_name}__
 #define __BC_DEFS_${bc_name}__
 #include <mutek/bytecode.h>
+extern const struct bc_descriptor_s ${bc_name}_bytecode;
 ";
 
     # emit defs for global registers
@@ -1245,7 +1246,6 @@ sub write_header
             }
         }
 
-        print STDERR "$inmask $l->{input}\n";
         # for use with the bc_set_regs_va function
         if ($inmask == $l->{input}) {
             print OUT "#define ".uc($l->{name})."_BCARGS(";

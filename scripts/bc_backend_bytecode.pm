@@ -11,21 +11,21 @@ sub addr {
 sub out_begin {
     my ( $b, $opcount ) = @_;
     return "    .section .rodata,\"a\"\n".
-           "    .globl $main::bc_name\n".
+           "    .globl ${main::bc_name}_bytecode\n".
            "    .balign ".(1 << $main::backend_width)."\n".
-           "$main::bc_name:\n".
+           "${main::bc_name}_bytecode:\n".
 	   # struct bc_descriptor_s
-	   addr( "_".$main::bc_name ).
+	   addr( "_${main::bc_name}_bytecode" ).
 	   addr( "bc_run_vm" ).
 	   "    .2byte 0x0000\n".
 	   "    .2byte $opcount\n".
-	   "_$main::bc_name:\n";
+	   "_${main::bc_name}_bytecode:\n";
 }
 
 sub out_eof {
     return "    .2byte 0\n". # end op
 	   "    .2byte 0\n". # end op
-	   "    .size $main::bc_name, . - $main::bc_name\n";
+	   "    .size ${main::bc_name}_bytecode, . - ${main::bc_name}_bytecode\n";
 }
 
 sub word

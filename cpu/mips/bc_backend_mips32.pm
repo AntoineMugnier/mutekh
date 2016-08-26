@@ -10,20 +10,20 @@ our $max_op_regs = (scalar @reg) - 2;
 sub out_begin {
     my ( $b ) = @_;
     return "    .section .rodata,\"a\"\n".
-	   "    .globl $main::bc_name\n".
+	   "    .globl ${main::bc_name}_bytecode\n".
            "    .balign 4\n".
-           "$main::bc_name:\n".
+           "${main::bc_name}_bytecode:\n".
 	   # struct bc_descriptor_s
 	   "    .long 1f\n".
-	   "    .long _$main::bc_name\n".
+	   "    .long _${main::bc_name}_bytecode\n".
 	   "    .short 0x0001\n".
 	   "    .short 0\n".
            "    .section .text,\"ax\",\@progbits\n".
            "    .set noat\n".
-           "    .globl _$main::bc_name\n".
-           "    .func _$main::bc_name\n".
-           "    .type _$main::bc_name, \%function\n".
-           "_$main::bc_name:\n".
+           "    .globl _${main::bc_name}_bytecode\n".
+           "    .func _${main::bc_name}_bytecode\n".
+           "    .type _${main::bc_name}_bytecode, \%function\n".
+           "_${main::bc_name}_bytecode:\n".
            "    addiu   \$sp, \$sp, -24\n".
            "    sw      \$31, 20(\$sp)\n".
            # vm regs array
@@ -43,7 +43,7 @@ sub out_eof {
            "    addiu   \$sp, \$sp, 24\n".
            "    jr      \$31\n".
            "    .endfunc\n".
-           "    .size _$main::bc_name, . - _$main::bc_name\n";
+           "    .size _${main::bc_name}_bytecode, . - _${main::bc_name}_bytecode\n";
 }
 
 sub out_load {
