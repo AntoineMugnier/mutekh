@@ -139,7 +139,7 @@ else ifneq ($(wildcard $(2)/$(1:.o=.bc)),) #####################################
 
 $(3)/$(1:.o=.deps): $(2)/$(1:.o=.bc) $(OBJ_DIR)/config.h $(OBJ_DIR)/.done_pre_header_list
 	$(call mkdir_command,$$@)
-	$(call compute_depfile_c,$$(@:.o=.deps),$$@,$$<,$(CPUCFLAGS) $(ARCHCFLAGS) $(INCS) \
+	$(call compute_depfile_c,$$(@:.o=.deps),$(3)/$(1),$$<,$(CPUCFLAGS) $(ARCHCFLAGS) $(INCS) \
 		$($(1)_CFLAGS) $(DIR_CFLAGS))
 
 include $(3)/$(1:.o=.deps)
