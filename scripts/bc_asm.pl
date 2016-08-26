@@ -1646,7 +1646,7 @@ sub check_regs
              # check instruction input registers
              foreach my $in ( @in ) {
                  warning($thisop, "instruction uses the undeclared register %$in\n")
-                 if ( $func && !( ( ( $func->{input} | $func->{preserve} |
+                 if ( $func && !( ( ( $func->{input} | $func->{output} | $func->{preserve} |
                                       $func->{clobber} | $global_regmask ) >> $in ) & 1 ) );
 
                  warning($thisop, "use of possibly undefined value in register %$in\n")
