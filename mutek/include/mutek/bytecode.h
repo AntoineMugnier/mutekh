@@ -298,11 +298,12 @@
      @item @tt{trace flags} @item Enable or disable debug trace. @see bc_set_trace
      @item @tt{ccall reg, reg} @item Call a C function. The address of the function is in the source
      register. The value of the destination register is passed to the
-     function and the return value is stored back in this same register. (bytecode will not be portable)
+     function and the return value is stored back in this same register.
+     Bytecode in compiled form will not be portable.
      @see bc_ccall_function_t
      @item @tt{laddr[16,32] reg, label} @item Set a register to the address of a bytecode label.
      @item @tt{gaddr reg, label} @item Set a register to the address of a
-     global symbol. (bytecode will not be portable)
+     global symbol. Bytecode in compiled form will not be portable.
      @item @tt{.data16 value} @item Dump a 16 bits word value in the program.
    @end table
 
