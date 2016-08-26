@@ -7,3 +7,12 @@ glob:*~
 doc/html
 doc/mutek-api.mkdoclib
 doc/config.h
+
+glob:*.swp
+glob:*.swo
+glob:*.orig
+glob:*.bin
+
+tags
+arch/cc26xx/include/arch/cc26xx/ignore/
+examples/test/
