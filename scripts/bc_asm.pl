@@ -361,6 +361,7 @@ sub parse_call8
 
     $thisop->{lr} = check_reg($thisop, 0);
     $thisop->{target} = check_label8($thisop, 1, 128);
+    $thisop->{target}->{called}++;
 
     if ( $thisop->{lr} == 0 ) {
 	error($thisop, "call8 can not modify register 0\n");
@@ -377,6 +378,7 @@ sub parse_call32
 
     $thisop->{lr} = check_reg($thisop, 0);
     $thisop->{target} = check_label($thisop, 1);
+    $thisop->{target}->{called}++;
 
     if ( $thisop->{lr} == 0 ) {
 	error($thisop, "call32 can not modify register 0\n");
@@ -1657,10 +1659,15 @@ sub check_regs
                          push @clobber, $i if ( ( $l->{clobber} >> $i ) & 1);
 
                          if ( $func ) {
-                             warning($thisop, "nested call to function `$l->{name}' returns a value in register %$i, not declared in function `$func->{name}'\n")
-                                 if ( ( ( ~($func->{clobber} | $func->{output}) & $l->{output} ) >> $i ) & 1 );
-                             warning($thisop, "nested call to function `$l->{name}' clobbers register %$i, not declared in function `$func->{name}'\n")
-                                 if ( ( ( ~$func->{clobber} & $l->{clobber} ) >> $i ) & 1 );
+                             if ( $func->{called} || $op->{op_call} ) {
+                                 warning($thisop, "nested call to function `$l->{name}' returns a value in register %$i, not declared in function `$func->{name}'\n")
+                                     if ( ( ( ~($func->{clobber} | $func->{output}) & $l->{output} ) >> $i ) & 1 );
+                                 warning($thisop, "nested call to function `$l->{name}' clobbers register %$i, not declared in function `$func->{name}'\n")
+                                     if ( ( ( ~($func->{clobber} | $func->{output}) & $l->{clobber} ) >> $i ) & 1 );
+                             } else {
+                                 warning($thisop, "nested call to function `$l->{name}' returns a value in register %$i, not an output of function `$func->{name}'\n")
+                                     if ( ( ( ~$func->{output} & $l->{output} ) >> $i ) & 1 );
+                             }
                          }
                      }
 
