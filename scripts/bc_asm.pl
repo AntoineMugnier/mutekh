@@ -453,7 +453,24 @@ sub parse_pack
     }
     $thisop->{count} = $count;
     $thisop->{packout_reg} = $r;
-    $thisop->{packout_bytes} = $count * $packbytes{$thisop->{name}};
+}
+
+sub parse_pack8
+{
+    my $thisop = shift;
+    parse_pack($thisop);
+    $thisop->{packout_bytes} = $thisop->{count};
+}
+
+sub parse_pack1632
+{
+    my $thisop = shift;
+    parse_pack($thisop);
+    my $b = $packbytes{$thisop->{name}};
+    $thisop->{packout_bytes} = check_num($thisop, 2, 1, 8 * $b);
+    if ($thisop->{count} - 1 != int(($thisop->{packout_bytes} - 1) / $b)) {
+        error($thisop, "byte count does not match register count\n");
+    }
 }
 
 sub parse_unpack
@@ -470,7 +487,24 @@ sub parse_unpack
     }
     $thisop->{count} = $count;
     $thisop->{packin_reg} = $r;
-    $thisop->{packin_bytes} = $count * $packbytes{$thisop->{name}};
+}
+
+sub parse_unpack8
+{
+    my $thisop = shift;
+    parse_unpack($thisop);
+    $thisop->{packin_bytes} = $thisop->{count};
+}
+
+sub parse_unpack1632
+{
+    my $thisop = shift;
+    parse_unpack($thisop);
+    my $b = $packbytes{$thisop->{name}};
+    $thisop->{packin_bytes} = check_num($thisop, 2, 1, 8 * $b);
+    if ($thisop->{count} - 1 != int(($thisop->{packin_bytes} - 1) / $b)) {
+        error($thisop, "byte count does not match register count\n");
+    }
 }
 
 sub parse_ld
@@ -821,16 +855,26 @@ our %asm = (
         parse => \&parse_loop, backend => ('loop'),
         flushregs => 1, op_jmp => 1
     },
-    _multi_keys( 'pack8' => 'pack16le' => 'pack16be' =>
-                 'pack32le' => 'pack32be' => {
+    'pack8' => {
         words => 1, code => 0x3800, argscnt => 2,
-        parse => \&parse_pack, backend => ('pack'),
+        parse => \&parse_pack8, backend => ('pack'),
+        nocond => 1
+    },
+    _multi_keys( 'pack16le' => 'pack16be' =>
+                 'pack32le' => 'pack32be' => {
+        words => 1, code => 0x3800, argscnt => 3,
+        parse => \&parse_pack1632, backend => ('pack'),
         nocond => 1
     }),
-    _multi_keys( 'unpack8' => 'unpack16le' => 'unpack16be' =>
-                 'unpack32le' => 'unpack32be' => {
+    'unpack8' => {
         words => 1, code => 0x3800, argscnt => 2,
-        parse => \&parse_unpack, backend => ('unpack'),
+        parse => \&parse_unpack8, backend => ('unpack'),
+        nocond => 1
+    },
+    _multi_keys( 'unpack16le' => 'unpack16be' =>
+                 'unpack32le' => 'unpack32be' => {
+        words => 1, code => 0x3800, argscnt => 3,
+        parse => \&parse_unpack1632, backend => ('unpack'),
         nocond => 1
     }),
     _multi_keys( 'swap16le' => 'swap16be' => 'swap16' =>

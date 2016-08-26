@@ -402,7 +402,7 @@ next12:
         abort
 
 	loadstr %2, 8
-	unpack16be %2, 4
+	unpack16be %2, 4, 8
         cst8	%1, 1
         neq     %1, %2
         abort
@@ -414,7 +414,7 @@ next12:
         abort
 
 	loadstr %2, 8
-	unpack16le %2, 4
+	unpack16le %2, 4, 8
         cst16	%1, 0x100, 0
         neq     %1, %2
         abort
@@ -426,7 +426,7 @@ next12:
         abort
 
 	loadstr %2, 16
-	unpack16be %2, 8
+	unpack16be %2, 8, 16
         cst8	%1, 1
         neq     %1, %2
         abort
@@ -438,7 +438,7 @@ next12:
         abort
 
 	loadstr %2, 16
-	unpack16le %2, 8
+	unpack16le %2, 8, 16
         cst16	%1, 0x100, 0
         neq     %1, %2
         abort
@@ -450,7 +450,7 @@ next12:
         abort
 
 	loadstr %2, 8
-	unpack32be %2, 2
+	unpack32be %2, 2, 8
         cst32	%1, 0x00010203, 0
         neq     %1, %2
         abort
@@ -459,7 +459,7 @@ next12:
         abort
 
 	loadstr %2, 8
-	unpack32le %2, 2
+	unpack32le %2, 2, 8
         cst32	%1, 0x03020100, 0
         neq     %1, %2
         abort
@@ -468,7 +468,7 @@ next12:
         abort
 
 	loadstr %2, 32
-	unpack32be %2, 8
+	unpack32be %2, 8, 32
         cst32	%1, 0x00010203, 0
         neq     %1, %2
         abort
@@ -477,7 +477,7 @@ next12:
         abort
 
 	loadstr %2, 32
-	unpack32le %2, 8
+	unpack32le %2, 8, 32
         cst32	%1, 0x03020100, 0
         neq     %1, %2
         abort
@@ -497,14 +497,14 @@ next12:
 	cst16   %2, 0x0203, 0
 	cst16   %3, 0x0405, 0
 	cst16   %4, 0x0607, 0
-	pack16be %1, 4
+	pack16be %1, 4, 8
         checkstr %1, 8
 
 	cst16   %1, 0x0100, 0
 	cst16   %2, 0x0302, 0
 	cst16   %3, 0x0504, 0
 	cst16   %4, 0x0706, 0
-	pack16le %1, 4
+	pack16le %1, 4, 8
         checkstr %1, 8
 
 	cst16   %1, 0x0001, 0
@@ -515,7 +515,7 @@ next12:
 	cst16   %6, 0x0a0b, 0
 	cst16   %7, 0x0c0d, 0
 	cst16   %8, 0x0e0f, 0
-	pack16be %1, 8
+	pack16be %1, 8, 16
         checkstr %1, 16
 
 	cst16   %1, 0x0100, 0
@@ -526,21 +526,21 @@ next12:
 	cst16   %6, 0x0b0a, 0
 	cst16   %7, 0x0d0c, 0
 	cst16   %8, 0x0f0e, 0
-	pack16le %1, 8
+	pack16le %1, 8, 16
         checkstr %1, 16
 
 	cst32   %1, 0x00010203, 0
 	cst32   %2, 0x04050607, 0
 	cst32   %3, 0x08090a0b, 0
 	cst32   %4, 0x0c0d0e0f, 0
-	pack32be %1, 4
+	pack32be %1, 4, 16
         checkstr %1, 16
 
 	cst32   %1, 0x03020100, 0
 	cst32   %2, 0x07060504, 0
 	cst32   %3, 0x0b0a0908, 0
 	cst32   %4, 0x0f0e0d0c, 0
-	pack32le %1, 4
+	pack32le %1, 4, 16
         checkstr %1, 16
 
 	cst32   %1, 0x00010203, 0
@@ -551,7 +551,7 @@ next12:
 	cst32   %6, 0x14151617, 0
 	cst32   %7, 0x18191a1b, 0
 	cst32   %8, 0x1c1d1e1f, 0
-	pack32be %1, 8
+	pack32be %1, 8, 32
         checkstr %1, 32
 
 	cst32   %1, 0x03020100, 0
@@ -562,7 +562,7 @@ next12:
 	cst32   %6, 0x17161514, 0
 	cst32   %7, 0x1b1a1918, 0
 	cst32   %8, 0x1f1e1d1c, 0
-	pack32le %1, 8
+	pack32le %1, 8, 32
         checkstr %1, 32
 
     // SWAP

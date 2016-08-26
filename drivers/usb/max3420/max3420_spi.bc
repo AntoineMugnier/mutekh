@@ -38,7 +38,7 @@
 
 #define MAX3420_WRITE(REG, A, B)                \
 	cst16			%REG,            (((B) << 8) | (A)),  0 ;\
-	pack16le		%REG,    	 1                      ;\
+	pack16le		%REG,    	 1, 2                      ;\
         spi_wr                  %REG,            2,	CS_PULSE
 
 
@@ -109,7 +109,7 @@ gpx_poll_done:
         MAX3420_WRITE(R_TMP2, MAX3420_PINCTRL | 2, 0x18)
         /* Read device id */
         cst8                    %R_TMP0,         MAX3420_REVISION
-	pack16le		%R_TMP0,         1
+	pack16le		%R_TMP0,         1, 2
         spi_swp                 %R_TMP0,         %R_TMP0,         2,	CS_PULSE
 	unpack8			%R_TMP0,         2
         cst8                    %R_TMP0,         MAX3420_CURRENT_REVISION
@@ -118,7 +118,7 @@ gpx_poll_done:
 poll_osc:
         spi_yield_delay         %R_TMP1
         cst8                    %R_TMP2,         MAX3420_USBIRQ
-	pack16le		%R_TMP2,         1
+	pack16le		%R_TMP2,         1, 2
         spi_swp                 %R_TMP2,         %R_TMP2,         2,	CS_PULSE
 	unpack8			%R_TMP2,         2
         tst32c                  %R_TMP3,         0
@@ -144,14 +144,14 @@ max3420_entry_irq:
 max3420_process_irq:
         /* Read IRQ and IEN register */
         cst8                    %R_TMP0,         MAX3420_USBIRQ
-	pack32le		%R_TMP0,         1
+	pack32le		%R_TMP0,         1, 4
         spi_swp                 %R_TMP0,         %R_TMP0,         3,	CS_PULSE
 	unpack8			%R_TMP0,         3
         and32                   %R_TMP1,         %R_TMP2
         neq0                    %R_TMP1
           jmp8                  max3420_process_usbirq
         cst8                    %R_TMP0,         MAX3420_EPIRQ
-	pack32le		%R_TMP0,         1
+	pack32le		%R_TMP0,         1, 4
         spi_swp                 %R_TMP0,         %R_TMP0,         3,	CS_PULSE
 	unpack8			%R_TMP0,         3
         and32                   %R_TMP1,         %R_TMP2
@@ -347,7 +347,7 @@ max3420_entry_setup:
         cst8                    %R_ARG2,         MAX3420_IRQ_SETUP
         /* Read EPIRQ register */
         cst8                    %R_TMP0,         MAX3420_EPIRQ
-	pack16le		%R_TMP0,         1
+	pack16le		%R_TMP0,         1, 2
         spi_swp                 %R_TMP0,         %R_TMP0,         2,	CS_PULSE
 	unpack8			%R_TMP0,         2
         tst32s                  %R_TMP1,         bitpos(MAX3420_IRQ_SETUP)
@@ -425,7 +425,7 @@ max3420_try_data_out:
         /*R_ARG2: Irq mask */
         call32                  %R_LINK,         max3420_clean_pending
         cst8                    %R_TMP0,         MAX3420_EPIRQ
-	pack16le		%R_TMP0,         1
+	pack16le		%R_TMP0,         1, 2
         spi_swp                 %R_TMP0,         %R_TMP0,         2,	CS_PULSE
 	unpack8			%R_TMP0,         2
         and32                   %R_TMP1,         %R_ARG2
@@ -463,7 +463,7 @@ max3420_read_fifo:
         /* R_ARG0: FIFO address */
         /* R_ARG1: BC register address */
         mov                     %R_TMP0,         %R_ARG1        
-	pack16le		%R_TMP0,	 1
+	pack16le		%R_TMP0,	 1, 2
         spi_swp                 %R_TMP0,         %R_TMP0,         2,	CS_PULSE
 	unpack8			%R_TMP0,         2
         lteq                    %R_TMP1,         %R_SIZE
@@ -498,7 +498,7 @@ max3420_update_transfer:
 max3420_enable_irq:
         /*R_ARG2: interrupt to enable */
         cst8                    %R_TMP0,         MAX3420_EPIEN
-	pack16le		%R_TMP0,         1
+	pack16le		%R_TMP0,         1, 2
         spi_swp                 %R_TMP0,         %R_TMP0,     2,	CS_PULSE
 	unpack8			%R_TMP0,         2
         cst8                    %R_TMP0,         MAX3420_EPIEN | 2
@@ -510,7 +510,7 @@ max3420_enable_irq:
 max3420_disable_irq:
         /*R_ARG2: interrupt to disable */
         cst8                    %R_TMP0,         MAX3420_EPIEN
-	pack16le		%R_TMP0,         1
+	pack16le		%R_TMP0,         1, 2
         spi_swp                 %R_TMP0,         %R_TMP0,     2,	CS_PULSE
 	unpack8			%R_TMP0,         2
         cst8                    %R_TMP0,         MAX3420_EPIEN | 2

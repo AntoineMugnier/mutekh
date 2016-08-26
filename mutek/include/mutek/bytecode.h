@@ -307,19 +307,43 @@
    @end table
 
    Some instructions are provided to handle packing of some register values
-   to an array of bytes. These are used with custom operations which needs to
-   deal with byte buffers. When in packed form, register value are meaning less
-   for the bytecode program but may be accessed from the C code using the
-   @ref bc_get_bytepack function. These instructions allow writing portable
-   bytecode programs:
+   as an array of bytes. The storage space of vm registers is used to store the array,
+   clobbering the original register values. When in packed form, register values are
+   meaningless for other generic bytecode instructions.
+   Packed values can be used by custom operations which needs to
+   deal with byte buffers. They may be accessed from the C code using the
+   @ref bc_get_bytepack function. The following array packing and unpacking
+   instructions are available:
    @table 2
      @item Instruction @item Description
-     @item @tt{pack* reg_1st, reg_count} @item Converts from one or multiple vm register values to
-       an array of bytes with various encoding. Each register is stored in the buffer encoded as a 8 bits,
-       16 bits or 32 bits value with the specified endianess. The storage space of vm registers is
-       used to store the array, clobbering the original register values.
-     @item @tt{unpack* reg_1st, reg_count} @item Converts from an array of bytes with the specified
-       encoding to one or multiple vm register values. This clobbers the content of the array.
+     @item @tt{pack8 reg_1st, reg_count} @item Converts multiple vm register values to
+       an array of bytes. The value of a single register is stored as a single byte in the array.
+     @item @tt{pack16le reg_1st, reg_count, byte_count} @item Converts multiple vm register
+       values to an array of bytes. The value of a single register is stored as a pair of bytes
+       in the array, with the less significant byte stored first.
+     @item @tt{pack16be reg_1st, reg_count, byte_count} @item Converts multiple vm register
+       values to an array of bytes. The value of a single register is stored as a pair of bytes
+       in the array, with the most significant byte stored first.
+     @item @tt{pack32le reg_1st, reg_count, byte_count} @item Converts multiple vm register
+       values to an array of bytes. The value of a single register is stored as 4 bytes
+       in the array, with the less significant byte stored first.
+     @item @tt{pack32be reg_1st, reg_count, byte_count} @item Converts multiple vm register
+       values to an array of bytes. The value of a single register is stored as 4 bytes
+       in the array, with the most significant byte stored first.
+     @item @tt{unpack8 reg_1st, reg_count} @item Converts an array of bytes to multiple vm
+       register values. The value of a single register is loaded from a single byte of the array.
+     @item @tt{unpack16le reg_1st, reg_count, byte_count} @item Converts multiple vm register
+       values to an array of bytes. The value of a single register is loaded from a pair of bytes
+       of the array, with the less significant byte stored first.
+     @item @tt{unpack16be reg_1st, reg_count, byte_count} @item Converts multiple vm register
+       values to an array of bytes. The value of a single register is loaded from a pair of bytes
+       of the array, with the most significant byte stored first.
+     @item @tt{unpack32le reg_1st, reg_count, byte_count} @item Converts multiple vm register
+       values to an array of bytes. The value of a single register is loaded from 4 bytes
+       of the array, with the less significant byte stored first.
+     @item @tt{unpack32be reg_1st, reg_count, byte_count} @item Converts multiple vm register
+       values to an array of bytes. The value of a single register is loaded from 4 bytes
+       of the array, with the most significant byte stored first.
    @end table
 
    @end section
@@ -342,7 +366,7 @@
     @item loop                @item r, lbl        @item @tt{0011 0lll llll rrrr} @item  0
 
     @item {un,}pack8          @item r, c          @item @tt{0011 1ccc oooo rrrr} @item  4
-    @item {un,}pack{16,32}{le,be} @item r, c      @item @tt{0011 1ccc oooo rrrr} @item  4
+    @item {un,}pack{16,32}{le,be} @item r, c, b   @item @tt{0011 1ccc oooo rrrr} @item  4
     @item swap{16,32}{le,be,} @item r             @item @tt{0011 1000 oooo rrrr} @item  4
 
     @item eq                  @item r, r          @item @tt{0100 0000 rrrr rrrr} @item  1

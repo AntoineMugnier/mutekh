@@ -18,14 +18,14 @@ adxl362_spi_entry_reset:
 	.export adxl362_spi_entry_reset
 
         cst32                   %R_TMP0,        0x521f0a, 0
-        pack32le                %R_TMP0,        1
+        pack32le                %R_TMP0,        1, 4
         spi_wr                  %R_TMP0,        3,     CS_PULSE
 #warning compute a delay in driver init
         cst16                   %R_TMP0,        1000, 0
         spi_yield_delay         %R_TMP0
 
         cst16                   %R_TMP0,        0x000b, 0
-        pack16le                %R_TMP0,        1
+        pack16le                %R_TMP0,        1, 2
         spi_swp                 %R_TMP0,        %R_TMP0,  5, CS_PULSE
         unpack8                 %R_TMP0,        5
 
@@ -40,11 +40,11 @@ adxl362_spi_entry_reset:
           abort
 
         cst32                   %R_TMP0,        0x0f270a, 0
-        pack32le                %R_TMP0,        1
+        pack32le                %R_TMP0,        1, 4
         spi_wr                  %R_TMP0,        3,     CS_PULSE
 
         cst32                   %R_TMP0,        0x0a2d0a, 0
-        pack32le                %R_TMP0,        1
+        pack32le                %R_TMP0,        1, 4
         spi_wr                  %R_TMP0,        3,     CS_PULSE
 
         call8                   %R_LINK,        clear_irq
