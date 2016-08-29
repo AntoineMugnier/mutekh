@@ -116,7 +116,8 @@ sub out_jmp8 {
     if ( my $d = $thisop->{disp} ) {
         return fmt0( $thisop, $d, 0 );
     } else {
-        return fmt0( $thisop, 0, 4 );
+        # nop
+        return word(0x0004);
     }
 }
 
