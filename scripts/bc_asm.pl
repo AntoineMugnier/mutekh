@@ -1774,6 +1774,11 @@ sub check_regs
              if ( $op->{op_tail} ) {
                  last;
              } else {
+                 if ( $op->{op_call} ) {
+                     # the link register set by the call is only relevant to the called function
+                     $regs->[$thisop->{lr}] = REGVAL_UNDEF;
+                 }
+
                  $pc += $op->{words};
                  $last = $thisop;
              }
