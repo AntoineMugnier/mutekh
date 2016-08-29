@@ -162,7 +162,7 @@ sub out_call8 {
     my ($thisop) = @_;
     return "    adr r0, 2f\n".
            "    adds r0, #1\n".
-           "    str r0, [r4, #".($thisop->{lr} * 4)."]\n".
+           "    str r0, [r4, #".($thisop->{out}->[0] * 4)."]\n".
 	   "    b $thisop->{args}->[1]\n".
            "    .balign 4\n".
            "2:\n"
@@ -173,7 +173,7 @@ sub out_call32 {
     my ($thisop) = @_;
     return "    adr r0, 2f\n".
            "    adds r0, #1\n".
-           "    str r0, [r4, #".($thisop->{lr} * 4)."]\n".
+           "    str r0, [r4, #".($thisop->{out}->[0] * 4)."]\n".
            "    ldr r0, = $thisop->{args}->[1] + 1\n".
 	   "    bx r0\n".
            "    .balign 4\n".

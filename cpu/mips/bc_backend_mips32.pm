@@ -138,7 +138,7 @@ sub out_call8 {
     my ($thisop) = @_;
     return "    .set noreorder\n".
            "    bal $thisop->{args}->[1]\n".
-           "    sw \$31, ".($thisop->{lr} * 4)."(\$17)\n".
+           "    sw \$31, ".($thisop->{out}->[0] * 4)."(\$17)\n".
            "    .set reorder\n"
            ;
 }
@@ -147,7 +147,7 @@ sub out_call32 {
     my ($thisop) = @_;
     return "    .set noreorder\n".
            "    bal $thisop->{args}->[1]\n".
-           "    sw \$31, ".($thisop->{lr} * 4)."(\$17)\n".
+           "    sw \$31, ".($thisop->{out}->[0] * 4)."(\$17)\n".
            "    .set reorder\n"
 }
 

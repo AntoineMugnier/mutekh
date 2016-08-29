@@ -123,7 +123,7 @@ sub out_jmp8 {
 
 sub out_call8 {
     my ($thisop) = @_;
-    return fmt0( $thisop, $thisop->{disp}, $thisop->{lr} );
+    return fmt0( $thisop, $thisop->{disp}, $thisop->{out}->[0] );
 }
 
 sub out_call32 {
@@ -133,7 +133,7 @@ sub out_call32 {
     main::warning($thisop, "`call8' could be used instead of `call32'.\n")
         if ($thisop->{disp} <= 127 && $thisop->{disp} > -128);
 
-    return fmt3( $thisop, 0, 0, $thisop->{lr} ).
+    return fmt3( $thisop, 0, 0, $thisop->{out}->[0] ).
            word( $a >> 16 ).
            word( $a );
 }

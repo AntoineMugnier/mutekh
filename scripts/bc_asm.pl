@@ -359,11 +359,14 @@ sub parse_call8
 {
     my $thisop = shift;
 
-    $thisop->{lr} = check_reg($thisop, 0);
+    my $link = check_reg($thisop, 0);
+    $thisop->{reloadout} |= 1 << $link;
+    push @{$thisop->{out}}, $link;
+
     $thisop->{target} = check_label8($thisop, 1, 128);
     $thisop->{target}->{called}++;
 
-    if ( $thisop->{lr} == 0 ) {
+    if ( $link == 0 ) {
 	error($thisop, "call8 can not modify register 0\n");
     }
 
@@ -376,11 +379,14 @@ sub parse_call32
 {
     my $thisop = shift;
 
-    $thisop->{lr} = check_reg($thisop, 0);
+    my $link = check_reg($thisop, 0);
+    $thisop->{reloadout} |= 1 << $link;
+    push @{$thisop->{out}}, $link;
+
     $thisop->{target} = check_label($thisop, 1);
     $thisop->{target}->{called}++;
 
-    if ( $thisop->{lr} == 0 ) {
+    if ( $link == 0 ) {
 	error($thisop, "call32 can not modify register 0\n");
     }
 }
@@ -1644,10 +1650,57 @@ sub check_regs
              my $l = $thisop->{target};
              my $tailcall = $func && $op->{op_jmp} && $l->{func};
 
+             # check instruction input registers
+             foreach my $in ( @in ) {
+                 warning($thisop, "instruction uses the undeclared register %$in\n")
+                 if ( $func && !( ( ( $func->{input} | $func->{output} | $func->{preserve} |
+                                      $func->{clobber} | $global_regmask ) >> $in ) & 1 ) );
+
+                 warning($thisop, "use of possibly undefined value in register %$in\n")
+                     if ( $regs->[$in] & REGVAL_UNDEF );
+
+                 warning($thisop, "possible presence of packed data in register %$in, value is expected\n")
+                     if ( $regs->[$in] & REGVAL_PACK );
+
+                 $rd_mask |= 1 << $in;
+             }
+
+             for (my $i = 0; $i < $thisop->{packin_bytes}; $i += 4) {
+                 my $r = ($thisop->{packin_reg} * 4 + $i) / 4;
+                 my $d = $thisop->{packin_bytes} - $i;
+                 $d = 4 if $d > 4;
+                 if ( $regs->[$r] & REGVAL_VALUE ) {
+                     warning($thisop, "possible presence of value in register %$r, packed data is expected\n")
+                 } elsif ( ( $regs->[$r] & REGVAL_PACK ) < ( REGVAL_PACK >> (4 - $d) ) ) {
+                     warning($thisop, "packed data size mismatch in register %$r\n");
+                 }
+             }
+
+             # check instruction output registers
+             foreach my $out ( @out ) {
+                 $regs->[$out] = REGVAL_VALUE;
+                 warning($thisop, "instruction writes to the undeclared register %$out\n")
+                     if ( $func && !( ( ( $func->{output} | $func->{preserve} |
+                                          $func->{clobber} | $global_regmask ) >> $out ) & 1 ) );
+                 warning($thisop, "instruction writes to the constant global register %$out\n")
+                     if ( ( ( $global_const_regmask ) >> $out ) & 1 );
+                 $wr_mask |= 1 << $out;
+             }
+
+             for (my $i = 0; $i < $thisop->{packout_bytes}; $i += 4) {
+                 my $r = ($thisop->{packout_reg} * 4 + $i) / 4;
+                 my $d = $thisop->{packout_bytes} - $i;
+                 $d = 4 if $d > 4;
+                 $regs->[$r] = REGVAL_PACK >> (4 - $d);
+
+                 warning($thisop, "instruction writes to the undeclared register %$r\n")
+                     if ( $func && !( ( ( $func->{output} | $func->{preserve} |
+                                          $func->{clobber} | $global_regmask ) >> $r ) & 1 ) );
+                 $wr_mask |= 1 << $r;
+             }
+
              # check function call
              if ( $op->{op_call} || $tailcall ) {
-
-                 $regs->[$thisop->{lr}] = REGVAL_VALUE;
 
                  # check how registers are affected by the function call
                  if ( $l->{func} ) {
@@ -1699,55 +1752,6 @@ sub check_regs
                  $rd_mask |= $func->{output};
              }
 
-             # check instruction input registers
-             foreach my $in ( @in ) {
-                 warning($thisop, "instruction uses the undeclared register %$in\n")
-                 if ( $func && !( ( ( $func->{input} | $func->{output} | $func->{preserve} |
-                                      $func->{clobber} | $global_regmask ) >> $in ) & 1 ) );
-
-                 warning($thisop, "use of possibly undefined value in register %$in\n")
-                     if ( $regs->[$in] & REGVAL_UNDEF );
-
-                 warning($thisop, "possible presence of packed data in register %$in, value is expected\n")
-                     if ( $regs->[$in] & REGVAL_PACK );
-
-                 $rd_mask |= 1 << $in;
-             }
-
-             for (my $i = 0; $i < $thisop->{packin_bytes}; $i += 4) {
-                 my $r = ($thisop->{packin_reg} * 4 + $i) / 4;
-                 my $d = $thisop->{packin_bytes} - $i;
-                 $d = 4 if $d > 4;
-                 if ( $regs->[$r] & REGVAL_VALUE ) {
-                     warning($thisop, "possible presence of value in register %$r, packed data is expected\n")
-                 } elsif ( ( $regs->[$r] & REGVAL_PACK ) < ( REGVAL_PACK >> (4 - $d) ) ) {
-                     warning($thisop, "packed data size mismatch in register %$r\n");
-                 }
-             }
-
-             # check instruction output registers
-             foreach my $out ( @out ) {
-                 $regs->[$out] = REGVAL_VALUE;
-                 warning($thisop, "instruction writes to the undeclared register %$out\n")
-                     if ( $func && !( ( ( $func->{output} | $func->{preserve} |
-                                          $func->{clobber} | $global_regmask ) >> $out ) & 1 ) );
-                 warning($thisop, "instruction writes to the constant global register %$out\n")
-                     if ( ( ( $global_const_regmask ) >> $out ) & 1 );
-                 $wr_mask |= 1 << $out;
-             }
-
-             for (my $i = 0; $i < $thisop->{packout_bytes}; $i += 4) {
-                 my $r = ($thisop->{packout_reg} * 4 + $i) / 4;
-                 my $d = $thisop->{packout_bytes} - $i;
-                 $d = 4 if $d > 4;
-                 $regs->[$r] = REGVAL_PACK >> (4 - $d);
-
-                 warning($thisop, "instruction writes to the undeclared register %$r\n")
-                     if ( $func && !( ( ( $func->{output} | $func->{preserve} |
-                                          $func->{clobber} | $global_regmask ) >> $r ) & 1 ) );
-                 $wr_mask |= 1 << $r;
-             }
-
              foreach my $clob ( @clobber ) {
                  $regs->[$clob] = REGVAL_UNDEF;
                  $wr_mask |= 1 << $clob;
@@ -1773,15 +1777,18 @@ sub check_regs
              # explore next instruction
              if ( $op->{op_tail} ) {
                  last;
-             } else {
-                 if ( $op->{op_call} ) {
-                     # the link register set by the call is only relevant to the called function
-                     $regs->[$thisop->{lr}] = REGVAL_UNDEF;
-                 }
-
-                 $pc += $op->{words};
-                 $last = $thisop;
              }
+
+             if ( $op->{op_call} ) {
+                 # the link register set by the call is only relevant to the called function
+                 my $lr = $thisop->{out}->[0];
+                 if ( !$l->{func} || !(( $l->{output} >> $lr ) & 1) ) {
+                     $regs->[$lr] = REGVAL_UNDEF;
+                 }
+             }
+
+             $pc += $op->{words};
+             $last = $thisop;
          }
 
          return ( $rd_mask, $wr_mask );
