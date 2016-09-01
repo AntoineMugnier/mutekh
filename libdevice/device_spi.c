@@ -384,7 +384,7 @@ device_spi_bytecode_exec(struct dev_spi_ctrl_context_s *q,
                       rq->sleep_before = 0;
                       break;
 
-                    case 0x0c00: /* timestamp */
+                    case 0x00c0: /* timestamp */
                       *(dev_timer_value_t*)bc_get_reg(&rq->vm, op & 0xf) = t;
                       break;
                     }
