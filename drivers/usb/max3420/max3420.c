@@ -592,22 +592,23 @@ static DEV_INIT(max3420_usbdev_init)
   struct device_gpio_s *gpio;
   struct device_timer_s *timer;
 
-  if (dev_drv_spi_bytecode_init(dev, srq, &max3420_bytecode, &pv->spi, &gpio, &timer))
-    goto err_mem;
-
-  /* Base 500 us time */
-  dev_timer_init_sec(timer, &pv->bt, 0, 500, 1000000);
-
   static const struct dev_spi_ctrl_config_s spi_config = {
     .ck_mode = DEV_SPI_CK_MODE_0,
     .bit_order = DEV_SPI_MSB_FIRST,
     .miso_pol = DEV_SPI_ACTIVE_HIGH,
     .mosi_pol = DEV_SPI_ACTIVE_HIGH,
+    .cs_pol   = DEV_SPI_ACTIVE_LOW,
     .bit_rate = CONFIG_DRIVER_USBDEV_MAX3420_SPI_BITRATE,
     .word_width = 8,
   };
 
-  srq->base.config = (struct dev_spi_ctrl_config_s *)&spi_config;
+  if (dev_drv_spi_bytecode_init(dev, srq, &max3420_bytecode,
+                                &spi_config, &pv->spi, &gpio, &timer))
+    goto err_mem;
+
+  /* Base 500 us time */
+  dev_timer_init_sec(timer, &pv->bt, 0, 500, 1000000);
+
   srq->base.base.pvdata = dev;
 
   /* init GPIO stuff */

@@ -998,8 +998,19 @@ static DEV_INIT(sx127x_init)
   struct dev_spi_ctrl_bytecode_rq_s * srq  = &pv->spi_rq;
   struct device_gpio_s *              gpio = NULL;
 
-  if (dev_drv_spi_bytecode_init(dev, srq, &sx127x_bytecode, &pv->spi, &gpio,
-                                &pv->timer))
+  static struct dev_spi_ctrl_config_s const spi_ctrl_cfg =
+    {
+      .bit_rate   = CONFIG_DRIVER_RFPACKET_SX127X_SPI_BITRATE,
+      .word_width = 8,
+      .bit_order  = DEV_SPI_MSB_FIRST,
+      .miso_pol   = DEV_SPI_ACTIVE_HIGH,
+      .mosi_pol   = DEV_SPI_ACTIVE_HIGH,
+      .cs_pol     = DEV_SPI_ACTIVE_LOW,
+      .ck_mode    = DEV_SPI_CK_MODE_0,
+    };
+
+  if (dev_drv_spi_bytecode_init(dev, srq, &sx127x_bytecode, &spi_ctrl_cfg,
+                                &pv->spi, &gpio, &pv->timer))
     goto err_mem;
 
 #if defined(CONFIG_DEVICE_SPI_BYTECODE_TIMER)
@@ -1011,17 +1022,6 @@ static DEV_INIT(sx127x_init)
     goto err_srq;
 #endif
 
-  static struct dev_spi_ctrl_config_s const spi_ctrl_cfg =
-    {
-      .bit_rate   = CONFIG_DRIVER_RFPACKET_SX127X_SPI_BITRATE,
-      .word_width = 8,
-      .bit_order  = DEV_SPI_MSB_FIRST,
-      .miso_pol   = DEV_SPI_ACTIVE_HIGH,
-      .mosi_pol   = DEV_SPI_ACTIVE_HIGH,
-      .ck_mode    = DEV_SPI_CK_MODE_0,
-    };
-
-  srq->base.config          = (struct dev_spi_ctrl_config_s *)&spi_ctrl_cfg;
   srq->base.cs_cfg.polarity = DEV_SPI_ACTIVE_LOW;
 
   srq->base.base.pvdata = dev;

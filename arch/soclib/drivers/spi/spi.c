@@ -277,6 +277,27 @@ static DEV_SPI_CTRL_TRANSFER(soclib_spi_transfer)
     soclib_spi_transfer_end(pv, tr);
 }
 
+static DEV_SPI_CTRL_CSCFG(soclib_spi_cscfg)
+{
+  struct device_s *dev = accessor->dev;
+  struct soclib_spi_context_s *pv = dev->drv_pv;
+
+  uint_fast8_t cs_id = cs_cfg->id;
+  if (cs_id >= pv->gpout_cnt)
+    return -EINVAL;
+
+  LOCK_SPIN_IRQ(&dev->lock);
+
+  uint32_t csmask = 1 << cs_id;
+  uint32_t csval = (cs_cfg->polarity ^ 1) << cs_id;
+  uint32_t gpout = (endian_le32(cpu_mem_read_32(pv->addr + SOCLIB_SPI_GPOUT_ADDR)) & ~csmask) | csval;
+  cpu_mem_write_32(pv->addr + SOCLIB_SPI_GPOUT_ADDR, endian_le32(gpout));
+
+  LOCK_RELEASE_IRQ(&dev->lock);
+
+  return 0;
+}
+
 /****************************************************** GPIO */
 
 #ifdef CONFIG_DRIVER_SOCLIB_SPI_GPIO

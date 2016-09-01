@@ -414,16 +414,24 @@ static error_t spi_config(
   struct device_s *dev,
   struct mcp23s17_private_s *pv)
 {
-  if (dev_drv_spi_bytecode_init(dev, &pv->spi_req, &pv->spi, NULL, NULL))
+  static const struct dev_spi_ctrl_config_s spi_config = {
+    .ck_mode = DEV_SPI_CK_MODE_0,
+    .bit_order = DEV_SPI_MSB_FIRST,
+    .miso_pol = DEV_SPI_ACTIVE_HIGH,
+    .mosi_pol = DEV_SPI_ACTIVE_HIGH,
+    .cs_pol   = DEV_SPI_ACTIVE_LOW,
+    .bit_rate = 1000000,
+    .word_width = 8,
+  };
+
+  if (dev_drv_spi_bytecode_init(dev, &pv->spi_req, &mcp23s17_bytecode,
+                                &spi_config, &pv->spi, NULL, NULL))
     return -ENOTSUP;
 
-  pv->spi_req.base.config.bit_rate = 1000000;
-  pv->spi_req.base.config.word_width = 8;
-  pv->spi_req.base.config.bit_order = DEV_SPI_MSB_FIRST;
-  pv->spi_req.base.config.ck_mode = DEV_SPI_CK_MODE_0;
   pv->spi_req.base.base.pvdata = dev;
 
-  bc_init(&pv->spi_req.vm, &mcp23s17_bytecode, 1, pv);
+  bc_set_reg(&pv->spi_req.vm, 0, 1);
+  bc_set_reg(&pv->spi_req.vm, 1, pv);
 
   kroutine_init_immediate(&pv->spi_req.base.base.kr, &mcp23s17_spi_done);
 

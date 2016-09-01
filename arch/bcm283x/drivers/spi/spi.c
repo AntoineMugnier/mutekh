@@ -266,6 +266,7 @@ static DEV_SPI_CTRL_TRANSFER(bcm283x_spi_transfer)
     kroutine_exec(&tr->kr);
 }
 
+#define bcm283x_spi_cscfg (dev_spi_ctrl_cscfg_t*)dev_driver_notsup_fcn
 #define bcm283x_spi_use dev_use_generic
 
 static DEV_INIT(bcm283x_spi_init)

@@ -458,6 +458,7 @@ struct dev_spi_ctrl_config_s
   enum dev_spi_bit_order_e BITFIELD(bit_order,1);
   enum dev_spi_polarity_e  BITFIELD(miso_pol,1);
   enum dev_spi_polarity_e  BITFIELD(mosi_pol,1);
+  enum dev_spi_polarity_e  BITFIELD(cs_pol,1);
 
   /** This field gives the bitrate in bits per second. */
   uint32_t                 bit_rate;
@@ -473,6 +474,8 @@ struct dev_spi_ctrl_config_s
    @This changes the configuration of the controller. If the
    controller doesn't support the requested configuration, this
    function returns @tt -ENOTSUP.
+
+   This function ignores the @tt cs_pol field of the configuration.
 
    @This function returns @tt -EBUSY if a transfer is currently being
    processed.
@@ -583,11 +586,20 @@ config_depend_and2(CONFIG_MUTEK_CONTEXT_SCHED, CONFIG_DEVICE_SPI_TRANSACTION)
 error_t dev_spi_wait_transaction(struct device_spi_ctrl_s *ctrl,
                                  struct dev_spi_ctrl_transaction_rq_s *rq);
 
+/** @see dev_spi_ctrl_cscfg_t */
+#define DEV_SPI_CTRL_CSCFG(n) error_t (n) (struct device_spi_ctrl_s *accessor, \
+                                           struct dev_spi_cs_config_s *cs_cfg)
+
+/** @This sets the polarity of the specifed chip select line and
+    drive the line so that the chip is not selected. */
+typedef DEV_SPI_CTRL_CSCFG(dev_spi_ctrl_cscfg_t);
+
 /***************************************** device class */
 
 DRIVER_CTX_CLASS_TYPES(DRIVER_CLASS_SPI_CTRL, spi_ctrl,
 		   dev_spi_ctrl_config_t         *f_config;
 		   dev_spi_ctrl_transfer_t       *f_transfer;
+		   dev_spi_ctrl_cscfg_t          *f_cscfg;
 		   );
 
 #define DRIVER_SPI_CTRL_METHODS(prefix)                     \
@@ -596,6 +608,7 @@ DRIVER_CTX_CLASS_TYPES(DRIVER_CLASS_SPI_CTRL, spi_ctrl,
     .class_ = DRIVER_CLASS_SPI_CTRL,                          \
     .f_config = prefix ## _config,                            \
     .f_transfer = prefix ## _transfer,                        \
+    .f_cscfg = prefix ## _cscfg,                              \
   })
 
 struct dev_spi_ctrl_context_s;
@@ -617,7 +630,7 @@ struct dev_spi_ctrl_base_rq_s
       No configuration takes place when @tt NULL. */
   struct dev_spi_ctrl_config_s *config;
 
-#ifdef CONFIG_DEVICE_GPIO
+#if defined(CONFIG_DEVICE_SPI_BYTECODE_GPIO) || defined(CONFIG_DEVICE_SPI_GPIO_CS)
   /** @internal If this device accessor refers to a gpio device, it
       will be used to drive the chip select pin and aux pins for this
       SPI slave. If it's not valid, the controller chip select
@@ -634,13 +647,15 @@ struct dev_spi_ctrl_base_rq_s
   /** Reflect current chip select status, used for checking only. */
   bool_t                  BITFIELD(cs_state,1);
 
-#ifdef CONFIG_DEVICE_GPIO
+#ifdef CONFIG_DEVICE_SPI_GPIO_CS
   /** Use a gpio device to drive the chip select pin of the slave */
   bool_t                  BITFIELD(cs_gpio,1);
 #endif
 
+#ifdef CONFIG_DEVICE_SPI_CTRL_CS
   /** Use the controller to drive the chip select pin of the slave */
   bool_t                  BITFIELD(cs_ctrl,1);
+#endif
 
   /** @internal This flag indicates that the request has not ended yet. */
   bool_t                  BITFIELD(enqueued,1);
@@ -832,6 +847,7 @@ config_depend(CONFIG_DEVICE_SPI_BYTECODE)
 error_t dev_drv_spi_bytecode_init(struct device_s *dev,
                                   struct dev_spi_ctrl_bytecode_rq_s *rq,
                                   const struct bc_descriptor_s *desc,
+                                  const struct dev_spi_ctrl_config_s *cfg,
                                   struct device_spi_ctrl_s *ctrl,
                                   struct device_gpio_s **gpio,
                                   struct device_timer_s **timer);
@@ -864,6 +880,7 @@ void dev_spi_transaction_init(struct dev_spi_ctrl_transaction_rq_s *rq),
 config_depend(CONFIG_DEVICE_SPI_TRANSACTION)
 error_t dev_drv_spi_transaction_init(struct device_s *dev,
                                      struct dev_spi_ctrl_transaction_rq_s *rq,
+                                     const struct dev_spi_ctrl_config_s *cfg,
                                      struct device_spi_ctrl_s *ctrl,
                                      struct device_gpio_s **gpio);
 

@@ -261,7 +261,7 @@ static DEV_SPI_CTRL_TRANSFER(nrf5x_spi_transfer)
     kroutine_exec(&tr->kr);
 }
 
-
+#define nrf5x_spi_cscfg (dev_spi_ctrl_cscfg_t*)dev_driver_notsup_fcn
 #define nrf5x_spi_use dev_use_generic
 
 static DEV_INIT(nrf5x_spi_init)

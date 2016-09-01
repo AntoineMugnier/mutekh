@@ -407,7 +407,7 @@ end:
     kroutine_exec(&tr->kr);
 }
 
-
+#define pic32_spi_cscfg (dev_spi_ctrl_cscfg_t*)dev_driver_notsup_fcn
 #define pic32_spi_use dev_use_generic
 
 static DEV_INIT(pic32_spi_init)

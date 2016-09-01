@@ -576,6 +576,8 @@ static DEV_CLEANUP(efm32_usart_spi_cleanup)
   return 0;
 }
 
+#define efm32_usart_spi_cscfg (dev_spi_ctrl_cscfg_t*)dev_driver_notsup_fcn
+
 DRIVER_DECLARE(efm32_usart_spi_drv, 0, "EFM32 USART (SPI)", efm32_usart_spi,
                DRIVER_SPI_CTRL_METHODS(efm32_usart_spi));
 

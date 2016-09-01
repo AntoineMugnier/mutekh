@@ -242,7 +242,7 @@ static DEV_SPI_CTRL_TRANSFER(cc26xx_spi_transfer)
     kroutine_exec(&tr->kr);
 }
 
-
+#define cc26xx_spi_cscfg (dev_spi_ctrl_cscfg_t*)dev_driver_notsup_fcn
 #define cc26xx_spi_use dev_use_generic
 
 static void power_domain_on(void)

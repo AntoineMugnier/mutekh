@@ -62,7 +62,7 @@ static KROUTINE_EXEC(device_spi_ctrl_transfer_end)
 
   lock_spin_irq(&q->lock);
 
-# ifdef CONFIG_DEVICE_GPIO
+# ifdef CONFIG_DEVICE_SPI_GPIO_CS
   struct dev_spi_cs_config_s *cs_cfg = &rq->cs_cfg;
   if (rq->cs_gpio)
     dev_gpio_out(&rq->gpio, cs_cfg->id, rq->cs_state ^ cs_cfg->polarity ^ 1);
@@ -104,28 +104,30 @@ device_spi_ctrl_transfer(struct dev_spi_ctrl_context_s *q,
         }
     }
 
-  struct dev_spi_cs_config_s *cs_cfg = &rq->cs_cfg;
-
   tr->cs_op = DEV_SPI_CS_NOP_NOP;
   if (csop != DEV_SPI_CS_NOP_NOP)
     {
+      __unused__ struct dev_spi_cs_config_s *cs_cfg = &rq->cs_cfg;
       rq->cs_state = (csop == DEV_SPI_CS_SET_NOP);
-# ifdef CONFIG_DEVICE_GPIO
+      if (0)
+        ;
+# ifdef CONFIG_DEVICE_SPI_GPIO_CS
       if (rq->cs_gpio)
         dev_gpio_out(&rq->gpio, cs_cfg->id, cs_cfg->polarity ^ (csop == DEV_SPI_CS_CLR_NOP));
-      else
 # endif
-        if (rq->cs_ctrl)
-          {
-            tr->cs_op = csop;
-            tr->cs_cfg = *cs_cfg;
-          }
-        else
-          {
-            /* this request requires a chip select configuration */
-            err = -ENOENT;
-            goto err;
-          }
+# ifdef CONFIG_DEVICE_SPI_CTRL_CS
+      else if (rq->cs_ctrl)
+        {
+          tr->cs_op = csop;
+          tr->cs_cfg = *cs_cfg;
+        }
+# endif
+      else
+        {
+          /* this request requires a chip select configuration */
+          err = -ENOENT;
+          goto err;
+        }
     }
 
   tr->pvdata = rq;
@@ -164,7 +166,7 @@ device_spi_ctrl_end(struct dev_spi_ctrl_context_s *q,
   rq->cs_state = 0;
 # endif
 
-# ifdef CONFIG_DEVICE_GPIO
+# ifdef CONFIG_DEVICE_SPI_GPIO_CS
   if (rq->cs_gpio)
     dev_gpio_out(&rq->gpio, rq->cs_cfg.id, rq->cs_cfg.polarity ^ 1);
 # endif
@@ -393,7 +395,6 @@ device_spi_bytecode_exec(struct dev_spi_ctrl_context_s *q,
                   continue;
                 }
 
-#warning
             case 0x0400: {
               struct dev_spi_ctrl_config_s *rcfg = rq->base.config;
               rcfg->dirty = 1;
@@ -594,7 +595,7 @@ static bool_t device_spi_ctrl_entry(struct dev_spi_ctrl_context_s *q,
 void dev_spi_transaction_start(struct device_spi_ctrl_s *ctrl,
                                struct dev_spi_ctrl_transaction_rq_s *rq)
 {
-#  ifdef CONFIG_DEVICE_GPIO
+#  ifdef CONFIG_DEVICE_SPI_GPIO_CS
   assert(!rq->base.cs_gpio || device_check_accessor(&rq->base.gpio.base));
 #  endif
 
@@ -626,7 +627,7 @@ error_t dev_spi_bytecode_start_va(struct device_spi_ctrl_s *ctrl,
 {
   error_t err = -EBUSY;
 
-#  ifdef CONFIG_DEVICE_GPIO
+#  ifdef CONFIG_DEVICE_SPI_GPIO_CS
   assert(!rq->base.cs_gpio || device_check_accessor(&rq->base.gpio.base));
 #  endif
 
@@ -749,18 +750,23 @@ static error_t dev_drv_spi_init(struct device_s *dev,
                                 struct device_spi_ctrl_s *ctrl)
 {
   uintptr_t x;
+
+  rq->cs_cfg.polarity = rq->config->cs_pol;
+
   if (!device_get_param_uint(dev, "spi-cs-id", &x))
     {
+# ifdef CONFIG_DEVICE_SPI_CTRL_CS
       rq->cs_ctrl = 1;
       rq->cs_cfg.id = x;
-      rq->cs_cfg.polarity = DEV_SPI_ACTIVE_LOW;
+# else
+      return -ENOTSUP;
+# endif
     }
   else if (!device_get_param_uint(dev, "gpio-cs-id", &x))
     {
-# ifdef CONFIG_DEVICE_GPIO
+# ifdef CONFIG_DEVICE_SPI_GPIO_CS
       rq->cs_gpio = 1;
       rq->cs_cfg.id = x;
-      rq->cs_cfg.polarity = DEV_SPI_ACTIVE_LOW;
 # else
       return -ENOTSUP;
 # endif
@@ -772,29 +778,48 @@ static error_t dev_drv_spi_init(struct device_s *dev,
   return 0;
 }
 
-static error_t dev_drv_spi_gpio_init(struct device_s *dev,
+static error_t dev_drv_spi_cs_init(struct device_s *dev,
                                      struct dev_spi_ctrl_base_rq_s *rq,
-                                     struct device_gpio_s **gpio)
+                                     struct device_gpio_s **gpio,
+                                     struct device_spi_ctrl_s *ctrl)
 {
 # ifdef CONFIG_LIBC_ASSERT
   rq->cs_state = 0;
 # endif
 
-# ifdef CONFIG_DEVICE_GPIO
-  if (gpio != NULL || rq->cs_gpio)
+# if defined(CONFIG_DEVICE_SPI_BYTECODE_GPIO) || defined(CONFIG_DEVICE_SPI_GPIO_CS)
+  if (0
+#  if defined(CONFIG_DEVICE_SPI_BYTECODE_GPIO)
+      || gpio != NULL
+#  endif
+#  ifdef CONFIG_DEVICE_SPI_GPIO_CS
+      || rq->cs_gpio
+#  endif
+      )
     {
       if (device_get_param_dev_accessor(dev, "gpio", &rq->gpio.base, DRIVER_CLASS_GPIO))
         return -ENOENT;
+#  ifdef CONFIG_DEVICE_SPI_GPIO_CS
       if (rq->cs_gpio)
         {
           dev_gpio_mode(&rq->gpio, rq->cs_cfg.id, DEV_PIN_PUSHPULL);
           dev_gpio_out(&rq->gpio, rq->cs_cfg.id, rq->cs_cfg.polarity ^ 1);
         }
+#  endif
+    }
+# endif
+
+# ifdef CONFIG_DEVICE_SPI_CTRL_CS
+  if (rq->cs_ctrl)
+    {
+      error_t err = DEVICE_OP(ctrl, cscfg, &rq->cs_cfg);
+      if (err)
+        return err;
     }
 # endif
 
   if (gpio != NULL)
-# ifdef CONFIG_DEVICE_GPIO
+# ifdef CONFIG_DEVICE_SPI_BYTECODE_GPIO
     *gpio = &rq->gpio;
 # else
     return -ENOTSUP;
@@ -807,11 +832,14 @@ static error_t dev_drv_spi_gpio_init(struct device_s *dev,
 error_t dev_drv_spi_bytecode_init(struct device_s *dev,
                                   struct dev_spi_ctrl_bytecode_rq_s *rq,
                                   const struct bc_descriptor_s *desc,
+                                  const struct dev_spi_ctrl_config_s *cfg,
                                   struct device_spi_ctrl_s *ctrl,
                                   struct device_gpio_s **gpio,
                                   struct device_timer_s **timer)
 {
   dev_spi_bytecode_init(rq);
+
+  rq->base.config = (struct dev_spi_ctrl_config_s *)cfg;
 
   error_t err = dev_drv_spi_init(dev, &rq->base, ctrl);
   if (err)
@@ -831,7 +859,7 @@ error_t dev_drv_spi_bytecode_init(struct device_s *dev,
 #  endif
     }
 
-  err = dev_drv_spi_gpio_init(dev, &rq->base, gpio);
+  err = dev_drv_spi_cs_init(dev, &rq->base, gpio, ctrl);
   if (err)
     goto err;
 
@@ -846,7 +874,7 @@ error_t dev_drv_spi_bytecode_init(struct device_s *dev,
 void dev_drv_spi_bytecode_cleanup(struct device_spi_ctrl_s *ctrl,
                                   struct dev_spi_ctrl_bytecode_rq_s *rq)
 {
-#  ifdef CONFIG_DEVICE_GPIO
+#  if defined(CONFIG_DEVICE_SPI_BYTECODE_GPIO) || defined(CONFIG_DEVICE_SPI_GPIO_CS)
   device_put_accessor(&rq->base.gpio.base);
 #  endif
   device_put_accessor(&ctrl->base);
@@ -857,16 +885,19 @@ void dev_drv_spi_bytecode_cleanup(struct device_spi_ctrl_s *ctrl,
 
 error_t dev_drv_spi_transaction_init(struct device_s *dev,
                                      struct dev_spi_ctrl_transaction_rq_s *rq,
+                                     const struct dev_spi_ctrl_config_s *cfg,
                                      struct device_spi_ctrl_s *ctrl,
                                      struct device_gpio_s **gpio)
 {
   dev_spi_transaction_init(rq);
 
+  rq->base.config = (struct dev_spi_ctrl_config_s *)cfg;
+
   error_t err = dev_drv_spi_init(dev, &rq->base, ctrl);
   if (err)
     return err;
 
-  err = dev_drv_spi_gpio_init(dev, &rq->base, gpio);
+  err = dev_drv_spi_cs_init(dev, &rq->base, gpio);
   if (err)
     goto err;
 
@@ -879,7 +910,7 @@ error_t dev_drv_spi_transaction_init(struct device_s *dev,
 void dev_drv_spi_transaction_cleanup(struct device_spi_ctrl_s *ctrl,
                                      struct dev_spi_ctrl_transaction_rq_s *rq)
 {
-#  ifdef CONFIG_DEVICE_GPIO
+#  if defined(CONFIG_DEVICE_SPI_BYTECODE_GPIO) || defined(CONFIG_DEVICE_SPI_GPIO_CS)
   device_put_accessor(&rq->base.gpio.base);
 #  endif
   device_put_accessor(&ctrl->base);

@@ -290,7 +290,7 @@ DEV_SPI_CTRL_TRANSFER(stm32_spi_transfer)
     kroutine_exec(&tr->kr);
 }
 
-
+#define stm32_spi_cscfg (dev_spi_ctrl_cscfg_t*)dev_driver_notsup_fcn
 #define stm32_spi_use dev_use_generic
 
 static DEV_INIT(stm32_spi_init)
