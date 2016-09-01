@@ -137,10 +137,11 @@
 
     @item generic instructions     @item               @item @tt{0--- ---- ---- ----}
 
-    @item spi_nodelay              @item               @item @tt{1000 0011 00-- ----}
+    @item spi_nodelay              @item               @item @tt{1000 0011 000- ----}
     @item spi_deadline             @item r             @item @tt{1000 0011 01-- rrrr}
     @item spi_delay                @item r             @item @tt{1000 0011 10-- rrrr}
-    @item spi_timestamp            @item r             @item @tt{1000 0011 11-- rrrr}
+    @item spi_timestamp            @item r             @item @tt{1000 0011 110- rrrr}
+    @item spi_elapsed              @item               @item @tt{1000 0011 111- ----}
 
     @item spi_yield                @item               @item @tt{1000 0000 001- ----}
     @item spi_yield_delay          @item r             @item @tt{1000 0000 101- rrrr}
@@ -205,6 +206,11 @@
 
    The @cref #CONFIG_DEVICE_SPI_BYTECODE_TIMER token must be defined in order
    to use this instruction.
+   @end section
+
+   @section {spi_elapsed}
+   This conditional instruction skips the next instruction if the timer
+   deadline setup by @xref {spi_delay} or @xref {spi_deadline} has not been reached.
    @end section
 
    @section {spi_yield}

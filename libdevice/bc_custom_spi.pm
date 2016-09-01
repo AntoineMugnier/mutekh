@@ -5,6 +5,7 @@ main::custom_op('spi_nodelay',        0,      0x0300 );
 main::custom_op('spi_deadline',       1,      0x0340, \&parse_reg );
 main::custom_op('spi_delay',          1,      0x0380, \&parse_reg );
 main::custom_op('spi_timestamp',      1,      0x03c0, \&parse_reg );
+main::custom_cond_op('spi_elapsed',   0,      0x03e0 );
 
 main::custom_op('spi_yield',          0,      0x0020 );
 main::custom_op('spi_yield_delay',    1,      0x00a0, \&parse_reg );
