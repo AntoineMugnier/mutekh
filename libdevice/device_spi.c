@@ -897,7 +897,7 @@ error_t dev_drv_spi_transaction_init(struct device_s *dev,
   if (err)
     return err;
 
-  err = dev_drv_spi_cs_init(dev, &rq->base, gpio);
+  err = dev_drv_spi_cs_init(dev, &rq->base, gpio, ctrl);
   if (err)
     goto err;
 
