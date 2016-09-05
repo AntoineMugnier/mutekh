@@ -796,7 +796,7 @@ extern TERMUI_CON_GROUP_DECL(dev_shell_pwm_group);
 extern TERMUI_CON_GROUP_DECL(dev_shell_crypto_group);
 extern TERMUI_CON_GROUP_DECL(dev_shell_i2c_group);
 extern TERMUI_CON_GROUP_DECL(dev_shell_gpio_group);
-extern TERMUI_CON_GROUP_DECL(dev_shell_rfpacket_group);
+//extern TERMUI_CON_GROUP_DECL(dev_shell_rfpacket_group);
 extern TERMUI_CON_GROUP_DECL(dev_shell_spi_ctrl_group);
 extern TERMUI_CON_GROUP_DECL(dev_shell_char_group);
 extern TERMUI_CON_GROUP_DECL(dev_shell_enum_group);
@@ -851,7 +851,7 @@ static TERMUI_CON_GROUP_DECL(dev_shell_subgroup) =
   TERMUI_CON_GROUP_ENTRY(dev_shell_gpio_group, "gpio")
 #endif
 #ifdef CONFIG_DEVICE_RFPACKET
-  TERMUI_CON_GROUP_ENTRY(dev_shell_rfpacket_group, "rfpacket")
+  //  TERMUI_CON_GROUP_ENTRY(dev_shell_rfpacket_group, "rfpacket")
 #endif
 #ifdef CONFIG_DEVICE_SPI
   TERMUI_CON_GROUP_ENTRY(dev_shell_spi_ctrl_group, "spi")
