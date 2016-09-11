@@ -1,0 +1,31 @@
+# -*- python -*-
+
+from mt.base.environment import *
+from mt.base.match import *
+from mt.base.expectation import *
+
+from mutekh.test.stages import configure, build, execute
+from mutekh.test.archs import *
+
+test_smp                  = Config("test_smp", [ "cpu_count:4" ])
+test_sched_static         = Config("test_sched_static")
+
+env = Environment(
+    name = "semaphore",
+    timeout = 2,
+    success_grep = "++SUCCESS++16++",
+
+    test_space = [
+        Dimension(*all_cpus.expand()),
+        Exclude(all.filter_by_feature("-smp") & test_smp)
+        ],
+
+    actions = [
+        configure,
+        build,
+        execute
+        ],
+
+    rules = Rules(
+        )
+    )
