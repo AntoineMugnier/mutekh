@@ -27,130 +27,105 @@
  * @file
  * @module {Core::Kernel services}
  * @short Kernel semaphore service
- *
- * The semaphore functions are empty and always succeed when the
- * scheduler is disabled in the configuration.
  */
 
 #include <hexo/decls.h>
 
 C_HEADER_BEGIN
 
+#include <gct_platform.h>
+#include <gct/container_clist.h>
+
 #include <mutek/scheduler.h>
 #include <hexo/types.h>
 #include <hexo/error.h>
 
-/** Type for the semaphore counting */
-typedef int_fast8_t semaphore_count_t;
+/** Type for the semaphore valueing */
+config_depend(CONFIG_MUTEK_SEMAPHORE)
+typedef intptr_t semaphore_value_t;
+
+#define GCT_CONTAINER_ALGO_semaphore_wait CLIST
+
+#ifdef CONFIG_MUTEK_SEMAPHORE
+/** @internal Semaphore wait object, allocated on waiter stack */
+struct semaphore_wait_s
+{
+  GCT_CONTAINER_ENTRY    (semaphore_wait, list_entry);
+  struct sched_context_s *sched_ctx;
+  semaphore_value_t value;
+};
+
+GCT_CONTAINER_TYPES      (semaphore_wait, struct semaphore_wait_s *, list_entry);
+#endif
 
 /** Semaphore object structure */
+config_depend(CONFIG_MUTEK_SEMAPHORE)
 struct semaphore_s
 {
-#ifdef CONFIG_MUTEK_CONTEXT_SCHED
-	/** semaphore counter */
-	semaphore_count_t count;
-
-	/** blocked contexts wait queue */
-	sched_queue_root_t wait;
-# define SEMAPHORE_INITIALIZER {1, SCHED_QUEUE_INITIALIZER}
-#else
-# define SEMAPHORE_INITIALIZER { }
+#ifdef CONFIG_MUTEK_SEMAPHORE
+  semaphore_wait_root_t wait;
+  lock_t lock;
+  semaphore_value_t value;
 #endif
 };
 
-#ifndef CONFIG_MUTEK_CONTEXT_SCHED
-ALWAYS_INLINE error_t
-semaphore_init(struct semaphore_s *semaphore, semaphore_count_t value)
-{
-  return 0;
-}
-
-ALWAYS_INLINE void
-semaphore_take(struct semaphore_s *semaphore, semaphore_count_t n)
-{
-}
-
-ALWAYS_INLINE error_t
-semaphore_try_take(struct semaphore_s *semaphore, semaphore_count_t n)
-{
-  return 0;
-}
-
-ALWAYS_INLINE void
-semaphore_give(struct semaphore_s *semaphore, semaphore_count_t n)
-{
-}
-
-ALWAYS_INLINE semaphore_count_t
-semaphore_value(struct semaphore_s *semaphore)
-{
-  return 1;
-}
-
-ALWAYS_INLINE void
-semaphore_destroy(struct semaphore_s *semaphore)
-{
-}
-#endif
-
-/**
-   @this initializes a semaphore structure
-
-   @param semaphore Semaphore structure to initialize
-   @param value Initial count of semaphore
-   @returns a standart error code
- */
+/** @This initializes a semaphore object and set its internal counter
+    to the specified value. */
 config_depend(CONFIG_MUTEK_SEMAPHORE)
-error_t semaphore_init(struct semaphore_s *semaphore, semaphore_count_t value);
+error_t semaphore_init(struct semaphore_s *semaphore, semaphore_value_t value);
 
-/**
-   @this waits for the semaphore count to be at least n. @this
-   decrements the count and returns.
-
-   @param semaphore Semaphore structure
-   @param n Semaphore count to change
- */
-config_depend(CONFIG_MUTEK_SEMAPHORE)
-void semaphore_take(struct semaphore_s *semaphore, semaphore_count_t n);
-
-/**
-   @this tries to take the semaphore, but dont wait if it cant take
-   it. It will return EBUSY instead.
-
-   @param semaphore Semaphore structure
-   @param n Semaphore count to change
-   @returns 0 if taken else EBUSY
- */
-config_depend(CONFIG_MUTEK_SEMAPHORE)
-error_t semaphore_try_take(struct semaphore_s *semaphore, semaphore_count_t n);
-
-/**
-   @this changes the count of semaphore in a way it may not block,
-   even if count does become negative.
-
-   @param semaphore Semaphore structure
- */
-config_depend(CONFIG_MUTEK_SEMAPHORE)
-void semaphore_give(struct semaphore_s *semaphore, semaphore_count_t n);
-
-/**
-   @this gets the current value of a semaphore. This function always
-   returns 1 if the scheduler is disabled.
-
-   @param semaphore Semaphore structure
-   @return current semaphore count.
- */
-config_depend(CONFIG_MUTEK_SEMAPHORE)
-semaphore_count_t semaphore_value(struct semaphore_s *semaphore);
-
-/**
-   @this destroys a semaphore. If some tasks are still waiting on the
-   semaphore, behaviour is unpredictible.
-
-   @param semaphore Semaphore structure
- */
+/** @This releases the resources used by the semaphore */
 config_depend(CONFIG_MUTEK_SEMAPHORE)
 void semaphore_destroy(struct semaphore_s *semaphore);
+
+/** @This consumes the specified amount from the semaphore internal
+    counter. If the current value of the counter is not large enough,
+    the execution of the calling thread is suspended until the remaining
+    amount becomes available. */
+config_depend(CONFIG_MUTEK_SEMAPHORE)
+void semaphore_take(struct semaphore_s *semaphore, semaphore_value_t n);
+
+/** @This successes only if the semaphore internal counter is at least @em {n}.
+    In this case it subtracts @em {n} from the semaphore counter an returns 0. */
+config_depend(CONFIG_MUTEK_SEMAPHORE)
+error_t semaphore_try_take(struct semaphore_s *semaphore, semaphore_value_t n);
+
+/** @This suspends the execution of the caller until the
+    semaphore internal counter is greater than 0. It then resets the
+    counter to 0 and returns the previously observed value. */
+config_depend(CONFIG_MUTEK_SEMAPHORE)
+semaphore_value_t semaphore_take_any(struct semaphore_s *semaphore);
+
+/** @This resets the semaphore internal counter to 0 and returns the
+    previously observed value. */
+config_depend(CONFIG_MUTEK_SEMAPHORE)
+semaphore_value_t semaphore_try_take_any(struct semaphore_s *semaphore);
+
+/** @This increases the internal counter by the specified amount then
+    serves suspended threads in blocking order. */
+config_depend(CONFIG_MUTEK_SEMAPHORE)
+void semaphore_give(struct semaphore_s *semaphore, semaphore_value_t n);
+
+/** @This increases the internal counter by the specified amount then
+    serves any suspended threads with a low enough remaining amount. */
+config_depend(CONFIG_MUTEK_SEMAPHORE)
+void semaphore_give_any(struct semaphore_s *semaphore, semaphore_value_t n);
+
+/** @This consumes the specified amount from the semaphore internal
+    counter and suspends the execution of the caller only if the
+    counter is currently larger than specified. In the other case, all
+    waiter are resumed and the internal counter is restored to its
+    initial value. */
+config_depend(CONFIG_MUTEK_SEMAPHORE)
+void semaphore_barrier(struct semaphore_s *semaphore, semaphore_value_t n);
+
+/** @This returns the current value of the semaphore counter if
+    greater than 0. In the other case, this function returns a
+    null or negative value which indicates the counter amount needed to
+    unblock all waiters which have called the @ref semaphore_take
+    function. */
+config_depend(CONFIG_MUTEK_SEMAPHORE)
+semaphore_value_t semaphore_value(struct semaphore_s *semaphore);
 
 C_HEADER_END
 
