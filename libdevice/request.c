@@ -21,6 +21,7 @@
 */
 
 #include <device/request.h>
+#include <mutek/semaphore.h>
 
 GCT_CONTAINER_PROTOTYPES(dev_request_queue, extern inline, dev_request_queue,
                          init, destroy, push, pushback, pop, remove, isempty, head, tail, next);
@@ -72,4 +73,13 @@ KROUTINE_EXEC(dev_request_delayed_kr)
 }
 #endif
 
+#ifdef CONFIG_MUTEK_SEMAPHORE
 
+KROUTINE_EXEC(dev_request_sem_done)
+{
+  struct dev_request_s *rq = KROUTINE_CONTAINER(kr, *rq, kr);
+  struct semaphore_poll_s *poll = rq->pvdata;
+  semaphore_give(poll->sem, poll->value);
+}
+
+#endif

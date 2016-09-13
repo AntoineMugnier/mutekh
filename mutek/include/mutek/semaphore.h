@@ -127,6 +127,37 @@ void semaphore_barrier(struct semaphore_s *semaphore, semaphore_value_t n);
 config_depend(CONFIG_MUTEK_SEMAPHORE)
 semaphore_value_t semaphore_value(struct semaphore_s *semaphore);
 
+/** @internalmembers @see semaphore_poll_init */
+struct semaphore_poll_s
+{
+  struct semaphore_s *sem;
+  semaphore_value_t value;
+};
+
+/** @This initializes an array of @ref semaphore_poll_s objects. This
+    can be used to implement a primitive similar to unix @tt poll
+    which waits for multiple asynchronous operations to terminate.
+
+    Some helpers are provided to wait for termination of device
+    requests. More helpers can be implemented in order to handle any
+    kind of asynchronous event.
+
+    See @sourcelink examples/poll_sem */
+config_depend_inline(CONFIG_MUTEK_SEMAPHORE,
+void semaphore_poll_init(struct semaphore_poll_s poll[], size_t count,
+                         struct semaphore_s *sem),
+{
+  semaphore_value_t v = 1;
+  uint_fast8_t i;
+
+  for (i = 0; i < count; i++)
+    {
+      poll[i].sem = sem;
+      poll[i].value = v;
+      v <<= 1;
+    }
+});
+
 C_HEADER_END
 
 #endif

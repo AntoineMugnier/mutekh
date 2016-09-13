@@ -263,3 +263,7 @@ semaphore_value_t semaphore_value(struct semaphore_s *semaphore)
   return r;
 }
 
+extern inline void
+semaphore_poll_init(struct semaphore_poll_s poll[], size_t count,
+                    struct semaphore_s *sem);
+
