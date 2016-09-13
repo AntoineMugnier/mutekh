@@ -2,6 +2,8 @@ MKDOC=mkdoc
 
 include $(MUTEK_SRC_DIR)/doc/header_list.mk
 
+OBJ_DIR = $(BUILD_DIR)/doc
+
 include $(MUTEK_SRC_DIR)/scripts/discover.mk
 
 doc:

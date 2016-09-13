@@ -394,6 +394,8 @@ device/irq.h
 device/clock.h
 device/resources.h
 device/types.h
+device/request.h
+device/shell.h
 
 device/class/cpu.h
 device/class/enum.h
