@@ -41,7 +41,6 @@ C_HEADER_BEGIN
 #include <hexo/error.h>
 
 /** Type for the semaphore valueing */
-config_depend(CONFIG_MUTEK_SEMAPHORE)
 typedef intptr_t semaphore_value_t;
 
 #define GCT_CONTAINER_ALGO_semaphore_wait CLIST
