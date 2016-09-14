@@ -5,3 +5,5 @@ objs-$(CONFIG_DRIVER_ADXL345) += adxl345.o
 objs-$(CONFIG_DRIVER_MATRIX_KEYBOARD) += matrix_keyboard.o
 objs-$(CONFIG_DRIVER_BUTTON_SET) += button_set.o
 objs-$(CONFIG_DRIVER_MPU6505) += mpu6505.o
+
+subdirs-$(CONFIG_DRIVER_ADXL362) += adxl362
