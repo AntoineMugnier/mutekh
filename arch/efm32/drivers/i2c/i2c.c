@@ -427,10 +427,8 @@ DEV_INIT(efm32_i2c_init)
   if(device_res_get_uint(dev, DEV_RES_MEM, 0, &pv->addr, NULL))
     goto err_clk;
 
-#ifdef CONFIG_DEVICE_I2C_REQUEST
   if (dev_i2c_context_init(dev, &pv->i2c_ctrl_ctx))
     goto err_queue;
-#endif
 
   /* Reset Device by disabling controller (bus idle timeout has not effect). */
   cpu_mem_write_32(pv->addr + EFM32_I2C_CTRL_ADDR, 0);

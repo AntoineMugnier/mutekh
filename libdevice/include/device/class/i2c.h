@@ -643,13 +643,24 @@ struct dev_i2c_ctrl_context_s
     the device pointed to by the @tt{'timer'} device resource
     entry of the controller, if available.
 */
-config_depend(CONFIG_DEVICE_I2C_REQUEST)
 error_t dev_i2c_context_init(struct device_s *dev, struct dev_i2c_ctrl_context_s *q);
 
 /** This helper function release the device accessor associated with
     the I2C request context. @see dev_i2c_context_init */
-config_depend(CONFIG_DEVICE_I2C_REQUEST)
 void dev_i2c_context_cleanup(struct dev_i2c_ctrl_context_s *q);
+
+#ifndef CONFIG_DEVICE_I2C_REQUEST
+ALWAYS_INLINE
+error_t dev_i2c_context_init(struct device_s *dev, struct dev_i2c_ctrl_context_s *q)
+{
+  return 0;
+}
+
+ALWAYS_INLINE
+void dev_i2c_context_cleanup(struct dev_i2c_ctrl_context_s *q)
+{
+}
+#endif
 
 /** @This schedules a I2C single transaction request for
     execution. The kroutine of the request will be called when the

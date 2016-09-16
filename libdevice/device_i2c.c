@@ -695,6 +695,7 @@ error_t device_i2c_bytecode_wakeup(struct device_i2c_ctrl_s *ctrl,
 }
 # endif
 
+#ifdef CONFIG_DEVICE_I2C_REQUEST
 error_t dev_i2c_context_init(struct device_s *dev, struct dev_i2c_ctrl_context_s *q)
 {
   __unused__ error_t err;
@@ -724,6 +725,7 @@ void dev_i2c_context_cleanup(struct dev_i2c_ctrl_context_s *q)
   device_put_accessor(&q->timer.base);
 # endif
 }
+#endif
 
 static
 error_t dev_drv_i2c_init(struct device_s *dev,
