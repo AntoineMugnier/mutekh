@@ -433,7 +433,7 @@ device_i2c_bytecode_exec(struct dev_i2c_ctrl_context_s *q,
         case 5: // gpioget
         case 6: // gpiomode
           err = 0;
-          if (!device_check_accessor(&rq->base.gpio))
+          if (!device_check_accessor(&rq->gpio.base))
             {
               err = -ENOTSUP;
             }
@@ -447,17 +447,17 @@ device_i2c_bytecode_exec(struct dev_i2c_ctrl_context_s *q,
                 {
                 case 0: /* gpioset */
                   endian_le32_na_store(value, bc_get_reg(&rq->vm, op & 0xf));
-                  err = DEVICE_OP(&rq->base.gpio, set_output, id,
+                  err = DEVICE_OP(&rq->gpio, set_output, id,
                                   id + w - 1, value, value);
                   break;
                 case 1: /* gpioget */
-                  err = DEVICE_OP(&rq->base.gpio, get_input, id,
+                  err = DEVICE_OP(&rq->gpio, get_input, id,
                                   id + w - 1, value);
                   bc_set_reg(&rq->vm, op & 0xf,
                              endian_le32_na_load(value) & ((1 << w) - 1));
                   break;
                 case 2: /* gpiomode */
-                  err = DEVICE_OP(&rq->base.gpio, set_mode, id,
+                  err = DEVICE_OP(&rq->gpio, set_mode, id,
                                   id + w - 1, dev_gpio_mask1, op & 0xf);
                   break;
                 }

@@ -760,7 +760,7 @@ struct device_timer_s * dev_i2c_timer(struct device_i2c_ctrl_s *ctrl),
 
 /** This function returns an accessor to the gpio device of the request. */
 config_depend_alwaysinline(CONFIG_DEVICE_I2C_BYTECODE_GPIO,
-struct device_gpio_s *dev_i2c_request_gpio(struct dev_i2c_ctrl_base_rq_s *rq),
+struct device_gpio_s *dev_i2c_request_gpio(struct dev_i2c_ctrl_bytecode_rq_s *rq),
 {
   return &rq->gpio;
 })
