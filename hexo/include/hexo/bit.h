@@ -103,10 +103,10 @@ C_HEADER_BEGIN
 
 
 /** @this sets bit @tt bit in @tt value */
-#define BIT_SET(value, bit) ((v) |= bit(bit))
+#define BIT_SET(value, b) ((value) |= bit(b))
 
 /** @this clears bit @tt bit in @tt value */
-#define BIT_CLEAR(value, bit) ((v) &= ~bit(bit))
+#define BIT_CLEAR(value, b) ((value) &= ~bit(b))
 
 /** @this inserts @tt count bits value @tt ins at specified @tt index
     in @tt value */
