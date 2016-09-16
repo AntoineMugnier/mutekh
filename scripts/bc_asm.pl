@@ -1281,7 +1281,7 @@ extern const struct bc_descriptor_s ${bc_name}_bytecode;
 
         next unless $l->{func};
         my %inputs;
-        my $inmask;
+        my $inmask = 0;
 
         # input and output function registers
         foreach my $a ( keys %{$l->{regalias}} ) {
