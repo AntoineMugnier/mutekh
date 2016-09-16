@@ -634,6 +634,7 @@ struct dev_i2c_ctrl_context_s
 
 /*----------------------------------------------------------------------------*/
 
+#ifdef CONFIG_DEVICE_I2C_REQUEST
 /** This helper function initializes a I2C request context struct for
     use in a I2C controller device driver. It is usually called from
     the controller driver initialization function to initialize a
@@ -649,7 +650,8 @@ error_t dev_i2c_context_init(struct device_s *dev, struct dev_i2c_ctrl_context_s
     the I2C request context. @see dev_i2c_context_init */
 void dev_i2c_context_cleanup(struct dev_i2c_ctrl_context_s *q);
 
-#ifndef CONFIG_DEVICE_I2C_REQUEST
+#else
+
 ALWAYS_INLINE
 error_t dev_i2c_context_init(struct device_s *dev, struct dev_i2c_ctrl_context_s *q)
 {
@@ -660,6 +662,7 @@ ALWAYS_INLINE
 void dev_i2c_context_cleanup(struct dev_i2c_ctrl_context_s *q)
 {
 }
+
 #endif
 
 /** @This schedules a I2C single transaction request for
