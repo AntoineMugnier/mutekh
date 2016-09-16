@@ -637,41 +637,41 @@ void nrf5x_printk_out_char(void *addr, char c);
 
 static PRINTF_OUTPUT_FUNC(nrf5x_printk_out)
 {
-    struct device_s *dev = ctx;
-    struct nrf5x_uart_priv *pv = dev->drv_pv;
+  struct device_s *dev = ctx;
+  struct nrf5x_uart_priv *pv = dev->drv_pv;
 
-    if (!len)
-      return;
+  if (!len)
+    return;
 
-    dprintk("printk %d\n", len);
+  dprintk("printk %d\n", len);
 
-    CPU_INTERRUPT_SAVESTATE_DISABLE;
+  CPU_INTERRUPT_SAVESTATE_DISABLE;
 
-    bool_t enabled = dev->start_count & USE_TX;
+  bool_t enabled = dev->start_count & USE_TX;
 
-    if (enabled) {
-      if (pv->txdrdy) {
-        pv->txdrdy = 0;
-      } else {
-        while (!nrf_event_check(pv->addr, NRF_UART_TXDRDY))
-          ;
-      }
+  if (enabled) {
+    if (pv->txdrdy) {
+      pv->txdrdy = 0;
     } else {
-      nrf_task_trigger(pv->addr, NRF_UART_STARTTX);
+      while (!nrf_event_check(pv->addr, NRF_UART_TXDRDY))
+        ;
     }
+  } else {
+    nrf_task_trigger(pv->addr, NRF_UART_STARTTX);
+  }
 
-    nrf_it_disable(pv->addr, NRF_UART_TXDRDY);
+  nrf_it_disable(pv->addr, NRF_UART_TXDRDY);
 
-    nrf5x_printk_out_nodrv((void *)pv->addr, str, offset, len);
+  nrf5x_printk_out_nodrv((void *)pv->addr, str, offset, len);
 
-    if (!enabled) {
-      nrf_event_clear(pv->addr, NRF_UART_TXDRDY);
-      nrf_task_trigger(pv->addr, NRF_UART_STOPTX);
-    }
+  if (!enabled) {
+    nrf_event_clear(pv->addr, NRF_UART_TXDRDY);
+    nrf_task_trigger(pv->addr, NRF_UART_STOPTX);
+  }
 
-    nrf_it_enable(pv->addr, NRF_UART_TXDRDY);
+  nrf_it_enable(pv->addr, NRF_UART_TXDRDY);
 
-    CPU_INTERRUPT_RESTORESTATE;
+  CPU_INTERRUPT_RESTORESTATE;
 }
 
 #endif
