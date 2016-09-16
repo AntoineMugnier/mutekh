@@ -1,0 +1,121 @@
+/*
+  -*- asm -*-
+
+  This file is part of MutekH.
+
+  MutekH is free software; you can redistribute it and/or modify it
+  under the terms of the GNU Lesser General Public License as
+  published by the Free Software Foundation; version 2.1 of the
+  License.
+
+  MutekH is distributed in the hope that it will be useful, but
+  WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+  Lesser General Public License for more details.
+
+  You should have received a copy of the GNU Lesser General Public
+  License along with this program.  If not, see
+  <http://www.gnu.org/licenses/>.
+
+  Copyright (c) Nicolas Pouillon <nipo@ssji.net>, 2016
+*/
+
+#include <device/class/i2c.h>
+#include "sx1509_kbd.h"
+
+        .custom i2c
+        .name sx1509_kbd
+
+.func sx1509_kbd_reset
+        .input %0 rows, %1 cols, %2 init_delay
+        .clobber %2, %3, %4, %5, %6, %7, %8, %9
+        .export sx1509_kbd_reset
+
+        cst16 %3, SX1509_RESET | (SX1509_RESET_MAGIC1 << 8), 0
+        pack16le %3, 1, 2
+        i2c_wrr %3, 1, STOP
+        cst16 %3, SX1509_RESET | (SX1509_RESET_MAGIC2 << 8), 0
+        pack16le %3, 1, 2
+        i2c_wrr %3, 1, STOP
+
+        i2c_wait_delay %2
+        
+        cst8 %2, 1
+        shl32 %2, %rows
+        add8 %2, -1
+        pack16be %2, 1, 2
+
+        cst8 %3, 1
+        shl32 %3, %cols
+        add8 %3, -1
+        pack16le %3, 1, 2
+
+        cst8 %4, 0
+        pack32le %4, 1, 4
+
+        cst8 %6, SX1509_INPUT_DISABLE
+        pack32le %6, 1, 4
+
+        i2c_wrr %6, 1, CONTINUOUS
+        i2c_wrr %2, 2, CONTINUOUS // Input disable
+        i2c_wrr %4, 2, CONTINUOUS // Long slew
+        i2c_wrr %4, 2, CONTINUOUS // Low drive
+        i2c_wrr %3, 2, CONTINUOUS // Pull up
+        i2c_wrr %4, 2, CONTINUOUS // Pull down
+        i2c_wrr %2, 2, CONTINUOUS // Open drain
+        i2c_wrr %4, 2, CONTINUOUS // Polarity
+        i2c_wrr %3, 2, STOP       // Direction
+
+        cst8 %6, SX1509_CLOCK
+        pack8 %6, 1
+        cst32 %5, SX1509_CLOCK_FOSC_2MHZ, 0
+        pack32le %5, 1, 4
+        cst8 %7, SX1509_KEY_CONFIG1_AUTO_SLEEP(2) | SX1509_KEY_CONFIG1_ROW_TIME(1)
+        pack8 %7, 1
+        mov %8, %rows
+        add8 %8, -1
+        mov %9, %cols
+        add8 %9, -1
+        shi32l %8, 3
+        or32 %8, %9
+        pack8 %8, 1
+
+        i2c_wrr %6, 1, CONTINUOUS
+        i2c_wrr %5, 4, CONTINUOUS // Clock, Misc, Led_Driver B/A
+        i2c_wrr %4, 1, CONTINUOUS // Debounce
+        i2c_wrr %3, 2, CONTINUOUS // DebounceEnable B/A
+        i2c_wrr %7, 1, CONTINUOUS // KeyConfig 1
+        i2c_wrr %8, 1, STOP       // KeyConfig 2
+
+        cst8 %2, SX1509_KEY_DATA
+        pack8 %2, 1
+        i2c_wrr %2, 1, RESTART
+        i2c_rdr %3, 2, STOP       // Clear key buffer
+
+        end
+.endfunc
+
+.func sx1509_kbd_disable
+        .export sx1509_kbd_disable
+        .clobber %2
+
+        cst32 %2, SX1509_KEY_CONFIG, 0
+        pack32le %2, 1, 3
+        i2c_wrr %2, 3, STOP
+
+        end
+.endfunc
+
+.func sx1509_kbd_read
+        .export sx1509_kbd_read
+        .clobber %1
+        .output %0
+
+        cst8 %1, SX1509_KEY_DATA
+        pack8 %1, 1
+        i2c_wrr %1, 1, RESTART
+        i2c_rdr %0, 2, STOP
+        unpack16le %0, 1, 2
+
+        end
+.endfunc
