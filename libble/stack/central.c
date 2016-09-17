@@ -56,6 +56,12 @@ static error_t scan_start(struct ble_central_s *ctr);
 
 static void ctr_state_update(struct ble_central_s *ctr)
 {
+  kroutine_exec(&ctr->updater);
+}
+
+static KROUTINE_EXEC(ble_central_state_update)
+{
+  struct ble_central_s *ctr = KROUTINE_CONTAINER(kr, *ctr, updater);
   enum ble_central_state_e state = BLE_CENTRAL_IDLE;
 
   if (ctr->conn.phy) {
@@ -66,6 +72,9 @@ static void ctr_state_update(struct ble_central_s *ctr)
     else
       state = BLE_CENTRAL_SCANNING;
   }
+
+  if (state == BLE_CENTRAL_IDLE && ctr->mode & BLE_CENTRAL_CONNECTABLE)
+    scan_start(ctr);
 
   if (state == ctr->last_state)
     return;
@@ -252,7 +261,8 @@ error_t ble_central_init(
   ctr->mode = 0;
 
   ble_stack_context_local_address_get(context, &ctr->addr);
-
+  kroutine_init_sched_switch(&ctr->updater, ble_central_state_update);
+  
   return 0;
 }
 

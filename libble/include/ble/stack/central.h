@@ -31,6 +31,7 @@
 #define BLE_STACK_CENTRAL_H
 
 #include <hexo/types.h>
+#include <mutek/kroutine.h>
 #include <ble/net/scanner.h>
 #include <ble/net/scan_filter.h>
 #include <ble/protocol/address.h>
@@ -135,6 +136,7 @@ struct ble_central_s
   struct net_layer_s *scan;
   struct net_layer_s *scan_filter;
   struct ble_addr_s addr;
+  struct kroutine_s updater;
 
   enum ble_central_state_e last_state : 8;
   uint8_t mode;

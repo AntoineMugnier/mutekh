@@ -70,22 +70,43 @@ static void sig_command_handle(struct ble_signalling_s *sig, struct net_task_s *
 {
   const uint8_t *data = task->packet.buffer->data + task->packet.buffer->begin;
   const size_t size = task->packet.buffer->end - task->packet.buffer->begin;
+  struct net_addr_s dst = {
+    .cid = BLE_L2CAP_CID_SIGNALLING,
+  };
 
   if (size < 4)
+    goto destroy;
+
+  switch (data[0]) {
+  case BLE_SIGNALLING_CONN_PARAMS_UPDATE_RSP:
+    if (sig->pending_conn_params
+        && data[1] == sig->pending_conn_params_identifier) {
+      if (size < 6)
+        break;
+
+      bool_t success = endian_le16_na_load(data + 4) == 0;
+
+      net_task_query_respond_push(sig->pending_conn_params,
+                                  success ? 0 : -EAGAIN);
+      sig->pending_conn_params = NULL;
+    }
+    break;
+
+  case BLE_SIGNALLING_CONN_PARAMS_UPDATE_REQ:
+    task->packet.buffer->data[task->packet.buffer->begin]
+      = BLE_SIGNALLING_CONN_PARAMS_UPDATE_RSP;
+    endian_le16_na_store(task->packet.buffer->data + task->packet.buffer->begin + 2, 2);
+    endian_le16_na_store(task->packet.buffer->data + task->packet.buffer->begin + 4, 0);
+    task->packet.buffer->end = task->packet.buffer->begin + 6;
+    net_task_packet_respond(task, sig->layer.parent, 0, &dst);
     return;
 
-  if (sig->pending_conn_params && data[1] == sig->pending_conn_params_identifier) {
-    if (size < 6)
-      return;
-
-    bool_t success = data[0] == BLE_SIGNALLING_CONN_PARAMS_UPDATE_RSP
-      && endian_le16_na_load(data + 4) == 0;
-
-    net_task_query_respond_push(sig->pending_conn_params,
-                                success ? 0 : -EAGAIN);
-    sig->pending_conn_params = NULL;
-    return;
+  default:
+    break;
   }
+
+ destroy:
+  net_task_destroy(task);
 }
 
 static
@@ -132,7 +153,7 @@ void ble_sig_task_handle(struct net_layer_s *layer,
 
   case NET_TASK_INBOUND:
     sig_command_handle(sig, task);
-    break;
+    return;
 
   case NET_TASK_QUERY:
     dprintk("SIG Query, %x, current %p\n", task->query.opcode, sig->pending_conn_params);
