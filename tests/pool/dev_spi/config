@@ -16,6 +16,16 @@
   CONFIG_DEVICE_SHELL
   CONFIG_DEVICE_SPI
 
+%section t_slaves
+  # spi slaves drivers
+  CONFIG_DRIVER_USBDEV_MAX3420
+  CONFIG_DRIVER_RFPACKET_SX127X
+%warning  CONFIG_DRIVER_MCP23S17
+%warning  CONFIG_DRIVER_ADXL362
+
+%section t_ctrls
+  # spi controller drivers which are not arch specific
+
 %section t_debug
   CONFIG_MUTEK_BYTECODE_DEBUG
   CONFIG_MUTEK_BYTECODE_TRACE
@@ -28,7 +38,7 @@
 %section t_trans
   CONFIG_DEVICE_SPI_TRANSACTION!
 %else
-  CONFIG_DEVICE_SPI_TRANSACTION undefined
+  CONFIG_DEVICE_SPI_TRANSACTION! undefined
 
 %section t_bytecode
   CONFIG_DEVICE_SPI_BYTECODE!
