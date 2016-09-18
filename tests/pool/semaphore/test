@@ -12,7 +12,7 @@ test_sched_static         = Config("test_sched_static")
 
 env = Environment(
     name = "semaphore",
-    timeout = 2,
+    timeout = 30,
     success_grep = "++SUCCESS++16++",
 
     test_space = [
