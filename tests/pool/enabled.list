@@ -11,4 +11,5 @@ devinit
 usbdev
 drv_max3420
 dev_spi
+dev_i2c
 semaphore
