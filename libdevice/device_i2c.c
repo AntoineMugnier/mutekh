@@ -696,7 +696,7 @@ error_t device_i2c_bytecode_wakeup(struct device_i2c_ctrl_s *ctrl,
 # endif
 
 #ifdef CONFIG_DEVICE_I2C_REQUEST
-error_t dev_i2c_context_init(struct device_s *dev, struct dev_i2c_ctrl_context_s *q)
+error_t dev_drv_i2c_ctrl_context_init_(struct device_s *dev, struct dev_i2c_ctrl_context_s *q)
 {
   __unused__ error_t err;
 
@@ -717,7 +717,7 @@ error_t dev_i2c_context_init(struct device_s *dev, struct dev_i2c_ctrl_context_s
   return 0;
 }
 
-void dev_i2c_context_cleanup(struct dev_i2c_ctrl_context_s *q)
+void dev_drv_i2c_ctrl_context_cleanup_(struct dev_i2c_ctrl_context_s *q)
 {
   lock_destroy_irq(&q->lock);
   dev_request_queue_destroy(&q->queue);

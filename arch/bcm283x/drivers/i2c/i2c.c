@@ -469,7 +469,7 @@ DEV_INIT(bcm283x_i2c_init)
     goto err_mem;
 
 #ifdef CONFIG_DEVICE_I2C_REQUEST
-  if (dev_i2c_context_init(dev, &pv->i2c_ctrl_ctx))
+  if (dev_drv_i2c_ctrl_context_init(dev, &pv->i2c_ctrl_ctx))
     goto err_mem;
 #endif
 /* err_ctx */
@@ -502,7 +502,7 @@ DEV_INIT(bcm283x_i2c_init)
 
 err_ctx:
 #ifdef CONFIG_DEVICE_I2C_REQUEST
-  dev_i2c_context_cleanup(&pv->i2c_ctrl_ctx);
+  dev_drv_i2c_ctrl_context_cleanup(&pv->i2c_ctrl_ctx);
 #endif
 
 err_mem:
@@ -524,7 +524,7 @@ DEV_CLEANUP(bcm283x_i2c_cleanup)
   cpu_mem_write_32(pv->addr + BCM283X_I2C_C_ADDR, 0);
 
 #ifdef CONFIG_DEVICE_I2C_REQUEST
-  dev_i2c_context_cleanup(&pv->i2c_ctrl_ctx);
+  dev_drv_i2c_ctrl_context_cleanup(&pv->i2c_ctrl_ctx);
 #endif
 
   mem_free(pv);

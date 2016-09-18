@@ -388,7 +388,7 @@ static DEV_INIT(nrf5x_i2c_init)
   if (err)
     goto free_pv;
 
-  err = dev_i2c_context_init(dev, &pv->i2c_ctrl_ctx);
+  err = dev_drv_i2c_ctrl_context_init(dev, &pv->i2c_ctrl_ctx);
   if (err)
     goto unlink;
 
@@ -418,7 +418,7 @@ static DEV_CLEANUP(nrf5x_i2c_cleanup)
   nrf_reg_set(pv->addr, NRF_I2C_PSELSCL, (uint32_t)-1);
   nrf_reg_set(pv->addr, NRF_I2C_PSELSDA, (uint32_t)-1);
 
-  dev_i2c_context_cleanup(&pv->i2c_ctrl_ctx);
+  dev_drv_i2c_ctrl_context_cleanup(&pv->i2c_ctrl_ctx);
 
   mem_free(pv);
 

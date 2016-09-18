@@ -634,7 +634,11 @@ struct dev_i2c_ctrl_context_s
 
 /*----------------------------------------------------------------------------*/
 
-#ifdef CONFIG_DEVICE_I2C_REQUEST
+/** @internal @see dev_drv_i2c_ctrl_context_init */
+config_depend(CONFIG_DEVICE_I2C)
+error_t dev_drv_i2c_ctrl_context_init_(struct device_s *dev,
+                                       struct dev_i2c_ctrl_context_s *q);
+
 /** This helper function initializes a I2C request context struct for
     use in a I2C controller device driver. It is usually called from
     the controller driver initialization function to initialize a
@@ -644,26 +648,32 @@ struct dev_i2c_ctrl_context_s
     the device pointed to by the @tt{'timer'} device resource
     entry of the controller, if available.
 */
-error_t dev_i2c_context_init(struct device_s *dev, struct dev_i2c_ctrl_context_s *q);
+config_depend_alwaysinline(CONFIG_DEVICE_I2C,
+error_t dev_drv_i2c_ctrl_context_init(struct device_s *dev,
+                                      struct dev_i2c_ctrl_context_s *q),
+{
+#ifdef CONFIG_DEVICE_I2C_REQUEST
+  return dev_drv_i2c_ctrl_context_init_(dev, q);
+#else
+  return 0;
+#endif
+});
+
+/** @internal @see dev_drv_i2c_ctrl_context_cleanup */
+config_depend(CONFIG_DEVICE_I2C)
+void dev_drv_i2c_ctrl_context_cleanup_(struct dev_i2c_ctrl_context_s *q);
 
 /** This helper function release the device accessor associated with
-    the I2C request context. @see dev_i2c_context_init */
-void dev_i2c_context_cleanup(struct dev_i2c_ctrl_context_s *q);
-
+    the I2C request context. @see dev_drv_i2c_ctrl_context_init */
+config_depend_alwaysinline(CONFIG_DEVICE_I2C,
+void dev_drv_i2c_ctrl_context_cleanup(struct dev_i2c_ctrl_context_s *q),
+{
+#ifdef CONFIG_DEVICE_I2C_REQUEST
+  return dev_drv_i2c_ctrl_context_cleanup_(q);
 #else
-
-ALWAYS_INLINE
-error_t dev_i2c_context_init(struct device_s *dev, struct dev_i2c_ctrl_context_s *q)
-{
   return 0;
-}
-
-ALWAYS_INLINE
-void dev_i2c_context_cleanup(struct dev_i2c_ctrl_context_s *q)
-{
-}
-
 #endif
+});
 
 /** @This schedules a I2C single transaction request for
     execution. The kroutine of the request will be called when the
