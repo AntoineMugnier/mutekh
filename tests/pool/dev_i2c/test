@@ -1,0 +1,80 @@
+# -*- python -*-
+
+from mt.base.environment import *
+from mt.base.match import *
+from mt.base.expectation import *
+
+from mutekh.test.stages import configure, build, execute
+from mutekh.test.archs import *
+
+test_sched         = Config("t_sched")
+test_trans         = Config("t_trans")
+test_bytecode      = Config("t_bytecode")
+test_timer         = Config("t_timer")
+test_gpio          = Config("t_gpio")
+test_i2cgpio       = Config("t_i2cgpio")
+test_slaves        = Config("t_slaves")
+test_ctrls         = Config("t_ctrls")
+
+env_list = [
+
+# Test i2c device stack with all related options on a singla arch
+Environment(
+    name = "dev_i2c_1",
+
+    test_deps = [
+        "libdevice/device_i2c.c",
+        "libdevice/shell_i2c.c",
+        "libdevice/include/device/class/i2c.h",
+        "libdevice/bc_custom_i2c.pm",
+    ],
+
+    test_space = [
+        Dimension(all_archs.filter_by_feature("+i2c").expand()[0]),
+        Dimension(test_sched, None),
+        Dimension(test_trans, None),
+        Dimension(test_bytecode, None),
+        Dimension(test_timer, None),
+        Dimension(test_gpio, None),
+        Dimension(test_i2cgpio, None),
+        Dimension(test_slaves),
+        Exclude(test_timer & ~test_bytecode),
+        Exclude(test_i2cgpio & ~test_bytecode),
+        Exclude(test_i2cgpio & ~test_gpio),
+    ],
+
+    actions = [
+        configure,
+        build,
+    ],
+
+    rules = Rules(
+    )
+),
+
+# Test fewer options on all archs
+Environment(
+    name = "dev_i2c_2",
+
+    test_deps = [
+        "libdevice/device_i2c.c",
+        "libdevice/include/device/class/i2c.h",
+    ],
+
+    test_space = [
+        Dimension(*all_archs.filter_by_feature("+i2c").expand()),
+        Dimension(test_trans, None),
+        Dimension(test_ctrls),
+    ],
+
+    actions = [
+        configure,
+        build,
+    ],
+
+    rules = Rules(
+    )
+)
+
+]
+
