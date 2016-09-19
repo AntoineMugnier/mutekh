@@ -23,6 +23,8 @@
 
 #include "sx127x_spi.h"
 
+#include <hexo/endian.h>
+
 #define CONFIG_DRIVER_RFPACKET_CLK_SOURCE
 
 #if defined(CONFIG_DRIVER_RFPACKET_SX127X_DEBUG)
