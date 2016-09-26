@@ -1,0 +1,911 @@
+/*
+    -*- asm -*-
+
+    This file is part of MutekH.
+
+    MutekH is free software; you can redistribute it and/or modify it
+    under the terms of the GNU Lesser General Public License as
+    published by the Free Software Foundation; version 2.1 of the
+    License.
+
+    MutekH is distributed in the hope that it will be useful, but
+    WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+    Lesser General Public License for more details.
+
+    You should have received a copy of the GNU Lesser General Public
+    License along with this program.  If not, see
+    <http://www.gnu.org/licenses/>.
+
+    Copyright (c) Nicolas Pouillon <nipo@ssji.net>, 2016
+*/
+
+#include <device/class/nfc.h>
+#include "micore2_regs.h"
+
+#define REG_SET(r, a, v) \
+    cst8 %r, v ; \
+    reg_set MICORE2_##a##_ADDR, %r
+
+#define REG_OR(r, a, v) \
+    cst8 %r, v ; \
+    reg_or MICORE2_##a##_ADDR, %r
+
+#define REG_ANDN(r, a, v) \
+    cst8 %r, v ; \
+    reg_andn MICORE2_##a##_ADDR, %r
+
+#define RELOAD_SET_MS(r, v)            \
+    REG_SET(r, TRELOAD,    ((v) * 8) >> 8) ; \
+    cst8 %r, ((v) * 8) & 0xff ; \
+    reg_set MICORE2_TRELOAD_ADDR + 1, %r
+
+#define MICORE2_COMMIRQ_ALL MICORE2_COMMIRQ_TIMER | MICORE2_COMMIRQ_ERR | MICORE2_COMMIRQ_LOALERT | MICORE2_COMMIRQ_HIALERT | MICORE2_COMMIRQ_IDLE | MICORE2_COMMIRQ_RX | MICORE2_COMMIRQ_TX
+
+.custom micore2
+.name micore2_app
+
+.func waitidle
+    .clobber %0 tmp
+    .input %15 link
+idle_loop:
+    REG_SET(tmp, COMMAND, MICORE2_COMMAND_COMMAND(IDLE))
+    reg_get  MICORE2_COMMAND_ADDR, %tmp
+    extz %tmp, 3
+    neq0 %tmp
+    jmp8 idle_loop
+
+    ret %link
+.endfunc
+
+.func clear_irq
+    .clobber %1 tmp
+    .input %15 link
+
+    REG_SET(tmp, COMMIRQ, 0x7f)
+    REG_SET(tmp, DIVIRQ, 0x7f)
+    irq_pending_clear
+
+    ret %link
+.endfunc
+
+.func wait_irq
+    .clobber %1 tmp, %2
+    .input %0 mask, %15 link
+    .output %0
+
+    mov %2, %0
+    cst8 %tmp, MICORE2_COMMIRQ_TIMER
+    or32 %2, %tmp
+again:
+    on_irq_timeout 600
+    jmp8 irq_timeout
+
+    reg_get  MICORE2_COMMIRQ_ADDR, %tmp
+    mov %0, %tmp
+    and32 %tmp, %2
+    eq0 %tmp
+    jmp8 again
+
+    ret %link
+
+irq_timeout:
+    cst8 %0, 0
+    ret %link
+.endfunc
+
+.func seven_bit_cmd_put
+    .input %0 cmd, %15 link
+    .clobber %0, %1
+
+    REG_SET(1, FIFOLEVEL, MICORE2_FIFOLEVEL_FLUSH)
+    reg_set MICORE2_FIFODATA_ADDR, %0
+    REG_SET(0, BITFRAMING, MICORE2_BITFRAMING_TXLASTBITS(7))
+
+    ret %link
+.endfunc
+
+.func transceive_wait_irq
+    .input %0 comm_irq, %14 link
+    .output %0
+    .clobber %1, %2, %15
+
+    cst8 %1, MICORE2_COMMIEN_IRQINV
+    or32 %1, %0
+    reg_set MICORE2_COMMIEN_ADDR, %1
+    REG_SET(1, DIVIEN, MICORE2_DIVIEN_IRQPUSHPULL(OPENDRAIN))
+
+    call8 %clear_irq:link, clear_irq
+    REG_SET(1, COMMAND, MICORE2_COMMAND_COMMAND_TRANSCEIVE)
+    REG_OR(1, BITFRAMING, MICORE2_BITFRAMING_STARTSEND)
+
+    call8 %wait_irq:link, wait_irq
+
+    ret %link
+.endfunc
+
+.func transmit_wait_irq
+    .input %0 comm_irq, %14 link
+    .output %0
+    .clobber %1, %2, %15
+
+    cst8 %1, MICORE2_COMMIEN_IRQINV
+    or32 %1, %0
+    reg_set MICORE2_COMMIEN_ADDR, %1
+    REG_SET(1, DIVIEN, MICORE2_DIVIEN_IRQPUSHPULL(OPENDRAIN))
+
+    call8 %clear_irq:link, clear_irq
+    REG_SET(1, COMMAND, MICORE2_COMMAND_COMMAND_TRANSMIT)
+    REG_OR(1, BITFRAMING, MICORE2_BITFRAMING_STARTSEND)
+
+    call8 %wait_irq:link, wait_irq
+
+    ret %link
+.endfunc
+
+.func reset
+    .clobber %0, %15
+    .input %14 link
+
+    reg_get MICORE2_VERSION_ADDR, %0
+
+    REG_SET(0, COMMAND, MICORE2_COMMAND_COMMAND(IDLE))
+wait_wokenup:
+    reg_get  MICORE2_COMMAND_ADDR, %0
+    tst32s %0, bitpos(MICORE2_COMMAND_POWERDOWN)
+    jmp8 wait_wokenup
+
+    REG_SET(0, COMMAND, MICORE2_COMMAND_COMMAND(SOFTRESET))
+    call8 %waitidle:link, waitidle
+    REG_SET(0, COMMAND, MICORE2_COMMAND_COMMAND(IDLE))
+    REG_SET(0, COMMIEN, MICORE2_COMMIEN_IRQINV)
+    REG_SET(0, DIVIEN, MICORE2_DIVIEN_IRQPUSHPULL(OPENDRAIN))
+    irq_pending_clear
+    REG_SET(0, FIFOLEVEL, MICORE2_FIFOLEVEL_FLUSH)
+    ret %link
+.endfunc
+
+.func micore2_start
+    .export micore2_start
+    .input %8 info
+    .clobber %0, %1, %2, %3, %4, %5, %9 rq, %10 peer, %12, %13, %14, %15
+
+    resetn 0
+    wait_ms 50
+    resetn 1
+    wait_ms 50
+    call8 %reset:link, reset
+
+    REG_SET(0, CONTROL, MICORE2_CONTROL_WRNFCIDTOFIFO)
+id_loop:
+    reg_get  MICORE2_CONTROL_ADDR, %0
+    tst32s %0, bitpos(MICORE2_CONTROL_WRNFCIDTOFIFO)
+    jmp8 id_loop
+
+    reg_get  MICORE2_FIFOLEVEL_ADDR, %1
+    fifo_read %info, %1
+
+    reg_get MICORE2_VERSION_ADDR, %0
+    st8e %0, %info, 10
+
+next_rq:
+    rq_next_then %rq
+    jmp8 handle_rq
+
+    sleep_until_rq
+    jmp8 next_rq
+
+handle_rq:
+    ld32e %peer, %rq, _offsetof(struct dev_nfc_rq_s, peer)
+    ld32e %0, %rq, _offsetof(struct dev_nfc_rq_s, type)
+    cst8 %1, _const(DEV_NFC_SELECT_ANY)
+    eq %0, %1
+    jmp8 handle_select_any
+    cst8 %1, _const(DEV_NFC_POWEROFF)
+    eq %0, %1
+    jmp8 handle_poweroff
+    cst8 %1, _const(DEV_NFC_SELECT)
+    eq %0, %1
+    jmp8 handle_select
+    cst8 %1, _const(DEV_NFC_TRANSMIT)
+    eq %0, %1
+    jmp8 handle_transmit
+    cst8 %1, _const(DEV_NFC_RECEIVE)
+    eq %0, %1
+    jmp8 handle_receive
+
+    cst8 %0, ENOTSUP
+    rq_done %0
+    jmp8 next_rq
+
+handle_poweroff:
+    call32 %antenna_off:link, antenna_off
+    wait_ms 10 // See ISO14443-3 5.4, 5ms should be enough
+    cst8 %0, 0
+    rq_done %0
+    jmp8 next_rq
+
+handle_select_any:
+    call32 %setup_iso14443a_pcd:link, setup_iso14443a_pcd
+
+    cst8 %reqa_wupa:cmd, DEV_NFC_ISO14443_CMD_WUPA
+    call8 %reqa_wupa:link, reqa_wupa
+    neq0 %reqa_wupa:errorlevel
+    jmp8 select_any_done
+
+    wait_ms 10
+
+    st16e %reqa_wupa:atqa, %peer, _offsetof(struct dev_nfc_peer_s, atqa)
+
+    call32 %anticoll:link, anticoll
+
+select_any_done:
+    rq_done %anticoll:errorlevel
+    jmp8 next_rq
+
+handle_select:
+    call32 %setup_iso14443a_pcd:link, setup_iso14443a_pcd
+
+    cst8 %reqa_wupa:cmd, DEV_NFC_ISO14443_CMD_WUPA
+    call8 %reqa_wupa:link, reqa_wupa
+    neq0 %reqa_wupa:errorlevel
+    jmp8 select_done
+
+    wait_ms 10
+
+    call32 %select:link, select
+select_done:
+    rq_done %select:errorlevel
+    jmp8 next_rq
+
+handle_transmit:
+    call32 %transmit:link, transmit
+    rq_done %0
+    jmp8 next_rq
+
+handle_receive:
+    cst8 %0, ENOTSUP
+    rq_done %0
+    jmp8 next_rq
+
+.endfunc
+
+.func reqa_wupa
+    .input %0 cmd, %13 link
+    .output %0 errorlevel, %1 atqa
+    .clobber %2, %14, %15
+
+    mov %2, %0
+    call32 %setup_framing_parity:link, setup_framing_parity
+    call32 %waitidle:link, waitidle
+
+    REG_SET(0, COLL, MICORE2_COLL_VALUESAFTERCOLL)
+    mov %0, %2
+    call32 %seven_bit_cmd_put:link, seven_bit_cmd_put
+
+    cst8 %0, MICORE2_COMMIRQ_RX | MICORE2_COMMIRQ_TIMER | MICORE2_COMMIRQ_ERR
+    call32 %transceive_wait_irq:link, transceive_wait_irq
+
+    reg_get MICORE2_FIFOLEVEL_ADDR, %0
+    cst8 %1, 2
+    eq %0, %1
+     jmp8 reqa_wupa_ok
+    cst8 %0, EIO
+    jmp8 reqa_wupa_out
+
+reqa_wupa_ok:
+    fifo_read_r %1, 2
+    unpack16le %1, 1, 2
+    cst8 %0, 0
+    jmp8 reqa_wupa_out
+
+reqa_wupa_out:
+    REG_SET(2, FIFOLEVEL, MICORE2_FIFOLEVEL_FLUSH)
+    REG_SET(2, COMMAND, MICORE2_COMMAND_COMMAND_IDLE)
+    ret %link
+.endfunc
+
+.func anticoll_cl
+    .input %0 level, %13 link
+    .clobber %3 valid_bits, %4 uid, %5 cmd, %14, %15
+    .output %0 errorlevel, %1 uid_selected, %2 sak
+
+    cst8 %valid_bits, 0
+    cst8 %uid, 0
+    cst8 %cmd, 0x91
+    add %cmd, %level
+    add %cmd, %level
+
+    call32 %setup_framing_parity:link, setup_framing_parity
+
+anticoll_cl_loop:
+//    REG_SET(1, COLL, MICORE2_COLL_VALUESAFTERCOLL)
+    REG_SET(0, COLL, 0)
+    REG_SET(0, FIFOLEVEL, MICORE2_FIFOLEVEL_FLUSH)
+    reg_set MICORE2_FIFODATA_ADDR, %cmd
+
+    // Do a floor for count of bytes in cmd
+    // 0BBB Bbbb
+    mov %0, %valid_bits
+    shi32r %0, 3
+    shi32l %0, 3
+    // 0BBB B000
+    add %0, %valid_bits
+    // BBBB 0bbb
+    add8 %0, 0x20
+    reg_set MICORE2_FIFODATA_ADDR, %0
+
+    eq0 %valid_bits
+    jmp8 anticoll_cl_empty_uid
+
+    // Do a ceil for count of bytes to push in fifo
+    mov %1, %valid_bits
+    add8 %1, 7
+    shi32r %1, 3
+    mov %0, %uid
+anticoll_cl_uid_push:
+    reg_set MICORE2_FIFODATA_ADDR, %0
+    shi32r %0, 8
+    loop %1, anticoll_cl_uid_push
+anticoll_cl_empty_uid:
+
+    // Set number of bits to send in last byte
+    cst8 %0, 7
+    and32 %0, %valid_bits
+    mov %1, %0
+    shi32l %1, 4
+    or32 %0, %1
+    reg_set MICORE2_BITFRAMING_ADDR, %0
+
+    cst8 %0, MICORE2_COMMIRQ_RX | MICORE2_COMMIRQ_TIMER | MICORE2_COMMIRQ_ERR
+    call32 %transceive_wait_irq:link, transceive_wait_irq
+
+    tst32s %0, bitpos(MICORE2_COMMIRQ_ERR)
+     jmp8 anticoll_cl_error
+    tst32s %0, bitpos(MICORE2_COMMIRQ_RX)
+     jmp8 anticoll_cl_rx
+
+anticoll_cl_eio:
+    // Timeout, other
+    REG_SET(0, COMMAND, MICORE2_COMMAND_COMMAND(IDLE))
+    REG_SET(0, FIFOLEVEL, MICORE2_FIFOLEVEL_FLUSH)
+    cst8 %0, ETIMEDOUT
+    cst8 %1, 0
+    cst8 %2, 0
+    ret %link
+
+anticoll_cl_rx:
+    cst8 %2, 32
+    sub %2, %valid_bits
+    jmp8 anticoll_cl_append_uid
+
+anticoll_cl_error:
+    reg_get MICORE2_ERROR_ADDR, %0
+    tst32c %0, bitpos(MICORE2_ERROR_COLL)
+    jmp8 anticoll_cl_eio
+
+    // Collision, this is expected
+    reg_get MICORE2_COLL_ADDR, %2
+    tst32s %2, bitpos(MICORE2_COLL_COLLPOSNOTVALID)
+    jmp8 anticoll_cl_eio
+
+    cst8 %1, 0x1f
+    and32 %2, %1
+    eq0 %2
+    cst8 %2, 32
+    mov %0, %valid_bits
+    extz %0, 2
+    sub %2, %0
+
+anticoll_cl_append_uid:
+    mov %0, %valid_bits
+    shi32r %0, 3
+    shi32l %0, 3
+
+    add %valid_bits, %2
+
+    add8 %2, 7
+    shi32r %2, 3
+
+    reg_get MICORE2_FIFOLEVEL_ADDR, %1
+    lt %1, %2
+     jmp8 anticoll_cl_eio
+
+     
+anticoll_cl_uid_read:
+    print %0
+    print %2
+    reg_get MICORE2_FIFODATA_ADDR, %1
+    shl32 %1, %0
+    or32 %uid, %1
+    add8 %0, 8
+    loop %2, anticoll_cl_uid_read
+
+    REG_SET(1, COMMAND, MICORE2_COMMAND_COMMAND(IDLE))
+    call32 %waitidle:link, waitidle
+
+    wait_ms 50
+
+    cst8 %0, 32
+    lt %valid_bits, %0
+    jmp8 anticoll_cl_loop
+
+    call32 %setup_framing_std:link, setup_framing_std
+    REG_SET(0, COLL, 0)
+    REG_SET(0, FIFOLEVEL, MICORE2_FIFOLEVEL_FLUSH)
+    reg_set MICORE2_FIFODATA_ADDR, %cmd
+    REG_SET(0, FIFODATA, 0x70)
+    mov %0, %uid
+    pack32le %0, 1, 4
+    fifo_write_r %0, 4
+    mov %0, %uid
+    mov %1, %uid
+    shi32r %1, 16
+    xor32 %0, %1
+    mov %1, %0
+    shi32r %1, 8
+    xor32 %0, %1
+    reg_set MICORE2_FIFODATA_ADDR, %0
+
+    cst8 %0, MICORE2_COMMIRQ_RX | MICORE2_COMMIRQ_TIMER | MICORE2_COMMIRQ_ERR
+    call32 %transceive_wait_irq:link, transceive_wait_irq
+    tst32s %0, bitpos(MICORE2_COMMIRQ_RX)
+     jmp8 anticoll_sak_rx
+    jmp8 anticoll_cl_eio
+
+anticoll_sak_rx:
+    reg_get MICORE2_STATUS1_ADDR, %0
+    tst32c %0, bitpos(MICORE2_STATUS1_CRCOK)
+    jmp8 anticoll_cl_eio
+
+    reg_get MICORE2_FIFOLEVEL_ADDR, %0
+    cst8 %1, 1
+    neq %1, %0
+    jmp8 anticoll_cl_eio
+
+    reg_get MICORE2_FIFODATA_ADDR, %sak
+    REG_SET(0, FIFOLEVEL, MICORE2_FIFOLEVEL_FLUSH)
+    REG_SET(0, COMMAND, MICORE2_COMMAND_COMMAND(IDLE))
+    mov %uid_selected, %uid
+    cst8 %errorlevel, 0
+
+    ret %link
+.endfunc
+
+.func anticoll
+    .input %10 peer, %12 link
+    .clobber %1, %2, %3, %4, %5, %13, %14, %15
+    .output %0 errorlevel
+
+    cst8 %anticoll_cl:level, 1
+    call32 %anticoll_cl:link, anticoll_cl
+    neq0 %anticoll_cl:errorlevel
+    jmp8 anticoll_err_ret
+
+    tst32s %anticoll_cl:sak, 2
+    jmp8 anticoll_uid7
+
+    st32e %anticoll_cl:uid_selected, %peer, _offsetof(struct dev_nfc_peer_s, uid)
+    st8e %anticoll_cl:sak, %peer, _offsetof(struct dev_nfc_peer_s, sak)
+    cst8 %0, 4
+    st8e %0, %peer, _offsetof(struct dev_nfc_peer_s, uid_size)
+    cst8 %0, 0
+    jmp8 anticoll_err_ret
+
+anticoll_uid7:
+    shi32r %anticoll_cl:uid_selected, 8
+    st32e %anticoll_cl:uid_selected, %peer, _offsetof(struct dev_nfc_peer_s, uid)
+
+    cst8 %anticoll_cl:level, 2
+    call32 %anticoll_cl:link, anticoll_cl
+    neq0 %anticoll_cl:errorlevel
+    jmp8 anticoll_err_ret
+
+    tst32s %anticoll_cl:sak, 2
+    jmp8 anticoll_uid10
+
+    st8e %anticoll_cl:uid_selected, %peer, _offsetof(struct dev_nfc_peer_s, uid) + 3
+    shi32r %anticoll_cl:uid_selected, 8
+    st8e %anticoll_cl:uid_selected, %peer, _offsetof(struct dev_nfc_peer_s, uid) + 4
+    shi32r %anticoll_cl:uid_selected, 8
+    st8e %anticoll_cl:uid_selected, %peer, _offsetof(struct dev_nfc_peer_s, uid) + 5
+    shi32r %anticoll_cl:uid_selected, 8
+    st8e %anticoll_cl:uid_selected, %peer, _offsetof(struct dev_nfc_peer_s, uid) + 6
+    st8e %anticoll_cl:sak, %peer, _offsetof(struct dev_nfc_peer_s, sak)
+    cst8 %0, 7
+    st8e %0, %peer, _offsetof(struct dev_nfc_peer_s, uid_size)
+    cst8 %0, 0
+    jmp8 anticoll_err_ret
+
+anticoll_uid10:
+    shi32r %anticoll_cl:uid_selected, 8
+    st8e %anticoll_cl:uid_selected, %peer, _offsetof(struct dev_nfc_peer_s, uid) + 3
+    shi32r %anticoll_cl:uid_selected, 8
+    st8e %anticoll_cl:uid_selected, %peer, _offsetof(struct dev_nfc_peer_s, uid) + 4
+    shi32r %anticoll_cl:uid_selected, 8
+    st8e %anticoll_cl:uid_selected, %peer, _offsetof(struct dev_nfc_peer_s, uid) + 5
+
+    cst8 %anticoll_cl:level, 3
+    call32 %anticoll_cl:link, anticoll_cl
+    neq0 %anticoll_cl:errorlevel
+    jmp8 anticoll_err_ret
+
+    tst32c %anticoll_cl:sak, 2
+     jmp8 anticoll_done
+    cst8 %0, EBADDATA
+    ret %link
+
+anticoll_done:
+    st8e %anticoll_cl:uid_selected, %peer, _offsetof(struct dev_nfc_peer_s, uid) + 6
+    shi32r %anticoll_cl:uid_selected, 8
+    st8e %anticoll_cl:uid_selected, %peer, _offsetof(struct dev_nfc_peer_s, uid) + 7
+    shi32r %anticoll_cl:uid_selected, 8
+    st8e %anticoll_cl:uid_selected, %peer, _offsetof(struct dev_nfc_peer_s, uid) + 8
+    shi32r %anticoll_cl:uid_selected, 8
+    st8e %anticoll_cl:uid_selected, %peer, _offsetof(struct dev_nfc_peer_s, uid) + 9
+    st8e %anticoll_cl:sak, %peer, _offsetof(struct dev_nfc_peer_s, sak)
+    cst8 %0, 10
+    st8e %0, %peer, _offsetof(struct dev_nfc_peer_s, uid_size)
+    cst8 %0, 0
+    ret %link
+
+anticoll_err_ret:
+    REG_SET(1, FIFOLEVEL, MICORE2_FIFOLEVEL_FLUSH)
+    REG_SET(1, COMMAND, MICORE2_COMMAND_COMMAND(IDLE))
+    ret %link
+.endfunc
+
+.func transmit
+    .input %9 rq, %13 link
+    .clobber %1, %2, %14, %15
+    .output %0 errorlevel, %9 /* rq */
+
+    ld8e %0, %rq, _offsetof(struct dev_nfc_rq_s, data.framing)
+    cst8 %1, _const(DEV_NFC_FRAMING_RAW)
+    eq %0, %1
+    jmp8 transmit_raw
+    cst8 %1, _const(DEV_NFC_FRAMING_PARITY)
+    eq %0, %1
+    jmp8 transmit_parity
+
+//transmit_std
+    call32 %setup_framing_std:link, setup_framing_std
+    REG_SET(0, BITFRAMING, 0)
+    jmp8 transmit_fill
+transmit_parity:
+    call32 %setup_framing_parity:link, setup_framing_parity
+    jmp8 transmit_fill_framing
+transmit_raw:
+    call32 %setup_framing_raw:link, setup_framing_raw
+    // fallthrough
+transmit_fill_framing:
+    ld8e %0, %rq, _offsetof(struct dev_nfc_rq_s, data.last_byte_bits)
+    reg_set MICORE2_BITFRAMING_ADDR, %0
+transmit_fill:
+    REG_SET(0, FIFOLEVEL, MICORE2_FIFOLEVEL_FLUSH)
+    ld32e %0, %rq, _offsetof(struct dev_nfc_rq_s, data.data)
+    ld16e %1, %rq, _offsetof(struct dev_nfc_rq_s, data.size)
+    fifo_write %0, %1
+
+    ld32e %0, %rq, _offsetof(struct dev_nfc_rq_s, base.drvdata)
+    eq0 %0
+     jmp8 transmit_only
+
+    // transmit with receive
+    // Transmit of a transceive never fails
+    cst8 %0, 0
+    rq_done %0
+    rq_next_then %rq
+     jmp8 transceive_do
+
+    // must not happen
+    die
+
+transceive_do:
+    cst8 %0, MICORE2_COMMIRQ_RX | MICORE2_COMMIRQ_TIMER | MICORE2_COMMIRQ_ERR
+    call32 %transceive_wait_irq:link, transceive_wait_irq
+    tst32s %0, bitpos(MICORE2_COMMIRQ_RX)
+     jmp8 transceive_rx
+    tst32s %0, bitpos(MICORE2_COMMIRQ_ERR)
+     jmp8 transmit_eio
+    cst8 %errorlevel, ETIMEDOUT
+    jmp8 transmit_done
+
+transceive_rx:
+    ld8e %0, %rq, _offsetof(struct dev_nfc_rq_s, data.framing)
+    cst8 %1, _const(DEV_NFC_FRAMING_STD)
+    neq %0, %1
+     jmp8 transceive_crc_dontcare
+
+    reg_get MICORE2_STATUS1_ADDR, %0
+    tst32s %0, bitpos(MICORE2_STATUS1_CRCOK)
+    jmp8 transceive_crc_dontcare
+    cst8 %errorlevel, EBADDATA
+    jmp8 transmit_done
+
+transceive_crc_dontcare:
+    reg_get MICORE2_FIFOLEVEL_ADDR, %0
+    ld16e %1, %rq, _offsetof(struct dev_nfc_rq_s, data.size)
+    lt %0, %1
+     mov %1, %0
+    st16e %1, %rq, _offsetof(struct dev_nfc_rq_s, data.size)
+    ld32e %0, %rq, _offsetof(struct dev_nfc_rq_s, data.data)
+    fifo_read %0, %1
+
+    cst8 %errorlevel, 0
+    jmp8 transmit_done
+
+transmit_only:
+    cst8 %0, MICORE2_COMMIRQ_TX | MICORE2_COMMIRQ_TIMER | MICORE2_COMMIRQ_ERR
+    call32 %transmit_wait_irq:link, transmit_wait_irq
+    tst32c %0, bitpos(MICORE2_COMMIRQ_TX)
+     jmp8 transmit_eio
+    cst8 %errorlevel, 0
+    jmp8 transmit_done
+
+transmit_eio:
+    cst8 %errorlevel, EIO
+
+transmit_done:
+    REG_SET(1, FIFOLEVEL, MICORE2_FIFOLEVEL_FLUSH)
+    REG_SET(1, COMMAND, MICORE2_COMMAND_COMMAND(IDLE))
+    ret %link
+.endfunc
+
+.func sel
+    .input %0 level, %1 cl_uid, %13 link
+    .clobber %1, %2 cmd, %14, %15
+    .output %0 errorlevel
+
+    cst8 %cmd, DEV_NFC_ISO14443_CMD_SEL1 - 2
+    add %cmd, %level
+    add %cmd, %level
+
+    call32 %setup_framing_std:link, setup_framing_std
+    REG_SET(0, COLL, 0)
+    REG_SET(0, FIFOLEVEL, MICORE2_FIFOLEVEL_FLUSH)
+    REG_SET(0, BITFRAMING, 0)
+
+    reg_set MICORE2_FIFODATA_ADDR, %cmd
+    REG_SET(0, FIFODATA, 0x70)
+
+    mov %0, %cl_uid
+    pack32le %0, 1, 4
+    fifo_write_r %0, 4
+
+    mov %0, %1
+    shi32r %0, 16
+    xor32 %1, %0
+    mov %0, %1
+    shi32r %1, 8
+    xor32 %0, %1
+    reg_set MICORE2_FIFODATA_ADDR, %0
+
+    cst8 %0, MICORE2_COMMIRQ_RX | MICORE2_COMMIRQ_TIMER | MICORE2_COMMIRQ_ERR
+    call32 %transceive_wait_irq:link, transceive_wait_irq
+    tst32s %0, bitpos(MICORE2_COMMIRQ_RX)
+     jmp8 sel_transmit_rx
+    jmp8 sel_transmit_enoent
+
+sel_transmit_rx:
+    reg_get MICORE2_STATUS1_ADDR, %0
+    tst32c %0, bitpos(MICORE2_STATUS1_CRCOK)
+    jmp8 sel_transmit_enoent
+
+    reg_get MICORE2_FIFOLEVEL_ADDR, %0
+    cst8 %1, 1
+    neq %1, %0
+    jmp8 sel_transmit_enoent
+
+    cst8 %errorlevel, 0
+    jmp8 sel_transmit_done
+
+sel_transmit_enoent:
+    cst8 %errorlevel, ENOENT
+
+sel_transmit_done:
+    REG_SET(1, FIFOLEVEL, MICORE2_FIFOLEVEL_FLUSH)
+    REG_SET(1, COMMAND, MICORE2_COMMAND_COMMAND(IDLE))
+    ret %link
+.endfunc
+
+.func select
+    .input %10 peer, %12 link
+    .clobber %1, %2, %13, %14, %15
+    .output %0 errorlevel
+
+    ld8e %0, %peer, _offsetof(struct dev_nfc_peer_s, uid_size)
+    cst8 %1, 4
+    neq %0, %1
+     jmp8 select_7_or_10
+
+    ld32e %1, %peer, _offsetof(struct dev_nfc_peer_s, uid)
+    cst8 %0, 1
+    call8 %sel:link, sel
+    ret %link
+
+select_7_or_10:
+    ld32e %1, %peer, _offsetof(struct dev_nfc_peer_s, uid)
+    shi32l %1, 8
+    cst8 %0, 0x88
+    or32 %1, %0
+    cst8 %0, 1
+    call8 %sel:link, sel
+    neq0 %0
+     ret %link
+
+    ld8e %0, %peer, _offsetof(struct dev_nfc_peer_s, uid_size)
+    cst8 %1, 7
+    neq %0, %1
+     jmp8 select_10
+
+    ld8e %1, %peer, _offsetof(struct dev_nfc_peer_s, uid) + 6
+    shi32l %1, 8
+    ld8e %0, %peer, _offsetof(struct dev_nfc_peer_s, uid) + 5
+    or32 %1, %0
+    shi32l %1, 8
+    ld8e %0, %peer, _offsetof(struct dev_nfc_peer_s, uid) + 4
+    or32 %1, %0
+    shi32l %1, 8
+    ld8e %0, %peer, _offsetof(struct dev_nfc_peer_s, uid) + 3
+    or32 %1, %0
+    cst8 %0, 2
+    call8 %sel:link, sel
+    ret %link
+
+select_10:
+
+    ld8e %1, %peer, _offsetof(struct dev_nfc_peer_s, uid) + 5
+    shi32l %1, 8
+    ld8e %0, %peer, _offsetof(struct dev_nfc_peer_s, uid) + 4
+    or32 %1, %0
+    shi32l %1, 8
+    ld8e %0, %peer, _offsetof(struct dev_nfc_peer_s, uid) + 3
+    or32 %1, %0
+    shi32l %1, 8
+    cst8 %0, 0x88
+    or32 %1, %0
+    cst8 %0, 2
+    call8 %sel:link, sel
+    neq0 %0
+     ret %link
+
+    ld8e %1, %peer, _offsetof(struct dev_nfc_peer_s, uid) + 9
+    shi32l %1, 8
+    ld8e %0, %peer, _offsetof(struct dev_nfc_peer_s, uid) + 8
+    or32 %1, %0
+    shi32l %1, 8
+    ld8e %0, %peer, _offsetof(struct dev_nfc_peer_s, uid) + 7
+    or32 %1, %0
+    shi32l %1, 8
+    ld8e %0, %peer, _offsetof(struct dev_nfc_peer_s, uid) + 6
+    or32 %1, %0
+    cst8 %0, 3
+    call8 %sel:link, sel
+    ret %link
+.endfunc
+
+.func setup_framing_raw
+    .clobber %0
+    .input %15 link
+
+    REG_SET(0, MANUALRCV, MICORE2_MANUALRCV_PARITYDISABLE)
+    REG_SET(0, TXMODE,    0)
+    REG_SET(0, RXMODE,    0)
+
+    ret %link
+.endfunc
+
+.func setup_framing_parity
+    .clobber %0
+    .input %15 link
+
+    REG_SET(0, MANUALRCV,   0)
+    REG_SET(0, TXMODE,      0)
+    REG_SET(0, RXMODE,      0)
+
+    ret %link
+.endfunc
+
+.func setup_framing_std
+    .clobber %0
+    .input %15 link
+
+    REG_SET(0, MANUALRCV,   0)
+    REG_SET(0, TXMODE,      MICORE2_TXMODE_TXCRCEN)
+    REG_SET(0, RXMODE,      MICORE2_RXMODE_RXCRCEN)
+
+    ret %link
+.endfunc
+
+.func antenna_off
+    .clobber %0
+    .input %15 link
+
+    REG_ANDN(0, TXCONTROL, 0
+                         | MICORE2_TXCONTROL_TX2RFEN
+                         | MICORE2_TXCONTROL_TX1RFEN
+                         )
+
+    ret %link
+.endfunc
+
+.func setup_iso14443a_pcd
+    .clobber %0
+    .input %15 link
+
+    // MODEM Settings
+
+    REG_SET(0, MODE,     0
+                         | MICORE2_MODE_MODEDETOFF
+                         | MICORE2_MODE_CRCPRESET_6363
+                         )
+
+    REG_SET(0, CONTROL,  0
+                         | MICORE2_CONTROL_INITIATOR
+                         )
+    REG_SET(0, MIFNFC,   0
+                         )
+
+    // TX
+
+    REG_SET(0, TXAUTO,   0
+                         | MICORE2_TXAUTO_INITIALRFON
+                         | MICORE2_TXAUTO_FORCE100ASK
+                         )
+    REG_SET(0, TXCONTROL, 0
+                         | MICORE2_TXCONTROL_INVTX2RFON
+                         | MICORE2_TXCONTROL_TX2RFEN
+                         | MICORE2_TXCONTROL_TX1RFEN
+                         )
+    REG_SET(0, GSNOFF,   0
+                         | MICORE2_GSNOFF_CWGSNOFF(6)
+                         | MICORE2_GSNOFF_MODGSNOFF(16)
+                         )
+    REG_SET(0, GSNON,    0
+                         | MICORE2_GSNON_CWGSNON(15)
+                         | MICORE2_GSNON_MODGSNON(4)
+                         )
+    REG_SET(0, CWGSP,    63)
+    REG_SET(0, MODGSP,   17)
+    REG_SET(0, MODWIDTH, 38)
+    REG_SET(0, TXBITPHASE, 0
+                         | MICORE2_TXBITPHASE_RCVCLKCHANGE
+                         | MICORE2_TXBITPHASE_TXBITPHASE(15)
+                         )
+
+    // RX
+
+    REG_SET(0, RFCFG,    0
+                         | MICORE2_RFCFG_RFLEVEL(0_99VPP)
+                         | MICORE2_RFCFG_RXGAIN(33DB)
+                         )
+    REG_SET(0, DEMOD,    0
+                         | MICORE2_DEMOD_ADDIQ(IQ)
+                         | MICORE2_DEMOD_TAURCV(1)
+                         | MICORE2_DEMOD_TAUSYNC(3)
+                         )
+    REG_SET(0, RXTHRESHOLD, 0
+                         | MICORE2_RXTHRESHOLD_MINLEVEL(7)
+                         | MICORE2_RXTHRESHOLD_COLLLEVEL(5)
+                         )
+
+    // Timer
+
+    REG_SET(0, TMODE,       0
+                            | MICORE2_TMODE_TAUTO
+                            | MICORE2_TMODE_TPRESCALERHI(847 >> 8)
+                            )
+    REG_SET(0, TPRESCALER, 847 & 0xff) // 8 kHz
+    RELOAD_SET_MS(0, 500)
+
+    // Debug
+
+//    REG_SET(0, TXSEL,    0
+//                         | MICORE2_TXSEL_DRIVERSEL(INTERNAL)
+//                         | MICORE2_TXSEL_SIGOUTSEL(SERIALRX)
+//                         )
+
+
+    ret %link
+.endfunc

@@ -1,0 +1,148 @@
+/*
+    -*- asm -*-
+
+    This file is part of MutekH.
+
+    MutekH is free software; you can redistribute it and/or modify it
+    under the terms of the GNU Lesser General Public License as
+    published by the Free Software Foundation; version 2.1 of the
+    License.
+
+    MutekH is distributed in the hope that it will be useful, but
+    WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+    Lesser General Public License for more details.
+
+    You should have received a copy of the GNU Lesser General Public
+    License along with this program.  If not, see
+    <http://www.gnu.org/licenses/>.
+
+    Copyright (c) Nicolas Pouillon <nipo@ssji.net>, 2016
+*/
+
+#include <device/class/spi.h>
+#include "micore2_regs.h"
+
+.custom spi
+.name micore2_spi
+
+.func micore2_reg_write
+    .export micore2_reg_write
+    .input %0 reg, %1 value
+    .clobber %0
+
+    shi32l   %reg, 1
+    pack8    %reg, 2
+    spi_wr   %reg, 2, CS_PULSE
+
+    end
+.endfunc
+
+.func micore2_reg_read
+    .export micore2_reg_read
+    .input %0 reg
+    .output %0 value
+    .clobber %1
+
+    shi32l   %reg,   1
+    bit32s   %reg,   bitpos(MICORE2_SPICTRL_DIRECTION(READ))
+    pack16le %reg,   1,    2
+    spi_swp  %reg,   %reg, 2, CS_PULSE
+    unpack8  %reg,   2
+    mov      %value, %1
+
+    end
+.endfunc
+
+.func micore2_reg_or
+    .export micore2_reg_or
+    .input %0 wreg, %1 wvalue
+    .clobber %0, %1, %2 rreg, %3 rvalue
+
+    shi32l   %wreg,   1
+    mov      %rreg,   %wreg
+    bit32s   %rreg,   bitpos(MICORE2_SPICTRL_DIRECTION(READ))
+    pack16le %rreg,   1,     2
+    spi_swp  %rreg,   %rreg, 2, CS_PULSE
+    unpack8  %rreg,   2
+    or32     %wvalue, %rvalue
+    pack8    %wreg,   2
+    spi_wr   %wreg,   2,     CS_PULSE
+
+    end
+.endfunc
+
+.func micore2_reg_andn
+    .export micore2_reg_andn
+    .input %0 wreg, %1 wvalue
+    .clobber %0, %1, %2 rreg, %3 rvalue
+
+    shi32l   %wreg,   1
+    mov      %rreg,   %wreg
+    bit32s   %rreg,   bitpos(MICORE2_SPICTRL_DIRECTION(READ))
+    pack16le %rreg,   1,      2
+    spi_swp  %rreg,   %rreg,  2, CS_PULSE
+    unpack8  %rreg,   2
+    andn32   %rvalue, %wvalue
+    mov      %wvalue, %rvalue
+    pack8    %wreg,   2
+    spi_wr   %wreg,   2,      CS_PULSE
+
+    end
+.endfunc
+
+.func micore2_fifo_read
+    .export micore2_fifo_read
+    .input %0 buffer, %1 count
+    .clobber %3 left, %4 bufp, %1, %2 cmd
+
+    eq0        %count
+    die
+
+    mov        %left, %count
+
+    add8       %left, -1
+    mov        %bufp, %buffer
+
+    cst8       %cmd, MICORE2_SPICTRL_ADDRESS(MICORE2_FIFODATA_ADDR) | MICORE2_SPICTRL_DIRECTION(READ)
+
+    mov        %1, %cmd
+    pack8      %1, 1
+    spi_wr     %1, 1, CS_START
+
+    eq0        %left
+    jmp8       last
+
+next:   
+    mov        %1,    %cmd
+    pack8      %1,    1
+    spi_swp    %1,    %1, 1, CS_CONTINUE
+    unpack8    %1,    1
+    st8i       %1, %bufp
+    loop       %left, next
+
+last:   
+    cst8       %1, 0
+    pack8      %1, 1
+    spi_swp    %1, %1, 1, CS_END
+    unpack8    %1, 1
+    st8i       %1, %bufp
+
+    end
+.endfunc
+
+.func micore2_fifo_write
+    .export micore2_fifo_write
+    .input %0 buffer, %1 count
+    .clobber %2
+
+    eq0 %count
+    die
+
+    cst8 %2, MICORE2_SPICTRL_ADDRESS(MICORE2_FIFODATA_ADDR) | MICORE2_SPICTRL_DIRECTION(WRITE)
+    pack8 %2, 1
+    spi_wr %2, 1, CS_START
+    spi_wrm %0, %1, CS_END
+
+    end
+.endfunc
