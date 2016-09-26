@@ -37,7 +37,7 @@
 
 #define dprintk(...) do{}while(0)
 
-DRIVER_PV(struct nrf5x_spi_context_s
+struct nrf5x_spi_context_s
 {
   uintptr_t addr;
 
@@ -49,7 +49,9 @@ DRIVER_PV(struct nrf5x_spi_context_s
   uint32_t route;
 
   struct dev_spi_ctrl_context_s spi_ctrl_ctx;
-});
+};
+
+DRIVER_PV(struct nrf5x_spi_context_s);
 
 static DEV_SPI_CTRL_CONFIG(nrf5x_spi_config)
 {
@@ -72,7 +74,7 @@ static DEV_SPI_CTRL_CONFIG(nrf5x_spi_config)
   }
 
   if (cfg->miso_pol != DEV_SPI_ACTIVE_HIGH
-      || cfg->mosi_pol != DEV_SPI_ACTIVE_HIGH) {
+      && cfg->mosi_pol != DEV_SPI_ACTIVE_LOW) {
     err = -ENOTSUP;
     goto out;
   }
