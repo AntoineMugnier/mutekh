@@ -18,6 +18,7 @@
 
 %section t_slaves
   # i2c slaves drivers
+  CONFIG_DRIVER_SX1509_KBD
 
 %section t_ctrls
   # i2c controller drivers which are not arch specific
