@@ -42,7 +42,7 @@ define compute_depfile_c
 		$(DEPCC) \
 			$$(CFLAGS) $$(DEPINC) $(value 4) \
 			-M -MG -MT $(value 2) -x c $(value 3) \
-                        | sed -e 's: \(\w\): $$(dir $(value 1))\1:g' > $(value 1) \
+                        | perl -ne 's:\s(\w): $$(dir $(value 1))\1:g; print;' > $(value 1) \
 	) $(LOG_REDIR)
 endef
 
