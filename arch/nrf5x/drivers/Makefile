@@ -20,3 +20,4 @@ objs-$(CONFIG_DRIVER_NRF5X_RNG) += rng.o
 objs-$(CONFIG_DRIVER_NRF5X_ADC) += adc.o
 objs-$(CONFIG_DRIVER_NRF52_SAADC) += saadc.o
 objs-$(CONFIG_DRIVER_NRF52_PDM) += pdm.o
+objs-$(CONFIG_DRIVER_NRF52_IR_BLASTER) += ir_blaster.o
