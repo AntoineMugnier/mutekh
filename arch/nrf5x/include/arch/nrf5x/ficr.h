@@ -49,6 +49,8 @@
 #define NRF_FICR_INFO_RAM        0x1000010c
 #define NRF_FICR_INFO_FLASH      0x10000110
 
+# define NRF_FICR_RAM_BANKS  0x10000258
+
 #if defined(CONFIG_ARCH_NRF52)
 # define NRF_FICR_TEMP_A(x)  (0x10000404 + 4 * (x))
 # define NRF_FICR_TEMP_B(x)  (0x1000041c + 4 * (x))

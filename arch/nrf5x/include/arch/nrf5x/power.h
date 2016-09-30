@@ -61,6 +61,9 @@ enum nrf5x_power_register {
 # define NRF_POWER_RAM_POWER(x) (320 + (x) * 4)
 # define NRF_POWER_RAM_POWERSET(x) (321 + (x) * 4)
 # define NRF_POWER_RAM_POWERCLR(x) (322 + (x) * 4)
+
+    // See PAN-108
+    NRF_POWER_RAM_CURRENT = 697,
 #endif
 };
 

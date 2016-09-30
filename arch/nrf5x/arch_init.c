@@ -1,4 +1,4 @@
-/*
+x/*
     This file is part of MutekH.
 
     MutekH is free software; you can redistribute it and/or modify it
@@ -31,6 +31,23 @@
 #include <arch/nrf5x/gpio.h>
 #include <arch/nrf5x/peripheral.h>
 
+__unused__
+static uint32_t nrf_build_tag(void)
+{
+  return (cpu_mem_read_8(0xf0000fe0) << 12)
+    | ((cpu_mem_read_8(0xf0000fe4) & 0xf) << 8)
+    | (cpu_mem_read_8(0xf0000fe8) & 0xf0)
+    | (cpu_mem_read_8(0xf0000fec) >> 4);
+}
+
+#define NRF51_G0 0x01040 // QFAAG0_1407 r2
+#define NRF51_H0 0x01070 // QFAAH0_1513 r3
+#define NRF51_A1 0x01090 // QFACA1_1503 r3
+
+#define NRF52_ENGA 0x06030 // QFAAAA_xxxx engA
+#define NRF52_ENGB 0x06040 // QFAABA_1536 engB
+#define NRF52_R1   0x06050 // QFAAB0_1614 r1
+
 #if defined(CONFIG_ARCH_NRF52)
 static void nrf52_icache_init(void)
 {
@@ -41,47 +58,34 @@ static void nrf52_icache_init(void)
 #endif
 
 #if defined(CONFIG_ARCH_NRF52)
-static bool_t is_nrf52_0(void)
-{
-  // Nothing else exists for now
-  return 1;
-
-  static const uint8_t const mask[]     = {0xff, 0x0f, 0xf0, 0xf0};
-  static const uint8_t const expected[] = {0x06, 0x00, 0x30, 0x00};
-  const uint32_t *base = (const uint32_t*)0xf0000fe0;
-
-  for (uint8_t i = 0; i < ARRAY_SIZE(mask); ++i) {
-    if ((base[i] & mask[i]) != expected[i])
-      return 0;
-  }
-
-  return 1;
-}
-
 void nrf52_init(void)
 {
   uintptr_t clock = NRF_PERIPHERAL_ADDR(NRF5X_CLOCK);
   uintptr_t demcr = 0xe000edfc;
+  uint32_t tag = nrf_build_tag();
 
   nrf52_icache_init();
 
-  if (is_nrf52_0()) {
+  if (tag < NRF52_ENGB) {
     // FTPAN 32
     cpu_mem_write_32(demcr, cpu_mem_read_32(demcr) & ~0x01000000);
 
     // FTPAN 37
-    *(volatile uint32_t *)0x400005A0 = 0x3;
-
-    // PAN 16
-    *(uint32_t *)0x4007C074 = 0xbaadf00d;
-
-    // PAN 31
-    // CLOCK: Calibration values are not correctly loaded from FICR at reset
-    *(volatile uint32_t *)0x4000053C = ((*(volatile uint32_t *)0x10000244) & 0x0000E000) >> 13;
-
-    // FTPAN 36
-    nrf_event_clear(clock, NRF_CLOCK_DONE);
-    nrf_event_clear(clock, NRF_CLOCK_CTTO);
+    cpu_mem_write_32(0x400005A0, 0x3);
   }
+
+  // PAN 16
+  cpu_mem_write_32(0x4007C074, 0xbaadf00d);
+
+  // PAN 31
+  // CLOCK: Calibration values are not correctly loaded from FICR at reset
+  cpu_mem_write_32(0x4000053C, (cpu_mem_read_32(0x10000244) & 0x0000E000) >> 13);
+
+  // FTPAN 36
+  nrf_event_clear(clock, NRF_CLOCK_DONE);
+  nrf_event_clear(clock, NRF_CLOCK_CTTO);
+
+  // PAN-108
+  cpu_mem_write_32(0x40000ee4, cpu_mem_read_32(0x10000258));
 }
 #endif
