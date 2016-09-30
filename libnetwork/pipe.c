@@ -42,7 +42,7 @@ STRUCT_COMPOSE(pipe_end_s, layer);
 
 struct net_pipe_s
 {
-  struct net_layer_s end[2];
+  struct pipe_end_s end[2];
 };
 
 static
@@ -85,7 +85,7 @@ void net_pipe_layer_task_handle(struct net_layer_s *layer,
       break;
 
     t = net_scheduler_task_alloc(other->layer.scheduler);
-    if (!f)
+    if (!t)
       break;
     net_task_inbound_push(t, other->child, &other->layer,
                           0, &other->src_addr, NULL,
@@ -134,8 +134,8 @@ error_t net_pipe_create(struct net_scheduler_s *scheduler,
 
   pipe->end[0].pipe = pipe;
   pipe->end[1].pipe = pipe;
-  pipe->end[0].src_addr = addr0;
-  pipe->end[1].src_addr = addr1;
+  pipe->end[0].src_addr = *addr0;
+  pipe->end[1].src_addr = *addr1;
 
   *layer0 = &pipe->end[0].layer;
   *layer1 = &pipe->end[1].layer;
