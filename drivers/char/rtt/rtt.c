@@ -220,7 +220,7 @@ static DEV_INIT(char_rtt_init)
   memset(pv, 0, sizeof(*pv));
 
 #if defined(CONFIG_DRIVER_CHAR_RTT_TIMER)
-  if (device_get_param_dev_accessor(dev, "timer", &pv->timer, DRIVER_CLASS_TIMER)) {
+  if (device_get_param_dev_accessor(dev, "timer", &pv->timer.base, DRIVER_CLASS_TIMER)) {
     goto err_pv;
   }
 #endif
