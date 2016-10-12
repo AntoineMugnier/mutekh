@@ -71,6 +71,15 @@
 #define SOCLIB_MC_SET_SP_REG_OFFSET 64
 #define SOCLIB_MC_SET_SP_REG (CONFIG_SOCLIB_MEMCHECK_ADDRESS + SOCLIB_MC_SET_SP_REG_OFFSET)
 
+#define SOCLIB_MC_SET_FP_REG_OFFSET 68
+#define SOCLIB_MC_SET_FP_REG (CONFIG_SOCLIB_MEMCHECK_ADDRESS + SOCLIB_MC_SET_FP_REG_OFFSET)
+
+#define SOCLIB_MC_UNINITIALIZED_OFFSET 72
+#define SOCLIB_MC_UNINITIALIZED (CONFIG_SOCLIB_MEMCHECK_ADDRESS + SOCLIB_MC_UNINITIALIZED_OFFSET)
+
+#define SOCLIB_MC_INITCOPY_OFFSET 76
+#define SOCLIB_MC_INITCOPY (CONFIG_SOCLIB_MEMCHECK_ADDRESS + SOCLIB_MC_INITCOPY_OFFSET)
+
 #define SOCLIB_MC_CTX_ID_UNKNOWN -1
 #define SOCLIB_MC_CTX_ID_CURRENT -2
 
@@ -182,6 +191,30 @@ soclib_mem_mark_initialized(void* addr, size_t size)
   cpu_mem_write_32(SOCLIB_MC_R1, (uintptr_t)addr);
   cpu_mem_write_32(SOCLIB_MC_R2, size);
   cpu_mem_write_32(SOCLIB_MC_INITIALIZED, 0);
+  cpu_mem_write_32(SOCLIB_MC_MAGIC, 0);
+  order_compiler_mem();
+}
+
+ALWAYS_INLINE void
+soclib_mem_mark_uninitialized(void* addr, size_t size)
+{
+  order_compiler_mem();
+  cpu_mem_write_32(SOCLIB_MC_MAGIC, SOCLIB_MC_MAGIC_VAL);
+  cpu_mem_write_32(SOCLIB_MC_R1, (uintptr_t)addr);
+  cpu_mem_write_32(SOCLIB_MC_R2, size);
+  cpu_mem_write_32(SOCLIB_MC_UNINITIALIZED, 0);
+  cpu_mem_write_32(SOCLIB_MC_MAGIC, 0);
+  order_compiler_mem();
+}
+
+ALWAYS_INLINE void
+soclib_mem_copy_initialized(void* dst, void* src, size_t size)
+{
+  order_compiler_mem();
+  cpu_mem_write_32(SOCLIB_MC_MAGIC, SOCLIB_MC_MAGIC_VAL);
+  cpu_mem_write_32(SOCLIB_MC_R1, (uintptr_t)dst);
+  cpu_mem_write_32(SOCLIB_MC_R2, size);
+  cpu_mem_write_32(SOCLIB_MC_INITCOPY, (uintptr_t)src);
   cpu_mem_write_32(SOCLIB_MC_MAGIC, 0);
   order_compiler_mem();
 }
