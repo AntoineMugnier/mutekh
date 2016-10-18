@@ -26,6 +26,7 @@
 #include <mutek/mem_alloc.h>
 #include <hexo/interrupt.h>
 #include <hexo/bit.h>
+#include <mutek/printk.h>
 
 #include <device/resources.h>
 #include <device/device.h>
@@ -70,10 +71,12 @@ static void efm32_dev_dma_set_ctrl(struct device_s *dev,
   struct dev_dma_param_s *p = &rq->param[idx];
   struct efm32_dev_dma_rq_s *exrq = (struct efm32_dev_dma_rq_s *)rq;
   struct efm32_dev_dma_cfg_s * cfg = &exrq->cfg[idx];
-  uintptr_t ctrladdr = (uintptr_t)pv->primary + CHANNEL_SIZE * p->channel;
 
-  if (pv->alt)
-    ctrladdr += 0x100;
+  uintptr_t ctrladdr = (uintptr_t)pv->primary;
+  if (alternate)
+    ctrladdr = (uintptr_t)cpu_mem_read_32(pv->addr + PL230_DMA_ALTCTRLBASE_ADDR);
+  ctrladdr +=  CHANNEL_SIZE * p->channel;
+
 
   size_t len = e->size; 
   if (len > 1024)
@@ -260,20 +263,107 @@ static DEVDMA_REQUEST(efm32_dma_request)
   LOCK_RELEASE_IRQ(&dev->lock);
 }
 
-static inline void efm32_dev_dma_kroutine(struct device_s *dev, struct dev_request_s *base)
+static inline bool_t
+efm32_dev_dma_double_buffering_process(struct device_s *dev, uint8_t i)
 {
-  lock_release(&dev->lock);
-  kroutine_exec(&base->kr);
-  lock_spin(&dev->lock);
+  struct efm32_dma_context  *pv = dev->drv_pv;
+  struct dev_dma_rq_s       *rq = dev_dma_rq_s_cast(dev_request_queue_head(&pv->queue[i]));
 
-  dev->start_count -= DEVICE_START_COUNT_INC;
+  assert(rq != NULL);
+
+  rq->count -= 1;
+  pv->alt ^= 1;
+
+  rq->tr_id = pv->alt;
+  kroutine_exec(&rq->base.kr);
+
+
+  if (rq->count == 0)
+    {
+      dev_request_queue_pop(&pv->queue[i]);
+      return 1;
+    }
+
+  if (rq->count > 1)
+    efm32_dev_dma_set_ctrl(dev, rq, &rq->tr[pv->alt], 0, pv->alt);
+
+  return 0;
+}
+
+static inline void
+efm32_dev_dma_next_request(struct device_s *dev, uint8_t i)
+{
+  struct efm32_dma_context  *pv = dev->drv_pv;
+  uint16_t mask = bit(i);
+  struct dev_dma_rq_s *rq;
+
+  /* A interleaved request is waiting on this channel */
+  if (pv->intlwait & mask)
+  {
+    pv->intlwait &= ~mask;
+    rq = dev_dma_rq_s_cast(dev_request_queue_head(&pv->queue[i + 1]));
+  }
+  else
+    rq = dev_dma_rq_s_cast(dev_request_queue_head(&pv->queue[i]));
+
+  if (!rq)
+    return;
+
+  if (rq->type == DEV_DMA_INTERLEAVED)
+  {
+    if (!efm32_dma_start_intl(dev, rq))
+      return ;
+  }
+
+  efm32_dev_dma_config(dev, rq);
+}
+       
+static inline bool_t
+efm32_dev_dma_process_channel_irq(struct device_s *dev, uint8_t i)
+{
+  struct efm32_dma_context *pv = dev->drv_pv;
+  struct dev_dma_rq_s *rq = dev_dma_rq_s_cast(dev_request_queue_head(&pv->queue[i]));
+
+  uint16_t  mask = bit(i);
+  bool_t    done = 0;
+
+  if (pv->intlrun & mask)
+    pv->intlrun &= ~mask;
+  else if (rq)
+  /* Not the end of a write interleaved transfer */
+    {
+      pv->busy = mask;
+      switch (rq->type)
+        {
+          case DEV_DMA_INTERLEAVED:
+          case DEV_DMA_BASIC:
+            dev_request_queue_pop(&pv->queue[i]);
+            kroutine_exec(&rq->base.kr);
+            done = 1;
+            break;
+#ifdef CONFIG_DRIVER_EFM32_DMA_DOUBLE_BUFFERING
+          case DEV_DMA_DBL_BUF_DST:
+            done = efm32_dev_dma_double_buffering_process(dev, i);
+            break;
+#endif
+          default:
+            abort();
+        }
+      pv->busy = 0;
+    }
+  if (done)
+    {
+      dev->start_count -= DEVICE_START_COUNT_INC;
+      efm32_dev_dma_next_request(dev, i);
+    }
+
+  return 0;
 }
 
 static DEV_IRQ_SRC_PROCESS(efm32_dma_irq)
 {
   struct device_s *dev = ep->base.dev;
   struct efm32_dma_context *pv = dev->drv_pv;
-  struct dev_dma_rq_s *rq; 
   
   lock_spin(&dev->lock);
 
@@ -286,7 +376,9 @@ static DEV_IRQ_SRC_PROCESS(efm32_dma_irq)
 #ifdef CONFIG_DEVICE_CLOCK_GATING
         /* All queue are empty */
         if (!dev->start_count)
-          dev_clock_sink_gate(&pv->clk_ep, DEV_CLOCK_EP_NONE);
+          {
+            dev_clock_sink_gate(&pv->clk_ep, DEV_CLOCK_EP_NONE);
+          }
 #endif
         break;
       }
@@ -297,70 +389,8 @@ static DEV_IRQ_SRC_PROCESS(efm32_dma_irq)
           continue;
 
         /* Clear Interrupt Flag */
-        cpu_mem_write_32(pv->addr + EFM32_DMA_IFC_ADDR, endian_le32(EFM32_DMA_IF_DONE(i)));
-       
-        rq =  dev_dma_rq_s_cast(dev_request_queue_head(&pv->queue[i]));
-       
-        bool_t end = 1;
-        uint16_t mask = bit(i);
-
-        /* Not the end of a write interleaved transfer */
-        if (!(pv->intlrun & mask))
-        {
-          assert(rq != NULL);
-          pv->busy = mask;
-          switch (rq->type)
-          {
-            case DEV_DMA_INTERLEAVED:
-            case DEV_DMA_BASIC:
-              dev_request_queue_pop(&pv->queue[i]);
-              efm32_dev_dma_kroutine(dev, &rq->base);
-              break;
-#ifdef CONFIG_DRIVER_EFM32_DMA_DOUBLE_BUFFERING
-            case DEV_DMA_DBL_BUF_DST:
-              rq->count -= 1;
-              end = (rq->count == 0);
-        
-              if (end)
-                dev_request_queue_pop(&pv->queue[i]);
-        
-              efm32_dev_dma_kroutine(dev, &rq->base);
-        
-              pv->alt ^= 1;
-        
-              if (!end)
-                efm32_dev_dma_set_ctrl(dev, &rq->tr[pv->alt], rq, 0, pv->alt);
-              break;
-#endif
-             default:
-               assert(1);
-               break;
-          }
-          pv->busy = 0;
-        }
-
-        pv->intlrun &= ~mask;
-        rq = dev_dma_rq_s_cast(dev_request_queue_head(&pv->queue[i]));
-
-        /* Start Next request */
-
-        /* A interleaved request is waiting on this channel */
-        if (pv->intlwait & mask)
-          {
-            pv->intlwait &= ~mask;
-            rq =  dev_dma_rq_s_cast(dev_request_queue_head(&pv->queue[i + 1]));
-          }
-
-        if (!end || rq == NULL)
-          continue;
-         
-        if (rq->type == DEV_DMA_INTERLEAVED)
-          {
-            if (!efm32_dma_start_intl(dev, rq))
-              continue;
-          }
-
-        efm32_dev_dma_config(dev, rq);
+        cpu_mem_write_32(pv->addr + EFM32_DMA_IFC_ADDR, endian_le32(EFM32_DMA_IFC_DONE(i)));
+        efm32_dev_dma_process_channel_irq(dev, i);
       }
   }
   
@@ -422,16 +452,36 @@ static DEV_INIT(efm32_dma_init)
   uint32_t x = endian_le32(cpu_mem_read_32(pv->addr + PL230_DMA_STATUS_ADDR));
 
   x = PL230_DMA_STATUS_CHNUM_GET(x) + 1;
-
   assert(CONFIG_DRIVER_EFM32_DMA_CHANNEL_COUNT <= x);
 
+  size_t    s;
+  switch (x)
+    {
+      case 1:
+        s = 0x10;
+        break;
+      case 2:
+        s = 0x20;
+        break;
+      case 3 ... 4:
+        s = 0x40;
+        break;
+      case 5 ... 8:
+        s = 0x80;
+        break;
+      case 9 ... 16:
+        s = 0x100;
+        break;
+      case 17 ... 32:
+        s = 0x200;
+        break;
+    }
+
 #ifdef CONFIG_DRIVER_EFM32_DMA_DOUBLE_BUFFERING
-  size_t s = CHANNEL_SIZE * x + 0x100;
-#else
-  size_t s = CHANNEL_SIZE * CONFIG_DRIVER_EFM32_DMA_CHANNEL_COUNT;
+  s *= 2;
 #endif
 
-  pv->primary = mem_alloc_align(s, 512, (mem_scope_sys));
+  pv->primary = mem_alloc_align(s, s, (mem_scope_sys));
   
   if (!pv->primary)
     goto err_clk;

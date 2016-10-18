@@ -132,13 +132,13 @@ struct dev_dma_rq_s
     struct dev_dma_entry_s   ** sg;
   };
 
- 
+  bool_t                        tr_id;
+
   struct dev_dma_param_s        param[2];
 
   uint16_t                      count;
   uint8_t                       BITFIELD(arch_rq,1);
-                             
-  error_t                       error;    
+  error_t                       error;
 };
 
 STRUCT_INHERIT(dev_dma_rq_s, dev_request_s, base);
