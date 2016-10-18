@@ -1,0 +1,32 @@
+# -*- python -*-
+
+from mt.base.environment import *
+from mt.base.match import *
+from mt.base.expectation import *
+
+from mutekh.test.stages import configure, build, execute
+from mutekh.test.archs import *
+
+test_smp         = Config("t_smp")
+
+env = Environment(
+    name = "atomic",
+    timeout = 10,
+    success_grep = "++SUCCESS++",
+
+    test_space = [
+        Dimension(*all_cpus.expand()),
+        Dimension(test_smp, None),
+        Exclude(all.filter_by_feature("-smp") & test_smp),
+        ],
+
+    actions = [
+        configure,
+        build,
+        execute
+        ],
+
+    rules = Rules(
+    )
+)
+
