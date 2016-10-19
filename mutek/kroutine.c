@@ -22,7 +22,8 @@
 
 #include <mutek/kroutine.h>
 
-extern inline bool_t kroutine_exec(struct kroutine_s *kr);
+extern inline bool_t
+kroutine_exec_flags(struct kroutine_s *kr, uint8_t user_flags);
 
 #ifdef CONFIG_MUTEK_KROUTINE_TRIGGER
 extern inline bool_t kroutine_trigger(struct kroutine_s *kr, enum kroutine_policy_e policy);
