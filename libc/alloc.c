@@ -62,8 +62,9 @@ realloc(void *ptr, size_t size)
   CPU_INTERRUPT_SAVESTATE_DISABLE;
   soclib_mem_check_disable(SOCLIB_MC_CHECK_INIT);
 #endif
-  memcpy(p, ptr, oldsize );
+  memcpy(p, ptr, oldsize);
 #ifdef CONFIG_SOCLIB_MEMCHECK
+  soclib_mem_copy_initialized(p, ptr, oldsize);
   soclib_mem_check_enable(SOCLIB_MC_CHECK_INIT);
   CPU_INTERRUPT_RESTORESTATE;
 #endif
