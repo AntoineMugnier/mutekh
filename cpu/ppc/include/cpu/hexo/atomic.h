@@ -30,6 +30,110 @@
 
 #define CPU_ATOMIC_H_
 
+#define HAS_CPU_ATOMIC_ADD
+
+ALWAYS_INLINE atomic_int_t
+__cpu_atomic_add(atomic_int_t *a, atomic_int_t value)
+{
+        reg_t result, tmp;
+
+	asm volatile(
+		"1:                              \n"
+		"  lwarx   %[result], 0, %[atomic]  \n"
+		"  add     %[tmp], %[result], %[value] \n"
+		"  stwcx.  %[tmp], 0, %[atomic]  \n"
+		"  bne-    1b                    \n"
+		: [tmp] "=&r" (tmp), [result] "=&b" (result), "=m" (*a)
+		: [atomic] "r" (a), [value] "r" (value)
+        : "cr0"
+		);
+
+	return result;
+}
+
+#define HAS_CPU_ATOMIC_OR
+
+ALWAYS_INLINE atomic_int_t
+__cpu_atomic_or(atomic_int_t *a, atomic_int_t value)
+{
+        reg_t result, tmp;
+
+	asm volatile(
+		"1:                              \n"
+		"  lwarx   %[result], 0, %[atomic]  \n"
+		"  or      %[tmp], %[result], %[value] \n"
+		"  stwcx.  %[tmp], 0, %[atomic]  \n"
+		"  bne-    1b                    \n"
+		: [tmp] "=&r" (tmp), [result] "=&b" (result), "=m" (*a)
+		: [atomic] "r" (a), [value] "r" (value)
+        : "cr0"
+		);
+
+	return result;
+}
+
+#define HAS_CPU_ATOMIC_XOR
+
+ALWAYS_INLINE atomic_int_t
+__cpu_atomic_xor(atomic_int_t *a, atomic_int_t value)
+{
+        reg_t result, tmp;
+
+	asm volatile(
+		"1:                              \n"
+		"  lwarx   %[result], 0, %[atomic]  \n"
+		"  xor     %[tmp], %[result], %[value] \n"
+		"  stwcx.  %[tmp], 0, %[atomic]  \n"
+		"  bne-    1b                    \n"
+		: [tmp] "=&r" (tmp), [result] "=&b" (result), "=m" (*a)
+		: [atomic] "r" (a), [value] "r" (value)
+        : "cr0"
+		);
+
+	return result;
+}
+
+#define HAS_CPU_ATOMIC_AND
+
+ALWAYS_INLINE atomic_int_t
+__cpu_atomic_and(atomic_int_t *a, atomic_int_t value)
+{
+        reg_t result, tmp;
+
+	asm volatile(
+		"1:                              \n"
+		"  lwarx   %[result], 0, %[atomic]  \n"
+		"  and     %[tmp], %[result], %[value] \n"
+		"  stwcx.  %[tmp], 0, %[atomic]  \n"
+		"  bne-    1b                    \n"
+		: [tmp] "=&r" (tmp), [result] "=&b" (result), "=m" (*a)
+		: [atomic] "r" (a), [value] "r" (value)
+        : "cr0"
+		);
+
+	return result;
+}
+
+#define HAS_CPU_ATOMIC_SWAP
+
+ALWAYS_INLINE atomic_int_t
+__cpu_atomic_swap(atomic_int_t *a, atomic_int_t value)
+{
+        reg_t result;
+
+	asm volatile(
+		"1:                              \n"
+		"  lwarx   %[result], 0, %[atomic]  \n"
+		"  stwcx.  %[value], 0, %[atomic]  \n"
+		"  bne-    1b                    \n"
+		: [result] "=&b" (result), "=m" (*a)
+		: [atomic] "r" (a), [value] "r" (value)
+        : "cr0"
+		);
+
+	return result;
+}
+
 #define HAS_CPU_ATOMIC_INC
 
 ALWAYS_INLINE bool_t
@@ -205,6 +309,8 @@ __cpu_atomic_bit_clr(atomic_int_t *a, uint_fast8_t n)
         : "cr0"
         );
 }
+
+#define HAS_CPU_ATOMIC_COMPARE_AND_SWAP
 
 ALWAYS_INLINE bool_t
 __cpu_atomic_compare_and_swap(atomic_int_t *a, atomic_int_t old, atomic_int_t future)

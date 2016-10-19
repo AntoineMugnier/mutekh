@@ -29,6 +29,18 @@
 
 #define CPU_ATOMIC_H_
 
+#define HAS_CPU_ATOMIC_SWAP
+
+ALWAYS_INLINE atomic_int_t
+__cpu_atomic_swap(atomic_int_t *a, atomic_int_t value)
+{
+  asm volatile("swap [%3], %0        \n"
+               : "=r" (value), "+m" (*a)
+               : "0" (value), "r" (a)
+               );
+
+  return value;
+}
 
 #if defined(CONFIG_CPU_SPARC_LEON3_CASA) || defined(CONFIG_CPU_SPARC_SOCLIB)
 # define HAS_CPU_ATOMIC_COMPARE_AND_SWAP

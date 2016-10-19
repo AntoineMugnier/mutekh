@@ -54,6 +54,66 @@ ALWAYS_INLINE  atomic_int_t atomic_get(atomic_t *a)
   return res;
 }
 
+ALWAYS_INLINE atomic_int_t atomic_add(atomic_t *a, atomic_int_t value)
+{
+  atomic_int_t	res;
+
+  LOCK_SPIN_IRQ(&__atomic_arch_lock);
+  res = a->value;
+  a->value += value;
+  LOCK_RELEASE_IRQ(&__atomic_arch_lock);
+
+  return res;
+}
+
+ALWAYS_INLINE atomic_int_t atomic_or(atomic_t *a, atomic_int_t value)
+{
+  atomic_int_t	res;
+
+  LOCK_SPIN_IRQ(&__atomic_arch_lock);
+  res = a->value;
+  a->value |= value;
+  LOCK_RELEASE_IRQ(&__atomic_arch_lock);
+
+  return res;
+}
+
+ALWAYS_INLINE atomic_int_t atomic_xor(atomic_t *a, atomic_int_t value)
+{
+  atomic_int_t	res;
+
+  LOCK_SPIN_IRQ(&__atomic_arch_lock);
+  res = a->value;
+  a->value ^= value;
+  LOCK_RELEASE_IRQ(&__atomic_arch_lock);
+
+  return res;
+}
+
+ALWAYS_INLINE atomic_int_t atomic_and(atomic_t *a, atomic_int_t value)
+{
+  atomic_int_t	res;
+
+  LOCK_SPIN_IRQ(&__atomic_arch_lock);
+  res = a->value;
+  a->value &= value;
+  LOCK_RELEASE_IRQ(&__atomic_arch_lock);
+
+  return res;
+}
+
+ALWAYS_INLINE atomic_int_t atomic_swap(atomic_t *a, atomic_int_t value)
+{
+  atomic_int_t	res;
+
+  LOCK_SPIN_IRQ(&__atomic_arch_lock);
+  res = a->value;
+  a->value = value;
+  LOCK_RELEASE_IRQ(&__atomic_arch_lock);
+
+  return res;
+}
+
 ALWAYS_INLINE  bool_t atomic_inc(atomic_t *a)
 {
   atomic_int_t	res;

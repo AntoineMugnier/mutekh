@@ -30,13 +30,38 @@
 
 #define CPU_ATOMIC_H_
 
-#define HAS_CPU_ATOMIC_INC
+#define _SMPLOCK "lock\n"
 
-#if !defined(CONFIG_ARCH_EMU) || defined(CONFIG_ARCH_SMP)
-# define _SMPLOCK "lock\n"
-#else
-# define _SMPLOCK
-#endif
+#define HAS_CPU_ATOMIC_ADD
+
+ALWAYS_INLINE atomic_int_t
+__cpu_atomic_add(atomic_int_t *a, atomic_int_t value)
+{
+  asm volatile (_SMPLOCK
+                "xadd	%1, %0\n"
+		: "=m" (*a), "=r" (value)
+                : "1" (value)
+                : "cc"
+                );
+
+  return value;
+}
+
+#define HAS_CPU_ATOMIC_SWAP
+
+ALWAYS_INLINE atomic_int_t
+__cpu_atomic_swap(atomic_int_t *a, atomic_int_t value)
+{
+  asm volatile (_SMPLOCK
+                "xchg	%1, %0\n"
+		: "=m" (*a), "=r" (value)
+                : "1" (value)
+		);
+
+  return value;
+}
+
+#define HAS_CPU_ATOMIC_INC
 
 ALWAYS_INLINE bool_t
 __cpu_atomic_inc(atomic_int_t *a)
@@ -162,6 +187,8 @@ __cpu_atomic_bit_clr(atomic_int_t *a, uint_fast8_t n)
                 : "cc"
 		);
 }
+
+#define HAS_CPU_ATOMIC_COMPARE_AND_SWAP
 
 ALWAYS_INLINE bool_t
 __cpu_atomic_compare_and_swap(atomic_int_t *a, atomic_int_t old, atomic_int_t future)

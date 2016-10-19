@@ -32,6 +32,116 @@
 
 #define CPU_ATOMIC_H_
 
+#define HAS_CPU_ATOMIC_ADD
+
+ALWAYS_INLINE atomic_int_t
+__cpu_atomic_add(atomic_int_t *a, atomic_int_t value)
+{
+    reg_t  result, tmp;
+
+    order_smp_mem();
+
+    asm volatile(
+        "1:     ll      %[result], %[atomic]      \n"
+        "       addu    %[tmp], %[result], %[value] \n"
+        "       sc      %[tmp], %[atomic]         \n"
+        "       beqz    %[tmp], 1b                \n"
+        : [tmp] "=&r" (tmp), [result] "=&r" (result)
+        , [atomic] "+m" (*a)
+        : [value] "r" (value)
+        );
+
+    return result;
+}
+
+#define HAS_CPU_ATOMIC_OR
+
+ALWAYS_INLINE atomic_int_t
+__cpu_atomic_or(atomic_int_t *a, atomic_int_t value)
+{
+    reg_t  result, tmp;
+
+    order_smp_mem();
+
+    asm volatile(
+        "1:     ll      %[result], %[atomic]      \n"
+        "       or      %[tmp], %[result], %[value] \n"
+        "       sc      %[tmp], %[atomic]         \n"
+        "       beqz    %[tmp], 1b                \n"
+        : [tmp] "=&r" (tmp), [result] "=&r" (result)
+        , [atomic] "+m" (*a)
+        : [value] "r" (value)
+        );
+
+    return result;
+}
+
+#define HAS_CPU_ATOMIC_XOR
+
+ALWAYS_INLINE atomic_int_t
+__cpu_atomic_xor(atomic_int_t *a, atomic_int_t value)
+{
+    reg_t  result, tmp;
+
+    order_smp_mem();
+
+    asm volatile(
+        "1:     ll      %[result], %[atomic]      \n"
+        "       xor     %[tmp], %[result], %[value] \n"
+        "       sc      %[tmp], %[atomic]         \n"
+        "       beqz    %[tmp], 1b                \n"
+        : [tmp] "=&r" (tmp), [result] "=&r" (result)
+        , [atomic] "+m" (*a)
+        : [value] "r" (value)
+        );
+
+    return result;
+}
+
+#define HAS_CPU_ATOMIC_AND
+
+ALWAYS_INLINE atomic_int_t
+__cpu_atomic_and(atomic_int_t *a, atomic_int_t value)
+{
+    reg_t  result, tmp;
+
+    order_smp_mem();
+
+    asm volatile(
+        "1:     ll      %[result], %[atomic]      \n"
+        "       and     %[tmp], %[result], %[value] \n"
+        "       sc      %[tmp], %[atomic]         \n"
+        "       beqz    %[tmp], 1b                \n"
+        : [tmp] "=&r" (tmp), [result] "=&r" (result)
+        , [atomic] "+m" (*a)
+        : [value] "r" (value)
+        );
+
+    return result;
+}
+
+#define HAS_CPU_ATOMIC_SWAP
+
+ALWAYS_INLINE atomic_int_t
+__cpu_atomic_swap(atomic_int_t *a, atomic_int_t value)
+{
+    reg_t  result, tmp;
+
+    order_smp_mem();
+
+    asm volatile(
+        "1:     ll      %[result], %[atomic]      \n"
+        "       move    %[tmp], %[value]          \n"
+        "       sc      %[tmp], %[atomic]         \n"
+        "       beqz    %[tmp], 1b                \n"
+        : [tmp] "=&r" (tmp), [result] "=&r" (result)
+        , [atomic] "+m" (*a)
+        : [value] "r" (value)
+        );
+
+    return result;
+}
+
 #define HAS_CPU_ATOMIC_INC
 
 ALWAYS_INLINE bool_t

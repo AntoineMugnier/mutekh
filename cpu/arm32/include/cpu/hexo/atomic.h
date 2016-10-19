@@ -32,6 +32,135 @@
 
 #define CPU_ATOMIC_H_
 
+#define HAS_CPU_ATOMIC_ADD
+
+ALWAYS_INLINE atomic_int_t
+__cpu_atomic_add(atomic_int_t *a, atomic_int_t value)
+{
+	reg_t tmp, tmp2, tmp3;
+        THUMB_TMP_VAR;
+
+	asm volatile(
+        THUMB_TO_ARM
+		"1:                   \n\t"
+		"ldrex   %[tmp], [%[atomic]]       \n\t"
+		"add     %[tmp2], %[tmp], %[value]   \n\t"
+		"strex   %[tmp3], %[tmp2], [%[atomic]]   \n\t"
+		"tst     %[tmp3], #1       \n\t"
+		"bne     1b           \n\t"
+        ARM_TO_THUMB
+		: [tmp] "=&r" (tmp), [tmp2] "=&r" (tmp2)
+                , [tmp3] "=&r" (tmp3), [clobber] "=m" (*a)
+		/*,*/ THUMB_OUT(,)
+                : [atomic] "r" (a), [value] "r" (value)
+		);
+
+	return tmp;
+}
+
+#define HAS_CPU_ATOMIC_OR
+
+ALWAYS_INLINE atomic_int_t
+__cpu_atomic_or(atomic_int_t *a, atomic_int_t value)
+{
+	reg_t tmp, tmp2, tmp3;
+        THUMB_TMP_VAR;
+
+	asm volatile(
+        THUMB_TO_ARM
+		"1:                   \n\t"
+		"ldrex   %[tmp], [%[atomic]]       \n\t"
+		"orr     %[tmp2], %[tmp], %[value]   \n\t"
+		"strex   %[tmp3], %[tmp2], [%[atomic]]   \n\t"
+		"tst     %[tmp3], #1       \n\t"
+		"bne     1b           \n\t"
+        ARM_TO_THUMB
+		: [tmp] "=&r" (tmp), [tmp2] "=&r" (tmp2)
+                , [tmp3] "=&r" (tmp3), [clobber] "=m" (*a)
+		/*,*/ THUMB_OUT(,)
+                : [atomic] "r" (a), [value] "r" (value)
+		);
+
+	return tmp;
+}
+
+#define HAS_CPU_ATOMIC_XOR
+
+ALWAYS_INLINE atomic_int_t
+__cpu_atomic_xor(atomic_int_t *a, atomic_int_t value)
+{
+	reg_t tmp, tmp2, tmp3;
+        THUMB_TMP_VAR;
+
+	asm volatile(
+        THUMB_TO_ARM
+		"1:                   \n\t"
+		"ldrex   %[tmp], [%[atomic]]       \n\t"
+		"eor     %[tmp2], %[tmp], %[value]   \n\t"
+		"strex   %[tmp3], %[tmp2], [%[atomic]]   \n\t"
+		"tst     %[tmp3], #1       \n\t"
+		"bne     1b           \n\t"
+        ARM_TO_THUMB
+		: [tmp] "=&r" (tmp), [tmp2] "=&r" (tmp2)
+                , [tmp3] "=&r" (tmp3), [clobber] "=m" (*a)
+		/*,*/ THUMB_OUT(,)
+                : [atomic] "r" (a), [value] "r" (value)
+		);
+
+	return tmp;
+}
+
+#define HAS_CPU_ATOMIC_AND
+
+ALWAYS_INLINE atomic_int_t
+__cpu_atomic_and(atomic_int_t *a, atomic_int_t value)
+{
+	reg_t tmp, tmp2, tmp3;
+        THUMB_TMP_VAR;
+
+	asm volatile(
+        THUMB_TO_ARM
+		"1:                   \n\t"
+		"ldrex   %[tmp], [%[atomic]]       \n\t"
+		"and     %[tmp2], %[tmp], %[value]   \n\t"
+		"strex   %[tmp3], %[tmp2], [%[atomic]]   \n\t"
+		"tst     %[tmp3], #1       \n\t"
+		"bne     1b           \n\t"
+        ARM_TO_THUMB
+		: [tmp] "=&r" (tmp), [tmp2] "=&r" (tmp2)
+                , [tmp3] "=&r" (tmp3), [clobber] "=m" (*a)
+		/*,*/ THUMB_OUT(,)
+                : [atomic] "r" (a), [value] "r" (value)
+		);
+
+	return tmp;
+}
+
+#define HAS_CPU_ATOMIC_SWAP
+
+ALWAYS_INLINE atomic_int_t
+__cpu_atomic_swap(atomic_int_t *a, atomic_int_t value)
+{
+	reg_t tmp, tmp2;
+        THUMB_TMP_VAR;
+
+	asm volatile(
+        THUMB_TO_ARM
+		"1:                   \n\t"
+		"ldrex   %[tmp], [%[atomic]]       \n\t"
+		"strex   %[tmp2], %[value], [%[atomic]]   \n\t"
+		"tst     %[tmp2], #1       \n\t"
+		"bne     1b           \n\t"
+        ARM_TO_THUMB
+		: [tmp] "=&r" (tmp), [tmp2] "=&r" (tmp2)
+                , [clobber] "=m" (*a)
+		/*,*/ THUMB_OUT(,)
+                : [atomic] "r" (a), [value] "r" (value)
+		);
+
+	return tmp;
+}
+
 #define HAS_CPU_ATOMIC_INC
 
 ALWAYS_INLINE bool_t
@@ -242,6 +371,8 @@ __cpu_atomic_bit_clr(atomic_int_t *a, uint_fast8_t n)
         : [mask] "r" (mask), [atomic] "r" (a)
 		);
 }
+
+#define HAS_CPU_ATOMIC_COMPARE_AND_SWAP
 
 ALWAYS_INLINE bool_t
 __cpu_atomic_compare_and_swap(atomic_int_t *a, atomic_int_t old, atomic_int_t future)

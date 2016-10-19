@@ -26,6 +26,16 @@
 
 #include <hexo/ordering.h>
 
+/* implement underlying cpu atomic operations. */
+#include <cpu/hexo/atomic.h>
+
+/* implement missing underlying cpu atomic operation from available operations. */
+#include <hexo/atomic_cpu_fallback.h>
+
+/* implement missing underlying cpu atomic operation by disabling
+   interrupts, this only work on single processor builds. */
+#include <hexo/atomic_cpu_nosmp.h>
+
 #define ATOMIC_INITIALIZER(n)		{ .value = (n) }
 
 struct arch_atomic_s
@@ -43,6 +53,31 @@ ALWAYS_INLINE atomic_int_t atomic_get(atomic_t *a)
 {
   order_smp_read();
   return a->value;
+}
+
+ALWAYS_INLINE atomic_int_t atomic_add(atomic_t *a, atomic_int_t value)
+{
+  return __cpu_atomic_add(&a->value, value);
+}
+
+ALWAYS_INLINE atomic_int_t atomic_or(atomic_t *a, atomic_int_t value)
+{
+  return __cpu_atomic_or(&a->value, value);
+}
+
+ALWAYS_INLINE atomic_int_t atomic_xor(atomic_t *a, atomic_int_t value)
+{
+  return __cpu_atomic_xor(&a->value, value);
+}
+
+ALWAYS_INLINE atomic_int_t atomic_and(atomic_t *a, atomic_int_t value)
+{
+  return __cpu_atomic_and(&a->value, value);
+}
+
+ALWAYS_INLINE atomic_int_t atomic_swap(atomic_t *a, atomic_int_t value)
+{
+  return __cpu_atomic_swap(&a->value, value);
 }
 
 ALWAYS_INLINE bool_t atomic_inc(atomic_t *a)
@@ -77,8 +112,7 @@ ALWAYS_INLINE bool_t atomic_bit_testclr(atomic_t *a, uint_fast8_t n)
 
 ALWAYS_INLINE bool_t atomic_bit_test(atomic_t *a, uint_fast8_t n)
 {
-  order_compiler_mem();
-  return ((1 << n) & a->value) != 0;
+  return (atomic_get(a) >> n) & 1;
 }
 
 ALWAYS_INLINE bool_t atomic_compare_and_swap(atomic_t *a, atomic_int_t old, atomic_int_t future)
