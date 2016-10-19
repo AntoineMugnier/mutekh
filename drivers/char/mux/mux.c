@@ -796,7 +796,7 @@ static DEV_INIT(char_mux_init)
 
   pv->chan_count = num;
 
-  if (device_get_param_dev_accessor(dev, "io", &pv->io, DRIVER_CLASS_CHAR))
+  if (device_get_param_dev_accessor(dev, "io", &pv->io.base, DRIVER_CLASS_CHAR))
     goto err_mem;
 
   dev_request_queue_init(&pv->write_q);
