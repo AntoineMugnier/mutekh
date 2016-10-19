@@ -460,8 +460,8 @@ static void sched_context_idle()
           cpu_interrupt_enable();
            /* reset state after pop and before the call so that no
               call to kroutine_exec is discarded. */
-          atomic_set(&kr->state, KROUTINE_INVALID);
-          kr->exec(kr, KROUTINE_EXEC_DEFERRED);
+          atomic_int_t krmask = atomic_swap(&kr->state, 0);
+          kr->exec(kr, krmask | KROUTINE_EXEC_DEFERRED);
           cpu_interrupt_disable();
 
 # ifdef CONFIG_ARCH_SMP

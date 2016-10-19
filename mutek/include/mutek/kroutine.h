@@ -55,15 +55,24 @@ struct kroutine_sequence_s;
 /** @This flags are passed to the @ref kroutine_exec_t handler */
 enum kroutine_exec_flags_e
 {
+  /** @multiple This can be passed to the @ref kroutine_exec_flags function. */
+  KROUTINE_EXEC_USERFLAG_0 = 0x01,
+  KROUTINE_EXEC_USERFLAG_1 = 0x02,
+  KROUTINE_EXEC_USERFLAG_2 = 0x04,
+  KROUTINE_EXEC_USERFLAG_3 = 0x08,
+  KROUTINE_EXEC_USERFLAG_4 = 0x10,
+  KROUTINE_EXEC_USERFLAG_5 = 0x20,
+  KROUTINE_EXEC_USERFLAG_6 = 0x40,
+  KROUTINE_EXEC_USERFLAG_7 = 0x80,
   /** This indicates that the kroutine handler is executed from the
       @ref kroutine_trigger function. This implies that the
       kroutine_exec function has been called previously and the
       retained policy and context allow immediate execution of the
       kroutine handler. */
-  KROUTINE_EXEC_TRIGGERED = 1,
+  KROUTINE_EXEC_TRIGGERED = 0x100,
   /** This indicates that the kroutine handler has been deferred and
       is therefore executed from an interruptible context. */
-  KROUTINE_EXEC_DEFERRED = 2,
+  KROUTINE_EXEC_DEFERRED = 0x200,
 };
 
 /** @see kroutine_exec_t */
@@ -557,16 +566,16 @@ void kroutine_queue_cleanup(struct kroutine_queue_s *q),
 /** @internal */
 error_t kroutine_schedule(struct kroutine_s *kr, enum kroutine_policy_e policy);
 
-/** @This either schedules execution of the kroutine or executes its
-    handler immediately depending on the policy. This function returns
-    @em true if the handler has been executed immediately.
+/** @This acts like @ref kroutine_exec letting the caller pass some
+    @ref kroutine_exec_flags_e user flags which will be passed to the
+    handler.
 
-    For policies other than @ref KROUTINE_TRIGGER, it is ok to call
-    this function multiple times before the handler is actually
-    executed. When deferred execution is used, the handler may be
-    executed only once in this case.
-*/
-inline bool_t kroutine_exec(struct kroutine_s *kr)
+    When deferred execution is used, multiple invocation of this
+    function before actual execution of the handler will lead to user
+    flags being ored together. The value of @tt user_flags can not be 0.
+
+    This is not supported when the policy is @ref KROUTINE_TRIGGER. */
+inline bool_t kroutine_exec_flags(struct kroutine_s *kr, uint8_t user_flags)
 {
   enum kroutine_policy_e policy = kr->policy;
 
@@ -584,10 +593,13 @@ inline bool_t kroutine_exec(struct kroutine_s *kr)
       policy = atomic_get(&kr->state);
       assert(policy != KROUTINE_TRIGGER && policy != KROUTINE_NONE);
 # if defined(CONFIG_MUTEK_KROUTINE_QUEUE)
-      if (policy != KROUTINE_IMMEDIATE)
-        goto sched;
+      if (policy != KROUTINE_IMMEDIATE &&
+          !kroutine_schedule(kr, policy))
+        return 0;
 # endif
-      goto imm;
+      atomic_set(&kr->state, KROUTINE_INVALID); /* reset state */
+      kr->exec(kr, 0);
+      return 1;
 #endif
 #if defined(CONFIG_MUTEK_KROUTINE_QUEUE)
     case KROUTINE_QUEUE:
@@ -607,18 +619,31 @@ inline bool_t kroutine_exec(struct kroutine_s *kr)
     case KROUTINE_SEQ_DEFERRED:
 #  endif
 # endif
-      if (!atomic_compare_and_swap(&kr->state, KROUTINE_INVALID, !KROUTINE_INVALID))
+      assert(user_flags != 0);
+      if (atomic_or(&kr->state, user_flags))
         return 0;
-    sched:
       if (!kroutine_schedule(kr, policy))
         return 0;
+      user_flags = atomic_swap(&kr->state, 0); /* reset state */
 #endif
-    imm:
-      atomic_set(&kr->state, KROUTINE_INVALID); /* reset state */
     case KROUTINE_IMMEDIATE:
-      kr->exec(kr, 0);
+      kr->exec(kr, user_flags);
       return 1;
     }
+}
+
+/** @This either schedules execution of the kroutine or executes its
+    handler immediately depending on the policy. This function returns
+    @em true if the handler has been executed immediately.
+
+    For policies other than @ref KROUTINE_TRIGGER, it is ok to call
+    this function multiple times before the handler is actually
+    executed. When deferred execution is used, the handler may be
+    executed only once in this case.
+*/
+ALWAYS_INLINE bool_t kroutine_exec(struct kroutine_s *kr)
+{
+  return kroutine_exec_flags(kr, 1);
 }
 
 /** @This pops a kroutine from the queue and executes its handler.
