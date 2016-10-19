@@ -170,6 +170,9 @@ dev_request_sched_wait(struct dev_request_status_s *status)
 
 struct semaphore_poll_s;
 
+/** @internal */
+KROUTINE_EXEC(dev_request_sem_done);
+
 /** @This setups a device request for use in a semaphore poll construct.
     The @tt kr and @tt pvdata fields of the request are initialized.
     @see semaphore_poll_init */
@@ -177,7 +180,6 @@ config_depend_inline(CONFIG_MUTEK_SEMAPHORE,
 void dev_request_poll_init(struct dev_request_s *rq,
                            const struct semaphore_poll_s *give),
 {
-  KROUTINE_EXEC(dev_request_sem_done);
   kroutine_init_immediate(&rq->kr, &dev_request_sem_done);
   rq->pvdata = (void*)give;
 })
