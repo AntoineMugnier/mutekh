@@ -625,7 +625,6 @@ void dev_spi_transaction_start(struct device_spi_ctrl_s *ctrl,
 # endif
 
 # ifdef CONFIG_DEVICE_SPI_BYTECODE
-static
 error_t dev_spi_bytecode_start_va(struct device_spi_ctrl_s *ctrl,
                                   struct dev_spi_ctrl_bytecode_rq_s *rq,
                                   const void *pc, uint16_t mask, va_list ap)

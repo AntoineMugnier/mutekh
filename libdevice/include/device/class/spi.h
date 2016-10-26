@@ -808,6 +808,11 @@ error_t dev_spi_bytecode_start(struct device_spi_ctrl_s *ctrl,
                                struct dev_spi_ctrl_bytecode_rq_s *rq,
                                const void *pc, uint16_t mask, ...);
 
+config_depend(CONFIG_DEVICE_SPI_BYTECODE)
+error_t dev_spi_bytecode_start_va(struct device_spi_ctrl_s *ctrl,
+                                  struct dev_spi_ctrl_bytecode_rq_s *rq,
+                                  const void *pc, uint16_t mask, va_list ap);
+
 /** @This initializes a SPI bytecode  request. */
 config_depend_alwaysinline(CONFIG_DEVICE_SPI_BYTECODE,
 void dev_spi_bytecode_init(struct dev_spi_ctrl_bytecode_rq_s *rq),
