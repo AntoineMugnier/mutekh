@@ -256,7 +256,7 @@ sub parse_mov
     push @{$thisop->{out}}, check_reg($thisop, 0);
 
     if ( $thisop->{in}->[0] == $thisop->{out}->[0] ) {
-        error($thisop, "the register same register can not be used twice\n");
+	$thisop->{nop} = 1;
     }
 }
 

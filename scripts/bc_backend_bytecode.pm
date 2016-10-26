@@ -241,7 +241,12 @@ sub out_neg {
 
 sub out_mov {
     my ($thisop) = @_;
-    return fmt1( $thisop, $thisop->{in}->[0], $thisop->{out}->[0] );
+    if ( $thisop->{in}->[0] != $thisop->{out}->[0] ) {
+        return fmt1( $thisop, $thisop->{in}->[0], $thisop->{out}->[0] );
+    } else {
+        # nop
+        return word(0x0004);
+    }
 }
 
 sub out_mul {
