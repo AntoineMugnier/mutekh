@@ -203,7 +203,10 @@ static DEV_IRQ_SRC_PROCESS(efm32_timer_irq)
             {
               dev->start_count &= ~1;
               if (dev->start_count == 0)
-                efm32_timer_stop_counter(pv);
+                {
+                  efm32_timer_stop_counter(pv);
+                  goto end;
+                }
               break;
             }
 
@@ -224,6 +227,7 @@ static DEV_IRQ_SRC_PROCESS(efm32_timer_irq)
         }
     }
 
+end:
   lock_release(&dev->lock);
 }
 #endif

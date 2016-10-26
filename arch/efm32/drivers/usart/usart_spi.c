@@ -225,20 +225,22 @@ static bool_t efm32_usart_spi_transfer_tx(struct device_s *dev)
 
 static DEV_IRQ_SRC_PROCESS(efm32_usart_spi_irq)
 {
-
   struct device_s *dev = ep->base.dev;
   struct efm32_usart_spi_context_s *pv = dev->drv_pv;
 
-
   lock_spin(&dev->lock);
+
+  while (1)
+    {
 #ifdef CONFIG_DEVICE_CLOCK_GATING
-  if (!dev->start_count)
-    goto end;
+      if (!dev->start_count)
+        break;
 #endif
 
-  while (cpu_mem_read_32(pv->addr + EFM32_USART_IF_ADDR) &
-         endian_le32(EFM32_USART_IF_RXDATAV | EFM32_USART_IF_RXFULL))
-    {
+      if (!((cpu_mem_read_32(pv->addr + EFM32_USART_IF_ADDR) & 
+         endian_le32(EFM32_USART_IF_RXDATAV | EFM32_USART_IF_RXFULL))))
+        break;
+
       cpu_mem_write_32(pv->addr + EFM32_USART_IEN_ADDR, 0);
       cpu_mem_write_32(pv->addr + EFM32_USART_IFC_ADDR, endian_le32(EFM32_USART_IFC_MASK));
 
