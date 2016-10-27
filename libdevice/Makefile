@@ -108,4 +108,5 @@ endif
 
 ifeq ($(CONFIG_DEVICE_NFC), defined)
 objs += device_nfc.o
+#objs-$(CONFIG_DEVICE_SHELL) += shell_nfc.o
 endif
