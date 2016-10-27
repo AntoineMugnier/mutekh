@@ -757,7 +757,7 @@ void dev_i2c_transaction_init(struct dev_i2c_ctrl_transaction_rq_s *rq),
     according to the @tt i2c device resource entry of the slave.
 
     @see dev_drv_i2c_transaction_cleanup */
-config_depend(CONFIG_DEVICE_I2C_BYTECODE)
+config_depend(CONFIG_DEVICE_I2C_TRANSACTION)
 error_t dev_drv_i2c_transaction_init(struct device_s *dev,
                                      struct dev_i2c_ctrl_transaction_rq_s *rq,
                                      struct device_i2c_ctrl_s *ctrl);
