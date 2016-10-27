@@ -33,16 +33,16 @@
 #define dprintk(k...) do {} while (0)
 //#define dprintk printk
 
-DRIVER_PV(struct i2c_eeprom_priv_s
+struct i2c_eeprom_priv_s
 {
-    struct device_i2c_s bus;
+    struct device_i2c_ctrl_s bus;
     uint8_t saddr;
     uint8_t addr[2];
     uint8_t addr_size;
     uint32_t size;
     uint32_t page_size_l2;
-    struct dev_i2c_rq_s i2c_req;
-    struct dev_i2c_transfer_s i2c_transfer[2];
+    struct dev_i2c_ctrl_transaction_rq_s i2c_req;
+    struct dev_i2c_ctrl_transaction_data_s i2c_transfer[2];
     dev_request_queue_root_t queue;
 
     size_t sc;
@@ -50,7 +50,9 @@ DRIVER_PV(struct i2c_eeprom_priv_s
 
     bool_t last_was_write;
     bool_t busy;
-});
+};
+
+DRIVER_PV(struct i2c_eeprom_priv_s);
 
 static DEV_MEM_INFO(i2c_eeprom_info)
 {
@@ -98,21 +100,18 @@ static KROUTINE_EXEC(i2c_eeprom_done)
     struct dev_mem_rq_s *rq, *done = NULL;
     struct device_s *dev;
 
-    pv = KROUTINE_CONTAINER(kr, *pv, i2c_req.base.kr);
-    dev = pv->i2c_req.base.pvdata;
+    pv = KROUTINE_CONTAINER(kr, *pv, i2c_req.base.base.kr);
+    dev = pv->i2c_req.base.base.pvdata;
 
     LOCK_SPIN_IRQ(&dev->lock);
 
     drq = dev_request_queue_head(&pv->queue);
     rq = dev_mem_rq_s_cast(drq);
 
-    if (pv->i2c_req.error) {
+    if (pv->i2c_req.base.err) {
         // Write ACK polling
-        if (pv->last_was_write
-            && pv->i2c_req.error_transfer == 0
-            && pv->i2c_req.error_offset == 0
-            && pv->i2c_req.error == -EHOSTUNREACH)
-            goto out;
+        if (pv->last_was_write && pv->i2c_req.base.err == -EHOSTUNREACH)
+          goto out;
 
         rq->err = -EIO;
         done = rq;
@@ -172,16 +171,16 @@ static void i2c_rq_run(
 {
     struct i2c_eeprom_priv_s *pv = dev->drv_pv;
 
-    kroutine_init_immediate(&pv->i2c_req.base.kr, i2c_eeprom_done);
+    kroutine_init_deferred(&pv->i2c_req.base.base.kr, i2c_eeprom_done);
 
-    pv->i2c_req.saddr = pv->saddr + (rq->addr >> (pv->addr_size * 8));
-    pv->i2c_req.base.pvdata = dev;
+    pv->i2c_req.base.saddr = pv->saddr + (rq->addr >> (pv->addr_size * 8));
+    pv->i2c_req.base.base.pvdata = dev;
     pv->i2c_req.transfer = pv->i2c_transfer;
 
     pv->i2c_req.transfer_count = 2;
     pv->i2c_transfer[0].data = pv->addr;
     pv->i2c_transfer[0].size = pv->addr_size;
-    pv->i2c_transfer[0].type = DEV_I2C_WRITE;
+    pv->i2c_transfer[0].type = DEV_I2C_CTRL_TRANSACTION_WRITE;
 
     if (pv->addr_size == 1) {
         pv->addr[0] = rq->addr;
@@ -193,7 +192,7 @@ static void i2c_rq_run(
     case DEV_MEM_OP_PARTIAL_READ:
         pv->i2c_transfer[1].data = rq->data;
         pv->i2c_transfer[1].size = rq->size;
-        pv->i2c_transfer[1].type = DEV_I2C_READ;
+        pv->i2c_transfer[1].type = DEV_I2C_CTRL_TRANSACTION_READ;
 
         dprintk("%s partial read @%x, size: %d\n", __FUNCTION__,
                 (uint32_t)rq->addr, rq->data);
@@ -202,20 +201,20 @@ static void i2c_rq_run(
     case DEV_MEM_OP_PARTIAL_WRITE:
         pv->i2c_transfer[1].data = rq->data;
         pv->i2c_transfer[1].size = rq->size;
-        pv->i2c_transfer[1].type = DEV_I2C_WRITE;
+        pv->i2c_transfer[1].type = DEV_I2C_CTRL_TRANSACTION_WRITE;
 
         dprintk("%s partial write @%x, size: %d\n", __FUNCTION__,
                 (uint32_t)rq->addr, rq->data);
         break;
 
     case DEV_MEM_OP_PAGE_READ:
-        pv->i2c_transfer[1].type = DEV_I2C_READ;
+        pv->i2c_transfer[1].type = DEV_I2C_CTRL_TRANSACTION_READ;
 
         dprintk("%s page read @%x\n", __FUNCTION__, (uint32_t)rq->addr);
         goto page;
 
     case DEV_MEM_OP_PAGE_WRITE:
-        pv->i2c_transfer[1].type = DEV_I2C_WRITE;
+        pv->i2c_transfer[1].type = DEV_I2C_CTRL_TRANSACTION_WRITE;
 
         dprintk("%s page write @%x\n", __FUNCTION__, (uint32_t)rq->addr);
 
@@ -227,7 +226,7 @@ static void i2c_rq_run(
         break;
     }
     
-    DEVICE_OP(&pv->bus, request, &pv->i2c_req);
+    dev_i2c_transaction_start(&pv->bus, &pv->i2c_req);
 }
 
 static DEV_MEM_REQUEST(i2c_eeprom_request)
@@ -287,13 +286,11 @@ static DEV_INIT(i2c_eeprom_init)
     if (!pv)
         return -ENOMEM;
 
-    err = device_get_param_dev_accessor(dev, "bus", &pv->bus, DRIVER_CLASS_I2C);
+    err = dev_drv_i2c_transaction_init(dev, &pv->i2c_req, &pv->bus);
     if (err)
         goto fail;
 
-    err = dev_i2c_res_get_addr(dev, &pv->saddr, 0);
-    if (err)
-        goto fail;
+    pv->saddr = pv->i2c_req.base.saddr;
 
     err = device_get_param_uint(dev, "size", &size);
     if (err)
@@ -311,6 +308,7 @@ static DEV_INIT(i2c_eeprom_init)
     pv->page_size_l2 = __builtin_ctz(page_size);
     pv->size = size;
     pv->addr_size = addr_size;
+    pv->last_was_write = 0;
 
     dev_request_queue_init(&pv->queue);
 
