@@ -1,0 +1,190 @@
+/*
+    -*- asm -*-
+
+    This file is part of MutekH.
+
+    MutekH is free software; you can redistribute it and/or modify it
+    under the terms of the GNU Lesser General Public License as
+    published by the Free Software Foundation; version 2.1 of the
+    License.
+
+    MutekH is distributed in the hope that it will be useful, but
+    WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+    Lesser General Public License for more details.
+
+    You should have received a copy of the GNU Lesser General Public
+    License along with this program.  If not, see
+    <http://www.gnu.org/licenses/>.
+
+    Copyright (c) 2016, Nicolas Pouillon, <nipo@ssji.net>
+*/
+
+#include "hd44780_defs.h"
+    
+.custom hd44780
+.name hd44780_io
+    
+#if !defined(CONFIG_DRIVER_HD44780_4BIT)
+.func hd44780_byte_send
+    .input %0 cmd, %14 link
+
+    data %0
+    e 1
+    wait 5
+    e 0
+    wait 5
+    
+    ret %link
+.endfunc
+#else // 4BIT
+.func hd44780_nibble_send
+    .input %1 nibble, %15 link
+#if defined(CONFIG_DRIVER_HD44780_4BIT_SWAPPED)
+    .clobber %1
+    .clobber %2 tmp
+
+    cst8 %tmp, 0xf
+    and32 %nibble, %tmp
+    cst16 %tmp, 0x1111, 0
+    mul32 %nibble, %tmp
+    cst16 %tmp, 0x8421, 0
+    and32 %nibble, %tmp
+    cst32 %tmp, 0x41041, 0
+    mul32 %nibble, %tmp
+    shi32r %nibble, 15
+#endif
+    data %nibble
+
+    e 1
+    wait 5
+    e 0
+    wait 5
+    ret %link
+.endfunc
+
+.func hd44780_byte_send
+    .input %0 byte, %14 link
+    .clobber %1, %15
+#if defined(CONFIG_DRIVER_HD44780_4BIT_SWAPPED)
+    .clobber %2
+#endif
+    
+    mov %hd44780_nibble_send:nibble, %byte
+    shi32r %hd44780_nibble_send:nibble, 4
+    call8 %hd44780_nibble_send:link, hd44780_nibble_send
+    mov %hd44780_nibble_send:nibble, %byte
+    call8 %hd44780_nibble_send:link, hd44780_nibble_send
+    
+    ret %link
+.endfunc
+#endif
+
+.func hd44780_start
+    .export hd44780_start
+    .input %12
+    .clobber %0, %1, %4, %5, %14
+#if defined(CONFIG_DRIVER_HD44780_4BIT)
+#if defined(CONFIG_DRIVER_HD44780_4BIT_SWAPPED)
+    .clobber %2
+#endif
+    .clobber %15
+#endif    
+    
+    rs 0
+#if defined(CONFIG_DRIVER_HD44780_4BIT)
+    wait 10
+    cst8 %hd44780_nibble_send:nibble, (CMD_FUNCTION | CMD_FUNCTION_8BIT) >> 4
+    call8 %hd44780_nibble_send:link, hd44780_nibble_send
+    wait 1600
+    cst8 %hd44780_nibble_send:nibble, (CMD_FUNCTION | CMD_FUNCTION_8BIT) >> 4
+    call8 %hd44780_nibble_send:link, hd44780_nibble_send
+    wait 20
+    cst8 %hd44780_nibble_send:nibble, (CMD_FUNCTION | CMD_FUNCTION_8BIT) >> 4
+    call8 %hd44780_nibble_send:link, hd44780_nibble_send
+    cst8 %hd44780_nibble_send:nibble, (CMD_FUNCTION | CMD_FUNCTION_4BIT) >> 4
+    call8 %hd44780_nibble_send:link, hd44780_nibble_send
+    cst8 %0, CMD_FUNCTION | CMD_FUNCTION_4BIT
+#else
+    cst8 %0, CMD_FUNCTION | CMD_FUNCTION_8BIT
+#endif
+    or32 %0, %12
+    call8 %hd44780_byte_send:link, hd44780_byte_send
+    cst8 %0, CMD_ENABLE
+    call8 %hd44780_byte_send:link, hd44780_byte_send
+    cst8 %0, CMD_CLEAR
+    call8 %hd44780_byte_send:link, hd44780_byte_send
+    wait 400
+    cst8 %0, CMD_ENTRY | CMD_ENTRY_INC
+    call8 %hd44780_byte_send:link, hd44780_byte_send
+    cst8 %0, CMD_ENABLE | CMD_ENABLE_DISPLAY
+    call8 %hd44780_byte_send:link, hd44780_byte_send
+
+    rs 1
+again:
+    next %0
+#if defined(CONFIG_DRIVER_HD44780_TERM)
+    cst8 %1, 0x1b
+    neq %0, %1
+    jmp8 character
+    next %0
+    cst8 %1, '['
+    neq %0, %1
+    jmp8 again
+    cst8 %4, 0
+    cst8 %5, 0
+ansi:
+    next %0
+    cst8 %1, 0x30 // 0
+    lt %0, %1
+    jmp8 cmd
+    cst8 %1, 0x39 // 9
+    lt %1, %0
+    jmp8 cmd
+    add8 %0, -48 // 0
+    cst8 %1, 10
+    mul32 %4, %1
+    add %4, %0
+    jmp8 ansi
+cmd:
+    cst8 %1, 0x3b // ;
+    neq %0, %1
+    jmp8 not_semicolon
+    mov %5, %4
+    cst8 %4, 0
+    jmp8 ansi
+not_semicolon:
+    cst8 %1, 0x48 // H
+    eq %0, %1
+    jmp8 move
+    cst8 %1, 0x66 // f
+    neq %0, %1
+    jmp8 not_move
+move:
+    rs 0
+    cst8 %0, CMD_DDRAM_ADDR
+    or32 %0, %4
+    shi32l %5, 6
+    or32 %0, %5
+    call8 %hd44780_byte_send:link, hd44780_byte_send
+    wait 30
+    rs 1
+    jmp8 again
+not_move:
+    cst8 %1, 0x4a // J
+    eq %0, %1
+    jmp8 clear
+    jmp8 again
+clear:
+    rs 0
+    cst8 %0, CMD_CLEAR
+    call8 %hd44780_byte_send:link, hd44780_byte_send
+    wait 410
+    rs 1
+    jmp8 again
+character:
+#endif
+    call8 %hd44780_byte_send:link, hd44780_byte_send
+    wait 10
+    jmp8 again
+.endfunc
