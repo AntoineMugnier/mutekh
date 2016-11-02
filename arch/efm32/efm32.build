@@ -157,13 +157,19 @@
       CONFIG_LOAD_ROM_RO_SIZE 0x00008000
     %end
 
+    %subsection efm32-zero-*-f128
+      %types flash
+
+      CONFIG_LOAD_ROM_RO_SIZE 0x00020000
+    %end
+
     %subsection efm32-zero-*-f4 efm32-zero-*-f8
       %types sram
 
       CONFIG_EFM32_RAMSIZE 0x800
     %end
 
-    %subsection efm32-zero-*-f16 efm32-zero-*-f32
+    %subsection efm32-zero-*-f16 efm32-zero-*-f32 efm32-zero-*-f128
       %types sram
 
       CONFIG_EFM32_RAMSIZE 0x1000
@@ -232,6 +238,10 @@
     %end
 
     %subsection efm32-gecko-200-* efm32-gecko-210-*
+      %types features
+    %end
+
+    %subsection efm32-gecko-222-*
       %types features
     %end
   
