@@ -69,17 +69,17 @@ C_HEADER_BEGIN
 #define bit_range(first, last) (bit((last) + 1) - bit(first))
 
 /** @this extracts bit at specified index */
-#define bit_get(value, index) (((value) >> (index)) & 1)
+#define bit_get(value, index) (typeof(value))(((value) >> (index)) & 1)
 
 /** @this extracts @tt count bits from specified @tt index in @tt
     value */
 #define bit_get_mask(value, index, count)  \
-  (((value) >> (index)) & bit_mask(0, count))
+  (typeof(value))(((value) >> (index)) & bit_mask(0, count))
 
 /** @this extracts bits between specified @tt first and @tt last index
     (included) in @tt value */
 #define bit_get_range(value, first, last) \
-  bit_get_mask(value, first, (last) - (first) + 1)
+  (typeof(value))bit_get_mask(value, first, (last) - (first) + 1)
 
 
 
