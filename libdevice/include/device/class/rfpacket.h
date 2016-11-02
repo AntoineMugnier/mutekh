@@ -69,7 +69,13 @@ typedef int16_t dev_rfpacket_pwr_t;
         if (e->dirty)
           e->dirty = 0;
       }
-    @end code */
+
+    @end code 
+
+    A configuration can not be modified while it is already in use by
+    a request.
+
+    */
 struct dev_rfpacket_cfg_cache_s
 {
   /** Configuration id provided by the application. It is used by the
@@ -153,6 +159,9 @@ struct dev_rfpacket_rf_cfg_fairtx_s
           this level will allow start of transmission. */
       dev_rfpacket_pwr_t            rssi;
     } __attribute__((packed)) lbt;
+    struct {
+    } __attribute__((packed)) csma;
+
   } __attribute__((packed));
 
 
@@ -244,7 +253,7 @@ struct dev_rfpacket_pk_cfg_basic_s
   struct dev_rfpacket_pk_cfg_s  base;
 
   /** Specifies the CRC polynomial when relevant. for instance IBM
-      CRC16 has value 0x8005. Zero means that the CRC field is not
+      CRC16 has value 0x18005. Zero means that the CRC field is not
       checked. */
   uint32_t                      crc;
 
@@ -257,7 +266,7 @@ struct dev_rfpacket_pk_cfg_basic_s
   /** Size of sync word in bits minus one */
   uint32_t                      BITFIELD(sw_len,5);
 
-  /** preamble pattern len minus one */
+  /** preamble pattern len in bits minus one */
   uint32_t                      BITFIELD(pb_pattern_len,5);
 
   /** Size of transmitted preamble in bits. When the requested value
@@ -368,8 +377,11 @@ struct dev_rfpacket_rx_s
       driver if the packet is actually smaller. */
   uint16_t                          size;
 
-  /** RX signal level associated to the received packet. */
+  /** RX signal level of radio environment. */
   dev_rfpacket_pwr_t                rssi;
+
+  /** RX signal level of the received packet. */
+  dev_rfpacket_pwr_t                carrier;
 
   /** RX signal power over noise power ratio. */
   dev_rfpacket_pwr_t                snr;
@@ -453,6 +465,14 @@ enum dev_rfpacket_rq_rtype_e
   DEV_RFPACKET_RQ_RX_CONT,
 };
 
+enum dev_rfpacket_timestamp_anchor_e
+{
+  /* Timestamp is relative to the effective start of packet date */
+  DEV_RFPACKET_TIMESTAMP_START,
+  /* Timestamp is relative to the end of packet date */
+  DEV_RFPACKET_TIMESTAMP_END,
+};
+
 struct dev_rfpacket_rq_s
 {
   struct dev_request_s               base;
@@ -501,6 +521,9 @@ struct dev_rfpacket_rq_s
       canceled, all subsequent requests with the same error groups are
       terminated along with the @tt -ECANCELED error code. */
   bool_t                            BITFIELD(err_group,1);
+
+  /* This defines the timestamp anchor */
+  enum dev_rfpacket_timestamp_anchor_e   BITFIELD(anchor,1); 
 
   /** This specifies the type of the request. */
   enum dev_rfpacket_rq_rtype_e      BITFIELD(type,2);
@@ -573,16 +596,17 @@ typedef DEV_RFPACKET_REQUEST(dev_rfpacket_request_t);
 #define DEV_RFPACKET_CANCEL(n)	error_t (n) (const struct device_rfpacket_s *accessor, \
                                              struct dev_rfpacket_rq_s *rq)
 
-/** @This cancels a request which have previously been passed to the
-    @ref dev_rfpacket_request_t function. The function returns 0 if
-    the request has been canceled. The function returns @tt -EBUSY if
-    the request has already ended or will terminate normally soon.
-
-    When this function returns 0, the request kroutine is not executed
-    and the @ref dev_rfpacket_rq_s can be reused by the caller.
-
-    In the case of a running @ref DEV_RFPACKET_RQ_RX_CONT request,
-    this function always returns 0.
+/*  @This forces early termination of a request which have previously been passed to the
+    @ref dev_rfpacket_request_t function.
+    
+    The function returns 0 if the request has been canceled.
+    In this case, the request kroutine is not executed
+    and the @ref dev_rfpacket_rq_s can be reused immediately by the caller.
+    
+    This function returns @tt -EBUSY if
+    the request has already ended normally or will terminate soon.
+    In the later case, some packets may still be received or transmitted
+    before the request kroutine is executed.
 */
 typedef DEV_RFPACKET_CANCEL(dev_rfpacket_cancel_t);
 
