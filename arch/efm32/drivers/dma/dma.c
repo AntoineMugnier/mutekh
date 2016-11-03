@@ -201,7 +201,7 @@ static bool_t efm32_dma_start_intl(struct device_s *dev, struct dev_dma_rq_s *rq
   struct efm32_dma_context *pv = dev->drv_pv;
   uint8_t wchan = rq->param[DEV_DMA_INTL_WRITE].channel;
 
-  /* Channels must be contigeous */
+  /* Channels must be contigous */
   assert(rq->param[DEV_DMA_INTL_READ].channel == (rq->param[DEV_DMA_INTL_WRITE].channel + 1));
 
   bool_t wempty = dev_request_queue_isempty(&pv->queue[wchan]);
@@ -318,7 +318,7 @@ efm32_dev_dma_next_request(struct device_s *dev, uint8_t i)
   efm32_dev_dma_config(dev, rq);
 }
        
-static inline bool_t
+static inline void
 efm32_dev_dma_process_channel_irq(struct device_s *dev, uint8_t i)
 {
   struct efm32_dma_context *pv = dev->drv_pv;
@@ -351,13 +351,12 @@ efm32_dev_dma_process_channel_irq(struct device_s *dev, uint8_t i)
         }
       pv->busy = 0;
     }
+
   if (done)
     {
       dev->start_count -= DEVICE_START_COUNT_INC;
       efm32_dev_dma_next_request(dev, i);
     }
-
-  return 0;
 }
 
 static DEV_IRQ_SRC_PROCESS(efm32_dma_irq)
@@ -371,14 +370,14 @@ static DEV_IRQ_SRC_PROCESS(efm32_dma_irq)
   {
     uint32_t x = endian_le32(cpu_mem_read_32(pv->addr + EFM32_DMA_IF_ADDR));
 
+    assert((x & EFM32_DMA_IF_ERR) == 0); 
+
     if (!x)
       {
 #ifdef CONFIG_DEVICE_CLOCK_GATING
         /* All queue are empty */
         if (!dev->start_count)
-          {
-            dev_clock_sink_gate(&pv->clk_ep, DEV_CLOCK_EP_NONE);
-          }
+          dev_clock_sink_gate(&pv->clk_ep, DEV_CLOCK_EP_POWER);
 #endif
         break;
       }
@@ -454,39 +453,43 @@ static DEV_INIT(efm32_dma_init)
   x = PL230_DMA_STATUS_CHNUM_GET(x) + 1;
   assert(CONFIG_DRIVER_EFM32_DMA_CHANNEL_COUNT <= x);
 
-  size_t    s;
+  size_t align, size;
+
   switch (x)
     {
       case 1:
-        s = 0x10;
+        size = 0x10;
         break;
       case 2:
-        s = 0x20;
+        size = 0x20;
         break;
       case 3 ... 4:
-        s = 0x40;
+        size = 0x40;
         break;
       case 5 ... 8:
-        s = 0x80;
+        size = 0x80;
         break;
       case 9 ... 16:
-        s = 0x100;
+        size = 0x100;
         break;
       case 17 ... 32:
-        s = 0x200;
+        size = 0x200;
         break;
     }
 
+  align = size * 2;
+
 #ifdef CONFIG_DRIVER_EFM32_DMA_DOUBLE_BUFFERING
-  s *= 2;
+  /* Need alternate structure */
+  size= align;
 #endif
 
-  pv->primary = mem_alloc_align(s, s, (mem_scope_sys));
+  pv->primary = mem_alloc_align(size, align, (mem_scope_sys));
   
   if (!pv->primary)
     goto err_clk;
 
-  memset(pv->primary, 0, s);
+  memset(pv->primary, 0, size);
   
   /* Enable DMA Controller */
   cpu_mem_write_32(pv->addr + PL230_DMA_CONFIG_ADDR, endian_le32(PL230_DMA_CONFIG_EN));
