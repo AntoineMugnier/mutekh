@@ -220,7 +220,7 @@
 
       CONFIG_STM32_SERIES 107
 
-      CONFIG_CPU_ARM32M_M_IRQ_COUNT 0
+      CONFIG_CPU_ARM32M_M_IRQ_COUNT 67
     %end
 
     ########### Ram size
