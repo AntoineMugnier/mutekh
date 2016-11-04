@@ -1,11 +1,13 @@
 
-#ifndef EFM32_DEVADDR_H_
-#define EFM32_DEVADDR_H_
-
-#define EFM32_RMU_ADDR 0x400ca000
-#define EFM32_EMU_ADDR 0x400c6000
-#define EFM32_CMU_ADDR 0x400c8000
-#define EFM32_GPIO_ADDR 0x40006000
-
+# if defined(CONFIG_EFM32_LEOPARD_GECKO) \
+  || defined(CONFIG_EFM32_WONDER_GECKO) \
+  || defined(CONFIG_EFM32_GIANT_GECKO)
+# include "efm/leopard/devaddr.h"
+#elif defined(CONFIG_EFM32_GECKO)
+# include "efm/gecko/devaddr.h"
+#elif defined(CONFIG_EFM32_ZERO_GECKO)
+# include "efm/zero/devaddr.h"
+#else
+# error
 #endif
 

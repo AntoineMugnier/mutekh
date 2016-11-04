@@ -1,0 +1,11 @@
+
+#ifndef EFM32_DEVADDR_H_
+#define EFM32_DEVADDR_H_
+
+#define EFM32_RMU_ADDR 0x400ca000
+#define EFM32_EMU_ADDR 0x400c6000
+#define EFM32_CMU_ADDR 0x400c8000
+#define EFM32_GPIO_ADDR 0x40006000
+
+#endif
+
