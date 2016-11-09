@@ -84,7 +84,7 @@ error_t device_res_gpio_map(struct device_s *dev, const char *pin_list,
     {
       struct dev_resource_s *r = device_res_get_from_name(dev, DEV_RES_GPIO, 0, pin_list);
 
-      while (*pin_list && *pin_list != ':' && *pin_list != '?')
+      while (*pin_list && *pin_list != ':' && *pin_list != '?' && *pin_list != ' ')
         pin_list++;
 
       if (*pin_list == '?')
