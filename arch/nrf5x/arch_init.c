@@ -1,4 +1,4 @@
-x/*
+/*
     This file is part of MutekH.
 
     MutekH is free software; you can redistribute it and/or modify it
