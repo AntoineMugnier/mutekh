@@ -63,14 +63,12 @@ sub out_custom {
     my $op = $thisop->{code} | $thisop->{op}->{code};
     return
            # opcode value
-	   "    movs r0, #".($op & 0xff)."\n".
-	   "    movs r1, #".($op >> 8)."\n".
-	   "    lsls r1, #8\n".
-	   "    orrs r0, r1\n".
+	   "    ldr r0, =$op\n".
            # resume address
 	   "    adr r1, 2f\n".
            "    str r1, [r4, #".(16 * 4)."]\n".
            "    pop    {r4, r5, r6, r7, pc}\n".
+	   "    .ltorg\n".
 	   "    .balign 4\n".
 	   "2:\n";
 }
@@ -80,10 +78,7 @@ sub out_custom_cond {
     my $op = $thisop->{code} | $thisop->{op}->{code};
     return
            # opcode value
-	   "    movs r0, #".($op & 0xff)."\n".
-	   "    movs r1, #".($op >> 8)."\n".
-	   "    lsls r1, #8\n".
-	   "    orrs r0, r1\n".
+	   "    ldr r0, =$op\n".
            # skip amount
 	   "    movs r1, 1f - 2f\n".
            "    str r1, [r4, #".(17 * 4)."]\n".
@@ -91,6 +86,7 @@ sub out_custom_cond {
 	   "    adr r1, 2f\n".
            "    str r1, [r4, #".(16 * 4)."]\n".
            "    pop    {r4, r5, r6, r7, pc}\n".
+	   "    .ltorg\n".
 	   "    .balign 4\n".
 	   "2:\n";
 }
