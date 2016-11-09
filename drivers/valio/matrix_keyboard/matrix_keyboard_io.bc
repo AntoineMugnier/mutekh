@@ -1,0 +1,101 @@
+/*
+    -*- asm -*-
+
+    This file is part of MutekH.
+
+    MutekH is free software; you can redistribute it and/or modify it
+    under the terms of the GNU Lesser General Public License as
+    published by the Free Software Foundation; version 2.1 of the
+    License.
+
+    MutekH is distributed in the hope that it will be useful, but
+    WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+    Lesser General Public License for more details.
+
+    You should have received a copy of the GNU Lesser General Public
+    License along with this program.  If not, see
+    <http://www.gnu.org/licenses/>.
+
+    Copyright (c) 2016, Nicolas Pouillon, <nipo@ssji.net>
+*/
+    
+.custom matrix_keyboard
+.name matrix_keyboard_io
+
+.func matrix_keyboard_start
+    .export matrix_keyboard_start
+    .input %7 column_count, %8 row_count, %9 max_scan_count
+    .clobber %0 column, %1 rows, %2 row, %3 rows_before_scan, %4 tmp, %5 rescans_left, %6 one_pressed
+
+    mov %rescans_left, %max_scan_count
+    notify none
+    columns_release
+    wait_row
+
+scan_again:
+    pressed_reset
+    cst8 %one_pressed, 0
+    rows_get %rows_before_scan
+    mov %column, %column_count
+
+column_scan_loop:
+    add8 %column, -1
+    column_strobe %column
+
+    wait_row
+
+    rows_get %rows
+row_extract:
+    eq0 %rows
+     jmp8 next_column
+
+row_next:
+    mov %row, %rows
+    msbs32 %row
+
+    mov %tmp, %row
+    mul32 %tmp, %column_count
+    add %tmp, %column
+    pressed_set %tmp
+    cst8 %one_pressed, 1
+
+    cst8 %tmp, 1
+    shl32 %tmp, %row
+    andn32 %rows, %tmp
+    neq0 %rows
+     jmp8 row_next
+
+next_column:
+    neq0 %column
+     jmp8 column_scan_loop
+
+    columns_release
+    wait_row
+    notify release
+    wait_row
+    rows_get %rows
+
+    neq %rows, %rows_before_scan
+     jmp8 scan_again
+
+    pressed_done
+
+    eq0 %one_pressed
+     jmp8 keyboard_released
+
+    loop %rescans_left, scan_again
+    wait_change
+    notify none
+    mov %rescans_left, %max_scan_count
+    jmp8 scan_again
+
+keyboard_released:
+    notify press
+    wait_change
+    notify none
+
+    mov %rescans_left, %max_scan_count
+    jmp8 scan_again
+
+.endfunc
