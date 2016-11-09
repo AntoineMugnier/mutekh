@@ -496,7 +496,7 @@ void
 bc_set_regs(struct bc_context_s *ctx, uint16_t mask, ...);
 
 /** @This returns the value of one of the 16 virtual machine registers */
-ALWAYS_INLINE bc_reg_t
+ALWAYS_INLINE uintptr_t
 bc_get_reg(struct bc_context_s *ctx, uint_fast8_t i)
 {
   return ctx->v[i];
@@ -512,7 +512,7 @@ bc_get_bytepack(struct bc_context_s *ctx, uint_fast8_t i)
 
 /** @This sets the value of one of the 16 virtual machine registers */
 ALWAYS_INLINE void
-bc_set_reg(struct bc_context_s *ctx, uint_fast8_t i, bc_reg_t value)
+bc_set_reg(struct bc_context_s *ctx, uint_fast8_t i, uintptr_t value)
 {
   ctx->v[i] = value;
 }
