@@ -15,7 +15,7 @@
     License along with this program.  If not, see
     <http://www.gnu.org/licenses/>.
 
-    Copyright (c) Nicolas Pouillon <nipo@ssji.net> 2016
+    Copyright (c) 2016, Nicolas Pouillon, <nipo@ssji.net>
 */
 
 /**
@@ -77,8 +77,8 @@ enum dev_nfc_side_e
 #define DEV_NFC_ATQA_UID_SIZE_GET(x) ((((x) >> 6) & 0x3) * 3 + 4)
 #define DEV_NFC_ATQA_PLATCONFIG(x) ((x) << 8)
 
-#define DEV_NFC_SEL_NFCIP1 bit(6)
-#define DEV_NFC_SEL_14443_4 bit(5)
+#define DEV_NFC_SAK_NFCIP1 bit(6)
+#define DEV_NFC_SAK_14443_4 bit(5)
 
 #define DEV_NFC_ISO14443_CMD_REQA 0x26
 #define DEV_NFC_ISO14443_CMD_WUPA 0x52
@@ -130,24 +130,45 @@ enum dev_nfc_req_type_e
   DEV_NFC_TRANSMIT,
   /** RX */
   DEV_NFC_RECEIVE,
-  /** Power field, Wakeup all PICCs, do anticoll and put first
-      available PICC it in ACTIVE state, HALT others */
-  DEV_NFC_FIND_ANY,
-  /* Seek for a given PICC in field, put others in HALT state */
+  /** Wakeup all PICCs, do anticoll and put first available PICC it in
+      ACTIVE state, HALT others */
+  DEV_NFC_SELECT_ANY,
+  /** Seek for a given PICC in field, put others in IDLE/HALT state */
   DEV_NFC_SELECT,
+  /** Remove power from field */
+  DEV_NFC_POWEROFF,
 };
 
-ENUM_DESCRIPTOR(dev_nfc_parity_mode_e, strip:DEV_NFC_PARITY_, upper);
+ENUM_DESCRIPTOR(dev_nfc_framing_e, strip:DEV_NFC_FRAMING_, upper);
 
-enum dev_nfc_parity_mode_e
+enum dev_nfc_framing_e
 {
-  /** Parity is automatically inserted and checked. */
-  DEV_NFC_PARITY_AUTO,
-  /** Parity is transceived from/to @tt parity buffer once every 8
-      data bits. */
-  DEV_NFC_PARITY_RAW,
-  /** No parity at all, only transceive bits from @tt data buffer. */
-  DEV_NFC_PARITY_NONE,
+  /** Transceiver should append/check ISO 16-bit CRC (and parity). */
+  DEV_NFC_FRAMING_STD,
+  /** Parity is automatically inserted and checked, but CRC is not
+      automatically appended/checked. */
+  DEV_NFC_FRAMING_PARITY,
+  /** Parity is not inserted nor checked, @tt data is the raw
+      transceived data stream. */
+  DEV_NFC_FRAMING_RAW,
+};
+
+struct dev_nfc_rq_data_s
+{
+  /** Data buffer. Data is transceived LSB first. */
+  uint8_t *data;
+
+  /** Frame byte count. Every started byte counts. i.e. @tt size
+      is the byte count of @tt data buffer. */
+  uint16_t size;
+
+  /** Data framing mode. @see dev_nfc_framing_e. */
+  enum dev_nfc_framing_e framing : 8;
+
+  /** 0 means last byte is full with parity bit (if not raw), 8 is
+      forbidden.  Only allowed to be non-zero if @tt framing
+      is not DEV_NFC_FRAMING_STD. */
+  uint8_t last_byte_bits;
 };
 
 struct dev_nfc_rq_s
@@ -163,30 +184,7 @@ struct dev_nfc_rq_s
    */
   struct dev_nfc_peer_s *peer;
 
-  union {
-    struct {
-      /** Data parity mode. @see dev_nfc_parity_mode_e. */
-      bool_t parity_mode;
-
-      /** Whether transceiver should append/check ISO 16-bit CRC.  @tt
-          parity_mode must be @tt DEV_NFC_PARITY_AUTO if set. */
-      bool_t auto_crc;
-
-      /** Frame byte count. Every started byte counts. i.e. @tt size
-          is the byte count of @tt data buffer. */
-      uint16_t size;
-      /** 0 means last byte is full with parity bit (if not raw), 8 is
-          forbidden.  Only allowed to be non-zero if @tt parity_mode
-          is not DEV_NFC_PARITY_AUTO or @tt size is 1. */
-      uint16_t last_byte_bits;
-
-      /** Data buffer. Data is transceived LSB first. */
-      uint8_t *data;
-
-      /** Parity buffer. Only used if @tt parity_mode is @tt DEV_NFC_PARITY_RAW. */
-      uint8_t *parity;
-    } data;
-  };
+  struct dev_nfc_rq_data_s data;
 };
 
 STRUCT_INHERIT(dev_nfc_rq_s, dev_request_s, base);
@@ -194,11 +192,21 @@ STRUCT_INHERIT(dev_nfc_rq_s, dev_request_s, base);
 /** @see dev_nfc_request_t */
 #define DEV_NFC_REQUEST(n)                      \
   void (n)(const struct device_nfc_s *accessor, \
-           struct dev_nfc_rq_s *rq)
+           struct dev_nfc_rq_s *rq1, \
+           struct dev_nfc_rq_s *rq2)
 
 /**
-   NFC device class request() function type. Enqueue a read or write
-   request.
+   NFC device class request() function type. Enqueue up to 2
+   requests.
+
+   Enqueing two requests is only valid for atomic
+   transmit-then-receive (a.k.a. transceive) operations.  When two
+   requests are pushed, they must be of type @tt DEV_NFC_TRANSMIT and
+   @tt DEV_NFC_RECEIVE, respectively.  Any other request types must be
+   enqueued one-by-one.
+
+   If only one request is pushed, second request should be set to @tt
+   NULL.
 */
 typedef DEV_NFC_REQUEST(dev_nfc_request_t);
 
@@ -207,7 +215,7 @@ typedef DEV_NFC_REQUEST(dev_nfc_request_t);
   error_t (n)(const struct device_nfc_s *accessor,      \
               struct dev_nfc_rq_s *rq)
 /**
-   NFC device class cancel() function type. Cancel a request.
+   NFC device class cancel() function type. Cancels a request.
 */
 typedef DEV_NFC_CANCEL(dev_nfc_cancel_t);
 
@@ -240,32 +248,39 @@ BUSY_WAITING_FUNCTION
 config_depend_inline(CONFIG_DEVICE_NFC,
 error_t dev_nfc_spin_request(
     const struct device_nfc_s *accessor,
-    struct dev_nfc_rq_s *req),
+    struct dev_nfc_rq_s *rq),
 {
     struct dev_request_status_s status;
 
-    dev_request_spin_init(&req->base, &status);
-    DEVICE_OP(accessor, request, req);
+    dev_request_spin_init(&rq->base, &status);
+    DEVICE_OP(accessor, request, rq, NULL);
     dev_request_spin_wait(&status);
 
-    return req->error;
+    return rq->error;
 });
 
 /** @This is scheduler wait wrapper for the @ref dev_nfc_request_t function */
 config_depend_and2_inline(CONFIG_DEVICE_NFC, CONFIG_MUTEK_CONTEXT_SCHED,
 error_t dev_nfc_wait_request(
     const struct device_nfc_s *accessor,
-    struct dev_nfc_rq_s *req),
+    struct dev_nfc_rq_s *rq),
 {
       struct dev_request_status_s status;
 
-      dev_request_sched_init(&req->base, &status);
-
-      DEVICE_OP(accessor, request, req);
-
+      dev_request_sched_init(&rq->base, &status);
+      DEVICE_OP(accessor, request, rq, NULL);
       dev_request_sched_wait(&status);
 
-      return req->error;
+      return rq->error;
 });
+
+/** @This is scheduler wait wrapper for transceiving data with
+    standard framing. */
+config_depend_and2(CONFIG_DEVICE_NFC, CONFIG_MUTEK_CONTEXT_SCHED)
+error_t dev_nfc_wait_transceive_std(
+    const struct device_nfc_s *accessor,
+    struct dev_nfc_peer_s *peer,
+    const uint8_t *tx_data, size_t tx_size,
+    uint8_t *rx_data, size_t *rx_size);
 
 #endif
