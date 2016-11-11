@@ -48,11 +48,11 @@ ENUM_DESCRIPTOR(dev_mem_type_e, strip:DEV_MEM_, upper);
 
 enum dev_mem_type_e
 {
-  /* RAM memory */
+  /* Random access memory */
   DEV_MEM_RAM,
-  /* ROM memory */
+  /* Read-only memory */
   DEV_MEM_ROM,
-  /* Flash or EEPROM memory */
+  /* Flash or EEPROM */
   DEV_MEM_FLASH,
   /* Disk drive memory */
   DEV_MEM_DISK,
@@ -60,6 +60,8 @@ enum dev_mem_type_e
   DEV_MEM_OOB,
   /* Hardware ECC */
   DEV_MEM_ECC,
+  /* Registers */
+  DEV_MEM_REG,
 };
 
 ENUM_DESCRIPTOR(dev_mem_flags_e, strip:DEV_MEM_, upper, or);
