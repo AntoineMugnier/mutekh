@@ -191,6 +191,7 @@
 #define STM32_IRQ_DMA2_CHANNEL2         57
 #define STM32_IRQ_DMA2_CHANNEL3         58
 #define STM32_IRQ_DMA2_CHANNEL4_5       59
+#define STM32_IRQ_ETH                   61
 
 #endif // CONFIG_STM32_FLASHSIZE
 
