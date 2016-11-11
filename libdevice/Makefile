@@ -104,3 +104,7 @@ endif
 ifeq ($(CONFIG_DEVICE_VALIO_MOTION_SENSOR), defined)
 objs-$(CONFIG_DEVICE_SHELL) += shell_motion_sensor.o
 endif
+
+ifeq ($(CONFIG_DEVICE_NET)$(CONFIG_DEVICE_MEM)$(CONFIG_DEVICE_SHELL), defineddefineddefined)
+objs += shell_smi.o
+endif
