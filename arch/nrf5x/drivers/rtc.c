@@ -128,7 +128,7 @@ static DEV_TIMER_REQUEST(nrf5x_rtc_request)
 
   dprintk("%s %p\n", __FUNCTION__, rq);
 
-  assert(rq->rq.drvdata != pv);
+  //  assert(rq->rq.drvdata != pv);
 
   LOCK_SPIN_IRQ(&dev->lock);
 
