@@ -48,6 +48,8 @@ void net_dumper_task_handle(struct net_layer_s *layer,
 {
   struct net_dumper_s *dumper = net_dumper_s_from_layer(layer);
 
+  (void)dumper;
+  
   switch (task->type) {
   default:
     break;
