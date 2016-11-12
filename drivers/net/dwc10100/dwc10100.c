@@ -34,7 +34,9 @@
 #include <device/class/mem.h>
 #include <device/class/iomux.h>
 #include <device/class/gpio.h>
+#include <device/class/timer.h>
 #include <device/irq.h>
+#include <device/resources.h>
 
 #include <mutek/buffer_pool.h>
 #include <net/scheduler.h>
@@ -46,12 +48,28 @@
 #include <mutek/kroutine.h>
 #include <mutek/printk.h>
 
+#include <drivers/phy/smi.h>
 #include "dwc10100_mac.h"
 
 //#define dprintk printk
 #ifndef dprintk
 # define dprintk(...) do{}while(0)
 #endif
+
+enum dwc_irq_id_e
+{
+  DWC_IRQ_MAC,
+  DWC_IRQ_PHY,
+  DWC_IRQ_COUNT,
+};
+
+struct dwc_dma_desc_s
+{
+  uint32_t desc;
+  uint32_t size;
+  uint32_t buf0;
+  uint32_t buf1;
+};
 
 struct dwc_private_s
 {
@@ -62,7 +80,18 @@ struct dwc_private_s
   uintptr_t mmc;
   uintptr_t dma;
 
-  struct dev_irq_src_s irq_ep;
+  bool_t full_duplex;
+
+  uint16_t status_old;
+  uint16_t status_cur;
+
+  struct kroutine_s phy_updater;
+  struct kroutine_s mac_configure;
+
+  struct dwc_dma_desc_s tx_desc;
+  struct dwc_dma_desc_s rx_desc;
+
+  struct dev_irq_src_s irq_ep[DWC_IRQ_COUNT];
 };
 
 STRUCT_COMPOSE(dwc_private_s, layer);
@@ -207,8 +236,10 @@ static uint16_t dwc_smi_read(struct device_s *dev,
 {
   struct dwc_private_s *pv = dev->drv_pv;
   uint16_t val;
-  
-  LOCK_SPIN_IRQ(&dev->lock);
+
+  while (cpu_mem_read_32(pv->mac + DWC_MAC_MIIAR_ADDR) & DWC_MAC_MIIAR_MB)
+    ;
+
   cpu_mem_write_32(pv->mac + DWC_MAC_MIIAR_ADDR, 0
                    | DWC_MAC_MIIAR_PA(phy)
                    | DWC_MAC_MIIAR_MR(reg)
@@ -218,7 +249,6 @@ static uint16_t dwc_smi_read(struct device_s *dev,
     ;
 
   val = cpu_mem_read_32(pv->mac + DWC_MAC_MIIDR_ADDR);
-  LOCK_RELEASE_IRQ(&dev->lock);
 
   return val;
 }
@@ -229,18 +259,83 @@ static void dwc_smi_write(struct device_s *dev,
                            uint16_t value)
 {
   struct dwc_private_s *pv = dev->drv_pv;
-  
-  LOCK_SPIN_IRQ(&dev->lock);
+
+  while (cpu_mem_read_32(pv->mac + DWC_MAC_MIIAR_ADDR) & DWC_MAC_MIIAR_MB)
+    ;
+
   cpu_mem_write_32(pv->mac + DWC_MAC_MIIDR_ADDR, value);
   cpu_mem_write_32(pv->mac + DWC_MAC_MIIAR_ADDR, 0
                    | DWC_MAC_MIIAR_PA(phy)
                    | DWC_MAC_MIIAR_MR(reg)
                    | DWC_MAC_MIIAR_MW
                    | DWC_MAC_MIIAR_MB);
+}
 
-  while (cpu_mem_read_32(pv->mac + DWC_MAC_MIIAR_ADDR) & DWC_MAC_MIIAR_MB)
-    ;
-  LOCK_RELEASE_IRQ(&dev->lock);
+static DEV_IRQ_SRC_PROCESS(dwc_irq)
+{
+  struct device_s *dev = ep->base.dev;
+  struct dwc_private_s *pv = dev->drv_pv;
+  enum dwc_irq_id_e no = ep - pv->irq_ep;
+
+  printk("%s IRQ %d\n", __FUNCTION__, no);
+
+  if (no == DWC_IRQ_PHY) {
+    LOCK_SPIN_IRQ(&dev->lock);
+    pv->status_cur = dwc_smi_read(dev, 0, SMI_STATUS_ADDR);
+    dwc_smi_read(dev, 0, 29);
+    dwc_smi_write(dev, 0, 29, -1);
+    LOCK_RELEASE_IRQ(&dev->lock);
+    kroutine_exec(&pv->phy_updater);
+  }
+}
+
+static KROUTINE_EXEC(dwc_phy_updater)
+{
+  struct dwc_private_s *pv = KROUTINE_CONTAINER(kr, *pv, phy_updater);
+  struct device_s *dev = pv->irq_ep[0].base.dev;
+
+  uint_fast16_t cleared = ~pv->status_cur & pv->status_old;
+  uint_fast16_t set = pv->status_cur & ~pv->status_old;
+  pv->status_old = pv->status_cur;
+
+  if (cleared & SMI_STATUS_LINK_UP)
+    printk("%s: Link down\n", __FUNCTION__);
+
+  if (set & SMI_STATUS_LINK_UP)
+    printk("%s: Link up\n", __FUNCTION__);
+
+  if (set & SMI_STATUS_AUTONEG_DONE)
+    printk("%s: Autoneg complete\n", __FUNCTION__);
+
+  if (set & SMI_STATUS_JABBER_DETECT)
+    printk("%s: Jabber detected\n", __FUNCTION__);
+
+  uint_fast16_t local = dwc_smi_read(dev, 0, SMI_AUTONEG_ADV_ADDR);
+  uint_fast16_t remote = dwc_smi_read(dev, 0, SMI_AUTONEG_PARTNER_ADDR);
+  bool_t fd = !!(local & remote & (SMI_AUTONEG_ADV_CAN_10BASETFD
+                                   | SMI_AUTONEG_ADV_CAN_100BASETXFD));
+  if (fd != !pv->full_duplex) {
+    pv->full_duplex = fd;
+    kroutine_exec(&pv->mac_configure);
+  }
+}
+
+static KROUTINE_EXEC(dwc_mac_configure)
+{
+  struct dwc_private_s *pv = KROUTINE_CONTAINER(kr, *pv, mac_configure);
+  struct device_s *dev = pv->irq_ep[0].base.dev;
+
+  cpu_mem_write_32(pv->mac + DWC_MAC_CR_ADDR, 0
+                   | DWC_MAC_CR_WD
+                   | DWC_MAC_CR_FES
+                   | (pv->full_duplex ? DWC_MAC_CR_DM : 0)
+                   | DWC_MAC_CR_TE
+                   | DWC_MAC_CR_RE
+                   );
+
+  cpu_mem_write_32(pv->mac + DWC_MAC_FFR_ADDR, 0
+                   | DWC_MAC_FFR_PAM
+                   );
 }
 
 #if defined(CONFIG_DRIVER_NET_DWC10100_SMI_MEM)
@@ -251,7 +346,7 @@ static DEV_MEM_INFO(dwc_mem_info)
 
   if (accessor->number > 31)
     return -ENOENT;
-  
+
   memset(info, 0, sizeof(*info));
 
   info->type = DEV_MEM_REG;
@@ -288,19 +383,21 @@ static DEV_MEM_REQUEST(dwc_mem_request)
     goto out;
   }
 
+  LOCK_SPIN_IRQ(&dev->lock);
   if (rq->type & DEV_MEM_OP_PARTIAL_WRITE) {
     const uint16_t *data = (const void*)rq->data;
-    
+
     for (size_t i = 0; i < rq->size; i += 2)
       dwc_smi_write(dev, accessor->number, (rq->addr + i) / 2, data[i/2]);
   } else {
     uint16_t *data = (void*)rq->data;
-    
+
     for (size_t i = 0; i < rq->size; i += 2)
       data[i/2] = dwc_smi_read(dev, accessor->number, (rq->addr + i) / 2);
 
   }
-  
+  LOCK_RELEASE_IRQ(&dev->lock);
+
  out:
   rq->err = err;
   kroutine_exec(&rq->base.kr);
@@ -311,6 +408,7 @@ static DEV_INIT(dwc_init)
 {
   error_t err = 0;
   struct dwc_private_s *pv;
+  bool_t rmii = 0;
 
   pv = mem_alloc(sizeof (*pv), (mem_scope_sys));
 
@@ -332,33 +430,90 @@ static DEV_INIT(dwc_init)
   if (err)
     goto err_mem;
 
-  iomux_demux_t loc[2];
-  err = device_iomux_setup(dev, ">mdc =smi", loc, NULL, NULL);
+  err = device_iomux_setup(dev, ">mdc >mdio", NULL, NULL, NULL);
   if (err)
     goto err_mem;
+
+  // First, try MII mode
+  err = device_iomux_setup(dev,
+                           "<tx_clk >tx_d0 >tx_d1 >tx_d2 >tx_d3 >tx_en"
+                           "<rx_clk <rx_d0 <rx_d1 <rx_d2 <rx_d3 <rx_err <rx_dv"
+                           "<crs <col",
+                           NULL, NULL, NULL);
+  if (err) {
+    // Try RMII mode
+    err = device_iomux_setup(dev,
+                             ">tx_d0 >tx_d1 >tx_en"
+                             "<rx_d0 <rx_d1 <crs_dv"
+                             "<ref_clk",
+                             NULL, NULL, NULL);
+    if (err)
+      goto err_mem;
+
+    rmii = 1;
+  }
 
   err = device_get_param_dev_accessor(dev, "gpio", &pv->gpio.base, DRIVER_CLASS_GPIO);
   if (err)
     goto err_mem;
-  
+
   gpio_id_t map[1];
   gpio_width_t w[1] = {1};
   err = device_res_gpio_map(dev, "resetn:1", map, w);
   if (err)
-    goto err_gpio;
+    goto err_timer;
 
   err = device_gpio_map_set_mode(&pv->gpio, map, w, 1, DEV_PIN_PUSHPULL);
   if (err)
-    goto err_gpio;
+    goto err_timer;
 
   err = dev_gpio_out(&pv->gpio, map[0], 1);
   if (err)
-    goto err_gpio;
-  
+    goto err_timer;
+
+  device_irq_source_init(dev, pv->irq_ep, DWC_IRQ_COUNT, &dwc_irq);
+  if (device_irq_source_link(dev, pv->irq_ep, DWC_IRQ_COUNT, -1))
+    goto err_timer;
+
+  struct dev_resource_s *r = device_res_get(dev, DEV_RES_IRQ, 1);
+  assert(r);
+
+  dev_gpio_mode(&pv->gpio, r->u.irq.sink_id, DEV_PIN_INPUT_PULLUP);
+
+  const uint8_t *mac;
+  err = device_get_param_blob(dev, "hwaddr", 0, (const void**)&mac);
+  if (err)
+    mac = (const void*)"\x02\x00\x00\x12\x34\x56";
+
+  cpu_mem_write_32(pv->mac + DWC_MAC_A0HR_ADDR,
+                   endian_be16_na_load(mac));
+  cpu_mem_write_32(pv->mac + DWC_MAC_A0LR_ADDR,
+                   endian_be32_na_load(mac+2));
+
+  dwc_smi_write(dev, 0, SMI_CONTROL_ADDR, 0
+                | SMI_CONTROL_DUPLEX_MODE(FULL)
+                | SMI_CONTROL_AUTONEG_RESTART
+                | SMI_CONTROL_AUTONEG
+                | SMI_CONTROL_SPEED_SELECT_2(10_100)
+                | SMI_CONTROL_SPEED_SELECT_1(100_RES)
+                );
+
+  dwc_smi_write(dev, 0, 30, 0x50);
+  dwc_smi_read(dev, 0, 29);
+  dwc_smi_write(dev, 0, 29, -1);
+
+  kroutine_init_deferred(&pv->phy_updater, dwc_phy_updater);
+  kroutine_init_deferred(&pv->mac_configure, dwc_mac_configure);
+
+  pv->tx_desc.desc = DWC_TX_DESC_TDES0_IC;
+  pv->rx_desc.desc = 0;
+
   return 0;
 
  err_gpio:
   device_put_accessor(&pv->gpio.base);
+ err_timer:
+  //  device_put_accessor(&pv->timer.base);
  err_mem:
   mem_free(pv);
   return err;
@@ -368,6 +523,7 @@ static DEV_CLEANUP(dwc_cleanup)
 {
   struct dwc_private_s *pv = dev->drv_pv;
 
+  device_put_accessor(&pv->gpio.base);
   mem_free(pv);
 
   return 0;
