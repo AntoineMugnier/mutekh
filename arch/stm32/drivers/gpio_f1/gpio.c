@@ -575,6 +575,8 @@ static DEV_INIT(stm32_gpio_init)
   dev->drv_pv = pv;
 #endif
 
+  dev->drv_pv = pv;
+
   return 0;
 
 err_mem:
@@ -603,4 +605,3 @@ DRIVER_DECLARE(stm32_gpio_drv, 0, "STM32 GPIO", stm32_gpio,
                DRIVER_IOMUX_METHODS(stm32_gpio_iomux));
 
 DRIVER_REGISTER(stm32_gpio_drv);
-
