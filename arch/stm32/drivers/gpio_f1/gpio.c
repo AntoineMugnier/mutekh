@@ -222,6 +222,8 @@ error_t stm32_gpio_apply_mode(gpio_id_t io_first, gpio_id_t io_last,
         mbits = STM32_GPIO_MODE_CNF(STM32_GPIO_MODE_OUTPUT_50MHZ, STM32_GPIO_CNF_GEN_PUSHPULL);
       break;
 
+    case DEV_PIN_OPENDRAIN_PULLUP:
+      pull = 1;
     case DEV_PIN_OPENDRAIN:
       if (alt)
         mbits = STM32_GPIO_MODE_CNF(STM32_GPIO_MODE_OUTPUT_50MHZ, STM32_GPIO_CNF_ALT_OPENDRAIN);
