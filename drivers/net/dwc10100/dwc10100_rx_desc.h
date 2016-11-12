@@ -25,7 +25,7 @@
 /** When set, this bit indicates that the received frame has a non-integer
    multiple of bytes (odd nibbles). This bit is valid only in MII mode. @multiple
    */
-  #define DWC_RX_DESC_RDES0_DE                     0x00000004
+  #define DWC_RX_DESC_RDES0_DRE                    0x00000004
 /** When set, this bit indicates that the RX_ERR signal is asserted while RX_DV
    is asserted during frame reception. @multiple */
   #define DWC_RX_DESC_RDES0_RE                     0x00000008
@@ -89,10 +89,10 @@
 
 #define DWC_RX_DESC_RDES1_ADDR                       0x00000004
 /** These bits indicate the second data buffer size in bytes. @multiple */
-  #define DWC_RX_DESC_RDES1_TBS_COUNT              2
-  #define DWC_RX_DESC_RDES1_TBS(fidx, v)           ((v) << ((fidx) * 16 + 0))
-  #define DWC_RX_DESC_RDES1_TBS_SET(fidx, x, v)    do { (x) = (((x) & ~(0x1fff << ((fidx) * 16))) | ((v) << ((fidx) * 16 + 0))); } while(0)
-  #define DWC_RX_DESC_RDES1_TBS_GET(fidx, x)       (((x) >> ((fidx) * 16 + 0)) & 0x1fff)
+  #define DWC_RX_DESC_RDES1_RBS_COUNT              2
+  #define DWC_RX_DESC_RDES1_RBS(fidx, v)           ((v) << ((fidx) * 16 + 0))
+  #define DWC_RX_DESC_RDES1_RBS_SET(fidx, x, v)    do { (x) = (((x) & ~(0x1fff << ((fidx) * 16))) | ((v) << ((fidx) * 16 + 0))); } while(0)
+  #define DWC_RX_DESC_RDES1_RBS_GET(fidx, x)       (((x) >> ((fidx) * 16 + 0)) & 0x1fff)
 /** When set, this bit indicates that the second address in the descriptor is the
    next descriptor address rather than the second buffer address. When this bit
    is set, RBS2 (RDES1[28:16]) is a “don’t care” value. RDES1[15] takes
@@ -108,8 +108,8 @@
    that frame. @multiple */
   #define DWC_RX_DESC_RDES1_DIC                    0x80000000
 
-#define DWC_RX_DESC_TBAP_ADDR(ridx)                  (0x00000008 + (ridx) * 4)
-#define DWC_RX_DESC_TBAP_COUNT                       2
+#define DWC_RX_DESC_RBAP_ADDR(ridx)                  (0x00000008 + (ridx) * 4)
+#define DWC_RX_DESC_RBAP_COUNT                       2
 
 #endif
 

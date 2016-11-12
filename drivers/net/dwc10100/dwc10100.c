@@ -50,6 +50,9 @@
 
 #include <drivers/phy/smi.h>
 #include "dwc10100_mac.h"
+#include "dwc10100_dma.h"
+#include "dwc10100_tx_desc.h"
+#include "dwc10100_rx_desc.h"
 
 //#define dprintk printk
 #ifndef dprintk
@@ -81,6 +84,8 @@ struct dwc_private_s
   uintptr_t dma;
 
   bool_t full_duplex;
+  bool_t layer_used;
+  bool_t has_peer;
 
   uint16_t status_old;
   uint16_t status_cur;
@@ -91,6 +96,8 @@ struct dwc_private_s
   struct dwc_dma_desc_s tx_desc;
   struct dwc_dma_desc_s rx_desc;
 
+  struct buffer_s *rx_packet;
+  
   struct dev_irq_src_s irq_ep[DWC_IRQ_COUNT];
 };
 
@@ -100,7 +107,7 @@ DRIVER_PV(struct dwc_private_s);
 
 static
 void dwc_outbound_enqueue(struct dwc_private_s *pv,
-                              struct net_task_s *task)
+                          struct net_task_s *task)
 {
 }
 
@@ -108,8 +115,13 @@ static
 void dwc_layer_destroyed(struct net_layer_s *layer)
 {
   struct dwc_private_s *pv = dwc_private_s_from_layer(layer);
+  struct device_s *dev = pv->irq_ep[0].base.dev;
 
+  LOCK_SPIN_IRQ(&dev->lock);
   memset(&pv->layer, 0, sizeof(pv->layer));
+  LOCK_RELEASE_IRQ(&dev->lock);
+
+  kroutine_exec(&pv->mac_configure);
 }
 
 static
@@ -137,6 +149,8 @@ void dwc_layer_child_context_adjust(const struct net_layer_s *layer,
   const struct dwc_private_s *pv = const_dwc_private_s_from_layer(layer);
 
   (void)pv;
+
+  printk("%s\n", __FUNCTION__);
 }
 
 static
@@ -145,6 +159,8 @@ void dwc_layer_context_changed(struct net_layer_s *layer)
   struct dwc_private_s *pv = dwc_private_s_from_layer(layer);
 
   (void)pv;
+
+  printk("%s\n", __FUNCTION__);
 }
 
 static
@@ -153,6 +169,9 @@ void dwc_layer_dandling(struct net_layer_s *layer)
   struct dwc_private_s *pv = dwc_private_s_from_layer(layer);
 
   (void)pv;
+
+  printk("%s\n", __FUNCTION__);
+
   /* if (pv->rx_packet) { */
   /*   buffer_refdec(pv->rx_packet); */
   /*   pv->rx_packet = NULL; */
@@ -166,6 +185,8 @@ error_t dwc_layer_bound(struct net_layer_s *layer,
 {
   struct dwc_private_s *pv = dwc_private_s_from_layer(layer);
 
+  printk("%s\n", __FUNCTION__);
+  
   if (pv->target)
     return -EBUSY;
 
@@ -179,6 +200,8 @@ void dwc_layer_unbound(struct net_layer_s *layer,
                        struct net_layer_s *child)
 {
   struct dwc_private_s *pv = dwc_private_s_from_layer(layer);
+
+  printk("%s\n", __FUNCTION__);
 
   assert(child == pv->target);
 
@@ -207,15 +230,26 @@ static DEV_NET_LAYER_CREATE(dwc_net_layer_create)
   if (type != NET_LAYER_ETHERNET)
     return -ENOTSUP;
 
-  if (pv->layer.scheduler)
-    return -EBUSY;
+  LOCK_SPIN_IRQ(&dev->lock);
+  if (pv->layer.scheduler) {
+    err = -EBUSY;
+    goto out;
+  }
 
   err = net_layer_init(&pv->layer,
                        &dwc_layer_handler, scheduler,
                        delegate, delegate_vtable);
 
-  if (!err)
+  if (!err) {
     *layer = &pv->layer;
+
+    printk("%s Layer created\n", __FUNCTION__);
+    
+    kroutine_exec(&pv->mac_configure);
+  }
+
+ out:
+  LOCK_RELEASE_IRQ(&dev->lock);
 
   return err;
 }
@@ -277,15 +311,19 @@ static DEV_IRQ_SRC_PROCESS(dwc_irq)
   struct dwc_private_s *pv = dev->drv_pv;
   enum dwc_irq_id_e no = ep - pv->irq_ep;
 
-  printk("%s IRQ %d\n", __FUNCTION__, no);
-
-  if (no == DWC_IRQ_PHY) {
+  switch (no) {
+  case DWC_IRQ_PHY:
     LOCK_SPIN_IRQ(&dev->lock);
     pv->status_cur = dwc_smi_read(dev, 0, SMI_STATUS_ADDR);
     dwc_smi_read(dev, 0, 29);
     dwc_smi_write(dev, 0, 29, -1);
     LOCK_RELEASE_IRQ(&dev->lock);
     kroutine_exec(&pv->phy_updater);
+    break;
+    
+  case DWC_IRQ_MAC:
+    printk("Mac IRQ\n");
+    break;
   }
 }
 
@@ -293,20 +331,27 @@ static KROUTINE_EXEC(dwc_phy_updater)
 {
   struct dwc_private_s *pv = KROUTINE_CONTAINER(kr, *pv, phy_updater);
   struct device_s *dev = pv->irq_ep[0].base.dev;
-
+  const struct net_ethernet_delegate_vtable_s *delegate_vtable
+    = const_net_ethernet_delegate_vtable_s_from_base(pv->layer.delegate_vtable);
+  
   uint_fast16_t cleared = ~pv->status_cur & pv->status_old;
   uint_fast16_t set = pv->status_cur & ~pv->status_old;
   pv->status_old = pv->status_cur;
 
-  if (cleared & SMI_STATUS_LINK_UP)
-    printk("%s: Link down\n", __FUNCTION__);
+  if (cleared & SMI_STATUS_LINK_UP) {
+    dprintk("%s: Link down\n", __FUNCTION__);
+    delegate_vtable->link_changed(pv->layer.delegate, &pv->layer, 0);
+  }
+  
+  if (set & SMI_STATUS_LINK_UP) {
+    dprintk("%s: Link up\n", __FUNCTION__);
+    delegate_vtable->link_changed(pv->layer.delegate, &pv->layer, 1);
+  }
 
-  if (set & SMI_STATUS_LINK_UP)
-    printk("%s: Link up\n", __FUNCTION__);
-
-  if (set & SMI_STATUS_AUTONEG_DONE)
-    printk("%s: Autoneg complete\n", __FUNCTION__);
-
+  if (set & SMI_STATUS_AUTONEG_DONE) {
+    dprintk("%s: Autoneg complete\n", __FUNCTION__);
+  }
+  
   if (set & SMI_STATUS_JABBER_DETECT)
     printk("%s: Jabber detected\n", __FUNCTION__);
 
@@ -314,7 +359,7 @@ static KROUTINE_EXEC(dwc_phy_updater)
   uint_fast16_t remote = dwc_smi_read(dev, 0, SMI_AUTONEG_PARTNER_ADDR);
   bool_t fd = !!(local & remote & (SMI_AUTONEG_ADV_CAN_10BASETFD
                                    | SMI_AUTONEG_ADV_CAN_100BASETXFD));
-  if (fd != !pv->full_duplex) {
+  if (fd != !pv->full_duplex || ((cleared | set) & SMI_STATUS_LINK_UP)) {
     pv->full_duplex = fd;
     kroutine_exec(&pv->mac_configure);
   }
@@ -324,18 +369,67 @@ static KROUTINE_EXEC(dwc_mac_configure)
 {
   struct dwc_private_s *pv = KROUTINE_CONTAINER(kr, *pv, mac_configure);
   struct device_s *dev = pv->irq_ep[0].base.dev;
+  bool_t enable;
+  bool_t fd;
 
-  cpu_mem_write_32(pv->mac + DWC_MAC_CR_ADDR, 0
-                   | DWC_MAC_CR_WD
-                   | DWC_MAC_CR_FES
-                   | (pv->full_duplex ? DWC_MAC_CR_DM : 0)
-                   | DWC_MAC_CR_TE
-                   | DWC_MAC_CR_RE
-                   );
+  LOCK_SPIN_IRQ(&dev->lock);
+  enable = pv->layer.scheduler && (pv->status_cur & SMI_STATUS_LINK_UP);
+  fd = pv->full_duplex;
+  LOCK_RELEASE_IRQ(&dev->lock);
 
-  cpu_mem_write_32(pv->mac + DWC_MAC_FFR_ADDR, 0
-                   | DWC_MAC_FFR_PAM
-                   );
+  printk("%s enable %d\n", __FUNCTION__, enable);
+
+  if (enable) {
+    if (!pv->rx_packet)
+      pv->rx_packet = net_scheduler_packet_alloc(pv->layer.scheduler);
+
+    if (pv->rx_packet) {
+      pv->rx_desc.buf0 = (uint32_t)pv->rx_packet->data;
+      pv->rx_desc.buf1 = 0;
+      pv->rx_desc.size = 0
+        | DWC_RX_DESC_RDES1_RBS(0, buffer_size(pv->rx_packet))
+        | DWC_RX_DESC_RDES1_RER
+        ;
+      pv->rx_desc.desc = DWC_RX_DESC_RDES0_OWN;
+    }
+
+    cpu_mem_write_32(pv->dma + DWC_DMA_BMR_ADDR, 0
+                     | DWC_DMA_BMR_RDP(1)
+                     | DWC_DMA_BMR_PBL(1)
+                     );
+    cpu_mem_write_32(pv->dma + DWC_DMA_RDLAR_ADDR,
+                     (uint32_t)&pv->rx_desc);
+    cpu_mem_write_32(pv->dma + DWC_DMA_IER_ADDR, 0
+                     | DWC_DMA_IER_RIE
+                     | DWC_DMA_IER_RBUIE
+                     | DWC_DMA_IER_RPSIE
+                     | DWC_DMA_IER_RWTIE
+                     );
+    cpu_mem_write_32(pv->dma + DWC_DMA_OMR_ADDR, 0
+                     | DWC_DMA_OMR_SR
+                     );
+    cpu_mem_write_32(pv->mac + DWC_MAC_CR_ADDR, 0
+                     | DWC_MAC_CR_WD
+                     | DWC_MAC_CR_FES
+                     | (fd ? DWC_MAC_CR_DM : 0)
+                     | DWC_MAC_CR_TE
+                     | DWC_MAC_CR_RE
+                     );
+    cpu_mem_write_32(pv->mac + DWC_MAC_FFR_ADDR, 0
+                     | DWC_MAC_FFR_RA
+                     | DWC_MAC_FFR_PAM
+                     );
+    cpu_mem_write_32(pv->dma + DWC_DMA_RPDR_ADDR, 1);
+    printk("stup done\n");
+  } else {
+    cpu_mem_write_32(pv->mac + DWC_MAC_CR_ADDR, 0
+                     | DWC_MAC_CR_WD
+                     | DWC_MAC_CR_FES
+                     );
+    cpu_mem_write_32(pv->mac + DWC_MAC_FFR_ADDR, 0
+                     | DWC_MAC_FFR_PAM
+                     );
+  }
 }
 
 #if defined(CONFIG_DRIVER_NET_DWC10100_SMI_MEM)
@@ -506,7 +600,7 @@ static DEV_INIT(dwc_init)
   kroutine_init_deferred(&pv->mac_configure, dwc_mac_configure);
 
   pv->tx_desc.desc = DWC_TX_DESC_TDES0_IC;
-  pv->rx_desc.desc = 0;
+  pv->rx_desc.desc = DWC_RX_DESC_RDES0_OWN;
 
   return 0;
 
