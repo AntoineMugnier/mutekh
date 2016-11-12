@@ -571,6 +571,8 @@ static DEV_INIT(stm32_gpio_init)
   device_irq_sink_init(dev, pv->sink, STM32_GPIO_BANK_SIZE,
     &stm32_gpio_icu_sink_update, DEV_IRQ_SENSE_ANY_EDGE |
     DEV_IRQ_SENSE_FALLING_EDGE | DEV_IRQ_SENSE_RISING_EDGE);
+
+  dev->drv_pv = pv;
 #endif
 
   return 0;
