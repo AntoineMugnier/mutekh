@@ -92,6 +92,7 @@ struct dwc_private_s
 
   struct kroutine_s phy_updater;
   struct kroutine_s mac_configure;
+  struct kroutine_s dma_receive;
 
   struct dwc_dma_desc_s tx_desc;
   struct dwc_dma_desc_s rx_desc;
@@ -322,7 +323,11 @@ static DEV_IRQ_SRC_PROCESS(dwc_irq)
     break;
     
   case DWC_IRQ_MAC:
-    printk("Mac IRQ\n");
+    LOCK_SPIN_IRQ(&dev->lock);
+    cpu_mem_write_32(pv->dma + DWC_DMA_IER_ADDR, 0
+                     );
+    kroutine_exec(&pv->dma_receive);
+    LOCK_RELEASE_IRQ(&dev->lock);
     break;
   }
 }
@@ -365,6 +370,94 @@ static KROUTINE_EXEC(dwc_phy_updater)
   }
 }
 
+static void dwc_rx_next(struct device_s *dev)
+{
+  struct dwc_private_s *pv = dev->drv_pv;
+
+  if (!pv->rx_packet)
+    pv->rx_packet = net_scheduler_packet_alloc(pv->layer.scheduler);
+
+  if (pv->rx_packet) {
+    pv->rx_desc.buf0 = (uint32_t)pv->rx_packet->data;
+    pv->rx_desc.buf1 = (uint32_t)&pv->rx_desc;
+    pv->rx_desc.size = 0
+      | DWC_RX_DESC_RDES1_RBS(0, buffer_size(pv->rx_packet))
+      | DWC_RX_DESC_RDES1_RCH
+      ;
+    pv->rx_desc.desc = DWC_RX_DESC_RDES0_OWN;
+
+    printk("%d bytes RX packet ready\n", buffer_size(pv->rx_packet));
+  }
+
+  cpu_mem_write_32(pv->dma + DWC_DMA_BMR_ADDR, 0
+                   | DWC_DMA_BMR_RDP(1)
+                   | DWC_DMA_BMR_PBL(1)
+                   );
+  cpu_mem_write_32(pv->dma + DWC_DMA_IER_ADDR, 0
+                   | DWC_DMA_IER_NISE
+                   | DWC_DMA_IER_AISE
+                   | DWC_DMA_IER_RIE
+                   | DWC_DMA_IER_RBUIE
+                   | DWC_DMA_IER_RPSIE
+                   | DWC_DMA_IER_RWTIE
+                   );
+  cpu_mem_write_32(pv->dma + DWC_DMA_OMR_ADDR, 0
+                   | DWC_DMA_OMR_SR
+                   );
+  cpu_mem_write_32(pv->dma + DWC_DMA_RPDR_ADDR, 1);
+
+  printk("RX setup done\n");
+}
+
+static KROUTINE_EXEC(dwc_dma_receive)
+{
+  struct dwc_private_s *pv = KROUTINE_CONTAINER(kr, *pv, dma_receive);
+  struct device_s *dev = pv->irq_ep[0].base.dev;
+  struct net_task_s *task;
+  struct net_addr_s src = {}, dst = {};
+  uint32_t sr;
+  bool_t enable;
+
+  LOCK_SPIN_IRQ(&dev->lock);
+  enable = pv->layer.scheduler && (pv->status_cur & SMI_STATUS_LINK_UP);
+  sr = cpu_mem_read_32(pv->dma + DWC_DMA_SR_ADDR);
+  printk("DMA SR %08x\n", sr);
+  cpu_mem_write_32(pv->dma + DWC_DMA_SR_ADDR, sr);
+  LOCK_RELEASE_IRQ(&dev->lock);
+
+  if (!enable)
+    return;
+
+  if (!(pv->rx_desc.desc & DWC_RX_DESC_RDES0_OWN)) {
+    printk("Desc0 desc %08x\n", pv->rx_desc.desc);
+    
+    if (!pv->target) {
+      printk("No target for packet %P\n", pv->rx_packet->data + pv->rx_packet->begin,
+              pv->rx_packet->end - pv->rx_packet->begin);
+      goto out;
+    }
+
+    pv->rx_packet->begin = 0;
+    pv->rx_packet->end = DWC_RX_DESC_RDES1_RBS_GET(0, pv->rx_desc.size);
+
+    task = net_scheduler_task_alloc(pv->layer.scheduler);
+
+    if (!task)
+      goto out;
+    
+    printk("Forwarding packet %P\n", pv->rx_packet->data + pv->rx_packet->begin,
+            pv->rx_packet->end - pv->rx_packet->begin);
+
+    net_task_inbound_push(task, pv->target, &pv->layer,
+                          0, &src, &dst, pv->rx_packet);
+    buffer_refdec(pv->rx_packet);
+    pv->rx_packet = NULL;
+  }
+
+ out:
+  dwc_rx_next(dev);
+}
+
 static KROUTINE_EXEC(dwc_mac_configure)
 {
   struct dwc_private_s *pv = KROUTINE_CONTAINER(kr, *pv, mac_configure);
@@ -380,34 +473,10 @@ static KROUTINE_EXEC(dwc_mac_configure)
   printk("%s enable %d\n", __FUNCTION__, enable);
 
   if (enable) {
-    if (!pv->rx_packet)
-      pv->rx_packet = net_scheduler_packet_alloc(pv->layer.scheduler);
+    dwc_rx_next(dev);
 
-    if (pv->rx_packet) {
-      pv->rx_desc.buf0 = (uint32_t)pv->rx_packet->data;
-      pv->rx_desc.buf1 = 0;
-      pv->rx_desc.size = 0
-        | DWC_RX_DESC_RDES1_RBS(0, buffer_size(pv->rx_packet))
-        | DWC_RX_DESC_RDES1_RER
-        ;
-      pv->rx_desc.desc = DWC_RX_DESC_RDES0_OWN;
-    }
-
-    cpu_mem_write_32(pv->dma + DWC_DMA_BMR_ADDR, 0
-                     | DWC_DMA_BMR_RDP(1)
-                     | DWC_DMA_BMR_PBL(1)
-                     );
     cpu_mem_write_32(pv->dma + DWC_DMA_RDLAR_ADDR,
                      (uint32_t)&pv->rx_desc);
-    cpu_mem_write_32(pv->dma + DWC_DMA_IER_ADDR, 0
-                     | DWC_DMA_IER_RIE
-                     | DWC_DMA_IER_RBUIE
-                     | DWC_DMA_IER_RPSIE
-                     | DWC_DMA_IER_RWTIE
-                     );
-    cpu_mem_write_32(pv->dma + DWC_DMA_OMR_ADDR, 0
-                     | DWC_DMA_OMR_SR
-                     );
     cpu_mem_write_32(pv->mac + DWC_MAC_CR_ADDR, 0
                      | DWC_MAC_CR_WD
                      | DWC_MAC_CR_FES
@@ -416,11 +485,9 @@ static KROUTINE_EXEC(dwc_mac_configure)
                      | DWC_MAC_CR_RE
                      );
     cpu_mem_write_32(pv->mac + DWC_MAC_FFR_ADDR, 0
-                     | DWC_MAC_FFR_RA
                      | DWC_MAC_FFR_PAM
                      );
-    cpu_mem_write_32(pv->dma + DWC_DMA_RPDR_ADDR, 1);
-    printk("stup done\n");
+    printk("MAC RX Setup done\n");
   } else {
     cpu_mem_write_32(pv->mac + DWC_MAC_CR_ADDR, 0
                      | DWC_MAC_CR_WD
@@ -598,6 +665,7 @@ static DEV_INIT(dwc_init)
 
   kroutine_init_deferred(&pv->phy_updater, dwc_phy_updater);
   kroutine_init_deferred(&pv->mac_configure, dwc_mac_configure);
+  kroutine_init_deferred(&pv->dma_receive, dwc_dma_receive);
 
   pv->tx_desc.desc = DWC_TX_DESC_TDES0_IC;
   pv->rx_desc.desc = DWC_RX_DESC_RDES0_OWN;
