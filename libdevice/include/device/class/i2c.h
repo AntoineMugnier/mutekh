@@ -669,9 +669,7 @@ config_depend_alwaysinline(CONFIG_DEVICE_I2C,
 void dev_drv_i2c_ctrl_context_cleanup(struct dev_i2c_ctrl_context_s *q),
 {
 #ifdef CONFIG_DEVICE_I2C_REQUEST
-  return dev_drv_i2c_ctrl_context_cleanup_(q);
-#else
-  return 0;
+  dev_drv_i2c_ctrl_context_cleanup_(q);
 #endif
 });
 
