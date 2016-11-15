@@ -29,7 +29,9 @@
 #include <arch/nrf5x/clock.h>
 #include <arch/nrf5x/ids.h>
 #include <arch/nrf5x/gpio.h>
+#include <arch/nrf5x/uicr.h>
 #include <arch/nrf5x/peripheral.h>
+#include <cpu/arm32m/v7m.h>
 
 __unused__
 static uint32_t nrf_build_tag(void)
@@ -63,6 +65,13 @@ void nrf52_init(void)
   uintptr_t clock = NRF_PERIPHERAL_ADDR(NRF5X_CLOCK);
   uintptr_t demcr = 0xe000edfc;
   uint32_t tag = nrf_build_tag();
+
+#ifndef CONFIG_DRIVER_NRF52_NFCT
+  if (cpu_mem_read_32(NRF_UICR_NFCPINS) & NRF_UICR_NFCPINS_PROTECT_NFC) {
+    nrf5x_flash_write(NRF_UICR_NFCPINS, (const uint32_t[]){ ~NRF_UICR_NFCPINS_PROTECT_NFC }, 1);
+    cpu_mem_write_32(ARMV7M_AIRCR_ADDR, 0x5FA0004);
+  }
+#endif
 
   nrf52_icache_init();
 
