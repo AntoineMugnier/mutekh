@@ -120,6 +120,7 @@ enum nrf5x_peripheral_id_e
     NRF5X_TWIM1 = 4,
     NRF5X_TWIS1 = 4,
     NRF5X_NFCT = 5,
+    NRF5X_SAADC = 7,
     NRF5X_COMP = 19,
     NRF5X_EGU0 = 20,
     NRF5X_SWI0 = 20,
@@ -168,5 +169,15 @@ enum nrf5x_clock_id_e
   NRF_CLOCK_OSC_LFXO,
   NRF_CLOCK_NODE_COUNT,
 };
+
+#define NRF52_SAADC_PIN_REF_0_6   0
+#define NRF52_SAADC_PIN_REF_VDD_4 0x8
+
+#define NRF52_SAADC_PIN_CONFIG(gain_num, gain_denom, ref) (0          \
+   | ((gain_num) == 1 ? (6-(gain_denom)) : ((gain_num) == 2 ? 6 : 7)) \
+   | NRF52_SAADC_PIN_REF_ ## ref                                      \
+   )
+
+#define NRF52_SAADC_PIN_CONFIG_EXTRACT(x) ((((x) & 0x7) << 8) | (((x) & 0x8) << 11))
 
 #endif
