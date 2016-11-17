@@ -136,7 +136,7 @@ static bool_t efm32_usart_spi_transfer_rx(struct device_s *dev)
 
       if (!st)
 #ifdef CONFIG_DEVICE_IRQ
-        return 0;           /* wait for more rx irq */
+        break;
 #else
         continue;
 #endif
@@ -164,16 +164,18 @@ static bool_t efm32_usart_spi_transfer_rx(struct device_s *dev)
       tr->data.in = (void*)((uint8_t*)tr->data.in + tr->data.in_width);
     }
 
-  if (tr->data.count > 0)
+  if (tr->data.count > 0 || pv->fifo_lvl)
     return efm32_usart_spi_transfer_tx(dev);
+
+  cpu_mem_write_32(pv->addr + EFM32_USART_IEN_ADDR, 0);
+
+# ifdef CONFIG_DEVICE_CLOCK_GATING
+  if (dev->start_count == 1)
+    dev_clock_sink_gate(&pv->clk_ep, DEV_CLOCK_EP_POWER);
+# endif
 
   pv->tr = NULL;
   dev->start_count &= ~1;
-
-# ifdef CONFIG_DEVICE_CLOCK_GATING
-  if (dev->start_count == 0)
-    dev_clock_sink_gate(&pv->clk_ep, DEV_CLOCK_EP_POWER);
-# endif
 
   return 1;
 }
@@ -183,12 +185,8 @@ static bool_t efm32_usart_spi_transfer_tx(struct device_s *dev)
   struct efm32_usart_spi_context_s *pv = dev->drv_pv;
   struct dev_spi_ctrl_transfer_s *tr = pv->tr;
 
-
-  /* enable expected irq */
-  cpu_mem_write_32(pv->addr + EFM32_USART_IEN_ADDR,
-                   tr->data.count >= EFM32_USART_FIFO_SIZE
-                   ? endian_le32(EFM32_USART_IEN_RXFULL)
-                   : endian_le32(EFM32_USART_IEN_RXDATAV));
+  if (tr->data.count < EFM32_USART_FIFO_SIZE)
+    cpu_mem_write_32(pv->addr + EFM32_USART_IEN_ADDR, endian_le32(EFM32_USART_IEN_RXDATAV));
 
   while (tr->data.count > 0 && pv->fifo_lvl < EFM32_USART_FIFO_SIZE)
     {
@@ -236,12 +234,11 @@ static DEV_IRQ_SRC_PROCESS(efm32_usart_spi_irq)
       if (!dev->start_count)
         break;
 #endif
+      uint32_t x = endian_le32(cpu_mem_read_32(pv->addr + EFM32_USART_IF_ADDR));
 
-      if (!((cpu_mem_read_32(pv->addr + EFM32_USART_IF_ADDR) & 
-         endian_le32(EFM32_USART_IF_RXDATAV | EFM32_USART_IF_RXFULL))))
+      if (!(x & endian_le32(EFM32_USART_IF_RXDATAV)))
         break;
 
-      cpu_mem_write_32(pv->addr + EFM32_USART_IEN_ADDR, 0);
       cpu_mem_write_32(pv->addr + EFM32_USART_IFC_ADDR, endian_le32(EFM32_USART_IFC_MASK));
 
 #ifdef CONFIG_DRIVER_EFM32_DMA
@@ -251,7 +248,10 @@ static DEV_IRQ_SRC_PROCESS(efm32_usart_spi_irq)
 
       struct dev_spi_ctrl_transfer_s *tr = pv->tr;
 
-      if (tr != NULL && efm32_usart_spi_transfer_rx(dev))
+      assert(tr);
+      assert(pv->fifo_lvl > 0);
+
+      if (efm32_usart_spi_transfer_rx(dev))
         kroutine_exec(&tr->kr);
     }
 
@@ -304,8 +304,6 @@ static void efm32_usart_spi_start_dma(struct device_s *dev)
   
   pv->drq.rq.base.pvdata = dev;
 
-  cpu_mem_write_32(pv->addr + EFM32_USART_IEN_ADDR, 0);
-
   /* Start DMA request */ 
   DEVICE_OP(&pv->dma, request, &pv->drq.rq);
 
@@ -354,6 +352,7 @@ static DEV_SPI_CTRL_TRANSFER(efm32_usart_spi_transfer)
 #endif
         {
           cpu_mem_write_32(pv->addr + EFM32_USART_IFC_ADDR, endian_le32(EFM32_USART_IFC_MASK));
+          cpu_mem_write_32(pv->addr + EFM32_USART_IEN_ADDR, endian_le32(EFM32_USART_IEN_RXFULL));
 
           pv->fifo_lvl = 0;
 
@@ -559,8 +558,6 @@ static DEV_CLEANUP(efm32_usart_spi_cleanup)
 
 #ifdef CONFIG_DEVICE_IRQ
   device_irq_source_unlink(dev, &pv->irq_ep, 1);
-  /* disable irqs */
-  cpu_mem_write_32(pv->addr + EFM32_USART_IEN_ADDR, 0);
 #endif
 
   /* disable the usart */
