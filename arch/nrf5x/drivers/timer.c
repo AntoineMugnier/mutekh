@@ -341,6 +341,9 @@ static DEV_INIT(nrf5x_timer_init)
   if (dev_drv_clock_init(dev, &pv->clock_sink, 0, 0, &pv->freq))
     goto unlink_irq;
 
+  pv->freq.num = 16000000;
+  pv->freq.denom = 1;
+
   dev_request_pqueue_init(&pv->queue);
   pv->base = 0;
 
