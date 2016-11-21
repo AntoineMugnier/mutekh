@@ -37,8 +37,10 @@
 #include <arch/nrf5x/i2c.h>
 #include <arch/nrf5x/gpio.h>
 
-#define dprintk(k...) do {} while (0)
 //#define dprintk printk
+#ifndef dprintk
+# define dprintk(x...) do{}while(0)
+#endif
 
 struct nrf5x_i2c_priv_s
 {
@@ -82,45 +84,48 @@ void nrf5x_i2c_tx_continue(struct nrf5x_i2c_priv_s *pv)
 {
   struct dev_i2c_ctrl_transfer_s *tr = pv->current;
 
-  if (!tr)
+  dprintk("%s %p\n", __FUNCTION__, tr);
+
+  if (!tr || tr->err)
     return;
 
   assert(!(tr->type & _DEV_I2C_READ_OP));
 
-  tr->data++;
-  tr->size--;
-
-  dprintk("%s %p TX %d bytes left\n", __FUNCTION__, tr, tr->size);
-
   if (tr->size == 0) {
     dprintk("%s %p TX done %x\n", __FUNCTION__, tr, tr->type);
-
-    tr->err = 0;
 
     switch (tr->type & _DEV_I2C_ENDING_MASK) {
     default:
     case _DEV_I2C_STOP:
+      pv->started = 0;
       return;
 
     case _DEV_I2C_RESTART:
       pv->started = 0;
+
     case _DEV_I2C_CONTINUOUS:
-      dprintk("%s %p kroutine_exec(), err=%d\n", __FUNCTION__, tr, tr->err);
+      dprintk("%s %p kroutine_exec(), started=%d, err=%d\n", __FUNCTION__, tr, pv->started, tr->err);
       kroutine_exec(&tr->kr);
       pv->current = NULL;
       return;
     }
   }
 
-  dprintk("%s %p TX %d bytes left: %02x\n", __FUNCTION__, tr,
-          tr->size, tr->data[0]);
+  dprintk("%s %p TX %d bytes left: %02x\n", __FUNCTION__, tr, tr->size, tr->data[0]);
 
-  if ((tr->type & _DEV_I2C_ENDING_MASK) == _DEV_I2C_STOP && tr->size == 1) {
-    dprintk("%s %p stopping after next byte\n", __FUNCTION__, tr);
-    nrf_short_set(pv->addr, bit(NRF_I2C_BB_STOP));
+  if (tr->size == 1) {
+    switch (tr->type & _DEV_I2C_ENDING_MASK) {
+    case _DEV_I2C_STOP:
+      dprintk("%s %p stopping after next byte\n", __FUNCTION__, tr);
+      nrf_short_set(pv->addr, bit(NRF_I2C_BB_STOP));
+      break;
+    }
   }
 
   nrf_reg_set(pv->addr, NRF_I2C_TXD, tr->data[0]);
+
+  tr->data++;
+  tr->size--;
 }
 
 static
@@ -128,24 +133,25 @@ void nrf5x_i2c_rx_continue(struct nrf5x_i2c_priv_s *pv)
 {
   struct dev_i2c_ctrl_transfer_s *tr = pv->current;
 
-  if (!tr)
+  dprintk("%s %p\n", __FUNCTION__, tr);
+
+  if (!tr || tr->err)
     return;
 
   assert(tr->type & _DEV_I2C_READ_OP);
 
   uint8_t data = nrf_reg_get(pv->addr, NRF_I2C_RXD);
 
-  dprintk("%s %p RX %02x, %d bytes left\n", __FUNCTION__, tr, data, tr->size - 1);
-
   tr->data[0] = data;
 
   tr->data++;
   tr->size--;
 
-  if (tr->size == 0) {
-    dprintk("%s %p RX done %x\n", __FUNCTION__, tr, tr->type);
+  dprintk("%s %p RX %02x, %d bytes left\n", __FUNCTION__, tr, data, tr->size);
 
-    tr->err = 0;
+  switch (tr->size) {
+  case 0:
+    dprintk("%s %p RX done %x\n", __FUNCTION__, tr, tr->type);
 
     switch (tr->type & _DEV_I2C_ENDING_MASK) {
     default:
@@ -158,9 +164,9 @@ void nrf5x_i2c_rx_continue(struct nrf5x_i2c_priv_s *pv)
       pv->current = NULL;
       return;
     }
-  }
+    break;
 
-  if (tr->size == 1) {
+  case 1:
     switch (tr->type & _DEV_I2C_ENDING_MASK) {
     default:
     case _DEV_I2C_CONTINUOUS:
@@ -170,9 +176,12 @@ void nrf5x_i2c_rx_continue(struct nrf5x_i2c_priv_s *pv)
       nrf_short_set(pv->addr, bit(NRF_I2C_BB_STOP));
       break;
     }
-  }
+    // Fallthrough
 
-  nrf_task_trigger(pv->addr, NRF_I2C_RESUME);
+  default:
+    nrf_task_trigger(pv->addr, NRF_I2C_RESUME);
+    break;
+  }
 }
 
 static
@@ -184,11 +193,12 @@ void nrf5x_i2c_transfer_start(struct nrf5x_i2c_priv_s *pv)
 
   nrf_reg_set(pv->addr, NRF_I2C_ADDR, tr->saddr);
 
-  dprintk("%s %p %s %s%s%s saddr %02x, %d bytes\n", __FUNCTION__, tr,
+  dprintk("%s %p %s %s%s%s%s saddr %02x, %d bytes\n", __FUNCTION__, tr,
           pv->started ? "continue" : "starting",
           tr->type & _DEV_I2C_READ_OP ? "read," : "write,",
-          tr->type & _DEV_I2C_STOP ? "stop," : "",
-          tr->type & _DEV_I2C_CONTINUOUS ? "continuous" : "",
+          (tr->type & _DEV_I2C_ENDING_MASK) == _DEV_I2C_STOP ? "stop" : "",
+          (tr->type & _DEV_I2C_ENDING_MASK) == _DEV_I2C_CONTINUOUS ? "continuous" : "",
+          (tr->type & _DEV_I2C_ENDING_MASK) == _DEV_I2C_RESTART ? "restart" : "",
           tr->saddr, tr->size);
 
   if (tr->size == 1) {
@@ -197,6 +207,8 @@ void nrf5x_i2c_transfer_start(struct nrf5x_i2c_priv_s *pv)
       nrf_short_set(pv->addr, bit(NRF_I2C_BB_STOP));
     else if (tr->type & _DEV_I2C_READ_OP)
       nrf_short_set(pv->addr, bit(NRF_I2C_BB_SUSPEND));
+    else
+      nrf_short_set(pv->addr, 0);
   } else {
     if (tr->type & _DEV_I2C_READ_OP)
       nrf_short_set(pv->addr, bit(NRF_I2C_BB_SUSPEND));
@@ -231,6 +243,8 @@ void nrf5x_i2c_transfer_start(struct nrf5x_i2c_priv_s *pv)
 
   if (!(tr->type & _DEV_I2C_READ_OP)) {
     nrf_reg_set(pv->addr, NRF_I2C_TXD, tr->data[0]);
+    tr->data++;
+    tr->size--;
     dprintk("%s %p TX %02x\n", __FUNCTION__, tr, tr->data[0]);
   }
 }
@@ -263,8 +277,18 @@ static DEV_IRQ_SRC_PROCESS(nrf5x_i2c_irq)
     dprintk("%s %p stopped\n", __FUNCTION__, tr);
 
     nrf_event_clear(pv->addr, NRF_I2C_STOPPED);
-    pv->started = 0;
-    if (tr && (tr->err || ((tr->type & _DEV_I2C_ENDING_MASK) == _DEV_I2C_STOP))) {
+
+    if (tr) {
+      switch (tr->type & _DEV_I2C_ENDING_MASK) {
+      default:
+        break;
+      case _DEV_I2C_STOP:
+      case _DEV_I2C_RESTART:
+        pv->started = 0;
+        break;
+      }
+
+      assert(tr->size == 0 || tr->err);
       dprintk("%s %p kroutine_exec(), err=%d\n", __FUNCTION__, tr, tr->err);
       kroutine_exec(&tr->kr);
       pv->current = NULL;
