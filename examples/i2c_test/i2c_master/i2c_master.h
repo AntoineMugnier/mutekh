@@ -27,7 +27,7 @@
 #define I2C_MASTER_I2C_DEV        "i2c*"
 #define I2C_MASTER_MAX_THREADS    3  /* without the main thread */
 
-#define I2C_MASTER_READ_RESTART_SUPPORT 1  /* controller read restart support */
+#define I2C_MASTER_READ_RESTART_SUPPORT 0  /* controller read restart support */
 
 /*
 -----------------------------------------------------------------
@@ -58,34 +58,6 @@ enum i2c_slave_basic_op_e
 };
 
 void display_memory(void);
-
-extern const struct bc_descriptor_s i2c_master_bytecode;
-
-extern void i2c_master_bc_init_slave(void);
-extern void i2c_master_bc_scan(void);
-extern void i2c_master_bc_read_debug_info(void);
-
-extern void i2c_master_bc_test_1_reg(void);
-extern void i2c_master_bc_test_2_reg(void);
-extern void i2c_master_bc_test_3_reg(void);
-extern void i2c_master_bc_test_4_reg(void);
-extern void i2c_master_bc_test_5_reg(void);
-extern void i2c_master_bc_test_6_reg(void);
-extern void i2c_master_bc_test_7_reg(void);
-extern void i2c_master_bc_test_8_reg(void);
-extern void i2c_master_bc_test_9_reg(void);
-extern void i2c_master_bc_test_10_reg(void);
-
-extern void i2c_master_bc_test_1_mem(void);
-extern void i2c_master_bc_test_2_mem(void);
-extern void i2c_master_bc_test_3_mem(void);
-extern void i2c_master_bc_test_4_mem(void);
-extern void i2c_master_bc_test_5_mem(void);
-extern void i2c_master_bc_test_6_mem(void);
-extern void i2c_master_bc_test_7_mem(void);
-extern void i2c_master_bc_test_8_mem(void);
-extern void i2c_master_bc_test_9_mem(void);
-extern void i2c_master_bc_test_10_mem(void);
 
 uint8_t get_test_bc_1_checksum(uint8_t slave_addr);
 uint8_t get_test_bc_2_checksum(uint8_t slave_addr);
