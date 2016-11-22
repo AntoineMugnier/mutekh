@@ -341,8 +341,9 @@ static DEV_IRQ_SINK_UPDATE(nrf5x_gpio_icu_sink_update)
 
   if (!sense) {
     nrf_reg_set(GPIO_ADDR, NRF_GPIO_PIN_CNF(pin), 0x0);
-    nrf_it_disable(GPIOTE_ADDR, NRF_GPIOTE_IN(te));
-    nrf_reg_set(GPIOTE_ADDR, NRF_GPIOTE_CONFIG(te), NRF_GPIOTE_CONFIG_MODE_DISABLED);
+    nrf_it_disable(GPIOTE_ADDR, NRF_GPIOTE_IN(te + CONFIG_DRIVER_NRF5X_GPIO_TE_FIRST));
+    nrf_reg_set(GPIOTE_ADDR, NRF_GPIOTE_CONFIG(te + CONFIG_DRIVER_NRF5X_GPIO_TE_FIRST),
+                NRF_GPIOTE_CONFIG_MODE_DISABLED);
     pv->gpiote_pin[te] = -1;
     return;
   }
@@ -369,8 +370,9 @@ static DEV_IRQ_SINK_UPDATE(nrf5x_gpio_icu_sink_update)
   }
 
   nrf_reg_set(GPIO_ADDR, NRF_GPIO_PIN_CNF(pin), pin_config);
-  nrf_reg_set(GPIOTE_ADDR, NRF_GPIOTE_CONFIG(te), te_config);
-  nrf_it_enable(GPIOTE_ADDR, NRF_GPIOTE_IN(te));
+  nrf_reg_set(GPIOTE_ADDR, NRF_GPIOTE_CONFIG(te + CONFIG_DRIVER_NRF5X_GPIO_TE_FIRST),
+              te_config);
+  nrf_it_enable(GPIOTE_ADDR, NRF_GPIOTE_IN(te + CONFIG_DRIVER_NRF5X_GPIO_TE_FIRST));
 
   return;
 }
@@ -431,10 +433,10 @@ static DEV_IRQ_SRC_PROCESS(nrf5x_gpio_process)
 
 #if CONFIG_DRIVER_NRF5X_GPIO_ICU_CHANNEL_COUNT
     for (int8_t te = 0; te < CONFIG_DRIVER_NRF5X_GPIO_ICU_CHANNEL_COUNT; ++te) {
-      if (!nrf_event_check(GPIOTE_ADDR, NRF_GPIOTE_IN(te)))
+      if (!nrf_event_check(GPIOTE_ADDR, NRF_GPIOTE_IN(te + CONFIG_DRIVER_NRF5X_GPIO_TE_FIRST)))
         continue;
 
-      nrf_event_clear(GPIOTE_ADDR, NRF_GPIOTE_IN(te));
+      nrf_event_clear(GPIOTE_ADDR, NRF_GPIOTE_IN(te + CONFIG_DRIVER_NRF5X_GPIO_TE_FIRST));
 
       struct dev_irq_sink_s *sink = pv->irq_out + te;
       device_irq_sink_process(sink, 0);
@@ -505,7 +507,7 @@ static DEV_INIT(nrf5x_gpio_init)
 
 # if CONFIG_DRIVER_NRF5X_GPIO_ICU_CHANNEL_COUNT
   for (int8_t i = 0; i < CONFIG_DRIVER_NRF5X_GPIO_ICU_CHANNEL_COUNT; ++i) {
-    nrf_reg_set(GPIOTE_ADDR, NRF_GPIOTE_CONFIG(i),
+    nrf_reg_set(GPIOTE_ADDR, NRF_GPIOTE_CONFIG(i + CONFIG_DRIVER_NRF5X_GPIO_TE_FIRST),
                 NRF_GPIOTE_CONFIG_MODE_DISABLED);
     pv->gpiote_pin[i] = -1;
   }
@@ -547,7 +549,7 @@ static DEV_CLEANUP(nrf5x_gpio_cleanup)
 
 #if CONFIG_DRIVER_NRF5X_GPIO_ICU_CHANNEL_COUNT
   for (int8_t i = 0; i < CONFIG_DRIVER_NRF5X_GPIO_ICU_CHANNEL_COUNT; ++i)
-    nrf_it_disable(GPIOTE_ADDR, NRF_GPIOTE_IN(i));
+    nrf_it_disable(GPIOTE_ADDR, NRF_GPIOTE_IN(i + CONFIG_DRIVER_NRF5X_GPIO_TE_FIRST));
 
 #endif
 
