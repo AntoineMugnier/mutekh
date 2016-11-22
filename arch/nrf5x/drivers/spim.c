@@ -34,8 +34,16 @@
 #include <device/class/iomux.h>
 
 #include <arch/nrf5x/spim.h>
+#if defined(CONFIG_DRIVER_NRF52_SPIM_PAN58)
+# include <arch/nrf5x/ppi.h>
+# include <arch/nrf5x/gpiote.h>
+#endif
 
 #define dprintk(...) do{}while(0)
+
+#define GPIOTE_ADDR NRF_PERIPHERAL_ADDR(NRF5X_GPIOTE)
+#define GPIOTE_CHANNEL CONFIG_DRIVER_NRF52_SPIM_PAN58_GPIOTE_FIRST
+#define PPI_CHANNEL CONFIG_DRIVER_NRF52_SPIM_PAN58_PPI_FIRST
 
 DRIVER_PV(struct nrf5x_spim_context_s
 {
@@ -247,6 +255,14 @@ static void nrf5x_spim_next_start(struct nrf5x_spim_context_s *pv)
   nrf_reg_set(pv->addr, NRF_SPIM_TXD_MAXCNT, tr->data.out_width ? count : 0);
   nrf_reg_set(pv->addr, NRF_SPIM_RXD_MAXCNT, tr->data.in && tr->data.in_width ? count : 0);
 
+#if defined(CONFIG_DRIVER_NRF52_SPIM_PAN58)
+  if (nrf_reg_get(pv->addr, NRF_SPIM_RXD_MAXCNT) <= 1
+      && nrf_reg_get(pv->addr, NRF_SPIM_TXD_MAXCNT) == 1)
+    nrf_ppi_enable(PPI_CHANNEL);
+  else
+    nrf_ppi_disable(PPI_CHANNEL);
+#endif
+
   pv->transferred = count;
 
   nrf_it_enable(pv->addr, NRF_SPIM_END);
@@ -355,8 +371,19 @@ static DEV_INIT(nrf5x_spim_init)
 
   nrf_it_disable(pv->addr, NRF_SPIM_END);
 
-  device_irq_source_init(dev, pv->irq_ep, 1, &nrf5x_spim_irq);
+#if defined(CONFIG_DRIVER_NRF52_SPIM_PAN58)
+  nrf_reg_set(GPIOTE_ADDR, NRF_GPIOTE_CONFIG(GPIOTE_CHANNEL), 0
+              | NRF_GPIOTE_CONFIG_MODE_EVENT
+              | NRF_GPIOTE_CONFIG_PSEL(id[0])
+              | NRF_GPIOTE_CONFIG_POLARITY_TOGGLE);
 
+  nrf_ppi_setup(PPI_CHANNEL,
+                GPIOTE_ADDR, NRF_GPIOTE_IN(GPIOTE_CHANNEL),
+                pv->addr, NRF_SPIM_STOP);
+#endif
+
+
+  device_irq_source_init(dev, pv->irq_ep, 1, &nrf5x_spim_irq);
   if (device_irq_source_link(dev, pv->irq_ep, 1, -1))
     goto free_queue;
 
