@@ -90,7 +90,7 @@ enum efm32_leuart_start_e
 static uint32_t efm32_leuart_char_bauds(struct device_s *dev, uint32_t bauds)
 {
   struct efm32_leuart_context_s *pv = dev->drv_pv;
-  return EFM32_LEUART_CLKDIV_DIV((32 * pv->freq.num) / (bauds * pv->freq.denom) - 32);
+  return (256ULL * pv->freq.num) / (bauds * pv->freq.denom) - 256;
 }
 
 static void efm32_leuart_try_read(struct device_s *dev)
@@ -457,10 +457,10 @@ static DEV_INIT(efm32_leuart_init)
 
   /* setup baud rate */
 #ifdef CONFIG_DEVICE_CLOCK_VARFREQ
-  pv->bauds = 9600;
+  pv->bauds = CONFIG_DRIVER_EFM32_LEUART_RATE;
 #endif
   efm32_leuart_write_reg(pv->addr, EFM32_LEUART_CLKDIV_ADDR,
-                         endian_le32(efm32_leuart_char_bauds(dev, 9600)));
+                         endian_le32(efm32_leuart_char_bauds(dev, CONFIG_DRIVER_EFM32_LEUART_RATE)));
 
   /* enable the uart */
   efm32_leuart_write_reg(pv->addr, EFM32_LEUART_CMD_ADDR,
