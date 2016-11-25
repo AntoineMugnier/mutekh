@@ -33,16 +33,12 @@
    This class provides functions to read and update pins of a GPIO
    controller device.
 
-   This class does not provide any pin change notification
-   feature. This feature is provided by the @xref {Interrupt
-   controller driver API}{Interrupt controller driver API}. A GPIO
-   device driver may implement both classes.
-
    This class enables performing the following operations on a GPIO device:
    @list
-   @item setting the mode of a pin,
-   @item reading the current value of a pin,
-   @item setting or toggling the value of a pin.
+   @item setting the mode of a set of pins,
+   @item reading the current value of a set of pins,
+   @item setting or toggling the value of a set of pins.
+   @item waiting until the value of a set of pins is not as expected.
    @end list
 
    An operation involving multiple pins must be performed atomically
@@ -193,36 +189,6 @@ typedef DEV_GPIO_GET_INPUT(dev_gpio_get_input_t);
 
 
 
-/** @see dev_gpio_input_irq_range_t */
-#define DEV_GPIO_INPUT_IRQ_RANGE(n) error_t (n)(const struct device_gpio_s *gpio, \
-                                                gpio_id_t io_first, gpio_id_t io_last, \
-                                                const uint8_t *mask,    \
-                                                enum dev_irq_sense_modes_e mode, \
-                                                uint_fast8_t ep_id)
-/**
-   @this declares a range of pins as common IRQ source.  This must be
-   used for a device that also implements the ICU device class.
-
-   This configures endpoint @tt ep_id as an interrupt source for
-   changes detected on pins in range @tt io_first to @tt io_last where
-   bits in @tt mask are set.
-
-   Relevant @tt ep_id to use for this call is device-specific.
-
-   Pin direction and other characteristics (pullups, etc.) must be set
-   through @tt set_mode call.
-
-   Any selected change in @tt mode for any selected pin triggers an
-   IRQ on the endpoint.
-
-   When changes are then notified through the IRQ callback, there is
-   no way to tell which pin triggered the IRQ.  It is up to client
-   code to read the input pin status and take action.
-*/
-typedef DEV_GPIO_INPUT_IRQ_RANGE(dev_gpio_input_irq_range_t);
-
-
-
 /** @see dev_gpio_request_t */
 #define DEV_GPIO_REQUEST(n) void (n)(const struct device_gpio_s *gpio, \
                                      struct dev_gpio_rq_s *req)
@@ -236,10 +202,26 @@ typedef DEV_GPIO_REQUEST(dev_gpio_request_t);
 
 enum dev_gpio_request_type
 {
+  /** @This performs the same action as the dev_gpio_set_mode_t
+      function. The request is handled in order, on the same queue as
+      the @ref DEV_GPIO_SET_OUTPUT and @ref DEV_GPIO_GET_INPUT
+      requests. */
   DEV_GPIO_MODE,
+  /** @This performs the same action as the dev_gpio_get_input_t
+      function. The request is handled in order, on the same queue as
+      the @ref DEV_GPIO_MODE and @ref DEV_GPIO_GET_INPUT requests. */
   DEV_GPIO_SET_OUTPUT,
+  /** @This performs the same action as the dev_gpio_set_output_t
+      function. The request is handled in order, on the same queue as
+      the @ref DEV_GPIO_MODE and @ref DEV_GPIO_SET_OUTPUT requests. */
   DEV_GPIO_GET_INPUT,
-  DEV_GPIO_INPUT_IRQ_RANGE,
+  /** @This waits until a masked set of input pins have a different
+      value from what is specified in the request. The request is not
+      handled in order with other requests. Not all implementation are
+      required to handle multiple such requests at the same time. The
+      request will terminate immediately with the @tt -EBUSY error in
+      this case. */
+  DEV_GPIO_UNTIL,
 };
 
 #define GCT_CONTAINER_ALGO_dev_gpio_queue CLIST
@@ -258,29 +240,32 @@ struct dev_gpio_rq_s
   enum dev_gpio_request_type type;
 
   union {
+    /** @see DEV_GPIO_MODE @see dev_gpio_set_mode_t */
     struct {
-      /** mask of ios to set mode for. */
       const uint8_t               *mask;
       enum dev_pin_driving_e      mode;
     } mode;
 
+    /** @see DEV_GPIO_SET_OUTPUT @see dev_gpio_set_output_t */
     struct {
-      /** mask to set, @see dev_gpio_set_output_t */
       const uint8_t               *set_mask;
-      /** mask to clear, @see dev_gpio_set_output_t */
       const uint8_t               *clear_mask;
     } output;
 
+    /** @see DEV_GPIO_GET_INPUT @see dev_gpio_get_input_t */
     struct {
-      /** data buffer to read */
       uint8_t                     *data;
     } input;
 
+    /** @see DEV_GPIO_WAIT */
     struct {
+      /** This specifies which input bits are tested against the
+          current @tt data value. */
       const uint8_t               *mask;
-      enum dev_irq_sense_modes_e  mode;
-      uint_fast8_t                ep_id;
-    } input_irq_range;
+      /** The request terminates when any masked input bit is not
+          equal to @tt data. */
+      const uint8_t               *data;
+    } until;
   };
 };
 
@@ -296,7 +281,6 @@ DRIVER_CLASS_TYPES(DRIVER_CLASS_GPIO, gpio,
                    dev_gpio_set_mode_t *f_set_mode;
                    dev_gpio_set_output_t *f_set_output;
                    dev_gpio_get_input_t *f_get_input;
-                   dev_gpio_input_irq_range_t *f_input_irq_range;
                    dev_gpio_request_t *f_request;
   );
 
@@ -307,7 +291,6 @@ DRIVER_CLASS_TYPES(DRIVER_CLASS_GPIO, gpio,
     .f_set_mode = prefix ## _set_mode,                            \
     .f_set_output = prefix ## _set_output,                        \
     .f_get_input = prefix ## _get_input,                          \
-    .f_input_irq_range = prefix ## _input_irq_range,              \
     .f_request = prefix ## _request,                              \
   })
 
@@ -434,6 +417,27 @@ bool_t dev_gpio_wait_input(struct device_gpio_s *accessor, gpio_id_t id, error_t
   if (err != NULL)
     *err = rq.error;
   return x[0] & 1;
+})
+
+/** @This reads the value of a single gpio pin. This function uses the
+    scheduler api to put the current context in wait state during the
+    request. @see dev_gpio_get_input_t @see dev_gpio_input
+    @xsee {Synchronous and asynchronous operation} */
+config_depend_and2_inline(CONFIG_DEVICE_GPIO, CONFIG_MUTEK_CONTEXT_SCHED,
+error_t dev_gpio_wait_until(struct device_gpio_s *accessor, gpio_id_t id,
+                            bool_t x),
+{
+  struct dev_gpio_rq_s rq;
+  struct dev_request_status_s st;
+  const uint8_t *p = x ? dev_gpio_mask1 : dev_gpio_mask0;
+  rq.io_first = rq.io_last = id;
+  rq.type = DEV_GPIO_UNTIL;
+  rq.until.mask = dev_gpio_mask1;
+  rq.until.data = p;
+  dev_request_sched_init(&rq.base, &st);
+  DEVICE_OP(accessor, request, &rq);
+  dev_request_sched_wait(&st);
+  return rq.error;
 })
 
 /** @This changes the mode of multiple GPIO pins using the synchronous API. */
