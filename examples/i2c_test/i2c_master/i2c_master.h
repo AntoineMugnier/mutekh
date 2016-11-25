@@ -27,7 +27,7 @@
 #define I2C_MASTER_I2C_DEV        "i2c*"
 #define I2C_MASTER_MAX_THREADS    3  /* without the main thread */
 
-#define I2C_MASTER_READ_RESTART_SUPPORT 0  /* controller read restart support */
+#define I2C_MASTER_READ_RESTART_SUPPORT 1  /* controller read restart support */
 
 /*
 -----------------------------------------------------------------

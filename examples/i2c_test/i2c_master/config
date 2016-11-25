@@ -29,10 +29,15 @@ CONFIG_MUTEK_BYTECODE_TRACE
 %section nrf5x-pca10040
   CONFIG_I2C_TEST_BOARD_NAME pca10040
 
-  %section twim
-    CONFIG_DRIVER_NRF52_TWIM
+  %section soft
+    CONFIG_DRIVER_I2C_BITBANG
+    CONFIG_DRIVER_I2C_BITBANG_SYNC undefined
   %else
-    CONFIG_DRIVER_NRF5X_I2C
+    %section twim
+      CONFIG_DRIVER_NRF52_TWIM
+    %else
+      CONFIG_DRIVER_NRF5X_I2C
+    %end
   %end
 %end
 
@@ -50,6 +55,18 @@ CONFIG_MUTEK_BYTECODE_TRACE
     CONFIG_DRIVER_CHAR_RTT_RX_BUFFER_SIZE 128
     %inherit shell
   %end
+
+  %subsection printk-rtt
+    CONFIG_DRIVER_RTT_PRINTK
+    CONFIG_RTT_PRINTK_RINGBUFFER_SIZE 2048
+  %end
+
+  %subsection shell-uart
+    CONFIG_DRIVER_NRF5X_UART
+    CONFIG_DEVICE_UART
+    CONFIG_DRIVER_CHAR_RTT_RX_BUFFER_SIZE 128
+    %inherit shell
+  %end
 %end
 
 %include scripts/options.build
@@ -59,6 +76,7 @@ CONFIG_MUTEK_BYTECODE_TRACE
 CONFIG_COMPILE_DEBUG
 CONFIG_HEXO_IRQ defined
 
+CONFIG_HEXO_CPU_STACK_SIZE 0x1000
 CONFIG_PTHREAD_STACK_SIZE 0x1000
 
 CONFIG_DEVICE_SPI undefined
