@@ -5,6 +5,7 @@ block \
 char \
 enum \
 gpio \
+i2c \
 mem \
 net \
 printk \

@@ -1,0 +1,266 @@
+/*
+    -*- asm -*-
+
+    This file is part of MutekH.
+
+    MutekH is free software; you can redistribute it and/or modify it
+    under the terms of the GNU Lesser General Public License as
+    published by the Free Software Foundation; version 2.1 of the
+    License.
+
+    MutekH is distributed in the hope that it will be useful, but
+    WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+    Lesser General Public License for more details.
+
+    You should have received a copy of the GNU Lesser General Public
+    License along with this program.  If not, see
+    <http://www.gnu.org/licenses/>.
+
+    Copyright (c) 2016, Nicolas Pouillon, <nipo@ssji.net>
+*/
+
+#include <device/class/i2c.h>
+    
+.custom i2c_bb
+.name i2c_bb_io
+
+.func byte_write
+    .input %0 byte, %15 link
+    .output %0 nack
+    .clobber %1 tmp, %2 ctr
+
+    cst8 %ctr, 8
+
+bit_write_next:
+    mov %tmp, %byte
+    shi32r %tmp, 7
+    shi32l %byte, 1
+    io_set SDA, %tmp
+    wait
+    io_set SCL, HIGH
+    wait
+    io_set SCL, LOW
+
+    loop %ctr, bit_write_next
+
+    io_set SDA, HIGH
+    wait
+    io_set SCL, HIGH
+    wait
+    io_get SDA, %nack
+    io_set SCL, LOW
+
+    ret %link
+.endfunc
+
+.func byte_read
+    .input %0 nack, %15 link
+    .output %0 byte
+    .clobber %1 tmp, %2 ctr, %3 nack_backup
+
+    mov %nack_backup, %nack
+    cst8 %ctr, 8
+    io_set SDA, HIGH
+
+bit_read_next:
+    wait
+    io_set SCL, HIGH
+    wait
+    io_get SDA, %tmp
+    shi32l %byte, 1
+    or32 %byte, %tmp
+    io_set SCL, LOW
+
+    loop %ctr, bit_read_next
+
+    eq0 %nack_backup
+     io_set SDA, LOW
+    wait
+    io_set SCL, HIGH
+    wait
+    io_set SCL, LOW
+    io_set SDA, HIGH
+
+    ret %link
+.endfunc
+
+.func stop
+    .input %15 link
+
+    io_set SDA, LOW
+    wait
+    io_set SCL, HIGH
+    wait
+    io_set SDA, HIGH
+    wait
+
+    ret %link
+.endfunc
+
+.func restart_prepare
+    .input %15 link
+
+    io_set SDA, HIGH
+    wait
+    io_set SCL, HIGH
+    wait
+
+    ret %link
+.endfunc
+
+.func start
+    .input %15 link
+
+    io_set SDA, LOW
+    wait
+    io_set SCL, LOW
+    wait
+
+    ret %link
+.endfunc
+
+.func reset
+    .input %15 link
+    .clobber %0 tmp
+
+reset_again:
+    io_set SCL, HIGH
+    io_set SDA, HIGH
+    wait
+
+    io_get SCL, %tmp
+    eq0 %tmp
+     jmp8 stuck
+
+    io_get SDA, %tmp
+    neq0 %tmp
+     ret %link
+
+stuck:
+    io_set SCL, LOW
+    wait
+    jmp8 reset_again
+
+.endfunc
+
+.func i2c_bb_start
+    .export i2c_bb_start
+    .clobber %0, %1, %2, %3, %4 tmp, %5 tmp2, %6 op, %15
+
+    io_mode SCL, _const(DEV_PIN_OPENDRAIN_PULLUP)
+    io_mode SDA, _const(DEV_PIN_OPENDRAIN_PULLUP)
+
+reset_next:
+    call8 %reset:link, reset
+
+first:
+    txn_next_wait
+    txn_type_get %op
+
+    cst8 %tmp, _const(DEV_I2C_RESET)
+    eq %tmp, %op
+     jmp8 reset_txn
+
+    call8 %start:link, start
+    jmp8 started
+
+reset_txn:
+    call8 %reset:link, reset
+    txn_done 0
+    jmp8 first
+
+started:
+    txn_saddr_get %byte_write:byte
+
+    shi32l %byte_write:byte, 1
+    tst32s %op, bitpos(_DEV_I2C_READ_OP)
+     add8 %byte_write:byte, 1
+
+    call8 %byte_write:link, byte_write
+    neq0 %byte_write:nack
+     jmp8 saddr_nack
+
+slave_selected:
+    tst32s %op, bitpos(_DEV_I2C_READ_OP)
+     jmp8 read_op
+
+write_op:
+    txn_byte_pop %byte_write:byte
+     jmp8 txn_end
+
+    call8 %byte_write:link, byte_write
+    eq0 %byte_write:nack
+     jmp8 write_op
+
+//write_nack
+//    txn_byte_is_done %tmp
+//    neq0 %tmp
+//     jmp8 txn_end
+
+    call8 %stop:link, stop
+    txn_done EAGAIN
+    jmp8 first
+
+read_op:    
+    cst8 %tmp2, _DEV_I2C_ENDING_MASK
+    and32 %tmp2, %op
+    cst8 %tmp, _DEV_I2C_CONTINUOUS
+    eq %tmp, %tmp2
+     jmp8 read_op_continuous
+
+read_op_nack:
+    txn_byte_is_last %byte_read:nack
+    call8 %byte_read:link, byte_read
+    txn_byte_push %byte_read:byte
+    txn_byte_is_done %tmp
+    eq0 %tmp
+     jmp8 read_op_nack
+    jmp8 txn_end
+
+read_op_continuous:
+    cst8 %tmp, 0
+    mov %byte_read:nack, %tmp
+    call8 %byte_read:link, byte_read
+    txn_byte_push %byte_read:byte
+    txn_byte_is_done %tmp
+    eq0 %tmp
+     jmp8 read_op_continuous
+
+txn_end:
+    cst8 %tmp, _DEV_I2C_ENDING_MASK
+    and32 %tmp, %op
+    cst8 %tmp2, _DEV_I2C_CONTINUOUS
+    eq %tmp, %tmp2
+     jmp8 continuous
+
+    cst8 %tmp2, _DEV_I2C_RESTART
+    eq %tmp, %tmp2
+     jmp8 restart
+
+//stop
+    call8 %stop:link, stop
+    txn_done 0
+    jmp8 first
+
+continuous:
+    txn_done 0
+    txn_next_wait
+    txn_type_get %op
+
+    cst8 %tmp, _const(DEV_I2C_RESET)
+    eq %tmp, %op
+     jmp8 reset_txn
+    jmp8 slave_selected
+
+restart:
+    call8 %restart_prepare:link, restart_prepare
+    txn_done 0
+    jmp8 first
+
+saddr_nack:
+    call8 %stop:link, stop
+    txn_done EHOSTUNREACH
+    jmp8 first
+
+.endfunc
