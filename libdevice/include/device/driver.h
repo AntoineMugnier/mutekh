@@ -571,6 +571,14 @@ struct device_accessor_s
   __a__->api->f_##op(__a__, ## __VA_ARGS__);       \
 })
 
+/** @This tells whether device defines said function.
+    @xcsee {Device accessor} */
+#define DEVICE_HAS_OP(dev_accessor, op)        \
+({                                            \
+  typeof(dev_accessor) __a__ = (dev_accessor);  \
+  ((void*)__a__->api->f_##op != (void*)dev_driver_notsup_fcn);      \
+})
+
 /** @This initializes a @ref device_accessor_s object to the null
     accessor. */
 #define DEVICE_ACCESSOR_INIT { .dev = NULL, .api = NULL }
