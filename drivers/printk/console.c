@@ -50,7 +50,6 @@ static void console_printk_rq_next(struct console_printk_status_s *pv)
   pv->use_begin += pv->pending_tx_size;
   if (pv->use_begin == CONFIG_DRIVER_CONSOLE_PRINTK_BUFFER_SIZE)
     pv->use_begin = 0;
-  lock_release_irq(&pv->lock);
 
   pv->char_rq.data = (void*)(pv->fifo + rptr);
   pv->char_rq.size = pv->pending_tx_size;
@@ -120,7 +119,7 @@ void console_printk_init(void)
 
   lock_init_irq(&status.lock);
   status.char_rq.type = DEV_CHAR_WRITE;
-  kroutine_init_immediate(&status.char_rq.base.kr, console_printk_done);
+  kroutine_init_deferred(&status.char_rq.base.kr, console_printk_done);
 
   status.free_size = CONFIG_DRIVER_CONSOLE_PRINTK_BUFFER_SIZE;
   status.free_begin = 0;
