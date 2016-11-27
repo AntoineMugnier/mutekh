@@ -801,6 +801,7 @@ extern TERMUI_CON_GROUP_DECL(dev_shell_spi_ctrl_group);
 extern TERMUI_CON_GROUP_DECL(dev_shell_char_group);
 extern TERMUI_CON_GROUP_DECL(dev_shell_enum_group);
 extern TERMUI_CON_GROUP_DECL(dev_shell_uart_group);
+extern TERMUI_CON_GROUP_DECL(dev_shell_hwclock_group);
 
 static TERMUI_CON_GROUP_DECL(dev_shell_subgroup) =
 {
@@ -864,6 +865,9 @@ static TERMUI_CON_GROUP_DECL(dev_shell_subgroup) =
 #endif
 #ifdef CONFIG_DEVICE_UART
   TERMUI_CON_GROUP_ENTRY(dev_shell_uart_group, "uart")
+#endif
+#if defined(CONFIG_DEVICE_VALIO_HWCLOCK)
+  TERMUI_CON_GROUP_ENTRY(dev_shell_hwclock_group, "hwclock")
 #endif
   TERMUI_CON_LIST_END
 };

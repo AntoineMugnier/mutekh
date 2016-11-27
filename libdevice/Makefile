@@ -11,7 +11,8 @@ enum_headers = include/device/types.h \
                include/device/class/rfpacket.h \
                include/device/class/persist.h \
                include/device/class/uart.h \
-               include/device/class/spi.h
+               include/device/class/spi.h \
+               include/device/valio/hwclock.h
 
 objs = driver.o device.o resources.o init.o request.o
 
@@ -94,4 +95,9 @@ objs-$(CONFIG_DEVICE_USBDEV) += device_usbdev.o device_usbdev_helpers.o
 
 ifeq ($(CONFIG_DEVICE_VALIO), defined)
 objs += device_valio.o
+endif
+
+ifeq ($(CONFIG_DEVICE_VALIO_HWCLOCK), defined)
+objs += device_hwclock.o
+objs-$(CONFIG_DEVICE_SHELL) += shell_hwclock.o
 endif
