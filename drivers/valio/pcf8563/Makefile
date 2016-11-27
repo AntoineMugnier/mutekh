@@ -1,0 +1,1 @@
+objs-$(CONFIG_DRIVER_PCF8563) += pcf8563.o

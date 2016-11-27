@@ -9,3 +9,4 @@ objs-$(CONFIG_DRIVER_MPU6505) += mpu6505.o
 
 subdirs-$(CONFIG_DRIVER_MATRIX_KEYBOARD) += matrix_keyboard
 subdirs-$(CONFIG_DRIVER_ADXL362) += adxl362
+subdirs-$(CONFIG_DRIVER_PCF8563) += pcf8563
