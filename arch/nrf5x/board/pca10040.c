@@ -80,11 +80,8 @@ DEV_DECLARE_STATIC(uart_dev, "uart0", 0, nrf5x_uart_drv,
 #if defined(CONFIG_DRIVER_NRF5X_GPIO) && defined(CONFIG_DRIVER_BUTTON_SET)
 
 DEV_DECLARE_STATIC(keyboard_dev, "keyboard", 0, button_set_drv,
-                   DEV_STATIC_RES_DEV_ICU("/gpio"),
                    DEV_STATIC_RES_DEV_GPIO("/gpio"),
-                   DEV_STATIC_RES_IRQ(0, NRF_GPIO_RANGE_IRQ_ID, DEV_IRQ_SENSE_HIGH_LEVEL, 0, 1),
-                   DEV_STATIC_RES_IO(13, 16),
-                   DEV_STATIC_RES_BLOB_PARAM("mask", dev_gpio_mask1),
+                   DEV_STATIC_RES_GPIO("pins", 13, 4),
                    DEV_STATIC_RES_UINT_PARAM("active", 0),
                    );
 
