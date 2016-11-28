@@ -29,7 +29,6 @@
     .clobber %0 column, %1 rows, %2 row, %3 rows_before_scan, %4 tmp, %5 rescans_left, %6 one_pressed
 
     mov %rescans_left, %max_scan_count
-    notify none
     columns_release
     wait_row
 
@@ -72,8 +71,6 @@ next_column:
 
     columns_release
     wait_row
-    notify release
-    wait_row
     rows_get %rows
 
     neq %rows, %rows_before_scan
@@ -85,15 +82,12 @@ next_column:
      jmp8 keyboard_released
 
     loop %rescans_left, scan_again
-    wait_change
-    notify none
+    wait_change %rows
     mov %rescans_left, %max_scan_count
     jmp8 scan_again
 
 keyboard_released:
-    notify press
-    wait_change
-    notify none
+    wait_change %rows
 
     mov %rescans_left, %max_scan_count
     jmp8 scan_again
