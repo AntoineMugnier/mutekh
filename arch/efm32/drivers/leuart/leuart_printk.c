@@ -161,6 +161,7 @@ void efm32_leuart_printk_init()
   /* However, the data rate may be fine if the leuart input clock is
      later changed by the clock management when the
      CONFIG_DRIVER_EFM32_LEUART_CHAR driver is enabled. */
+  cpu_mem_write_32(b + EFM32_LEUART_CLKDIV_ADDR, EFM32_LEUART_CLKDIV_MASK);
 #else
   cpu_mem_write_32(b + EFM32_LEUART_CLKDIV_ADDR, (uint32_t)RATE);
 #endif
