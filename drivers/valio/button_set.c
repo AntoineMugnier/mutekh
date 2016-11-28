@@ -21,7 +21,7 @@
 #include <hexo/types.h>
 #include <hexo/endian.h>
 #include <hexo/iospace.h>
-#include <hexo/interrupt.h>
+#include <hexo/bit.h>
 
 #include <mutek/mem_alloc.h>
 #include <mutek/printk.h>
@@ -29,7 +29,6 @@
 #include <device/resources.h>
 #include <device/device.h>
 #include <device/driver.h>
-#include <device/irq.h>
 
 #include <device/class/timer.h>
 #include <device/class/icu.h>
@@ -37,129 +36,102 @@
 #include <device/class/valio.h>
 #include <device/valio/keyboard.h>
 
-#define dprintk(x...) do{}while(0)
 //#define dprintk printk
+#ifndef dprintk
+# define dprintk(x...) do{}while(0)
+#endif
 
-DRIVER_PV(struct bs_context_s
+struct bs_context_s
 {
   dev_request_queue_root_t queue;
   struct dev_irq_src_s irq_ep;
-
   struct device_gpio_s gpio;
-  uint64_t mask;
-  uint8_t *last_read_state, *cur_state;
+  struct dev_gpio_rq_s gpio_rq;
 
-  uint8_t first, last, range_id, count, state_size;
-  bool_t active_low;
-  bool_t changed;
-});
+  uint8_t mask[8];
+  uint8_t cur[8];
 
-static void bs_notif_disable(struct device_s *dev)
+  bool_t active_high;
+  bool_t busy;
+  uint8_t state_size;
+};
+
+DRIVER_PV(struct bs_context_s);
+
+static void bs_state_read(struct bs_context_s *pv,
+                          struct dev_valio_rq_s *rq)
 {
-  struct bs_context_s *pv = dev->drv_pv;
-
-  if (!(dev->start_count & 1))
-    return;
-
-  dprintk("%s\n", __FUNCTION__);
-
-  dev->start_count &= ~1;
-
-  DEVICE_OP(&pv->gpio, input_irq_range,
-            pv->first, pv->last, (const uint8_t *)&pv->mask,
-            0, pv->range_id);
-}
-
-static void bs_notif_enable(struct device_s *dev)
-{
-  struct bs_context_s *pv = dev->drv_pv;
-
-  if (dev->start_count & 1)
-    return;
-
-  dprintk("%s\n", __FUNCTION__);
-
-  dev->start_count |= 1;
-
-  DEVICE_OP(&pv->gpio, input_irq_range,
-            pv->first, pv->last, (const uint8_t *)&pv->mask,
-            DEV_IRQ_SENSE_LOW_LEVEL | DEV_IRQ_SENSE_HIGH_LEVEL, pv->range_id);
-}
-
-static uint32_t bs_value_get(struct bs_context_s *pv)
-{
-  uint64_t state;
-
-  DEVICE_OP(&pv->gpio, get_input, pv->first, pv->last, (uint8_t *)&state);
-
-  if (pv->active_low)
-    state = ~state;
-
-  return state & pv->mask;
-}
-
-static bool_t bs_read_or_update(struct bs_context_s *pv,
-                                struct dev_valio_rq_s *rq)
-{
-  uint64_t set = bs_value_get(pv);
-  uint64_t mask = pv->mask;
+  uint32_t mask = endian_le32_na_load(pv->mask);
+  uint32_t value = endian_le32_na_load(pv->cur);
   uint8_t button = 0;
 
-  memset(pv->cur_state, 0, pv->state_size);
+  memset(rq->data, 0, pv->state_size);
 
   while (mask) {
-    uint8_t bit = __builtin_ctzll(mask);
-    uint64_t m = 1ULL << bit;
+    uint8_t b = __builtin_ctzl(mask);
 
-    if (set & m)
-      pv->cur_state[button / 8] |= 1 << (button & 7);
+    if (bit_get(value, b) == pv->active_high)
+      ((uint8_t *)rq->data)[button / 8] |= 1 << (button & 7);
 
-    mask &= ~m;
+    BIT_CLEAR(mask, b);
     button++;
   }
 
-  pv->changed = 0;
-
-  if (rq->type == DEVICE_VALIO_WAIT_EVENT
-      && !memcmp(pv->cur_state, pv->last_read_state, pv->state_size))
-    return 0;
-
-  memcpy(pv->last_read_state, pv->cur_state, pv->state_size);
-  memcpy(rq->data, pv->cur_state, pv->state_size);
-  rq->error = 0;
-
-  return 1;
+  dprintk("%s %x %x %P\n", __FUNCTION__, mask, value,
+         rq->data, pv->state_size);
 }
 
-static DEV_IRQ_SRC_PROCESS(bs_irq)
+static void bs_gpio_read(struct device_s *dev)
 {
-  struct device_s *dev = ep->base.dev;
   struct bs_context_s *pv = dev->drv_pv;
-  struct dev_valio_rq_s *rq;
 
-  dprintk("%s\n", __FUNCTION__);
+  pv->gpio_rq.type = DEV_GPIO_GET_INPUT;
+  pv->gpio_rq.input.data = pv->cur;
+
+  pv->busy = 1;
+  DEVICE_OP(&pv->gpio, request, &pv->gpio_rq);
+}
+
+static void bs_gpio_wait(struct device_s *dev)
+{
+  struct bs_context_s *pv = dev->drv_pv;
+
+  pv->gpio_rq.type = DEV_GPIO_UNTIL;
+  pv->gpio_rq.until.mask = pv->mask;
+  pv->gpio_rq.until.data = pv->cur;
+
+  pv->busy = 1;
+  DEVICE_OP(&pv->gpio, request, &pv->gpio_rq);
+}
+
+static KROUTINE_EXEC(bs_gpio_done)
+{
+  struct bs_context_s *pv = KROUTINE_CONTAINER(kr, *pv, gpio_rq.base.kr);
+  struct device_s *dev = pv->gpio_rq.base.pvdata;
 
   LOCK_SPIN_IRQ(&dev->lock);
-  rq = dev_valio_rq_s_cast(dev_request_queue_head(&pv->queue));
+  pv->busy = 0;
 
-  pv->changed = 1;
-
-  while (rq) {
-    if (bs_read_or_update(pv, rq) == 1) {
-      dev_request_queue_remove(&pv->queue, &rq->base);
-
-      kroutine_exec(&rq->base.kr);
-
-      rq = dev_valio_rq_s_cast(dev_request_queue_head(&pv->queue));
-    }
-
-    if (!rq || rq->type != DEVICE_VALIO_READ)
+  switch (pv->gpio_rq.type) {
+  default:
+  case DEV_GPIO_MODE:
+    if (dev_request_queue_isempty(&pv->queue))
       break;
+
+  case DEV_GPIO_GET_INPUT:
+    bs_gpio_wait(dev);
+    GCT_FOREACH(dev_request_queue, &pv->queue, brq, {
+        struct dev_valio_rq_s *rq = dev_valio_rq_s_cast(brq);
+        bs_state_read(pv, rq);
+        dev_request_queue_remove(&pv->queue, &rq->base);
+        kroutine_exec(&rq->base.kr);
+      });
+    break;
+
+  case DEV_GPIO_UNTIL:
+    bs_gpio_read(dev);
+    break;
   }
-
-  if (!rq)
-    device_sleep_schedule(dev);
-
   LOCK_RELEASE_IRQ(&dev->lock);
 }
 
@@ -167,8 +139,7 @@ static DEV_VALIO_REQUEST(button_set_request)
 {
   struct device_s *dev = accessor->dev;
   struct bs_context_s *pv = dev->drv_pv;
-  bool_t queued = 0;
-  req->error = 0;
+  bool_t was_empty = 0;
 
   dprintk("%s\n", __FUNCTION__);
 
@@ -183,18 +154,17 @@ static DEV_VALIO_REQUEST(button_set_request)
     goto done;
 
   case DEVICE_VALIO_WAIT_EVENT:
+    req->error = 0;
     LOCK_SPIN_IRQ(&dev->lock);
-    if (!pv->changed) {
-      dev_request_queue_pushback(&pv->queue, &req->base);
-      bs_notif_enable(dev);
-      queued = 1;
-    }
+    was_empty = dev_request_queue_isempty(&pv->queue);
+    dev_request_queue_pushback(&pv->queue, &req->base);
+    if (was_empty && !pv->busy)
+      bs_gpio_wait(dev);
     LOCK_RELEASE_IRQ(&dev->lock);
-    if (queued)
-      return;
+    return;
 
   case DEVICE_VALIO_READ:
-    bs_read_or_update(pv, req);
+    bs_state_read(pv, req);
     req->error = 0;
     goto done;
   }
@@ -228,32 +198,15 @@ static DEV_VALIO_CANCEL(button_set_cancel)
   return err;
 }
 
-static DEV_USE(button_set_use)
-{
-  switch (op) {
-  case DEV_USE_SLEEP: {
-    struct device_s *dev = param;
-    struct bs_context_s *pv = dev->drv_pv;
-
-    if (dev_request_queue_isempty(&pv->queue))
-      bs_notif_disable(dev);
-
-    return 0;
-  }
-
-  default:
-    return dev_use_generic(param, op);
-  }
-}
+#define button_set_use dev_use_generic
 
 static DEV_INIT(button_set_init)
 {
   struct bs_context_s *pv;
   error_t err;
-  const struct dev_resource_s *r;
-  uintptr_t first, last, tmp;
-  const void* mask;
-
+  uintptr_t tmp;
+  gpio_id_t id;
+  gpio_width_t width;
 
   pv = mem_alloc(sizeof(*pv), mem_scope_sys);
   if (!pv)
@@ -267,52 +220,35 @@ static DEV_INIT(button_set_init)
   if (err)
     goto free_pv;
 
-  r = device_res_get(dev, DEV_RES_IRQ, 0);
-  if (!r) {
-    err = -ENOENT;
-    goto put_gpio;
-  }
-
-  pv->range_id = r->u.irq.sink_id;
-
-  err = device_res_get_io(dev, 0, &first, &last);
+  err = device_res_gpio_map(dev, "pins", &id, &width);
   if (err)
     goto put_gpio;
 
-  pv->first = first;
-  pv->last = last;
-
-  err = device_get_param_blob(dev, "mask", 0, &mask);
+  err = device_get_param_uint(dev, "mask", &tmp);
   if (err)
-    return err;
+    tmp = (uintptr_t)-1;
 
-  pv->mask = endian_le64_na_load(mask) & ((1ULL << (last - first + 1)) - 1);
-  pv->count = __builtin_popcountll(pv->mask);
-  pv->state_size = (pv->count + 7) / 8;
+  endian_le64_na_store(pv->mask, tmp & bit_mask(0, width));
 
-  pv->last_read_state = mem_alloc(pv->state_size * 2, mem_scope_sys);
-  if (!pv->last_read_state) {
-    err = -ENOMEM;
-    goto put_gpio;
-  }
-  memset(pv->last_read_state, 0, pv->state_size * 2);
-  pv->cur_state = pv->last_read_state + pv->state_size;
+  pv->state_size = (__builtin_popcountl(tmp & bit_mask(0, width)) + 7) / 8;
 
   dev_request_queue_init(&pv->queue);
 
-  device_irq_source_init(dev, &pv->irq_ep, 1, &bs_irq);
-
-  err = device_irq_source_link(dev, &pv->irq_ep, 1, -1);
-  if (err)
-    goto put_gpio;
-
   err = device_get_param_uint(dev, "active", &tmp);
-  pv->active_low = !err && !tmp;
+  pv->active_high = err || tmp;
 
-  DEVICE_OP(&pv->gpio, set_mode, pv->first, pv->last,
-            (const uint8_t *)&pv->mask,
-            pv->active_low ? DEV_PIN_INPUT_PULLUP : DEV_PIN_INPUT_PULLDOWN);
+  pv->gpio_rq.base.pvdata = dev;
+  pv->gpio_rq.io_first = id;
+  pv->gpio_rq.io_last = id + width - 1;
+  kroutine_init_deferred(&pv->gpio_rq.base.kr, bs_gpio_done);
+  pv->gpio_rq.type = DEV_GPIO_MODE;
+  pv->gpio_rq.mode.mask = pv->mask;
+  pv->gpio_rq.mode.mode = pv->active_high ? DEV_PIN_INPUT_PULLDOWN : DEV_PIN_INPUT_PULLUP;
+  pv->busy = 1;
 
+  memset(pv->cur, pv->active_high ? 0 : 0xff, sizeof(pv->cur));
+
+  DEVICE_OP(&pv->gpio, request, &pv->gpio_rq);
 
   return 0;
 
@@ -335,7 +271,6 @@ static DEV_CLEANUP(button_set_cleanup)
   device_irq_source_unlink(dev, &pv->irq_ep, 1);
   dev_request_queue_destroy(&pv->queue);
 
-  mem_free(pv->last_read_state);
   mem_free(pv);
 
   return 0;
