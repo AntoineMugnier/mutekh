@@ -48,7 +48,7 @@
 
 struct nrf5x_gpio_private_s
 {
-#if CONFIG_DRIVER_NRF5X_GPIO_ICU_CHANNEL_COUNT
+#if CONFIG_DRIVER_NRF5X_GPIO_ICU_CHANNEL_COUNT || defined(CONFIG_DRIVER_NRF5X_GPIO_UNTIL)
 #define GPIOTE_ADDR NRF_PERIPHERAL_ADDR(NRF5X_GPIOTE)
 
   struct dev_irq_src_s irq_in[1];
@@ -379,6 +379,10 @@ static DEV_ICU_GET_SINK(nrf5x_gpio_icu_get_sink)
 
   return NULL;
 }
+
+#endif
+
+#if defined(CONFIG_DRIVER_NRF5X_GPIO_UNTIL) || CONFIG_DRIVER_NRF5X_GPIO_ICU_CHANNEL_COUNT
 
 static DEV_IRQ_SRC_PROCESS(nrf5x_gpio_process)
 {
