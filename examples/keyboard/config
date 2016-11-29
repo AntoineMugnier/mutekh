@@ -1,0 +1,15 @@
+%set OUTPUT_NAME keyboard
+
+%append MODULES $(OUTPUT_NAME):$(CONFIGPATH)
+
+CONFIG_COMPILE_COLLECT
+CONFIG_COMPILE_DEBUG
+
+%include scripts/options.build
+%include arch/arch.build
+
+# Application license
+CONFIG_LICENSE_APP_LGPL
+
+# Features
+CONFIG_APP_START
