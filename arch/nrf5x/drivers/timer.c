@@ -338,8 +338,10 @@ static DEV_INIT(nrf5x_timer_init)
   if (device_irq_source_link(dev, pv->irq_ep, 1, -1))
     goto free_pv;
 
+#if defined(CONFIG_DEVICE_CLOCK)
   if (dev_drv_clock_init(dev, &pv->clock_sink, 0, 0, &pv->freq))
     goto unlink_irq;
+#endif
 
   pv->freq.num = 16000000;
   pv->freq.denom = 1;
@@ -370,7 +372,9 @@ static DEV_CLEANUP(nrf5x_timer_cleanup)
 
   dev_request_pqueue_destroy(&pv->queue);
   nrf_it_disable_mask(pv->addr, -1);
+#if defined(CONFIG_DEVICE_CLOCK)
   dev_drv_clock_cleanup(dev, &pv->clock_sink);
+#endif
 
   device_irq_source_unlink(dev, pv->irq_ep, 1);
 
