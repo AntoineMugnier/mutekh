@@ -57,7 +57,7 @@ void inet_ipv4_outbound_handle(struct inet_ipv4_s *ipv4,
                                struct net_task_s *task,
                                uint8_t proto)
 {
-  struct buffer_s *buf = task->packet.buffer;
+  struct buffer_s *buf = buffer_queue_head(&task->packet.chunks);
   struct inet_ipv4_hdr_s *p;
 
   if (!ipv4->layer.parent)

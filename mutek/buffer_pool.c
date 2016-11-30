@@ -36,23 +36,16 @@ void buffer_pool_cleanup(struct buffer_pool_s *pool)
     slab_cleanup(&pool->slab);
 }
 
-void buffer_destroy(struct buffer_s *buffer)
-{
-    buffer_refcleanup(buffer);
-    slab_free(&buffer->pool->slab, buffer);
-}
+extern inline
+struct buffer_s *buffer_pool_alloc(struct buffer_pool_s *pool);
 
-struct buffer_s *buffer_pool_alloc(struct buffer_pool_s *pool)
-{
-    struct buffer_s *buffer = slab_alloc(&pool->slab);
+extern inline
+void buffer_free(struct buffer_s *buffer);
 
-    if (!buffer)
-        return buffer;
+extern inline
+error_t buffer_prepend(struct buffer_s *buffer,
+                       const uint8_t *data, size_t size);
 
-    buffer->pool = pool;
-    buffer_refinit(buffer);
-    buffer->begin = 0;
-    buffer->end = pool->slab.unit_size - sizeof(struct buffer_s);
-
-    return buffer;
-}
+extern inline
+error_t buffer_append(struct buffer_s *buffer,
+                      const uint8_t *data, size_t size);

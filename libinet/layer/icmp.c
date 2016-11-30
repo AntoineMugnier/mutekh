@@ -49,7 +49,7 @@ void inet_icmp_destroyed(struct net_layer_s *layer)
 static
 void inet_icmp_inbound_handle(struct inet_icmp_s *icmp, struct net_task_s *task)
 {
-  struct buffer_s *buf = task->packet.buffer;
+  struct buffer_s *buf = buffer_queue_head(&task->packet.chunks);
   struct inet_icmp_hdr_s *p = (void *)(buf->data + buf->begin);
 
   // Incomplete packet
@@ -104,7 +104,7 @@ void inet_icmp_dandling(struct net_layer_s *layer)
   (void)icmp;
 }
 
-static const struct net_layer_handler_s icmp_handler = {
+static const struct net_layer_vtable_s icmp_handler = {
   .destroyed = inet_icmp_destroyed,
   .task_handle = inet_icmp_task_handle,
   .dandling = inet_icmp_dandling,

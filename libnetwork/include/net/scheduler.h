@@ -51,48 +51,41 @@ GCT_CONTAINER_TYPES(net_timeout_queue, struct net_task_s *, queue_entry);
 
 struct net_scheduler_s;
 
+struct net_scheduler_vtable_s
+{
+  /**
+     @returns false if scheduler processing should stop definitly.
+   */
+  bool_t (*idle)(struct net_scheduler_s *scheduler);
+};
+
 /**
    @this is a network scheduler context.  No field should be accessed
    directly.
  */
 struct net_scheduler_s
 {
-  lock_t lock;
-
-  struct context_s context;
-  struct sched_context_s sched_context;
-
-  net_task_queue_root_t pending_tasks;
   net_timeout_queue_root_t delayed_tasks;
   net_layer_sched_list_root_t layers;
-  net_layer_sched_list_root_t destroyed_layers;
 
   struct device_timer_s timer;
   struct dev_timer_rq_s timer_rq;
 
   struct slab_s task_pool;
-  struct buffer_pool_s *packet_pool;
-
-  bool_t scheduled;
-  bool_t exited;
-  struct sched_context_s *exiter;
-
-  uint32_t timer_usage;
-
-  void *stack;
+  struct buffer_pool_s *chunk_pool;
 };
 
 /**
    @this initializes a network scheduler context.
 
    @param sched Scheduler context to initialize
-   @param packet_pool Buffer pool to allocate packets in
+   @param chunk_pool Buffer pool to allocate chunks in
    @param timer_dev Timer device path. It will be the reference timer
           for the scheduler.
  */
 error_t net_scheduler_init(
   struct net_scheduler_s *sched,
-  struct buffer_pool_s *packet_pool,
+  struct buffer_pool_s *chunk_pool,
   const char *timer_dev);
 
 /**
@@ -107,30 +100,30 @@ error_t net_scheduler_cleanup(struct net_scheduler_s *sched);
 struct net_task_s *net_scheduler_task_alloc(struct net_scheduler_s *sched);
 
 /**
-   @this allocates a packet from scheduler's packet pool.
+   @this allocates a chunk from scheduler's chunk pool.
  */
 ALWAYS_INLINE
-struct buffer_s *net_scheduler_packet_alloc(struct net_scheduler_s *sched)
+struct buffer_s *net_scheduler_chunk_alloc(struct net_scheduler_s *sched)
 {
-  return buffer_pool_alloc(sched->packet_pool);
+  return buffer_pool_alloc(sched->chunk_pool);
 }
 
 /**
-   @this allocates a packet for layer.
+   @this allocates a chunk for layer.
 
-   @param layer Layer to allocate packet for
+   @param layer Layer to allocate chunk for
    @param begin reserved header size for layers headers
           (should be at least @tt{layer->context.prefix_size})
-   @param size minimal data size to allocate packet for
+   @param size minimal data size to allocate chunk for
           (should be no more than @tt{layer->context.mtu})
  */
 ALWAYS_INLINE
-struct buffer_s *net_layer_packet_alloc(
+struct buffer_s *net_layer_chunk_alloc(
   struct net_layer_s *layer,
   size_t begin,
   size_t size)
 {
-  struct buffer_s *pkt = net_scheduler_packet_alloc(layer->scheduler);
+  struct buffer_s *pkt = net_scheduler_chunk_alloc(layer->scheduler);
 
   if (pkt) {
     pkt->begin = begin;
@@ -166,15 +159,5 @@ void net_scheduler_task_cancel(
 void net_scheduler_from_layer_cancel(
   struct net_scheduler_s *sched,
   struct net_layer_s *layer);
-
-/**
-   @this retrieves the maximum packet payload size that can be
-   transported in buffers allocated from scheduler's packet pool.
- */
-ALWAYS_INLINE size_t net_scheduler_packet_mtu(
-  struct net_scheduler_s *sched)
-{
-  return buffer_pool_unit_size(sched->packet_pool);
-}
 
 #endif

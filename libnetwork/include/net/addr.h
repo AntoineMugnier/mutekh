@@ -37,6 +37,9 @@
 struct net_addr_s
 {
 #if defined(CONFIG_BLE)
+  int16_t rssi;
+  uint16_t cid;
+  uint16_t att;
   uint8_t llid : 2;
   uint8_t encrypted : 1;
   uint8_t authenticated : 1;
@@ -54,9 +57,6 @@ struct net_addr_s
 #endif
 #if defined(CONFIG_INET_IPV6)
   uint8_t ipv6[16];
-#endif
-#if defined(CONFIG_NET_ETHERNET) || defined(CONFIG_BLE)
-  uint8_t mac[6];
 #endif
 #if defined(CONFIG_NET_ETHERNET)
   uint16_t ethertype;

@@ -45,6 +45,7 @@
 #include <assert.h>
 
 #include <net/addr.h>
+#include <net/task.h>
 
 struct net_task_s;
 struct net_layer_s;
@@ -70,7 +71,7 @@ struct net_layer_context_s
 /**
    @this is a vtable for a layer
  */
-struct net_layer_handler_s
+struct net_layer_vtable_s
 {
   /**
      @this is called after a layer gets destroyed because its refcount
@@ -132,6 +133,16 @@ struct net_layer_handler_s
 #define GCT_CONTAINER_REFCOUNT_net_layer_list net_layer
 #define GCT_CONTAINER_ALGO_net_layer_sched_list CLIST
 
+struct net_layer_delegate_vtable_s;
+
+struct net_layer_delegate_s
+{
+  struct kroutine_s kr;
+  const struct net_layer_delegate_vtable_s *vtable;
+
+  net_task_queue_root_t pending;
+};
+
 /**
    @this is the base vtable for a delegate.  All delegate must
    implement functions contained herein.
@@ -144,7 +155,7 @@ struct net_layer_delegate_vtable_s
      @this notifies delegate the layer got destroyed, implying
      delegate is released from referencing layer.
    */
-  void (*release)(void *delegate, struct net_layer_s *layer);
+  void (*release)(struct net_layer_delegate_s *delegate, struct net_layer_s *layer);
 };
 
 GCT_CONTAINER_TYPES(net_layer_list,
@@ -160,7 +171,9 @@ struct net_layer_s
   net_layer_list_root_t children;
   GCT_CONTAINER_ENTRY(net_layer_sched_list, scheduler_ref);
 
-  const struct net_layer_handler_s *handler;
+  net_task_queue_root_t pending;
+
+  const struct net_layer_vtable_s *vtable;
 
   /** Layer's scheduler. May be dereferenced for using its timing and
       allocation functions. */
@@ -170,13 +183,11 @@ struct net_layer_s
   struct net_layer_s *parent;
   /** Layer's context, as set by parent.  Layer is notified of changes
       in this structure through @ref
-      {net_layer_handler_s::context_changed} method. */
+      {net_layer_vtable_s::context_changed} method. */
   struct net_layer_context_s context;
 
-  /** Delegate pointer */
-  void *delegate;
-  /** Delegate vtable */
-  const struct net_layer_delegate_vtable_s *delegate_vtable;
+  /** Delegate */
+  struct net_layer_delegate_s *delegate;
 
   // Internal data through inheritance
 } *, entry);
@@ -230,16 +241,30 @@ void net_layer_context_changed(struct net_layer_s *layer);
    @this initializes a network layer.
 
    @param layer Layer to initialize
-   @param handler Pointer to a vtable
+   @param vtable Pointer to a vtable
    @param scheduler Context scheduler this layer runs in
    @param delegate Delegate private data pointer
    @param delegate_vtable Vtable for delegate, mandatory if @tt delegate is set
  */
 error_t net_layer_init(
   struct net_layer_s *layer,
-  const struct net_layer_handler_s *handler,
+  const struct net_layer_vtable_s *vtable,
   struct net_scheduler_s *scheduler,
-  void *delegate,
+  struct net_layer_delegate_s *delegate,
   const struct net_layer_delegate_vtable_s *delegate_vtable);
+
+/**
+   @internal
+   @this pushes a task to a given target, for a given type.
+
+   @param task Task to push
+   @param target Target layer, mandatory
+   @param source Source layer, mandatory
+   @param type Task type
+ */
+void net_layer_task_push(struct net_layer_s *target,
+                         struct net_task_s *task,
+                         struct net_layer_s *source,
+                         enum net_task_type_e type);
 
 #endif
