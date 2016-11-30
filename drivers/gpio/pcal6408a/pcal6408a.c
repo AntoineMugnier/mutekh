@@ -140,7 +140,7 @@ static void pcal6408a_handle_next(struct device_s *dev)
   case DEV_GPIO_SET_OUTPUT: {
     uint_fast8_t range = bit_range(rq->io_first, rq->io_last);
     uint_fast8_t set = (rq->output.set_mask[0] << rq->io_first) & range;
-    uint_fast8_t clear = (rq->output.clear_mask[0] << rq->io_first) & range;
+    uint_fast8_t clear = (rq->output.clear_mask[0] << rq->io_first) | ~range;
 
     bc_set_reg(&pv->i2c_rq.vm, PCAL6408A_SET_OUTPUT_BCIN_OUTPUT_PORT,
                set ^ (bc_get_reg(&pv->i2c_rq.vm, PCAL6408A_SET_OUTPUT_BCIN_OUTPUT_PORT)
