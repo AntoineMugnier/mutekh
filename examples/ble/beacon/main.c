@@ -16,6 +16,7 @@
 
 #include "dis.h"
 #include "gap.h"
+#include "led.h"
 #include "beacon_config.h"
 
 #define dprintk(...) do{}while(0)
@@ -33,6 +34,7 @@ struct app_s
   struct ble_gattdb_registry_s gap;
   struct ble_gattdb_registry_s dis;
   struct beacon_config_s beacon_config;
+  struct led_s led[3];
   struct net_layer_s *beaconer;
 #if defined(CONFIG_DEVICE_PERSIST)
   struct device_persist_s persist;
@@ -110,13 +112,27 @@ static void config_load(struct app_s *app)
 static
 void peri_state_changed(struct ble_peripheral_s *peri, enum ble_peripheral_state_e state)
 {
-#if defined(CONFIG_DEVICE_PERSIST)
   struct app_s *app = app_s_from_peripheral(peri);
 
+#if defined(CONFIG_DEVICE_PERSIST)
   if (app->config_changed) {
     config_save(app);
   }
 #endif
+
+  switch (state) {
+  case BLE_PERIPHERAL_IDLE:
+    led_blink(&app->led[2], 0, 100, 1);
+    break;
+
+  case BLE_PERIPHERAL_RECONNECTING:
+  case BLE_PERIPHERAL_ADVERTISING:
+    break;
+
+  case BLE_PERIPHERAL_CONNECTED:
+    led_blink(&app->led[2], 50, 1950, 5000);
+    break;
+  }
 }
 
 static const struct ble_peripheral_handler_s peri_handler =
@@ -177,6 +193,15 @@ static CONTEXT_ENTRY(main)
   ensure(!err && "GAPs init failed");
   err = beacon_config_service_register(&app->beacon_config, &app->context.gattdb, &config_handler);
   ensure(!err && "Beacon config service init failed");
+
+  err = led_init(&app->led[0], 16, 0);
+  ensure(!err && "LED failed");
+  err = led_init(&app->led[1], 12, 0);
+  ensure(!err && "LED failed");
+  err = led_init(&app->led[2], 15, 0);
+  ensure(!err && "LED failed");
+
+  led_blink(&app->led[1], 25, 4975, 5000);
 
   ble_peripheral_mode_set(&app->peripheral, 0
                           | BLE_PERIPHERAL_DISCOVERABLE
