@@ -461,11 +461,15 @@ static DEV_GPIO_REQUEST(nrf5x_gpio_request)
     break;
 
   case DEV_GPIO_UNTIL:
+# if defined(CONFIG_DRIVER_NRF5X_GPIO_UNTIL)
     LOCK_SPIN_IRQ(&dev->lock);
     dev_request_queue_pushback(&pv->queue, &req->base);
     kroutine_exec(&pv->until_checker);
     LOCK_RELEASE_IRQ(&dev->lock);
     return;
+#else
+    req->error = -ENOTSUP;
+#endif
   }
 
   kroutine_exec(&req->base.kr);
