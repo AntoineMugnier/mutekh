@@ -222,10 +222,14 @@
      @item @tt{neq reg, reg} @item Compare two registers and skip the next instruction if thay are equal.
      @item @tt{eq0 reg} @item Skip the next instruction if the register is not zero.
      @item @tt{neq0 reg} @item Skip the next instruction if the register is zero.
-     @item @tt{lt reg, reg} @item Compare two registers and skip the next instruction if
-     first reg >= second reg.
-     @item @tt{lteq reg, reg} @item Compare two registers and skip the next instruction if
-     first reg > second reg.
+     @item @tt{lt reg, reg} @item Perform an unsigned comparison of two registers and skip
+       the next instruction if first reg >= second reg.
+     @item @tt{lteq reg, reg} @item Perform an unsigned comparison of two registers and skip
+       the next instruction if first reg > second reg.
+     @item @tt{lts reg} @item Perform an signed comparison of reg with r0 and skip
+       the next instruction if reg >= r0.
+     @item @tt{lteqs reg} @item Perform an signed comparison of reg with r0 and skip
+       the next instruction if reg > r0.
    @end table
 
    The following bit oriented operations are available:
@@ -375,9 +379,9 @@
     @item neq                 @item r, r          @item @tt{0100 0001 rrrr rrrr} @item  1
     @item neq0                @item r             @item @tt{0100 0001 rrrr rrrr} @item  1
     @item lt                  @item r, r          @item @tt{0100 0010 rrrr rrrr} @item  1
-    @item ---                 @item r             @item @tt{0100 0010 rrrr rrrr} @item  1
+    @item lts                 @item r, r0         @item @tt{0100 0010 rrrr rrrr} @item  1
     @item lteq                @item r, r          @item @tt{0100 0011 rrrr rrrr} @item  1
-    @item ---                 @item r             @item @tt{0100 0011 rrrr rrrr} @item  1
+    @item lteqs               @item r, r0         @item @tt{0100 0011 rrrr rrrr} @item  1
     @item add                 @item r, r          @item @tt{0100 0100 rrrr rrrr} @item  1
     @item ---                 @item r             @item @tt{0100 0100 rrrr rrrr} @item  1
     @item sub                 @item r, r          @item @tt{0100 0101 rrrr rrrr} @item  1

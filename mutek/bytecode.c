@@ -573,10 +573,17 @@ static uint_fast8_t bc_run_alu(struct bc_context_s *ctx, uint16_t op)
       ctx->pc++;
     break;
   dispatch_LT:
-  dispatch_LTEQ:
-    if (!((dst < src) | (op & 1 & (dst == src))))
+  dispatch_LTEQ: {
+    bool_t lt = (dst < src);
+    if (!o)
+      {
+        src = ctx->v[0];
+        lt = (bc_sreg_t)dst < (bc_sreg_t)src;
+      }
+    if (!(lt || ((op & 1) && (dst == src))))
       ctx->pc++;
     break;
+    }
   dispatch_CCALL:
 #ifdef CONFIG_MUTEK_BYTECODE_CHECKING
     if (ctx->sandbox)
