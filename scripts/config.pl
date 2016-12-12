@@ -196,7 +196,7 @@ sub args_flags
 
     foreach my $flag (@args)
     {
-	if ( $flag !~ /^(internal|value|meta|root|noexport|mandatory|harddep|auto|private|maxval|minval|sumval|single|deprecated|experimental|enum)$/)
+	if ( $flag !~ /^(internal|value|meta|root|noexport|mandatory|harddep|auto|private|maxval|minval|sumval|userval|single|deprecated|experimental|enum)$/)
 	{
 	    error($location.": unknown flag `".$flag."' for `".$opts->{name}." token'");
 	    next;
@@ -1517,6 +1517,17 @@ sub tokens_set_methods
 {
     foreach my $opt (values %config_opts) {
 
+        my $norm = sub {
+            my $value = shift;
+            if ( $value =~ /^\d+$/ ) {
+                return int($value);
+            } elsif ( $value =~ /^0[xb][a-fA-F0-9]+$/ ) {
+                return oct($value);
+            } else {
+                return $value;
+            }
+        };
+
 	# set getvalue method
 	if ($opt->{flags}->{meta}) {
 
@@ -1560,7 +1571,7 @@ sub tokens_set_methods
             } else {
                 $combine = sub {
                     my ( $opt, $old, $new ) = @_;
-                    if ( $old != $new ) {
+                    if ( $old ne $new ) {
                         push @{$opt->{deperror}}, "Conflict between `$old' and `$new' values for `provide' on `$opt->{name}' token";
                     }
                     return $new;
@@ -1570,11 +1581,15 @@ sub tokens_set_methods
 	    # value token getvalue method returns value provided by provider tokens
 	    $opt->{getvalue} = sub {
 		my ( $token ) = @_;
-		my $value = $token->{value};
+		my $value = $norm->( $token->{value} );
+
+                if ( $token->{userdefined} && $token->{flags}->{userval} ) {
+                    return $value;
+                };
 
 		foreach my $p (@{$token->{providers}}) {
 		    if ( check_condition( $p->{getvalue}->( $p ) ) ) {
-                        my $new = $token->{provided}->{$p->{name}};
+                        my $new = $norm->(  $token->{provided}->{$p->{name}} );
                         if ( $value eq "undefined" ) {
                             $value = $new;
                         } else {
@@ -2399,7 +2414,9 @@ sub tokens_list
 	    $attr .= "m";
 	}
 
-	printf {$out} (" %-6s%-40s %-16s %-16s ", $attr, $name, $opt->{value},
+        my $val = $opt->{value};
+        $val = int($val) > 15 ? sprintf("0x%x", $val) : $val;
+	printf {$out} (" %-6s%-40s %-16s %-16s ", $attr, $name, $val,
 	       basename($opt->{file}).":".$opt->{location});
 
 	if ( $all && $opt->{vlocation}) {
