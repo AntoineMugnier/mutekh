@@ -19,55 +19,125 @@
  *         Nicolas Pouillon <nipo@ssji.net>, 2009-2010
  */
 
-#ifdef CONFIG_MUTEK_PRINTK_LOCK
-# include <hexo/lock.h>
-#endif
+#define GCT_CONFIG_NODEPRECATED
+
+#include <hexo/endian.h>
 
 #include <stdio.h>
 #include <mutek/printk.h>
 #include <libc/formatter.h>
 
-static printf_output_func_t *printk_output = NULL;
-static void *printk_output_arg;
+GCT_CONTAINER_FCNS(printk_backend, static inline, printk_backend,
+                   remove, push);
+
+static printk_backend_root_t printk_backends =
+  GCT_CONTAINER_ROOT_INITIALIZER(printk_backend);
+
+void printk_register(struct printk_backend_s *s, printk_handler_t *handler)
+{
+  s->level = CONFIG_MUTEK_PRINTK_RUNTIME_LEVEL;
+  s->id = 0;
+  s->handler = handler;
+  printk_backend_push(&printk_backends, s);
+}
+
+void printk_unregister(struct printk_backend_s *s)
+{
+  printk_backend_remove(&printk_backends, s);
+}
 
 #ifdef CONFIG_COMPILE_INSTRUMENT
 bool_t mutek_instrument_trace(bool_t state);
 #endif
 
-void printk_set_output(printf_output_func_t *f, void *priv)
-{
-	printk_output = f;
-	printk_output_arg = priv;
-        printk_output(printk_output_arg, "\n", 0, 1);
-}
-
 #ifdef CONFIG_MUTEK_PRINTK_LOCK
 static lock_t printk_lock = LOCK_INITIALIZER;
 #endif
 
+struct logk_filter_s
+{
+  uint32_t id;
+  int8_t level;
+};
+
+static PRINTF_OUTPUT_FUNC(logk_output)
+{
+  const struct logk_filter_s *f = ctx;
+
+  GCT_FOREACH(printk_backend, &printk_backends, s, {
+      __unused__ uint32_t backend_id = s->id;
+      __unused__ int8_t backend_level = s->level;
+      __unused__ uint32_t id = f->id;
+      __unused__ int8_t level = f->level;
+
+      if (CONFIG_MUTEK_PRINTK_RUNTIME_EXPR)
+        s->handler(s, str, len);
+  });
+}
+
+inline ssize_t vlogk_(const char *format, va_list ap)
+{
+#ifdef CONFIG_COMPILE_INSTRUMENT
+  bool_t old = mutek_instrument_trace(0);
+#endif
+
+  struct logk_filter_s f = {
+    .id = endian_be32_na_load(format + 2),
+    .level = format[0]
+  };
+
+  error_t err = formatter_printf(&f, logk_output, format + 1, ap);
+
+#ifdef CONFIG_COMPILE_INSTRUMENT
+  mutek_instrument_trace(old);
+#endif
+  return err;
+}
+
+ssize_t logk_(const char *format, ...)
+{
+  ssize_t	res;
+  va_list	ap;
+
+  va_start(ap, format);
+  res = vlogk_(format, ap);
+  va_end(ap);
+
+  return res;
+}
+
+void logk_set_filter(struct printk_backend_s *backend,
+                     const char id[4], enum logk_level_e level)
+{
+  GCT_FOREACH(printk_backend, &printk_backends, s, {
+      if (backend == NULL || backend == s)
+        {
+          s->id = id != NULL ? endian_be32_na_load(id) : 0;
+          s->level = level;
+        }
+  });
+}
+
+static PRINTF_OUTPUT_FUNC(printk_output)
+{
+  GCT_FOREACH(printk_backend, &printk_backends, s, {
+      s->handler(s, str, len);
+  });
+}
+
 inline ssize_t vprintk(const char *format, va_list ap)
 {
 #ifdef CONFIG_COMPILE_INSTRUMENT
-	bool_t old = mutek_instrument_trace(0);
+  bool_t old = mutek_instrument_trace(0);
 #endif
-	error_t err = EIO;
-
-	if ( printk_output ) {
-#ifdef CONFIG_MUTEK_PRINTK_LOCK
-                lock_spin(&printk_lock);
-#endif
-		err = formatter_printf(printk_output_arg, printk_output, format, ap);
-#ifdef CONFIG_MUTEK_PRINTK_LOCK
-                lock_release(&printk_lock);
-#endif
-        }
+  error_t err = formatter_printf(NULL, printk_output, format, ap);
 
 #ifdef CONFIG_COMPILE_INSTRUMENT
-	mutek_instrument_trace(old);
+  mutek_instrument_trace(old);
 #endif
-
-	return err;
+  return err;
 }
+
 
 ssize_t printk(const char *format, ...)
 {
@@ -81,17 +151,18 @@ ssize_t printk(const char *format, ...)
   return res;
 }
 
+
 void writek(const char *data, size_t len)
 {
-  if ( printk_output ) {
 #ifdef CONFIG_MUTEK_PRINTK_LOCK
     lock_spin(&printk_lock);
 #endif
-    printk_output(printk_output_arg, data, 0, len);
+    GCT_FOREACH(printk_backend, &printk_backends, s, {
+        s->handler(s, data, len);
+    });
 #ifdef CONFIG_MUTEK_PRINTK_LOCK
     lock_release(&printk_lock);
 #endif
-  }
 }
 
 #ifdef CONFIG_MUTEK_PRINTK_HEXDUMP
@@ -101,7 +172,7 @@ void hexdumpk(uintptr_t address, const void *data, size_t len)
 #ifdef CONFIG_MUTEK_PRINTK_LOCK
   lock_spin(&printk_lock);
 #endif
-  formatter_hexdump(printk_output_arg, printk_output, address, data, len);
+  formatter_hexdump(NULL, printk_output, address, data, len);
 #ifdef CONFIG_MUTEK_PRINTK_LOCK
   lock_release(&printk_lock);
 #endif

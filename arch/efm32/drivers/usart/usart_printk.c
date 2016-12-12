@@ -33,7 +33,7 @@
 
 #define USART_CLOCK            14000000
 
-static void printk_out_char(char c)
+static inline void printk_out_char(char c)
 {
   uint32_t b = CONFIG_MUTEK_PRINTK_ADDR;
 
@@ -44,7 +44,7 @@ static void printk_out_char(char c)
   cpu_mem_write_32(b + EFM32_USART_TXDATA_ADDR, c);
 }
 
-static PRINTF_OUTPUT_FUNC(printk_out)
+static PRINTK_HANDLER(efm32_usart_printk_out)
 {
   uint_fast8_t i;
 
@@ -169,6 +169,7 @@ void efm32_usart_printk_init()
   cpu_mem_write_32(b + EFM32_USART_CMD_ADDR,
                    EFM32_USART_CMD_TXEN);
 
-  printk_set_output(printk_out, NULL);
+  static struct printk_backend_s backend;
+  printk_register(&backend, efm32_usart_printk_out);
 }
 

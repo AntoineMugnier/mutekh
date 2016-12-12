@@ -185,14 +185,15 @@ void emu_start_cpus()
 #include <mutek/printk.h>
 
 #ifdef CONFIG_EMU_PRINTK
-static PRINTF_OUTPUT_FUNC(printk_fd1)
+static PRINTK_HANDLER(printk_fd1)
 {
   emu_do_syscall(EMU_SYSCALL_WRITE, 3, 1, str, len);  
 }
 
 void emu_printk_init()
 {
-  printk_set_output(printk_fd1, NULL);
+  static struct printk_backend_s backend;
+  printk_register(&backend, printk_fd1);
 }
 #endif
 

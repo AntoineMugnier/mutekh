@@ -39,6 +39,8 @@
 #include <arch/nrf5x/uart.h>
 #include <arch/nrf5x/gpio.h>
 
+#include "printk.h"
+
 #if !defined(CONFIG_DRIVER_NRF5X_PRINTK) && 0
 # define dprintk printk
 #else
@@ -61,8 +63,7 @@ GCT_CONTAINER_FCNS(uart_fifo, static inline, uart_fifo,
 #endif
 
 #if defined(CONFIG_DRIVER_NRF5X_PRINTK)
-static PRINTF_OUTPUT_FUNC(nrf5x_printk_out);
-PRINTF_OUTPUT_FUNC(nrf5x_printk_out_nodrv);
+static PRINTK_HANDLER(nrf5x_uart_printk);
 #endif
 
 DRIVER_PV(struct nrf5x_uart_priv
@@ -72,6 +73,10 @@ DRIVER_PV(struct nrf5x_uart_priv
 #if CONFIG_DRIVER_NRF5X_UART_SWFIFO > 0
   uart_fifo_root_t rx_fifo;
   uart_fifo_root_t tx_fifo;
+#endif
+
+#if defined(CONFIG_DRIVER_NRF5X_PRINTK)
+  struct printk_backend_s printk;
 #endif
 
   /* tty input request queue and char fifo */
@@ -84,6 +89,10 @@ DRIVER_PV(struct nrf5x_uart_priv
   bool_t txdrdy:1;
   bool_t rxdrdy:1;
 });
+
+#if defined(CONFIG_DRIVER_NRF5X_PRINTK)
+STRUCT_COMPOSE(nrf5x_uart_priv, printk)
+#endif
 
 static void nrf5x_uart_request_finish(struct device_s *dev,
                                       struct dev_char_rq_s *rq)
@@ -561,7 +570,7 @@ static DEV_INIT(nrf5x_uart_char_init)
 
 #if defined(CONFIG_DRIVER_NRF5X_PRINTK)
     if (pv->addr == CONFIG_MUTEK_PRINTK_ADDR)
-      printk_set_output(nrf5x_printk_out, dev);
+      printk_register(&pv->printk, nrf5x_uart_printk);
 #endif
 
     pv->txdrdy = 1;
@@ -589,6 +598,11 @@ static DEV_INIT(nrf5x_uart_char_init)
 static DEV_CLEANUP(nrf5x_uart_char_cleanup)
 {
     struct nrf5x_uart_priv *pv = dev->drv_pv;
+
+#if defined(CONFIG_DRIVER_NRF5X_PRINTK)
+    if (pv->addr == CONFIG_MUTEK_PRINTK_ADDR)
+      printk_unregister(&pv->printk);
+#endif
 
     if (!dev_request_queue_isempty(&pv->rx_q)
         || !dev_request_queue_isempty(&pv->tx_q))
@@ -633,17 +647,13 @@ DRIVER_REGISTER(nrf5x_uart_drv);
 
 #if defined(CONFIG_DRIVER_NRF5X_PRINTK)
 
-void nrf5x_printk_out_char(void *addr, char c);
-
-static PRINTF_OUTPUT_FUNC(nrf5x_printk_out)
+static PRINTK_HANDLER(nrf5x_uart_printk)
 {
-  struct device_s *dev = ctx;
-  struct nrf5x_uart_priv *pv = dev->drv_pv;
+  struct nrf5x_uart_priv *pv = nrf5x_uart_priv_from_printk(backend);
+  struct device_s *dev = pv->irq_ep.base.dev;
 
   if (!len)
     return;
-
-  dprintk("printk %d\n", len);
 
   CPU_INTERRUPT_SAVESTATE_DISABLE;
 
@@ -662,7 +672,7 @@ static PRINTF_OUTPUT_FUNC(nrf5x_printk_out)
 
   nrf_it_disable(pv->addr, NRF_UART_TXDRDY);
 
-  nrf5x_printk_out_nodrv((void *)pv->addr, str, offset, len);
+  nrf5x_printk_out_nodrv(pv->addr, str, len);
 
   if (!enabled) {
     nrf_event_clear(pv->addr, NRF_UART_TXDRDY);

@@ -42,9 +42,9 @@
 #endif
 
 static
-void psoc4_printk_out_char(void *addr, char c)
+void psoc4_printk_out_char(char c)
 {
-  const uintptr_t scb = (uintptr_t)addr;
+  const uintptr_t scb = CONFIG_MUTEK_PRINTK_ADDR;
 
   while (SCB_TX_FIFO_STATUS_USED_GET(cpu_mem_read_32(scb + SCB_TX_FIFO_STATUS_ADDR)))
     ;
@@ -52,14 +52,14 @@ void psoc4_printk_out_char(void *addr, char c)
 }
 
 static
-PRINTF_OUTPUT_FUNC(psoc4_printk_out_nodrv)
+PRINTK_HANDLER(psoc4_printk_out_nodrv)
 {
   size_t i;
 
   for (i = 0; i < len; i++) {
     if (str[i] == '\n')
-      psoc4_printk_out_char(ctx, '\r');
-    psoc4_printk_out_char(ctx, str[i]);
+      psoc4_printk_out_char('\r');
+    psoc4_printk_out_char(str[i]);
   }
 }
 
@@ -174,5 +174,6 @@ void psoc4_printk_init(void)
   GPIO_PORT_PC_DM_SET(pin, tmp, 0_1);
   cpu_mem_write_32(gpio + GPIO_PORT_PC_ADDR, tmp);
 
-  printk_set_output(psoc4_printk_out_nodrv, (void*)scb);
+  struct printk_backend_s backend;
+  printk_register(&backend, psoc4_printk_out_nodrv);
 }

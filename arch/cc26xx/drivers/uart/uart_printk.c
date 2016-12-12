@@ -19,7 +19,7 @@ static void printk_out_char(uint8_t c)
   cpu_mem_write_8(CC26XX_UART0_BASE + CC26XX_UART_DR_ADDR, c);
 }
 
-static PRINTF_OUTPUT_FUNC(printk_out)
+static PRINTK_HANDLER(printk_out)
 {
   uint_fast8_t i;
 
@@ -127,6 +127,7 @@ void cc26xx_printk_init()
   CC26XX_UART_CTL_UARTEN_SET(reg, EN);
   cpu_mem_write_32(CC26XX_UART0_BASE + CC26XX_UART_CTL_ADDR, reg);
 
-  printk_set_output(printk_out, NULL);
+  static struct printk_backend_s backend;
+  printk_register(&backend, printk_out);
 }
 

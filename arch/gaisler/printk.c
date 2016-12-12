@@ -29,8 +29,10 @@
 #include <hexo/iospace.h>
 #include <hexo/endian.h>
 
-static void printk_out_char(uintptr_t addr, uint8_t c)
+static void printk_out_char(uint8_t c)
 {
+  uintptr_t addr = CONFIG_MUTEK_PRINTK_ADDR;
+
   /* wait for transmit fifo empty */
   while (!(cpu_mem_read_32(addr + 4) & endian_be32(0x4)))
     ;
@@ -42,25 +44,24 @@ static void printk_out_char(uintptr_t addr, uint8_t c)
     ;
 }
 
-static PRINTF_OUTPUT_FUNC(printk_out)
+static PRINTK_HANDLER(printk_out)
 {
-  uintptr_t addr = (uintptr_t)ctx;
   size_t i;
 
   for (i = 0; i < len; i++)
     {
       if (str[i] == '\n')
-	printk_out_char(addr, '\r');
+	printk_out_char('\r');
 
-      printk_out_char(addr, str[i]);
+      printk_out_char(str[i]);
     }
 }
 
 void gaisler_printk_init()
 {
+#ifndef CONFIG_GAISLER_PRINTK_DEBUG
   uintptr_t addr = CONFIG_MUTEK_PRINTK_ADDR;
 
-#ifndef CONFIG_GAISLER_PRINTK_DEBUG
   /* uart scaler FIXME */
   cpu_mem_write_32(addr + 12, endian_be32(CONFIG_GAISLER_PRINTK_SCALER));
   /* uart control */
@@ -69,6 +70,7 @@ void gaisler_printk_init()
   cpu_mem_write_32(addr + 4, 0);
 #endif
 
-  printk_set_output(printk_out, (void*)addr);
+  struct printk_backend_s backend;
+  printk_register(&backend, printk_out);
 }
 

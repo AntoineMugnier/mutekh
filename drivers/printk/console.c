@@ -19,6 +19,7 @@
 */
 
 #include <mutek/printk.h>
+#include <mutek/startup.h>
 #include <hexo/iospace.h>
 
 #include <device/class/char.h>
@@ -31,7 +32,10 @@ struct console_printk_status_s {
   size_t pending_tx_size;
   struct lock_irq_s lock;
   struct dev_char_rq_s char_rq;
+  struct printk_backend_s backend;
 };
+
+STRUCT_COMPOSE(console_printk_status_s, backend)
 
 static void console_printk_rq_next(struct console_printk_status_s *pv)
 {
@@ -73,9 +77,10 @@ static KROUTINE_EXEC(console_printk_done)
   lock_release_irq(&pv->lock);
 }
 
-static PRINTF_OUTPUT_FUNC(console_printk_out)
+static PRINTK_HANDLER(console_printk_out)
 {
-  struct console_printk_status_s *pv = ctx;
+  struct console_printk_status_s *pv =
+    console_printk_status_s_from_backend(backend);
 
   if (!device_check_accessor(&console_dev.base))
     return;
@@ -128,5 +133,5 @@ void console_printk_init(void)
   status.use_begin = 0;
   status.use_end = 0;
 
-  printk_set_output(console_printk_out, &status);
+  printk_register(&status.backend, console_printk_out);
 }

@@ -47,7 +47,7 @@ static inline void stm32_usart_tx_wait_ready()
   while (!(x & STM32_USART_ISR_TXE));
 }
 
-static PRINTF_OUTPUT_FUNC(early_console_out)
+static PRINTK_HANDLER(early_console_out)
 {
   uintptr_t const a = CONFIG_MUTEK_PRINTK_ADDR + STM32_USART_TDR_ADDR;
 
@@ -145,6 +145,7 @@ void stm32_usart_printk_init(void)
   STM32_USART_CR1_UE_SET(cr1, 1);
   cpu_mem_write_32(CONFIG_MUTEK_PRINTK_ADDR + STM32_USART_CR1_ADDR, endian_le32(cr1));
 
-  printk_set_output(early_console_out, NULL);
+  static struct printk_backend_s backend;
+  printk_register(&backend, early_console_out);
 }
 

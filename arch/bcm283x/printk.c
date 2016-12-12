@@ -32,37 +32,34 @@
 
 extern volatile char toto;
 
-static void printk_out_char(uintptr_t addr, uint8_t c)
+static void printk_out_char(uint8_t c)
 {
-  while ((cpu_mem_read_32(addr + 0x18) & 0x20))
+  while ((cpu_mem_read_32(CONFIG_MUTEK_PRINTK_ADDR + 0x18) & 0x20))
     ;
 
-  cpu_mem_write_32(addr, endian_le32((uint32_t)c));
+  cpu_mem_write_32(CONFIG_MUTEK_PRINTK_ADDR, endian_le32((uint32_t)c));
 }
 
-static PRINTF_OUTPUT_FUNC(printk_out)
+static PRINTK_HANDLER(printk_out)
 {
-  uintptr_t addr = (uintptr_t)ctx;
   size_t i;
 
   for (i = 0; i < len; i++)
     {
       if (str[i] == '\n')
-	printk_out_char(addr, '\r');
+	printk_out_char('\r');
 
-      printk_out_char(addr, str[i]);
+      printk_out_char(str[i]);
     }
 
-  while (endian_le32(cpu_mem_read_32(addr + 0x18)) & 0x8)
+  while (endian_le32(cpu_mem_read_32(CONFIG_MUTEK_PRINTK_ADDR + 0x18)) & 0x8)
     ;
 }
 
 void bcm283x_printk_init()
 {
-  uintptr_t addr = CONFIG_MUTEK_PRINTK_ADDR;
-
   /* before init disable uart */
-  cpu_mem_write_32(addr + 0x30, 0);
+  cpu_mem_write_32(CONFIG_MUTEK_PRINTK_ADDR + 0x30, 0);
 
   /* set baudrate
      ibrd = uart_clk / (16 * baud_rate)
@@ -72,15 +69,16 @@ void bcm283x_printk_init()
      ibrd = 1
      fbrd = 40
    */
-  cpu_mem_write_32(addr + 0x24, 1);
-  cpu_mem_write_32(addr + 0x28, 40);
+  cpu_mem_write_32(CONFIG_MUTEK_PRINTK_ADDR + 0x24, 1);
+  cpu_mem_write_32(CONFIG_MUTEK_PRINTK_ADDR + 0x28, 40);
 
   /* set uart to be 8 bits, 1 stop bit, no parity, fifo enabled */
-  cpu_mem_write_32(addr + 0x2c, (3 << 5) | (1 << 4));
+  cpu_mem_write_32(CONFIG_MUTEK_PRINTK_ADDR + 0x2c, (3 << 5) | (1 << 4));
 
   /* enable uart */
-  cpu_mem_write_32(addr + 0x30, (1 << 8) | (1 << 9) | (1));
+  cpu_mem_write_32(CONFIG_MUTEK_PRINTK_ADDR + 0x30, (1 << 8) | (1 << 9) | (1));
 
-  printk_set_output(printk_out, (void*)addr);
+  static struct printk_backend_s backend;
+  printk_register(&backend, printk_out);
 }
 

@@ -23,26 +23,26 @@
 #include <string.h>
 
 #include <mutek/printk.h>
+#include <mutek/startup.h>
 
 #include <drivers/rtt/rtt.h>
 
 static uint8_t rtt_printk_ringbuffer[CONFIG_RTT_PRINTK_RINGBUFFER_SIZE];
+static struct printk_backend_s rtt_printk_backend;
+static struct rtt_channel_s *rtt_channel;
 
-static PRINTF_OUTPUT_FUNC(rtt_printk_out)
+static PRINTK_HANDLER(rtt_printk_out)
 {
-  struct rtt_channel_s *chan = ctx;
-
-  rtt_channel_write(chan, (const uint8_t *)str, len);
+  rtt_channel_write(rtt_channel, (const uint8_t *)str, len);
 }
 
-void rtt_printk_init(void);
 void rtt_printk_init(void)
 {
-  struct rtt_channel_s *chan = rtt_channel_init(
+  rtt_channel = rtt_channel_init(
     RTT_CHANNEL_TX_ID(CONFIG_DRIVER_RTT_PRINTK_OUT_FIRST),
     "Printk Output",
     rtt_printk_ringbuffer, CONFIG_RTT_PRINTK_RINGBUFFER_SIZE,
     RTT_CHANNEL_MODE_BLOCKING);
 
-  printk_set_output(rtt_printk_out, chan);
+  printk_register(&rtt_printk_backend, rtt_printk_out);
 }
