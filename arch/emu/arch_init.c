@@ -92,7 +92,6 @@ __compiler_sint_t __bootstrap_pid = 0;
 void emu_cpus_enum_init()
 {
   extern const struct driver_s emu_cpu_drv;
-  size_t i;
 
   /* add bootstrap processor to device tree */
   __bootstrap_pid = emu_do_syscall(EMU_SYSCALL_GETPID, 0);
@@ -103,6 +102,8 @@ void emu_cpus_enum_init()
   device_attach(d, NULL, &emu_cpu_drv);
 
 #ifdef CONFIG_ARCH_SMP
+  size_t i;
+
   /* add other processors to device tree */
   for (i = 1; i < CONFIG_ARCH_EMU_CPUS; i++)
   {
