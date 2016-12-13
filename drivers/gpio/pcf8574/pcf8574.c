@@ -88,7 +88,7 @@ static void pcf8574_handle_next(struct device_s *dev)
 
     pv->output = set ^ (pv->output & (set ^ clear));
 
-    printk("%s %p set %d %d %02x %02x %02x\n", __FUNCTION__,
+    dprintk("%s %p set %d %d %02x %02x %02x\n", __FUNCTION__,
            rq, rq->io_first, rq->io_last, set, clear,
            pv->output);
 
