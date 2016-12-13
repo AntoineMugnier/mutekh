@@ -335,9 +335,6 @@ static DEV_VALIO_REQUEST(matrix_keyboard_request)
 
   case DEVICE_VALIO_WAIT_EVENT:
     LOCK_SPIN_IRQ(&dev->lock);
-    if (dev_request_queue_isempty(&pv->queue))
-      device_start(&pv->timer.base);
-
     dev_request_queue_pushback(&pv->queue, &req->base);
 
     if (pv->state == MATRIX_KEYBOARD_IDLE)
