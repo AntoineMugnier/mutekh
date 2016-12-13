@@ -32,6 +32,9 @@
 #include <device/irq.h>
 #include <device/class/pcm.h>
 #include <device/class/iomux.h>
+#ifdef CONFIG_DRIVER_NRF52_PDM_POWERGATE
+#include <device/clock.h>
+#endif
 
 #include <arch/nrf5x/pdm.h>
 
@@ -46,6 +49,10 @@ struct nrf52_pdm_pv_s
 
   struct dev_irq_src_s irq_ep;
 
+#ifdef CONFIG_DRIVER_NRF52_PDM_POWERGATE
+  struct dev_clock_sink_ep_s power_source;
+#endif
+
   struct kroutine_s deleter;
 };
 
@@ -58,6 +65,10 @@ static KROUTINE_EXEC(nrf52_pdm_ended)
 
   if (!rq)
     return;
+
+#ifdef CONFIG_DRIVER_NRF52_PDM_POWERGATE
+  dev_clock_sink_gate(&pv->power_source, DEV_CLOCK_EP_NONE);
+#endif
 
   dprintk("%s\n", __FUNCTION__);
 
@@ -180,6 +191,10 @@ static DEV_PCM_REQUEST(nrf52_pdm_request)
   nrf_reg_set(PDM_ADDR, NRF_PDM_SAMPLE_PTR, (uint32_t)sample);
   nrf_reg_set(PDM_ADDR, NRF_PDM_SAMPLE_MAXCNT, rq->sample_count * rq->stream_count);
 
+#ifdef CONFIG_DRIVER_NRF52_PDM_POWERGATE
+  dev_clock_sink_gate(&pv->power_source, DEV_CLOCK_EP_POWER);
+#endif
+
   nrf_it_enable(PDM_ADDR, NRF_PDM_STARTED);
   nrf_it_enable(PDM_ADDR, NRF_PDM_END);
   nrf_task_trigger(PDM_ADDR, NRF_PDM_START);
@@ -207,6 +222,11 @@ static DEV_INIT(nrf52_pdm_init)
 
   if (device_iomux_setup(dev, ">clk <din", NULL, id, NULL))
     goto free_pv;
+
+#ifdef CONFIG_DRIVER_NRF52_PDM_POWERGATE
+  if (dev_drv_clock_init(dev, &pv->power_source, 0, 0, NULL))
+    goto free_pv;
+#endif
 
   kroutine_init_idle(&pv->deleter, nrf52_pdm_ended);
 
@@ -248,6 +268,10 @@ static DEV_CLEANUP(nrf52_pdm_cleanup)
     return -EBUSY;
 
   nrf_it_disable_mask(PDM_ADDR, -1);
+
+#ifdef CONFIG_DRIVER_NRF52_PDM_POWERGATE
+  dev_drv_clock_cleanup(dev, &pv->power_source);
+#endif
 
   device_irq_source_unlink(dev, &pv->irq_ep, 1);
 
