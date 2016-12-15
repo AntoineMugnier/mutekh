@@ -144,7 +144,7 @@ static TERMUI_CON_COMMAND_PROTOTYPE(dev_shell_i2c_scan)
       dev_i2c_spin_transaction(&data->ctrl, &rq);
 #endif
 
-      if (!rq.base.err)
+      if (rq.base.err != -EHOSTUNREACH)
         {
           termui_con_printf(con, "found slave @ 0x%02x\n", saddr);
           count++;
