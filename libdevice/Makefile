@@ -101,3 +101,7 @@ ifeq ($(CONFIG_DEVICE_VALIO_HWCLOCK), defined)
 objs += device_hwclock.o
 objs-$(CONFIG_DEVICE_SHELL) += shell_hwclock.o
 endif
+
+ifeq ($(CONFIG_DEVICE_VALIO_MOTION_SENSOR), defined)
+objs-$(CONFIG_DEVICE_SHELL) += shell_motion_sensor.o
+endif
