@@ -138,6 +138,9 @@ enum nrf5x_peripheral_id_e
     NRF5X_TIMER4 = 27,
     NRF5X_PWM0   = 28,
     NRF5X_PDM    = 29,
+#if CONFIG_NRF5X_MODEL == 52840
+    NRF5X_ACL    = 30,
+#endif
     NRF5X_MWU   = 32,
     NRF5X_PWM1  = 33,
     NRF5X_PWM2  = 34,
@@ -146,6 +149,15 @@ enum nrf5x_peripheral_id_e
     NRF5X_SPIM2 = 35,
     NRF5X_RTC2  = 36,
     NRF5X_I2S   = 37,
+#endif
+#if CONFIG_NRF5X_MODEL == 52840
+    NRF5X_FPU        = 38,
+    NRF5X_USBD       = 39,
+    NRF5X_UARTE      = 40,
+    NRF5X_QSPI       = 41,
+    NRF5X_CRYPTOCELL = 42,
+    NRF5X_SPIM       = 43,
+    NRF5X_PWM        = 45,
 #endif
 };
 
@@ -164,6 +176,9 @@ enum nrf5x_clock_id_e
   NRF_CLOCK_SRC_HFCLK,
   NRF_CLOCK_SRC_COUNT,
   NRF_CLOCK_OSC_LFRC = NRF_CLOCK_SRC_COUNT,
+#if CONFIG_NRF5X_MODEL == 52840
+  NRF_CLOCK_OSC_LFRC_ULP,
+#endif
   NRF_CLOCK_OSC_HFRC,
   NRF_CLOCK_OSC_HFXO,
   NRF_CLOCK_OSC_LFXO,
