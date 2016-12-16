@@ -24,9 +24,9 @@
 #include "peripheral.h"
 #include "ids.h"
 
-#if defined(CONFIG_ARCH_NRF51)
+#if CONFIG_NRF5X_MODEL <= 51999
 # define NRF_GPIOTE_COUNT 4
-#elif defined(CONFIG_ARCH_NRF52)
+#elif 52000 <= CONFIG_NRF5X_MODEL && CONFIG_NRF5X_MODEL <= 52999
 # define NRF_GPIOTE_COUNT 8
 #endif
 
@@ -35,7 +35,7 @@
 #define NRF_GPIOTE_OUT(x) (x)
 
 #define NRF_GPIOTE_IN(x) (x)
-#if defined(CONFIG_ARCH_NRF52)
+#if 52000 <= CONFIG_NRF5X_MODEL && CONFIG_NRF5X_MODEL <= 52999
 #define NRF_GPIOTE_SET(x) ((x) + 12)
 #define NRF_GPIOTE_CLR(x) ((x) + 24)
 #endif
@@ -51,7 +51,7 @@
 #define NRF_GPIOTE_CONFIG_PSEL(x) (((x) & 0x1f) << 8)
 
 #define NRF_GPIOTE_CONFIG_POLARITY_MASK   0x00030000
-#if defined(CONFIG_ARCH_NRF52)
+#if 52000 <= CONFIG_NRF5X_MODEL && CONFIG_NRF5X_MODEL <= 52999
 # define NRF_GPIOTE_CONFIG_POLARITY_NONE  0x00000000
 #endif
 #define NRF_GPIOTE_CONFIG_POLARITY_LOTOHI 0x00010000

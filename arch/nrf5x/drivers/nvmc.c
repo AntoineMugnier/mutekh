@@ -81,7 +81,7 @@ size_t nrf5x_flash_page_count(void)
 
 void nrf5x_flash_page_erase(uintptr_t page)
 {
-#if defined(CONFIG_ARCH_NRF51)
+#if CONFIG_NRF5X_MODEL <= 51999
   uint32_t cr0_len = cpu_mem_read_32(NRF_FICR_CLENR0);
   if (cr0_len == 0xffffffff)
     cr0_len = 0;

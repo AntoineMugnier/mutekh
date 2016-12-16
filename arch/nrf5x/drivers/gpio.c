@@ -202,7 +202,7 @@ static DEV_GPIO_SET_MODE(nrf5x_gpio_set_mode)
   struct device_s *dev = gpio->dev;
   uint32_t nrf_mode;
 
-  if (io_last > NRF_GPIO_COUNT)
+  if (io_last > CONFIG_NRF5X_GPIO_COUNT)
     return -ERANGE;
 
   if (nrf5x_gpio_mode(mode, &nrf_mode))
@@ -231,10 +231,10 @@ static DEV_GPIO_SET_OUTPUT(nrf5x_gpio_set_output)
 {
   struct device_s *dev = gpio->dev;
 
-  if (io_last > NRF_GPIO_COUNT)
+  if (io_last > CONFIG_NRF5X_GPIO_COUNT)
     return -ERANGE;
 
-  if (io_first > NRF_GPIO_COUNT)
+  if (io_first > CONFIG_NRF5X_GPIO_COUNT)
     return -ERANGE;
 
   uint32_t mask = bit_range(io_first, io_last);
@@ -261,7 +261,7 @@ static DEV_GPIO_GET_INPUT(nrf5x_gpio_get_input)
 {
   struct device_s *dev = gpio->dev;
 
-  if (io_last > NRF_GPIO_COUNT)
+  if (io_last > CONFIG_NRF5X_GPIO_COUNT)
     return -ERANGE;
 
   LOCK_SPIN_IRQ(&dev->lock);
@@ -312,7 +312,7 @@ static DEV_IRQ_SINK_UPDATE(nrf5x_gpio_icu_sink_update)
   if (te >= CONFIG_DRIVER_NRF5X_GPIO_ICU_CHANNEL_COUNT)
     return;
 
-  if (pin >= NRF_GPIO_COUNT || pin < 0)
+  if (pin >= CONFIG_NRF5X_GPIO_COUNT || pin < 0)
     return;
 
   for (uint8_t i = 0; i < CONFIG_DRIVER_NRF5X_GPIO_ICU_CHANNEL_COUNT; ++i) {
@@ -368,7 +368,7 @@ static DEV_ICU_GET_SINK(nrf5x_gpio_icu_get_sink)
   struct device_s *dev = accessor->dev;
   struct nrf5x_gpio_private_s *pv = dev->drv_pv;
 
-  if (id >= NRF_GPIO_COUNT)
+  if (id >= CONFIG_NRF5X_GPIO_COUNT)
     return NULL;
 
 #if CONFIG_DRIVER_NRF5X_GPIO_ICU_CHANNEL_COUNT
@@ -422,7 +422,7 @@ static DEV_IRQ_SRC_PROCESS(nrf5x_gpio_process)
 
 static DEV_IOMUX_SETUP(nrf5x_gpio_iomux_setup)
 {
-  if (io_id >= NRF_GPIO_COUNT)
+  if (io_id >= CONFIG_NRF5X_GPIO_COUNT)
     return -ERANGE;
 
   uint32_t nrf_mode;
@@ -480,13 +480,11 @@ static DEV_GPIO_REQUEST(nrf5x_gpio_request)
 
 static DEV_INIT(nrf5x_gpio_init)
 {
-  __unused__ uintptr_t addr = 0;
-  assert(!device_res_get_uint(dev, DEV_RES_MEM, 0, &addr, NULL) && GPIO_ADDR == addr);
-
 #if CONFIG_DRIVER_NRF5X_GPIO_ICU_CHANNEL_COUNT || defined(CONFIG_DRIVER_NRF5X_GPIO_UNTIL)
+  __unused__ uintptr_t addr = 0;
   struct nrf5x_gpio_private_s *pv;
 
-  assert(!device_res_get_uint(dev, DEV_RES_MEM, 1, &addr, NULL) && GPIOTE_ADDR == addr);
+  assert(!device_res_get_uint(dev, DEV_RES_MEM, 0, &addr, NULL) && GPIOTE_ADDR == addr);
 
   pv = mem_alloc(sizeof(*pv), mem_scope_sys);
   if (!pv)
@@ -524,7 +522,7 @@ static DEV_INIT(nrf5x_gpio_init)
 #endif
 
 
-  for (uint8_t pin = 0; pin <= 31; ++pin)
+  for (uint8_t pin = 0; pin < CONFIG_NRF5X_GPIO_COUNT; ++pin)
     nrf_reg_set(GPIO_ADDR, NRF_GPIO_PIN_CNF(pin), 0
                 | NRF_GPIO_PIN_CNF_DIR_INPUT
                 | NRF_GPIO_PIN_CNF_INPUT_DISCONNECT);

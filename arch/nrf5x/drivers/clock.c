@@ -49,7 +49,7 @@
 
 #define LFRC_CAL defined(CONFIG_DRIVER_NRF5X_CLOCK_LFRC_CAL)
 
-#if defined(CONFIG_ARCH_NRF51)
+#if CONFIG_NRF5X_MODEL <= 51999
 # define HFRC_FREQ DEV_FREQ(16000000, 1, 2, 24) // 1%
 #else
 # define HFRC_FREQ DEV_FREQ(64000000, 1, 7, 24) // 1.5%
@@ -501,7 +501,7 @@ static DEV_CMU_CONFIG_OSC(nrf5x_clock_config_osc)
 
   case NRF_CLOCK_OSC_HFXO:
     if ((
-#if defined(CONFIG_ARCH_NRF51)
+#if CONFIG_NRF5X_MODEL <= 51999
          freq->num != 16000000 &&
 #endif
          freq->num != 32000000) || freq->denom != 1)
@@ -552,7 +552,7 @@ static DEV_CMU_COMMIT(nrf5x_clock_commit)
       ;
   }
 
-#if defined(CONFIG_ARCH_NRF51)
+#if CONFIG_NRF5X_MODEL <= 51999
   nrf_reg_set(CLOCK_ADDR, NRF_CLOCK_XTALFREQ,
               pv->hfxo_freq.num == 16000000
               ? NRF_CLOCK_XTALFREQ_16MHZ
@@ -743,7 +743,7 @@ static DEV_INIT(nrf5x_clock_init)
   if (err)
     goto free_pv;
 
-#if LFRC_CAL && defined(CONFIG_ARCH_NRF52)
+#if LFRC_CAL && 52000 <= CONFIG_NRF5X_MODEL && CONFIG_NRF5X_MODEL <= 52999
   // PAN 36: CLOCK: Some registers are not reset when expected
   nrf_event_clear(CLOCK_ADDR, NRF_CLOCK_CTTO);
   nrf_event_clear(CLOCK_ADDR, NRF_CLOCK_DONE);

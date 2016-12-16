@@ -1,5 +1,5 @@
 %section nrf5x-pca10000
-  %inherit nrf51-qfaa
+  %inherit nrf51822-qfaa
 
   CONFIG_NRF5X_BOARD_NAME pca10000
 
@@ -8,7 +8,7 @@
   CONFIG_DRIVER_NRF5X_PRINTK_PIN 9
 
 %section nrf5x-pca10005
-  %inherit nrf51-qfaa
+  %inherit nrf51822-qfaa
 
   CONFIG_NRF5X_BOARD_NAME pca10005
 
@@ -17,7 +17,7 @@
   CONFIG_DRIVER_NRF5X_PRINTK_PIN 1
 
 %section nrf5x-pca10024
-  %inherit nrf51-qfaa
+  %inherit nrf51822-qfaa
 
   CONFIG_NRF5X_BOARD_NAME pca10024
 
@@ -26,7 +26,7 @@
   CONFIG_DRIVER_NRF5X_PRINTK_PIN 9
 
 %section nrf5x-pca20002
-  %inherit nrf51-qfaa
+  %inherit nrf51822-qfaa
 
   CONFIG_NRF5X_BOARD_NAME pca20002
 
@@ -37,7 +37,7 @@
   CONFIG_DRIVER_NRF5X_PRINTK_PIN 20
 
 %section nrf5x-pca20006
-  %inherit nrf51-qfaa
+  %inherit nrf51822-qfaa
 
   CONFIG_NRF5X_BOARD_NAME pca20006
 
@@ -46,7 +46,7 @@
   CONFIG_DRIVER_NRF5X_PRINTK_PIN 9
 
 %section nrf5x-pca10028
-  %inherit nrf51-xxac
+  %inherit nrf51422-xxac
 
   CONFIG_NRF5X_BOARD_NAME pca10028
 
@@ -74,7 +74,7 @@
   %end
 
 %section nrf5x-pca10031
-  %inherit nrf51-xxac
+  %inherit nrf51422-xxac
 
   CONFIG_NRF5X_BOARD_NAME pca10031
 
@@ -83,7 +83,7 @@
   CONFIG_DRIVER_NRF5X_PRINTK_PIN 9
 
 %section nrf5x-pca10036
-  %inherit nrf52-qfaa
+  %inherit nrf52832-qfaa
 
   CONFIG_NRF5X_BOARD_NAME pca10036
 
@@ -105,7 +105,7 @@
   %end
 
 %section nrf5x-pca10040
-  %inherit nrf52-qfaa
+  %inherit nrf52832-qfaa
 
   CONFIG_NRF5X_BOARD_NAME pca10040
 
@@ -127,7 +127,7 @@
   %end
 
 %section nrf5x-tinyble
-  %inherit nrf51-xxaa
+  %inherit nrf51822-xxaa
 
   CONFIG_NRF5X_BOARD_NAME tinyble
 

@@ -70,7 +70,7 @@ static void nrf5x_timer_start(struct nrf5x_timer_context_s *pv)
 static void nrf5x_timer_stop(struct nrf5x_timer_context_s *pv)
 {
   nrf_task_trigger(pv->addr, NRF_TIMER_STOP);
-#if defined(CONFIG_ARCH_NRF52)
+#if 52000 <= CONFIG_NRF5X_MODEL && CONFIG_NRF5X_MODEL <= 52999
   // PAN 78
   nrf_task_trigger(pv->addr, NRF_TIMER_SHUTDOWN);
 #endif
@@ -318,6 +318,10 @@ static DEV_INIT(nrf5x_timer_init)
 
   switch (pv->addr) {
   case NRF_PERIPHERAL_ADDR(NRF5X_TIMER0):
+#if 52000 <= CONFIG_NRF5X_MODEL && CONFIG_NRF5X_MODEL <= 52999
+  case NRF_PERIPHERAL_ADDR(NRF5X_TIMER3):
+  case NRF_PERIPHERAL_ADDR(NRF5X_TIMER4):
+#endif
     nrf_reg_set(pv->addr, NRF_TIMER_BITMODE, NRF_TIMER_BITMODE_32);
     pv->width = 32;
     break;
