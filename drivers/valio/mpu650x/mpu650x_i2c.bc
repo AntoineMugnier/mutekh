@@ -1,0 +1,94 @@
+/*
+    This file is part of MutekH.
+
+    MutekH is free software; you can redistribute it and/or modify it
+    under the terms of the GNU Lesser General Public License as
+    published by the Free Software Foundation; version 2.1 of the
+    License.
+
+    MutekH is distributed in the hope that it will be useful, but
+    WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+    Lesser General Public License for more details.
+
+    You should have received a copy of the GNU Lesser General Public
+    License along with this program.  If not, see
+    <http://www.gnu.org/licenses/>.
+
+    Copyright (c) Nicolas Pouillon <nipo@ssji.net>, 2017
+*/
+
+#include "mpu650x_regs.h"
+
+.custom i2c
+.name mpu650x_bus
+.global %8 pv
+.global %9 wom_thresh
+.global %10 smplrt_div
+.global %11 lp_rate
+.global %12 ten_ms
+    
+#define delay i2c_yield_delay
+#define USER_CTRL_APPEND 0
+    
+.func mpu650x_reg_read
+    .input %0 reg, %15 link
+    .output %0 value
+
+    pack8    %reg,   1
+    i2c_wrr  %reg,   1, RESTART
+    i2c_rdr  %value, 1, STOP
+    unpack8  %value, 1
+
+    ret %link
+.endfunc
+
+.func mpu650x_reg_write
+    .input %0 reg, %1 value, %15 link
+    .clobber %0
+
+    pack8    %reg, 2
+    i2c_wrr  %reg, 2, STOP
+
+    ret %link
+.endfunc
+
+.func mpu650x_short_write
+    .input %0 reg, %1 value, %15 link
+    .clobber %0, %1
+
+    pack8    %reg, 1
+    i2c_wrr  %reg, 1, CONTINUOUS
+    pack16be %value, 1, 2
+    i2c_wrr  %value, 2, STOP
+
+    ret %link
+.endfunc
+
+.func mpu650x_read_accel
+    .input %15 link
+    .output %0, %1, %2
+
+    cst8       %0, REG_ACCEL_XOUT_H
+    pack8      %0, 1
+    i2c_wrr    %0, 1, RESTART
+    i2c_rdr    %0, 6, STOP
+    unpack16be %0, 3, 6
+
+    ret %link
+.endfunc
+
+.func mpu650x_read_gyro
+    .input %15 link
+    .output %0, %1, %2
+
+    cst8       %0, REG_GYRO_XOUT_H
+    pack8      %0, 1
+    i2c_wrr    %0, 1, RESTART
+    i2c_rdr    %0, 6, STOP
+    unpack16be %0, 3, 6
+
+    ret %link
+.endfunc
+
+#include "mpu650x_app.bc"
