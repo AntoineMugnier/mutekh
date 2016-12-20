@@ -55,7 +55,7 @@ DEV_DECLARE_STATIC(uart_dev, "uart0", 0, nrf5x_uarte_drv,
                    DEV_STATIC_RES_DEV_ICU("/cpu"),
                    DEV_STATIC_RES_IRQ(0, NRF5X_UART0, DEV_IRQ_SENSE_HIGH_LEVEL, 0, 1),
                    DEV_STATIC_RES_DEV_IOMUX("/gpio"),
-                   DEV_STATIC_RES_UART(1000000, 8, DEV_UART_PARITY_NONE, 1, 1, 0),
+                   DEV_STATIC_RES_UART(1000000, 8, DEV_UART_PARITY_NONE, 1, 0, 0),
                    DEV_STATIC_RES_IOMUX("rts", 0, 5, 0, 0),
                    DEV_STATIC_RES_IOMUX("tx", 0, 6, 0, 0),
                    DEV_STATIC_RES_IOMUX("cts", 0, 7, 0, 0),
@@ -69,7 +69,7 @@ DEV_DECLARE_STATIC(uart_dev, "uart0", 0, nrf5x_uart_drv,
                    DEV_STATIC_RES_DEV_ICU("/cpu"),
                    DEV_STATIC_RES_IRQ(0, NRF5X_UART0, DEV_IRQ_SENSE_HIGH_LEVEL, 0, 1),
                    DEV_STATIC_RES_DEV_IOMUX("/gpio"),
-                   DEV_STATIC_RES_UART(1000000, 8, DEV_UART_PARITY_NONE, 1, 1, 0),
+                   DEV_STATIC_RES_UART(1000000, 8, DEV_UART_PARITY_NONE, 1, 0, 0),
                    DEV_STATIC_RES_IOMUX("rts", 0, 5, 0, 0),
                    DEV_STATIC_RES_IOMUX("tx", 0, 6, 0, 0),
                    DEV_STATIC_RES_IOMUX("cts", 0, 7, 0, 0),
@@ -88,5 +88,40 @@ DEV_DECLARE_STATIC(keyboard_dev, "keyboard", 0, button_set_drv,
                    DEV_STATIC_RES_GPIO("pins", 13, 4),
                    DEV_STATIC_RES_UINT_PARAM("active", 0),
                    );
+
+#endif
+
+#if defined(CONFIG_DRIVER_MPU650X_I2C)
+
+DEV_DECLARE_STATIC(accgyr0_dev, "accgyr0", 0, mpu650x_drv,
+                   DEV_STATIC_RES_I2C_ADDR("/i2c0", 0x68),
+                   DEV_STATIC_RES_DEV_ICU("/gpio"),
+                   DEV_STATIC_RES_IRQ(0, 25, DEV_IRQ_SENSE_LOW_LEVEL, 0, 1),
+                   DEV_STATIC_RES_DEV_TIMER("/rtc1"),
+                   );
+
+#endif
+
+#if defined(CONFIG_DRIVER_ADXL362)
+
+DEV_DECLARE_STATIC(accgyr1_dev, "accgyr1", 0, adxl362_drv,
+                   DEV_STATIC_RES_DEV_PARAM("spi", "/spi*"),
+                   DEV_STATIC_RES_DEV_PARAM("icu", "/gpio"),
+                   DEV_STATIC_RES_IRQ(0, 4, DEV_IRQ_SENSE_FALLING_EDGE, 0, 1),
+                   DEV_STATIC_RES_UINT_PARAM("gpio-cs-id", 3),
+                   DEV_STATIC_RES_DEV_PARAM("gpio", "/gpio"),
+                   );
+
+#endif
+
+#if defined(CONFIG_DRIVER_MPU650X_SPI)
+
+DEV_DECLARE_STATIC(accgyr0_dev, "accgyr0", 0, mpu650x_drv,
+                   DEV_STATIC_RES_DEV_PARAM("spi", "/spi*"),
+                   DEV_STATIC_RES_DEV_ICU("/gpio"),
+                   DEV_STATIC_RES_IRQ(0, 22, DEV_IRQ_SENSE_LOW_LEVEL, 0, 1),
+                   DEV_STATIC_RES_UINT_PARAM("gpio-cs-id", 2),
+                   DEV_STATIC_RES_DEV_PARAM("gpio", "/gpio"),
+                  );
 
 #endif
