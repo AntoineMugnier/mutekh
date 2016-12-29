@@ -2284,7 +2284,7 @@ static const struct usbdev_device_info_s usb_default_devinfo =
   .iconfig = 0,
   .power = 50,
   .str_cnt = 2,
-  .string = "MutekH\0\Test\0"
+  .string = "MutekH\0Test\0"
 };
 
 #endif
