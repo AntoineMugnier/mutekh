@@ -174,12 +174,8 @@ static DEV_TIMER_CANCEL(nrf5x_timer_cancel)
 
   err = 0;
 
-  if (dev_request_pqueue_isempty(&pv->queue)) {
-    dev->start_count &= ~1;
-
-    if (!dev->start_count)
-      nrf5x_timer_stop(pv);
-  }
+  if (dev_request_pqueue_isempty(&pv->queue))
+    device_sleep_schedule(dev);
 
   LOCK_RELEASE_IRQ(&dev->lock);
 
@@ -188,23 +184,42 @@ static DEV_TIMER_CANCEL(nrf5x_timer_cancel)
 
 static DEV_USE(nrf5x_timer_use)
 {
-  struct device_accessor_s *accessor = param;
-  struct device_s *dev = accessor->dev;
-  struct nrf5x_timer_context_s *pv = dev->drv_pv;
-
   switch (op) {
   default:
     return dev_use_generic(param, op);
 
-  case DEV_USE_START:
-    if (!dev->start_count)
-      nrf5x_timer_start(pv);
-    break;
+  case DEV_USE_SLEEP: {
+    struct device_s *dev = param;
+    struct nrf5x_rtc_context_s *pv = dev->drv_pv;
 
-  case DEV_USE_STOP:
+    dev->start_count &= ~1;
+
     if (!dev->start_count)
       nrf5x_timer_stop(pv);
-    break;
+
+    return 0;
+  }
+
+  case DEV_USE_START: {
+    struct device_accessor_s *acc = param;
+    struct device_s *dev = acc->dev;
+    struct nrf5x_timer_context_s *pv = dev->drv_pv;
+
+    if (!dev->start_count)
+      nrf5x_timer_start(pv);
+
+    return 0;
+  }
+
+  case DEV_USE_STOP: {
+    struct device_accessor_s *acc = param;
+    struct device_s *dev = acc->dev;
+    struct nrf5x_timer_context_s *pv = dev->drv_pv;
+
+    if (dev_request_pqueue_isempty(&pv->queue))
+      device_sleep_schedule(dev);
+
+    return 0;
   }
 
   return 0;
