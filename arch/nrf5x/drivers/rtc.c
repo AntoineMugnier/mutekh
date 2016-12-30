@@ -36,10 +36,7 @@
 
 #include <arch/nrf5x/rtc.h>
 
-#define dprintk(...) do{}while(0)
-//#define dprintk printk
-
-DRIVER_PV(struct nrf5x_rtc_context_s
+struct nrf5x_rtc_context_s
 {
   uintptr_t addr;
 
@@ -51,7 +48,9 @@ DRIVER_PV(struct nrf5x_rtc_context_s
 #if defined(CONFIG_DEVICE_CLOCK)
   struct dev_clock_sink_ep_s clock_sink;
 #endif
-});
+};
+
+DRIVER_PV(struct nrf5x_rtc_context_s);
 
 static void nrf5x_rtc_start(struct device_s *dev)
 {
@@ -60,7 +59,7 @@ static void nrf5x_rtc_start(struct device_s *dev)
   if (dev->start_count)
     return;
 
-  dprintk("%s\n", __FUNCTION__);
+  logk_trace("%s\n", __FUNCTION__);
 
 #if defined(CONFIG_DEVICE_CLOCK)
   dev_clock_sink_gate(&pv->clock_sink, DEV_CLOCK_EP_CLOCK);
@@ -76,7 +75,7 @@ static void nrf5x_rtc_stop(struct device_s *dev)
   if (dev->start_count)
     return;
 
-  dprintk("%s\n", __FUNCTION__);
+  logk_trace("%s\n", __FUNCTION__);
 
   assert(dev_request_pqueue_isempty(&pv->queue));
 
@@ -110,7 +109,7 @@ static void nrf5x_rtc_deadline_set(struct nrf5x_rtc_context_s *pv,
   if (next_deadline < nrf5x_rtc_value_get(pv) + 2)
     nrf_it_enable(pv->addr, NRF_RTC_TICK);
 
-  dprintk("%s %lld\n", __FUNCTION__, next_deadline);
+  logk_trace("%s %lld\n", __FUNCTION__, next_deadline);
 }
 
 static void nrf5x_rtc_deadline_disable(struct nrf5x_rtc_context_s *pv)
@@ -126,7 +125,7 @@ static DEV_TIMER_REQUEST(nrf5x_rtc_request)
   dev_timer_value_t value;
   error_t err = 0;
 
-  dprintk("%s %p\n", __FUNCTION__, rq);
+  logk_debug("%s %p\n", __FUNCTION__, rq);
 
   //  assert(rq->rq.drvdata != pv);
 
@@ -171,7 +170,7 @@ static DEV_TIMER_CANCEL(nrf5x_rtc_cancel)
   if (rq->rq.drvdata != pv)
     return -ENOENT;
 
-  dprintk("%s %p\n", __FUNCTION__, rq);
+  logk_debug("%s %p\n", __FUNCTION__, rq);
 
   LOCK_SPIN_IRQ(&dev->lock);
 
@@ -214,16 +213,19 @@ static DEV_USE(nrf5x_rtc_use)
   case DEV_USE_START: {
     struct device_accessor_s *acc = param;
     struct device_s *dev = acc->dev;
+
     nrf5x_rtc_start(dev);
+
     return 0;
   }
 
   case DEV_USE_STOP: {
     struct device_accessor_s *acc = param;
     struct device_s *dev = acc->dev;
-    struct nrf5x_rtc_context_s *pv = dev->drv_pv;
 
-    nrf_it_enable(pv->addr, NRF_RTC_TICK);
+    if (dev_request_pqueue_isempty(&pv->queue))
+      device_sleep_schedule(dev);
+
     return 0;
   }
 
@@ -254,7 +256,7 @@ static DEV_IRQ_SRC_PROCESS(nrf5x_rtc_irq)
   struct nrf5x_rtc_context_s *pv = dev->drv_pv;
   struct dev_timer_rq_s *rq;
 
-  dprintk("%s\n", __FUNCTION__);
+  logk_trace("%s\n", __FUNCTION__);
 
   lock_spin(&dev->lock);
 
@@ -280,7 +282,7 @@ static DEV_IRQ_SRC_PROCESS(nrf5x_rtc_irq)
     rq->rq.drvdata = NULL;
 
     lock_release(&dev->lock);
-    dprintk("%s exec %p\n", __FUNCTION__, rq);
+    logk_trace("%s exec %p\n", __FUNCTION__, rq);
     kroutine_exec(&rq->rq.kr);
     lock_spin(&dev->lock);
   }
