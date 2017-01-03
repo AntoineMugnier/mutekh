@@ -40,9 +40,6 @@
 
 #define PDM_ADDR NRF_PERIPHERAL_ADDR(NRF5X_PDM)
 
-//#define dprintk printk
-#define dprintk(...) do{}while(0)
-
 struct nrf52_pdm_pv_s
 {
   struct dev_pcm_rq_s *rq;
@@ -70,7 +67,7 @@ static KROUTINE_EXEC(nrf52_pdm_ended)
   dev_clock_sink_gate(&pv->power_source, DEV_CLOCK_EP_NONE);
 #endif
 
-  dprintk("%s\n", __FUNCTION__);
+  logk_trace("%s\n", __FUNCTION__);
 
   mem_free(rq->stream[0].buffer[0]);
   pv->rq = NULL;
@@ -86,7 +83,7 @@ static DEV_IRQ_SRC_PROCESS(nrf52_pdm_irq)
   struct nrf52_pdm_pv_s *pv = dev->drv_pv;
   struct dev_pcm_rq_s *rq = pv->rq;
 
-  dprintk("%s\n", __FUNCTION__);
+  logk_trace("%s\n", __FUNCTION__);
 
   if (!rq) {
     nrf_task_trigger(PDM_ADDR, NRF_PDM_STOP);
@@ -130,7 +127,7 @@ static DEV_PCM_REQUEST(nrf52_pdm_request)
   uint16_t *sample;
   uint32_t mode;
 
-  dprintk("%s\n", __FUNCTION__);
+  logk_debug("%s\n", __FUNCTION__);
 
   if (pv->rq)
     return -EBUSY;
@@ -180,7 +177,7 @@ static DEV_PCM_REQUEST(nrf52_pdm_request)
   uint32_t reg = NRF_PDM_CLKCTRL_FREQ(rq->sample_rate);
   rq->effective_sample_rate = NRF_PDM_CLKCTRL_RATE(reg);
 
-  dprintk("Starting pdm %dHz, clock reg=%08x, mode reg=%08x, esr: %d\n",
+  logk_debug("Starting pdm %dHz, clock reg=%08x, mode reg=%08x, esr: %d\n",
          rq->sample_rate, reg, mode, rq->effective_sample_rate);
 
   nrf_reg_set(PDM_ADDR, NRF_PDM_ENABLE, NRF_PDM_ENABLE_ENABLED);

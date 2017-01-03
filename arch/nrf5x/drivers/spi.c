@@ -35,8 +35,6 @@
 
 #include <arch/nrf5x/spi.h>
 
-#define dprintk(...) do{}while(0)
-
 struct nrf5x_spi_context_s
 {
   uintptr_t addr;
@@ -137,7 +135,7 @@ static void nrf5x_spi_tr_put_one(struct nrf5x_spi_context_s *pv,
     break;
   }
 
-  dprintk("SPI tx: %02x\n", word);
+  logk_trace("SPI tx: %02x\n", word);
 
   nrf_reg_set(pv->addr, NRF_SPI_TXD, word);
 
@@ -149,7 +147,7 @@ static void nrf5x_spi_tr_get_one(struct nrf5x_spi_context_s *pv,
 {
   uint8_t word = nrf_reg_get(pv->addr, NRF_SPI_RXD);
 
-  dprintk("SPI rx: %02x\n", word);
+  logk_trace("SPI rx: %02x\n", word);
 
   if (tr->data.in) {
     switch (tr->data.in_width) {
@@ -175,7 +173,7 @@ void nrf5x_spi_transfer_start(
 {
   pv->words_in_transit = 0;
 
-  dprintk("SPI rq %d %d %P...", tr->data.count, tr->data.out_width, tr->data.out, tr->data.count);
+  logk_trace("SPI rq %d %d %P...", tr->data.count, tr->data.out_width, tr->data.out, tr->data.count);
 
   while (tr->data.count && pv->words_in_transit < 2) {
     nrf5x_spi_tr_put_one(pv, tr);
@@ -224,7 +222,7 @@ static DEV_IRQ_SRC_PROCESS(nrf5x_spi_irq)
 
   // tr is not NULL only if it is finished.
   if (tr) {
-    dprintk(" done\n");
+    logk_trace(" done\n");
     kroutine_exec(&tr->kr);
   }
 }

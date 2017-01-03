@@ -38,9 +38,6 @@
 #include <arch/nrf5x/ids.h>
 #include <arch/nrf5x/peripheral.h>
 
-//#define dprintk printk
-#define dprintk(...) do{}while(0)
-
 enum ir_symbol_e
 {
   RC6_LEAD_START,
@@ -130,7 +127,7 @@ static void nrf52_ir_symbol_send(struct nrf52_ir_pv_s *pv,
   const struct ir_symbol_seq_s *seq = &ir_seq[symbol];
   uintptr_t off = pv->seq_cur ? NRF_PWM_SEQ1_PTR - NRF_PWM_SEQ0_PTR : 0;
 
-  dprintk("%s %d\n", __FUNCTION__, symbol);
+  logk_trace("%s %d\n", __FUNCTION__, symbol);
 
   nrf_reg_set(pv->addr, off + NRF_PWM_SEQ0_PTR, (uintptr_t)seq->seq);
   nrf_reg_set(pv->addr, off + NRF_PWM_SEQ0_CNT, seq->seq_count);
@@ -237,7 +234,7 @@ static void nrf52_ir_step(struct device_s *dev)
     goto rq_proceed;
 
   rq_start:
-    dprintk("%s start\n", __FUNCTION__);
+    logk_debug("%s start\n", __FUNCTION__);
 
     nrf_reg_set(pv->addr, NRF_PWM_LOOP, 1);
     nrf_short_set(pv->addr, 0);
@@ -245,7 +242,7 @@ static void nrf52_ir_step(struct device_s *dev)
     nrf_short_set(pv->addr, bit(NRF_PWM_LOOPSDONE_SEQSTART0));
 
   rq_proceed:
-    dprintk("%s proceed seq %d state %d\n", __FUNCTION__, pv->seq_cur, pv->state);
+    logk_debug("%s proceed seq %d state %d\n", __FUNCTION__, pv->seq_cur, pv->state);
 
     nrf_reg_set(pv->addr, NRF_PWM_LOOP, 1);
     if (pv->seq_cur == 0)
@@ -255,7 +252,7 @@ static void nrf52_ir_step(struct device_s *dev)
     return;
 
   rq_last:
-    dprintk("%s last seq %d state %d\n", __FUNCTION__, pv->seq_cur, pv->state);
+    logk_debug("%s last seq %d state %d\n", __FUNCTION__, pv->seq_cur, pv->state);
 
     if (pv->seq_cur == 0)
       nrf_short_set(pv->addr, bit(NRF_PWM_SEQEND0_STOP));
@@ -266,7 +263,7 @@ static void nrf52_ir_step(struct device_s *dev)
     return;
 
   rq_done:
-    dprintk("%s done\n", __FUNCTION__);
+    logk_debug("%s done\n", __FUNCTION__);
 
     pv->state = ST_IDLE;
     pv->current = NULL;
@@ -287,21 +284,21 @@ static DEV_IRQ_SRC_PROCESS(nrf52_ir_irq)
   if (nrf_it_is_enabled(pv->addr, NRF_PWM_SEQSTARTED0)
       && nrf_event_check(pv->addr, NRF_PWM_SEQSTARTED0)) {
     nrf_event_clear(pv->addr, NRF_PWM_SEQSTARTED1);
-    dprintk("%s seqstarted0\n", __FUNCTION__);
+    logk_trace("%s seqstarted0\n", __FUNCTION__);
     goto push_next;
   }
 
   if (nrf_it_is_enabled(pv->addr, NRF_PWM_SEQSTARTED1)
       && nrf_event_check(pv->addr, NRF_PWM_SEQSTARTED1)) {
     nrf_event_clear(pv->addr, NRF_PWM_SEQSTARTED0);
-    dprintk("%s seqstarted1\n", __FUNCTION__);
+    logk_trace("%s seqstarted1\n", __FUNCTION__);
     goto push_next;
   }
 
   if (nrf_it_is_enabled(pv->addr, NRF_PWM_STOPPED)
       && nrf_event_check(pv->addr, NRF_PWM_STOPPED)) {
     nrf_event_clear(pv->addr, NRF_PWM_STOPPED);
-    dprintk("%s stopped\n", __FUNCTION__);
+    logk_trace("%s stopped\n", __FUNCTION__);
     goto push_next;
   }
 
@@ -324,7 +321,7 @@ static DEV_VALIO_REQUEST(nrf52_ir_request)
   if (req->attribute != VALIO_IR_COMMAND)
     goto nosup;
 
-  dprintk("%s %d\n", __FUNCTION__, cmd->type);
+  logk_debug("%s %d\n", __FUNCTION__, cmd->type);
 
   switch (cmd->type) {
   case VALIO_IR_RC5:
@@ -370,7 +367,7 @@ static DEV_VALIO_CANCEL(nrf52_ir_cancel)
   struct nrf52_ir_pv_s *pv = dev->drv_pv;
   error_t err = -ENOENT;
 
-  dprintk("%s\n", __FUNCTION__);
+  logk_debug("%s\n", __FUNCTION__);
 
   if (pv->current == req)
     return -EBUSY;

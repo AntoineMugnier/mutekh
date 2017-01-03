@@ -222,6 +222,7 @@ static DEV_USE(nrf5x_rtc_use)
   case DEV_USE_STOP: {
     struct device_accessor_s *acc = param;
     struct device_s *dev = acc->dev;
+    struct nrf5x_rtc_context_s *pv = dev->drv_pv;
 
     if (dev_request_pqueue_isempty(&pv->queue))
       device_sleep_schedule(dev);

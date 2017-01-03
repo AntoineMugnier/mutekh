@@ -37,9 +37,6 @@
 #include <arch/nrf5x/uarte.h>
 #include <arch/nrf5x/gpio.h>
 
-//#define dprintk printk
-#define dprintk(...) do{}while(0)
-
 enum {
   CALLBACKING_NONE,
   CALLBACKING_RX,
@@ -79,7 +76,7 @@ static void nrf5x_uarte_request_finish(struct device_s *dev,
   pv->callbacking = cb_way;
   lock_release(&dev->lock);
 
-  dprintk("%s DONE %p %p %d\n", __FUNCTION__, rq, rq->data, rq->size);
+  logk_trace("%s DONE %p %p %d\n", __FUNCTION__, rq, rq->data, rq->size);
   kroutine_exec(&rq->base.kr);
 
   lock_spin(&dev->lock);
@@ -91,7 +88,7 @@ static void nrf5x_uarte_rx_start(struct device_s *dev)
   struct nrf5x_uarte_priv *pv = dev->drv_pv;
   struct dev_char_rq_s *rq = dev_char_rq_s_cast(dev_request_queue_head(&pv->rx_q));
 
-  dprintk("%s START RX %p %p %d\n", __FUNCTION__, rq, rq->data, rq->size);
+  logk_trace("%s START RX %p %p %d\n", __FUNCTION__, rq, rq->data, rq->size);
 
   assert(rq);
 
@@ -134,7 +131,7 @@ static void nrf5x_uarte_tx_start(struct device_s *dev)
   nrf_reg_set(pv->addr, NRF_UARTE_TXD_PTR, source);
   nrf_reg_set(pv->addr, NRF_UARTE_TXD_MAXCNT, size);
 
-  dprintk("%s START TX %p %p %d %P\n", __FUNCTION__, rq,
+  logk_trace("%s START TX %p %p %d %P\n", __FUNCTION__, rq,
           source, size,
           source, size);
 
@@ -157,7 +154,7 @@ static DEV_IRQ_SRC_PROCESS(nrf5x_uarte_irq)
   struct dev_char_rq_s *rq;
   size_t xfered;
   
-  dprintk("%s\n", __FUNCTION__);
+  logk_trace("%s\n", __FUNCTION__);
 
   lock_spin(&dev->lock);
 
@@ -166,7 +163,7 @@ static DEV_IRQ_SRC_PROCESS(nrf5x_uarte_irq)
         && nrf_event_check(pv->addr, NRF_UARTE_NCTS)) {
       nrf_event_clear(pv->addr, NRF_UARTE_NCTS);
       nrf_it_disable(pv->addr, NRF_UARTE_NCTS);
-      dprintk("%s NCTS\n", __FUNCTION__);
+      logk_trace("%s NCTS\n", __FUNCTION__);
 
       nrf_event_clear(pv->addr, NRF_UARTE_ENDTX);
       nrf_it_enable(pv->addr, NRF_UARTE_ENDTX);
@@ -176,7 +173,7 @@ static DEV_IRQ_SRC_PROCESS(nrf5x_uarte_irq)
     if (nrf_event_check(pv->addr, NRF_UARTE_ENDTX)) {
       nrf_event_clear(pv->addr, NRF_UARTE_ENDTX);
       nrf_it_disable(pv->addr, NRF_UARTE_ENDTX);
-      dprintk("%s END TX\n", __FUNCTION__);
+      logk_trace("%s END TX\n", __FUNCTION__);
 
       xfered = nrf_reg_get(pv->addr, NRF_UARTE_TXD_AMOUNT);
 
@@ -209,7 +206,7 @@ static DEV_IRQ_SRC_PROCESS(nrf5x_uarte_irq)
         && nrf_event_check(pv->addr, NRF_UARTE_ERROR)) {
       nrf_event_clear(pv->addr, NRF_UARTE_ERROR);
       nrf_it_disable(pv->addr, NRF_UARTE_ERROR);
-      dprintk("%s ERROR\n", __FUNCTION__);
+      logk_trace("%s ERROR\n", __FUNCTION__);
 
       uint32_t error = nrf_reg_get(pv->addr, NRF_UARTE_ERRORSRC);
       rq = dev_char_rq_s_cast(dev_request_queue_head(&pv->rx_q));
@@ -233,7 +230,7 @@ static DEV_IRQ_SRC_PROCESS(nrf5x_uarte_irq)
         && nrf_event_check(pv->addr, NRF_UARTE_RXTO)) {
       nrf_event_clear(pv->addr, NRF_UARTE_RXTO);
       nrf_it_disable(pv->addr, NRF_UARTE_RXTO);
-      dprintk("%s RXTO\n", __FUNCTION__);
+      logk_trace("%s RXTO\n", __FUNCTION__);
 
       nrf_task_trigger(pv->addr, NRF_UARTE_STOPRX);
       pv->must_flush = 1;
@@ -248,7 +245,7 @@ static DEV_IRQ_SRC_PROCESS(nrf5x_uarte_irq)
       rq = dev_char_rq_s_cast(dev_request_queue_head(&pv->rx_q));
       xfered = nrf_reg_get(pv->addr, NRF_UARTE_RXD_AMOUNT);
 
-      dprintk("%s END RX, must flush: %d, %P\n", __FUNCTION__, pv->must_flush,
+      logk_trace("%s END RX, must flush: %d, %P\n", __FUNCTION__, pv->must_flush,
               rq->data, xfered);
 
       if (pv->must_flush) {
@@ -293,7 +290,7 @@ static DEV_CHAR_REQUEST(nrf5x_uarte_request)
   dev_request_queue_root_t *q = NULL;
   bool_t start;
 
-  dprintk("%s REQUEST %x %p %p %d\n", __FUNCTION__, rq->type, rq, rq->data, rq->size);
+  logk_trace("%s REQUEST %x %p %p %d\n", __FUNCTION__, rq->type, rq, rq->data, rq->size);
 
   switch (rq->type) {
   case DEV_CHAR_READ_PARTIAL:
@@ -325,7 +322,7 @@ static DEV_CHAR_REQUEST(nrf5x_uarte_request)
   dev_request_queue_pushback(q, &rq->base);
 
   if (start) {
-    dprintk("%s START\n", __FUNCTION__);
+    logk_trace("%s START\n", __FUNCTION__);
 
     if (q == &pv->rx_q)
       nrf5x_uarte_rx_start(dev);

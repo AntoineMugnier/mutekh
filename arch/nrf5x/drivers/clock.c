@@ -27,14 +27,6 @@
 #include <mutek/mem_alloc.h>
 #include <mutek/printk.h>
 
-//#define dprintk printk
-#ifndef dprintk
-# define dwritek(...) do{}while(0)
-# define dprintk(...) do{}while(0)
-#else
-# define dwritek writek
-#endif
-
 #include <device/device.h>
 #include <device/resources.h>
 #include <device/driver.h>
@@ -141,13 +133,13 @@ static uint_fast8_t nrf5x_clock_hf_src(void)
 
 static void nrf5x_clock_hfxo_start(void)
 {
-  dprintk("%s\n", __FUNCTION__);
+  logk_trace("%s\n", __FUNCTION__);
   nrf_task_trigger(CLOCK_ADDR, NRF_CLOCK_HFCLKSTART);
 }
 
 static void nrf5x_clock_hfxo_stop(void)
 {
-  dprintk("%s\n", __FUNCTION__);
+  logk_trace("%s\n", __FUNCTION__);
   nrf_task_trigger(CLOCK_ADDR, NRF_CLOCK_HFCLKSTOP);
 }
 
@@ -299,13 +291,13 @@ static DEV_IRQ_SRC_PROCESS(nrf5x_clock_irq)
 
   if (nrf_event_check(CLOCK_ADDR, NRF_CLOCK_LFCLKSTARTED)) {
     nrf_event_clear(CLOCK_ADDR, NRF_CLOCK_LFCLKSTARTED);
-    dprintk("%s LFCLK started\n", __FUNCTION__);
+    logk_trace("%s LFCLK started\n", __FUNCTION__);
     lf_check = 1;
   }
 
   if (nrf_event_check(CLOCK_ADDR, NRF_CLOCK_HFCLKSTARTED)) {
     nrf_event_clear(CLOCK_ADDR, NRF_CLOCK_HFCLKSTARTED);
-    dprintk("%s HFCLK started\n", __FUNCTION__);
+    logk_trace("%s HFCLK started\n", __FUNCTION__);
     hf_check = 1;
   }
 
@@ -588,7 +580,7 @@ static DEV_CLOCK_SRC_SETUP(nrf5x_clock_ep_setup)
 
 #ifdef CONFIG_DEVICE_CLOCK_THROTTLE
   case DEV_CLOCK_SRC_SETUP_THROTTLE:
-    dprintk("%s src %d throttle %d->%d\n",
+    logk_debug("%s src %d throttle %d->%d\n",
             __FUNCTION__,
             id,
             param->throttle.configid_old,
@@ -656,7 +648,7 @@ static void nrf5x_clock_configid_refresh(struct device_s *dev)
             __MAX((uint_fast8_t)pv->src[NRF_CLOCK_SRC_LFCLK].configid_min,
                   (uint_fast8_t)pv->src[NRF_CLOCK_SRC_HFCLK].configid_min));
 
-  dprintk("%s %d %d %d: %d->%d\n", __FUNCTION__,
+  logk_debug("%s %d %d %d: %d->%d\n", __FUNCTION__,
           (uint_fast8_t)pv->configid_app,
           (uint_fast8_t)pv->src[NRF_CLOCK_SRC_LFCLK].configid_min,
           (uint_fast8_t)pv->src[NRF_CLOCK_SRC_HFCLK].configid_min,
@@ -697,7 +689,7 @@ static KROUTINE_EXEC(nrf5x_clock_configid_update)
 
   LOCK_SPIN_IRQ(&dev->lock);
 
-  dprintk("%s %d->%d\n", __FUNCTION__,
+  logk_debug("%s %d->%d\n", __FUNCTION__,
           pv->configid_cur, pv->configid_next);
 
   pv->configid_cur = pv->configid_next;

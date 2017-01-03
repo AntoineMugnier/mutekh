@@ -41,8 +41,6 @@
 
 #define SAADC_ADDR NRF_PERIPHERAL_ADDR(NRF5X_SAADC)
 
-#define dprintk(...) do{}while(0)
-
 struct nrf5x_saadc_private_s
 {
   struct dev_irq_src_s irq_ep[1];
@@ -71,7 +69,7 @@ static DEV_IRQ_SRC_PROCESS(nrf5x_saadc_irq)
 
   nrf_event_clear(SAADC_ADDR, NRF_SAADC_DONE);
 
-  dprintk("SAADC done\n");
+  logk_trace("SAADC done\n");
 
   nrf_task_trigger(SAADC_ADDR, NRF_SAADC_STOP);
   
@@ -131,7 +129,7 @@ static DEV_VALIO_REQUEST(nrf5x_saadc_request)
 
   req->error = 0;
 
-  dprintk("%s %d %d %02x\n", __FUNCTION__, req->type, req->attribute, group->mask);
+  logk_trace("%s %d %d %02x\n", __FUNCTION__, req->type, req->attribute, group->mask);
 
   if (!group->mask)
     goto notsup;

@@ -190,7 +190,7 @@ static DEV_USE(nrf5x_timer_use)
 
   case DEV_USE_SLEEP: {
     struct device_s *dev = param;
-    struct nrf5x_rtc_context_s *pv = dev->drv_pv;
+    struct nrf5x_timer_context_s *pv = dev->drv_pv;
 
     dev->start_count &= ~1;
 
@@ -220,6 +220,7 @@ static DEV_USE(nrf5x_timer_use)
       device_sleep_schedule(dev);
 
     return 0;
+  }
   }
 
   return 0;

@@ -45,14 +45,6 @@ enum nrf5x_flash_bank
   BANK_UICR,
 };
 
-#if 0
-# define dprintk printk
-# define dhexdumpk hexdumpk
-#else
-# define dprintk(k...) do {} while (0)
-# define dhexdumpk(k...) do {} while (0)
-#endif
-
 #if defined(CONFIG_DRIVER_NRF5X_NVMC) || defined(CONFIG_DRIVER_NRF5X_PERSIST)
 DRIVER_PV(struct nrf5x_nvmc_private_s
 {
@@ -199,14 +191,14 @@ static void nrf5x_persist_storage_write(uintptr_t base,
 {
   assert(address_is_aligned(base, 4) && address_is_aligned(data, 4) && address_is_aligned(size, 4));
 
-  dprintk("Write to %p:\n", base);
+  logk_trace("Write to %p:\n", base);
   dhexdumpk(0, data, size);
-  dprintk(" before:\n");
+  logk_trace(" before:\n");
   dhexdumpk(base, (void*)base, size);
 
   nrf5x_flash_write(base, data, size / sizeof(uint32_t));
 
-  dprintk(" after:\n");
+  logk_trace(" after:\n");
   dhexdumpk(base, (void*)base, size);
 }
 
@@ -221,7 +213,7 @@ static void nrf5x_persist_item_invalidate(struct nrf5x_nvmc_private_s *pv,
   struct dev_persist_descriptor_s desc = *hdr;
   desc.state = DEV_PERSIST_STATE_ERASED;
 
-  dprintk("%s %d %x %d at %p\n", __FUNCTION__, desc.type, desc.uid, desc.size, hdr);
+  logk_trace("%s %d %x %d at %p\n", __FUNCTION__, desc.type, desc.uid, desc.size, hdr);
 
   nrf5x_persist_storage_write((uintptr_t)hdr, &desc, sizeof(desc));
 
@@ -236,7 +228,7 @@ static void nrf5x_persist_write_blob(struct nrf5x_nvmc_private_s *pv,
 {
   uint32_t size = item_size(desc);
 
-  dprintk("%s %d %x %d at %08x\n", __FUNCTION__, desc->type, desc->uid, desc->size, writep);
+  logk_trace("%s %d %x %d at %08x\n", __FUNCTION__, desc->type, desc->uid, desc->size, writep);
 
   desc->state = DEV_PERSIST_STATE_BUSY;
   nrf5x_persist_storage_write(writep, desc, sizeof(*desc));
@@ -263,7 +255,7 @@ static void nrf5x_persist_write_counter(struct nrf5x_nvmc_private_s *pv,
 
   assert(desc->size > sizeof(value));
 
-  dprintk("%s %d %x %d at %08x\n", __FUNCTION__, desc->type, desc->uid, desc->size, writep);
+  logk_trace("%s %d %x %d at %08x\n", __FUNCTION__, desc->type, desc->uid, desc->size, writep);
 
   desc->state = DEV_PERSIST_STATE_BUSY;
   nrf5x_persist_storage_write(writep, desc, sizeof(*desc));
@@ -399,8 +391,8 @@ static void nrf5x_persist_slot_state_read(struct nrf5x_nvmc_private_s *pv,
       || header->state != DEV_PERSIST_STATE_WRITTEN
       || header->size != pv->slot_size) {
     state->state = SLOT_BROKEN;
-    dprintk("slot %d magic %08x size %d state %d\n", slot, header->magic, header->size, header->state);
-    dprintk("slot %d bad header\n", slot);
+    logk_debug("slot %d magic %08x size %d state %d\n", slot, header->magic, header->size, header->state);
+    logk_debug("slot %d bad header\n", slot);
     return;
   }
 
@@ -412,12 +404,12 @@ static void nrf5x_persist_slot_state_read(struct nrf5x_nvmc_private_s *pv,
     switch (desc->state) {
     case DEV_PERSIST_STATE_FREE:
       if (nrf5x_persist_storage_is_clean(point, end - point)) {
-        dprintk("slot %d clean end reached used %d\n", slot, state->used);
+        logk_trace("slot %d clean end reached used %d\n", slot, state->used);
         state->available = pv->slot_size - sizeof(*header) - state->used;
         return;
       }
 
-      dprintk("slot %d unclean end reached\n", slot);
+      logk_trace("slot %d unclean end reached\n", slot);
       return;
 
     case DEV_PERSIST_STATE_BUSY:
@@ -437,7 +429,7 @@ static void nrf5x_persist_slot_state_read(struct nrf5x_nvmc_private_s *pv,
     // We may have point == end if slot is full to the last byte
     if (point < base + sizeof(*header) || point > end) {
       state->state = SLOT_BROKEN;
-      dprintk("slot %d overflow\n", slot);
+      logk_trace("slot %d overflow\n", slot);
       break;
     }
   }
@@ -453,7 +445,7 @@ static void nrf5x_persist_discover(struct nrf5x_nvmc_private_s *pv)
     nrf5x_persist_slot_state_read(pv, &state[i], i);
 
     if (state[i].state == SLOT_CLEAN) {
-      dprintk("slot %d clean\n", i);
+      logk_trace("slot %d clean\n", i);
 
       pv->current_slot = i;
       pv->used = state[i].used;
@@ -466,7 +458,7 @@ static void nrf5x_persist_discover(struct nrf5x_nvmc_private_s *pv)
   // None of them is CLEAN, but we may have one with MUST_PACK ?
   for (uint8_t i = 0; i < 2; ++i) {
     if (state[i].state == SLOT_MUST_PACK) {
-      dprintk("slot %d must pack\n", i);
+      logk_trace("slot %d must pack\n", i);
 
       pv->current_slot = i;
       nrf5x_persist_pack(pv, NULL);
@@ -474,7 +466,7 @@ static void nrf5x_persist_discover(struct nrf5x_nvmc_private_s *pv)
     }
   }
 
-  dprintk("all broken\n");
+  logk_trace("all broken\n");
   // None is CLEAN, nor MUST_PACK, erase first one
   pv->current_slot = 0;
   nrf5x_persist_erase(pv, NULL);
@@ -491,7 +483,7 @@ nrf5x_persist_find(struct nrf5x_nvmc_private_s *pv,
 
   struct dev_persist_descriptor_s desc = *ref;
 
-  dprintk("Find %d %x\n", desc.type, desc.uid);
+  logk_trace("Find %d %x\n", desc.type, desc.uid);
 
   while (point > current && point < current + size) {
     const struct dev_persist_descriptor_s *cur = (const void *)point;
@@ -501,30 +493,30 @@ nrf5x_persist_find(struct nrf5x_nvmc_private_s *pv,
 
     point += item_size(cur);
 
-    dprintk(" %p %d %x %d size: %d (%d)...", cur, cur->type, cur->uid, cur->state,
+    logk_trace(" %p %d %x %d size: %d (%d)...", cur, cur->type, cur->uid, cur->state,
            cur->size, item_size(cur));
 
     if (cur->state != DEV_PERSIST_STATE_WRITTEN) {
-      dprintk(" bad state\n");
+      logk_trace(" bad state\n");
       continue;
     }
 
     if (cur->uid != desc.uid) {
-      dprintk(" bad uid\n");
+      logk_trace(" bad uid\n");
       continue;
     }
 
     if (cur->type != desc.type) {
-      dprintk(" bad type\n");
+      logk_trace(" bad type\n");
       continue;
     }
 
-    dprintk(" OK\n");
+    logk_trace(" OK\n");
 
     return cur;
   }
 
-  dprintk(" %p Not found\n", point);
+  logk_trace(" %p Not found\n", point);
 
   return NULL;
 }
@@ -568,10 +560,10 @@ static void nrf5x_persist_counter_zero_range(const struct dev_persist_descriptor
   uint32_t last_mask = bit_mask(0, last_bit);
   uint32_t mask = first_mask;
 
-  dprintk("zero range %d - %d\n", first_bit, last_bit);
+  logk_trace("zero range %d - %d\n", first_bit, last_bit);
 
-  dprintk("first: %d@%d %08x\n", first_bit, first_word, first_mask);
-  dprintk("last: %d@%d %08x\n", last_bit, last_word, last_mask);
+  logk_trace("first: %d@%d %08x\n", first_bit, first_word, first_mask);
+  logk_trace("last: %d@%d %08x\n", last_bit, last_word, last_mask);
 
   if (first_word == last_word)
     last_mask &= first_mask;
@@ -586,7 +578,7 @@ static void nrf5x_persist_counter_zero_range(const struct dev_persist_descriptor
 
   last_mask = ~last_mask;
 
-  dprintk("last write: @%08x %08x\n", bits + last_word * sizeof(uint32_t), last_mask);
+  logk_trace("last write: @%08x %08x\n", bits + last_word * sizeof(uint32_t), last_mask);
 
   nrf5x_persist_storage_write(bits + last_word * sizeof(uint32_t), &last_mask, sizeof(last_mask));
 }
@@ -625,10 +617,10 @@ static error_t nrf5x_persist_write(struct nrf5x_nvmc_private_s *pv,
   struct dev_persist_descriptor_s ref = *rq->descriptor;
   ref.uid += rq->uid_offset;
 
-  dprintk("%s %d %x %d\n", __FUNCTION__, ref.type, ref.uid, ref.size);
+  logk_trace("%s %d %x %d\n", __FUNCTION__, ref.type, ref.uid, ref.size);
 
   const struct dev_persist_descriptor_s *found = nrf5x_persist_find(pv, &ref);
-  dprintk("Value found: %p\n", found);
+  logk_trace("Value found: %p\n", found);
 
   if (!found)
     goto append;
@@ -646,7 +638,7 @@ static error_t nrf5x_persist_write(struct nrf5x_nvmc_private_s *pv,
     uint32_t bits = (item_size(found) - sizeof(*found) - sizeof(uint64_t)) * 8;
     uint32_t zeroes = nrf5x_persist_counter_offset_get(found);
 
-    dprintk("%s counter %lld + %d/%d + %lld\n",
+    logk_trace("%s counter %lld + %d/%d + %lld\n",
            __FUNCTION__, nrf5x_persist_counter_base_get(found),
            zeroes, bits, rq->counter);
 
@@ -666,7 +658,7 @@ static error_t nrf5x_persist_write(struct nrf5x_nvmc_private_s *pv,
     + pv->slot_size * pv->current_slot
     + pv->used;
 
-  dprintk("Append %d %x. needed: %d, reclaimable: %d, available: %d, used: %d\n",
+  logk_trace("Append %d %x. needed: %d, reclaimable: %d, available: %d, used: %d\n",
          ref.type, ref.uid,
          needed, pv->reclaimable, pv->available, pv->used);
 
@@ -676,7 +668,7 @@ static error_t nrf5x_persist_write(struct nrf5x_nvmc_private_s *pv,
   if (needed > pv->available) {
     nrf5x_persist_pack(pv, NULL);
     found = nrf5x_persist_find(pv, &ref);
-    dprintk("Value found after repack: %p\n", found);
+    logk_trace("Value found after repack: %p\n", found);
     writep = pv->addr
       + pv->slot_size * pv->current_slot
       + pv->used;
