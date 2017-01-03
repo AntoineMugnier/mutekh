@@ -511,7 +511,7 @@ void nrf5x_ble_context_start_first(struct nrf5x_ble_private_s *pv)
   nrf_reg_set(BLE_RADIO_ADDR, NRF_RADIO_BCC, 16);
   nrf5x_ble_config_init(&pv->current_params);
 
-#if defined(CONFIG_ARCH_NRF52)
+#if 52000 <= CONFIG_NRF5X_MODEL && CONFIG_NRF5X_MODEL <= 52999
   nrf_reg_set(BLE_RADIO_ADDR, NRF_RADIO_MODECNF0, 0
     | NRF_RADIO_MODECNF0_RU_FAST
     | NRF_RADIO_MODECNF0_DTX_B1);
@@ -792,7 +792,7 @@ void nrf5x_ble_event_address_matched(struct nrf5x_ble_private_s *pv)
   while (!nrf_event_check(BLE_RADIO_ADDR, NRF_RADIO_BCMATCH)) {
     uint32_t state = nrf_reg_get(BLE_RADIO_ADDR, NRF_RADIO_STATE);
     if (state != NRF_RADIO_STATE_RX && state != NRF_RADIO_STATE_TX
-#if defined(CONFIG_ARCH_NRF52)
+#if 52000 <= CONFIG_NRF5X_MODEL && CONFIG_NRF5X_MODEL <= 52999
         && state != NRF_RADIO_STATE_RXIDLE && state != NRF_RADIO_STATE_TXIDLE
 #endif
         ) {
