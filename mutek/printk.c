@@ -109,6 +109,7 @@ ssize_t logk_(const char *format, ...)
 void logk_set_filter(struct printk_backend_s *backend,
                      const char id[4], enum logk_level_e level)
 {
+  CPU_INTERRUPT_SAVESTATE_DISABLE;
   GCT_FOREACH(printk_backend, &printk_backends, s, {
       if (backend == NULL || backend == s)
         {
@@ -116,13 +117,16 @@ void logk_set_filter(struct printk_backend_s *backend,
           s->level = level;
         }
   });
+  CPU_INTERRUPT_RESTORESTATE;
 }
 
 static PRINTF_OUTPUT_FUNC(printk_output)
 {
+  CPU_INTERRUPT_SAVESTATE_DISABLE;
   GCT_FOREACH(printk_backend, &printk_backends, s, {
       s->handler(s, str, len);
   });
+  CPU_INTERRUPT_RESTORESTATE;
 }
 
 inline ssize_t vprintk(const char *format, va_list ap)
@@ -155,13 +159,13 @@ ssize_t printk(const char *format, ...)
 void writek(const char *data, size_t len)
 {
 #ifdef CONFIG_MUTEK_PRINTK_LOCK
-    lock_spin(&printk_lock);
+    LOCK_SPIN_IRQ(&printk_lock);
 #endif
     GCT_FOREACH(printk_backend, &printk_backends, s, {
         s->handler(s, data, len);
     });
 #ifdef CONFIG_MUTEK_PRINTK_LOCK
-    lock_release(&printk_lock);
+    LOCK_RELEASE_IRQ(&printk_lock);
 #endif
 }
 
@@ -170,11 +174,11 @@ void writek(const char *data, size_t len)
 void hexdumpk(uintptr_t address, const void *data, size_t len)
 {
 #ifdef CONFIG_MUTEK_PRINTK_LOCK
-  lock_spin(&printk_lock);
+  LOCK_SPIN_IRQ(&printk_lock);
 #endif
   formatter_hexdump(NULL, printk_output, address, data, len);
 #ifdef CONFIG_MUTEK_PRINTK_LOCK
-  lock_release(&printk_lock);
+  LOCK_RELEASE_IRQ(&printk_lock);
 #endif
 }
 
