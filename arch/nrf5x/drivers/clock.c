@@ -240,7 +240,6 @@ static void nrf5x_clock_lf_calibrate(struct nrf5x_clock_context_s *pv)
       && pv->cal_pending
       && !pv->cal_running
       && !pv->cal_temp_running) {
-    dwritek("(", 1);
     pv->cal_running = 1;
     pv->cal_temp_running = 1;
     nrf_task_trigger(TEMP_ADDR, NRF_TEMP_START);
@@ -257,8 +256,6 @@ static DEV_IRQ_SRC_PROCESS(nrf5x_temp_irq)
     return;
   nrf_event_clear(TEMP_ADDR, NRF_TEMP_DATARDY);
 
-  dwritek("T", 1);
-
   pv->cal_temp_running = 0;
 
   if (pv->cal_running)
@@ -269,8 +266,6 @@ static DEV_IRQ_SRC_PROCESS(nrf5x_temp_irq)
 
   if (__ABS(pv->temp_cur - pv->cal_temp_last) > 2 && !pv->cal_pending) {
     pv->cal_pending = 1;
-
-    dwritek("!", 1);
 
     if (nrf5x_clock_hfxo_is_running())
       nrf5x_clock_lf_calibrate(pv);
@@ -304,8 +299,6 @@ static DEV_IRQ_SRC_PROCESS(nrf5x_clock_irq)
 #if LFRC_CAL
   if (nrf_event_check(CLOCK_ADDR, NRF_CLOCK_DONE)) {
     nrf_event_clear(CLOCK_ADDR, NRF_CLOCK_DONE);
-
-    dwritek(")", 1);
 
     pv->cal_temp_last = pv->temp_cur;
     pv->cal_done = pv->cal_en;
@@ -367,8 +360,6 @@ static DEV_IRQ_SRC_PROCESS(nrf5x_clock_irq)
         pv->cal_done = 0;
         pv->cal_pending = 1;
 
-        dwritek("H", 1);
-
         if (nrf5x_clock_hfxo_is_running())
           nrf5x_clock_lf_calibrate(pv);
         else
@@ -415,13 +406,10 @@ static DEV_IRQ_SRC_PROCESS(nrf5x_clock_irq)
   if (nrf_event_check(CLOCK_ADDR, NRF_CLOCK_CTTO)) {
     nrf_event_clear(CLOCK_ADDR, NRF_CLOCK_CTTO);
 
-    dwritek("?", 1);
-
     pv->cal_timeout_count++;
 
     if (pv->cal_timeout_count >= 2 && !pv->cal_temp_running) {
       pv->cal_temp_running = 1;
-      dwritek("t", 1);
       nrf_task_trigger(TEMP_ADDR, NRF_TEMP_START);
     }
 
