@@ -18,6 +18,8 @@
     Copyright (c) Nicolas Pouillon <nipo@ssji.net>, 2014
 */
 
+#define LOGK_MODULE_ID "ni2c"
+
 #include <hexo/types.h>
 #include <hexo/endian.h>
 #include <hexo/iospace.h>
@@ -57,7 +59,7 @@ void nrf5x_i2c_transfer_error(struct nrf5x_i2c_priv_s *pv)
 
   uint32_t error = nrf_reg_get(pv->addr, NRF_I2C_ERRORSRC);
 
-  logk_trace("%s %p src %d\n", __FUNCTION__, tr, error);
+  logk_trace("%s %p src %d", __FUNCTION__, tr, error);
 
   nrf_reg_set(pv->addr, NRF_I2C_ERRORSRC, error);
 
@@ -79,7 +81,7 @@ void nrf5x_i2c_tx_continue(struct nrf5x_i2c_priv_s *pv)
 {
   struct dev_i2c_ctrl_transfer_s *tr = pv->current;
 
-  logk_trace("%s %p\n", __FUNCTION__, tr);
+  logk_trace("%s %p", __FUNCTION__, tr);
 
   if (!tr || tr->err)
     return;
@@ -87,7 +89,7 @@ void nrf5x_i2c_tx_continue(struct nrf5x_i2c_priv_s *pv)
   assert(!(tr->type & _DEV_I2C_READ_OP));
 
   if (tr->size == 0) {
-    logk_trace("%s %p TX done %x\n", __FUNCTION__, tr, tr->type);
+    logk_trace("%s %p TX done %x", __FUNCTION__, tr, tr->type);
 
     switch (tr->type & _DEV_I2C_ENDING_MASK) {
     default:
@@ -99,19 +101,19 @@ void nrf5x_i2c_tx_continue(struct nrf5x_i2c_priv_s *pv)
       pv->started = 0;
 
     case _DEV_I2C_CONTINUOUS:
-      logk_trace("%s %p kroutine_exec(), started=%d, err=%d\n", __FUNCTION__, tr, pv->started, tr->err);
+      logk_trace("%s %p kroutine_exec(), started=%d, err=%d", __FUNCTION__, tr, pv->started, tr->err);
       kroutine_exec(&tr->kr);
       pv->current = NULL;
       return;
     }
   }
 
-  logk_trace("%s %p TX %d bytes left: %02x\n", __FUNCTION__, tr, tr->size, tr->data[0]);
+  logk_debug("%s %p TX %d bytes left: %02x", __FUNCTION__, tr, tr->size, tr->data[0]);
 
   if (tr->size == 1) {
     switch (tr->type & _DEV_I2C_ENDING_MASK) {
     case _DEV_I2C_STOP:
-      logk_trace("%s %p stopping after next byte\n", __FUNCTION__, tr);
+      logk_trace("%s %p stopping after next byte", __FUNCTION__, tr);
       nrf_short_set(pv->addr, bit(NRF_I2C_BB_STOP));
       break;
     }
@@ -128,7 +130,7 @@ void nrf5x_i2c_rx_continue(struct nrf5x_i2c_priv_s *pv)
 {
   struct dev_i2c_ctrl_transfer_s *tr = pv->current;
 
-  logk_trace("%s %p\n", __FUNCTION__, tr);
+  logk_trace("%s %p", __FUNCTION__, tr);
 
   if (!tr || tr->err)
     return;
@@ -142,11 +144,11 @@ void nrf5x_i2c_rx_continue(struct nrf5x_i2c_priv_s *pv)
   tr->data++;
   tr->size--;
 
-  logk_trace("%s %p RX %02x, %d bytes left\n", __FUNCTION__, tr, data, tr->size);
+  logk_debug("%s %p RX %02x, %d bytes left", __FUNCTION__, tr, data, tr->size);
 
   switch (tr->size) {
   case 0:
-    logk_trace("%s %p RX done %x\n", __FUNCTION__, tr, tr->type);
+    logk_trace("%s %p RX done %x", __FUNCTION__, tr, tr->type);
 
     switch (tr->type & _DEV_I2C_ENDING_MASK) {
     default:
@@ -154,7 +156,7 @@ void nrf5x_i2c_rx_continue(struct nrf5x_i2c_priv_s *pv)
       return;
 
     case _DEV_I2C_CONTINUOUS:
-      logk_trace("%s %p kroutine_exec(), err=%d\n", __FUNCTION__, tr, tr->err);
+      logk_trace("%s %p kroutine_exec(), err=%d", __FUNCTION__, tr, tr->err);
       kroutine_exec(&tr->kr);
       pv->current = NULL;
       return;
@@ -167,7 +169,7 @@ void nrf5x_i2c_rx_continue(struct nrf5x_i2c_priv_s *pv)
     case _DEV_I2C_CONTINUOUS:
       break;
     case _DEV_I2C_STOP:
-      logk_trace("%s %p stopping after next byte\n", __FUNCTION__, tr);
+      logk_trace("%s %p stopping after next byte", __FUNCTION__, tr);
       nrf_short_set(pv->addr, bit(NRF_I2C_BB_STOP));
       break;
     }
@@ -188,7 +190,7 @@ void nrf5x_i2c_transfer_start(struct nrf5x_i2c_priv_s *pv)
 
   nrf_reg_set(pv->addr, NRF_I2C_ADDR, tr->saddr);
 
-  logk_debug("%s %p %s %s%s%s%s saddr %02x, %d bytes\n", __FUNCTION__, tr,
+  logk_debug("%s %p %s %s%s%s%s saddr %02x, %d bytes", __FUNCTION__, tr,
           pv->started ? "continue" : "starting",
           tr->type & _DEV_I2C_READ_OP ? "read," : "write,",
           (tr->type & _DEV_I2C_ENDING_MASK) == _DEV_I2C_STOP ? "stop" : "",
@@ -196,8 +198,11 @@ void nrf5x_i2c_transfer_start(struct nrf5x_i2c_priv_s *pv)
           (tr->type & _DEV_I2C_ENDING_MASK) == _DEV_I2C_RESTART ? "restart" : "",
           tr->saddr, tr->size);
 
+  if (!(tr->type & _DEV_I2C_READ_OP))
+    logk_debug(" [%P]", tr->data, tr->size);
+
   if (tr->size == 1) {
-    logk_trace("%s %p last byte\n", __FUNCTION__, tr);
+    logk_trace("%s %p last byte", __FUNCTION__, tr);
     if ((tr->type & _DEV_I2C_ENDING_MASK) == _DEV_I2C_STOP)
       nrf_short_set(pv->addr, bit(NRF_I2C_BB_STOP));
     else if (tr->type & _DEV_I2C_READ_OP)
@@ -238,9 +243,9 @@ void nrf5x_i2c_transfer_start(struct nrf5x_i2c_priv_s *pv)
 
   if (!(tr->type & _DEV_I2C_READ_OP)) {
     nrf_reg_set(pv->addr, NRF_I2C_TXD, tr->data[0]);
+    logk_debug("%s %p TX %02x", __FUNCTION__, tr, tr->data[0]);
     tr->data++;
     tr->size--;
-    logk_trace("%s %p TX %02x\n", __FUNCTION__, tr, tr->data[0]);
   }
 }
 
@@ -269,7 +274,7 @@ static DEV_IRQ_SRC_PROCESS(nrf5x_i2c_irq)
   if (nrf_event_check(pv->addr, NRF_I2C_STOPPED)) {
     struct dev_i2c_ctrl_transfer_s *tr = pv->current;
 
-    logk_trace("%s %p stopped\n", __FUNCTION__, tr);
+    logk_trace("%s %p stopped", __FUNCTION__, tr);
 
     nrf_event_clear(pv->addr, NRF_I2C_STOPPED);
 
@@ -284,7 +289,7 @@ static DEV_IRQ_SRC_PROCESS(nrf5x_i2c_irq)
       }
 
       assert(tr->size == 0 || tr->err);
-      logk_trace("%s %p kroutine_exec(), err=%d\n", __FUNCTION__, tr, tr->err);
+      logk_trace("%s %p kroutine_exec(), err=%d", __FUNCTION__, tr, tr->err);
       kroutine_exec(&tr->kr);
       pv->current = NULL;
     }
@@ -333,7 +338,7 @@ static DEV_I2C_CTRL_TRANSFER(nrf5x_i2c_transfer)
 
   switch (tr->type) {
   case DEV_I2C_RESET:
-    logk_debug("%s reset\n", __FUNCTION__);
+    logk_debug("%s reset", __FUNCTION__);
 
     LOCK_SPIN_IRQ(&dev->lock);
     pv->started = 0;
@@ -345,7 +350,7 @@ static DEV_I2C_CTRL_TRANSFER(nrf5x_i2c_transfer)
 
   case DEV_I2C_READ_RESTART:
     tr->err = -ENOTSUP;
-    logk_debug("%s %p read restart unsupported, kroutine_exec(), err=%d\n", __FUNCTION__, tr, tr->err);
+    logk_debug("%s %p read restart unsupported, kroutine_exec(), err=%d", __FUNCTION__, tr, tr->err);
     kroutine_exec(&tr->kr);
     return;
 
@@ -355,7 +360,7 @@ static DEV_I2C_CTRL_TRANSFER(nrf5x_i2c_transfer)
 
   if (tr->size == 0) {
     tr->err = -EINVAL;
-    logk_debug("%s %p len=0, kroutine_exec(), err=%d\n", __FUNCTION__, tr, tr->err);
+    logk_debug("%s %p len=0, kroutine_exec(), err=%d", __FUNCTION__, tr, tr->err);
     kroutine_exec(&tr->kr);
     return;
   }
