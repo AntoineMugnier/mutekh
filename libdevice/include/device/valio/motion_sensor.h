@@ -30,6 +30,24 @@
 
 #include <device/class/valio.h>
 
+enum valio_ms_att_e {
+    /** A struct valio_ms_state_s with current gravity vector, instant rotation
+        and magnetic measurements.
+        Read or Wait event based on a defined status. */
+    VALIO_MS_STATE = CONFIG_DEVICE_VALIO_MOTION_SENSOR_ATTRIBUTE_FIRST,
+
+    /** A struct valio_ms_data with all possible values.
+        Set offset registers. */
+    VALIO_MS_CALIB,
+
+    /** A struct @ref valio_ms_config_s. Read or Write. */
+    VALIO_MS_CONFIG,
+};
+
+/**
+   Defined axis for a motion sensor unit. Not all devices are required
+   to support all axis.
+ */
 enum valio_ms_axis_e {
     VALIO_MS_ACCEL_X,
     VALIO_MS_ACCEL_Y,
@@ -43,31 +61,12 @@ enum valio_ms_axis_e {
     VALIO_MS_AXIS_COUNT,
 };
 
-enum valio_ms_status_e {
-    VALIO_MS_STATUS_INACTIVE,
-    VALIO_MS_STATUS_ACTIVE
-};
-
-enum valio_ms_att_e {
-    /** A struct valio_ms_state_s with current gravity vector, instant rotation
-        and magnetic measurements.
-        Read or Wait event based on a defined status. */
-    VALIO_MS_STATE = CONFIG_DEVICE_VALIO_MOTION_SENSOR_ATTRIBUTE_FIRST,
-
-    /** A struct valio_ms_data with all possible values.
-        Set offset registers. */
-    VALIO_MS_CALIBRATE,
-
-    /** A struct valio_ms_accel_config. Read or Write. */
-    VALIO_MS_ACCEL_CONFIG,
-};
-
 /**
    For an object lying still, in its natural orientation, nominal
    terrestrial gravity is -1g along Z axis.
 
    Acceleration values are in mG (1e-3 g).
-   Rotation values are in mdps (1e-3 degrees per second).
+   Rotation values are in 1/64 dps (2^-6 degrees per second).
    Magnetic sensing values are in µT (1e-6 Tesla)
  */
 struct valio_ms_data_s
@@ -77,18 +76,32 @@ struct valio_ms_data_s
 
 struct valio_ms_state_s
 {
-  enum valio_ms_status_e  status;
-  struct valio_ms_data_s  data;
+  struct valio_ms_data_s data;
+
+  /** Whether device is currently considered active (see config). */
+  bool_t active;
 };
 
-struct valio_ms_accel_config_s
+struct valio_ms_config_s
 {
-  uint16_t  active_data_rate_hz;
-  uint16_t  inactive_data_rate_hz;
-  uint16_t  active_threshold_mg;
-  uint16_t  inactive_threshold_mg;
-  uint16_t  active_time_ms;
-  uint16_t  inactive_time_ms;
+  /** Main data streaming period, in ms. */
+  uint16_t period;
+
+  /** Accelerometer threshold, in mG, over/under which device decide
+      it is active/inactive. */
+  uint16_t threshold;
+
+  /** Minimum time in @tt ms to stay with changes in acceleration less
+      than @tt threshold in order to be declared inactive.  This is a
+      best case timing.  Inactivity should not be declared before this
+      time. */
+  uint16_t sleep_time;
+
+  /** Maximum time in @tt ms to run with changes in acceleration
+      values over @tt threshold in order to be declared active.  This
+      is a worst case timing.  Active mode could be declared before
+      that. */
+  uint16_t wakeup_time;
 };
 
 #endif
