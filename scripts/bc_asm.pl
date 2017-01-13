@@ -861,7 +861,7 @@ our %asm = (
     'loop' => {
         words => 1, code => 0x3000, argscnt => 2,
         parse => \&parse_loop, backend => ('loop'),
-        flushregs => 1, op_jmp => 1
+        flushregs => 1, reloadregs => 1, op_jmp => 1
     },
     'pack8' => {
         words => 1, code => 0x3800, argscnt => 2,
