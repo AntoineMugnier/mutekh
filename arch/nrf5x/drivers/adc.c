@@ -18,8 +18,11 @@
     Copyright Nicolas Pouillon <nipo@ssji.net> (c) 2015
 */
 
+#define LOGK_MODULE_ID "nadc"
+
 #include <mutek/mem_alloc.h>
 #include <mutek/kroutine.h>
+#include <mutek/printk.h>
 
 #include <hexo/types.h>
 #include <hexo/endian.h>
