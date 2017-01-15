@@ -63,6 +63,9 @@ static void pcf8574_handle_next(struct device_s *dev)
   struct pcf8574_priv_s *pv = dev->drv_pv;
   struct dev_gpio_rq_s *rq;
 
+  if (pv->state != STATE_IDLE)
+    return;
+  
   if (pv->evented) {
     dprintk("%s evented, reading\n", __FUNCTION__);
     pv->evented = 0;
@@ -180,6 +183,7 @@ static DEV_GPIO_SET_MODE(pcf8574_set_mode)
 {
   struct device_s *dev = gpio->dev;
   struct pcf8574_priv_s *pv = dev->drv_pv;
+  (void)pv;
 
   switch (mode) {
   case DEV_PIN_PUSHPULL:
