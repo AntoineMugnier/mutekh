@@ -1,0 +1,139 @@
+/*
+    This file is part of MutekH.
+
+    MutekH is free software; you can redistribute it and/or modify it
+    under the terms of the GNU Lesser General Public License as
+    published by the Free Software Foundation; version 2.1 of the
+    License.
+
+    MutekH is distributed in the hope that it will be useful, but
+    WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+    Lesser General Public License for more details.
+
+    You should have received a copy of the GNU Lesser General Public
+    License along with MutekH; if not, write to the Free Software
+    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+    02110-1301 USA.
+
+    Copyright Sebastien Cerdan <sebcerdan@gmail.com> (c) 2014
+    Copyright Vincent DEFILIPPI <vincentdefilippi@gmail.com> (c) 2016
+*/
+
+#include "adxl362.h"
+#include "adxl362_regs.h"
+
+.custom spi
+.name adxl362_app
+
+#define ADXL362_WRITE_REG(addr, val) ((val << 16) | ((addr) << 8) | (ADXL362_CMD_WRITE_REG))
+#define ADXL362_READ_REG(addr)  (((addr) << 8) | (ADXL362_CMD_READ_REG))
+
+    /*
+.func adxl362_reg_get
+    .input    %1 reg, %15 link
+    .output   %0 value
+
+    cst8      %0, ADXL362_CMD_WRITE_REG
+    pack8     %0, 2
+    spi_wr    %0, 2, CS_START
+    spi_rd    %0, 1, CS_END
+    unpack8   %0, 1
+    ret       %link
+.endfunc
+    */
+    
+.func adxl362_reg_set
+    .input    %1 reg, %2 value, %15 link
+    .clobber  %0
+
+    cst8      %0, ADXL362_CMD_WRITE_REG
+    pack8     %0, 3
+    spi_wr    %0, 3, CS_PULSE
+    ret       %link
+.endfunc
+
+.func adxl362_bc_reset
+    .export adxl362_bc_reset
+    .input %7 reset_latency
+    .clobber %0, %1, %2, %15
+    
+    /* Soft reset */
+    cst8      %adxl362_reg_set:reg, ADXL362_REG_SOFT_RESET
+    cst8      %adxl362_reg_set:value, ADXL362_SOFT_RESET_CODE
+    call8     %adxl362_reg_set:link, adxl362_reg_set
+
+    /* Delay after reset */
+    spi_yield_delay  %reset_latency
+
+    /* Check the device ID */
+    cst16      %0, ADXL362_READ_REG(ADXL362_REG_DEVID_AD), 0
+    pack16le   %0, 1, 2
+    spi_wr     %0, 2, CS_START
+    spi_rd     %0, 3, CS_END
+    unpack32le %0, 1, 3
+    extz       %0, 23
+    cst32      %1, (ADXL362_REG_DEVID_AD_CONST | (ADXL362_REG_DEVID_MST_CONST << 8) | (ADXL362_REG_PARTID_CONST << 16)), 0
+    neq        %1, %0
+     abort
+
+    end
+.endfunc
+    
+.func adxl362_bc_config
+    .export adxl362_bc_config
+    .input  %3 config0, %4 config1, %5 config2, %6 config3
+    .clobber %0, %3, %4, %5, %6
+
+    /* Write config registers */
+    cst16      %0, ADXL362_WRITE_REG(ADXL362_REG_THRESH_ACT_L, 0), 0
+    pack16le   %0, 1, 2
+    spi_wr     %0, 2, CS_START
+    pack32le   %config0, 4, 14
+    spi_wr     %config0, 14, CS_END
+    
+    end
+.endfunc
+
+.func adxl362_bc_read_conv
+    .export adxl362_bc_read_conv
+    .output %6 status, %7 fifo, %8 xdata, %9 ydata, %10 zdata
+    .clobber %15, %0, %1, %2, %5 rb
+
+    cst16      %1, ADXL362_READ_REG(ADXL362_REG_XDATA), 0
+    pack16le   %1, 1, 2
+    spi_wr     %1, 2, CS_START
+    spi_rd     %rb, 12, CS_END
+    unpack16le %rb, 6, 12
+
+    shi32r     %status, 8
+    exts       %xdata, 11
+    exts       %ydata, 11
+    exts       %zdata, 11
+
+    cst8       %adxl362_reg_set:reg, ADXL362_REG_INTMAP1
+    cst8       %adxl362_reg_set:value, ADXL362_REG_INTMAP1_INACT_MASK | ADXL362_REG_INTMAP1_ACT_MASK | ADXL362_REG_INTMAP1_INT_LOW_MASK
+
+    tst32s     %status, bitpos(ADXL362_REG_STATUS_AWAKE_MASK)
+     bit32s    %adxl362_reg_set:value, bitpos(ADXL362_REG_INTMAP1_DATA_READY_MASK)
+    tst32c     %status, bitpos(ADXL362_REG_STATUS_AWAKE_MASK)
+     bit32s    %adxl362_reg_set:value, bitpos(ADXL362_REG_INTMAP1_AWAKE_MASK)
+    call8      %adxl362_reg_set:link, adxl362_reg_set
+    
+    end
+.endfunc
+
+.func adxl362_bc_set_idle
+    .export adxl362_bc_set_idle
+    .clobber %0, %1, %2, %15
+
+    cst8      %adxl362_reg_set:reg, ADXL362_REG_ACT_INACT_CTL
+    cst8      %adxl362_reg_set:value, 0
+    call8     %adxl362_reg_set:link, adxl362_reg_set
+
+    cst8      %adxl362_reg_set:reg, ADXL362_REG_POWER_CTL
+    cst8      %adxl362_reg_set:value, ADXL362_REG_POWER_CTL_MEASURE(STANDBY)
+    call8     %adxl362_reg_set:link, adxl362_reg_set
+
+    end
+.endfunc
