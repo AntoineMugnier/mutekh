@@ -383,20 +383,34 @@ static DEV_IRQ_SRC_PROCESS(nrf5x_gpio_process)
 {
   struct nrf5x_gpio_private_s *pv = ep->base.dev->drv_pv;
   bool_t evented = 1;
+  uint32_t again = 100;
 
-  while (evented) {
+  while (evented && --again) {
     evented = 0;
 
 #if CONFIG_DRIVER_NRF5X_GPIO_ICU_CHANNEL_COUNT
     for (int8_t te = 0; te < CONFIG_DRIVER_NRF5X_GPIO_ICU_CHANNEL_COUNT; ++te) {
-      if (!nrf_event_check(GPIOTE_ADDR, NRF_GPIOTE_IN(te + CONFIG_DRIVER_NRF5X_GPIO_TE_FIRST)))
+      struct dev_irq_sink_s *sink = pv->irq_out + te;
+      bool_t do_process = 0;
+
+      if (pv->gpiote_pin[te] < 0)
         continue;
 
+      bool_t gpiote_triggered = nrf_event_check(GPIOTE_ADDR, NRF_GPIOTE_IN(te + CONFIG_DRIVER_NRF5X_GPIO_TE_FIRST));
       nrf_event_clear(GPIOTE_ADDR, NRF_GPIOTE_IN(te + CONFIG_DRIVER_NRF5X_GPIO_TE_FIRST));
 
-      struct dev_irq_sink_s *sink = pv->irq_out + te;
-      device_irq_sink_process(sink, 0);
-      evented = 1;
+      if (sink->sense_link & (DEV_IRQ_SENSE_FALLING_EDGE | DEV_IRQ_SENSE_RISING_EDGE)) {
+        do_process |= gpiote_triggered;
+      } else {
+        bool_t value = bit_get(nrf_reg_get(GPIO_ADDR, NRF_GPIO_IN), pv->gpiote_pin[te]);
+        do_process |= (sink->sense_link & DEV_IRQ_SENSE_HIGH_LEVEL) && value;
+        do_process |= (sink->sense_link & DEV_IRQ_SENSE_LOW_LEVEL) && !value;
+      }
+
+      if (do_process) {
+        device_irq_sink_process(sink, 0);
+        evented = 1;
+      }
     }
 #endif
 
