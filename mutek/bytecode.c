@@ -46,6 +46,29 @@ bc_set_regs(struct bc_context_s *ctx, uint16_t mask, ...)
   va_end(ap);
 }
 
+error_t
+bc_load(struct bc_descriptor_s *desc,
+        const uint8_t *blob, size_t len)
+{
+  if ((uintptr_t)blob & 1)
+    return -ENOTSUP;
+
+  if (len < /* header */ 4)
+    return -EINVAL;
+
+  size_t count = endian_le16_na_load(blob + 2);
+
+  if (len < /* header */ 4 + count * 2)
+    return -EINVAL;
+
+  desc->code = blob + 4;
+  desc->run = &bc_run_vm;
+  desc->flags = endian_le16_na_load(blob);
+  desc->op_count = count;
+
+  return 0;
+}
+
 void
 bc_init(struct bc_context_s *ctx,
         const struct bc_descriptor_s *desc)

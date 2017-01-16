@@ -448,7 +448,7 @@ struct bc_context_s;
 typedef struct bytecode_entry_s bytecode_entry_t;
 
 /** @internal */
-typedef reg_t (bc_run_t)(struct bc_context_s *ctx, int_fast32_t max_cycles);
+typedef bc_opcode_t (bc_run_t)(struct bc_context_s *ctx, int_fast32_t max_cycles);
 
 /** @This is the bytecode descriptor header */
 struct bc_descriptor_s
@@ -487,6 +487,19 @@ struct bc_context_s
 void
 bc_init(struct bc_context_s *ctx,
         const struct bc_descriptor_s *desc);
+
+/** @This initializes a bytecode descriptor from a bytecode loadable
+    blob. The format of the blob is:
+    @list
+      @item flags in 16 bits little endian representation
+      @item words count in 16 bits little endian representation
+      @item instruction words
+    @end list
+    The @tt blob pointer must be 16 bits aligned.
+*/
+error_t
+bc_load(struct bc_descriptor_s *desc,
+        const uint8_t *blob, size_t len);
 
 /** @see bc_set_regs */
 void
