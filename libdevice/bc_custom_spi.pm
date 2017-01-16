@@ -106,8 +106,8 @@ sub parse_wr
 sub parse_swp
 {
     my $thisop = shift;
-    my $wr = main::check_reg( $thisop, 0 );
-    my $rd = main::check_reg( $thisop, 1 );
+    my $rd = main::check_reg( $thisop, 0 );
+    my $wr = main::check_reg( $thisop, 1 );
     my $l = main::check_num( $thisop, 2, 1, 16 );
     $thisop->{packin_reg} = $wr;
     $thisop->{packin_bytes} = $l;
