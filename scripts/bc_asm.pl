@@ -416,6 +416,10 @@ sub parse_loop
     push @{$thisop->{out}}, check_reg($thisop, 0);
     push @{$thisop->{in}}, check_reg($thisop, 0);
     $thisop->{target} = check_label8($thisop, 1, 64);
+
+    if ($thisop->{target}->{addr} < $thisop->{addr}) {
+        $thisop->{wbout} = 1;
+    }
 }
 
 our $le = ($main::backend_endian eq 'little');
@@ -861,7 +865,7 @@ our %asm = (
     'loop' => {
         words => 1, code => 0x3000, argscnt => 2,
         parse => \&parse_loop, backend => ('loop'),
-        flushregs => 1, reloadregs => 1, op_jmp => 1
+        flushregs => 1, op_jmp => 1, nocond => 1
     },
     'pack8' => {
         words => 1, code => 0x3800, argscnt => 2,
@@ -1140,14 +1144,18 @@ sub parse_args
         # handler
         $thisop->{flushin} = 0;
 
-        # bit mask of arguments which are written back by the instruction,
-        # ignored when flushin is set for the argument
+        # bit mask of input arguments which are written back by the
+        # instruction, ignored when flushin is set for the argument.
         $thisop->{wbin} = 0;
 
         # bit mask of arguments which require a register reload rather
         # than an output register allocation, updated by the backend
         # parse handler
         $thisop->{reloadout} = 0;
+
+        # bit mask of output arguments which are written back by the
+        # instruction, ignored when reloadout is set for the argument.
+        $thisop->{wbout} = 0;
 
         # bit mask of clobbered cpu registers
         $thisop->{clobber} = 0;
@@ -1525,7 +1533,7 @@ sub write_asm
                     delete $w2r{$ow}->{$o};
                 }
             }
-            $wb{$o} = 1;
+            $wb{$o} = !(($thisop->{wbout} >> $j) & 1);
             push @wregout, $r2w{$o};
           }
         }
