@@ -1513,6 +1513,8 @@ sub write_asm
                 my $new = $reg_alloc->();
                 $r2w{$o} = $new;
                 $w2r{$new} = { $o => 1 };
+                # load previous register value when in a conditional
+                print OUT $backend->out_load($o, $new) if ( $cond );
             } else {
                 # handle copy on write
                 my @k = keys %{$w2r{$ow}};
