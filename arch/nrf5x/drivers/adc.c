@@ -18,8 +18,11 @@
     Copyright Nicolas Pouillon <nipo@ssji.net> (c) 2015
 */
 
+#define LOGK_MODULE_ID "nadc"
+
 #include <mutek/mem_alloc.h>
 #include <mutek/kroutine.h>
+#include <mutek/printk.h>
 
 #include <hexo/types.h>
 #include <hexo/endian.h>
@@ -38,8 +41,6 @@
 #include <arch/nrf5x/ids.h>
 
 #define ADC_ADDR NRF_PERIPHERAL_ADDR(NRF5X_ADC)
-
-#define dprintk(...) do{}while(0)
 
 DRIVER_PV(struct nrf5x_adc_private_s
 {
@@ -72,7 +73,7 @@ static DEV_IRQ_SRC_PROCESS(nrf5x_adc_irq)
   if (nrf_event_check(ADC_ADDR, NRF_ADC_END)) {
     nrf_event_clear(ADC_ADDR, NRF_ADC_END);
 
-    dprintk("ADC sample %d done: %d\n", pv->index, nrf_reg_get(ADC_ADDR, NRF_ADC_RESULT));
+    logk_trace("ADC sample %d done: %d\n", pv->index, nrf_reg_get(ADC_ADDR, NRF_ADC_RESULT));
 
     group->value[pv->index] = nrf_reg_get(ADC_ADDR, NRF_ADC_RESULT);
     nrf_task_trigger(ADC_ADDR, NRF_ADC_STOP);
@@ -122,7 +123,7 @@ static void nrf5x_adc_sample_next(struct device_s *dev)
   uint8_t line = __builtin_ctz(pv->todo);
   pv->todo &= ~bit(line);
 
-  dprintk("ADC sample %d line %d conf %08x\n", pv->index, line, pv->config[line]);
+  logk_trace("ADC sample %d line %d conf %08x\n", pv->index, line, pv->config[line]);
 
   nrf_reg_set(ADC_ADDR, NRF_ADC_CONFIG, 0
               | (line < pv->config_count ? pv->config[line] : 0)
@@ -163,7 +164,7 @@ static DEV_VALIO_REQUEST(nrf5x_adc_request)
 
   req->error = 0;
 
-  dprintk("%s %d %d %02x\n", __FUNCTION__, req->type, req->attribute, group->mask);
+  logk_trace("%s %d %d %02x\n", __FUNCTION__, req->type, req->attribute, group->mask);
 
   if (!group->mask) {
     req->error = -ENOTSUP;

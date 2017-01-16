@@ -18,6 +18,7 @@
 #
 
 CFLAGS=	-std=gnu99 -nostdlib -fno-builtin -foptimize-sibling-calls \
+        -Wno-multichar \
         -Wall -Wmissing-prototypes -Wno-main -Wno-unused-label -O$(CONFIG_COMPILE_OPTIMIZE)
 
 -include $(arch_SRC_DIR)/config.mk

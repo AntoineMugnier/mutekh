@@ -27,14 +27,6 @@
 #include <mutek/mem_alloc.h>
 #include <mutek/printk.h>
 
-//#define dprintk printk
-#ifndef dprintk
-# define dwritek(...) do{}while(0)
-# define dprintk(...) do{}while(0)
-#else
-# define dwritek writek
-#endif
-
 #include <device/device.h>
 #include <device/resources.h>
 #include <device/driver.h>
@@ -49,7 +41,7 @@
 
 #define LFRC_CAL defined(CONFIG_DRIVER_NRF5X_CLOCK_LFRC_CAL)
 
-#if defined(CONFIG_ARCH_NRF51)
+#if CONFIG_NRF5X_MODEL <= 51999
 # define HFRC_FREQ DEV_FREQ(16000000, 1, 2, 24) // 1%
 #else
 # define HFRC_FREQ DEV_FREQ(64000000, 1, 7, 24) // 1.5%
@@ -141,13 +133,13 @@ static uint_fast8_t nrf5x_clock_hf_src(void)
 
 static void nrf5x_clock_hfxo_start(void)
 {
-  dprintk("%s\n", __FUNCTION__);
+  logk_trace("%s\n", __FUNCTION__);
   nrf_task_trigger(CLOCK_ADDR, NRF_CLOCK_HFCLKSTART);
 }
 
 static void nrf5x_clock_hfxo_stop(void)
 {
-  dprintk("%s\n", __FUNCTION__);
+  logk_trace("%s\n", __FUNCTION__);
   nrf_task_trigger(CLOCK_ADDR, NRF_CLOCK_HFCLKSTOP);
 }
 
@@ -248,7 +240,6 @@ static void nrf5x_clock_lf_calibrate(struct nrf5x_clock_context_s *pv)
       && pv->cal_pending
       && !pv->cal_running
       && !pv->cal_temp_running) {
-    dwritek("(", 1);
     pv->cal_running = 1;
     pv->cal_temp_running = 1;
     nrf_task_trigger(TEMP_ADDR, NRF_TEMP_START);
@@ -265,8 +256,6 @@ static DEV_IRQ_SRC_PROCESS(nrf5x_temp_irq)
     return;
   nrf_event_clear(TEMP_ADDR, NRF_TEMP_DATARDY);
 
-  dwritek("T", 1);
-
   pv->cal_temp_running = 0;
 
   if (pv->cal_running)
@@ -277,8 +266,6 @@ static DEV_IRQ_SRC_PROCESS(nrf5x_temp_irq)
 
   if (__ABS(pv->temp_cur - pv->cal_temp_last) > 2 && !pv->cal_pending) {
     pv->cal_pending = 1;
-
-    dwritek("!", 1);
 
     if (nrf5x_clock_hfxo_is_running())
       nrf5x_clock_lf_calibrate(pv);
@@ -299,21 +286,19 @@ static DEV_IRQ_SRC_PROCESS(nrf5x_clock_irq)
 
   if (nrf_event_check(CLOCK_ADDR, NRF_CLOCK_LFCLKSTARTED)) {
     nrf_event_clear(CLOCK_ADDR, NRF_CLOCK_LFCLKSTARTED);
-    dprintk("%s LFCLK started\n", __FUNCTION__);
+    logk_trace("%s LFCLK started\n", __FUNCTION__);
     lf_check = 1;
   }
 
   if (nrf_event_check(CLOCK_ADDR, NRF_CLOCK_HFCLKSTARTED)) {
     nrf_event_clear(CLOCK_ADDR, NRF_CLOCK_HFCLKSTARTED);
-    dprintk("%s HFCLK started\n", __FUNCTION__);
+    logk_trace("%s HFCLK started\n", __FUNCTION__);
     hf_check = 1;
   }
 
 #if LFRC_CAL
   if (nrf_event_check(CLOCK_ADDR, NRF_CLOCK_DONE)) {
     nrf_event_clear(CLOCK_ADDR, NRF_CLOCK_DONE);
-
-    dwritek(")", 1);
 
     pv->cal_temp_last = pv->temp_cur;
     pv->cal_done = pv->cal_en;
@@ -375,8 +360,6 @@ static DEV_IRQ_SRC_PROCESS(nrf5x_clock_irq)
         pv->cal_done = 0;
         pv->cal_pending = 1;
 
-        dwritek("H", 1);
-
         if (nrf5x_clock_hfxo_is_running())
           nrf5x_clock_lf_calibrate(pv);
         else
@@ -423,13 +406,10 @@ static DEV_IRQ_SRC_PROCESS(nrf5x_clock_irq)
   if (nrf_event_check(CLOCK_ADDR, NRF_CLOCK_CTTO)) {
     nrf_event_clear(CLOCK_ADDR, NRF_CLOCK_CTTO);
 
-    dwritek("?", 1);
-
     pv->cal_timeout_count++;
 
     if (pv->cal_timeout_count >= 2 && !pv->cal_temp_running) {
       pv->cal_temp_running = 1;
-      dwritek("t", 1);
       nrf_task_trigger(TEMP_ADDR, NRF_TEMP_START);
     }
 
@@ -501,7 +481,7 @@ static DEV_CMU_CONFIG_OSC(nrf5x_clock_config_osc)
 
   case NRF_CLOCK_OSC_HFXO:
     if ((
-#if defined(CONFIG_ARCH_NRF51)
+#if CONFIG_NRF5X_MODEL <= 51999
          freq->num != 16000000 &&
 #endif
          freq->num != 32000000) || freq->denom != 1)
@@ -552,7 +532,7 @@ static DEV_CMU_COMMIT(nrf5x_clock_commit)
       ;
   }
 
-#if defined(CONFIG_ARCH_NRF51)
+#if CONFIG_NRF5X_MODEL <= 51999
   nrf_reg_set(CLOCK_ADDR, NRF_CLOCK_XTALFREQ,
               pv->hfxo_freq.num == 16000000
               ? NRF_CLOCK_XTALFREQ_16MHZ
@@ -588,7 +568,7 @@ static DEV_CLOCK_SRC_SETUP(nrf5x_clock_ep_setup)
 
 #ifdef CONFIG_DEVICE_CLOCK_THROTTLE
   case DEV_CLOCK_SRC_SETUP_THROTTLE:
-    dprintk("%s src %d throttle %d->%d\n",
+    logk_debug("%s src %d throttle %d->%d\n",
             __FUNCTION__,
             id,
             param->throttle.configid_old,
@@ -656,7 +636,7 @@ static void nrf5x_clock_configid_refresh(struct device_s *dev)
             __MAX((uint_fast8_t)pv->src[NRF_CLOCK_SRC_LFCLK].configid_min,
                   (uint_fast8_t)pv->src[NRF_CLOCK_SRC_HFCLK].configid_min));
 
-  dprintk("%s %d %d %d: %d->%d\n", __FUNCTION__,
+  logk_debug("%s %d %d %d: %d->%d\n", __FUNCTION__,
           (uint_fast8_t)pv->configid_app,
           (uint_fast8_t)pv->src[NRF_CLOCK_SRC_LFCLK].configid_min,
           (uint_fast8_t)pv->src[NRF_CLOCK_SRC_HFCLK].configid_min,
@@ -697,7 +677,7 @@ static KROUTINE_EXEC(nrf5x_clock_configid_update)
 
   LOCK_SPIN_IRQ(&dev->lock);
 
-  dprintk("%s %d->%d\n", __FUNCTION__,
+  logk_debug("%s %d->%d\n", __FUNCTION__,
           pv->configid_cur, pv->configid_next);
 
   pv->configid_cur = pv->configid_next;
@@ -743,7 +723,7 @@ static DEV_INIT(nrf5x_clock_init)
   if (err)
     goto free_pv;
 
-#if LFRC_CAL && defined(CONFIG_ARCH_NRF52)
+#if LFRC_CAL && 52000 <= CONFIG_NRF5X_MODEL && CONFIG_NRF5X_MODEL <= 52999
   // PAN 36: CLOCK: Some registers are not reset when expected
   nrf_event_clear(CLOCK_ADDR, NRF_CLOCK_CTTO);
   nrf_event_clear(CLOCK_ADDR, NRF_CLOCK_DONE);

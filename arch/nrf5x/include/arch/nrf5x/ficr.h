@@ -23,7 +23,7 @@
 
 #define NRF_FICR_CODEPAGESIZE     0x10000010 // Bytes
 #define NRF_FICR_CODESIZE         0x10000014 // Count of pages
-#if defined(CONFIG_ARCH_NRF51)
+#if CONFIG_NRF5X_MODEL <= 51999
 # define NRF_FICR_CLENR0           0x10000028
 # define NRF_FICR_PPFC             0x1000002C
 # define NRF_FICR_NUMRAMBLOCK      0x10000034
@@ -51,7 +51,7 @@
 
 # define NRF_FICR_RAM_BANKS  0x10000258
 
-#if defined(CONFIG_ARCH_NRF52)
+#if 52000 <= CONFIG_NRF5X_MODEL && CONFIG_NRF5X_MODEL <= 52999
 # define NRF_FICR_TEMP_A(x)  (0x10000404 + 4 * (x))
 # define NRF_FICR_TEMP_B(x)  (0x1000041c + 4 * (x))
 # define NRF_FICR_TEMP_T(x)  (0x10000434 + 4 * (x))

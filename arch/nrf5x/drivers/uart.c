@@ -41,12 +41,6 @@
 
 #include "printk.h"
 
-#if !defined(CONFIG_DRIVER_NRF5X_PRINTK) && 0
-# define dprintk printk
-#else
-# define dprintk(...) do{}while(0)
-#endif
-
 #define USE_RX 1
 #define USE_TX 2
 
@@ -98,7 +92,7 @@ static void nrf5x_uart_request_finish(struct device_s *dev,
                                       struct dev_char_rq_s *rq)
 {
   rq->error = 0;
-  dprintk("rq %p done\n", rq);
+  logk_trace("rq %p done\n", rq);
   kroutine_exec(&rq->base.kr);
 }
 
@@ -121,7 +115,7 @@ static bool_t nrf5x_uart_tx_fifo_refill(
 
         count = uart_fifo_pushback_array(&pv->tx_fifo, rq->data, rq->size);
 
-        dprintk("%s %p %d\n", __FUNCTION__, rq, count);
+        logk_trace("%s %p %d\n", __FUNCTION__, rq, count);
 
         if (!count)
             break;
@@ -159,7 +153,7 @@ static bool_t nrf5x_uart_rx_fifo_flush(
 
         count = uart_fifo_pop_array(&pv->rx_fifo, rq->data, rq->size);
 
-        dprintk("%s %d\n", __FUNCTION__, count);
+        logk_trace("%s %d\n", __FUNCTION__, count);
 
         if (!count)
             break;
@@ -189,14 +183,14 @@ static bool_t nrf5x_io_process_one(
     size_t popped_count;
     uint8_t chr;
 
-    dprintk("%s %p\n", __FUNCTION__, pv->addr);
+    logk_trace("%s %p\n", __FUNCTION__, pv->addr);
 
  rx_again:
     if (nrf_event_check(pv->addr, NRF_UART_RXDRDY)) {
       nrf_event_clear(pv->addr, NRF_UART_RXDRDY);
       pv->rxdrdy = 1;
 
-      dprintk("%s rxdrdy\n", __FUNCTION__);
+      logk_trace("%s rxdrdy\n", __FUNCTION__);
     }
 
     while (pv->rxdrdy && !uart_fifo_isfull(&pv->rx_fifo)) {
@@ -204,7 +198,7 @@ static bool_t nrf5x_io_process_one(
         pv->rxdrdy = 0;
 
         uint8_t chr = nrf_reg_get(pv->addr, NRF_UART_RXD);
-        dprintk("%s rx 0x%02x '%c'\n", __FUNCTION__, chr, chr < ' ' ? '.' : chr);
+        logk_trace("%s rx 0x%02x '%c'\n", __FUNCTION__, chr, chr < ' ' ? '.' : chr);
 
         uart_fifo_pushback(&pv->rx_fifo, chr);
     }
@@ -220,7 +214,7 @@ static bool_t nrf5x_io_process_one(
       nrf_event_clear(pv->addr, NRF_UART_TXDRDY);
       pv->txdrdy = 1;
 
-      dprintk("%s txdrdy\n", __FUNCTION__);
+      logk_trace("%s txdrdy\n", __FUNCTION__);
     }
 
     if (pv->txdrdy && !uart_fifo_isempty(&pv->tx_fifo)) {
@@ -228,7 +222,7 @@ static bool_t nrf5x_io_process_one(
 
         assert(popped_count);
 
-        dprintk("%s tx 0x%02x '%c'\n", __FUNCTION__, chr, chr < ' ' ? '.' : chr);
+        logk_trace("%s tx 0x%02x '%c'\n", __FUNCTION__, chr, chr < ' ' ? '.' : chr);
 
         processed = 1;
         pv->txdrdy = 0;
@@ -263,7 +257,7 @@ static DEV_CHAR_REQUEST(nrf5x_uart_request)
   dev_request_queue_root_t *q = NULL;
   uint16_t use = 0;
 
-  dprintk("%s REQUEST %p, type %x, use %x, %P\n", __FUNCTION__, rq,
+  logk_trace("%s REQUEST %p, type %x, use %x, %P\n", __FUNCTION__, rq,
           rq->type,
           dev->start_count & (USE_TX | USE_RX),
           rq->data, rq->size);
@@ -298,10 +292,10 @@ static DEV_CHAR_REQUEST(nrf5x_uart_request)
   dev_request_queue_pushback(q, &rq->base);
   if (!(dev->start_count & use)) {
     if (use == USE_RX) {
-      dprintk("%s START RX\n", __FUNCTION__);
+      logk_trace("%s START RX\n", __FUNCTION__);
       nrf_task_trigger(pv->addr, NRF_UART_STARTRX);
     } else {
-      dprintk("%s START TX\n", __FUNCTION__);
+      logk_trace("%s START TX\n", __FUNCTION__);
       nrf_task_trigger(pv->addr, NRF_UART_STARTTX);
     }
     dev->start_count |= use;
@@ -457,12 +451,12 @@ static DEV_USE(nrf5x_uart_char_use)
         dev->start_count &= ~USE_TX;
 
       if (before & ~dev->start_count & USE_RX) {
-        dprintk("%s STOP RX\n", __FUNCTION__);
+        logk_trace("%s STOP RX\n", __FUNCTION__);
         nrf_task_trigger(pv->addr, NRF_UART_STOPRX);
       }
 
       if (before & ~dev->start_count & USE_TX) {
-        dprintk("%s STOP TX\n", __FUNCTION__);
+        logk_trace("%s STOP TX\n", __FUNCTION__);
         nrf_task_trigger(pv->addr, NRF_UART_STOPTX);
       }
 

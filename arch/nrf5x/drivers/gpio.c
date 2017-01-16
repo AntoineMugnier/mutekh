@@ -39,11 +39,6 @@
 #include <mutek/printk.h>
 #include <string.h>
 
-//#define dprintk printk
-#ifndef dprintk
-# define dprintk(x...) do{}while(0)
-#endif
-
 #define GPIO_ADDR NRF5X_GPIO_ADDR
 
 struct nrf5x_gpio_private_s
@@ -130,7 +125,7 @@ static void nrf5x_gpio_mask_update(struct device_s *dev, uint32_t ref, uint32_t 
 {
   struct nrf5x_gpio_private_s *pv = dev->drv_pv;
 
-  dprintk("%s %x %x %x\n", __FUNCTION__, pv->mask, mask, ref);
+  logk_trace("%s %x %x %x\n", __FUNCTION__, pv->mask, mask, ref);
 
   uint32_t to_update = mask | pv->mask;
 
@@ -142,7 +137,7 @@ static void nrf5x_gpio_mask_update(struct device_s *dev, uint32_t ref, uint32_t 
     cnf &= ~NRF_GPIO_PIN_CNF_SENSE_MASK;
 
     if (mask & bit(pin)) {
-      dprintk("%s sensing pin %d %s\n", __FUNCTION__, pin, bit(pin) & ref ? "low" : "high");
+      logk_debug("%s sensing pin %d %s\n", __FUNCTION__, pin, bit(pin) & ref ? "low" : "high");
       cnf |= (ref & bit(pin)) ? NRF_GPIO_PIN_CNF_SENSE_LOW : NRF_GPIO_PIN_CNF_SENSE_HIGH;
     }
 
@@ -154,7 +149,7 @@ static void nrf5x_gpio_mask_update(struct device_s *dev, uint32_t ref, uint32_t 
   pv->mask = mask;
 
   if (pv->mask) {
-    dprintk("%s port enable\n", __FUNCTION__);
+    logk_debug("%s port enable\n", __FUNCTION__);
 
     nrf_event_clear(GPIOTE_ADDR, NRF_GPIOTE_PORT);
     nrf_it_enable(GPIOTE_ADDR, NRF_GPIOTE_PORT);
@@ -170,7 +165,7 @@ static KROUTINE_EXEC(nrf5x_gpio_until_check)
   uint32_t mask_next = 0;
   uint32_t ref_next = 0;
 
-  dprintk("%s -> %x\n", __FUNCTION__, cur & pv->mask);
+  logk_trace("%s -> %x\n", __FUNCTION__, cur & pv->mask);
 
   LOCK_SPIN_IRQ(&dev->lock);
 
@@ -181,11 +176,11 @@ static KROUTINE_EXEC(nrf5x_gpio_until_check)
       mask &= bit_range(rq->io_first, rq->io_last);
 
       if ((cur ^ ref) & mask) {
-        dprintk("%s %p done\n", __FUNCTION__, rq);
+        logk_debug("%s %p done\n", __FUNCTION__, rq);
         dev_request_queue_remove(&pv->queue, &rq->base);
         kroutine_exec(&rq->base.kr);
       } else {
-        dprintk("%s %p still waiting\n", __FUNCTION__, rq);
+        logk_debug("%s %p still waiting\n", __FUNCTION__, rq);
         mask_next |= mask;
         ref_next |= ref;
       }
@@ -202,7 +197,7 @@ static DEV_GPIO_SET_MODE(nrf5x_gpio_set_mode)
   struct device_s *dev = gpio->dev;
   uint32_t nrf_mode;
 
-  if (io_last > NRF_GPIO_COUNT)
+  if (io_last > CONFIG_NRF5X_GPIO_COUNT)
     return -ERANGE;
 
   if (nrf5x_gpio_mode(mode, &nrf_mode))
@@ -217,7 +212,7 @@ static DEV_GPIO_SET_MODE(nrf5x_gpio_set_mode)
     if (!bit_get(m, pin))
       continue;
 
-    dprintk("%s %d %x\n", __FUNCTION__, pin, nrf_mode);
+    logk_trace("%s %d %x\n", __FUNCTION__, pin, nrf_mode);
 
     nrf_reg_set(GPIO_ADDR, NRF_GPIO_PIN_CNF(pin), nrf_mode);
   }
@@ -231,10 +226,10 @@ static DEV_GPIO_SET_OUTPUT(nrf5x_gpio_set_output)
 {
   struct device_s *dev = gpio->dev;
 
-  if (io_last > NRF_GPIO_COUNT)
+  if (io_last > CONFIG_NRF5X_GPIO_COUNT)
     return -ERANGE;
 
-  if (io_first > NRF_GPIO_COUNT)
+  if (io_first > CONFIG_NRF5X_GPIO_COUNT)
     return -ERANGE;
 
   uint32_t mask = bit_range(io_first, io_last);
@@ -246,7 +241,7 @@ static DEV_GPIO_SET_OUTPUT(nrf5x_gpio_set_output)
   uint32_t out = nrf_reg_get(GPIO_ADDR, NRF_GPIO_OUT);
   uint32_t next = setm ^ (out & (setm ^ clearm));
 
-  dprintk("%s %d-%d clr %08x set %08x %08x -> %08x\n",
+  logk_trace("%s %d-%d clr %08x set %08x %08x -> %08x\n",
          __FUNCTION__, io_first, io_last, clearm, setm,
          out, next);
 
@@ -261,7 +256,7 @@ static DEV_GPIO_GET_INPUT(nrf5x_gpio_get_input)
 {
   struct device_s *dev = gpio->dev;
 
-  if (io_last > NRF_GPIO_COUNT)
+  if (io_last > CONFIG_NRF5X_GPIO_COUNT)
     return -ERANGE;
 
   LOCK_SPIN_IRQ(&dev->lock);
@@ -312,7 +307,7 @@ static DEV_IRQ_SINK_UPDATE(nrf5x_gpio_icu_sink_update)
   if (te >= CONFIG_DRIVER_NRF5X_GPIO_ICU_CHANNEL_COUNT)
     return;
 
-  if (pin >= NRF_GPIO_COUNT || pin < 0)
+  if (pin >= CONFIG_NRF5X_GPIO_COUNT || pin < 0)
     return;
 
   for (uint8_t i = 0; i < CONFIG_DRIVER_NRF5X_GPIO_ICU_CHANNEL_COUNT; ++i) {
@@ -368,7 +363,7 @@ static DEV_ICU_GET_SINK(nrf5x_gpio_icu_get_sink)
   struct device_s *dev = accessor->dev;
   struct nrf5x_gpio_private_s *pv = dev->drv_pv;
 
-  if (id >= NRF_GPIO_COUNT)
+  if (id >= CONFIG_NRF5X_GPIO_COUNT)
     return NULL;
 
 #if CONFIG_DRIVER_NRF5X_GPIO_ICU_CHANNEL_COUNT
@@ -388,20 +383,34 @@ static DEV_IRQ_SRC_PROCESS(nrf5x_gpio_process)
 {
   struct nrf5x_gpio_private_s *pv = ep->base.dev->drv_pv;
   bool_t evented = 1;
+  uint32_t again = 100;
 
-  while (evented) {
+  while (evented && --again) {
     evented = 0;
 
 #if CONFIG_DRIVER_NRF5X_GPIO_ICU_CHANNEL_COUNT
     for (int8_t te = 0; te < CONFIG_DRIVER_NRF5X_GPIO_ICU_CHANNEL_COUNT; ++te) {
-      if (!nrf_event_check(GPIOTE_ADDR, NRF_GPIOTE_IN(te + CONFIG_DRIVER_NRF5X_GPIO_TE_FIRST)))
+      struct dev_irq_sink_s *sink = pv->irq_out + te;
+      bool_t do_process = 0;
+
+      if (pv->gpiote_pin[te] < 0)
         continue;
 
+      bool_t gpiote_triggered = nrf_event_check(GPIOTE_ADDR, NRF_GPIOTE_IN(te + CONFIG_DRIVER_NRF5X_GPIO_TE_FIRST));
       nrf_event_clear(GPIOTE_ADDR, NRF_GPIOTE_IN(te + CONFIG_DRIVER_NRF5X_GPIO_TE_FIRST));
 
-      struct dev_irq_sink_s *sink = pv->irq_out + te;
-      device_irq_sink_process(sink, 0);
-      evented = 1;
+      if (sink->sense_link & (DEV_IRQ_SENSE_FALLING_EDGE | DEV_IRQ_SENSE_RISING_EDGE)) {
+        do_process |= gpiote_triggered;
+      } else {
+        bool_t value = bit_get(nrf_reg_get(GPIO_ADDR, NRF_GPIO_IN), pv->gpiote_pin[te]);
+        do_process |= (sink->sense_link & DEV_IRQ_SENSE_HIGH_LEVEL) && value;
+        do_process |= (sink->sense_link & DEV_IRQ_SENSE_LOW_LEVEL) && !value;
+      }
+
+      if (do_process) {
+        device_irq_sink_process(sink, 0);
+        evented = 1;
+      }
     }
 #endif
 
@@ -409,7 +418,7 @@ static DEV_IRQ_SRC_PROCESS(nrf5x_gpio_process)
     if (nrf_event_check(GPIOTE_ADDR, NRF_GPIOTE_PORT)) {
       nrf_it_disable(GPIOTE_ADDR, NRF_GPIOTE_PORT);
       nrf_event_clear(GPIOTE_ADDR, NRF_GPIOTE_PORT);
-      dprintk("%s port\n", __FUNCTION__);
+      logk_trace("%s port\n", __FUNCTION__);
 
       kroutine_exec(&pv->until_checker);
       evented = 1;
@@ -422,7 +431,7 @@ static DEV_IRQ_SRC_PROCESS(nrf5x_gpio_process)
 
 static DEV_IOMUX_SETUP(nrf5x_gpio_iomux_setup)
 {
-  if (io_id >= NRF_GPIO_COUNT)
+  if (io_id >= CONFIG_NRF5X_GPIO_COUNT)
     return -ERANGE;
 
   uint32_t nrf_mode;
@@ -439,7 +448,7 @@ static DEV_GPIO_REQUEST(nrf5x_gpio_request)
   struct device_s *dev = gpio->dev;
   struct nrf5x_gpio_private_s *pv = dev->drv_pv;
 
-  dprintk("%s\n", __FUNCTION__);
+  logk_trace("%s\n", __FUNCTION__);
 
   switch (req->type) {
   case DEV_GPIO_MODE:
@@ -480,13 +489,11 @@ static DEV_GPIO_REQUEST(nrf5x_gpio_request)
 
 static DEV_INIT(nrf5x_gpio_init)
 {
-  __unused__ uintptr_t addr = 0;
-  assert(!device_res_get_uint(dev, DEV_RES_MEM, 0, &addr, NULL) && GPIO_ADDR == addr);
-
 #if CONFIG_DRIVER_NRF5X_GPIO_ICU_CHANNEL_COUNT || defined(CONFIG_DRIVER_NRF5X_GPIO_UNTIL)
+  __unused__ uintptr_t addr = 0;
   struct nrf5x_gpio_private_s *pv;
 
-  assert(!device_res_get_uint(dev, DEV_RES_MEM, 1, &addr, NULL) && GPIOTE_ADDR == addr);
+  assert(!device_res_get_uint(dev, DEV_RES_MEM, 0, &addr, NULL) && GPIOTE_ADDR == addr);
 
   pv = mem_alloc(sizeof(*pv), mem_scope_sys);
   if (!pv)
@@ -524,7 +531,7 @@ static DEV_INIT(nrf5x_gpio_init)
 #endif
 
 
-  for (uint8_t pin = 0; pin <= 31; ++pin)
+  for (uint8_t pin = 0; pin < CONFIG_NRF5X_GPIO_COUNT; ++pin)
     nrf_reg_set(GPIO_ADDR, NRF_GPIO_PIN_CNF(pin), 0
                 | NRF_GPIO_PIN_CNF_DIR_INPUT
                 | NRF_GPIO_PIN_CNF_INPUT_DISCONNECT);

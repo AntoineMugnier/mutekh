@@ -39,8 +39,6 @@
 # include <arch/nrf5x/gpiote.h>
 #endif
 
-#define dprintk(...) do{}while(0)
-
 #define GPIOTE_ADDR NRF_PERIPHERAL_ADDR(NRF5X_GPIOTE)
 #define GPIOTE_CHANNEL CONFIG_DRIVER_NRF52_SPIM_PAN58_GPIOTE_FIRST
 #define PPI_CHANNEL CONFIG_DRIVER_NRF52_SPIM_PAN58_PPI_FIRST
@@ -131,10 +129,10 @@ static void nrf5x_spim_transfer_ended(struct nrf5x_spim_context_s *pv)
 {
   struct dev_spi_ctrl_transfer_s *tr = pv->current_transfer;
 
-  dprintk("%s, count %d transferred %d\n", __FUNCTION__, tr->data.count, pv->transferred);
+  logk_trace("%s, count %d transferred %d\n", __FUNCTION__, tr->data.count, pv->transferred);
 
   if (tr->data.in && tr->data.in_width)
-    dprintk("in: %P\n", nrf_reg_get(pv->addr, NRF_SPIM_RXD_PTR), pv->transferred);
+    logk_trace("in: %P\n", nrf_reg_get(pv->addr, NRF_SPIM_RXD_PTR), pv->transferred);
 
   assert(tr);
 
@@ -244,13 +242,13 @@ static void nrf5x_spim_next_start(struct nrf5x_spim_context_s *pv)
     nrf_reg_set(pv->addr, NRF_SPIM_RXD_PTR, 0);
   }
 
-  dprintk("%s count %d out w %d in w %d%s\n", __FUNCTION__,
+  logk_trace("%s count %d out w %d in w %d%s\n", __FUNCTION__,
           count,
           tr->data.out_width,
           tr->data.in_width, pv->buffered_in ? " buffered" : "");
 
   if (tr->data.out_width)
-    dprintk("out: %P\n", nrf_reg_get(pv->addr, NRF_SPIM_TXD_PTR), count);
+    logk_trace("out: %P\n", nrf_reg_get(pv->addr, NRF_SPIM_TXD_PTR), count);
 
   nrf_reg_set(pv->addr, NRF_SPIM_TXD_MAXCNT, tr->data.out_width ? count : 0);
   nrf_reg_set(pv->addr, NRF_SPIM_RXD_MAXCNT, tr->data.in && tr->data.in_width ? count : 0);
@@ -275,7 +273,7 @@ static DEV_IRQ_SRC_PROCESS(nrf5x_spim_irq)
   struct nrf5x_spim_context_s *pv = dev->drv_pv;
   struct dev_spi_ctrl_transfer_s *tr = pv->current_transfer;
 
-  //dprintk("%s\n", __FUNCTION__);
+  logk_trace("%s\n", __FUNCTION__);
 
   lock_spin(&dev->lock);
 
@@ -303,7 +301,7 @@ static DEV_SPI_CTRL_TRANSFER(nrf5x_spim_transfer)
   struct nrf5x_spim_context_s *pv = dev->drv_pv;
   bool_t done = 1;
 
-  dprintk("%s\n", __FUNCTION__);
+  logk_trace("%s\n", __FUNCTION__);
 
   LOCK_SPIN_IRQ(&dev->lock);
 

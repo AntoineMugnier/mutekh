@@ -18,8 +18,11 @@
     Copyright (c) 2016, Nicolas Pouillon, <nipo@ssji.net>
 */
 
+#define LOGK_MODULE_ID "hd44"
+
 #include <hexo/types.h>
 #include <hexo/endian.h>
+#include <hexo/bit.h>
 
 #include <mutek/mem_alloc.h>
 #include <mutek/printk.h>
@@ -37,9 +40,6 @@
 #include "hd44780_io.o.h"
 #include "hd44780_defs.h"
 
-//#define dprintk printk
-#define dprintk(...) do{}while(0)
-
 enum hd44780_state_e
 {
   HD44780_IDLE,
@@ -47,6 +47,15 @@ enum hd44780_state_e
   HD44780_WAIT_TIMER,
   HD44780_WAIT_GPIO,
   HD44780_WAIT_CHAR,
+};
+
+enum hd44780_gpio_e
+{
+  HD44780_GPIO_E,
+  HD44780_GPIO_RS,
+  HD44780_GPIO_RW,
+  HD44780_GPIO_D,
+  HD44780_GPIO_COUNT,
 };
 
 struct hd44780_ctx_s
@@ -64,7 +73,7 @@ struct hd44780_ctx_s
   enum hd44780_state_e state;
   uint8_t reg;
   
-  gpio_id_t gpio_id[3];
+  gpio_id_t gpio_id[HD44780_GPIO_COUNT];
 };
 
 DRIVER_PV(struct hd44780_ctx_s);
@@ -94,7 +103,7 @@ static KROUTINE_EXEC(hd44780_runner)
         goto again;
       }
 
-      dprintk("%s refill %02x\n", __FUNCTION__, rq->data[0]);
+      logk_trace("%s refill %02x", __func__, rq->data[0]);
       pv->vm.v[pv->reg] = *rq->data++;
       rq->size--;
       pv->state = HD44780_IDLE;
@@ -116,21 +125,23 @@ static KROUTINE_EXEC(hd44780_runner)
     if (!run)
       break;
 
-    dprintk("%s run\n", __FUNCTION__);
+    logk_trace("%s run", __func__);
 
     op = bc_run(&pv->vm, -1);
 
-    dprintk("%s op = %04x\n", __FUNCTION__, op);
+    logk_trace("%s op = %04x", __func__, op);
 
     if (!(op & 0x8000)) {
       assert(!op);
       break;
     }
 
-    switch ((op & 0x3000) >> 12) {
+    switch (bit_get_mask(op, 12, 2)) {
     case 0: // Delay
-      pv->timer_rq.delay = pv->cycle * (op & 0xfff);
-      dprintk("%s delay %d %d\n", __FUNCTION__, op & 0xfff, pv->timer_rq.delay);
+      pv->timer_rq.delay = pv->cycle * bit_get_mask(op, 0, 12);
+      logk_trace("%s delay %d %d",
+              __func__, bit_get_mask(op, 0, 12),
+              pv->timer_rq.delay);
       pv->timer_rq.deadline = 0;
       if (DEVICE_OP(&pv->timer, request, &pv->timer_rq) == 0) {
         pv->state = HD44780_WAIT_TIMER;
@@ -140,29 +151,30 @@ static KROUTINE_EXEC(hd44780_runner)
       continue;
 
     case 1: // Data
-      dprintk("%s data r%d: %02x\n", __FUNCTION__, op & 0xf,
-              pv->vm.v[op & 0xf] & (_CONFIG_DRIVER_HD44780_4BIT ? 0xf : 0xff));
-      pv->gpio_rq.io_first = pv->gpio_id[2];
-      pv->gpio_rq.io_last = pv->gpio_id[2]
+      logk_trace("%s data r%d: %02x", __func__, bit_get_mask(op, 0, 4),
+              pv->vm.v[bit_get_mask(op, 0, 4)]
+              & (_CONFIG_DRIVER_HD44780_4BIT ? 0xf : 0xff));
+      pv->gpio_rq.io_first = pv->gpio_id[HD44780_GPIO_D];
+      pv->gpio_rq.io_last = pv->gpio_id[HD44780_GPIO_D]
         + (_CONFIG_DRIVER_HD44780_4BIT ? 4 : 8) - 1;
-      pv->reg = pv->vm.v[op & 0xf];
+      pv->reg = pv->vm.v[bit_get_mask(op, 0, 4)];
       pv->state = HD44780_WAIT_GPIO;
       DEVICE_OP(&pv->gpio, request, &pv->gpio_rq);
       return;
       
     case 2: // E/RS
-      dprintk("%s %s %d\n", __FUNCTION__, (op & 0x10) ? "rs" : "e", op & 1);
+      logk_trace("%s %d %d", __func__, bit_get_range(op, 4, 5), bit_get(op, 0));
       pv->gpio_rq.io_first
         = pv->gpio_rq.io_last
-        = pv->gpio_id[(op >> 4) & 1];
-      pv->reg = op & 1;
+        = pv->gpio_id[(op >> 4) & 3];
+      pv->reg = bit_get(op, 0);
       pv->state = HD44780_WAIT_GPIO;
       DEVICE_OP(&pv->gpio, request, &pv->gpio_rq);
       return;
       
     case 3: // Next
-      dprintk("%s next r%d\n", __FUNCTION__, op & 0xf);
-      pv->reg = op & 0xf;
+      logk_trace("%s next r%d", __func__, bit_get_mask(op, 0, 4));
+      pv->reg = bit_get_mask(op, 0, 4);
       pv->state = HD44780_WAIT_CHAR;
       continue;
     }
@@ -174,7 +186,7 @@ static KROUTINE_EXEC(hd44780_gpio_done)
   struct hd44780_ctx_s *pv = KROUTINE_CONTAINER(kr, *pv, gpio_rq.base.kr);
   struct device_s *dev = pv->gpio_rq.base.pvdata;
 
-  dprintk("%s\n", __FUNCTION__);
+  logk_trace("%s", __func__);
 
   LOCK_SPIN_IRQ(&dev->lock);
   assert(pv->state == HD44780_WAIT_GPIO);
@@ -188,7 +200,7 @@ static KROUTINE_EXEC(hd44780_timer_done)
   struct hd44780_ctx_s *pv = KROUTINE_CONTAINER(kr, *pv, timer_rq.rq.kr);
   struct device_s *dev = pv->timer_rq.rq.pvdata;
 
-  dprintk("%s\n", __FUNCTION__);
+  logk_trace("%s", __func__);
 
   LOCK_SPIN_IRQ(&dev->lock);
   assert(pv->state == HD44780_WAIT_TIMER);
@@ -277,19 +289,20 @@ static DEV_INIT(hd4780_init)
   if (!pv->cycle)
     pv->cycle = 1;
 
-  gpio_width_t pin_wmap[3];
+  gpio_width_t pin_wmap[HD44780_GPIO_COUNT];
 
   err = device_res_gpio_map(dev,
 #if defined(CONFIG_DRIVER_HD44780_4BIT)
-                            "e:1 rs:1 d:4",
+                            "e:1 rs:1 rw?:1 d:4",
 #else
-                            "e:1 rs:1 d:8",
+                            "e:1 rs:1 rw?:1 d:8",
 #endif
                             pv->gpio_id, pin_wmap);
   if (err)
     goto err_gpio;
 
-  err = device_gpio_map_set_mode(&pv->gpio, pv->gpio_id, pin_wmap, 3,
+  err = device_gpio_map_set_mode(&pv->gpio, pv->gpio_id, pin_wmap, HD44780_GPIO_COUNT,
+                                 DEV_PIN_PUSHPULL,
                                  DEV_PIN_PUSHPULL,
                                  DEV_PIN_PUSHPULL,
                                  DEV_PIN_PUSHPULL);

@@ -337,17 +337,17 @@
        in the array, with the most significant byte stored first.
      @item @tt{unpack8 reg_1st, reg_count} @item Converts an array of bytes to multiple vm
        register values. The value of a single register is loaded from a single byte of the array.
-     @item @tt{unpack16le reg_1st, reg_count, byte_count} @item Converts multiple vm register
-       values to an array of bytes. The value of a single register is loaded from a pair of bytes
+     @item @tt{unpack16le reg_1st, reg_count, byte_count} @item Converts an array of bytes to
+       multiple vm register values. The value of a single register is loaded from a pair of bytes
        of the array, with the less significant byte stored first.
-     @item @tt{unpack16be reg_1st, reg_count, byte_count} @item Converts multiple vm register
-       values to an array of bytes. The value of a single register is loaded from a pair of bytes
+     @item @tt{unpack16be reg_1st, reg_count, byte_count} @item Converts an array of bytes to
+       multiple vm register values. The value of a single register is loaded from a pair of bytes
        of the array, with the most significant byte stored first.
-     @item @tt{unpack32le reg_1st, reg_count, byte_count} @item Converts multiple vm register
-       values to an array of bytes. The value of a single register is loaded from 4 bytes
+     @item @tt{unpack32le reg_1st, reg_count, byte_count} @item Converts an array of bytes to
+       multiple vm register values. The value of a single register is loaded from 4 bytes
        of the array, with the less significant byte stored first.
-     @item @tt{unpack32be reg_1st, reg_count, byte_count} @item Converts multiple vm register
-       values to an array of bytes. The value of a single register is loaded from 4 bytes
+     @item @tt{unpack32be reg_1st, reg_count, byte_count} @item Converts an array of bytes to
+       multiple vm register values. The value of a single register is loaded from 4 bytes
        of the array, with the most significant byte stored first.
    @end table
 

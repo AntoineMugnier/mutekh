@@ -16,7 +16,7 @@
 #include <gct/container_slist.h>
 
 #define GCT_CONTAINER_ALGO_printk_backend SLIST
-#define GCT_CONTAINER_LOCK_printk_backend HEXO_LOCK
+#define GCT_CONTAINER_LOCK_printk_backend NOLOCK
 
 #ifndef LOGK_MODULE_ID
 /** A four characters @ref logk module id defined for the current compilation unit. */
@@ -115,52 +115,56 @@ ssize_t logk_(const char *format, ...);
 /** @internal */
 #define logk_level_(log_func, level_str, format, ...)                   \
   do {                                                                  \
-    __unused__ uint8_t level = level_str[0];                            \
-    __unused__ uint32_t id   = ((LOGK_MODULE_ID[0] << 24) |             \
-                                (LOGK_MODULE_ID[1] << 16) |             \
-                                (LOGK_MODULE_ID[2] << 8)  |             \
-                                LOGK_MODULE_ID[3]);                     \
-    if (CONFIG_MUTEK_PRINTK_COMPILE_EXPR)                               \
+    bool_t __do_log = 0;                                                \
+    {                                                                   \
+       __unused__ uint8_t level = level_str[0];                         \
+       __unused__ uint32_t id   = ((LOGK_MODULE_ID[0] << 24) |          \
+                                   (LOGK_MODULE_ID[1] << 16) |          \
+                                   (LOGK_MODULE_ID[2] << 8)  |          \
+                                    LOGK_MODULE_ID[3]);                 \
+       __do_log = !!(CONFIG_MUTEK_PRINTK_COMPILE_EXPR);                 \
+    }                                                                   \
+    if (__do_log)                                                       \
       log_func(level_str "[" LOGK_MODULE_ID "] " format "\n",           \
-               #__VA_ARGS__);                                           \
+               ## __VA_ARGS__);                                         \
   } while (0)
 
 #ifdef CONFIG_MUTEK_PRINTK
 /** @multiple @This sends a line to the printk backends with the @ref
     LOGK_LEVEL_TRACE level */
 # define vlogk_trace(format, ap)   logk_level_(vlogk_, "\x10", format, ap)
-# define logk_trace(format, ...)   logk_level_(logk_, "\x10", format, #__VA_ARGS__)
+# define logk_trace(format...)   logk_level_(logk_, "\x10", format)
 /** @multiple @This sends a line to the printk backends with the @ref
     LOGK_LEVEL_DEBUG level */
 # define vlogk_debug(format, ap)   logk_level_(vlogk_, "\x20", format, ap)
-# define logk_debug(format, ...)   logk_level_(logk_, "\x20", format, #__VA_ARGS__)
+# define logk_debug(format...)   logk_level_(logk_, "\x20", format)
 /** @multiple @This sends a line to the printk backends with the @ref
     LOGK_LEVEL_NORMAL level */
 # define vlogk(format, ap)         logk_level_(vlogk_, "\x30", format, ap)
-# define logk(format, ...)         logk_level_(logk_, "\x30", format, #__VA_ARGS__)
+# define logk(format...)         logk_level_(logk_, "\x30", format)
 /** @multiple @This sends a line to the printk backends with the @ref
     LOGK_LEVEL_WARNING level */
 # define vlogk_warning(format, ap) logk_level_(vlogk_, "\x40", format, ap)
-# define logk_warning(format, ...) logk_level_(logk_, "\x40", format, #__VA_ARGS__)
+# define logk_warning(format...) logk_level_(logk_, "\x40", format)
 /** @multiple @This sends a line to the printk backends with the @ref
     LOGK_LEVEL_ERROR level */
 # define vlogk_error(format, ap)   logk_level_(vlogk_, "\x50", format, ap)
-# define logk_error(format, ...)   logk_level_(logk_, "\x50", format, #__VA_ARGS__)
+# define logk_error(format...)   logk_level_(logk_, "\x50", format)
 
 #else
 
 /** @multiple @hidden
    silently ignore calls to these functions when printk is disabled. */
 # define vlogk_trace(format, ap)
-# define logk_trace(format, ...)
+# define logk_trace(format...)
 # define vlogk_debug(format, ap)
-# define logk_debug(format, ...)
+# define logk_debug(format...)
 # define vlogk(format, ap)
-# define logk(format, ...)
+# define logk(format...)
 # define vlogk_warning(format, ap)
-# define logk_warning(format, ...)
+# define logk_warning(format...)
 # define vlogk_error(format, ap)
-# define logk_error(format, ...)
+# define logk_error(format...)
 # define printk(...)
 # define vprintk(...)
 # define hexdumpk(...)

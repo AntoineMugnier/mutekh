@@ -18,6 +18,8 @@
     Copyright (c) Nicolas Pouillon <nipo@ssji.net>, 2014
 */
 
+#define LOGK_MODULE_ID "nspi"
+
 #include <hexo/types.h>
 #include <hexo/endian.h>
 #include <hexo/iospace.h>
@@ -34,8 +36,6 @@
 #include <device/class/iomux.h>
 
 #include <arch/nrf5x/spi.h>
-
-#define dprintk(...) do{}while(0)
 
 struct nrf5x_spi_context_s
 {
@@ -106,7 +106,7 @@ static DEV_SPI_CTRL_CONFIG(nrf5x_spi_config)
 
   rate = cfg->bit_rate;
   if (rate > 1000000) {
-    printk("nRF5x SPI Warning: bit rate capped to 1MHz (was %d)\n", rate);
+    printk("nRF5x SPI Warning: bit rate capped to 1MHz (was %d)", rate);
     rate = 1000000;
   }
 
@@ -137,7 +137,7 @@ static void nrf5x_spi_tr_put_one(struct nrf5x_spi_context_s *pv,
     break;
   }
 
-  dprintk("SPI tx: %02x\n", word);
+  logk_trace("SPI tx: %02x", word);
 
   nrf_reg_set(pv->addr, NRF_SPI_TXD, word);
 
@@ -149,7 +149,7 @@ static void nrf5x_spi_tr_get_one(struct nrf5x_spi_context_s *pv,
 {
   uint8_t word = nrf_reg_get(pv->addr, NRF_SPI_RXD);
 
-  dprintk("SPI rx: %02x\n", word);
+  logk_trace("SPI rx: %02x", word);
 
   if (tr->data.in) {
     switch (tr->data.in_width) {
@@ -175,7 +175,7 @@ void nrf5x_spi_transfer_start(
 {
   pv->words_in_transit = 0;
 
-  dprintk("SPI rq %d %d %P...", tr->data.count, tr->data.out_width, tr->data.out, tr->data.count);
+  logk_trace("SPI rq %d %d %P...", tr->data.count, tr->data.out_width, tr->data.out, tr->data.count);
 
   while (tr->data.count && pv->words_in_transit < 2) {
     nrf5x_spi_tr_put_one(pv, tr);
@@ -224,7 +224,7 @@ static DEV_IRQ_SRC_PROCESS(nrf5x_spi_irq)
 
   // tr is not NULL only if it is finished.
   if (tr) {
-    dprintk(" done\n");
+    logk_trace(" done");
     kroutine_exec(&tr->kr);
   }
 }
@@ -241,8 +241,8 @@ static DEV_SPI_CTRL_TRANSFER(nrf5x_spi_transfer)
   } else if (tr->cs_op != DEV_SPI_CS_NOP_NOP) {
     tr->err = -ENOTSUP;
   } else if (!((0x17 >> tr->data.out_width) & 1) || (tr->data.in && !((0x16 >> tr->data.in_width) & 1))) {
-    printk("Error: out_width: %d, in_width: %d\n", tr->data.out_width, tr->data.in_width);
-    printk("Error: out: %p, in: %p\n", tr->data.out, tr->data.in);
+    printk("Error: out_width: %d, in_width: %d", tr->data.out_width, tr->data.in_width);
+    printk("Error: out: %p, in: %p", tr->data.out, tr->data.in);
     tr->err = -EINVAL;
   } else {
     assert(tr->data.count > 0);
