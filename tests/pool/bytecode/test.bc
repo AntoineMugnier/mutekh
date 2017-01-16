@@ -16,6 +16,43 @@ test_bytecode_entry:
         // enable vm debug traces
         // trace	1, 1
 
+        cst8	%3, 143
+        cst8	%2, 143
+        neq	%3, %2
+         abort
+        neq     %3, %2
+         cst32	%2, 0x5678abcd, 0    // skipped
+        neq     %3, %2
+         cst16	%2, 0x5678, 0    // skipped
+        neq     %3, %2
+         std	%2, %3          // skipped
+        neq     %3, %2
+         laddr16	%2, data    // skipped
+        neq     %3, %2
+         jmp32	data            // skipped
+        neq     %3, %2
+         call32	%2, data    // skipped
+        neq     %3, %2
+         ld8e	%2, %3, 1   // skipped
+        neq     %3, %2
+         ld16e	%2, %3, 1   // skipped
+        neq     %3, %2
+         ld32e	%2, %3, 1   // skipped
+        neq     %3, %2
+         st8e	%2, %3, 1   // skipped
+        neq     %3, %2
+         st16e	%2, %3, 1   // skipped
+        neq     %3, %2
+         st32e	%2, %3, 1   // skipped
+        neq	%3, %2
+         abort
+        eq	%3, %2
+         cst32	%3, 0x5678abcd, 0
+        neq	%3, %2
+         cst32	%2, 0x5678abcd, 0
+        neq	%3, %2
+         abort
+
 #ifndef CONFIG_MUTEK_BYTECODE_CHECKING
     // CST8, CCALL, NEQ
         cst8	%2, 11

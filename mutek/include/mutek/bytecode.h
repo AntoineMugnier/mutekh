@@ -23,6 +23,7 @@
 
 #include <hexo/types.h>
 #include <stdarg.h>
+#include <assert.h>
 #include <inttypes.h>
 
 /**
@@ -409,7 +410,7 @@
     @item ld[8,16,32,64][i]   @item r, ra         @item @tt{0110 0ssi aaaa rrrr} @item  3
     @item st[8,16,32,64][i]   @item r, ra         @item @tt{0110 1ssi aaaa rrrr} @item  3
     @item st[8,16,32,64]d     @item r, ra         @item @tt{0111 1ss0 aaaa rrrr} @item  3
-    @item gaddr               @item r, lbl        @item @tt{0111 0000 0000 rrrr} @item  3
+    @item gaddr               @item r, lbl        @item @tt{0111 0000 0000 rrrr, v?} @item  3
     @item laddr[16,32]        @item r, lbl        @item @tt{0111 0ss0 0000 rrrr, v, v?} @item  3
     @item jmp32               @item lbl           @item @tt{0111 0000 ---1 0000, v, v} @item  3
     @item call32              @item r, lbl        @item @tt{0111 0000 ---1 rrrr, v, v} @item  3
@@ -459,16 +460,23 @@ struct bc_descriptor_s
   uint16_t op_count;
 };
 
-/** @This defines the virtual machine context. */
+/** @This defines the virtual machine context.
+    @internalcontent */
 struct bc_context_s
 {
   bc_reg_t v[16];
   union {
-    const uint16_t *pc;
+    /** Bytecode resume execution pointer. For native code, this is a
+        pointer to the machine code instruction. For vm bytecode, this
+        is a 16 bits aligned pointer to the next instruction word with
+        the bit 0 indicating if the next instruction must be skipped
+        on resume. */
+    uintptr_t pc;
     const void *vpc;
   };
+#ifdef CONFIG_MUTEK_BYTECODE_NATIVE
   bc_reg_t skip;
-
+#endif
   const struct bc_descriptor_s *desc;
 
 #ifdef CONFIG_MUTEK_BYTECODE_CHECKING
@@ -482,7 +490,7 @@ struct bc_context_s
 #endif
 };
 
-/** @This intializes the virtual machine. The initial value of the
+/** @This initializes the virtual machine. The initial value of the
     registers is undefined. */
 void
 bc_init(struct bc_context_s *ctx,
@@ -566,7 +574,13 @@ bc_set_trace(struct bc_context_s *ctx, bool_t enabled, bool_t regs)
 ALWAYS_INLINE void
 bc_skip(struct bc_context_s *ctx)
 {
-  ctx->vpc = (uint8_t*)ctx->vpc + ctx->skip;
+#ifdef CONFIG_MUTEK_BYTECODE_NATIVE
+  assert(ctx->skip && "nothing to skip");
+  ctx->pc += ctx->skip;
+  ctx->skip = 0;
+#else
+  ctx->pc |= 1;
+#endif
 }
 
 /** @This can be used to reduce the range of memory addresses which

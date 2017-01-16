@@ -1067,6 +1067,7 @@ our %asm = (
     'gaddr' => {
         words => 1 + (4 << $backend_width) / 8, code => 0x7000, argscnt => 2,
         parse => \&parse_gaddr, backend => ('gaddr'),
+        nocond => 1
     },
     'data16' => {
         words => 1, argscnt => 1,
@@ -1129,9 +1130,6 @@ sub parse_args
 
 	error($thisop, "bad operand count for `$thisop->{name}'\n")
 	    if (defined $op->{argscnt}) && $op->{argscnt} != @{$thisop->{args}};
-
-	error($thisop, "multi-word instruction after conditional\n")
-	    if $prevop && $prevop->{op}->{op_cond} && $op->{words} > 1;
 
         error($thisop, "instruction can not be conditional\n")
 	    if $prevop && $prevop->{op}->{op_cond} && ($op->{op_cond} || $op->{nocond});
