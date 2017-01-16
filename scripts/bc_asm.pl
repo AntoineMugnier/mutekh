@@ -1224,32 +1224,6 @@ sub write_addr
     close( OUT );
 }
 
-sub write_bc
-{
-    open(OUT, ">$fout") || die "unable to open output file `$fout'.\n";
-
-    print OUT $backend->out_begin( $last_addr );
-
-    foreach my $thisop (@src) {
-
-        foreach my $l ( @{$thisop->{labels}} ) {
-            if ( $l->{export} ) {
-                print OUT "$l->{name}:\n";
-                print OUT "     .globl $l->{name}\n";
-            };
-        }
-
-        # print STDERR $thisop->{name}."\n";
-        printf OUT "    %-20s  # %s %s\n",
-          $backend->can('out_'.$thisop->{op}->{backend})->( $thisop ),
-          $thisop->{name}, join(', ', @{$thisop->{args}});
-    }
-
-    print OUT $backend->out_eof();
-
-    close( OUT );
-}
-
 sub write_header
 {
     open(OUT, ">$fheader") || die "unable to open output file `$fheader'.\n";
@@ -1854,7 +1828,7 @@ sub check_regs
 
 check_regs();
 
-$backend->write();
+$backend->write( $backend );
 write_header() if defined $fheader;
 
 warnings_print();
