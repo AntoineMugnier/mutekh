@@ -56,15 +56,15 @@ test_bytecode_entry:
 #ifndef CONFIG_MUTEK_BYTECODE_CHECKING
     // CST8, CCALL, NEQ
         cst8	%2, 11
-        ccall	%2, %1
+        ccall	%1
         cst8	%3, 143
         neq	%3, %2
         abort
 #endif
 
-    // CST8, XOR, NEQ, EQ
+    // CST8, NEQ, EQ
         cst8	%1, 0
-        xor32	%2, %2
+        cst16	%2, 0, 0
         neq	%1, %2
         abort
         neq0	%1

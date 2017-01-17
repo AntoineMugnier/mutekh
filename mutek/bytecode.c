@@ -116,17 +116,18 @@ static const char * bc_opname(uint16_t op)
     { 0xff00, BC_OP_EQ    << 8, "eq", "eq0" },
     { 0xff00, BC_OP_NEQ   << 8, "neq", "neq0" },
     { 0xff00, BC_OP_LT    << 8, "lt" },
+    { 0xff00, BC_OP_LTS   << 8, "lts" },
     { 0xff00, BC_OP_LTEQ  << 8, "lteq" },
+    { 0xff00, BC_OP_LTEQS << 8, "lteqs" },
     { 0xff00, BC_OP_ADD   << 8, "add" },
     { 0xff00, BC_OP_SUB   << 8, "sub", "neg" },
-    { 0xff00, BC_OP_MUL   << 8, "mul" },
     { 0xff00, BC_OP_OR    << 8, "or" },
-    { 0xff00, BC_OP_XOR   << 8, "xor" },
+    { 0xff00, BC_OP_XOR   << 8, "xor", "ccall" },
     { 0xff00, BC_OP_AND   << 8, "and" },
-    { 0xff00, BC_OP_CCALL << 8, "ccall" },
+    { 0xff00, BC_OP_ANDN  << 8, "andn", "not" },
     { 0xff00, BC_OP_SHL   << 8, "shl" },
     { 0xff00, BC_OP_SHR   << 8, "shr" },
-    { 0xff00, BC_OP_ANDN  << 8, "andn", "not" },
+    { 0xff00, BC_OP_MUL   << 8, "mul" },
     { 0xff00, BC_OP_MOV   << 8, "mov", "msbs" },
     { 0xfe00, BC_OP_TSTC  << 8, "tstc" },
     { 0xfe00, BC_OP_TSTS  << 8, "tsts" },
@@ -547,17 +548,16 @@ static bool_t bc_run_alu(struct bc_context_s *ctx, uint16_t op)
   do {
     static const bs_dispatch_t dispatch[16] = {
       [BC_OP_EQ & 0x0f] =  BC_DISPATCH(EQ),    [BC_OP_NEQ & 0x0f] = BC_DISPATCH(NEQ),
-      [BC_OP_LT & 0x0f] =  BC_DISPATCH(LT),    [BC_OP_LTEQ & 0x0f] = BC_DISPATCH(LTEQ),
+      [BC_OP_LT & 0x0f] =  BC_DISPATCH(LT),    [BC_OP_LTS & 0x0f] = BC_DISPATCH(LTS),
+      [BC_OP_LTEQ & 0x0f] =  BC_DISPATCH(LTEQ),  [BC_OP_LTEQS & 0x0f] = BC_DISPATCH(LTEQS),
       [BC_OP_ADD & 0x0f] = BC_DISPATCH(ADD),   [BC_OP_SUB & 0x0f] = BC_DISPATCH(SUB),
-      [BC_OP_RES & 0x0f] = BC_DISPATCH(RES),   [BC_OP_MUL & 0x0f] = BC_DISPATCH(MUL),
       [BC_OP_OR & 0x0f]  = BC_DISPATCH(OR),    [BC_OP_XOR & 0x0f] = BC_DISPATCH(XOR),
-      [BC_OP_AND & 0x0f] = BC_DISPATCH(AND),   [BC_OP_CCALL & 0x0f] = BC_DISPATCH(CCALL),
+      [BC_OP_AND & 0x0f] = BC_DISPATCH(AND),   [BC_OP_ANDN & 0x0f] = BC_DISPATCH(ANDN),
       [BC_OP_SHL & 0x0f] = BC_DISPATCH(SHL),   [BC_OP_SHR & 0x0f] = BC_DISPATCH(SHR),
-      [BC_OP_ANDN & 0x0f] = BC_DISPATCH(ANDN),  [BC_OP_MOV & 0x0f] = BC_DISPATCH(MOV),
+      [BC_OP_MUL & 0x0f] = BC_DISPATCH(MUL),   [BC_OP_MOV & 0x0f] = BC_DISPATCH(MOV),
     };
     BC_DISPATCH_GOTO(op & 0x0f);
 
-  dispatch_BAD:
   dispatch_ADD:
     dst += src;
     break;
@@ -573,7 +573,13 @@ static bool_t bc_run_alu(struct bc_context_s *ctx, uint16_t op)
     dst = (uint32_t)(dst | src);
     break;
   dispatch_XOR:
-    dst = (uint32_t)(dst ^ src);
+    if (o)
+      dst = (uint32_t)(dst ^ src);
+    else
+#ifdef CONFIG_MUTEK_BYTECODE_CHECKING
+      if (!ctx->sandbox)                   /* ccall */
+#endif
+        ((bc_ccall_function_t*)(uintptr_t)src)(ctx);
     break;
   dispatch_AND:
     dst = (uint32_t)(dst & src);
@@ -603,18 +609,13 @@ static bool_t bc_run_alu(struct bc_context_s *ctx, uint16_t op)
   dispatch_LT:
   dispatch_LTEQ: {
     bool_t lt = (dst < src);
-    if (!o)
-      {
-        src = ctx->v[0];
-        lt = (bc_sreg_t)dst < (bc_sreg_t)src;
-      }
-    return !(lt || ((op & 1) && (dst == src)));
+    return !(lt || ((op & 4) && (dst == src)));
     }
-  dispatch_CCALL:
-#ifdef CONFIG_MUTEK_BYTECODE_CHECKING
-    if (!ctx->sandbox)
-#endif
-      dst = ((bc_ccall_function_t*)(uintptr_t)src)(ctx, dst);
+  dispatch_LTS:
+  dispatch_LTEQS: {
+    bool_t lt = ((bc_sreg_t)dst < (bc_sreg_t)src);
+    return !(lt || ((op & 4) && (dst == src)));
+    }
   dispatch_RES:
     break;
   } while (0);

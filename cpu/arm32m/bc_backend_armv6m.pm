@@ -346,13 +346,25 @@ sub out_neq0 {
 sub out_lt {
     my ($thisop, $wi0, $wi1) = @_;
     return "    cmp $reg[$wi0], $reg[$wi1]\n".
-           "    ble 1f\n";
+           "    bhs 1f\n";
 }
 
 sub out_lteq {
     my ($thisop, $wi0, $wi1) = @_;
     return "    cmp $reg[$wi0], $reg[$wi1]\n".
-           "    blt 1f\n";
+           "    bhi 1f\n";
+}
+
+sub out_lts {
+    my ($thisop, $wi0, $wi1) = @_;
+    return "    cmp $reg[$wi0], $reg[$wi1]\n".
+           "    bge 1f\n";
+}
+
+sub out_lteqs {
+    my ($thisop, $wi0, $wi1) = @_;
+    return "    cmp $reg[$wi0], $reg[$wi1]\n".
+           "    bgt 1f\n";
 }
 
 sub mov_op {
@@ -443,12 +455,10 @@ sub parse_ccall {
 }
 
 sub out_ccall {
-    my ($thisop, $wo, $wi0, $wi1) = @_;
+    my ($thisop, $wi0) = @_;
     my $r = "    mov r0, r4\n";
-    $r .= "    mov r12, $reg[$wi1]\n";
-    $r .= "    mov r1, $reg[$wi0]\n" if $reg[$wi0] ne "r1";
-    $r .= "    blx r12\n".
-          "    mov $reg[$wo], r0\n";
+    $r .= "    mov r12, $reg[$wi0]\n";
+    $r .= "    blx r12\n";
     return $r;
 }
 

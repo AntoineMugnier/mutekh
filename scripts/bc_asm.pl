@@ -210,8 +210,8 @@ sub parse_cmp2
 {
     my $thisop = shift;
 
-    push @{$thisop->{in}}, check_reg($thisop, 1);
     push @{$thisop->{in}}, check_reg($thisop, 0);
+    push @{$thisop->{in}}, check_reg($thisop, 1);
 
     if ( $thisop->{in}->[0] == $thisop->{in}->[1] ) {
         error($thisop, "compare to the same register is not allowed\n");
@@ -225,6 +225,13 @@ sub parse_alu
     push @{$thisop->{in}}, check_reg($thisop, 0);
     push @{$thisop->{in}}, check_reg($thisop, 1);
     push @{$thisop->{out}}, check_reg($thisop, 0);
+}
+
+sub parse_ccall
+{
+    my $thisop = shift;
+
+    push @{$thisop->{in}}, check_reg($thisop, 0);
 }
 
 sub parse_alu1
@@ -919,26 +926,32 @@ our %asm = (
         parse => \&parse_cmp2, backend => ('lt'),
         op_cond => 1,
     },
-    'lteq'  => {
+    'lts'  => {
         words => 1, code => 0x4300, argscnt => 2,
+        parse => \&parse_cmp2, backend => ('lts'),
+        op_cond => 1,
+    },
+    'lteq'  => {
+        words => 1, code => 0x4400, argscnt => 2,
         parse => \&parse_cmp2, backend => ('lteq'),
         op_cond => 1,
     },
+    'lteqs'  => {
+        words => 1, code => 0x4500, argscnt => 2,
+        parse => \&parse_cmp2, backend => ('lteqs'),
+        op_cond => 1,
+    },
     'add' => {
-        words => 1, code => 0x4400, argscnt => 2,
+        words => 1, code => 0x4600, argscnt => 2,
         parse => \&parse_alu2, backend => ('add')
     },
     'sub' => {
-        words => 1, code => 0x4500, argscnt => 2,
+        words => 1, code => 0x4700, argscnt => 2,
         parse => \&parse_alu2, backend => ('sub')
     },
     'neg' => {
-        words => 1, code => 0x4500, argscnt => 1,
+        words => 1, code => 0x4700, argscnt => 1,
         parse => \&parse_alu1, backend => ('neg')
-    },
-    'mul32' => {
-        words => 1, code => 0x4700, argscnt => 2,
-        parse => \&parse_alu, backend => ('mul')
     },
     'or32' => {
         words => 1, code => 0x4800, argscnt => 2,
@@ -946,16 +959,24 @@ our %asm = (
     },
     'xor32' => {
         words => 1, code => 0x4900, argscnt => 2,
-        parse => \&parse_alu, backend => ('xor')
+        parse => \&parse_alu2, backend => ('xor')
+    },
+    'ccall' => {
+        words => 1, code => 0x4900, argscnt => 1,
+        parse => \&parse_ccall, backend => ('ccall'),
+        flushregs => 1, reloadregs => 1,
     },
     'and32' => {
         words => 1, code => 0x4a00, argscnt => 2,
         parse => \&parse_alu2, backend => ('and')
     },
-    'ccall' => {
+    'andn32' => {
         words => 1, code => 0x4b00, argscnt => 2,
-        parse => \&parse_alu, backend => ('ccall'),
-        flushregs => 1,
+        parse => \&parse_alu2, backend => ('andn')
+    },
+    'not32' => {
+        words => 1, code => 0x4b00, argscnt => 1,
+        parse => \&parse_alu1, backend => ('not')
     },
     'shl32' => {
         words => 1, code => 0x4c00, argscnt => 2,
@@ -965,13 +986,9 @@ our %asm = (
         words => 1, code => 0x4d00, argscnt => 2,
         parse => \&parse_alu, backend => ('shr'),
     },
-    'andn32' => {
+    'mul32' => {
         words => 1, code => 0x4e00, argscnt => 2,
-        parse => \&parse_alu2, backend => ('andn')
-    },
-    'not32' => {
-        words => 1, code => 0x4e00, argscnt => 1,
-        parse => \&parse_alu1, backend => ('not')
+        parse => \&parse_alu, backend => ('mul')
     },
     'mov' => {
         words => 1, code => 0x4f00, argscnt => 2,

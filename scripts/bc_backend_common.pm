@@ -185,12 +185,22 @@ sub out_neq0 {
 
 sub out_lt {
     my ($thisop) = @_;
-    return fmt1( $thisop, $thisop->{in}->[0], $thisop->{in}->[1] );
+    return fmt1( $thisop, $thisop->{in}->[1], $thisop->{in}->[0] );
 }
 
 sub out_lteq {
     my ($thisop) = @_;
-    return fmt1( $thisop, $thisop->{in}->[0], $thisop->{in}->[1] );
+    return fmt1( $thisop, $thisop->{in}->[1], $thisop->{in}->[0] );
+}
+
+sub out_lts {
+    my ($thisop) = @_;
+    return fmt1( $thisop, $thisop->{in}->[1], $thisop->{in}->[0] );
+}
+
+sub out_lteqs {
+    my ($thisop) = @_;
+    return fmt1( $thisop, $thisop->{in}->[1], $thisop->{in}->[0] );
 }
 
 sub out_add {
@@ -250,7 +260,7 @@ sub out_not {
 
 sub out_ccall {
     my ($thisop) = @_;
-    return fmt1( $thisop, $thisop->{in}->[1], $thisop->{out}->[0] );
+    return fmt1( $thisop, $thisop->{in}->[0], $thisop->{in}->[0] );
 }
 
 sub out_shl {

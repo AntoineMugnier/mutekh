@@ -304,14 +304,26 @@ sub out_neq0 {
 
 sub out_lt {
     my ($thisop, $wi0, $wi1) = @_;
-    return "    subu \$at, $reg[$wi0], $reg[$wi1]\n".
-           "    blez \$at, 1f\n";
+    return "    sltu \$at, $reg[$wi0], $reg[$wi1]\n".
+           "    beq  \$at, \$0, 1f\n";
 }
 
 sub out_lteq {
     my ($thisop, $wi0, $wi1) = @_;
-    return "    subu \$at, $reg[$wi0], $reg[$wi1]\n".
-           "    bltz \$at, 1f\n";
+    return "    sltu \$at, $reg[$wi1], $reg[$wi0]\n".
+           "    bne  \$at, \$0, 1f\n";
+}
+
+sub out_lts {
+    my ($thisop, $wi0, $wi1) = @_;
+    return "    slt \$at, $reg[$wi0], $reg[$wi1]\n".
+           "    beq  \$at, \$0, 1f\n";
+}
+
+sub out_lteqs {
+    my ($thisop, $wi0, $wi1) = @_;
+    return "    slt \$at, $reg[$wi1], $reg[$wi0]\n".
+           "    bne  \$at, \$0, 1f\n";
 }
 
 sub out_add {
@@ -378,11 +390,9 @@ sub parse_ccall {
 }
 
 sub out_ccall {
-    my ($thisop, $wo, $wi0, $wi1) = @_;
+    my ($thisop, $wi0) = @_;
     return "    move \$a0, \$17\n".
-           "    move \$a1, $reg[$wi0]\n".
-           "    jalr $reg[$wi1]\n".
-           "    move $reg[$wo], \$v0\n";
+           "    jalr $reg[$wi0]\n";
 }
 
 sub out_shl {

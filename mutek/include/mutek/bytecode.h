@@ -301,10 +301,8 @@
      @item @tt{abort} @item Terminate bytecode execution and report an error.
      @item @tt{die} @item Terminate by calling the libc @ref abort function.
      @item @tt{trace flags} @item Enable or disable debug trace. @see bc_set_trace
-     @item @tt{ccall reg, reg} @item Call a C function. The address of the function is in the source
-     register. The value of the destination register is passed to the
-     function and the return value is stored back in this same register.
-     Bytecode in compiled form will not be portable.
+     @item @tt{ccall reg} @item Call a C function. The address of the function is in the source
+     register. Bytecode in compiled form will not be portable.
      @see bc_ccall_function_t
      @item @tt{laddr[16,32] reg, label} @item Set a register to the address of a bytecode label.
      @item @tt{gaddr reg, label} @item Set a register to the address of a
@@ -364,6 +362,7 @@
     @item die                 @item               @item @tt{0000 0000 0000 0011} @item  0
     @item nop                 @item               @item @tt{0000 0000 0000 0100} @item  0
     @item trace               @item x             @item @tt{0000 0000 0000 10xx} @item  0
+    @item ---                 @item               @item @tt{0000 0000 0000 11xx} @item  0
     @item add8                @item r, +/-v       @item @tt{0000 vvvv vvvv rrrr} @item  0
     @item cst8                @item r, v          @item @tt{0001 vvvv vvvv rrrr} @item  0
     @item call8               @item r, lbl        @item @tt{0010 llll llll rrrr} @item  0
@@ -380,25 +379,28 @@
     @item neq                 @item r, r          @item @tt{0100 0001 rrrr rrrr} @item  1
     @item neq0                @item r             @item @tt{0100 0001 rrrr rrrr} @item  1
     @item lt                  @item r, r          @item @tt{0100 0010 rrrr rrrr} @item  1
-    @item lts                 @item r, r0         @item @tt{0100 0010 rrrr rrrr} @item  1
-    @item lteq                @item r, r          @item @tt{0100 0011 rrrr rrrr} @item  1
-    @item lteqs               @item r, r0         @item @tt{0100 0011 rrrr rrrr} @item  1
-    @item add                 @item r, r          @item @tt{0100 0100 rrrr rrrr} @item  1
+    @item ---                 @item r             @item @tt{0100 0010 rrrr rrrr} @item  1
+    @item lts                 @item r, r          @item @tt{0100 0011 rrrr rrrr} @item  1
+    @item ---                 @item r             @item @tt{0100 0011 rrrr rrrr} @item  1
+    @item lteq                @item r, r          @item @tt{0100 0100 rrrr rrrr} @item  1
     @item ---                 @item r             @item @tt{0100 0100 rrrr rrrr} @item  1
-    @item sub                 @item r, r          @item @tt{0100 0101 rrrr rrrr} @item  1
-    @item neg                 @item r             @item @tt{0100 0101 rrrr rrrr} @item  1
-    @item ---                 @item r, r          @item @tt{0100 0110 rrrr rrrr} @item  1
-    @item mul32               @item r, r          @item @tt{0100 0111 rrrr rrrr} @item  1
+    @item lteqs               @item r, r          @item @tt{0100 0101 rrrr rrrr} @item  1
+    @item ---                 @item r             @item @tt{0100 0101 rrrr rrrr} @item  1
+    @item add                 @item r, r          @item @tt{0100 0110 rrrr rrrr} @item  1
+    @item ---                 @item r             @item @tt{0100 0110 rrrr rrrr} @item  1
+    @item sub                 @item r, r          @item @tt{0100 0111 rrrr rrrr} @item  1
+    @item neg                 @item r             @item @tt{0100 0111 rrrr rrrr} @item  1
     @item or32                @item r, r          @item @tt{0100 1000 rrrr rrrr} @item  1
     @item ---                 @item r             @item @tt{0100 1000 rrrr rrrr} @item  1
     @item xor32               @item r, r          @item @tt{0100 1001 rrrr rrrr} @item  1
+    @item ccall               @item r             @item @tt{0100 1001 rrrr rrrr} @item  1
     @item and32               @item r, r          @item @tt{0100 1010 rrrr rrrr} @item  1
     @item ---                 @item r             @item @tt{0100 1010 rrrr rrrr} @item  1
-    @item ccall               @item r, r          @item @tt{0100 1011 rrrr rrrr} @item  1
+    @item andn32              @item r, r          @item @tt{0100 1011 rrrr rrrr} @item  1
+    @item not32               @item r             @item @tt{0100 1011 rrrr rrrr} @item  1
     @item shl32               @item r, r          @item @tt{0100 1100 rrrr rrrr} @item  1
     @item shr32               @item r, r          @item @tt{0100 1101 rrrr rrrr} @item  1
-    @item andn32              @item r, r          @item @tt{0100 1110 rrrr rrrr} @item  1
-    @item not32               @item r             @item @tt{0100 1110 rrrr rrrr} @item  1
+    @item mul32               @item r, r          @item @tt{0100 1110 rrrr rrrr} @item  1
     @item mov                 @item r, r          @item @tt{0100 1111 rrrr rrrr} @item  1
     @item msbs32              @item r             @item @tt{0100 1111 rrrr rrrr} @item  1
 
@@ -415,8 +417,8 @@
     @item jmp32               @item lbl           @item @tt{0111 0000 ---1 0000, v, v} @item  3
     @item call32              @item r, lbl        @item @tt{0111 0000 ---1 rrrr, v, v} @item  3
     @item cst[16,32,64]       @item r, v, b       @item @tt{0111 0ss0 bbb1 rrrr, v, v?, v?} @item  3
-    @item ld[8,16,32,64]e     @item r, ra, v      @item @tt{0111 0ss1 aaaa rrrr, v} @item  3
-    @item st[8,16,32,64]e     @item r, ra, v      @item @tt{0111 1ss1 aaaa rrrr, v} @item  3
+    @item ld[8,16,32,64]e     @item r, ra, +/-v   @item @tt{0111 0ss1 aaaa rrrr, v} @item  3
+    @item st[8,16,32,64]e     @item r, ra, +/-v   @item @tt{0111 1ss1 aaaa rrrr, v} @item  3
 
     @item .data16             @item v             @item @tt{v}                      @item
 
@@ -654,18 +656,18 @@ enum bc_opcode_e
     BC_OP_EQ   = 0x40,
     BC_OP_NEQ  = 0x41,
     BC_OP_LT   = 0x42,
-    BC_OP_LTEQ = 0x43,
-    BC_OP_ADD  = 0x44,
-    BC_OP_SUB  = 0x45,
-    BC_OP_RES  = 0x46,
-    BC_OP_MUL  = 0x47,
+    BC_OP_LTS  = 0x43,
+    BC_OP_LTEQ = 0x44,
+    BC_OP_LTEQS = 0x45,
+    BC_OP_ADD  = 0x46,
+    BC_OP_SUB  = 0x47,
     BC_OP_OR   = 0x48,
     BC_OP_XOR  = 0x49,
     BC_OP_AND  = 0x4a,
-    BC_OP_CCALL = 0x4b,
+    BC_OP_ANDN = 0x4b,
     BC_OP_SHL  = 0x4c,
     BC_OP_SHR  = 0x4d,
-    BC_OP_ANDN = 0x4e,
+    BC_OP_MUL  = 0x4e,
     BC_OP_MOV  = 0x4f,
   BC_OP_FMT2 = 0x50,
     BC_OP_TSTC = 0x50,
@@ -710,7 +712,7 @@ enum bc_opcode_pack_e
 };
 
 /** @see #BC_CCALL_FUNCTION */
-#define BC_CCALL_FUNCTION(n) bc_reg_t (n)(const struct bc_context_s *ctx, bc_reg_t dst)
+#define BC_CCALL_FUNCTION(n) void (n)(struct bc_context_s *ctx)
 /** C function type invoked by the @tt ccall instruction. */
 typedef BC_CCALL_FUNCTION(bc_ccall_function_t);
 
