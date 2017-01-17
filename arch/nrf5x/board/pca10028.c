@@ -100,11 +100,11 @@ DEV_DECLARE_STATIC(i2c0_dev, "i2c0", 0, nrf5x_i2c_drv,
                    DEV_STATIC_RES_DEV_ICU("/cpu"),
                    DEV_STATIC_RES_IRQ(0, NRF5X_TWI0, DEV_IRQ_SENSE_HIGH_LEVEL, 0, 1),
                    DEV_STATIC_RES_DEV_IOMUX("/gpio"),
-                   DEV_STATIC_RES_DEV_TIMER("/timer1"),
+                   DEV_STATIC_RES_DEV_TIMER("/rtc* /timer*"),
                    DEV_STATIC_RES_DEV_GPIO("/gpio"),
                    DEV_STATIC_RES_I2C_BITRATE(400000),
-                   DEV_STATIC_RES_IOMUX("scl", 0, 7, 0, 0),
-                   DEV_STATIC_RES_IOMUX("sda", 0, 30, 0, 0)
+                   DEV_STATIC_RES_IOMUX(",scl", 0, 7, 0, 0),
+                   DEV_STATIC_RES_IOMUX(",sda", 0, 30, 0, 0)
                    );
 
 #  if defined(CONFIG_DRIVER_GPIO_PCAL6408A)
