@@ -191,15 +191,7 @@ static void nrf5x_persist_storage_write(uintptr_t base,
 {
   assert(address_is_aligned(base, 4) && address_is_aligned(data, 4) && address_is_aligned(size, 4));
 
-  logk_trace("Write to %p:\n", base);
-  dhexdumpk(0, data, size);
-  logk_trace(" before:\n");
-  dhexdumpk(base, (void*)base, size);
-
   nrf5x_flash_write(base, data, size / sizeof(uint32_t));
-
-  logk_trace(" after:\n");
-  dhexdumpk(base, (void*)base, size);
 }
 
 static inline size_t item_size(const struct dev_persist_descriptor_s *desc)
@@ -386,7 +378,6 @@ static void nrf5x_persist_slot_state_read(struct nrf5x_nvmc_private_s *pv,
   state->used = sizeof(*header);
   state->reclaimable = 0;
 
-  dhexdumpk(base, header, sizeof(*header));
   if (header->magic != NRF5X_PERSIST_MAGIC
       || header->state != DEV_PERSIST_STATE_WRITTEN
       || header->size != pv->slot_size) {
