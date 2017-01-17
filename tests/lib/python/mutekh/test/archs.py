@@ -141,7 +141,7 @@ all_cpus             = OrMatch(soclib_mips32el,  # mips32
                                ibmpc_x86,        # x86
                                emu_linux_x86,    # x86-emu
                                emu_linux_x86_64, # x86_64-emu
-#                               efm32_zero,       # arm32m cortex-m0      FIXME flash size too small
+                               nrf51,            # arm32m cortex-m0
                                efm32_leopard,    # arm32m cortex-m3
                                efm32_wonder,     # arm32m cortex-m4
 )
