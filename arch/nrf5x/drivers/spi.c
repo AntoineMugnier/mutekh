@@ -106,7 +106,7 @@ static DEV_SPI_CTRL_CONFIG(nrf5x_spi_config)
 
   rate = cfg->bit_rate;
   if (rate > 1000000) {
-    printk("nRF5x SPI Warning: bit rate capped to 1MHz (was %d)", rate);
+    logk_warning("nRF5x SPI Warning: bit rate capped to 1MHz (was %d)", rate);
     rate = 1000000;
   }
 
@@ -124,24 +124,28 @@ static void nrf5x_spi_tr_put_one(struct nrf5x_spi_context_s *pv,
 {
   uint8_t word = 0;
 
-  switch (tr->data.out_width) {
-  case 1:
-    word = *(const uint8_t*)tr->data.out;
-    break;
-  case 2:
-    word = *(const uint16_t*)tr->data.out;
-    break;
-  case 0:
-  case 4:
-    word = *(const uint32_t*)tr->data.out;
-    break;
+  if (tr->data.out) {
+    switch (tr->data.out_width) {
+    case 1:
+      word = *(const uint8_t*)tr->data.out;
+      break;
+    case 2:
+      word = *(const uint16_t*)tr->data.out;
+      break;
+    case 0:
+    case 4:
+      word = *(const uint32_t*)tr->data.out;
+      break;
+    }
+
+    tr->data.out = (const void*)((uintptr_t)tr->data.out + tr->data.out_width);
+  } else {
+    word = 0xff;
   }
 
-  logk_trace("SPI tx: %02x", word);
+  logk_trace("SPI tx: %02x", (uint8_t)word);
 
   nrf_reg_set(pv->addr, NRF_SPI_TXD, word);
-
-  tr->data.out = (const void*)((uintptr_t)tr->data.out + tr->data.out_width);
 }
 
 static void nrf5x_spi_tr_get_one(struct nrf5x_spi_context_s *pv,
@@ -175,7 +179,10 @@ void nrf5x_spi_transfer_start(
 {
   pv->words_in_transit = 0;
 
-  logk_trace("SPI rq %d %d %P...", tr->data.count, tr->data.out_width, tr->data.out, tr->data.count);
+  if (tr->data.out)
+    logk_trace("SPI rq %d %d %P...", tr->data.count, tr->data.out_width, tr->data.out, tr->data.count);
+  else
+    logk_trace("SPI rq %d %d [NULL]...", tr->data.count, tr->data.out_width);
 
   while (tr->data.count && pv->words_in_transit < 2) {
     nrf5x_spi_tr_put_one(pv, tr);
@@ -223,10 +230,8 @@ static DEV_IRQ_SRC_PROCESS(nrf5x_spi_irq)
   lock_release(&dev->lock);
 
   // tr is not NULL only if it is finished.
-  if (tr) {
-    logk_trace(" done");
+  if (tr)
     kroutine_exec(&tr->kr);
-  }
 }
 
 static DEV_SPI_CTRL_TRANSFER(nrf5x_spi_transfer)
@@ -241,8 +246,8 @@ static DEV_SPI_CTRL_TRANSFER(nrf5x_spi_transfer)
   } else if (tr->cs_op != DEV_SPI_CS_NOP_NOP) {
     tr->err = -ENOTSUP;
   } else if (!((0x17 >> tr->data.out_width) & 1) || (tr->data.in && !((0x16 >> tr->data.in_width) & 1))) {
-    printk("Error: out_width: %d, in_width: %d", tr->data.out_width, tr->data.in_width);
-    printk("Error: out: %p, in: %p", tr->data.out, tr->data.in);
+    logk_error("Error: out_width: %d, in_width: %d", tr->data.out_width, tr->data.in_width);
+    logk_error("Error: out: %p, in: %p", tr->data.out, tr->data.in);
     tr->err = -EINVAL;
   } else {
     assert(tr->data.count > 0);
