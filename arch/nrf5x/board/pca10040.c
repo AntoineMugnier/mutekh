@@ -78,7 +78,21 @@ DEV_DECLARE_STATIC(uart_dev, "uart0", 0, nrf5x_uart_drv,
 
 #endif
 
-#if defined(CONFIG_NRF5X_BOARD_I2C_EXT)
+#if defined(CONFIG_NRF5X_BOARD_ARDUINO_MODE)
+# if defined(CONFIG_DRIVER_NRF5X_SPI)
+
+DEV_DECLARE_STATIC(spi_dev, "spi0", 0, nrf5x_spi_drv,
+                   NRF_STATIC_RES_PERIPHERAL_MEM(NRF5X_SPI1),
+                   DEV_STATIC_RES_DEV_ICU("/cpu"),
+                   DEV_STATIC_RES_IRQ(0, NRF5X_SPI1, DEV_IRQ_SENSE_HIGH_LEVEL, 0, 1),
+                   DEV_STATIC_RES_DEV_IOMUX("/gpio"),
+                   DEV_STATIC_RES_IOMUX("clk", 0, 25, 0, 0),
+                   DEV_STATIC_RES_IOMUX("mosi", 0, 23, 0, 0),
+                   DEV_STATIC_RES_IOMUX("miso", 0, 24, 0, 0),
+                   DEV_STATIC_RES_DEV_TIMER("rtc* timer*"),
+                   );
+# endif
+
 # if defined(CONFIG_DRIVER_NRF5X_I2C)
 
 DEV_DECLARE_STATIC(i2c0_dev, "i2c0", 0, nrf5x_i2c_drv,
