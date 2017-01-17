@@ -1763,9 +1763,14 @@ sub check_regs
 
              # explore branch target
              if ( $op->{op_cond} ) {
-                 my ( $rd, $wr ) = $exc->( $pc + $op->{words} + 1, [ @$regs ], $func, $thisop );
-                 $rd_mask |= $rd;
-                 $wr_mask |= $wr;
+                 my $nextpc = $pc + $op->{words};
+                 if ( my $nextop = $srcaddr{$nextpc} ) {
+                     my ( $rd, $wr ) = $exc->( $nextpc + $nextop->{op}->{words}, [ @$regs ], $func, $thisop );
+                     $rd_mask |= $rd;
+                     $wr_mask |= $wr;
+                 } else {
+                     warning($thisop, "no instruction in conditional\n");
+                 }
              } elsif ( ( $op->{op_call} && !$l->{func} ) ||
                        ( $op->{op_jmp} && !$tailcall ) ) {
                  my ( $rd, $wr ) = $exc->( $thisop->{target}->{addr}, [ @$regs ], $func, $thisop );
