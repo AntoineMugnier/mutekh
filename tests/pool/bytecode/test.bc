@@ -19,7 +19,7 @@ test_bytecode_entry:
         cst8	%3, 143
         cst8	%2, 143
         neq	%3, %2
-         abort
+         die
         neq     %3, %2
          cst32	%2, 0x5678abcd, 0    // skipped
         neq     %3, %2
@@ -45,13 +45,13 @@ test_bytecode_entry:
         neq     %3, %2
          st32e	%2, %3, 4   // skipped
         neq	%3, %2
-         abort
+         die
         eq	%3, %2
          cst32	%3, 0x5678abcd, 0
         neq	%3, %2
          cst32	%2, 0x5678abcd, 0
         neq	%3, %2
-         abort
+         die
 
 #ifndef CONFIG_MUTEK_BYTECODE_CHECKING
     // CST8, CCALL, NEQ
@@ -59,54 +59,54 @@ test_bytecode_entry:
         ccall	%1
         cst8	%3, 143
         neq	%3, %2
-        abort
+        die
 #endif
 
     // CST8, NEQ, EQ
         cst8	%1, 0
         cst16	%2, 0, 0
         neq	%1, %2
-        abort
+        die
         neq0	%1
-        abort
+        die
         neq0	%2
-        abort
+        die
         eq	%1, %2
         jmp8	next1
-        abort
+        die
 next1:
     // CST8, EQ, ADD
         cst8	%1, 42
         eq	%1, %2
-        abort
+        die
         neq	%1, %2
         jmp8	next2
-        abort
+        die
 next2:
         add8	%2, 21
         add8	%2, 21
         neq	%1, %2
-        abort
+        die
 
     // LT, LTEQ
         lt	%1, %2
-        abort
+        die
         lteq	%1, %2
         jmp8	next3
-        abort
+        die
 next3:
         add8	%1, 1
         lt	%1, %2
-        abort
+        die
         lteq	%1, %2
-        abort
+        die
         lt	%2, %1
         jmp8	next4
-        abort
+        die
 next4:
         lteq	%2, %1
         jmp8	next5
-        abort
+        die
 next5:
     // LOOP backward, ADD8 positiv
         cst8	%1, 0
@@ -116,7 +116,7 @@ add:
         loop	%2, add
         cst8	%2, 10
         neq	%1, %2
-        abort
+        die
 
     // ADD8 negative
         cst8	%1, 15
@@ -126,7 +126,7 @@ add8:
         loop	%2, add8
         cst8	%2, 5
         neq	%1, %2
-        abort
+        die
 
     // LOOP forward, JMP
         cst8	%1, 0
@@ -138,35 +138,35 @@ re:
 fwd:
         cst8	%2, 10
         neq	%1, %2
-        abort
+        die
 
     // TSTC, TSTS
         cst8	%1, 0x55
         tst32c	%1, 2
-        abort
+        die
         tst32s	%1, 2
         jmp8	next6
-        abort
+        die
 next6:
         tst32s	%1, 1
-        abort
+        die
         tst32c	%1, 1
         jmp8	next7
-        abort
+        die
 next7:
         tst32c	%1, 1
         shi32l	%1, 1
         tst32c	%1, 1
-        abort
+        die
         tst32s	%1, 1
         jmp8	next8
-        abort
+        die
 next8:
         tst32s	%1, 2
-        abort
+        die
         tst32c	%1, 2
         jmp8	next9
-        abort
+        die
 next9:
 
 	shr32     %1, %2
@@ -174,13 +174,13 @@ next9:
         cst8	%1, 0x0f
         bit32s	%1, 5
         tst32c	%1, 5
-        abort
+        die
         bit32c	%1, 2
         tst32s	%1, 2
-        abort
+        die
         cst8	%2, 0x2b
         neq	%1, %2
-        abort
+        die
 
     // LD8, LD8I
         mov	%1, %buf
@@ -189,14 +189,14 @@ next9:
         ld8	%2, %1
         cst8	%3, 'a'
         neq	%3, %2
-        abort
+        die
         neq	%4, %1
-        abort
+        die
         ld8i	%2, %1
         ld8i	%2, %1
         cst8	%3, 'r'
         neq	%3, %2
-        abort
+        die
 
     // MUL, CST16, CST32, CST16X
         cst16	%1, 0x1234, 0
@@ -206,7 +206,7 @@ next9:
         and32	%2, %3
         cst32	%3, 0x0c970000, 0
         neq	%3, %2
-        abort
+        die
 
     // ST32I, ST32, LD32
         cst32	%2, 0x12345678, 0
@@ -217,33 +217,33 @@ next9:
         ld32	%3, %1
         cst32	%5, 0x2468acf0, 0
         neq	%5, %2
-        abort
+        die
         add8	%1, -4
         neq	%1, %buf
-        abort
+        die
         ld32	%4, %1
         cst32	%2, 0x12345678, 0
         neq	%4, %2
-        abort
+        die
 
     // STE32, LDE32
         ld32e	%4, %buf, 4
         neq	%5, %4
-        abort
+        die
         add8	%1, 12
         shi32l	%4, 1
         st32e	%4, %1, -8
         ld32e	%5, %buf, 4
         cst32	%2, 0x48d159e0, 0
         neq	%5, %2
-        abort
+        die
 
         skipodd %1
-        abort
+        die
 
         skipodd %2
         jmp8 next10
-        abort
+        die
 next10:
 
     // SUB, NEG
@@ -252,120 +252,120 @@ next10:
 	sub	%1, %2
 	add8    %1, -0x30
 	neq0	%1
-	abort
+	die
 	add8    %1, -0x30
 	neg	%1
 	bit32c	%1, 4
 	bit32c	%1, 5
 	neq0	%1
-	abort
+	die
 
     // EQ0, NEQ0
 	cst8	%1, 42
 	eq0	%1
-	abort
+	die
 	neq0	%1
 	jmp8 next11
-	abort
+	die
 next11:
 	add8	%1, -42
 	neq0	%1
-	abort
+	die
 	eq0	%1
 	jmp8 next12
-	abort
+	die
 next12:
     // EXTZ
 	cst8	%1, 0x42
 	mov	%2, %1
 	extz	%2, 7
 	neq	%1, %2
-	abort
+	die
 	mov	%2, %1
 	extz	%2, 15
 	neq	%1, %2
-	abort
+	die
 	cst8	%1, 0x82
 	mov	%2, %1
 	extz	%2, 7
 	neq	%1, %2
-	abort
+	die
 	mov	%2, %1
 	extz	%2, 15
 	neq	%1, %2
-	abort
+	die
 	cst16	%1, 0xff82, 0
 	mov	%2, %1
 	extz	%2, 11
 	eq	%1, %2
-	abort
+	die
 	cst16	%3, 0xf82, 0
 	neq	%3, %2
-	abort
+	die
 	mov	%2, %1
 	extz	%2, 7
 	eq	%1, %2
-	abort
+	die
 	cst8	%3, 0x82
 	neq	%3, %2
-	abort
+	die
 	mov	%2, %1
 	extz	%2, 15
 	neq	%1, %2
-	abort
+	die
 
     // EXTS
 	cst8	%1, 0x42
 	mov	%2, %1
 	exts	%2, 7
 	neq	%1, %2
-	abort
+	die
 	mov	%2, %1
 	exts	%2, 15
 	neq	%1, %2
-	abort
+	die
 	cst8	%1, 0x82
 	mov	%2, %1
 	exts	%2, 7
 	eq	%1, %2
-	abort
+	die
 	extz	%2, 31
 	cst32	%1, 0xffffff82, 0
 	neq	%1, %2
-	abort
+	die
 	cst16	%2, 0x382, 0
 	mov	%3, %2
 	exts	%2, 10
 	neq	%3, %2
-	abort
+	die
 	cst64	%1, 0xffffffffffffff82, 0
 	exts	%2, 9
 	neq	%1, %2
-	abort
+	die
 
     // MSBS
 	cst8	%1, 0x42
 	msbs32	%1
 	cst8	%2, 6
 	neq	%1, %2
-	abort
+	die
 	cst32	%1, 0xffffff82, 0
 	msbs32	%1
 	cst8	%2, 31
 	neq	%1, %2
-	abort
+	die
 
     // NOT, ANDN
 	cst16	%1, 0x55aa, 0
 	not32	%1
 	cst32	%2, 0xffffaa55, 0
 	neq	%1, %2
-	abort
+	die
 	cst8    %3, 0xf0
 	andn32    %2, %3
 	cst32	%1, 0xffffaa05, 0
 	neq	%1, %2
-	abort
+	die
 
     // LADDR
 	laddr16 %1, data
@@ -374,7 +374,7 @@ next12:
 	xor32	%2, %3
 	cst8	%1, 0xff
 	neq	%1, %2
-	abort
+	die
 
 #ifndef CONFIG_MUTEK_BYTECODE_CHECKING
 	// GADDR
@@ -383,7 +383,7 @@ next12:
 	not32	%2
 	extz	%2, 7
 	neq	%3, %2
-	abort
+	die
 #endif
 
     // SHIL, SHIR
@@ -391,15 +391,15 @@ next12:
 	shi32l    %1, 8
 	cst16	%2, 0x3c00, 0
 	neq	%1, %2
-	abort
+	die
 	shi32l    %1, 4
 	cst32	%2, 0x3c000, 0
 	neq	%1, %2
-	abort
+	die
 	shi32r    %1, 1
 	cst32	%2, 0x1e000, 0
 	neq	%1, %2
-	abort
+	die
 
     // SHL, SHR
 	cst8	%1, 0xc3
@@ -407,120 +407,120 @@ next12:
 	shl32     %1, %5
 	cst16	%2, 0xc300, 0
 	neq	%1, %2
-	abort
+	die
 	cst8	%5, 4
 	shl32     %1, %5
 	cst32	%2, 0xc3000, 0
 	neq	%1, %2
-	abort
+	die
 	cst8	%5, 1
 	shr32     %1, %5
 	cst32	%2, 0x61800, 0
 	neq	%1, %2
-	abort
+	die
 
     // UNPACK
 	loadstr %2, 4
 	unpack8 %2, 4
         cst8	%1, 0
         neq     %1, %2
-        abort
+        die
         cst8	%1, 3
         neq     %1, %5
-        abort
+        die
 
         loadstr %2, 8
 	unpack8 %2, 8
         cst8	%1, 0
         neq     %1, %2
-        abort
+        die
         cst8	%1, 7
         neq     %1, %9
-        abort
+        die
 
 	loadstr %2, 8
 	unpack16be %2, 4, 8
         cst8	%1, 1
         neq     %1, %2
-        abort
+        die
         cst16	%1, 0x203, 0
         neq     %1, %3
-        abort
+        die
         cst16	%1, 0x607, 0
         neq     %1, %5
-        abort
+        die
 
 	loadstr %2, 8
 	unpack16le %2, 4, 8
         cst16	%1, 0x100, 0
         neq     %1, %2
-        abort
+        die
         cst16	%1, 0x302, 0
         neq     %1, %3
-        abort
+        die
         cst16	%1, 0x706, 0
         neq     %1, %5
-        abort
+        die
 
 	loadstr %2, 16
 	unpack16be %2, 8, 16
         cst8	%1, 1
         neq     %1, %2
-        abort
+        die
         cst16	%1, 0x203, 0
         neq     %1, %3
-        abort
+        die
         cst16	%1, 0xe0f, 0
         neq     %1, %9
-        abort
+        die
 
 	loadstr %2, 16
 	unpack16le %2, 8, 16
         cst16	%1, 0x100, 0
         neq     %1, %2
-        abort
+        die
         cst16	%1, 0x302, 0
         neq     %1, %3
-        abort
+        die
         cst16	%1, 0xf0e, 0
         neq     %1, %9
-        abort
+        die
 
 	loadstr %2, 8
 	unpack32be %2, 2, 8
         cst32	%1, 0x00010203, 0
         neq     %1, %2
-        abort
+        die
         cst32	%1, 0x04050607, 0
         neq     %1, %3
-        abort
+        die
 
 	loadstr %2, 8
 	unpack32le %2, 2, 8
         cst32	%1, 0x03020100, 0
         neq     %1, %2
-        abort
+        die
         cst32	%1, 0x07060504, 0
         neq     %1, %3
-        abort
+        die
 
 	loadstr %2, 32
 	unpack32be %2, 8, 32
         cst32	%1, 0x00010203, 0
         neq     %1, %2
-        abort
+        die
         cst32	%1, 0x1c1d1e1f, 0
         neq     %1, %9
-        abort
+        die
 
 	loadstr %2, 32
 	unpack32le %2, 8, 32
         cst32	%1, 0x03020100, 0
         neq     %1, %2
-        abort
+        die
         cst32	%1, 0x1f1e1d1c, 0
         neq     %1, %9
-        abort
+        die
 
     // PACK
         cst8    %1, 0
@@ -607,7 +607,7 @@ next12:
 	cst32   %2, 0x78563412, 0
         swap32  %1
 	neq	%1, %2
-	abort
+	die
 
 	cst32   %1, 0x12345678, 0
 #if defined (CONFIG_CPU_ENDIAN_BIG)
@@ -619,7 +619,7 @@ next12:
 #endif
         swap32le %1
 	neq	%1, %2
-	abort
+	die
 
 	cst32   %1, 0x12345678, 0
 #if defined (CONFIG_CPU_ENDIAN_BIG)
@@ -629,14 +629,14 @@ next12:
 #endif
         swap32be %1
 	neq	%1, %2
-	abort
+	die
 
 	cst16   %1, 0xcdef, 0
 	cst16   %2, 0xefcd, 0
         swap16  %1
 	extz    %1, 15
 	neq	%1, %2
-	abort
+	die
 
 	cst16   %1, 0xcdef, 0
 #if defined (CONFIG_CPU_ENDIAN_BIG)
@@ -647,7 +647,7 @@ next12:
         swap16le %1
 	extz    %1, 15
 	neq	%1, %2
-	abort
+	die
 
 	cst16   %1, 0xcdef, 0
 #if defined (CONFIG_CPU_ENDIAN_BIG)
@@ -658,7 +658,7 @@ next12:
         swap16be %1
 	extz    %1, 15
 	neq	%1, %2
-	abort
+	die
 
     // hello world using the custom prints instruction
         mov	%2, %buf
@@ -684,7 +684,7 @@ next12:
         call32	%fact:link, wrap
         cst8	%3, 120
         neq	%fact:result, %3
-        abort
+        die
         end
 
 .func wrap
