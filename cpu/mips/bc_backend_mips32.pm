@@ -89,7 +89,7 @@ sub out_end {
 }
 
 sub out_abort {
-    return "    move \$v0, \$3\n".
+    return "    addiu \$v0, \$0, 3\n".
            "    b Lbytecode_end\n";
 }
 
