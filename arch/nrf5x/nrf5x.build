@@ -181,3 +181,21 @@
   %requiretypes sram
   %requiretypes flash
 %end
+
+%section printk-uart
+  CONFIG_DRIVER_NRF5X_PRINTK
+  CONFIG_MUTEK_PRINTK_HEXDUMP
+
+%section shell-uart
+  CONFIG_DRIVER_NRF5X_UART
+  CONFIG_DEVICE_UART
+  %inherit shell
+
+%section printk-rtt
+  CONFIG_DRIVER_RTT_PRINTK
+  CONFIG_MUTEK_PRINTK_HEXDUMP
+
+%section shell-rtt
+  CONFIG_DRIVER_CHAR_RTT
+  CONFIG_DRIVER_CHAR_RTT_RX_BUFFER_SIZE 128
+  %inherit shell
