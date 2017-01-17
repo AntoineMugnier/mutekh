@@ -163,10 +163,8 @@ static KROUTINE_EXEC(hd44780_runner)
       return;
       
     case 2: // E/RS
-      logk_trace("%s %d %d", __func__, bit_get_range(op, 4, 5), bit_get(op, 0));
-      pv->gpio_rq.io_first
-        = pv->gpio_rq.io_last
-        = pv->gpio_id[(op >> 4) & 3];
+      logk_trace("%s %d %d", __func__, bit_get_mask(op, 4, 2), bit_get(op, 0));
+      pv->gpio_rq.io_first = pv->gpio_rq.io_last = pv->gpio_id[bit_get_mask(op, 4, 2)];
       pv->reg = bit_get(op, 0);
       pv->state = HD44780_WAIT_GPIO;
       DEVICE_OP(&pv->gpio, request, &pv->gpio_rq);
@@ -285,7 +283,7 @@ static DEV_INIT(hd4780_init)
   if (err)
     tmp = 270000;
 
-  dev_timer_init_sec_ceil(&pv->timer, &pv->cycle, 0, 1, tmp);
+  dev_timer_init_sec_ceil(&pv->timer, &pv->cycle, 0, 5, tmp);
   if (!pv->cycle)
     pv->cycle = 1;
 

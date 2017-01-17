@@ -44,8 +44,8 @@ sub parse_regout
 sub parse_delay
 {
     my $thisop = shift;
-    my $d = main::check_num($thisop, 0, 0, 2047);
-    $thisop->{code} |= $d;
+    my $d = main::check_num($thisop, 0, 0, 2047 * 5);
+    $thisop->{code} |= $d / 5;
 }
 
 sub parse_int
