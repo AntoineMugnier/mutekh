@@ -961,7 +961,7 @@ sub check_condition
 
     if ( $cond =~ /^([=<>!]+)([^\s]*)$/ ) {
 	my $op = $1;
-	my $val = $2;
+	my $val = normalize($2);
 
 	if ($op eq "!")	{
 	    return ($value eq "undefined");
@@ -1513,20 +1513,22 @@ sub process_config_suggest
     }
 }
 
+sub normalize
+{
+    my $value = shift;
+
+    if ( $value =~ /^\d+$/ ) {
+        return int($value);
+    } elsif ( $value =~ /^0[xb][a-fA-F0-9]+$/ ) {
+        return oct($value);
+    } else {
+        return $value;
+    }
+}
+
 sub tokens_set_methods
 {
     foreach my $opt (values %config_opts) {
-
-        my $norm = sub {
-            my $value = shift;
-            if ( $value =~ /^\d+$/ ) {
-                return int($value);
-            } elsif ( $value =~ /^0[xb][a-fA-F0-9]+$/ ) {
-                return oct($value);
-            } else {
-                return $value;
-            }
-        };
 
 	# set getvalue method
 	if ($opt->{flags}->{meta}) {
@@ -1581,7 +1583,7 @@ sub tokens_set_methods
 	    # value token getvalue method returns value provided by provider tokens
 	    $opt->{getvalue} = sub {
 		my ( $token ) = @_;
-		my $value = $norm->( $token->{value} );
+		my $value = normalize( $token->{value} );
 
                 if ( $token->{userdefined} && $token->{flags}->{userval} ) {
                     return $value;
@@ -1589,7 +1591,7 @@ sub tokens_set_methods
 
 		foreach my $p (@{$token->{providers}}) {
 		    if ( check_condition( $p->{getvalue}->( $p ) ) ) {
-                        my $new = $norm->(  $token->{provided}->{$p->{name}} );
+                        my $new = normalize( $token->{provided}->{$p->{name}} );
                         if ( $value eq "undefined" ) {
                             $value = $new;
                         } else {
