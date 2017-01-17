@@ -35,15 +35,15 @@ test_bytecode_entry:
         neq     %3, %2
          ld8e	%2, %3, 1   // skipped
         neq     %3, %2
-         ld16e	%2, %3, 1   // skipped
+         ld16e	%2, %3, 2   // skipped
         neq     %3, %2
-         ld32e	%2, %3, 1   // skipped
+         ld32e	%2, %3, 4   // skipped
         neq     %3, %2
          st8e	%2, %3, 1   // skipped
         neq     %3, %2
-         st16e	%2, %3, 1   // skipped
+         st16e	%2, %3, 2   // skipped
         neq     %3, %2
-         st32e	%2, %3, 1   // skipped
+         st32e	%2, %3, 4   // skipped
         neq	%3, %2
          abort
         eq	%3, %2
