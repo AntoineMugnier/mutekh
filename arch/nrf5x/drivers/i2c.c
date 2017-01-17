@@ -433,8 +433,10 @@ static DEV_CLEANUP(nrf5x_i2c_cleanup)
 {
   struct nrf5x_i2c_priv_s *pv = dev->drv_pv;
 
+#ifdef CONFIG_DEVICE_I2C_REQUEST
   if (!dev_request_queue_isempty(&pv->i2c_ctrl_ctx.queue))
     return -EBUSY;
+#endif
 
   nrf_reg_set(pv->addr, NRF_I2C_ENABLE, NRF_I2C_ENABLE_DISABLED);
 
