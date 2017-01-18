@@ -239,15 +239,13 @@ static bool_t nrf5x_io_process_one(
 
 static DEV_IRQ_SRC_PROCESS(nrf5x_uart_irq)
 {
-    struct device_s *dev = ep->base.dev;
-    struct nrf5x_uart_priv *pv = dev->drv_pv;
+  struct device_s *dev = ep->base.dev;
+  struct nrf5x_uart_priv *pv = dev->drv_pv;
 
-    lock_spin(&dev->lock);
+  LOCK_SPIN_SCOPED(&dev->lock);
 
-    while (nrf5x_io_process_one(dev, pv))
-        ;
-
-    lock_release(&dev->lock);
+  while (nrf5x_io_process_one(dev, pv))
+    ;
 }
 
 static DEV_CHAR_REQUEST(nrf5x_uart_request)
@@ -285,7 +283,7 @@ static DEV_CHAR_REQUEST(nrf5x_uart_request)
 
   assert(rq->size);
 
-  LOCK_SPIN_IRQ(&dev->lock);
+  LOCK_SPIN_IRQ_SCOPED(&dev->lock);
 
   rq->error = 0;
 
@@ -302,8 +300,6 @@ static DEV_CHAR_REQUEST(nrf5x_uart_request)
   }
 
   nrf5x_io_process_one(dev, pv);
-
-  LOCK_RELEASE_IRQ(&dev->lock);
 }
 
 static DEV_CHAR_CANCEL(nrf5x_uart_cancel)
@@ -311,7 +307,6 @@ static DEV_CHAR_CANCEL(nrf5x_uart_cancel)
   struct device_s *dev = accessor->dev;
   struct nrf5x_uart_priv *pv = dev->drv_pv;
   dev_request_queue_root_t *q = NULL;
-  error_t err;
 
   switch (rq->type) {
   case DEV_CHAR_READ_PARTIAL:
@@ -328,19 +323,15 @@ static DEV_CHAR_CANCEL(nrf5x_uart_cancel)
     return -EINVAL;
   }
 
-  LOCK_SPIN_IRQ(&dev->lock);
+  LOCK_SPIN_IRQ_SCOPED(&dev->lock);
 
-  if (dev_request_queue_head(q) == &rq->base) {
-    err = -EBUSY;
-  } else {
-    dev_request_queue_remove(q, &rq->base);
-    device_sleep_schedule(dev);
-    err = 0;
-  }
+  if (dev_request_queue_head(q) == &rq->base)
+    return -EBUSY;
 
-  LOCK_RELEASE_IRQ(&dev->lock);
+  dev_request_queue_remove(q, &rq->base);
+  device_sleep_schedule(dev);
 
-  return err;
+  return 0;
 }
 
 static error_t nrf5x_uart_config(

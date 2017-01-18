@@ -50,7 +50,6 @@ DRIVER_PV(struct nrf5x_adc_private_s
   uint16_t config_count;
   uint16_t todo;
   uint8_t index;
-  bool_t callbacking;
 });
 
 static void nrf5x_adc_sample_next(struct device_s *dev);
@@ -62,58 +61,43 @@ static DEV_IRQ_SRC_PROCESS(nrf5x_adc_irq)
   struct dev_valio_rq_s *rq;
   struct valio_adc_group_s *group;
 
-  lock_spin(&dev->lock);
+  LOCK_SPIN_SCOPED(&dev->lock);
 
   rq = dev_valio_rq_s_cast(dev_request_queue_head(&pv->queue));
-  if (!rq)
-    goto stop;
+  if (rq) {
+    group = rq->data;
 
-  group = rq->data;
+    if (nrf_event_check(ADC_ADDR, NRF_ADC_END)) {
+      nrf_event_clear(ADC_ADDR, NRF_ADC_END);
 
-  if (nrf_event_check(ADC_ADDR, NRF_ADC_END)) {
-    nrf_event_clear(ADC_ADDR, NRF_ADC_END);
+      logk_trace("ADC sample %d done: %d\n", pv->index, nrf_reg_get(ADC_ADDR, NRF_ADC_RESULT));
 
-    logk_trace("ADC sample %d done: %d\n", pv->index, nrf_reg_get(ADC_ADDR, NRF_ADC_RESULT));
+      group->value[pv->index] = nrf_reg_get(ADC_ADDR, NRF_ADC_RESULT);
+      nrf_task_trigger(ADC_ADDR, NRF_ADC_STOP);
+      pv->index++;
 
-    group->value[pv->index] = nrf_reg_get(ADC_ADDR, NRF_ADC_RESULT);
-    nrf_task_trigger(ADC_ADDR, NRF_ADC_STOP);
-    pv->index++;
+      if (!pv->todo) {
+        dev_request_queue_pop(&pv->queue);
 
-    if (!pv->todo)
-      goto callback;
+        rq->base.drvdata = 0;
+        rq->error = 0;
 
-    goto again;
+        kroutine_exec(&rq->base.kr);
+
+        rq = dev_valio_rq_s_cast(dev_request_queue_head(&pv->queue));
+      }
+
+      if (rq) {
+        nrf5x_adc_sample_next(dev);
+        return;
+      }
+    }
   }
-
-  goto out;
-
- callback:
-  dev_request_queue_pop(&pv->queue);
-
-  rq->base.drvdata = 0;
-  rq->error = 0;
-
-  pv->callbacking = 1;
-  lock_release(&dev->lock);
-  kroutine_exec(&rq->base.kr);
-  lock_spin(&dev->lock);
-  pv->callbacking = 0;
-
-  rq = dev_valio_rq_s_cast(dev_request_queue_head(&pv->queue));
-  if (!rq)
-    goto stop;
-
- again:
-  nrf5x_adc_sample_next(dev);
-  goto out;
 
  stop:
   nrf_it_disable(ADC_ADDR, NRF_ADC_END);
   nrf_reg_set(ADC_ADDR, NRF_ADC_CONFIG, 0);
   nrf_reg_set(ADC_ADDR, NRF_ADC_ENABLE, 0);
-
- out:
-  lock_release(&dev->lock);
 }
 
 static void nrf5x_adc_sample_next(struct device_s *dev)
@@ -178,7 +162,7 @@ static DEV_VALIO_REQUEST(nrf5x_adc_request)
     return;
   }
 
-  LOCK_SPIN_IRQ(&dev->lock);
+  LOCK_SPIN_IRQ_SCOPED(&dev->lock);
 
   start = dev_request_queue_isempty(&pv->queue);
 
@@ -187,8 +171,6 @@ static DEV_VALIO_REQUEST(nrf5x_adc_request)
 
   if (start)
     nrf5x_adc_request_start(dev);
-
-  LOCK_RELEASE_IRQ(&dev->lock);
 }
 
 static DEV_VALIO_CANCEL(nrf5x_adc_cancel)
@@ -197,14 +179,12 @@ static DEV_VALIO_CANCEL(nrf5x_adc_cancel)
   struct nrf5x_adc_private_s *pv = dev->drv_pv;
   error_t err = -ENOENT;
 
-  LOCK_SPIN_IRQ(&dev->lock);
+  LOCK_SPIN_IRQ_SCOPED(&dev->lock);
 
   if (req->base.drvdata == dev) {
     err = 0;
     dev_request_queue_remove(&pv->queue, &req->base);
   }
-
-  LOCK_RELEASE_IRQ(&dev->lock);
 
   return err;
 }

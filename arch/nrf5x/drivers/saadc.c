@@ -58,40 +58,32 @@ static DEV_IRQ_SRC_PROCESS(nrf5x_saadc_irq)
   struct nrf5x_saadc_private_s *pv = dev->drv_pv;
   struct dev_valio_rq_s *rq;
 
-  lock_spin(&dev->lock);
+  LOCK_SPIN_SCOPED(&dev->lock);
 
   rq = dev_valio_rq_s_cast(dev_request_queue_head(&pv->queue));
-  if (!rq)
-    goto stop;
+  if (rq && nrf_event_check(SAADC_ADDR, NRF_SAADC_DONE)) {
+    nrf_event_clear(SAADC_ADDR, NRF_SAADC_DONE);
 
-  if (!nrf_event_check(SAADC_ADDR, NRF_SAADC_DONE))
-    goto out;
+    logk_trace("SAADC done\n");
 
-  nrf_event_clear(SAADC_ADDR, NRF_SAADC_DONE);
-
-  logk_trace("SAADC done\n");
-
-  nrf_task_trigger(SAADC_ADDR, NRF_SAADC_STOP);
+    nrf_task_trigger(SAADC_ADDR, NRF_SAADC_STOP);
   
-  dev_request_queue_pop(&pv->queue);
+    dev_request_queue_pop(&pv->queue);
 
-  rq->base.drvdata = 0;
-  rq->error = 0;
+    rq->base.drvdata = 0;
+    rq->error = 0;
 
-  kroutine_exec(&rq->base.kr);
+    kroutine_exec(&rq->base.kr);
 
-  rq = dev_valio_rq_s_cast(dev_request_queue_head(&pv->queue));
-  if (rq) {
-    nrf5x_saadc_request_start(dev);
-    goto out;
+    rq = dev_valio_rq_s_cast(dev_request_queue_head(&pv->queue));
+
+    if (rq) {
+      nrf5x_saadc_request_start(dev);
+      return;
+    }
   }
-
- stop:
   nrf_it_disable(SAADC_ADDR, NRF_SAADC_END);
   //  nrf_reg_set(SAADC_ADDR, NRF_SAADC_ENABLE, 0);
-
- out:
-  lock_release(&dev->lock);
 }
 
 static void nrf5x_saadc_request_start(struct device_s *dev)
@@ -140,15 +132,13 @@ static DEV_VALIO_REQUEST(nrf5x_saadc_request)
   if (req->attribute != VALIO_ADC_VALUE || req->type != DEVICE_VALIO_READ)
     goto notsup;
 
-  LOCK_SPIN_IRQ(&dev->lock);
+  LOCK_SPIN_IRQ_SCOPED(&dev->lock);
 
   start = dev_request_queue_isempty(&pv->queue);
   dev_request_queue_pushback(&pv->queue, &req->base);
   req->base.drvdata = dev;
   if (start)
     nrf5x_saadc_request_start(dev);
-
-  LOCK_RELEASE_IRQ(&dev->lock);
 
   return;
 
@@ -161,20 +151,18 @@ static DEV_VALIO_CANCEL(nrf5x_saadc_cancel)
 {
   struct device_s *dev = accessor->dev;
   struct nrf5x_saadc_private_s *pv = dev->drv_pv;
-  error_t err = -ENOENT;
 
-  LOCK_SPIN_IRQ(&dev->lock);
+  LOCK_SPIN_IRQ_SCOPED(&dev->lock);
 
-  if (req == dev_valio_rq_s_cast(dev_request_queue_head(&pv->queue))) {
-    err = -EBUSY;
-  } else if (req->base.drvdata == dev) {
-    err = 0;
+  if (req == dev_valio_rq_s_cast(dev_request_queue_head(&pv->queue)))
+    return -EBUSY;
+  
+  if (req->base.drvdata == dev) {
     dev_request_queue_remove(&pv->queue, &req->base);
+    return 0;
   }
 
-  LOCK_RELEASE_IRQ(&dev->lock);
-
-  return err;
+  return -ENOENT;
 }
 
 #define nrf5x_saadc_use dev_use_generic

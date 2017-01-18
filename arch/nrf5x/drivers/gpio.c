@@ -167,26 +167,27 @@ static KROUTINE_EXEC(nrf5x_gpio_until_check)
 
   logk_trace("%s -> %x\n", __FUNCTION__, cur & pv->mask);
 
-  LOCK_SPIN_IRQ(&dev->lock);
+  {
+    LOCK_SPIN_IRQ_SCOPED(&dev->lock);
 
-  GCT_FOREACH(dev_request_queue, &pv->queue, brq, {
-      struct dev_gpio_rq_s *rq = dev_gpio_rq_s_cast(brq);
-      uint32_t mask = endian_le32_na_load(rq->until.mask) << rq->io_first;
-      uint32_t ref = endian_le32_na_load(rq->until.data) << rq->io_first;
-      mask &= bit_range(rq->io_first, rq->io_last);
+    GCT_FOREACH(dev_request_queue, &pv->queue, brq, {
+        struct dev_gpio_rq_s *rq = dev_gpio_rq_s_cast(brq);
+        uint32_t mask = endian_le32_na_load(rq->until.mask) << rq->io_first;
+        uint32_t ref = endian_le32_na_load(rq->until.data) << rq->io_first;
+        mask &= bit_range(rq->io_first, rq->io_last);
 
-      if ((cur ^ ref) & mask) {
-        logk_debug("%s %p done\n", __FUNCTION__, rq);
-        dev_request_queue_remove(&pv->queue, &rq->base);
-        kroutine_exec(&rq->base.kr);
-      } else {
-        logk_debug("%s %p still waiting\n", __FUNCTION__, rq);
-        mask_next |= mask;
-        ref_next |= ref;
-      }
-    });
+        if ((cur ^ ref) & mask) {
+          logk_debug("%s %p done\n", __FUNCTION__, rq);
+          dev_request_queue_remove(&pv->queue, &rq->base);
+          kroutine_exec(&rq->base.kr);
+        } else {
+          logk_debug("%s %p still waiting\n", __FUNCTION__, rq);
+          mask_next |= mask;
+          ref_next |= ref;
+        }
+      });
 
-  LOCK_RELEASE_IRQ(&dev->lock);
+  }
 
   nrf5x_gpio_mask_update(dev, ref_next, mask_next);
 }
@@ -206,7 +207,7 @@ static DEV_GPIO_SET_MODE(nrf5x_gpio_set_mode)
   uint32_t m = (endian_le32_na_load(mask) << io_first)
     & bit_range(io_first, io_last);
 
-  LOCK_SPIN_IRQ(&dev->lock);
+  LOCK_SPIN_IRQ_SCOPED(&dev->lock);
 
   for (uint8_t pin = io_first; pin <= io_last; ++pin) {
     if (!bit_get(m, pin))
@@ -216,8 +217,6 @@ static DEV_GPIO_SET_MODE(nrf5x_gpio_set_mode)
 
     nrf_reg_set(GPIO_ADDR, NRF_GPIO_PIN_CNF(pin), nrf_mode);
   }
-
-  LOCK_RELEASE_IRQ(&dev->lock);
 
   return 0;
 }
@@ -236,7 +235,7 @@ static DEV_GPIO_SET_OUTPUT(nrf5x_gpio_set_output)
   uint32_t setm = (endian_le32_na_load(set_mask) << io_first) & mask;
   uint32_t clearm = (endian_le32_na_load(clear_mask) << io_first) | ~mask;
 
-  LOCK_SPIN_IRQ(&dev->lock);
+  LOCK_SPIN_IRQ_SCOPED(&dev->lock);
 
   uint32_t out = nrf_reg_get(GPIO_ADDR, NRF_GPIO_OUT);
   uint32_t next = setm ^ (out & (setm ^ clearm));
@@ -246,8 +245,6 @@ static DEV_GPIO_SET_OUTPUT(nrf5x_gpio_set_output)
          out, next);
 
   nrf_reg_set(GPIO_ADDR, NRF_GPIO_OUT, next);
-
-  LOCK_RELEASE_IRQ(&dev->lock);
 
   return 0;
 }
@@ -259,13 +256,11 @@ static DEV_GPIO_GET_INPUT(nrf5x_gpio_get_input)
   if (io_last > CONFIG_NRF5X_GPIO_COUNT)
     return -ERANGE;
 
-  LOCK_SPIN_IRQ(&dev->lock);
+  LOCK_SPIN_IRQ_SCOPED(&dev->lock);
 
   uint32_t mask = bit_mask(0, io_last - io_first + 1);
   uint32_t in = nrf_reg_get(GPIO_ADDR, NRF_GPIO_IN) >> io_first;
   endian_le32_na_store(data, in & mask);
-
-  LOCK_RELEASE_IRQ(&dev->lock);
 
   return 0;
 }
@@ -469,16 +464,16 @@ static DEV_GPIO_REQUEST(nrf5x_gpio_request)
                                       req->input.data);
     break;
 
-  case DEV_GPIO_UNTIL:
+  case DEV_GPIO_UNTIL: {
 # if defined(CONFIG_DRIVER_NRF5X_GPIO_UNTIL)
-    LOCK_SPIN_IRQ(&dev->lock);
+    LOCK_SPIN_IRQ_SCOPED(&dev->lock);
     dev_request_queue_pushback(&pv->queue, &req->base);
     kroutine_exec(&pv->until_checker);
-    LOCK_RELEASE_IRQ(&dev->lock);
     return;
 #else
     req->error = -ENOTSUP;
 #endif
+  }
   }
 
   kroutine_exec(&req->base.kr);

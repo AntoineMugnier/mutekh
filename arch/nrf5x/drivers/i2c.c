@@ -254,7 +254,7 @@ static DEV_IRQ_SRC_PROCESS(nrf5x_i2c_irq)
   struct device_s *dev = ep->base.dev;
   struct nrf5x_i2c_priv_s *pv = dev->drv_pv;
 
-  lock_spin(&dev->lock);
+  LOCK_SPIN_SCOPED(&dev->lock);
 
   if (nrf_event_check(pv->addr, NRF_I2C_ERROR)) {
     nrf_event_clear(pv->addr, NRF_I2C_ERROR);
@@ -294,8 +294,6 @@ static DEV_IRQ_SRC_PROCESS(nrf5x_i2c_irq)
       pv->current = NULL;
     }
   }
-
-  lock_release(&dev->lock);
 }
 
 static void nrf5x_i2c_ip_reset(struct nrf5x_i2c_priv_s *pv)
@@ -340,10 +338,11 @@ static DEV_I2C_CTRL_TRANSFER(nrf5x_i2c_transfer)
   case DEV_I2C_RESET:
     logk_debug("%s reset", __FUNCTION__);
 
-    LOCK_SPIN_IRQ(&dev->lock);
-    pv->started = 0;
-    nrf5x_i2c_ip_reset(pv);
-    LOCK_RELEASE_IRQ(&dev->lock);
+    {
+      LOCK_SPIN_IRQ_SCOPED(&dev->lock);
+      pv->started = 0;
+      nrf5x_i2c_ip_reset(pv);
+    }
 
     kroutine_exec(&tr->kr);
     return;
@@ -365,13 +364,11 @@ static DEV_I2C_CTRL_TRANSFER(nrf5x_i2c_transfer)
     return;
   }
 
-  LOCK_SPIN_IRQ(&dev->lock);
+  LOCK_SPIN_IRQ_SCOPED(&dev->lock);
 
   pv->current = tr;
 
   nrf5x_i2c_transfer_start(pv);
-
-  LOCK_RELEASE_IRQ(&dev->lock);
 }
 
 #define nrf5x_i2c_use dev_use_generic

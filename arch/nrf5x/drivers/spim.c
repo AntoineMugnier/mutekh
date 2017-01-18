@@ -65,40 +65,32 @@ static DEV_SPI_CTRL_CONFIG(nrf5x_spim_config)
 {
   struct device_s *dev = accessor->dev;
   struct nrf5x_spim_context_s *pv = dev->drv_pv;
-  error_t err = 0;
   uint32_t config = 0;
   uint32_t rate;
-
-  LOCK_SPIN_IRQ(&dev->lock);
-
-  if (pv->current_transfer != NULL) {
-    err = -EBUSY;
-    goto out;
-  }
 
   if (cfg->word_width != 8
       || cfg->miso_pol != DEV_SPI_ACTIVE_HIGH
       || cfg->mosi_pol != DEV_SPI_ACTIVE_HIGH) {
-    err = -ENOTSUP;
-    goto out;
+    return -ENOTSUP;
   }
+
+  LOCK_SPIN_IRQ_SCOPED(&dev->lock);
+
+  if (pv->current_transfer != NULL)
+    return -EBUSY;
 
   switch (cfg->ck_mode) {
   case DEV_SPI_CK_MODE_0:
-    config |= NRF_SPIM_CONFIG_CPOL_ACTIVEHIGH
-      | NRF_SPIM_CONFIG_CPHA_LEADING;
+    config |= NRF_SPIM_CONFIG_CPOL_ACTIVEHIGH | NRF_SPIM_CONFIG_CPHA_LEADING;
     break;
   case DEV_SPI_CK_MODE_1:
-    config |= NRF_SPIM_CONFIG_CPOL_ACTIVELOW
-      | NRF_SPIM_CONFIG_CPHA_LEADING;
+    config |= NRF_SPIM_CONFIG_CPOL_ACTIVELOW | NRF_SPIM_CONFIG_CPHA_LEADING;
     break;
   case DEV_SPI_CK_MODE_2:
-    config |= NRF_SPIM_CONFIG_CPOL_ACTIVEHIGH
-      | NRF_SPIM_CONFIG_CPHA_TRAILING;
+    config |= NRF_SPIM_CONFIG_CPOL_ACTIVEHIGH | NRF_SPIM_CONFIG_CPHA_TRAILING;
     break;
   case DEV_SPI_CK_MODE_3:
-    config |= NRF_SPIM_CONFIG_CPOL_ACTIVELOW
-      | NRF_SPIM_CONFIG_CPHA_TRAILING;
+    config |= NRF_SPIM_CONFIG_CPOL_ACTIVELOW | NRF_SPIM_CONFIG_CPHA_TRAILING;
     break;
   }
 
@@ -117,10 +109,7 @@ static DEV_SPI_CTRL_CONFIG(nrf5x_spim_config)
   nrf_reg_set(pv->addr, NRF_SPIM_FREQUENCY,
               NRF_SPIM_FREQUENCY_(rate));
 
- out:
-  LOCK_RELEASE_IRQ(&dev->lock);
-
-  return err;
+  return 0;
 }
 
 #define nrf5x_spim_select (dev_spi_ctrl_select_t*)dev_driver_notsup_fcn
@@ -275,7 +264,7 @@ static DEV_IRQ_SRC_PROCESS(nrf5x_spim_irq)
 
   logk_trace("%s\n", __FUNCTION__);
 
-  lock_spin(&dev->lock);
+  LOCK_SPIN_SCOPED(&dev->lock);
 
   if (nrf_event_check(pv->addr, NRF_SPIM_END)) {
     nrf_event_clear(pv->addr, NRF_SPIM_END);
@@ -291,8 +280,6 @@ static DEV_IRQ_SRC_PROCESS(nrf5x_spim_irq)
       }
     }
   }
-
-  lock_release(&dev->lock);
 }
 
 static DEV_SPI_CTRL_TRANSFER(nrf5x_spim_transfer)

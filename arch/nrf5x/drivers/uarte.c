@@ -37,13 +37,10 @@
 #include <arch/nrf5x/uarte.h>
 #include <arch/nrf5x/gpio.h>
 
-enum {
-  CALLBACKING_NONE,
-  CALLBACKING_RX,
-  CALLBACKING_TX,
-};
+#define START_RX 1
+#define START_TX 2
 
-DRIVER_PV(struct nrf5x_uarte_priv
+struct nrf5x_uarte_priv
 {
   uintptr_t addr;
 
@@ -57,30 +54,24 @@ DRIVER_PV(struct nrf5x_uarte_priv
 
   struct dev_irq_src_s irq_ep;
 
-  uint8_t callbacking : 2;
   bool_t has_ctsrts : 1;
   bool_t must_flush : 1;
   bool_t from_rom : 1;
-});
+};
+
+DRIVER_PV(struct nrf5x_uarte_priv);
 
 static void nrf5x_uarte_request_finish(struct device_s *dev,
                                        struct dev_char_rq_s *rq,
-                                       size_t count,
-                                       uint8_t cb_way)
+                                       size_t count)
 {
   struct nrf5x_uarte_priv *pv = dev->drv_pv;
 
   rq->size -= count;
   rq->data += count;
-  
-  pv->callbacking = cb_way;
-  lock_release(&dev->lock);
 
   logk_trace("%s DONE %p %p %d\n", __FUNCTION__, rq, rq->data, rq->size);
   kroutine_exec(&rq->base.kr);
-
-  lock_spin(&dev->lock);
-  pv->callbacking = 0;
 }
 
 static void nrf5x_uarte_rx_start(struct device_s *dev)
@@ -91,6 +82,8 @@ static void nrf5x_uarte_rx_start(struct device_s *dev)
   logk_trace("%s START RX %p %p %d\n", __FUNCTION__, rq, rq->data, rq->size);
 
   assert(rq);
+
+  dev->start_count |= START_RX;
 
   nrf_reg_set(pv->addr, NRF_UARTE_RXD_PTR, (uintptr_t)rq->data);
   nrf_reg_set(pv->addr, NRF_UARTE_RXD_MAXCNT, rq->size);
@@ -116,6 +109,8 @@ static void nrf5x_uarte_tx_start(struct device_s *dev)
   size_t size = rq->size;
 
   assert(rq);
+
+  dev->start_count |= START_TX;
 
   if (source < 0x20000000) {
     uintptr_t offset = source % sizeof(pv->buffer);
@@ -156,7 +151,7 @@ static DEV_IRQ_SRC_PROCESS(nrf5x_uarte_irq)
   
   logk_trace("%s\n", __FUNCTION__);
 
-  lock_spin(&dev->lock);
+  LOCK_SPIN_SCOPED(&dev->lock);
 
   for (;;) {
     if (nrf_it_is_enabled(pv->addr, NRF_UARTE_NCTS)
@@ -174,6 +169,8 @@ static DEV_IRQ_SRC_PROCESS(nrf5x_uarte_irq)
       nrf_event_clear(pv->addr, NRF_UARTE_ENDTX);
       nrf_it_disable(pv->addr, NRF_UARTE_ENDTX);
       logk_trace("%s END TX\n", __FUNCTION__);
+
+      dev->start_count &= ~START_TX;
 
       xfered = nrf_reg_get(pv->addr, NRF_UARTE_TXD_AMOUNT);
 
@@ -193,7 +190,7 @@ static DEV_IRQ_SRC_PROCESS(nrf5x_uarte_irq)
       rq = dev_char_rq_s_cast(dev_request_queue_pop(&pv->tx_q));
       assert(rq);
 
-      nrf5x_uarte_request_finish(dev, rq, xfered, CALLBACKING_TX);
+      nrf5x_uarte_request_finish(dev, rq, xfered);
 
       rq = dev_char_rq_s_cast(dev_request_queue_head(&pv->tx_q));
       if (rq)
@@ -215,6 +212,8 @@ static DEV_IRQ_SRC_PROCESS(nrf5x_uarte_irq)
       nrf_event_clear(pv->addr, NRF_UARTE_RXTO);
       nrf_it_enable(pv->addr, NRF_UARTE_RXTO);
 
+      dev->start_count &= ~START_RX;
+
       nrf_task_trigger(pv->addr, NRF_UARTE_STOPRX);
       // Will trigger RXTO
 
@@ -231,6 +230,8 @@ static DEV_IRQ_SRC_PROCESS(nrf5x_uarte_irq)
       nrf_event_clear(pv->addr, NRF_UARTE_RXTO);
       nrf_it_disable(pv->addr, NRF_UARTE_RXTO);
       logk_trace("%s RXTO\n", __FUNCTION__);
+
+      dev->start_count &= ~START_RX;
 
       nrf_task_trigger(pv->addr, NRF_UARTE_STOPRX);
       pv->must_flush = 1;
@@ -267,7 +268,7 @@ static DEV_IRQ_SRC_PROCESS(nrf5x_uarte_irq)
         rq = dev_char_rq_s_cast(dev_request_queue_pop(&pv->rx_q));
         assert(rq);
 
-        nrf5x_uarte_request_finish(dev, rq, xfered, CALLBACKING_RX);
+        nrf5x_uarte_request_finish(dev, rq, xfered);
 
         rq = dev_char_rq_s_cast(dev_request_queue_head(&pv->rx_q));
         if (rq)
@@ -279,8 +280,6 @@ static DEV_IRQ_SRC_PROCESS(nrf5x_uarte_irq)
 
     break;
   }
-  
-  lock_release(&dev->lock);
 }
 
 static DEV_CHAR_REQUEST(nrf5x_uarte_request)
@@ -296,14 +295,12 @@ static DEV_CHAR_REQUEST(nrf5x_uarte_request)
   case DEV_CHAR_READ_PARTIAL:
   case DEV_CHAR_READ:
     q = &pv->rx_q;
-    start = pv->callbacking != CALLBACKING_RX;
     break;
 
   case DEV_CHAR_WRITE_FLUSH:
   case DEV_CHAR_WRITE_PARTIAL:
   case DEV_CHAR_WRITE:
     q = &pv->tx_q;
-    start = pv->callbacking != CALLBACKING_TX;
     break;
 
   default:
@@ -314,11 +311,11 @@ static DEV_CHAR_REQUEST(nrf5x_uarte_request)
 
   assert(rq->size);
 
-  LOCK_SPIN_IRQ(&dev->lock);
+  LOCK_SPIN_IRQ_SCOPED(&dev->lock);
 
   rq->error = 0;
 
-  start &= dev_request_queue_isempty(q);
+  start = dev_request_queue_isempty(q);
   dev_request_queue_pushback(q, &rq->base);
 
   if (start) {
@@ -329,8 +326,6 @@ static DEV_CHAR_REQUEST(nrf5x_uarte_request)
     else
       nrf5x_uarte_tx_start(dev);
   }
-
-  LOCK_RELEASE_IRQ(&dev->lock);
 }
 
 static DEV_CHAR_CANCEL(nrf5x_uarte_cancel)
@@ -338,7 +333,6 @@ static DEV_CHAR_CANCEL(nrf5x_uarte_cancel)
   struct device_s *dev = accessor->dev;
   struct nrf5x_uarte_priv *pv = dev->drv_pv;
   dev_request_queue_root_t *q = NULL;
-  error_t err;
 
   switch (rq->type) {
   case DEV_CHAR_READ_PARTIAL:
@@ -355,18 +349,14 @@ static DEV_CHAR_CANCEL(nrf5x_uarte_cancel)
     return -EINVAL;
   }
 
-  LOCK_SPIN_IRQ(&dev->lock);
+  LOCK_SPIN_IRQ_SCOPED(&dev->lock);
 
-  if (dev_request_queue_head(q) == &rq->base) {
-    err = -EBUSY;
-  } else {
-    dev_request_queue_remove(q, &rq->base);
-    err = 0;
-  }
+  if (dev_request_queue_head(q) == &rq->base)
+    return -EBUSY;
 
-  LOCK_RELEASE_IRQ(&dev->lock);
+  dev_request_queue_remove(q, &rq->base);
 
-  return err;
+  return 0;
 }
 
 static error_t nrf5x_uarte_config(struct nrf5x_uarte_priv *pv,
@@ -419,17 +409,12 @@ static error_t nrf5x_uarte_config(struct nrf5x_uarte_priv *pv,
 
 static DEV_UART_CONFIG(nrf5x_uarte_uart_config)
 {
-    struct device_s *dev = accessor->dev;
-    struct nrf5x_uarte_priv *pv = dev->drv_pv;
-    error_t err;
+  struct device_s *dev = accessor->dev;
+  struct nrf5x_uarte_priv *pv = dev->drv_pv;
 
-    LOCK_SPIN_IRQ(&dev->lock);
+  LOCK_SPIN_IRQ_SCOPED(&dev->lock);
 
-    err = nrf5x_uarte_config(pv, cfg);
-
-    LOCK_RELEASE_IRQ(&dev->lock);
-
-    return err;
+  return nrf5x_uarte_config(pv, cfg);
 }
 
 #endif
@@ -517,7 +502,6 @@ static DEV_INIT(nrf5x_uarte_char_init)
 
   nrf5x_uarte_config(pv, &config);
 
-  pv->callbacking = 0;
   pv->must_flush = 0;
 
   return 0;

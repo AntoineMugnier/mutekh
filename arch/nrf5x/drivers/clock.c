@@ -660,12 +660,10 @@ static DEV_CMU_APP_CONFIGID_SET(nrf5x_clock_app_configid_set)
   struct device_s *dev = accessor->dev;
   struct nrf5x_clock_context_s *pv = dev->drv_pv;
 
-  LOCK_SPIN_IRQ(&dev->lock);
+  LOCK_SPIN_IRQ_SCOPED(&dev->lock);
   
   pv->configid_app = config_id;
   nrf5x_clock_configid_refresh(dev);
-
-  LOCK_RELEASE_IRQ(&dev->lock);
 
   return 0;
 }
@@ -675,15 +673,13 @@ static KROUTINE_EXEC(nrf5x_clock_configid_update)
   struct nrf5x_clock_context_s *pv = KROUTINE_CONTAINER(kr, *pv, configid_updater);
   struct device_s *dev = pv->src[0].dev;
 
-  LOCK_SPIN_IRQ(&dev->lock);
+  LOCK_SPIN_IRQ_SCOPED(&dev->lock);
 
   logk_debug("%s %d->%d\n", __FUNCTION__,
           pv->configid_cur, pv->configid_next);
 
   pv->configid_cur = pv->configid_next;
   dev_cmu_configid_set(dev, &nrf5x_clock_config_ops, pv->configid_next);
-
-  LOCK_RELEASE_IRQ(&dev->lock);
 }
 
 const struct driver_s nrf5x_clock_drv;
