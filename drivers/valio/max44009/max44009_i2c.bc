@@ -1,0 +1,142 @@
+/*
+  This file is part of MutekH.
+
+  MutekH is free software; you can redistribute it and/or modify it
+  under the terms of the GNU Lesser General Public License as
+  published by the Free Software Foundation; version 2.1 of the
+  License.
+
+  MutekH is distributed in the hope that it will be useful, but
+  WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+  Lesser General Public License for more details.
+
+  You should have received a copy of the GNU Lesser General Public
+  License along with this program.  If not, see
+  <http://www.gnu.org/licenses/>.
+
+  Copyright (c) 2017, Nicolas Pouillon <nipo@ssji.net>
+*/
+
+#include <device/class/i2c.h>
+#include "max44009_regs.h"
+
+.custom i2c
+.name max44009_i2c
+.global %8 if_above, %9 if_below
+
+.func max44009_reg_set
+    .input %0 reg, %1 value, %15 link
+    .clobber %0
+
+    pack8      %reg, 2
+    i2c_wrr    %reg, 2, STOP
+
+    ret %link
+.endfunc
+
+.func max44009_reg_get
+    .input %0 reg, %15 link
+    .output %0 value
+
+    pack8      %reg, 1
+    i2c_wrr    %reg, 1, RESTART
+    i2c_rdr    %value, 1, STOP
+    unpack8    %value, 1
+
+    ret %link
+.endfunc
+
+.func max44009_set_level
+    .input %0 reg, %1 level, %15 link
+    .clobber %0, %1, %2
+
+    // Divide by 720
+    cst16  %2, 11, 0
+    mul32  %1, %2
+    shi32r %1, 13
+    // Find exponent
+    mov    %2, %1
+    msbs32 %1
+    add8   %1, -3
+    // Keep it positive
+    tst32s %1, 31
+     cst8  %1,  0
+    // Merge mantissa and exponent
+    shr32  %2, %1
+    shi32l %1,  4
+    or32   %1, %2
+    
+    jmp8   max44009_reg_set
+.endfunc
+
+.func max44009_bc_wait_setup
+    .clobber %0, %1, %2, %15
+    .export max44009_bc_wait_setup
+
+    mov   %max44009_set_level:level, %if_above
+    cst8  %max44009_set_level:reg, REG_THRESH_UP
+    call8 %max44009_set_level:link, max44009_set_level
+
+    mov   %max44009_set_level:level, %if_below
+    cst8  %max44009_set_level:reg, REG_THRESH_DOWN
+    call8 %max44009_set_level:link, max44009_set_level
+
+    cst8  %max44009_reg_set:reg, REG_CONFIG
+    cst8  %max44009_reg_set:value, 0
+    call8 %max44009_reg_set:link, max44009_reg_set
+
+    cst8  %max44009_reg_set:reg, REG_THRESH_TIME
+    cst8  %max44009_reg_set:value, 0
+    call8 %max44009_reg_set:link, max44009_reg_set
+
+    cst8  %max44009_reg_set:reg, REG_INT_ENABLE
+    cst8  %max44009_reg_set:value, 1
+    call8 %max44009_reg_set:link, max44009_reg_set
+
+    end
+.endfunc
+
+.func max44009_bc_shutdown
+    .clobber %0, %1, %15
+    .export max44009_bc_shutdown
+
+    cst8  %max44009_reg_set:reg, REG_INT_ENABLE
+    cst8  %max44009_reg_set:value, 0
+    call8 %max44009_reg_set:link, max44009_reg_set
+
+    cst8  %max44009_reg_set:reg, REG_CONFIG
+    cst8  %max44009_reg_set:value, 0
+    call8 %max44009_reg_set:link, max44009_reg_set
+
+    end
+.endfunc
+
+.func max44009_bc_read
+    .output %4 reading
+    .clobber %0 reg, %1 tmp, %15
+    .export max44009_bc_read
+
+    cst8  %max44009_reg_set:reg, REG_INT_ENABLE
+    cst8  %max44009_reg_set:value, 0
+    call8 %max44009_reg_set:link, max44009_reg_set
+
+    cst8   %max44009_reg_get:reg, REG_LUX_H
+    call8  %max44009_reg_get:link, max44009_reg_get
+    mov    %tmp, %max44009_reg_get:value
+
+    cst8   %max44009_reg_get:reg, REG_LUX_L
+    call8  %max44009_reg_get:link, max44009_reg_get
+    extz   %0, 3
+
+    shi32l %1, 4
+    or32   %0, %1
+    shi32r %1, 8
+    extz   %0, 7
+    extz   %1, 3
+    shl32  %0, %1
+    cst8   %reading, 45
+    mul32  %reading, %0
+
+    end
+.endfunc
