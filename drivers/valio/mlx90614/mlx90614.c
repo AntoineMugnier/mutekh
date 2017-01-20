@@ -251,7 +251,7 @@ KROUTINE_EXEC(mlx90614_i2c_done)
     device_async_init_done(dev, pv->i2c_rq.base.err);
 
     if (pv->i2c_rq.base.err)
-      return;
+      goto out;
   }
   
   pv->state = MLX90614_IDLE;
@@ -267,6 +267,7 @@ KROUTINE_EXEC(mlx90614_i2c_done)
 
   mlx90614_wait(dev);
 
+ out:
   LOCK_RELEASE_IRQ(&dev->lock);
 }
 
