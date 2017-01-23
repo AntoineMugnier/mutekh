@@ -186,11 +186,11 @@ static KROUTINE_EXEC(hd44780_gpio_done)
 
   logk_trace("%s", __func__);
 
-  LOCK_SPIN_IRQ(&dev->lock);
+  LOCK_SPIN_IRQ_SCOPED(&dev->lock);
+
   assert(pv->state == HD44780_WAIT_GPIO);
   pv->state = HD44780_IDLE;
   kroutine_exec(&pv->vm_runner);
-  LOCK_RELEASE_IRQ(&dev->lock);
 }
 
 static KROUTINE_EXEC(hd44780_timer_done)
@@ -200,11 +200,11 @@ static KROUTINE_EXEC(hd44780_timer_done)
 
   logk_trace("%s", __func__);
 
-  LOCK_SPIN_IRQ(&dev->lock);
+  LOCK_SPIN_IRQ_SCOPED(&dev->lock);
+
   assert(pv->state == HD44780_WAIT_TIMER);
   pv->state = HD44780_IDLE;
   kroutine_exec(&pv->vm_runner);
-  LOCK_RELEASE_IRQ(&dev->lock);
 }
 
 static DEV_CHAR_REQUEST(hd4780_request)
@@ -231,11 +231,11 @@ static DEV_CHAR_REQUEST(hd4780_request)
 
   rq->base.drvdata = dev;
 
-  LOCK_SPIN_IRQ(&dev->lock);
+  LOCK_SPIN_IRQ_SCOPED(&dev->lock);
+
   dev_request_queue_pushback(&pv->queue, &rq->base);
   if (pv->state == HD44780_WAIT_CHAR)
     kroutine_exec(&pv->vm_runner);
-  LOCK_RELEASE_IRQ(&dev->lock);
 }
 
 static DEV_CHAR_CANCEL(hd4780_cancel)
@@ -246,12 +246,12 @@ static DEV_CHAR_CANCEL(hd4780_cancel)
   if (rq->base.drvdata != dev)
     return -EINVAL;
 
-  LOCK_SPIN_IRQ(&dev->lock);
+  LOCK_SPIN_IRQ_SCOPED(&dev->lock);
+
   dev_request_queue_remove(&pv->queue, &rq->base);
 
   if (dev_request_queue_isempty(&pv->queue))
     device_sleep_schedule(dev);
-  LOCK_RELEASE_IRQ(&dev->lock);
 
   return 0;
 }
