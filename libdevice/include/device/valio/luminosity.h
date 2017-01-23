@@ -38,7 +38,7 @@ enum valio_luminosity_att_e
   /**
      The request data field is a @tt valio_luminosity_limits_s structure.
    */
-  VALIO_LUMINOSITY_LIMITS = CONFIG_DEVICE_VALIO_LUMINOSITY_ATTRIBUTE_FIRST,
+  VALIO_LUMINOSITY_LIMITS,
 };
 
 /* Return structure for @tt DEVICE_VALIO_READ and
