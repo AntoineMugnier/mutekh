@@ -146,9 +146,9 @@ static KROUTINE_EXEC(i2c_bb_runner)
       err = DEVICE_OP(&pv->timer, request, &pv->timer_rq);
 
       if (err == 0) {
-        LOCK_SPIN_IRQ(&dev->lock);
+        LOCK_SPIN_IRQ_SCOPED(&dev->lock);
+
         pv->state = I2C_BB_WAIT_TIMER;
-        LOCK_RELEASE_IRQ(&dev->lock);
         return;
       }
 
@@ -158,11 +158,12 @@ static KROUTINE_EXEC(i2c_bb_runner)
       switch (bit_get_mask(op, 8, 3)) {
       case 0: { // txn_next_get
         bool_t cont = 0;
-        LOCK_SPIN_IRQ(&dev->lock);
+
+        LOCK_SPIN_IRQ_SCOPED(&dev->lock);
+
         cont = !!pv->current;
         if (!cont)
           pv->state = I2C_BB_WAIT_RQ;
-        LOCK_RELEASE_IRQ(&dev->lock);
 
         if (cont) {
           dprintk("%s wait rq OK\n", __FUNCTION__);
@@ -220,10 +221,12 @@ static KROUTINE_EXEC(i2c_bb_runner)
         bc_set_reg(&pv->vm, bit_get_mask(op, 0, 4), pv->current->size == 0);
         continue;
 
-      case 7: // txn_done
+      case 7: { // txn_done
         dprintk("%s txn done %d\n", __FUNCTION__,
                 bit_get_mask(op, 0, 8));
-        LOCK_SPIN_IRQ(&dev->lock);
+
+        LOCK_SPIN_IRQ_SCOPED(&dev->lock);
+
         struct dev_i2c_ctrl_transfer_s *rq = pv->current;
 
         pv->current = NULL;
@@ -231,8 +234,8 @@ static KROUTINE_EXEC(i2c_bb_runner)
         rq->err = -bit_get_mask(op, 0, 8);
         kroutine_exec(&rq->kr);
 
-        LOCK_RELEASE_IRQ(&dev->lock);
         continue;
+      }
       }
 
     case 2: { // IO
@@ -266,9 +269,10 @@ static KROUTINE_EXEC(i2c_bb_runner)
           pv->gpio_rq.type = DEV_GPIO_SET_OUTPUT;
           DEVICE_OP(&pv->gpio, request, &pv->gpio_rq);
 
-          LOCK_SPIN_IRQ(&dev->lock);
+          LOCK_SPIN_IRQ_SCOPED(&dev->lock);
+
           pv->state = I2C_BB_WAIT_GPIO_OUT;
-          LOCK_RELEASE_IRQ(&dev->lock);
+
           return;
 #endif
         }
@@ -302,9 +306,10 @@ static KROUTINE_EXEC(i2c_bb_runner)
           pv->gpio_rq.input.data = pv->gpio_input;
           DEVICE_OP(&pv->gpio, request, &pv->gpio_rq);
 
-          LOCK_SPIN_IRQ(&dev->lock);
+          LOCK_SPIN_IRQ_SCOPED(&dev->lock);
+
           pv->state = I2C_BB_WAIT_GPIO_IN;
-          LOCK_RELEASE_IRQ(&dev->lock);
+
           return;
 #endif
         }
@@ -332,9 +337,9 @@ static KROUTINE_EXEC(i2c_bb_runner)
             pv->gpio_rq.mode.mode = mode;
             DEVICE_OP(&pv->gpio, request, &pv->gpio_rq);
 
-            LOCK_SPIN_IRQ(&dev->lock);
+            LOCK_SPIN_IRQ_SCOPED(&dev->lock);
+
             pv->state = I2C_BB_WAIT_GPIO_OUT;
-            LOCK_RELEASE_IRQ(&dev->lock);
             return;
 #endif
           }
@@ -343,12 +348,12 @@ static KROUTINE_EXEC(i2c_bb_runner)
       }
     }
 
-    case 3: // Yield
-      LOCK_SPIN_IRQ(&dev->lock);
+    case 3: { // Yield
+      LOCK_SPIN_IRQ_SCOPED(&dev->lock);
       pv->state = I2C_BB_IDLE;
       kroutine_exec(&pv->vm_runner);
-      LOCK_RELEASE_IRQ(&dev->lock);
       return;
+    }
     }
   }
 }
@@ -361,7 +366,7 @@ static KROUTINE_EXEC(i2c_bb_gpio_done)
 
   dprintk("%s\n", __FUNCTION__);
 
-  LOCK_SPIN_IRQ(&dev->lock);
+  LOCK_SPIN_IRQ_SCOPED(&dev->lock);
   assert(pv->state == I2C_BB_WAIT_GPIO_IN
          || pv->state == I2C_BB_WAIT_GPIO_OUT);
 
@@ -373,7 +378,6 @@ static KROUTINE_EXEC(i2c_bb_gpio_done)
 
   pv->state = I2C_BB_IDLE;
   kroutine_exec(&pv->vm_runner);
-  LOCK_RELEASE_IRQ(&dev->lock);
 }
 #endif
 
@@ -384,12 +388,11 @@ static KROUTINE_EXEC(i2c_bb_timer_done)
 
   dprintk("%s\n", __FUNCTION__);
 
-  LOCK_SPIN_IRQ(&dev->lock);
+  LOCK_SPIN_IRQ_SCOPED(&dev->lock);
   assert(pv->state == I2C_BB_WAIT_TIMER);
 
   pv->state = I2C_BB_IDLE;
   kroutine_exec(&pv->vm_runner);
-  LOCK_RELEASE_IRQ(&dev->lock);
 }
 
 static DEV_I2C_CTRL_TRANSFER(i2c_bb_transfer)
@@ -397,7 +400,7 @@ static DEV_I2C_CTRL_TRANSFER(i2c_bb_transfer)
   struct device_s *dev = accessor->dev;
   struct i2c_bb_ctx_s *pv = dev->drv_pv;
 
-  LOCK_SPIN_IRQ(&dev->lock);
+  LOCK_SPIN_IRQ_SCOPED(&dev->lock);
   assert(pv->current == NULL);
 
   pv->current = tr;
@@ -407,7 +410,6 @@ static DEV_I2C_CTRL_TRANSFER(i2c_bb_transfer)
     pv->state = I2C_BB_IDLE;
     kroutine_exec(&pv->vm_runner);
   }
-  LOCK_RELEASE_IRQ(&dev->lock);
 }
 
 #define i2c_bb_use dev_use_generic
