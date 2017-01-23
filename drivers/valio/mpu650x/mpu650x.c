@@ -330,7 +330,7 @@ static KROUTINE_EXEC(mpu650x_bus_done)
 
   dprintk("%s %d %P\n", __FUNCTION__, pv->bus_rq.base.err, pv->value_last, 12);
 
-  LOCK_SPIN_IRQ(&dev->lock);
+  LOCK_SPIN_IRQ_SCOPED(&dev->lock);
 
   pv->bus_rq.base.base.pvdata = NULL;
 
@@ -348,11 +348,8 @@ static KROUTINE_EXEC(mpu650x_bus_done)
     }
   }
 
-
   mpu650x_request_serve_queue(dev); 
   mpu650x_state_advance(dev);
-
-  LOCK_RELEASE_IRQ(&dev->lock);
 }
 
 static DEV_VALIO_REQUEST(mpu650x_request)
@@ -362,7 +359,7 @@ static DEV_VALIO_REQUEST(mpu650x_request)
 
   dprintk("%s\n", __FUNCTION__);
 
-  LOCK_SPIN_IRQ(&dev->lock);
+  LOCK_SPIN_IRQ_SCOPED(&dev->lock);
 
   switch (req->attribute) {
   case VALIO_MS_STATE: {
@@ -383,7 +380,7 @@ static DEV_VALIO_REQUEST(mpu650x_request)
 
       if (pv->state < MPU650X_STREAMING)
         mpu650x_state_switch(dev, MPU650X_STREAMING);
-      goto out;
+      return;
 
     default:
       req->error = -ENOTSUP;
@@ -450,29 +447,22 @@ static DEV_VALIO_REQUEST(mpu650x_request)
   default:
     break;
   }
-
- out:
-  LOCK_RELEASE_IRQ(&dev->lock);
 }
 
 static DEV_VALIO_CANCEL(mpu650x_cancel)
 {
   struct device_s *dev = accessor->dev;
   struct mpu650x_context_s *pv = dev->drv_pv;
-  error_t err = -ENOENT;
 
-  LOCK_SPIN_IRQ(&dev->lock);
+  LOCK_SPIN_IRQ_SCOPED(&dev->lock);
 
   GCT_FOREACH(dev_request_queue, &pv->queue, item,
               if (item == &req->base) {
                 dev_request_queue_remove(&pv->queue, &req->base);
-                err = 0;
-                GCT_FOREACH_BREAK;
+                return 0;
               });
 
-  LOCK_RELEASE_IRQ(&dev->lock);
-
-  return err;
+  return -ENOENT;
 }
 
 static DEV_USE(mpu650x_use)
