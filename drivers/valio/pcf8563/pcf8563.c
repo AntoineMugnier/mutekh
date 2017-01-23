@@ -216,30 +216,27 @@ static DEV_VALIO_REQUEST(pcf8563_request)
     return;
   }
 
-  LOCK_SPIN_IRQ(&dev->lock);
+  LOCK_SPIN_IRQ_SCOPED(&dev->lock);
   bool_t was_empty = dev_request_queue_isempty(&pv->queue);
 
   dev_request_queue_push(&pv->queue, &req->base);
 
   if (was_empty)
     pcf8563_request_run(dev, pv);
-  LOCK_RELEASE_IRQ(&dev->lock);
 }
 
 static DEV_VALIO_CANCEL(pcf8563_cancel)
 {
   struct device_s *dev = accessor->dev;
   struct pcf8563_priv_s *pv = dev->drv_pv;
-  error_t err = 0;
   
-  LOCK_SPIN_IRQ(&dev->lock);
+  LOCK_SPIN_IRQ_SCOPED(&dev->lock);
   if (req == dev_valio_rq_s_cast(dev_request_queue_head(&pv->queue)))
-    err = -EBUSY;
-  else
-    dev_request_queue_remove(&pv->queue, &req->base);
-  LOCK_RELEASE_IRQ(&dev->lock);
+    return -EBUSY;
 
-  return err;
+  dev_request_queue_remove(&pv->queue, &req->base);
+
+  return 0;
 }
 
 
