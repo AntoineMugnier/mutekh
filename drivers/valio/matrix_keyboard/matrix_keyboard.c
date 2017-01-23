@@ -242,10 +242,10 @@ static KROUTINE_EXEC(matrix_keyboard_runner)
         break;
       }
 
-      case 2: // pressed_done
+      case 2: { // pressed_done
         dprintk("%s pressed state changed: %P\n", __FUNCTION__, pv->cur_state, pv->state_size);
 
-        LOCK_SPIN_IRQ(&dev->lock);
+        LOCK_SPIN_IRQ_SCOPED(&dev->lock);
         if (memcmp(pv->cur_state, pv->last_state, pv->state_size)) {
           memcpy(pv->last_state, pv->cur_state, pv->state_size);
           struct dev_valio_rq_s *rq = dev_valio_rq_s_cast(dev_request_queue_pop(&pv->queue));
@@ -255,8 +255,9 @@ static KROUTINE_EXEC(matrix_keyboard_runner)
             kroutine_exec(&rq->base.kr);
           }
         }
-        LOCK_RELEASE_IRQ(&dev->lock);
+
         break;
+      }
       }
     }
 
@@ -270,7 +271,7 @@ static KROUTINE_EXEC(matrix_keyboard_gpio_done)
 
   dprintk("%s\n", __FUNCTION__);
 
-  LOCK_SPIN_IRQ(&dev->lock);
+  LOCK_SPIN_IRQ_SCOPED(&dev->lock);
   assert(pv->state == MATRIX_KEYBOARD_WAIT_COLUMNS
          || pv->state == MATRIX_KEYBOARD_WAIT_ROWS
          || pv->state == MATRIX_KEYBOARD_WAIT_CHANGE
@@ -292,7 +293,6 @@ static KROUTINE_EXEC(matrix_keyboard_gpio_done)
 
   pv->state = MATRIX_KEYBOARD_IDLE;
   kroutine_exec(&pv->vm_runner);
-  LOCK_RELEASE_IRQ(&dev->lock);
 }
 
 static KROUTINE_EXEC(matrix_keyboard_timer_done)
@@ -302,12 +302,11 @@ static KROUTINE_EXEC(matrix_keyboard_timer_done)
 
   dprintk("%s\n", __FUNCTION__);
 
-  LOCK_SPIN_IRQ(&dev->lock);
+  LOCK_SPIN_IRQ_SCOPED(&dev->lock);
   assert(pv->state == MATRIX_KEYBOARD_WAIT_TIMER);
 
   pv->state = MATRIX_KEYBOARD_IDLE;
   kroutine_exec(&pv->vm_runner);
-  LOCK_RELEASE_IRQ(&dev->lock);
 }
 
 static DEV_VALIO_REQUEST(matrix_keyboard_request)
@@ -333,15 +332,15 @@ static DEV_VALIO_REQUEST(matrix_keyboard_request)
     req->error = 0;
     break;
 
-  case DEVICE_VALIO_WAIT_EVENT:
-    LOCK_SPIN_IRQ(&dev->lock);
+  case DEVICE_VALIO_WAIT_EVENT: {
+    LOCK_SPIN_IRQ_SCOPED(&dev->lock);
     dev_request_queue_pushback(&pv->queue, &req->base);
 
     if (pv->state == MATRIX_KEYBOARD_IDLE)
       kroutine_exec(&pv->vm_runner);
-    LOCK_RELEASE_IRQ(&dev->lock);
 
     break;
+  }
   }
 }
 
