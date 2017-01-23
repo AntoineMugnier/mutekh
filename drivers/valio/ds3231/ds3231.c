@@ -189,30 +189,28 @@ static DEV_VALIO_REQUEST(ds3231_request)
     return;
   }
 
-  LOCK_SPIN_IRQ(&dev->lock);
+  LOCK_SPIN_IRQ_SCOPED(&dev->lock);
   bool_t was_empty = dev_request_queue_isempty(&pv->queue);
 
   dev_request_queue_push(&pv->queue, &req->base);
 
   if (was_empty)
     ds3231_request_run(dev, pv);
-  LOCK_RELEASE_IRQ(&dev->lock);
 }
 
 static DEV_VALIO_CANCEL(ds3231_cancel)
 {
   struct device_s *dev = accessor->dev;
   struct ds3231_priv_s *pv = dev->drv_pv;
-  error_t err = 0;
   
-  LOCK_SPIN_IRQ(&dev->lock);
-  if (req == dev_valio_rq_s_cast(dev_request_queue_head(&pv->queue)))
-    err = -EBUSY;
-  else
-    dev_request_queue_remove(&pv->queue, &req->base);
-  LOCK_RELEASE_IRQ(&dev->lock);
+  LOCK_SPIN_IRQ_SCOPED(&dev->lock);
 
-  return err;
+  if (req == dev_valio_rq_s_cast(dev_request_queue_head(&pv->queue)))
+    return -EBUSY;
+
+  dev_request_queue_remove(&pv->queue, &req->base);
+
+  return 0;
 }
 
 
