@@ -169,7 +169,8 @@ static KROUTINE_EXEC(pcal6408a_i2c_done)
 
   dprintk("%s\n", __FUNCTION__);
 
-  LOCK_SPIN_IRQ(&dev->lock);
+  LOCK_SPIN_IRQ_SCOPED(&dev->lock);
+
   switch(pv->state) {
   case STATE_NOTIFY_READ: {
     uint_fast8_t cur = bc_get_reg(&pv->i2c_rq.vm, 0);
@@ -221,7 +222,6 @@ static KROUTINE_EXEC(pcal6408a_i2c_done)
 
   pv->state = STATE_IDLE;
   pcal6408a_handle_next(dev);
-  LOCK_RELEASE_IRQ(&dev->lock);
 }
 
 static DEV_GPIO_REQUEST(pcal6408a_request)
@@ -231,7 +231,7 @@ static DEV_GPIO_REQUEST(pcal6408a_request)
 
   req->error = 0;
 
-  LOCK_SPIN_IRQ(&dev->lock);
+  LOCK_SPIN_IRQ_SCOPED(&dev->lock);
   switch (req->type) {
   default:
     dprintk("%s request %p\n", __FUNCTION__, req);
@@ -246,7 +246,6 @@ static DEV_GPIO_REQUEST(pcal6408a_request)
   }
 
   pcal6408a_handle_next(dev);
-  LOCK_RELEASE_IRQ(&dev->lock);
 }
 
 static DEV_IRQ_SRC_PROCESS(pcal6408a_irq)
