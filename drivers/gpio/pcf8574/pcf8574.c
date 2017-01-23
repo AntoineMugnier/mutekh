@@ -124,7 +124,8 @@ static KROUTINE_EXEC(pcf8574_i2c_done)
 
   dprintk("%s\n", __FUNCTION__);
 
-  LOCK_SPIN_IRQ(&dev->lock);
+  LOCK_SPIN_IRQ_SCOPED(&dev->lock);
+
   switch(pv->state) {
   case STATE_NOTIFY_READ: {
     uint_fast8_t cur = pv->input;
@@ -176,7 +177,6 @@ static KROUTINE_EXEC(pcf8574_i2c_done)
 
   pv->state = STATE_IDLE;
   pcf8574_handle_next(dev);
-  LOCK_RELEASE_IRQ(&dev->lock);
 }
 
 static DEV_GPIO_SET_MODE(pcf8574_set_mode)
@@ -227,7 +227,8 @@ static DEV_GPIO_REQUEST(pcf8574_request)
 
   req->error = 0;
 
-  LOCK_SPIN_IRQ(&dev->lock);
+  LOCK_SPIN_IRQ_SCOPED(&dev->lock);
+
   switch (req->type) {
   default:
     dprintk("%s request %p\n", __FUNCTION__, req);
@@ -243,7 +244,7 @@ static DEV_GPIO_REQUEST(pcf8574_request)
     if (range & mask & (data ^ pv->input)) {
       req->error = 0;
       kroutine_exec(&req->base.kr);
-      goto noop;
+      return;
     } else {
       dev_request_queue_pushback(&pv->until_queue, &req->base);
     }
@@ -251,8 +252,6 @@ static DEV_GPIO_REQUEST(pcf8574_request)
   }
 
   pcf8574_handle_next(dev);
- noop:
-  LOCK_RELEASE_IRQ(&dev->lock);
 }
 
 static DEV_IRQ_SRC_PROCESS(pcf8574_irq)
