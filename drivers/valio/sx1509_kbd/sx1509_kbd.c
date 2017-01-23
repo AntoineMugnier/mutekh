@@ -67,62 +67,54 @@ static DEV_VALIO_REQUEST(sx1509_kbd_request)
 {
   struct device_s *dev = accessor->dev;
   struct sx1509_kbd_context_s *pv = dev->drv_pv;
-  bool_t queued = 0;
-  req->error = 0;
 
   dprintk("%s\n", __FUNCTION__);
 
   if (req->attribute != VALIO_KEYBOARD_MAP) {
     req->error = -EINVAL;
-    goto done;
+    kroutine_exec(&req->base.kr);
+    return;
   }
 
   switch (req->type) {
   default:
     req->error = -ENOTSUP;
-    goto done;
+    kroutine_exec(&req->base.kr);
+    return;
 
-  case DEVICE_VALIO_WAIT_EVENT:
-    LOCK_SPIN_IRQ(&dev->lock);
+  case DEVICE_VALIO_WAIT_EVENT: {
+    LOCK_SPIN_IRQ_SCOPED(&dev->lock);
+    req->error = 0;
     dev_request_queue_pushback(&pv->queue, &req->base);
-    queued = 1;
-    LOCK_RELEASE_IRQ(&dev->lock);
-    if (queued)
-      return;
+    return;
+  }
 
   case DEVICE_VALIO_READ:
     endian_le64_na_store(req->data, pv->value_last);
     req->error = 0;
-    goto done;
+    kroutine_exec(&req->base.kr);
+    return;
   }
-
- done:
-  kroutine_exec(&req->base.kr);
 }
 
 static DEV_VALIO_CANCEL(sx1509_kbd_cancel)
 {
   struct device_s *dev = accessor->dev;
   struct sx1509_kbd_context_s *pv = dev->drv_pv;
-  error_t err = -ENOENT;
 
-  LOCK_SPIN_IRQ(&dev->lock);
+  LOCK_SPIN_IRQ_SCOPED(&dev->lock);
 
   GCT_FOREACH(dev_request_queue, &pv->queue, item,
               if (item == &req->base) {
-                err = 0;
-                GCT_FOREACH_BREAK;
+                dev_request_queue_remove(&pv->queue, &req->base);
+
+                if (dev_request_queue_isempty(&pv->queue))
+                  device_sleep_schedule(dev);
+
+                return 0;
               });
 
-  if (err == 0)
-    dev_request_queue_remove(&pv->queue, &req->base);
-
-  if (dev_request_queue_isempty(&pv->queue))
-    device_sleep_schedule(dev);
-
-  LOCK_RELEASE_IRQ(&dev->lock);
-
-  return err;
+  return -ENOENT;
 }
 
 static DEV_USE(sx1509_kbd_use)
