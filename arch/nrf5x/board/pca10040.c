@@ -79,7 +79,7 @@ DEV_DECLARE_STATIC(uart_dev, "uart0", 0, nrf5x_uart_drv,
 #endif
 
 
-#if !defined(CONFIG_NRF5X_BOARD_INO_PINOUT) \
+#if !defined(CONFIG_NRF5X_BOARD_LAYOUT_NAME) \
   && defined(CONFIG_DRIVER_NRF5X_GPIO) \
   && defined(CONFIG_DRIVER_BUTTON_SET)
 

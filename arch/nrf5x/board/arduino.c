@@ -25,7 +25,7 @@
 #include <device/class/cmu.h>
 #include <device/class/i2c.h>
 #include <arch/nrf5x/ids.h>
-#include <arch/ino_pinout.h>
+#include <arch/pinmap/arduino.h>
 
 #if defined(CONFIG_DRIVER_NRF5X_SPI)
 
@@ -34,9 +34,9 @@ DEV_DECLARE_STATIC(spi_dev, "spi0", 0, nrf5x_spi_drv,
                    DEV_STATIC_RES_DEV_ICU("/cpu"),
                    DEV_STATIC_RES_IRQ(0, NRF5X_SPI1, DEV_IRQ_SENSE_HIGH_LEVEL, 0, 1),
                    DEV_STATIC_RES_DEV_IOMUX("/gpio"),
-                   DEV_STATIC_RES_IOMUX("mosi", 0, ARCH_INO_PINOUT_MOSI, 0, 0),
-                   DEV_STATIC_RES_IOMUX("miso", 0, ARCH_INO_PINOUT_MISO, 0, 0),
-                   DEV_STATIC_RES_IOMUX("clk", 0, ARCH_INO_PINOUT_SCK, 0, 0),
+                   DEV_STATIC_RES_IOMUX("mosi", 0, PINMAP_ARDUINO_MOSI, 0, 0),
+                   DEV_STATIC_RES_IOMUX("miso", 0, PINMAP_ARDUINO_MISO, 0, 0),
+                   DEV_STATIC_RES_IOMUX("clk", 0, PINMAP_ARDUINO_SCK, 0, 0),
                    DEV_STATIC_RES_DEV_TIMER("rtc* timer*"),
                    );
 #endif
@@ -51,8 +51,8 @@ DEV_DECLARE_STATIC(i2c0_dev, "i2c0", 0, nrf5x_i2c_drv,
                    DEV_STATIC_RES_DEV_TIMER("/rtc* /timer*"),
                    DEV_STATIC_RES_DEV_GPIO("/gpio"),
                    DEV_STATIC_RES_I2C_BITRATE(100000),
-                   DEV_STATIC_RES_IOMUX(",scl", 0, ARCH_INO_PINOUT_SCL, 0, 0),
-                   DEV_STATIC_RES_IOMUX(",sda", 0, ARCH_INO_PINOUT_SDA, 0, 0)
+                   DEV_STATIC_RES_IOMUX(",scl", 0, PINMAP_ARDUINO_SCL, 0, 0),
+                   DEV_STATIC_RES_IOMUX(",sda", 0, PINMAP_ARDUINO_SDA, 0, 0)
                    );
 
 # if defined(CONFIG_DRIVER_GPIO_PCAL6408A)
