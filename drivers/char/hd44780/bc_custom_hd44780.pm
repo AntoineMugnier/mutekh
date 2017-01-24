@@ -22,7 +22,7 @@ main::custom_op('wait', 1, 0x0000, \&parse_delay);
 main::custom_op('data', 1, 0x1000, \&parse_reg);
 main::custom_op('e',    1, 0x2000, \&parse_int);
 main::custom_op('rs',   1, 0x2010, \&parse_int);
-main::custom_op('rw',   1, 0x2020, \&parse_int);
+main::custom_op('rw',   1, 0x2030, \&parse_int);
 main::custom_op('next', 1, 0x3000, \&parse_regout);
 
 sub parse_reg

@@ -53,8 +53,8 @@ enum hd44780_gpio_e
 {
   HD44780_GPIO_E,
   HD44780_GPIO_RS,
-  HD44780_GPIO_RW,
   HD44780_GPIO_D,
+  HD44780_GPIO_RW,
   HD44780_GPIO_COUNT,
 };
 
@@ -164,6 +164,10 @@ static KROUTINE_EXEC(hd44780_runner)
       
     case 2: // E/RS
       logk_trace("%s %d %d", __func__, bit_get_mask(op, 4, 2), bit_get(op, 0));
+      if (pv->gpio_id[bit_get_mask(op, 4, 2)] == GPIO_INVALID_ID) {
+        pv->state = HD44780_IDLE;
+        continue;
+      }
       pv->gpio_rq.io_first = pv->gpio_rq.io_last = pv->gpio_id[bit_get_mask(op, 4, 2)];
       pv->reg = bit_get(op, 0);
       pv->state = HD44780_WAIT_GPIO;
@@ -291,15 +295,17 @@ static DEV_INIT(hd4780_init)
 
   err = device_res_gpio_map(dev,
 #if defined(CONFIG_DRIVER_HD44780_4BIT)
-                            "e:1 rs:1 rw?:1 d:4",
+                            "e:1 rs:1 d:4 rw?:1",
 #else
-                            "e:1 rs:1 rw?:1 d:8",
+                            "e:1 rs:1 d:8 rw?:1",
 #endif
                             pv->gpio_id, pin_wmap);
   if (err)
     goto err_gpio;
 
-  err = device_gpio_map_set_mode(&pv->gpio, pv->gpio_id, pin_wmap, HD44780_GPIO_COUNT,
+  size_t count = pv->gpio_id[HD44780_GPIO_RW] == GPIO_INVALID_ID ? 3 : 4;
+
+  err = device_gpio_map_set_mode(&pv->gpio, pv->gpio_id, pin_wmap, count,
                                  DEV_PIN_PUSHPULL,
                                  DEV_PIN_PUSHPULL,
                                  DEV_PIN_PUSHPULL,
