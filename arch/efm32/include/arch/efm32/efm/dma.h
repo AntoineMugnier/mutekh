@@ -4,8 +4,8 @@
 
 /*
    bfgen -o cdefs                                                              \
-     -O /home/cerdan/Work/mutekh/arch/efm32/include/arch/efm32/dma.h           \
-     -I /opt/bfgen/defs/efm32/efm32_dma.bf cdefs_use_reg_mask=1                \
+     -O dma.h       \
+     -I efm32_dma.bf cdefs_use_reg_mask=1                \
      cdefs_use_setter_value_prefix=0
 */
 
@@ -68,23 +68,14 @@
   #define EFM32_DMA_RDS_RDSCH_COUNT                32
   #define EFM32_DMA_RDS_RDSCH(fidx)                (0x00000001 << ((fidx)))
 
-#define EFM32_DMA_LOOP0_ADDR                         0x00001020
-#define EFM32_DMA_LOOP0_MASK                         0x000103ff
+#define EFM32_DMA_LOOP_ADDR(ridx)                    (0x00001020 + (ridx) * 4)
+#define EFM32_DMA_LOOP_COUNT                         2
+#define EFM32_DMA_LOOP_MASK                          0x000103ff
 /** Reload value for N_MINUS_1 when loop is enabled @multiple */
-  #define EFM32_DMA_LOOP0_WIDTH(v)                 ((v) << 0)
-  #define EFM32_DMA_LOOP0_WIDTH_SET(x, v)          do { (x) = (((x) & ~0x3ff) | ((v) << 0)); } while(0)
-  #define EFM32_DMA_LOOP0_WIDTH_GET(x)             (((x) >> 0) & 0x3ff)
-/** Reload value for N_MINUS_1 when loop is enabled @multiple */
-  #define EFM32_DMA_LOOP0_EN                       0x00010000
-
-#define EFM32_DMA_LOOP1_ADDR                         0x00001024
-#define EFM32_DMA_LOOP1_MASK                         0x000103ff
-/** Reload value for N_MINUS_1 when loop is enabled @multiple */
-  #define EFM32_DMA_LOOP1_WIDTH(v)                 ((v) << 0)
-  #define EFM32_DMA_LOOP1_WIDTH_SET(x, v)          do { (x) = (((x) & ~0x3ff) | ((v) << 0)); } while(0)
-  #define EFM32_DMA_LOOP1_WIDTH_GET(x)             (((x) >> 0) & 0x3ff)
-/** Reload value for N_MINUS_1 when loop is enabled @multiple */
-  #define EFM32_DMA_LOOP1_EN                       0x00010000
+  #define EFM32_DMA_LOOP_WIDTH(v)                  ((v) << 0)
+  #define EFM32_DMA_LOOP_WIDTH_SET(x, v)           do { (x) = (((x) & ~0x3ff) | ((v) << 0)); } while(0)
+  #define EFM32_DMA_LOOP_WIDTH_GET(x)              (((x) >> 0) & 0x3ff)
+  #define EFM32_DMA_LOOP_EN                        0x00010000
 
 #define EFM32_DMA_RECT0_ADDR                         0x00001060
 #define EFM32_DMA_RECT0_MASK                         0xffffffff

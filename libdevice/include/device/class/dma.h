@@ -26,6 +26,31 @@
   @short Direct memory access driver API
   @index {Direct memory access} {Device classes}
   @csee DRIVER_CLASS_DMA
+
+  This class of device provides a generic API for accessing DMA
+  controllers from other device drivers.
+
+  Transfer between memory and device registers are both supported. A
+  @ref dev_dma_rq_s {DMA operation} request may perform multiple
+  transfers of the same @ref dev_dma_rq_type_e {type}. A request
+  embeds an array of @ref dev_dma_desc_s {transfer descriptors}. Each
+  transfer entry specifies the addresses, size, stride and access
+  width that must be used to perform the copy. It is possible to loop
+  over the array of descriptors during a single request.
+
+  These modes of operation are supported:
+  @list
+  @item In continuous mode, a callback is invoked after
+    each transfer of the request, letting the initiator decide if the
+    transfer must go on.
+  @item In single shot mode, a callback is invoked when the whole
+    operation is over. A loop count is provided when the requested
+    is submitted, allowing the hardware to perform the whole operation
+    without software intervention.
+  @end list
+
+  A per request channel mask is used to specifies the channels that
+  can be used to perform an operation.
 */
 
 #ifndef __DEVICE_DMA_H__
@@ -39,144 +64,269 @@
 #include <device/class/timer.h>
 #include <device/request.h>
 
+struct device_dma_s;
+
+/** @internal source is a device register */
+#define _DEV_DMA_SRC_REG         1
+/** @internal source is a memory buffer */
+#define _DEV_DMA_SRC_MEM         2
+/** @internal destination is a device register */
+#define _DEV_DMA_DST_REG         4
+/** @internal destination is a memory buffer */
+#define _DEV_DMA_DST_MEM         8
+/** @internal loop an indefinite number of times over descriptors */
+#define _DEV_DMA_CONTINUOUS      16
+
+/** @This specifies the type of dma operation.
+    @see dev_dma_rq_s */
+enum dev_dma_rq_type_e
+{
+  /** @This type of request performs some memory to memory
+      transfers. All fields of the descriptors in @tt {src.mem} and
+      @tt {dst.mem} must be initialized. The request terminates and
+      the callback is invoked when the last descriptor is reached and
+      the loop counter reaches 0. */
+  DEV_DMA_MEM_MEM = _DEV_DMA_SRC_MEM | _DEV_DMA_DST_MEM,
+  /** @This type of request performs some memory to device register
+      transfers. Fields of the descriptors in @tt {src.mem} and @tt
+      {dst.reg} must be initialized. The request terminates and the
+      callback is invoked when the last descriptor is reached and
+      the loop counter reaches 0. */
+  DEV_DMA_MEM_REG = _DEV_DMA_SRC_MEM | _DEV_DMA_DST_REG,
+  /** @This type of request performs an indefinite number of memory to
+      device register transfers. All fields of the descriptors in @tt
+      {src.mem} and @tt {dst.reg} must be initialized. The callback is
+      invoked after each transfer. The request terminates when the
+      callback returns 0. */
+  DEV_DMA_MEM_REG_CONT = _DEV_DMA_SRC_MEM | _DEV_DMA_DST_REG | _DEV_DMA_CONTINUOUS,
+  /** @This type of request performs some device register to memory
+      transfers. Fields of the descriptors in @tt {src.reg} and @tt
+      {dst.mem} must be initialized. The request terminates and the
+      callback is invoked when the last descriptor is reached and
+      the loop counter reaches 0. */
+  DEV_DMA_REG_MEM = _DEV_DMA_SRC_REG | _DEV_DMA_DST_MEM,
+  /** @This type of request performs an indefinite number of device
+      register to memory transfers. All fields of the descriptors in
+      @tt {src.reg} and @tt {dst.mem} must be initialized. The
+      callback is invoked after each transfer. The request terminates
+      when the callback returns 0. */
+  DEV_DMA_REG_MEM_CONT = _DEV_DMA_SRC_REG | _DEV_DMA_DST_MEM | _DEV_DMA_CONTINUOUS,
+  /** @This type of request performs some device register to device
+      register transfers. Fields of the descriptors in @tt {src.reg}
+      and @tt {dst.reg} must be initialized. The request terminates
+      and the callback is invoked when the last descriptor is reached
+      and the loop counter reaches 0. */
+  DEV_DMA_REG_REG = _DEV_DMA_SRC_REG | _DEV_DMA_DST_REG,
+  /** @This type of request performs an indefinite number of device
+      register to device register transfers. All fields of the
+      descriptors in @tt {src.reg} and @tt {dst.mem} must be
+      initialized. The callback is invoked after each transfer. The
+      request terminates when the callback returns 0. */
+  DEV_DMA_REG_REG_CONT = _DEV_DMA_SRC_REG | _DEV_DMA_DST_REG | _DEV_DMA_CONTINUOUS,
+};
 
 enum dev_dma_inc_e
 {
-  DEV_DMA_INC_1_BYTE,
-  DEV_DMA_INC_2_BYTE,
-  DEV_DMA_INC_4_BYTE,
-  DEV_DMA_INC_NONE
+  DEV_DMA_INC_0_UNIT  = 0,
+  DEV_DMA_INC_1_UNITS = 1,
+  DEV_DMA_INC_2_UNITS = 2,
+  DEV_DMA_INC_4_UNITS = 3,
 };
 
-enum dev_dma_intl_e
+# define DEV_DMA_GET_INC(inc) ((inc) == DEV_DMA_INC_4_UNITS ? 4 : (inc))
+
+
+/** @This specifies parameter of a single DMA transfer. This is used
+    as an array element in the @ref dev_dma_rq_s structure. */
+struct dev_dma_desc_s
 {
-  DEV_DMA_INTL_READ = 0, 
-  DEV_DMA_INTL_WRITE
+  union {
+    struct {
+      /** This specifies the address of the source memory buffer.
+          This field may be modified by the driver. */
+      uintptr_t   addr;
+      /** This specifies the number of units minus one to transfer from memory. */
+      uint16_t    size;
+      /** This specifies the log2 of the memory load access width in bytes.
+          This defines the unit size. */
+      uint16_t    BITFIELD(width, 2);
+      /** This specifies the memory source address increment in units */
+      enum dev_dma_inc_e inc:2;
+      /** This specifies the number of units to add to the source address pointer
+          when looping. */
+      uint16_t    BITFIELD(stride,12);
+    }            mem;
+    struct {
+      /** This specifies the address of the device to load from register. */
+      uintptr_t   addr;
+      /** This specifies the number of units minus one to transfer from memory. */
+      uint16_t    size;
+      /** This specifies the log2 of the register load access width in bytes.
+          This defines the unit size. */
+      uint16_t    BITFIELD(width,2);
+      uint16_t    BITFIELD(_unused,2);
+      /** This specifies the number of units that is transfered at once from
+          the device. Value 0 means that all units can be transfered at once */
+      uint16_t    BITFIELD(burst,12);
+    }            reg;
+  }             src;
+
+  union {
+    struct {
+      /** This specifies the address of the destination memory buffer.
+          This field may be modified by the driver. */
+      uintptr_t   addr;
+      /** This specifies the memory destination address increment in word unit */
+      enum dev_dma_inc_e inc:2;
+      uint16_t    BITFIELD(_unused,2);
+      /** This specifies the number of units to add to the destination address pointer
+          when looping. */
+      uint16_t    BITFIELD(stride,12);
+    }            mem;
+    struct {
+      /** This specifies the address of the device register to write to. */
+      uintptr_t   addr;
+      uint16_t    BITFIELD(_unused,4);
+      /** This specifies the number of units that is transfered at once to
+          the device. Value 0 means that all units can be transfered at once */
+      uint16_t    BITFIELD(burst,12);
+    }            reg;
+  }             dst;
 };
 
-enum dev_dma_transfer_type_e
-{
-/** @This is the basic DMA transfer mode. Copy a memory block of size @tt size
-    from @tt src to @tt dst. */
-  DEV_DMA_BASIC,
-/** @This is used to write data continously to a destination address @tt dst.
-    DMA transfer source swicthes alternatively between @tt src[0] and @tt src[1].
-    @tt count is decremented and kroutine is called each time DMA 
-    terminates a write operation. When kroutine is called with @tt count null,
-    DMA transfer is terminated and request will be not used anymore by driver.
-    If @tt count is not null when kroutine is called, it can be incremented by the
-    kroutine to continue operation as long as necessary. In the same way, @tt dst
-    can be modified by kroutine to write contigous memory area. Kroutine policy must
-    always be @ref KROUTINE_IMMEDIATE. @tt dst[0] and @tt dst[1] must be equal. */
-  DEV_DMA_DBL_BUF_SRC,
-/** @This is used to read data continously from a source address @tt src.
-    DMA transfer destination swicthes alternatively between @tt dst[0] and @tt dst[1].
-    @tt count is decremented and kroutine is called each time DMA terminates
-    a write operation. When kroutine is called with @tt count null, DMA transfer is
-    terminated and request will be not used anymore by driver. If @tt count is not null
-    when kroutine is called, it can be incremented by the kroutine to continue operation
-    as long as necessary. In the same way, @tt dst can be modified by kroutine to write
-    contigous memory area. Kroutine policy must always be @ref KROUTINE_IMMEDIATE. 
-    @tt src[0] and @tt src[1] must be equal. */
-  DEV_DMA_DBL_BUF_DST,
-/** @This is used to chain a list of DMA operation on a channel. The kroutine
-    is called when all operation have been performed. This can be useful to move multiple
-    memory blocks into one contiguous memory area. The number of operation to perform
-    @tt count is decremented each time an operation is terminated.*/
-  DEV_DMA_SCATTER_GATHER,
-/** @This is used when 2 DMA operations must be synchonized. This can be useful to
-    perform a SPI transfer. In this case, a first DMA operation is in charge of writing
-    data to SPI device and a second DMA operation is in charge of reading data from SPI.
-    @tt tr[DEV_DMA_INTL_READ] and @tt param[DEV_DMA_INTL_READ] are used for read operation
-    and @tt tr[DEV_DMA_INTL_WRITE] and @tt param[DEV_DMA_INTL_WRITE] are used for write
-    operation. The kroutine is called only when the read operation is finished. */
-  DEV_DMA_INTERLEAVED,
-};
+struct dev_dma_rq_s;
 
-struct dev_dma_entry_s
-{
-  size_t                      size;
-  uintptr_t                   src;
-  uintptr_t                   dst;
-};
+/** @see dev_dma_callback_t */
+#define DEV_DMA_CALLBACK(n) bool_t (n)(struct dev_dma_rq_s *rq, \
+                                       uint_fast16_t desc_id, \
+                                       error_t err)
 
-struct dev_dma_param_s
-{
-  uint8_t                       channel;
-  enum dev_dma_inc_e            BITFIELD(src_inc,2);
-  enum dev_dma_inc_e            BITFIELD(dst_inc,2);
-  uint8_t                       BITFIELD(const_data,1);
-  uint8_t                       BITFIELD(const_len,3);
-};
+/** @This is called when a DMA transfer has completed.
 
-struct device_dma_s;
+    Depending on the @ref dev_dma_rq_type_e {type} of operation
+    requested, this will be called multiple times during a single
+    operation:
 
-/** Dma request @see devdma_request_t */
+    @list
+      @item When a continuous DMA operation has been requested, this function
+      is called for each completed descriptor. The @tt desc_id indicates the
+      completed descriptor. The DMA operation terminates when this callback
+      returns 0. The driver loops over the array of descriptors until this
+      happens.
+      @item For other type of operations, this callback is called once
+      when the operation terminates as the last descriptor is reached
+      and the loop counter is decremented to 0.
+    @end list
+
+    In any case, the @tt err parameter is not 0, the operation is
+    terminated ans the callback will not be called anymore.
+
+    It is not permitted to call the devdma_request_t function in order
+    to start a new operation from this callback. This callback may be
+    invoked from the interrupt handler of the DMA controller. Deferred
+    execution must be implemented as needed. */
+typedef DEV_DMA_CALLBACK(dev_dma_callback_t);
+
+#define GCT_CONTAINER_ALGO_dev_dma_queue CLIST
+
+/** @This is the DMA operation object. The array of DMA transfer
+    descriptors declared in this structure has null size. The @ref
+    #DEV_DMA_RQ_TYPE macro must be used instead to declare a DMA
+    operation embedding some transfer descriptors. */
 struct dev_dma_rq_s
 {
-  struct dev_request_s          base;
+  /** Type of DMA operation requested */
+  enum dev_dma_rq_type_e        type:5;
 
-  enum dev_dma_transfer_type_e  type;
+  /** Reserved for use by the driver of the DMA controller */
+  uint8_t                       drv_pv:5;
 
-  union
-  {
-    /** Used with @ref DEV_DMA_BASIC */
-    struct dev_dma_entry_s      basic;
+  /** Number of descriptors embedded at the end of the object minus one */
+  uint8_t                       desc_count_m1:6;
 
-    /** Used with @ref DEV_DMA_INTERLEAVED,
-        @ref DEV_DMA_DBL_BUF_SRC and
-        @ref DEV_DMA_DBL_BUF_DST */
-    struct dev_dma_entry_s      tr[2];
+  /** Number of iterations over the list of descriptors when not in
+      continuous mode minus one. */
+  uint16_t                      loop_count_m1;
 
-    /** Used with @ref DEV_DMA_SCATTER_GATHER */
-    struct dev_dma_entry_s   ** sg;
-  };
+  /** Mask of channels the operation is allowed to execute on. This is
+      used for channel allocation. It should be specified in resources
+      of the device relying on the DMA. */
+  uint32_t                      chan_mask;
 
-  bool_t                        tr_id;
+  /** This identifies a link between the device and the DMA
+      controller. The exact meaning is hardware dependent. */
+  struct {
+    uint16_t                    src;
+    uint16_t                    dst;
+  }                             dev_link;
 
-  struct dev_dma_param_s        param[2];
+  /** Completion callback. */
+  dev_dma_callback_t            *f_done;
 
-  uint16_t                      count;
-  uint8_t                       BITFIELD(arch_rq,1);
-  error_t                       error;
+  GCT_CONTAINER_ENTRY(dev_dma_queue, queue_entry);
+
+  /** This may be used by the driver in order to reuse some internal
+      data structure associated to a repeated request. It must be set
+      to @tt NULL before submitting a new request. It should be left
+      untouched when the same request is submitted again. Only the @tt
+      {mem.addr}, @tt {mem.size} and @tt {mem.stride} fields of the
+      request descriptor are allowed to change between submissions
+      when not reset to @NULL. */
+  void                          *cache_ptr;
+
+  /** Array of transfer descriptors. The driver is allowed to modify
+      the @tt {src.mem.addr} and @tt {dst.mem.addr} fields during
+      execution of the request. */
+  struct dev_dma_desc_s        desc[0];
 };
 
-STRUCT_INHERIT(dev_dma_rq_s, dev_request_s, base);
+GCT_CONTAINER_TYPES(dev_dma_queue, struct dev_dma_rq_s *, queue_entry);
+GCT_CONTAINER_FCNS(dev_dma_queue, static inline, dev_dma_queue,
+                   init, destroy, pushback, pop, isempty, head);
+
+/** @This declare a @ref dev_dma_rq_s object type with an embedded
+    array of @ref dev_dma_desc_s at the end. */
+#define DEV_DMA_RQ_TYPE(n)                      \
+  struct {                                      \
+    struct dev_dma_rq_s rq;                     \
+    struct dev_dma_desc_s desc[n];              \
+  }
 
 /** @see devdma_request_t */
-#define DEVDMA_REQUEST(n)	void (n) (const struct device_dma_s *accessor, struct dev_dma_rq_s *req)
+#define DEVDMA_REQUEST(n)	__attribute__ ((sentinel)) \
+  error_t (n) (const struct device_dma_s *accessor, ...)
 
 /**
-   Dma device class request() function type. Enqueue a dma transfert
-   request.
+   Dma device class request() function type.
 
-   @ref dev_dma_param_s::src_inc and @ref dev_dma_param_s::dst_inc
-   defines the incrementation step of respectively @ref
-   dev_dma_entry_s::src and @ref dev_dma_entry_s::dst addresses.
+   @This enqueues one or more @ref dev_dma_rq_s objects. The argument
+   list of pointers to request must be @tt NULL terminated.
 
-   When @ref DEV_DMA_INC_NONE is used, address must not be incremented
-   by the DMA. The @tt src and @tt dst fields can be modified by
-   driver.
+   When multiple requests are passed on the same calls, they are
+   guaranteed to be started in order. This means that a request
+   sending data to a device might be postponed until an other
+   request is ready to sink data from the device.
 
-   When the @ref dev_dma_param_s::const_data field is set, the @tt src
-   field points to the constant data to copy repeatedly to the
-   destination and the @ref dev_dma_param_s::const_len field must be
-   used to indicate length of the pattern.  @ref
-   dev_dma_param_s::channel specifies which channel must be used for
-   the transfert.  On single channel DMA's this field must be set to
-   0.
+   The @ref dev_dma_rq_s::cache_ptr field of the request must be set
+   to @tt NULL unless the same request has been pushed previously.
 
-   When the @ref dev_dma_rq_s::arch_rq field is set, The @ref
-   dev_dma_rq_s structure is inherited by a platform specific
-   structure. Additional fields contains some values that are platform
-   specific. This may include DMA triggering signal or peripheral ID
-   when transfering to/from a peripheral.
+   Execution of the request consists in performing multiple transfers
+   specified in the embedded descriptors. The @ref dev_dma_rq_type_e
+   {type} of request specifies the exact behavior. The @tt
+   {src.mem.addr} and @tt {dst.mem.addr} fields of request descriptors
+   are left undefined when the request terminates. Other fields of the
+   descriptors are not modified.
 
-   A new request may be submitted from the kroutine handler function.
-   Please read @xref {Nested device request submission}.
+   A request will not start until one of the channel specified in @tt
+   chan_mask becomes idle. It returns @tt -ENOENT if the channel
+   mask does not have at least one bit set for an implemented channel.
 
-   The function returns @tt -ENOTSUP when the requested operation is not
-   supported and @tt 0 otherwise.
+   The function returns @tt -ENOTSUP when the requested type of
+   operation is not supported.
+
+   If a descriptor related issue is detected (unsupported alignment,
+   non mapped address...), the error is reported to the callback
+   function instead.
 */
 typedef DEVDMA_REQUEST(devdma_request_t);
 
@@ -192,56 +342,47 @@ DRIVER_CLASS_TYPES(DRIVER_CLASS_DMA, dma,
     .f_request = prefix ## _request,                             \
   })
 
-BUSY_WAITING_FUNCTION
-inline error_t dev_dma_spin_copy(const struct device_dma_s *accessor, 
-                                 struct dev_dma_rq_s* rq)
-{
-    struct dev_request_status_s status;
-
-    dev_request_spin_init(&rq->base, &status);
-
-    DEVICE_OP(accessor, request, rq);
-
-    dev_request_spin_wait(&status);
-
-    return rq->error;
-}
-
-#ifdef CONFIG_MUTEK_CONTEXT_SCHED
-inline error_t dev_dma_wait_copy(const struct device_dma_s *accessor,
-                                 struct dev_dma_rq_s* rq)
-{
-    struct dev_request_status_s status;
-
-    dev_request_sched_init(&rq->base, &status);
-
-    DEVICE_OP(accessor, request, rq);
-
-    dev_request_sched_wait(&status);
-
-    return rq->error;
-}
-#endif
-
 #ifdef CONFIG_DEVICE_DMA
+
 /** @This specifies a DMA resource entry in a static
     device resources table declaration. @csee DEV_RES_DMA
     @see #DEV_DECLARE_STATIC */
-# define DEV_STATIC_RES_DMA(label_, channel_, config_)    \
+# define DEV_STATIC_RES_DMA(channel_mask_, link_)    \
   {                                                       \
       .type = DEV_RES_DMA,                                \
         .u = { .dma = {                                   \
-          .label = (label_),                              \
-          .channel = (channel_),                          \
-          .config = (config_),                            \
+          .channel_mask = (channel_mask_),                \
+          .link = (link_)                                 \
         } }                                               \
   }
+
 #else
-# define DEV_STATIC_RES_DMA(label_, channel_, config_)   \
+
+# define DEV_STATIC_RES_DMA(channel_, config_)   \
+  {                                                      \
+    .type = DEV_RES_UNUSED,                              \
+  }
+
+# define DEV_STATIC_RES_DEV_DMA(path_)                                 \
   {                                                      \
     .type = DEV_RES_UNUSED,                              \
   }
 #endif
 
-#endif
+config_depend_alwaysinline(CONFIG_DEVICE_DMA,
+error_t device_res_get_dma(const struct device_s *dev, uint_fast16_t id,
+                           uint32_t *channel_mask, uint32_t *link),
+{
+  struct dev_resource_s *r;
 
+  if (!(r = device_res_get(dev, DEV_RES_DMA, id)))
+    return -ENOENT;
+
+  *channel_mask = r->u.dma.channel_mask;
+  if (link != NULL)
+    *link = r->u.dma.link;
+
+  return 0;
+})
+
+#endif

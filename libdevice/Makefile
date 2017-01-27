@@ -33,7 +33,6 @@ objs += device_timer.o
 objs-$(CONFIG_DEVICE_SHELL) += shell_timer.o
 endif
 
-objs-$(CONFIG_DEVICE_DMA) += device_dma.o
 objs-$(CONFIG_DEVICE_BLOCK) += device_block.o
 
 ifeq ($(CONFIG_DEVICE_I2C), defined)

@@ -26,6 +26,8 @@
 # include <device/class/iomux.h>
 # include <device/class/cmu.h>
 # include <device/class/timer.h>
+# include <device/class/dma.h>
+# include <arch/efm32/dma_source.h>
 #endif
 
 #include <arch/efm32/irq.h>
@@ -81,6 +83,17 @@ DEV_DECLARE_STATIC(timer1_dev, "timer0", 0, efm32_timer_drv,
 
 #endif
 
+#if defined(CONFIG_DRIVER_EFR32_DMA)
+
+DEV_DECLARE_STATIC(dma_dev, "dma", 0, efm32_dma_drv,
+                   DEV_STATIC_RES_MEM(0x400e2000, 0x400e3000),
+                   DEV_STATIC_RES_FREQ(HFXO_FREQ, 1),
+                   DEV_STATIC_RES_DEV_ICU("/cpu"),
+                   DEV_STATIC_RES_IRQ(0, EFM32_IRQ_DMA, DEV_IRQ_SENSE_RISING_EDGE, 0, 1)
+                   );
+
+#endif
+
 #if defined(CONFIG_DRIVER_EFM32_USART_SPI)
 
 DEV_DECLARE_STATIC(usart1_dev, "spi1", 0, efm32_usart_spi_drv,
@@ -90,6 +103,12 @@ DEV_DECLARE_STATIC(usart1_dev, "spi1", 0, efm32_usart_spi_drv,
 
                    DEV_STATIC_RES_DEV_ICU("/cpu"),
                    DEV_STATIC_RES_IRQ(0, EFM32_IRQ_USART1_RX, DEV_IRQ_SENSE_RISING_EDGE, 0, 1),
+#if defined(CONFIG_DRIVER_EFR32_DMA)
+                   DEV_STATIC_RES_DEV_PARAM("dma", "/dma"),
+                   /* Read channel must have higher priority than write channel */
+                   DEV_STATIC_RES_DMA((1 << 0), (EFM32_DMA_SOURCE_USART1 | (EFM32_DMA_SIGNAL_USART1RXDATAV << 8))),
+                   DEV_STATIC_RES_DMA((1 << 1), (EFM32_DMA_SOURCE_USART1 | (EFM32_DMA_SIGNAL_USART1TXEMPTY << 8))),
+#endif
 
                    DEV_STATIC_RES_DEV_IOMUX("/gpio"),
                    DEV_STATIC_RES_IOMUX("clk",  EFM32_LOC11, EFM32_PC8, 0, 0),

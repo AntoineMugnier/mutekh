@@ -39,7 +39,25 @@
 #include <arch/efm32/dma_request.h>
 #include <arch/efm32/dma.h>
 
-#define CHANNEL_SIZE 16
+#define PL230_CHANNEL_SIZE 16
+#define EFM32_DMA_CHANNEL_MASK ((1 << CONFIG_DRIVER_EFM32_DMA_CHANNEL_COUNT) - 1)
+
+struct efm32_dma_chan_state_s
+{
+  struct dev_dma_rq_s  *rq;
+  uint8_t               didx;
+  uint8_t               lidx;
+  /* Used for double buffering */
+  bool_t                alt;
+};
+
+struct efm32_dma_descriptor_s
+{
+  uint32_t src;
+  uint32_t dst;
+  uint32_t cfg;
+  uint32_t unused;
+};
 
 DRIVER_PV(struct efm32_dma_context
 {
@@ -49,314 +67,541 @@ DRIVER_PV(struct efm32_dma_context
   void *                        primary;
 
   struct dev_irq_src_s          irq_ep;
-  dev_request_queue_root_t      queue[CONFIG_DRIVER_EFM32_DMA_CHANNEL_COUNT];
+  dev_dma_queue_root_t          queue;
   struct dev_clock_sink_ep_s    clk_ep;
 
-  /* lock for reentrant kroutine */
-  uint16_t                      busy;
-  /* Waiting and running interleaved request */
-  uint16_t                      intlwait;
-  uint16_t                      intlrun;
-  /* Used for double buffering */
-  bool_t                        alt;
+  uint8_t                       free_channel_mask;
+  struct efm32_dma_chan_state_s chan[CONFIG_DRIVER_EFR32_DMA_CHANNEL_COUNT];
+  struct efm32_dma_descriptor_s desc[CONFIG_DRIVER_EFM32_DMA_LINKED_LIST_SIZE];
+
+  bool_t                        list_busy;
 });
 
-static void efm32_dev_dma_set_ctrl(struct device_s *dev,
-                                   struct dev_dma_rq_s * rq,
-                                   struct dev_dma_entry_s *e, 
-                                   uint8_t idx,
-                                   bool_t alternate)
+static inline uint8_t efm32_dma_get_src(struct dev_dma_rq_s * rq)
 {
-  struct efm32_dma_context *pv = dev->drv_pv;
-  struct dev_dma_param_s *p = &rq->param[idx];
-  struct efm32_dev_dma_rq_s *exrq = (struct efm32_dev_dma_rq_s *)rq;
-  struct efm32_dev_dma_cfg_s * cfg = &exrq->cfg[idx];
-
-  uintptr_t ctrladdr = (uintptr_t)pv->primary;
-  if (alternate)
-    ctrladdr = (uintptr_t)cpu_mem_read_32(pv->addr + PL230_DMA_ALTCTRLBASE_ADDR);
-  ctrladdr +=  CHANNEL_SIZE * p->channel;
-
-
-  size_t len = e->size; 
-  if (len > 1024)
-    len = 1024; 
-
-  e->size -= len;
-
-  uint32_t x = DMA_CHANNEL_CFG_N_MINUS_1(len - 1);
-
-  uint8_t mode = DMA_CHANNEL_CFG_CYCLE_CTR_BASIC;
-
-  if (rq->type == DEV_DMA_DBL_BUF_DST)
-    mode = DMA_CHANNEL_CFG_CYCLE_CTR_PINGPONG;
-
-  if (rq->arch_rq)
+  switch(rq->type)
     {
-      DMA_CHANNEL_CFG_CYCLE_CTR_SETVAL(x, mode);
-      DMA_CHANNEL_CFG_R_POWER_SETVAL(x, cfg->arbiter);
+    case DEV_DMA_MEM_MEM:
+      return 0;
+    case DEV_DMA_MEM_REG:  
+    case DEV_DMA_MEM_REG_CONT:
+      return rq->dev_link.dst & 0xFF;
+    case DEV_DMA_REG_MEM:
+    case DEV_DMA_REG_MEM_CONT:
+      return rq->dev_link.src & 0xFF;
+    default:
+      abort();
     }
-  else
+}
+
+static inline uint8_t efm32_dma_get_signal(struct dev_dma_rq_s * rq)
+{
+  switch(rq->type)
     {
-      DMA_CHANNEL_CFG_CYCLE_CTR_SET(x, AUTOREQUEST);
-      DMA_CHANNEL_CFG_R_POWER_SET(x, AFTER32);
+    case DEV_DMA_MEM_MEM:
+      return 0;
+    case DEV_DMA_MEM_REG:  
+    case DEV_DMA_MEM_REG_CONT:
+      return (rq->dev_link.dst >> 8) & 0xFF;
+    case DEV_DMA_REG_MEM:
+    case DEV_DMA_REG_MEM_CONT:
+      return (rq->dev_link.src >> 8) & 0xFF;
+    default:
+      abort();
     }
+}
 
-  DMA_CHANNEL_CFG_SRC_INC_SETVAL(x, p->src_inc);
-  DMA_CHANNEL_CFG_DST_INC_SETVAL(x, p->dst_inc);
+static uint8_t efm32_dma_get_inc(uint8_t inc, uint8_t width)
+{
+  uint16_t lkt[3] = {0x2103, 0xF213, 0xFF23};
 
-  uint8_t size = p->src_inc; 
-  
-  if (p->src_inc == DEV_DMA_INC_NONE)
-   {
-     if (p->dst_inc == DEV_DMA_INC_NONE)
-       size = DMA_CHANNEL_CFG_SRC_SIZE_BYTE;
-     else 
-       size = p->dst_inc;
-   }
+  return (lkt[width] >> (inc << 2)) & 0xFF;
+}
 
-  DMA_CHANNEL_CFG_SRC_SIZE_SETVAL(x, size);
-  DMA_CHANNEL_CFG_DST_SIZE_SETVAL(x, size);
+static uint32_t efm32_dma_get_end_address(struct dev_dma_desc_s * desc, bool_t src)
+{
+  uint8_t  inc  = src ? desc->src.mem.inc  : desc->dst.mem.inc;
+  uint32_t addr = src ? desc->src.mem.addr : desc->dst.mem.addr;
 
-  uintptr_t src = e->src;
+  return addr + desc->src.mem.size * (1 << desc->src.mem.width) * DEV_DMA_GET_INC(inc);
+}
 
-  if (p->src_inc != DEV_DMA_INC_NONE)
+static error_t efm32_dma_set_ctrl(struct dev_dma_rq_s * rq,
+                                  struct dev_dma_desc_s * desc,
+                                  struct efm32_dma_descriptor_s *ctrl, 
+                                  uint32_t mode)
+{
+  size_t len = desc->src.mem.size;
+  size_t burst;
+
+  if (len + 1 > 1024)
+    return -EINVAL;
+
+  uint8_t width = desc->src.mem.width;
+
+  if (width > 2)
+    return -EINVAL;
+
+  uint8_t src_inc, dst_inc;
+
+  ctrl->src = desc->src.mem.addr;
+  ctrl->dst = desc->dst.mem.addr;
+  ctrl->cfg = DMA_CHANNEL_CFG_N_MINUS_1(len);
+
+  DMA_CHANNEL_CFG_SRC_SIZE_SETVAL(ctrl->cfg, width);
+  DMA_CHANNEL_CFG_DST_SIZE_SETVAL(ctrl->cfg, width);
+  DMA_CHANNEL_CFG_CYCLE_CTR_SETVAL(ctrl->cfg, mode);
+
+  switch(rq->type)
     {
-      src += ((len - 1) << p->src_inc);
-      e->src += len;
+    case DEV_DMA_MEM_MEM:
+      DMA_CHANNEL_CFG_R_POWER_SET(ctrl->cfg, AFTER1);
+      src_inc = efm32_dma_get_inc(desc->src.mem.inc, width);
+      dst_inc = efm32_dma_get_inc(desc->dst.mem.inc, width);
+      ctrl->src = efm32_dma_get_end_address(desc, 1);
+      ctrl->dst = efm32_dma_get_end_address(desc, 0);
+      break;
+    case DEV_DMA_MEM_REG:  
+    case DEV_DMA_MEM_REG_CONT:
+      burst = desc->dst.reg.burst;
+      if (burst & (burst - 1))
+      /* Not a power of 2 */
+        return -EINVAL;
+      DMA_CHANNEL_CFG_R_POWER_SETVAL(ctrl->cfg, __builtin_ctz(burst));
+      src_inc = efm32_dma_get_inc(desc->src.mem.inc, width);
+      dst_inc = 3;
+      ctrl->src = efm32_dma_get_end_address(desc, 1);
+      break;
+    case DEV_DMA_REG_MEM:
+    case DEV_DMA_REG_MEM_CONT:
+      burst = desc->src.reg.burst;
+      if (burst & (burst - 1))
+      /* Not a power of 2 */
+        return -EINVAL;
+      DMA_CHANNEL_CFG_R_POWER_SETVAL(ctrl->cfg, __builtin_ctz(burst));
+      src_inc = 3;
+      dst_inc = efm32_dma_get_inc(desc->dst.mem.inc, width);
+      ctrl->dst = efm32_dma_get_end_address(desc, 0);
+      break;
+    default:
+      return -EINVAL;
     }
 
+  if (src_inc == 0xF || dst_inc == 0xF)
+    return -EINVAL;
 
-  cpu_mem_write_32(ctrladdr + DMA_CHANNEL_SRC_DATA_END_ADDR, endian_le32(src));
+  DMA_CHANNEL_CFG_SRC_INC_SETVAL(ctrl->cfg, src_inc);
+  DMA_CHANNEL_CFG_DST_INC_SETVAL(ctrl->cfg, dst_inc);
 
-  uintptr_t dst = e->dst;
+  return 0;
+}
 
-  if (p->dst_inc != DEV_DMA_INC_NONE)
+static void efm32_dma_start(struct efm32_dma_context *pv,
+                            struct dev_dma_rq_s * rq,
+                            uint8_t chan)
+{
+  uint8_t src = efm32_dma_get_src(rq);
+  uint8_t signal = efm32_dma_get_signal(rq);
+
+  uint32_t msk = endian_le32(1 << chan);
+
+  pv->chan[chan].rq = rq;
+  pv->free_channel_mask &= ~(1 << chan);
+
+  if (!rq->loop_count_m1 && !chan)
     {
-      dst += ((len - 1) << p->dst_inc);
-      e->dst += len;
+      cpu_mem_write_32(pv->addr + EFM32_DMA_RECT0_ADDR, 0);
+      cpu_mem_write_32(pv->addr + EFM32_DMA_LOOP_ADDR(0), 0);
     }
 
-  cpu_mem_write_32(ctrladdr + DMA_CHANNEL_DST_DATA_END_ADDR, endian_le32(dst));
-  cpu_mem_write_32(ctrladdr + DMA_CHANNEL_CFG_ADDR, endian_le32(x));
-
-  x = endian_le32(cpu_mem_read_32(pv->addr + EFM32_DMA_IEN_ADDR));
-  x |= EFM32_DMA_IEN_DONE(p->channel);
+  uint32_t x = endian_le32(cpu_mem_read_32(pv->addr + EFM32_DMA_IEN_ADDR));
+  x |= msk;
   cpu_mem_write_32(pv->addr + EFM32_DMA_IEN_ADDR, endian_le32(x));
   
-  /* Enable channel */
-  x = PL230_DMA_CHENS_CH(p->channel);
-  cpu_mem_write_32(pv->addr + PL230_DMA_CHENS_ADDR, endian_le32(x));
+  x = EFM32_DMA_CH_CTRL_SOURCESEL(src) | EFM32_DMA_CH_CTRL_SIGSEL(signal); 
+  cpu_mem_write_32(pv->addr + EFM32_DMA_CH_CTRL_ADDR(chan), endian_le32(x));
 
-  if (rq->arch_rq)
+  /* Clear alternate setting */
+  cpu_mem_write_32(pv->addr + PL230_DMA_CHALTC_ADDR, msk);
+
+  /* Enable channel */
+  cpu_mem_write_32(pv->addr + PL230_DMA_CHENS_ADDR, msk);
+
+  if (src)
     /* Peripheral triggering source */
-    {
-      cpu_mem_write_32(pv->addr + EFM32_DMA_CH_CTRL_ADDR(p->channel), endian_le32(cfg->trigsrc));
-      x = PL230_DMA_CHREQMASKC_CH(p->channel);
-      cpu_mem_write_32(pv->addr + PL230_DMA_CHREQMASKC_ADDR, endian_le32(x));
-    }
+    cpu_mem_write_32(pv->addr + PL230_DMA_CHREQMASKC_ADDR, msk);
   else
     /* Software triggering source */
     {
-      x = PL230_DMA_CHSWREQ_CH(p->channel);
-      cpu_mem_write_32(pv->addr + PL230_DMA_CHSWREQ_ADDR, endian_le32(x));
+      cpu_mem_write_32(pv->addr + PL230_DMA_CHREQMASKS_ADDR, msk);
+      cpu_mem_write_32(pv->addr + PL230_DMA_CHSWREQ_ADDR, msk);
     }
 }
 
-static void efm32_dev_dma_config(struct device_s *dev, struct dev_dma_rq_s *rq)
+static error_t efm32_dma_loop_setup(struct efm32_dma_context *pv,
+                                    struct dev_dma_rq_s * rq,
+                                    uint8_t chan)
 {
-#ifdef CONFIG_DRIVER_EFM32_DMA_DOUBLE_BUFFERING
-  struct efm32_dma_context *pv = dev->drv_pv;
-#endif
+  if (rq->desc_count_m1 ||
+      rq->type != DEV_DMA_MEM_MEM)
+    return -ENOTSUP;
 
-  switch (rq->type)
-  {
-    case DEV_DMA_BASIC:
-      efm32_dev_dma_set_ctrl(dev, rq, &rq->basic, 0, 0);
-      break;
+  uintptr_t ctrladdr = (uintptr_t)pv->primary;
 
-#ifdef CONFIG_DRIVER_EFM32_DMA_DOUBLE_BUFFERING
-    case DEV_DMA_DBL_BUF_DST:
-      /* Primary and Alternate control configuration */
-      efm32_dev_dma_set_ctrl(dev, rq, &rq->tr[0], 0, 0);
-      efm32_dev_dma_set_ctrl(dev, rq, &rq->tr[1], 0, 1);
-      pv->alt = 1;
-      break;
-#endif
+  ctrladdr += PL230_CHANNEL_SIZE * chan;
 
-    case DEV_DMA_INTERLEAVED:
-      /* Read and write channels configuration. Read configuration must be done first */
-      efm32_dev_dma_set_ctrl(dev, rq, &rq->tr[DEV_DMA_INTL_READ], DEV_DMA_INTL_READ, 0);
-      efm32_dev_dma_set_ctrl(dev, rq, &rq->tr[DEV_DMA_INTL_WRITE], DEV_DMA_INTL_WRITE, 0);
-      break;
+  uint32_t mode = DMA_CHANNEL_CFG_CYCLE_CTR_AUTOREQUEST;
 
-    default:
-      break;
-  }
+  if (efm32_dma_get_src(rq))
+    mode = DMA_CHANNEL_CFG_CYCLE_CTR_BASIC;
+
+  struct efm32_dma_descriptor_s ctrl;
+  struct dev_dma_desc_s *desc = rq->desc;
+
+  error_t err = efm32_dma_set_ctrl(rq, desc, &ctrl, mode);
+
+  if (err)
+    return err;
+
+  cpu_mem_write_32(ctrladdr + DMA_CHANNEL_CFG_ADDR, endian_le32(ctrl.cfg));
+  cpu_mem_write_32(ctrladdr + DMA_CHANNEL_SRC_DATA_END_ADDR, endian_le32(ctrl.src));
+  cpu_mem_write_32(ctrladdr + DMA_CHANNEL_DST_DATA_END_ADDR, endian_le32(ctrl.dst));
+
+  uint32_t width = EFM32_DMA_LOOP_WIDTH(desc->src.mem.size);
+  uint32_t src_stride = desc->src.mem.stride * (1 << desc->src.mem.width);
+  uint32_t dst_stride = desc->dst.mem.stride * (1 << desc->src.mem.width);
+  uint32_t height = rq->loop_count_m1;
+
+  cpu_mem_write_32(pv->addr + EFM32_DMA_LOOP_ADDR(0), endian_le32(width));
+
+  uint32_t x = EFM32_DMA_RECT0_HEIGHT(height) |
+               EFM32_DMA_RECT0_SRCSTRIDE(src_stride) |
+               EFM32_DMA_RECT0_DSTSTRIDE(dst_stride);
+
+  cpu_mem_write_32(pv->addr + EFM32_DMA_RECT0_ADDR, endian_le32(x));
+
+  efm32_dma_start(pv, rq, chan);
+
+  return 1;
 }
 
-/* @This starts a interleaved request on DMA */
-static bool_t efm32_dma_start_intl(struct device_s *dev, struct dev_dma_rq_s *rq)
+static error_t efm32_dma_basic_setup(struct efm32_dma_context *pv,
+                                     struct dev_dma_rq_s * rq,
+                                     uint8_t chan)
 {
-  struct efm32_dma_context *pv = dev->drv_pv;
-  uint8_t wchan = rq->param[DEV_DMA_INTL_WRITE].channel;
+  uintptr_t ctrladdr = (uintptr_t)pv->primary;
 
-  /* Channels must be contigous */
-  assert(rq->param[DEV_DMA_INTL_READ].channel == (rq->param[DEV_DMA_INTL_WRITE].channel + 1));
+  ctrladdr += PL230_CHANNEL_SIZE * chan;
 
-  bool_t wempty = dev_request_queue_isempty(&pv->queue[wchan]);
+  uint32_t mode = DMA_CHANNEL_CFG_CYCLE_CTR_AUTOREQUEST;
 
-  bool_t idle = !((pv->busy | pv->intlrun) & bit(wchan));
+  if (efm32_dma_get_src(rq))
+    mode = DMA_CHANNEL_CFG_CYCLE_CTR_BASIC;
 
-  if (wempty && idle)
-  {
-    pv->intlrun |= bit(wchan);
-    return 1;
-  }
+  struct efm32_dma_descriptor_s ctrl;
 
-  pv->intlwait |= bit(wchan);
+  error_t err = efm32_dma_set_ctrl(rq, rq->desc, &ctrl, mode);
+
+  if (err)
+    return err;
+
+  cpu_mem_write_32(ctrladdr + DMA_CHANNEL_CFG_ADDR, endian_le32(ctrl.cfg));
+  cpu_mem_write_32(ctrladdr + DMA_CHANNEL_SRC_DATA_END_ADDR, endian_le32(ctrl.src));
+  cpu_mem_write_32(ctrladdr + DMA_CHANNEL_DST_DATA_END_ADDR, endian_le32(ctrl.dst));
+
+  efm32_dma_start(pv, rq, chan);
+
+  return 1;
+}
+
+static error_t efm32_dma_ping_pong_desc_setup(struct efm32_dma_context *pv,
+                                              struct dev_dma_rq_s * rq,
+                                              uint8_t chan)
+{
+  struct efm32_dma_chan_state_s *state = pv->chan + chan;
+  struct dev_dma_desc_s *desc = &rq->desc[state->didx];
+
+  uintptr_t ctrladdr = PL230_CHANNEL_SIZE * chan;
+
+  if (state->alt)
+    ctrladdr += cpu_mem_read_32(pv->addr + PL230_DMA_ALTCTRLBASE_ADDR);
+  else
+    ctrladdr += (uintptr_t)pv->primary;
+
+  state->alt ^= 1;
+
+  struct efm32_dma_descriptor_s ctrl;
+  uint32_t mode = DMA_CHANNEL_CFG_CYCLE_CTR_PINGPONG;
+
+  error_t err = efm32_dma_set_ctrl(rq, desc, &ctrl, mode);
+
+  if (err)
+    return err;
+
+  cpu_mem_write_32(ctrladdr + DMA_CHANNEL_CFG_ADDR, endian_le32(ctrl.cfg));
+  cpu_mem_write_32(ctrladdr + DMA_CHANNEL_SRC_DATA_END_ADDR, endian_le32(ctrl.src));
+  cpu_mem_write_32(ctrladdr + DMA_CHANNEL_DST_DATA_END_ADDR, endian_le32(ctrl.dst));
+
+  state->didx = state->didx == rq->desc_count_m1 ? 0 : state->didx + 1;
+
   return 0;
+}
 
+static error_t efm32_dma_ping_pong_setup(struct efm32_dma_context *pv,
+                                         struct dev_dma_rq_s * rq,
+                                         uint8_t chan)
+{
+  assert(rq->desc_count_m1);
+
+  struct efm32_dma_chan_state_s *state = pv->chan + chan;
+
+  state->didx = 0;
+  state->lidx = 0;
+  state->alt  = 0;
+
+  /* Configure primary descriptor */
+  error_t err = efm32_dma_ping_pong_desc_setup(pv, rq, chan);
+
+  if (err)
+    return err;
+
+  err = efm32_dma_ping_pong_desc_setup(pv, rq, chan);
+
+  if (err)
+    return err;
+
+  efm32_dma_start(pv, rq, chan);
+
+  return 1;
+}
+
+static error_t efm32_dma_list_setup(struct efm32_dma_context *pv,
+                                    struct dev_dma_rq_s * rq,
+                                    uint8_t chan)
+{
+  if (pv->list_busy)
+    return 0;
+
+  uintptr_t ctrladdr = (uintptr_t)pv->primary + PL230_CHANNEL_SIZE * chan;
+
+  struct dev_dma_desc_s *desc;
+  struct efm32_dma_descriptor_s *ctrl;
+  uint32_t mode;
+
+  /* Build table of transfer */
+
+  for (uint8_t i = 0; i < rq->desc_count_m1 + 1; i++)
+    {
+      desc = rq->desc + i;
+      ctrl = pv->desc + i;
+
+      mode = DMA_CHANNEL_CFG_CYCLE_CTR_AUTOREQUEST;
+
+      if (i < rq->desc_count_m1)
+        {
+          if (efm32_dma_get_src(rq))
+            mode = DMA_CHANNEL_CFG_CYCLE_CTR_PER_SG_ALT;
+          else
+            mode = DMA_CHANNEL_CFG_CYCLE_CTR_MEM_SG_ALT;
+        }
+
+      error_t err = efm32_dma_set_ctrl(rq, desc, ctrl, mode);
+
+      if (err) 
+        return err;
+    }
+
+  /* Configure primary data structure */
+
+  uint32_t x = DMA_CHANNEL_CFG_R_POWER(AFTER4) |
+               DMA_CHANNEL_CFG_N_MINUS_1(((rq->desc_count_m1 + 1) << 2) - 1) |
+               DMA_CHANNEL_CFG_SRC_INC(WORD) |
+               DMA_CHANNEL_CFG_DST_INC(WORD) |
+               DMA_CHANNEL_CFG_SRC_SIZE(WORD) |
+               DMA_CHANNEL_CFG_DST_SIZE(WORD);
+
+  if (efm32_dma_get_src(rq))
+    x |= DMA_CHANNEL_CFG_CYCLE_CTR(PER_SG_PRI);
+  else
+    x |= DMA_CHANNEL_CFG_CYCLE_CTR(MEM_SG_PRI);
+
+  cpu_mem_write_32(ctrladdr + DMA_CHANNEL_CFG_ADDR, endian_le32(x));
+
+  uint32_t addr = (uint32_t)pv->desc + (rq->desc_count_m1 + 1) * PL230_CHANNEL_SIZE - 4;
+  cpu_mem_write_32(ctrladdr + DMA_CHANNEL_SRC_DATA_END_ADDR, endian_le32(addr));
+
+  addr = cpu_mem_read_32(pv->addr + PL230_DMA_ALTCTRLBASE_ADDR) + PL230_CHANNEL_SIZE * (chan + 1) - 4;
+  cpu_mem_write_32(ctrladdr + DMA_CHANNEL_DST_DATA_END_ADDR, endian_le32(addr));
+
+  efm32_dma_start(pv, rq, chan);
+
+  pv->list_busy = 1;
+
+  return 1;
+}
+
+/* 
+   Return 1 is request has been started. 
+   Return 0 is request will be started later.
+   Return ERROR is request is not supported or malformed.
+*/
+
+static error_t efm32_dma_process(struct efm32_dma_context *pv, struct dev_dma_rq_s * rq)
+{
+  if (!(rq->chan_mask & EFM32_DMA_CHANNEL_MASK))
+    return -ENOENT;
+
+  if (rq->desc_count_m1 + 1 > CONFIG_DRIVER_EFM32_DMA_LINKED_LIST_SIZE)
+    return -ENOTSUP;
+
+  uint8_t chan_msk = rq->chan_mask & pv->free_channel_mask;
+
+  if (rq->drv_pv == 0 || chan_msk == 0)
+    return 0;
+
+  uint8_t chan = __builtin_ctz(chan_msk);
+
+  if (rq->loop_count_m1 && chan)
+  /* Only channel 0 can be used in loop mode */
+    return 0;
+
+  assert(pv->chan[chan].rq == NULL);
+
+  if (rq->loop_count_m1)
+    /* 2D copy */
+    return efm32_dma_loop_setup(pv, rq, chan);
+  if (rq->type & _DEV_DMA_CONTINUOUS)
+    /* Ping-Pong mode */
+    return efm32_dma_ping_pong_setup(pv, rq, chan);
+  else if (rq->desc_count_m1)
+    /* Scatter-gather */
+    return efm32_dma_list_setup(pv, rq, chan);
+  else
+    /* Basic mode */
+    return efm32_dma_basic_setup(pv, rq, chan);
 }
 
 static DEVDMA_REQUEST(efm32_dma_request)
 {
-  struct device_s         *dev = accessor->dev;
-  struct efm32_dma_context	*pv = dev->drv_pv;
+  struct device_s            *dev = accessor->dev;
+  struct efm32_dma_context   *pv = dev->drv_pv;
 
-  struct dev_request_s *base = &req->base;
-
-  if ((req->type == DEV_DMA_DBL_BUF_SRC) ||
-#ifndef CONFIG_DRIVER_EFM32_DMA_DOUBLE_BUFFERING
-      (req->type == DEV_DMA_DBL_BUF_DST) ||
-#endif
-      (req->type == DEV_DMA_SCATTER_GATHER))
-    {
-      req->error = -ENOTSUP;
-      kroutine_exec(&base->kr);
-      return;
-    }
+  error_t start = 1;
 
   LOCK_SPIN_IRQ(&dev->lock);
-
-  req->error = 0;
 
 #ifdef CONFIG_DEVICE_CLOCK_GATING
   if (!dev->start_count)
     dev_clock_sink_gate(&pv->clk_ep, DEV_CLOCK_EP_POWER_CLOCK);
 #endif
-  dev->start_count += DEVICE_START_COUNT_INC;
 
-  uint8_t chan = req->param[0].channel;
-  bool_t empty = dev_request_queue_isempty(&pv->queue[chan]);
-  bool_t idle = !((pv->busy | pv->intlrun) & bit(chan));
+  va_list vl;
+  va_start(vl, accessor);
 
-  dev_request_queue_pushback(&pv->queue[chan], base);
+  while(1)
+  {
+    struct dev_dma_rq_s *rq = va_arg(vl, struct dev_dma_rq_s *);
 
-  if (empty && idle)
-    {
-      if (req->type != DEV_DMA_INTERLEAVED ||
-          efm32_dma_start_intl(dev, req))
-        efm32_dev_dma_config(dev, req);
-    }
+    if (rq == NULL)
+      break;
+
+    dev->start_count += DEVICE_START_COUNT_INC;
+
+    rq->drv_pv = start;
+
+    start = efm32_dma_process(pv, rq);
+
+    if (start < 0)
+      break;
+
+    if (!start)
+      dev_dma_queue_pushback(&pv->queue, rq);
+  }
 
   LOCK_RELEASE_IRQ(&dev->lock);
-}
 
-static inline bool_t
-efm32_dev_dma_double_buffering_process(struct device_s *dev, uint8_t i)
-{
-  struct efm32_dma_context  *pv = dev->drv_pv;
-  struct dev_dma_rq_s       *rq = dev_dma_rq_s_cast(dev_request_queue_head(&pv->queue[i]));
-
-  assert(rq != NULL);
-
-  rq->count -= 1;
-  pv->alt ^= 1;
-
-  rq->tr_id = pv->alt;
-  kroutine_exec(&rq->base.kr);
-
-
-  if (rq->count == 0)
-    {
-      dev_request_queue_pop(&pv->queue[i]);
-      return 1;
-    }
-
-  if (rq->count > 1)
-    efm32_dev_dma_set_ctrl(dev, rq, &rq->tr[pv->alt], 0, pv->alt);
-
-  return 0;
+  return start < 0 ? start : 0;
 }
 
 static inline void
-efm32_dev_dma_next_request(struct device_s *dev, uint8_t i)
+efm32_dev_dma_process_next(struct efm32_dma_context *pv)
 {
-  struct efm32_dma_context  *pv = dev->drv_pv;
-  uint16_t mask = bit(i);
-  struct dev_dma_rq_s *rq;
+  error_t start = 1;
 
-  /* A interleaved request is waiting on this channel */
-  if (pv->intlwait & mask)
-  {
-    pv->intlwait &= ~mask;
-    rq = dev_dma_rq_s_cast(dev_request_queue_head(&pv->queue[i + 1]));
-  }
-  else
-    rq = dev_dma_rq_s_cast(dev_request_queue_head(&pv->queue[i]));
+  GCT_FOREACH(dev_dma_queue, &pv->queue, r, {
 
-  if (!rq)
-    return;
+    if (pv->free_channel_mask == 0)
+     GCT_FOREACH_BREAK;
 
-  if (rq->type == DEV_DMA_INTERLEAVED)
-  {
-    if (!efm32_dma_start_intl(dev, rq))
-      return ;
-  }
+    if (r->drv_pv == 0)
+      r->drv_pv = start;
 
-  efm32_dev_dma_config(dev, rq);
+    start = efm32_dma_process(pv, r);
+
+    if (start < 0)
+      {
+        /* Request Callback here */
+        r->f_done(r, 0, start);
+        GCT_FOREACH_DROP;
+      }
+
+    if (start)
+      GCT_FOREACH_DROP;
+    });
 }
        
 static inline void
 efm32_dev_dma_process_channel_irq(struct device_s *dev, uint8_t i)
 {
   struct efm32_dma_context *pv = dev->drv_pv;
-  struct dev_dma_rq_s *rq = dev_dma_rq_s_cast(dev_request_queue_head(&pv->queue[i]));
+  struct dev_dma_rq_s *rq = pv->chan[i].rq;
 
-  uint16_t  mask = bit(i);
-  bool_t    done = 0;
+  assert(rq);
 
-  if (pv->intlrun & mask)
-    pv->intlrun &= ~mask;
-  else if (rq)
-  /* Not the end of a write interleaved transfer */
+  struct efm32_dma_chan_state_s *state = pv->chan + i;
+  uint32_t msk = endian_le32(1 << i);
+
+  uint8_t desc_id = 0;
+  bool_t continous = (rq->type & _DEV_DMA_CONTINUOUS) ? 1 : 0;
+
+  /* Clear Interrupt Flag */
+  cpu_mem_write_32(pv->addr + EFM32_DMA_IFC_ADDR, endian_le32(EFM32_DMA_IFC_DONE(i)));
+
+  if (continous)
     {
-      pv->busy = mask;
-      switch (rq->type)
-        {
-          case DEV_DMA_INTERLEAVED:
-          case DEV_DMA_BASIC:
-            dev_request_queue_pop(&pv->queue[i]);
-            kroutine_exec(&rq->base.kr);
-            done = 1;
-            break;
-#ifdef CONFIG_DRIVER_EFM32_DMA_DOUBLE_BUFFERING
-          case DEV_DMA_DBL_BUF_DST:
-            done = efm32_dev_dma_double_buffering_process(dev, i);
-            break;
+      desc_id = state->lidx;
+  
+      if (desc_id == rq->desc_count_m1)
+        state->lidx = 0;
+      else
+        state->lidx++;
+    }
+
+  /* Request Callback here */
+  bool_t run = rq->f_done(rq, desc_id, 0);
+
+  if (continous && run)
+    {
+      efm32_dma_ping_pong_desc_setup(pv, rq, i);
+#ifdef CONFIG_DRIVER_EFM32_DMA_TEST
+      /* Simulate a Peripheral restart */
+      cpu_mem_write_32(pv->addr + PL230_DMA_CHSWREQ_ADDR, msk);
 #endif
-          default:
-            abort();
-        }
-      pv->busy = 0;
+      return;
     }
 
-  if (done)
-    {
-      dev->start_count -= DEVICE_START_COUNT_INC;
-      efm32_dev_dma_next_request(dev, i);
-    }
+  /* Disable channel */
+  cpu_mem_write_32(pv->addr + PL230_DMA_CHENC_ADDR, msk);
+
+  pv->chan[i].rq = NULL;
+
+  if (!continous && rq->desc_count_m1)
+    pv->list_busy = 0;
+
+  dev->start_count -= DEVICE_START_COUNT_INC;
+  pv->free_channel_mask |= msk;
+
+  efm32_dev_dma_process_next(pv);
 }
 
 static DEV_IRQ_SRC_PROCESS(efm32_dma_irq)
@@ -375,27 +620,23 @@ static DEV_IRQ_SRC_PROCESS(efm32_dma_irq)
     if (!x)
       {
 #ifdef CONFIG_DEVICE_CLOCK_GATING
-        /* All queue are empty */
         if (!dev->start_count)
           dev_clock_sink_gate(&pv->clk_ep, DEV_CLOCK_EP_POWER);
 #endif
         break;
       }
  
-    for (uint16_t i = 0; i < CONFIG_DRIVER_EFM32_DMA_CHANNEL_COUNT; i++) 
+    for (uint8_t i = 0; i < CONFIG_DRIVER_EFM32_DMA_CHANNEL_COUNT; i++) 
       {
         if (!(x & EFM32_DMA_IF_DONE(i)))
           continue;
 
-        /* Clear Interrupt Flag */
-        cpu_mem_write_32(pv->addr + EFM32_DMA_IFC_ADDR, endian_le32(EFM32_DMA_IFC_DONE(i)));
         efm32_dev_dma_process_channel_irq(dev, i);
       }
   }
   
   lock_release(&dev->lock);
 }
-
 
 static DEV_USE(efm32_dma_use)
 {
@@ -438,6 +679,8 @@ static DEV_INIT(efm32_dma_init)
 
   memset(pv, 0, sizeof(struct efm32_dma_context));
 
+  pv->free_channel_mask = EFM32_DMA_CHANNEL_MASK;
+
   dev->drv_pv = pv;
 
   if (device_res_get_uint(dev, DEV_RES_MEM, 0, &pv->addr, NULL))
@@ -479,10 +722,8 @@ static DEV_INIT(efm32_dma_init)
 
   align = size * 2;
 
-#ifdef CONFIG_DRIVER_EFM32_DMA_DOUBLE_BUFFERING
   /* Need alternate structure */
   size= align;
-#endif
 
   pv->primary = mem_alloc_align(size, align, (mem_scope_sys));
   
@@ -506,8 +747,7 @@ static DEV_INIT(efm32_dma_init)
   /* Disable Channels */
   cpu_mem_write_32(pv->addr + PL230_DMA_CHENC_ADDR, endian_le32(PL230_DMA_CHENC_MASK));
 
-  for (uint8_t i = 0; i < CONFIG_DRIVER_EFM32_DMA_CHANNEL_COUNT; i++) 
-    dev_request_queue_init(pv->queue + i);
+  dev_dma_queue_init(&pv->queue);
 
   device_irq_source_init(dev, &pv->irq_ep, 1, &efm32_dma_irq);
 
@@ -525,7 +765,7 @@ static DEV_INIT(efm32_dma_init)
   mem_free(pv->primary);
  err_clk:
   dev_drv_clock_cleanup(dev, &pv->clk_ep);
-  err_mem:
+ err_mem:
   mem_free(pv);
   return -1;
 }
@@ -538,8 +778,7 @@ static DEV_CLEANUP(efm32_dma_cleanup)
 
   dev_drv_clock_cleanup(dev, &pv->clk_ep);
 
-  for (uint8_t i = 0; i < CONFIG_DRIVER_EFM32_DMA_CHANNEL_COUNT; i++) 
-    dev_request_queue_destroy(pv->queue + i);
+  dev_dma_queue_destroy(&pv->queue);
 
   mem_free(pv->primary);
   mem_free(pv);

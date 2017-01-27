@@ -1,0 +1,31 @@
+
+  %set OUTPUT_NAME out
+
+  # New source code module to be compiled
+  %append MODULES $(OUTPUT_NAME):$(CONFIGPATH)
+
+  # Application license
+  CONFIG_LICENSE_APP_LGPL
+
+  %include scripts/options.build
+  %include arch/arch.build
+
+  # Libs
+  CONFIG_APP_START
+  CONFIG_MUTEK_SLAB
+  CONFIG_COMPILE_OPTIMIZE 2
+
+  CONFIG_MUTEK_KROUTINE_SCHED defined
+
+%section efr32-stk6066a
+  CONFIG_DRIVER_EFR32_DMA
+  CONFIG_DRIVER_EFR32_DMA_TEST
+%end
+
+%section efm32-stk3700 efm32-stk3600 efm32-stk3800
+  CONFIG_DEVICE_SLEEP
+  CONFIG_DRIVER_EFM32_DMA
+  CONFIG_DRIVER_EFM32_DMA_TEST
+  CONFIG_DRIVER_EFM32_DMA_LINKED_LIST_SIZE 4
+%end
+

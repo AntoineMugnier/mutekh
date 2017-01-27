@@ -11,6 +11,6 @@
 #elif defined(CONFIG_EFM32_HAPPY_GECKO)
 # include "efm/happy/dma_source.h"
 #else
-# error
+# include "efr/dma_source.h"
 #endif
 

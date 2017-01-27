@@ -720,12 +720,6 @@ static error_t device_init_driver_nolock(struct device_s *dev)
           cl = DRIVER_CLASS_CMU;
           break;
 #endif
-#ifdef CONFIG_DEVICE_DMA
-        case DEV_RES_DMA:
-          path = r->u.ptr[0];
-          cl = DRIVER_CLASS_DMA;
-          break;
-#endif
 #ifdef CONFIG_DEVICE_I2C
         case DEV_RES_I2C_ADDR:
           path = r->u.i2c_addr.ctrl;

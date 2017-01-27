@@ -191,9 +191,8 @@ struct dev_resource_s
 
     /** @see DEV_RES_DMA */
     struct {
- char                *label;
-      uintptr_t                 config;
-      uintptr_t                 BITFIELD(channel,5);
+      uint32_t                  channel_mask;
+      uint16_t                  link;
     }                           dma;
 
     /** @see DEV_RES_USBDEV */

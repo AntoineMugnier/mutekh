@@ -36,12 +36,14 @@
 #include <device/class/iomux.h>
 #include <device/clock.h>
 
-#ifdef CONFIG_DRIVER_EFM32_DMA
+#if defined(CONFIG_DRIVER_EFM32_DMA) || defined(CONFIG_DRIVER_EFR32_DMA)
 #include <device/class/dma.h>
-
-#include <cpu/arm32m/pl230_channel.h>
 #include <arch/efm32/dma_source.h>
 #include <arch/efm32/dma_request.h>
+#endif
+
+#ifdef CONFIG_DRIVER_EFM32_DMA
+#include <cpu/arm32m/pl230_channel.h>
 #endif
 
 #include <arch/efm32/irq.h>
@@ -64,9 +66,12 @@ DRIVER_PV(struct efm32_usart_spi_context_s
 
   struct dev_clock_sink_ep_s     clk_ep;
 
-#ifdef CONFIG_DRIVER_EFM32_DMA
+#if defined(CONFIG_DRIVER_EFM32_DMA) || defined(CONFIG_DRIVER_EFR32_DMA)
+  DEV_DMA_RQ_TYPE(1)             dma_rd_rq; 
+  struct dev_dma_rq_s            dma_wr_rq;
+  struct dev_dma_desc_s          dma_wr_desc;
   struct device_dma_s            dma;
-  struct efm32_dev_dma_rq_s      drq; 
+  struct device_s                *spi;
 #endif
 
   uint32_t                       ctrl;
@@ -81,6 +86,10 @@ DRIVER_PV(struct efm32_usart_spi_context_s
   uint8_t                        fifo_lvl;
   bool_t                         dma_use;
 });
+
+#if defined(CONFIG_DRIVER_EFM32_DMA) || defined(CONFIG_DRIVER_EFR32_DMA)
+STRUCT_COMPOSE(efm32_usart_spi_context_s, dma_wr_rq);
+#endif
 
 static void efm32_usart_spi_update_rate(struct device_s *dev, uint32_t bit_rate)
 {
@@ -146,6 +155,7 @@ static bool_t efm32_usart_spi_transfer_rx(struct device_s *dev)
 #else
         continue;
 #endif
+
 
       uint32_t word = (uint8_t)endian_le32(cpu_mem_read_32(pv->addr + EFM32_USART_RXDATA_ADDR));
 
@@ -249,7 +259,7 @@ static DEV_IRQ_SRC_PROCESS(efm32_usart_spi_irq)
 
       cpu_mem_write_32(pv->addr + EFM32_USART_IFC_ADDR, endian_le32(EFM32_USART_IFC_MASK));
 
-#ifdef CONFIG_DRIVER_EFM32_DMA
+#if defined(CONFIG_DRIVER_EFM32_DMA) || defined(CONFIG_DRIVER_EFR32_DMA)
       if (pv->dma_use)
         break;
 #endif
@@ -269,51 +279,54 @@ static DEV_IRQ_SRC_PROCESS(efm32_usart_spi_irq)
 
 #endif
 
-#ifdef CONFIG_DRIVER_EFM32_DMA
+#if defined(CONFIG_DRIVER_EFM32_DMA) || defined(CONFIG_DRIVER_EFR32_DMA)
 
-static KROUTINE_EXEC(dma_callback)
+static DEV_DMA_CALLBACK(efm32_spi_dma_read_done)
 {
-  struct dev_dma_rq_s *rq = KROUTINE_CONTAINER(kr, *rq, base.kr);
-  struct device_s *dev = (struct device_s *)rq->base.pvdata;
-  struct efm32_usart_spi_context_s *pv = dev->drv_pv;
+  return 0;
+}
+
+static DEV_DMA_CALLBACK(efm32_spi_dma_write_done)
+{
+  struct efm32_usart_spi_context_s *pv = 
+    efm32_usart_spi_context_s_from_dma_wr_rq(rq);
   
-  lock_spin(&dev->lock);
+  lock_spin(&pv->spi->lock);
 
   struct dev_spi_ctrl_transfer_s *tr = pv->tr;
 
   pv->tr = NULL;
 
-  dev->start_count &= ~1;
+  pv->spi->start_count &= ~1;
 # ifdef CONFIG_DEVICE_CLOCK_GATING
-  if (dev->start_count == 0)
+  if (pv->spi->start_count == 0)
     dev_clock_sink_gate(&pv->clk_ep, DEV_CLOCK_EP_POWER);
 # endif
 
-  lock_release(&dev->lock);
+  lock_release(&pv->spi->lock);
 
   kroutine_exec(&tr->kr);
+  return 0;
 }
 
-static void efm32_usart_spi_start_dma(struct device_s *dev)
+static void efm32_usart_spi_start_dma(struct efm32_usart_spi_context_s *pv)
 {
-  struct efm32_usart_spi_context_s *pv = dev->drv_pv;
-  
   pv->dma_use = 1;
 
-  pv->drq.rq.error = 0;
-  /* TX */
-  pv->drq.rq.tr[DEV_DMA_INTL_WRITE].size = pv->tr->data.count;
-  pv->drq.rq.tr[DEV_DMA_INTL_WRITE].src = (uintptr_t)pv->tr->data.out;
-  pv->drq.rq.param[DEV_DMA_INTL_WRITE].src_inc = (0x20103 >> (pv->tr->data.out_width * 4)) & 0xf;
-  /* RX */
-  pv->drq.rq.tr[DEV_DMA_INTL_READ].size = pv->tr->data.count;
-  pv->drq.rq.tr[DEV_DMA_INTL_READ].dst = (uintptr_t)pv->tr->data.in;
-  pv->drq.rq.param[DEV_DMA_INTL_READ].dst_inc = (0x20103 >> (pv->tr->data.in_width * 4)) & 0xf;
-  
-  pv->drq.rq.base.pvdata = dev;
+  struct dev_dma_desc_s * desc = &pv->dma_wr_desc;
 
+  /* TX */
+  desc->src.mem.addr = (uintptr_t)pv->tr->data.out;
+  desc->src.mem.size = pv->tr->data.count - 1;
+
+  desc = pv->dma_rd_rq.desc;
+
+  /* RX */
+  desc->dst.mem.addr = (uintptr_t)pv->tr->data.in;
+  desc->src.mem.size = pv->tr->data.count - 1;
+  
   /* Start DMA request */ 
-  DEVICE_OP(&pv->dma, request, &pv->drq.rq);
+  DEVICE_OP(&pv->dma, request, &pv->dma_rd_rq, &pv->dma_wr_rq, NULL);
 
 }
 #endif
@@ -352,15 +365,13 @@ static DEV_SPI_CTRL_TRANSFER(efm32_usart_spi_transfer)
       cpu_mem_write_32(pv->addr + EFM32_USART_CTRL_ADDR, endian_le32(pv->ctrl));
       cpu_mem_write_32(pv->addr + EFM32_USART_FRAME_ADDR, endian_le32(pv->frame));
 
-#ifdef CONFIG_DRIVER_EFM32_DMA
+#if defined(CONFIG_DRIVER_EFM32_DMA) || defined(CONFIG_DRIVER_EFR32_DMA)
       pv->dma_use = 0;
 
       done = 0;
 
       if (tr->data.count > CONFIG_DRIVER_EFM32_USART_DMA_THRD)
-        {
-          efm32_usart_spi_start_dma(dev);
-        }
+        efm32_usart_spi_start_dma(pv);
       else
 #endif
         {
@@ -524,54 +535,51 @@ static DEV_INIT(efm32_usart_spi_init)
     goto err_clk;
 #endif
 
-#ifdef CONFIG_DRIVER_EFM32_DMA
+#if defined(CONFIG_DRIVER_EFM32_DMA) || defined(CONFIG_DRIVER_EFR32_DMA)
 
-  /* RX */
-  struct dev_resource_s * rx = device_res_get(dev, DEV_RES_DMA, 0); 
+  uint32_t read_link, write_link;
+  uint32_t read_mask, write_mask;
 
-  if (rx->u.dma.channel > CONFIG_DRIVER_EFM32_DMA_CHANNEL_COUNT)
+  pv->spi = dev;
+
+  if (device_res_get_dma(dev, 0, &read_mask, &read_link) ||
+      device_res_get_dma(dev, 1, &write_mask, &write_link) ||
+      device_get_param_dev_accessor(dev, "dma", &pv->dma.base, DRIVER_CLASS_DMA))
     goto err_irq;
 
-  /* TX */
-  struct dev_resource_s * tx = device_res_get(dev, DEV_RES_DMA, 1); 
+struct dev_dma_rq_s *rq = &pv->dma_rd_rq.rq;
+  struct dev_dma_desc_s *desc = rq->desc;
 
-  if (tx->u.dma.channel > CONFIG_DRIVER_EFM32_DMA_CHANNEL_COUNT)
-    goto err_irq;
-
-  if (strcmp(tx->u.dma.label, rx->u.dma.label))
-    goto err_irq;
-
-  if (device_get_accessor_by_path(&pv->dma.base, NULL, rx->u.dma.label, DRIVER_CLASS_DMA))
-    goto err_irq;
-
-  /* Set all fields that will not change */
-
-  pv->drq.rq.arch_rq = 1;
-  pv->drq.rq.type = DEV_DMA_INTERLEAVED;
-
-  /* WRITE */
-
-  pv->drq.rq.tr[DEV_DMA_INTL_WRITE].dst = pv->addr + EFM32_USART_TXDATA_ADDR;
-
-  pv->drq.rq.param[DEV_DMA_INTL_WRITE].dst_inc = DEV_DMA_INC_NONE;
-  pv->drq.rq.param[DEV_DMA_INTL_WRITE].const_data = 0;
-  pv->drq.rq.param[DEV_DMA_INTL_WRITE].channel = tx->u.dma.channel;
-
-  pv->drq.cfg[DEV_DMA_INTL_WRITE].trigsrc = tx->u.dma.config;
-  pv->drq.cfg[DEV_DMA_INTL_WRITE].arbiter = DMA_CHANNEL_CFG_R_POWER_AFTER1;
+  desc->src.reg.addr = pv->addr + EFM32_USART_RXDATA_ADDR;
+  desc->src.reg.width = 0;
+  desc->src.reg.burst = 1;
+  desc->dst.mem.inc = DEV_DMA_INC_1_UNITS;
 
   /* READ */
+  rq->dev_link.src = read_link;
+  rq->type = DEV_DMA_REG_MEM;
+  rq->desc_count_m1 = 0;
+  rq->loop_count_m1 = 0;
+  rq->chan_mask = read_mask;
+  rq->f_done = efm32_spi_dma_read_done;
+  rq->cache_ptr = NULL;
 
-  pv->drq.rq.tr[DEV_DMA_INTL_READ].src = pv->addr + EFM32_USART_RXDATA_ADDR;
+  /* WRITE */
+  rq = &pv->dma_wr_rq;
+  desc = &pv->dma_wr_desc;
 
-  pv->drq.rq.param[DEV_DMA_INTL_READ].src_inc = DEV_DMA_INC_NONE;
-  pv->drq.rq.param[DEV_DMA_INTL_READ].const_data = 0;
-  pv->drq.rq.param[DEV_DMA_INTL_READ].channel = rx->u.dma.channel;
+  desc->dst.reg.addr = pv->addr + EFM32_USART_TXDATA_ADDR;
+  desc->dst.reg.burst = EFM32_USART_FIFO_SIZE;
+  desc->src.mem.inc = DEV_DMA_INC_1_UNITS;
+  desc->src.mem.width = 0;
 
-  pv->drq.cfg[DEV_DMA_INTL_READ].trigsrc = rx->u.dma.config;
-  pv->drq.cfg[DEV_DMA_INTL_READ].arbiter = DMA_CHANNEL_CFG_R_POWER_AFTER1;
-  
-  kroutine_init_immediate(&pv->drq.rq.base.kr, &dma_callback);
+  rq->dev_link.dst = write_link;
+  rq->type = DEV_DMA_MEM_REG;
+  rq->desc_count_m1 = 0;
+  rq->loop_count_m1 = 0;
+  rq->chan_mask = write_mask;
+  rq->f_done = efm32_spi_dma_write_done;
+  rq->cache_ptr = NULL;
 
 #endif
 
