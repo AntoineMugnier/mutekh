@@ -6,5 +6,5 @@
    defined(CONFIG_EFM32_GIANT_GECKO)
 # include "efm/timer.h"
 #else
-# error
+# include "efr/timer.h"
 #endif

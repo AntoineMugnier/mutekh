@@ -6,5 +6,5 @@
    defined(CONFIG_EFM32_GIANT_GECKO)
 # include "efm/gpio.h"
 #else
-# error
+# include "efr/gpio.h"
 #endif

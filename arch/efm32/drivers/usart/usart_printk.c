@@ -19,6 +19,8 @@
     Copyright Alexandre Becoulet <alexandre.becoulet@free.fr> (c) 2015
 */
 
+#include <stdlib.h>
+
 #include <hexo/types.h>
 #include <hexo/endian.h>
 #include <hexo/iospace.h>
@@ -62,30 +64,39 @@ void efm32_usart_printk_init()
 
   switch (CONFIG_MUTEK_PRINTK_ADDR)
     {
-#ifdef EFM32_CMU_HFPERCLKEN0_UART0
+#ifdef CONFIG_EFR32
+    case 0x40010000:
+      hfperclken = EFM32_CMU_HFPERCLKEN0_USART0;
+      break;
+    case 0x40010400:
+      hfperclken = EFM32_CMU_HFPERCLKEN0_USART1;
+      break;
+#else
+  #ifdef EFM32_CMU_HFPERCLKEN0_UART0
     case 0x4000e000:            /* uart0 */
       hfperclken = EFM32_CMU_HFPERCLKEN0_UART0;
       break;
-#endif
-#ifdef EFM32_CMU_HFPERCLKEN0_UART1
+  #endif
+  #ifdef EFM32_CMU_HFPERCLKEN0_UART1
     case 0x4000e400:            /* uart1 */
       hfperclken = EFM32_CMU_HFPERCLKEN0_UART1;
       break;
-#endif
-#ifdef EFM32_CMU_HFPERCLKEN0_USART0
+  #endif
+  #ifdef EFM32_CMU_HFPERCLKEN0_USART0
     case 0x4000c000:            /* usart0 */
       hfperclken = EFM32_CMU_HFPERCLKEN0_USART0;
       break;
-#endif
-#ifdef EFM32_CMU_HFPERCLKEN0_USART1
+  #endif
+  #ifdef EFM32_CMU_HFPERCLKEN0_USART1
     case 0x4000c400:            /* usart1 */
       hfperclken = EFM32_CMU_HFPERCLKEN0_USART1;
       break;
-#endif
-#ifdef EFM32_CMU_HFPERCLKEN0_USART2
+  #endif
+  #ifdef EFM32_CMU_HFPERCLKEN0_USART2
     case 0x4000c800:            /* usart2 */
       hfperclken = EFM32_CMU_HFPERCLKEN0_USART2;
       break;
+  #endif
 #endif
     default:
       return;
@@ -96,15 +107,65 @@ void efm32_usart_printk_init()
   /* configure CMU */
   b = EFM32_CMU_ADDR;
 
+  uint32_t clk = USART_CLOCK;
+
+#ifdef CONFIG_EFR32
+
+  x = endian_le32(cpu_mem_read_32(b + EFM32_CMU_HFRCOCTRL_ADDR));
+
+  switch (EFM32_CMU_HFRCOCTRL_FREQRANGE_GET(x))
+    {
+    case 0:
+      clk = 4000000;
+      break;
+    case 3:
+      clk = 7000000;
+      break;
+    case 6:
+      clk = 13000000;
+      break;
+    case 7:
+      clk = 16000000;
+      break;
+    case 8:
+      clk = 19000000;
+      break;
+    case 10:
+      clk = 26000000;
+      break;
+    case 11:
+      clk = 32000000;
+      break;
+    case 12:
+      clk = 38000000;
+      break;
+    default:
+      abort();
+    }
+
+  cpu_mem_write_32(b + EFM32_CMU_OSCENCMD_ADDR, EFM32_CMU_OSCENCMD_HFRCOEN);
+  while (!(cpu_mem_read_32(b + EFM32_CMU_STATUS_ADDR) & EFM32_CMU_STATUS_HFRCORDY))
+    ;
+  cpu_mem_write_32(b + EFM32_CMU_HFCLKSEL_ADDR, EFM32_CMU_HFCLKSEL_HF(HFRCO));
+  /* Enable clock for HF peripherals */
+  x = cpu_mem_read_32(b + EFM32_CMU_CTRL_ADDR);
+  cpu_mem_write_32(b + EFM32_CMU_CTRL_ADDR, x | EFM32_CMU_CTRL_HFPERCLKEN);
+  /* Enable clock for USART */
+  x = cpu_mem_read_32(b + EFM32_CMU_HFPERCLKEN0_ADDR);
+  cpu_mem_write_32(b + EFM32_CMU_HFPERCLKEN0_ADDR, x | hfperclken);
+  /* Enable clock for GPIO */
+  x = cpu_mem_read_32(b + EFM32_CMU_HFBUSCLKEN0_ADDR);
+  cpu_mem_write_32(b + EFM32_CMU_HFBUSCLKEN0_ADDR, x | EFM32_CMU_HFBUSCLKEN0_GPIO);
+#else
   /* Enable clock for HF peripherals */
   x = cpu_mem_read_32(b + EFM32_CMU_HFPERCLKDIV_ADDR);
   x |= EFM32_CMU_HFPERCLKDIV_HFPERCLKEN;
   cpu_mem_write_32(b + EFM32_CMU_HFPERCLKDIV_ADDR, x);
-
   /* Enable clock for GPIO */
   x = cpu_mem_read_32(b + EFM32_CMU_HFPERCLKEN0_ADDR);
   x |= EFM32_CMU_HFPERCLKEN0_GPIO | hfperclken;
   cpu_mem_write_32(b + EFM32_CMU_HFPERCLKEN0_ADDR, x);
+#endif
 
   /* configure GPIO to route USART signals */
   b = EFM32_GPIO_ADDR;
@@ -149,21 +210,27 @@ void efm32_usart_printk_init()
   cpu_mem_write_32(b + EFM32_USART_CMD_ADDR,
                    EFM32_USART_CMD_CLEARRX | EFM32_USART_CMD_CLEARTX);
 
-  cpu_mem_write_32(b + EFM32_USART_CTRL_ADDR,
-                   EFM32_USART_CTRL_SYNC(ASYNC) | EFM32_USART_CTRL_OVS(X4));
+  cpu_mem_write_32(b + EFM32_USART_CTRL_ADDR, EFM32_USART_CTRL_OVS(X4));
 
   cpu_mem_write_32(b + EFM32_USART_FRAME_ADDR,
                    EFM32_USART_FRAME_DATABITS(EIGHT) |
                    EFM32_USART_FRAME_PARITY(NONE) |
                    EFM32_USART_FRAME_STOPBITS(ONE));
 
-  uint32_t div = (256ULL * USART_CLOCK) / (4 * CONFIG_DRIVER_EFM32_USART_RATE) - 256;
+  uint32_t div = (256ULL * clk) / (4 * CONFIG_DRIVER_EFM32_USART_RATE) - 256;
   cpu_mem_write_32(b + EFM32_USART_CLKDIV_ADDR, div);
 
+#ifdef CONFIG_EFR32
+  cpu_mem_write_32(b + EFM32_USART_ROUTEPEN_ADDR, EFM32_USART_ROUTEPEN_TXPEN);
+  x = cpu_mem_read_32(b + EFM32_USART_ROUTELOC0_ADDR);
+  EFM32_USART_ROUTELOC0_TXLOC_SETVAL(x, CONFIG_DRIVER_EFM32_USART_PRINTK_LOC);
+  cpu_mem_write_32(b + EFM32_USART_ROUTELOC0_ADDR, x);
+#else
   /* USART routes */
   x = EFM32_USART_ROUTE_TXPEN;
   EFM32_USART_ROUTE_LOCATION_SETVAL(x, CONFIG_DRIVER_EFM32_USART_PRINTK_LOC);
   cpu_mem_write_32(b + EFM32_USART_ROUTE_ADDR, x);
+#endif
 
   /* Enable TX */
   cpu_mem_write_32(b + EFM32_USART_CMD_ADDR,

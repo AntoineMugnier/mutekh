@@ -71,7 +71,6 @@ DRIVER_PV(struct efm32_timer_private_s
 
 #define EFM32_TIMER_CTRL_CONST (EFM32_TIMER_CTRL_MODE(UP) |             \
                                 EFM32_TIMER_CTRL_CLKSEL(PRESCHFPERCLK) | \
-                                EFM32_TIMER_CTRL_SYNC(NONE) |           \
                                 EFM32_TIMER_CTRL_RISEA(NONE) |          \
                                 EFM32_TIMER_CTRL_FALLA(NONE))
 

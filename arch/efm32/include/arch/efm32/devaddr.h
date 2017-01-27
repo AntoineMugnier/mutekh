@@ -8,6 +8,6 @@
 #elif defined(CONFIG_EFM32_ZERO_GECKO)
 # include "efm/zero/devaddr.h"
 #else
-# error
+# include "efr/devaddr.h"
 #endif
 

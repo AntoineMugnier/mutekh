@@ -6,5 +6,5 @@
    defined(CONFIG_EFM32_GIANT_GECKO)
 # include "efm/rtc.h"
 #else
-# error
+# include "efr/rtcc.h"
 #endif

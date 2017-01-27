@@ -72,7 +72,12 @@ DRIVER_PV(struct efm32_usart_spi_context_s
   uint32_t                       ctrl;
   uint32_t                       BITFIELD(clkdiv,24);
   uint32_t                       BITFIELD(frame,8);
+#ifdef CONFIG_EFR32
+  uint32_t                       route;
+  uint32_t                       enable;
+#else
   uint16_t                       route;
+#endif
   uint8_t                        fifo_lvl;
   bool_t                         dma_use;
 });
@@ -103,15 +108,16 @@ static DEV_SPI_CTRL_CONFIG(efm32_usart_spi_config)
         {
           pv->frame = cfg->word_width - 3;
 
-          EFM32_USART_CTRL_CLKPOL_SETVAL(pv->ctrl, cfg->ck_mode == DEV_SPI_CK_MODE_2 ||
-                                                   cfg->ck_mode == DEV_SPI_CK_MODE_3);
-          EFM32_USART_CTRL_CLKPHA_SETVAL(pv->ctrl, cfg->ck_mode == DEV_SPI_CK_MODE_1 ||
-                                                   cfg->ck_mode == DEV_SPI_CK_MODE_3);
-
-          EFM32_USART_CTRL_RXINV_SETVAL(pv->ctrl, cfg->miso_pol == DEV_SPI_ACTIVE_LOW);
-          EFM32_USART_CTRL_TXINV_SETVAL(pv->ctrl, cfg->mosi_pol == DEV_SPI_ACTIVE_LOW);
-          EFM32_USART_CTRL_MSBF_SETVAL(pv->ctrl,  cfg->bit_order == DEV_SPI_MSB_FIRST);
-
+          if (cfg->ck_mode == DEV_SPI_CK_MODE_2 || cfg->ck_mode == DEV_SPI_CK_MODE_3)
+            pv->ctrl |= EFM32_USART_CTRL_CLKPOL;
+          if (cfg->ck_mode == DEV_SPI_CK_MODE_1 || cfg->ck_mode == DEV_SPI_CK_MODE_3)
+            pv->ctrl |= EFM32_USART_CTRL_CLKPHA;
+          if (cfg->miso_pol == DEV_SPI_ACTIVE_LOW)
+            pv->ctrl |= EFM32_USART_CTRL_RXINV;
+          if (cfg->mosi_pol == DEV_SPI_ACTIVE_LOW)
+            pv->ctrl |= EFM32_USART_CTRL_TXINV;
+          if (cfg->bit_order == DEV_SPI_MSB_FIRST)
+            pv->ctrl |= EFM32_USART_CTRL_MSBF;
           if (pv->bit_rate != cfg->bit_rate)
             efm32_usart_spi_update_rate(dev, cfg->bit_rate);
         }
@@ -163,6 +169,8 @@ static bool_t efm32_usart_spi_transfer_rx(struct device_s *dev)
 
       tr->data.in = (void*)((uint8_t*)tr->data.in + tr->data.in_width);
     }
+
+
 
   if (tr->data.count > 0 || pv->fifo_lvl)
     return efm32_usart_spi_transfer_tx(dev);
@@ -335,7 +343,12 @@ static DEV_SPI_CTRL_TRANSFER(efm32_usart_spi_transfer)
 # endif
 
       cpu_mem_write_32(pv->addr + EFM32_USART_CLKDIV_ADDR, endian_le32(pv->clkdiv));
+#ifdef CONFIG_EFR32
+      cpu_mem_write_32(pv->addr + EFM32_USART_ROUTELOC0_ADDR, endian_le32(pv->route));
+      cpu_mem_write_32(pv->addr + EFM32_USART_ROUTEPEN_ADDR, endian_le32(pv->enable));
+#else
       cpu_mem_write_32(pv->addr + EFM32_USART_ROUTE_ADDR, endian_le32(pv->route));
+#endif
       cpu_mem_write_32(pv->addr + EFM32_USART_CTRL_ADDR, endian_le32(pv->ctrl));
       cpu_mem_write_32(pv->addr + EFM32_USART_FRAME_ADDR, endian_le32(pv->frame));
 
@@ -442,7 +455,7 @@ static DEV_INIT(efm32_usart_spi_init)
   cpu_mem_write_32(pv->addr + EFM32_USART_IFC_ADDR, endian_le32(EFM32_USART_IFC_MASK));
 
   /* synchronous mode, 8 bits */
-  pv->ctrl = EFM32_USART_CTRL_SYNC(SYNC);
+  pv->ctrl = EFM32_USART_CTRL_SYNC;
   cpu_mem_write_32(pv->addr + EFM32_USART_CTRL_ADDR, endian_le32(pv->ctrl));
   pv->frame = 8 - 3;
 
@@ -451,6 +464,35 @@ static DEV_INIT(efm32_usart_spi_init)
   if (device_iomux_setup(dev, ">clk <miso? >mosi? >cs?", loc, NULL, NULL))
     goto err_clk;
 
+#ifdef CONFIG_EFR32
+  pv->enable = 0;
+  pv->route = 0;
+
+  if (loc[0] != IOMUX_INVALID_DEMUX)
+    {
+      pv->enable |= EFM32_USART_ROUTEPEN_CLKPEN;
+      EFM32_USART_ROUTELOC0_CLKLOC_SETVAL(pv->route, loc[0]);
+    }
+  if (loc[1] != IOMUX_INVALID_DEMUX)
+    {
+      pv->enable |= EFM32_USART_ROUTEPEN_RXPEN;
+      EFM32_USART_ROUTELOC0_RXLOC_SETVAL(pv->route, loc[1]);
+    }
+  if (loc[2] != IOMUX_INVALID_DEMUX)
+    {
+      pv->enable |= EFM32_USART_ROUTEPEN_TXPEN;
+      EFM32_USART_ROUTELOC0_TXLOC_SETVAL(pv->route, loc[2]);
+    }
+  if (loc[3] != IOMUX_INVALID_DEMUX)
+    {
+      pv->enable |= EFM32_USART_ROUTEPEN_CSPEN;
+      EFM32_USART_ROUTELOC0_CSLOC_SETVAL(pv->route, loc[3]);
+    }
+
+  cpu_mem_write_32(pv->addr + EFM32_USART_ROUTELOC0_ADDR, endian_le32(pv->route));
+  cpu_mem_write_32(pv->addr + EFM32_USART_ROUTEPEN_ADDR, endian_le32(pv->enable));
+
+#else
   pv->route =  EFM32_USART_ROUTE_CLKPEN;
   if (loc[1] != IOMUX_INVALID_DEMUX)
     pv->route |= EFM32_USART_ROUTE_RXPEN;
@@ -462,6 +504,7 @@ static DEV_INIT(efm32_usart_spi_init)
   EFM32_USART_ROUTE_LOCATION_SETVAL(pv->route, loc[0]);
 
   cpu_mem_write_32(pv->addr + EFM32_USART_ROUTE_ADDR, endian_le32(pv->route));
+#endif
 
   /* setup bit rate */
   pv->bit_rate = 100000;

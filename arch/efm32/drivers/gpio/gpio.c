@@ -42,6 +42,18 @@
 #define GPIO_SRC_IRQ_COUNT 2
 #define GPIO_BANK_SIZE 16
 
+  /* This specifies which bank is selected for each interrupt line. A
+     value of -1 means that no bank is currently bound to an
+     interrupt. */
+struct efm32_gpio_sink_info_s{
+  int8_t            bank:5;
+#ifdef CONFIG_EFR32
+  /* This specifies which line of group is selected for each interrupt
+     line. This value is valid only if bank field is not -1. */
+  uint8_t           idx:2;
+#endif
+  };
+
 DRIVER_PV(struct efm32_gpio_private_s
 {
 #ifdef CONFIG_DRIVER_EFM32_GPIO_ICU
@@ -50,10 +62,6 @@ DRIVER_PV(struct efm32_gpio_private_s
   /* This specifies which bank is selected for each interrupt line. A
      value of -1 means that no bank is currently bound to an
      interrupt. */
-  struct {
-    int8_t            bank:5;
-  }                   irq[CONFIG_DRIVER_EFM32_GPIO_IRQ_COUNT];
-
   struct dev_irq_src_s src[2];
 #endif
 
@@ -312,6 +320,13 @@ static DEV_IOMUX_SETUP(efm32_gpio_iomux_setup)
 
 /******** GPIO irq controller driver part *********************/
 
+#ifdef CONFIG_EFR32
+static inline uint8_t efm32_get_idx(uint8_t irq_line, uint8_t group_idx)
+{
+  return (irq_line & 0xFC) + group_idx;
+}
+#endif
+
 #ifdef CONFIG_DRIVER_EFM32_GPIO_ICU
 
 static DEV_IRQ_SINK_UPDATE(efm32_gpio_icu_sink_update)
@@ -375,15 +390,43 @@ static DEV_ICU_GET_SINK(efm32_gpio_icu_get_sink)
   if (line >= CONFIG_DRIVER_EFM32_GPIO_IRQ_COUNT || bank >= 6)
     return NULL;
 
-  struct dev_irq_sink_s *sink = pv->sink + line;
+  struct efm32_gpio_sink_info_s *info; 
+  struct dev_irq_sink_s *sink;
 
+#ifdef CONFIG_EFR32
+  uint8_t irq_base_line = line & 0xFC;
+  /* Find a free sink endpoint. Pin i can be mapped on irq group
+     lines [base: base + 4] of gpio controller */
+  for (uint8_t i = 0; i < 4; i++)
+    {
+      sink = pv->sink + irq_base_line + i;
+      info = (struct efm32_gpio_sink_info_s *)&sink->icu_pv;
+
+      if (sink->base.link_count == 0)
+        {
+          info->bank = bank;
+          info->idx = line % 4;
+          break;
+        }
+
+      /* Already linked */
+      if (info->bank == bank && info->idx == line % 4)
+        break;
+
+      if (i == 3)
+        return NULL;
+    }
+#else
+  sink = pv->sink + line;
+  info = (struct efm32_gpio_sink_info_s *)&sink->icu_pv;
   /* We actually keep only one endpoint object per line for all
      banks. We have to keep track of which bank the endpoint is
      associated to. */
   if (sink->base.link_count == 0)
-    pv->irq[line].bank = bank;
-  else if (pv->irq[line].bank != bank)
+      info->bank = bank;
+  else if (info->bank != bank)
     return NULL;
+#endif
 
   return sink;
 }
@@ -396,7 +439,8 @@ static DEV_ICU_LINK(efm32_gpio_icu_link)
   struct device_s *dev = accessor->dev;
   struct efm32_gpio_private_s *pv = dev->drv_pv;
   uint_fast8_t sink_id = sink - pv->sink;
-  uint_fast8_t bank = pv->irq[sink_id].bank;
+  struct efm32_gpio_sink_info_s *info = (struct efm32_gpio_sink_info_s*)&sink->icu_pv; 
+  uint_fast8_t bank = info->bank;
 
 #ifdef CONFIG_DEVICE_IRQ_SHARING
   if (sink->base.link_count > 1)
@@ -409,10 +453,24 @@ static DEV_ICU_LINK(efm32_gpio_icu_link)
   EFM32_GPIO_EXTIPSELL_EXT_SETVAL(sink_id & 7, x, bank);
   cpu_mem_write_32(EFM32_GPIO_ADDR + a, endian_le32(x));
 
+#ifdef CONFIG_EFR32
+  uint_fast8_t idx = info->idx;
+  /* Select group */
+  a = sink_id >= 8 ? EFM32_GPIO_EXTIGSELH_ADDR : EFM32_GPIO_EXTIGSELL_ADDR;
+  x = endian_le32(cpu_mem_read_32(EFM32_GPIO_ADDR + a));
+  EFM32_GPIO_EXTIGSELL_EXT_SETVAL(sink_id & 7, x, idx);
+  cpu_mem_write_32(EFM32_GPIO_ADDR + a, endian_le32(x));
+#endif
+
   /* Change pin mode to input */
   a = sink_id >= 8 ? EFM32_GPIO_MODEH_ADDR(bank) : EFM32_GPIO_MODEL_ADDR(bank);
   x = endian_le32(cpu_mem_read_32(EFM32_GPIO_ADDR + a));
+#ifdef CONFIG_EFR32
+  uint8_t pin_id = (sink_id & 0xFC) + idx;
+  EFM32_GPIO_MODEL_MODE_SET(pin_id  & 7, x, INPUT);
+#else
   EFM32_GPIO_MODEL_MODE_SET(sink_id & 7, x, INPUT);
+#endif
   cpu_mem_write_32(EFM32_GPIO_ADDR + a, endian_le32(x));
 
   /* Clear interrupt */
@@ -442,7 +500,13 @@ static DEV_IRQ_SRC_PROCESS(efm32_gpio_source_process)
         {
           uint_fast8_t i = __builtin_ctz(x);
           struct dev_irq_sink_s *sink = pv->sink + i;
-          int_fast16_t id = (cpu_mem_read_32(EFM32_GPIO_ADDR + EFM32_GPIO_DIN_ADDR(pv->irq[i].bank)) >> i) & 1;
+          struct efm32_gpio_sink_info_s *info = (struct efm32_gpio_sink_info_s*)&sink->icu_pv; 
+#ifdef CONFIG_EFR32
+          uint8_t idx = (i & 0xFC) + info->idx;
+          int_fast16_t id = (cpu_mem_read_32(EFM32_GPIO_ADDR + EFM32_GPIO_DIN_ADDR(info->bank)) >> idx) & 1;
+#else
+          int_fast16_t id = (cpu_mem_read_32(EFM32_GPIO_ADDR + EFM32_GPIO_DIN_ADDR(info->bank)) >> i) & 1;
+#endif 
           device_irq_sink_process(sink, id);
           x ^= bit(i);
         }

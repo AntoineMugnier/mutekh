@@ -24,12 +24,12 @@
 
 #include <string.h>
 
-#ifdef CONFIG_EFM32_BOOT_BUTTON
-
 #include <hexo/iospace.h>
 #include <arch/efm32/gpio.h>
 #include <arch/efm32/cmu.h>
 #include <arch/efm32/devaddr.h>
+
+#if defined(CONFIG_EFM32_BOOT_BUTTON)
 
 void efm32_boot_button_wait()
 {
@@ -37,6 +37,17 @@ void efm32_boot_button_wait()
 
   b = EFM32_CMU_ADDR;
 
+#ifdef CONFIG_EFR32
+
+  cpu_mem_write_32(b + EFM32_CMU_OSCENCMD_ADDR, EFM32_CMU_OSCENCMD_HFRCOEN);
+  while (!(cpu_mem_read_32(b + EFM32_CMU_STATUS_ADDR) & EFM32_CMU_STATUS_HFRCORDY))
+    ;
+  cpu_mem_write_32(b + EFM32_CMU_HFCLKSEL_ADDR, EFM32_CMU_HFCLKSEL_HF(HFRCO));
+  /* Enable clock for GPIO */
+  x = cpu_mem_read_32(b + EFM32_CMU_HFBUSCLKEN0_ADDR);
+  cpu_mem_write_32(b + EFM32_CMU_HFBUSCLKEN0_ADDR, x | EFM32_CMU_HFBUSCLKEN0_GPIO);
+
+#else
   /* Enable clock for HF peripherals */
   x = cpu_mem_read_32(b + EFM32_CMU_HFPERCLKDIV_ADDR);
   x |= EFM32_CMU_HFPERCLKDIV_HFPERCLKEN;
@@ -46,6 +57,8 @@ void efm32_boot_button_wait()
   x = cpu_mem_read_32(b + EFM32_CMU_HFPERCLKEN0_ADDR);
   x |= EFM32_CMU_HFPERCLKEN0_GPIO;
   cpu_mem_write_32(b + EFM32_CMU_HFPERCLKEN0_ADDR, x);
+
+#endif
 
   b = EFM32_GPIO_ADDR;
 
@@ -72,16 +85,36 @@ void efm32_clock_enable()
   uint32_t b, x;
 
   b = EFM32_CMU_ADDR;
+  
+#ifdef CONFIG_EFR32
+  cpu_mem_write_32(b + EFM32_CMU_OSCENCMD_ADDR, EFM32_CMU_OSCENCMD_HFRCOEN);
+  while (!(cpu_mem_read_32(b + EFM32_CMU_STATUS_ADDR) & EFM32_CMU_STATUS_HFRCORDY))
+    ;
+  cpu_mem_write_32(b + EFM32_CMU_HFCLKSEL_ADDR, EFM32_CMU_HFCLKSEL_HF(HFRCO));
+
+  x = cpu_mem_read_32(b + EFM32_CMU_CTRL_ADDR);
+  x = EFM32_CMU_CTRL_HFPERCLKEN |
+      EFM32_CMU_CTRL_HFRADIOCLKEN;
+  cpu_mem_write_32(b + EFM32_CMU_CTRL_ADDR, x);
+  
+  cpu_mem_write_32(b + EFM32_CMU_HFBUSCLKEN0_ADDR, EFM32_CMU_HFBUSCLKEN0_MASK);
+  cpu_mem_write_32(b + EFM32_CMU_LFBCLKSEL_ADDR, EFM32_CMU_LFBCLKSEL_LFB(LFRCO));
+  cpu_mem_write_32(b + EFM32_CMU_LFACLKSEL_ADDR, EFM32_CMU_LFACLKSEL_LFA(LFRCO));
+
+#else
 
   x = cpu_mem_read_32(b + EFM32_CMU_HFPERCLKDIV_ADDR);
   x |= EFM32_CMU_HFPERCLKDIV_HFPERCLKEN;
   cpu_mem_write_32(b + EFM32_CMU_HFPERCLKDIV_ADDR, x);
 
+  cpu_mem_write_32(b + EFM32_CMU_HFCORECLKEN0_ADDR, EFM32_CMU_HFCORECLKEN0_MASK);
+
+#endif
+
   cpu_mem_write_32(b + EFM32_CMU_OSCENCMD_ADDR, EFM32_CMU_OSCENCMD_LFRCOEN);
   while (!(cpu_mem_read_32(b + EFM32_CMU_STATUS_ADDR) & EFM32_CMU_STATUS_LFRCORDY))
     ;
 
-  cpu_mem_write_32(b + EFM32_CMU_HFCORECLKEN0_ADDR, EFM32_CMU_HFCORECLKEN0_MASK);
   cpu_mem_write_32(b + EFM32_CMU_HFPERCLKEN0_ADDR, EFM32_CMU_HFPERCLKEN0_MASK);
   cpu_mem_write_32(b + EFM32_CMU_LFACLKEN0_ADDR, EFM32_CMU_LFACLKEN0_MASK);
   cpu_mem_write_32(b + EFM32_CMU_LFBCLKEN0_ADDR, EFM32_CMU_LFBCLKEN0_MASK);

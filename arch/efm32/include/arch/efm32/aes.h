@@ -6,5 +6,5 @@
    defined(CONFIG_EFM32_GIANT_GECKO)
 # include "efm/aes.h"
 #else
-# error
+# include "efm/crypto.h"
 #endif

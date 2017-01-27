@@ -6,5 +6,5 @@
    defined(CONFIG_EFM32_GIANT_GECKO)
 # include "efm/cmu.h"
 #else
-# error
+# include "efr/cmu.h"
 #endif

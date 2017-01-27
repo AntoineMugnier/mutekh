@@ -6,5 +6,5 @@
    defined(CONFIG_EFM32_GIANT_GECKO)
 # include "efm/pin.h"
 #else
-# error
+# include "efr/pin.h"
 #endif

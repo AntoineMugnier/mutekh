@@ -6,5 +6,5 @@
    defined(CONFIG_EFM32_GIANT_GECKO)
 # include "efm/usart.h"
 #else
-# error
+# include "efr/usart.h"
 #endif

@@ -6,5 +6,5 @@
    defined(CONFIG_EFM32_GIANT_GECKO)
 # include "efm/dma.h"
 #else
-# error
+# include "efr/dma.h"
 #endif

@@ -3,8 +3,9 @@
 ***************************************/
 
 /*
-   bfgen -o cdefs -O include/arch/efm32/usart.h cdefs_use_reg_mask=1           \
-     cdefs_use_field_setval=1
+   bfgen -o cdefs cdefs_use_reg_mask=1 cdefs_use_field_setval=1                \
+     -i /opt/bfgen/defs/efm32/efm32_usart.bf                                   \
+     -O /home/cerdan/Work/mutekh/arch/efm32/include/arch/efm32/efm/usart.h
 */
 
 #ifndef _EFM32_USART_BFGEN_DEFS_
@@ -14,704 +15,674 @@
 #define EFM32_USART_CTRL_MASK                        0xffffff7f
 /** Determines whether the USART is operating in asynchronous or synchronous
    mode. @multiple */
-  #define EFM32_USART_CTRL_SYNC(v)                   ((EFM32_USART_CTRL_SYNC_##v) << 0)
-  #define EFM32_USART_CTRL_SYNC_SET(x, v)            do { (x) = (((x) & ~0x1) | ((EFM32_USART_CTRL_SYNC_##v) << 0)); } while(0)
-  #define EFM32_USART_CTRL_SYNC_SETVAL(x, v)         do { (x) = (((x) & ~0x1) | ((v) << 0)); } while(0)
-  #define EFM32_USART_CTRL_SYNC_GET(x)               (((x) >> 0) & 0x1)
-    #define EFM32_USART_CTRL_SYNC_ASYNC                0x00000000
-    #define EFM32_USART_CTRL_SYNC_SYNC                 0x00000001
+  #define EFM32_USART_CTRL_SYNC                    0x00000001
 /** Allows the receiver to be connected directly to the USART transmitter for
    loopback and half duplex communication. @multiple */
-  #define EFM32_USART_CTRL_LOOPBK(v)                 ((EFM32_USART_CTRL_LOOPBK_##v) << 1)
-  #define EFM32_USART_CTRL_LOOPBK_SET(x, v)          do { (x) = (((x) & ~0x2) | ((EFM32_USART_CTRL_LOOPBK_##v) << 1)); } while(0)
-  #define EFM32_USART_CTRL_LOOPBK_SETVAL(x, v)       do { (x) = (((x) & ~0x2) | ((v) << 1)); } while(0)
-  #define EFM32_USART_CTRL_LOOPBK_GET(x)             (((x) >> 1) & 0x1)
-    #define EFM32_USART_CTRL_LOOPBK_RX                 0x00000000
-    #define EFM32_USART_CTRL_LOOPBK_TX                 0x00000001
+  #define EFM32_USART_CTRL_LOOPBK(v)               ((EFM32_USART_CTRL_LOOPBK_##v) << 1)
+  #define EFM32_USART_CTRL_LOOPBK_SET(x, v)        do { (x) = (((x) & ~0x2) | ((EFM32_USART_CTRL_LOOPBK_##v) << 1)); } while(0)
+  #define EFM32_USART_CTRL_LOOPBK_SETVAL(x, v)     do { (x) = (((x) & ~0x2) | ((v) << 1)); } while(0)
+  #define EFM32_USART_CTRL_LOOPBK_GET(x)           (((x) >> 1) & 0x1)
+    #define EFM32_USART_CTRL_LOOPBK_RX               0x00000000
+    #define EFM32_USART_CTRL_LOOPBK_TX               0x00000001
 /** Enables collision checking on data when operating in half duplex modus.
    @multiple */
-  #define EFM32_USART_CTRL_CCEN                      0x00000004
+  #define EFM32_USART_CTRL_CCEN                    0x00000004
 /** Multi-processor mode uses the 9th bit of the USART frames to tell whether the
    frame is an address frame or a data frame. @multiple */
-  #define EFM32_USART_CTRL_MPM(v)                    ((EFM32_USART_CTRL_MPM_##v) << 3)
-  #define EFM32_USART_CTRL_MPM_SET(x, v)             do { (x) = (((x) & ~0x8) | ((EFM32_USART_CTRL_MPM_##v) << 3)); } while(0)
-  #define EFM32_USART_CTRL_MPM_SETVAL(x, v)          do { (x) = (((x) & ~0x8) | ((v) << 3)); } while(0)
-  #define EFM32_USART_CTRL_MPM_GET(x)                (((x) >> 3) & 0x1)
-    #define EFM32_USART_CTRL_MPM_NONE                  0x00000000
-    #define EFM32_USART_CTRL_MPM_LOADED                0x00000001
+  #define EFM32_USART_CTRL_MPM(v)                  ((EFM32_USART_CTRL_MPM_##v) << 3)
+  #define EFM32_USART_CTRL_MPM_SET(x, v)           do { (x) = (((x) & ~0x8) | ((EFM32_USART_CTRL_MPM_##v) << 3)); } while(0)
+  #define EFM32_USART_CTRL_MPM_SETVAL(x, v)        do { (x) = (((x) & ~0x8) | ((v) << 3)); } while(0)
+  #define EFM32_USART_CTRL_MPM_GET(x)              (((x) >> 3) & 0x1)
+    #define EFM32_USART_CTRL_MPM_NONE                0x00000000
+    #define EFM32_USART_CTRL_MPM_LOADED              0x00000001
 /** Defines the value of the multi-processor address bit. An incoming frame with
    its 9th bit equal to the value of this bit marks the frame as a
    multi-processor address frame. @multiple */
-  #define EFM32_USART_CTRL_MPAB                      0x00000010
+  #define EFM32_USART_CTRL_MPAB                    0x00000010
 /** Sets the number of clock periods in a UART bit-period. More clock cycles
    gives better robustness, while less clock cycles gives better performance.
    @multiple */
-  #define EFM32_USART_CTRL_OVS(v)                    ((EFM32_USART_CTRL_OVS_##v) << 5)
-  #define EFM32_USART_CTRL_OVS_SET(x, v)             do { (x) = (((x) & ~0x60) | ((EFM32_USART_CTRL_OVS_##v) << 5)); } while(0)
-  #define EFM32_USART_CTRL_OVS_SETVAL(x, v)          do { (x) = (((x) & ~0x60) | ((v) << 5)); } while(0)
-  #define EFM32_USART_CTRL_OVS_GET(x)                (((x) >> 5) & 0x3)
-    #define EFM32_USART_CTRL_OVS_X16                   0x00000000
-    #define EFM32_USART_CTRL_OVS_X8                    0x00000001
-    #define EFM32_USART_CTRL_OVS_X6                    0x00000002
-    #define EFM32_USART_CTRL_OVS_X4                    0x00000003
+  #define EFM32_USART_CTRL_OVS(v)                  ((EFM32_USART_CTRL_OVS_##v) << 5)
+  #define EFM32_USART_CTRL_OVS_SET(x, v)           do { (x) = (((x) & ~0x60) | ((EFM32_USART_CTRL_OVS_##v) << 5)); } while(0)
+  #define EFM32_USART_CTRL_OVS_SETVAL(x, v)        do { (x) = (((x) & ~0x60) | ((v) << 5)); } while(0)
+  #define EFM32_USART_CTRL_OVS_GET(x)              (((x) >> 5) & 0x3)
+    #define EFM32_USART_CTRL_OVS_X16                 0x00000000
+    #define EFM32_USART_CTRL_OVS_X8                  0x00000001
+    #define EFM32_USART_CTRL_OVS_X6                  0x00000002
+    #define EFM32_USART_CTRL_OVS_X4                  0x00000003
 /** Determines the clock polarity of the bus clock used in synchronous mode.
    @multiple */
-  #define EFM32_USART_CTRL_CLKPOL(v)                 ((EFM32_USART_CTRL_CLKPOL_##v) << 8)
-  #define EFM32_USART_CTRL_CLKPOL_SET(x, v)          do { (x) = (((x) & ~0x100) | ((EFM32_USART_CTRL_CLKPOL_##v) << 8)); } while(0)
-  #define EFM32_USART_CTRL_CLKPOL_SETVAL(x, v)       do { (x) = (((x) & ~0x100) | ((v) << 8)); } while(0)
-  #define EFM32_USART_CTRL_CLKPOL_GET(x)             (((x) >> 8) & 0x1)
-    #define EFM32_USART_CTRL_CLKPOL_IDLE_LOW           0x00000000
-    #define EFM32_USART_CTRL_CLKPOL_IDLE_HIGH          0x00000001
+  #define EFM32_USART_CTRL_CLKPOL                  0x00000100
 /** Determines where data is set-up and sampled according to the bus clock when
    in synchronous mode. @multiple */
-  #define EFM32_USART_CTRL_CLKPHA(v)                 ((EFM32_USART_CTRL_CLKPHA_##v) << 9)
-  #define EFM32_USART_CTRL_CLKPHA_SET(x, v)          do { (x) = (((x) & ~0x200) | ((EFM32_USART_CTRL_CLKPHA_##v) << 9)); } while(0)
-  #define EFM32_USART_CTRL_CLKPHA_SETVAL(x, v)       do { (x) = (((x) & ~0x200) | ((v) << 9)); } while(0)
-  #define EFM32_USART_CTRL_CLKPHA_GET(x)             (((x) >> 9) & 0x1)
-    #define EFM32_USART_CTRL_CLKPHA_SAMPLE_LEADING     0x00000000
-    #define EFM32_USART_CTRL_CLKPHA_SAMPLE_TRAILING    0x00000001
+  #define EFM32_USART_CTRL_CLKPHA                  0x00000200
 /** Decides whether data is sent with the least significant bit first, or the
    most significant bit first. @multiple */
-  #define EFM32_USART_CTRL_MSBF(v)                   ((EFM32_USART_CTRL_MSBF_##v) << 10)
-  #define EFM32_USART_CTRL_MSBF_SET(x, v)            do { (x) = (((x) & ~0x400) | ((EFM32_USART_CTRL_MSBF_##v) << 10)); } while(0)
-  #define EFM32_USART_CTRL_MSBF_SETVAL(x, v)         do { (x) = (((x) & ~0x400) | ((v) << 10)); } while(0)
-  #define EFM32_USART_CTRL_MSBF_GET(x)               (((x) >> 10) & 0x1)
-    #define EFM32_USART_CTRL_MSBF_LSB_FIRST            0x00000000
-    #define EFM32_USART_CTRL_MSBF_MSB_FIRST            0x00000001
+  #define EFM32_USART_CTRL_MSBF                    0x00000400
 /** This register determines the action to be performed when slave-select is
    configured as an input and driven low while in master mode. @multiple */
-  #define EFM32_USART_CTRL_CSMA(v)                   ((EFM32_USART_CTRL_CSMA_##v) << 11)
-  #define EFM32_USART_CTRL_CSMA_SET(x, v)            do { (x) = (((x) & ~0x800) | ((EFM32_USART_CTRL_CSMA_##v) << 11)); } while(0)
-  #define EFM32_USART_CTRL_CSMA_SETVAL(x, v)         do { (x) = (((x) & ~0x800) | ((v) << 11)); } while(0)
-  #define EFM32_USART_CTRL_CSMA_GET(x)               (((x) >> 11) & 0x1)
-    #define EFM32_USART_CTRL_CSMA_NO_ACTION            0x00000000
-    #define EFM32_USART_CTRL_CSMA_SLAVE_MODE           0x00000001
+  #define EFM32_USART_CTRL_CSMA(v)                 ((EFM32_USART_CTRL_CSMA_##v) << 11)
+  #define EFM32_USART_CTRL_CSMA_SET(x, v)          do { (x) = (((x) & ~0x800) | ((EFM32_USART_CTRL_CSMA_##v) << 11)); } while(0)
+  #define EFM32_USART_CTRL_CSMA_SETVAL(x, v)       do { (x) = (((x) & ~0x800) | ((v) << 11)); } while(0)
+  #define EFM32_USART_CTRL_CSMA_GET(x)             (((x) >> 11) & 0x1)
+    #define EFM32_USART_CTRL_CSMA_NO_ACTION          0x00000000
+    #define EFM32_USART_CTRL_CSMA_SLAVE_MODE         0x00000001
 /** Determines the interrupt and status level of the transmit buffer. @multiple
    */
-  #define EFM32_USART_CTRL_TXBIL(v)                  ((EFM32_USART_CTRL_TXBIL_##v) << 12)
-  #define EFM32_USART_CTRL_TXBIL_SET(x, v)           do { (x) = (((x) & ~0x1000) | ((EFM32_USART_CTRL_TXBIL_##v) << 12)); } while(0)
-  #define EFM32_USART_CTRL_TXBIL_SETVAL(x, v)        do { (x) = (((x) & ~0x1000) | ((v) << 12)); } while(0)
-  #define EFM32_USART_CTRL_TXBIL_GET(x)              (((x) >> 12) & 0x1)
-    #define EFM32_USART_CTRL_TXBIL_EMPTY               0x00000000
-    #define EFM32_USART_CTRL_TXBIL_HALF_FULLD          0x00000001
+  #define EFM32_USART_CTRL_TXBIL(v)                ((EFM32_USART_CTRL_TXBIL_##v) << 12)
+  #define EFM32_USART_CTRL_TXBIL_SET(x, v)         do { (x) = (((x) & ~0x1000) | ((EFM32_USART_CTRL_TXBIL_##v) << 12)); } while(0)
+  #define EFM32_USART_CTRL_TXBIL_SETVAL(x, v)      do { (x) = (((x) & ~0x1000) | ((v) << 12)); } while(0)
+  #define EFM32_USART_CTRL_TXBIL_GET(x)            (((x) >> 12) & 0x1)
+    #define EFM32_USART_CTRL_TXBIL_EMPTY             0x00000000
+    #define EFM32_USART_CTRL_TXBIL_HALF_FULLD        0x00000001
 /** Setting this bit will invert the input to the USART receiver. @multiple */
-  #define EFM32_USART_CTRL_RXINV(v)                  ((EFM32_USART_CTRL_RXINV_##v) << 13)
-  #define EFM32_USART_CTRL_RXINV_SET(x, v)           do { (x) = (((x) & ~0x2000) | ((EFM32_USART_CTRL_RXINV_##v) << 13)); } while(0)
-  #define EFM32_USART_CTRL_RXINV_SETVAL(x, v)        do { (x) = (((x) & ~0x2000) | ((v) << 13)); } while(0)
-  #define EFM32_USART_CTRL_RXINV_GET(x)              (((x) >> 13) & 0x1)
-    #define EFM32_USART_CTRL_RXINV_NONE                0x00000000
-    #define EFM32_USART_CTRL_RXINV_INVERTED            0x00000001
+  #define EFM32_USART_CTRL_RXINV                   0x00002000
 /** The output from the USART transmitter can optionally be inverted by setting
    this bit. @multiple */
-  #define EFM32_USART_CTRL_TXINV(v)                  ((EFM32_USART_CTRL_TXINV_##v) << 14)
-  #define EFM32_USART_CTRL_TXINV_SET(x, v)           do { (x) = (((x) & ~0x4000) | ((EFM32_USART_CTRL_TXINV_##v) << 14)); } while(0)
-  #define EFM32_USART_CTRL_TXINV_SETVAL(x, v)        do { (x) = (((x) & ~0x4000) | ((v) << 14)); } while(0)
-  #define EFM32_USART_CTRL_TXINV_GET(x)              (((x) >> 14) & 0x1)
-    #define EFM32_USART_CTRL_TXINV_NONE                0x00000000
-    #define EFM32_USART_CTRL_TXINV_INVERTED            0x00000001
+  #define EFM32_USART_CTRL_TXINV                   0x00004000
 /** Default value is active low. This affects both the selection of external
    slaves, as well as the selection of the microcontroller as a slave. @multiple
    */
-  #define EFM32_USART_CTRL_CSINV(v)                  ((EFM32_USART_CTRL_CSINV_##v) << 15)
-  #define EFM32_USART_CTRL_CSINV_SET(x, v)           do { (x) = (((x) & ~0x8000) | ((EFM32_USART_CTRL_CSINV_##v) << 15)); } while(0)
-  #define EFM32_USART_CTRL_CSINV_SETVAL(x, v)        do { (x) = (((x) & ~0x8000) | ((v) << 15)); } while(0)
-  #define EFM32_USART_CTRL_CSINV_GET(x)              (((x) >> 15) & 0x1)
-    #define EFM32_USART_CTRL_CSINV_ACTIVE_LOW          0x00000000
-    #define EFM32_USART_CTRL_CSINV_ACTIVE_HIGH         0x00000001
+  #define EFM32_USART_CTRL_CSINV(v)                ((EFM32_USART_CTRL_CSINV_##v) << 15)
+  #define EFM32_USART_CTRL_CSINV_SET(x, v)         do { (x) = (((x) & ~0x8000) | ((EFM32_USART_CTRL_CSINV_##v) << 15)); } while(0)
+  #define EFM32_USART_CTRL_CSINV_SETVAL(x, v)      do { (x) = (((x) & ~0x8000) | ((v) << 15)); } while(0)
+  #define EFM32_USART_CTRL_CSINV_GET(x)            (((x) >> 15) & 0x1)
+    #define EFM32_USART_CTRL_CSINV_ACTIVE_LOW        0x00000000
+    #define EFM32_USART_CTRL_CSINV_ACTIVE_HIGH       0x00000001
 /** When enabled, the output on USn_CS will be activated one baud-period before
    transmission starts, and deactivated when transmission ends. @multiple */
-  #define EFM32_USART_CTRL_AUTOCS                    0x00010000
+  #define EFM32_USART_CTRL_AUTOCS                  0x00010000
 /** When enabled, TXTRI is set by hardware whenever the transmitter is idle, and
    TXTRI is cleared by hardware when transmission starts. @multiple */
-  #define EFM32_USART_CTRL_AUTORI                    0x00020000
+  #define EFM32_USART_CTRL_AUTORI                  0x00020000
 /** Use this bit to enable or disable SmartCard mode. @multiple */
-  #define EFM32_USART_CTRL_SCMODE                    0x00040000
+  #define EFM32_USART_CTRL_SCMODE                  0x00040000
 /** When in SmartCard mode, a NACK'ed frame will be kept in the shift register
    and retransmitted if the transmitter is still enabled. @multiple */
-  #define EFM32_USART_CTRL_SCRETRANS                 0x00080000
+  #define EFM32_USART_CTRL_SCRETRANS               0x00080000
 /** When set, the receiver discards frames with parity errors (asynchronous mode
    only). The PERR interrupt flag is still set. @multiple */
-  #define EFM32_USART_CTRL_SKIPPERRF                 0x00100000
+  #define EFM32_USART_CTRL_SKIPPERRF               0x00100000
 /** The default value of the 9th bit. If 9-bit frames are used, and an 8-bit
    write operation is done, leaving the 9th bit unspecified, the 9th bit is set
    to the value of BIT8DV. @multiple */
-  #define EFM32_USART_CTRL_BIT8DV                    0x00200000
+  #define EFM32_USART_CTRL_BIT8DV                  0x00200000
 /** When set, DMA requests will be cleared on framing and parity errors
    (asynchronous mode only). @multiple */
-  #define EFM32_USART_CTRL_ERRSDMA(v)                ((EFM32_USART_CTRL_ERRSDMA_##v) << 22)
-  #define EFM32_USART_CTRL_ERRSDMA_SET(x, v)         do { (x) = (((x) & ~0x400000) | ((EFM32_USART_CTRL_ERRSDMA_##v) << 22)); } while(0)
-  #define EFM32_USART_CTRL_ERRSDMA_SETVAL(x, v)      do { (x) = (((x) & ~0x400000) | ((v) << 22)); } while(0)
-  #define EFM32_USART_CTRL_ERRSDMA_GET(x)            (((x) >> 22) & 0x1)
-    #define EFM32_USART_CTRL_ERRSDMA_NO_EFFECT         0x00000000
-    #define EFM32_USART_CTRL_ERRSDMA_BLOCKED           0x00000001
+  #define EFM32_USART_CTRL_ERRSDMA(v)              ((EFM32_USART_CTRL_ERRSDMA_##v) << 22)
+  #define EFM32_USART_CTRL_ERRSDMA_SET(x, v)       do { (x) = (((x) & ~0x400000) | ((EFM32_USART_CTRL_ERRSDMA_##v) << 22)); } while(0)
+  #define EFM32_USART_CTRL_ERRSDMA_SETVAL(x, v)    do { (x) = (((x) & ~0x400000) | ((v) << 22)); } while(0)
+  #define EFM32_USART_CTRL_ERRSDMA_GET(x)          (((x) >> 22) & 0x1)
+    #define EFM32_USART_CTRL_ERRSDMA_NO_EFFECT       0x00000000
+    #define EFM32_USART_CTRL_ERRSDMA_BLOCKED         0x00000001
 /** When set, the receiver is disabled on framing and parity errors (asynchronous
    mode only). @multiple */
-  #define EFM32_USART_CTRL_ERRSRX(v)                 ((EFM32_USART_CTRL_ERRSRX_##v) << 23)
-  #define EFM32_USART_CTRL_ERRSRX_SET(x, v)          do { (x) = (((x) & ~0x800000) | ((EFM32_USART_CTRL_ERRSRX_##v) << 23)); } while(0)
-  #define EFM32_USART_CTRL_ERRSRX_SETVAL(x, v)       do { (x) = (((x) & ~0x800000) | ((v) << 23)); } while(0)
-  #define EFM32_USART_CTRL_ERRSRX_GET(x)             (((x) >> 23) & 0x1)
-    #define EFM32_USART_CTRL_ERRSRX_NO_EFFECT          0x00000000
-    #define EFM32_USART_CTRL_ERRSRX_DISABLE_RX         0x00000001
+  #define EFM32_USART_CTRL_ERRSRX(v)               ((EFM32_USART_CTRL_ERRSRX_##v) << 23)
+  #define EFM32_USART_CTRL_ERRSRX_SET(x, v)        do { (x) = (((x) & ~0x800000) | ((EFM32_USART_CTRL_ERRSRX_##v) << 23)); } while(0)
+  #define EFM32_USART_CTRL_ERRSRX_SETVAL(x, v)     do { (x) = (((x) & ~0x800000) | ((v) << 23)); } while(0)
+  #define EFM32_USART_CTRL_ERRSRX_GET(x)           (((x) >> 23) & 0x1)
+    #define EFM32_USART_CTRL_ERRSRX_NO_EFFECT        0x00000000
+    #define EFM32_USART_CTRL_ERRSRX_DISABLE_RX       0x00000001
 /** When set, the transmitter is disabled on framing and parity errors
    (asynchronous mode only) in the receiver. @multiple */
-  #define EFM32_USART_CTRL_ERRSTX(v)                 ((EFM32_USART_CTRL_ERRSTX_##v) << 24)
-  #define EFM32_USART_CTRL_ERRSTX_SET(x, v)          do { (x) = (((x) & ~0x1000000) | ((EFM32_USART_CTRL_ERRSTX_##v) << 24)); } while(0)
-  #define EFM32_USART_CTRL_ERRSTX_SETVAL(x, v)       do { (x) = (((x) & ~0x1000000) | ((v) << 24)); } while(0)
-  #define EFM32_USART_CTRL_ERRSTX_GET(x)             (((x) >> 24) & 0x1)
-    #define EFM32_USART_CTRL_ERRSTX_NO_EFFECT          0x00000000
-    #define EFM32_USART_CTRL_ERRSTX_DISABLE_TX         0x00000001
+  #define EFM32_USART_CTRL_ERRSTX(v)               ((EFM32_USART_CTRL_ERRSTX_##v) << 24)
+  #define EFM32_USART_CTRL_ERRSTX_SET(x, v)        do { (x) = (((x) & ~0x1000000) | ((EFM32_USART_CTRL_ERRSTX_##v) << 24)); } while(0)
+  #define EFM32_USART_CTRL_ERRSTX_SETVAL(x, v)     do { (x) = (((x) & ~0x1000000) | ((v) << 24)); } while(0)
+  #define EFM32_USART_CTRL_ERRSTX_GET(x)           (((x) >> 24) & 0x1)
+    #define EFM32_USART_CTRL_ERRSTX_NO_EFFECT        0x00000000
+    #define EFM32_USART_CTRL_ERRSTX_DISABLE_TX       0x00000001
 /** Setup data on sample edge in synchronous slave mode to improve MOSI setup
    time. @multiple */
-  #define EFM32_USART_CTRL_SSEARLY                   0x02000000
+  #define EFM32_USART_CTRL_SSEARLY                 0x02000000
 /** Configurable delay before new transfers. Frames sent back-to-back are not
    delayed. @multiple */
-  #define EFM32_USART_CTRL_TXDELAY(v)                ((EFM32_USART_CTRL_TXDELAY_##v) << 26)
-  #define EFM32_USART_CTRL_TXDELAY_SET(x, v)         do { (x) = (((x) & ~0xc000000) | ((EFM32_USART_CTRL_TXDELAY_##v) << 26)); } while(0)
-  #define EFM32_USART_CTRL_TXDELAY_SETVAL(x, v)      do { (x) = (((x) & ~0xc000000) | ((v) << 26)); } while(0)
-  #define EFM32_USART_CTRL_TXDELAY_GET(x)            (((x) >> 26) & 0x3)
-    #define EFM32_USART_CTRL_TXDELAY_NONE              0x00000000
-    #define EFM32_USART_CTRL_TXDELAY_SINGLE            0x00000001
-    #define EFM32_USART_CTRL_TXDELAY_DOUBLE            0x00000002
-    #define EFM32_USART_CTRL_TXDELAY_TRIPLE            0x00000003
+  #define EFM32_USART_CTRL_TXDELAY(v)              ((EFM32_USART_CTRL_TXDELAY_##v) << 26)
+  #define EFM32_USART_CTRL_TXDELAY_SET(x, v)       do { (x) = (((x) & ~0xc000000) | ((EFM32_USART_CTRL_TXDELAY_##v) << 26)); } while(0)
+  #define EFM32_USART_CTRL_TXDELAY_SETVAL(x, v)    do { (x) = (((x) & ~0xc000000) | ((v) << 26)); } while(0)
+  #define EFM32_USART_CTRL_TXDELAY_GET(x)          (((x) >> 26) & 0x3)
+    #define EFM32_USART_CTRL_TXDELAY_NONE            0x00000000
+    #define EFM32_USART_CTRL_TXDELAY_SINGLE          0x00000001
+    #define EFM32_USART_CTRL_TXDELAY_DOUBLE          0x00000002
+    #define EFM32_USART_CTRL_TXDELAY_TRIPLE          0x00000003
 /** Set to switch the order of the bytes in double accesses. @multiple */
-  #define EFM32_USART_CTRL_BYTESWAP(v)               ((EFM32_USART_CTRL_BYTESWAP_##v) << 28)
-  #define EFM32_USART_CTRL_BYTESWAP_SET(x, v)        do { (x) = (((x) & ~0x10000000) | ((EFM32_USART_CTRL_BYTESWAP_##v) << 28)); } while(0)
-  #define EFM32_USART_CTRL_BYTESWAP_SETVAL(x, v)     do { (x) = (((x) & ~0x10000000) | ((v) << 28)); } while(0)
-  #define EFM32_USART_CTRL_BYTESWAP_GET(x)           (((x) >> 28) & 0x1)
-    #define EFM32_USART_CTRL_BYTESWAP_NORMAL           0x00000000
-    #define EFM32_USART_CTRL_BYTESWAP_SWAPPED          0x00000001
+  #define EFM32_USART_CTRL_BYTESWAP(v)             ((EFM32_USART_CTRL_BYTESWAP_##v) << 28)
+  #define EFM32_USART_CTRL_BYTESWAP_SET(x, v)      do { (x) = (((x) & ~0x10000000) | ((EFM32_USART_CTRL_BYTESWAP_##v) << 28)); } while(0)
+  #define EFM32_USART_CTRL_BYTESWAP_SETVAL(x, v)   do { (x) = (((x) & ~0x10000000) | ((v) << 28)); } while(0)
+  #define EFM32_USART_CTRL_BYTESWAP_GET(x)         (((x) >> 28) & 0x1)
+    #define EFM32_USART_CTRL_BYTESWAP_NORMAL         0x00000000
+    #define EFM32_USART_CTRL_BYTESWAP_SWAPPED        0x00000001
 /** Transmits as long as RX is not full. If TX is empty, underflows are
    generated. @multiple */
-  #define EFM32_USART_CTRL_AUTOTX                    0x20000000
+  #define EFM32_USART_CTRL_AUTOTX                  0x20000000
 /** Disable majority vote for 16x, 8x and 6x oversampling modes. @multiple */
-  #define EFM32_USART_CTRL_MVDIS                     0x40000000
+  #define EFM32_USART_CTRL_MVDIS                   0x40000000
 /** Delay Synchronous Master sample point to the next setup edge to improve
    timing and allow communication at higher speeds. @multiple */
-  #define EFM32_USART_CTRL_SMSDELAY                  0x80000000
+  #define EFM32_USART_CTRL_SMSDELAY                0x80000000
 
 #define EFM32_USART_FRAME_ADDR                       0x00000004
 #define EFM32_USART_FRAME_MASK                       0x0000330f
 /** This register sets the number of data bits in a USART frame. @multiple */
-  #define EFM32_USART_FRAME_DATABITS(v)              ((EFM32_USART_FRAME_DATABITS_##v) << 0)
-  #define EFM32_USART_FRAME_DATABITS_SET(x, v)       do { (x) = (((x) & ~0xf) | ((EFM32_USART_FRAME_DATABITS_##v) << 0)); } while(0)
-  #define EFM32_USART_FRAME_DATABITS_SETVAL(x, v)    do { (x) = (((x) & ~0xf) | ((v) << 0)); } while(0)
-  #define EFM32_USART_FRAME_DATABITS_GET(x)          (((x) >> 0) & 0xf)
-    #define EFM32_USART_FRAME_DATABITS_FOUR            0x00000001
-    #define EFM32_USART_FRAME_DATABITS_FIVE            0x00000002
-    #define EFM32_USART_FRAME_DATABITS_SIX             0x00000003
-    #define EFM32_USART_FRAME_DATABITS_SEVEN           0x00000004
-    #define EFM32_USART_FRAME_DATABITS_EIGHT           0x00000005
-    #define EFM32_USART_FRAME_DATABITS_NINE            0x00000006
-    #define EFM32_USART_FRAME_DATABITS_TEN             0x00000007
-    #define EFM32_USART_FRAME_DATABITS_ELEVEN          0x00000008
-    #define EFM32_USART_FRAME_DATABITS_TWELVE          0x00000009
-    #define EFM32_USART_FRAME_DATABITS_THIRTEEN        0x0000000a
-    #define EFM32_USART_FRAME_DATABITS_FOURTEEN        0x0000000b
-    #define EFM32_USART_FRAME_DATABITS_FIFTEEN         0x0000000c
-    #define EFM32_USART_FRAME_DATABITS_SIXTEEN         0x0000000d
+  #define EFM32_USART_FRAME_DATABITS(v)            ((EFM32_USART_FRAME_DATABITS_##v) << 0)
+  #define EFM32_USART_FRAME_DATABITS_SET(x, v)     do { (x) = (((x) & ~0xf) | ((EFM32_USART_FRAME_DATABITS_##v) << 0)); } while(0)
+  #define EFM32_USART_FRAME_DATABITS_SETVAL(x, v)  do { (x) = (((x) & ~0xf) | ((v) << 0)); } while(0)
+  #define EFM32_USART_FRAME_DATABITS_GET(x)        (((x) >> 0) & 0xf)
+    #define EFM32_USART_FRAME_DATABITS_FOUR          0x00000001
+    #define EFM32_USART_FRAME_DATABITS_FIVE          0x00000002
+    #define EFM32_USART_FRAME_DATABITS_SIX           0x00000003
+    #define EFM32_USART_FRAME_DATABITS_SEVEN         0x00000004
+    #define EFM32_USART_FRAME_DATABITS_EIGHT         0x00000005
+    #define EFM32_USART_FRAME_DATABITS_NINE          0x00000006
+    #define EFM32_USART_FRAME_DATABITS_TEN           0x00000007
+    #define EFM32_USART_FRAME_DATABITS_ELEVEN        0x00000008
+    #define EFM32_USART_FRAME_DATABITS_TWELVE        0x00000009
+    #define EFM32_USART_FRAME_DATABITS_THIRTEEN      0x0000000a
+    #define EFM32_USART_FRAME_DATABITS_FOURTEEN      0x0000000b
+    #define EFM32_USART_FRAME_DATABITS_FIFTEEN       0x0000000c
+    #define EFM32_USART_FRAME_DATABITS_SIXTEEN       0x0000000d
 /** Determines whether parity bits are enabled, and whether even or odd parity
    should be used. Only available in asynchronous mode. @multiple */
-  #define EFM32_USART_FRAME_PARITY(v)                ((EFM32_USART_FRAME_PARITY_##v) << 8)
-  #define EFM32_USART_FRAME_PARITY_SET(x, v)         do { (x) = (((x) & ~0x300) | ((EFM32_USART_FRAME_PARITY_##v) << 8)); } while(0)
-  #define EFM32_USART_FRAME_PARITY_SETVAL(x, v)      do { (x) = (((x) & ~0x300) | ((v) << 8)); } while(0)
-  #define EFM32_USART_FRAME_PARITY_GET(x)            (((x) >> 8) & 0x3)
-    #define EFM32_USART_FRAME_PARITY_NONE              0x00000000
-    #define EFM32_USART_FRAME_PARITY_EVEN              0x00000002
-    #define EFM32_USART_FRAME_PARITY_ODD               0x00000003
+  #define EFM32_USART_FRAME_PARITY(v)              ((EFM32_USART_FRAME_PARITY_##v) << 8)
+  #define EFM32_USART_FRAME_PARITY_SET(x, v)       do { (x) = (((x) & ~0x300) | ((EFM32_USART_FRAME_PARITY_##v) << 8)); } while(0)
+  #define EFM32_USART_FRAME_PARITY_SETVAL(x, v)    do { (x) = (((x) & ~0x300) | ((v) << 8)); } while(0)
+  #define EFM32_USART_FRAME_PARITY_GET(x)          (((x) >> 8) & 0x3)
+    #define EFM32_USART_FRAME_PARITY_NONE            0x00000000
+    #define EFM32_USART_FRAME_PARITY_EVEN            0x00000002
+    #define EFM32_USART_FRAME_PARITY_ODD             0x00000003
 /** Determines the number of stop-bits used. @multiple */
-  #define EFM32_USART_FRAME_STOPBITS(v)              ((EFM32_USART_FRAME_STOPBITS_##v) << 12)
-  #define EFM32_USART_FRAME_STOPBITS_SET(x, v)       do { (x) = (((x) & ~0x3000) | ((EFM32_USART_FRAME_STOPBITS_##v) << 12)); } while(0)
-  #define EFM32_USART_FRAME_STOPBITS_SETVAL(x, v)    do { (x) = (((x) & ~0x3000) | ((v) << 12)); } while(0)
-  #define EFM32_USART_FRAME_STOPBITS_GET(x)          (((x) >> 12) & 0x3)
-    #define EFM32_USART_FRAME_STOPBITS_HALF            0x00000000
-    #define EFM32_USART_FRAME_STOPBITS_ONE             0x00000001
-    #define EFM32_USART_FRAME_STOPBITS_ONEADNHALF      0x00000002
-    #define EFM32_USART_FRAME_STOPBITS_TWO             0x00000003
+  #define EFM32_USART_FRAME_STOPBITS(v)            ((EFM32_USART_FRAME_STOPBITS_##v) << 12)
+  #define EFM32_USART_FRAME_STOPBITS_SET(x, v)     do { (x) = (((x) & ~0x3000) | ((EFM32_USART_FRAME_STOPBITS_##v) << 12)); } while(0)
+  #define EFM32_USART_FRAME_STOPBITS_SETVAL(x, v)  do { (x) = (((x) & ~0x3000) | ((v) << 12)); } while(0)
+  #define EFM32_USART_FRAME_STOPBITS_GET(x)        (((x) >> 12) & 0x3)
+    #define EFM32_USART_FRAME_STOPBITS_HALF          0x00000000
+    #define EFM32_USART_FRAME_STOPBITS_ONE           0x00000001
+    #define EFM32_USART_FRAME_STOPBITS_ONEADNHALF    0x00000002
+    #define EFM32_USART_FRAME_STOPBITS_TWO           0x00000003
 
 #define EFM32_USART_TRIGCTRL_ADDR                    0x00000008
 #define EFM32_USART_TRIGCTRL_MASK                    0x00000073
 /** Select USART PRS trigger channel. The PRS signal can enable RX and/or TX,
    depending on the setting of RXTEN and TXTEN. @multiple */
-  #define EFM32_USART_TRIGCTRL_TSEL(v)               ((EFM32_USART_TRIGCTRL_TSEL_##v) << 0)
-  #define EFM32_USART_TRIGCTRL_TSEL_SET(x, v)        do { (x) = (((x) & ~0x3) | ((EFM32_USART_TRIGCTRL_TSEL_##v) << 0)); } while(0)
-  #define EFM32_USART_TRIGCTRL_TSEL_SETVAL(x, v)     do { (x) = (((x) & ~0x3) | ((v) << 0)); } while(0)
-  #define EFM32_USART_TRIGCTRL_TSEL_GET(x)           (((x) >> 0) & 0x3)
-    #define EFM32_USART_TRIGCTRL_TSEL_PRSCH0           0x00000000
-    #define EFM32_USART_TRIGCTRL_TSEL_PRSCH1           0x00000001
-    #define EFM32_USART_TRIGCTRL_TSEL_PRSCH2           0x00000002
-    #define EFM32_USART_TRIGCTRL_TSEL_PRSCH3           0x00000003
+  #define EFM32_USART_TRIGCTRL_TSEL(v)             ((EFM32_USART_TRIGCTRL_TSEL_##v) << 0)
+  #define EFM32_USART_TRIGCTRL_TSEL_SET(x, v)      do { (x) = (((x) & ~0x3) | ((EFM32_USART_TRIGCTRL_TSEL_##v) << 0)); } while(0)
+  #define EFM32_USART_TRIGCTRL_TSEL_SETVAL(x, v)   do { (x) = (((x) & ~0x3) | ((v) << 0)); } while(0)
+  #define EFM32_USART_TRIGCTRL_TSEL_GET(x)         (((x) >> 0) & 0x3)
+    #define EFM32_USART_TRIGCTRL_TSEL_PRSCH0         0x00000000
+    #define EFM32_USART_TRIGCTRL_TSEL_PRSCH1         0x00000001
+    #define EFM32_USART_TRIGCTRL_TSEL_PRSCH2         0x00000002
+    #define EFM32_USART_TRIGCTRL_TSEL_PRSCH3         0x00000003
 /** When set, the PRS channel selected by TSEL sets RXEN, enabling the receiver
    on positive trigger edges. @multiple */
-  #define EFM32_USART_TRIGCTRL_RXTEN                 0x00000010
+  #define EFM32_USART_TRIGCTRL_RXTEN               0x00000010
 /** When set, the PRS channel selected by TSEL sets TXEN, enabling the
    transmitter on positive trigger edges. @multiple */
-  #define EFM32_USART_TRIGCTRL_TXTEN                 0x00000020
+  #define EFM32_USART_TRIGCTRL_TXTEN               0x00000020
 /** When set, AUTOTX is enabled as long as the PRS channel selected by TSEL has a
    high value. @multiple */
-  #define EFM32_USART_TRIGCTRL_AUTOTXTEN             0x00000040
+  #define EFM32_USART_TRIGCTRL_AUTOTXTEN           0x00000040
 
 #define EFM32_USART_CMD_ADDR                         0x0000000c
 #define EFM32_USART_CMD_MASK                         0x00000fff
 /** Set to activate data reception on U(S)n_RX @multiple */
-  #define EFM32_USART_CMD_RXEN                       0x00000001
+  #define EFM32_USART_CMD_RXEN                     0x00000001
 /** Set to disable data reception. If a frame is under reception when the
    receiver is disabled, the incoming frame is discarded. @multiple */
-  #define EFM32_USART_CMD_RXDIS                      0x00000002
+  #define EFM32_USART_CMD_RXDIS                    0x00000002
 /** Set to enable data transmission. @multiple */
-  #define EFM32_USART_CMD_TXEN                       0x00000004
+  #define EFM32_USART_CMD_TXEN                     0x00000004
 /** Set to disable transmission. @multiple */
-  #define EFM32_USART_CMD_TXDIS                      0x00000008
+  #define EFM32_USART_CMD_TXDIS                    0x00000008
 /** Set to enable master mode, setting the MASTER status bit. Master mode should
    not be enabled while TXENS is set to 1. To enable both master and TX mode,
    write MASTEREN before TXEN, or enable them both in the same write operation.
    @multiple */
-  #define EFM32_USART_CMD_MASTEREN                   0x00000010
+  #define EFM32_USART_CMD_MASTEREN                 0x00000010
 /** Set to disable master mode, clearing the MASTER status bit and putting the
    USART in slave mode. @multiple */
-  #define EFM32_USART_CMD_MASTERDIS                  0x00000020
+  #define EFM32_USART_CMD_MASTERDIS                0x00000020
 /** Set to set RXBLOCK, resulting in all incoming frames being discarded.
    @multiple */
-  #define EFM32_USART_CMD_RXBLOCKDEN                 0x00000040
+  #define EFM32_USART_CMD_RXBLOCKDEN               0x00000040
 /** Set to clear RXBLOCK, resulting in all incoming frames being loaded into the
    receive buffer. @multiple */
-  #define EFM32_USART_CMD_RXBLOCKDIS                 0x00000080
+  #define EFM32_USART_CMD_RXBLOCKDIS               0x00000080
 /** Tristates the transmitter output. @multiple */
-  #define EFM32_USART_CMD_TXTRIEN                    0x00000100
+  #define EFM32_USART_CMD_TXTRIEN                  0x00000100
 /** Disables tristating of the transmitter output. @multiple */
-  #define EFM32_USART_CMD_TXTRIDIS                   0x00000200
+  #define EFM32_USART_CMD_TXTRIDIS                 0x00000200
 /** Set to clear receive buffer and the RX shift register. @multiple */
-  #define EFM32_USART_CMD_CLEARTX                    0x00000400
+  #define EFM32_USART_CMD_CLEARTX                  0x00000400
 /** Set to clear receive buffer and the RX shift register. @multiple */
-  #define EFM32_USART_CMD_CLEARRX                    0x00000800
+  #define EFM32_USART_CMD_CLEARRX                  0x00000800
 
 #define EFM32_USART_STATUS_ADDR                      0x00000010
 #define EFM32_USART_STATUS_MASK                      0x00001fff
 /** Set when the receiver is enabled. @multiple */
-  #define EFM32_USART_STATUS_RXENS                   0x00000001
+  #define EFM32_USART_STATUS_RXENS                 0x00000001
 /** Set when the transmitter is enabled. @multiple */
-  #define EFM32_USART_STATUS_TXENS                   0x00000002
+  #define EFM32_USART_STATUS_TXENS                 0x00000002
 /** Set when the USART operates as a master. Set using the MASTEREN command and
    clear using the MASTERDIS command. @multiple */
-  #define EFM32_USART_STATUS_MASTER                  0x00000004
+  #define EFM32_USART_STATUS_MASTER                0x00000004
 /** When set, the receiver discards incoming frames. An incoming frame will not
    be loaded into the receive buffer if this bit is set at the instant the frame
    has been completely received. @multiple */
-  #define EFM32_USART_STATUS_RXBLOCK                 0x00000008
+  #define EFM32_USART_STATUS_RXBLOCK               0x00000008
 /** Set when the transmitter is tristated, and cleared when transmitter output is
    enabled. If AUTOTRI in USARTn_CTRL is set this bit is always read as 0.
    @multiple */
-  #define EFM32_USART_STATUS_TXTRI                   0x00000010
+  #define EFM32_USART_STATUS_TXTRI                 0x00000010
 /** Set when a transmission has completed and no more data is available in the
    transmit buffer and shift register. Cleared when data is written to the
    transmit buffer. @multiple */
-  #define EFM32_USART_STATUS_TXC                     0x00000020
+  #define EFM32_USART_STATUS_TXC                   0x00000020
 /** Indicates the level of the transmit buffer. If TXBIL is cleared, TXBL is set
    whenever the transmit buffer is empty, and if TXBIL is set, TXBL is set
    whenever the transmit buffer is half-full or empty. @multiple */
-  #define EFM32_USART_STATUS_TXBL                    0x00000040
+  #define EFM32_USART_STATUS_TXBL                  0x00000040
 /** Set when data is available in the receive buffer. Cleared when the receive
    buffer is empty. @multiple */
-  #define EFM32_USART_STATUS_RXDATAV                 0x00000080
+  #define EFM32_USART_STATUS_RXDATAV               0x00000080
 /** Set when the RXFIFO is full. Cleared when the receive buffer is no longer
    full. When this bit is set, there is still room for one more frame in the
    receive shift register. @multiple */
-  #define EFM32_USART_STATUS_RXFULL                  0x00000100
+  #define EFM32_USART_STATUS_RXFULL                0x00000100
 /** When set, the TX buffer expects double right data. Else it may expect a
    single right data or left data. Only used in I2S mode. @multiple */
-  #define EFM32_USART_STATUS_TXBDRIGHT               0x00000200
+  #define EFM32_USART_STATUS_TXBDRIGHT             0x00000200
 /** When set, the TX buffer expects at least a single right data. Else it expects
    left data. Only used in I2S mode. @multiple */
-  #define EFM32_USART_STATUS_TXBSRIGHT               0x00000400
+  #define EFM32_USART_STATUS_TXBSRIGHT             0x00000400
 /** When set, reading RXDATA or RXDATAX gives right data. Else left data is read.
    Only used in I2S mode. @multiple */
-  #define EFM32_USART_STATUS_RXDATAVRIGHT            0x00000800
+  #define EFM32_USART_STATUS_RXDATAVRIGHT          0x00000800
 /** When set, the entire RX buffer contains right data. Only used in I2S mode.
    @multiple */
-  #define EFM32_USART_STATUS_RXFULLRIGHT             0x00001000
+  #define EFM32_USART_STATUS_RXFULLRIGHT           0x00001000
 
 #define EFM32_USART_CLKDIV_ADDR                      0x00000014
 #define EFM32_USART_CLKDIV_MASK                      0x001fffc0
 /** Specifies the fractional clock divider for the USART @multiple */
-  #define EFM32_USART_CLKDIV_DIV(v)                  ((v) << 6)
-  #define EFM32_USART_CLKDIV_DIV_SET(x, v)           do { (x) = (((x) & ~0x1fffc0) | ((v) << 6)); } while(0)
-  #define EFM32_USART_CLKDIV_DIV_GET(x)              (((x) >> 6) & 0x7fff)
+  #define EFM32_USART_CLKDIV_DIV(v)                ((v) << 6)
+  #define EFM32_USART_CLKDIV_DIV_SET(x, v)         do { (x) = (((x) & ~0x1fffc0) | ((v) << 6)); } while(0)
+  #define EFM32_USART_CLKDIV_DIV_GET(x)            (((x) >> 6) & 0x7fff)
 
 #define EFM32_USART_RXDATAX_ADDR                     0x00000018
 #define EFM32_USART_RXDATAX_MASK                     0x0000c1ff
 /** Use this register to access data read from the USART. Buffer is cleared on
    read access. @multiple */
-  #define EFM32_USART_RXDATAX_RXDATA(v)              ((v) << 0)
-  #define EFM32_USART_RXDATAX_RXDATA_SET(x, v)       do { (x) = (((x) & ~0x1ff) | ((v) << 0)); } while(0)
-  #define EFM32_USART_RXDATAX_RXDATA_GET(x)          (((x) >> 0) & 0x1ff)
+  #define EFM32_USART_RXDATAX_RXDATA(v)            ((v) << 0)
+  #define EFM32_USART_RXDATAX_RXDATA_SET(x, v)     do { (x) = (((x) & ~0x1ff) | ((v) << 0)); } while(0)
+  #define EFM32_USART_RXDATAX_RXDATA_GET(x)        (((x) >> 0) & 0x1ff)
 /** Set if data in buffer has a parity error (asynchronous mode only). @multiple
    */
-  #define EFM32_USART_RXDATAX_PERR                   0x00004000
+  #define EFM32_USART_RXDATAX_PERR                 0x00004000
 /** Set if data in buffer has a framing error. Can be the result of a break
    condition. @multiple */
-  #define EFM32_USART_RXDATAX_FERR                   0x00008000
+  #define EFM32_USART_RXDATAX_FERR                 0x00008000
 
 #define EFM32_USART_RXDATA_ADDR                      0x0000001c
 #define EFM32_USART_RXDATA_MASK                      0x000000ff
 /** Use this register to access data read from USART. Buffer is cleared on read
    access. Only the 8 LSB can be read using this register. @multiple */
-  #define EFM32_USART_RXDATA_RXDATA(v)               ((v) << 0)
-  #define EFM32_USART_RXDATA_RXDATA_SET(x, v)        do { (x) = (((x) & ~0xff) | ((v) << 0)); } while(0)
-  #define EFM32_USART_RXDATA_RXDATA_GET(x)           (((x) >> 0) & 0xff)
+  #define EFM32_USART_RXDATA_RXDATA(v)             ((v) << 0)
+  #define EFM32_USART_RXDATA_RXDATA_SET(x, v)      do { (x) = (((x) & ~0xff) | ((v) << 0)); } while(0)
+  #define EFM32_USART_RXDATA_RXDATA_GET(x)         (((x) >> 0) & 0xff)
 
 #define EFM32_USART_RXDOUBLEX_ADDR                   0x00000020
 #define EFM32_USART_RXDOUBLEX_MASK                   0xc1ffc1ff
 /** First frame read from buffer. @multiple */
-  #define EFM32_USART_RXDOUBLEX_RXDATA0(v)           ((v) << 0)
-  #define EFM32_USART_RXDOUBLEX_RXDATA0_SET(x, v)    do { (x) = (((x) & ~0x1ff) | ((v) << 0)); } while(0)
-  #define EFM32_USART_RXDOUBLEX_RXDATA0_GET(x)       (((x) >> 0) & 0x1ff)
+  #define EFM32_USART_RXDOUBLEX_RXDATA0(v)         ((v) << 0)
+  #define EFM32_USART_RXDOUBLEX_RXDATA0_SET(x, v)  do { (x) = (((x) & ~0x1ff) | ((v) << 0)); } while(0)
+  #define EFM32_USART_RXDOUBLEX_RXDATA0_GET(x)     (((x) >> 0) & 0x1ff)
 /** Set if data in buffer has a parity error (asynchronous mode only). @multiple
    */
-  #define EFM32_USART_RXDOUBLEX_PERR0                0x00004000
+  #define EFM32_USART_RXDOUBLEX_PERR0              0x00004000
 /** Set if data in buffer has a framing error. Can be the result of a break
    condition. @multiple */
-  #define EFM32_USART_RXDOUBLEX_FERR0                0x00008000
+  #define EFM32_USART_RXDOUBLEX_FERR0              0x00008000
 /** Second frame read from buffer. @multiple */
-  #define EFM32_USART_RXDOUBLEX_RXDATA1(v)           ((v) << 16)
-  #define EFM32_USART_RXDOUBLEX_RXDATA1_SET(x, v)    do { (x) = (((x) & ~0x1ff0000) | ((v) << 16)); } while(0)
-  #define EFM32_USART_RXDOUBLEX_RXDATA1_GET(x)       (((x) >> 16) & 0x1ff)
+  #define EFM32_USART_RXDOUBLEX_RXDATA1(v)         ((v) << 16)
+  #define EFM32_USART_RXDOUBLEX_RXDATA1_SET(x, v)  do { (x) = (((x) & ~0x1ff0000) | ((v) << 16)); } while(0)
+  #define EFM32_USART_RXDOUBLEX_RXDATA1_GET(x)     (((x) >> 16) & 0x1ff)
 /** Set if data in buffer has a parity error (asynchronous mode only). @multiple
    */
-  #define EFM32_USART_RXDOUBLEX_PERR1                0x40000000
+  #define EFM32_USART_RXDOUBLEX_PERR1              0x40000000
 /** Set if data in buffer has a framing error. Can be the result of a break
    condition. @multiple */
-  #define EFM32_USART_RXDOUBLEX_FERR1                0x80000000
+  #define EFM32_USART_RXDOUBLEX_FERR1              0x80000000
 
 #define EFM32_USART_RXDOUBLE_ADDR                    0x00000024
 #define EFM32_USART_RXDOUBLE_MASK                    0x0000ffff
 /** First frame read from buffer. @multiple */
-  #define EFM32_USART_RXDOUBLE_RXDATA0(v)            ((v) << 0)
-  #define EFM32_USART_RXDOUBLE_RXDATA0_SET(x, v)     do { (x) = (((x) & ~0xff) | ((v) << 0)); } while(0)
-  #define EFM32_USART_RXDOUBLE_RXDATA0_GET(x)        (((x) >> 0) & 0xff)
+  #define EFM32_USART_RXDOUBLE_RXDATA0(v)          ((v) << 0)
+  #define EFM32_USART_RXDOUBLE_RXDATA0_SET(x, v)   do { (x) = (((x) & ~0xff) | ((v) << 0)); } while(0)
+  #define EFM32_USART_RXDOUBLE_RXDATA0_GET(x)      (((x) >> 0) & 0xff)
 /** Second frame read from buffer. @multiple */
-  #define EFM32_USART_RXDOUBLE_RXDATA1(v)            ((v) << 8)
-  #define EFM32_USART_RXDOUBLE_RXDATA1_SET(x, v)     do { (x) = (((x) & ~0xff00) | ((v) << 8)); } while(0)
-  #define EFM32_USART_RXDOUBLE_RXDATA1_GET(x)        (((x) >> 8) & 0xff)
+  #define EFM32_USART_RXDOUBLE_RXDATA1(v)          ((v) << 8)
+  #define EFM32_USART_RXDOUBLE_RXDATA1_SET(x, v)   do { (x) = (((x) & ~0xff00) | ((v) << 8)); } while(0)
+  #define EFM32_USART_RXDOUBLE_RXDATA1_GET(x)      (((x) >> 8) & 0xff)
 
 #define EFM32_USART_RXDATAXP_ADDR                    0x00000028
 #define EFM32_USART_RXDATAXP_MASK                    0xc1ffc1ff
 /** Use this register to access data read from the USART. @multiple */
-  #define EFM32_USART_RXDATAXP_RXDATAP(v)            ((v) << 0)
-  #define EFM32_USART_RXDATAXP_RXDATAP_SET(x, v)     do { (x) = (((x) & ~0x1ff) | ((v) << 0)); } while(0)
-  #define EFM32_USART_RXDATAXP_RXDATAP_GET(x)        (((x) >> 0) & 0x1ff)
+  #define EFM32_USART_RXDATAXP_RXDATAP(v)          ((v) << 0)
+  #define EFM32_USART_RXDATAXP_RXDATAP_SET(x, v)   do { (x) = (((x) & ~0x1ff) | ((v) << 0)); } while(0)
+  #define EFM32_USART_RXDATAXP_RXDATAP_GET(x)      (((x) >> 0) & 0x1ff)
 /** Set if data in buffer has a parity error (asynchronous mode only). @multiple
    */
-  #define EFM32_USART_RXDATAXP_PERR                  0x00004000
+  #define EFM32_USART_RXDATAXP_PERR                0x00004000
 /** Set if data in buffer has a framing error. Can be the result of a break
    condition. @multiple */
-  #define EFM32_USART_RXDATAXP_FERR                  0x00008000
+  #define EFM32_USART_RXDATAXP_FERR                0x00008000
 /** Second frame read from buffer. @multiple */
-  #define EFM32_USART_RXDATAXP_RXDATA1(v)            ((v) << 16)
-  #define EFM32_USART_RXDATAXP_RXDATA1_SET(x, v)     do { (x) = (((x) & ~0x1ff0000) | ((v) << 16)); } while(0)
-  #define EFM32_USART_RXDATAXP_RXDATA1_GET(x)        (((x) >> 16) & 0x1ff)
+  #define EFM32_USART_RXDATAXP_RXDATA1(v)          ((v) << 16)
+  #define EFM32_USART_RXDATAXP_RXDATA1_SET(x, v)   do { (x) = (((x) & ~0x1ff0000) | ((v) << 16)); } while(0)
+  #define EFM32_USART_RXDATAXP_RXDATA1_GET(x)      (((x) >> 16) & 0x1ff)
 /** Set if data in buffer has a parity error (asynchronous mode only). @multiple
    */
-  #define EFM32_USART_RXDATAXP_PERR1                 0x40000000
+  #define EFM32_USART_RXDATAXP_PERR1               0x40000000
 /** Set if data in buffer has a framing error. Can be the result of a break
    condition. @multiple */
-  #define EFM32_USART_RXDATAXP_FERR1                 0x80000000
+  #define EFM32_USART_RXDATAXP_FERR1               0x80000000
 
 #define EFM32_USART_RXDOUBLEXP_ADDR                  0x0000002c
 #define EFM32_USART_RXDOUBLEXP_MASK                  0xc1ffc1ff
 /** First frame read from FIFO. @multiple */
-  #define EFM32_USART_RXDOUBLEXP_RXDATAP0(v)         ((v) << 0)
-  #define EFM32_USART_RXDOUBLEXP_RXDATAP0_SET(x, v)  do { (x) = (((x) & ~0x1ff) | ((v) << 0)); } while(0)
-  #define EFM32_USART_RXDOUBLEXP_RXDATAP0_GET(x)     (((x) >> 0) & 0x1ff)
+  #define EFM32_USART_RXDOUBLEXP_RXDATAP0(v)       ((v) << 0)
+  #define EFM32_USART_RXDOUBLEXP_RXDATAP0_SET(x, v) do { (x) = (((x) & ~0x1ff) | ((v) << 0)); } while(0)
+  #define EFM32_USART_RXDOUBLEXP_RXDATAP0_GET(x)   (((x) >> 0) & 0x1ff)
 /** Set if data in buffer has a parity error (asynchronous mode only). @multiple
    */
-  #define EFM32_USART_RXDOUBLEXP_PERRP0              0x00004000
+  #define EFM32_USART_RXDOUBLEXP_PERRP0            0x00004000
 /** Set if data in buffer has a framing error. Can be the result of a break
    condition. @multiple */
-  #define EFM32_USART_RXDOUBLEXP_FERRP0              0x00008000
+  #define EFM32_USART_RXDOUBLEXP_FERRP0            0x00008000
 /** Second frame read from FIFO. @multiple */
-  #define EFM32_USART_RXDOUBLEXP_RXDATA1(v)          ((v) << 16)
-  #define EFM32_USART_RXDOUBLEXP_RXDATA1_SET(x, v)   do { (x) = (((x) & ~0x1ff0000) | ((v) << 16)); } while(0)
-  #define EFM32_USART_RXDOUBLEXP_RXDATA1_GET(x)      (((x) >> 16) & 0x1ff)
+  #define EFM32_USART_RXDOUBLEXP_RXDATA1(v)        ((v) << 16)
+  #define EFM32_USART_RXDOUBLEXP_RXDATA1_SET(x, v) do { (x) = (((x) & ~0x1ff0000) | ((v) << 16)); } while(0)
+  #define EFM32_USART_RXDOUBLEXP_RXDATA1_GET(x)    (((x) >> 16) & 0x1ff)
 /** Set if data in buffer has a parity error (asynchronous mode only). @multiple
    */
-  #define EFM32_USART_RXDOUBLEXP_PERR1P              0x40000000
+  #define EFM32_USART_RXDOUBLEXP_PERR1P            0x40000000
 /** Set if data in buffer has a framing error. Can be the result of a break
    condition. @multiple */
-  #define EFM32_USART_RXDOUBLEXP_FERR1P              0x80000000
+  #define EFM32_USART_RXDOUBLEXP_FERR1P            0x80000000
 
 #define EFM32_USART_TXDATAX_ADDR                     0x00000030
 #define EFM32_USART_TXDATAX_MASK                     0x0000f9ff
 /** Use this register to write data to the USART. If TXEN is set, a transfer will
    be initiated at the first opportunity. @multiple */
-  #define EFM32_USART_TXDATAX_TXDATAX(v)             ((v) << 0)
-  #define EFM32_USART_TXDATAX_TXDATAX_SET(x, v)      do { (x) = (((x) & ~0x1ff) | ((v) << 0)); } while(0)
-  #define EFM32_USART_TXDATAX_TXDATAX_GET(x)         (((x) >> 0) & 0x1ff)
+  #define EFM32_USART_TXDATAX_TXDATAX(v)           ((v) << 0)
+  #define EFM32_USART_TXDATAX_TXDATAX_SET(x, v)    do { (x) = (((x) & ~0x1ff) | ((v) << 0)); } while(0)
+  #define EFM32_USART_TXDATAX_TXDATAX_GET(x)       (((x) >> 0) & 0x1ff)
 /** Set clear RXBLOCK after transmission, unblocking the receiver. @multiple */
-  #define EFM32_USART_TXDATAX_UBRXAT                 0x00000800
+  #define EFM32_USART_TXDATAX_UBRXAT               0x00000800
 /** Set to tristate transmitter by setting TXTRI after transmission. @multiple */
-  #define EFM32_USART_TXDATAX_TXTRIAT                0x00001000
+  #define EFM32_USART_TXDATAX_TXTRIAT              0x00001000
 /** Set to send data as a break. Recipient will see a framing error or a break
    condition depending on its configuration and the value of WDATA. @multiple */
-  #define EFM32_USART_TXDATAX_TXBREAK                0x00002000
+  #define EFM32_USART_TXDATAX_TXBREAK              0x00002000
 /** Set to disable transmitter and release data bus directly after transmission.
    @multiple */
-  #define EFM32_USART_TXDATAX_TXDIASAT               0x00004000
+  #define EFM32_USART_TXDATAX_TXDIASAT             0x00004000
 /** Set to enable reception after transmission. @multiple */
-  #define EFM32_USART_TXDATAX_RXENAT                 0x00008000
+  #define EFM32_USART_TXDATAX_RXENAT               0x00008000
 
 #define EFM32_USART_TXDATA_ADDR                      0x00000034
 #define EFM32_USART_TXDATA_MASK                      0x000000ff
 /** This frame will be added to TX buffer. Only 8 LSB can be written using this
    register. 9th bit and control bits will be cleared. @multiple */
-  #define EFM32_USART_TXDATA_TXDATA(v)               ((v) << 0)
-  #define EFM32_USART_TXDATA_TXDATA_SET(x, v)        do { (x) = (((x) & ~0xff) | ((v) << 0)); } while(0)
-  #define EFM32_USART_TXDATA_TXDATA_GET(x)           (((x) >> 0) & 0xff)
+  #define EFM32_USART_TXDATA_TXDATA(v)             ((v) << 0)
+  #define EFM32_USART_TXDATA_TXDATA_SET(x, v)      do { (x) = (((x) & ~0xff) | ((v) << 0)); } while(0)
+  #define EFM32_USART_TXDATA_TXDATA_GET(x)         (((x) >> 0) & 0xff)
 
 #define EFM32_USART_TXDOUBLEX_ADDR                   0x00000038
 #define EFM32_USART_TXDOUBLEX_MASK                   0xf9fff9ff
 /** First frame to write to buffer. @multiple */
-  #define EFM32_USART_TXDOUBLEX_TXDATA0(v)           ((v) << 0)
-  #define EFM32_USART_TXDOUBLEX_TXDATA0_SET(x, v)    do { (x) = (((x) & ~0x1ff) | ((v) << 0)); } while(0)
-  #define EFM32_USART_TXDOUBLEX_TXDATA0_GET(x)       (((x) >> 0) & 0x1ff)
+  #define EFM32_USART_TXDOUBLEX_TXDATA0(v)         ((v) << 0)
+  #define EFM32_USART_TXDOUBLEX_TXDATA0_SET(x, v)  do { (x) = (((x) & ~0x1ff) | ((v) << 0)); } while(0)
+  #define EFM32_USART_TXDOUBLEX_TXDATA0_GET(x)     (((x) >> 0) & 0x1ff)
 /** Set clear RXBLOCK after transmission, unblocking the receiver. @multiple */
-  #define EFM32_USART_TXDOUBLEX_UBRXAT0              0x00000800
+  #define EFM32_USART_TXDOUBLEX_UBRXAT0            0x00000800
 /** Set clear RXBLOCK after transmission, unblocking the receiver. @multiple */
-  #define EFM32_USART_TXDOUBLEX_TXTRIAT0             0x00001000
+  #define EFM32_USART_TXDOUBLEX_TXTRIAT0           0x00001000
 /** Set to send data as a break. Recipient will see a framing error or a break
    condition depending on its configuration and the value of WDATA. @multiple */
-  #define EFM32_USART_TXDOUBLEX_TXBREAK0             0x00002000
+  #define EFM32_USART_TXDOUBLEX_TXBREAK0           0x00002000
 /** Set to disable transmitter and release data bus directly after transmission.
    @multiple */
-  #define EFM32_USART_TXDOUBLEX_TXDIASAT0            0x00004000
+  #define EFM32_USART_TXDOUBLEX_TXDIASAT0          0x00004000
 /** Set to enable reception after transmission. @multiple */
-  #define EFM32_USART_TXDOUBLEX_RXENAT0              0x00008000
+  #define EFM32_USART_TXDOUBLEX_RXENAT0            0x00008000
 /** Second frame to write to FIFO. @multiple */
-  #define EFM32_USART_TXDOUBLEX_TXDATA1(v)           ((v) << 16)
-  #define EFM32_USART_TXDOUBLEX_TXDATA1_SET(x, v)    do { (x) = (((x) & ~0x1ff0000) | ((v) << 16)); } while(0)
-  #define EFM32_USART_TXDOUBLEX_TXDATA1_GET(x)       (((x) >> 16) & 0x1ff)
+  #define EFM32_USART_TXDOUBLEX_TXDATA1(v)         ((v) << 16)
+  #define EFM32_USART_TXDOUBLEX_TXDATA1_SET(x, v)  do { (x) = (((x) & ~0x1ff0000) | ((v) << 16)); } while(0)
+  #define EFM32_USART_TXDOUBLEX_TXDATA1_GET(x)     (((x) >> 16) & 0x1ff)
 /** Set clear RXBLOCK after transmission, unblocking the receiver. @multiple */
-  #define EFM32_USART_TXDOUBLEX_UBRXAT1              0x08000000
+  #define EFM32_USART_TXDOUBLEX_UBRXAT1            0x08000000
 /** Set clear RXBLOCK after transmission, unblocking the receiver. @multiple */
-  #define EFM32_USART_TXDOUBLEX_TXTRIAT1             0x10000000
+  #define EFM32_USART_TXDOUBLEX_TXTRIAT1           0x10000000
 /** Set to send data as a break. Recipient will see a framing error or a break
    condition depending on its configuration and the value of WDATA. @multiple */
-  #define EFM32_USART_TXDOUBLEX_TXBREAK1             0x20000000
+  #define EFM32_USART_TXDOUBLEX_TXBREAK1           0x20000000
 /** Set to disable transmitter and release data bus directly after transmission.
    @multiple */
-  #define EFM32_USART_TXDOUBLEX_TXDIASAT1            0x40000000
+  #define EFM32_USART_TXDOUBLEX_TXDIASAT1          0x40000000
 /** Set to enable reception after transmission. @multiple */
-  #define EFM32_USART_TXDOUBLEX_RXENAT1              0x80000000
+  #define EFM32_USART_TXDOUBLEX_RXENAT1            0x80000000
 
 #define EFM32_USART_TXDOUBLE_ADDR                    0x0000003c
 #define EFM32_USART_TXDOUBLE_MASK                    0x0000ffff
 /** First frame to write to buffer. @multiple */
-  #define EFM32_USART_TXDOUBLE_TXDATA0(v)            ((v) << 0)
-  #define EFM32_USART_TXDOUBLE_TXDATA0_SET(x, v)     do { (x) = (((x) & ~0xff) | ((v) << 0)); } while(0)
-  #define EFM32_USART_TXDOUBLE_TXDATA0_GET(x)        (((x) >> 0) & 0xff)
+  #define EFM32_USART_TXDOUBLE_TXDATA0(v)          ((v) << 0)
+  #define EFM32_USART_TXDOUBLE_TXDATA0_SET(x, v)   do { (x) = (((x) & ~0xff) | ((v) << 0)); } while(0)
+  #define EFM32_USART_TXDOUBLE_TXDATA0_GET(x)      (((x) >> 0) & 0xff)
 /** Second frame to write to buffer. @multiple */
-  #define EFM32_USART_TXDOUBLE_TXDATA1(v)            ((v) << 8)
-  #define EFM32_USART_TXDOUBLE_TXDATA1_SET(x, v)     do { (x) = (((x) & ~0xff00) | ((v) << 8)); } while(0)
-  #define EFM32_USART_TXDOUBLE_TXDATA1_GET(x)        (((x) >> 8) & 0xff)
+  #define EFM32_USART_TXDOUBLE_TXDATA1(v)          ((v) << 8)
+  #define EFM32_USART_TXDOUBLE_TXDATA1_SET(x, v)   do { (x) = (((x) & ~0xff00) | ((v) << 8)); } while(0)
+  #define EFM32_USART_TXDOUBLE_TXDATA1_GET(x)      (((x) >> 8) & 0xff)
 
 #define EFM32_USART_IF_ADDR                          0x00000040
 #define EFM32_USART_IF_MASK                          0x00001fff
 /** TX Complete Interrupt Flag @multiple */
-  #define EFM32_USART_IF_TXC                         0x00000001
+  #define EFM32_USART_IF_TXC                       0x00000001
 /** Set when buffer becomes empty if TXBIL is set, or when buffer goes from full
    to half-full if TXBIL is cleared. @multiple */
-  #define EFM32_USART_IF_TXBL                        0x00000002
+  #define EFM32_USART_IF_TXBL                      0x00000002
 /** Set when data becomes available in the receive buffer. @multiple */
-  #define EFM32_USART_IF_RXDATAV                     0x00000004
+  #define EFM32_USART_IF_RXDATAV                   0x00000004
 /** Set when the receive buffer becomes full. @multiple */
-  #define EFM32_USART_IF_RXFULL                      0x00000008
+  #define EFM32_USART_IF_RXFULL                    0x00000008
 /** Set when data is incoming while the receive shift register is full. The data
    previously in the shift register is lost. @multiple */
-  #define EFM32_USART_IF_RXOF                        0x00000010
+  #define EFM32_USART_IF_RXOF                      0x00000010
 /** Set when trying to read from the receive buffer when it is empty. @multiple
    */
-  #define EFM32_USART_IF_RXUF                        0x00000020
+  #define EFM32_USART_IF_RXUF                      0x00000020
 /** Set when a write is done to the transmit buffer while it is full. The data
    already in the transmit buffer is preserved. @multiple */
-  #define EFM32_USART_IF_TXOF                        0x00000040
+  #define EFM32_USART_IF_TXOF                      0x00000040
 /** Set when operating as a synchronous slave, no data is available in the
    transmit buffer when the master starts transmission of a new frame. @multiple
    */
-  #define EFM32_USART_IF_TXUF                        0x00000080
+  #define EFM32_USART_IF_TXUF                      0x00000080
 /** Set when a frame with a parity error (asynchronous mode only) is received
    while RXBLOCK is cleared. @multiple */
-  #define EFM32_USART_IF_PERR                        0x00000100
+  #define EFM32_USART_IF_PERR                      0x00000100
 /** Set when a frame with a framing error is received while RXBLOCK is cleared.
    @multiple */
-  #define EFM32_USART_IF_FERR                        0x00000200
+  #define EFM32_USART_IF_FERR                      0x00000200
 /** Set when a multi-processor address frame is detected. @multiple */
-  #define EFM32_USART_IF_MPAF                        0x00000400
+  #define EFM32_USART_IF_MPAF                      0x00000400
 /** Set when the device is selected as a slave when in master mode. @multiple */
-  #define EFM32_USART_IF_SSM                         0x00000800
+  #define EFM32_USART_IF_SSM                       0x00000800
 /** Set when a collision check notices an error in the transmitted data.
    @multiple */
-  #define EFM32_USART_IF_CCF                         0x00001000
+  #define EFM32_USART_IF_CCF                       0x00001000
 
 #define EFM32_USART_IFS_ADDR                         0x00000044
 #define EFM32_USART_IFS_MASK                         0x00001ff9
 /** Write to 1 to set the TXC interrupt flag. @multiple */
-  #define EFM32_USART_IFS_TXC                        0x00000001
+  #define EFM32_USART_IFS_TXC                      0x00000001
 /** Write to 1 to set the RXFULL interrupt flag. @multiple */
-  #define EFM32_USART_IFS_RXFULL                     0x00000008
+  #define EFM32_USART_IFS_RXFULL                   0x00000008
 /** Write to 1 to set the RXOF interrupt flag. @multiple */
-  #define EFM32_USART_IFS_RXOF                       0x00000010
+  #define EFM32_USART_IFS_RXOF                     0x00000010
 /** Write to 1 to set the RXUF interrupt flag. @multiple */
-  #define EFM32_USART_IFS_RXUF                       0x00000020
+  #define EFM32_USART_IFS_RXUF                     0x00000020
 /** Write to 1 to set the TXOF interrupt flag. @multiple */
-  #define EFM32_USART_IFS_TXOF                       0x00000040
+  #define EFM32_USART_IFS_TXOF                     0x00000040
 /** Write to 1 to set the TXUF interrupt flag. @multiple */
-  #define EFM32_USART_IFS_TXUF                       0x00000080
+  #define EFM32_USART_IFS_TXUF                     0x00000080
 /** Write to 1 to set the PERR interrupt flag. @multiple */
-  #define EFM32_USART_IFS_PERR                       0x00000100
+  #define EFM32_USART_IFS_PERR                     0x00000100
 /** Write to 1 to set the FERR interrupt flag. @multiple */
-  #define EFM32_USART_IFS_FERR                       0x00000200
+  #define EFM32_USART_IFS_FERR                     0x00000200
 /** Write to 1 to set the MPAF interrupt flag. @multiple */
-  #define EFM32_USART_IFS_MPAF                       0x00000400
+  #define EFM32_USART_IFS_MPAF                     0x00000400
 /** Write to 1 to set the SSM interrupt flag. @multiple */
-  #define EFM32_USART_IFS_SSM                        0x00000800
+  #define EFM32_USART_IFS_SSM                      0x00000800
 /** Write to 1 to set the CCF interrupt flag. @multiple */
-  #define EFM32_USART_IFS_CCF                        0x00001000
+  #define EFM32_USART_IFS_CCF                      0x00001000
 
 #define EFM32_USART_IFC_ADDR                         0x00000048
 #define EFM32_USART_IFC_MASK                         0x00001ff9
 /** Write to 1 to clear the TXC interrupt flag. @multiple */
-  #define EFM32_USART_IFC_TXC                        0x00000001
+  #define EFM32_USART_IFC_TXC                      0x00000001
 /** Write to 1 to clear the RXFULL interrupt flag. @multiple */
-  #define EFM32_USART_IFC_RXFULL                     0x00000008
+  #define EFM32_USART_IFC_RXFULL                   0x00000008
 /** Write to 1 to clear the RXOF interrupt flag. @multiple */
-  #define EFM32_USART_IFC_RXOF                       0x00000010
+  #define EFM32_USART_IFC_RXOF                     0x00000010
 /** Write to 1 to clear the RXUF interrupt flag. @multiple */
-  #define EFM32_USART_IFC_RXUF                       0x00000020
+  #define EFM32_USART_IFC_RXUF                     0x00000020
 /** Write to 1 to clear the TXOF interrupt flag. @multiple */
-  #define EFM32_USART_IFC_XOF                        0x00000040
+  #define EFM32_USART_IFC_XOF                      0x00000040
 /** Write to 1 to clear the TXUF interrupt flag. @multiple */
-  #define EFM32_USART_IFC_TXUF                       0x00000080
+  #define EFM32_USART_IFC_TXUF                     0x00000080
 /** Write to 1 to clear the PERR interrupt flag. @multiple */
-  #define EFM32_USART_IFC_PERR                       0x00000100
+  #define EFM32_USART_IFC_PERR                     0x00000100
 /** Write to 1 to clear the FERR interrupt flag. @multiple */
-  #define EFM32_USART_IFC_FERR                       0x00000200
+  #define EFM32_USART_IFC_FERR                     0x00000200
 /** Write to 1 to clear the MPAF interrupt flag. @multiple */
-  #define EFM32_USART_IFC_MPAF                       0x00000400
+  #define EFM32_USART_IFC_MPAF                     0x00000400
 /** Write to 1 to clear the SSM interrupt flag. @multiple */
-  #define EFM32_USART_IFC_SSM                        0x00000800
+  #define EFM32_USART_IFC_SSM                      0x00000800
 /** Write to 1 to clear the CCF interrupt flag. @multiple */
-  #define EFM32_USART_IFC_CCF                        0x00001000
+  #define EFM32_USART_IFC_CCF                      0x00001000
 
 #define EFM32_USART_IEN_ADDR                         0x0000004c
 #define EFM32_USART_IEN_MASK                         0x00001fff
 /** Enable interrupt on TX complete. @multiple */
-  #define EFM32_USART_IEN_TXC                        0x00000001
+  #define EFM32_USART_IEN_TXC                      0x00000001
 /** Enable interrupt on TX buffer level. @multiple */
-  #define EFM32_USART_IEN_TXBL                       0x00000002
+  #define EFM32_USART_IEN_TXBL                     0x00000002
 /** Enable interrupt on RX data. @multiple */
-  #define EFM32_USART_IEN_RXDATAV                    0x00000004
+  #define EFM32_USART_IEN_RXDATAV                  0x00000004
 /** Enable interrupt on RX Buffer full. @multiple */
-  #define EFM32_USART_IEN_RXFULL                     0x00000008
+  #define EFM32_USART_IEN_RXFULL                   0x00000008
 /** Enable interrupt on RX overflow. @multiple */
-  #define EFM32_USART_IEN_RXOF                       0x00000010
+  #define EFM32_USART_IEN_RXOF                     0x00000010
 /** Enable interrupt on RX underflow. @multiple */
-  #define EFM32_USART_IEN_RXUF                       0x00000020
+  #define EFM32_USART_IEN_RXUF                     0x00000020
 /** Enable interrupt on TX overflow. @multiple */
-  #define EFM32_USART_IEN_TXOF                       0x00000040
+  #define EFM32_USART_IEN_TXOF                     0x00000040
 /** Enable interrupt on TX underflow. @multiple */
-  #define EFM32_USART_IEN_TXUF                       0x00000080
+  #define EFM32_USART_IEN_TXUF                     0x00000080
 /** Enable interrupt on parity error (asynchronous mode only). @multiple */
-  #define EFM32_USART_IEN_PERR                       0x00000100
+  #define EFM32_USART_IEN_PERR                     0x00000100
 /** Enable interrupt on framing error. @multiple */
-  #define EFM32_USART_IEN_FERR                       0x00000200
+  #define EFM32_USART_IEN_FERR                     0x00000200
 /** Enable interrupt on multi-processor address frame. @multiple */
-  #define EFM32_USART_IEN_MPAF                       0x00000400
+  #define EFM32_USART_IEN_MPAF                     0x00000400
 /** Enable interrupt on slave-select in master mode. @multiple */
-  #define EFM32_USART_IEN_SSM                        0x00000800
+  #define EFM32_USART_IEN_SSM                      0x00000800
 /** Enable interrupt on collision check error detected. @multiple */
-  #define EFM32_USART_IEN_CCF                        0x00001000
+  #define EFM32_USART_IEN_CCF                      0x00001000
 
 #define EFM32_USART_IRCTRL_ADDR                      0x00000050
 #define EFM32_USART_IRCTRL_MASK                      0x000000bf
 /** Enable IrDA module and rout USART signals through it. @multiple */
-  #define EFM32_USART_IRCTRL_IREN                    0x00000001
+  #define EFM32_USART_IRCTRL_IREN                  0x00000001
 /** Configure the pulse width generated by the IrDA modulator as a fraction of
    the configured USART bit period. @multiple */
-  #define EFM32_USART_IRCTRL_IRPW(v)                 ((EFM32_USART_IRCTRL_IRPW_##v) << 1)
-  #define EFM32_USART_IRCTRL_IRPW_SET(x, v)          do { (x) = (((x) & ~0x6) | ((EFM32_USART_IRCTRL_IRPW_##v) << 1)); } while(0)
-  #define EFM32_USART_IRCTRL_IRPW_SETVAL(x, v)       do { (x) = (((x) & ~0x6) | ((v) << 1)); } while(0)
-  #define EFM32_USART_IRCTRL_IRPW_GET(x)             (((x) >> 1) & 0x3)
-    #define EFM32_USART_IRCTRL_IRPW_ONE                0x00000000
-    #define EFM32_USART_IRCTRL_IRPW_TWO                0x00000001
-    #define EFM32_USART_IRCTRL_IRPW_THREE              0x00000002
-    #define EFM32_USART_IRCTRL_IRPW_FOUR               0x00000003
+  #define EFM32_USART_IRCTRL_IRPW(v)               ((EFM32_USART_IRCTRL_IRPW_##v) << 1)
+  #define EFM32_USART_IRCTRL_IRPW_SET(x, v)        do { (x) = (((x) & ~0x6) | ((EFM32_USART_IRCTRL_IRPW_##v) << 1)); } while(0)
+  #define EFM32_USART_IRCTRL_IRPW_SETVAL(x, v)     do { (x) = (((x) & ~0x6) | ((v) << 1)); } while(0)
+  #define EFM32_USART_IRCTRL_IRPW_GET(x)           (((x) >> 1) & 0x3)
+    #define EFM32_USART_IRCTRL_IRPW_ONE              0x00000000
+    #define EFM32_USART_IRCTRL_IRPW_TWO              0x00000001
+    #define EFM32_USART_IRCTRL_IRPW_THREE            0x00000002
+    #define EFM32_USART_IRCTRL_IRPW_FOUR             0x00000003
 /** Set to enable filter on IrDA demodulator. @multiple */
-  #define EFM32_USART_IRCTRL_IRFILT                  0x00000008
+  #define EFM32_USART_IRCTRL_IRFILT                0x00000008
 /** A PRS can be used as input to the pulse modulator instead of TX. This value
    selects the channel to use. @multiple */
-  #define EFM32_USART_IRCTRL_IRPRSSEL(v)             ((EFM32_USART_IRCTRL_IRPRSSEL_##v) << 4)
-  #define EFM32_USART_IRCTRL_IRPRSSEL_SET(x, v)      do { (x) = (((x) & ~0x30) | ((EFM32_USART_IRCTRL_IRPRSSEL_##v) << 4)); } while(0)
-  #define EFM32_USART_IRCTRL_IRPRSSEL_SETVAL(x, v)   do { (x) = (((x) & ~0x30) | ((v) << 4)); } while(0)
-  #define EFM32_USART_IRCTRL_IRPRSSEL_GET(x)         (((x) >> 4) & 0x3)
-    #define EFM32_USART_IRCTRL_IRPRSSEL_PRSCH0         0x00000000
-    #define EFM32_USART_IRCTRL_IRPRSSEL_PRSCH1         0x00000001
-    #define EFM32_USART_IRCTRL_IRPRSSEL_PRSCH2         0x00000002
-    #define EFM32_USART_IRCTRL_IRPRSSEL_PRSCH3         0x00000003
+  #define EFM32_USART_IRCTRL_IRPRSSEL(v)           ((EFM32_USART_IRCTRL_IRPRSSEL_##v) << 4)
+  #define EFM32_USART_IRCTRL_IRPRSSEL_SET(x, v)    do { (x) = (((x) & ~0x30) | ((EFM32_USART_IRCTRL_IRPRSSEL_##v) << 4)); } while(0)
+  #define EFM32_USART_IRCTRL_IRPRSSEL_SETVAL(x, v) do { (x) = (((x) & ~0x30) | ((v) << 4)); } while(0)
+  #define EFM32_USART_IRCTRL_IRPRSSEL_GET(x)       (((x) >> 4) & 0x3)
+    #define EFM32_USART_IRCTRL_IRPRSSEL_PRSCH0       0x00000000
+    #define EFM32_USART_IRCTRL_IRPRSSEL_PRSCH1       0x00000001
+    #define EFM32_USART_IRCTRL_IRPRSSEL_PRSCH2       0x00000002
+    #define EFM32_USART_IRCTRL_IRPRSSEL_PRSCH3       0x00000003
 /** Enable the PRS channel selected by IRPRSSEL as input to IrDA module instead
    of TX. @multiple */
-  #define EFM32_USART_IRCTRL_IRPRSEN                 0x00000080
+  #define EFM32_USART_IRCTRL_IRPRSEN               0x00000080
 
 #define EFM32_USART_ROUTE_ADDR                       0x00000054
 #define EFM32_USART_ROUTE_MASK                       0x0000070f
 /** When set, the RX/MISO pin of the USART is enabled. @multiple */
-  #define EFM32_USART_ROUTE_RXPEN                    0x00000001
+  #define EFM32_USART_ROUTE_RXPEN                  0x00000001
 /** When set, the TX/MOSI pin of the USART is enabled. @multiple */
-  #define EFM32_USART_ROUTE_TXPEN                    0x00000002
+  #define EFM32_USART_ROUTE_TXPEN                  0x00000002
 /** When set, the CS pin of the USART is enabled. @multiple */
-  #define EFM32_USART_ROUTE_CSPEN                    0x00000004
+  #define EFM32_USART_ROUTE_CSPEN                  0x00000004
 /** When set, the Clk pin of the USART is enabled. @multiple */
-  #define EFM32_USART_ROUTE_CLKPEN                   0x00000008
+  #define EFM32_USART_ROUTE_CLKPEN                 0x00000008
 /** Decides the location of the USART I/O pins. @multiple */
-  #define EFM32_USART_ROUTE_LOCATION(v)              ((EFM32_USART_ROUTE_LOCATION_##v) << 8)
-  #define EFM32_USART_ROUTE_LOCATION_SET(x, v)       do { (x) = (((x) & ~0x700) | ((EFM32_USART_ROUTE_LOCATION_##v) << 8)); } while(0)
-  #define EFM32_USART_ROUTE_LOCATION_SETVAL(x, v)    do { (x) = (((x) & ~0x700) | ((v) << 8)); } while(0)
-  #define EFM32_USART_ROUTE_LOCATION_GET(x)          (((x) >> 8) & 0x7)
-    #define EFM32_USART_ROUTE_LOCATION_LOC0            0x00000000
-    #define EFM32_USART_ROUTE_LOCATION_LOC1            0x00000001
-    #define EFM32_USART_ROUTE_LOCATION_LOC2            0x00000002
-    #define EFM32_USART_ROUTE_LOCATION_LOC3            0x00000003
+  #define EFM32_USART_ROUTE_LOCATION(v)            ((EFM32_USART_ROUTE_LOCATION_##v) << 8)
+  #define EFM32_USART_ROUTE_LOCATION_SET(x, v)     do { (x) = (((x) & ~0x700) | ((EFM32_USART_ROUTE_LOCATION_##v) << 8)); } while(0)
+  #define EFM32_USART_ROUTE_LOCATION_SETVAL(x, v)  do { (x) = (((x) & ~0x700) | ((v) << 8)); } while(0)
+  #define EFM32_USART_ROUTE_LOCATION_GET(x)        (((x) >> 8) & 0x7)
+    #define EFM32_USART_ROUTE_LOCATION_LOC0          0x00000000
+    #define EFM32_USART_ROUTE_LOCATION_LOC1          0x00000001
+    #define EFM32_USART_ROUTE_LOCATION_LOC2          0x00000002
+    #define EFM32_USART_ROUTE_LOCATION_LOC3          0x00000003
 
 #define EFM32_USART_INPUT_ADDR                       0x00000058
 #define EFM32_USART_INPUT_MASK                       0x00000013
 /** Select PRS channel as input to RX. @multiple */
-  #define EFM32_USART_INPUT_RXPRSSEL(v)              ((EFM32_USART_INPUT_RXPRSSEL_##v) << 0)
-  #define EFM32_USART_INPUT_RXPRSSEL_SET(x, v)       do { (x) = (((x) & ~0x3) | ((EFM32_USART_INPUT_RXPRSSEL_##v) << 0)); } while(0)
-  #define EFM32_USART_INPUT_RXPRSSEL_SETVAL(x, v)    do { (x) = (((x) & ~0x3) | ((v) << 0)); } while(0)
-  #define EFM32_USART_INPUT_RXPRSSEL_GET(x)          (((x) >> 0) & 0x3)
-    #define EFM32_USART_INPUT_RXPRSSEL_PRSCH0          0x00000000
-    #define EFM32_USART_INPUT_RXPRSSEL_PRSCH1          0x00000001
-    #define EFM32_USART_INPUT_RXPRSSEL_PRSCH2          0x00000002
-    #define EFM32_USART_INPUT_RXPRSSEL_PRSCH3          0x00000003
+  #define EFM32_USART_INPUT_RXPRSSEL(v)            ((EFM32_USART_INPUT_RXPRSSEL_##v) << 0)
+  #define EFM32_USART_INPUT_RXPRSSEL_SET(x, v)     do { (x) = (((x) & ~0x3) | ((EFM32_USART_INPUT_RXPRSSEL_##v) << 0)); } while(0)
+  #define EFM32_USART_INPUT_RXPRSSEL_SETVAL(x, v)  do { (x) = (((x) & ~0x3) | ((v) << 0)); } while(0)
+  #define EFM32_USART_INPUT_RXPRSSEL_GET(x)        (((x) >> 0) & 0x3)
+    #define EFM32_USART_INPUT_RXPRSSEL_PRSCH0        0x00000000
+    #define EFM32_USART_INPUT_RXPRSSEL_PRSCH1        0x00000001
+    #define EFM32_USART_INPUT_RXPRSSEL_PRSCH2        0x00000002
+    #define EFM32_USART_INPUT_RXPRSSEL_PRSCH3        0x00000003
 /** When set, the PRS channel selected as input to RX. @multiple */
-  #define EFM32_USART_INPUT_RXPRS                    0x00000010
+  #define EFM32_USART_INPUT_RXPRS                  0x00000010
 
 #define EFM32_USART_I2SCTRL_ADDR                     0x0000005c
 #define EFM32_USART_I2SCTRL_MASK                     0x0000001f
 /** Set the U(S)ART in I2S mode. @multiple */
-  #define EFM32_USART_I2SCTRL_EN                     0x00000001
+  #define EFM32_USART_I2SCTRL_EN                   0x00000001
 /** Switch between stereo and mono mode. Set for mono @multiple */
-  #define EFM32_USART_I2SCTRL_MONO                   0x00000002
+  #define EFM32_USART_I2SCTRL_MONO                 0x00000002
 /** Determines whether the I2S data is left or right justified @multiple */
-  #define EFM32_USART_I2SCTRL_JUSTIFY(v)             ((EFM32_USART_I2SCTRL_JUSTIFY_##v) << 2)
-  #define EFM32_USART_I2SCTRL_JUSTIFY_SET(x, v)      do { (x) = (((x) & ~0x4) | ((EFM32_USART_I2SCTRL_JUSTIFY_##v) << 2)); } while(0)
-  #define EFM32_USART_I2SCTRL_JUSTIFY_SETVAL(x, v)   do { (x) = (((x) & ~0x4) | ((v) << 2)); } while(0)
-  #define EFM32_USART_I2SCTRL_JUSTIFY_GET(x)         (((x) >> 2) & 0x1)
-    #define EFM32_USART_I2SCTRL_JUSTIFY_LEFT           0x00000000
-    #define EFM32_USART_I2SCTRL_JUSTIFY_RIGHT          0x00000001
+  #define EFM32_USART_I2SCTRL_JUSTIFY(v)           ((EFM32_USART_I2SCTRL_JUSTIFY_##v) << 2)
+  #define EFM32_USART_I2SCTRL_JUSTIFY_SET(x, v)    do { (x) = (((x) & ~0x4) | ((EFM32_USART_I2SCTRL_JUSTIFY_##v) << 2)); } while(0)
+  #define EFM32_USART_I2SCTRL_JUSTIFY_SETVAL(x, v) do { (x) = (((x) & ~0x4) | ((v) << 2)); } while(0)
+  #define EFM32_USART_I2SCTRL_JUSTIFY_GET(x)       (((x) >> 2) & 0x1)
+    #define EFM32_USART_I2SCTRL_JUSTIFY_LEFT         0x00000000
+    #define EFM32_USART_I2SCTRL_JUSTIFY_RIGHT        0x00000001
 /** When set DMA requests for right-channel data are put on the TXBLRIGHT and
    RXDATAVRIGHT DMA requests. @multiple */
-  #define EFM32_USART_I2SCTRL_DMASPLIT               0x00000008
+  #define EFM32_USART_I2SCTRL_DMASPLIT             0x00000008
 /** Set to add a one-cycle delay between a transition on the word-clock and the
    start of the I2S word. Should be set for standard I2S format @multiple */
-  #define EFM32_USART_I2SCTRL_DELAY                  0x00000010
+  #define EFM32_USART_I2SCTRL_DELAY                0x00000010
 
 #endif
 

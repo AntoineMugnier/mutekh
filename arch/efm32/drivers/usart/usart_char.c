@@ -398,16 +398,34 @@ static DEV_INIT(efm32_usart_char_init)
   if (device_iomux_setup(dev, "<rx? >tx?", loc, NULL, NULL))
     goto err_mem;
 
+#ifdef CONFIG_EFR32
+  uint32_t enable = 0;
+  uint32_t route = 0;
+
+  if (loc[0] != IOMUX_INVALID_DEMUX)
+    {
+      enable |= EFM32_USART_ROUTEPEN_RXPEN;
+      EFM32_USART_ROUTELOC0_RXLOC_SETVAL(route, loc[0]);
+    }
+  if (loc[1] != IOMUX_INVALID_DEMUX)
+    {
+      enable |= EFM32_USART_ROUTEPEN_TXPEN;
+      EFM32_USART_ROUTELOC0_TXLOC_SETVAL(route, loc[1]);
+    }
+  if (enable == 0)
+    goto err_mem;
+#else
   uint32_t route = 0;
   if (loc[0] != IOMUX_INVALID_DEMUX)
     route |= EFM32_USART_ROUTE_RXPEN;
   if (loc[1] != IOMUX_INVALID_DEMUX)
     route |= EFM32_USART_ROUTE_TXPEN;
 
+  EFM32_USART_ROUTE_LOCATION_SETVAL(route, loc[0] != IOMUX_INVALID_DEMUX ? loc[0] : loc[1]);
+
   if (route == 0)
     goto err_mem;
-
-  EFM32_USART_ROUTE_LOCATION_SETVAL(route, loc[0] != IOMUX_INVALID_DEMUX ? loc[0] : loc[1]);
+#endif
 
   /* init software fifos */
   dev_request_queue_init(&pv->read_q);
@@ -447,7 +465,12 @@ static DEV_INIT(efm32_usart_char_init)
   cpu_mem_write_32(pv->addr + EFM32_USART_CMD_ADDR,
                    endian_le32(EFM32_USART_CMD_CLEARRX | EFM32_USART_CMD_CLEARTX));
 
+#ifdef CONFIG_EFR32
+  cpu_mem_write_32(pv->addr + EFM32_USART_ROUTELOC0_ADDR, endian_le32(route));
+  cpu_mem_write_32(pv->addr + EFM32_USART_ROUTEPEN_ADDR, endian_le32(enable));
+#else
   cpu_mem_write_32(pv->addr + EFM32_USART_ROUTE_ADDR, endian_le32(route));
+#endif
 
 #ifdef CONFIG_DEVICE_IRQ
   /* enable irqs */
@@ -456,8 +479,7 @@ static DEV_INIT(efm32_usart_char_init)
 #endif
 
   /* configure */
-  cpu_mem_write_32(pv->addr + EFM32_USART_CTRL_ADDR,
-                   endian_le32(EFM32_USART_CTRL_SYNC(ASYNC) | EFM32_USART_CTRL_OVS(X4)));
+  cpu_mem_write_32(pv->addr + EFM32_USART_CTRL_ADDR, endian_le32(EFM32_USART_CTRL_OVS(X4)));
 
   cpu_mem_write_32(pv->addr + EFM32_USART_FRAME_ADDR,
                    endian_le32(EFM32_USART_FRAME_DATABITS(EIGHT) |

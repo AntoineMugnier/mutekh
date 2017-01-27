@@ -8,6 +8,6 @@
 #elif defined(CONFIG_EFM32_ZERO_GECKO)
 # include "efm/zero/irq.h"
 #else
-# error
+# include "efr/irq.h"
 #endif
 

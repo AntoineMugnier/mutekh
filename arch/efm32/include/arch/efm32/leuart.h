@@ -6,5 +6,5 @@
    defined(CONFIG_EFM32_GIANT_GECKO)
 # include "efm/leuart.h"
 #else
-# error
+# include "efr/leuart.h"
 #endif
