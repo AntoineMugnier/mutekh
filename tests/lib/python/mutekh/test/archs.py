@@ -65,12 +65,16 @@ emu_linux_x86_64     = Config("emu-linux-x86_64",                       ["arch:e
 ##################################################
 # SiLab EFM32 low-power archs and platforms
 
-_efm32_features      = _arm32m_features + ["arch:efm32", "spi", "i2c", "pwm", "timer", "char", "gpio", "usbdev", "minimal"]
+_efm32_efm_features      = _arm32m_features + ["arch:efm32", "spi", "i2c", "pwm", "timer", "char", "gpio", "usbdev", "minimal"]
 
-efm32_zero           = Config("efm32-stk3200",                          _efm32_features)
-efm32_leopard        = Config("efm32-stk3600",                          _efm32_features)
-efm32_giant          = Config("efm32-stk3700",                          _efm32_features)
-efm32_wonder         = Config("efm32-stk3800",                          _efm32_features)
+efm32_zero           = Config("efm32-stk3200",                          _efm32_efm_features)
+efm32_leopard        = Config("efm32-stk3600",                          _efm32_efm_features)
+efm32_giant          = Config("efm32-stk3700",                          _efm32_efm_features)
+efm32_wonder         = Config("efm32-stk3800",                          _efm32_efm_features)
+
+_efm32_efrxg1_features      = _arm32m_features + ["arch:efm32", "spi", "timer", "char", "gpio", "minimal"]
+
+efm32_efrxg1         = Config("efm32-stk6066a",                         _efm32_efrxg1_features)
 
 ##################################################
 # Nordic nrf5x
@@ -163,6 +167,7 @@ all_archs            = OrMatch(soclib_mips32eb,
                                ibmpc_x86,
                                emu_linux_x86_64,
                                efm32_leopard,
+                               efm32_efrxg1,
                                nrf52,
                                pic32_mz,
                                gaisler_leon3,
@@ -178,6 +183,7 @@ all                  = OrMatch(soclib_mips32eb, soclib_mips32el, soclib_arm32, s
                                emu_linux_x86, emu_linux_x86_64,
 #                               efm32_zero,
                                efm32_leopard, efm32_giant, efm32_wonder,
+                               efm32_efrxg1,
                                nrf51, nrf52,
                                pic32_mz,
                                gaisler_leon3,

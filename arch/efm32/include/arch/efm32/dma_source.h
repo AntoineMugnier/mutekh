@@ -1,14 +1,15 @@
 
+#include "chips.h"
 
-# if defined(CONFIG_EFM32_LEOPARD_GECKO) \
-  || defined(CONFIG_EFM32_WONDER_GECKO) \
-  || defined(CONFIG_EFM32_GIANT_GECKO)
+# if (CONFIG_EFM32_FAMILY == EFM32_FAMILY_LEOPARD) \
+  || (CONFIG_EFM32_FAMILY == EFM32_FAMILY_WONDER) \
+  || (CONFIG_EFM32_FAMILY == EFM32_FAMILY_GIANT)
 # include "efm/leopard/dma_source.h"
-#elif defined(CONFIG_EFM32_GECKO)
+#elif (CONFIG_EFM32_FAMILY == EFM32_FAMILY_GECKO)
 # include "efm/gecko/dma_source.h"
-#elif defined(CONFIG_EFM32_ZERO_GECKO)
+#elif (CONFIG_EFM32_FAMILY == EFM32_FAMILY_ZERO)
 # include "efm/zero/dma_source.h"
-#elif defined(CONFIG_EFM32_HAPPY_GECKO)
+#elif (CONFIG_EFM32_FAMILY == EFM32_FAMILY_HAPPY)
 # include "efm/happy/dma_source.h"
 #else
 # include "efr/dma_source.h"

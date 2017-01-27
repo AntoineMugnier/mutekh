@@ -1,10 +1,10 @@
 
-#if defined(CONFIG_EFM32_GECKO) || \
-   defined(CONFIG_EFM32_ZERO_GECKO) || \
-   defined(CONFIG_EFM32_LEOPARD_GECKO) || \
-   defined(CONFIG_EFM32_WONDER_GECKO) || \
-   defined(CONFIG_EFM32_GIANT_GECKO)
+#include "chips.h"
+
+#if CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFM
 # include "efm/rtc.h"
-#else
+#elif CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_XG1
 # include "efr/rtcc.h"
+#else
+# error not supported
 #endif

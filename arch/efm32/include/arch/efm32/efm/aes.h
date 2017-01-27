@@ -20,7 +20,7 @@
   #define EFM32_AES_CTRL_DECRYPT_GET(x)            (((x) >> 0) & 0x1)
     #define EFM32_AES_CTRL_DECRYPT_ENCRYPTION        0x00000000
     #define EFM32_AES_CTRL_DECRYPT_DECRYPTION        0x00000001
-# if defined(CONFIG_EFM32_LEOPARD_GECKO) || defined(CONFIG_EFM32_WONDER_GECKO) || defined(CONFIG_EFM32_GIANT_GECKO) || defined(CONFIG_EFM32_GECKO)
+# if (CONFIG_EFM32_FAMILY == EFM32_FAMILY_LEOPARD) || (CONFIG_EFM32_FAMILY == EFM32_FAMILY_WONDER) || (CONFIG_EFM32_FAMILY == EFM32_FAMILY_GIANT) || (CONFIG_EFM32_FAMILY == EFM32_FAMILY_GECKO)
 /** enable AES with 256 bits key instead of 128 bits @multiple */
   #define EFM32_AES_CTRL_AES256                    0x00000002
   #define EFM32_AES_CTRL_AES256_SHIFT              1
@@ -118,7 +118,7 @@
   #define EFM32_AES_KEYL_KEYL_SET(x, v)            do { (x) = (((x) & ~0xffffffff) | ((v) << 0)); } while(0)
   #define EFM32_AES_KEYL_KEYL_GET(x)               (((x) >> 0) & 0xffffffff)
 
-# if defined(CONFIG_EFM32_LEOPARD_GECKO) || defined(CONFIG_EFM32_WONDER_GECKO) || defined(CONFIG_EFM32_GIANT_GECKO) || defined(CONFIG_EFM32_GECKO)
+# if (CONFIG_EFM32_FAMILY == EFM32_FAMILY_LEOPARD) || (CONFIG_EFM32_FAMILY == EFM32_FAMILY_WONDER) || (CONFIG_EFM32_FAMILY == EFM32_FAMILY_GIANT) || (CONFIG_EFM32_FAMILY == EFM32_FAMILY_GECKO)
 #define EFM32_AES_KEYH_ADDR(ridx)                    (0x00000040 + (ridx) * 4)
 #define EFM32_AES_KEYH_COUNT                         4
 #define EFM32_AES_KEYH_MASK                          0xffffffff

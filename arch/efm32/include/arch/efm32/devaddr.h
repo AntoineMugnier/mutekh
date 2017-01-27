@@ -1,13 +1,17 @@
 
-# if defined(CONFIG_EFM32_LEOPARD_GECKO) \
-  || defined(CONFIG_EFM32_WONDER_GECKO) \
-  || defined(CONFIG_EFM32_GIANT_GECKO)
+#include "chips.h"
+
+# if (CONFIG_EFM32_FAMILY == EFM32_FAMILY_LEOPARD) \
+  || (CONFIG_EFM32_FAMILY == EFM32_FAMILY_WONDER) \
+  || (CONFIG_EFM32_FAMILY == EFM32_FAMILY_GIANT)
 # include "efm/leopard/devaddr.h"
-#elif defined(CONFIG_EFM32_GECKO)
+#elif (CONFIG_EFM32_FAMILY == EFM32_FAMILY_GECKO)
 # include "efm/gecko/devaddr.h"
-#elif defined(CONFIG_EFM32_ZERO_GECKO)
+#elif (CONFIG_EFM32_FAMILY == EFM32_FAMILY_ZERO)
 # include "efm/zero/devaddr.h"
-#else
+#elif (CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_XG1)
 # include "efr/devaddr.h"
+#else
+# error not supported
 #endif
 

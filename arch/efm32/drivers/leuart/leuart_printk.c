@@ -122,7 +122,7 @@ void efm32_leuart_printk_init()
   EFM32_GPIO_MODEL_MODE_SET(pin, x, PUSHPULL);
   cpu_mem_write_32(b + EFM32_GPIO_MODEL_ADDR(bank) + h, x);
 
-#if defined(CONFIG_EFM32_ZERO_GECKO) && \
+#if (CONFIG_EFM32_FAMILY == EFM32_FAMILY_ZERO) && \
   CONFIG_MUTEK_PRINTK_ADDR == 0x40084000 && \
   CONFIG_DRIVER_EFM32_LEUART_PRINTK_PIN == 52 && \
   defined(CONFIG_EFM32_STK_BC_EN)

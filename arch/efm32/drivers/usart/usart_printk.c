@@ -64,14 +64,14 @@ void efm32_usart_printk_init()
 
   switch (CONFIG_MUTEK_PRINTK_ADDR)
     {
-#ifdef CONFIG_EFR32
+#if CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_XG1
     case 0x40010000:
       hfperclken = EFM32_CMU_HFPERCLKEN0_USART0;
       break;
     case 0x40010400:
       hfperclken = EFM32_CMU_HFPERCLKEN0_USART1;
       break;
-#else
+#elif CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_EFM
   #ifdef EFM32_CMU_HFPERCLKEN0_UART0
     case 0x4000e000:            /* uart0 */
       hfperclken = EFM32_CMU_HFPERCLKEN0_UART0;
@@ -97,6 +97,8 @@ void efm32_usart_printk_init()
       hfperclken = EFM32_CMU_HFPERCLKEN0_USART2;
       break;
   #endif
+#else
+# error
 #endif
     default:
       return;
@@ -109,7 +111,7 @@ void efm32_usart_printk_init()
 
   uint32_t clk = USART_CLOCK;
 
-#ifdef CONFIG_EFR32
+#if CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_XG1
 
   x = endian_le32(cpu_mem_read_32(b + EFM32_CMU_HFRCOCTRL_ADDR));
 
@@ -156,7 +158,7 @@ void efm32_usart_printk_init()
   /* Enable clock for GPIO */
   x = cpu_mem_read_32(b + EFM32_CMU_HFBUSCLKEN0_ADDR);
   cpu_mem_write_32(b + EFM32_CMU_HFBUSCLKEN0_ADDR, x | EFM32_CMU_HFBUSCLKEN0_GPIO);
-#else
+#elif CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_EFM
   /* Enable clock for HF peripherals */
   x = cpu_mem_read_32(b + EFM32_CMU_HFPERCLKDIV_ADDR);
   x |= EFM32_CMU_HFPERCLKDIV_HFPERCLKEN;
@@ -165,6 +167,8 @@ void efm32_usart_printk_init()
   x = cpu_mem_read_32(b + EFM32_CMU_HFPERCLKEN0_ADDR);
   x |= EFM32_CMU_HFPERCLKEN0_GPIO | hfperclken;
   cpu_mem_write_32(b + EFM32_CMU_HFPERCLKEN0_ADDR, x);
+#else
+# error
 #endif
 
   /* configure GPIO to route USART signals */
@@ -178,9 +182,9 @@ void efm32_usart_printk_init()
   EFM32_GPIO_MODEL_MODE_SET(pin, x, PUSHPULL);
   cpu_mem_write_32(b + EFM32_GPIO_MODEL_ADDR(bank) + h, x);
 
-#if (defined(CONFIG_EFM32_LEOPARD_GECKO) ||             \
-     defined(CONFIG_EFM32_GIANT_GECKO) ||             \
-     defined(CONFIG_EFM32_WONDER_GECKO)) &&            \
+#if ((CONFIG_EFM32_FAMILY == EFM32_FAMILY_LEOPARD) ||             \
+     (CONFIG_EFM32_FAMILY == EFM32_FAMILY_GIANT) ||             \
+     (CONFIG_EFM32_FAMILY == EFM32_FAMILY_WONDER)) &&            \
   defined(CONFIG_EFM32_STK_BC_EN) &&              \
   CONFIG_MUTEK_PRINTK_ADDR == 0x4000e000 &&       \
   CONFIG_DRIVER_EFM32_USART_PRINTK_PIN == 64
@@ -192,7 +196,7 @@ void efm32_usart_printk_init()
 
   cpu_mem_write_32(b + EFM32_GPIO_DOUTSET_ADDR(5), EFM32_GPIO_DOUTSET_DOUTSET(7));
 
-#elif defined(CONFIG_EFM32_GECKO) &&           \
+#elif (CONFIG_EFM32_FAMILY == EFM32_FAMILY_GECKO) &&           \
   defined(CONFIG_EFM32_STK_BC_EN) &&              \
   CONFIG_MUTEK_PRINTK_ADDR == 0x4000e000 &&       \
   CONFIG_DRIVER_EFM32_USART_PRINTK_PIN == 64
@@ -220,16 +224,18 @@ void efm32_usart_printk_init()
   uint32_t div = (256ULL * clk) / (4 * CONFIG_DRIVER_EFM32_USART_RATE) - 256;
   cpu_mem_write_32(b + EFM32_USART_CLKDIV_ADDR, div);
 
-#ifdef CONFIG_EFR32
+#if CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_XG1
   cpu_mem_write_32(b + EFM32_USART_ROUTEPEN_ADDR, EFM32_USART_ROUTEPEN_TXPEN);
   x = cpu_mem_read_32(b + EFM32_USART_ROUTELOC0_ADDR);
   EFM32_USART_ROUTELOC0_TXLOC_SETVAL(x, CONFIG_DRIVER_EFM32_USART_PRINTK_LOC);
   cpu_mem_write_32(b + EFM32_USART_ROUTELOC0_ADDR, x);
-#else
+#elif CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_EFM
   /* USART routes */
   x = EFM32_USART_ROUTE_TXPEN;
   EFM32_USART_ROUTE_LOCATION_SETVAL(x, CONFIG_DRIVER_EFM32_USART_PRINTK_LOC);
   cpu_mem_write_32(b + EFM32_USART_ROUTE_ADDR, x);
+#else
+# eror
 #endif
 
   /* Enable TX */

@@ -438,9 +438,9 @@ efm32_recmu_get_node_freq(struct efm32_recmu_private_s *pv,
   switch (node)
     {
     case EFM32_CLOCK_HFCLKDIV:
-# if defined(CONFIG_EFM32_LEOPARD_GECKO) \
-  || defined(CONFIG_EFM32_WONDER_GECKO) \
-  || defined(CONFIG_EFM32_GIANT_GECKO)
+# if (CONFIG_EFM32_FAMILY == EFM32_FAMILY_LEOPARD) \
+  || (CONFIG_EFM32_FAMILY == EFM32_FAMILY_WONDER) \
+  || (CONFIG_EFM32_FAMILY == EFM32_FAMILY_GIANT)
       div *= EFM32_CMU_CTRL_HFCLKDIV_GET(endian_le32(
         cpu_mem_read_32(EFM32_CMU_ADDR + EFM32_CMU_CTRL_ADDR))) + 1;
 # endif
@@ -465,10 +465,10 @@ efm32_recmu_get_node_freq(struct efm32_recmu_private_s *pv,
     case EFM32_CLOCK_LE:
       if (efm32_recmu_get_node_freq(pv, freq, EFM32_CLOCK_HFCORECLK))
         return -EINVAL;
-# if defined(CONFIG_EFM32_LEOPARD_GECKO) \
-  || defined(CONFIG_EFM32_WONDER_GECKO) \
-  || defined(CONFIG_EFM32_GIANT_GECKO) \
-  || defined(CONFIG_EFM32_ZERO_GECKO)
+# if (CONFIG_EFM32_FAMILY == EFM32_FAMILY_LEOPARD) \
+  || (CONFIG_EFM32_FAMILY == EFM32_FAMILY_WONDER) \
+  || (CONFIG_EFM32_FAMILY == EFM32_FAMILY_GIANT) \
+  || (CONFIG_EFM32_FAMILY == EFM32_FAMILY_ZERO)
       div *= 2 << EFM32_CMU_HFCORECLKDIV_HFCORECLKLEDIV_GET(endian_le32(
         cpu_mem_read_32(EFM32_CMU_ADDR + EFM32_CMU_HFCORECLKDIV_ADDR)));
 # else
@@ -574,10 +574,10 @@ static DEV_CMU_CONFIG_OSC(efm32_recmu_config_osc)
         case 21000000:
           EFM32_CMU_HFRCOCTRL_BAND_SET(pv->r_hfrcoctrl, 21MHZ);
           break;
-# if defined(CONFIG_EFM32_LEOPARD_GECKO) \
-  || defined(CONFIG_EFM32_WONDER_GECKO) \
-  || defined(CONFIG_EFM32_GIANT_GECKO) \
-  || defined(CONFIG_EFM32_GECKO)
+# if (CONFIG_EFM32_FAMILY == EFM32_FAMILY_LEOPARD) \
+  || (CONFIG_EFM32_FAMILY == EFM32_FAMILY_WONDER) \
+  || (CONFIG_EFM32_FAMILY == EFM32_FAMILY_GIANT) \
+  || (CONFIG_EFM32_FAMILY == EFM32_FAMILY_GECKO)
         case 28000000:
           EFM32_CMU_HFRCOCTRL_BAND_SET(pv->r_hfrcoctrl, 28MHZ);
           break;
@@ -591,10 +591,10 @@ static DEV_CMU_CONFIG_OSC(efm32_recmu_config_osc)
       return 0;
     }
 
-# if defined(CONFIG_EFM32_LEOPARD_GECKO) \
-  || defined(CONFIG_EFM32_WONDER_GECKO) \
-  || defined(CONFIG_EFM32_GIANT_GECKO) \
-  || defined(CONFIG_EFM32_ZERO_GECKO)
+# if (CONFIG_EFM32_FAMILY == EFM32_FAMILY_LEOPARD) \
+  || (CONFIG_EFM32_FAMILY == EFM32_FAMILY_WONDER) \
+  || (CONFIG_EFM32_FAMILY == EFM32_FAMILY_GIANT) \
+  || (CONFIG_EFM32_FAMILY == EFM32_FAMILY_ZERO)
     case EFM32_CLOCK_AUXHFRCO: {
       switch (freq->denom)
         {
@@ -624,9 +624,9 @@ static DEV_CMU_CONFIG_OSC(efm32_recmu_config_osc)
         case 21000000:
           EFM32_CMU_AUXHFRCOCTRL_BAND_SET(pv->r_auxhfrcoctrl, 21MHZ);
           break;
-# if defined(CONFIG_EFM32_LEOPARD_GECKO) \
-  || defined(CONFIG_EFM32_WONDER_GECKO) \
-  || defined(CONFIG_EFM32_GIANT_GECKO)
+# if (CONFIG_EFM32_FAMILY == EFM32_FAMILY_LEOPARD) \
+  || (CONFIG_EFM32_FAMILY == EFM32_FAMILY_WONDER) \
+  || (CONFIG_EFM32_FAMILY == EFM32_FAMILY_GIANT)
         case 28000000:
           EFM32_CMU_AUXHFRCOCTRL_BAND_SET(pv->r_auxhfrcoctrl, 28MHZ);
           break;
@@ -706,9 +706,9 @@ static DEV_CMU_CONFIG_MUX(efm32_recmu_config_mux)
       break;
     }
 
-# if defined(CONFIG_EFM32_LEOPARD_GECKO) \
-  || defined(CONFIG_EFM32_WONDER_GECKO) \
-  || defined(CONFIG_EFM32_GIANT_GECKO)
+# if (CONFIG_EFM32_FAMILY == EFM32_FAMILY_LEOPARD) \
+  || (CONFIG_EFM32_FAMILY == EFM32_FAMILY_WONDER) \
+  || (CONFIG_EFM32_FAMILY == EFM32_FAMILY_GIANT)
     case EFM32_CLOCK_HFCLKDIV:
       if (parent_id != EFM32_CLOCK_HFCLK)
         return -ENOTSUP;
@@ -750,10 +750,10 @@ static DEV_CMU_CONFIG_MUX(efm32_recmu_config_mux)
         return -ENOTSUP;
         {
           uint32_t d = ratio->denom;
-# if defined(CONFIG_EFM32_LEOPARD_GECKO) \
-  || defined(CONFIG_EFM32_WONDER_GECKO) \
-  || defined(CONFIG_EFM32_GIANT_GECKO) \
-  || defined(CONFIG_EFM32_ZERO_GECKO)
+# if (CONFIG_EFM32_FAMILY == EFM32_FAMILY_LEOPARD) \
+  || (CONFIG_EFM32_FAMILY == EFM32_FAMILY_WONDER) \
+  || (CONFIG_EFM32_FAMILY == EFM32_FAMILY_GIANT) \
+  || (CONFIG_EFM32_FAMILY == EFM32_FAMILY_ZERO)
           if (d != 2 && d != 4)
             return -ENOTSUP;
           EFM32_CMU_HFCORECLKDIV_HFCORECLKLEDIV_SETVAL(pv->r_hfcoreclkdiv, d == 4);
@@ -802,10 +802,10 @@ static DEV_CMU_CONFIG_MUX(efm32_recmu_config_mux)
         case EFM32_CLOCK_LFRCO:
           EFM32_CMU_LFCLKSEL_LFA_SET(pv->r_lfclksel, LFRCO);
           break;
-# if defined(CONFIG_EFM32_LEOPARD_GECKO) \
-  || defined(CONFIG_EFM32_WONDER_GECKO) \
-  || defined(CONFIG_EFM32_GIANT_GECKO) \
-  || defined(CONFIG_EFM32_ZERO_GECKO)
+# if (CONFIG_EFM32_FAMILY == EFM32_FAMILY_LEOPARD) \
+  || (CONFIG_EFM32_FAMILY == EFM32_FAMILY_WONDER) \
+  || (CONFIG_EFM32_FAMILY == EFM32_FAMILY_GIANT) \
+  || (CONFIG_EFM32_FAMILY == EFM32_FAMILY_ZERO)
         case EFM32_CLOCK_ULFRCO:
           EFM32_CMU_LFCLKSEL_LFA_SET(pv->r_lfclksel, DISABLED_OR_ULFRCO);
           EFM32_CMU_LFCLKSEL_LFAE_SET(pv->r_lfclksel, ULFRCO);
@@ -832,10 +832,10 @@ static DEV_CMU_CONFIG_MUX(efm32_recmu_config_mux)
         case EFM32_CLOCK_LFRCO:
           EFM32_CMU_LFCLKSEL_LFB_SET(pv->r_lfclksel, LFRCO);
           break;
-# if defined(CONFIG_EFM32_LEOPARD_GECKO) \
-  || defined(CONFIG_EFM32_WONDER_GECKO) \
-  || defined(CONFIG_EFM32_GIANT_GECKO) \
-  || defined(CONFIG_EFM32_ZERO_GECKO)
+# if (CONFIG_EFM32_FAMILY == EFM32_FAMILY_LEOPARD) \
+  || (CONFIG_EFM32_FAMILY == EFM32_FAMILY_WONDER) \
+  || (CONFIG_EFM32_FAMILY == EFM32_FAMILY_GIANT) \
+  || (CONFIG_EFM32_FAMILY == EFM32_FAMILY_ZERO)
         case EFM32_CLOCK_ULFRCO:
           EFM32_CMU_LFCLKSEL_LFB_SET(pv->r_lfclksel, DISABLED_OR_ULFRCO);
           EFM32_CMU_LFCLKSEL_LFBE_SET(pv->r_lfclksel, ULFRCO);

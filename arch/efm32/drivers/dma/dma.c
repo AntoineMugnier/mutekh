@@ -39,6 +39,10 @@
 #include <arch/efm32/dma_request.h>
 #include <arch/efm32/dma.h>
 
+#if CONFIG_DRIVER_EFM32_DMA_CHANNEL_COUNT > EFM32_DMA_CHAN_COUNT
+# error too many dma channels
+#endif
+
 #define PL230_CHANNEL_SIZE 16
 #define EFM32_DMA_CHANNEL_MASK ((1 << CONFIG_DRIVER_EFM32_DMA_CHANNEL_COUNT) - 1)
 

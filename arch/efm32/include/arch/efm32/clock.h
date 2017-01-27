@@ -1,11 +1,13 @@
 
-# if defined(CONFIG_EFM32_LEOPARD_GECKO) \
-  || defined(CONFIG_EFM32_WONDER_GECKO) \
-  || defined(CONFIG_EFM32_GIANT_GECKO)
+#include "chips.h"
+
+# if (CONFIG_EFM32_FAMILY == EFM32_FAMILY_LEOPARD) \
+  || (CONFIG_EFM32_FAMILY == EFM32_FAMILY_WONDER) \
+  || (CONFIG_EFM32_FAMILY == EFM32_FAMILY_GIANT)
 # include "efm/leopard/clock.h"
-#elif defined(CONFIG_EFM32_GECKO)
+#elif (CONFIG_EFM32_FAMILY == EFM32_FAMILY_GECKO)
 # include "efm/gecko/clock.h"
-#elif defined(CONFIG_EFM32_ZERO_GECKO)
+#elif (CONFIG_EFM32_FAMILY == EFM32_FAMILY_ZERO)
 # include "efm/zero/clock.h"
 #else
 # error
