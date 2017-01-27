@@ -1948,8 +1948,10 @@ sub read_build_config
 
 		    my $p_ = $p;
 		    $p_ =~ s/\*/[\\w\\d]\+/g;
-		    $p_ =~ s/N/[\\d]/g;
 		    $p_ =~ s/\?/[\\w\\d]/g;
+		    $p_ =~ s/N/[\\d]/g;
+		    $p_ =~ s/X/[\\d]+/g;
+		    $p_ =~ s/L/[a-zA-Z]/g;
 
 		    foreach (split(/:/, $$section)) {
 			if ( $_ =~ /^$p_$/i ) {

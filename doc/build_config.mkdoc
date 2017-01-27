@@ -314,11 +314,9 @@ CONFIG_CPU_MAXCOUNT 4
           which will be conditionaly considered depending on the
           @tt{BUILD} variable. @tt{pattern} is a pattern matching
           expression which may contain lower case text, hypens and
-          wildcards (e.i. @tt{text-text-*}, @tt{text-???}). The @tt *
-          wildcard match non-empty and non-hypens text. The @tt ?
-          wildcard matches a single text character. The @tt N wildcard
-          matches a single decimal digit. The next @tt{%section} token
-          automatically terminates the previous section.
+          wildcards (e.i. @tt{text-text-*}, @tt{text-???}).
+          The next @tt{%section} token automatically terminates the
+          previous section.
         @item @tt{%common}: Revert to unconditional common file part,
           default at beginning of a file.
         @item @tt{%else}: Change current conditional state.
@@ -330,6 +328,16 @@ CONFIG_CPU_MAXCOUNT 4
         @item @tt{%inherit}: Append a string to the BUILD
           variable. This can be used when a section needs to enable
           other sections.
+      @end list
+
+      The following section pattern format is used:
+      @list
+        @item Lower case letter, digits and underscores are not wildcards.
+        @item The @tt * wildcard match non-empty and non-hypens text.
+        @item The @tt ? wildcard matches a single text character.
+        @item The @tt N wildcard matches a single decimal digit.
+        @item The @tt X wildcard matches one or more digits.
+        @item The @tt L wildcard matches only letters.
       @end list
 
       Section types directives can be used to enforce use of sections:
