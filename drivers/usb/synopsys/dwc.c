@@ -357,11 +357,12 @@ static void synopsys_usbdev_get_out_tsize(struct synopsys_usbdev_private_s *pv,
 }
 
 static void synopsys_usbdev_get_data(struct synopsys_usbdev_private_s *pv,
-                                  struct dev_usbdev_request_s *tr)
+                                     struct dev_usbdev_request_s *tr)
 {
   uint32_t size, pcnt;
 
   synopsys_usbdev_get_out_tsize(pv, tr, &size, &pcnt);
+
 
   uint32_t x = SYNOPSYS_USB_DOEPTSIZE_XFERSIZE_SHIFT_VAL(size) |
                SYNOPSYS_USB_DOEPTSIZE_PKTCNT_SHIFT_VAL(pcnt);
@@ -766,7 +767,7 @@ error_t synopsys_usbdev_config(struct device_s *dev,
 error_t synopsys_usbdev_transfer(struct synopsys_usbdev_private_s *pv, 
                                  struct dev_usbdev_request_s * tr)
 {
-//  printk("R%d%d\n", tr->ep, tr->type);
+  //printk("R%d %d\n", tr->ep, tr->type);
   error_t err = -EAGAIN;
 
   /* Some event are pending */
@@ -1105,7 +1106,8 @@ void synopsys_usb_reset_device(struct synopsys_usbdev_private_s *pv)
     {
       cpu_mem_write_32(pv->addr + SYNOPSYS_USB_DIEPCTL_ADDR(i), 0);
       cpu_mem_write_32(pv->addr + SYNOPSYS_USB_DIEPINT_ADDR(i), SYNOPSYS_USB_DIEPINT_MASK);
-      cpu_mem_write_32(pv->addr + SYNOPSYS_USB_DOEPCTL_ADDR(i), 0);
+      /* Set the NAK bit for all OUT endpoints */
+      cpu_mem_write_32(pv->addr + SYNOPSYS_USB_DOEPCTL_ADDR(i), SYNOPSYS_USB_DOEPCTL_SNAK);
       cpu_mem_write_32(pv->addr + SYNOPSYS_USB_DOEPINT_ADDR(i), SYNOPSYS_USB_DOEPINT_MASK);
     }
 
@@ -1130,7 +1132,6 @@ void synopsys_usb_reset_device(struct synopsys_usbdev_private_s *pv)
   x = SYNOPSYS_USB_GINTMSK_WKUPINTMSK | SYNOPSYS_USB_GINTMSK_DISCONNINTMSK |
       SYNOPSYS_USB_GINTMSK_RESETDETMSK | SYNOPSYS_USB_GINTMSK_OEPINTMSK |
       SYNOPSYS_USB_GINTMSK_IEPINTMSK | SYNOPSYS_USB_GINTMSK_USBRSTMSK |
-//      SYNOPSYS_USB_GINTMSK_USBSUSPMSK | 
       SYNOPSYS_USB_GINTMSK_ENUMDONEMSK |
       SYNOPSYS_USB_GINTMSK_GOUTNAKEFFMSK;
 

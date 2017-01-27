@@ -38,6 +38,7 @@
 #include <device/clock.h>
 
 #include "i2c_master.h"
+#include "i2c_master_bytecode.o.h"
 
 #define I2C_MASTER_DISPLAY_DEBUG  0
 
@@ -72,8 +73,7 @@ typedef error_t i2c_master_test_t(struct i2c_master_test_ctx_s *);
 #define TEST_BAD_CHECKSUM 1
 #define TEST_FAILED 2
 
-#if I2C_MASTER_DISPLAY_DEBUG
-static void
+static __unused__ void
 i2c_master_display_debug_info(struct i2c_master_test_ctx_s *ctx)
 {
   static const char * const i2c_slave_basic_op_str[] =
@@ -116,7 +116,6 @@ i2c_master_display_debug_info(struct i2c_master_test_ctx_s *ctx)
       printk("0x%02x\n", ctx->debug_info.checksum[i]);
     }
 }
-#endif
 
 static void
 i2c_master_init_buffer(struct i2c_master_test_ctx_s *ctx)
@@ -997,7 +996,7 @@ i2c_master_init_test_ctx(struct i2c_master_test_ctx_s *ctx, uint8_t slave_addr)
     }
 
   ctx->i2c_bc_rq.base.saddr = slave_addr;
-  bc_init(&ctx->i2c_bc_rq.vm, &i2c_master_bytecode);
+  bc_init(&ctx->i2c_bc_rq.vm, &i2c_master_bytecode_bytecode);
 
   ctx->i2c_tr_rq.base.saddr = slave_addr;
 }

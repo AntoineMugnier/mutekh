@@ -34,7 +34,7 @@ static lock_t printk_lock;
 static uint_fast16_t cursor = 0;
 #endif
 
-static PRINTF_OUTPUT_FUNC(printk_output)
+static PRINTK_HANDLER(printk_output)
 {
   size_t i;
 
@@ -92,6 +92,7 @@ static PRINTF_OUTPUT_FUNC(printk_output)
 void ibmpc_printk_init(void)
 {
   lock_init(&printk_lock);
-  printk_set_output(printk_output, NULL);
+  static struct printk_backend_s backend;
+  printk_register(&backend, printk_output);
 }
 

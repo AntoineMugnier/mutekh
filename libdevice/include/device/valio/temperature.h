@@ -16,6 +16,7 @@
     <http://www.gnu.org/licenses/>.
 
     Copyright (c) Vincent DEFILIPPI <vincentdefilippi@gmail.com> 2015
+    Copyright (c) 2017, Nicolas Pouillon <nipo@ssji.net>
 */
 
 /**
@@ -30,18 +31,18 @@
 enum valio_temp_att_e
 {
   /**
-     This attribute id used only for @tt DEVICE_VALIO_READ request type.
-     The request callback is called with @tt valio_temp_read_s as data.
+     This attribute id used only for @tt DEVICE_VALIO_READ and @tt
+     DEVICE_VALIO_WAIT_EVENT request types.  The request is called
+     with @tt valio_temperature_s as data.
    */
   VALIO_TEMPERATURE_VALUE = CONFIG_DEVICE_VALIO_TEMPERATURE_ATTRIBUTE_FIRST,
-
 };
 
-/* Return structure for @tt DEVICE_VALIO_READ request type */
-struct valio_temp_read_s
+/** Structure for @tt VALIO_TEMPERATURE_VALUE request type */
+struct valio_temperature_s
 {
-  int16_t   celsius;    /* Temperature in celsius unit */
-  uint16_t  mil;        /* Thousandth of celsius */
+  /** Temperature in mK unit */
+  uint32_t temperature;
 };
 
 #endif

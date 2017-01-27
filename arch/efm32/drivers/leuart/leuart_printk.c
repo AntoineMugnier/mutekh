@@ -24,16 +24,14 @@
 #include <hexo/iospace.h>
 
 #include <mutek/printk.h>
+#include <mutek/startup.h>
 
 #include <arch/efm32/leuart.h>
 #include <arch/efm32/gpio.h>
 #include <arch/efm32/cmu.h>
 #include <arch/efm32/devaddr.h>
 
-#define LEUART_CLOCK            32768
-#define LEUART_RATE             9600
-
-static void printk_out_char(char c)
+static inline void printk_out_char(char c)
 {
   uint32_t b = CONFIG_MUTEK_PRINTK_ADDR;
 
@@ -44,7 +42,7 @@ static void printk_out_char(char c)
   cpu_mem_write_32(b + EFM32_LEUART_TXDATA_ADDR, c);
 }
 
-static PRINTF_OUTPUT_FUNC(printk_out)
+static PRINTK_HANDLER(efm32_leuart_printk_out)
 {
   uint_fast8_t i;
 
@@ -155,9 +153,18 @@ void efm32_leuart_printk_init()
   cpu_mem_write_32(b + EFM32_LEUART_CTRL_ADDR, x);
 
   /* Baudrate */
-  x = cpu_mem_read_32(b + EFM32_LEUART_CLKDIV_ADDR);
-  EFM32_LEUART_CLKDIV_DIV_SET(x, 32 * LEUART_CLOCK / LEUART_RATE - 32);
-  cpu_mem_write_32(b + EFM32_LEUART_CLKDIV_ADDR, x);
+#define LEUART_CLOCK 32768
+#define RATE (256ULL * LEUART_CLOCK / CONFIG_DRIVER_EFM32_LEUART_RATE - 256)
+
+#if RATE > EFM32_LEUART_CLKDIV_MASK || RATE < 0
+# warning EFM32 leuart printk data rate out of range when used with a 32khz clock.
+  /* However, the data rate may be fine if the leuart input clock is
+     later changed by the clock management when the
+     CONFIG_DRIVER_EFM32_LEUART_CHAR driver is enabled. */
+  cpu_mem_write_32(b + EFM32_LEUART_CLKDIV_ADDR, EFM32_LEUART_CLKDIV_MASK);
+#else
+  cpu_mem_write_32(b + EFM32_LEUART_CLKDIV_ADDR, (uint32_t)RATE);
+#endif
 
   /* LEUART routes */
   x = EFM32_LEUART_ROUTE_TXPEN;
@@ -172,6 +179,7 @@ void efm32_leuart_printk_init()
   /* Enable TX */
   cpu_mem_write_32(b + EFM32_LEUART_CMD_ADDR, EFM32_LEUART_CMD_TXEN);
 
-  printk_set_output(printk_out, NULL);
+  static struct printk_backend_s backend;
+  printk_register(&backend, efm32_leuart_printk_out);
 }
 

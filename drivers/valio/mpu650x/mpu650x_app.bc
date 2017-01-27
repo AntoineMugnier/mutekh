@@ -1,0 +1,243 @@
+/*
+    This file is part of MutekH.
+
+    MutekH is free software; you can redistribute it and/or modify it
+    under the terms of the GNU Lesser General Public License as
+    published by the Free Software Foundation; version 2.1 of the
+    License.
+
+    MutekH is distributed in the hope that it will be useful, but
+    WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+    Lesser General Public License for more details.
+
+    You should have received a copy of the GNU Lesser General Public
+    License along with this program.  If not, see
+    <http://www.gnu.org/licenses/>.
+
+    Copyright (c) Nicolas Pouillon <nipo@ssji.net>, 2016
+*/
+
+#include "mpu650x.h"
+
+#define REG_SET(r, v) \
+    cst8 %mpu650x_reg_write:reg, r ; \
+    cst8 %mpu650x_reg_write:value, v ; \
+    call32 %mpu650x_reg_write:link, mpu650x_reg_write
+
+#define PWR_MGMT_SET(a, b) \
+    cst8 %mpu650x_short_write:reg, REG_PWR_MGMT_1 ; \
+    cst16 %mpu650x_short_write:value, ( \
+        ((a) << 8) |                 \
+        (b)), 0 ; \
+    call32 %mpu650x_short_write:link, mpu650x_short_write
+
+#define ACCEL_PRECISION_G 4
+#define GYRO_PRECISION_DPS 1000
+    
+#if ACCEL_PRECISION_G == 1
+#define ACCEL_CONFIG_PRECISION REG_ACCEL_CONFIG_1G
+#elif ACCEL_PRECISION_G == 2
+#define ACCEL_CONFIG_PRECISION REG_ACCEL_CONFIG_2G
+#elif ACCEL_PRECISION_G == 4
+#define ACCEL_CONFIG_PRECISION REG_ACCEL_CONFIG_4G
+#elif ACCEL_PRECISION_G == 8
+#define ACCEL_CONFIG_PRECISION REG_ACCEL_CONFIG_8G
+#endif
+
+#if GYRO_PRECISION_DPS == 250
+#define GYRO_CONFIG_PRECISION REG_GYRO_CONFIG_250DPS
+#define GYRO_SHIFT (-1)
+#elif GYRO_PRECISION_DPS == 500
+#define GYRO_CONFIG_PRECISION REG_GYRO_CONFIG_500DPS
+#define GYRO_SHIFT 0
+#elif GYRO_PRECISION_DPS == 1000
+#define GYRO_CONFIG_PRECISION REG_GYRO_CONFIG_1000DPS
+#define GYRO_SHIFT 1
+#elif GYRO_PRECISION_DPS == 2000
+#define GYRO_CONFIG_PRECISION REG_GYRO_CONFIG_2000DPS
+#define GYRO_SHIFT 2
+#endif
+
+.func mpu650x_poweron
+    .export mpu650x_poweron
+    .clobber %0, %1, %15
+
+    cst8 %0, 10
+    mul32 %0, %ten_ms
+    delay %0
+    REG_SET(REG_PWR_MGMT_1, REG_PWR_MGMT_1_H_RESET)
+    delay %ten_ms
+    REG_SET(REG_USER_CTRL, USER_CTRL_APPEND)
+    REG_SET(REG_INT_PIN_CFG, REG_INT_PIN_CFG_ACTIVE_LOW | REG_INT_PIN_CFG_OPEN_DRAIN
+                           | REG_INT_PIN_CFG_EDGE | REG_INT_PIN_CLEAR_READ_STATUS
+                           )
+    REG_SET(REG_FIFO_EN, 0)
+
+    REG_SET(REG_CONFIG, REG_CONFIG_DLPF_92HZ)
+    REG_SET(REG_GYRO_CONFIG, REG_GYRO_CONFIG_DLPF | GYRO_CONFIG_PRECISION)
+    REG_SET(REG_ACCEL_CONFIG, ACCEL_CONFIG_PRECISION)
+    REG_SET(REG_ACCEL_CONFIG2, REG_ACCEL_CONFIG2_92HZ)
+    REG_SET(REG_ACCEL_INTEL_CTRL, 0)
+
+    PWR_MGMT_SET(
+        REG_PWR_MGMT_1_CYCLE | REG_PWR_MGMT_1_GYRO_STANDBY | REG_PWR_MGMT_1_TEMP_DIS,
+        REG_PWR_MGMT_2_DISABLE_XG | REG_PWR_MGMT_2_DISABLE_YG | REG_PWR_MGMT_2_DISABLE_ZG
+        | REG_PWR_MGMT_2_DISABLE_XA | REG_PWR_MGMT_2_DISABLE_YA | REG_PWR_MGMT_2_DISABLE_ZA)
+
+    mov    %mpu650x_reg_write:value, %wom_thresh
+    cst8   %mpu650x_reg_write:reg, REG_WOM_THR
+    call32 %mpu650x_reg_write:link, mpu650x_reg_write
+
+    mov    %mpu650x_reg_write:value, %smplrt_div
+    cst8   %mpu650x_reg_write:reg, REG_SMPLRT_DIV
+    call32 %mpu650x_reg_write:link, mpu650x_reg_write
+
+    mov    %mpu650x_reg_write:value, %lp_rate
+    cst8   %mpu650x_reg_write:reg, REG_LP_ACCEL_ODR
+    call32 %mpu650x_reg_write:link, mpu650x_reg_write
+    
+    REG_SET(REG_SIGNAL_PATH_RESET, 0x3f)
+    REG_SET(REG_SIGNAL_PATH_RESET, 0)
+
+    PWR_MGMT_SET(
+        REG_PWR_MGMT_1_SLEEP | REG_PWR_MGMT_1_TEMP_DIS,
+        REG_PWR_MGMT_2_DISABLE_XG | REG_PWR_MGMT_2_DISABLE_YG | REG_PWR_MGMT_2_DISABLE_ZG
+        | REG_PWR_MGMT_2_DISABLE_XA | REG_PWR_MGMT_2_DISABLE_YA | REG_PWR_MGMT_2_DISABLE_ZA)
+
+    end
+.endfunc
+
+.func mpu650x_poweroff
+    .export mpu650x_poweroff
+    .clobber %0, %1, %15
+
+    delay %ten_ms
+    REG_SET(REG_ACCEL_INTEL_CTRL, 0)
+    REG_SET(REG_FIFO_EN, 0)
+    REG_SET(REG_INT_ENABLE, 0)
+    cst8   %mpu650x_reg_read:reg, REG_INT_STATUS
+    call32 %mpu650x_reg_read:link, mpu650x_reg_read
+    PWR_MGMT_SET(
+        REG_PWR_MGMT_1_SLEEP | REG_PWR_MGMT_1_TEMP_DIS,
+        REG_PWR_MGMT_2_DISABLE_XG | REG_PWR_MGMT_2_DISABLE_YG | REG_PWR_MGMT_2_DISABLE_ZG
+        | REG_PWR_MGMT_2_DISABLE_XA | REG_PWR_MGMT_2_DISABLE_YA | REG_PWR_MGMT_2_DISABLE_ZA)
+
+    end
+.endfunc
+    
+.func mpu650x_wom_enable
+    .export mpu650x_wom_enable
+    .clobber %0, %1, %15
+
+    REG_SET(REG_INT_ENABLE, REG_INT_WOM)
+    REG_SET(REG_INT_STATUS, 0)
+    PWR_MGMT_SET(
+        REG_PWR_MGMT_1_TEMP_DIS | REG_PWR_MGMT_1_CYCLE,
+        REG_PWR_MGMT_2_DISABLE_XG | REG_PWR_MGMT_2_DISABLE_YG | REG_PWR_MGMT_2_DISABLE_ZG)
+
+    end
+.endfunc
+
+.func mpu650x_streaming_enable
+    .export mpu650x_streaming_enable
+    .clobber %0, %1, %15
+
+    PWR_MGMT_SET(
+        0,
+        0)
+    REG_SET(REG_ACCEL_INTEL_CTRL, REG_ACCEL_INTEL_EN | REG_ACCEL_INTEL_MODE_COMPARE)
+    REG_SET(REG_INT_ENABLE, REG_INT_RAW_RDY)
+
+    end
+.endfunc
+
+.func mpu650x_irq_handle
+    .export mpu650x_irq_handle
+    .clobber %0, %1, %2, %3, %4 moved, %5 ctr, %6 values, %13 old, %14 offset, %15
+
+    cst8   %mpu650x_reg_read:reg, REG_INT_STATUS
+    call32 %mpu650x_reg_read:link, mpu650x_reg_read
+
+    mov    %3, %mpu650x_reg_read:value
+    REG_SET(REG_INT_STATUS, 0)
+    cst8   %moved, 0
+
+    tst32c %3, bitpos(REG_INT_RAW_RDY)
+     end
+    
+    cst16  %values, _offsetof(struct mpu650x_context_s, value_last), 0
+    add    %values, %pv
+
+    cst8   %mpu650x_reg_read:reg, REG_PWR_MGMT_2
+    call32 %mpu650x_reg_read:link, mpu650x_reg_read
+    tst32c %mpu650x_reg_read:value, bitpos(REG_PWR_MGMT_2_DISABLE_ZG)
+     jmp8 irq_streaming_mode
+
+//wom_mode:
+    tst32s %3, bitpos(REG_INT_WOM)
+     bit32s %moved, 0
+
+    add8   %values, 6
+    cst8   %0, 0
+    st16i  %0, %values
+    st16i  %0, %values
+    st16i  %0, %values
+    jmp8 irq_done
+    
+irq_streaming_mode:
+    call32 %mpu650x_read_accel:link, mpu650x_read_accel
+
+    cst16  %offset, _offsetof(struct mpu650x_context_s, offset), 0
+    add    %offset, %pv
+
+    cst8   %ctr, 3
+motion_detect:
+    shi32r %0, bitpos(ACCEL_PRECISION_G) + 1
+    ld16i  %3, %offset
+    add    %0, %3
+    exts   %0, 12
+    ld16   %old, %values
+    st16i  %0, %values
+    sub    %old, %0
+    shi32r %old, 2
+    exts   %old, 13
+    tst32s %old, 15
+     neg   %old
+    lteq   %wom_thresh, %old
+     bit32s %moved, 0
+    mov    %0, %1
+    mov    %1, %2
+    loop   %ctr, motion_detect
+    
+    call32 %mpu650x_read_gyro:link, mpu650x_read_gyro
+    cst16   %13, 64 * (1 << 8) / 131, 0
+
+    ld16i  %3, %offset
+    add    %0, %3
+    exts   %0, 15
+    mul32  %0, %13
+    shi32r %0, 8 - GYRO_SHIFT
+    st16i  %0, %values
+
+    ld16i  %3, %offset
+    add    %1, %3
+    exts   %1, 15
+    mul32  %1, %13
+    shi32r %1, 8 - GYRO_SHIFT
+    st16i  %1, %values
+
+    ld16i  %3, %offset
+    add    %1, %3
+    exts   %2, 15
+    mul32  %2, %13
+    shi32r %2, 8 - GYRO_SHIFT
+    st16i  %2, %values
+
+irq_done:
+    st8e   %moved, %pv, _offsetof(struct mpu650x_context_s, has_moved)
+    cst8   %0, 1
+    st8e   %0, %pv, _offsetof(struct mpu650x_context_s, has_fresh_data)
+
+    end
+.endfunc

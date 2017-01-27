@@ -87,12 +87,10 @@ static KROUTINE_EXEC(pca9557_i2c_write_done)
             dev_request_queue_head(&pv->pending));
     struct device_s *dev = pv->i2c_req.base.pvdata;
 
-    LOCK_SPIN_IRQ(&dev->lock);
+    LOCK_SPIN_IRQ_SCOPED(&dev->lock);
 
     req->error = pv->i2c_req.error;
     pca9557_req_done(dev, req);
-
-    LOCK_RELEASE_IRQ(&dev->lock);
 }
 
 static KROUTINE_EXEC(pca9557_i2c_read_done)
@@ -104,14 +102,12 @@ static KROUTINE_EXEC(pca9557_i2c_read_done)
             dev_request_queue_head(&pv->pending));
     struct device_s *dev = pv->i2c_req.base.pvdata;
 
-    LOCK_SPIN_IRQ(&dev->lock);
+    LOCK_SPIN_IRQ_SCOPED(&dev->lock);
 
     req->error = pv->i2c_req.error;
     *req->input.data = pv->input_value >> req->io_first;
 
     pca9557_req_done(dev, req);
-
-    LOCK_RELEASE_IRQ(&dev->lock);
 }
 
 static void pca9557_mode_update(
@@ -242,15 +238,13 @@ static DEV_GPIO_REQUEST(pca9557_request)
         return;
     }
 
-    LOCK_SPIN_IRQ(&dev->lock);
+    LOCK_SPIN_IRQ_SCOPED(&dev->lock);
 
     bool_t empty = dev_request_queue_isempty(&pv->pending);
 
     dev_request_queue_pushback(&pv->pending, &req->base);
     if (empty)
         pca9557_req_serve(dev, req);
-
-    LOCK_RELEASE_IRQ(&dev->lock);
 }
 
 

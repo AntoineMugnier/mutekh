@@ -29,7 +29,6 @@
 #include <device/device.h>
 #include <device/resources.h>
 #include <device/driver.h>
-#include <device/irq.h>
 #include <device/class/valio.h>
 #include <device/valio/keyboard.h>
 #include <device/class/gpio.h>
@@ -66,8 +65,6 @@ struct matrix_keyboard_ctx_s
   struct dev_timer_rq_s timer_rq;
   struct dev_gpio_rq_s gpio_rq;
 
-  struct dev_irq_src_s irq_ep;
-
   struct bc_context_s vm;
   struct kroutine_s vm_runner;
 
@@ -91,9 +88,8 @@ struct matrix_keyboard_ctx_s
     uint8_t input[8];
   } gpio_data;
   uint32_t rows_mask, columns_mask;
-  uint8_t column_count, row_count, state_size, range_id;
+  uint8_t column_count, row_count, state_size;
   uint8_t reg;
-  uint8_t pending_irq;
   
   gpio_id_t pin_id[GPIO_ID_COUNT];
   gpio_width_t pin_width[GPIO_ID_COUNT];
@@ -186,7 +182,7 @@ static KROUTINE_EXEC(matrix_keyboard_runner)
         return;
       }
 
-      case 1: { // columns release
+      case 1: // columns release
         dprintk("%s columns_release\n", __FUNCTION__);
         /*
           Column IDs:    432  10
@@ -205,9 +201,8 @@ static KROUTINE_EXEC(matrix_keyboard_runner)
         pv->state = MATRIX_KEYBOARD_WAIT_COLUMNS;
         DEVICE_OP(&pv->gpio, request, &pv->gpio_rq);
         return;
-      }
 
-      case 2: { // rows_get
+      case 2: // rows_get
         dprintk("%s rows_get\n", __FUNCTION__);
         pv->gpio_rq.io_first = pv->pin_id[GPIO_ROWS];
         pv->gpio_rq.io_last = pv->pin_id[GPIO_ROWS] + pv->pin_width[GPIO_ROWS] - 1;
@@ -217,50 +212,19 @@ static KROUTINE_EXEC(matrix_keyboard_runner)
         pv->state = MATRIX_KEYBOARD_WAIT_ROWS;
         DEVICE_OP(&pv->gpio, request, &pv->gpio_rq);
         return;
-      }
 
-      case 3: { // wait_change
-        bool_t done = 0;
-
-        LOCK_SPIN_IRQ(&dev->lock);
-        dprintk("%s wait_change\n", __FUNCTION__);
-        if (pv->pending_irq) {
-          pv->pending_irq = 0;
-          done = 1;
-        } else {
-          pv->state = MATRIX_KEYBOARD_WAIT_CHANGE;
-          done = 0;
-        }
-        LOCK_RELEASE_IRQ(&dev->lock);
-
-        if (done)
-          continue;
-        return;
-      }
-
-      case 4: { // Notify
-        dprintk("%s notify %d\n", __FUNCTION__, bit_get_mask(op, 0, 1));
-        endian_le32_na_store(pv->gpio_data.input, pv->rows_mask);
+      case 3: // wait_change
+        endian_le32_na_store(pv->gpio_data.input,
+                             bc_get_reg(&pv->vm, bit_get_mask(op, 0, 4)));
+        endian_le32_na_store(pv->gpio_data.input + 4, pv->rows_mask);
         pv->gpio_rq.io_first = pv->pin_id[GPIO_ROWS];
         pv->gpio_rq.io_last = pv->pin_id[GPIO_ROWS] + pv->pin_width[GPIO_ROWS] - 1;
-        pv->gpio_rq.input_irq_range.mask = pv->gpio_data.input;
-        switch (bit_get_mask(op, 0, 2)) {
-        case 0: // None
-          pv->gpio_rq.input_irq_range.mode = 0;
-          break;
-        case 1: // Press
-          pv->gpio_rq.input_irq_range.mode = DEV_IRQ_SENSE_LOW_LEVEL;
-          break;
-        case 2: // Release
-          pv->gpio_rq.input_irq_range.mode = DEV_IRQ_SENSE_HIGH_LEVEL;
-          break;
-        }
-        pv->gpio_rq.input_irq_range.ep_id = pv->range_id;
-        pv->gpio_rq.type = DEV_GPIO_INPUT_IRQ_RANGE;
-        pv->state = MATRIX_KEYBOARD_WAIT_NOTIFY;
+        pv->gpio_rq.until.data = pv->gpio_data.input;
+        pv->gpio_rq.until.mask = pv->gpio_data.input + 4;
+        pv->gpio_rq.type = DEV_GPIO_UNTIL;
+        pv->state = MATRIX_KEYBOARD_WAIT_CHANGE;
         DEVICE_OP(&pv->gpio, request, &pv->gpio_rq);
         return;
-      }
       }
       break;
 
@@ -278,10 +242,10 @@ static KROUTINE_EXEC(matrix_keyboard_runner)
         break;
       }
 
-      case 2: // pressed_done
+      case 2: { // pressed_done
         dprintk("%s pressed state changed: %P\n", __FUNCTION__, pv->cur_state, pv->state_size);
 
-        LOCK_SPIN_IRQ(&dev->lock);
+        LOCK_SPIN_IRQ_SCOPED(&dev->lock);
         if (memcmp(pv->cur_state, pv->last_state, pv->state_size)) {
           memcpy(pv->last_state, pv->cur_state, pv->state_size);
           struct dev_valio_rq_s *rq = dev_valio_rq_s_cast(dev_request_queue_pop(&pv->queue));
@@ -291,8 +255,9 @@ static KROUTINE_EXEC(matrix_keyboard_runner)
             kroutine_exec(&rq->base.kr);
           }
         }
-        LOCK_RELEASE_IRQ(&dev->lock);
+
         break;
+      }
       }
     }
 
@@ -306,9 +271,10 @@ static KROUTINE_EXEC(matrix_keyboard_gpio_done)
 
   dprintk("%s\n", __FUNCTION__);
 
-  LOCK_SPIN_IRQ(&dev->lock);
+  LOCK_SPIN_IRQ_SCOPED(&dev->lock);
   assert(pv->state == MATRIX_KEYBOARD_WAIT_COLUMNS
          || pv->state == MATRIX_KEYBOARD_WAIT_ROWS
+         || pv->state == MATRIX_KEYBOARD_WAIT_CHANGE
          || pv->state == MATRIX_KEYBOARD_WAIT_NOTIFY);
 
   if (pv->state == MATRIX_KEYBOARD_WAIT_ROWS) {
@@ -327,7 +293,6 @@ static KROUTINE_EXEC(matrix_keyboard_gpio_done)
 
   pv->state = MATRIX_KEYBOARD_IDLE;
   kroutine_exec(&pv->vm_runner);
-  LOCK_RELEASE_IRQ(&dev->lock);
 }
 
 static KROUTINE_EXEC(matrix_keyboard_timer_done)
@@ -337,29 +302,11 @@ static KROUTINE_EXEC(matrix_keyboard_timer_done)
 
   dprintk("%s\n", __FUNCTION__);
 
-  LOCK_SPIN_IRQ(&dev->lock);
+  LOCK_SPIN_IRQ_SCOPED(&dev->lock);
   assert(pv->state == MATRIX_KEYBOARD_WAIT_TIMER);
 
   pv->state = MATRIX_KEYBOARD_IDLE;
   kroutine_exec(&pv->vm_runner);
-  LOCK_RELEASE_IRQ(&dev->lock);
-}
-
-static DEV_IRQ_SRC_PROCESS(mxk_irq)
-{
-  struct device_s *dev = ep->base.dev;
-  struct matrix_keyboard_ctx_s *pv = dev->drv_pv;
-
-  dprintk("%s\n", __FUNCTION__);
-
-  LOCK_SPIN_IRQ(&dev->lock);
-  if (pv->state == MATRIX_KEYBOARD_WAIT_CHANGE) {
-    pv->state = MATRIX_KEYBOARD_IDLE;
-    kroutine_exec(&pv->vm_runner);
-  } else {
-    pv->pending_irq = 0;
-  }
-  LOCK_RELEASE_IRQ(&dev->lock);
 }
 
 static DEV_VALIO_REQUEST(matrix_keyboard_request)
@@ -385,18 +332,15 @@ static DEV_VALIO_REQUEST(matrix_keyboard_request)
     req->error = 0;
     break;
 
-  case DEVICE_VALIO_WAIT_EVENT:
-    LOCK_SPIN_IRQ(&dev->lock);
-    if (dev_request_queue_isempty(&pv->queue))
-      device_start(&pv->timer.base);
-
+  case DEVICE_VALIO_WAIT_EVENT: {
+    LOCK_SPIN_IRQ_SCOPED(&dev->lock);
     dev_request_queue_pushback(&pv->queue, &req->base);
 
     if (pv->state == MATRIX_KEYBOARD_IDLE)
       kroutine_exec(&pv->vm_runner);
-    LOCK_RELEASE_IRQ(&dev->lock);
 
     break;
+  }
   }
 }
 
@@ -411,7 +355,6 @@ static DEV_INIT(matrix_keyboard_init)
   uintptr_t rows_mask;
   uintptr_t columns_mask;
   size_t column_count, row_count, state_size;
-  const struct dev_resource_s *r;
   gpio_id_t pin_id[2];
   gpio_width_t pin_width[2];
 
@@ -470,20 +413,6 @@ static DEV_INIT(matrix_keyboard_init)
 
   assert(!columns_mask);
 
-  r = device_res_get(dev, DEV_RES_IRQ, 0);
-  if (!r) {
-    err = -ENOENT;
-    goto free_pv;
-  }
-
-  pv->range_id = r->u.irq.sink_id;
-
-  r = device_res_get_from_name(dev, DEV_RES_DEV_PARAM, 0, "icu");
-  if (!r) {
-    err = -ENOENT;
-    goto free_pv;
-  }
-
   err = device_get_param_dev_accessor(dev, "timer", &pv->timer.base, DRIVER_CLASS_TIMER);
   if (err)
     goto free_pv;
@@ -512,12 +441,6 @@ static DEV_INIT(matrix_keyboard_init)
   pv->refresh_max = tmp;
 
   dev_request_queue_init(&pv->queue);
-
-  device_irq_source_init(dev, &pv->irq_ep, 1, &mxk_irq);
-
-  err = device_irq_source_link(dev, &pv->irq_ep, 1, -1);
-  if (err)
-    goto put_gpio;
 
   uint8_t mask[8] = {};
 
@@ -566,7 +489,6 @@ static DEV_CLEANUP(matrix_keyboard_cleanup)
       || !(pv->state == MATRIX_KEYBOARD_IDLE))
     return -EBUSY;
 
-  device_irq_source_unlink(dev, &pv->irq_ep, 1);
   dev_request_queue_destroy(&pv->queue);
   device_put_accessor(&pv->timer.base);
   device_put_accessor(&pv->gpio.base);

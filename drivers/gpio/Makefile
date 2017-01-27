@@ -1,2 +1,4 @@
 objs-$(CONFIG_DRIVER_PCA9557) += pca9557.o
 objs-$(CONFIG_DRIVER_MCP23S17) += mcp23s17.o mcp23s17_spi.o
+subdirs-$(CONFIG_DRIVER_GPIO_PCAL6408A) += pcal6408a
+subdirs-$(CONFIG_DRIVER_GPIO_PCF8574) += pcf8574

@@ -210,8 +210,8 @@ sub parse_cmp2
 {
     my $thisop = shift;
 
-    push @{$thisop->{in}}, check_reg($thisop, 1);
     push @{$thisop->{in}}, check_reg($thisop, 0);
+    push @{$thisop->{in}}, check_reg($thisop, 1);
 
     if ( $thisop->{in}->[0] == $thisop->{in}->[1] ) {
         error($thisop, "compare to the same register is not allowed\n");
@@ -225,6 +225,13 @@ sub parse_alu
     push @{$thisop->{in}}, check_reg($thisop, 0);
     push @{$thisop->{in}}, check_reg($thisop, 1);
     push @{$thisop->{out}}, check_reg($thisop, 0);
+}
+
+sub parse_ccall
+{
+    my $thisop = shift;
+
+    push @{$thisop->{in}}, check_reg($thisop, 0);
 }
 
 sub parse_alu1
@@ -416,6 +423,10 @@ sub parse_loop
     push @{$thisop->{out}}, check_reg($thisop, 0);
     push @{$thisop->{in}}, check_reg($thisop, 0);
     $thisop->{target} = check_label8($thisop, 1, 64);
+
+    if ($thisop->{target}->{addr} < $thisop->{addr}) {
+        $thisop->{wbout} = 1;
+    }
 }
 
 our $le = ($main::backend_endian eq 'little');
@@ -861,7 +872,7 @@ our %asm = (
     'loop' => {
         words => 1, code => 0x3000, argscnt => 2,
         parse => \&parse_loop, backend => ('loop'),
-        flushregs => 1, op_jmp => 1
+        flushregs => 1, op_jmp => 1, nocond => 1
     },
     'pack8' => {
         words => 1, code => 0x3800, argscnt => 2,
@@ -915,26 +926,32 @@ our %asm = (
         parse => \&parse_cmp2, backend => ('lt'),
         op_cond => 1,
     },
-    'lteq'  => {
+    'lts'  => {
         words => 1, code => 0x4300, argscnt => 2,
+        parse => \&parse_cmp2, backend => ('lts'),
+        op_cond => 1,
+    },
+    'lteq'  => {
+        words => 1, code => 0x4400, argscnt => 2,
         parse => \&parse_cmp2, backend => ('lteq'),
         op_cond => 1,
     },
+    'lteqs'  => {
+        words => 1, code => 0x4500, argscnt => 2,
+        parse => \&parse_cmp2, backend => ('lteqs'),
+        op_cond => 1,
+    },
     'add' => {
-        words => 1, code => 0x4400, argscnt => 2,
+        words => 1, code => 0x4600, argscnt => 2,
         parse => \&parse_alu2, backend => ('add')
     },
     'sub' => {
-        words => 1, code => 0x4500, argscnt => 2,
+        words => 1, code => 0x4700, argscnt => 2,
         parse => \&parse_alu2, backend => ('sub')
     },
     'neg' => {
-        words => 1, code => 0x4500, argscnt => 1,
+        words => 1, code => 0x4700, argscnt => 1,
         parse => \&parse_alu1, backend => ('neg')
-    },
-    'mul32' => {
-        words => 1, code => 0x4700, argscnt => 2,
-        parse => \&parse_alu, backend => ('mul')
     },
     'or32' => {
         words => 1, code => 0x4800, argscnt => 2,
@@ -942,16 +959,24 @@ our %asm = (
     },
     'xor32' => {
         words => 1, code => 0x4900, argscnt => 2,
-        parse => \&parse_alu, backend => ('xor')
+        parse => \&parse_alu2, backend => ('xor')
+    },
+    'ccall' => {
+        words => 1, code => 0x4900, argscnt => 1,
+        parse => \&parse_ccall, backend => ('ccall'),
+        flushregs => 1, reloadregs => 1,
     },
     'and32' => {
         words => 1, code => 0x4a00, argscnt => 2,
         parse => \&parse_alu2, backend => ('and')
     },
-    'ccall' => {
+    'andn32' => {
         words => 1, code => 0x4b00, argscnt => 2,
-        parse => \&parse_alu, backend => ('ccall'),
-        flushregs => 1,
+        parse => \&parse_alu2, backend => ('andn')
+    },
+    'not32' => {
+        words => 1, code => 0x4b00, argscnt => 1,
+        parse => \&parse_alu1, backend => ('not')
     },
     'shl32' => {
         words => 1, code => 0x4c00, argscnt => 2,
@@ -961,13 +986,9 @@ our %asm = (
         words => 1, code => 0x4d00, argscnt => 2,
         parse => \&parse_alu, backend => ('shr'),
     },
-    'andn32' => {
+    'mul32' => {
         words => 1, code => 0x4e00, argscnt => 2,
-        parse => \&parse_alu2, backend => ('andn')
-    },
-    'not32' => {
-        words => 1, code => 0x4e00, argscnt => 1,
-        parse => \&parse_alu1, backend => ('not')
+        parse => \&parse_alu, backend => ('mul')
     },
     'mov' => {
         words => 1, code => 0x4f00, argscnt => 2,
@@ -1063,6 +1084,7 @@ our %asm = (
     'gaddr' => {
         words => 1 + (4 << $backend_width) / 8, code => 0x7000, argscnt => 2,
         parse => \&parse_gaddr, backend => ('gaddr'),
+        nocond => 1
     },
     'data16' => {
         words => 1, argscnt => 1,
@@ -1126,9 +1148,6 @@ sub parse_args
 	error($thisop, "bad operand count for `$thisop->{name}'\n")
 	    if (defined $op->{argscnt}) && $op->{argscnt} != @{$thisop->{args}};
 
-	error($thisop, "multi-word instruction after conditional\n")
-	    if $prevop && $prevop->{op}->{op_cond} && $op->{words} > 1;
-
         error($thisop, "instruction can not be conditional\n")
 	    if $prevop && $prevop->{op}->{op_cond} && ($op->{op_cond} || $op->{nocond});
 
@@ -1140,14 +1159,18 @@ sub parse_args
         # handler
         $thisop->{flushin} = 0;
 
-        # bit mask of arguments which are written back by the instruction,
-        # ignored when flushin is set for the argument
+        # bit mask of input arguments which are written back by the
+        # instruction, ignored when flushin is set for the argument.
         $thisop->{wbin} = 0;
 
         # bit mask of arguments which require a register reload rather
         # than an output register allocation, updated by the backend
         # parse handler
         $thisop->{reloadout} = 0;
+
+        # bit mask of output arguments which are written back by the
+        # instruction, ignored when reloadout is set for the argument.
+        $thisop->{wbout} = 0;
 
         # bit mask of clobbered cpu registers
         $thisop->{clobber} = 0;
@@ -1220,32 +1243,6 @@ sub write_addr
 
         printf OUT " %4u   %-15s %s\n", $thisop->{addr}, $thisop->{src};
     }
-
-    close( OUT );
-}
-
-sub write_bc
-{
-    open(OUT, ">$fout") || die "unable to open output file `$fout'.\n";
-
-    print OUT $backend->out_begin( $last_addr );
-
-    foreach my $thisop (@src) {
-
-        foreach my $l ( @{$thisop->{labels}} ) {
-            if ( $l->{export} ) {
-                print OUT "$l->{name}:\n";
-                print OUT "     .globl $l->{name}\n";
-            };
-        }
-
-        # print STDERR $thisop->{name}."\n";
-        printf OUT "    %-20s  # %s %s\n",
-          $backend->can('out_'.$thisop->{op}->{backend})->( $thisop ),
-          $thisop->{name}, join(', ', @{$thisop->{args}});
-    }
-
-    print OUT $backend->out_eof();
 
     close( OUT );
 }
@@ -1539,6 +1536,8 @@ sub write_asm
                 my $new = $reg_alloc->();
                 $r2w{$o} = $new;
                 $w2r{$new} = { $o => 1 };
+                # load previous register value when in a conditional
+                print OUT $backend->out_load($o, $new) if ( $cond );
             } else {
                 # handle copy on write
                 my @k = keys %{$w2r{$ow}};
@@ -1549,7 +1548,7 @@ sub write_asm
                     delete $w2r{$ow}->{$o};
                 }
             }
-            $wb{$o} = 1;
+            $wb{$o} = !(($thisop->{wbout} >> $j) & 1);
             push @wregout, $r2w{$o};
           }
         }
@@ -1764,9 +1763,14 @@ sub check_regs
 
              # explore branch target
              if ( $op->{op_cond} ) {
-                 my ( $rd, $wr ) = $exc->( $pc + $op->{words} + 1, [ @$regs ], $func, $thisop );
-                 $rd_mask |= $rd;
-                 $wr_mask |= $wr;
+                 my $nextpc = $pc + $op->{words};
+                 if ( my $nextop = $srcaddr{$nextpc} ) {
+                     my ( $rd, $wr ) = $exc->( $nextpc + $nextop->{op}->{words}, [ @$regs ], $func, $thisop );
+                     $rd_mask |= $rd;
+                     $wr_mask |= $wr;
+                 } else {
+                     warning($thisop, "no instruction in conditional\n");
+                 }
              } elsif ( ( $op->{op_call} && !$l->{func} ) ||
                        ( $op->{op_jmp} && !$tailcall ) ) {
                  my ( $rd, $wr ) = $exc->( $thisop->{target}->{addr}, [ @$regs ], $func, $thisop );
@@ -1854,7 +1858,7 @@ sub check_regs
 
 check_regs();
 
-$backend->write();
+$backend->write( $backend );
 write_header() if defined $fheader;
 
 warnings_print();

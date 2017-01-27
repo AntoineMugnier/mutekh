@@ -3,8 +3,10 @@ DIR_CFLAGS = -D_HEXO_INTTYPES_DEPRECATED
 subdirs = \
 block \
 char \
+cmu \
 enum \
 gpio \
+i2c \
 mem \
 net \
 printk \

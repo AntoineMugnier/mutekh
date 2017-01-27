@@ -29,46 +29,47 @@
 #include <arch/nrf5x/uart.h>
 #include <arch/nrf5x/gpio.h>
 
-void nrf5x_printk_out_char(void *addr, char c);
+#include "printk.h"
 
-void nrf5x_printk_out_char(void *addr, char c)
+static inline void nrf5x_printk_out_char(uintptr_t addr, char c)
 {
-  const uintptr_t uart = (uintptr_t)addr;
   uint32_t timeout = 0x100;
 
-  nrf_event_clear(uart, NRF_UART_TXDRDY);
+  nrf_event_clear(addr, NRF_UART_TXDRDY);
 
-  nrf_reg_set(uart, NRF_UART_TXD, c);
+  nrf_reg_set(addr, NRF_UART_TXD, c);
 
-  while (!nrf_event_check(uart, NRF_UART_TXDRDY) && --timeout)
+  while (!nrf_event_check(addr, NRF_UART_TXDRDY) && --timeout)
     ;
 }
 
-PRINTF_OUTPUT_FUNC(nrf5x_printk_out_nodrv);
-PRINTF_OUTPUT_FUNC(nrf5x_printk_out_nodrv)
+void nrf5x_printk_out_nodrv(uintptr_t addr, const char *str, size_t len)
 {
-  uintptr_t uart = (uintptr_t)ctx;
   size_t i;
 
-  nrf_task_trigger(uart, NRF_UART_STARTTX);
-  nrf_event_clear(uart, NRF_UART_TXDRDY);
+  nrf_task_trigger(addr, NRF_UART_STARTTX);
+  nrf_event_clear(addr, NRF_UART_TXDRDY);
 
   for (i = 0; i < len; i++)
     {
       if (str[i] == '\n')
-        nrf5x_printk_out_char(ctx, '\r');
-      nrf5x_printk_out_char(ctx, str[i]);
+        nrf5x_printk_out_char(addr, '\r');
+      nrf5x_printk_out_char(addr, str[i]);
     }
 
-  nrf_task_trigger(uart, NRF_UART_STOPTX);
+  nrf_task_trigger(addr, NRF_UART_STOPTX);
+}
+
+static PRINTK_HANDLER(nrf5x_printk)
+{
+  nrf5x_printk_out_nodrv(CONFIG_MUTEK_PRINTK_ADDR, str, len);
 }
 
 void nrf5x_printk_init()
 {
-  const uintptr_t uart = CONFIG_MUTEK_PRINTK_ADDR;
   const uintptr_t gpio = NRF5X_GPIO_ADDR;
 
-  nrf_reg_set(uart, NRF_UART_PSELTXD,
+  nrf_reg_set(CONFIG_MUTEK_PRINTK_ADDR, NRF_UART_PSELTXD,
               CONFIG_DRIVER_NRF5X_PRINTK_PIN);
 
   nrf_reg_set(gpio,
@@ -77,15 +78,16 @@ void nrf5x_printk_init()
               | NRF_GPIO_PIN_CNF_INPUT_DISCONNECT
               | NRF_GPIO_PIN_CNF_DRIVE_S0S1);
 
-  nrf_reg_set(uart, NRF_UART_BAUDRATE,
+  nrf_reg_set(CONFIG_MUTEK_PRINTK_ADDR, NRF_UART_BAUDRATE,
               NRF_UART_BAUDRATE_(CONFIG_DRIVER_NRF5X_PRINTK_RATE));
-  nrf_reg_set(uart,
+  nrf_reg_set(CONFIG_MUTEK_PRINTK_ADDR,
               NRF_UART_CONFIG,
               NRF_UART_CONFIG_PARITY_DISABLED
               | NRF_UART_CONFIG_CTSRTS_DISABLED);
-  nrf_reg_set(uart,
+  nrf_reg_set(CONFIG_MUTEK_PRINTK_ADDR,
               NRF_UART_ENABLE,
               NRF_UART_ENABLE_ENABLED);
 
-  printk_set_output(nrf5x_printk_out_nodrv, (void*)uart);
+  struct printk_backend_s backend;
+  printk_register(&backend, nrf5x_printk);
 }

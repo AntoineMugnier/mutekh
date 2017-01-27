@@ -50,7 +50,7 @@ enum driver_class_e
   DRIVER_CLASS_DMA,
   DRIVER_CLASS_INPUT,
   DRIVER_CLASS_NET,
-  DRIVER_CLASS_SOUND,
+  DRIVER_CLASS_PCM,
   DRIVER_CLASS_TIMER,
   DRIVER_CLASS_PWM,
   DRIVER_CLASS_SPI_CTRL,
@@ -569,6 +569,14 @@ struct device_accessor_s
 ({                                            \
   typeof(dev_accessor) __a__ = (dev_accessor);  \
   __a__->api->f_##op(__a__, ## __VA_ARGS__);       \
+})
+
+/** @This tells whether device defines said function.
+    @xcsee {Device accessor} */
+#define DEVICE_HAS_OP(dev_accessor, op)        \
+({                                            \
+  typeof(dev_accessor) __a__ = (dev_accessor);  \
+  ((void*)__a__->api->f_##op != (void*)dev_driver_notsup_fcn);      \
 })
 
 /** @This initializes a @ref device_accessor_s object to the null

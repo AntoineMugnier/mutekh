@@ -45,7 +45,7 @@ C_HEADER_BEGIN
 #   define MUTEK_CFILE ""
 #  endif
 
-#  if defined(CONFIG_LIBC_ASSERT_SIMPLE) || !defined(CONFIG_MUTEK_PRINTK_HANDLER)
+#  if defined(CONFIG_LIBC_ASSERT_SIMPLE) || !defined(CONFIG_MUTEK_PRINTK)
 void __assert_fail(void);
 #  define assert(expr) ((void) ((expr) ? 0 : __assert_fail()))
 #  else

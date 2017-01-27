@@ -178,7 +178,7 @@
     %subsection stm32-f100??
       %types features
 
-      CONFIG_STM32_SERIE 100
+      CONFIG_STM32_SERIES 100
 
       CONFIG_CPU_ARM32M_M_IRQ_COUNT 0
     %end
@@ -186,7 +186,7 @@
     %subsection stm32-f101??
       %types features
 
-      CONFIG_STM32_SERIE 101
+      CONFIG_STM32_SERIES 101
 
       CONFIG_CPU_ARM32M_M_IRQ_COUNT 0
     %end
@@ -194,7 +194,7 @@
     %subsection stm32-f102??
       %types features
 
-      CONFIG_STM32_SERIE 102
+      CONFIG_STM32_SERIES 102
 
       CONFIG_CPU_ARM32M_M_IRQ_COUNT 0
     %end
@@ -202,7 +202,7 @@
     %subsection stm32-f103??
       %types features
 
-      CONFIG_STM32_SERIE 103
+      CONFIG_STM32_SERIES 103
 
       CONFIG_CPU_ARM32M_M_IRQ_COUNT 60
     %end
@@ -210,7 +210,7 @@
     %subsection stm32-f105??
       %types features
 
-      CONFIG_STM32_SERIE 105
+      CONFIG_STM32_SERIES 105
 
       CONFIG_CPU_ARM32M_M_IRQ_COUNT 0
     %end
@@ -218,9 +218,9 @@
     %subsection stm32-f107??
       %types features
 
-      CONFIG_STM32_SERIE 107
+      CONFIG_STM32_SERIES 107
 
-      CONFIG_CPU_ARM32M_M_IRQ_COUNT 0
+      CONFIG_CPU_ARM32M_M_IRQ_COUNT 67
     %end
 
     ########### Ram size
@@ -321,7 +321,7 @@
     %subsection stm32-f401??
       %types features
 
-      CONFIG_STM32_SERIE 401
+      CONFIG_STM32_SERIES 401
 
       CONFIG_CPU_ARM32M_M_IRQ_COUNT 85
     %end
@@ -329,7 +329,7 @@
     %subsection stm32-f405??
       %types features
 
-      CONFIG_STM32_SERIE 405
+      CONFIG_STM32_SERIES 405
 
       CONFIG_CPU_ARM32M_M_IRQ_COUNT
     %end
@@ -337,7 +337,7 @@
     %subsection stm32-f407??
       %types features
 
-      CONFIG_STM32_SERIE 407
+      CONFIG_STM32_SERIES 407
 
       CONFIG_CPU_ARM32M_M_IRQ_COUNT
     %end
@@ -345,7 +345,7 @@
     %subsection stm32-f411??
       %types features
 
-      CONFIG_STM32_SERIE 411
+      CONFIG_STM32_SERIES 411
 
       CONFIG_CPU_ARM32M_M_IRQ_COUNT
     %end
@@ -353,7 +353,7 @@
     %subsection stm32-f415??
       %types features
 
-      CONFIG_STM32_SERIE 415
+      CONFIG_STM32_SERIES 415
 
       CONFIG_CPU_ARM32M_M_IRQ_COUNT
     %end
@@ -361,7 +361,7 @@
     %subsection stm32-f417??
       %types features
 
-      CONFIG_STM32_SERIE 417
+      CONFIG_STM32_SERIES 417
 
       CONFIG_CPU_ARM32M_M_IRQ_COUNT
     %end
@@ -369,7 +369,7 @@
     %subsection stm32-f446??
       %types features
 
-      CONFIG_STM32_SERIE 446
+      CONFIG_STM32_SERIES 446
 
       CONFIG_CPU_ARM32M_M_IRQ_COUNT
     %end
@@ -377,7 +377,7 @@
     %subsection stm32-f427??
       %types features
 
-      CONFIG_STM32_SERIE 427
+      CONFIG_STM32_SERIES 427
 
       CONFIG_CPU_ARM32M_M_IRQ_COUNT
     %end
@@ -385,7 +385,7 @@
     %subsection stm32-f429??
       %types features
 
-      CONFIG_STM32_SERIE 429
+      CONFIG_STM32_SERIES 429
 
       CONFIG_CPU_ARM32M_M_IRQ_COUNT
     %end
@@ -393,7 +393,7 @@
     %subsection stm32-f437??
       %types features
 
-      CONFIG_STM32_SERIE 437
+      CONFIG_STM32_SERIES 437
 
       CONFIG_CPU_ARM32M_M_IRQ_COUNT
     %end
@@ -401,7 +401,7 @@
     %subsection stm32-f439??
       %types features
 
-      CONFIG_STM32_SERIE 439
+      CONFIG_STM32_SERIES 439
 
       CONFIG_CPU_ARM32M_M_IRQ_COUNT
     %end
@@ -409,7 +409,7 @@
     %subsection stm32-f479??
       %types features
 
-      CONFIG_STM32_SERIE 479
+      CONFIG_STM32_SERIES 479
 
       CONFIG_CPU_ARM32M_M_IRQ_COUNT
     %end
@@ -470,7 +470,7 @@
     %subsection stm32-f746??
       %types features
 
-      CONFIG_STM32_SERIE 746
+      CONFIG_STM32_SERIES 746
 
       CONFIG_CPU_ARM32M_M_IRQ_COUNT 85
     %end
@@ -478,7 +478,7 @@
     %subsection stm32-f756??
       %types features
 
-      CONFIG_STM32_SERIE 756
+      CONFIG_STM32_SERIES 756
 
       CONFIG_CPU_ARM32M_M_IRQ_COUNT 85
     %end
@@ -516,25 +516,25 @@
     %subsection stm32-l471??
       %types features
 
-      CONFIG_STM32_SERIE 471
+      CONFIG_STM32_SERIES 471
     %end
 
     %subsection stm32-l475??
       %types features
 
-      CONFIG_STM32_SERIE 475
+      CONFIG_STM32_SERIES 475
     %end
 
     %subsection stm32-l476??
       %types features
 
-      CONFIG_STM32_SERIE 476
+      CONFIG_STM32_SERIES 476
     %end
 
     %subsection stm32-l486??
       %types features
 
-      CONFIG_STM32_SERIE 486
+      CONFIG_STM32_SERIES 486
     %end
 
     ########### Ram size

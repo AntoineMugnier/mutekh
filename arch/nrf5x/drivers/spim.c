@@ -34,8 +34,14 @@
 #include <device/class/iomux.h>
 
 #include <arch/nrf5x/spim.h>
+#if defined(CONFIG_DRIVER_NRF52_SPIM_PAN58)
+# include <arch/nrf5x/ppi.h>
+# include <arch/nrf5x/gpiote.h>
+#endif
 
-#define dprintk(...) do{}while(0)
+#define GPIOTE_ADDR NRF_PERIPHERAL_ADDR(NRF5X_GPIOTE)
+#define GPIOTE_CHANNEL CONFIG_DRIVER_NRF52_SPIM_PAN58_GPIOTE_FIRST
+#define PPI_CHANNEL CONFIG_DRIVER_NRF52_SPIM_PAN58_PPI_FIRST
 
 DRIVER_PV(struct nrf5x_spim_context_s
 {
@@ -59,40 +65,32 @@ static DEV_SPI_CTRL_CONFIG(nrf5x_spim_config)
 {
   struct device_s *dev = accessor->dev;
   struct nrf5x_spim_context_s *pv = dev->drv_pv;
-  error_t err = 0;
   uint32_t config = 0;
   uint32_t rate;
-
-  LOCK_SPIN_IRQ(&dev->lock);
-
-  if (pv->current_transfer != NULL) {
-    err = -EBUSY;
-    goto out;
-  }
 
   if (cfg->word_width != 8
       || cfg->miso_pol != DEV_SPI_ACTIVE_HIGH
       || cfg->mosi_pol != DEV_SPI_ACTIVE_HIGH) {
-    err = -ENOTSUP;
-    goto out;
+    return -ENOTSUP;
   }
+
+  LOCK_SPIN_IRQ_SCOPED(&dev->lock);
+
+  if (pv->current_transfer != NULL)
+    return -EBUSY;
 
   switch (cfg->ck_mode) {
   case DEV_SPI_CK_MODE_0:
-    config |= NRF_SPIM_CONFIG_CPOL_ACTIVEHIGH
-      | NRF_SPIM_CONFIG_CPHA_LEADING;
+    config |= NRF_SPIM_CONFIG_CPOL_ACTIVEHIGH | NRF_SPIM_CONFIG_CPHA_LEADING;
     break;
   case DEV_SPI_CK_MODE_1:
-    config |= NRF_SPIM_CONFIG_CPOL_ACTIVELOW
-      | NRF_SPIM_CONFIG_CPHA_LEADING;
+    config |= NRF_SPIM_CONFIG_CPOL_ACTIVELOW | NRF_SPIM_CONFIG_CPHA_LEADING;
     break;
   case DEV_SPI_CK_MODE_2:
-    config |= NRF_SPIM_CONFIG_CPOL_ACTIVEHIGH
-      | NRF_SPIM_CONFIG_CPHA_TRAILING;
+    config |= NRF_SPIM_CONFIG_CPOL_ACTIVEHIGH | NRF_SPIM_CONFIG_CPHA_TRAILING;
     break;
   case DEV_SPI_CK_MODE_3:
-    config |= NRF_SPIM_CONFIG_CPOL_ACTIVELOW
-      | NRF_SPIM_CONFIG_CPHA_TRAILING;
+    config |= NRF_SPIM_CONFIG_CPOL_ACTIVELOW | NRF_SPIM_CONFIG_CPHA_TRAILING;
     break;
   }
 
@@ -111,10 +109,7 @@ static DEV_SPI_CTRL_CONFIG(nrf5x_spim_config)
   nrf_reg_set(pv->addr, NRF_SPIM_FREQUENCY,
               NRF_SPIM_FREQUENCY_(rate));
 
- out:
-  LOCK_RELEASE_IRQ(&dev->lock);
-
-  return err;
+  return 0;
 }
 
 #define nrf5x_spim_select (dev_spi_ctrl_select_t*)dev_driver_notsup_fcn
@@ -123,10 +118,10 @@ static void nrf5x_spim_transfer_ended(struct nrf5x_spim_context_s *pv)
 {
   struct dev_spi_ctrl_transfer_s *tr = pv->current_transfer;
 
-  dprintk("%s, count %d transferred %d\n", __FUNCTION__, tr->data.count, pv->transferred);
+  logk_trace("%s, count %d transferred %d\n", __FUNCTION__, tr->data.count, pv->transferred);
 
   if (tr->data.in && tr->data.in_width)
-    dprintk("in: %P\n", nrf_reg_get(pv->addr, NRF_SPIM_RXD_PTR), pv->transferred);
+    logk_trace("in: %P\n", nrf_reg_get(pv->addr, NRF_SPIM_RXD_PTR), pv->transferred);
 
   assert(tr);
 
@@ -236,16 +231,24 @@ static void nrf5x_spim_next_start(struct nrf5x_spim_context_s *pv)
     nrf_reg_set(pv->addr, NRF_SPIM_RXD_PTR, 0);
   }
 
-  dprintk("%s count %d out w %d in w %d%s\n", __FUNCTION__,
+  logk_trace("%s count %d out w %d in w %d%s\n", __FUNCTION__,
           count,
           tr->data.out_width,
           tr->data.in_width, pv->buffered_in ? " buffered" : "");
 
   if (tr->data.out_width)
-    dprintk("out: %P\n", nrf_reg_get(pv->addr, NRF_SPIM_TXD_PTR), count);
+    logk_trace("out: %P\n", nrf_reg_get(pv->addr, NRF_SPIM_TXD_PTR), count);
 
   nrf_reg_set(pv->addr, NRF_SPIM_TXD_MAXCNT, tr->data.out_width ? count : 0);
   nrf_reg_set(pv->addr, NRF_SPIM_RXD_MAXCNT, tr->data.in && tr->data.in_width ? count : 0);
+
+#if defined(CONFIG_DRIVER_NRF52_SPIM_PAN58)
+  if (nrf_reg_get(pv->addr, NRF_SPIM_RXD_MAXCNT) <= 1
+      && nrf_reg_get(pv->addr, NRF_SPIM_TXD_MAXCNT) == 1)
+    nrf_ppi_enable(PPI_CHANNEL);
+  else
+    nrf_ppi_disable(PPI_CHANNEL);
+#endif
 
   pv->transferred = count;
 
@@ -259,9 +262,9 @@ static DEV_IRQ_SRC_PROCESS(nrf5x_spim_irq)
   struct nrf5x_spim_context_s *pv = dev->drv_pv;
   struct dev_spi_ctrl_transfer_s *tr = pv->current_transfer;
 
-  //dprintk("%s\n", __FUNCTION__);
+  logk_trace("%s\n", __FUNCTION__);
 
-  lock_spin(&dev->lock);
+  LOCK_SPIN_SCOPED(&dev->lock);
 
   if (nrf_event_check(pv->addr, NRF_SPIM_END)) {
     nrf_event_clear(pv->addr, NRF_SPIM_END);
@@ -277,8 +280,6 @@ static DEV_IRQ_SRC_PROCESS(nrf5x_spim_irq)
       }
     }
   }
-
-  lock_release(&dev->lock);
 }
 
 static DEV_SPI_CTRL_TRANSFER(nrf5x_spim_transfer)
@@ -287,7 +288,7 @@ static DEV_SPI_CTRL_TRANSFER(nrf5x_spim_transfer)
   struct nrf5x_spim_context_s *pv = dev->drv_pv;
   bool_t done = 1;
 
-  dprintk("%s\n", __FUNCTION__);
+  logk_trace("%s\n", __FUNCTION__);
 
   LOCK_SPIN_IRQ(&dev->lock);
 
@@ -355,8 +356,19 @@ static DEV_INIT(nrf5x_spim_init)
 
   nrf_it_disable(pv->addr, NRF_SPIM_END);
 
-  device_irq_source_init(dev, pv->irq_ep, 1, &nrf5x_spim_irq);
+#if defined(CONFIG_DRIVER_NRF52_SPIM_PAN58)
+  nrf_reg_set(GPIOTE_ADDR, NRF_GPIOTE_CONFIG(GPIOTE_CHANNEL), 0
+              | NRF_GPIOTE_CONFIG_MODE_EVENT
+              | NRF_GPIOTE_CONFIG_PSEL(id[0])
+              | NRF_GPIOTE_CONFIG_POLARITY_TOGGLE);
 
+  nrf_ppi_setup(PPI_CHANNEL,
+                GPIOTE_ADDR, NRF_GPIOTE_IN(GPIOTE_CHANNEL),
+                pv->addr, NRF_SPIM_STOP);
+#endif
+
+
+  device_irq_source_init(dev, pv->irq_ep, 1, &nrf5x_spim_irq);
   if (device_irq_source_link(dev, pv->irq_ep, 1, -1))
     goto free_queue;
 

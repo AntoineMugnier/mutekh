@@ -1,100 +1,176 @@
+
+/**
+  @file
+  @module {Core::Kernel services}
+  @short Debugging messages output API
+*/
+
 #ifndef MUTEK_PRINTK_H_
 #define MUTEK_PRINTK_H_
 
 #include <stdarg.h>
 #include <libc/formatter.h>
 
-/**
- * @file
- * @module {Core::Kernel services}
- * @short Debugging messages output API
- */
+#include <gct_platform.h>
+#include <gct_lock_hexo_lock.h>
+#include <gct/container_slist.h>
 
-#if defined(CONFIG_MUTEK_PRINTK_HANDLER)
+#define GCT_CONTAINER_ALGO_printk_backend SLIST
+#define GCT_CONTAINER_LOCK_printk_backend NOLOCK
 
-/**
-   @this defines the backend function for printk() output
+#ifndef LOGK_MODULE_ID
+/** A four characters @ref logk module id defined for the current compilation unit. */
+# define LOGK_MODULE_ID "none"
+#endif
 
-   @param f The function to call
-   @param ctx Context to give back to the @tt f
- */
-void printk_set_output(printf_output_func_t *f, void *ctx);
+/** @This specifies the logk level.
+    @see logk_set_filter */
+enum logk_level_e
+{
+  LOGK_LEVEL_TRACE =   0x10,
+  LOGK_LEVEL_DEBUG =   0x20,
+  LOGK_LEVEL_NORMAL=   0x30,
+  LOGK_LEVEL_WARNING = 0x40,
+  LOGK_LEVEL_ERROR =   0x50
+};
 
-/**
-   @this prints a kernel message to the printk backend set by @tt
-   printk_set_output. If available. There is no guarantee the printk
-   actually writes anywhere.
+/** @hidden static assert for logk module id len */
+typedef char printk_module_len_isnt_4_t[-(sizeof(LOGK_MODULE_ID) != 5)];
 
-   @param format Format syntax, and variadic parameters, like printf()
-   @returns count of bytes actually emitted
-   @see formatter_printf
- */
+struct printk_backend_s;
+
+/** @see printk_handler_t */
+#define PRINTK_HANDLER(n) void (n)(struct printk_backend_s *backend, \
+                                   const char *str, size_t len)
+/** @This is the printk backend output handler.
+    It may be called from interrupt context. */
+typedef PRINTK_HANDLER(printk_handler_t);
+
+/** @internalmembers printk backend entry */
+struct printk_backend_s
+{
+  printk_handler_t *handler;
+  GCT_CONTAINER_ENTRY(printk_backend, list_entry);
+  uint32_t id;
+  int8_t level;
+};
+
+GCT_CONTAINER_TYPES      (printk_backend, struct printk_backend_s *, list_entry);
+
+/** @This registers a printk backend */
+config_depend(CONFIG_MUTEK_PRINTK)
+void printk_register(struct printk_backend_s *s, printk_handler_t *handler);
+
+/** @This unregisters a printk backend */
+config_depend(CONFIG_MUTEK_PRINTK)
+void printk_unregister(struct printk_backend_s *s);
+
+/** @This set the logk runtime filtering.
+    Filtering by module is disabled if the @tt id pointer is @tt NULL.
+    @see #CONFIG_MUTEK_PRINTK_RUNTIME_LEVEL
+    @see #CONFIG_MUTEK_PRINTK_RUNTIME_EXPR */
+config_depend(CONFIG_MUTEK_PRINTK)
+void logk_set_filter(struct printk_backend_s *backend,
+                     const char id[4], enum logk_level_e level);
+
+/** @multiple @This outputs a formatted string to the backends.
+
+    Output is not filtered according to the log level.  Use the @ref
+    #logk family of functions instead when the intent is to output
+    filtered log entries.
+
+    @see formatter_printf */
+config_depend(CONFIG_MUTEK_PRINTK)
 ssize_t printk(const char *format, ...);
 
-/**
-   @this prints a kernel message to the printk backend set by @tt
-   printk_set_output. If available. There is no guarantee the printk
-   actually writes anywhere.
-   
-   @param format Format syntax
-   @param ap variadic parameters, like vprintf()
-   @returns count of bytes actually emitted
-   @see formatter_printf
- */
+/** @see printk */
+config_depend(CONFIG_MUTEK_PRINTK)
 ssize_t vprintk(const char *format, va_list ap);
 
 /**
-   @this prints a binary memory dump of memory to the current printk()
-   backend. Output is terminal-protected (all characters between
+   @This prints a binary memory dump of memory to the
+   backends. Output is terminal-protected (all characters between
    ascii(0) and ascii(31) are replaced by "." in output).
 
-   Address appearing on the side of the dump may not be the address of
-   the memory buffer holding the data.
-   
-   @param address Printed address for the first byte of dump
-   @param data Data buffer to print
-   @param len Length of buffer to print
- */
+   Address appearing on the side of the dump can be defined.
+
+   Output is not filtered according to the log level.
+*/
 config_depend(CONFIG_MUTEK_PRINTK_HEXDUMP)
 void hexdumpk(uintptr_t address, const void *data, size_t len);
 
-/**
-   Write to the current printk() backend, as set by printk_set_output.
-
-   @param data Data buffer to write
-   @param len Length of data buffer to write
- */
+/** @This write raw data to the current backends.
+    Output is not filtered according to the log level. */
+config_depend(CONFIG_MUTEK_PRINTK)
 void writek(const char *data, size_t len);
 
-#else /* no printk */
+/** @internal @see #vlogk */
+config_depend(CONFIG_MUTEK_PRINTK)
+ssize_t vlogk_(const char *format, va_list ap);
 
-ALWAYS_INLINE
-void printk_set_output(printf_output_func_t *f, void *ctx)
-{}
+/** @internal @see #logk */
+config_depend(CONFIG_MUTEK_PRINTK)
+ssize_t logk_(const char *format, ...);
 
-ALWAYS_INLINE
-ssize_t printk(const char *format, ...)
-{
-	return 0;
-}
+/** @internal */
+#define logk_level_(log_func, level_str, format, ...)                   \
+  do {                                                                  \
+    bool_t __do_log = 0;                                                \
+    {                                                                   \
+       __unused__ uint8_t level = level_str[0];                         \
+       __unused__ uint32_t id   = ((LOGK_MODULE_ID[0] << 24) |          \
+                                   (LOGK_MODULE_ID[1] << 16) |          \
+                                   (LOGK_MODULE_ID[2] << 8)  |          \
+                                    LOGK_MODULE_ID[3]);                 \
+       __do_log = !!(CONFIG_MUTEK_PRINTK_COMPILE_EXPR);                 \
+    }                                                                   \
+    if (__do_log)                                                       \
+      log_func(level_str "[" LOGK_MODULE_ID "] " format "\n",           \
+               ## __VA_ARGS__);                                         \
+  } while (0)
 
-ALWAYS_INLINE
-void hexdumpk(uintptr_t address, const void *data, size_t len)
-{
-}
+#ifdef CONFIG_MUTEK_PRINTK
+/** @multiple @This sends a line to the printk backends with the @ref
+    LOGK_LEVEL_TRACE level */
+# define vlogk_trace(format, ap)   logk_level_(vlogk_, "\x10", format, ap)
+# define logk_trace(format...)   logk_level_(logk_, "\x10", format)
+/** @multiple @This sends a line to the printk backends with the @ref
+    LOGK_LEVEL_DEBUG level */
+# define vlogk_debug(format, ap)   logk_level_(vlogk_, "\x20", format, ap)
+# define logk_debug(format...)   logk_level_(logk_, "\x20", format)
+/** @multiple @This sends a line to the printk backends with the @ref
+    LOGK_LEVEL_NORMAL level */
+# define vlogk(format, ap)         logk_level_(vlogk_, "\x30", format, ap)
+# define logk(format...)         logk_level_(logk_, "\x30", format)
+/** @multiple @This sends a line to the printk backends with the @ref
+    LOGK_LEVEL_WARNING level */
+# define vlogk_warning(format, ap) logk_level_(vlogk_, "\x40", format, ap)
+# define logk_warning(format...) logk_level_(logk_, "\x40", format)
+/** @multiple @This sends a line to the printk backends with the @ref
+    LOGK_LEVEL_ERROR level */
+# define vlogk_error(format, ap)   logk_level_(vlogk_, "\x50", format, ap)
+# define logk_error(format...)   logk_level_(logk_, "\x50", format)
 
-ALWAYS_INLINE
-inline ssize_t vprintk(const char *format, va_list ap)
-{
-	return 0;
-}
+#else
 
-ALWAYS_INLINE
-void writek(const char *data, size_t len)
-{
-}
+/** @multiple @hidden
+   silently ignore calls to these functions when printk is disabled. */
+# define vlogk_trace(format, ap)
+# define logk_trace(format...)
+# define vlogk_debug(format, ap)
+# define logk_debug(format...)
+# define vlogk(format, ap)
+# define logk(format...)
+# define vlogk_warning(format, ap)
+# define logk_warning(format...)
+# define vlogk_error(format, ap)
+# define logk_error(format...)
+# define printk(...)
+# define vprintk(...)
+# define hexdumpk(...)
+# define writek(...)
 
-#endif /* printk */
+#endif
 
 #define PRINTK_RET(val, ...)			\
 do {						\

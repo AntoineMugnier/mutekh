@@ -22,8 +22,9 @@ static void cksum_update(uint32_t x)
 
 static BC_CCALL_FUNCTION(c_func)
 {
-  cksum_update(dst);
-  return dst * 13;
+  bc_reg_t r = bc_get_reg(ctx, 2);
+  cksum_update(r);
+  bc_set_reg(ctx, 2, r * 13);
 }
 
 extern const struct bc_descriptor_s test_bytecode;
@@ -37,6 +38,8 @@ void app_start()
 
   bc_init(&vm, &test_bytecode);
   bc_set_regs(&vm, 0b11, buf, &c_func);
+  for (uint_fast8_t i = 2; i < 16; i++)
+    bc_set_reg(&vm, i, 0x5a5a5a5a);
   bc_set_pc(&vm, &test_bytecode_entry);
 
 #ifdef CONFIG_MUTEK_BYTECODE_CHECKING
@@ -60,7 +63,7 @@ void app_start()
 #ifdef CONFIG_MUTEK_BYTECODE_DEBUG
           bc_dump(&vm, 1);
 #endif
-          printk("bytecode execution error\n");
+          printk("bytecode execution error at %p\n", bc_get_pc(&vm));
           break; /* error */
         }
 

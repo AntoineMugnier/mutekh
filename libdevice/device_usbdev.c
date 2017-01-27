@@ -58,6 +58,14 @@ static bool_t usbdev_get_string(const char ** str, uint8_t idx, size_t *len)
   return 0;
 }
 
+static void usbdev_set_ep0_state(struct dev_usbdev_context_s *ctx, 
+                                 enum dev_usbdev_ctrl_ep_state_e state)
+                             
+{
+  usbdev_printk("USBDEV EP0: %d\n", state);
+  ctx->ep0_state = state;
+}
+
 static void usbdev_dump_setup(const struct usb_ctrl_setup_s *setup)
 {
   printk("  bRequestType: %x\n", usb_setup_reqtype_get(setup));
@@ -450,7 +458,7 @@ static void usbdev_fsm_handle_event(struct dev_usbdev_context_s *ctx, uint8_t ev
 
 static inline void usbdev_ep0_status_in(struct dev_usbdev_context_s *ctx)
 {
-  ctx->ep0_state = EP0_STATUS_WAIT;
+  usbdev_set_ep0_state(ctx, EP0_STATUS_WAIT);
 
   error_t err = usbdev_ctrl_transaction(ctx, DEV_USBDEV_CTRL_STATUS_IN);
 
@@ -472,7 +480,7 @@ static void usbdev_enable_service(struct dev_usbdev_context_s *ctx)
   if (ctx->service_cnt == 0)
     return usbdev_ep0_status_in(ctx);
 
-  ctx->ep0_state = EP0_SRVC_ENABLE_WAIT;
+  usbdev_set_ep0_state(ctx, EP0_SRVC_ENABLE_WAIT);
 
   GCT_FOREACH(usbdev_service, &ctx->service, service, {
     /* A request must be posted */
@@ -656,14 +664,14 @@ static void usbdev_ep0_service_setup(struct dev_usbdev_context_s *ctx)
 
   //  usbdev_dump_setup(setup);
 
-  ctx->ep0_state = EP0_SRVC_STATUS_IN;
+  usbdev_set_ep0_state(ctx, EP0_SRVC_STATUS_IN);
 
   if (usb_setup_length_get(setup))
     {
       if (usb_setup_direction_get(setup) == USB_DEVICE_TO_HOST)
-        ctx->ep0_state = EP0_SRVC_DATA_IN;
+        usbdev_set_ep0_state(ctx, EP0_SRVC_DATA_IN);
       else
-        ctx->ep0_state = EP0_SRVC_DATA_OUT;
+        usbdev_set_ep0_state(ctx, EP0_SRVC_DATA_OUT);
     }
 
   uint8_t intf = usb_setup_index_get(setup);
@@ -1041,7 +1049,7 @@ static void usbdev_ep0_idle(struct dev_usbdev_context_s *ctx)
   memset(&ctx->it, 0, sizeof(ctx->it));
   memset(setup, 0, 8);
 
-  ctx->ep0_state = EP0_SETUP_WAIT;
+  usbdev_set_ep0_state(ctx, EP0_SETUP_WAIT);
 
   /* Get next control packet */
   error_t err = usbdev_ctrl_transaction(ctx, DEV_USBDEV_CTRL_SETUP);
@@ -1065,7 +1073,7 @@ static void usbdev_ep0_idle(struct dev_usbdev_context_s *ctx)
 
 static inline void usbdev_ep0_status_out(struct dev_usbdev_context_s *ctx)
 {
-  ctx->ep0_state = EP0_STATUS_WAIT;
+  usbdev_set_ep0_state(ctx, EP0_STATUS_WAIT);
 
   error_t err = usbdev_ctrl_transaction(ctx, DEV_USBDEV_CTRL_STATUS_OUT);
 
@@ -1101,7 +1109,7 @@ static void usbdev_ep0_zero_len_packet(struct dev_usbdev_context_s *ctx)
     return usbdev_ep0_status_out(ctx);
 
   /* Zero length packet must be send */
-  ctx->ep0_state = EP0_DATA_IN_ZERO_WAIT;
+  usbdev_set_ep0_state(ctx, EP0_DATA_IN_ZERO_WAIT);
   ctx->it.data_pkt_size = 0;
 
   error_t err = usbdev_ctrl_transaction(ctx, DEV_USBDEV_DATA_IN);
@@ -1123,7 +1131,7 @@ static void usbdev_ep0_data_in_done(struct dev_usbdev_context_s *ctx)
 {
   if (ctx->ep0_state == EP0_SRVC_DATA_IN_WAIT)
     {
-      ctx->ep0_state = EP0_SRVC_DATA_IN;
+      usbdev_set_ep0_state(ctx, EP0_SRVC_DATA_IN);
       /* Call service kroutine */
       return usbdev_service_data(ctx, 0);
     }
@@ -1147,9 +1155,9 @@ static void usbdev_ep0_data_in(struct dev_usbdev_context_s *ctx)
     }
 
   if (ctx->ep0_state == EP0_SRVC_DATA_IN)
-    ctx->ep0_state = EP0_SRVC_DATA_IN_WAIT;
+    usbdev_set_ep0_state(ctx, EP0_SRVC_DATA_IN_WAIT);
   else
-    ctx->ep0_state = EP0_DATA_IN_WAIT;
+    usbdev_set_ep0_state(ctx, EP0_DATA_IN_WAIT);
 
   error_t err = usbdev_ctrl_transaction(ctx, DEV_USBDEV_DATA_IN);
 
@@ -1168,7 +1176,7 @@ static void usbdev_ep0_data_in(struct dev_usbdev_context_s *ctx)
 
 static inline void usbdev_ep0_stall(struct dev_usbdev_context_s *ctx, enum dev_usbdev_rq_type_e type)
 {
-  ctx->ep0_state = EP0_STALL_WAIT;
+  usbdev_set_ep0_state(ctx, EP0_STALL_WAIT);
 
   error_t err = usbdev_ctrl_transaction(ctx, type);
 
@@ -1233,7 +1241,7 @@ static void usbdev_ep0_data_out_done(struct dev_usbdev_context_s *ctx)
 
   if (ctx->ep0_state == EP0_SRVC_DATA_OUT_WAIT)
     {
-      ctx->ep0_state = EP0_SRVC_DATA_OUT;
+      usbdev_set_ep0_state(ctx, EP0_SRVC_DATA_OUT);
       /* Call service kroutine */
       return usbdev_service_data(ctx, 0);
     }
@@ -1245,9 +1253,9 @@ static void usbdev_ep0_data_out_done(struct dev_usbdev_context_s *ctx)
 static void usbdev_ep0_data_out(struct dev_usbdev_context_s *ctx)
 {
   if (ctx->ep0_state == EP0_SRVC_DATA_OUT)
-    ctx->ep0_state = EP0_SRVC_DATA_OUT_WAIT;
+    usbdev_set_ep0_state(ctx, EP0_SRVC_DATA_OUT_WAIT);
   else
-    ctx->ep0_state = EP0_DATA_OUT_WAIT;
+    usbdev_set_ep0_state(ctx, EP0_DATA_OUT_WAIT);
 
   error_t err = usbdev_ctrl_transaction(ctx, DEV_USBDEV_DATA_OUT);
 
@@ -1283,7 +1291,7 @@ static void usbdev_set_configuration(struct dev_usbdev_context_s *ctx, const str
       if (cfg_number == 1)
         return usbdev_ep0_status_in(ctx);
 
-      ctx->ep0_state = EP0_SRVC_DISABLE_WAIT;
+      usbdev_set_ep0_state(ctx, EP0_SRVC_DISABLE_WAIT);
       usbdev_disable_endpoint(ctx, NULL, 0);
 
       return usbdev_disable_service(ctx);
@@ -1310,7 +1318,7 @@ static void usbdev_set_configuration(struct dev_usbdev_context_s *ctx, const str
       ctx->cfg.type = DEV_USBDEV_CONFIGURE;
       ctx->cfg.error = 0;
 
-      ctx->ep0_state = EP0_CTRL_CONFIGURATION_WAIT;
+      usbdev_set_ep0_state(ctx, EP0_CTRL_CONFIGURATION_WAIT);
 
       LOCK_SPIN_IRQ(&ctx->dev->lock);
 
@@ -1575,7 +1583,7 @@ static inline void usbdev_set_address(struct dev_usbdev_context_s *ctx, const st
 
   LOCK_RELEASE_IRQ(&ctx->dev->lock);
 
-  ctx->ep0_state = EP0_CTRL_SET_ADDRESS_WAIT;
+  usbdev_set_ep0_state(ctx, EP0_CTRL_SET_ADDRESS_WAIT);
 
   switch (err)
     {
@@ -1703,7 +1711,7 @@ static void usbdev_set_interface(struct dev_usbdev_context_s *ctx, const struct 
           ctx->cfg.type = DEV_USBDEV_CHANGE_INTERFACE;
           ctx->cfg.error = 0;
 
-          ctx->ep0_state = EP0_SET_INTERFACE_WAIT;
+          usbdev_set_ep0_state(ctx, EP0_SET_INTERFACE_WAIT);
 
           error_t err;
 
@@ -1716,7 +1724,7 @@ static void usbdev_set_interface(struct dev_usbdev_context_s *ctx, const struct 
           switch (err)
             {
             case 0:
-              ctx->ep0_state = EP0_SRVC_SET_INTERFACE_WAIT;
+              usbdev_set_ep0_state(ctx, EP0_SRVC_SET_INTERFACE_WAIT);
               return;
             case -EAGAIN:
               /* Configuration is on-going */
@@ -1846,7 +1854,7 @@ static KROUTINE_EXEC(usbdev_config_done)
 #if (CONFIG_USBDEV_MAX_ALTERNATE_COUNT > 0)
             case EP0_SET_INTERFACE_WAIT:
               /* Wait for service acknoledge */
-              ctx->ep0_state = EP0_SRVC_SET_INTERFACE_WAIT;
+              usbdev_set_ep0_state(ctx, EP0_SRVC_SET_INTERFACE_WAIT);
               return;
             case EP0_CTRL_SET_INTERFACE_WAIT:
               /* Process pending transfer */
@@ -1969,7 +1977,7 @@ static void usbdev_stack_transfer_0_done(struct dev_usbdev_context_s *ctx,
           break;
 
         case EP0_SRVC_DATA_OUT_WAIT:
-          ctx->ep0_state = EP0_SRVC_DATA_OUT;
+          usbdev_set_ep0_state(ctx, EP0_SRVC_DATA_OUT);
           /* Check if data stage is valid */
           usbdev_ep0_data_out_stage_done(ctx);
           /* Call service kroutine */
@@ -1980,7 +1988,7 @@ static void usbdev_stack_transfer_0_done(struct dev_usbdev_context_s *ctx,
           break;
 
         case EP0_SRVC_DATA_IN_WAIT:
-          ctx->ep0_state = EP0_SRVC_DATA_IN;
+          usbdev_set_ep0_state(ctx, EP0_SRVC_DATA_IN);
           /* Call service kroutine */
           return usbdev_service_data(ctx, 0);
 
@@ -2086,7 +2094,7 @@ error_t usbdev_stack_request(struct device_usbdev_s *dev,
 #if (CONFIG_USBDEV_MAX_ALTERNATE_COUNT > 0)
           case EP0_SET_INTERFACE_WAIT:
             /* Wait for controller acknoledge */
-            ctx->ep0_state = EP0_CTRL_SET_INTERFACE_WAIT;
+            usbdev_set_ep0_state(ctx, EP0_CTRL_SET_INTERFACE_WAIT);
             break;
           case EP0_SRVC_SET_INTERFACE_WAIT:
             /* Reconfiguration is done */
@@ -2323,7 +2331,7 @@ error_t usbdev_stack_init(struct device_s *dev,
 
   /* Endpoint 0 */
   ctx->data = ctx->ops->f_alloc(ctx, CONFIG_USBDEV_EP0_BUFFER_SIZE);
-  ctx->ep0_state = EP0_IDLE;
+  usbdev_set_ep0_state(ctx, EP0_IDLE);
   ctx->tr.ep = 0;
 
   kroutine_init_deferred(&ctx->kr, &usbdev_init);

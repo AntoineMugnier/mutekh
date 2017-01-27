@@ -1,19 +1,22 @@
 %include arch/nrf5x/board/board.build
 
-%section nrf51-??aa
+%section nrf51?22-??aa
   %inherit nrf5x-51822-256-16
 
-%section nrf51-??ab
+%section nrf51?22-??ab
   %inherit nrf5x-51822-128-16
 
-%section nrf51-??ac
+%section nrf51?22-??ac
   %inherit nrf5x-51822-256-32
 
-%section nrf52-??aa
+%section nrf52832-??aa
   %inherit nrf5x-52832-512-64
 
-%section nrf52-??ab
+%section nrf52832-??ab
   %inherit nrf5x-52832-256-32
+
+%section nrf52840-??aa
+  %inherit nrf5x-52840-1024-256
 
 %section nrf5x-*-*-*
   %types architecture
@@ -25,18 +28,20 @@
     CONFIG_DRIVER_NRF5X_GPIO_PWM
     CONFIG_DRIVER_NRF5X_NVMC
     CONFIG_DRIVER_NRF5X_PERSIST
-#    CONFIG_DRIVER_NRF5X_I2C
+    CONFIG_DRIVER_NRF5X_I2C
     CONFIG_DRIVER_NRF5X_RTC
     CONFIG_DRIVER_NRF5X_TIMER
     CONFIG_DRIVER_NRF5X_SPI
-    CONFIG_DRIVER_NRF52_SPIM
     CONFIG_DRIVER_NRF5X_UART
-    CONFIG_DRIVER_NRF52_UARTE
     CONFIG_DRIVER_NRF5X_AES
     CONFIG_DRIVER_NRF5X_AES_RANDOM
     CONFIG_DRIVER_NRF5X_AES_CMAC
     CONFIG_DRIVER_NRF5X_RNG
     CONFIG_DRIVER_NRF5X_ADC
+    %subsection nrf5x-52???-*-*
+      CONFIG_DRIVER_NRF52_UARTE
+      CONFIG_DRIVER_NRF52_SPIM
+    %end
   %end
 
   CONFIG_ARCH_NRF5X
@@ -78,36 +83,52 @@
     %types family
     %set BUILD_NAME nrf51822
 
-    CONFIG_ARCH_NRF51
+    CONFIG_NRF5X_MODEL 51822
     CONFIG_CPU_ARM32M_CORTEXM0
     CONFIG_CPU_ARM32M_TIMER_SYSTICK undefined
     CONFIG_CPU_ARM32M_CLOCK undefined
     CONFIG_CPU_ARM32M_M_IRQ_COUNT 31
     CONFIG_DRIVER_NRF5X_PERSIST_SIZE 2048
+    CONFIG_NRF5X_GPIO_COUNT 31
   %end
 
   %subsection nrf5x-51422-*-*
     %types family
     %set BUILD_NAME nrf51422
 
-    CONFIG_ARCH_NRF51
+    CONFIG_NRF5X_MODEL 51422
     CONFIG_CPU_ARM32M_CORTEXM0
     CONFIG_CPU_ARM32M_TIMER_SYSTICK undefined
     CONFIG_CPU_ARM32M_CLOCK undefined
     CONFIG_CPU_ARM32M_M_IRQ_COUNT 31
     CONFIG_DRIVER_NRF5X_PERSIST_SIZE 2048
+    CONFIG_NRF5X_GPIO_COUNT 31
   %end
 
   %subsection nrf5x-52832-*-*
     %types family
     %set BUILD_NAME nrf52832
 
-    CONFIG_ARCH_NRF52
+    CONFIG_NRF5X_MODEL 52832
     CONFIG_CPU_ARM32M_CORTEXM4
     CONFIG_CPU_ARM32M_TIMER_SYSTICK undefined
     CONFIG_CPU_ARM32M_CLOCK undefined
     CONFIG_CPU_ARM32M_M_IRQ_COUNT 37
     CONFIG_DRIVER_NRF5X_PERSIST_SIZE 8192
+    CONFIG_NRF5X_GPIO_COUNT 32
+  %end
+
+  %subsection nrf5x-52840-*-*
+    %types family
+    %set BUILD_NAME nrf52840
+
+    CONFIG_NRF5X_MODEL 52840
+    CONFIG_CPU_ARM32M_CORTEXM4
+    CONFIG_CPU_ARM32M_TIMER_SYSTICK undefined
+    CONFIG_CPU_ARM32M_CLOCK undefined
+    CONFIG_CPU_ARM32M_M_IRQ_COUNT 45
+    CONFIG_DRIVER_NRF5X_PERSIST_SIZE 8192
+    CONFIG_NRF5X_GPIO_COUNT 48
   %end
 
   %subsection nrf5x-*-128-*
@@ -128,6 +149,12 @@
     CONFIG_LOAD_ROM_RO_SIZE 0x00080000
   %end
 
+  %subsection nrf5x-*-1024-*
+    %types flash
+
+    CONFIG_LOAD_ROM_RO_SIZE 0x00100000
+  %end
+
   %subsection nrf5x-*-*-16
     %types sram
 
@@ -146,7 +173,31 @@
     CONFIG_NRF5X_RAMSIZE 0x10000
   %end
 
+  %subsection nrf5x-*-*-256
+    %types sram
+
+    CONFIG_NRF5X_RAMSIZE 0x40000
+  %end
+
   %requiretypes family
   %requiretypes sram
   %requiretypes flash
 %end
+
+%section printk-uart
+  CONFIG_DRIVER_NRF5X_PRINTK
+  CONFIG_MUTEK_PRINTK_HEXDUMP
+
+%section shell-uart
+  CONFIG_DRIVER_NRF5X_UART
+  CONFIG_DEVICE_UART
+  %inherit shell
+
+%section printk-rtt
+  CONFIG_DRIVER_RTT_PRINTK
+  CONFIG_MUTEK_PRINTK_HEXDUMP
+
+%section shell-rtt
+  CONFIG_DRIVER_CHAR_RTT
+  CONFIG_DRIVER_CHAR_RTT_RX_BUFFER_SIZE 128
+  %inherit shell

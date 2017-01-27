@@ -1,7 +1,7 @@
 #ifndef _STM32_IRQ_H_
 #define _STM32_IRQ_H_
 
-#if CONFIG_STM32_SERIE == 401
+#if CONFIG_STM32_SERIES == 401
 
 #define STM32_IRQ_WWDG          0
 #define STM32_IRQ_EXTI16        1
@@ -68,7 +68,7 @@
 #define STM32_IRQ_FPU           81
 #define STM32_IRQ_SPI4          84
 
-#elif CONFIG_STM32_SERIE == 429
+#elif CONFIG_STM32_SERIES == 429
 
 #define STM32_IRQ_WWDG                  0
 #define STM32_IRQ_PVD                   1

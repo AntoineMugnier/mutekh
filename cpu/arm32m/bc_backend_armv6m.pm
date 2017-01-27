@@ -204,7 +204,13 @@ sub out_pack {
         for ( my $i = 0; $i < $thisop->{count}; $i++ ) {
             my %op = (
                 'bc_pack_op8' => sub {
-                    $r .= "    strb $reg[$w[$i]], [r4, #".(4 * $thisop->{packout_reg} + $i)."]\n";
+                    my $o = (4 * $thisop->{packout_reg} + $i);
+                    if ( $o > 31 ) {
+                        $r .= "    movs r0, #".$o."\n";
+                        $r .= "    strb $reg[$w[$i]], [r4, r0]\n";
+                    } else {
+                        $r .= "    strb $reg[$w[$i]], [r4, #".$o."]\n";
+                    }
                 }, 'bc_pack_op16' => sub {
                     $r .= "    strh $reg[$w[$i]], [r4, #".(4 * $thisop->{packout_reg} + $i * 2)."]\n";
                 }, 'bc_swap_pack_op16' => sub {
@@ -235,7 +241,13 @@ sub out_unpack {
         for ( my $i = 0; $i < $thisop->{count}; $i++ ) {
             my %op = (
                 'bc_unpack_op8' => sub {
-                    $r .= "    ldrb $reg[$w[$i]], [r4, #".(4 * $thisop->{packin_reg} + $i)."]\n";
+                    my $o = (4 * $thisop->{packin_reg} + $i);
+                    if ( $o > 31 ) {
+                        $r .= "    movs r0, #".$o."\n";
+                        $r .= "    ldrb $reg[$w[$i]], [r4, r0]\n";
+                    } else {
+                        $r .= "    ldrb $reg[$w[$i]], [r4, #".$o."]\n";
+                    }
                 }, 'bc_unpack_op16' => sub {
                     $r .= "    ldrh $reg[$w[$i]], [r4, #".(4 * $thisop->{packin_reg} + $i * 2)."]\n";
                 }, 'bc_unpack_swap_op16' => sub {
@@ -346,13 +358,25 @@ sub out_neq0 {
 sub out_lt {
     my ($thisop, $wi0, $wi1) = @_;
     return "    cmp $reg[$wi0], $reg[$wi1]\n".
-           "    ble 1f\n";
+           "    bhs 1f\n";
 }
 
 sub out_lteq {
     my ($thisop, $wi0, $wi1) = @_;
     return "    cmp $reg[$wi0], $reg[$wi1]\n".
-           "    blt 1f\n";
+           "    bhi 1f\n";
+}
+
+sub out_lts {
+    my ($thisop, $wi0, $wi1) = @_;
+    return "    cmp $reg[$wi0], $reg[$wi1]\n".
+           "    bge 1f\n";
+}
+
+sub out_lteqs {
+    my ($thisop, $wi0, $wi1) = @_;
+    return "    cmp $reg[$wi0], $reg[$wi1]\n".
+           "    bgt 1f\n";
 }
 
 sub mov_op {
@@ -443,12 +467,10 @@ sub parse_ccall {
 }
 
 sub out_ccall {
-    my ($thisop, $wo, $wi0, $wi1) = @_;
+    my ($thisop, $wi0) = @_;
     my $r = "    mov r0, r4\n";
-    $r .= "    mov r12, $reg[$wi1]\n";
-    $r .= "    mov r1, $reg[$wi0]\n" if $reg[$wi0] ne "r1";
-    $r .= "    blx r12\n".
-          "    mov $reg[$wo], r0\n";
+    $r .= "    mov r12, $reg[$wi0]\n";
+    $r .= "    blx r12\n";
     return $r;
 }
 

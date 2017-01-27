@@ -30,41 +30,39 @@
 #include <hexo/iospace.h>
 #include <hexo/endian.h>
 
-static void printk_out_char(uintptr_t addr, uint8_t c)
+static void printk_out_char(uint8_t c)
 {
   /* wait tx fifo not full */
-  while ((endian_le32(cpu_mem_read_32(addr + 0x2c)) & 0x10))
+  while ((endian_le32(cpu_mem_read_32(CONFIG_MUTEK_PRINTK_ADDR + 0x2c)) & 0x10))
     ;
 
-  cpu_mem_write_32(addr + 0x30, endian_le32((uint32_t)c));
+  cpu_mem_write_32(CONFIG_MUTEK_PRINTK_ADDR + 0x30, endian_le32((uint32_t)c));
 }
 
-static PRINTF_OUTPUT_FUNC(printk_out)
+static PRINTK_HANDLER(printk_out)
 {
-  uintptr_t addr = (uintptr_t)ctx;
   size_t i;
 
   /* enable TX if needed */
-  if ((endian_le32(cpu_mem_read_32(addr + 0)) & 0x30) != 0x10)
-    cpu_mem_write_32(addr + 0, endian_le32(0x110));
+  if ((endian_le32(cpu_mem_read_32(CONFIG_MUTEK_PRINTK_ADDR + 0)) & 0x30) != 0x10)
+    cpu_mem_write_32(CONFIG_MUTEK_PRINTK_ADDR + 0, endian_le32(0x110));
 
   for (i = 0; i < len; i++)
   {
     if (str[i] == '\n')
-      printk_out_char(addr, '\r');
+      printk_out_char('\r');
 
-    printk_out_char(addr, str[i]);
+    printk_out_char(str[i]);
   }
 
   /* wait tx active or tx fifo not empty */
-  while ((endian_le32(cpu_mem_read_32(addr + 0x2c)) & 0x808) ^ 0x008)
+  while ((endian_le32(cpu_mem_read_32(CONFIG_MUTEK_PRINTK_ADDR + 0x2c)) & 0x808) ^ 0x008)
     ;
 }
 
 void zynq_printk_init()
 {
-  uintptr_t addr = CONFIG_MUTEK_PRINTK_ADDR;
-
-  printk_set_output(printk_out, (void*)addr);
+  struct printk_backend_s backend;
+  printk_register(&backend, printk_out);
 }
 

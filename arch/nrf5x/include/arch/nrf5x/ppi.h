@@ -24,10 +24,10 @@
 #include "peripheral.h"
 #include "ids.h"
 
-#if defined(CONFIG_ARCH_NRF51)
+#if CONFIG_NRF5X_MODEL <= 51999
 # define NRF_PPI_COUNT 16
 # define NRF_PPI_GROUP_COUNT 4
-#elif defined(CONFIG_ARCH_NRF52)
+#elif 52000 <= CONFIG_NRF5X_MODEL && CONFIG_NRF5X_MODEL <= 52999
 # define NRF_PPI_COUNT 20
 # define NRF_PPI_GROUP_COUNT 6
 #endif

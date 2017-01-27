@@ -42,7 +42,6 @@ DRIVER_PV(struct nrf5x_rng_private_s
 {
   struct dev_irq_src_s irq_ep[1];
   dev_request_queue_root_t queue;
-  bool_t callbacking;
 });
 
 static DEV_CRYPTO_INFO(nrf5x_rng_info)
@@ -67,52 +66,35 @@ static DEV_IRQ_SRC_PROCESS(nrf5x_rng_irq)
   struct nrf5x_rng_private_s *pv = dev->drv_pv;
   struct dev_crypto_rq_s *rq;
 
-  lock_spin(&dev->lock);
+  LOCK_SPIN_SCOPED(&dev->lock);
 
   rq = dev_crypto_rq_s_cast(dev_request_queue_head(&pv->queue));
-  if (!rq)
-    goto stop;
+  if (rq) {
+    if (nrf_event_check(RNG_ADDR, NRF_RNG_VALRDY)) {
+      nrf_event_clear(RNG_ADDR, NRF_RNG_VALRDY);
+      *rq->out = nrf_reg_get(RNG_ADDR, NRF_RNG_VALUE);
+      rq->out++;
+      rq->len--;
 
-  if (nrf_event_check(RNG_ADDR, NRF_RNG_VALRDY)) {
-    nrf_event_clear(RNG_ADDR, NRF_RNG_VALRDY);
-    *rq->out = nrf_reg_get(RNG_ADDR, NRF_RNG_VALUE);
-    rq->out++;
-    rq->len--;
+      if (!rq->len) {
+        dev_request_queue_pop(&pv->queue);
+        rq->base.drvdata = 0;
+        kroutine_exec(&rq->base.kr);
 
-    if (rq->len)
-      goto again;
-    goto callback;
+        rq = dev_crypto_rq_s_cast(dev_request_queue_head(&pv->queue));
+      }
+
+      if (rq) {
+        nrf_task_trigger(RNG_ADDR, NRF_RNG_START);
+        nrf_it_enable(RNG_ADDR, NRF_RNG_VALRDY);
+
+        return;
+      }
+    }
   }
 
-  goto out;
-
- callback:
-  dev_request_queue_pop(&pv->queue);
-
-  rq->base.drvdata = 0;
-
-  pv->callbacking = 1;
-  lock_release(&dev->lock);
-  kroutine_exec(&rq->base.kr);
-  lock_spin(&dev->lock);
-  pv->callbacking = 0;
-
-  rq = dev_crypto_rq_s_cast(dev_request_queue_head(&pv->queue));
-  if (!rq)
-    goto stop;
-
- again:
-  nrf_task_trigger(RNG_ADDR, NRF_RNG_START);
-  nrf_it_enable(RNG_ADDR, NRF_RNG_VALRDY);
-
-  goto out;
-
- stop:
   nrf_it_disable(RNG_ADDR, NRF_RNG_VALRDY);
   nrf_task_trigger(RNG_ADDR, NRF_RNG_STOP);
-
- out:
-  lock_release(&dev->lock);
 }
 
 static void nrf5x_rng_byte_start(struct device_s *dev)
@@ -133,7 +115,7 @@ static DEV_CRYPTO_REQUEST(nrf5x_rng_request)
     return;
   }
 
-  LOCK_SPIN_IRQ(&dev->lock);
+  LOCK_SPIN_IRQ_SCOPED(&dev->lock);
 
   start = dev_request_queue_isempty(&pv->queue);
 
@@ -142,8 +124,6 @@ static DEV_CRYPTO_REQUEST(nrf5x_rng_request)
 
   if (start)
     nrf5x_rng_byte_start(dev);
-
-  LOCK_RELEASE_IRQ(&dev->lock);
 }
 
 

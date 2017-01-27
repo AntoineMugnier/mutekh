@@ -101,6 +101,8 @@
           @item @tt{maxval} : Keep the maximum value.
           @item @tt{minval} : Keep the minimum value.
           @item @tt{sumval} : Compute the sum of provided values.
+          @item @tt{userval} : A user defined value overrides the
+            token provided values instead of conflicting.
         @end list
 
       @end section

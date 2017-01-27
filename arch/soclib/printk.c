@@ -25,20 +25,16 @@
 #include <mutek/printk.h>
 #include <mutek/startup.h>
 
-static PRINTF_OUTPUT_FUNC(printk_out)
+static PRINTK_HANDLER(soclib_printk_out)
 {
-	uintptr_t out = (uintptr_t)ctx;
-	size_t i;
-	for ( i=0; i<len; ++i )
-		cpu_mem_write_8(out, str[i]);
-}
-
-static void soclib_printk(uintptr_t addr)
-{
-	printk_set_output(printk_out, (void*)addr);
+  size_t i;
+  for (i = 0; i < len; ++i)
+    cpu_mem_write_8(CONFIG_MUTEK_PRINTK_ADDR, str[i]);
 }
 
 void soclib_printk_init()
 {
-	soclib_printk(CONFIG_MUTEK_PRINTK_ADDR);
+  static struct printk_backend_s backend;
+  printk_register(&backend, soclib_printk_out);
 }
+

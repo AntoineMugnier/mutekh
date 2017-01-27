@@ -1,0 +1,16 @@
+This application tests an I2C driver with help of Proby FPGA board.
+
+Proby needs to be loaded with i2c_test app bitstream.  On proby side,
+P50 (P3.17) is SCL, P48 (P3.15) is SDA.  Don't forget to put your
+master board VCC on Proby's level shifter reference voltage pin (P3.1)
+
+When used with Nordic development kit boards, a custom board
+definition is appended to bare board definition and instanciates an
+I2C controller on fixed pins.
+
+--------------------- --- --- ----------------
+Board                 SCL SDA BUILD= token
+--------------------- --- --- ----------------
+PCA10028 (nRF51-DK)   1   2   nrf5x-pca10028
+PCA10040 (nRF52-DK)   22  23  nrf5x-pca10040
+--------------------- --- --- ----------------

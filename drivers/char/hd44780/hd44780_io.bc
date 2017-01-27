@@ -80,17 +80,48 @@
 .endfunc
 #endif
 
-.func hd44780_start
-    .export hd44780_start
-    .input %12
-    .clobber %0, %1, %4, %5, %14
+.func position_update
+    .input %6 line, %7 column, %13 link
+    .clobber %0, %1, %14
 #if defined(CONFIG_DRIVER_HD44780_4BIT)
 #if defined(CONFIG_DRIVER_HD44780_4BIT_SWAPPED)
     .clobber %2
 #endif
     .clobber %15
 #endif    
+
+    rs 0
+    cst8 %0, CMD_DDRAM_ADDR
+    or32 %0, %column
+    tst32s %line, 0
+     bit32s %0, 6
+    tst32s %line, 1
+     add8 %0, 20
+    call8 %hd44780_byte_send:link, hd44780_byte_send
+    wait 30
+    rs 1
+
+    ret %link
+.endfunc
     
+.func hd44780_start
+    .export hd44780_start
+    .input %12
+    .clobber %0, %1, %3 end, %4 arg0, %5 arg1, %6 line, %7 column, %14, %13
+#if defined(CONFIG_DRIVER_HD44780_4BIT)
+#if defined(CONFIG_DRIVER_HD44780_4BIT_SWAPPED)
+    .clobber %2
+#endif
+    .clobber %15
+#endif    
+
+    cst8 %line, 0
+    cst8 %column, 0
+
+    e 0
+    rw 1
+    rs 1
+    rw 0
     rs 0
 #if defined(CONFIG_DRIVER_HD44780_4BIT)
     wait 10
@@ -123,68 +154,100 @@
     rs 1
 again:
     next %0
-#if defined(CONFIG_DRIVER_HD44780_TERM)
+    cst8 %1, 0x0a
+    eq %0, %1
+     jmp8 newline
     cst8 %1, 0x1b
     neq %0, %1
-    jmp8 character
+     jmp8 character
     next %0
     cst8 %1, '['
     neq %0, %1
-    jmp8 again
-    cst8 %4, 0
-    cst8 %5, 0
+     jmp8 again
+    cst8 %arg0, 0
+    cst8 %arg1, 0
 ansi:
     next %0
     cst8 %1, 0x30 // 0
     lt %0, %1
-    jmp8 cmd
+    jmp8 ansi_not_digit
     cst8 %1, 0x39 // 9
     lt %1, %0
-    jmp8 cmd
+    jmp8 ansi_not_digit
     add8 %0, -48 // 0
     cst8 %1, 10
-    mul32 %4, %1
-    add %4, %0
+    mul32 %arg0, %1
+    add %arg0, %0
     jmp8 ansi
-cmd:
+ansi_not_digit:
     cst8 %1, 0x3b // ;
     neq %0, %1
-    jmp8 not_semicolon
-    mov %5, %4
-    cst8 %4, 0
+     jmp8 not_semicolon
+    mov %arg1, %arg0
+    cst8 %arg0, 0
     jmp8 ansi
 not_semicolon:
     cst8 %1, 0x48 // H
     eq %0, %1
-    jmp8 move
+     jmp8 ansi_move
     cst8 %1, 0x66 // f
-    neq %0, %1
-    jmp8 not_move
-move:
-    rs 0
-    cst8 %0, CMD_DDRAM_ADDR
-    or32 %0, %4
-    shi32l %5, 6
-    or32 %0, %5
-    call8 %hd44780_byte_send:link, hd44780_byte_send
-    wait 30
-    rs 1
-    jmp8 again
-not_move:
+    eq %0, %1
+     jmp8 ansi_move
     cst8 %1, 0x4a // J
     eq %0, %1
-    jmp8 clear
+     jmp8 ansi_clear_screen
+    cst8 %1, 0x4b // K
+    eq %0, %1
+     jmp8 ansi_clear_line
     jmp8 again
-clear:
+
+ansi_move:
+    eq0 %arg1
+     jmp8 no_line
+    mov %line, %arg1
+    add8 %line, -1
+no_line:
+    eq0 %arg0
+     jmp8 no_column
+    mov %column, %arg0
+    add8 %column, -1
+no_column:
+    call8 %position_update:link, position_update
+    jmp8 again
+
+ansi_clear_screen:
     rs 0
     cst8 %0, CMD_CLEAR
     call8 %hd44780_byte_send:link, hd44780_byte_send
     wait 410
     rs 1
     jmp8 again
-character:
-#endif
+
+ansi_clear_line:
+    mov %3, %column
+clear_line_next:
+    cst8 %0, 20
+    lteq %0, %3
+     jmp8 reposition
+    cst8 %0, 0x20
     call8 %hd44780_byte_send:link, hd44780_byte_send
+    add8 %3, 1
+    jmp8 clear_line_next
+    
+newline:
+    add8 %line, 1
+    extz %line, 1
+    cst8 %column, 0
+reposition:
+    call8 %position_update:link, position_update
+    jmp8 again
+    
+character:
+    cst8 %1, 20
+    lteq %1, %column
+     jmp8 again
+    call8 %hd44780_byte_send:link, hd44780_byte_send
+    add8 %column, 1
     wait 10
     jmp8 again
 .endfunc

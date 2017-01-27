@@ -92,7 +92,6 @@ __compiler_sint_t __bootstrap_pid = 0;
 void emu_cpus_enum_init()
 {
   extern const struct driver_s emu_cpu_drv;
-  size_t i;
 
   /* add bootstrap processor to device tree */
   __bootstrap_pid = emu_do_syscall(EMU_SYSCALL_GETPID, 0);
@@ -103,6 +102,8 @@ void emu_cpus_enum_init()
   device_attach(d, NULL, &emu_cpu_drv);
 
 #ifdef CONFIG_ARCH_SMP
+  size_t i;
+
   /* add other processors to device tree */
   for (i = 1; i < CONFIG_ARCH_EMU_CPUS; i++)
   {
@@ -184,14 +185,15 @@ void emu_start_cpus()
 #include <mutek/printk.h>
 
 #ifdef CONFIG_EMU_PRINTK
-static PRINTF_OUTPUT_FUNC(printk_fd1)
+static PRINTK_HANDLER(printk_fd1)
 {
   emu_do_syscall(EMU_SYSCALL_WRITE, 3, 1, str, len);  
 }
 
 void emu_printk_init()
 {
-  printk_set_output(printk_fd1, NULL);
+  static struct printk_backend_s backend;
+  printk_register(&backend, printk_fd1);
 }
 #endif
 

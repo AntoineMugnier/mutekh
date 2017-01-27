@@ -1,0 +1,137 @@
+/*
+  This file is part of MutekH.
+
+  MutekH is free software; you can redistribute it and/or modify it
+  under the terms of the GNU Lesser General Public License as
+  published by the Free Software Foundation; version 2.1 of the
+  License.
+
+  MutekH is distributed in the hope that it will be useful, but
+  WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+  Lesser General Public License for more details.
+
+  You should have received a copy of the GNU Lesser General Public
+  License along with this program.  If not, see
+  <http://www.gnu.org/licenses/>.
+
+  Copyright (c) 2017, Nicolas Pouillon <nipo@ssji.net>
+*/
+
+#include <device/class/i2c.h>
+#include "mlx90614_regs.h"
+
+.custom i2c
+.name mlx90614_i2c
+
+#if 0
+.func pec_calculate
+    .input %1 value, %15 link
+    .output %2 pec
+
+    cst8 %pec, 0
+    ret %link
+.endfunc
+
+.func mlx90614_reg_write
+    .input %0 reg, %1 value, %14 link
+    .clobber %0, %1, %2 pec, %15
+
+    call8      %pec_calculate:link, pec_calculate
+
+    pack8      %reg, 1
+    i2c_wrr    %reg, 1, CONTINUOUS
+    pack16le   %value, 1, 2
+    i2c_wrr    %value, 1, CONTINUOUS
+    pack8      %pec, 1
+    i2c_wrr    %pec, 1, STOP
+    
+    ret %link
+.endfunc
+
+.func mlx90614_disable
+    .clobber %0
+    .input %14 link
+
+    cst8     %0, CMD_SLEEP
+    i2c_wrr  %0, 1, STOP
+    
+    ret %link
+.endfunc
+#endif
+    
+.func mlx90614_reg_read
+    .input %0 reg, %14 link
+    .output %0 value
+    .clobber %2 pec_calc, %1 pec_rcvd, %15
+
+    pack8      %reg, 1
+    i2c_wrr    %reg, 1, RESTART
+    i2c_rdr    %value, 2, CONTINUOUS
+    i2c_rdr    %pec_rcvd, 1, STOP
+    unpack16le %value, 1, 2
+    unpack8    %pec_rcvd, 1
+
+//    call8      %pec_calculate:link, pec_calculate
+//    neq        %pec_calculate:pec, %pec_rcvd
+//     abort
+
+    ret %link
+.endfunc
+
+.func mlx90614_discover
+    .output %4 id0, %5 id1, %6 dual
+    .clobber %0, %1, %2, %14, %15
+    .export mlx90614_discover
+
+    cst8   %mlx90614_reg_read:reg, REG_ID0
+    call8  %mlx90614_reg_read:link, mlx90614_reg_read
+    mov    %id0, %mlx90614_reg_read:value
+    extz   %id0, 15
+
+    cst8   %mlx90614_reg_read:reg, REG_ID1
+    call8  %mlx90614_reg_read:link, mlx90614_reg_read
+    shi32l %mlx90614_reg_read:value, 16
+    or32   %id0, %mlx90614_reg_read:value
+
+    cst8   %mlx90614_reg_read:reg, REG_ID2
+    call8  %mlx90614_reg_read:link, mlx90614_reg_read
+    mov    %id1, %mlx90614_reg_read:value
+    extz   %id1, 15
+
+    cst8   %mlx90614_reg_read:reg, REG_ID3
+    call8  %mlx90614_reg_read:link, mlx90614_reg_read
+    shi32l %mlx90614_reg_read:value, 16
+    or32   %id1, %mlx90614_reg_read:value
+
+    cst8   %mlx90614_reg_read:reg, REG_CONFIG1
+    call8  %mlx90614_reg_read:link, mlx90614_reg_read
+    shi32r %mlx90614_reg_read:value, bitpos(CONFIG1_IR_DUAL)
+    cst8   %dual, 1
+    and32  %dual, %mlx90614_reg_read:value
+
+    end
+.endfunc
+
+.func mlx90614_sensor_read
+    .output %4 ta, %5 tobj1, %6 tobj2
+    .clobber %0, %1, %2, %14, %15
+    .export mlx90614_sensor_read
+
+    cst8   %mlx90614_reg_read:reg, REG_TA
+    call8  %mlx90614_reg_read:link, mlx90614_reg_read
+    mov    %ta, %mlx90614_reg_read:value
+    extz   %ta, 14
+
+    cst8   %mlx90614_reg_read:reg, REG_TOBJ1
+    call8  %mlx90614_reg_read:link, mlx90614_reg_read
+    mov    %tobj1, %mlx90614_reg_read:value
+    extz   %tobj1, 14
+
+    cst8   %mlx90614_reg_read:reg, REG_TOBJ2
+    call8  %mlx90614_reg_read:link, mlx90614_reg_read
+    mov    %tobj2, %mlx90614_reg_read:value
+    extz   %tobj2, 14
+
+    end
+.endfunc

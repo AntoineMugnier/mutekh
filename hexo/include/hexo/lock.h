@@ -168,8 +168,10 @@ ALWAYS_INLINE void lock_spin_irq2(lock_t *lock, cpu_irq_state_t *irq_state)
 }
 
 
-/** @this saves interrupts state, disables interrupts, and spins to take
-    lock. This macro must be matched with the LOCK_RELEASE_IRQ macro. */
+/** @this saves interrupts state, disables interrupts, and spins to
+    take lock. This macro must be matched with the LOCK_RELEASE_IRQ
+    macro.  Using #LOCK_SPIN_IRQ_SCOPED is preferred over using this
+    macros. */
 #ifdef CONFIG_HEXO_IRQ
 # define LOCK_SPIN_IRQ(lock)					\
   HEXO_ATOMIC_SCOPE_BEGIN                                       \
@@ -235,6 +237,74 @@ ALWAYS_INLINE void lock_release_irq2(lock_t *lock, const cpu_irq_state_t *irq_st
   HEXO_ATOMIC_SCOPE_END
 
 #endif
+
+
+/** @internal @see #LOCK_SPIN_IRQ_SCOPED  */
+struct lock_irq_scoped_s
+{
+#ifdef CONFIG_HEXO_IRQ
+  cpu_irq_state_t interrupt_state;
+#endif
+  lock_t *lock;
+};
+
+/** @internal @see #LOCK_SPIN_IRQ_SCOPED  */
+ALWAYS_INLINE
+void lock_irq_scoped_release(struct lock_irq_scoped_s *ls)
+{
+  lock_release(ls->lock);
+#ifdef CONFIG_HEXO_IRQ
+  cpu_interrupt_restorestate(&ls->interrupt_state);
+#endif
+}
+
+/** @internal @see #LOCK_SPIN_IRQ_SCOPED  */
+ALWAYS_INLINE
+void lock_irq_scoped_spin(struct lock_irq_scoped_s *ls, lock_t *lock)
+{
+#ifdef CONFIG_HEXO_IRQ
+  cpu_interrupt_savestate_disable(&ls->interrupt_state);
+#endif
+  ls->lock = lock;
+  lock_spin(ls->lock);
+}
+
+/** @this saves interrupts state, disables interrupts, and spins to
+    spin lock. Lock is automatically released when control reaches
+    scope end. */
+#define LOCK_SPIN_IRQ_SCOPED(lock)                                  \
+  struct lock_irq_scoped_s __scoped_lock                            \
+  __attribute__((__cleanup__(lock_irq_scoped_release)));            \
+  lock_irq_scoped_spin(&__scoped_lock, (lock));
+
+/** @internal @see #LOCK_SPIN_SCOPED  */
+struct lock_scoped_s
+{
+  lock_t *lock;
+};
+
+/** @internal @see #LOCK_SPIN_SCOPED  */
+ALWAYS_INLINE
+void lock_scoped_release(struct lock_scoped_s *ls)
+{
+  lock_release(ls->lock);
+}
+
+/** @internal @see #LOCK_SPIN_SCOPED  */
+ALWAYS_INLINE
+void lock_scoped_spin(struct lock_scoped_s *ls, lock_t *lock)
+{
+  ls->lock = lock;
+  lock_spin(ls->lock);
+}
+
+/** @this saves interrupts state, disables interrupts, and spins to
+    spin lock. Lock is automatically released when control reaches
+    scope end. */
+#define LOCK_SPIN_SCOPED(lock)                                  \
+  struct lock_scoped_s __scoped_lock                            \
+  __attribute__((__cleanup__(lock_scoped_release)));            \
+  lock_scoped_spin(&__scoped_lock, (lock));
 
 C_HEADER_END
 

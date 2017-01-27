@@ -41,7 +41,7 @@ static void printk_out_char(char c)
   cpu_mem_write_32(CONFIG_MUTEK_PRINTK_ADDR + PIC32_UART_TX_ADDR, c);
 }
 
-static PRINTF_OUTPUT_FUNC(printk_out)
+static PRINTK_HANDLER(printk_out)
 {
   uint_fast8_t i;
 
@@ -97,6 +97,7 @@ void pic32_uart_printk_init()
   cpu_mem_write_32(CONFIG_MUTEK_PRINTK_ADDR + PIC32_UART_STATUS_ADDR, PIC32_UART_STATUS_UTXEN);
 
 
-  printk_set_output(printk_out, NULL);
+  static struct printk_backend_s backend;
+  printk_register(&backend, printk_out);
 }
 

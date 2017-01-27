@@ -81,8 +81,8 @@
 ALWAYS_INLINE
 void nrf_task_trigger(uintptr_t base, uint8_t task)
 {
-    uintptr_t addr = base | NRF_TASK | (task << 2);
-    cpu_mem_write_32(addr, 1);
+  uintptr_t addr = base | NRF_TASK | (task << 2);
+  cpu_mem_write_32(addr, 1);
 }
 
 /**
@@ -92,8 +92,8 @@ void nrf_task_trigger(uintptr_t base, uint8_t task)
 ALWAYS_INLINE
 bool_t nrf_it_is_enabled(uintptr_t base, uint8_t it)
 {
-    uintptr_t addr = base | NRF_INTENSET;
-    return bit_get(cpu_mem_read_32(addr), it);
+  uintptr_t addr = base | NRF_INTENSET;
+  return bit_get(cpu_mem_read_32(addr), it);
 }
 
 /**
@@ -103,8 +103,8 @@ bool_t nrf_it_is_enabled(uintptr_t base, uint8_t it)
 ALWAYS_INLINE
 void nrf_it_set_mask(uintptr_t base, uint32_t mask)
 {
-    uintptr_t addr = base | NRF_INTEN;
-    cpu_mem_write_32(addr, mask);
+  uintptr_t addr = base | NRF_INTEN;
+  cpu_mem_write_32(addr, mask);
 }
 
 /**
@@ -114,8 +114,11 @@ void nrf_it_set_mask(uintptr_t base, uint32_t mask)
 ALWAYS_INLINE
 void nrf_it_enable_mask(uintptr_t base, uint32_t mask)
 {
-    uintptr_t addr = base | NRF_INTENSET;
-    cpu_mem_write_32(addr, mask);
+  if (__builtin_constant_p(mask) && mask == 0)
+    return;
+
+  uintptr_t addr = base | NRF_INTENSET;
+  cpu_mem_write_32(addr, mask);
 }
 
 /**
@@ -125,7 +128,7 @@ void nrf_it_enable_mask(uintptr_t base, uint32_t mask)
 ALWAYS_INLINE
 void nrf_it_enable(uintptr_t base, uint8_t it)
 {
-    nrf_it_enable_mask(base, bit(it));
+  nrf_it_enable_mask(base, bit(it));
 }
 
 /**
@@ -135,8 +138,15 @@ void nrf_it_enable(uintptr_t base, uint8_t it)
 ALWAYS_INLINE
 void nrf_it_disable_mask(uintptr_t base, uint32_t mask)
 {
+  if (__builtin_constant_p(mask) && mask == 0)
+    return;
+
+  if (__builtin_constant_p(mask) && mask == (uint32_t)-1) {
+    nrf_it_set_mask(base, 0);
+  } else {
     uintptr_t addr = base | NRF_INTENCLR;
     cpu_mem_write_32(addr, mask);
+  }
 }
 
 /**
@@ -146,7 +156,7 @@ void nrf_it_disable_mask(uintptr_t base, uint32_t mask)
 ALWAYS_INLINE
 void nrf_it_disable(uintptr_t base, uint8_t it)
 {
-    nrf_it_disable_mask(base, bit(it));
+  nrf_it_disable_mask(base, bit(it));
 }
 
 /**
@@ -156,8 +166,8 @@ void nrf_it_disable(uintptr_t base, uint8_t it)
 ALWAYS_INLINE
 bool_t nrf_evt_is_enabled(uintptr_t base, uint8_t evt)
 {
-    uintptr_t addr = base | NRF_EVTENSET;
-    return bit_get(cpu_mem_read_32(addr), evt);
+  uintptr_t addr = base | NRF_EVTENSET;
+  return bit_get(cpu_mem_read_32(addr), evt);
 }
 
 /**
@@ -167,8 +177,8 @@ bool_t nrf_evt_is_enabled(uintptr_t base, uint8_t evt)
 ALWAYS_INLINE
 void nrf_evt_enable_mask(uintptr_t base, uint32_t mask)
 {
-    uintptr_t addr = base | NRF_EVTENSET;
-    cpu_mem_write_32(addr, mask);
+  uintptr_t addr = base | NRF_EVTENSET;
+  cpu_mem_write_32(addr, mask);
 }
 
 /**
@@ -285,8 +295,15 @@ bool_t nrf_short_is_enabled(uintptr_t base, uint8_t id)
 ALWAYS_INLINE
 void nrf_short_disable_mask(uintptr_t base, uint32_t mask)
 {
+  if (__builtin_constant_p(mask) && mask == 0)
+    return;
+
+  if (__builtin_constant_p(mask) && mask == (uint32_t)-1) {
+    nrf_short_set(base, 0);
+  } else {
     uintptr_t addr = base | NRF_SHORT;
     cpu_mem_write_32(addr, ~mask & cpu_mem_read_32(addr));
+  }
 }
 
 /**

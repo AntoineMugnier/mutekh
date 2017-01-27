@@ -199,6 +199,63 @@ static TERMUI_CON_COMMAND_PROTOTYPE(gpio_in_cmd)
   return 0;
 }
 
+static TERMUI_CON_COMMAND_PROTOTYPE(gpio_until_cmd)
+{
+  struct termui_optctx_dev_gpio_opts *c = ctx;
+  error_t err;
+
+  if (used & GPIO_OPT_IORANGE)
+    {
+      if (c->io[0] > c->io[1])
+        return -EINVAL;
+    }
+  else
+    {
+      c->io[1] = c->io[0];
+    }
+
+  size_t l = (c->io[1] - c->io[0] + 8) / 8;
+  uint8_t d[l + 8];
+
+  struct dev_gpio_rq_s rq = {
+    .type = DEV_GPIO_GET_INPUT,
+    .io_first = c->io[0],
+    .io_last = c->io[1],
+    .input.data = d,
+  };
+
+  err = dev_gpio_wait_rq(&c->gpio, &rq);
+  if (err) {
+    termui_con_printf(con, "READ request error %i\n", err);
+    return err;
+  }
+
+  termui_con_printf(con, "Waiting %P...\n", d, l);
+
+  rq.type = DEV_GPIO_UNTIL;
+  rq.until.data = d;
+  rq.until.mask = dev_gpio_mask1;
+
+  err = dev_gpio_wait_rq(&c->gpio, &rq);
+  if (err) {
+    termui_con_printf(con, "UNTIL request error %i\n", err);
+    return err;
+  }
+
+  rq.type = DEV_GPIO_GET_INPUT;
+  rq.input.data = d;
+
+  err = dev_gpio_wait_rq(&c->gpio, &rq);
+  if (err) {
+    termui_con_printf(con, "READ again request error %i\n", err);
+    return err;
+  }
+
+  termui_con_printf(con, "Changed %P\n", d, l);
+
+  return 0;
+}
+
 
 /* options descriptors array */
 static TERMUI_CON_OPT_DECL(dev_gpio_opts) =
@@ -261,6 +318,12 @@ TERMUI_CON_GROUP_DECL(dev_shell_gpio_group) =
 		   TERMUI_CON_OPTS_CTX(dev_gpio_opts,
                                        GPIO_OPT_DEV | GPIO_OPT_IO | GPIO_OPT_IORANGE | GPIO_OPT_TOGGLE |
                                        GPIO_OPT_SET | GPIO_OPT_CLEAR | GPIO_OPT_MASK, GPIO_OPT_MASK_CLR, gpio_opts_cleanup)
+		   )
+
+  TERMUI_CON_ENTRY(gpio_until_cmd, "until",
+		   TERMUI_CON_OPTS_CTX(dev_gpio_opts,
+                                       GPIO_OPT_DEV | GPIO_OPT_IO | GPIO_OPT_IORANGE,
+                                       0, gpio_opts_cleanup)
 		   )
 
   TERMUI_CON_LIST_END

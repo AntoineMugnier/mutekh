@@ -63,6 +63,10 @@ DRIVER_PV(struct stm32_timer_private_s
 
   enum dev_timer_capabilities_e cap:8;
   dev_timer_cfgrev_t rev;
+
+#if !defined(CONFIG_DEVICE_CLOCK)
+  struct dev_freq_s busfreq;
+#endif
 });
 
 /* This function starts the hardware timer counter. */
@@ -383,9 +387,12 @@ static DEV_TIMER_CONFIG(stm32_timer_config)
 
   if (cfg)
     {
-      // FIXME: hardcoded
-      cfg->freq.num   = 84000000;
-      cfg->freq.denom = 1;
+#if !defined(CONFIG_DEVICE_CLOCK)
+      cfg->freq.num   = pv->busfreq.num;
+      cfg->freq.denom = pv->busfreq.denom;
+#else
+# error Does not support clock device
+#endif
       cfg->rev = pv->rev;
       cfg->res = r;
       cfg->cap = pv->cap;
@@ -423,7 +430,13 @@ static DEV_INIT(stm32_timer_init)
   pv->addr = addr;
   pv->rev = 1;
   pv->cap = DEV_TIMER_CAP_STOPPABLE | DEV_TIMER_CAP_HIGHRES | DEV_TIMER_CAP_KEEPVALUE;
+
   dev->drv_pv = pv;
+
+#if !defined(CONFIG_DEVICE_CLOCK)
+  if (device_get_res_freq(dev, &pv->busfreq, 0))
+    goto err_mem;
+#endif
 
 #ifdef CONFIG_DEVICE_IRQ
   pv->cap |= DEV_TIMER_CAP_REQUEST;
@@ -461,9 +474,10 @@ static DEV_INIT(stm32_timer_init)
 #endif
 
   /* Prescaler 1MHz. */
-  // FIXME: 84MHz hardcoded clock freq.
-  cpu_mem_write_32( ( (((pv->addr))) + (STM32_TIMER_PSC_ADDR) ), endian_le32(83) );
+#if !defined(CONFIG_DEVICE_CLOCK)
+  cpu_mem_write_32( ( (((pv->addr))) + (STM32_TIMER_PSC_ADDR) ), endian_le32(pv->busfreq.num / pv->busfreq.denom / 1000000) );
   do { uint32_t register _reg = endian_le32(cpu_mem_read_32(( ((((pv->addr)))) + (STM32_TIMER_EGR_ADDR) ))); STM32_TIMER_EGR_UG_SET( (_reg), 1 ); cpu_mem_write_32( ( ((((pv->addr)))) + (STM32_TIMER_EGR_ADDR) ), endian_le32(_reg) ); } while (0);
+#endif
 
   /* Top value. */
   cpu_mem_write_32( ( (((pv->addr))) + (STM32_TIMER_ARR_ADDR) ), endian_le32(STM32_TIMER_TOP(pv)) );

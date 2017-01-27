@@ -27,21 +27,20 @@
 #ifndef LIBDEVICE_VALIO_HUMIDITY_H_
 #define LIBDEVICE_VALIO_HUMIDITY_H_
 
-enum valio_humi_att_e
+enum valio_humidity_e
 {
   /**
-     This attribute id used only for @tt DEVICE_VALIO_READ request type.
-     The request callback is called with @tt valio_humi_read_s as data.
+     This attribute id used only for @tt DEVICE_VALIO_READ request
+     type.  The request callback is called with @tt valio_humidity_s
+     as data.
    */
-  VALIO_HUMIDITY_VALUE = CONFIG_DEVICE_VALIO_HUMIDITY_ATTRIBUTE_FIRST,
-
+  VALIO_HUMIDITY = CONFIG_DEVICE_VALIO_HUMIDITY_ATTRIBUTE_FIRST,
 };
 
 /* Return structure for @tt DEVICE_VALIO_READ request type */
-struct valio_humi_read_s
+struct valio_humidity_s
 {
-  uint16_t  percent;    /* Humidity in percent */
-  uint16_t  mil;        /* Thousandth of percent */
+  uint16_t  mil;        /* 1/1000 units from 0 to 1 */
 };
 
 #endif

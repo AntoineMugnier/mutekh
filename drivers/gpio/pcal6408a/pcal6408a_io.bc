@@ -1,0 +1,117 @@
+/*
+  -*- asm -*-
+
+  This file is part of MutekH.
+
+  MutekH is free software; you can redistribute it and/or modify it
+  under the terms of the GNU Lesser General Public License as
+  published by the Free Software Foundation; version 2.1 of the
+  License.
+
+  MutekH is distributed in the hope that it will be useful, but
+  WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+  Lesser General Public License for more details.
+
+  You should have received a copy of the GNU Lesser General Public
+  License along with this program.  If not, see
+  <http://www.gnu.org/licenses/>.
+
+  Copyright (c) Nicolas Pouillon <nipo@ssji.net>, 2016
+*/
+
+#include <device/class/i2c.h>
+#include "pcal6408a.h"
+
+        .custom i2c
+        .name pcal6408a
+
+.func pcal6408a_set_mode
+        .export pcal6408a_set_mode
+        .clobber %0, %1
+        .input %8 input_direction, %9 pull_up, %10 pull_enable
+
+        cst8 %0, PCAL6408A_INPUT_DIRECTION
+        mov %1, %input_direction
+        pack8 %0, 2
+        i2c_wrr %0, 2, STOP
+
+        cst8 %0, PCAL6408A_PULL_UP
+        mov %1, %pull_up
+        pack8 %0, 2
+        i2c_wrr %0, 2, STOP
+
+        cst8 %0, PCAL6408A_PULL_ENABLE
+        mov %1, %pull_enable
+        pack8 %0, 2
+        i2c_wrr %0, 2, STOP
+
+        end
+.endfunc
+
+.func pcal6408a_set_output
+        .export pcal6408a_set_output
+        .clobber %0, %1
+        .input %11 output_port
+
+        cst8 %0, PCAL6408A_OUTPUT_PORT
+        mov %1, %output_port
+        pack8 %0, 2
+        i2c_wrr %0, 2, STOP
+
+        end
+.endfunc
+
+.func pcal6408a_get_input
+        .export pcal6408a_get_input
+        .output %0
+
+        cst8 %0, PCAL6408A_INPUT_PORT
+        pack8 %0, 1
+        i2c_wrr %0, 1, RESTART
+        i2c_rdr %0, 1, STOP
+        unpack8 %0, 1
+
+        end
+.endfunc
+
+.func pcal6408a_until
+        .export pcal6408a_until
+        .clobber %1
+        .input %12 mask
+        .output %0 current
+
+        cst8 %0, PCAL6408A_INTERRUPT_DISABLE
+        mov %1, %mask
+        not32 %1
+        pack8 %0, 2
+        i2c_wrr %0, 2, STOP
+        cst8 %0, PCAL6408A_INPUT_PORT
+        pack8 %0, 1
+        i2c_wrr %0, 1, RESTART
+        i2c_rdr %0, 1, STOP
+        unpack8 %0, 1
+
+        end
+.endfunc
+
+#define REG_SET(reg, value) \
+    cst16 %0, (reg) | ((value) << 8), 0 ; \
+    pack16le %0, 1, 2 ; \
+    i2c_wrr %0, 2, STOP
+
+.func pcal6408a_reset
+        .export pcal6408a_reset
+        .clobber %0
+
+        REG_SET(PCAL6408A_INTERRUPT_DISABLE, 0xff)
+        REG_SET(PCAL6408A_INPUT_DIRECTION, 0xff)
+        REG_SET(PCAL6408A_OUTPUT_PORT, 0xff)
+        REG_SET(PCAL6408A_POLARITY_INVERSION, 0)
+        REG_SET(PCAL6408A_INPUT_LATCH, 0)
+        REG_SET(PCAL6408A_PULL_ENABLE, 0)
+        REG_SET(PCAL6408A_PULL_UP, 0)
+        REG_SET(PCAL6408A_INTERRUPT_DISABLE, 0xff)
+
+        end
+.endfunc

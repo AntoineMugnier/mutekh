@@ -15,39 +15,42 @@
     License along with this program.  If not, see
     <http://www.gnu.org/licenses/>.
 
-    Copyright (c) Vincent DEFILIPPI <vincentdefilippi@gmail.com> 2015
+    Copyright (c) Nicolas Pouillon <nipo@ssji.net> 2016
 */
 
 /**
    @file
-   @module{Devices support library}
-   @short Value IO interface for light sensors
+   @module {Core::Devices support library::Valio device attributes}
+   @short Value IO interface for an Infra-red Transceiver
 */
 
-#ifndef LIBDEVICE_VALIO_LIGHT_H_
-#define LIBDEVICE_VALIO_LIGHT_H_
+#ifndef LIBDEVICE_VALIO_IR_H_
+#define LIBDEVICE_VALIO_IR_H_
 
-enum valio_light_att_e
+#include <device/class/valio.h>
+
+enum valio_ir_e
+{
+  VALIO_IR_COMMAND = CONFIG_DEVICE_VALIO_IR_ATTRIBUTE_FIRST,
+};
+
+enum valio_ir_encoding_e
 {
   /**
-     The request callback is called with @tt valio_light_read_s as data.
+     Bit count is fixed to 12 bits: 1 toggle, 5 address, 6 command
    */
-  VALIO_LIGHT_VALUE = CONFIG_DEVICE_VALIO_LIGHT_ATTRIBUTE_FIRST,
-
+  VALIO_IR_RC5,
+  /**
+     Bit count is in (12, 20, 28, 36): 3 mode, 1 toggle, n * 8 command
+   */
+  VALIO_IR_RC6,
 };
 
-/* Return structure for @tt DEVICE_VALIO_READ request type */
-struct valio_light_read_s
+struct valio_ir_command_s
 {
-  uint32_t  lux;    /* Light level in lux unit */
-  uint16_t  mil;    /* Thousandth of lux */
-};
-
-struct valio_light_update_s
-{
-  uint32_t  min;
-  uint32_t  max;
-  struct valio_light_read_s conv;
+  enum valio_ir_encoding_e type;
+  uint64_t value;
+  size_t bit_count;
 };
 
 #endif

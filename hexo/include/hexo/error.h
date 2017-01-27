@@ -36,7 +36,7 @@ C_HEADER_BEGIN
 #include <hexo/types.h>
 
 /** error code type */
-typedef int_fast8_t		error_t;
+typedef int8_t		error_t;
 
 /** unknown or undefined error */
 #define EUNKNOWN	1

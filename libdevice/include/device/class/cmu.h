@@ -386,6 +386,50 @@ config_depend(CONFIG_DEVICE_CLOCK_GATING)
 void dev_cmu_src_update_async(struct dev_clock_src_ep_s *src,
                               enum dev_clock_ep_flags_e gates);
 
+/** @This tells whether a source endpoint currently requests power.
+ */
+ALWAYS_INLINE
+bool_t dev_clock_src_is_power_requested(const struct dev_clock_src_ep_s *src)
+{
+#if !defined(CONFIG_DEVICE_CLOCK)
+  return 0;
+#elif defined(CONFIG_DEVICE_CLOCK_SHARING)
+  struct dev_clock_sink_ep_s *sink = src->sink_head;
+
+  while (sink) {
+    if (sink->flags & DEV_CLOCK_EP_POWER)
+      return 1;
+    sink = sink->next;
+  }
+
+  return 0;
+#else
+  return src->sink_head && !!(src->sink_head->flags & DEV_CLOCK_EP_POWER);
+#endif
+}
+
+/** @This tells whether a source endpoint currently requests clock.
+ */
+ALWAYS_INLINE
+bool_t dev_clock_src_is_clock_requested(const struct dev_clock_src_ep_s *src)
+{
+#if !defined(CONFIG_DEVICE_CLOCK)
+  return 0;
+#elif defined(CONFIG_DEVICE_CLOCK_SHARING)
+  struct dev_clock_sink_ep_s *sink = src->sink_head;
+
+  while (sink) {
+    if (sink->flags & DEV_CLOCK_EP_CLOCK)
+      return 1;
+    sink = sink->next;
+  }
+
+  return 0;
+#else
+  return src->sink_head && !!(src->sink_head->flags & DEV_CLOCK_EP_CLOCK);
+#endif
+}
+
 /** @This is a wrapper for the @ref dev_cmu_node_info_t function
     which takes care of locking the device. */
 config_depend(CONFIG_DEVICE_CLOCK)
@@ -549,4 +593,3 @@ error_t device_res_add_cmu_osc(struct device_s     *dev,
 })
 
 #endif
-

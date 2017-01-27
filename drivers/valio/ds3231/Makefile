@@ -1,0 +1,1 @@
+objs-$(CONFIG_DRIVER_DS3231) += ds3231.o

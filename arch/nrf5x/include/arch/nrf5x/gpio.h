@@ -24,12 +24,6 @@
 #include "peripheral.h"
 #include "ids.h"
 
-#if defined(CONFIG_ARCH_NRF51)
-# define NRF_GPIO_COUNT 31
-#elif defined(CONFIG_ARCH_NRF52)
-# define NRF_GPIO_COUNT 32
-#endif
-
 #define NRF5X_GPIO_ADDR 0x50000000
 
 enum nrf5x_gpio_register {

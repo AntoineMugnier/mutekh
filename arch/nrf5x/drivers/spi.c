@@ -18,6 +18,8 @@
     Copyright (c) Nicolas Pouillon <nipo@ssji.net>, 2014
 */
 
+#define LOGK_MODULE_ID "nspi"
+
 #include <hexo/types.h>
 #include <hexo/endian.h>
 #include <hexo/iospace.h>
@@ -34,8 +36,6 @@
 #include <device/class/iomux.h>
 
 #include <arch/nrf5x/spi.h>
-
-#define dprintk(...) do{}while(0)
 
 struct nrf5x_spi_context_s
 {
@@ -57,44 +57,32 @@ static DEV_SPI_CTRL_CONFIG(nrf5x_spi_config)
 {
   struct device_s *dev = accessor->dev;
   struct nrf5x_spi_context_s *pv = dev->drv_pv;
-  error_t err = 0;
   uint32_t config = 0;
   uint32_t rate;
 
-  LOCK_SPIN_IRQ(&dev->lock);
+  if (cfg->word_width != 8)
+    return -ENOTSUP;
 
-  if (pv->current_transfer != NULL) {
-    err = -EBUSY;
-    goto out;
-  }
+  if (cfg->miso_pol != DEV_SPI_ACTIVE_HIGH && cfg->mosi_pol != DEV_SPI_ACTIVE_LOW)
+    return -ENOTSUP;
 
-  if (cfg->word_width != 8) {
-    err = -ENOTSUP;
-    goto out;
-  }
+  LOCK_SPIN_IRQ_SCOPED(&dev->lock);
 
-  if (cfg->miso_pol != DEV_SPI_ACTIVE_HIGH
-      && cfg->mosi_pol != DEV_SPI_ACTIVE_LOW) {
-    err = -ENOTSUP;
-    goto out;
-  }
+  if (pv->current_transfer != NULL)
+    return -EBUSY;
 
   switch (cfg->ck_mode) {
   case DEV_SPI_CK_MODE_1:
-    config |= NRF_SPI_CONFIG_CPOL_ACTIVELOW
-      | NRF_SPI_CONFIG_CPHA_LEADING;
+    config |= NRF_SPI_CONFIG_CPOL_ACTIVELOW | NRF_SPI_CONFIG_CPHA_LEADING;
     break;
   case DEV_SPI_CK_MODE_3:
-    config |= NRF_SPI_CONFIG_CPOL_ACTIVELOW
-      | NRF_SPI_CONFIG_CPHA_TRAILING;
+    config |= NRF_SPI_CONFIG_CPOL_ACTIVELOW | NRF_SPI_CONFIG_CPHA_TRAILING;
     break;
   case DEV_SPI_CK_MODE_0:
-    config |= NRF_SPI_CONFIG_CPOL_ACTIVEHIGH
-      | NRF_SPI_CONFIG_CPHA_LEADING;
+    config |= NRF_SPI_CONFIG_CPOL_ACTIVEHIGH | NRF_SPI_CONFIG_CPHA_LEADING;
     break;
   case DEV_SPI_CK_MODE_2:
-    config |= NRF_SPI_CONFIG_CPOL_ACTIVEHIGH
-      | NRF_SPI_CONFIG_CPHA_TRAILING;
+    config |= NRF_SPI_CONFIG_CPOL_ACTIVEHIGH | NRF_SPI_CONFIG_CPHA_TRAILING;
     break;
   }
 
@@ -106,17 +94,14 @@ static DEV_SPI_CTRL_CONFIG(nrf5x_spi_config)
 
   rate = cfg->bit_rate;
   if (rate > 1000000) {
-    printk("nRF5x SPI Warning: bit rate capped to 1MHz (was %d)\n", rate);
+    logk_warning("nRF5x SPI Warning: bit rate capped to 1MHz (was %d)", rate);
     rate = 1000000;
   }
 
   nrf_reg_set(pv->addr, NRF_SPI_FREQUENCY,
               NRF_SPI_FREQUENCY_(rate));
 
- out:
-  LOCK_RELEASE_IRQ(&dev->lock);
-
-  return err;
+  return 0;
 }
 
 static void nrf5x_spi_tr_put_one(struct nrf5x_spi_context_s *pv,
@@ -124,24 +109,28 @@ static void nrf5x_spi_tr_put_one(struct nrf5x_spi_context_s *pv,
 {
   uint8_t word = 0;
 
-  switch (tr->data.out_width) {
-  case 1:
-    word = *(const uint8_t*)tr->data.out;
-    break;
-  case 2:
-    word = *(const uint16_t*)tr->data.out;
-    break;
-  case 0:
-  case 4:
-    word = *(const uint32_t*)tr->data.out;
-    break;
+  if (tr->data.out) {
+    switch (tr->data.out_width) {
+    case 1:
+      word = *(const uint8_t*)tr->data.out;
+      break;
+    case 2:
+      word = *(const uint16_t*)tr->data.out;
+      break;
+    case 0:
+    case 4:
+      word = *(const uint32_t*)tr->data.out;
+      break;
+    }
+
+    tr->data.out = (const void*)((uintptr_t)tr->data.out + tr->data.out_width);
+  } else {
+    word = 0xff;
   }
 
-  dprintk("SPI tx: %02x\n", word);
+  logk_trace("SPI tx: %02x", (uint8_t)word);
 
   nrf_reg_set(pv->addr, NRF_SPI_TXD, word);
-
-  tr->data.out = (const void*)((uintptr_t)tr->data.out + tr->data.out_width);
 }
 
 static void nrf5x_spi_tr_get_one(struct nrf5x_spi_context_s *pv,
@@ -149,7 +138,7 @@ static void nrf5x_spi_tr_get_one(struct nrf5x_spi_context_s *pv,
 {
   uint8_t word = nrf_reg_get(pv->addr, NRF_SPI_RXD);
 
-  dprintk("SPI rx: %02x\n", word);
+  logk_trace("SPI rx: %02x", word);
 
   if (tr->data.in) {
     switch (tr->data.in_width) {
@@ -175,7 +164,10 @@ void nrf5x_spi_transfer_start(
 {
   pv->words_in_transit = 0;
 
-  dprintk("SPI rq %d %d %P...", tr->data.count, tr->data.out_width, tr->data.out, tr->data.count);
+  if (tr->data.out)
+    logk_trace("SPI rq %d %d %P...", tr->data.count, tr->data.out_width, tr->data.out, tr->data.count);
+  else
+    logk_trace("SPI rq %d %d [NULL]...", tr->data.count, tr->data.out_width);
 
   while (tr->data.count && pv->words_in_transit < 2) {
     nrf5x_spi_tr_put_one(pv, tr);
@@ -190,15 +182,13 @@ static DEV_IRQ_SRC_PROCESS(nrf5x_spi_irq)
   struct nrf5x_spi_context_s *pv = dev->drv_pv;
   struct dev_spi_ctrl_transfer_s *tr;
 
-  lock_spin(&dev->lock);
+  LOCK_SPIN_SCOPED(&dev->lock);
 
   tr = pv->current_transfer;
   assert(tr);
 
-  if (!nrf_event_check(pv->addr, NRF_SPI_READY)) {
-    tr = NULL;
-    goto out;
-  }
+  if (!nrf_event_check(pv->addr, NRF_SPI_READY))
+    return;
   nrf_event_clear(pv->addr, NRF_SPI_READY);
 
   nrf5x_spi_tr_get_one(pv, tr);
@@ -212,19 +202,9 @@ static DEV_IRQ_SRC_PROCESS(nrf5x_spi_irq)
     pv->words_in_transit--;
   }
 
-  if (pv->words_in_transit) {
-    tr = NULL;
-  } else {
+  if (!pv->words_in_transit) {
     pv->current_transfer = NULL;
     nrf_it_disable(pv->addr, NRF_SPI_READY);
-  }
-
- out:
-  lock_release(&dev->lock);
-
-  // tr is not NULL only if it is finished.
-  if (tr) {
-    dprintk(" done\n");
     kroutine_exec(&tr->kr);
   }
 }
@@ -234,30 +214,31 @@ static DEV_SPI_CTRL_TRANSFER(nrf5x_spi_transfer)
   struct device_s *dev = accessor->dev;
   struct nrf5x_spi_context_s *pv = dev->drv_pv;
 
-  LOCK_SPIN_IRQ(&dev->lock);
+  {
+    LOCK_SPIN_IRQ_SCOPED(&dev->lock);
 
-  if (pv->current_transfer != NULL) {
-    tr->err = -EBUSY;
-  } else if (tr->cs_op != DEV_SPI_CS_NOP_NOP) {
-    tr->err = -ENOTSUP;
-  } else if (!((0x17 >> tr->data.out_width) & 1) || (tr->data.in && !((0x16 >> tr->data.in_width) & 1))) {
-    printk("Error: out_width: %d, in_width: %d\n", tr->data.out_width, tr->data.in_width);
-    printk("Error: out: %p, in: %p\n", tr->data.out, tr->data.in);
-    tr->err = -EINVAL;
-  } else {
-    assert(tr->data.count > 0);
+    if (pv->current_transfer != NULL) {
+      tr->err = -EBUSY;
+    } else if (tr->cs_op != DEV_SPI_CS_NOP_NOP) {
+      tr->err = -ENOTSUP;
+    } else if (!((0x17 >> tr->data.out_width) & 1) || (tr->data.in && !((0x16 >> tr->data.in_width) & 1))) {
+      logk_error("Error: out_width: %d, in_width: %d", tr->data.out_width, tr->data.in_width);
+      logk_error("Error: out: %p, in: %p", tr->data.out, tr->data.in);
+      tr->err = -EINVAL;
+    } else {
+      assert(tr->data.count > 0);
 
-    pv->current_transfer = tr;
-    tr->err = 0;
+      pv->current_transfer = tr;
+      tr->err = 0;
 
-    nrf_event_clear(pv->addr, NRF_SPI_READY);
-    nrf_it_enable(pv->addr, NRF_SPI_READY);
-    nrf5x_spi_transfer_start(pv, tr);
+      nrf_event_clear(pv->addr, NRF_SPI_READY);
+      nrf_it_enable(pv->addr, NRF_SPI_READY);
+      nrf5x_spi_transfer_start(pv, tr);
 
-    tr = NULL;
+      tr = NULL;
+    }
+
   }
-
-  LOCK_RELEASE_IRQ(&dev->lock);
 
   if (tr)
     kroutine_exec(&tr->kr);
