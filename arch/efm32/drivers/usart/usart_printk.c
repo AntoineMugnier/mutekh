@@ -33,8 +33,6 @@
 #include <arch/efm32/cmu.h>
 #include <arch/efm32/devaddr.h>
 
-#define USART_CLOCK            14000000
-
 static void printk_out_char(char c)
 {
   uint32_t b = CONFIG_MUTEK_PRINTK_ADDR;
@@ -109,41 +107,9 @@ void efm32_usart_printk_init()
   /* configure CMU */
   b = EFM32_CMU_ADDR;
 
-  uint32_t clk = USART_CLOCK;
-
 #if CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_XG1
 
-  x = endian_le32(cpu_mem_read_32(b + EFM32_CMU_HFRCOCTRL_ADDR));
-
-  switch (EFM32_CMU_HFRCOCTRL_FREQRANGE_GET(x))
-    {
-    case 0:
-      clk = 4000000;
-      break;
-    case 3:
-      clk = 7000000;
-      break;
-    case 6:
-      clk = 13000000;
-      break;
-    case 7:
-      clk = 16000000;
-      break;
-    case 8:
-      clk = 19000000;
-      break;
-    case 10:
-      clk = 26000000;
-      break;
-    case 11:
-      clk = 32000000;
-      break;
-    case 12:
-      clk = 38000000;
-      break;
-    default:
-      abort();
-    }
+#define USART_CLOCK            19000000
 
   cpu_mem_write_32(b + EFM32_CMU_OSCENCMD_ADDR, EFM32_CMU_OSCENCMD_HFRCOEN);
   while (!(cpu_mem_read_32(b + EFM32_CMU_STATUS_ADDR) & EFM32_CMU_STATUS_HFRCORDY))
@@ -159,6 +125,9 @@ void efm32_usart_printk_init()
   x = cpu_mem_read_32(b + EFM32_CMU_HFBUSCLKEN0_ADDR);
   cpu_mem_write_32(b + EFM32_CMU_HFBUSCLKEN0_ADDR, x | EFM32_CMU_HFBUSCLKEN0_GPIO);
 #elif CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_EFM
+
+#define USART_CLOCK            14000000
+
   /* Enable clock for HF peripherals */
   x = cpu_mem_read_32(b + EFM32_CMU_HFPERCLKDIV_ADDR);
   x |= EFM32_CMU_HFPERCLKDIV_HFPERCLKEN;
@@ -221,7 +190,7 @@ void efm32_usart_printk_init()
                    EFM32_USART_FRAME_PARITY(NONE) |
                    EFM32_USART_FRAME_STOPBITS(ONE));
 
-  uint32_t div = (256ULL * clk) / (4 * CONFIG_DRIVER_EFM32_USART_RATE) - 256;
+  uint32_t div = (256ULL * USART_CLOCK) / (4 * CONFIG_DRIVER_EFM32_USART_RATE) - 256;
   cpu_mem_write_32(b + EFM32_USART_CLKDIV_ADDR, div);
 
 #if CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_XG1
