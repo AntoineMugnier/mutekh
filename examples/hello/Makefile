@@ -1,2 +1,2 @@
 
-objs = hello.o
+objs = hello.o config.o #dac.o
