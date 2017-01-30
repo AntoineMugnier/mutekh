@@ -1,0 +1,138 @@
+/*
+    This file is part of MutekH.
+
+    MutekH is free software; you can redistribute it and/or modify it
+    under the terms of the GNU Lesser General Public License as
+    published by the Free Software Foundation; version 2.1 of the
+    License.
+
+    MutekH is distributed in the hope that it will be useful, but
+    WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+    Lesser General Public License for more details.
+
+    You should have received a copy of the GNU Lesser General Public
+    License along with this program.  If not, see
+    <http://www.gnu.org/licenses/>.
+
+    Copyright (c) 2017, Nicolas Pouillon <nipo@ssji.net>
+*/
+
+.custom spi
+.name sd1306_spi
+
+#define GPIO_DC(tmp, x) \
+    cst8        tmp, x ; \
+    spi_gpioset 1, tmp
+
+#define GPIO_RST(tmp, x) \
+    cst8        tmp, x ; \
+    spi_gpioset 0, tmp
+
+#define START_COMMAND(tmp) GPIO_DC(tmp, 0)
+
+#define START_DATA(tmp) GPIO_DC(tmp, 1)
+
+#define COMMAND(tmp, cmd) \
+    cst8        tmp, cmd ; \
+    pack8       tmp, 1 ; \
+    spi_wr      tmp, 1, CS_PULSE
+
+#define COMMAND_8(tmp, cmd, y) \
+    cst16       tmp, (cmd) | ((y) << 8), 0 ; \
+    pack16le    tmp, 1, 2 ; \
+    spi_wr      tmp, 2, CS_PULSE
+
+#define COMMAND_16(tmp, cmd, y) \
+    cst32       tmp, (cmd) | ((y) << 8), 0 ; \
+    pack32le    tmp, 1, 3 ; \
+    spi_wr      tmp, 3, CS_PULSE
+
+#define CMD_SET_CONTRAST(tmp, n)     COMMAND_8(tmp, 0x81, n)
+#define CMD_FORCE_ON(tmp, n)         COMMAND(tmp, 0xa4 | n)
+#define CMD_INVERSE(tmp, n)          COMMAND(tmp, 0xa6 | n)
+#define CMD_POWER(tmp, n)            COMMAND(tmp, 0xae | n)
+#define CMD_TOP_LINE(tmp, n)         COMMAND(tmp, 0x40 | n)
+#define CMD_LEFT_COLUMN(tmp, n)      COMMAND_8(tmp, 0xd3, n)
+#define CMD_FLIP_H(tmp, n)           COMMAND(tmp, 0xa0 | n)
+#define CMD_FLIP_V(tmp, n)           COMMAND(tmp, 0xc0 | ((n) << 3))
+    
+#define CMD_ADDRESSING_MODE(tmp, x) COMMAND_8(tmp, 0x20, _CMD_ADDRESSING_MODE_##x)
+#define     _CMD_ADDRESSING_MODE_HORIZONTAL 0
+#define     _CMD_ADDRESSING_MODE_VERTICAL 1
+#define     _CMD_ADDRESSING_MODE_PAGE 2
+
+/* Page addressing mode */
+#define CMD_PAGE(tmp, a) \
+    cst8        tmp, 0xb0 ; \
+    or32        tmp, a; \
+    pack8       tmp, 1 ; \
+    spi_wr      tmp, 1, CS_PULSE
+#define CMD_PAGE_COLUMN(tmp, v) \
+    mov         tmp, v ; \
+    extz        tmp, 3 ; \
+    pack8       tmp, 1 ; \
+    spi_wr      tmp, 1, CS_PULSE ; \
+    shi32r      v, 4 ; \
+    extz        v, 3 ; \
+    bit32s      v, 4 ; \
+    pack8       v, 1 ; \
+    spi_wr      v, 1, CS_PULSE
+
+/* Horizontal/vertical addressing mode */
+#define CMD_SET_COLUMN_RANGE(tmp, a, b) \
+    cst8        tmp, 0x21 ; \
+    shi32l      a, 8 ; \
+    shi32l      b, 16 ; \
+    or32        tmp, a; \
+    or32        tmp, b; \
+    pack32le    tmp, 1, 3 ; \
+    spi_wr      tmp, 3, CS_PULSE
+#define CMD_SET_PAGE_RANGE(tmp, a, b) \
+    cst8        tmp, 0x22 ; \
+    shi32l      a, 8 ; \
+    shi32l      b, 16 ; \
+    or32        tmp, a; \
+    or32        tmp, b; \
+    pack32le    tmp, 1, 3 ; \
+    spi_wr      tmp, 3, CS_PULSE
+
+    
+.func sd1306_bc_reset
+    .export sd1306_bc_reset
+    .input %7 reset_latency
+    .clobber %0
+
+    GPIO_RST(%0, 0)
+    spi_yield_delay %reset_latency
+    GPIO_RST(%0, 1)
+    spi_yield_delay %reset_latency
+
+    START_COMMAND(%0)
+    CMD_SET_CONTRAST(%0, 0x7f)
+    CMD_FORCE_ON(%0, 0)
+    CMD_INVERSE(%0, 0)
+    CMD_POWER(%0, 1)
+    CMD_TOP_LINE(%0, 0)
+    CMD_LEFT_COLUMN(%0, 0)
+    CMD_FLIP_H(%0, 0)
+    CMD_FLIP_V(%0, 0)
+    CMD_ADDRESSING_MODE(%0, PAGE)
+
+    end
+.endfunc
+
+.func sd1306_bc_write
+    .export sd1306_bc_write
+    .input  %0 page, %1 column, %2 blob, %3 count
+    .clobber %1, %5 tmp
+
+    START_COMMAND(%tmp)
+    CMD_PAGE_COLUMN(%tmp, %column)
+    CMD_PAGE(%tmp, %page)
+    
+    START_DATA(%tmp)
+    spi_wrm %blob, %count, CS_PULSE
+    
+    end
+.endfunc
