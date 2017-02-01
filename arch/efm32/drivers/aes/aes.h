@@ -37,8 +37,7 @@
 #include <device/clock.h>
 
 #include <arch/efm32/aes.h>
-
-#define CONFIG_EFM32_AES_ADDR 0x400e0000
+#include <arch/efm32/devaddr.h>
 
 #define EFM32_AES_OCB_L_COUNT                                           \
   (8 * sizeof(int) - __builtin_clz(CONFIG_DRIVER_EFM32_AES_OCB3_MAXBLOCKS + 1))
@@ -143,7 +142,7 @@ inline void efm32_aes_load_key128l(const uint8_t *key)
 {
   uint_fast8_t i;
   for (i = 0; i < 16; i += 4)
-    cpu_mem_write_32(CONFIG_EFM32_AES_ADDR + EFM32_AES_KEYL_ADDR(0),
+    cpu_mem_write_32(EFM32_AES_ADDR + EFM32_AES_KEYL_ADDR(0),
                      endian_be32_na_load(key + 12 - i));
 }
 
@@ -151,7 +150,7 @@ inline void efm32_aes_get_key128(uint8_t *key)
 {
   uint_fast8_t i;
   for (i = 0; i < 16; i += 4)
-    endian_be32_na_store(key + 12 - i, cpu_mem_read_32(CONFIG_EFM32_AES_ADDR + EFM32_AES_KEYL_ADDR(0)));
+    endian_be32_na_store(key + 12 - i, cpu_mem_read_32(EFM32_AES_ADDR + EFM32_AES_KEYL_ADDR(0)));
 }
 
 #ifdef EFM32_AES_CTRL_KEYBUFEN
@@ -159,7 +158,7 @@ inline void efm32_aes_load_key128h(const uint8_t *key)
 {
   uint_fast8_t i;
   for (i = 0; i < 16; i += 4)
-    cpu_mem_write_32(CONFIG_EFM32_AES_ADDR + EFM32_AES_KEYH_ADDR(0),
+    cpu_mem_write_32(EFM32_AES_ADDR + EFM32_AES_KEYH_ADDR(0),
                      endian_be32_na_load(key + 12 - i));
 }
 #endif
@@ -169,7 +168,7 @@ inline void efm32_aes_load_key256(const uint8_t *key)
 {
   uint_fast8_t i;
   for (i = 0; i < 32; i += 4)
-    cpu_mem_write_32(CONFIG_EFM32_AES_ADDR + EFM32_AES_KEYL_ADDR(i >> 2),
+    cpu_mem_write_32(EFM32_AES_ADDR + EFM32_AES_KEYL_ADDR(i >> 2),
                      endian_be32_na_load(key + 28 - i));
 }
 
@@ -177,13 +176,13 @@ inline void efm32_aes_get_key256(uint8_t *key)
 {
   uint_fast8_t i;
   for (i = 0; i < 32; i += 4)
-    endian_be32_na_store(key + 28 - i, cpu_mem_read_32(CONFIG_EFM32_AES_ADDR + EFM32_AES_KEYL_ADDR(i >> 2)));
+    endian_be32_na_store(key + 28 - i, cpu_mem_read_32(EFM32_AES_ADDR + EFM32_AES_KEYL_ADDR(i >> 2)));
 }
 #endif
 
 inline void efm32_aes_wait()
 {
-  while (cpu_mem_read_32(CONFIG_EFM32_AES_ADDR + EFM32_AES_STATUS_ADDR) & EFM32_AES_STATUS_RUNNING)
+  while (cpu_mem_read_32(EFM32_AES_ADDR + EFM32_AES_STATUS_ADDR) & EFM32_AES_STATUS_RUNNING)
     asm volatile("nop");
 }
 

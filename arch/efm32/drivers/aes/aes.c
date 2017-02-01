@@ -159,9 +159,9 @@ static DEV_REQUEST_DELAYED_FUNC(efm32_aes_process)
     case 16: {
       if (!ctx_ok && !ctx->encrypt_only)
         {
-          cpu_mem_write_32(CONFIG_EFM32_AES_ADDR + EFM32_AES_CTRL_ADDR, 0);
+          cpu_mem_write_32(EFM32_AES_ADDR + EFM32_AES_CTRL_ADDR, 0);
           efm32_aes_load_key128l(ctx->key_data);
-          cpu_mem_write_32(CONFIG_EFM32_AES_ADDR + EFM32_AES_CMD_ADDR, EFM32_AES_CMD_START);
+          cpu_mem_write_32(EFM32_AES_ADDR + EFM32_AES_CMD_ADDR, EFM32_AES_CMD_START);
           efm32_aes_wait();
           efm32_aes_get_key128(actx->dkey);
         }
@@ -177,9 +177,9 @@ static DEV_REQUEST_DELAYED_FUNC(efm32_aes_process)
     case 32:
       if (!ctx_ok && !ctx->encrypt_only)
         {
-          cpu_mem_write_32(CONFIG_EFM32_AES_ADDR + EFM32_AES_CTRL_ADDR, EFM32_AES_CTRL_AES256);
+          cpu_mem_write_32(EFM32_AES_ADDR + EFM32_AES_CTRL_ADDR, EFM32_AES_CTRL_AES256);
           efm32_aes_load_key256(ctx->key_data);
-          cpu_mem_write_32(CONFIG_EFM32_AES_ADDR + EFM32_AES_CMD_ADDR, EFM32_AES_CMD_START);
+          cpu_mem_write_32(EFM32_AES_ADDR + EFM32_AES_CMD_ADDR, EFM32_AES_CMD_START);
           efm32_aes_wait();
           efm32_aes_get_key256(actx->dkey);
         }
@@ -270,7 +270,7 @@ static DEV_INIT(efm32_aes_init)
   uintptr_t addr;
   if (device_res_get_uint(dev, DEV_RES_MEM, 0, &addr, NULL))
     return -ENOENT;
-  assert(addr == CONFIG_EFM32_AES_ADDR);
+  assert(addr == EFM32_AES_ADDR);
 
   pv = mem_alloc(sizeof (*pv), (mem_scope_sys));
 

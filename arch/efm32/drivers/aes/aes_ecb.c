@@ -29,7 +29,7 @@ void efm32_aes_ecb(struct efm32_aes_context_s * __restrict__ actx,
   if (rq->op & DEV_CRYPTO_INVERSE)
     ctrl |= EFM32_AES_CTRL_DECRYPT(DECRYPTION);
   EFM32_AES_KEY_CTRL(key, ctrl);
-  cpu_mem_write_32(CONFIG_EFM32_AES_ADDR + EFM32_AES_CTRL_ADDR, ctrl);
+  cpu_mem_write_32(EFM32_AES_ADDR + EFM32_AES_CTRL_ADDR, ctrl);
 
   if (rq->len & 15)
     return;
@@ -42,16 +42,16 @@ void efm32_aes_ecb(struct efm32_aes_context_s * __restrict__ actx,
     {
       EFM32_AES_KEY_RELOAD(key);
 
-      cpu_mem_write_32(CONFIG_EFM32_AES_ADDR + EFM32_AES_DATA_ADDR, endian_be32_na_load(in + 12));
-      cpu_mem_write_32(CONFIG_EFM32_AES_ADDR + EFM32_AES_DATA_ADDR, endian_be32_na_load(in + 8));
-      cpu_mem_write_32(CONFIG_EFM32_AES_ADDR + EFM32_AES_DATA_ADDR, endian_be32_na_load(in + 4));
-      cpu_mem_write_32(CONFIG_EFM32_AES_ADDR + EFM32_AES_DATA_ADDR, endian_be32_na_load(in + 0));
+      cpu_mem_write_32(EFM32_AES_ADDR + EFM32_AES_DATA_ADDR, endian_be32_na_load(in + 12));
+      cpu_mem_write_32(EFM32_AES_ADDR + EFM32_AES_DATA_ADDR, endian_be32_na_load(in + 8));
+      cpu_mem_write_32(EFM32_AES_ADDR + EFM32_AES_DATA_ADDR, endian_be32_na_load(in + 4));
+      cpu_mem_write_32(EFM32_AES_ADDR + EFM32_AES_DATA_ADDR, endian_be32_na_load(in + 0));
       efm32_aes_wait();
 
-      endian_be32_na_store(out + 12, cpu_mem_read_32(CONFIG_EFM32_AES_ADDR + EFM32_AES_DATA_ADDR));
-      endian_be32_na_store(out + 8,  cpu_mem_read_32(CONFIG_EFM32_AES_ADDR + EFM32_AES_DATA_ADDR));
-      endian_be32_na_store(out + 4,  cpu_mem_read_32(CONFIG_EFM32_AES_ADDR + EFM32_AES_DATA_ADDR));
-      endian_be32_na_store(out + 0,  cpu_mem_read_32(CONFIG_EFM32_AES_ADDR + EFM32_AES_DATA_ADDR));
+      endian_be32_na_store(out + 12, cpu_mem_read_32(EFM32_AES_ADDR + EFM32_AES_DATA_ADDR));
+      endian_be32_na_store(out + 8,  cpu_mem_read_32(EFM32_AES_ADDR + EFM32_AES_DATA_ADDR));
+      endian_be32_na_store(out + 4,  cpu_mem_read_32(EFM32_AES_ADDR + EFM32_AES_DATA_ADDR));
+      endian_be32_na_store(out + 0,  cpu_mem_read_32(EFM32_AES_ADDR + EFM32_AES_DATA_ADDR));
       out += 16;
       in += 16;
     }

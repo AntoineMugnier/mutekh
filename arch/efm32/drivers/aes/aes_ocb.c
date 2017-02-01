@@ -36,18 +36,18 @@ void efm32_aes_ocb_key(struct efm32_aes_context_s * __restrict__ actx,
   else
 #endif
     efm32_aes_load_key128l(ctx->key_data);
-  cpu_mem_write_32(CONFIG_EFM32_AES_ADDR + EFM32_AES_CTRL_ADDR, ctrl);
+  cpu_mem_write_32(EFM32_AES_ADDR + EFM32_AES_CTRL_ADDR, ctrl);
 
-  cpu_mem_write_32(CONFIG_EFM32_AES_ADDR + EFM32_AES_DATA_ADDR, 0);
-  cpu_mem_write_32(CONFIG_EFM32_AES_ADDR + EFM32_AES_DATA_ADDR, 0);
-  cpu_mem_write_32(CONFIG_EFM32_AES_ADDR + EFM32_AES_DATA_ADDR, 0);
-  cpu_mem_write_32(CONFIG_EFM32_AES_ADDR + EFM32_AES_DATA_ADDR, 0);
+  cpu_mem_write_32(EFM32_AES_ADDR + EFM32_AES_DATA_ADDR, 0);
+  cpu_mem_write_32(EFM32_AES_ADDR + EFM32_AES_DATA_ADDR, 0);
+  cpu_mem_write_32(EFM32_AES_ADDR + EFM32_AES_DATA_ADDR, 0);
+  cpu_mem_write_32(EFM32_AES_ADDR + EFM32_AES_DATA_ADDR, 0);
   efm32_aes_wait();
 
-  actx->ocb_l32[0][3] = endian_be32(cpu_mem_read_32(CONFIG_EFM32_AES_ADDR + EFM32_AES_DATA_ADDR));
-  actx->ocb_l32[0][2] = endian_be32(cpu_mem_read_32(CONFIG_EFM32_AES_ADDR + EFM32_AES_DATA_ADDR));
-  actx->ocb_l32[0][1] = endian_be32(cpu_mem_read_32(CONFIG_EFM32_AES_ADDR + EFM32_AES_DATA_ADDR));
-  actx->ocb_l32[0][0] = endian_be32(cpu_mem_read_32(CONFIG_EFM32_AES_ADDR + EFM32_AES_DATA_ADDR));
+  actx->ocb_l32[0][3] = endian_be32(cpu_mem_read_32(EFM32_AES_ADDR + EFM32_AES_DATA_ADDR));
+  actx->ocb_l32[0][2] = endian_be32(cpu_mem_read_32(EFM32_AES_ADDR + EFM32_AES_DATA_ADDR));
+  actx->ocb_l32[0][1] = endian_be32(cpu_mem_read_32(EFM32_AES_ADDR + EFM32_AES_DATA_ADDR));
+  actx->ocb_l32[0][0] = endian_be32(cpu_mem_read_32(EFM32_AES_ADDR + EFM32_AES_DATA_ADDR));
 
   uint_fast8_t i, j;
   for (i = 1; i < EFM32_AES_OCB_L_COUNT + 2; i++)
@@ -94,19 +94,19 @@ void efm32_aes_ocb_nonce(struct efm32_aes_context_s * __restrict__ actx,
   else
 #endif
     efm32_aes_load_key128l(ctx->key_data);
-  cpu_mem_write_32(CONFIG_EFM32_AES_ADDR + EFM32_AES_CTRL_ADDR, ctrl);
+  cpu_mem_write_32(EFM32_AES_ADDR + EFM32_AES_CTRL_ADDR, ctrl);
 
-  cpu_mem_write_32(CONFIG_EFM32_AES_ADDR + EFM32_AES_DATA_ADDR, endian_be32_na_load(n + 12) & 0xffffffc0);
-  cpu_mem_write_32(CONFIG_EFM32_AES_ADDR + EFM32_AES_DATA_ADDR, endian_be32_na_load(n + 8));
-  cpu_mem_write_32(CONFIG_EFM32_AES_ADDR + EFM32_AES_DATA_ADDR, endian_be32_na_load(n + 4));
-  cpu_mem_write_32(CONFIG_EFM32_AES_ADDR + EFM32_AES_DATA_ADDR, endian_be32_na_load(n + 0));
+  cpu_mem_write_32(EFM32_AES_ADDR + EFM32_AES_DATA_ADDR, endian_be32_na_load(n + 12) & 0xffffffc0);
+  cpu_mem_write_32(EFM32_AES_ADDR + EFM32_AES_DATA_ADDR, endian_be32_na_load(n + 8));
+  cpu_mem_write_32(EFM32_AES_ADDR + EFM32_AES_DATA_ADDR, endian_be32_na_load(n + 4));
+  cpu_mem_write_32(EFM32_AES_ADDR + EFM32_AES_DATA_ADDR, endian_be32_na_load(n + 0));
   efm32_aes_wait();
 
   n = actx->ocb_stretch;
-  endian_be32_na_store(n + 12, cpu_mem_read_32(CONFIG_EFM32_AES_ADDR + EFM32_AES_DATA_ADDR));
-  endian_be32_na_store(n + 8,  cpu_mem_read_32(CONFIG_EFM32_AES_ADDR + EFM32_AES_DATA_ADDR));
-  endian_be32_na_store(n + 4,  cpu_mem_read_32(CONFIG_EFM32_AES_ADDR + EFM32_AES_DATA_ADDR));
-  endian_be32_na_store(n + 0,  cpu_mem_read_32(CONFIG_EFM32_AES_ADDR + EFM32_AES_DATA_ADDR));
+  endian_be32_na_store(n + 12, cpu_mem_read_32(EFM32_AES_ADDR + EFM32_AES_DATA_ADDR));
+  endian_be32_na_store(n + 8,  cpu_mem_read_32(EFM32_AES_ADDR + EFM32_AES_DATA_ADDR));
+  endian_be32_na_store(n + 4,  cpu_mem_read_32(EFM32_AES_ADDR + EFM32_AES_DATA_ADDR));
+  endian_be32_na_store(n + 0,  cpu_mem_read_32(EFM32_AES_ADDR + EFM32_AES_DATA_ADDR));
 
   for (i = 0; i < 8; i++)
     n[i + 16] = n[i] ^ n[i + 1];
@@ -150,16 +150,16 @@ void efm32_aes_ocb_hash(struct efm32_aes_context_s * __restrict__ actx,
       o3 ^= endian_be32(actx->ocb_l32[z][0]);
 
       EFM32_AES_KEY_RELOAD(key);
-      cpu_mem_write_32(CONFIG_EFM32_AES_ADDR + EFM32_AES_DATA_ADDR, endian_be32_na_load(in + 12) ^ o0);
-      cpu_mem_write_32(CONFIG_EFM32_AES_ADDR + EFM32_AES_DATA_ADDR, endian_be32_na_load(in + 8)  ^ o1);
-      cpu_mem_write_32(CONFIG_EFM32_AES_ADDR + EFM32_AES_DATA_ADDR, endian_be32_na_load(in + 4)  ^ o2);
-      cpu_mem_write_32(CONFIG_EFM32_AES_ADDR + EFM32_AES_DATA_ADDR, endian_be32_na_load(in + 0)  ^ o3);
+      cpu_mem_write_32(EFM32_AES_ADDR + EFM32_AES_DATA_ADDR, endian_be32_na_load(in + 12) ^ o0);
+      cpu_mem_write_32(EFM32_AES_ADDR + EFM32_AES_DATA_ADDR, endian_be32_na_load(in + 8)  ^ o1);
+      cpu_mem_write_32(EFM32_AES_ADDR + EFM32_AES_DATA_ADDR, endian_be32_na_load(in + 4)  ^ o2);
+      cpu_mem_write_32(EFM32_AES_ADDR + EFM32_AES_DATA_ADDR, endian_be32_na_load(in + 0)  ^ o3);
       efm32_aes_wait();
 
-      k0 ^= cpu_mem_read_32(CONFIG_EFM32_AES_ADDR + EFM32_AES_DATA_ADDR);
-      k1 ^= cpu_mem_read_32(CONFIG_EFM32_AES_ADDR + EFM32_AES_DATA_ADDR);
-      k2 ^= cpu_mem_read_32(CONFIG_EFM32_AES_ADDR + EFM32_AES_DATA_ADDR);
-      k3 ^= cpu_mem_read_32(CONFIG_EFM32_AES_ADDR + EFM32_AES_DATA_ADDR);
+      k0 ^= cpu_mem_read_32(EFM32_AES_ADDR + EFM32_AES_DATA_ADDR);
+      k1 ^= cpu_mem_read_32(EFM32_AES_ADDR + EFM32_AES_DATA_ADDR);
+      k2 ^= cpu_mem_read_32(EFM32_AES_ADDR + EFM32_AES_DATA_ADDR);
+      k3 ^= cpu_mem_read_32(EFM32_AES_ADDR + EFM32_AES_DATA_ADDR);
 
       in += 16;
     }
@@ -172,16 +172,16 @@ void efm32_aes_ocb_hash(struct efm32_aes_context_s * __restrict__ actx,
       p.p8[i] = 0x80;
 
       EFM32_AES_KEY_RELOAD(key);
-      cpu_mem_write_32(CONFIG_EFM32_AES_ADDR + EFM32_AES_DATA_ADDR, o0 ^ endian_be32(actx->ocb_l32[0][3] ^ p.p32[3]));
-      cpu_mem_write_32(CONFIG_EFM32_AES_ADDR + EFM32_AES_DATA_ADDR, o1 ^ endian_be32(actx->ocb_l32[0][2] ^ p.p32[2]));
-      cpu_mem_write_32(CONFIG_EFM32_AES_ADDR + EFM32_AES_DATA_ADDR, o2 ^ endian_be32(actx->ocb_l32[0][1] ^ p.p32[1]));
-      cpu_mem_write_32(CONFIG_EFM32_AES_ADDR + EFM32_AES_DATA_ADDR, o3 ^ endian_be32(actx->ocb_l32[0][0] ^ p.p32[0]));
+      cpu_mem_write_32(EFM32_AES_ADDR + EFM32_AES_DATA_ADDR, o0 ^ endian_be32(actx->ocb_l32[0][3] ^ p.p32[3]));
+      cpu_mem_write_32(EFM32_AES_ADDR + EFM32_AES_DATA_ADDR, o1 ^ endian_be32(actx->ocb_l32[0][2] ^ p.p32[2]));
+      cpu_mem_write_32(EFM32_AES_ADDR + EFM32_AES_DATA_ADDR, o2 ^ endian_be32(actx->ocb_l32[0][1] ^ p.p32[1]));
+      cpu_mem_write_32(EFM32_AES_ADDR + EFM32_AES_DATA_ADDR, o3 ^ endian_be32(actx->ocb_l32[0][0] ^ p.p32[0]));
       efm32_aes_wait();
 
-      k0 ^= cpu_mem_read_32(CONFIG_EFM32_AES_ADDR + EFM32_AES_DATA_ADDR);
-      k1 ^= cpu_mem_read_32(CONFIG_EFM32_AES_ADDR + EFM32_AES_DATA_ADDR);
-      k2 ^= cpu_mem_read_32(CONFIG_EFM32_AES_ADDR + EFM32_AES_DATA_ADDR);
-      k3 ^= cpu_mem_read_32(CONFIG_EFM32_AES_ADDR + EFM32_AES_DATA_ADDR);
+      k0 ^= cpu_mem_read_32(EFM32_AES_ADDR + EFM32_AES_DATA_ADDR);
+      k1 ^= cpu_mem_read_32(EFM32_AES_ADDR + EFM32_AES_DATA_ADDR);
+      k2 ^= cpu_mem_read_32(EFM32_AES_ADDR + EFM32_AES_DATA_ADDR);
+      k3 ^= cpu_mem_read_32(EFM32_AES_ADDR + EFM32_AES_DATA_ADDR);
     }
 
   tag[3] ^= endian_be32(k0);
@@ -229,7 +229,7 @@ void efm32_aes_ocb(struct efm32_aes_context_s * __restrict__ actx,
     {
       uint32_t ctrl = EFM32_AES_CTRL_DATASTART | EFM32_AES_CTRL_DECRYPT(DECRYPTION);
       EFM32_AES_KEY_CTRL(key, ctrl);
-      cpu_mem_write_32(CONFIG_EFM32_AES_ADDR + EFM32_AES_CTRL_ADDR, ctrl);
+      cpu_mem_write_32(EFM32_AES_ADDR + EFM32_AES_CTRL_ADDR, ctrl);
 
       for (i = 0; i < m; i++)
         {
@@ -243,16 +243,16 @@ void efm32_aes_ocb(struct efm32_aes_context_s * __restrict__ actx,
           o2 ^= endian_be32(actx->ocb_l32[z][1]);
           o3 ^= endian_be32(actx->ocb_l32[z][0]);
 
-          cpu_mem_write_32(CONFIG_EFM32_AES_ADDR + EFM32_AES_DATA_ADDR, endian_be32_na_load(in + 12) ^ o0);
-          cpu_mem_write_32(CONFIG_EFM32_AES_ADDR + EFM32_AES_DATA_ADDR, endian_be32_na_load(in + 8)  ^ o1);
-          cpu_mem_write_32(CONFIG_EFM32_AES_ADDR + EFM32_AES_DATA_ADDR, endian_be32_na_load(in + 4)  ^ o2);
-          cpu_mem_write_32(CONFIG_EFM32_AES_ADDR + EFM32_AES_DATA_ADDR, endian_be32_na_load(in + 0)  ^ o3);
+          cpu_mem_write_32(EFM32_AES_ADDR + EFM32_AES_DATA_ADDR, endian_be32_na_load(in + 12) ^ o0);
+          cpu_mem_write_32(EFM32_AES_ADDR + EFM32_AES_DATA_ADDR, endian_be32_na_load(in + 8)  ^ o1);
+          cpu_mem_write_32(EFM32_AES_ADDR + EFM32_AES_DATA_ADDR, endian_be32_na_load(in + 4)  ^ o2);
+          cpu_mem_write_32(EFM32_AES_ADDR + EFM32_AES_DATA_ADDR, endian_be32_na_load(in + 0)  ^ o3);
           efm32_aes_wait();
 
-          m0 = o0 ^ cpu_mem_read_32(CONFIG_EFM32_AES_ADDR + EFM32_AES_DATA_ADDR);
-          m1 = o1 ^ cpu_mem_read_32(CONFIG_EFM32_AES_ADDR + EFM32_AES_DATA_ADDR);
-          m2 = o2 ^ cpu_mem_read_32(CONFIG_EFM32_AES_ADDR + EFM32_AES_DATA_ADDR);
-          m3 = o3 ^ cpu_mem_read_32(CONFIG_EFM32_AES_ADDR + EFM32_AES_DATA_ADDR);
+          m0 = o0 ^ cpu_mem_read_32(EFM32_AES_ADDR + EFM32_AES_DATA_ADDR);
+          m1 = o1 ^ cpu_mem_read_32(EFM32_AES_ADDR + EFM32_AES_DATA_ADDR);
+          m2 = o2 ^ cpu_mem_read_32(EFM32_AES_ADDR + EFM32_AES_DATA_ADDR);
+          m3 = o3 ^ cpu_mem_read_32(EFM32_AES_ADDR + EFM32_AES_DATA_ADDR);
 
           endian_be32_na_store(out + 12, m0);
           endian_be32_na_store(out + 8,  m1);
@@ -282,7 +282,7 @@ void efm32_aes_ocb(struct efm32_aes_context_s * __restrict__ actx,
         ctrl |= EFM32_AES_CTRL_AES256;
 # endif
 #endif
-      cpu_mem_write_32(CONFIG_EFM32_AES_ADDR + EFM32_AES_CTRL_ADDR, ctrl);
+      cpu_mem_write_32(EFM32_AES_ADDR + EFM32_AES_CTRL_ADDR, ctrl);
 
       if (r)
         {
@@ -293,16 +293,16 @@ void efm32_aes_ocb(struct efm32_aes_context_s * __restrict__ actx,
           o2 ^= endian_be32(actx->ocb_l32[0][1]);
           o3 ^= endian_be32(actx->ocb_l32[0][0]);
 
-          cpu_mem_write_32(CONFIG_EFM32_AES_ADDR + EFM32_AES_DATA_ADDR, o0);
-          cpu_mem_write_32(CONFIG_EFM32_AES_ADDR + EFM32_AES_DATA_ADDR, o1);
-          cpu_mem_write_32(CONFIG_EFM32_AES_ADDR + EFM32_AES_DATA_ADDR, o2);
-          cpu_mem_write_32(CONFIG_EFM32_AES_ADDR + EFM32_AES_DATA_ADDR, o3);
+          cpu_mem_write_32(EFM32_AES_ADDR + EFM32_AES_DATA_ADDR, o0);
+          cpu_mem_write_32(EFM32_AES_ADDR + EFM32_AES_DATA_ADDR, o1);
+          cpu_mem_write_32(EFM32_AES_ADDR + EFM32_AES_DATA_ADDR, o2);
+          cpu_mem_write_32(EFM32_AES_ADDR + EFM32_AES_DATA_ADDR, o3);
           efm32_aes_wait();
 
-          p.p32[3] = endian_be32(cpu_mem_read_32(CONFIG_EFM32_AES_ADDR + EFM32_AES_DATA_ADDR));
-          p.p32[2] = endian_be32(cpu_mem_read_32(CONFIG_EFM32_AES_ADDR + EFM32_AES_DATA_ADDR));
-          p.p32[1] = endian_be32(cpu_mem_read_32(CONFIG_EFM32_AES_ADDR + EFM32_AES_DATA_ADDR));
-          p.p32[0] = endian_be32(cpu_mem_read_32(CONFIG_EFM32_AES_ADDR + EFM32_AES_DATA_ADDR));
+          p.p32[3] = endian_be32(cpu_mem_read_32(EFM32_AES_ADDR + EFM32_AES_DATA_ADDR));
+          p.p32[2] = endian_be32(cpu_mem_read_32(EFM32_AES_ADDR + EFM32_AES_DATA_ADDR));
+          p.p32[1] = endian_be32(cpu_mem_read_32(EFM32_AES_ADDR + EFM32_AES_DATA_ADDR));
+          p.p32[0] = endian_be32(cpu_mem_read_32(EFM32_AES_ADDR + EFM32_AES_DATA_ADDR));
 
           for (i = 0; i < r; i++)
             out[i] = p.p8[i] ^= in[i];
@@ -320,7 +320,7 @@ void efm32_aes_ocb(struct efm32_aes_context_s * __restrict__ actx,
     {
       uint32_t ctrl = EFM32_AES_CTRL_DATASTART | EFM32_AES_CTRL_DECRYPT(ENCRYPTION);
       EFM32_AES_KEY_CTRL(key, ctrl);
-      cpu_mem_write_32(CONFIG_EFM32_AES_ADDR + EFM32_AES_CTRL_ADDR, ctrl);
+      cpu_mem_write_32(EFM32_AES_ADDR + EFM32_AES_CTRL_ADDR, ctrl);
 
       for (i = 0; i < m; i++)
         {
@@ -338,16 +338,16 @@ void efm32_aes_ocb(struct efm32_aes_context_s * __restrict__ actx,
           m3 = endian_be32_na_load(in + 0);
 
           EFM32_AES_KEY_RELOAD(key);
-          cpu_mem_write_32(CONFIG_EFM32_AES_ADDR + EFM32_AES_DATA_ADDR, m0 ^ o0);
-          cpu_mem_write_32(CONFIG_EFM32_AES_ADDR + EFM32_AES_DATA_ADDR, m1 ^ o1);
-          cpu_mem_write_32(CONFIG_EFM32_AES_ADDR + EFM32_AES_DATA_ADDR, m2 ^ o2);
-          cpu_mem_write_32(CONFIG_EFM32_AES_ADDR + EFM32_AES_DATA_ADDR, m3 ^ o3);
+          cpu_mem_write_32(EFM32_AES_ADDR + EFM32_AES_DATA_ADDR, m0 ^ o0);
+          cpu_mem_write_32(EFM32_AES_ADDR + EFM32_AES_DATA_ADDR, m1 ^ o1);
+          cpu_mem_write_32(EFM32_AES_ADDR + EFM32_AES_DATA_ADDR, m2 ^ o2);
+          cpu_mem_write_32(EFM32_AES_ADDR + EFM32_AES_DATA_ADDR, m3 ^ o3);
           efm32_aes_wait();
 
-          endian_be32_na_store(out + 12, o0 ^ cpu_mem_read_32(CONFIG_EFM32_AES_ADDR + EFM32_AES_DATA_ADDR));
-          endian_be32_na_store(out + 8,  o1 ^ cpu_mem_read_32(CONFIG_EFM32_AES_ADDR + EFM32_AES_DATA_ADDR));
-          endian_be32_na_store(out + 4,  o2 ^ cpu_mem_read_32(CONFIG_EFM32_AES_ADDR + EFM32_AES_DATA_ADDR));
-          endian_be32_na_store(out + 0,  o3 ^ cpu_mem_read_32(CONFIG_EFM32_AES_ADDR + EFM32_AES_DATA_ADDR));
+          endian_be32_na_store(out + 12, o0 ^ cpu_mem_read_32(EFM32_AES_ADDR + EFM32_AES_DATA_ADDR));
+          endian_be32_na_store(out + 8,  o1 ^ cpu_mem_read_32(EFM32_AES_ADDR + EFM32_AES_DATA_ADDR));
+          endian_be32_na_store(out + 4,  o2 ^ cpu_mem_read_32(EFM32_AES_ADDR + EFM32_AES_DATA_ADDR));
+          endian_be32_na_store(out + 0,  o3 ^ cpu_mem_read_32(EFM32_AES_ADDR + EFM32_AES_DATA_ADDR));
 
           k0 ^= m0;
           k1 ^= m1;
@@ -376,17 +376,17 @@ void efm32_aes_ocb(struct efm32_aes_context_s * __restrict__ actx,
           o3 ^= endian_be32(actx->ocb_l32[0][0]);
 
           EFM32_AES_KEY_RELOAD(key);
-          cpu_mem_write_32(CONFIG_EFM32_AES_ADDR + EFM32_AES_DATA_ADDR, o0);
-          cpu_mem_write_32(CONFIG_EFM32_AES_ADDR + EFM32_AES_DATA_ADDR, o1);
-          cpu_mem_write_32(CONFIG_EFM32_AES_ADDR + EFM32_AES_DATA_ADDR, o2);
-          cpu_mem_write_32(CONFIG_EFM32_AES_ADDR + EFM32_AES_DATA_ADDR, o3);
+          cpu_mem_write_32(EFM32_AES_ADDR + EFM32_AES_DATA_ADDR, o0);
+          cpu_mem_write_32(EFM32_AES_ADDR + EFM32_AES_DATA_ADDR, o1);
+          cpu_mem_write_32(EFM32_AES_ADDR + EFM32_AES_DATA_ADDR, o2);
+          cpu_mem_write_32(EFM32_AES_ADDR + EFM32_AES_DATA_ADDR, o3);
           efm32_aes_wait();
 
           p.p8[r] ^= 0x80;
-          p.p32[3] ^= endian_be32(cpu_mem_read_32(CONFIG_EFM32_AES_ADDR + EFM32_AES_DATA_ADDR));
-          p.p32[2] ^= endian_be32(cpu_mem_read_32(CONFIG_EFM32_AES_ADDR + EFM32_AES_DATA_ADDR));
-          p.p32[1] ^= endian_be32(cpu_mem_read_32(CONFIG_EFM32_AES_ADDR + EFM32_AES_DATA_ADDR));
-          p.p32[0] ^= endian_be32(cpu_mem_read_32(CONFIG_EFM32_AES_ADDR + EFM32_AES_DATA_ADDR));
+          p.p32[3] ^= endian_be32(cpu_mem_read_32(EFM32_AES_ADDR + EFM32_AES_DATA_ADDR));
+          p.p32[2] ^= endian_be32(cpu_mem_read_32(EFM32_AES_ADDR + EFM32_AES_DATA_ADDR));
+          p.p32[1] ^= endian_be32(cpu_mem_read_32(EFM32_AES_ADDR + EFM32_AES_DATA_ADDR));
+          p.p32[0] ^= endian_be32(cpu_mem_read_32(EFM32_AES_ADDR + EFM32_AES_DATA_ADDR));
 
           for (i = 0; i < r; i++)
             out[i] = p.p8[i];
@@ -395,16 +395,16 @@ void efm32_aes_ocb(struct efm32_aes_context_s * __restrict__ actx,
 
   EFM32_AES_KEY_RELOAD(key);
 
-  cpu_mem_write_32(CONFIG_EFM32_AES_ADDR + EFM32_AES_DATA_ADDR, endian_be32(actx->ocb_l32[1][3]) ^ o0 ^ k0);
-  cpu_mem_write_32(CONFIG_EFM32_AES_ADDR + EFM32_AES_DATA_ADDR, endian_be32(actx->ocb_l32[1][2]) ^ o1 ^ k1);
-  cpu_mem_write_32(CONFIG_EFM32_AES_ADDR + EFM32_AES_DATA_ADDR, endian_be32(actx->ocb_l32[1][1]) ^ o2 ^ k2);
-  cpu_mem_write_32(CONFIG_EFM32_AES_ADDR + EFM32_AES_DATA_ADDR, endian_be32(actx->ocb_l32[1][0]) ^ o3 ^ k3);
+  cpu_mem_write_32(EFM32_AES_ADDR + EFM32_AES_DATA_ADDR, endian_be32(actx->ocb_l32[1][3]) ^ o0 ^ k0);
+  cpu_mem_write_32(EFM32_AES_ADDR + EFM32_AES_DATA_ADDR, endian_be32(actx->ocb_l32[1][2]) ^ o1 ^ k1);
+  cpu_mem_write_32(EFM32_AES_ADDR + EFM32_AES_DATA_ADDR, endian_be32(actx->ocb_l32[1][1]) ^ o2 ^ k2);
+  cpu_mem_write_32(EFM32_AES_ADDR + EFM32_AES_DATA_ADDR, endian_be32(actx->ocb_l32[1][0]) ^ o3 ^ k3);
   efm32_aes_wait();
 
-  p.p32[3] = endian_be32(cpu_mem_read_32(CONFIG_EFM32_AES_ADDR + EFM32_AES_DATA_ADDR));
-  p.p32[2] = endian_be32(cpu_mem_read_32(CONFIG_EFM32_AES_ADDR + EFM32_AES_DATA_ADDR));
-  p.p32[1] = endian_be32(cpu_mem_read_32(CONFIG_EFM32_AES_ADDR + EFM32_AES_DATA_ADDR));
-  p.p32[0] = endian_be32(cpu_mem_read_32(CONFIG_EFM32_AES_ADDR + EFM32_AES_DATA_ADDR));
+  p.p32[3] = endian_be32(cpu_mem_read_32(EFM32_AES_ADDR + EFM32_AES_DATA_ADDR));
+  p.p32[2] = endian_be32(cpu_mem_read_32(EFM32_AES_ADDR + EFM32_AES_DATA_ADDR));
+  p.p32[1] = endian_be32(cpu_mem_read_32(EFM32_AES_ADDR + EFM32_AES_DATA_ADDR));
+  p.p32[0] = endian_be32(cpu_mem_read_32(EFM32_AES_ADDR + EFM32_AES_DATA_ADDR));
 
 #ifdef CONFIG_DRIVER_EFM32_AES_AD
   if (rq->ad_len)
