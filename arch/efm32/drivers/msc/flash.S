@@ -191,7 +191,7 @@ FUNC_START(.text, efm32_flash_write)
 	adds	r2,	#4
 	adds	r1,	#4
 	subs	r3,	#1
-#ifdef CONFIG_EFM32_GECKO
+#if CONFIG_EFM32_FAMILY == EFM32_FAMILY_GECKO
 	bne	4b
 #else
 	bne	2b

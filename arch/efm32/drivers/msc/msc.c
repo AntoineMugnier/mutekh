@@ -83,7 +83,7 @@ static DEV_MEM_INFO(efm32_msc_info)
         }
       else
         {
-#ifdef CONFIG_EFM32_GIANT_GECKO
+#if CONFIG_EFM32_FAMILY == EFM32_FAMILY_GIANT
           info->page_log2 = 11;
 #else
           info->page_log2 = pv->page_log2;
