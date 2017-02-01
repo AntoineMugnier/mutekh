@@ -45,7 +45,7 @@
     CONFIG_HEXO_STACK_ALIGN 32
   %end
 
-  %subsection efm32-zgNNN-*
+  %subsection efm32-zgNNN-*-*
     %types family
 
     CONFIG_CPU_ARM32M_CORTEXM0
@@ -90,7 +90,7 @@
 
   %end
 
-  %subsection efm32-gNNN-*
+  %subsection efm32-gNNN-*-*
     %types family
 
     CONFIG_CPU_ARM32M_CORTEXM3

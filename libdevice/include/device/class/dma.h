@@ -356,14 +356,17 @@ DRIVER_CLASS_TYPES(DRIVER_CLASS_DMA, dma,
         } }                                               \
   }
 
+# define DEV_STATIC_RES_DEV_DMA(path_)                    \
+  DEV_STATIC_RES_DEV_PARAM("dma", path_)
+
 #else
 
-# define DEV_STATIC_RES_DMA(channel_, config_)   \
+# define DEV_STATIC_RES_DMA(channel_mask_, link_)        \
   {                                                      \
     .type = DEV_RES_UNUSED,                              \
   }
 
-# define DEV_STATIC_RES_DEV_DMA(path_)                                 \
+# define DEV_STATIC_RES_DEV_DMA(path_)                   \
   {                                                      \
     .type = DEV_RES_UNUSED,                              \
   }
