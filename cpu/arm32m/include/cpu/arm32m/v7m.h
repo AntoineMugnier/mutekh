@@ -3,8 +3,7 @@
 ***************************************/
 
 /*
-   bfgen -I /opt/bfgen/defs/arm/arm_v7m.bf -o cdefs cdefs_use_field_shift=1    \
-     -O cpu/arm/include/cpu/arm32m/v7m.h
+   bfgen -o cdefs cdefs_use_field_shift=1
 */
 
 #ifndef _ARMV7M_BFGEN_DEFS_
@@ -157,10 +156,25 @@
   #define ARMV7M_VTOR_TBLOFF_GET(x)                (((x) >> 7) & 0x1ffffff)
 
 #define ARMV7M_AIRCR_ADDR                            0xe000ed0c
+  #define ARMV7M_AIRCR_VECTCLRACTIVE               0x00000002
+  #define ARMV7M_AIRCR_VECTCLRACTIVE_SHIFT         1
+  #define ARMV7M_AIRCR_SYSRESETREQ                 0x00000004
+  #define ARMV7M_AIRCR_SYSRESETREQ_SHIFT           2
+  #define ARMV7M_AIRCR_ENDIANESS_SHIFT             15
+  #define ARMV7M_AIRCR_ENDIANESS(v)                ((ARMV7M_AIRCR_ENDIANESS_##v) << 15)
+  #define ARMV7M_AIRCR_ENDIANESS_SET(x, v)         do { (x) = (((x) & ~0x8000) | ((ARMV7M_AIRCR_ENDIANESS_##v) << 15)); } while(0)
+  #define ARMV7M_AIRCR_ENDIANESS_GET(x)            (((x) >> 15) & 0x1)
+    #define ARMV7M_AIRCR_ENDIANESS_LITTLE            0x00000000
+    #define ARMV7M_AIRCR_ENDIANESS_BIG               0x00000001
+  #define ARMV7M_AIRCR_VECTKEY_SHIFT               16
+  #define ARMV7M_AIRCR_VECTKEY(v)                  ((ARMV7M_AIRCR_VECTKEY_##v) << 16)
+  #define ARMV7M_AIRCR_VECTKEY_SET(x, v)           do { (x) = (((x) & ~0xffff0000) | ((ARMV7M_AIRCR_VECTKEY_##v) << 16)); } while(0)
+  #define ARMV7M_AIRCR_VECTKEY_GET(x)              (((x) >> 16) & 0xffff)
+    #define ARMV7M_AIRCR_VECTKEY_KEY                 0x000005fa
 
 #define ARMV7M_SCR_ADDR                              0xe000ed10
-  #define ARMV7M_SCR_SLEEPONNEXIT                  0x00000002
-  #define ARMV7M_SCR_SLEEPONNEXIT_SHIFT            1
+  #define ARMV7M_SCR_SLEEPONEXIT                   0x00000002
+  #define ARMV7M_SCR_SLEEPONEXIT_SHIFT             1
   #define ARMV7M_SCR_SLEEPDEEP                     0x00000004
   #define ARMV7M_SCR_SLEEPDEEP_SHIFT               2
   #define ARMV7M_SCR_SEVONPEND                     0x00000010

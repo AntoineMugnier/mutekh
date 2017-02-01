@@ -21,10 +21,15 @@
 */
 
 #include <hexo/power.h>
+#include <hexo/iospace.h>
+#include <cpu/arm32m/v7m.h>
 
 error_t power_reboot()
 {
-  return ENOTSUP;
+  cpu_mem_write_32(ARMV7M_AIRCR_ADDR, ARMV7M_AIRCR_VECTKEY(KEY)
+                   | ARMV7M_AIRCR_SYSRESETREQ);
+  while (1)
+    asm volatile("dmb");
 }
 
 error_t power_shutdown()
