@@ -374,7 +374,7 @@ error_t device_irq_source_link(struct device_s *dev, struct dev_irq_src_s *srcs,
       struct device_icu_s icu;
       if (device_get_accessor_by_path(&icu.base, &dev->node, icu_path, DRIVER_CLASS_ICU))
         {
-          printk("device: can not use %p device as an interrupt controller.\n", icu_path);
+          printk("device: can not use %s device as an interrupt controller.\n", icu_path);
           err = -EINVAL;
           goto error;
         }
