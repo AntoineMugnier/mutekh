@@ -774,7 +774,7 @@ static DEV_CLEANUP(nrf5x_clock_cleanup)
   return 0;
 }
 
-DRIVER_DECLARE(nrf5x_clock_drv, DRIVER_FLAGS_EARLY_INIT | DRIVER_FLAGS_NO_DEPEND, "nRF5x clock"
+DRIVER_DECLARE(nrf5x_clock_drv, 0, "nRF5x clock"
 #if LFRC_CAL
                "/Cal"
 #endif
