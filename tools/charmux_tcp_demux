@@ -1,0 +1,250 @@
+#!/usr/bin/python3
+
+import serial
+import serial.aio
+import asyncio
+import os
+
+class CharMux(asyncio.Protocol):
+    WAIT_SYNC = 1
+    WAIT_LEN = 2
+    WAIT_CTRL = 3
+    WAIT_DATA = 4
+    WAIT_HASH = 5
+
+    def __init__(self, frame_size = 48):
+        self.registry = {}
+        self.state = self.WAIT_SYNC
+        self.buffer = b""
+        self.frame_size = frame_size
+
+    def register(self, id, term):
+        if not id in self.registry:
+            self.registry[id] = set()
+        self.registry[id].add(term)
+
+    def unregister(self, id, term):
+        if id in self.registry:
+            self.registry[id].remove(term)
+
+    def connection_made(self, transport):
+        self.transport = transport
+
+    def data_received(self, data):
+        #print("Received:", data)
+        self.buffer += data
+        self.process()
+
+    def write_chunk(self, chunk):
+        #print("Writing chunk", chunk)
+        self.transport.write(chunk)
+
+    def process(self):
+        while True:
+            #print("In state", self.state, "Waiting data:", self.buffer)
+            if self.state == self.WAIT_SYNC:
+                try:
+                    i = self.buffer.index(b"\x67")
+                except:
+                    self.buffer = b""
+                    return
+                self.buffer = self.buffer[i + 1:]
+                self.state = self.WAIT_LEN
+                continue
+
+            elif self.state == self.WAIT_LEN:
+                if not self.buffer:
+                    return
+                self.length = self.buffer[0]
+                self.buffer = self.buffer[1:]
+                self.state = self.WAIT_CTRL
+
+            elif self.state == self.WAIT_CTRL:
+                if not self.buffer:
+                    return
+                self.ctrl = self.buffer[0]
+                self.buffer = self.buffer[1:]
+                self.state = self.WAIT_DATA
+
+            elif self.state == self.WAIT_DATA:
+                if len(self.buffer) < self.length:
+                    return
+                self.data = self.buffer[:self.length]
+                self.buffer = self.buffer[self.length:]
+                self.state = self.WAIT_HASH
+
+            elif self.state == self.WAIT_HASH:
+                if len(self.buffer) < 4:
+                    return
+                chk = self.buffer[:4]
+                chan = self.ctrl & 0x3f
+
+                self.buffer = self.buffer[4:]
+                self.state = self.WAIT_SYNC
+
+                for tgt in self.registry.get(chan, ()):
+                    tgt.receive(self.length, self.ctrl, self.data, chk)
+
+
+    def connection_lost(self, exc):
+        #print('port closed')
+        asyncio.get_event_loop().stop()
+
+class Fnv:
+    def __init__(self):
+        self.reset()
+
+    def reset(self):
+        self.__fnv = 0x811c9dc5
+
+    def update(self, b):
+        for x in b:
+            self.__fnv = 0xffffffff & ((self.__fnv ^ x) * 0x01000193)
+
+    def str(self):
+        return self.__fnv.to_bytes(4, byteorder = "little", signed = False)
+
+    def check(self, bytes):
+        return self.__fnv == int.from_bytes(bytes, byteorder = "little", signed = False)
+
+class MuxedChar(asyncio.Protocol):
+    def __init__(self, mux, id):
+        self.mux = mux
+        self.id = id
+        self.tx_chk = Fnv()
+        self.rx_chk = Fnv()
+        mux.register(id, self)
+        self.transport = None
+
+    def connection_made(self, transport):
+        self.transport = transport
+
+    def send(self, data, framed = False):
+        ctrl = self.id
+
+        if framed:
+            self.tx_chk.reset()
+            ctrl |= 0x80
+
+        while data:
+            if len(data) <= self.mux.frame_size and framed:
+                ctrl |= 0x40
+            part = data[:self.mux.frame_size]
+            data = data[self.mux.frame_size:]
+
+            header = bytes([0x67, len(part), ctrl])
+
+            self.tx_chk.update(header[1:])
+            self.tx_chk.update(part)
+
+            self.mux.write_chunk(header+part+self.tx_chk.str())
+            ctrl &= ~0x80
+
+    def data_received(self, data):
+        self.send(data, True)
+
+    def receive(self, length, ctrl, data, chk):
+        if ctrl & 0x80:
+            self.rx_chk.reset()
+        self.rx_chk.update([length])
+        self.rx_chk.update([ctrl])
+        self.rx_chk.update(data)
+        if self.rx_chk.check(chk) and self.transport:
+            self.transport.write(data)
+
+    def connection_lost(self, exc):
+        self.mux.unregister(self.id, self)
+
+class MuxedSocket(MuxedChar):
+    @classmethod
+    def listen(cls, mux, id, port):
+        factory = lambda: cls(mux, id)
+        loop = asyncio.get_event_loop()
+        coro = loop.create_server(factory, '127.0.0.1', port)
+        loop.run_until_complete(coro)
+        print("Registered mux channel #{} on port {}".format(id, port))
+
+class PtsSocket:
+    PTMX = "/dev/ptmx"
+    libc = None
+
+    @classmethod
+    def _init(cls):
+        if cls.libc:
+            return
+
+        from ctypes import c_int, c_char_p, cdll
+
+        cls.libc = cdll.LoadLibrary("libc.so.6")
+        cls.libc.ptsname.args = [c_int]
+        cls.libc.ptsname.restype = c_char_p
+
+    def __init__(self):
+        self._init()
+
+        self.ptmx = os.open(self.PTMX, os.O_RDWR|os.O_NOCTTY)
+        self.libc.grantpt(self.ptmx)
+        self.libc.unlockpt(self.ptmx)
+
+    def getsockname(self):
+        return self.PTMX
+
+    def getpeername(self):
+        return self.libc.ptsname(self.ptmx)
+
+    def fileno(self):
+        return self.ptmx
+
+    def close(self):
+        os.close(self.ptmx)
+
+    def read(self, n):
+        try:
+            return os.read(self.ptmx, n)
+        except OSError as e:
+            print(str(self.getpeername(), "ascii"), "closed")
+            return None
+    recv = read
+
+    def write(self, b):
+        return os.write(self.ptmx, b)
+    send = write
+
+class MuxedPts(MuxedChar):
+    @classmethod
+    def listen(cls, mux, id, port):
+        loop = asyncio.get_event_loop()
+        pts = PtsSocket()
+        loop._make_socket_transport(pts, cls(mux, id))
+        print("Registered mux channel #{} on {}".format(id, pts.getpeername()))
+
+def main():
+    modes = dict(pts = MuxedPts, tcp = MuxedSocket)
+
+    import argparse
+    parser = argparse.ArgumentParser("Charmux to TCP socket demuxer")
+    parser.add_argument("port", help = "Serial port", type = str)
+    parser.add_argument("-r", "--rate", help = "Serial port baudrate", default = 115200, type = int)
+    parser.add_argument("-c", "--count", help = "Mux count", default = 3, type = int)
+    parser.add_argument("-s", "--socket", help = "Create TCP sockets (default)", action = "store_const", dest = "mode", const = "tcp", default = "tcp")
+    parser.add_argument("-p", "--pts", help = "Create PTS", action = "store_const", dest = "mode", const = "pts")
+
+    args = parser.parse_args()
+
+    target_class = modes[args.mode]
+    mux = CharMux()
+    for i in range(args.count):
+        target_class.listen(mux, i, 4700+i)
+
+    loop = asyncio.get_event_loop()
+    coro = serial.aio.create_serial_connection(loop, lambda : mux, args.port, baudrate = args.rate)
+    loop.run_until_complete(coro)
+    try:
+        loop.run_forever()
+    except KeyboardInterrupt as e:
+        loop.close()
+    except:
+        raise
+
+if __name__ == "__main__":
+    main()
