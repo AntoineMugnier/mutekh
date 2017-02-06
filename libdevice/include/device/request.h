@@ -64,7 +64,10 @@ struct dev_request_s
   };
 
   /** Caller private data */
-  void                                  *pvdata;
+  union {
+    void                                *pvdata;
+    uintptr_t                           pvuint;
+  };
 
   /** Driver private data */
   union {
