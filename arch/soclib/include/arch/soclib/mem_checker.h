@@ -274,6 +274,11 @@ soclib_mem_mark_initialized(void* addr, size_t size)
 }
 
 ALWAYS_INLINE void
+soclib_mem_mark_uninitialized(void* addr, size_t size)
+{
+}
+
+ALWAYS_INLINE void
 soclib_mem_bypass_sp_check(uintptr_t pc_start, uintptr_t pc_end)
 {
 }
