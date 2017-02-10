@@ -80,7 +80,7 @@ DRIVER_PV(struct efm32_usart_spi_context_s
 #if CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_XG1
   uint32_t                       route;
   uint32_t                       enable;
-#elif CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_EFM
+#elif CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFM
   uint16_t                       route;
 #else
 # error
@@ -361,7 +361,7 @@ static DEV_SPI_CTRL_TRANSFER(efm32_usart_spi_transfer)
 #if CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_XG1
       cpu_mem_write_32(pv->addr + EFM32_USART_ROUTELOC0_ADDR, endian_le32(pv->route));
       cpu_mem_write_32(pv->addr + EFM32_USART_ROUTEPEN_ADDR, endian_le32(pv->enable));
-#elif CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_EFM
+#elif CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFM
       cpu_mem_write_32(pv->addr + EFM32_USART_ROUTE_ADDR, endian_le32(pv->route));
 #else
 # error
@@ -507,7 +507,7 @@ static DEV_INIT(efm32_usart_spi_init)
   cpu_mem_write_32(pv->addr + EFM32_USART_ROUTELOC0_ADDR, endian_le32(pv->route));
   cpu_mem_write_32(pv->addr + EFM32_USART_ROUTEPEN_ADDR, endian_le32(pv->enable));
 
-#elif CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_EFM
+#elif CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFM
   pv->route =  EFM32_USART_ROUTE_CLKPEN;
   if (loc[1] != IOMUX_INVALID_DEMUX)
     pv->route |= EFM32_USART_ROUTE_RXPEN;

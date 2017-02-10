@@ -416,7 +416,7 @@ static DEV_ICU_GET_SINK(efm32_gpio_icu_get_sink)
       if (i == 3)
         return NULL;
     }
-#elif CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_EFM
+#elif CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFM
   sink = pv->sink + line;
   info = (struct efm32_gpio_sink_info_s *)&sink->icu_pv;
   /* We actually keep only one endpoint object per line for all
@@ -470,7 +470,7 @@ static DEV_ICU_LINK(efm32_gpio_icu_link)
 #if CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_XG1
   uint8_t pin_id = (sink_id & 0xFC) + idx;
   EFM32_GPIO_MODEL_MODE_SET(pin_id  & 7, x, INPUT);
-#elif CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_EFM
+#elif CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFM
   EFM32_GPIO_MODEL_MODE_SET(sink_id & 7, x, INPUT);
 #else
 # error
@@ -508,7 +508,7 @@ static DEV_IRQ_SRC_PROCESS(efm32_gpio_source_process)
 #if CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_XG1
           uint8_t idx = (i & 0xFC) + info->idx;
           int_fast16_t id = (cpu_mem_read_32(EFM32_GPIO_ADDR + EFM32_GPIO_DIN_ADDR(info->bank)) >> idx) & 1;
-#elif CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_EFM
+#elif CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFM
           int_fast16_t id = (cpu_mem_read_32(EFM32_GPIO_ADDR + EFM32_GPIO_DIN_ADDR(info->bank)) >> i) & 1;
 #else
 # error

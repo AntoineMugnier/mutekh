@@ -414,7 +414,7 @@ static DEV_INIT(efm32_usart_char_init)
     }
   if (enable == 0)
     goto err_mem;
-#elif CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_EFM
+#elif CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFM
   uint32_t route = 0;
   if (loc[0] != IOMUX_INVALID_DEMUX)
     route |= EFM32_USART_ROUTE_RXPEN;
@@ -470,7 +470,7 @@ static DEV_INIT(efm32_usart_char_init)
 #if CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_XG1
   cpu_mem_write_32(pv->addr + EFM32_USART_ROUTELOC0_ADDR, endian_le32(route));
   cpu_mem_write_32(pv->addr + EFM32_USART_ROUTEPEN_ADDR, endian_le32(enable));
-#elif CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_EFM
+#elif CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFM
   cpu_mem_write_32(pv->addr + EFM32_USART_ROUTE_ADDR, endian_le32(route));
 #else
 # error
