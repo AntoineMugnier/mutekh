@@ -70,6 +70,7 @@
 enum char_mux_rx_state_e
 {
   CHAR_MUX_RX_IDLE,
+  CHAR_MUX_RX_OOSYNC,
   CHAR_MUX_RX_SYNC,
   CHAR_MUX_RX_LEN,
   CHAR_MUX_RX_PAYLOAD,
@@ -488,7 +489,7 @@ static bool_t char_mux_start_rx(struct device_s *dev)
     {
       pv->read_rq.size = 2;
       pv->read_rq.data = pv->rx_buf;
-      pv->rx_state = CHAR_MUX_RX_SYNC;
+      pv->rx_state = CHAR_MUX_RX_OOSYNC;
       return 1;
     }
 
@@ -529,12 +530,13 @@ static KROUTINE_EXEC(char_mux_io_read_done)
     restart:
       pv->read_rq.size = 2;
       pv->read_rq.data = pv->rx_buf;
-      pv->rx_state = CHAR_MUX_RX_SYNC;
+      pv->rx_state = CHAR_MUX_RX_OOSYNC;
       break;
 
     case 0:
       switch (pv->rx_state)
         {
+        case CHAR_MUX_RX_OOSYNC:
         case CHAR_MUX_RX_SYNC:
           if (pv->rx_buf[0] == SYNC_BYTE)
             {
@@ -553,8 +555,10 @@ static KROUTINE_EXEC(char_mux_io_read_done)
             }
 
           /* out of sync */
-          char_mux_rx_error(dev, -EPIPE);
+          if (pv->rx_state == CHAR_MUX_RX_SYNC)
+            char_mux_rx_error(dev, -EPIPE);
 
+          pv->rx_state = CHAR_MUX_RX_OOSYNC;
           if (pv->rx_buf[1] == SYNC_BYTE)
             {
               pv->rx_state = CHAR_MUX_RX_LEN;
@@ -627,6 +631,7 @@ static bool_t char_mux_start_tx(struct device_s *dev)
   if (pv->tx_state == CHAR_MUX_TX_IDLE && trq != NULL)
     {
       pv->write_rq.type = DEV_CHAR_WRITE | (trq->type & _DEV_CHAR_FLUSH);
+      assert(trq->size);
 
       /* send header */
       pv->write_rq.data = pv->tx_buf;
