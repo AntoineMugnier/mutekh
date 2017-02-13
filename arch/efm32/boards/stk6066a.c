@@ -61,6 +61,22 @@ DEV_DECLARE_STATIC(uart0_dev, "usart0", 0, efm32_usart_drv,
 
 #endif
 
+#ifdef CONFIG_DRIVER_EFM32_LEUART_CHAR
+
+DEV_DECLARE_STATIC(leuart0_dev, "leuart0", 0, efm32_leuart_drv,
+                   DEV_STATIC_RES_MEM(0x4004a000, 0x4004a400),
+                   DEV_STATIC_RES_FREQ(32768, 1),
+
+                   DEV_STATIC_RES_DEV_ICU("/cpu"),
+                   DEV_STATIC_RES_IRQ(0, EFM32_IRQ_LEUART0, DEV_IRQ_SENSE_RISING_EDGE, 0, 1),
+
+                   DEV_STATIC_RES_DEV_IOMUX("/gpio"),
+                   DEV_STATIC_RES_IOMUX("tx",  EFM32_LOC2, EFM32_PA2, 0, 0),
+                   DEV_STATIC_RES_IOMUX("rx",  EFM32_LOC2, EFM32_PA3, 0, 0)
+                   );
+
+#endif
+
 #ifdef CONFIG_DRIVER_EFM32_GPIO
 
 DEV_DECLARE_STATIC(gpio_dev, "gpio", 0, efm32_gpio_drv,

@@ -56,69 +56,85 @@ static PRINTK_HANDLER(efm32_leuart_printk_out)
 
 void efm32_leuart_printk_init()
 {
+  /* configure CMU */
+  uint32_t cmu = EFM32_CMU_ADDR;
+
+  /* Enable LFRCO */
+  cpu_mem_write_32(cmu + EFM32_CMU_OSCENCMD_ADDR, EFM32_CMU_OSCENCMD_LFRCOEN);
+
+  /* Wait LFRCO for stabilizing */
+  while (!(cpu_mem_read_32(cmu + EFM32_CMU_STATUS_ADDR) & EFM32_CMU_STATUS_LFRCORDY))
+        ;
+
   uint32_t lfbclken;
+  uint32_t x;
+
+#if CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_XG1
+  /* Select LFRCO for CLKLFB */
+  x = endian_le32(EFM32_CMU_LFBCLKSEL_LFB(LFRCO));
+  cpu_mem_write_32(cmu + EFM32_CMU_LFBCLKSEL_ADDR, x);
+  /* Enable clock for GPIO and LE interface */
+  x = cpu_mem_read_32(cmu + EFM32_CMU_HFBUSCLKEN0_ADDR);
+  x |= EFM32_CMU_HFBUSCLKEN0_GPIO | EFM32_CMU_HFBUSCLKEN0_LE;
+  cpu_mem_write_32(cmu + EFM32_CMU_HFBUSCLKEN0_ADDR, endian_le32(x));
+
+  if (CONFIG_MUTEK_PRINTK_ADDR != 0x4004a000)
+    return;
+
+  lfbclken = EFM32_CMU_LFBCLKEN0_LEUART0;
+
+#elif CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFM
+  /* Select LFRCO for CLKLFB */
+  x = cpu_mem_read_32(cmu + EFM32_CMU_LFCLKSEL_ADDR);
+  EFM32_CMU_LFCLKSEL_LFB_SET(x, LFRCO);
+  cpu_mem_write_32(cmu + EFM32_CMU_LFCLKSEL_ADDR, x);
+  /* Enable HF peripherals clock */
+  x = cpu_mem_read_32(cmu + EFM32_CMU_HFPERCLKDIV_ADDR);
+  x |= EFM32_CMU_HFPERCLKDIV_HFPERCLKEN;
+  cpu_mem_write_32(cmu + EFM32_CMU_HFPERCLKDIV_ADDR, endian_le32(x));
+  /* Enable LE clock */
+  x = cpu_mem_read_32(cmu + EFM32_CMU_HFCORECLKEN0_ADDR);
+  x |= EFM32_CMU_HFCORECLKEN0_LE;
+  cpu_mem_write_32(cmu + EFM32_CMU_HFCORECLKEN0_ADDR, endian_le32(x));
+  /* Enable GPIO clock */
+  x = cpu_mem_read_32(cmu + EFM32_CMU_HFPERCLKEN0_ADDR);
+  x |= EFM32_CMU_HFPERCLKEN0_GPIO;
+  cpu_mem_write_32(cmu + EFM32_CMU_HFPERCLKEN0_ADDR, endian_le32(x));
 
   switch (CONFIG_MUTEK_PRINTK_ADDR)
     {
-#ifdef EFM32_CMU_LFBCLKEN0_LEUART0
+  #ifdef EFM32_CMU_LFBCLKEN0_LEUART0
     case 0x40084000:            /* leuart0 */
       lfbclken = EFM32_CMU_LFBCLKEN0_LEUART0;
       break;
-#endif
-#ifdef EFM32_CMU_LFBCLKEN0_LEUART1
+  #endif
+  #ifdef EFM32_CMU_LFBCLKEN0_LEUART1
     case 0x40084400:            /* leuart1 */
       lfbclken = EFM32_CMU_LFBCLKEN0_LEUART1;
       break;
-#endif
+  #endif
     default:
       return;
     }
-
-  uint32_t b, x;
-
-  /* configure CMU */
-  b = EFM32_CMU_ADDR;
-
-  /* Enable clock for LE interface */
-  cpu_mem_write_32(b + EFM32_CMU_HFCORECLKEN0_ADDR, EFM32_CMU_HFCORECLKEN0_LE);
-
-  /* Enable LFRCO */
-  cpu_mem_write_32(b + EFM32_CMU_OSCENCMD_ADDR, EFM32_CMU_OSCENCMD_LFRCOEN);
-
-  /* Wait LFRCO for stabilizing */
-  while (!(cpu_mem_read_32(b + EFM32_CMU_STATUS_ADDR) & EFM32_CMU_STATUS_LFRCORDY))
-        ;
-
-  /* Select LFRCO for CLKLFB */
-  x = cpu_mem_read_32(b + EFM32_CMU_LFCLKSEL_ADDR);
-  EFM32_CMU_LFCLKSEL_LFB_SET(x, LFRCO);
-  cpu_mem_write_32(b + EFM32_CMU_LFCLKSEL_ADDR, x);
+#else
+# error
+#endif
 
   /* Enable clock for LEUART0 */
-  x = cpu_mem_read_32(b + EFM32_CMU_LFBCLKEN0_ADDR);
+  x = cpu_mem_read_32(cmu + EFM32_CMU_LFBCLKEN0_ADDR);
   x |= lfbclken;
-  cpu_mem_write_32(b + EFM32_CMU_LFBCLKEN0_ADDR, x);
-
-  /* Enable clock for HF peripherals */
-  x = cpu_mem_read_32(b + EFM32_CMU_HFPERCLKDIV_ADDR);
-  x |= EFM32_CMU_HFPERCLKDIV_HFPERCLKEN;
-  cpu_mem_write_32(b + EFM32_CMU_HFPERCLKDIV_ADDR, x);
-
-  /* Enable clock for GPIO */
-  x = cpu_mem_read_32(b + EFM32_CMU_HFPERCLKEN0_ADDR);
-  x |= EFM32_CMU_HFPERCLKEN0_GPIO;
-  cpu_mem_write_32(b + EFM32_CMU_HFPERCLKEN0_ADDR, x);
+  cpu_mem_write_32(cmu + EFM32_CMU_LFBCLKEN0_ADDR, x);
 
   /* configure GPIO to route LEUART signals */
-  b = EFM32_GPIO_ADDR;
+  uint32_t gpio = EFM32_GPIO_ADDR;
 
   /* TX route */
   uint32_t bank = CONFIG_DRIVER_EFM32_LEUART_PRINTK_PIN / 16;
   uint32_t pin = CONFIG_DRIVER_EFM32_LEUART_PRINTK_PIN % 8;
   uint32_t h = (CONFIG_DRIVER_EFM32_LEUART_PRINTK_PIN >> 1) & 4;
-  x = cpu_mem_read_32(b + EFM32_GPIO_MODEL_ADDR(bank) + h);
+  x = cpu_mem_read_32(gpio + EFM32_GPIO_MODEL_ADDR(bank) + h);
   EFM32_GPIO_MODEL_MODE_SET(pin, x, PUSHPULL);
-  cpu_mem_write_32(b + EFM32_GPIO_MODEL_ADDR(bank) + h, x);
+  cpu_mem_write_32(gpio + EFM32_GPIO_MODEL_ADDR(bank) + h, x);
 
 #if (CONFIG_EFM32_FAMILY == EFM32_FAMILY_ZERO) && \
   CONFIG_MUTEK_PRINTK_ADDR == 0x40084000 && \
@@ -126,31 +142,25 @@ void efm32_leuart_printk_init()
   defined(CONFIG_EFM32_STK_BC_EN)
 
   /* set EFM_BC_EN (PA9) high on stk3200 */
-  x = cpu_mem_read_32(b + EFM32_GPIO_MODEH_ADDR(0));
+  x = cpu_mem_read_32(gpio + EFM32_GPIO_MODEH_ADDR(0));
   EFM32_GPIO_MODEH_MODE_SET(1, x, PUSHPULL);
-  cpu_mem_write_32(b + EFM32_GPIO_MODEH_ADDR(0), x);
+  cpu_mem_write_32(gpio + EFM32_GPIO_MODEH_ADDR(0), x);
 
-  cpu_mem_write_32(b + EFM32_GPIO_DOUTSET_ADDR(0), EFM32_GPIO_DOUTSET_DOUTSET(9));
+  cpu_mem_write_32(gpio + EFM32_GPIO_DOUTSET_ADDR(0), EFM32_GPIO_DOUTSET_DOUTSET(9));
 #endif
 
-  b = CONFIG_MUTEK_PRINTK_ADDR;
+  uint32_t leuart = CONFIG_MUTEK_PRINTK_ADDR;
 
   /* Check that there is no on-going synchronization */
-  while (cpu_mem_read_32(b + EFM32_LEUART_SYNCBUSY_ADDR)
+  while (cpu_mem_read_32(leuart + EFM32_LEUART_SYNCBUSY_ADDR)
          & EFM32_LEUART_SYNCBUSY_MASK)
     ;
 
   /* Freeze Registers */
-  x = cpu_mem_read_32(b + EFM32_LEUART_FREEZE_ADDR);
-  EFM32_LEUART_FREEZE_REGFREEZE_SET(x, FREEZE);
-  cpu_mem_write_32(b + EFM32_LEUART_FREEZE_ADDR, x);
+  cpu_mem_write_32(leuart + EFM32_LEUART_FREEZE_ADDR, EFM32_LEUART_FREEZE_MASK);
 
   /* 8N1 */
-  x = cpu_mem_read_32(b + EFM32_LEUART_CTRL_ADDR);
-  EFM32_LEUART_CTRL_DATABITS_SET(x, EIGHT);
-  EFM32_LEUART_CTRL_PARITY_SET(x, NONE);
-  EFM32_LEUART_CTRL_STOPBITS_SET(x, ONE);
-  cpu_mem_write_32(b + EFM32_LEUART_CTRL_ADDR, x);
+  cpu_mem_write_32(leuart + EFM32_LEUART_CTRL_ADDR, 0);
 
   /* Baudrate */
 #define LEUART_CLOCK 32768
@@ -161,23 +171,30 @@ void efm32_leuart_printk_init()
   /* However, the data rate may be fine if the leuart input clock is
      later changed by the clock management when the
      CONFIG_DRIVER_EFM32_LEUART_CHAR driver is enabled. */
-  cpu_mem_write_32(b + EFM32_LEUART_CLKDIV_ADDR, EFM32_LEUART_CLKDIV_MASK);
+  cpu_mem_write_32(leuart + EFM32_LEUART_CLKDIV_ADDR, EFM32_LEUART_CLKDIV_MASK);
 #else
-  cpu_mem_write_32(b + EFM32_LEUART_CLKDIV_ADDR, (uint32_t)RATE);
+  cpu_mem_write_32(leuart + EFM32_LEUART_CLKDIV_ADDR, (uint32_t)RATE);
 #endif
 
   /* LEUART routes */
+#if CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_XG1
+  cpu_mem_write_32(leuart + EFM32_LEUART_ROUTEPEN_ADDR, EFM32_LEUART_ROUTEPEN_TXPEN);
+  x = cpu_mem_read_32(leuart + EFM32_LEUART_ROUTELOC0_ADDR);
+  EFM32_LEUART_ROUTELOC0_TXLOC_SETVAL(x, CONFIG_DRIVER_EFM32_LEUART_PRINTK_LOC);
+  cpu_mem_write_32(leuart + EFM32_LEUART_ROUTELOC0_ADDR, x);
+#elif CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFM
   x = EFM32_LEUART_ROUTE_TXPEN;
   EFM32_LEUART_ROUTE_LOCATION_SETVAL(x, CONFIG_DRIVER_EFM32_LEUART_PRINTK_LOC);
-  cpu_mem_write_32(b + EFM32_LEUART_ROUTE_ADDR, x);
+  cpu_mem_write_32(leuart + EFM32_LEUART_ROUTE_ADDR, x);
+#else
+# error
+#endif
 
   /* Unfreeze Registers */
-  x = cpu_mem_read_32(b + EFM32_LEUART_FREEZE_ADDR);
-  EFM32_LEUART_FREEZE_REGFREEZE_SET(x, UPDATE);
-  cpu_mem_write_32(b + EFM32_LEUART_FREEZE_ADDR, x);
+  cpu_mem_write_32(leuart + EFM32_LEUART_FREEZE_ADDR, 0);
 
   /* Enable TX */
-  cpu_mem_write_32(b + EFM32_LEUART_CMD_ADDR, EFM32_LEUART_CMD_TXEN);
+  cpu_mem_write_32(leuart + EFM32_LEUART_CMD_ADDR, EFM32_LEUART_CMD_TXEN);
 
   static struct printk_backend_s backend;
   printk_register(&backend, efm32_leuart_printk_out);
