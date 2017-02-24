@@ -67,7 +67,7 @@ enum adxl362_state_e
   ADXL362_STATE_ERROR,
 };
 
-DRIVER_PV(struct adxl362_private_s
+struct adxl362_private_s
 {
   struct device_spi_ctrl_s            spi;
   struct device_gpio_s                *gpio;
@@ -85,6 +85,10 @@ DRIVER_PV(struct adxl362_private_s
   bool_t                              was_active;
 
   enum adxl362_state_e                state;
-});
+
+  gpio_id_t pin_map[1];
+};
+
+DRIVER_PV(struct adxl362_private_s);
 
 #endif /* _ADXL362_H_ */

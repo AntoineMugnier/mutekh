@@ -105,8 +105,11 @@ KROUTINE_EXEC(adxl362_read_conv_done)
 
   pv->spi_rq.base.base.pvdata = NULL;
 
-  if (pv->state != ADXL362_STATE_RUNNING)
-    goto end;
+  if (pv->state != ADXL362_STATE_RUNNING) {
+    logk_trace("%s not running", __func__);
+    pv->read_pending = 1;
+    goto next;
+  }
 
   if (pv->spi_rq.base.err)
     {
@@ -143,6 +146,8 @@ KROUTINE_EXEC(adxl362_read_conv_done)
   });
 
   pv->was_active = active;
+
+next:
   adxl362_next(pv);
 
 end:
@@ -536,6 +541,14 @@ DEV_INIT(adxl362_init)
                                   &spi_config, &pv->spi, &pv->gpio, &pv->timer);
   if (err)
     goto err_pv;
+
+  static const gpio_width_t pin_wmap[] = {1};
+
+  if (device_res_gpio_map(dev, "irq:1", pv->pin_map, NULL))
+    goto err_pv;
+
+  pv->spi_rq.gpio_map = pv->pin_map;
+  pv->spi_rq.gpio_wmap = pin_wmap;
 
   pv->spi_rq.base.base.pvdata = NULL;
 
