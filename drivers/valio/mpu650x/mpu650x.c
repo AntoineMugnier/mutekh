@@ -145,7 +145,7 @@ void mpu650x_state_advance(struct device_s *dev)
     return;
   }
 
-  printk("%s %d -> %d%s\n", __FUNCTION__, pv->state, pv->target_state, pv->irq_pending ? " irq" : "");
+  dprintk("%s %d -> %d%s\n", __FUNCTION__, pv->state, pv->target_state, pv->irq_pending ? " irq" : "");
 
   if (pv->target_state < pv->state) {
     switch (pv->target_state) {
@@ -248,13 +248,13 @@ void mpu650x_request_serve_queue(struct device_s *dev)
           pv->stable_left, pv->stable_count,
           pv->wom_just_changed);
 
+  if (!pv->has_fresh_data)
+    return;
+
   if (dev_request_queue_isempty(&pv->queue)) {
     //    dprintk("%s queue empty\n", __FUNCTION__);
     device_sleep_schedule(dev);
   }
-
-  if (!pv->has_fresh_data)
-    return;
 
   if (pv->wom_just_changed) {
     pv->wom_just_changed--;
