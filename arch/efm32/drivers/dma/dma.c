@@ -591,7 +591,11 @@ efm32_dev_dma_process_channel_irq(struct device_s *dev, uint8_t i)
       /* Simulate a Peripheral restart */
       cpu_mem_write_32(pv->addr + PL230_DMA_CHSWREQ_ADDR, msk);
 #endif
-      return;
+      uint32_t x = endian_le32(cpu_mem_read_32(pv->addr + PL230_DMA_CHENS_ADDR));
+      if (x & (1 << i))
+        return;
+      /* Restart occurs too late */
+      rq->f_done(rq, desc_id, -EINVAL);
     }
 
   /* Disable channel */
