@@ -39,32 +39,67 @@
 
 #include <string.h>
 
+/*
+  There is an indefinite number of banks (#bank).
+  There are 16 pins (#pin) per bank.
+  There are 16 external interrupt lines (#sink).
+
+  An usable external interrupt has an associated sink end-point object
+  in the driver. The hardware can be configured to map every 16
+  external interrupts to some {bank, pin} tupples. An irq sink index
+  in the mutekh API is equivalent to the {bank, pin} tuple. Not all
+  associations are allowed; the pin must fall in a specific group
+  which depends on the external interrupt.
+
+  On efr32, there are 4 groups of 4 pins in a bank. An external
+  interrupt has one hardwired group index (#grp), one selectable pin
+  index in the group (#idx) and one selectable bank (#bank).
+
+  On efm32, there are 16 groups of 1 pin in a bank. An external
+  interrupt has one selectable bank (#bank). Thus #idx is always 0 and
+  #grp is always equal to #pin.
+*/
+
 #define GPIO_SRC_IRQ_COUNT 2
 #define GPIO_BANK_SIZE 16
 
-/* This specifies which bank is selected for each interrupt line. A
-   value of -1 means that no bank is currently bound to an
-   interrupt. */
-static inline uint_fast8_t
+#if CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFM
+# define GPIO_PINIDX_COUNT 1
+# define GPIO_PINGRP_COUNT 16
+# define GPIO_BANK_COUNT 6
+#endif
+#if CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_XG1
+# define GPIO_PINIDX_COUNT 4
+# define GPIO_PINGRP_COUNT 4
+# define GPIO_BANK_COUNT 12
+#endif
+
+/* This specifies which bank is selected for each interrupt line. */
+static ALWAYS_INLINE uint_fast8_t
 efm32_gpio_icupv_bank(const struct dev_irq_sink_s *sink)
 {
   return sink->icu_pv & 0x1f;
 }
 
-#if CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_XG1
-/* This specifies which line of group is selected for each interrupt
-   line. This value is valid only if bank field is not -1. */
-static inline uint_fast8_t
+/* This specifies which pin in the group is selected for an interrupt. */
+static ALWAYS_INLINE uint_fast8_t
 efm32_gpio_icupv_idx(const struct dev_irq_sink_s *sink)
 {
+#if CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_XG1
   return sink->icu_pv >> 5;
-}
+#else
+  return 0;
 #endif
+}
 
-static inline uint8_t
+static ALWAYS_INLINE uint8_t
 efm32_gpio_icupv(uint_fast8_t bank, uint_fast8_t idx)
 {
-  return bank | idx << 5;
+  return bank
+#if CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_XG1
+    | idx << 5
+#endif
+    ;
 }
 
 DRIVER_PV(struct efm32_gpio_private_s
@@ -73,6 +108,10 @@ DRIVER_PV(struct efm32_gpio_private_s
   struct dev_irq_sink_s sink[CONFIG_DRIVER_EFM32_GPIO_IRQ_COUNT];
 
   struct dev_irq_src_s src[2];
+#endif
+
+#ifdef CONFIG_DRIVER_EFM32_GPIO_UNTIL
+  dev_request_queue_root_t queue;
 #endif
 
   struct dev_clock_sink_ep_s    clk_ep;
@@ -245,7 +284,7 @@ static DEV_GPIO_SET_MODE(efm32_gpio_set_mode)
 {
   struct device_s *dev = gpio->dev;
 
-  if (io_last >= GPIO_BANK_SIZE * 6)
+  if (io_last >= GPIO_BANK_SIZE * GPIO_BANK_COUNT)
     return -ERANGE;
 
   LOCK_SPIN_IRQ(&dev->lock);
@@ -259,7 +298,7 @@ static DEV_GPIO_SET_OUTPUT(efm32_gpio_set_output)
 {
   struct device_s *dev = gpio->dev;
 
-  if (io_last >= GPIO_BANK_SIZE * 6)
+  if (io_last >= GPIO_BANK_SIZE * GPIO_BANK_COUNT)
     return -ERANGE;
 
   LOCK_SPIN_IRQ(&dev->lock);
@@ -269,16 +308,11 @@ static DEV_GPIO_SET_OUTPUT(efm32_gpio_set_output)
   return 0;
 }
 
-/* This function returns the GPIO input values of pins whose index
-   is included in range [io_first, io_last]. Size of data is a
-   multiple of 4 bytes. We do not care about bits outside range in 
-   data
-*/
 static DEV_GPIO_GET_INPUT(efm32_gpio_get_input)
 {
   struct device_s *dev = gpio->dev;
 
-  if (io_last >= GPIO_BANK_SIZE * 6)
+  if (io_last >= GPIO_BANK_SIZE * GPIO_BANK_COUNT)
     return -ERANGE;
 
   LOCK_SPIN_IRQ(&dev->lock);
@@ -306,10 +340,147 @@ static DEV_GPIO_GET_INPUT(efm32_gpio_get_input)
   LOCK_RELEASE_IRQ(&dev->lock);
 
   return 0;
-
 }
 
-#define efm32_gpio_request dev_gpio_request_async_to_sync
+#ifdef CONFIG_DRIVER_EFM32_GPIO_UNTIL
+static void
+efm32_gpio_request_until(struct device_s *dev,
+                         struct efm32_gpio_private_s *pv,
+                         struct dev_gpio_rq_s *rq)
+{
+  LOCK_SPIN_IRQ_SCOPED(&dev->lock);
+
+  const uint8_t *datap = rq->until.data;
+  const uint8_t *maskp = rq->until.mask;
+
+  uint16_t extirise = cpu_mem_read_32(EFM32_GPIO_ADDR + EFM32_GPIO_EXTIRISE_ADDR);
+  uint16_t extifall = cpu_mem_read_32(EFM32_GPIO_ADDR + EFM32_GPIO_EXTIFALL_ADDR);
+  uint16_t extien   = cpu_mem_read_32(EFM32_GPIO_ADDR + EFM32_GPIO_IEN_ADDR);
+  uint16_t irise = 0, ifall = 0;
+  gpio_id_t io;
+
+  for (io = rq->io_first; io <= rq->io_last; io += 32)
+    {
+      uint32_t mask = endian_le32_na_load(maskp);
+      uint32_t data = endian_le32_na_load(datap);
+      maskp += 4;
+      datap += 4;
+
+      while (mask)
+        {
+          uint_fast8_t k, j = __builtin_ctz(mask);
+          uint_fast8_t i = io + j;
+
+          if (i > rq->io_last)
+            goto push;
+          mask ^= 1 << j;
+
+          uint_fast8_t pin = i % GPIO_BANK_SIZE;
+          uint_fast8_t bank = i / GPIO_BANK_SIZE;
+
+          /* grpx = #grp * GPIO_PINIDX_COUNT */
+          uint_fast8_t grpx = pin & ~(GPIO_PINIDX_COUNT - 1);
+          uint_fast8_t sink_id;
+
+          /* Find an external interrupt which can be associated to the
+             monitored pin. */
+          for (k = 0; k < GPIO_BANK_SIZE / GPIO_PINGRP_COUNT; k++)
+            {
+              sink_id = grpx + k;
+#ifdef CONFIG_DRIVER_EFM32_GPIO_ICU
+              struct dev_irq_sink_s *sink = pv->sink + sink_id;
+              if (sink->base.link_count != 0)
+                continue;
+#endif
+              if (((extien | irise | ifall) >> sink_id) & 1)
+                continue;
+              goto found;
+            }
+
+          rq->error = -EBUSY;
+          goto done;
+
+        found:;
+          uintptr_t h = (sink_id & 8) >> 1; /* 4 when using high registers */
+
+          /* Select interrupt bank */
+          uint32_t x = endian_le32(cpu_mem_read_32(EFM32_GPIO_ADDR + EFM32_GPIO_EXTIPSELL_ADDR + h));
+          EFM32_GPIO_EXTIPSELL_EXT_SETVAL(sink_id & 7, x, bank);
+          cpu_mem_write_32(EFM32_GPIO_ADDR + EFM32_GPIO_EXTIPSELL_ADDR + h, endian_le32(x));
+
+#if GPIO_PINIDX_COUNT > 1
+          /* Select pin in the group */
+          uint_fast8_t idx = pin & (GPIO_PINIDX_COUNT - 1);
+          x = endian_le32(cpu_mem_read_32(EFM32_GPIO_ADDR + EFM32_GPIO_EXTIGSELL_ADDR + h));
+          EFM32_GPIO_EXTIGSELL_EXT_SETVAL(sink_id & 7, x, idx);
+          cpu_mem_write_32(EFM32_GPIO_ADDR + EFM32_GPIO_EXTIGSELL_ADDR + h, endian_le32(x));
+#endif
+
+          bool_t expected = (data >> j) & 1;
+          uint16_t m = 1 << sink_id;
+
+          /* Enable falling or rising edge interrupt */
+          if (expected)
+            {
+              ifall |= m;
+              cpu_mem_write_32(EFM32_GPIO_ADDR + EFM32_GPIO_EXTIFALL_ADDR,
+                               endian_le32(extifall | ifall));
+            }
+          else
+            {
+              irise |= m;
+              cpu_mem_write_32(EFM32_GPIO_ADDR + EFM32_GPIO_EXTIRISE_ADDR,
+                               endian_le32(extirise | irise));
+            }
+
+          cpu_mem_write_32(EFM32_GPIO_ADDR + EFM32_GPIO_IFC_ADDR,
+                           endian_le32(m));
+          cpu_mem_write_32(EFM32_GPIO_ADDR + EFM32_GPIO_IEN_ADDR,
+                           endian_le32(extien | ifall | irise));
+
+          /* Check current pin status */
+          uint16_t din = endian_le32(cpu_mem_read_32(EFM32_GPIO_ADDR + EFM32_GPIO_DIN_ADDR(bank)));
+
+          if (((din >> pin) ^ expected) & 1)
+            {
+              rq->error = 0;
+              goto done;
+            }
+        }
+    }
+
+ push:
+  rq->base.drvuint = ifall | irise;
+  dev_request_queue_pushback(&pv->queue, &rq->base);
+  return;
+
+ done:
+  /* revert external interrupts enabling */
+  cpu_mem_write_32(EFM32_GPIO_ADDR + EFM32_GPIO_EXTIFALL_ADDR,
+                   endian_le32(extifall));
+  cpu_mem_write_32(EFM32_GPIO_ADDR + EFM32_GPIO_EXTIRISE_ADDR,
+                   endian_le32(extirise));
+  cpu_mem_write_32(EFM32_GPIO_ADDR + EFM32_GPIO_IEN_ADDR,
+                   endian_le32(extien));
+
+  cpu_mem_write_32(EFM32_GPIO_ADDR + EFM32_GPIO_IFC_ADDR,
+                   endian_le32(irise | ifall));
+
+  kroutine_exec(&rq->base.kr);
+}
+#endif
+
+static DEV_GPIO_REQUEST(efm32_gpio_request)
+{
+#ifdef CONFIG_DRIVER_EFM32_GPIO_UNTIL
+  struct device_s *dev = gpio->dev;
+  if (rq->type == DEV_GPIO_UNTIL)
+    return efm32_gpio_request_until(dev, dev->drv_pv, rq);
+#endif
+
+  dev_gpio_request_async_to_sync(gpio, rq);
+}
+
 #define efm32_gpio_input_irq_range (dev_gpio_input_irq_range_t*)dev_driver_notsup_fcn
 
 /******** GPIO iomux controller driver part *********************/
@@ -318,7 +489,7 @@ static DEV_IOMUX_SETUP(efm32_gpio_iomux_setup)
 {
   struct device_s *dev = accessor->dev;
 
-  if (io_id >= GPIO_BANK_SIZE * 6)
+  if (io_id >= GPIO_BANK_SIZE * GPIO_BANK_COUNT)
     return -ERANGE;
 
   LOCK_SPIN_IRQ(&dev->lock);
@@ -329,13 +500,6 @@ static DEV_IOMUX_SETUP(efm32_gpio_iomux_setup)
 }
 
 /******** GPIO irq controller driver part *********************/
-
-#if CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_XG1
-static inline uint8_t efm32_get_idx(uint8_t irq_line, uint8_t group_idx)
-{
-  return (irq_line & 0xFC) + group_idx;
-}
-#endif
 
 #ifdef CONFIG_DRIVER_EFM32_GPIO_ICU
 
@@ -394,57 +558,45 @@ static DEV_ICU_GET_SINK(efm32_gpio_icu_get_sink)
 {
   struct device_s *dev = accessor->dev;
   struct efm32_gpio_private_s *pv = dev->drv_pv;
-  uint8_t line = id % GPIO_BANK_SIZE;
+  uint8_t pin = id % GPIO_BANK_SIZE;
   uint_fast8_t bank = id / GPIO_BANK_SIZE;
 
-  if (line >= CONFIG_DRIVER_EFM32_GPIO_IRQ_COUNT || bank >= 6)
+  if (pin >= CONFIG_DRIVER_EFM32_GPIO_IRQ_COUNT || bank >= GPIO_BANK_COUNT)
     return NULL;
 
-  struct dev_irq_sink_s *sink;
+  uint_fast8_t i = 0;
+  uint_fast8_t grpx = pin & ~(GPIO_PINIDX_COUNT - 1); /* grpx = grp * GPIO_PINIDX_COUNT */
+  uint_fast8_t idx  = pin &  (GPIO_PINIDX_COUNT - 1);
+  uint8_t icupv = efm32_gpio_icupv(bank, idx);
 
-#if CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_XG1
-  uint_fast8_t i, irq_base_line = line & 0xFC;
-  /* Find a free sink endpoint. Pin i can be mapped on irq group
-     lines [base: base + 4] of gpio controller */
-  for (i = 0; i < 4; i++)
+  /* Find a external interrupt (sink endpoint) which can be associated
+     to the selected pin. */
+  for (i = 0; i < GPIO_BANK_SIZE / GPIO_PINGRP_COUNT; i++)
     {
-      sink = pv->sink + irq_base_line + i;
-      uint8_t icupv = efm32_gpio_icupv(bank, line % 4);
+      uint_fast8_t sink_id = grpx + i;
+      struct dev_irq_sink_s *sink = pv->sink + sink_id;
 
       if (sink->base.link_count == 0)
         {
+#ifdef CONFIG_DRIVER_EFM32_GPIO_UNTIL
+          uint16_t mask = 1 << sink_id;
+          if (endian_le32(cpu_mem_read_32(EFM32_GPIO_ADDR + EFM32_GPIO_IEN_ADDR)) & mask)
+            continue;
+#endif
           sink->icu_pv = icupv;
-          break;
+          return sink;
         }
 
-      /* Already linked */
+      /* Already linked with the same configuration */
       if (sink->icu_pv == icupv)
-        break;
+        return sink;
     }
 
-  if (i == 4)
-    return NULL;
-#elif CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFM
-  sink = pv->sink + line;
-  /* We actually keep only one endpoint object per line for all
-     banks. We have to keep track of which bank the endpoint is
-     associated to. */
-  if (sink->base.link_count == 0)
-    sink->icu_pv = bank;
-  else if (sink->icu_pv != bank)
-    return NULL;
-#else
-# error
-#endif
-
-  return sink;
+  return NULL;
 }
 
 static DEV_ICU_LINK(efm32_gpio_icu_link)
 {
-  if (!route_mask || *bypass)
-    return 0;
-
   struct device_s *dev = accessor->dev;
   struct efm32_gpio_private_s *pv = dev->drv_pv;
   uint_fast8_t sink_id = sink - pv->sink;
@@ -455,33 +607,35 @@ static DEV_ICU_LINK(efm32_gpio_icu_link)
     return 0;
 #endif
 
-  /* Select bank */
-  uintptr_t a = sink_id >= 8 ? EFM32_GPIO_EXTIPSELH_ADDR : EFM32_GPIO_EXTIPSELL_ADDR;
-  uint32_t x = endian_le32(cpu_mem_read_32(EFM32_GPIO_ADDR + a));
-  EFM32_GPIO_EXTIPSELL_EXT_SETVAL(sink_id & 7, x, bank);
-  cpu_mem_write_32(EFM32_GPIO_ADDR + a, endian_le32(x));
+  if (route_mask == NULL)
+    return 0;
 
-#if CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_XG1
+#ifdef CONFIG_DEVICE_IRQ_BYPASS
+  if (*bypass)
+    return 0;
+#endif
+
+  uintptr_t h = (sink_id & 8) >> 1; /* 4 when using high registers */
+
+  /* Select bank */
+  uint32_t x = endian_le32(cpu_mem_read_32(EFM32_GPIO_ADDR + EFM32_GPIO_EXTIPSELL_ADDR + h));
+  EFM32_GPIO_EXTIPSELL_EXT_SETVAL(sink_id & 7, x, bank);
+  cpu_mem_write_32(EFM32_GPIO_ADDR + EFM32_GPIO_EXTIPSELL_ADDR + h, endian_le32(x));
+
   uint_fast8_t idx = efm32_gpio_icupv_idx(sink);
-  /* Select group */
-  a = sink_id >= 8 ? EFM32_GPIO_EXTIGSELH_ADDR : EFM32_GPIO_EXTIGSELL_ADDR;
-  x = endian_le32(cpu_mem_read_32(EFM32_GPIO_ADDR + a));
+#if GPIO_PINIDX_COUNT > 1
+  /* Select pin in the group */
+  x = endian_le32(cpu_mem_read_32(EFM32_GPIO_ADDR + EFM32_GPIO_EXTIGSELL_ADDR + h));
   EFM32_GPIO_EXTIGSELL_EXT_SETVAL(sink_id & 7, x, idx);
-  cpu_mem_write_32(EFM32_GPIO_ADDR + a, endian_le32(x));
+  cpu_mem_write_32(EFM32_GPIO_ADDR + EFM32_GPIO_EXTIGSELL_ADDR + h, endian_le32(x));
 #endif
 
   /* Change pin mode to input */
-  a = sink_id >= 8 ? EFM32_GPIO_MODEH_ADDR(bank) : EFM32_GPIO_MODEL_ADDR(bank);
-  x = endian_le32(cpu_mem_read_32(EFM32_GPIO_ADDR + a));
-#if CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_XG1
-  uint8_t pin_id = (sink_id & 0xFC) + idx;
-  EFM32_GPIO_MODEL_MODE_SET(pin_id  & 7, x, INPUT);
-#elif CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFM
-  EFM32_GPIO_MODEL_MODE_SET(sink_id & 7, x, INPUT);
-#else
-# error
-#endif
-  cpu_mem_write_32(EFM32_GPIO_ADDR + a, endian_le32(x));
+  x = endian_le32(cpu_mem_read_32(EFM32_GPIO_ADDR + EFM32_GPIO_MODEL_ADDR(bank) + h));
+  uint_fast8_t grpx = sink_id & ~(GPIO_PINIDX_COUNT - 1);
+  uint8_t pin_id = grpx + idx;
+  EFM32_GPIO_MODEL_MODE_SET(pin_id & 7, x, INPUT);
+  cpu_mem_write_32(EFM32_GPIO_ADDR + EFM32_GPIO_MODEL_ADDR(bank) + h, endian_le32(x));
 
   /* Clear interrupt */
   cpu_mem_write_32(EFM32_GPIO_ADDR + EFM32_GPIO_IFC_ADDR, endian_le32(bit(sink_id)));
@@ -492,45 +646,77 @@ static DEV_ICU_LINK(efm32_gpio_icu_link)
   return 0;
 }
 
+#endif
+
 static DEV_IRQ_SRC_PROCESS(efm32_gpio_source_process)
 {
-  struct efm32_gpio_private_s *pv = ep->base.dev->drv_pv;
+  struct device_s *dev = ep->base.dev;
+  struct efm32_gpio_private_s *pv = dev->drv_pv;
+
+  lock_spin(&dev->lock);
 
   while (1)
     {
-      uint32_t x = cpu_mem_read_32(EFM32_GPIO_ADDR + EFM32_GPIO_IF_ADDR);
+      uint32_t x = endian_le32(cpu_mem_read_32(EFM32_GPIO_ADDR + EFM32_GPIO_IF_ADDR));
 
       if (!x)
         break;
 
-      cpu_mem_write_32(EFM32_GPIO_ADDR + EFM32_GPIO_IFC_ADDR, x);
-      x = endian_le32(x);
+#ifdef CONFIG_DRIVER_EFM32_GPIO_UNTIL
+      /* handle gpio DEV_GPIO_UNTIL requests */
+      GCT_FOREACH(dev_request_queue, &pv->queue, rq, {
+          uint16_t m = rq->drvuint;
+          if (m & x)
+            {
+              x ^= m;
 
+              cpu_mem_write_32(EFM32_GPIO_ADDR + EFM32_GPIO_EXTIRISE_ADDR,
+                               cpu_mem_read_32(EFM32_GPIO_ADDR + EFM32_GPIO_EXTIRISE_ADDR)
+                               & endian_le32(~m));
+              cpu_mem_write_32(EFM32_GPIO_ADDR + EFM32_GPIO_EXTIFALL_ADDR,
+                               cpu_mem_read_32(EFM32_GPIO_ADDR + EFM32_GPIO_EXTIFALL_ADDR)
+                               & endian_le32(~m));
+              cpu_mem_write_32(EFM32_GPIO_ADDR + EFM32_GPIO_IEN_ADDR,
+                               cpu_mem_read_32(EFM32_GPIO_ADDR + EFM32_GPIO_IEN_ADDR)
+                               & endian_le32(~m));
+
+              kroutine_exec(&rq->kr);
+              GCT_FOREACH_DROP;
+            }
+      });
+#endif
+
+      cpu_mem_write_32(EFM32_GPIO_ADDR + EFM32_GPIO_IFC_ADDR, endian_le32(x));
+
+#ifdef CONFIG_DRIVER_EFM32_GPIO_ICU
       while (x)
         {
           uint_fast8_t i = __builtin_ctz(x);
           struct dev_irq_sink_s *sink = pv->sink + i;
-          uint_fast8_t bank = efm32_gpio_icupv_bank(sink);
-#if CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_XG1
-          uint8_t idx = (i & 0xFC) + efm32_gpio_icupv_idx(sink);
-          int_fast16_t id = (cpu_mem_read_32(EFM32_GPIO_ADDR + EFM32_GPIO_DIN_ADDR(bank)) >> idx) & 1;
-#elif CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFM
-          int_fast16_t id = (cpu_mem_read_32(EFM32_GPIO_ADDR + EFM32_GPIO_DIN_ADDR(bank)) >> i) & 1;
-#else
-# error
-#endif
-          device_irq_sink_process(sink, id);
+
+# ifdef CONFIG_DRIVER_EFM32_GPIO_UNTIL
+          if (sink->base.link_count != 0)
+# endif
+            {
+              uint_fast8_t bank = efm32_gpio_icupv_bank(sink);
+              uint8_t idx = (i & ~(GPIO_PINIDX_COUNT - 1)) + efm32_gpio_icupv_idx(sink);
+              int_fast16_t id = (cpu_mem_read_32(EFM32_GPIO_ADDR + EFM32_GPIO_DIN_ADDR(bank)) >> idx) & 1;
+              device_irq_sink_process(sink, id);
+            }
+
           x ^= bit(i);
         }
-    }
-}
-
 #endif
+    }
+
+  lock_release(&dev->lock);
+}
 
 /******** GPIO generic driver part *********************/
 
 
 #define efm32_gpio_use dev_use_generic
+//#define efm32_gpio_cancel dev_use_generic
 
 static DEV_INIT(efm32_gpio_init)
 {
@@ -552,13 +738,17 @@ static DEV_INIT(efm32_gpio_init)
   if (dev_drv_clock_init(dev, &pv->clk_ep, 0, DEV_CLOCK_EP_POWER_CLOCK | DEV_CLOCK_EP_GATING_SYNC, NULL))
     goto err_mem;
 
-#ifdef CONFIG_DRIVER_EFM32_GPIO_ICU
+#ifdef CONFIG_DRIVER_EFM32_GPIO_UNTIL
+  dev_request_queue_init(&pv->queue);
+#endif
+
   device_irq_source_init(dev, pv->src, GPIO_SRC_IRQ_COUNT,
                     &efm32_gpio_source_process);
 
   if (device_irq_source_link(dev, pv->src, GPIO_SRC_IRQ_COUNT, -1))
     goto err_clk;
 
+#ifdef CONFIG_DRIVER_EFM32_GPIO_ICU
   device_irq_sink_init(dev, pv->sink, CONFIG_DRIVER_EFM32_GPIO_IRQ_COUNT,
                        &efm32_gpio_icu_sink_update,
                        DEV_IRQ_SENSE_FALLING_EDGE | DEV_IRQ_SENSE_RISING_EDGE |
@@ -589,6 +779,10 @@ static DEV_CLEANUP(efm32_gpio_cleanup)
 #endif
 
   dev_drv_clock_cleanup(dev, &pv->clk_ep);
+
+#ifdef CONFIG_DRIVER_EFM32_GPIO_UNTIL
+  dev_request_queue_destroy(&pv->queue);
+#endif
 
   mem_free(pv);
 
