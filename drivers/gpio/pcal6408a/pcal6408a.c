@@ -229,18 +229,18 @@ static DEV_GPIO_REQUEST(pcal6408a_request)
   struct device_s *dev = gpio->dev;
   struct pcal6408a_priv_s *pv = dev->drv_pv;
 
-  req->error = 0;
+  rq->error = 0;
 
   LOCK_SPIN_IRQ_SCOPED(&dev->lock);
-  switch (req->type) {
+  switch (rq->type) {
   default:
-    dprintk("%s request %p\n", __FUNCTION__, req);
-    dev_request_queue_pushback(&pv->queue, &req->base);
+    dprintk("%s request %p\n", __FUNCTION__, rq);
+    dev_request_queue_pushback(&pv->queue, &rq->base);
     break;
 
   case DEV_GPIO_UNTIL:
-    dprintk("%s until %p\n", __FUNCTION__, req);
-    dev_request_queue_pushback(&pv->until_queue, &req->base);
+    dprintk("%s until %p\n", __FUNCTION__, rq);
+    dev_request_queue_pushback(&pv->until_queue, &rq->base);
     pv->until_mask_dirty = 1;
     break;
   }

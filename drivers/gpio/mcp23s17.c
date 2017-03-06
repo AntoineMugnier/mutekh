@@ -67,7 +67,7 @@
 
 */
 
-static void mcp23s17_rq_serve(struct device_s *dev, struct dev_gpio_rq_s *req);
+static void mcp23s17_rq_serve(struct device_s *dev, struct dev_gpio_rq_s *rq);
 
 #ifdef CONFIG_DRIVER_MCP23S17_ICU
 static void mcp23s17_spi_irq_process(struct mcp23s17_private_s *pv);
@@ -77,7 +77,7 @@ static void mcp23s17_spi_irq_setup(struct mcp23s17_private_s *pv);
 static void mcp23s17_next(struct device_s *dev)
 {
   struct mcp23s17_private_s *pv = dev->drv_pv;
-  struct dev_gpio_rq_s      *req;
+  struct dev_gpio_rq_s      *rq;
 
 #ifdef CONFIG_DRIVER_MCP23S17_ICU
   if (pv->pending_op & MCP23S17_IRQ_PROCESS_OP)
@@ -95,11 +95,11 @@ static void mcp23s17_next(struct device_s *dev)
       return;
     }
 #endif
-  if ((req = dev_gpio_rq_s_cast(dev_request_queue_head(&pv->rq_pending))))
+  if ((rq = dev_gpio_rq_s_cast(dev_request_queue_head(&pv->rq_pending))))
     {
       pv->current_op = MCP23S17_REQUEST_OP;
       pv->pending_op &= ~MCP23S17_REQUEST_OP;
-      mcp23s17_rq_serve(dev, req);
+      mcp23s17_rq_serve(dev, rq);
       return;
     }
   pv->current_op = 0;
@@ -110,27 +110,27 @@ static KROUTINE_EXEC(mcp23s17_spi_done)
 {
   struct mcp23s17_private_s *pv = KROUTINE_CONTAINER(kr, *pv, spi_req.base.base.kr);
   struct device_s           *dev = pv->spi_req.base.base.pvdata;
-  struct dev_gpio_rq_s      *req;
+  struct dev_gpio_rq_s      *rq;
 
   LOCK_SPIN_IRQ(&dev->lock);
 
   switch (pv->current_op)
     {
       case MCP23S17_REQUEST_OP:
-        req = dev_gpio_rq_s_cast(dev_request_queue_head(&pv->rq_pending));
-        req->error = pv->spi_req.base.err;
-        switch (req->type)
+        rq = dev_gpio_rq_s_cast(dev_request_queue_head(&pv->rq_pending));
+        rq->error = pv->spi_req.base.err;
+        switch (rq->type)
           {
             case DEV_GPIO_GET_INPUT:
-              endian_le16_na_store(req->input.data, pv->gpio_cache >> req->io_first);
+              endian_le16_na_store(rq->input.data, pv->gpio_cache >> rq->io_first);
             case DEV_GPIO_MODE:
             case DEV_GPIO_SET_OUTPUT:
             case DEV_GPIO_INPUT_IRQ_RANGE:
               break;
           }
         dev_request_queue_pop(&pv->rq_pending);
-        req->base.drvdata = NULL;
-        kroutine_exec(&req->base.kr);
+        rq->base.drvdata = NULL;
+        kroutine_exec(&rq->base.kr);
         break;
 #ifdef CONFIG_DRIVER_MCP23S17_ICU
       case MCP23S17_IRQ_PROCESS_OP:
@@ -178,29 +178,29 @@ static inline void mcp23s17_spi_irq_process(
 
 static void mcp23s17_rq_serve(
   struct device_s *dev,
-  struct dev_gpio_rq_s *req)
+  struct dev_gpio_rq_s *rq)
 {
   struct mcp23s17_private_s *pv = dev->drv_pv;
 
-  if (req->io_last >= MCP23S17_PIN_NB || req->io_last < req->io_first)
+  if (rq->io_last >= MCP23S17_PIN_NB || rq->io_last < rq->io_first)
     {
-      req->error = -ERANGE;
+      rq->error = -ERANGE;
       kroutine_exec(&pv->spi_req.base.base.kr);
       return;
     }
 
   uint16_t range_mask
-    = ((1 << (req->io_last - req->io_first + 1)) - 1) << req->io_first;
+    = ((1 << (rq->io_last - rq->io_first + 1)) - 1) << rq->io_first;
 
   __unused__ uint16_t mask;
   __unused__ uint16_t set_mask;
   __unused__ uint16_t clr_mask;
 
-  switch (req->type)
+  switch (rq->type)
     {
       case DEV_GPIO_MODE:
-        mask = (endian_le16_na_load(req->mode.mask) << req->io_first) & range_mask;
-        switch (req->mode.mode)
+        mask = (endian_le16_na_load(rq->mode.mask) << rq->io_first) & range_mask;
+        switch (rq->mode.mode)
           {
             case DEV_PIN_PUSHPULL:
               if (pv->iodir_cache & mask)
@@ -231,15 +231,15 @@ static void mcp23s17_rq_serve(
                 }
               break;
             default:
-              req->error = -ENOTSUP;
+              rq->error = -ENOTSUP;
               kroutine_exec(&pv->spi_req.base.base.kr);
               return;
           }
         break;
 
       case DEV_GPIO_SET_OUTPUT:
-        set_mask = endian_le16_na_load(req->output.set_mask) << req->io_first;
-        clr_mask = endian_le16_na_load(req->output.clear_mask) << req->io_first;
+        set_mask = endian_le16_na_load(rq->output.set_mask) << rq->io_first;
+        clr_mask = endian_le16_na_load(rq->output.clear_mask) << rq->io_first;
         mask = set_mask ^ (pv->olat_cache & (set_mask ^ clr_mask));
         if ((pv->olat_cache ^ mask) & range_mask)
           {
@@ -257,11 +257,11 @@ static void mcp23s17_rq_serve(
         return;
 
       case DEV_GPIO_INPUT_IRQ_RANGE:
-        req->error = -ENOTSUP;
+        rq->error = -ENOTSUP;
         kroutine_exec(&pv->spi_req.base.base.kr);
         return;
     }
-    req->error = 0;
+    rq->error = 0;
     kroutine_exec(&pv->spi_req.base.base.kr);
     return;
 }
@@ -273,14 +273,14 @@ static DEV_GPIO_REQUEST(mcp23s17_request)
 
   LOCK_SPIN_IRQ(&dev->lock);
 
-  dev_request_queue_pushback(&pv->rq_pending, &req->base);
+  dev_request_queue_pushback(&pv->rq_pending, &rq->base);
 
   pv->pending_op |= MCP23S17_REQUEST_OP;
   if (!pv->current_op)
     {
       pv->current_op = MCP23S17_REQUEST_OP;
       pv->pending_op &= ~MCP23S17_REQUEST_OP;
-      mcp23s17_rq_serve(dev, req);
+      mcp23s17_rq_serve(dev, rq);
     }
 
   LOCK_RELEASE_IRQ(&dev->lock);

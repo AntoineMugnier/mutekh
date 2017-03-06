@@ -191,7 +191,7 @@ typedef DEV_GPIO_GET_INPUT(dev_gpio_get_input_t);
 
 /** @see dev_gpio_request_t */
 #define DEV_GPIO_REQUEST(n) void (n)(const struct device_gpio_s *gpio, \
-                                     struct dev_gpio_rq_s *req)
+                                     struct dev_gpio_rq_s *rq)
 /**
    This function enqueues a request to the GPIO driver.
 

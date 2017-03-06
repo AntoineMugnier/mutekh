@@ -199,24 +199,24 @@ static DEV_GPIO_REQUEST(pcf8574_request)
   struct device_s *dev = gpio->dev;
   struct pcf8574_priv_s *pv = dev->drv_pv;
 
-  switch (req->type) {
+  switch (rq->type) {
   case DEV_GPIO_MODE:
-    switch (req->mode.mode) {
+    switch (rq->mode.mode) {
     case DEV_PIN_PUSHPULL:
     case DEV_PIN_OPENDRAIN_PULLUP:
-      req->error = 0;
+      rq->error = 0;
       break;
     default:
-      req->error = -ENOTSUP;
+      rq->error = -ENOTSUP;
       break;
     }
-    kroutine_exec(&req->base.kr);
+    kroutine_exec(&rq->base.kr);
     return;
 
   case DEV_GPIO_UNTIL:
     if (pv->no_irq) {
-      req->error = -ENOTSUP;
-      kroutine_exec(&req->base.kr);
+      rq->error = -ENOTSUP;
+      kroutine_exec(&rq->base.kr);
       return;
     }
     break;
@@ -225,28 +225,28 @@ static DEV_GPIO_REQUEST(pcf8574_request)
     break;
   }
 
-  req->error = 0;
+  rq->error = 0;
 
   LOCK_SPIN_IRQ_SCOPED(&dev->lock);
 
-  switch (req->type) {
+  switch (rq->type) {
   default:
-    dprintk("%s request %p\n", __FUNCTION__, req);
-    dev_request_queue_pushback(&pv->queue, &req->base);
+    dprintk("%s request %p\n", __FUNCTION__, rq);
+    dev_request_queue_pushback(&pv->queue, &rq->base);
     break;
 
   case DEV_GPIO_UNTIL:
-    dprintk("%s until %p\n", __FUNCTION__, req);
-    uint_fast8_t range = bit_range(req->io_first, req->io_last);
-    uint_fast8_t mask = (req->until.mask[0] << req->io_first);
-    uint_fast8_t data = (req->until.data[0] << req->io_first);
+    dprintk("%s until %p\n", __FUNCTION__, rq);
+    uint_fast8_t range = bit_range(rq->io_first, rq->io_last);
+    uint_fast8_t mask = (rq->until.mask[0] << rq->io_first);
+    uint_fast8_t data = (rq->until.data[0] << rq->io_first);
 
     if (range & mask & (data ^ pv->input)) {
-      req->error = 0;
-      kroutine_exec(&req->base.kr);
+      rq->error = 0;
+      kroutine_exec(&rq->base.kr);
       return;
     } else {
-      dev_request_queue_pushback(&pv->until_queue, &req->base);
+      dev_request_queue_pushback(&pv->until_queue, &rq->base);
     }
     break;
   }

@@ -445,38 +445,38 @@ static DEV_GPIO_REQUEST(nrf5x_gpio_request)
 
   logk_trace("%s\n", __FUNCTION__);
 
-  switch (req->type) {
+  switch (rq->type) {
   case DEV_GPIO_MODE:
-    req->error = nrf5x_gpio_set_mode(gpio,
-                                     req->io_first, req->io_last,
-                                     req->mode.mask, req->mode.mode);
+    rq->error = nrf5x_gpio_set_mode(gpio,
+                                     rq->io_first, rq->io_last,
+                                     rq->mode.mask, rq->mode.mode);
     break;
 
   case DEV_GPIO_SET_OUTPUT:
-    req->error = nrf5x_gpio_set_output(gpio,
-                                       req->io_first, req->io_last,
-                                       req->output.set_mask, req->output.clear_mask);
+    rq->error = nrf5x_gpio_set_output(gpio,
+                                       rq->io_first, rq->io_last,
+                                       rq->output.set_mask, rq->output.clear_mask);
     break;
 
   case DEV_GPIO_GET_INPUT:
-    req->error = nrf5x_gpio_get_input(gpio,
-                                      req->io_first, req->io_last,
-                                      req->input.data);
+    rq->error = nrf5x_gpio_get_input(gpio,
+                                      rq->io_first, rq->io_last,
+                                      rq->input.data);
     break;
 
   case DEV_GPIO_UNTIL: {
 # if defined(CONFIG_DRIVER_NRF5X_GPIO_UNTIL)
     LOCK_SPIN_IRQ_SCOPED(&dev->lock);
-    dev_request_queue_pushback(&pv->queue, &req->base);
+    dev_request_queue_pushback(&pv->queue, &rq->base);
     kroutine_exec(&pv->until_checker);
     return;
 #else
-    req->error = -ENOTSUP;
+    rq->error = -ENOTSUP;
 #endif
   }
   }
 
-  kroutine_exec(&req->base.kr);
+  kroutine_exec(&rq->base.kr);
 }
 
 #define nrf5x_gpio_use dev_use_generic

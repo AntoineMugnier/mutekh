@@ -112,29 +112,29 @@ error_t device_res_gpio_map(struct device_s *dev, const char *pin_list,
 
 DEV_GPIO_REQUEST(dev_gpio_request_async_to_sync)
 {
-  switch (req->type) {
+  switch (rq->type) {
   case DEV_GPIO_MODE:
-    req->error = DEVICE_OP(gpio, set_mode,
-                          req->io_first, req->io_last,
-                          req->mode.mask, req->mode.mode);
+    rq->error = DEVICE_OP(gpio, set_mode,
+                          rq->io_first, rq->io_last,
+                          rq->mode.mask, rq->mode.mode);
     break;
 
   case DEV_GPIO_SET_OUTPUT:
-    req->error = DEVICE_OP(gpio, set_output,
-                          req->io_first, req->io_last,
-                          req->output.set_mask, req->output.clear_mask);
+    rq->error = DEVICE_OP(gpio, set_output,
+                          rq->io_first, rq->io_last,
+                          rq->output.set_mask, rq->output.clear_mask);
     break;
 
   case DEV_GPIO_GET_INPUT:
-    req->error = DEVICE_OP(gpio, get_input,
-                          req->io_first, req->io_last,
-                          req->input.data);
+    rq->error = DEVICE_OP(gpio, get_input,
+                          rq->io_first, rq->io_last,
+                          rq->input.data);
     break;
 
   case DEV_GPIO_UNTIL:
-    req->error = -ENOTSUP;
+    rq->error = -ENOTSUP;
     break;
   }
 
-  kroutine_exec(&req->base.kr);
+  kroutine_exec(&rq->base.kr);
 }

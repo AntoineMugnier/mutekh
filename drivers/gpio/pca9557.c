@@ -68,13 +68,13 @@ static void pca9557_req_next(struct device_s *dev);
 
 static void pca9557_req_done(
     struct device_s *dev,
-    struct dev_gpio_rq_s *req)
+    struct dev_gpio_rq_s *rq)
 {
     struct pca9557_private_s *pv = dev->drv_pv;
 
     dev_request_queue_pop(&pv->pending);
-    req->base.drvdata = NULL;
-    kroutine_exec(&req->base.kr);
+    rq->base.drvdata = NULL;
+    kroutine_exec(&rq->base.kr);
     pca9557_req_next(dev);
 }
 
@@ -82,32 +82,32 @@ static KROUTINE_EXEC(pca9557_i2c_write_done)
 {
     struct pca9557_private_s *pv
         = KROUTINE_CONTAINER(kr, *pv, i2c_req.base.kr);
-    struct dev_gpio_rq_s *req
+    struct dev_gpio_rq_s *rq
         = dev_gpio_rq_s_cast(
             dev_request_queue_head(&pv->pending));
     struct device_s *dev = pv->i2c_req.base.pvdata;
 
     LOCK_SPIN_IRQ_SCOPED(&dev->lock);
 
-    req->error = pv->i2c_req.error;
-    pca9557_req_done(dev, req);
+    rq->error = pv->i2c_req.error;
+    pca9557_req_done(dev, rq);
 }
 
 static KROUTINE_EXEC(pca9557_i2c_read_done)
 {
     struct pca9557_private_s *pv
         = KROUTINE_CONTAINER(kr, *pv, i2c_req.base.kr);
-    struct dev_gpio_rq_s *req
+    struct dev_gpio_rq_s *rq
         = dev_gpio_rq_s_cast(
             dev_request_queue_head(&pv->pending));
     struct device_s *dev = pv->i2c_req.base.pvdata;
 
     LOCK_SPIN_IRQ_SCOPED(&dev->lock);
 
-    req->error = pv->i2c_req.error;
-    *req->input.data = pv->input_value >> req->io_first;
+    rq->error = pv->i2c_req.error;
+    *rq->input.data = pv->input_value >> rq->io_first;
 
-    pca9557_req_done(dev, req);
+    pca9557_req_done(dev, rq);
 }
 
 static void pca9557_mode_update(
@@ -163,15 +163,15 @@ static void pca9557_input_get(
 
 static void pca9557_req_serve(
     struct device_s *dev,
-    struct dev_gpio_rq_s *req)
+    struct dev_gpio_rq_s *rq)
 {
     struct pca9557_private_s *pv = dev->drv_pv;
 
-    switch (req->type) {
+    switch (rq->type) {
     case DEV_GPIO_MODE: {
-        uint8_t mask = (1 << req->io_last) - (req->io_first ? (1 << req->io_first) : 0);
+        uint8_t mask = (1 << rq->io_last) - (rq->io_first ? (1 << rq->io_first) : 0);
 
-        switch (req->mode.mode) {
+        switch (rq->mode.mode) {
         case DEV_PIN_PUSHPULL:
             pv->input_mode &= ~mask;
             break;
@@ -181,8 +181,8 @@ static void pca9557_req_serve(
             break;
 
         default:
-            req->error = -ENOTSUP;
-            pca9557_req_done(dev, req);
+            rq->error = -ENOTSUP;
+            pca9557_req_done(dev, rq);
             return;
         }
 
@@ -191,12 +191,12 @@ static void pca9557_req_serve(
     }
 
     case DEV_GPIO_SET_OUTPUT: {
-        uint8_t mask = (1 << (req->io_last - req->io_first + 1)) - 1;
-        uint8_t setm = (*req->output.set_mask & mask) << req->io_first;
-        uint8_t clearm = (*req->output.clear_mask & mask) << req->io_first;
-        uint8_t set = (setm & clearm) << req->io_first;
-        uint8_t toggle = (setm & ~clearm) << req->io_first;
-        uint8_t clear = (~clearm & ~setm & mask) << req->io_first;
+        uint8_t mask = (1 << (rq->io_last - rq->io_first + 1)) - 1;
+        uint8_t setm = (*rq->output.set_mask & mask) << rq->io_first;
+        uint8_t clearm = (*rq->output.clear_mask & mask) << rq->io_first;
+        uint8_t set = (setm & clearm) << rq->io_first;
+        uint8_t toggle = (setm & ~clearm) << rq->io_first;
+        uint8_t clear = (~clearm & ~setm & mask) << rq->io_first;
 
         pv->output_value ^= toggle;
         pv->output_value &= ~clear;
@@ -212,7 +212,7 @@ static void pca9557_req_serve(
     }
 
     case DEV_GPIO_INPUT_IRQ_RANGE:
-      req->error = -ENOTSUP;
+      rq->error = -ENOTSUP;
       break;
     }
 }
@@ -220,12 +220,12 @@ static void pca9557_req_serve(
 static void pca9557_req_next(struct device_s *dev)
 {
     struct pca9557_private_s *pv = dev->drv_pv;
-    struct dev_gpio_rq_s *req
+    struct dev_gpio_rq_s *rq
         = dev_gpio_rq_s_cast(
             dev_request_queue_head(&pv->pending));
 
-    if (req)
-        pca9557_req_serve(dev, req);
+    if (rq)
+        pca9557_req_serve(dev, rq);
 }
 
 static DEV_GPIO_REQUEST(pca9557_request)
@@ -233,8 +233,8 @@ static DEV_GPIO_REQUEST(pca9557_request)
     struct device_s *dev = gpio->dev;
     struct pca9557_private_s *pv = dev->drv_pv;
 
-    if (req->io_last >= 8) {
-        req->error = -ERANGE;
+    if (rq->io_last >= 8) {
+        rq->error = -ERANGE;
         return;
     }
 
@@ -242,9 +242,9 @@ static DEV_GPIO_REQUEST(pca9557_request)
 
     bool_t empty = dev_request_queue_isempty(&pv->pending);
 
-    dev_request_queue_pushback(&pv->pending, &req->base);
+    dev_request_queue_pushback(&pv->pending, &rq->base);
     if (empty)
-        pca9557_req_serve(dev, req);
+        pca9557_req_serve(dev, rq);
 }
 
 
