@@ -24,7 +24,7 @@ void app_start(void)
 
   while (1)
     {
-      uint16_t r = bc_run(&vm, -1);
+      uint16_t r = bc_run(&vm);
 
       if (!r)
         {

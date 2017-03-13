@@ -130,7 +130,7 @@ static KROUTINE_EXEC(i2c_bb_runner)
 
   for (;;) {
     //dprintk("%s run\n", __FUNCTION__);
-    op = bc_run(&pv->vm, -1);
+    op = bc_run(&pv->vm);
     //dprintk("%s op = %04x\n", __FUNCTION__, op);
 
     if (!(op & 0x8000)) {

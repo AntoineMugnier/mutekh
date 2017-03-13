@@ -451,7 +451,7 @@ struct bc_context_s;
 typedef struct bytecode_entry_s bytecode_entry_t;
 
 /** @internal */
-typedef bc_opcode_t (bc_run_t)(struct bc_context_s *ctx, int_fast32_t max_cycles);
+typedef bc_opcode_t (bc_run_t)(struct bc_context_s *ctx);
 
 /** @This is the bytecode descriptor header */
 struct bc_descriptor_s
@@ -481,10 +481,15 @@ struct bc_context_s
 #endif
   const struct bc_descriptor_s *desc;
 
-#ifdef CONFIG_MUTEK_BYTECODE_CHECKING
-  uintptr_t min_addr;
-  uintptr_t max_addr;
+#ifdef CONFIG_MUTEK_BYTECODE_SANDBOX
+  /** address of writable data segment when sandboxed */
+  uintptr_t data_base;
+  /** mask address of writable data segment when sandboxed */
+  uintptr_t data_addr_mask;
+  /** @see bc_init_sandbox */
   bool_t sandbox;
+  /** maximum number of executed cycles by a single call to @ref bc_run_vm */
+  uint_fast32_t max_cycles;
 #endif
 #ifdef CONFIG_MUTEK_BYTECODE_TRACE
   bool_t trace;
@@ -497,6 +502,70 @@ struct bc_context_s
 void
 bc_init(struct bc_context_s *ctx,
         const struct bc_descriptor_s *desc);
+
+/** @This initializes the virtual machine in sandbox mode. When
+    working in sandbox mode, address are translated and the following
+    checks are performed:
+
+    @list
+      @item Execution of instructions are not allowed outside of the
+        code segment specified in the bytecode descriptor. Code base
+        address inside the virtual machine is 0.
+      @item Load and store instructions addresses are translated from
+        0x80000000 to the @tt data_base address and the address is
+        masked according to @tt data_addr_bits. Loads
+        below 0x8000000 are translated to the code segment.
+      @item The @tt ccall instruction can not be used.
+      @item The @tt abort instruction is equivalent to @tt die.
+    @end list
+
+    When the @tt data_addr_bits parameter is not 0, it must be at
+    least 8 and @tt data_base must point to a 8 bytes aligned buffer.
+
+    When in sandbox mode on a 64 bits target, instructions wont touch
+    registers above bit 31. This makes the sandbox a 32 bits virtual
+    machine.
+
+    The @tt max_cycles parameter specifies the maximum number of
+    executed cycles by a single call to @ref bc_run_vm
+*/
+config_depend(CONFIG_MUTEK_BYTECODE_SANDBOX)
+void bc_init_sandbox(struct bc_context_s *ctx, const struct bc_descriptor_s *desc,
+                     void *data_base, uint_fast8_t data_addr_bits,
+                     uint_fast32_t max_cycles);
+
+/** @This translates a data address from a sandboxed virtual machine to
+    an accessible address. This returns 0 if the address is not valid
+    inside the sandbox. */
+config_depend(CONFIG_MUTEK_BYTECODE_SANDBOX)
+uintptr_t bc_translate_addr(struct bc_context_s *ctx, bc_reg_t addr, uint_fast32_t width);
+
+/** @This translates an address to a single @ref uint8_t from a
+    sandboxed virtual machine to an accessible pointer. This returns
+    @tt NULL if the address is not valid inside the sandbox. */
+config_depend_alwaysinline(CONFIG_MUTEK_BYTECODE_SANDBOX,
+uint8_t * bc_translate_8(struct bc_context_s *ctx, bc_reg_t addr),
+{
+  return (uint8_t*)bc_translate_addr(ctx, addr, 1);
+});
+
+/** @This translates an address to a single @ref uint16_t from a
+    sandboxed virtual machine to an accessible pointer. This returns
+    @tt NULL if the address is not valid inside the sandbox. */
+config_depend_alwaysinline(CONFIG_MUTEK_BYTECODE_SANDBOX,
+uint16_t * bc_translate_16(struct bc_context_s *ctx, bc_reg_t addr),
+{
+  return (uint16_t*)bc_translate_addr(ctx, addr, 2);
+});
+
+/** @This translates an address to a single @ref uint32_t from a
+    sandboxed virtual machine to an accessible pointer. This returns
+    @tt NULL if the address is not valid inside the sandbox. */
+config_depend_alwaysinline(CONFIG_MUTEK_BYTECODE_SANDBOX,
+uint32_t * bc_translate_32(struct bc_context_s *ctx, bc_reg_t addr),
+{
+  return (uint32_t*)bc_translate_addr(ctx, addr, 4);
+});
 
 /** @This initializes a bytecode descriptor from a bytecode loadable
     blob. The format of the blob is:
@@ -585,30 +654,6 @@ bc_skip(struct bc_context_s *ctx)
 #endif
 }
 
-/** @This can be used to reduce the range of memory addresses which
-    can be accessed by the bytecode. If the @ref
-    #CONFIG_MUTEK_BYTECODE_CHECKING token is not defined, this
-    function has no effect. */
-ALWAYS_INLINE void
-bc_set_addr_range(struct bc_context_s *ctx, uintptr_t min, uintptr_t max)
-{
-#ifdef CONFIG_MUTEK_BYTECODE_CHECKING
-  ctx->min_addr = min;
-  ctx->max_addr = max;
-#endif
-}
-
-/** @This can be used to disallow use of the @tt ccall instruction
-    in the bytecode. If the @ref #CONFIG_MUTEK_BYTECODE_CHECKING token
-    is not defined, this function has no effect. */
-ALWAYS_INLINE void
-bc_sandbox(struct bc_context_s *ctx, bool_t sandbox)
-{
-#ifdef CONFIG_MUTEK_BYTECODE_CHECKING
-  ctx->sandbox = sandbox;
-#endif
-}
-
 /** @This dumps the virtual machine state. If the @ref
     #CONFIG_MUTEK_BYTECODE_DEBUG token is not defined, this
     function has no effect. */
@@ -628,20 +673,19 @@ void bc_dump(const struct bc_context_s *ctx, bool_t regs);
     compiled bytecode. The type of bytecode is guessed from the
     descriptor.
 */
-ALWAYS_INLINE bc_opcode_t bc_run(struct bc_context_s *ctx,
-                                 int_fast32_t max_cycles)
+ALWAYS_INLINE bc_opcode_t bc_run(struct bc_context_s *ctx)
 {
-  return ctx->desc->run(ctx, max_cycles);
+  return ctx->desc->run(ctx);
 }
 
 /** This function starts or resumes executions of the bytecode using
     the virtual machine. This function does not work if the bytecode
     is compiled in machine code.
 
-    If the execution took more than @tt max_cycles instructions, this
-    function returns 1. It may also stop if an error occurs and the
-    @ref #CONFIG_MUTEK_BYTECODE_CHECKING token is defined. */
-bc_opcode_t bc_run_vm(struct bc_context_s *ctx, int_fast32_t max_cycles);
+    When sandboxed, at most @tt max_cycles instructions are
+    executed. This function returns 1 when this limit is reached. It
+    will return 3 if an error occurs. */
+bc_opcode_t bc_run_vm(struct bc_context_s *ctx);
 
 /** @internal @This specifies opcode values. */
 enum bc_opcode_e

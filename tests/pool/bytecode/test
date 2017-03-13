@@ -9,7 +9,7 @@ from mutekh.test.archs import *
 
 test_vm64           = Config("t_vm64")
 test_native         = Config("t_native")
-test_checking       = Config("t_checking")
+test_sandbox       = Config("t_sandbox")
 test_debug          = Config("t_debug")
 test_trace          = Config("t_trace")
 
@@ -55,7 +55,7 @@ Environment(
         Dimension(default.expand()[0]),
         Dimension(test_debug, None),
         Dimension(test_trace, None),
-        Dimension(test_checking, None),
+        Dimension(test_sandbox, None),
         Exclude(test_trace & ~test_debug),
         ],
 

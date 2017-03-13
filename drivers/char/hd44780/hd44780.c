@@ -127,7 +127,7 @@ static KROUTINE_EXEC(hd44780_runner)
 
     logk_trace("%s run", __func__);
 
-    op = bc_run(&pv->vm, -1);
+    op = bc_run(&pv->vm);
 
     logk_trace("%s op = %04x", __func__, op);
 

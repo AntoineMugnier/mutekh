@@ -20,12 +20,14 @@ static void cksum_update(uint32_t x)
   cksum = (cksum * 33) ^ x;
 }
 
+#ifndef CONFIG_MUTEK_BYTECODE_SANDBOX
 static BC_CCALL_FUNCTION(c_func)
 {
   bc_reg_t r = bc_get_reg(ctx, 2);
   cksum_update(r);
   bc_set_reg(ctx, 2, r * 13);
 }
+#endif
 
 extern const struct bc_descriptor_s test_bytecode;
 
@@ -34,24 +36,27 @@ extern bytecode_entry_t test_bytecode_entry;
 void app_start()
 {
   struct bc_context_s vm;
+  __attribute__((aligned(8)))
   char buf[128] = "testbarx";
 
+#ifdef CONFIG_MUTEK_BYTECODE_SANDBOX
+  bc_init_sandbox(&vm, &test_bytecode, buf, 7, -1);
+  bc_set_regs(&vm, 0b1, /* buf */ 0x80000000);
+#else
   bc_init(&vm, &test_bytecode);
   bc_set_regs(&vm, 0b11, buf, &c_func);
+#endif
+
   for (uint_fast8_t i = 2; i < 16; i++)
     bc_set_reg(&vm, i, 0x5a5a5a5a);
   bc_set_pc(&vm, &test_bytecode_entry);
 
-#ifdef CONFIG_MUTEK_BYTECODE_CHECKING
-  bc_set_addr_range(&vm, (uintptr_t)buf, (uintptr_t)buf + sizeof(buf) - 1);
-  bc_sandbox(&vm, 1);
-#endif
   //  bc_set_trace(&vm, 1, 1);
   //  bc_dump(&vm, 1);
 
   while (1)
     {
-      uint16_t r = bc_run(&vm, -1);
+      uint16_t r = bc_run(&vm);
 
       if (!r)
         {
@@ -76,7 +81,12 @@ void app_start()
           break;
         }
         case BC_CUSTOM_PRINTS: {
-          const char *s = (char*)bc_get_reg(&vm, r & 0xf);
+          uintptr_t addr = bc_get_reg(&vm, r & 0xf);
+#ifdef CONFIG_MUTEK_BYTECODE_SANDBOX
+          const char *s = bc_translate_8(&vm, addr);
+#else
+          const char *s = (char*)addr;
+#endif
           printk("%s\n", s);
           while (*s)
             cksum_update(*s++);

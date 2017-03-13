@@ -53,7 +53,7 @@ test_bytecode_entry:
         neq	%3, %2
          die
 
-#ifndef CONFIG_MUTEK_BYTECODE_CHECKING
+#ifndef CONFIG_MUTEK_BYTECODE_SANDBOX
     // CST8, CCALL, NEQ
         cst8	%2, 11
         ccall	%1
@@ -376,7 +376,7 @@ next12:
 	neq	%1, %2
 	die
 
-#ifndef CONFIG_MUTEK_BYTECODE_CHECKING
+#ifndef CONFIG_MUTEK_BYTECODE_SANDBOX
 	// GADDR
 	gaddr   %1, data
 	ld8	%2, %1

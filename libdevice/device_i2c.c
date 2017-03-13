@@ -318,7 +318,7 @@ device_i2c_bytecode_exec(struct dev_i2c_ctrl_context_s *q,
 
   for (err = 0; err == 0; )
     {
-      op = bc_run(&rq->vm, -1);
+      op = bc_run(&rq->vm);
       q->op = op;
       if (!(op & 0x8000))       /* bytecode end */
         {

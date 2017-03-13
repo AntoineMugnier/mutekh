@@ -306,7 +306,7 @@ device_spi_bytecode_exec(struct dev_spi_ctrl_context_s *q,
     {
       struct dev_spi_ctrl_transfer_s *tr = &q->transfer;
 
-      op = bc_run(&rq->vm, -1);
+      op = bc_run(&rq->vm);
 
       if (!(op & 0x8000))       /* bytecode end */
         {
