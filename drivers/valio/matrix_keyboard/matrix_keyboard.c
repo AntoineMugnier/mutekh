@@ -215,7 +215,7 @@ static KROUTINE_EXEC(matrix_keyboard_runner)
 
       case 3: // wait_change
         endian_le32_na_store(pv->gpio_data.input,
-                             bc_get_reg(&pv->vm, bit_get_mask(op, 0, 4)));
+                             ~bc_get_reg(&pv->vm, bit_get_mask(op, 0, 4)));
         endian_le32_na_store(pv->gpio_data.input + 4, pv->rows_mask);
         pv->gpio_rq.io_first = pv->pin_id[GPIO_ROWS];
         pv->gpio_rq.io_last = pv->pin_id[GPIO_ROWS] + pv->pin_width[GPIO_ROWS] - 1;
