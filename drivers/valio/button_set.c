@@ -44,7 +44,6 @@
 struct bs_context_s
 {
   dev_request_queue_root_t queue;
-  struct dev_irq_src_s irq_ep;
   struct device_gpio_s gpio;
   struct dev_gpio_rq_s gpio_rq;
 
@@ -268,7 +267,6 @@ static DEV_CLEANUP(button_set_cleanup)
 
   device_put_accessor(&pv->gpio.base);
 
-  device_irq_source_unlink(dev, &pv->irq_ep, 1);
   dev_request_queue_destroy(&pv->queue);
 
   mem_free(pv);
