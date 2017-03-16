@@ -32,10 +32,9 @@
  */
 #define STM32_AFIO_REMAP(_reg, _offset, _mask, _value) \
   (((_reg)    & 0x7)          |                        \
-  (((_offset) & 0x1f) <<  3)  |                        \
-  (((_mask)   & 0x3)  <<  8)  |                        \
-  (((_value)  & 0x3)  << 10)  |                        \
-  (0xffff << 16))
+   (((_offset) & 0x1f) <<  3)  |                       \
+   (((_mask)   & 0x3)  <<  8)  |                       \
+   (((_value)  & 0x3)  << 10))
 
 #define STM32_AFIO_REMAP_REG_ADDR(_config) \
   ((uintptr_t)(_config & 0x7) * 4 + STM32_AFIO_MAPR_ADDR + STM32_AFIO_ADDR)
@@ -57,6 +56,7 @@
 /* Remap definitions for STM32 F1 boards. */
 
 #define STM32_AFIO_REMAP_SPI1(_value)     STM32_AFIO_REMAP(0, 0, 0x1, _value)
+#define STM32_AFIO_REMAP_SPI3(_value)     STM32_AFIO_REMAP(0, 28, 0x1, _value)
 
 #define STM32_AFIO_REMAP_I2C1(_value)     STM32_AFIO_REMAP(0, 1, 0x1, _value)
 
