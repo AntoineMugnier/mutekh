@@ -88,12 +88,14 @@ struct mpu650x_context_s
 
   enum mpu650x_state_e state;
   enum mpu650x_state_e target_state;
-  
+
   uint8_t irq_pending;
   uint8_t has_moved;
   uint8_t has_fresh_data;
   uint8_t wom_just_changed;
   uint8_t error_count;
+
+  bool_t bus_started;
 
   dev_request_queue_root_t queue;
 };

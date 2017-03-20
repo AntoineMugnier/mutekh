@@ -151,6 +151,10 @@ void mpu650x_state_advance(struct device_s *dev)
     switch (pv->target_state) {
     case MPU650X_GATE_OFF:
       pv->state = MPU650X_GATE_OFF;
+      if (pv->bus_started) {
+        pv->bus_started = 0;
+        device_stop(&pv->bus.base);
+      }
 #ifdef CONFIG_DRIVER_MPU650X_POWERGATE
       if (dev_clock_sink_gate(&pv->power_source, DEV_CLOCK_EP_NONE) == -EAGAIN)
         return;
@@ -159,8 +163,10 @@ void mpu650x_state_advance(struct device_s *dev)
 
     case MPU650X_GATE_ON:
     case MPU650X_POWER_OFF:
-      dprintk("mpu650x_poweroff\n");
-      mpu650x_run(dev, &mpu650x_poweroff);
+      if (pv->bus_started) {
+        dprintk("mpu650x_poweroff\n");
+        mpu650x_run(dev, &mpu650x_poweroff);
+      }
       pv->state = pv->target_state;
       return;
 
@@ -179,6 +185,11 @@ void mpu650x_state_advance(struct device_s *dev)
       goto again;
 
     case MPU650X_GATE_ON:
+      if (!pv->bus_started) {
+        pv->bus_started = 1;
+        device_start(&pv->bus.base);
+      }
+
       if (pv->target_state == MPU650X_POWER_OFF) {
         dprintk("mpu650x_poweroff\n");
         mpu650x_run(dev, &mpu650x_poweroff);
