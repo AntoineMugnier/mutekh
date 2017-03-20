@@ -475,6 +475,22 @@ dev_shell_dump_device(struct termui_console_s *con, struct device_s *dev,
           );
           break;
         }
+
+        case DEV_RES_I2C_ADDR: {
+          termui_con_printf(con,
+            "  I2C controller `%s', slave address 0x%02x\n",
+            r->u.i2c_addr.ctrl, r->u.i2c_addr.addr
+          );
+          break;
+        }
+
+        case DEV_RES_I2C_BITRATE: {
+          termui_con_printf(con,
+            "  I2C bit rate %d Hz\n",
+            r->u.i2c_bitrate.bitrate
+          );
+          break;
+        }
 #endif
 #ifdef CONFIG_DEVICE_UART
         case DEV_RES_UART: {
