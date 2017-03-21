@@ -39,6 +39,8 @@
 #include <arch/nrf5x/i2c.h>
 #include <arch/nrf5x/gpio.h>
 
+#define GPIO_ADDR NRF5X_GPIO_ADDR
+
 struct nrf5x_i2c_priv_s
 {
   uintptr_t addr;
@@ -46,6 +48,7 @@ struct nrf5x_i2c_priv_s
   struct dev_i2c_ctrl_context_s i2c_ctrl_ctx;
   struct dev_i2c_ctrl_transfer_s *current;
   bool_t started;
+  bool_t enabled;
   iomux_io_id_t pin[2];
   uint32_t rate;
 };
@@ -283,6 +286,8 @@ static DEV_IRQ_SRC_PROCESS(nrf5x_i2c_irq)
       default:
         break;
       case _DEV_I2C_STOP:
+        if (!dev->start_count)
+          device_sleep_schedule(pv->irq_ep->base.dev);
       case _DEV_I2C_RESTART:
         pv->started = 0;
         break;
@@ -296,8 +301,62 @@ static DEV_IRQ_SRC_PROCESS(nrf5x_i2c_irq)
   }
 }
 
+static void nrf5x_i2c_ip_disable(struct nrf5x_i2c_priv_s *pv)
+{
+  if (!pv->enabled)
+    return;
+
+  pv->enabled = 0;
+
+  uint8_t scl = pv->pin[0];
+  uint8_t sda = pv->pin[1];
+
+  nrf_event_clear(pv->addr, NRF_I2C_ERROR);
+  nrf_reg_set(pv->addr, NRF_I2C_ENABLE, NRF_I2C_ENABLE_DISABLED);
+  nrf_reg_set(pv->addr, NRF_I2C_POWER, 0);
+
+  nrf_reg_set(GPIO_ADDR, NRF_GPIO_PIN_CNF(scl), 0
+              | NRF_GPIO_PIN_CNF_DIR_INPUT
+              | NRF_GPIO_PIN_CNF_INPUT_DISCONNECT);
+
+  nrf_reg_set(GPIO_ADDR, NRF_GPIO_PIN_CNF(sda), 0
+              | NRF_GPIO_PIN_CNF_DIR_INPUT
+              | NRF_GPIO_PIN_CNF_INPUT_DISCONNECT);
+}
+
+static void nrf5x_i2c_ip_enable(struct nrf5x_i2c_priv_s *pv)
+{
+  if (pv->enabled)
+    return;
+
+  pv->enabled = 1;
+
+  uint8_t scl = pv->pin[0];
+  uint8_t sda = pv->pin[1];
+
+  nrf_reg_set(GPIO_ADDR, NRF_GPIO_PIN_CNF(scl), 0
+              | NRF_GPIO_PIN_CNF_DIR_OUTPUT
+              | NRF_GPIO_PIN_CNF_DRIVE_S0D1
+              | NRF_GPIO_PIN_CNF_PULL_UP);
+  nrf_reg_set(GPIO_ADDR, NRF_GPIO_PIN_CNF(sda), 0
+              | NRF_GPIO_PIN_CNF_DIR_OUTPUT
+              | NRF_GPIO_PIN_CNF_DRIVE_S0D1
+              | NRF_GPIO_PIN_CNF_PULL_UP);
+
+  nrf_reg_set(pv->addr, NRF_I2C_POWER, 1);
+  nrf_reg_set(pv->addr, NRF_I2C_ENABLE, NRF_I2C_ENABLE_ENABLED);
+  nrf_reg_set(pv->addr, NRF_I2C_PSELSCL, scl);
+  nrf_reg_set(pv->addr, NRF_I2C_PSELSDA, sda);
+  nrf_reg_set(pv->addr, NRF_I2C_FREQUENCY, NRF_I2C_FREQUENCY_(pv->rate));
+}
+
 static void nrf5x_i2c_ip_reset(struct nrf5x_i2c_priv_s *pv)
 {
+  if (!pv->enabled)
+    return;
+
+  pv->enabled = 0;
+
   uint8_t scl = pv->pin[0];
   uint8_t sda = pv->pin[1];
 
@@ -322,11 +381,7 @@ static void nrf5x_i2c_ip_reset(struct nrf5x_i2c_priv_s *pv)
       asm volatile("");
   }
 
-  nrf_reg_set(pv->addr, NRF_I2C_POWER, 1);
-  nrf_reg_set(pv->addr, NRF_I2C_ENABLE, NRF_I2C_ENABLE_ENABLED);
-  nrf_reg_set(pv->addr, NRF_I2C_PSELSCL, scl);
-  nrf_reg_set(pv->addr, NRF_I2C_PSELSDA, sda);
-  nrf_reg_set(pv->addr, NRF_I2C_FREQUENCY, NRF_I2C_FREQUENCY_(pv->rate));
+  nrf5x_i2c_ip_enable(pv);
 }
 
 static DEV_I2C_CTRL_TRANSFER(nrf5x_i2c_transfer)
@@ -342,6 +397,8 @@ static DEV_I2C_CTRL_TRANSFER(nrf5x_i2c_transfer)
       LOCK_SPIN_IRQ_SCOPED(&dev->lock);
       pv->started = 0;
       nrf5x_i2c_ip_reset(pv);
+      if (!dev->start_count)
+        device_sleep_schedule(pv->irq_ep->base.dev);
     }
 
     kroutine_exec(&tr->kr);
@@ -366,12 +423,52 @@ static DEV_I2C_CTRL_TRANSFER(nrf5x_i2c_transfer)
 
   LOCK_SPIN_IRQ_SCOPED(&dev->lock);
 
+  nrf5x_i2c_ip_enable(pv);
+
   pv->current = tr;
 
   nrf5x_i2c_transfer_start(pv);
 }
 
-#define nrf5x_i2c_use dev_use_generic
+static DEV_USE(nrf5x_i2c_use)
+{
+  switch (op) {
+  case DEV_USE_START: {
+    struct device_accessor_s *acc = param;
+    struct device_s *dev = acc->dev;
+    struct nrf5x_i2c_priv_s *pv = dev->drv_pv;
+
+    if (!dev->start_count)
+      nrf5x_i2c_ip_enable(pv);
+
+    return 0;
+  }
+
+  case DEV_USE_STOP: {
+    struct device_accessor_s *acc = param;
+    struct device_s *dev = acc->dev;
+
+    if (!dev->start_count)
+      device_sleep_schedule(dev);
+    // fallthrough
+  }
+
+  default:
+    return dev_use_generic(param, op);
+
+  case DEV_USE_SLEEP: {
+    struct device_s *dev = param;
+    struct nrf5x_i2c_priv_s *pv = dev->drv_pv;
+
+    if (dev->start_count || pv->current)
+      return -EAGAIN;
+
+    nrf5x_i2c_ip_disable(pv);
+
+    return 0;
+  }
+  }
+}
 
 static DEV_INIT(nrf5x_i2c_init)
 {
