@@ -34,15 +34,16 @@
 #include <arch/pic32/devaddr.h>
 #include <arch/pic32/gpio.h>
 #include <mutek/printk.h>
+#include <mutek/startup.h>
 
-void pic32_mem_init()
+void pic32_mem_init(void)
 {
   default_region = memory_allocator_init(NULL, (void*)CONFIG_STARTUP_HEAP_ADDR,
                                          (void*)(CONFIG_STARTUP_HEAP_ADDR +
                                                  CONFIG_STARTUP_HEAP_SIZE));
 }
 
-void pic32_clk_init()
+void pic32_clk_init(void)
 {
 
   /* Unlock sequence */
