@@ -1,0 +1,265 @@
+/*
+    This file is part of MutekH.
+
+    MutekH is free software; you can redistribute it and/or modify it
+    under the terms of the GNU Lesser General Public License as
+    published by the Free Software Foundation; version 2.1 of the
+    License.
+
+    MutekH is distributed in the hope that it will be useful, but
+    WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+    Lesser General Public License for more details.
+
+    You should have received a copy of the GNU Lesser General Public
+    License along with this program.  If not, see
+    <http://www.gnu.org/licenses/>.
+
+    Copyright (c) 2017, Nicolas Pouillon <nipo@ssji.net>
+*/
+
+#include "ntag.h"
+    
+.custom i2c
+.name ntag_i2c
+.global %8 pt_state
+.global %9 version
+.global %10 size
+.global %11 split
+.global %12 nc
+.global %13 ns
+    
+#define NS_SET(tmp, mask, val) \
+    cst32      tmp, (0x06fe | ((mask) << 16) | ((val) << 24)), 0 ; \
+    pack32le   tmp, 1, 4 ; \
+    i2c_wrr    tmp, 4, STOP
+#define NC_SET(tmp, mask, val) \
+    cst32      tmp, (0x00fe | ((mask) << 16) | ((val) << 24)), 0 ; \
+    pack32le   tmp, 1, 4 ; \
+    i2c_wrr    tmp, 4, STOP
+
+.func ntag_bc_init
+    .export ntag_bc_init
+    .clobber %0
+
+    NC_SET(%0, NC_PT_ON | NC_FD_OFF_MASK | NC_FD_ON_MASK, NC_FD_OFF_FIELD | NC_FD_ON_FIELD)
+
+    cst8       %split, 0xff
+    cst8       %0, 0x57
+    pack8      %0, 1
+    i2c_wrrc   %0, 1, STOP
+     jmp8      is_1k_or_1k_plus
+
+    cst8       %0, 0x3f
+    pack8      %0, 1
+    i2c_wrrc   %0, 1, STOP
+     jmp8      is_2k_plus
+
+//is_2k:
+    cst8       %version, 1
+    cst16      %size, 1904, 0
+    end
+
+is_2k_plus:
+    cst8       %version, 2
+    cst16      %size, 1912, 0
+    cst8       %split, 0x38
+    end
+
+is_1k_or_1k_plus:
+    cst16      %size, 888, 0
+    cst8       %version, 1
+
+    cst8       %0, 0x39
+    pack8      %0, 1
+    i2c_wrrc   %0, 1, STOP
+     end
+
+    cst8       %version, 2
+    end
+.endfunc
+
+#ifdef CONFIG_DRIVER_NTAG_I2C_PASSTHROUGH
+.func ntag_bc_passthrough_update
+    .export ntag_bc_passthrough_update
+    .clobber   %15
+    
+    call8      %pt_read:link, pt_read
+    end
+.endfunc
+    
+.func ntag_bc_passthrough_enable
+    .export ntag_bc_passthrough_enable
+    .clobber   %0 tmp, %2 retry, %15
+
+again2:
+    cst8       %retry, 2
+
+again:
+    call8      %pt_read:link, pt_read
+    tst32s     %ns, bitpos(NS_NFC_PRESENT)
+     jmp8      has_field
+
+    NC_SET(%tmp, NC_FD_OFF_MASK, NC_FD_OFF_FIELD)
+    NC_SET(%tmp, NC_FD_ON_MASK, NC_FD_ON_FIELD)
+    call8      %pt_read:link, pt_read
+    end
+    
+has_field:
+    tst32s     %nc, bitpos(NC_PT_ON)
+     end
+    loop       %retry, fail
+
+    NC_SET(%tmp, NC_PT_ON, 0)
+    NC_SET(%tmp, NC_FD_OFF_MASK, NC_FD_OFF_PT)
+    NC_SET(%tmp, NC_FD_ON_MASK, NC_FD_ON_PT)
+    NS_SET(%tmp, NS_I2C_LOCKED, 0)
+    NC_SET(%tmp, NC_PT_ON, NC_PT_ON)
+    jmp8       again
+
+fail:
+    call8      %pt_read:link, pt_read
+    end
+    
+.endfunc
+
+.func ntag_bc_passthrough_disable
+    .export ntag_bc_passthrough_disable
+    .clobber   %0 tmp, %15
+
+    NC_SET(%tmp, NC_FD_OFF_MASK, NC_FD_OFF_FIELD)
+    NC_SET(%tmp, NC_FD_ON_MASK, NC_FD_ON_FIELD)
+    call8      %pt_read:link, pt_read
+    end
+    
+.endfunc
+
+.func pt_read
+    .input     %15 link
+    
+    cst16      %nc, 0x00fe, 0
+    pack16le   %nc, 1, 2
+    i2c_wrr    %nc, 2, RESTART
+    i2c_rdr    %nc, 1, STOP
+    unpack8    %nc, 1
+    
+    cst16      %ns, 0x06fe, 0
+    pack16le   %ns, 1, 2
+    i2c_wrr    %ns, 2, RESTART
+    i2c_rdr    %ns, 1, STOP
+    unpack8    %ns, 1
+
+    ret        %link
+.endfunc
+
+.func ntag_bc_pt_send
+    .export ntag_bc_pt_send
+    .input  %0 buffer
+    .clobber %0, %1 block, %2 tmp, %3 block_size, %15
+
+    cst8     %block, 0xf8
+    cst8     %block_size, 16
+
+pt_send_again:
+    mov      %tmp, %block
+    pack8    %tmp, 1
+    i2c_wrr  %tmp, 1, CONTINUOUS
+    i2c_wrm  %buffer, %block_size, STOP
+    add8     %block, 1
+    add8     %buffer, 16
+    tst32c   %block, 2
+     jmp8 pt_send_again
+
+    call8      %pt_read:link, pt_read
+    end
+.endfunc
+
+.func ntag_bc_pt_recv_start
+    .export ntag_bc_pt_recv_start
+    .clobber %0 tmp, %15
+
+    NC_SET(%tmp, NC_PT_ON, 0)
+    NC_SET(%tmp, NC_PT_TO_I2C, NC_PT_TO_I2C)
+    NC_SET(%tmp, NC_PT_ON, NC_PT_ON)
+
+    call8      %pt_read:link, pt_read
+    end
+.endfunc
+
+.func ntag_bc_pt_send_start
+    .export ntag_bc_pt_send_start
+    .clobber %0 tmp, %15
+
+    NC_SET(%tmp, NC_PT_ON, 0)
+    NC_SET(%tmp, NC_PT_TO_I2C, 0)
+    NC_SET(%tmp, NC_PT_ON, NC_PT_ON)
+
+    call8      %pt_read:link, pt_read
+    end
+.endfunc
+
+.func ntag_bc_pt_recv
+    .export ntag_bc_pt_recv
+    .input  %0 buffer
+    .clobber %0, %1 block, %2 tmp, %3 block_size, %15
+
+    cst8     %block, 0xf8
+    cst8     %block_size, 16
+
+pt_recv_again:
+    mov      %tmp, %block
+    pack8    %tmp, 1
+    i2c_wrr  %tmp, 1, RESTART
+    i2c_rdm  %buffer, %block_size, STOP
+    add8     %block, 1
+    add8     %buffer, 16
+    tst32c   %block, 2
+     jmp8 pt_recv_again
+
+    call8    %pt_read:link, pt_read
+    end
+.endfunc
+#endif
+
+.func ntag_bc_write
+    .export ntag_bc_write
+    .input  %0 block, %1 buffer, %2 block_count
+    .clobber %0, %1, %2, %3 block_size, %4 packed_block
+
+    
+    add8    %block, 1
+    cst8    %block_size, 16
+write_again:
+    mov     %packed_block, %block
+    pack8   %packed_block, 1
+    i2c_wrr %packed_block, 1, CONTINUOUS
+    i2c_wrm %buffer, %block_size, STOP
+    add8    %buffer, 16
+    add8    %block, 1
+    eq      %block, %split
+     add8   %block, 8
+    loop    %block_count, write_again
+
+    end
+.endfunc
+
+.func ntag_bc_read
+    .export ntag_bc_read
+    .input  %0 block, %1 buffer, %2 block_count
+    .clobber %0, %1, %2, %3 block_size, %4 packed_block
+
+    add8    %block, 1
+    cst8    %block_size, 16
+read_again:
+    mov     %packed_block, %block
+    pack8   %packed_block, 1
+    i2c_wrr %packed_block, 1, RESTART
+    i2c_rdm %buffer, %block_size, STOP
+    add8    %buffer, 16
+    add8    %block, 1
+    eq      %block, %split
+     add8   %block, 8
+    loop    %block_count, read_again
+
+    end
+.endfunc
