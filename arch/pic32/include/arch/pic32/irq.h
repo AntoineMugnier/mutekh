@@ -69,6 +69,10 @@
 #define PIC32_IRQ_RX_SPI5              177
 #define PIC32_IRQ_TX_SPI5              178
 
+#define PIC32_IRQ_ERR_UART5 179
+#define PIC32_IRQ_RX_UART5 180
+#define PIC32_IRQ_TX_UART5 181
+
 #define PIC32_IRQ_ERR_SPI6             185
 #define PIC32_IRQ_RX_SPI6              186
 #define PIC32_IRQ_TX_SPI6              187

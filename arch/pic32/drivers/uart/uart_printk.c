@@ -22,14 +22,18 @@
 #include <hexo/types.h>
 #include <hexo/iospace.h>
 #include <hexo/endian.h>
+#include <hexo/bit.h>
 
 #include <mutek/printk.h>
+#include <mutek/startup.h>
 
 #include <arch/pic32/uart.h>
 #include <arch/pic32/gpio.h>
 #include <arch/pic32/clk.h>
 #include <arch/pic32/devaddr.h>
 #include <arch/pic32/freq.h>
+
+#include <arch/pic32/pin.h>
 
 
 static void printk_out_char(char c)
@@ -53,51 +57,26 @@ static PRINTK_HANDLER(printk_out)
   }
 }
 
-void pic32_uart_printk_init()
+void pic32_uart_printk_init(void)
 {
-  uint32_t x = 0;
-
   uint8_t nuart = (CONFIG_MUTEK_PRINTK_ADDR >> 9) & 0x7;
   uint32_t bank = CONFIG_DRIVER_PIC32_UART_PRINTK_PIN/16;
   uint32_t pin = CONFIG_DRIVER_PIC32_UART_PRINTK_PIN%16;
-
-  /* Configure TX pin */
-
-  switch (nuart)
-    {
-    case 0:    /* uart1 */
-    case 2:    /* uart3 */
-      x = 1;
-      break;
-    case 1:    /* uart2 */
-    case 3:    /* uart4 */
-      x = 2;
-      break;
-    case 4:    /* uart5 */
-      x = 3;
-      break;
-    case 5:    /* uart6 */
-      x = 4;
-      break;
-    default:
-      return;
-    }
+  uint32_t remap = nuart < 2 ? (nuart + 1) : (nuart - 1);
+  uint32_t rate = ((PIC32_PB2CLK_FREQ / CONFIG_DRIVER_PIC32_UART_PRINTK_BAUDRATE) / 16) - 1;
+  static struct printk_backend_s backend;
 
   cpu_mem_write_32(PIC32_GPIO_ADDR + PIC32_GPIO_TRIS_ADDR(bank), PIC32_GPIO_TRIS_DIR(pin, OUTPUT));
-  cpu_mem_write_32(PIC32_GPIO_ADDR + PIC32_GPIO_RP_ADDR(CONFIG_DRIVER_PIC32_UART_PRINTK_PIN), x);
-  cpu_mem_write_32(PIC32_GPIO_ADDR + PIC32_GPIO_ANSEL_ADDR(bank), 0);
+  cpu_mem_write_32(PIC32_GPIO_ADDR + PIC32_GPIO_RP_ADDR(CONFIG_DRIVER_PIC32_UART_PRINTK_PIN), remap);
+  cpu_mem_write_32(PIC32_GPIO_ADDR + PIC32_GPIO_ANSEL_CLR_ADDR(bank), bit(pin));
 
   /* configure baud rate. */
-  x = ((PIC32_PB2CLK_FREQ/CONFIG_DRIVER_PIC32_UART_PRINTK_BAUDRATE)/16) - 1;
-
-  cpu_mem_write_32(CONFIG_MUTEK_PRINTK_ADDR + PIC32_UART_BAUD_ADDR, x);
+  cpu_mem_write_32(CONFIG_MUTEK_PRINTK_ADDR + PIC32_UART_BAUD_ADDR, rate);
 
   /* Enable uart and transmitter */
   cpu_mem_write_32(CONFIG_MUTEK_PRINTK_ADDR + PIC32_UART_MODE_ADDR, PIC32_UART_MODE_ON);
   cpu_mem_write_32(CONFIG_MUTEK_PRINTK_ADDR + PIC32_UART_STATUS_ADDR, PIC32_UART_STATUS_UTXEN);
 
-
-  static struct printk_backend_s backend;
   printk_register(&backend, printk_out);
 }
 
