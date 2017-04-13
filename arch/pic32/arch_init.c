@@ -107,22 +107,4 @@ void pic32_clk_init(void)
 
   /* Lock */
   cpu_mem_write_32(PIC32_SYSKEY_ADDR, 0x33333333);
-
-  /* Reference clock output on PD11 */
-
-  x = PIC32_CLOCK_REFCTRL_ROSEL(1) |
-      PIC32_CLOCK_REFCTRL_OE |
-      PIC32_CLOCK_REFCTRL_ON |
-      PIC32_CLOCK_REFCTRL_ACTIVE;
-
-  cpu_mem_write_32(PIC32_CMU_ADDR + PIC32_CLOCK_REFCTRL_ADDR(0), x); 
-
-  x = cpu_mem_read_32(PIC32_CMU_ADDR + PIC32_CLOCK_CTRL_ADDR);
-
-  uint32_t p = PIC32_PD7; 
-
-  cpu_mem_write_32(PIC32_GPIO_ADDR + PIC32_GPIO_ANSEL_CLR_ADDR(p/16), 1 << (p%16));
-  cpu_mem_write_32(PIC32_GPIO_ADDR + PIC32_GPIO_TRIS_CLR_ADDR(p/16), 1 << (p%16));
-  cpu_mem_write_32(PIC32_GPIO_ADDR + PIC32_GPIO_RP_ADDR(p), endian_le32(PIC32_OUTPUT_MUX_REFCLKO1));
-
 }
