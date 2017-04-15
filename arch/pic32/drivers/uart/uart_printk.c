@@ -59,14 +59,15 @@ static PRINTK_HANDLER(printk_out)
 
 void pic32_uart_printk_init(void)
 {
+  // UART number, 0-based, unlike PIC32 Datasheet
   uint8_t nuart = (CONFIG_MUTEK_PRINTK_ADDR >> 9) & 0x7;
   uint32_t bank = CONFIG_DRIVER_PIC32_UART_PRINTK_PIN/16;
   uint32_t pin = CONFIG_DRIVER_PIC32_UART_PRINTK_PIN%16;
   uint32_t remap = nuart < 2 ? (nuart + 1) : (nuart - 1);
   uint32_t rate = ((PIC32_PB2CLK_FREQ / CONFIG_DRIVER_PIC32_UART_PRINTK_BAUDRATE) / 16) - 1;
   static struct printk_backend_s backend;
-
-  cpu_mem_write_32(PIC32_GPIO_ADDR + PIC32_GPIO_TRIS_ADDR(bank), PIC32_GPIO_TRIS_DIR(pin, OUTPUT));
+  
+  cpu_mem_write_32(PIC32_GPIO_ADDR + PIC32_GPIO_TRIS_CLR_ADDR(bank), bit(pin));
   cpu_mem_write_32(PIC32_GPIO_ADDR + PIC32_GPIO_RP_ADDR(CONFIG_DRIVER_PIC32_UART_PRINTK_PIN), remap);
   cpu_mem_write_32(PIC32_GPIO_ADDR + PIC32_GPIO_ANSEL_CLR_ADDR(bank), bit(pin));
 
