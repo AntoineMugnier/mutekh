@@ -70,6 +70,7 @@ enum driver_class_e
   DRIVER_CLASS_USBDEV,
   DRIVER_CLASS_DISPLAY,
   DRIVER_CLASS_SMI,
+  DRIVER_CLASS_PHY,
 
   /* Custom driver class IDs should be registered in @ref
       #CONFIG_DEVICE_CUSTOM_CLASS_COUNT enum config token.
