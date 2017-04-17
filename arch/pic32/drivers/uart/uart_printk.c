@@ -67,9 +67,11 @@ void pic32_uart_printk_init(void)
   uint32_t rate = ((PIC32_PB2CLK_FREQ / CONFIG_DRIVER_PIC32_UART_PRINTK_BAUDRATE) / 16) - 1;
   static struct printk_backend_s backend;
   
-  cpu_mem_write_32(PIC32_GPIO_ADDR + PIC32_GPIO_TRIS_CLR_ADDR(bank), bit(pin));
+  cpu_mem_write_32(PIC32_GPIO_ADDR + PIC32_GPIO_TRIS_ADDR(bank) + PIC32_CLR_OFF,
+                   bit(pin));
   cpu_mem_write_32(PIC32_GPIO_ADDR + PIC32_GPIO_RP_ADDR(CONFIG_DRIVER_PIC32_UART_PRINTK_PIN), remap);
-  cpu_mem_write_32(PIC32_GPIO_ADDR + PIC32_GPIO_ANSEL_CLR_ADDR(bank), bit(pin));
+  cpu_mem_write_32(PIC32_GPIO_ADDR + PIC32_GPIO_ANSEL_ADDR(bank) + PIC32_CLR_OFF,
+                   bit(pin));
 
   /* configure baud rate. */
   cpu_mem_write_32(CONFIG_MUTEK_PRINTK_ADDR + PIC32_UART_BAUD_ADDR, rate);

@@ -106,26 +106,26 @@ static error_t pic32_gpio_mode(gpio_id_t io_first, gpio_id_t io_last,
     const uint8_t *mask, enum dev_pin_driving_e mode)
 {
   /* Digital I/O mode */
-  pic32_gpio_write_reg(PIC32_GPIO_ANSEL_CLR_ADDR(0), io_first, io_last, mask);
+  pic32_gpio_write_reg(PIC32_GPIO_ANSEL_ADDR(0) + PIC32_CLR_OFF, io_first, io_last, mask);
 
   switch (mode)
   {
     case DEV_PIN_DISABLED:
     case DEV_PIN_INPUT:
-      pic32_gpio_write_reg(PIC32_GPIO_TRIS_SET_ADDR(0), io_first, io_last, mask);
+      pic32_gpio_write_reg(PIC32_GPIO_TRIS_ADDR(0) + PIC32_SET_OFF, io_first, io_last, mask);
       break;
     case DEV_PIN_PUSHPULL:
-      pic32_gpio_write_reg(PIC32_GPIO_TRIS_CLR_ADDR(0), io_first, io_last, mask);
+      pic32_gpio_write_reg(PIC32_GPIO_TRIS_ADDR(0) + PIC32_CLR_OFF, io_first, io_last, mask);
       break;
     case DEV_PIN_INPUT_PULLUP:
-      pic32_gpio_write_reg(PIC32_GPIO_TRIS_SET_ADDR(0), io_first, io_last, mask);
-      pic32_gpio_write_reg(PIC32_GPIO_CNPU_SET_ADDR(0), io_first, io_last, mask);
+      pic32_gpio_write_reg(PIC32_GPIO_TRIS_ADDR(0) + PIC32_SET_OFF, io_first, io_last, mask);
+      pic32_gpio_write_reg(PIC32_GPIO_CNPU_ADDR(0) + PIC32_SET_OFF, io_first, io_last, mask);
     case DEV_PIN_INPUT_PULLDOWN:
-      pic32_gpio_write_reg(PIC32_GPIO_TRIS_SET_ADDR(0), io_first, io_last, mask);
-      pic32_gpio_write_reg(PIC32_GPIO_CNPD_SET_ADDR(0), io_first, io_last, mask);
+      pic32_gpio_write_reg(PIC32_GPIO_TRIS_ADDR(0) + PIC32_SET_OFF, io_first, io_last, mask);
+      pic32_gpio_write_reg(PIC32_GPIO_CNPD_ADDR(0) + PIC32_SET_OFF, io_first, io_last, mask);
     case DEV_PIN_OPENDRAIN:
-      pic32_gpio_write_reg(PIC32_GPIO_TRIS_CLR_ADDR(0), io_first, io_last, mask);
-      pic32_gpio_write_reg(PIC32_GPIO_ODC_SET_ADDR(0), io_first, io_last, mask);
+      pic32_gpio_write_reg(PIC32_GPIO_TRIS_ADDR(0) + PIC32_CLR_OFF, io_first, io_last, mask);
+      pic32_gpio_write_reg(PIC32_GPIO_ODC_ADDR(0) + PIC32_SET_OFF, io_first, io_last, mask);
       break;
     default:
       return -ENOTSUP;
@@ -346,8 +346,8 @@ static DEV_IRQ_SINK_UPDATE(pic32_gpio_icu_sink_update)
     {
     case DEV_IRQ_SENSE_NONE: {
       /* Disable external interrupt */
-      cpu_mem_write_32(PIC32_GPIO_ADDR + PIC32_GPIO_CNCON_CLR_ADDR(b), PIC32_GPIO_CNCON_ON);
-      cpu_mem_write_32(PIC32_GPIO_ADDR + PIC32_GPIO_CNEN_CLR_ADDR(b), endian_le32(mask));
+      cpu_mem_write_32(PIC32_GPIO_ADDR + PIC32_GPIO_CNCON_ADDR(b) + PIC32_CLR_OFF, PIC32_GPIO_CNCON_ON);
+      cpu_mem_write_32(PIC32_GPIO_ADDR + PIC32_GPIO_CNEN_ADDR(b) + PIC32_CLR_OFF, endian_le32(mask));
       return;
     }
 
@@ -356,8 +356,8 @@ static DEV_IRQ_SINK_UPDATE(pic32_gpio_icu_sink_update)
     case DEV_IRQ_SENSE_HIGH_LEVEL:{
       /* Rearm irq */
       __unused__ uint32_t x = endian_le32(cpu_mem_read_32(a));
-      cpu_mem_write_32(PIC32_GPIO_ADDR + PIC32_GPIO_CNCON_SET_ADDR(b), PIC32_GPIO_CNCON_ON);
-      cpu_mem_write_32(PIC32_GPIO_ADDR + PIC32_GPIO_CNEN_SET_ADDR(b), endian_le32(mask));
+      cpu_mem_write_32(PIC32_GPIO_ADDR + PIC32_GPIO_CNCON_ADDR(b) + PIC32_SET_OFF, PIC32_GPIO_CNCON_ON);
+      cpu_mem_write_32(PIC32_GPIO_ADDR + PIC32_GPIO_CNEN_ADDR(b) + PIC32_SET_OFF, endian_le32(mask));
       break;
     }
     default:

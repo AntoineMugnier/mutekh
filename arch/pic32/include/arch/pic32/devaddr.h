@@ -7,5 +7,9 @@
 #define PIC32_UART_ADDR(x) (0xBF822000 + (((x) - 1) << 9))
 #define PIC32_SYSKEY_ADDR 0xBF800030
 
+#define PIC32_CLR_OFF 0x4
+#define PIC32_SET_OFF 0x8
+#define PIC32_INV_OFF 0xc
+
 #endif
 
