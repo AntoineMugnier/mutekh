@@ -29,12 +29,12 @@
 
 #include <mutek/mem_alloc.h>
 #include <mutek/memory_allocator.h>
-#include <arch/pic32/clk.h>
-#include <arch/pic32/pin.h>
-#include <arch/pic32/devaddr.h>
-#include <arch/pic32/gpio.h>
 #include <mutek/printk.h>
 #include <mutek/startup.h>
+
+#include <arch/pic32/clk.h>
+#include <arch/pic32/devaddr.h>
+#include <arch/pic32/system.h>
 
 void pic32_mem_init(void)
 {
@@ -45,12 +45,7 @@ void pic32_mem_init(void)
 
 void pic32_clk_init(void)
 {
-
-  /* Unlock sequence */
-  cpu_mem_write_32(PIC32_SYSKEY_ADDR, 0x00000000);
-  cpu_mem_write_32(PIC32_SYSKEY_ADDR, 0xAA996655);
-  cpu_mem_write_32(PIC32_SYSKEY_ADDR, 0x556699AA);
-
+  pic32_system_unlock();
 
   uint32_t x = cpu_mem_read_32(PIC32_CMU_ADDR + PIC32_CLOCK_CTRL_ADDR);
 
@@ -105,6 +100,5 @@ void pic32_clk_init(void)
         cpu_mem_write_32(PIC32_CMU_ADDR + PIC32_CLOCK_PBDIV_ADDR(i), PIC32_CLOCK_PBDIV_ON | PIC32_CLOCK_PBDIV_DIV(1));
     }
 
-  /* Lock */
-  cpu_mem_write_32(PIC32_SYSKEY_ADDR, 0x33333333);
+  pic32_system_lock();
 }

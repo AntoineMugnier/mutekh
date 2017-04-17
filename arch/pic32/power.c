@@ -24,12 +24,11 @@
 #include <hexo/iospace.h>
 #include <arch/pic32/devaddr.h>
 #include <arch/pic32/reset.h>
+#include <arch/pic32/system.h>
 
 error_t power_reboot()
 {
-  cpu_mem_write_32(PIC32_SYSKEY_ADDR, 0x00000000);
-  cpu_mem_write_32(PIC32_SYSKEY_ADDR, 0xAA996655);
-  cpu_mem_write_32(PIC32_SYSKEY_ADDR, 0x556699AA);
+  pic32_system_unlock();
 
   cpu_mem_write_32(PIC32_RSWRST_ADDR, 1);
   cpu_mem_read_32(PIC32_RSWRST_ADDR);
