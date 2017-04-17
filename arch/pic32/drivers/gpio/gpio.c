@@ -103,33 +103,51 @@ last:;
 }
 
 static error_t pic32_gpio_mode(gpio_id_t io_first, gpio_id_t io_last,
-    const uint8_t *mask, enum dev_pin_driving_e mode)
+                               const uint8_t *mask, enum dev_pin_driving_e mode)
 {
   /* Digital I/O mode */
   pic32_gpio_write_reg(PIC32_GPIO_ANSEL_ADDR(0) + PIC32_CLR_OFF, io_first, io_last, mask);
 
   switch (mode)
-  {
+    {
     case DEV_PIN_DISABLED:
     case DEV_PIN_INPUT:
       pic32_gpio_write_reg(PIC32_GPIO_TRIS_ADDR(0) + PIC32_SET_OFF, io_first, io_last, mask);
+      pic32_gpio_write_reg(PIC32_GPIO_CNPU_ADDR(0) + PIC32_CLR_OFF, io_first, io_last, mask);
+      pic32_gpio_write_reg(PIC32_GPIO_CNPD_ADDR(0) + PIC32_CLR_OFF, io_first, io_last, mask);
       break;
+
     case DEV_PIN_PUSHPULL:
       pic32_gpio_write_reg(PIC32_GPIO_TRIS_ADDR(0) + PIC32_CLR_OFF, io_first, io_last, mask);
+      pic32_gpio_write_reg(PIC32_GPIO_CNPU_ADDR(0) + PIC32_CLR_OFF, io_first, io_last, mask);
+      pic32_gpio_write_reg(PIC32_GPIO_CNPD_ADDR(0) + PIC32_CLR_OFF, io_first, io_last, mask);
+      pic32_gpio_write_reg(PIC32_GPIO_ODC_ADDR(0) + PIC32_CLR_OFF, io_first, io_last, mask);
       break;
+
     case DEV_PIN_INPUT_PULLUP:
       pic32_gpio_write_reg(PIC32_GPIO_TRIS_ADDR(0) + PIC32_SET_OFF, io_first, io_last, mask);
       pic32_gpio_write_reg(PIC32_GPIO_CNPU_ADDR(0) + PIC32_SET_OFF, io_first, io_last, mask);
+      pic32_gpio_write_reg(PIC32_GPIO_CNPD_ADDR(0) + PIC32_CLR_OFF, io_first, io_last, mask);
+      pic32_gpio_write_reg(PIC32_GPIO_ODC_ADDR(0) + PIC32_CLR_OFF, io_first, io_last, mask);
+      break;
+
     case DEV_PIN_INPUT_PULLDOWN:
       pic32_gpio_write_reg(PIC32_GPIO_TRIS_ADDR(0) + PIC32_SET_OFF, io_first, io_last, mask);
+      pic32_gpio_write_reg(PIC32_GPIO_CNPU_ADDR(0) + PIC32_CLR_OFF, io_first, io_last, mask);
       pic32_gpio_write_reg(PIC32_GPIO_CNPD_ADDR(0) + PIC32_SET_OFF, io_first, io_last, mask);
+      pic32_gpio_write_reg(PIC32_GPIO_ODC_ADDR(0) + PIC32_CLR_OFF, io_first, io_last, mask);
+      break;
+
     case DEV_PIN_OPENDRAIN:
       pic32_gpio_write_reg(PIC32_GPIO_TRIS_ADDR(0) + PIC32_CLR_OFF, io_first, io_last, mask);
+      pic32_gpio_write_reg(PIC32_GPIO_CNPU_ADDR(0) + PIC32_CLR_OFF, io_first, io_last, mask);
+      pic32_gpio_write_reg(PIC32_GPIO_CNPD_ADDR(0) + PIC32_CLR_OFF, io_first, io_last, mask);
       pic32_gpio_write_reg(PIC32_GPIO_ODC_ADDR(0) + PIC32_SET_OFF, io_first, io_last, mask);
       break;
+
     default:
       return -ENOTSUP;
-  }
+    }
   return 0;
 }
 
