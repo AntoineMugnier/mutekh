@@ -3,8 +3,7 @@
 ***************************************/
 
 /*
-   bfgen -o cdefs -O arch/pic32/include/arch/pic32/gpio.h cdefs_use_reg_mask=1 \
-     cdefs_use_field_setval=1 -I /opt/bfgen/defs/pic32/pic32_gpio.bf
+   bfgen -o cdefs cdefs_use_reg_mask=1 cdefs_use_field_setval=1
 */
 
 #ifndef _PIC32_GPIO_BFGEN_DEFS_
@@ -97,24 +96,6 @@
   #define PIC32_GPIO_ANSEL_DIR_DIGITAL             0x00000000
   #define PIC32_GPIO_ANSEL_DIR_ANALOG              0x00000001
 
-#define PIC32_GPIO_ANSEL_CLR_ADDR(ridx)              (0x00060004 + (ridx) * 256)
-#define PIC32_GPIO_ANSEL_CLR_COUNT                   10
-#define PIC32_GPIO_ANSEL_CLR_MASK                    0x0000ffff
-  #define PIC32_GPIO_ANSEL_CLR_VAL_COUNT           16
-  #define PIC32_GPIO_ANSEL_CLR_VAL(fidx)           (0x00000001 << ((fidx)))
-
-#define PIC32_GPIO_ANSEL_SET_ADDR(ridx)              (0x00060008 + (ridx) * 256)
-#define PIC32_GPIO_ANSEL_SET_COUNT                   10
-#define PIC32_GPIO_ANSEL_SET_MASK                    0x0000ffff
-  #define PIC32_GPIO_ANSEL_SET_VAL_COUNT           16
-  #define PIC32_GPIO_ANSEL_SET_VAL(fidx)           (0x00000001 << ((fidx)))
-
-#define PIC32_GPIO_ANSEL_INV_ADDR(ridx)              (0x0006000c + (ridx) * 256)
-#define PIC32_GPIO_ANSEL_INV_COUNT                   10
-#define PIC32_GPIO_ANSEL_INV_MASK                    0x0000ffff
-  #define PIC32_GPIO_ANSEL_INV_VAL_COUNT           16
-  #define PIC32_GPIO_ANSEL_INV_VAL(fidx)           (0x00000001 << ((fidx)))
-
 #define PIC32_GPIO_TRIS_ADDR(ridx)                   (0x00060010 + (ridx) * 256)
 #define PIC32_GPIO_TRIS_COUNT                        10
 #define PIC32_GPIO_TRIS_MASK                         0x0000ffff
@@ -126,71 +107,17 @@
   #define PIC32_GPIO_TRIS_DIR_OUTPUT               0x00000000
   #define PIC32_GPIO_TRIS_DIR_INPUT                0x00000001
 
-#define PIC32_GPIO_TRIS_CLR_ADDR(ridx)               (0x00060014 + (ridx) * 256)
-#define PIC32_GPIO_TRIS_CLR_COUNT                    10
-#define PIC32_GPIO_TRIS_CLR_MASK                     0x0000ffff
-  #define PIC32_GPIO_TRIS_CLR_VAL_COUNT            16
-  #define PIC32_GPIO_TRIS_CLR_VAL(fidx)            (0x00000001 << ((fidx)))
-
-#define PIC32_GPIO_TRIS_SET_ADDR(ridx)               (0x00060018 + (ridx) * 256)
-#define PIC32_GPIO_TRIS_SET_COUNT                    10
-#define PIC32_GPIO_TRIS_SET_MASK                     0x0000ffff
-  #define PIC32_GPIO_TRIS_SET_VAL_COUNT            16
-  #define PIC32_GPIO_TRIS_SET_VAL(fidx)            (0x00000001 << ((fidx)))
-
-#define PIC32_GPIO_TRIS_INV_ADDR(ridx)               (0x0006001c + (ridx) * 256)
-#define PIC32_GPIO_TRIS_INV_COUNT                    10
-#define PIC32_GPIO_TRIS_INV_MASK                     0x0000ffff
-  #define PIC32_GPIO_TRIS_INV_VAL_COUNT            16
-  #define PIC32_GPIO_TRIS_INV_VAL(fidx)            (0x00000001 << ((fidx)))
-
 #define PIC32_GPIO_PORT_ADDR(ridx)                   (0x00060020 + (ridx) * 256)
 #define PIC32_GPIO_PORT_COUNT                        10
 #define PIC32_GPIO_PORT_MASK                         0x0000ffff
   #define PIC32_GPIO_PORT_VAL_COUNT                16
   #define PIC32_GPIO_PORT_VAL(fidx)                (0x00000001 << ((fidx)))
 
-#define PIC32_GPIO_PORT_CLR_ADDR(ridx)               (0x00060024 + (ridx) * 256)
-#define PIC32_GPIO_PORT_CLR_COUNT                    10
-#define PIC32_GPIO_PORT_CLR_MASK                     0x0000ffff
-  #define PIC32_GPIO_PORT_CLR_VAL_COUNT            16
-  #define PIC32_GPIO_PORT_CLR_VAL(fidx)            (0x00000001 << ((fidx)))
-
-#define PIC32_GPIO_PORT_SET_ADDR(ridx)               (0x00060028 + (ridx) * 256)
-#define PIC32_GPIO_PORT_SET_COUNT                    10
-#define PIC32_GPIO_PORT_SET_MASK                     0x0000ffff
-  #define PIC32_GPIO_PORT_SET_VAL_COUNT            16
-  #define PIC32_GPIO_PORT_SET_VAL(fidx)            (0x00000001 << ((fidx)))
-
-#define PIC32_GPIO_PORT_INV_ADDR(ridx)               (0x0006002c + (ridx) * 256)
-#define PIC32_GPIO_PORT_INV_COUNT                    10
-#define PIC32_GPIO_PORT_INV_MASK                     0x0000ffff
-  #define PIC32_GPIO_PORT_INV_VAL_COUNT            16
-  #define PIC32_GPIO_PORT_INV_VAL(fidx)            (0x00000001 << ((fidx)))
-
 #define PIC32_GPIO_LAT_ADDR(ridx)                    (0x00060030 + (ridx) * 256)
 #define PIC32_GPIO_LAT_COUNT                         10
 #define PIC32_GPIO_LAT_MASK                          0x0000ffff
   #define PIC32_GPIO_LAT_VAL_COUNT                 16
   #define PIC32_GPIO_LAT_VAL(fidx)                 (0x00000001 << ((fidx)))
-
-#define PIC32_GPIO_LAT_CLR_ADDR(ridx)                (0x00060034 + (ridx) * 256)
-#define PIC32_GPIO_LAT_CLR_COUNT                     10
-#define PIC32_GPIO_LAT_CLR_MASK                      0x0000ffff
-  #define PIC32_GPIO_LAT_CLR_VAL_COUNT             16
-  #define PIC32_GPIO_LAT_CLR_VAL(fidx)             (0x00000001 << ((fidx)))
-
-#define PIC32_GPIO_LAT_SET_ADDR(ridx)                (0x00060038 + (ridx) * 256)
-#define PIC32_GPIO_LAT_SET_COUNT                     10
-#define PIC32_GPIO_LAT_SET_MASK                      0x0000ffff
-  #define PIC32_GPIO_LAT_SET_VAL_COUNT             16
-  #define PIC32_GPIO_LAT_SET_VAL(fidx)             (0x00000001 << ((fidx)))
-
-#define PIC32_GPIO_LAT_INV_ADDR(ridx)                (0x0006003c + (ridx) * 256)
-#define PIC32_GPIO_LAT_INV_COUNT                     10
-#define PIC32_GPIO_LAT_INV_MASK                      0x0000ffff
-  #define PIC32_GPIO_LAT_INV_VAL_COUNT             16
-  #define PIC32_GPIO_LAT_INV_VAL(fidx)             (0x00000001 << ((fidx)))
 
 #define PIC32_GPIO_ODC_ADDR(ridx)                    (0x00060040 + (ridx) * 256)
 #define PIC32_GPIO_ODC_COUNT                         10
@@ -203,71 +130,17 @@
   #define PIC32_GPIO_ODC_VAL_NORMAL                0x00000000
   #define PIC32_GPIO_ODC_VAL_OPENDRAIN             0x00000001
 
-#define PIC32_GPIO_ODC_CLR_ADDR(ridx)                (0x00060044 + (ridx) * 256)
-#define PIC32_GPIO_ODC_CLR_COUNT                     10
-#define PIC32_GPIO_ODC_CLR_MASK                      0x0000ffff
-  #define PIC32_GPIO_ODC_CLR_VAL_COUNT             16
-  #define PIC32_GPIO_ODC_CLR_VAL(fidx)             (0x00000001 << ((fidx)))
-
-#define PIC32_GPIO_ODC_SET_ADDR(ridx)                (0x00060048 + (ridx) * 256)
-#define PIC32_GPIO_ODC_SET_COUNT                     10
-#define PIC32_GPIO_ODC_SET_MASK                      0x0000ffff
-  #define PIC32_GPIO_ODC_SET_VAL_COUNT             16
-  #define PIC32_GPIO_ODC_SET_VAL(fidx)             (0x00000001 << ((fidx)))
-
-#define PIC32_GPIO_ODC_INV_ADDR(ridx)                (0x0006004c + (ridx) * 256)
-#define PIC32_GPIO_ODC_INV_COUNT                     10
-#define PIC32_GPIO_ODC_INV_MASK                      0x0000ffff
-  #define PIC32_GPIO_ODC_INV_VAL_COUNT             16
-  #define PIC32_GPIO_ODC_INV_VAL(fidx)             (0x00000001 << ((fidx)))
-
 #define PIC32_GPIO_CNPU_ADDR(ridx)                   (0x00060050 + (ridx) * 256)
 #define PIC32_GPIO_CNPU_COUNT                        10
 #define PIC32_GPIO_CNPU_MASK                         0x0000ffff
   #define PIC32_GPIO_CNPU_VAL_COUNT                16
   #define PIC32_GPIO_CNPU_VAL(fidx)                (0x00000001 << ((fidx)))
 
-#define PIC32_GPIO_CNPU_CLR_ADDR(ridx)               (0x00060054 + (ridx) * 256)
-#define PIC32_GPIO_CNPU_CLR_COUNT                    10
-#define PIC32_GPIO_CNPU_CLR_MASK                     0x0000ffff
-  #define PIC32_GPIO_CNPU_CLR_VAL_COUNT            16
-  #define PIC32_GPIO_CNPU_CLR_VAL(fidx)            (0x00000001 << ((fidx)))
-
-#define PIC32_GPIO_CNPU_SET_ADDR(ridx)               (0x00060058 + (ridx) * 256)
-#define PIC32_GPIO_CNPU_SET_COUNT                    10
-#define PIC32_GPIO_CNPU_SET_MASK                     0x0000ffff
-  #define PIC32_GPIO_CNPU_SET_VAL_COUNT            16
-  #define PIC32_GPIO_CNPU_SET_VAL(fidx)            (0x00000001 << ((fidx)))
-
-#define PIC32_GPIO_CNPU_INV_ADDR(ridx)               (0x0006005c + (ridx) * 256)
-#define PIC32_GPIO_CNPU_INV_COUNT                    10
-#define PIC32_GPIO_CNPU_INV_MASK                     0x0000ffff
-  #define PIC32_GPIO_CNPU_INV_VAL_COUNT            16
-  #define PIC32_GPIO_CNPU_INV_VAL(fidx)            (0x00000001 << ((fidx)))
-
 #define PIC32_GPIO_CNPD_ADDR(ridx)                   (0x00060060 + (ridx) * 256)
 #define PIC32_GPIO_CNPD_COUNT                        10
 #define PIC32_GPIO_CNPD_MASK                         0x0000ffff
   #define PIC32_GPIO_CNPD_VAL_COUNT                16
   #define PIC32_GPIO_CNPD_VAL(fidx)                (0x00000001 << ((fidx)))
-
-#define PIC32_GPIO_CNPD_CLR_ADDR(ridx)               (0x00060064 + (ridx) * 256)
-#define PIC32_GPIO_CNPD_CLR_COUNT                    10
-#define PIC32_GPIO_CNPD_CLR_MASK                     0x0000ffff
-  #define PIC32_GPIO_CNPD_CLR_VAL_COUNT            16
-  #define PIC32_GPIO_CNPD_CLR_VAL(fidx)            (0x00000001 << ((fidx)))
-
-#define PIC32_GPIO_CNPD_SET_ADDR(ridx)               (0x00060068 + (ridx) * 256)
-#define PIC32_GPIO_CNPD_SET_COUNT                    10
-#define PIC32_GPIO_CNPD_SET_MASK                     0x0000ffff
-  #define PIC32_GPIO_CNPD_SET_VAL_COUNT            16
-  #define PIC32_GPIO_CNPD_SET_VAL(fidx)            (0x00000001 << ((fidx)))
-
-#define PIC32_GPIO_CNPD_INV_ADDR(ridx)               (0x0006006c + (ridx) * 256)
-#define PIC32_GPIO_CNPD_INV_COUNT                    10
-#define PIC32_GPIO_CNPD_INV_MASK                     0x0000ffff
-  #define PIC32_GPIO_CNPD_INV_VAL_COUNT            16
-  #define PIC32_GPIO_CNPD_INV_VAL(fidx)            (0x00000001 << ((fidx)))
 
 #define PIC32_GPIO_CNCON_ADDR(ridx)                  (0x00060070 + (ridx) * 256)
 #define PIC32_GPIO_CNCON_COUNT                       10
@@ -278,56 +151,11 @@
 /** CN is enabled when 1 and disabled when 0. @multiple */
   #define PIC32_GPIO_CNCON_ON                      0x00008000
 
-#define PIC32_GPIO_CNCON_CLR_ADDR(ridx)              (0x00060074 + (ridx) * 256)
-#define PIC32_GPIO_CNCON_CLR_COUNT                   10
-#define PIC32_GPIO_CNCON_CLR_MASK                    0x0000a000
-/** CPU Idle Mode halts CN operation when 1 else CPU Idle does not affect CN
-   operation when 0. @multiple */
-  #define PIC32_GPIO_CNCON_CLR_SIDL                0x00002000
-/** CN is enabled when 1 and disabled when 0. @multiple */
-  #define PIC32_GPIO_CNCON_CLR_ON                  0x00008000
-
-#define PIC32_GPIO_CNCON_SET_ADDR(ridx)              (0x00060078 + (ridx) * 256)
-#define PIC32_GPIO_CNCON_SET_COUNT                   10
-#define PIC32_GPIO_CNCON_SET_MASK                    0x0000a000
-/** CPU Idle Mode halts CN operation when 1 else CPU Idle does not affect CN
-   operation when 0. @multiple */
-  #define PIC32_GPIO_CNCON_SET_SIDL                0x00002000
-/** CN is enabled when 1 and disabled when 0. @multiple */
-  #define PIC32_GPIO_CNCON_SET_ON                  0x00008000
-
-#define PIC32_GPIO_CNCON_INV_ADDR(ridx)              (0x0006007c + (ridx) * 256)
-#define PIC32_GPIO_CNCON_INV_COUNT                   10
-#define PIC32_GPIO_CNCON_INV_MASK                    0x0000a000
-/** CPU Idle Mode halts CN operation when 1 else CPU Idle does not affect CN
-   operation when 0. @multiple */
-  #define PIC32_GPIO_CNCON_INV_SIDL                0x00002000
-/** CN is enabled when 1 and disabled when 0. @multiple */
-  #define PIC32_GPIO_CNCON_INV_ON                  0x00008000
-
 #define PIC32_GPIO_CNEN_ADDR(ridx)                   (0x00060080 + (ridx) * 256)
 #define PIC32_GPIO_CNEN_COUNT                        10
 #define PIC32_GPIO_CNEN_MASK                         0x0000ffff
   #define PIC32_GPIO_CNEN_VAL_COUNT                16
   #define PIC32_GPIO_CNEN_VAL(fidx)                (0x00000001 << ((fidx)))
-
-#define PIC32_GPIO_CNEN_CLR_ADDR(ridx)               (0x00060084 + (ridx) * 256)
-#define PIC32_GPIO_CNEN_CLR_COUNT                    10
-#define PIC32_GPIO_CNEN_CLR_MASK                     0x0000ffff
-  #define PIC32_GPIO_CNEN_CLR_VAL_COUNT            16
-  #define PIC32_GPIO_CNEN_CLR_VAL(fidx)            (0x00000001 << ((fidx)))
-
-#define PIC32_GPIO_CNEN_SET_ADDR(ridx)               (0x00060088 + (ridx) * 256)
-#define PIC32_GPIO_CNEN_SET_COUNT                    10
-#define PIC32_GPIO_CNEN_SET_MASK                     0x0000ffff
-  #define PIC32_GPIO_CNEN_SET_VAL_COUNT            16
-  #define PIC32_GPIO_CNEN_SET_VAL(fidx)            (0x00000001 << ((fidx)))
-
-#define PIC32_GPIO_CNEN_INV_ADDR(ridx)               (0x0006008c + (ridx) * 256)
-#define PIC32_GPIO_CNEN_INV_COUNT                    10
-#define PIC32_GPIO_CNEN_INV_MASK                     0x0000ffff
-  #define PIC32_GPIO_CNEN_INV_VAL_COUNT            16
-  #define PIC32_GPIO_CNEN_INV_VAL(fidx)            (0x00000001 << ((fidx)))
 
 #define PIC32_GPIO_CNSTAT_ADDR(ridx)                 (0x00060090 + (ridx) * 256)
 #define PIC32_GPIO_CNSTAT_COUNT                      10
