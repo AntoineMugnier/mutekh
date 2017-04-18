@@ -22,6 +22,10 @@
 #define PIC32_IRQ_RX_SPI1              110
 #define PIC32_IRQ_TX_SPI1              111
 
+#define PIC32_IRQ_ERR_UART1            112
+#define PIC32_IRQ_RX_UART1             113
+#define PIC32_IRQ_TX_UART1             114
+
 #define PIC32_IRQ_PORTA                118
 #define PIC32_IRQ_PORTB                119
 #define PIC32_IRQ_PORTC                120
@@ -53,6 +57,8 @@
 #define PIC32_IRQ_RX_UART2             146
 #define PIC32_IRQ_TX_UART2             147
 
+#define PIC32_IRQ_ETH                  153
+
 #define PIC32_IRQ_ERR_SPI3             154
 #define PIC32_IRQ_RX_SPI3              155
 #define PIC32_IRQ_TX_SPI3              156
@@ -69,9 +75,9 @@
 #define PIC32_IRQ_RX_SPI5              177
 #define PIC32_IRQ_TX_SPI5              178
 
-#define PIC32_IRQ_ERR_UART5 179
-#define PIC32_IRQ_RX_UART5 180
-#define PIC32_IRQ_TX_UART5 181
+#define PIC32_IRQ_ERR_UART5            179
+#define PIC32_IRQ_RX_UART5             180
+#define PIC32_IRQ_TX_UART5             181
 
 #define PIC32_IRQ_ERR_SPI6             185
 #define PIC32_IRQ_RX_SPI6              186
