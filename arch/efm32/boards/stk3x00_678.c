@@ -181,16 +181,16 @@ DEV_DECLARE_STATIC(leuart0_dev, "leuart0", 0, efm32_leuart_drv,
 
 #ifdef CONFIG_DRIVER_EFM32_TIMER
 
-DEV_DECLARE_STATIC(timer1_dev, "timer1", 0, efm32_timer_drv,
-                   DEV_STATIC_RES_MEM(0x40010400, 0x40010800),
+DEV_DECLARE_STATIC(timer0_dev, "timer0", 0, efm32_timer_drv,
+                   DEV_STATIC_RES_MEM(0x40010000, 0x40010400),
 # ifdef CONFIG_DEVICE_CLOCK
-                   DEV_STATIC_RES_CLK_SRC("/recmu", EFM32_CLOCK_TIMER1, 0),
+                   DEV_STATIC_RES_CLK_SRC("/recmu", EFM32_CLOCK_TIMER0, 0),
 # else
                    DEV_STATIC_RES_FREQ(14000000, 1),
 # endif
 
                    DEV_STATIC_RES_DEV_ICU("/cpu"),
-                   DEV_STATIC_RES_IRQ(0, EFM32_IRQ_TIMER1, DEV_IRQ_SENSE_RISING_EDGE, 0, 1),
+                   DEV_STATIC_RES_IRQ(0, EFM32_IRQ_TIMER0, DEV_IRQ_SENSE_RISING_EDGE, 0, 1),
                    );
 
 #endif
