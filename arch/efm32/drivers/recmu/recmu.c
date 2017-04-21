@@ -37,7 +37,7 @@
 #include <device/class/cmu.h>
 
 typedef UINT_FIT_TYPE(1ULL << (EFM32_CLOCK_count - 1)) efm32_clock_mask_t;
-#define EFM32_CLK_MASK(x) ((efm32_clock_mask_t)1 << (x))
+#define EFM32_CLK_MASK(x) (1ULL << (x))
 
 #define EFM32_CLOCK_HFCORECLK_CHILDMASK \
   ((EFM32_CLK_MASK(EFM32_CLOCK_HFCORECLK_last - EFM32_CLOCK_HFCORECLK_first + 1) - 1) \
