@@ -263,7 +263,17 @@ struct dev_dma_rq_s
   /** Completion callback. */
   dev_dma_callback_t            *f_done;
 
-  GCT_CONTAINER_ENTRY(dev_dma_queue, queue_entry);
+  union {
+    GCT_CONTAINER_ENTRY(dev_dma_queue, queue_entry);
+    struct {
+      /** Accumulated number of unit transferred by DMA. For continous
+          operation, it contains number of transferred units since last dma
+          callback */
+      uint32_t                   size;
+      /** Index of last descriptor processed by DMA. */
+      uint32_t                   desc_idx;
+    }                            cancel;
+  };
 
   /** This may be used by the driver in order to reuse some internal
       data structure associated to a repeated request. It must be set
@@ -330,15 +340,33 @@ GCT_CONTAINER_FCNS(dev_dma_queue, static inline, dev_dma_queue,
 */
 typedef DEVDMA_REQUEST(devdma_request_t);
 
+/** @see dev_dma_cancel_t */
+#define DEV_DMA_CANCEL(n)	error_t  (n) (struct device_dma_s *accessor, \
+                                              struct dev_dma_rq_s *rq)
+
+/**
+   @This cancel a dma request.
+
+   The function returns 0 if the request has been cancelled or @tt
+   -EBUSY if the request has already ended or will terminate very
+   soon. It may also return @tt -ENOTSUP. The DMA callback is not
+   executed when this function returns 0.
+
+   In case of success the @ref cancel structure field of the request
+   contains information about cancelled request
+*/
+typedef DEV_DMA_CANCEL(devdma_cancel_t);
 
 DRIVER_CLASS_TYPES(DRIVER_CLASS_DMA, dma,
                    devdma_request_t *f_request;
+                   devdma_cancel_t *f_cancel;
                    );
 
 /** @see driver_dma_s */
 #define DRIVER_DMA_METHODS(prefix)                               \
   ((const struct driver_class_s*)&(const struct driver_dma_s){   \
     .class_ = DRIVER_CLASS_DMA,                                  \
+    .f_cancel = prefix ## _cancel,                               \
     .f_request = prefix ## _request,                             \
   })
 

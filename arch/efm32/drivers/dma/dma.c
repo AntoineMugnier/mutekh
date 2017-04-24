@@ -46,6 +46,13 @@
 #define PL230_CHANNEL_SIZE 16
 #define EFM32_DMA_CHANNEL_MASK ((1 << CONFIG_DRIVER_EFM32_DMA_CHANNEL_COUNT) - 1)
 
+enum efm32_dma_rq_state_e
+{
+  EFR32_DMA_DONE = 0,
+  EFR32_DMA_ENQUEUED = 1,
+  EFR32_DMA_ONGOING = 2,
+};
+
 struct efm32_dma_chan_state_s
 {
   struct dev_dma_rq_s  *rq;
@@ -63,7 +70,7 @@ struct efm32_dma_descriptor_s
   uint32_t unused;
 };
 
-DRIVER_PV(struct efm32_dma_context
+DRIVER_PV(struct efm32_dma_context_s
 {
   /* base address of DMA */
   uintptr_t                     addr;
@@ -75,7 +82,7 @@ DRIVER_PV(struct efm32_dma_context
   struct dev_clock_sink_ep_s    clk_ep;
 
   uint8_t                       free_channel_mask;
-  struct efm32_dma_chan_state_s chan[CONFIG_DRIVER_EFR32_DMA_CHANNEL_COUNT];
+  struct efm32_dma_chan_state_s chan[CONFIG_DRIVER_EFM32_DMA_CHANNEL_COUNT];
   struct efm32_dma_descriptor_s desc[CONFIG_DRIVER_EFM32_DMA_LINKED_LIST_SIZE];
 
   bool_t                        list_busy;
@@ -200,7 +207,7 @@ static error_t efm32_dma_set_ctrl(struct dev_dma_rq_s * rq,
   return 0;
 }
 
-static void efm32_dma_start(struct efm32_dma_context *pv,
+static void efm32_dma_start(struct efm32_dma_context_s *pv,
                             struct dev_dma_rq_s * rq,
                             uint8_t chan)
 {
@@ -242,7 +249,7 @@ static void efm32_dma_start(struct efm32_dma_context *pv,
     }
 }
 
-static error_t efm32_dma_loop_setup(struct efm32_dma_context *pv,
+static error_t efm32_dma_loop_setup(struct efm32_dma_context_s *pv,
                                     struct dev_dma_rq_s * rq,
                                     uint8_t chan)
 {
@@ -289,7 +296,7 @@ static error_t efm32_dma_loop_setup(struct efm32_dma_context *pv,
   return 1;
 }
 
-static error_t efm32_dma_basic_setup(struct efm32_dma_context *pv,
+static error_t efm32_dma_basic_setup(struct efm32_dma_context_s *pv,
                                      struct dev_dma_rq_s * rq,
                                      uint8_t chan)
 {
@@ -318,7 +325,7 @@ static error_t efm32_dma_basic_setup(struct efm32_dma_context *pv,
   return 1;
 }
 
-static error_t efm32_dma_ping_pong_desc_setup(struct efm32_dma_context *pv,
+static error_t efm32_dma_ping_pong_desc_setup(struct efm32_dma_context_s *pv,
                                               struct dev_dma_rq_s * rq,
                                               uint8_t chan)
 {
@@ -351,7 +358,7 @@ static error_t efm32_dma_ping_pong_desc_setup(struct efm32_dma_context *pv,
   return 0;
 }
 
-static error_t efm32_dma_ping_pong_setup(struct efm32_dma_context *pv,
+static error_t efm32_dma_ping_pong_setup(struct efm32_dma_context_s *pv,
                                          struct dev_dma_rq_s * rq,
                                          uint8_t chan)
 {
@@ -379,7 +386,7 @@ static error_t efm32_dma_ping_pong_setup(struct efm32_dma_context *pv,
   return 1;
 }
 
-static error_t efm32_dma_list_setup(struct efm32_dma_context *pv,
+static error_t efm32_dma_list_setup(struct efm32_dma_context_s *pv,
                                     struct dev_dma_rq_s * rq,
                                     uint8_t chan)
 {
@@ -391,6 +398,7 @@ static error_t efm32_dma_list_setup(struct efm32_dma_context *pv,
   struct dev_dma_desc_s *desc;
   struct efm32_dma_descriptor_s *ctrl;
   uint32_t mode;
+  uint8_t src = efm32_dma_get_src(rq);
 
   /* Build table of transfer */
 
@@ -399,15 +407,10 @@ static error_t efm32_dma_list_setup(struct efm32_dma_context *pv,
       desc = rq->desc + i;
       ctrl = pv->desc + i;
 
-      mode = DMA_CHANNEL_CFG_CYCLE_CTR_AUTOREQUEST;
-
       if (i < rq->desc_count_m1)
-        {
-          if (efm32_dma_get_src(rq))
-            mode = DMA_CHANNEL_CFG_CYCLE_CTR_PER_SG_ALT;
-          else
-            mode = DMA_CHANNEL_CFG_CYCLE_CTR_MEM_SG_ALT;
-        }
+        mode = src ? DMA_CHANNEL_CFG_CYCLE_CTR_PER_SG_ALT : DMA_CHANNEL_CFG_CYCLE_CTR_MEM_SG_ALT;
+      else
+        mode = src ? DMA_CHANNEL_CFG_CYCLE_CTR_BASIC : DMA_CHANNEL_CFG_CYCLE_CTR_AUTOREQUEST;
 
       error_t err = efm32_dma_set_ctrl(rq, desc, ctrl, mode);
 
@@ -450,7 +453,7 @@ static error_t efm32_dma_list_setup(struct efm32_dma_context *pv,
    Return ERROR is request is not supported or malformed.
 */
 
-static error_t efm32_dma_process(struct efm32_dma_context *pv, struct dev_dma_rq_s * rq)
+static error_t efm32_dma_process(struct efm32_dma_context_s *pv, struct dev_dma_rq_s * rq)
 {
   if (!(rq->chan_mask & EFM32_DMA_CHANNEL_MASK))
     return -ENOENT;
@@ -460,7 +463,7 @@ static error_t efm32_dma_process(struct efm32_dma_context *pv, struct dev_dma_rq
 
   uint8_t chan_msk = rq->chan_mask & pv->free_channel_mask;
 
-  if (rq->drv_pv == 0 || chan_msk == 0)
+  if (chan_msk == 0)
     return 0;
 
   uint8_t chan = __builtin_ctz(chan_msk);
@@ -488,7 +491,7 @@ static error_t efm32_dma_process(struct efm32_dma_context *pv, struct dev_dma_rq
 static DEVDMA_REQUEST(efm32_dma_request)
 {
   struct device_s            *dev = accessor->dev;
-  struct efm32_dma_context   *pv = dev->drv_pv;
+  struct efm32_dma_context_s   *pv = dev->drv_pv;
 
   error_t start = 1;
 
@@ -511,12 +514,17 @@ static DEVDMA_REQUEST(efm32_dma_request)
 
     dev->start_count += DEVICE_START_COUNT_INC;
 
-    rq->drv_pv = start;
-
-    start = efm32_dma_process(pv, rq);
+    if (start)
+      start = efm32_dma_process(pv, rq);
 
     if (start < 0)
-      break;
+    /* An error has been detected */
+      {
+        rq->drv_pv = EFR32_DMA_DONE;
+        break;
+      }
+
+    rq->drv_pv = start ? EFR32_DMA_ONGOING : EFR32_DMA_ENQUEUED;
 
     if (!start)
       dev_dma_queue_pushback(&pv->queue, rq);
@@ -527,8 +535,7 @@ static DEVDMA_REQUEST(efm32_dma_request)
   return start < 0 ? start : 0;
 }
 
-static inline void
-efm32_dev_dma_process_next(struct efm32_dma_context *pv)
+static inline void efm32_dev_dma_process_next(struct efm32_dma_context_s *pv)
 {
   error_t start = 1;
 
@@ -537,27 +544,31 @@ efm32_dev_dma_process_next(struct efm32_dma_context *pv)
     if (pv->free_channel_mask == 0)
      GCT_FOREACH_BREAK;
 
-    if (r->drv_pv == 0)
-      r->drv_pv = start;
+    assert(r->drv_pv == EFR32_DMA_ENQUEUED);
 
-    start = efm32_dma_process(pv, r);
+    if (start)
+      start = efm32_dma_process(pv, r);
 
     if (start < 0)
       {
+        r->drv_pv = EFR32_DMA_DONE;
         /* Request Callback here */
         r->f_done(r, 0, start);
         GCT_FOREACH_DROP;
       }
 
     if (start)
-      GCT_FOREACH_DROP;
+      {
+        r->drv_pv = EFR32_DMA_ONGOING;
+        GCT_FOREACH_DROP;
+      }
     });
 }
        
 static inline void
 efm32_dev_dma_process_channel_irq(struct device_s *dev, uint8_t i)
 {
-  struct efm32_dma_context *pv = dev->drv_pv;
+  struct efm32_dma_context_s *pv = dev->drv_pv;
   struct dev_dma_rq_s *rq = pv->chan[i].rq;
 
   assert(rq);
@@ -598,6 +609,8 @@ efm32_dev_dma_process_channel_irq(struct device_s *dev, uint8_t i)
       rq->f_done(rq, desc_id, -EINVAL);
     }
 
+  rq->drv_pv = EFR32_DMA_DONE;
+
   /* Disable channel */
   cpu_mem_write_32(pv->addr + PL230_DMA_CHENC_ADDR, msk);
 
@@ -615,7 +628,7 @@ efm32_dev_dma_process_channel_irq(struct device_s *dev, uint8_t i)
 static DEV_IRQ_SRC_PROCESS(efm32_dma_irq)
 {
   struct device_s *dev = ep->base.dev;
-  struct efm32_dma_context *pv = dev->drv_pv;
+  struct efm32_dma_context_s *pv = dev->drv_pv;
   
   lock_spin(&dev->lock);
 
@@ -654,7 +667,7 @@ static DEV_USE(efm32_dma_use)
     case DEV_USE_START: {
       struct device_accessor_s *acc = param;
       struct device_s *dev = acc->dev;
-      struct efm32_dma_context *pv = dev->drv_pv;
+      struct efm32_dma_context_s *pv = dev->drv_pv;
       if (dev->start_count == 0)
         dev_clock_sink_gate(&pv->clk_ep, DEV_CLOCK_EP_POWER_CLOCK);
       return 0;
@@ -663,7 +676,7 @@ static DEV_USE(efm32_dma_use)
     case DEV_USE_STOP: {
       struct device_accessor_s *acc = param;
       struct device_s *dev = acc->dev;
-      struct efm32_dma_context *pv = dev->drv_pv;
+      struct efm32_dma_context_s *pv = dev->drv_pv;
       if (dev->start_count == 0)
         dev_clock_sink_gate(&pv->clk_ep, DEV_CLOCK_EP_POWER);
       return 0;
@@ -675,17 +688,171 @@ static DEV_USE(efm32_dma_use)
     }
 }
 
+static error_t efm32_dev_dma_update_rq(struct efm32_dma_context_s *pv, uint8_t chan)
+{
+  struct efm32_dma_chan_state_s * state = pv->chan + chan;
+  struct dev_dma_rq_s *rq = state->rq;
+
+  /* Channel must be disabled */
+  assert((cpu_mem_read_32(pv->addr + PL230_DMA_CHENS_ADDR) & (1 << chan)) == 0);
+
+  if (rq->loop_count_m1)
+  /* 2D copy */
+    return -ENOTSUP;
+
+  uintptr_t priaddr = (uintptr_t)pv->primary + PL230_CHANNEL_SIZE * chan;
+  uintptr_t altaddr = cpu_mem_read_32(pv->addr + PL230_DMA_ALTCTRLBASE_ADDR) + PL230_CHANNEL_SIZE * (chan);
+
+  uint32_t prirem = cpu_mem_read_32(priaddr + DMA_CHANNEL_CFG_ADDR);
+  prirem = DMA_CHANNEL_CFG_N_MINUS_1_GET(prirem);
+
+  uint32_t altrem = cpu_mem_read_32(altaddr + DMA_CHANNEL_CFG_ADDR);
+  altrem = DMA_CHANNEL_CFG_N_MINUS_1_GET(altrem);
+
+  bool_t alt = (cpu_mem_read_32(pv->addr + PL230_DMA_CHALTS_ADDR) >> chan) & 1;
+
+  rq->cancel.desc_idx = 0;
+  rq->cancel.size = 0; 
+
+  if (rq->type & _DEV_DMA_CONTINUOUS)
+  /* Ping-Pong mode */
+    {
+      rq->cancel.desc_idx = state->lidx;
+      rq->cancel.size = rq->desc[state->lidx].src.mem.size;
+      rq->cancel.size -= alt ? altrem : prirem; 
+    }
+  else if (rq->desc_count_m1)
+  /* Scatter-gather */
+    {
+      uint32_t priidx = (rq->desc_count_m1 + 1) - (prirem >> 2) - 1;
+
+      if (prirem == 0 && alt)
+      /* Primary channel not active and no remaining primary transfer */
+        priidx++;
+
+      if (alt)
+        assert(!prirem || !((prirem + 1) & 0x3));
+
+      if (priidx == 0)
+        return 0;
+
+      for (uint8_t i = 0; i < rq->desc_count_m1 + 1; i++)
+        {
+          rq->cancel.desc_idx = i;
+
+          if (i == (priidx - 1))
+            {
+              if (altrem || alt)
+                rq->cancel.size += rq->desc[i].src.mem.size - altrem;
+              return 0;
+            }
+
+          rq->cancel.size += rq->desc[i].src.mem.size + 1;
+        }
+    }
+  else
+  /* Basic mode */
+    rq->cancel.size = rq->desc[0].src.mem.size - prirem;
+
+  return 0;
+}
+
+static DEV_DMA_CANCEL(efm32_dma_cancel)
+{
+  struct device_s *dev = accessor->dev;
+  struct efm32_dma_context_s *pv = dev->drv_pv;
+  struct dev_dma_rq_s * crq = NULL;
+  error_t err = -EBUSY;
+
+  LOCK_SPIN_IRQ(&dev->lock);
+
+  switch (rq->drv_pv)
+  {
+    case EFR32_DMA_DONE:
+      break;
+    case EFR32_DMA_ENQUEUED:
+      err = 0;
+      GCT_FOREACH(dev_dma_queue, &pv->queue, r, {
+        if (r == rq)
+          {
+            crq = r;
+            GCT_FOREACH_DROP;
+          }
+        });
+
+      assert(crq);
+
+      crq->cancel.size = 0;
+      crq->cancel.desc_idx = 0;
+
+      dev->start_count -= DEVICE_START_COUNT_INC;
+      break;
+    case EFR32_DMA_ONGOING:{
+      /* Request is not terminated */
+      uint8_t chan_msk = rq->chan_mask;
+
+      while(1)
+        {
+          assert(chan_msk);
+
+          uint8_t chan = __builtin_ctz(chan_msk);
+          uint8_t msk  = (1 << chan);
+          chan_msk &= ~msk;
+
+          if (pv->chan[chan].rq != rq)
+            continue;
+
+          /* Disable channel */
+          cpu_mem_write_32(pv->addr + PL230_DMA_CHENC_ADDR, endian_le32(msk));
+          /* Check interrupt */
+          uint32_t x = endian_le32(cpu_mem_read_32(pv->addr + EFM32_DMA_IF_ADDR));
+
+          if (x & msk)
+          /* Interrupt is pending */
+            break;
+
+          /* Disable irq */
+          x = endian_le32(cpu_mem_read_32(pv->addr + EFM32_DMA_IEN_ADDR));
+          cpu_mem_write_32(pv->addr + EFM32_DMA_IEN_ADDR, endian_le32(x & ~msk));
+      
+          err = efm32_dev_dma_update_rq(pv, chan);
+
+          if (err)
+            break;
+
+          if (!(rq->type & _DEV_DMA_CONTINUOUS) && rq->desc_count_m1)
+            pv->list_busy = 0;
+      
+          pv->chan[chan].rq = NULL;
+      
+          dev->start_count -= DEVICE_START_COUNT_INC;
+          pv->free_channel_mask |= msk;
+      
+          efm32_dev_dma_process_next(pv);
+
+          break;
+        }}
+      break;
+    default:
+      abort();
+  }
+
+  LOCK_RELEASE_IRQ(&dev->lock);
+
+  return err;
+}
+
 static DEV_INIT(efm32_dma_init)
 {
-  struct efm32_dma_context *pv;
+  struct efm32_dma_context_s *pv;
 
   /* allocate private driver data */
-  pv = mem_alloc(sizeof(struct efm32_dma_context), (mem_scope_sys));
+  pv = mem_alloc(sizeof(struct efm32_dma_context_s), (mem_scope_sys));
 
   if (!pv)
     return -ENOMEM;
 
-  memset(pv, 0, sizeof(struct efm32_dma_context));
+  memset(pv, 0, sizeof(struct efm32_dma_context_s));
 
   pv->free_channel_mask = EFM32_DMA_CHANNEL_MASK;
 
@@ -780,7 +947,7 @@ static DEV_INIT(efm32_dma_init)
 
 static DEV_CLEANUP(efm32_dma_cleanup)
 {
-  struct efm32_dma_context	*pv = dev->drv_pv;
+  struct efm32_dma_context_s	*pv = dev->drv_pv;
 
   device_irq_source_unlink(dev, &pv->irq_ep, 1);
 

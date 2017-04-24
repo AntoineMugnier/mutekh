@@ -39,6 +39,13 @@
 
 #define EFR32_LDMA_CHANNEL_MASK ((1 << CONFIG_DRIVER_EFR32_DMA_CHANNEL_COUNT) - 1)
 
+enum efm32_dma_rq_state_e
+{
+  EFR32_DMA_DONE = 0,
+  EFR32_DMA_ENQUEUED = 1,
+  EFR32_DMA_ONGOING = 2,
+};
+
 struct efm32_dma_descriptor_s
 {
   uint32_t ctrl;
@@ -56,7 +63,7 @@ struct efm32_dma_chan_state_s
   uint8_t              idx;
 };
 
-DRIVER_PV(struct efm32_dma_context
+DRIVER_PV(struct efm32_dma_context_s
 {
   /* base address of DMA */
   uintptr_t                         addr;
@@ -178,7 +185,7 @@ static error_t efm32_dma_init_ctrl(struct dev_dma_rq_s * rq,
   return 0;
 }
 
-static void efm32_dma_start(struct efm32_dma_context *pv,
+static void efm32_dma_start(struct efm32_dma_context_s *pv,
                             struct dev_dma_rq_s * rq,
                             uint8_t  chan)
 {
@@ -200,14 +207,14 @@ static void efm32_dma_start(struct efm32_dma_context *pv,
   cpu_mem_write_32(pv->addr + EFR32_LDMA_IEN_ADDR + 0x06000000, msk);
 }
 
-static inline void efm32_dma_set_link_addr(struct efm32_dma_context *pv,
+static inline void efm32_dma_set_link_addr(struct efm32_dma_context_s *pv,
                                     struct efm32_dma_descriptor_s *desc,
                                     uint8_t index)
 {
   desc->link = (uint32_t)(pv->desc + index % CONFIG_DRIVER_EFR32_DMA_LINKED_LIST_SIZE);
 }
 
-static inline uint8_t efm32_dma_list_get_offset(struct efm32_dma_context *pv,
+static inline uint8_t efm32_dma_list_get_offset(struct efm32_dma_context_s *pv,
                                          struct efm32_dma_descriptor_s *desc)
 {
   return (uint8_t)(desc - pv->desc);
@@ -218,7 +225,7 @@ static inline struct efm32_dma_descriptor_s * efm32_dma_get_next_desc(struct efm
   return (struct efm32_dma_descriptor_s *)(dlist->link & 0xfffffffc);
 }
 
-static error_t efm32_dma_single_setup(struct efm32_dma_context *pv,
+static error_t efm32_dma_single_setup(struct efm32_dma_context_s *pv,
                                       struct dev_dma_rq_s * rq,
                                       uint8_t chan)
 {
@@ -247,7 +254,7 @@ static error_t efm32_dma_single_setup(struct efm32_dma_context *pv,
   return 1;
 }
 
-static error_t efm32_dma_loop_setup(struct efm32_dma_context *pv,
+static error_t efm32_dma_loop_setup(struct efm32_dma_context_s *pv,
                                     struct dev_dma_rq_s * rq,
                                     uint8_t chan)
 {
@@ -315,7 +322,7 @@ static error_t efm32_dma_loop_setup(struct efm32_dma_context *pv,
   return 1;
 }
 
-static error_t efm32_dma_ping_pong_setup(struct efm32_dma_context *pv,
+static error_t efm32_dma_ping_pong_setup(struct efm32_dma_context_s *pv,
                                          struct dev_dma_rq_s * rq,
                                          uint8_t chan)
 {
@@ -361,11 +368,10 @@ static error_t efm32_dma_ping_pong_setup(struct efm32_dma_context *pv,
 
   cpu_mem_write_32(pv->addr + EFR32_LDMA_LINKLOAD_ADDR, EFR32_LDMA_LINKLOAD_LINKLOAD(chan));
 
-
   return 1;
 }
 
-static error_t efm32_dma_list_setup(struct efm32_dma_context *pv,
+static error_t efm32_dma_list_setup(struct efm32_dma_context_s *pv,
                                     struct dev_dma_rq_s * rq,
                                     uint8_t chan)
 {
@@ -417,7 +423,7 @@ static error_t efm32_dma_list_setup(struct efm32_dma_context *pv,
    Return ERROR is request is not supported or malformed.
 */
 
-static error_t efm32_dma_process(struct efm32_dma_context *pv, struct dev_dma_rq_s * rq)
+static error_t efm32_dma_process(struct efm32_dma_context_s *pv, struct dev_dma_rq_s * rq)
 {
   if (!(rq->chan_mask & EFR32_LDMA_CHANNEL_MASK))
     return -ENOENT;
@@ -431,7 +437,7 @@ static error_t efm32_dma_process(struct efm32_dma_context *pv, struct dev_dma_rq
 
   uint8_t chan_msk = rq->chan_mask & pv->free_channel_mask;
 
-  if (rq->drv_pv == 0 || chan_msk == 0)
+  if (chan_msk == 0)
     return 0;
 
   uint8_t chan = __builtin_ctz(chan_msk);
@@ -456,7 +462,7 @@ static error_t efm32_dma_process(struct efm32_dma_context *pv, struct dev_dma_rq
 static DEVDMA_REQUEST(efm32_dma_request)
 {
   struct device_s            *dev = accessor->dev;
-  struct efm32_dma_context   *pv = dev->drv_pv;
+  struct efm32_dma_context_s   *pv = dev->drv_pv;
 
   error_t start = 1;
 
@@ -479,12 +485,17 @@ static DEVDMA_REQUEST(efm32_dma_request)
 
     dev->start_count += DEVICE_START_COUNT_INC;
 
-    rq->drv_pv = start;
-
-    start = efm32_dma_process(pv, rq);
+    if (start)
+      start = efm32_dma_process(pv, rq);
 
     if (start < 0)
-      break;
+    /* An error has been detected */
+      {
+        rq->drv_pv = EFR32_DMA_DONE;
+        break;
+      }
+
+    rq->drv_pv = start ? EFR32_DMA_ONGOING : EFR32_DMA_ENQUEUED;
 
     if (!start)
       dev_dma_queue_pushback(&pv->queue, rq);
@@ -492,11 +503,11 @@ static DEVDMA_REQUEST(efm32_dma_request)
 
   LOCK_RELEASE_IRQ(&dev->lock);
 
-  return start < 0 ? start : 0;;
+  return start < 0 ? start : 0;
 }
 
 static inline void
-efm32_dev_dma_process_next(struct efm32_dma_context *pv)
+efm32_dev_dma_process_next(struct efm32_dma_context_s *pv)
 {
   bool_t start = 1;
 
@@ -505,25 +516,29 @@ efm32_dev_dma_process_next(struct efm32_dma_context *pv)
     if (pv->free_channel_mask == 0)
      GCT_FOREACH_BREAK;
 
-    if (r->drv_pv == 0)
-      r->drv_pv = start;
+    assert(r->drv_pv == EFR32_DMA_ENQUEUED);
 
-    start = efm32_dma_process(pv, r);
+    if (start)
+      start = efm32_dma_process(pv, r);
 
     if (start < 0)
       {
+        r->drv_pv = EFR32_DMA_DONE;
         /* Request Callback here */
         r->f_done(r, 0, start);
         GCT_FOREACH_DROP;
       }
 
     if (start)
-      GCT_FOREACH_DROP;
+      {
+        r->drv_pv = EFR32_DMA_ONGOING;
+        GCT_FOREACH_DROP;
+      }
     });
 }
 
 /* Release chains of linked list */
-static void efm32_dma_release_list(struct efm32_dma_context *pv, uint8_t i)
+static void efm32_dma_release_list(struct efm32_dma_context_s *pv, uint8_t i)
 {
   struct efm32_dma_chan_state_s * state = pv->chan + i;
   struct efm32_dma_descriptor_s * dlist = pv->desc + state->last;
@@ -544,7 +559,7 @@ static void efm32_dma_release_list(struct efm32_dma_context *pv, uint8_t i)
 static inline void
 efm32_dma_process_channel_irq(struct device_s *dev, uint8_t i)
 {
-  struct efm32_dma_context *pv = dev->drv_pv;
+  struct efm32_dma_context_s *pv = dev->drv_pv;
   struct dev_dma_rq_s *rq = pv->chan[i].rq;
   uint32_t msk = endian_le32(1 << i);
 
@@ -570,6 +585,8 @@ efm32_dma_process_channel_irq(struct device_s *dev, uint8_t i)
       return;
     }
 
+  rq->drv_pv = EFR32_DMA_DONE;
+
   /* Disable channel and interrupt */
   cpu_mem_write_32(pv->addr + EFR32_LDMA_IEN_ADDR + 0x04000000, msk);
   cpu_mem_write_32(pv->addr + EFR32_LDMA_CHEN_ADDR + 0x04000000, msk);
@@ -589,7 +606,7 @@ efm32_dma_process_channel_irq(struct device_s *dev, uint8_t i)
 static DEV_IRQ_SRC_PROCESS(efm32_dma_irq)
 {
   struct device_s *dev = ep->base.dev;
-  struct efm32_dma_context *pv = dev->drv_pv;
+  struct efm32_dma_context_s *pv = dev->drv_pv;
   
   lock_spin(&dev->lock);
 
@@ -620,6 +637,137 @@ static DEV_IRQ_SRC_PROCESS(efm32_dma_irq)
   lock_release(&dev->lock);
 }
 
+static error_t efm32_dev_dma_update_rq(struct efm32_dma_context_s *pv, uint8_t chan)
+{
+  struct efm32_dma_chan_state_s * state = pv->chan + chan;
+  struct dev_dma_rq_s *rq = state->rq;
+  uint32_t chdone = endian_le32(cpu_mem_read_32(pv->addr + EFR32_LDMA_CHDONE_ADDR));
+
+  uint32_t xfercnt = endian_le32(cpu_mem_read_32(pv->addr + EFR32_LDMA_CH_CTRL_ADDR(chan)));
+  xfercnt = EFR32_LDMA_CH_CTRL_XFERCNT_GET(xfercnt);
+
+  if (rq->loop_count_m1)
+  /* 2D copy */
+    return -ENOTSUP;
+
+  if (rq->type & _DEV_DMA_CONTINUOUS)
+  /* Ping-Pong mode */
+    {
+      rq->cancel.desc_idx = state->idx;
+      rq->cancel.size = rq->desc[state->idx].src.mem.size - xfercnt; 
+    }
+  else if (rq->desc_count_m1)
+  /* Scatter-gather */
+    {
+      struct efm32_dma_descriptor_s * dlist = pv->desc + state->first;
+      uint32_t link = endian_le32(cpu_mem_read_32(pv->addr + EFR32_LDMA_CH_LINK_ADDR(chan)));
+      link &= 0xfffffffc; 
+
+      for (uint8_t i = 0; i < rq->desc_count_m1 + 1; i++) 
+        {
+          rq->cancel.desc_idx = i;
+
+          if ((dlist->link & 0xfffffffc) == link)
+          /* This is the last descriptor processed */
+            {
+              if (xfercnt || !(chdone & (1 << chan)))
+                rq->cancel.size += rq->desc[i].src.mem.size - xfercnt;
+              return 0;
+            }
+
+          rq->cancel.size += rq->desc[i].src.mem.size + 1;
+          dlist = efm32_dma_get_next_desc(dlist);
+        }
+    }
+  else
+  /* Basic mode */
+    rq->cancel.size = rq->desc[0].src.mem.size - xfercnt;
+
+  return 0;
+}
+
+static DEV_DMA_CANCEL(efm32_dma_cancel)
+{
+  struct device_s *dev = accessor->dev;
+  struct efm32_dma_context_s *pv = dev->drv_pv;
+  struct dev_dma_rq_s * crq = NULL;
+  error_t err = -EBUSY;
+
+  LOCK_SPIN_IRQ(&dev->lock);
+
+  switch (rq->drv_pv)
+  {
+    case EFR32_DMA_DONE:
+      break;
+    case EFR32_DMA_ENQUEUED:
+      err = 0;
+      GCT_FOREACH(dev_dma_queue, &pv->queue, r, {
+        if (r == rq)
+          {
+            crq = r;
+            GCT_FOREACH_DROP;
+          }
+        });
+
+      assert(crq);
+
+      crq->cancel.size = 0;
+      crq->cancel.desc_idx = 0;
+
+      dev->start_count -= DEVICE_START_COUNT_INC;
+      break;
+    case EFR32_DMA_ONGOING:{
+      /* Request is not terminated */
+      uint8_t chan_msk = rq->chan_mask;
+
+      while(1)
+        {
+          assert(chan_msk);
+
+          uint8_t chan = __builtin_ctz(chan_msk);
+          uint8_t msk  = (1 << chan);
+          chan_msk &= ~msk;
+
+          if (pv->chan[chan].rq != rq)
+            continue;
+            
+          /* Disable channel */
+          cpu_mem_write_32(pv->addr + EFR32_LDMA_CHEN_ADDR + 0x4000000, endian_le32(msk));
+          /* Check interrupt */
+          uint32_t done = endian_le32(cpu_mem_read_32(pv->addr + EFR32_LDMA_IF_ADDR));
+
+          if (done & msk)
+          /* Interrupt is pending */
+            break;
+
+          cpu_mem_write_32(pv->addr + EFR32_LDMA_IEN_ADDR + 0x04000000, msk);
+      
+          err = efm32_dev_dma_update_rq(pv, chan);
+
+          if (err)
+            break;
+
+          if (rq->desc_count_m1 || rq->loop_count_m1)
+            efm32_dma_release_list(pv, chan);
+      
+          pv->chan[chan].rq = NULL;
+      
+          dev->start_count -= DEVICE_START_COUNT_INC;
+          pv->free_channel_mask |= msk;
+      
+          efm32_dev_dma_process_next(pv);
+
+          break;
+        }}
+      break;
+    default:
+      abort();
+  }
+
+  LOCK_RELEASE_IRQ(&dev->lock);
+
+  return err;
+}
 
 static DEV_USE(efm32_dma_use)
 {
@@ -629,7 +777,7 @@ static DEV_USE(efm32_dma_use)
     case DEV_USE_START: {
       struct device_accessor_s *acc = param;
       struct device_s *dev = acc->dev;
-      struct efm32_dma_context *pv = dev->drv_pv;
+      struct efm32_dma_context_s *pv = dev->drv_pv;
       if (dev->start_count == 0)
         dev_clock_sink_gate(&pv->clk_ep, DEV_CLOCK_EP_POWER_CLOCK);
       return 0;
@@ -638,7 +786,7 @@ static DEV_USE(efm32_dma_use)
     case DEV_USE_STOP: {
       struct device_accessor_s *acc = param;
       struct device_s *dev = acc->dev;
-      struct efm32_dma_context *pv = dev->drv_pv;
+      struct efm32_dma_context_s *pv = dev->drv_pv;
       if (dev->start_count == 0)
         dev_clock_sink_gate(&pv->clk_ep, DEV_CLOCK_EP_POWER);
       return 0;
@@ -652,15 +800,15 @@ static DEV_USE(efm32_dma_use)
 
 static DEV_INIT(efm32_dma_init)
 {
-  struct efm32_dma_context *pv;
+  struct efm32_dma_context_s *pv;
 
   /* allocate private driver data */
-  pv = mem_alloc(sizeof(struct efm32_dma_context), (mem_scope_sys));
+  pv = mem_alloc(sizeof(struct efm32_dma_context_s), (mem_scope_sys));
 
   if (!pv)
     return -ENOMEM;
 
-  memset(pv, 0, sizeof(struct efm32_dma_context));
+  memset(pv, 0, sizeof(struct efm32_dma_context_s));
 
   pv->free_channel_mask = EFR32_LDMA_CHANNEL_MASK;
     
@@ -714,7 +862,7 @@ static DEV_INIT(efm32_dma_init)
 
 static DEV_CLEANUP(efm32_dma_cleanup)
 {
-  struct efm32_dma_context	*pv = dev->drv_pv;
+  struct efm32_dma_context_s	*pv = dev->drv_pv;
 
   device_irq_source_unlink(dev, &pv->irq_ep, 1);
 
