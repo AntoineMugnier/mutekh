@@ -112,13 +112,15 @@ adxl362_bc_read_conv_again:
     exts       %ydata, 11
     exts       %zdata, 11
 
-    cst8       %adxl362_reg_set:reg, ADXL362_REG_INTMAP1
     cst8       %adxl362_reg_set:value, ADXL362_REG_INTMAP1_INACT_MASK | ADXL362_REG_INTMAP1_ACT_MASK | ADXL362_REG_INTMAP1_INT_LOW_MASK
 
     tst32s     %status, bitpos(ADXL362_REG_STATUS_AWAKE_MASK)
      bit32s    %adxl362_reg_set:value, bitpos(ADXL362_REG_INTMAP1_DATA_READY_MASK)
     tst32c     %status, bitpos(ADXL362_REG_STATUS_AWAKE_MASK)
      bit32s    %adxl362_reg_set:value, bitpos(ADXL362_REG_INTMAP1_AWAKE_MASK)
+    cst8       %adxl362_reg_set:reg, ADXL362_REG_INTMAP1
+    call8      %adxl362_reg_set:link, adxl362_reg_set
+    cst8       %adxl362_reg_set:reg, ADXL362_REG_INTMAP2
     call8      %adxl362_reg_set:link, adxl362_reg_set
 
     spi_gpioget 0, %0
