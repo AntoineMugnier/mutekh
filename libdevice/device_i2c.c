@@ -608,10 +608,6 @@ error_t dev_i2c_bytecode_start_va(struct device_i2c_ctrl_s *ctrl,
 {
   error_t err = -EBUSY;
 
-#  ifdef CONFIG_DEVICE_I2C_BYTECODE_GPIO
-  assert(device_check_accessor(&rq->gpio.base));
-#  endif
-
   rq->base.ctrl = ctrl;
   struct dev_i2c_ctrl_context_s *q = device_i2c_ctrl_context(ctrl);
 
