@@ -49,6 +49,7 @@ DEV_DECLARE_STATIC(lcd, "lcd", 0, sd1306_drv,
 #include <device/driver.h>
 
 #include <device/class/mem.h>
+#include <device/class/cmu.h>
 #include <device/class/spi.h>
 
 struct sd1306_private_s
@@ -60,6 +61,7 @@ struct sd1306_private_s
   dev_request_queue_root_t queue;
   gpio_id_t gpio_map[2];
   gpio_width_t gpio_wmap[2];
+  struct dev_clock_sink_ep_s power_source;
 };
 
 DRIVER_PV(struct sd1306_private_s);
@@ -196,7 +198,68 @@ DEV_MEM_REQUEST(sd1306_request)
   sd1306_next(dev);
 }
 
-#define sd1306_use dev_use_generic
+static inline void
+sd1306_enable(struct device_s *dev)
+{
+  struct sd1306_private_s *pv = dev->drv_pv;
+
+  dev_clock_sink_gate(&pv->power_source, DEV_CLOCK_EP_POWER);
+  dev_gpio_out(pv->gpio, pv->spi_rq.base.cs_cfg.id, 1);
+
+  assert(pv->spi_rq.base.base.pvdata == NULL);
+  pv->spi_rq.base.base.pvdata = dev;
+
+  dev_timer_delay_t reset_latency;
+  dev_timer_init_sec(pv->timer, &reset_latency, 0, 1, 1000);
+
+  dev_spi_bytecode_start(&pv->spi, &pv->spi_rq, &sd1306_bc_reset,
+                         SD1306_BC_RESET_BCARGS(reset_latency));
+}
+
+static inline void
+sd1306_disable(struct device_s *dev)
+{
+  struct sd1306_private_s *pv = dev->drv_pv;
+
+  dev_clock_sink_gate(&pv->power_source, DEV_CLOCK_EP_NONE);
+  dev_gpio_out(pv->gpio, pv->gpio_map[0], 0);
+  dev_gpio_out(pv->gpio, pv->spi_rq.base.cs_cfg.id, 0);
+}
+
+static DEV_USE(sd1306_use)
+{
+  switch (op)
+    {
+#ifdef CONFIG_DEVICE_CLOCK_GATING
+    case DEV_USE_START: {
+      struct device_accessor_s *acc = param;
+      struct device_s *dev = acc->dev;
+      if (!dev->start_count)
+	sd1306_enable(dev);
+      return 0;
+    }
+
+    case DEV_USE_STOP: {
+      struct device_accessor_s *acc = param;
+      struct device_s *dev = acc->dev;
+      if (!dev->start_count)
+	device_sleep_schedule(dev);
+      return 0;
+    }
+#endif
+
+    case DEV_USE_SLEEP: {
+      struct device_s *dev = param;
+      if (dev->start_count)
+	return -EAGAIN;
+      sd1306_disable(dev);
+      return 0;
+    }
+
+    default:
+      return dev_use_generic(param, op);
+    }
+}
 
 static
 DEV_INIT(sd1306_init)
@@ -214,6 +277,10 @@ DEV_INIT(sd1306_init)
   dev->drv_pv = pv;
 
   dev_request_queue_init(&pv->queue);
+
+  err = dev_drv_clock_init(dev, &pv->power_source, 0, 0, NULL);
+  if (err)
+    goto err_pv;
 
   static const struct dev_spi_ctrl_config_s spi_config = {
     .ck_mode = DEV_SPI_CK_MODE_0,
@@ -242,13 +309,7 @@ DEV_INIT(sd1306_init)
   pv->spi_rq.gpio_map = pv->gpio_map;
   pv->spi_rq.gpio_wmap = pv->gpio_wmap;
 
-  dev_timer_delay_t reset_latency;
-  dev_timer_init_sec(pv->timer, &reset_latency, 0, 1, 1000);
-
-  pv->spi_rq.base.base.pvdata = dev;
   kroutine_init_deferred(&pv->spi_rq.base.base.kr, &sd1306_spi_done);
-  dev_spi_bytecode_start(&pv->spi, &pv->spi_rq, &sd1306_bc_reset,
-                         SD1306_BC_RESET_BCARGS(reset_latency));
 
   return 0;
 
@@ -269,6 +330,7 @@ DEV_CLEANUP(sd1306_cleanup)
 
   dev_drv_spi_bytecode_cleanup(&pv->spi, &pv->spi_rq);
   dev_request_queue_destroy(&pv->queue);
+  dev_drv_clock_cleanup(dev, &pv->power_source);
   mem_free(pv);
 
   return 0;
