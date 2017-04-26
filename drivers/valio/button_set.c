@@ -36,7 +36,7 @@
 #include <device/class/valio.h>
 #include <device/valio/keyboard.h>
 
-//#define dprintk printk
+/* #define dprintk printk */
 #ifndef dprintk
 # define dprintk(x...) do{}while(0)
 #endif
@@ -60,14 +60,14 @@ DRIVER_PV(struct bs_context_s);
 static void bs_state_read(struct bs_context_s *pv,
                           struct dev_valio_rq_s *rq)
 {
-  uint32_t mask = endian_le32_na_load(pv->mask);
-  uint32_t value = endian_le32_na_load(pv->cur);
+  uint64_t mask = endian_le64_na_load(pv->mask);
+  uint64_t value = endian_le64_na_load(pv->cur);
   uint8_t button = 0;
 
   memset(rq->data, 0, pv->state_size);
 
   while (mask) {
-    uint8_t b = __builtin_ctzl(mask);
+    uint8_t b = __builtin_ctzll(mask);
 
     if (bit_get(value, b) == pv->active_high)
       ((uint8_t *)rq->data)[button / 8] |= 1 << (button & 7);
@@ -76,7 +76,7 @@ static void bs_state_read(struct bs_context_s *pv,
     button++;
   }
 
-  dprintk("%s %x %x %P\n", __FUNCTION__, mask, value,
+  dprintk("%s %llx %llx %P\n", __FUNCTION__, mask, value,
          rq->data, pv->state_size);
 }
 
@@ -109,6 +109,7 @@ static KROUTINE_EXEC(bs_gpio_done)
   struct device_s *dev = pv->gpio_rq.base.pvdata;
 
   LOCK_SPIN_IRQ(&dev->lock);
+
   pv->busy = 0;
 
   switch (pv->gpio_rq.type) {
@@ -225,11 +226,11 @@ static DEV_INIT(button_set_init)
 
   err = device_get_param_uint(dev, "mask", &tmp);
   if (err)
-    tmp = (uintptr_t)-1;
+    goto put_gpio;
 
-  endian_le64_na_store(pv->mask, tmp & bit_mask(0, width));
-
-  pv->state_size = (__builtin_popcountl(tmp & bit_mask(0, width)) + 7) / 8;
+  uint64_t mask = (*(uint64_t *)tmp) & bit_mask(0, width);
+  endian_le64_na_store(pv->mask, mask);
+  pv->state_size = (__builtin_popcountll(mask) + 7) / 8;
 
   dev_request_queue_init(&pv->queue);
 
