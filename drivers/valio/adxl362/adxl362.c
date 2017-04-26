@@ -437,6 +437,7 @@ DEV_VALIO_REQUEST(adxl362_request)
           config = (struct valio_ms_config_s *)req->data;
           pv->config = *config;
           pv->config_pending = 1;
+          pv->read_pending = 1;
           adxl362_next(pv);
           kroutine_exec(&req->base.kr);
           break;
