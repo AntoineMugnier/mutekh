@@ -25,8 +25,6 @@
 
 static TERMUI_CON_COMMAND_PROTOTYPE(foo_command)
 {
-  void *my_private_data = termui_con_get_private(con);
-
   int i;
   for (i = 0; i < argc; i++)
     termui_con_printf(con, "Argument %i : '%s'\n", i, argv[i]);
@@ -53,13 +51,11 @@ static TERMUI_CON_GROUP_DECL(root_group) =
 
 static CONTEXT_ENTRY(shell_thread)
 {
-  void *my_private_data = NULL;
-
 #if defined(CONFIG_MUTEK_CONSOLE) && !defined(CONFIG_MUTEK_SHELL_THREAD)
   assert(device_check_accessor(&console_dev.base));
 
   /* start a shell on the mutekh console char device */
-  mutek_shell_start(&console_dev, "xterm", root_group, "$ ", my_private_data);
+  mutek_shell_start(&console_dev, "xterm", root_group, "$ ");
 #else
 
   struct device_char_s chardev;
@@ -68,7 +64,7 @@ static CONTEXT_ENTRY(shell_thread)
     abort();
 
   /* start a shell on a char device */
-  mutek_shell_start(&chardev, "xterm", root_group, "$ ", my_private_data);
+  mutek_shell_start(&chardev, "xterm", root_group, "$ ");
 #endif
 }
 

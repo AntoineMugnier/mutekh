@@ -32,6 +32,33 @@
 #include <termui/mutekh.h>
 #include <termui/console.h>
 
+static void shell_context_init(struct mutek_shell_context_s *sctx)
+{
+  lock_init(&sctx->lock);
+#ifdef CONFIG_MUTEK_SHELL_BUFFER
+  shell_buffer_pool_init(&sctx->bufs);
+  sctx->next_id = 0;
+#endif
+}
+
+static error_t shell_context_flush(struct mutek_shell_context_s *sctx)
+{
+#ifdef CONFIG_MUTEK_SHELL_BUFFER
+  bool_t r;
+  LOCK_SPIN_IRQ(&sctx->lock);
+  r = shell_buffer_collect_all(sctx);
+  LOCK_RELEASE_IRQ(&sctx->lock);
+
+  if (r)
+    return -EBUSY;
+
+  shell_buffer_pool_destroy(&sctx->bufs);
+#endif
+  lock_destroy(&sctx->lock);
+
+  return 0;
+}
+
 /* console commands descriptors array */
 
 #ifdef CONFIG_LIBTERMUI_CON_HELP
@@ -44,23 +71,27 @@ extern __ldscript_symbol_t shell_cmd_table;
 
 void mutek_shell_start(struct device_char_s *c, const char *term,
                        const struct termui_con_entry_s * const *root,
-                       const char *prompt, void *con_pv)
+                       const char *prompt)
 {
   struct termui_term_s *tm;
   struct termui_console_s *con;
+  struct mutek_shell_context_s *sctx;
 
   if (root == NULL)
     root = (void*)&shell_cmd_table;
 
-  tm = mem_alloc(sizeof(*tm) + sizeof(*con), mem_scope_sys);
+  tm = mem_alloc(sizeof(*tm) + sizeof(*con) + sizeof(*sctx), mem_scope_sys);
   if (tm == NULL)
     return;
   con = (void*)(tm + 1);
+  sctx = (void*)(con + 1);
+
+  shell_context_init(sctx);
 
   termui_dev_io_init(tm, c, term);
   termui_con_init(con, tm, root);
 
-  termui_con_set_private(con, con_pv);
+  termui_con_set_private(con, sctx);
   termui_con_set_prompt(con, prompt);
 
   termui_term_printf(tm, "You may type `list' and `help'.\n\n");
@@ -71,7 +102,7 @@ void mutek_shell_start(struct device_char_s *c, const char *term,
     res = termui_con_process(con);
     if (res == -EINVAL)
       termui_term_printf(tm, "Failed\n");
-  } while (res != -EIO && res != -ECANCELED);
+  } while (res != -ECANCELED || shell_context_flush(sctx));
 
   termui_term_printf(tm, "Terminated\n");
 
@@ -90,7 +121,7 @@ void mutek_shell_start(struct device_char_s *c, const char *term,
 static CONTEXT_ENTRY(shell_thread)
 {
   while (1)
-    mutek_shell_start(param, "xterm", NULL, CONFIG_MUTEK_SHELL_PROMPT, NULL);
+    mutek_shell_start(param, "xterm", NULL, CONFIG_MUTEK_SHELL_PROMPT);
 }
 
 void mutek_shell_thread_init()

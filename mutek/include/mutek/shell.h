@@ -28,6 +28,7 @@
  */
 
 #include <hexo/decls.h>
+#include <hexo/lock.h>
 
 #ifndef MUTEK_SHELL_H_
 #define MUTEK_SHELL_H_
@@ -40,12 +41,157 @@
 struct device_char_s;
 struct termui_con_entry_s;
 
+#ifdef CONFIG_MUTEK_SHELL_BUFFER
+
+#include <gct_platform.h>
+#include <gct_lock_hexo_lock.h>
+#include <gct/container_clist.h>
+
+#define GCT_CONTAINER_ALGO_shell_buffer CLIST
+struct mutek_shell_context_s;
+
+/** @internal */
+struct mutek_shell_buffer_s
+{
+  GCT_CONTAINER_ENTRY    (shell_buffer, list_entry);
+  char name[16];
+  struct mutek_shell_context_s *sctx;
+  const void  *type;
+  uintptr_t  size:24;
+  uintptr_t  use:1;
+  uint8_t    data[0];
+};
+
+GCT_CONTAINER_TYPES      (shell_buffer, struct mutek_shell_buffer_s *, list_entry);
+GCT_CONTAINER_KEY_TYPES  (shell_buffer, PTR, STRING, name);
+GCT_CONTAINER_KEY_FCNS   (shell_buffer, ASC, static inline, shell_buffer_pool, name,
+			  init, destroy, push, remove, lookup);
+
+#endif
+
+/** @internal */
+struct mutek_shell_context_s
+{
+  lock_t lock;
+#ifdef CONFIG_MUTEK_SHELL_BUFFER
+  shell_buffer_root_t bufs;
+  uint32_t next_id;
+#endif
+};
+
+/** @This allocates a new buffer. The reference to the buffer must be
+    released by calling the @ref shell_buffer_drop function.
+
+    When the @ref #CONFIG_MUTEK_SHELL_BUFFER token is undefined,
+    this is equivalent to calling @ref mem_alloc.
+*/
+void * shell_buffer_new(const struct termui_console_s *con,
+                        size_t size, const char *prefix,
+                        const void *type);
+
+/** @This lookup a buffer with a matching type and a zero reference
+    count. If no such buffer exist a new buffer is allocated. The
+    reference to the buffer must be released by calling the @ref
+    shell_buffer_drop function.
+
+    The function return @tt NULL if the allocation failed.
+
+    When the @ref #CONFIG_MUTEK_SHELL_BUFFER token is undefined,
+    this is equivalent to calling @ref mem_alloc.
+*/
+void * shell_buffer_reuse(const struct termui_console_s *con,
+                          size_t size, const char *prefix,
+                          const void *type);
+
+/** @This drop a reference to the buffer. The buffer is released when
+    the reference count reaches 0 and the @ref shell_buffer_collect
+    function is called.
+
+    When the @ref #CONFIG_MUTEK_SHELL_BUFFER token is undefined,
+    this is equivalent to calling @ref mem_free.
+*/
+void shell_buffer_drop(void * data);
+
+/** @This can be used to advertise the availability of new data in a
+    buffer. When the @ref #CONFIG_MUTEK_SHELL_BUFFER token is defined,
+    this show the name of the buffer. In the other case, it hexdumps
+    the buffer content.
+*/
+void shell_buffer_advertise(struct termui_console_s *con,
+                            void *data, size_t size);
+
+/** @This lookup a buffer and increase its reference count.
+
+    The current size of the buffer is stored in @tt size if not @tt
+    NULL. The reference to the buffer must be released by calling the
+    @ref shell_buffer_drop function.
+
+    The function return @tt NULL if the allocation failed.
+    @see #TERMUI_CON_OPT_SHELL_BUFFER_GET_ENTRY
+*/
+config_depend(CONFIG_MUTEK_SHELL_BUFFER)
+void * shell_buffer_get(const struct termui_console_s *con,
+                        const char *name, size_t *size, const void *type);
+
+/** @This returns the name of a referenced buffer */
+config_depend(CONFIG_MUTEK_SHELL_BUFFER)
+const char * shell_buffer_name(void * data);
+
+/** @This destroy a buffer which is not in use. All buffers are
+    released when the @tt name pointer is @tt NULL. */
+config_depend(CONFIG_MUTEK_SHELL_BUFFER)
+void shell_buffer_collect(const struct termui_console_s *con,
+                          const char *name);
+
+/** @internal This is for internal purpose, shell context must be
+    locked. */
+config_depend(CONFIG_MUTEK_SHELL_BUFFER)
+bool_t shell_buffer_collect_all(struct mutek_shell_context_s *sctx);
+
 /** @This starts an interactive shell. This function does not returns
     until the shell is exited by the user. */
 config_depend(CONFIG_MUTEK_SHELL)
 void mutek_shell_start(struct device_char_s *c, const char *term,
                        const struct termui_con_entry_s * const *root,
-                       const char *prompt, void *con_pv);
+                       const char *prompt);
+
+/** This is used to store a pointer to a shell buffer or other
+    storage in a console options parsing context.
+    @see #TERMUI_CON_OPT_SHELL_BUFFER_GET_ENTRY */
+struct shell_opt_buffer_s
+{
+  /** pointer to storage */
+  void *addr;
+  /** size storage */
+  uintptr_t size:31;
+  /** this is set when the @ref shell_buffer_drop function must be
+      called on cleanup. */
+  uintptr_t buffered:1;
+};
+
+/** @internal @see #TERMUI_CON_OPT_SHELL_BUFFER_GET_ENTRY */
+struct shell_opt_buffer_desc_s
+{
+  struct termui_con_opts_s opt;
+  void *type;
+  uint16_t offset;
+};
+
+/** @internal */
+TERMUI_CON_PARSE_OPT_PROTOTYPE(shell_opt_buffer_get_parse);
+/** @internal */
+TERMUI_CON_ARGS_COLLECT_PROTOTYPE(shell_opt_buffer_comp);
+
+/** @This can be used to declare a libtermui console option which
+    specifies a shell buffer or raw data. */
+#define TERMUI_CON_OPT_SHELL_BUFFER_GET_ENTRY(sname_, lname_, id_, type_, field_, typeptr_, ...) \
+  TERMUI_CON_OPT_CUSTOM_ENTRY(shell_opt_buffer_desc_s, sname_, lname_, id_, \
+    TERMUI_CON_OPT_PARSE(shell_opt_buffer_get_parse, 1)                  \
+    TERMUI_CON_OPT_COMPLETE(shell_opt_buffer_comp, NULL)                 \
+    .type = typeptr_,                                                    \
+    .offset = offsetof(type_, field_),                                   \
+    __VA_ARGS__                                                          \
+  )
 
 /** @internal */
 struct mutek_shell_root_groups_s

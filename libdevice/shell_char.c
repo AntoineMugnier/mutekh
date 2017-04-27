@@ -163,7 +163,7 @@ static CONTEXT_ENTRY(shell_thread)
   semaphore_give(&p->sem, 1);
   if (ok)
     {
-      mutek_shell_start(&accessor, "xterm", NULL, CONFIG_MUTEK_SHELL_PROMPT, NULL);
+      mutek_shell_start(&accessor, "xterm", NULL, CONFIG_MUTEK_SHELL_PROMPT);
       device_put_accessor(&accessor.base);
     }
 }
