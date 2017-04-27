@@ -24,8 +24,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <mutek/mem_alloc.h>
-
 #include <device/shell.h>
 #include <device/device.h>
 #include <device/driver.h>
@@ -64,7 +62,7 @@ struct termui_optctx_dev_spi_opts
   union {
     /* Transfer */
     struct {
-      struct termui_con_string_s data;
+      struct shell_opt_buffer_s data;
       size_t count;
     };
 
@@ -83,6 +81,9 @@ struct termui_optctx_dev_spi_opts
 static TERMUI_CON_ARGS_CLEANUP_PROTOTYPE(spi_opts_cleanup)
 {
   struct termui_optctx_dev_spi_opts *c = ctx;
+
+  if (c->data.buffered)
+    shell_buffer_drop(c->data.addr);
 
   if (device_check_accessor(&c->spi.base))
     device_put_accessor(&c->spi.base);
@@ -133,12 +134,13 @@ static TERMUI_CON_COMMAND_PROTOTYPE(dev_shell_spi_transfer)
   struct termui_optctx_dev_spi_opts *c = ctx;
   struct dev_spi_ctrl_transfer_s tr;
   size_t count;
+  error_t err;
 
   if (used & SPI_OPT_WR_DATA)
     {
       tr.data.out_width = 1;
-      tr.data.out = (const uint8_t*)c->data.str;
-      tr.data.count = count = c->data.len;
+      tr.data.out = (const uint8_t*)c->data.addr;
+      tr.data.count = count = c->data.size;
     }
   else
     {
@@ -147,7 +149,13 @@ static TERMUI_CON_COMMAND_PROTOTYPE(dev_shell_spi_transfer)
       tr.data.count = count = c->count;
     }
 
-  void *in = mem_alloc(tr.data.count, (mem_scope_sys));
+  if (!tr.data.count)
+    return 0;
+
+  void *in = shell_buffer_new(con, tr.data.count, "spi", NULL);
+  if (!in)
+    return -EINVAL;
+
   tr.data.in = in;
   tr.data.in_width = 1;
   tr.cs_op = DEV_SPI_CS_NOP_NOP;
@@ -167,7 +175,7 @@ static TERMUI_CON_COMMAND_PROTOTYPE(dev_shell_spi_transfer)
       tr.cs_cfg.polarity = c->polarity;
     }
 
-  error_t err = dev_spi_wait_transfer(&c->spi, &tr);
+  err = dev_spi_wait_transfer(&c->spi, &tr);
 
 # ifdef CONFIG_DEVICE_GPIO
   if (used & SPI_OPT_DEV_GPIO)
@@ -175,21 +183,12 @@ static TERMUI_CON_COMMAND_PROTOTYPE(dev_shell_spi_transfer)
 # endif
 
   if (err)
-    {
-      termui_con_printf(con, "error %i\n", err);
-      goto err;
-    }
+    termui_con_printf(con, "error %i\n", err);
+  else
+    shell_buffer_advertise(con, in, tr.data.count);
 
-  if (in != NULL)
-    {
-      termui_con_printf(con, "read (%u bytes): %P\n", count, in, count);
-      mem_free(in);
-    }
-
-  return 0;
- err:
-  mem_free(in);
-  return -EINVAL;
+  shell_buffer_drop(in);
+  return err ? -EINVAL : 0;
 }
 
 # ifdef CONFIG_DEVICE_SPI_TRANSACTION
@@ -198,6 +197,7 @@ static TERMUI_CON_COMMAND_PROTOTYPE(dev_shell_spi_transaction)
   struct termui_optctx_dev_spi_opts *c = ctx;
   struct dev_spi_ctrl_transaction_rq_s tr;
   size_t count;
+  error_t err;
 
   dev_spi_transaction_init(&tr);
 # ifdef CONFIG_DEVICE_GPIO
@@ -207,8 +207,8 @@ static TERMUI_CON_COMMAND_PROTOTYPE(dev_shell_spi_transaction)
   if (used & SPI_OPT_WR_DATA)
     {
       tr.data.out_width = 1;
-      tr.data.out = (const uint8_t*)c->data.str;
-      tr.data.count = count = c->data.len;
+      tr.data.out = (const uint8_t*)c->data.addr;
+      tr.data.count = count = c->data.size;
     }
   else
     {
@@ -217,7 +217,13 @@ static TERMUI_CON_COMMAND_PROTOTYPE(dev_shell_spi_transaction)
       tr.data.count = count = c->count;
     }
 
-  void *in = mem_alloc(tr.data.count, (mem_scope_sys));
+  if (!tr.data.count)
+    return 0;
+
+  void *in = shell_buffer_new(con, tr.data.count, "spi", NULL);
+  if (!in)
+    return -EINVAL;
+
   tr.data.in = in;
   tr.data.in_width = 1;
 
@@ -231,13 +237,14 @@ static TERMUI_CON_COMMAND_PROTOTYPE(dev_shell_spi_transaction)
 # ifdef CONFIG_DEVICE_GPIO
   if (used & SPI_OPT_DEV_GPIO)
     {
-      if (device_copy_accessor(&tr.base.gpio.base, &c->gpio.base))
+      err = device_copy_accessor(&tr.base.gpio.base, &c->gpio.base);
+      if (err)
         goto err;
       tr.base.cs_gpio = 1;
     }
 # endif
 
-  error_t err = dev_spi_wait_transaction(&c->spi, &tr);
+  err = dev_spi_wait_transaction(&c->spi, &tr);
 
 # ifdef CONFIG_DEVICE_GPIO
   if (used & SPI_OPT_DEV_GPIO)
@@ -245,21 +252,13 @@ static TERMUI_CON_COMMAND_PROTOTYPE(dev_shell_spi_transaction)
 # endif
 
   if (err)
-    {
-      termui_con_printf(con, "error %i\n", err);
-      goto err;
-    }
+    termui_con_printf(con, "error %i\n", err);
+  else
+    shell_buffer_advertise(con, in, tr.data.count);
 
-  if (in != NULL)
-    {
-      termui_con_printf(con, "read (%u bytes): %P\n", count, in, count);
-      mem_free(in);
-    }
-
-  return 0;
  err:
-  mem_free(in);
-  return -EINVAL;
+  shell_buffer_drop(in);
+  return err ? -EINVAL : 0;
 }
 # endif
 
@@ -304,8 +303,8 @@ static TERMUI_CON_OPT_DECL(dev_spi_opts) =
     struct termui_optctx_dev_spi_opts, ck_mode, dev_spi_ckmode_e,
     TERMUI_CON_OPT_CONSTRAINTS(SPI_OPT_CLK_MODE, 0))
 
-  TERMUI_CON_OPT_STRING_ENTRY("-D", "--data", SPI_OPT_WR_DATA,
-    struct termui_optctx_dev_spi_opts, data, 1,
+  TERMUI_CON_OPT_SHELL_BUFFER_GET_ENTRY("-D", "--data", SPI_OPT_WR_DATA,
+    struct termui_optctx_dev_spi_opts, data, NULL,
     TERMUI_CON_OPT_CONSTRAINTS(SPI_OPT_SIZE | SPI_OPT_WR_DATA, 0)
     TERMUI_CON_OPT_HELP("Specifies the content of a write transfer",
                         NULL)
