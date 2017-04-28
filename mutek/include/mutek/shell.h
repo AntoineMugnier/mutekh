@@ -59,6 +59,7 @@ struct mutek_shell_buffer_s
   const void  *type;
   uintptr_t  size:24;
   uintptr_t  use:1;
+  uintptr_t  nocopy:1;
   uint8_t    data[0];
 };
 
@@ -82,12 +83,19 @@ struct mutek_shell_context_s
 /** @This allocates a new buffer. The reference to the buffer must be
     released by calling the @ref shell_buffer_drop function.
 
+    The type argument can be used to indentify the type of data
+    contained in the buffer. It allows trusting the content of an
+    existing buffer for casting to a C structure. Editing the buffer
+    at byte level from the shell will change the type to @tt NULL. The
+    @tt nocopy flag can also be used to drop the type when the buffer
+    is duplicated.
+
     When the @ref #CONFIG_MUTEK_SHELL_BUFFER token is undefined,
     this is equivalent to calling @ref mem_alloc.
 */
 void * shell_buffer_new(const struct termui_console_s *con,
                         size_t size, const char *prefix,
-                        const void *type);
+                        const void *type, bool_t nocopy);
 
 /** @This lookup a buffer with a matching type and a zero reference
     count. If no such buffer exist a new buffer is allocated. The
@@ -101,7 +109,7 @@ void * shell_buffer_new(const struct termui_console_s *con,
 */
 void * shell_buffer_reuse(const struct termui_console_s *con,
                           size_t size, const char *prefix,
-                          const void *type);
+                          const void *type, bool_t nocopy);
 
 /** @This drop a reference to the buffer. The buffer is released when
     the reference count reaches 0 and the @ref shell_buffer_collect
@@ -178,16 +186,33 @@ struct shell_opt_buffer_desc_s
 };
 
 /** @internal */
+TERMUI_CON_PARSE_OPT_PROTOTYPE(shell_opt_buffer_raw_parse);
+/** @internal */
+config_depend(CONFIG_MUTEK_SHELL_BUFFER)
 TERMUI_CON_PARSE_OPT_PROTOTYPE(shell_opt_buffer_get_parse);
 /** @internal */
 TERMUI_CON_ARGS_COLLECT_PROTOTYPE(shell_opt_buffer_comp);
+/** @internal */
+config_depend(CONFIG_MUTEK_SHELL_BUFFER)
+TERMUI_CON_ARGS_COLLECT_PROTOTYPE(shell_opt_buffer_name_comp);
+
+/** @This can be used to declare a libtermui console option which
+    accepts an exisiting shell buffer or raw data. */
+#define TERMUI_CON_OPT_SHELL_BUFFER_RAW_ENTRY(sname_, lname_, id_, type_, field_, typeptr_, ...) \
+  TERMUI_CON_OPT_CUSTOM_ENTRY(shell_opt_buffer_desc_s, sname_, lname_, id_, \
+    TERMUI_CON_OPT_PARSE(shell_opt_buffer_raw_parse, 1)                  \
+    TERMUI_CON_OPT_COMPLETE(shell_opt_buffer_comp, NULL)                 \
+    .type = typeptr_,                                                    \
+    .offset = offsetof(type_, field_),                                   \
+    __VA_ARGS__                                                          \
+  )
 
 /** @This can be used to declare a libtermui console option which
     specifies a shell buffer or raw data. */
 #define TERMUI_CON_OPT_SHELL_BUFFER_GET_ENTRY(sname_, lname_, id_, type_, field_, typeptr_, ...) \
   TERMUI_CON_OPT_CUSTOM_ENTRY(shell_opt_buffer_desc_s, sname_, lname_, id_, \
     TERMUI_CON_OPT_PARSE(shell_opt_buffer_get_parse, 1)                  \
-    TERMUI_CON_OPT_COMPLETE(shell_opt_buffer_comp, NULL)                 \
+    TERMUI_CON_OPT_COMPLETE(shell_opt_buffer_name_comp, NULL)            \
     .type = typeptr_,                                                    \
     .offset = offsetof(type_, field_),                                   \
     __VA_ARGS__                                                          \

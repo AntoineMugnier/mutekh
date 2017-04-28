@@ -152,7 +152,7 @@ static TERMUI_CON_COMMAND_PROTOTYPE(dev_shell_spi_transfer)
   if (!tr.data.count)
     return 0;
 
-  void *in = shell_buffer_new(con, tr.data.count, "spi", NULL);
+  void *in = shell_buffer_new(con, tr.data.count, "spi", NULL, 0);
   if (!in)
     return -EINVAL;
 
@@ -185,7 +185,7 @@ static TERMUI_CON_COMMAND_PROTOTYPE(dev_shell_spi_transfer)
   if (err)
     termui_con_printf(con, "error %i\n", err);
   else
-    shell_buffer_advertise(con, in, tr.data.count);
+    shell_buffer_advertise(con, in, count);
 
   shell_buffer_drop(in);
   return err ? -EINVAL : 0;
@@ -220,7 +220,7 @@ static TERMUI_CON_COMMAND_PROTOTYPE(dev_shell_spi_transaction)
   if (!tr.data.count)
     return 0;
 
-  void *in = shell_buffer_new(con, tr.data.count, "spi", NULL);
+  void *in = shell_buffer_new(con, tr.data.count, "spi", NULL, 0);
   if (!in)
     return -EINVAL;
 
@@ -254,7 +254,7 @@ static TERMUI_CON_COMMAND_PROTOTYPE(dev_shell_spi_transaction)
   if (err)
     termui_con_printf(con, "error %i\n", err);
   else
-    shell_buffer_advertise(con, in, tr.data.count);
+    shell_buffer_advertise(con, in, count);
 
  err:
   shell_buffer_drop(in);
@@ -303,7 +303,7 @@ static TERMUI_CON_OPT_DECL(dev_spi_opts) =
     struct termui_optctx_dev_spi_opts, ck_mode, dev_spi_ckmode_e,
     TERMUI_CON_OPT_CONSTRAINTS(SPI_OPT_CLK_MODE, 0))
 
-  TERMUI_CON_OPT_SHELL_BUFFER_GET_ENTRY("-D", "--data", SPI_OPT_WR_DATA,
+  TERMUI_CON_OPT_SHELL_BUFFER_RAW_ENTRY("-D", "--data", SPI_OPT_WR_DATA,
     struct termui_optctx_dev_spi_opts, data, NULL,
     TERMUI_CON_OPT_CONSTRAINTS(SPI_OPT_SIZE | SPI_OPT_WR_DATA, 0)
     TERMUI_CON_OPT_HELP("Specifies the content of a write transfer",

@@ -26,10 +26,11 @@
 #include <termui/console.h>
 
 #include <stdio.h>
+#include <stdlib.h>
 
 void * shell_buffer_new(const struct termui_console_s *con,
                         size_t size, const char *prefix,
-                        const void *type)
+                        const void *type, bool_t nocopy)
 {
 #ifdef CONFIG_MUTEK_SHELL_BUFFER
   struct mutek_shell_context_s *sctx = termui_con_get_private(con);
@@ -49,6 +50,7 @@ void * shell_buffer_new(const struct termui_console_s *con,
       b->sctx = sctx;
       b->type = type;
       b->size = size;
+      b->nocopy = nocopy && type;
       b->use = 1;
       shell_buffer_pool_push(&sctx->bufs, b);
     }
@@ -63,7 +65,7 @@ void * shell_buffer_new(const struct termui_console_s *con,
 
 void * shell_buffer_reuse(const struct termui_console_s *con,
                           size_t size, const char *prefix,
-                          const void *type)
+                          const void *type, bool_t nocopy)
 {
 #ifdef CONFIG_MUTEK_SHELL_BUFFER
   struct mutek_shell_context_s *sctx = termui_con_get_private(con);
@@ -87,7 +89,7 @@ void * shell_buffer_reuse(const struct termui_console_s *con,
   if (b)
     return b->data;
 
-  return shell_buffer_new(con, size, prefix, type);
+  return shell_buffer_new(con, size, prefix, type, nocopy);
 #else
   return mem_alloc(size, mem_scope_sys);
 #endif
@@ -108,26 +110,58 @@ void shell_buffer_drop(void * data)
 #endif
 }
 
+static void shell_hexdump(struct termui_console_s *con, const uint8_t *data,
+                          size_t offset, size_t size, size_t dump_size)
+{
+  bool_t more = size > dump_size;
+  size_t left = 0;
+
+  if (more)
+    {
+      left = size - dump_size;
+      size = dump_size;
+    }
+
+  while (size)
+    {
+      size_t s = __MIN(16, size);
+      termui_con_printf(con, "%p: %P\n", offset, data + offset, s);
+      size -= s;
+      offset += s;
+    }
+
+  if (more)
+    termui_con_printf(con, "... %u bytes not displayed.\n", left);
+}
+
 void shell_buffer_advertise(struct termui_console_s *con,
                             void *data, size_t size)
 {
 #ifdef CONFIG_MUTEK_SHELL_BUFFER
-  termui_con_printf(con, "%u bytes of data are available in buffer `%s'.\n",
+  termui_con_printf(con, "%u bytes of data are available in buffer `%s':\n",
                     size, shell_buffer_name(data));
+  shell_hexdump(con, data, 0, size, 64);
 #else
-  termui_con_printf(con, "%u bytes of data are available: `%P'.\n",
+  termui_con_printf(con, "%u bytes of data are available:\n",
                     size, data, size);
+  shell_hexdump(con, data, 0, size, size);
 #endif
 }
 
 #ifdef CONFIG_MUTEK_SHELL_BUFFER
 
-const char * shell_buffer_name(void * data)
+static inline struct mutek_shell_buffer_s *
+shell_buffer_from_addr(void * data)
 {
   struct mutek_shell_buffer_s *b = data;
   b--;
-  ensure(b->use);
-  return b->name;
+  assert(b->use);
+  return b;
+}
+
+const char * shell_buffer_name(void * data)
+{
+  return shell_buffer_from_addr(data)->name;
 }
 
 void * shell_buffer_get(const struct termui_console_s *con,
@@ -197,10 +231,28 @@ void shell_buffer_collect(const struct termui_console_s *con,
 
 #endif
 
+#ifdef CONFIG_MUTEK_SHELL_BUFFER
 TERMUI_CON_PARSE_OPT_PROTOTYPE(shell_opt_buffer_get_parse)
 {
   struct shell_opt_buffer_desc_s *optd = (void*)opt;
+  struct shell_opt_buffer_s *ob = (void*)((uint8_t*)ctx + optd->offset);
 
+  size_t s;
+  void *a = shell_buffer_get(con, argv[0], &s, optd->type);
+  if (!a)
+    return -ECANCELED;
+
+  ob->size = s;
+  ob->addr = a;
+  ob->buffered = 1;
+
+  return 0;
+}
+#endif
+
+TERMUI_CON_PARSE_OPT_PROTOTYPE(shell_opt_buffer_raw_parse)
+{
+  struct shell_opt_buffer_desc_s *optd = (void*)opt;
   struct shell_opt_buffer_s *ob = (void*)((uint8_t*)ctx + optd->offset);
 
   if (!strncmp(argv[0], "raw:", 4))
@@ -212,14 +264,7 @@ TERMUI_CON_PARSE_OPT_PROTOTYPE(shell_opt_buffer_get_parse)
   else
     {
 #ifdef CONFIG_MUTEK_SHELL_BUFFER
-      size_t s;
-      void *a = shell_buffer_get(con, argv[0], &s, optd->type);
-      if (!a)
-        return -ECANCELED;
-
-      ob->size = s;
-      ob->addr = a;
-      ob->buffered = 1;
+      return shell_opt_buffer_get_parse(con, opt, ctx, argv, argl);
 #else
       return -ECANCELED;
 #endif
@@ -229,12 +274,11 @@ TERMUI_CON_PARSE_OPT_PROTOTYPE(shell_opt_buffer_get_parse)
 }
 
 #ifdef CONFIG_LIBTERMUI_CON_COMPLETION
-TERMUI_CON_ARGS_COLLECT_PROTOTYPE(shell_opt_buffer_comp)
+TERMUI_CON_ARGS_COLLECT_PROTOTYPE(shell_opt_buffer_name_comp)
 {
 # ifdef CONFIG_MUTEK_SHELL_BUFFER
   struct mutek_shell_context_s *sctx = termui_con_get_private(con);
   struct shell_opt_buffer_desc_s *optd = (void*)entry;
-  bool_t match = 0;
 
   GCT_FOREACH(shell_buffer, &sctx->bufs, i, {
       if (optd->type && optd->type != i->type)
@@ -243,10 +287,18 @@ TERMUI_CON_ARGS_COLLECT_PROTOTYPE(shell_opt_buffer_comp)
         GCT_FOREACH_CONTINUE;
       if (!termui_con_comp_append(cctx, i->name))
         return NULL;
-      match = 1;
   });
+# endif
 
-  if (!match)
+  return NULL;
+}
+
+TERMUI_CON_ARGS_COLLECT_PROTOTYPE(shell_opt_buffer_comp)
+{
+# ifdef CONFIG_MUTEK_SHELL_BUFFER
+  shell_opt_buffer_name_comp(con, cctx, entry, id);
+
+  if (!cctx->count)
 # endif
     {
       termui_con_comp_append(cctx, "raw:");
@@ -263,9 +315,9 @@ TERMUI_CON_ARGS_COLLECT_PROTOTYPE(shell_opt_buffer_comp)
 struct termui_optctx_shell_buffer_opts
 {
   struct termui_con_string_s bufname;
-  struct termui_con_string_s data;
+  struct shell_opt_buffer_s data;
   size_t size;
-  uintptr_t offset;
+  intptr_t offset;
 };
 
 enum
@@ -276,17 +328,22 @@ enum
   BUFFER_OPT_OFFSET = 8,
   BUFFER_OPT_DELETE = 16,
   BUFFER_OPT_INSERT = 32,
+  BUFFER_OPT_PREFIX = 64,
 };
 
 static TERMUI_CON_OPT_DECL(shell_buffer_opts) =
 {
+  TERMUI_CON_OPT_STRING_ENTRY("-p", "--prefix", BUFFER_OPT_PREFIX,
+                              struct termui_optctx_shell_buffer_opts, bufname, 1,
+                              TERMUI_CON_OPT_CONSTRAINTS(BUFFER_OPT_PREFIX, 0))
+
   TERMUI_CON_OPT_STRING_ENTRY("-n", "--name", BUFFER_OPT_BUFNAME,
                               struct termui_optctx_shell_buffer_opts, bufname, 1,
-                              TERMUI_CON_OPT_COMPLETE(shell_opt_buffer_comp, NULL)
+                              TERMUI_CON_OPT_COMPLETE(shell_opt_buffer_name_comp, NULL)
                               TERMUI_CON_OPT_CONSTRAINTS(BUFFER_OPT_BUFNAME, 0))
 
-  TERMUI_CON_OPT_STRING_ENTRY("-d", "--data", BUFFER_OPT_DATA,
-                              struct termui_optctx_shell_buffer_opts, data, 1,
+  TERMUI_CON_OPT_SHELL_BUFFER_RAW_ENTRY("-d", "--data", BUFFER_OPT_DATA,
+                              struct termui_optctx_shell_buffer_opts, data, NULL,
                               TERMUI_CON_OPT_CONSTRAINTS(BUFFER_OPT_DATA | BUFFER_OPT_SIZE, 0))
 
   TERMUI_CON_OPT_INTEGER_ENTRY("-s", "--size", BUFFER_OPT_SIZE,
@@ -305,6 +362,14 @@ static TERMUI_CON_OPT_DECL(shell_buffer_opts) =
 
   TERMUI_CON_LIST_END
 };
+
+static TERMUI_CON_ARGS_CLEANUP_PROTOTYPE(shell_buffer_opts_cleanup)
+{
+  struct termui_optctx_shell_buffer_opts *c = ctx;
+
+  if (c->data.buffered)
+    shell_buffer_drop(c->data.addr);
+}
 
 static TERMUI_CON_COMMAND_PROTOTYPE(shell_buffer_cmd_list)
 {
@@ -338,18 +403,7 @@ static TERMUI_CON_COMMAND_PROTOTYPE(shell_buffer_cmd_hexdump)
   else if (c->offset + size > bsize)
     size = bsize - c->offset;
 
-  uintptr_t i = c->offset;
-
-  if (size != bsize)
-    termui_con_printf(con, "Dumping %u bytes of %u.\n", size, bsize);
-
-  while (size)
-    {
-      size_t s = __MIN(16, size);
-      termui_con_printf(con, "%p: %P\n", i, data + i, s);
-      size -= s;
-      i += s;
-    }
+  shell_hexdump(con, data, c->offset, bsize, size);
 
   shell_buffer_drop(data);
   return 0;
@@ -366,15 +420,52 @@ static TERMUI_CON_COMMAND_PROTOTYPE(shell_buffer_cmd_new)
 {
   struct termui_optctx_shell_buffer_opts *c = ctx;
 
-  size_t size = used & BUFFER_OPT_SIZE ? c->size : c->data.len;
-  const char *prefix = used & BUFFER_OPT_BUFNAME ? c->bufname.str : "noname";
-  void *r = shell_buffer_new(con, size, prefix, NULL);
-
-  if (!r)
-    return -EINVAL;
+  const char *prefix = used & BUFFER_OPT_PREFIX ? c->bufname.str : "noname";
+  uint8_t *r;
+  intptr_t o = c->offset;
 
   if (used & BUFFER_OPT_DATA)
-    memcpy(r, c->data.str, size);
+    {
+      const void *type = NULL;
+
+      if (c->data.buffered)
+        {
+          struct mutek_shell_buffer_s *b =
+            shell_buffer_from_addr(c->data.addr);
+          if (!b->nocopy && !o)
+            type = b->type;
+        }
+
+      if (o >= 0)
+        {
+          r = shell_buffer_new(con, c->data.size + o, prefix, type, 0);
+          if (!r)
+            return -EINVAL;
+
+          memset(r, 0, o);
+          memcpy(r + o, c->data.addr, c->data.size);
+        }
+      else
+        {
+          o = -o;
+          if (c->data.size <= o)
+            return -EINVAL;
+
+          r = shell_buffer_new(con, c->data.size - o, prefix, NULL, 0);
+          if (!r)
+            return -EINVAL;
+          memcpy(r, c->data.addr + o, c->data.size - o);
+        }
+    }
+  else
+    {
+      r = shell_buffer_new(con, c->size, prefix, NULL, 0);
+      if (!r)
+        return -EINVAL;
+    }
+
+  termui_con_printf(con, "Created buffer `%s':\n",
+                    shell_buffer_name(r));
 
   shell_buffer_drop(r);
   return 0;
@@ -390,42 +481,44 @@ static TERMUI_CON_COMMAND_PROTOTYPE(shell_buffer_cmd_edit)
   LOCK_SPIN_IRQ(&sctx->lock);
   b = shell_buffer_pool_lookup(&sctx->bufs, c->bufname.str);
 
-  if (b && !b->use)
+  if (!b || (b->use && b->data != c->data.addr))
+    goto err;
+
+  size_t s = used & BUFFER_OPT_SIZE ? c->size : c->data.size;
+  uintptr_t o = c->offset;
+
+  if (used & BUFFER_OPT_INSERT)
     {
-      size_t s = used & BUFFER_OPT_SIZE ? c->size : c->data.len;
-      uintptr_t o = c->offset;
-
-      if (used & BUFFER_OPT_INSERT)
-        {
-          if (mem_getsize(b) < b->size + s)
-            goto err;
-          memmove(b->data + o + s,
-                  b->data + o,
-                  b->size - o);
-          b->size += s;
-        }
-      else if (used & BUFFER_OPT_DELETE)
-        {
-          if (o + s > b->size)
-            goto err;
-          b->size -= s;
-          memmove(b->data + o,
-                  b->data + o + s,
-                  b->size - o);
-        }
-      else
-        {
-          if (mem_getsize(b) < o + s)
-            goto err;
-          if ((used & BUFFER_OPT_SIZE) || o + s > b->size)
-            b->size = o + s;
-        }
-
-      if (used & BUFFER_OPT_DATA)
-        memcpy(b->data + o, c->data.str, s);
+      if (mem_getsize(b) < b->size + s)
+        goto err;
+      memmove(b->data + o + s,
+              b->data + o,
+              b->size - o);
+      b->size += s;
+    }
+  else if (used & BUFFER_OPT_DELETE)
+    {
+      if (o + s > b->size)
+        goto err;
+      b->size -= s;
+      memmove(b->data + o,
+              b->data + o + s,
+              b->size - o);
+    }
+  else
+    {
+      if (mem_getsize(b) < o + s)
+        goto err;
+      if ((used & BUFFER_OPT_SIZE) || o + s > b->size)
+        b->size = o + s;
     }
 
+  if (used & BUFFER_OPT_DATA)
+    memcpy(b->data + o, c->data.addr, s);
+
+  b->type = NULL;
   err = 0;
+
  err:;
   LOCK_RELEASE_IRQ(&sctx->lock);
 
@@ -439,23 +532,28 @@ static TERMUI_CON_GROUP_DECL(shell_buffer_subgroup) =
 
   TERMUI_CON_ENTRY(shell_buffer_cmd_hexdump, "hexdump",
     TERMUI_CON_OPTS_CTX(shell_buffer_opts,
-                        BUFFER_OPT_BUFNAME, BUFFER_OPT_OFFSET | BUFFER_OPT_SIZE, NULL)
+                        BUFFER_OPT_BUFNAME, BUFFER_OPT_OFFSET | BUFFER_OPT_SIZE,
+                        shell_buffer_opts_cleanup)
   )
 
   TERMUI_CON_ENTRY(shell_buffer_cmd_collect, "collect",
     TERMUI_CON_OPTS_CTX(shell_buffer_opts,
-                        0, BUFFER_OPT_BUFNAME, NULL)
+                        0, BUFFER_OPT_BUFNAME,
+                        shell_buffer_opts_cleanup)
   )
 
   TERMUI_CON_ENTRY(shell_buffer_cmd_new, "new",
     TERMUI_CON_OPTS_CTX(shell_buffer_opts,
-                        BUFFER_OPT_SIZE | BUFFER_OPT_DATA, BUFFER_OPT_BUFNAME, NULL)
+                        BUFFER_OPT_SIZE | BUFFER_OPT_DATA,
+                        BUFFER_OPT_PREFIX | BUFFER_OPT_OFFSET,
+                        shell_buffer_opts_cleanup)
   )
 
   TERMUI_CON_ENTRY(shell_buffer_cmd_edit, "edit",
     TERMUI_CON_OPTS_CTX(shell_buffer_opts,
                         BUFFER_OPT_SIZE | BUFFER_OPT_DATA | BUFFER_OPT_BUFNAME,
-                        BUFFER_OPT_INSERT | BUFFER_OPT_DELETE | BUFFER_OPT_OFFSET, NULL)
+                        BUFFER_OPT_INSERT | BUFFER_OPT_DELETE | BUFFER_OPT_OFFSET,
+                        shell_buffer_opts_cleanup)
   )
 
   TERMUI_CON_LIST_END
