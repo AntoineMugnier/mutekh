@@ -142,40 +142,40 @@ ENUM_DESCRIPTOR(dev_mem_rq_type_e, strip:DEV_MEM_OP_, upper, or);
 
 /* @This specifies available memory device operations. When combined,
    operations are performed in declaration order. */
-enum dev_mem_rq_type_e
-{
+enum dev_mem_rq_type_e{
+
   /** Invalidate read cache. Always succeed if there is no cache. Can
       be combined with @ref DEV_MEM_OP_PARTIAL_READ or @ref
-      DEV_MEM_OP_PAGE_READ. The @tt count field of the request indicates
+      DEV_MEM_OP_PAGE_READ. The @tt size field of the request indicates
       the number of bytes unless it is combined with a @ref
       DEV_MEM_OP_PAGE_READ operation. */
   DEV_MEM_OP_CACHE_INVALIDATE   = 0x0001,
   /** Erase a page on a flash device, perform a TRIM on a disk device.
-      Can be combined with @ref DEV_MEM_OP_PAGE_WRITE. The @tt count
+      Can be combined with @ref DEV_MEM_OP_PAGE_WRITE. The @tt size
       field of the request indicates the number of erased pages. The
       address must be page aligned. This may no be supported by all devices. */
   DEV_MEM_OP_PAGE_ERASE         = 0x0002,
-  /** Partial page read. The @tt count field of the request indicates
+  /** Partial page read. The @tt size field of the request indicates
       the number of bytes. The transfer must not cross page
       boundaries. This may no be supported by all devices. */
   DEV_MEM_OP_PARTIAL_READ       = 0x0004,
-  /** Partial page write. The @tt count field of the request indicates
+  /** Partial page write. The @tt size field of the request indicates
       the number of bytes. The transfer must not cross page
       boundaries. This may no be supported by all devices. */
   DEV_MEM_OP_PARTIAL_WRITE      = 0x0008,
-  /** Pages read with scattered data buffers. The @tt count field of
+  /** Pages read with scattered data buffers. The @tt size field of
       the request indicates the number of written pages and the @tt
       sc_log2 field indicates the number of pages per buffer. The
       address must be page aligned. */
   DEV_MEM_OP_PAGE_READ          = 0x0010,
-  /** Pages write with scattered data buffers. The @tt count field of
+  /** Pages write with scattered data buffers. The @tt size field of
       the request indicates the number of read pages and the @tt
       sc_log2 field indicates the number of pages per buffer. The
       address must be page aligned.  */
   DEV_MEM_OP_PAGE_WRITE         = 0x0020,
   /** Flush write cache. Always succeed if there is no cache.  Can be
       combined with @ref DEV_MEM_OP_PARTIAL_WRITE or @ref
-      DEV_MEM_OP_PAGE_WRITE. The @tt count field of the request
+      DEV_MEM_OP_PAGE_WRITE. The @tt size field of the request
       indicates the number of bytes unless it is combined with a @ref
       DEV_MEM_OP_PAGE_WRITE operation. */
   DEV_MEM_OP_CACHE_FLUSH        = 0x0040,
