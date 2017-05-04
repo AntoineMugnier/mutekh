@@ -24,6 +24,7 @@
 #include <device/device.h>
 #include <device/driver.h>
 
+#include <mutek/mem_alloc.h>
 #include <device/class/mem.h>
 
 enum mem_opts_e
@@ -105,7 +106,8 @@ static TERMUI_CON_COMMAND_PROTOTYPE(dev_shell_mem_info)
 static TERMUI_CON_COMMAND_PROTOTYPE(dev_shell_mem_request)
 {
   struct termui_optctx_dev_mem_opts *c = ctx;
-
+  error_t ret;
+  
   struct dev_mem_info_s info;
   if (DEVICE_OP(&c->mem, info, &info, c->band))
     return -EINVAL;
@@ -119,6 +121,15 @@ static TERMUI_CON_COMMAND_PROTOTYPE(dev_shell_mem_request)
 
   size_t sc = c->size >> c->sc_log2;
   uint8_t *d[sc];
+  uint8_t *buffer = (void*)c->buffer;
+
+  if (!(used & (MEM_OPT_DATA | MEM_OPT_BUFFER))) {
+    buffer = mem_alloc(c->size << info.page_log2, mem_scope_sys);
+    if (!buffer) {
+      termui_con_printf(con, "Not enough memory\n");
+      return -1;
+    }
+  }
 
   if (c->rqtype & (DEV_MEM_OP_PAGE_ERASE | DEV_MEM_OP_PAGE_READ | DEV_MEM_OP_PAGE_WRITE))
     {
@@ -126,28 +137,42 @@ static TERMUI_CON_COMMAND_PROTOTYPE(dev_shell_mem_request)
         return -EINVAL;
       size_t i;
       for (i = 0; i < sc; i++)
-        d[i] = (uint8_t*)c->buffer + (i << (info.page_log2 + c->sc_log2));
+        d[i] = buffer + (i << (info.page_log2 + c->sc_log2));
       rq.sc_data = d;
+      rq.size = c->size;
+    }
+  else if (used & MEM_OPT_BUFFER)
+    {
+      rq.data = (uint8_t*)c->data.str;
+      rq.size = c->data.len;
+    }
+  else if (used & MEM_OPT_DATA)
+    {
+      if (c->rqtype & DEV_MEM_OP_PARTIAL_READ)
+        return -EINVAL;
+      rq.data = (uint8_t*)c->buffer;
       rq.size = c->size;
     }
   else
     {
-      if (used & MEM_OPT_BUFFER)
-        {
-          rq.data = (uint8_t*)c->data.str;
-          rq.size = c->data.len;
-        }
-      else
-        {
-          if (c->rqtype & DEV_MEM_OP_PARTIAL_READ)
-            return -EINVAL;
-          rq.data = (uint8_t*)c->buffer;
-          rq.size = c->size;
-        }
+      rq.data = buffer;
+      rq.size = c->size;
     }
 
-  termui_con_printf(con, "%i\n", dev_mem_wait_op(&c->mem, &rq));
+  ret = dev_mem_wait_op(&c->mem, &rq);
 
+  if (ret)
+    termui_con_printf(con, "Request error: %s\n", strerror(ret));
+
+  if (!(used & (MEM_OPT_DATA | MEM_OPT_BUFFER)) && ret == 0) {
+    for (size_t off = 0; off < c->size << info.page_log2; off += 16)
+      termui_con_printf(con, "%p: %P\n", off, buffer + off,
+                        __MIN((c->size << info.page_log2) - off, 16));
+  }
+
+  if (!(used & (MEM_OPT_DATA | MEM_OPT_BUFFER)))
+    mem_free(buffer);
+  
   return 0;
 }
 
@@ -192,8 +217,8 @@ TERMUI_CON_GROUP_DECL(dev_shell_mem_group) =
 
   TERMUI_CON_ENTRY(dev_shell_mem_request, "request",
 		   TERMUI_CON_OPTS_CTX(dev_mem_opts, MEM_OPT_DEV | MEM_OPT_RQ |
-                                       MEM_OPT_ADDR | MEM_OPT_DATA | MEM_OPT_BUFFER,
-                                       MEM_OPT_BAND | MEM_OPT_SIZE | MEM_OPT_SCLOG2, mem_opts_cleanup)
+                                       MEM_OPT_ADDR,
+                                       MEM_OPT_BAND | MEM_OPT_SIZE | MEM_OPT_SCLOG2 | MEM_OPT_DATA | MEM_OPT_BUFFER, mem_opts_cleanup)
                    )
 
   TERMUI_CON_LIST_END
