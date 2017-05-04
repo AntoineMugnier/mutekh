@@ -321,19 +321,21 @@ static DEV_IRQ_SINK_UPDATE(nrf5x_gpio_icu_sink_update)
   }
 
   bool_t up = !!(sense & (DEV_IRQ_SENSE_HIGH_LEVEL
-                          | DEV_IRQ_SENSE_RISING_EDGE));
+                          | DEV_IRQ_SENSE_RISING_EDGE
+                          | DEV_IRQ_SENSE_ANY_EDGE));
   bool_t down = !!(sense & (DEV_IRQ_SENSE_LOW_LEVEL
-                            | DEV_IRQ_SENSE_FALLING_EDGE));
-
-  if (up == down)
-    return;
+                            | DEV_IRQ_SENSE_FALLING_EDGE
+                            | DEV_IRQ_SENSE_ANY_EDGE));
 
   uint32_t te_config = NRF_GPIOTE_CONFIG_MODE_EVENT
     | NRF_GPIOTE_CONFIG_PSEL(pin);
   uint32_t pin_config = 0
     | NRF_GPIO_PIN_CNF_DIR_INPUT;
 
-  if (up) {
+  if (up && down) {
+    te_config |= NRF_GPIOTE_CONFIG_POLARITY_TOGGLE;
+    pin_config |= NRF_GPIO_PIN_CNF_PULL_UP;
+  } else if (up) {
     te_config |= NRF_GPIOTE_CONFIG_POLARITY_LOTOHI;
     pin_config |= NRF_GPIO_PIN_CNF_PULL_DOWN;
   } else {
@@ -345,6 +347,7 @@ static DEV_IRQ_SINK_UPDATE(nrf5x_gpio_icu_sink_update)
   nrf_reg_set(GPIOTE_ADDR, NRF_GPIOTE_CONFIG(te + CONFIG_DRIVER_NRF5X_GPIO_TE_FIRST),
               te_config);
   nrf_it_enable(GPIOTE_ADDR, NRF_GPIOTE_IN(te + CONFIG_DRIVER_NRF5X_GPIO_TE_FIRST));
+  nrf_event_clear(GPIOTE_ADDR, NRF_GPIOTE_IN(te + CONFIG_DRIVER_NRF5X_GPIO_TE_FIRST));
 
   return;
 }
@@ -394,7 +397,9 @@ static DEV_IRQ_SRC_PROCESS(nrf5x_gpio_process)
       bool_t gpiote_triggered = nrf_event_check(GPIOTE_ADDR, NRF_GPIOTE_IN(te + CONFIG_DRIVER_NRF5X_GPIO_TE_FIRST));
       nrf_event_clear(GPIOTE_ADDR, NRF_GPIOTE_IN(te + CONFIG_DRIVER_NRF5X_GPIO_TE_FIRST));
 
-      if (sink->sense_link & (DEV_IRQ_SENSE_FALLING_EDGE | DEV_IRQ_SENSE_RISING_EDGE)) {
+      if (sink->sense_link & (DEV_IRQ_SENSE_FALLING_EDGE
+                              | DEV_IRQ_SENSE_RISING_EDGE
+                              | DEV_IRQ_SENSE_ANY_EDGE)) {
         do_process |= gpiote_triggered;
       } else {
         bool_t value = bit_get(nrf_reg_get(GPIO_ADDR, NRF_GPIO_IN), pv->gpiote_pin[te]);
@@ -517,7 +522,8 @@ static DEV_INIT(nrf5x_gpio_init)
                        DEV_IRQ_SENSE_HIGH_LEVEL
                        | DEV_IRQ_SENSE_LOW_LEVEL
                        | DEV_IRQ_SENSE_RISING_EDGE
-                       | DEV_IRQ_SENSE_FALLING_EDGE);
+                       | DEV_IRQ_SENSE_FALLING_EDGE
+                       | DEV_IRQ_SENSE_ANY_EDGE);
 # endif
 # if defined(CONFIG_DRIVER_NRF5X_GPIO_UNTIL)
   kroutine_init_deferred(&pv->until_checker, nrf5x_gpio_until_check);
