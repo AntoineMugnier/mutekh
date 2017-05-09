@@ -738,6 +738,8 @@ static DEV_INIT(efm32_gpio_init)
   if (dev_drv_clock_init(dev, &pv->clk_ep, 0, DEV_CLOCK_EP_POWER_CLOCK | DEV_CLOCK_EP_GATING_SYNC, NULL))
     goto err_mem;
 
+  cpu_mem_write_32(EFM32_GPIO_ADDR + EFM32_GPIO_IEN_ADDR, 0);
+
 #ifdef CONFIG_DRIVER_EFM32_GPIO_UNTIL
   dev_request_queue_init(&pv->queue);
 #endif
