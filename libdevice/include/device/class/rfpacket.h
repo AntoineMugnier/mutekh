@@ -226,6 +226,8 @@ enum dev_rfpacket_format_e
   DEV_RFPACKET_FMT_LORA,
 };
 
+ENUM_DESCRIPTOR(dev_rfpacket_encoding_e, strip:DEV_RFPACKET_, upper);
+
 enum dev_rfpacket_encoding_e
 {
   DEV_RFPACKET_CLEAR,
@@ -634,6 +636,9 @@ error_t dev_rfpacket_spin_request(
        const struct device_rfpacket_s *accessor,
        struct dev_rfpacket_rq_s *rq),
 {
+    if (rq->type == DEV_RFPACKET_RQ_RX_CONT)
+      return -ENOTSUP;
+
     struct dev_request_status_s status;
     dev_request_spin_init(&rq->base, &status);
     DEVICE_OP(accessor, request, rq, NULL);
@@ -646,6 +651,9 @@ error_t dev_rfpacket_wait_request(
        const struct device_rfpacket_s *accessor,
        struct dev_rfpacket_rq_s *rq),
 {
+    if (rq->type == DEV_RFPACKET_RQ_RX_CONT)
+      return -ENOTSUP;
+
     struct dev_request_status_s status;
     dev_request_sched_init(&rq->base, &status);
     DEVICE_OP(accessor, request, rq, NULL);

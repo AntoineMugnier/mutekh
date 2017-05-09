@@ -51,7 +51,7 @@ objs-$(CONFIG_DEVICE_IOMUX) += device_iomux.o
 
 ifeq ($(CONFIG_DEVICE_RFPACKET), defined)
 objs += device_rfpacket.o
-#objs-$(CONFIG_DEVICE_SHELL) += shell_rfpacket.o
+objs-$(CONFIG_DEVICE_SHELL_RFPACKET) += shell_rfpacket.o
 endif
 
 ifeq ($(CONFIG_DEVICE_GPIO), defined)

@@ -23,6 +23,7 @@
 #include <hexo/enum.h>
 
 const char dev_rfpacket_modulation_e[] = ENUM_DESC_DEV_RFPACKET_MODULATION_E;
+const char dev_rfpacket_encoding_e[] = ENUM_DESC_DEV_RFPACKET_ENCODING_E;
 
 extern inline error_t dev_rfpacket_spin_request(
        const struct device_rfpacket_s *accessor,
