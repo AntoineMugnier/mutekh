@@ -26,24 +26,24 @@ endif
 
 ifeq ($(CONFIG_DEVICE_CHAR), defined)
 objs += device_char.o
-objs-$(CONFIG_DEVICE_SHELL) += shell_char.o
+objs-$(CONFIG_DEVICE_SHELL_CHAR) += shell_char.o
 endif
 
 ifeq ($(CONFIG_DEVICE_TIMER), defined)
 objs += device_timer.o
-objs-$(CONFIG_DEVICE_SHELL) += shell_timer.o
+objs-$(CONFIG_DEVICE_SHELL_TIMER) += shell_timer.o
 endif
 
 objs-$(CONFIG_DEVICE_BLOCK) += device_block.o
 
 ifeq ($(CONFIG_DEVICE_I2C), defined)
 objs += device_i2c.o
-objs-$(CONFIG_DEVICE_SHELL) += shell_i2c.o
+objs-$(CONFIG_DEVICE_SHELL_I2C) += shell_i2c.o
 endif
 
 ifeq ($(CONFIG_DEVICE_SPI), defined)
 objs += device_spi.o
-objs-$(CONFIG_DEVICE_SHELL) += shell_spi.o
+objs-$(CONFIG_DEVICE_SHELL_SPI) += shell_spi.o
 endif
 
 objs-$(CONFIG_DEVICE_LCD) += device_lcd.o
@@ -56,12 +56,12 @@ endif
 
 ifeq ($(CONFIG_DEVICE_GPIO), defined)
 objs += device_gpio.o
-objs-$(CONFIG_DEVICE_SHELL) += shell_gpio.o
+objs-$(CONFIG_DEVICE_SHELL_GPIO) += shell_gpio.o
 endif
 
 ifeq ($(CONFIG_DEVICE_CLOCK), defined)
 objs += device_clock.o
-objs-$(CONFIG_DEVICE_SHELL) += shell_clock.o
+objs-$(CONFIG_DEVICE_SHELL_CLOCK) += shell_clock.o
 endif
 
 ifeq ($(CONFIG_DEVICE_MEM), defined)
@@ -73,17 +73,17 @@ objs-$(CONFIG_DEVICE_SHELL) += shell.o
 
 ifeq ($(CONFIG_DEVICE_PWM), defined)
 objs += device_pwm.o
-objs-$(CONFIG_DEVICE_SHELL) += shell_pwm.o
+objs-$(CONFIG_DEVICE_SHELL_PWM) += shell_pwm.o
 endif
 
 ifeq ($(CONFIG_DEVICE_CRYPTO), defined)
 objs += device_crypto.o
-objs-$(CONFIG_DEVICE_SHELL) += shell_crypto.o
+objs-$(CONFIG_DEVICE_SHELL_CRYPTO) += shell_crypto.o
 endif
 
 ifeq ($(CONFIG_DEVICE_UART), defined)
 objs += device_uart.o
-objs-$(CONFIG_DEVICE_SHELL) += shell_uart.o
+objs-$(CONFIG_DEVICE_SHELL_UART) += shell_uart.o
 endif
 
 ifeq ($(CONFIG_DEVICE_PERSIST), defined)

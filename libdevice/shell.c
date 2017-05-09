@@ -847,40 +847,40 @@ static TERMUI_CON_GROUP_DECL(dev_shell_subgroup) =
                    )
 #endif
   TERMUI_CON_GROUP_ENTRY(dev_driver_group, "driver")
-#ifdef CONFIG_DEVICE_CLOCK
+#ifdef CONFIG_DEVICE_SHELL_CLOCK
   TERMUI_CON_GROUP_ENTRY(dev_shell_clock_group, "clock")
 #endif
-#ifdef CONFIG_DEVICE_TIMER
+#ifdef CONFIG_DEVICE_SHELL_TIMER
   TERMUI_CON_GROUP_ENTRY(dev_shell_timer_group, "timer")
 #endif
 #ifdef CONFIG_DEVICE_MEM
   TERMUI_CON_GROUP_ENTRY(dev_shell_mem_group, "mem")
 #endif
-#ifdef CONFIG_DEVICE_PWM
+#ifdef CONFIG_DEVICE_SHELL_PWM
   TERMUI_CON_GROUP_ENTRY(dev_shell_pwm_group, "pwm")
 #endif
-#ifdef CONFIG_DEVICE_CRYPTO
+#ifdef CONFIG_DEVICE_SHELL_CRYPTO
   TERMUI_CON_GROUP_ENTRY(dev_shell_crypto_group, "crypto")
 #endif
-#ifdef CONFIG_DEVICE_I2C
+#ifdef CONFIG_DEVICE_SHELL_I2C
   TERMUI_CON_GROUP_ENTRY(dev_shell_i2c_group, "i2c")
 #endif
-#ifdef CONFIG_DEVICE_GPIO
+#ifdef CONFIG_DEVICE_SHELL_GPIO
   TERMUI_CON_GROUP_ENTRY(dev_shell_gpio_group, "gpio")
 #endif
 #ifdef CONFIG_DEVICE_RFPACKET
   //  TERMUI_CON_GROUP_ENTRY(dev_shell_rfpacket_group, "rfpacket")
 #endif
-#ifdef CONFIG_DEVICE_SPI
+#ifdef CONFIG_DEVICE_SHELL_SPI
   TERMUI_CON_GROUP_ENTRY(dev_shell_spi_ctrl_group, "spi")
 #endif
-#ifdef CONFIG_DEVICE_CHAR
+#ifdef CONFIG_DEVICE_SHELL_CHAR
   TERMUI_CON_GROUP_ENTRY(dev_shell_char_group, "char")
 #endif
 #ifdef CONFIG_DEVICE_ENUM
   TERMUI_CON_GROUP_ENTRY(dev_shell_enum_group, "enum")
 #endif
-#ifdef CONFIG_DEVICE_UART
+#ifdef CONFIG_DEVICE_SHELL_UART
   TERMUI_CON_GROUP_ENTRY(dev_shell_uart_group, "uart")
 #endif
 #if defined(CONFIG_DEVICE_VALIO_HWCLOCK)
