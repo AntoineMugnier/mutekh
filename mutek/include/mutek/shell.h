@@ -134,7 +134,7 @@ void shell_buffer_advertise(struct termui_console_s *con,
     NULL. The reference to the buffer must be released by calling the
     @ref shell_buffer_drop function.
 
-    The function return @tt NULL if the allocation failed.
+    The function return @tt NULL if the lookup failed.
     @see #TERMUI_CON_OPT_SHELL_BUFFER_GET_ENTRY
 */
 config_depend(CONFIG_MUTEK_SHELL_BUFFER)
@@ -181,9 +181,19 @@ struct shell_opt_buffer_s
 struct shell_opt_buffer_desc_s
 {
   struct termui_con_opts_s opt;
-  void *type;
+  const void *type;
   uint16_t offset;
 };
+
+/** @This calls @ref shell_buffer_new only if the @ref #
+    TERMUI_CON_OPT_SHELL_BUFFER_GET_ENTRY option has not parsed a
+    buffer. In either cases the buffer should be released by the
+    options cleanup handler. */
+config_depend(CONFIG_MUTEK_SHELL_BUFFER)
+void * shell_opt_buffer_new_if_null(struct shell_opt_buffer_s *b,
+                                    const struct termui_console_s *con,
+                                    size_t size, const char *prefix,
+                                    const void *type, bool_t nocopy);
 
 /** @internal */
 TERMUI_CON_PARSE_OPT_PROTOTYPE(shell_opt_buffer_raw_parse);

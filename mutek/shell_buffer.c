@@ -173,7 +173,7 @@ void * shell_buffer_get(const struct termui_console_s *con,
   LOCK_SPIN_IRQ(&sctx->lock);
   b = shell_buffer_pool_lookup(&sctx->bufs, name);
 
-  if (b->use)
+  if (b && b->use)
     b = NULL;
 
   LOCK_RELEASE_IRQ(&sctx->lock);
@@ -232,6 +232,22 @@ void shell_buffer_collect(const struct termui_console_s *con,
 #endif
 
 #ifdef CONFIG_MUTEK_SHELL_BUFFER
+
+void * shell_opt_buffer_new_if_null(struct shell_opt_buffer_s *b,
+                                    const struct termui_console_s *con,
+                                    size_t size, const char *prefix,
+                                    const void *type, bool_t nocopy)
+{
+  if (b->addr == NULL)
+    {
+      b->addr = shell_buffer_new(con, size, prefix, type, nocopy);
+      b->size = size;
+      b->buffered = 1;
+    }
+
+  return b->addr;
+}
+
 TERMUI_CON_PARSE_OPT_PROTOTYPE(shell_opt_buffer_get_parse)
 {
   struct shell_opt_buffer_desc_s *optd = (void*)opt;

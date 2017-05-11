@@ -121,6 +121,10 @@
                 __builtin_offsetof(struct struct_name, field) == 0)
 #endif
 
+#define STRUCT_DESCRIPTOR(struct_name, ...) \
+  __attribute__((weak))                     \
+  const char struct_name##_desc = 0 
+
 #define STRUCT_INHERIT(type_s, base_s, field)                           \
                                                                         \
 ALWAYS_INLINE struct base_s *                                           \

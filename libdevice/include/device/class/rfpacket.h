@@ -138,6 +138,8 @@ struct dev_rfpacket_rf_cfg_s
   uint32_t                      bw;
 };
 
+STRUCT_DESCRIPTOR(dev_rfpacket_rf_cfg_s);
+
 /** @This specifies the policy of fair TX */
 enum dev_rfpacket_fairtx_e
 {
@@ -215,6 +217,8 @@ STRUCT_INHERIT(dev_rfpacket_rf_cfg_lora_s, dev_rfpacket_rf_cfg_s, base);
 
 /***************************************** packet format config */
 
+ENUM_DESCRIPTOR(dev_rfpacket_format_e, strip:DEV_RFPACKET_, upper);
+
 enum dev_rfpacket_format_e
 {
   /* Sync word, 1 byte Len, Payload, CRC
@@ -250,6 +254,8 @@ struct dev_rfpacket_pk_cfg_s
   struct dev_rfpacket_cfg_cache_s cache;
 };
 
+STRUCT_DESCRIPTOR(dev_rfpacket_pk_cfg_s);
+
 struct dev_rfpacket_pk_cfg_basic_s
 {
   struct dev_rfpacket_pk_cfg_s  base;
@@ -282,12 +288,14 @@ struct dev_rfpacket_pk_cfg_basic_s
 
 STRUCT_INHERIT(dev_rfpacket_pk_cfg_basic_s, dev_rfpacket_pk_cfg_s, base);
 
+ENUM_DESCRIPTOR(dev_rfpacket_lora_encoding_e, strip:DEV_RFPACKET_, upper);
+
 enum dev_rfpacket_lora_encoding_e
 {
   DEV_RFPACKET_LORA_CR_45 = 1,
   DEV_RFPACKET_LORA_CR_46,
   DEV_RFPACKET_LORA_CR_47,
-  DEV_RFPACKET_LORA_CR_48,
+  DEV_RFPACKET_LORA_CR_48
 };
 
 struct dev_rfpacket_pk_cfg_lora_s
