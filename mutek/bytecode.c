@@ -940,7 +940,7 @@ bc_opcode_t bc_run_vm(struct bc_context_s *ctx)
                 {
                   if (op & 0xf)
                     *dst = (bc_reg_t)(uintptr_t)pc;
-                  pc = (uint16_t*)desc->code + x;
+                  pc = (uint16_t*)desc->code + (bc_sreg_t)x;
                   goto check_pc;
                 }
 	    }
@@ -953,7 +953,7 @@ bc_opcode_t bc_run_vm(struct bc_context_s *ctx)
 
       check_pc:
 #if defined(CONFIG_MUTEK_BYTECODE_SANDBOX) || !defined(CONFIG_RELEASE)
-        if (pc < (uint16_t*)desc->code || ((uintptr_t)pc & 1))
+        if (pc + 1 < (uint16_t*)desc->code || ((uintptr_t)pc & 1))
           goto err_pc;
 #endif
 	break;
