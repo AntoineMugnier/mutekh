@@ -116,7 +116,7 @@
     CMD_TOP_LINE(%0, 0)
     CMD_LEFT_COLUMN(%0, 0)
     CMD_FLIP_H(%0, 0)
-    CMD_FLIP_V(%0, 0)
+    CMD_FLIP_V(%0, 1)
     CMD_ADDRESSING_MODE(%0, PAGE)
 
     end
