@@ -238,6 +238,11 @@ sub out_or {
     return fmt1( $thisop, $thisop->{in}->[1], $thisop->{out}->[0] );
 }
 
+sub out_rand {
+    my ($thisop) = @_;
+    return fmt1( $thisop, $thisop->{out}->[0], $thisop->{out}->[0] );
+}
+
 sub out_xor {
     my ($thisop) = @_;
     return fmt1( $thisop, $thisop->{in}->[1], $thisop->{out}->[0] );

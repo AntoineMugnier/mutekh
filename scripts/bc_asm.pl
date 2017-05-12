@@ -234,6 +234,13 @@ sub parse_ccall
     push @{$thisop->{in}}, check_reg($thisop, 0);
 }
 
+sub parse_rand
+{
+    my $thisop = shift;
+
+    push @{$thisop->{out}}, check_reg($thisop, 0);
+}
+
 sub parse_alu1
 {
     my $thisop = shift;
@@ -956,6 +963,10 @@ our %asm = (
     'or32' => {
         words => 1, code => 0x4800, argscnt => 2,
         parse => \&parse_alu2, backend => ('or')
+    },
+    'rand32' => {
+        words => 1, code => 0x4800, argscnt => 1,
+        parse => \&parse_rand, backend => ('rand'),
     },
     'xor32' => {
         words => 1, code => 0x4900, argscnt => 2,

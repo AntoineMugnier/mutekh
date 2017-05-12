@@ -154,7 +154,7 @@ static const char * bc_opname(uint16_t op)
     { 0xff00, BC_OP_LTEQS << 8, "lteqs" },
     { 0xff00, BC_OP_ADD   << 8, "add" },
     { 0xff00, BC_OP_SUB   << 8, "sub", "neg" },
-    { 0xff00, BC_OP_OR    << 8, "or" },
+    { 0xff00, BC_OP_OR    << 8, "or", "rand" },
     { 0xff00, BC_OP_XOR   << 8, "xor", "ccall" },
     { 0xff00, BC_OP_AND   << 8, "and" },
     { 0xff00, BC_OP_ANDN  << 8, "andn", "not" },
@@ -647,7 +647,10 @@ static bool_t bc_run_alu(struct bc_context_s *ctx, uint16_t op)
     dst = (uint32_t)(dst * src);
     break;
   dispatch_OR:
-    dst = (uint32_t)(dst | src);
+    if (!o)
+      dst = rand();
+    else
+      dst = (uint32_t)(dst | src);
     break;
   dispatch_XOR:
     if (o)

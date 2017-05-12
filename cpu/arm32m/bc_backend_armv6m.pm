@@ -474,6 +474,18 @@ sub out_ccall {
     return $r;
 }
 
+sub parse_rand {
+    my ($thisop) = @_;
+    $thisop->{clobber} = $caller_saved;    # some vm working regs are caller saved
+}
+
+sub out_rand {
+    my ($thisop, $wo) = @_;
+
+    return "    bl rand\n".
+           "    movs $reg[$wo], r0\n";
+}
+
 sub out_shl {
     my ($thisop, $wo, $wi0, $wi1) = @_;
     return mov_op($wo, $wi0, $wi1, "lsls");

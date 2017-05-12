@@ -395,6 +395,18 @@ sub out_ccall {
            "    jalr $reg[$wi0]\n";
 }
 
+sub parse_rand {
+    my ($thisop) = @_;
+    $thisop->{clobber} = $caller_saved;
+}
+
+sub out_rand {
+    my ($thisop, $wo) = @_;
+
+    return "    jal rand\n".
+           "    move $reg[$wo], \$v0\n";
+}
+
 sub out_shl {
     my ($thisop, $wo, $wi0, $wi1) = @_;
     return "    sllv $reg[$wo], $reg[$wi0], $reg[$wi1]\n";

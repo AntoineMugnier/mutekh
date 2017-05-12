@@ -214,6 +214,7 @@
      @item @tt{swapN reg} @item Exchange bytes of a 16 bits or 32 bits values.
      @item @tt{swapNle reg} @item Exchange bytes only when running on a big endian processor, used to access little endian data in portable way.
      @item @tt{swapNbe reg} @item Exchange bytes only when running on a little endian processor, used to access big endian data in portable way.
+     @item @tt{rand32 reg} @item Set the register to a random value
    @end table
 
    The following comparison operations are available:

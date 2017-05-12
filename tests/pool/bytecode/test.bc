@@ -677,6 +677,8 @@ next12:
 
         prints	%2
 
+        rand32  %2
+
     // recursive factorial invocation
         mov	%13, %buf
         add8	%13, 120
