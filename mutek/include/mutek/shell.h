@@ -185,8 +185,8 @@ struct shell_opt_buffer_desc_s
   uint16_t offset;
 };
 
-/** @This calls @ref shell_buffer_new only if the @ref #
-    TERMUI_CON_OPT_SHELL_BUFFER_GET_ENTRY option has not parsed a
+/** @This calls @ref shell_buffer_new only if the @ref
+    #TERMUI_CON_OPT_SHELL_BUFFER_GET_ENTRY option has not parsed a
     buffer. In either cases the buffer should be released by the
     options cleanup handler. */
 config_depend(CONFIG_MUTEK_SHELL_BUFFER)

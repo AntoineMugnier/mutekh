@@ -281,7 +281,7 @@ struct dev_dma_rq_s
       untouched when the same request is submitted again. Only the @tt
       {mem.addr}, @tt {mem.size} and @tt {mem.stride} fields of the
       request descriptor are allowed to change between submissions
-      when not reset to @NULL. */
+      when not reset to @tt NULL. */
   void                          *cache_ptr;
 
   /** Array of transfer descriptors. The driver is allowed to modify
