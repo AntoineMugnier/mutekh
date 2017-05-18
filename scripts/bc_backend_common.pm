@@ -97,7 +97,7 @@ sub out_call8 {
 
 sub out_call32 {
     my ($thisop) = @_;
-    my $a = $thisop->{target}->{addr} - 1;
+    my $a = $thisop->{target}->{addr} / 2 - 1;
 
     main::warning($thisop, "`call8' could be used instead of `call32'.\n")
         if ($thisop->{disp} <= 127 && $thisop->{disp} > -128);
@@ -109,7 +109,7 @@ sub out_call32 {
 
 sub out_jmp32 {
     my ($thisop) = @_;
-    my $a = $thisop->{target}->{addr} - 1;
+    my $a = $thisop->{target}->{addr} / 2 - 1;
 
     main::warning($thisop, "`jmp8' could be used instead of `jmp32'.\n")
         if ($thisop->{disp} <= 127 && $thisop->{disp} > -128);
@@ -404,11 +404,5 @@ sub out_laddr {
     }
 
     return $res;
-}
-
-sub out_data {
-    my ($thisop) = @_;
-
-    return $word->( $thisop->{args}->[0] );
 }
 

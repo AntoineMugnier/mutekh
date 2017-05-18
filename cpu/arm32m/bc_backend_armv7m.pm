@@ -24,9 +24,7 @@ sub out_begin {
 	   # struct bc_descriptor_s
 	   "    .long 1f\n".
 	   "    .long _${main::bc_name}_bytecode\n".
-	   "    .byte 0x01\n".
-	   "    .byte 16\n".
-	   "    .short 0\n".
+	   "    .long $main::bcflags\n".
 
            "    .section .text\n".
            "    .code 16\n".

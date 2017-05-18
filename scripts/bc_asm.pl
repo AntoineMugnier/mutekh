@@ -10,6 +10,7 @@ our $backend_width = 0;		# 8 << 2 bits
 our $backend_name = "bytecode";
 our $bc_name = "mybytecode";
 our $fout = "bc.out";
+our $bcflags = 0;
 our $fheader;
 our $last_addr;
 our $modpath = $ENV{MUTEK_BYTECODE_PATH};
@@ -60,6 +61,9 @@ while (defined $ARGV[0]) {
 
 die "missing -w option\n" if !$backend_width;
 $defs{_SIZEOF_PTR} = 1 << $backend_width;
+
+our $le = ($main::backend_endian eq 'little');
+die unless $le or $main::backend_endian eq 'big';
 
 sub log2
 {
@@ -173,7 +177,7 @@ sub check_label
         $thisop->{args}->[$argidx] = "L$lbl";
     }
 
-    $thisop->{disp} = $l->{addr} - $thisop->{addr} - 1;
+    $thisop->{disp} = ($l->{addr} - $thisop->{addr}) / 2 - 1;
 
     $l->{used}++;
     return $l;
@@ -307,14 +311,80 @@ sub parse_cst
     check_num( $thisop, 1, 0, 0xffffffffffffffff >> (64 - (8 << $thisop->{width})) );
 }
 
+sub addr_data
+{
+    my ( $thisop, $addr ) = @_;
+    $thisop->{name} =~ /^[a-z]+(\d+)/;
+    my $w = $1 / 8;
+    $addr = (($addr - 1) | ($w - 1)) + 1 if $addr;
+
+    my $l = scalar @{$thisop->{args}};
+
+    return ( $addr, $l * $w );
+}
+
 sub parse_data
 {
     my $thisop = shift;
 
-    $thisop->{name} =~ /^[a-z]+(\d+)/;
-    $thisop->{width} = $1 ? log2($1) - 3 : 2;
+    $thisop->{name} =~ /^[a-z]+(\d+)(.e)?/;
+    my $w = log2($1) - 3;
+    my $l = scalar @{$thisop->{args}};
 
-    check_num( $thisop, 0, 0, 0xffffffffffffffff >> (64 - (8 << $thisop->{width})) );
+    if ( $2 ) {
+        $thisop->{endian} = $2;
+    } else {
+        $thisop->{endian} = $le ? 'le' : 'be';
+    }
+    $thisop->{width} = $w;
+
+    my @a;
+    for ( my $i = 0; $i < $l; $i++ ) {
+        push @a, check_num( $thisop, $i, 0, 0xffffffffffffffff >> (64 - (8 << $w)) );
+    }
+    $thisop->{data} = [ @a ];
+}
+
+sub addr_str1
+{
+    my ( $thisop, $addr ) = @_;
+
+    return ( $addr, 1 + length $thisop->{args}->[0] );
+}
+
+sub parse_strc
+{
+    my $thisop = shift;
+
+    $thisop->{width} = 0;
+    my $s = $thisop->{args}->[0];
+    $thisop->{data} = [ unpack("C*", $s), 0 ];
+}
+
+sub parse_strp
+{
+    my $thisop = shift;
+
+    $thisop->{width} = 0;
+    my $s = $thisop->{args}->[0];
+    my $l = length $s;
+    error($thisop, "pascal string longer than 255 characters") if $l > 255;
+    $thisop->{data} = [ $l, unpack("C*", $s) ];
+}
+
+sub addr_str
+{
+    my ( $thisop, $addr ) = @_;
+
+    return ( $addr, length $thisop->{args}->[0] );
+}
+
+sub parse_str
+{
+    my $thisop = shift;
+
+    $thisop->{width} = 0;
+    $thisop->{data} = [ unpack("C*", $thisop->{args}->[0]) ];
 }
 
 sub parse_laddr
@@ -435,9 +505,6 @@ sub parse_loop
         $thisop->{wbout} = 1;
     }
 }
-
-our $le = ($main::backend_endian eq 'little');
-die unless $le or $main::backend_endian eq 'big';
 
 our %packops = (
     'pack8' =>      'bc_pack_op8',
@@ -617,7 +684,11 @@ my @custom;
 
 sub args_split
 {
-    return map { s/^\s*|\s*$//g; $_ } split(/,/, shift);
+    return map {
+        s/^\s*|\s*$//g;
+        s/^"(.*)"$/$1/g;
+        $_
+    } split(/,/, shift);
 }
 
 sub regs_mask_parse
@@ -751,6 +822,12 @@ sub parse
             $backend_name = $1;
             next;
         }
+        if ($l =~ /^\s*\.sandbox\s*$/) {
+            error($loc, "sandboxed bytecode must be little endian\n") if !$le;
+            error($loc, "sandboxed bytecode must be 32 bits\n") if $backend_width != 2;
+            $bcflags |= 0x02000000;
+            next;
+        }
         if ($l =~ /^\s*\.name\s+(\w+)\s*$/) {
             $bc_name = $1;
             next;
@@ -769,7 +846,7 @@ sub parse
         if ($l =~ /^\s*\.(\w+)/) {
             error($loc, "bad directive syntax `.$1'\n");
         }
-        if ($l =~ /^\s*(\.?\w+)\b\s*(.*?)\s*$/) {
+        if ($l =~ /^\s*(\w+)\b\s*(.*?)\s*$/) {
             my $opname = $1;
             my @args = args_split($2);
             my $thisop = {
@@ -1097,9 +1174,25 @@ our %asm = (
         parse => \&parse_gaddr, backend => ('gaddr'),
         nocond => 1
     },
-    'data16' => {
-        words => 1, argscnt => 1,
+    _multi_keys( 'data8' => 'data16' => 'data16le' => 'data16be' =>
+                 'data32' => 'data32le' => 'data32be' => {
+        addr => \&addr_data,
         parse => \&parse_data, backend => ('data'),
+        op_data => 1
+    }),
+    'str' => {
+        addr => \&addr_str, argscnt => 1,
+        parse => \&parse_str, backend => ('data'),
+        op_data => 1
+    },
+    'strc' => {
+        addr => \&addr_str1, argscnt => 1,
+        parse => \&parse_strc, backend => ('data'),
+        op_data => 1
+    },
+    'strp' => {
+        addr => \&addr_str1, argscnt => 1,
+        parse => \&parse_strp, backend => ('data'),
         op_data => 1
     },
 );
@@ -1163,7 +1256,6 @@ sub parse_args
 	    if $prevop && $prevop->{op}->{op_cond} && ($op->{op_cond} || $op->{nocond});
 
 	$thisop->{op} = $op;
-	$thisop->{addr} = $addr;
 
         # bit mask of arguments which require a register write back
         # rather than a register load, updated by the backend parse
@@ -1186,12 +1278,23 @@ sub parse_args
         # bit mask of clobbered cpu registers
         $thisop->{clobber} = 0;
 
+        my $bytes;
+        if ( defined $op->{words} ) {
+            $addr = (($addr - 1) | 1) + 1 if $addr;
+            $bytes = $op->{words} * 2;
+        } else {
+            ( $addr, $bytes ) = $op->{addr}->( $thisop, $addr );
+        }
+
+	$thisop->{addr} = $addr;
         $srcaddr{$addr} = $thisop;
         foreach my $l ( @{$thisop->{labels}} ) {
 	    $l->{addr} = $addr;
 	}
 
-	$addr += $op->{words} + $thisop->{words};
+        $thisop->{bytes} = $bytes;
+        $addr += $bytes;
+
         $prevop = $thisop;
     }
 
@@ -1199,6 +1302,7 @@ sub parse_args
         if ( $prevop && $prevop->{op}->{op_cond} );
 
     $last_addr = $addr;
+    $bcflags |= $addr;
 
     foreach my $thisop (@src) {
 
@@ -1256,6 +1360,29 @@ sub write_addr
     }
 
     close( OUT );
+}
+
+sub repack_data
+{
+    my $thisop = shift;
+
+    my @s = @{$thisop->{data}};
+
+    if ( $thisop->{width} == 1 ) {
+        if ( $thisop->{endian} eq 'le' ) {
+            @s = unpack('C*', pack('v*', @s) );
+        } else {
+            @s = unpack('C*', pack('n*', @s) );
+        }
+    } elsif ( $thisop->{width} == 2 ) {
+        if ( $thisop->{endian} eq 'le' ) {
+            @s = unpack('C*', pack('V*', @s) );
+        } else {
+            @s = unpack('C*', pack('N*', @s) );
+        }
+    }
+
+    return @s;
 }
 
 sub write_header
@@ -1332,6 +1459,10 @@ sub write_asm
     my @wfifo;			# cpu register allocation fifo
 
     die unless $wcnt >= 4;
+
+    die "This backend can not emit sandboxed bytecode.\n"
+        if ($bcflags & 0x02000000);
+    $bcflags |= 0x01000000;     # native flag
 
     open(OUT, ">$fout") || die "unable to open output file `$fout'.\n";
 
@@ -1774,9 +1905,9 @@ sub check_regs
 
              # explore branch target
              if ( $op->{op_cond} ) {
-                 my $nextpc = $pc + $op->{words};
+                 my $nextpc = $pc + $thisop->{bytes};
                  if ( my $nextop = $srcaddr{$nextpc} ) {
-                     my ( $rd, $wr ) = $exc->( $nextpc + $nextop->{op}->{words}, [ @$regs ], $func, $thisop );
+                     my ( $rd, $wr ) = $exc->( $nextpc + $nextop->{bytes}, [ @$regs ], $func, $thisop );
                      $rd_mask |= $rd;
                      $wr_mask |= $wr;
                  } else {
@@ -1802,7 +1933,7 @@ sub check_regs
                  }
              }
 
-             $pc += $op->{words};
+             $pc += $thisop->{bytes};
              $last = $thisop;
          }
 

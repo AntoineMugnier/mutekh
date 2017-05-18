@@ -308,7 +308,6 @@
      @item @tt{laddr[16,32] reg, label} @item Set a register to the address of a bytecode label.
      @item @tt{gaddr reg, label} @item Set a register to the address of a
      global symbol. Bytecode in compiled form will not be portable.
-     @item @tt{.data16 value} @item Dump a 16 bits word value in the program.
    @end table
 
    Some instructions are provided to handle packing of some register values
@@ -349,6 +348,16 @@
      @item @tt{unpack32be reg_1st, reg_count, byte_count} @item Converts an array of bytes to
        multiple vm register values. The value of a single register is loaded from 4 bytes
        of the array, with the most significant byte stored first.
+   @end table
+
+   The following instructions are available to dump raw data in the program:
+   @table 2
+     @item @tt{data8 value, ...} @item Dump at least one 8 bits word value in the program.
+     @item @tt{data[16,32] value, ...} @item Dump at least one aligned multi-bytes value with platform endianess.
+     @item @tt{data[16,32][le,be] value, ...} @item Dump at least one aligned multi-bytes value with specified endianess.
+     @item @tt{str "string"} @item Dump a character string.
+     @item @tt{strc "string"} @item Dump a null terminated string.
+     @item @tt{strp "string"} @item Dump a pascal string (with a leading length byte).
    @end table
 
    @end section
@@ -421,7 +430,6 @@
     @item ld[8,16,32,64]e     @item r, ra, +/-v   @item @tt{0111 0ss1 aaaa rrrr, v} @item  3
     @item st[8,16,32,64]e     @item r, ra, +/-v   @item @tt{0111 1ss1 aaaa rrrr, v} @item  3
 
-    @item .data16             @item v             @item @tt{v}                      @item
 
     @item custom              @item               @item @tt{1--- ---- ---- ----} @item
    @end table
@@ -443,7 +451,9 @@ typedef int64_t bc_sreg_t;
 /** @internal */
 enum bc_flags_s
 {
-  BC_FLAGS_NATIVE = 0x0001,
+  BC_FLAGS_NATIVE   = 0x01000000,
+  BC_FLAGS_SANDBOX  = 0x02000000,
+  BC_FLAGS_SIZEMASK = 0x00ffffff,
 };
 
 struct bc_context_s;
@@ -459,12 +469,11 @@ struct bc_descriptor_s
 {
   const void *code;
   bc_run_t *run;
-  uint16_t flags;
-  uint16_t op_count;
+  uint32_t flags;
 };
 
 /** @This defines the virtual machine context.
-    @internalcontent */
+    @internalmembers */
 struct bc_context_s
 {
   bc_reg_t v[16];
@@ -535,38 +544,51 @@ void bc_init_sandbox(struct bc_context_s *ctx, const struct bc_descriptor_s *des
                      void *data_base, uint_fast8_t data_addr_bits,
                      uint_fast32_t max_cycles);
 
+/** @internal */
+config_depend(CONFIG_MUTEK_BYTECODE_SANDBOX)
+uintptr_t bc_translate_op_addr(const struct bc_descriptor_s * __restrict__ desc,
+                               struct bc_context_s *ctx, bc_reg_t addr,
+                               uint_fast32_t width, uint8_t nocode);
+
 /** @This translates a data address from a sandboxed virtual machine to
     an accessible address. This returns 0 if the address is not valid
     inside the sandbox. */
-config_depend(CONFIG_MUTEK_BYTECODE_SANDBOX)
-uintptr_t bc_translate_addr(struct bc_context_s *ctx, bc_reg_t addr, uint_fast32_t width);
+ALWAYS_INLINE void *
+bc_translate_addr(struct bc_context_s *ctx, bc_reg_t addr, uint_fast32_t width)
+{
+#ifdef CONFIG_MUTEK_BYTECODE_SANDBOX
+  if (ctx->sandbox)
+    return (void*)bc_translate_op_addr(ctx->desc, ctx, addr, width, 0);
+#endif
+  return (void*)addr;
+}
 
 /** @This translates an address to a single @ref uint8_t from a
     sandboxed virtual machine to an accessible pointer. This returns
     @tt NULL if the address is not valid inside the sandbox. */
-config_depend_alwaysinline(CONFIG_MUTEK_BYTECODE_SANDBOX,
-uint8_t * bc_translate_8(struct bc_context_s *ctx, bc_reg_t addr),
+ALWAYS_INLINE uint8_t *
+bc_translate_8(struct bc_context_s *ctx, bc_reg_t addr)
 {
   return (uint8_t*)bc_translate_addr(ctx, addr, 1);
-});
+}
 
 /** @This translates an address to a single @ref uint16_t from a
     sandboxed virtual machine to an accessible pointer. This returns
     @tt NULL if the address is not valid inside the sandbox. */
-config_depend_alwaysinline(CONFIG_MUTEK_BYTECODE_SANDBOX,
-uint16_t * bc_translate_16(struct bc_context_s *ctx, bc_reg_t addr),
+ALWAYS_INLINE uint16_t *
+bc_translate_16(struct bc_context_s *ctx, bc_reg_t addr)
 {
   return (uint16_t*)bc_translate_addr(ctx, addr, 2);
-});
+}
 
 /** @This translates an address to a single @ref uint32_t from a
     sandboxed virtual machine to an accessible pointer. This returns
     @tt NULL if the address is not valid inside the sandbox. */
-config_depend_alwaysinline(CONFIG_MUTEK_BYTECODE_SANDBOX,
-uint32_t * bc_translate_32(struct bc_context_s *ctx, bc_reg_t addr),
+ALWAYS_INLINE uint32_t *
+bc_translate_32(struct bc_context_s *ctx, bc_reg_t addr)
 {
   return (uint32_t*)bc_translate_addr(ctx, addr, 4);
-});
+}
 
 /** @This initializes a bytecode descriptor from a bytecode loadable
     blob. The format of the blob is:

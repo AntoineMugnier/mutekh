@@ -18,9 +18,7 @@ sub out_begin {
 	   # struct bc_descriptor_s
 	   "    .long 1f\n".
 	   "    .long _${main::bc_name}_bytecode\n".
-	   "    .byte 0x01\n".
-	   "    .byte 16\n".
-	   "    .short 0\n".
+	   "    .long $main::bcflags\n".
 
            "    .section .text\n".
            "    .code 16\n".
@@ -41,7 +39,7 @@ sub out_begin {
 }
 
 sub out_eof {
-    return "    movs r0, #0\n".
+    return "    .balign 4\n".
            "Lbytecode_end:\n".
            "    pop    {r4, r5, r6, r7, pc}\n".
            "    .endfunc\n".
@@ -784,8 +782,18 @@ sub out_laddr {
 
 sub out_data {
     my ($thisop) = @_;
-    my $x = $thisop->{args}->[0];
-    return "    .short $x\n";
+
+    my $r;
+
+    if ($thisop->{width}) {
+        $r = sprintf("    .balign %u ;", 1 << $thisop->{width});
+    }
+
+    $r .= join('', map {
+                      sprintf("    .byte 0x%02x ;", $_);
+                    } main::repack_data( $thisop ) )."\n";
+
+    return $r;
 }
 
 sub write {

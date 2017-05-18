@@ -17,7 +17,8 @@ deps = [
     "mutek/bytecode.c",
     "mutek/include/mutek/bytecode.h",
     "scripts/bc_asm.pl",
-    "scripts/bc_backend_bytecode.pm"
+    "scripts/bc_backend_bytecode.pm",
+    "scripts/bc_backend_common.pm"
 ]
 
 env_list = [

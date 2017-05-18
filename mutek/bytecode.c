@@ -57,15 +57,15 @@ bc_load(struct bc_descriptor_s *desc,
   if (len < /* header */ 4)
     return -EINVAL;
 
-  size_t count = endian_le16_na_load(blob + 2);
+  uint32_t flags = endian_le32_na_load(blob);
+  size_t bytes = flags & BC_FLAGS_SIZEMASK;
 
-  if (len < /* header */ 4 + count * 2)
+  if (len < /* header */ 4 + bytes)
     return -EINVAL;
 
   desc->code = blob + 4;
   desc->run = &bc_run_vm;
-  desc->flags = endian_le16_na_load(blob);
-  desc->op_count = count;
+  desc->flags = flags;
 
   return 0;
 }
@@ -87,6 +87,7 @@ bc_init(struct bc_context_s *ctx,
   ctx->trace = 0;
   ctx->trace_regs = 0;
 #endif
+  return 0;
 }
 
 #ifdef CONFIG_MUTEK_BYTECODE_SANDBOX
@@ -206,11 +207,13 @@ static void bc_dump_(const struct bc_context_s *ctx, const uint16_t *pc, bool_t 
 # endif
     {
 # ifdef CONFIG_MUTEK_BYTECODE_VM
+      const void *code = ctx->desc->code;
+      size_t size = ctx->desc->flags & BC_FLAGS_SIZEMASK;
 
-      printk("bytecode: pc=%p (%u)", pc, pc - (uint16_t*)ctx->desc->code);
+      printk("bytecode: pc=%p (%u)", pc, pc - (uint16_t*)code);
 
-      if (pc >= (uint16_t*)ctx->desc->code &&
-          pc < (uint16_t*)ctx->desc->code + ctx->desc->op_count &&
+      if (pc >= (uint16_t*)code &&
+          (uint8_t*)pc < (uint8_t*)code + size &&
           !((uintptr_t)pc & 1))
         {
           uint16_t op = endian_le16(*pc);
@@ -487,7 +490,7 @@ typedef int16_t bs_dispatch_t;
 
 #ifdef CONFIG_MUTEK_BYTECODE_SANDBOX
 
-static inline uintptr_t
+inline uintptr_t
 bc_translate_op_addr(const struct bc_descriptor_s * __restrict__ desc,
                      struct bc_context_s *ctx, bc_reg_t addr,
                      uint_fast32_t width, uint8_t nocode)
@@ -503,7 +506,8 @@ bc_translate_op_addr(const struct bc_descriptor_s * __restrict__ desc,
       if (nocode)
         return 0;
 
-      if (addr + width > desc->op_count * 2)
+      size_t size = desc->flags & BC_FLAGS_SIZEMASK;
+      if (addr + width > size)
         return 0;
 
       /* address translation */
@@ -516,12 +520,6 @@ bc_translate_op_addr(const struct bc_descriptor_s * __restrict__ desc,
   return addr;
 }
 
-uintptr_t
-bc_translate_addr(struct bc_context_s *ctx, bc_reg_t addr, uint_fast32_t width)
-{
-  assert(ctx->sandbox);
-  return bc_translate_op_addr(ctx->desc, ctx, addr, width, 0);
-}
 #endif
 
 __attribute__((noinline))
@@ -530,7 +528,7 @@ static uint_fast8_t bc_run_ldst(const struct bc_descriptor_s * __restrict__ desc
                                 uint16_t op)
 {
   dispatch_begin:;
-  bc_reg_t *dst = &ctx->v[op & 0xf];
+  bc_reg_t *dst = &ctx->v[op & 0xf], d = *dst;
   op >>= 4;
   bc_reg_t *addrp = &ctx->v[op & 0xf];
   uintptr_t addr = *addrp;
@@ -579,32 +577,56 @@ static uint_fast8_t bc_run_ldst(const struct bc_descriptor_s * __restrict__ desc
     BC_DISPATCH_GOTO(op & 7);
 
   dispatch_LD8:
-    *dst = *(uint8_t*)addr;
+    d = *(uint8_t*)addr;
     break;
   dispatch_LD16:
-    *dst = *(uint16_t*)addr;
+    d = *(uint16_t*)addr;
+#ifdef CONFIG_MUTEK_BYTECODE_SANDBOX
+    if (ctx->sandbox)
+      d = endian_le16(d);
+#endif
     break;
   dispatch_LD32:
-    *dst = *(uint32_t*)addr;
+    d = *(uint32_t*)addr;
+#ifdef CONFIG_MUTEK_BYTECODE_SANDBOX
+    if (ctx->sandbox)
+      d = endian_le32(d);
+#endif
     break;
   dispatch_LD64:
-    *dst = *(uint64_t*)addr;
-    BC_CLAMP32(*dst);
+#ifdef CONFIG_MUTEK_BYTECODE_SANDBOX
+    if (ctx->sandbox)
+      return -1;
+#endif
+    d = *(uint64_t*)addr;
     break;
   dispatch_ST8:
-    *(uint8_t*)addr = *dst;
-    break;
+    *(uint8_t*)addr = d;
+    return 0;
   dispatch_ST16:
-    *(uint16_t*)addr = *dst;
-    break;
+#ifdef CONFIG_MUTEK_BYTECODE_SANDBOX
+    if (ctx->sandbox)
+      d = endian_le16(d);
+#endif
+    *(uint16_t*)addr = d;
+    return 0;
   dispatch_ST32:
-    *(uint32_t*)addr = *dst;
-    break;
+#ifdef CONFIG_MUTEK_BYTECODE_SANDBOX
+    if (ctx->sandbox)
+      d = endian_le32(d);
+#endif
+    *(uint32_t*)addr = d;
+    return 0;
   dispatch_ST64:
-    *(uint64_t*)addr = *dst;
-    break;
+#ifdef CONFIG_MUTEK_BYTECODE_SANDBOX
+    if (ctx->sandbox)
+      return -1;
+#endif
+    *(uint64_t*)addr = d;
+    return 0;
   } while (0);
 
+  *dst = d;
   return 0;
 }
 
@@ -712,16 +734,22 @@ bc_opcode_t bc_run_vm(struct bc_context_s *ctx)
   uint16_t op = 0;
 #ifdef CONFIG_MUTEK_BYTECODE_SANDBOX
   int_fast32_t max_cycles = ctx->max_cycles;
-#endif
 
   if (desc->flags & BC_FLAGS_NATIVE)
     return 3;
+  if (!!(desc->flags & BC_FLAGS_SANDBOX) ^ ctx->sandbox)
+    return 3;
+#else
+  if (desc->flags & (BC_FLAGS_SANDBOX | BC_FLAGS_NATIVE))
+    return 3;
+#endif
 
   for (;; pc++)
     {
 #if defined(CONFIG_MUTEK_BYTECODE_SANDBOX) || !defined(CONFIG_RELEASE)
+      size_t size = desc->flags & BC_FLAGS_SIZEMASK;
+      uint16_t *code_end = (uint16_t*)desc->code + (size >> 1);
       /* check pc upper bound */
-      uint16_t *code_end = (uint16_t*)desc->code + desc->op_count;
       if (pc + 1 > code_end)
         goto err_pc;
 #endif
@@ -930,7 +958,6 @@ bc_opcode_t bc_run_vm(struct bc_context_s *ctx)
                   x <<= ((op & 0x00e0) >> 2);
                   if (!(op & 0x0010))
                     {
-                      x = x * 2; /* BC_LADDR */
 #ifdef CONFIG_MUTEK_BYTECODE_SANDBOX
                       if (!ctx->sandbox)
 #endif

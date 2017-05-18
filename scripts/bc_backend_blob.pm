@@ -11,6 +11,12 @@ $bc_backend_common::word = sub
     return pack("v", $w);
 };
 
+sub out_data {
+    my ($thisop) = @_;
+
+    return pack("C*", main::repack_data( $thisop ) );
+}
+
 sub out_gaddr {
     my ($thisop) = @_;
 
@@ -22,11 +28,22 @@ sub write {
 
     open(OUT, ">$main::fout") || die "unable to open output file `$main::fout'.\n";
 
-    print OUT pack( "vv", 0, $main::last_addr );
+    print OUT pack( "V", $main::bcflags );
+    my $addr = 0;
 
     foreach my $thisop (@main::src) {
+
+        if ( my $pad = $addr < $thisop->{addr} ) {
+            print OUT pack("C", 0) x $pad;
+        } elsif ( $addr > $thisop->{addr} ) {
+            die;
+        }
+
         my $hname = 'out_'.$thisop->{op}->{backend};
+
         print OUT $this->can( $hname )->( $thisop );
+
+        $addr += $thisop->{bytes};
     }
 
     close( OUT );

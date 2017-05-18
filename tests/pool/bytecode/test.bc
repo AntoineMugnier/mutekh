@@ -9,6 +9,9 @@
 
 //	.global %0 buf
 	.const %0 buf
+#ifdef CONFIG_MUTEK_BYTECODE_SANDBOX
+       .sandbox
+#endif
 
 test_bytecode_entry:
 	.entry %1
