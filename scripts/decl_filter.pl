@@ -109,7 +109,7 @@ sub split_input
       }
 
       $loc = "$file:$line";
-      if ( $file =~ /\.[ch]$/ ) {
+      if ( $file =~ /\.[cht]$/ ) {
           $cdecl_code .= $str;
       } else {
           push @asm_code, $str;
