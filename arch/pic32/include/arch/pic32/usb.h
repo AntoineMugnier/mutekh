@@ -3,10 +3,7 @@
 ***************************************/
 
 /*
-   bfgen -o cdefs                                                              \
-     -O pic32_usb.h                                                            \
-     cdefs_use_reg_mask=1 cdefs_use_field_setval=1                             \
-     -I pic32_usb.bf                    
+   bfgen -o cdefs cdefs_use_reg_mask=1 cdefs_use_field_setval=1
 */
 
 #ifndef _PIC32_USB_BFGEN_DEFS_
@@ -418,6 +415,22 @@
   #define PIC32_USB_LPMR2_LPFADDR(v)               ((v) << 8)
   #define PIC32_USB_LPMR2_LPFADDR_SET(x, v)        do { (x) = (((x) & ~0x7f00) | ((v) << 8)); } while(0)
   #define PIC32_USB_LPMR2_LPFADDR_GET(x)           (((x) >> 8) & 0x7f)
+
+#define PIC32_USB_CRCON_ADDR                         0xfffa4000
+#define PIC32_USB_CRCON_MASK                         0x070003ff
+  #define PIC32_USB_CRCON_USBWKUPEN                0x00000001
+  #define PIC32_USB_CRCON_USBRIE                   0x00000002
+  #define PIC32_USB_CRCON_USBIE                    0x00000004
+  #define PIC32_USB_CRCON_SENDMONEN                0x00000008
+  #define PIC32_USB_CRCON_BSVALMONEN               0x00000010
+  #define PIC32_USB_CRCON_ASVALMONEN               0x00000020
+  #define PIC32_USB_CRCON_VBUSMONEN                0x00000040
+  #define PIC32_USB_CRCON_PHYIDEN                  0x00000080
+  #define PIC32_USB_CRCON_USBIDVAL                 0x00000100
+  #define PIC32_USB_CRCON_USBIDOVEN                0x00000200
+  #define PIC32_USB_CRCON_USBWK                    0x01000000
+  #define PIC32_USB_CRCON_USBRF                    0x02000000
+  #define PIC32_USB_CRCON_USBIF                    0x04000000
 
 #endif
 

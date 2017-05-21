@@ -113,7 +113,7 @@
     #define PIC32_CONFIG_DEVCFG1_OSC_SEL_FRC0        0x00000000
 /** SPLL */
     #define PIC32_CONFIG_DEVCFG1_OSC_SEL_SPLL        0x00000001
-/** POSC (HS, EC) */
+/** POSC (HS, XT, EC) */
     #define PIC32_CONFIG_DEVCFG1_OSC_SEL_POSC        0x00000002
 /** SOSC */
     #define PIC32_CONFIG_DEVCFG1_OSC_SEL_SOSC        0x00000004
@@ -140,9 +140,9 @@
   #define PIC32_CONFIG_DEVCFG1_POSC_SET(x, v)      do { (x) = (((x) & ~0x300) | ((PIC32_CONFIG_DEVCFG1_POSC_##v) << 8)); } while(0)
   #define PIC32_CONFIG_DEVCFG1_POSC_SETVAL(x, v)   do { (x) = (((x) & ~0x300) | ((v) << 8)); } while(0)
   #define PIC32_CONFIG_DEVCFG1_POSC_GET(x)         (((x) >> 8) & 0x3)
-/** External clock pin */
+/** External clock */
     #define PIC32_CONFIG_DEVCFG1_POSC_EC             0x00000000
-/** External oscillator */
+/** High speed crystal */
     #define PIC32_CONFIG_DEVCFG1_POSC_HS             0x00000002
 /** Disabled */
     #define PIC32_CONFIG_DEVCFG1_POSC_DISABLED       0x00000003

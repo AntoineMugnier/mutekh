@@ -52,6 +52,7 @@ void pic32_clk_init(void)
   if (x & PIC32_CLOCK_CTRL_CLKLOCK)
     printk("Warning: Clock configuration can not be modified\n");
 
+#if 0
   x = PIC32_CLOCK_CTRL_NOSC(FRC) |
       PIC32_CLOCK_CTRL_FRCDIV(DIV1) |
       PIC32_CLOCK_CTRL_OSWEN;
@@ -85,6 +86,7 @@ void pic32_clk_init(void)
       if (!(x & PIC32_CLOCK_CTRL_OSWEN))
         break;
     }
+#endif
 
   /* Enable Peripheral bus clock @ 200 MHz for PB7 and @100 MHz for others clocks */
 

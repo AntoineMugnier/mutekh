@@ -252,7 +252,7 @@ $$($(1)_STAMP)-patch: $$($(1)_DIR)
         # try to fetch a patch
 	wget $$(WGET_OPTS) $$(PATCH_URL)/$(1)-$$($(1)_VER)-latest.diff.gz -O $$($(1)_PATCH).gz || rm -f $$($(1)_PATCH).gz
         # test if a patch is available and apply
-	( cd $$($(1)_DIR) ; cat $$($(1)_PATCH).gz | gunzip | patch -p 0 --merge )
+	( cd $$($(1)_DIR) ; cat $$($(1)_PATCH).gz | gunzip | patch -p 0 )
 	touch $$@
 
 $$($(1)_STAMP)-$$(TARGET)-conf: $$($(1)_DIR) $$($(1)_STAMP)-patch $$($(1)_DEPS)
@@ -292,7 +292,7 @@ $$($(1)_STAMP)-patch: $$($(1)_DIR)
         # try to fetch a patch
 	wget $$(WGET_OPTS) $$(PATCH_URL)/$(1)-$$($(1)_VER)-latest.diff.gz -O $$($(1)_PATCH).gz || rm -f $$($(1)_PATCH).gz
         # test is a patch is available and apply
-	( cd $$($(1)_DIR) ; cat $$($(1)_PATCH).gz | gunzip | patch -p 0 --merge )
+	( cd $$($(1)_DIR) ; cat $$($(1)_PATCH).gz | gunzip | patch -p 0 )
 	touch $$@
 
 $$($(1)_TGZ): $$($(1)_STAMP)-wget

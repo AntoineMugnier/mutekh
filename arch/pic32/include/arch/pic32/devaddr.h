@@ -5,6 +5,7 @@
 #define PIC32_GPIO_ADDR 0xBF800000
 #define PIC32_EMAC_ADDR 0xBF882000
 #define PIC32_CMU_ADDR 0xBF801200
+#define PIC32_SPI_ADDR(x) (0xBF821000 + (((x) - 1) << 9))
 #define PIC32_UART_ADDR(x) (0xBF822000 + (((x) - 1) << 9))
 #define PIC32_SYSKEY_ADDR 0xBF800030
 

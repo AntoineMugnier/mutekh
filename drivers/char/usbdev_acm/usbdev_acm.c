@@ -58,9 +58,9 @@
 
 */
 
-#define USBDEV_SERV_CHAR_BUFFER_SIZE 128
 /* Bulk endpoint max packet size */
-#define USBDEV_SERV_CHAR_BULK_SIZE 64
+#define USBDEV_SERV_CHAR_BULK_SIZE 512
+#define USBDEV_SERV_CHAR_BUFFER_SIZE (USBDEV_SERV_CHAR_BULK_SIZE * 2)
 
 #define USBDEV_SERV_CHAR_INTF_CTRL 0
 #define USBDEV_SERV_CHAR_INTF_DATA 1
@@ -157,7 +157,7 @@ static struct usb_endpoint_descriptor_s ep_irq_in =
   .bEndpointAddress = USB_EP_IN | 1, 
   .bmAttributes = USB_EP_INTERRUPT,
   .wMaxPacketSize = 8,
-  .bInterval = 0xFF
+  .bInterval = 0x8,
 };
 
 static const struct usbdev_interface_default_s interface_cdc_ctrl =

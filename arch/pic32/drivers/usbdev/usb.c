@@ -661,6 +661,12 @@ static void pic32_usb_reset_device(struct device_s *dev)
       PIC32_USB_CS2_DISCONIE;
 
   cpu_mem_write_32(pv->addr + PIC32_USB_CS2_ADDR, endian_le32(x));
+
+  cpu_mem_write_32(pv->addr + PIC32_USB_CRCON_ADDR,
+                   endian_le32(0
+                               | PIC32_USB_CRCON_USBIE
+                               | PIC32_USB_CRCON_USBWKUPEN
+                               ));
 }
 
 static void pic32_usbdev_data_in_end(struct pic32_usbdev_private_s *pv, uint8_t idx)
@@ -857,7 +863,7 @@ static DEV_IRQ_SRC_PROCESS(pic32_usb_irq)
       irq0 = endian_le32(cpu_mem_read_32(pv->addr + PIC32_USB_CS0_ADDR));
       irq1 = endian_le32(cpu_mem_read_32(pv->addr + PIC32_USB_CS1_ADDR));
       irq2 = endian_le32(cpu_mem_read_32(pv->addr + PIC32_USB_CS2_ADDR));
-
+      
       irqe = irq2 & (irq2 >> 8) & (0xFF << 16);
       irqi = ((irq0 & irq1) >> 16) & 0xFF;
       irqo = (irq2 & irq1 & 0xFF);

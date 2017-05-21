@@ -131,7 +131,7 @@ static DEV_IRQ_SRC_PROCESS(pic32_icu_source_process)
       uint32_t msk = endian_le32(cpu_mem_read_32(pv->addr + PIC32_ICU_IEC_ADDR(vnbr/32)));
       if (!(msk & PIC32_ICU_IEC_EN(vnbr%32)))
         return;
-
+      
       struct dev_irq_sink_s *sink = pv->sinks + vnbr;
 
       if (sink->icu_pv & (DEV_IRQ_SENSE_RISING_EDGE | DEV_IRQ_SENSE_FALLING_EDGE))
