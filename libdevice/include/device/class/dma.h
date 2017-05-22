@@ -292,7 +292,7 @@ struct dev_dma_rq_s
 
 GCT_CONTAINER_TYPES(dev_dma_queue, struct dev_dma_rq_s *, queue_entry);
 GCT_CONTAINER_FCNS(dev_dma_queue, static inline, dev_dma_queue,
-                   init, destroy, pushback, pop, isempty, head);
+                   init, destroy, pushback, remove, isempty, head);
 
 /** @This declare a @ref dev_dma_rq_s object type with an embedded
     array of @ref dev_dma_desc_s at the end. */

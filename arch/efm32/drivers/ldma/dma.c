@@ -690,31 +690,19 @@ static DEV_DMA_CANCEL(efm32_dma_cancel)
 {
   struct device_s *dev = accessor->dev;
   struct efm32_dma_context_s *pv = dev->drv_pv;
-  struct dev_dma_rq_s * crq = NULL;
   error_t err = -EBUSY;
 
   LOCK_SPIN_IRQ(&dev->lock);
 
   switch (rq->drv_pv)
   {
-    case EFR32_DMA_DONE:
-      break;
     case EFR32_DMA_ENQUEUED:
       err = 0;
-      GCT_FOREACH(dev_dma_queue, &pv->queue, r, {
-        if (r == rq)
-          {
-            crq = r;
-            GCT_FOREACH_DROP;
-          }
-        });
-
-      assert(crq);
-
-      crq->cancel.size = 0;
-      crq->cancel.desc_idx = 0;
-
+      rq->cancel.size = 0;
+      rq->cancel.desc_idx = 0;
+      dev_dma_queue_remove(&pv->queue, rq);
       dev->start_count -= DEVICE_START_COUNT_INC;
+    case EFR32_DMA_DONE:
       break;
     case EFR32_DMA_ONGOING:{
       /* Request is not terminated */
