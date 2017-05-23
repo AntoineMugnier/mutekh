@@ -18,6 +18,8 @@
     Copyright Nicolas Pouillon <nipo@ssji.net> (c) 2015
 */
 
+#ifdef CONFIG_DEVICE
+
 #include <device/resources.h>
 #include <device/class/iomux.h>
 #include <device/class/uart.h>
@@ -88,5 +90,7 @@ DEV_DECLARE_STATIC(keyboard_dev, "keyboard", 0, button_set_drv,
                    DEV_STATIC_RES_GPIO("pins", 13, 4),
                    DEV_STATIC_RES_UINT_PARAM("active", 0),
                    );
+
+#endif
 
 #endif

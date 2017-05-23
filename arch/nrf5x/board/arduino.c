@@ -18,6 +18,8 @@
     Copyright (c) 2017 Nicolas Pouillon <nipo@ssji.net>
 */
 
+#ifdef CONFIG_DEVICE
+
 #include <device/resources.h>
 #include <device/class/iomux.h>
 #include <device/class/uart.h>
@@ -70,4 +72,6 @@ DEV_DECLARE_STATIC(keyboard_dev, "keyboard", 0, button_set_drv,
                      );
 #  endif
 # endif
+#endif
+
 #endif
