@@ -36,19 +36,21 @@
 __unused__
 static uint32_t nrf_build_tag(void)
 {
-  return (cpu_mem_read_8(0xf0000fe0) << 12) // Nordic chip series id ?
-    | ((cpu_mem_read_8(0xf0000fe4) & 0xf) << 8)
-    | (cpu_mem_read_8(0xf0000fe8) & 0xf0) // silicon revision ?
-    | (cpu_mem_read_8(0xf0000fec) >> 4);
+  return 0
+    | ((cpu_mem_read_8(0xf0000fe4) & 0xf) << 12) // Part ID 1
+    | (cpu_mem_read_8(0xf0000fe0) << 8) // Part ID 0
+    | (cpu_mem_read_8(0xf0000fec) >> 4) // RevAnd
+    | (cpu_mem_read_8(0xf0000fe8) & 0xf0) // Revision number
+    ;
 }
 
-#define NRF51x22_G0   0x01040   // QFAAG0_1407 r2
-#define NRF51x22_H0   0x01070   // QFAAH0_1513 r3
-#define NRF51x22_A1   0x01090   // QFACA1_1503 r3
-#define NRF52832_ENGA 0x06030   // QFAAAA_xxxx engA
-#define NRF52832_ENGB 0x06040   // QFAABA_1536 engB
-#define NRF52832_R1   0x06050   // QFAAB0_1614 r1
-#define NRF52840_ENGA 0x08000   // QIAAAA_1644 engA
+#define NRF51x22_G0   0x00140   // nRF51x22 QFAAG0_1407 r2
+#define NRF51x22_H0   0x00170   // nRF51x22 QFAAH0_1513 r3
+#define NRF51x22_A1   0x00190   // nRF51x22 QFACA1_1503 r3
+#define NRF52832_ENGA 0x00630   // nRF52832 QFAAAA_xxxx engA
+#define NRF52832_ENGB 0x00640   // nRF52832 QFAABA_1536 engB
+#define NRF52832_R1   0x00650   // nRF52832 QFAAB0_1614 r1
+#define NRF52840_ENGA 0x00800   // nRF52840 QIAAAA_1644 engA
 
 void nrf52_init(void)
 {
