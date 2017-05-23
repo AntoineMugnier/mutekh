@@ -3,8 +3,7 @@
 ***************************************/
 
 /*
-   bfgen -o cdefs -I micore2.bf                                                \
-     -O /home/nipo/projects/mutekh/drivers/nfc/micore2/micore2_regs.h
+   bfgen -o cdefs -I micore2.bf -O micore2_regs.h
 */
 
 #ifndef _MICORE2_BFGEN_DEFS_

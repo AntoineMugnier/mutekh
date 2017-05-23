@@ -18,6 +18,8 @@
     Copyright (c) Nicolas Pouillon <nipo@ssji.net>, 2016
 */
 
+#define LOGK_MODULE_ID "mic2"
+
 #include <hexo/types.h>
 #include <hexo/endian.h>
 #include <hexo/iospace.h>
@@ -37,24 +39,22 @@
 #include <device/class/icu.h>
 #include <device/class/nfc.h>
 #include <device/class/gpio.h>
-#if defined(CONFIG_DRIVER_NFC_MICORE2_SPI)
-# include <device/class/spi.h>
-#elif defined(CONFIG_DRIVER_NFC_MICORE2_I2C)
-# include <device/class/i2c.h>
-#endif
 
 #include "micore2_regs.h"
-#if defined(CONFIG_DRIVER_NFC_MICORE2_SPI)
-# include "micore2_spi.o.h"
-#elif defined(CONFIG_DRIVER_NFC_MICORE2_I2C)
-# include "micore2_i2c.o.h"
-#endif
-#include "micore2_app.o.h"
 
-//#define dprintk printk
-#ifndef dprintk
-# define dprintk(x...) do{}while(0)
+#if defined(CONFIG_DRIVER_NFC_MICORE2_SPI)
+# include <device/class/spi.h>
+# include "micore2_spi.o.h"
+# define bus_bytecode_start dev_spi_bytecode_start
+# define bus_cleanup dev_drv_spi_bytecode_cleanup
+#elif defined(CONFIG_DRIVER_NFC_MICORE2_I2C)
+# include <device/class/i2c.h>
+# include "micore2_i2c.o.h"
+# define bus_bytecode_start dev_i2c_bytecode_start
+# define bus_cleanup dev_drv_i2c_bytecode_cleanup
 #endif
+
+#include "micore2_app.o.h"
 
 enum micore2_state_e
 {
@@ -77,11 +77,11 @@ struct micore2_context_s
 {
   struct device_gpio_s *gpio;
 #if defined(CONFIG_DRIVER_NFC_MICORE2_SPI)
-  struct device_spi_ctrl_s spi;
-  struct dev_spi_ctrl_bytecode_rq_s spi_rq;
+  struct device_spi_ctrl_s bus;
+  struct dev_spi_ctrl_bytecode_rq_s bus_rq;
 #elif defined(CONFIG_DRIVER_NFC_MICORE2_I2C)
-  struct device_i2c_ctrl_s i2c;
-  struct dev_i2c_ctrl_bytecode_rq_s i2c_rq;
+  struct device_i2c_ctrl_s bus;
+  struct dev_i2c_ctrl_bytecode_rq_s bus_rq;
 #endif
   struct dev_irq_src_s irq_ep;
   struct device_timer_s *timer;
@@ -108,11 +108,7 @@ DRIVER_PV(struct micore2_context_s);
 static
 struct device_s *micore2_context_device_get(const struct micore2_context_s *pv)
 {
-#if defined(CONFIG_DRIVER_NFC_MICORE2_SPI)
-  return pv->spi_rq.base.base.pvdata;
-#elif defined(CONFIG_DRIVER_NFC_MICORE2_I2C)
-  return pv->i2c_rq.base.base.pvdata;
-#endif
+  return pv->bus_rq.base.base.pvdata;
 }
 
 static const void *const micore2_reg_op[4] = {
@@ -149,7 +145,7 @@ static DEV_IRQ_SRC_PROCESS(micore2_irq)
   lock_spin(&dev->lock);
   if (pv->state == MICORE2_WAIT_IRQ_DELAY) {
     DEVICE_OP(pv->timer, cancel, &pv->timer_rq);
-    dprintk(" -> irq while sleeping\n");
+    logk_info(" -> irq while sleeping");
     bc_skip(&pv->vm);
     pv->state = MICORE2_IDLE;
     kroutine_exec(&pv->runner);
@@ -177,9 +173,9 @@ static KROUTINE_EXEC(micore2_runner)
     return;
 
   for (;;) {
-    //dprintk("%s run\n", __FUNCTION__);
+    logk_debug("%s run", __FUNCTION__);
     op = bc_run(&pv->vm, -1);
-    //dprintk("%s op = %04x\n", __FUNCTION__, op);
+    logk_debug("%s op = %04x", __FUNCTION__, op);
 
     if (!bit_get(op, 15)) {
       assert(!op);
@@ -191,7 +187,7 @@ static KROUTINE_EXEC(micore2_runner)
     switch (bit_get_mask(op, 12, 3)) {
     case 0: { // wait_ms (5ms steps)
       pv->timer_rq.delay = pv->five_ms * bit_get_mask(op, 0, 12);
-      dprintk("%s delay %dms: %d\n", __FUNCTION__,
+      logk_info("%s delay %dms: %d", __FUNCTION__,
               bit_get_mask(op, 0, 12) * 5, pv->timer_rq.delay);
       pv->timer_rq.deadline = 0;
 
@@ -208,17 +204,17 @@ static KROUTINE_EXEC(micore2_runner)
     case 1: { // on_irq_timeout (5ms steps)
       pv->timer_rq.deadline = 0;
       pv->timer_rq.delay = pv->five_ms * bit_get_mask(op, 0, 12);
-      dprintk("%s delay irq %dms: %d\n", __FUNCTION__,
+      logk_info("%s delay irq %dms: %d", __FUNCTION__,
               bit_get_mask(op, 0, 12) * 5, pv->timer_rq.delay);
 
       LOCK_SPIN_IRQ_SCOPED(&dev->lock);
       if (bit_get_mask(op, 0, 12) == 0) {
-        dprintk(" -> %s\n", pv->irq_pending ? "irq pending cleared" : "no irq pending");
+        logk_info(" -> %s", pv->irq_pending ? "irq pending cleared" : "no irq pending");
         pv->irq_pending = 0;
       } else if (pv->irq_pending) {
         pv->irq_pending = 0;
         bc_skip(&pv->vm);
-        dprintk(" -> pending irq\n");
+        logk_info(" -> pending irq");
       } else {
         DEVICE_OP(pv->timer, cancel, &pv->timer_rq);
         if (DEVICE_OP(pv->timer, request, &pv->timer_rq) == 0)
@@ -231,7 +227,7 @@ static KROUTINE_EXEC(micore2_runner)
     }
 
     case 2: { // Reg access
-      dprintk("%s reg %s 0x%02x 0x%02x\n", __FUNCTION__,
+      logk_info("%s reg %s 0x%02x 0x%02x", __FUNCTION__,
               micore2_reg_op_str[bit_get_mask(op, 10, 2)],
               bit_get_mask(op, 4, 6),
               (uint8_t)bc_get_reg(&pv->vm, bit_get_mask(op, 0, 4)));
@@ -239,54 +235,39 @@ static KROUTINE_EXEC(micore2_runner)
       LOCK_SPIN_IRQ_SCOPED(&dev->lock);
       pv->state = MICORE2_WAIT_BUS;
       pv->readback0 = bit_get_mask(op, 10, 2) ? -1 : bit_get_mask(op, 0, 4);
-#if defined(CONFIG_DRIVER_NFC_MICORE2_SPI)
-      dev_spi_bytecode_start(&pv->spi, &pv->spi_rq,
-                             micore2_reg_op[bit_get_mask(op, 10, 2)],
-                             3, bit_get_mask(op, 4, 6),
-                             bc_get_reg(&pv->vm, bit_get_mask(op, 0, 4)));
-#elif defined(CONFIG_DRIVER_NFC_MICORE2_I2C)
-      dev_i2c_bytecode_start(&pv->i2c, &pv->i2c_rq,
-                             micore2_reg_op[bit_get_mask(op, 10, 2)],
-                             3, bit_get_mask(op, 4, 6),
-                             bc_get_reg(&pv->vm, bit_get_mask(op, 0, 4)));
-#endif
+      bus_bytecode_start(&pv->bus, &pv->bus_rq,
+                         micore2_reg_op[bit_get_mask(op, 10, 2)],
+                         3, bit_get_mask(op, 4, 6),
+                         bc_get_reg(&pv->vm, bit_get_mask(op, 0, 4)));
       return;
     }
 
     case 3: { // Fifo access
       if (bit_get(op, 9)) {
         if (bit_get(op, 8))
-          dprintk("%s fifo write pack [%P]\n", __FUNCTION__,
+          logk_info("%s fifo write pack [%P]", __FUNCTION__,
                   bc_get_bytepack(&pv->vm, bit_get_mask(op, 4, 4)),
                   bit_get_mask(op, 0, 4) + 1);
         else
-          dprintk("%s fifo read pack %d\n", __FUNCTION__,
+          logk_info("%s fifo read pack %d", __FUNCTION__,
                   bit_get_mask(op, 0, 4) + 1);
 
         LOCK_SPIN_IRQ_SCOPED(&dev->lock);
         pv->state = MICORE2_WAIT_BUS;
-#if defined(CONFIG_DRIVER_NFC_MICORE2_SPI)
-        dev_spi_bytecode_start(&pv->spi, &pv->spi_rq,
-                               micore2_fifo_op[bit_get(op, 8)],
-                               3,
-                               bc_get_bytepack(&pv->vm, bit_get_mask(op, 4, 4)),
-                               bit_get_mask(op, 0, 4) + 1);
-#elif defined(CONFIG_DRIVER_NFC_MICORE2_I2C)
-        dev_i2c_bytecode_start(&pv->i2c, &pv->i2c_rq,
-                               micore2_fifo_op[bit_get(op, 8)],
-                               3,
-                               bc_get_bytepack(&pv->vm, bit_get_mask(op, 4, 4)),
-                               bit_get_mask(op, 0, 4) + 1);
-#endif
+        bus_bytecode_start(&pv->bus, &pv->bus_rq,
+                           micore2_fifo_op[bit_get(op, 8)],
+                           3,
+                           bc_get_bytepack(&pv->vm, bit_get_mask(op, 4, 4)),
+                           bit_get_mask(op, 0, 4) + 1);
       } else {
         if (bit_get(op, 8))
-          dprintk("%s fifo write %p %d [%P]\n", __FUNCTION__,
+          logk_info("%s fifo write %p %d [%P]", __FUNCTION__,
                   bc_get_reg(&pv->vm, bit_get_mask(op, 4, 4)),
                   bc_get_reg(&pv->vm, bit_get_mask(op, 0, 4)),
                   bc_get_reg(&pv->vm, bit_get_mask(op, 4, 4)),
                   bc_get_reg(&pv->vm, bit_get_mask(op, 0, 4)));
         else
-          dprintk("%s fifo read %d\n", __FUNCTION__,
+          logk_info("%s fifo read %d", __FUNCTION__,
                   bc_get_reg(&pv->vm, bit_get_mask(op, 0, 4)));
 
         if (bc_get_reg(&pv->vm, bit_get_mask(op, 0, 4)) == 0)
@@ -294,19 +275,11 @@ static KROUTINE_EXEC(micore2_runner)
 
         LOCK_SPIN_IRQ_SCOPED(&dev->lock);
         pv->state = MICORE2_WAIT_BUS;
-#if defined(CONFIG_DRIVER_NFC_MICORE2_SPI)
-        dev_spi_bytecode_start(&pv->spi, &pv->spi_rq,
+        bus_bytecode_start(&pv->bus, &pv->bus_rq,
                                micore2_fifo_op[bit_get(op, 8)],
                                3,
                                bc_get_reg(&pv->vm, bit_get_mask(op, 4, 4)),
                                bc_get_reg(&pv->vm, bit_get_mask(op, 0, 4)));
-#elif defined(CONFIG_DRIVER_NFC_MICORE2_I2C)
-        dev_i2c_bytecode_start(&pv->i2c, &pv->i2c_rq,
-                               micore2_fifo_op[bit_get(op, 8)],
-                               3,
-                               bc_get_reg(&pv->vm, bit_get_mask(op, 4, 4)),
-                               bc_get_reg(&pv->vm, bit_get_mask(op, 0, 4)));
-#endif
       }
       return;
     }
@@ -314,7 +287,7 @@ static KROUTINE_EXEC(micore2_runner)
     case 4: // wait_rq
       switch (bit_get_mask(op, 8, 4)) {
       case 0: {
-        dprintk("%s wait rq\n", __FUNCTION__);
+        logk_info("%s wait rq", __FUNCTION__);
         LOCK_SPIN_IRQ_SCOPED(&dev->lock);
         if (dev_request_queue_isempty(&pv->queue)) {
           device_sleep_schedule(dev);
@@ -328,7 +301,7 @@ static KROUTINE_EXEC(micore2_runner)
 
       case 1: {
         error_t err = -bc_get_reg(&pv->vm, bit_get_mask(op, 0, 4));
-        dprintk("%s rq done %d\n", __FUNCTION__, err);
+        logk_info("%s rq done %d", __FUNCTION__, err);
         LOCK_SPIN_IRQ_SCOPED(&dev->lock);
         assert(!dev_request_queue_isempty(&pv->queue));
 
@@ -342,12 +315,12 @@ static KROUTINE_EXEC(micore2_runner)
       continue;
 
     case 5: { // if_no_rq
-      dprintk("%s rq next then\n", __FUNCTION__);
+      logk_info("%s rq next then", __FUNCTION__);
       LOCK_SPIN_IRQ_SCOPED(&dev->lock);
       if (!dev_request_queue_isempty(&pv->queue)) {
         bc_set_reg(&pv->vm, bit_get_mask(op, 0, 4),
                    (uintptr_t)dev_nfc_rq_s_cast(dev_request_queue_head(&pv->queue)));
-        dprintk(" -> ok r%d = %p\n",
+        logk_info(" -> ok r%d = %p",
                 bit_get_mask(op, 0, 4),
                 bc_get_reg(&pv->vm, bit_get_mask(op, 0, 4)));
       } else {
@@ -369,7 +342,7 @@ static KROUTINE_EXEC(micore2_runner)
     }
 
     case 7: // print
-      dprintk("  print %08x\n", bc_get_reg(&pv->vm, bit_get_mask(op, 0, 4)));
+      logk_info("  print %08x", bc_get_reg(&pv->vm, bit_get_mask(op, 0, 4)));
       continue;
     }
   }
@@ -380,7 +353,7 @@ static KROUTINE_EXEC(micore2_gpio_done)
   struct micore2_context_s *pv = KROUTINE_CONTAINER(kr, *pv, gpio_rq.base.kr);
   struct device_s *dev = micore2_context_device_get(pv);
 
-  //dprintk("%s\n", __FUNCTION__);
+  logk_debug("%s", __FUNCTION__);
 
   LOCK_SPIN_IRQ_SCOPED(&dev->lock);
   assert(pv->state == MICORE2_WAIT_GPIO);
@@ -388,54 +361,32 @@ static KROUTINE_EXEC(micore2_gpio_done)
   kroutine_exec(&pv->runner);
 }
 
-#if defined(CONFIG_DRIVER_NFC_MICORE2_SPI)
-static KROUTINE_EXEC(micore2_spi_done)
+static KROUTINE_EXEC(micore2_bus_done)
 {
-  struct micore2_context_s *pv = KROUTINE_CONTAINER(kr, *pv, spi_rq.base.base.kr);
+  struct micore2_context_s *pv = KROUTINE_CONTAINER(kr, *pv, bus_rq.base.base.kr);
   struct device_s *dev = micore2_context_device_get(pv);
 
-  //dprintk("%s\n", __FUNCTION__);
+  logk_debug("%s", __FUNCTION__);
 
   LOCK_SPIN_IRQ_SCOPED(&dev->lock);
   assert(pv->state == MICORE2_WAIT_BUS);
 
   if (pv->readback0 >= 0) {
-    dprintk("  -> r%d = 0x%02x\n", pv->readback0, bc_get_reg(&pv->spi_rq.vm, 0));
-    bc_set_reg(&pv->vm, pv->readback0, bc_get_reg(&pv->spi_rq.vm, 0));
+    logk_info("  -> r%d = 0x%02x", pv->readback0, bc_get_reg(&pv->bus_rq.vm, 0));
+    bc_set_reg(&pv->vm, pv->readback0, bc_get_reg(&pv->bus_rq.vm, 0));
     pv->readback0 = -1;
   }
 
   pv->state = MICORE2_IDLE;
   kroutine_exec(&pv->runner);
 }
-#elif defined(CONFIG_DRIVER_NFC_MICORE2_I2C)
-static KROUTINE_EXEC(micore2_i2c_done)
-{
-  struct micore2_context_s *pv = KROUTINE_CONTAINER(kr, *pv, i2c_rq.base.base.kr);
-  struct device_s *dev = micore2_context_device_get(pv);
-
-  //dprintk("%s\n", __FUNCTION__);
-
-  LOCK_SPIN_IRQ_SCOPED(&dev->lock);
-  assert(pv->state == MICORE2_WAIT_BUS);
-
-  if (pv->readback0 >= 0) {
-    dprintk("  -> r%d = 0x%02x\n", pv->readback0, bc_get_reg(&pv->i2c_rq.vm, 0));
-    bc_set_reg(&pv->vm, pv->readback0, bc_get_reg(&pv->i2c_rq.vm, 0));
-    pv->readback0 = -1;
-  }
-
-  pv->state = MICORE2_IDLE;
-  kroutine_exec(&pv->runner);
-}
-#endif
 
 static KROUTINE_EXEC(micore2_timer_done)
 {
   struct micore2_context_s *pv = KROUTINE_CONTAINER(kr, *pv, timer_rq.rq.kr);
   struct device_s *dev = micore2_context_device_get(pv);
 
-  dprintk("%s\n", __FUNCTION__);
+  logk_info("%s", __FUNCTION__);
 
   LOCK_SPIN_IRQ_SCOPED(&dev->lock);
   assert(pv->state == MICORE2_WAIT_IRQ_DELAY || pv->state == MICORE2_WAIT_DELAY);
@@ -448,7 +399,7 @@ static DEV_NFC_REQUEST(micore2_request)
   struct device_s *dev = accessor->dev;
   struct micore2_context_s *pv = dev->drv_pv;
 
-  dprintk("%s\n", __FUNCTION__);
+  logk_info("%s", __FUNCTION__);
 
   switch (rq1->type) {
   notsup:
@@ -480,7 +431,7 @@ static DEV_NFC_REQUEST(micore2_request)
 
       if (pv->state == MICORE2_WAIT_RQ) {
         pv->state = MICORE2_IDLE;
-        dprintk("%s wait done\n", __FUNCTION__);
+        logk_info("%s wait done", __FUNCTION__);
         kroutine_exec(&pv->runner);
       }
       return;
@@ -505,7 +456,7 @@ static DEV_NFC_REQUEST(micore2_request)
 
     if (pv->state == MICORE2_WAIT_RQ) {
       pv->state = MICORE2_IDLE;
-      dprintk("%s wait done\n", __FUNCTION__);
+      logk_info("%s wait done", __FUNCTION__);
       kroutine_exec(&pv->runner);
     }
     return;
@@ -560,24 +511,22 @@ static DEV_USE(micore2_use)
   }
 }
 
-#if defined(CONFIG_DRIVER_NFC_MICORE2_SPI)
-static const struct dev_spi_ctrl_config_s micore2_spi_config =
-{
-  .dirty = 0,
-  .ck_mode = DEV_SPI_CK_MODE_0,
-  .bit_order = DEV_SPI_MSB_FIRST,
-  .miso_pol = DEV_SPI_ACTIVE_HIGH,
-  .mosi_pol = DEV_SPI_ACTIVE_HIGH,
-  .cs_pol = DEV_SPI_ACTIVE_LOW,
-  .bit_rate = 1000000,
-  .word_width = 8,
-};
-#endif
-
 static DEV_INIT(micore2_init)
 {
   struct micore2_context_s *pv;
   error_t err;
+#if defined(CONFIG_DRIVER_NFC_MICORE2_SPI)
+  static const struct dev_spi_ctrl_config_s micore2_spi_config = {
+    .dirty = 0,
+    .ck_mode = DEV_SPI_CK_MODE_0,
+    .bit_order = DEV_SPI_MSB_FIRST,
+    .miso_pol = DEV_SPI_ACTIVE_HIGH,
+    .mosi_pol = DEV_SPI_ACTIVE_HIGH,
+    .cs_pol = DEV_SPI_ACTIVE_LOW,
+    .bit_rate = 1000000,
+    .word_width = 8,
+  };
+#endif
 
   pv = mem_alloc(sizeof(*pv), mem_scope_sys);
   if (!pv)
@@ -596,11 +545,12 @@ static DEV_INIT(micore2_init)
 
   pv->state = MICORE2_IDLE;
 #if defined(CONFIG_DRIVER_NFC_MICORE2_SPI)
-  err = dev_drv_spi_bytecode_init(dev, &pv->spi_rq, &micore2_spi_bytecode,
-                                  &micore2_spi_config, &pv->spi, &pv->gpio, &pv->timer);
+  err = dev_drv_spi_bytecode_init(dev, &pv->bus_rq, &micore2_spi_bytecode,
+                                  &micore2_spi_config,
+                                  &pv->bus, &pv->gpio, &pv->timer);
 #elif defined(CONFIG_DRIVER_NFC_MICORE2_I2C)
-  err = dev_drv_i2c_bytecode_init(dev, &pv->i2c_rq, &micore2_i2c_bytecode,
-                                  &pv->i2c, &pv->gpio, &pv->timer);
+  err = dev_drv_i2c_bytecode_init(dev, &pv->bus_rq, &micore2_i2c_bytecode,
+                                  &pv->bus, &pv->gpio, &pv->timer);
 #endif
   if (err)
     goto free_pv;
@@ -624,13 +574,8 @@ static DEV_INIT(micore2_init)
 
   kroutine_init_deferred(&pv->gpio_rq.base.kr, micore2_gpio_done);
 
-#if defined(CONFIG_DRIVER_NFC_MICORE2_SPI)
-  pv->spi_rq.base.base.pvdata = dev;
-  kroutine_init_deferred(&pv->spi_rq.base.base.kr, &micore2_spi_done);
-#elif defined(CONFIG_DRIVER_NFC_MICORE2_I2C)
-  pv->i2c_rq.base.base.pvdata = dev;
-  kroutine_init_deferred(&pv->i2c_rq.base.base.kr, &micore2_i2c_done);
-#endif
+  pv->bus_rq.base.base.pvdata = dev;
+  kroutine_init_deferred(&pv->bus_rq.base.base.kr, &micore2_bus_done);
   kroutine_init_deferred(&pv->timer_rq.rq.kr, micore2_timer_done);
   kroutine_init_deferred(&pv->runner, &micore2_runner);
 
@@ -644,11 +589,7 @@ static DEV_INIT(micore2_init)
   return 0;
 
  free_bus:
-#if defined(CONFIG_DRIVER_NFC_MICORE2_SPI)
-  dev_drv_spi_bytecode_cleanup(&pv->spi, &pv->spi_rq);
-#elif defined(CONFIG_DRIVER_NFC_MICORE2_I2C)
-  dev_drv_i2c_bytecode_cleanup(&pv->i2c, &pv->i2c_rq);
-#endif
+  bus_cleanup(&pv->bus, &pv->bus_rq);
  free_pv:
   mem_free(pv);
   return err;
@@ -666,11 +607,7 @@ static DEV_CLEANUP(micore2_cleanup)
   if (still_busy)
     return -EBUSY;
 
-#if defined(CONFIG_DRIVER_NFC_MICORE2_SPI)
-  dev_drv_spi_bytecode_cleanup(&pv->spi, &pv->spi_rq);
-#elif defined(CONFIG_DRIVER_NFC_MICORE2_I2C)
-  dev_drv_i2c_bytecode_cleanup(&pv->i2c, &pv->i2c_rq);
-#endif
+  bus_cleanup(&pv->bus, &pv->bus_rq);
   device_irq_source_unlink(dev, &pv->irq_ep, 1);
   dev_request_queue_destroy(&pv->queue);
 
