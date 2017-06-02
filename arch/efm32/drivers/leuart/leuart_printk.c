@@ -136,19 +136,6 @@ void efm32_leuart_printk_init()
   EFM32_GPIO_MODEL_MODE_SET(pin, x, PUSHPULL);
   cpu_mem_write_32(gpio + EFM32_GPIO_MODEL_ADDR(bank) + h, x);
 
-#if (CONFIG_EFM32_FAMILY == EFM32_FAMILY_ZERO) && \
-  CONFIG_MUTEK_PRINTK_ADDR == 0x40084000 && \
-  CONFIG_DRIVER_EFM32_LEUART_PRINTK_PIN == 52 && \
-  defined(CONFIG_EFM32_STK_BC_EN)
-
-  /* set EFM_BC_EN (PA9) high on stk3200 */
-  x = cpu_mem_read_32(gpio + EFM32_GPIO_MODEH_ADDR(0));
-  EFM32_GPIO_MODEH_MODE_SET(1, x, PUSHPULL);
-  cpu_mem_write_32(gpio + EFM32_GPIO_MODEH_ADDR(0), x);
-
-  cpu_mem_write_32(gpio + EFM32_GPIO_DOUTSET_ADDR(0), EFM32_GPIO_DOUTSET_DOUTSET(9));
-#endif
-
   uint32_t leuart = CONFIG_MUTEK_PRINTK_ADDR;
 
   /* Check that there is no on-going synchronization */

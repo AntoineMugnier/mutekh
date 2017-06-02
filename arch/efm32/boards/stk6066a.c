@@ -30,10 +30,44 @@
 # include <arch/efm32/dma_source.h>
 #endif
 
+#include <hexo/iospace.h>
 #include <arch/efm32/irq.h>
 #include <arch/efm32/pin.h>
+#include <arch/efm32/gpio.h>
+#include <arch/efm32/cmu.h>
+#include <arch/efm32/devaddr.h>
+#include <mutek/startup.h>
 
 #define HFXO_FREQ  19000000
+
+void efm32_board_init()
+{
+  uint32_t b, x;
+
+  /* Enable GPIO clock */
+  b = EFM32_CMU_ADDR;
+  cpu_mem_write_32(b + EFM32_CMU_OSCENCMD_ADDR, EFM32_CMU_OSCENCMD_HFRCOEN);
+  while (!(cpu_mem_read_32(b + EFM32_CMU_STATUS_ADDR) & EFM32_CMU_STATUS_HFRCORDY))
+    ;
+  cpu_mem_write_32(b + EFM32_CMU_HFCLKSEL_ADDR, EFM32_CMU_HFCLKSEL_HF(HFRCO));
+  x = cpu_mem_read_32(b + EFM32_CMU_HFBUSCLKEN0_ADDR);
+  cpu_mem_write_32(b + EFM32_CMU_HFBUSCLKEN0_ADDR, x | EFM32_CMU_HFBUSCLKEN0_GPIO);
+
+  uint32_t gpio = EFM32_GPIO_ADDR;
+  uint32_t button_pin = 86;
+
+  /* wait for button to be released */
+  uint32_t bank = button_pin / 16;
+  uint32_t h = (button_pin >> 1) & 4;
+
+  x = cpu_mem_read_32(b + EFM32_GPIO_MODEL_ADDR(bank) + h);
+  EFM32_GPIO_MODEL_MODE_SET(button_pin % 8, x, INPUT);
+  cpu_mem_write_32(b + EFM32_GPIO_MODEL_ADDR(bank) + h, x);
+
+  while (!(cpu_mem_read_32(b + EFM32_GPIO_DIN_ADDR(bank))
+           & EFM32_GPIO_DIN_DIN(button_pin % 16)))
+    ;
+}
 
 #if defined(CONFIG_DRIVER_CPU_ARM32M)
 

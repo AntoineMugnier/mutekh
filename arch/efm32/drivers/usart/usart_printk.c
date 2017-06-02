@@ -151,33 +151,6 @@ void efm32_usart_printk_init()
   EFM32_GPIO_MODEL_MODE_SET(pin, x, PUSHPULL);
   cpu_mem_write_32(b + EFM32_GPIO_MODEL_ADDR(bank) + h, x);
 
-#if ((CONFIG_EFM32_FAMILY == EFM32_FAMILY_LEOPARD) ||             \
-     (CONFIG_EFM32_FAMILY == EFM32_FAMILY_GIANT) ||             \
-     (CONFIG_EFM32_FAMILY == EFM32_FAMILY_WONDER)) &&            \
-  defined(CONFIG_EFM32_STK_BC_EN) &&              \
-  CONFIG_MUTEK_PRINTK_ADDR == 0x4000e000 &&       \
-  CONFIG_DRIVER_EFM32_USART_PRINTK_PIN == 64
-
-  /* set EFM_BC_EN (PF7) high on stk3[678]00 */
-  x = cpu_mem_read_32(b + EFM32_GPIO_MODEL_ADDR(5));
-  EFM32_GPIO_MODEL_MODE_SET(7, x, PUSHPULL);
-  cpu_mem_write_32(b + EFM32_GPIO_MODEL_ADDR(5), x);
-
-  cpu_mem_write_32(b + EFM32_GPIO_DOUTSET_ADDR(5), EFM32_GPIO_DOUTSET_DOUTSET(7));
-
-#elif (CONFIG_EFM32_FAMILY == EFM32_FAMILY_GECKO) &&           \
-  defined(CONFIG_EFM32_STK_BC_EN) &&              \
-  CONFIG_MUTEK_PRINTK_ADDR == 0x4000e000 &&       \
-  CONFIG_DRIVER_EFM32_USART_PRINTK_PIN == 64
-
-  /* set EFM_BC_EN (PD13) high on g8xx_stk */
-  x = cpu_mem_read_32(b + EFM32_GPIO_MODEH_ADDR(3));
-  EFM32_GPIO_MODEH_MODE_SET(5, x, PUSHPULL);
-  cpu_mem_write_32(b + EFM32_GPIO_MODEH_ADDR(3), x);
-
-  cpu_mem_write_32(b + EFM32_GPIO_DOUTSET_ADDR(3), EFM32_GPIO_DOUTSET_DOUTSET(13));
-#endif
-
   b = CONFIG_MUTEK_PRINTK_ADDR;
 
   cpu_mem_write_32(b + EFM32_USART_CMD_ADDR,

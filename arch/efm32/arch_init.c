@@ -29,57 +29,6 @@
 #include <arch/efm32/cmu.h>
 #include <arch/efm32/devaddr.h>
 
-#if defined(CONFIG_EFM32_BOOT_BUTTON)
-
-void efm32_boot_button_wait()
-{
-  uint32_t b, x;
-
-  b = EFM32_CMU_ADDR;
-
-#if CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_XG1
-
-  cpu_mem_write_32(b + EFM32_CMU_OSCENCMD_ADDR, EFM32_CMU_OSCENCMD_HFRCOEN);
-  while (!(cpu_mem_read_32(b + EFM32_CMU_STATUS_ADDR) & EFM32_CMU_STATUS_HFRCORDY))
-    ;
-  cpu_mem_write_32(b + EFM32_CMU_HFCLKSEL_ADDR, EFM32_CMU_HFCLKSEL_HF(HFRCO));
-  /* Enable clock for GPIO */
-  x = cpu_mem_read_32(b + EFM32_CMU_HFBUSCLKEN0_ADDR);
-  cpu_mem_write_32(b + EFM32_CMU_HFBUSCLKEN0_ADDR, x | EFM32_CMU_HFBUSCLKEN0_GPIO);
-
-#elif CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFM
-
-  /* Enable clock for HF peripherals */
-  x = cpu_mem_read_32(b + EFM32_CMU_HFPERCLKDIV_ADDR);
-  x |= EFM32_CMU_HFPERCLKDIV_HFPERCLKEN;
-  cpu_mem_write_32(b + EFM32_CMU_HFPERCLKDIV_ADDR, x);
-
-  /* Enable clock for GPIO */
-  x = cpu_mem_read_32(b + EFM32_CMU_HFPERCLKEN0_ADDR);
-  x |= EFM32_CMU_HFPERCLKEN0_GPIO;
-  cpu_mem_write_32(b + EFM32_CMU_HFPERCLKEN0_ADDR, x);
-
-#else
-# error
-#endif
-
-  b = EFM32_GPIO_ADDR;
-
-  /* wait for button to be released */
-  uint32_t bank = CONFIG_EFM32_BOOT_BUTTON_PIN / 16;
-  uint32_t h = (CONFIG_EFM32_BOOT_BUTTON_PIN >> 1) & 4;
-
-  x = cpu_mem_read_32(b + EFM32_GPIO_MODEL_ADDR(bank) + h);
-  EFM32_GPIO_MODEL_MODE_SET(CONFIG_EFM32_BOOT_BUTTON_PIN % 8, x, INPUT);
-  cpu_mem_write_32(b + EFM32_GPIO_MODEL_ADDR(bank) + h, x);
-
-  while (!(cpu_mem_read_32(b + EFM32_GPIO_DIN_ADDR(bank))
-           & EFM32_GPIO_DIN_DIN(CONFIG_EFM32_BOOT_BUTTON_PIN % 16)))
-    ;
-}
-
-#endif
-
 #ifndef CONFIG_DEVICE_CLOCK
 
 /* clock management disabled, enable all clocks at startup */

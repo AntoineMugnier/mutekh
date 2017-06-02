@@ -30,10 +30,57 @@
 # include <device/class/i2c.h>
 #endif
 
+#include <hexo/iospace.h>
 #include <arch/efm32/irq.h>
 #include <arch/efm32/pin.h>
 #include <arch/efm32/clock.h>
 #include <arch/efm32/dma_source.h>
+#include <arch/efm32/gpio.h>
+#include <arch/efm32/cmu.h>
+#include <arch/efm32/devaddr.h>
+#include <mutek/startup.h>
+
+void efm32_board_init()
+{
+  uint32_t x;
+  uint32_t cmu = EFM32_CMU_ADDR;
+
+  /* Enable HF peripherals clock */
+  x = cpu_mem_read_32(cmu + EFM32_CMU_HFPERCLKDIV_ADDR);
+  x |= EFM32_CMU_HFPERCLKDIV_HFPERCLKEN;
+  cpu_mem_write_32(cmu + EFM32_CMU_HFPERCLKDIV_ADDR, endian_le32(x));
+  /* Enable GPIO clock */
+  x = cpu_mem_read_32(cmu + EFM32_CMU_HFPERCLKEN0_ADDR);
+  x |= EFM32_CMU_HFPERCLKEN0_GPIO;
+  cpu_mem_write_32(cmu + EFM32_CMU_HFPERCLKEN0_ADDR, endian_le32(x));
+
+  uint32_t gpio = EFM32_GPIO_ADDR;
+  uint32_t button_pin = 25;
+
+  /* wait for button to be released */
+  uint32_t bank = button_pin / 16;
+  uint32_t h = (button_pin >> 1) & 4;
+
+  x = cpu_mem_read_32(gpio + EFM32_GPIO_MODEL_ADDR(bank) + h);
+  EFM32_GPIO_MODEL_MODE_SET(button_pin % 8, x, INPUT);
+  cpu_mem_write_32(gpio + EFM32_GPIO_MODEL_ADDR(bank) + h, x);
+
+  while (!(cpu_mem_read_32(gpio + EFM32_GPIO_DIN_ADDR(bank))
+           & EFM32_GPIO_DIN_DIN(button_pin % 16)))
+    ;
+
+#if CONFIG_MUTEK_PRINTK_ADDR == 0x4000e000 &&   \
+  CONFIG_DRIVER_EFM32_USART_PRINTK_PIN == 64
+
+  /* set EFM_BC_EN (PF7) high on stk3[678]00 */
+  x = cpu_mem_read_32(gpio + EFM32_GPIO_MODEL_ADDR(5));
+  EFM32_GPIO_MODEL_MODE_SET(7, x, PUSHPULL);
+  cpu_mem_write_32(gpio + EFM32_GPIO_MODEL_ADDR(5), x);
+
+  cpu_mem_write_32(gpio + EFM32_GPIO_DOUTSET_ADDR(5),
+                   EFM32_GPIO_DOUTSET_DOUTSET(7));
+#endif
+}
 
 #if defined(CONFIG_DRIVER_CPU_ARM32M)
 
