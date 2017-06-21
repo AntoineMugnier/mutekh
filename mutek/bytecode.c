@@ -87,7 +87,6 @@ bc_init(struct bc_context_s *ctx,
   ctx->trace = 0;
   ctx->trace_regs = 0;
 #endif
-  return 0;
 }
 
 #ifdef CONFIG_MUTEK_BYTECODE_SANDBOX
@@ -786,9 +785,10 @@ bc_opcode_t bc_run_vm(struct bc_context_s *ctx)
       if (max_cycles == 0)
         {
           ctx->vpc = pc;
+          ctx->max_cycles = 0;
           return 1;
         }
-      max_cycles--;
+      max_cycles -= ctx->sandbox;
 #endif
 
       /* custom op */
@@ -798,6 +798,9 @@ bc_opcode_t bc_run_vm(struct bc_context_s *ctx)
           ctx->skip = 1;
 #endif
           ctx->vpc = pc + 1;
+#ifdef CONFIG_MUTEK_BYTECODE_SANDBOX
+          ctx->max_cycles = max_cycles;
+#endif
           return op;
         }
 
@@ -824,6 +827,9 @@ bc_opcode_t bc_run_vm(struct bc_context_s *ctx)
           if (op == 0)
             {
               ctx->vpc = pc;
+#ifdef CONFIG_MUTEK_BYTECODE_SANDBOX
+              ctx->max_cycles = max_cycles;
+#endif
               return 0;
             }
 #ifdef CONFIG_MUTEK_BYTECODE_DEBUG
@@ -1007,6 +1013,9 @@ bc_opcode_t bc_run_vm(struct bc_context_s *ctx)
 
  err_ret:
   ctx->vpc = pc;
+#ifdef CONFIG_MUTEK_BYTECODE_SANDBOX
+  ctx->max_cycles = max_cycles;
+#endif
   return 3;
 }
 
