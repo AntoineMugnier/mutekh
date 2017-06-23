@@ -663,7 +663,7 @@ DEV_IRQ_SRC_PROCESS(stm32_gpio_icu_src_process)
 
 /********************************* DRIVER */
 
-
+#define stm32_gpio_gpio_cancel (dev_gpio_cancel_t*)&dev_driver_notsup_fcn
 #define stm32_gpio_gpio_request dev_gpio_request_async_to_sync
 #define stm32_gpio_gpio_input_irq_range (dev_gpio_input_irq_range_t*)dev_driver_notsup_fcn
 

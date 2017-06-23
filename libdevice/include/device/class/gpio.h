@@ -199,6 +199,17 @@ typedef DEV_GPIO_GET_INPUT(dev_gpio_get_input_t);
 */
 typedef DEV_GPIO_REQUEST(dev_gpio_request_t);
 
+/** @see dev_gpio_cancel_t */
+#define DEV_GPIO_CANCEL(n) error_t (n)(const struct device_gpio_s *gpio, \
+                                       struct dev_gpio_rq_s *rq)
+/** This function cancels a GPIO request.
+
+    The function returns 0 if the request has been cancelled or @tt
+    -EBUSY if the request has already ended or will terminate very
+    soon. It may also return @tt -ENOTSUP. The request kroutine is not
+    executed when this function returns 0.
+*/
+typedef DEV_GPIO_CANCEL(dev_gpio_cancel_t);
 
 enum dev_gpio_request_type
 {
@@ -220,7 +231,8 @@ enum dev_gpio_request_type
       handled in order with other requests. Not all implementation are
       required to handle multiple such requests at the same time. The
       request will terminate immediately with the @tt -EBUSY error in
-      this case. */
+      this case. The request terminates immediately when the set of
+      inputs is empty. */
   DEV_GPIO_UNTIL,
 };
 
@@ -282,6 +294,7 @@ DRIVER_CLASS_TYPES(DRIVER_CLASS_GPIO, gpio,
                    dev_gpio_set_output_t *f_set_output;
                    dev_gpio_get_input_t *f_get_input;
                    dev_gpio_request_t *f_request;
+                   dev_gpio_cancel_t *f_cancel;
   );
 
 /** @see driver_gpio_s */
@@ -292,6 +305,7 @@ DRIVER_CLASS_TYPES(DRIVER_CLASS_GPIO, gpio,
     .f_set_output = prefix ## _set_output,                        \
     .f_get_input = prefix ## _get_input,                          \
     .f_request = prefix ## _request,                              \
+    .f_cancel = prefix ## _cancel,                                \
   })
 
 /** Blocking GPIO device request function. This function uses a

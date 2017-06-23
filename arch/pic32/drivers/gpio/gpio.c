@@ -302,6 +302,7 @@ static DEV_IOMUX_SETUP(pic32_gpio_iomux_setup)
   return err;
 }
 
+#define pic32_gpio_cancel (dev_gpio_cancel_t*)&dev_driver_notsup_fcn
 #define pic32_gpio_request dev_gpio_request_async_to_sync
 #define pic32_gpio_input_irq_range (dev_gpio_input_irq_range_t*)dev_driver_notsup_fcn
 #define pic32_gpio_use dev_use_generic

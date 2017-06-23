@@ -260,6 +260,7 @@ static DEV_IRQ_SRC_PROCESS(pcal6408a_irq)
   lock_release(&dev->lock);
 }
 
+#define pcal6408a_cancel (dev_gpio_cancel_t*)&dev_driver_notsup_fcn
 #define pcal6408a_set_mode (dev_gpio_set_mode_t*)dev_driver_notsup_fcn
 #define pcal6408a_set_output (dev_gpio_set_output_t*)dev_driver_notsup_fcn
 #define pcal6408a_get_input (dev_gpio_get_input_t*)dev_driver_notsup_fcn

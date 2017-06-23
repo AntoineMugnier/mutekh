@@ -484,6 +484,7 @@ static DEV_GPIO_REQUEST(nrf5x_gpio_request)
   kroutine_exec(&rq->base.kr);
 }
 
+#define nrf5x_gpio_cancel (dev_gpio_cancel_t*)&dev_driver_notsup_fcn
 #define nrf5x_gpio_use dev_use_generic
 #define nrf5x_gpio_icu_link device_icu_dummy_link
 

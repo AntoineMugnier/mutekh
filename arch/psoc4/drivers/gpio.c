@@ -388,6 +388,7 @@ static DEV_CLEANUP(psoc4_gpio_cleanup)
   return 0;
 }
 
+#define psoc4_gpio_cancel (dev_gpio_cancel_t*)&dev_driver_notsup_fcn
 #define psoc4_gpio_request dev_gpio_request_async_to_sync
 #define psoc4_gpio_use dev_use_generic
 #define psoc4_gpio_icu_link device_icu_dummy_link

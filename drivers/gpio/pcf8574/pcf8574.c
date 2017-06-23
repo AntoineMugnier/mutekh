@@ -266,6 +266,7 @@ static DEV_IRQ_SRC_PROCESS(pcf8574_irq)
   lock_release(&dev->lock);
 }
 
+#define pcf8574_cancel (dev_gpio_cancel_t*)&dev_driver_notsup_fcn
 #define pcf8574_set_output (dev_gpio_set_output_t*)dev_driver_notsup_fcn
 #define pcf8574_get_input (dev_gpio_get_input_t*)dev_driver_notsup_fcn
 #define pcf8574_use dev_use_generic

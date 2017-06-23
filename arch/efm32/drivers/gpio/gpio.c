@@ -450,7 +450,10 @@ efm32_gpio_request_until(struct device_s *dev,
     }
 
  push:
-  rq->base.drvuint = ifall | irise;
+  ifall |= irise;
+  if (!ifall)
+    goto empty;
+  rq->base.drvuint = ifall;
   dev_request_queue_pushback(&pv->queue, &rq->base);
   return;
 
@@ -466,6 +469,7 @@ efm32_gpio_request_until(struct device_s *dev,
   cpu_mem_write_32(EFM32_GPIO_ADDR + EFM32_GPIO_IFC_ADDR,
                    endian_le32(irise | ifall));
 
+ empty:
   kroutine_exec(&rq->base.kr);
 }
 #endif
@@ -479,6 +483,44 @@ static DEV_GPIO_REQUEST(efm32_gpio_request)
 #endif
 
   dev_gpio_request_async_to_sync(gpio, rq);
+}
+
+#ifdef CONFIG_DRIVER_EFM32_GPIO_UNTIL
+static void efm32_gpio_until_clear(uint32_t m)
+{
+  cpu_mem_write_32(EFM32_GPIO_ADDR + EFM32_GPIO_EXTIRISE_ADDR,
+                   cpu_mem_read_32(EFM32_GPIO_ADDR + EFM32_GPIO_EXTIRISE_ADDR)
+                   & endian_le32(~m));
+  cpu_mem_write_32(EFM32_GPIO_ADDR + EFM32_GPIO_EXTIFALL_ADDR,
+                   cpu_mem_read_32(EFM32_GPIO_ADDR + EFM32_GPIO_EXTIFALL_ADDR)
+                   & endian_le32(~m));
+  cpu_mem_write_32(EFM32_GPIO_ADDR + EFM32_GPIO_IEN_ADDR,
+                   cpu_mem_read_32(EFM32_GPIO_ADDR + EFM32_GPIO_IEN_ADDR)
+                   & endian_le32(~m));
+}
+#endif
+
+static DEV_GPIO_CANCEL(efm32_gpio_cancel)
+{
+#ifdef CONFIG_DRIVER_EFM32_GPIO_UNTIL
+  struct device_s *dev = gpio->dev;
+  struct efm32_gpio_private_s *pv = dev->drv_pv;
+  LOCK_SPIN_IRQ_SCOPED(&dev->lock);
+
+  if (rq->type == DEV_GPIO_UNTIL)
+    {
+      uint32_t m = rq->base.drvuint;
+      if (m == 0)
+        return -EBUSY;
+
+      dev_request_queue_remove(&pv->queue, &rq->base);
+      efm32_gpio_until_clear(m);
+      cpu_mem_write_32(EFM32_GPIO_ADDR + EFM32_GPIO_IFC_ADDR, endian_le32(m));
+      rq->base.drvuint = 0;
+      return 0;
+    }
+#endif
+  return -ENOTSUP;
 }
 
 #define efm32_gpio_input_irq_range (dev_gpio_input_irq_range_t*)dev_driver_notsup_fcn
@@ -669,17 +711,8 @@ static DEV_IRQ_SRC_PROCESS(efm32_gpio_source_process)
           if (m & x)
             {
               x ^= m;
-
-              cpu_mem_write_32(EFM32_GPIO_ADDR + EFM32_GPIO_EXTIRISE_ADDR,
-                               cpu_mem_read_32(EFM32_GPIO_ADDR + EFM32_GPIO_EXTIRISE_ADDR)
-                               & endian_le32(~m));
-              cpu_mem_write_32(EFM32_GPIO_ADDR + EFM32_GPIO_EXTIFALL_ADDR,
-                               cpu_mem_read_32(EFM32_GPIO_ADDR + EFM32_GPIO_EXTIFALL_ADDR)
-                               & endian_le32(~m));
-              cpu_mem_write_32(EFM32_GPIO_ADDR + EFM32_GPIO_IEN_ADDR,
-                               cpu_mem_read_32(EFM32_GPIO_ADDR + EFM32_GPIO_IEN_ADDR)
-                               & endian_le32(~m));
-
+              efm32_gpio_until_clear(m);
+              rq->drvuint = 0;
               kroutine_exec(&rq->kr);
               GCT_FOREACH_DROP;
             }
@@ -714,9 +747,7 @@ static DEV_IRQ_SRC_PROCESS(efm32_gpio_source_process)
 
 /******** GPIO generic driver part *********************/
 
-
 #define efm32_gpio_use dev_use_generic
-//#define efm32_gpio_cancel dev_use_generic
 
 static DEV_INIT(efm32_gpio_init)
 {

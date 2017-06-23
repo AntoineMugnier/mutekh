@@ -403,7 +403,7 @@ static DEV_ICU_GET_SINK(mcp23s17_icu_get_sink)
 
 #endif
 
-
+#define mcp23s17_cancel (dev_gpio_cancel_t*)&dev_driver_notsup_fcn
 #define mcp23s17_set_mode (dev_gpio_set_mode_t *)dev_driver_notsup_fcn
 #define mcp23s17_set_output (dev_gpio_set_output_t *)dev_driver_notsup_fcn
 #define mcp23s17_get_input (dev_gpio_get_input_t *)dev_driver_notsup_fcn

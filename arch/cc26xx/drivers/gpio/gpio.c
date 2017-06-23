@@ -354,7 +354,7 @@ static DEV_IRQ_SRC_PROCESS(cc26xx_gpio_source_process)
 
 /******** GPIO generic driver part *********************/
 
-
+#define cc26xx_gpio_cancel (dev_gpio_cancel_t*)&dev_driver_notsup_fcn
 #define cc26xx_gpio_request dev_gpio_request_async_to_sync
 
 static void power_domain_on(void)

@@ -487,7 +487,7 @@ static DEV_IRQ_SRC_PROCESS(bcm283x_gpio_source_process)
 
 /***********************************************************************/
 
-
+#define bcm283x_gpio_cancel (dev_gpio_cancel_t*)&dev_driver_notsup_fcn
 #define bcm283x_gpio_use dev_use_generic
 
 static DEV_INIT(bcm283x_gpio_init)

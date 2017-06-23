@@ -419,6 +419,7 @@ static DEV_IRQ_SINK_UPDATE(soclib_spi_icu_sink_update)
 
 /*******************************************************/
 
+#define soclib_spi_gpio_cancel (dev_gpio_cancel_t*)&dev_driver_notsup_fcn
 #define soclib_spi_gpio_request dev_gpio_request_async_to_sync
 #define soclib_spi_gpio_input_irq_range (dev_gpio_input_irq_range_t*)dev_driver_notsup_fcn
 
