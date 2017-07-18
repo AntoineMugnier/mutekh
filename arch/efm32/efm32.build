@@ -310,6 +310,16 @@
 
   ########### Ram size
 
+  %subsection efr32-fg12P2NN-*-*
+    %types sram
+    CONFIG_EFM32_RAMSIZE 0x20000
+  %end
+
+  %subsection efr32-fg12P4NN-*-*
+    %types sram
+    CONFIG_EFM32_RAMSIZE 0x40000
+  %end
+
   %subsection efr32-mg12P3NN-*-*
     %types sram
     CONFIG_EFM32_RAMSIZE 0x40000
