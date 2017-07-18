@@ -416,7 +416,9 @@ static DEV_INIT(efm32_leuart_init)
   if (device_iomux_setup(dev, "<rx? >tx?", loc, NULL, NULL))
     goto err_clk;
 
-#if CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_XG1
+#if (CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_XG1) ||\
+    (CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_XG12)
+
   uint32_t enable = 0;
   uint32_t route = 0;
 
@@ -443,12 +445,12 @@ static DEV_INIT(efm32_leuart_init)
   if (loc[1] != IOMUX_INVALID_DEMUX)
     route |= EFM32_LEUART_ROUTE_TXPEN;
 
-  EFM32_LEUART_ROUTE_LOCATION_SETVAL(route, loc[0] != IOMUX_INVALID_DEMUX ? loc[0] : loc[1]);
-
   if (route == 0)
     goto err_clk;
 
-  cpu_mem_write_32(pv->addr + EFM32_LEUART_ROUTE_ADDR, endian_le32(route));
+  EFM32_LEUART_ROUTE_LOCATION_SETVAL(route, loc[0] != IOMUX_INVALID_DEMUX ? loc[0] : loc[1]);
+
+  efm32_leuart_write_reg(pv->addr, EFM32_LEUART_ROUTE_ADDR, endian_le32(route));
 #else
 # error
 #endif
