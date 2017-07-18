@@ -68,7 +68,8 @@
 # define GPIO_PINGRP_COUNT 16
 # define GPIO_BANK_COUNT 6
 #endif
-#if CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_XG1
+#if (CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_XG1) ||\
+    (CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_XG12)
 # define GPIO_PINIDX_COUNT 4
 # define GPIO_PINGRP_COUNT 4
 # define GPIO_BANK_COUNT 12
@@ -85,7 +86,8 @@ efm32_gpio_icupv_bank(const struct dev_irq_sink_s *sink)
 static ALWAYS_INLINE uint_fast8_t
 efm32_gpio_icupv_idx(const struct dev_irq_sink_s *sink)
 {
-#if CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_XG1
+#if (CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_XG1) ||\
+    (CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_XG12)
   return sink->icu_pv >> 5;
 #else
   return 0;
@@ -96,7 +98,8 @@ static ALWAYS_INLINE uint8_t
 efm32_gpio_icupv(uint_fast8_t bank, uint_fast8_t idx)
 {
   return bank
-#if CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_XG1
+#if (CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_XG1) ||\
+    (CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_XG12)
     | idx << 5
 #endif
     ;

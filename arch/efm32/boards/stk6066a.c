@@ -36,22 +36,46 @@
 #include <arch/efm32/gpio.h>
 #include <arch/efm32/cmu.h>
 #include <arch/efm32/devaddr.h>
+#include <arch/efm32/cmu.h>
+#include <arch/efm32/emu.h>
 #include <mutek/startup.h>
 
-#define HFXO_FREQ  19000000
+#define HFXO_FREQ  38400000
 
 void efm32_board_init()
 {
   uint32_t b, x;
 
-  /* Enable GPIO clock */
+  b = EFM32_EMU_ADDR;
+
+  x = cpu_mem_read_32(b + EFR32_EMU_PWRCFG_ADDR);
+
+  EFR32_EMU_PWRCFG_PWRCFG_SET(x, DCDCTODVDD);                                                                                            
+  cpu_mem_write_32(b + EFR32_EMU_PWRCFG_ADDR, x);                                                                                     
+  cpu_mem_write_32(b + EFR32_EMU_DCDCCTRL_ADDR, 0x31);
+
+  x = cpu_mem_read_32(b + EFR32_EMU_PWRCFG_ADDR);
+  assert((x & EFR32_EMU_PWRCFG_MASK) == EFR32_EMU_PWRCFG_PWRCFG_DCDCTODVDD);
+
+  x = cpu_mem_read_32(b + EFR32_EMU_PWRCTRL_ADDR);
+  x |= 0x420;
+  cpu_mem_write_32(b + EFR32_EMU_PWRCTRL_ADDR, x);
+
+
   b = EFM32_CMU_ADDR;
+
   cpu_mem_write_32(b + EFM32_CMU_OSCENCMD_ADDR, EFM32_CMU_OSCENCMD_HFRCOEN);
   while (!(cpu_mem_read_32(b + EFM32_CMU_STATUS_ADDR) & EFM32_CMU_STATUS_HFRCORDY))
     ;
   cpu_mem_write_32(b + EFM32_CMU_HFCLKSEL_ADDR, EFM32_CMU_HFCLKSEL_HF(HFRCO));
+  
+  x = cpu_mem_read_32(b + EFM32_CMU_HFCLKSTATUS_ADDR);
+  assert(EFM32_CMU_HFCLKSTATUS_SELECTED_GET(x) != EFM32_CMU_HFCLKSTATUS_SELECTED_HFXO);
+
+  /* Enable GPIO clock */
   x = cpu_mem_read_32(b + EFM32_CMU_HFBUSCLKEN0_ADDR);
-  cpu_mem_write_32(b + EFM32_CMU_HFBUSCLKEN0_ADDR, x | EFM32_CMU_HFBUSCLKEN0_GPIO);
+  x |= EFM32_CMU_HFBUSCLKEN0_GPIO;
+  cpu_mem_write_32(b + EFM32_CMU_HFBUSCLKEN0_ADDR, x);
 
   uint32_t gpio = EFM32_GPIO_ADDR;
   uint32_t button_pin = 86;
@@ -60,13 +84,31 @@ void efm32_board_init()
   uint32_t bank = button_pin / 16;
   uint32_t h = (button_pin >> 1) & 4;
 
-  x = cpu_mem_read_32(b + EFM32_GPIO_MODEL_ADDR(bank) + h);
+  x = cpu_mem_read_32(gpio + EFM32_GPIO_MODEL_ADDR(bank) + h);
   EFM32_GPIO_MODEL_MODE_SET(button_pin % 8, x, INPUT);
-  cpu_mem_write_32(b + EFM32_GPIO_MODEL_ADDR(bank) + h, x);
+  cpu_mem_write_32(gpio + EFM32_GPIO_MODEL_ADDR(bank) + h, x);
 
-  while (!(cpu_mem_read_32(b + EFM32_GPIO_DIN_ADDR(bank))
+  while (!(cpu_mem_read_32(gpio + EFM32_GPIO_DIN_ADDR(bank))
            & EFM32_GPIO_DIN_DIN(button_pin % 16)))
     ;
+
+  /* Set PA5 high for enabling VCOM */
+  x = cpu_mem_read_32(gpio + EFM32_GPIO_MODEL_ADDR(0));
+  EFM32_GPIO_MODEL_MODE_SET(5, x, PUSHPULL);
+  cpu_mem_write_32(gpio + EFM32_GPIO_MODEL_ADDR(0), x);
+
+  x = EFM32_GPIO_DOUT_DOUT(5);
+  cpu_mem_write_32(gpio + EFM32_GPIO_DOUT_ADDR(0) + 0x06000000, x);
+
+  /* Set PF4 and PF5 high for led */
+  x = cpu_mem_read_32(gpio + EFM32_GPIO_MODEL_ADDR(5));
+  EFM32_GPIO_MODEL_MODE_SET(4, x, PUSHPULL);
+  EFM32_GPIO_MODEL_MODE_SET(5, x, PUSHPULL);
+  cpu_mem_write_32(gpio + EFM32_GPIO_MODEL_ADDR(5), x);
+
+  x = EFM32_GPIO_DOUT_DOUT(4) | EFM32_GPIO_DOUT_DOUT(5);
+  cpu_mem_write_32(gpio + EFM32_GPIO_DOUT_ADDR(5) + 0x06000000, x);
+
 }
 
 #if defined(CONFIG_DRIVER_CPU_ARM32M)
@@ -146,31 +188,56 @@ DEV_DECLARE_STATIC(dma_dev, "dma", 0, efm32_dma_drv,
 
 #if defined(CONFIG_DRIVER_EFM32_USART_SPI)
 
-DEV_DECLARE_STATIC(usart1_dev, "spi1", 0, efm32_usart_spi_drv,
+DEV_DECLARE_STATIC(usart_dev, "spi", 0, efm32_usart_spi_drv,
+
+  #if (CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_XG1)
 
                    DEV_STATIC_RES_MEM(0x40010400, 0x40010800),
                    DEV_STATIC_RES_FREQ(HFXO_FREQ, 1),
 
                    DEV_STATIC_RES_DEV_ICU("/cpu"),
                    DEV_STATIC_RES_IRQ(0, EFM32_IRQ_USART1_RX, DEV_IRQ_SENSE_RISING_EDGE, 0, 1),
-#if defined(CONFIG_DRIVER_EFR32_DMA)
+    #if defined(CONFIG_DRIVER_EFR32_DMA)
                    DEV_STATIC_RES_DEV_PARAM("dma", "/dma"),
                    /* Read channel must have higher priority than write channel */
                    DEV_STATIC_RES_DMA((1 << 0), (EFM32_DMA_SOURCE_USART1 | (EFM32_DMA_SIGNAL_USART1RXDATAV << 8))),
                    DEV_STATIC_RES_DMA((1 << 1), (EFM32_DMA_SOURCE_USART1 | (EFM32_DMA_SIGNAL_USART1TXEMPTY << 8))),
-#endif
+    #endif
 
                    DEV_STATIC_RES_DEV_IOMUX("/gpio"),
                    DEV_STATIC_RES_IOMUX("clk",  EFM32_LOC11, EFM32_PC8, 0, 0),
                    DEV_STATIC_RES_IOMUX("miso", EFM32_LOC11, EFM32_PC7, 0, 0),
                    DEV_STATIC_RES_IOMUX("mosi", EFM32_LOC11, EFM32_PC6, 0, 0),
-#if 0
-                   DEV_STATIC_RES_IOMUX("cs",   EFM32_LOC8, EFM32_PC9, 0, 0),
+
+  #elif (CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_XG12)
+
+                   DEV_STATIC_RES_MEM(0x40010800, 0x40010C00),
+                   DEV_STATIC_RES_FREQ(HFXO_FREQ, 1),
+
+                   DEV_STATIC_RES_DEV_ICU("/cpu"),
+                   DEV_STATIC_RES_IRQ(0, EFM32_IRQ_USART2_RX, DEV_IRQ_SENSE_RISING_EDGE, 0, 1),
+    #if defined(CONFIG_DRIVER_EFR32_DMA)
+                   DEV_STATIC_RES_DEV_PARAM("dma", "/dma"),
+                   /* Read channel must have higher priority than write channel */
+                   DEV_STATIC_RES_DMA((1 << 0), (EFM32_DMA_SOURCE_USART2 | (EFM32_DMA_SIGNAL_USART2RXDATAV << 8))),
+                   DEV_STATIC_RES_DMA((1 << 1), (EFM32_DMA_SOURCE_USART2 | (EFM32_DMA_SIGNAL_USART2TXEMPTY << 8))),
+    #endif
+
+                   DEV_STATIC_RES_DEV_IOMUX("/gpio"),
+                   DEV_STATIC_RES_IOMUX("clk",  EFM32_LOC1, EFM32_PA8, 0, 0),
+                   DEV_STATIC_RES_IOMUX("miso", EFM32_LOC1, EFM32_PA7, 0, 0),
+                   DEV_STATIC_RES_IOMUX("mosi", EFM32_LOC1, EFM32_PA6, 0, 0),
+  #else
+   #error
+  #endif
+
+    #ifdef CONFIG_DRIVER_EFM32_TIMER
+                   DEV_STATIC_RES_DEV_TIMER("/timer0")
+    #endif
+                   );
 #endif
 
-#ifdef CONFIG_DRIVER_EFM32_TIMER
-                   DEV_STATIC_RES_DEV_TIMER("/timer0")
-#endif
                    );
 
 #endif
+

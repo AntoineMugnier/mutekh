@@ -62,13 +62,22 @@ void efm32_usart_printk_init()
 
   switch (CONFIG_MUTEK_PRINTK_ADDR)
     {
-#if CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_XG1
+#if (CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_XG1) ||\
+    (CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_XG12)
     case 0x40010000:
       hfperclken = EFM32_CMU_HFPERCLKEN0_USART0;
       break;
     case 0x40010400:
       hfperclken = EFM32_CMU_HFPERCLKEN0_USART1;
       break;
+  #if (CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_XG12)
+    case 0x40010800:
+      hfperclken = EFM32_CMU_HFPERCLKEN0_USART2;
+      break;
+    case 0x40010C00:
+      hfperclken = EFM32_CMU_HFPERCLKEN0_USART3;
+      break;
+  #endif
 #elif CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFM
   #ifdef EFM32_CMU_HFPERCLKEN0_UART0
     case 0x4000e000:            /* uart0 */
@@ -107,9 +116,10 @@ void efm32_usart_printk_init()
   /* configure CMU */
   b = EFM32_CMU_ADDR;
 
-#if CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_XG1
+#if (CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_XG1) ||\
+    (CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_XG12)
 
-#define USART_CLOCK            19000000
+#define USART_CLOCK            38400000
 
   cpu_mem_write_32(b + EFM32_CMU_OSCENCMD_ADDR, EFM32_CMU_OSCENCMD_HFRCOEN);
   while (!(cpu_mem_read_32(b + EFM32_CMU_STATUS_ADDR) & EFM32_CMU_STATUS_HFRCORDY))
@@ -166,7 +176,8 @@ void efm32_usart_printk_init()
   uint32_t div = (256ULL * USART_CLOCK) / (4 * CONFIG_DRIVER_EFM32_USART_RATE) - 256;
   cpu_mem_write_32(b + EFM32_USART_CLKDIV_ADDR, div);
 
-#if CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_XG1
+#if (CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_XG1) ||\
+    (CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_XG12)
   cpu_mem_write_32(b + EFM32_USART_ROUTEPEN_ADDR, EFM32_USART_ROUTEPEN_TXPEN);
   x = cpu_mem_read_32(b + EFM32_USART_ROUTELOC0_ADDR);
   EFM32_USART_ROUTELOC0_TXLOC_SETVAL(x, CONFIG_DRIVER_EFM32_USART_PRINTK_LOC);
@@ -177,7 +188,7 @@ void efm32_usart_printk_init()
   EFM32_USART_ROUTE_LOCATION_SETVAL(x, CONFIG_DRIVER_EFM32_USART_PRINTK_LOC);
   cpu_mem_write_32(b + EFM32_USART_ROUTE_ADDR, x);
 #else
-# eror
+# error
 #endif
 
   /* Enable TX */

@@ -398,7 +398,8 @@ static DEV_INIT(efm32_usart_char_init)
   if (device_iomux_setup(dev, "<rx? >tx?", loc, NULL, NULL))
     goto err_mem;
 
-#if CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_XG1
+#if (CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_XG1) ||\
+    (CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_XG12)
   uint32_t enable = 0;
   uint32_t route = 0;
 
@@ -467,7 +468,8 @@ static DEV_INIT(efm32_usart_char_init)
   cpu_mem_write_32(pv->addr + EFM32_USART_CMD_ADDR,
                    endian_le32(EFM32_USART_CMD_CLEARRX | EFM32_USART_CMD_CLEARTX));
 
-#if CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_XG1
+#if (CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_XG1) ||\
+    (CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_XG12)
   cpu_mem_write_32(pv->addr + EFM32_USART_ROUTELOC0_ADDR, endian_le32(route));
   cpu_mem_write_32(pv->addr + EFM32_USART_ROUTEPEN_ADDR, endian_le32(enable));
 #elif CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFM

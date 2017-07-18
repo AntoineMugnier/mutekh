@@ -3,6 +3,11 @@
 #define EFM32_IRQ_H_
 
 #define EFM32_IRQ_EMU            0
+#define EFM32_IRQ_FRC            3
+#define EFM32_IRQ_MODEM          4
+#define EFM32_IRQ_RAC_SEQ        5
+#define EFM32_IRQ_RAC_RSM        6
+#define EFM32_IRQ_BUFC           7
 #define EFM32_IRQ_DMA            8
 #define EFM32_IRQ_GPIO_EVEN      9
 #define EFM32_IRQ_TIMER0         10
@@ -22,6 +27,12 @@
 #define EFM32_IRQ_MSC            24
 #define EFM32_IRQ_CRYPTO         25
 #define EFM32_IRQ_LETIMER0       26
+#define EFM32_IRQ_AGC            27
+#define EFM32_IRQ_PROTIMER       28
+#define EFM32_IRQ_RTCC           29
+#define EFM32_IRQ_SYNTH          30
+#define EFM32_IRQ_CRYOTIMER      31
+#define EFM32_IRQ_RFSENSE        32
 #define EFM32_IRQ_FPUEH          33
 
 #endif

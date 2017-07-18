@@ -11,6 +11,8 @@
 # include "efm/zero/devaddr.h"
 #elif (CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_XG1)
 # include "efr/devaddr.h"
+#elif (CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_XG12)
+# include "efr/devaddr.h"
 #else
 # error not supported
 #endif

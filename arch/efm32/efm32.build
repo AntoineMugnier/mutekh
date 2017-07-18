@@ -15,7 +15,7 @@
   CONFIG_LOAD_ROM_RO_ADDR   0x00000000
   CONFIG_LOAD_ROM_RW_ADDR   0x20000000
   CONFIG_STARTUP_STACK_ADDR (0x20000000 + CONFIG_LOAD_ROM_RW_SIZE)
-  CONFIG_STARTUP_STACK_SIZE  0x400
+  CONFIG_STARTUP_STACK_SIZE  0x800
   CONFIG_LOAD_ROM_RW_SIZE   (CONFIG_EFM32_RAMSIZE - CONFIG_STARTUP_STACK_SIZE)
   CONFIG_STARTUP_HEAP_SIZE  0
 
@@ -221,7 +221,14 @@
   %types architecture
 
   CONFIG_ARCH_EFM32
-  CONFIG_EFM32_ARCHREV EFM32_ARCHREV_EFR_XG1
+
+  %subsection efr32-Lg1LNNN-fX-gmX efm32-jg1LNNN-fX-gmX efm32-pg1LNNN-fX-gmX
+    CONFIG_EFM32_ARCHREV EFM32_ARCHREV_EFR_XG1
+  %end
+
+  %subsection efr32-Lg12LNNN-fX-gmX
+    CONFIG_EFM32_ARCHREV EFM32_ARCHREV_EFR_XG12
+  %end
 
   %types family
   %set BUILD_NAME efr32
@@ -243,6 +250,7 @@
   CONFIG_LOAD_EXCEPTIONS_SEPARATE undefined
   CONFIG_LOAD_EXCEPTIONS_TEXT
 
+  CONFIG_DEVICE_CLOCK undefined
   CONFIG_DEVICE_TREE undefined
   CONFIG_DRIVER_EFM32_TIMER
   CONFIG_DRIVER_EFM32_GPIO
@@ -260,48 +268,67 @@
   CONFIG_PTHREAD_STACK_SIZE  0x800
 
   CONFIG_CPU_ARM32M_CORTEXM4
-  CONFIG_CPU_ARM32M_M_IRQ_COUNT 33
-
-  %subsection efr32-mg1LNNN-*-* efr32-mg1LNNN?-*-*
+  CONFIG_CPU_ARM32M_M_IRQ_COUNT 45
+  %subsection efr32-mgXLNNN-*-* efr32-mgXLNNN?-*-*
     CONFIG_EFM32_FAMILY EFM32_FAMILY_MIGHTY
   %end
 
-  %subsection efr32-fg1LNNN-*-* efr32-fg1LNNN?-*-*
+  %subsection efr32-fgXLNNN-*-* efr32-fgXLNNN?-*-*
     CONFIG_EFM32_FAMILY EFM32_FAMILY_FLEX
   %end
 
-  %subsection efr32-bg1LNNN-*-* efr32-bg1LNNN?-*-*
+  %subsection efr32-bgXLNNN-*-* efr32-bgXLNNN?-*-*
     CONFIG_EFM32_FAMILY EFM32_FAMILY_BLUE
   %end
 
   ########### Flash size
 
-  %subsection efr32-?g1LNNN-f32-*
+  %subsection efr32-?gXLNNN-f32-*
     %types flash
     CONFIG_LOAD_ROM_RO_SIZE 0x00008000
   %end
 
-  %subsection efr32-?g1LNNN-f64-*
+  %subsection efr32-?gXLNNN-f64-*
     %types flash
     CONFIG_LOAD_ROM_RO_SIZE 0x00010000
   %end
 
-  %subsection efr32-?g1LNNN-f128-*
+  %subsection efr32-?gXLNNN-f128-*
     %types flash
     CONFIG_LOAD_ROM_RO_SIZE 0x00020000
   %end
 
-  %subsection efr32-?g1LNNN-f256-*
+  %subsection efr32-?gXLNNN-f256-*
     %types flash
     CONFIG_LOAD_ROM_RO_SIZE 0x00040000
   %end
 
-  %subsection efr32-?g1LNNN-f1024-*
+  %subsection efr32-?gXLNNN-f1024-*
     %types flash
     CONFIG_LOAD_ROM_RO_SIZE 0x00100000
   %end
 
   ########### Ram size
+
+  %subsection efr32-mg12P3NN-*-*
+    %types sram
+    CONFIG_EFM32_RAMSIZE 0x40000
+  %end
+
+  %subsection efr32-mg12P4NN-*-*
+    %types sram
+    CONFIG_EFM32_RAMSIZE 0x40000
+  %end
+
+  %subsection efr32-mg12P1NN-*-*
+    %types sram
+    CONFIG_EFM32_RAMSIZE 0x20000
+  %end
+
+  %subsection efr32-mg12P2NN-*-*
+    %types sram
+    CONFIG_EFM32_RAMSIZE 0x20000
+  %end
 
   %subsection efr32-mg1LNNN-*-*
     %types sram
