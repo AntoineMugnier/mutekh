@@ -144,7 +144,6 @@ error_t ble_stack_context_address_non_resolvable_generate(struct ble_stack_conte
   return 0;
 }
 
-#if defined(CONFIG_BLE_SECURITY_DB)
 error_t ble_stack_context_address_resolvable_generate(struct ble_stack_context_s *ctx,
                                                       struct ble_addr_s *addr)
 {
@@ -158,7 +157,6 @@ error_t ble_stack_context_address_resolvable_generate(struct ble_stack_context_s
 
   return ble_ah(&ctx->crypto, ctx->security_db.irk, addr->addr + 3, addr->addr);
 }
-#endif
 
 error_t ble_stack_context_local_address_get(struct ble_stack_context_s *ctx,
                                             struct ble_addr_s *addr)

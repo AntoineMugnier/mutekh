@@ -141,7 +141,6 @@ bool_t peri_connection_requested(void *delegate, struct net_layer_s *layer,
     return 1;
   }
 
-#if defined(CONFIG_BLE_SECURITY_DB)
   bool_t known_device = ble_security_db_contains(&peri->context->security_db, &conn->master);
 
   if (!(peri->mode & BLE_PERIPHERAL_PAIRABLE) && !known_device) {
@@ -153,7 +152,6 @@ bool_t peri_connection_requested(void *delegate, struct net_layer_s *layer,
   /*   printk(" ignored: we are paired and connection comes from a known device\n"); */
   /*   return 1; */
   /* } */
-#endif
 
   if (ble_gattdb_std_char_read(&peri->context->gattdb,
                                BLE_GATT_SERVICE_GENERIC_ACCESS,
@@ -253,14 +251,10 @@ static const struct ble_advertiser_delegate_vtable_s peri_adv_vtable =
 
 void ble_peripheral_mode_set(struct ble_peripheral_s *peri, uint8_t mode)
 {
-#if defined(CONFIG_BLE_SECURITY_DB)
   if (ble_security_db_count(&peri->context->security_db) == 0
       && mode & BLE_PERIPHERAL_CONNECTABLE) {
     mode |= BLE_PERIPHERAL_PAIRABLE;
   }
-#else
-  mode |= BLE_PERIPHERAL_PAIRABLE;
-#endif
 
   if (mode == peri->mode)
     return;

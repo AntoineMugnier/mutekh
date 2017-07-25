@@ -205,14 +205,9 @@ error_t ble_stack_connection_create(struct ble_stack_connection_s *conn,
   conn->is_master = is_master;
   phy_params.connect_packet_timestamp = anchor;
   phy_params.conn_req = *conn_params;
-#if defined(CONFIG_BLE_CRYPTO)
   ble_security_db_load(&context->security_db,
                        is_master ? &conn_params->slave : &conn_params->master,
                        &conn->peer);
-#else
-  ble_peer_init(&conn->peer, NULL,
-                is_master ? &conn_params->slave : &conn_params->master);
-#endif
 
   err = DEVICE_OP(&context->ble, layer_create,
                   &context->scheduler,

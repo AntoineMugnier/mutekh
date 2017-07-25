@@ -23,12 +23,8 @@
 
 #include <mutek/printk.h>
 
-#if defined(CONFIG_BLE_SECURITY_DB)
-# include <device/class/persist.h>
-# include <device/class/crypto.h>
-#endif
-
 #if defined(CONFIG_BLE_CRYPTO)
+# include <device/class/crypto.h>
 # include <ble/crypto.h>
 #endif
 
@@ -44,7 +40,6 @@
 # define dprintk(k...) do {} while (0)
 #endif
 
-#if defined(CONFIG_BLE_SECURITY_DB)
 static
 error_t ble_peer_subscriptions_save(const struct ble_peer_s *peer)
 {
@@ -68,7 +63,6 @@ error_t ble_peer_subscriptions_save(const struct ble_peer_s *peer)
 
   return peer_subscribed_save(db, peer, index);
 }
-#endif
 
 #if defined(CONFIG_BLE_CRYPTO)
 error_t ble_peer_sk_get(struct ble_peer_s *peer,
@@ -77,21 +71,18 @@ error_t ble_peer_sk_get(struct ble_peer_s *peer,
                         const uint16_t ediv,
                         uint8_t *sk)
 {
-#if defined(CONFIG_BLE_SECURITY_DB)
   struct ble_security_db_s *db = peer->db;
   if (!db)
     return -EINVAL;
 
   uint8_t tmp[16];
   uint64_t did = endian_le64_na_load(random);
-#endif
   uint8_t pk[16], skd_rev[16];
   error_t err;
 
   dprintk("%s peer %lld, random %lld, ediv %04x\n", __FUNCTION__,
          peer->id, did, ediv);
 
-#if defined(CONFIG_BLE_SECURITY_DB)
   if (ediv || did) {
     // LTK mode
     dprintk("  LTK lookup mode\n");
@@ -138,7 +129,6 @@ error_t ble_peer_sk_get(struct ble_peer_s *peer,
 
   return err;
 }
-#endif
 
 void ble_peer_init(struct ble_peer_s *peer,
                    struct ble_security_db_s *db,
@@ -179,11 +169,7 @@ error_t ble_peer_reset(struct ble_peer_s *peer)
     peer->addr_present = 1;
   }
 
-#if defined(CONFIG_BLE_SECURITY_DB)
   return ble_security_db_next_id(peer->db, &peer->id);
-#else
-  return 0;
-#endif
 }
 
 void ble_peer_addr_set(struct ble_peer_s *peer, const struct ble_addr_s *addr)
@@ -204,7 +190,6 @@ void ble_peer_addr_set(struct ble_peer_s *peer, const struct ble_addr_s *addr)
   peer->dirty = 1;
 }
 
-#if defined(CONFIG_BLE_SECURITY_DB)
 error_t ble_peer_ltk_get(struct ble_peer_s *peer, uint8_t *ltk)
 {
     return ble_security_db_key_get(peer->db, peer->id, KEY_HANDLE_LTK, ltk);
@@ -246,8 +231,6 @@ void ble_peer_irk_set(struct ble_peer_s *peer, const uint8_t *irk)
   peer->dirty = 1;
 }
 
-#endif
-
 #if defined(CONFIG_BLE_CRYPTO)
 error_t ble_peer_paired(struct ble_peer_s *peer,
                         bool_t bonded,
@@ -260,12 +243,10 @@ error_t ble_peer_paired(struct ble_peer_s *peer,
 
   printk("%s peer id %lld\n", __FUNCTION__, peer->id);
 
-#if defined(CONFIG_BLE_SECURITY_DB)
   peer->bonded = bonded;
   peer->mitm_protection = mitm_protection;
   peer->secure_pairing = secure_pairing;
   peer->paired = 1;
-#endif
 
   peer->stk_present = !!stk;
   if (stk)
@@ -278,7 +259,6 @@ error_t ble_peer_paired(struct ble_peer_s *peer,
 
 error_t ble_peer_save(struct ble_peer_s *peer)
 {
-#if defined(CONFIG_BLE_SECURITY_DB)
   struct ble_security_db_s *db = peer->db;
   error_t err;
 
@@ -311,9 +291,6 @@ error_t ble_peer_save(struct ble_peer_s *peer)
   }
 
   return 0;
-#else
-  return -ENOTSUP;
-#endif
 }
 
 void ble_peer_ltk_set(struct ble_peer_s *peer, const uint8_t *ltk)

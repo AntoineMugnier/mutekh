@@ -98,14 +98,12 @@ void ble_stack_context_release(struct ble_stack_context_s *ctx);
 error_t ble_stack_context_address_non_resolvable_generate(struct ble_stack_context_s *ctx,
                                                           struct ble_addr_s *addr);
 
-#if defined(CONFIG_BLE_SECURITY_DB)
 /**
    @this generates a resolvable address using the device IRK from
    security database.
  */
 error_t ble_stack_context_address_resolvable_generate(struct ble_stack_context_s *ctx,
                                                       struct ble_addr_s *addr);
-#endif
 
 /**
    @this retrieves device address from radio hardware.

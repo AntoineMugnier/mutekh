@@ -136,7 +136,7 @@ bool_t ble_scan_filter_address_resolve(struct ble_scan_filter_s *sf,
   err = ble_security_db_load(sf->peerdb, adva, &peer);
   if (err)
     return 0;
-
+  
   if (!peer.identity_present)
     return 0;
 
@@ -178,10 +178,6 @@ void ble_scan_filter_adv_handle(struct ble_scan_filter_s *sf,
     break;
   }
 
-  dprintk("Got adv %p %P\n", item,
-         buffer->data + buffer->begin,
-         buffer->end - buffer->begin);
-
   ble_advertise_packet_txaddr_get(buffer, &adva);
 
   if (adva.type == BLE_ADDR_RANDOM
@@ -193,6 +189,11 @@ void ble_scan_filter_adv_handle(struct ble_scan_filter_s *sf,
   }
 
   item = ble_scan_filter_device_get(sf, &adva, create);
+
+  dprintk("Got adv %p %P\n", item,
+         buffer->data + buffer->begin,
+         buffer->end - buffer->begin);
+
   if (!item)
     return;
 

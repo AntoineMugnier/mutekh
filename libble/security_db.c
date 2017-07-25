@@ -23,7 +23,7 @@
 
 #include <mutek/printk.h>
 
-#if defined(CONFIG_BLE_SECURITY_DB)
+#if defined(CONFIG_DEVICE_PERSIST)
 # include <device/class/persist.h>
 #endif
 
@@ -62,7 +62,7 @@ struct ble_security_db_entry_s
   bool_t secure_pairing : 1;
 };
 
-#if defined(CONFIG_BLE_SECURITY_DB)
+#if defined(CONFIG_DEVICE_PERSIST)
 static const struct dev_persist_descriptor_s security_db_entry_blob = {
   .uid = 0x3200,
   .type = DEV_PERSIST_BLOB,
@@ -86,16 +86,6 @@ static const struct dev_persist_descriptor_s security_db_pk_blob = {
   .type = DEV_PERSIST_BLOB,
   .size = 16,
 };
-
-error_t ble_security_db_key_get(struct ble_security_db_s *db,
-                                uint64_t did,
-                                uint64_t key_handle,
-                                uint8_t *out)
-{
-  uint64_t tmp[2] = { did, key_handle };
-
-  return ble_e(&db->aes, db->pk, (const uint8_t *)tmp, out);
-}
 
 static
 void peer_entry_addr_load(const struct ble_security_db_entry_s *entry,
@@ -171,7 +161,31 @@ error_t peer_subscribed_save(struct ble_security_db_s *db,
   return dev_persist_wait_write(&db->persist, &security_db_subscribed_blob,
                                 offset, peer->subscriptions);
 }
+#else
+void peer_subscribed_load(struct ble_security_db_s *db,
+                          struct ble_peer_s *peer,
+                          uint8_t offset)
+{
+  memset(peer->subscriptions, 0xff, sizeof(peer->subscriptions));
+}
+
+error_t peer_subscribed_save(struct ble_security_db_s *db,
+                             const struct ble_peer_s *peer,
+                             uint8_t offset)
+{
+  return -ENOTSUP;
+}
 #endif
+
+error_t ble_security_db_key_get(struct ble_security_db_s *db,
+                                uint64_t did,
+                                uint64_t key_handle,
+                                uint8_t *out)
+{
+  uint64_t tmp[2] = { did, key_handle };
+
+  return ble_e(&db->aes, db->pk, (const uint8_t *)tmp, out);
+}
 
 error_t ble_security_db_init(struct ble_security_db_s *db,
                              const char *persist,
@@ -182,7 +196,7 @@ error_t ble_security_db_init(struct ble_security_db_s *db,
 
   memset(db, 0, sizeof(*db));
 
-#if defined(CONFIG_BLE_SECURITY_DB)
+#if defined(CONFIG_DEVICE_PERSIST)
   err = device_get_accessor_by_path(&db->persist.base, NULL, persist, DRIVER_CLASS_PERSIST);
   if (err)
     return err;
@@ -194,7 +208,7 @@ error_t ble_security_db_init(struct ble_security_db_s *db,
 
   db->rng = rng;
 
-#if defined(CONFIG_BLE_SECURITY_DB)
+#if defined(CONFIG_DEVICE_PERSIST)
   const void *tmp;
   err = dev_persist_wait_read(&db->persist, &security_db_pk_blob, 0, &tmp);
   if (!err) {
@@ -202,19 +216,24 @@ error_t ble_security_db_init(struct ble_security_db_s *db,
 
     printk("Loaded device private key: %P\n", db->pk, 16);
   } else {
+#endif
     err = dev_rng_wait_read(db->rng, db->pk, 16);
     if (err)
       goto put_aes;
 
+#if defined(CONFIG_DEVICE_PERSIST)
     printk("Created device private key: %P\n", db->pk, 16);
 
     dev_persist_wait_write(&db->persist, &security_db_pk_blob, 0, db->pk);
     // We can still run until reboot if key fails to write...
   }
+#endif
 
+#if defined(CONFIG_DEVICE_PERSIST)
   err = dev_persist_wait_read(&db->persist, &security_db_device_counter, 0, &tmp);
   if (err)
     dev_persist_wait_inc(&db->persist, &security_db_device_counter, 0);
+#endif
 
   err = ble_security_db_key_get(db, 0, KEY_HANDLE_IRK, db->irk);
   if (err)
@@ -222,6 +241,7 @@ error_t ble_security_db_init(struct ble_security_db_s *db,
 
   printk("Device IRK: %P\n", db->irk, 16);
 
+#if defined(CONFIG_DEVICE_PERSIST)
   for (uint8_t i = 0; i < CONFIG_BLE_SECURITY_DB_MAX; ++i) {
     const struct ble_security_db_entry_s *entry;
     err = dev_persist_wait_read(&db->persist, &security_db_entry_blob, i, (const void**)&entry);
@@ -263,7 +283,7 @@ error_t ble_security_db_init(struct ble_security_db_s *db,
  put_aes:
   device_put_accessor(&db->aes.base);
  put_persist:
-#if defined(CONFIG_BLE_SECURITY_DB)
+#if defined(CONFIG_DEVICE_PERSIST)
   device_put_accessor(&db->persist.base);
 #endif
   return err;
@@ -271,13 +291,13 @@ error_t ble_security_db_init(struct ble_security_db_s *db,
 
 void ble_security_db_cleanup(struct ble_security_db_s *db)
 {
-#if defined(CONFIG_BLE_SECURITY_DB)
+#if defined(CONFIG_DEVICE_PERSIST)
   device_put_accessor(&db->persist.base);
 #endif
   device_put_accessor(&db->aes.base);
 }
 
-#if defined(CONFIG_BLE_SECURITY_DB)
+#if defined(CONFIG_DEVICE_PERSIST)
 uint_fast8_t ble_security_db_count(struct ble_security_db_s *db)
 {
   uint_fast8_t ret = 0;
@@ -291,16 +311,18 @@ uint_fast8_t ble_security_db_count(struct ble_security_db_s *db)
 
   return ret;
 }
-
+#endif
 
 error_t ble_security_db_peer_reconnect_addr_set(struct ble_security_db_s *db,
                                                 uint8_t slot, struct ble_addr_s *addr)
 {
+#if defined(CONFIG_DEVICE_PERSIST)
   if (db->paired_id[slot] == 0)
     return -ENOENT;
 
   const struct ble_security_db_entry_s *entry;
-  error_t err = dev_persist_wait_read(&db->persist, &security_db_entry_blob, slot, (const void**)&entry);
+  error_t err = dev_persist_wait_read(&db->persist, &security_db_entry_blob,
+                                      slot, (const void**)&entry);
 
   if (err)
     return err;
@@ -315,10 +337,12 @@ error_t ble_security_db_peer_reconnect_addr_set(struct ble_security_db_s *db,
     ble_ah(&db->aes, entry->irk, addr->addr + 3, addr->addr);
     return 0;
   }
+#endif
 
   return -EINVAL;
 }
 
+#if defined(CONFIG_DEVICE_PERSIST)
 bool_t ble_security_db_contains(struct ble_security_db_s *db,
                                 const struct ble_addr_s *addr)
 {
@@ -367,6 +391,7 @@ bool_t ble_security_db_contains(struct ble_security_db_s *db,
 
   return 0;
 }
+#endif
 
 error_t ble_security_db_load(struct ble_security_db_s *db,
                                const struct ble_addr_s *addr,
@@ -377,6 +402,7 @@ error_t ble_security_db_load(struct ble_security_db_s *db,
 
   ble_peer_init(peer, db, addr);
 
+#if defined(CONFIG_DEVICE_PERSIST)
   dprintk("%s looking up "BLE_ADDR_FMT"\n", __FUNCTION__, BLE_ADDR_ARG(addr));
 
   if (addr->type == BLE_ADDR_PUBLIC || rt == BLE_ADDR_RANDOM_STATIC) {
@@ -425,6 +451,7 @@ error_t ble_security_db_load(struct ble_security_db_s *db,
     peer_subscribed_load(db, peer, i);
     return 0;
   }
+#endif
 
   return -ENOENT;
 }
@@ -437,6 +464,7 @@ error_t ble_security_db_load(struct ble_security_db_s *db,
 error_t ble_security_db_save(struct ble_security_db_s *db,
                              const struct ble_peer_s *peer)
 {
+#if defined(CONFIG_DEVICE_PERSIST)
   uint64_t oldest_id = -1;
   int8_t index = -1;
   struct ble_security_db_entry_s entry;
@@ -495,6 +523,9 @@ error_t ble_security_db_save(struct ble_security_db_s *db,
   printk(" %d\n", err);
 
   return err;
+#else
+  return 0;
+#endif
 }
 
 /**
@@ -503,6 +534,7 @@ error_t ble_security_db_save(struct ble_security_db_s *db,
 error_t ble_security_db_remove(struct ble_security_db_s *db,
                                uint64_t id)
 {
+#if defined(CONFIG_DEVICE_PERSIST)
   uint8_t index = 0;
 
   for (uint8_t i = 0; i < CONFIG_BLE_SECURITY_DB_MAX; ++i) {
@@ -518,6 +550,9 @@ error_t ble_security_db_remove(struct ble_security_db_s *db,
  remove:
   db->paired_id[index] = 0;
   return dev_persist_wait_remove(&db->persist, &security_db_entry_blob, index);
+#else
+  return -ENOENT;
+#endif
 }
 
 /**
@@ -525,6 +560,7 @@ error_t ble_security_db_remove(struct ble_security_db_s *db,
  */
 void ble_security_db_clear(struct ble_security_db_s *db)
 {
+#if defined(CONFIG_DEVICE_PERSIST)
   for (uint8_t i = 0; i < CONFIG_BLE_SECURITY_DB_MAX; ++i) {
     if (!db->paired_id[i])
       continue;
@@ -532,6 +568,7 @@ void ble_security_db_clear(struct ble_security_db_s *db)
     db->paired_id[i] = 0;
     dev_persist_wait_remove(&db->persist, &security_db_entry_blob, i);
   }
+#endif
 }
 
 error_t ble_peer_lookup_id(struct ble_security_db_s *db,
@@ -539,6 +576,7 @@ error_t ble_peer_lookup_id(struct ble_security_db_s *db,
                            const uint8_t *random,
                            const uint16_t ediv)
 {
+#if defined(CONFIG_DEVICE_PERSIST)
   uint64_t did = endian_le64_na_load(random);
   error_t err;
   uint8_t tmp[16];
@@ -574,6 +612,7 @@ error_t ble_peer_lookup_id(struct ble_security_db_s *db,
     peer_subscribed_load(db, peer, i);
     return 0;
   }
+#endif
 
   return -ENOENT;
 }
@@ -581,6 +620,7 @@ error_t ble_peer_lookup_id(struct ble_security_db_s *db,
 error_t ble_security_db_next_id(struct ble_security_db_s *db,
                                 uint64_t *value)
 {
+#if defined(CONFIG_DEVICE_PERSIST)
   error_t err;
 
   dprintk("%s wait inc\n", __FUNCTION__);
@@ -593,5 +633,8 @@ error_t ble_security_db_next_id(struct ble_security_db_s *db,
 
   return dev_persist_wait_counter_read(&db->persist, &security_db_device_counter,
                                        0, value);
-}
 #endif
+  *value = 0;
+
+  return 0;
+}
