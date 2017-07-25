@@ -64,6 +64,14 @@ static KROUTINE_EXEC(ble_central_state_update)
   struct ble_central_s *ctr = KROUTINE_CONTAINER(kr, *ctr, updater);
   enum ble_central_state_e state = BLE_CENTRAL_IDLE;
 
+  if (!(ctr->mode & BLE_CENTRAL_CONNECTABLE))
+    ble_stack_connection_drop(&ctr->conn);
+
+  if (ctr->scan && !(ctr->mode & BLE_CENTRAL_CONNECTABLE)) {
+    net_layer_refdec(ctr->scan);
+    ctr->scan = NULL;
+  }
+
   if (ctr->conn.phy) {
     state = BLE_CENTRAL_CONNECTED;
   } else if (ctr->scan) {
@@ -94,13 +102,10 @@ static void ctr_conn_state_changed(struct ble_stack_connection_s *conn,
 {
   struct ble_central_s *ctr = ble_central_s_from_conn(conn);
 
-  if (!connected && ctr->mode & BLE_CENTRAL_CONNECTABLE)
-    scan_start(ctr);
-
   if (connected
       && !(ctr->mode & BLE_CENTRAL_PAIRABLE)
-      && conn->peer.paired
-      && conn->peer.ltk_present)
+      && conn->peer.ltk_present
+      && conn->peer.paired)
     ble_llcp_encryption_enable(conn->llcp);
 
   ctr_state_update(ctr);
@@ -122,6 +127,8 @@ void ctr_conn_pairing_success(struct ble_stack_connection_s *conn)
     printk("Encryption enable error: %d\n", err);
     ble_stack_connection_drop(&ctr->conn);
   }
+
+  ctr_state_update(ctr);
 }
 
 static const struct ble_stack_context_handler_s ctr_conn_handler =
@@ -272,6 +279,9 @@ static void ctr_scan_destroyed(void *delegate, struct net_layer_s *layer)
 
   printk("Scanner layer destroyed\n");
 
+  if (ctr->scan == layer)
+    ctr->scan = NULL;
+  
   ctr_state_update(ctr);
 }
 
@@ -296,17 +306,8 @@ void ble_central_mode_set(struct ble_central_s *ctr, uint8_t mode)
     ble_stack_context_use(ctr->context);
 
   ctr->mode = mode;
-
-  if (!(mode & BLE_CENTRAL_CONNECTABLE))
-    ble_stack_connection_drop(&ctr->conn);
-
-  if (ctr->scan) {
-    net_layer_refdec(ctr->scan);
-    ctr->scan = NULL;
-  }
-
-  if (mode & BLE_CENTRAL_CONNECTABLE && !ctr->conn.phy)
-    scan_start(ctr);
+  
+  ctr_state_update(ctr);
 }
 
 static
