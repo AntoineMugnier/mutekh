@@ -34,20 +34,13 @@ struct net_scheduler_s;
 struct ble_peer_s;
 struct dev_rng_s;
 
-enum ble_scan_filter_policy_e
-{
-  BLE_SCAN_FILTER_IGNORE = 0,
-  BLE_SCAN_FILTER_SCAN = 1,
-  BLE_SCAN_FILTER_CONNECT = 2,
-  BLE_SCAN_FILTER_MONITOR = 3,
-};
-
 struct ble_scan_filter_device_s
 {
   struct ble_addr_s addr;
   uint32_t id;
   dev_timer_value_t first_seen;
   dev_timer_value_t last_seen;
+  enum ble_scanner_policy_e policy;
   uint8_t ad[62];
   uint8_t ad_len;
   int16_t rssi;
@@ -62,8 +55,8 @@ struct ble_scan_filter_delegate_vtable_s
 {
   struct net_layer_delegate_vtable_s base;
 
-  enum ble_scan_filter_policy_e (*device_updated)(void *delegate, struct net_layer_s *layer,
-                                                  const struct ble_scan_filter_device_s *device);
+  enum ble_scanner_policy_e (*device_updated)(void *delegate, struct net_layer_s *layer,
+                                              const struct ble_scan_filter_device_s *device);
 };
 
 STRUCT_COMPOSE(ble_scan_filter_delegate_vtable_s, base);

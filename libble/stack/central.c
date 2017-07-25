@@ -92,7 +92,7 @@ static KROUTINE_EXEC(ble_central_state_update)
 
   ctr->last_state = state;
 
-  printk("Central state now %d\n", state);
+  //printk("Central state now %d\n", state);
 
   ctr->handler->state_changed(ctr, state);
 }
@@ -197,7 +197,8 @@ static error_t scan_start(struct ble_central_s *ctr)
 
   ble_stack_context_local_address_get(ctr->context, &ctr->params.local_addr);
 
-  ctr->params.default_policy = BLE_SCANNER_IGNORE;
+  ctr->params.default_policy = BLE_SCANNER_MONITOR;
+  ctr->params.connectable_only = 1;
   ctr->params.target_count = 0;
 
   ctr->params.timing = ctr->conn_params;
@@ -259,7 +260,8 @@ error_t ble_central_init(
   ctr->params.interval_ms = params->scan_interval_ms;
   ctr->params.duration_ms = params->scan_duration_ms;
   ctr->params.target_count = 0;
-  ctr->params.default_policy = BLE_SCANNER_IGNORE;
+  ctr->params.default_policy = BLE_SCANNER_MONITOR;
+  ctr->params.connectable_only = 1;
 
   ctr->conn_params = params->conn;
 
@@ -311,7 +313,7 @@ void ble_central_mode_set(struct ble_central_s *ctr, uint8_t mode)
 }
 
 static
-enum ble_scan_filter_policy_e central_device_updated(void *delegate, struct net_layer_s *layer,
+enum ble_scanner_policy_e central_device_updated(void *delegate, struct net_layer_s *layer,
                                                      const struct ble_scan_filter_device_s *device)
 {
   struct ble_central_s *central = delegate;
