@@ -627,6 +627,7 @@ static DEV_USE(nrf5x_clock_use)
   }
 }
 
+#ifdef CONFIG_DEVICE_CLOCK_THROTTLE
 static void nrf5x_clock_configid_refresh(struct device_s *dev)
 {
   struct nrf5x_clock_context_s *pv = dev->drv_pv;
@@ -654,16 +655,20 @@ static void nrf5x_clock_configid_refresh(struct device_s *dev)
     device_sleep_schedule(dev);
   }
 }
+#endif
 
 static DEV_CMU_APP_CONFIGID_SET(nrf5x_clock_app_configid_set)
 {
   struct device_s *dev = accessor->dev;
   struct nrf5x_clock_context_s *pv = dev->drv_pv;
 
+#ifdef CONFIG_DEVICE_CLOCK_THROTTLE
   LOCK_SPIN_IRQ_SCOPED(&dev->lock);
   
   pv->configid_app = config_id;
   nrf5x_clock_configid_refresh(dev);
+
+#endif
 
   return 0;
 }
