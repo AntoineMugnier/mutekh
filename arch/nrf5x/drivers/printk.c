@@ -88,6 +88,6 @@ void nrf5x_printk_init()
               NRF_UART_ENABLE,
               NRF_UART_ENABLE_ENABLED);
 
-  struct printk_backend_s backend;
+  static struct printk_backend_s backend;
   printk_register(&backend, nrf5x_printk);
 }
