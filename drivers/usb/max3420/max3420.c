@@ -598,7 +598,7 @@ static DEV_INIT(max3420_usbdev_init)
     .miso_pol = DEV_SPI_ACTIVE_HIGH,
     .mosi_pol = DEV_SPI_ACTIVE_HIGH,
     .cs_pol   = DEV_SPI_ACTIVE_LOW,
-    .bit_rate = CONFIG_DRIVER_USBDEV_MAX3420_SPI_BITRATE,
+    .bit_rate1k = CONFIG_DRIVER_USBDEV_MAX3420_SPI_BITRATE >> 10,
     .word_width = 8,
   };
 

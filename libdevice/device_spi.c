@@ -405,7 +405,7 @@ device_spi_bytecode_exec(struct dev_spi_ctrl_context_s *q,
               rcfg->dirty = 1;
               if (op & 0x0080)  /* brate */
                 {
-                  rcfg->bit_rate = bc_get_reg(&rq->vm, op & 0xf);
+                  rcfg->bit_rate1k = bc_get_reg(&rq->vm, op & 0xf) >> 10;
                 }
               else              /* width */
                 {

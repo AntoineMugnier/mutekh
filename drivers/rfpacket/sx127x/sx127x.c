@@ -1002,7 +1002,7 @@ static DEV_INIT(sx127x_init)
 
   static struct dev_spi_ctrl_config_s const spi_ctrl_cfg =
     {
-      .bit_rate   = CONFIG_DRIVER_RFPACKET_SX127X_SPI_BITRATE,
+      .bit_rate1k = CONFIG_DRIVER_RFPACKET_SX127X_SPI_BITRATE >> 10,
       .word_width = 8,
       .bit_order  = DEV_SPI_MSB_FIRST,
       .miso_pol   = DEV_SPI_ACTIVE_HIGH,

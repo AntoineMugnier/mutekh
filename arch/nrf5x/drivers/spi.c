@@ -92,7 +92,7 @@ static DEV_SPI_CTRL_CONFIG(nrf5x_spi_config)
 
   nrf_reg_set(pv->addr, NRF_SPI_CONFIG, config);
 
-  rate = cfg->bit_rate;
+  rate = cfg->bit_rate1k * 1024;
   if (rate > 1000000) {
     logk_warning("nRF5x SPI Warning: bit rate capped to 1MHz (was %d)", rate);
     rate = 1000000;

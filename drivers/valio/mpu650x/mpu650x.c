@@ -539,7 +539,7 @@ static DEV_INIT(mpu650x_init)
     .miso_pol = DEV_SPI_ACTIVE_HIGH,
     .mosi_pol = DEV_SPI_ACTIVE_HIGH,
     .cs_pol = DEV_SPI_ACTIVE_LOW,
-    .bit_rate = 1000000,
+    .bit_rate1k = 1000,
     .word_width = 8,
   };
 

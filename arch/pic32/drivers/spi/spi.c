@@ -60,7 +60,7 @@ DRIVER_PV(struct pic32_spi_context_s
   struct dev_spi_ctrl_context_s    spi_ctrl_ctx;
 
   struct dev_freq_s              freq;
-  uint32_t                       bit_rate;
+  uint16_t                       bit_rate1k;
   enum dev_spi_polarity_e        pol;
   enum dev_spi_bit_order_e       bit_order;
 
@@ -74,7 +74,7 @@ DRIVER_PV(struct pic32_spi_context_s
 
 static void pic32_spi_update_rate(struct pic32_spi_context_s *pv)
 {
-  uint32_t d = pv->bit_rate * pv->freq.denom;
+  uint32_t d = pv->bit_rate1k * pv->freq.denom * 1024;
   uint32_t brg = pv->freq.num >> 1;
 
   assert(d);
@@ -117,9 +117,9 @@ static DEV_SPI_CTRL_CONFIG(pic32_spi_config)
       pv->bit_order = cfg->bit_order;
       pv->pol = cfg->mosi_pol;
   
-      if (cfg->bit_rate && (pv->bit_rate != cfg->bit_rate))
+      if (cfg->bit_rate1k && (pv->bit_rate1k != cfg->bit_rate1k))
         {
-          pv->bit_rate = cfg->bit_rate;
+          pv->bit_rate1k = cfg->bit_rate1k;
           pic32_spi_update_rate(pv);
         }
     }
@@ -448,7 +448,7 @@ static DEV_INIT(pic32_spi_init)
     goto err_mem;
 
   /* setup bit rate */
-  pv->bit_rate = CONFIG_DRIVER_PIC32_SPI_BAUDRATE;
+  pv->bit_rate1k = CONFIG_DRIVER_PIC32_SPI_BAUDRATE >> 10;
   pic32_spi_update_rate(pv);
 
   /* enable the spi */

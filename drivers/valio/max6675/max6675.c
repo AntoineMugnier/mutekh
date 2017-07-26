@@ -249,7 +249,7 @@ static DEV_INIT(max6675_init)
     .bit_order = DEV_SPI_MSB_FIRST,
     .miso_pol = DEV_SPI_ACTIVE_HIGH,
     .mosi_pol = DEV_SPI_ACTIVE_HIGH,
-    .bit_rate = 1000000,
+    .bit_rate1k = 1000,
     .word_width = 8,
   };
   

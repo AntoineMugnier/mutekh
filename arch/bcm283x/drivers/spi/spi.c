@@ -82,7 +82,7 @@ static DEV_SPI_CTRL_CONFIG(bcm283x_spi_config)
 
   /* DIV must be rounded down to the nearest power of 2 */
 
-  uint32_t div = (BCM283X_SPI_CORE_CLK/cfg->bit_rate);
+  uint32_t div = (BCM283X_SPI_CORE_CLK / (cfg->bit_rate1k * 1024));
 
   uint_fast8_t i = __builtin_clz(div);
 

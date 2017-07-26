@@ -54,7 +54,7 @@ DRIVER_PV(struct cc26xx_spi_context_s
   struct dev_spi_ctrl_context_s    spi_ctrl_ctx;
 
   struct dev_freq_s              freq;
-  uint32_t                       bit_rate;
+  uint16_t                       bit_rate1k;
 
 #ifdef CONFIG_DEVICE_CLOCK
   struct dev_clock_sink_ep_s     clk_ep;
@@ -64,7 +64,7 @@ DRIVER_PV(struct cc26xx_spi_context_s
 
 static void cc26xx_spi_update_rate(struct cc26xx_spi_context_s *pv)
 {
-  uint32_t div = (pv->freq.num) / (pv->freq.denom * pv->bit_rate);
+  uint32_t div = (pv->freq.num) / (pv->freq.denom * 1024 * pv->bit_rate1k);
   cpu_mem_write_32(pv->addr + CC26XX_SSI_CPSR_ADDR, div);
 }
 
@@ -101,9 +101,9 @@ static DEV_SPI_CTRL_CONFIG(cc26xx_spi_config)
 
           cpu_mem_write_32(pv->addr + CC26XX_SSI_CR0_ADDR, reg);
 
-          if (pv->bit_rate != cfg->bit_rate)
+          if (pv->bit_rate1k != cfg->bit_rate1k)
             {
-              pv->bit_rate = cfg->bit_rate;
+              pv->bit_rate1k = cfg->bit_rate1k;
               cc26xx_spi_update_rate(pv);
             }
         }
@@ -331,7 +331,7 @@ static DEV_INIT(cc26xx_spi_init)
     goto err_mem;
 
   /* setup bit rate */
-  pv->bit_rate = 1000000;
+  pv->bit_rate1k = 1000;
   cc26xx_spi_update_rate(pv);
 
   /* Clear interrupt flags */
