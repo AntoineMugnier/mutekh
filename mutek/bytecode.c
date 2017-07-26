@@ -93,7 +93,7 @@ bc_init(struct bc_context_s *ctx,
 void
 bc_init_sandbox(struct bc_context_s *ctx, const struct bc_descriptor_s *desc,
                 void *data_base, uint_fast8_t data_addr_bits,
-                uint_fast32_t max_cycles)
+                uint_fast16_t max_cycles)
 {
   ctx->vpc = desc->code;
 #ifdef CONFIG_MUTEK_BYTECODE_NATIVE
@@ -732,7 +732,7 @@ bc_opcode_t bc_run_vm(struct bc_context_s *ctx)
   bool_t skip = ctx->pc & 1;
   uint16_t op = 0;
 #ifdef CONFIG_MUTEK_BYTECODE_SANDBOX
-  int_fast32_t max_cycles = ctx->max_cycles;
+  int_fast16_t max_cycles = ctx->max_cycles;
 
   if (desc->flags & BC_FLAGS_NATIVE)
     return 3;

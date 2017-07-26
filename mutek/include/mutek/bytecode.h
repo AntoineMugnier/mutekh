@@ -496,14 +496,14 @@ struct bc_context_s
   uintptr_t data_base;
   /** mask address of writable data segment when sandboxed */
   uintptr_t data_addr_mask;
-  /** @see bc_init_sandbox */
-  bool_t sandbox;
   /** maximum number of executed cycles by a single call to @ref bc_run_vm */
-  uint_fast32_t max_cycles;
+  uint16_t max_cycles;
+  /** @see bc_init_sandbox */
+  bool_t BITFIELD(sandbox,1);
 #endif
 #ifdef CONFIG_MUTEK_BYTECODE_TRACE
-  bool_t trace;
-  bool_t trace_regs;
+  bool_t BITFIELD(trace,1);
+  bool_t BITFIELD(trace_regs,1);
 #endif
 };
 
@@ -542,7 +542,7 @@ bc_init(struct bc_context_s *ctx,
 config_depend(CONFIG_MUTEK_BYTECODE_SANDBOX)
 void bc_init_sandbox(struct bc_context_s *ctx, const struct bc_descriptor_s *desc,
                      void *data_base, uint_fast8_t data_addr_bits,
-                     uint_fast32_t max_cycles);
+                     uint_fast16_t max_cycles);
 
 /** @internal */
 config_depend(CONFIG_MUTEK_BYTECODE_SANDBOX)
