@@ -102,11 +102,19 @@ sub error
 
 sub check_reg
 {
-    my ( $thisop, $argidx ) = @_;
+    my ( $thisop, $argidx, $min, $max ) = @_;
     my $reg = $thisop->{args}->[$argidx];
 
-    if ( $reg !~ /^%(\d+)$/ || $1 > 15 ) {
+    if ( $reg !~ /^%(\d+)$/ ) {
         error($thisop, "expected register as operand $argidx of `$thisop->{name}'.\n");
+    }
+
+    $min ||= 0;
+    $max ||= 15;
+    die if $min < 0 || $max > 15;
+
+    if ( $1 > $max || $1 < $min ) {
+        error($thisop, "operand $argidx of `$thisop->{name}' must be a register in range [$min, $max].\n");
     }
 
     return $1;

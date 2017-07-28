@@ -74,8 +74,11 @@ typedef signed long		int32_t;
 #  error
 # endif
 
-typedef unsigned long long	uint64_t;
-typedef signed long long	int64_t;
+typedef unsigned long long	uint64_t
+__attribute__ ((aligned (CONFIG_CPU_INT64_ALIGN)));
+
+typedef signed long long	int64_t
+__attribute__ ((aligned (CONFIG_CPU_INT64_ALIGN)));
 
 # define INT64_C(c)             c ## LL
 # define UINT64_C(c)            c ## ULL
@@ -153,12 +156,14 @@ typedef struct __ldscript_symbol_s __ldscript_symbol_t;
 typedef signed short		__compiler_sshort_t;
 typedef signed int		__compiler_sint_t;
 typedef signed long		__compiler_slong_t;
-typedef signed long long	__compiler_slonglong_t;
+typedef signed long long	__compiler_slonglong_t
+__attribute__ ((aligned (CONFIG_CPU_INT64_ALIGN)));
 
 typedef unsigned short		__compiler_ushort_t;
 typedef unsigned int		__compiler_uint_t;
 typedef unsigned long		__compiler_ulong_t;
-typedef unsigned long long	__compiler_ulonglong_t;
+typedef unsigned long long	__compiler_ulonglong_t
+__attribute__ ((aligned (CONFIG_CPU_INT64_ALIGN)));
 
 typedef long double             __compiler_longdouble_t;
 

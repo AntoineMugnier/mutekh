@@ -117,7 +117,7 @@ static TERMUI_CON_COMMAND_PROTOTYPE(dev_shell_spi_config)
     cfg.miso_pol = cfg.mosi_pol = c->polarity;
 
   if (used & SPI_OPT_BIT_RATE)
-    cfg.bit_rate = c->bit_rate;
+    cfg.bit_rate1k = c->bit_rate >> 10;
 
   if (used & SPI_OPT_WIDTH)
     cfg.word_width = c->width;

@@ -1197,6 +1197,7 @@ sub process_config_define
     if ( $opt->{default} eq 'defined' ) {
         debug(1, "$opt->{name} defined by default");
         $opt->{value} = 'defined';
+        $opt->{defaultdefined} = 1;
     }
 
     foreach_recurs( $opt, 'childs', \&process_config_define );
@@ -1557,23 +1558,23 @@ sub tokens_set_methods
 	    # specify how to handle provide conflicts
             if ( $opt->{flags}->{maxval} ) {
                 $combine = sub {
-                    my ( $opt, $old, $new ) = @_;
+                    my ( $opt, $old, $new, $dd ) = @_;
                     return $old > $new ? $old : $new;
                 }
             } elsif ( $opt->{flags}->{minval} ) {
                 $combine = sub {
-                    my ( $opt, $old, $new ) = @_;
+                    my ( $opt, $old, $new, $dd ) = @_;
                     return $old < $new ? $old : $new;
                 }
             } elsif ( $opt->{flags}->{sumval} ) {
                 $combine = sub {
-                    my ( $opt, $old, $new ) = @_;
+                    my ( $opt, $old, $new, $dd ) = @_;
                     return $old + $new;
                 }
             } else {
                 $combine = sub {
-                    my ( $opt, $old, $new ) = @_;
-                    if ( $old ne $new ) {
+                    my ( $opt, $old, $new, $dd ) = @_;
+                    if ( $old ne $new && !$dd ) {
                         push @{$opt->{deperror}}, "Conflict between `$old' and `$new' values for `provide' on `$opt->{name}' token";
                     }
                     return $new;
@@ -1589,14 +1590,16 @@ sub tokens_set_methods
                     return $value;
                 };
 
+                my $dd = $token->{defaultdefined};
 		foreach my $p (@{$token->{providers}}) {
 		    if ( check_condition( $p->{getvalue}->( $p ) ) ) {
                         my $new = normalize( $token->{provided}->{$p->{name}} );
                         if ( $value eq "undefined" ) {
                             $value = $new;
                         } else {
-                            $value = $combine->( $token, $value, $new );
+                            $value = $combine->( $token, $value, $new, $dd );
                         }
+                        $dd = 0;
 		    }
 		}
 
@@ -1842,13 +1845,15 @@ sub check_config
     # set default values
     foreach my $opt (values %config_opts) {
 	if (not defined $opt->{value}) {
-	    $opt->{default} = 'undefined' if !defined $opt->{default};
+            my $dd = defined $opt->{default};
+	    $opt->{default} = 'undefined' if !$dd;
 
             if ( $opt->{userdefined} or $opt->{flags}->{meta} or $opt->{flags}->{mandatory} ) {
             } elsif ( $opt->{flags}->{meta} ) {
                 $opt->{value} = 'undefined';
             } elsif ( $opt->{flags}->{value} or $opt->{flags}->{enum} ) {
                 $opt->{value} = $opt->{default};
+                $opt->{defaultdefined} = $dd;
             } else {
                 if ( foreach_and_parent( $opt, sub {
                     my $l = shift;
@@ -1903,6 +1908,7 @@ sub check_config
 	    if $opt->{value} eq $val;
 
 	$opt->{value} = $val;
+        undef $opt->{defaultdefined};
     }
 
     # check exclude, require and range tag constraints

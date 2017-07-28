@@ -35,11 +35,11 @@ __rand_type_t rand_r(__rand_type_t *seedp)
   if (sizeof(__rand_type_t) == 1)
     taps = (__rand_type_t)0xb8;
   else if (sizeof(__rand_type_t) == 2)
-    taps = (__rand_type_t)0xb008;
+    taps = (__rand_type_t)0xec83;
   else if (sizeof(__rand_type_t) == 4)
-    taps = (__rand_type_t)0x80200003UL;
+    taps = (__rand_type_t)0xec82f6cbUL;
   else if (sizeof(__rand_type_t) == 8)
-    taps = (__rand_type_t)0xd800000000000000ULL;
+    taps = (__rand_type_t)0x81ec82f69eb5a9d3ULL;
 
   res = (*seedp >> 1) ^ ((__rand_type_t)(-(*seedp & 1)) & taps);
   *seedp = res;

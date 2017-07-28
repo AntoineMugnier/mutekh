@@ -55,12 +55,12 @@ DRIVER_PV(struct stm32_spi_private_s
 
 static
 error_t stm32_spi_update_bitrate(struct stm32_spi_private_s *pv,
-                                 uint32_t bit_rate)
+                                 uint16_t bit_rate1k)
 {
-  if (bit_rate == 0)
+  if (bit_rate1k == 0)
     return -EINVAL;
 
-  uint32_t const div = pv->busfreq.num / (bit_rate * pv->busfreq.denom);
+  uint32_t const div = pv->busfreq.num / (bit_rate1k * 1024 * pv->busfreq.denom);
   if (div == 0)
     return -EINVAL;
 
@@ -107,7 +107,7 @@ DEV_SPI_CTRL_CONFIG(stm32_spi_config)
     }
 
   /* bitrate */
-  err = stm32_spi_update_bitrate(pv, cfg->bit_rate);
+  err = stm32_spi_update_bitrate(pv, cfg->bit_rate1k);
   if (err)
     goto cfg_end;
 

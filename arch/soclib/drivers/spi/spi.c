@@ -115,7 +115,7 @@ static DEV_SPI_CTRL_CONFIG(soclib_spi_config)
 
           cpu_mem_write_32(pv->addr + SOCLIB_SPI_CTRL_ADDR, endian_le32(ctrl));
 
-          uint32_t r = pv->freq.num / pv->freq.denom / 2 / cfg->bit_rate;
+          uint32_t r = pv->freq.num / pv->freq.denom / 2 / cfg->bit_rate1k / 1024;
           if (r < 1)
             err = -ERANGE;
 

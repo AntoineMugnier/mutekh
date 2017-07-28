@@ -30,7 +30,7 @@ void main()
   printk("spi found\n");
 
   static struct dev_spi_ctrl_config_s cfg = {
-    .bit_rate = 100000,
+    .bit_rate1k = 100,
     .word_width = 8,
   };
 
@@ -91,7 +91,7 @@ void main()
 
   struct dev_spi_ctrl_request_s rq = {
     .config = {
-      .bit_rate = 100000,
+      .bit_rate1k = 100,
       .word_width = 8,
       //      .miso_pol = DEV_SPI_ACTIVE_LOW,
     },

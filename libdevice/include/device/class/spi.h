@@ -466,11 +466,11 @@ struct dev_spi_ctrl_config_s
   enum dev_spi_polarity_e  BITFIELD(mosi_pol,1);
   enum dev_spi_polarity_e  BITFIELD(cs_pol,1);
 
-  /** This field gives the bitrate in bits per second. */
-  uint32_t                 bit_rate;
-
   /** Width of the data words on the SPI bus in bits */
-  uint_fast8_t             word_width;
+  uint8_t                  BITFIELD(word_width,6);
+
+  /** This field gives the bitrate in 1024 bits per second. */
+  uint16_t                 bit_rate1k;
 };
 
 /** @csee dev_spi_ctrl_config_t */

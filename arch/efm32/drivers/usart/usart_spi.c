@@ -62,7 +62,6 @@ DRIVER_PV(struct efm32_usart_spi_context_s
   struct dev_spi_ctrl_context_s  spi_ctrl_ctx;
 
   struct dev_freq_s              freq;
-  uint32_t                       bit_rate;
 
   struct dev_clock_sink_ep_s     clk_ep;
 
@@ -86,6 +85,7 @@ DRIVER_PV(struct efm32_usart_spi_context_s
 #else
 # error
 #endif
+  uint16_t                       bit_rate1k;
   uint8_t                        fifo_lvl;
   bool_t                         dma_use;
 });
@@ -94,11 +94,11 @@ DRIVER_PV(struct efm32_usart_spi_context_s
 STRUCT_COMPOSE(efm32_usart_spi_context_s, dma_wr_rq);
 #endif
 
-static void efm32_usart_spi_update_rate(struct device_s *dev, uint32_t bit_rate)
+static void efm32_usart_spi_update_rate(struct device_s *dev, uint32_t bit_rate1k)
 {
   struct efm32_usart_spi_context_s *pv = dev->drv_pv;
-  pv->bit_rate = bit_rate;
-  uint64_t d = (128 * pv->freq.num) / (bit_rate * pv->freq.denom);
+  pv->bit_rate1k = bit_rate1k;
+  uint64_t d = (128 * pv->freq.num) / (bit_rate1k * 1024 * pv->freq.denom);
   pv->clkdiv = d < 256 ? 0 : (d >> 20 ? 0x1fffc0 : d - 256);
 }
 
@@ -130,8 +130,8 @@ static DEV_SPI_CTRL_CONFIG(efm32_usart_spi_config)
             pv->ctrl |= EFM32_USART_CTRL_TXINV;
           if (cfg->bit_order == DEV_SPI_MSB_FIRST)
             pv->ctrl |= EFM32_USART_CTRL_MSBF;
-          if (pv->bit_rate != cfg->bit_rate)
-            efm32_usart_spi_update_rate(dev, cfg->bit_rate);
+          if (pv->bit_rate1k != cfg->bit_rate1k)
+            efm32_usart_spi_update_rate(dev, cfg->bit_rate1k);
         }
     }
 
@@ -407,7 +407,7 @@ static DEV_USE(efm32_usart_spi_use)
       struct device_s *dev = sink->dev;
       struct efm32_usart_spi_context_s *pv = dev->drv_pv;
       pv->freq = chg->freq;
-      efm32_usart_spi_update_rate(dev, pv->bit_rate);
+      efm32_usart_spi_update_rate(dev, pv->bit_rate1k);
       return 0;
     }
 #endif
@@ -527,8 +527,8 @@ static DEV_INIT(efm32_usart_spi_init)
 #endif
 
   /* setup bit rate */
-  pv->bit_rate = 100000;
-  efm32_usart_spi_update_rate(dev, pv->bit_rate);
+  pv->bit_rate1k = 100;
+  efm32_usart_spi_update_rate(dev, pv->bit_rate1k);
   cpu_mem_write_32(pv->addr + EFM32_USART_CLKDIV_ADDR, endian_le32(pv->clkdiv));
 
   /* enable the uart */
