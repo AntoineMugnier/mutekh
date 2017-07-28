@@ -103,7 +103,7 @@ static TERMUI_CON_COMMAND_PROTOTYPE(dev_shell_spi_config)
     .bit_order = DEV_SPI_MSB_FIRST,
     .miso_pol = DEV_SPI_ACTIVE_HIGH,
     .mosi_pol = DEV_SPI_ACTIVE_HIGH,
-    .bit_rate = 100000,
+    .bit_rate1k = 100,
     .word_width = 8
   };
 
