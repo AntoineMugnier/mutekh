@@ -429,7 +429,7 @@ static void sched_context_idle()
                 case KROUTINE_SEQ_SCHED_SWITCH:
                 case KROUTINE_SEQ_DEFERRED:
                   /* lock sequence */
-                  if (atomic_bit_testset(&k->seq->state, 0))
+                  if (atomic_fast8_bit_testset(&k->seq->state, 0))
                     GCT_FOREACH_CONTINUE;
                 default:
                   break;
@@ -460,7 +460,7 @@ static void sched_context_idle()
           cpu_interrupt_enable();
            /* reset state after pop and before the call so that no
               call to kroutine_exec is discarded. */
-          atomic_int_t krmask = atomic_swap(&kr->state, 0);
+          atomic_fast8_int_t krmask = atomic_fast8_swap(&kr->state, 0);
           kr->exec(kr, krmask | KROUTINE_EXEC_DEFERRED);
           cpu_interrupt_disable();
 
@@ -471,7 +471,7 @@ static void sched_context_idle()
             case KROUTINE_SEQ_SCHED_SWITCH:
             case KROUTINE_SEQ_DEFERRED:
               /* release sequence */
-              atomic_bit_clr(&seq->state, 0);
+              atomic_fast8_bit_clr(&seq->state, 0);
             default:
               break;
             }
@@ -519,7 +519,7 @@ static void sched_context_idle()
               cpu_interrupt_enable();
               /* reset state after pop and before the call so that no
                  call to kroutine_exec is discarded. */
-              atomic_set(&kri->state, KROUTINE_INVALID);
+              atomic_fast8_set(&kri->state, KROUTINE_INVALID);
               kri->exec(kri, KROUTINE_EXEC_DEFERRED);
               cpu_interrupt_disable();
 # ifdef CONFIG_MUTEK_CONTEXT_SCHED

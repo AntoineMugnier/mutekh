@@ -224,7 +224,7 @@ struct kroutine_s
 #endif
   kroutine_exec_t              *exec;
   enum kroutine_policy_e       policy;
-  atomic_t                     state;
+  atomic_fast8_t                     state;
 #if CONFIG_MUTEK_SCHED_PRIORITIES > 1 && defined(CONFIG_MUTEK_KROUTINE_SCHED)
   uint8_t                      priority;
 #endif
@@ -238,7 +238,7 @@ struct kroutine_s
 struct kroutine_sequence_s
 {
 #ifdef CONFIG_ARCH_SMP
-  atomic_t state;
+  atomic_fast8_t state;
 #endif
 };
 
@@ -311,7 +311,7 @@ void kroutine_init_trigger(struct kroutine_s *kr,
 {
   kr->policy = KROUTINE_TRIGGER;
   kr->exec = exec;
-  atomic_set(&kr->state, KROUTINE_INVALID);
+  atomic_fast8_set(&kr->state, KROUTINE_INVALID);
 #if CONFIG_MUTEK_SCHED_PRIORITIES > 1 && defined(CONFIG_MUTEK_KROUTINE_SCHED)
   kr->priority = KROUTINE_DEFAULT_PRIORITY;
 #endif
@@ -324,7 +324,7 @@ void kroutine_init_deferred(struct kroutine_s *kr,
 {
   kr->policy = KROUTINE_DEFERRED;
   kr->exec = exec;
-  atomic_set(&kr->state, KROUTINE_INVALID);
+  atomic_fast8_set(&kr->state, KROUTINE_INVALID);
 #ifdef CONFIG_ARCH_SMP
   kr->cls = NULL;
 #endif
@@ -342,7 +342,7 @@ void kroutine_init_deferred_cpu(struct kroutine_s *kr,
 {
   kr->policy = KROUTINE_CPU_DEFERRED;
   kr->exec = exec;
-  atomic_set(&kr->state, KROUTINE_INVALID);
+  atomic_fast8_set(&kr->state, KROUTINE_INVALID);
   kr->cls = cpu->cls;
 #if CONFIG_MUTEK_SCHED_PRIORITIES > 1
   kr->priority = KROUTINE_DEFAULT_PRIORITY;
@@ -357,7 +357,7 @@ void kroutine_init_deferred_local(struct kroutine_s *kr,
 {
   kr->policy = KROUTINE_CPU_DEFERRED;
   kr->exec = exec;
-  atomic_set(&kr->state, KROUTINE_INVALID);
+  atomic_fast8_set(&kr->state, KROUTINE_INVALID);
 #ifdef CONFIG_ARCH_SMP
   kr->cls = (void*)CPU_GET_CLS();
 #endif
@@ -375,7 +375,7 @@ void kroutine_init_deferred_seq(struct kroutine_s *kr,
 {
   kr->policy = KROUTINE_SEQ_DEFERRED;
   kr->exec = exec;
-  atomic_set(&kr->state, KROUTINE_INVALID);
+  atomic_fast8_set(&kr->state, KROUTINE_INVALID);
 #ifdef CONFIG_ARCH_SMP
   kr->seq = seq;
 #endif
@@ -391,7 +391,7 @@ void kroutine_init_sched_switch(struct kroutine_s *kr,
 {
   kr->policy = KROUTINE_SCHED_SWITCH;
   kr->exec = exec;
-  atomic_set(&kr->state, KROUTINE_INVALID);
+  atomic_fast8_set(&kr->state, KROUTINE_INVALID);
 #ifdef CONFIG_ARCH_SMP
   kr->cls = NULL;
 #endif
@@ -409,7 +409,7 @@ void kroutine_init_sched_switch_cpu(struct kroutine_s *kr,
 {
   kr->policy = KROUTINE_CPU_SCHED_SWITCH;
   kr->exec = exec;
-  atomic_set(&kr->state, KROUTINE_INVALID);
+  atomic_fast8_set(&kr->state, KROUTINE_INVALID);
   kr->cls = cpu->cls;
 #if CONFIG_MUTEK_SCHED_PRIORITIES > 1
   kr->priority = KROUTINE_DEFAULT_PRIORITY;
@@ -424,7 +424,7 @@ void kroutine_init_sched_switch_local(struct kroutine_s *kr,
 {
   kr->policy = KROUTINE_CPU_SCHED_SWITCH;
   kr->exec = exec;
-  atomic_set(&kr->state, KROUTINE_INVALID);
+  atomic_fast8_set(&kr->state, KROUTINE_INVALID);
 #ifdef CONFIG_ARCH_SMP
   kr->cls = (void*)CPU_GET_CLS();
 #endif
@@ -442,7 +442,7 @@ void kroutine_init_sched_switch_seq(struct kroutine_s *kr,
 {
   kr->policy = KROUTINE_SEQ_SCHED_SWITCH;
   kr->exec = exec;
-  atomic_set(&kr->state, KROUTINE_INVALID);
+  atomic_fast8_set(&kr->state, KROUTINE_INVALID);
 #ifdef CONFIG_ARCH_SMP
   kr->seq = seq;
 #endif
@@ -458,7 +458,7 @@ void kroutine_init_interruptible(struct kroutine_s *kr,
 {
   kr->policy = KROUTINE_INTERRUPTIBLE;
   kr->exec = exec;
-  atomic_set(&kr->state, KROUTINE_INVALID);
+  atomic_fast8_set(&kr->state, KROUTINE_INVALID);
 #ifdef CONFIG_ARCH_SMP
   kr->cls = NULL;
 #endif
@@ -476,7 +476,7 @@ void kroutine_init_interruptible_cpu(struct kroutine_s *kr,
 {
   kr->policy = KROUTINE_CPU_INTERRUPTIBLE;
   kr->exec = exec;
-  atomic_set(&kr->state, KROUTINE_INVALID);
+  atomic_fast8_set(&kr->state, KROUTINE_INVALID);
   kr->cls = cpu->cls;
 #if CONFIG_MUTEK_SCHED_PRIORITIES > 1
   kr->priority = KROUTINE_DEFAULT_PRIORITY;
@@ -491,7 +491,7 @@ void kroutine_init_interruptible_local(struct kroutine_s *kr,
 {
   kr->policy = KROUTINE_CPU_INTERRUPTIBLE;
   kr->exec = exec;
-  atomic_set(&kr->state, KROUTINE_INVALID);
+  atomic_fast8_set(&kr->state, KROUTINE_INVALID);
 #ifdef CONFIG_ARCH_SMP
   kr->cls = (void*)CPU_GET_CLS();
 #endif
@@ -510,7 +510,7 @@ void kroutine_init_interruptible_seq(struct kroutine_s *kr,
 {
   kr->policy = KROUTINE_SEQ_INTERRUPTIBLE;
   kr->exec = exec;
-  atomic_set(&kr->state, KROUTINE_INVALID);
+  atomic_fast8_set(&kr->state, KROUTINE_INVALID);
 #ifdef CONFIG_ARCH_SMP
   kr->seq = seq;
 #endif
@@ -526,7 +526,7 @@ void kroutine_init_idle(struct kroutine_s *kr,
 {
   kr->policy = KROUTINE_IDLE;
   kr->exec = exec;
-  atomic_set(&kr->state, KROUTINE_INVALID);
+  atomic_fast8_set(&kr->state, KROUTINE_INVALID);
 });
 
 /** @This initializes a kroutine with the @ref KROUTINE_QUEUE policy. */
@@ -538,7 +538,7 @@ void kroutine_init_queue(struct kroutine_s *kr,
   kr->policy = KROUTINE_QUEUE;
   kr->exec = exec;
   kr->queue = queue;
-  atomic_set(&kr->state, KROUTINE_INVALID);
+  atomic_fast8_set(&kr->state, KROUTINE_INVALID);
 });
 
 /** @This initializes a queue used to push kroutine initialized with
@@ -588,16 +588,16 @@ inline bool_t kroutine_exec_flags(struct kroutine_s *kr, uint8_t user_flags)
       return 0;
 #ifdef CONFIG_MUTEK_KROUTINE_TRIGGER
     case KROUTINE_TRIGGER:
-      if (atomic_compare_and_swap(&kr->state, KROUTINE_INVALID, KROUTINE_TRIGGER))
+      if (atomic_fast8_compare_and_swap(&kr->state, KROUTINE_INVALID, KROUTINE_TRIGGER))
         return 0;
-      policy = atomic_get(&kr->state);
+      policy = atomic_fast8_get(&kr->state);
       assert(policy != KROUTINE_TRIGGER && policy != KROUTINE_NONE);
 # if defined(CONFIG_MUTEK_KROUTINE_QUEUE)
       if (policy != KROUTINE_IMMEDIATE &&
           !kroutine_schedule(kr, policy))
         return 0;
 # endif
-      atomic_set(&kr->state, KROUTINE_INVALID); /* reset state */
+      atomic_fast8_set(&kr->state, KROUTINE_INVALID); /* reset state */
       kr->exec(kr, 0);
       return 1;
 #endif
@@ -620,11 +620,11 @@ inline bool_t kroutine_exec_flags(struct kroutine_s *kr, uint8_t user_flags)
 #  endif
 # endif
       assert(user_flags != 0);
-      if (atomic_or(&kr->state, user_flags))
+      if (atomic_fast8_or(&kr->state, user_flags))
         return 0;
       if (!kroutine_schedule(kr, policy))
         return 0;
-      user_flags = atomic_swap(&kr->state, 0); /* reset state */
+      user_flags = atomic_fast8_swap(&kr->state, 0); /* reset state */
 #endif
     case KROUTINE_IMMEDIATE:
       kr->exec(kr, user_flags);
@@ -676,10 +676,10 @@ config_depend_inline(CONFIG_MUTEK_KROUTINE_TRIGGER,
 bool_t kroutine_trigger(struct kroutine_s *kr, enum kroutine_policy_e policy),
 {
   if (kr->policy != KROUTINE_TRIGGER ||
-      atomic_compare_and_swap(&kr->state, KROUTINE_INVALID, policy))
+      atomic_fast8_compare_and_swap(&kr->state, KROUTINE_INVALID, policy))
     return 0;
 
-  assert(atomic_get(&kr->state) == KROUTINE_TRIGGER);
+  assert(atomic_fast8_get(&kr->state) == KROUTINE_TRIGGER);
   switch (policy)
     {
     default:
@@ -708,7 +708,7 @@ bool_t kroutine_trigger(struct kroutine_s *kr, enum kroutine_policy_e policy),
         break;
 #endif
     case KROUTINE_IMMEDIATE:
-      atomic_set(&kr->state, KROUTINE_INVALID);
+      atomic_fast8_set(&kr->state, KROUTINE_INVALID);
       kr->exec(kr, KROUTINE_EXEC_TRIGGERED);
     }
   return 1;
@@ -725,9 +725,9 @@ config_depend_alwaysinline(CONFIG_MUTEK_KROUTINE_TRIGGER,
 bool_t kroutine_postpone(struct kroutine_s *kr, enum kroutine_policy_e policy),
 {
   assert(policy != KROUTINE_TRIGGER && kr->policy == KROUTINE_TRIGGER);
-  bool_t r = atomic_compare_and_swap(&kr->state, KROUTINE_INVALID, policy);
+  bool_t r = atomic_fast8_compare_and_swap(&kr->state, KROUTINE_INVALID, policy);
   if (!r)
-    atomic_set(&kr->state, KROUTINE_INVALID); /* reset state */
+    atomic_fast8_set(&kr->state, KROUTINE_INVALID); /* reset state */
   return r;
 });
 
@@ -736,7 +736,7 @@ config_depend_alwaysinline(CONFIG_MUTEK_KROUTINE_QUEUE,
 error_t kroutine_seq_init(struct kroutine_sequence_s *seq),
 {
 #ifdef CONFIG_ARCH_SMP
-  atomic_set(&seq->state, 0);
+  atomic_fast8_set(&seq->state, 0);
 #endif
   return 0;
 });

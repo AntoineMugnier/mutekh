@@ -43,7 +43,7 @@ bool_t kroutine_queue_process(struct kroutine_queue_s *queue)
   if (done)
     {
       kr->queue = queue;
-      atomic_set(&kr->state, KROUTINE_INVALID);
+      atomic_fast8_set(&kr->state, KROUTINE_INVALID);
       kr->exec(kr, KROUTINE_EXEC_DEFERRED);
     }
   return done;
