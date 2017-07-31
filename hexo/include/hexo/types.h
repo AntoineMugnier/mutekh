@@ -111,9 +111,6 @@ typedef int64_t		intmax_t;
   typedef _DEFINE_INT_TYPE(uint, size, _t)	reg_t;		\
   typedef _DEFINE_INT_TYPE(int, size, _t)	sreg_t;
 
-# define _DEFINE_ATOMIC_INT(size)                                \
-  typedef _DEFINE_INT_TYPE(int, size, _t)       atomic_int_t;
-
 # ifdef CONFIG_HEXO_INTTYPES_SMALL
 #  undef INT_FAST8_SIZE
 #  define INT_FAST8_SIZE          8
@@ -131,7 +128,6 @@ _DEFINE_FAST_INT(32)
 _DEFINE_FAST_INT(64)
 _DEFINE_PTR_INT(INT_PTR_SIZE)
 _DEFINE_REG_INT(INT_REG_SIZE)
-_DEFINE_ATOMIC_INT(INT_ATOMIC_SIZE)
 
 # include "arch/hexo/types.h"
 

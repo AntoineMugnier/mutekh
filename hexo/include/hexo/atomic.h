@@ -47,71 +47,82 @@
 
 /** Atomic value type */
 typedef struct arch_atomic_s atomic_t;
+typedef struct arch_atomic_fast8_s atomic_fast8_t;
+typedef struct arch_atomic_fast16_s atomic_fast16_t;
 
-/** @this sets atomic integer value in memory */
-ALWAYS_INLINE void atomic_set(atomic_t *a, atomic_int_t value);
-
-/** @this gets atomic integer value in memory */
-ALWAYS_INLINE atomic_int_t atomic_get(atomic_t *a);
-
-/** @this atomically add a signed value to an integer value in memory.
-    @return the previous value. */
-ALWAYS_INLINE atomic_int_t atomic_add(atomic_t *a, atomic_int_t value);
-
-/** @this atomically add a signed value to an integer value in memory.
-    @return the previous value. */
-ALWAYS_INLINE atomic_int_t atomic_or(atomic_t *a, atomic_int_t value);
-
-/** @this atomically add a signed value to an integer value in memory.
-    @return the previous value. */
-ALWAYS_INLINE atomic_int_t atomic_xor(atomic_t *a, atomic_int_t value);
-
-/** @this atomically add a signed value to an integer value in memory.
-    @return the previous value. */
-ALWAYS_INLINE atomic_int_t atomic_and(atomic_t *a, atomic_int_t value);
-
-/** @this atomically swap a value in memory.
-    @return the previous value. */
-ALWAYS_INLINE atomic_int_t atomic_swap(atomic_t *a, atomic_int_t value);
-
-/** @this atomically increments integer value in memory.
-    @return 0 if the new value is 0. */
-ALWAYS_INLINE bool_t atomic_inc(atomic_t *a);
-
-/** @this atomically decrements integer value in memory
-    @return 0 if the new value is 0. */
-ALWAYS_INLINE bool_t atomic_dec(atomic_t *a);
-
-/** @this atomically sets bit in integer value in memory */
-ALWAYS_INLINE void atomic_bit_set(atomic_t *a, uint_fast8_t n);
-
-/** @this atomically tests and sets bit in integer value in memory
-   @return 0 if bit was cleared before. */
-ALWAYS_INLINE bool_t atomic_bit_testset(atomic_t *a, uint_fast8_t n);
-
-/** @this atomically clears bit in integer value in memory */
-ALWAYS_INLINE void atomic_bit_clr(atomic_t *a, uint_fast8_t n);
-
-/** @this atomically tests and clears bit in integer value in memory
-   @return 0 if bit was cleared before. */
-ALWAYS_INLINE bool_t atomic_bit_testclr(atomic_t *a, uint_fast8_t n);
-
-/** @this tests bit in integer value in memory
-   @return 0 if bit is cleared. */
-ALWAYS_INLINE bool_t atomic_bit_test(atomic_t *a, uint_fast8_t n);
-
-/** @this compares memory to old and replace with future if they are the same.
-   @return true if exchanged */
-ALWAYS_INLINE bool_t atomic_compare_and_swap(atomic_t *a, atomic_int_t old, atomic_int_t future);
+#define __ATOMIC_PROTO(attr, type)                                      \
+                                                                        \
+/** @this sets atomic integer value in memory */                        \
+attr void type##_set(type##_t *a, type##_int_t value);         \
+                                                                        \
+/** @this gets atomic integer value in memory */                        \
+attr type##_int_t type##_get(type##_t *a);                     \
+                                                                        \
+/** @this atomically add a signed value to an integer value in memory.  \
+    @return the previous value. */                                      \
+attr type##_int_t type##_add(type##_t *a, type##_int_t value); \
+                                                                        \
+/** @this atomically add a signed value to an integer value in memory.  \
+    @return the previous value. */                                      \
+attr type##_int_t type##_or(type##_t *a, type##_int_t value);  \
+                                                                        \
+/** @this atomically add a signed value to an integer value in memory.  \
+    @return the previous value. */                                      \
+attr type##_int_t type##_xor(type##_t *a, type##_int_t value); \
+                                                                        \
+/** @this atomically add a signed value to an integer value in memory.  \
+    @return the previous value. */                                      \
+attr type##_int_t type##_and(type##_t *a, type##_int_t value); \
+                                                                        \
+/** @this atomically swap a value in memory.                            \
+    @return the previous value. */                                      \
+attr type##_int_t type##_swap(type##_t *a, type##_int_t value); \
+                                                                        \
+/** @this atomically increments integer value in memory.                \
+    @return 0 if the new value is 0. */                                 \
+attr bool_t type##_inc(type##_t *a);                           \
+                                                                        \
+/** @this atomically decrements integer value in memory                 \
+    @return 0 if the new value is 0. */                                 \
+attr bool_t type##_dec(type##_t *a);                           \
+                                                                        \
+/** @this atomically sets bit in integer value in memory */             \
+attr void type##_bit_set(type##_t *a, uint_fast8_t n);         \
+                                                                        \
+/** @this atomically tests and sets bit in integer value in memory      \
+   @return 0 if bit was cleared before. */                              \
+attr bool_t type##_bit_testset(type##_t *a, uint_fast8_t n);   \
+                                                                        \
+/** @this atomically clears bit in integer value in memory */           \
+attr void type##_bit_clr(type##_t *a, uint_fast8_t n);         \
+                                                                        \
+/** @this atomically tests and clears bit in integer value in memory    \
+   @return 0 if bit was cleared before. */                              \
+attr bool_t type##_bit_testclr(type##_t *a, uint_fast8_t n);   \
+                                                                        \
+/** @this tests bit in integer value in memory                          \
+   @return 0 if bit is cleared. */                                      \
+attr bool_t type##_bit_test(type##_t *a, uint_fast8_t n);      \
+                                                                        \
+/** @this compares memory to old and replace with future if they are    \
+   the same. @return true if exchanged */                               \
+attr bool_t type##_compare_and_swap(type##_t *a,               \
+                       type##_int_t old, type##_int_t future);
 
 #if 0
-/** ALWAYS_INLINE atomic value initializer */
+/** inline atomic value initializer */
 # define ATOMIC_INITIALIZER(n)	/* defined in implementation */
+# define ATOMIC_FAST8_INITIALIZER(n)	/* defined in implementation */
+# define ATOMIC_FAST16_INITIALIZER(n)	/* defined in implementation */
 #endif
 
 /* implement atomic operations defined above using either cpu atomic
    operations or a platform specific mechanism */
 #include <arch/hexo/atomic.h>
+
+__ATOMIC_PROTO(inline, atomic);
+__ATOMIC_PROTO(inline, atomic_fast8);
+__ATOMIC_PROTO(inline, atomic_fast16);
 
 #endif
 

@@ -37,88 +37,141 @@
 #include <hexo/atomic_cpu_nosmp.h>
 
 #define ATOMIC_INITIALIZER(n)		{ .value = (n) }
+#define ATOMIC_FAST8_INITIALIZER(n)	{ .value = (n) }
+#define ATOMIC_FAST16_INITIALIZER(n)	{ .value = (n) }
 
-struct arch_atomic_s
-{
-  atomic_int_t	value;
-};
 
-ALWAYS_INLINE void atomic_set(atomic_t *a, atomic_int_t value)
-{
-  a->value = value;
-  order_smp_write();
+#define __ATOMIC_CPU_PROTO(attr, type)                          \
+attr type##_int_t                                               \
+__cpu_##type##_add(type##_int_t *a, type##_int_t value);        \
+                                                                \
+attr type##_int_t                                               \
+__cpu_##type##_or(type##_int_t *a, type##_int_t value);         \
+                                                                \
+attr type##_int_t                                               \
+__cpu_##type##_xor(type##_int_t *a, type##_int_t value);        \
+                                                                \
+attr type##_int_t                                               \
+__cpu_##type##_and(type##_int_t *a, type##_int_t value);        \
+                                                                \
+attr type##_int_t                                               \
+__cpu_##type##_swap(type##_int_t *a, type##_int_t value);       \
+                                                                \
+attr bool_t                                                     \
+__cpu_##type##_inc(type##_int_t *a);                            \
+                                                                \
+attr bool_t                                                     \
+__cpu_##type##_dec(type##_int_t *a);                            \
+                                                                \
+attr bool_t                                                     \
+__cpu_##type##_bit_testset(type##_int_t *a, uint_fast8_t n);    \
+                                                                \
+attr void                                                       \
+__cpu_##type##_bit_waitset(type##_int_t *a, uint_fast8_t n);    \
+                                                                \
+attr bool_t                                                     \
+__cpu_##type##_bit_testclr(type##_int_t *a, uint_fast8_t n);    \
+                                                                \
+attr void                                                       \
+__cpu_##type##_bit_waitclr(type##_int_t *a, uint_fast8_t n);    \
+                                                                \
+attr void                                                       \
+__cpu_##type##_bit_set(type##_int_t *a, uint_fast8_t n);        \
+                                                                \
+attr void                                                       \
+__cpu_##type##_bit_clr(type##_int_t *a, uint_fast8_t n);        \
+                                                                \
+attr bool_t                                                     \
+__cpu_##type##_compare_and_swap(type##_int_t *a,                \
+                    type##_int_t old, type##_int_t future);
+
+#define __ATOMIC_CPUBASED(type)                                         \
+struct arch_##type##_s                                                  \
+{                                                                       \
+  type##_int_t	value;                                                  \
+};                                                                      \
+                                                                        \
+ALWAYS_INLINE void type##_set(type##_t *a, type##_int_t value)          \
+{                                                                       \
+  a->value = value;                                                     \
+  order_smp_write();                                                    \
+}                                                                       \
+                                                                        \
+ALWAYS_INLINE type##_int_t type##_get(type##_t *a)                      \
+{                                                                       \
+  order_smp_read();                                                     \
+  return a->value;                                                      \
+}                                                                       \
+                                                                        \
+ALWAYS_INLINE type##_int_t type##_add(type##_t *a, type##_int_t value)  \
+{                                                                       \
+  return __cpu_##type##_add(&a->value, value);                          \
+}                                                                       \
+                                                                        \
+ALWAYS_INLINE type##_int_t type##_or(type##_t *a, type##_int_t value)   \
+{                                                                       \
+  return __cpu_##type##_or(&a->value, value);                           \
+}                                                                       \
+                                                                        \
+ALWAYS_INLINE type##_int_t type##_xor(type##_t *a, type##_int_t value)  \
+{                                                                       \
+  return __cpu_##type##_xor(&a->value, value);                          \
+}                                                                       \
+                                                                        \
+ALWAYS_INLINE type##_int_t type##_and(type##_t *a, type##_int_t value)  \
+{                                                                       \
+  return __cpu_##type##_and(&a->value, value);                          \
+}                                                                       \
+                                                                        \
+ALWAYS_INLINE type##_int_t type##_swap(type##_t *a, type##_int_t value) \
+{                                                                       \
+  return __cpu_##type##_swap(&a->value, value);                         \
+}                                                                       \
+                                                                        \
+ALWAYS_INLINE bool_t type##_inc(type##_t *a)                            \
+{                                                                       \
+  return __cpu_##type##_inc(&a->value);                                 \
+}                                                                       \
+                                                                        \
+ALWAYS_INLINE bool_t type##_dec(type##_t *a)                            \
+{                                                                       \
+  return __cpu_##type##_dec(&a->value);                                 \
+}                                                                       \
+                                                                        \
+ALWAYS_INLINE void type##_bit_set(type##_t *a, uint_fast8_t n)          \
+{                                                                       \
+  __cpu_##type##_bit_set(&a->value, n);                                 \
+}                                                                       \
+                                                                        \
+ALWAYS_INLINE bool_t type##_bit_testset(type##_t *a, uint_fast8_t n)    \
+{                                                                       \
+  return __cpu_##type##_bit_testset(&a->value, n);                      \
+}                                                                       \
+                                                                        \
+ALWAYS_INLINE void type##_bit_clr(type##_t *a, uint_fast8_t n)          \
+{                                                                       \
+  __cpu_##type##_bit_clr(&a->value, n);                                 \
+}                                                                       \
+                                                                        \
+ALWAYS_INLINE bool_t type##_bit_testclr(type##_t *a, uint_fast8_t n)    \
+{                                                                       \
+  return __cpu_##type##_bit_testclr(&a->value, n);                      \
+}                                                                       \
+                                                                        \
+ALWAYS_INLINE bool_t type##_bit_test(type##_t *a, uint_fast8_t n)       \
+{                                                                       \
+  return (type##_get(a) >> n) & 1;                                      \
+}                                                                       \
+                                                                        \
+ALWAYS_INLINE bool_t type##_compare_and_swap(type##_t *a,               \
+                       type##_int_t old, type##_int_t future)           \
+{                                                                       \
+  return __cpu_##type##_compare_and_swap(&a->value, old, future);       \
 }
 
-ALWAYS_INLINE atomic_int_t atomic_get(atomic_t *a)
-{
-  order_smp_read();
-  return a->value;
-}
-
-ALWAYS_INLINE atomic_int_t atomic_add(atomic_t *a, atomic_int_t value)
-{
-  return __cpu_atomic_add(&a->value, value);
-}
-
-ALWAYS_INLINE atomic_int_t atomic_or(atomic_t *a, atomic_int_t value)
-{
-  return __cpu_atomic_or(&a->value, value);
-}
-
-ALWAYS_INLINE atomic_int_t atomic_xor(atomic_t *a, atomic_int_t value)
-{
-  return __cpu_atomic_xor(&a->value, value);
-}
-
-ALWAYS_INLINE atomic_int_t atomic_and(atomic_t *a, atomic_int_t value)
-{
-  return __cpu_atomic_and(&a->value, value);
-}
-
-ALWAYS_INLINE atomic_int_t atomic_swap(atomic_t *a, atomic_int_t value)
-{
-  return __cpu_atomic_swap(&a->value, value);
-}
-
-ALWAYS_INLINE bool_t atomic_inc(atomic_t *a)
-{
-  return __cpu_atomic_inc(&a->value);
-}
-
-ALWAYS_INLINE bool_t atomic_dec(atomic_t *a)
-{
-  return __cpu_atomic_dec(&a->value);
-}
-
-ALWAYS_INLINE void atomic_bit_set(atomic_t *a, uint_fast8_t n)
-{
-  __cpu_atomic_bit_set(&a->value, n);
-}
-
-ALWAYS_INLINE bool_t atomic_bit_testset(atomic_t *a, uint_fast8_t n)
-{
-  return __cpu_atomic_bit_testset(&a->value, n);
-}
-
-ALWAYS_INLINE void atomic_bit_clr(atomic_t *a, uint_fast8_t n)
-{
-  __cpu_atomic_bit_clr(&a->value, n);
-}
-
-ALWAYS_INLINE bool_t atomic_bit_testclr(atomic_t *a, uint_fast8_t n)
-{
-  return __cpu_atomic_bit_testclr(&a->value, n);
-}
-
-ALWAYS_INLINE bool_t atomic_bit_test(atomic_t *a, uint_fast8_t n)
-{
-  return (atomic_get(a) >> n) & 1;
-}
-
-ALWAYS_INLINE bool_t atomic_compare_and_swap(atomic_t *a, atomic_int_t old, atomic_int_t future)
-{
-  return __cpu_atomic_compare_and_swap(&a->value, old, future);
-}
+__ATOMIC_CPUBASED(atomic);
+__ATOMIC_CPUBASED(atomic_fast8);
+__ATOMIC_CPUBASED(atomic_fast16);
 
 #define ARCH_ATOMIC_H_
 

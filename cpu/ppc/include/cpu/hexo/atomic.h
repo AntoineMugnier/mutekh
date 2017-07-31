@@ -30,6 +30,15 @@
 
 #define CPU_ATOMIC_H_
 
+typedef int32_t atomic_int_t;
+
+typedef int32_t atomic_fast16_int_t;
+#define HAS_CPU_ATOMIC_FAST16_ALIAS
+
+typedef int32_t atomic_fast8_int_t;
+#define HAS_CPU_ATOMIC_FAST8_ALIAS
+
+
 #define HAS_CPU_ATOMIC_ADD
 
 ALWAYS_INLINE atomic_int_t

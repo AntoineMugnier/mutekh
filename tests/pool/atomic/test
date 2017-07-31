@@ -14,6 +14,26 @@ env = Environment(
     timeout = 10,
     success_grep = "++SUCCESS++",
 
+    test_deps = [
+        "tests/pool/atomic/test.c",
+        "cpu/lm32/include/cpu/hexo/atomic.h",
+        "cpu/arm32m/include/cpu/hexo/atomic.h",
+        "cpu/ppc/include/cpu/hexo/atomic.h",
+        "cpu/nios2/include/cpu/hexo/atomic.h",
+        "cpu/x86_64-emu/include/cpu/hexo/atomic.h",
+        "cpu/sparc/include/cpu/hexo/atomic.h",
+        "cpu/arm32/include/cpu/hexo/atomic.h",
+        "cpu/avr32/include/cpu/hexo/atomic.h",
+        "cpu/mips/include/cpu/hexo/atomic.h",
+        "cpu/x86-emu/include/cpu/hexo/atomic.h",
+        "cpu/x86/include/cpu/hexo/atomic.h",
+        "hexo/include/hexo/atomic.h",
+        "hexo/include/hexo/atomic_cpu_fallback.h",
+        "hexo/include/hexo/atomic_cpu_nosmp.h",
+        "arch/common/include/arch/hexo/atomic_lockbased.h",
+        "arch/common/include/arch/hexo/atomic_cpu.h",
+    ],
+
     test_space = [
         Dimension(*all_cpus.expand()),
         Dimension(test_smp, None),

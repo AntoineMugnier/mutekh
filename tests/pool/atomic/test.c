@@ -6,67 +6,76 @@
 
 void app_start()
 {
-  atomic_t a;
+#define ATOMIC_TEST(type)                       \
+  type##_t a;                                   \
+                                                \
+  type##_set(&a, 0x42);                         \
+                                                \
+  ensure(type##_get(&a) == 0x42);               \
+                                                \
+  ensure(type##_add(&a, 2) == 0x42);            \
+  ensure(type##_get(&a) == 0x44);               \
+                                                \
+  ensure(type##_or(&a, 2) == 0x44);             \
+  ensure(type##_get(&a) == 0x46);               \
+                                                \
+  ensure(type##_xor(&a, 3) == 0x46);            \
+  ensure(type##_get(&a) == 0x45);               \
+                                                \
+  ensure(type##_and(&a, 3) == 0x45);            \
+  ensure(type##_get(&a) == 0x1);                \
+                                                \
+  ensure(type##_swap(&a, 0x42) == 0x1);         \
+  ensure(type##_get(&a) == 0x42);               \
+                                                \
+  ensure(type##_inc(&a));                       \
+  ensure(type##_get(&a) == 0x43);               \
+                                                \
+  ensure(type##_dec(&a));                       \
+  ensure(type##_get(&a) == 0x42);               \
+                                                \
+  type##_set(&a, 1);                            \
+                                                \
+  ensure(!type##_dec(&a));                      \
+  ensure(type##_get(&a) == 0);                  \
+                                                \
+  type##_set(&a, -1);                           \
+                                                \
+  ensure(!type##_inc(&a));                      \
+  ensure(type##_get(&a) == 0);                  \
+                                                \
+  ensure(!type##_bit_testset(&a, 3));           \
+  ensure(type##_get(&a) == 0x08);               \
+                                                \
+  ensure(type##_bit_testset(&a, 3));            \
+  ensure(type##_get(&a) == 0x08);               \
+  ensure(type##_bit_test(&a, 3));               \
+                                                \
+  ensure(type##_bit_testclr(&a, 3));            \
+  ensure(type##_get(&a) == 0);                  \
+                                                \
+  ensure(!type##_bit_testclr(&a, 3));           \
+  ensure(type##_get(&a) == 0);                  \
+  ensure(!type##_bit_test(&a, 3));              \
+                                                \
+  type##_bit_set(&a, 2);                        \
+  ensure(type##_bit_test(&a, 2));               \
+                                                \
+  type##_bit_clr(&a, 2);                        \
+  ensure(!type##_bit_test(&a, 2));              \
+                                                \
+  ensure(type##_compare_and_swap(&a, 0, 4));    \
+  ensure(!type##_compare_and_swap(&a, 0, 4));   \
+  ensure(type##_compare_and_swap(&a, 4, 42));   \
+  ensure(type##_compare_and_swap(&a, 42, 4));
 
-  atomic_set(&a, 0x42);
+  { ATOMIC_TEST(atomic) }
+  { ATOMIC_TEST(atomic_fast8) }
+  { ATOMIC_TEST(atomic_fast16) }
 
-  ensure(atomic_get(&a) == 0x42);
-
-  ensure(atomic_add(&a, 2) == 0x42);
-  ensure(atomic_get(&a) == 0x44);
-
-  ensure(atomic_or(&a, 2) == 0x44);
-  ensure(atomic_get(&a) == 0x46);
-
-  ensure(atomic_xor(&a, 3) == 0x46);
-  ensure(atomic_get(&a) == 0x45);
-
-  ensure(atomic_and(&a, 3) == 0x45);
-  ensure(atomic_get(&a) == 0x1);
-
-  ensure(atomic_swap(&a, 0x42) == 0x1);
-  ensure(atomic_get(&a) == 0x42);
-
-  ensure(atomic_inc(&a));
-  ensure(atomic_get(&a) == 0x43);
-
-  ensure(atomic_dec(&a));
-  ensure(atomic_get(&a) == 0x42);
-
-  atomic_set(&a, 1);
-
-  ensure(!atomic_dec(&a));
-  ensure(atomic_get(&a) == 0);
-
-  atomic_set(&a, -1);
-
-  ensure(!atomic_inc(&a));
-  ensure(atomic_get(&a) == 0);
-
-  ensure(!atomic_bit_testset(&a, 3));
-  ensure(atomic_get(&a) == 0x08);
-
-  ensure(atomic_bit_testset(&a, 3));
-  ensure(atomic_get(&a) == 0x08);
-  ensure(atomic_bit_test(&a, 3));
-
-  ensure(atomic_bit_testclr(&a, 3));
-  ensure(atomic_get(&a) == 0);
-
-  ensure(!atomic_bit_testclr(&a, 3));
-  ensure(atomic_get(&a) == 0);
-  ensure(!atomic_bit_test(&a, 3));
-
-  atomic_bit_set(&a, 2);
-  ensure(atomic_bit_test(&a, 2));
-
-  atomic_bit_clr(&a, 2);
-  ensure(!atomic_bit_test(&a, 2));
-
-  ensure(atomic_compare_and_swap(&a, 0, 4));
-  ensure(!atomic_compare_and_swap(&a, 0, 4));
-  ensure(atomic_compare_and_swap(&a, 4, 42));
-  ensure(atomic_compare_and_swap(&a, 42, 4));
+  atomic_t a = ATOMIC_FAST8_INITIALIZER(42);
+  atomic_fast8_t a8 = ATOMIC_FAST8_INITIALIZER(42);
+  atomic_fast16_t a16 = ATOMIC_FAST16_INITIALIZER(42);
 
   printk("++SUCCESS++\n");
 

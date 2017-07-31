@@ -30,318 +30,355 @@
 
 #define CPU_ATOMIC_H_
 
+#define __ATOMIC_ARM32M(type, width)                                    \
+                                                                        \
+inline type##_int_t                                                     \
+__cpu_##type##_add(type##_int_t *a, type##_int_t value)                 \
+{                                                                       \
+  reg_t tmp, tmp2, tmp3;                                                \
+                                                                        \
+  asm volatile(                                                         \
+               "1:                   \n\t"                              \
+               "ldrex" width "   %[tmp], [%[atomic]]       \n\t"        \
+               "add     %[tmp2], %[tmp], %[value]   \n\t"               \
+               "strex" width "   %[tmp3], %[tmp2], [%[atomic]]   \n\t"  \
+               "tst     %[tmp3], #1       \n\t"                         \
+               "bne     1b           \n\t"                              \
+               : [tmp] "=&r" (tmp), [tmp2] "=&r" (tmp2)                 \
+                 , [tmp3] "=&r" (tmp3), [clobber] "=m" (*a)             \
+               : [atomic] "r" (a), [value] "r" (value)                  \
+               );                                                       \
+                                                                        \
+  return tmp;                                                           \
+}                                                                       \
+                                                                        \
+inline type##_int_t                                                     \
+__cpu_##type##_or(type##_int_t *a, type##_int_t value)                  \
+{                                                                       \
+  reg_t tmp, tmp2, tmp3;                                                \
+                                                                        \
+  asm volatile(                                                         \
+               "1:                   \n\t"                              \
+               "ldrex" width "   %[tmp], [%[atomic]]       \n\t"        \
+               "orr     %[tmp2], %[tmp], %[value]   \n\t"               \
+               "strex" width "   %[tmp3], %[tmp2], [%[atomic]]   \n\t"  \
+               "tst     %[tmp3], #1       \n\t"                         \
+               "bne     1b           \n\t"                              \
+               : [tmp] "=&r" (tmp), [tmp2] "=&r" (tmp2)                 \
+                 , [tmp3] "=&r" (tmp3), [clobber] "=m" (*a)             \
+               : [atomic] "r" (a), [value] "r" (value)                  \
+               );                                                       \
+                                                                        \
+  return tmp;                                                           \
+}                                                                       \
+                                                                        \
+inline type##_int_t                                                     \
+__cpu_##type##_xor(type##_int_t *a, type##_int_t value)                 \
+{                                                                       \
+  reg_t tmp, tmp2, tmp3;                                                \
+                                                                        \
+  asm volatile(                                                         \
+               "1:                   \n\t"                              \
+               "ldrex" width "   %[tmp], [%[atomic]]       \n\t"        \
+               "eor     %[tmp2], %[tmp], %[value]   \n\t"               \
+               "strex" width "   %[tmp3], %[tmp2], [%[atomic]]   \n\t"  \
+               "tst     %[tmp3], #1       \n\t"                         \
+               "bne     1b           \n\t"                              \
+               : [tmp] "=&r" (tmp), [tmp2] "=&r" (tmp2)                 \
+                 , [tmp3] "=&r" (tmp3), [clobber] "=m" (*a)             \
+               : [atomic] "r" (a), [value] "r" (value)                  \
+               );                                                       \
+                                                                        \
+  return tmp;                                                           \
+}                                                                       \
+                                                                        \
+inline type##_int_t                                                     \
+__cpu_##type##_and(type##_int_t *a, type##_int_t value)                 \
+{                                                                       \
+  reg_t tmp, tmp2, tmp3;                                                \
+                                                                        \
+  asm volatile(                                                         \
+               "1:                   \n\t"                              \
+               "ldrex" width "   %[tmp], [%[atomic]]       \n\t"        \
+               "and     %[tmp2], %[tmp], %[value]   \n\t"               \
+               "strex" width "   %[tmp3], %[tmp2], [%[atomic]]   \n\t"  \
+               "tst     %[tmp3], #1       \n\t"                         \
+               "bne     1b           \n\t"                              \
+               : [tmp] "=&r" (tmp), [tmp2] "=&r" (tmp2)                 \
+                 , [tmp3] "=&r" (tmp3), [clobber] "=m" (*a)             \
+               : [atomic] "r" (a), [value] "r" (value)                  \
+               );                                                       \
+                                                                        \
+  return tmp;                                                           \
+}                                                                       \
+                                                                        \
+inline type##_int_t                                                     \
+__cpu_##type##_swap(type##_int_t *a, type##_int_t value)                \
+{                                                                       \
+  reg_t tmp, tmp2;                                                      \
+                                                                        \
+  asm volatile(                                                         \
+               "1:                   \n\t"                              \
+               "ldrex" width "   %[tmp], [%[atomic]]       \n\t"        \
+               "strex" width "   %[tmp2], %[value], [%[atomic]]   \n\t" \
+               "tst     %[tmp2], #1       \n\t"                         \
+               "bne     1b           \n\t"                              \
+               : [tmp] "=&r" (tmp), [tmp2] "=&r" (tmp2)                 \
+                 , [clobber] "=m" (*a)                                  \
+               : [atomic] "r" (a), [value] "r" (value)                  \
+               );                                                       \
+                                                                        \
+  return tmp;                                                           \
+}                                                                       \
+                                                                        \
+inline bool_t                                                           \
+__cpu_##type##_inc(type##_int_t *a)                                     \
+{                                                                       \
+  reg_t tmp = 0, tmp2;                                                  \
+                                                                        \
+  asm volatile(                                                         \
+               "1:                   \n\t"                              \
+               "ldrex" width "   %[tmp], [%[atomic]]       \n\t"        \
+               "add     %[tmp], %[tmp], #1   \n\t"                      \
+               "strex" width "   %[tmp2], %[tmp], [%[atomic]]   \n\t"   \
+               "tst     %[tmp2], #1       \n\t"                         \
+               "bne     1b           \n\t"                              \
+               : [tmp] "=&r" (tmp), [tmp2] "=&r" (tmp2),                \
+                 [clobber] "=m" (*a) : [atomic] "r" (a)                 \
+               );                                                       \
+                                                                        \
+  return tmp != 0;                                                      \
+}                                                                       \
+                                                                        \
+inline bool_t                                                           \
+__cpu_##type##_dec(type##_int_t *a)                                     \
+{                                                                       \
+  reg_t tmp = 0, tmp2;                                                  \
+                                                                        \
+  asm volatile(                                                         \
+               "1:                   \n\t"                              \
+               "ldrex" width "   %[tmp], [%[atomic]]       \n\t"        \
+               "sub     %[tmp], %[tmp], #1   \n\t"                      \
+               "strex" width "   %[tmp2], %[tmp], [%[atomic]]   \n\t"   \
+               "tst     %[tmp2], #1       \n\t"                         \
+               "bne     1b           \n\t"                              \
+               : [tmp] "=&r" (tmp), [tmp2] "=&r" (tmp2),                \
+                 [clobber] "=m" (*a) : [atomic] "r" (a)                 \
+               );                                                       \
+                                                                        \
+  return tmp != 0;                                                      \
+}                                                                       \
+                                                                        \
+inline bool_t                                                           \
+__cpu_##type##_bit_testset(type##_int_t *a, uint_fast8_t n)             \
+{                                                                       \
+  reg_t mask = 1 << n;                                                  \
+  reg_t tmp, tmp2, tmp3;                                                \
+                                                                        \
+  asm volatile(                                                         \
+               "1:                   \n\t"                              \
+               "ldrex" width "   %[tmp], [%[atomic]]       \n\t"        \
+               "tst     %[tmp], %[mask]       \n\t"                     \
+               "bne     2f           \n\t"                              \
+               "orr     %[tmp2], %[tmp], %[mask]   \n\t"                \
+               "strex" width "   %[tmp3], %[tmp2], [%[atomic]]   \n\t"  \
+               "tst     %[tmp3], #1       \n\t"                         \
+               "bne     1b           \n\t"                              \
+               "2:                   \n\t"                              \
+               : [tmp] "=&r" (tmp), [tmp2] "=&r" (tmp2)                 \
+                 , [tmp3] "=&r"(tmp3), [clobber] "=m" (*a)              \
+               : [mask] "r" (mask), [atomic] "r" (a)                    \
+               );                                                       \
+                                                                        \
+  return (tmp & mask) != 0;                                             \
+}                                                                       \
+                                                                        \
+inline void                                                             \
+__cpu_##type##_bit_waitset(type##_int_t *a, uint_fast8_t n)             \
+{                                                                       \
+  reg_t mask = 1 << n;                                                  \
+  reg_t tmp = 0, tmp2;                                                  \
+                                                                        \
+  asm volatile(                                                         \
+               "1:                   \n\t"                              \
+               "ldrex" width "   %[tmp], [%[atomic]]       \n\t"        \
+               "tst     %[tmp], %[mask]       \n\t"                     \
+               "bne     1b           \n\t"                              \
+               "orr     %[tmp], %[tmp], %[mask]   \n\t"                 \
+               "strex" width "   %[tmp2], %[tmp], [%[atomic]]   \n\t"   \
+               "tst     %[tmp2], #1       \n\t"                         \
+               "bne     1b           \n\t"                              \
+               : [tmp] "=&r" (tmp), [clobber] "=m" (*a)                 \
+                 , [tmp2] "=&r" (tmp2)                                  \
+               : [mask] "r" (mask), [atomic] "r" (a)                    \
+               );                                                       \
+}                                                                       \
+                                                                        \
+inline bool_t                                                           \
+__cpu_##type##_bit_testclr(type##_int_t *a, uint_fast8_t n)             \
+{                                                                       \
+  reg_t mask = 1 << n;                                                  \
+  reg_t tmp, tmp2, tmp3;                                                \
+                                                                        \
+  asm volatile(                                                         \
+               "1:                   \n\t"                              \
+               "ldrex" width "   %[tmp], [%[atomic]]       \n\t"        \
+               "tst     %[tmp], %[mask]       \n\t"                     \
+               "beq     2f           \n\t"                              \
+               "bic     %[tmp2], %[tmp], %[mask]   \n\t"                \
+               "strex" width "   %[tmp3], %[tmp2], [%[atomic]]   \n\t"  \
+               "tst     %[tmp3], #1       \n\t"                         \
+               "bne     1b           \n\t"                              \
+               "2:                   \n\t"                              \
+               : [tmp] "=&r" (tmp), [tmp2] "=&r" (tmp2),                \
+                 [clobber] "=m" (*a), [tmp3] "=&r"(tmp3)                \
+               : [mask] "r" (mask), [atomic] "r" (a)                    \
+               );                                                       \
+                                                                        \
+  return (tmp & mask) != 0;                                             \
+}                                                                       \
+                                                                        \
+inline void                                                             \
+__cpu_##type##_bit_waitclr(type##_int_t *a, uint_fast8_t n)             \
+{                                                                       \
+  reg_t mask = 1 << n;                                                  \
+  reg_t tmp = 0, tmp2;                                                  \
+                                                                        \
+  asm volatile(                                                         \
+               "1:                   \n\t"                              \
+               "ldrex" width "   %[tmp], [%[atomic]]       \n\t"        \
+               "tst     %[tmp], %[mask]       \n\t"                     \
+               "beq     1b           \n\t"                              \
+               "bic     %[tmp], %[tmp], %[mask]   \n\t"                 \
+               "strex" width "   %[tmp2], %[tmp], [%[atomic]]   \n\t"   \
+               "tst     %[tmp2], #1       \n\t"                         \
+               "bne     1b           \n\t"                              \
+               : [tmp] "=&r" (tmp), [tmp2] "=&r" (tmp2),                \
+                 [clobber] "=m" (*a)                                    \
+               : [mask] "r" (mask), [atomic] "r" (a)                    \
+               );                                                       \
+}                                                                       \
+                                                                        \
+inline void                                                             \
+__cpu_##type##_bit_set(type##_int_t *a, uint_fast8_t n)                 \
+{                                                                       \
+  reg_t mask = 1 << n;                                                  \
+  reg_t tmp, tmp2;                                                      \
+                                                                        \
+  asm volatile(                                                         \
+               "1:                   \n\t"                              \
+               "ldrex" width "   %[tmp], [%[atomic]]       \n\t"        \
+               "orr     %[tmp], %[tmp], %[mask]   \n\t"                 \
+               "strex" width "   %[tmp2], %[tmp], [%[atomic]]   \n\t"   \
+               "tst     %[tmp2], #1       \n\t"                         \
+               "bne     1b           \n\t"                              \
+               : [tmp] "=&r" (tmp), [tmp2] "=&r" (tmp2),                \
+                 [clobber] "=m" (*a)                                    \
+               : [mask] "r" (mask), [atomic] "r" (a)                    \
+               );                                                       \
+}                                                                       \
+                                                                        \
+inline void                                                             \
+__cpu_##type##_bit_clr(type##_int_t *a, uint_fast8_t n)                 \
+{                                                                       \
+  reg_t mask = 1 << n;                                                  \
+  reg_t tmp, tmp2;                                                      \
+                                                                        \
+  asm volatile(                                                         \
+               "1:                   \n\t"                              \
+               "ldrex" width "   %[tmp], [%[atomic]]       \n\t"        \
+               "bic     %[tmp], %[tmp], %[mask]   \n\t"                 \
+               "strex" width "   %[tmp2], %[tmp], [%[atomic]]   \n\t"   \
+               "tst     %[tmp2], #1       \n\t"                         \
+               "bne     1b           \n\t"                              \
+               : [tmp] "=&r" (tmp), [tmp2] "=&r" (tmp2),                \
+                 [clobber] "=m" (*a)                                    \
+               : [mask] "r" (mask), [atomic] "r" (a)                    \
+               );                                                       \
+}                                                                       \
+                                                                        \
+inline bool_t                                                           \
+__cpu_##type##_compare_and_swap(type##_int_t *a, type##_int_t old,      \
+                                type##_int_t future)                    \
+{                                                                       \
+  reg_t tmp, loaded;                                                    \
+                                                                        \
+  asm volatile(                                                         \
+               "1:                                   \n\t"              \
+               "ldrex" width "   %[loaded], [%[atomic]]       \n\t"     \
+               "cmp     %[loaded], %[old]            \n\t"              \
+               "bne     2f                           \n\t"              \
+               "strex" width "   %[tmp], %[future], [%[atomic]]  \n\t"  \
+               "tst     %[tmp], #1                   \n\t"              \
+               "bne     1b                           \n\t"              \
+               "2:                                   \n\t"              \
+               : [tmp] "=&r" (tmp), [loaded] "=&r" (loaded), "=m" (*a)  \
+               : [old] "r" (old), [future] "r" (future), [atomic] "r" (a) \
+               );                                                       \
+                                                                        \
+  return loaded == old;                                                 \
+}
+
+typedef int32_t atomic_int_t;
+typedef int16_t atomic_fast16_int_t;
+typedef int8_t  atomic_fast8_int_t;
+
 #if CONFIG_CPU_ARM32M_ARCH_VERSION >= 7
 
 #define HAS_CPU_ATOMIC_ADD
-
-ALWAYS_INLINE atomic_int_t
-__cpu_atomic_add(atomic_int_t *a, atomic_int_t value)
-{
-	reg_t tmp, tmp2, tmp3;
-
-	asm volatile(
-		"1:                   \n\t"
-		"ldrex   %[tmp], [%[atomic]]       \n\t"
-		"add     %[tmp2], %[tmp], %[value]   \n\t"
-		"strex   %[tmp3], %[tmp2], [%[atomic]]   \n\t"
-		"tst     %[tmp3], #1       \n\t"
-		"bne     1b           \n\t"
-		: [tmp] "=&r" (tmp), [tmp2] "=&r" (tmp2)
-                , [tmp3] "=&r" (tmp3), [clobber] "=m" (*a)
-                : [atomic] "r" (a), [value] "r" (value)
-		);
-
-	return tmp;
-}
-
 #define HAS_CPU_ATOMIC_OR
-
-ALWAYS_INLINE atomic_int_t
-__cpu_atomic_or(atomic_int_t *a, atomic_int_t value)
-{
-	reg_t tmp, tmp2, tmp3;
-
-	asm volatile(
-		"1:                   \n\t"
-		"ldrex   %[tmp], [%[atomic]]       \n\t"
-		"orr     %[tmp2], %[tmp], %[value]   \n\t"
-		"strex   %[tmp3], %[tmp2], [%[atomic]]   \n\t"
-		"tst     %[tmp3], #1       \n\t"
-		"bne     1b           \n\t"
-		: [tmp] "=&r" (tmp), [tmp2] "=&r" (tmp2)
-                , [tmp3] "=&r" (tmp3), [clobber] "=m" (*a)
-                : [atomic] "r" (a), [value] "r" (value)
-		);
-
-	return tmp;
-}
-
 #define HAS_CPU_ATOMIC_XOR
-
-ALWAYS_INLINE atomic_int_t
-__cpu_atomic_xor(atomic_int_t *a, atomic_int_t value)
-{
-	reg_t tmp, tmp2, tmp3;
-
-	asm volatile(
-		"1:                   \n\t"
-		"ldrex   %[tmp], [%[atomic]]       \n\t"
-		"eor     %[tmp2], %[tmp], %[value]   \n\t"
-		"strex   %[tmp3], %[tmp2], [%[atomic]]   \n\t"
-		"tst     %[tmp3], #1       \n\t"
-		"bne     1b           \n\t"
-		: [tmp] "=&r" (tmp), [tmp2] "=&r" (tmp2)
-                , [tmp3] "=&r" (tmp3), [clobber] "=m" (*a)
-                : [atomic] "r" (a), [value] "r" (value)
-		);
-
-	return tmp;
-}
-
 #define HAS_CPU_ATOMIC_AND
-
-ALWAYS_INLINE atomic_int_t
-__cpu_atomic_and(atomic_int_t *a, atomic_int_t value)
-{
-	reg_t tmp, tmp2, tmp3;
-
-	asm volatile(
-		"1:                   \n\t"
-		"ldrex   %[tmp], [%[atomic]]       \n\t"
-		"and     %[tmp2], %[tmp], %[value]   \n\t"
-		"strex   %[tmp3], %[tmp2], [%[atomic]]   \n\t"
-		"tst     %[tmp3], #1       \n\t"
-		"bne     1b           \n\t"
-		: [tmp] "=&r" (tmp), [tmp2] "=&r" (tmp2)
-                , [tmp3] "=&r" (tmp3), [clobber] "=m" (*a)
-                : [atomic] "r" (a), [value] "r" (value)
-		);
-
-	return tmp;
-}
-
 #define HAS_CPU_ATOMIC_SWAP
-
-ALWAYS_INLINE atomic_int_t
-__cpu_atomic_swap(atomic_int_t *a, atomic_int_t value)
-{
-	reg_t tmp, tmp2;
-
-	asm volatile(
-		"1:                   \n\t"
-		"ldrex   %[tmp], [%[atomic]]       \n\t"
-		"strex   %[tmp2], %[value], [%[atomic]]   \n\t"
-		"tst     %[tmp2], #1       \n\t"
-		"bne     1b           \n\t"
-		: [tmp] "=&r" (tmp), [tmp2] "=&r" (tmp2)
-                , [clobber] "=m" (*a)
-                : [atomic] "r" (a), [value] "r" (value)
-		);
-
-	return tmp;
-}
-
-# define HAS_CPU_ATOMIC_INC
-
-ALWAYS_INLINE bool_t
-__cpu_atomic_inc(atomic_int_t *a)
-{
-	reg_t tmp = 0, tmp2;
-
-	asm volatile(
-		"1:                   \n\t"
-		"ldrex   %[tmp], [%[atomic]]       \n\t"
-		"add     %[tmp], %[tmp], #1   \n\t"
-		"strex   %[tmp2], %[tmp], [%[atomic]]   \n\t"
-		"tst     %[tmp2], #1       \n\t"
-		"bne     1b           \n\t"
-		: [tmp] "=&r" (tmp), [tmp2] "=&r" (tmp2), [clobber] "=m" (*a)
-        : [atomic] "r" (a)
-		);
-
-	return tmp != 0;
-}
-
-# define HAS_CPU_ATOMIC_DEC
-
-ALWAYS_INLINE bool_t
-__cpu_atomic_dec(atomic_int_t *a)
-{
-	reg_t tmp = 0, tmp2;
-
-	asm volatile(
-		"1:                   \n\t"
-		"ldrex   %[tmp], [%[atomic]]       \n\t"
-		"sub     %[tmp], %[tmp], #1   \n\t"
-		"strex   %[tmp2], %[tmp], [%[atomic]]   \n\t"
-		"tst     %[tmp2], #1       \n\t"
-		"bne     1b           \n\t"
-		: [tmp] "=&r" (tmp), [tmp2] "=&r" (tmp2), [clobber] "=m" (*a)
-        : [atomic] "r" (a)
-		);
-
-	return tmp != 0;
-}
-
-# define HAS_CPU_ATOMIC_TESTSET
-
-ALWAYS_INLINE bool_t
-__cpu_atomic_bit_testset(atomic_int_t *a, uint_fast8_t n)
-{
-	reg_t mask = 1 << n;
-	reg_t tmp, tmp2, tmp3;
-
-	asm volatile(
-		"1:                   \n\t"
-		"ldrex   %[tmp], [%[atomic]]       \n\t"
-		"tst     %[tmp], %[mask]       \n\t"
-		"bne     2f           \n\t"
-		"orr     %[tmp2], %[tmp], %[mask]   \n\t"
-		"strex   %[tmp3], %[tmp2], [%[atomic]]   \n\t"
-		"tst     %[tmp3], #1       \n\t"
-		"bne     1b           \n\t"
-		"2:                   \n\t"
-		: [tmp] "=&r" (tmp), [tmp2] "=&r" (tmp2)
-		, [tmp3] "=&r"(tmp3), [clobber] "=m" (*a)
-        : [mask] "r" (mask), [atomic] "r" (a)
-		);
-
-	return (tmp & mask) != 0;
-}
-
-# define HAS_CPU_ATOMIC_WAITSET
-
-ALWAYS_INLINE void
-__cpu_atomic_bit_waitset(atomic_int_t *a, uint_fast8_t n)
-{
-	reg_t mask = 1 << n;
-	reg_t tmp = 0, tmp2;
-
-	asm volatile(
-		"1:                   \n\t"
-		"ldrex   %[tmp], [%[atomic]]       \n\t"
-		"tst     %[tmp], %[mask]       \n\t"
-		"bne     1b           \n\t"
-		"orr     %[tmp], %[tmp], %[mask]   \n\t"
-		"strex   %2, %[tmp], [%[atomic]]   \n\t"
-		"tst     %2, #1       \n\t"
-		"bne     1b           \n\t"
-		: [tmp] "=&r" (tmp), [clobber] "=m" (*a)
-		, [tmp2] "=&r" (tmp2)
-        : [mask] "r" (mask), [atomic] "r" (a)
-		);
-}
-
-# define HAS_CPU_ATOMIC_TESTCLR
-
-ALWAYS_INLINE bool_t
-__cpu_atomic_bit_testclr(atomic_int_t *a, uint_fast8_t n)
-{
-	reg_t mask = 1 << n;
-	reg_t tmp, tmp2, tmp3;
-
-	asm volatile(
-		"1:                   \n\t"
-		"ldrex   %[tmp], [%[atomic]]       \n\t"
-		"tst     %[tmp], %[mask]       \n\t"
-		"beq     2f           \n\t"
-		"bic     %[tmp2], %[tmp], %[mask]   \n\t"
-		"strex   %[tmp3], %[tmp2], [%[atomic]]   \n\t"
-		"tst     %[tmp3], #1       \n\t"
-		"bne     1b           \n\t"
-		"2:                   \n\t"
-		: [tmp] "=&r" (tmp), [tmp2] "=&r" (tmp2), [clobber] "=m" (*a)
-		, [tmp3] "=&r"(tmp3)
-        : [mask] "r" (mask), [atomic] "r" (a)
-		);
-
-	return (tmp & mask) != 0;
-}
-
-# define HAS_CPU_ATOMIC_WAITCLR
-
-ALWAYS_INLINE void
-__cpu_atomic_bit_waitclr(atomic_int_t *a, uint_fast8_t n)
-{
-	reg_t mask = 1 << n;
-	reg_t tmp = 0, tmp2;
-
-	asm volatile(
-		"1:                   \n\t"
-		"ldrex   %[tmp], [%[atomic]]       \n\t"
-		"tst     %[tmp], %[mask]       \n\t"
-		"beq     1b           \n\t"
-		"bic     %[tmp], %[tmp], %[mask]   \n\t"
-		"strex   %2, %[tmp], [%[atomic]]   \n\t"
-		"tst     %2, #1       \n\t"
-		"bne     1b           \n\t"
-		: [tmp] "=&r" (tmp), [tmp2] "=&r" (tmp2), [clobber] "=m" (*a)
-        : [mask] "r" (mask), [atomic] "r" (a)
-		);
-}
-
-# define HAS_CPU_ATOMIC_SET
-
-ALWAYS_INLINE void
-__cpu_atomic_bit_set(atomic_int_t *a, uint_fast8_t n)
-{
-	reg_t mask = 1 << n;
-	reg_t tmp, tmp2;
-
-	asm volatile(
-		"1:                   \n\t"
-		"ldrex   %[tmp], [%[atomic]]       \n\t"
-		"orr     %[tmp], %[tmp], %[mask]   \n\t"
-		"strex   %[tmp2], %[tmp], [%[atomic]]   \n\t"
-		"tst     %[tmp2], #1       \n\t"
-		"bne     1b           \n\t"
-		: [tmp] "=&r" (tmp), [tmp2] "=&r" (tmp2), [clobber] "=m" (*a)
-        : [mask] "r" (mask), [atomic] "r" (a)
-		);
-}
-
-# define HAS_CPU_ATOMIC_CLR
-
-ALWAYS_INLINE void
-__cpu_atomic_bit_clr(atomic_int_t *a, uint_fast8_t n)
-{
-	reg_t mask = 1 << n;
-	reg_t tmp, tmp2;
-
-	asm volatile(
-		"1:                   \n\t"
-		"ldrex   %[tmp], [%[atomic]]       \n\t"
-		"bic     %[tmp], %[tmp], %[mask]   \n\t"
-		"strex   %[tmp2], %[tmp], [%[atomic]]   \n\t"
-		"tst     %[tmp2], #1       \n\t"
-		"bne     1b           \n\t"
-		: [tmp] "=&r" (tmp), [tmp2] "=&r" (tmp2), [clobber] "=m" (*a)
-        : [mask] "r" (mask), [atomic] "r" (a)
-		);
-}
-
+#define HAS_CPU_ATOMIC_INC
+#define HAS_CPU_ATOMIC_DEC
+#define HAS_CPU_ATOMIC_TESTSET
+#define HAS_CPU_ATOMIC_WAITSET
+#define HAS_CPU_ATOMIC_TESTCLR
+#define HAS_CPU_ATOMIC_WAITCLR
+#define HAS_CPU_ATOMIC_SET
+#define HAS_CPU_ATOMIC_CLR
 #define HAS_CPU_ATOMIC_COMPARE_AND_SWAP
 
-ALWAYS_INLINE bool_t
-__cpu_atomic_compare_and_swap(atomic_int_t *a, atomic_int_t old, atomic_int_t future)
-{
-	atomic_int_t tmp, loaded;
+__ATOMIC_ARM32M(atomic, "");
 
-	asm volatile(
-		"1:                                   \n\t"
-		"ldrex   %[loaded], [%[atomic]]       \n\t"
-		"cmp     %[loaded], %[old]            \n\t"
-		"bne     2f                           \n\t"
-		"strex   %[tmp], %[future], [%[atomic]]  \n\t"
-		"tst     %[tmp], #1                   \n\t"
-		"bne     1b                           \n\t"
-        "2:                                   \n\t"
-		: [tmp] "=&r" (tmp), [loaded] "=&r" (loaded), "=m" (*a)
-        : [old] "r" (old), [future] "r" (future), [atomic] "r" (a)
-		);
+#define HAS_CPU_ATOMIC_FAST16_ADD
+#define HAS_CPU_ATOMIC_FAST16_OR
+#define HAS_CPU_ATOMIC_FAST16_XOR
+#define HAS_CPU_ATOMIC_FAST16_AND
+#define HAS_CPU_ATOMIC_FAST16_SWAP
+#define HAS_CPU_ATOMIC_FAST16_INC
+#define HAS_CPU_ATOMIC_FAST16_DEC
+#define HAS_CPU_ATOMIC_FAST16_TESTSET
+#define HAS_CPU_ATOMIC_FAST16_WAITSET
+#define HAS_CPU_ATOMIC_FAST16_TESTCLR
+#define HAS_CPU_ATOMIC_FAST16_WAITCLR
+#define HAS_CPU_ATOMIC_FAST16_SET
+#define HAS_CPU_ATOMIC_FAST16_CLR
+#define HAS_CPU_ATOMIC_FAST16_COMPARE_AND_SWAP
 
-    return loaded == old;
-}
+__ATOMIC_ARM32M(atomic_fast16, "h");
+
+#define HAS_CPU_ATOMIC_FAST8_ADD
+#define HAS_CPU_ATOMIC_FAST8_OR
+#define HAS_CPU_ATOMIC_FAST8_XOR
+#define HAS_CPU_ATOMIC_FAST8_AND
+#define HAS_CPU_ATOMIC_FAST8_SWAP
+#define HAS_CPU_ATOMIC_FAST8_INC
+#define HAS_CPU_ATOMIC_FAST8_DEC
+#define HAS_CPU_ATOMIC_FAST8_TESTSET
+#define HAS_CPU_ATOMIC_FAST8_WAITSET
+#define HAS_CPU_ATOMIC_FAST8_TESTCLR
+#define HAS_CPU_ATOMIC_FAST8_WAITCLR
+#define HAS_CPU_ATOMIC_FAST8_SET
+#define HAS_CPU_ATOMIC_FAST8_CLR
+#define HAS_CPU_ATOMIC_FAST8_COMPARE_AND_SWAP
+
+__ATOMIC_ARM32M(atomic_fast8, "b");
+
+#else
+
+  /* v6m relies on hexo/atomic_cpu_nosmp.h */
 
 #endif
 

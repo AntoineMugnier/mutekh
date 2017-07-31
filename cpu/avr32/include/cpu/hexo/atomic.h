@@ -29,4 +29,8 @@
 
 #define CPU_ATOMIC_H_
 
+typedef int32_t atomic_int_t;
+typedef int16_t atomic_fast16_int_t;
+typedef int8_t atomic_fast8_int_t;
+
 #endif
