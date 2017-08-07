@@ -37,9 +37,11 @@
 
 %section binary
   CONFIG_COMPILE_FORMAT! binary
+  CONFIG_COMPILE_EXT! bin
 
 %section ihex
   CONFIG_COMPILE_FORMAT! ihex
+  CONFIG_COMPILE_EXT! hex
 
 %section gct-checking
   CONFIG_GCT_CHECKING
