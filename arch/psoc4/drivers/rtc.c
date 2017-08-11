@@ -175,7 +175,7 @@ static void psoc4_rtc_deadline_set(struct psoc4_rtc_context_s *pv,
     control &= ~SRSS_WDT_CONTROL_INT(0);
     control &= ~SRSS_WDT_CONTROL_INT(2);
 
-    bit = 31 - __builtin_clzl(rising_bits);
+    bit = bit_msb_index(rising_bits);
 
     if (next_deadline <= value + 3) {
       SRSS_WDT_CONFIG_BITS2_SET(config, 0);

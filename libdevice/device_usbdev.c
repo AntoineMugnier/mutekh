@@ -179,7 +179,7 @@ static void usbdev_disable_all_endpoints(struct dev_usbdev_context_s *ctx,
 
   while(msk)
     {
-      idx = __builtin_ctz(msk);
+      idx = bit_ctz(msk);
       ep = ctx->ops->f_endpoint(ctx, dir, idx);
       assert(ep != NULL);
       ep->disabled = 1;
@@ -241,7 +241,7 @@ static void usbdev_enable_all_endpoints(struct dev_usbdev_context_s *ctx,
 
   while(msk)
     {
-      idx = __builtin_ctz(msk);
+      idx = bit_ctz(msk);
       ep = ctx->ops->f_endpoint(ctx, dir, idx);
       assert(ep != NULL);
       ep->disabled = 0;
@@ -2246,7 +2246,7 @@ static void usbdev_ep_init_cleanup(struct dev_usbdev_context_s *ctx,
 
   while(msk)
     {
-      idx = __builtin_ctz(msk);
+      idx = bit_ctz(msk);
 
       ep = ctx->ops->f_endpoint(ctx, dir, idx);
       assert(ep != NULL);

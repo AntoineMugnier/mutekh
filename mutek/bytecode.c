@@ -32,7 +32,7 @@ bc_set_regs_va(struct bc_context_s *ctx, uint16_t mask, va_list ap)
 {
   while (mask)
     {
-      uint_fast8_t r = __builtin_ctz(mask);
+      uint_fast8_t r = bit_ctz(mask);
       ctx->v[r] = va_arg(ap, uintptr_t);
       mask ^= 1 << r;
     }
@@ -700,7 +700,7 @@ static bool_t bc_run_alu(struct bc_context_s *ctx, uint16_t op)
   dispatch_MOV:
     dst = src;
     if (!o)
-      dst = __LOG2I((uint32_t)dst);       /* msbs */
+      dst = bit_msb_index((uint32_t)dst);       /* msbs */
     break;
   dispatch_EQ:
   dispatch_NEQ:

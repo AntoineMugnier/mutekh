@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <mutek/printk.h>
+#include <hexo/bit.h>
 
 void exit(uint_fast8_t status)
 {
@@ -76,7 +77,7 @@ error_t system(const char *cmd)
       a ^= b & m;                                                       \
                                                                         \
       /* subtract B*2^N from A, with B*2^N smaller than A and N large */ \
-      utype c = b << (__CLZ(b) - __CLZ(a));                             \
+      utype c = b << (bit_msb_index(a) - bit_msb_index(b));             \
       c >>= c > a;                                                      \
       a -= c;                                                           \
     }                                                                   \

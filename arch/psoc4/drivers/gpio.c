@@ -275,7 +275,7 @@ static DEV_IRQ_SRC_PROCESS(psoc4_gpio_process)
   cpu_mem_write_32(GPA(port) + GPIO_PORT_INTR_ADDR, pins);
 
   while (pins) {
-    uint8_t pin = __builtin_ctzl(pins);
+    uint8_t pin = bit_ctz32(pins);
     pins &= ~bit(pin);
 
     uint8_t io = PSOC4_IO(port, pin);

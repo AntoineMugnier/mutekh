@@ -160,7 +160,7 @@ static DEV_CLOCK_SET_CONFIG(stm32_rcc_set_config)
           CFGR,
           HPRE,
           /* FIXME: does not work for prescaler > 16. */
-          0x8 | ((__builtin_ctz(denum) >> 1) && 0x7)
+          0x8 | ((bit_ctz(denum) >> 1) && 0x7)
         );
 
       stm32_rcc_update_source_freq(dev, 0 /* AHB */);
@@ -177,7 +177,7 @@ static DEV_CLOCK_SET_CONFIG(stm32_rcc_set_config)
           pv->addr,
           CFGR,
           PPRE1,
-          0x4 | ((__builtin_ctz(denum) >> 1) && 0x3)
+          0x4 | ((bit_ctz(denum) >> 1) && 0x3)
         );
       stm32_rcc_update_source_freq(dev, 1 /* APB1 */);
       stm32_rcc_update_sinks(dev, 1 /* APB1 */);
@@ -193,7 +193,7 @@ static DEV_CLOCK_SET_CONFIG(stm32_rcc_set_config)
           pv->addr,
           CFGR,
           HPRE,
-          0x4 | ((__builtin_ctz(denum) >> 1) && 0x3)
+          0x4 | ((bit_ctz(denum) >> 1) && 0x3)
         );
       stm32_rcc_update_source_freq(dev, 2 /* APB2 */);
       stm32_rcc_update_sinks(dev, 2 /* APB2 */);

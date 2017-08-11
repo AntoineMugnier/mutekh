@@ -31,7 +31,7 @@ static KROUTINE_EXEC(kbd_done)
   if (pressed) {
     printk("Pressed:");
     while (pressed) {
-      uint8_t key = __builtin_ctzll(pressed);
+      uint8_t key = bit_ctz64(pressed);
 
       printk(" %d", key);
 
@@ -43,7 +43,7 @@ static KROUTINE_EXEC(kbd_done)
   if (released) {
     printk("Released:");
     while (released) {
-      uint8_t key = __builtin_ctzll(released);
+      uint8_t key = bit_ctz64(released);
 
       printk(" %d", key);
 

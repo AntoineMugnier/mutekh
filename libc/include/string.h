@@ -36,6 +36,7 @@ C_HEADER_BEGIN
 
 #include <hexo/types.h>
 #include <hexo/error.h>
+#include <hexo/bit.h>
 
 #if defined (CONFIG_LIBC_STRING_ASM)
 # include <cpu/string.h>
@@ -185,28 +186,12 @@ stpcpy(char *dest, const char *src);
 
 /***************************************** bit string operations */
 
-/** Find first bit set in an integer. This generic macro adapts to the
-    integer type width. @see #__CLZ */
-#define __FFS(n)                                                        \
-({                                                                      \
-  typedef typeof(n) _t;                                                 \
-  _t _n = (n);                                                          \
-                                                                        \
-  __builtin_types_compatible_p(_t, __compiler_slong_t) ||               \
-    __builtin_types_compatible_p(_t, __compiler_ulong_t)                \
-    ? __builtin_ffsl(_n)                                                \
-    : __builtin_types_compatible_p(_t, __compiler_slonglong_t) ||       \
-    __builtin_types_compatible_p(_t, __compiler_ulonglong_t)            \
-    ? __builtin_ffsll(_n)                                               \
-    : __builtin_ffs(_n);                                                \
-})
-
-/** standard @tt ffs function @see #__FFS */
-#define ffs(x) __builtin_ffs(x)
-/** standard @tt ffsl function @see #__FFS */
-#define ffsl(x) __builtin_ffsl(x)
-/** standard @tt ffsll function @see #__FFS */
-#define ffsll(x) __builtin_ffsll(x)
+/** standard @tt ffs function @see #bit_ffs */
+#define ffs(x) bit_ffs(x)
+/** standard @tt ffsl function @see #bit_ffs */
+#define ffsl(x) bit_ffs(x)
+/** standard @tt ffsll function @see #bit_ffs */
+#define ffsll(x) bit_ffs(x)
 
 const char *strerror(error_t errnum);
 

@@ -174,7 +174,7 @@ static error_t efm32_dma_init_ctrl(struct dev_dma_rq_s * rq,
     case 8 ... 1024:
       if (burst & (burst - 1))
         return -ENOTSUP;
-      burst = __builtin_ctz(burst) + 2;
+      burst = bit_ctz(burst) + 2;
       break;
     default:
       return -ENOTSUP;
@@ -440,7 +440,7 @@ static error_t efm32_dma_process(struct efm32_dma_context_s *pv, struct dev_dma_
   if (chan_msk == 0)
     return 0;
 
-  uint8_t chan = __builtin_ctz(chan_msk);
+  uint8_t chan = bit_ctz(chan_msk);
 
   assert(chan < CONFIG_DRIVER_EFR32_DMA_CHANNEL_COUNT);
   assert(pv->chan[chan].rq == NULL);
@@ -712,7 +712,7 @@ static DEV_DMA_CANCEL(efm32_dma_cancel)
         {
           assert(chan_msk);
 
-          uint8_t chan = __builtin_ctz(chan_msk);
+          uint8_t chan = bit_ctz(chan_msk);
           uint8_t msk  = (1 << chan);
           chan_msk &= ~msk;
 

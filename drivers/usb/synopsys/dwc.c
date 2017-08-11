@@ -1050,7 +1050,7 @@ bool_t synopsys_usb_irq(struct synopsys_usbdev_private_s *pv)
       epidx = 0;
       while(irqio)
         {
-          epidx = __builtin_ctz(irqio);
+          epidx = bit_ctz(irqio);
           synopsys_usbdev_epin_irq(pv, epidx);
           irqio ^= 1 << epidx; 
         }
@@ -1060,7 +1060,7 @@ bool_t synopsys_usb_irq(struct synopsys_usbdev_private_s *pv)
       epidx = 0;
       while(irqio)
         {
-          epidx = __builtin_ctz(irqio);
+          epidx = bit_ctz(irqio);
           synopsys_usbdev_epout_irq(pv, epidx);
           irqio ^= 1 << epidx; 
         }

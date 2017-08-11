@@ -430,7 +430,7 @@ static DEV_IRQ_SRC_PROCESS(pic32_gpio_source_process)
 
       while (x)
         {
-          uint_fast8_t i = __builtin_ctz(x);
+          uint_fast8_t i = bit_ctz(x);
           struct dev_irq_sink_s *sink = pv->sinks + pv->sinks_map[i + src_id * GPIO_BANK_SIZE];
 
           do

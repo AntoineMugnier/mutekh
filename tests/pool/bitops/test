@@ -1,0 +1,46 @@
+# -*- python -*-
+
+from mt.base.environment import *
+from mt.base.match import *
+from mt.base.expectation import *
+
+from mutekh.test.stages import configure, build, execute
+from mutekh.test.archs import *
+
+test_smp         = Config("t_smp")
+
+env = Environment(
+    name = "bitops",
+    timeout = 10,
+    success_grep = "++SUCCESS++",
+
+    test_deps = [
+        "tests/pool/bitops/test.c",
+        "cpu/lm32/include/cpu/hexo/bit.h",
+        "cpu/arm32m/include/cpu/hexo/bit.h",
+        "cpu/ppc/include/cpu/hexo/bit.h",
+        "cpu/nios2/include/cpu/hexo/bit.h",
+        "cpu/x86_64-emu/include/cpu/hexo/bit.h",
+        "cpu/sparc/include/cpu/hexo/bit.h",
+        "cpu/arm32/include/cpu/hexo/bit.h",
+        "cpu/avr32/include/cpu/hexo/bit.h",
+        "cpu/mips/include/cpu/hexo/bit.h",
+        "cpu/x86-emu/include/cpu/hexo/bit.h",
+        "cpu/x86/include/cpu/hexo/bit.h",
+        "hexo/include/hexo/bit.h",
+    ],
+
+    test_space = [
+        Dimension(*all_cpus.expand()),
+        ],
+
+    actions = [
+        configure,
+        build,
+        execute
+        ],
+
+    rules = Rules(
+    )
+)
+

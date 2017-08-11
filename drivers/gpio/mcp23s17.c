@@ -138,7 +138,7 @@ static KROUTINE_EXEC(mcp23s17_spi_done)
           {
             while (pv->intf_cache)
               {
-                uint_fast8_t pin_id = __builtin_ctz(pv->intf_cache);
+                uint_fast8_t pin_id = bit_ctz(pv->intf_cache);
                 struct dev_irq_sink_s *sink = pv->sinks_ep + pv->sinks_map[pin_id];
                 device_irq_sink_process(sink, 0);
                 pv->intf_cache ^= 1 << pin_id;

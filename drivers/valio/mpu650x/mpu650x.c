@@ -104,7 +104,7 @@ void mpu650x_config_set(struct device_s *dev, const struct valio_ms_config_s *co
   if (!tmp)
     tmp = 1;
 
-  uint8_t high_bit = 31 - __builtin_clzl(tmp);
+  uint8_t high_bit = bit_msb_index(tmp);
   lp_rate = (high_bit > 11) ? 11 : 12 - high_bit;
 
   pv->stable_count = config->sleep_time / (smplrt_div + 1) + 1;

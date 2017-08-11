@@ -82,7 +82,7 @@ static inline uint_fast8_t soft_aes_ocb_ntz(size_t i)
 #if CONFIG_DRIVER_SOFT_AES_OCB3_MAXBLOCKS < 15
   return (0x0484c484 >> (i << 1)) & 3;
 #else
-  return __builtin_ctz(i + 1);
+  return bit_ctz(i + 1);
 #endif
 }
 

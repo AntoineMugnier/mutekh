@@ -140,16 +140,16 @@ static DEV_IRQ_SRC_PROCESS(bcm283x_icu_source_process)
 
       uint_fast8_t i;
       if (basic & 0x000000ff)       // arm irqs 0-7
-        i = __builtin_ctz(basic);     // clz instruction on ARM cpu
+        i = bit_ctz(basic);     // clz instruction on ARM cpu
 
       else if (basic & 0x001ffc00)   // some gpu irqs directly mapped in the basic pending
-        i = bcm283x_icu_basic_to_gpu[__builtin_ctz(basic & 0x001ffc00)];
+        i = bcm283x_icu_basic_to_gpu[bit_ctz(basic & 0x001ffc00)];
 
       else if (basic & 0x00000100)       // gpu irqs 0-31
-        i = __builtin_ctz(endian_le32(cpu_mem_read_32(pv->addr + BCM283XICU_PEND1))) + 8;
+        i = bit_ctz(endian_le32(cpu_mem_read_32(pv->addr + BCM283XICU_PEND1))) + 8;
 
       else if (basic & 0x00000200)       // gpu irqs 32-63
-        i = __builtin_ctz(endian_le32(cpu_mem_read_32(pv->addr + BCM283XICU_PEND2))) + 8 + 32;
+        i = bit_ctz(endian_le32(cpu_mem_read_32(pv->addr + BCM283XICU_PEND2))) + 8 + 32;
       else
         break;
 

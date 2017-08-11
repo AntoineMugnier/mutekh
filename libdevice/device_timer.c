@@ -172,8 +172,8 @@ error_t dev_timer_shift_sec(struct device_timer_s *accessor,
   if (a == 0 || b == 0)
     return -ERANGE;
 
-  uint_fast8_t as = __builtin_clzll(a);
-  uint_fast8_t bs = __builtin_clzll(b);
+  uint_fast8_t as = bit_clz(a);
+  uint_fast8_t bs = bit_clz(b);
   a <<= as;
   b <<= bs;
 

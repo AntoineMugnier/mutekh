@@ -70,7 +70,7 @@ cpu_sparc_wincount(void)
        : "=r" (tmp), "=r" (wim_mask): "1" (wim_mask)
        );
 
-  return __builtin_popcount(wim_mask);
+  return bit_popc(wim_mask);
 }
 
 ALWAYS_INLINE cpu_id_t

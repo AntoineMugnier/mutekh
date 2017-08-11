@@ -28,6 +28,7 @@
 #include <hexo/types.h>
 #include <hexo/endian.h>
 #include <hexo/iospace.h>
+#include <hexo/bit.h>
 
 #include <device/device.h>
 #include <device/resources.h>
@@ -94,7 +95,7 @@ pl390_get_current_cpu(struct pl390_icu_private_s *pv, uint_fast8_t ppi_id)
   uint8_t mask = (endian_le32(cpu_mem_read_32(pv->gicd_addr + PL390_GICD_ITARGETSR_ADDR(4 + ppi_id / 4)))
                   >> ((ppi_id % 4) * 8));
 
-  return __builtin_ctz(mask);
+  return bit_ctz(mask);
 }
 
 static DEV_IRQ_SINK_UPDATE(pl390_icu_sink_update)
@@ -254,9 +255,9 @@ static DEV_INIT(pl390_icu_init)
 
   uint_fast16_t spi_count = 0;
   for (i = 1; i < n; i++)
-    spi_count += __builtin_popcount(pv->imp_irq[i]);
+    spi_count += bit_popc(pv->imp_irq[i]);
 
-  uint_fast16_t ppi_count = __builtin_popcount(pv->imp_irq[0] >> 16);
+  uint_fast16_t ppi_count = bit_popc16(pv->imp_irq[0] >> 16);
   pv->reg_count = n;
 
   printk("pl390: %u cpu interfaces, %u shared peripheral irqs, %u private irqs per cpu\n",

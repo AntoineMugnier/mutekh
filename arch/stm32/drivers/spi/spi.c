@@ -24,6 +24,7 @@
 #include <hexo/endian.h>
 #include <hexo/iospace.h>
 #include <hexo/interrupt.h>
+#include <hexo/bit.h>
 
 #include <mutek/mem_alloc.h>
 #include <mutek/printk.h>
@@ -64,7 +65,7 @@ error_t stm32_spi_update_bitrate(struct stm32_spi_private_s *pv,
   if (div == 0)
     return -EINVAL;
 
-  uint32_t logval = 31 - __builtin_clz(div);
+  uint32_t logval = bit_msb_index(div);
   if (logval < 1)
     return -ERANGE;
 

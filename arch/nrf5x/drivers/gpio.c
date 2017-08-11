@@ -130,7 +130,7 @@ static void nrf5x_gpio_mask_update(struct device_s *dev, uint32_t ref, uint32_t 
   uint32_t to_update = mask | pv->mask;
 
   while (to_update) {
-    uint8_t pin = __builtin_ctz(to_update);
+    uint8_t pin = bit_ctz(to_update);
     uint32_t cnf;
 
     cnf = nrf_reg_get(GPIO_ADDR, NRF_GPIO_PIN_CNF(pin));

@@ -164,6 +164,22 @@ __attribute__ ((aligned (CONFIG_CPU_INT64_ALIGN)));
 typedef long double             __compiler_longdouble_t;
 
 # ifdef _HEXO_INTTYPES_DEPRECATED //mkdoc:skip
+
+__attribute__ ((deprecated))
+int __builtin_popcount(unsigned int);
+__attribute__ ((deprecated))
+int __builtin_popcountl(unsigned long);
+
+__attribute__ ((deprecated))
+int __builtin_clz(unsigned int);
+__attribute__ ((deprecated))
+int __builtin_clzl(unsigned long);
+
+__attribute__ ((deprecated))
+int __builtin_ctz(unsigned int);
+__attribute__ ((deprecated))
+int __builtin_ctzl(unsigned long);
+
 /** @this prevents use of compiler native short type,
     @tt int_fast*_t and @tt uint_fast*_t types are prefered. */
 typedef short _dont_use_native_short_type_t __attribute__ ((deprecated));

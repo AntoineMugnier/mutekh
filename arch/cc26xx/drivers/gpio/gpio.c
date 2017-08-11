@@ -341,7 +341,7 @@ static DEV_IRQ_SRC_PROCESS(cc26xx_gpio_source_process)
 
       while (x)
         {
-          uint_fast8_t dio_id = __builtin_ctz(x);
+          uint_fast8_t dio_id = bit_ctz(x);
           struct dev_irq_sink_s *sink = pv->sinks_ep + pv->sinks_map[dio_id];
           device_irq_sink_process(sink, 0);
           x ^= 1 << dio_id;

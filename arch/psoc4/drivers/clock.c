@@ -280,7 +280,7 @@ static DEV_CMU_CONFIG_MUX(psoc4_clock_config_mux)
     if (!ratio->denom > 128)
       return -ENOTSUP;
 
-    uint8_t bit = __builtin_ctz(ratio->denom);
+    uint8_t bit = bit_ctz(ratio->denom);
     pv->sysclk_div = bit;
 
     return 0;

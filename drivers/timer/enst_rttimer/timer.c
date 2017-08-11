@@ -120,7 +120,7 @@ static DEV_IRQ_SRC_PROCESS(enst_rttimer_irq_single)
 
       while (ip)
 	{
-	  uint_fast8_t number = __builtin_ctz(ip);
+	  uint_fast8_t number = bit_ctz(ip);
 
 	  assert(number < pv->t_count);
 

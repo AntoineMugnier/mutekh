@@ -84,7 +84,7 @@ static DEV_SPI_CTRL_CONFIG(bcm283x_spi_config)
 
   uint32_t div = (BCM283X_SPI_CORE_CLK / (cfg->bit_rate1k * 1024));
 
-  uint_fast8_t i = __builtin_clz(div);
+  uint_fast8_t i = bit_clz32(div);
 
   if (i < 16)
     i = 16;

@@ -67,7 +67,7 @@ static void bs_state_read(struct bs_context_s *pv,
   memset(rq->data, 0, pv->state_size);
 
   while (mask) {
-    uint8_t b = __builtin_ctzll(mask);
+    uint8_t b = bit_ctz64(mask);
 
     if (bit_get(value, b) == pv->active_high)
       ((uint8_t *)rq->data)[button / 8] |= 1 << (button & 7);
@@ -230,7 +230,7 @@ static DEV_INIT(button_set_init)
 
   uint64_t mask = (*(uint64_t *)tmp) & bit_mask(0, width);
   endian_le64_na_store(pv->mask, mask);
-  pv->state_size = (__builtin_popcountll(mask) + 7) / 8;
+  pv->state_size = (bit_popc64(mask) + 7) / 8;
 
   dev_request_queue_init(&pv->queue);
 

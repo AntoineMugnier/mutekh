@@ -428,7 +428,7 @@ static void max3420_usbdev_tr_done(struct device_s *dev)
 
   while(msk)
     {
-      uint8_t idx = __builtin_ctz(msk);
+      uint8_t idx = bit_ctz(msk);
       tr = pv->tr[idx];
 
       msk ^= 1 << idx;

@@ -288,7 +288,7 @@ static uint8_t pic32_usbdev_select_dma(struct pic32_usbdev_private_s *pv)
 
   assert(dma_idle);
 
-  return (PIC32_USB_DMA_IDLE_MSK | __builtin_ctz(dma_idle));
+  return (PIC32_USB_DMA_IDLE_MSK | bit_ctz(dma_idle));
 }
 
 static void pic32_usbdev_dma_start(struct pic32_usbdev_private_s *pv,
@@ -463,7 +463,7 @@ static DEV_IRQ_SRC_PROCESS(pic32_usb_dma_irq)
 
   while(irq)
     {
-      dmaidx = __builtin_ctz(irq);
+      dmaidx = bit_ctz(irq);
       irq ^= 1 << dmaidx;
 
       /* Release DMA channel */
@@ -907,7 +907,7 @@ static DEV_IRQ_SRC_PROCESS(pic32_usb_irq)
 
       while(irqo)
         {
-           epidx = __builtin_ctz(irqo);
+           epidx = bit_ctz(irqo);
            pic32_usbdev_epout_irq(pv, epidx);
            irqo ^= 1 << epidx; 
         }
@@ -918,7 +918,7 @@ static DEV_IRQ_SRC_PROCESS(pic32_usb_irq)
 
       while(irqi)
         {
-           epidx = __builtin_ctz(irqi);
+           epidx = bit_ctz(irqi);
            pic32_usbdev_epin_irq(pv, epidx);
            irqi ^= 1 << epidx; 
         }

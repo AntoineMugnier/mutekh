@@ -305,7 +305,7 @@ static DEV_INIT(i2c_eeprom_init)
         goto fail;
 
     pv->busy = 0;
-    pv->page_size_l2 = __builtin_ctz(page_size);
+    pv->page_size_l2 = bit_ctz(page_size);
     pv->size = size;
     pv->addr_size = addr_size;
     pv->last_was_write = 0;

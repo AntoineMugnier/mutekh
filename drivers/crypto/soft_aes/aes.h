@@ -25,6 +25,7 @@
 
 #include <hexo/types.h>
 #include <hexo/endian.h>
+#include <hexo/bit.h>
 
 #include <device/device.h>
 #include <device/resources.h>
@@ -40,7 +41,7 @@
 #endif
 
 #define AES_OCB_L_COUNT                                                 \
-  (8 * sizeof(__compiler_sint_t) - __builtin_clz(CONFIG_DRIVER_CRYPTO_SOFT_AES_OCB3_MAXBLOCKS + 1))
+  (1 + bit_msb_index(CONFIG_DRIVER_CRYPTO_SOFT_AES_OCB3_MAXBLOCKS + 1))
 
 struct soft_aes_context_s
 {

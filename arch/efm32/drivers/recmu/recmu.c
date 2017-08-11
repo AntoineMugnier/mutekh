@@ -728,7 +728,7 @@ static DEV_CMU_CONFIG_MUX(efm32_recmu_config_mux)
           uint32_t d = ratio->denom;
           if (d > 512)
             return -ENOTSUP;
-          EFM32_CMU_HFCORECLKDIV_HFCORECLKDIV_SETVAL(pv->r_hfcoreclkdiv, __FFS(d) - 1);
+          EFM32_CMU_HFCORECLKDIV_HFCORECLKDIV_SETVAL(pv->r_hfcoreclkdiv, bit_ctz(d));
         }
       break;
     }
@@ -740,7 +740,7 @@ static DEV_CMU_CONFIG_MUX(efm32_recmu_config_mux)
           uint32_t d = ratio->denom;
           if (d > 512)
             return -ENOTSUP;
-          EFM32_CMU_HFPERCLKDIV_HFPERCLKDIV_SETVAL(pv->r_hfperclkdiv, __FFS(d) - 1);
+          EFM32_CMU_HFPERCLKDIV_HFPERCLKDIV_SETVAL(pv->r_hfperclkdiv, bit_ctz(d));
         }
       break;
     }
@@ -856,7 +856,7 @@ static DEV_CMU_CONFIG_MUX(efm32_recmu_config_mux)
           uint32_t d = ratio->denom;
           if (d > 8)
             return -ENOTSUP;
-          EFM32_CMU_LFAPRESC0_LESENSE_SETVAL(pv->r_lfapresc0, __FFS(d) - 1);
+          EFM32_CMU_LFAPRESC0_LESENSE_SETVAL(pv->r_lfapresc0, bit_ctz(d));
         }
       break;
 #endif
@@ -869,7 +869,7 @@ static DEV_CMU_CONFIG_MUX(efm32_recmu_config_mux)
           uint32_t d = ratio->denom;
           if (d > 32768)
             return -ENOTSUP;
-          EFM32_CMU_LFAPRESC0_RTC_SETVAL(pv->r_lfapresc0, __FFS(d) - 1);
+          EFM32_CMU_LFAPRESC0_RTC_SETVAL(pv->r_lfapresc0, bit_ctz(d));
         }
       break;
 #endif
@@ -882,7 +882,7 @@ static DEV_CMU_CONFIG_MUX(efm32_recmu_config_mux)
           uint32_t d = ratio->denom;
           if (d > 32768)
             return -ENOTSUP;
-          EFM32_CMU_LFAPRESC0_LETIMER0_SETVAL(pv->r_lfapresc0, __FFS(d) - 1);
+          EFM32_CMU_LFAPRESC0_LETIMER0_SETVAL(pv->r_lfapresc0, bit_ctz(d));
         }
       break;
 #endif
@@ -895,7 +895,7 @@ static DEV_CMU_CONFIG_MUX(efm32_recmu_config_mux)
           uint32_t d = ratio->denom;
           if (d < 16)
             return -ENOTSUP;
-          EFM32_CMU_LFAPRESC0_LCD_SETVAL(pv->r_lfapresc0, __FFS(d) - 5);
+          EFM32_CMU_LFAPRESC0_LCD_SETVAL(pv->r_lfapresc0, bit_ctz(d) - 4);
         }
       break;
 #endif
@@ -908,7 +908,7 @@ static DEV_CMU_CONFIG_MUX(efm32_recmu_config_mux)
           uint32_t d = ratio->denom;
           if (d > 8)
             return -ENOTSUP;
-          EFM32_CMU_LFBPRESC0_LEUART0_SETVAL(pv->r_lfbpresc0, __FFS(d) - 1);
+          EFM32_CMU_LFBPRESC0_LEUART0_SETVAL(pv->r_lfbpresc0, bit_ctz(d));
         }
       break;
 #endif
@@ -921,7 +921,7 @@ static DEV_CMU_CONFIG_MUX(efm32_recmu_config_mux)
           uint32_t d = ratio->denom;
           if (d > 8)
             return -ENOTSUP;
-          EFM32_CMU_LFBPRESC0_LEUART1_SETVAL(pv->r_lfbpresc0, __FFS(d) - 1);
+          EFM32_CMU_LFBPRESC0_LEUART1_SETVAL(pv->r_lfbpresc0, bit_ctz(d));
         }
       break;
 #endif
@@ -995,7 +995,7 @@ static void efm32_recmu_clock_gate(struct efm32_recmu_private_s *pv,
       uint32_t x = cpu_mem_read_32(EFM32_CMU_ADDR + t->addr);
       while (q)
         {
-          dev_cmu_node_id_t id = __FFS(q) - 1;
+          dev_cmu_node_id_t id = bit_ctz(q);
           uint8_t s = efm32_en_bits[id];
           if (s & 0x80)
             {
@@ -1206,7 +1206,7 @@ static DEV_CMU_COMMIT(efm32_recmu_commit)
 
   while (m)
     {
-      dev_cmu_node_id_t id = __FFS(m) - 1;
+      dev_cmu_node_id_t id = bit_ctz(m);
       struct dev_clock_src_ep_s *src = pv->src + id;
       assert(src->notify_count);
       id += EFM32_CLOCK_FIRST_EP;

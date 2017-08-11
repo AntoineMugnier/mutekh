@@ -288,7 +288,7 @@ static uint32_t nrf5x_persist_counter_offset_get(const struct dev_persist_descri
   }
 
   if (low < total)
-    zeroes = __builtin_ctz(begin[low]);
+    zeroes = bit_ctz(begin[low]);
   return zeroes + low * sizeof(uint32_t) * 8;
 }
 
@@ -743,7 +743,7 @@ static DEV_MEM_INFO(nrf5x_mem_info)
 
   memset(info, 0, sizeof(*info));
 
-  uint8_t page_log2 = __builtin_ctz(cpu_mem_read_32(NRF_FICR_CODEPAGESIZE));
+  uint8_t page_log2 = bit_ctz(cpu_mem_read_32(NRF_FICR_CODEPAGESIZE));
 
   switch (accessor->number)
     {
@@ -787,7 +787,7 @@ static void nrf5x_nvmc_flash_op(
 {
   size_t i;
   uint32_t addr_mask = cpu_mem_read_32(NRF_FICR_CODEPAGESIZE) - 1;
-  uint32_t page_log2 = __builtin_ctz(cpu_mem_read_32(NRF_FICR_CODEPAGESIZE));
+  uint32_t page_log2 = bit_ctz(cpu_mem_read_32(NRF_FICR_CODEPAGESIZE));
 
   if (rq->type & (DEV_MEM_OP_PARTIAL_READ | DEV_MEM_OP_PAGE_READ))
     dev_mem_mapped_op_helper(base, page_log2, rq);

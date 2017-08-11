@@ -470,7 +470,7 @@ static DEV_IRQ_SRC_PROCESS(bcm283x_gpio_source_process)
 
       while (x)
         {
-          uint_fast8_t i = __builtin_ctz(x);
+          uint_fast8_t i = bit_ctz(x);
           struct dev_irq_sink_s *sink = pv->sink + i + GPIO_BANK_SIZE * src_id;
           device_irq_sink_process(sink, 0);
           x ^= 1 << i;

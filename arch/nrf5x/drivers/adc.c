@@ -104,7 +104,7 @@ static void nrf5x_adc_sample_next(struct device_s *dev)
 {
   struct nrf5x_adc_private_s *pv = dev->drv_pv;
 
-  uint8_t line = __builtin_ctz(pv->todo);
+  uint8_t line = bit_ctz(pv->todo);
   pv->todo &= ~bit(line);
 
   logk_trace("ADC sample %d line %d conf %08x\n", pv->index, line, pv->config[line]);

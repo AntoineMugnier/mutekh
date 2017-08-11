@@ -531,7 +531,7 @@ DEV_IRQ_SRC_PROCESS(stm32_gpio_icu_src_process)
       x = endian_le32(x);
       while (x)
         {
-          uint_fast8_t          sink_id = __builtin_ctz(x);
+          uint_fast8_t          sink_id = bit_ctz(x);
           struct dev_irq_sink_s *sink   = &pv->sink[sink_id];
           dev_irq_id_t          irq_id  = stm32_gpio_icu_src_id_of_sink_id(sink_id);
           device_irq_sink_process(sink, irq_id);

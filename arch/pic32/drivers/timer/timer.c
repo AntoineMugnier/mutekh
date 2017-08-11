@@ -377,7 +377,7 @@ static DEV_TIMER_CONFIG(pic32_timer_config)
           else if (res >= 64)
             div = 6;
           else
-            div = sizeof(__compiler_sint_t) * 8 - __builtin_clz(res) - 1;
+            div = bit_msb_index(res);
 
           ctrl = endian_le32(cpu_mem_read_32(pv->taddr + PIC32_TIMER_CON_ADDR));
           PIC32_TIMER_CON_TCKPS_SETVAL(ctrl, div);

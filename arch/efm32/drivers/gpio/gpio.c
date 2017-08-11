@@ -371,7 +371,7 @@ efm32_gpio_request_until(struct device_s *dev,
 
       while (mask)
         {
-          uint_fast8_t k, j = __builtin_ctz(mask);
+          uint_fast8_t k, j = bit_ctz(mask);
           uint_fast8_t i = io + j;
 
           if (i > rq->io_last)
@@ -727,7 +727,7 @@ static DEV_IRQ_SRC_PROCESS(efm32_gpio_source_process)
 #ifdef CONFIG_DRIVER_EFM32_GPIO_ICU
       while (x)
         {
-          uint_fast8_t i = __builtin_ctz(x);
+          uint_fast8_t i = bit_ctz(x);
           struct dev_irq_sink_s *sink = pv->sink + i;
 
 # ifdef CONFIG_DRIVER_EFM32_GPIO_UNTIL

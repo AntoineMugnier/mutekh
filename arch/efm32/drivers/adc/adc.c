@@ -90,7 +90,7 @@ void efm32_adc_clk_changed(struct efm32_adc_private_s * pv)
 static
 void efm32_adc_sample_next(struct efm32_adc_private_s * pv)
 {
-  uint8_t line = __builtin_ctz(pv->pending);
+  uint8_t line = bit_ctz(pv->pending);
   pv->pending &= ~(1 << line);
 
   dprintk("adc sample %d line %d conf %08x\n", pv->index, line, pv->config[line]);

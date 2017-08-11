@@ -104,6 +104,7 @@
 
 #include <hexo/types.h>
 #include <hexo/error.h>
+#include <hexo/bit.h>
 
 #include <mutek/kroutine.h>
 #include <gct_platform.h>
@@ -424,7 +425,7 @@ config_depend(CONFIG_DEVICE_TIMER)
 ALWAYS_INLINE error_t
 dev_timer_delay_check_s2t(int_fast8_t shift, dev_timer_delay_t delay)
 {
-  return shift > 0 && __builtin_clz(delay) < shift ? -ERANGE : 0;
+  return shift > 0 && bit_clz_unsafe(delay) < shift ? -ERANGE : 0;
 }
 
 /** @This applies the shift amount computed by the @ref
@@ -443,7 +444,7 @@ config_depend(CONFIG_DEVICE_TIMER)
 ALWAYS_INLINE error_t
 dev_timer_delay_check_t2s(int_fast8_t shift, dev_timer_delay_t delay)
 {
-  return shift < 0 && __builtin_clz(delay) < -shift ? -ERANGE : 0;
+  return shift < 0 && bit_clz_unsafe(delay) < -shift ? -ERANGE : 0;
 }
 
 ALWAYS_INLINE bool_t dev_timer_request_is_scheduled(const struct dev_timer_rq_s *rq)

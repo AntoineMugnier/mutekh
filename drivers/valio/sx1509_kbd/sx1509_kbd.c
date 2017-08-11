@@ -150,11 +150,11 @@ static void sx1509_kbd_update(struct sx1509_kbd_context_s *pv, uint16_t rowcol)
     pv->value_cur = 0;
     pv->value_next = 0;
   } else {
-    uint32_t row = __builtin_ctz((rowcol >> 8) & bit_mask(0, pv->rows));
+    uint32_t row = bit_ctz((rowcol >> 8) & bit_mask(0, pv->rows));
     uint32_t cols = rowcol & bit_mask(0, pv->cols);
 
     while (cols) {
-      uint32_t col = __builtin_ctz(cols);
+      uint32_t col = bit_ctz(cols);
 
       BIT_SET(pv->value_next, row * pv->cols + col);
 

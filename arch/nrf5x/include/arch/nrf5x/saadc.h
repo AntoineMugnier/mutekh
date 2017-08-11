@@ -124,7 +124,7 @@ enum nrf5x_saadc_register_s
 #define NRF_SAADC_RESOLUTION_14BIT       3
 
 #define NRF_SAADC_OVERSAMPLE_BYPASS      0
-#define NRF_SAADC_OVERSAMPLE_X(n)        (__builtin_ctz(n))
+#define NRF_SAADC_OVERSAMPLE_X(n)        (bit_ctz(n))
 
 #define NRF_SAADC_SAMPLERATE_CC(x)       ((x) << 0)
 #define NRF_SAADC_SAMPLERATE_MODE_TASK   (0 << 12)

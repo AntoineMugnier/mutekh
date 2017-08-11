@@ -370,8 +370,8 @@ static DEV_INIT(matrix_keyboard_init)
   if (err)
     columns_mask = bit_mask(0, pin_width[1]);
 
-  column_count = __builtin_popcountll(columns_mask);
-  row_count = __builtin_popcountll(rows_mask);
+  column_count = bit_popc64(columns_mask);
+  row_count = bit_popc64(rows_mask);
 
   assert(column_count && row_count);
 
@@ -398,7 +398,7 @@ static DEV_INIT(matrix_keyboard_init)
   memcpy(pv->pin_width, pin_width, 2 * sizeof(gpio_width_t));
 
   for (uint8_t i = 0; i < pv->row_count; ++i) {
-    uint8_t id = __builtin_ctz(rows_mask);
+    uint8_t id = bit_ctz(rows_mask);
     pv->row[i] = id;
     rows_mask &= ~bit(id);
   }
@@ -406,7 +406,7 @@ static DEV_INIT(matrix_keyboard_init)
   assert(!rows_mask);
 
   for (uint8_t i = 0; i < pv->column_count; ++i) {
-    uint8_t id = __builtin_ctz(columns_mask);
+    uint8_t id = bit_ctz(columns_mask);
     pv->column[i] = id;
     columns_mask &= ~bit(id);
   }

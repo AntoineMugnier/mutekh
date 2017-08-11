@@ -1,0 +1,13 @@
+
+# New source code module to be compiled
+  %append MODULES test:$(CONFIGPATH)
+
+  # Application license
+  CONFIG_LICENSE_APP_LGPL
+
+  %include scripts/options.build
+  %include arch/arch.build
+
+  CONFIG_APP_START!
+  CONFIG_LIBC_ASSERT!
+

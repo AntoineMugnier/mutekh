@@ -196,38 +196,6 @@ error_t system(const char *cmd);
 /** standard @tt llabs function @see #__ABS */
 #define llabs(x) __builtin_llabs(x)
 
-/** Compute integer log2. This generic macro adapts to the integer
-    type width. @see #__CLZ */
-#define __LOG2I(n)                                                      \
-({                                                                      \
-  typedef typeof(n) _t;                                                 \
-  _t _n = (n);                                                          \
-                                                                        \
-  __builtin_types_compatible_p(_t, __compiler_slong_t) ||               \
-    __builtin_types_compatible_p(_t, __compiler_ulong_t)                \
-    ? sizeof(__compiler_slong_t) * 8 - 1 - __builtin_clzl(_n)           \
-    : __builtin_types_compatible_p(_t, __compiler_slonglong_t) ||       \
-      __builtin_types_compatible_p(_t, __compiler_ulonglong_t)          \
-    ? sizeof(__compiler_slonglong_t) * 8 - 1 - __builtin_clzll(_n)      \
-    : sizeof(__compiler_sint_t) * 8 - 1 - __builtin_clz(_n);            \
-})
-
-/** Count leading zero bits in integer. This generic macro adapts to
-    the integer type width. @see #__FFS @see #__LOG2I */
-#define __CLZ(n)                                                        \
-({                                                                      \
-  typedef typeof(n) _t;                                                 \
-  _t _n = (n);                                                          \
-                                                                        \
-  __builtin_types_compatible_p(_t, __compiler_slong_t) ||               \
-    __builtin_types_compatible_p(_t, __compiler_ulong_t)                \
-    ? __builtin_clzl(_n)                                                \
-    : __builtin_types_compatible_p(_t, __compiler_slonglong_t) ||       \
-      __builtin_types_compatible_p(_t, __compiler_ulonglong_t)          \
-    ? __builtin_clzll(_n)                                               \
-    : __builtin_clz(_n) + (sizeof(_t) - sizeof(__compiler_sint_t)) * 8; \
-})
-
 uint32_t gcd32(uint32_t a, uint32_t b);
 uint64_t gcd64(uint64_t a, uint64_t b);
 

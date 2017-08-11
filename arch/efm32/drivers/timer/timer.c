@@ -409,7 +409,7 @@ static DEV_TIMER_CONFIG(efm32_timer_config)
       else
         {
           /* div is either set to maximum value 10 or rounded down to the nearest power of 2 */
-          div = res > 1024 ? 10 : sizeof(__compiler_sint_t) * 8 - __builtin_clz(res) - 1;
+          div = res > 1024 ? 10 : bit_msb_index(res);
           pv->prescaler = div;
 
           r = 1 << div;

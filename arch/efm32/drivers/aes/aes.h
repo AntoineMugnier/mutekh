@@ -40,7 +40,7 @@
 #include <arch/efm32/devaddr.h>
 
 #define EFM32_AES_OCB_L_COUNT                                           \
-  (8 * sizeof(int) - __builtin_clz(CONFIG_DRIVER_EFM32_AES_OCB3_MAXBLOCKS + 1))
+  (1 + bit_msb_index(CONFIG_DRIVER_EFM32_AES_OCB3_MAXBLOCKS + 1))
 
 struct efm32_aes_context_s
 {

@@ -111,7 +111,7 @@ static error_t efm32_pwm_freq(struct device_s *dev)
 
   uint32_t msb = scale >> EFM32_PWM_HW_WIDTH;
   
-  uint8_t div = msb ? sizeof(msb) * 8 - __builtin_clz(msb) : 0;
+  uint8_t div = msb ? 1 + bit_msb_index(msb) : 0;
 
   if (div > 10)
   /* Frequency can not be achieved */  

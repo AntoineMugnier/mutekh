@@ -92,8 +92,8 @@ static error_t fat_parse_bpb(struct fat_s *state, struct fat_tmp_sector_s *secto
 		return -EINVAL;
 	}
 
-	state->sect_size_pow2 = __builtin_ctz(byte_per_sector);
-	state->sect_per_clust_pow2 = __builtin_ctz(bpb->sector_per_cluster);
+	state->sect_size_pow2 = bit_ctz(byte_per_sector);
+	state->sect_per_clust_pow2 = bit_ctz(bpb->sector_per_cluster);
 	state->root_dir_secsize = root_dirent_count >> (state->sect_size_pow2 - 5);
 	state->fat_count = bpb->fat_count;
 
