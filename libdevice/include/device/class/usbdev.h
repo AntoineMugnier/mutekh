@@ -429,19 +429,19 @@ DRIVER_CTX_CLASS_TYPES(DRIVER_CLASS_USBDEV, usbdev, );
     .ctx_offset = offsetof(driver_pv_t , usbdev_ctx),                 \
   })
 
-# define USBDEV_FOREACH_INTERFACE(intf, ... /* loop body */ )            \
+# define USBDEV_FOREACH_INTERFACE(intf, ... /* loop body */ )           \
   do {                                                                  \
     const struct usbdev_interface_default_s * _i                        \
-      = (const struct usbdev_interface_default_s *)intf;                 \
-    uint_fast8_t _intfidx = 0;                                           \
+      = (const struct usbdev_interface_default_s *)(intf);              \
+    uint_fast8_t _intfidx = 0;                                          \
     while(1)                                                            \
       {                                                                 \
         { __VA_ARGS__ }                                                 \
-        if (_intfidx == _i->alt_cnt)                                     \
-          goto _end;                                                    \
-        intf = (const struct usbdev_interface_s *)_i->alt[_intfidx++];    \
+        if (_intfidx == _i->alt_cnt)                                    \
+          break;                                                        \
+        intf = (const struct usbdev_interface_s *)_i->alt[_intfidx++];  \
       }                                                                 \
-  _end:;                                                                \
+    intf = _i;                                                          \
   } while(0)
 
 # define USBDEV_FOREACH_ENDPOINT(intf, mapin, mapout, ... /* loop body */)         \
