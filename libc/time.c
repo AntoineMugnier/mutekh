@@ -24,6 +24,7 @@
 #include <mutek/printk.h>
 #include <sys/time.h>
 #include <time.h>
+#include <stdlib.h>
 
 #include <device/class/timer.h>
 #include <device/device.h>
@@ -43,18 +44,9 @@ static uint64_t          libc_time_nsec_den;
 
 static void adjust_frac(uint64_t *num, uint64_t *den)
 {
-  uint64_t a = *num, b = *den;
-
-  // gcd
-  while (b)
-    {
-      uint64_t t = b;
-      b = a % b;
-      a = t;
-    }
-
-  *num /= a;
-  *den /= a;
+  uint64_t gcd = gcd64(*num, *den);
+  *num /= gcd;
+  *den /= gcd;
 }
 
 void libc_time_initsmp()
