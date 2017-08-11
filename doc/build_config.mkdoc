@@ -120,10 +120,6 @@ $ make CONF=path/to/config.build BUILD=... listinit
     The following options may be useful:
     @list
       @item @tt{VERBOSE=1}: Prints all the commands executed
-      @item @tt{TARGET_EXT=}: Changes the file extension of the
-        generated kernel. This doesn't change the internal file format,
-        see CONFIG_COMPILE_FORMAT.
-
     @end list
 
     The following options are useful when building out of the source tree:
