@@ -21,6 +21,7 @@ objs-$(CONFIG_DRIVER_NRF5X_ADC) += adc.o
 objs-$(CONFIG_DRIVER_NRF52_SAADC) += saadc.o
 objs-$(CONFIG_DRIVER_NRF52_PDM) += pdm.o
 objs-$(CONFIG_DRIVER_NRF52_IR_BLASTER) += ir_blaster.o
+objs-$(CONFIG_DRIVER_NRF52_USBD) += usbd.o
 
 ifeq ($(CONFIG_DRIVER_NRF5X_BLE), defined)
 objs += ble.o ble_primitives.o
