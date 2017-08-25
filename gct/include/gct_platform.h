@@ -39,6 +39,7 @@ C_HEADER_BEGIN
 
 #include <hexo/error.h>
 #include <hexo/types.h>
+#include <hexo/bit.h>
 
 #define GCT_CONFIG_LIBRARY
 #define GCT_CONFIG_NOPLATFORM
@@ -80,6 +81,11 @@ ALWAYS_INLINE void _gct_free(void *p)
 }
 
 #include <gct_atomic.h>
+
+#define _GCT_POPCOUNT(n) bit_popc(n)
+#define _GCT_BIT_FFS(n)  bit_ffs(n)
+#define _GCT_BIT_CTZ(n)  bit_ctz(n)
+#define _GCT_BIT_MSB(n)  bit_msb_index(n)
 
 C_HEADER_END
 
