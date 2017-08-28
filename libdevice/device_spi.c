@@ -708,6 +708,7 @@ error_t dev_spi_bytecode_wakeup(struct device_spi_ctrl_s *ctrl,
       rq->sleep_before = 0;
 #  endif
       bc_skip(&rq->vm);
+      rq->wakeup_able = 0;
       if (!device_spi_ctrl_entry(q, &rq->base))
         dev_request_queue_remove(&q->queue, &rq->base.base);
     }
