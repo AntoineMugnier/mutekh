@@ -98,6 +98,10 @@ bc_init(struct bc_context_s *ctx,
   ctx->trace = 0;
   ctx->trace_regs = 0;
 #endif
+#if CONFIG_MUTEK_BYTECODE_BREAKPOINTS > 0
+  ctx->bp_mask = 0;
+  ctx->bp_skip = 0;
+#endif
 }
 
 #ifdef CONFIG_MUTEK_BYTECODE_SANDBOX
@@ -129,6 +133,10 @@ bc_init_sandbox(struct bc_context_s *ctx, const struct bc_descriptor_s *desc,
 #ifdef CONFIG_MUTEK_BYTECODE_TRACE
   ctx->trace = 0;
   ctx->trace_regs = 0;
+#endif
+#if CONFIG_MUTEK_BYTECODE_BREAKPOINTS > 0
+  ctx->bp_mask = 0;
+  ctx->bp_skip = 0;
 #endif
 }
 #endif
@@ -509,6 +517,9 @@ error_t bc_set_sandbox_pc(struct bc_context_s *ctx, uint32_t pc)
   if (pc >= size || pc & 1)
     return -ERANGE;
 
+#if CONFIG_MUTEK_BYTECODE_BREAKPOINTS > 0
+  ctx->bp_skip = 0;
+#endif
   ctx->vpc = (uint8_t*)ctx->desc->code + pc;
   return 0;
 }
@@ -800,9 +811,29 @@ bc_opcode_t bc_run_vm(struct bc_context_s *ctx)
           continue;
         }
 
-#ifdef CONFIG_MUTEK_BYTECODE_TRACE
-      if (ctx->trace)
-        bc_dump_(ctx, pc, ctx->trace_regs);
+#if CONFIG_MUTEK_BYTECODE_BREAKPOINTS > 0
+      uint16_t bp_mask = ctx->bp_mask;
+      uint16_t bp_skip = ctx->bp_skip;
+      ctx->bp_skip = 0;
+      if (bp_mask && !bp_skip)
+        {
+          uint_fast8_t i;
+          for (i = 0; bp_mask && i < CONFIG_MUTEK_BYTECODE_BREAKPOINTS; i++)
+            {
+              uint16_t m = 1 << i;
+              uintptr_t bp = ctx->bp_list[i];
+              if (bp_mask & m)
+                {
+                  if ((uintptr_t)pc == bp)
+                    {
+                      ctx->vpc = pc;
+                      ctx->bp_skip = 1;
+                      return BC_RUN_STATUS_BREAK;
+                    }
+                  bp_mask ^= m;
+                }
+            }
+        }
 #endif
 
 #ifdef CONFIG_MUTEK_BYTECODE_SANDBOX
@@ -813,6 +844,11 @@ bc_opcode_t bc_run_vm(struct bc_context_s *ctx)
           return BC_RUN_STATUS_CYCLES;
         }
       max_cycles -= ctx->sandbox;
+#endif
+
+#ifdef CONFIG_MUTEK_BYTECODE_TRACE
+      if (ctx->trace)
+        bc_dump_(ctx, pc, ctx->trace_regs);
 #endif
 
       /* custom op */

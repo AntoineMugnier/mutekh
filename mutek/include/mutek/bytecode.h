@@ -466,6 +466,7 @@ enum bc_run_status_e
 {
   BC_RUN_STATUS_END = 0,
   BC_RUN_STATUS_CYCLES = 1,
+  BC_RUN_STATUS_BREAK = 2,
   BC_RUN_STATUS_FAULT = 3,
 };
 
@@ -508,6 +509,11 @@ struct bc_context_s
   uint16_t max_cycles;
   /** @see bc_init_sandbox */
   bool_t BITFIELD(sandbox,1);
+#endif
+#if CONFIG_MUTEK_BYTECODE_BREAKPOINTS > 0
+  uintptr_t bp_list[CONFIG_MUTEK_BYTECODE_BREAKPOINTS];
+  uint16_t bp_mask;
+  bool_t BITFIELD(bp_skip,1);
 #endif
 #ifdef CONFIG_MUTEK_BYTECODE_TRACE
   bool_t BITFIELD(trace,1);
@@ -711,6 +717,9 @@ ALWAYS_INLINE void
 bc_set_pc(struct bc_context_s *ctx, const void *pc)
 {
   ctx->vpc = pc;
+#if CONFIG_MUTEK_BYTECODE_BREAKPOINTS > 0
+  ctx->bp_skip = 0;
+#endif
 }
 
 /** @This function enables or disable the bytecode execution trace
@@ -723,6 +732,48 @@ bc_set_trace(struct bc_context_s *ctx, bool_t enabled, bool_t regs)
 #ifdef CONFIG_MUTEK_BYTECODE_TRACE
   ctx->trace = enabled;
   ctx->trace_regs = regs;
+#endif
+}
+
+/** @This function set the address of a breakpoint. This does not
+    enable the breakpoint.
+    @see bc_enable_bp
+    @see #CONFIG_MUTEK_BYTECODE_BREAKPOINTS */
+ALWAYS_INLINE error_t
+bc_set_bp(struct bc_context_s *ctx, uint_fast8_t idx, uintptr_t pc)
+{
+  if (idx >= CONFIG_MUTEK_BYTECODE_BREAKPOINTS)
+    return -ENOENT;
+#if CONFIG_MUTEK_BYTECODE_BREAKPOINTS > 0
+# ifdef CONFIG_MUTEK_BYTECODE_SANDBOX
+  if (ctx->sandbox)
+    pc += (uintptr_t)ctx->desc->code;
+# endif
+  ctx->bp_list[idx] = pc;
+#endif
+  return 0;
+}
+
+/** @This function enable or disable a breakpoint.
+    @see #CONFIG_MUTEK_BYTECODE_BREAKPOINTS */
+ALWAYS_INLINE void
+bc_enable_bp(struct bc_context_s *ctx, uint_fast8_t idx, bool_t en)
+{
+#if CONFIG_MUTEK_BYTECODE_BREAKPOINTS > 0
+  if (en)
+    ctx->bp_mask |= 1 << idx;
+  else
+    ctx->bp_mask &= ~(1 << idx);
+#endif
+}
+
+/** @This function enable or disable multiple breakpoints.
+    @see #CONFIG_MUTEK_BYTECODE_BREAKPOINTS */
+ALWAYS_INLINE void
+bc_enable_bps(struct bc_context_s *ctx, uint16_t mask)
+{
+#if CONFIG_MUTEK_BYTECODE_BREAKPOINTS > 0
+  ctx->bp_mask = mask;
 #endif
 }
 
@@ -760,6 +811,8 @@ void bc_dump(const struct bc_context_s *ctx, bool_t regs);
       @item When sandboxing is used and the maximum number of cycles
         has been reached, the function returns @ref BC_RUN_STATUS_CYCLES.
         The limit can be updated and the bytecode may then be resumed.
+      @item When breakpoints are used, the function may return
+        @ref BC_RUN_STATUS_BREAK. The bytecode may then be resumed.
     @end list
 
     This function will eiter run the virtual machine or jump to the
