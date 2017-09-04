@@ -667,6 +667,20 @@ bc_get_bytepack(struct bc_context_s *ctx, uint_fast8_t i)
   return (uint8_t*)(ctx->v + i);
 }
 
+/** @This returns a pointer to a packed array of bytes stored in
+    virtual machine register storage. When the index of the register
+    is to high for the specified number of bytes, a pointer to
+    register 0 is retured instead. */
+ALWAYS_INLINE uint8_t *
+bc_get_bytepack_safe(struct bc_context_s *ctx, uint_fast8_t i,
+                     size_t bytes)
+{
+  size_t reg_count = (((bytes - 1) | 3) + 1) >> 2;
+  int32_t m = i + reg_count - 17;
+  i &= m >> 31;
+  return (uint8_t*)(ctx->v + i);
+}
+
 /** @This sets the value of one of the 16 virtual machine registers */
 ALWAYS_INLINE void
 bc_set_reg(struct bc_context_s *ctx, uint_fast8_t i, uintptr_t value)
