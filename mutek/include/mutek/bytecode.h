@@ -636,10 +636,19 @@ bc_translate_32(struct bc_context_s *ctx, bc_reg_t addr)
       @item instruction words
     @end list
     The @tt blob pointer must be 16 bits aligned.
+
+    @see bc_desc_init
 */
 error_t
 bc_load(struct bc_descriptor_s *desc,
         const uint8_t *blob, size_t len);
+
+/** @This initializes a bytecode descriptor. This can be used in place
+    of @ref bc_load when some raw bytecode is loaded in memory. */
+void
+bc_desc_init(struct bc_descriptor_s *desc,
+             const void *code, size_t len,
+             enum bc_flags_s flags);
 
 /** @see bc_set_regs */
 void

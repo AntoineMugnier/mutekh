@@ -71,6 +71,17 @@ bc_load(struct bc_descriptor_s *desc,
 }
 
 void
+bc_desc_init(struct bc_descriptor_s *desc,
+             const void *code, size_t len,
+             enum bc_flags_s flags)
+{
+  assert(!((uintptr_t)code & 1));
+  desc->code = code;
+  desc->run = &bc_run_vm;
+  desc->flags = flags | len;
+}
+
+void
 bc_init(struct bc_context_s *ctx,
         const struct bc_descriptor_s *desc)
 {
