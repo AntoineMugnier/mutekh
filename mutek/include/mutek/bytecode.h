@@ -570,6 +570,17 @@ uint_fast16_t bc_get_cycles(const struct bc_context_s *ctx),
   return ctx->max_cycles;
 });
 
+/** @This changes the program counter of a sandboxed virtual machine. */
+config_depend(CONFIG_MUTEK_BYTECODE_SANDBOX)
+error_t bc_set_sandbox_pc(struct bc_context_s *ctx, uint32_t pc);
+
+/** @This returns the program counter of a sandboxed virtual machine. */
+config_depend_alwaysinline(CONFIG_MUTEK_BYTECODE_SANDBOX,
+uint32_t bc_get_sandbox_pc(const struct bc_context_s *ctx),
+{
+  assert(ctx->sandbox);
+  return ctx->vpc - ctx->desc->code;
+});
 
 /** @internal */
 config_depend(CONFIG_MUTEK_BYTECODE_SANDBOX)
@@ -663,14 +674,16 @@ bc_set_reg(struct bc_context_s *ctx, uint_fast8_t i, uintptr_t value)
   ctx->v[i] = value;
 }
 
-/** @This returns the value of one of the 16 virtual machine registers */
+/** @This returns the value of the virtual machine program counter in
+    the host address space. @see bc_get_sandbox_pc */
 ALWAYS_INLINE const void *
 bc_get_pc(struct bc_context_s *ctx)
 {
   return ctx->vpc;
 }
 
-/** @This sets the value of the virtual machine pc */
+/** @This changes the value of the virtual machine program counter in the
+    host address space. @see bc_set_sandbox_pc */
 ALWAYS_INLINE void
 bc_set_pc(struct bc_context_s *ctx, const void *pc)
 {

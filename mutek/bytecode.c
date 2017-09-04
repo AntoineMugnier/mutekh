@@ -489,6 +489,19 @@ typedef int16_t bs_dispatch_t;
 
 #ifdef CONFIG_MUTEK_BYTECODE_SANDBOX
 
+error_t bc_set_sandbox_pc(struct bc_context_s *ctx, uint32_t pc)
+{
+  assert(ctx->sandbox);
+  const struct bc_descriptor_s * __restrict__ desc = ctx->desc;
+  size_t size = desc->flags & BC_FLAGS_SIZEMASK;
+
+  if (pc >= size || pc & 1)
+    return -ERANGE;
+
+  ctx->vpc = (uint8_t*)ctx->desc->code + pc;
+  return 0;
+}
+
 inline uintptr_t
 bc_translate_op_addr(const struct bc_descriptor_s * __restrict__ desc,
                      struct bc_context_s *ctx, bc_reg_t addr,
