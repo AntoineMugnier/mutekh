@@ -28,22 +28,25 @@
 #include <hexo/context.h>
 #include <hexo/power.h>
 
+#ifdef CONFIG_MUTEK_PRINTK
 static lock_t fault_lock;
+#endif
 
 static CPU_EXCEPTION_HANDLER(fault_handler)
 {
+#ifdef CONFIG_MUTEK_PRINTK
   int_fast8_t		i;
   reg_t			*sp = (reg_t*)stackptr;
-#ifdef CPU_CONTEXT_REG_NAMES
+# ifdef CPU_CONTEXT_REG_NAMES
   static const char		*reg_names[] = { CPU_CONTEXT_REG_NAMES };
-#endif
+# endif
 
-#ifdef CPU_FAULT_NAMES
+# ifdef CPU_FAULT_NAMES
   static const char *const fault_names[CPU_FAULT_COUNT] = CPU_FAULT_NAMES;
   const char *name = type < CPU_FAULT_COUNT ? fault_names[type] : "unknown";
-#else
+# else
   const char *name = "unknown";
-#endif
+# endif
 
   lock_spin(&fault_lock);
 
@@ -54,11 +57,11 @@ static CPU_EXCEPTION_HANDLER(fault_handler)
 
   reg_t *r = regs->gpr;
   for (i = 0; i < CPU_CONTEXT_REG_COUNT; i++)
-#ifdef CPU_CONTEXT_REG_NAMES
+# ifdef CPU_CONTEXT_REG_NAMES
     printk("%s=%p%c", reg_names[i], (void*)*(r + i), (i + 1) % 4 ? ' ' : '\n');
-#else
+# else
     printk("%p%c", (void*)*(r + i), (i + 1) % 4 ? ' ' : '\n');
-#endif
+# endif
 
   printk("Stack top (%p):\n", (void*)stackptr);
 
@@ -66,6 +69,7 @@ static CPU_EXCEPTION_HANDLER(fault_handler)
 	  printk("%p%c", (void*)(uintptr_t)sp[i], (i + 1) % 4 ? ' ' : '\n');
 
   lock_release(&fault_lock);
+#endif
 
 #ifdef CONFIG_RELEASE
   power_reboot();
@@ -77,7 +81,9 @@ static CPU_EXCEPTION_HANDLER(fault_handler)
 
 void mutek_fault_initsmp(void)
 {
+#ifdef CONFIG_MUTEK_PRINTK
   lock_init(&fault_lock);
+#endif
   cpu_exception_sethandler(fault_handler);
 }
 
