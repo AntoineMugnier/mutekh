@@ -269,9 +269,14 @@ foreach my $filein (@ARGV) {
                         $name =~ s/(^|_)(\w)/uc($2)/ge;
                     }
                 }
+                my $base = 0;
+                if ($val =~ /^0b(\w+)/) {
+                    $val = $1;
+                    $base = 2;
+                }
                 my $e = {
                     name => $name,
-                    val => strtol($val, 0),
+                    val => strtol($val, $base),
                 };
                 push @{$enum->{vals}}, $e;
               skip:
