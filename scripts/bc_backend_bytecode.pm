@@ -14,6 +14,8 @@ sub out_begin {
 
     return "    .section .rodata,\"a\"\n".
            "    .globl ${main::bc_name}_bytecode\n".
+           "    .globl _${main::bc_name}_bytecode\n".
+           "    .globl _${main::bc_name}_bytecode_end\n".
            "    .balign ".(1 << $main::backend_width)."\n".
            "${main::bc_name}_bytecode:\n".
 	   # struct bc_descriptor_s
@@ -26,6 +28,7 @@ sub out_begin {
 sub out_eof {
     return "    .2byte 0\n". # end op
 	   "    .2byte 0\n". # end op
+	   "_${main::bc_name}_bytecode_end:\n".
 	   "    .size ${main::bc_name}_bytecode, . - ${main::bc_name}_bytecode\n";
 }
 

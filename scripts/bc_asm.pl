@@ -1402,6 +1402,8 @@ sub write_header
 #define __BC_DEFS_${bc_name}__
 #include <mutek/bytecode.h>
 extern const struct bc_descriptor_s ${bc_name}_bytecode;
+extern const bc_opcode_t _${bc_name}_bytecode;
+extern const bc_opcode_t _${bc_name}_bytecode_end;
 ";
 
     # emit defs for global registers
