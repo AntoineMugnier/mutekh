@@ -544,13 +544,32 @@ bc_init(struct bc_context_s *ctx,
     registers above bit 31. This makes the sandbox a 32 bits virtual
     machine.
 
-    The @tt max_cycles parameter specifies the maximum number of
-    executed cycles by a single call to @ref bc_run_vm
+    The @tt cycles parameter specifies the initial number of cycles
+    executed by the @ref bc_run function before it returns @ref
+    BC_RUN_STATUS_CYCLES.
 */
 config_depend(CONFIG_MUTEK_BYTECODE_SANDBOX)
 void bc_init_sandbox(struct bc_context_s *ctx, const struct bc_descriptor_s *desc,
                      void *data_base, uint_fast8_t data_addr_bits,
-                     uint_fast16_t max_cycles);
+                     uint_fast16_t cycles);
+
+/** @This updates the remaining number of cycles before the @ref bc_run
+    function returns @ref BC_RUN_STATUS_CYCLES. */
+config_depend_alwaysinline(CONFIG_MUTEK_BYTECODE_SANDBOX,
+void bc_set_cycles(struct bc_context_s *ctx, uint_fast16_t cycles),
+{
+  assert(ctx->sandbox);
+  ctx->max_cycles = max_cycles;
+});
+
+/** @see bc_set_cycles */
+config_depend_alwaysinline(CONFIG_MUTEK_BYTECODE_SANDBOX,
+uint_fast16_t bc_get_cycles(const struct bc_context_s *ctx),
+{
+  assert(ctx->sandbox);
+  return ctx->max_cycles;
+});
+
 
 /** @internal */
 config_depend(CONFIG_MUTEK_BYTECODE_SANDBOX)
