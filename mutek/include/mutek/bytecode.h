@@ -461,6 +461,14 @@ struct bc_context_s;
 /** @This can be used to declare bytecode entry points. @see bc_set_pc */
 typedef struct bytecode_entry_s bytecode_entry_t;
 
+/** @This specifes status codes returned by the @ref bc_run function. */
+enum bc_run_status_e
+{
+  BC_RUN_STATUS_END = 0,
+  BC_RUN_STATUS_CYCLES = 1,
+  BC_RUN_STATUS_FAULT = 3,
+};
+
 /** @internal */
 typedef bc_opcode_t (bc_run_t)(struct bc_context_s *ctx);
 
@@ -682,19 +690,26 @@ bc_skip(struct bc_context_s *ctx)
     function has no effect. */
 void bc_dump(const struct bc_context_s *ctx, bool_t regs);
 
-/** This function starts or resumes executions of the bytecode. It
-    stops when an instruction which is not handled is encountered and
-    returns its opcode. Instructions words with the most significant
-    bit set are custom instructions and must be handled by the caller
-    before resuming execution of the bytecode.
+/** This function starts or resumes executions of the bytecode.
 
-    If the end of bytecode instruction has been reached, this function
-    returns 0. Other return values less than 32768 indicate an error
-    condition.
+    It returns under the following conditions:
+    @list
+      @item When the @tt end instruction is encountered, the function
+        returns @ref BC_RUN_STATUS_END.
+      @item When an error occurs, the function returns @ref
+        BC_RUN_STATUS_FAULT.
+      @item When a custom instruction is encountered, the opcode
+        of the instruction is returned. The opcode is a 16 bits value
+        not less than 0x8000. The caller must handle the custom
+        instruction and resume execution of the bytecode.
+      @item When sandboxing is used and the maximum number of cycles
+        has been reached, the function returns @ref BC_RUN_STATUS_CYCLES.
+        The limit can be updated and the bytecode may then be resumed.
+    @end list
 
-    This function will eiter run the vm or jump to the machine
-    compiled bytecode. The type of bytecode is guessed from the
-    descriptor.
+    This function will eiter run the virtual machine or jump to the
+    machine compiled bytecode. The type of bytecode is guessed from
+    the descriptor.
 */
 ALWAYS_INLINE bc_opcode_t bc_run(struct bc_context_s *ctx)
 {

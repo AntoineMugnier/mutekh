@@ -735,12 +735,12 @@ bc_opcode_t bc_run_vm(struct bc_context_s *ctx)
   int_fast16_t max_cycles = ctx->max_cycles;
 
   if (desc->flags & BC_FLAGS_NATIVE)
-    return 3;
+    return BC_RUN_STATUS_FAULT;
   if (!!(desc->flags & BC_FLAGS_SANDBOX) ^ ctx->sandbox)
-    return 3;
+    return BC_RUN_STATUS_FAULT;
 #else
   if (desc->flags & (BC_FLAGS_SANDBOX | BC_FLAGS_NATIVE))
-    return 3;
+    return BC_RUN_STATUS_FAULT;
 #endif
 
   for (;; pc++)
@@ -786,7 +786,7 @@ bc_opcode_t bc_run_vm(struct bc_context_s *ctx)
         {
           ctx->vpc = pc;
           ctx->max_cycles = 0;
-          return 1;
+          return BC_RUN_STATUS_CYCLES;
         }
       max_cycles -= ctx->sandbox;
 #endif
@@ -830,7 +830,7 @@ bc_opcode_t bc_run_vm(struct bc_context_s *ctx)
 #ifdef CONFIG_MUTEK_BYTECODE_SANDBOX
               ctx->max_cycles = max_cycles;
 #endif
-              return 0;
+              return BC_RUN_STATUS_END;
             }
 #ifdef CONFIG_MUTEK_BYTECODE_DEBUG
           else if (op == 1)
@@ -1016,7 +1016,7 @@ bc_opcode_t bc_run_vm(struct bc_context_s *ctx)
 #ifdef CONFIG_MUTEK_BYTECODE_SANDBOX
   ctx->max_cycles = max_cycles;
 #endif
-  return 3;
+  return BC_RUN_STATUS_FAULT;
 }
 
 #endif
