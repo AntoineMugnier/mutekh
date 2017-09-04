@@ -34,6 +34,7 @@
 #include <mutek/kroutine.h>
 #include <stdlib.h> /* abs */
 #include <hexo/enum.h>
+#include <hexo/bit.h>
 
 const char dev_timer_capabilities_e[] = ENUM_DESC_DEV_TIMER_CAPABILITIES_E;
 
@@ -172,8 +173,8 @@ error_t dev_timer_shift_sec(struct device_timer_s *accessor,
   if (a == 0 || b == 0)
     return -ERANGE;
 
-  uint_fast8_t as = bit_clz(a);
-  uint_fast8_t bs = bit_clz(b);
+  uint_fast8_t as = bit_clz_unsafe(a);
+  uint_fast8_t bs = bit_clz_unsafe(b);
   a <<= as;
   b <<= bs;
 
