@@ -17,6 +17,7 @@
   CONFIG_STARTUP_STACK_ADDR (0x20000000 + CONFIG_LOAD_ROM_RW_SIZE)
   CONFIG_STARTUP_STACK_SIZE  0x800
   CONFIG_LOAD_ROM_RW_SIZE   (CONFIG_EFM32_RAMSIZE - CONFIG_STARTUP_STACK_SIZE)
+  CONFIG_LOAD_ROM_RO_SIZE CONFIG_EFM32_FLASHSIZE
   CONFIG_STARTUP_HEAP_SIZE  0
 
   CONFIG_COMPILE_OPTIMIZE s
@@ -60,22 +61,22 @@
 
     %subsection efm32-zgNNN-f4-*
       %types flash
-      CONFIG_LOAD_ROM_RO_SIZE 0x00001000
+      CONFIG_EFM32_FLASHSIZE 0x00001000
     %end
 
     %subsection efm32-zgNNN-f8-*
       %types flash
-      CONFIG_LOAD_ROM_RO_SIZE 0x00002000
+      CONFIG_EFM32_FLASHSIZE 0x00002000
     %end
 
     %subsection efm32-zgNNN-f16-*
       %types flash
-      CONFIG_LOAD_ROM_RO_SIZE 0x00004000
+      CONFIG_EFM32_FLASHSIZE 0x00004000
     %end
 
     %subsection efm32-zgNNN-f32-*
       %types flash
-      CONFIG_LOAD_ROM_RO_SIZE 0x00008000
+      CONFIG_EFM32_FLASHSIZE 0x00008000
     %end
 
     %subsection efm32-zgNNN-f4-* efm32-zgNNN-f8-*
@@ -106,22 +107,22 @@
 
     %subsection efm32-gNNN-f16-*
       %types flash
-      CONFIG_LOAD_ROM_RO_SIZE 0x00004000
+      CONFIG_EFM32_FLASHSIZE 0x00004000
     %end
 
     %subsection efm32-gNNN-f32-*
       %types flash
-      CONFIG_LOAD_ROM_RO_SIZE 0x00008000
+      CONFIG_EFM32_FLASHSIZE 0x00008000
     %end
 
     %subsection efm32-gNNN-f64-*
       %types flash
-      CONFIG_LOAD_ROM_RO_SIZE 0x00010000
+      CONFIG_EFM32_FLASHSIZE 0x00010000
     %end
 
     %subsection efm32-gNNN-f128-*
       %types flash
-      CONFIG_LOAD_ROM_RO_SIZE 0x00020000
+      CONFIG_EFM32_FLASHSIZE 0x00020000
     %end
 
     %subsection efm32-gNNN-f16-* efm32-gNNN-f32-*
@@ -153,17 +154,17 @@
 
     %subsection efm32-*-f64-*
       %types flash
-      CONFIG_LOAD_ROM_RO_SIZE 0x00010000
+      CONFIG_EFM32_FLASHSIZE 0x00010000
     %end
 
     %subsection efm32-*-f128-*
       %types flash
-      CONFIG_LOAD_ROM_RO_SIZE 0x00020000
+      CONFIG_EFM32_FLASHSIZE 0x00020000
     %end
 
     %subsection efm32-*-f256-*
       %types flash
-      CONFIG_LOAD_ROM_RO_SIZE 0x00040000
+      CONFIG_EFM32_FLASHSIZE 0x00040000
     %end
 
   %end
@@ -203,12 +204,12 @@
 
     %subsection efm32-*-f512-*
       %types flash
-      CONFIG_LOAD_ROM_RO_SIZE 0x00080000
+      CONFIG_EFM32_FLASHSIZE 0x00080000
     %end
 
     %subsection efm32-*-f1024-*
       %types flash
-      CONFIG_LOAD_ROM_RO_SIZE 0x00100000
+      CONFIG_EFM32_FLASHSIZE 0x00100000
     %end
 
   %end
@@ -285,27 +286,27 @@
 
   %subsection efr32-?gXLNNN-f32-*
     %types flash
-    CONFIG_LOAD_ROM_RO_SIZE 0x00008000
+    CONFIG_EFM32_FLASHSIZE 0x00008000
   %end
 
   %subsection efr32-?gXLNNN-f64-*
     %types flash
-    CONFIG_LOAD_ROM_RO_SIZE 0x00010000
+    CONFIG_EFM32_FLASHSIZE 0x00010000
   %end
 
   %subsection efr32-?gXLNNN-f128-*
     %types flash
-    CONFIG_LOAD_ROM_RO_SIZE 0x00020000
+    CONFIG_EFM32_FLASHSIZE 0x00020000
   %end
 
   %subsection efr32-?gXLNNN-f256-*
     %types flash
-    CONFIG_LOAD_ROM_RO_SIZE 0x00040000
+    CONFIG_EFM32_FLASHSIZE 0x00040000
   %end
 
   %subsection efr32-?gXLNNN-f1024-*
     %types flash
-    CONFIG_LOAD_ROM_RO_SIZE 0x00100000
+    CONFIG_EFM32_FLASHSIZE 0x00100000
   %end
 
   ########### Ram size
