@@ -40,6 +40,7 @@
 
 struct device_char_s;
 struct termui_con_entry_s;
+struct termui_console_s;
 
 #ifdef CONFIG_MUTEK_SHELL_BUFFER
 
@@ -167,6 +168,7 @@ void mutek_shell_start(struct device_char_s *c, const char *term,
     storage in a console options parsing context.
     @see #TERMUI_CON_OPT_SHELL_BUFFER_GET_ENTRY */
 struct shell_opt_buffer_s
+#ifdef CONFIG_MUTEK_SHELL_BUFFER
 {
   /** pointer to storage */
   void *addr;
@@ -175,15 +177,20 @@ struct shell_opt_buffer_s
   /** this is set when the @ref shell_buffer_drop function must be
       called on cleanup. */
   uintptr_t buffered:1;
-};
+}
+#endif
+;
 
 /** @internal @see #TERMUI_CON_OPT_SHELL_BUFFER_GET_ENTRY */
 struct shell_opt_buffer_desc_s
+#ifdef CONFIG_MUTEK_SHELL_BUFFER
 {
   struct termui_con_opts_s opt;
   const void *type;
   uint16_t offset;
-};
+}
+#endif
+;
 
 /** @This calls @ref shell_buffer_new only if the @ref
     #TERMUI_CON_OPT_SHELL_BUFFER_GET_ENTRY option has not parsed a
@@ -195,6 +202,7 @@ void * shell_opt_buffer_new_if_null(struct shell_opt_buffer_s *b,
                                     size_t size, const char *prefix,
                                     const void *type, bool_t nocopy);
 
+#ifdef CONFIG_MUTEK_SHELL
 /** @internal */
 TERMUI_CON_PARSE_OPT_PROTOTYPE(shell_opt_buffer_raw_parse);
 /** @internal */
@@ -205,6 +213,7 @@ TERMUI_CON_ARGS_COLLECT_PROTOTYPE(shell_opt_buffer_comp);
 /** @internal */
 config_depend(CONFIG_MUTEK_SHELL_BUFFER)
 TERMUI_CON_ARGS_COLLECT_PROTOTYPE(shell_opt_buffer_name_comp);
+#endif
 
 /** @This can be used to declare a libtermui console option which
     accepts an exisiting shell buffer or raw data. */
