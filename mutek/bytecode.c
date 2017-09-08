@@ -212,11 +212,9 @@ static const char * bc_opname(uint16_t op)
 }
 #endif
 
-static void bc_dump_(const struct bc_context_s *ctx, const uint16_t *pc, bool_t regs)
-{
 #ifdef CONFIG_MUTEK_BYTECODE_DEBUG
-  uint_fast8_t i;
-
+static void bc_dump_op(const struct bc_context_s *ctx, const uint16_t *pc)
+{
 # ifdef CONFIG_MUTEK_BYTECODE_NATIVE
   if (ctx->desc->flags & BC_FLAGS_NATIVE)
     {
@@ -243,16 +241,29 @@ static void bc_dump_(const struct bc_context_s *ctx, const uint16_t *pc, bool_t 
     }
 
   printk("\n");
-
-  if (regs)
-    for (i = 0; i < 16; i++)
-      printk("r%02u=%" BC_REG_FORMAT "%c", i, ctx->v[i], (i + 1) % 4 ? ' ' : '\n');
-#endif
 }
+
+static void bc_dump_regs(const struct bc_context_s *ctx)
+{
+  uint_fast8_t i;
+  for (i = 0; i < 16; i++)
+    printk("r%02u=%" BC_REG_FORMAT "%c", i, ctx->v[i], (i + 1) % 4 ? ' ' : '\n');
+}
+
+static void bc_dump_pc(const struct bc_context_s *ctx, const uint16_t *pc)
+{
+  bc_dump_op(ctx, pc);
+  bc_dump_regs(ctx);
+}
+#endif
 
 void bc_dump(const struct bc_context_s *ctx, bool_t regs)
 {
-  bc_dump_(ctx, (void*)(ctx->pc & (intptr_t)-2), regs);
+#ifdef CONFIG_MUTEK_BYTECODE_DEBUG
+  bc_dump_op(ctx, (void*)(ctx->pc & (intptr_t)-2));
+  if (regs)
+    bc_dump_regs(ctx);
+#endif
 }
 
 #define BC_PACK(n)				\
@@ -849,7 +860,11 @@ bc_opcode_t bc_run_vm(struct bc_context_s *ctx)
 
 #ifdef CONFIG_MUTEK_BYTECODE_TRACE
       if (ctx->trace)
-        bc_dump_(ctx, pc, ctx->trace_regs);
+        {
+          if (ctx->trace_regs)
+            bc_dump_regs(ctx);
+          bc_dump_op(ctx, pc);
+        }
 #endif
 
       /* custom op */
@@ -894,8 +909,8 @@ bc_opcode_t bc_run_vm(struct bc_context_s *ctx)
               return BC_RUN_STATUS_END;
             }
 #ifdef CONFIG_MUTEK_BYTECODE_DEBUG
-          else if (op == 1)
-            bc_dump_(ctx, pc, 1);
+          else if (op == 1)     /* dump */
+            bc_dump_pc(ctx, pc);
 #endif
 #ifdef CONFIG_MUTEK_BYTECODE_TRACE
           else if (op & 8)      /* trace */
@@ -1069,7 +1084,7 @@ bc_opcode_t bc_run_vm(struct bc_context_s *ctx)
  err_die:
 #ifdef CONFIG_MUTEK_BYTECODE_DEBUG
   printk("bytecode: die %p\n", pc);
-  bc_dump_(ctx, pc, 1);
+  bc_dump_pc(ctx, pc);
 #endif
 
  err_ret:
