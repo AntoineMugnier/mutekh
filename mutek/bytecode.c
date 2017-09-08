@@ -156,8 +156,9 @@ static const char * bc_opname(uint16_t op)
     { 0xffff, 0x0000, "end" },
     { 0xffff, 0x0001, "dump" },
     { 0xffff, 0x0002, "abort" },
-    { 0xffff, 0x0040, "nop" },
+    { 0xffff, 0x0003, "die" },
     { 0xfffc, 0x0008, "trace" },
+    { 0xfff0, 0x0000, "nop" },
     { 0xf000, BC_OP_ADD8  << 8, "add8" },
     { 0xf000, BC_OP_CST8  << 8, "cst8" },
     { 0xfff0, BC_OP_JMP   << 8, "ret" },
@@ -878,13 +879,13 @@ bc_opcode_t bc_run_vm(struct bc_context_s *ctx)
       dispatch_begin:
       dispatch_add8: {
           int8_t x = (op >> 4) & 0xff;
-          if (x)
+          if (x)                /* add8 */
             {
               *dst += (bc_sreg_t)x;
               BC_CLAMP32(*dst);
               break;
             }
-          if (op == 0)
+          if (op == 0)          /* end */
             {
               ctx->vpc = pc;
 #ifdef CONFIG_MUTEK_BYTECODE_SANDBOX
@@ -897,7 +898,7 @@ bc_opcode_t bc_run_vm(struct bc_context_s *ctx)
             bc_dump_(ctx, pc, 1);
 #endif
 #ifdef CONFIG_MUTEK_BYTECODE_TRACE
-          else if (op & 8)
+          else if (op & 8)      /* trace */
             {
               ctx->trace = op & 1;
               ctx->trace_regs = (op & 2) >> 1;
@@ -922,7 +923,7 @@ bc_opcode_t bc_run_vm(struct bc_context_s *ctx)
 
       dispatch_jmp: {
           int8_t disp = op >> 4;
-          if (disp)             /* jmp* */
+          if (disp)             /* jmp8 */
             {
               if (op & 0xf)     /* jmpl */
                 *dst = (bc_reg_t)(uintptr_t)pc;
@@ -992,7 +993,7 @@ bc_opcode_t bc_run_vm(struct bc_context_s *ctx)
 	}
 
       dispatch_cstn_call: {
-	  if ((op & 0x0900) == 0x0000)
+	  if ((op & 0x0900) == 0x0000) /* not ld/st */
 	    {
               if ((op & 0x0ff0) == 0x0000) /* BC_GADDR */
                 {

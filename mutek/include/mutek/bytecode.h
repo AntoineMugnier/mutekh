@@ -565,7 +565,7 @@ config_depend_alwaysinline(CONFIG_MUTEK_BYTECODE_SANDBOX,
 void bc_set_cycles(struct bc_context_s *ctx, uint_fast16_t cycles),
 {
   assert(ctx->sandbox);
-  ctx->max_cycles = max_cycles;
+  ctx->max_cycles = cycles;
 });
 
 /** @see bc_set_cycles */
@@ -604,7 +604,7 @@ bc_translate_addr(struct bc_context_s *ctx, bc_reg_t addr, uint_fast32_t width)
   if (ctx->sandbox)
     return (void*)bc_translate_op_addr(ctx->desc, ctx, addr, width, 0);
 #endif
-  return (void*)addr;
+  return (void*)(uintptr_t)addr;
 }
 
 /** @This translates an address to a single @ref uint8_t from a
@@ -787,6 +787,7 @@ bc_skip(struct bc_context_s *ctx)
   ctx->pc += ctx->skip;
   ctx->skip = 0;
 #else
+  assert(!(ctx->pc & 1) && "nothing to skip");
   ctx->pc |= 1;
 #endif
 }
