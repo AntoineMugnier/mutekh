@@ -77,6 +77,11 @@ test_bytecode_entry:
         eq	%1, %2
         jmp8	next1
         die
+
+data0:
+        data16  0xa6a6
+        data16  0x0000
+
 next1:
     // CST8, EQ, ADD
         cst8	%1, 42
@@ -142,6 +147,67 @@ fwd:
         cst8	%2, 10
         neq	%1, %2
         die
+
+    // fwd CALL8, LADDR16 bwd LADDR16R
+        call8   %2, call1
+        die
+call1:
+        add8    %2, 4
+        laddr16 %3, call1
+        laddr16r %4, call1
+#ifdef CONFIG_MUTEK_BYTECODE_VM
+        neq     %2, %3
+         die
+        neq     %2, %4
+         die
+#endif
+
+    // fwd CALL16R, LADDR16 fwd LADDR16R
+        laddr16 %3, call2
+        laddr16r %4, call2
+        call16r  %2, call2
+        die
+        die
+call2:
+        add8    %2, 6
+#ifdef CONFIG_MUTEK_BYTECODE_VM
+        neq     %2, %3
+         die
+        neq     %2, %4
+         die
+#endif
+
+    // bwd CALL8, LADDR32
+        jmp8 call3
+call4:
+        add8    %2, 4
+        jmp8 call5
+call3:
+        nop
+        call8   %2, call4
+        die
+call5:
+        laddr32 %3, call5
+#ifdef CONFIG_MUTEK_BYTECODE_VM
+        neq     %2, %3
+         die
+#endif
+
+    // bwd CALL16R, bwd LADDR32R
+        jmp8 call6
+call7:
+        add8    %2, 4
+        jmp8 call8
+call6:
+        nop
+        call16r   %2, call7
+        die
+call8:
+        laddr32r %3, call8
+#ifdef CONFIG_MUTEK_BYTECODE_VM
+        neq     %2, %3
+         die
+#endif
 
     // TSTC, TSTS
         cst8	%1, 0x55
@@ -379,8 +445,25 @@ next12:
 	neq	%1, %2
 	die
 
+	laddr16r %1, data2
+	ld8	%2, %1
+	cst8	%3, 0xbd
+	xor32	%2, %3
+	cst8	%1, 0xff
+	neq	%1, %2
+	die
+
+	laddr16r %1, data0
+	ld8	%2, %1
+	cst8	%3, 0x59
+	xor32	%2, %3
+	cst8	%1, 0xff
+	neq	%1, %2
+	die
+
 #ifndef CONFIG_MUTEK_BYTECODE_SANDBOX
 	// GADDR
+	cst8	%3, 0xac
 	gaddr   %1, data
 	ld8	%2, %1
 	not32	%2
@@ -727,4 +810,6 @@ fact_end:
 data:
         .export data
 	data16  0x5353
+data2:
+	data16  0x4242
 

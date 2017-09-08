@@ -8,7 +8,7 @@ use strict;
 $bc_backend_common::word = sub
 {
     my ($w) = @_;
-    return pack("v", $w);
+    return pack("v", $w & 0xffff);
 };
 
 sub out_data {

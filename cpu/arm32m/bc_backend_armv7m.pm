@@ -269,20 +269,26 @@ sub out_lde {
 sub out_cst {
     my ($thisop, $wo) = @_;
     my $x = ($thisop->{args}->[1] << $thisop->{args}->[2]) & 0xffffffff;
-    if ( $thisop->{width} == 3 ) {
+    if ( $thisop->{width} >= 2 ) {
         main::warning($thisop, "64 bit constant truncated to 32 bits.\n");
     }
     return mov_imm( $reg[$wo], $x );
 }
 
-sub out_call32 {
-    my ($thisop) = @_;
-    return bc_backend_armv6m::out_call8($thisop);
+sub out_calla {
+    return bc_backend_armv6m::out_call8(shift);
 }
 
-sub out_jmp32 {
-    my ($thisop) = @_;
-    return bc_backend_armv6m::out_jmp8($thisop);
+sub out_callr {
+    return bc_backend_armv6m::out_call8(shift);
+}
+
+sub out_jmpa {
+    return bc_backend_armv6m::out_jmp8(shift);
+}
+
+sub out_jmpr {
+    return bc_backend_armv6m::out_jmp8(shift);
 }
 
 return 1;

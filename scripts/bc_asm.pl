@@ -185,7 +185,7 @@ sub check_label
         $thisop->{args}->[$argidx] = "L$lbl";
     }
 
-    $thisop->{disp} = ($l->{addr} - $thisop->{addr}) / 2 - 1;
+    $thisop->{disp} = ($l->{addr} - $thisop->{addr});
 
     $l->{used}++;
     return $l;
@@ -196,7 +196,7 @@ sub check_label8
     my ( $thisop, $argidx, $bound ) = @_;
     my $l = check_label( $thisop, $argidx );
 
-    if ($thisop->{disp} > $bound - 1 || $thisop->{disp} < -$bound) {
+    if ($thisop->{disp} - 2 > $bound - 1 || $thisop->{disp} - 2 < -$bound) {
         error($thisop, "jump target out of range for `$thisop->{name}'.\n");
     }
 
@@ -313,10 +313,11 @@ sub parse_cst
         error($thisop, "cst shift must be a multiple of 8\n");
     }
 
-    $thisop->{name} =~ /^[a-z]+(\d+)/;
-    $thisop->{width} = $1 ? log2($1) - 3 : 2;
+    $thisop->{name} =~ /^cst(\d+)/;
+    my $w = $1 / 16;
+    $thisop->{width} = $w - 1;
 
-    check_num( $thisop, 1, 0, 0xffffffffffffffff >> (64 - (8 << $thisop->{width})) );
+    check_num( $thisop, 1, 0, 0xffffffffffffffff >> (64 - 16 * $w) );
 }
 
 sub addr_data
@@ -399,8 +400,8 @@ sub parse_laddr
 {
     my $thisop = shift;
 
-    $thisop->{name} =~ /^[a-z]+(\d+)/ ;
-    $thisop->{width} = $1 ? log2($1) - 3 : 2;
+    $thisop->{name} =~ /^laddr(\d+)/ ;
+    $thisop->{width} = $1 / 16 - 1;
 
     push @{$thisop->{out}}, check_reg($thisop, 0);
     $thisop->{target} = check_label($thisop, 1);
@@ -440,9 +441,9 @@ sub parse_jmp8
 {
     my $thisop = shift;
 
-    $thisop->{target} = check_label8($thisop, 0, 128);
+    $thisop->{target} = check_label8($thisop, 0, 256);
 
-    if ( $thisop->{disp} == 0 ) {
+    if ( $thisop->{disp} == 2 ) {
 	$thisop->{nop} = 1;
     }
 }
@@ -455,14 +456,14 @@ sub parse_call8
     $thisop->{reloadout} |= 1 << $link;
     push @{$thisop->{out}}, $link;
 
-    $thisop->{target} = check_label8($thisop, 1, 128);
+    $thisop->{target} = check_label8($thisop, 1, 256);
     $thisop->{target}->{called}++;
 
     if ( $link == 0 ) {
 	error($thisop, "call8 can not modify register 0\n");
     }
 
-    if ( $thisop->{disp} == 0 ) {
+    if ( $thisop->{disp} == 2 ) {
 	error($thisop, "call8 can not have a zero displacement\n");
     }
 }
@@ -478,14 +479,20 @@ sub parse_call32
     $thisop->{target} = check_label($thisop, 1);
     $thisop->{target}->{called}++;
 
+    $thisop->{name} =~ /^call(\d+)/ ;
+    $thisop->{width} = $1 / 16 - 1;
+
     if ( $link == 0 ) {
-	error($thisop, "call32 can not modify register 0\n");
+	error($thisop, "call can not modify register 0\n");
     }
 }
 
 sub parse_jmp32
 {
     my $thisop = shift;
+
+    $thisop->{name} =~ /^jmp(\d+)/ ;
+    $thisop->{width} = $1 / 16 - 1;
 
     $thisop->{target} = check_label($thisop, 0);
 }
@@ -507,7 +514,7 @@ sub parse_loop
 
     push @{$thisop->{out}}, check_reg($thisop, 0);
     push @{$thisop->{in}}, check_reg($thisop, 0);
-    $thisop->{target} = check_label8($thisop, 1, 64);
+    $thisop->{target} = check_label8($thisop, 1, 128);
 
     if ($thisop->{target}->{addr} < $thisop->{addr}) {
         $thisop->{wbout} = 1;
@@ -936,19 +943,49 @@ our %asm = (
         parse => \&parse_jmp8, backend => ('jmp8'),
         flushregs => 1, op_jmp => 1, op_tail => 1
     },
+    'jmp16'  => {
+        words => 2, code => 0x7040, argscnt => 1,
+        parse => \&parse_jmp32, backend => ('jmpa'),
+        flushregs => 1, op_jmp => 1, op_tail => 1
+    },
+    'jmp16r'  => {
+        words => 2, code => 0x70c0, argscnt => 1,
+        parse => \&parse_jmp32, backend => ('jmpr'),
+        flushregs => 1, op_jmp => 1, op_tail => 1
+    },
+    'jmp32'  => {
+        words => 3, code => 0x7240, argscnt => 1,
+        parse => \&parse_jmp32, backend => ('jmpa'),
+        flushregs => 1, op_jmp => 1, op_tail => 1
+    },
+    'jmp32r'  => {
+        words => 3, code => 0x72c0, argscnt => 1,
+        parse => \&parse_jmp32, backend => ('jmpr'),
+        flushregs => 1, op_jmp => 1, op_tail => 1
+    },
     'call8'  => {
         words => 1, code => 0x2000, argscnt => 2,
         parse => \&parse_call8, backend => ('call8'),
         flushregs => 1, reloadregs => 1, op_call => 1,
     },
-    'jmp32'  => {
-        words => 3, code => 0x7010, argscnt => 1,
-        parse => \&parse_jmp32, backend => ('jmp32'),
-        flushregs => 1, op_jmp => 1, op_tail => 1
+    'call16'  => {
+        words => 2, code => 0x7040, argscnt => 2,
+        parse => \&parse_call32, backend => ('calla'),
+        flushregs => 1, reloadregs => 1, op_call => 1,
+    },
+    'call16r'  => {
+        words => 2, code => 0x70c0, argscnt => 2,
+        parse => \&parse_call32, backend => ('callr'),
+        flushregs => 1, reloadregs => 1, op_call => 1,
     },
     'call32'  => {
-        words => 3, code => 0x7010, argscnt => 2,
-        parse => \&parse_call32, backend => ('call32'),
+        words => 3, code => 0x7240, argscnt => 2,
+        parse => \&parse_call32, backend => ('calla'),
+        flushregs => 1, reloadregs => 1, op_call => 1,
+    },
+    'call32r'  => {
+        words => 3, code => 0x72c0, argscnt => 2,
+        parse => \&parse_call32, backend => ('callr'),
         flushregs => 1, reloadregs => 1, op_call => 1,
     },
     'ret' => {
@@ -1158,11 +1195,15 @@ our %asm = (
         parse => \&parse_ste, backend => ('ste'),
     }),
     'cst16' => {
-        words => 2, code => 0x7210, argscnt => 3,
+        words => 2, code => 0x7010, argscnt => 3,
         parse => \&parse_cst, backend => ('cst'),
     },
     'cst32' => {
-        words => 3, code => 0x7410, argscnt => 3,
+        words => 3, code => 0x7210, argscnt => 3,
+        parse => \&parse_cst, backend => ('cst'),
+    },
+    'cst48' => {
+        words => 4, code => 0x7410, argscnt => 3,
         parse => \&parse_cst, backend => ('cst'),
     },
     'cst64' => {
@@ -1170,12 +1211,24 @@ our %asm = (
         parse => \&parse_cst, backend => ('cst'),
     },
     'laddr16' => {
-        words => 2, code => 0x7200, argscnt => 2,
-        parse => \&parse_laddr, backend => ('laddr'),
+        words => 2, code => 0x7020, argscnt => 2,
+        parse => \&parse_laddr, backend => ('laddra'),
     },
     'laddr32' => {
-        words => 3, code => 0x7400, argscnt => 2,
-        parse => \&parse_laddr, backend => ('laddr'),
+        words => 3, code => 0x7220, argscnt => 2,
+        parse => \&parse_laddr, backend => ('laddra'),
+    },
+    'laddr64' => {
+        words => 5, code => 0x7620, argscnt => 2,
+        parse => \&parse_laddr, backend => ('laddra'),
+    },
+    'laddr16r' => {
+        words => 2, code => 0x70a0, argscnt => 2,
+        parse => \&parse_laddr, backend => ('laddrr'),
+    },
+    'laddr32r' => {
+        words => 3, code => 0x72a0, argscnt => 2,
+        parse => \&parse_laddr, backend => ('laddrr'),
     },
     'gaddr' => {
         words => 1 + (4 << $backend_width) / 8, code => 0x7000, argscnt => 2,
@@ -1364,7 +1417,7 @@ sub write_addr
             print OUT "$l->{name}:\n";
         }
 
-        printf OUT " %4u   %-15s %s\n", $thisop->{addr}, $thisop->{src};
+        printf OUT " %4u   %-15s %s\n", $thisop->{addr} >> 1, $thisop->{src};
     }
 
     close( OUT );

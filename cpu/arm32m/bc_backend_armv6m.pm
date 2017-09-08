@@ -163,7 +163,7 @@ sub out_call8 {
            ;
 }
 
-sub out_call32 {
+sub out_calla {
     my ($thisop) = @_;
     return "    adr r0, 2f\n".
            "    adds r0, #1\n".
@@ -174,11 +174,19 @@ sub out_call32 {
            "2:\n";
 }
 
-sub out_jmp32 {
+sub out_callr {
+    return out_calla(shift);
+}
+
+sub out_jmpa {
     my ($thisop) = @_;
     return "    ldr r0, = $thisop->{args}->[0] + 1\n".
 	   "    bx r0\n".
 	   "    .ltorg\n";
+}
+
+sub out_jmpr {
+    return out_jmpa(shift);
 }
 
 sub out_ret {
@@ -765,7 +773,7 @@ sub out_cst {
     my ($thisop, $wo) = @_;
     my $r;
     my $x = ($thisop->{args}->[1] << $thisop->{args}->[2]) & 0xffffffff;
-    if ( $thisop->{width} == 3 ) {
+    if ( $thisop->{width} >= 2 ) {
         main::warning($thisop, "64 bit constant truncated to 32 bits.\n");
     }
     return "    ldr $reg[$wo], = $x\n";
@@ -776,7 +784,11 @@ sub out_gaddr {
     return "    ldr $reg[$wo], = $thisop->{args}->[1]\n";
 }
 
-sub out_laddr {
+sub out_laddra {
+    out_gaddr( @_ );
+}
+
+sub out_laddrr {
     out_gaddr( @_ );
 }
 

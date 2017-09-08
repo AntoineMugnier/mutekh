@@ -195,10 +195,10 @@ static const char * bc_opname(uint16_t op)
     { 0xf900, BC_OP_ST    << 8, "st" },
     { 0xf900, BC_OP_STI   << 8, "sti" },
     { 0xfff0, BC_OP_CST  << 8, "gaddr" },
-    { 0xf9f0, BC_OP_CST  << 8, "laddr" },
-    { 0xffff, (BC_OP_CALL  << 8) | 0x10, "jmp32" },
-    { 0xfff0, (BC_OP_CALL  << 8) | 0x10, "call32" },
-    { 0xf900, BC_OP_CST   << 8, "cst" },
+    { 0xf910, (BC_OP_CST  << 8) | 0x10, "cst" },
+    { 0xf930, (BC_OP_LADDR << 8) | 0x20, "laddr" },
+    { 0xf97f, (BC_OP_CALL << 8) | 0x40, "jmp" },
+    { 0xf970, (BC_OP_CALL << 8) | 0x40, "call" },
     { 0xf900, BC_OP_STD   << 8, "std" },
     { 0xf900, BC_OP_LDE   << 8, "lde" },
     { 0xf900, BC_OP_STE   << 8, "ste" },
@@ -790,11 +790,20 @@ bc_opcode_t bc_run_vm(struct bc_context_s *ctx)
     return BC_RUN_STATUS_FAULT;
 #endif
 
+#if defined(CONFIG_MUTEK_BYTECODE_SANDBOX) || !defined(CONFIG_RELEASE)
+  const size_t size = desc->flags & BC_FLAGS_SIZEMASK;
+  const uint16_t *code_end = (uint16_t*)desc->code + (size >> 1);
+#endif
+
+  const uintptr_t code_offset =
+#if defined(CONFIG_MUTEK_BYTECODE_SANDBOX)
+    ctx->sandbox ? (uintptr_t)desc->code :
+#endif
+    0;
+
   for (;; pc++)
     {
 #if defined(CONFIG_MUTEK_BYTECODE_SANDBOX) || !defined(CONFIG_RELEASE)
-      size_t size = desc->flags & BC_FLAGS_SIZEMASK;
-      uint16_t *code_end = (uint16_t*)desc->code + (size >> 1);
       /* check pc upper bound */
       if (pc + 1 > code_end)
         goto err_pc;
@@ -806,7 +815,7 @@ bc_opcode_t bc_run_vm(struct bc_context_s *ctx)
       uint_fast8_t cst_len = 0;
       if ((op & 0xf000) == 0x7000)
         {
-          cst_len += (0x1010101014121112ULL >> ((op >> 6) & 0x3c)) & 15;
+          cst_len += (0x1010101014131211ULL >> ((op >> 6) & 0x3c)) & 15;
 
 #if defined(CONFIG_MUTEK_BYTECODE_SANDBOX) || !defined(CONFIG_RELEASE)
           /* check upper bound again with extra words */
@@ -940,13 +949,13 @@ bc_opcode_t bc_run_vm(struct bc_context_s *ctx)
           int8_t disp = op >> 4;
           if (disp)             /* jmp8 */
             {
-              if (op & 0xf)     /* jmpl */
-                *dst = (bc_reg_t)(uintptr_t)pc;
+              if (op & 0xf)     /* call8 */
+                *dst = (uintptr_t)pc - code_offset;
               pc += (intptr_t)disp;
             }
           else                  /* ret */
             {
-              pc = (void*)(uintptr_t)*dst;
+              pc = (void*)(code_offset + *dst);
             }
           goto check_pc;
         }
@@ -1010,7 +1019,7 @@ bc_opcode_t bc_run_vm(struct bc_context_s *ctx)
       dispatch_cstn_call: {
 	  if ((op & 0x0900) == 0x0000) /* not ld/st */
 	    {
-              if ((op & 0x0ff0) == 0x0000) /* BC_GADDR */
+              if ((op & 0x0070) == 0x0000) /* gaddr */
                 {
 #ifdef CONFIG_MUTEK_BYTECODE_SANDBOX
                   if (ctx->sandbox)
@@ -1028,33 +1037,55 @@ bc_opcode_t bc_run_vm(struct bc_context_s *ctx)
                   pc += INT_PTR_SIZE / 16 - 1;
                   break;
                 }
-	      uint_fast8_t c = (0x4212 >> ((op >> 7) & 0xc)) & 7;
+
+              uintptr_t rpc = (void*)pc - desc->code;
+
+              /* fetch constant */
+	      uint_fast8_t cm1 = (op >> 9) & 3;
+
+	      uint_fast8_t c = cm1 + 1;
 	      bc_reg_t x = 0;
 	      while (c--)
 		x = (x << 16) | endian_le16(*++pc);
 
               BC_CLAMP32(x);
 
-              if (op & 0x0600)  /* BC_CSTN */
+              if (op & 0x0010)  /* cst16, cst32... */
                 {
-                  x <<= ((op & 0x00e0) >> 2);
-                  if (!(op & 0x0010))
-                    {
-#ifdef CONFIG_MUTEK_BYTECODE_SANDBOX
-                      if (!ctx->sandbox)
+                  *dst = x << ((op & 0x00e0) >> 2); /* byte shift */
+                  break;
+                }
+
+              if (op & 0x0080)  /* pc relative */
+                {
+#if INT_REG_SIZE > 32 || defined(CONFIG_MUTEK_BYTECODE_VM64)
+                  bc_reg_t m = (bc_reg_t)0x8000 << (cm1 << 4); /* sign extend x */
+                  x = rpc + (m ^ x) - m;
+#else
+                  if (cm1 == 0)
+                    x = (bc_sreg_t)(int16_t)x;
+                  x += rpc;
 #endif
-                        x += (uintptr_t)desc->code;
-                    }
+                }
+
+              if (op & 0x0020)  /* laddr */
+                {
+#ifdef CONFIG_MUTEK_BYTECODE_SANDBOX
+                  if (ctx->sandbox)
+                    x |= (op & 0x40) << 25; /* bit 31 */
+                  else
+#endif
+                    x += (uintptr_t)desc->code;
                   *dst = x;
                   break;
                 }
-              else             /* BC_CALL */
-                {
-                  if (op & 0xf)
-                    *dst = (bc_reg_t)(uintptr_t)pc;
-                  pc = (uint16_t*)desc->code + (bc_sreg_t)x;
-                  goto check_pc;
-                }
+
+              /* call/jmp */
+              if (op & 0xf)     /* save return address */
+                *dst = (uintptr_t)pc - code_offset;
+
+              pc = (const uint16_t*)(desc->code + x);
+              goto check_pc;
 	    }
         }
 

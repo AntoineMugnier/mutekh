@@ -251,10 +251,12 @@
      @item @tt{end} @item Terminate bytecode execution.
      @item @tt{jmp8 label} @item Jump relative. The branch target must be in
        range [-128, +127] from this instruction.
-     @item @tt{jmp32 label} @item Jump absolute.
-     @item @tt{call8 reg, label} @item Jump absolute and save the return address in a register.
+     @item @tt{jmp[16,32] label} @item Jump absolute.
+     @item @tt{jmp[16,32]r label} @item Jump relative.
+     @item @tt{call8 reg, label} @item Jump relative and save the return address in a register.
        The branch target must be in range [-128, +127] from this instruction.
-     @item @tt{call32 reg, label} @item Jump relative and save the return address in a register.
+     @item @tt{call[16,32] reg, label} @item Jump absolute and save the return address in a register.
+     @item @tt{call[16,32]r reg, label} @item Jump relative and save the return address in a register.
      @item @tt{ret reg} @item Return to the address saved in a link register.
      @item @tt{jmp reg} @item Jump to the address saved in a register.
      @item @tt{loop reg, label} @item If the jump target is backward, this instruction decrements the
@@ -305,7 +307,8 @@
      @item @tt{ccall reg} @item Call a C function. The address of the function is in the source
      register. Bytecode in compiled form will not be portable.
      @see bc_ccall_function_t
-     @item @tt{laddr[16,32] reg, label} @item Set a register to the address of a bytecode label.
+     @item @tt{laddr[16,32,64] reg, label} @item Set a register to the absolute address of a bytecode label.
+     @item @tt{laddr[16,32]r reg, label} @item Set a register to the pc relative address of a bytecode label.
      @item @tt{gaddr reg, label} @item Set a register to the address of a
      global symbol. Bytecode in compiled form will not be portable.
    @end table
@@ -421,15 +424,16 @@
 
     @item ld[8,16,32,64][i]   @item r, ra         @item @tt{0110 0ssi aaaa rrrr} @item  3
     @item st[8,16,32,64][i]   @item r, ra         @item @tt{0110 1ssi aaaa rrrr} @item  3
+
     @item st[8,16,32,64]d     @item r, ra         @item @tt{0111 1ss0 aaaa rrrr} @item  3
-    @item gaddr               @item r, lbl        @item @tt{0111 0000 0000 rrrr, v?} @item  3
-    @item laddr[16,32]        @item r, lbl        @item @tt{0111 0ss0 0000 rrrr, v, v?} @item  3
-    @item jmp32               @item lbl           @item @tt{0111 0000 ---1 0000, v, v} @item  3
-    @item call32              @item r, lbl        @item @tt{0111 0000 ---1 rrrr, v, v} @item  3
-    @item cst[16,32,64]       @item r, v, b       @item @tt{0111 0ss0 bbb1 rrrr, v, v?, v?} @item  3
     @item ld[8,16,32,64]e     @item r, ra, +/-v   @item @tt{0111 0ss1 aaaa rrrr, v} @item  3
     @item st[8,16,32,64]e     @item r, ra, +/-v   @item @tt{0111 1ss1 aaaa rrrr, v} @item  3
 
+    @item gaddr               @item r, lbl        @item @tt{0111 0--0 -000 rrrr, v?} @item  3
+    @item cst[16,32,48,64]    @item r, v, b       @item @tt{0111 0ss0 bbb1 rrrr, v, v ...} @item  3
+    @item laddr[16,32][r]     @item r, lbl        @item @tt{0111 0ss0 Rx10 rrrr, v, v ...} @item  3
+    @item jmp[16,32][r]       @item lbl           @item @tt{0111 0ss0 R100 0000, v, v ...} @item  3
+    @item call[16,32][r]      @item r, lbl        @item @tt{0111 0ss0 R100 rrrr, v, v ...} @item  3
 
     @item custom              @item               @item @tt{1--- ---- ---- ----} @item
    @end table
@@ -875,6 +879,7 @@ enum bc_opcode_e
     BC_OP_ST   = 0x68,
     BC_OP_STI  = 0x69,
     BC_OP_CST  = 0x70,
+    BC_OP_LADDR = 0x70,
     BC_OP_CALL = 0x70,
     BC_OP_STD  = 0x78,
     BC_OP_LDE  = 0x71,

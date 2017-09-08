@@ -143,7 +143,7 @@ sub out_call8 {
            ;
 }
 
-sub out_call32 {
+sub out_calla {
     my ($thisop) = @_;
     return "    .set noreorder\n".
            "    bal $thisop->{args}->[1]\n".
@@ -151,9 +151,17 @@ sub out_call32 {
            "    .set reorder\n"
 }
 
-sub out_jmp32 {
+sub out_callr {
+    return out_calla(shift);
+}
+
+sub out_jmpa {
     my ($thisop) = @_;
     return "    j $thisop->{args}->[0]\n";
+}
+
+sub out_jmpr {
+    return out_jmpa(shift);
 }
 
 sub out_ret {
@@ -660,7 +668,7 @@ sub out_cst {
     my ($thisop, $wo) = @_;
     my $r;
     my $x = $thisop->{args}->[1] << $thisop->{args}->[2];
-    if ( $thisop->{width} == 3 ) {
+    if ( $thisop->{width} >= 2 ) {
         main::warning($thisop, "64 bit constant truncated to 32 bits.\n");
     }
     if ( !($x & 0xffff0000) ) {
@@ -679,7 +687,11 @@ sub out_gaddr {
     return "    la $reg[$wo], $thisop->{args}->[1]\n";
 }
 
-sub out_laddr {
+sub out_laddra {
+    out_gaddr( @_ );
+}
+
+sub out_laddrr {
     out_gaddr( @_ );
 }
 

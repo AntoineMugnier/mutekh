@@ -1,6 +1,8 @@
 
 package bc_backend_common;
 
+use strict;
+
 our $word = sub { die "instruction word output handler not installed"; };
 
 sub out_custom {
@@ -45,6 +47,22 @@ sub fmt4
     return $word->( $thisop->{op}->{code} | ($c << 8) | (($o & 0xf) << 4) | ($r & 0xf) );
 }
 
+sub check_imm
+{
+    my ($thisop, $a, $signed) = @_;
+
+    my $w = $thisop->{width};
+    my $m1 = -1 << (16 + 16 * $w);
+
+    my $m2 =  1 << (15 + 16 * $w);
+    $a ^= $m1 if ( $signed && ( $m2 & $a ) );
+
+    main::error($thisop, sprintf("`%s' range exceeded : 0x%x.\n", $thisop->{name}, $a))
+        if ( $a & $m1 );
+
+    return $a;
+}
+
 sub out_end {
     return fmt0( shift, 0, 0 );
 }
@@ -82,7 +100,7 @@ sub out_cst8 {
 
 sub out_jmp8 {
     my ($thisop) = @_;
-    if ( my $d = $thisop->{disp} ) {
+    if ( my $d = ($thisop->{disp} - 2) >> 1 ) {
         return fmt0( $thisop, $d, 0 );
     } else {
         # nop
@@ -92,31 +110,50 @@ sub out_jmp8 {
 
 sub out_call8 {
     my ($thisop) = @_;
-    return fmt0( $thisop, $thisop->{disp}, $thisop->{out}->[0] );
+    return fmt0( $thisop, ($thisop->{disp} - 2) >> 1, $thisop->{out}->[0] );
 }
 
-sub out_call32 {
-    my ($thisop) = @_;
-    my $a = $thisop->{target}->{addr} / 2 - 1;
+sub out_calljmp {
+    my ($thisop, $a, $signed, $reg) = @_;
 
-    main::warning($thisop, "`call8' could be used instead of `call32'.\n")
-        if ($thisop->{disp} <= 127 && $thisop->{disp} > -128);
+    my $w = $thisop->{width};
+    $a = check_imm( $thisop, $a, $signed );
+    my $d = $thisop->{disp} - 2;
 
-    return fmt3( $thisop, 0, 0, $thisop->{out}->[0] ).
-           $word->( $a >> 16 ).
-           $word->( $a );
+    if ($d <= 127*2 && $d > -128*2) {
+        main::warning($thisop, "8 bits jump could be used instead.\n")
+    } elsif ($w > 0 && $d <= 32767 && $d > -32768) {
+        main::warning($thisop, "16 bits jump could be used instead.\n")
+    }
+
+    my $r = fmt3( $thisop, 0, 0, $reg );
+
+    $r .= $word->( $a >> 48 ) if ( $w > 2 );
+    $r .= $word->( $a >> 32 ) if ( $w > 1 );
+    $r .= $word->( $a >> 16 ) if ( $w > 0 );
+    $r .= $word->( $a );
+
+    return $r;
 }
 
-sub out_jmp32 {
+sub out_callr {
     my ($thisop) = @_;
-    my $a = $thisop->{target}->{addr} / 2 - 1;
+    return out_calljmp( $thisop, $thisop->{disp} - 2, 1, $thisop->{out}->[0] );
+}
 
-    main::warning($thisop, "`jmp8' could be used instead of `jmp32'.\n")
-        if ($thisop->{disp} <= 127 && $thisop->{disp} > -128);
+sub out_calla {
+    my ($thisop) = @_;
+    return out_calljmp( $thisop, $thisop->{target}->{addr} - 2, 0, $thisop->{out}->[0] );
+}
 
-    return fmt3( $thisop, 0, 0, 0 ).
-           $word->( $a >> 16 ).
-           $word->( $a );
+sub out_jmpr {
+    my ($thisop) = @_;
+    return out_calljmp( $thisop, $thisop->{disp} - 2, 1, 0 );
+}
+
+sub out_jmpa {
+    my ($thisop) = @_;
+    return out_calljmp( $thisop, $thisop->{target}->{addr} - 2, 0, 0 );
 }
 
 sub out_ret {
@@ -126,7 +163,7 @@ sub out_ret {
 
 sub out_loop {
     my ($thisop) = @_;
-    return fmt0( $thisop, $thisop->{disp} & 0x7f, $thisop->{in}->[0] );
+    return fmt0( $thisop, (($thisop->{disp} - 2) >> 1) & 0x7f, $thisop->{in}->[0] );
 }
 
 our %packops = (
@@ -363,46 +400,54 @@ sub out_ldi {
 sub out_cst {
     my ($thisop) = @_;
 
-    my $res = fmt3( $thisop, $thisop->{width},
-                    $thisop->{args}->[2] >> 2,
-                    $thisop->{out}->[0] );
+    my $w = $thisop->{width};
+    my $a = $thisop->{args}->[1];
+    $a = check_imm( $thisop, $a, 0 );
 
-    my $x = $thisop->{args}->[1];
+    my $r = fmt3( $thisop, $w,
+                  $thisop->{args}->[2] >> 2,
+                  $thisop->{out}->[0] );
 
-    if ( $thisop->{width} == 1 ) {
-        $res .= $word->( $x );
-    } elsif ( $thisop->{width} == 2 ) {
-        $res .= $word->( $x >> 16 );
-        $res .= $word->( $x );
-    } elsif ( $thisop->{width} == 3 ) {
-        $res .= $word->( $x >> 48 );
-        $res .= $word->( $x >> 32 );
-        $res .= $word->( $x >> 16 );
-        $res .= $word->( $x );
-    } else {
-        die;
-    }
+    $r .= $word->( $a >> 48 ) if ( $w > 2 );
+    $r .= $word->( $a >> 32 ) if ( $w > 1 );
+    $r .= $word->( $a >> 16 ) if ( $w > 0 );
+    $r .= $word->( $a );
 
-    return $res;
+    return $r;
 }
 
-sub out_laddr {
+sub out_laddr_ {
+    my ($thisop, $a, $signed) = @_;
+
+    my $op = 0;
+    my $w = $thisop->{width};
+
+    # may embbed bit 31 of laddr16 when in sandbox mode
+    if (($main::bcflags & 0x02000000) && $w == 0 &&
+        ($a & 0xffff0000) == 0x80000000) {
+        $a -= 0x80000000;
+        $op = 4;
+    }
+
+    $a = check_imm( $thisop, $a, $signed );
+
+    my $r = fmt3( $thisop, $w, $op,
+                  $thisop->{out}->[0] );
+
+    $r .= $word->( $a >> 48 ) if ( $w > 2 );
+    $r .= $word->( $a >> 32 ) if ( $w > 1 );
+    $r .= $word->( $a >> 16 ) if ( $w > 0 );
+    $r .= $word->( $a );
+
+    return $r;
+}
+
+sub out_laddra {
     my ($thisop) = @_;
-
-    my $res = fmt3( $thisop, $thisop->{width}, 0,
-                    $thisop->{out}->[0] );
-
-    my $x = $thisop->{target}->{addr};
-
-    if ( $thisop->{width} == 1 ) {
-        $res .= $word->( $x );
-    } elsif ( $thisop->{width} == 2 ) {
-        $res .= $word->( $x >> 16 );
-        $res .= $word->( $x );
-    } else {
-        die;
-    }
-
-    return $res;
+    return out_laddr_( $thisop, $thisop->{target}->{addr}, 0 );
 }
 
+sub out_laddrr {
+    my ($thisop) = @_;
+    return out_laddr_( $thisop, $thisop->{disp}, 1 );
+}
