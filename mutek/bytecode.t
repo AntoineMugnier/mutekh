@@ -465,34 +465,40 @@ error_t bc_set_sandbox_pc(struct bc_context_s *ctx, uint32_t pc)
   return 0;
 }
 
-inline uintptr_t
-bc_translate_op_addr(const struct bc_descriptor_s * __restrict__ desc,
-                     struct bc_context_s *ctx, bc_reg_t addr,
-                     uint_fast32_t width, uint8_t nocode)
+void *
+bc_translate_addr(struct bc_context_s *ctx,
+                  bc_reg_t addr_, size_t size,
+                  bool_t writable)
 {
+  const struct bc_descriptor_s * __restrict__ desc = ctx->desc;
+  uintptr_t addr = addr_;
+  uint32_t end = addr + size;
+
+  if (end < addr)
+    return NULL;
+
   if (addr & 0x80000000)    /* rw data segment */
     {
-      /* address translation */
-      addr &= ctx->data_addr_mask;
+      uintptr_t m = ctx->data_addr_mask;
+
+      addr &= m;
+      if (addr + size > m)
+        return NULL;
+
       addr += ctx->data_base;
     }
   else                      /* code segment */
     {
-      if (nocode)
-        return 0;
+      if (writable)
+        return NULL;
 
-      size_t size = desc->flags & BC_FLAGS_SIZEMASK;
-      if (addr + width > size)
-        return 0;
+      if (end > (desc->flags & BC_FLAGS_SIZEMASK))
+        return NULL;
 
-      /* address translation */
       addr += (uintptr_t)desc->code;
     }
 
-  if (addr & (width - 1))       /* not aligned */
-    return 0;
-
-  return addr;
+  return (void*)addr;
 }
 
 #endif
@@ -621,9 +627,9 @@ static void bc_run_packing(struct bc_context_s *ctx,
 /* backslash-region-begin */
 #define BC_VM_GEN(fcname, sandbox)
 __attribute__((noinline))
-static uint_fast8_t bc_run_##fcname##_ldst(const struct bc_descriptor_s * __restrict__ desc,
-                                struct bc_context_s *ctx, const uint16_t **pc,
-                                uint16_t op)
+static bool_t bc_run_##fcname##_ldst(const struct bc_descriptor_s * __restrict__ desc,
+                                     struct bc_context_s *ctx, const uint16_t **pc,
+                                     uint16_t op)
 {
   dispatch_begin:;
   bc_reg_t *dst = &ctx->v[op & 0xf], d = *dst;
@@ -657,13 +663,28 @@ static uint_fast8_t bc_run_##fcname##_ldst(const struct bc_descriptor_s * __rest
   BC_CONFIG_SANDBOX(
     if (sandbox)
       {
-        addr = bc_translate_op_addr(desc, ctx, addr, w, /* not a load */ op & 4);
-        if (!addr)
-          return -1;
+        if (addr & 0x80000000)    /* rw data segment */
+          {
+            addr &= ctx->data_addr_mask;
+            addr += ctx->data_base;
+          }
+        else                      /* code segment */
+          {
+            if (op & 4 /* store */)
+              return 1;
+
+            size_t s = desc->flags & BC_FLAGS_SIZEMASK;
+            if (addr + w > s)
+              return 1;
+
+            /* address translation */
+            addr += (uintptr_t)desc->code;
+          }
+
+        if (addr & (w - 1))       /* not aligned */
+          return 1;
       }
   );
-
-  assert((addr & (w - 1)) == 0 && "bytecode memory access not aligned");
 
   do {
     static const bs_dispatch_t dispatch[8] = {
@@ -698,7 +719,7 @@ static uint_fast8_t bc_run_##fcname##_ldst(const struct bc_descriptor_s * __rest
   dispatch_LD64:
   BC_CONFIG_SANDBOX(
     if (sandbox)
-      return -1;
+      return 1;
   );
     d = *(uint64_t*)addr;
     break;
@@ -722,7 +743,7 @@ static uint_fast8_t bc_run_##fcname##_ldst(const struct bc_descriptor_s * __rest
   dispatch_ST64:
   BC_CONFIG_SANDBOX(
     if (sandbox)
-      return -1;
+      return 1;
   );
     *(uint64_t*)addr = d;
     return 0;

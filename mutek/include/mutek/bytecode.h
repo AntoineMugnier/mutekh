@@ -592,51 +592,15 @@ uint32_t bc_get_sandbox_pc(const struct bc_context_s *ctx),
   return ctx->vpc - ctx->desc->code;
 });
 
-/** @internal */
+/** @This translates an address from the sandbox virtual machine
+    address space to an usable pointer. This returns @tt NULL if the
+    address range is not valid and contiguous inside the sandbox.
+
+    When the @tt writable argument is set, the function return @tt
+    NULL if the address range is not writable in the sandbox. */
 config_depend(CONFIG_MUTEK_BYTECODE_SANDBOX)
-uintptr_t bc_translate_op_addr(const struct bc_descriptor_s * __restrict__ desc,
-                               struct bc_context_s *ctx, bc_reg_t addr,
-                               uint_fast32_t width, uint8_t nocode);
-
-/** @This translates a data address from a sandboxed virtual machine to
-    an accessible address. This returns 0 if the address is not valid
-    inside the sandbox. */
-ALWAYS_INLINE void *
-bc_translate_addr(struct bc_context_s *ctx, bc_reg_t addr, uint_fast32_t width)
-{
-#ifdef CONFIG_MUTEK_BYTECODE_SANDBOX
-  if (ctx->sandbox)
-    return (void*)bc_translate_op_addr(ctx->desc, ctx, addr, width, 0);
-#endif
-  return (void*)(uintptr_t)addr;
-}
-
-/** @This translates an address to a single @ref uint8_t from a
-    sandboxed virtual machine to an accessible pointer. This returns
-    @tt NULL if the address is not valid inside the sandbox. */
-ALWAYS_INLINE uint8_t *
-bc_translate_8(struct bc_context_s *ctx, bc_reg_t addr)
-{
-  return (uint8_t*)bc_translate_addr(ctx, addr, 1);
-}
-
-/** @This translates an address to a single @ref uint16_t from a
-    sandboxed virtual machine to an accessible pointer. This returns
-    @tt NULL if the address is not valid inside the sandbox. */
-ALWAYS_INLINE uint16_t *
-bc_translate_16(struct bc_context_s *ctx, bc_reg_t addr)
-{
-  return (uint16_t*)bc_translate_addr(ctx, addr, 2);
-}
-
-/** @This translates an address to a single @ref uint32_t from a
-    sandboxed virtual machine to an accessible pointer. This returns
-    @tt NULL if the address is not valid inside the sandbox. */
-ALWAYS_INLINE uint32_t *
-bc_translate_32(struct bc_context_s *ctx, bc_reg_t addr)
-{
-  return (uint32_t*)bc_translate_addr(ctx, addr, 4);
-}
+void * bc_translate_addr(struct bc_context_s *ctx, bc_reg_t addr,
+                         size_t size, bool_t writable);
 
 /** @This initializes a bytecode descriptor from a bytecode loadable
     blob. The format of the blob is:

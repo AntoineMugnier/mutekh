@@ -83,7 +83,7 @@ void app_start()
         case BC_CUSTOM_PRINTS: {
           uintptr_t addr = bc_get_reg(&vm, r & 0xf);
 #ifdef CONFIG_MUTEK_BYTECODE_SANDBOX
-          const char *s = bc_translate_8(&vm, addr);
+          const char *s = bc_translate_addr(&vm, addr, 0, 0);
 #else
           const char *s = (char*)addr;
 #endif
