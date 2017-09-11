@@ -173,6 +173,21 @@ $(3)/$(1): $(2)/$(1:.o=.c)
 	$(call compile,$(CC),$$@,$$<,$($(1)_CFLAGS) $(DIR_CFLAGS) -DMUTEK_CFILE='"$$(<F)"')
 	$(value do_hetlink_mangling)
 
+else ifneq ($(wildcard $(2)/$(1:.o=.t)),) ########################################### template C file
+
+$(3)/$(1:.o=.deps): $(2)/$(1:.o=.t) $(OBJ_DIR)/config.h $(OBJ_DIR)/.done_pre_header_list
+	$(call mkdir_command,$$@)
+	$(call compute_depfile_c,$$@,$(3)/$(1),$$<,$(CPUCFLAGS) $(ARCHCFLAGS) $(INCS) \
+		$($(1)_CFLAGS) $(DIR_CFLAGS))
+
+include $(3)/$(1:.o=.deps)
+
+$(3)/$(1): $(2)/$(1:.o=.t)
+	$(call echo_command,TC,$$@)
+	$(call run_command,$$@, perl $(MUTEK_SRC_DIR)/gct/gct/build/backslash.pl $$< $$@.c )
+	$(call compile,$(CC),$$@,$$@.c,$($(1)_CFLAGS) $(DIR_CFLAGS) -DMUTEK_CFILE='"$$(<F)"')
+	$(value do_hetlink_mangling)
+
 endif
 
 endef
