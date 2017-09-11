@@ -509,7 +509,7 @@ struct bc_context_s
   uintptr_t data_base;
   /** mask address of writable data segment when sandboxed */
   uintptr_t data_addr_mask;
-  /** maximum number of executed cycles by a single call to @ref bc_run_vm */
+  /** maximum number of executed cycles by a single call to @ref bc_run_sandbox */
   uint16_t max_cycles;
   /** @see bc_init_sandbox */
   bool_t BITFIELD(sandbox,1);
@@ -655,7 +655,7 @@ bc_load(struct bc_descriptor_s *desc,
 
 /** @This initializes a bytecode descriptor. This can be used in place
     of @ref bc_load when some raw bytecode is loaded in memory. */
-void
+error_t
 bc_desc_init(struct bc_descriptor_s *desc,
              const void *code, size_t len,
              enum bc_flags_s flags);
@@ -828,15 +828,6 @@ ALWAYS_INLINE bc_opcode_t bc_run(struct bc_context_s *ctx)
 {
   return ctx->desc->run(ctx);
 }
-
-/** This function starts or resumes executions of the bytecode using
-    the virtual machine. This function does not work if the bytecode
-    is compiled in machine code.
-
-    When sandboxed, at most @tt max_cycles instructions are
-    executed. This function returns 1 when this limit is reached. It
-    will return 3 if an error occurs. */
-bc_opcode_t bc_run_vm(struct bc_context_s *ctx);
 
 /** @internal @This specifies opcode values. */
 enum bc_opcode_e

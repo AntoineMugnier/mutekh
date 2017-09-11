@@ -14,7 +14,7 @@ test_debug          = Config("t_debug")
 test_trace          = Config("t_trace")
 
 deps = [
-    "mutek/bytecode.c",
+    "mutek/bytecode.t",
     "mutek/include/mutek/bytecode.h",
     "scripts/bc_asm.pl",
     "scripts/bc_backend_bytecode.pm",

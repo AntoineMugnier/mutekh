@@ -1,4 +1,4 @@
-/*
+/* -*- mode: c -*-
  * This file is part of MutekH.
  * 
  * MutekH is free software; you can redistribute it and/or modify it
@@ -47,6 +47,27 @@ bc_set_regs(struct bc_context_s *ctx, uint16_t mask, ...)
   va_end(ap);
 }
 
+bc_opcode_t bc_run_vm(struct bc_context_s *ctx);
+bc_opcode_t bc_run_sandbox(struct bc_context_s *ctx);
+
+error_t
+bc_desc_init(struct bc_descriptor_s *desc,
+             const void *code, size_t len,
+             enum bc_flags_s flags)
+{
+  assert(!((uintptr_t)code & 1));
+  if (flags & BC_FLAGS_SANDBOX)
+#ifdef CONFIG_MUTEK_BYTECODE_SANDBOX
+    desc->run = &bc_run_sandbox;
+#else
+    return -ENOTSUP;
+#endif
+  else
+    desc->run = &bc_run_vm;
+  desc->code = code;
+  desc->flags = flags | len;
+}
+
 error_t
 bc_load(struct bc_descriptor_s *desc,
         const uint8_t *blob, size_t len)
@@ -63,22 +84,7 @@ bc_load(struct bc_descriptor_s *desc,
   if (len < /* header */ 4 + bytes)
     return -EINVAL;
 
-  desc->code = blob + 4;
-  desc->run = &bc_run_vm;
-  desc->flags = flags;
-
-  return 0;
-}
-
-void
-bc_desc_init(struct bc_descriptor_s *desc,
-             const void *code, size_t len,
-             enum bc_flags_s flags)
-{
-  assert(!((uintptr_t)code & 1));
-  desc->code = code;
-  desc->run = &bc_run_vm;
-  desc->flags = flags | len;
+  return bc_desc_init(desc, blob + 4, 0, flags);
 }
 
 void
@@ -318,16 +324,16 @@ static void bc_swap32(void *t, uint_fast8_t c)
 
 #ifdef CONFIG_MUTEK_BYTECODE_NATIVE
 
-void bc_unpack_op8(struct bc_context_s *ctx, reg_t op);
-void bc_unpack_op8(struct bc_context_s *ctx, reg_t op)
+extern inline void
+bc_unpack_op8(struct bc_context_s *ctx, reg_t op)
 {
   uint_fast8_t c = op >> 4;
   bc_reg_t *t = ctx->v + (op & 15);
   bc_unpack8(t, c);
 }
 
-void bc_unpack_swap_op16(struct bc_context_s *ctx, reg_t op);
-void bc_unpack_swap_op16(struct bc_context_s *ctx, reg_t op)
+extern inline void
+bc_unpack_swap_op16(struct bc_context_s *ctx, reg_t op)
 {
   uint_fast8_t c = op >> 4;
   bc_reg_t *t = ctx->v + (op & 15);
@@ -335,24 +341,24 @@ void bc_unpack_swap_op16(struct bc_context_s *ctx, reg_t op)
   bc_swap16(t, c);
 }
 
-void bc_unpack_op16(struct bc_context_s *ctx, reg_t op);
-void bc_unpack_op16(struct bc_context_s *ctx, reg_t op)
+extern inline void
+bc_unpack_op16(struct bc_context_s *ctx, reg_t op)
 {
   uint_fast8_t c = op >> 4;
   bc_reg_t *t = ctx->v + (op & 15);
   bc_unpack16(t, c);
 }
 
-void bc_pack_op8(struct bc_context_s *ctx, reg_t op);
-void bc_pack_op8(struct bc_context_s *ctx, reg_t op)
+extern inline void
+bc_pack_op8(struct bc_context_s *ctx, reg_t op)
 {
   uint_fast8_t c = op >> 4;
   bc_reg_t *t = ctx->v + (op & 15);
   bc_pack8(t, c);
 }
 
-void bc_swap_pack_op16(struct bc_context_s *ctx, reg_t op);
-void bc_swap_pack_op16(struct bc_context_s *ctx, reg_t op)
+extern inline void
+bc_swap_pack_op16(struct bc_context_s *ctx, reg_t op)
 {
   uint_fast8_t c = op >> 4;
   bc_reg_t *t = ctx->v + (op & 15);
@@ -360,16 +366,16 @@ void bc_swap_pack_op16(struct bc_context_s *ctx, reg_t op)
   bc_pack16(t, c);
 }
 
-void bc_pack_op16(struct bc_context_s *ctx, reg_t op);
-void bc_pack_op16(struct bc_context_s *ctx, reg_t op)
+extern inline void
+bc_pack_op16(struct bc_context_s *ctx, reg_t op)
 {
   uint_fast8_t c = op >> 4;
   bc_reg_t *t = ctx->v + (op & 15);
   bc_pack16(t, c);
 }
 
-void bc_swap_pack_op32(struct bc_context_s *ctx, reg_t op);
-void bc_swap_pack_op32(struct bc_context_s *ctx, reg_t op)
+extern inline void
+bc_swap_pack_op32(struct bc_context_s *ctx, reg_t op)
 {
   uint_fast8_t c = op >> 4;
   bc_reg_t *t = ctx->v + (op & 15);
@@ -380,8 +386,8 @@ void bc_swap_pack_op32(struct bc_context_s *ctx, reg_t op)
 }
 
 # if INT_REG_SIZE > 32 || defined(CONFIG_MUTEK_BYTECODE_VM64)
-void bc_pack_op32(struct bc_context_s *ctx, reg_t op);
-void bc_pack_op32(struct bc_context_s *ctx, reg_t op)
+extern inline void
+bc_pack_op32(struct bc_context_s *ctx, reg_t op)
 {
   uint_fast8_t c = op >> 4;
   bc_reg_t *t = ctx->v + (op & 15);
@@ -389,8 +395,8 @@ void bc_pack_op32(struct bc_context_s *ctx, reg_t op)
 }
 # endif
 
-void bc_unpack_swap_op32(struct bc_context_s *ctx, reg_t op);
-void bc_unpack_swap_op32(struct bc_context_s *ctx, reg_t op)
+extern inline void
+bc_unpack_swap_op32(struct bc_context_s *ctx, reg_t op)
 {
   uint_fast8_t c = op >> 4;
   bc_reg_t *t = ctx->v + (op & 15);
@@ -401,8 +407,8 @@ void bc_unpack_swap_op32(struct bc_context_s *ctx, reg_t op)
 }
 
 # if INT_REG_SIZE > 32 || defined(CONFIG_MUTEK_BYTECODE_VM64)
-void bc_unpack_op32(struct bc_context_s *ctx, reg_t op);
-void bc_unpack_op32(struct bc_context_s *ctx, reg_t op)
+extern inline void
+bc_unpack_op32(struct bc_context_s *ctx, reg_t op)
 {
   uint_fast8_t c = op >> 4;
   bc_reg_t *t = ctx->v + (op & 15);
@@ -410,16 +416,16 @@ void bc_unpack_op32(struct bc_context_s *ctx, reg_t op)
 }
 # endif
 
-void bc_swap_op16(struct bc_context_s *ctx, reg_t op);
-void bc_swap_op16(struct bc_context_s *ctx, reg_t op)
+extern inline void
+bc_swap_op16(struct bc_context_s *ctx, reg_t op)
 {
   uint_fast8_t c = op >> 4;
   bc_reg_t *t = ctx->v + (op & 15);
   bc_swap16(t, c);
 }
 
-void bc_swap_op32(struct bc_context_s *ctx, reg_t op);
-void bc_swap_op32(struct bc_context_s *ctx, reg_t op)
+extern inline void
+bc_swap_op32(struct bc_context_s *ctx, reg_t op)
 {
   uint_fast8_t c = op >> 4;
   bc_reg_t *t = ctx->v + (op & 15);
@@ -430,18 +436,73 @@ void bc_swap_op32(struct bc_context_s *ctx, reg_t op)
 
 #ifdef CONFIG_MUTEK_BYTECODE_VM
 
-__attribute__((noinline))
-static void bc_run_packing(struct bc_context_s *ctx, uint16_t op)
-{
-  uint_fast8_t c = ((op >> 8) & 0x7) + 1;
-  uint_fast8_t r = (op & 0xf);
-  bc_reg_t *t = ctx->v + r;
-#ifdef CONFIG_MUTEK_BYTECODE_SANDBOX
-  if (ctx->sandbox && r + c > 16)
-    return;
+#define BC_DISPATCH(name) ((&&dispatch_##name - &&dispatch_begin))
+#define BC_DISPATCH_GOTO(index) goto *(&&dispatch_begin + dispatch[index])
+typedef int16_t bs_dispatch_t;
+
+#if (INT_REG_SIZE > 32 || defined(CONFIG_MUTEK_BYTECODE_VM64)) \
+  && defined(CONFIG_MUTEK_BYTECODE_SANDBOX)
+# define BC_CLAMP32(sandbox, x) do { if (sandbox) (x) = (uint32_t)(x); } while (0)
+#else
+# define BC_CLAMP32(sandbox, x) do { } while (0)
 #endif
-  assert(r + c <= 16);
-  op = (op >> 4) & 0xf;
+
+#ifdef CONFIG_MUTEK_BYTECODE_SANDBOX
+
+error_t bc_set_sandbox_pc(struct bc_context_s *ctx, uint32_t pc)
+{
+  assert(ctx->sandbox);
+  const struct bc_descriptor_s * __restrict__ desc = ctx->desc;
+  size_t size = desc->flags & BC_FLAGS_SIZEMASK;
+
+  if (pc >= size || pc & 1)
+    return -ERANGE;
+
+#if CONFIG_MUTEK_BYTECODE_BREAKPOINTS > 0
+  ctx->bp_skip = 0;
+#endif
+  ctx->vpc = (uint8_t*)ctx->desc->code + pc;
+  return 0;
+}
+
+inline uintptr_t
+bc_translate_op_addr(const struct bc_descriptor_s * __restrict__ desc,
+                     struct bc_context_s *ctx, bc_reg_t addr,
+                     uint_fast32_t width, uint8_t nocode)
+{
+  if (addr & 0x80000000)    /* rw data segment */
+    {
+      /* address translation */
+      addr &= ctx->data_addr_mask;
+      addr += ctx->data_base;
+    }
+  else                      /* code segment */
+    {
+      if (nocode)
+        return 0;
+
+      size_t size = desc->flags & BC_FLAGS_SIZEMASK;
+      if (addr + width > size)
+        return 0;
+
+      /* address translation */
+      addr += (uintptr_t)desc->code;
+    }
+
+  if (addr & (width - 1))       /* not aligned */
+    return 0;
+
+  return addr;
+}
+
+#endif
+
+__attribute__((noinline))
+static void bc_run_packing(struct bc_context_s *ctx,
+                           uint_fast8_t c, uint_fast8_t r,
+                           uint_fast8_t op)
+{
+  bc_reg_t *t = ctx->v + r;
 
   switch (op)
     {
@@ -507,69 +568,60 @@ static void bc_run_packing(struct bc_context_s *ctx, uint16_t op)
     }
 }
 
-#define BC_DISPATCH(name) ((&&dispatch_##name - &&dispatch_begin))
-#define BC_DISPATCH_GOTO(index) goto *(&&dispatch_begin + dispatch[index])
-typedef int16_t bs_dispatch_t;
-
-#if (INT_REG_SIZE > 32 || defined(CONFIG_MUTEK_BYTECODE_VM64)) \
-  && defined(CONFIG_MUTEK_BYTECODE_SANDBOX)
-# define BC_CLAMP32(x) do { if (ctx->sandbox) (x) = (uint32_t)(x); } while (0)
-#else
-# define BC_CLAMP32(x) do { } while (0)
-#endif
-
 #ifdef CONFIG_MUTEK_BYTECODE_SANDBOX
-
-error_t bc_set_sandbox_pc(struct bc_context_s *ctx, uint32_t pc)
-{
-  assert(ctx->sandbox);
-  const struct bc_descriptor_s * __restrict__ desc = ctx->desc;
-  size_t size = desc->flags & BC_FLAGS_SIZEMASK;
-
-  if (pc >= size || pc & 1)
-    return -ERANGE;
+# define BC_CONFIG_SANDBOX(...) __VA_ARGS__
+# define BC_CONFIG_NOT_SANDBOX(...)
+#else
+# define BC_CONFIG_SANDBOX(...)
+# define BC_CONFIG_NOT_SANDBOX(...) __VA_ARGS__
+#endif
 
 #if CONFIG_MUTEK_BYTECODE_BREAKPOINTS > 0
-  ctx->bp_skip = 0;
-#endif
-  ctx->vpc = (uint8_t*)ctx->desc->code + pc;
-  return 0;
-}
-
-inline uintptr_t
-bc_translate_op_addr(const struct bc_descriptor_s * __restrict__ desc,
-                     struct bc_context_s *ctx, bc_reg_t addr,
-                     uint_fast32_t width, uint8_t nocode)
-{
-  if (addr & 0x80000000)    /* rw data segment */
-    {
-      /* address translation */
-      addr &= ctx->data_addr_mask;
-      addr += ctx->data_base;
-    }
-  else                      /* code segment */
-    {
-      if (nocode)
-        return 0;
-
-      size_t size = desc->flags & BC_FLAGS_SIZEMASK;
-      if (addr + width > size)
-        return 0;
-
-      /* address translation */
-      addr += (uintptr_t)desc->code;
-    }
-
-  if (addr & (width - 1))       /* not aligned */
-    return 0;
-
-  return addr;
-}
-
+# define BC_CONFIG_BREAKPOINTS(...) __VA_ARGS__
+#else
+# define BC_CONFIG_BREAKPOINTS(...)
 #endif
 
+#ifdef CONFIG_MUTEK_BYTECODE_TRACE
+# define BC_CONFIG_TRACE(...) __VA_ARGS__
+#else
+# define BC_CONFIG_TRACE(...)
+#endif
+
+#ifdef CONFIG_MUTEK_BYTECODE_NATIVE
+# define BC_CONFIG_NATIVE(...) __VA_ARGS__
+#else
+# define BC_CONFIG_NATIVE(...)
+#endif
+
+#ifdef CONFIG_MUTEK_BYTECODE_DEBUG
+# define BC_CONFIG_DEBUG(...) __VA_ARGS__
+#else
+# define BC_CONFIG_DEBUG(...)
+#endif
+
+#if INT_REG_SIZE > 32 || defined(CONFIG_MUTEK_BYTECODE_VM64)
+# define BC_CONFIG_64(...) __VA_ARGS__
+# define BC_CONFIG_NOT_64(...)
+#else
+# define BC_CONFIG_64(...)
+# define BC_CONFIG_NOT_64(...) __VA_ARGS__
+#endif
+
+#if INT_PTR_SIZE == 16
+# define BC_NATIVE_PTR_NA_LOAD(x) endian_16_na_load(x)
+#endif
+#if INT_PTR_SIZE == 32
+# define BC_NATIVE_PTR_NA_LOAD(x) endian_32_na_load(x)
+#endif
+#if INT_PTR_SIZE == 64
+# define BC_NATIVE_PTR_NA_LOAD(x) endian_64_na_load(x)
+#endif
+
+/* backslash-region-begin */
+#define BC_VM_GEN(fcname, sandbox)
 __attribute__((noinline))
-static uint_fast8_t bc_run_ldst(const struct bc_descriptor_s * __restrict__ desc,
+static uint_fast8_t bc_run_##fcname##_ldst(const struct bc_descriptor_s * __restrict__ desc,
                                 struct bc_context_s *ctx, const uint16_t **pc,
                                 uint16_t op)
 {
@@ -592,33 +644,37 @@ static uint_fast8_t bc_run_ldst(const struct bc_descriptor_s * __restrict__ desc
       else                      /* BC_STnD */
         {
           *addrp -= w;
-          BC_CLAMP32(*addrp);
+          BC_CLAMP32(sandbox, *addrp);
           addr = *addrp;
         }
     }
   else if (inc)              /* BC_LDnI/BC_STnI */
     {
       *addrp += w;
-      BC_CLAMP32(*addrp);
+      BC_CLAMP32(sandbox, *addrp);
     }
 
-#ifdef CONFIG_MUTEK_BYTECODE_SANDBOX
-  if (ctx->sandbox)
-    {
-      addr = bc_translate_op_addr(desc, ctx, addr, w, /* not a load */ op & 4);
-      if (!addr)
-        return -1;
-    }
-#endif
+  BC_CONFIG_SANDBOX(
+    if (sandbox)
+      {
+        addr = bc_translate_op_addr(desc, ctx, addr, w, /* not a load */ op & 4);
+        if (!addr)
+          return -1;
+      }
+  );
 
   assert((addr & (w - 1)) == 0 && "bytecode memory access not aligned");
 
   do {
     static const bs_dispatch_t dispatch[8] = {
-      [0] = BC_DISPATCH(LD8),    [1] = BC_DISPATCH(LD16),
-      [2] = BC_DISPATCH(LD32),   [3] = BC_DISPATCH(LD64),
-      [4] = BC_DISPATCH(ST8),    [5] = BC_DISPATCH(ST16),
-      [6] = BC_DISPATCH(ST32),   [7] = BC_DISPATCH(ST64),
+      [0] = BC_DISPATCH(LD8),
+      [1] = BC_DISPATCH(LD16),
+      [2] = BC_DISPATCH(LD32),
+      [3] = BC_DISPATCH(LD64),
+      [4] = BC_DISPATCH(ST8),
+      [5] = BC_DISPATCH(ST16),
+      [6] = BC_DISPATCH(ST32),
+      [7] = BC_DISPATCH(ST64),
     };
     BC_DISPATCH_GOTO(op & 7);
 
@@ -627,47 +683,47 @@ static uint_fast8_t bc_run_ldst(const struct bc_descriptor_s * __restrict__ desc
     break;
   dispatch_LD16:
     d = *(uint16_t*)addr;
-#ifdef CONFIG_MUTEK_BYTECODE_SANDBOX
-    if (ctx->sandbox)
+  BC_CONFIG_SANDBOX(
+    if (sandbox)
       d = endian_le16(d);
-#endif
+  );
     break;
   dispatch_LD32:
     d = *(uint32_t*)addr;
-#ifdef CONFIG_MUTEK_BYTECODE_SANDBOX
-    if (ctx->sandbox)
+  BC_CONFIG_SANDBOX(
+    if (sandbox)
       d = endian_le32(d);
-#endif
+  );
     break;
   dispatch_LD64:
-#ifdef CONFIG_MUTEK_BYTECODE_SANDBOX
-    if (ctx->sandbox)
+  BC_CONFIG_SANDBOX(
+    if (sandbox)
       return -1;
-#endif
+  );
     d = *(uint64_t*)addr;
     break;
   dispatch_ST8:
     *(uint8_t*)addr = d;
     return 0;
   dispatch_ST16:
-#ifdef CONFIG_MUTEK_BYTECODE_SANDBOX
-    if (ctx->sandbox)
+  BC_CONFIG_SANDBOX(
+    if (sandbox)
       d = endian_le16(d);
-#endif
+  );
     *(uint16_t*)addr = d;
     return 0;
   dispatch_ST32:
-#ifdef CONFIG_MUTEK_BYTECODE_SANDBOX
-    if (ctx->sandbox)
+  BC_CONFIG_SANDBOX(
+    if (sandbox)
       d = endian_le32(d);
-#endif
+  );
     *(uint32_t*)addr = d;
     return 0;
   dispatch_ST64:
-#ifdef CONFIG_MUTEK_BYTECODE_SANDBOX
-    if (ctx->sandbox)
+  BC_CONFIG_SANDBOX(
+    if (sandbox)
       return -1;
-#endif
+  );
     *(uint64_t*)addr = d;
     return 0;
   } while (0);
@@ -677,7 +733,7 @@ static uint_fast8_t bc_run_ldst(const struct bc_descriptor_s * __restrict__ desc
 }
 
 __attribute__((noinline))
-static bool_t bc_run_alu(struct bc_context_s *ctx, uint16_t op)
+static bool_t bc_run_##fcname##_alu(struct bc_context_s *ctx, uint16_t op)
 {
   dispatch_begin:;
   bc_reg_t *dstp = &ctx->v[op & 0xf];
@@ -690,26 +746,34 @@ static bool_t bc_run_alu(struct bc_context_s *ctx, uint16_t op)
 
   do {
     static const bs_dispatch_t dispatch[16] = {
-      [BC_OP_EQ & 0x0f] =  BC_DISPATCH(EQ),    [BC_OP_NEQ & 0x0f] = BC_DISPATCH(NEQ),
-      [BC_OP_LT & 0x0f] =  BC_DISPATCH(LT),    [BC_OP_LTS & 0x0f] = BC_DISPATCH(LTS),
-      [BC_OP_LTEQ & 0x0f] =  BC_DISPATCH(LTEQ),  [BC_OP_LTEQS & 0x0f] = BC_DISPATCH(LTEQS),
-      [BC_OP_ADD & 0x0f] = BC_DISPATCH(ADD),   [BC_OP_SUB & 0x0f] = BC_DISPATCH(SUB),
-      [BC_OP_OR & 0x0f]  = BC_DISPATCH(OR),    [BC_OP_XOR & 0x0f] = BC_DISPATCH(XOR),
-      [BC_OP_AND & 0x0f] = BC_DISPATCH(AND),   [BC_OP_ANDN & 0x0f] = BC_DISPATCH(ANDN),
-      [BC_OP_SHL & 0x0f] = BC_DISPATCH(SHL),   [BC_OP_SHR & 0x0f] = BC_DISPATCH(SHR),
-      [BC_OP_MUL & 0x0f] = BC_DISPATCH(MUL),   [BC_OP_MOV & 0x0f] = BC_DISPATCH(MOV),
+      [BC_OP_EQ & 0x0f] =  BC_DISPATCH(EQ),
+      [BC_OP_NEQ & 0x0f] = BC_DISPATCH(NEQ),
+      [BC_OP_LT & 0x0f] =  BC_DISPATCH(LT),
+      [BC_OP_LTS & 0x0f] = BC_DISPATCH(LTS),
+      [BC_OP_LTEQ & 0x0f] =  BC_DISPATCH(LTEQ),
+      [BC_OP_LTEQS & 0x0f] = BC_DISPATCH(LTEQS),
+      [BC_OP_ADD & 0x0f] = BC_DISPATCH(ADD),
+      [BC_OP_SUB & 0x0f] = BC_DISPATCH(SUB),
+      [BC_OP_OR & 0x0f]  = BC_DISPATCH(OR),
+      [BC_OP_XOR & 0x0f] = BC_DISPATCH(XOR),
+      [BC_OP_AND & 0x0f] = BC_DISPATCH(AND),
+      [BC_OP_ANDN & 0x0f] = BC_DISPATCH(ANDN),
+      [BC_OP_SHL & 0x0f] = BC_DISPATCH(SHL),
+      [BC_OP_SHR & 0x0f] = BC_DISPATCH(SHR),
+      [BC_OP_MUL & 0x0f] = BC_DISPATCH(MUL),
+      [BC_OP_MOV & 0x0f] = BC_DISPATCH(MOV)
     };
     BC_DISPATCH_GOTO(op & 0x0f);
 
   dispatch_ADD:
     dst += src;
-    BC_CLAMP32(dst);
+    BC_CLAMP32(sandbox, dst);
     break;
   dispatch_SUB:
     if (!o)
       dst = 0;
     dst -= src;
-    BC_CLAMP32(dst);
+    BC_CLAMP32(sandbox, dst);
     break;
   dispatch_MUL:
     dst = (uint32_t)(dst * src);
@@ -724,9 +788,9 @@ static bool_t bc_run_alu(struct bc_context_s *ctx, uint16_t op)
     if (o)
       dst = (uint32_t)(dst ^ src);
     else
-#ifdef CONFIG_MUTEK_BYTECODE_SANDBOX
-      if (!ctx->sandbox)                   /* ccall */
-#endif
+  BC_CONFIG_SANDBOX(
+      if (!sandbox)                   /* ccall */
+  )
         ((bc_ccall_function_t*)(uintptr_t)src)(ctx);
     break;
   dispatch_AND:
@@ -772,42 +836,39 @@ static bool_t bc_run_alu(struct bc_context_s *ctx, uint16_t op)
   return 0;
 }
 
-bc_opcode_t bc_run_vm(struct bc_context_s *ctx)
+bc_opcode_t bc_run_##fcname(struct bc_context_s *ctx)
 {
   const struct bc_descriptor_s * __restrict__ desc = ctx->desc;
   const uint16_t *pc = (void*)(ctx->pc & (intptr_t)-2);
   bool_t skip = ctx->pc & 1;
   uint16_t op = 0;
-#ifdef CONFIG_MUTEK_BYTECODE_SANDBOX
-  int_fast16_t max_cycles = ctx->max_cycles;
 
-  if (desc->flags & BC_FLAGS_NATIVE)
-    return BC_RUN_STATUS_FAULT;
-  if (!!(desc->flags & BC_FLAGS_SANDBOX) ^ ctx->sandbox)
-    return BC_RUN_STATUS_FAULT;
-#else
-  if (desc->flags & (BC_FLAGS_SANDBOX | BC_FLAGS_NATIVE))
-    return BC_RUN_STATUS_FAULT;
-#endif
+  BC_CONFIG_SANDBOX(
+    int_fast16_t max_cycles = ctx->max_cycles;
 
-#if defined(CONFIG_MUTEK_BYTECODE_SANDBOX) || !defined(CONFIG_RELEASE)
-  const size_t size = desc->flags & BC_FLAGS_SIZEMASK;
-  const uint16_t *code_end = (uint16_t*)desc->code + (size >> 1);
-#endif
+    if (desc->flags & BC_FLAGS_NATIVE)
+      return BC_RUN_STATUS_FAULT;
+    if (!!(desc->flags & BC_FLAGS_SANDBOX) ^ sandbox)
+      return BC_RUN_STATUS_FAULT;
 
-  const uintptr_t code_offset =
-#if defined(CONFIG_MUTEK_BYTECODE_SANDBOX)
-    ctx->sandbox ? (uintptr_t)desc->code :
-#endif
-    0;
+    const size_t size = desc->flags & BC_FLAGS_SIZEMASK;
+    const uint16_t *code_end = (uint16_t*)desc->code + (size >> 1);
+    const uintptr_t code_offset = sandbox ? (uintptr_t)desc->code : 0;
+  );
+
+  BC_CONFIG_NOT_SANDBOX(
+    if (desc->flags & (BC_FLAGS_SANDBOX | BC_FLAGS_NATIVE))
+      return BC_RUN_STATUS_FAULT;
+    const uintptr_t code_offset = 0;
+  );
 
   for (;; pc++)
     {
-#if defined(CONFIG_MUTEK_BYTECODE_SANDBOX) || !defined(CONFIG_RELEASE)
-      /* check pc upper bound */
-      if (pc + 1 > code_end)
-        goto err_pc;
-#endif
+      BC_CONFIG_SANDBOX(
+        /* check pc upper bound */
+        if (sandbox && pc + 1 > code_end)
+          goto err_pc;
+      );
 
       op = endian_le16(*pc);
 
@@ -817,11 +878,11 @@ bc_opcode_t bc_run_vm(struct bc_context_s *ctx)
         {
           cst_len += (0x1010101014131211ULL >> ((op >> 6) & 0x3c)) & 15;
 
-#if defined(CONFIG_MUTEK_BYTECODE_SANDBOX) || !defined(CONFIG_RELEASE)
-          /* check upper bound again with extra words */
-          if (pc + 1 + cst_len > code_end)
-            goto err_pc;
-#endif
+          BC_CONFIG_SANDBOX(
+            /* check upper bound again with extra words */
+            if (sandbox && pc + 1 + cst_len > code_end)
+              goto err_pc;
+          );
         }
 
       if (skip)
@@ -832,7 +893,7 @@ bc_opcode_t bc_run_vm(struct bc_context_s *ctx)
           continue;
         }
 
-#if CONFIG_MUTEK_BYTECODE_BREAKPOINTS > 0
+  BC_CONFIG_BREAKPOINTS(
       uint16_t bp_mask = ctx->bp_mask;
       uint16_t bp_skip = ctx->bp_skip;
       ctx->bp_skip = 0;
@@ -855,37 +916,42 @@ bc_opcode_t bc_run_vm(struct bc_context_s *ctx)
                 }
             }
         }
-#endif
+  );
 
-#ifdef CONFIG_MUTEK_BYTECODE_SANDBOX
-      if (max_cycles == 0)
+  BC_CONFIG_SANDBOX(
+      if (sandbox)
         {
-          ctx->vpc = pc;
-          ctx->max_cycles = 0;
-          return BC_RUN_STATUS_CYCLES;
+          if (max_cycles == 0)
+            {
+              ctx->vpc = pc;
+              ctx->max_cycles = 0;
+              return BC_RUN_STATUS_CYCLES;
+            }
+          max_cycles--;
         }
-      max_cycles -= ctx->sandbox;
-#endif
+  );
 
-#ifdef CONFIG_MUTEK_BYTECODE_TRACE
+  BC_CONFIG_TRACE(
       if (ctx->trace)
         {
           if (ctx->trace_regs)
             bc_dump_regs(ctx);
           bc_dump_op(ctx, pc);
         }
-#endif
+  );
 
       /* custom op */
       if (op & 0x8000)
         {
-#ifdef CONFIG_MUTEK_BYTECODE_NATIVE
-          ctx->skip = 1;
-#endif
+          BC_CONFIG_NATIVE(
+            ctx->skip = 1;
+          );
+
           ctx->vpc = pc + 1;
-#ifdef CONFIG_MUTEK_BYTECODE_SANDBOX
-          ctx->max_cycles = max_cycles;
-#endif
+          BC_CONFIG_SANDBOX(
+            if (sandbox)
+              ctx->max_cycles = max_cycles;
+          );
           return op;
         }
 
@@ -893,10 +959,14 @@ bc_opcode_t bc_run_vm(struct bc_context_s *ctx)
 
       do {
 	static const bs_dispatch_t dispatch[8] = {
-	  [BC_OP_ADD8 >> 4] = BC_DISPATCH(add8), [BC_OP_CST8 >> 4] = BC_DISPATCH(cst8),
-	  [BC_OP_JMP  >> 4]  = BC_DISPATCH(jmp), [BC_OP_LOOP >> 4] = BC_DISPATCH(loop_pack),
-	  [BC_OP_FMT1 >> 4] = BC_DISPATCH(alu),  [BC_OP_FMT2 >> 4] = BC_DISPATCH(fmt2),
-	  [BC_OP_LD >> 4]   = BC_DISPATCH(ldst), [BC_OP_CST >> 4] = BC_DISPATCH(cstn_call),
+	  [BC_OP_ADD8 >> 4] = BC_DISPATCH(add8),
+          [BC_OP_CST8 >> 4] = BC_DISPATCH(cst8),
+	  [BC_OP_JMP  >> 4]  = BC_DISPATCH(jmp),
+          [BC_OP_LOOP >> 4] = BC_DISPATCH(loop_pack),
+	  [BC_OP_FMT1 >> 4] = BC_DISPATCH(alu),
+          [BC_OP_FMT2 >> 4] = BC_DISPATCH(fmt2),
+	  [BC_OP_LD >> 4]   = BC_DISPATCH(ldst),
+          [BC_OP_CST >> 4] = BC_DISPATCH(cstn_call),
 	};
 	BC_DISPATCH_GOTO((op >> 12) & 0x7);
 
@@ -906,35 +976,34 @@ bc_opcode_t bc_run_vm(struct bc_context_s *ctx)
           if (x)                /* add8 */
             {
               *dst += (bc_sreg_t)x;
-              BC_CLAMP32(*dst);
+              BC_CLAMP32(sandbox, *dst);
               break;
             }
           if (op == 0)          /* end */
             {
               ctx->vpc = pc;
-#ifdef CONFIG_MUTEK_BYTECODE_SANDBOX
-              ctx->max_cycles = max_cycles;
-#endif
+              BC_CONFIG_SANDBOX(
+                if (sandbox)
+                  ctx->max_cycles = max_cycles;
+              );
               return BC_RUN_STATUS_END;
             }
-#ifdef CONFIG_MUTEK_BYTECODE_DEBUG
+        BC_CONFIG_DEBUG(
           else if (op == 1)     /* dump */
             bc_dump_pc(ctx, pc);
-#endif
-#ifdef CONFIG_MUTEK_BYTECODE_TRACE
+        )
+        BC_CONFIG_TRACE(
           else if (op & 8)      /* trace */
             {
               ctx->trace = op & 1;
               ctx->trace_regs = (op & 2) >> 1;
             }
-#endif
+        )
           else if (op & 2)
             {
               if ((op & 1)      /* abort */
-#ifdef CONFIG_MUTEK_BYTECODE_SANDBOX
-                  && !ctx->sandbox
-#endif
-                  )
+                BC_CONFIG_SANDBOX( && !sandbox )
+              )
                 abort();
               goto err_die;   /* die */
             }
@@ -963,7 +1032,14 @@ bc_opcode_t bc_run_vm(struct bc_context_s *ctx)
       dispatch_loop_pack: {
           if (op & 0x800)         /* packing */
             {
-              bc_run_packing(ctx, op);
+              uint_fast8_t c = ((op >> 8) & 0x7) + 1;
+              uint_fast8_t r = (op & 0xf);
+              BC_CONFIG_SANDBOX(
+                if (sandbox && r + c > 16)
+                  break;
+              );
+              assert(r + c <= 16);
+              bc_run_packing(ctx, c, r, (op >> 4) & 0xf);
               break;
             }
 
@@ -974,7 +1050,7 @@ bc_opcode_t bc_run_vm(struct bc_context_s *ctx)
 	    {
 	      if (!--(*dst))
 		break;
-              BC_CLAMP32(*dst);
+              BC_CLAMP32(sandbox, *dst);
 	    }
 	  else if (*dst > 0)
 	    {
@@ -986,7 +1062,7 @@ bc_opcode_t bc_run_vm(struct bc_context_s *ctx)
 	}
 
       dispatch_alu:
-	skip = bc_run_alu(ctx, op);
+	skip = bc_run_##fcname##_alu(ctx, op);
 	break;
 
       dispatch_fmt2: {
@@ -998,7 +1074,7 @@ bc_opcode_t bc_run_vm(struct bc_context_s *ctx)
                   bc_reg_t mask = 0xffffffff >> bit;
                   bc_reg_t x = ((uint32_t)(op & 0x0200) << 22) >> bit;
                   *dst = ((*dst & mask) ^ x) - x;
-                  BC_CLAMP32(*dst);
+                  BC_CLAMP32(sandbox, *dst);
                 }
               else
                 *dst = op & 0x0200 ? (uint32_t)(*dst >> bit)
@@ -1021,19 +1097,11 @@ bc_opcode_t bc_run_vm(struct bc_context_s *ctx)
 	    {
               if ((op & 0x0070) == 0x0000) /* gaddr */
                 {
-#ifdef CONFIG_MUTEK_BYTECODE_SANDBOX
-                  if (ctx->sandbox)
-                    goto err_ret;
-#endif
-#if INT_PTR_SIZE == 16
-                  *dst = endian_16_na_load(++pc);
-#endif
-#if INT_PTR_SIZE == 32
-                  *dst = endian_32_na_load(++pc);
-#endif
-#if INT_PTR_SIZE == 64
-                  *dst = endian_64_na_load(++pc);
-#endif
+                  BC_CONFIG_SANDBOX(
+                    if (sandbox)
+                      goto err_ret;
+                  );
+                  *dst = BC_NATIVE_PTR_NA_LOAD(++pc);
                   pc += INT_PTR_SIZE / 16 - 1;
                   break;
                 }
@@ -1048,7 +1116,7 @@ bc_opcode_t bc_run_vm(struct bc_context_s *ctx)
 	      while (c--)
 		x = (x << 16) | endian_le16(*++pc);
 
-              BC_CLAMP32(x);
+              BC_CLAMP32(sandbox, x);
 
               if (op & 0x0010)  /* cst16, cst32... */
                 {
@@ -1058,23 +1126,24 @@ bc_opcode_t bc_run_vm(struct bc_context_s *ctx)
 
               if (op & 0x0080)  /* pc relative */
                 {
-#if INT_REG_SIZE > 32 || defined(CONFIG_MUTEK_BYTECODE_VM64)
-                  bc_reg_t m = (bc_reg_t)0x8000 << (cm1 << 4); /* sign extend x */
-                  x = rpc + (m ^ x) - m;
-#else
-                  if (cm1 == 0)
-                    x = (bc_sreg_t)(int16_t)x;
-                  x += rpc;
-#endif
+                  BC_CONFIG_64(
+                    bc_reg_t m = (bc_reg_t)0x8000 << (cm1 << 4); /* sign extend x */
+                    x = rpc + (m ^ x) - m;
+                  );
+                  BC_CONFIG_NOT_64(
+                    if (cm1 == 0)
+                      x = (bc_sreg_t)(int16_t)x;
+                    x += rpc;
+                  );
                 }
 
               if (op & 0x0020)  /* laddr */
                 {
-#ifdef CONFIG_MUTEK_BYTECODE_SANDBOX
-                  if (ctx->sandbox)
-                    x |= (op & 0x40) << 25; /* bit 31 */
-                  else
-#endif
+                  BC_CONFIG_SANDBOX(
+                    if (sandbox)
+                      x |= (op & 0x40) << 25; /* bit 31 */
+                    else
+                 )
                     x += (uintptr_t)desc->code;
                   *dst = x;
                   break;
@@ -1090,15 +1159,15 @@ bc_opcode_t bc_run_vm(struct bc_context_s *ctx)
         }
 
       dispatch_ldst:
-	if (bc_run_ldst(desc, ctx, &pc, op))
+	if (bc_run_##fcname##_ldst(desc, ctx, &pc, op))
           goto err_ret;
 	break;
 
       check_pc:
-#if defined(CONFIG_MUTEK_BYTECODE_SANDBOX) || !defined(CONFIG_RELEASE)
-        if (pc + 1 < (uint16_t*)desc->code || ((uintptr_t)pc & 1))
-          goto err_pc;
-#endif
+        BC_CONFIG_SANDBOX(
+          if (sandbox && (pc + 1 < (uint16_t*)desc->code || ((uintptr_t)pc & 1)))
+            goto err_pc;
+        );
 	break;
 
       } while (0);
@@ -1106,25 +1175,46 @@ bc_opcode_t bc_run_vm(struct bc_context_s *ctx)
     }
 
  err_pc:
-#ifdef CONFIG_MUTEK_BYTECODE_SANDBOX
-  if (ctx->sandbox)
-    goto err_ret;
-#endif
+  BC_CONFIG_SANDBOX(
+    if (sandbox)
+      goto err_ret;
+  );
   assert(!"bytecode pc out of range");
 
  err_die:
-#ifdef CONFIG_MUTEK_BYTECODE_DEBUG
-  printk("bytecode: die %p\n", pc);
-  bc_dump_pc(ctx, pc);
-#endif
+  BC_CONFIG_DEBUG(
+    printk("bytecode: die %p\n", pc);
+    bc_dump_pc(ctx, pc);
+  );
 
  err_ret:
   ctx->vpc = pc;
-#ifdef CONFIG_MUTEK_BYTECODE_SANDBOX
-  ctx->max_cycles = max_cycles;
-#endif
+  BC_CONFIG_SANDBOX(
+    if (sandbox)
+      ctx->max_cycles = max_cycles;
+  );
   return BC_RUN_STATUS_FAULT;
 }
+/* backslash-region-end */
+
+#ifdef CONFIG_MUTEK_BYTECODE_VM_SINGLE
+# ifdef CONFIG_MUTEK_BYTECODE_SANDBOX
+BC_VM_GEN(vm, ctx->sandbox);
+bc_opcode_t bc_run_sandbox(struct bc_context_s *ctx)
+{
+  return bc_run_vm(ctx);
+}
+#else
+BC_VM_GEN(vm, 0);
+#endif
+
+#else /* !CONFIG_MUTEK_BYTECODE_VM_SINGLE */
+
+# ifdef CONFIG_MUTEK_BYTECODE_SANDBOX
+BC_VM_GEN(sandbox, 1);
+# endif
+BC_VM_GEN(vm, 0);
+#endif
 
 #endif
 

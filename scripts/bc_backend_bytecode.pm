@@ -20,7 +20,7 @@ sub out_begin {
            "${main::bc_name}_bytecode:\n".
 	   # struct bc_descriptor_s
 	   addr( "_${main::bc_name}_bytecode" ).
-	   addr( "bc_run_vm" ).
+	   addr( $main::bcflags & 0x02000000 ? "bc_run_sandbox" : "bc_run_vm" ).
 	   "    .4byte $main::bcflags\n".
 	   "_${main::bc_name}_bytecode:\n";
 }
