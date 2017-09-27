@@ -253,8 +253,7 @@ static error_t efm32_dma_loop_setup(struct efm32_dma_context_s *pv,
                                     struct dev_dma_rq_s * rq,
                                     uint8_t chan)
 {
-  if (rq->desc_count_m1 ||
-      rq->type != DEV_DMA_MEM_MEM)
+  if (rq->desc_count_m1) 
     return -ENOTSUP;
 
   uintptr_t ctrladdr = (uintptr_t)pv->primary;
@@ -279,8 +278,25 @@ static error_t efm32_dma_loop_setup(struct efm32_dma_context_s *pv,
   cpu_mem_write_32(ctrladdr + DMA_CHANNEL_DST_DATA_END_ADDR, endian_le32(ctrl.dst));
 
   uint32_t width = EFM32_DMA_LOOP_WIDTH(desc->src.mem.size);
-  uint32_t src_stride = desc->src.mem.stride * (1 << desc->src.mem.width);
-  uint32_t dst_stride = desc->dst.mem.stride * (1 << desc->src.mem.width);
+  uint32_t src_stride = desc->src.mem.stride << desc->src.mem.width;
+  uint32_t dst_stride = desc->dst.mem.stride << desc->src.mem.width;
+
+  switch(rq->type)
+    {
+    case DEV_DMA_MEM_MEM:
+      break;
+    case DEV_DMA_MEM_REG:  
+    case DEV_DMA_MEM_REG_CONT:
+      dst_stride = 0;
+      break;
+    case DEV_DMA_REG_MEM:
+    case DEV_DMA_REG_MEM_CONT:
+      src_stride = 0;
+      break;
+    default:
+      return -EINVAL;
+    }
+
   uint32_t height = rq->loop_count_m1;
 
   cpu_mem_write_32(pv->addr + EFM32_DMA_LOOP_ADDR(0), endian_le32(width));
