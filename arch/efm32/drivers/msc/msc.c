@@ -39,16 +39,24 @@ uint32_t efm32_flash_write(uintptr_t msc_addr, uintptr_t flash_addr,
 
 DRIVER_PV(struct efm32_msc_context_s
 {
-  uintptr_t                 addr;
-  uint8_t                   page_log2;
 });
 
-#define EFM32_MSC_ADDR 0x400c0000
+#if (CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_XG1) ||\
+    (CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_XG12)
+#  define EFM32_MSC_ADDR 0x400e0000
+#elif CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFM
+#  define EFM32_MSC_ADDR 0x400c0000
+#else
+#  error
+#endif
+
 
 static DEV_MEM_INFO(efm32_msc_info)
 {
+#if 0
   struct device_s *dev = accessor->dev;
   struct efm32_msc_context_s *pv = dev->drv_pv;
+#endif
 
   if (band_index > 0)
     return -ENOENT;
@@ -73,12 +81,16 @@ static DEV_MEM_INFO(efm32_msc_info)
       info->flags |= DEV_MEM_WRITABLE | DEV_MEM_ERASE_ONE |
         DEV_MEM_MAPPED_READ | DEV_MEM_PARTIAL_WRITE | DEV_MEM_PARTIAL_READ |
         DEV_MEM_CROSS_READ;
+#if (CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFM)
       info->erase_cycles_p = 12; /* 20480 cycles */
+#else
+      info->erase_cycles_p = 11; /* 10240 cycles */
+#endif
       info->erase_cycles_m = 5;
       if (accessor->number == 1)
         {
-          info->page_log2 = pv->page_log2;
-          info->size = (cpu_mem_read_16(0x0fe081f8) << 10) >> info->page_log2;
+          info->page_log2 = EFM32_FLASH_PAGE_SIZE;
+          info->size = CONFIG_EFM32_FLASHSIZE >> EFM32_FLASH_PAGE_SIZE;
           info->map_base = 0x00000000;
         }
       else
@@ -86,12 +98,12 @@ static DEV_MEM_INFO(efm32_msc_info)
 #if CONFIG_EFM32_FAMILY == EFM32_FAMILY_GIANT
           info->page_log2 = 11;
 #else
-          info->page_log2 = pv->page_log2;
+          info->page_log2 = EFM32_FLASH_PAGE_SIZE;
 #endif
           info->size = 1;
           info->map_base = 0x0fe00000;
         }
-      info->erase_log2 = info->page_log2;
+      info->erase_log2 = EFM32_FLASH_PAGE_SIZE;
       break;
     default:
       UNREACHABLE();
@@ -143,8 +155,10 @@ static uint32_t efm32_msc_flash_op(uintptr_t base, uint_fast8_t page_log2, struc
 
 static DEV_MEM_REQUEST(efm32_msc_request)
 {
+#if 0
   struct device_s *dev = accessor->dev;
   struct efm32_msc_context_s *pv = dev->drv_pv;
+#endif
 
   rq->err = 0;
   switch (accessor->number)
@@ -155,11 +169,15 @@ static DEV_MEM_REQUEST(efm32_msc_request)
         dev_mem_mapped_op_helper(0x20000000, 0, rq);
       break;
     case 1:                     /* FLASH code */
-      if (efm32_msc_flash_op(0x00000000, pv->page_log2, rq))
+      if (efm32_msc_flash_op(0x00000000, EFM32_FLASH_PAGE_SIZE, rq))
         rq->err = -EIO;
       break;
     case 2:                     /* FLASH userdata */
-      if (efm32_msc_flash_op(0x0fe00000, pv->page_log2, rq))
+#if CONFIG_EFM32_FAMILY == EFM32_FAMILY_GIANT
+      if (efm32_msc_flash_op(0x0fe00000, 11, rq))
+#else
+      if (efm32_msc_flash_op(0x0fe00000, EFM32_FLASH_PAGE_SIZE, rq))
+#endif
         rq->err = -EIO;
       break;
     default:
@@ -189,8 +207,8 @@ static DEV_USE(efm32_msc_use)
 
 static DEV_INIT(efm32_msc_init)
 {
+#if 0
   struct efm32_msc_context_s	*pv;
-
 
   /* allocate private driver data */
   pv = mem_alloc(sizeof(*pv), (mem_scope_sys));
@@ -198,26 +216,31 @@ static DEV_INIT(efm32_msc_init)
 
   if (!pv)
     return -ENOMEM;
+#endif
 
-  if (device_res_get_uint(dev, DEV_RES_MEM, 0, &pv->addr, NULL))
-    goto err_mem;
+  uintptr_t                 addr;
+  if (device_res_get_uint(dev, DEV_RES_MEM, 0, &addr, NULL))
+    return -1;
+  assert(addr == EFM32_MSC_ADDR);
 
-  pv->page_log2 = (cpu_mem_read_8(0x0fe081e7) + 10) & 0xff;
-
+  assert(((cpu_mem_read_8(0x0fe081e7) + 10) & 0xff) == EFM32_FLASH_PAGE_SIZE);
 
   return 0;
 
+#if 0
  err_mem:
   mem_free(pv);
   return -1;
+#endif
 }
 
 static DEV_CLEANUP(efm32_msc_cleanup)
 {
+#if 0
   struct efm32_msc_context_s	*pv = dev->drv_pv;
 
   mem_free(pv);
-
+#endif
   return 0;
 }
 
