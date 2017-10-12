@@ -259,6 +259,7 @@
   CONFIG_DRIVER_EFM32_USART
   CONFIG_DRIVER_EFR32_DMA
   CONFIG_DRIVER_EFM32_LEUART
+  CONFIG_DRIVER_EFM32_MSC
 
   %subsection debug
     CONFIG_CPU_ARM32M_MPU_STACK_GUARD
@@ -278,7 +279,11 @@
   CONFIG_CPU_ARM32M_M_IRQ_COUNT 49
 %end
 
-%subsection efr32-mgXLNNN-*-* efr32-mgXLNNN?-*-*
+  %subsection efm32-jgXLNNN-fX-gmX
+    CONFIG_EFM32_FAMILY EFM32_FAMILY_JADE
+  %end
+
+  %subsection efr32-mgXLNNN-*-* efr32-mgXLNNN?-*-*
     CONFIG_EFM32_FAMILY EFM32_FAMILY_MIGHTY
   %end
 
@@ -393,7 +398,7 @@
 
   %subsection efm32-jgXLNNN-f1024-*
     %types sram
-    CONFIG_EFM32_RAMSIZE 0x8000
+    CONFIG_EFM32_RAMSIZE 0x40000
   %end
 
   %end
