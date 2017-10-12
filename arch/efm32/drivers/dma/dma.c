@@ -253,6 +253,8 @@ static error_t efm32_dma_loop_setup(struct efm32_dma_context_s *pv,
                                     struct dev_dma_rq_s * rq,
                                     uint8_t chan)
 {
+  assert(chan == 0);
+
   if (rq->desc_count_m1) 
     return -ENOTSUP;
 
@@ -486,7 +488,7 @@ static error_t efm32_dma_process(struct efm32_dma_context_s *pv, struct dev_dma_
 
   if (rq->loop_count_m1 && chan)
   /* Only channel 0 can be used in loop mode */
-    return 0;
+    return -ENOTSUP;
 
   assert(pv->chan[chan].rq == NULL);
 
