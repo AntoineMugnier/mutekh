@@ -59,21 +59,49 @@ void efm32_leuart_printk_init()
   /* configure CMU */
   uint32_t cmu = EFM32_CMU_ADDR;
 
-  /* Enable LFRCO */
-  cpu_mem_write_32(cmu + EFM32_CMU_OSCENCMD_ADDR, EFM32_CMU_OSCENCMD_LFRCOEN);
+  uint32_t x = endian_le32(cpu_mem_read_32(cmu + EFM32_CMU_STATUS_ADDR));
 
-  /* Wait LFRCO for stabilizing */
-  while (!(cpu_mem_read_32(cmu + EFM32_CMU_STATUS_ADDR) & EFM32_CMU_STATUS_LFRCORDY))
-        ;
+  if ((x & EFM32_CMU_STATUS_LFXOENS) && 
+      (x & EFM32_CMU_STATUS_LFXORDY))
+    /* Select LFXO for CLKLFB */
+    {
+#if (CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_XG1) ||\
+    (CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_XG12)
+      x = endian_le32(EFM32_CMU_LFBCLKSEL_LFB(LFXO));
+      cpu_mem_write_32(cmu + EFM32_CMU_LFBCLKSEL_ADDR, x);
+#elif CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFM
+      x = cpu_mem_read_32(cmu + EFM32_CMU_LFCLKSEL_ADDR);
+      EFM32_CMU_LFCLKSEL_LFB_SET(x, LFXO);
+      cpu_mem_write_32(cmu + EFM32_CMU_LFCLKSEL_ADDR, x);
+#else
+# error
+#endif
+    }
+  else
+    /* Select LFRCO for CLKLFB */
+    {
+      /* Enable LFRCO */
+      cpu_mem_write_32(cmu + EFM32_CMU_OSCENCMD_ADDR, EFM32_CMU_OSCENCMD_LFRCOEN);
+      /* Wait LFRCO for stabilizing */
+      while (!(cpu_mem_read_32(cmu + EFM32_CMU_STATUS_ADDR) & EFM32_CMU_STATUS_LFRCORDY))
+            ;
+#if (CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_XG1) ||\
+    (CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_XG12)
+      x = endian_le32(EFM32_CMU_LFBCLKSEL_LFB(LFRCO));
+      cpu_mem_write_32(cmu + EFM32_CMU_LFBCLKSEL_ADDR, x);
+#elif CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFM
+      x = cpu_mem_read_32(cmu + EFM32_CMU_LFCLKSEL_ADDR);
+      EFM32_CMU_LFCLKSEL_LFB_SET(x, LFRCO);
+      cpu_mem_write_32(cmu + EFM32_CMU_LFCLKSEL_ADDR, x);
+#else
+# error
+#endif
+    }
 
   uint32_t lfbclken;
-  uint32_t x;
 
 #if (CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_XG1) ||\
     (CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_XG12)
-  /* Select LFRCO for CLKLFB */
-  x = endian_le32(EFM32_CMU_LFBCLKSEL_LFB(LFRCO));
-  cpu_mem_write_32(cmu + EFM32_CMU_LFBCLKSEL_ADDR, x);
   /* Enable clock for GPIO and LE interface */
   x = cpu_mem_read_32(cmu + EFM32_CMU_HFBUSCLKEN0_ADDR);
   x |= EFM32_CMU_HFBUSCLKEN0_GPIO | EFM32_CMU_HFBUSCLKEN0_LE;
@@ -85,10 +113,6 @@ void efm32_leuart_printk_init()
   lfbclken = EFM32_CMU_LFBCLKEN0_LEUART0;
 
 #elif CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFM
-  /* Select LFRCO for CLKLFB */
-  x = cpu_mem_read_32(cmu + EFM32_CMU_LFCLKSEL_ADDR);
-  EFM32_CMU_LFCLKSEL_LFB_SET(x, LFRCO);
-  cpu_mem_write_32(cmu + EFM32_CMU_LFCLKSEL_ADDR, x);
   /* Enable HF peripherals clock */
   x = cpu_mem_read_32(cmu + EFM32_CMU_HFPERCLKDIV_ADDR);
   x |= EFM32_CMU_HFPERCLKDIV_HFPERCLKEN;
