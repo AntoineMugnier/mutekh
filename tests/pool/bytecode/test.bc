@@ -20,8 +20,15 @@ test_bytecode_entry:
         // trace	1, 1
 
         cst8	%3, 143
+        cst8	%2, 141
+        eq	%3, %2
+         die
+        eq	%2, %3
+         die
         cst8	%2, 143
         neq	%3, %2
+         die
+        neq	%2, %3
          die
         neq     %3, %2
          cst32	%2, 0x5678abcd, 0    // skipped
@@ -279,6 +286,17 @@ next9:
         neq	%3, %2
         die
 
+    // DIV
+        cst32	%1, 1234567, 0
+        cst16	%2, 4001, 0
+        div32   %1, %2
+        cst16	%3, 2259, 0
+        cst16	%4, 308, 0
+        neq	%1, %4
+        die
+        neq	%2, %3
+        die
+
     // ST32I, ST32, LD32
         cst32	%2, 0x12345678, 0
         mov	%1, %buf
@@ -386,6 +404,7 @@ next12:
 	die
 
     // EXTS
+	cst64	%4, 0xffffffffffffff82, 0
 	cst8	%1, 0x42
 	mov	%2, %1
 	exts	%2, 7
@@ -400,18 +419,22 @@ next12:
 	exts	%2, 7
 	eq	%1, %2
 	die
-	extz	%2, 31
-	cst32	%1, 0xffffff82, 0
-	neq	%1, %2
+	neq	%4, %2
 	die
-	cst16	%2, 0x382, 0
+	extz	%2, 31
+	eq	%1, %2
+	die
+	cst16	%2, 0x7f82, 0
 	mov	%3, %2
-	exts	%2, 10
+	exts	%2, 15
 	neq	%3, %2
 	die
-	cst64	%1, 0xffffffffffffff82, 0
-	exts	%2, 9
-	neq	%1, %2
+        cst16	%2, 0xff82, 0
+	mov	%3, %2
+	exts	%2, 15
+	eq	%3, %2
+	die
+	neq	%4, %2
 	die
 
     // MSBS
@@ -430,11 +453,6 @@ next12:
 	cst16	%1, 0x55aa, 0
 	not32	%1
 	cst32	%2, 0xffffaa55, 0
-	neq	%1, %2
-	die
-	cst8    %3, 0xf0
-	andn32    %2, %3
-	cst32	%1, 0xffffaa05, 0
 	neq	%1, %2
 	die
 
@@ -474,7 +492,7 @@ next12:
 	die
 #endif
 
-    // SHIL, SHIR
+    // SHIL, SHIR, SHIA
 	cst8	%1, 0x3c
 	shi32l    %1, 8
 	cst16	%2, 0x3c00, 0
@@ -484,12 +502,24 @@ next12:
 	cst32	%2, 0x3c000, 0
 	neq	%1, %2
 	die
-	shi32r    %1, 1
+
+        shi32r    %1, 1
 	cst32	%2, 0x1e000, 0
 	neq	%1, %2
 	die
 
-    // SHL, SHR
+        cst16	%1, 0x3bb, 0
+	shi32a  %1, 3
+        cst8	%2, 0x77
+	neq	%1, %2
+	die
+        cst32	%1, 0x800003bb, 0
+	shi32a  %1, 3
+        cst32	%2, 0xf0000077, 0
+	neq	%1, %2
+	die
+
+    // SHL, SHR, SHA
 	cst8	%1, 0xc3
 	cst8	%5, 8
 	shl32     %1, %5
@@ -501,9 +531,23 @@ next12:
 	cst32	%2, 0xc3000, 0
 	neq	%1, %2
 	die
-	cst8	%5, 1
+
+        cst8	%5, 1
 	shr32     %1, %5
 	cst32	%2, 0x61800, 0
+	neq	%1, %2
+	die
+
+        cst16	%1, 0x3bb, 0
+	cst8	%5, 3
+	sha32   %1, %5
+        cst8	%2, 0x77
+	neq	%1, %2
+	die
+        cst32	%1, 0x800003bb, 0
+	cst8	%5, 3
+	sha32   %1, %5
+        cst32	%2, 0xf0000077, 0
 	neq	%1, %2
 	die
 

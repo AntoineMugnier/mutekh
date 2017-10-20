@@ -239,17 +239,67 @@ sub parse_cmp2
     push @{$thisop->{in}}, check_reg($thisop, 1);
 
     if ( $thisop->{in}->[0] == $thisop->{in}->[1] ) {
-        error($thisop, "compare to the same register is not allowed\n");
+        error($thisop, "the same register can't be used for both operands\n");
     }
+}
+
+sub parse_eq
+{
+    my $thisop = shift;
+
+    my $a = check_reg($thisop, 0);
+    my $b = check_reg($thisop, 1);
+
+    if ( $a == $b  ) {
+        error($thisop, "the same register can't be used for both operands\n");
+    }
+
+    if ( ( $a > $b ) ^ ( $thisop->{name} eq "neq" ) ) {
+        ( $a, $b ) = ( $b, $a );
+    }
+
+    push @{$thisop->{in}}, $a;
+    push @{$thisop->{in}}, $b;
+}
+
+sub parse_mul
+{
+    my $thisop = shift;
+
+    my $a = check_reg($thisop, 0);
+    my $b = check_reg($thisop, 1);
+    push @{$thisop->{in}}, $a;
+    push @{$thisop->{in}}, $b;
+    push @{$thisop->{out}}, $a;
 }
 
 sub parse_alu
 {
     my $thisop = shift;
 
-    push @{$thisop->{in}}, check_reg($thisop, 0);
-    push @{$thisop->{in}}, check_reg($thisop, 1);
-    push @{$thisop->{out}}, check_reg($thisop, 0);
+    my $a = check_reg($thisop, 0);
+    my $b = check_reg($thisop, 1);
+    if ( $a == $b  ) {
+        error($thisop, "the same register can't be used for both operands\n");
+    }
+    push @{$thisop->{in}}, $a;
+    push @{$thisop->{in}}, $b;
+    push @{$thisop->{out}}, $a;
+}
+
+sub parse_div
+{
+    my $thisop = shift;
+
+    my $a = check_reg($thisop, 0);
+    my $b = check_reg($thisop, 1);
+    if ( $a == $b  ) {
+        error($thisop, "the same register can't be used for both operands\n");
+    }
+    push @{$thisop->{in}}, $a;
+    push @{$thisop->{in}}, $b;
+    push @{$thisop->{out}}, $a;
+    push @{$thisop->{out}}, $b;
 }
 
 sub parse_ccall
@@ -435,10 +485,25 @@ sub parse_bitop
 {
     my $thisop = shift;
 
-    push @{$thisop->{in}}, check_reg($thisop, 0);
-    push @{$thisop->{out}}, check_reg($thisop, 0);
+    my $a = check_reg($thisop, 0);
+    push @{$thisop->{in}}, $a;
+    push @{$thisop->{out}}, $a;
 
     check_num($thisop, 1, 0, 31);
+}
+
+sub parse_exts
+{
+    my $thisop = shift;
+
+    my $a = check_reg($thisop, 0);
+    push @{$thisop->{in}}, $a;
+    push @{$thisop->{out}}, $a;
+
+    my $b = check_num($thisop, 1, 0, 31);
+    if ( $b != 7 && $b != 15 && $b != 31 ) {
+        error($thisop, "only bits 7, 15 and 31 can be used as a sign bit.\n");
+    }
 }
 
 sub parse_mode
@@ -1061,7 +1126,7 @@ our %asm = (
     }),
     'eq'  => {
         words => 1, code => 0x4000, argscnt => 2,
-        parse => \&parse_cmp2, backend => ('eq'),
+        parse => \&parse_eq, backend => ('eq'),
         op_cond => 1,
     },
     'eq0'  => {
@@ -1070,9 +1135,14 @@ our %asm = (
         op_cond => 1,
     },
     'neq'  => {
-        words => 1, code => 0x4100, argscnt => 2,
-        parse => \&parse_cmp2, backend => ('neq'),
+        words => 1, code => 0x4000, argscnt => 2,
+        parse => \&parse_eq, backend => ('neq'),
         op_cond => 1,
+    },
+    'mov' => {
+        words => 1, code => 0x4100, argscnt => 2,
+        parse => \&parse_mov, backend => ('mov'),
+        op_mov => 1
     },
     'neq0'  => {
         words => 1, code => 0x4100, argscnt => 1,
@@ -1132,10 +1202,6 @@ our %asm = (
         words => 1, code => 0x4a00, argscnt => 2,
         parse => \&parse_alu2, backend => ('and')
     },
-    'andn32' => {
-        words => 1, code => 0x4b00, argscnt => 2,
-        parse => \&parse_alu2, backend => ('andn')
-    },
     'not32' => {
         words => 1, code => 0x4b00, argscnt => 1,
         parse => \&parse_alu1, backend => ('not')
@@ -1148,14 +1214,17 @@ our %asm = (
         words => 1, code => 0x4d00, argscnt => 2,
         parse => \&parse_alu, backend => ('shr'),
     },
+    'sha32' => {
+        words => 1, code => 0x4b00, argscnt => 2,
+        parse => \&parse_alu, backend => ('sha'),
+    },
     'mul32' => {
         words => 1, code => 0x4e00, argscnt => 2,
-        parse => \&parse_alu, backend => ('mul')
+        parse => \&parse_mul, backend => ('mul')
     },
-    'mov' => {
+    'div32' => {
         words => 1, code => 0x4f00, argscnt => 2,
-        parse => \&parse_mov, backend => ('mov'),
-        op_mov => 1
+        parse => \&parse_div, backend => ('div'),
     },
     'msbs32' => {
         words => 1, code => 0x4f00, argscnt => 1,
@@ -1187,12 +1256,16 @@ our %asm = (
         words => 1, code => 0x5a00, argscnt => 2,
         parse => \&parse_bitop, backend => ('shir'),
     },
+    'shi32a' => {
+        words => 1, code => 0x5c00, argscnt => 2,
+        parse => \&parse_bitop, backend => ('shia'),
+    },
     'exts' => {
-        words => 1, code => 0x5e00, argscnt => 2,
-        parse => \&parse_bitop, backend => ('exts'),
+        words => 1, code => 0x4000, argscnt => 2,
+        parse => \&parse_exts, backend => ('exts'),
     },
     'extz' => {
-        words => 1, code => 0x5c00, argscnt => 2,
+        words => 1, code => 0x5e00, argscnt => 2,
         parse => \&parse_bitop, backend => ('extz'),
     },
     _multi_keys( 'ld' => 'ld8' => 'ld16' => 'ld32' => 'ld64' => {

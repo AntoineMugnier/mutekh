@@ -168,50 +168,50 @@ static const char * bc_opname(uint16_t op)
     { 0xffff, 0x0003, "die" },
     { 0xfffc, 0x0008, "trace" },
     { 0xfff0, 0x0000, "nop" },
-    { 0xf000, BC_OP_ADD8  << 8, "add8" },
-    { 0xf000, BC_OP_CST8  << 8, "cst8" },
-    { 0xfff0, BC_OP_JMP   << 8, "ret" },
-    { 0xf00f, BC_OP_JMP   << 8, "jmp8" },
-    { 0xf000, BC_OP_JMP   << 8, "call8" },
-    { 0xf800, BC_OP_LOOP  << 8, "loop" },
-    { 0xf800, BC_OP_PACK  << 8, "(un)pack/swap" },
-    { 0xff00, BC_OP_EQ    << 8, "eq", "eq0" },
-    { 0xff00, BC_OP_NEQ   << 8, "neq", "neq0" },
-    { 0xff00, BC_OP_LT    << 8, "lt" },
-    { 0xff00, BC_OP_LTS   << 8, "lts" },
-    { 0xff00, BC_OP_LTEQ  << 8, "lteq" },
-    { 0xff00, BC_OP_LTEQS << 8, "lteqs" },
-    { 0xff00, BC_OP_ADD   << 8, "add" },
-    { 0xff00, BC_OP_SUB   << 8, "sub", "neg" },
-    { 0xff00, BC_OP_OR    << 8, "or", "rand" },
-    { 0xff00, BC_OP_XOR   << 8, "xor", "ccall" },
-    { 0xff00, BC_OP_AND   << 8, "and" },
-    { 0xff00, BC_OP_ANDN  << 8, "andn", "not" },
-    { 0xff00, BC_OP_SHL   << 8, "shl" },
-    { 0xff00, BC_OP_SHR   << 8, "shr" },
-    { 0xff00, BC_OP_MUL   << 8, "mul" },
-    { 0xff00, BC_OP_MOV   << 8, "mov", "msbs" },
-    { 0xfe00, BC_OP_TSTC  << 8, "tstc" },
-    { 0xfe00, BC_OP_TSTS  << 8, "tsts" },
-    { 0xfe00, BC_OP_BITC  << 8, "bitc" },
-    { 0xfe00, BC_OP_BITS  << 8, "bits" },
-    { 0xfe00, BC_OP_SHIL  << 8, "shil" },
-    { 0xfe00, BC_OP_SHIR  << 8, "shir" },
-    { 0xfe00, BC_OP_EXTS  << 8, "exts" },
-    { 0xfe00, BC_OP_EXTZ  << 8, "extz" },
-    { 0xf900, BC_OP_LD    << 8, "ld" },
-    { 0xf900, BC_OP_LDI   << 8, "ldi" },
-    { 0xf900, BC_OP_ST    << 8, "st" },
-    { 0xf900, BC_OP_STI   << 8, "sti" },
-    { 0xfff0, BC_OP_CST  << 8, "gaddr" },
-    { 0xf910, (BC_OP_CST  << 8) | 0x10, "cst" },
-    { 0xf930, (BC_OP_LADDR << 8) | 0x20, "laddr" },
-    { 0xf97f, (BC_OP_CALL << 8) | 0x40, "jmp" },
-    { 0xf970, (BC_OP_CALL << 8) | 0x40, "call" },
-    { 0xf900, BC_OP_STD   << 8, "std" },
-    { 0xf900, BC_OP_LDE   << 8, "lde" },
-    { 0xf900, BC_OP_STE   << 8, "ste" },
+    { 0xf000, 0x0000, "add8" },
+    { 0xf000, 0x1000, "cst8" },
+    { 0xfff0, 0x2000, "ret" },
+    { 0xf00f, 0x2000, "jmp8" },
+    { 0xf000, 0x2000, "call8" },
+    { 0xf800, 0x3000, "loop" },
+    { 0xf800, 0x3800, "(un)pack/swap" },
+    { 0xff00, 0x4000, "(n)eq", "eq0" },
+    { 0xff00, 0x4100, "mov", "neq0" },
+    { 0xff00, 0x4200, "lt", "exts8" },
+    { 0xff00, 0x4300, "lts", "exts16" },
+    { 0xff00, 0x4400, "lteq", "exts32" },
+    { 0xff00, 0x4500, "lteqs" },
+    { 0xff00, 0x4600, "add" },
+    { 0xff00, 0x4700, "sub", "neg" },
+    { 0xff00, 0x4800, "or", "rand" },
+    { 0xff00, 0x4900, "xor", "ccall" },
+    { 0xff00, 0x4a00, "and" },
+    { 0xff00, 0x4b00, "sha", "not" },
+    { 0xff00, 0x4c00, "shl" },
+    { 0xff00, 0x4d00, "shr" },
+    { 0xff00, 0x4e00, "mul" },
+    { 0xff00, 0x4f00, "div", "msbs" },
+    { 0xfe00, 0x5000, "tstc" },
+    { 0xfe00, 0x5200, "tsts" },
+    { 0xfe00, 0x5400, "bitc" },
+    { 0xfe00, 0x5600, "bits" },
+    { 0xfe00, 0x5800, "shil" },
+    { 0xfe00, 0x5a00, "shir" },
+    { 0xfe00, 0x5c00, "shia" },
+    { 0xfe00, 0x5e00, "extz" },
+    { 0xf900, 0x6000, "ld" },
+    { 0xf900, 0x6100, "ldi" },
+    { 0xf900, 0x6800, "st" },
+    { 0xf900, 0x6900, "sti" },
     { 0xf9f0, 0x7080, "mode" },
+    { 0xf9f0, 0x7000, "gaddr" },
+    { 0xf910, 0x7010, "cst" },
+    { 0xf930, 0x7020, "laddr" },
+    { 0xf97f, 0x7040, "jmp" },
+    { 0xf970, 0x7040, "call" },
+    { 0xf900, 0x7800, "std" },
+    { 0xf900, 0x7100, "lde" },
+    { 0xf900, 0x7900, "ste" },
     { 0x0000, 0x0000, "invalid" },
   };
   uint_fast8_t i;
@@ -408,6 +408,13 @@ bc_unpack_swap_op32(struct bc_context_s *ctx, reg_t op)
   bc_unpack32(t, c);
 # endif
   bc_swap32(t, c);
+}
+
+extern inline uint32_t bc_divmod32(uint32_t a, uint32_t b, uint32_t *r)
+{
+  uint32_t q = a / b;
+  *r = a - q * b;
+  return q;
 }
 
 # if INT_REG_SIZE > 32 || defined(CONFIG_MUTEK_BYTECODE_VM64)
@@ -761,71 +768,92 @@ __attribute__((noinline))
 static bool_t bc_run_##fcname##_alu(struct bc_context_s *ctx, uint16_t op)
 {
   dispatch_begin:;
-  bc_reg_t *dstp = &ctx->v[op & 0xf];
+  uint8_t a = op & 15;
+  op >>= 4;
+  uint8_t b = op & 15;
+  bc_reg_t *dstp = &ctx->v[a];
   bc_reg_t dst = *dstp;
-  uint8_t o = op;
-  op >>= 4;
-  o = (o ^ op) & 0xf;
-  bc_reg_t src = ctx->v[op & 0xf];
-  op >>= 4;
+  bc_reg_t *srcp = &ctx->v[b];
+  bc_reg_t src = *srcp;
 
   do {
-    static const bs_dispatch_t dispatch[16] = {
-      [BC_OP_EQ & 0x0f] =  BC_DISPATCH(EQ),
-      [BC_OP_NEQ & 0x0f] = BC_DISPATCH(NEQ),
-      [BC_OP_LT & 0x0f] =  BC_DISPATCH(LT),
-      [BC_OP_LTS & 0x0f] = BC_DISPATCH(LTS),
-      [BC_OP_LTEQ & 0x0f] =  BC_DISPATCH(LTEQ),
-      [BC_OP_LTEQS & 0x0f] = BC_DISPATCH(LTEQS),
-      [BC_OP_ADD & 0x0f] = BC_DISPATCH(ADD),
-      [BC_OP_SUB & 0x0f] = BC_DISPATCH(SUB),
-      [BC_OP_OR & 0x0f]  = BC_DISPATCH(OR),
-      [BC_OP_XOR & 0x0f] = BC_DISPATCH(XOR),
-      [BC_OP_AND & 0x0f] = BC_DISPATCH(AND),
-      [BC_OP_ANDN & 0x0f] = BC_DISPATCH(ANDN),
-      [BC_OP_SHL & 0x0f] = BC_DISPATCH(SHL),
-      [BC_OP_SHR & 0x0f] = BC_DISPATCH(SHR),
-      [BC_OP_MUL & 0x0f] = BC_DISPATCH(MUL),
-      [BC_OP_MOV & 0x0f] = BC_DISPATCH(MOV)
+    static const bs_dispatch_t dispatch[32] = {
+      BC_DISPATCH(EQ),         BC_DISPATCH(EQ0),
+      BC_DISPATCH(MOV),        BC_DISPATCH(NEQ0),
+      BC_DISPATCH(LT),         BC_DISPATCH(EXTS8),
+      BC_DISPATCH(LTS),        BC_DISPATCH(EXTS16),
+      BC_DISPATCH(LTEQ),       BC_DISPATCH(EXTS32),
+      BC_DISPATCH(LTEQS),      BC_DISPATCH(RES),
+      BC_DISPATCH(ADD),        BC_DISPATCH(RES),
+      BC_DISPATCH(SUB),        BC_DISPATCH(NEG),
+      BC_DISPATCH(OR),         BC_DISPATCH(RAND),
+      BC_DISPATCH(XOR),        BC_DISPATCH(CCALL),
+      BC_DISPATCH(AND),        BC_DISPATCH(RES),
+      BC_DISPATCH(SHA),        BC_DISPATCH(NOT),
+      BC_DISPATCH(SHL),        BC_DISPATCH(RES),
+      BC_DISPATCH(SHR),        BC_DISPATCH(RES),
+      BC_DISPATCH(MUL),        BC_DISPATCH(MUL),
+      BC_DISPATCH(DIV),        BC_DISPATCH(MSBS)
     };
-    BC_DISPATCH_GOTO(op & 0x0f);
+    BC_DISPATCH_GOTO(((op >> 3) & 0x01e) | (a == b));
 
+  dispatch_EQ:
+    return (dst != src) ^ (a < b);
+  dispatch_EQ0:
+    return dst != 0;
+  dispatch_MOV:
+    dst = src;
+    break;
+  dispatch_NEQ0:
+    return dst == 0;
+  dispatch_LT:
+    return dst >= src;
+  dispatch_EXTS8:
+    dst = (bc_sreg_t)(int8_t)src;
+    break;
+  dispatch_LTS:
+    return (bc_sreg_t)dst >= (bc_sreg_t)src;
+  dispatch_EXTS16:
+    dst = (bc_sreg_t)(int16_t)src;
+    break;
+  dispatch_LTEQ:
+    return dst > src;
+  dispatch_EXTS32:
+    BC_CONFIG_64( dst = (bc_sreg_t)(int32_t)src );
+    break;
+  dispatch_LTEQS:
+    return (bc_sreg_t)dst > (bc_sreg_t)src;
   dispatch_ADD:
     dst += src;
-    BC_CLAMP32(sandbox, dst);
     break;
+  dispatch_NEG:
+    dst = 0;
   dispatch_SUB:
-    if (!o)
-      dst = 0;
     dst -= src;
-    BC_CLAMP32(sandbox, dst);
-    break;
-  dispatch_MUL:
-    dst = (uint32_t)(dst * src);
     break;
   dispatch_OR:
-    if (!o)
-      dst = rand();
-    else
-      dst = (uint32_t)(dst | src);
+    dst = (uint32_t)(dst | src);
+    break;
+  dispatch_RAND:
+    dst = (uint32_t)rand();
     break;
   dispatch_XOR:
-    if (o)
-      dst = (uint32_t)(dst ^ src);
-    else
+    dst = (uint32_t)(dst ^ src);
+    break;
+  dispatch_CCALL:
   BC_CONFIG_SANDBOX(
-      if (!sandbox)                   /* ccall */
+      if (!sandbox)
   )
         ((bc_ccall_function_t*)(uintptr_t)src)(ctx);
     break;
   dispatch_AND:
     dst = (uint32_t)(dst & src);
     break;
-  dispatch_ANDN:
-    src = (uint32_t)~src;
-    if (o)
-      src &= dst;
-    dst = src;
+  dispatch_SHA:
+    dst = (uint32_t)((int32_t)dst >> src);
+    break;
+  dispatch_NOT:
+    dst = (uint32_t)~src;
     break;
   dispatch_SHL:
     dst = (uint32_t)(dst << src);
@@ -833,30 +861,28 @@ static bool_t bc_run_##fcname##_alu(struct bc_context_s *ctx, uint16_t op)
   dispatch_SHR:
     dst = (uint32_t)(dst >> src);
     break;
-  dispatch_MOV:
-    dst = src;
-    if (!o)
-      dst = bit_msb_index((uint32_t)dst);       /* msbs */
+  dispatch_MUL:
+    dst = (uint32_t)(dst * src);
     break;
-  dispatch_EQ:
-  dispatch_NEQ:
-    if (!o)
-      src = 0;
-    return (op ^ (dst != src)) & 1;
-  dispatch_LT:
-  dispatch_LTEQ: {
-    bool_t lt = (dst < src);
-    return !(lt || ((op & 4) && (dst == src)));
-    }
-  dispatch_LTS:
-  dispatch_LTEQS: {
-    bool_t lt = ((bc_sreg_t)dst < (bc_sreg_t)src);
-    return !(lt || ((op & 4) && (dst == src)));
-    }
+  dispatch_MOD:
+    dst = (uint32_t)dst % (uint32_t)src;
+    break;
+  dispatch_DIV:
+    BC_CONFIG_SANDBOX(
+      if (src == 0 && sandbox)
+        return 0;
+    );
+    *dstp = (uint32_t)dst / (uint32_t)src;
+    *srcp = (uint32_t)dst - (uint32_t)*dstp * (uint32_t)src;
+    return 0;
+  dispatch_MSBS:
+    dst = bit_msb_index((uint32_t)dst);
+    break;
   dispatch_RES:
-    break;
+    return 0;
   } while (0);
 
+  BC_CLAMP32(sandbox, dst);
   *dstp = dst;
   return 0;
 }
@@ -980,18 +1006,18 @@ bc_opcode_t bc_run_##fcname(struct bc_context_s *ctx)
           return op;
         }
 
-      bc_reg_t *dst = &ctx->v[op & 0xf];
+      bc_reg_t *dstp = &ctx->v[op & 0xf];
 
       do {
 	static const bs_dispatch_t dispatch[8] = {
-	  [BC_OP_ADD8 >> 4] = BC_DISPATCH(add8),
-          [BC_OP_CST8 >> 4] = BC_DISPATCH(cst8),
-	  [BC_OP_JMP  >> 4]  = BC_DISPATCH(jmp),
-          [BC_OP_LOOP >> 4] = BC_DISPATCH(loop_pack),
-	  [BC_OP_FMT1 >> 4] = BC_DISPATCH(alu),
-          [BC_OP_FMT2 >> 4] = BC_DISPATCH(fmt2),
-	  [BC_OP_LD >> 4]   = BC_DISPATCH(ldst),
-          [BC_OP_CST >> 4] = BC_DISPATCH(cstn_call),
+	  BC_DISPATCH(add8),
+          BC_DISPATCH(cst8),
+	  BC_DISPATCH(jmp),
+          BC_DISPATCH(loop_pack),
+	  BC_DISPATCH(alu),
+          BC_DISPATCH(fmt2),
+	  BC_DISPATCH(ldst),
+          BC_DISPATCH(cstn_call),
 	};
 	BC_DISPATCH_GOTO((op >> 12) & 0x7);
 
@@ -1000,8 +1026,8 @@ bc_opcode_t bc_run_##fcname(struct bc_context_s *ctx)
           int8_t x = (op >> 4) & 0xff;
           if (x)                /* add8 */
             {
-              *dst += (bc_sreg_t)x;
-              BC_CLAMP32(sandbox, *dst);
+              *dstp += (bc_sreg_t)x;
+              BC_CLAMP32(sandbox, *dstp);
               break;
             }
           if (op == 0)          /* end */
@@ -1036,7 +1062,7 @@ bc_opcode_t bc_run_##fcname(struct bc_context_s *ctx)
         }
 
       dispatch_cst8:
-	*dst = (bc_reg_t)((op >> 4) & 0xff);
+	*dstp = (bc_reg_t)((op >> 4) & 0xff);
 	break;
 
       dispatch_jmp: {
@@ -1044,12 +1070,12 @@ bc_opcode_t bc_run_##fcname(struct bc_context_s *ctx)
           if (disp)             /* jmp8 */
             {
               if (op & 0xf)     /* call8 */
-                *dst = (uintptr_t)pc - code_offset;
+                *dstp = (uintptr_t)pc - code_offset;
               pc += (intptr_t)disp;
             }
           else                  /* ret */
             {
-              pc = (void*)(code_offset + *dst);
+              pc = (void*)(uintptr_t)(code_offset + *dstp);
             }
           goto check_pc;
         }
@@ -1073,13 +1099,13 @@ bc_opcode_t bc_run_##fcname(struct bc_context_s *ctx)
           d >>= 1;
 	  if (d < 0)
 	    {
-	      if (!--(*dst))
+	      if (!--(*dstp))
 		break;
-              BC_CLAMP32(sandbox, *dst);
+              BC_CLAMP32(sandbox, *dstp);
 	    }
-	  else if (*dst > 0)
+	  else if (*dstp > 0)
 	    {
-	      (*dst)--;
+	      (*dstp)--;
 	      break;
 	    }
 	  pc += d;
@@ -1092,28 +1118,33 @@ bc_opcode_t bc_run_##fcname(struct bc_context_s *ctx)
 
       dispatch_fmt2: {
 	  uint_fast8_t bit = (op >> 4) & 0x1f;
+          bc_reg_t dst = *dstp;
 	  if (op & 0x0800)
             {
-              if (op & 0x0400)                                /* BC_EXT* */
+              if (op & 0x0400)
                 {
-                  bc_reg_t mask = 0xffffffff >> bit;
-                  bc_reg_t x = ((uint32_t)(op & 0x0200) << 22) >> bit;
-                  *dst = ((*dst & mask) ^ x) - x;
-                  BC_CLAMP32(sandbox, *dst);
+                  if (op & 0x0200) /* BC_EXTZ */
+                    dst &= 0xffffffff >> bit;
+                  else
+                    dst = (uint32_t)((int32_t)dst >> bit); /* BC_SHIA */
                 }
               else
-                *dst = op & 0x0200 ? (uint32_t)(*dst >> bit)
-                                   : (uint32_t)(*dst << bit); /* BC_SHI* */
+                {
+                  dst = op & 0x0200 ? (uint32_t)(dst >> bit)
+                                   : (uint32_t)(dst << bit); /* BC_SHI* */
+                }
             }
           else
             {
               bc_reg_t mask = 1U << bit;
               bc_reg_t vmask = op & 0x0200 ? mask : 0;
-              if (op & 0x0400)                                /* BC_BIT* */
-                *dst = (*dst & ~mask) | vmask;
-              else if (((*dst ^ vmask) >> bit) & 1)           /* BC_TST* */
-                skip = 1;
+              if (op & 0x0400)
+                dst = (dst & ~mask) | vmask; /* BC_BIT* */
+              else
+                skip = ((dst ^ vmask) >> bit) & 1; /* BC_TST* */
             }
+          BC_CLAMP32(sandbox, dst);
+          *dstp = dst;
 	  break;
 	}
 
@@ -1132,7 +1163,7 @@ bc_opcode_t bc_run_##fcname(struct bc_context_s *ctx)
                         if (sandbox)
                           goto err_ret;
                       );
-                      *dst = BC_NATIVE_PTR_NA_LOAD(++pc);
+                      *dstp = BC_NATIVE_PTR_NA_LOAD(++pc);
                       pc += INT_PTR_SIZE / 16 - 1;
                     }
                   break;
@@ -1152,7 +1183,7 @@ bc_opcode_t bc_run_##fcname(struct bc_context_s *ctx)
 
               if (op & 0x0010)  /* cst16, cst32... */
                 {
-                  *dst = x << ((op & 0x00e0) >> 2); /* byte shift */
+                  *dstp = x << ((op & 0x00e0) >> 2); /* byte shift */
                   break;
                 }
 
@@ -1177,13 +1208,13 @@ bc_opcode_t bc_run_##fcname(struct bc_context_s *ctx)
                     else
                  )
                     x += (uintptr_t)desc->code;
-                  *dst = x;
+                  *dstp = x;
                   break;
                 }
 
               /* call/jmp */
               if (op & 0xf)     /* save return address */
-                *dst = (uintptr_t)pc - code_offset;
+                *dstp = (uintptr_t)pc - code_offset;
 
               pc = (const uint16_t*)(desc->code + x);
               goto check_pc;

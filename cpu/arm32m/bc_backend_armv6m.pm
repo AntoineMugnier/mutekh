@@ -453,11 +453,6 @@ sub out_and {
     return mov_op($wo, $wi0, $wi1, "ands", "ands");
 }
 
-sub out_andn {
-    my ($thisop, $wo, $wi0, $wi1) = @_;
-    return mov_op($wo, $wi0, $wi1, "bics", "bics");
-}
-
 sub out_not {
     my ($thisop, $wo, $wi) = @_;
     return "    mvns $reg[$wo], $reg[$wi]\n";
@@ -474,6 +469,27 @@ sub out_msbs {
            "    bl __clzsi2\n".
            "    movs $reg[$wo], #31\n".
            "    eors $reg[$wo], r0\n";
+}
+
+sub parse_div {
+    my ($thisop) = @_;
+
+    # no need to wb 2nd input, will be overwritten as 2nd output
+    $thisop->{wbin} = 2;
+    # 2nd output is written by the function call
+    $thisop->{reloadout} = 2;
+    $thisop->{clobber} = $caller_saved;
+}
+
+sub out_div {
+    my ($thisop, $wo0, $wo1, $wi0, $wi1) = @_;
+    my $r = "    mov r0, $reg[$wi0]\n";
+    $r .= "    mov r1, $reg[$wi1]\n" if $reg[$wi1] ne 'r1';
+    $r .= "    mov r2, r4\n".
+          "    adds r2, #".($thisop->{out}->[1] * 4)."\n".
+          "    bl bc_divmod32\n".
+          "    mov $reg[$wo0], r0\n";
+    return $r;
 }
 
 sub parse_ccall {
@@ -509,6 +525,11 @@ sub out_shl {
 sub out_shr {
     my ($thisop, $wo, $wi0, $wi1) = @_;
     return mov_op($wo, $wi0, $wi1, "lsrs");
+}
+
+sub out_sha {
+    my ($thisop, $wo, $wi0, $wi1) = @_;
+    return mov_op($wo, $wi0, $wi1, "asrs");
 }
 
 sub out_tstc {
@@ -567,6 +588,14 @@ sub out_shir {
     my $r;
     $r .= "    mov $reg[$wo], $reg[$wi]\n" if ( $wi != $wo );
     return $r."    lsrs $reg[$wo], #$x\n";
+}
+
+sub out_shia {
+    my ($thisop, $wo, $wi) = @_;
+    my $x = $thisop->{args}->[1];
+    my $r;
+    $r .= "    mov $reg[$wo], $reg[$wi]\n" if ( $wi != $wo );
+    return $r."    asrs $reg[$wo], #$x\n";
 }
 
 sub out_extz {

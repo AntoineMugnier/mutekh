@@ -61,7 +61,8 @@ row_next:
 
     cst8 %tmp, 1
     shl32 %tmp, %row
-    andn32 %rows, %tmp
+    mot32 %tmp
+    and32 %rows, %tmp
     neq0 %rows
      jmp8 row_next
 

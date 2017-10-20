@@ -199,19 +199,22 @@
      @item @tt{sub reg, reg} @item Subtract the value of the source register from the destination register.
      @item @tt{neg reg} @item Subtract the value from zero.
      @item @tt{mul32 reg, reg} @item Multiply the values of the source register and destination registers.
+     @item @tt{div32 reg, reg} @item Perform a division, store both quotient and modulus in registers.
      @item @tt{or32 reg, reg} @item 32 bits bitwise or.
      @item @tt{xor32 reg, reg} @item 32 bits bitwise exclusive or.
      @item @tt{and32 reg, reg} @item 32 bits bitwise and.
-     @item @tt{andn32 reg, reg} @item 32 bits bitwise and with complemented source register.
      @item @tt{not32 reg} @item 32 bits bitwise not.
      @item @tt{shl32 reg, reg} @item 32 bits variable left shift.
      @item @tt{shr32 reg, reg} @item 32 bits variable right shift.
+     @item @tt{sha32 reg, reg} @item 32 bits variable right arithmetic shift.
      @item @tt{shi32l reg, bit_index} @item Left shift a register by a constant amount.
        Amount must be in the range [0,31].
      @item @tt{shi32r reg, bit_index} @item Right shift a register by a constant amount.
        Amount must be in the range [0,31].
+     @item @tt{shi32a reg, bit_index} @item Right arithmetic shift a register by a constant amount.
+       Amount must be in the range [0,31].
      @item @tt{msbs32 reg} @item Find the position of the most significant bit set in range [0, 31].
-     @item @tt{exts reg, bit_index} @item Sign extend a register using the specified sign bit in the range [0,31].
+     @item @tt{exts reg, bit_index} @item Sign extend a register using the specified sign bit in the set {7, 15, 31}.
      @item @tt{extz reg, bit_index} @item Clear all bits in a register above specified bit in the range [0,31].
      @item @tt{swapN reg} @item Exchange bytes of a 16 bits or 32 bits values.
      @item @tt{swapNle reg} @item Exchange bytes only when running on a big endian processor, used to access little endian data in portable way.
@@ -390,40 +393,44 @@
     @item {un,}pack{16,32}{le,be} @item r, c, b   @item @tt{0011 1ccc oooo rrrr} @item  4
     @item swap{16,32}{le,be,} @item r             @item @tt{0011 1000 oooo rrrr} @item  4
 
-    @item eq                  @item r, r          @item @tt{0100 0000 rrrr rrrr} @item  1
-    @item eq0                 @item r             @item @tt{0100 0000 rrrr rrrr} @item  1
-    @item neq                 @item r, r          @item @tt{0100 0001 rrrr rrrr} @item  1
-    @item neq0                @item r             @item @tt{0100 0001 rrrr rrrr} @item  1
-    @item lt                  @item r, r          @item @tt{0100 0010 rrrr rrrr} @item  1
-    @item ---                 @item r             @item @tt{0100 0010 rrrr rrrr} @item  1
-    @item lts                 @item r, r          @item @tt{0100 0011 rrrr rrrr} @item  1
-    @item ---                 @item r             @item @tt{0100 0011 rrrr rrrr} @item  1
-    @item lteq                @item r, r          @item @tt{0100 0100 rrrr rrrr} @item  1
-    @item ---                 @item r             @item @tt{0100 0100 rrrr rrrr} @item  1
-    @item lteqs               @item r, r          @item @tt{0100 0101 rrrr rrrr} @item  1
-    @item ---                 @item r             @item @tt{0100 0101 rrrr rrrr} @item  1
-    @item add                 @item r, r          @item @tt{0100 0110 rrrr rrrr} @item  1
-    @item ---                 @item r             @item @tt{0100 0110 rrrr rrrr} @item  1
-    @item sub                 @item r, r          @item @tt{0100 0111 rrrr rrrr} @item  1
-    @item neg                 @item r             @item @tt{0100 0111 rrrr rrrr} @item  1
-    @item or32                @item r, r          @item @tt{0100 1000 rrrr rrrr} @item  1
-    @item ---                 @item r             @item @tt{0100 1000 rrrr rrrr} @item  1
-    @item xor32               @item r, r          @item @tt{0100 1001 rrrr rrrr} @item  1
-    @item ccall               @item r             @item @tt{0100 1001 rrrr rrrr} @item  1
-    @item and32               @item r, r          @item @tt{0100 1010 rrrr rrrr} @item  1
-    @item ---                 @item r             @item @tt{0100 1010 rrrr rrrr} @item  1
-    @item andn32              @item r, r          @item @tt{0100 1011 rrrr rrrr} @item  1
-    @item not32               @item r             @item @tt{0100 1011 rrrr rrrr} @item  1
-    @item shl32               @item r, r          @item @tt{0100 1100 rrrr rrrr} @item  1
-    @item shr32               @item r, r          @item @tt{0100 1101 rrrr rrrr} @item  1
-    @item mul32               @item r, r          @item @tt{0100 1110 rrrr rrrr} @item  1
-    @item mov                 @item r, r          @item @tt{0100 1111 rrrr rrrr} @item  1
-    @item msbs32              @item r             @item @tt{0100 1111 rrrr rrrr} @item  1
+    @item eq                  @item a, b          @item @tt{0100 0000 bbbb aaaa} a > b @item  1
+    @item neq                 @item a, b          @item @tt{0100 0000 bbbb aaaa} a < b @item  1
+    @item eq0                 @item a             @item @tt{0100 0000 bbbb aaaa} a == b @item  1
+    @item mov                 @item a, b          @item @tt{0100 0001 bbbb aaaa} a != b @item  1
+    @item neq0                @item a             @item @tt{0100 0001 bbbb aaaa} a == b @item  1
+    @item lt                  @item a, b          @item @tt{0100 0010 bbbb aaaa} a != b @item  1
+    @item exts                @item a, 7          @item @tt{0100 0010 bbbb aaaa} a == b @item  1
+    @item lts                 @item a, b          @item @tt{0100 0011 bbbb aaaa} a != b @item  1
+    @item exts                @item a, 15         @item @tt{0100 0011 bbbb aaaa} a == b @item  1
+    @item lteq                @item a, b          @item @tt{0100 0100 bbbb aaaa} a != b @item  1
+    @item exts                @item a, 31         @item @tt{0100 0100 bbbb aaaa} a == b @item  1
+    @item lteqs               @item a, b          @item @tt{0100 0101 bbbb aaaa} a != b @item  1
+    @item ---                 @item a             @item @tt{0100 0101 bbbb aaaa} a == b @item  1
+    @item add                 @item a, b          @item @tt{0100 0110 bbbb aaaa} a != b @item  1
+    @item ---                 @item a             @item @tt{0100 0110 bbbb aaaa} a == b @item  1
+    @item sub                 @item a, b          @item @tt{0100 0111 bbbb aaaa} a != b @item  1
+    @item neg                 @item a             @item @tt{0100 0111 bbbb aaaa} a == b @item  1
+    @item or32                @item a, b          @item @tt{0100 1000 bbbb aaaa} a != b @item  1
+    @item rand32              @item a             @item @tt{0100 1000 bbbb aaaa} a == b @item  1
+    @item xor32               @item a, b          @item @tt{0100 1001 bbbb aaaa} a != b @item  1
+    @item ccall               @item a             @item @tt{0100 1001 bbbb aaaa} a == b @item  1
+    @item and32               @item a, b          @item @tt{0100 1010 bbbb aaaa} a != b @item  1
+    @item ---                 @item a             @item @tt{0100 1010 bbbb aaaa} a == b @item  1
+    @item sha32               @item a, b          @item @tt{0100 1011 bbbb aaaa} a != b @item  1
+    @item not32               @item a             @item @tt{0100 1011 bbbb aaaa} a == b @item  1
+    @item shl32               @item a, b          @item @tt{0100 1100 bbbb aaaa} a != b @item  1
+    @item ---                 @item a             @item @tt{0100 1100 bbbb aaaa} a == b @item  1
+    @item shr32               @item a, b          @item @tt{0100 1101 bbbb aaaa} a != b @item  1
+    @item ---                 @item a             @item @tt{0100 1101 bbbb aaaa} a == b @item  1
+    @item mul32               @item a, b          @item @tt{0100 1110 bbbb aaaa} @item  1
+    @item div32               @item a, b          @item @tt{0100 1111 bbbb aaaa} a != b @item  1
+    @item msbs32              @item a             @item @tt{0100 1111 bbbb aaaa} a == b @item  1
 
     @item tst32[c,s]          @item r, bit        @item @tt{0101 00sb bbbb rrrr} @item  2
     @item bit32[c,s]          @item r, bit        @item @tt{0101 01sb bbbb rrrr} @item  2
     @item shi32[l,r]          @item r, bit        @item @tt{0101 10rb bbbb rrrr} @item  2
-    @item ext[s,z]            @item r, bit        @item @tt{0101 11zb bbbb rrrr} @item  2
+    @item shi32a              @item r, bit        @item @tt{0101 110b bbbb rrrr} @item  2
+    @item extz                @item r, bit        @item @tt{0101 111b bbbb rrrr} @item  2
 
     @item ld[8,16,32,64][i]   @item r, ra         @item @tt{0110 0ssi aaaa rrrr} @item  3
     @item st[8,16,32,64][i]   @item r, ra         @item @tt{0110 1ssi aaaa rrrr} @item  3
@@ -518,8 +525,6 @@ struct bc_context_s
   uintptr_t data_addr_mask;
   /** maximum number of executed cycles by a single call to @ref bc_run_sandbox */
   uint16_t max_cycles;
-  /** @see bc_init_sandbox */
-  bool_t BITFIELD(sandbox,1);
 #endif
 #if CONFIG_MUTEK_BYTECODE_BREAKPOINTS > 0
   uintptr_t bp_list[CONFIG_MUTEK_BYTECODE_BREAKPOINTS];
@@ -529,6 +534,10 @@ struct bc_context_s
 #ifdef CONFIG_MUTEK_BYTECODE_TRACE
   bool_t BITFIELD(trace,1);
   bool_t BITFIELD(trace_regs,1);
+#endif
+#ifdef CONFIG_MUTEK_BYTECODE_SANDBOX
+  /** @see bc_init_sandbox */
+  bool_t BITFIELD(sandbox,1);
 #endif
 };
 
@@ -799,54 +808,6 @@ ALWAYS_INLINE bc_opcode_t bc_run(struct bc_context_s *ctx)
 {
   return ctx->desc->run(ctx);
 }
-
-/** @internal @This specifies opcode values. */
-enum bc_opcode_e
-{
-  BC_OP_ADD8 = 0x00,
-  BC_OP_CST8 = 0x10,
-  BC_OP_JMP  = 0x20,
-  BC_OP_LOOP = 0x30,
-  BC_OP_PACK = 0x38,
-
-  BC_OP_FMT1 = 0x40,
-    BC_OP_EQ   = 0x40,
-    BC_OP_NEQ  = 0x41,
-    BC_OP_LT   = 0x42,
-    BC_OP_LTS  = 0x43,
-    BC_OP_LTEQ = 0x44,
-    BC_OP_LTEQS = 0x45,
-    BC_OP_ADD  = 0x46,
-    BC_OP_SUB  = 0x47,
-    BC_OP_OR   = 0x48,
-    BC_OP_XOR  = 0x49,
-    BC_OP_AND  = 0x4a,
-    BC_OP_ANDN = 0x4b,
-    BC_OP_SHL  = 0x4c,
-    BC_OP_SHR  = 0x4d,
-    BC_OP_MUL  = 0x4e,
-    BC_OP_MOV  = 0x4f,
-  BC_OP_FMT2 = 0x50,
-    BC_OP_TSTC = 0x50,
-    BC_OP_TSTS = 0x52,
-    BC_OP_BITC = 0x54,
-    BC_OP_BITS = 0x56,
-    BC_OP_SHIL = 0x58,
-    BC_OP_SHIR = 0x5a,
-    BC_OP_EXTZ = 0x5c,
-    BC_OP_EXTS = 0x5e,
-  BC_OP_FMT3 = 0x60,
-    BC_OP_LD   = 0x60,
-    BC_OP_LDI  = 0x61,
-    BC_OP_ST   = 0x68,
-    BC_OP_STI  = 0x69,
-    BC_OP_CST  = 0x70,
-    BC_OP_LADDR = 0x70,
-    BC_OP_CALL = 0x70,
-    BC_OP_STD  = 0x78,
-    BC_OP_LDE  = 0x71,
-    BC_OP_STE  = 0x79,
-};
 
 /** @internal @This specifies packing and byteswap opcode operations */
 enum bc_opcode_pack_e

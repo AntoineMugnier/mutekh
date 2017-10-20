@@ -366,6 +366,13 @@ sub out_mul {
            "    mflo $reg[$wo]\n";
 }
 
+sub out_div {
+    my ($thisop, $wo0, $wo1, $wi0, $wi1) = @_;
+    return "    divu $reg[$wi0], $reg[$wi1]\n".
+           "    mflo $reg[$wo0]\n".
+           "    mfhi $reg[$wo1]\n";
+}
+
 sub out_or {
     my ($thisop, $wo, $wi0, $wi1) = @_;
     return "    or $reg[$wo], $reg[$wi0], $reg[$wi1]\n";
@@ -379,12 +386,6 @@ sub out_xor {
 sub out_and {
     my ($thisop, $wo, $wi0, $wi1) = @_;
     return "    and $reg[$wo], $reg[$wi0], $reg[$wi1]\n";
-}
-
-sub out_andn {
-    my ($thisop, $wo, $wi0, $wi1) = @_;
-    return "    nor \$at, \$0, $reg[$wi1]\n".
-           "    and $reg[$wo], $reg[$wi0], \$at\n";
 }
 
 sub out_not {
@@ -429,6 +430,11 @@ sub out_shl {
 sub out_shr {
     my ($thisop, $wo, $wi0, $wi1) = @_;
     return "    srlv $reg[$wo], $reg[$wi0], $reg[$wi1]\n";
+}
+
+sub out_sha {
+    my ($thisop, $wo, $wi0, $wi1) = @_;
+    return "    srav $reg[$wo], $reg[$wi0], $reg[$wi1]\n";
 }
 
 sub out_tstc {
@@ -485,6 +491,12 @@ sub out_shir {
     my ($thisop, $wo, $wi) = @_;
     my $x = $thisop->{args}->[1];
     return "    srl $reg[$wo], $reg[$wi], $x\n";
+}
+
+sub out_shia {
+    my ($thisop, $wo, $wi) = @_;
+    my $x = $thisop->{args}->[1];
+    return "    sra $reg[$wo], $reg[$wi], $x\n";
 }
 
 sub out_extz {

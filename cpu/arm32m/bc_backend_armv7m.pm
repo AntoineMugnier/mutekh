@@ -133,11 +133,6 @@ sub out_and {
     return "    ands $reg[$wo], $reg[$wi0], $reg[$wi1]\n";
 }
 
-sub out_andn {
-    my ($thisop, $wo, $wi0, $wi1) = @_;
-    return "    bics $reg[$wo], $reg[$wi0], $reg[$wi1]\n";
-}
-
 sub out_shl {
     my ($thisop, $wo, $wi0, $wi1) = @_;
     return "    lsls $reg[$wo], $reg[$wi0], $reg[$wi1]\n";
@@ -148,6 +143,11 @@ sub out_shr {
     return "    lsrs $reg[$wo], $reg[$wi0], $reg[$wi1]\n";
 }
 
+sub out_sha {
+    my ($thisop, $wo, $wi0, $wi1) = @_;
+    return "    asrs $reg[$wo], $reg[$wi0], $reg[$wi1]\n";
+}
+
 sub parse_msbs {
 }
 
@@ -155,6 +155,28 @@ sub out_msbs {
     my ($thisop, $wo, $wi) = @_;
     return "    clz $reg[$wo], $reg[$wi]\n".
            "    eor $reg[$wo], $reg[$wo], #31\n";
+}
+
+sub parse_div {
+}
+
+sub out_div {
+    my ($thisop, $wo0, $wo1, $wi0, $wi1) = @_;
+    if ( $wo0 == $wi0 ) {
+        return "    mov r0, $reg[$wi0]\n".
+               "    udiv $reg[$wo0], r0, $reg[$wi1]\n".
+               "    mul $reg[$wo1], $reg[$wo0], $reg[$wi1]\n".
+               "    sub $reg[$wo1], r0, $reg[$wo1]\n";
+    } elsif ( $wo0 == $wi1 ) {
+        return "    mov r0, $reg[$wi1]\n".
+               "    udiv $reg[$wo0], $reg[$wi0], r0\n".
+               "    mul r0, $reg[$wo0], r0\n".
+               "    sub $reg[$wo1], $reg[$wi0], r0\n";
+    } else {
+        return "    udiv $reg[$wo0], $reg[$wi0], $reg[$wi1]\n".
+               "    mul $reg[$wo1], $reg[$wo0], $reg[$wi1]\n".
+               "    sub $reg[$wo1], $reg[$wi0], $reg[$wo1]\n";
+    }
 }
 
 sub out_bitc {

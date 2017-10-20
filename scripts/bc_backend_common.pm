@@ -270,6 +270,11 @@ sub out_mul {
     return fmt1( $thisop, $thisop->{in}->[1], $thisop->{out}->[0] );
 }
 
+sub out_div {
+    my ($thisop) = @_;
+    return fmt1( $thisop, $thisop->{in}->[1], $thisop->{out}->[0] );
+}
+
 sub out_or {
     my ($thisop) = @_;
     return fmt1( $thisop, $thisop->{in}->[1], $thisop->{out}->[0] );
@@ -315,6 +320,11 @@ sub out_shr {
     return fmt1( $thisop, $thisop->{in}->[1], $thisop->{out}->[0] );
 }
 
+sub out_sha {
+    my ($thisop) = @_;
+    return fmt1( $thisop, $thisop->{in}->[1], $thisop->{out}->[0] );
+}
+
 sub out_msbs {
     my ($thisop) = @_;
     return fmt1( $thisop, $thisop->{in}->[0], $thisop->{out}->[0] );
@@ -350,6 +360,11 @@ sub out_shir {
     return fmt2( $thisop, $thisop->{args}->[1], $thisop->{in}->[0] );
 }
 
+sub out_shia {
+    my ($thisop) = @_;
+    return fmt2( $thisop, $thisop->{args}->[1], $thisop->{in}->[0] );
+}
+
 sub out_extz {
     my ($thisop) = @_;
     return fmt2( $thisop, 31 - $thisop->{args}->[1], $thisop->{in}->[0] );
@@ -357,7 +372,10 @@ sub out_extz {
 
 sub out_exts {
     my ($thisop) = @_;
-    return fmt2( $thisop, 31 - $thisop->{args}->[1], $thisop->{in}->[0] );
+    my $r = $thisop->{in}->[0];
+    my $b = $thisop->{args}->[1];
+    my %code = ( 7 => 0x4200, 15 => 0x4300, 31 => 0x4400 );
+    return $word->( $code{$b} | ($r << 4) | $r );
 }
 
 sub out_st {
