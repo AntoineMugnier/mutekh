@@ -26,6 +26,7 @@
 #include <hexo/types.h>
 #include <hexo/interrupt.h>
 #include <hexo/local.h>
+#include <hexo/bit.h>
 
 #include <device/device.h>
 #include <device/resources.h>
@@ -196,6 +197,24 @@ static DEV_CPU_GET_NODE(sparc_cpu_get_node)
 /************************************************************************/
 
 #define sparc_use dev_use_generic
+
+/** return sparc cpu windows count */
+ALWAYS_INLINE size_t
+cpu_sparc_wincount(void)
+{
+  uint32_t wim_mask = 0xffffffff;
+  uint32_t tmp;
+
+  asm ("  rd %%wim, %0   \n" // save wim
+       "  wr %1, %%wim   \n" // write all ones
+       "  nop \n nop \n nop \n"
+       "  rd %%wim, %1   \n" // read back
+       "  wr %0, %%wim   \n" // restore wim
+       : "=r" (tmp), "=r" (wim_mask): "1" (wim_mask)
+       );
+
+  return bit_popc(wim_mask);
+}
 
 static DEV_INIT(sparc_init)
 {
