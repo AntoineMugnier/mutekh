@@ -134,7 +134,9 @@
      @em bytecode may be specified in order to prevent generation
      of native machine code for the program.
    @item @tt{.name name} : set the bytecode program name.
-   @item @tt{.custom name} : load a custom instruction set module.
+   @item @tt{.custom name [mask of modes]} : load a custom instruction set module and
+     optionally restrict modes which are allowed for instructions of the module.
+   @item @tt{.mode m} : declare the default mode used in the current @tt{.func}.
    @item @tt{.export label} : export a label as a global symbol.
    @end list
 
@@ -311,6 +313,7 @@
      @item @tt{laddr[16,32]r reg, label} @item Set a register to the pc relative address of a bytecode label.
      @item @tt{gaddr reg, label} @item Set a register to the address of a
      global symbol. Bytecode in compiled form will not be portable.
+     @item @tt{mode m} @item Select custom bytecode interpretation mode in range [0, 63].
    @end table
 
    Some instructions are provided to handle packing of some register values
@@ -429,7 +432,8 @@
     @item ld[8,16,32,64]e     @item r, ra, +/-v   @item @tt{0111 0ss1 aaaa rrrr, v} @item  3
     @item st[8,16,32,64]e     @item r, ra, +/-v   @item @tt{0111 1ss1 aaaa rrrr, v} @item  3
 
-    @item gaddr               @item r, lbl        @item @tt{0111 0--0 -000 rrrr, v?} @item  3
+    @item mode                @item m             @item @tt{0111 0mm0 1000 mmmm} @item  3
+    @item gaddr               @item r, lbl        @item @tt{0111 0--0 0000 rrrr, v?} @item  3
     @item cst[16,32,48,64]    @item r, v, b       @item @tt{0111 0ss0 bbb1 rrrr, v, v ...} @item  3
     @item laddr[16,32][r]     @item r, lbl        @item @tt{0111 0ss0 Rx10 rrrr, v, v ...} @item  3
     @item jmp[16,32][r]       @item lbl           @item @tt{0111 0ss0 R100 0000, v, v ...} @item  3
@@ -499,10 +503,13 @@ struct bc_context_s
     uintptr_t pc;
     const void *vpc;
   };
-#ifdef CONFIG_MUTEK_BYTECODE_NATIVE
-  bc_reg_t skip;
-#endif
+
   const struct bc_descriptor_s *desc;
+
+#ifdef CONFIG_MUTEK_BYTECODE_NATIVE
+  uint8_t skip;
+#endif
+  uint8_t mode;
 
 #ifdef CONFIG_MUTEK_BYTECODE_SANDBOX
   /** address of writable data segment when sandboxed */

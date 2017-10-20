@@ -75,18 +75,27 @@ sub out_custom_cond {
     my ($thisop) = @_;
     my $op = $thisop->{code} | $thisop->{op}->{code};
     return
-           # opcode value
-	   "    ldr r0, =$op\n".
-           # skip amount
-	   "    movs r1, 1f - 2f\n".
-           "    str r1, [r4, #".(17 * 4)."]\n".
            # resume address
 	   "    adr r1, 2f\n".
            "    str r1, [r4, #".(16 * 4)."]\n".
+           # skip amount
+           "    movs r1, 1f - 2f\n".
+           "    adds r4, #".(18 * 4)."\n".
+           "    strb r1, [r4]\n".
+           # opcode value
+	   "    ldr r0, =$op\n".
            "    pop    {r4, r5, r6, r7, pc}\n".
 	   "    .ltorg\n".
 	   "    .balign 4\n".
 	   "2:\n";
+}
+
+sub out_mode {
+    my ($thisop) = @_;
+    return "    movs r0, ".$thisop->{args}->[0]."\n".
+           "    adds r4, #".(18 * 4 + 1)."\n".
+           "    strb r0, [r4]\n".
+           "    subs r4, #".(18 * 4 + 1)."\n";
 }
 
 sub out_end {

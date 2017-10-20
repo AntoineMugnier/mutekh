@@ -120,18 +120,17 @@ sub check_reg
     return $1;
 }
 
-sub check_num
+sub eval_expr
 {
-    my ( $thisop, $argidx, $min, $max ) = @_;
-    my $expr = $thisop->{args}->[$argidx];
+    my ( $expr, $loc ) = @_;
+
+    our $num = qr/(?>[-+]?\b\d+\b)/xs;
 
     my $bit = sub {
         my $x = shift;
-        error($thisop, "bitpos() expects a power of 2.\n") if !$x or ($x & ($x - 1));
+        error($loc, "bitpos() expects a power of 2.\n") if !$x or ($x & ($x - 1));
         return log2($x);
     };
-
-    our $num = qr/(?>[-+]?\b\d+\b)/xs;
 
     while (1) {
         next if ($expr =~ s/'(.)'/ord($1)/ge);
@@ -152,6 +151,20 @@ sub check_num
     }
 
     if ( $expr !~ /^($num)$/ ) {
+        return undef;
+    } else {
+        return $expr;
+    }
+}
+
+sub check_num
+{
+    my ( $thisop, $argidx, $min, $max ) = @_;
+    my $expr = $thisop->{args}->[$argidx];
+
+    $expr = eval_expr( $expr, $thisop );
+
+    if (!defined $expr) {
         error($thisop, "expected number as operand $argidx of `$thisop->{name}', got `$expr'.\n");
     }
 
@@ -426,6 +439,12 @@ sub parse_bitop
     push @{$thisop->{out}}, check_reg($thisop, 0);
 
     check_num($thisop, 1, 0, 31);
+}
+
+sub parse_mode
+{
+    my $thisop = shift;
+    check_num($thisop, 0, 0, 63);
 }
 
 sub parse_tst
@@ -833,6 +852,13 @@ sub parse
             regs_mask_parse($loc, $1, $2, \$func->{$1}, $func->{regalias} );
             next;
         }
+        if ($l =~ /^\s*\.mode\s+(.*?)\s*$/) {
+            error($loc, ".mode not inside a function\n") if !defined $func;
+            my $e = eval_expr( $1, $loc );
+            error($loc, "bad mode expression `$1'\n") if (!defined $e || $e >= 64);
+            $func->{mode} = $e;
+            next;
+        }
         if ($l =~ /^\s*\.backend\s+(\w+)\s*$/) {
             $backend_name = $1;
             next;
@@ -847,8 +873,11 @@ sub parse
             $bc_name = $1;
             next;
         }
-        if ($l =~ /^\s*\.custom\s+([\w.]+)\s*$/) {
-	    push @custom, $1;
+        if ($l =~ /^\s*\.custom\s+([\w.]+)\s*(.+?)?\s*$/) {
+            my $e = eval_expr( $2, $loc );
+            error($loc, "bad mode mask expression `$2'\n")
+                if (defined $2 && !defined $e);
+	    push @custom, [ $1, $e ];
             next;
         }
         if ($l =~ /^\s*\.export\s+(\w+)\s*$/) {
@@ -1230,6 +1259,11 @@ our %asm = (
         words => 3, code => 0x72a0, argscnt => 2,
         parse => \&parse_laddr, backend => ('laddrr'),
     },
+    'mode' => {
+        words => 1, code => 0x7080, argscnt => 1,
+        parse => \&parse_mode, backend => ('mode'),
+        nocond => 1, op_mode => 1
+    },
     'gaddr' => {
         words => 1 + (4 << $backend_width) / 8, code => 0x7000, argscnt => 2,
         parse => \&parse_gaddr, backend => ('gaddr'),
@@ -1258,7 +1292,12 @@ our %asm = (
     },
 );
 
-load_module($_, "bc_custom") foreach (@custom);
+our $custom_mode;
+
+foreach (@custom) {
+    $custom_mode = $_->[1];
+    load_module($_->[0], "bc_custom");
+}
 
 sub custom_op
 {
@@ -1279,6 +1318,7 @@ sub custom_op
         backend => 'custom',
         flushregs => 1,
         reloadregs => 1,
+        mode => $custom_mode,
     };
 
     $asm{$name} = $op;
@@ -1803,12 +1843,13 @@ sub check_regs
      use constant REGVAL_PACK =>  15;
      use constant REGVAL_UNDEF => 16;
      use constant REGVAL_VALUE => 32;
+     use constant MODE_UNDEF => 64;
 
      my @entries;
      my %entries_done;
 
      my $exc; $exc = sub {
-         my ( $pc, $regs, $func, $last ) = @_;
+         my ( $pc, $regs, $mode, $func, $last ) = @_;
 
          my $wr_mask = 0;
          my $rd_mask = 0;
@@ -1845,7 +1886,19 @@ sub check_regs
              for (my $i = 0; $i < 16; $i++) {
                  $update |= ($regs->[$i] & ~$thisop->{regs}->[$i]);
              }
+
+             # also check mode in use
+             $update |= !$thisop->{modes}->[ $mode ];
+
              last if ( !$update );
+
+             if ( $op->{mode} ) {
+                 if ( $mode == MODE_UNDEF ) {
+                     warning($thisop, "instruction requires a mode to be defined\n");
+                 } elsif ( !(($op->{mode} >> $mode) & 1) ) {
+                     warning($thisop, "instruction can't be used with mode $mode\n");
+                 }
+             }
 
              my @in = @{$thisop->{in}};
              my @out = @{$thisop->{out}};
@@ -1908,6 +1961,14 @@ sub check_regs
 
                  # check how registers are affected by the function call
                  if ( $l->{func} ) {
+
+                     if ( $l->{mode} ) {
+                         warning($thisop, "call to function `$l->{name}' requires mode $l->{mode}\n")
+                             if ( $l->{mode} != $mode );
+                     } else {
+                         $mode = MODE_UNDEF;
+                     }
+
                      for (my $i = 0; $i < 16; $i++) {
                          warning($thisop, "possibly undefined value in register %$i used as parameter to function `$l->{name}'\n")
                              if ( ( $l->{input} >> $i ) & 1) && ( $regs->[$i] & REGVAL_UNDEF );
@@ -1946,6 +2007,13 @@ sub check_regs
 
              # check function return
              if ( ( $func && $op->{op_ret} ) || $tailcall ) {
+                 if ( defined $func->{mode} ) {
+                     if ( $mode == 64 ) {
+                         warning($thisop, "function returns with undefined mode instead of $func->{mode}\n")
+                     } elsif ( $func->{mode} != $mode ) {
+                         warning($thisop, "function returns with mode $mode instead of $func->{mode}\n")
+                     }
+                 }
                  for (my $i = 0; $i < 16; $i++) {
                      next unless ( $func->{output} >> $i ) & 1;
                      warning($thisop, "possibly undefined value in register %$i used as return value of function `$func->{name}' \n")
@@ -1965,12 +2033,16 @@ sub check_regs
              for (my $i = 0; $i < 16; $i++) {
                  $thisop->{regs}->[$i] |= $regs->[$i];
              }
+             $thisop->{modes}->[ $mode ] = 1;
+
+             if ( $op->{op_mode} ) {
+                 $mode = $thisop->{args}->[0];
 
              # explore branch target
-             if ( $op->{op_cond} ) {
+             } elsif ( $op->{op_cond} ) {
                  my $nextpc = $pc + $thisop->{bytes};
                  if ( my $nextop = $srcaddr{$nextpc} ) {
-                     my ( $rd, $wr ) = $exc->( $nextpc + $nextop->{bytes}, [ @$regs ], $func, $thisop );
+                     my ( $rd, $wr ) = $exc->( $nextpc + $nextop->{bytes}, [ @$regs ], $mode, $func, $thisop );
                      $rd_mask |= $rd;
                      $wr_mask |= $wr;
                  } else {
@@ -1978,9 +2050,10 @@ sub check_regs
                  }
              } elsif ( ( $op->{op_call} && !$l->{func} ) ||
                        ( $op->{op_jmp} && !$tailcall ) ) {
-                 my ( $rd, $wr ) = $exc->( $thisop->{target}->{addr}, [ @$regs ], $func, $thisop );
+                 my ( $rd, $wr, $m ) = $exc->( $thisop->{target}->{addr}, [ @$regs ], $mode, $func, $thisop );
                  $rd_mask |= $rd;
                  $wr_mask |= $wr;
+                 $mode = $m;
              }
 
              # explore next instruction
@@ -2000,7 +2073,7 @@ sub check_regs
              $last = $thisop;
          }
 
-         return ( $rd_mask, $wr_mask );
+         return ( $rd_mask, $wr_mask, $mode );
      };
 
      # schedule analysis of exported labels
@@ -2029,8 +2102,16 @@ sub check_regs
          }
 
          # start program exploration from this entry point
+         my ( $func, $mode, $rd_mask, $wr_mask );
+         if ( $l->{func} ) {
+             $func = $l;
+             $mode = $func->{mode} || MODE_UNDEF;
+         } else {
+             $mode = MODE_UNDEF;
+         }
+
          my $func = $l->{func} ? $l : undef;
-         my ( $rd_mask, $wr_mask ) = $exc->( $l->{addr}, \@regs, $func, $l );
+         ( $rd_mask, $wr_mask, $mode ) = $exc->( $l->{addr}, \@regs, $mode, $func, $l );
 
          # emit some post exploration warnings
          if ( $func ) {

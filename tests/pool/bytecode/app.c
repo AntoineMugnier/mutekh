@@ -23,6 +23,7 @@ static void cksum_update(uint32_t x)
 #ifndef CONFIG_MUTEK_BYTECODE_SANDBOX
 static BC_CCALL_FUNCTION(c_func)
 {
+  assert(ctx->mode == 43);
   bc_reg_t r = bc_get_reg(ctx, 2);
   cksum_update(r);
   bc_set_reg(ctx, 2, r * 13);
@@ -60,6 +61,7 @@ void app_start()
 
       if (!r)
         {
+          assert(vm.mode == 23);
           printk("++SUCCESS++%08x++\n", cksum);
           break;
         }

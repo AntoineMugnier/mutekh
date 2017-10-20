@@ -416,6 +416,12 @@ sub out_cst {
     return $r;
 }
 
+sub out_mode {
+    my ($thisop) = @_;
+    my $m = $thisop->{args}->[0];
+    return fmt3($thisop, $m >> 4, 0, $m & 15);
+}
+
 sub out_laddr_ {
     my ($thisop, $a, $signed) = @_;
 

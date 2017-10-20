@@ -72,7 +72,7 @@ sub out_custom_cond {
     my $op = $thisop->{code} | $thisop->{op}->{code};
     return # skip amount
            "    ori \$at, \$0, 1f - 2f\n".
-           "    sw \$at, ".(17 * 4)."(\$17)\n".
+           "    sb \$at, ".(18 * 4)."(\$17)\n".
            "    ori \$v0, \$0, $op\n".
            "    .set noreorder\n".
            "    bal Lbytecode_end\n".
@@ -80,6 +80,12 @@ sub out_custom_cond {
            "    sw \$31, ".(16 * 4)."(\$17)\n".
            "    .set reorder\n".
            "2:";
+}
+
+sub out_mode {
+    my ($thisop) = @_;
+    return "    addiu \$v0, \$0, ".$thisop->{args}->[0]."\n".
+           "    sb \$v0, ".(18 * 4 + 1)."(\$17)\n";
 }
 
 sub out_end {

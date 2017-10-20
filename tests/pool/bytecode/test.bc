@@ -56,6 +56,8 @@ test_bytecode_entry:
         neq	%3, %2
          die
 
+        mode 43
+
 #ifndef CONFIG_MUTEK_BYTECODE_SANDBOX
     // CST8, CCALL, NEQ
         cst8	%2, 11
@@ -773,6 +775,8 @@ next12:
         cst8	%3, 120
         neq	%fact:result, %3
         die
+
+        mode 23
         end
 
 .func wrap
@@ -791,6 +795,7 @@ next12:
 	.output %1 result
 	.clobber %2 tmp
 	.preserve %10, %13
+        .mode 43
 
         std	%link, %sp
         cst8	%tmp, 1

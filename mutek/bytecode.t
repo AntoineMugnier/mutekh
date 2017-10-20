@@ -66,6 +66,7 @@ bc_desc_init(struct bc_descriptor_s *desc,
     desc->run = &bc_run_vm;
   desc->code = code;
   desc->flags = flags | len;
+  return 0;
 }
 
 error_t
@@ -92,6 +93,7 @@ bc_init(struct bc_context_s *ctx,
         const struct bc_descriptor_s *desc)
 {
   ctx->vpc = desc->code;
+  ctx->mode = 0;
 #ifdef CONFIG_MUTEK_BYTECODE_NATIVE
   ctx->skip = 0;
 #endif
@@ -117,6 +119,7 @@ bc_init_sandbox(struct bc_context_s *ctx, const struct bc_descriptor_s *desc,
                 uint_fast16_t max_cycles)
 {
   ctx->vpc = desc->code;
+  ctx->mode = 0;
 #ifdef CONFIG_MUTEK_BYTECODE_NATIVE
   ctx->skip = 0;
 #endif
@@ -208,6 +211,7 @@ static const char * bc_opname(uint16_t op)
     { 0xf900, BC_OP_STD   << 8, "std" },
     { 0xf900, BC_OP_LDE   << 8, "lde" },
     { 0xf900, BC_OP_STE   << 8, "ste" },
+    { 0xf9f0, 0x7080, "mode" },
     { 0x0000, 0x0000, "invalid" },
   };
   uint_fast8_t i;
@@ -246,7 +250,7 @@ static void bc_dump_op(const struct bc_context_s *ctx, const uint16_t *pc)
 # endif
     }
 
-  printk("\n");
+  printk(", mode=%u\n", ctx->mode);
 }
 
 static void bc_dump_regs(const struct bc_context_s *ctx)
@@ -1116,14 +1120,21 @@ bc_opcode_t bc_run_##fcname(struct bc_context_s *ctx)
       dispatch_cstn_call: {
 	  if ((op & 0x0900) == 0x0000) /* not ld/st */
 	    {
-              if ((op & 0x0070) == 0x0000) /* gaddr */
+              if ((op & 0x0070) == 0x0000)
                 {
-                  BC_CONFIG_SANDBOX(
-                    if (sandbox)
-                      goto err_ret;
-                  );
-                  *dst = BC_NATIVE_PTR_NA_LOAD(++pc);
-                  pc += INT_PTR_SIZE / 16 - 1;
+                  if (op & 0x0080) /* mode */
+                    {
+                      ctx->mode = ((op & 0x0600) >> 5) | (op & 15);
+                    }
+                  else /* gaddr */
+                    {
+                      BC_CONFIG_SANDBOX(
+                        if (sandbox)
+                          goto err_ret;
+                      );
+                      *dst = BC_NATIVE_PTR_NA_LOAD(++pc);
+                      pc += INT_PTR_SIZE / 16 - 1;
+                    }
                   break;
                 }
 
