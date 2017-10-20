@@ -60,34 +60,18 @@ sub out_custom {
     my ($thisop) = @_;
     my $op = $thisop->{code} | $thisop->{op}->{code};
     return
-           # opcode value
-	   "    ldr r0, =$op\n".
-           # resume address
-	   "    adr r1, 2f\n".
-           "    str r1, [r4, #".(16 * 4)."]\n".
-           "    pop    {r4, r5, r6, r7, pc}\n".
-	   "    .ltorg\n".
-	   "    .balign 4\n".
-	   "2:\n";
+        "    bl arm32m_bc_trampoline\n".
+        "    .2byte ".($op & 0xffff)."\n";    # opcode
 }
 
 sub out_custom_cond {
     my ($thisop) = @_;
     my $op = $thisop->{code} | $thisop->{op}->{code};
     return
-           # resume address
-	   "    adr r1, 2f\n".
-           "    str r1, [r4, #".(16 * 4)."]\n".
-           # skip amount
-           "    movs r1, 1f - 2f\n".
-           "    adds r4, #".(18 * 4)."\n".
-           "    strb r1, [r4]\n".
-           # opcode value
-	   "    ldr r0, =$op\n".
-           "    pop    {r4, r5, r6, r7, pc}\n".
-	   "    .ltorg\n".
-	   "    .balign 4\n".
-	   "2:\n";
+        "    bl arm32m_bc_trampoline_cond\n".
+        "    .2byte ".($op & 0xffff)."\n".    # opcode
+        "    .2byte 1f - 2f\n".               # conditional skip amount
+        "2:\n";
 }
 
 sub out_mode {
@@ -487,7 +471,7 @@ sub out_div {
     $r .= "    mov r1, $reg[$wi1]\n" if $reg[$wi1] ne 'r1';
     $r .= "    mov r2, r4\n".
           "    adds r2, #".($thisop->{out}->[1] * 4)."\n".
-          "    bl bc_divmod32\n".
+          "    bl arm32m_bc_div32\n".
           "    mov $reg[$wo0], r0\n";
     return $r;
 }

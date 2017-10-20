@@ -43,37 +43,6 @@ sub out_begin {
            "1:\n";
 }
 
-sub out_custom {
-    my ($thisop) = @_;
-    my $op = $thisop->{code} | $thisop->{op}->{code};
-    return
-           # opcode value
-	   "    movw r0, #".($op & 0xffff)."\n".
-           # resume address
-	   "    adr r1, 2f\n".
-           "    str r1, [r4, #".(16 * 4)."]\n".
-           "    pop    {r4, r5, r6, r7, r8, pc}\n".
-	   "    .balign 4\n".
-	   "2:\n";
-}
-
-sub out_custom_cond {
-    my ($thisop) = @_;
-    my $op = $thisop->{code} | $thisop->{op}->{code};
-    return
-           # opcode value
-	   "    movw r0, #".($op & 0xffff)."\n".
-           # skip amount
-	   "    movs r1, 1f - 2f\n".
-           "    strb r1, [r4, #".(18 * 4)."]\n".
-           # resume address
-	   "    adr r1, 2f\n".
-           "    str r1, [r4, #".(16 * 4)."]\n".
-           "    pop    {r4, r5, r6, r7, r8, pc}\n".
-	   "    .balign 4\n".
-	   "2:\n";
-}
-
 sub out_mode {
     my ($thisop) = @_;
     return "    movs r0, ".$thisop->{args}->[0]."\n".

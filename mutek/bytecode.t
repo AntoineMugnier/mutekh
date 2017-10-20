@@ -410,13 +410,6 @@ bc_unpack_swap_op32(struct bc_context_s *ctx, reg_t op)
   bc_swap32(t, c);
 }
 
-extern inline uint32_t bc_divmod32(uint32_t a, uint32_t b, uint32_t *r)
-{
-  uint32_t q = a / b;
-  *r = a - q * b;
-  return q;
-}
-
 # if INT_REG_SIZE > 32 || defined(CONFIG_MUTEK_BYTECODE_VM64)
 extern inline void
 bc_unpack_op32(struct bc_context_s *ctx, reg_t op)
