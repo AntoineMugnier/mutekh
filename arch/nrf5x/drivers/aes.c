@@ -100,7 +100,10 @@ static DEV_CRYPTO_INFO(nrf5x_aes_info)
     | bit(DEV_CRYPTO_MODE_RANDOM)
 #endif
 #ifdef CONFIG_DRIVER_NRF5X_AES_CMAC
-    | bit(DEV_CRYPTO_MODE_HMAC)
+    | bit(DEV_CRYPTO_MODE_CMAC)
+#endif
+#ifdef CONFIG_DRIVER_NRF5X_AES_CBC
+    | bit(DEV_CRYPTO_MODE_CBC)
 #endif
 #ifdef CONFIG_DRIVER_NRF5X_AES_CCM
     | (1 << DEV_CRYPTO_MODE_BLE_CCM)
@@ -327,6 +330,48 @@ static error_t nrf5x_aes_cmac(struct dev_crypto_rq_s *rq)
 }
 #endif
 
+#ifdef CONFIG_DRIVER_NRF5X_AES_CBC
+static error_t nrf5x_aes_cbc(struct dev_crypto_rq_s *rq)
+{
+  struct dev_crypto_context_s *ctx = rq->ctx;
+  struct nrf5x_ecb_param_s params;
+  const uint8_t *in = rq->in;
+  uint8_t *out = rq->out;
+  size_t len = rq->len;
+
+  if (len % 16)
+    return -EINVAL;
+  if (ctx->iv_len != 16)
+    return -EINVAL;
+  if (rq->op & DEV_CRYPTO_INVERSE)
+    return -ENOTSUP;
+
+  memcpy(params.key, rq->ctx->key_data, 16);
+
+  memcpy(params.ciphertext, rq->iv_ctr, 16);
+
+  while (len) {
+    for (uint8_t i = 0; i < 4; ++i) {
+      params.cleartext[i] = params.ciphertext[i] ^ endian_le32_na_load(in);
+      in += 4;
+    }
+
+    nrf5x_aes_encrypt_start(&params);
+    nrf5x_aes_encrypt_spin();
+
+    memcpy(out, params.ciphertext, 16);
+
+    out += 16;
+    len -= 16;
+  }
+
+  if (rq->op & DEV_CRYPTO_FINALIZE)
+    memcpy(rq->iv_ctr, params.ciphertext, 16);
+
+  return 0;
+}
+#endif
+
 #ifdef CONFIG_DRIVER_NRF5X_AES_CCM
 static void nrf5x_aes_ccm_hw_start(struct nrf5x_aes_private_s *pv,
                                    struct dev_crypto_rq_s *rq)
@@ -416,7 +461,7 @@ static error_t nrf5x_aes_ccm_sw_encrypt(struct nrf5x_aes_private_s *pv,
 
   // CTR block 1 (Data cipher stream)
   nrf5x_aes_encrypt_start(&aes_ctr);
-  
+
   for (uint32_t point = 0; point < len; point += 16) {
     uint32_t input[4];
 
@@ -458,14 +503,14 @@ static error_t nrf5x_aes_ccm_sw_encrypt(struct nrf5x_aes_private_s *pv,
 
     // Next CTR round
     nrf5x_aes_encrypt_start(&aes_ctr);
-  }    
+  }
 
   // End of CTR block 0, for MIC encoding
   nrf5x_aes_encrypt_spin();
 
   rq->out[0] = rq->in[0];
   rq->out[1] = rq->in[1] + 4;
-  
+
   endian_le32_na_store(rq->out + 2 + len, aes_cbc.ciphertext[0] ^ aes_ctr.ciphertext[0]);
 
   return 0;
@@ -560,7 +605,7 @@ static error_t nrf5x_aes_ccm_sw_decrypt(struct nrf5x_aes_private_s *pv,
 
     // Next CTR round
     nrf5x_aes_encrypt_start(&aes_ctr);
-  }    
+  }
 
   // End of CTR block 0, for MIC encoding
   nrf5x_aes_encrypt_spin();
@@ -692,7 +737,7 @@ static DEV_IRQ_SRC_PROCESS(nrf5x_aes_irq)
           printk(" Out: %P\n", rq->out, rq->out[1] + 2);
           printk(" Ctx: %P\n", state, sizeof(*state));
           printk(" Scr: %P\n", pv->scratch, sizeof(pv->scratch));
-#endif  
+#endif
           rq->err = -EINVAL;
         } else {
           rq->err = 0;
@@ -713,7 +758,7 @@ static DEV_IRQ_SRC_PROCESS(nrf5x_aes_irq)
 
     break;
   }
-  
+
   lock_release(&dev->lock);
 }
 #endif
@@ -745,8 +790,14 @@ static DEV_REQUEST_DELAYED_FUNC(nrf5x_aes_process)
 #endif
 
 #ifdef CONFIG_DRIVER_NRF5X_AES_CMAC
-  case DEV_CRYPTO_MODE_HMAC:
+  case DEV_CRYPTO_MODE_CMAC:
     rq->err = nrf5x_aes_cmac(rq);
+    break;
+#endif
+
+#ifdef CONFIG_DRIVER_NRF5X_AES_CBC
+  case DEV_CRYPTO_MODE_CBC:
+    rq->err = nrf5x_aes_cbc(rq);
     break;
 #endif
 
@@ -837,6 +888,9 @@ DRIVER_DECLARE(nrf5x_aes_drv, 0, "nRF5x AES"
 #endif
 #ifdef CONFIG_DRIVER_NRF5X_AES_CMAC
                ",CMAC"
+#endif
+#ifdef CONFIG_DRIVER_NRF5X_AES_CBC
+               ",CBC"
 #endif
 #ifdef CONFIG_DRIVER_NRF5X_AES_CCM
                ",CCM"
