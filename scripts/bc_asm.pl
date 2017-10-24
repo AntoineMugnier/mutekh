@@ -940,10 +940,9 @@ sub parse
             $bc_name = $1;
             next;
         }
-        if ($l =~ /^\s*\.custom\s+([\w.]+)\s*(.+?)?\s*$/) {
-            my $e = eval_expr( $2, $loc );
-            error($loc, "bad mode mask expression `$2'\n")
-                if (defined $2 && !defined $e);
+        if ($l =~ /^\s*\.custom\s+([\w.]+)\s*([\s\d,]+?)?\s*$/) {
+            my $e;
+            $e |= $_ foreach ( map { 1 << $_ } split /\s*,\s*/, $2 );
 	    push @custom, [ $1, $e ];
             next;
         }

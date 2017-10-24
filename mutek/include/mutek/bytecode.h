@@ -134,7 +134,7 @@
      @em bytecode may be specified in order to prevent generation
      of native machine code for the program.
    @item @tt{.name name} : set the bytecode program name.
-   @item @tt{.custom name [mask of modes]} : load a custom instruction set module and
+   @item @tt{.custom name [mode, mode ...]} : load a custom instruction set module and
      optionally restrict modes which are allowed for instructions of the module.
    @item @tt{.mode m} : declare the default mode used in the current @tt{.func}.
    @item @tt{.export label} : export a label as a global symbol.
@@ -184,9 +184,12 @@
      @item Instruction @item Description
      @item @tt{cst8 reg, value} @item Set a register to an unsigned 8 bits
        constant.
-     @item @tt{cst[16,32,64] reg, value, shift} @item Set a register
-       to an unsigned constant which may be shifted by a mulitple of 8
-       bits. This uses more than one opcode word.
+     @item @tt{cst16 reg, value, shift} @item Set a register
+       to an signed constant in range [-2**16, 2**16-1]. The constant
+       may be shifted by a mulitple of 8 bits. This uses 2 opcode words.
+     @item @tt{cst32 reg, value, shift} @item Set a register
+       to an signed constant in range [-2**32, 2**32-1]. The constant
+       may be shifted by a mulitple of 8 bits. This uses 3 opcode words.
      @item @tt{mov reg, reg} @item Copy a value between 2 registers.
    @end table
 
@@ -774,6 +777,18 @@ bc_skip(struct bc_context_s *ctx)
   assert(!(ctx->pc & 1) && "nothing to skip");
   ctx->pc |= 1;
 #endif
+}
+
+/** @This returns the current bytecode execution mode */
+ALWAYS_INLINE uint_fast8_t bc_get_mode(const struct bc_context_s *ctx)
+{
+  return ctx->mode;
+}
+
+/** @This sets the current bytecode execution mode */
+ALWAYS_INLINE void bc_set_mode(struct bc_context_s *ctx, uint_fast8_t mode)
+{
+  ctx->mode = mode & 63;
 }
 
 /** @This dumps the virtual machine state. If the @ref
