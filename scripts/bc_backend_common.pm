@@ -38,7 +38,7 @@ sub fmt2
 sub fmt3
 {
     my ($thisop, $s, $a, $r) = @_;
-    return $word->( $thisop->{op}->{code} | ($s << 9) | (($a & 0xf) << 4) | ($r & 0xf) );
+    return $word->( $thisop->{op}->{code} | ($s << 10) | (($a & 0xf) << 4) | ($r & 0xf) );
 }
 
 sub fmt4
@@ -128,10 +128,8 @@ sub out_calljmp {
 
     my $r = fmt3( $thisop, 0, 0, $reg );
 
-    $r .= $word->( $a >> 48 ) if ( $w > 2 );
-    $r .= $word->( $a >> 32 ) if ( $w > 1 );
-    $r .= $word->( $a >> 16 ) if ( $w > 0 );
     $r .= $word->( $a );
+    $r .= $word->( $a >> 16 ) if ( $w > 0 );
 
     return $r;
 }
@@ -420,16 +418,21 @@ sub out_cst {
 
     my $w = $thisop->{width};
     my $a = $thisop->{args}->[1];
-    $a = check_imm( $thisop, $a, 0 );
+
+    if ($w == 0 && ($a & 0xffffffffffff0000) == 0xffffffffffff0000) {
+        $a &= 0xffff;
+        $w |= 2;
+    } elsif ($w == 1 && ($a & 0xffffffff00000000) == 0xffffffff00000000) {
+        $a &= 0xffffffff;
+        $w |= 2;
+    }
 
     my $r = fmt3( $thisop, $w,
-                  $thisop->{args}->[2] >> 2,
+                  $thisop->{args}->[2] >> 3,
                   $thisop->{out}->[0] );
 
-    $r .= $word->( $a >> 48 ) if ( $w > 2 );
-    $r .= $word->( $a >> 32 ) if ( $w > 1 );
-    $r .= $word->( $a >> 16 ) if ( $w > 0 );
     $r .= $word->( $a );
+    $r .= $word->( $a >> 16 ) if ( $w & 1 );
 
     return $r;
 }
@@ -458,10 +461,8 @@ sub out_laddr_ {
     my $r = fmt3( $thisop, $w, $op,
                   $thisop->{out}->[0] );
 
-    $r .= $word->( $a >> 48 ) if ( $w > 2 );
-    $r .= $word->( $a >> 32 ) if ( $w > 1 );
-    $r .= $word->( $a >> 16 ) if ( $w > 0 );
     $r .= $word->( $a );
+    $r .= $word->( $a >> 16 ) if ( $w > 0 );
 
     return $r;
 }

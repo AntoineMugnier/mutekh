@@ -432,19 +432,19 @@
     @item shi32a              @item r, bit        @item @tt{0101 110b bbbb rrrr} @item  2
     @item extz                @item r, bit        @item @tt{0101 111b bbbb rrrr} @item  2
 
-    @item ld[8,16,32,64][i]   @item r, ra         @item @tt{0110 0ssi aaaa rrrr} @item  3
-    @item st[8,16,32,64][i]   @item r, ra         @item @tt{0110 1ssi aaaa rrrr} @item  3
+    @item ld[8,16,32,64][i]   @item r, ra         @item @tt{0110 ss0i aaaa rrrr} @item  3
+    @item st[8,16,32,64][i]   @item r, ra         @item @tt{0110 ss1i aaaa rrrr} @item  3
 
-    @item st[8,16,32,64]d     @item r, ra         @item @tt{0111 1ss0 aaaa rrrr} @item  3
-    @item ld[8,16,32,64]e     @item r, ra, +/-v   @item @tt{0111 0ss1 aaaa rrrr, v} @item  3
-    @item st[8,16,32,64]e     @item r, ra, +/-v   @item @tt{0111 1ss1 aaaa rrrr, v} @item  3
+    @item st[8,16,32,64]d     @item r, ra         @item @tt{0111 ss10 aaaa rrrr} @item  3
+    @item ld[8,16,32,64]e     @item r, ra, +/-v   @item @tt{0111 ss01 aaaa rrrr, v} @item  3
+    @item st[8,16,32,64]e     @item r, ra, +/-v   @item @tt{0111 ss11 aaaa rrrr, v} @item  3
 
-    @item mode                @item m             @item @tt{0111 0mm0 1000 mmmm} @item  3
-    @item gaddr               @item r, lbl        @item @tt{0111 0--0 0000 rrrr, v?} @item  3
-    @item cst[16,32,48,64]    @item r, v, b       @item @tt{0111 0ss0 bbb1 rrrr, v, v ...} @item  3
-    @item laddr[16,32][r]     @item r, lbl        @item @tt{0111 0ss0 Rx10 rrrr, v, v ...} @item  3
-    @item jmp[16,32][r]       @item lbl           @item @tt{0111 0ss0 R100 0000, v, v ...} @item  3
-    @item call[16,32][r]      @item r, lbl        @item @tt{0111 0ss0 R100 rrrr, v, v ...} @item  3
+    @item mode                @item m             @item @tt{0111 mm00 0001 mmmm} @item  3
+    @item gaddr               @item r, lbl        @item @tt{0111 --00 0000 rrrr, v?} @item  3
+    @item cst[16,32]          @item r, v, b       @item @tt{0111 xs00 1bbb rrrr, v, v?} @item  3
+    @item laddr[16,32][r]     @item r, lbl        @item @tt{0111 Rs00 0x1- rrrr, v, v?} @item  3
+    @item jmp[16,32][r]       @item lbl           @item @tt{0111 Rs00 0100 rrrr, v, v?} @item  3
+    @item call[16,32][r]      @item r, lbl        @item @tt{0111 Rs00 0101 rrrr, v, v?} @item  3
 
     @item custom              @item               @item @tt{1--- ---- ---- ----} @item
    @end table

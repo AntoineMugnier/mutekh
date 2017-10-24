@@ -199,19 +199,19 @@ static const char * bc_opname(uint16_t op)
     { 0xfe00, 0x5a00, "shir" },
     { 0xfe00, 0x5c00, "shia" },
     { 0xfe00, 0x5e00, "extz" },
-    { 0xf900, 0x6000, "ld" },
-    { 0xf900, 0x6100, "ldi" },
-    { 0xf900, 0x6800, "st" },
-    { 0xf900, 0x6900, "sti" },
-    { 0xf9f0, 0x7080, "mode" },
-    { 0xf9f0, 0x7000, "gaddr" },
-    { 0xf910, 0x7010, "cst" },
-    { 0xf930, 0x7020, "laddr" },
-    { 0xf97f, 0x7040, "jmp" },
-    { 0xf970, 0x7040, "call" },
-    { 0xf900, 0x7800, "std" },
-    { 0xf900, 0x7100, "lde" },
-    { 0xf900, 0x7900, "ste" },
+    { 0xf300, 0x6000, "ld" },
+    { 0xf300, 0x6100, "ldi" },
+    { 0xf300, 0x6100, "st" },
+    { 0xf300, 0x6300, "sti" },
+    { 0xf3f0, 0x7010, "mode" },
+    { 0xf3f0, 0x7000, "gaddr" },
+    { 0xf380, 0x7080, "cst" },
+    { 0xf3a0, 0x7020, "laddr" },
+    { 0xf3f0, 0x7040, "jmp" },
+    { 0xf3f0, 0x7050, "call" },
+    { 0xf300, 0x7200, "std" },
+    { 0xf300, 0x7100, "lde" },
+    { 0xf300, 0x7300, "ste" },
     { 0x0000, 0x0000, "invalid" },
   };
   uint_fast8_t i;
@@ -632,7 +632,7 @@ static void bc_run_packing(struct bc_context_s *ctx,
 #define BC_VM_GEN(fcname, sandbox)
 __attribute__((noinline))
 static bool_t bc_run_##fcname##_ldst(const struct bc_descriptor_s * __restrict__ desc,
-                                     struct bc_context_s *ctx, const uint16_t **pc,
+                                     struct bc_context_s *ctx, const uint16_t *pc,
                                      uint16_t op)
 {
   dispatch_begin:;
@@ -642,14 +642,13 @@ static bool_t bc_run_##fcname##_ldst(const struct bc_descriptor_s * __restrict__
   uintptr_t addr = *addrp;
   op >>= 4;
   uint_fast8_t inc = op & 1;
-  op >>= 1;
-  uint_fast8_t w = 1 << (op & 3);
+  uint_fast8_t w = 1 << ((op >> 2) & 3);
 
-  if (op & 8)
+  if (op & 16)
     {
       if (inc)                  /* BC_LDnE/BC_STnE */
         {
-          addr += (intptr_t)(int16_t)endian_le16(*++*pc);
+          addr += (intptr_t)(int16_t)endian_le16(*pc);
         }
       else                      /* BC_STnD */
         {
@@ -674,7 +673,7 @@ static bool_t bc_run_##fcname##_ldst(const struct bc_descriptor_s * __restrict__
           }
         else                      /* code segment */
           {
-            if (op & 4 /* store */)
+            if (op & 2 /* store */)
               return 1;
 
             size_t s = desc->flags & BC_FLAGS_SIZEMASK;
@@ -692,16 +691,12 @@ static bool_t bc_run_##fcname##_ldst(const struct bc_descriptor_s * __restrict__
 
   do {
     static const bs_dispatch_t dispatch[8] = {
-      [0] = BC_DISPATCH(LD8),
-      [1] = BC_DISPATCH(LD16),
-      [2] = BC_DISPATCH(LD32),
-      [3] = BC_DISPATCH(LD64),
-      [4] = BC_DISPATCH(ST8),
-      [5] = BC_DISPATCH(ST16),
-      [6] = BC_DISPATCH(ST32),
-      [7] = BC_DISPATCH(ST64),
+      BC_DISPATCH(LD8),      BC_DISPATCH(ST8),
+      BC_DISPATCH(LD16),     BC_DISPATCH(ST16),
+      BC_DISPATCH(LD32),     BC_DISPATCH(ST32),
+      BC_DISPATCH(LD64),     BC_DISPATCH(ST64),
     };
-    BC_DISPATCH_GOTO(op & 7);
+    BC_DISPATCH_GOTO((op >> 1) & 7);
 
   dispatch_LD8:
     d = *(uint8_t*)addr;
@@ -920,13 +915,18 @@ bc_opcode_t bc_run_##fcname(struct bc_context_s *ctx)
       uint_fast8_t cst_len = 0;
       if ((op & 0xf000) == 0x7000)
         {
-          cst_len += (0x1010101014131211ULL >> ((op >> 6) & 0x3c)) & 15;
+          uint_fast8_t s = (op >> 5) & 31;
 
-          BC_CONFIG_SANDBOX(
-            /* check upper bound again with extra words */
-            if (sandbox && pc + 1 + cst_len > code_end)
-              goto err_pc;
-          );
+          if ((0xff00fffe >> s) & 1)
+            {
+              cst_len = 1 + ((op & 0x0700) == 0x0400);
+
+              BC_CONFIG_SANDBOX(
+                /* check upper bound again with extra words */
+                if (sandbox && pc + 1 + cst_len > code_end)
+                  goto err_pc;
+              );
+            }
         }
 
       if (skip)
@@ -1142,13 +1142,13 @@ bc_opcode_t bc_run_##fcname(struct bc_context_s *ctx)
 	}
 
       dispatch_cstn_call: {
-	  if ((op & 0x0900) == 0x0000) /* not ld/st */
+	  if ((op & 0x0300) == 0x0000) /* not ld/st */
 	    {
-              if ((op & 0x0070) == 0x0000)
+              if ((op & 0x00e0) == 0x0000)
                 {
-                  if (op & 0x0080) /* mode */
+                  if (op & 0x0010) /* mode */
                     {
-                      ctx->mode = ((op & 0x0600) >> 5) | (op & 15);
+                      ctx->mode = ((op & 0x0c00) >> 6) | (op & 15);
                     }
                   else /* gaddr */
                     {
@@ -1165,32 +1165,31 @@ bc_opcode_t bc_run_##fcname(struct bc_context_s *ctx)
               uintptr_t rpc = (void*)pc - desc->code;
 
               /* fetch constant */
-	      uint_fast8_t cm1 = (op >> 9) & 3;
+              bc_reg_t x = endian_le16(*++pc);
+              if (op & 0x0400)
+                x |= (uint32_t)endian_le16(*++pc) << 16;
 
-	      uint_fast8_t c = cm1 + 1;
-	      bc_reg_t x = 0;
-	      while (c--)
-		x = (x << 16) | endian_le16(*++pc);
-
-              BC_CLAMP32(sandbox, x);
-
-              if (op & 0x0010)  /* cst16, cst32... */
+              if (op & 0x0080)  /* cst16, cst32 */
                 {
-                  *dstp = x << ((op & 0x00e0) >> 2); /* byte shift */
+                  if (op & 0x0800)  /* set high */
+                    {
+                      if (op & 0x0400)
+                        BC_CONFIG_64( x |= 0xffffffff00000000ULL );
+                      else
+                        x |= 0xffffffffffff0000ULL;
+                    }
+
+                  *dstp = x << ((op & 0x0070) >> 1); /* byte shift */
                   break;
                 }
 
-              if (op & 0x0080)  /* pc relative */
+              if (op & 0x0800)  /* pc relative */
                 {
-                  BC_CONFIG_64(
-                    bc_reg_t m = (bc_reg_t)0x8000 << (cm1 << 4); /* sign extend x */
-                    x = rpc + (m ^ x) - m;
-                  );
-                  BC_CONFIG_NOT_64(
-                    if (cm1 == 0)
-                      x = (bc_sreg_t)(int16_t)x;
-                    x += rpc;
-                  );
+                  if (op & 0x0400)  /* sign extend */
+                    BC_CONFIG_64( x = (bc_sreg_t)(int32_t)x );
+                  else
+                    x = (bc_sreg_t)(int16_t)x;
+                  x += rpc;
                 }
 
               if (op & 0x0020)  /* laddr */
@@ -1206,7 +1205,7 @@ bc_opcode_t bc_run_##fcname(struct bc_context_s *ctx)
                 }
 
               /* call/jmp */
-              if (op & 0xf)     /* save return address */
+              if (op & 0x0010)     /* save return address */
                 *dstp = (uintptr_t)pc - code_offset;
 
               pc = (const uint16_t*)(desc->code + x);
@@ -1215,8 +1214,9 @@ bc_opcode_t bc_run_##fcname(struct bc_context_s *ctx)
         }
 
       dispatch_ldst:
-	if (bc_run_##fcname##_ldst(desc, ctx, &pc, op))
+	if (bc_run_##fcname##_ldst(desc, ctx, pc + 1, op))
           goto err_ret;
+        pc += cst_len;
 	break;
 
       check_pc:

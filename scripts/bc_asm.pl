@@ -380,7 +380,13 @@ sub parse_cst
     my $w = $1 / 16;
     $thisop->{width} = $w - 1;
 
-    check_num( $thisop, 1, 0, 0xffffffffffffffff >> (64 - 16 * $w) );
+    if ( $w == 1 ) {
+        check_num( $thisop, 1, -0x10000, 0xffff);
+    } elsif ( $w == 2 ) {
+        check_num( $thisop, 1, -0x100000000, 0xffffffff);
+    } else {
+        die;
+    }
 }
 
 sub addr_data
@@ -565,10 +571,6 @@ sub parse_call32
 
     $thisop->{name} =~ /^call(\d+)/ ;
     $thisop->{width} = $1 / 16 - 1;
-
-    if ( $link == 0 ) {
-	error($thisop, "call can not modify register 0\n");
-    }
 }
 
 sub parse_jmp32
@@ -1043,17 +1045,17 @@ our %asm = (
         flushregs => 1, op_jmp => 1, op_tail => 1
     },
     'jmp16r'  => {
-        words => 2, code => 0x70c0, argscnt => 1,
+        words => 2, code => 0x7840, argscnt => 1,
         parse => \&parse_jmp32, backend => ('jmpr'),
         flushregs => 1, op_jmp => 1, op_tail => 1
     },
     'jmp32'  => {
-        words => 3, code => 0x7240, argscnt => 1,
+        words => 3, code => 0x7440, argscnt => 1,
         parse => \&parse_jmp32, backend => ('jmpa'),
         flushregs => 1, op_jmp => 1, op_tail => 1
     },
     'jmp32r'  => {
-        words => 3, code => 0x72c0, argscnt => 1,
+        words => 3, code => 0x7c40, argscnt => 1,
         parse => \&parse_jmp32, backend => ('jmpr'),
         flushregs => 1, op_jmp => 1, op_tail => 1
     },
@@ -1063,22 +1065,22 @@ our %asm = (
         flushregs => 1, reloadregs => 1, op_call => 1,
     },
     'call16'  => {
-        words => 2, code => 0x7040, argscnt => 2,
+        words => 2, code => 0x7050, argscnt => 2,
         parse => \&parse_call32, backend => ('calla'),
         flushregs => 1, reloadregs => 1, op_call => 1,
     },
     'call16r'  => {
-        words => 2, code => 0x70c0, argscnt => 2,
+        words => 2, code => 0x7850, argscnt => 2,
         parse => \&parse_call32, backend => ('callr'),
         flushregs => 1, reloadregs => 1, op_call => 1,
     },
     'call32'  => {
-        words => 3, code => 0x7240, argscnt => 2,
+        words => 3, code => 0x7450, argscnt => 2,
         parse => \&parse_call32, backend => ('calla'),
         flushregs => 1, reloadregs => 1, op_call => 1,
     },
     'call32r'  => {
-        words => 3, code => 0x72c0, argscnt => 2,
+        words => 3, code => 0x7c50, argscnt => 2,
         parse => \&parse_call32, backend => ('callr'),
         flushregs => 1, reloadregs => 1, op_call => 1,
     },
@@ -1281,35 +1283,27 @@ our %asm = (
         parse => \&parse_lde, backend => ('lde'),
     }),
     _multi_keys( 'st' => 'st8' => 'st16' => 'st32' => 'st64' => {
-        words => 1, code => 0x6800, argscnt => 2,
+        words => 1, code => 0x6200, argscnt => 2,
         parse => \&parse_st, backend => ('st'),
     }),
     _multi_keys( 'sti' => 'st8i' => 'st16i' => 'st32i' => 'st64i' => {
-        words => 1, code => 0x6900, argscnt => 2,
+        words => 1, code => 0x6300, argscnt => 2,
         parse => \&parse_sti, backend => ('sti'),
     }),
     _multi_keys( 'std' => 'st8d' => 'st16d' => 'st32d' => 'st64d' => {
-        words => 1, code => 0x7800, argscnt => 2,
+        words => 1, code => 0x7200, argscnt => 2,
         parse => \&parse_sti, backend => ('std'),
     }),
     _multi_keys( 'ste' => 'st8e' => 'st16e' => 'st32e' => 'st64e' => {
-        words => 2, code => 0x7900, argscnt => 3,
+        words => 2, code => 0x7300, argscnt => 3,
         parse => \&parse_ste, backend => ('ste'),
     }),
     'cst16' => {
-        words => 2, code => 0x7010, argscnt => 3,
+        words => 2, code => 0x7080, argscnt => 3,
         parse => \&parse_cst, backend => ('cst'),
     },
     'cst32' => {
-        words => 3, code => 0x7210, argscnt => 3,
-        parse => \&parse_cst, backend => ('cst'),
-    },
-    'cst48' => {
-        words => 4, code => 0x7410, argscnt => 3,
-        parse => \&parse_cst, backend => ('cst'),
-    },
-    'cst64' => {
-        words => 5, code => 0x7610, argscnt => 3,
+        words => 3, code => 0x7480, argscnt => 3,
         parse => \&parse_cst, backend => ('cst'),
     },
     'laddr16' => {
@@ -1317,23 +1311,19 @@ our %asm = (
         parse => \&parse_laddr, backend => ('laddra'),
     },
     'laddr32' => {
-        words => 3, code => 0x7220, argscnt => 2,
-        parse => \&parse_laddr, backend => ('laddra'),
-    },
-    'laddr64' => {
-        words => 5, code => 0x7620, argscnt => 2,
+        words => 3, code => 0x7420, argscnt => 2,
         parse => \&parse_laddr, backend => ('laddra'),
     },
     'laddr16r' => {
-        words => 2, code => 0x70a0, argscnt => 2,
+        words => 2, code => 0x7820, argscnt => 2,
         parse => \&parse_laddr, backend => ('laddrr'),
     },
     'laddr32r' => {
-        words => 3, code => 0x72a0, argscnt => 2,
+        words => 3, code => 0x7c20, argscnt => 2,
         parse => \&parse_laddr, backend => ('laddrr'),
     },
     'mode' => {
-        words => 1, code => 0x7080, argscnt => 1,
+        words => 1, code => 0x7010, argscnt => 1,
         parse => \&parse_mode, backend => ('mode'),
         nocond => 1, op_mode => 1
     },

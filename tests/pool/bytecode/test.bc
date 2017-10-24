@@ -276,6 +276,36 @@ next9:
         neq	%3, %2
         die
 
+    // CST16, CST32
+        cst8	%1, 0x32
+        not32   %1
+        cst32	%2, 0xffffffcd, 0
+        neq	%1, %2
+         die
+        cst16	%1, 0x1234, 0
+        cst32	%2, 0x00001234, 0
+        neq	%1, %2
+         die
+        cst16	%1, -0x5433, 0
+        cst32	%2, 0x0000abcd, 0
+        exts    %2, 15
+        neq	%1, %2
+         die
+        tst32c	%1, 31
+         die
+        cst16	%1, 0xffff, 0
+        add8    %1, 1
+        eq0    %1
+         die
+        cst16	%1, -1, 0
+        add8    %1, 1
+        neq0    %1
+         die
+        cst32	%1, -1, 0
+        add8    %1, 1
+        neq0    %1
+         die
+
     // MUL, CST16, CST32, CST16X
         cst16	%1, 0x1234, 0
         cst32	%2, 0x5678abcd, 0
@@ -404,7 +434,7 @@ next12:
 	die
 
     // EXTS
-	cst64	%4, 0xffffffffffffff82, 0
+	cst32	%4, -0x7e, 0
 	cst8	%1, 0x42
 	mov	%2, %1
 	exts	%2, 7
@@ -443,16 +473,16 @@ next12:
 	cst8	%2, 6
 	neq	%1, %2
 	die
-	cst32	%1, 0xffffff82, 0
+	cst16	%1, -0x7e, 0
 	msbs32	%1
 	cst8	%2, 31
 	neq	%1, %2
 	die
 
     // NOT, ANDN
-	cst16	%1, 0x55aa, 0
+	cst32   %1, 0xffff55aa, 0
 	not32	%1
-	cst32	%2, 0xffffaa55, 0
+	cst16	%2, 0xaa55, 0
 	neq	%1, %2
 	die
 
