@@ -168,7 +168,6 @@ void mutek_shell_start(struct device_char_s *c, const char *term,
     storage in a console options parsing context.
     @see #TERMUI_CON_OPT_SHELL_BUFFER_GET_ENTRY */
 struct shell_opt_buffer_s
-#ifdef CONFIG_MUTEK_SHELL_BUFFER
 {
   /** pointer to storage */
   void *addr;
@@ -177,20 +176,15 @@ struct shell_opt_buffer_s
   /** this is set when the @ref shell_buffer_drop function must be
       called on cleanup. */
   uintptr_t buffered:1;
-}
-#endif
-;
+};
 
 /** @internal @see #TERMUI_CON_OPT_SHELL_BUFFER_GET_ENTRY */
 struct shell_opt_buffer_desc_s
-#ifdef CONFIG_MUTEK_SHELL_BUFFER
 {
   struct termui_con_opts_s opt;
   const void *type;
   uint16_t offset;
-}
-#endif
-;
+};
 
 /** @This calls @ref shell_buffer_new only if the @ref
     #TERMUI_CON_OPT_SHELL_BUFFER_GET_ENTRY option has not parsed a
