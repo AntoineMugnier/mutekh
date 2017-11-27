@@ -18,14 +18,14 @@
     Copyright Nicolas Pouillon <nipo@ssji.net> (c) 2015
 */
 
+#define LOGK_MODULE_ID "netl"
+
 #include <mutek/printk.h>
 
 #include <net/scheduler.h>
 #include <net/layer.h>
 
 #include "network.h"
-
-#define dprintk(...) do{}while(0)
 
 void net_layer_context_changed(struct net_layer_s *layer)
 {
@@ -62,7 +62,7 @@ error_t net_layer_bind(
   if (err)
     return err;
 
-  dprintk("Layer %p %p bound to %p %p\n", child, child->handler,
+  logk_trace("bound %p %p to %p %p", child, child->handler,
         layer, layer->handler);
 
   child->parent = layer;
@@ -83,7 +83,7 @@ void net_layer_unbind(
     struct net_layer_s *layer,
     struct net_layer_s *child)
 {
-  dprintk("Layer %p %p unbound from %p %p\n", child, child->handler,
+  logk_trace("unbound %p %p from %p %p", child, child->handler,
         layer, layer->handler);
 
   assert(child->parent == layer);
@@ -104,19 +104,63 @@ void net_layer_unbind_all(struct net_layer_s *layer)
 
   while ((child = net_layer_list_head(&layer->children))) {
     net_layer_unbind(layer, child);
-    net_layer_refdec(child);
   }
 }
 
-error_t net_layer_init(
+static void net_layer_destroy_real(
+    struct net_layer_s *layer)
+{
+  const struct net_layer_handler_s *handler = layer->handler;
+  void *delegate = layer->delegate;
+  const struct net_layer_delegate_vtable_s *delegate_vtable = layer->delegate_vtable;
+
+  layer->scheduler = NULL;
+
+  logk_trace("destroy real %p %p", layer, layer->handler);
+
+  net_layer_unbind_all(layer);
+
+  if (delegate)
+    delegate_vtable->release(delegate, layer);
+
+  layer->delegate = NULL;
+
+  handler->destroyed(layer);
+}
+
+static KROUTINE_EXEC(net_layer_handler)
+{
+  struct net_layer_s *layer = KROUTINE_CONTAINER(kr, *layer, kr);
+  struct net_task_s *task;
+  
+  if (layer->destroying) {
+    net_layer_destroy_real(layer);
+    return;
+  }
+
+  while ((task = net_task_queue_pop(&layer->pending))) {
+    logk_trace("%p handling %p", layer, task);
+    layer->handler->task_handle(layer, task);
+  }
+}
+
+error_t net_layer_init_(
   struct net_layer_s *layer,
   const struct net_layer_handler_s *handler,
   struct net_scheduler_s *sched,
   void *delegate,
-  const struct net_layer_delegate_vtable_s *delegate_vtable)
+  const struct net_layer_delegate_vtable_s *delegate_vtable,
+  struct kroutine_sequence_s * sequence)
 {
   net_layer_refinit(layer);
   net_layer_list_init(&layer->children);
+  net_task_queue_init(&layer->pending);
+  layer->destroying = 0;
+
+  if (sequence)
+    kroutine_init_deferred_seq(&layer->kr, net_layer_handler, sequence);
+  else
+    kroutine_init_deferred(&layer->kr, net_layer_handler);
 
   layer->handler = handler;
   layer->scheduler = sched;
@@ -128,9 +172,7 @@ error_t net_layer_init(
 
   net_scheduler_layer_created(sched, layer);
   
-  dprintk("Layer %p %p init\n", layer, layer->handler);
-
-  net_scheduler_timer_use(layer->scheduler);
+  logk_trace("init %p %p", layer, layer->handler);
 
   return 0;
 }
@@ -138,37 +180,29 @@ error_t net_layer_init(
 void net_layer_destroy(
     struct net_layer_s *layer)
 {
+  if (layer->destroying)
+    return;
+
+  logk_trace("destroy %p %p", layer, layer->handler);
+
   net_scheduler_layer_destroyed(layer->scheduler, layer);
+  layer->destroying = 1;
+  kroutine_exec(&layer->kr);
+
+  struct net_task_s *task;
+  while ((task = net_task_queue_pop(&layer->pending)))
+    net_task_destroy(task);
 }
 
-void net_layer_destroy_real(
-    struct net_layer_s *layer)
+void net_layer_task_push(
+    struct net_layer_s *layer,
+    struct net_task_s *task)
 {
-  struct net_layer_s *child;
-  struct net_scheduler_s *sched = layer->scheduler;
-  const struct net_layer_handler_s *handler = layer->handler;
-  void *delegate = layer->delegate;
-  const struct net_layer_delegate_vtable_s *delegate_vtable = layer->delegate_vtable;
+  if (layer->destroying)
+    return;
 
-  layer->scheduler = NULL;
+  assert(task->target == layer);
 
-  dprintk("Layer %p %p destroy\n", layer, layer->handler);
-
-  while ((child = net_layer_list_head(&layer->children))) {
-    dprintk(" cleaning ref to %p %p\n", layer, layer->handler);
-    net_layer_unbind(layer, child);
-    net_layer_refdec(child);
-  }
-
-  net_scheduler_from_layer_cancel(sched, layer);
-
-  if (delegate)
-    delegate_vtable->release(delegate, layer);
-
-  layer->delegate = NULL;
-
-  handler->destroyed(layer);
-
-  net_scheduler_timer_release(sched);
+  net_task_queue_pushback(&layer->pending, task);
+  kroutine_exec(&layer->kr);
 }
-

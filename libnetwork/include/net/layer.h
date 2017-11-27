@@ -41,10 +41,12 @@
 #include <gct/container_clist.h>
 
 #include <mutek/buffer_pool.h>
+#include <mutek/kroutine.h>
 
 #include <assert.h>
 
 #include <net/addr.h>
+#include <net/task.h>
 
 struct net_task_s;
 struct net_layer_s;
@@ -154,6 +156,12 @@ GCT_CONTAINER_TYPES(net_layer_list,
  */
 struct net_layer_s
 {
+  struct kroutine_s kr;
+
+  bool_t destroying;
+
+  net_task_queue_root_t pending;
+
   /** @multiple @internal */
   GCT_REFCOUNT_ENTRY(obj_entry);
   GCT_CONTAINER_ENTRY(net_layer_list, entry);
@@ -226,6 +234,15 @@ void net_layer_unbind_all(struct net_layer_s *layer);
  */
 void net_layer_context_changed(struct net_layer_s *layer);
 
+/** @internal */
+error_t net_layer_init_(
+  struct net_layer_s *layer,
+  const struct net_layer_handler_s *handler,
+  struct net_scheduler_s *scheduler,
+  void *delegate,
+  const struct net_layer_delegate_vtable_s *delegate_vtable,
+  struct kroutine_sequence_s *seq);
+
 /**
    @this initializes a network layer.
 
@@ -235,11 +252,31 @@ void net_layer_context_changed(struct net_layer_s *layer);
    @param delegate Delegate private data pointer
    @param delegate_vtable Vtable for delegate, mandatory if @tt delegate is set
  */
+ALWAYS_INLINE
 error_t net_layer_init(
   struct net_layer_s *layer,
   const struct net_layer_handler_s *handler,
   struct net_scheduler_s *scheduler,
   void *delegate,
-  const struct net_layer_delegate_vtable_s *delegate_vtable);
+  const struct net_layer_delegate_vtable_s *delegate_vtable)
+{
+  return net_layer_init_(layer, handler, scheduler, delegate, delegate_vtable, NULL);
+}
+
+ALWAYS_INLINE
+error_t net_layer_init_seq(
+  struct net_layer_s *layer,
+  const struct net_layer_handler_s *handler,
+  struct net_scheduler_s *scheduler,
+  void *delegate,
+  const struct net_layer_delegate_vtable_s *delegate_vtable,
+  struct kroutine_sequence_s *seq)
+{
+  return net_layer_init_(layer, handler, scheduler, delegate, delegate_vtable, seq);
+}
+
+void net_layer_task_push(
+    struct net_layer_s *layer,
+    struct net_task_s *task);
 
 #endif
