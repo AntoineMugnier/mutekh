@@ -18,39 +18,34 @@
     Copyright Nicolas Pouillon <nipo@ssji.net> (c) 2015
 */
 
+#define LOGK_MODULE_ID "bsec"
+
 #include <hexo/types.h>
 #include <ble/protocol/address.h>
 
 #include <mutek/printk.h>
 
-#if defined(CONFIG_DEVICE_PERSIST)
-# include <device/class/persist.h>
-#endif
-
 #include <device/class/crypto.h>
 #include <ble/crypto.h>
 
 #include <ble/security_db.h>
-#include <ble/peer.h>
-#include "security_db_priv.h"
+
+#if defined(CONFIG_DEVICE_PERSIST)
+# include <device/class/persist.h>
+#endif
 
 #include <string.h>
 
-#if 0
-# define dprintk printk
-#else
-# define dprintk(k...) do {} while (0)
-#endif
-
+#if defined(CONFIG_DEVICE_PERSIST)
 __attribute__((packed))
 struct ble_security_db_entry_s
 {
   uint8_t irk[16];
   uint8_t ltk[16];
-  uint64_t id;
-  uint8_t addr[6];
   uint8_t rand[8];
+  uint8_t addr[6];
   uint16_t ediv;
+  uint32_t id;
 
   bool_t addr_present : 1;
   bool_t irk_present : 1;
@@ -62,17 +57,10 @@ struct ble_security_db_entry_s
   bool_t secure_pairing : 1;
 };
 
-#if defined(CONFIG_DEVICE_PERSIST)
 static const struct dev_persist_descriptor_s security_db_entry_blob = {
   .uid = 0x3200,
   .type = DEV_PERSIST_BLOB,
   .size = sizeof(struct ble_security_db_entry_s),
-};
-
-static const struct dev_persist_descriptor_s security_db_subscribed_blob = {
-  .uid = 0x3220,
-  .type = DEV_PERSIST_BLOB,
-  .size = BLE_SUBSCRIBED_CHAR_COUNT * sizeof(struct ble_subscription_s),
 };
 
 static const struct dev_persist_descriptor_s security_db_device_counter = {
@@ -86,34 +74,27 @@ static const struct dev_persist_descriptor_s security_db_pk_blob = {
   .type = DEV_PERSIST_BLOB,
   .size = 16,
 };
-
-static
-void peer_entry_addr_load(const struct ble_security_db_entry_s *entry,
-                          struct ble_addr_s *addr)
-{
-  memcpy(addr->addr, entry->addr, 6);
-
-  addr->type = entry->addr_random ? BLE_ADDR_RANDOM : BLE_ADDR_PUBLIC;
-}
+#endif
 
 static
 void peer_entry_store(struct ble_security_db_entry_s *entry,
                       const struct ble_peer_s *peer)
 {
-  memcpy(entry->ltk, peer->ltk, 16);
-  memcpy(entry->irk, peer->irk, 16);
+  memcpy(entry->ltk, peer->remote.ltk, 16);
+  memcpy(entry->irk, peer->remote.irk, 16);
+  memcpy(entry->csrk, peer->remote.csrk, 16);
   memcpy(entry->addr, peer->addr.addr, 6);
-  memcpy(entry->rand, peer->rand, 8);
+  entry->rand = peer->remote.rand;
+  entry->ediv = peer->remote.ediv;
 
   entry->addr_random = peer->addr.type == BLE_ADDR_RANDOM;
   entry->addr_present = peer->addr_present;
-  entry->ltk_present = peer->ltk_present;
-  entry->irk_present = peer->irk_present;
-  entry->identity_present = peer->identity_present;
-  entry->ediv = peer->ediv;
+  entry->ltk_present = peer->remote.ltk_present;
+  entry->irk_present = peer->remote.irk_present;
+  entry->csrk_present = peer->remote.csrk_present;
+  entry->identity_present = peer->remote.identity_present;
 
   entry->id = peer->id;
-  entry->bonded = peer->bonded;
   entry->mitm_protection = peer->mitm_protection;
   entry->secure_pairing = peer->secure_pairing;
 }
@@ -122,69 +103,25 @@ static
 void peer_entry_load(const struct ble_security_db_entry_s *entry,
                      struct ble_peer_s *peer)
 {
-  memcpy(peer->irk, entry->irk, 16);
-  memcpy(peer->ltk, entry->ltk, 16);
-  memcpy(peer->rand, entry->rand, 8);
-  peer_entry_addr_load(entry, &peer->addr);
+  memcpy(peer->remote.ltk, entry->ltk, 16);
+  memcpy(peer->remote.irk, entry->irk, 16);
+  memcpy(peer->remote.csrk, entry->csrk, 16);
+  memcpy(peer->addr.addr, entry->addr, 6);
+  peer->remote.rand = entry->rand;
+  peer->remote.ediv = entry->ediv;
+
+  peer->addr.type = entry->addr_random ? BLE_ADDR_RANDOM : BLE_ADDR_PUBLIC;
+  peer->addr_present = entry->addr_present;
+  peer->remote.ltk_present = entry->ltk_present;
+  peer->remote.irk_present = entry->irk_present;
+  peer->remote.csrk_present = entry->csrk_present;
+  peer->remote.identity_present = entry->identity_present;
 
   peer->id = entry->id;
-  peer->identity_present = entry->identity_present;
-  peer->ediv = entry->ediv;
-  peer->addr_present = entry->addr_present;
-  peer->ltk_present = entry->ltk_present;
-  peer->irk_present = entry->irk_present;
-  peer->bonded = entry->bonded;
   peer->mitm_protection = entry->mitm_protection;
   peer->secure_pairing = entry->secure_pairing;
-  peer->paired = 1;
-  memset(peer->subscriptions, 0xff, sizeof(peer->subscriptions));
-}
 
-void peer_subscribed_load(struct ble_security_db_s *db,
-                          struct ble_peer_s *peer,
-                          uint8_t offset)
-{
-  const void *data;
-
-  if (dev_persist_wait_read(&db->persist, &security_db_subscribed_blob,
-                            offset, &data) == 0) {
-    memcpy(peer->subscriptions, data, sizeof(peer->subscriptions));
-  } else {
-    memset(peer->subscriptions, 0xff, sizeof(peer->subscriptions));
-  }
-}
-
-error_t peer_subscribed_save(struct ble_security_db_s *db,
-                             const struct ble_peer_s *peer,
-                             uint8_t offset)
-{
-  return dev_persist_wait_write(&db->persist, &security_db_subscribed_blob,
-                                offset, peer->subscriptions);
-}
-#else
-void peer_subscribed_load(struct ble_security_db_s *db,
-                          struct ble_peer_s *peer,
-                          uint8_t offset)
-{
-  memset(peer->subscriptions, 0xff, sizeof(peer->subscriptions));
-}
-
-error_t peer_subscribed_save(struct ble_security_db_s *db,
-                             const struct ble_peer_s *peer,
-                             uint8_t offset)
-{
-  return -ENOTSUP;
-}
-#endif
-
-error_t ble_security_db_key_get(struct ble_security_db_s *db,
-                                uint64_t did,
-                                uint64_t key_handle,
-                                uint8_t *out)
-{
-  uint64_t tmp[2] = { did, key_handle };
-
-  return ble_e(&db->aes, db->pk, (const uint8_t *)tmp, out);
+  peer->bonded = 1;
 }
 
 error_t ble_security_db_init(struct ble_security_db_s *db,
@@ -214,7 +151,7 @@ error_t ble_security_db_init(struct ble_security_db_s *db,
   if (!err) {
     memcpy(db->pk, tmp, 16);
 
-    printk("Loaded device private key: %P\n", db->pk, 16);
+    logk("loaded device private key: %P", db->pk, 16);
   } else {
 #endif
     err = dev_rng_wait_read(db->rng, db->pk, 16);
@@ -222,7 +159,7 @@ error_t ble_security_db_init(struct ble_security_db_s *db,
       goto put_aes;
 
 #if defined(CONFIG_DEVICE_PERSIST)
-    printk("Created device private key: %P\n", db->pk, 16);
+    logk("created device private key: %P", db->pk, 16);
 
     dev_persist_wait_write(&db->persist, &security_db_pk_blob, 0, db->pk);
     // We can still run until reboot if key fails to write...
@@ -239,7 +176,7 @@ error_t ble_security_db_init(struct ble_security_db_s *db,
   if (err)
     goto put_aes;
 
-  printk("Device IRK: %P\n", db->irk, 16);
+  logk("device IRK: %P", db->irk, 16);
 
 #if defined(CONFIG_DEVICE_PERSIST)
   for (uint8_t i = 0; i < CONFIG_BLE_SECURITY_DB_MAX; ++i) {
@@ -260,18 +197,18 @@ error_t ble_security_db_init(struct ble_security_db_s *db,
         }
       }
 
-      printk("SecDB peer %lld slot %d\n", db->paired_id[i], i);
+      logk("peer %lld slot %d", db->paired_id[i], i);
       if (entry->addr_present) {
         struct ble_addr_s addr;
         peer_entry_addr_load(entry, &addr);
-        printk("  address " BLE_ADDR_FMT "\n", BLE_ADDR_ARG(&addr));
+        logk("  address " BLE_ADDR_FMT "", BLE_ADDR_ARG(&addr));
       }
       if (entry->irk_present) {
-        printk("  IRK %P\n", entry->irk, 16);
+        logk("  IRK %P", entry->irk, 16);
       }
       uint8_t tmp[16];
       ble_security_db_key_get(db, db->paired_id[i], KEY_HANDLE_LTK, tmp);
-      printk("  LTK %P\n", tmp, 16);
+      logk("  LTK %P", tmp, 16);
     }
 
   next:;
@@ -403,7 +340,7 @@ error_t ble_security_db_load(struct ble_security_db_s *db,
   ble_peer_init(peer, db, addr);
 
 #if defined(CONFIG_DEVICE_PERSIST)
-  dprintk("%s looking up "BLE_ADDR_FMT"\n", __FUNCTION__, BLE_ADDR_ARG(addr));
+  logk_trace("looking up "BLE_ADDR_FMT"", BLE_ADDR_ARG(addr));
 
   if (addr->type == BLE_ADDR_PUBLIC || rt == BLE_ADDR_RANDOM_STATIC) {
     peer->addr = *addr;
@@ -474,7 +411,7 @@ error_t ble_security_db_save(struct ble_security_db_s *db,
   if (peer->id == 0)
     return -EINVAL;
 
-  printk("Saving peer id %lld\n", peer->id);
+  logk("saving peer id %lld", peer->id);
 
   peer_entry_store(&entry, peer);
 
@@ -484,14 +421,14 @@ error_t ble_security_db_save(struct ble_security_db_s *db,
     // Entry with id == 0 can always be overwritten
     existing.id = 0;
   } else {
-    printk("Address "BLE_ADDR_FMT" found present as peer %lld\n", BLE_ADDR_ARG(&peer->lookup_addr), existing.id);
+    logk("address "BLE_ADDR_FMT" found present as peer %lld", BLE_ADDR_ARG(&peer->lookup_addr), existing.id);
   }
 
   for (uint8_t i = 0; i < CONFIG_BLE_SECURITY_DB_MAX; ++i) {
     if (existing.id && db->paired_id[i] == existing.id) {
       index = i;
 
-      printk("Found slot %d with id %lld matching peer to save\n", i, db->paired_id[i]);
+      logk("found slot %d with id %lld matching peer to save", i, db->paired_id[i]);
 
       goto write;
     }
@@ -504,23 +441,24 @@ error_t ble_security_db_save(struct ble_security_db_s *db,
     if (db->paired_id[i] == -1 || db->paired_id[i] == 0) {
       index = i;
 
-      printk("Found entry %d to be free\n", i);
+      logk("found entry %d to be free", i);
 
       goto write;
     }
   }
 
-  printk("Using slot %d as oldest to replace\n", index);
+  logk("using slot %d as oldest to replace", index);
 
  write:
   db->paired_id[index] = peer->id;
 
-  printk("SecDB: Saving peer %lld slot %d: %P...", peer->id, index, &entry, sizeof(entry));
+  logk("saving peer %lld slot %d: %P...", peer->id, index, &entry, sizeof(entry));
 
   err = dev_persist_wait_write(&db->persist, &security_db_entry_blob, index, &entry);
   peer_subscribed_save(db, peer, index);
 
-  printk(" %d\n", err);
+  if (err)
+    logk_error("error %d", err);
 
   return err;
 #else
@@ -600,7 +538,7 @@ error_t ble_peer_lookup_id(struct ble_security_db_s *db,
 
     err = dev_persist_wait_read(&db->persist, &security_db_entry_blob, i, (const void**)&entry);
 
-    printk("%s load %lld slot %d: %d\n", __FUNCTION__, did, i, err);
+    logk("load peer %lld slot %d: %d", did, i, err);
 
     if (err) {
       // This should not happen
@@ -623,13 +561,13 @@ error_t ble_security_db_next_id(struct ble_security_db_s *db,
 #if defined(CONFIG_DEVICE_PERSIST)
   error_t err;
 
-  dprintk("%s wait inc\n", __FUNCTION__);
+  logk_trace("wait inc");
 
   err = dev_persist_wait_inc(&db->persist, &security_db_device_counter, 0);
   if (err)
     return err;
 
-  dprintk("%s read\n", __FUNCTION__);
+  logk_trace("read");
 
   return dev_persist_wait_counter_read(&db->persist, &security_db_device_counter,
                                        0, value);

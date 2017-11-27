@@ -18,8 +18,11 @@
     Copyright (c) Nicolas Pouillon <nipo@ssji.net> 2015
 */
 
+#define LOGK_MODULE_ID "bsm_"
+
 #include <string.h>
 
+#include <hexo/bit.h>
 #include <mutek/printk.h>
 #include <mutek/buffer_pool.h>
 
@@ -35,92 +38,17 @@
 #include <ble/protocol/sm.h>
 #include <ble/protocol/l2cap.h>
 
-#define EXPECT_ENCRYPTION_INFORMATION 1
-#define EXPECT_MASTER_IDENTIFICATION 2
-#define EXPECT_IDENTITY_INFORMATION 4
-#define EXPECT_IDENTITY_ADDRESS_INFORMATION 8
-#define EXPECT_CSRK 16
-
-#define dprintk(...) do{}while(0)
-//#define dprintk printk
-
 #include <ble/peer.h>
 #include <device/class/crypto.h>
 
-struct ble_sm_handler_s;
-struct dev_rng_s;
+#include "sm.h"
+#include "sm_impl.o.h"
 
-enum ble_sm_state_e
-{
-  BLE_SM_IDLE,
-  BLE_SM_REQUESTED,
-  BLE_SM_REQUEST_DONE,
-  BLE_SM_REQUEST_ANSWERED,
-  BLE_SM_MCONF_SENT,
-  BLE_SM_SCONF_SENT,
-  BLE_SM_MRAND_SENT,
-  BLE_SM_STK_DONE,
-  BLE_SM_SLAVE_INFO_DONE,
-  BLE_SM_MASTER_INFO_DONE,
-  BLE_SM_EXCHANGE_DONE,
-};
+#undef SM_HAS_SECURE_PAIRING
 
 #if !defined(CONFIG_BLE_PERIPHERAL) && !defined(CONFIG_BLE_CENTRAL)
 # error How good is Security manager without either Central nor Peripheral roles ?
 #endif
-
-/**
- BLE Security manager layer.
-
- Handles device pairing and bonding.
- */
-struct ble_sm_s
-{
-  struct net_layer_s layer;
-
-  struct dev_rng_s *rng;
-  struct device_crypto_s aes_dev;
-
-  const struct ble_sm_handler_s *handler;
-  struct ble_peer_s *peer;
-
-  enum ble_sm_state_e pairing_state;
-  bool_t security_requested;
-
-  struct ble_addr_s local_addr;
-
-  uint8_t to_distribute;
-  uint8_t to_expect;
-  uint8_t expected_tx;
-
-  uint8_t io_cap;
-  bool_t mitm_protection;
-
-  __attribute__((align(16)))
-  struct {
-    uint8_t tk[16];
-    uint8_t mconf[16];
-
-    union {
-#if  defined(CONFIG_BLE_PERIPHERAL)
-      struct {
-        uint8_t srand[16];
-      } slave;
-#endif
-#if  defined(CONFIG_BLE_CENTRAL)
-      struct {
-        uint8_t mrand[16];
-        uint8_t sconf[16];
-      } master;
-#endif
-    };
-
-    uint8_t preq[7];
-    uint8_t pres[7];
-  };
-};
-
-STRUCT_COMPOSE(ble_sm_s, layer);
 
 static ALWAYS_INLINE bool_t sm_is_slave(struct ble_sm_s *sm)
 {
@@ -134,604 +62,324 @@ static ALWAYS_INLINE bool_t sm_is_slave(struct ble_sm_s *sm)
 }
 
 static
+void sm_state_advance(struct ble_sm_s *sm);
+
+static
 void ble_sm_destroyed(struct net_layer_s *layer)
 {
   struct ble_sm_s *sm = ble_sm_s_from_layer(layer);
 
-  device_put_accessor(&sm->aes_dev.base);
+  device_put_accessor(&sm->aes.base);
+  kroutine_seq_cleanup(&sm->seq);
 
   mem_free(sm);
 }
 
-#if defined(CONFIG_BLE_PERIPHERAL)
-static uint8_t sm_sconf_setup(struct ble_sm_s *sm, uint8_t *sconfirm)
+static void sm_fail(struct ble_sm_s *sm, uint8_t err)
 {
-  error_t err;
+  sm->state = SM_FAIL;
 
-  err = ble_peer_reset(sm->peer);
-  if (err)
-    return BLE_SM_REASON_UNSPECIFIED_REASON;
+  logk_trace("Fail for reason %x", err);
 
-  err = dev_rng_wait_read(sm->rng, sm->slave.srand, sizeof(sm->slave.srand));
-  if (err)
-    return BLE_SM_REASON_UNSPECIFIED_REASON;
-
-  dprintk("Starting pairing, new device id: %lld\n", sm->peer->id);
-  dprintk("Generating sconf:\n");
-
-  dprintk("TK:         %P\n", sm->tk, 16);
-  dprintk("srand:      %P\n", sm->slave.srand, 16);
-  dprintk("preq:       %P\n", sm->preq, 7);
-  dprintk("pres:       %P\n", sm->pres, 7);
-  dprintk("init@:      "BLE_ADDR_FMT"\n", BLE_ADDR_ARG(&sm->peer->lookup_addr));
-  dprintk("resp@:      "BLE_ADDR_FMT"\n", BLE_ADDR_ARG(&sm->local_addr));
-
-  err = ble_c1(&sm->aes_dev, sm->tk, sm->slave.srand, sm->preq, sm->pres,
-               &sm->peer->lookup_addr, &sm->local_addr,
-               sconfirm);
-  if (err)
-    return BLE_SM_REASON_UNSPECIFIED_REASON;
-
-  dprintk("sconf_tx:   %P\n", sconfirm, 16);
-
-  return 0;
+  // TODO: Send failure packet
 }
 
-static uint8_t sm_mconf_check(struct ble_sm_s *sm, const uint8_t *mrand)
+static KROUTINE_EXEC(sm_aes_done)
 {
-  error_t err;
-  uint8_t mconf[16];
-  uint8_t authreq = sm->preq[3];
-  uint8_t stk[16];
+  struct ble_sm_s *sm = KROUTINE_CONTAINER(kr, *sm, aes_rq.base.kr);
+  
+  switch (sm->state) {
+  case SM_VM_WAIT_RAND:
+    logk_trace("Random out: %P", sm->aes_io, sm->aes_rq.len);
+    break;
 
-  dprintk("Checking mconf:\n");
+  case SM_VM_WAIT_CONF:
+    logk_trace("Confirm out: %P", sm->aes_io + 16, 16);
+    break;
 
-  dprintk("mrand:      %P\n", mrand, 16);
-  dprintk("preq:       %P\n", sm->preq, 7);
-  dprintk("pres:       %P\n", sm->pres, 7);
-  dprintk("init@:      "BLE_ADDR_FMT"\n", BLE_ADDR_ARG(&sm->peer->lookup_addr));
-  dprintk("resp@:      "BLE_ADDR_FMT"\n", BLE_ADDR_ARG(&sm->local_addr));
-  dprintk("mconf_rx:   %P\n", sm->mconf, 16);
+  case SM_VM_WAIT_STK:
+    logk_trace("STK: %P", sm->aes_io + 16, 16);
+    ble_peer_phase2_done(sm->peer, sm->aes_io + 16,
+                         !!(sm->preq[3] & sm->pres[3] & BLE_SM_REQ_MITM));
+    break;
 
-  err = ble_c1(&sm->aes_dev, sm->tk, mrand, sm->preq, sm->pres,
-               &sm->peer->lookup_addr, &sm->local_addr,
-               mconf);
-  if (err)
-    return BLE_SM_REASON_UNSPECIFIED_REASON;
-
-  dprintk("mconf_calc: %P\n", mconf, 16);
-
-  if (memcmp(sm->mconf, mconf, 16))
-    return BLE_SM_REASON_CONFIRM_VALUE_FAILED;
-
-  dprintk("mconf OK\n");
-
-  err = ble_s1(&sm->aes_dev, sm->tk, sm->slave.srand, mrand, stk);
-  if (err)
-    return BLE_SM_REASON_UNSPECIFIED_REASON;
-
-  dprintk("STK:        %P\n", stk, 16);
-
-  err = ble_peer_paired(sm->peer,
-                        (authreq & BLE_SM_REQ_BONDING_MASK) == BLE_SM_REQ_BONDING,
-                        !!(authreq & BLE_SM_REQ_MITM),
-                        !!(authreq & BLE_SM_REQ_SC),
-                        stk);
-  if (err)
-    return BLE_SM_REASON_UNSPECIFIED_REASON;
-
-  return 0;
-}
-#endif
-
-#if defined(CONFIG_BLE_CENTRAL)
-static uint8_t sm_mconf_setup(struct ble_sm_s *sm)
-{
-  error_t err;
-
-  dprintk("Creating mconf:\n");
-
-  err = dev_rng_wait_read(sm->rng, sm->master.mrand, sizeof(sm->master.mrand));
-  if (err)
-    return BLE_SM_REASON_UNSPECIFIED_REASON;
-
-  dprintk("mrand:      %P\n", sm->master.mrand, 16);
-  dprintk("preq:       %P\n", sm->preq, 7);
-  dprintk("pres:       %P\n", sm->pres, 7);
-  dprintk("init@:      "BLE_ADDR_FMT"\n", BLE_ADDR_ARG(&sm->local_addr));
-  dprintk("resp@:      "BLE_ADDR_FMT"\n", BLE_ADDR_ARG(&sm->peer->lookup_addr));
-
-  err = ble_c1(&sm->aes_dev, sm->tk, sm->master.mrand, sm->preq, sm->pres,
-               &sm->local_addr, &sm->peer->lookup_addr,
-               sm->mconf);
-  if (err)
-    return BLE_SM_REASON_UNSPECIFIED_REASON;
-
-  dprintk("mconf:      %P\n", sm->mconf, 16);
-
-  return 0;
-}
-
-static uint8_t sm_sconf_check(struct ble_sm_s *sm, const uint8_t *srand)
-{
-  error_t err;
-  uint8_t sconf_calc[16];
-  uint8_t authreq = sm->preq[3];
-  uint8_t stk[16];
-
-  dprintk("Checking sconf:\n");
-
-  dprintk("srand:      %P\n", srand, 16);
-  dprintk("preq:       %P\n", sm->preq, 7);
-  dprintk("pres:       %P\n", sm->pres, 7);
-  dprintk("init@:      "BLE_ADDR_FMT"\n", BLE_ADDR_ARG(&sm->local_addr));
-  dprintk("resp@:      "BLE_ADDR_FMT"\n", BLE_ADDR_ARG(&sm->peer->lookup_addr));
-  dprintk("sconf_rx:   %P\n", sm->master.sconf, 16);
-
-  err = ble_c1(&sm->aes_dev, sm->tk, srand, sm->preq, sm->pres,
-               &sm->local_addr, &sm->peer->lookup_addr,
-               sconf_calc);
-  if (err)
-    return BLE_SM_REASON_UNSPECIFIED_REASON;
-
-  dprintk("sconf_calc: %P\n", sconf_calc, 16);
-
-  if (memcmp(sconf_calc, sm->master.sconf, 16))
-    return BLE_SM_REASON_CONFIRM_VALUE_FAILED;
-
-  dprintk("sconf OK\n");
-
-  err = ble_s1(&sm->aes_dev, sm->tk, srand, sm->master.mrand, stk);
-  if (err)
-    return BLE_SM_REASON_UNSPECIFIED_REASON;
-
-  dprintk("STK:        %P\n", stk, 16);
-
-  err = ble_peer_paired(sm->peer,
-                        (authreq & BLE_SM_REQ_BONDING_MASK) == BLE_SM_REQ_BONDING,
-                        !!(authreq & BLE_SM_REQ_MITM),
-                        !!(authreq & BLE_SM_REQ_SC),
-                        stk);
-  if (err)
-    return BLE_SM_REASON_UNSPECIFIED_REASON;
-
-  return 0;
-}
-#endif
-
-static uint8_t sm_expected_compute(uint8_t filt)
-{
-  uint8_t ret = 0;
-
-  if (filt & BLE_SM_ENC_KEY) {
-    ret |= EXPECT_ENCRYPTION_INFORMATION;
-    ret |= EXPECT_MASTER_IDENTIFICATION;
+  default:
+    logk_trace("Crypto done, bad state: %d", sm->state);
+    return;
   }
 
-  if (filt & BLE_SM_ID_KEY) {
-    ret |= EXPECT_IDENTITY_INFORMATION;
-    ret |= EXPECT_IDENTITY_ADDRESS_INFORMATION;
-  }
+  if (sm->aes_rq.err)
+    return sm_fail(sm, BLE_SM_REASON_UNSPECIFIED_REASON);
 
-  if (filt & BLE_SM_SIGN_KEY) {
-    ret |= EXPECT_CSRK;
-  }
+  sm->state = SM_VM_IDLE;
 
-  return ret;
+  sm_state_advance(sm);
 }
 
-static void sm_exchange_done(struct ble_sm_s *sm)
+static void sm_rng_read(struct ble_sm_s *sm,
+                        uint8_t *dest,
+                        size_t size)
 {
-  dprintk("SM: All information exchanged, now paired\n");
+  sm->aes_rq.op = DEV_CRYPTO_INIT | DEV_CRYPTO_FINALIZE;
+  sm->aes_rq.in = NULL;
+  sm->aes_rq.out = dest;
+  sm->aes_rq.len = size;
+  sm->aes_ctx.mode = DEV_CRYPTO_MODE_RANDOM;
+  sm->aes_ctx.state_data = sm->rng->state_data;
 
-  assert(sm->pairing_state == BLE_SM_MASTER_INFO_DONE);
-  sm->pairing_state = BLE_SM_EXCHANGE_DONE;
+  logk_trace("RNG Read, %p %d", dest, size);
 
-  const struct ble_sm_delegate_vtable_s *vtable
-    = const_ble_sm_delegate_vtable_s_from_base(sm->layer.delegate_vtable);
+  sm->state = SM_VM_WAIT_RAND;
 
-  vtable->bonding_success(sm->layer.delegate, &sm->layer);
+  DEVICE_OP(&sm->aes, request, &sm->aes_rq);
+}
 
-  ble_peer_save(sm->peer);
+static void sm_s1(struct ble_sm_s *sm,
+                  const uint8_t *k,
+                  const uint8_t *r1,
+                  const uint8_t *r2)
+{
+  sm->aes_rq.op = 0;
+  sm->aes_rq.in = sm->aes_io;
+  sm->aes_rq.out = sm->aes_io + 16;
+  sm->aes_rq.len = 16;
+  sm->aes_ctx.key_data = (void*)k;
+  sm->aes_ctx.key_len = 16;
+  sm->aes_ctx.mode = DEV_CRYPTO_MODE_ECB;
+  sm->aes_ctx.cache_ptr = NULL;
+  
+  memcpy(sm->aes_io, r1 + 8, 8);
+  memcpy(sm->aes_io + 8, r2 + 8, 8);
+
+  logk_trace("STK calculation from %P", sm->aes_io, 16);
+
+  sm->state = SM_VM_WAIT_STK;
+
+  DEVICE_OP(&sm->aes, request, &sm->aes_rq);
+}
+
+static void sm_c1(struct ble_sm_s *sm,
+                  uint8_t *conf,
+                  const uint8_t *rand)
+{
+  const struct ble_addr_s *ia;
+  const struct ble_addr_s *ra;
+
+  if (sm_is_slave(sm)) {
+    ia = &sm->peer->lookup_addr;
+    ra = &sm->local_addr;
+  } else {
+    ia = &sm->local_addr;
+    ra = &sm->peer->lookup_addr;
+  }
+
+  memrevcpy(sm->aes_io, sm->pres, 7);
+  memrevcpy(sm->aes_io + 7, sm->preq, 7);
+  sm->aes_io[14] = ra->type;
+  sm->aes_io[15] = ia->type;
+  sm->aes_io[16] = 0;
+  sm->aes_io[17] = 0;
+  sm->aes_io[18] = 0;
+  sm->aes_io[19] = 0;
+  memrevcpy(sm->aes_io + 20, ia->addr, 6);
+  memrevcpy(sm->aes_io + 26, ra->addr, 6);
+
+  logk_trace("Conf in %P", sm->aes_io, 32);
+
+  memcpy(conf, rand, 16);
+
+  logk_trace("Conf iv %P", conf, 16);
+
+  sm->aes_ctx.key_data = sm->tk;
+  sm->aes_ctx.key_len = 16;
+  sm->aes_ctx.mode = DEV_CRYPTO_MODE_CBC;
+  sm->aes_ctx.iv_len = 16;
+  sm->aes_ctx.auth_len = 0;
+  sm->aes_rq.op = DEV_CRYPTO_FINALIZE;
+  sm->aes_rq.in = sm->aes_io;
+  sm->aes_rq.out = sm->aes_io;
+  sm->aes_rq.ad = NULL;
+  sm->aes_rq.ad_len = 0;
+  sm->aes_rq.len = 32;
+  sm->aes_rq.iv_ctr = conf;
+  sm->aes_rq.auth = NULL;
+
+  sm->state = SM_VM_WAIT_CONF;
+
+  DEVICE_OP(&sm->aes, request, &sm->aes_rq);
 }
 
 static void sm_tx_done(struct net_task_s *task)
 {
   struct ble_sm_s *sm = ble_sm_s_from_layer(task->source);
 
-  sm->expected_tx--;
-
-  printk("SM %p done\n", sm);
-
-  if (!sm_is_slave(sm) && sm->expected_tx == 0)
-    sm_exchange_done(sm);
-
   mem_free(task);
+
+  if (sm->state == SM_VM_WAIT_TX) {
+    sm->state = SM_VM_IDLE;
+
+    logk_trace("TX done");
+
+    sm_state_advance(sm);
+  }
 }
 
-static void sm_tx(struct ble_sm_s *sm, struct buffer_s *packet, bool_t ensure_tx_done)
+static void sm_tx(struct ble_sm_s *sm, struct buffer_s *packet)
 {
   struct net_addr_s dst = {
     .cid = BLE_L2CAP_CID_SM,
   };
   struct net_task_s *task;
 
-  dprintk("SM %p < %P\n",
-          sm,
+  logk_trace("TX < %P",
           packet->data + packet->begin,
           packet->end - packet->begin);
 
-  if (ensure_tx_done) {
-    task = mem_alloc(sizeof(*task), mem_scope_sys);
-    if (task) {
-      task->destroy_func = (void*)sm_tx_done;
-      task->type = NET_TASK_INVALID;
-      task->source = NULL;
-      task->target = NULL;
-    }
-  } else {
-    task = net_scheduler_task_alloc(sm->layer.scheduler);
+  task = mem_alloc(sizeof(*task), mem_scope_sys);
+  if (task) {
+    task->destroy_func = sm->state == SM_VM_WAIT_TX ? (void*)sm_tx_done : (void*)mem_free;
+    task->type = NET_TASK_INVALID;
+    task->source = NULL;
+    task->target = NULL;
   }
 
   if (task)
     net_task_outbound_push(task,
                            sm->layer.parent, &sm->layer,
                            0, NULL, &dst, packet);
-  buffer_refdec(packet);
+  else if (sm->state == SM_VM_WAIT_TX)
+    sm_fail(sm, BLE_SM_REASON_UNSPECIFIED_REASON);
 
-  if (ensure_tx_done)
-    sm->expected_tx++;
+  buffer_refdec(packet);
 }
 
-static void sm_distribute(struct ble_sm_s *sm)
+static void sm_pairing_start(struct ble_sm_s *sm)
 {
-  struct buffer_s *pkt;
+  bc_set_reg(&sm->vm, SM_IMPL_BCGLOBAL_PV, (uintptr_t)sm);
 
-  if (sm->to_distribute & EXPECT_ENCRYPTION_INFORMATION) {
-    pkt = net_layer_packet_alloc(&sm->layer, sm->layer.context.prefix_size, 17);
-    if (pkt) {
-      printk("SM: Sending LTK\n");
-      pkt->data[pkt->begin] = BLE_SM_ENCRYPTION_INFORMATION;
-      ble_peer_ltk_get(sm->peer, pkt->data + pkt->begin + 1);
-      sm_tx(sm, pkt, !sm_is_slave(sm) || !sm->to_expect);
-    }
-  }
+  logk_trace("Req:           %P", sm->preq, 7);
+  logk_trace("Res:           %P", sm->pres, 7);
 
-  if (sm->to_distribute & EXPECT_MASTER_IDENTIFICATION) {
-    uint16_t ediv;
+#if defined(SM_HAS_SECURE_PAIRING)
+  if (sm->preq[3] & sm->pres[3] & BLE_SM_REQ_SC) {
+    // TODO: implement secure pairing
 
-    pkt = net_layer_packet_alloc(&sm->layer, sm->layer.context.prefix_size, 11);
-    if (pkt) {
-      printk("SM: Sending master identification\n");
-      pkt->data[pkt->begin] = BLE_SM_MASTER_IDENTIFICATION;
-      ble_peer_id_get(sm->peer, pkt->data + pkt->begin + 3, &ediv);
-      endian_le16_na_store(pkt->data + pkt->begin + 1, ediv);
-      sm_tx(sm, pkt, !sm_is_slave(sm) || !sm->to_expect);
-    }
-  }
-
-  if (sm->to_distribute & EXPECT_IDENTITY_INFORMATION) {
-    pkt = net_layer_packet_alloc(&sm->layer, sm->layer.context.prefix_size, 17);
-    if (pkt) {
-      printk("SM: Sending identity information\n");
-      pkt->data[pkt->begin] = BLE_SM_IDENTITY_INFORMATION;
-      memcpy(pkt->data + pkt->begin + 1, sm->peer->db->irk, 16);
-      sm_tx(sm, pkt, !sm_is_slave(sm) || !sm->to_expect);
-    }
-  }
-
-  if (sm->to_distribute & EXPECT_IDENTITY_ADDRESS_INFORMATION) {
-    pkt = net_layer_packet_alloc(&sm->layer, sm->layer.context.prefix_size, 8);
-    if (pkt) {
-      printk("SM: Sending identity address information\n");
-      pkt->data[pkt->begin] = BLE_SM_IDENTITY_ADDRESS_INFORMATION;
-      pkt->data[pkt->begin + 1] = sm->local_addr.type == BLE_ADDR_RANDOM;
-      memcpy(pkt->data + pkt->begin + 2, sm->local_addr.addr, 6);
-      sm_tx(sm, pkt, !sm_is_slave(sm) || !sm->to_expect);
-    }
-  }
-
-  if (sm->to_distribute & EXPECT_CSRK) {
-    pkt = net_layer_packet_alloc(&sm->layer, sm->layer.context.prefix_size, 17);
-    if (pkt) {
-      printk("SM: Sending CSRK\n");
-      pkt->data[pkt->begin] = BLE_SM_SIGNING_INFORMATION;
-      ble_peer_csrk_get(sm->peer, pkt->data + pkt->begin + 1);
-      sm_tx(sm, pkt, !sm_is_slave(sm) || !sm->to_expect);
-    }
-  }
-
-  sm->to_distribute = 0;
-
-  if (sm_is_slave(sm)) {
-    sm->pairing_state = BLE_SM_SLAVE_INFO_DONE;
-
-    if (sm->to_expect == 0) {
-      sm->pairing_state = BLE_SM_MASTER_INFO_DONE;
-      sm_exchange_done(sm);
-    }
+    return;
   } else {
-    sm->pairing_state = BLE_SM_MASTER_INFO_DONE;
+#endif
+    logk_trace("Starting legacy pairing");
+
+    bc_set_pc(&sm->vm, sm_is_slave(sm)
+              ? &ble_sm_slave_legacy
+              : &ble_sm_master_legacy);
+#if defined(SM_HAS_SECURE_PAIRING)
   }
+#endif
+
+  sm->state = SM_VM_IDLE;
+
+  sm_state_advance(sm);
 }
 
 static void sm_command_handle(struct ble_sm_s *sm, struct net_task_s *task)
 {
   const uint8_t *data = task->packet.buffer->data + task->packet.buffer->begin;
   const size_t size = task->packet.buffer->end - task->packet.buffer->begin;
-  struct buffer_s *rsp = net_layer_packet_alloc(&sm->layer, sm->layer.context.prefix_size, 0);
   const struct ble_sm_delegate_vtable_s *vtable
     = const_ble_sm_delegate_vtable_s_from_base(sm->layer.delegate_vtable);
-  uint8_t err;
-  __unused__
-  bool_t receive_ok = sm_is_slave(sm)
-    ? (sm->pairing_state == BLE_SM_SLAVE_INFO_DONE)
-    : (sm->pairing_state == BLE_SM_STK_DONE);
-  
-  dprintk("SM > %P\n", data, size);
+
+  logk_trace("RX > %P", data, size);
 
   switch (data[0]) {
   case BLE_SM_PAIRING_REQUEST:
-    if (size != 7) {
-      err = BLE_SM_REASON_INVALID_PARAMETERS;
-      goto error;
-    }
+    if (!sm_is_slave(sm))
+      goto unhandled;
 
-    if (sm->pairing_state != BLE_SM_IDLE && sm->pairing_state != BLE_SM_REQUESTED) {
-      err = BLE_SM_REASON_INVALID_PARAMETERS;
-      dprintk("Bad state %d\n", sm->pairing_state);
-      goto error;
+    if (size != 7)
+      goto invalid;
+
+    if (sm->state != SM_IDLE) {
+      logk_trace("Bad state for pairing req");
+      goto invalid;
     }
 
     memcpy(sm->preq, data, 7);
 
-    sm->to_distribute = 0;
-    sm->to_expect = 0;
+    sm->state = SM_WAIT_USER;
 
-    sm->pairing_state = BLE_SM_REQUEST_DONE;
-
+    logk_trace("Pairing requested from master, asking user for confirmation");
+    
     vtable->pairing_requested(sm->layer.delegate, &sm->layer,
                               !!(sm->preq[3] & BLE_SM_REQ_BONDING));
-    goto out;
+    return;
 
-#if defined(CONFIG_BLE_CENTRAL)
   case BLE_SM_PAIRING_RESPONSE:
-    if (size != 7) {
-      err = BLE_SM_REASON_INVALID_PARAMETERS;
-      goto error;
-    }
+    if (sm_is_slave(sm))
+      goto unhandled;
 
-    if (sm->pairing_state != BLE_SM_REQUEST_DONE) {
-      err = BLE_SM_REASON_INVALID_PARAMETERS;
-      dprintk("Bad state %d\n", sm->pairing_state);
-      goto error;
-    }
+    if (size != 7)
+      goto invalid;
 
+    if (sm->state != SM_WAIT_RESPONSE) {
+      logk_trace("Bad state for pairing response");
+      goto invalid;
+    }
+    
     memcpy(sm->pres, data, 7);
 
-    sm->to_expect = sm_expected_compute(sm->pres[6]);
-    sm->to_distribute = sm_expected_compute(sm->pres[5]);
+    logk_trace("Pairing response from slave");
 
-    sm->pairing_state = BLE_SM_REQUEST_ANSWERED;
-
-    err = sm_mconf_setup(sm);
-    if (err)
-      goto error;
-
-    rsp->data[rsp->begin] = BLE_SM_PAIRING_CONFIRM;
-    memcpy(rsp->data + rsp->begin + 1, sm->mconf, 16);
-    rsp->end = rsp->begin + 17;
-
-    sm->pairing_state = BLE_SM_MCONF_SENT;
-
-    goto send;
-#endif
-
-  case BLE_SM_PAIRING_CONFIRM:
-    if (size != 17) {
-      err = BLE_SM_REASON_INVALID_PARAMETERS;
-      goto error;
-    }
-
-    if (sm_is_slave(sm)) {
-#if defined(CONFIG_BLE_PERIPHERAL)
-      if (sm->pairing_state != BLE_SM_REQUEST_ANSWERED) {
-        err = BLE_SM_REASON_INVALID_PARAMETERS;
-        goto error;
-      }
-
-      dprintk("mconf stored.\n");
-
-      rsp->data[rsp->begin] = BLE_SM_PAIRING_CONFIRM;
-      // compute sconfirm, send it
-      err = sm_sconf_setup(sm, rsp->data + rsp->begin + 1);
-      if (err)
-        goto error;
-
-      rsp->end = rsp->begin + 17;
-
-      memcpy(sm->mconf, data + 1, 16);
-
-      sm->pairing_state = BLE_SM_SCONF_SENT;
-#endif
-    } else {
-#if defined(CONFIG_BLE_CENTRAL)
-      if (sm->pairing_state != BLE_SM_MCONF_SENT) {
-        err = BLE_SM_REASON_INVALID_PARAMETERS;
-        goto error;
-      }
-
-      memcpy(sm->master.sconf, data + 1, 16);
-      rsp->data[rsp->begin] = BLE_SM_PAIRING_RANDOM;
-      memcpy(rsp->data + rsp->begin + 1, sm->master.mrand, 16);
-      rsp->end = rsp->begin + 17;
-
-      sm->pairing_state = BLE_SM_MRAND_SENT;
-#endif
-    }
-
-    goto send;
-
-  case BLE_SM_PAIRING_RANDOM:
-    if (size != 17) {
-      err = BLE_SM_REASON_INVALID_PARAMETERS;
-      goto error;
-    }
-
-    if (sm_is_slave(sm)) {
-#if defined(CONFIG_BLE_PERIPHERAL)
-      if (sm->pairing_state != BLE_SM_SCONF_SENT) {
-        err = BLE_SM_REASON_INVALID_PARAMETERS;
-        goto error;
-      }
-
-      err = sm_mconf_check(sm, data + 1);
-      if (err)
-        goto error;
-
-      rsp->data[rsp->begin] = BLE_SM_PAIRING_RANDOM;
-      memcpy(rsp->data + rsp->begin + 1, sm->slave.srand, 16);
-      rsp->end = rsp->begin + 17;
-
-      sm->pairing_state = BLE_SM_STK_DONE;
-
-      vtable->pairing_success(sm->layer.delegate, &sm->layer);
-
-      goto send;
-#endif
-    } else {
-#if defined(CONFIG_BLE_CENTRAL)
-      if (sm->pairing_state != BLE_SM_MRAND_SENT) {
-        err = BLE_SM_REASON_INVALID_PARAMETERS;
-        goto error;
-      }
-
-      err = sm_sconf_check(sm, data + 1);
-      if (err)
-        goto error;
-
-      sm->pairing_state = BLE_SM_STK_DONE;
-
-      vtable->pairing_success(sm->layer.delegate, &sm->layer);
-
-      goto out;
-#endif
-    }
-
-  case BLE_SM_ENCRYPTION_INFORMATION:
-    if (!receive_ok
-        || !sm->layer.context.addr.encrypted
-        || (!(sm->to_expect & EXPECT_ENCRYPTION_INFORMATION))) {
-      dprintk("SM error while receiving enc info\n");
-      dprintk("state: %d, enc: %d, to_expect: %02x\n",
-              sm->pairing_state, sm->layer.context.addr.encrypted,
-              sm->to_expect);
-      err = BLE_SM_REASON_AUTHENTICATION_REQUIREMENTS;
-      goto error;
-    }
-
-    ble_peer_ltk_set(sm->peer, data + 1);
-    sm->to_expect &= ~EXPECT_ENCRYPTION_INFORMATION;
-
-    goto expected_rx;
-
-  case BLE_SM_MASTER_IDENTIFICATION:
-    if (!receive_ok
-        || !sm->layer.context.addr.encrypted
-        || (!(sm->to_expect & EXPECT_MASTER_IDENTIFICATION))) {
-      dprintk("SM error while receiving master id\n");
-      dprintk("state: %d, enc: %d, to_expect: %02x\n",
-              sm->pairing_state, sm->layer.context.addr.encrypted,
-              sm->to_expect);
-      err = BLE_SM_REASON_AUTHENTICATION_REQUIREMENTS;
-      goto error;
-    }
-
-    ble_peer_identity_set(sm->peer, endian_le16_na_load(data + 1), data + 3);
-    sm->to_expect &= ~EXPECT_MASTER_IDENTIFICATION;
-
-    goto expected_rx;
-
-  case BLE_SM_IDENTITY_INFORMATION:
-    if (!receive_ok
-        || !sm->layer.context.addr.encrypted
-        || (!(sm->to_expect & EXPECT_IDENTITY_INFORMATION))) {
-      dprintk("SM error while receiving id info\n");
-      dprintk("state: %d, enc: %d, to_expect: %02x\n",
-              sm->pairing_state, sm->layer.context.addr.encrypted,
-              sm->to_expect);
-      err = BLE_SM_REASON_AUTHENTICATION_REQUIREMENTS;
-      goto error;
-    }
-
-    ble_peer_irk_set(sm->peer, data + 1);
-    sm->to_expect &= ~EXPECT_IDENTITY_INFORMATION;
-
-    goto expected_rx;
-
-  case BLE_SM_IDENTITY_ADDRESS_INFORMATION:
-    if (!receive_ok
-        || !sm->layer.context.addr.encrypted
-        || (!(sm->to_expect & EXPECT_IDENTITY_ADDRESS_INFORMATION))) {
-      err = BLE_SM_REASON_AUTHENTICATION_REQUIREMENTS;
-      goto error;
-    } else {
-      struct ble_addr_s addr;
-
-      addr.type = data[1] ? BLE_ADDR_RANDOM : BLE_ADDR_PUBLIC;
-      memcpy(addr.addr, data + 2, 6);
-      ble_peer_addr_set(sm->peer, &addr);
-
-      sm->to_expect &= ~EXPECT_IDENTITY_ADDRESS_INFORMATION;
-
-      goto expected_rx;
-    }
-
-  case BLE_SM_PAIRING_FAILED:
-    dprintk("SM: Pairing failed beause of peer (%d)\n", data[1]);
-    sm->pairing_state = BLE_SM_IDLE;
-    goto out;
+    sm_pairing_start(sm);
+    return;
 
   case BLE_SM_SECURITY_REQUEST:
-    dprintk("SM: Security req %02x\n", data[1]);
-    goto out;
+    if (sm_is_slave(sm))
+      goto unhandled;
+
+    if (size != 2)
+      goto invalid;
+
+    logk_trace("Security request from slave");
+
+    sm->state = SM_WAIT_USER;
+
+    vtable->pairing_requested(sm->layer.delegate, &sm->layer,
+                              !!(data[1] & BLE_SM_REQ_BONDING));
+    return;
+
+  case BLE_SM_PAIRING_FAILED:
+    logk_error("Pairing failed beause of peer (%d)", data[1]);
+
+    if (size != 2)
+      goto invalid;
+
+    vtable->pairing_failed(sm->layer.delegate, &sm->layer, data[1]);
+    sm->state = SM_FAIL;
+    return;
 
   default:
-    err = BLE_SM_REASON_INVALID_PARAMETERS;
-    goto error;
-  }
+    if (sm->state == SM_VM_WAIT_RX) {
+      logk_trace("Packet received for VM");
 
-  goto out;
+      sm->state = SM_VM_IDLE;
 
- expected_rx:
-  dprintk("SM: Still expected: %x\n", sm->to_expect);
-  if (sm->to_expect == 0) {
-    if (sm_is_slave(sm)) {
-      dprintk("SM: All master expected information received\n");
-      sm->pairing_state = BLE_SM_MASTER_INFO_DONE;
-      sm_exchange_done(sm);
-    } else {
-      dprintk("SM: All slave expected information received, sending ours\n");
-      sm->pairing_state = BLE_SM_SLAVE_INFO_DONE;
-      sm_distribute(sm);
+      if (sm->pkt)
+        buffer_refdec(sm->pkt);
+      sm->pkt = buffer_refinc(task->packet.buffer);
+
+      bc_set_reg(&sm->vm, SM_IMPL_BCGLOBAL_PKT, (uintptr_t)sm->pkt->data + sm->pkt->begin);
+
+      sm_state_advance(sm);
+      return;
     }
+
+    logk_trace("Other packet, unhandled");
+
+  unhandled:
+  invalid:
+    sm_fail(sm, BLE_SM_REASON_INVALID_PARAMETERS);
+    return;
   }
-  goto out;
-
- error:
-  rsp->end = rsp->begin + 2;;
-  rsp->data[rsp->begin] = BLE_SM_PAIRING_FAILED;
-  rsp->data[rsp->begin + 1] = err;
-  sm->pairing_state = BLE_SM_IDLE;
-
-  dprintk("Sm state %d sending error %d after packet %P\n", sm->pairing_state, err, data, size);
-
- send:
-  sm_tx(sm, rsp, 0);
-  return;
-
- out:
-  buffer_refdec(rsp);
 }
 
 static
@@ -756,28 +404,16 @@ static void ble_sm_context_changed(struct net_layer_s *layer)
 {
   struct ble_sm_s *sm = ble_sm_s_from_layer(layer);
 
-  dprintk("SM: context changed, now %s, state %d\n",
+  logk_trace("context changed, now %s, state %d",
           layer->context.addr.encrypted ? "encrypted" : "clear",
-          sm->pairing_state);
+          sm->state);
 
-  if (layer->parent) {
-    if (layer->context.addr.encrypted
-        && sm->pairing_state == BLE_SM_STK_DONE) {
+  if (layer->parent
+      && layer->context.addr.encrypted
+      && sm->state == SM_VM_WAIT_ENCRYPTION) {
+    sm->state = SM_VM_IDLE;
 
-      if (sm_is_slave(sm)) {
-#if defined(CONFIG_BLE_PERIPHERAL)
-        dprintk("SM: LL security enabled, distributing data\n");
-        sm_distribute(sm);
-#endif
-      } else {
-#if defined(CONFIG_BLE_CENTRAL)
-        if (sm->to_expect == 0) {
-          dprintk("SM: No slave information to expect, sending ours\n");
-          sm_distribute(sm);
-        }
-#endif
-      }
-    }
+    sm_state_advance(sm);
   }
 }
 
@@ -788,11 +424,10 @@ void sm_pairing_request(struct net_layer_s *layer,
 {
   struct ble_sm_s *sm = ble_sm_s_from_layer(layer);
 
-  if (sm->pairing_state != BLE_SM_IDLE || !sm->layer.parent)
+  if (sm->state != SM_IDLE || !sm->layer.parent)
     return;
 
   if (sm_is_slave(sm)) {
-#if defined(CONFIG_BLE_PERIPHERAL)
     struct buffer_s *rsp = net_layer_packet_alloc(&sm->layer, sm->layer.context.prefix_size, 2);
 
     rsp->data[rsp->begin] = BLE_SM_SECURITY_REQUEST;
@@ -802,18 +437,16 @@ void sm_pairing_request(struct net_layer_s *layer,
 #endif
       | (mitm_protection ? BLE_SM_REQ_MITM : 0);
 
-    sm->pairing_state = BLE_SM_REQUESTED;
+    sm->state = SM_WAIT_REQUEST;
 
-    sm_tx(sm, rsp, 0);
-#endif
+    sm_tx(sm, rsp);
   } else {
-#if defined(CONFIG_BLE_CENTRAL)
     const struct ble_sm_delegate_vtable_s *vtable
       = const_ble_sm_delegate_vtable_s_from_base(sm->layer.delegate_vtable);
-    sm->pairing_state = BLE_SM_REQUESTED;
+
+    sm->state = SM_WAIT_USER;
 
     vtable->pairing_requested(sm->layer.delegate, &sm->layer, bonding);
-#endif
   }
 }
 
@@ -825,9 +458,12 @@ void sm_pairing_accept(struct net_layer_s *layer,
 {
   struct ble_sm_s *sm = ble_sm_s_from_layer(layer);
 
-  printk("%s()\n", __FUNCTION__);
+  logk("%s()", __func__);
 
   if (!sm->layer.parent)
+    return;
+
+  if (sm->state != SM_WAIT_USER)
     return;
 
   struct buffer_s *pkt = net_layer_packet_alloc(&sm->layer, sm->layer.context.prefix_size, 7);
@@ -840,60 +476,58 @@ void sm_pairing_accept(struct net_layer_s *layer,
   }
 
   if (sm_is_slave(sm)) {
-#if defined(CONFIG_BLE_PERIPHERAL)
-    if (sm->pairing_state != BLE_SM_REQUEST_DONE)
-      return;
-
     sm->pres[0] = BLE_SM_PAIRING_RESPONSE;
     sm->pres[1] = sm->io_cap;
-    sm->pres[2] = oob_data ? 1 : 0;
+    sm->pres[2] = !!oob_data;
     sm->pres[3] = 0
 #if defined(CONFIG_BLE_SECURITY_DB)
       | BLE_SM_REQ_BONDING
 #endif
-      | (mitm_protection ? BLE_SM_REQ_MITM : 0);
+      | (mitm_protection ? BLE_SM_REQ_MITM : 0)
+#if defined(SM_HAS_SECURE_PAIRING)
+      | BLE_SM_REQ_SC
+#endif
+      ;
     sm->pres[4] = 16;
     sm->pres[5] = sm->preq[5] & (BLE_SM_ENC_KEY | BLE_SM_ID_KEY);
     sm->pres[6] = sm->preq[6] & (BLE_SM_ENC_KEY | BLE_SM_ID_KEY);
-    sm->to_distribute = sm_expected_compute(sm->pres[6]);
-    sm->to_expect = sm_expected_compute(sm->pres[5]);
 
     memcpy(pkt->data + pkt->begin, sm->pres, 7);
 
-    sm->pairing_state = BLE_SM_REQUEST_ANSWERED;
+    sm_tx(sm, pkt);
 
-    dprintk("Pairing RSP sent\n");
-#endif
+    logk_trace("Pairing RSP sent");
+
+    sm_pairing_start(sm);
   } else {
-#if defined(CONFIG_BLE_CENTRAL)
-    if (sm->pairing_state != BLE_SM_REQUESTED)
-      return;
-
     error_t err = ble_peer_reset(sm->peer);
     if (err)
       return;
 
     sm->preq[0] = BLE_SM_PAIRING_REQUEST;
     sm->preq[1] = sm->io_cap;
-    sm->preq[2] = oob_data ? 1 : 0;
-    sm->preq[3] = BLE_SM_REQ_BONDING
-      | (mitm_protection ? BLE_SM_REQ_MITM : 0);
+    sm->preq[2] = !!oob_data;
+    sm->preq[3] = 0
+#if defined(CONFIG_BLE_SECURITY_DB)
+      | BLE_SM_REQ_BONDING
+#endif
+      | (mitm_protection ? BLE_SM_REQ_MITM : 0)
+#if defined(SM_HAS_SECURE_PAIRING)
+      | BLE_SM_REQ_SC
+#endif
+      ;
     sm->preq[4] = 16;
     sm->preq[5] = BLE_SM_ENC_KEY | BLE_SM_ID_KEY;
     sm->preq[6] = BLE_SM_ENC_KEY | BLE_SM_ID_KEY;
 
     memcpy(pkt->data + pkt->begin, sm->preq, 7);
 
-    sm->to_distribute = 0;
-    sm->to_expect = 0;
+    sm->state = SM_WAIT_RESPONSE;
 
-    sm->pairing_state = BLE_SM_REQUEST_DONE;
+    sm_tx(sm, pkt);
 
-    printk("Pairing REQ sent\n");
-#endif
+    logk("Pairing REQ sent");
   }
-
-  sm_tx(sm, pkt, 0);
 }
 
 static
@@ -901,19 +535,189 @@ void sm_pairing_abort(struct net_layer_s *layer, enum sm_reason reason)
 {
   struct ble_sm_s *sm = ble_sm_s_from_layer(layer);
 
-  if (sm->pairing_state != BLE_SM_IDLE || !sm->layer.parent)
+  if (sm->state == SM_IDLE || !sm->layer.parent)
     return;
 
-  struct buffer_s *rsp = net_layer_packet_alloc(&sm->layer, sm->layer.context.prefix_size, 2);
+  logk_trace("Pairing aborted by user");
 
-  rsp->data[rsp->begin] = BLE_SM_PAIRING_FAILED;
-  rsp->data[rsp->begin + 1] = reason;
+  sm_fail(sm, BLE_SM_REASON_UNSPECIFIED_REASON);
+}
 
-  sm->pairing_state = BLE_SM_IDLE;
+static
+void sm_pairing_success(struct ble_sm_s *sm)
+{
+  const struct ble_sm_delegate_vtable_s *vtable
+    = const_ble_sm_delegate_vtable_s_from_base(sm->layer.delegate_vtable);
 
-  sm_tx(sm, rsp, 0);
+  logk_trace("Notifying user of pairing success");
 
-  dprintk("Pairing aborted\n");
+  vtable->pairing_success(sm->layer.delegate, &sm->layer);
+}
+
+static
+void sm_bonding_success(struct ble_sm_s *sm)
+{
+  const struct ble_sm_delegate_vtable_s *vtable
+    = const_ble_sm_delegate_vtable_s_from_base(sm->layer.delegate_vtable);
+
+  logk_trace("Notifying user of pairing failure");
+
+  vtable->bonding_success(sm->layer.delegate, &sm->layer);
+}
+
+static
+void sm_state_advance(struct ble_sm_s *sm)
+{
+  bc_opcode_t op;
+
+  logk_trace("VM");
+
+  assert(sm->state == SM_VM_IDLE);
+
+ again:
+  op = bc_run(&sm->vm);
+
+  assert(op & 0x8000);
+
+  switch (bit_get_range(op, 12, 14)) {
+  case 0: // Packet management
+    switch (bit_get_range(op, 8, 11)) {
+    case 0: // Packet alloc
+      logk_trace("Packet alloc");
+      if (!sm->pkt) {
+        sm->pkt = net_layer_packet_alloc(&sm->layer, 0, 0);
+        if (!sm->pkt) {
+          sm_fail(sm, BLE_SM_REASON_UNSPECIFIED_REASON);
+          return;
+        }
+      }
+      sm->pkt->end = sm->pkt->begin = sm->layer.context.prefix_size;
+
+      logk_trace("Packet alloc: %p, data at %p", sm->pkt, sm->pkt->data + sm->pkt->begin);
+
+      bc_set_reg(&sm->vm, SM_IMPL_BCGLOBAL_PKT, (uintptr_t)sm->pkt->data + sm->pkt->end);
+      goto again;
+
+    case 1: // Packet wait
+      logk_trace("Packet wait");
+      if (sm->pkt)
+        buffer_refdec(sm->pkt);
+      sm->pkt = NULL;
+      bc_set_reg(&sm->vm, SM_IMPL_BCGLOBAL_PKT, 0);
+      sm->state = SM_VM_WAIT_RX;
+      return;
+
+    case 2: { // Packet left
+      struct buffer_s *pkt = sm->pkt;
+      uint8_t *point = (uint8_t *)bc_get_reg(&sm->vm, SM_IMPL_BCGLOBAL_PKT);
+
+      assert(pkt);
+      assert(point > pkt->data);
+
+      size_t left = pkt->end - (point - pkt->data);
+      
+      logk_trace("Packet left: %d", left);
+
+      bc_set_reg(&sm->vm, bit_get_range(op, 0, 3), left);
+      goto again;
+    }
+
+    case 3: { // Packet send
+      struct buffer_s *pkt = sm->pkt;
+      uint8_t *point = (uint8_t *)bc_get_reg(&sm->vm, SM_IMPL_BCGLOBAL_PKT);
+
+      assert(pkt);
+      assert(point > pkt->data);
+
+      sm->pkt->end = point - pkt->data;
+
+      logk_trace("Packet send: %d bytes", sm->pkt->end - sm->pkt->begin);
+
+      sm->pkt = NULL;
+      sm->state = SM_VM_WAIT_TX;
+
+      sm_tx(sm, pkt);
+      return;
+    }
+    }
+    break;
+
+  case 1: // DB handling
+    logk_trace("DB %d", bit_get_range(op, 8, 11));
+
+    switch (bit_get_range(op, 8, 11)) {
+    case 0: // LTK get
+    case 1: // IRK get
+    case 2: // Peer ID get
+    case 3: // EDIV get
+    case 4: // Peer CSRK get
+    case 5: // Peer LTK set
+    case 6: // Peer ID set
+    case 7: // Peer EDIV set
+    case 8: // Peer IRK set
+    case 9: // Peer CSRK set
+      ;
+    }
+    break;
+
+  case 2: // Crypto
+    switch (bit_get_range(op, 8, 11)) {
+    case 0: { // RNG Read
+      size_t size = 1 + bit_get_range(op, 4, 7);
+      void *buffer = (void*)bc_get_reg(&sm->vm, bit_get_range(op, 0, 3));
+
+      logk_trace("RNG Read");
+
+      sm_rng_read(sm, buffer, size);
+      return;
+    }
+
+    case 1: { // Confirm calc
+      void *rand = (void*)bc_get_reg(&sm->vm, bit_get_range(op, 0, 3));
+      void *conf = (void*)bc_get_reg(&sm->vm, bit_get_range(op, 4, 7));
+
+      logk_trace("Confirm calc");
+
+      sm_c1(sm, conf, rand);
+      return;
+    }
+
+    case 2: // STK compute
+      logk_trace("STK");
+
+      sm_s1(sm, sm->tk, sm->srand, sm->mrand);
+      return;
+    }
+    break;
+
+  case 3: // State
+    switch (bit_get_range(op, 8, 11)) {
+    case 0: // Pairing success
+      logk_trace("Pairing success");
+      sm_pairing_success(sm);
+      goto again;
+
+    case 1: // Encryption wait
+      logk_trace("Encryption wait");
+      sm->state = SM_VM_WAIT_ENCRYPTION;
+      return;
+
+    case 2: // Bonding success
+      logk_trace("Bonding success");
+      sm_bonding_success(sm);
+      goto again;
+
+    case 3: { // Failure
+      uint8_t reason = bit_get_range(op, 0, 7);
+      logk_trace("Pairing failure 0x%x", reason);
+      sm_fail(sm, reason);
+      return;
+    }
+    }
+    break;
+  }
+
+  sm_fail(sm, BLE_SM_REASON_UNSPECIFIED_REASON);
 }
 
 static const struct ble_sm_handler_s sm_handler = {
@@ -939,11 +743,15 @@ error_t ble_sm_init(
 
   sm->rng = params->rng;
 
-  err = device_copy_accessor(&sm->aes_dev.base, &params->crypto->base);
+  err = device_copy_accessor(&sm->aes.base, &params->crypto->base);
   if (err)
     goto err_out;
 
-  err = net_layer_init(&sm->layer, &sm_handler.base, scheduler, delegate, &delegate_vtable->base);
+  kroutine_seq_init(&sm->seq);
+
+  err = net_layer_init_seq(&sm->layer, &sm_handler.base, scheduler,
+                           delegate, &delegate_vtable->base,
+                           &sm->seq);
 
   if (err)
     goto err_put_aes;
@@ -951,11 +759,15 @@ error_t ble_sm_init(
   sm->peer = params->peer;
   sm->io_cap = BLE_SM_IO_CAP_NO_INPUT_NO_OUTPUT;
   sm->local_addr = params->local_addr;
+  bc_init(&sm->vm, &sm_impl_bytecode);
+
+  sm->aes_rq.ctx = &sm->aes_ctx;
+  kroutine_init_deferred_seq(&sm->aes_rq.base.kr, sm_aes_done, &sm->seq);
 
   return 0;
 
  err_put_aes:
-  device_put_accessor(&sm->aes_dev.base);
+  device_put_accessor(&sm->aes.base);
  err_out:
   return err;
 }

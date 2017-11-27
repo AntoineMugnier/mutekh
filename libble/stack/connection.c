@@ -18,6 +18,8 @@
     Copyright Nicolas Pouillon <nipo@ssji.net> (c) 2015
 */
 
+#define LOGK_MODULE_ID "bcon"
+
 #include <ble/stack/context.h>
 #include <ble/stack/connection.h>
 #include <ble/protocol/data.h>

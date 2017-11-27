@@ -18,3 +18,6 @@ CONFIG_DRIVER_NRF5X_GPIO_PWM_CHANNEL_COUNT 3
 %include arch/arch.build
 %include scripts/options.build
 %include examples/ble/ble.build
+
+CONFIG_MUTEK_PRINTK_COMPILE_EXPR level >= LOGK_LEVEL_NORMAL || id == 'bsm_'
+CONFIG_MUTEK_PRINTK_RUNTIME_LEVEL LOGK_LEVEL_TRACE

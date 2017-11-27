@@ -18,6 +18,8 @@
     Copyright Nicolas Pouillon <nipo@ssji.net> (c) 2015
 */
 
+#define LOGK_MODULE_ID "bgsv"
+
 #include <ble/gattdb/service.h>
 #include <ble/gattdb/db.h>
 #include <ble/gattdb/client.h>

@@ -25,6 +25,7 @@ const char *ble_company_name(uint16_t cid)
   switch (cid) {
   case BLE_COMPANY_TI: return "Ti";
   case BLE_COMPANY_BROADCOM: return "Bcm";
+  case BLE_COMPANY_QUALCOMM: return "Qcm";
   case BLE_COMPANY_ATHEROS: return "Ath";
   case BLE_COMPANY_APPLE: return "Apple";
   case BLE_COMPANY_NORDIC: return "Nordic";

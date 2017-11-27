@@ -18,6 +18,8 @@
     Copyright Nicolas Pouillon <nipo@ssji.net> (c) 2015
 */
 
+#define LOGK_MODULE_ID "nbsc"
+
 #include <ble/protocol/advertise.h>
 #include <ble/net/scanner.h>
 
@@ -26,9 +28,6 @@
 #include <net/task.h>
 
 #include "ble.h"
-
-#define dprintk(...) do{}while(0)
-//#define dprintk printk
 
 static
 error_t scan_param_update(struct net_layer_s *layer, const struct ble_scanner_param_s *params);
@@ -82,7 +81,7 @@ static void scanner_schedule(struct nrf5x_ble_scanner_s *scan)
   dev_timer_value_t now, begin, end;
 
   if (!net_layer_refcount(&scan->layer)) {
-    dprintk("%s Scanner unreffed\n", __FUNCTION__);
+    logk_trace("scanner unreffed");
     return;
   }
 
@@ -115,7 +114,7 @@ static bool_t scanner_ctx_event_opened(struct nrf5x_ble_context_s *context)
   struct nrf5x_ble_scanner_s *scan = nrf5x_ble_scanner_s_from_context(context);
 
   if (!net_layer_refcount(&scan->layer)) {
-    dprintk("%s Scanner unreffed\n", __FUNCTION__);
+    logk_trace("scanner unreffed");
     return 0;
   }
 
@@ -281,7 +280,7 @@ static void scanner_ctx_ifs_event(struct nrf5x_ble_context_s *context,
 static enum ble_scanner_policy_e scanner_policy_get(struct nrf5x_ble_scanner_s *scan, const struct ble_addr_s *addr)
 {
   for (size_t i = 0; i < scan->target_count; ++i) {
-    /* printk("Policy ? "BLE_ADDR_FMT" - "BLE_ADDR_FMT"\n", */
+    /* logk("Policy ? "BLE_ADDR_FMT" - "BLE_ADDR_FMT"", */
     /*        BLE_ADDR_ARG(addr), BLE_ADDR_ARG(&scan->target[i].addr)); */
     if (!ble_addr_cmp(addr, &scan->target[i].addr))
       return scan->target[i].policy;
@@ -367,7 +366,7 @@ void scanner_layer_destroyed(struct net_layer_s *layer)
 {
   struct nrf5x_ble_scanner_s *scan = nrf5x_ble_scanner_s_from_layer(layer);
 
-  dprintk("%s\n", __FUNCTION__);
+  logk_trace("destroyed");
 
   nrf5x_ble_context_cleanup(&scan->context);
   if (scan->rx_buffer)
@@ -393,9 +392,9 @@ error_t nrf5x_ble_scanner_create(struct net_scheduler_s *scheduler,
 
   memset(scan, 0, sizeof(*scan));
 
-  dprintk("%s Scanner init start\n", __FUNCTION__);
+  logk_trace("create");
 
-  err = net_layer_init(&scan->layer, &ble_scanner_layer_handler.base, scheduler, delegate, delegate_vtable_);
+  err = net_layer_init_seq(&scan->layer, &ble_scanner_layer_handler.base, scheduler, delegate, delegate_vtable_, &priv->kr_seq);
   if (err)
     goto err_out;
 
@@ -410,7 +409,7 @@ error_t nrf5x_ble_scanner_create(struct net_scheduler_s *scheduler,
 
   scanner_schedule(scan);
 
-  dprintk("%s Scanner init done\n", __FUNCTION__);
+  logk_trace("create done");
 
   *layer = &scan->layer;
 
@@ -443,9 +442,8 @@ error_t scan_param_update(struct net_layer_s *layer, const struct ble_scanner_pa
   scan->conn_params.access_address = params->access_address;
   scan->conn_params.crc_init = params->crc_init;
 
-  dprintk("%s scan interval: %d, duration: %d\n",
-          __FUNCTION__,
-          scan->interval_tk, scan->duration_tk);
+  logk_trace("params update, scan interval: %d, duration: %d",
+             scan->interval_tk, scan->duration_tk);
 
   return 0;
 }

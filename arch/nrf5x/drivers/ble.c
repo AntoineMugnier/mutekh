@@ -18,6 +18,8 @@
     Copyright Nicolas Pouillon <nipo@ssji.net> (c) 2015
 */
 
+#define LOGK_MODULE_ID "nble"
+
 #include <hexo/types.h>
 #include <hexo/endian.h>
 #include <string.h>
@@ -41,9 +43,6 @@
 
 #include "ble.h"
 #include "ble_debug.h"
-
-#define dprintk(...) do{}while(0)
-//#define dprintk printk
 
 static KROUTINE_EXEC(nrf5x_ble_reschedule_kr);
 static KROUTINE_EXEC(nrf5x_ble_closer_kr);
@@ -74,6 +73,8 @@ void nrf5x_ble_backlog_dump(struct nrf5x_ble_context_s *ctx)
     printk(b->msg, b->arg);
     printk("\n");
   }
+
+  ctx->backlog_cur = 0;
 }
 #endif
 
@@ -344,8 +345,9 @@ static DEV_INIT(nrf5x_ble_init)
 
   pv->sca = ble_sca_from_accuracy(&pv->sleep_freq);
 
-  kroutine_init_sched_switch(&pv->rescheduler, nrf5x_ble_reschedule_kr);
-  kroutine_init_sched_switch(&pv->closer, nrf5x_ble_closer_kr);
+  kroutine_seq_init(&pv->kr_seq);
+  kroutine_init_deferred_seq(&pv->rescheduler, nrf5x_ble_reschedule_kr, &pv->kr_seq);
+  kroutine_init_deferred_seq(&pv->closer, nrf5x_ble_closer_kr, &pv->kr_seq);
 
   nrf5x_ble_radio_init();
   nrf5x_ble_rtc_init();
@@ -382,7 +384,7 @@ static void nrf5x_ble_event_close(struct nrf5x_ble_private_s *pv,
 
   pv->transmitting = NULL;
 
-  dprintk("%s %p %d %d\n", __FUNCTION__, ctx, pv->event_packet_count, status);
+  logk_trace("%s %p %d %d", __func__, ctx, pv->event_packet_count, status);
 
   assert(ctx);
 
@@ -457,7 +459,7 @@ void nrf5x_ble_context_start_first(struct nrf5x_ble_private_s *pv)
   bool_t clock_running = nrf5x_ble_clock_request(pv);
   gpio(I_LATER, 0);
 
-  //  printk("Frame open\n");
+  logk_trace("frame open");
 
   assert(ctx->handler->event_opened);
 
@@ -476,14 +478,14 @@ void nrf5x_ble_context_start_first(struct nrf5x_ble_private_s *pv)
   bool_t sync_start = 0;
 
   if (pv->event_begin < now + ramp_time) {
-    dprintk("Bad timing: %d < %d + %d ramp ",
-            (uint32_t)pv->event_begin, (uint32_t)now, ramp_time);
     if (ctx->precise_timing || !clock_running) {
-      dprintk("aborting\n");
+      logk_trace("bad timing: %d < %d + %d ramp, aborting",
+                 (uint32_t)pv->event_begin, (uint32_t)now, ramp_time);
       nrf5x_ble_event_close(pv, EVENT_STATUS_IN_PAST);
       return;
     } else {
-      dprintk("starting ASAP\n");
+      logk_trace("bad timing: %d < %d + %d ramp, starting ASAP",
+                 (uint32_t)pv->event_begin, (uint32_t)now, ramp_time);
       pv->event_begin = now + ramp_time;
       sync_start = 1;
     }
@@ -591,10 +593,10 @@ void nrf5x_ble_context_start_later(struct nrf5x_ble_private_s *pv,
 static
 void nrf5x_ble_reschedule(struct nrf5x_ble_private_s *pv)
 {
-  dprintk("%s\n", __FUNCTION__);
+  logk_trace("rescheduling");
 
   GCT_FOREACH(nrf5x_ble_context_list, &pv->context_list, c,
-              dprintk(" %p %lld %d\n", c, c->event_begin, c->layer.handler->type);
+              logk_trace(" %p %lld", c, c->event_begin);
               );
 
   if (pv->current)
@@ -606,7 +608,7 @@ void nrf5x_ble_reschedule(struct nrf5x_ble_private_s *pv)
   struct nrf5x_ble_context_s *ctx = nrf5x_ble_context_list_head(&pv->context_list);
 
   if (!ctx) {
-    dprintk("%s empty\n", __FUNCTION__);
+    logk_trace("%s empty", __func__);
 
     nrf5x_ble_clock_release(pv);
     return;
@@ -616,7 +618,7 @@ void nrf5x_ble_reschedule(struct nrf5x_ble_private_s *pv)
   gpio(I_LATER, 0);
   gpio(I_LATER, I_LATER);
 
-  dprintk("%s %lld %lld ", __FUNCTION__, ctx->event_begin, ctx->event_end);
+  logk_trace("%s event from %lld to %lld ", __func__, ctx->event_begin, ctx->event_end);
 
   /*
              We are here
@@ -642,13 +644,13 @@ void nrf5x_ble_reschedule(struct nrf5x_ble_private_s *pv)
   dev_timer_value_t ramp = RADIO_ENABLE_TK + CLOCK_ENABLE_TK;
 
   if (ctx->event_begin > now + ramp + RTC_SKEW_TK * 2) {
-    dprintk("later\n");
+    logk_trace("later");
     nrf5x_ble_context_start_later(pv, ctx);
     goto out;
   }
 #endif
 
-  dprintk("now\n");
+  logk_trace("now");
   nrf5x_ble_context_start_first(pv);
 
  out:
@@ -708,7 +710,7 @@ void nrf5x_ble_context_schedule(struct nrf5x_ble_context_s *ctx,
 {
   struct nrf5x_ble_private_s *pv = ctx->pv;
 
-  dprintk("%s %p %lld %lld\n", __FUNCTION__, ctx, event_begin, event_end);
+  logk_trace("%s %p %lld %lld", __func__, ctx, event_begin, event_end);
 
   _ble_context_unschedule(pv, ctx);
 
@@ -722,7 +724,7 @@ void nrf5x_ble_context_schedule(struct nrf5x_ble_context_s *ctx,
   ctx->scheduled = 1;
 
   GCT_FOREACH(nrf5x_ble_context_list, &pv->context_list, c,
-              dprintk(" %p %lld %d\n", c, c->event_begin, c->layer.handler->type);
+              logk_trace(" %p %lld", c, c->event_begin);
               );
 
   if (ctx == nrf5x_ble_context_list_head(&pv->context_list))
@@ -796,7 +798,7 @@ void nrf5x_ble_event_address_matched(struct nrf5x_ble_private_s *pv)
         && state != NRF_RADIO_STATE_RXIDLE && state != NRF_RADIO_STATE_TXIDLE
 #endif
         ) {
-      printk("Not in RX/TX any more: %d\n", state);
+      logk_error("not in RX/TX any more: %d", state);
       break;
     }
     assert(nrf_reg_get(BLE_RADIO_ADDR, NRF_RADIO_BCC) == 16);
@@ -831,7 +833,7 @@ void nrf5x_ble_event_address_matched(struct nrf5x_ble_private_s *pv)
     --some_long_time;
 
     if (!some_long_time) {
-      printk("Long time passed\n");
+      logk_error("long time passed");
       nrf5x_ble_event_timeout(pv);
       return;
     }
@@ -971,8 +973,8 @@ static
 int32_t nrf5x_ble_context_cmp(const struct nrf5x_ble_context_s *a,
                               const struct nrf5x_ble_context_s *b)
 {
-  dprintk("%s (%lld %lld %d) (%lld %lld %d)\n",
-         __FUNCTION__,
+  logk_trace("%s (%lld %lld %d) (%lld %lld %d)",
+         __func__,
          a->event_begin, a->event_end, a->importance,
          b->event_begin, b->event_end, b->importance);
 
@@ -993,12 +995,12 @@ void nrf5x_ble_context_list_insert_sorted(nrf5x_ble_context_list_root_t *root,
 {
   struct nrf5x_ble_context_s *cur;
 
-  dprintk("%s %lld %d\n", __FUNCTION__, ctx->event_begin, ctx->layer.handler->type);
+  logk_trace("%s %lld", __func__, ctx->event_begin);
 
   for (cur = nrf5x_ble_context_list_head(root);
        cur;
        cur = nrf5x_ble_context_list_next(root, cur)) {
-    dprintk(" %lld %d\n", cur->event_begin, cur->layer.handler->type);
+    logk_trace(" %lld", cur->event_begin);
     if (nrf5x_ble_context_cmp(ctx, cur) > 0)
       continue;
     nrf5x_ble_context_list_insert_prev(root, cur, ctx);

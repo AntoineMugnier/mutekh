@@ -1,0 +1,468 @@
+/*
+    -*- asm -*-
+
+    This file is part of MutekH.
+
+    MutekH is free software; you can redistribute it and/or modify it
+    under the terms of the GNU Lesser General Public License as
+    published by the Free Software Foundation; version 2.1 of the
+    License.
+
+    MutekH is distributed in the hope that it will be useful, but
+    WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+    Lesser General Public License for more details.
+
+    You should have received a copy of the GNU Lesser General Public
+    License along with this program.  If not, see
+    <http://www.gnu.org/licenses/>.
+
+    Copyright (c) 2017, Nicolas Pouillon, <nipo@ssji.net>
+*/
+
+#include <ble/net/sm.h>
+#include "sm.h"
+
+.global %8 pv
+.global %9 offset
+.global %10 pkt
+    
+.custom ble_sm
+.name sm_impl
+
+.func cmp16
+    .input %0 a, %1 b
+    .clobber %0, %1, %2 tmpa, %3 tmpb
+    .output %4 differs
+    .input %15 link
+
+    cst8         %differs, 0
+    ld32i        %tmpa, %a
+    ld32i        %tmpb, %b
+    xor32        %tmpa, %tmpb
+    or32         %differs, %tmpa
+    ld32i        %tmpa, %a
+    ld32i        %tmpb, %b
+    xor32        %tmpa, %tmpb
+    or32         %differs, %tmpa
+    ld32i        %tmpa, %a
+    ld32i        %tmpb, %b
+    xor32        %tmpa, %tmpb
+    or32         %differs, %tmpa
+    ld32i        %tmpa, %a
+    ld32i        %tmpb, %b
+    xor32        %tmpa, %tmpb
+    or32         %differs, %tmpa
+
+    ret %link
+.endfunc
+
+.func pkt_put_16
+    .input %1 src
+    .clobber %0, %1
+    .input %14 link
+
+    add8         %pkt, 16
+    ld32i        %0, %1
+    swap32       %0
+    st32d        %0, %pkt
+    ld32i        %0, %1
+    swap32       %0
+    st32d        %0, %pkt
+    ld32i        %0, %1
+    swap32       %0
+    st32d        %0, %pkt
+    ld32i        %0, %1
+    swap32       %0
+    st32d        %0, %pkt
+    add8         %pkt, 16
+
+    ret %link
+.endfunc
+
+.func pkt_get_16
+    .input %1 dst
+    .clobber %0, %1
+    .input %14 link
+
+    add8         %dst, 16
+    ld32i        %0, %pkt
+    swap32       %0
+    st32d        %0, %1
+    ld32i        %0, %pkt
+    swap32       %0
+    st32d        %0, %1
+    ld32i        %0, %pkt
+    swap32       %0
+    st32d        %0, %1
+    ld32i        %0, %pkt
+    swap32       %0
+    st32d        %0, %1
+
+    ret %link
+.endfunc
+
+.func key_distribute
+    .input %4 kd
+    .input %15 link
+    .clobber %0, %1, %14
+
+    // EncKey part
+    tst32c       %kd, bitpos(_const(BLE_SM_ENC_KEY))
+     jmp8 kd_no_enc
+    // Send LTK
+    packet_alloc
+    cst8         %0, _const(BLE_SM_ENCRYPTION_INFORMATION)
+    st8i         %0, %pkt
+    ltk_get      %pkt
+    add8         %pkt, 16
+    packet_send
+    // Send Identification (ID + EDIV)
+    packet_alloc
+    cst8         %0, _const(BLE_SM_MASTER_IDENTIFICATION)
+    st8i         %0, %pkt
+    peer_id_get  %0 // peer id is RAND field
+    st32i        %0, %pkt
+    swap32le     %0
+    cst8         %0, 0
+    st32i        %0, %pkt
+    ediv_get     %0
+    swap16le     %0
+    st16i        %0, %pkt
+    packet_send
+kd_no_enc:
+
+    // IdKey part
+    tst32c       %kd, bitpos(_const(BLE_SM_ID_KEY))
+     jmp8 kd_no_id
+    // Send IRK
+    packet_alloc
+    cst8         %0, _const(BLE_SM_IDENTITY_INFORMATION)
+    st8i         %0, %pkt
+    irk_get      %pkt_put_16:src
+    call8        %pkt_put_16:link, pkt_put_16
+    packet_send
+kd_no_id:
+
+    // SignKey part
+    tst32c       %kd, bitpos(_const(BLE_SM_SIGN_KEY))
+     jmp8 kd_no_sign
+    // Send CSRK
+    packet_alloc
+    cst8          %0, _const(BLE_SM_SIGNING_INFORMATION)
+    st8i          %0, %pkt
+    peer_csrk_get %pkt_put_16:src
+    call8         %pkt_put_16:link, pkt_put_16
+    packet_send
+kd_no_sign:
+
+    // LinkKey cannot happen with legacy pairing
+
+    ret %link
+.endfunc
+
+.func key_receive
+    .input %4 kd
+    .input %15 link
+    .clobber %0, %1
+
+    // EncKey part
+    tst32c       %kd, bitpos(_const(BLE_SM_ENC_KEY))
+     jmp8 kr_no_enc
+    // Expect LTK
+    packet_wait
+    cst8         %0, _const(BLE_SM_ENCRYPTION_INFORMATION)
+    ld8i         %1, %pkt
+    neq          %0, %1
+     failure
+    packet_left  %1
+    cst8         %0, 16
+    neq          %0, %1
+     failure
+    peer_ltk_set %pkt
+
+    // Expect Identification (ID + EDIV)
+    packet_wait
+    cst8         %0, _const(BLE_SM_MASTER_IDENTIFICATION)
+    ld8i         %1, %pkt
+    neq          %0, %1
+     failure
+    packet_left  %1
+    cst8         %0, 10
+    neq          %0, %1
+     failure
+    peer_id_set   %pkt
+    add8          %pkt, 8
+    ld16i         %0, %pkt
+    swap16le      %0
+    peer_ediv_set %0
+kr_no_enc:
+
+    // IdKey part
+    tst32c       %kd, bitpos(_const(BLE_SM_ID_KEY))
+     jmp8 kr_no_id
+    // Get IRK
+    packet_wait
+    cst8         %0, _const(BLE_SM_IDENTITY_INFORMATION)
+    ld8i         %1, %pkt
+    neq          %0, %1
+     failure
+    packet_left  %1
+    cst8         %0, 16
+    neq          %0, %1
+     failure
+    peer_irk_set %pkt
+kr_no_id:
+
+    // SignKey part
+    tst32c       %kd, bitpos(_const(BLE_SM_SIGN_KEY))
+     jmp8 kr_no_sign
+    // Get CSRK
+    packet_wait
+    cst8         %0, _const(BLE_SM_SIGNING_INFORMATION)
+    ld8i         %1, %pkt
+    neq          %0, %1
+     failure
+    packet_left  %1
+    cst8         %0, 16
+    neq          %0, %1
+     failure
+    peer_csrk_set %pkt
+kr_no_sign:
+
+    // LinkKey cannot happen with legacy pairing
+
+    ret %link
+.endfunc
+    
+.func ble_sm_master_legacy
+    .export ble_sm_master_legacy
+    .clobber %0, %1, %2, %3, %4, %14, %15
+    
+    // MRAND generation
+    mov          %0, %pv
+    cst16        %offset, _offsetof(struct ble_sm_s, mrand), 0
+    add          %0, %offset
+    rng_read     %0, 16
+
+    // MCONF calculation
+    mov          %1, %pv
+    cst16        %offset, _offsetof(struct ble_sm_s, mconf), 0
+    add          %1, %offset
+    conf_calc    %1, %0
+
+    // Send MCONF
+    packet_alloc
+    cst8         %0, _const(BLE_SM_PAIRING_CONFIRM)
+    st8i         %0, %pkt
+    mov          %pkt_put_16:src, %pv
+    cst16        %offset, _offsetof(struct ble_sm_s, mconf), 0
+    add          %pkt_put_16:src, %offset
+    call32       %pkt_put_16:link, pkt_put_16
+    packet_send
+
+    // Wait SCONF
+    packet_wait
+    ld8i         %1, %pkt
+    cst8         %0, _const(BLE_SM_PAIRING_CONFIRM)
+    neq          %0, %1
+     failure
+    packet_left  %1
+    cst8         %0, 16
+    neq          %0, %1
+     failure
+    // Copy SCONF from packet
+    mov          %pkt_get_16:dst, %pv
+    cst16        %offset, _offsetof(struct ble_sm_s, sconf), 0
+    add          %pkt_get_16:dst, %offset
+    call32       %pkt_get_16:link, pkt_get_16
+
+    // Send MRAND
+    packet_alloc
+    cst8         %0, _const(BLE_SM_PAIRING_RANDOM)
+    st8i         %0, %pkt
+    mov          %pkt_put_16:src, %pv
+    cst16        %offset, _offsetof(struct ble_sm_s, mrand), 0
+    add          %pkt_put_16:src, %offset
+    call32       %pkt_put_16:link, pkt_put_16
+    packet_send
+    
+    // Wait SRAND
+    packet_wait
+    cst8         %0, _const(BLE_SM_PAIRING_RANDOM)
+    ld8i         %1, %pkt
+    neq          %0, %1
+     failure
+    packet_left  %1
+    cst8         %0, 16
+    neq          %0, %1
+     failure
+    // Copy SRAND from packet
+    mov          %pkt_get_16:dst, %pv
+    cst16        %offset, _offsetof(struct ble_sm_s, srand), 0
+    add          %pkt_get_16:dst, %offset
+    call32       %pkt_get_16:link, pkt_get_16
+
+    // Check SCONF against SRAND
+    mov          %cmp16:b, %pv
+    cst16        %offset, _offsetof(struct ble_sm_s, srand), 0
+    add          %cmp16:b, %offset
+    mov          %cmp16:a, %pv
+    cst16        %offset, _offsetof(struct ble_sm_s, pconf), 0
+    add          %cmp16:a, %offset
+    conf_calc    %cmp16:a, %cmp16:b
+    mov          %cmp16:b, %pv
+    cst16        %offset, _offsetof(struct ble_sm_s, sconf), 0
+    add          %cmp16:b, %offset
+    call32       %cmp16:link, cmp16
+    neq0         %cmp16:differs
+     failure
+
+    // We're OK, let's make STK
+    stk_compute
+
+    pairing_success
+
+    encryption_wait
+
+    mov          %3, %pv
+    mov          %2, %3
+    cst16        %offset, _offsetof(struct ble_sm_s, preq) + 6, 0
+    add          %3, %offset
+    cst16        %offset, _offsetof(struct ble_sm_s, pres) + 6, 0
+    add          %2, %offset
+    
+    ld8          %0, %3
+    ld8          %key_receive:kd, %2
+    and32        %key_receive:kd, %0
+
+    call32       %key_receive:link, key_receive
+
+    add8         %3, -1
+    add8         %2, -1
+
+    ld8          %0, %3
+    ld8          %key_distribute:kd, %2
+    and32        %key_distribute:kd, %0
+
+    call32       %key_distribute:link, key_distribute
+
+    bonding_success
+
+    end
+.endfunc
+
+
+.func ble_sm_slave_legacy
+    .export ble_sm_slave_legacy
+    .clobber %0, %1, %2, %3, %4, %14, %15
+    
+    // SRAND generation
+    mov          %0, %pv
+    cst16        %offset, _offsetof(struct ble_sm_s, srand), 0
+    add          %0, %offset
+    rng_read     %0, 16
+
+    // SCONF calculation
+    mov          %1, %pv
+    cst16        %offset, _offsetof(struct ble_sm_s, sconf), 0
+    add          %1, %offset
+    conf_calc    %1, %0
+
+    // Wait SCONF
+    packet_wait
+    ld8i         %1, %pkt
+    cst8         %0, _const(BLE_SM_PAIRING_CONFIRM)
+    neq          %0, %1
+     failure
+    packet_left  %1
+    cst8         %0, 16
+    neq          %0, %1
+     failure
+    // Copy MCONF from packet
+    mov          %pkt_get_16:dst, %pv
+    cst16        %offset, _offsetof(struct ble_sm_s, mconf), 0
+    add          %pkt_get_16:dst, %offset
+    call32       %pkt_get_16:link, pkt_get_16
+
+    // Send SCONF
+    packet_alloc
+    cst8         %0, _const(BLE_SM_PAIRING_CONFIRM)
+    st8i         %0, %pkt
+    mov          %pkt_put_16:src, %pv
+    cst16        %offset, _offsetof(struct ble_sm_s, sconf), 0
+    add          %pkt_put_16:src, %offset
+    call32       %pkt_put_16:link, pkt_put_16
+    packet_send
+    
+    // Wait MRAND
+    packet_wait
+    cst8         %0, _const(BLE_SM_PAIRING_RANDOM)
+    ld8i         %1, %pkt
+    neq          %0, %1
+     failure
+    packet_left  %1
+    cst8         %0, 16
+    neq          %0, %1
+     failure
+    // Copy MRAND from packet
+    mov          %pkt_get_16:dst, %pv
+    cst16        %offset, _offsetof(struct ble_sm_s, mrand), 0
+    add          %pkt_get_16:dst, %offset
+    call32       %pkt_get_16:link, pkt_get_16
+
+    // Check MCONF against MRAND
+    mov          %cmp16:b, %pv
+    cst16        %offset, _offsetof(struct ble_sm_s, mrand), 0
+    add          %cmp16:b, %offset
+    mov          %cmp16:a, %pv
+    cst16        %offset, _offsetof(struct ble_sm_s, pconf), 0
+    add          %cmp16:a, %offset
+    conf_calc    %cmp16:a, %cmp16:b
+    mov          %cmp16:b, %pv
+    cst16        %offset, _offsetof(struct ble_sm_s, mconf), 0
+    add          %cmp16:b, %offset
+    call32       %cmp16:link, cmp16
+    neq0         %cmp16:differs
+     failure
+
+    // Send SRAND
+    packet_alloc
+    cst8         %0, _const(BLE_SM_PAIRING_RANDOM)
+    st8i         %0, %pkt
+    mov          %pkt_put_16:src, %pv
+    cst16        %offset, _offsetof(struct ble_sm_s, srand), 0
+    add          %pkt_put_16:src, %offset
+    call32       %pkt_put_16:link, pkt_put_16
+    packet_send
+
+    // We're OK, let's make STK
+    stk_compute
+
+    pairing_success
+
+    encryption_wait
+
+    mov          %3, %pv
+    mov          %2, %3
+    cst16        %offset, _offsetof(struct ble_sm_s, preq) + 5, 0
+    add          %3, %offset
+    cst16        %offset, _offsetof(struct ble_sm_s, pres) + 5, 0
+    add          %2, %offset
+
+    ld8i         %0, %3
+    ld8i         %key_distribute:kd, %2
+    and32        %key_distribute:kd, %0
+
+    call32       %key_distribute:link, key_distribute
+
+    ld8          %0, %3
+    ld8          %key_receive:kd, %2
+    and32        %key_receive:kd, %0
+
+    call32       %key_receive:link, key_receive
+
+    bonding_success
+
+    end
+.endfunc

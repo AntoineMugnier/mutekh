@@ -41,7 +41,7 @@ void peri_pairing_failed(struct ble_stack_connection_s *conn, enum sm_reason rea
 }
 
 static
-void peri_pairing_success(struct ble_stack_connection_s *conn)
+void peri_bonding_success(struct ble_stack_connection_s *conn)
 {
 }
 
@@ -68,7 +68,7 @@ static const struct ble_peripheral_handler_s peri_handler =
 #if defined(CONFIG_BLE_CRYPTO)
   .base.pairing_requested = peri_pairing_requested,
   .base.pairing_failed = peri_pairing_failed,
-  .base.pairing_success = peri_pairing_success,
+  .base.bonding_success = peri_bonding_success,
 #endif
   .connection_requested = peri_connection_requested,
   .base.connection_closed = peri_connection_closed,

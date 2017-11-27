@@ -18,6 +18,10 @@
     Copyright Nicolas Pouillon <nipo@ssji.net> (c) 2015
 */
 
+#define LOGK_MODULE_ID "bchm"
+
+#include <mutek/printk.h>
+
 #include <string.h>
 
 #include <hexo/types.h>
@@ -96,7 +100,7 @@ void ble_channel_mapper_event_set(struct ble_channel_mapper_s *mapper,
       mapper->update_pending = 0;
       memcpy(mapper->mapped_channel, mapper->pending_mapped_channel, 37);
 
-      //printk("Channel map updated: %P\n", mapper->mapped_channel, 37);
+      logk_trace("channel map updated: %P\n", mapper->mapped_channel, 37);
     }
   }
 }
@@ -130,7 +134,7 @@ error_t ble_channel_mapper_update_push(struct ble_channel_mapper_s *mapper,
   if (__builtin_popcountll(chan_map) < 2)
     return -EINVAL;
 
-  //printk("Channel map update at %d: %10llx\n", instant, chan_map);
+  logk_trace("channel map update at %d: %10llx\n", instant, chan_map);
 
   mapper->update_pending = 1;
   mapper->update_instant = instant;

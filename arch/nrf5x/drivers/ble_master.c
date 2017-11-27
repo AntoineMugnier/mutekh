@@ -18,6 +18,10 @@
     Copyright Nicolas Pouillon <nipo@ssji.net> (c) 2015
 */
 
+#define LOGK_MODULE_ID "nbms"
+
+#include <mutek/printk.h>
+
 #include <ble/util/channel_mapper.h>
 #include <ble/util/timing_mapper.h>
 #include <ble/protocol/error.h>
@@ -28,12 +32,6 @@
 #include <net/scheduler.h>
 #include <ble/peer.h>
 #include "ble.h"
-
-#define dprintk(...) do{}while(0)
-//#define dprintk printk
-
-#define cprintk(...) do{}while(0)
-//#define cprintk printk
 
 #define MASTER_CONTEXT_UPDATED 1
 #define STUCK_EVENTS_MAX 100
@@ -109,7 +107,7 @@ void nrf5x_ble_master_error(struct nrf5x_ble_master_s *master, uint8_t reason)
   const struct ble_phy_delegate_vtable_s *vtable
     = const_ble_phy_delegate_vtable_s_from_base(master->layer.delegate_vtable);
 
-  cprintk("Master error, reason %d", reason);
+  logk_error("error, reason %d", reason);
 
   if (master->reason)
     return;
@@ -151,13 +149,13 @@ static void master_schedule(struct nrf5x_ble_master_s *master)
       event_advance = to_event;
   }
 
-  cprintk("Master schedule %d/%d, %03d, reason %d",
-         master->last_event_counter, master->scheduled_event_counter,
-         event_advance,
-         master->reason);
+  logk_debug("schedule %d/%d, %03d, reason %d",
+             master->last_event_counter, master->scheduled_event_counter,
+             event_advance,
+             master->reason);
 
   if (master->scheduled_event_counter - master->last_event_counter == event_advance) {
-    cprintk(" is next\n");
+    logk_debug("is next");
     return;
   }
 
@@ -172,7 +170,7 @@ static void master_schedule(struct nrf5x_ble_master_s *master)
 
   master->scheduled_event_counter = master->last_event_counter + event_advance;
 
-  cprintk(" event %d (%d + %d)\n", master->scheduled_event_counter,
+  logk_debug(" event %d (%d + %d)", master->scheduled_event_counter,
          master->last_event_counter, event_advance);
 
   ble_timing_mapper_window_master_get(&master->timing,
@@ -182,7 +180,7 @@ static void master_schedule(struct nrf5x_ble_master_s *master)
                                      &event_max_duration);
 
   if (event_begin > master->timing.drops_at) {
-    cprintk(" too late, drops at %lld, scheduled at %lld, %lld too late\n",
+    logk_debug(" too late, drops at %lld, scheduled at %lld, %lld too late",
             master->timing.drops_at, event_begin,
             event_begin - master->timing.drops_at);
     nrf5x_ble_master_error(master, BLE_CONNECTION_TIMEOUT);
@@ -191,11 +189,11 @@ static void master_schedule(struct nrf5x_ble_master_s *master)
 
   if (event_begin < now) {
     event_advance++;
-    cprintk(" deadline_missed %lld < %lld\n", event_begin, now);
+    logk_debug(" deadline_missed %lld < %lld", event_begin, now);
     goto deadline_missed;
   }
 
-  cprintk(" scheduled event %d at %lld\n",
+  logk_debug(" scheduled event %d at %lld",
           master->scheduled_event_counter,
           event_begin);
 
@@ -243,7 +241,7 @@ error_t nrf5x_ble_master_create(struct net_scheduler_s *scheduler,
   if (err)
     goto err_channel_mapper;
 
-  err = net_layer_init(&master->layer, &ble_master_layer_handler, scheduler, delegate, delegate_vtable);
+  err = net_layer_init_seq(&master->layer, &ble_master_layer_handler, scheduler, delegate, delegate_vtable, &priv->kr_seq);
   if (err)
     goto err_timing_mapper;
 
@@ -319,7 +317,7 @@ static void master_query_task_handle(struct nrf5x_ble_master_s *master,
     struct ble_llcp_connection_parameters_update_s *up
       = ble_llcp_connection_parameters_update_s_from_task(task);
 
-    cprintk("Master conn params update on event %d\n", up->update.instant);
+    logk_debug("conn params update on event %d", up->update.instant);
 
     net_task_query_respond_push(
       task, ble_timing_mapper_update_push(&master->timing, &up->update));
@@ -330,7 +328,7 @@ static void master_query_task_handle(struct nrf5x_ble_master_s *master,
     struct ble_llcp_channel_map_update_s *up
       = ble_llcp_channel_map_update_s_from_task(task);
 
-    cprintk("Master channel map update on event %d\n", up->instant);
+    logk_debug("channel map update on event %d", up->instant);
 
     net_task_query_respond_push(task, ble_channel_mapper_update_push(
       &master->channel_mapper, up->instant, up->channel_map));
@@ -363,11 +361,11 @@ void master_layer_task_handle(struct net_layer_s *layer,
 {
   struct nrf5x_ble_master_s *master = nrf5x_ble_master_s_from_layer(layer);
 
-  dprintk("%s in %p %p -> %p", __FUNCTION__, master, task->source, task->target);
+  logk_trace("%p task handle %p -> %p", master, task->source, task->target);
 
   switch (task->type) {
   case NET_TASK_OUTBOUND:
-    dprintk(" outbound [%P]",
+    logk_trace(" outbound [%P]",
             task->packet.buffer->data + task->packet.buffer->begin,
             task->packet.buffer->end - task->packet.buffer->begin);
 
@@ -390,13 +388,13 @@ void master_layer_task_handle(struct net_layer_s *layer,
     break;
 
   case NET_TASK_QUERY:
-    dprintk("Master query, %S\n", &task->query.opcode, 4);
+    logk_trace("query, %S", &task->query.opcode, 4);
 
     master_query_task_handle(master, task);
     return;
 
   default:
-    dprintk(" other\n");
+    logk_trace("other");
     break;
   }
 
@@ -415,7 +413,7 @@ void master_layer_unbound(struct net_layer_s *layer,
   master->ll = NULL;
 
   if (!master->reason) {
-    dprintk("Master unbound without connection closed\n");
+    logk_trace("unbound without connection closed");
 
     nrf5x_ble_master_error(master, BLE_CONNECTION_TERMINATED_BY_LOCAL_HOST);
   }
@@ -460,7 +458,7 @@ void master_ctx_event_closed(struct nrf5x_ble_context_s *context,
 {
   struct nrf5x_ble_master_s *master = nrf5x_ble_master_s_from_context(context);
 
-  cprintk("Event %d done: %d, %d pkts\n   (%d rx, %d tx, %d acked, %d crc err)\n",
+  logk_debug("event %d done: %d, %d pkts   (%d rx, %d tx, %d acked, %d crc err)",
           master->scheduled_event_counter, status,
           master->event_packet_count,
           master->event_rx_count,

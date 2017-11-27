@@ -1,4 +1,5 @@
-objs-$(CONFIG_BLE_CRYPTO) += sm.o
+BCPATH += -p $(LOCAL_SRC_DIR)
+objs-$(CONFIG_BLE_CRYPTO) += sm.o sm_impl.o
 objs += att.o att_encoding.o
 objs += gatt.o
 objs += gap.o

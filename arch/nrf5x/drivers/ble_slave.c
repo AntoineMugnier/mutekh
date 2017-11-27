@@ -18,6 +18,10 @@
     Copyright Nicolas Pouillon <nipo@ssji.net> (c) 2015
 */
 
+#define LOGK_MODULE_ID "nbsl"
+
+#include <mutek/printk.h>
+
 #include <ble/util/channel_mapper.h>
 #include <ble/util/timing_mapper.h>
 #include <ble/protocol/error.h>
@@ -30,12 +34,6 @@
 #include <net/scheduler.h>
 #include <net/layer.h>
 #include <net/task.h>
-
-#define dprintk(...) do{}while(0)
-//#define dprintk printk
-
-#define cprintk(...) do{}while(0)
-//#define cprintk printk
 
 #define SUPPORTED_FEATURES (0                                  \
                             | (_CONFIG_BLE_CRYPTO << BLE_LL_FEATURE_LE_ENCRYPTION) \
@@ -121,7 +119,7 @@ void nrf5x_ble_slave_error(struct nrf5x_ble_slave_s *slave, uint8_t reason)
   const struct ble_phy_delegate_vtable_s *vtable
     = const_ble_phy_delegate_vtable_s_from_base(slave->layer.delegate_vtable);
 
-  dprintk("Slave error, reason %d\n", reason);
+  logk_error("error, reason %d", reason);
 
   if (slave->reason)
     return;
@@ -138,7 +136,7 @@ static void slave_schedule(struct nrf5x_ble_slave_s *slave)
   if (slave->opened)
     return;
 
-  dprintk("%s %d\n", __FUNCTION__, net_layer_refcount(&slave->layer));
+  logk_trace("%s ref %d", __FUNCTION__, net_layer_refcount(&slave->layer));
 
   if (!net_layer_refcount(&slave->layer))
     return;
@@ -172,14 +170,14 @@ static void slave_schedule(struct nrf5x_ble_slave_s *slave)
       event_advance = to_event;
   }
 
-  cprintk("Slave schedule %d/%d, %d %03d/%03d/%03d, reason %d",
+  logk_trace("schedule %d/%d, %d %03d/%03d/%03d, reason %d",
          slave->last_event_counter, slave->scheduled_event_counter,
           until_forced,
          event_advance, slave->latency_backoff, slave->timing.current.latency,
          slave->reason);
 
   if (slave->scheduled_event_counter - slave->last_event_counter == event_advance) {
-    cprintk(" is next\n");
+    logk_trace("is next");
     return;
   }
 
@@ -194,7 +192,7 @@ static void slave_schedule(struct nrf5x_ble_slave_s *slave)
 
   slave->scheduled_event_counter = slave->last_event_counter + event_advance;
 
-  cprintk(" event %d (%d + %d)\n", slave->scheduled_event_counter,
+  logk_trace("event %d (%d + %d)", slave->scheduled_event_counter,
          slave->last_event_counter, event_advance);
 
   ble_timing_mapper_window_slave_get(&slave->timing,
@@ -204,7 +202,7 @@ static void slave_schedule(struct nrf5x_ble_slave_s *slave)
                                      &event_max_duration);
 
   if (event_begin > slave->timing.drops_at) {
-    cprintk(" too late, drops at %lld, scheduled at %lld, %lld too late\n",
+    logk_trace("too late, drops at %lld, scheduled at %lld, %lld too late",
             slave->timing.drops_at, event_begin,
             event_begin - slave->timing.drops_at);
     nrf5x_ble_slave_error(slave, BLE_CONNECTION_TIMEOUT);
@@ -213,7 +211,7 @@ static void slave_schedule(struct nrf5x_ble_slave_s *slave)
 
   if (event_begin < now) {
     event_advance++;
-    cprintk(" deadline_missed %lld < %lld\n", event_begin, now);
+    logk_trace("deadline_missed %lld < %lld", event_begin, now);
     goto deadline_missed;
   }
 
@@ -222,7 +220,7 @@ static void slave_schedule(struct nrf5x_ble_slave_s *slave)
     && !slave->peer_md
     && ((slave->since_last_event_intervals + event_advance) < slave->latency_backoff);
 
-  cprintk(" slave latency permit: %s, txq: %d, md: %d, %d + %d < %d: %d\n",
+  logk_trace("slave latency permit: %s, txq: %d, md: %d, %d + %d < %d: %d",
          slave->established ? "established" : "not yet",
           slave->tx_queue_count,
           slave->peer_md,
@@ -231,7 +229,7 @@ static void slave_schedule(struct nrf5x_ble_slave_s *slave)
          slave->latency_backoff,
          slave->latency_permitted);
 
-  cprintk(" scheduled event %d at %lld\n",
+  logk_trace("scheduled event %d at %lld",
           slave->scheduled_event_counter,
           event_begin);
 
@@ -277,7 +275,7 @@ error_t nrf5x_ble_slave_create(struct net_scheduler_s *scheduler,
   if (err)
     goto err_channel_mapper;
 
-  err = net_layer_init(&slave->layer, &ble_slave_layer_handler, scheduler, delegate, delegate_vtable);
+  err = net_layer_init_seq(&slave->layer, &ble_slave_layer_handler, scheduler, delegate, delegate_vtable, &priv->kr_seq);
   if (err)
     goto err_timing_mapper;
 
@@ -336,7 +334,7 @@ void slave_layer_destroyed(struct net_layer_s *layer)
 {
   struct nrf5x_ble_slave_s *slave = nrf5x_ble_slave_s_from_layer(layer);
 
-  dprintk("%s\n", __FUNCTION__);
+  logk_trace("destroyed");
 
   if (slave->rx_buffer)
     buffer_refdec(slave->rx_buffer);
@@ -356,7 +354,7 @@ static void slave_query_task_handle(struct nrf5x_ble_slave_s *slave,
     struct ble_llcp_connection_parameters_update_s *up
       = ble_llcp_connection_parameters_update_s_from_task(task);
 
-    cprintk("Slave conn params update on event %d\n", up->update.instant);
+    logk_trace("conn params update on event %d", up->update.instant);
 
     net_task_query_respond_push(
       task, ble_timing_mapper_update_push(&slave->timing, &up->update));
@@ -367,7 +365,7 @@ static void slave_query_task_handle(struct nrf5x_ble_slave_s *slave,
     struct ble_llcp_channel_map_update_s *up
       = ble_llcp_channel_map_update_s_from_task(task);
 
-    cprintk("Slave channel map update on event %d\n", up->instant);
+    logk_trace("channel map update on event %d", up->instant);
 
     net_task_query_respond_push(task, ble_channel_mapper_update_push(
       &slave->channel_mapper, up->instant, up->channel_map));
@@ -400,11 +398,11 @@ void slave_layer_task_handle(struct net_layer_s *layer,
 {
   struct nrf5x_ble_slave_s *slave = nrf5x_ble_slave_s_from_layer(layer);
 
-  dprintk("%s in %p %p -> %p", __FUNCTION__, slave, task->source, task->target);
+  logk_trace("task handle in %p %p -> %p", slave, task->source, task->target);
 
   switch (task->type) {
   case NET_TASK_OUTBOUND:
-    dprintk(" outbound [%P]",
+    logk_trace("outbound [%P]",
             task->packet.buffer->data + task->packet.buffer->begin,
             task->packet.buffer->end - task->packet.buffer->begin);
 
@@ -424,13 +422,13 @@ void slave_layer_task_handle(struct net_layer_s *layer,
     break;
 
   case NET_TASK_QUERY:
-    dprintk("Slave query, %S\n", &task->query.opcode, 4);
+    logk_trace("query, %S", &task->query.opcode, 4);
 
     slave_query_task_handle(slave, task);
     return;
 
   default:
-    dprintk(" other\n");
+    logk_trace("other");
     break;
   }
 
@@ -449,7 +447,7 @@ void slave_layer_unbound(struct net_layer_s *layer,
   slave->ll = NULL;
 
   if (!slave->reason) {
-    dprintk("Slave unbound without connection closed\n");
+    logk_trace("unbound without connection closed");
 
     nrf5x_ble_slave_error(slave, BLE_CONNECTION_TERMINATED_BY_LOCAL_HOST);
   }
@@ -476,7 +474,7 @@ static bool_t slave_ctx_event_opened(struct nrf5x_ble_context_s *context)
   if (!net_layer_refcount(&slave->layer))
     return 0;
 
-  dprintk("%s\n", __FUNCTION__);
+  logk_trace("event opened");
 
   slave->opened = 1;
   slave->event_acked_count = 0;
@@ -497,9 +495,9 @@ void slave_ctx_event_closed(struct nrf5x_ble_context_s *context,
 {
   struct nrf5x_ble_slave_s *slave = nrf5x_ble_slave_s_from_context(context);
 
-  dprintk("%s\n", __FUNCTION__);
+  logk_trace("event closed");
 
-  cprintk("Event %d done: %d, %d pkts, latency %s\n   (%d rx, %d data, %d tx, %d acked, %d crc err)\n",
+  logk_trace("event %d done: %d, %d pkts, latency %s   (%d rx, %d data, %d tx, %d acked, %d crc err)",
           slave->scheduled_event_counter, status,
           slave->event_packet_count, slave->latency_permitted ? "permitted" : "forbidden",
           slave->event_rx_count, slave->event_rx_data_acked_count,
@@ -556,7 +554,7 @@ void slave_ctx_event_closed(struct nrf5x_ble_context_s *context,
   if (slave->latency_backoff > slave->timing.current.latency)
     slave->latency_backoff = slave->timing.current.latency + 1;
 
-  cprintk(" latency %d, backoff %d\n",
+  logk_trace(" latency %d, backoff %d",
          slave->timing.current.latency, slave->latency_backoff);
 
   slave->opened = 0;

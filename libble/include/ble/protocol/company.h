@@ -40,6 +40,7 @@ const char *ble_company_name(uint16_t cid);
 enum ble_company {
   BLE_COMPANY_TI = 0x000d,
   BLE_COMPANY_BROADCOM = 0x000f,
+  BLE_COMPANY_QUALCOMM = 0x001d,
   BLE_COMPANY_ATHEROS = 0x0045,
   BLE_COMPANY_APPLE = 0x004c,
   BLE_COMPANY_NORDIC = 0x0059,
