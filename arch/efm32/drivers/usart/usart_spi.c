@@ -91,7 +91,7 @@ DRIVER_PV(struct efm32_usart_spi_context_s
 });
 
 #if defined(CONFIG_DRIVER_EFM32_DMA) || defined(CONFIG_DRIVER_EFR32_DMA)
-STRUCT_COMPOSE(efm32_usart_spi_context_s, dma_wr_rq);
+STRUCT_COMPOSE(efm32_usart_spi_context_s, dma_rd_rq);
 #endif
 
 static void efm32_usart_spi_update_rate(struct device_s *dev, uint32_t bit_rate1k)
@@ -119,6 +119,7 @@ static DEV_SPI_CTRL_CONFIG(efm32_usart_spi_config)
       else
         {
           pv->frame = cfg->word_width - 3;
+          pv->ctrl = EFM32_USART_CTRL_SYNC;
 
           if (cfg->ck_mode == DEV_SPI_CK_MODE_2 || cfg->ck_mode == DEV_SPI_CK_MODE_3)
             pv->ctrl |= EFM32_USART_CTRL_CLKPOL;
@@ -286,13 +287,8 @@ static DEV_IRQ_SRC_PROCESS(efm32_usart_spi_irq)
 
 static DEV_DMA_CALLBACK(efm32_spi_dma_read_done)
 {
-  return 0;
-}
-
-static DEV_DMA_CALLBACK(efm32_spi_dma_write_done)
-{
   struct efm32_usart_spi_context_s *pv = 
-    efm32_usart_spi_context_s_from_dma_wr_rq(rq);
+    efm32_usart_spi_context_s_from_dma_rd_rq(rq);
   
   lock_spin(&pv->spi->lock);
 
@@ -309,6 +305,11 @@ static DEV_DMA_CALLBACK(efm32_spi_dma_write_done)
   lock_release(&pv->spi->lock);
 
   kroutine_exec(&tr->kr);
+  return 0;
+}
+
+static DEV_DMA_CALLBACK(efm32_spi_dma_write_done)
+{
   return 0;
 }
 
@@ -364,7 +365,25 @@ static DEV_SPI_CTRL_TRANSFER(efm32_usart_spi_transfer)
       cpu_mem_write_32(pv->addr + EFM32_USART_ROUTELOC0_ADDR, endian_le32(pv->route));
       cpu_mem_write_32(pv->addr + EFM32_USART_ROUTEPEN_ADDR, endian_le32(pv->enable));
 #elif CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFM
+
+  #if 0
+      if (tr->data.out == tr->data.in)
+        {
+          pv->route &= ~EFM32_USART_ROUTE_TXPEN;
+          if (device_iomux_setup(dev, "<mosi", NULL, NULL, NULL))
+            abort();
+        }
+      else
+        {
+        pv->route |= EFM32_USART_ROUTE_TXPEN;
+          if (device_iomux_setup(dev, ">mosi", NULL, NULL, NULL))
+            abort();
+        }
+  #endif
+
+       pv->route |= EFM32_USART_ROUTE_TXPEN;
       cpu_mem_write_32(pv->addr + EFM32_USART_ROUTE_ADDR, endian_le32(pv->route));
+      
 #else
 # error
 #endif
@@ -556,7 +575,7 @@ static DEV_INIT(efm32_usart_spi_init)
       device_get_param_dev_accessor(dev, "dma", &pv->dma.base, DRIVER_CLASS_DMA))
     goto err_irq;
 
-struct dev_dma_rq_s *rq = &pv->dma_rd_rq.rq;
+  struct dev_dma_rq_s *rq = &pv->dma_rd_rq.rq;
   struct dev_dma_desc_s *desc = rq->desc;
 
   desc->src.reg.addr = pv->addr + EFM32_USART_RXDATA_ADDR;
