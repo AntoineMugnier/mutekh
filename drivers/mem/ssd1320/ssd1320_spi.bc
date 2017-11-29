@@ -1,0 +1,188 @@
+/*
+    This file is part of MutekH.
+
+    MutekH is free software; you can redistribute it and/or modify it
+    under the terms of the GNU Lesser General Public License as
+    published by the Free Software Foundation; version 2.1 of the
+    License.
+
+    MutekH is distributed in the hope that it will be useful, but
+    WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+    Lesser General Public License for more details.
+
+    You should have received a copy of the GNU Lesser General Public
+    License along with this program.  If not, see
+    <http://www.gnu.org/licenses/>.
+
+    Copyright (c) 2017, Nicolas Pouillon <nipo@ssji.net>
+*/
+
+.custom spi
+.name ssd1320_spi
+
+#define GPIO_DC(tmp, x) \
+    cst8        tmp, x ; \
+    spi_gpioset 1, tmp
+
+#define GPIO_RST(tmp, x) \
+    cst8        tmp, x ; \
+    spi_gpioset 0, tmp
+
+#define START_COMMAND(tmp) GPIO_DC(tmp, 0)
+
+#define START_DATA(tmp) GPIO_DC(tmp, 1)
+
+#define COMMAND(tmp, cmd) \
+    cst8        tmp, cmd ; \
+    pack8       tmp, 1 ; \
+    spi_wr      tmp, 1, CS_PULSE
+
+#define COMMAND_8(tmp, cmd, y) \
+    cst16       tmp, (cmd) | ((y) << 8), 0 ; \
+    pack16le    tmp, 1, 2 ; \
+    spi_wr      tmp, 2, CS_PULSE
+
+#define COMMAND_16(tmp, cmd, y) \
+    cst32       tmp, (cmd) | ((y) << 8), 0 ; \
+    pack32le    tmp, 1, 3 ; \
+    spi_wr      tmp, 3, CS_PULSE
+
+#define CMD_LOCK(tmp, n)             COMMAND_8(tmp, 0xfd, ((n) << 2) | 0x12)
+#define CMD_SET_CONTRAST(tmp, n)     COMMAND_8(tmp, 0x81, n)
+#define CMD_FORCE_ON(tmp, n)         COMMAND(tmp, 0xa4 | n)
+#define CMD_INVERSE(tmp, n)          COMMAND(tmp, 0xa6 | n)
+#define CMD_COM_SCAN_INVERSE(tmp, n) COMMAND(tmp, 0xc8 | n)
+#define CMD_POWER(tmp, n)            COMMAND(tmp, 0xae | n)
+#define CMD_TOP_LINE(tmp, n)         COMMAND_8(tmp, 0xa2, n)
+#define CMD_LEFT_COLUMN(tmp, n)      COMMAND_8(tmp, 0xd3, n)
+#define CMD_FLIP_H(tmp, n)           COMMAND(tmp, 0xa0 | n)
+#define CMD_FLIP_V(tmp, n)           COMMAND(tmp, 0xc0 | ((n) << 3))
+#define CMD_MUX_RATIO(tmp, n)        COMMAND_8(tmp, 0xa8, n)
+#define CMD_SEG_HW_CFG(tmp, n)       COMMAND_8(tmp, 0xda, n)
+#define CMD_VCOM(tmp, n)             COMMAND_8(tmp, 0xdb, n)
+#define CMD_IREF_EXT(tmp, n)         COMMAND_8(tmp, 0xad, ((n) << 4))
+#define CMD_PRECHARGE_V(tmp, n)      COMMAND_8(tmp, 0xbc, n)
+    
+#define CMD_ADDRESSING_MODE(tmp, x) COMMAND_8(tmp, 0x20, _CMD_ADDRESSING_MODE_##x)
+#define     _CMD_ADDRESSING_MODE_HORIZONTAL 0
+#define     _CMD_ADDRESSING_MODE_VERTICAL 1
+
+/* Horizontal/vertical addressing mode */
+#define CMD_SET_COLUMN_RANGE(tmp, a, b) \
+    cst8        tmp, 0x21 ; \
+    shi32l      a, 8 ; \
+    shi32l      b, 16 ; \
+    or32        tmp, a; \
+    or32        tmp, b; \
+    pack32le    tmp, 1, 3 ; \
+    spi_wr      tmp, 3, CS_PULSE
+#define CMD_SET_ROW_RANGE(tmp, a, b) \
+    cst8        tmp, 0x22 ; \
+    shi32l      a, 8 ; \
+    shi32l      b, 16 ; \
+    or32        tmp, a; \
+    or32        tmp, b; \
+    pack32le    tmp, 1, 3 ; \
+    spi_wr      tmp, 3, CS_PULSE
+
+    
+.func ssd1320_bc_reset
+    .export ssd1320_bc_reset
+    .input %7 reset_latency
+    .clobber %0, %2, %3
+
+    GPIO_RST(%0, 0)
+    spi_yield_delay %reset_latency
+    GPIO_RST(%0, 1)
+    spi_yield_delay %reset_latency
+
+    START_COMMAND(%0)
+    CMD_POWER(%0, 0)
+    CMD_LOCK(%0, 0)
+    CMD_ADDRESSING_MODE(%0, HORIZONTAL)
+    CMD_SET_CONTRAST(%0, 0x0f)
+    CMD_FLIP_H(%0, 0)
+    CMD_TOP_LINE(%0, 0)
+    CMD_FORCE_ON(%0, 0)
+    CMD_FORCE_ON(%0, 2)
+    CMD_MUX_RATIO(%0, 0x63)
+    CMD_IREF_EXT(%0, 1)
+    CMD_PRECHARGE_V(%0, 0x1e)
+    COMMAND(%0, 0xbf) // Linear lut
+    CMD_INVERSE(%0, 0)
+    CMD_COM_SCAN_INVERSE(%0, 0)
+    CMD_LEFT_COLUMN(%0, 30)
+    COMMAND_8(%0, 0xd5, 0xa2) // Osc freq
+    COMMAND_8(%0, 0xd9, 0x72) // Phase length
+    COMMAND_8(%0, 0xda, 0x32) // Pin HW config
+    COMMAND_8(%0, 0xdb, 0x30) // DCOM deselect level
+    cst8 %2, 0
+    cst8 %3, 79
+    CMD_SET_COLUMN_RANGE(%0, %2, %3)
+    cst8 %2, 0
+    cst8 %3, 159
+    CMD_SET_ROW_RANGE(%0, %2, %3)
+    
+    CMD_POWER(%0, 1)
+    end
+.endfunc
+
+.func ssd1320_bc_write
+    .export ssd1320_bc_write
+    .input  %0 page, %1 column, %2 blob, %3 count
+    .clobber %0, %1, %6 tmp2, %5 tmp
+
+    START_COMMAND(%tmp)
+#if 1
+    cst8 %tmp2, 79
+    CMD_SET_COLUMN_RANGE(%tmp, %column, %tmp2)
+    cst8 %tmp2, 159
+    CMD_SET_ROW_RANGE(%tmp, %page, %tmp2)
+
+#else
+    COMMAND(%tmp, 0xAE) // Power 0
+    COMMAND(%tmp, 0xFD) // Unlock
+    COMMAND(%tmp, 0x12)
+    COMMAND(%tmp, 0x20) // Addressing mode horizontal
+    COMMAND(%tmp, 0x00)
+    COMMAND(%tmp, 0x25) // Set portrait/landscape (landscape)
+    COMMAND(%tmp, 0x00)
+    COMMAND(%tmp, 0x81) // Set contrast
+    COMMAND(%tmp, 0x0F)
+    COMMAND(%tmp, 0xA0) // Set segment remap 0
+    COMMAND(%tmp, 0xA2) // Set display start line 0
+    COMMAND(%tmp, 0x00)
+    COMMAND(%tmp, 0xA4) // Set display mode normal
+    COMMAND(%tmp, 0xA6) // Set display mode normal
+    COMMAND(%tmp, 0xA8) // Set mux ratio 0x63
+    COMMAND(%tmp, 0x63)
+    COMMAND(%tmp, 0xAD) // Disable external IREF
+    COMMAND(%tmp, 0x10)
+    COMMAND(%tmp, 0xBC) // Set precharge voltage 0x1e
+    COMMAND(%tmp, 0x1E)
+    COMMAND(%tmp, 0xBF) // Linear grayscale
+    COMMAND(%tmp, 0xC8) // Set inverted COM scan direction
+    COMMAND(%tmp, 0xD3) // Set display offset 0x1e
+    COMMAND(%tmp, 0x1E)
+    COMMAND(%tmp, 0xD5) // Set oscillator freq = 10 / 0
+    COMMAND(%tmp, 0xA2)
+    COMMAND(%tmp, 0xD9) // Set phase length 2 / 7
+    COMMAND(%tmp, 0x72)
+    COMMAND(%tmp, 0xDA) // Set seg pin hw config 0x32
+    COMMAND(%tmp, 0x32)
+    COMMAND(%tmp, 0xDB) // Set DCOM Deselect level
+    COMMAND(%tmp, 0x30)
+    COMMAND(%tmp, 0x21) // Set column address 00 - 4f
+    COMMAND(%tmp, 0x00)
+    COMMAND(%tmp, 0x4F)
+    COMMAND(%tmp, 0x22) // Set row address 00 - 9f
+    COMMAND(%tmp, 0x00)
+    COMMAND(%tmp, 0x9F)
+#endif
+    
+    START_DATA(%tmp)
+    spi_wrm %blob, %count, CS_PULSE
+    
+    end
+.endfunc
