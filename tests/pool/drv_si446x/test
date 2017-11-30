@@ -1,0 +1,48 @@
+# -*- python -*-
+
+from mt.base.environment import *
+from mt.base.match import *
+from mt.base.expectation import *
+
+from mutekh.test.stages import configure, build, execute
+from mutekh.test.archs import *
+
+t_rev20       = Config("t_rev20")
+t_sleep       = Config("t_sleep")
+t_short       = Config("t_short")
+t_cca         = Config("t_cca")
+t_ook         = Config("t_ook")
+t_2fsk        = Config("t_2fsk")
+t_4fsk        = Config("t_4fsk")
+t_all         = Config("t_ook:t_2fsk:t_4fsk")
+
+env = Environment(
+    name = "drv_si446x",
+
+    test_deps = [
+        "drivers/rfpacket/si446x/Makefile",
+        "drivers/rfpacket/si446x/si446x.c",
+        "drivers/rfpacket/si446x/si446x.config",
+        "drivers/rfpacket/si446x/si446x_spi.bc",
+        "drivers/rfpacket/si446x/si446x.h",
+        "drivers/rfpacket/si446x/modem_calc.c",
+        "drivers/rfpacket/si446x/modem_calc.h"
+    ],
+
+    test_space = [
+        Dimension(all_archs.filter_by_feature("+spi").expand()[0]),
+        Dimension(t_rev20, None),
+        Dimension(t_sleep, t_short),
+        Dimension(t_cca, None),
+        Dimension(t_ook, t_2fsk, t_4fsk, t_all),
+    ],
+
+    actions = [
+        configure,
+        build,
+    ],
+
+    rules = Rules(
+    )
+)
+
