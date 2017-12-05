@@ -66,9 +66,9 @@ DRIVER_PV(struct efm32_usart_spi_context_s
   struct dev_clock_sink_ep_s     clk_ep;
 
 #if defined(CONFIG_DRIVER_EFM32_DMA) || defined(CONFIG_DRIVER_EFR32_DMA)
-  DEV_DMA_RQ_TYPE(1)             dma_rd_rq; 
-  struct dev_dma_rq_s            dma_wr_rq;
-  struct dev_dma_desc_s          dma_wr_desc;
+  struct dev_dma_rq_s            dma_rd_rq;
+  struct dev_dma_desc_s          dma_rd_desc;
+  DEV_DMA_RQ_TYPE(1)             dma_wr_rq; 
   struct device_dma_s            dma;
   struct device_s                *spi;
 #endif
@@ -317,15 +317,14 @@ static void efm32_usart_spi_start_dma(struct efm32_usart_spi_context_s *pv)
 {
   pv->dma_use = 1;
 
-  struct dev_dma_desc_s * desc = &pv->dma_wr_desc;
+  struct dev_dma_desc_s * desc = pv->dma_wr_rq.desc;
 
   /* TX */
   desc->src.mem.addr = (uintptr_t)pv->tr->data.out;
   desc->src.mem.size = pv->tr->data.count - 1;
 
-  desc = pv->dma_rd_rq.desc;
-
   /* RX */
+  desc = &pv->dma_rd_desc;
   desc->dst.mem.addr = (uintptr_t)pv->tr->data.in;
   desc->src.mem.size = pv->tr->data.count - 1;
   
@@ -575,7 +574,7 @@ static DEV_INIT(efm32_usart_spi_init)
       device_get_param_dev_accessor(dev, "dma", &pv->dma.base, DRIVER_CLASS_DMA))
     goto err_irq;
 
-  struct dev_dma_rq_s *rq = &pv->dma_rd_rq.rq;
+  struct dev_dma_rq_s *rq = &pv->dma_rd_rq;
   struct dev_dma_desc_s *desc = rq->desc;
 
   desc->src.reg.addr = pv->addr + EFM32_USART_RXDATA_ADDR;
@@ -593,8 +592,8 @@ static DEV_INIT(efm32_usart_spi_init)
   rq->cache_ptr = NULL;
 
   /* WRITE */
-  rq = &pv->dma_wr_rq;
-  desc = &pv->dma_wr_desc;
+  rq = &pv->dma_wr_rq.rq;
+  desc = pv->dma_wr_rq.desc;
 
   desc->dst.reg.addr = pv->addr + EFM32_USART_TXDATA_ADDR;
   desc->dst.reg.burst = EFM32_USART_FIFO_SIZE;
