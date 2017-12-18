@@ -12,9 +12,10 @@ t_sleep       = Config("t_sleep")
 t_short       = Config("t_short")
 t_cca         = Config("t_cca")
 t_ook         = Config("t_ook")
+t_raw         = Config("t_raw")
 t_2fsk        = Config("t_2fsk")
 t_4fsk        = Config("t_4fsk")
-t_all         = Config("t_ook:t_2fsk:t_4fsk")
+t_all         = Config("t_ook:t_2fsk:t_4fsk:t_raw")
 
 env = Environment(
     name = "drv_si446x",
@@ -34,7 +35,7 @@ env = Environment(
         Dimension(t_rev20, None),
         Dimension(t_sleep, t_short),
         Dimension(t_cca, None),
-        Dimension(t_ook, t_2fsk, t_4fsk, t_all),
+        Dimension(t_raw, t_ook, t_2fsk, t_4fsk, t_all),
     ],
 
     actions = [

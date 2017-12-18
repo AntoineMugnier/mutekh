@@ -69,7 +69,7 @@
 #define CONFIG_DRIVER_RFPACKET_SI446X_PFM 2	/* 1 or 2 */
 
 enum si446x_modulation_e {
-	MOD_UNDEF,
+	MOD_RAW,
 	MOD_OOK,
 	MOD_2FSK,
 	MOD_2GFSK,
@@ -98,6 +98,7 @@ enum si446x_mc_cfg_msk_e {
 
 #define CONFIG_DRIVER_RFPACKET_SI446X_FREQ_XO 26000000U
 #define CONFIG_DRIVER_RFPACKET_SI446X_CHIPREV 0x22
+#define CONFIG_DRIVER_RFPACKET_SI446X_MOD_RAW
 #define CONFIG_DRIVER_RFPACKET_SI446X_MOD_OOK
 #define CONFIG_DRIVER_RFPACKET_SI446X_MOD_2FSK
 #define CONFIG_DRIVER_RFPACKET_SI446X_MOD_4FSK
@@ -205,6 +206,13 @@ static bool_t modem_calc(struct si446x_rf_regs_s *out,
   synth = synth_tab;
 
   switch (mod) {
+#ifdef CONFIG_DRIVER_RFPACKET_SI446X_MOD_RAW
+  case MOD_RAW:
+    mfdev = fdev;
+    ph_src = 0;
+    detector = 3;
+    goto raw;
+#endif
 #ifdef CONFIG_DRIVER_RFPACKET_SI446X_MOD_OOK
   case MOD_OOK:
     mfdev = 0;
@@ -229,8 +237,12 @@ static bool_t modem_calc(struct si446x_rf_regs_s *out,
     ph_src = 0;
     detector = 3;
 #endif
-#if defined(CONFIG_DRIVER_RFPACKET_SI446X_MOD_2FSK) || defined(CONFIG_DRIVER_RFPACKET_SI446X_MOD_4FSK)
+#if defined(CONFIG_DRIVER_RFPACKET_SI446X_MOD_2FSK) || \
+  defined(CONFIG_DRIVER_RFPACKET_SI446X_MOD_4FSK) || \
+  defined(CONFIG_DRIVER_RFPACKET_SI446X_MOD_RAW)
   fsk:
+    synth += (rate >= 75000) + (rate >= 125000) + (rate >= 200000);
+  raw:
     mrate += mfdev * 2;
     double r = ph_src ? 0.1
 # ifdef CONFIG_DRIVER_RFPACKET_SI446X_AFC
@@ -242,15 +254,6 @@ static bool_t modem_calc(struct si446x_rf_regs_s *out,
     rxbw_rate = __MAX(rxbw_khz * 4 / (double)rate, 8);
     rxbw_khz /= 1000.;
 
-    if (rate <= 75000)
-      break;
-    synth++;
-    if (rate < 125000)
-      break;
-    synth++;
-    if (rate < 200000)
-      break;
-    synth++;
     break;
 #endif
   default:
@@ -383,15 +386,21 @@ static bool_t modem_calc(struct si446x_rf_regs_s *out,
   case MOD_2GFSK:
     spike = 64 * .65;
   case MOD_2FSK:
+    modem->tx_ramp_delay = 1;
     if ((fdev_rate > 10) && (mrate > 200000))
       modem->dec_cfg0 |= (1 << 6);
+#endif
+#ifdef CONFIG_DRIVER_RFPACKET_SI446X_MOD_RAW
+  case MOD_RAW:
+#endif
+#if defined(CONFIG_DRIVER_RFPACKET_SI446X_MOD_2FSK) || \
+  defined(CONFIG_DRIVER_RFPACKET_SI446X_MOD_RAW)
     if (ph_src) {
       modem->afc_wait += 0x20;
       modem->bcr_misc1 = 0xc2;
     } else {
       bcr_a = fdev_rate;
     }
-    modem->tx_ramp_delay = 1;
     goto fsk2;
 #endif
 #ifdef CONFIG_DRIVER_RFPACKET_SI446X_MOD_4FSK
@@ -405,7 +414,9 @@ static bool_t modem_calc(struct si446x_rf_regs_s *out,
     bcr_a = 3 * fdev_rate;
     goto fsk2;
 #endif
-#if defined(CONFIG_DRIVER_RFPACKET_SI446X_MOD_2FSK) || defined(CONFIG_DRIVER_RFPACKET_SI446X_MOD_4FSK)
+#if defined(CONFIG_DRIVER_RFPACKET_SI446X_MOD_2FSK) || \
+  defined(CONFIG_DRIVER_RFPACKET_SI446X_MOD_4FSK) || \
+  defined(CONFIG_DRIVER_RFPACKET_SI446X_MOD_RAW)
   fsk2:
     if (rate_th) {
       static const double tab[5] = {
@@ -539,7 +550,12 @@ static bool_t modem_calc(struct si446x_rf_regs_s *out,
     modem->ant_div_control = 0xf0;
     modem->fsk4_gain1 = 0;
 #endif
-#if defined(CONFIG_DRIVER_RFPACKET_SI446X_MOD_2FSK) || defined(CONFIG_DRIVER_RFPACKET_SI446X_MOD_4FSK)
+#ifdef CONFIG_DRIVER_RFPACKET_SI446X_MOD_RAW
+  case MOD_RAW:
+#endif
+#if defined(CONFIG_DRIVER_RFPACKET_SI446X_MOD_2FSK) || \
+  defined(CONFIG_DRIVER_RFPACKET_SI446X_MOD_4FSK) || \
+  defined(CONFIG_DRIVER_RFPACKET_SI446X_MOD_RAW)
   fsk3:
     modem->afc_gain_1 |= 0x80;
     modem->agc_control |= 0x80;
