@@ -258,7 +258,7 @@ static inline error_t si446x_build_rf_config(struct si446x_ctx_s *pv,
 
   /** Configure RSSI_threshold */
 
-  int16_t rssi_th = 0;
+  const struct dev_rfpacket_rf_cfg_fairtx_s *fairtx = NULL;
 
   switch (cfg->mod)
     {
@@ -267,20 +267,24 @@ static inline error_t si446x_build_rf_config(struct si446x_ctx_s *pv,
       {
         const struct dev_rfpacket_rf_cfg_fsk_s * c =
           const_dev_rfpacket_rf_cfg_fsk_s_cast(cfg);
-        rssi_th = c->fairtx.lbt.rssi;
+        fairtx = &c->fairtx;
         break;
       }
     case DEV_RFPACKET_ASK:
       {
         const struct dev_rfpacket_rf_cfg_ask_s * c =
           const_dev_rfpacket_rf_cfg_ask_s_cast(cfg);
-        rssi_th = c->fairtx.lbt.rssi;
+        fairtx = &c->fairtx;
         break;
       }
     default:
       break;
     }
 
+  int16_t rssi_th = SI446X_MAX_RSSI_VALUE;
+
+  if (fairtx && fairtx->mode == DEV_RFPACKET_LBT)
+    rssi_th = fairtx->lbt.rssi;
 
   if (rssi_th > SI446X_MAX_RSSI_VALUE)
     return -ENOTSUP;
@@ -360,9 +364,34 @@ static inline error_t si446x_check_config(struct si446x_ctx_s *pv, struct dev_rf
   else
     si446x_rfp_set_state(pv, SI446X_STATE_CONFIG);
 
+  const struct dev_rfpacket_rf_cfg_s *rfcfg = rq->rf_cfg;
+
   if (rq->type == DEV_RFPACKET_RQ_TX_FAIR)
-  /* Test if RX is allowed during TX */
     {
+      switch (rfcfg->mod)
+        {
+          case DEV_RFPACKET_GFSK:
+          case DEV_RFPACKET_FSK:
+            {
+              const struct dev_rfpacket_rf_cfg_fsk_s * c =
+                const_dev_rfpacket_rf_cfg_fsk_s_cast(rfcfg);
+              if (c->fairtx.mode == DEV_RFPACKET_NO_FAIRTX)
+                return -ENOTSUP;
+              break;
+            }
+          case DEV_RFPACKET_ASK:
+            {
+              const struct dev_rfpacket_rf_cfg_ask_s * c =
+                const_dev_rfpacket_rf_cfg_ask_s_cast(rfcfg);
+              if (c->fairtx.mode == DEV_RFPACKET_NO_FAIRTX)
+                return -ENOTSUP;
+              break;
+            }
+          default:
+            break;
+         }
+
+     /* Test if RX is allowed during TX */
       pv->flags &= ~SI446X_FLAGS_RX_ON;
       if (pv->rx_cont && rq->rf_cfg == pv->rx_cont->rf_cfg &&
           rq->pk_cfg == pv->rx_cont->pk_cfg)
@@ -372,13 +401,14 @@ static inline error_t si446x_check_config(struct si446x_ctx_s *pv, struct dev_rf
   error_t err = 0;
 
   /* Check packet format configuration */
+  const struct dev_rfpacket_pk_cfg_s *pkcfg = rq->pk_cfg;
 
-  if ((rq->pk_cfg != pv->pk_cfg) || rq->pk_cfg->cache.dirty)
+  if ((pkcfg != pv->pk_cfg) || pkcfg->cache.dirty)
     {
-      pv->pk_cfg = (struct dev_rfpacket_pk_cfg_s *)rq->pk_cfg;
+      pv->pk_cfg = (struct dev_rfpacket_pk_cfg_s *)pkcfg;
 
-      if (rq->pk_cfg->cache.dirty)
-        ((struct dev_rfpacket_pk_cfg_s *)rq->pk_cfg)->cache.dirty = 0;
+      if (pkcfg->cache.dirty)
+        ((struct dev_rfpacket_pk_cfg_s *)pkcfg)->cache.dirty = 0;
 
       err = si446x_build_pk_config(pv, rq);
 
@@ -393,29 +423,28 @@ static inline error_t si446x_check_config(struct si446x_ctx_s *pv, struct dev_rf
 
   /* Check RF configuration */
 
-  const struct dev_rfpacket_rf_cfg_s *cfg = rq->rf_cfg;
-  struct si446x_cache_entry_s *e = &pv->cache_array[cfg->cache.id % SI446X_RF_CONFIG_CACHE_ENTRY];
+  struct si446x_cache_entry_s *e = &pv->cache_array[rfcfg->cache.id % SI446X_RF_CONFIG_CACHE_ENTRY];
 
-  if (e->cfg == cfg && !cfg->cache.dirty)
+  if (e->cfg == rfcfg && !rfcfg->cache.dirty)
     {
-      if (cfg->cache.id == pv->id)
+      if (rfcfg->cache.id == pv->id)
         /** Config is in cache and is applied */
         return 0;
 
       /** Config is in cache but is not applied */
-      si446x_rf_config_done(pv, cfg);
+      si446x_rf_config_done(pv, rfcfg);
       return -EAGAIN;
     }
 
   /* Update cache entry */
 
-  e->cfg = (struct dev_rfpacket_rf_cfg_s * )cfg;
+  e->cfg = (struct dev_rfpacket_rf_cfg_s * )rfcfg;
   /* Time byte in us */
   dev_timer_delay_t tb = 8000000/rq->rf_cfg->drate;
   dev_timer_init_sec(pv->timer, &(e->tb), 0, tb, 1000000);
 
-  if (cfg->cache.dirty)
-    ((struct dev_rfpacket_rf_cfg_s *)cfg)->cache.dirty = 0;
+  if (rfcfg->cache.dirty)
+    ((struct dev_rfpacket_rf_cfg_s *)rfcfg)->cache.dirty = 0;
 
   kroutine_init_deferred(&pv->kr, &si446x_config_deferred);
   kroutine_exec(&pv->kr);

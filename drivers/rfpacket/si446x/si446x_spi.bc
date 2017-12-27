@@ -203,7 +203,7 @@
         cst8                    %tmp,            1
         add                     %size,           %tmp
         shi32l                  %size,           16
-        cst32                   %tmp,            0xFF,  24
+        cst32                   %tmp,            0xFF000000,  0
         and32                   %tmp,            %size
         or32                    %cmd,            %tmp
         shi32r                  %size,           16
