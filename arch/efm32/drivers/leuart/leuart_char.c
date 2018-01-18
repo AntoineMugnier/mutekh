@@ -42,6 +42,7 @@ static void efm32_leuart_write_reg(uint32_t addr, uintptr_t reg, uint32_t x)
 #include <device/irq.h>
 #include <device/class/char.h>
 #include <device/class/iomux.h>
+#include <device/class/uart.h>
 #include <device/clock.h>
 
 #if CONFIG_DRIVER_EFM32_LEUART_SWFIFO > 0
@@ -70,9 +71,7 @@ DRIVER_PV(struct efm32_leuart_context_s
 #endif
   uint32_t                      mode;
 
-#ifdef CONFIG_DEVICE_CLOCK_VARFREQ
-  uint32_t                      bauds;
-#endif
+  struct dev_uart_config_s      cfg;
   struct dev_freq_s             freq;
 
   struct dev_clock_sink_ep_s    clk_ep;
@@ -87,10 +86,10 @@ enum efm32_leuart_start_e
   EFM32_LEUART_STARTED_WRITE = 2,
 };
 
-static uint32_t efm32_leuart_char_bauds(struct device_s *dev, uint32_t bauds)
+static uint32_t efm32_leuart_char_bauds(struct device_s *dev)
 {
   struct efm32_leuart_context_s *pv = dev->drv_pv;
-  return (256ULL * pv->freq.num) / (bauds * pv->freq.denom) - 256;
+  return (256ULL * pv->freq.num) / (pv->cfg.baudrate * pv->freq.denom) - 256;
 }
 
 static void efm32_leuart_try_read(struct device_s *dev)
@@ -346,7 +345,7 @@ static DEV_USE(efm32_leuart_use)
       dev_clock_sink_gate(&pv->clk_ep, DEV_CLOCK_EP_POWER_CLOCK);
 # endif
       efm32_leuart_write_reg(pv->addr, EFM32_LEUART_CLKDIV_ADDR,
-                       endian_le32(efm32_leuart_char_bauds(dev, pv->bauds)));
+                       endian_le32(efm32_leuart_char_bauds(dev)));
 # ifdef CONFIG_DEVICE_CLOCK_GATING
       if (dev->start_count == 0)
         dev_clock_sink_gate(&pv->clk_ep, DEV_CLOCK_EP_POWER);
@@ -482,11 +481,11 @@ static DEV_INIT(efm32_leuart_init)
 #endif
 
   /* setup baud rate */
-#ifdef CONFIG_DEVICE_CLOCK_VARFREQ
-  pv->bauds = CONFIG_DRIVER_EFM32_LEUART_RATE;
-#endif
+  if (device_get_res_uart(dev, &pv->cfg))
+    pv->cfg.baudrate = CONFIG_DRIVER_EFM32_LEUART_RATE;
+
   efm32_leuart_write_reg(pv->addr, EFM32_LEUART_CLKDIV_ADDR,
-                         endian_le32(efm32_leuart_char_bauds(dev, CONFIG_DRIVER_EFM32_LEUART_RATE)));
+                         endian_le32(efm32_leuart_char_bauds(dev)));
 
   /* enable the uart */
   efm32_leuart_write_reg(pv->addr, EFM32_LEUART_CMD_ADDR,

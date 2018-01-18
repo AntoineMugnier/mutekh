@@ -27,7 +27,7 @@
 # include <device/class/cmu.h>
 # include <device/class/timer.h>
 # include <device/class/dma.h>
-# include <arch/efm32/dma_source.h>
+# include <device/class/uart.h>
 #endif
 
 #include <hexo/iospace.h>
@@ -35,6 +35,7 @@
 #include <arch/efm32/pin.h>
 #include <arch/efm32/gpio.h>
 #include <arch/efm32/cmu.h>
+#include <arch/efm32/dma_source.h>
 #include <arch/efm32/devaddr.h>
 #include <arch/efm32/cmu.h>
 #include <arch/efm32/emu.h>
@@ -148,7 +149,9 @@ DEV_DECLARE_STATIC(leuart0_dev, "leuart0", 0, efm32_leuart_drv,
 
                    DEV_STATIC_RES_DEV_IOMUX("/gpio"),
                    DEV_STATIC_RES_IOMUX("tx",  EFM32_LOC2, EFM32_PA2, 0, 0),
-                   DEV_STATIC_RES_IOMUX("rx",  EFM32_LOC2, EFM32_PA3, 0, 0)
+                   DEV_STATIC_RES_IOMUX("rx",  EFM32_LOC2, EFM32_PA3, 0, 0),
+
+                   DEV_STATIC_RES_UART(9600, 8, 0, 0, 0)
                    );
 
 #endif

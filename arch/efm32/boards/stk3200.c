@@ -26,6 +26,7 @@
 # include <device/class/iomux.h>
 # include <device/class/dma.h>
 # include <device/class/cmu.h>
+# include <device/class/uart.h>
 #endif
 
 #include <hexo/iospace.h>
@@ -213,7 +214,9 @@ DEV_DECLARE_STATIC(leuart0_dev, "leuart0", 0, efm32_leuart_drv,
 
                    DEV_STATIC_RES_DEV_IOMUX("/gpio"),
                    DEV_STATIC_RES_IOMUX("tx", EFM32_LOC0, EFM32_PD4, 0, 0),
-                   DEV_STATIC_RES_IOMUX("rx", EFM32_LOC0, EFM32_PD5, 0, 0)
+                   DEV_STATIC_RES_IOMUX("rx", EFM32_LOC0, EFM32_PD5, 0, 0),
+
+                   DEV_STATIC_RES_UART(9600, 8, 0, 0, 0)
                    );
 
 #endif

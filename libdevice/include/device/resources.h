@@ -204,12 +204,11 @@ struct dev_resource_s
 
     /** @see DEV_RES_UART */
     struct {
-      uintptr_t                 BITFIELD(baudrate,26);
-      uintptr_t                 BITFIELD(data_bits,4);
+      uintptr_t                 BITFIELD(baudrate,22);
+      uintptr_t                 BITFIELD(data_bits,5);
       uintptr_t                 BITFIELD(stop_bits,2);
       uintptr_t                 BITFIELD(parity,2);
       uintptr_t                 BITFIELD(flow_ctrl,1);
-      uintptr_t                 BITFIELD(half_duplex,1);
     }                           uart;
 
     /** @ref DEV_RES_ID */

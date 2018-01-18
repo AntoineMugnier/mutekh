@@ -32,6 +32,7 @@
 #include <device/irq.h>
 #include <device/class/char.h>
 #include <device/class/iomux.h>
+#include <device/class/uart.h>
 #include <device/clock.h>
 
 #include <arch/efm32/usart.h>
@@ -70,8 +71,8 @@ DRIVER_PV(struct efm32_usart_context_s
   struct dev_irq_src_s           irq_ep[2];
 #endif
 
+  struct dev_uart_config_s      cfg;
 #ifdef CONFIG_DEVICE_CLOCK_VARFREQ
-  uint32_t                      bauds;
   uint32_t                      clkdiv;
 #endif
   struct dev_freq_s             freq;
@@ -79,10 +80,10 @@ DRIVER_PV(struct efm32_usart_context_s
   struct dev_clock_sink_ep_s    clk_ep;
 });
 
-static uint32_t efm32_usart_char_bauds(struct device_s *dev, uint32_t bauds)
+static uint32_t efm32_usart_char_bauds(struct device_s *dev)
 {
   struct efm32_usart_context_s	*pv = dev->drv_pv;
-  return (256 * pv->freq.num) / (4 * bauds * pv->freq.denom) - 256;
+  return (256 * pv->freq.num) / (4 * pv->cfg.baudrate * pv->freq.denom) - 256;
 }
 
 static void efm32_usart_try_read(struct device_s *dev)
@@ -350,7 +351,7 @@ static DEV_USE(efm32_usart_char_use)
       struct device_s *dev = sink->dev;
       struct efm32_usart_context_s *pv = dev->drv_pv;
       pv->freq = chg->freq;
-      pv->clkdiv = endian_le32(efm32_usart_char_bauds(dev, pv->bauds));
+      pv->clkdiv = endian_le32(efm32_usart_char_bauds(dev));
       return 0;
     }
 #endif
@@ -493,12 +494,14 @@ static DEV_INIT(efm32_usart_char_init)
                                EFM32_USART_FRAME_STOPBITS(ONE)));
 
   /* set baud rate */
+  if (device_get_res_uart(dev, &pv->cfg))
+    pv->cfg.baudrate = CONFIG_DRIVER_EFM32_USART_RATE;
+
 #ifdef CONFIG_DEVICE_CLOCK_VARFREQ
-  pv->bauds = CONFIG_DRIVER_EFM32_USART_RATE;
   pv->clkdiv = 0;
 #endif
   cpu_mem_write_32(pv->addr + EFM32_USART_CLKDIV_ADDR,
-                   endian_le32(efm32_usart_char_bauds(dev, CONFIG_DRIVER_EFM32_USART_RATE)));
+                   endian_le32(efm32_usart_char_bauds(dev)));
 
   /* enable the uart */
   cpu_mem_write_32(pv->addr + EFM32_USART_CMD_ADDR,

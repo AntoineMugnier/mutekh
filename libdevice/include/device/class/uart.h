@@ -63,22 +63,19 @@ enum dev_uart_parity_e
 struct dev_uart_config_s
 {
   /** baud rate in bps. */
-  uint32_t baudrate;
+  uint32_t BITFIELD(baudrate,22);
 
   /** data bits. */
-  uint8_t data_bits;
+  uint32_t BITFIELD(data_bits,5);
 
   /** stop bits. */
-  uint8_t stop_bits;
+  uint32_t BITFIELD(stop_bits,2);
 
   /** flow control. */
-  bool_t                    flow_ctrl;
-
-  /** half duplex. */
-  bool_t                    half_duplex;
+  uint32_t BITFIELD(flow_ctrl,1);
 
   /** parity. */
-  enum dev_uart_parity_e    parity;
+  enum dev_uart_parity_e BITFIELD(parity,2);
 };
 
 
@@ -117,12 +114,7 @@ error_t dev_uart_config(struct device_uart_s     *accessor,
     @csee DEV_RES_UART */
 config_depend_and2_alwaysinline(CONFIG_DEVICE_UART, CONFIG_DEVICE_RESOURCE_ALLOC,
 error_t device_res_add_uart(struct device_s           *dev,
-                            uint32_t                  baudrate,
-                            uint8_t                   data_bits,
-                            enum dev_uart_parity_e    parity,
-                            uint8_t                   stop_bits,
-                            bool_t                    flow_ctrl,
-                            bool_t                    half_duplex),
+                            const struct dev_uart_config_s *cfg),
 {
   struct dev_resource_s *r;
 
@@ -130,23 +122,38 @@ error_t device_res_add_uart(struct device_s           *dev,
   if (err)
     return err;
 
-  r->u.uart.baudrate    = baudrate;
-  r->u.uart.data_bits   = data_bits;
-  r->u.uart.stop_bits   = stop_bits;
-  r->u.uart.parity      = parity;
-  r->u.uart.flow_ctrl   = flow_ctrl;
-  r->u.uart.half_duplex = half_duplex;
+  r->u.uart.baudrate    = cfg->baudrate;
+  r->u.uart.data_bits   = cfg->data_bits;
+  r->u.uart.stop_bits   = cfg->stop_bits;
+  r->u.uart.parity      = cfg->parity;
+  r->u.uart.flow_ctrl   = cfg->flow_ctrl;
 
   return 0;
 })
 
-#if defined(CONFIG_DEVICE_UART)
+ALWAYS_INLINE error_t device_get_res_uart(const struct device_s *dev,
+                                          struct dev_uart_config_s *cfg)
+{
+  struct dev_resource_s *r;
+
+  r = device_res_get(dev, DEV_RES_UART, 0);
+  if (r == NULL)
+    return -ENOENT;
+
+  cfg->baudrate  = r->u.uart.baudrate;
+  cfg->data_bits = r->u.uart.data_bits;
+  cfg->stop_bits = r->u.uart.stop_bits;
+  cfg->parity    = r->u.uart.parity;
+  cfg->flow_ctrl = r->u.uart.flow_ctrl;
+
+  return 0;
+}
 
 /** @This specifies an UART configuration resource entry in a static
     device resources table declaration. @csee DEV_RES_UART
     @see #DEV_DECLARE_STATIC */
 # define DEV_STATIC_RES_UART(                               \
-    __baudrate, __data, __parity, __stop, __flow, __duplex) \
+    __baudrate, __data, __parity, __stop, __flow)           \
   {                                                         \
     .type = DEV_RES_UART,                                   \
     .u    = { .uart = {                                     \
@@ -154,21 +161,9 @@ error_t device_res_add_uart(struct device_s           *dev,
       .data_bits = (__data),                                \
       .stop_bits = (__stop),                                \
       .parity    = (__parity),                              \
-      .flow_ctrl = (__flow),                                \
-      .half_duplex = (__duplex),                            \
+      .flow_ctrl = (__flow)                                 \
     } }                                                     \
   }
-
-#else
-
-/** @hidden */
-# define DEV_STATIC_RES_UART(                               \
-    __baudrate, __data, __parity, __stop, __flow, __duplex) \
-  {                                                         \
-    .type = DEV_RES_UNUSED,                                 \
-  }
-
-#endif
 
 #endif
 
