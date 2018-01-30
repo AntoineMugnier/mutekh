@@ -56,11 +56,11 @@
    ; call %label:var, label
    '("\\bcall\\(?:8\\|32\\)[^,]+,[ \t]*\\(\\(?:\\s_\\|\\sw\\)+\\)" 1 font-lock-function-name-face t)
    ; loop ..., label
-   '("\\bloop[^,]+,[ \t]*\\(\\(?:\\s_\\|\\sw\\)+\\)" 1 font-lock-reference-face t)
+   '("\\bloop\\b[^,]+,[ \t]*\\(\\(?:\\s_\\|\\sw\\)+\\)" 1 font-lock-reference-face t)
    ; #preprocessor
    '("^#\\(if\\|warning\\|error\\|endif\\|elif\\|include\\)" . font-lock-preprocessor-face)
    ; builtins
-   '("\\b\\(a\\(bort\\|dd8?\\|ndn?32\\)\\|bit32[cs]\\|c\\(all\\(32\\|8\\)\\|call\\|st\\(8\\|16\\|32\\|64\\)\\)\\|d\\(ie\\|ump\\)\\|e\\(nd\\|q0?\\|xt[sz]\\)\\|gaddr\\|jmp\\(8\\|32\\)\\|l\\(addr\\(16\\|32\\)\\|d\\(8\\|16\\|32\\|64\\)[ei]?\\|t\\(eq\\)?s?\\)\\|m\\(ov\\|sbs32\\|ul32\\)\\|n\\(e\\(g\\|q0?\\)\\|op\\|ot32\\)\\|or32\\|pack\\(8\\|\\(16\\|32\\)\\(le\\|be\\)\\)\\|ret\\|sh\\(i32[lr]\\|[lr]32\\)\\|s\\(t\\(8\\|16\\|32\\|64\\)[ei]?\\|ub\\|wap\\(16\\|32\\)\\(le\\|be\\)?\\)\\|t\\(race\\|st32[cs]\\)\\|unpack\\(8\\|\\(16\\|32\\)\\(le\\|be\\)\\)\\|xor32\\)\\b" 1 font-lock-builtin-face)
+   '("\\b\\(a\\(bort\\|dd8?\\|ndn?32\\)\\|bit32[cs]\\|c\\(all\\(32\\|8\\)\\|call\\|st\\(8\\|16\\|32\\|64\\)\\)\\|d\\(ie\\|ump\\)\\|e\\(nd\\|q0?\\|xt[sz]\\)\\|gaddr\\|jmp\\(8\\|32\\)\\|l\\(addr\\(16\\|32\\)\\|d\\(8\\|16\\|32\\|64\\)[ei]?\\|oop\\|t\\(eq\\)?s?\\)\\|m\\(o\\(v\\|de\\)\\|sbs32\\|ul32\\)\\|n\\(e\\(g\\|q0?\\)\\|op\\|ot32\\)\\|or32\\|pack\\(8\\|\\(16\\|32\\)\\(le\\|be\\)\\)\\|ret\\|sh\\(i32[lr]\\|[lr]32\\)\\|s\\(t\\(8\\|16\\|32\\|64\\)[ei]?\\|ub\\|wap\\(16\\|32\\)\\(le\\|be\\)?\\)\\|t\\(race\\|st32[cs]\\)\\|unpack\\(8\\|\\(16\\|32\\)\\(le\\|be\\)\\)\\|xor32\\)\\b" 1 font-lock-builtin-face)
    ; ALL_CAPS_CONSTANTS
    '("[A-Z_][A-Z0-9_]+" . font-lock-constant-face)
    ; #include "something"
@@ -70,6 +70,7 @@
 
 (defvar bc-syntax-table
   (let ((st (make-syntax-table)))
+    (modify-syntax-entry ?_ "w" st)
     ; C-style comments
     (modify-syntax-entry ?/ ". 124" st)
     (modify-syntax-entry ?* ". 23b" st)
