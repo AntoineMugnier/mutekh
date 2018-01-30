@@ -94,7 +94,7 @@ $(3)/$(1:.o=.deps): $(2)/$(1:.o=.S) $(OBJ_DIR)/.done_pre_header_list $(OBJ_DIR)/
 		$(CFLAGS) $(CPUCFLAGS) $(ARCHCFLAGS) $(INCS) \
 		$($(1)_CFLAGS) $(DIR_CFLAGS) )
 
-include $(3)/$(1:.o=.deps)
+DEPS_LIST +=  $(3)/$(1:.o=.deps)
 
 $(3)/$(1): $(2)/$(1:.o=.S)
 	$(call echo_command,AS,$$@)
@@ -128,7 +128,7 @@ $(3)/$(1:.o=.deps): $(wildcard $(2)/$(1:.o=.cc))$(wildcard $(2)/$(1:.o=.cpp)) $(
 	$(call compute_depfile_c,$$(@:.o=.deps),$(3)/$(1),$$<,$(CPUCFLAGS) $(ARCHCFLAGS) $(INCS) \
 		$($(1)_CXXFLAGS) $(DIR_CXXFLAGS))
 
-include $(3)/$(1:.o=.deps)
+DEPS_LIST +=  $(3)/$(1:.o=.deps)
 
 $(3)/$(1): $(wildcard $(2)/$(1:.o=.cc))$(wildcard $(2)/$(1:.o=.cpp))
 	$(call echo_command,C++,$$@)
@@ -142,7 +142,7 @@ $(3)/$(1:.o=.deps): $(2)/$(1:.o=.bc) $(OBJ_DIR)/config.h $(OBJ_DIR)/.done_pre_he
 	$(call compute_depfile_c,$$(@:.o=.deps),$(3)/$(1),$$<,$(CPUCFLAGS) $(ARCHCFLAGS) $(INCS) \
 		$($(1)_CFLAGS) $(DIR_CFLAGS))
 
-include $(3)/$(1:.o=.deps)
+DEPS_LIST +=  $(3)/$(1:.o=.deps)
 
 $(3)/$(1): $(2)/$(1:.o=.bc)
 	$(call echo_command,BC,$$@)
@@ -166,7 +166,7 @@ $(3)/$(1:.o=.deps): $(2)/$(1:.o=.c) $(OBJ_DIR)/config.h $(OBJ_DIR)/.done_pre_hea
 	$(call compute_depfile_c,$$@,$(3)/$(1),$$<,$(CPUCFLAGS) $(ARCHCFLAGS) $(INCS) \
 		$($(1)_CFLAGS) $(DIR_CFLAGS))
 
-include $(3)/$(1:.o=.deps)
+DEPS_LIST +=  $(3)/$(1:.o=.deps)
 
 $(3)/$(1): $(2)/$(1:.o=.c)
 	$(call echo_command,CC,$$@)
@@ -215,7 +215,7 @@ $(3)/$(1).deps: $(2)/$(1).cpp $(OBJ_DIR)/config.h
 	$(call mkdir_command,$$@)
 	$(DEPCC) -E -M -MG -MF $$@ -MT $(3)/$(1) $$(INCS) -P -x c $$<
 
-include $(3)/$(1).deps
+DEPS_LIST +=  $(3)/$(1).deps
 
 $(3)/$(1): $(2)/$(1).cpp
 	$(call echo_command,CPP,$$@)
@@ -231,7 +231,7 @@ $(3)/$(1).deps: $(2)/$(1).m4 $(OBJ_DIR)/config.m4 $(MUTEK_SRC_DIR)/scripts/globa
 		perl $(MUTEK_SRC_DIR)/scripts/compute_m4_deps.pl \
 		$$@ $$(filter -I%,$$(INCS)) > $$@
 
-include $(3)/$(1).deps
+DEPS_LIST +=  $(3)/$(1).deps
 
 $(3)/$(1): $(2)/$(1).m4
 	$(call echo_command,M4,$$@)

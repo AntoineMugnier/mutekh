@@ -34,6 +34,7 @@ LOG_FILE=$(OBJ_DIR)/build.log
 
 include $(MUTEK_SRC_DIR)/scripts/config.mk
 include $(MUTEK_SRC_DIR)/scripts/discover.mk
+include $(DEPS_LIST)
 
 $(OBJ_DIR)/enums.h: $(ENUM_HEADER_LIST) $(MUTEK_SRC_DIR)/scripts/enum.pl
 	perl $(MUTEK_SRC_DIR)/scripts/enum.pl -o $@ $(ENUM_HEADER_LIST)
