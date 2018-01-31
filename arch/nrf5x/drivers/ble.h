@@ -41,19 +41,19 @@
 struct net_scheduler_s;
 
 #if defined(CONFIG_DEVICE_CLOCK)
-# if defined(CONFIG_ARCH_NRF51)
+# if CONFIG_NRF5X_MODEL <= 51999
 #  define HFCLK_RAMPUP_US     800
-# elif defined(CONFIG_ARCH_NRF52)
+# elif 52000 <= CONFIG_NRF5X_MODEL && CONFIG_NRF5X_MODEL <= 52999
 #  define HFCLK_RAMPUP_US     500
 # endif
 #endif
 
-#if defined(CONFIG_ARCH_NRF51)
+#if CONFIG_NRF5X_MODEL <= 51999
 # define RADIO_RAMPUP_US      140
 # define RADIO_IRQ_LATENCY_US 8
 # define RADIO_RX_CHAIN_DELAY_US 3
 # define RADIO_TX_CHAIN_DELAY_US 1
-#elif defined(CONFIG_ARCH_NRF52)
+#elif 52000 <= CONFIG_NRF5X_MODEL && CONFIG_NRF5X_MODEL <= 52999
 # define RADIO_RAMPUP_US      40
 # define RADIO_IRQ_LATENCY_US 2
 # define RADIO_RX_CHAIN_DELAY_US 10
