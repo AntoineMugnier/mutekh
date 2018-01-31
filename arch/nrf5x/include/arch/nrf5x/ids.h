@@ -167,6 +167,12 @@ enum nrf5x_peripheral_id_e
  */
 #define NRF_GPIO_RANGE_IRQ_ID 32
 
+#if defined(CONFIG_DRIVER_NRF52_USBD)
+# if CONFIG_NRF5X_MODEL != 52840
+#  error Dont know how to handle non 52840 USB dev
+# endif
+#endif
+
 /**
    @this defines identifiers for nRF51/nRF52 clocks.
  */
@@ -174,6 +180,10 @@ enum nrf5x_clock_id_e
 {
   NRF_CLOCK_SRC_LFCLK,
   NRF_CLOCK_SRC_HFCLK,
+#if defined(CONFIG_DRIVER_NRF52_USBD)
+  NRF_CLOCK_SRC_USB_VBUS,
+  NRF_CLOCK_SRC_USB_REG,
+#endif
   NRF_CLOCK_SRC_COUNT,
   NRF_CLOCK_OSC_LFRC = NRF_CLOCK_SRC_COUNT,
 #if CONFIG_NRF5X_MODEL == 52840
@@ -224,6 +234,26 @@ enum nrf5x_radio_device_mode_e
   NRF5X_BLE_MODE_IDLE,
   NRF5X_BLE_MODE_WAIT,
   NRF5X_BLE_MODE_RADIO,
+};
+
+/**
+   @this defines clock sinks for the nRF52840 USB driver.
+ */
+enum nrf5x_usdb_clock_sink_e
+{
+  NRF5X_USBD_CLK_USB_VBUS,
+  NRF5X_USBD_CLK_USB_REG,
+  NRF5X_USBD_CLK_HFCLK,
+  NRF5X_USBD_CLK_COUNT,
+};
+
+/**
+   @this defines device modes for USB driver
+ */
+enum nrf5x_usbd_device_mode_e
+{
+  NRF5X_USBD_MODE_IDLE,
+  NRF5X_USBD_MODE_RUNNING,
 };
 
 #endif
