@@ -60,8 +60,9 @@ enum ble_sm_state_e
   BLE_SM_SCONF_SENT,
   BLE_SM_MRAND_SENT,
   BLE_SM_STK_DONE,
-  BLE_SM_DISTRIBUTION_DONE,
-  BLE_SM_RECEPTION_DONE,
+  BLE_SM_SLAVE_INFO_DONE,
+  BLE_SM_MASTER_INFO_DONE,
+  BLE_SM_EXCHANGE_DONE,
 };
 
 #if !defined(CONFIG_BLE_PERIPHERAL) && !defined(CONFIG_BLE_CENTRAL)
@@ -90,6 +91,7 @@ struct ble_sm_s
 
   uint8_t to_distribute;
   uint8_t to_expect;
+  uint8_t expected_tx;
 
   uint8_t io_cap;
   bool_t mitm_protection;
@@ -322,6 +324,9 @@ static void sm_exchange_done(struct ble_sm_s *sm)
 {
   dprintk("SM: All information exchanged, now paired\n");
 
+  assert(sm->pairing_state == BLE_SM_MASTER_INFO_DONE);
+  sm->pairing_state = BLE_SM_EXCHANGE_DONE;
+
   const struct ble_sm_delegate_vtable_s *vtable
     = const_ble_sm_delegate_vtable_s_from_base(sm->layer.delegate_vtable);
 
@@ -330,24 +335,52 @@ static void sm_exchange_done(struct ble_sm_s *sm)
   ble_peer_save(sm->peer);
 }
 
-static void sm_tx(struct ble_sm_s *sm,
-                  struct buffer_s *packet)
+static void sm_tx_done(struct net_task_s *task)
+{
+  struct ble_sm_s *sm = ble_sm_s_from_layer(task->source);
+
+  sm->expected_tx--;
+
+  printk("SM %p done\n", sm);
+
+  if (!sm_is_slave(sm) && sm->expected_tx == 0)
+    sm_exchange_done(sm);
+
+  mem_free(task);
+}
+
+static void sm_tx(struct ble_sm_s *sm, struct buffer_s *packet, bool_t ensure_tx_done)
 {
   struct net_addr_s dst = {
     .cid = BLE_L2CAP_CID_SM,
   };
   struct net_task_s *task;
 
-  dprintk("SM < %P\n",
+  dprintk("SM %p < %P\n",
+          sm,
           packet->data + packet->begin,
           packet->end - packet->begin);
 
-  task = net_scheduler_task_alloc(sm->layer.scheduler);
+  if (ensure_tx_done) {
+    task = mem_alloc(sizeof(*task), mem_scope_sys);
+    if (task) {
+      task->destroy_func = (void*)sm_tx_done;
+      task->type = NET_TASK_INVALID;
+      task->source = NULL;
+      task->target = NULL;
+    }
+  } else {
+    task = net_scheduler_task_alloc(sm->layer.scheduler);
+  }
+
   if (task)
     net_task_outbound_push(task,
                            sm->layer.parent, &sm->layer,
                            0, NULL, &dst, packet);
   buffer_refdec(packet);
+
+  if (ensure_tx_done)
+    sm->expected_tx++;
 }
 
 static void sm_distribute(struct ble_sm_s *sm)
@@ -358,9 +391,10 @@ static void sm_distribute(struct ble_sm_s *sm)
   if (sm->to_distribute & EXPECT_ENCRYPTION_INFORMATION) {
     pkt = net_layer_packet_alloc(&sm->layer, sm->layer.context.prefix_size, 17);
     if (pkt) {
+      printk("SM: Sending LTK\n");
       pkt->data[pkt->begin] = BLE_SM_ENCRYPTION_INFORMATION;
       ble_peer_ltk_get(sm->peer, pkt->data + pkt->begin + 1);
-      sm_tx(sm, pkt);
+      sm_tx(sm, pkt, !sm_is_slave(sm) || !sm->to_expect);
     }
   }
 
@@ -369,43 +403,58 @@ static void sm_distribute(struct ble_sm_s *sm)
 
     pkt = net_layer_packet_alloc(&sm->layer, sm->layer.context.prefix_size, 11);
     if (pkt) {
+      printk("SM: Sending master identification\n");
       pkt->data[pkt->begin] = BLE_SM_MASTER_IDENTIFICATION;
       ble_peer_id_get(sm->peer, pkt->data + pkt->begin + 3, &ediv);
       endian_le16_na_store(pkt->data + pkt->begin + 1, ediv);
-      sm_tx(sm, pkt);
+      sm_tx(sm, pkt, !sm_is_slave(sm) || !sm->to_expect);
     }
   }
 
   if (sm->to_distribute & EXPECT_IDENTITY_INFORMATION) {
     pkt = net_layer_packet_alloc(&sm->layer, sm->layer.context.prefix_size, 17);
     if (pkt) {
+      printk("SM: Sending identity information\n");
       pkt->data[pkt->begin] = BLE_SM_IDENTITY_INFORMATION;
       memcpy(pkt->data + pkt->begin + 1, sm->peer->db->irk, 16);
-      sm_tx(sm, pkt);
+      sm_tx(sm, pkt, !sm_is_slave(sm) || !sm->to_expect);
     }
   }
 
   if (sm->to_distribute & EXPECT_IDENTITY_ADDRESS_INFORMATION) {
     pkt = net_layer_packet_alloc(&sm->layer, sm->layer.context.prefix_size, 8);
     if (pkt) {
+      printk("SM: Sending identity address information\n");
       pkt->data[pkt->begin] = BLE_SM_IDENTITY_ADDRESS_INFORMATION;
       pkt->data[pkt->begin + 1] = sm->local_addr.type == BLE_ADDR_RANDOM;
       memcpy(pkt->data + pkt->begin + 2, sm->local_addr.addr, 6);
-      sm_tx(sm, pkt);
+      sm_tx(sm, pkt, !sm_is_slave(sm) || !sm->to_expect);
     }
   }
 
   if (sm->to_distribute & EXPECT_CSRK) {
     pkt = net_layer_packet_alloc(&sm->layer, sm->layer.context.prefix_size, 17);
     if (pkt) {
+      printk("SM: Sending CSRK\n");
       pkt->data[pkt->begin] = BLE_SM_SIGNING_INFORMATION;
       ble_peer_csrk_get(sm->peer, pkt->data + pkt->begin + 1);
-      sm_tx(sm, pkt);
+      sm_tx(sm, pkt, !sm_is_slave(sm) || !sm->to_expect);
     }
   }
 
   sm->to_distribute = 0;
 #endif
+
+  if (sm_is_slave(sm)) {
+    sm->pairing_state = BLE_SM_SLAVE_INFO_DONE;
+
+    if (sm->to_expect == 0) {
+      sm->pairing_state = BLE_SM_MASTER_INFO_DONE;
+      sm_exchange_done(sm);
+    }
+  } else {
+    sm->pairing_state = BLE_SM_MASTER_INFO_DONE;
+  }
 }
 
 static void sm_command_handle(struct ble_sm_s *sm, struct net_task_s *task)
@@ -418,7 +467,7 @@ static void sm_command_handle(struct ble_sm_s *sm, struct net_task_s *task)
   uint8_t err;
   __unused__
   bool_t receive_ok = sm_is_slave(sm)
-    ? (sm->pairing_state == BLE_SM_DISTRIBUTION_DONE)
+    ? (sm->pairing_state == BLE_SM_SLAVE_INFO_DONE)
     : (sm->pairing_state == BLE_SM_STK_DONE);
   
   dprintk("SM > %P\n", data, size);
@@ -659,16 +708,17 @@ static void sm_command_handle(struct ble_sm_s *sm, struct net_task_s *task)
   goto out;
 
  expected_rx:
+  dprintk("SM: Still expected: %x\n", sm->to_expect);
   if (sm->to_expect == 0) {
-    sm->pairing_state = BLE_SM_RECEPTION_DONE;
-
     if (sm_is_slave(sm)) {
-      dprintk("SM: All expected information received, sending ours\n");
+      dprintk("SM: All master expected information received\n");
+      sm->pairing_state = BLE_SM_MASTER_INFO_DONE;
+      sm_exchange_done(sm);
+    } else {
+      dprintk("SM: All slave expected information received, sending ours\n");
+      sm->pairing_state = BLE_SM_SLAVE_INFO_DONE;
       sm_distribute(sm);
-      sm->pairing_state = BLE_SM_DISTRIBUTION_DONE;
     }
-
-    sm_exchange_done(sm);
   }
   goto out;
 
@@ -681,7 +731,7 @@ static void sm_command_handle(struct ble_sm_s *sm, struct net_task_s *task)
   dprintk("Sm state %d sending error %d after packet %P\n", sm->pairing_state, err, data, size);
 
  send:
-  sm_tx(sm, rsp);
+  sm_tx(sm, rsp, 0);
   return;
 
  out:
@@ -722,20 +772,12 @@ static void ble_sm_context_changed(struct net_layer_s *layer)
 #if defined(CONFIG_BLE_PERIPHERAL)
         dprintk("SM: LL security enabled, distributing data\n");
         sm_distribute(sm);
-        sm->pairing_state = BLE_SM_DISTRIBUTION_DONE;
-
-        if (sm->to_expect == 0) {
-          sm->pairing_state = BLE_SM_RECEPTION_DONE;
-          sm_exchange_done(sm);
-        }
 #endif
       } else {
 #if defined(CONFIG_BLE_CENTRAL)
         if (sm->to_expect == 0) {
-          dprintk("SM: No information to expect, sending ours\n");
+          dprintk("SM: No slave information to expect, sending ours\n");
           sm_distribute(sm);
-          sm->pairing_state = BLE_SM_DISTRIBUTION_DONE;
-          sm_exchange_done(sm);
         }
 #endif
       }
@@ -764,7 +806,7 @@ void sm_pairing_request(struct net_layer_s *layer,
 
     sm->pairing_state = BLE_SM_REQUESTED;
 
-    sm_tx(sm, rsp);
+    sm_tx(sm, rsp, 0);
 #endif
   } else {
 #if defined(CONFIG_BLE_CENTRAL)
@@ -834,6 +876,10 @@ void sm_pairing_accept(struct net_layer_s *layer,
     if (sm->pairing_state != BLE_SM_REQUESTED)
       return;
 
+    error_t err = ble_peer_reset(sm->peer);
+    if (err)
+      return;
+
     sm->preq[0] = BLE_SM_PAIRING_REQUEST;
     sm->preq[1] = sm->io_cap;
     sm->preq[2] = oob_data ? 1 : 0;
@@ -858,11 +904,11 @@ void sm_pairing_accept(struct net_layer_s *layer,
 
     sm->pairing_state = BLE_SM_REQUEST_DONE;
 
-    dprintk("Pairing REQ sent\n");
+    printk("Pairing REQ sent\n");
 #endif
   }
 
-  sm_tx(sm, pkt);
+  sm_tx(sm, pkt, 0);
 }
 
 static
@@ -880,7 +926,7 @@ void sm_pairing_abort(struct net_layer_s *layer, enum sm_reason reason)
 
   sm->pairing_state = BLE_SM_IDLE;
 
-  sm_tx(sm, rsp);
+  sm_tx(sm, rsp, 0);
 
   dprintk("Pairing aborted\n");
 }
