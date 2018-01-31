@@ -245,9 +245,6 @@ void ble_gattdb_service_unregister(struct ble_gattdb_registry_s *reg)
   struct ble_gattdb_registry_s *last;
   uint16_t last_handle;
 
-  if (ble_gattdb_registry_list_isempty(&db->registry_list))
-    return;
-
   last = ble_gattdb_registry_list_tail(&db->registry_list);
   last_handle = last->start_handle + last->handle_count - 1;
 
