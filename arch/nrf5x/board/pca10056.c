@@ -79,10 +79,12 @@ DEV_DECLARE_STATIC(uart_dev, "uart0", 0, nrf5x_uart_drv,
 #endif
 
 #if defined(CONFIG_DRIVER_NRF5X_GPIO) && defined(CONFIG_DRIVER_BUTTON_SET)
+static const uint64_t keyboard_mask = 0x6003;
+
 DEV_DECLARE_STATIC(keyboard_dev, "keyboard", 0, button_set_drv,
                    DEV_STATIC_RES_DEV_GPIO("/gpio"),
                    DEV_STATIC_RES_GPIO("pins", 11, 15),
-                   DEV_STATIC_RES_UINT_PARAM("mask", 0x6003),
+                   DEV_STATIC_RES_BLOB_PARAM("mask", &keyboard_mask),
                    DEV_STATIC_RES_UINT_PARAM("active", 0),
                    );
 #endif
