@@ -32,9 +32,7 @@
 #include <hexo/types.h>
 #include <ble/protocol/address.h>
 
-#if defined(CONFIG_BLE_SECURITY_DB)
 #include <ble/security_db.h>
-#endif
 
 struct ble_security_db_s;
 
@@ -89,18 +87,17 @@ struct ble_peer_s
   /** Pointer to security DB context */
   struct ble_security_db_s *db;
 
-# if defined(CONFIG_BLE_SECURITY_DB)
-  /** Whether peer has an associated IRK */
-  bool_t irk_present : 1;
   /** Whether peer is paired */
   bool_t paired : 1;
+  
+  /** Whether peer has an associated IRK */
+  bool_t irk_present : 1;
   /** Whether peer is bonded */
   bool_t bonded : 1;
   /** Whether peer requested MITM protection while pairing */
   bool_t mitm_protection : 1;
   /** Whether pairing was secure */
   bool_t secure_pairing : 1;
-# endif
   /** Whether we currently hold a valid STK */
   bool_t stk_present : 1;
 #endif
@@ -151,7 +148,13 @@ error_t ble_peer_sk_get(struct ble_peer_s *peer,
                         const uint16_t ediv,
                         uint8_t *sk);
 
-#if defined(CONFIG_BLE_SECURITY_DB)
+/**
+   @this marks peer as paired.
+ */
+error_t ble_peer_paired(struct ble_peer_s *peer,
+                        bool_t bonded, bool_t mitm_protection, bool_t secure_pairing,
+                        const uint8_t *stk);
+
 /**
    @this retrieves peer-distributed LTK
  */
@@ -168,14 +171,6 @@ error_t ble_peer_id_get(struct ble_peer_s *peer, uint8_t *random, uint16_t *ediv
    @this sets peer-distributed IRK
  */
 void ble_peer_irk_set(struct ble_peer_s *peer, const uint8_t *irk);
-#endif
-
-/**
-   @this marks peer as paired.
- */
-error_t ble_peer_paired(struct ble_peer_s *peer,
-                        bool_t bonded, bool_t mitm_protection, bool_t secure_pairing,
-                        const uint8_t *stk);
 
 /**
    @this saves peer in persistent storage.

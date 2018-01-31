@@ -456,11 +456,7 @@ static void ble_llcp_packet_handle(struct ble_llcp_s *llcp, struct net_task_s *t
     dprintk("SK:        %P\n", setup->sk, 16);
     dprintk("IV:        %P\n", setup->iv, 8);
 
-#if defined(CONFIG_BLE_SECURITY_DB)
     setup->authenticated = llcp->peer->mitm_protection;
-#else
-    setup->authenticated = 0;
-#endif
 
     net_task_query_push(&setup->task, llcp->layer.parent, &llcp->layer,
                         BLE_LLCP_ENCRYPTION_SETUP);
@@ -517,11 +513,7 @@ static void ble_llcp_packet_handle(struct ble_llcp_s *llcp, struct net_task_s *t
     dprintk("SK:        %P\n", setup->sk, 16);
     dprintk("IV:        %P\n", setup->iv, 8);
 
-#if defined(CONFIG_BLE_SECURITY_DB)
     setup->authenticated = llcp->peer->mitm_protection;
-#else
-    setup->authenticated = 0;
-#endif
 
     net_task_query_push(&setup->task, llcp->layer.parent, &llcp->layer,
                         BLE_LLCP_ENCRYPTION_SETUP);

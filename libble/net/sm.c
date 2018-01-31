@@ -385,7 +385,6 @@ static void sm_tx(struct ble_sm_s *sm, struct buffer_s *packet, bool_t ensure_tx
 
 static void sm_distribute(struct ble_sm_s *sm)
 {
-#if defined(CONFIG_BLE_SECURITY_DB)
   struct buffer_s *pkt;
 
   if (sm->to_distribute & EXPECT_ENCRYPTION_INFORMATION) {
@@ -443,7 +442,6 @@ static void sm_distribute(struct ble_sm_s *sm)
   }
 
   sm->to_distribute = 0;
-#endif
 
   if (sm_is_slave(sm)) {
     sm->pairing_state = BLE_SM_SLAVE_INFO_DONE;
@@ -620,7 +618,6 @@ static void sm_command_handle(struct ble_sm_s *sm, struct net_task_s *task)
 #endif
     }
 
-#if defined(CONFIG_BLE_SECURITY_DB)
   case BLE_SM_ENCRYPTION_INFORMATION:
     if (!receive_ok
         || !sm->layer.context.addr.encrypted
@@ -689,7 +686,6 @@ static void sm_command_handle(struct ble_sm_s *sm, struct net_task_s *task)
 
       goto expected_rx;
     }
-#endif
 
   case BLE_SM_PAIRING_FAILED:
     dprintk("SM: Pairing failed beause of peer (%d)\n", data[1]);
@@ -849,19 +845,11 @@ void sm_pairing_accept(struct net_layer_s *layer,
     sm->pres[0] = BLE_SM_PAIRING_RESPONSE;
     sm->pres[1] = sm->io_cap;
     sm->pres[2] = oob_data ? 1 : 0;
-
-#if !defined(CONFIG_BLE_SECURITY_DB)
-    sm->pres[3] = 0;
-    sm->pres[4] = 16;
-    sm->pres[5] = 0;
-    sm->pres[6] = 0;
-#else
     sm->pres[3] = (_CONFIG_BLE_SECURITY_DB ? BLE_SM_REQ_BONDING : 0)
       | (mitm_protection ? BLE_SM_REQ_MITM : 0);
     sm->pres[4] = 16;
     sm->pres[5] = sm->preq[5] & (BLE_SM_ENC_KEY | BLE_SM_ID_KEY);
     sm->pres[6] = sm->preq[6] & (BLE_SM_ENC_KEY | BLE_SM_ID_KEY);
-#endif
     sm->to_distribute = sm_expected_compute(sm->pres[6]);
     sm->to_expect = sm_expected_compute(sm->pres[5]);
 
@@ -883,19 +871,11 @@ void sm_pairing_accept(struct net_layer_s *layer,
     sm->preq[0] = BLE_SM_PAIRING_REQUEST;
     sm->preq[1] = sm->io_cap;
     sm->preq[2] = oob_data ? 1 : 0;
-
-#if !defined(CONFIG_BLE_SECURITY_DB)
-    sm->preq[3] = 0;
-    sm->preq[4] = 16;
-    sm->preq[5] = 0;
-    sm->preq[6] = 0;
-#else
-    sm->preq[3] = (_CONFIG_BLE_SECURITY_DB ? BLE_SM_REQ_BONDING : 0)
+    sm->preq[3] = BLE_SM_REQ_BONDING
       | (mitm_protection ? BLE_SM_REQ_MITM : 0);
     sm->preq[4] = 16;
     sm->preq[5] = BLE_SM_ENC_KEY | BLE_SM_ID_KEY;
     sm->preq[6] = BLE_SM_ENC_KEY | BLE_SM_ID_KEY;
-#endif
 
     memcpy(pkt->data + pkt->begin, sm->preq, 7);
 

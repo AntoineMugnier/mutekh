@@ -283,15 +283,11 @@ static const struct ble_scanner_delegate_vtable_s ctr_scan_vtable =
 
 void ble_central_mode_set(struct ble_central_s *ctr, uint8_t mode)
 {
-#if defined(CONFIG_BLE_SECURITY_DB)
   if (ble_security_db_count(&ctr->context->security_db) == 0
       && mode & BLE_CENTRAL_CONNECTABLE) {
     printk("No peer in sec db, pairing mode forced\n");
     mode |= BLE_CENTRAL_PAIRABLE;
   }
-#else
-  mode |= BLE_CENTRAL_PAIRABLE;
-#endif
 
   if (mode == ctr->mode)
     return;
