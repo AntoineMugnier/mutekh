@@ -250,81 +250,110 @@ static error_t nrf5x_aes_drbg(struct dev_crypto_rq_s *rq)
 #endif
 
 #ifdef CONFIG_DRIVER_NRF5X_AES_CMAC
+static void cmac_key_rotate(uint32_t k[static 4])
+{
+  uint32_t r = *(uint8_t*)k & 0x80 ? 0x87 : 0;
+
+  for (int8_t i = 3; i >= 0; --i) {
+    uint32_t s = (int32_t)endian_be32(k[i]) < 8;
+    k[i] = endian_be32(r ^ (endian_be32(k[i]) << 1));
+    r = s;
+  }
+}
+
 static error_t nrf5x_aes_cmac(struct dev_crypto_rq_s *rq)
 {
   struct dev_crypto_context_s *ctx = rq->ctx;
-  struct nrf5x_aes_state_s *state = ctx->state_data;
-  struct nrf5x_ecb_param_s params;
+  struct nrf5x_ecb_param_s data, ks;
 
-  memcpy(params.key, rq->ctx->key_data, 16);
+  if (!(rq->op & DEV_CRYPTO_FINALIZE) && rq->len != 16)
+    return -ENOTSUP;
 
-  if (rq->op & DEV_CRYPTO_FINALIZE && rq->len != 16)
+  if (ctx->iv_len != 16)
     return -EINVAL;
 
-  if (rq->op & (DEV_CRYPTO_INIT | DEV_CRYPTO_FINALIZE))
-    state = alloca(sizeof(*state));
+  if (ctx->auth_len > 16 || ctx->auth_len & 0x3)
+    return -ENOTSUP;
 
-  if (rq->op & DEV_CRYPTO_INIT)
-    memset(state, 0, sizeof(*state));
+  const uint8_t *in = rq->in;
+  size_t len = rq->len;
 
-  if (rq->op & DEV_CRYPTO_INVERSE) {
-    const uint8_t *data = rq->ad;
-    size_t len = rq->ad_len;
-
-    while (len) {
-      size_t align = state->cmac.size & 0xf;
-      size_t used = __MIN(16 - align, len);
-
-      if (state->cmac.size && align == 0) {
-        for (uint8_t j = 0; j < 4; ++j)
-          params.cleartext[j] = state->cmac.buf32[j];
-
-        nrf5x_aes_encrypt_start(&params);
-        nrf5x_aes_encrypt_spin();
-
-        for (uint8_t j = 0; j < 4; ++j)
-          state->cmac.buf32[j] = params.ciphertext[j];
-      }
-
-      memxor(state->cmac.buf8 + align, state->cmac.buf8 + align, data, used);
-
-      data += used;
-      state->cmac.size += used;
-      len -= used;
-    }
-  }
+  memcpy(data.key, rq->ctx->key_data, 16);
+  memcpy(data.ciphertext, rq->iv_ctr, 16);
 
   if (rq->op & DEV_CRYPTO_FINALIZE) {
-    uint8_t rounds = 1;
+    memcpy(ks.key, rq->ctx->key_data, 16);
+    memset(ks.cleartext, 0, 16);
 
-    if (state->cmac.size & 0xf || state->cmac.size == 0) {
-      rounds = 2;
-      state->cmac.buf8[state->cmac.size & 0xf] ^= 0x80;
-    }
-
-    memset(params.cleartext, 0, 16);
-    nrf5x_aes_encrypt_start(&params);
+    nrf5x_aes_encrypt_start(&ks);
     nrf5x_aes_encrypt_spin();
 
-    while (rounds--) {
-      uint32_t r = *(uint8_t*)params.ciphertext & 0x80 ? 0x87 : 0;
-
-      for (int8_t i = 3; i >= 0; --i) {
-        uint32_t s = (int32_t)endian_be32(params.ciphertext[i]) < 8;
-        params.ciphertext[i]
-          = endian_be32(r ^ (endian_be32(params.ciphertext[i]) << 1));
-        r = s;
-      }
-    }
-
-    for (int8_t i = 0; i < 4; ++i)
-      params.cleartext[i] = params.ciphertext[i] ^ state->cmac.buf32[i];
-
-    nrf5x_aes_encrypt_start(&params);
-    nrf5x_aes_encrypt_spin();
-
-    memcpy(rq->out, params.ciphertext, 16);
+    cmac_key_rotate(ks.ciphertext);
   }
+
+  while (len > 16) {
+    for (uint8_t i = 0; i < 4; ++i) {
+      data.cleartext[i] = data.ciphertext[i] ^ endian_le32_na_load(in);
+      in += 4;
+    }
+    len -= 16;
+
+    nrf5x_aes_encrypt_start(&data);
+    nrf5x_aes_encrypt_spin();
+  }
+
+  if (!(rq->op & DEV_CRYPTO_FINALIZE)) {
+    assert(len == 16);
+
+    for (uint8_t i = 0; i < 4; ++i) {
+      data.cleartext[i] = data.ciphertext[i] ^ endian_le32_na_load(in);
+      in += 4;
+    }
+
+    nrf5x_aes_encrypt_start(&data);
+    nrf5x_aes_encrypt_spin();
+
+    memcpy(rq->iv_ctr, data.ciphertext, 16);
+
+    return 0;
+  }
+
+  if (len == 16) {
+    for (uint8_t i = 0; i < 4; ++i) {
+      data.cleartext[i] = data.ciphertext[i] ^ endian_le32_na_load(in) ^ ks.ciphertext[i];
+      in += 4;
+    }
+  } else {
+    assert(len < 16);
+
+    cmac_key_rotate(ks.ciphertext);
+
+    const uint8_t *sk = (const uint8_t *)ks.ciphertext;
+    const uint8_t *mn_1 = (const uint8_t *)data.ciphertext;
+    uint8_t *inp = (uint8_t *)data.cleartext;
+
+    for (size_t i = 0; i < len; ++i)
+      inp[i] = mn_1[i] ^ sk[i] ^ in[i];
+    inp[len] = mn_1[len] ^ sk[len] ^ 0x80;
+    for (size_t i = len + 1; i < 16; ++i)
+      inp[i] = mn_1[i] ^ sk[i];
+  }
+
+  nrf5x_aes_encrypt_start(&data);
+  nrf5x_aes_encrypt_spin();
+
+  if (rq->op & DEV_CRYPTO_INVERSE) {
+    uint32_t c = 0;
+
+    for (uint8_t i = 0; i < ctx->auth_len/4; ++i)
+      c |= endian_le32_na_load(rq->auth + i * 4) ^ data.ciphertext[i];
+
+    if (c)
+      return -EBADDATA;
+  }
+
+  for (uint8_t i = 0; i < ctx->auth_len/4; ++i)
+    endian_le32_na_store(rq->auth + i * 4, data.ciphertext[i]);
 
   return 0;
 }
