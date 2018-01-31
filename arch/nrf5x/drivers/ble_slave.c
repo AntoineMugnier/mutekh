@@ -659,6 +659,7 @@ void slave_ctx_ifs_event(struct nrf5x_ble_context_s *context, bool_t timeout)
 static
 void slave_ctx_payload_received(struct nrf5x_ble_context_s *context,
                                 dev_timer_value_t timestamp,
+                                            int16_t rssi,
                                 bool_t crc_valid)
 {
   struct nrf5x_ble_slave_s *slave = nrf5x_ble_slave_s_from_context(context);
