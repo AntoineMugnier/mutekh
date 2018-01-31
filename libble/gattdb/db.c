@@ -66,9 +66,17 @@ void ble_gattdb_char_changed(struct ble_gattdb_registry_s *reg,
 {
   GCT_FOREACH(ble_gattdb_listener_list, &reg->listener_list, item,
               if (item->chr_index == charid)
-                item->handler(item, reg, reliable, data, size);
+                item->value_changed(item, reg, reliable, data, size);
               );
 }
+
+#if defined(CONFIG_BLE_GATTDB_STREAM)
+void ble_gattdb_char_stream_resume(struct ble_gattdb_registry_s *reg,
+                                   uint8_t charid)
+{
+  ble_gattdb_char_changed(reg, charid, 0, 0, 0);
+}
+#endif
 
 static void ble_gattdb_registry_changed(struct ble_gattdb_s *db,
                                      uint16_t start, uint16_t end)
@@ -331,7 +339,7 @@ static void listener_notify_if_0(struct ble_gattdb_registry_s *reg,
 
   if (count == 0) {
     switch (chr->mode) {
-    default:
+    case BLE_GATTDB_CHARACTERISTIC_CONSTANT:
       break;
 
     case BLE_GATTDB_CHARACTERISTIC_PLAIN:
@@ -346,6 +354,14 @@ static void listener_notify_if_0(struct ble_gattdb_registry_s *reg,
       }
       break;
 
+#if defined(CONFIG_BLE_GATTDB_STREAM)
+    case BLE_GATTDB_CHARACTERISTIC_STREAM:
+      if (chr->data.stream.on_subscribe) {
+        chr->data.stream.on_subscribe(reg, chr_index, subsc);
+      }
+      break;
+#endif
+
 #if defined(CONFIG_BLE_ATT_LONG_WRITE)
     case BLE_GATTDB_CHARACTERISTIC_DYNAMIC_PREPARED:
       if (chr->data.dynamic_prepared.on_subscribe)
@@ -358,10 +374,10 @@ static void listener_notify_if_0(struct ble_gattdb_registry_s *reg,
 
 void ble_gattdb_listener_register(struct ble_gattdb_registry_s *reg,
                                    struct ble_gattdb_listener_s *listener,
-                                   ble_gattdb_registry_handler_func_t *func,
+                                   ble_gattdb_registry_value_changed_func_t *func,
                                    uint8_t chr_index)
 {
-  listener->handler = func;
+  listener->value_changed = func;
   listener->registry = reg;
   listener->chr_index = chr_index;
 

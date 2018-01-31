@@ -54,6 +54,7 @@ struct ble_gattdb_registry_s;
 struct ble_gattdb_client_s;
 struct ble_subscription_s;
 struct ble_gattdb_client_subs_s;
+struct buffer_s;
 
 #define GCT_CONTAINER_ALGO_ble_gattdb_client_sl CLIST
 
@@ -73,6 +74,10 @@ struct ble_gattdb_client_handler_s
 {
   error_t (*att_value_changed)(struct ble_gattdb_client_s *client, uint16_t value_handle,
                                uint16_t mode, const void *data, size_t size);
+#if defined(CONFIG_BLE_GATTDB_STREAM)
+  void (*att_stream_resume)(struct ble_gattdb_client_s *client,
+                            uint16_t value_handle);
+#endif
   void (*att_subscription_changed)(struct ble_gattdb_client_s *client);
 };
 
@@ -115,6 +120,12 @@ enum ble_att_error_e ble_gattdb_client_read(struct ble_gattdb_client_s *client,
 
 enum ble_att_error_e ble_gattdb_client_write(struct ble_gattdb_client_s *client,
                                            const void *data, size_t size);
+
+#if defined(CONFIG_BLE_GATTDB_STREAM)
+error_t ble_gattdb_client_att_stream_get(struct ble_gattdb_client_s *client,
+                                         uint16_t value_handle,
+                                         struct buffer_s *buffer);
+#endif
 
 void ble_gattdb_client_subscription_get(struct ble_gattdb_client_s *client,
                                       struct ble_subscription_s *subscriptions,
