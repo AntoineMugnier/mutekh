@@ -37,8 +37,9 @@ struct dev_rng_s;
 enum ble_scanner_policy_e
 {
   BLE_SCANNER_IGNORE = 0,
-  BLE_SCANNER_SCAN = 1,
-  BLE_SCANNER_CONNECT = 2,
+  BLE_SCANNER_MONITOR = 1,
+  BLE_SCANNER_SCAN = 2,
+  BLE_SCANNER_CONNECT = 4,
 };
 
 struct ble_scanner_target_s
@@ -57,6 +58,7 @@ struct ble_scanner_param_s
   size_t target_count;
   struct ble_scanner_target_s target[BLE_SCANNER_TARGET_MAXCOUNT];
   uint8_t default_policy;
+  bool_t connectable_only;
 
   uint32_t access_address;
   uint32_t crc_init;

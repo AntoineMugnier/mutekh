@@ -91,7 +91,7 @@ struct ble_central_handler_s
      @this asks handler about what behavior to adopt with a given
      device that got scanned.
    */
-  enum ble_scan_filter_policy_e (*device_policy)(struct ble_central_s *ctrl,
+  enum ble_scanner_policy_e (*device_policy)(struct ble_central_s *ctrl,
                                                  const struct ble_scan_filter_device_s *device);
 
   /**

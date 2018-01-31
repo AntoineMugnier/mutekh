@@ -34,27 +34,35 @@
 
 #include <gct_platform.h>
 #include <gct/container_avl_p.h>
+#include <gct/container_clist.h>
 
 //#define dprintk printk
 #define dprintk(...) do{}while(0)
 
-#define GCT_CONTAINER_ALGO_ble_scan_list AVL_P
+#define GCT_CONTAINER_ALGO_dev_list_by_addr AVL_P
+#define GCT_CONTAINER_ALGO_dev_list_by_time CLIST
 
 struct ble_scan_item_s
 {
-  GCT_CONTAINER_ENTRY(ble_scan_list, entry);
+  GCT_CONTAINER_ENTRY(dev_list_by_addr, by_addr);
+  GCT_CONTAINER_ENTRY(dev_list_by_time, by_time);
 
   uint8_t adv_ad_len;
   uint8_t scan_ad_len;
-  bool_t rescan;
+  dev_timer_value_t last_scan;
   struct ble_scan_filter_device_s device;
-  enum ble_scan_filter_policy_e policy;
 };
 
-GCT_CONTAINER_TYPES(ble_scan_list, struct ble_scan_item_s *, entry);
-GCT_CONTAINER_KEY_TYPES(ble_scan_list, CUSTOM, BLOB, &ble_scan_list_item->device.addr, addr, sizeof(struct ble_addr_s));
-GCT_CONTAINER_KEY_FCNS(ble_scan_list, ASC, static, ble_scan_list, addr,
+GCT_CONTAINER_TYPES(dev_list_by_addr, struct ble_scan_item_s *, by_addr);
+GCT_CONTAINER_TYPES(dev_list_by_time, struct ble_scan_item_s *, by_time);
+GCT_CONTAINER_KEY_TYPES(dev_list_by_addr, CUSTOM, BLOB,
+                        &dev_list_by_addr_item->device.addr, addr_key_fcn,
+                        sizeof(struct ble_addr_s));
+GCT_CONTAINER_KEY_FCNS(dev_list_by_addr, ASC, ALWAYS_INLINE,
+                       dev_list_by_addr, addr_key_fcn,
                        init, destroy, remove, insert, lookup);
+GCT_CONTAINER_FCNS(dev_list_by_time, ALWAYS_INLINE, dev_list_by_time,
+                   init, destroy, remove, push);
 
 /**
    BLE scanner layer
@@ -63,7 +71,8 @@ struct ble_scan_filter_s
 {
   struct net_layer_s layer;
 
-  ble_scan_list_root_t devices;
+  dev_list_by_addr_root_t devices_by_addr;
+  dev_list_by_time_root_t devices_by_time;
   dev_timer_delay_t lifetime_tk;
   uint32_t next_id;
 
@@ -84,12 +93,14 @@ void ble_scan_filter_destroyed(struct net_layer_s *layer)
 {
   struct ble_scan_filter_s *sf = ble_scan_filter_s_from_layer(layer);
 
-  GCT_FOREACH(ble_scan_list, &sf->devices, item,
-              ble_scan_list_remove(&sf->devices, item);
+  GCT_FOREACH(dev_list_by_addr, &sf->devices_by_addr, item,
+              dev_list_by_addr_remove(&sf->devices_by_addr, item);
+              dev_list_by_time_remove(&sf->devices_by_time, item);
               mem_free(item);
               );
 
-  ble_scan_list_destroy(&sf->devices);
+  dev_list_by_addr_destroy(&sf->devices_by_addr);
+  dev_list_by_time_destroy(&sf->devices_by_time);
 
   dprintk("Scan filter %p destroyed\n", sf);
 
@@ -103,9 +114,18 @@ struct ble_scan_item_s *ble_scan_filter_device_get(struct ble_scan_filter_s *sf,
 {
   struct ble_scan_item_s *item;
 
-  item = ble_scan_list_lookup(&sf->devices, addr);
-  if (item || !create)
+  item = dev_list_by_addr_lookup(&sf->devices_by_addr, addr);
+  if (item) {
+    dev_list_by_time_remove(&sf->devices_by_time, item);
+    item->device.active = 1;
+    item->device.last_seen = net_scheduler_time_get(sf->layer.scheduler);
+    dev_list_by_time_push(&sf->devices_by_time, item);
+
     return item;
+  }
+
+  if (!create)
+    return NULL;
 
   item = mem_alloc(sizeof(*item), mem_scope_sys);
   if (!item)
@@ -117,8 +137,11 @@ struct ble_scan_item_s *ble_scan_filter_device_get(struct ble_scan_filter_s *sf,
   item->device.addr = *addr;
   item->device.active = 1;
   item->device.first_seen = net_scheduler_time_get(sf->layer.scheduler);
-  ble_scan_list_insert(&sf->devices, item);
-  item->policy = BLE_SCAN_FILTER_MONITOR;
+  item->device.last_seen = net_scheduler_time_get(sf->layer.scheduler);
+  item->last_scan = 0;
+  dev_list_by_addr_insert(&sf->devices_by_addr, item);
+  dev_list_by_time_push(&sf->devices_by_time, item);
+  item->device.policy = BLE_SCANNER_MONITOR;
   item->device.known = ble_security_db_contains(sf->peerdb, addr);
 
   ble_scan_filter_cleanup_later(sf);
@@ -148,6 +171,48 @@ bool_t ble_scan_filter_address_resolve(struct ble_scan_filter_s *sf,
   return 1;
 }
 
+static void scan_filter_params_update(struct ble_scan_filter_s *sf)
+{
+  bool_t changed = 0;
+  size_t target_count = 0;
+
+  if (!sf->layer.parent)
+    return;
+
+  dprintk("%s\n", __func__);
+  
+  GCT_FOREACH(dev_list_by_time, &sf->devices_by_time, item, {
+      if (item->device.policy == sf->scan_params.default_policy)
+        GCT_FOREACH_CONTINUE;
+      
+      if (ble_addr_cmp(&item->device.addr, &sf->scan_params.target[target_count].addr)
+          || sf->scan_params.target[target_count].policy != item->device.policy)
+        changed = 1;
+
+      sf->scan_params.target[target_count].addr = item->device.addr;
+      sf->scan_params.target[target_count].policy = item->device.policy;
+
+      dprintk(" - "BLE_ADDR_FMT", %d\n",
+             BLE_ADDR_ARG(&sf->scan_params.target[target_count].addr),
+             sf->scan_params.target[target_count].policy);
+
+      target_count++;
+
+      if (target_count >= BLE_SCANNER_TARGET_MAXCOUNT)
+        GCT_FOREACH_BREAK;
+    });
+
+  if (sf->scan_params.target_count != target_count)
+    changed = 1;
+
+  if (!changed)
+    return;
+
+  sf->scan_params.target_count = target_count;
+
+  ble_scanner_params_update(sf->layer.parent, &sf->scan_params);
+}
+
 static
 void ble_scan_filter_adv_handle(struct ble_scan_filter_s *sf,
                                 struct buffer_s *buffer, int16_t rssi)
@@ -161,9 +226,11 @@ void ble_scan_filter_adv_handle(struct ble_scan_filter_s *sf,
   const struct ble_scan_filter_delegate_vtable_s *vtable
     = const_ble_scan_filter_delegate_vtable_s_from_base(sf->layer.delegate_vtable);
 
-  if (ad_len > 31)
+  if (ad_len > 31) {
+    dprintk("Bad AD len: %d\n", ad_len);
     return;
-
+  }
+  
   switch (ble_advertise_packet_type_get(buffer)) {
   case BLE_ADV_IND:
   case BLE_ADV_NONCONN_IND:
@@ -182,7 +249,8 @@ void ble_scan_filter_adv_handle(struct ble_scan_filter_s *sf,
 
   if (adva.type == BLE_ADDR_RANDOM
       && ble_addr_random_type(&adva) == BLE_ADDR_RANDOM_RESOLVABLE) {
-    dprintk("From random "BLE_ADDR_FMT"\n", BLE_ADDR_ARG(&adva));
+    //dprintk("From random "BLE_ADDR_FMT" %02x\n", BLE_ADDR_ARG(&adva),
+    //        ble_advertise_packet_type_get(buffer));
 
     if (!ble_scan_filter_address_resolve(sf, &adva))
       return;
@@ -197,8 +265,10 @@ void ble_scan_filter_adv_handle(struct ble_scan_filter_s *sf,
   if (!item)
     return;
 
-  item->device.last_seen = net_scheduler_time_get(sf->layer.scheduler);
   item->device.rssi = rssi;
+
+  dprintk(""BLE_ADDR_FMT" %d %02x %d\n", BLE_ADDR_ARG(&item->device.addr), item->device.rssi,
+         ble_advertise_packet_type_get(buffer), item->device.policy);
 
   switch (ble_advertise_packet_type_get(buffer)) {
   case BLE_ADV_IND:
@@ -206,16 +276,15 @@ void ble_scan_filter_adv_handle(struct ble_scan_filter_s *sf,
     if (item->device.connectable
         && ad_len == item->adv_ad_len
         && !memcmp(item->device.ad, ad, ad_len)
-        && item->policy != BLE_SCAN_FILTER_MONITOR)
+        && item->device.policy != BLE_SCANNER_MONITOR)
       return;
 
     item->device.connectable = ble_advertise_packet_type_get(buffer) == BLE_ADV_IND;
 
-    if (ad_len != item->adv_ad_len && item->scan_ad_len)
-      memmove(item->device.ad + ad_len, item->device.ad + item->adv_ad_len, item->scan_ad_len);
     memcpy(item->device.ad, ad, ad_len);
     item->adv_ad_len = ad_len;
-    item->device.ad_len = ad_len + item->scan_ad_len;
+    item->device.ad_len = ad_len;
+    item->last_scan = 0;
     break;
     
   case BLE_ADV_DIRECT_IND:
@@ -224,17 +293,13 @@ void ble_scan_filter_adv_handle(struct ble_scan_filter_s *sf,
     break;
 
   case BLE_SCAN_RSP:
-    if (item->device.scanned
-        && ad_len == item->scan_ad_len
-        && !memcmp(item->device.ad + item->adv_ad_len, ad, ad_len)
-        && item->policy != BLE_SCAN_FILTER_MONITOR) {
-      item->rescan = 0;
+    item->last_scan = net_scheduler_time_get(sf->layer.scheduler);
+
+    if (item->device.scanned && !(item->device.policy & BLE_SCANNER_MONITOR))
       return;
-    }
 
     item->device.connectable = 1;
     item->device.scanned = 1;
-    item->rescan = 0;
 
     memcpy(item->device.ad + item->adv_ad_len, ad, ad_len);
     item->scan_ad_len = ad_len;
@@ -247,69 +312,20 @@ void ble_scan_filter_adv_handle(struct ble_scan_filter_s *sf,
     return;
   }
 
-  if (item->policy == BLE_SCAN_FILTER_IGNORE)
+  dprintk("Scan filter policy %d\n", item->device.policy);
+
+  if (item->device.policy == BLE_SCANNER_IGNORE)
     return;
 
-  item->policy = vtable->device_updated(sf->layer.delegate, &sf->layer, &item->device);
+  scan_policy = vtable->device_updated(sf->layer.delegate, &sf->layer, &item->device);
 
-  if (!sf->layer.parent)
-    return;
+  if (scan_policy == BLE_SCANNER_SCAN && item->device.scanned && item->last_scan)
+    scan_policy = BLE_SCANNER_MONITOR;
 
-  switch (item->policy) {
-  case BLE_SCAN_FILTER_IGNORE:
-    scan_policy = BLE_SCANNER_IGNORE;
-    break;
-    
-  case BLE_SCAN_FILTER_SCAN:
-    if (item->device.scanned && !item->rescan)
-      scan_policy = BLE_SCANNER_IGNORE;
-    else
-      scan_policy = BLE_SCANNER_SCAN;
-    break;
-
-  case BLE_SCAN_FILTER_CONNECT:
-    scan_policy = BLE_SCANNER_CONNECT;
-    break;
-
-  default:
-  case BLE_SCAN_FILTER_MONITOR:
-    return;
+  if (item->device.policy != scan_policy) {
+    item->device.policy = scan_policy;
+    scan_filter_params_update(sf);
   }
-
-  for (size_t i = 0; i < sf->scan_params.target_count; ++i) {
-    if (ble_addr_cmp(&adva, &sf->scan_params.target[i].addr))
-      continue;
-
-    if (scan_policy == sf->scan_params.default_policy) {
-      if (i < sf->scan_params.target_count - 1)
-        memmove(sf->scan_params.target + i, sf->scan_params.target + i + 1,
-                sizeof(struct ble_scanner_target_s) * (sf->scan_params.target_count - i - 1));
-      sf->scan_params.target_count--;
-    } else {
-      if (sf->scan_params.target[i].policy == scan_policy)
-        return;
-
-      sf->scan_params.target[i].policy = scan_policy;
-    }
-    goto params_update;
-  }
-
-  if (scan_policy != sf->scan_params.default_policy) {
-    size_t moved_count = __MIN(BLE_SCANNER_TARGET_MAXCOUNT - 1, sf->scan_params.target_count);
-    memmove(sf->scan_params.target + 1, sf->scan_params.target, sizeof(struct ble_scanner_target_s) * moved_count);
-    sf->scan_params.target_count = moved_count + 1;
-    sf->scan_params.target[0].addr = adva;
-    sf->scan_params.target[0].policy = scan_policy;
-  }
-
- params_update:
-#if 0
-  dprintk("New policy table (default %d)\n", sf->scan_params.default_policy);
-  for (size_t i = 0; i < sf->scan_params.target_count; ++i)
-    dprintk(" "BLE_ADDR_FMT": %d\n", BLE_ADDR_ARG(&sf->scan_params.target[i].addr), sf->scan_params.target[i].policy);
-#endif
-
-  ble_scanner_params_update(sf->layer.parent, &sf->scan_params);
 }
 
 static void ble_scan_filter_cleanup_task_destroy(void *task_)
@@ -336,21 +352,30 @@ static void ble_scan_filter_cleanup(struct ble_scan_filter_s *sf)
 {
   const struct ble_scan_filter_delegate_vtable_s *vtable
     = const_ble_scan_filter_delegate_vtable_s_from_base(sf->layer.delegate_vtable);
+  bool_t changed = 0;
 
   net_task_destroy(&sf->cleanup_task);
 
-  dev_timer_value_t last_seen_max = net_scheduler_time_get(sf->layer.scheduler) - sf->lifetime_tk;
+  dprintk("%s\n", __func__);
 
-  GCT_FOREACH(ble_scan_list, &sf->devices, item,
-              if (item->device.last_seen < last_seen_max) {
-                ble_scan_list_remove(&sf->devices, item);
+  dev_timer_value_t now = net_scheduler_time_get(sf->layer.scheduler);
+  dev_timer_value_t last_seen_min = now - sf->lifetime_tk;
+
+  GCT_FOREACH(dev_list_by_time, &sf->devices_by_time, item,
+              if (item->device.last_seen < last_seen_min) {
+                dev_list_by_addr_remove(&sf->devices_by_addr, item);
+                dev_list_by_time_remove(&sf->devices_by_time, item);
                 item->device.active = 0;
+                changed = item->device.policy != sf->scan_params.default_policy;
                 vtable->device_updated(sf->layer.delegate, &sf->layer, &item->device);
                 mem_free(item);
-              } else {
-                item->rescan = 1;
+              } else if (item->last_scan < last_seen_min) {
+                item->last_scan = 0;
               });
 
+  if (changed)
+    scan_filter_params_update(sf);
+  
   ble_scan_filter_cleanup_later(sf);
 }
 
@@ -388,8 +413,9 @@ static void ble_scan_filter_dandling(struct net_layer_s *layer)
 
   net_scheduler_from_layer_cancel(sf->layer.scheduler, &sf->layer);
 
-  GCT_FOREACH(ble_scan_list, &sf->devices, item,
-              ble_scan_list_remove(&sf->devices, item);
+  GCT_FOREACH(dev_list_by_time, &sf->devices_by_time, item,
+              dev_list_by_addr_remove(&sf->devices_by_addr, item);
+              dev_list_by_time_remove(&sf->devices_by_time, item);
               mem_free(item);
               );
 }
@@ -419,12 +445,13 @@ error_t ble_scan_filter_create(struct net_scheduler_s *scheduler,
   if (err)
     goto err_free;
 
-  ble_scan_list_init(&sf->devices);
+  dev_list_by_addr_init(&sf->devices_by_addr);
+  dev_list_by_time_init(&sf->devices_by_time);
 
   memcpy(&sf->scan_params, params, sizeof(sf->scan_params));
-  sf->scan_params.default_policy = BLE_SCANNER_IGNORE;
+  sf->scan_params.default_policy = BLE_SCANNER_MONITOR;
 
-  dev_timer_init_sec(&scheduler->timer, &sf->lifetime_tk, NULL, 10, 1);
+  dev_timer_init_sec(&scheduler->timer, &sf->lifetime_tk, NULL, 2, 1);
   sf->peerdb = params->peerdb;
   sf->scan_params = params->scan_params;
 
