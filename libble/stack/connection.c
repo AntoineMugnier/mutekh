@@ -286,11 +286,15 @@ error_t ble_stack_connection_create(struct ble_stack_connection_s *conn,
 #if defined(CONFIG_BLE_CRYPTO)
   struct ble_sm_param_s sm_params = {
     .peer = &conn->peer,
-    .local_addr = phy_params.conn_req.slave,
     .rng = &context->rng,
     .crypto = &context->crypto,
   };
 
+  if (is_master)
+    sm_params.local_addr = conn_params->master;
+  else
+    sm_params.local_addr = conn_params->slave;
+    
   err = ble_sm_create(&context->scheduler, &sm_params, conn, &conn_sm_vtable.base, &sm);
   if (err) {
     printk("error while creating sm: %d\n", err);
