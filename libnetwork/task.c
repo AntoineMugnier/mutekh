@@ -18,6 +18,8 @@
     Copyright Nicolas Pouillon <nipo@ssji.net> (c) 2015
 */
 
+#define LOGK_MODULE_ID "nett"
+
 #include <mutek/printk.h>
 
 #include <net/task.h>
@@ -64,7 +66,7 @@ void net_task_push(struct net_task_s *task,
 
   assert(task->destroy_func);
 
-  //printk("Task %p push %p\n", task, task->target->handler);
+  logk_trace("%p push %p", task, task->target->handler);
 
   net_scheduler_task_push(target->scheduler, task);
 }
@@ -92,7 +94,7 @@ void net_task_inbound_push(struct net_task_s *task,
   else
     memset(&task->packet.dst_addr, 0, sizeof(struct net_addr_s));
 
-  //printk("Task %p forward <- %p\n", task, source->handler);
+  logk_trace("%p forward <- %p", task, source->handler);
 
   net_task_push(task, target, source, NET_TASK_INBOUND);
 }
@@ -120,7 +122,7 @@ void net_task_outbound_push(struct net_task_s *task,
   else
     memset(&task->packet.dst_addr, 0, sizeof(struct net_addr_s));
 
-  //printk("Task %p forward <- %p\n", task, source->handler);
+  logk_trace("%p forward <- %p", task, source->handler);
 
   net_task_push(task, target, source, NET_TASK_OUTBOUND);
 }
@@ -131,7 +133,7 @@ void net_task_packet_forward(struct net_task_s *task,
   struct net_layer_s *old_source = task->source;
   struct net_layer_s *old_target = task->target;
 
-  //printk("Task %p forward <- %p\n", task, old_source->handler);
+  logk_trace("%p forward <- %p", task, old_source->handler);
 
   net_task_push(task, target, old_source, task->type);
 

@@ -57,15 +57,8 @@ struct net_scheduler_s;
  */
 struct net_scheduler_s
 {
-  lock_t lock;
-
-  struct context_s context;
-  struct sched_context_s sched_context;
-
-  net_task_queue_root_t pending_tasks;
   net_timeout_queue_root_t delayed_tasks;
   net_layer_sched_list_root_t layers;
-  net_layer_sched_list_root_t destroyed_layers;
 
   struct device_timer_s timer;
   struct dev_timer_rq_s timer_rq;
@@ -73,13 +66,7 @@ struct net_scheduler_s
   struct slab_s task_pool;
   struct buffer_pool_s *packet_pool;
 
-  bool_t scheduled;
-  bool_t exited;
-  struct sched_context_s *exiter;
-
   uint32_t timer_usage;
-
-  void *stack;
 };
 
 /**
