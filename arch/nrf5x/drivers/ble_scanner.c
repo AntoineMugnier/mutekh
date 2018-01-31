@@ -68,6 +68,8 @@ struct nrf5x_ble_scanner_s
 
   enum ble_scanner_policy_e default_policy;
 
+  bool_t connectable_only;
+
   size_t target_count;
   struct ble_scanner_target_s target[BLE_SCANNER_TARGET_MAXCOUNT];
 };
@@ -295,7 +297,7 @@ static void scanner_ctx_payload_received(struct nrf5x_ble_context_s *context,
 {
   struct nrf5x_ble_scanner_s *scan
     = nrf5x_ble_scanner_s_from_context(context);
-  enum ble_scanner_policy_e policy = BLE_SCANNER_IGNORE;
+  enum ble_scanner_policy_e policy = BLE_SCANNER_MONITOR;
   struct ble_addr_s adva;
   const uint8_t size = __MIN(CONFIG_BLE_PACKET_SIZE,
                              scan->rx_buffer->data[scan->rx_buffer->begin + 1] + 2);
@@ -308,37 +310,36 @@ static void scanner_ctx_payload_received(struct nrf5x_ble_context_s *context,
   scan->rx_buffer->end = scan->rx_buffer->begin + size;
   ble_advertise_packet_txaddr_get(scan->rx_buffer, &adva);
 
+  policy = scanner_policy_get(scan, &adva);
+
   switch (ble_advertise_packet_type_get(scan->rx_buffer)) {
   case BLE_ADV_IND:
-    policy = scanner_policy_get(scan, &adva);
-    break;
-
   case BLE_SCAN_RSP:
-    policy = scanner_policy_get(scan, &adva) & ~BLE_SCANNER_SCAN;
-    break;
-
   case BLE_ADV_DIRECT_IND:
-    policy = scanner_policy_get(scan, &adva) & BLE_SCANNER_CONNECT;
     break;
 
   default:
-    policy = 0;
-    break;
+    if (scan->connectable_only)
+      return;
   }
 
-  if (policy & BLE_SCANNER_CONNECT) {
+  scan->state = SCAN_IND;
+
+  if (policy & BLE_SCANNER_CONNECT
+      && ble_advertise_packet_type_get(scan->rx_buffer) == BLE_ADV_IND) {
     scan->conn_params.slave = adva;
     scan->state = SCAN_CONNECT;
     return;
   }
 
-  if (policy & BLE_SCANNER_SCAN) {
+  if (policy & BLE_SCANNER_SCAN
+      && ble_advertise_packet_type_get(scan->rx_buffer) == BLE_ADV_IND) {
     scan->conn_params.slave = adva;
     scan->state = SCAN_REQ;
     return;
   }
 
-  if (scan->client) {
+  if (policy & (BLE_SCANNER_SCAN | BLE_SCANNER_MONITOR) && scan->client) {
     struct buffer_s *buffer;
     struct net_task_s *task;
     struct net_addr_s src = {
@@ -357,9 +358,8 @@ static void scanner_ctx_payload_received(struct nrf5x_ble_context_s *context,
         buffer_refdec(buffer);
       }
     }
+    return;
   }
-
-  scan->state = SCAN_IND;
 }
 
 static
@@ -430,6 +430,7 @@ error_t scan_param_update(struct net_layer_s *layer, const struct ble_scanner_pa
   scan->interval_tk = params->interval_ms * 32768 / 1000;
   scan->duration_tk = params->duration_ms * 32768 / 1000;
   scan->default_policy = params->default_policy;
+  scan->connectable_only = params->connectable_only;
   scan->target_count = __MIN(params->target_count, BLE_SCANNER_TARGET_MAXCOUNT);
   for (size_t i = 0; i < scan->target_count; ++i) {
     scan->target[i].addr = params->target[i].addr;
