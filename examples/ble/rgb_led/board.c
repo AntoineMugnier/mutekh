@@ -7,7 +7,15 @@
 #include <arch/nrf5x/adc.h>
 #endif
 
-#if defined(CONFIG_NRF5X_PCA10000) || defined(CONFIG_NRF5X_PCA10028)
+#define board_pca10000 1
+#define board_pca10028 1
+#define board_pca10036 2
+#define board_pca10040 2
+
+#define _board_id(x) board_##x
+#define board_id(x) _board_id(x)
+
+#if board_id(CONFIG_NRF5X_BOARD_NAME) == 1
 
 DEV_DECLARE_STATIC(pwm_dev, "leds", 0, nrf5x_gpio_pwm_drv,
                    NRF_STATIC_RES_PERIPHERAL_MEM(NRF5X_TIMER2),
@@ -21,7 +29,7 @@ DEV_DECLARE_STATIC(pwm_dev, "leds", 0, nrf5x_gpio_pwm_drv,
 
 #endif
 
-#if defined(CONFIG_NRF5X_PCA10036)
+#if board_id(CONFIG_NRF5X_BOARD_NAME) == 2
 
 DEV_DECLARE_STATIC(pwm_dev, "leds", 0, nrf5x_gpio_pwm_drv,
                    NRF_STATIC_RES_PERIPHERAL_MEM(NRF5X_TIMER2),

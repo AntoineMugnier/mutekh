@@ -56,8 +56,8 @@ struct net_scheduler_s;
 #elif 52000 <= CONFIG_NRF5X_MODEL && CONFIG_NRF5X_MODEL <= 52999
 # define RADIO_RAMPUP_US      40
 # define RADIO_IRQ_LATENCY_US 2
-# define RADIO_RX_CHAIN_DELAY_US 10
-# define RADIO_TX_CHAIN_DELAY_US 1
+# define RADIO_RX_CHAIN_DELAY_US 8
+# define RADIO_TX_CHAIN_DELAY_US 6
 #endif
 
 #define RTC_SKEW_TK 2
@@ -187,6 +187,8 @@ struct nrf5x_ble_private_s {
 
   struct device_s *dev;
 
+  struct kroutine_sequence_s kr_seq;
+  
   nrf5x_ble_context_list_root_t context_list;
   nrf5x_ble_context_list_root_t closed_list;
 

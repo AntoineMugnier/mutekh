@@ -18,6 +18,8 @@
     Copyright Nicolas Pouillon <nipo@ssji.net> (c) 2015
 */
 
+#define LOGK_MODULE_ID "bgcl"
+
 #include <mutek/buffer_pool.h>
 
 #include <ble/gattdb/db.h>
@@ -33,10 +35,21 @@
 
 #include <mutek/printk.h>
 
-#include <ble/peer.h>
+static const struct dev_persist_descriptor_s security_db_subscribed_blob = {
+  .uid = 0x3220,
+  .type = DEV_PERSIST_BLOB,
+  .size = BLE_SUBSCRIBED_CHAR_COUNT * sizeof(struct ble_subscription_s),
+};
 
-#define dprintk(...) do{}while(0)
-//#define dprintk printk
+/**
+   @this is a subscription entry saved for a peer.
+ */
+
+struct ble_subscription_s {
+  uint8_t registry_index : 3;
+  uint8_t char_index : 4;
+  uint8_t mode : 1;
+} __attribute__((__packed__));
 
 GCT_CONTAINER_FCNS(ble_gattdb_client_sl, ALWAYS_INLINE, ble_gattdb_client_sl,
                    init, destroy, pushback, remove, isempty, head, tail, next);
@@ -419,7 +432,7 @@ static BLE_GATTDB_LISTENER_FUNC(ble_gattdb_client_value_changed_handler)
   const struct ble_gattdb_characteristic_s *chr
     = &registry->service->characteristic[listener->chr_index];
 
-  dprintk("Characteristic %d of service changed, value handle %d\n",
+  logk_debug("characteristic %d of service changed, value handle %d",
          listener->chr_index, handle_index);
 
   assert(hndl[handle_index].index == listener->chr_index
@@ -563,7 +576,7 @@ void ble_gattdb_client_subscription_get(struct ble_gattdb_client_s *client,
   struct ble_gattdb_client_subs_s *sub;
   size_t i = 0;
 
-  printk("Saving subscriptions:\n");
+  logk_trace("saving subscriptions:");
 
   for (sub = ble_gattdb_client_sl_head(&client->subs_list);
        sub && i < count;
@@ -572,10 +585,10 @@ void ble_gattdb_client_subscription_get(struct ble_gattdb_client_s *client,
     subscriptions[i].char_index = sub->listener.chr_index;
     subscriptions[i].mode = sub->mode == 2;
 
-    printk(" reg %d chr %d mode %d\n",
-           subscriptions[i].registry_index,
-           subscriptions[i].char_index,
-           subscriptions[i].mode);
+    logk_trace(" reg %d chr %d mode %d",
+               subscriptions[i].registry_index,
+               subscriptions[i].char_index,
+               subscriptions[i].mode);
 
     i++;
   }
@@ -584,7 +597,7 @@ void ble_gattdb_client_subscription_get(struct ble_gattdb_client_s *client,
 
   memset(subscriptions + i, 0xff, sizeof(*subscriptions) * (count - i));
 
-  printk(" -> %P\n", subscriptions, sizeof(*subscriptions) * count);
+  logk_trace(" -> %P", subscriptions, sizeof(*subscriptions) * count);
 }
 
 void ble_gattdb_client_subscription_set(struct ble_gattdb_client_s *client,
@@ -602,7 +615,7 @@ void ble_gattdb_client_subscription_set(struct ble_gattdb_client_s *client,
   if (memcstcmp(subscriptions, 0xff, count) == 0)
     return;
 
-  printk("Restoring subscriptions: %P\n", subscriptions, count);
+  logk_trace("restoring subscriptions: %P", subscriptions, count);
 
   for (size_t i = 0; i < count; ++i) {
     struct ble_gattdb_registry_s *reg = ble_gattdb_registry_get_by_index(client->db,
@@ -629,10 +642,10 @@ void ble_gattdb_client_subscription_set(struct ble_gattdb_client_s *client,
           & (BLE_GATTDB_NOTIFIABLE | BLE_GATTDB_INDICABLE)))
       continue;
 
-    printk(" reg %d chr %d mode %d\n",
-           subscriptions[i].registry_index,
-           subscriptions[i].char_index,
-           subscriptions[i].mode);
+    logk_trace(" reg %d chr %d mode %d",
+               subscriptions[i].registry_index,
+               subscriptions[i].char_index,
+               subscriptions[i].mode);
 
     sub->client = client;
     sub->mode = 1 << subscriptions[i].mode;

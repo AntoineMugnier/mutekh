@@ -18,6 +18,10 @@
     Copyright Nicolas Pouillon <nipo@ssji.net> (c) 2015
 */
 
+#define LOGK_MODULE_ID "nbad"
+
+#include <mutek/printk.h>
+
 #include <hexo/bit.h>
 
 #include <ble/protocol/advertise.h>
@@ -28,8 +32,6 @@
 #include <net/task.h>
 
 #include "ble.h"
-
-#define dprintk(...) do{}while(0)
 
 static
 error_t adv_param_update(struct net_layer_s *layer, const struct ble_advertiser_param_s *params);
@@ -76,7 +78,7 @@ static void advertiser_schedule(struct nrf5x_ble_advertiser_s *adv)
 {
   dev_timer_value_t now, begin;
 
-  //printk("%s %d\n", __FUNCTION__, net_layer_refcount(&adv->layer));
+  logk_trace("%s %d", __func__, net_layer_refcount(&adv->layer));
   
   if (!net_layer_refcount(&adv->layer))
     return;
@@ -91,7 +93,7 @@ static bool_t advertiser_ctx_event_opened(struct nrf5x_ble_context_s *context)
 {
   struct nrf5x_ble_advertiser_s *adv = nrf5x_ble_advertiser_s_from_context(context);
 
-  //printk("%s %d\n", __FUNCTION__, net_layer_refcount(&adv->layer));
+  logk_trace("%s %d", __func__, net_layer_refcount(&adv->layer));
 
   if (!net_layer_refcount(&adv->layer))
     return 0;
@@ -111,9 +113,9 @@ static void advertiser_ctx_event_closed(struct nrf5x_ble_context_s *context,
     = const_ble_advertiser_delegate_vtable_s_from_base(adv->layer.delegate_vtable);
   bool_t reschedule = 1;
 
-  //printk("%s %d\n", __FUNCTION__, net_layer_refcount(&adv->layer));
+  logk_trace("%s %d", __func__, net_layer_refcount(&adv->layer));
 
-  //printk("%s %d %p\n", __FUNCTION__, status, adv->conn_packet);
+  logk_trace("%s %d %p", __func__, status, adv->conn_packet);
 
   if (adv->conn_packet) {
     struct ble_adv_connect_s conn;
@@ -314,9 +316,9 @@ error_t nrf5x_ble_advertiser_create(struct net_scheduler_s *scheduler,
 
   memset(adv, 0, sizeof(*adv));
 
-  dprintk("Advertiser init start\n");
+  logk_trace("Advertiser init start");
 
-  err = net_layer_init(&adv->layer, &ble_advertiser_layer_handler.base, scheduler, delegate, delegate_vtable);
+  err = net_layer_init_seq(&adv->layer, &ble_advertiser_layer_handler.base, scheduler, delegate, delegate_vtable, &priv->kr_seq);
   if (err)
     goto err_out;
 
@@ -333,7 +335,7 @@ error_t nrf5x_ble_advertiser_create(struct net_scheduler_s *scheduler,
 
   advertiser_schedule(adv);
 
-  dprintk("Advertiser init done\n");
+  logk_trace("Advertiser init done");
 
   *layer = &adv->layer;
 
@@ -392,13 +394,13 @@ error_t adv_param_update(struct net_layer_s *layer, const struct ble_advertiser_
   if (!adv->delay_max_tk)
     adv->delay_max_tk = 3;
 
-  dprintk("ADV interval: %d, delay_max: %d\n", adv->interval_tk, adv->delay_max_tk);
-  dprintk("ADV packet: %P\n",
-         adv->adv_packet->data + adv->adv_packet->begin,
-         adv->adv_packet->end - adv->adv_packet->begin);
-  dprintk("Scan RSP packet: %P\n",
-         adv->scan_response->data + adv->scan_response->begin,
-         adv->scan_response->end - adv->scan_response->begin);
+  logk_trace("ADV interval: %d, delay_max: %d", adv->interval_tk, adv->delay_max_tk);
+  logk_trace("ADV packet: %P",
+             adv->adv_packet->data + adv->adv_packet->begin,
+             adv->adv_packet->end - adv->adv_packet->begin);
+  logk_trace("Scan RSP packet: %P",
+             adv->scan_response->data + adv->scan_response->begin,
+             adv->scan_response->end - adv->scan_response->begin);
 
   return 0;
 }

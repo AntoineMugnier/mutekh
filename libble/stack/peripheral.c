@@ -18,6 +18,8 @@
     Copyright Nicolas Pouillon <nipo@ssji.net> (c) 2015
 */
 
+#define LOGK_MODULE_ID "bper"
+
 #include <ble/protocol/l2cap.h>
 #include <ble/protocol/advertise.h>
 #include <ble/protocol/gap.h>
@@ -69,7 +71,7 @@ static void peri_state_update(struct ble_peripheral_s *peri)
 
   peri->last_state = state;
 
-  printk("Peripheral state now %d\n", state);
+  logk_trace("peripheral state now %d", state);
 
   peri->handler->state_changed(peri, state);
 }
@@ -78,7 +80,7 @@ static void peri_adv_destroyed(void *delegate, struct net_layer_s *layer)
 {
   struct ble_peripheral_s *peri = delegate;
 
-  printk("Advertise layer destroyed\n");
+  logk_trace("advertise layer destroyed");
 
   peri_state_update(peri);
 }
@@ -88,7 +90,7 @@ static void peri_conn_state_changed(struct ble_stack_connection_s *conn,
 {
   struct ble_peripheral_s *peri = ble_peripheral_s_from_conn(conn);
 
-  printk("Conn state changed %d\n", connected);
+  logk_trace("conn state changed %d", connected);
 
   peri_state_update(peri);
 
@@ -103,7 +105,7 @@ void peri_conn_pairing_success(struct ble_stack_connection_s *conn)
 
   (void)peri;
 
-  printk("Slave pairing success\n");
+  logk_trace("slave pairing success");
 }
 
 static const struct ble_stack_context_handler_s peri_conn_handler =
@@ -122,34 +124,34 @@ bool_t peri_connection_requested(void *delegate, struct net_layer_s *layer,
   const struct ble_gap_preferred_conn_params_s *wanted_timing;
   size_t size;
 
-  printk("Connection request from "BLE_ADDR_FMT"...", BLE_ADDR_ARG(&conn->master));
+  logk("connection request from "BLE_ADDR_FMT"...", BLE_ADDR_ARG(&conn->master));
 
 #if defined(CONFIG_BLE_CRYPTO)
   if (peri->conn.sm) {
-    printk(" still have sm\n");
+    logk_error("still have sm");
     return 1;
   }
 #endif
 
   if (peri->conn.phy) {
-    printk(" still have phy\n");
+    logk_error("still have phy");
     return 1;
   }
 
   if (!peri->handler->connection_requested(peri, &conn->master)) {
-    printk(" rejected by handler\n");
+    logk("rejected by handler");
     return 1;
   }
 
   bool_t known_device = ble_security_db_contains(&peri->context->security_db, &conn->master);
 
   if (!(peri->mode & BLE_PERIPHERAL_PAIRABLE) && !known_device) {
-    printk(" ignored: we are not paired\n");
+    logk_trace(" ignored: we are not paired\n");
     return 1;
   }
 
   /* if ((peri->mode & BLE_PERIPHERAL_PAIRABLE) && known_device) { */
-  /*   printk(" ignored: we are paired and connection comes from a known device\n"); */
+  /*   logk_error(" ignored: we are paired and connection comes from a known device"); */
   /*   return 1; */
   /* } */
 
@@ -160,11 +162,11 @@ bool_t peri_connection_requested(void *delegate, struct net_layer_s *layer,
     wanted_timing = NULL;
 
   if (wanted_timing) {
-    printk("Wanted timing: %d-%d %d %d\n",
+    logk_debug("wanted timing: %d-%d %d %d",
            wanted_timing->interval_min, wanted_timing->interval_max,
            wanted_timing->latency, wanted_timing->timeout);
   } else {
-    printk("Wanted timing: unknown\n");
+    logk_debug("wanted timing: unknown");
   }
 
   err = ble_stack_connection_create(&peri->conn, peri->context,
@@ -189,16 +191,16 @@ static error_t adv_start(struct ble_peripheral_s *peri)
   error_t err;
 
   if (peri->conn.phy) {
-    printk("Cannot advertise: has phy\n");
+    logk_error("cannot advertise: has phy");
     return 0;
   }
 
   if (peri->adv) {
-    printk("Cannot advertise: has adv\n");
+    logk_error("cannot advertise: has adv");
     return 0;
   }
 
-  printk("Peripheral advertising starting\n");
+  logk("Peripheral advertising starting");
 
   params.local_addr = peri->addr;
   params.interval_ms = peri->params.adv_interval_ms;
@@ -216,7 +218,7 @@ static error_t adv_start(struct ble_peripheral_s *peri)
                   peri, &peri_adv_vtable.base,
                   &peri->adv);
   if (err) {
-    printk("Advertising start failed: %d\n", err);
+    logk_error("advertising start failed: %d", err);
     peri->adv = NULL;
   }
   

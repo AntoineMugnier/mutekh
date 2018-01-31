@@ -18,6 +18,8 @@
     Copyright (c) Nicolas Pouillon <nipo@ssji.net> 2015
 */
 
+#define LOGK_MODULE_ID "braw"
+
 #include <ble/stack/raw_connection.h>
 #include <ble/stack/context.h>
 #include <ble/protocol/address.h>

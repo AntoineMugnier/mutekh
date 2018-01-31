@@ -23,6 +23,13 @@
 
 static uint8_t led_color[4] = {0,0,255,255};
 
+static KROUTINE_EXEC(led_done)
+{
+  struct led_s *led = KROUTINE_CONTAINER(kr, *led, pwm_rq.base.kr);
+
+  led->busy = 0;
+}
+
 static
 uint8_t on_led_color_write(struct ble_gattdb_client_s *client,
                            struct ble_gattdb_registry_s *service,
@@ -35,17 +42,13 @@ uint8_t on_led_color_write(struct ble_gattdb_client_s *client,
     led->cfg[i].duty.denom = ((256 - led_color[3]) << 4) - (1 << 4) + 0x100;
   }
 
-  struct dev_request_status_s status;
-  struct dev_pwm_rq_s rq = {
-    .cfg = led->cfg,
-    .chan_mask = 0x7,
-    .error = 0,
-    .mask = DEV_PWM_MASK_DUTY,
-  };
+  led->pwm_rq.mask = DEV_PWM_MASK_DUTY;
 
-  dev_request_sched_init(&rq.base, &status);
-  DEVICE_OP(&led->pwm, config, &rq);
-  dev_request_sched_wait(&status);
+  if (led->busy)
+    return 0;
+
+  led->busy = 1;
+  DEVICE_OP(&led->pwm, config, &led->pwm_rq);
 
   return 0;
 }
@@ -55,7 +58,7 @@ BLE_GATTDB_SERVICE_DECL(led_service,
                         BLE_UUID_BT_BASED_P(CYPRESS_LED_SERVICE),
                         NULL,
                         BLE_GATTDB_CHAR(BLE_UUID_BT_BASED_P(CYPRESS_LED_COLOR_CHAR),
-                                        BLE_GATTDB_PERM_OTHER_WRITE | BLE_GATTDB_PERM_OTHER_READ,
+                                        BLE_GATTDB_PERM_AUTH_WRITE | BLE_GATTDB_PERM_AUTH_READ,
                                         BLE_GATTDB_CHAR_DATA_PLAIN(led_color, sizeof(led_color),
                                                                    NULL, on_led_color_write)),
                         );
@@ -77,19 +80,14 @@ error_t led_service_register(struct led_s *led,
     led->cfg[i].pol = DEV_PWM_POL_LOW;
   }
 
-  struct dev_request_status_s status;
-  struct dev_pwm_rq_s rq = {
-    .cfg = led->cfg,
-    .chan_mask = 0x7,
-    .error = 0,
-    .mask = DEV_PWM_MASK_FREQ | DEV_PWM_MASK_DUTY | DEV_PWM_MASK_POL,
-  };
+  led->pwm_rq.cfg = led->cfg;
+  led->pwm_rq.chan_mask = 0x7;
+  led->pwm_rq.error = 0;
+  led->pwm_rq.mask = DEV_PWM_MASK_FREQ | DEV_PWM_MASK_DUTY | DEV_PWM_MASK_POL;
 
-  dev_request_sched_init(&rq.base, &status);
-  DEVICE_OP(&led->pwm, config, &rq);
-  dev_request_sched_wait(&status);
-
-  printk("PWM init: %d\n", rq.error);
+  kroutine_init_deferred(&led->pwm_rq.base.kr, led_done);
+  led->busy = 1;
+  DEVICE_OP(&led->pwm, config, &led->pwm_rq);
 
   return ble_gattdb_service_register(&led->dbs, db, &led_service);
 }

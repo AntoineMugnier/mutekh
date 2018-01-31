@@ -76,6 +76,7 @@ static TERMUI_CON_COMMAND_PROTOTYPE(shell_crypto_cipher)
     case DEV_CRYPTO_MODE_OFB:
     case DEV_CRYPTO_MODE_CTR:
     case DEV_CRYPTO_MODE_GCM:
+    case DEV_CRYPTO_MODE_CMAC:
     case DEV_CRYPTO_MODE_CCM:
     case DEV_CRYPTO_MODE_OCB3:
     case DEV_CRYPTO_MODE_STREAM:

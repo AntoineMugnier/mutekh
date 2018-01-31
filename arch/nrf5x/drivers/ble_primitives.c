@@ -18,6 +18,8 @@
     Copyright Nicolas Pouillon <nipo@ssji.net> (c) 2014-2015
 */
 
+#define LOGK_MODULE_ID "nbpr"
+
 #include <mutek/buffer_pool.h>
 
 #include <net/task.h>
@@ -351,7 +353,9 @@ bool_t nrf5x_ble_pipelined_setup(struct nrf5x_ble_private_s *pv)
                   | (1 << NRF_RADIO_END_DISABLE)
                   | (1 << NRF_RADIO_DISABLED_TXEN));
     nrf_reg_set(BLE_TIMER_ADDR, NRF_TIMER_CC(TIMER_IFS_START),
-                BLE_T_IFS - RADIO_TX_CHAIN_DELAY_US - 2 * PPI_LATENCY_US - 1);
+                BLE_T_IFS
+                - RADIO_RX_CHAIN_DELAY_US - RADIO_TX_CHAIN_DELAY_US
+                - 2 * PPI_LATENCY_US);
     break;
 
   default:
@@ -363,7 +367,9 @@ bool_t nrf5x_ble_pipelined_setup(struct nrf5x_ble_private_s *pv)
     nrf_it_enable(BLE_TIMER_ADDR, NRF_TIMER_COMPARE(TIMER_IFS_TIMEOUT));
     nrf_event_clear(BLE_TIMER_ADDR, NRF_TIMER_COMPARE(TIMER_IFS_TIMEOUT));
     nrf_reg_set(BLE_TIMER_ADDR, NRF_TIMER_CC(TIMER_IFS_START),
-                BLE_T_IFS - RADIO_RX_CHAIN_DELAY_US - 2 * PPI_LATENCY_US - 3);
+                BLE_T_IFS
+                - RADIO_RX_CHAIN_DELAY_US - RADIO_TX_CHAIN_DELAY_US
+                - 2 * PPI_LATENCY_US - 3);
     break;
   }
 
