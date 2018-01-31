@@ -21,3 +21,9 @@ objs-$(CONFIG_DRIVER_NRF5X_ADC) += adc.o
 objs-$(CONFIG_DRIVER_NRF52_SAADC) += saadc.o
 objs-$(CONFIG_DRIVER_NRF52_PDM) += pdm.o
 objs-$(CONFIG_DRIVER_NRF52_IR_BLASTER) += ir_blaster.o
+
+ifeq ($(CONFIG_DRIVER_NRF5X_BLE), defined)
+objs += ble.o ble_primitives.o
+objs-$(CONFIG_BLE_PERIPHERAL) += ble_advertiser.o ble_slave.o
+objs-$(CONFIG_BLE_CENTRAL) += ble_scanner.o ble_master.o
+endif

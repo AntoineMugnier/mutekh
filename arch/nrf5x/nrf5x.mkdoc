@@ -79,7 +79,9 @@ hardware features.  Most development boards are supported as well.
 
   @section {RTC}
     RTC is supported as a Timer device.  When driver is compiled in,
-    RTC1 instance is declared built-in as "rtc1".
+    RTC1 instance is declared built-in as "rtc1".  RTC0 is left
+    available for BLE radio driver.  User may instantiate RTC0 on its
+    own if radio driver is unused.
   @end section
 
   @section {NVMC}
@@ -98,10 +100,34 @@ hardware features.  Most development boards are supported as well.
 
   @section {Timer}
     Timers are implemented as Timer devices.  When driver is enabled,
-    Timer1 is instantiated as "timer1".
+    Timer1 is instantiated as "timer1".  Timer0 is left available for
+    BLE radio driver.  User may instantiate Timer0 on its own if radio
+    driver is unused.
   @end section
 
+  @section {BLE Radio}
+    BLE Radio driver implements various network layers, depending on
+    the @ref {+Bluetooth Low Energy library} configuration:
 
+    @list
+      @item @ref {@ble/net/adv.h} {Advertising} layer,
+      @item @ref {@ble/net/scanner.h} {Scanner} layer (Oberver,
+        Scanner, Initiator),
+      @item @ref {@ble/net/phy.h} {Slave},
+      @item @ref {@ble/net/phy.h} {Master}.
+    @end list
+
+    Link-layer (LL demux, Crypto and LLCP) is handled through generic
+    libble network layers.
+
+    This driver uses 3 hardware blocks: @tt Radio, @tt RTC0 and @tt
+    Timer0.  @tt Timer0 and @tt RTC0 blocks may not be changed to
+    others as there are some hardwired @tt PPIs between them.
+
+    Nordic assigns Static Random addresses to its chips.  Driver
+    retrieves device address from @tt FICR.
+  @end section
+  
   @section {AES}
     Hardware AES encrypt block is supported through a crypto driver
     which supports 4 functions:
