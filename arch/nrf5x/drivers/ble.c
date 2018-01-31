@@ -176,7 +176,7 @@ static DEV_USE(nrf5x_ble_use)
   switch (op)
     {
 #if defined(CONFIG_DEVICE_CLOCK)
-    case DEV_USE_CLOCK_GATES: {
+    case DEV_USE_CLOCK_SINK_GATE_DONE: {
 # if defined(CONFIG_DRIVER_NRF5X_BLE_DEBUG)
       struct dev_clock_sink_ep_s *sink = param;
       struct device_s *dev = sink->dev;
