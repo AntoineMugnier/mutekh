@@ -101,9 +101,9 @@ static DEV_SPI_CTRL_CONFIG(nrf5x_spim_config)
   nrf_reg_set(pv->addr, NRF_SPIM_CONFIG, config);
 
   rate = cfg->bit_rate1k * 1024;
-  if (rate > 1000000) {
-    printk("nRF5x SPI Warning: bit rate capped to 1MHz (was %d)\n", rate);
-    rate = 1000000;
+  if (rate > 8000000) {
+    printk("nRF5x SPI Warning: bit rate capped to 8MHz (was %d)\n", rate);
+    rate = 8000000;
   }
 
   nrf_reg_set(pv->addr, NRF_SPIM_FREQUENCY,
