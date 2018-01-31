@@ -44,6 +44,7 @@ enum ble_link_state_e
 {
   LINK_CLEAR,
 #if defined(CONFIG_BLE_CRYPTO)
+  LINK_ENC_STARTING0,
   LINK_ENC_STARTING1,
   LINK_ENC_STARTING2,
   LINK_ENC_RUNNING,
@@ -390,6 +391,7 @@ static void link_crypto_next(struct ble_link_s *link)
 
   switch (link->state) {
 #if defined(CONFIG_BLE_CRYPTO)
+  case LINK_ENC_STARTING0:
   case LINK_ENC_STARTING1:
   case LINK_ENC_STARTING2:
   case LINK_ENC_PAUSED:
@@ -430,6 +432,14 @@ static void link_crypto_next(struct ble_link_s *link)
 
   switch (link->state) {
 #if defined(CONFIG_BLE_CRYPTO)
+  case LINK_CLEAR:
+    if (link_is_master(link)
+        && (task->packet.buffer->data[task->packet.buffer->begin] & 3) == BLE_LL_CONTROL
+        && task->packet.buffer->data[task->packet.buffer->begin + 2] == BLE_LL_ENC_REQ) {
+      link_state_set(link, LINK_ENC_STARTING0);
+    }
+    goto forward;
+
   case LINK_ENC_STARTING1:
     if (link_is_master(link)
         && (task->packet.buffer->data[task->packet.buffer->begin] & 3) == BLE_LL_CONTROL
