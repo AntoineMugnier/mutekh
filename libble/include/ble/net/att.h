@@ -23,7 +23,7 @@
 
 /**
    @file
-   @module {Bluetooth Low Energy library}
+   @module {Libraries::Bluetooth Low Energy}
    @short Network layer definition for Attribute Protocol (ATT)
 
    This header defines the Network Layer API for Attribute Protocol

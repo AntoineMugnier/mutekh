@@ -23,7 +23,7 @@
 
 /**
    @file
-   @module {Bluetooth Low Energy library}
+   @module {Libraries::Bluetooth Low Energy}
    @short GATT Database context
 
    A GATT database merges GATT service definitions in a GATT database,

@@ -23,7 +23,7 @@
 
 /**
    @file
-   @module {Bluetooth Low Energy library}
+   @module {Libraries::Bluetooth Low Energy}
    @short Network layer definition for Link-Layer Control Protocol (LLCP)
 
    This header defines Network Layer API for Link-Layer Control

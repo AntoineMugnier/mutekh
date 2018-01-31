@@ -23,7 +23,7 @@
 
 /**
    @file
-   @module {Bluetooth Low Energy library}
+   @module {Libraries::Bluetooth Low Energy}
    @short Protocol definitions for Attribute protocol
 
    @this defines protocol data types for ATT.

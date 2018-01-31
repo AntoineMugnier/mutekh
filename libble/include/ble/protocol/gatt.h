@@ -23,7 +23,7 @@
 
 /**
    @file
-   @module {Bluetooth Low Energy library}
+   @module {Libraries::Bluetooth Low Energy}
    @short Protocol definitions for GATT constants
  */
 

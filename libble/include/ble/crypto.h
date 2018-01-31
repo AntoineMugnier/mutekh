@@ -23,7 +23,7 @@
 
 /**
    @file
-   @module {Bluetooth Low Energy library}
+   @module {Libraries::Bluetooth Low Energy}
    @short Bluetooth cryptography toolbox
 
    Those functions are from "Cryptographic toolbox" chapter of

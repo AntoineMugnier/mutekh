@@ -23,7 +23,7 @@
 
 /**
    @file
-   @module {Bluetooth Low Energy library}
+   @module {Libraries::Bluetooth Low Energy}
    @short Beacon advertiser utility
 
    @this contains all declarations for a Beacon functionnality.

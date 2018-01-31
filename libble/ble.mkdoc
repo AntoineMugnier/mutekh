@@ -1,12 +1,10 @@
-@moduledef {Bluetooth Low Energy library}
-@short BLE Library
+@moduledef {Bluetooth Low Energy} {Libraries}
+@short Bluetooth Low Energy stack
 
-Bluetooth Low Energy library is a generic framework for implementing
+Bluetooth Low Energy is a generic framework for implementing
 devices using this whole stack of protocols defined in @url
 {https://www.bluetooth.com/specifications/adopted-specifications}
 {Bluetooth Core v4.2 specification}.
-
-@insert localtoc
 
 @section tPU {Terminology recap for Core Specification (non-)readers}
 
@@ -215,37 +213,6 @@ devices using this whole stack of protocols defined in @url
         @end list
     @end list
 
-    @parse{
-    ble/net/adv.h
-    ble/net/att.h
-    ble/net/gap.h
-    ble/net/gatt.h
-    ble/net/gattc.h
-    ble/net/link.h
-    ble/net/llcp.h
-    ble/net/phy.h
-    ble/net/scan_filter.h
-    ble/net/scanner.h
-    ble/net/sm.h
-    ble/net/generic.h
-    ble/net/layer_id.h
-    }
-
-    See definitions in
-    @ref {@ble/net/adv.h},
-    @ref {@ble/net/att.h},
-    @ref {@ble/net/gap.h},
-    @ref {@ble/net/gatt.h},
-    @ref {@ble/net/gattc.h},
-    @ref {@ble/net/link.h},
-    @ref {@ble/net/llcp.h},
-    @ref {@ble/net/phy.h},
-    @ref {@ble/net/scan_filter.h},
-    @ref {@ble/net/scanner.h},
-    @ref {@ble/net/sm.h},
-    @ref {@ble/net/generic.h},
-    @ref {@ble/net/layer_id.h}.
-
   @end section
 
   @section tU {GATT Database}
@@ -328,23 +295,6 @@ devices using this whole stack of protocols defined in @url
 
     @end section
 
-    @parse{
-    ble/stack/beacon.h
-    ble/stack/central.h
-    ble/stack/connection.h
-    ble/stack/context.h
-    ble/stack/peripheral.h
-    ble/stack/raw_connection.h
-    }
-
-    See definitions in
-    @ref {@ble/stack/beacon.h},
-    @ref {@ble/stack/central.h},
-    @ref {@ble/stack/connection.h},
-    @ref {@ble/stack/context.h},
-    @ref {@ble/stack/peripheral.h},
-    @ref {@ble/stack/raw_connection.h}.
-
   @end section
 
   @section tU {Security Manager and Security DB}
@@ -362,19 +312,6 @@ devices using this whole stack of protocols defined in @url
     characteristic notification/indication settings that needs to be
     restored across connections and reboots.
 
-    @parse{
-    ble/ccm_params.h
-    ble/crypto.h
-    ble/peer.h
-    ble/security_db.h
-    }
-
-    See definitions in
-    @ref {@ble/ccm_params.h},
-    @ref {@ble/crypto.h},
-    @ref {@ble/peer.h},
-    @ref {@ble/security_db.h}.
-
   @end section
 
   @section tU {Protocol definitions and utilities}
@@ -384,39 +321,6 @@ devices using this whole stack of protocols defined in @url
 
     There is also a set of packet dissectors, useful for dumping packet
     contents in a textual form.
-
-    @parse{
-    ble/protocol/advertise.h
-    ble/protocol/att.h
-    ble/protocol/company.h
-    ble/protocol/data.h
-    ble/protocol/error.h
-    ble/protocol/gap.h
-    ble/protocol/gatt.h
-    ble/protocol/l2cap.h
-    ble/protocol/llcp.h
-    ble/protocol/radio.h
-    ble/protocol/signalling.h
-    ble/protocol/sm.h
-    ble/util/channel_mapper.h
-    ble/util/timing_mapper.h
-    }
-
-    See definitions in
-    @ref {@ble/protocol/advertise.h},
-    @ref {@ble/protocol/att.h},
-    @ref {@ble/protocol/company.h},
-    @ref {@ble/protocol/data.h},
-    @ref {@ble/protocol/error.h},
-    @ref {@ble/protocol/gap.h},
-    @ref {@ble/protocol/gatt.h},
-    @ref {@ble/protocol/l2cap.h},
-    @ref {@ble/protocol/llcp.h},
-    @ref {@ble/protocol/radio.h},
-    @ref {@ble/protocol/signalling.h},
-    @ref {@ble/protocol/sm.h},
-    @ref {@ble/util/channel_mapper.h},
-    @ref {@ble/util/timing_mapper.h}.
 
   @end section
   
@@ -428,10 +332,6 @@ devices using this whole stack of protocols defined in @url
 
     @section tU {Device addresses}
 
-      @parse{
-      ble/protocol/address.h
-      }
-
       @insert {@ble/protocol/address.h} decl_inline_doc
 
       See definitions in
@@ -441,8 +341,6 @@ devices using this whole stack of protocols defined in @url
 
     @section tU {UUIDs}
       
-      @parse{ble/uuid.h}
-
       @insert {@ble/uuid.h} decl_inline_doc
 
       @see @ble/uuid.h
@@ -454,8 +352,6 @@ devices using this whole stack of protocols defined in @url
   @section tU {Stack instanciation}
 
     @section tU {Peripheral stack}
-
-      @parse{ble/stack/peripheral.h}
 
       @insert {@ble/stack/peripheral.h} decl_inline_doc
 
@@ -469,23 +365,17 @@ devices using this whole stack of protocols defined in @url
 
     @section tU {Services declaration}
 
-      @parse{ble/gattdb/service.h}
       @insert {@ble/gattdb/service.h} decl_inline_doc
 
     @end section
 
     @section tU {Service registration to database}
 
-      @parse{ble/gattdb/db.h}
       @insert {@ble/gattdb/db.h} decl_inline_doc
 
     @end section
 
     @section tU {Database client}
-
-      @parse{
-      ble/gattdb/client.h
-      }
 
       See definitions in
       @ref {@ble/gattdb/client.h}.
@@ -493,14 +383,6 @@ devices using this whole stack of protocols defined in @url
     @end section
 
     @section tU {Standard service declarations}
-
-      @parse{
-      ble/gatt/characteristic.h
-      ble/gatt/descriptor.h
-      ble/gatt/dis.h
-      ble/gatt/hid.h
-      ble/gatt/service.h
-      }
 
       See definitions in
       @ref {@ble/gatt/characteristic.h},
@@ -515,12 +397,6 @@ devices using this whole stack of protocols defined in @url
 
   @section tU {GATT Client}
 
-    @parse{
-    ble/gattc/client.h
-    ble/gattc/registry.h
-    ble/gattc/service.h
-    }
-
     See definitions in
     @ref {@ble/gattc/client.h},
     @ref {@ble/gattc/registry.h},
@@ -532,8 +408,58 @@ devices using this whole stack of protocols defined in @url
 
 @end moduledef
 
-@c @parse{
-@c ble/sniffer/advertise.h
-@c ble/sniffer/connection.h
-@c ble/sniffer/radio.h
-@c }
+@parse{
+ble/net/adv.h
+ble/net/scanner.h
+ble/net/sm.h
+ble/net/att.h
+ble/net/llcp.h
+ble/net/phy.h
+ble/net/scan_filter.h
+ble/net/gap.h
+ble/net/link.h
+ble/net/gatt.h
+ble/net/layer_id.h
+ble/net/generic.h
+ble/stack/central.h
+ble/stack/context.h
+ble/stack/advertiser.h
+ble/stack/peripheral.h
+ble/stack/connection.h
+ble/stack/raw_connection.h
+ble/stack/beacon.h
+ble/gatt/characteristic.h
+ble/gatt/descriptor.h
+ble/gatt/gap.h
+ble/gatt/dis.h
+ble/gatt/service.h
+ble/gatt/hid.h
+ble/gattc/registry.h
+ble/gattc/client.h
+ble/gattc/service.h
+ble/sniffer/radio.h
+ble/sniffer/advertise.h
+ble/sniffer/connection.h
+ble/ccm_params.h
+ble/protocol/data.h
+ble/protocol/radio.h
+ble/protocol/l2cap.h
+ble/protocol/advertise.h
+ble/protocol/sm.h
+ble/protocol/att.h
+ble/protocol/llcp.h
+ble/protocol/gap.h
+ble/protocol/error.h
+ble/protocol/gatt.h
+ble/protocol/signalling.h
+ble/protocol/company.h
+ble/protocol/address.h
+ble/gattdb/client.h
+ble/gattdb/db.h
+ble/gattdb/service.h
+ble/uuid.h
+ble/security_db.h
+ble/crypto.h
+ble/util/timing_mapper.h
+ble/util/channel_mapper.h
+}

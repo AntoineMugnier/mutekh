@@ -25,7 +25,7 @@
 
 /**
    @file
-   @module {Bluetooth Low Energy library}
+   @module {Libraries::Bluetooth Low Energy}
    @short Network layer definition for Generic Access Profile
 
    This layer is not a layer per-se, but implements parts of the GAP

@@ -20,7 +20,7 @@
 
 /**
    @file
-   @module {Bluetooth Low Energy library}
+   @module {Libraries::Bluetooth Low Energy}
    @short BLE stack Peripheral context
 
    @this contains definitions for a @ref {ble_peripheral_s}

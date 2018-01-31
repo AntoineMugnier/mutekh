@@ -23,7 +23,7 @@
 
 /**
    @file
-   @module {Bluetooth Low Energy library}
+   @module {Libraries::Bluetooth Low Energy}
    @short Network layer definition for GATT Server
 
    This header defines Network Layer API for a GATT server.  This

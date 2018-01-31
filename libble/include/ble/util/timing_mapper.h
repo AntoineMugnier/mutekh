@@ -23,7 +23,7 @@
 
 /**
    @file
-   @module {Bluetooth Low Energy library}
+   @module {Libraries::Bluetooth Low Energy}
    @short BLE connection timing mapper utility
 
    @this contains all declarations for the @ref {ble_timing_mapper_s}

@@ -23,7 +23,7 @@
 
 /**
    @file
-   @module {Bluetooth Low Energy library}
+   @module {Libraries::Bluetooth Low Energy}
    @short UUID definition and helpers
 
    Bluetooth uses UUIDs in a special way.  There are short-hand

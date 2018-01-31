@@ -23,7 +23,7 @@
 
 /**
    @file
-   @module {Bluetooth Low Energy library}
+   @module {Libraries::Bluetooth Low Energy}
    @short Network layer definition for Link-layer
 
    This handles a connection on low level.  In particular, this layer

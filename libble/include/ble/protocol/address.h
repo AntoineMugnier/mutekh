@@ -23,7 +23,7 @@
 
 /**
    @file
-   @module {Bluetooth Low Energy library}
+   @module {Libraries::Bluetooth Low Energy}
    @short Bluetooth device address declaration
 
    @ref {ble_addr_s} {Device addresses} are defined as a 48-bit

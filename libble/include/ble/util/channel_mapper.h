@@ -23,7 +23,7 @@
 
 /**
    @file
-   @module {Bluetooth Low Energy library}
+   @module {Libraries::Bluetooth Low Energy}
    @short BLE connection channel mapper utility
 
    @this contains all declarations for the @ref {ble_channel_mapper_s}

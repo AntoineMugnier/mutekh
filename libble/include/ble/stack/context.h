@@ -23,7 +23,7 @@
 
 /**
    @file
-   @module {Bluetooth Low Energy library}
+   @module {Libraries::Bluetooth Low Energy}
    @short BLE stack utilities context
 
    @this contains all declarations for the @ref {ble_stack_context_s}

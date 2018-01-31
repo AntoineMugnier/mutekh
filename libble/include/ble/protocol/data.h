@@ -23,7 +23,7 @@
 
 /**
    @file
-   @module {Bluetooth Low Energy library}
+   @module {Libraries::Bluetooth Low Energy}
    @short Protocol definitions for Data channel PDUs
 
    @this defines protocol data types for advertising.

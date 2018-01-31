@@ -28,7 +28,7 @@
 
 /**
    @file
-   @module {Bluetooth Low Energy library}
+   @module {Libraries::Bluetooth Low Energy}
    @short GATT Database Client
 
    @section {Description}
