@@ -282,8 +282,12 @@ error_t ble_peer_save(struct ble_peer_s *peer)
   struct ble_security_db_s *db = peer->db;
   error_t err;
 
-  if (!db)
+  printk("Saving peer %lld\n", peer->id);
+
+  if (!db) {
+    printk("No DB for peer\n");
     return -EINVAL;
+  }
 
   if (!peer->paired && !peer->bonded && !peer->addr_present && !peer->irk_present) {
     printk("Not saving useless peer %lld\n", peer->id);
@@ -316,6 +320,7 @@ void ble_peer_ltk_set(struct ble_peer_s *peer, const uint8_t *ltk)
 {
   memcpy(peer->ltk, ltk, 16);
   peer->ltk_present = 1;
+  peer->dirty = 1;
 }
 
 void ble_peer_identity_set(struct ble_peer_s *peer, uint16_t ediv, const uint8_t *rand)
@@ -323,6 +328,7 @@ void ble_peer_identity_set(struct ble_peer_s *peer, uint16_t ediv, const uint8_t
   memcpy(peer->rand, rand, 8);
   peer->ediv = ediv;
   peer->identity_present = 1;
+  peer->dirty = 1;
 }
 
 error_t ble_peer_master_sk_get(struct ble_peer_s *peer,
