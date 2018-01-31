@@ -55,6 +55,7 @@ struct ble_scan_filter_device_s
   bool_t connectable : 1;
   bool_t scannable : 1;
   bool_t scanned : 1;
+  bool_t known : 1;
 };
 
 struct ble_scan_filter_delegate_vtable_s
@@ -66,5 +67,11 @@ struct ble_scan_filter_delegate_vtable_s
 };
 
 STRUCT_COMPOSE(ble_scan_filter_delegate_vtable_s, base);
+
+struct ble_scan_filter_param_s
+{
+  struct ble_security_db_s *peerdb;
+  struct ble_scanner_param_s scan_params;
+};
 
 #endif
