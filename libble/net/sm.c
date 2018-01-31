@@ -797,7 +797,9 @@ void sm_pairing_request(struct net_layer_s *layer,
 
     rsp->data[rsp->begin] = BLE_SM_SECURITY_REQUEST;
     rsp->data[rsp->begin + 1] = 0
-      | (_CONFIG_BLE_SECURITY_DB && bonding ? BLE_SM_REQ_BONDING : 0)
+#if defined(CONFIG_BLE_SECURITY_DB)
+      | (bonding ? BLE_SM_REQ_BONDING : 0)
+#endif
       | (mitm_protection ? BLE_SM_REQ_MITM : 0);
 
     sm->pairing_state = BLE_SM_REQUESTED;
@@ -845,7 +847,10 @@ void sm_pairing_accept(struct net_layer_s *layer,
     sm->pres[0] = BLE_SM_PAIRING_RESPONSE;
     sm->pres[1] = sm->io_cap;
     sm->pres[2] = oob_data ? 1 : 0;
-    sm->pres[3] = (_CONFIG_BLE_SECURITY_DB ? BLE_SM_REQ_BONDING : 0)
+    sm->pres[3] = 0
+#if defined(CONFIG_BLE_SECURITY_DB)
+      | BLE_SM_REQ_BONDING
+#endif
       | (mitm_protection ? BLE_SM_REQ_MITM : 0);
     sm->pres[4] = 16;
     sm->pres[5] = sm->preq[5] & (BLE_SM_ENC_KEY | BLE_SM_ID_KEY);
