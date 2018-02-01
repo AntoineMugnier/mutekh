@@ -77,7 +77,7 @@ DEV_DECLARE_STATIC(usart2_dev, "uart2", 0, stm32_usart_drv,
                    DEV_STATIC_RES_IOMUX("rx", 0, STM32_PA3, /* AF7. */ 7, 0),
 
                    /* default configuration. */
-                   DEV_STATIC_RES_UART(115200, 8, DEV_UART_PARITY_NONE, 1, 0, 0)
+                   DEV_STATIC_RES_UART(115200, 8, DEV_UART_PARITY_NONE, 1, 0)
                    );
 
 /* USART6. */
