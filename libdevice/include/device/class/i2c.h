@@ -150,9 +150,9 @@
   @item i2c_addr_get             @item r            @item @tt{1000 0111 ---0 rrrr}
   @item i2c_addr_set             @item r            @item @tt{1000 0111 ---1 rrrr}
 
-  @item i2c_gpioset              @item i, r         @item @tt{1000 0100 iiii rrrr}
-  @item i2c_gpioget              @item i, r         @item @tt{1000 0101 iiii rrrr}
-  @item i2c_gpiomode             @item i, m         @item @tt{1000 0110 iiii mmmm}
+  @item i2c_gpiomode             @item i, m         @item @tt{1000 100i iiim mmmm}
+  @item i2c_gpioget              @item i, r         @item @tt{1000 101i iii- rrrr}
+  @item i2c_gpioset              @item i, r         @item @tt{1000 110i iii- rrrr}
 
   @item i2c_rdm                  @item ra, rl, e    @item @tt{1100 eee1 aaaa llll}
   @item i2c_wrm                  @item ra, rl, e    @item @tt{1100 eee0 aaaa llll}

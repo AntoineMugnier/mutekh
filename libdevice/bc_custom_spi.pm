@@ -159,27 +159,27 @@ sub parse_swpm
 sub parse_gpio_set
 {
     my $thisop = shift;
-    my $i = main::check_num( $thisop, 0, 0, 31 );
+    my $i = main::check_num( $thisop, 0, 0, 15 );
     my $r = main::check_reg( $thisop, 1 );
     $thisop->{in}->[0] = $r;
-    $thisop->{code} |= ($i << 4) | $r;
+    $thisop->{code} |= ($i << 5) | $r;
 }
 
 sub parse_gpio_get
 {
     my $thisop = shift;
-    my $i = main::check_num( $thisop, 0, 0, 31 );
+    my $i = main::check_num( $thisop, 0, 0, 15 );
     my $r = main::check_reg( $thisop, 1 );
     $thisop->{out}->[0] = $r;
-    $thisop->{code} |= ($i << 4) | $r;
+    $thisop->{code} |= ($i << 5) | $r;
 }
 
 sub parse_gpio_mode
 {
     my $thisop = shift;
-    my $i = main::check_num( $thisop, 0, 0, 31 );
-    my $m = main::check_num( $thisop, 0, 0, 15 );
-    $thisop->{code} |= ($a << 4) | $m;
+    my $i = main::check_num( $thisop, 0, 0, 15 );
+    my $m = main::check_num( $thisop, 1, 0, 31 );
+    $thisop->{code} |= ($i << 5) | $m;
 }
 
 return 1;

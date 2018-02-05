@@ -423,8 +423,9 @@ device_spi_bytecode_exec(struct dev_spi_ctrl_context_s *q,
                   err = -ENOENT;
                   continue;
                 }
-              gpio_id_t id = rq->gpio_map[(op >> 4) & 0x1f];
-              gpio_width_t w = rq->gpio_wmap[(op >> 4) & 0x1f];
+              uint_fast8_t i = (op >> 5) & 0xf;
+              gpio_id_t id = rq->gpio_map[i];
+              gpio_width_t w = rq->gpio_wmap[i];
               uint8_t value[8];
 
               if (op & 0x0200)  /* gpioget */
@@ -439,7 +440,8 @@ device_spi_bytecode_exec(struct dev_spi_ctrl_context_s *q,
                 }
               else              /* gpiomode */
                 {
-                  err = DEVICE_OP(&rq->base.gpio, set_mode, id, id + w - 1, dev_gpio_mask1, op & 0xf);
+                  err = DEVICE_OP(&rq->base.gpio, set_mode, id,
+                                  id + w - 1, dev_gpio_mask1, op & 0x1f);
                 }
               continue;
             }

@@ -166,9 +166,9 @@
     @item spi_wrm                  @item ra, rl, e     @item @tt{1100 10ee aaaa llll}
     @item spi_swpm                 @item rar, raw, rl, e @item @tt{1100 11ee aaaa llll}
 
-    @item spi_gpiomode             @item i, r          @item @tt{1000 100i iiii mmmm}
-    @item spi_gpioget              @item i, r          @item @tt{1000 101i iiii rrrr}
-    @item spi_gpioset              @item i, r          @item @tt{1000 110i iiii rrrr}
+    @item spi_gpiomode             @item i, mode       @item @tt{1000 100i iiim mmmm}
+    @item spi_gpioget              @item i, r          @item @tt{1000 101i iii- rrrr}
+    @item spi_gpioset              @item i, r          @item @tt{1000 110i iii- rrrr}
    @end table
 
    @section {spi_nodelay}
