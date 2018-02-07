@@ -24,17 +24,19 @@
 #include "peripheral.h"
 #include "ids.h"
 
-enum nrf5x_ccm_task {
+enum nrf5x_nfct_task {
     NRF_NFCT_ACTIVATE = 0,
     NRF_NFCT_DISABLE = 1,
     NRF_NFCT_SENSE = 2,
     NRF_NFCT_STARTTX = 3,
     NRF_NFCT_ENABLERXDATA = 7,
+    // FTPAN 27
+    NRF_NFCT_DISABLERXDATA = 8,
     NRF_NFCT_GOIDLE = 9,
     NRF_NFCT_GOSLEEP = 10,
 };
 
-enum nrf5x_ccm_event {
+enum nrf5x_nfct_event {
     NRF_NFCT_READY = 0,
     NRF_NFCT_FIELDDETECT = 1,
     NRF_NFCT_FIELDLOST = 2,
@@ -52,13 +54,15 @@ enum nrf5x_ccm_event {
     NRF_NFCT_STARTED = 20,
 };
 
-enum nrf5x_ccm_short {
+enum nrf5x_nfct_short {
     NRF_NFCT_FIELDDETECT_ACTIVATE = 0,
     NRF_NFCT_FIELDLOST_SENSE = 1,
 };
 
-enum nrf5x_ccm_register {
+enum nrf5x_nfct_register {
   NRF_NFCT_ERRORSTATUS = 1,
+  // FTPAN 24
+  NRF_NFCT_AUTOCOLRESSTATUS = 2,
   NRF_NFCT_FRAMESTATUS_RX = 3,
   NRF_NFCT_CURRENTLOADCTRL = 12,
   NRF_NFCT_FIELDPRESENT    = 15,
@@ -76,6 +80,11 @@ enum nrf5x_ccm_register {
   NRF_NFCT_NFCID1_3RD_LAST = 102,
   NRF_NFCT_SENSRES         = 104,
   NRF_NFCT_SELRES          = 105,
+  NRF_NFCT_SHUNTREGTHRESHOLDS = 132,
+  NRF_NFCT_MODSTEPFIXED = 133,
+  NRF_NFCT_MODSTEPMULTIPLIER = 134,
+  NRF_NFCT_R_IN            = 154,
+  NRF_NFCT_INITIALLOADCTRLVAL = 162,
 };
 
 #define NRF_NFCT_ERRORSTATUS_FRAMEDELAYTIMEOUT 1
@@ -117,5 +126,7 @@ enum nrf5x_ccm_register {
 
 #define NRF_NFCT_SELRES_CASCASE 4
 #define NRF_NFCT_SELRES_PROTOCOL(x)     ((x) << 5)
+
+#define NRF_NFCT_R_IN_R(x)               ((x) & 0x3f)
 
 #endif
