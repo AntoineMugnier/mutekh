@@ -187,6 +187,20 @@ struct dev_nfc_rq_s
   struct dev_nfc_rq_data_s data;
 };
 
+ALWAYS_INLINE
+void dev_nfc_rq_bitcount_set(struct dev_nfc_rq_s *rq, size_t bits)
+{
+  rq->data.size = (bits + 7) / 8;
+  rq->data.last_byte_bits = bits % 8;
+}
+
+ALWAYS_INLINE
+size_t dev_nfc_rq_bitcount_get(const struct dev_nfc_rq_s *rq)
+{
+  return rq->data.size * 8
+    + (rq->data.last_byte_bits ? rq->data.last_byte_bits - 8 : 0);
+}
+
 STRUCT_INHERIT(dev_nfc_rq_s, dev_request_s, base);
 
 /** @see dev_nfc_request_t */
