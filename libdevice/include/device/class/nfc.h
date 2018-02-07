@@ -88,25 +88,6 @@ enum dev_nfc_side_e
 #define DEV_NFC_ISO14443_CMD_SEL2 0x95
 #define DEV_NFC_ISO14443_CMD_SEL3 0x97
 
-struct dev_nfc_peer_s
-{
-  uint8_t uid[10];
-  uint16_t atqa;
-  uint8_t uid_size;
-  uint8_t sak;
-
-  /**
-     Protocol variant to implement.  This mainly changes the modulation
-     and baudrate.
-   */
-  enum dev_nfc_protocol_e protocol : 4;
-  enum dev_nfc_side_e side : 2;
-  /**
-     Baudrate = 13.56MHz / divier, a power of two between 16 and 2048.
-   */
-  uint8_t div_log2;
-};
-
 struct dev_nfc_transceiver_info_s
 {
   /** Only filled if relevant (i.e. if device may act as target) */
@@ -126,24 +107,38 @@ ENUM_DESCRIPTOR(dev_nfc_req_type_e, strip:DEV_NFC_, upper);
 
 enum dev_nfc_req_type_e
 {
-  /** TX */
+  /** TX, takes a @tt data argument */
   DEV_NFC_TRANSMIT,
-  /** RX */
+  /** RX, takes a @tt data argument */
   DEV_NFC_RECEIVE,
-  /** Wakeup all PICCs, do anticoll and put first available PICC it in
-      ACTIVE state, HALT others */
-  DEV_NFC_SELECT_ANY,
-  /** Seek for a given PICC in field, put others in IDLE/HALT state */
-  DEV_NFC_SELECT,
-  /** Remove power from field */
+  /** Find first PICC in field after WUP.  PICC will be activated.
+      Fills a @tt picc argument.  */
+  DEV_NFC_WAKEUP_FIND,
+  /** Find first PICC in field after REQ.  PICC will be activated.
+      Fills a @tt picc argument. */
+  DEV_NFC_REQUEST_FIND,
+  /** Req/Sel a PICC by UID, useful for fast reconnection to last PICC
+      after a power cycle. Takes a @tt picc argument.  */
+  DEV_NFC_ACTIVATE,
+  /** Halt currently selected PICC in field. No argument required. */
+  DEV_NFC_HALT,
+  /** Configure transceiver for PCD function, takes a @tt config
+      argument */
+  DEV_NFC_PCD_CONFIG,
+  /** Remove power from field. No argument required. */
   DEV_NFC_POWEROFF,
+  /** Enable power from field. No argument required. */
+  DEV_NFC_POWERON,
 };
 
 ENUM_DESCRIPTOR(dev_nfc_framing_e, strip:DEV_NFC_FRAMING_, upper);
 
 enum dev_nfc_framing_e
 {
-  /** Transceiver should append/check ISO 16-bit CRC (and parity). */
+  /** Transceiver should insert ISO-DEP framing. */
+  DEV_NFC_FRAMING_ISO_DEP,
+  /** Transceiver should append/check ISO 16-bit CRC (and parity).
+      Initial value and polynom match implemented -3 level. */
   DEV_NFC_FRAMING_STD,
   /** Parity is automatically inserted and checked, but CRC is not
       automatically appended/checked. */
@@ -153,7 +148,16 @@ enum dev_nfc_framing_e
   DEV_NFC_FRAMING_RAW,
 };
 
-struct dev_nfc_rq_data_s
+struct dev_nfc_pcd_config_s
+{
+  /**
+     Protocol variant to implement.  This mainly changes the modulation
+     and baudrate.
+   */
+  enum dev_nfc_protocol_e protocol : 8;
+};
+
+struct dev_nfc_data_s
 {
   /** Data buffer. Data is transceived LSB first. */
   uint8_t *data;
@@ -169,22 +173,41 @@ struct dev_nfc_rq_data_s
       forbidden.  Only allowed to be non-zero if @tt framing
       is not DEV_NFC_FRAMING_STD. */
   uint8_t last_byte_bits;
+
+  /**
+     Baudrate = 13.56MHz / divier, a power of two between 16 and 128.
+   */
+  uint8_t div_log2;
+};
+
+enum dev_nfc_div_log2_e {
+  DEV_NFC_DIV_106K = 7,
+  DEV_NFC_DIV_212K = 6,
+  DEV_NFC_DIV_424K = 5,
+  DEV_NFC_DIV_848K = 4,
+};
+
+struct dev_nfc_picc_s
+{
+  /** UID */
+  uint8_t uid[10];
+
+  /** UID length */
+  uint8_t uid_size;
 };
 
 struct dev_nfc_rq_s
 {
   struct dev_request_s base;
+  enum dev_nfc_req_type_e type;
 
   error_t error;
 
-  enum dev_nfc_req_type_e type;
-
-  /**
-     Peer device info. May be populated automatically by request.
-   */
-  struct dev_nfc_peer_s *peer;
-
-  struct dev_nfc_rq_data_s data;
+  union {
+    struct dev_nfc_data_s data;
+    struct dev_nfc_pcd_config_s pcd_config;
+    struct dev_nfc_picc_s picc;
+  };
 };
 
 ALWAYS_INLINE
@@ -293,8 +316,101 @@ error_t dev_nfc_wait_request(
 config_depend_and2(CONFIG_DEVICE_NFC, CONFIG_MUTEK_CONTEXT_SCHED)
 error_t dev_nfc_wait_transceive_std(
     const struct device_nfc_s *accessor,
-    struct dev_nfc_peer_s *peer,
     const uint8_t *tx_data, size_t tx_size,
-    uint8_t *rx_data, size_t *rx_size);
+    uint8_t *rx_data, size_t *rx_size,
+    enum dev_nfc_div_log2_e div);
+
+/** @This performs a poweroff of PCD antenna. */
+config_depend_and2_inline(CONFIG_DEVICE_NFC, CONFIG_MUTEK_CONTEXT_SCHED,
+error_t dev_nfc_wait_poweroff(const struct device_nfc_s *accessor)
+{
+  struct dev_nfc_rq_s rq;
+
+  rq.type = DEV_NFC_POWEROFF;
+
+  return dev_nfc_wait_request(accessor, &rq);
+});
+
+/** @This performs a poweron of PCD antenna. */
+config_depend_and2_inline(CONFIG_DEVICE_NFC, CONFIG_MUTEK_CONTEXT_SCHED,
+error_t dev_nfc_wait_poweron(const struct device_nfc_s *accessor)
+{
+  struct dev_nfc_rq_s rq;
+
+  rq.type = DEV_NFC_POWERON;
+
+  return dev_nfc_wait_request(accessor, &rq);
+});
+
+/** @This performs a HLT command on current PICC. */
+config_depend_and2_inline(CONFIG_DEVICE_NFC, CONFIG_MUTEK_CONTEXT_SCHED,
+error_t dev_nfc_wait_halt(const struct device_nfc_s *accessor)
+{
+  struct dev_nfc_rq_s rq;
+
+  rq.type = DEV_NFC_HALT;
+
+  return dev_nfc_wait_request(accessor, &rq);
+});
+
+/** @This performs a WUP, then selects first PICC. */
+config_depend_and2_inline(CONFIG_DEVICE_NFC, CONFIG_MUTEK_CONTEXT_SCHED,
+error_t dev_nfc_wait_wakeup_find(const struct device_nfc_s *accessor,
+                                 struct dev_nfc_picc_s *picc)
+{
+  struct dev_nfc_rq_s rq;
+  error_t err;
+
+  rq.type = DEV_NFC_WAKEUP_FIND;
+
+  err = dev_nfc_wait_request(accessor, &rq);
+
+  *picc = rq.picc;
+
+  return err;
+});
+
+/** @This performs a REQ, then selects first PICC. */
+config_depend_and2_inline(CONFIG_DEVICE_NFC, CONFIG_MUTEK_CONTEXT_SCHED,
+error_t dev_nfc_wait_request_find(const struct device_nfc_s *accessor,
+                                  struct dev_nfc_picc_s *picc)
+{
+  struct dev_nfc_rq_s rq;
+  error_t err;
+
+  rq.type = DEV_NFC_REQUEST_FIND;
+
+  err = dev_nfc_wait_request(accessor, &rq);
+
+  *picc = rq.picc;
+
+  return err;
+});
+
+/** @This performs a REQ, then selects given PICC. */
+config_depend_and2_inline(CONFIG_DEVICE_NFC, CONFIG_MUTEK_CONTEXT_SCHED,
+error_t dev_nfc_wait_activate(const struct device_nfc_s *accessor,
+                              const struct dev_nfc_picc_s *picc)
+{
+  struct dev_nfc_rq_s rq;
+
+  rq.type = DEV_NFC_ACTIVATE;
+  rq.picc = *picc;
+
+  return dev_nfc_wait_request(accessor, &rq);
+});
+
+/** @This performs a PCD configuration. */
+config_depend_and2_inline(CONFIG_DEVICE_NFC, CONFIG_MUTEK_CONTEXT_SCHED,
+error_t dev_nfc_wait_pcd_config(const struct device_nfc_s *accessor,
+                                const struct dev_nfc_pcd_config_s *config)
+{
+  struct dev_nfc_rq_s rq;
+
+  rq.type = DEV_NFC_PCD_CONFIG;
+  rq.pcd_config = *config;
+
+  return dev_nfc_wait_request(accessor, &rq);
+});
 
 #endif
