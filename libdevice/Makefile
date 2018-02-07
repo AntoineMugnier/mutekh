@@ -11,8 +11,9 @@ enum_headers = include/device/types.h \
                include/device/class/rfpacket.h \
                include/device/class/persist.h \
                include/device/class/uart.h \
-               include/device/class/spi.h \
-               include/device/valio/hwclock.h
+               include/device/valio/hwclock.h \
+               include/device/class/nfc.h \
+               include/device/class/spi.h
 
 objs = driver.o device.o resources.o init.o request.o
 
@@ -103,4 +104,8 @@ endif
 
 ifeq ($(CONFIG_DEVICE_VALIO_MOTION_SENSOR), defined)
 objs-$(CONFIG_DEVICE_SHELL) += shell_motion_sensor.o
+endif
+
+ifeq ($(CONFIG_DEVICE_NFC), defined)
+objs += device_nfc.o
 endif
