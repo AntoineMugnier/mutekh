@@ -199,7 +199,7 @@ struct dev_nfc_picc_s
 struct dev_nfc_rq_s
 {
   struct dev_request_s base;
-  enum dev_nfc_req_type_e type;
+  enum dev_nfc_req_type_e type : 8;
 
   error_t error;
 
