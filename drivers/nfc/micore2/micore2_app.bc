@@ -196,7 +196,7 @@ next_rq:
     jmp8 next_rq
 
 handle_rq:
-    ld32e %0, %rq, _offsetof(struct dev_nfc_rq_s, type)
+    ld8e %0, %rq, _offsetof(struct dev_nfc_rq_s, type)
     cst8 %1, _const(DEV_NFC_TRANSMIT)
     eq %0, %1
     jmp8 handle_transmit
