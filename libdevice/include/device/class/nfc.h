@@ -43,21 +43,21 @@ struct dev_nfc_rq_s;
 struct driver_nfc_s;
 struct device_nfc_s;
 
-ENUM_DESCRIPTOR(dev_nfc_protocol_e, strip:DEV_NFC_, upper);
+ENUM_DESCRIPTOR(dev_nfc_modem_e, strip:DEV_NFC_MODEM_, upper);
 
 /**
-   Protocol to implement
+   Modem to implement
  */
-enum dev_nfc_protocol_e
+enum dev_nfc_modem_e
 {
-  DEV_NFC_14443A,
-  DEV_NFC_14443B,
-  DEV_NFC_15693_256,
-  DEV_NFC_15693_4,
-  DEV_NFC_18000_MODE1,
-  DEV_NFC_18000_MODE1_EXT,
-  DEV_NFC_18000_MODE2,
-  DEV_NFC_FELICA,
+  DEV_NFC_MODEM_14443A,
+  DEV_NFC_MODEM_14443B,
+  DEV_NFC_MODEM_15693_256,
+  DEV_NFC_MODEM_15693_4,
+  DEV_NFC_MODEM_18000_MODE1,
+  DEV_NFC_MODEM_18000_MODE1_EXT,
+  DEV_NFC_MODEM_18000_MODE2,
+  DEV_NFC_MODEM_FELICA,
 };
 
 ENUM_DESCRIPTOR(dev_nfc_side_e, strip:DEV_NFC_, upper);
@@ -70,37 +70,6 @@ enum dev_nfc_side_e
   DEV_NFC_PASSIVE_PCD,
   DEV_NFC_PASSIVE_PICC,
   DEV_NFC_ACTIVE,
-};
-
-#define DEV_NFC_ATQA_ANTICOLL(x) (1 << (x))
-#define DEV_NFC_ATQA_UID_SIZE(x) ((((x) - 4) / 3) << 6)
-#define DEV_NFC_ATQA_UID_SIZE_GET(x) ((((x) >> 6) & 0x3) * 3 + 4)
-#define DEV_NFC_ATQA_PLATCONFIG(x) ((x) << 8)
-
-#define DEV_NFC_SAK_NFCIP1 bit(6)
-#define DEV_NFC_SAK_14443_4 bit(5)
-
-#define DEV_NFC_ISO14443_CMD_REQA 0x26
-#define DEV_NFC_ISO14443_CMD_WUPA 0x52
-#define DEV_NFC_ISO14443_CMD_TSLOT 0x35
-#define DEV_NFC_ISO14443_CMD_HLTA 0x50
-#define DEV_NFC_ISO14443_CMD_SEL1 0x93
-#define DEV_NFC_ISO14443_CMD_SEL2 0x95
-#define DEV_NFC_ISO14443_CMD_SEL3 0x97
-
-struct dev_nfc_transceiver_info_s
-{
-  /** Only filled if relevant (i.e. if device may act as target) */
-  uint8_t uid[10];
-  uint16_t atqa;
-  uint8_t uid_size;
-  uint8_t sak;
-
-  struct {
-    uint16_t div_log2;
-    uint8_t side;
-    uint8_t protocol;
-  } support;
 };
 
 ENUM_DESCRIPTOR(dev_nfc_req_type_e, strip:DEV_NFC_, upper);
@@ -117,44 +86,84 @@ enum dev_nfc_req_type_e
   /** Find first PICC in field after REQ.  PICC will be activated.
       Fills a @tt picc argument. */
   DEV_NFC_REQUEST_FIND,
+  /** Wait for emulated PICC to be selected.  */
+  DEV_NFC_WAIT_SELECTED,
   /** Req/Sel a PICC by UID, useful for fast reconnection to last PICC
       after a power cycle. Takes a @tt picc argument.  */
   DEV_NFC_ACTIVATE,
   /** Halt currently selected PICC in field. No argument required. */
   DEV_NFC_HALT,
-  /** Configure transceiver for PCD function, takes a @tt config
-      argument */
-  DEV_NFC_PCD_CONFIG,
-  /** Remove power from field. No argument required. */
-  DEV_NFC_POWEROFF,
-  /** Enable power from field. No argument required. */
-  DEV_NFC_POWERON,
+  /** Configure transceiver, takes a @tt config argument */
+  DEV_NFC_CONFIG,
+  /** Remove power from field / disable transceiver. No argument
+      required. */
+  DEV_NFC_SHUTDOWN,
 };
 
 ENUM_DESCRIPTOR(dev_nfc_framing_e, strip:DEV_NFC_FRAMING_, upper);
 
 enum dev_nfc_framing_e
 {
-  /** Transceiver should insert ISO-DEP framing. */
-  DEV_NFC_FRAMING_ISO_DEP,
   /** Transceiver should append/check ISO 16-bit CRC (and parity).
-      Initial value and polynom match implemented -3 level. */
-  DEV_NFC_FRAMING_STD,
+      Initial value and polynom match depend on modem configuration. */
+  DEV_NFC_FRAMING_CRC,
   /** Parity is automatically inserted and checked, but CRC is not
-      automatically appended/checked. */
+      automatically appended/checked. CRC (if any) will be part of
+      data buffer. */
   DEV_NFC_FRAMING_PARITY,
   /** Parity is not inserted nor checked, @tt data is the raw
       transceived data stream. */
   DEV_NFC_FRAMING_RAW,
 };
 
-struct dev_nfc_pcd_config_s
+ENUM_DESCRIPTOR(dev_nfc_protocol_e, strip:DEV_NFC_PROTOCOL_, upper);
+
+enum dev_nfc_protocol_e
+{
+  /** ISO T=CL encapsulation. Requires CRC framing. */
+  DEV_NFC_PROTOCOL_ISO_DEP,
+  /** Raw data is passed to framer. */
+  DEV_NFC_PROTOCOL_RAW,
+};
+
+ENUM_DESCRIPTOR(dev_nfc_div_e, strip:DEV_NFC_DIV_, upper);
+
+enum dev_nfc_div_e
+{
+  DEV_NFC_DIV_106K = 7,
+  DEV_NFC_DIV_212K = 6,
+  DEV_NFC_DIV_424K = 5,
+  DEV_NFC_DIV_848K = 4,
+};
+
+struct dev_nfc_transceiver_info_s
+{
+  /** Only filled if relevant (i.e. if device may act as target) */
+  uint8_t uid[10];
+  uint16_t atqa;
+  uint8_t uid_size;
+  uint8_t sak;
+
+  struct {
+    // Bitfields
+    uint8_t div;
+    uint8_t side;
+    uint16_t modem;
+  } support;
+};
+
+struct dev_nfc_config_s
 {
   /**
-     Protocol variant to implement.  This mainly changes the modulation
+     Modem variant to implement.  This mainly changes the modulation
      and baudrate.
    */
-  enum dev_nfc_protocol_e protocol : 8;
+  enum dev_nfc_modem_e modem : 8;
+
+  /**
+     Side to be on.
+   */
+  enum dev_nfc_side_e side : 8;
 };
 
 struct dev_nfc_data_s
@@ -168,23 +177,12 @@ struct dev_nfc_data_s
 
   /** Data framing mode. @see dev_nfc_framing_e. */
   enum dev_nfc_framing_e framing : 8;
+  enum dev_nfc_div_e rate : 8;
 
   /** 0 means last byte is full with parity bit (if not raw), 8 is
       forbidden.  Only allowed to be non-zero if @tt framing
       is not DEV_NFC_FRAMING_STD. */
   uint8_t last_byte_bits;
-
-  /**
-     Baudrate = 13.56MHz / divier, a power of two between 16 and 128.
-   */
-  uint8_t div_log2;
-};
-
-enum dev_nfc_div_log2_e {
-  DEV_NFC_DIV_106K = 7,
-  DEV_NFC_DIV_212K = 6,
-  DEV_NFC_DIV_424K = 5,
-  DEV_NFC_DIV_848K = 4,
 };
 
 struct dev_nfc_picc_s
@@ -194,6 +192,10 @@ struct dev_nfc_picc_s
 
   /** UID length */
   uint8_t uid_size;
+
+  uint8_t sak;
+  
+  enum dev_nfc_modem_e modem : 8;
 };
 
 struct dev_nfc_rq_s
@@ -205,10 +207,13 @@ struct dev_nfc_rq_s
 
   union {
     struct dev_nfc_data_s data;
-    struct dev_nfc_pcd_config_s pcd_config;
+    struct dev_nfc_config_s config;
     struct dev_nfc_picc_s picc;
   };
 };
+
+STRUCT_INHERIT(dev_nfc_rq_s, dev_request_s, base);
+
 
 ALWAYS_INLINE
 void dev_nfc_rq_bitcount_set(struct dev_nfc_rq_s *rq, size_t bits)
@@ -224,7 +229,6 @@ size_t dev_nfc_rq_bitcount_get(const struct dev_nfc_rq_s *rq)
     + (rq->data.last_byte_bits ? rq->data.last_byte_bits - 8 : 0);
 }
 
-STRUCT_INHERIT(dev_nfc_rq_s, dev_request_s, base);
 
 /** @see dev_nfc_request_t */
 #define DEV_NFC_REQUEST(n)                      \
@@ -247,6 +251,7 @@ STRUCT_INHERIT(dev_nfc_rq_s, dev_request_s, base);
 */
 typedef DEV_NFC_REQUEST(dev_nfc_request_t);
 
+
 /** @see dev_nfc_cancel_t */
 #define DEV_NFC_CANCEL(n)                               \
   error_t (n)(const struct device_nfc_s *accessor,      \
@@ -256,6 +261,7 @@ typedef DEV_NFC_REQUEST(dev_nfc_request_t);
 */
 typedef DEV_NFC_CANCEL(dev_nfc_cancel_t);
 
+
 /** @see dev_nfc_info_get_t */
 #define DEV_NFC_INFO_GET(n)                               \
   void (n)(const struct device_nfc_s *accessor,           \
@@ -264,6 +270,7 @@ typedef DEV_NFC_CANCEL(dev_nfc_cancel_t);
    NFC device class info_get() function type. Get local device information.
 */
 typedef DEV_NFC_INFO_GET(dev_nfc_info_get_t);
+
 
 DRIVER_CLASS_TYPES(DRIVER_CLASS_NFC, nfc,
                    dev_nfc_request_t *f_request;
@@ -318,7 +325,7 @@ error_t dev_nfc_wait_transceive_std(
     const struct device_nfc_s *accessor,
     const uint8_t *tx_data, size_t tx_size,
     uint8_t *rx_data, size_t *rx_size,
-    enum dev_nfc_div_log2_e div);
+    enum dev_nfc_div_e div);
 
 /** @This performs a poweroff of PCD antenna. */
 config_depend_and2_inline(CONFIG_DEVICE_NFC, CONFIG_MUTEK_CONTEXT_SCHED,
@@ -400,17 +407,35 @@ error_t dev_nfc_wait_activate(const struct device_nfc_s *accessor,
   return dev_nfc_wait_request(accessor, &rq);
 });
 
-/** @This performs a PCD configuration. */
+/** @This performs a TRANSCEIVER configuration. */
 config_depend_and2_inline(CONFIG_DEVICE_NFC, CONFIG_MUTEK_CONTEXT_SCHED,
-error_t dev_nfc_wait_pcd_config(const struct device_nfc_s *accessor,
-                                const struct dev_nfc_pcd_config_s *config)
+error_t dev_nfc_wait_config(const struct device_nfc_s *accessor,
+                                const struct dev_nfc_config_s *config)
 {
   struct dev_nfc_rq_s rq;
 
-  rq.type = DEV_NFC_PCD_CONFIG;
-  rq.pcd_config = *config;
+  rq.type = DEV_NFC_CONFIG;
+  rq.config = *config;
 
   return dev_nfc_wait_request(accessor, &rq);
 });
+
+
+#define DEV_NFC_ATQA_ANTICOLL(x) (1 << (x))
+#define DEV_NFC_ATQA_UID_SIZE(x) ((((x) - 4) / 3) << 6)
+#define DEV_NFC_ATQA_UID_SIZE_GET(x) ((((x) >> 6) & 0x3) * 3 + 4)
+#define DEV_NFC_ATQA_PLATCONFIG(x) ((x) << 8)
+
+#define DEV_NFC_SAK_NFCIP1 bit(6)
+#define DEV_NFC_SAK_14443_4 bit(5)
+
+#define DEV_NFC_ISO14443_CMD_REQA 0x26
+#define DEV_NFC_ISO14443_CMD_WUPA 0x52
+#define DEV_NFC_ISO14443_CMD_TSLOT 0x35
+#define DEV_NFC_ISO14443_CMD_HLTA 0x50
+#define DEV_NFC_ISO14443_CMD_SEL1 0x93
+#define DEV_NFC_ISO14443_CMD_SEL2 0x95
+#define DEV_NFC_ISO14443_CMD_SEL3 0x97
+
 
 #endif
