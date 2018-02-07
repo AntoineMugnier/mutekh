@@ -885,7 +885,7 @@ select_10:
                          )
     REG_SET(0, GSNOFF,   0
                          | MICORE2_GSNOFF_CWGSNOFF(6)
-                         | MICORE2_GSNOFF_MODGSNOFF(16)
+                         | MICORE2_GSNOFF_MODGSNOFF(15)
                          )
     REG_SET(0, GSNON,    0
                          | MICORE2_GSNON_CWGSNON(15)
