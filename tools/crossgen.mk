@@ -24,6 +24,8 @@
 
 #### LINE 25 IS HERE ####
 
+GNU_MIRROR=ftp://ftp.gnu.org/gnu
+
 # Target architecture
 TARGET=mipsel
 
@@ -99,6 +101,7 @@ gcc_CONF=$(common_CONF) --enable-languages=c --disable-libssp --enable-multilib 
 mpfr_VER=2.4.2
 gmp_VER=4.3.2
 mpc_VER=0.9
+sed_VER=4.2
 
 # GNU Debugger
 gdb_VER_mipsel  = 7.8.2
@@ -142,27 +145,31 @@ SUFFIX=$(SUFFIX_$(TARGET))
 # packages configurations
 
 binutils_ARCHIVE=binutils-$(binutils_VER).tar.bz2
-binutils_URL=ftp://ftp.gnu.org/gnu/binutils/$(binutils_ARCHIVE)
+binutils_URL=$(GNU_MIRROR)/binutils/$(binutils_ARCHIVE)
 binutils_TESTBIN=bin/$(TARGET)-$(SUFFIX)-as
 
+sed_ARCHIVE=sed-$(sed_VER).tar.bz2
+sed_URL=$(GNU_MIRROR)/sed/$(sed_ARCHIVE)
+sed_TESTBIN=bin/sed
+
 gcc_ARCHIVE=gcc-$(gcc_VER).tar.bz2
-gcc_URL=ftp://ftp.gnu.org/gnu/gcc/gcc-$(gcc_VER)/$(gcc_ARCHIVE)
+gcc_URL=$(GNU_MIRROR)/gcc/gcc-$(gcc_VER)/$(gcc_ARCHIVE)
 gcc_TESTBIN=bin/$(TARGET)-$(SUFFIX)-gcc
 gcc_DEPS=binutils mpfr gmp mpc
 gcc_CONF+=--with-mpfr=$(PREFIX) --with-gmp=$(PREFIX) --with-mpc=$(PREFIX)
 
 gdb_ARCHIVE=gdb-$(gdb_VER).tar.gz
-gdb_URL=ftp://ftp.gnu.org/gnu/gdb/gdb-$(gdb_VER).tar.gz
+gdb_URL=$(GNU_MIRROR)/gdb/gdb-$(gdb_VER).tar.gz
 gdb_TESTBIN=bin/$(TARGET)-$(SUFFIX)-gdb
 
 mpfr_ARCHIVE=mpfr-$(mpfr_VER).tar.bz2
-mpfr_URL=ftp://ftp.gnu.org/gnu/mpfr/$(mpfr_ARCHIVE)
+mpfr_URL=$(GNU_MIRROR)/mpfr/$(mpfr_ARCHIVE)
 mpfr_TESTBIN=lib/libmpfr.a
 mpfr_DEPS=gmp
 mpfr_CONF+=--with-gmp=$(PREFIX)
 
 gmp_ARCHIVE=gmp-$(gmp_VER).tar.bz2
-gmp_URL=ftp://ftp.gnu.org/gnu/gmp/$(gmp_ARCHIVE)
+gmp_URL=$(GNU_MIRROR)/gmp/$(gmp_ARCHIVE)
 gmp_TESTBIN=lib/libgmp.a
 
 mpc_ARCHIVE=mpc-$(mpc_VER).tar.gz
@@ -193,6 +200,22 @@ PATCH_URL=https://www.mutekh.org/tools/diffs/
 WGET_OPTS=-c -t 5 -w 5 --no-check-certificate
 
 $(shell mkdir -p $(WORKDIR))
+
+
+MACHINE:=$(shell uname -s)
+
+ifeq ($(MACHINE),Darwin)
+LOADER_PATH_VAR = DYLD_LIBRARY_PATH
+gcc_DEPS += sed
+gcc_CONF += CFLAGS_FOR_BUILD=\"-fbracket-depth=1024\" CXXFLAGS_FOR_BUILD=\"-fbracket-depth=1024\" CFLAGS_FOR_HOST=\"-fbracket-depth=1024\" CXXFLAGS_FOR_HOST=\"-fbracket-depth=1024\"
+else
+LOADER_PATH_VAR = LD_LIBRARY_PATH
+endif
+
+GLOBAL_ENV += $(LOADER_PATH_VAR)=$(PREFIX)/lib PATH=$(PREFIX):$${PATH}
+CONFIGURE_ENV += $(GLOBAL_ENV) LD_LIBRARY_PATH=$$(PREFIX)/lib
+BUILD_ENV += $(GLOBAL_ENV)
+TESTBIN_ENV += $(GLOBAL_ENV)
 
 # main rules
 
@@ -257,13 +280,13 @@ $$($(1)_STAMP)-patch: $$($(1)_DIR)
 
 $$($(1)_STAMP)-$$(TARGET)-conf: $$($(1)_DIR) $$($(1)_STAMP)-patch $$($(1)_DEPS)
 	mkdir -p $$($(1)_BDIR)
-	( cd $$($(1)_BDIR) ; LD_LIBRARY_PATH=$$(PREFIX)/lib $$($(1)_DIR)/configure MAKEINFO="makeinfo --version" --disable-nls --prefix=$$(PREFIX) --target=$$(TARGET)-$$(SUFFIX) --disable-werror $$($(1)_CONF) $$($(1)_CONF_$$(TARGET))  ) && touch $$@
+	( cd $$($(1)_BDIR) ; $$(CONFIGURE_ENV) $$($(1)_DIR)/configure MAKEINFO="makeinfo --version" --disable-nls --prefix=$$(PREFIX) --target=$$(TARGET)-$$(SUFFIX) --disable-werror $$($(1)_CONF) $$($(1)_CONF_$$(TARGET))  ) && touch $$@
 
 $$($(1)_STAMP)-$$(TARGET)-build: $$($(1)_STAMP)-$$(TARGET)-conf
-	LD_LIBRARY_PATH=$$(PREFIX)/lib make $$(BLDMAKE_OPTS) -C $$($(1)_BDIR) && touch $$@
+	$$(BUILD_ENV) make $$(BLDMAKE_OPTS) -C $$($(1)_BDIR) && touch $$@
 
 $$(PREFIX)/$$($(1)_TESTBIN): $$($(1)_STAMP)-$$(TARGET)-build
-	LD_LIBRARY_PATH=$$(PREFIX)/lib make -C $$($(1)_BDIR) -j1 install && touch $$@
+	$$(TESTBIN_ENV) make -C $$($(1)_BDIR) -j1 install && touch $$@
 
 $(1): $$(shell test -f $$(PREFIX)/$$($(1)_TESTBIN) || echo $$(PREFIX)/$$($(1)_TESTBIN))
 
@@ -300,13 +323,13 @@ $$($(1)_TGZ): $$($(1)_STAMP)-wget
 
 $$($(1)_STAMP)-conf: $$($(1)_DIR) $$($(1)_STAMP)-patch $$($(1)_DEPS)
 	mkdir -p $$($(1)_BDIR)
-	( cd $$($(1)_BDIR) ; LD_LIBRARY_PATH=$$(PREFIX)/lib $$($(1)_DIR)/configure --prefix=$$(PREFIX) $$($(1)_CONF) ) && touch $$@
+	( cd $$($(1)_BDIR) ; $$(CONFIGURE_ENV) $$($(1)_DIR)/configure --prefix=$$(PREFIX) $$($(1)_CONF) ) && touch $$@
 
 $$($(1)_STAMP)-build: $$($(1)_STAMP)-conf
-	LD_LIBRARY_PATH=$$(PREFIX)/lib make $$(BLDMAKE_OPTS) -C $$($(1)_BDIR) && touch $$@
+	$$(BUILD_ENV) make $$(BLDMAKE_OPTS) -C $$($(1)_BDIR) && touch $$@
 
 $$(PREFIX)/$$($(1)_TESTBIN): $$($(1)_STAMP)-build
-	LD_LIBRARY_PATH=$$(PREFIX)/lib make -C $$($(1)_BDIR) -j1 install && touch $$@
+	$$(TESTBIN_ENV) make -C $$($(1)_BDIR) -j1 install && touch $$@
 
 $(1): $$(shell test -f $$(PREFIX)/$$($(1)_TESTBIN) || echo $$(PREFIX)/$$($(1)_TESTBIN))
 
@@ -314,6 +337,7 @@ endef
 
 # template rules instantiation
 
+$(eval $(call TOOL_template,sed))
 $(eval $(call TOOL_template,mpfr))
 $(eval $(call TOOL_template,gmp))
 $(eval $(call TOOL_template,mpc))

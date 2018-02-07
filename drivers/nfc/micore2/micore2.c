@@ -456,7 +456,6 @@ static DEV_NFC_REQUEST(micore2_request)
   dprintk("%s\n", __FUNCTION__);
 
   switch (rq1->type) {
-  default:
   notsup:
     rq1->error = -ENOTSUP;
     kroutine_exec(&rq1->base.kr);
@@ -470,9 +469,6 @@ static DEV_NFC_REQUEST(micore2_request)
   case DEV_NFC_TRANSMIT:
     if (rq2) {
       if (rq2->type != DEV_NFC_RECEIVE)
-        goto notsup;
-
-      if (rq2->peer != rq1->peer)
         goto notsup;
 
       if (rq2->data.framing != rq1->data.framing)
@@ -497,9 +493,17 @@ static DEV_NFC_REQUEST(micore2_request)
     }
     // Fallthrough
 
-  case DEV_NFC_SELECT_ANY:
-  case DEV_NFC_SELECT:
+  case DEV_NFC_POWEROFF:
+  case DEV_NFC_POWERON:
+  case DEV_NFC_HALT:
+  case DEV_NFC_REQUEST_FIND:
+  case DEV_NFC_WAKEUP_FIND:
+  case DEV_NFC_ACTIVATE:
+  case DEV_NFC_PCD_CONFIG:
   case DEV_NFC_RECEIVE:
+    if (rq2)
+      goto notsup;
+
     rq1->error = 0;
     rq1->base.drvdata = 0;
     LOCK_SPIN_IRQ(&dev->lock);
