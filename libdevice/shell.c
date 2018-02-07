@@ -819,6 +819,7 @@ extern TERMUI_CON_GROUP_DECL(dev_shell_enum_group);
 extern TERMUI_CON_GROUP_DECL(dev_shell_uart_group);
 extern TERMUI_CON_GROUP_DECL(dev_shell_hwclock_group);
 extern TERMUI_CON_GROUP_DECL(dev_shell_ms_group);
+//extern TERMUI_CON_GROUP_DECL(dev_shell_nfc_group);
 
 static TERMUI_CON_GROUP_DECL(dev_shell_subgroup) =
 {
@@ -889,6 +890,9 @@ static TERMUI_CON_GROUP_DECL(dev_shell_subgroup) =
 #if defined(CONFIG_DEVICE_VALIO_MOTION_SENSOR)
   TERMUI_CON_GROUP_ENTRY(dev_shell_ms_group, "motion")
 #endif
+//#ifdef CONFIG_DEVICE_NFC
+//  TERMUI_CON_GROUP_ENTRY(dev_shell_nfc_group, "nfc")
+//#endif
   TERMUI_CON_LIST_END
 };
 
