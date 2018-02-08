@@ -366,6 +366,8 @@ static inline error_t si446x_check_config(struct si446x_ctx_s *pv, struct dev_rf
 
   const struct dev_rfpacket_rf_cfg_s *rfcfg = rq->rf_cfg;
 
+#ifdef CONFIG_DRIVER_RFPACKET_SI446X_CCA
+
   if (rq->type == DEV_RFPACKET_RQ_TX_FAIR)
     {
       switch (rfcfg->mod)
@@ -397,6 +399,7 @@ static inline error_t si446x_check_config(struct si446x_ctx_s *pv, struct dev_rf
           rq->pk_cfg == pv->rx_cont->pk_cfg)
         pv->flags |= SI446X_FLAGS_RX_ON;
     }
+#endif
 
   error_t err = 0;
 
@@ -792,7 +795,7 @@ static void si446x_rfp_idle(struct si446x_ctx_s *pv)
     case DEV_RFPACKET_RQ_RX_CONT:
       return si446x_start_rx(pv, rq);
     default:
-      abort();
+      return si446x_rfp_end_rq(pv, -ENOTSUP);
   }
 }
 
@@ -1055,7 +1058,7 @@ BC_CCALL_FUNCTION(si446x_alloc)
     goto error;
 
   pv->rxrq = rx;
-  pv->buffer = rx->buf;
+  pv->buffer = (uint8_t*)rx->buf;
 
   assert(rx->size == pv->size);
 

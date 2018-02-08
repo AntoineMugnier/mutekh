@@ -408,7 +408,7 @@ static KROUTINE_EXEC(shell_rfpacket_rx_cb)
   struct shell_rfpacket_rx_pkt_s *rxpkt = shell_rfpacket_rx_pkt_s_from_rx(rx);
 
   if (rx->size)
-    printk("Rx packet size: %d\n", rx->size);
+    printk("Rx packet: %P\n", rx->buf, rx->size);
 
   /* Drop allocated RX buffer here */
   shell_buffer_drop(rxpkt->data);
@@ -428,7 +428,12 @@ static struct dev_rfpacket_rx_s *shell_rfpacket_rx_alloc(struct dev_rfpacket_rq_
   if (!rxpkt)
     return NULL;
 
-  rxpkt->data = shell_buffer_new(con, size, "rxdata", 0, 0);
+  rxpkt->data = shell_buffer_new(con, size, "rxdata", shell_rfpacket_rx_alloc + 4, 0);
+
+  /* Reuse a old buffer if possible when allocation failed */
+
+  if (!rxpkt->data)
+    rxpkt->data = shell_buffer_reuse(con, size, "rxdata", shell_rfpacket_rx_alloc + 4, 0);
 
   if (!rxpkt->data)
     {
@@ -468,7 +473,7 @@ static TERMUI_CON_COMMAND_PROTOTYPE(shell_rfpacket_receive)
   rq->rf_cfg = rf;
   rq->pk_cfg = pk;
 
-  if (!(used & RFPACKET_OPT_LIFETIME && c->lifetime))
+  if (!(used & RFPACKET_OPT_LIFETIME))
     c->lifetime = 10000;
 
   struct device_timer_s timer;
@@ -546,7 +551,15 @@ static TERMUI_CON_COMMAND_PROTOTYPE(shell_rfpacket_send)
   rq.pk_cfg = pk;
 
   if (!(used & RFPACKET_OPT_LIFETIME))
-    c->lifetime = 10000;
+    c->lifetime = 10;
+
+  struct device_timer_s timer;
+
+  if (device_get_accessor(&timer.base, c->accessor.dev, DRIVER_CLASS_TIMER, 0))
+    return -EINVAL;
+
+  if (dev_timer_init_sec(&timer, &rq.lifetime, 0, c->lifetime, 1000))
+    return -EINVAL;
 
 #if defined(CONFIG_MUTEK_CONTEXT_SCHED)
   error_t err = dev_rfpacket_wait_request(&c->accessor, &rq);
