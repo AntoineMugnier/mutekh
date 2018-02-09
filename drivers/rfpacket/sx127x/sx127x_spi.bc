@@ -1,476 +1,410 @@
+/*
+   This file is part of MutekH.
+
+    MutekH is free software; you can redistribute it and/or modify it
+    under the terms of the GNU Lesser General Public License as
+    published by the Free Software Foundation; version 2.1 of the
+    License.
+
+    MutekH is distributed in the hope that it will be useful, but
+    WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+    Lesser General Public License for more details.
+
+    You should have received a copy of the GNU Lesser General Public
+    License along with MutekH; if not, write to the Free Software
+    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+    02110-1301 USA.
+
+    Copyright (c) 2018 Sebastien Cerdan <sebcerdan@gmail.com>
+
+*/
 
 #include <device/class/spi.h>
-
 #include "sx127x_spi.h"
 
         .custom spi
         .name sx127x
+        .const %R_CTX_PV
+        .global %STATUS
 
-        /* --------------------- Reset subroutine ------------------------*/
-sx127x_entry_reset:
+.func sx127x_entry_reset
         .export sx127x_entry_reset
+        .clobber %5 tmp, %6 data, %7 ver
     /* Get start-up delay */
-        ld32e                   %R_TMP0,         %R_CTX_PV, _offsetof(sx127x_private_s, delay_5ms, 4)
+        ld32e                   %data,            %R_CTX_PV,       _offsetof(sx127x_private_s, delay_1ms, 4)
+        shi32l                  %data,            2
     /* Reset device */
-        cst8                    %R_TMP1,         0
-        spi_gpioset             SX127X_IO_RST,   %R_TMP1
-        spi_yield_delay         %R_TMP0
-        cst8                    %R_TMP1,         1
-        spi_gpioset             SX127X_IO_RST,   %R_TMP1
-        spi_yield_delay         %R_TMP0
+        cst8                    %tmp,             0
+        spi_gpioset             SX127X_IO_RST,    %tmp
+        spi_yield_delay         %data,
+        cst8                    %tmp,             1
+        spi_gpioset             SX127X_IO_RST,    %tmp
+        spi_yield_delay         %data
     /* Check Revision */
-        cst8                    %R_TMP0,         RLR_VERSION
-        pack16le                %R_TMP0,         1, 2
-        spi_swp                 %R_TMP0,         %R_TMP0, 2, CS_PULSE
-        unpack8                 %R_TMP0,         2
-    /* Go to sleep mode */
-        cst8                    %R_ARG0,         SX127X_MODE_SLEEP
-        call8                   %R_LINK,         sx127x_mode_set
-    /* Enable LoRa modulation */
-        cst8                    %R_ARG0,         SX127X_MODE_LORA
-        call8                   %R_LINK,         sx127x_mode_set
-    /* Go to standby mode */
-        cst8                    %R_ARG0,         SX127X_MODE_LORA | SX127X_MODE_STANDBY
-        call8                   %R_LINK,         sx127x_mode_set
-#if defined(CONFIG_DRIVER_RFPACKET_SX127X_PABOOST)
-    /* PA Config */
-        cst8                    %R_TMP0,         RLR_PACONFIG | 0x80
-        cst8                    %R_TMP1,         0xff
-        pack8                   %R_TMP0,         2
-        spi_wr                  %R_TMP0,         2, CS_PULSE
-    /* PA DAC */
-        cst8                    %R_TMP0,         RLR_PADAC | 0x80
-        cst8                    %R_TMP1,         0x87
-        pack8                   %R_TMP0,         2
-        spi_wr                  %R_TMP0,         2, CS_PULSE
-#else
-    /* PA Config */
-        cst8                    %R_TMP0,         RLR_PACONFIG | 0x80
-        cst8                    %R_TMP1,         0x7f
-        pack8                   %R_TMP0,         2
-        spi_wr                  %R_TMP0,         2, CS_PULSE
-    /* PA DAC */
-        cst8                    %R_TMP0,         RLR_PADAC | 0x80
-        cst8                    %R_TMP1,         0x84
-        pack8                   %R_TMP0,         2
-        spi_wr                  %R_TMP0,         2, CS_PULSE
-#endif
-    /* Setup TX FIFO base */
-        cst8                    %R_TMP0,         RLR_FIFOTXBASEADDR | 0x80
-        cst8                    %R_TMP1,         0x0
-        pack8                   %R_TMP0,         2
-        spi_wr                  %R_TMP0,         2, CS_PULSE
-    /* Setup RX FIFO base */
-        cst8                    %R_TMP0,         RLR_FIFORXBASEADDR | 0x80
-        cst8                    %R_TMP1,         0x0
-        pack8                   %R_TMP0,         2
-        spi_wr                  %R_TMP0,         2, CS_PULSE
-    /* Setup maximum payload size */
-        cst8                    %R_TMP0,         RLR_PAYLOADMAXLENGTH | 0x80
-        cst8                    %R_TMP1,         0xff
-        pack8                   %R_TMP0,         2
-        spi_wr                  %R_TMP0,         2, CS_PULSE
-    /* Enable LoRa interrupts */
-        cst8                    %R_TMP0,         RLR_IRQFLAGSMASK | 0x80
-        cst8                    %R_TMP1,         SX127X_IRQ_LORA_DIS_IRQMASK
-        not32                   %R_TMP1
-        pack8                   %R_TMP0,         2
-        spi_wr                  %R_TMP0,         2, CS_PULSE
-    /* Initialisation done */
-        cst8                    %R_ARG0,         SX127X_INIT_MASK
-        jmp8                    sx127x_done_set
-
-sx127x_entry_irq:
-        .export sx127x_entry_irq
-        xor32                   %R_ARG0,         %R_ARG0
-        ld16e                   %R_ICOUNT,       %R_CTX_PV, _offsetof(sx127x_private_s, icount, 2)
-        spi_gpioget             SX127X_IO_DIO0,  %R_TMP0
-        tst32s                  %R_TMP0,         0
-        jmp8                    __irq_flags
-        spi_gpioget             SX127X_IO_DIO3,  %R_TMP0
-        tst32c                  %R_TMP0,         0
-        jmp8                    __irq_end
-__irq_flags:
-        cst8                    %R_TMP0,         RLR_IRQFLAGS
-        pack16le                %R_TMP0,         1, 2
-        spi_swp                 %R_TMP0,         %R_TMP0, 2, CS_PULSE
-        unpack8                 %R_TMP0,         2
-        mov                     %R_ARG1,         %R_TMP1,
-        cst8                    %R_TMP0,         RLR_IRQFLAGS | 0x80
-        cst8                    %R_TMP1,         0xff
-        pack8                   %R_TMP0,         2
-        spi_wr                  %R_TMP0,         2, CS_PULSE
-__irq_rx_flag:
-        tst32c                  %R_ARG1,         bitpos(SX127X_IRQ_LORA_RX_DONE)
-        jmp8                    __irq_tx_flag
-        tst32s                  %R_ARG1,         bitpos(SX127X_IRQ_LORA_CRC_ERROR)
-        jmp8                    __irq_tx_flag
-        cst8                    %R_TMP1,         SX127X_RX_MASK
-        or32                    %R_ARG0,         %R_TMP1
-__irq_tx_flag:
-        tst32c                  %R_ARG1,         bitpos(SX127X_IRQ_LORA_TX_DONE)
-        jmp8                    __irq_end
-        cst8                    %R_TMP1,         SX127X_TX_MASK
-        or32                    %R_ARG0,         %R_TMP1
-__irq_end:
-        neq0                    %R_ARG0
-        jmp8                    sx127x_done_set
-        end
-
-sx127x_done_set:
-        /* R_ARG0: Mask of done operation */
-        ld8e                    %R_TMP0,         %R_CTX_PV, _offsetof(sx127x_private_s, done, 2)
-        or32                    %R_TMP0,         %R_ARG0
-        st16e                   %R_TMP0,         %R_CTX_PV, _offsetof(sx127x_private_s, done, 2)
-        /* Check interrupt before leaving */
-        jmp8                    sx127x_entry_irq
-
-sx127x_entry_config:
-        .export sx127x_entry_config
-    /* ARG0: configuration mask */
-        mov                     %R_ARG1,         %R_ARG0
-    /* Ensure Stand-by mode */
-        cst8                    %R_ARG0,         SX127X_MODE_LORA | SX127X_MODE_STANDBY
-        call8                   %R_LINK,         sx127x_mode_set
-    /* Compute address of configuration data (from bkp_config.data). */
-        mov                     %R_ARG0,         %R_CTX_PV
-        cst8                    %R_TMP0,         _offsetof(sx127x_private_s, bkp_config.data)
-        add                     %R_ARG0,         %R_TMP0
-__config_modemcfg12:
-    /* Test if config needed */
-        cst8                    %R_TMP0,         0x3
-        and32                   %R_TMP0,         %R_ARG1
-        eq0                     %R_TMP0
-        jmp8                    __config_modemcfg3
-    /* Write modemcfg1 & 2 */
-        cst8                    %R_TMP0,         RLR_MODEMCONFIG1 | 0x80
-        pack8                   %R_TMP0,         1
-        cst8                    %R_TMP1,         2
-        spi_wr                  %R_TMP0,         1, CS_START
-        spi_wrm                 %R_ARG0,         %R_TMP1, CS_END
-__config_modemcfg3:
-    /* Test if config needed */
-        tst32c                  %R_ARG1,         2
-        jmp8                    __config_syncword
-    /* Write modemcfg3 */
-        cst8                    %R_TMP0,         RLR_MODEMCONFIG3 | 0x80
-        ld8e                    %R_TMP1,         %R_ARG0, 2
-        pack8                   %R_TMP0,         2
-        spi_wr                  %R_TMP0,         2, CS_PULSE
-__config_syncword:
-    /* Test if config needed */
-        tst32c                  %R_ARG1,         3
-        jmp8                    __config_preamble
-    /* Write sync word */
-        cst8                    %R_TMP0,         RLR_SYNCWORD | 0x80
-        ld8e                    %R_TMP1,         %R_ARG0, 3
-        pack8                   %R_TMP0,         2
-        spi_wr                  %R_TMP0,         2, CS_PULSE
-__config_preamble:
-    /* Test if config needed */
-        tst32c                  %R_ARG1,         4
-        jmp8                    __config_iq
-    /* Write preamble length */
-        cst8                    %R_TMP0,         RLR_PREAMBLELSB | 0x80
-        ld8e                    %R_TMP1,         %R_ARG0, 4
-        pack8                   %R_TMP0,         2
-        spi_wr                  %R_TMP0,         2, CS_PULSE
-__config_iq:
-    /* Test if config needed */
-        tst32c                  %R_ARG1,         5
-        jmp8                    __config_freq
-    /* Write I/Q inversion */
-        cst8                    %R_TMP0,         RLR_INVERTIQ | 0x80
-        ld8e                    %R_TMP1,         %R_ARG0, 5
-        pack8                   %R_TMP0,         2
-        spi_wr                  %R_TMP0,         2, CS_PULSE
-__config_freq:
-    /* Test if config needed */
-        tst32c                  %R_ARG1,         7
-        jmp8                    __config_end
-    /* Update frequency */
-        mov                     %R_TMP1,         %R_CTX_PV
-        cst8                    %R_TMP2,         _offsetof(sx127x_private_s, bkp_freq)
-        add                     %R_TMP1,         %R_TMP2
-        cst8                    %R_TMP0,         RLR_FRFMSB | 0x80
-        cst8                    %R_TMP2,         3
-        pack8                   %R_TMP0,         1
-        spi_wr                  %R_TMP0,         1, CS_START
-        spi_wrm                 %R_TMP1,         %R_TMP2, CS_END
-__config_end:
-    /* Configuration done */
-        cst8                    %R_ARG0,         SX127X_CFG_MASK
-        jmp8                    sx127x_done_set
-
-sx127x_abort:
-    /* Return to standby mode */
-        cst8                    %R_ARG0,        SX127X_MODE_STANDBY
-        call8                   %R_LINK,        sx127x_mode_set
-        end
-
-sx127x_mode_set:
-    /* R_ARG0 : mode */
-        mov                     %R_TMP1,         %R_ARG0
-        cst8                    %R_TMP0,         RLR_OPMODE | 0x80
-        pack8                   %R_TMP0,         2
-        spi_wr                  %R_TMP0,         2, CS_PULSE
-        ret                     %R_LINK
-
-sx127x_rx_enable_irq:
-        cst8                    %R_TMP0,         RLR_DIOMAPPING1 | 0x80
-        cst8                    %R_TMP1,         0x10 /* RxDone IRQ on DIO0 */
-        pack8                   %R_TMP0,         2
-        spi_wr                  %R_TMP0,         2, CS_PULSE
-        cst8                    %R_TMP0,         RLR_IRQFLAGSMASK | 0x80
-        mov                     %R_TMP1,         %R_ARG0
-        pack8                   %R_TMP0,         2
-        spi_wr                  %R_TMP0,         2, CS_PULSE
-        ret                     %R_LINK
-
-sx127x_entry_rx:
-        .export sx127x_entry_rx
-        mov                     %R_TMP4,         %R_ARG0
-        mov                     %R_TMP5,         %R_ARG1
-    /* Ensure STANDBY mode */
-        cst8                    %R_ARG0,         SX127X_MODE_STANDBY
-        call8                   %R_LINK,         sx127x_mode_set
-    /* Enable RX interrupt */
-        cst8                    %R_ARG0,         SX127X_IRQ_LORA_RX_IRQMASK
-        call8                   %R_LINK,         sx127x_rx_enable_irq
-    /* Load TX FIFO pointer */
-        cst8                    %R_TMP0,         RLR_FIFORXBASEADDR
-        pack16le                %R_TMP0,         1, 2
-        spi_swp                 %R_TMP0,         %R_TMP0, 2, CS_PULSE
-        unpack8                 %R_TMP0,         2
-    /* Update FIFO write pointer */
-        cst8                    %R_TMP0,         RLR_FIFOADDRPTR | 0x80
-        pack8                   %R_TMP0,         2
-        spi_wr                  %R_TMP0,         2, CS_PULSE
-    /* Wait for deadline if any */
-        spi_yield_deadline      %R_TMP4
-    /* Start RX */
-        cst8                    %R_ARG0,         SX127X_MODE_RX_CONT
-        call8                   %R_LINK,         sx127x_mode_set
-__rx_keep_going:
-        spi_yieldc_delay        %R_ARG1
-        jmp8                    __rx_check_status
-        cst8                    %R_ARG0,         SX127X_MODE_STANDBY
-        call8                   %R_LINK,         sx127x_mode_set
+        cst8                    %tmp,             SX1276_REG_VERSION
+        pack16le                %tmp,             1,              2
+        spi_swp                 %tmp,             %tmp,           2,      CS_PULSE
+        unpack8                 %tmp,             2
+        cst32                   %ver,             SX127X_VERSION_VALUE,   0
+        neq                     %ver,             %data
+          abort
+    /* Rssi measure configuration */
+        cst8                    %tmp,             SX1276_REG_RSSICONFIG | 0x80
+        cst8                    %data,            (SX127X_RSSI_OFFSET | SX1276_RSSICONFIG_SMOOTHING_64)
+        pack8                   %tmp,             2
+        spi_wr                  %tmp,             2,     CS_PULSE
         jmp32                   sx127x_entry_irq
-    /* RX lifetime has elapsed */
-__rx_timeout:
-        cst8                    %R_ARG0,         SX127X_MODE_STANDBY
-        call8                   %R_LINK,         sx127x_mode_set
-        cst8                    %R_ARG0,         SX127X_RX_TIMEOUT_MASK
-        jmp8                    sx127x_done_set
-__rx_check_status:
-    /* Read status */
-        cst8                    %R_TMP0,         RLR_MODEMSTAT
-        pack16le                %R_TMP0,         1, 2
-        spi_swp                 %R_TMP0,         %R_TMP0, 2, CS_PULSE
-        unpack8                 %R_TMP0,         2
-    /* Keep going if the transceiver has received the beginning of a valid packet. */
-        tst32s                  %R_TMP1,         3 /* Valid header bit */
-        jmp8                    __rx_keep_going
-        jmp8                    __rx_timeout
+.endfunc
 
-sx127x_entry_rx_cont:
-        .export sx127x_entry_rx_cont
-    /* Ensure STANDBY mode */
-        cst8                    %R_ARG0,         SX127X_MODE_STANDBY
-        call8                   %R_LINK,         sx127x_mode_set
-    /* Enable RX interrupt */
-        cst8                    %R_ARG0,         SX127X_IRQ_LORA_RX_CONT_IRQMASK
-        call8                   %R_LINK,         sx127x_rx_enable_irq
-    /* Load TX FIFO pointer */
-        cst8                    %R_TMP0,         RLR_FIFORXBASEADDR
-        pack16le                %R_TMP0,         1, 2
-        spi_swp                 %R_TMP0,         %R_TMP0, 2, CS_PULSE
-        unpack8                 %R_TMP0,         2
-    /* Update FIFO write pointer */
-        cst8                    %R_TMP0,         RLR_FIFOADDRPTR | 0x80
-        pack8                   %R_TMP0,         2
-        spi_wr                  %R_TMP0,         2, CS_PULSE
-    /* Start RX */
-        cst8                    %R_ARG0,         SX127X_MODE_RX_CONT
-        call8                   %R_LINK,         sx127x_mode_set
+.func sx127x_entry_config
+        .export sx127x_entry_config
+        .input %0 buf
+        .clobber %0, %1 cmd, %6 len, %7, %8, %9, %10, %12
+
+        /* Ensure Stand-by mode */
+        cst8                    %sx127x_mode_set:mode,  SX1276_OPMODE_STANDBY
+        call16                  %sx127x_mode_set:link,  sx127x_mode_set
+        call8                   %config_freq:link,      config_freq
+
+  config_loop:
+        ld8i                    %len,                %buf
+        eq0                     %len
+          jmp8 config_done
+        ld8i                    %cmd,                %buf
+        pack8                   %cmd,         1
+        spi_wr                  %cmd,         1,                CS_START
+        spi_wrm                 %buf,                %len,	CS_END
+        add                     %buf,                %len
+        jmp8                    config_loop
+  config_done:
         end
+.endfunc
 
-sx127x_entry_rx_packet:
-        .export sx127x_entry_rx_packet
-    /* Retrieve the length of the packet */
-        cst8                    %R_TMP0,        RLR_RXNBBYTES
-        pack16le                %R_TMP0,        1, 2
-        spi_swp                 %R_TMP0,        %R_TMP0, 2, CS_PULSE
-        unpack8                 %R_TMP0,        2
-        mov                     %R_ARG1,        %R_TMP1
-    /* Retreive the end address of the packet in the fifo */
-        cst8                    %R_TMP0,        RLR_FIFORXBYTEADDR
-        pack16le                %R_TMP0,        1, 2
-        spi_swp                 %R_TMP0,        %R_TMP0, 2, CS_PULSE
-        unpack8                 %R_TMP0,        2
-    /* Compute the base address of the packet in the fifo */
-        sub                     %R_TMP1,        %R_ARG1
-    /* Update the fifo pointer */
-        cst8                    %R_TMP0,        RLR_FIFOADDRPTR | 0x80
-        pack8                   %R_TMP0,        2
-        spi_wr                  %R_TMP0,        2, CS_PULSE
-    /* Prepare destination buffer pointer and size */
-        lde                     %R_TMP2,        %R_CTX_PV, _offsetof(sx127x_private_s, rx_last)
-        lde                     %R_ARG0,        %R_TMP2, _offsetof(dev_rfpacket_rx_s, buf)
-        st16e                   %R_ARG1,        %R_TMP2, _offsetof(dev_rfpacket_rx_s, size, 2)
-    /* Read the packet in the fifo */
-        cst8                    %R_TMP0,        RLR_FIFO
-        pack8                   %R_TMP0,        1
-        spi_wr                  %R_TMP0,        1, CS_START
-        spi_rdm                 %R_ARG0,        %R_ARG1, CS_END
-    /* Retrieve the packet information (RSSI, SNR) */
-        cst8                    %R_TMP0,        RLR_PKTRSSIVALUE
-        pack16le                %R_TMP0,        1, 2
-        spi_swp                 %R_TMP0,        %R_TMP0, 2, CS_PULSE
-        unpack8                 %R_TMP0,        2
-        mov                     %R_TMP2,        %R_TMP1
-        cst8                    %R_TMP0,        RLR_PKTSNRVALUE
-        pack16le                %R_TMP0,        1, 2
-        spi_swp                 %R_TMP0,        %R_TMP0, 2, CS_PULSE
-        unpack8                 %R_TMP0,        2
-        shi32l                  %R_TMP1,        8
-        or32                    %R_TMP1,        %R_TMP2
-        ste                     %R_TMP1,        %R_CTX_PV, _offsetof(sx127x_private_s, bc_pkt_infos)
-    /* Stop RX if not in continuous mode */
-        lde                     %R_TMP0,        %R_CTX_PV, _offsetof(sx127x_private_s, next_rq)
-        lde                     %R_TMP1,        %R_CTX_PV, _offsetof(sx127x_private_s, rx_cont_rq)
-        xor32                   %R_TMP0,        %R_TMP1
-        eq0                     %R_TMP0
-        jmp8                    __rx_cont_fifo_reset
-    /* Stop RX if the request is not a RX continuous */
-        cst8                    %R_ARG0,        SX127X_MODE_STANDBY
-        call8                   %R_LINK,        sx127x_mode_set
-        jmp8                    __rx_packet_done
-__rx_cont_fifo_reset:
-    /* Reset RX fifo pointer (used for RX continuous) */
-        cst8                    %R_TMP0,         RLR_FIFORXBASEADDR
-        pack16le                %R_TMP0,         1, 2
-        spi_swp                 %R_TMP0,         %R_TMP0, 2, CS_PULSE
-        unpack8                 %R_TMP0,         2
-        cst8                    %R_TMP0,         RLR_FIFOADDRPTR | 0x80
-        pack8                   %R_TMP0,         2
-        spi_wr                  %R_TMP0,         2, CS_PULSE
-__rx_packet_done:
-    /* Notifies the end of packet reading */
-        cst8                    %R_ARG0,        SX127X_RX_PACKET_MASK
-        jmp32                   sx127x_done_set
-
-sx127x_tx_enable_irq:
-        cst8                    %R_TMP0,         RLR_DIOMAPPING1 | 0x80
-        cst8                    %R_TMP1,         0x40 /* TxDone IRQ on DIO0 */
-        pack8                   %R_TMP0,         2
-        spi_wr                  %R_TMP0,         2, CS_PULSE
-        cst8                    %R_TMP0,         RLR_IRQFLAGSMASK | 0x80
-        cst8                    %R_TMP1,         SX127X_IRQ_LORA_TX_IRQMASK
-        pack8                   %R_TMP0,         2
-        spi_wr                  %R_TMP0,         2, CS_PULSE
-        ret                     %R_LINK
-
-sx127x_entry_tx:
-        .export sx127x_entry_tx
-    /* ARG0: deadline in timer unit */
-        mov                     %R_ARG1,         %R_ARG0
-    /* Ensure STANDBY mode */
-        cst8                    %R_ARG0,         SX127X_MODE_STANDBY
-        call32                  %R_LINK,         sx127x_mode_set
-    /* Enable TX interrupt */
-        call8                   %R_LINK,         sx127x_tx_enable_irq
-    /* Load TX FIFO pointer */
-        cst8                    %R_TMP0,         RLR_FIFOTXBASEADDR
-        pack16le                %R_TMP0,         1, 2
-        spi_swp                 %R_TMP0,         %R_TMP0, 2, CS_PULSE
-        unpack8                 %R_TMP0,         2
-    /* Update FIFO write pointer */
-        cst8                    %R_TMP0,         RLR_FIFOADDRPTR | 0x80
-        pack8                   %R_TMP0,         2
-        spi_wr                  %R_TMP0,         2, CS_PULSE
-    /* Setup deadline */
-        spi_deadline            %R_ARG1
-    /* Load pvdata */
-        lde                     %R_TMP0,         %R_CTX_PV, _offsetof(sx127x_private_s, next_rq)
-        lde                     %R_ARG0,         %R_TMP0, _offsetof(struct dev_rfpacket_rq_s, tx_buf)
-        ld16e                   %R_ARG1,         %R_TMP0, _offsetof(struct dev_rfpacket_rq_s, tx_size, 2)
-    /* Write fifo */
-        cst8                    %R_TMP0,         RLR_FIFO | 0x80
-        pack8                   %R_TMP0,         1
-        spi_wr                  %R_TMP0,         1, CS_START
-        spi_wrm                 %R_ARG0,         %R_ARG1, CS_END
-    /* Set payload length */
-        cst8                    %R_TMP0,         RLR_PAYLOADLENGTH | 0x80
-        mov                     %R_TMP1,         %R_ARG1
-        pack8                   %R_TMP0,         2
-        spi_wr                  %R_TMP0,         2, CS_PULSE
-    /* Wait for deadline to end */
-        spi_yield
-    /* Start TX */
-        cst8                    %R_ARG0,         SX127X_MODE_TX
-        call32                  %R_LINK,         sx127x_mode_set
+.func sx127x_entry_irq
+        .export sx127x_entry_irq
+        .clobber %0, %5, %6, %7, %8, %9, %10, %12 
+        call8                   %sx127x_check_irq:link,          sx127x_check_irq
         end
+.endfunc
 
-sx127x_entry_cancel:
+.func sx127x_check_irq
+        .input %12 link
+        .clobber %0 buffer, %5 tmp, %6 irq1 len, %7 irq2, %8, %9, %10, %12
+        /* Update icount field */
+        cst32                   %STATUS,         0,   0
+        ld8e                    %STATUS,         %R_CTX_PV,      _offsetof(sx127x_private_s, icount, 1)
+        spi_gpioget             SX127X_DIO0,     %tmp
+        tst32s                  %tmp,            0
+          jmp8                  __sx127x_process_irq
+        ret                     %link
+__sx127x_process_irq:
+        /* Read irq status */
+        cst8                    %tmp,            SX1276_REG_IRQFLAGS1
+        pack32le                %tmp,            1,      3
+        spi_swp                 %tmp,            %tmp,   3,      CS_PULSE
+        unpack8                 %tmp,            3
+        /* Set the transceiver in standby mode */
+        cst8                    %sx127x_mode_set:mode,  SX1276_OPMODE_STANDBY
+        call8                   %sx127x_mode_set:link,  sx127x_mode_set
+        mov                     %tmp,            %irq2
+        shi32l                  %tmp,            8
+        or32                    %STATUS,         %tmp
+        tst32s                  %irq2,           bitpos(SX1276_IRQFLAGS2_PACKETSENT)
+          jmp8                  __irq_tx_flag
+        tst32s                  %irq2,           bitpos(SX1276_IRQFLAGS2_PAYLOADREADY)
+          jmp8                  __irq_rx_flag
+        end
+__irq_rx_flag:
+        /* Retrieve first word from fifo which contains payload lenght */
+        cst8                    %tmp,            SX1276_REG_FIFO
+        pack16le                %tmp,            1,      2
+        spi_swp                 %tmp,            %tmp,   2,      CS_PULSE
+        unpack8                 %tmp,            2
+        st8e                    %len,            %R_CTX_PV,      _offsetof(sx127x_private_s, size, 1)
+       /* Try to allocate buffer */
+        gaddr                   %tmp,            sx127x_alloc
+        mov                     %0,              %R_CTX_PV
+        ccall                   %tmp
+        /* Rx allocation error */
+        eq0                     %buffer
+          jmp8                  __rx_alloc_error
+        /* Read Fifo */
+        ld8e                    %len,            %R_CTX_PV,      _offsetof(sx127x_private_s, size, 1)
+        cst8                    %tmp,            SX1276_REG_FIFO
+        pack8                   %tmp,            1
+        spi_wr                  %tmp,            1,             CS_START
+        spi_rdm                 %buffer,         %len,          CS_END
+__irq_tx_flag:
+        end
+__rx_alloc_error:
+        jmp8                    sx127x_error
+.endfunc
+
+.func sx127x_error
+        .clobber %8, %9, %10, %12
+        bit32s                  %STATUS,                STATUS_OTHER_ERR
+        jmp8                    sx127x_entry_standby
+.endfunc
+
+.func sx127x_entry_standby
+        .export sx127x_entry_standby
+        .clobber %0 tmp, %8, %9, %10, %12
+        cst8                    %sx127x_mode_set:mode,  SX1276_OPMODE_STANDBY
+        call8                   %sx127x_mode_set:link,  sx127x_mode_set
+        /* Clean irq status */
+        cst32                   %tmp,            STATUS_INFO_MSK, 0
+        and32                   %STATUS,         %tmp
+        ld8e                    %tmp,            %R_CTX_PV,      _offsetof(sx127x_private_s, icount, 1)
+        or32                    %STATUS,         %tmp
+        end
+.endfunc
+
+.func config_freq
+        .input %12 link
+        .clobber %6 tmp, %7 data, %8 len
+    /* Update frequency */
+        mov                     %data,           %R_CTX_PV
+        cst16                   %tmp,            _offsetof(sx127x_private_s, cfg.freq),  0
+        add                     %data,           %tmp
+        cst8                    %tmp,            SX1276_REG_FRFMSB | 0x80
+        pack8                   %tmp,            1
+        spi_wr                  %tmp,            1,              CS_START
+        cst8                    %len,            3
+        spi_wrm                 %data,           %len,           CS_END
+        ret                     %link
+.endfunc
+
+.func sx127x_entry_cancel
         .export sx127x_entry_cancel
-        jmp32                   sx127x_abort
+        .clobber %0, %5, %6, %7, %8, %9, %10, %11, %12
+        /* Test if packet is being received */
+        call8                   %test_rx_on_going:link, test_rx_on_going
+        jmp8                    sx127x_entry_standby
+.endfunc
 
-#if defined(CONFIG_DRIVER_CRYPTO_SX127X_RNG)
+.func sx127x_mode_set
+        .input %8 mode, %12 link
+        .clobber %9 tmp, %10 cfg
+        cst8                    %tmp,            SX1276_REG_OPMODE | 0x80
+        ld8e                    %cfg,            %R_CTX_PV,   _offsetof(sx127x_private_s, cfg.mode, 1)
+        or32                    %cfg,            %mode
+        pack8                   %tmp,            2
+        spi_wr                  %tmp,            2,     CS_PULSE
+        ret                     %link
+.endfunc
 
-sx127x_entry_rng:
-        .export sx127x_entry_rng
-    /* Ensure sleep mode */
-        cst8                    %R_ARG0,        SX127X_MODE_SLEEP
-        call32                  %R_LINK,        sx127x_mode_set
-    /* Ensure standby mode with LoRa modulation */
-        cst8                    %R_ARG0,        SX127X_MODE_LORA | SX127X_MODE_STANDBY
-        call32                  %R_LINK,        sx127x_mode_set
-    /* Disable all irq */
-        cst8                    %R_TMP0,        RLR_IRQFLAGSMASK | 0x80
-        cst8                    %R_TMP1,        0xff
-        pack8                   %R_TMP0,        2
-        spi_wr                  %R_TMP0,        2, CS_PULSE
-    /* Change mode to rx continuous */
-        cst8                    %R_ARG0,        SX127X_MODE_LORA | SX127X_MODE_RX_CONT
-        call32                  %R_LINK,        sx127x_mode_set
-    /* Prepare pointers */
-        lde                     %R_TMP1,        %R_CTX_PV, _offsetof(sx127x_private_s, crypto_rq)
-        lde                     %R_TMP2,        %R_TMP1, _offsetof(dev_crypto_rq_s, ctx)
-        lde                     %R_TMP1,        %R_TMP2, _offsetof(dev_crypto_context_s, state_data)
-    /* Read rssi to fill rng buffer */
-        cst8                    %R_TMP3,        0x1
-        mov                     %R_ARG0,        %R_TMP1
-        cst8                    %R_ARG1,        CONFIG_DRIVER_CRYPTO_SX127X_RNG_SIZE
-        ld32e                   %R_TMP5,        %R_CTX_PV, _offsetof(sx127x_private_s, delay_5ms, 4)
-__rng_loop_byte:
-        ld8                     %R_TMP2,        %R_ARG0
-        cst8                    %R_TMP4,        8
-__rng_loop_bit:
-        add8                    %R_TMP4,        -1
-        cst8                    %R_TMP1,        0
-        spi_yield_delay         %R_TMP5
-        cst8                    %R_TMP0,        RLR_RSSIWIDEBAND
-        pack16le                %R_TMP0,        1, 2
-        spi_swp                 %R_TMP0,        %R_TMP0, 2, CS_PULSE
-        unpack8                 %R_TMP0,        2
-        and32                   %R_TMP1,        %R_TMP3
-        shl32                   %R_TMP1,        %R_TMP4
-        or32                    %R_TMP2,        %R_TMP1
-        neq0                    %R_TMP4
-        jmp8                    __rng_loop_bit
-        st8i                    %R_TMP2,        %R_ARG0
-        loop                    %R_ARG1,        __rng_loop_byte
-    /* Go back to standby mode */
-        cst8                    %R_ARG0,        SX127X_MODE_STANDBY
-        call32                  %R_LINK,        sx127x_mode_set
-    /* Restore irq mask */
-        cst8                    %R_TMP0,        RLR_IRQFLAGSMASK | 0x80
-        pack16le                %R_TMP0,        1, 2
-        spi_wr                  %R_TMP0,        2, CS_PULSE
-    /* End */
-        cst8                    %R_ARG0,        SX127X_RNG_MASK
-        jmp32                   sx127x_done_set
+.func sx127x_entry_rx
+        .export sx127x_entry_rx
+        .input %0 deadline, %1 lifetime, %2 cmd
+        .clobber %0, %5, %6 tmp, %7 data, %8, %9, %10, %11, %12
+    /* Set sync word size */
+        mov                     %data,        %cmd
+        cst8                    %tmp,         (SX1276_REG_SYNCCONFIG | 0x80)
+        pack8	                %tmp,         2
+        spi_wr                  %tmp,         2,      CS_PULSE
+    /* Test if frequency must be changed */
+        tst32s                  %cmd,         bitpos(CMD_FREQ_CHANGE)
+          call8                 %config_freq:link,  config_freq
+    /* Wait for deadline if any */
+        spi_yield_deadline      %deadline
+    /* Start RX */
+        cst8                    %sx127x_mode_set:mode,  SX1276_OPMODE_RECEIVER
+        call8                   %sx127x_mode_set:link,  sx127x_mode_set
+    /* Stay in RX until lifetime is up */
+        spi_yieldc_deadline     %lifetime
+          jmp8                  __rx_timeout
+    /* An interrupt has been raised */
+        call8                   %sx127x_check_irq:link,  sx127x_check_irq
+__rx_timeout:
+        jmp8                    sx127x_entry_cancel
+.endfunc
 
-#endif // CONFIG_DRIVER_CRYPTO_SX127X_RNG
+.func sx127x_entry_rx_cont
+        .export sx127x_entry_rx_cont
+        .input %0 cmd, %1 timeout
+        .clobber %0 chan, %5, %6 tmp, %7 data, %8, %9, %10, %11, %12
+    /* Set sync word size */
+        mov                     %data,        %cmd
+        cst8                    %tmp,         (SX1276_REG_SYNCCONFIG | 0x80)
+        pack8	                %tmp,         2
+        spi_wr                  %tmp,         2,      CS_PULSE
+    /* Test if frequency must be changed */
+        tst32s                  %cmd,         bitpos(CMD_FREQ_CHANGE)
+          call8                 %config_freq:link,  config_freq
+    /* Start RX */
+        cst8                    %sx127x_mode_set:mode,  SX1276_OPMODE_RECEIVER
+        call8                   %sx127x_mode_set:link,  sx127x_mode_set
+    /* Test if channel scanning must be performed */
+        tst32s                  %cmd,         bitpos(CMD_RX_SCANNING)
+          jmp8                  __rx_hopping_loop
+    /* Check preamble detecion before leaving */
+        call8                   %test_rx_on_going:link, test_rx_on_going
+        end
+__rx_hopping_loop:
+   /* Set channel scanning delay */
+        spi_delay               %timeout
+   /* Wait scanning delay */
+        spi_yieldc
+          jmp8                  __rx_check_status
+        call8                   %sx127x_check_irq:link,  sx127x_check_irq
+__rx_check_status:
+   /* Test if packet is being received */
+        call8                   %test_rx_on_going:link,  test_rx_on_going
+   /* Check if a cancel is pending before scanning next channel */
+        ld8e                    %tmp,            %R_CTX_PV,      _offsetof(sx127x_private_s, cancel, 1)
+        tst32s                  %tmp,            0
+          jmp8                    sx127x_entry_cancel
+   /* Stop receiver */
+        cst8                    %sx127x_mode_set:mode,  SX1276_OPMODE_STANDBY
+        call8                   %sx127x_mode_set:link,  sx127x_mode_set
+   /* Compute next frequency */
+        gaddr                   %tmp,               sx127x_next_hopping_freq
+        mov                     %0,                 %R_CTX_PV
+        ccall                   %tmp
+        call8                   %config_freq:link,  config_freq
+   /* Restart Rx on next channel */
+        cst8                    %sx127x_mode_set:mode,  SX1276_OPMODE_RECEIVER
+        call8                   %sx127x_mode_set:link,  sx127x_mode_set
+        jmp8                    __rx_hopping_loop
+.endfunc
+
+.func test_rx_on_going
+        .input %11 link
+        .clobber %0, %5, %6 tmp, %7, %8, %9, %10, %12
+        spi_gpioget             SX127X_DIO4,  %tmp
+   /* Test if a valid preamble has been received */
+        tst32c                  %tmp,            0
+          jmp8                  __no_rx_ongoing
+   /* Receive is on-going */
+        ld32e                   %tmp,         %R_CTX_PV,   _offsetof(sx127x_private_s, tbrs, 4)
+        spi_yieldc_delay        %tmp
+          jmp8                  __no_rx_ongoing
+   /* A payload ready irq has been raised */
+        call16                  %sx127x_check_irq:link,  sx127x_check_irq
+__no_rx_ongoing:
+        ret                     %link
+.endfunc
+
+.func process_tx_cmd
+        .input %2 cmd
+        .input %11 link
+        .clobber %6 tmp, %7 data, %8, %12
+        /* Power config */
+        mov                     %data,        %cmd
+        shi32r                  %data,        8
+        cst8                    %tmp,         SX1276_REG_PACONFIG | 0x80
+        pack8                   %tmp,         2
+        spi_wr                  %tmp,         2,      CS_PULSE
+        /* Change frequency is needed */
+        tst32s                  %cmd,         bitpos(CMD_FREQ_CHANGE)
+          call8                 %config_freq:link,  config_freq
+        /* Set sync word size */
+        mov                     %data,        %cmd
+        cst8                    %tmp,         (SX1276_REG_SYNCCONFIG | 0x80)
+        pack8	                %tmp,         2
+        spi_wr                  %tmp,         2,      CS_PULSE
+        ret                     %link
+.endfunc
+
+.func sx127x_read_rssi
+        .input %12 link
+        .clobber %6 tmp
+        .output %7 data
+        /* Read RSSI */
+        cst8                    %tmp,            SX1276_REG_RSSIVALUE
+        pack8                   %tmp,            2
+        spi_swp                 %tmp,            %tmp,   2,      CS_PULSE
+        unpack8                 %tmp,            2
+        ret                     %link
+.endfunc
+
+.func sx127x_entry_tx_fair
+        .export sx127x_entry_tx_fair
+        .input %0 len
+        .input %1 buffer
+        .input %2 cmd
+        .input %3 deadline
+        .input %4 timeout
+        .input %5 rssith
+        .clobber %2 period, %3 mean, %5, %6 tmp, %7 data, %8, %9, %10, %11, %12
+        /* Init TX */
+        call8                   %process_tx_cmd:link,    process_tx_cmd
+        /* Rssi period */
+        ld32e                   %period,      %R_CTX_PV,   _offsetof(sx127x_private_s, delay_1ms, 4)
+        shi32l                  %period,      1
+        /* Wait deadline before TX */
+        spi_yield_deadline      %deadline
+        /* Test if timeout date is reached */
+        spi_deadline            %timeout
+        spi_elapsed
+          jmp8                  __tx_fail
+        /* Start RX */
+        cst8                    %sx127x_mode_set:mode,  SX1276_OPMODE_RECEIVER
+        call8                   %sx127x_mode_set:link,  sx127x_mode_set
+__retry_tx_fair:
+        spi_yield_delay         %period
+        call8                   %sx127x_read_rssi:link,  sx127x_read_rssi
+        mov                     %mean,        %data
+        /* Wait before second measurement */
+        spi_yield_delay         %period
+        call8                   %sx127x_read_rssi:link,  sx127x_read_rssi
+        add                     %mean,        %data
+        lt                      %rssith,      %mean
+        /* RSSI mean is less than RSSI threshold */ 
+          jmp8                  sx127x_start_tx
+        /* Test if timeout date is reached */
+        spi_deadline            %timeout
+        spi_elapsed
+          jmp8                  __tx_fail
+        jmp8                    __retry_tx_fair
+__tx_fail:
+        jmp16                   sx127x_entry_standby
+.endfunc
+
+.func sx127x_entry_tx
+        .export sx127x_entry_tx
+        .input %0 len
+        .input %1 buffer
+        .input %2 cmd
+        .input %3 deadline
+        .clobber %0, %5, %6 tmp, %7 data, %8, %9, %10, %11, %12
+        call8                   %process_tx_cmd:link,    process_tx_cmd 
+        /* Wait deadline before TX */
+        spi_yield_deadline      %deadline
+        jmp8                    sx127x_start_tx
+.endfunc
+
+.func sx127x_start_tx
+        .input %0 len
+        .input %1 buffer
+        .clobber %0, %5, %6 tmp, %7 data, %8, %9, %10, %12
+        /* Start TX */
+        cst8                    %sx127x_mode_set:mode,  SX1276_OPMODE_TRANSMITTER
+        call8                   %sx127x_mode_set:link,  sx127x_mode_set
+        /* Write Fifo */
+        cst8                    %tmp,         SX1276_REG_FIFO | 0x80
+        mov                     %data,        %len
+        pack8                   %tmp,         2
+        spi_wr                  %tmp,         2,             CS_START
+        spi_wrm                 %buffer,      %len,          CS_END
+        /* Transmit is on-going */
+        ld32e                   %tmp,         %R_CTX_PV,   _offsetof(sx127x_private_s, tbrs, 4)
+        spi_yieldc_delay        %tmp
+          jmp16                 sx127x_error
+        call16                  %sx127x_check_irq:link,    sx127x_check_irq
+        jmp16                   sx127x_error
+.endfunc
+
+#if defined(CONFIG_DRIVER_RFPACKET_SX127X_DEBUG)
+.func sx127x_entry_dump_cfg
+        .clobber %6 tmp, %7 data, %8, %9, %10, %12
+        cst8                    %tmp,         SX1276_REG_OPMODE
+        pack8                   %tmp,         1
+        spi_wr                  %tmp,         1,                CS_START
+        ld32e                   %tmp,         %R_CTX_PV,        _offsetof(sx127x_private_s, dump, 4)
+        cst8                    %data,        112
+        spi_rdm                 %tmp,         %data,          CS_END
+        end
+.endfunc
+#endif

@@ -1,4 +1,6 @@
 
-objs = sx127x.o sx127x_spi.o
+
+objs-$(CONFIG_DRIVER_RFPACKET_SX127X_MOD_LORA) += sx127x_lora.o sx127x_lora_spi.o
+objs-$(or $(CONFIG_DRIVER_RFPACKET_SX127X_MOD_2FSK), $(CONFIG_DRIVER_RFPACKET_SX127X_MOD_00K)) += sx127x.o sx127x_spi.o
 
 mc.o_CFLAGS=-O0 -ggdb3
