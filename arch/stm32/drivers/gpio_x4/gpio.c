@@ -436,7 +436,8 @@ DEV_IOMUX_SETUP(stm32_gpio_iomux_setup)
     goto end;
 
   /* configure the alternate function (number in mux argument). */
-  err = stm32_gpio_apply_alt_func(io_id, mux);
+  if (mux != IOMUX_INVALID_MUX)
+    err = stm32_gpio_apply_alt_func(io_id, mux);
 
 end:
   LOCK_RELEASE_IRQ(&dev->lock);

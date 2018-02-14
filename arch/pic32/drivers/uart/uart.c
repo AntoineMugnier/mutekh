@@ -410,6 +410,7 @@ static DEV_CLEANUP(pic32_uart_char_cleanup)
   dev_request_queue_destroy(&pv->read_q);
   dev_request_queue_destroy(&pv->write_q);
 
+  device_iomux_cleanup(dev);
   mem_free(pv);
 }
 

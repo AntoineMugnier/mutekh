@@ -290,25 +290,26 @@ static DEV_IOMUX_SETUP(pic32_gpio_iomux_setup)
 
   switch (dir)
   {
+    case DEV_PIN_DISABLED:
     case DEV_PIN_INPUT:
     case DEV_PIN_INPUT_PULLUP:
     case DEV_PIN_INPUT_PULLDOWN: 
-      /* For input only, PPS functionality does not have priority over TRISx settings.*/
+     /* For input only, PPS functionality does not have priority over TRISx settings.*/
       err = pic32_gpio_mode(io_id, io_id, dev_gpio_mask1, dir); 
       /* Retrieve mux value from pic32mz_input_mux */
-      for (uint8_t i = 0; i < sizeof(pic32mz_input_mux); i++)
-        {
+      if (mux != IOMUX_INVALID_MUX)
+        for (uint8_t i = 0; i < sizeof(pic32mz_input_mux); i++)
           if (pic32mz_input_mux[i] == io_id)
             {
               cpu_mem_write_32(PIC32_GPIO_ADDR + PIC32_GPIO_INPUT_MUX_OFFSET + mux, i >> 2);
               break;
             }
-        }
       break;
     case DEV_PIN_PUSHPULL:
     case DEV_PIN_OPENDRAIN:
         err = pic32_gpio_mode(io_id, io_id, dev_gpio_mask1, dir); 
-        cpu_mem_write_32(PIC32_GPIO_ADDR + PIC32_GPIO_RP_ADDR(io_id), endian_le32(mux));
+        if (mux != IOMUX_INVALID_MUX)
+          cpu_mem_write_32(PIC32_GPIO_ADDR + PIC32_GPIO_RP_ADDR(io_id), endian_le32(mux));
       break;
     default:
       err = -ENOTSUP;

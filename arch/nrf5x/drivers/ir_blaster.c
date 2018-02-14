@@ -472,6 +472,7 @@ static DEV_CLEANUP(nrf52_ir_cleanup)
 
   dev_request_queue_destroy(&pv->queue);
 
+  device_iomux_cleanup(dev);
   mem_free(pv);
 
   return 0;

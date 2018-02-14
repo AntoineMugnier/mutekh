@@ -648,6 +648,7 @@ static DEV_CLEANUP(efm32_usart_spi_cleanup)
   dev_spi_context_cleanup(&pv->spi_ctrl_ctx);
 #endif
 
+  device_iomux_cleanup(dev);
   mem_free(pv);
 
   return 0;

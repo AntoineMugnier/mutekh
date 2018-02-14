@@ -789,6 +789,7 @@ static DEV_CLEANUP(psoc4_uart_char_cleanup)
   dev_request_queue_destroy(&pv->rx_q);
   dev_request_queue_destroy(&pv->tx_q);
 
+  device_iomux_cleanup(dev);
   mem_free(pv);
 
   return 0;

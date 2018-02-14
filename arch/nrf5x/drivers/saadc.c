@@ -263,6 +263,7 @@ static DEV_CLEANUP(nrf5x_saadc_cleanup)
   nrf_it_disable_mask(SAADC_ADDR, -1);
   device_irq_source_unlink(dev, pv->irq_ep, 1);
 
+  device_iomux_cleanup(dev);
   mem_free(pv);
 
   return 0;

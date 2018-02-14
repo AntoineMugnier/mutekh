@@ -402,6 +402,7 @@ static DEV_CLEANUP(nrf5x_spim_cleanup)
   nrf_reg_set(pv->addr, NRF_SPIM_PSEL_MISO, (uint32_t)-1);
   nrf_reg_set(pv->addr, NRF_SPIM_PSEL_MOSI, (uint32_t)-1);
 
+  device_iomux_cleanup(dev);
   mem_free(pv);
 
   return 0;

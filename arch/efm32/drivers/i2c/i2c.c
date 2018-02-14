@@ -522,6 +522,7 @@ DEV_CLEANUP(efm32_i2c_cleanup)
   dev_drv_clock_cleanup(dev, &pv->clk_ep);
 #endif
 
+  device_iomux_cleanup(dev);
   mem_free(pv);
   return 0;
 }

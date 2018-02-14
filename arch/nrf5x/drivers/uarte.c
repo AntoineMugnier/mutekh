@@ -539,6 +539,7 @@ static DEV_CLEANUP(nrf5x_uarte_char_cleanup)
   dev_request_queue_destroy(&pv->rx_q);
   dev_request_queue_destroy(&pv->tx_q);
 
+  device_iomux_cleanup(dev);
   mem_free(pv);
 
   return 0;

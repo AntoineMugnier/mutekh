@@ -383,6 +383,7 @@ static DEV_CLEANUP(efm32_pwm_cleanup)
 
   dev_drv_clock_cleanup(dev, &pv->clk_ep);
 
+  device_iomux_cleanup(dev);
   mem_free(pv);
 
   return 0;

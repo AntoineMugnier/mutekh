@@ -527,6 +527,7 @@ DEV_CLEANUP(bcm283x_i2c_cleanup)
   dev_drv_i2c_ctrl_context_cleanup(&pv->i2c_ctrl_ctx);
 #endif
 
+  device_iomux_cleanup(dev);
   mem_free(pv);
   return 0;
 }
