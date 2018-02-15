@@ -207,6 +207,9 @@ static DEV_USE(efm32_msc_use)
 
 static DEV_INIT(efm32_msc_init)
 {
+  if (((cpu_mem_read_8(0x0fe081e7) + 10) & 0xff) != EFM32_FLASH_PAGE_SIZE)
+    return -EINVAL;
+
 #if 0
   struct efm32_msc_context_s	*pv;
 
@@ -222,8 +225,6 @@ static DEV_INIT(efm32_msc_init)
   if (device_res_get_uint(dev, DEV_RES_MEM, 0, &addr, NULL))
     return -1;
   assert(addr == EFM32_MSC_ADDR);
-
-  assert(((cpu_mem_read_8(0x0fe081e7) + 10) & 0xff) == EFM32_FLASH_PAGE_SIZE);
 
   return 0;
 
