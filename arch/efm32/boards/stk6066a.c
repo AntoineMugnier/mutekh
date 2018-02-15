@@ -43,72 +43,96 @@
 
 #define HFXO_FREQ  38400000
 
-void efm32_board_init()
+void efm32_wait_button_released()
 {
-  uint32_t b, x;
-
-  b = EFM32_EMU_ADDR;
-
-  x = cpu_mem_read_32(b + EFR32_EMU_PWRCFG_ADDR);
-
-  EFR32_EMU_PWRCFG_PWRCFG_SET(x, DCDCTODVDD);                                                                                            
-  cpu_mem_write_32(b + EFR32_EMU_PWRCFG_ADDR, x);                                                                                     
-  cpu_mem_write_32(b + EFR32_EMU_DCDCCTRL_ADDR, 0x31);
-
-  x = cpu_mem_read_32(b + EFR32_EMU_PWRCFG_ADDR);
-  assert((x & EFR32_EMU_PWRCFG_MASK) == EFR32_EMU_PWRCFG_PWRCFG_DCDCTODVDD);
-
-  x = cpu_mem_read_32(b + EFR32_EMU_PWRCTRL_ADDR);
-  x |= 0x420;
-  cpu_mem_write_32(b + EFR32_EMU_PWRCTRL_ADDR, x);
-
-
-  b = EFM32_CMU_ADDR;
-
-  cpu_mem_write_32(b + EFM32_CMU_OSCENCMD_ADDR, EFM32_CMU_OSCENCMD_HFRCOEN);
-  while (!(cpu_mem_read_32(b + EFM32_CMU_STATUS_ADDR) & EFM32_CMU_STATUS_HFRCORDY))
-    ;
-  cpu_mem_write_32(b + EFM32_CMU_HFCLKSEL_ADDR, EFM32_CMU_HFCLKSEL_HF(HFRCO));
-  
-  x = cpu_mem_read_32(b + EFM32_CMU_HFCLKSTATUS_ADDR);
-  assert(EFM32_CMU_HFCLKSTATUS_SELECTED_GET(x) != EFM32_CMU_HFCLKSTATUS_SELECTED_HFXO);
-
-  /* Enable GPIO clock */
-  x = cpu_mem_read_32(b + EFM32_CMU_HFBUSCLKEN0_ADDR);
-  x |= EFM32_CMU_HFBUSCLKEN0_GPIO;
-  cpu_mem_write_32(b + EFM32_CMU_HFBUSCLKEN0_ADDR, x);
-
-  uint32_t gpio = EFM32_GPIO_ADDR;
   uint32_t button_pin = 86;
+  uint32_t x;
 
   /* wait for button to be released */
   uint32_t bank = button_pin / 16;
   uint32_t h = (button_pin >> 1) & 4;
 
-  x = cpu_mem_read_32(gpio + EFM32_GPIO_MODEL_ADDR(bank) + h);
+  x = cpu_mem_read_32(EFM32_GPIO_ADDR + EFM32_GPIO_MODEL_ADDR(bank) + h);
   EFM32_GPIO_MODEL_MODE_SET(button_pin % 8, x, INPUT);
-  cpu_mem_write_32(gpio + EFM32_GPIO_MODEL_ADDR(bank) + h, x);
+  cpu_mem_write_32(EFM32_GPIO_ADDR + EFM32_GPIO_MODEL_ADDR(bank) + h, x);
 
-  while (!(cpu_mem_read_32(gpio + EFM32_GPIO_DIN_ADDR(bank))
+  while (!(cpu_mem_read_32(EFM32_GPIO_ADDR + EFM32_GPIO_DIN_ADDR(bank))
            & EFM32_GPIO_DIN_DIN(button_pin % 16)))
     ;
+}
+
+void efm32_board_init()
+{
+  uint32_t x;
+  uint32_t gpio = EFM32_GPIO_ADDR;
+
+  /* unlock registers */
+  cpu_mem_write_32(EFM32_EMU_ADDR + EFR32_EMU_PWRLOCK_ADDR, 0xADE8);
+
+  x = cpu_mem_read_32(EFM32_EMU_ADDR + EFR32_EMU_PWRCFG_ADDR);
+  EFR32_EMU_PWRCFG_PWRCFG_SET(x, DCDCTODVDD);
+  cpu_mem_write_32(EFM32_EMU_ADDR + EFR32_EMU_PWRCFG_ADDR, x);
+
+  x = cpu_mem_read_32(EFM32_EMU_ADDR + EFR32_EMU_PWRCFG_ADDR);
+  assert((x & EFR32_EMU_PWRCFG_MASK) == EFR32_EMU_PWRCFG_PWRCFG_DCDCTODVDD);
+
+  x = cpu_mem_read_32(EFM32_EMU_ADDR + EFR32_EMU_PWRCTRL_ADDR);
+  x |= EFR32_EMU_PWRCTRL_ANASW |
+       EFR32_EMU_PWRCTRL_REGPWRSEL;
+  cpu_mem_write_32(EFM32_EMU_ADDR + EFR32_EMU_PWRCTRL_ADDR, x);
+
+  x = cpu_mem_read_32(EFM32_EMU_ADDR + EFR32_EMU_DCDCLNFREQCTRL_ADDR);
+  EFR32_EMU_DCDCLNFREQCTRL_RCOBAND_SET(x, 4);
+  cpu_mem_write_32(EFM32_EMU_ADDR + EFR32_EMU_DCDCLNFREQCTRL_ADDR, x);
+
+  while (cpu_mem_read_32(EFM32_EMU_ADDR + EFR32_EMU_DCDCSYNC_ADDR) & 1);
+
+  x = cpu_mem_read_32(EFM32_EMU_ADDR + EFR32_EMU_DCDCCTRL_ADDR);  
+  EFR32_EMU_DCDCCTRL_DCDCMODE_SETVAL(x, 1);
+  cpu_mem_write_32(EFM32_EMU_ADDR + EFR32_EMU_DCDCCTRL_ADDR, x);
+
+  x = cpu_mem_read_32(EFM32_EMU_ADDR + EFR32_EMU_DCDCMISCCTRL_ADDR);
+  EFR32_EMU_DCDCMISCCTRL_PFETCNT_SET(x, 7);
+  EFR32_EMU_DCDCMISCCTRL_NFETCNT_SET(x, 7);
+  cpu_mem_write_32(EFM32_EMU_ADDR + EFR32_EMU_DCDCMISCCTRL_ADDR, x);
+
+  /* Enable GPIO clock */
+  x = cpu_mem_read_32(EFM32_CMU_ADDR + EFM32_CMU_HFBUSCLKEN0_ADDR);
+  x |= EFM32_CMU_HFBUSCLKEN0_GPIO;
+  cpu_mem_write_32(EFM32_CMU_ADDR + EFM32_CMU_HFBUSCLKEN0_ADDR, x);
+
+  /* Wait button to be released */
+  efm32_wait_button_released();
+
+  /* Select HFXO as HF clock */
+  x = EFM32_CMU_OSCENCMD_HFXOEN;
+  cpu_mem_write_32(EFM32_CMU_ADDR + EFM32_CMU_OSCENCMD_ADDR, x);
+
+  while (!(cpu_mem_read_32(EFM32_CMU_ADDR + EFM32_CMU_STATUS_ADDR) & EFM32_CMU_STATUS_HFXORDY))
+    ;
+
+  cpu_mem_write_32(EFM32_CMU_ADDR + EFM32_CMU_HFCLKSEL_ADDR, EFM32_CMU_HFCLKSEL_HF(HFXO));
+
+  x = cpu_mem_read_32(EFM32_CMU_ADDR + EFM32_CMU_HFCLKSTATUS_ADDR);
+  assert(EFM32_CMU_HFCLKSTATUS_SELECTED_GET(x) == EFM32_CMU_HFCLKSTATUS_SELECTED_HFXO);
 
   /* Set PA5 high for enabling VCOM */
-  x = cpu_mem_read_32(gpio + EFM32_GPIO_MODEL_ADDR(0));
+  x = cpu_mem_read_32(EFM32_GPIO_ADDR + EFM32_GPIO_MODEL_ADDR(0));
   EFM32_GPIO_MODEL_MODE_SET(5, x, PUSHPULL);
-  cpu_mem_write_32(gpio + EFM32_GPIO_MODEL_ADDR(0), x);
+  cpu_mem_write_32(EFM32_GPIO_ADDR + EFM32_GPIO_MODEL_ADDR(0), x);
 
   x = EFM32_GPIO_DOUT_DOUT(5);
-  cpu_mem_write_32(gpio + EFM32_GPIO_DOUT_ADDR(0) + 0x06000000, x);
+  cpu_mem_write_32(EFM32_GPIO_ADDR + EFM32_GPIO_DOUT_ADDR(0) + 0x06000000, x);
 
   /* Set PF4 and PF5 high for led */
-  x = cpu_mem_read_32(gpio + EFM32_GPIO_MODEL_ADDR(5));
+  x = cpu_mem_read_32(EFM32_GPIO_ADDR + EFM32_GPIO_MODEL_ADDR(5));
   EFM32_GPIO_MODEL_MODE_SET(4, x, PUSHPULL);
   EFM32_GPIO_MODEL_MODE_SET(5, x, PUSHPULL);
-  cpu_mem_write_32(gpio + EFM32_GPIO_MODEL_ADDR(5), x);
-
+  cpu_mem_write_32(EFM32_GPIO_ADDR + EFM32_GPIO_MODEL_ADDR(5), x);
+  
   x = EFM32_GPIO_DOUT_DOUT(4) | EFM32_GPIO_DOUT_DOUT(5);
-  cpu_mem_write_32(gpio + EFM32_GPIO_DOUT_ADDR(5) + 0x06000000, x);
+  cpu_mem_write_32(EFM32_GPIO_ADDR + EFM32_GPIO_DOUT_ADDR(5) + 0x06000000, x);
+
 
 }
 
@@ -116,7 +140,7 @@ void efm32_board_init()
 
 DEV_DECLARE_STATIC(cpu_dev, "cpu", DEVICE_FLAG_CPU, arm32m_drv,
                    DEV_STATIC_RES_ID(0, 0),
-                   DEV_STATIC_RES_FREQ(40000000, 1),
+                   DEV_STATIC_RES_FREQ(HFXO_FREQ, 1),
                    );
 
 #endif
@@ -241,6 +265,4 @@ DEV_DECLARE_STATIC(usart_dev, "spi", 0, efm32_usart_spi_drv,
 #endif
 
                    );
-
 #endif
-
