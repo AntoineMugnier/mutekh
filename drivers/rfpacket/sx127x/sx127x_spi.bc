@@ -57,9 +57,8 @@
         jmp32                   sx127x_entry_irq
 .endfunc
 
-.func sx127x_entry_config
-        .export sx127x_entry_config
-        .input %0 buf
+.func sx127x_config
+        .input %0 buf, %11 link
         .clobber %0, %1 cmd, %6 len, %7, %8, %9, %10, %12
 
         /* Ensure Stand-by mode */
@@ -78,6 +77,14 @@
         add                     %buf,                %len
         jmp8                    config_loop
   config_done:
+        ret                     %link
+.endfunc
+
+.func sx127x_entry_config
+        .export sx127x_entry_config
+        .input %0 buf
+        .clobber %0, %1 cmd, %6 len, %7, %8, %9, %10, %11, %12
+        call8                   %sx127x_config:link,            sx127x_config
         end
 .endfunc
 
@@ -185,7 +192,7 @@ __rx_alloc_error:
 
 .func sx127x_mode_set
         .input %8 mode, %12 link
-        .clobber %9 tmp, %10 cfg
+        .clobber %9 tmp, %10 cfg irq1
         cst8                    %tmp,            SX1276_REG_OPMODE | 0x80
         ld8e                    %cfg,            %R_CTX_PV,   _offsetof(sx127x_private_s, cfg.mode, 1)
         or32                    %cfg,            %mode
@@ -396,7 +403,65 @@ __tx_fail:
         jmp16                   sx127x_error
 .endfunc
 
-#if defined(CONFIG_DRIVER_RFPACKET_SX127X_DEBUG)
+#ifdef CONFIG_DRIVER_RFPACKET_SX127X_RAW_MODE
+.func sx127x_entry_rx_raw
+        .export sx127x_entry_rx_raw
+        .input %0 cmd 
+        .clobber %6 tmp, %7 data, %8, %9, %10, %12
+    /* Change frequency is needed */
+        tst32s                  %cmd,               bitpos(CMD_FREQ_CHANGE)
+          call16                %config_freq:link,  config_freq
+    /* Start RX */
+        cst8                    %sx127x_mode_set:mode,  SX1276_OPMODE_RECEIVER
+        call16                  %sx127x_mode_set:link,  sx127x_mode_set
+        end
+.endfunc
+
+.func sx127x_entry_tx_raw
+        .export sx127x_entry_tx_raw
+        .input %0 cmd
+        .clobber %6 tmp, %7 data, %8, %9, %10, %12
+    /* Power config */
+        mov                     %data,        %cmd
+        shi32r                  %data,        8
+        cst8                    %tmp,         SX1276_REG_PACONFIG | 0x80
+        pack8                   %tmp,         2
+        spi_wr                  %tmp,         2,      CS_PULSE
+    /* Change frequency is needed */
+        tst32s                  %cmd,               bitpos(CMD_FREQ_CHANGE)
+          call16                %config_freq:link,  config_freq
+    /* Start TX */
+        cst8                    %sx127x_mode_set:mode,    SX1276_OPMODE_TRANSMITTER
+        call16                  %sx127x_mode_set:link,    sx127x_mode_set
+        end
+.endfunc
+
+.func sx127x_entry_standby_tx_raw
+        .export sx127x_entry_standby_tx_raw
+        .input %0 buf
+        .clobber %0, %1, %6 tmp, %7 data, %8, %9, %10, %11, %12
+    /* Get start-up delay */
+        ld32e                   %data,            %R_CTX_PV,       _offsetof(sx127x_private_s, delay_1ms, 4)
+        shi32l                  %data,            2
+        cst8                    %tmp,             0
+        spi_gpioset             SX127X_IO_RST,    %tmp
+        spi_yield_delay         %data,
+        cst8                    %tmp,             1
+        spi_gpioset             SX127X_IO_RST,    %tmp
+        spi_yield_delay         %data
+        call16                  %sx127x_config:link,    sx127x_config
+        cst8                    %sx127x_mode_set:mode,  SX1276_OPMODE_STANDBY
+        call16                  %sx127x_mode_set:link,  sx127x_mode_set
+      /* Clean irq status */
+        cst32                   %tmp,            STATUS_INFO_MSK, 0
+        and32                   %STATUS,         %tmp
+        ld8e                    %tmp,            %R_CTX_PV,      _offsetof(sx127x_private_s, icount, 1)
+        or32                    %STATUS,         %tmp
+        end
+.endfunc
+#endif
+
+#ifdef SX127X_PRINT_REGS
 .func sx127x_entry_dump_cfg
         .clobber %6 tmp, %7 data, %8, %9, %10, %12
         cst8                    %tmp,         SX1276_REG_OPMODE

@@ -13,20 +13,21 @@
 
 #include <device/class/spi.h>
 #include <device/class/dma.h>
+#include <device/class/timer.h>
 #include <device/class/gpio.h>
 #include <device/class/rfpacket.h>
 #include <device/class/iomux.h>
+#include <device/class/bitbang.h>
 
 #include "sx1276_regs_fsk.h"
 
 //#define CONFIG_DRIVER_RFPACKET_SX127X_DEBUG
+//#define SX127X_PRINT_REGS
 
-
-#define SX127X_PIN_COUNT 4
+#define SX127X_PIN_COUNT 3
 #define SX127X_IO_RST  0
 #define SX127X_DIO0    1
-#define SX127X_DIO2    2
-#define SX127X_DIO4    3
+#define SX127X_DIO4    2
 
 #define STATUS          15
 #define R_CTX_PV        14
@@ -68,17 +69,28 @@ enum sx127x_state_e
   SX127X_STATE_CONFIG_RXC,
   SX127X_STATE_CONFIG_RXC_PENDING_STOP,
   SX127X_STATE_RX,      /* 6 */
-  /* Rx continous. Started in bytecode but no loop in bytecode */
+  /* Rx continous.*/
   SX127X_STATE_RXC,
-  /* Restarting RX continous after a RX overflow */
-  /* Rx on multiple channels. Started in bytecode and loop in bytecode */
+  /* Rx continuous on multiple channels */
   SX127X_STATE_RX_SCANNING,
-  /* A stop rx continous is pending but we are still in bytecode */  
+  /* A stop rx continous is pending */  
   SX127X_STATE_RXC_PENDING_STOP,
   /* Rx continous is stopping */  
   SX127X_STATE_RXC_STOP, 
   SX127X_STATE_TX,
   SX127X_STATE_TX_FAIR,
+#ifdef CONFIG_DRIVER_RFPACKET_SX127X_RAW_MODE
+  SX127X_STATE_RXC_RAW_ALLOC,                           /* 13 */
+  SX127X_STATE_RXC_RAW,
+  SX127X_STATE_RXC_RAW_PENDING_STOP,
+  SX127X_STATE_RXC_RAW_STOP,
+  SX127X_STATE_RX_RAW_ALLOC,                       
+  SX127X_STATE_RX_RAW,                                 /* 18 */
+  SX127X_STATE_RX_RAW_PENDING_STOP,                               
+  SX127X_STATE_RX_RAW_STOP,
+  SX127X_STATE_TX_RAW,
+  SX127X_STATE_TX_RAW_DONE,
+#endif
 };
 
 struct sx127x_freq_coeff_s
@@ -136,12 +148,10 @@ struct sx127x_private_s
   /* SPI controller */
   struct device_spi_ctrl_s           spi;
   struct dev_spi_ctrl_bytecode_rq_s  spi_rq;
-  /* SPI timer */
-  struct device_timer_s *            timer;
   /* SX127x gpio mapping */
   gpio_id_t                          pin_map[SX127X_PIN_COUNT];
   /* SX127x interrupts. */
-  struct dev_irq_src_s               src_ep[2];
+  struct dev_irq_src_s               src_ep;
   /* TX/RX request queue */
   dev_request_queue_root_t           queue;
   /* RX continuous request */
@@ -149,18 +159,29 @@ struct sx127x_private_s
   struct dev_rfpacket_rq_s *         next_rx_cont;
   struct dev_rfpacket_rx_s *         rxrq;   
 
+  struct kroutine_s                  kr;
   bool_t                             bcrun;
   uint32_t                           bc_status;
 
-#if defined(CONFIG_DRIVER_RFPACKET_SX127X_DEBUG)
+#ifdef SX127X_PRINT_REGS
   uint8_t                            *dump;
-#endif 
+#endif
   struct sx127x_config_s             cfg;
 
   const struct dev_rfpacket_rf_cfg_s *rf_cfg;
   const struct dev_rfpacket_pk_cfg_s *pk_cfg;
 
+  /* SPI timer */
+  struct device_timer_s *            timer;
+  struct dev_timer_rq_s              trq;
+
+  struct device_bitbang_s            bitbang;
+  struct dev_bitbang_rq_s            brq;
 };
+
+STRUCT_COMPOSE(sx127x_private_s, kr);
+STRUCT_COMPOSE(sx127x_private_s, trq);
+STRUCT_COMPOSE(sx127x_private_s, brq);
 
 DRIVER_PV(struct sx127x_private_s);
 
