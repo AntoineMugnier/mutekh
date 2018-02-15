@@ -64,7 +64,9 @@ DRIVER_PV(struct efm32_bitbang_ctx_s
   uint8_t                          div;
   iomux_io_id_t                    id;
 
+#ifdef CONFIG_DEVICE_CLOCK
   struct dev_clock_sink_ep_s       clk_ep;
+#endif
   struct dev_freq_s                freq;
   struct dev_freq_s                sfreq;
 });
@@ -209,7 +211,7 @@ static void efm32_bitbang_ctx_start_rx(struct efm32_bitbang_ctx_s *pv, struct de
 
   /* Set timer channel as input/capture mapped to external pin */
   x = EFM32_TIMER_CC_CTRL_MODE(INPUTCAPTURE) |
-      EFM32_TIMER_CC_CTRL_FILT(ENABLED) |
+      EFM32_TIMER_CC_CTRL_FILT |
       EFM32_TIMER_CC_CTRL_ICEDGE(BOTH);
 
   cpu_mem_write_32(pv->addr + EFM32_TIMER_CC_CTRL_ADDR(0), endian_le32(x));
@@ -469,12 +471,14 @@ static DEV_INIT(efm32_bitbang_init)
   if (device_get_param_dev_accessor(dev, "iomux", &pv->iomux.base, DRIVER_CLASS_IOMUX))
     goto err_mem;
 
+#ifdef CONFIG_DEVICE_CLOCK
   enum dev_clock_ep_flags_e flags = DEV_CLOCK_EP_FREQ_NOTIFY |
                                     DEV_CLOCK_EP_POWER_CLOCK |
                                     DEV_CLOCK_EP_GATING_SYNC;
 
   if (dev_drv_clock_init(dev, &pv->clk_ep, 0, flags, &pv->freq))
     goto err_mem;
+#endif
 
   /* Timer initialisation */
 
@@ -541,7 +545,9 @@ static DEV_INIT(efm32_bitbang_init)
   return 0;
 
  err_clk:
+#ifdef CONFIG_DEVICE_CLOCK
   dev_drv_clock_cleanup(dev, &pv->clk_ep);
+#endif
  err_mem:
   mem_free(pv);
   return -1;
@@ -558,7 +564,9 @@ static DEV_CLEANUP(efm32_bitbang_cleanup)
 
   cpu_mem_write_32(pv->addr + EFM32_TIMER_CMD_ADDR, endian_le32(EFM32_TIMER_CMD_STOP));
 
+#ifdef CONFIG_DEVICE_CLOCK
   dev_drv_clock_cleanup(dev, &pv->clk_ep);
+#endif
 
   mem_free(pv);
 
