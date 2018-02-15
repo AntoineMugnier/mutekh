@@ -60,18 +60,19 @@ DRIVER_PV(struct efm32_bitbang_ctx_s
   struct device_dma_s              dma;
   struct device_iomux_s            iomux;
 
+  struct kroutine_s                kr;
   uint32_t                         dvalue;
   uint8_t                          div;
   iomux_io_id_t                    id;
 
-#ifdef CONFIG_DEVICE_CLOCK
   struct dev_clock_sink_ep_s       clk_ep;
-#endif
   struct dev_freq_s                freq;
   struct dev_freq_s                sfreq;
+  bool_t                           pending;
 });
 
 STRUCT_COMPOSE(efm32_bitbang_ctx_s, dma_rq);
+STRUCT_COMPOSE(efm32_bitbang_ctx_s, kr);
 
 static void efm32_bitbang_ctx_start_tx(struct efm32_bitbang_ctx_s *pv, struct dev_bitbang_rq_s * rq);
 static void efm32_bitbang_ctx_start_rx(struct efm32_bitbang_ctx_s *pv, struct dev_bitbang_rq_s * rq);
@@ -87,7 +88,7 @@ static void efm32_bitbang_freq(struct efm32_bitbang_ctx_s *pv)
   pv->sfreq.denom = rq->unit.denom;
 
   /* Compute scale factor to the requested frequency. */
-  uint64_t scale = (pv->freq.num * rq->unit.denom) / (pv->freq.denom * rq->unit.num);
+  uint32_t scale = (pv->freq.num * rq->unit.denom) / (pv->freq.denom * rq->unit.num);
 
   pv->div = scale > 1024 ? 10 : bit_msb_index(scale);
 }
@@ -95,6 +96,8 @@ static void efm32_bitbang_freq(struct efm32_bitbang_ctx_s *pv)
 static void bitbang_process_next(struct efm32_bitbang_ctx_s *pv)
 {
   struct dev_bitbang_rq_s *rq = dev_bitbang_rq_s_cast(dev_request_queue_head(&pv->queue));
+
+  pv->pending = 0;
 
   if (rq == NULL)
     return;
@@ -118,22 +121,52 @@ static void bitbang_process_next(struct efm32_bitbang_ctx_s *pv)
     }
 }
 
+
+static KROUTINE_EXEC(efm32_bitbang_process_next_kr)
+{
+  struct efm32_bitbang_ctx_s *pv = efm32_bitbang_ctx_s_from_kr(kr);
+
+  LOCK_SPIN_IRQ(&pv->dev->lock);
+  bitbang_process_next(pv);
+  LOCK_RELEASE_IRQ(&pv->dev->lock);
+}
+
 static void efm32_bitbang_end_wr_rq(struct efm32_bitbang_ctx_s *pv)
 {
+  LOCK_SPIN_IRQ(&pv->dev->lock);
+
   struct dev_bitbang_rq_s *rq = dev_bitbang_rq_s_cast(dev_request_queue_head(&pv->queue));
 
-  if (rq == NULL)
-    return;
-
-  assert(rq->type == DEV_BITBANG_WR);
+  assert(rq && rq->type == DEV_BITBANG_WR);
 
   rq->err = 0;
   rq->base.drvdata = NULL;
 
+  /* End current request */
   dev_request_queue_pop(&pv->queue);
   kroutine_exec(&rq->base.kr);
 
-  return bitbang_process_next(pv);
+  /* Process next request */
+  kroutine_exec(&pv->kr);
+end:
+  LOCK_RELEASE_IRQ(&pv->dev->lock);
+}
+
+static DEV_DMA_CALLBACK(sx127x_bitbang_tx_dma_done)
+{
+  assert(err == 0);
+
+  struct efm32_bitbang_ctx_s *pv = efm32_bitbang_ctx_s_from_dma_rq(rq);
+
+  /* Set pin as input */
+  DEVICE_OP(&pv->iomux, setup, pv->id, DEV_PIN_INPUT, IOMUX_INVALID_MUX, 0);
+
+  /* Stop timer */
+  cpu_mem_write_32(pv->addr + EFM32_TIMER_CMD_ADDR, endian_le32(EFM32_TIMER_CMD_STOP));
+
+  efm32_bitbang_end_wr_rq(pv);
+
+  return 0;
 }
 
 static void efm32_bitbang_end_rd_rq(struct efm32_bitbang_ctx_s *pv, error_t err, size_t size)
@@ -151,14 +184,10 @@ static void efm32_bitbang_end_rd_rq(struct efm32_bitbang_ctx_s *pv, error_t err,
 
   dev_request_queue_pop(&pv->queue);
   kroutine_exec(&rq->base.kr);
-
-  writek("e", 1);
-  return bitbang_process_next(pv);
 }
 
 static DEV_DMA_CALLBACK(sx127x_bitbang_rx_dma_done)
 {
-  writek("d", 1);
   assert(err == 0);
 
   struct efm32_bitbang_ctx_s *pv = efm32_bitbang_ctx_s_from_dma_rq(rq);
@@ -170,28 +199,23 @@ static DEV_DMA_CALLBACK(sx127x_bitbang_rx_dma_done)
   cpu_mem_write_32(pv->addr + EFM32_TIMER_CMD_ADDR, endian_le32(EFM32_TIMER_CMD_STOP));
   cpu_mem_write_32(pv->addr + EFM32_TIMER_CC_CTRL_ADDR(0), 0);
 
+  uint32_t x = cpu_mem_read_32(pv->addr + EFM32_TIMER_IF_ADDR);
+  x &= cpu_mem_read_32(pv->addr + EFM32_TIMER_IEN_ADDR);
+
+  pv->pending = 1;
+
+  if (x & EFM32_TIMER_IEN_OF)
+    /* Timer irq is pending */
+    goto end;
+
   /* Buffer overflow */
   efm32_bitbang_end_rd_rq(pv, -EIO, 0);
 
+  /* Process next request */
+  kroutine_exec(&pv->kr);
+
+end:
   LOCK_RELEASE_IRQ(&pv->dev->lock);
-
-  return 0;
-}
-
-static DEV_DMA_CALLBACK(sx127x_bitbang_tx_dma_done)
-{
-  assert(err == 0);
-
-  struct efm32_bitbang_ctx_s *pv = efm32_bitbang_ctx_s_from_dma_rq(rq);
-
-  /* Set pin as input */
-  DEVICE_OP(&pv->iomux, setup, pv->id, DEV_PIN_INPUT, IOMUX_INVALID_MUX, 0);
-
-  /* Stop timer */
-  cpu_mem_write_32(pv->addr + EFM32_TIMER_CMD_ADDR, endian_le32(EFM32_TIMER_CMD_STOP));
-  
-  efm32_bitbang_end_wr_rq(pv);
-
   return 0;
 }
 
@@ -199,7 +223,8 @@ static void efm32_bitbang_ctx_start_rx(struct efm32_bitbang_ctx_s *pv, struct de
 {
   /* Timer */
   cpu_mem_write_32(pv->addr + EFM32_TIMER_CMD_ADDR, endian_le32(EFM32_TIMER_CMD_STOP));
-  cpu_mem_write_32(pv->addr + EFM32_TIMER_TOP_ADDR, 0xFFFF);
+  /* Timer top value is set to read timeout */
+  cpu_mem_write_32(pv->addr + EFM32_TIMER_TOP_ADDR, rq->read_timeout);
 
   uint32_t x = EFM32_TIMER_CTRL_MODE(UP) |
                pv->div << 24|
@@ -317,7 +342,6 @@ static void efm32_bitbang_ctx_start_tx(struct efm32_bitbang_ctx_s *pv, struct de
 
 static error_t efm32_bitbang_cancel_rx(struct efm32_bitbang_ctx_s *pv)
 {
-  writek("c", 1);
   struct dev_dma_rq_s *drq = &pv->dma_rq;
 
   cpu_mem_write_32(pv->addr + EFM32_TIMER_CMD_ADDR, endian_le32(EFM32_TIMER_CMD_STOP));
@@ -357,9 +381,12 @@ static DEV_BITBANG_CANCEL(efm32_bitbang_cancel)
       switch(rq->type)
         {
           case DEV_BITBANG_RD:
+            if (pv->pending)
+              break;
             err = efm32_bitbang_cancel_rx(pv);
             if (err)
               break;
+            rq->base.drvdata = NULL;
             dev_request_queue_pop(&pv->queue);
             bitbang_process_next(pv);
             break; 
@@ -394,7 +421,7 @@ static DEV_BITBANG_REQUEST(efm32_bitbang_request)
   dev_request_queue_pushback(&pv->queue, dev_bitbang_rq_s_base(rq));
   rq->base.drvdata = pv;
 
-  if (empty)
+  if (empty && !pv->pending)
     bitbang_process_next(pv);
 
   LOCK_RELEASE_IRQ(&dev->lock);
@@ -407,7 +434,6 @@ static DEV_IRQ_SRC_PROCESS(efm32_bitbang_irq_process)
 
   lock_spin(&dev->lock);
 
-  writek("i", 1);
   struct dev_dma_rq_s *drq = &pv->dma_rq;
 
   /* Turn off CC and stop timer */
@@ -417,6 +443,8 @@ static DEV_IRQ_SRC_PROCESS(efm32_bitbang_irq_process)
 
   /* Clean irq */
   cpu_mem_write_32(pv->addr + EFM32_TIMER_IFC_ADDR, EFM32_TIMER_IFC_MASK);
+
+  pv->pending = 1;
 
   /* Cancel dma request */ 
   error_t err = DEVICE_OP(&pv->dma, cancel, drq);
@@ -429,6 +457,9 @@ static DEV_IRQ_SRC_PROCESS(efm32_bitbang_irq_process)
     efm32_bitbang_end_rd_rq(pv, 0, pv->dma_rq.cancel.size - 1);
   else
     efm32_bitbang_end_rd_rq(pv, 0, pv->dma_rq.cancel.size);
+
+  /* Request is terminated here */
+  bitbang_process_next(pv);
 
 end:
   lock_release(&dev->lock);
@@ -443,7 +474,6 @@ static void efm32_bitbang_clk_changed(struct device_s *dev)
 
 }
 #endif
-
 
 static DEV_INIT(efm32_bitbang_init)
 {
@@ -471,14 +501,14 @@ static DEV_INIT(efm32_bitbang_init)
   if (device_get_param_dev_accessor(dev, "iomux", &pv->iomux.base, DRIVER_CLASS_IOMUX))
     goto err_mem;
 
-#ifdef CONFIG_DEVICE_CLOCK
   enum dev_clock_ep_flags_e flags = DEV_CLOCK_EP_FREQ_NOTIFY |
                                     DEV_CLOCK_EP_POWER_CLOCK |
                                     DEV_CLOCK_EP_GATING_SYNC;
 
   if (dev_drv_clock_init(dev, &pv->clk_ep, 0, flags, &pv->freq))
     goto err_mem;
-#endif
+
+  kroutine_init_deferred(&pv->kr, efm32_bitbang_process_next_kr);
 
   /* Timer initialisation */
 
