@@ -50,7 +50,7 @@ static void sx127x_rfp_idle(struct sx127x_private_s *pv);
 
 static void sx127x_rfp_set_state(struct sx127x_private_s *pv, enum sx127x_state_e state)
 {
-  dprintk("state %d\n", state);
+  dprintk("st %d\n", state);
   pv->state = state;
 }
 
@@ -141,7 +141,6 @@ static uint8_t sx127x_get_bw(uint32_t bw)
 
 static error_t sx127x_build_raw_config(struct sx127x_private_s * pv, struct dev_rfpacket_rq_s *rq, uint8_t **p)
 {
-
   const struct dev_rfpacket_pk_cfg_raw_s *pk_cfg = const_dev_rfpacket_pk_cfg_raw_s_cast(rq->pk_cfg);
 
   /* Set bitbang symbol duration */
@@ -774,16 +773,15 @@ static inline void sx127x_start_tx_raw(struct sx127x_private_s *pv)
 
 static void sx127x_rx_raw_timeout(struct sx127x_private_s *pv)
 {
-  dprintk("rx done %d\n", pv->state);
   switch (pv->state)
   {
     case SX127X_STATE_RX_RAW:
       /* Stop bitbang */
       if (DEVICE_OP(&pv->bitbang, cancel, &pv->brq))
-      {
-        sx127x_rfp_set_state(pv, SX127X_STATE_RX_RAW_PENDING_STOP);
-        return;
-      }
+        {
+          sx127x_rfp_set_state(pv, SX127X_STATE_RX_RAW_PENDING_STOP);
+          return;
+        }
     default:
       break;
   }
@@ -800,6 +798,7 @@ static void sx127x_rx_raw_timeout(struct sx127x_private_s *pv)
   {
     case SX127X_STATE_RX_RAW:
     case SX127X_STATE_RX_RAW_ALLOC:
+    case SX127X_STATE_RX_RAW_PENDING_STOP:
       break;
     default:
       abort();
@@ -869,7 +868,10 @@ static KROUTINE_EXEC(sx127x_bitbang_rx_done)
       /* Cancel timer request */
       if (DEVICE_OP(pv->timer, cancel, &pv->trq))
         /* Kroutine will be called sooner */
+        {
+          sx127x_rfp_set_state(pv, SX127X_STATE_RX_RAW_PENDING_STOP);
           goto done;
+        }
       sx127x_rfp_set_state(pv, SX127X_STATE_RX_RAW_ALLOC);
       break;
     default:
@@ -897,7 +899,6 @@ static void sx127x_start_tx_bitbang(struct sx127x_private_s *pv)
   pv->brq.sym_width = 1;
 
   kroutine_init_deferred(&pv->brq.base.kr, sx127x_bitbang_tx_done);
-
   DEVICE_OP(&pv->bitbang, request, &pv->brq);
 }
 
@@ -911,9 +912,9 @@ static void sx127x_start_rx_bitbang(struct sx127x_private_s *pv)
   pv->brq.count = rx->size;
   pv->brq.symbols = rx->buf;
   pv->brq.sym_width = 1;
+  pv->brq.read_timeout = 0xFFFF;
 
   kroutine_init_deferred(&pv->brq.base.kr, sx127x_bitbang_rx_done);
-
   DEVICE_OP(&pv->bitbang, request, &pv->brq);
 }
 
@@ -970,12 +971,10 @@ static void sx127x_rx_raw_startup(struct sx127x_private_s *pv)
   {
     case SX127X_STATE_RXC_RAW_ALLOC:
       sx127x_rfp_set_state(pv, SX127X_STATE_RXC_RAW);
-    case SX127X_STATE_RXC_RAW:
       /* No need to start timer when RX continuous */
       return;
     case SX127X_STATE_RX_RAW_ALLOC:
       sx127x_rfp_set_state(pv, SX127X_STATE_RX_RAW);
-    case SX127X_STATE_RX_RAW:
       break;
     default:
       printk("state error %d\n", pv->state);
@@ -1714,7 +1713,6 @@ static KROUTINE_EXEC(sx127x_spi_rq_done)
       sx127x_rx_done(pv);
       goto end;
     }
-
 
   switch (pv->state)
   {

@@ -63,12 +63,9 @@ enum sx127x_state_e
   SX127X_STATE_INITIALISING,
   SX127X_STATE_IDLE,
   SX127X_STATE_SLEEP,
-  /* Configuring Radio transceiver for any operation except RX continuous */
   SX127X_STATE_CONFIG,
-  /* Configuring Radio transceiver for RX continuous */
-  SX127X_STATE_CONFIG_RXC,
   SX127X_STATE_CONFIG_RXC_PENDING_STOP,
-  SX127X_STATE_RX,      /* 6 */
+  SX127X_STATE_RX,      /* 5 */
   /* Rx continous.*/
   SX127X_STATE_RXC,
   /* Rx continuous on multiple channels */
@@ -80,12 +77,12 @@ enum sx127x_state_e
   SX127X_STATE_TX,
   SX127X_STATE_TX_FAIR,
 #ifdef CONFIG_DRIVER_RFPACKET_SX127X_RAW_MODE
-  SX127X_STATE_RXC_RAW_ALLOC,                           /* 13 */
+  SX127X_STATE_RXC_RAW_ALLOC,                           /* 12 */
   SX127X_STATE_RXC_RAW,
   SX127X_STATE_RXC_RAW_PENDING_STOP,
   SX127X_STATE_RXC_RAW_STOP,
   SX127X_STATE_RX_RAW_ALLOC,                       
-  SX127X_STATE_RX_RAW,                                 /* 18 */
+  SX127X_STATE_RX_RAW,                                 /* 17 */
   SX127X_STATE_RX_RAW_PENDING_STOP,                               
   SX127X_STATE_RX_RAW_STOP,
   SX127X_STATE_TX_RAW,
