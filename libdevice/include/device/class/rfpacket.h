@@ -46,8 +46,6 @@
 struct device_rfpacket_s;
 struct dev_rfpacket_rq_s;
 
-typedef uint16_t dev_symbol_delay_t;
-
 /** RF power in 0.125 dBm steps */
 typedef int16_t dev_rfpacket_pwr_t;
 
@@ -303,13 +301,29 @@ struct dev_rfpacket_pk_cfg_basic_s
 
 STRUCT_INHERIT(dev_rfpacket_pk_cfg_basic_s, dev_rfpacket_pk_cfg_s, base);
 
+/** @This specifies the integer type used to store symbols for a
+    raw request. */
+enum dev_rfpacket_sym_width_e
+{
+  /** Symbols are stored as @tt uint8_t */
+  DEV_RFPACKET_RAW_8BITS,
+  /** Symbols are stored as @tt uint16_t */
+  DEV_RFPACKET_RAW_16BITS,
+  /** Symbols are stored as @tt uint32_t */
+  DEV_RFPACKET_RAW_32BITS,
+};
+
 struct dev_rfpacket_pk_cfg_raw_s
 {
-  struct dev_rfpacket_pk_cfg_s  base;
+  struct dev_rfpacket_pk_cfg_s   base;
   /* Maximum packet size in number of symbol */ 
-  uint16_t                      mps;
+  uint16_t                       mps;
   /* This defines the base unit time use for symbol duration */
-  struct dev_freq_s             unit;
+  struct dev_freq_s              unit;
+  /* Timeout in unit used to detect end of a RX packet */
+  uint32_t                       timeout;
+  /** This specifies the type of integer used for symbols */
+  enum dev_rfpacket_sym_width_e  sym_width;
 };
 
 STRUCT_INHERIT(dev_rfpacket_pk_cfg_raw_s, dev_rfpacket_pk_cfg_s, base);
