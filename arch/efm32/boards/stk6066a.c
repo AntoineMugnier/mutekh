@@ -43,7 +43,7 @@
 
 #define HFXO_FREQ  38400000
 
-void efm32_wait_button_released()
+static void efm32_wait_button_released()
 {
   uint32_t button_pin = 86;
   uint32_t x;
@@ -64,8 +64,6 @@ void efm32_wait_button_released()
 void efm32_board_init()
 {
   uint32_t x;
-  uint32_t gpio = EFM32_GPIO_ADDR;
-
   /* unlock registers */
   cpu_mem_write_32(EFM32_EMU_ADDR + EFR32_EMU_PWRLOCK_ADDR, 0xADE8);
 
@@ -258,11 +256,8 @@ DEV_DECLARE_STATIC(usart_dev, "spi", 0, efm32_usart_spi_drv,
    #error
   #endif
 
-    #ifdef CONFIG_DRIVER_EFM32_TIMER
+  #ifdef CONFIG_DRIVER_EFM32_TIMER
                    DEV_STATIC_RES_DEV_TIMER("/timer0")
-    #endif
-                   );
-#endif
-
+  #endif
                    );
 #endif
