@@ -147,6 +147,9 @@ static error_t sx127x_build_raw_config(struct sx127x_private_s * pv, struct dev_
   pv->brq.unit.num = pk_cfg->unit.num;
   pv->brq.unit.denom = pk_cfg->unit.denom;
 
+  pv->brq.read_timeout = pk_cfg->timeout;
+  pv->brq.sym_width = pk_cfg->sym_width;
+
   uint8_t * pk = *p;
 
   pv->cfg.rxcfg = SX1276_RXCONFIG_AFCAUTO_ON |
@@ -163,6 +166,7 @@ static error_t sx127x_build_raw_config(struct sx127x_private_s * pv, struct dev_
   *pk++ = 1;
   *pk++ = SX1276_REG_PACKETCONFIG2 | 0x80;
   *pk++ = SX1276_PACKETCONFIG2_DATAMODE_CONTINUOUS;
+
 
   /* DIO Mapping */
   *pk++ = 2;
@@ -446,15 +450,12 @@ static inline error_t sx127x_check_config(struct sx127x_private_s *pv, struct de
 
       /* Frequency */
       sx127x_config_coeff_freq_update(pv, rq);
-
+      
+      /* Datarate */
       *cfg++ = 2;
       *cfg++ = SX1276_REG_BITRATEMSB | 0x80;
- 
-      /* Datarate */
-      uint16_t dr = 0x01;
-      if (rq->pk_cfg->format != DEV_RFPACKET_FMT_RAW)
-        dr = (CONFIG_DRIVER_RFPACKET_SX127X_FREQ_XO/rfcfg->drate);
 
+      uint16_t dr = (CONFIG_DRIVER_RFPACKET_SX127X_FREQ_XO/rfcfg->drate);
       endian_be16_na_store(cfg, dr);
       cfg += 2;
 
@@ -696,53 +697,52 @@ static uint32_t sx127x_set_cmd(struct sx127x_private_s *pv, struct dev_rfpacket_
   return cmd;
 }
 
-static void sx127x_rfp_end_rxrq(struct sx127x_private_s *pv, bool_t err)
+static void sx127x_rfp_end_rxrq(struct sx127x_private_s *pv, bool_t err, size_t size)
 {
   struct dev_rfpacket_rx_s *rx = pv->rxrq;
 
   if (rx == NULL)
     return;
 
-  struct dev_rfpacket_rq_s *rq = dev_rfpacket_rq_s_cast(dev_request_queue_head(&pv->queue));
+  struct dev_rfpacket_rq_s *rq = NULL;
 
-  /* Terminate allocated rx request */
-  if (err)
-    rx->size = 0;
-  else
+  switch (pv->state)
     {
-      switch (pv->state)
-      {
 #ifdef CONFIG_DRIVER_RFPACKET_SX127X_RAW_MODE
-        case SX127X_STATE_RX_RAW:
+      case SX127X_STATE_RX_RAW:
+      case SX127X_STATE_RX_RAW_PENDING_STOP:
+        rq = dev_rfpacket_rq_s_cast(dev_request_queue_head(&pv->queue));
+        break;
+      case SX127X_STATE_RXC_RAW:
+      case SX127X_STATE_RXC_RAW_PENDING_STOP:
+        rq = pv->rx_cont;
+        break;
 #endif
-        case SX127X_STATE_RX:
-          rq = dev_rfpacket_rq_s_cast(dev_request_queue_head(&pv->queue));
-          break;
-        case SX127X_STATE_RXC_STOP:
-        case SX127X_STATE_RXC:
-        case SX127X_STATE_RX_SCANNING:
-#ifdef CONFIG_DRIVER_RFPACKET_SX127X_RAW_MODE
-        case SX127X_STATE_RXC_RAW:
-        case SX127X_STATE_RXC_RAW_PENDING_STOP:
-#endif
-          rq = pv->rx_cont;
-          break;
-        default:
-          abort();
-      }
-
-      assert(rq);
-
-      rx->channel = pv->cfg.channel;
-      rx->carrier = 0;
-      rx->rssi = 0;
-      rx->timestamp = pv->timestamp;
-
-      if (rq->anchor == DEV_RFPACKET_TIMESTAMP_START)
-        rx->timestamp -= pv->rxrq->size * pv->timebit * 8;
+      case SX127X_STATE_RX:
+        rq = dev_rfpacket_rq_s_cast(dev_request_queue_head(&pv->queue));
+        break;
+      case SX127X_STATE_RXC_STOP:
+      case SX127X_STATE_RXC:
+      case SX127X_STATE_RX_SCANNING:
+        rq = pv->rx_cont;
+        break;
+      default:
+        break;
     }
 
+  assert(rq);
+
+  /* Terminate allocated rx request */
+  rx->size = size;
+  rx->channel = pv->cfg.channel;
+  rx->carrier = 0;
+  rx->rssi = 0;
+  rx->timestamp = pv->timestamp;
   rx->err = err;
+
+  if (rq->anchor == DEV_RFPACKET_TIMESTAMP_START)
+    rx->timestamp -= pv->rxrq->size * pv->timebit * 8;
+
   kroutine_exec(&rx->kr);
   pv->rxrq = NULL;
 }
@@ -786,13 +786,8 @@ static void sx127x_rx_raw_timeout(struct sx127x_private_s *pv)
       break;
   }
 
-  struct dev_rfpacket_rx_s *rx = pv->rxrq;
-
-  if (rx)
-    {
-      rx->size = 0;
-      sx127x_rfp_end_rxrq(pv, 0);
-    }
+  /* End allocated RX */
+  sx127x_rfp_end_rxrq(pv, 0, 0);
 
   switch (pv->state)
   {
@@ -830,7 +825,7 @@ static KROUTINE_EXEC(sx127x_bitbang_tx_done)
 
   /* Reset and configure device. Chip is freezed after a tx raw */
   sx127x_rfp_set_state(pv, SX127X_STATE_TX_RAW_DONE);
-  sx127x_bytecode_start(pv, &sx127x_entry_standby_tx_raw, SX127X_ENTRY_STANDBY_TX_RAW_BCARGS(pv->cfg.cfg));
+  sx127x_bytecode_start(pv, &sx127x_entry_standby, 0, 0);
 
   LOCK_RELEASE_IRQ(&pv->dev->lock);
 }
@@ -842,14 +837,10 @@ static KROUTINE_EXEC(sx127x_bitbang_rx_done)
 
   LOCK_SPIN_IRQ(&pv->dev->lock);
 
-  struct dev_rfpacket_rx_s *rx = pv->rxrq;
   struct dev_bitbang_rq_s *rq = &pv->brq;
-
-  if (rx)
-    {
-      rx->size = rq->count;
-      sx127x_rfp_end_rxrq(pv, rq->err);
-    }
+  
+  /* End allocated RX */
+  sx127x_rfp_end_rxrq(pv, rq->err, rq->count);
 
   switch (pv->state)
   {
@@ -896,7 +887,6 @@ static void sx127x_start_tx_bitbang(struct sx127x_private_s *pv)
   pv->brq.type = DEV_BITBANG_WR;
   pv->brq.count = rq->tx_size;
   pv->brq.symbols = (void *)rq->tx_buf;
-  pv->brq.sym_width = 1;
 
   kroutine_init_deferred(&pv->brq.base.kr, sx127x_bitbang_tx_done);
   DEVICE_OP(&pv->bitbang, request, &pv->brq);
@@ -911,8 +901,6 @@ static void sx127x_start_rx_bitbang(struct sx127x_private_s *pv)
   pv->brq.type = DEV_BITBANG_RD;
   pv->brq.count = rx->size;
   pv->brq.symbols = rx->buf;
-  pv->brq.sym_width = 1;
-  pv->brq.read_timeout = 0xFFFF;
 
   kroutine_init_deferred(&pv->brq.base.kr, sx127x_bitbang_rx_done);
   DEVICE_OP(&pv->bitbang, request, &pv->brq);
@@ -957,7 +945,6 @@ static void sx127x_rx_raw_startup(struct sx127x_private_s *pv)
 
   if ((rx == NULL) || (rx->size != size))
     {
-      writek("B", 1);
       /* Retry allocation later */
       kroutine_exec(&pv->kr);
       return;
@@ -977,7 +964,6 @@ static void sx127x_rx_raw_startup(struct sx127x_private_s *pv)
       sx127x_rfp_set_state(pv, SX127X_STATE_RX_RAW);
       break;
     default:
-      printk("state error %d\n", pv->state);
       abort();
   }
 
@@ -1055,13 +1041,7 @@ static void sx127x_cancel_rxc_raw(struct sx127x_private_s *pv)
     }
   
   /* End allocated RX packet */
-  struct dev_rfpacket_rx_s *rx = pv->rxrq;
-
-  if (rx)
-    {
-      rx->size = 0;
-      sx127x_rfp_end_rxrq(pv, 0);
-    }
+  sx127x_rfp_end_rxrq(pv, 0, 0);
 
   sx127x_rfp_set_state(pv, SX127X_STATE_RXC_RAW_STOP);
   sx127x_bytecode_start(pv, &sx127x_entry_cancel, 0, 0);
@@ -1414,7 +1394,7 @@ static DEV_RFPACKET_REQUEST(sx127x_request)
 /* Transceiver is idle when this function is called */
 static inline void sx127x_rx_done(struct sx127x_private_s *pv)
 {
-  sx127x_rfp_end_rxrq(pv, 0);
+  sx127x_rfp_end_rxrq(pv, 0, pv->size);
 
   switch (pv->state)
   {
@@ -1661,7 +1641,7 @@ static inline void sx127x_rfp_error(struct sx127x_private_s *pv)
 {
   dprintk("sx127x: -EIO error %d\n", pv->state);
   /* Terminate allocated rx request */
-  sx127x_rfp_end_rxrq(pv, 1);
+  sx127x_rfp_end_rxrq(pv, 1, 0);
 
   switch (pv->state)
   {

@@ -436,29 +436,6 @@ __tx_fail:
         end
 .endfunc
 
-.func sx127x_entry_standby_tx_raw
-        .export sx127x_entry_standby_tx_raw
-        .input %0 buf
-        .clobber %0, %1, %6 tmp, %7 data, %8, %9, %10, %11, %12
-    /* Get start-up delay */
-        ld32e                   %data,            %R_CTX_PV,       _offsetof(sx127x_private_s, delay_1ms, 4)
-        shi32l                  %data,            2
-        cst8                    %tmp,             0
-        spi_gpioset             SX127X_IO_RST,    %tmp
-        spi_yield_delay         %data,
-        cst8                    %tmp,             1
-        spi_gpioset             SX127X_IO_RST,    %tmp
-        spi_yield_delay         %data
-        call16                  %sx127x_config:link,    sx127x_config
-        cst8                    %sx127x_mode_set:mode,  SX1276_OPMODE_STANDBY
-        call16                  %sx127x_mode_set:link,  sx127x_mode_set
-      /* Clean irq status */
-        cst32                   %tmp,            STATUS_INFO_MSK, 0
-        and32                   %STATUS,         %tmp
-        ld8e                    %tmp,            %R_CTX_PV,      _offsetof(sx127x_private_s, icount, 1)
-        or32                    %STATUS,         %tmp
-        end
-.endfunc
 #endif
 
 #ifdef SX127X_PRINT_REGS
