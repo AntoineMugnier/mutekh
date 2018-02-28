@@ -484,9 +484,6 @@ static error_t psoc4_uart_config(struct device_s *dev,
   if (cfg->baudrate > 1000000)
     return -ENOTSUP;
 
-  if (cfg->half_duplex)
-    return -ENOTSUP;
-
   if (cfg->flow_ctrl && !pv->has_ctsrts)
     return -ENOTSUP;
 
@@ -691,7 +688,6 @@ static DEV_INIT(psoc4_uart_char_init)
     .stop_bits = 1,
     .parity = DEV_UART_PARITY_NONE,
     .flow_ctrl = 0,
-    .half_duplex = 0,
   };
 
   pv = mem_alloc(sizeof(*pv), mem_scope_sys);

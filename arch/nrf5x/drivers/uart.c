@@ -352,9 +352,6 @@ static error_t nrf5x_uart_config(
     if (cfg->stop_bits != 1)
         return -ENOTSUP;
 
-    if (cfg->half_duplex)
-        return -ENOTSUP;
-
     switch  (cfg->parity) {
     case DEV_UART_PARITY_NONE:
         config |= NRF_UART_CONFIG_PARITY_DISABLED;
@@ -471,7 +468,6 @@ static DEV_INIT(nrf5x_uart_char_init)
         .stop_bits = 1,
         .parity = DEV_UART_PARITY_NONE,
         .flow_ctrl = 0,
-        .half_duplex = 0,
     };
 
     pv = mem_alloc(sizeof(*pv), mem_scope_sys);
@@ -549,7 +545,6 @@ static DEV_INIT(nrf5x_uart_char_init)
         config.stop_bits   = r->u.uart.stop_bits;
         config.parity      = r->u.uart.parity;
         config.flow_ctrl   = r->u.uart.flow_ctrl;
-        config.half_duplex = r->u.uart.half_duplex;
     }
 #endif
 
