@@ -1,0 +1,730 @@
+/*
+   This file is part of MutekH.
+
+   MutekH is free software; you can redistribute it and/or modify it
+   under the terms of the GNU Lesser General Public License as
+   published by the Free Software Foundation; version 2.1 of the
+   License.
+
+   MutekH is distributed in the hope that it will be useful, but
+   WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+   Lesser General Public License for more details.
+
+   You should have received a copy of the GNU Lesser General Public
+   License along with MutekH; if not, write to the Free Software
+   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+   02110-1301 USA.
+
+   Copyright (c) 2017 Sebastien Cerdan <sebcerdan@gmail.com>
+
+*/
+
+.baseaddr 0x21000000
+
+entry_state_off:
+        /* 1 */
+        jmp              __entry_state_off           
+
+entry_state_rxwarm:
+        /* 2 */
+        jmp              __entry_rxwarm           
+
+entry_state_rxsearch:
+        /* 3 */
+        jmp              __entry_rxsearch           
+
+entry_state_rxframe:
+        /* 4 */
+        jmp              __entry_rxframe           
+
+entry_state_rxpd:
+        /* 5 */
+        jmp              __entry_rxpd_ovf           
+
+entry_state_rx2rx:
+        /* 6 */
+        jmp              __entry_rx2rx           
+
+entry_state_rxoverflow:
+        /* 5 */
+        jmp              __entry_rxpd_ovf           
+
+entry_state_rx2tx:
+        /* 7 */
+        jmp              __entry_rx2tx           
+
+entry_state_txwarm:
+        /* 8 */
+        jmp              __entry_txwarm           
+
+entry_state_tx:
+        /* 9 */
+        jmp              __entry_tx           
+
+entry_state_txpd:
+        /* a */
+        jmp              __entry_txpd           
+
+entry_state_tx2rx:
+        /* b */
+        jmp              __entry_tx2rx           
+
+entry_state_tx2tx:
+        /* c */
+        jmp              __entry_tx2tx           
+
+entry_state_shutdown:
+        /* d */
+        jmp              __entry_shutdown        
+
+#include "common.h"
+#include "debug.seq"
+
+#define RESET_SP()                                              \
+        cst32            r0, EFR32_SEQ_STACK_POINTER_ADDR;      \
+        st.rac           [EFR32_RAC_ADDR + EFR32_RAC_R_ADDR(6)], r0
+
+__entry_state_off:        // function call from: entry_state_off
+        GPIO_LOG(1)
+        RESET_SP()
+        STACK_TEST(1)
+        call             _disable_radio
+        end                                  
+
+__entry_rxwarm:        // function call from: entry_state_rxwarm
+        GPIO_LOG(2)
+        RESET_SP()
+        STACK_TEST(2)
+        call             _wait_before_op
+        call             _clear_hfxoretimectrl_en_bit 
+        cst32            r2, EFR32_SYNTH_ADDR + EFR32_SYNTH_CMD_ADDR       
+        bitband          [r2], EFR32_SYNTH_CMD_SYNTHSTOP_IDX, SET, 0    
+        /* Enable if */
+        bitband          [r2], EFR32_SYNTH_CMD_ENABLEIF_IDX, SET, 0  
+        /* Do not set synthenctrl.lpfbwsel bit */
+        cst32            r3, 0x0        
+        call             __cfg_synth 
+        /* Might need to configure DCDC here when used */
+        call             _rx_no_synth_cfg
+        /* Clear SW detection bit */
+        cst32            r1, EFR32_MODEM_ADDR + EFR32_MODEM_IFC_ADDR
+        bitband          [r1], EFR32_MODEM_IF_RXFRAMEDET0_IDX, SET, 0
+        end                                  
+
+__entry_rxpd_ovf:        // function call from: entry_state_rxpd, entry_state_rxoverflow
+        // in {r1, sp, pc, sr0, sr1, sr3}
+        GPIO_LOG(5)
+        RESET_SP()
+        STACK_TEST(5)
+        /* Test buf1 overflow */
+        cst32            r4, EFR32_BUFC_ADDR + EFR32_BUFC_IF_ADDR    
+        ld               r2, [r4]            
+        cst32            r0, EFR32_BUFC_IF_OF(1)            
+        and              r2, r0             
+        /* No overflow */
+        jz               _no_ovf           
+        /* Clear buf1 ovf irq */
+        addi             r4, 8	  
+        st               [r4], r2            
+        cst32            r4, EFR32_FRC_ADDR + EFR32_FRC_IFS_ADDR    
+        bitband          [r4], EFR32_FRC_IF_RXABORTED_IDX, SET, 0  
+        jmp              _set_idle
+    _no_ovf:
+        ld.rac           r0, [EFR32_RAC_ADDR + EFR32_RAC_IFPGACTRL_ADDR] 
+        andi.nowb        r0, EFR32_RAC_IFPGACTRL_BANDSEL(SG)            
+        jnz              _set_idle
+        cst32            r1, 250
+        call             _schedule_next_op
+        jmp              _rxpd_end
+    _set_idle:
+        /* Stop Rx */
+        cst8             r0,  EFR32_RAC_RXENSRCEN_ADDR    
+        bitband          [r0], 1, CLEAR, 1  
+        cst8             r1,  EFR32_RAC_STATUS_STATE_OFF
+        st.rac           [EFR32_RAC_ADDR + EFR32_RAC_FORCESTATE_ADDR], r1
+    _rxpd_end:
+        end                                  
+
+__entry_rx2rx:        // function call from: entry_state_rx2rx
+        // in {r1, sp, pc, sr0, sr1, sr3}
+        GPIO_LOG(6)
+        RESET_SP()
+        STACK_TEST(6)
+        sleep            100
+        end                                  
+
+__entry_rx2tx:        // function call from: entry_state_rx2tx
+        // in {r1, sp, pc, sr0, sr1, sr2, sr3}
+        GPIO_LOG(7)
+        STACK_TEST(7)
+        RESET_SP()
+        sleep            316            /* Wait for 150 us */
+        end
+
+__entry_txwarm:        // function call from: entry_state_txwarm
+        // in {r1, sp, pc, sr0, sr1, sr2, sr3}
+        GPIO_LOG(8)
+        RESET_SP()
+        STACK_TEST(8)
+        call             _wait_before_op
+        call             _reset_tx
+        call             _clear_hfxoretimectrl_en_bit
+
+        /* Might Clear CMU HFXOCTRL1 SQBMODE here */
+
+        cst32            r2, EFR32_SYNTH_ADDR + EFR32_SYNTH_CMD_ADDR       
+        bitband          [r2], EFR32_SYNTH_CMD_SYNTHSTOP_IDX, SET, 0     
+        /* Disable if */
+        bitband          [r2], EFR32_SYNTH_CMD_DISABLEIF_IDX, SET, 0    
+
+        /* Set synthenctrl.lpfbwsel bit */
+        cst32            r3, EFR32_RAC_SYNTHENCTRL_LPFBWSEL
+        call             __cfg_synth 
+        call             __start_tx
+        end
+
+__entry_tx:        // function call from: entry_state_tx
+        // in {r1, sp, pc, sr0, sr1, sr3}
+        GPIO_LOG(9)
+        RESET_SP()
+        STACK_TEST(9)
+        end
+
+__entry_txpd:        // function call from: entry_state_txpd
+        // in {r1, sp, pc, sr0, sr1, sr3}
+        GPIO_LOG(0xa)
+        RESET_SP()
+        STACK_TEST(0xa)
+        cst32            r1, 180
+        call             _schedule_next_op
+        end
+
+__entry_tx2rx:        // function call from: entry_state_tx2rx
+        // in {r1, sp, pc, sr0, sr1, sr3}
+        GPIO_LOG(0xb)
+        RESET_SP()
+        STACK_TEST(0xb)
+        sleep            250            /* Wait for less than 150 us */
+        end
+
+
+__entry_tx2tx:        // function call from: entry_state_tx2tx
+        // in {r1, sp, pc, sr0, sr1, sr2, sr3}
+        GPIO_LOG(0xc)
+        RESET_SP()
+        STACK_TEST(0xC)
+        end
+
+__entry_shutdown:        // function call from: entry_state_shutdown
+        // in {r1, sp, pc, sr0, sr1, sr3}
+        GPIO_LOG(0xd)
+        RESET_SP()
+        STACK_TEST(0xd)
+        call             _disable_radio
+        end                                  
+
+__entry_rxsearch:        // function call from: entry_state_rxsearch
+        // in {r1, sp, pc, sr0, sr1, sr3}
+        STACK_TEST(3)
+        RESET_SP()
+        GPIO_LOG(3)
+        ld.rac           r0, [EFR32_RAC_ADDR + EFR32_RAC_IFPGACTRL_ADDR] 
+        andi.nowb        r0, EFR32_RAC_IFPGACTRL_BANDSEL(SG)            
+        jnz              _rxsearch_end
+        /* Wait at leat 50 us in BLE before ending RX */
+        sleep            0x200
+        cst32            r1, EFR32_MODEM_ADDR + EFR32_MODEM_IF_ADDR
+        ld               r0, [r1]          
+        ror              r0, 8
+        andi             r0, 0x4
+          jnz            _rxsearch_end
+        /* Stop RX */
+        GPIO_LOG(0xF)
+        cst8             r0,  EFR32_RAC_RXENSRCEN_ADDR    
+        bitband          [r0], 1, CLEAR, 1  
+        cst8             r1,  EFR32_RAC_STATUS_STATE_OFF
+        st.rac           [EFR32_RAC_ADDR + EFR32_RAC_FORCESTATE_ADDR], r1
+        cst32            r0, EFR32_FRC_ADDR + EFR32_FRC_IFS_ADDR
+        bitband          [r0], EFR32_FRC_IF_RXABORTED_IDX, SET, 0  
+    _rxsearch_end:
+        end
+
+__entry_rxframe:        // function call from: entry_state_rxframe
+        // in {r1, sp, pc, sr0, sr1, sr3}
+        GPIO_LOG(4)
+        RESET_SP()
+        STACK_TEST(4)
+        cst8             r0,  EFR32_RAC_RXENSRCEN_ADDR    
+        bitband          [r0], 1, CLEAR, 1  
+        end
+
+_disable_paramp:
+        cst8             r0, 0x00            
+        st.rac           [EFR32_RAC_ADDR + EFR32_RAC_PAENCTRL_ADDR], r0  
+        cst32            r4, EFR32_MODEM_ADDR + EFR32_MODEM_RAMPCTRL_ADDR  
+        ld               r1, [r4]           
+        ror              r1, 8
+        ror              r1, 8
+        andi.nowb        r1, 0x80            
+        jnz              _wait_ramp_done_ret           
+        waitmask         0x040               
+    _wait_ramp_done_ret: 
+        ret                                  
+
+_disable_radio:
+        call             _disable_paramp
+        ld.rac           r0, [EFR32_RAC_ADDR + EFR32_RAC_IFPGACTRL_ADDR] 
+        cst32            r4, EFR32_RAC_SGRFENCTRL0_ADDR   
+        andi.nowb        r0, EFR32_RAC_IFPGACTRL_BANDSEL(SG)            
+        jnz              _reset_rf_ctrl
+        cst32            r4, EFR32_RAC_RFENCTRL0_ADDR
+
+    _reset_rf_ctrl:
+        mov              r3, r4              
+        addi             r3, 12	  
+        bitband          [r4], EFR32_RAC_RFENCTRL0_PAOUTEN_IDX, CLEAR, 1  
+        bitband          [r3], EFR32_RAC_PAPKDCTRL_PKDEN_IDX, CLEAR, 1   
+        st.rac           [EFR32_RAC_ADDR + EFR32_RAC_SYNTHENCTRL_ADDR], r0
+        cst32            r4, EFR32_RAC_ADDR + EFR32_RAC_RFENCTRL0_ADDR
+        xor              r0, r0              
+        st.rac           [EFR32_RAC_ADDR + EFR32_RAC_SYNTHCTRL_ADDR], r0 
+        sleep            0x005               
+        bitband          [r4], EFR32_RAC_RFENCTRL0_STRIPESLICEDIS_IDX, SET, 1    
+        sleep            0x00a               
+        bitband          [r4], EFR32_RAC_RFENCTRL0_CASCODEDIS_IDX, SET, 1    
+        sleep            0x005               
+        bitband          [r4], EFR32_RAC_RFENCTRL0_PASTANDBY_IDX, CLEAR, 1  
+        cst8             r0, EFR32_RAC_CMD_ADDR
+        bitband          [r0], EFR32_RAC_CMD_PAENCLEAR_IDX, SET, 1    
+        ret                                 
+
+__cfg_synth:
+        cst8             r0, 0x00            
+        st.rac           [EFR32_RAC_ADDR + EFR32_RAC_SYNTHENCTRL_ADDR], r0
+
+        /* Set vcoamplitude = 0xe */
+        ld.rac           r0, [EFR32_RAC_ADDR + EFR32_RAC_VCOCTRL_ADDR]   
+        cst32            r1, 0xfffffff0      
+        and              r0, r1              
+        cst8             r1, 0x0e            
+        or               r0, r1              
+        st.rac           [EFR32_RAC_ADDR + EFR32_RAC_VCOCTRL_ADDR], r0  
+
+        /* Set vcotunning = 0x80 */
+        cst8             r0, 0x80            
+        cst32            r1, EFR32_SYNTH_ADDR + EFR32_SYNTH_VCOTUNING_ADDR 
+        st               [r1], r0            
+
+        cst32            r4, EFR32_SYNTH_ADDR + EFR32_SYNTH_CTRL_ADDR      
+        ld               r1, [r4]            
+        xor              r0, r1              
+        andi             r0, 0xff            
+        xor              r1, r0              
+//        st               [r4], r1           
+
+        cst32            r0, (EFR32_RAC_SYNTHENCTRL_SYNTHCLKEN | EFR32_RAC_SYNTHENCTRL_SYNTHSTARTREQ | EFR32_RAC_SYNTHENCTRL_CHPLDOEN | EFR32_RAC_SYNTHENCTRL_LODIVSYNCCLKEN | EFR32_RAC_SYNTHENCTRL_MMDLDOEN | EFR32_RAC_SYNTHENCTRL_VCOLDOEN)
+
+        st.rac           [EFR32_RAC_ADDR + EFR32_RAC_SYNTHENCTRL_ADDR], r0
+
+        sleep            0x005               
+
+        cst32            r0, EFR32_SYNTH_ADDR + EFR32_SYNTH_VCDACCTRL_ADDR 
+        bitband          [r0], EFR32_SYNTH_VCDACCTRL_EN_IDX, SET, 0     
+
+        cst32            r0, (EFR32_RAC_SYNTHENCTRL_SYNTHCLKEN | EFR32_RAC_SYNTHENCTRL_SYNTHSTARTREQ | EFR32_RAC_SYNTHENCTRL_CHPLDOEN | EFR32_RAC_SYNTHENCTRL_LODIVSYNCCLKEN| EFR32_RAC_SYNTHENCTRL_MMDLDOEN | EFR32_RAC_SYNTHENCTRL_VCOLDOEN | EFR32_RAC_SYNTHENCTRL_LODIVSYNCCLKEN | EFR32_RAC_SYNTHENCTRL_VCOEN | EFR32_RAC_SYNTHENCTRL_VCOSTARTUP | EFR32_RAC_SYNTHENCTRL_LPFEN | EFR32_RAC_SYNTHENCTRL_LPFQUICKSTART | EFR32_RAC_SYNTHENCTRL_VCODIVEN)
+
+        or               r0, r3              
+        st.rac           [EFR32_RAC_ADDR + EFR32_RAC_SYNTHENCTRL_ADDR], r0
+
+        sleep            0x005               
+        waitmask         0x020               
+        
+        /* Set CAPCALSTART bit and wait ready */
+        bitband          [r2], 4, SET, 0     
+        waitmask         0x020               
+
+        xori             r0, 0x18           
+        st.rac           [EFR32_RAC_ADDR + EFR32_RAC_SYNTHENCTRL_ADDR], r0
+
+        /* Set vcoamplitude = 0xa */
+        ld.rac           r0, [EFR32_RAC_ADDR + EFR32_RAC_VCOCTRL_ADDR]   
+        cst8             r1, 0x0a            
+        xor              r1, r0              
+        andi             r1, 0x0f            
+        xor              r0, r1              
+        st.rac           [EFR32_RAC_ADDR + EFR32_RAC_VCOCTRL_ADDR], r0 
+
+        sleep            0x005              
+
+        /* Set SYNTHSTART bit */
+        bitband          [r2], 0, SET, 0     
+        waitmask         0x020               
+        sleep            0x00f
+        
+        /* Clear SYNTHENCTRL.VCOSTARTUP and SYNTHENCTRL.LPFQUICKSTART bits */
+        cst8             r0, EFR32_RAC_SYNTHENCTRL_ADDR            
+        bitband          [r0], 6, CLEAR, 1   
+        bitband          [r0], 1, CLEAR, 1  
+
+        jmp              __wait_vco_stabilize
+
+__wait_vco_stabilize:
+
+        cst32            r0, EFR32_SYNTH_ADDR + EFR32_SYNTH_VCORANGE_ADDR
+        cst32            r1, ((5 << 6) | (5 << 3) | (1 << 2) | 1)
+        st               [r0], r1           
+
+        /* Might need sleep here */
+//        sleep            0x200               
+//        sleep            0x200               
+        sleep            0x10               
+
+    __clear_synth_vco_irq:
+        /* Clear SYNTHIF bit 4 and 5 */
+        cst32            r0, EFR32_SYNTH_ADDR + EFR32_SYNTH_IFC_ADDR 
+        bitband          [r0], EFR32_SYNTH_IF_VCOLOW_IDX, SET, 0     
+        bitband          [r0], EFR32_SYNTH_IF_VCOHIGH_IDX, SET, 0    
+
+        sleep            0x096              
+
+        cst32            r0, EFR32_SYNTH_ADDR + EFR32_SYNTH_IF_ADDR   
+        ld               r1, [r0]            
+        andi             r1, 0x30            
+        jnz              __clear_synth_vco_irq           
+
+        cst32            r0, EFR32_SYNTH_ADDR + EFR32_SYNTH_VCORANGE_ADDR
+        cst32            r1, ((0 << 6) | (0 << 3) | (1 << 2) | 2)
+        st               [r0], r1            
+        cst8             r1, 0x00            
+        st               [r0], r1          
+        ret
+
+_clear_hfxoretimectrl_en_bit:
+        /* Clear RAC hfxoretimectrl en bit */        
+        cst8             r0, EFR32_RAC_HFXORETIMECTRL_ADDR            
+        bitband          [r0], EFR32_RAC_HFXORETIMECTRL_EN, CLEAR, 1  
+     __wait_hfxoretime_clksel_null:
+        ld.rac           r1, [EFR32_RAC_ADDR + EFR32_RAC_HFXORETIMESTATUS_ADDR]
+        andi.nowb        r1, 0x01            
+        jnz              __wait_hfxoretime_clksel_null
+        bitband          [r0], 2, CLEAR, 1  
+        /* Clear EMU_DCDCRCOSC.RCOSYNC bit */
+        cst32            r0, EFM32_EMU_ADDR + EFR32_EMU_DCDCRCOSC_ADDR   
+        ld               r1, [r0]            
+        cst8             r2, 0x4c            
+        bitband          [r2], 0, CLEAR, 1   
+        st               [r0], r1           
+        /* Clear EMU_DCDCTIMING.PWMRETIME bit */
+        cst32            r0, EFM32_EMU_ADDR +EFR32_EMU_DCDCTIMING_ADDR  
+        ld               r1, [r0]            
+        bitband          [r2], 28, CLEAR, 1  
+        st               [r0], r1            
+        /* MMD ctrl */
+        cst8             r3, EFR32_RAC_MMDCTRL_ADDR            
+        bitband          [r3], EFR32_RAC_MMDCTRL_MMDENRSDIG_IDX, SET, 1    
+        bitband          [r3], EFR32_RAC_MMDCTRL_MMDENDCDC_IDX, CLEAR, 1  
+        bitband          [r3], EFR32_RAC_MMDCTRL_MMDENRSDCDC_IDX, CLEAR, 1  
+        ret
+
+_reset_tx:
+        /* Disable IF ADC clock */
+        cst32            r0, EFR32_RAC_IFADCCTRL_ADDR            
+        bitband          [r0], 29, CLEAR, 1 
+
+        /* Disable strip slice and cascode */
+        cst32            r0, 0x3000000       
+        st.rac           [EFR32_RAC_ADDR + EFR32_RAC_SGRFENCTRL0_ADDR], r0
+        st.rac           [EFR32_RAC_ADDR + EFR32_RAC_RFENCTRL0_ADDR], r0
+
+        /* Keep DEMEN bit */
+        ld.rac           r1, [EFR32_RAC_ADDR + EFR32_RAC_RFENCTRL_ADDR]  
+        cst32            r0, 0x1000            
+        and              r1, r0              
+        st.rac           [EFR32_RAC_ADDR + EFR32_RAC_RFENCTRL_ADDR], r1 
+
+        /* Set lnaenclear bit */
+        cst8             r0, EFR32_RAC_CMD_ADDR    
+        bitband          [r0], EFR32_RAC_CMD_LNAENCLEAR_IDX, SET, 1  
+
+        ret
+
+__start_tx:
+
+        /* Set RAC PA en bit */
+        cst8             r0, EFR32_RAC_CMD_ADDR    
+        bitband          [r0], EFR32_RAC_CMD_PAENSET_IDX, SET, 1    
+
+        // Disable PA VHigh; PA VLow; PA BatHigh
+        cst8             r0, EFR32_RAC_IEN_ADDR            
+        bitband          [r0], EFR32_RAC_IF_PAVLOW_IDX, CLEAR, 1  
+        bitband          [r0], EFR32_RAC_IF_PAVHIGH_IDX, CLEAR, 1  
+        bitband          [r0], EFR32_RAC_IF_PABATHIGH_IDX, CLEAR, 1  
+        // Set PA CTuneSel
+        cst32            r0, EFR32_RAC_ADDR + EFR32_RAC_RFENCTRL_ADDR    
+        bitband          [r0], EFR32_RAC_RFENCTRL_PACTUNESEL_IDX, SET, 1    
+
+        cst32            r0, 0x5c00c0c4      
+        st.rac           [EFR32_RAC_ADDR + EFR32_RAC_PACTRL0_ADDR], r0   
+        st.rac           [EFR32_RAC_ADDR + EFR32_RAC_SGPACTRL0_ADDR], r0 
+        ld.rac           r0, [EFR32_RAC_ADDR + EFR32_RAC_IFPGACTRL_ADDR] 
+        andi.nowb        r0, EFR32_RAC_IFPGACTRL_BANDSEL(SG)            
+        jz               _txconfig_2p4          
+
+    _txconfig_sg:
+        cst32            r2, EFR32_RAC_SGRFENCTRL0_PASTANDBY         
+        st.rac           [EFR32_RAC_ADDR + EFR32_RAC_SGRFENCTRL0_ADDR], r2
+        sleep            0x023               
+        cst32            r2, (EFR32_RAC_SGRFENCTRL0_PASTANDBY | EFR32_RAC_SGRFENCTRL0_PAEN | EFR32_RAC_SGRFENCTRL0_TRSW)
+        st.rac           [EFR32_RAC_ADDR + EFR32_RAC_SGRFENCTRL0_ADDR], r2
+        cst32            r4, EFR32_RAC_SGRFENCTRL0_ADDR
+        cst32            r2, EFR32_RAC_SGPACTRL0_ADDR
+        jmp              _txconfig_done
+
+    _txconfig_2p4:
+        ld.rac           r1, [EFR32_RAC_ADDR + EFR32_RAC_LNAMIXCTRL1_ADDR]
+        cst32            r0, 0xffffff9f      
+        and              r0, r1              
+        xori             r0, 0x60            
+        st.rac           [EFR32_RAC_ADDR + EFR32_RAC_LNAMIXCTRL1_ADDR], r0
+
+        cst8             r0, EFR32_RAC_RFENCTRL0_ADDR            
+        bitband          [r0], EFR32_RAC_RFENCTRL0_PASTANDBY_IDX, SET, 1    
+        sleep            0x019               
+        cst32            r1, EFR32_RAC_RFENCTRL_ADDR            
+        bitband          [r1], EFR32_RAC_RFENCTRL_ENLDOPGALNA_IDX, SET, 1    
+        bitband          [r0], EFR32_RAC_RFENCTRL0_TRSW_IDX, SET, 1    
+        bitband          [r0], EFR32_RAC_RFENCTRL0_PAEN_IDX, SET, 1   
+        cst32            r4, EFR32_RAC_RFENCTRL0_ADDR
+        cst32            r2, EFR32_RAC_PACTRL0_ADDR
+
+     _txconfig_done:
+        /* Enable Cascode and stripeslice */
+        bitband          [r4], EFR32_RAC_RFENCTRL0_CASCODEDIS_IDX, CLEAR, 1  
+        sleep            0x005               
+
+        bitband          [r4], EFR32_RAC_RFENCTRL0_STRIPESLICEDIS_IDX, CLEAR, 1  
+        sleep            0x00f               
+
+        /* Set lodivtxen */
+        cst8             r3, 0x04            
+        st.rac           [EFR32_RAC_ADDR + EFR32_RAC_SYNTHCTRL_ADDR], r3 
+        sleep            0x005               
+
+        bitband          [r4], EFR32_RAC_RFENCTRL0_PAOUTEN_IDX, SET, 1   // PAOUT EN 
+        sleep            0x005   
+
+        cst32            r0, EFR32_RAC_PAENCTRL_ADDR            
+        bitband          [r0], EFR32_RAC_PAENCTRL_PARAMP_IDX, SET, 1 
+        waitmask         0x040              // Wait RAMPDONE 
+        ret
+
+__startdccal:
+        cst32            r0, EFR32_AGC_ADDR + EFR32_AGC_MANGAIN_ADDR     
+        ld               r1, [r0]            
+        push             r1                  
+        cst32            r1, 0x40001800      
+        st               [r0], r1           
+
+        /* AGC_MANUALCTRL */
+        addi             r0, 68	  
+        ld               r1, [r0]            
+        push             r1                 
+
+        /* AGC_CTRL0 */
+        addi             r0, -88	  // 0xffffffa8
+        ld               r1, [r0]            
+        push             r1                 
+        cst8             r2, EFR32_RAC_R_ADDR(1)            
+        bitband          [r2], 21, SET, 1    
+        st               [r0], r1           
+
+        ld.rac           r1, [EFR32_RAC_ADDR + EFR32_RAC_RFENCTRL_ADDR]  
+        push             r1                  
+        cst8             r0, EFR32_RAC_RFENCTRL_ADDR            
+        bitband          [r0], EFR32_RAC_RFENCTRL_PKDEN_IDX, CLEAR, 1  
+
+        /* IFPGACTRL */
+        addi             r0, 68	
+        bitband          [r0], EFR32_RAC_IFPGACTRL_ENOFFD_IDX, SET, 1    
+
+        /* SGRFENCTRL0 */
+        addi             r0, -40
+        bitband          [r0], EFR32_RAC_SGRFENCTRL0_TRSW_IDX, SET, 1   
+
+        /* RFENCTRL0 */
+        addi             r0, -24	
+        bitband          [r0], EFR32_RAC_RFENCTRL0_TRSW_IDX, SET, 1   
+
+        ld.rac           r2, [EFR32_RAC_ADDR + EFR32_RAC_IFPGACAL_ADDR]  
+        cst32            r4, 0x8080ffff      
+        and              r2, r4             
+        st.rac           [EFR32_RAC_ADDR + EFR32_RAC_IFPGACAL_ADDR], r2  
+
+        cst8             r4, 0x01            
+        ror              r4, 2               
+        mov              r3, r4              
+        ror              r3, 8               
+
+    __rx_cal_loop:  
+        cst32            r0, EFR32_AGC_ADDR + EFR32_AGC_MANUALCTRL_ADDR  
+        cst8             r1, 0x03            
+        st               [r0], r1            
+
+        mov              r0, r0              
+        mov              r0, r0              
+
+        cst8             r1, 0x01            
+        st               [r0], r1            
+
+        mov              r0, r0              
+        mov              r0, r0              
+        mov              r0, r0              
+        mov              r0, r0              
+
+        /* AGC STATUS 1 */
+        addi             r0, -104	  // 0xffffff98
+        ld               r1, [r0]            
+        ror              r1, 8               
+        cst8             r0, 0x01            
+        ror              r0, 2               
+        and.nowb         r2, r0              
+        jz               _210007ce           
+        xori             r1, 0x04            
+
+    _210007ce:
+        andi.nowb        r1, 0x04            
+        jnz              _210007d4           
+        xor              r2, r4              
+
+    _210007d4: 
+        ror              r0, 8               
+        and.nowb         r2, r0              
+        jz               _210007dc           
+        xori             r1, 0x08            
+
+    _210007dc:
+        andi.nowb        r1, 0x08            
+        jnz              _210007e2           
+        xor              r2, r3              
+
+    _210007e2: 
+        ror              r0, 5               
+        and.nowb         r3, r0              
+        jnz              __rx_cal_done           
+        ror              r3, 1               
+        ror              r4, 1               
+        or               r2, r3              
+        or               r2, r4              
+        st.rac           [EFR32_RAC_ADDR + EFR32_RAC_IFPGACAL_ADDR], r2  
+        ja               __rx_cal_loop           
+
+    __rx_cal_done:
+        st.rac           [EFR32_RAC_ADDR + EFR32_RAC_IFPGACAL_ADDR], r2  
+        cst32            r0, EFR32_RAC_SGRFENCTRL0_ADDR
+        bitband          [r0], EFR32_RAC_SGRFENCTRL0_TRSW_IDX, CLEAR, 1  
+        cst32            r0, EFR32_RAC_RFENCTRL0_ADDR
+        bitband          [r0], EFR32_RAC_RFENCTRL0_TRSW_IDX, CLEAR, 1  
+        addi             r0, 64	 
+        bitband          [r0], EFR32_RAC_IFPGACTRL_ENOFFD_IDX, CLEAR, 1  
+        pop              r1                  
+        st.rac           [EFR32_RAC_ADDR + EFR32_RAC_RFENCTRL_ADDR], r1  
+        pop              r1                  
+        cst32            r0, EFR32_AGC_ADDR + EFR32_AGC_CTRL0_ADDR       
+        st               [r0], r1            
+        pop              r1                  
+        addi             r0, 88	  // 0x00000058
+        st               [r0], r1            
+        pop              r1                  
+        addi             r0, -68	  // 0xffffffbc
+        st               [r0], r1            
+        ret                                 
+
+_rx_no_synth_cfg:
+        /* Lna en set bit */ 
+        cst8             r0, EFR32_RAC_CMD_ADDR            
+        bitband          [r0], EFR32_RAC_CMD_LNAENSET_IDX, SET, 1    
+
+        cst8             r0, 0x0e            
+        ld.rac           r1, [EFR32_RAC_ADDR + EFR32_RAC_IFPGACTRL_ADDR] 
+        andi.nowb        r1, EFR32_RAC_IFPGACTRL_BANDSEL(SG)            
+        jnz              __sg_rx_cfg          
+
+        st.rac           [EFR32_RAC_ADDR + EFR32_RAC_RFENCTRL0_ADDR], r0 
+        sleep            0x014              
+        cst32            r0, 0xf             
+        st.rac           [EFR32_RAC_ADDR + EFR32_RAC_RFENCTRL0_ADDR], r0
+        jmp              _rx_cfg_done
+
+    __sg_rx_cfg:
+        st.rac           [EFR32_RAC_ADDR + EFR32_RAC_SGRFENCTRL0_ADDR], r0
+        sleep            0x014               
+        cst32            r0, 0x1             
+        cst32            r1, EFM32_EMU_ADDR + EFR32_EMU_SGLNAMIXCTRL_ADDR
+        st               [r1], r0            
+
+    _rx_cfg_done:
+        cst32            r0, 0x1f8077        
+        ld.rac           r2, [EFR32_RAC_ADDR + EFR32_RAC_RFENCTRL_ADDR]  
+        or               r2, r0              
+        st.rac           [EFR32_RAC_ADDR + EFR32_RAC_RFENCTRL_ADDR], r2  
+
+        /* Clear pactunesel and sgpactunesel bits */
+        cst32            r0, 0xfcffffff      
+        and              r2, r0             
+        st.rac           [EFR32_RAC_ADDR + EFR32_RAC_RFENCTRL_ADDR], r2  
+
+        sleep            0x014              
+
+        cst32            r0, 0x1fe077        
+        or               r2, r0              
+        st.rac           [EFR32_RAC_ADDR + EFR32_RAC_RFENCTRL_ADDR], r2  
+
+        cst32            r0, EFR32_RAC_ADDR + EFR32_RAC_IFADCCTRL_ADDR           
+        bitband          [r0], EFR32_RAC_IFADCCTRL_ENABLECLK_IDX, SET, 1    
+        cst8             r0, EFR32_RAC_CMD_ADDR            
+        bitband          [r0], EFR32_RAC_IFADCCTRL_INVERTCLK_IDX, SET, 1   
+
+        call             __startdccal
+
+        /* Clear ifadccapreset bit */
+        cst8             r0, EFR32_RAC_RFENCTRL_ADDR
+        bitband          [r0], EFR32_RAC_RFENCTRL_IFADCCAPRESET_IDX, CLEAR, 1  
+
+        sleep            0x00a               
+        ret
+
+_schedule_next_op:
+        ld.rac           r0, [EFR32_RAC_ADDR + EFR32_RAC_STIMER_ADDR]  
+        addc             r0, r1              
+        cst32            r1, 0xffff          
+        and              r0, r1             
+        rol              r0, 1
+        xori             r0, 1
+        cst32            r1, EFR32_SEQ_DEADLINE_ADDR      
+        st               [r1], r0
+        ret
+
+_wait_before_op:
+        /* Get next op date */
+        cst32            r1, EFR32_SEQ_DEADLINE_ADDR      
+        ld               r1, [r1]
+        andi.nowb        r1, 1
+          jz             _wait_done
+        ror              r1, 1  
+        /* Get current stimer value */
+        ld.rac           r0, [EFR32_RAC_ADDR + EFR32_RAC_STIMER_ADDR] 
+        neg              r0, r0
+        addc             r0, r1              
+          jpos           _wait           
+        cst32            r1, 0x10000
+        addc             r0, r1              
+  _wait:
+        st.rac           [EFR32_RAC_ADDR + EFR32_RAC_STIMERCOMP_ADDR], r0
+        waitmask         0x001              
+        xor              r0, r0
+        cst32            r1, EFR32_SEQ_DEADLINE_ADDR     
+        st               [r1], r0
+  _wait_done:
+        ret
+

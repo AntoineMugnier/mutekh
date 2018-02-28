@@ -131,6 +131,16 @@ void efm32_board_init()
   x = EFM32_GPIO_DOUT_DOUT(4) | EFM32_GPIO_DOUT_DOUT(5);
   cpu_mem_write_32(EFM32_GPIO_ADDR + EFM32_GPIO_DOUT_ADDR(5) + 0x06000000, x);
 
+#if defined(CONFIG_DRIVER_EFR32_RADIO)
+  x = cpu_mem_read_32(EFM32_CMU_ADDR + EFM32_CMU_CTRL_ADDR);
+  x |= EFM32_CMU_CTRL_HFRADIOCLKEN;
+  cpu_mem_write_32(EFM32_CMU_ADDR + EFM32_CMU_CTRL_ADDR, x);
+
+  cpu_mem_write_32(EFM32_CMU_ADDR + EFM32_CMU_HFRADIOCLKEN0_ADDR, EFM32_CMU_HFRADIOCLKEN0_MASK);
+ #if (CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_XG12)
+  cpu_mem_write_32(EFM32_CMU_ADDR + EFM32_CMU_HFRADIOALTCLKEN0_ADDR, EFM32_CMU_HFRADIOALTCLKEN0_MASK);
+ #endif
+#endif 
 
 }
 
@@ -155,7 +165,8 @@ DEV_DECLARE_STATIC(uart0_dev, "usart0", 0, efm32_usart_drv,
 
                    DEV_STATIC_RES_DEV_IOMUX("/gpio"),
                    DEV_STATIC_RES_IOMUX("rx", EFM32_LOC0, EFM32_PA1, 0, 0),
-                   DEV_STATIC_RES_IOMUX("tx", EFM32_LOC0, EFM32_PA0, 0, 0)
+                   DEV_STATIC_RES_IOMUX("tx", EFM32_LOC0, EFM32_PA0, 0, 0),
+                   DEV_STATIC_RES_UART(115200, 8, 0, 0, 0)
                    );
 
 #endif
@@ -261,3 +272,21 @@ DEV_DECLARE_STATIC(usart_dev, "spi", 0, efm32_usart_spi_drv,
   #endif
                    );
 #endif
+
+#if defined(CONFIG_DRIVER_EFR32_RADIO)
+DEV_DECLARE_STATIC(radio_dev, "efr32_radio", 0, efr32_radio_drv,
+                   DEV_STATIC_RES_FREQ(HFXO_FREQ, 1),
+
+                   DEV_STATIC_RES_DEV_ICU("/cpu"),
+                   DEV_STATIC_RES_IRQ(0, EFM32_IRQ_MODEM, DEV_IRQ_SENSE_RISING_EDGE, 0, 1),
+                   DEV_STATIC_RES_IRQ(1, EFM32_IRQ_RAC_SEQ, DEV_IRQ_SENSE_RISING_EDGE, 0, 1),
+                   DEV_STATIC_RES_IRQ(2, EFM32_IRQ_RAC_RSM, DEV_IRQ_SENSE_RISING_EDGE, 0, 1),
+                   DEV_STATIC_RES_IRQ(3, EFM32_IRQ_BUFC, DEV_IRQ_SENSE_RISING_EDGE, 0, 1),
+                   DEV_STATIC_RES_IRQ(4, EFM32_IRQ_AGC, DEV_IRQ_SENSE_RISING_EDGE, 0, 1),
+                   DEV_STATIC_RES_IRQ(5, EFM32_IRQ_SYNTH, DEV_IRQ_SENSE_RISING_EDGE, 0, 1),
+                   DEV_STATIC_RES_IRQ(6, EFM32_IRQ_RFSENSE, DEV_IRQ_SENSE_RISING_EDGE, 0, 1),
+                   DEV_STATIC_RES_IRQ(7, EFM32_IRQ_PROTIMER, DEV_IRQ_SENSE_RISING_EDGE, 0, 1),
+                   DEV_STATIC_RES_IRQ(8, EFM32_IRQ_FRC, DEV_IRQ_SENSE_RISING_EDGE, 0, 1),
+                   );
+#endif
+

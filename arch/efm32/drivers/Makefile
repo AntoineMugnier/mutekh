@@ -12,3 +12,4 @@ subdirs-$(CONFIG_DRIVER_EFM32_DMA) += dma
 subdirs-$(CONFIG_DRIVER_EFR32_DMA) += ldma
 subdirs-$(CONFIG_DRIVER_EFM32_ADC) += adc
 subdirs-$(CONFIG_DRIVER_EFM32_BITBANG) += bitbang
+subdirs-$(CONFIG_DRIVER_EFR32_RADIO) += radio
