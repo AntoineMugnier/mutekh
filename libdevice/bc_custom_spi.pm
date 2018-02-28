@@ -1,6 +1,8 @@
 
 package bc_custom_spi;
 
+use strict;
+
 main::custom_op('spi_nodelay',        0,      0x0300 );
 main::custom_op('spi_deadline',       1,      0x0340, \&parse_reg );
 main::custom_op('spi_delay',          1,      0x0380, \&parse_reg );

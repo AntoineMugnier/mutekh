@@ -852,9 +852,6 @@ static bool_t bc_run_##fcname##_alu(struct bc_context_s *ctx, uint16_t op)
   dispatch_MUL:
     dst = (uint32_t)(dst * src);
     break;
-  dispatch_MOD:
-    dst = (uint32_t)dst % (uint32_t)src;
-    break;
   dispatch_DIV:
     BC_CONFIG_SANDBOX(
       if (src == 0 && sandbox)

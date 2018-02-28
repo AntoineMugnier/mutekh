@@ -479,7 +479,8 @@ struct bc_context_s;
 /** @This can be used to declare bytecode entry points. @see bc_set_pc */
 typedef struct bytecode_entry_s bytecode_entry_t;
 
-/** @This specifes status codes returned by the @ref bc_run function. */
+/** @This specifes status codes returned by the @ref bc_run function.
+    @see #BC_STATUS_CUSTOM */
 enum bc_run_status_e
 {
   BC_RUN_STATUS_END = 0,
@@ -487,6 +488,10 @@ enum bc_run_status_e
   BC_RUN_STATUS_BREAK = 2,
   BC_RUN_STATUS_FAULT = 3,
 };
+
+/** @This tests if the return status of @ref bc_run is a custom opcode
+    or a value specified in @ref bc_run_status_e */
+#define BC_STATUS_CUSTOM(op) ((op) & 0x8000)
 
 /** @internal */
 typedef bc_opcode_t (bc_run_t)(struct bc_context_s *ctx);

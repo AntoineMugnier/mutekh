@@ -1,6 +1,6 @@
 
         // load custom instruction definitions
-	.custom print
+	.custom print 43, 21
 
         .name test
 
