@@ -393,6 +393,19 @@ struct dev_display_config_s
   uint8_t brightness;
 };
 
+struct dev_display_screeninfo_s
+{
+  /** Horizontal resolution of the screen. */
+  uint32_t xres;
+
+/** Vertical resolution of the screen. */
+  uint32_t yres;
+
+/** PPI of the screen. */
+  uint16_t ppi;
+};
+
+
 /** @see dev_display_config_t */
 #define DEV_DISPLAY_CONFIG(n)                                          \
   error_t (n)(                                                         \
@@ -423,5 +436,32 @@ DRIVER_CLASS_TYPES(DRIVER_CLASS_DISPLAY, display,
       .f_request  = prefix ## _request,                                \
       .f_deadline = prefix ## _deadline,                               \
   })
+
+ALWAYS_INLINE error_t device_get_res_display(const struct device_s *dev,
+                                          struct dev_display_screeninfo_s *cfg)
+{
+  struct dev_resource_s *r;
+
+  r = device_res_get(dev, DEV_RES_DISPLAY, 0);
+  if (r == NULL)
+    return -ENOENT;
+
+  cfg->xres = r->u.display.xres;
+  cfg->yres = r->u.display.yres;
+  cfg->ppi  = r->u.display.ppi;
+
+  return 0;
+}
+
+# define DEV_STATIC_RES_DISPLAY(width_, height_, ppi_)               \
+  {                                                                  \
+    .type = DEV_RES_DISPLAY,                                         \
+       .u = { .display = {                                           \
+      .xres = (width_),                                              \
+      .yres = (height_),                                             \
+      .ppi = (ppi_),                                                 \
+    } }                                                              \
+  }
+
 
 #endif
