@@ -107,7 +107,7 @@ __entry_rxwarm:        // function call from: entry_state_rxwarm
         call             __cfg_synth 
         /* Might need to configure DCDC here when used */
         call             _rx_no_synth_cfg
-        /* Clear SW detection bit */
+        /* Clear Sync Word detection bit */
         cst32            r1, EFR32_MODEM_ADDR + EFR32_MODEM_IFC_ADDR
         bitband          [r1], EFR32_MODEM_IF_RXFRAMEDET0_IDX, SET, 0
         end                                  
@@ -139,8 +139,7 @@ __entry_rxpd_ovf:        // function call from: entry_state_rxpd, entry_state_rx
         jmp              _rxpd_end
     _set_idle:
         /* Stop Rx */
-        cst8             r0,  EFR32_RAC_RXENSRCEN_ADDR    
-        bitband          [r0], 1, CLEAR, 1  
+        call 		 __stop_rx
         cst8             r1,  EFR32_RAC_STATUS_STATE_OFF
         st.rac           [EFR32_RAC_ADDR + EFR32_RAC_FORCESTATE_ADDR], r1
     _rxpd_end:
@@ -151,7 +150,12 @@ __entry_rx2rx:        // function call from: entry_state_rx2rx
         GPIO_LOG(6)
         RESET_SP()
         STACK_TEST(6)
-        sleep            100
+        call 		 __stop_rx
+        cst8             r1,  EFR32_RAC_STATUS_STATE_OFF
+        st.rac           [EFR32_RAC_ADDR + EFR32_RAC_FORCESTATE_ADDR], r1
+        cst32            r0, EFR32_FRC_ADDR + EFR32_FRC_IFS_ADDR
+	/* Raise RX aborted error */
+        bitband          [r0], EFR32_FRC_IF_RXABORTED_IDX, SET, 0  
         end                                  
 
 __entry_rx2tx:        // function call from: entry_state_rx2tx
@@ -237,12 +241,11 @@ __entry_rxsearch:        // function call from: entry_state_rxsearch
         cst32            r1, EFR32_MODEM_ADDR + EFR32_MODEM_IF_ADDR
         ld               r0, [r1]          
         ror              r0, 8
-        andi             r0, 0x4
+        andi             r0, (EFR32_MODEM_IF_RXFRAMEDET0 >> 8)
           jnz            _rxsearch_end
         /* Stop RX */
         GPIO_LOG(0xF)
-        cst8             r0,  EFR32_RAC_RXENSRCEN_ADDR    
-        bitband          [r0], 1, CLEAR, 1  
+        call 		 __stop_rx
         cst8             r1,  EFR32_RAC_STATUS_STATE_OFF
         st.rac           [EFR32_RAC_ADDR + EFR32_RAC_FORCESTATE_ADDR], r1
         cst32            r0, EFR32_FRC_ADDR + EFR32_FRC_IFS_ADDR
@@ -255,9 +258,13 @@ __entry_rxframe:        // function call from: entry_state_rxframe
         GPIO_LOG(4)
         RESET_SP()
         STACK_TEST(4)
-        cst8             r0,  EFR32_RAC_RXENSRCEN_ADDR    
-        bitband          [r0], 1, CLEAR, 1  
+        call 		 __stop_rx
         end
+
+__stop_rx:
+        cst8             r0,  EFR32_RAC_RXENSRCEN_ADDR    
+        bitband          [r0], 1, CLEAR, 1 
+	ret
 
 _disable_paramp:
         cst8             r0, 0x00            
@@ -268,7 +275,7 @@ _disable_paramp:
         ror              r1, 8
         andi.nowb        r1, 0x80            
         jnz              _wait_ramp_done_ret           
-        waitmask         0x040               
+        waitmask         EFR32_RAC_WAITMASK_RAMPDONE               
     _wait_ramp_done_ret: 
         ret                                  
 
@@ -316,13 +323,6 @@ __cfg_synth:
         cst32            r1, EFR32_SYNTH_ADDR + EFR32_SYNTH_VCOTUNING_ADDR 
         st               [r1], r0            
 
-        cst32            r4, EFR32_SYNTH_ADDR + EFR32_SYNTH_CTRL_ADDR      
-        ld               r1, [r4]            
-        xor              r0, r1              
-        andi             r0, 0xff            
-        xor              r1, r0              
-//        st               [r4], r1           
-
         cst32            r0, (EFR32_RAC_SYNTHENCTRL_SYNTHCLKEN | EFR32_RAC_SYNTHENCTRL_SYNTHSTARTREQ | EFR32_RAC_SYNTHENCTRL_CHPLDOEN | EFR32_RAC_SYNTHENCTRL_LODIVSYNCCLKEN | EFR32_RAC_SYNTHENCTRL_MMDLDOEN | EFR32_RAC_SYNTHENCTRL_VCOLDOEN)
 
         st.rac           [EFR32_RAC_ADDR + EFR32_RAC_SYNTHENCTRL_ADDR], r0
@@ -338,11 +338,11 @@ __cfg_synth:
         st.rac           [EFR32_RAC_ADDR + EFR32_RAC_SYNTHENCTRL_ADDR], r0
 
         sleep            0x005               
-        waitmask         0x020               
+        waitmask         EFR32_RAC_WAITMASK_SYNTHRDY               
         
         /* Set CAPCALSTART bit and wait ready */
-        bitband          [r2], 4, SET, 0     
-        waitmask         0x020               
+        bitband          [r2], EFR32_SYNTH_CMD_CAPCALSTART_IDX, SET, 0     
+        waitmask         EFR32_RAC_WAITMASK_SYNTHRDY               
 
         xori             r0, 0x18           
         st.rac           [EFR32_RAC_ADDR + EFR32_RAC_SYNTHENCTRL_ADDR], r0
@@ -358,21 +358,21 @@ __cfg_synth:
         sleep            0x005              
 
         /* Set SYNTHSTART bit */
-        bitband          [r2], 0, SET, 0     
-        waitmask         0x020               
+        bitband          [r2], EFR32_SYNTH_CMD_SYNTHSTART_IDX, SET, 0     
+        waitmask         EFR32_RAC_WAITMASK_SYNTHRDY               
         sleep            0x00f
         
         /* Clear SYNTHENCTRL.VCOSTARTUP and SYNTHENCTRL.LPFQUICKSTART bits */
         cst8             r0, EFR32_RAC_SYNTHENCTRL_ADDR            
-        bitband          [r0], 6, CLEAR, 1   
-        bitband          [r0], 1, CLEAR, 1  
+        bitband          [r0], EFR32_RAC_SYNTHENCTRL_LPFQUICKSTART_IDX, CLEAR, 1   
+        bitband          [r0], EFR32_RAC_SYNTHENCTRL_VCOSTARTUP_IDX, CLEAR, 1  
 
         jmp              __wait_vco_stabilize
 
 __wait_vco_stabilize:
 
         cst32            r0, EFR32_SYNTH_ADDR + EFR32_SYNTH_VCORANGE_ADDR
-        cst32            r1, ((5 << 6) | (5 << 3) | (1 << 2) | 1)
+        cst32            r1, (EFR32_SYNTH_VCORANGE_HIGHTHRESH(5) | EFR32_SYNTH_VCORANGE_LOWTHRESH(5) | EFR32_SYNTH_VCORANGE_SWITCHMODE | EFR32_SYNTH_VCORANGE_MODE(MANUAL))
         st               [r0], r1           
 
         /* Might need sleep here */
@@ -394,9 +394,9 @@ __wait_vco_stabilize:
         jnz              __clear_synth_vco_irq           
 
         cst32            r0, EFR32_SYNTH_ADDR + EFR32_SYNTH_VCORANGE_ADDR
-        cst32            r1, ((0 << 6) | (0 << 3) | (1 << 2) | 2)
+        cst32            r1, (EFR32_SYNTH_VCORANGE_SWITCHMODE | EFR32_SYNTH_VCORANGE_MODE(MANUAL))
         st               [r0], r1            
-        cst8             r1, 0x00            
+        cst8             r1, EFR32_SYNTH_VCORANGE_MODE(AUTO)
         st               [r0], r1          
         ret
 
@@ -408,18 +408,7 @@ _clear_hfxoretimectrl_en_bit:
         ld.rac           r1, [EFR32_RAC_ADDR + EFR32_RAC_HFXORETIMESTATUS_ADDR]
         andi.nowb        r1, 0x01            
         jnz              __wait_hfxoretime_clksel_null
-        bitband          [r0], 2, CLEAR, 1  
-        /* Clear EMU_DCDCRCOSC.RCOSYNC bit */
-        cst32            r0, EFM32_EMU_ADDR + EFR32_EMU_DCDCRCOSC_ADDR   
-        ld               r1, [r0]            
-        cst8             r2, 0x4c            
-        bitband          [r2], 0, CLEAR, 1   
-        st               [r0], r1           
-        /* Clear EMU_DCDCTIMING.PWMRETIME bit */
-        cst32            r0, EFM32_EMU_ADDR +EFR32_EMU_DCDCTIMING_ADDR  
-        ld               r1, [r0]            
-        bitband          [r2], 28, CLEAR, 1  
-        st               [r0], r1            
+        bitband          [r0], EFR32_RAC_HFXORETIMECTRL_RESET_IDX, CLEAR, 1  
         /* MMD ctrl */
         cst8             r3, EFR32_RAC_MMDCTRL_ADDR            
         bitband          [r3], EFR32_RAC_MMDCTRL_MMDENRSDIG_IDX, SET, 1    
@@ -516,7 +505,7 @@ __start_tx:
 
         cst32            r0, EFR32_RAC_PAENCTRL_ADDR            
         bitband          [r0], EFR32_RAC_PAENCTRL_PARAMP_IDX, SET, 1 
-        waitmask         0x040              // Wait RAMPDONE 
+        waitmask         EFR32_RAC_WAITMASK_RAMPDONE 
         ret
 
 __startdccal:
@@ -535,8 +524,6 @@ __startdccal:
         addi             r0, -88	  // 0xffffffa8
         ld               r1, [r0]            
         push             r1                 
-        cst8             r2, EFR32_RAC_R_ADDR(1)            
-        bitband          [r2], 21, SET, 1    
         st               [r0], r1           
 
         ld.rac           r1, [EFR32_RAC_ADDR + EFR32_RAC_RFENCTRL_ADDR]  
@@ -721,10 +708,11 @@ _wait_before_op:
         addc             r0, r1              
   _wait:
         st.rac           [EFR32_RAC_ADDR + EFR32_RAC_STIMERCOMP_ADDR], r0
-        waitmask         0x001              
+        waitmask         EFR32_RAC_WAITMASK_STCMP              
         xor              r0, r0
         cst32            r1, EFR32_SEQ_DEADLINE_ADDR     
         st               [r1], r0
   _wait_done:
         ret
 
+	
