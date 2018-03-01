@@ -490,6 +490,8 @@ static TERMUI_CON_COMMAND_PROTOTYPE(shell_rfpacket_receive)
   error_t err = dev_rfpacket_spin_request(&c->accessor, &rq);
 #endif
 
+  device_put_accessor(&timer.base);
+
   if (err)
     termui_con_printf(con, "RX failed with error: %d\n", err);
 
@@ -549,17 +551,6 @@ static TERMUI_CON_COMMAND_PROTOTYPE(shell_rfpacket_send)
   rq.err_group = 0;
   rq.rf_cfg = rf;
   rq.pk_cfg = pk;
-
-  if (!(used & RFPACKET_OPT_LIFETIME))
-    c->lifetime = 10;
-
-  struct device_timer_s timer;
-
-  if (device_get_accessor(&timer.base, c->accessor.dev, DRIVER_CLASS_TIMER, 0))
-    return -EINVAL;
-
-  if (dev_timer_init_sec(&timer, &rq.lifetime, 0, c->lifetime, 1000))
-    return -EINVAL;
 
 #if defined(CONFIG_MUTEK_CONTEXT_SCHED)
   error_t err = dev_rfpacket_wait_request(&c->accessor, &rq);
