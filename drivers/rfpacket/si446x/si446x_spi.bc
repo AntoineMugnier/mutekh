@@ -44,13 +44,13 @@
         mov                     %delay,                 %basetime
         shi32l                  %delay,                 5
         spi_yield_delay         %delay
-        call32                  %poll_gpio:link,        poll_gpio
+        call16                  %poll_gpio:link,        poll_gpio
 
         /* Check device */
         cst8                    %tmp,                   SI446X_PART_INFO_CMD
         pack8			%tmp,                   1
         spi_wr                  %tmp,                   1,	CS_PULSE
-        call32                  %poll_cts_rsp:link,     poll_cts_rsp
+        call16                  %poll_cts_rsp:link,     poll_cts_rsp
         spi_rd                  %tmp,                   3,      CS_END
         unpack32le              %tmp,                   1,      3
         extz                    %tmp,                   23
@@ -78,7 +78,7 @@
   config_init:
         eq0                     %size
           jmp8 config_done
-        call32                  %poll_gpio:link,       poll_gpio
+        call16                  %poll_gpio:link,       poll_gpio
         spi_wrm                 %buffer,               %size,	CS_PULSE
         add                     %buffer,               %size
         ld8i                    %size,                 %buffer
@@ -88,7 +88,7 @@
         shi32l                  %delay,                 12
         spi_yieldc_delay        %delay
           abort
-        call32                  %clean_irq:link,       clean_irq
+        call16                  %clean_irq:link,       clean_irq
         end
 .endfunc
 
@@ -114,7 +114,7 @@
         or32                    %head,                 %tmp
         pack32le		%head,                 1,     4
 
-        call32                  %poll_gpio:link,       poll_gpio
+        call16                  %poll_gpio:link,       poll_gpio
         spi_wr                  %head,                 4,               CS_START
         /* Offset */
         ld8i                    %tmp,                  %cmd
@@ -122,6 +122,22 @@
         spi_wrm                 %tmp,                  %size,           CS_END
         jmp8                    config_loop
 .endfunc
+
+.func si446x_check_irq
+        .input %12 link
+        .clobber %0, %1, %3, %4, %5 size, %6, %10, %11, %12, %13
+        /* Update icount field */
+        cst32                   %0,                     STATUS_INFO_MSK,        0
+        and32                   %STATUS,                %0
+        ld8e                    %0,                     %R_CTX_PV,      _offsetof(si446x_ctx_s, icount, 1)
+        or32                    %STATUS,                %0
+        spi_gpioget             SI446X_IO_NIRQ,         %0
+        /* Test if irq pin is raised */
+        tst32c                  %0,                     0
+          jmp16                 si446x_process_irq
+        ret                     %link
+.endfunc
+
 
 .func si446x_entry_pkt_config
         .input %0 buffer
@@ -135,11 +151,11 @@
 .func si446x_entry_rf_config
         .input %0 buffer
         .input %1 cmd
-        .clobber %0, %1, %2, %4 size, %5 head, %6 tmp, %7, %11, %12, %13
+        .clobber %0, %1, %4 size, %5 head, %6 tmp, %7, %11, %12, %13
         .export si446x_entry_rf_config
         call8                   %si446x_config:link,   si446x_config
         /* End of configuration */
-        call32                  %clean_irq:link,       clean_irq
+        call16                  %clean_irq:link,       clean_irq
         end
 .endfunc
 
@@ -147,11 +163,11 @@
         .input %5 link
         .output %0 tmp status
         .clobber %10, %11, %12, %13
-        call32                  %poll_gpio:link,        poll_gpio
+        call16                  %poll_gpio:link,        poll_gpio
         cst8                    %tmp,                   SI446X_MODEM_STATUS_CMD
         pack8			%tmp,                   1
         spi_wr                  %tmp,                   1,	CS_PULSE
-        call32                  %poll_cts_rsp:link,     poll_cts_rsp
+        call16                  %poll_cts_rsp:link,     poll_cts_rsp
         spi_rd                  %status,                1,      CS_END
         unpack8			%status,                1
         ret                     %link
@@ -209,7 +225,7 @@
         shi32r                  %size,           16
         extz                    %size,           7
         pack32le                %cmd,            2,     5
-        call32                  %poll_gpio:link,        poll_gpio
+        call16                  %poll_gpio:link,        poll_gpio
         spi_wr                  %cmd,            5,	CS_PULSE
         ret                     %link
 .endfunc
@@ -238,7 +254,7 @@
         .input %3 link
         .input %1 mode
         .clobber %0, %1, %11, %12, %13
-        call32                  %poll_gpio:link,         poll_gpio
+        call16                  %poll_gpio:link,         poll_gpio
         cst32			%0,                      0x4C012011,   0
         pack32le		%0,                      2,     5
         spi_wr                  %0,                      5,	CS_PULSE
@@ -249,9 +265,9 @@
         .input %0 power
         .input %7 link
         .clobber %0, %4, %5, %6, %11, %12, %13
-        call32                  %poll_gpio:link,          poll_gpio
+        call16                  %poll_gpio:link,          poll_gpio
         call8                   %set_tx_power:link,       set_tx_power
-        call32                  %poll_gpio:link,          poll_gpio
+        call16                  %poll_gpio:link,          poll_gpio
         /* Write packet size to fifo */
         call8                   %fifo_init:link,          fifo_init
         mov                     %update_packet:count,     %fifo_init:count
@@ -271,7 +287,7 @@
         /* Wait deadline before TX */
         spi_yield_deadline      %deadline
         call8                   %si446x_start_tx:link,  si446x_start_tx
-        jmp32                   transfer_ongoing
+        jmp16                   transfer_ongoing
 .endfunc
 
 .func si446x_start_rx
@@ -289,9 +305,9 @@
 
 .func si446x_entry_rx_cont
         .input %4 channel
-        .clobber %0, %1 tmp jam, %2, %3 old new, %5, %6, %7 period, %10, %11, %12, %13
+        .clobber %0, %1 tmp jam, %2, %3 old new, %4, %5, %6, %7 period, %10, %11, %12, %13
         .export si446x_entry_rx_cont
-        call32                  %poll_gpio:link,          poll_gpio
+        call16                  %poll_gpio:link,          poll_gpio
         /* Configure latch at Sync Word detection */
         cst8                    %set_rssi_control:mode,   0x02
         call8                   %set_rssi_control:link,   set_rssi_control
@@ -302,7 +318,7 @@
         ld32e                   %period,                  %R_CTX_PV,   _offsetof(si446x_ctx_s, bt, 4)
         shi32l                  %period,                  SI446X_RSSI_SAMPLING_PERIOD
   rssi_loop:
-        call32                  %get_rssi:link,           get_rssi
+        call16                  %get_rssi:link,           get_rssi
         shi32l                  %get_rssi:current,        8
         ld32e                   %old,                     %R_CTX_PV,   _offsetof(si446x_ctx_s, rssi, 4)
   rssi_compute:
@@ -321,11 +337,8 @@
         spi_yieldc_delay        %period
           jmp8                  rssi_loop
   test_irq:
-        /* Test if irq pin is raised */
-        spi_gpioget             SI446X_IO_NIRQ,         %tmp
-        tst32s                  %tmp,                   0
-          jmp8                  test_rxc
-        jmp32                   si446x_entry_irq
+        /* Test if irq is pending */
+        call16                  %si446x_check_irq:link,  si446x_check_irq
   test_rxc:
         /* Test if RXC has been canceled */
         ld8e                    %tmp,                   %R_CTX_PV,   _offsetof(si446x_ctx_s, flags, 1)
@@ -334,18 +347,16 @@
         jmp8                    rssi_loop
   jamming:
         bit32s                  %STATUS,                STATUS_JAMMING
-        jmp32                   rx_error
+        jmp16                   rx_error
 .endfunc
 
 .func si446x_stop_rx
         .clobber %0, %1, %3, %4, %6, %5, %10, %11, %12, %13
-        call32                  %get_status:link,       get_status
+        call16                  %get_status:link,       get_status
         /* Test if packet is being received */
         tst32s                  %get_status:status,     1
-          jmp8                  ongoing
-        jmp32                   rx_error
-  ongoing:
-        jmp32                   transfer_ongoing
+          jmp16                 transfer_ongoing
+        jmp16                   rx_error
 .endfunc
 
 .func si446x_entry_rx
@@ -356,7 +367,7 @@
         .export si446x_entry_rx
         /* Wait deadline before RX */
         spi_yield_deadline      %deadline
-        call32                  %poll_gpio:link,        poll_gpio
+        call16                  %poll_gpio:link,        poll_gpio
         /* Configure latch at Sync Word detection */
         cst8                    %set_rssi_control:mode, 0x02
         call8                   %set_rssi_control:link, set_rssi_control
@@ -364,9 +375,12 @@
         cst32                   %si446x_start_rx:state,   0x0,    8
         mov                     %si446x_start_rx:channel, %channel
         call8                   %si446x_start_rx:link,    si446x_start_rx
+  rx_wait:  
         spi_yieldc_deadline     %timeout
           jmp8                  rx_timeout
-        jmp32                   si446x_entry_irq
+        /* Irq is pending */
+        call16                  %si446x_check_irq:link,  si446x_check_irq
+        jmp8                    rx_wait
   rx_timeout:
         bit32s                  %STATUS,                STATUS_RX_TIMEOUT
         jmp8                    si446x_stop_rx
@@ -385,7 +399,7 @@
         cst32                   %si446x_start_tx:mode,               0x33,  16
         mov                     %si446x_start_tx:channel,            %channel
         /* Update TX for a later start */
-        call32                  %si446x_start_tx:link,               si446x_start_tx
+        call16                  %si446x_start_tx:link,               si446x_start_tx
         /* Wait deadline before TX */
         spi_yield_deadline      %deadline
         mov                     %si446x_entry_retry_tx_cca:channel,  %channel
@@ -396,7 +410,7 @@
         .export si446x_entry_retry_tx_cca
         .input %2 timeout
         .input %7 channel
-        .clobber %0 tbr, %1, %2, %3, %4, %5, %6, %10, %11, %12, %13
+        .clobber %0, %1, %2 tbr, %3, %4, %5, %6, %10, %11, %12, %13
         /* Test if timeout date is reached */
         spi_deadline            %timeout
         spi_elapsed
@@ -405,10 +419,10 @@
         cst8                    %0,                       SI446X_INT_STATUS_CMD
         pack8			%0,                       1
         spi_wr                  %0,                       1,	CS_PULSE
-        call32                  %poll_gpio:link,          poll_gpio
+        call16                  %poll_gpio:link,          poll_gpio
         /* Configure check RSSI threshold at latch */
         cst8                    %set_rssi_control:mode,   0x23
-        call32                  %set_rssi_control:link,   set_rssi_control
+        call16                  %set_rssi_control:link,   set_rssi_control
         /* Start RX */
         mov                     %si446x_start_rx:channel, %channel
         cst32                   %si446x_start_rx:state,   0x7,    8
@@ -416,35 +430,34 @@
         ld32e                   %0,                       %R_CTX_PV,   _offsetof(si446x_ctx_s, ccad, 4)
         spi_yield_delay         %0
         /* Read status  */
-        call32                  %get_status:link,       get_status
+        call16                  %get_status:link,       get_status
         /* Test if packet is leaving */
-        tst32c                  %get_status:status,     2
-          jmp8                  cca_fail
-        jmp8                    transfer_ongoing
-  cca_fail:
+        tst32s                  %get_status:status,     2
+          jmp8                  transfer_ongoing
         /* Test if reception is possible */
         ld8e                    %0,                     %R_CTX_PV,   _offsetof(si446x_ctx_s, flags, 1)
         tst32c                  %0,                     1
           jmp8                  wait_no_rx
         /* Configure latch at Sync Word detection */
         cst8                    %set_rssi_control:mode, 0x02
-        call32                  %set_rssi_control:link, set_rssi_control
+        call16                  %set_rssi_control:link, set_rssi_control
         /* Wait in RX before retrying */
         ld32e                   %tbr,                   %R_CTX_PV,   _offsetof(si446x_ctx_s, bt, 4)
         shi32l                  %tbr,                   SI446X_TIME_BEFORE_RETRY_SHIFT
+  wait_before_retry:
         spi_yieldc_delay        %tbr
           jmp8                  stop_rx
-        jmp32                   si446x_entry_irq
-
+        /* Irq is pending */
+        call16                  %si446x_check_irq:link,  si446x_check_irq
+        jmp8                    wait_before_retry
   wait_no_rx:
         call8                   %abort_rx:link,         abort_rx
         ld32e                   %tbr,                   %R_CTX_PV,   _offsetof(si446x_ctx_s, bt, 4)
         shi32l                  %tbr,                   SI446X_TIME_BEFORE_RETRY_SHIFT
         spi_yield_delay         %tbr
         jmp8                    si446x_entry_retry_tx_cca
-
   stop_rx:
-        call32                  %get_status:link,       get_status
+        call16                  %get_status:link,       get_status
         /* Test if packet is being received */
         tst32s                  %get_status:status,     1
           jmp8                  transfer_ongoing
@@ -460,13 +473,13 @@
         .input %6 link
         .input %5 mask  /** Fifo flush mask */
         .clobber %0, %1, %4, %11, %12, %13
-        call32                  %poll_gpio:link,        poll_gpio
+        call16                  %poll_gpio:link,        poll_gpio
         call8                   %state_ready:link,      state_ready
-        call32                  %poll_gpio:link,        poll_gpio
+        call16                  %poll_gpio:link,        poll_gpio
         mov                     %flush_fifo:mask,       %mask
         call8                   %flush_fifo:link,       flush_fifo
-        call32                  %poll_gpio:link,        poll_gpio
-        call32                  %clean_irq:link,        clean_irq
+        call16                  %poll_gpio:link,        poll_gpio
+        call16                  %clean_irq:link,        clean_irq
         ret                     %link
 .endfunc
 
@@ -499,9 +512,9 @@
         .output %0 current, %1 latched
         cst8                    %0,                     SI446X_MODEM_STATUS_CMD
         pack8			%0,                     1
-        call32                  %poll_gpio:link,        poll_gpio
+        call16                  %poll_gpio:link,        poll_gpio
         spi_wr                  %0,                     1,	CS_PULSE
-        call32                  %poll_cts_rsp:link,     poll_cts_rsp
+        call16                  %poll_cts_rsp:link,     poll_cts_rsp
         spi_rd                  %0,                     4,	CS_END
         unpack32le		%0,                     1,      4
         mov                     %1,                     %0
@@ -520,9 +533,9 @@
         /* Retrieve size of incoming packet */
         cst8                    %tmp,                   SI446X_PACKET_INFO_CMD
         pack8			%tmp,                   1
-        call32                  %poll_gpio:link,        poll_gpio
+        call16                  %poll_gpio:link,        poll_gpio
         spi_wr                  %tmp,                   1,	CS_PULSE
-        call32                  %poll_cts_rsp:link,     poll_cts_rsp
+        call16                  %poll_cts_rsp:link,     poll_cts_rsp
         spi_rd                  %size,                  2,	CS_END
         unpack16le		%size,                  1,      2
         shi32r                  %size,                  8
@@ -536,19 +549,15 @@
 .endfunc
 
 .func transfer_ongoing
-        .clobber %0, %1, %2, %3, %4, %5, %6, %10, %11, %12, %13
+        .clobber %0, %1, %3, %4, %5, %6, %10, %11, %12, %13
         ld32e                   %0,                     %R_CTX_PV,   _offsetof(si446x_ctx_s, mpst, 4)
         spi_delay               %0
   wait_next_irq:
         spi_yieldc
-          jmp8                  timeout
-        /* Test if irq pin is raised */
-        spi_gpioget             SI446X_IO_NIRQ,       %1
-        tst32s                  %1,                   0
-          jmp8                  wait_next_irq
-        jmp8                    si446x_entry_irq
-  timeout:
-        jmp8                    si446x_error
+          jmp8                  si446x_error
+        /* Test if irq is pending */
+        call16                  %si446x_check_irq:link,  si446x_check_irq
+        jmp8                    wait_next_irq
 .endfunc
 
 .func si446x_entry_read_fifo
@@ -592,11 +601,11 @@
         ld32e                   %buffer,                %R_CTX_PV,     _offsetof(si446x_ctx_s, buffer, 4)
         cst8                    %tmp,                   SI446X_READ_FIFO_CMD
         pack8			%tmp,                   1
-        call32                  %poll_gpio:link,        poll_gpio
+        call16                  %poll_gpio:link,        poll_gpio
         spi_wr                  %tmp,                   1,              CS_START
         spi_rdm                 %buffer,                %rxcnt,         CS_END
         mov                     %update_packet:count,   %rxcnt
-        call32                  %update_packet:link,    update_packet
+        call16                  %update_packet:link,    update_packet
         tst32c                  %STATUS,                STATUS_PACKET_RX
           jmp8                  transfer_ongoing
    rssi:
@@ -659,16 +668,14 @@
 
 .func si446x_entry_irq
         .export si446x_entry_irq
+        .clobber %0, %1, %3, %4, %5 size, %6, %10, %11, %12, %13
+        /* Test if irq is pending */
+        call16                  %si446x_check_irq:link,  si446x_check_irq
+	end
+.endfunc
+
+.func si446x_process_irq
         .clobber %0, %1, %2, %3, %4, %5 size, %6, %10, %11, %12, %13
-        /* Update icount field */
-        cst32                   %0,                     STATUS_INFO_MSK,        0
-        and32                   %STATUS,                %0
-        ld8e                    %0,                     %R_CTX_PV,      _offsetof(si446x_ctx_s, icount, 1)
-        or32                    %STATUS,                %0
-        spi_gpioget             SI446X_IO_NIRQ,         %0
-        /* Test if irq pin is raised */
-        tst32s                  %0,                     0
-          end
         /* Get irq status */
         cst8                    %0,                     SI446X_INT_STATUS_CMD
         pack8			%0,                     1
@@ -708,8 +715,8 @@
         call8                   %poll_gpio:link,        poll_gpio
         call8                   %write_fifo:link,       write_fifo
         mov                     %update_packet:count,   %write_fifo:count
-        call32                  %update_packet:link,    update_packet
-        jmp32                   transfer_ongoing
+        call16                  %update_packet:link,    update_packet
+        jmp16                   transfer_ongoing
   process_irq:
         cst32                   %0,                     STATUS_RX_IRQ_MSK,      0
         and32                   %0,                     %STATUS

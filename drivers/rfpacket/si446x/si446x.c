@@ -472,6 +472,8 @@ static inline void si446x_rfp_process_group(struct si446x_ctx_s *pv, bool_t grou
     assert(rq->type != DEV_RFPACKET_RQ_RX_CONT);
 
     rq->err = -ECANCELED;
+    rq->base.drvdata = NULL;
+
     dev_request_queue_pop(&pv->queue);
     kroutine_exec(&rq->base.kr);
   }
@@ -532,6 +534,7 @@ static void si446x_rfp_end_rq(struct si446x_ctx_s *pv, error_t err)
   assert(rq && rq->type != DEV_RFPACKET_RQ_RX_CONT);
 
   rq->err = err;
+  rq->base.drvdata = NULL;
 
   dev_request_queue_pop(&pv->queue);
   kroutine_exec(&rq->base.kr);
@@ -944,6 +947,8 @@ static DEV_RFPACKET_CANCEL(si446x_rfp_cancel)
 
   LOCK_SPIN_IRQ(&dev->lock);
 
+  struct dev_rfpacket_rq_s *hrq = dev_rfpacket_rq_s_cast(dev_request_queue_head(&pv->queue));
+
   if (rq == pv->rx_cont)
     {
       switch (pv->state)
@@ -994,7 +999,8 @@ static DEV_RFPACKET_CANCEL(si446x_rfp_cancel)
           abort();
       }
     }
-  else if (rq->base.drvdata == pv)
+  else if ((rq->base.drvdata == pv) && (rq != hrq))
+  /* Request is in queue and is not being processed */
     {
       err = 0;
       rq->base.drvdata = NULL;
@@ -1124,6 +1130,7 @@ static inline void si446x_rfp_end_rxrq(struct si446x_ctx_s *pv, bool_t err)
     }
 
   rx->err = err;
+  rx->channel = rq->channel;
   kroutine_exec(&rx->kr);
   pv->rxrq = NULL;
 }
