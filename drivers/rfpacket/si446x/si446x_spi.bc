@@ -336,10 +336,8 @@
           jmp8                  jamming
         spi_yieldc_delay        %period
           jmp8                  rssi_loop
-  test_irq:
         /* Test if irq is pending */
         call16                  %si446x_check_irq:link,  si446x_check_irq
-  test_rxc:
         /* Test if RXC has been canceled */
         ld8e                    %tmp,                   %R_CTX_PV,   _offsetof(si446x_ctx_s, flags, 1)
         tst32c                  %tmp,                   0

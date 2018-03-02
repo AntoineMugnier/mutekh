@@ -811,9 +811,9 @@ static void si446x_cancel_rxc(struct si446x_ctx_s *pv)
   pv->flags &= ~SI446X_FLAGS_RX_CONTINOUS;
 
   assert(pv->bcrun);
+
   /* Wakeup periodic rssi sampling */
-  if (pv->bcrun)
-    dev_spi_bytecode_wakeup(&pv->spi, srq);
+  dev_spi_bytecode_wakeup(&pv->spi, srq);
 }
 
 static DEV_RFPACKET_REQUEST(si446x_rfp_request)
@@ -852,6 +852,7 @@ static DEV_RFPACKET_REQUEST(si446x_rfp_request)
             break;
           case SI446X_STATE_STOPPING_RXC:
             assert(pv->rx_cont);
+	    /* Another RX continous request is already pending */
             if (pv->next_rx_cont && pv->next_rx_cont != pv->rx_cont)
               kroutine_exec(&pv->next_rx_cont->base.kr);
             pv->next_rx_cont = rq;
@@ -1088,49 +1089,43 @@ static inline void si446x_rfp_end_rxrq(struct si446x_ctx_s *pv, bool_t err)
 
 #ifdef CONFIG_DRIVER_RFPACKET_SI446X_STATISTICS
   pv->stats.rx_count++;
-#endif
-
-  struct dev_rfpacket_rq_s *rq = dev_rfpacket_rq_s_cast(dev_request_queue_head(&pv->queue));
-
-  /* Terminate allocated rx request */
   if (err)
-    {
-      rx->size = 0;
-#ifdef CONFIG_DRIVER_RFPACKET_SI446X_STATISTICS
-      pv->stats.rx_err_count++;
+    pv->stats.rx_err_count++;
 #endif
-    }
-  else
-    {
-      switch (pv->state)
-      {
-        case SI446X_STATE_RX:
-          rq = dev_rfpacket_rq_s_cast(dev_request_queue_head(&pv->queue));
-          break;
+
+  struct dev_rfpacket_rq_s *rq = NULL;
+
+  switch (pv->state)
+  {
+    case SI446X_STATE_RX:
+      rq = dev_rfpacket_rq_s_cast(dev_request_queue_head(&pv->queue));
+      break;
 #ifdef CONFIG_DRIVER_RFPACKET_SI446X_CCA
-        case SI446X_STATE_TX_LBT:
-        case SI446X_STATE_TX_LBT_PENDING_RXC:
+    case SI446X_STATE_TX_LBT:
+    case SI446X_STATE_TX_LBT_PENDING_RXC:
 #endif
-        case SI446X_STATE_STOPPING_RXC:
-        case SI446X_STATE_RXC:
-          rq = pv->rx_cont;
-          break;
-        default:
-          abort();
-      }
+    case SI446X_STATE_STOPPING_RXC:
+    case SI446X_STATE_RXC:
+      rq = pv->rx_cont;
+      break;
+    default:
+      abort();
+  }
 
-      assert(rq);
+  assert(rq);
 
-      rx->carrier = GET_RSSI(pv->carrier) << 3;
-      rx->rssi = GET_RSSI(pv->rssi >> 8) << 3;
-      rx->timestamp = pv->timestamp;
-
-      if (rq->anchor == DEV_RFPACKET_TIMESTAMP_START)
-        rx->timestamp -= pv->rxrq->size * pv->cache_array[pv->id].tb;
-    }
+  if (err)
+    goto end;
 
   rx->err = err;
+  rx->carrier = GET_RSSI(pv->carrier) << 3;
+  rx->rssi = GET_RSSI(pv->rssi >> 8) << 3;
+  rx->timestamp = pv->timestamp;
   rx->channel = rq->channel;
+  if (rq->anchor == DEV_RFPACKET_TIMESTAMP_START)
+    rx->timestamp -= pv->rxrq->size * pv->cache_array[pv->id].tb;
+  
+end:
   kroutine_exec(&rx->kr);
   pv->rxrq = NULL;
 }
