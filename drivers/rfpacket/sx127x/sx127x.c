@@ -139,6 +139,7 @@ static uint8_t sx127x_get_bw(uint32_t bw)
   return 0;
 }
 
+#ifdef CONFIG_DRIVER_RFPACKET_SX127X_RAW_MODE
 static error_t sx127x_build_raw_config(struct sx127x_private_s * pv, struct dev_rfpacket_rq_s *rq, uint8_t **p)
 {
   const struct dev_rfpacket_pk_cfg_raw_s *pk_cfg = const_dev_rfpacket_pk_cfg_raw_s_cast(rq->pk_cfg);
@@ -179,6 +180,7 @@ static error_t sx127x_build_raw_config(struct sx127x_private_s * pv, struct dev_
 
   return 0;
 }
+#endif
 
 static error_t sx127x_build_pkt_config(struct sx127x_private_s * pv, struct dev_rfpacket_rq_s *rq, uint8_t **p)
 {
@@ -660,6 +662,9 @@ error:
 static uint32_t sx127x_set_cmd(struct sx127x_private_s *pv, struct dev_rfpacket_rq_s *rq)
 {
   uint32_t cmd = pv->cfg.sync;
+
+  if (rq->pk_cfg->format == DEV_RFPACKET_FMT_IO)
+    cmd |= CMD_IO_MODE;
 
   switch (rq->type)
     {

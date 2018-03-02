@@ -35,6 +35,7 @@
 #define CMD_FREQ_CHANGE      0x10000
 #define CMD_RX_SCANNING      0x20000
 #define CMD_RXC_RAW          0x40000
+#define CMD_IO_MODE          0x80000
 
 #define STATUS_IRQ_MSK          0xFF
 #define STATUS_INFO_MSK         0x00FFFF00

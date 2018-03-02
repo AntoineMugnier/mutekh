@@ -105,6 +105,7 @@
         tst32s                  %tmp,            0
           jmp8                  __sx127x_process_irq
         ret                     %link
+
 __sx127x_process_irq:
         /* Read irq status */
         cst8                    %tmp,            SX1276_REG_IRQFLAGS1
@@ -334,7 +335,7 @@ __no_rx_ongoing:
         .input %3 deadline
         .input %4 timeout
         .input %5 rssith
-        .clobber %2 period, %3 mean, %5, %6 tmp, %7 data, %8, %9, %10, %11, %12
+        .clobber %3 mean, %5 period, %6 tmp, %7 data, %8, %9, %10, %11, %12
         /* Init TX */
         call8                   %process_tx_cmd:link,    process_tx_cmd
         /* Rssi period */
@@ -385,15 +386,24 @@ __tx_fail:
 .func sx127x_start_tx
         .input %0 len
         .input %1 buffer
+        .input %2 cmd
         .clobber %0, %5, %6 tmp, %7 data, %8, %9, %10, %12
         /* Start TX */
         cst8                    %sx127x_mode_set:mode,  SX1276_OPMODE_TRANSMITTER
         call8                   %sx127x_mode_set:link,  sx127x_mode_set
         /* Write Fifo */
         cst8                    %tmp,         SX1276_REG_FIFO | 0x80
+        tst32c                  %cmd,         bitpos(CMD_IO_MODE)
+          jmp8                  __send_len
+	/* Do not send length in IO mode */
+        pack8                   %tmp,         1
+        spi_wr                  %tmp,         1,             CS_START
+        jmp8                    __send_data
+  __send_len:
         mov                     %data,        %len
         pack8                   %tmp,         2
         spi_wr                  %tmp,         2,             CS_START
+  __send_data:
         spi_wrm                 %buffer,      %len,          CS_END
         /* Transmit is on-going */
         ld32e                   %tmp,         %R_CTX_PV,   _offsetof(sx127x_private_s, tbrs, 4)
