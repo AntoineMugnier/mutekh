@@ -1,0 +1,16 @@
+
+  %set OUTPUT_NAME mydrv
+
+  # New source code module to be compiled
+  %append MODULES $(OUTPUT_NAME):$(CONFIGPATH)
+
+  # enable the shell so that we can play with the devices and drivers
+  %inherit shell
+
+  %include scripts/options.build
+  %include arch/arch.build
+
+  CONFIG_DEVICE_SHELL_CHAR
+
+  # Application license
+  CONFIG_LICENSE_APP_LGPL
