@@ -770,16 +770,18 @@ bc_enable_bps(struct bc_context_s *ctx, uint16_t mask)
 }
 
 /** @This skip the next instruction. This can only be called if the
-    execution has stopped on a conditional custom instruction. */
+    execution has stopped on a conditional custom instruction.
+
+    A single instruction can be skipped. When executed more than once
+    without restarting execution of the bytecode, this function does
+    nothing. */
 ALWAYS_INLINE void
 bc_skip(struct bc_context_s *ctx)
 {
 #ifdef CONFIG_MUTEK_BYTECODE_NATIVE
-  assert(ctx->skip && "nothing to skip");
   ctx->pc += ctx->skip;
   ctx->skip = 0;
 #else
-  assert(!(ctx->pc & 1) && "nothing to skip");
   ctx->pc |= 1;
 #endif
 }
