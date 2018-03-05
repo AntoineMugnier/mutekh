@@ -537,7 +537,7 @@ sub out_bitc {
     $r .= "    mov $reg[$wo], $reg[$wi]\n" if ( $wi != $wo );
     if ($x >= 8) {
 	$r .= "    movs r0, #1\n".
-	      "    lsrs r0, #$x\n";
+	      "    lsls r0, #$x\n";
     } else {
 	$r .= "    movs r0, #".(1 << $x)."\n";
     }
@@ -551,7 +551,7 @@ sub out_bits {
     $r .= "    mov $reg[$wo], $reg[$wi]\n" if ( $wi != $wo );
     if ($x >= 8) {
 	$r .= "    movs r0, #1\n".
-	      "    lsrs r0, #$x\n";
+	      "    lsls r0, #$x\n";
     } else {
 	$r .= "    movs r0, #".(1 << $x)."\n";
     }
