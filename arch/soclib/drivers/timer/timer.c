@@ -257,6 +257,7 @@ static DEV_USE(soclib_timer_use)
       struct soclib_timer_private_s *pv = accessor->dev->drv_pv;
       if (accessor->number / 2 >= pv->t_count)
         return -ENOTSUP;
+      return 0;
     }
     case DEV_USE_START:
     case DEV_USE_STOP:
