@@ -121,10 +121,6 @@ void efm32_usart_printk_init()
 
 #define USART_CLOCK            38400000
 
-  cpu_mem_write_32(b + EFM32_CMU_OSCENCMD_ADDR, EFM32_CMU_OSCENCMD_HFRCOEN);
-  while (!(cpu_mem_read_32(b + EFM32_CMU_STATUS_ADDR) & EFM32_CMU_STATUS_HFRCORDY))
-    ;
-  cpu_mem_write_32(b + EFM32_CMU_HFCLKSEL_ADDR, EFM32_CMU_HFCLKSEL_HF(HFRCO));
   /* Enable clock for HF peripherals */
   x = cpu_mem_read_32(b + EFM32_CMU_CTRL_ADDR);
   cpu_mem_write_32(b + EFM32_CMU_CTRL_ADDR, x | EFM32_CMU_CTRL_HFPERCLKEN);
@@ -134,6 +130,7 @@ void efm32_usart_printk_init()
   /* Enable clock for GPIO */
   x = cpu_mem_read_32(b + EFM32_CMU_HFBUSCLKEN0_ADDR);
   cpu_mem_write_32(b + EFM32_CMU_HFBUSCLKEN0_ADDR, x | EFM32_CMU_HFBUSCLKEN0_GPIO);
+
 #elif CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFM
 
 #define USART_CLOCK            14000000
