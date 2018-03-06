@@ -401,12 +401,13 @@
         /* Wait deadline before TX */
         spi_yield_deadline      %deadline
         mov                     %si446x_entry_retry_tx_cca:channel,  %channel
+        mov                     %si446x_entry_retry_tx_cca:timeout,  %timeout
         jmp8 si446x_entry_retry_tx_cca
 .endfunc
 
 .func si446x_entry_retry_tx_cca
         .export si446x_entry_retry_tx_cca
-        .input %2 timeout
+        .input %9 timeout
         .input %7 channel
         .clobber %0, %1, %2 tbr, %3, %4, %5, %6, %10, %11, %12, %13
         /* Test if timeout date is reached */
@@ -461,7 +462,6 @@
           jmp8                  transfer_ongoing
         call8                   %abort_rx:link,         abort_rx
         jmp8                    si446x_entry_retry_tx_cca
-
   tx_fail:
         bit32s                  %STATUS,                STATUS_TX_TIMEOUT
         jmp8                    si446x_rx_tx_error
@@ -724,7 +724,8 @@
         and32                   %0,                     %STATUS
         neq0                    %0
           jmp8                  process_tx_irq
-/**/    end
+        /* Unexpected irq */
+        jmp8                    si446x_error
 .endfunc
 
 .func write_fifo
