@@ -240,8 +240,13 @@ static error_t sx127x_build_pkt_config(struct sx127x_private_s * pv, struct dev_
       *pk++ = x;
     }
 
-  if (pk_cfg->rx_pb_len > 24)
-    return -ENOTSUP;
+  uint8_t rx_pb_len = pk_cfg->rx_pb_len >> 3;
+
+  /* Saturate RX preamble threshold */
+  if (rx_pb_len == 0)
+    rx_pb_len = 1;
+  else if (rx_pb_len > 3)
+    rx_pb_len = 3;
 
   /*  Sync word + preambule + crc + fifo filling time + 2 bytes margin */
   pv->tbrs = pv->timebit * ((68 + sw) * 8 + IO_MAX_PREAMBLE_SIZE);
@@ -249,11 +254,11 @@ static error_t sx127x_build_pkt_config(struct sx127x_private_s * pv, struct dev_
   /* Time to achieve preambule detection */
   dev_timer_delay_t t = SX127X_TS_RE_US + SX127X_TS_FS_US + 100;
   dev_timer_init_sec(pv->timer, &pv->tpbrx, 0, t, 1000000);
-  pv->tpbrx += pv->timebit * (pk_cfg->rx_pb_len >> 3) * 8;
+  pv->tpbrx += pv->timebit * rx_pb_len * 8;
 
   *pk++ = 1;
   *pk++ = SX1276_REG_PREAMBLEDETECT | 0x80;
-  *pk++ = SX1276_PREAMBLEDETECT_DETECTOR_ON | (((pk_cfg->rx_pb_len >> 3) - 1) << 5) | 0xA;
+  *pk++ = SX1276_PREAMBLEDETECT_DETECTOR_ON | ((rx_pb_len - 1) << 5) | 0xA;
 
   /* Packet config mode */
 
