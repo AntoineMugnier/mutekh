@@ -89,7 +89,11 @@ bool_t efr32_protimer_request_start(struct efr32_protimer_s *pv,
 
   /* hw compare for == only, check for race condition */
   if (deadline <= efr32_protimer_get_value(pv))
-    return 1;
+    {
+      uint32_t x = EFR32_PROTIMER_IF_CC(channel);
+      cpu_mem_write_32(EFR32_PROTIMER_ADDR + EFR32_PROTIMER_IFS_ADDR, x);
+      return 1;
+    } 
 
   return 0;
 }
