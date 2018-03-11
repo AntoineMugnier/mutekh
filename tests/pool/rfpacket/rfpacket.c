@@ -55,6 +55,11 @@
 #define RFP_TEST_RX_CONTINOUS
 #define RFP_TEST_SLEEP
 
+#if (RFP_TEST_RQ_NUMBER == 1) && defined(RFP_TEST_RX_CONTINOUS)
+#undef RFP_TEST_RX_CONTINOUS
+#warning RFP_TEST_RX_CONTINOUS can not be defined when only one request in use
+#endif
+
 static const struct dev_rfpacket_pk_cfg_basic_s pkcfg = {
     .base = {
         .format = DEV_RFPACKET_FMT_SLPC,
@@ -84,9 +89,9 @@ static const struct dev_rfpacket_rf_cfg_fsk_s rfcfg =
          .id = 0,
          .dirty = 0
        },
-     .drate = 40000,
+     .drate = 38400,
      .jam_rssi = (-90) << 3,  
-     .frequency = 868250000,
+     .frequency = 868000000,
      .chan_spacing = 100000,
      .bw = 100000,
    },
@@ -287,7 +292,7 @@ static void rfp_test_wait_before_push(struct rfp_test_pv_s *pv, struct dev_rfpac
   struct rfp_test_rq_s *base = rfp_test_rq_s_from_rq(rq);
   struct dev_timer_rq_s *trq = &base->trq;
 
-  trq->delay = TEST_BASE_TIME_US * 8;
+  trq->delay = pv->base_time * 256;
   trq->rev = 0;
   trq->rq.pvdata = pv;
 

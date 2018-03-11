@@ -96,6 +96,20 @@ __entry_rxwarm:        // function call from: entry_state_rxwarm
         GPIO_LOG(2)
         RESET_SP()
         STACK_TEST(2)
+	/* Test if buffer is empty before warming */
+        ld.rac           r0, [EFR32_RAC_ADDR + EFR32_RAC_IFPGACTRL_ADDR] 
+        andi.nowb        r0, EFR32_RAC_IFPGACTRL_BANDSEL(SG)            
+        jz               _rxwarmstart
+        cst32            r1, EFR32_BUFC_ADDR + EFR32_BUFC_STATUS_ADDR(1)      
+        ld               r0, [r1]          
+        andi.nowb        r0, 0xff            
+        /* Buffer is empty */ 
+        jz               _rxwarmstart
+        call 		 __stop_rx
+        cst8             r1,  EFR32_RAC_STATUS_STATE_OFF
+        st.rac           [EFR32_RAC_ADDR + EFR32_RAC_FORCESTATE_ADDR], r1
+        end
+    _rxwarmstart:
         call             _wait_before_op
         call             _clear_hfxoretimectrl_en_bit 
         cst32            r2, EFR32_SYNTH_ADDR + EFR32_SYNTH_CMD_ADDR       

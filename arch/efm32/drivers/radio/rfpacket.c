@@ -59,7 +59,6 @@ DRIVER_PV(struct radio_efr32_rfp_ctx_s
   struct dev_rfpacket_rq_s      *next_rx_cont;
   struct dev_rfpacket_rx_s      *rx;
   uint8_t                       sg_buffer[EFR32_RADIO_RFP_BUFFER_SIZE];
-  bool_t                        rx_available;
   enum efr32_radio_rfp_state    state;
   /* Current config */
   const struct dev_rfpacket_rf_cfg_s *rf_cfg;
@@ -235,23 +234,21 @@ static void efr32_rfp_set_cca_threshold(struct radio_efr32_rfp_ctx_s *ctx, struc
 
 static void efr32_rfp_start_tx_lbt(struct radio_efr32_rfp_ctx_s *ctx, struct dev_rfpacket_rq_s *rq)
 {
-  uint32_t x;
-
   cpu_mem_write_32(EFR32_PROTIMER_ADDR + EFR32_PROTIMER_TOUTCNTTOP_ADDR(0), EFR32_PROTIMER_TOUTCNTTOP_PCNTTOP(4));
   cpu_mem_write_32(EFR32_PROTIMER_ADDR + EFR32_PROTIMER_TOUTCOMP_ADDR(0), EFR32_PROTIMER_TOUTCOMP_PCNTCOMP(1));
 
   /* Time granularity is based on T0UF */
 
-  x = /* Time between 2 retries */
-      EFR32_PROTIMER_LBTCTRL_FIXEDBACKOFF |
-      EFR32_PROTIMER_LBTCTRL_STARTEXP(1) |
-      EFR32_PROTIMER_LBTCTRL_MAXEXP(1) |
-      /* Number of consecutive successfull CCA before generating LBT success */ 
-      EFR32_PROTIMER_LBTCTRL_CCAREPEAT(1) |
-      /* Time between 2 CCA measures */
-      EFR32_PROTIMER_LBTCTRL_CCADELAY(1) |
-      /* Number of CCA failure before generating LBTFAILURE */ 
-      EFR32_PROTIMER_LBTCTRL_RETRYLIMIT(EFR32_MAX_LBT_RETRY_COUNT - 1);
+  uint32_t x = /* Time between 2 retries */
+               EFR32_PROTIMER_LBTCTRL_FIXEDBACKOFF |
+               EFR32_PROTIMER_LBTCTRL_STARTEXP(1) |
+               EFR32_PROTIMER_LBTCTRL_MAXEXP(1) |
+               /* Number of consecutive successfull CCA before generating LBT success */ 
+               EFR32_PROTIMER_LBTCTRL_CCAREPEAT(1) |
+               /* Time between 2 CCA measures */
+               EFR32_PROTIMER_LBTCTRL_CCADELAY(1) |
+               /* Number of CCA failure before generating LBTFAILURE */ 
+               EFR32_PROTIMER_LBTCTRL_RETRYLIMIT(EFR32_MAX_LBT_RETRY_COUNT - 1);
 
   cpu_mem_write_32(EFR32_PROTIMER_ADDR + EFR32_PROTIMER_LBTCTRL_ADDR, x);
   cpu_mem_write_32(EFR32_PROTIMER_ADDR + EFR32_PROTIMER_RANDOM_ADDR, 1);
@@ -290,6 +287,24 @@ static void efr32_rfp_start_tx_lbt(struct radio_efr32_rfp_ctx_s *ctx, struct dev
   cpu_mem_write_32(EFR32_PROTIMER_ADDR + EFR32_PROTIMER_CMD_ADDR, EFR32_PROTIMER_CMD_LBTSTART);
 }
 
+static void efr32_rfp_try_restart_tx(struct radio_efr32_rfp_ctx_s *ctx)
+{
+  dev_timer_value_t time = efr32_protimer_get_value(&ctx->pv.pti);
+
+  struct dev_rfpacket_rq_s *rq = dev_rfpacket_rq_s_cast(dev_request_queue_head(&ctx->queue));
+
+  assert(rq->type == DEV_RFPACKET_RQ_TX_FAIR);
+
+  if (ctx->deadline <= time)
+  /* Deadline reached */
+    {
+      efr32_rfp_end_rq(ctx, -ETIMEDOUT);
+      return;
+    }
+
+  efr32_rfp_start_tx_lbt(ctx, rq);
+}
+
 static void efr32_rfp_start_tx(struct radio_efr32_rfp_ctx_s *ctx)
 {
   cpu_mem_write_32(EFR32_SEQ_DEADLINE_ADDR, 0);
@@ -297,8 +312,15 @@ static void efr32_rfp_start_tx(struct radio_efr32_rfp_ctx_s *ctx)
   struct dev_rfpacket_rq_s *rq;
   rq = dev_rfpacket_rq_s_cast(dev_request_queue_head(&ctx->queue));
 
+  assert(rq);
+
+  struct radio_efr32_ctx_s *pv = &ctx->pv;
+  dev_timer_value_t time = efr32_protimer_get_value(&pv->pti);
+  dev_timer_value_t start = rq->deadline ? rq->deadline : time;
+
   /* Check RAC state */
-  assert(EFR32_RAC_STATUS_STATE_GET(endian_le32(cpu_mem_read_32(EFR32_RAC_ADDR + EFR32_RAC_STATUS_ADDR))) == EFR32_RAC_STATUS_STATE_OFF);
+  uint32_t x = endian_le32(cpu_mem_read_32(EFR32_RAC_ADDR + EFR32_RAC_STATUS_ADDR));
+  assert(EFR32_RAC_STATUS_STATE_GET(x) == EFR32_RAC_STATUS_STATE_OFF);
 
   /* Clear buffer */
   cpu_mem_write_32(EFR32_BUFC_ADDR + EFR32_BUFC_CMD_ADDR(0), EFR32_BUFC_CMD_CLEAR); 
@@ -321,6 +343,7 @@ static void efr32_rfp_start_tx(struct radio_efr32_rfp_ctx_s *ctx)
         cpu_mem_write_32(EFR32_RAC_ADDR + EFR32_RAC_CMD_ADDR, EFR32_RAC_CMD_TXEN);
         break;
       case DEV_RFPACKET_RQ_TX_FAIR:
+        ctx->deadline = start + rq->lifetime;
         efr32_rfp_start_tx_lbt(ctx, rq);
         break;
       default:
@@ -340,6 +363,8 @@ static void efr32_rfp_disable(struct radio_efr32_rfp_ctx_s *ctx)
   /* Disable TX */
   cpu_mem_write_32(EFR32_RAC_ADDR + EFR32_RAC_CMD_ADDR, EFR32_RAC_CMD_TXDIS);
 
+  cpu_mem_write_32(EFR32_RAC_ADDR + EFR32_RAC_FORCESTATE_ADDR, EFR32_RAC_STATUS_STATE_OFF);
+
   /* Check RAC state */
   while(1)
   /* Use state change interrupt here or schedule a timer interrupt instead of active waiting */
@@ -348,12 +373,15 @@ static void efr32_rfp_disable(struct radio_efr32_rfp_ctx_s *ctx)
       if (EFR32_RAC_STATUS_STATE_GET(x) == EFR32_RAC_STATUS_STATE_OFF)
         break;
     }
+
+  /* Clear irq */
+  cpu_mem_write_32(EFR32_FRC_ADDR + EFR32_FRC_IF_ADDR, 0);
 }
 
 static void efr32_rfp_start_rx_scheduled(struct radio_efr32_rfp_ctx_s *ctx, struct dev_rfpacket_rq_s *rq)
 {
   struct radio_efr32_ctx_s *pv = &ctx->pv;
-
+ 
 #if EFR32_PROTIMER_HW_WIDTH < 64
   assert(0);
 #endif
@@ -373,19 +401,12 @@ static void efr32_rfp_start_rx_scheduled(struct radio_efr32_rfp_ctx_s *ctx, stru
 
   cpu_mem_write_32(EFR32_PROTIMER_ADDR + EFR32_PROTIMER_RXCTRL_ADDR, x);
 
-  if (efr32_protimer_request_start(&pv->pti, time, start, EFR32_PROTIMER_RX_START_CHANNEL))
-    /* Start date reached. Start RX in case of race */
-    {
-      x = cpu_mem_read_32(EFR32_RAC_ADDR + EFR32_RAC_RXENSRCEN_ADDR);
-      x |= 0x2;
-      cpu_mem_write_32(EFR32_RAC_ADDR + EFR32_RAC_RXENSRCEN_ADDR, x);
-    }
+  /* RX scheduled looks not to work as expected if no minimal delay */
+  if ((start <= time) || (start - time) < 128)
+    start = time + 128;
 
-  if (!(efr32_protimer_request_start(&pv->pti, time, ctx->deadline, EFR32_PROTIMER_RX_STOP_CHANNEL)))
-    return;
-
-  /* Irq is pending */
-  efr32_rfp_disable(ctx);
+  efr32_protimer_request_start(&pv->pti, time, start, EFR32_PROTIMER_RX_START_CHANNEL);
+  efr32_protimer_request_start(&pv->pti, time, ctx->deadline, EFR32_PROTIMER_RX_STOP_CHANNEL);
 }
 
 static void efr32_rfp_start_rx(struct radio_efr32_rfp_ctx_s *ctx, struct dev_rfpacket_rq_s *rq)
@@ -436,21 +457,17 @@ static inline void efr32_rfp_process_group(struct radio_efr32_rfp_ctx_s *ctx, bo
   }
 }
 
-static void efr32_rfp_try_restart_rx(struct radio_efr32_rfp_ctx_s *ctx)
+static void efr32_rfp_test_timeout(struct radio_efr32_rfp_ctx_s *ctx)
 {
   efr32_radio_set_state(ctx, EFR32_RFP_STATE_RX);
-  efr32_rfp_disable(ctx);
 
   dev_timer_value_t time = efr32_protimer_get_value(&ctx->pv.pti);
 
   if (ctx->deadline <= time)
-    return;
-
-  /* Enable RX */
-  uint32_t x = cpu_mem_read_32(EFR32_RAC_ADDR + EFR32_RAC_RXENSRCEN_ADDR);
-  x |= 0x2;
-  cpu_mem_write_32(EFR32_RAC_ADDR + EFR32_RAC_RXENSRCEN_ADDR, x);
-  
+    {
+      efr32_rfp_end_rq(ctx, 0);
+      return;
+    }
 }
 
 static void efr32_rfp_read_done(struct radio_efr32_rfp_ctx_s *ctx)
@@ -462,17 +479,22 @@ static void efr32_rfp_read_done(struct radio_efr32_rfp_ctx_s *ctx)
         break;
       case EFR32_RFP_STATE_RX_PENDING_RX:
       case EFR32_RFP_STATE_RX:
-        efr32_rfp_try_restart_rx(ctx);
+        efr32_rfp_test_timeout(ctx);
         break;
+      case EFR32_RFP_STATE_RXC:
       case EFR32_RFP_STATE_RXC_PENDING_RX:
         assert(ctx->rx_cont);
-        efr32_radio_set_state(ctx, EFR32_RFP_STATE_RXC);
+        efr32_rfp_idle(ctx);
         break;
       case EFR32_RFP_STATE_RXC_STOPPING_PENDING_RX:
         /* Radio is disabled here */
         assert(ctx->rx_cont);
-        kroutine_exec(&ctx->rx_cont->base.kr);
-        ctx->rx_cont = ctx->next_rx_cont;
+        if (ctx->next_rx_cont != ctx->rx_cont)
+          {
+            kroutine_exec(&ctx->rx_cont->base.kr);
+            ctx->rx_cont = ctx->next_rx_cont;
+          }
+        ctx->next_rx_cont = NULL;
         efr32_rfp_idle(ctx);
         break;
       default:
@@ -487,6 +509,7 @@ static void efr32_rfp_read_packet(struct radio_efr32_rfp_ctx_s *ctx, bool_t lock
 
   rx->timestamp = 0;
   rx->snr = 0;
+  rx->err = 0;
   rx->carrier = 0;
  
   uint8_t *p = (uint8_t *)rx->buf;
@@ -544,31 +567,41 @@ static void efr32_rfp_end_rq(struct radio_efr32_rfp_ctx_s *ctx, error_t err)
   return efr32_rfp_idle(ctx);
 }
 
+static void efr32_rfp_rx_error(struct radio_efr32_rfp_ctx_s *ctx)
+{
+  /* Flush RX fifo */
+  cpu_mem_write_32(EFR32_BUFC_ADDR + EFR32_BUFC_CMD_ADDR(1), EFR32_BUFC_CMD_CLEAR);
+  cpu_mem_write_32(EFR32_BUFC_ADDR + EFR32_BUFC_CMD_ADDR(2), EFR32_BUFC_CMD_CLEAR);
+
+  switch (ctx->state)
+    {
+      case EFR32_RFP_STATE_RXC:
+        return efr32_rfp_idle(ctx);
+      case EFR32_RFP_STATE_RX:
+        return efr32_rfp_test_timeout(ctx);
+      case EFR32_RFP_STATE_TX_LBT:
+      case EFR32_RFP_STATE_IDLE:
+        return;
+      default:
+        abort();
+    }
+}
 static void efr32_rfp_rx_irq(struct radio_efr32_rfp_ctx_s *ctx, uint32_t irq)
 {
   struct radio_efr32_ctx_s *pv = &ctx->pv;
   struct dev_rfpacket_rq_s *rq = NULL;
 
-  if (!(irq & EFR32_FRC_IF_RXDONE))
-    return efr32_rfp_try_restart_rx(ctx);
+  uint32_t x = endian_le32(cpu_mem_read_32(EFR32_RAC_ADDR + EFR32_RAC_STATUS_ADDR));
+  x = EFR32_RAC_STATUS_STATE_GET(x);  
+
+  if (irq != EFR32_FRC_IF_RXDONE)
+    return efr32_rfp_rx_error(ctx);
   
-  uint16_t size = cpu_mem_read_32(EFR32_BUFC_ADDR + EFR32_BUFC_READDATA_ADDR(1));
-
-  cpu_mem_write_32(EFR32_BUFC_ADDR + EFR32_BUFC_CMD_ADDR(2), EFR32_BUFC_CMD_CLEAR);
-
-  uint32_t status = cpu_mem_read_32(EFR32_BUFC_ADDR + EFR32_BUFC_STATUS_ADDR(1));
-  status = EFR32_BUFC_STATUS_BYTES_GET(status);
-
-  assert(EFR32_BUFC_STATUS_BYTES_GET(status) >= size);
-
    switch (ctx->state)
    {
      case EFR32_RFP_STATE_TX_LBT:
-       efr32_radio_printk("rx during tx\n");
-       /* Flush RX fifo */
-       cpu_mem_write_32(EFR32_BUFC_ADDR + EFR32_BUFC_CMD_ADDR(1), EFR32_BUFC_CMD_CLEAR);
-       cpu_mem_write_32(EFR32_BUFC_ADDR + EFR32_BUFC_CMD_ADDR(2), EFR32_BUFC_CMD_CLEAR);
-       return;
+     case EFR32_RFP_STATE_IDLE:
+       return efr32_rfp_rx_error(ctx);
      case EFR32_RFP_STATE_RXC:
        rq = ctx->rx_cont;
        break;
@@ -578,39 +611,57 @@ static void efr32_rfp_rx_irq(struct radio_efr32_rfp_ctx_s *ctx, uint32_t irq)
      default:
        abort();
    }
+
+  assert(rq);
+
+  uint16_t size = cpu_mem_read_32(EFR32_BUFC_ADDR + EFR32_BUFC_READDATA_ADDR(1));
+
+  cpu_mem_write_32(EFR32_BUFC_ADDR + EFR32_BUFC_CMD_ADDR(2), EFR32_BUFC_CMD_CLEAR);
+
+  uint32_t status = cpu_mem_read_32(EFR32_BUFC_ADDR + EFR32_BUFC_STATUS_ADDR(1));
+  status = EFR32_BUFC_STATUS_BYTES_GET(status);
+
+  assert(EFR32_BUFC_STATUS_BYTES_GET(status) >= size);
+
+  struct dev_rfpacket_rx_s * rx = rq->rx_alloc(rq, size);
   
-   assert(rq);
+  if (rx == NULL || rx->size != size)
+  /* Flush RX fifo */
+    {
+      cpu_mem_write_32(EFR32_BUFC_ADDR + EFR32_BUFC_CMD_ADDR(1), EFR32_BUFC_CMD_CLEAR);
+      cpu_mem_write_32(EFR32_BUFC_ADDR + EFR32_BUFC_CMD_ADDR(2), EFR32_BUFC_CMD_CLEAR);
 
-   struct dev_rfpacket_rx_s * rx = rq->rx_alloc(rq, size);
-   
-   if (rx == NULL)
-   /* Flush RX fifo */
-     {
-       cpu_mem_write_32(EFR32_BUFC_ADDR + EFR32_BUFC_CMD_ADDR(1), EFR32_BUFC_CMD_CLEAR);
-       cpu_mem_write_32(EFR32_BUFC_ADDR + EFR32_BUFC_CMD_ADDR(2), EFR32_BUFC_CMD_CLEAR);
-       return;
-     }
+      switch (ctx->state)
+      {
+        case EFR32_RFP_STATE_RXC:
+          return efr32_rfp_idle(ctx);
+        case EFR32_RFP_STATE_RX:
+          return efr32_rfp_test_timeout(ctx);
+        default:
+          abort();
+      }
+    }
 
-   assert(rx->size == size);
-   ctx->rx = rx;
-   
-   if (size <= EFR32_RADIO_THRESHOLD)
-     return efr32_rfp_read_packet(ctx, 1);
+  ctx->rx = rx;
+  rx->channel = rq->channel;
+  
+  if (size <= EFR32_RADIO_THRESHOLD)
+    return efr32_rfp_read_packet(ctx, 1);
 
-   switch (ctx->state)
-   {
-     case EFR32_RFP_STATE_RXC:
-       efr32_radio_set_state(ctx, EFR32_RFP_STATE_RXC_PENDING_RX);
-       break;
-     case EFR32_RFP_STATE_RX:
-       efr32_radio_set_state(ctx, EFR32_RFP_STATE_RX_PENDING_RX);
-       break;
-     default:
-       abort();
-   }
+  switch (ctx->state)
+  {
+    case EFR32_RFP_STATE_RXC:
+      efr32_radio_set_state(ctx, EFR32_RFP_STATE_RXC_PENDING_RX);
+      break;
+    case EFR32_RFP_STATE_RX:
+      efr32_radio_set_state(ctx, EFR32_RFP_STATE_RX_PENDING_RX);
+      break;
+    default:
+      abort();
+  }
 
-   kroutine_init_deferred(&pv->kr, &efr32_rfp_rx);
-   kroutine_exec(&pv->kr);
+  kroutine_init_deferred(&pv->kr, &efr32_rfp_rx);
+  kroutine_exec(&pv->kr);
 }
 
 static inline void efr32_rfp_tx_irq(struct radio_efr32_rfp_ctx_s *ctx, uint32_t irq)
@@ -660,7 +711,9 @@ static DEV_IRQ_SRC_PROCESS(efr32_radio_irq)
       break;
     case 1:
     case 2:
-      efr32_radio_printk("Rac irq: 0x%x\n", cpu_mem_read_32(EFR32_RAC_ADDR + EFR32_RAC_IF_ADDR));
+      irq = cpu_mem_read_32(EFR32_RAC_ADDR + EFR32_RAC_IF_ADDR);
+      irq &= cpu_mem_read_32(EFR32_RAC_ADDR + EFR32_RAC_IEN_ADDR);
+      efr32_radio_printk("Rac irq: 0x%x\n", irq);
       break;
     case 3:
       irq = cpu_mem_read_32(EFR32_BUFC_ADDR + EFR32_BUFC_IF_ADDR);
@@ -674,15 +727,12 @@ static DEV_IRQ_SRC_PROCESS(efr32_radio_irq)
       irq = cpu_mem_read_32(EFR32_FRC_ADDR + EFR32_FRC_IF_ADDR);
       irq &= cpu_mem_read_32(EFR32_FRC_ADDR + EFR32_FRC_IEN_ADDR);
 
-      assert(irq);
-
-      efr32_radio_printk("frc irq: 0x%x\n", irq);
-
       if (irq & EFR32_TX_IRQ_FRC_MSK)
         efr32_rfp_tx_irq(ctx, irq);
       else if (irq & EFR32_RX_IRQ_FRC_MSK)
         efr32_rfp_rx_irq(ctx, irq);
 
+      efr32_radio_printk("frc irq: 0x%x\n", irq);
       /* Clear irqs */
       cpu_mem_write_32(EFR32_FRC_ADDR + EFR32_FRC_IFC_ADDR, irq);
       break;
@@ -703,8 +753,11 @@ static void efr32_rfp_idle(struct radio_efr32_rfp_ctx_s *ctx)
 {
   struct radio_efr32_ctx_s *pv = &ctx->pv;
 
+  /* Check RAC state */
+  uint32_t x = endian_le32(cpu_mem_read_32(EFR32_RAC_ADDR + EFR32_RAC_STATUS_ADDR));
+  assert(EFR32_RAC_STATUS_STATE_GET(x) == EFR32_RAC_STATUS_STATE_OFF);
+
   efr32_radio_set_state(ctx, EFR32_RFP_STATE_IDLE);
-  efr32_rfp_disable(ctx);
 
   struct dev_rfpacket_rq_s *rq = dev_rfpacket_rq_s_cast(dev_request_queue_head(&ctx->queue));
 
@@ -714,7 +767,7 @@ static void efr32_rfp_idle(struct radio_efr32_rfp_ctx_s *ctx)
   if (!rq)
     return;
 
-  efr32_radio_printk("drv: Start rq: %d\n", rq->type);
+  efr32_radio_printk("rq: %d\n", rq->type);
 
   if (efr32_pkt_config(ctx, rq) || efr32_rf_config(ctx, rq))
     {
@@ -775,7 +828,7 @@ static DEV_RFPACKET_REQUEST(efr32_radio_request)
     assert(rq != ctx->rx_cont);
     assert(rq != ctx->next_rx_cont);
 
-    efr32_radio_printk("drv: New Request %d %d\n", rq->type, ctx->state);
+    efr32_radio_printk("R %d %d\n", rq->type, ctx->state);
 
     rq->err = 0;
 
@@ -785,7 +838,7 @@ static DEV_RFPACKET_REQUEST(efr32_radio_request)
         switch (ctx->state)
         {
           case EFR32_RFP_STATE_RXC_STOPPING_PENDING_RX:
-            if (ctx->next_rx_cont)
+            if (ctx->next_rx_cont && ctx->next_rx_cont != ctx->rx_cont)
               kroutine_exec(&ctx->next_rx_cont->base.kr);
             ctx->next_rx_cont = rq;
             break;
@@ -830,6 +883,7 @@ static DEV_RFPACKET_REQUEST(efr32_radio_request)
                 assert(ctx->rx_cont);
                 efr32_rfp_disable(ctx);
                 efr32_radio_set_state(ctx, EFR32_RFP_STATE_RXC_STOPPING_PENDING_RX);
+                ctx->next_rx_cont = ctx->rx_cont;
                 break;
               case EFR32_RFP_STATE_RXC:
                 assert(rq->deadline == 0);
@@ -855,8 +909,6 @@ static DEV_RFPACKET_CANCEL(efr32_radio_cancel)
   struct device_s *dev = accessor->dev;
   struct radio_efr32_rfp_ctx_s *ctx = dev->drv_pv;
 
-  efr32_radio_printk("drv: Cancel %d\n", ctx->state);
-
   error_t err = -EBUSY;
 
   assert(rq);
@@ -872,6 +924,10 @@ static DEV_RFPACKET_CANCEL(efr32_radio_cancel)
           assert(ctx->rx_cont);
           efr32_rfp_disable(ctx);
           efr32_radio_set_state(ctx, EFR32_RFP_STATE_RXC_STOPPING_PENDING_RX);
+          break;
+        case EFR32_RFP_STATE_RXC_STOPPING_PENDING_RX:
+          if (rq == ctx->next_rx_cont)
+            ctx->next_rx_cont = NULL;
           break;
         case EFR32_RFP_STATE_RXC:
           assert(ctx->next_rx_cont == NULL);
@@ -947,7 +1003,7 @@ static DEV_TIMER_CANCEL(efr32_rfpacket_timer_cancel)
             {
               dev_timer_value_t value = efr32_protimer_get_value(&pv->pti);
               /* start next request, raise irq on race condition */
-              efr32_protimer_request_start(&pv->pti, rqnext->deadline, value, EFR32_PROTIMER_CHANNEL);
+              efr32_protimer_request_start(&pv->pti, value, rqnext->deadline, EFR32_PROTIMER_CHANNEL);
             }
         }
 
@@ -983,7 +1039,6 @@ static DEV_TIMER_REQUEST(efr32_rfpacket_timer_request)
 
       if (rq->delay)
         rq->deadline = value + rq->delay;
-
       if (rq->deadline <= value)
         err = -ETIMEDOUT;
       else
@@ -994,7 +1049,7 @@ static DEV_TIMER_REQUEST(efr32_rfpacket_timer_request)
 
           /* start request, raise irq on race condition */
           if (dev_request_pqueue_prev(&pti->queue, dev_timer_rq_s_base(rq)) == NULL)
-            efr32_protimer_request_start(pti, rq->deadline, value, EFR32_PROTIMER_CHANNEL);
+            efr32_protimer_request_start(pti, value, rq->deadline, EFR32_PROTIMER_CHANNEL);
         }
     }
 
@@ -1077,15 +1132,26 @@ static void efr32_rfp_timer_irq(struct device_s *dev)
 
       cpu_mem_write_32(EFR32_PROTIMER_ADDR + EFR32_PROTIMER_IFC_ADDR, endian_le32(irq));
 
+      uint32_t x = endian_le32(cpu_mem_read_32(EFR32_RAC_ADDR + EFR32_RAC_STATUS_ADDR));
+      x = EFR32_RAC_STATUS_STATE_GET(x);  
+
       /* TX timeout */
       if (irq & EFR32_PROTIMER_IF_LBTFAILURE)
-        efr32_rfp_end_rq(ctx, -ETIMEDOUT);
+        {
+          /* Check RAC state */
+          if (x != EFR32_RAC_STATUS_STATE_OFF)
+            efr32_rfp_disable(ctx);
+          efr32_rfp_try_restart_tx(ctx);
+        }
 
       /* Compare channel RX end interrupt */ 
       if (irq & EFR32_PROTIMER_IF_CC(EFR32_PROTIMER_RX_STOP_CHANNEL))
        {
          /* RX timeout */
          efr32_protimer_disable_compare(pti, EFR32_PROTIMER_RX_STOP_CHANNEL);
+         if (x != EFR32_RAC_STATUS_STATE_OFF)
+           efr32_rfp_disable(ctx);
+
          efr32_rfp_end_rq(ctx, 0);
        }
 
@@ -1115,7 +1181,7 @@ static void efr32_rfp_timer_irq(struct device_s *dev)
 
           /* setup compare for first request */
           if (rq->deadline > value)
-            if (!efr32_protimer_request_start(pti, rq->deadline, value, EFR32_PROTIMER_CHANNEL))
+            if (!efr32_protimer_request_start(pti, value, rq->deadline, EFR32_PROTIMER_CHANNEL))
               break;
 
           dev_timer_pqueue_remove(&pti->queue, dev_timer_rq_s_base(rq));

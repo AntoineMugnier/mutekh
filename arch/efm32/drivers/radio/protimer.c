@@ -63,7 +63,7 @@ bool_t efr32_protimer_request_start(struct efr32_protimer_s *pv,
 #endif
 
   /* Disable channel compare */
-  efr32_protimer_disable_compare(pv, EFR32_PROTIMER_CHANNEL);
+  efr32_protimer_disable_compare(pv, channel);
 
   /* Write value for comparaison */
   uint32_t v = deadline & EFR32_PRECNT_MASK;
