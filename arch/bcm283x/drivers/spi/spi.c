@@ -241,17 +241,16 @@ static DEV_SPI_CTRL_TRANSFER(bcm283x_spi_transfer)
 
   LOCK_SPIN_IRQ(&dev->lock);
 
+  tr->err = 0;
+
   if (pv->tr != NULL)
     tr->err = -EBUSY;
   else if (tr->cs_op != DEV_SPI_CS_NOP_NOP)
     tr->err = -ENOTSUP;
-  else
+  else if (tr->data.count > 0)
     {
-      assert(tr->data.count > 0);
-
       pv->tr = tr;
       pv->fifo_lvl = 0;
-      tr->err = 0;
 
       BCM283X_SPI_CS_TA_SET(pv->ctrl, ACTIVE);
       BCM283X_SPI_CS_CLEAR_SET(pv->ctrl, NONE);

@@ -268,8 +268,8 @@ DEV_SPI_CTRL_TRANSFER(stm32_spi_transfer)
   struct device_s *dev = accessor->dev;
   struct stm32_spi_private_s *pv = dev->drv_pv;
 
-  assert(tr->data.count > 0);
   bool_t done = 1;
+  tr->err = 0;
 
   LOCK_SPIN_IRQ(&dev->lock);
 
@@ -277,9 +277,8 @@ DEV_SPI_CTRL_TRANSFER(stm32_spi_transfer)
     tr->err = -EBUSY;
   else if (tr->cs_op != DEV_SPI_CS_NOP_NOP)
     tr->err = -ENOTSUP;
-  else
+  else if (tr->data.count > 0)
     {
-      tr->err = 0;
       pv->tr = tr;
       stm32_spi_transfer_tx(dev);
       done = 0;

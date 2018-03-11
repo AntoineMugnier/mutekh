@@ -361,14 +361,14 @@ static DEV_SPI_CTRL_TRANSFER(efm32_usart_spi_transfer)
 
   LOCK_SPIN_IRQ(&dev->lock);
 
+  tr->err = 0;
+
   if (pv->tr != NULL)
     tr->err = -EBUSY;
   else if (tr->cs_op != DEV_SPI_CS_NOP_NOP)
     tr->err = -ENOTSUP;
-  else
+  else if (tr->data.count > 0)
     {
-      assert(tr->data.count > 0);
-      tr->err = 0;
       pv->tr = tr;
       dev->start_count |= 1;
 

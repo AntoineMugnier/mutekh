@@ -28,6 +28,7 @@ main::custom_op('spi_rd',             3,      0x1000, \&parse_rd );
 main::custom_op('spi_wr',             3,      0x2000, \&parse_wr );
 main::custom_op('spi_swp',            4,      0x3000, \&parse_swp );
 
+main::custom_op('spi_cs' ,            1,      0x4010, \&parse_cs );
 main::custom_op('spi_pad',            2,      0x4000, \&parse_pad );
 main::custom_op('spi_rdm',            3,      0x4400, \&parse_xxm );
 main::custom_op('spi_wrm',            3,      0x4800, \&parse_xxm );
@@ -121,6 +122,13 @@ sub parse_swp
     die "$thisop->{line}: out of range write byte array\n"
         if ($wr * 4 + $l > 16 * 4);
     $thisop->{code} |= ($cs << 14) | (($l - 1) << 8) | ($wr << 4) | $rd;
+}
+
+sub parse_cs
+{
+    my $thisop = shift;
+    my $cs = check_csop( $thisop, 0, \%csops2 );
+    $thisop->{code} |= ($cs << 8);
 }
 
 sub parse_pad

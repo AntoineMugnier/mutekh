@@ -214,6 +214,8 @@ static DEV_SPI_CTRL_TRANSFER(nrf5x_spi_transfer)
   struct device_s *dev = accessor->dev;
   struct nrf5x_spi_context_s *pv = dev->drv_pv;
 
+  tr->err = 0;
+
   {
     LOCK_SPIN_IRQ_SCOPED(&dev->lock);
 
@@ -221,15 +223,9 @@ static DEV_SPI_CTRL_TRANSFER(nrf5x_spi_transfer)
       tr->err = -EBUSY;
     } else if (tr->cs_op != DEV_SPI_CS_NOP_NOP) {
       tr->err = -ENOTSUP;
-    } else if (!((0x17 >> tr->data.out_width) & 1) || (tr->data.in && !((0x16 >> tr->data.in_width) & 1))) {
-      logk_error("Error: out_width: %d, in_width: %d", tr->data.out_width, tr->data.in_width);
-      logk_error("Error: out: %p, in: %p", tr->data.out, tr->data.in);
-      tr->err = -EINVAL;
-    } else {
-      assert(tr->data.count > 0);
+    } else if (tr->data.count > 0) {
 
       pv->current_transfer = tr;
-      tr->err = 0;
 
       nrf_event_clear(pv->addr, NRF_SPI_READY);
       nrf_it_enable(pv->addr, NRF_SPI_READY);

@@ -292,18 +292,16 @@ static DEV_SPI_CTRL_TRANSFER(nrf5x_spim_transfer)
 
   LOCK_SPIN_IRQ(&dev->lock);
 
+  tr->err = 0;
+
   if (pv->current_transfer) {
     tr->err = -EBUSY;
   } else if (tr->cs_op != DEV_SPI_CS_NOP_NOP) {
     tr->err = -ENOTSUP;
-  } else if (!(0x17 >> tr->data.out_width) || !(0x16 >> tr->data.in_width)) {
-    tr->err = -EINVAL;
-  } else {
-    assert(tr->data.count > 0);
+  } else if (tr->data.count > 0) {
     done = 0;
 
     pv->current_transfer = tr;
-    tr->err = 0;
 
     nrf5x_spim_next_start(pv);
   }

@@ -461,7 +461,9 @@ device_spi_bytecode_exec(struct dev_spi_ctrl_context_s *q,
           tr->data.count = count;
           switch (op & 0x0c00)
             {
-            case 0x0000:  /* pad */
+            case 0x0000:  /* spi_pad */
+              if (op & 0x0010)
+                tr->data.count = 0; /* spi_cs */
               tr->data.in_width = 0;
               tr->data.out_width = 0;
               tr->data.in = NULL;
