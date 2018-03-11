@@ -188,6 +188,29 @@ sub out_ret {
 	   "    .ltorg\n";
 }
 
+sub out_jmp {
+    my ($thisop, $wi) = @_;
+    return "    orrs $reg[$wi], #1\n".   # set thumb mode bit
+           "    bx $reg[$wi]\n".
+	   "    .ltorg\n";
+}
+
+sub parse_call {
+    my ($thisop) = @_;
+    $thisop->{wbin} = 1;
+}
+
+sub out_call {
+    my ($thisop, $wi) = @_;
+    return "    adr r0, 2f\n".
+           "    adds r0, #1\n".
+           "    str r0, [r4, #".($thisop->{out}->[0] * 4)."]\n".
+	   "    orrs $reg[$wi], #1\n".   # set thumb mode bit
+           "    bx $reg[$wi]\n".
+           "    .balign 4\n".
+           "2:\n";
+}
+
 sub out_pack {
     my ($thisop, @w) = @_;
 

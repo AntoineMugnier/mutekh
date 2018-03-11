@@ -266,7 +266,9 @@
      @item @tt{call[16,32] reg, label} @item Jump absolute and save the return address in a register.
      @item @tt{call[16,32]r reg, label} @item Jump relative and save the return address in a register.
      @item @tt{ret reg} @item Return to the address saved in a link register.
-     @item @tt{jmp reg} @item Jump to the address saved in a register.
+     @item @tt{jmp reg} @item Jump to the address specified by a register.
+     @item @tt{call reg} @item Jump to the address specified by a register and save the return
+       address in the same register.
      @item @tt{loop reg, label} @item If the jump target is backward, this instruction decrements the
        register which should not be initially zero and branch if the
        result is not zero. If the jump target is forward, this instruction decrement the
@@ -390,6 +392,7 @@
     @item call8               @item r, lbl        @item @tt{0010 llll llll rrrr} @item  0
     @item jmp8                @item lbl           @item @tt{0010 llll llll 0000} @item  0
     @item ret                 @item r             @item @tt{0010 0000 0000 rrrr} @item  0
+    @item call                @item r             @item @tt{0010 1111 1111 rrrr} @item  0
     @item loop                @item r, lbl        @item @tt{0011 0lll llll rrrr} @item  0
 
     @item {un,}pack8          @item r, c          @item @tt{0011 1ccc oooo rrrr} @item  4

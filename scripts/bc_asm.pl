@@ -543,7 +543,6 @@ sub parse_call8
     my $thisop = shift;
 
     my $link = check_reg($thisop, 0);
-    $thisop->{reloadout} |= 1 << $link;
     push @{$thisop->{out}}, $link;
 
     $thisop->{target} = check_label8($thisop, 1, 256);
@@ -553,7 +552,7 @@ sub parse_call8
 	error($thisop, "call8 can not modify register 0\n");
     }
 
-    if ( $thisop->{disp} == 2 ) {
+    if ( $thisop->{disp} == 2 || $thisop->{disp} == 0 ) {
 	error($thisop, "call8 can not have a zero displacement\n");
     }
 }
@@ -563,7 +562,6 @@ sub parse_call32
     my $thisop = shift;
 
     my $link = check_reg($thisop, 0);
-    $thisop->{reloadout} |= 1 << $link;
     push @{$thisop->{out}}, $link;
 
     $thisop->{target} = check_label($thisop, 1);
@@ -592,6 +590,15 @@ sub parse_ret
     my $thisop = shift;
 
     push @{$thisop->{in}}, check_reg($thisop, 0);
+}
+
+sub parse_call
+{
+    my $thisop = shift;
+
+    my $tgt_link = check_reg($thisop, 0);
+    push @{$thisop->{in}}, $tgt_link;
+    push @{$thisop->{out}}, $tgt_link;
 }
 
 sub parse_loop
@@ -1058,6 +1065,11 @@ our %asm = (
         parse => \&parse_jmp32, backend => ('jmpr'),
         flushregs => 1, op_jmp => 1, op_tail => 1
     },
+    'call'  => {
+        words => 1, code => 0x2ff0, argscnt => 1,
+        parse => \&parse_call, backend => ('call'),
+        flushregs => 1, reloadregs => 1,
+    },
     'call8'  => {
         words => 1, code => 0x2000, argscnt => 2,
         parse => \&parse_call8, backend => ('call8'),
@@ -1090,7 +1102,7 @@ our %asm = (
     },
     'jmp' => {  # same implementation as ret, different semantics
         words => 1, code => 0x2000, argscnt => 1,
-        parse => \&parse_ret, backend => ('ret'),
+        parse => \&parse_ret, backend => ('jmp'),
         flushregs => 1, op_tail => 1
     },
     'loop' => {
@@ -1420,22 +1432,44 @@ sub parse_args
 
 	$thisop->{op} = $op;
 
-        # bit mask of arguments which require a register write back
-        # rather than a register load, updated by the backend parse
-        # handler
+        # Bit mask of arguments which require a register write back
+        # before the native code generated for the instruction. The
+        # default behavior is to have the vm register loaded in an
+        # allocated cpu register before the instruction. This must be
+        # used when the native code loads its input directly from the
+        # vm registers array and needs no allocated cpu
+        # register. This may be updated by the backend parse handler.
         $thisop->{flushin} = 0;
 
-        # bit mask of input arguments which are written back by the
-        # instruction, ignored when flushin is set for the argument.
+        # Bit mask of input arguments which are written back by the
+        # native code generated for the instruction. When set, the wb
+        # mark of the registers are cleared so that no write back will
+        # occur later. This can be used to prevent later overwritting of
+        # a result stored directly in the vm register array. The default
+        # behavior is to leave the wb mark untouched for input
+        # arguments. This may be updated by the backend parse handler.
         $thisop->{wbin} = 0;
 
-        # bit mask of arguments which require a register reload rather
-        # than an output register allocation, updated by the backend
-        # parse handler
+        # Bit mask of arguments which require a register reload after
+        # the native code generated for the instruction rather than
+        # the allocation of an output register before the
+        # instruction. The default behavior is to have a cpu register
+        # allocated for the instruction to store its output. This must
+        # be used when the native code stores the result of the
+        # instruction directly into the vm registers array and needs
+        # no allocated cpu register. This may be updated by the
+        # backend parse handler.
         $thisop->{reloadout} = 0;
 
-        # bit mask of output arguments which are written back by the
-        # instruction, ignored when reloadout is set for the argument.
+        # Bit mask of output arguments which are written back by the
+        # instruction, ignored when reloadout is set for the
+        # argument. The default behavior is to set the wb mark for the
+        # output arguments so that the allocated cpu registers are
+        # later written back properly in the vm registers array. This
+        # must be used when the native code stores the result of the
+        # instruction directly into the vm registers array and takes
+        # care of keeping the allocated cpu registers in sync. This
+        # may be updated by the backend parse handler.
         $thisop->{wbout} = 0;
 
         # bit mask of clobbered cpu registers
@@ -1603,7 +1637,7 @@ extern const bc_opcode_t _${bc_name}_bytecode_end;
             print OUT "#define ".uc($l->{name})."_BCARGS(";
             print OUT join(', ', map { $_->{name} } sort { $a->{id} <=> $b->{id} } values %inputs);
             print OUT ") ";
-            print OUT join(', ', ($inmask, map { '('.$_->{name}.')' } sort { $a->{reg} <=> $b->{reg} } values %inputs));
+            print OUT join(', ', ($inmask, map { '(bc_reg_t)('.$_->{name}.')' } sort { $a->{reg} <=> $b->{reg} } values %inputs));
             print OUT "\n";
         }
     }
@@ -1743,14 +1777,10 @@ sub write_asm
         my $lbl_refs;
         $lbl_refs += $_->{used} foreach ( @{$thisop->{labels}} );
 
-        # if the instruction may read any vm regs directly from memory
-        # or if we are the target of a jump, then flush all cpu working regs
-        if ( $op->{flushregs} || $lbl_refs ) {
-            $regs_flush->();
-        }
-
         # write labels
         if ( $lbl_refs ) {
+            $regs_flush->();
+
             error($thisop, "label inside conditional\n") if defined $cond;
 
             foreach my $l (@{$thisop->{labels}}) {
@@ -1796,6 +1826,11 @@ sub write_asm
             }
             push @wregin, $r2w{$i};
           }
+        }
+
+        if ( $op->{flushregs} ) {
+            # if the instruction requires updating all vm regs
+            $regs_flush->();
         }
 
         # handle mov using copy on write unless involved in a conditional

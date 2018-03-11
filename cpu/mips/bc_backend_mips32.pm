@@ -140,6 +140,20 @@ sub out_jmp8 {
     return "    b $thisop->{args}->[0]\n";
 }
 
+sub parse_call {
+    my ($thisop) = @_;
+    $thisop->{wbin} = 1;
+}
+
+sub out_call {
+    my ($thisop, $wi) = @_;
+    return "    .set noreorder\n".
+           "    jalr $reg[$wi]\n".
+           "    sw \$31, ".($thisop->{out}->[0] * 4)."(\$17)\n".
+           "    .set reorder\n"
+           ;
+}
+
 sub out_call8 {
     my ($thisop) = @_;
     return "    .set noreorder\n".
@@ -173,6 +187,10 @@ sub out_jmpr {
 sub out_ret {
     my ($thisop, $wi) = @_;
     return "    jr $reg[$wi]\n";
+}
+
+sub out_jmp {
+    return out_ret( @_ );
 }
 
 sub out_pack {
