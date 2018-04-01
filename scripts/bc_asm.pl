@@ -147,6 +147,12 @@ sub eval_expr
 	next if ($expr =~ s/($num)\s*&\s*($num)/int($1)&int($2)/ge);
 	next if ($expr =~ s/($num)\s*\|\s*($num)/int($1)|int($2)/ge);
 	next if ($expr =~ s/($num)\s*\^\s*($num)/int($1)^int($2)/ge);
+	next if ($expr =~ s/($num)\s*==\s*($num)/int($1)==int($2)?1:0/ge);
+	next if ($expr =~ s/($num)\s*\!=\s*($num)/int($1)!=int($2)?1:0/ge);
+	next if ($expr =~ s/($num)\s*<\s*($num)/int($1)<int($2)?1:0/ge);
+	next if ($expr =~ s/($num)\s*<=\s*($num)/int($1)<=int($2)?1:0/ge);
+	next if ($expr =~ s/($num)\s*>\s*($num)/int($1)>int($2)?1:0/ge);
+	next if ($expr =~ s/($num)\s*>=\s*($num)/int($1)>=int($2)?1:0/ge);
 	last;
     }
 
@@ -866,6 +872,11 @@ sub parse
 	    my $l = { name => $name };
             $labels{$name} = $l;
 	    push @lbls, $l;
+            next;
+        }
+        if ($l =~ /^\s*\.assert\s+(.*?)\s*$/) {
+            error($loc, "static assert failed `$1'\n")
+                if eval_expr( $1, $loc ) != 1;
             next;
         }
         if ($l =~ /^\s*\.define\s+(\w+)\s+(.*?)\s*$/) {
