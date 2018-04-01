@@ -456,8 +456,6 @@ device_spi_bytecode_exec(struct dev_spi_ctrl_context_s *q,
           void *addr2 = (void*)bc_get_reg(&rq->vm, 1 ^ ra);
           size_t count = bc_get_reg(&rq->vm, op & 0xf);
           enum dev_spi_cs_op_e csop = (op >> 8) & 3;
-          if (count == 0)
-            continue;
           tr->data.count = count;
           switch (op & 0x0c00)
             {
