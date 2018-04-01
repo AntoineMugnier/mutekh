@@ -155,6 +155,8 @@
 
    The following directives are available to declare register usage:
    @list
+   @item @tt{.assert expr} : make the compilation fail if the expression
+     does not reduce to 1.
    @item @tt{.global %1 [aliasA] [, %7 [aliasB] ...]} : declare some registers
      as always initialized.
    @item @tt{.const %1 [aliasA] [, %7 [aliasB] ...]} : declare some registers
@@ -166,14 +168,17 @@
    @item @tt{.func name}, @tt {.endfunc} : declare a function. This
      is similar to declaring a label but allows better static analysis
      on function calls.
+   @item @tt{.proto name}, @tt {.endproto} : declare a function prototype.
    @item @tt{.input %1 [aliasA] [, %7 [aliasB] ...]} : declare some registers used as
-     input parameters by the current @tt{.func}.
+     input parameters by the current function or prototype.
    @item @tt{.output %1 [aliasA] [, %7 [aliasB] ...]} : declare some registers used
-     return values by the current @tt{.func}.
+     return values by the current function or prototype.
    @item @tt{.clobber %1 [aliasA] [, %7 [aliasB] ...]} : declare some registers used
-     as temporaries which are left clobbered by the current @tt{.func}.
+     as temporaries which are left clobbered by the current function or prototype.
    @item @tt{.preserve %1 [aliasA] [, %7 [aliasB] ...]} : declare some registers used
-     as temporaries which are saved and restored by the current @tt{.func}.
+     as temporaries which are saved and restored by the current function or prototype.
+   @item @tt{.implement name} : make the current function inherit from
+     register declarations of the specified function prototype.
    @end list
    @end section
 
@@ -267,8 +272,9 @@
      @item @tt{call[16,32]r reg, label} @item Jump relative and save the return address in a register.
      @item @tt{ret reg} @item Return to the address saved in a link register.
      @item @tt{jmp reg} @item Jump to the address specified by a register.
-     @item @tt{call reg} @item Jump to the address specified by a register and save the return
-       address in the same register.
+     @item @tt{call reg, proto} @item Jump to the address specified by a register and
+       save the return address in the same register. The function prototype is used for
+       register usage checking.
      @item @tt{loop reg, label} @item If the jump target is backward, this instruction decrements the
        register which should not be initially zero and branch if the
        result is not zero. If the jump target is forward, this instruction decrement the

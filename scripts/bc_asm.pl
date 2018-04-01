@@ -166,12 +166,12 @@ sub eval_expr
 sub check_num
 {
     my ( $thisop, $argidx, $min, $max ) = @_;
-    my $expr = $thisop->{args}->[$argidx];
+    my $arg = $thisop->{args}->[$argidx];
 
-    $expr = eval_expr( $expr, $thisop );
+    my $expr = eval_expr( $arg, $thisop );
 
     if (!defined $expr) {
-        error($thisop, "expected number as operand $argidx of `$thisop->{name}', got `$expr'.\n");
+        error($thisop, "expected number as operand $argidx of `$thisop->{name}', got `$arg'.\n");
     }
 
     $expr = int($expr);
@@ -185,19 +185,43 @@ sub check_num
     return $expr;
 }
 
-sub check_label
+sub get_label
 {
     my ( $thisop, $argidx ) = @_;
     my $lbl = $thisop->{args}->[$argidx];
 
     if ( $lbl !~ /^[a-zA-Z_]\w*$/ ) {
-        error($thisop, "expected label as operand $argidx of `$thisop->{name}'.\n");
+        error($thisop, "expected identifier as operand $argidx of `$thisop->{name}'.\n");
     }
 
     my $l = $labels{$lbl};
 
     if ( not defined $l ) {
-        error($thisop, "undefined label `$lbl' used with `$thisop->{name}'.\n");
+        error($thisop, "undefined identifier `$lbl' used with `$thisop->{name}'.\n");
+    }
+
+    return ( $l, $lbl );
+}
+
+sub check_proto
+{
+    my ( $thisop, $argidx ) = @_;
+    my ( $l ) = get_label( $thisop, $argidx );
+
+    if ( !$l->{proto} ) {
+        error($thisop, "can not use a label or function as a prototype\n");
+    }
+
+    return $l;
+}
+
+sub check_label
+{
+    my ( $thisop, $argidx ) = @_;
+    my ( $l, $lbl ) = get_label( $thisop, $argidx );
+
+    if ( $l->{proto} ) {
+        error($thisop, "can not use a prototype as a label\n");
     }
 
     if ( not $l->{export} ) {
@@ -551,8 +575,9 @@ sub parse_call8
     my $link = check_reg($thisop, 0);
     push @{$thisop->{out}}, $link;
 
-    $thisop->{target} = check_label8($thisop, 1, 256);
-    $thisop->{target}->{called}++;
+    my $tgt = check_label8($thisop, 1, 256);
+    $thisop->{target} = $tgt;
+    $tgt->{called}++;
 
     if ( $link == 0 ) {
 	error($thisop, "call8 can not modify register 0\n");
@@ -605,6 +630,8 @@ sub parse_call
     my $tgt_link = check_reg($thisop, 0);
     push @{$thisop->{in}}, $tgt_link;
     push @{$thisop->{out}}, $tgt_link;
+
+    $thisop->{target} = check_proto($thisop, 1);
 }
 
 sub parse_loop
@@ -884,14 +911,16 @@ sub parse
             $defs{$1} = $2;
             next;
         }
-        if ($l =~ /^\s*\.func\s+(\w+)\s*$/) {
-            my $name = $1;
+        if ($l =~ /^\s*\.(func|proto)\s+(\w+)\s*$/) {
+            my $proto = $1 eq 'proto';
+            my $name = $2;
             error($loc, "label `$name' already defined\n") if defined $labels{$name};
             error($loc, "nested function\n") if defined $func;
             error($loc, "label before a function\n") if scalar @lbls;
 	    my $l = { file => $file,
                       line => $line,
                       name => $name,
+                      proto => $proto,
                       func => 1,
                       input => 0,
                       output => 0,
@@ -900,13 +929,13 @@ sub parse
                       regalias => { }
             };
             $labels{$name} = $l;
-	    push @lbls, $l;
+	    push @lbls, $l unless $proto;
             $func = $l;
             next;
         }
-        if ($l =~ /^\s*\.endfunc\s*$/) {
+        if ($l =~ /^\s*\.(endfunc|endproto)\s*$/) {
             error($loc, "no function to end\n") if !defined $func;
-            error($loc, "label at end of function\n") if scalar @lbls;
+            error($loc, "label at end of function\n") if (scalar @lbls);
             # declare global aliases for function input/output regs
             while (my ($k, $v) = each(%{$func->{regalias}})) {
                 $global_regalias{$func->{name}.':'.$k} = $v
@@ -935,6 +964,19 @@ sub parse
         if ($l =~ /^\s*\.(input|output|clobber|preserve)\s+(.*?)\s*$/) {
             error($loc, "$1 regs not inside a function\n") if !defined $func;
             regs_mask_parse($loc, $1, $2, \$func->{$1}, $func->{regalias} );
+            next;
+        }
+        if ($l =~ /^\s*\.implement\s+(\w+)\s*$/) {
+            error($loc, ".implement not inside a function\n") if !defined $func;
+	    my $l = $labels{$1};
+            error($loc, "undefined prototype `$1'\n")
+                if !$l || !$l->{proto};
+            $func->{implement} = $l;
+            foreach (qw(input output clobber preserve)) {
+                error($loc, "can't use .implement after register alias") if $func->{$_};
+                $func->{$_} = $l->{$_};
+            }
+            $func->{regalias} = { %{$l->{regalias}} };
             next;
         }
         if ($l =~ /^\s*\.mode\s+(.*?)\s*$/) {
@@ -975,6 +1017,8 @@ sub parse
             error($loc, "bad directive syntax `.$1'\n");
         }
         if ($l =~ /^\s*(\w+)\b\s*(.*?)\s*$/) {
+            error($loc, "code in function prototype\n")
+                if $func && $func->{proto};
             my $opname = $1;
             my @args = args_split($2);
             my $thisop = {
@@ -1077,9 +1121,9 @@ our %asm = (
         flushregs => 1, op_jmp => 1, op_tail => 1
     },
     'call'  => {
-        words => 1, code => 0x2ff0, argscnt => 1,
+        words => 1, code => 0x2ff0, argscnt => 2,
         parse => \&parse_call, backend => ('call'),
-        flushregs => 1, reloadregs => 1,
+        flushregs => 1, reloadregs => 1, op_call => 1,
     },
     'call8'  => {
         words => 1, code => 0x2000, argscnt => 2,
@@ -2103,7 +2147,7 @@ sub check_regs
                      }
 
                      # schedule checking of the called function
-                     push @entries, $l unless ( $entries_done{$l}++ );
+                     push @entries, $l unless ( $l->{proto} || $entries_done{$l}++ );
 
                  } elsif ( $func ) {
                      warning($thisop, "call target is not a function, unable to track registers state\n");
@@ -2187,6 +2231,7 @@ sub check_regs
      # schedule analysis of exported labels
      foreach my $l ( values %labels ) {
          next unless $l->{export};
+         next if $l->{proto};
          next if $entries_done{$l}++;
          push @entries, $l
      }
@@ -2231,12 +2276,15 @@ sub check_regs
                         ( $func->{clobber} & $func->{preserve} & $m );
                  error($func, "function `$func->{name}' register %$i is already declared global\n")
                      if ( ( $func->{output} | $func->{input} | $func->{clobber} | $func->{preserve} ) & $global_regmask & $m );
-                 warning($func, "register %$i is declared as input of function `$func->{name}' but never used\n")
-                     if ( $func->{input} & ~$rd_mask & $m );
-                 warning($func, "register %$i is declared as output of function `$func->{name}' but never written\n")
-                     if ( $func->{output} & ~($wr_mask | $func->{input}) & $m );
-                 warning($func, "register %$i is declared clobbered in function `$func->{name}' but never written\n")
-                     if ( $func->{clobber} & ~$wr_mask & $m );
+
+                 if ( !$func->{proto} ) {
+                     warning($func, "register %$i is declared as input of function `$func->{name}' but never used\n")
+                         if ( $func->{input} & ~$rd_mask & $m );
+                     warning($func, "register %$i is declared as output of function `$func->{name}' but never written\n")
+                         if ( $func->{output} & ~($wr_mask | $func->{input}) & $m );
+                     warning($func, "register %$i is declared clobbered in function `$func->{name}' but never written\n")
+                         if ( $func->{clobber} & ~$wr_mask & $m );
+                 }
              }
          }
      }
