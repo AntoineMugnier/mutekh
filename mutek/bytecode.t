@@ -1057,9 +1057,9 @@ bc_opcode_t bc_run_##fcname(struct bc_context_s *ctx)
 
       dispatch_jmp: {
           int8_t disp = op >> 4;
-          bc_reg_t link = (uintptr_t)pc - code_offset;
-          bc_reg_t tgt = (void*)(uintptr_t)(code_offset + *dstp);
-          switch (disp)
+          bc_reg_t link = (uintptr_t)pc - code_offset + 2;
+          const uint16_t *tgt = (void*)(uintptr_t)(code_offset + *dstp - 2);
+          switch ((uint8_t)disp)
             {
             case 0xff:          /* call */
               *dstp = link;

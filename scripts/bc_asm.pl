@@ -78,14 +78,14 @@ sub warning
     if ( ref $loc ) {
         push @warnings, { obj => $loc, msg => $msg };
     } else {
-        print STDERR $loc.": ".$msg;
+        print STDERR $loc.": warning: ".$msg;
     }
 }
 
 sub warnings_print
 {
     foreach my $w ( sort { $a->{obj}->{line} <=> $b->{obj}->{line} } @warnings ) {
-        print STDERR "$w->{obj}->{file}:$w->{obj}->{line}: $w->{msg}";
+        print STDERR "$w->{obj}->{file}:$w->{obj}->{line}: warning: $w->{msg}";
     }
 }
 
@@ -124,7 +124,7 @@ sub eval_expr
 {
     my ( $expr, $loc ) = @_;
 
-    our $num = qr/(?>[-+]?\b\d+\b)/xs;
+    our $num = qr/(?> (?:(?<![\w).'])[-+])? \b\d+\b)/xs;
 
     my $bit = sub {
         my $x = shift;
@@ -134,8 +134,8 @@ sub eval_expr
 
     while (1) {
         next if ($expr =~ s/'(.)'/ord($1)/ge);
-        next if ($expr =~ s/\s*([-+]?)(0[Xx][a-fA-F0-9]+)\s*/$1.hex($2)/ge);
-	next if ($expr =~ s/bitpos\(($num)\)/$bit->($1)/ge);
+        next if ($expr =~ s/\s*\b(0[Xx][a-fA-F0-9]+)\b\s*/hex($1)/ge);
+	next if ($expr =~ s/\bbitpos\(($num)\)/$bit->($1)/ge);
 	next if ($expr =~ s/\(\s*($num)\s*\)/$1/ge);
 	next if ($expr =~ s/($num)\s*\*\s*($num)/int($1)*int($2)/ge);
 	next if ($expr =~ s/($num)\s*\/\s*($num)/int($2) ? int(int($1)\/int($2)) : 0/ge);
