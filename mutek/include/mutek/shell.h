@@ -67,7 +67,7 @@ struct mutek_shell_buffer_s
 GCT_CONTAINER_TYPES      (shell_buffer, struct mutek_shell_buffer_s *, list_entry);
 GCT_CONTAINER_KEY_TYPES  (shell_buffer, PTR, STRING, name);
 GCT_CONTAINER_KEY_FCNS   (shell_buffer, ASC, static inline, shell_buffer_pool, name,
-			  init, destroy, push, remove, lookup);
+			  init, destroy, push, remove, lookup, head);
 
 #endif
 
@@ -98,8 +98,8 @@ void * shell_buffer_new(const struct termui_console_s *con,
                         size_t size, const char *prefix,
                         const void *type, bool_t nocopy);
 
-/** @This lookup a buffer with a matching type and a zero reference
-    count. If no such buffer exist a new buffer is allocated. The
+/** @This lookup a buffer with a matching type and a no reference.
+    If no such buffer exist a new buffer is allocated. The
     reference to the buffer must be released by calling the @ref
     shell_buffer_drop function.
 
@@ -112,9 +112,9 @@ void * shell_buffer_reuse(const struct termui_console_s *con,
                           size_t size, const char *prefix,
                           const void *type, bool_t nocopy);
 
-/** @This drop a reference to the buffer. The buffer is released when
-    the reference count reaches 0 and the @ref shell_buffer_collect
-    function is called.
+/** @This drops the reference to a buffer. The buffer is released when
+    the @ref shell_buffer_collect function is called provided that
+    no one else has taken the reference.
 
     When the @ref #CONFIG_MUTEK_SHELL_BUFFER token is undefined,
     this is equivalent to calling @ref mem_free.
@@ -129,13 +129,16 @@ void shell_buffer_drop(void * data);
 void shell_buffer_advertise(struct termui_console_s *con,
                             void *data, size_t size);
 
-/** @This lookup a buffer and increase its reference count.
+/** @This takes a reference to a buffer. If the @tt name parameter is
+    not @tt NULL, a buffer with the specified name must exist for the
+    function to succeed. If the @tt name parameter is @tt NULL, the
+    last created buffer is returned.
 
     The current size of the buffer is stored in @tt size if not @tt
     NULL. The reference to the buffer must be released by calling the
     @ref shell_buffer_drop function.
 
-    The function return @tt NULL if the lookup failed.
+    The function return @tt NULL on failure.
     @see #TERMUI_CON_OPT_SHELL_BUFFER_GET_ENTRY
 */
 config_depend(CONFIG_MUTEK_SHELL_BUFFER)
