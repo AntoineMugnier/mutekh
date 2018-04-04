@@ -26,6 +26,9 @@
 
 #define NRF5X_GPIO_ADDR 0x50000000
 
+#define NRF5X_P0_MAX_PINS_NUM 32
+#define NRF5X_P1_MAX_PINS_NUM 16
+
 enum nrf5x_gpio_register {
     NRF_GPIO_OUT = 65,
     NRF_GPIO_OUTSET = 66,
@@ -36,7 +39,16 @@ enum nrf5x_gpio_register {
     NRF_GPIO_DIRCLR = 71,
 };
 
-#define NRF_GPIO_PIN_CNF(x) (192 + (x))
+
+#if CONFIG_NRF5X_GPIO_COUNT > NRF5X_P0_MAX_PINS_NUM
+# define NRF_GPIO_BANK_OFFSET(pin) (((pin) >> 5) * 192)
+# define NRF_GPIO_PIN_CNF(pin) (192 + NRF_GPIO_BANK_OFFSET(pin) + ((pin) & 31))
+#else
+# define NRF_GPIO_BANK_OFFSET(pin) 0
+# define NRF_GPIO_PIN_CNF(pin) (192 + (pin))
+#endif
+
+#define NRF_GPIO_PIN_MAP(port, pin) ((port << 5) | (pin & 0x1F))
 
 #define NRF_GPIO_PIN_CNF_DIR_MASK 0x1
 #define NRF_GPIO_PIN_CNF_DIR_INPUT 0x0
