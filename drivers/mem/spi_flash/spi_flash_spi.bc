@@ -1,0 +1,316 @@
+
+#include <device/class/spi.h>
+
+#include "spi_flash.h"
+
+.custom spi
+.name spi_flash
+
+.const %9 send_header /* pointer to spi header sending function */
+.global %10 sleep     /* current sleep state */
+.global %11 delay     /* expected delay of current op */
+.const %12 ctx        /* driver pv */
+
+.assert _offsetof(dev_mem_page_sc_s, addr, 8) == 0
+.assert _offsetof(dev_mem_page_sc_s, data, 4) == 8
+
+/* poll on the Work In Progress flag in status reg */
+.func poll_wip
+    .clobber %4, %5, %8
+    .input %15 lr
+
+    cst8 %8, 3 // tries
+
+    /* need to exit from sleep ? */
+    eq0 %sleep
+     jmp8 poll_wip_loop
+
+    cst8 %4, SPI_FLASH_CMD_WAKE
+    pack8 %4, 1
+    spi_wr %4, 1, CS_PULSE
+
+    cst8 %sleep, 0
+
+poll_wip_loop:
+    /* get status */
+    cst8 %4, SPI_FLASH_CMD_RD_STATUS
+    pack16le %4, 1, 2
+    spi_swp %4, %4, 2, CS_PULSE
+    unpack8 %4, 2
+
+    /* return if ready to take next op */
+    tst32c %5, bitpos(SPI_FLASH_ST_BUSY)
+     ret %lr
+
+    /* wait some time and retry if the previous
+       op is expected to take some time */
+    eq0 %delay
+     abort
+    spi_yield_delay %delay
+
+    loop %8, poll_wip_loop
+    abort
+
+.endfunc
+
+.proto spi_flash_bc_send_header
+    .input %4 cmd
+    .input %2 addr
+    .input %15 lr
+    .clobber %4
+.endproto
+
+/* Used for devices which require a 3 bytes command/addres header */
+.func spi_flash_bc_send_header_3bytes
+    .implement spi_flash_bc_send_header
+    .export spi_flash_bc_send_header_3bytes
+
+    shi32l %cmd, 24
+    or32 %cmd, %addr
+    pack32be %cmd, 1, 4
+    spi_wr %cmd, 4, CS_START
+
+    ret %lr
+.endfunc
+
+.func spi_flash_bc_detect
+    .export spi_flash_bc_detect
+    .clobber %0, %1, %15
+    .clobber %4, %5, %8
+
+//    trace 1, 0
+    cst8 %sleep, 1
+    cst8 %delay, 0
+    call8 %15, poll_wip
+
+#if 0
+    /* get device id */
+    cst8 %0, SPI_FLASH_CMD_ID
+    pack8 %0, 4
+    spi_swp %0, %0, 4, CS_PULSE
+    unpack8 %0, 4
+
+    dump
+#endif
+    /* see if we can toggle the write enable latch in the status register */
+
+    cst8 %0, SPI_FLASH_CMD_WR_EN
+    pack8 %0, 1
+    spi_wr %0, 1, CS_PULSE
+
+    cst8 %0, SPI_FLASH_CMD_RD_STATUS
+    pack16le %0, 1, 2
+    spi_swp %0, %0, 2, CS_PULSE
+    unpack8 %0, 2
+
+    tst32c %1, bitpos(SPI_FLASH_ST_WEL)
+     abort
+
+    cst8 %0, SPI_FLASH_CMD_WR_DIS
+    pack8 %0, 1
+    spi_wr %0, 1, CS_PULSE
+
+    cst8 %0, SPI_FLASH_CMD_RD_STATUS
+    pack16le %0, 1, 2
+    spi_swp %0, %0, 2, CS_PULSE
+    unpack8 %0, 2
+
+    tst32s %1, bitpos(SPI_FLASH_ST_WEL)
+     abort
+
+    end
+.endfunc
+
+.proto spi_flash_bc_page_op
+    .export spi_flash_bc_page_op
+    .input %0 sc
+    .input %7 page_count
+    .input %13 sc_count
+.endproto
+
+.proto spi_flash_bc_partial_op
+    .export spi_flash_bc_partial_op
+    .input %1 size
+    .input %2 addr
+    .input %3 data
+.endproto
+
+.func spi_flash_bc_erase_page
+    .export spi_flash_bc_erase_page
+    .implement spi_flash_bc_page_op
+    .clobber %0, %2 addr, %4, %5, %8 size, %14, %13, %15
+
+erase_next_sc:
+    ld64 %addr, %sc
+    add8 %sc, _sizeof(struct dev_mem_page_sc_s)
+    mov %14, %page_count
+
+erase_next_page:
+    call8 %15, poll_wip
+
+    cst8 %4, SPI_FLASH_CMD_WR_EN
+    pack8 %4, 1
+    spi_wr %4, 1, CS_PULSE
+
+    cst8 %4, SPI_FLASH_CMD_PAGE_ERASE
+    mov %15, %send_header
+    call %15, spi_flash_bc_send_header
+    spi_cs CS_END
+
+    // erase 4096 bytes, setup poll delay for next op
+    lde %delay, %ctx, _offsetof(spi_flash_private_s, byte_erase_delay, 4)
+    shi32l %delay, bitpos(SPI_FLASH_ERASE_SIZE)
+
+    cst16 %size, SPI_FLASH_ERASE_SIZE, 0
+    add %addr, %size
+
+    loop %14, erase_next_page
+    loop %sc_count, erase_next_sc
+
+    end
+.endfunc
+
+.func spi_flash_bc_write_cmd
+    .input %1 size
+    .input %2 addr
+    .input %3 data
+    .input %6 lr
+    .clobber %4, %5, %8, %15
+
+    call8 %15, poll_wip
+
+    cst8 %4, SPI_FLASH_CMD_WR_EN
+    pack8 %4, 1
+    spi_wr %4, 1, CS_PULSE
+
+    cst8 %4, SPI_FLASH_CMD_WR
+    mov %15, %send_header
+    call %15, spi_flash_bc_send_header
+    spi_wrm %data, %size, CS_END
+
+    // write some bytes, setup poll delay for next op
+    lde %delay, %ctx, _offsetof(spi_flash_private_s, byte_write_delay, 4)
+    mul32 %delay, %size
+
+    ret %lr
+.endfunc
+
+.func spi_flash_bc_write_partial
+    .export spi_flash_bc_write_partial
+    .implement spi_flash_bc_partial_op
+    .clobber %4, %5, %6, %8, %15
+
+    call8 %spi_flash_bc_write_cmd:lr, spi_flash_bc_write_cmd
+    end
+.endfunc
+
+.func spi_flash_bc_write_page
+    .export spi_flash_bc_write_page
+    .implement spi_flash_bc_page_op
+    .clobber %0, %1 size, %2 addr, %3 data, %4, %5, %6, %8, %14, %13, %15
+
+    cst16 %size, SPI_FLASH_PAGE_SIZE, 0
+
+write_next_sc:
+    ld64i %addr, %sc
+    ld %data, %sc
+    add8 %sc, _sizeof(struct dev_mem_page_sc_s) - 8
+    mov %14, %page_count
+
+write_next_page:
+    call8 %spi_flash_bc_write_cmd:lr, spi_flash_bc_write_cmd
+
+    add %addr, %size
+    add %data, %size
+
+    loop %14, write_next_page
+    loop %sc_count, write_next_sc
+
+    end
+.endfunc
+
+.func spi_flash_bc_read_cmd
+    .input %1 size
+    .input %2 addr
+    .input %3 data
+    .input %6 lr
+    .clobber %4, %5, %8, %15
+
+    call8 %15, poll_wip
+
+    cst8 %4, SPI_FLASH_CMD_RD
+    mov %15, %send_header
+    call %15, spi_flash_bc_send_header
+    spi_rdm %data, %size, CS_END
+
+    // read is not blocking for next op
+    cst8 %delay, 0
+
+    ret %lr
+.endfunc
+
+.func spi_flash_bc_read_partial
+    .export spi_flash_bc_read_partial
+    .implement spi_flash_bc_partial_op
+    .clobber %4, %5, %6, %8, %15
+
+    call8 %spi_flash_bc_read_cmd:lr, spi_flash_bc_read_cmd
+    end
+.endfunc
+
+.func spi_flash_bc_read_page
+    .export spi_flash_bc_read_page
+    .implement spi_flash_bc_page_op
+    .clobber %0, %1 size, %2 addr, %3 data, %4, %5, %6, %8, %13, %15
+
+    mov %size, %page_count
+    shi32l %size, bitpos(SPI_FLASH_PAGE_SIZE)
+
+read_next_sc:
+    ld64i %addr, %sc
+    ld %data, %sc
+    add8 %sc, _sizeof(struct dev_mem_page_sc_s) - 8
+
+    call8 %spi_flash_bc_read_cmd:lr, spi_flash_bc_read_cmd
+
+    loop %sc_count, read_next_sc
+
+    end
+.endfunc
+
+.func spi_flash_bc_chip_erase
+    .export spi_flash_bc_chip_erase
+    .clobber %4, %5, %8, %15
+
+    call8 %15, poll_wip
+
+    cst8 %4, SPI_FLASH_CMD_WR_EN
+    pack8 %4, 1
+    spi_wr %4, 1, CS_PULSE
+
+    cst8 %4, SPI_FLASH_CMD_CHIP_ERASE
+    pack8 %4, 1
+    spi_wr %4, 1, CS_PULSE
+
+    // setup poll delay for next op
+    lde %delay, %ctx, _offsetof(spi_flash_private_s, chip_erase_delay, 4)
+
+    end
+.endfunc
+
+.func spi_flash_bc_sleep
+    .export spi_flash_bc_sleep
+    .clobber %4, %5, %8, %15
+
+    dump
+    call8 %15, poll_wip
+
+    cst8 %4, SPI_FLASH_CMD_SLEEP
+    pack8 %4, 1
+    spi_wr %4, 1, CS_PULSE
+
+    cst8 %sleep, 1
+    cst8 %delay, 0
+
+    end
+.endfunc
