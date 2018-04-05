@@ -88,11 +88,7 @@ hardware features.  Most development boards are supported as well.
     Flash controller is implemented with two concurrent classes:
     @list
       @item Memory controller,
-      @item Persistent data controller.
     @end list
-
-    This allows to implement persistent data support and yet have
-    concurrent raw block accesses.
 
     Flash access is polled and fully blocking when writing.  This is a
     hardware-enforced requirement.
