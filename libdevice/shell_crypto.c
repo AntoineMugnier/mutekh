@@ -246,7 +246,7 @@ static TERMUI_CON_COMMAND_PROTOTYPE(shell_crypto_random)
   if (used & CRYPTO_OPT_OUT_LEN)
     {
       rq.op |= DEV_CRYPTO_FINALIZE;
-      rq.out = malloc(c->out_len);
+      rq.out = shell_buffer_new(con, c->out_len, "random", NULL, 0);
       if (!rq.out)
         {
           err = -EINVAL;
@@ -265,10 +265,13 @@ static TERMUI_CON_COMMAND_PROTOTYPE(shell_crypto_random)
     }
 
   if (used & CRYPTO_OPT_OUT_LEN)
-    termui_con_printf(con, "algo: %s\nout : %P\n", info.name, rq.out, rq.len);
+    {
+      termui_con_printf(con, "algo: %s\n", info.name);
+      shell_buffer_advertise(con, rq.out, rq.len);
+    }
 
  err_rqout:
-  free(rq.out);
+  shell_buffer_drop(rq.out);
  err_state:
   free(state);
 
