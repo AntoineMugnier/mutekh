@@ -1,0 +1,23 @@
+
+  %set OUTPUT_NAME mem
+
+  # New source code module to be compiled
+  %append MODULES $(OUTPUT_NAME):$(CONFIGPATH)
+
+  %include scripts/options.build
+  %include arch/arch.build
+
+  # Application license
+  CONFIG_LICENSE_APP_LGPL
+
+  # Features
+  CONFIG_APP_START
+
+  CONFIG_DRIVER_MEM_SPI_FLASH
+  CONFIG_MUTEK_CONTEXT_SCHED
+  CONFIG_MUTEK_THREAD
+CONFIG_MUTEK_BYTECODE_TRACE
+CONFIG_MUTEK_BYTECODE_DEBUG
+CONFIG_MUTEK_BYTECODE_NATIVE
+CONFIG_MUTEK_BYTECODE_VM undefined
+CONFIG_DRIVER_EFM32_DMA undefined

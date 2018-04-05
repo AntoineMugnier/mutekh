@@ -53,11 +53,12 @@ static DEV_MEM_INFO(ram_info)
   const struct ram_bank_s *b = pv->bank + accessor->number;
 
   memset(info, 0, sizeof(*info));
-  
+
   info->type = DEV_MEM_RAM;
-  info->flags |= DEV_MEM_WRITABLE | DEV_MEM_VOLATILE |
+  info->flags |= DEV_MEM_VOLATILE |
     DEV_MEM_MAPPED_READ | DEV_MEM_MAPPED_WRITE |
     DEV_MEM_PARTIAL_WRITE | DEV_MEM_PARTIAL_READ |
+    DEV_MEM_PAGE_WRITE | DEV_MEM_PAGE_READ |
     DEV_MEM_CROSS_READ | DEV_MEM_CROSS_WRITE;
   info->map_base = b->addr;
   info->size =  b->end - b->addr;
@@ -77,7 +78,7 @@ static DEV_MEM_REQUEST(ram_request)
   else if (rq->band_mask & 1)
     {
       const struct ram_bank_s *b = pv->bank + accessor->number;
-      dev_mem_mapped_op_helper(b->addr, 1, rq);
+      dev_mem_mapped_op_helper(b->addr, b->end, rq);
     }
 
   kroutine_exec(&rq->base.kr);
