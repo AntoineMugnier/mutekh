@@ -31,12 +31,10 @@
 
 DEV_DECLARE_STATIC(cpu_dev, "cpu", DEVICE_FLAG_CPU, arm32m_drv,
                    DEV_STATIC_RES_ID(0, 0),
-#if 52000 <= CONFIG_NRF5X_MODEL && CONFIG_NRF5X_MODEL <= 52999 && defined(CONFIG_CPU_ARM32M_CLOCK)
-# if defined(CONFIG_DEVICE_CLOCK)
+#if defined(CONFIG_CPU_ARM32M_CLOCK)
                    DEV_STATIC_RES_CLK_SRC("/clock", NRF_CLOCK_SRC_HFCLK, 0),
 #else
                    DEV_STATIC_RES_FREQ_ACC(64000000, 1, 7, 24),
-# endif
 #endif
                    );
 
