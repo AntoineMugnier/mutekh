@@ -24,6 +24,7 @@
 
 #include <mutek/mem_alloc.h>
 #include <mutek/memory_allocator.h>
+#include <hexo/flash.h>
 
 #include <arch/nrf5x/nvmc.h>
 #include <arch/nrf5x/clock.h>
@@ -54,10 +55,10 @@ static uint32_t nrf_build_tag(void)
 
 void nrf52_init(void)
 {
-#if 52000 <= CONFIG_NRF5X_MODEL && CONFIG_NRF5X_MODEL <= 52999
+#if 52000 >= CONFIG_NRF5X_MODEL && CONFIG_NRF5X_MODEL <= 52999
 # ifndef CONFIG_DRIVER_NRF52_NFCT
   if (cpu_mem_read_32(NRF_UICR_NFCPINS) & NRF_UICR_NFCPINS_PROTECT_NFC) {
-    nrf5x_flash_write(NRF_UICR_NFCPINS, (const uint32_t[]){ ~NRF_UICR_NFCPINS_PROTECT_NFC }, 1);
+    flash_page_write(NRF_UICR_NFCPINS, (void*)(const uint32_t[]){ ~NRF_UICR_NFCPINS_PROTECT_NFC }, 4);
     cpu_mem_write_32(ARMV7M_AIRCR_ADDR, 0x5FA0004);
   }
 # endif
