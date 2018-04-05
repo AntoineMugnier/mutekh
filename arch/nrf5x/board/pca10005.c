@@ -20,6 +20,7 @@
 
 #ifdef CONFIG_DEVICE
 #include <device/resources.h>
+#include <device/class/icu.h>
 #include <device/class/iomux.h>
 #include <device/class/uart.h>
 #include <device/class/cmu.h>
@@ -52,8 +53,8 @@ DEV_DECLARE_STATIC(clock_dev, "clock", 0, nrf5x_clock_drv,
 
 DEV_DECLARE_STATIC(uart_dev, "uart0", 0, nrf5x_uart_drv,
                    NRF_STATIC_RES_PERIPHERAL_MEM(NRF5X_UART0),
-                   DEV_STATIC_RES_DEV_ICU("/cpu"),,
-                   DEV_STATIC_RES_IRQ(0, NRF5X_UART0, DEV_IRQ_SENSE_HIGH_LEVEL, 0, 1)
+                   DEV_STATIC_RES_DEV_ICU("/cpu"),
+                   DEV_STATIC_RES_IRQ(0, NRF5X_UART0, DEV_IRQ_SENSE_HIGH_LEVEL, 0, 1),
                    DEV_STATIC_RES_DEV_IOMUX("/gpio"),
                    DEV_STATIC_RES_UART(1000000, 8, DEV_UART_PARITY_NONE, 1, 1),
                    DEV_STATIC_RES_IOMUX("rts", 0, 0, 0, 0),

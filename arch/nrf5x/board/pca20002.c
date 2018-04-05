@@ -24,6 +24,7 @@
 #include <device/class/uart.h>
 #include <device/class/gpio.h>
 #include <device/class/cmu.h>
+#include <device/class/icu.h>
 #include <arch/nrf5x/ids.h>
 
 DEV_DECLARE_STATIC(clock_dev, "clock", 0, nrf5x_clock_drv,
@@ -50,8 +51,8 @@ DEV_DECLARE_STATIC(clock_dev, "clock", 0, nrf5x_clock_drv,
 
 DEV_DECLARE_STATIC(uart_dev, "uart0", 0, nrf5x_uart_drv,
                    NRF_STATIC_RES_PERIPHERAL_MEM(NRF5X_UART0),
-                   DEV_STATIC_RES_DEV_ICU("/cpu"),,
-                   DEV_STATIC_RES_IRQ(0, NRF5X_UART0, DEV_IRQ_SENSE_HIGH_LEVEL, 0, 1)
+                   DEV_STATIC_RES_DEV_ICU("/cpu"),
+                   DEV_STATIC_RES_IRQ(0, NRF5X_UART0, DEV_IRQ_SENSE_HIGH_LEVEL, 0, 1),
                    DEV_STATIC_RES_DEV_IOMUX("/gpio"),
                    DEV_STATIC_RES_UART(1000000, 8, DEV_UART_PARITY_NONE, 1, 0),
                    DEV_STATIC_RES_IOMUX("tx", 0, 20, 0, 0),
@@ -64,8 +65,8 @@ DEV_DECLARE_STATIC(uart_dev, "uart0", 0, nrf5x_uart_drv,
 
 DEV_DECLARE_STATIC(i2c_dev, "i2c0", 0, nrf5x_i2c_drv,
                    NRF_STATIC_RES_PERIPHERAL_MEM(NRF5X_TWI0),
-                   DEV_STATIC_RES_DEV_ICU("/cpu"),,
-                   DEV_STATIC_RES_IRQ(0, NRF5X_TWI0, DEV_IRQ_SENSE_HIGH_LEVEL, 0, 1)
+                   DEV_STATIC_RES_DEV_ICU("/cpu"),
+                   DEV_STATIC_RES_IRQ(0, NRF5X_TWI0, DEV_IRQ_SENSE_HIGH_LEVEL, 0, 1),
                    DEV_STATIC_RES_DEV_IOMUX("/gpio"),
                    DEV_STATIC_RES_IOMUX("scl", 0, 8, 0, 0),
                    DEV_STATIC_RES_IOMUX("sda", 0, 7, 0, 0)
@@ -77,8 +78,8 @@ DEV_DECLARE_STATIC(i2c_dev, "i2c0", 0, nrf5x_i2c_drv,
 
 DEV_DECLARE_STATIC(spi_dev, "spi0", 0, nrf5x_spi_drv,
                    NRF_STATIC_RES_PERIPHERAL_MEM(NRF5X_SPI1),
-                   DEV_STATIC_RES_DEV_ICU("/cpu"),,
-                   DEV_STATIC_RES_IRQ(0, NRF5X_SPI1, DEV_IRQ_SENSE_HIGH_LEVEL, 0, 1)
+                   DEV_STATIC_RES_DEV_ICU("/cpu"),
+                   DEV_STATIC_RES_IRQ(0, NRF5X_SPI1, DEV_IRQ_SENSE_HIGH_LEVEL, 0, 1),
                    DEV_STATIC_RES_DEV_IOMUX("/gpio"),
                    DEV_STATIC_RES_IOMUX("clk", 0, 9, 0, 0),
                    DEV_STATIC_RES_IOMUX("mosi", 0, 10, 0, 0),
@@ -141,8 +142,8 @@ static const uint64_t rows_mask    = endian_le64(0xff);
 
 DEV_DECLARE_STATIC(keyboard_dev, "keyboard", 0, matrix_keyboard_drv,
                    DEV_STATIC_RES_DEV_TIMER("/rtc1"),
-                   DEV_STATIC_RES_DEV_ICU("/gpio"),,
-                   DEV_STATIC_RES_IRQ(0, NRF_GPIO_RANGE_IRQ_ID, DEV_IRQ_SENSE_HIGH_LEVEL, 0, 1)
+                   DEV_STATIC_RES_DEV_ICU("/gpio"),
+                   DEV_STATIC_RES_IRQ(0, NRF_GPIO_RANGE_IRQ_ID, DEV_IRQ_SENSE_HIGH_LEVEL, 0, 1),
                    DEV_STATIC_RES_IO(0, 31),
                    DEV_STATIC_RES_BLOB_PARAM("mask", &columns_mask),
                    DEV_STATIC_RES_IO(21, 28),
