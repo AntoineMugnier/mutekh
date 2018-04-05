@@ -190,7 +190,7 @@ sub out_ret {
 
 sub out_jmp {
     my ($thisop, $wi) = @_;
-    return "    orrs $reg[$wi], #1\n".   # set thumb mode bit
+    return "    adds $reg[$wi], #1\n".   # set thumb mode bit
            "    bx $reg[$wi]\n".
 	   "    .ltorg\n";
 }
@@ -205,7 +205,7 @@ sub out_call {
     return "    adr r0, 2f\n".
            "    adds r0, #1\n".
            "    str r0, [r4, #".($thisop->{out}->[0] * 4)."]\n".
-	   "    orrs $reg[$wi], #1\n".   # set thumb mode bit
+	   "    adds $reg[$wi], #1\n".   # set thumb mode bit
            "    bx $reg[$wi]\n".
            "    .balign 4\n".
            "2:\n";
