@@ -18,6 +18,8 @@
     Copyright (c) 2014, Nicolas Pouillon <nipo@ssji.net>
 */
 
+#define LOGK_MODULE_ID "nrfU"
+
 #include <hexo/types.h>
 #include <hexo/endian.h>
 #include <hexo/iospace.h>
@@ -440,6 +442,14 @@ static DEV_INIT(nrf5x_uarte_char_init)
   if (device_res_get_uint(dev, DEV_RES_MEM, 0, &pv->addr, NULL))
     goto free_pv;
 
+#ifdef CONFIG_DRIVER_NRF5X_PRINTK
+  if (pv->addr == CONFIG_MUTEK_PRINTK_ADDR)
+    {
+      logk_error("UARTE driver on same uart as prink");
+      goto free_pv;
+    }
+#endif
+
   if (device_iomux_setup(dev, "<rx? >tx? >rts? <cts?", NULL, id, NULL))
     goto free_pv;
 
@@ -540,7 +550,7 @@ static DEV_CLEANUP(nrf5x_uarte_char_cleanup)
   return 0;
 }
 
-DRIVER_DECLARE(nrf5x_uarte_drv, 0, "nRF52 Serial"
+DRIVER_DECLARE(nrf5x_uarte_drv, 0, "nRF52 Serial dma"
 #if defined(CONFIG_DEVICE_UART)
                ",UART"
 #endif
