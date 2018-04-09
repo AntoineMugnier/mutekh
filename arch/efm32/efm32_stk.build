@@ -67,13 +67,11 @@
 
 %section efr32-stk6066a-fg1p132-f256-gm48
   %inherit efr32-fg1p132-f256-gm48
-  %inherit efr32-stk6066a
 
 %section efr32-stk6066a-mg12p433-f1024-gm48
   %inherit efr32-mg12p433-f1024-gm48
-  %inherit efr32-stk6066a
 
-%section efr32-stk6066a
+%section efr32-stk6066a-*
   CONFIG_EFM32_BOARD stk6066a
 
   CONFIG_DEVICE_CLOCK_GATING undefined
