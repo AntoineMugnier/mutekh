@@ -53,9 +53,11 @@ static uint32_t nrf_build_tag(void)
 #define NRF52832_R1   0x00650   // nRF52832 QFAAB0_1614 r1
 #define NRF52840_ENGA 0x00800   // nRF52840 QIAAAA_1644 engA
 
-void nrf52_init(void)
+void nrf5x_init(void)
 {
-#if 52000 >= CONFIG_NRF5X_MODEL && CONFIG_NRF5X_MODEL <= 52999
+#if CONFIG_NRF5X_MODEL >= 52000 && \
+    CONFIG_NRF5X_MODEL < 53000
+
 # ifndef CONFIG_DRIVER_NRF52_NFCT
   if (cpu_mem_read_32(NRF_UICR_NFCPINS) & NRF_UICR_NFCPINS_PROTECT_NFC) {
     flash_page_write(NRF_UICR_NFCPINS, (void*)(const uint32_t[]){ ~NRF_UICR_NFCPINS_PROTECT_NFC }, 4);
