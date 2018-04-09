@@ -50,7 +50,7 @@ mem_ibmpc_memsize_probe(void *start)
 
 #include <mutek/mem_alloc.h>
 #include <mutek/mem_region.h>
-#include <mutek/memory_allocator.h>
+#include <mutek/mem_alloc.h>
 
 void ibmpc_mem_init()
 {

@@ -28,7 +28,7 @@
 #include <hexo/iospace.h>
 
 #include <mutek/mem_alloc.h>
-#include <mutek/memory_allocator.h>
+#include <mutek/mem_alloc.h>
 #include <mutek/printk.h>
 #include <mutek/startup.h>
 

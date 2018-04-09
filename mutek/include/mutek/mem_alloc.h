@@ -23,7 +23,7 @@
 /**
  * @file
  * @module {Core::Kernel services}
- * @short High level memory allocation stuff
+ * @short Memory allocation stuff
  */
 
 
@@ -33,7 +33,50 @@
 #include <hexo/types.h>
 #include <hexo/error.h>
 #include <hexo/lock.h>
-#include <mutek/memory_allocator.h>
+
+struct memory_allocator_region_s;
+
+/** @internal */
+extern struct memory_allocator_region_s *default_region;
+
+/** @internal @this initialize a memory region*/
+struct memory_allocator_region_s *
+memory_allocator_init(struct memory_allocator_region_s *container_region, void *start, void *end);
+
+/** @internal @this extend an existing memory region with a new memory space */
+struct memory_allocator_header_s *
+memory_allocator_extend(struct memory_allocator_region_s *region, void *start, size_t size);
+
+/** @internal @this resize the given memory block */
+void *memory_allocator_resize(void *address, size_t size);
+
+/** @internal @this allocate a new memory block in given region */
+void *memory_allocator_pop(struct memory_allocator_region_s *region, size_t size, size_t align);
+
+/** @internal @this free allocated memory block */
+void memory_allocator_push(void *address);
+
+/** @internal @this reserve a memory space in given region */
+void *memory_allocator_reserve(struct memory_allocator_region_s *region, void *start, size_t size);
+
+/** @internal @this return the size of given memory block */
+size_t memory_allocator_getsize(void *ptr);
+
+/** @internal @this return statistic of memory region use */
+error_t memory_allocator_stats(struct memory_allocator_region_s *region,
+			size_t *alloc_blocks,
+			size_t *free_size,
+			size_t *free_blocks);
+
+/** @internal @this make memory region check depending to activated token: guard zone, headers' integrity (crc and size) 
+    and if free space was used */
+void memory_allocator_region_check(struct memory_allocator_region_s *region);
+
+/** @internal @this return the size of given memory region */
+size_t memory_allocator_region_size(struct memory_allocator_region_s *region);
+
+/** @internal @this return the size of given memory region */
+void* memory_allocator_region_address(struct memory_allocator_region_s *region);
 
 #if defined(CONFIG_MUTEK_MEM_REGION)
 #include <mutek/mem_region.h>
@@ -55,18 +98,19 @@ enum mem_scope_e
     @see #CONFIG_MUTEK_MEMALLOC_SCRAMBLE
     @see #CONFIG_MUTEK_MEMALLOC_STATS
 */
-ALWAYS_INLINE
-void mem_check(void)
+config_depend_alwaysinline(CONFIG_MUTEK_MEMALLOC,
+void mem_check(void),
 {
   memory_allocator_region_check(default_region);
-}
+});
 
 /** @this allocates a new memory block in given scope with specified
     alignment constraint. 
     @see #CONFIG_MUTEK_MEMALLOC_ALIGN
 */
-inline void *
-mem_alloc_align(size_t size, size_t align, enum mem_scope_e scope)
+config_depend_inline(CONFIG_MUTEK_MEMALLOC,
+void *
+mem_alloc_align(size_t size, size_t align, enum mem_scope_e scope),
 {
   if (size == 0) 
     return NULL;
@@ -95,18 +139,19 @@ mem_alloc_align(size_t size, size_t align, enum mem_scope_e scope)
 # endif
 
   return ptr;
-}
+});
 
 /** @This allocates a new memory block in given scope. */
-ALWAYS_INLINE
-void *mem_alloc(size_t size, enum mem_scope_e scope)
+config_depend_alwaysinline(CONFIG_MUTEK_MEMALLOC,
+void *mem_alloc(size_t size, enum mem_scope_e scope),
 {
   return mem_alloc_align(size, 1, scope);
-}
+});
 
 /** @This allocate a new memory block for another cpu in given scope*/
-inline void *
-mem_alloc_cpu(size_t size, enum mem_scope_e scope, cpu_id_t cpu_id)
+config_depend_inline(CONFIG_MUTEK_MEMALLOC,
+void *
+mem_alloc_cpu(size_t size, enum mem_scope_e scope, cpu_id_t cpu_id),
 {
   if (size == 0)
     return NULL;
@@ -135,30 +180,30 @@ mem_alloc_cpu(size_t size, enum mem_scope_e scope, cpu_id_t cpu_id)
 # endif
 
   return ptr;
-}
+});
 
 /** @This frees allocated memory block */
-inline
-void mem_free(void *ptr)
+config_depend_inline(CONFIG_MUTEK_MEMALLOC,
+void mem_free(void *ptr),
 {
   memory_allocator_push(ptr);
-}
+});
 
 /** @This returns the size of given memory block */
-ALWAYS_INLINE
-size_t mem_getsize(void *ptr)
+config_depend_alwaysinline(CONFIG_MUTEK_MEMALLOC_SMART,
+size_t mem_getsize(void *ptr),
 {
   return memory_allocator_getsize(ptr);
-}
+});
 
 /** @This resizes the given memory block, return NULL if failed. The
     allocated memory block is not moved; if not enough free memory
     blocks are available next to allocated memory, this function
     fails. */
-ALWAYS_INLINE
-void *mem_resize(void *ptr, size_t size)
+config_depend_alwaysinline(CONFIG_MUTEK_MEMALLOC_SMART,
+void *mem_resize(void *ptr, size_t size),
 {
   return memory_allocator_resize(ptr, size);
-}
+});
 
 #endif

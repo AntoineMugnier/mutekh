@@ -20,7 +20,7 @@
               Dimitri Refauvelet <dimitri.refauvelet@lip6.fr> (c) 2009
 */
 
-#include <mutek/memory_allocator.h>
+#include <mutek/mem_alloc.h>
 #include <string.h>
 #include <hexo/types.h>
 #include <hexo/lock.h>

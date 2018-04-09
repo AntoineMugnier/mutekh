@@ -19,7 +19,6 @@ deps = [
     "mutek/memory_allocator_simple.c",
     "mutek/mem_alloc.c",
     "mutek/include/mutek/mem_alloc.h",
-    "mutek/include/mutek/memory_allocator.h"
 ]
 
 env_list = [

@@ -56,7 +56,7 @@ void emu_remap_shared_init(void)
 
 #include <mutek/mem_alloc.h>
 #include <mutek/mem_region.h>
-#include <mutek/memory_allocator.h>
+#include <mutek/mem_alloc.h>
 
 void emu_mem_init(void)
 {

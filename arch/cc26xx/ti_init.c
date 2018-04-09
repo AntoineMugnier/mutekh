@@ -3,7 +3,7 @@
 #include <string.h>
 
 #include <mutek/mem_alloc.h>
-#include <mutek/memory_allocator.h>
+#include <mutek/mem_alloc.h>
 
 #include <hexo/iospace.h>
 

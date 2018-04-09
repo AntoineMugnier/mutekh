@@ -30,7 +30,7 @@
 #define MEM_REGION_H_
 
 #include <mutek/mem_alloc.h>
-#include <mutek/memory_allocator.h>
+#include <mutek/mem_alloc.h>
 
 #include <gct_platform.h>
 #include <gct_lock_hexo_lock_irq.h>

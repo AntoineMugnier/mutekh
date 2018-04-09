@@ -20,7 +20,7 @@
 */
 
 #include <mutek/mem_alloc.h>
-#include <mutek/memory_allocator.h>
+#include <mutek/mem_alloc.h>
 #include <mutek/mem_region.h>
 
 #include <mutek/printk.h>

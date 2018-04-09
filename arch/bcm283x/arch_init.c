@@ -24,7 +24,7 @@
 /////////////////////////////////////////////////////////////////////
 
 #include <mutek/mem_alloc.h>
-#include <mutek/memory_allocator.h>
+#include <mutek/mem_alloc.h>
 #include <mutek/startup.h>
 
 void bcm283x_mem_init(void)
