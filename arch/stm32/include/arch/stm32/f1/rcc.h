@@ -3,858 +3,578 @@
 ***************************************/
 
 /*
-   bfgen -o cdefs cdefs_use_reg_meask=1 cdefs_use_field_set=1                  \
+   bfgen -o cdefs cdefs_use_reg_mask=1 cdefs_use_field_set=1                   \
      cdefs_use_field_get=1 reg_prefix=STM32 field_prefix=STM32                 \
-     cdefs_use_field_mask=1 cdefs_use_field_setval=1
+     cdefs_use_field_mask=1
 */
 
 #ifndef _RCC_BFGEN_DEFS_
 #define _RCC_BFGEN_DEFS_
 
-/** Clock control register @multiple */
 #define STM32_RCC_CR_ADDR                            0x00000000
-/** Internal High Speed clock enable @multiple */
+#define STM32_RCC_CR_MASK                            0x030ffffb
   #define STM32_RCC_CR_HSION_MASK                  0x00000001
   #define STM32_RCC_CR_HSION                       0x00000001
   #define STM32_RCC_CR_HSION_SET(x, v)             do { (x) = (((x) & ~0x1) | ((v) << 0)); } while(0)
   #define STM32_RCC_CR_HSION_GET(x)                (((x) >> 0) & 0x1)
-/** Internal High Speed clock ready flag @multiple */
-  #define STM32_RCC_CR_HSIRDY_MASK                 0x00000001
-  #define STM32_RCC_CR_HSIRDY                      0x00000002
-  #define STM32_RCC_CR_HSIRDY_SET(x, v)            do { (x) = (((x) & ~0x2) | ((v) << 1)); } while(0)
-  #define STM32_RCC_CR_HSIRDY_GET(x)               (((x) >> 1) & 0x1)
-/** Internal High Speed clock trimming @multiple */
+  #define STM32_RCC_CR_HSIDRY_MASK                 0x00000001
+  #define STM32_RCC_CR_HSIDRY                      0x00000002
+  #define STM32_RCC_CR_HSIDRY_SET(x, v)            do { (x) = (((x) & ~0x2) | ((v) << 1)); } while(0)
+  #define STM32_RCC_CR_HSIDRY_GET(x)               (((x) >> 1) & 0x1)
   #define STM32_RCC_CR_HSITRIM_MASK                0x0000001f
   #define STM32_RCC_CR_HSITRIM(v)                  ((v) << 3)
   #define STM32_RCC_CR_HSITRIM_SET(x, v)           do { (x) = (((x) & ~0xf8) | ((v) << 3)); } while(0)
   #define STM32_RCC_CR_HSITRIM_GET(x)              (((x) >> 3) & 0x1f)
-/** Internal High Speed clock Calibration @multiple */
   #define STM32_RCC_CR_HSICAL_MASK                 0x000000ff
   #define STM32_RCC_CR_HSICAL(v)                   ((v) << 8)
   #define STM32_RCC_CR_HSICAL_SET(x, v)            do { (x) = (((x) & ~0xff00) | ((v) << 8)); } while(0)
   #define STM32_RCC_CR_HSICAL_GET(x)               (((x) >> 8) & 0xff)
-/** External High Speed clock enable @multiple */
   #define STM32_RCC_CR_HSEON_MASK                  0x00000001
   #define STM32_RCC_CR_HSEON                       0x00010000
   #define STM32_RCC_CR_HSEON_SET(x, v)             do { (x) = (((x) & ~0x10000) | ((v) << 16)); } while(0)
   #define STM32_RCC_CR_HSEON_GET(x)                (((x) >> 16) & 0x1)
-/** External High Speed clock ready flag @multiple */
   #define STM32_RCC_CR_HSERDY_MASK                 0x00000001
   #define STM32_RCC_CR_HSERDY                      0x00020000
   #define STM32_RCC_CR_HSERDY_SET(x, v)            do { (x) = (((x) & ~0x20000) | ((v) << 17)); } while(0)
   #define STM32_RCC_CR_HSERDY_GET(x)               (((x) >> 17) & 0x1)
-/** External High Speed clock Bypass @multiple */
   #define STM32_RCC_CR_HSEBYP_MASK                 0x00000001
   #define STM32_RCC_CR_HSEBYP                      0x00040000
   #define STM32_RCC_CR_HSEBYP_SET(x, v)            do { (x) = (((x) & ~0x40000) | ((v) << 18)); } while(0)
   #define STM32_RCC_CR_HSEBYP_GET(x)               (((x) >> 18) & 0x1)
-/** Clock Security System enable @multiple */
   #define STM32_RCC_CR_CSSON_MASK                  0x00000001
   #define STM32_RCC_CR_CSSON                       0x00080000
   #define STM32_RCC_CR_CSSON_SET(x, v)             do { (x) = (((x) & ~0x80000) | ((v) << 19)); } while(0)
   #define STM32_RCC_CR_CSSON_GET(x)                (((x) >> 19) & 0x1)
-/** PLL enable @multiple */
   #define STM32_RCC_CR_PLLON_MASK                  0x00000001
   #define STM32_RCC_CR_PLLON                       0x01000000
   #define STM32_RCC_CR_PLLON_SET(x, v)             do { (x) = (((x) & ~0x1000000) | ((v) << 24)); } while(0)
   #define STM32_RCC_CR_PLLON_GET(x)                (((x) >> 24) & 0x1)
-/** PLL clock ready flag @multiple */
   #define STM32_RCC_CR_PLLRDY_MASK                 0x00000001
   #define STM32_RCC_CR_PLLRDY                      0x02000000
   #define STM32_RCC_CR_PLLRDY_SET(x, v)            do { (x) = (((x) & ~0x2000000) | ((v) << 25)); } while(0)
   #define STM32_RCC_CR_PLLRDY_GET(x)               (((x) >> 25) & 0x1)
-# if CONFIG_STM32_SERIES == 105 || CONFIG_STM32_SERIES == 107
-/** PLL3 enable @multiple */
-  #define STM32_RCC_CR_PLL2ON_MASK                 0x00000001
-  #define STM32_RCC_CR_PLL2ON                      0x04000000
-  #define STM32_RCC_CR_PLL2ON_SET(x, v)            do { (x) = (((x) & ~0x4000000) | ((v) << 26)); } while(0)
-  #define STM32_RCC_CR_PLL2ON_GET(x)               (((x) >> 26) & 0x1)
-/** PLL3 clock ready flag @multiple */
-  #define STM32_RCC_CR_PLL2RDY_MASK                0x00000001
-  #define STM32_RCC_CR_PLL2RDY                     0x08000000
-  #define STM32_RCC_CR_PLL2RDY_SET(x, v)           do { (x) = (((x) & ~0x8000000) | ((v) << 27)); } while(0)
-  #define STM32_RCC_CR_PLL2RDY_GET(x)              (((x) >> 27) & 0x1)
-/** PLL3 enable @multiple */
-  #define STM32_RCC_CR_PLL3ON_MASK                 0x00000001
-  #define STM32_RCC_CR_PLL3ON                      0x10000000
-  #define STM32_RCC_CR_PLL3ON_SET(x, v)            do { (x) = (((x) & ~0x10000000) | ((v) << 28)); } while(0)
-  #define STM32_RCC_CR_PLL3ON_GET(x)               (((x) >> 28) & 0x1)
-/** PLL3 clock ready flag @multiple */
-  #define STM32_RCC_CR_PLL3RDY_MASK                0x00000001
-  #define STM32_RCC_CR_PLL3RDY                     0x20000000
-  #define STM32_RCC_CR_PLL3RDY_SET(x, v)           do { (x) = (((x) & ~0x20000000) | ((v) << 29)); } while(0)
-  #define STM32_RCC_CR_PLL3RDY_GET(x)              (((x) >> 29) & 0x1)
-# endif
 
-/** Clock configuration register (RCC_CFGR) @multiple */
 #define STM32_RCC_CFGR_ADDR                          0x00000004
-/** System clock Switch @multiple */
+#define STM32_RCC_CFGR_MASK                          0x0f7fffff
   #define STM32_RCC_CFGR_SW_MASK                   0x00000003
-  #define STM32_RCC_CFGR_SW(v)                     ((v) << 0)
-  #define STM32_RCC_CFGR_SW_SET(x, v)              do { (x) = (((x) & ~0x3) | ((v) << 0)); } while(0)
+  #define STM32_RCC_CFGR_SW(v)                     ((STM32_RCC_CFGR_SW_##v) << 0)
+  #define STM32_RCC_CFGR_SW_SET(x, v)              do { (x) = (((x) & ~0x3) | ((STM32_RCC_CFGR_SW_##v) << 0)); } while(0)
   #define STM32_RCC_CFGR_SW_GET(x)                 (((x) >> 0) & 0x3)
-/** System Clock Switch Status @multiple */
+    #define STM32_RCC_CFGR_SW_HSI                    0x00000000
+    #define STM32_RCC_CFGR_SW_HSE                    0x00000001
+    #define STM32_RCC_CFGR_SW_PLL                    0x00000002
   #define STM32_RCC_CFGR_SWS_MASK                  0x00000003
   #define STM32_RCC_CFGR_SWS(v)                    ((STM32_RCC_CFGR_SWS_##v) << 2)
   #define STM32_RCC_CFGR_SWS_SET(x, v)             do { (x) = (((x) & ~0xc) | ((STM32_RCC_CFGR_SWS_##v) << 2)); } while(0)
-  #define STM32_RCC_CFGR_SWS_SETVAL(x, v)          do { (x) = (((x) & ~0xc) | ((v) << 2)); } while(0)
   #define STM32_RCC_CFGR_SWS_GET(x)                (((x) >> 2) & 0x3)
     #define STM32_RCC_CFGR_SWS_HSI                   0x00000000
     #define STM32_RCC_CFGR_SWS_HSE                   0x00000001
     #define STM32_RCC_CFGR_SWS_PLL                   0x00000002
-/** AHB prescaler @multiple */
   #define STM32_RCC_CFGR_HPRE_MASK                 0x0000000f
-  #define STM32_RCC_CFGR_HPRE(v)                   ((v) << 4)
-  #define STM32_RCC_CFGR_HPRE_SET(x, v)            do { (x) = (((x) & ~0xf0) | ((v) << 4)); } while(0)
+  #define STM32_RCC_CFGR_HPRE(v)                   ((STM32_RCC_CFGR_HPRE_##v) << 4)
+  #define STM32_RCC_CFGR_HPRE_SET(x, v)            do { (x) = (((x) & ~0xf0) | ((STM32_RCC_CFGR_HPRE_##v) << 4)); } while(0)
   #define STM32_RCC_CFGR_HPRE_GET(x)               (((x) >> 4) & 0xf)
-/** APB Low speed prescaler (APB1) @multiple */
+    #define STM32_RCC_CFGR_HPRE_DIV_1                0x00000000
+    #define STM32_RCC_CFGR_HPRE_DIV_2                0x00000008
+    #define STM32_RCC_CFGR_HPRE_DIV_4                0x00000009
+    #define STM32_RCC_CFGR_HPRE_DIV_8                0x0000000a
+    #define STM32_RCC_CFGR_HPRE_DIV_16               0x0000000b
+    #define STM32_RCC_CFGR_HPRE_DIV_64               0x0000000c
+    #define STM32_RCC_CFGR_HPRE_DIV_128              0x0000000d
+    #define STM32_RCC_CFGR_HPRE_DIV_256              0x0000000e
+    #define STM32_RCC_CFGR_HPRE_DIV_512              0x0000000f
   #define STM32_RCC_CFGR_PPRE1_MASK                0x00000007
-  #define STM32_RCC_CFGR_PPRE1(v)                  ((v) << 8)
-  #define STM32_RCC_CFGR_PPRE1_SET(x, v)           do { (x) = (((x) & ~0x700) | ((v) << 8)); } while(0)
+  #define STM32_RCC_CFGR_PPRE1(v)                  ((STM32_RCC_CFGR_PPRE1_##v) << 8)
+  #define STM32_RCC_CFGR_PPRE1_SET(x, v)           do { (x) = (((x) & ~0x700) | ((STM32_RCC_CFGR_PPRE1_##v) << 8)); } while(0)
   #define STM32_RCC_CFGR_PPRE1_GET(x)              (((x) >> 8) & 0x7)
-/** APB High speed prescaler (APB2) @multiple */
+    #define STM32_RCC_CFGR_PPRE1_DIV_1               0x00000000
+    #define STM32_RCC_CFGR_PPRE1_DIV_2               0x00000004
+    #define STM32_RCC_CFGR_PPRE1_DIV_4               0x00000005
+    #define STM32_RCC_CFGR_PPRE1_DIV_8               0x00000006
+    #define STM32_RCC_CFGR_PPRE1_DIV_16              0x00000007
   #define STM32_RCC_CFGR_PPRE2_MASK                0x00000007
-  #define STM32_RCC_CFGR_PPRE2(v)                  ((v) << 11)
-  #define STM32_RCC_CFGR_PPRE2_SET(x, v)           do { (x) = (((x) & ~0x3800) | ((v) << 11)); } while(0)
+  #define STM32_RCC_CFGR_PPRE2(v)                  ((STM32_RCC_CFGR_PPRE2_##v) << 11)
+  #define STM32_RCC_CFGR_PPRE2_SET(x, v)           do { (x) = (((x) & ~0x3800) | ((STM32_RCC_CFGR_PPRE2_##v) << 11)); } while(0)
   #define STM32_RCC_CFGR_PPRE2_GET(x)              (((x) >> 11) & 0x7)
-/** ADC prescaler @multiple */
+    #define STM32_RCC_CFGR_PPRE2_DIV_1               0x00000000
+    #define STM32_RCC_CFGR_PPRE2_DIV_2               0x00000004
+    #define STM32_RCC_CFGR_PPRE2_DIV_4               0x00000005
+    #define STM32_RCC_CFGR_PPRE2_DIV_8               0x00000006
+    #define STM32_RCC_CFGR_PPRE2_DIV_16              0x00000007
   #define STM32_RCC_CFGR_ADCPRE_MASK               0x00000003
-  #define STM32_RCC_CFGR_ADCPRE(v)                 ((v) << 14)
-  #define STM32_RCC_CFGR_ADCPRE_SET(x, v)          do { (x) = (((x) & ~0xc000) | ((v) << 14)); } while(0)
+  #define STM32_RCC_CFGR_ADCPRE(v)                 ((STM32_RCC_CFGR_ADCPRE_##v) << 14)
+  #define STM32_RCC_CFGR_ADCPRE_SET(x, v)          do { (x) = (((x) & ~0xc000) | ((STM32_RCC_CFGR_ADCPRE_##v) << 14)); } while(0)
   #define STM32_RCC_CFGR_ADCPRE_GET(x)             (((x) >> 14) & 0x3)
-/** PLL entry clock source @multiple */
+    #define STM32_RCC_CFGR_ADCPRE_DIV_2              0x00000000
+    #define STM32_RCC_CFGR_ADCPRE_DIV_4              0x00000001
+    #define STM32_RCC_CFGR_ADCPRE_DIV_6              0x00000002
+    #define STM32_RCC_CFGR_ADCPRE_DIV_8              0x00000003
   #define STM32_RCC_CFGR_PLLSRC_MASK               0x00000001
-  #define STM32_RCC_CFGR_PLLSRC                    0x00010000
-  #define STM32_RCC_CFGR_PLLSRC_SET(x, v)          do { (x) = (((x) & ~0x10000) | ((v) << 16)); } while(0)
+  #define STM32_RCC_CFGR_PLLSRC(v)                 ((STM32_RCC_CFGR_PLLSRC_##v) << 16)
+  #define STM32_RCC_CFGR_PLLSRC_SET(x, v)          do { (x) = (((x) & ~0x10000) | ((STM32_RCC_CFGR_PLLSRC_##v) << 16)); } while(0)
   #define STM32_RCC_CFGR_PLLSRC_GET(x)             (((x) >> 16) & 0x1)
-/** HSE divider for PLL entry @multiple */
+    #define STM32_RCC_CFGR_PLLSRC_HSI                0x00000000
+    #define STM32_RCC_CFGR_PLLSRC_HSE                0x00000001
   #define STM32_RCC_CFGR_PLLXTPRE_MASK             0x00000001
-  #define STM32_RCC_CFGR_PLLXTPRE                  0x00020000
-  #define STM32_RCC_CFGR_PLLXTPRE_SET(x, v)        do { (x) = (((x) & ~0x20000) | ((v) << 17)); } while(0)
+  #define STM32_RCC_CFGR_PLLXTPRE(v)               ((STM32_RCC_CFGR_PLLXTPRE_##v) << 17)
+  #define STM32_RCC_CFGR_PLLXTPRE_SET(x, v)        do { (x) = (((x) & ~0x20000) | ((STM32_RCC_CFGR_PLLXTPRE_##v) << 17)); } while(0)
   #define STM32_RCC_CFGR_PLLXTPRE_GET(x)           (((x) >> 17) & 0x1)
-/** PLL Multiplication Factor @multiple */
+    #define STM32_RCC_CFGR_PLLXTPRE_DIV_1            0x00000000
+    #define STM32_RCC_CFGR_PLLXTPRE_DIV_2            0x00000001
   #define STM32_RCC_CFGR_PLLMUL_MASK               0x0000000f
-  #define STM32_RCC_CFGR_PLLMUL(v)                 ((v) << 18)
-  #define STM32_RCC_CFGR_PLLMUL_SET(x, v)          do { (x) = (((x) & ~0x3c0000) | ((v) << 18)); } while(0)
+  #define STM32_RCC_CFGR_PLLMUL(v)                 ((STM32_RCC_CFGR_PLLMUL_##v) << 18)
+  #define STM32_RCC_CFGR_PLLMUL_SET(x, v)          do { (x) = (((x) & ~0x3c0000) | ((STM32_RCC_CFGR_PLLMUL_##v) << 18)); } while(0)
   #define STM32_RCC_CFGR_PLLMUL_GET(x)             (((x) >> 18) & 0xf)
-/** USB OTG FS prescaler @multiple */
-  #define STM32_RCC_CFGR_OTGFSPRE_MASK             0x00000001
-  #define STM32_RCC_CFGR_OTGFSPRE                  0x00400000
-  #define STM32_RCC_CFGR_OTGFSPRE_SET(x, v)        do { (x) = (((x) & ~0x400000) | ((v) << 22)); } while(0)
-  #define STM32_RCC_CFGR_OTGFSPRE_GET(x)           (((x) >> 22) & 0x1)
-/** Microcontroller clock output @multiple */
-  #define STM32_RCC_CFGR_MCO_MASK                  0x00000007
-  #define STM32_RCC_CFGR_MCO(v)                    ((v) << 24)
-  #define STM32_RCC_CFGR_MCO_SET(x, v)             do { (x) = (((x) & ~0x7000000) | ((v) << 24)); } while(0)
-  #define STM32_RCC_CFGR_MCO_GET(x)                (((x) >> 24) & 0x7)
+    #define STM32_RCC_CFGR_PLLMUL_MUL_2              0x00000000
+    #define STM32_RCC_CFGR_PLLMUL_MUL_3              0x00000001
+    #define STM32_RCC_CFGR_PLLMUL_MUL_4              0x00000002
+    #define STM32_RCC_CFGR_PLLMUL_MUL_5              0x00000003
+    #define STM32_RCC_CFGR_PLLMUL_MUL_6              0x00000004
+    #define STM32_RCC_CFGR_PLLMUL_MUL_7              0x00000005
+    #define STM32_RCC_CFGR_PLLMUL_MUL_8              0x00000006
+    #define STM32_RCC_CFGR_PLLMUL_MUL_9              0x00000007
+    #define STM32_RCC_CFGR_PLLMUL_MUL_10             0x00000008
+    #define STM32_RCC_CFGR_PLLMUL_MUL_11             0x00000009
+    #define STM32_RCC_CFGR_PLLMUL_MUL_12             0x0000000a
+    #define STM32_RCC_CFGR_PLLMUL_MUL_13             0x0000000b
+    #define STM32_RCC_CFGR_PLLMUL_MUL_14             0x0000000c
+    #define STM32_RCC_CFGR_PLLMUL_MUL_15             0x0000000d
+    #define STM32_RCC_CFGR_PLLMUL_MUL_16             0x0000000e
+  #define STM32_RCC_CFGR_USBPRE_MASK               0x00000001
+  #define STM32_RCC_CFGR_USBPRE(v)                 ((STM32_RCC_CFGR_USBPRE_##v) << 22)
+  #define STM32_RCC_CFGR_USBPRE_SET(x, v)          do { (x) = (((x) & ~0x400000) | ((STM32_RCC_CFGR_USBPRE_##v) << 22)); } while(0)
+  #define STM32_RCC_CFGR_USBPRE_GET(x)             (((x) >> 22) & 0x1)
+    #define STM32_RCC_CFGR_USBPRE_DIV_1_5            0x00000000
+    #define STM32_RCC_CFGR_USBPRE_DIV_1              0x00000001
+  #define STM32_RCC_CFGR_MCO_MASK                  0x0000000f
+  #define STM32_RCC_CFGR_MCO(v)                    ((STM32_RCC_CFGR_MCO_##v) << 24)
+  #define STM32_RCC_CFGR_MCO_SET(x, v)             do { (x) = (((x) & ~0xf000000) | ((STM32_RCC_CFGR_MCO_##v) << 24)); } while(0)
+  #define STM32_RCC_CFGR_MCO_GET(x)                (((x) >> 24) & 0xf)
+    #define STM32_RCC_CFGR_MCO_NO_CLOCK              0x00000000
+    #define STM32_RCC_CFGR_MCO_SYSCLK                0x00000004
+    #define STM32_RCC_CFGR_MCO_HSI                   0x00000005
+    #define STM32_RCC_CFGR_MCO_HSE                   0x00000006
+    #define STM32_RCC_CFGR_MCO_PLL_DIV_2             0x00000007
 
-/** Clock interrupt register (RCC_CIR) @multiple */
 #define STM32_RCC_CIR_ADDR                           0x00000008
-/** LSI Ready Interrupt flag @multiple */
+#define STM32_RCC_CIR_MASK                           0x009f1f9f
   #define STM32_RCC_CIR_LSIRDYF_MASK               0x00000001
   #define STM32_RCC_CIR_LSIRDYF                    0x00000001
   #define STM32_RCC_CIR_LSIRDYF_SET(x, v)          do { (x) = (((x) & ~0x1) | ((v) << 0)); } while(0)
   #define STM32_RCC_CIR_LSIRDYF_GET(x)             (((x) >> 0) & 0x1)
-/** LSE Ready Interrupt flag @multiple */
   #define STM32_RCC_CIR_LSERDYF_MASK               0x00000001
   #define STM32_RCC_CIR_LSERDYF                    0x00000002
   #define STM32_RCC_CIR_LSERDYF_SET(x, v)          do { (x) = (((x) & ~0x2) | ((v) << 1)); } while(0)
   #define STM32_RCC_CIR_LSERDYF_GET(x)             (((x) >> 1) & 0x1)
-/** HSI Ready Interrupt flag @multiple */
   #define STM32_RCC_CIR_HSIRDYF_MASK               0x00000001
   #define STM32_RCC_CIR_HSIRDYF                    0x00000004
   #define STM32_RCC_CIR_HSIRDYF_SET(x, v)          do { (x) = (((x) & ~0x4) | ((v) << 2)); } while(0)
   #define STM32_RCC_CIR_HSIRDYF_GET(x)             (((x) >> 2) & 0x1)
-/** HSE Ready Interrupt flag @multiple */
   #define STM32_RCC_CIR_HSERDYF_MASK               0x00000001
   #define STM32_RCC_CIR_HSERDYF                    0x00000008
   #define STM32_RCC_CIR_HSERDYF_SET(x, v)          do { (x) = (((x) & ~0x8) | ((v) << 3)); } while(0)
   #define STM32_RCC_CIR_HSERDYF_GET(x)             (((x) >> 3) & 0x1)
-/** PLL Ready Interrupt flag @multiple */
   #define STM32_RCC_CIR_PLLRDYF_MASK               0x00000001
   #define STM32_RCC_CIR_PLLRDYF                    0x00000010
   #define STM32_RCC_CIR_PLLRDYF_SET(x, v)          do { (x) = (((x) & ~0x10) | ((v) << 4)); } while(0)
   #define STM32_RCC_CIR_PLLRDYF_GET(x)             (((x) >> 4) & 0x1)
-# if CONFIG_STM32_SERIES == 105 || CONFIG_STM32_SERIES == 107
-/** PLL2 Ready Interrupt flag @multiple */
-  #define STM32_RCC_CIR_PLL2RDYF_MASK              0x00000001
-  #define STM32_RCC_CIR_PLL2RDYF                   0x00000020
-  #define STM32_RCC_CIR_PLL2RDYF_SET(x, v)         do { (x) = (((x) & ~0x20) | ((v) << 5)); } while(0)
-  #define STM32_RCC_CIR_PLL2RDYF_GET(x)            (((x) >> 5) & 0x1)
-/** PLL3 Ready Interrupt flag @multiple */
-  #define STM32_RCC_CIR_PLL3RDYF_MASK              0x00000001
-  #define STM32_RCC_CIR_PLL3RDYF                   0x00000040
-  #define STM32_RCC_CIR_PLL3RDYF_SET(x, v)         do { (x) = (((x) & ~0x40) | ((v) << 6)); } while(0)
-  #define STM32_RCC_CIR_PLL3RDYF_GET(x)            (((x) >> 6) & 0x1)
-# endif
-/** Clock Security System Interrupt flag @multiple */
   #define STM32_RCC_CIR_CSSF_MASK                  0x00000001
   #define STM32_RCC_CIR_CSSF                       0x00000080
   #define STM32_RCC_CIR_CSSF_SET(x, v)             do { (x) = (((x) & ~0x80) | ((v) << 7)); } while(0)
   #define STM32_RCC_CIR_CSSF_GET(x)                (((x) >> 7) & 0x1)
-/** LSI Ready Interrupt Enable @multiple */
   #define STM32_RCC_CIR_LSIRDYIE_MASK              0x00000001
   #define STM32_RCC_CIR_LSIRDYIE                   0x00000100
   #define STM32_RCC_CIR_LSIRDYIE_SET(x, v)         do { (x) = (((x) & ~0x100) | ((v) << 8)); } while(0)
   #define STM32_RCC_CIR_LSIRDYIE_GET(x)            (((x) >> 8) & 0x1)
-/** LSE Ready Interrupt Enable @multiple */
   #define STM32_RCC_CIR_LSERDYIE_MASK              0x00000001
   #define STM32_RCC_CIR_LSERDYIE                   0x00000200
   #define STM32_RCC_CIR_LSERDYIE_SET(x, v)         do { (x) = (((x) & ~0x200) | ((v) << 9)); } while(0)
   #define STM32_RCC_CIR_LSERDYIE_GET(x)            (((x) >> 9) & 0x1)
-/** HSI Ready Interrupt Enable @multiple */
   #define STM32_RCC_CIR_HSIRDYIE_MASK              0x00000001
   #define STM32_RCC_CIR_HSIRDYIE                   0x00000400
   #define STM32_RCC_CIR_HSIRDYIE_SET(x, v)         do { (x) = (((x) & ~0x400) | ((v) << 10)); } while(0)
   #define STM32_RCC_CIR_HSIRDYIE_GET(x)            (((x) >> 10) & 0x1)
-/** HSE Ready Interrupt Enable @multiple */
   #define STM32_RCC_CIR_HSERDYIE_MASK              0x00000001
   #define STM32_RCC_CIR_HSERDYIE                   0x00000800
   #define STM32_RCC_CIR_HSERDYIE_SET(x, v)         do { (x) = (((x) & ~0x800) | ((v) << 11)); } while(0)
   #define STM32_RCC_CIR_HSERDYIE_GET(x)            (((x) >> 11) & 0x1)
-/** PLL Ready Interrupt Enable @multiple */
   #define STM32_RCC_CIR_PLLRDYIE_MASK              0x00000001
   #define STM32_RCC_CIR_PLLRDYIE                   0x00001000
   #define STM32_RCC_CIR_PLLRDYIE_SET(x, v)         do { (x) = (((x) & ~0x1000) | ((v) << 12)); } while(0)
   #define STM32_RCC_CIR_PLLRDYIE_GET(x)            (((x) >> 12) & 0x1)
-# if CONFIG_STM32_SERIES == 105 || CONFIG_STM32_SERIES == 107
-/** PLL2 Ready Interrupt Enable @multiple */
-  #define STM32_RCC_CIR_PLL2RDYIE_MASK             0x00000001
-  #define STM32_RCC_CIR_PLL2RDYIE                  0x00002000
-  #define STM32_RCC_CIR_PLL2RDYIE_SET(x, v)        do { (x) = (((x) & ~0x2000) | ((v) << 13)); } while(0)
-  #define STM32_RCC_CIR_PLL2RDYIE_GET(x)           (((x) >> 13) & 0x1)
-/** PLL3 Ready Interrupt Enable @multiple */
-  #define STM32_RCC_CIR_PLL3RDYIE_MASK             0x00000001
-  #define STM32_RCC_CIR_PLL3RDYIE                  0x00004000
-  #define STM32_RCC_CIR_PLL3RDYIE_SET(x, v)        do { (x) = (((x) & ~0x4000) | ((v) << 14)); } while(0)
-  #define STM32_RCC_CIR_PLL3RDYIE_GET(x)           (((x) >> 14) & 0x1)
-# endif
-/** LSI Ready Interrupt Clear @multiple */
   #define STM32_RCC_CIR_LSIRDYC_MASK               0x00000001
   #define STM32_RCC_CIR_LSIRDYC                    0x00010000
   #define STM32_RCC_CIR_LSIRDYC_SET(x, v)          do { (x) = (((x) & ~0x10000) | ((v) << 16)); } while(0)
   #define STM32_RCC_CIR_LSIRDYC_GET(x)             (((x) >> 16) & 0x1)
-/** LSE Ready Interrupt Clear @multiple */
   #define STM32_RCC_CIR_LSERDYC_MASK               0x00000001
   #define STM32_RCC_CIR_LSERDYC                    0x00020000
   #define STM32_RCC_CIR_LSERDYC_SET(x, v)          do { (x) = (((x) & ~0x20000) | ((v) << 17)); } while(0)
   #define STM32_RCC_CIR_LSERDYC_GET(x)             (((x) >> 17) & 0x1)
-/** HSI Ready Interrupt Clear @multiple */
   #define STM32_RCC_CIR_HSIRDYC_MASK               0x00000001
   #define STM32_RCC_CIR_HSIRDYC                    0x00040000
   #define STM32_RCC_CIR_HSIRDYC_SET(x, v)          do { (x) = (((x) & ~0x40000) | ((v) << 18)); } while(0)
   #define STM32_RCC_CIR_HSIRDYC_GET(x)             (((x) >> 18) & 0x1)
-/** HSE Ready Interrupt Clear @multiple */
   #define STM32_RCC_CIR_HSERDYC_MASK               0x00000001
   #define STM32_RCC_CIR_HSERDYC                    0x00080000
   #define STM32_RCC_CIR_HSERDYC_SET(x, v)          do { (x) = (((x) & ~0x80000) | ((v) << 19)); } while(0)
   #define STM32_RCC_CIR_HSERDYC_GET(x)             (((x) >> 19) & 0x1)
-/** PLL Ready Interrupt Clear @multiple */
   #define STM32_RCC_CIR_PLLRDYC_MASK               0x00000001
   #define STM32_RCC_CIR_PLLRDYC                    0x00100000
   #define STM32_RCC_CIR_PLLRDYC_SET(x, v)          do { (x) = (((x) & ~0x100000) | ((v) << 20)); } while(0)
   #define STM32_RCC_CIR_PLLRDYC_GET(x)             (((x) >> 20) & 0x1)
-/** Clock security system interrupt clear @multiple */
   #define STM32_RCC_CIR_CSSC_MASK                  0x00000001
   #define STM32_RCC_CIR_CSSC                       0x00800000
   #define STM32_RCC_CIR_CSSC_SET(x, v)             do { (x) = (((x) & ~0x800000) | ((v) << 23)); } while(0)
   #define STM32_RCC_CIR_CSSC_GET(x)                (((x) >> 23) & 0x1)
 
-/** APB2 peripheral reset register (RCC_APB2RSTR) @multiple */
 #define STM32_RCC_APB2RSTR_ADDR                      0x0000000c
-/** Alternate function I/O reset @multiple */
+#define STM32_RCC_APB2RSTR_MASK                      0x0038fffd
   #define STM32_RCC_APB2RSTR_AFIORST_MASK          0x00000001
   #define STM32_RCC_APB2RSTR_AFIORST               0x00000001
   #define STM32_RCC_APB2RSTR_AFIORST_SET(x, v)     do { (x) = (((x) & ~0x1) | ((v) << 0)); } while(0)
   #define STM32_RCC_APB2RSTR_AFIORST_GET(x)        (((x) >> 0) & 0x1)
-/** IO port A reset @multiple */
   #define STM32_RCC_APB2RSTR_IOPARST_MASK          0x00000001
   #define STM32_RCC_APB2RSTR_IOPARST               0x00000004
   #define STM32_RCC_APB2RSTR_IOPARST_SET(x, v)     do { (x) = (((x) & ~0x4) | ((v) << 2)); } while(0)
   #define STM32_RCC_APB2RSTR_IOPARST_GET(x)        (((x) >> 2) & 0x1)
-/** IO port B reset @multiple */
   #define STM32_RCC_APB2RSTR_IOPBRST_MASK          0x00000001
   #define STM32_RCC_APB2RSTR_IOPBRST               0x00000008
   #define STM32_RCC_APB2RSTR_IOPBRST_SET(x, v)     do { (x) = (((x) & ~0x8) | ((v) << 3)); } while(0)
   #define STM32_RCC_APB2RSTR_IOPBRST_GET(x)        (((x) >> 3) & 0x1)
-/** IO port C reset @multiple */
   #define STM32_RCC_APB2RSTR_IOPCRST_MASK          0x00000001
   #define STM32_RCC_APB2RSTR_IOPCRST               0x00000010
   #define STM32_RCC_APB2RSTR_IOPCRST_SET(x, v)     do { (x) = (((x) & ~0x10) | ((v) << 4)); } while(0)
   #define STM32_RCC_APB2RSTR_IOPCRST_GET(x)        (((x) >> 4) & 0x1)
-/** IO port D reset @multiple */
   #define STM32_RCC_APB2RSTR_IOPDRST_MASK          0x00000001
   #define STM32_RCC_APB2RSTR_IOPDRST               0x00000020
   #define STM32_RCC_APB2RSTR_IOPDRST_SET(x, v)     do { (x) = (((x) & ~0x20) | ((v) << 5)); } while(0)
   #define STM32_RCC_APB2RSTR_IOPDRST_GET(x)        (((x) >> 5) & 0x1)
-/** IO port E reset @multiple */
   #define STM32_RCC_APB2RSTR_IOPERST_MASK          0x00000001
   #define STM32_RCC_APB2RSTR_IOPERST               0x00000040
   #define STM32_RCC_APB2RSTR_IOPERST_SET(x, v)     do { (x) = (((x) & ~0x40) | ((v) << 6)); } while(0)
   #define STM32_RCC_APB2RSTR_IOPERST_GET(x)        (((x) >> 6) & 0x1)
-/** IO port F reset @multiple */
   #define STM32_RCC_APB2RSTR_IOPFRST_MASK          0x00000001
   #define STM32_RCC_APB2RSTR_IOPFRST               0x00000080
   #define STM32_RCC_APB2RSTR_IOPFRST_SET(x, v)     do { (x) = (((x) & ~0x80) | ((v) << 7)); } while(0)
   #define STM32_RCC_APB2RSTR_IOPFRST_GET(x)        (((x) >> 7) & 0x1)
-/** IO port G reset @multiple */
   #define STM32_RCC_APB2RSTR_IOPGRST_MASK          0x00000001
   #define STM32_RCC_APB2RSTR_IOPGRST               0x00000100
   #define STM32_RCC_APB2RSTR_IOPGRST_SET(x, v)     do { (x) = (((x) & ~0x100) | ((v) << 8)); } while(0)
   #define STM32_RCC_APB2RSTR_IOPGRST_GET(x)        (((x) >> 8) & 0x1)
-/** ADC 1 interface reset @multiple */
   #define STM32_RCC_APB2RSTR_ADC1RST_MASK          0x00000001
   #define STM32_RCC_APB2RSTR_ADC1RST               0x00000200
   #define STM32_RCC_APB2RSTR_ADC1RST_SET(x, v)     do { (x) = (((x) & ~0x200) | ((v) << 9)); } while(0)
   #define STM32_RCC_APB2RSTR_ADC1RST_GET(x)        (((x) >> 9) & 0x1)
-/** ADC 2 interface reset @multiple */
   #define STM32_RCC_APB2RSTR_ADC2RST_MASK          0x00000001
   #define STM32_RCC_APB2RSTR_ADC2RST               0x00000400
   #define STM32_RCC_APB2RSTR_ADC2RST_SET(x, v)     do { (x) = (((x) & ~0x400) | ((v) << 10)); } while(0)
   #define STM32_RCC_APB2RSTR_ADC2RST_GET(x)        (((x) >> 10) & 0x1)
-/** TIM1 timer reset @multiple */
   #define STM32_RCC_APB2RSTR_TIM1RST_MASK          0x00000001
   #define STM32_RCC_APB2RSTR_TIM1RST               0x00000800
   #define STM32_RCC_APB2RSTR_TIM1RST_SET(x, v)     do { (x) = (((x) & ~0x800) | ((v) << 11)); } while(0)
   #define STM32_RCC_APB2RSTR_TIM1RST_GET(x)        (((x) >> 11) & 0x1)
-/** SPI 1 reset @multiple */
   #define STM32_RCC_APB2RSTR_SPI1RST_MASK          0x00000001
   #define STM32_RCC_APB2RSTR_SPI1RST               0x00001000
   #define STM32_RCC_APB2RSTR_SPI1RST_SET(x, v)     do { (x) = (((x) & ~0x1000) | ((v) << 12)); } while(0)
   #define STM32_RCC_APB2RSTR_SPI1RST_GET(x)        (((x) >> 12) & 0x1)
-/** TIM8 timer reset @multiple */
   #define STM32_RCC_APB2RSTR_TIM8RST_MASK          0x00000001
   #define STM32_RCC_APB2RSTR_TIM8RST               0x00002000
   #define STM32_RCC_APB2RSTR_TIM8RST_SET(x, v)     do { (x) = (((x) & ~0x2000) | ((v) << 13)); } while(0)
   #define STM32_RCC_APB2RSTR_TIM8RST_GET(x)        (((x) >> 13) & 0x1)
-/** USART1 reset @multiple */
   #define STM32_RCC_APB2RSTR_USART1RST_MASK        0x00000001
   #define STM32_RCC_APB2RSTR_USART1RST             0x00004000
   #define STM32_RCC_APB2RSTR_USART1RST_SET(x, v)   do { (x) = (((x) & ~0x4000) | ((v) << 14)); } while(0)
   #define STM32_RCC_APB2RSTR_USART1RST_GET(x)      (((x) >> 14) & 0x1)
-/** ADC 3 interface reset @multiple */
   #define STM32_RCC_APB2RSTR_ADC3RST_MASK          0x00000001
   #define STM32_RCC_APB2RSTR_ADC3RST               0x00008000
   #define STM32_RCC_APB2RSTR_ADC3RST_SET(x, v)     do { (x) = (((x) & ~0x8000) | ((v) << 15)); } while(0)
   #define STM32_RCC_APB2RSTR_ADC3RST_GET(x)        (((x) >> 15) & 0x1)
-/** TIM9 timer reset @multiple */
   #define STM32_RCC_APB2RSTR_TIM9RST_MASK          0x00000001
   #define STM32_RCC_APB2RSTR_TIM9RST               0x00080000
   #define STM32_RCC_APB2RSTR_TIM9RST_SET(x, v)     do { (x) = (((x) & ~0x80000) | ((v) << 19)); } while(0)
   #define STM32_RCC_APB2RSTR_TIM9RST_GET(x)        (((x) >> 19) & 0x1)
-/** TIM10 timer reset @multiple */
   #define STM32_RCC_APB2RSTR_TIM10RST_MASK         0x00000001
   #define STM32_RCC_APB2RSTR_TIM10RST              0x00100000
   #define STM32_RCC_APB2RSTR_TIM10RST_SET(x, v)    do { (x) = (((x) & ~0x100000) | ((v) << 20)); } while(0)
   #define STM32_RCC_APB2RSTR_TIM10RST_GET(x)       (((x) >> 20) & 0x1)
-/** TIM11 timer reset @multiple */
   #define STM32_RCC_APB2RSTR_TIM11RST_MASK         0x00000001
   #define STM32_RCC_APB2RSTR_TIM11RST              0x00200000
   #define STM32_RCC_APB2RSTR_TIM11RST_SET(x, v)    do { (x) = (((x) & ~0x200000) | ((v) << 21)); } while(0)
   #define STM32_RCC_APB2RSTR_TIM11RST_GET(x)       (((x) >> 21) & 0x1)
 
-/** APB1 peripheral reset register (RCC_APB1RSTR) @multiple */
-#define STM32_RCC_APB1RSTR_ADDR                      0x00000010
-/** Timer 2 reset @multiple */
-  #define STM32_RCC_APB1RSTR_TIM2RST_MASK          0x00000001
-  #define STM32_RCC_APB1RSTR_TIM2RST               0x00000001
-  #define STM32_RCC_APB1RSTR_TIM2RST_SET(x, v)     do { (x) = (((x) & ~0x1) | ((v) << 0)); } while(0)
-  #define STM32_RCC_APB1RSTR_TIM2RST_GET(x)        (((x) >> 0) & 0x1)
-/** Timer 3 reset @multiple */
-  #define STM32_RCC_APB1RSTR_TIM3RST_MASK          0x00000001
-  #define STM32_RCC_APB1RSTR_TIM3RST               0x00000002
-  #define STM32_RCC_APB1RSTR_TIM3RST_SET(x, v)     do { (x) = (((x) & ~0x2) | ((v) << 1)); } while(0)
-  #define STM32_RCC_APB1RSTR_TIM3RST_GET(x)        (((x) >> 1) & 0x1)
-/** Timer 4 reset @multiple */
-  #define STM32_RCC_APB1RSTR_TIM4RST_MASK          0x00000001
-  #define STM32_RCC_APB1RSTR_TIM4RST               0x00000004
-  #define STM32_RCC_APB1RSTR_TIM4RST_SET(x, v)     do { (x) = (((x) & ~0x4) | ((v) << 2)); } while(0)
-  #define STM32_RCC_APB1RSTR_TIM4RST_GET(x)        (((x) >> 2) & 0x1)
-/** Timer 5 reset @multiple */
-  #define STM32_RCC_APB1RSTR_TIM5RST_MASK          0x00000001
-  #define STM32_RCC_APB1RSTR_TIM5RST               0x00000008
-  #define STM32_RCC_APB1RSTR_TIM5RST_SET(x, v)     do { (x) = (((x) & ~0x8) | ((v) << 3)); } while(0)
-  #define STM32_RCC_APB1RSTR_TIM5RST_GET(x)        (((x) >> 3) & 0x1)
-/** Timer 6 reset @multiple */
-  #define STM32_RCC_APB1RSTR_TIM6RST_MASK          0x00000001
-  #define STM32_RCC_APB1RSTR_TIM6RST               0x00000010
-  #define STM32_RCC_APB1RSTR_TIM6RST_SET(x, v)     do { (x) = (((x) & ~0x10) | ((v) << 4)); } while(0)
-  #define STM32_RCC_APB1RSTR_TIM6RST_GET(x)        (((x) >> 4) & 0x1)
-/** Timer 7 reset @multiple */
-  #define STM32_RCC_APB1RSTR_TIM7RST_MASK          0x00000001
-  #define STM32_RCC_APB1RSTR_TIM7RST               0x00000020
-  #define STM32_RCC_APB1RSTR_TIM7RST_SET(x, v)     do { (x) = (((x) & ~0x20) | ((v) << 5)); } while(0)
-  #define STM32_RCC_APB1RSTR_TIM7RST_GET(x)        (((x) >> 5) & 0x1)
-/** Timer 12 reset @multiple */
-  #define STM32_RCC_APB1RSTR_TIM12RST_MASK         0x00000001
-  #define STM32_RCC_APB1RSTR_TIM12RST              0x00000040
-  #define STM32_RCC_APB1RSTR_TIM12RST_SET(x, v)    do { (x) = (((x) & ~0x40) | ((v) << 6)); } while(0)
-  #define STM32_RCC_APB1RSTR_TIM12RST_GET(x)       (((x) >> 6) & 0x1)
-/** Timer 13 reset @multiple */
-  #define STM32_RCC_APB1RSTR_TIM13RST_MASK         0x00000001
-  #define STM32_RCC_APB1RSTR_TIM13RST              0x00000080
-  #define STM32_RCC_APB1RSTR_TIM13RST_SET(x, v)    do { (x) = (((x) & ~0x80) | ((v) << 7)); } while(0)
-  #define STM32_RCC_APB1RSTR_TIM13RST_GET(x)       (((x) >> 7) & 0x1)
-/** Timer 14 reset @multiple */
-  #define STM32_RCC_APB1RSTR_TIM14RST_MASK         0x00000001
-  #define STM32_RCC_APB1RSTR_TIM14RST              0x00000100
-  #define STM32_RCC_APB1RSTR_TIM14RST_SET(x, v)    do { (x) = (((x) & ~0x100) | ((v) << 8)); } while(0)
-  #define STM32_RCC_APB1RSTR_TIM14RST_GET(x)       (((x) >> 8) & 0x1)
-/** Window watchdog reset @multiple */
-  #define STM32_RCC_APB1RSTR_WWDGRST_MASK          0x00000001
-  #define STM32_RCC_APB1RSTR_WWDGRST               0x00000800
-  #define STM32_RCC_APB1RSTR_WWDGRST_SET(x, v)     do { (x) = (((x) & ~0x800) | ((v) << 11)); } while(0)
-  #define STM32_RCC_APB1RSTR_WWDGRST_GET(x)        (((x) >> 11) & 0x1)
-/** SPI2 reset @multiple */
-  #define STM32_RCC_APB1RSTR_SPI2RST_MASK          0x00000001
-  #define STM32_RCC_APB1RSTR_SPI2RST               0x00004000
-  #define STM32_RCC_APB1RSTR_SPI2RST_SET(x, v)     do { (x) = (((x) & ~0x4000) | ((v) << 14)); } while(0)
-  #define STM32_RCC_APB1RSTR_SPI2RST_GET(x)        (((x) >> 14) & 0x1)
-/** SPI3 reset @multiple */
-  #define STM32_RCC_APB1RSTR_SPI3RST_MASK          0x00000001
-  #define STM32_RCC_APB1RSTR_SPI3RST               0x00008000
-  #define STM32_RCC_APB1RSTR_SPI3RST_SET(x, v)     do { (x) = (((x) & ~0x8000) | ((v) << 15)); } while(0)
-  #define STM32_RCC_APB1RSTR_SPI3RST_GET(x)        (((x) >> 15) & 0x1)
-/** USART 2 reset @multiple */
-  #define STM32_RCC_APB1RSTR_USART2RST_MASK        0x00000001
-  #define STM32_RCC_APB1RSTR_USART2RST             0x00020000
-  #define STM32_RCC_APB1RSTR_USART2RST_SET(x, v)   do { (x) = (((x) & ~0x20000) | ((v) << 17)); } while(0)
-  #define STM32_RCC_APB1RSTR_USART2RST_GET(x)      (((x) >> 17) & 0x1)
-/** USART 3 reset @multiple */
-  #define STM32_RCC_APB1RSTR_USART3RST_MASK        0x00000001
-  #define STM32_RCC_APB1RSTR_USART3RST             0x00040000
-  #define STM32_RCC_APB1RSTR_USART3RST_SET(x, v)   do { (x) = (((x) & ~0x40000) | ((v) << 18)); } while(0)
-  #define STM32_RCC_APB1RSTR_USART3RST_GET(x)      (((x) >> 18) & 0x1)
-/** UART 4 reset @multiple */
-  #define STM32_RCC_APB1RSTR_UART4RST_MASK         0x00000001
-  #define STM32_RCC_APB1RSTR_UART4RST              0x00080000
-  #define STM32_RCC_APB1RSTR_UART4RST_SET(x, v)    do { (x) = (((x) & ~0x80000) | ((v) << 19)); } while(0)
-  #define STM32_RCC_APB1RSTR_UART4RST_GET(x)       (((x) >> 19) & 0x1)
-/** UART 5 reset @multiple */
-  #define STM32_RCC_APB1RSTR_UART5RST_MASK         0x00000001
-  #define STM32_RCC_APB1RSTR_UART5RST              0x00100000
-  #define STM32_RCC_APB1RSTR_UART5RST_SET(x, v)    do { (x) = (((x) & ~0x100000) | ((v) << 20)); } while(0)
-  #define STM32_RCC_APB1RSTR_UART5RST_GET(x)       (((x) >> 20) & 0x1)
-/** I2C1 reset @multiple */
-  #define STM32_RCC_APB1RSTR_I2C1RST_MASK          0x00000001
-  #define STM32_RCC_APB1RSTR_I2C1RST               0x00200000
-  #define STM32_RCC_APB1RSTR_I2C1RST_SET(x, v)     do { (x) = (((x) & ~0x200000) | ((v) << 21)); } while(0)
-  #define STM32_RCC_APB1RSTR_I2C1RST_GET(x)        (((x) >> 21) & 0x1)
-/** I2C2 reset @multiple */
-  #define STM32_RCC_APB1RSTR_I2C2RST_MASK          0x00000001
-  #define STM32_RCC_APB1RSTR_I2C2RST               0x00400000
-  #define STM32_RCC_APB1RSTR_I2C2RST_SET(x, v)     do { (x) = (((x) & ~0x400000) | ((v) << 22)); } while(0)
-  #define STM32_RCC_APB1RSTR_I2C2RST_GET(x)        (((x) >> 22) & 0x1)
-/** USB reset @multiple */
-  #define STM32_RCC_APB1RSTR_USBRST_MASK           0x00000001
-  #define STM32_RCC_APB1RSTR_USBRST                0x00800000
-  #define STM32_RCC_APB1RSTR_USBRST_SET(x, v)      do { (x) = (((x) & ~0x800000) | ((v) << 23)); } while(0)
-  #define STM32_RCC_APB1RSTR_USBRST_GET(x)         (((x) >> 23) & 0x1)
-/** CAN reset @multiple */
-  #define STM32_RCC_APB1RSTR_CANRST_MASK           0x00000001
-  #define STM32_RCC_APB1RSTR_CANRST                0x02000000
-  #define STM32_RCC_APB1RSTR_CANRST_SET(x, v)      do { (x) = (((x) & ~0x2000000) | ((v) << 25)); } while(0)
-  #define STM32_RCC_APB1RSTR_CANRST_GET(x)         (((x) >> 25) & 0x1)
-/** Backup interface reset @multiple */
-  #define STM32_RCC_APB1RSTR_BKPRST_MASK           0x00000001
-  #define STM32_RCC_APB1RSTR_BKPRST                0x08000000
-  #define STM32_RCC_APB1RSTR_BKPRST_SET(x, v)      do { (x) = (((x) & ~0x8000000) | ((v) << 27)); } while(0)
-  #define STM32_RCC_APB1RSTR_BKPRST_GET(x)         (((x) >> 27) & 0x1)
-/** Power interface reset @multiple */
-  #define STM32_RCC_APB1RSTR_PWRRST_MASK           0x00000001
-  #define STM32_RCC_APB1RSTR_PWRRST                0x10000000
-  #define STM32_RCC_APB1RSTR_PWRRST_SET(x, v)      do { (x) = (((x) & ~0x10000000) | ((v) << 28)); } while(0)
-  #define STM32_RCC_APB1RSTR_PWRRST_GET(x)         (((x) >> 28) & 0x1)
-/** DAC interface reset @multiple */
-  #define STM32_RCC_APB1RSTR_DACRST_MASK           0x00000001
-  #define STM32_RCC_APB1RSTR_DACRST                0x20000000
-  #define STM32_RCC_APB1RSTR_DACRST_SET(x, v)      do { (x) = (((x) & ~0x20000000) | ((v) << 29)); } while(0)
-  #define STM32_RCC_APB1RSTR_DACRST_GET(x)         (((x) >> 29) & 0x1)
+#define STM32_RCC_APB1RST_ADDR                       0x00000010
+#define STM32_RCC_APB1RST_MASK                       0x00000000
 
-/** AHB Peripheral Clock enable register (RCC_AHBENR) @multiple */
 #define STM32_RCC_AHBENR_ADDR                        0x00000014
-/** DMA1 clock enable @multiple */
+#define STM32_RCC_AHBENR_MASK                        0x00000557
   #define STM32_RCC_AHBENR_DMA1EN_MASK             0x00000001
   #define STM32_RCC_AHBENR_DMA1EN                  0x00000001
   #define STM32_RCC_AHBENR_DMA1EN_SET(x, v)        do { (x) = (((x) & ~0x1) | ((v) << 0)); } while(0)
   #define STM32_RCC_AHBENR_DMA1EN_GET(x)           (((x) >> 0) & 0x1)
-/** DMA2 clock enable @multiple */
   #define STM32_RCC_AHBENR_DMA2EN_MASK             0x00000001
   #define STM32_RCC_AHBENR_DMA2EN                  0x00000002
   #define STM32_RCC_AHBENR_DMA2EN_SET(x, v)        do { (x) = (((x) & ~0x2) | ((v) << 1)); } while(0)
   #define STM32_RCC_AHBENR_DMA2EN_GET(x)           (((x) >> 1) & 0x1)
-/** SRAM interface clock enable @multiple */
   #define STM32_RCC_AHBENR_SRAMEN_MASK             0x00000001
   #define STM32_RCC_AHBENR_SRAMEN                  0x00000004
   #define STM32_RCC_AHBENR_SRAMEN_SET(x, v)        do { (x) = (((x) & ~0x4) | ((v) << 2)); } while(0)
   #define STM32_RCC_AHBENR_SRAMEN_GET(x)           (((x) >> 2) & 0x1)
-/** FLITF clock enable @multiple */
   #define STM32_RCC_AHBENR_FLITFEN_MASK            0x00000001
   #define STM32_RCC_AHBENR_FLITFEN                 0x00000010
   #define STM32_RCC_AHBENR_FLITFEN_SET(x, v)       do { (x) = (((x) & ~0x10) | ((v) << 4)); } while(0)
   #define STM32_RCC_AHBENR_FLITFEN_GET(x)          (((x) >> 4) & 0x1)
-/** CRC clock enable @multiple */
   #define STM32_RCC_AHBENR_CRCEN_MASK              0x00000001
   #define STM32_RCC_AHBENR_CRCEN                   0x00000040
   #define STM32_RCC_AHBENR_CRCEN_SET(x, v)         do { (x) = (((x) & ~0x40) | ((v) << 6)); } while(0)
   #define STM32_RCC_AHBENR_CRCEN_GET(x)            (((x) >> 6) & 0x1)
-/** FSMC clock enable @multiple */
   #define STM32_RCC_AHBENR_FSMCEN_MASK             0x00000001
   #define STM32_RCC_AHBENR_FSMCEN                  0x00000100
   #define STM32_RCC_AHBENR_FSMCEN_SET(x, v)        do { (x) = (((x) & ~0x100) | ((v) << 8)); } while(0)
   #define STM32_RCC_AHBENR_FSMCEN_GET(x)           (((x) >> 8) & 0x1)
-/** SDIO clock enable @multiple */
   #define STM32_RCC_AHBENR_SDIOEN_MASK             0x00000001
   #define STM32_RCC_AHBENR_SDIOEN                  0x00000400
   #define STM32_RCC_AHBENR_SDIOEN_SET(x, v)        do { (x) = (((x) & ~0x400) | ((v) << 10)); } while(0)
   #define STM32_RCC_AHBENR_SDIOEN_GET(x)           (((x) >> 10) & 0x1)
 
-/** APB2 peripheral clock enable register (RCC_APB2ENR) @multiple */
 #define STM32_RCC_APB2ENR_ADDR                       0x00000018
-/** Alternate function I/O clock enable @multiple */
+#define STM32_RCC_APB2ENR_MASK                       0x0038fffd
   #define STM32_RCC_APB2ENR_AFIOEN_MASK            0x00000001
   #define STM32_RCC_APB2ENR_AFIOEN                 0x00000001
   #define STM32_RCC_APB2ENR_AFIOEN_SET(x, v)       do { (x) = (((x) & ~0x1) | ((v) << 0)); } while(0)
   #define STM32_RCC_APB2ENR_AFIOEN_GET(x)          (((x) >> 0) & 0x1)
-/** I/O port A clock enable @multiple */
   #define STM32_RCC_APB2ENR_IOPAEN_MASK            0x00000001
   #define STM32_RCC_APB2ENR_IOPAEN                 0x00000004
   #define STM32_RCC_APB2ENR_IOPAEN_SET(x, v)       do { (x) = (((x) & ~0x4) | ((v) << 2)); } while(0)
   #define STM32_RCC_APB2ENR_IOPAEN_GET(x)          (((x) >> 2) & 0x1)
-/** I/O port B clock enable @multiple */
   #define STM32_RCC_APB2ENR_IOPBEN_MASK            0x00000001
   #define STM32_RCC_APB2ENR_IOPBEN                 0x00000008
   #define STM32_RCC_APB2ENR_IOPBEN_SET(x, v)       do { (x) = (((x) & ~0x8) | ((v) << 3)); } while(0)
   #define STM32_RCC_APB2ENR_IOPBEN_GET(x)          (((x) >> 3) & 0x1)
-/** I/O port C clock enable @multiple */
   #define STM32_RCC_APB2ENR_IOPCEN_MASK            0x00000001
   #define STM32_RCC_APB2ENR_IOPCEN                 0x00000010
   #define STM32_RCC_APB2ENR_IOPCEN_SET(x, v)       do { (x) = (((x) & ~0x10) | ((v) << 4)); } while(0)
   #define STM32_RCC_APB2ENR_IOPCEN_GET(x)          (((x) >> 4) & 0x1)
-/** I/O port D clock enable @multiple */
   #define STM32_RCC_APB2ENR_IOPDEN_MASK            0x00000001
   #define STM32_RCC_APB2ENR_IOPDEN                 0x00000020
   #define STM32_RCC_APB2ENR_IOPDEN_SET(x, v)       do { (x) = (((x) & ~0x20) | ((v) << 5)); } while(0)
   #define STM32_RCC_APB2ENR_IOPDEN_GET(x)          (((x) >> 5) & 0x1)
-/** I/O port E clock enable @multiple */
   #define STM32_RCC_APB2ENR_IOPEEN_MASK            0x00000001
   #define STM32_RCC_APB2ENR_IOPEEN                 0x00000040
   #define STM32_RCC_APB2ENR_IOPEEN_SET(x, v)       do { (x) = (((x) & ~0x40) | ((v) << 6)); } while(0)
   #define STM32_RCC_APB2ENR_IOPEEN_GET(x)          (((x) >> 6) & 0x1)
-/** I/O port F clock enable @multiple */
   #define STM32_RCC_APB2ENR_IOPFEN_MASK            0x00000001
   #define STM32_RCC_APB2ENR_IOPFEN                 0x00000080
   #define STM32_RCC_APB2ENR_IOPFEN_SET(x, v)       do { (x) = (((x) & ~0x80) | ((v) << 7)); } while(0)
   #define STM32_RCC_APB2ENR_IOPFEN_GET(x)          (((x) >> 7) & 0x1)
-/** I/O port G clock enable @multiple */
   #define STM32_RCC_APB2ENR_IOPGEN_MASK            0x00000001
   #define STM32_RCC_APB2ENR_IOPGEN                 0x00000100
   #define STM32_RCC_APB2ENR_IOPGEN_SET(x, v)       do { (x) = (((x) & ~0x100) | ((v) << 8)); } while(0)
   #define STM32_RCC_APB2ENR_IOPGEN_GET(x)          (((x) >> 8) & 0x1)
-/** ADC 1 interface clock enable @multiple */
   #define STM32_RCC_APB2ENR_ADC1EN_MASK            0x00000001
   #define STM32_RCC_APB2ENR_ADC1EN                 0x00000200
   #define STM32_RCC_APB2ENR_ADC1EN_SET(x, v)       do { (x) = (((x) & ~0x200) | ((v) << 9)); } while(0)
   #define STM32_RCC_APB2ENR_ADC1EN_GET(x)          (((x) >> 9) & 0x1)
-/** ADC 2 interface clock enable @multiple */
   #define STM32_RCC_APB2ENR_ADC2EN_MASK            0x00000001
   #define STM32_RCC_APB2ENR_ADC2EN                 0x00000400
   #define STM32_RCC_APB2ENR_ADC2EN_SET(x, v)       do { (x) = (((x) & ~0x400) | ((v) << 10)); } while(0)
   #define STM32_RCC_APB2ENR_ADC2EN_GET(x)          (((x) >> 10) & 0x1)
-/** TIM1 Timer clock enable @multiple */
   #define STM32_RCC_APB2ENR_TIM1EN_MASK            0x00000001
   #define STM32_RCC_APB2ENR_TIM1EN                 0x00000800
   #define STM32_RCC_APB2ENR_TIM1EN_SET(x, v)       do { (x) = (((x) & ~0x800) | ((v) << 11)); } while(0)
   #define STM32_RCC_APB2ENR_TIM1EN_GET(x)          (((x) >> 11) & 0x1)
-/** SPI 1 clock enable @multiple */
   #define STM32_RCC_APB2ENR_SPI1EN_MASK            0x00000001
   #define STM32_RCC_APB2ENR_SPI1EN                 0x00001000
   #define STM32_RCC_APB2ENR_SPI1EN_SET(x, v)       do { (x) = (((x) & ~0x1000) | ((v) << 12)); } while(0)
   #define STM32_RCC_APB2ENR_SPI1EN_GET(x)          (((x) >> 12) & 0x1)
-/** TIM8 Timer clock enable @multiple */
   #define STM32_RCC_APB2ENR_TIM8EN_MASK            0x00000001
   #define STM32_RCC_APB2ENR_TIM8EN                 0x00002000
   #define STM32_RCC_APB2ENR_TIM8EN_SET(x, v)       do { (x) = (((x) & ~0x2000) | ((v) << 13)); } while(0)
   #define STM32_RCC_APB2ENR_TIM8EN_GET(x)          (((x) >> 13) & 0x1)
-/** USART1 clock enable @multiple */
   #define STM32_RCC_APB2ENR_USART1EN_MASK          0x00000001
   #define STM32_RCC_APB2ENR_USART1EN               0x00004000
   #define STM32_RCC_APB2ENR_USART1EN_SET(x, v)     do { (x) = (((x) & ~0x4000) | ((v) << 14)); } while(0)
   #define STM32_RCC_APB2ENR_USART1EN_GET(x)        (((x) >> 14) & 0x1)
-/** ADC3 interface clock enable @multiple */
   #define STM32_RCC_APB2ENR_ADC3EN_MASK            0x00000001
   #define STM32_RCC_APB2ENR_ADC3EN                 0x00008000
   #define STM32_RCC_APB2ENR_ADC3EN_SET(x, v)       do { (x) = (((x) & ~0x8000) | ((v) << 15)); } while(0)
   #define STM32_RCC_APB2ENR_ADC3EN_GET(x)          (((x) >> 15) & 0x1)
-/** TIM9 Timer clock enable @multiple */
   #define STM32_RCC_APB2ENR_TIM9EN_MASK            0x00000001
   #define STM32_RCC_APB2ENR_TIM9EN                 0x00080000
   #define STM32_RCC_APB2ENR_TIM9EN_SET(x, v)       do { (x) = (((x) & ~0x80000) | ((v) << 19)); } while(0)
   #define STM32_RCC_APB2ENR_TIM9EN_GET(x)          (((x) >> 19) & 0x1)
-/** TIM10 Timer clock enable @multiple */
   #define STM32_RCC_APB2ENR_TIM10EN_MASK           0x00000001
   #define STM32_RCC_APB2ENR_TIM10EN                0x00100000
   #define STM32_RCC_APB2ENR_TIM10EN_SET(x, v)      do { (x) = (((x) & ~0x100000) | ((v) << 20)); } while(0)
   #define STM32_RCC_APB2ENR_TIM10EN_GET(x)         (((x) >> 20) & 0x1)
-/** TIM11 Timer clock enable @multiple */
   #define STM32_RCC_APB2ENR_TIM11EN_MASK           0x00000001
   #define STM32_RCC_APB2ENR_TIM11EN                0x00200000
   #define STM32_RCC_APB2ENR_TIM11EN_SET(x, v)      do { (x) = (((x) & ~0x200000) | ((v) << 21)); } while(0)
   #define STM32_RCC_APB2ENR_TIM11EN_GET(x)         (((x) >> 21) & 0x1)
 
-/** APB1 peripheral clock enable register (RCC_APB1ENR) @multiple */
 #define STM32_RCC_APB1ENR_ADDR                       0x0000001c
-/** Timer 2 clock enable @multiple */
+#define STM32_RCC_APB1ENR_MASK                       0x3afec9ff
   #define STM32_RCC_APB1ENR_TIM2EN_MASK            0x00000001
   #define STM32_RCC_APB1ENR_TIM2EN                 0x00000001
   #define STM32_RCC_APB1ENR_TIM2EN_SET(x, v)       do { (x) = (((x) & ~0x1) | ((v) << 0)); } while(0)
   #define STM32_RCC_APB1ENR_TIM2EN_GET(x)          (((x) >> 0) & 0x1)
-/** Timer 3 clock enable @multiple */
   #define STM32_RCC_APB1ENR_TIM3EN_MASK            0x00000001
   #define STM32_RCC_APB1ENR_TIM3EN                 0x00000002
   #define STM32_RCC_APB1ENR_TIM3EN_SET(x, v)       do { (x) = (((x) & ~0x2) | ((v) << 1)); } while(0)
   #define STM32_RCC_APB1ENR_TIM3EN_GET(x)          (((x) >> 1) & 0x1)
-/** Timer 4 clock enable @multiple */
   #define STM32_RCC_APB1ENR_TIM4EN_MASK            0x00000001
   #define STM32_RCC_APB1ENR_TIM4EN                 0x00000004
   #define STM32_RCC_APB1ENR_TIM4EN_SET(x, v)       do { (x) = (((x) & ~0x4) | ((v) << 2)); } while(0)
   #define STM32_RCC_APB1ENR_TIM4EN_GET(x)          (((x) >> 2) & 0x1)
-/** Timer 5 clock enable @multiple */
   #define STM32_RCC_APB1ENR_TIM5EN_MASK            0x00000001
   #define STM32_RCC_APB1ENR_TIM5EN                 0x00000008
   #define STM32_RCC_APB1ENR_TIM5EN_SET(x, v)       do { (x) = (((x) & ~0x8) | ((v) << 3)); } while(0)
   #define STM32_RCC_APB1ENR_TIM5EN_GET(x)          (((x) >> 3) & 0x1)
-/** Timer 6 clock enable @multiple */
   #define STM32_RCC_APB1ENR_TIM6EN_MASK            0x00000001
   #define STM32_RCC_APB1ENR_TIM6EN                 0x00000010
   #define STM32_RCC_APB1ENR_TIM6EN_SET(x, v)       do { (x) = (((x) & ~0x10) | ((v) << 4)); } while(0)
   #define STM32_RCC_APB1ENR_TIM6EN_GET(x)          (((x) >> 4) & 0x1)
-/** Timer 7 clock enable @multiple */
   #define STM32_RCC_APB1ENR_TIM7EN_MASK            0x00000001
   #define STM32_RCC_APB1ENR_TIM7EN                 0x00000020
   #define STM32_RCC_APB1ENR_TIM7EN_SET(x, v)       do { (x) = (((x) & ~0x20) | ((v) << 5)); } while(0)
   #define STM32_RCC_APB1ENR_TIM7EN_GET(x)          (((x) >> 5) & 0x1)
-/** Timer 12 clock enable @multiple */
   #define STM32_RCC_APB1ENR_TIM12EN_MASK           0x00000001
   #define STM32_RCC_APB1ENR_TIM12EN                0x00000040
   #define STM32_RCC_APB1ENR_TIM12EN_SET(x, v)      do { (x) = (((x) & ~0x40) | ((v) << 6)); } while(0)
   #define STM32_RCC_APB1ENR_TIM12EN_GET(x)         (((x) >> 6) & 0x1)
-/** Timer 13 clock enable @multiple */
   #define STM32_RCC_APB1ENR_TIM13EN_MASK           0x00000001
   #define STM32_RCC_APB1ENR_TIM13EN                0x00000080
   #define STM32_RCC_APB1ENR_TIM13EN_SET(x, v)      do { (x) = (((x) & ~0x80) | ((v) << 7)); } while(0)
   #define STM32_RCC_APB1ENR_TIM13EN_GET(x)         (((x) >> 7) & 0x1)
-/** Timer 14 clock enable @multiple */
   #define STM32_RCC_APB1ENR_TIM14EN_MASK           0x00000001
   #define STM32_RCC_APB1ENR_TIM14EN                0x00000100
   #define STM32_RCC_APB1ENR_TIM14EN_SET(x, v)      do { (x) = (((x) & ~0x100) | ((v) << 8)); } while(0)
   #define STM32_RCC_APB1ENR_TIM14EN_GET(x)         (((x) >> 8) & 0x1)
-/** Window watchdog clock enable @multiple */
   #define STM32_RCC_APB1ENR_WWDGEN_MASK            0x00000001
   #define STM32_RCC_APB1ENR_WWDGEN                 0x00000800
   #define STM32_RCC_APB1ENR_WWDGEN_SET(x, v)       do { (x) = (((x) & ~0x800) | ((v) << 11)); } while(0)
   #define STM32_RCC_APB1ENR_WWDGEN_GET(x)          (((x) >> 11) & 0x1)
-/** SPI 2 clock enable @multiple */
   #define STM32_RCC_APB1ENR_SPI2EN_MASK            0x00000001
   #define STM32_RCC_APB1ENR_SPI2EN                 0x00004000
   #define STM32_RCC_APB1ENR_SPI2EN_SET(x, v)       do { (x) = (((x) & ~0x4000) | ((v) << 14)); } while(0)
   #define STM32_RCC_APB1ENR_SPI2EN_GET(x)          (((x) >> 14) & 0x1)
-/** SPI 3 clock enable @multiple */
   #define STM32_RCC_APB1ENR_SPI3EN_MASK            0x00000001
   #define STM32_RCC_APB1ENR_SPI3EN                 0x00008000
   #define STM32_RCC_APB1ENR_SPI3EN_SET(x, v)       do { (x) = (((x) & ~0x8000) | ((v) << 15)); } while(0)
   #define STM32_RCC_APB1ENR_SPI3EN_GET(x)          (((x) >> 15) & 0x1)
-/** USART 2 clock enable @multiple */
   #define STM32_RCC_APB1ENR_USART2EN_MASK          0x00000001
   #define STM32_RCC_APB1ENR_USART2EN               0x00020000
   #define STM32_RCC_APB1ENR_USART2EN_SET(x, v)     do { (x) = (((x) & ~0x20000) | ((v) << 17)); } while(0)
   #define STM32_RCC_APB1ENR_USART2EN_GET(x)        (((x) >> 17) & 0x1)
-/** USART 3 clock enable @multiple */
   #define STM32_RCC_APB1ENR_USART3EN_MASK          0x00000001
   #define STM32_RCC_APB1ENR_USART3EN               0x00040000
   #define STM32_RCC_APB1ENR_USART3EN_SET(x, v)     do { (x) = (((x) & ~0x40000) | ((v) << 18)); } while(0)
   #define STM32_RCC_APB1ENR_USART3EN_GET(x)        (((x) >> 18) & 0x1)
-/** UART 4 clock enable @multiple */
   #define STM32_RCC_APB1ENR_UART4EN_MASK           0x00000001
   #define STM32_RCC_APB1ENR_UART4EN                0x00080000
   #define STM32_RCC_APB1ENR_UART4EN_SET(x, v)      do { (x) = (((x) & ~0x80000) | ((v) << 19)); } while(0)
   #define STM32_RCC_APB1ENR_UART4EN_GET(x)         (((x) >> 19) & 0x1)
-/** UART 5 clock enable @multiple */
   #define STM32_RCC_APB1ENR_UART5EN_MASK           0x00000001
   #define STM32_RCC_APB1ENR_UART5EN                0x00100000
   #define STM32_RCC_APB1ENR_UART5EN_SET(x, v)      do { (x) = (((x) & ~0x100000) | ((v) << 20)); } while(0)
   #define STM32_RCC_APB1ENR_UART5EN_GET(x)         (((x) >> 20) & 0x1)
-/** I2C 1 clock enable @multiple */
   #define STM32_RCC_APB1ENR_I2C1EN_MASK            0x00000001
   #define STM32_RCC_APB1ENR_I2C1EN                 0x00200000
   #define STM32_RCC_APB1ENR_I2C1EN_SET(x, v)       do { (x) = (((x) & ~0x200000) | ((v) << 21)); } while(0)
   #define STM32_RCC_APB1ENR_I2C1EN_GET(x)          (((x) >> 21) & 0x1)
-/** I2C 2 clock enable @multiple */
   #define STM32_RCC_APB1ENR_I2C2EN_MASK            0x00000001
   #define STM32_RCC_APB1ENR_I2C2EN                 0x00400000
   #define STM32_RCC_APB1ENR_I2C2EN_SET(x, v)       do { (x) = (((x) & ~0x400000) | ((v) << 22)); } while(0)
   #define STM32_RCC_APB1ENR_I2C2EN_GET(x)          (((x) >> 22) & 0x1)
-/** USB clock enable @multiple */
   #define STM32_RCC_APB1ENR_USBEN_MASK             0x00000001
   #define STM32_RCC_APB1ENR_USBEN                  0x00800000
   #define STM32_RCC_APB1ENR_USBEN_SET(x, v)        do { (x) = (((x) & ~0x800000) | ((v) << 23)); } while(0)
   #define STM32_RCC_APB1ENR_USBEN_GET(x)           (((x) >> 23) & 0x1)
-/** CAN clock enable @multiple */
   #define STM32_RCC_APB1ENR_CANEN_MASK             0x00000001
   #define STM32_RCC_APB1ENR_CANEN                  0x02000000
   #define STM32_RCC_APB1ENR_CANEN_SET(x, v)        do { (x) = (((x) & ~0x2000000) | ((v) << 25)); } while(0)
   #define STM32_RCC_APB1ENR_CANEN_GET(x)           (((x) >> 25) & 0x1)
-/** Backup interface clock enable @multiple */
-  #define STM32_RCC_APB1ENR_BKPEN_MASK             0x00000001
-  #define STM32_RCC_APB1ENR_BKPEN                  0x08000000
-  #define STM32_RCC_APB1ENR_BKPEN_SET(x, v)        do { (x) = (((x) & ~0x8000000) | ((v) << 27)); } while(0)
-  #define STM32_RCC_APB1ENR_BKPEN_GET(x)           (((x) >> 27) & 0x1)
-/** Power interface clock enable @multiple */
+  #define STM32_RCC_APB1ENR_BPKEN_MASK             0x00000001
+  #define STM32_RCC_APB1ENR_BPKEN                  0x08000000
+  #define STM32_RCC_APB1ENR_BPKEN_SET(x, v)        do { (x) = (((x) & ~0x8000000) | ((v) << 27)); } while(0)
+  #define STM32_RCC_APB1ENR_BPKEN_GET(x)           (((x) >> 27) & 0x1)
   #define STM32_RCC_APB1ENR_PWREN_MASK             0x00000001
   #define STM32_RCC_APB1ENR_PWREN                  0x10000000
   #define STM32_RCC_APB1ENR_PWREN_SET(x, v)        do { (x) = (((x) & ~0x10000000) | ((v) << 28)); } while(0)
   #define STM32_RCC_APB1ENR_PWREN_GET(x)           (((x) >> 28) & 0x1)
-/** DAC interface clock enable @multiple */
   #define STM32_RCC_APB1ENR_DACEN_MASK             0x00000001
   #define STM32_RCC_APB1ENR_DACEN                  0x20000000
   #define STM32_RCC_APB1ENR_DACEN_SET(x, v)        do { (x) = (((x) & ~0x20000000) | ((v) << 29)); } while(0)
   #define STM32_RCC_APB1ENR_DACEN_GET(x)           (((x) >> 29) & 0x1)
 
-/** Backup domain control register (RCC_BDCR) @multiple */
 #define STM32_RCC_BDCR_ADDR                          0x00000020
-/** External Low Speed oscillator enable @multiple */
+#define STM32_RCC_BDCR_MASK                          0x00000f07
   #define STM32_RCC_BDCR_LSEON_MASK                0x00000001
   #define STM32_RCC_BDCR_LSEON                     0x00000001
   #define STM32_RCC_BDCR_LSEON_SET(x, v)           do { (x) = (((x) & ~0x1) | ((v) << 0)); } while(0)
   #define STM32_RCC_BDCR_LSEON_GET(x)              (((x) >> 0) & 0x1)
-/** External Low Speed oscillator ready @multiple */
   #define STM32_RCC_BDCR_LSERDY_MASK               0x00000001
   #define STM32_RCC_BDCR_LSERDY                    0x00000002
   #define STM32_RCC_BDCR_LSERDY_SET(x, v)          do { (x) = (((x) & ~0x2) | ((v) << 1)); } while(0)
   #define STM32_RCC_BDCR_LSERDY_GET(x)             (((x) >> 1) & 0x1)
-/** External Low Speed oscillator bypass @multiple */
   #define STM32_RCC_BDCR_LSEBYP_MASK               0x00000001
   #define STM32_RCC_BDCR_LSEBYP                    0x00000004
   #define STM32_RCC_BDCR_LSEBYP_SET(x, v)          do { (x) = (((x) & ~0x4) | ((v) << 2)); } while(0)
   #define STM32_RCC_BDCR_LSEBYP_GET(x)             (((x) >> 2) & 0x1)
-/** RTC clock source selection @multiple */
   #define STM32_RCC_BDCR_RTCSEL_MASK               0x00000003
-  #define STM32_RCC_BDCR_RTCSEL(v)                 ((v) << 8)
-  #define STM32_RCC_BDCR_RTCSEL_SET(x, v)          do { (x) = (((x) & ~0x300) | ((v) << 8)); } while(0)
+  #define STM32_RCC_BDCR_RTCSEL(v)                 ((STM32_RCC_BDCR_RTCSEL_##v) << 8)
+  #define STM32_RCC_BDCR_RTCSEL_SET(x, v)          do { (x) = (((x) & ~0x300) | ((STM32_RCC_BDCR_RTCSEL_##v) << 8)); } while(0)
   #define STM32_RCC_BDCR_RTCSEL_GET(x)             (((x) >> 8) & 0x3)
-/** RTC clock enable @multiple */
+    #define STM32_RCC_BDCR_RTCSEL_NO_CLOCK           0x00000000
+    #define STM32_RCC_BDCR_RTCSEL_LSE                0x00000001
+    #define STM32_RCC_BDCR_RTCSEL_LSI                0x00000002
+    #define STM32_RCC_BDCR_RTCSEL_HSE_DIV_128        0x00000003
   #define STM32_RCC_BDCR_RTCEN_MASK                0x00000001
-  #define STM32_RCC_BDCR_RTCEN                     0x00008000
-  #define STM32_RCC_BDCR_RTCEN_SET(x, v)           do { (x) = (((x) & ~0x8000) | ((v) << 15)); } while(0)
-  #define STM32_RCC_BDCR_RTCEN_GET(x)              (((x) >> 15) & 0x1)
-/** Backup domain software reset @multiple */
+  #define STM32_RCC_BDCR_RTCEN                     0x00000400
+  #define STM32_RCC_BDCR_RTCEN_SET(x, v)           do { (x) = (((x) & ~0x400) | ((v) << 10)); } while(0)
+  #define STM32_RCC_BDCR_RTCEN_GET(x)              (((x) >> 10) & 0x1)
   #define STM32_RCC_BDCR_BDRST_MASK                0x00000001
-  #define STM32_RCC_BDCR_BDRST                     0x00010000
-  #define STM32_RCC_BDCR_BDRST_SET(x, v)           do { (x) = (((x) & ~0x10000) | ((v) << 16)); } while(0)
-  #define STM32_RCC_BDCR_BDRST_GET(x)              (((x) >> 16) & 0x1)
+  #define STM32_RCC_BDCR_BDRST                     0x00000800
+  #define STM32_RCC_BDCR_BDRST_SET(x, v)           do { (x) = (((x) & ~0x800) | ((v) << 11)); } while(0)
+  #define STM32_RCC_BDCR_BDRST_GET(x)              (((x) >> 11) & 0x1)
 
-/** Control/status register (RCC_CSR) @multiple */
 #define STM32_RCC_CSR_ADDR                           0x00000024
-/** Internal low speed oscillator enable @multiple */
+#define STM32_RCC_CSR_MASK                           0xfd000003
   #define STM32_RCC_CSR_LSION_MASK                 0x00000001
   #define STM32_RCC_CSR_LSION                      0x00000001
   #define STM32_RCC_CSR_LSION_SET(x, v)            do { (x) = (((x) & ~0x1) | ((v) << 0)); } while(0)
   #define STM32_RCC_CSR_LSION_GET(x)               (((x) >> 0) & 0x1)
-/** Internal low speed oscillator ready @multiple */
   #define STM32_RCC_CSR_LSIRDY_MASK                0x00000001
   #define STM32_RCC_CSR_LSIRDY                     0x00000002
   #define STM32_RCC_CSR_LSIRDY_SET(x, v)           do { (x) = (((x) & ~0x2) | ((v) << 1)); } while(0)
   #define STM32_RCC_CSR_LSIRDY_GET(x)              (((x) >> 1) & 0x1)
-/** Remove reset flag @multiple */
   #define STM32_RCC_CSR_RMVF_MASK                  0x00000001
   #define STM32_RCC_CSR_RMVF                       0x01000000
   #define STM32_RCC_CSR_RMVF_SET(x, v)             do { (x) = (((x) & ~0x1000000) | ((v) << 24)); } while(0)
   #define STM32_RCC_CSR_RMVF_GET(x)                (((x) >> 24) & 0x1)
-/** PIN reset flag @multiple */
   #define STM32_RCC_CSR_PINRSTF_MASK               0x00000001
   #define STM32_RCC_CSR_PINRSTF                    0x04000000
   #define STM32_RCC_CSR_PINRSTF_SET(x, v)          do { (x) = (((x) & ~0x4000000) | ((v) << 26)); } while(0)
   #define STM32_RCC_CSR_PINRSTF_GET(x)             (((x) >> 26) & 0x1)
-/** POR/PDR reset flag @multiple */
   #define STM32_RCC_CSR_PORRSTF_MASK               0x00000001
   #define STM32_RCC_CSR_PORRSTF                    0x08000000
   #define STM32_RCC_CSR_PORRSTF_SET(x, v)          do { (x) = (((x) & ~0x8000000) | ((v) << 27)); } while(0)
   #define STM32_RCC_CSR_PORRSTF_GET(x)             (((x) >> 27) & 0x1)
-/** Software reset flag @multiple */
   #define STM32_RCC_CSR_SFTRSTF_MASK               0x00000001
   #define STM32_RCC_CSR_SFTRSTF                    0x10000000
   #define STM32_RCC_CSR_SFTRSTF_SET(x, v)          do { (x) = (((x) & ~0x10000000) | ((v) << 28)); } while(0)
   #define STM32_RCC_CSR_SFTRSTF_GET(x)             (((x) >> 28) & 0x1)
-/** Independent watchdog reset flag @multiple */
   #define STM32_RCC_CSR_IWDGRSTF_MASK              0x00000001
   #define STM32_RCC_CSR_IWDGRSTF                   0x20000000
   #define STM32_RCC_CSR_IWDGRSTF_SET(x, v)         do { (x) = (((x) & ~0x20000000) | ((v) << 29)); } while(0)
   #define STM32_RCC_CSR_IWDGRSTF_GET(x)            (((x) >> 29) & 0x1)
-/** Window watchdog reset flag @multiple */
   #define STM32_RCC_CSR_WWDGRSTF_MASK              0x00000001
   #define STM32_RCC_CSR_WWDGRSTF                   0x40000000
   #define STM32_RCC_CSR_WWDGRSTF_SET(x, v)         do { (x) = (((x) & ~0x40000000) | ((v) << 30)); } while(0)
   #define STM32_RCC_CSR_WWDGRSTF_GET(x)            (((x) >> 30) & 0x1)
-/** Low-power reset flag @multiple */
   #define STM32_RCC_CSR_LPWRRSTF_MASK              0x00000001
   #define STM32_RCC_CSR_LPWRRSTF                   0x80000000
   #define STM32_RCC_CSR_LPWRRSTF_SET(x, v)         do { (x) = (((x) & ~0x80000000) | ((v) << 31)); } while(0)
   #define STM32_RCC_CSR_LPWRRSTF_GET(x)            (((x) >> 31) & 0x1)
-
-# if CONFIG_STM32_SERIES == 105 || CONFIG_STM32_SERIES == 107
-/** AHB Peripheral clock register (RCC_AHBRSTR) @multiple */
-#define STM32_RCC_AHBRSTR_ADDR                       0x00000028
-/** USB OTG FS reset @multiple */
-  #define STM32_RCC_AHBRSTR_OTGFSRST_MASK          0x00000001
-  #define STM32_RCC_AHBRSTR_OTGFSRST               0x00001000
-  #define STM32_RCC_AHBRSTR_OTGFSRST_SET(x, v)     do { (x) = (((x) & ~0x1000) | ((v) << 12)); } while(0)
-  #define STM32_RCC_AHBRSTR_OTGFSRST_GET(x)        (((x) >> 12) & 0x1)
-/** Ethernet MAC reset @multiple */
-  #define STM32_RCC_AHBRSTR_ETHMACRST_MASK         0x00000001
-  #define STM32_RCC_AHBRSTR_ETHMACRST              0x00004000
-  #define STM32_RCC_AHBRSTR_ETHMACRST_SET(x, v)    do { (x) = (((x) & ~0x4000) | ((v) << 14)); } while(0)
-  #define STM32_RCC_AHBRSTR_ETHMACRST_GET(x)       (((x) >> 14) & 0x1)
-# endif
-
-# if CONFIG_STM32_SERIES == 105 || CONFIG_STM32_SERIES == 107
-/** Clock configuration register 2 (RCC_CFGR2) @multiple */
-#define STM32_RCC_CFGR2_ADDR                         0x0000002c
-/** PREDIV1 division factor @multiple */
-  #define STM32_RCC_CFGR2_PREDIV1_MASK             0x0000000f
-  #define STM32_RCC_CFGR2_PREDIV1(v)               ((v) << 0)
-  #define STM32_RCC_CFGR2_PREDIV1_SET(x, v)        do { (x) = (((x) & ~0xf) | ((v) << 0)); } while(0)
-  #define STM32_RCC_CFGR2_PREDIV1_GET(x)           (((x) >> 0) & 0xf)
-/** PREDIV2 division factor @multiple */
-  #define STM32_RCC_CFGR2_PREDIV2_MASK             0x0000000f
-  #define STM32_RCC_CFGR2_PREDIV2(v)               ((v) << 4)
-  #define STM32_RCC_CFGR2_PREDIV2_SET(x, v)        do { (x) = (((x) & ~0xf0) | ((v) << 4)); } while(0)
-  #define STM32_RCC_CFGR2_PREDIV2_GET(x)           (((x) >> 4) & 0xf)
-/** PLL2 multiplication factor @multiple */
-  #define STM32_RCC_CFGR2_PLL2MUL_MASK             0x0000000f
-  #define STM32_RCC_CFGR2_PLL2MUL(v)               ((v) << 8)
-  #define STM32_RCC_CFGR2_PLL2MUL_SET(x, v)        do { (x) = (((x) & ~0xf00) | ((v) << 8)); } while(0)
-  #define STM32_RCC_CFGR2_PLL2MUL_GET(x)           (((x) >> 8) & 0xf)
-/** PLL3 multiplication factor @multiple */
-  #define STM32_RCC_CFGR2_PLL3MUL_MASK             0x0000000f
-  #define STM32_RCC_CFGR2_PLL3MUL(v)               ((v) << 12)
-  #define STM32_RCC_CFGR2_PLL3MUL_SET(x, v)        do { (x) = (((x) & ~0xf000) | ((v) << 12)); } while(0)
-  #define STM32_RCC_CFGR2_PLL3MUL_GET(x)           (((x) >> 12) & 0xf)
-/** PREDIV1 entry clock source @multiple */
-  #define STM32_RCC_CFGR2_PREDIV1SRC_MASK          0x00000001
-  #define STM32_RCC_CFGR2_PREDIV1SRC               0x00010000
-  #define STM32_RCC_CFGR2_PREDIV1SRC_SET(x, v)     do { (x) = (((x) & ~0x10000) | ((v) << 16)); } while(0)
-  #define STM32_RCC_CFGR2_PREDIV1SRC_GET(x)        (((x) >> 16) & 0x1)
-/** I2S2 clock source @multiple */
-  #define STM32_RCC_CFGR2_I2S2SRC_MASK             0x00000001
-  #define STM32_RCC_CFGR2_I2S2SRC                  0x00020000
-  #define STM32_RCC_CFGR2_I2S2SRC_SET(x, v)        do { (x) = (((x) & ~0x20000) | ((v) << 17)); } while(0)
-  #define STM32_RCC_CFGR2_I2S2SRC_GET(x)           (((x) >> 17) & 0x1)
-/** I2S3 clock source @multiple */
-  #define STM32_RCC_CFGR2_I2S3SRC_MASK             0x00000001
-  #define STM32_RCC_CFGR2_I2S3SRC                  0x00040000
-  #define STM32_RCC_CFGR2_I2S3SRC_SET(x, v)        do { (x) = (((x) & ~0x40000) | ((v) << 18)); } while(0)
-  #define STM32_RCC_CFGR2_I2S3SRC_GET(x)           (((x) >> 18) & 0x1)
-# endif
 
 #endif
 
