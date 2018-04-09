@@ -30,6 +30,7 @@
 #include <arch/pic32/gpio.h>
 #include <arch/pic32/irq.h>
 #include <arch/pic32/freq.h>
+#include <arch/pic32/fuses.h>
 
 PIC32_DEVCFG3(0
               | PIC32_CONFIG_DEVCFG3_USER_ID(0x1234)
@@ -116,7 +117,7 @@ DEV_DECLARE_STATIC(uart2_dev, "uart2", 0, pic32_uart_drv,
                    DEV_STATIC_RES_IRQ(1, PIC32_IRQ_TX_UART2, DEV_IRQ_SENSE_HIGH_LEVEL, 0, 1),
 
                    DEV_STATIC_RES_DEV_IOMUX("/gpio"),
-                   DEV_STATIC_RES_IOMUX("rx", 0, PIC32_PB15, PIC32_INPUT_MUX_URX2, 0),
+                   DEV_STATIC_RES_IOMUX("rx", 0, PIC32_PB15, PIC32_INPUT_MUX_U2RX, 0),
                    DEV_STATIC_RES_IOMUX("tx", 0, PIC32_PB14, PIC32_OUTPUT_MUX_U2TX, 0),
                    );
 
