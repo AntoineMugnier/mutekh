@@ -28,6 +28,7 @@
 # include <device/class/timer.h>
 # include <device/class/dma.h>
 # include <device/class/uart.h>
+# include <device/class/i2c.h>
 #endif
 
 #include <hexo/iospace.h>
@@ -185,6 +186,23 @@ DEV_DECLARE_STATIC(leuart0_dev, "leuart0", 0, efm32_leuart_drv,
                    DEV_STATIC_RES_IOMUX("rx",  EFM32_LOC2, EFM32_PA3, 0, 0),
 
                    DEV_STATIC_RES_UART(9600, 8, 0, 0, 0)
+                   );
+
+#endif
+
+#if defined(CONFIG_DRIVER_EFM32_I2C)
+
+DEV_DECLARE_STATIC(i2c0_dev, "i2c0", 0, efm32_i2c_drv,
+                   DEV_STATIC_RES_MEM(0x4000c000, 0x4000c400),
+                   DEV_STATIC_RES_FREQ(HFXO_FREQ, 1),
+
+                   DEV_STATIC_RES_DEV_ICU("/cpu"),
+                   DEV_STATIC_RES_IRQ(0, EFM32_IRQ_I2C0, DEV_IRQ_SENSE_RISING_EDGE, 0, 1),
+
+                   DEV_STATIC_RES_DEV_IOMUX("/gpio"),
+                   DEV_STATIC_RES_IOMUX("sda", EFM32_LOC16, EFM32_PC11, 0, 0),
+                   DEV_STATIC_RES_IOMUX("scl", EFM32_LOC14, EFM32_PC10, 0, 0),
+                   DEV_STATIC_RES_I2C_BITRATE(100000),
                    );
 
 #endif
