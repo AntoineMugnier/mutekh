@@ -431,6 +431,11 @@ struct driver_s
 #define DRIVER_PV(...) \
 typedef __VA_ARGS__ driver_pv_t;
 
+/** @This is used to declare a driver private data local variable from
+    dev */
+#define DEVICE_PV(pvdata, device)               \
+  driver_pv_t *pvdata = (device)->drv_pv
+
 /** @This declares a @ref driver_s object. Implemented device
     classes must be specified as extra parameters. */
 #define DRIVER_DECLARE(symbol_, flags_, pretty_, prefix_, ...)   \
