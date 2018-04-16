@@ -303,6 +303,26 @@ DEV_DECLARE_STATIC(i2c_dev, "i2c1", 0, efm32_i2c_drv,
 
 #endif
 
+#ifdef CONFIG_DRIVER_EFM32_I2C_SLAVE
+
+DEV_DECLARE_STATIC(i2c_dev, "i2cs0", 0, efm32_i2c_slave_drv,
+                   DEV_STATIC_RES_MEM(0x4000a400, 0x4000a800),
+# ifdef CONFIG_DEVICE_CLOCK
+                   DEV_STATIC_RES_CLK_SRC("/recmu", EFM32_CLOCK_I2C1, 0),
+# else
+                   DEV_STATIC_RES_FREQ(14000000, 1),
+# endif
+                   DEV_STATIC_RES_DEV_ICU("/cpu"),
+                   DEV_STATIC_RES_IRQ(0, EFM32_IRQ_I2C1, DEV_IRQ_SENSE_RISING_EDGE, 0, 1),
+
+                   DEV_STATIC_RES_DEV_IOMUX("/gpio"),
+
+                   DEV_STATIC_RES_IOMUX("scl", EFM32_LOC0, EFM32_PC5, 0, 0),
+                   DEV_STATIC_RES_IOMUX("sda", EFM32_LOC0, EFM32_PC4, 0, 0)
+                   );
+
+#endif
+
 #ifdef CONFIG_DRIVER_EFM32_PWM
 
 DEV_DECLARE_STATIC(pwm_dev, "pwm3", 0, efm32_pwm_drv,
