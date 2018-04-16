@@ -234,11 +234,11 @@ DEV_IRQ_SRC_PROCESS(efm32_i2c_slave_irq)
       logk_debug("%s state %d irq %04x mask %04x left %04x", __func__, pv->state,
                  rirq, mask, irq);
 
-      if (!irq)
-        return;
-
       /* Reset interrupts flags */
       cpu_mem_write_32(pv->addr + EFM32_I2C_IFC_ADDR, endian_le32(rirq));
+
+      if (!irq)
+        return;
 
       /* End of data phase conditions */
       if (irq & (EFM32_I2C_IF_RSTART | EFM32_I2C_IF_SSTOP | EFM32_I2C_IF_ARBLOST))
@@ -348,17 +348,19 @@ DEV_IRQ_SRC_PROCESS(efm32_i2c_slave_irq)
         {
           logk_debug(" nack");
 
-          assert(pv->state == STATE_TRANSMITTING);
+          if (pv->state == STATE_TRANSMITTING)
+            {
+              struct dev_i2c_slave_rq_s *rq
+                = dev_i2c_slave_rq_s_cast(dev_request_queue_head(&pv->queue));
 
-          struct dev_i2c_slave_rq_s *rq
-            = dev_i2c_slave_rq_s_cast(dev_request_queue_head(&pv->queue));
-
-          assert(rq);
-
-          rq->transfer.end_ack = 0;
-          efm32_i2c_slave_rq_end(pv, rq, 0);
-          efm32_i2c_slave_data_queue_cancel(pv);
-          efm32_i2c_slave_idle_setup(pv);
+              if (rq)
+                {
+                  rq->transfer.end_ack = 0;
+                  efm32_i2c_slave_rq_end(pv, rq, 0);
+                }
+              efm32_i2c_slave_data_queue_cancel(pv);
+              efm32_i2c_slave_idle_setup(pv);
+            }
         }
     }
  
@@ -480,7 +482,6 @@ static DEV_USE(efm32_i2c_slave_use)
 # ifdef CONFIG_DEVICE_CLOCK_GATING
       dev_clock_sink_gate(&pv->clk_ep, DEV_CLOCK_EP_POWER_CLOCK);
 # endif
-      efm32_i2c_slave_update_rate(pv, &chg->freq);
 # ifdef CONFIG_DEVICE_CLOCK_GATING
       if (dev->start_count == 0)
         dev_clock_sink_gate(&pv->clk_ep, DEV_CLOCK_EP_POWER);
