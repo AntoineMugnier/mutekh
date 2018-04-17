@@ -778,11 +778,13 @@ static DEV_INIT(efm32_gpio_init)
   dev_request_queue_init(&pv->queue);
 #endif
 
+#ifdef CONFIG_DEVICE_IRQ
   device_irq_source_init(dev, pv->src, GPIO_SRC_IRQ_COUNT,
                     &efm32_gpio_source_process);
 
   if (device_irq_source_link(dev, pv->src, GPIO_SRC_IRQ_COUNT, -1))
     goto err_clk;
+#endif
 
 #ifdef CONFIG_DRIVER_EFM32_GPIO_ICU
   device_irq_sink_init(dev, pv->sink, CONFIG_DRIVER_EFM32_GPIO_IRQ_COUNT,
