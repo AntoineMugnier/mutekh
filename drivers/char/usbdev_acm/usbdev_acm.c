@@ -1,16 +1,16 @@
 /*
     This file is part of MutekH.
-    
+
     MutekH is free software; you can redistribute it and/or modify it
     under the terms of the GNU Lesser General Public License as
     published by the Free Software Foundation; version 2.1 of the
     License.
-    
+
     MutekH is distributed in the hope that it will be useful, but
     WITHOUT ANY WARRANTY; without even the implied warranty of
     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
     Lesser General Public License for more details.
-    
+
     You should have received a copy of the GNU Lesser General Public
     License along with MutekH; if not, write to the Free Software
     Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
@@ -19,6 +19,8 @@
     Copyright Sebastien Cerdan <sebcerdan@gmail.com> (c) 2014
 
 */
+
+#define LOGK_MODULE_ID "uacm"
 
 #include <string.h>
 #include <stdio.h>
@@ -65,14 +67,6 @@
 #define USBDEV_SERV_CHAR_INTF_CTRL 0
 #define USBDEV_SERV_CHAR_INTF_DATA 1
 
-//#define CONFIG_USBDEV_ACM_DEBUG
-
-#ifdef CONFIG_USBDEV_ACM_DEBUG
-# define usbdev_acm_printk(...) do { printk(__VA_ARGS__); } while(0)
-#else
-# define usbdev_acm_printk(...) do { } while(0)
-#endif
-
 /* Functionnal descriptor */
 
 static const struct usb_cdc_header_descriptor_s cdc_header =
@@ -83,7 +77,7 @@ static const struct usb_cdc_header_descriptor_s cdc_header =
   .bcdCDC = endian_le16(0x0120),
 };
 
-static const struct usb_cdc_call_mgmt_descriptor_s cdc_call_mgmt = 
+static const struct usb_cdc_call_mgmt_descriptor_s cdc_call_mgmt =
 {
   .head.bLength = sizeof(struct usb_cdc_call_mgmt_descriptor_s),
   .head.bDescriptorType = USB_CDC_INTERFACE_DESCRIPTOR,
@@ -115,7 +109,7 @@ static struct usb_endpoint_descriptor_s ep_bulk_in =
 {
   .head.bLength = sizeof(struct usb_endpoint_descriptor_s),
   .head.bDescriptorType = USB_ENDPOINT_DESCRIPTOR,
-  .bEndpointAddress = USB_EP_IN | 0, 
+  .bEndpointAddress = USB_EP_IN | 0,
   .bmAttributes = USB_EP_BULK,
   .wMaxPacketSize = endian_le16(USBDEV_SERV_CHAR_BULK_SIZE),
   .bInterval = 0
@@ -125,7 +119,7 @@ static struct usb_endpoint_descriptor_s ep_bulk_out =
 {
   .head.bLength = sizeof(struct usb_endpoint_descriptor_s),
   .head.bDescriptorType = USB_ENDPOINT_DESCRIPTOR,
-  .bEndpointAddress = USB_EP_OUT | 0, 
+  .bEndpointAddress = USB_EP_OUT | 0,
   .bmAttributes = USB_EP_BULK,
   .wMaxPacketSize = endian_le16(USBDEV_SERV_CHAR_BULK_SIZE),
   .bInterval = 0
@@ -154,7 +148,7 @@ static struct usb_endpoint_descriptor_s ep_irq_in =
 {
   .head.bLength = sizeof(struct usb_endpoint_descriptor_s),
   .head.bDescriptorType = USB_ENDPOINT_DESCRIPTOR,
-  .bEndpointAddress = USB_EP_IN | 1, 
+  .bEndpointAddress = USB_EP_IN | 1,
   .bmAttributes = USB_EP_INTERRUPT,
   .wMaxPacketSize = 8,
   .bInterval = 0xFF
@@ -186,7 +180,7 @@ USBDEV_REPLACE(usbdev_acm_replace)
   usbdev_cdc_descriptor_replace(it, src, dst, begin, end);
 }
 
-DRIVER_PV(struct usbdev_acm_private_s
+struct usbdev_acm_private_s
 {
   struct usbdev_service_s service;
   /* Associated USB controller device */
@@ -202,10 +196,10 @@ DRIVER_PV(struct usbdev_acm_private_s
   struct usbdev_cdc_line_coding_s coding;
 
   struct dev_usbdev_request_s wtr;
-  uint8_t * wbuffer;
+  uint8_t *wbuffer;
 
   struct dev_usbdev_request_s rtr;
-  uint8_t * rbuffer;
+  uint8_t *rbuffer;
 
   bool_t read_started;
   bool_t write_started;
@@ -220,13 +214,17 @@ DRIVER_PV(struct usbdev_acm_private_s
   uint8_t interface_start_index;
   dev_usbdev_ep_map_t epi_map;
   dev_usbdev_ep_map_t epo_map;
-});
+};
 
-static void usbdev_service_char_read(struct device_s *dev);
-static void usbdev_service_char_write(struct device_s *dev);
+DRIVER_PV(struct usbdev_acm_private_s);
 
-static void usbdev_service_end_request(struct device_s *dev, bool_t read,
-                                       error_t err)
+static
+void usbdev_service_char_read(struct device_s *dev);
+static
+void usbdev_service_char_write(struct device_s *dev);
+
+static
+void usbdev_service_end_request(struct device_s *dev, bool_t read, error_t err)
 {
   struct usbdev_acm_private_s *pv = dev->drv_pv;
   struct dev_char_rq_s *rq;
@@ -259,7 +257,8 @@ static void usbdev_service_end_request(struct device_s *dev, bool_t read,
   kroutine_exec(&rq->base.kr);
 }
 
-static void usbdev_service_try_read(struct device_s *dev)
+static
+void usbdev_service_try_read(struct device_s *dev)
 {
   struct usbdev_acm_private_s *pv = dev->drv_pv;
   struct dev_usbdev_request_s *tr = &pv->rtr;
@@ -276,7 +275,7 @@ static void usbdev_service_try_read(struct device_s *dev)
           pv->read_started = 0;
           break;
         }
-  
+
       if (!pv->remaining)
         /* No data or all data used */
         {
@@ -288,20 +287,21 @@ static void usbdev_service_try_read(struct device_s *dev)
         {
           size_t min = pv->remaining < rq->size ? pv->remaining : rq->size;
           memcpy(rq->data, tr->data - pv->remaining, min);
-  
+
           pv->remaining -= min;
           rq->data += min;
           rq->size -= min;
         }
-  
+
       if (rq->type == DEV_CHAR_READ_PARTIAL ||
-          rq->type == DEV_CHAR_READ_POLL || 
+          rq->type == DEV_CHAR_READ_POLL ||
           rq->size == 0)
         usbdev_service_end_request(dev, 1, 0);
    }
 }
 
-static void usbdev_service_try_write(struct device_s *dev)
+static
+void usbdev_service_try_write(struct device_s *dev)
 {
   struct usbdev_acm_private_s *pv = dev->drv_pv;
   struct dev_usbdev_request_s *tr = &pv->wtr;
@@ -327,51 +327,53 @@ static void usbdev_service_try_write(struct device_s *dev)
 
       size_t s = USBDEV_SERV_CHAR_BUFFER_SIZE - tr->size;
       size_t min = s < rq->size ? s : rq->size;
-  
+
       memcpy(p, rq->data, min);
 
       tr->size += min;
       p += min;
       rq->data += min;
       rq->size -= min;
-  
+
       if (rq->type == DEV_CHAR_WRITE_PARTIAL || rq->size == 0)
         usbdev_service_end_request(dev, 0, 0);
    }
 }
 
-static KROUTINE_EXEC(usbdev_acm_write_cb)
+static
+KROUTINE_EXEC(usbdev_acm_write_cb)
 {
   struct dev_usbdev_request_s *tr = KROUTINE_CONTAINER(kr, *tr, base.kr);
   struct device_s *dev = tr->base.pvdata;
 
-  LOCK_SPIN_IRQ(&dev->lock);
+  LOCK_SPIN_IRQ_SCOPED(&dev->lock);
 
 
   if (tr->error)
-  /* USB reset or disconnected */
     {
-      usbdev_acm_printk("cb -EPIPE\n");
+      /* USB reset or disconnected */
+      logk_debug("Write -EPIPE");
       usbdev_service_end_request(dev, 0, tr->error);
     }
   else
-    usbdev_service_try_write(dev);
-
-  LOCK_RELEASE_IRQ(&dev->lock);
+    {
+      usbdev_service_try_write(dev);
+    }
 }
 
-static KROUTINE_EXEC(usbdev_acm_read_cb)
+static
+KROUTINE_EXEC(usbdev_acm_read_cb)
 {
   struct dev_usbdev_request_s *tr = KROUTINE_CONTAINER(kr, *tr, base.kr);
   struct device_s *dev = tr->base.pvdata;
   struct usbdev_acm_private_s *pv = dev->drv_pv;
 
-  LOCK_SPIN_IRQ(&dev->lock);
+  LOCK_SPIN_IRQ_SCOPED(&dev->lock);
 
   if (tr->error)
-  /* USB reset or disconnected */
     {
-      usbdev_acm_printk("cb -EPIPE\n");
+      /* USB reset or disconnected */
+      logk_debug("Read -EPIPE");
       usbdev_service_end_request(dev, 1, tr->error);
     }
   else
@@ -379,11 +381,10 @@ static KROUTINE_EXEC(usbdev_acm_read_cb)
       pv->remaining = USBDEV_SERV_CHAR_BUFFER_SIZE - tr->size;
       usbdev_service_try_read(dev);
     }
-
-  LOCK_RELEASE_IRQ(&dev->lock);
 }
 
-static void usbdev_service_char_write(struct device_s *dev)
+static
+void usbdev_service_char_write(struct device_s *dev)
 {
   struct usbdev_acm_private_s *pv = dev->drv_pv;
   struct dev_usbdev_request_s *tr = &pv->wtr;
@@ -391,16 +392,19 @@ static void usbdev_service_char_write(struct device_s *dev)
   tr->type = DEV_USBDEV_DATA_IN;
   tr->error = 0;
   tr->base.pvdata = dev;
-        
+
   /* Push transfer to stack */
   error_t err = usbdev_stack_transfer(&pv->usb, &pv->service, tr, &ep_bulk_in);
-   
+
   if (err)
-  /* USB reset or disconnected */
-    usbdev_service_end_request(dev, 0, err);
+    {
+      /* USB reset or disconnected */
+      usbdev_service_end_request(dev, 0, err);
+    }
 }
 
-static void usbdev_service_char_read(struct device_s *dev)
+static
+void usbdev_service_char_read(struct device_s *dev)
 {
   struct usbdev_acm_private_s *pv = dev->drv_pv;
   struct dev_usbdev_request_s *tr = &pv->rtr;
@@ -414,13 +418,16 @@ static void usbdev_service_char_read(struct device_s *dev)
   error_t err = usbdev_stack_transfer(&pv->usb, &pv->service, tr, &ep_bulk_out);
 
   if (err)
-  /* USB reset or disconnected */
-    usbdev_service_end_request(dev, 1, err);
+    {
+      /* USB reset or disconnected */
+      usbdev_service_end_request(dev, 1, err);
+    }
 }
 
 static KROUTINE_EXEC(usbdev_acm_ctrl_cb);
 
-static KROUTINE_EXEC(usbdev_acm_transfer_cb)
+static
+KROUTINE_EXEC(usbdev_acm_transfer_cb)
 {
   struct usbdev_service_rq_s *rq =  KROUTINE_CONTAINER(kr, *rq, kr);
   struct device_s *dev = rq->pvdata;
@@ -429,51 +436,54 @@ static KROUTINE_EXEC(usbdev_acm_transfer_cb)
   /* Update coding parameters */
   memcpy(&pv->coding, rq->ctrl.buffer, sizeof(struct usbdev_cdc_line_coding_s));
 
-  rq->type = USBDEV_GET_COMMAND; 
+  rq->type = USBDEV_GET_COMMAND;
   rq->error = 0;
 
   kroutine_init_deferred_seq(&rq->kr, &usbdev_acm_ctrl_cb, &pv->seq);
+
   /* Push request on stack */
   usbdev_stack_request(&pv->usb, &pv->service, &pv->rq);
 }
 
-static KROUTINE_EXEC(usbdev_acm_ctrl_cb)
+static
+KROUTINE_EXEC(usbdev_acm_ctrl_cb)
 {
   struct usbdev_service_rq_s *rq =  KROUTINE_CONTAINER(kr, *rq, kr);
   struct device_s *dev = rq->pvdata;
   struct usbdev_acm_private_s *pv = dev->drv_pv;
 
-  LOCK_SPIN_IRQ(&dev->lock);
+  {
+    LOCK_SPIN_IRQ_SCOPED(&dev->lock);
 
-  rq->error = 0;
+    rq->error = 0;
 
-  switch (rq->cmd)
-    {
-    case USBDEV_ENABLE_SERVICE:
-      usbdev_acm_printk("USB CHAR SERVICE ENABLE\n");
-      /* Enable service and check queues */
-      pv->service_enabled = 1;
- 
-      /* Start a USB bulk write transfer */
-      usbdev_service_try_write(dev);
-      usbdev_service_try_read(dev);
-
-      break;
-    
-    case USBDEV_DISABLE_SERVICE:
-      usbdev_acm_printk("USB CHAR SERVICE DISABLED\n");
-      pv->service_enabled = 0;
-    
-      if (!pv->read_started)
-        pv->disconnection = 1;
-
-      break;
-    
-    case USBDEV_PROCESS_CONTROL:
+    switch (rq->cmd)
       {
+      case USBDEV_ENABLE_SERVICE:
+        logk_debug("ACM Service enable");
+
+        /* Enable service and check queues */
+        pv->service_enabled = 1;
+
+        /* Start a USB bulk write transfer */
+        usbdev_service_try_write(dev);
+        usbdev_service_try_read(dev);
+
+        break;
+
+      case USBDEV_DISABLE_SERVICE:
+        logk_debug("ACM Service disable");
+
+        pv->service_enabled = 0;
+        if (!pv->read_started)
+          pv->disconnection = 1;
+
+        break;
+
+      case USBDEV_PROCESS_CONTROL: {
         /* Only CDC control interface support specific request*/
-        ensure (rq->intf == USBDEV_SERV_CHAR_INTF_CTRL);
-   
+        ensure(rq->intf == USBDEV_SERV_CHAR_INTF_CTRL);
+
         /* We use provided buffer to send/retrieve USB data */
         const struct usb_ctrl_setup_s *setup = (const void *)rq->ctrl.setup;
         uint16_t len = usb_setup_length_get(setup);
@@ -481,55 +491,55 @@ static KROUTINE_EXEC(usbdev_acm_ctrl_cb)
         ensure(len <= CONFIG_USBDEV_EP0_BUFFER_SIZE);
 
         rq->error = -EINVAL;
-       
+
         switch (usb_setup_request_get(setup))
           {
           case USB_CDC_GET_LINE_CODING:
-            usbdev_acm_printk("USB REQUEST: GET LINE CODING\n");
+            logk_debug("Get Line Coding req");
             if (usb_setup_value_get(setup) ||
                 usb_setup_direction_get(setup) != USB_DEVICE_TO_HOST)
               break;
 
             /* Copy data in provided buffer */
             memcpy(rq->ctrl.buffer, &pv->coding, len);
-       
+
             rq->type = USBDEV_TRANSFER_DATA;
             rq->ctrl.size = len;
             rq->error = 0;
             kroutine_init_deferred_seq(&rq->kr, &usbdev_acm_transfer_cb, &pv->seq);
             break;
-       
+
           case USB_CDC_SET_LINE_CODING:
-            usbdev_acm_printk("USB REQUEST: SET LINE CODING\n");
+            logk_debug("Set Line Coding req");
             if (usb_setup_value_get(setup) ||
                 usb_setup_direction_get(setup) != USB_HOST_TO_DEVICE)
               break;
-       
+
             rq->type = USBDEV_TRANSFER_DATA;
             rq->ctrl.size = len;
             rq->error = 0;
             kroutine_init_deferred_seq(&rq->kr, &usbdev_acm_transfer_cb, &pv->seq);
             break;
-     
+
           case USB_CDC_SET_CONTROL_LINE_STATE:
-            usbdev_acm_printk("USB REQUEST: SET LINE STATE\n");
+            logk_debug("Set Line State req");
             rq->error = 0;
             break;
-       
+
           default:
-            usbdev_acm_printk("USB CHAR SERVICE UNSUPPORTED REQUEST TYPE %d\n", usb_setup_request_get(setup));
+            logk_debug("Unsupported request type %d", usb_setup_request_get(setup));
             break;
           }
       }
 
-    default:
-      break;
+      default:
+        break;
+      }
+
+    if (rq->error)
+      logk_debug("Request error %d", rq->error);
   }
 
-  if (rq->error)
-    usbdev_acm_printk("USB CHAR REQUEST ERROR\n");
-
-  LOCK_RELEASE_IRQ(&dev->lock);
   /* Push request on stack */
   usbdev_stack_request(&pv->usb, &pv->service, &pv->rq);
 }
@@ -556,57 +566,51 @@ static const struct usbdev_service_descriptor_s usb_cdc_acm_service =
     ),
 
   .str_cnt = 2,
-  .string = 
+  .string =
     "CDC ACM Data\0"
     "CDC ACM Control\0",
 
   .replace = usbdev_acm_replace,
 };
 
-static DEV_CHAR_CANCEL(usbdev_acm_cancel)
+static
+DEV_CHAR_CANCEL(usbdev_acm_cancel)
 {
   struct device_s *dev = accessor->dev;
-  struct usbdev_acm_private_s   *pv = dev->drv_pv;
+  struct usbdev_acm_private_s *pv = dev->drv_pv;
 
-  error_t err = -ENOTSUP;
-
-  LOCK_SPIN_IRQ(&dev->lock);
+  LOCK_SPIN_IRQ_SCOPED(&dev->lock);
 
   switch (rq->type)
     {
     case DEV_CHAR_READ_POLL:
     case DEV_CHAR_READ_PARTIAL:
     case DEV_CHAR_READ:
-      err = -EBUSY;
-      if (rq->base.drvdata == pv)
-        {
-          err = 0;
-          rq->base.drvdata = NULL;
-          dev_request_queue_remove(&pv->read_q, dev_char_rq_s_base(rq));
-        }
-      break;
+      if (rq->base.drvdata != pv)
+        return -EBUSY;
+
+      rq->base.drvdata = NULL;
+      dev_request_queue_remove(&pv->read_q, dev_char_rq_s_base(rq));
+      return 0;
+
     case DEV_CHAR_WRITE_PARTIAL:
     case DEV_CHAR_WRITE:
     case DEV_CHAR_WRITE_PARTIAL_FLUSH:
     case DEV_CHAR_WRITE_FLUSH:
-      err = -EBUSY;
-      if (rq->base.drvdata == pv)
-        {
-          err = 0;
-          rq->base.drvdata = NULL;
-          dev_request_queue_remove(&pv->write_q, dev_char_rq_s_base(rq));
-        }
-      break;
+      if (rq->base.drvdata != pv)
+        return -EBUSY;
+
+      rq->base.drvdata = NULL;
+      dev_request_queue_remove(&pv->write_q, dev_char_rq_s_base(rq));
+      return 0;
+
     default:
-      break;                 
+      return -ENOTSUP;
     }
-
-  LOCK_RELEASE_IRQ(&dev->lock);
-
-  return err;
 }
 
-static DEV_CHAR_REQUEST(usbdev_acm_request)
+static
+DEV_CHAR_REQUEST(usbdev_acm_request)
 {
   struct device_s               *dev = accessor->dev;
   struct usbdev_acm_private_s   *pv = dev->drv_pv;
@@ -624,10 +628,10 @@ static DEV_CHAR_REQUEST(usbdev_acm_request)
       if (rq->size > 1)
         {
           rq->error = -ENOTSUP;
-          break;                 
+          break;
         }
     case DEV_CHAR_READ_PARTIAL:
-    case DEV_CHAR_READ: 
+    case DEV_CHAR_READ:
       if (pv->disconnection)
         {
           pv->disconnection = 0;
@@ -652,7 +656,7 @@ static DEV_CHAR_REQUEST(usbdev_acm_request)
 
     default:
       rq->error = -ENOTSUP;
-      break;                 
+      break;
     }
 
   LOCK_RELEASE_IRQ(&dev->lock);
@@ -663,7 +667,8 @@ static DEV_CHAR_REQUEST(usbdev_acm_request)
 
 #define usbdev_acm_use dev_use_generic
 
-static DEV_INIT(usbdev_acm_init)
+static
+DEV_INIT(usbdev_acm_init)
 {
   error_t err = 0;
 
@@ -697,7 +702,7 @@ static DEV_INIT(usbdev_acm_init)
 
   pv->coding.dwDTERate = endian_le32(115200);
   /* 1 Stop bit */
-  pv->coding.bCharFormat = 0;   
+  pv->coding.bCharFormat = 0;
   /* No parity */
   pv->coding.bParityType = 0;
   /* Data bits */
@@ -705,7 +710,7 @@ static DEV_INIT(usbdev_acm_init)
 
   pv->service.desc = &usb_cdc_acm_service;
   pv->service.pv = dev;
-  
+
   /* Get endpoint map from ressources */
   dev_res_get_usbdev_epmap(dev, &pv->service);
 
@@ -719,7 +724,7 @@ static DEV_INIT(usbdev_acm_init)
   struct usbdev_service_rq_s *rq = &pv->rq;
 
   rq->pvdata = dev;
-  rq->type = USBDEV_GET_COMMAND; 
+  rq->type = USBDEV_GET_COMMAND;
   rq->error = 0;
 
   kroutine_seq_init(&pv->seq);
@@ -746,7 +751,8 @@ err_pv:
   return err;
 }
 
-static DEV_CLEANUP(usbdev_acm_cleanup)
+static
+DEV_CLEANUP(usbdev_acm_cleanup)
 {
   struct usbdev_acm_private_s *pv = dev->drv_pv;
 
@@ -766,8 +772,7 @@ static DEV_CLEANUP(usbdev_acm_cleanup)
   return 0;
 }
 
-DRIVER_DECLARE(usbdev_acm_drv, 0, "USBDEV CDC ACM", usbdev_acm,
+DRIVER_DECLARE(usbdev_acm_drv, 0, "CDC-ACM Dev", usbdev_acm,
                DRIVER_CHAR_METHODS(usbdev_acm));
 
 DRIVER_REGISTER(usbdev_acm_drv);
-
