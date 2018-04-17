@@ -60,11 +60,19 @@ error_t device_get_api(struct device_s *dev,
     return -EBUSY;
 
   const struct driver_class_s *c = NULL;
-  uint_fast8_t i;
-  for (i = 0; (c = drv->classes[i]) != NULL; i++)
-    if (c->class_ == cl)
-      goto found;
-  return -ENOENT;
+  uint8_t mask = 0xff;
+
+  if (cl != DRIVER_CLASS_NONE)
+    {
+      uint_fast8_t i;
+      for (i = 0; (c = drv->classes[i]) != NULL; i++)
+        if (c->class_ == cl)
+          {
+            mask = 1 << i;
+            goto found;
+          }
+      return -ENOENT;
+    }
 
  found:
   switch (dev->status)
@@ -79,7 +87,7 @@ error_t device_get_api(struct device_s *dev,
     case DEVICE_INIT_ONGOING:
 # ifdef CONFIG_DEVICE_INIT_PARTIAL
     case DEVICE_INIT_PARTIAL:
-      if (dev->init_mask & (1 << i))
+      if (dev->init_mask & mask)
         goto done;
       if (dev->status == DEVICE_INIT_ONGOING)
 # endif

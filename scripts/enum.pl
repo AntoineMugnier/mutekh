@@ -244,12 +244,12 @@ foreach my $filein (@ARGV) {
                 $state = 2;
                 next;
             } else {
-                die "error:$lnum: enum parse error, looking for opening braces\n";
+                die "error:$filein:$lnum: enum parse error, looking for opening braces\n";
             }
         }
 
         if ($state == 2) {
-            if ($line =~ /^\s*(\w+)\b\s*(?:=\s*(\w+))?,?(?:\s*\/\*\s*name:(\w+)\s*\*\/)?\s*$/) {
+            if ($line =~ /^\s*(\w+)\b\s*(?:=\s*(\w+))?,?(?:\s*\/\*\s*name:(\w+)\s*\*\/)?\s*(?:\/.*\s*)?$/) {
                 $val = $2 if (defined $2);
                 my $name;
                 if (defined $3) {
@@ -289,7 +289,7 @@ foreach my $filein (@ARGV) {
                 $state = 3;
             } elsif ($line =~ /^$/) {
             } else {
-                die "error:$lnum: enum parse error, unexpected enum content line\n";
+                die "error:$filein:$lnum: enum parse error, unexpected enum content line\n";
             }
         }
 
@@ -297,7 +297,7 @@ foreach my $filein (@ARGV) {
             if ($line =~ /\*\/\s*$/) {
                 $state = 2;
             } elsif ($line =~ /\*\//) {
-                die "error:$lnum: unable to handle comment end\n";
+                die "error:$filein:$lnum: unable to handle comment end\n";
             }
             next;
         }

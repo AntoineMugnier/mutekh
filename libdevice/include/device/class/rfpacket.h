@@ -153,9 +153,9 @@ struct dev_rfpacket_rf_cfg_fairtx_s
 {
   union {
     struct {
-      /** Listening time in us. Defined as the minimum time that the device 
-          must listen prior to determine whether the intended channel is
-          available for use.**/
+      /** Listening time in timer unit. Defined as the minimum time that the
+          device must listen prior to determine whether the intended channel
+          is available for use.**/
       dev_timer_delay_t             duration;
       /** RX RSSI threshold. During a TX listen before talk, signal below
           this level will allow start of transmission. */
@@ -225,9 +225,20 @@ enum dev_rfpacket_format_e
      @see dev_rfpacket_pk_cfg_basic_s */
   DEV_RFPACKET_FMT_SLPC,
 
+  /* UART mode. Each byte of packet has a start and stop bit added. */
+  DEV_RFPACKET_FMT_IO,
+
   /* Sync word, optional header, Payload, CRC. This is used when
      @ref dev_rfpacket_pk_cfg_lora_s is used. */
   DEV_RFPACKET_FMT_LORA,
+
+  /* Raw mode. Data is provided as a list of duration encoding symbols
+     0 and 1. The first duration value is always for symbol 0 but might
+     be set to 0 is necessary. Symbol duration is expressed in
+     @ref dev_rfpacket_pk_cfg_raw_s::unit
+     */
+  DEV_RFPACKET_FMT_RAW,
+
 };
 
 ENUM_DESCRIPTOR(dev_rfpacket_encoding_e, strip:DEV_RFPACKET_, upper);
@@ -237,6 +248,8 @@ enum dev_rfpacket_encoding_e
   DEV_RFPACKET_CLEAR,
   DEV_RFPACKET_MANCHESTER,
   DEV_RFPACKET_LFSR8,
+  /* Direct Sequence Spread Spectrum */
+  DEV_RFPACKET_DSSS, 
 };
 
 /** This stores packet format configuration. This may be inherited
@@ -262,13 +275,13 @@ struct dev_rfpacket_pk_cfg_basic_s
 
   /** Specifies the CRC polynomial when relevant. for instance IBM
       CRC16 has value 0x18005. Zero means that the CRC field is not
-      checked. */
+      checked. CRC is always transmitted Most significant bits first */
   uint32_t                      crc;
 
-  /** Sync word value. Most significant bit are transmitted first */
+  /** Sync word value. Most significant bits are transmitted first */
   uint32_t                      sw_value;
 
-  /** preamble pattern */
+  /** preamble pattern. Most significant bits are transmitted first */
   uint32_t                      pb_pattern;
 
   /** Size of sync word in bits minus one */
@@ -279,7 +292,7 @@ struct dev_rfpacket_pk_cfg_basic_s
 
   /** Size of transmitted preamble in bits. When the requested value
       is not supported, it must be rounded to a higher value. */
-  uint8_t                       tx_pb_len;
+  uint16_t                       tx_pb_len;
 
   /** Size of expected RX preamble in bits. When the requested value
       is not supported, it must be rounded to a lower value. */
@@ -287,6 +300,33 @@ struct dev_rfpacket_pk_cfg_basic_s
 };
 
 STRUCT_INHERIT(dev_rfpacket_pk_cfg_basic_s, dev_rfpacket_pk_cfg_s, base);
+
+/** @This specifies the integer type used to store symbols for a
+    raw request. */
+enum dev_rfpacket_sym_width_e
+{
+  /** Symbols are stored as @tt uint8_t */
+  DEV_RFPACKET_RAW_8BITS,
+  /** Symbols are stored as @tt uint16_t */
+  DEV_RFPACKET_RAW_16BITS,
+  /** Symbols are stored as @tt uint32_t */
+  DEV_RFPACKET_RAW_32BITS,
+};
+
+struct dev_rfpacket_pk_cfg_raw_s
+{
+  struct dev_rfpacket_pk_cfg_s   base;
+  /* Maximum packet size in number of symbol */ 
+  uint16_t                       mps;
+  /* This defines the base unit time use for symbol duration */
+  struct dev_freq_s              unit;
+  /* Timeout in unit used to detect end of a RX packet */
+  uint32_t                       timeout;
+  /** This specifies the type of integer used for symbols */
+  enum dev_rfpacket_sym_width_e  sym_width;
+};
+
+STRUCT_INHERIT(dev_rfpacket_pk_cfg_raw_s, dev_rfpacket_pk_cfg_s, base);
 
 ENUM_DESCRIPTOR(dev_rfpacket_lora_encoding_e, strip:DEV_RFPACKET_, upper);
 
@@ -380,7 +420,7 @@ struct dev_rfpacket_rx_s
 
   /** Received payload buffer, allocated by the @ref
       dev_rfpacket_rx_alloc_t function. */
-  uint8_t                           *buf;
+  void                              *buf;
 
   /** Actual size of the received payload. This is initially set by
       the @ref dev_rfpacket_rx_alloc_t function and updated by the
@@ -395,6 +435,9 @@ struct dev_rfpacket_rx_s
 
   /** RX signal power over noise power ratio. */
   dev_rfpacket_pwr_t                snr;
+
+  /** Channel of the received packet. */
+  uint8_t                           channel;
 
   /** RX error. This is set by the driver if the packet is malformed
       or contains bit errors. If no data is available due to the
@@ -539,14 +582,23 @@ struct dev_rfpacket_rq_s
   enum dev_rfpacket_rq_rtype_e      BITFIELD(type,2);
 
   union {
-    /** This is used to allocate a RX buffers to store the payload of
-        the incoming packet when the request is running. The received
-        packet is discarded if the function return @tt NULL. */
-    dev_rfpacket_rx_alloc_t         *rx_alloc;
+    struct {
+      /** This is used to allocate a RX buffers to store the payload of
+          the incoming packet when the request is running. The received
+          packet is discarded if the function return @tt NULL. */
+      dev_rfpacket_rx_alloc_t         *rx_alloc;
+      /** This is a channel mask used in @ref DEV_RFPACKET_RQ_RX_CONT
+          operations to perform scanning on multiple channels. Least
+          significant bit of this mask corresponds to
+          @ref dev_rfpacket_rq_s::channel and must always be set.
+          When a  packet is received, @ref dev_rfpacket_rx_s::channel
+          corresponds to the reception channel */
+      uint32_t                        mask;
+    };
 
     struct {
       /** This contains the payload to transmit. */
-      const uint8_t                 *tx_buf;
+      const void                    *tx_buf;
       /** This specifies the size of the payload to transmit. */
       uint16_t                      tx_size;
       /** This specifies the TX power. */

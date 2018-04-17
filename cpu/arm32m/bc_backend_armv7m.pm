@@ -155,7 +155,7 @@ sub out_bitc {
     if ($x >= 12) {
         if ($x >= 16) {
             $r .= "    movs r0, #1\n".
-                  "    lsrs r0, #$x\n";
+                  "    lsls r0, #$x\n";
         } else {
             $r .= "    movw r0, #".(1 << $x)."\n";
         }
@@ -173,7 +173,7 @@ sub out_bits {
     if ($x >= 12) {
         if ($x >= 16) {
             $r .= "    movs r0, #1\n".
-                  "    lsrs r0, #$x\n";
+                  "    lsls r0, #$x\n";
         } else {
             $r .= "    movw r0, #".(1 << $x)."\n";
         }

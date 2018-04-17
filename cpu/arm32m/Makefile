@@ -7,6 +7,7 @@ ifneq ($(CONFIG_CPU_ARM32M_TIMER_SYSTICK)_$(CONFIG_CPU_ARM32M_TIMER_DWTCYC), und
 objs += driver_timer.o
 endif
 
+objs-$(CONFIG_CPU_ARM32M_CORESIGHT) += trace.o
 objs-$(CONFIG_CPU_ARM32M_ITM_PRINTK) += itm_printk.o
 objs-$(CONFIG_MUTEK_BYTECODE_NATIVE) += bytecode.o
 

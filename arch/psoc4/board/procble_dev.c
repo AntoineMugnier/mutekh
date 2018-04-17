@@ -32,7 +32,7 @@ DEV_DECLARE_STATIC(uart_dev, "uart0", 0, psoc4_uart_drv,
                    DEV_STATIC_RES_DEV_ICU("/cpu"),
                    DEV_STATIC_RES_IRQ(0, PSOC4_IRQ_SCB0, DEV_IRQ_SENSE_HIGH_LEVEL, 0, 1),
                    DEV_STATIC_RES_DEV_IOMUX("/gpio"),
-                   DEV_STATIC_RES_UART(1000000, 8, DEV_UART_PARITY_NONE, 1, 1, 0),
+                   DEV_STATIC_RES_UART(1000000, 8, DEV_UART_PARITY_NONE, 1, 1),
                    DEV_STATIC_RES_IOMUX("tx", 0, PSOC4_P1_5, PSOC4_P1_5_SCB0_UART_TX, 0),
                    DEV_STATIC_RES_IOMUX("rx", 0, PSOC4_P1_4, PSOC4_P1_4_SCB0_UART_RX, 0),
 # ifdef CONFIG_DEVICE_CLOCK

@@ -31,33 +31,29 @@ enum mem_opts_e
 {
   MEM_OPT_DEV    = 0x01,
   MEM_OPT_BAND   = 0x02,
-  MEM_OPT_RQ     = 0x04,
-  MEM_OPT_ADDR   = 0x08,
-  MEM_OPT_DATA   = 0x10,
-  MEM_OPT_BUFFER = 0x20,
-  MEM_OPT_SIZE   = 0x40,
-  MEM_OPT_SCLOG2 = 0x80
+  MEM_OPT_ADDR   = 0x04,
+  MEM_OPT_DATA   = 0x08,
+  MEM_OPT_SIZE   = 0x10,
+  MEM_OPT_PAGE   = 0x20,
+  MEM_OPT_ALL    = 0x40
 };
 
 struct termui_optctx_dev_mem_opts
 {
   struct device_mem_s mem;
   uint_fast8_t band;
-  enum dev_mem_rq_type_e rqtype;
   uintptr_t addr;
-  uint8_t sc_log2;
-  union {
-    struct {
-      uintptr_t buffer;
-      uintptr_t size;
-    };
-    struct termui_con_string_s data;
-  };
+  struct shell_opt_buffer_s data;
+  uintptr_t size;
+  uintptr_t page;
 };
 
 static TERMUI_CON_ARGS_CLEANUP_PROTOTYPE(mem_opts_cleanup)
 {
   struct termui_optctx_dev_mem_opts *c = ctx;
+
+  if (c->data.buffered)
+    shell_buffer_drop(c->data.addr);
 
   if (device_check_accessor(&c->mem.base))
       device_put_accessor(&c->mem.base);
@@ -86,7 +82,7 @@ static TERMUI_CON_COMMAND_PROTOTYPE(dev_shell_mem_info)
                         info.size);
       if (info.flags & (DEV_MEM_MAPPED_READ | DEV_MEM_MAPPED_WRITE))
         termui_con_printf(con, "  Mapped at   : %p\n", info.map_base);
-      if (info.page_log2)
+      if (info.flags & (DEV_MEM_PAGE_READ | DEV_MEM_PAGE_WRITE))
         termui_con_printf(con, "  Page size   : %u\n", 1 << info.page_log2);
       if (info.read_cycles_m)
         termui_con_printf(con, "  Read cycles : %u\n", info.read_cycles_m << info.read_cycles_p);
@@ -103,77 +99,150 @@ static TERMUI_CON_COMMAND_PROTOTYPE(dev_shell_mem_info)
     }
 }
 
-static TERMUI_CON_COMMAND_PROTOTYPE(dev_shell_mem_request)
+static error_t dev_shell_set_rq(struct dev_mem_rq_s *rq, size_t *sc_cnt,
+                                const struct termui_optctx_dev_mem_opts *c,
+                                uint_fast16_t used, size_t size)
 {
-  struct termui_optctx_dev_mem_opts *c = ctx;
-  error_t ret;
-  
-  struct dev_mem_info_s info;
-  if (DEVICE_OP(&c->mem, info, &info, c->band))
-    return -EINVAL;
-
-  struct dev_mem_rq_s rq;
-
-  rq.type = c->rqtype;
-  rq.band_mask = 1 << c->band;
-  rq.sc_log2 = c->sc_log2;
-  rq.addr = c->addr;
-
-  size_t sc = c->size >> c->sc_log2;
-  uint8_t *d[sc];
-  uint8_t *buffer = (void*)c->buffer;
-
-  if (!(used & (MEM_OPT_DATA | MEM_OPT_BUFFER))) {
-    buffer = mem_alloc(c->size << info.page_log2, mem_scope_sys);
-    if (!buffer) {
-      termui_con_printf(con, "Not enough memory\n");
-      return -1;
-    }
-  }
-
-  if (c->rqtype & (DEV_MEM_OP_PAGE_ERASE | DEV_MEM_OP_PAGE_READ | DEV_MEM_OP_PAGE_WRITE))
+  if (used & MEM_OPT_PAGE)
     {
-      if (used & MEM_OPT_DATA)
+      size_t psize = c->page;
+      if (!is_pow2(psize) || psize > size || (size & (psize - 1)))
         return -EINVAL;
-      size_t i;
-      for (i = 0; i < sc; i++)
-        d[i] = buffer + (i << (info.page_log2 + c->sc_log2));
-      rq.sc_data = d;
-      rq.size = c->size;
+      rq->type |= _DEV_MEM_PAGE;
+      rq->page.page_log2 = bit_msb_index(psize);
+      size_t c = size >> rq->page.page_log2;
+      *sc_cnt = c;
+      rq->page.sc_count = c;
     }
-  else if (used & MEM_OPT_BUFFER)
+  else if (used & MEM_OPT_ALL)
     {
-      rq.data = (uint8_t*)c->data.str;
-      rq.size = c->data.len;
-    }
-  else if (used & MEM_OPT_DATA)
-    {
-      if (c->rqtype & DEV_MEM_OP_PARTIAL_READ)
-        return -EINVAL;
-      rq.data = (uint8_t*)c->buffer;
-      rq.size = c->size;
+      rq->type |= _DEV_MEM_ALL;
     }
   else
     {
-      rq.data = buffer;
-      rq.size = c->size;
+      rq->type |= _DEV_MEM_PARTIAL;
+      rq->partial.addr = c->addr;
+      rq->partial.size = size;
     }
 
-  ret = dev_mem_wait_op(&c->mem, &rq);
-
-  if (ret)
-    termui_con_printf(con, "Request error: %s\n", strerror(ret));
-
-  if (!(used & (MEM_OPT_DATA | MEM_OPT_BUFFER)) && ret == 0) {
-    for (size_t off = 0; off < c->size << info.page_log2; off += 16)
-      termui_con_printf(con, "%p: %P\n", off, buffer + off,
-                        __MIN((c->size << info.page_log2) - off, 16));
-  }
-
-  if (!(used & (MEM_OPT_DATA | MEM_OPT_BUFFER)))
-    mem_free(buffer);
-  
   return 0;
+}
+
+static void dev_shell_set_sc(struct dev_mem_rq_s *rq, uint8_t *data,
+                             struct dev_mem_page_sc_s sc[], size_t sc_cnt,
+                             const struct termui_optctx_dev_mem_opts *c)
+{
+  if (sc_cnt)
+    {
+      uintptr_t a = 0;
+      uint_fast8_t i;
+      for (i = 0; i < sc_cnt; i++)
+        {
+          sc[i].addr = c->addr + a;
+          sc[i].data = data + a;
+          a += c->page;
+        }
+      rq->page.sc = sc;
+    }
+  else
+    {
+      rq->partial.data = data;
+    }
+}
+
+static TERMUI_CON_COMMAND_PROTOTYPE(dev_shell_mem_read)
+{
+  struct termui_optctx_dev_mem_opts *c = ctx;
+  struct dev_mem_rq_s rq;
+  size_t size = c->size;
+
+  void *buf = shell_buffer_new(con, size, "mem", NULL, 0);
+  void *data = buf;
+  if (!data)
+    return -EINVAL;
+
+  rq.type = _DEV_MEM_READ;
+  rq.band_mask = 1 << c->band;
+
+  size_t sc_cnt = 0;
+  error_t err = -EINVAL;
+
+  if (!dev_shell_set_rq(&rq, &sc_cnt, c, used, size))
+    {
+      struct dev_mem_page_sc_s sc[sc_cnt];
+      dev_shell_set_sc(&rq, data, sc, sc_cnt, c);
+
+      if ((err = dev_mem_wait_op(&c->mem, &rq)))
+        {
+          termui_con_printf(con, "error %i\n", err);
+          err = -EINVAL;
+        }
+      else
+        {
+          shell_buffer_advertise(con, buf, size);
+          err = 0;
+        }
+    }
+
+  shell_buffer_drop(buf);
+  return err;
+}
+
+static TERMUI_CON_COMMAND_PROTOTYPE(dev_shell_mem_write)
+{
+  struct termui_optctx_dev_mem_opts *c = ctx;
+  struct dev_mem_rq_s rq;
+  size_t size = c->data.size;
+  uint8_t *data = c->data.addr;
+
+  if (used & MEM_OPT_SIZE)
+    {
+      if (size < c->size)
+        return -EINVAL;
+      size = c->size;
+    }
+
+  rq.type = _DEV_MEM_WRITE;
+  rq.band_mask = 1 << c->band;
+
+  size_t sc_cnt = 0;
+  if (dev_shell_set_rq(&rq, &sc_cnt, c, used, size))
+    return -EINVAL;
+  struct dev_mem_page_sc_s sc[sc_cnt];
+  dev_shell_set_sc(&rq, data, sc, sc_cnt, c);
+
+  error_t err = dev_mem_wait_op(&c->mem, &rq);
+
+  if (err)
+    termui_con_printf(con, "error %i\n", err);
+
+  return err ? -EINVAL : 0;
+}
+
+static TERMUI_CON_COMMAND_PROTOTYPE(dev_shell_mem_erase)
+{
+  struct termui_optctx_dev_mem_opts *c = ctx;
+  struct dev_mem_rq_s rq;
+  size_t size = c->size;
+
+  if (!(used & MEM_OPT_SIZE))
+    size = c->page;
+
+  rq.type = _DEV_MEM_ERASE;
+  rq.band_mask = 1 << c->band;
+
+  size_t sc_cnt = 0;
+  if (dev_shell_set_rq(&rq, &sc_cnt, c, used, size))
+    return -EINVAL;
+  struct dev_mem_page_sc_s sc[sc_cnt];
+  dev_shell_set_sc(&rq, NULL, sc, sc_cnt, c);
+
+  error_t err = dev_mem_wait_op(&c->mem, &rq);
+
+  if (err)
+    termui_con_printf(con, "error %i\n", err);
+
+  return err ? -EINVAL : 0;
 }
 
 static TERMUI_CON_OPT_DECL(dev_mem_opts) =
@@ -187,24 +256,21 @@ static TERMUI_CON_OPT_DECL(dev_mem_opts) =
                                      band, 1, 0, 255,
                                      TERMUI_CON_OPT_CONSTRAINTS(MEM_OPT_BAND, 0))
 
-  TERMUI_CON_OPT_ENUM_ENTRY("-r", "--request", MEM_OPT_RQ, struct termui_optctx_dev_mem_opts,
-                            rqtype, dev_mem_rq_type_e,
-                            TERMUI_CON_OPT_CONSTRAINTS(MEM_OPT_RQ, 0))
-
   TERMUI_CON_OPT_INTEGER_ENTRY("-a", "--addr", MEM_OPT_ADDR, struct termui_optctx_dev_mem_opts, addr, 1,
                               TERMUI_CON_OPT_CONSTRAINTS(MEM_OPT_ADDR, 0))
 
-  TERMUI_CON_OPT_STRING_ENTRY("-d", "--data", MEM_OPT_DATA, struct termui_optctx_dev_mem_opts, data, 1,
-                              TERMUI_CON_OPT_CONSTRAINTS(MEM_OPT_DATA | MEM_OPT_BUFFER | MEM_OPT_SIZE, 0))
-
-  TERMUI_CON_OPT_INTEGER_ENTRY("-b", "--buffer", MEM_OPT_BUFFER, struct termui_optctx_dev_mem_opts, buffer, 1,
-                               TERMUI_CON_OPT_CONSTRAINTS(MEM_OPT_DATA | MEM_OPT_BUFFER, MEM_OPT_SIZE))
+  TERMUI_CON_OPT_SHELL_BUFFER_RAW_ENTRY("-D", "--data", MEM_OPT_DATA, struct termui_optctx_dev_mem_opts, data, NULL,
+                              TERMUI_CON_OPT_CONSTRAINTS(MEM_OPT_DATA, 0))
 
   TERMUI_CON_OPT_INTEGER_ENTRY("-s", "--size", MEM_OPT_SIZE, struct termui_optctx_dev_mem_opts, size, 1,
                                TERMUI_CON_OPT_CONSTRAINTS(MEM_OPT_SIZE, 0))
 
-  TERMUI_CON_OPT_INTEGER_ENTRY("-S", "--sc-log2", MEM_OPT_SCLOG2, struct termui_optctx_dev_mem_opts, sc_log2, 1,
-                               TERMUI_CON_OPT_CONSTRAINTS(MEM_OPT_SCLOG2, 0))
+  TERMUI_CON_OPT_INTEGER_ENTRY("-p", "--page-size", MEM_OPT_PAGE, struct termui_optctx_dev_mem_opts, page, 1,
+                               TERMUI_CON_OPT_CONSTRAINTS(MEM_OPT_PAGE | MEM_OPT_ALL, MEM_OPT_ADDR))
+
+  TERMUI_CON_OPT_ENTRY("-A", "--all", MEM_OPT_ALL,
+		       TERMUI_CON_OPT_CONSTRAINTS(MEM_OPT_ALL | MEM_OPT_PAGE, 0)
+		       )
 
   TERMUI_CON_LIST_END
 };
@@ -212,13 +278,22 @@ static TERMUI_CON_OPT_DECL(dev_mem_opts) =
 TERMUI_CON_GROUP_DECL(dev_shell_mem_group) =
 {
   TERMUI_CON_ENTRY(dev_shell_mem_info, "info",
-		   TERMUI_CON_OPTS_CTX(dev_mem_opts, MEM_OPT_DEV , MEM_OPT_DEV, mem_opts_cleanup)
+		   TERMUI_CON_OPTS_CTX(dev_mem_opts, MEM_OPT_DEV, 0, mem_opts_cleanup)
                    )
 
-  TERMUI_CON_ENTRY(dev_shell_mem_request, "request",
-		   TERMUI_CON_OPTS_CTX(dev_mem_opts, MEM_OPT_DEV | MEM_OPT_RQ |
-                                       MEM_OPT_ADDR,
-                                       MEM_OPT_BAND | MEM_OPT_SIZE | MEM_OPT_SCLOG2 | MEM_OPT_DATA | MEM_OPT_BUFFER, mem_opts_cleanup)
+  TERMUI_CON_ENTRY(dev_shell_mem_write, "write",
+		   TERMUI_CON_OPTS_CTX(dev_mem_opts, MEM_OPT_DEV | MEM_OPT_DATA | MEM_OPT_ADDR,
+                                       MEM_OPT_BAND | MEM_OPT_PAGE | MEM_OPT_SIZE, mem_opts_cleanup)
+                   )
+
+  TERMUI_CON_ENTRY(dev_shell_mem_read, "read",
+		   TERMUI_CON_OPTS_CTX(dev_mem_opts, MEM_OPT_DEV | MEM_OPT_SIZE | MEM_OPT_ADDR,
+                                       MEM_OPT_BAND | MEM_OPT_PAGE, mem_opts_cleanup)
+                   )
+
+  TERMUI_CON_ENTRY(dev_shell_mem_erase, "erase",
+		   TERMUI_CON_OPTS_CTX(dev_mem_opts, MEM_OPT_DEV | MEM_OPT_PAGE | MEM_OPT_ALL,
+                                       MEM_OPT_BAND | MEM_OPT_SIZE | MEM_OPT_ADDR, mem_opts_cleanup)
                    )
 
   TERMUI_CON_LIST_END

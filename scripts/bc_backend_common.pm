@@ -154,7 +154,17 @@ sub out_jmpa {
     return out_calljmp( $thisop, $thisop->{target}->{addr} - 2, 0, 0 );
 }
 
+sub out_call {
+    my ($thisop) = @_;
+    return fmt0( $thisop, 0, $thisop->{in}->[0] );
+}
+
 sub out_ret {
+    my ($thisop) = @_;
+    return fmt0( $thisop, 0, $thisop->{in}->[0] );
+}
+
+sub out_jmp {
     my ($thisop) = @_;
     return fmt0( $thisop, 0, $thisop->{in}->[0] );
 }

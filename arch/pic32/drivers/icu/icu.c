@@ -201,6 +201,7 @@ static DEV_CLEANUP(pic32_icu_cleanup)
   if (pv->sinks)
     mem_free(pv->sinks);
 
+  device_iomux_cleanup(dev);
   mem_free(pv);
 }
 

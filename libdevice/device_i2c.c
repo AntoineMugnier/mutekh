@@ -366,8 +366,41 @@ device_i2c_bytecode_exec(struct dev_i2c_ctrl_context_s *q,
           return device_i2c_ctrl_transfer(q, &rq->base, data, size, type);
         }
 
-      // non-accesses
-      switch (bit_get_mask(op, 8, 4))
+      if (op & 0x0800)          /* gpio */
+        {
+          err = -ENOTSUP;
+#  ifdef CONFIG_DEVICE_I2C_BYTECODE_GPIO
+          if (!device_check_accessor(&rq->gpio.base))
+            continue;
+
+          uint_fast8_t i = (op >> 5) & 0xf;
+          gpio_id_t id = rq->gpio_map[i];
+          gpio_width_t w = rq->gpio_wmap[i];
+          uint8_t value[8];
+
+          if (op & 0x0200)  /* gpioget */
+            {
+              err = DEVICE_OP(&rq->gpio, get_input, id,
+                              id + w - 1, value);
+              bc_set_reg(&rq->vm, op & 0xf,
+                         endian_le32_na_load(value) & ((1 << w) - 1));
+            }
+          else if (op & 0x0400) /* gpioset */
+            {
+              endian_le32_na_store(value, bc_get_reg(&rq->vm, op & 0xf));
+              err = DEVICE_OP(&rq->gpio, set_output, id,
+                              id + w - 1, value, value);
+            }
+          else              /* gpiomode */
+            {
+              err = DEVICE_OP(&rq->gpio, set_mode, id,
+                              id + w - 1, dev_gpio_mask1, op & 0x1f);
+            }
+#  endif
+          continue;
+        }
+
+      switch ((op & 0x0700) >> 8)
         {
         case 0: // (no)delay, wait
         case 1: // yield
@@ -427,43 +460,6 @@ device_i2c_bytecode_exec(struct dev_i2c_ctrl_context_s *q,
           else              /* addr_set */
             rq->base.saddr = bc_get_reg(&rq->vm, op & 0xf);
           continue;
-
-#  ifdef CONFIG_DEVICE_I2C_BYTECODE_GPIO
-        case 4: // gpioset
-        case 5: // gpioget
-        case 6: // gpiomode
-          err = 0;
-          if (!device_check_accessor(&rq->gpio.base))
-            {
-              err = -ENOTSUP;
-            }
-          else
-            {
-              gpio_id_t id = rq->gpio_map[bit_get_mask(op, 4, 4)];
-              gpio_width_t w = rq->gpio_wmap[bit_get_mask(op, 4, 4)];
-              uint8_t value[8];
-
-              switch (bit_get_mask(op, 8, 2))
-                {
-                case 0: /* gpioset */
-                  endian_le32_na_store(value, bc_get_reg(&rq->vm, op & 0xf));
-                  err = DEVICE_OP(&rq->gpio, set_output, id,
-                                  id + w - 1, value, value);
-                  break;
-                case 1: /* gpioget */
-                  err = DEVICE_OP(&rq->gpio, get_input, id,
-                                  id + w - 1, value);
-                  bc_set_reg(&rq->vm, op & 0xf,
-                             endian_le32_na_load(value) & ((1 << w) - 1));
-                  break;
-                case 2: /* gpiomode */
-                  err = DEVICE_OP(&rq->gpio, set_mode, id,
-                                  id + w - 1, dev_gpio_mask1, op & 0xf);
-                  break;
-                }
-            }
-          continue;
-#  endif
         }
 
       err = -EINVAL;  /* invalid op */

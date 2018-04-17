@@ -235,5 +235,12 @@
 
 @end moduledef
 
-@parse{ net/addr.h net/layer.h net/task.h net/scheduler.h
-net/layer/ethernet.h net/layer/dumper.h }
+@parse{
+  net/addr.h
+  net/layer.h
+  net/task.h
+  net/scheduler.h
+  net/layer/ethernet.h
+  net/layer/dumper.h
+  net/layer/pipe.h
+}

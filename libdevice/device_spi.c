@@ -423,8 +423,9 @@ device_spi_bytecode_exec(struct dev_spi_ctrl_context_s *q,
                   err = -ENOENT;
                   continue;
                 }
-              gpio_id_t id = rq->gpio_map[(op >> 4) & 0x1f];
-              gpio_width_t w = rq->gpio_wmap[(op >> 4) & 0x1f];
+              uint_fast8_t i = (op >> 5) & 0xf;
+              gpio_id_t id = rq->gpio_map[i];
+              gpio_width_t w = rq->gpio_wmap[i];
               uint8_t value[8];
 
               if (op & 0x0200)  /* gpioget */
@@ -439,7 +440,8 @@ device_spi_bytecode_exec(struct dev_spi_ctrl_context_s *q,
                 }
               else              /* gpiomode */
                 {
-                  err = DEVICE_OP(&rq->base.gpio, set_mode, id, id + w - 1, dev_gpio_mask1, op & 0xf);
+                  err = DEVICE_OP(&rq->base.gpio, set_mode, id,
+                                  id + w - 1, dev_gpio_mask1, op & 0x1f);
                 }
               continue;
             }
@@ -454,12 +456,12 @@ device_spi_bytecode_exec(struct dev_spi_ctrl_context_s *q,
           void *addr2 = (void*)bc_get_reg(&rq->vm, 1 ^ ra);
           size_t count = bc_get_reg(&rq->vm, op & 0xf);
           enum dev_spi_cs_op_e csop = (op >> 8) & 3;
-          if (count == 0)
-            continue;
           tr->data.count = count;
           switch (op & 0x0c00)
             {
-            case 0x0000:  /* pad */
+            case 0x0000:  /* spi_pad */
+              if (op & 0x0010)
+                tr->data.count = 0; /* spi_cs */
               tr->data.in_width = 0;
               tr->data.out_width = 0;
               tr->data.in = NULL;

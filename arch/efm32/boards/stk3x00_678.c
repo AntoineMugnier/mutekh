@@ -28,6 +28,7 @@
 # include <device/class/dma.h>
 # include <device/class/usbdev.h>
 # include <device/class/i2c.h>
+# include <device/class/uart.h>
 #endif
 
 #include <hexo/iospace.h>
@@ -201,7 +202,9 @@ DEV_DECLARE_STATIC(uart0_dev, "uart0", 0, efm32_usart_drv,
 
                    DEV_STATIC_RES_DEV_IOMUX("/gpio"),
                    DEV_STATIC_RES_IOMUX("rx", EFM32_LOC1, EFM32_PE1, 0, 0),
-                   DEV_STATIC_RES_IOMUX("tx", EFM32_LOC1, EFM32_PE0, 0, 0)
+                   DEV_STATIC_RES_IOMUX("tx", EFM32_LOC1, EFM32_PE0, 0, 0),
+
+                   DEV_STATIC_RES_UART(115200, 8, 0, 0, 0)
                    );
 
 #endif
@@ -221,7 +224,9 @@ DEV_DECLARE_STATIC(leuart0_dev, "leuart0", 0, efm32_leuart_drv,
 
                    DEV_STATIC_RES_DEV_IOMUX("/gpio"),
                    DEV_STATIC_RES_IOMUX("tx",  EFM32_LOC0, EFM32_PD4, 0, 0),
-                   DEV_STATIC_RES_IOMUX("rx",  EFM32_LOC0, EFM32_PD5, 0, 0)
+                   DEV_STATIC_RES_IOMUX("rx",  EFM32_LOC0, EFM32_PD5, 0, 0),
+
+                   DEV_STATIC_RES_UART(9600, 8, 0, 0, 0)
                    );
 
 #endif
@@ -287,6 +292,26 @@ DEV_DECLARE_STATIC(i2c_dev, "i2c1", 0, efm32_i2c_drv,
                    DEV_STATIC_RES_I2C_BITRATE(100000),
                    DEV_STATIC_RES_DEV_TIMER("/rtc"),
 
+                   DEV_STATIC_RES_DEV_ICU("/cpu"),
+                   DEV_STATIC_RES_IRQ(0, EFM32_IRQ_I2C1, DEV_IRQ_SENSE_RISING_EDGE, 0, 1),
+
+                   DEV_STATIC_RES_DEV_IOMUX("/gpio"),
+
+                   DEV_STATIC_RES_IOMUX("scl", EFM32_LOC0, EFM32_PC5, 0, 0),
+                   DEV_STATIC_RES_IOMUX("sda", EFM32_LOC0, EFM32_PC4, 0, 0)
+                   );
+
+#endif
+
+#ifdef CONFIG_DRIVER_EFM32_I2C_SLAVE
+
+DEV_DECLARE_STATIC(i2c_dev, "i2cs0", 0, efm32_i2c_slave_drv,
+                   DEV_STATIC_RES_MEM(0x4000a400, 0x4000a800),
+# ifdef CONFIG_DEVICE_CLOCK
+                   DEV_STATIC_RES_CLK_SRC("/recmu", EFM32_CLOCK_I2C1, 0),
+# else
+                   DEV_STATIC_RES_FREQ(14000000, 1),
+# endif
                    DEV_STATIC_RES_DEV_ICU("/cpu"),
                    DEV_STATIC_RES_IRQ(0, EFM32_IRQ_I2C1, DEV_IRQ_SENSE_RISING_EDGE, 0, 1),
 

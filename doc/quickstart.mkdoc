@@ -21,12 +21,12 @@ $ cd mutekh
     Build the ELF file containing an example application along with
     the kernel for your favorite platform:
     @code R
-$ make CONF=example/hello/config BUILD=efm32-stk3600
+$ make CONF=examples/hello/config BUILD=efm32-stk3600
     @end code
 
     You might want to build a binary file instead:
     @code R
-$ make CONF=example/hello/config BUILD=efm32-stk3600:binary
+$ make CONF=examples/hello/config BUILD=efm32-stk3600:binary
     @end code
 
     You will then need to flash the kernel into your board or run the
@@ -37,5 +37,5 @@ $ make CONF=example/hello/config BUILD=efm32-stk3600:binary
     specific build command lines.
 
     You can now start hacking the application code by editing
-    @tt {example/hello/hello.c}.
+    @tt {examples/hello/hello.c}.
 @end section

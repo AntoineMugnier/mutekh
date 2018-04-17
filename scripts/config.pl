@@ -814,23 +814,16 @@ sub output_inits_calls
 {
     my ( $out, $actions, $prefix ) = @_;
 
-    foreach my $init (sort { $a->{name} cmp $b->{name} } @$actions) {
+    foreach my $init (sort inits_sort_predicate @$actions) {
 
         next if !$init->{flags}->{calls} || !$init->{calls};
 
         my @calls = @{$init->{calls}};
 
-        print {$out} "$prefix $init->{name} (init):\n";
+        print {$out} "$prefix $init->{name}:\n";
         foreach my $call ( @calls ) {
             printf {$out} "$prefix     %-32s %s()\n", $call->{name}, $call->{constructor}
                 if ( $call->{constructor} );
-        }
-        print {$out} "\n";
-
-        print {$out} "$prefix $init->{name} (cleanup):\n";
-        foreach my $call ( reverse @calls ) {
-            printf {$out} "$prefix     %-32s %s()\n", $call->{name}, $call->{destructor}
-                if ( $call->{destructor} );
         }
         print {$out} "\n";
     }

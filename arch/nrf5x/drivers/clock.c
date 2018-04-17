@@ -18,6 +18,8 @@
   Copyright (c) Nicolas Pouillon <nipo@ssji.net>, 2015
 */
 
+#define LOGK_MODULE_ID "nclk"
+
 #include <hexo/types.h>
 #include <hexo/endian.h>
 #include <hexo/iospace.h>
@@ -35,8 +37,10 @@
 
 #include <arch/nrf5x/clock.h>
 #include <arch/nrf5x/temp.h>
+#include <arch/nrf5x/power.h>
 
 #define CLOCK_ADDR NRF_PERIPHERAL_ADDR(NRF5X_CLOCK)
+#define POWER_ADDR NRF_PERIPHERAL_ADDR(NRF5X_POWER)
 #define TEMP_ADDR NRF_PERIPHERAL_ADDR(NRF5X_TEMP)
 
 #define LFRC_CAL defined(CONFIG_DRIVER_NRF5X_CLOCK_LFRC_CAL)
@@ -47,6 +51,7 @@
 # define HFRC_FREQ DEV_FREQ(64000000, 1, 7, 24) // 1.5%
 #endif
 #define LFRC_FREQ DEV_FREQ(32768, 1, 2, 25) // 2%
+#define LFRC_ULP_FREQ DEV_FREQ(32768, 1, 0, 22) // 2000ppm
 
 DRIVER_PV(struct nrf5x_clock_context_s
 {
@@ -60,6 +65,7 @@ DRIVER_PV(struct nrf5x_clock_context_s
 
   uint8_t hf_src;
   uint8_t lf_src;
+  uint8_t lf_ulp;
 
   uint8_t configid_cur;
   uint8_t configid_next;
@@ -88,6 +94,30 @@ static bool_t nrf5x_clock_lfclk_is_running(void)
 {
   return !!(nrf_reg_get(CLOCK_ADDR, NRF_CLOCK_LFCLKSTAT)
             & NRF_CLOCK_LFCLKSTAT_STATE_RUNNING);
+}
+
+#if defined(CONFIG_DRIVER_NRF52_USBD)
+static bool_t nrf5x_is_usb_reg_ready(void)
+{
+  return !!(nrf_reg_get(POWER_ADDR, NRF_POWER_USBREGSTATUS)
+            & NRF_POWER_USBREGSTATUS_OUTPUTRDY);
+}
+
+static bool_t nrf5x_is_usb_vbus_present(void)
+{
+  return !!(nrf_reg_get(POWER_ADDR, NRF_POWER_USBREGSTATUS)
+            & NRF_POWER_USBREGSTATUS_VBUSDETECT);
+}
+#endif
+
+static bool_t nrf5x_clock_lfrc_is_ulp(void)
+{
+#if CONFIG_NRF5X_MODEL == 52840
+  return nrf_reg_get(CLOCK_ADDR, NRF_CLOCK_LFRCMODE)
+    == (NRF_CLOCK_LFRCMODE_MODE_ULP | NRF_CLOCK_LFRCMODE_STATUS_ULP);
+#else
+  return 0;
+#endif
 }
 
 static uint_fast8_t nrf5x_clock_lf_src(void)
@@ -133,13 +163,13 @@ static uint_fast8_t nrf5x_clock_hf_src(void)
 
 static void nrf5x_clock_hfxo_start(void)
 {
-  logk_trace("%s\n", __FUNCTION__);
+  logk_trace("HFXO start");
   nrf_task_trigger(CLOCK_ADDR, NRF_CLOCK_HFCLKSTART);
 }
 
 static void nrf5x_clock_hfxo_stop(void)
 {
-  logk_trace("%s\n", __FUNCTION__);
+  logk_trace("HFXO stop");
   nrf_task_trigger(CLOCK_ADDR, NRF_CLOCK_HFCLKSTOP);
 }
 
@@ -150,6 +180,13 @@ static DEV_CMU_NODE_INFO(nrf5x_clock_node_info)
   static const char *node_name[NRF_CLOCK_NODE_COUNT] = {
     [NRF_CLOCK_SRC_LFCLK] = "LFCLK",
     [NRF_CLOCK_SRC_HFCLK] = "HFCLK",
+#if defined(CONFIG_DRIVER_NRF52_USBD)
+    [NRF_CLOCK_SRC_USB_VBUS]  = "USB Vbus",
+    [NRF_CLOCK_SRC_USB_REG]  = "USB Reg",
+#endif
+#if CONFIG_NRF5X_MODEL == 52840
+    [NRF_CLOCK_OSC_LFRC_ULP] = "LFRC/LP",
+#endif
     [NRF_CLOCK_OSC_LFRC] = "LFRC",
     [NRF_CLOCK_OSC_HFRC] = "HFRC",
     [NRF_CLOCK_OSC_HFXO] = "HFXO",
@@ -180,7 +217,12 @@ static DEV_CMU_NODE_INFO(nrf5x_clock_node_info)
       break;
 
     case NRF_CLOCK_LF_SRC_RC:
-      info->parent_id = NRF_CLOCK_OSC_LFRC;
+#if CONFIG_NRF5X_MODEL == 52840
+      if (nrf5x_clock_lfrc_is_ulp())
+        info->parent_id = NRF_CLOCK_OSC_LFRC_ULP;
+      else
+#endif
+        info->parent_id = NRF_CLOCK_OSC_LFRC;
       break;
 
     case NRF_CLOCK_LF_SRC_SYNTH:
@@ -206,6 +248,31 @@ static DEV_CMU_NODE_INFO(nrf5x_clock_node_info)
       break;
     }
     break;
+
+#if defined(CONFIG_DRIVER_NRF52_USBD)
+  case NRF_CLOCK_SRC_USB_VBUS:
+    returned |= DEV_CMU_INFO_SRC;
+    info->freq.num = 0;
+    info->freq.denom = 1;
+    info->src = &pv->src[NRF_CLOCK_SRC_USB_VBUS];
+    info->running = nrf5x_is_usb_vbus_present();
+    break;
+
+  case NRF_CLOCK_SRC_USB_REG:
+    returned |= DEV_CMU_INFO_SRC;
+    info->freq.num = 0;
+    info->freq.denom = 1;
+    info->src = &pv->src[NRF_CLOCK_SRC_USB_REG];
+    info->running = nrf5x_is_usb_reg_ready();
+    break;
+#endif
+
+#if CONFIG_NRF5X_MODEL == 52840
+  case NRF_CLOCK_OSC_LFRC_ULP:
+    info->freq = LFRC_ULP_FREQ;
+    info->running = nrf5x_clock_lf_is_running(NRF_CLOCK_LF_SRC_RC) && nrf5x_clock_lfrc_is_ulp();
+    break;
+#endif
 
   case NRF_CLOCK_OSC_LFRC:
     info->freq = LFRC_FREQ;
@@ -284,15 +351,36 @@ static DEV_IRQ_SRC_PROCESS(nrf5x_clock_irq)
   bool_t lf_check = 0;
   bool_t hf_check = 0;
 
+#if defined(CONFIG_DRIVER_NRF52_USBD)
+  if (nrf_event_check(POWER_ADDR, NRF_POWER_USBDETECTED)) {
+    nrf_event_clear(POWER_ADDR, NRF_POWER_USBDETECTED);
+    logk_trace("USB Vbus detected");
+    dev_cmu_src_update_async(&pv->src[NRF_CLOCK_SRC_USB_VBUS], DEV_CLOCK_EP_POWER);
+  }
+
+  if (nrf_event_check(POWER_ADDR, NRF_POWER_USBREMOVED)) {
+    nrf_event_clear(POWER_ADDR, NRF_POWER_USBREMOVED);
+    logk_trace("USB Vbus removed");
+    dev_cmu_src_update_async(&pv->src[NRF_CLOCK_SRC_USB_REG], 0);
+    dev_cmu_src_update_async(&pv->src[NRF_CLOCK_SRC_USB_VBUS], 0);
+  }
+
+  if (nrf_event_check(POWER_ADDR, NRF_POWER_USBPWRRDY)) {
+    nrf_event_clear(POWER_ADDR, NRF_POWER_USBPWRRDY);
+    logk_trace("USB power reg ready");
+    dev_cmu_src_update_async(&pv->src[NRF_CLOCK_SRC_USB_REG], DEV_CLOCK_EP_POWER);
+  }
+#endif
+
   if (nrf_event_check(CLOCK_ADDR, NRF_CLOCK_LFCLKSTARTED)) {
     nrf_event_clear(CLOCK_ADDR, NRF_CLOCK_LFCLKSTARTED);
-    logk_trace("%s LFCLK started\n", __FUNCTION__);
+    logk_trace("LFCLK started");
     lf_check = 1;
   }
 
   if (nrf_event_check(CLOCK_ADDR, NRF_CLOCK_HFCLKSTARTED)) {
     nrf_event_clear(CLOCK_ADDR, NRF_CLOCK_HFCLKSTARTED);
-    logk_trace("%s HFCLK started\n", __FUNCTION__);
+    logk_trace("HFCLK started");
     hf_check = 1;
   }
 
@@ -384,7 +472,12 @@ static DEV_IRQ_SRC_PROCESS(nrf5x_clock_irq)
       break;
 
     case NRF_CLOCK_LF_SRC_RC:
-      lfclk_notif.freq = LFRC_FREQ;
+#if CONFIG_NRF5X_MODEL == 52840
+      if (nrf5x_clock_lfrc_is_ulp())
+        lfclk_notif.freq = LFRC_ULP_FREQ;
+      else
+#endif
+        lfclk_notif.freq = LFRC_FREQ;
       break;
 
     case NRF_CLOCK_LF_SRC_SYNTH:
@@ -430,7 +523,17 @@ static DEV_CMU_CONFIG_MUX(nrf5x_clock_config_mux)
       pv->lf_src = NRF_CLOCK_LF_SRC_XTAL;
       return 0;
 
+#if CONFIG_NRF5X_MODEL == 52840
+    case NRF_CLOCK_OSC_LFRC_ULP:
+      pv->lf_ulp = 1;
+      pv->lf_src = NRF_CLOCK_LF_SRC_RC;
+      return 0;
+#endif
+
     case NRF_CLOCK_OSC_LFRC:
+#if CONFIG_NRF5X_MODEL == 52840
+      pv->lf_ulp = 0;
+#endif
       pv->lf_src = NRF_CLOCK_LF_SRC_RC;
       return 0;
 
@@ -471,6 +574,11 @@ static DEV_CMU_CONFIG_OSC(nrf5x_clock_config_osc)
     pv->lfxo_freq = *freq;
     return 0;
 
+#if CONFIG_NRF5X_MODEL == 52840
+  case NRF_CLOCK_OSC_LFRC_ULP:
+    return 0;
+#endif
+
   case NRF_CLOCK_OSC_LFRC:
     if (freq->num != 32768 || freq->denom != 1)
       return -EINVAL;
@@ -490,7 +598,13 @@ static DEV_CMU_CONFIG_OSC(nrf5x_clock_config_osc)
     return 0;
 
   case NRF_CLOCK_OSC_HFRC:
-    if (freq->num != 16000000 || freq->denom != 1)
+    if ((
+#if CONFIG_NRF5X_MODEL == 52840
+         freq->num != 64000000
+#else
+         freq->num != 16000000
+#endif
+         ) || freq->denom != 1)
       return -EINVAL;
     return 0;
   }
@@ -524,6 +638,10 @@ static DEV_CMU_COMMIT(nrf5x_clock_commit)
 #endif
   if (pv->lfclk_required && !nrf5x_clock_lfclk_is_running())
     nrf5x_clock_lfclk_start();
+
+#if CONFIG_NRF5X_MODEL == 52840
+  nrf_reg_set(CLOCK_ADDR, NRF_CLOCK_LFRCMODE, pv->lf_ulp ? NRF_CLOCK_LFRCMODE_MODE_ULP : 0);
+#endif
 
   if (nrf5x_clock_hf_is_running(NRF_CLOCK_HF_SRC_XTAL)
       && pv->hf_src == NRF_CLOCK_HF_SRC_RC) {
@@ -568,8 +686,7 @@ static DEV_CLOCK_SRC_SETUP(nrf5x_clock_ep_setup)
 
 #ifdef CONFIG_DEVICE_CLOCK_THROTTLE
   case DEV_CLOCK_SRC_SETUP_THROTTLE:
-    logk_debug("%s src %d throttle %d->%d\n",
-            __FUNCTION__,
+    logk_debug("src %d throttle %d->%d",
             id,
             param->throttle.configid_old,
             param->throttle.configid_new);
@@ -600,6 +717,16 @@ static DEV_CLOCK_SRC_SETUP(nrf5x_clock_ep_setup)
     case NRF_CLOCK_SRC_HFCLK:
       dev_cmu_src_update_sync(src, param->flags);
       return 0;
+
+#if defined(CONFIG_DRIVER_NRF52_USBD)
+    case NRF_CLOCK_SRC_USB_REG:
+      if (!!(param->flags & DEV_CLOCK_EP_POWER) == nrf5x_is_usb_reg_ready()) {
+        dev_cmu_src_update_sync(src, param->flags);
+        return 0;
+      } else {
+        return -EAGAIN;
+      }
+#endif
     }
     break;
   }
@@ -636,7 +763,7 @@ static void nrf5x_clock_configid_refresh(struct device_s *dev)
             __MAX((uint_fast8_t)pv->src[NRF_CLOCK_SRC_LFCLK].configid_min,
                   (uint_fast8_t)pv->src[NRF_CLOCK_SRC_HFCLK].configid_min));
 
-  logk_debug("%s %d %d %d: %d->%d\n", __FUNCTION__,
+  logk_debug("%d %d %d: %d->%d",
           (uint_fast8_t)pv->configid_app,
           (uint_fast8_t)pv->src[NRF_CLOCK_SRC_LFCLK].configid_min,
           (uint_fast8_t)pv->src[NRF_CLOCK_SRC_HFCLK].configid_min,
@@ -661,7 +788,7 @@ static DEV_CMU_APP_CONFIGID_SET(nrf5x_clock_app_configid_set)
   struct nrf5x_clock_context_s *pv = dev->drv_pv;
 
   LOCK_SPIN_IRQ_SCOPED(&dev->lock);
-  
+
   pv->configid_app = config_id;
   nrf5x_clock_configid_refresh(dev);
 
@@ -675,8 +802,7 @@ static KROUTINE_EXEC(nrf5x_clock_configid_update)
 
   LOCK_SPIN_IRQ_SCOPED(&dev->lock);
 
-  logk_debug("%s %d->%d\n", __FUNCTION__,
-          pv->configid_cur, pv->configid_next);
+  logk_debug("config id %d->%d", pv->configid_cur, pv->configid_next);
 
   pv->configid_cur = pv->configid_next;
   dev_cmu_configid_set(dev, &nrf5x_clock_config_ops, pv->configid_next);
@@ -729,6 +855,11 @@ static DEV_INIT(nrf5x_clock_init)
 #if LFRC_CAL
                      | bit(NRF_CLOCK_CTTO)
                      | bit(NRF_CLOCK_DONE)
+#endif
+#if defined(CONFIG_DRIVER_NRF52_USBD)
+                     | bit(NRF_POWER_USBDETECTED)
+                     | bit(NRF_POWER_USBREMOVED)
+                     | bit(NRF_POWER_USBPWRRDY)
 #endif
                      | bit(NRF_CLOCK_HFCLKSTARTED)
                      | bit(NRF_CLOCK_LFCLKSTARTED)

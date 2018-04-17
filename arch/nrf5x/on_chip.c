@@ -31,12 +31,10 @@
 
 DEV_DECLARE_STATIC(cpu_dev, "cpu", DEVICE_FLAG_CPU, arm32m_drv,
                    DEV_STATIC_RES_ID(0, 0),
-#if 52000 <= CONFIG_NRF5X_MODEL && CONFIG_NRF5X_MODEL <= 52999 && defined(CONFIG_CPU_ARM32M_CLOCK)
-# if defined(CONFIG_DRIVER_CLOCK)
+#if defined(CONFIG_CPU_ARM32M_CLOCK)
                    DEV_STATIC_RES_CLK_SRC("/clock", NRF_CLOCK_SRC_HFCLK, 0),
 #else
                    DEV_STATIC_RES_FREQ_ACC(64000000, 1, 7, 24),
-# endif
 #endif
                    );
 
@@ -73,14 +71,10 @@ DEV_DECLARE_STATIC(rtc1, "rtc1", 0, nrf5x_rtc_drv,
 
 #endif
 
-#if defined(CONFIG_DRIVER_NRF5X_NVMC) || defined(CONFIG_DRIVER_NRF5X_PERSIST)
+#if defined(CONFIG_DRIVER_NRF5X_NVMC)
 
 DEV_DECLARE_STATIC(nvmc_dev, "nvmc", 0, nrf5x_nvmc_drv,
-                   NRF_STATIC_RES_PERIPHERAL_MEM(NRF5X_NVMC),
-#if defined(CONFIG_DRIVER_NRF5X_PERSIST)
-                   DEV_STATIC_RES_MEM(CONFIG_LOAD_ROM_RO_ADDR + CONFIG_LOAD_ROM_RO_SIZE - CONFIG_DRIVER_NRF5X_PERSIST_SIZE,
-                                      CONFIG_DRIVER_NRF5X_PERSIST_SIZE)
-#endif
+                   NRF_STATIC_RES_PERIPHERAL_MEM(NRF5X_NVMC)
                    );
 
 #endif
@@ -124,6 +118,47 @@ DEV_DECLARE_STATIC(rng_dev, "rng", 0, nrf5x_rng_drv,
                    NRF_STATIC_RES_PERIPHERAL_MEM(NRF5X_RNG),
                    DEV_STATIC_RES_DEV_ICU("/cpu"),
                    DEV_STATIC_RES_IRQ(0, NRF5X_RNG, DEV_IRQ_SENSE_HIGH_LEVEL, 0, 1)
+                   );
+
+#endif
+
+#if defined(CONFIG_DRIVER_NRF5X_BLE)
+
+DEV_DECLARE_STATIC(ble_radio, "ble", 0, nrf5x_ble_drv,
+                   NRF_STATIC_RES_PERIPHERAL_MEM(NRF5X_RADIO),
+                   NRF_STATIC_RES_PERIPHERAL_MEM(NRF5X_TIMER0),
+                   NRF_STATIC_RES_PERIPHERAL_MEM(NRF5X_RTC0),
+                   DEV_STATIC_RES_DEV_ICU("/cpu"),
+                   DEV_STATIC_RES_IRQ(NRF5X_BLE_IRQ_RADIO, NRF5X_RADIO, DEV_IRQ_SENSE_HIGH_LEVEL, 0, 1),
+                   DEV_STATIC_RES_IRQ(NRF5X_BLE_IRQ_TIMER, NRF5X_TIMER0, DEV_IRQ_SENSE_HIGH_LEVEL, 0, 1),
+                   DEV_STATIC_RES_IRQ(NRF5X_BLE_IRQ_RTC, NRF5X_RTC0, DEV_IRQ_SENSE_HIGH_LEVEL, 0, 1),
+#if defined(CONFIG_DEVICE_CLOCK)
+                   DEV_STATIC_RES_CLK_SRC("/clock", NRF_CLOCK_SRC_LFCLK, NRF5X_BLE_CLK_SLEEP),
+                   DEV_STATIC_RES_CLK_SRC("/clock", NRF_CLOCK_SRC_HFCLK, NRF5X_BLE_CLK_RADIO),
+                   // 3 device modes: Idle, Wait, Radio
+                   DEV_STATIC_RES_CLOCK_MODES(NRF5X_BLE_CLK_SLEEP, 0, 1, 1),
+                   DEV_STATIC_RES_CLOCK_MODES(NRF5X_BLE_CLK_RADIO, 0, 0, 2),
+# else
+                   DEV_STATIC_RES_FREQ_ACC(32768, 1, 2, 16), // 41ppm
+                   DEV_STATIC_RES_FREQ_ACC(16000000, 1, 2, 16), // 41ppm
+# endif
+                   );
+
+#endif
+
+#if defined(CONFIG_DRIVER_NRF52_USBD)
+
+DEV_DECLARE_STATIC(usb_dev, "usbdev", 0, nrf5x_usbd_drv,
+                   NRF_STATIC_RES_PERIPHERAL_MEM(NRF5X_USBD),
+                   DEV_STATIC_RES_DEV_ICU("/cpu"),
+                   DEV_STATIC_RES_IRQ(0, NRF5X_USBD, DEV_IRQ_SENSE_HIGH_LEVEL, 0, 1),
+                   DEV_STATIC_RES_CLK_SRC("/clock", NRF_CLOCK_SRC_HFCLK, NRF5X_USBD_CLK_HFCLK),
+                   DEV_STATIC_RES_CLK_SRC("/clock", NRF_CLOCK_SRC_USB_VBUS, NRF5X_USBD_CLK_USB_VBUS),
+                   DEV_STATIC_RES_CLK_SRC("/clock", NRF_CLOCK_SRC_USB_REG, NRF5X_USBD_CLK_USB_REG),
+                   // 2 device modes: Idle, Running
+                   DEV_STATIC_RES_CLOCK_MODES(NRF5X_USBD_CLK_USB_REG, 0, 0),
+                   DEV_STATIC_RES_CLOCK_MODES(NRF5X_USBD_CLK_USB_VBUS, 0, 0),
+                   DEV_STATIC_RES_CLOCK_MODES(NRF5X_USBD_CLK_HFCLK, 0, 2),
                    );
 
 #endif

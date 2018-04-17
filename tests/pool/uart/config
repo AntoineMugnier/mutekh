@@ -1,0 +1,16 @@
+
+  %set OUTPUT_NAME out
+
+  # New source code module to be compiled
+  %append MODULES $(OUTPUT_NAME):$(CONFIGPATH)
+
+  # Application license
+  CONFIG_LICENSE_APP_LGPL
+
+  # Libs
+  CONFIG_APP_START
+
+  %include scripts/options.build
+  %include arch/arch.build
+
+  CONFIG_MUTEK_KROUTINE_SCHED

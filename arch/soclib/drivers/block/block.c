@@ -96,69 +96,96 @@ DRIVER_PV(struct soclib_block_context_s
   void                      *data;
   size_t                    size;
 
-  size_t                    progress;
+  uint8_t                   progress;
   bool_t                    running;
   enum dev_mem_rq_type_e    rqtype;
 });
 
 /**************************************************************/
 
-static void soclib_block_op_start(struct soclib_block_context_s *pv,
-				  struct dev_mem_rq_s *rq)
+static error_t soclib_block_op_start(struct soclib_block_context_s *pv,
+                                     struct dev_mem_rq_s *rq)
 {
-  if (pv->rqtype & DEV_MEM_OP_PAGE_ERASE)
+  if (pv->rqtype & _DEV_MEM_PAGE)
     {
-      cpu_mem_write_32(pv->addr + SOCLIB_BLOCK_LBA,
-                       endian_le32((rq->addr >> pv->blk_log2)));
-      cpu_mem_write_32(pv->addr + SOCLIB_BLOCK_COUNT,
-                       endian_le32(rq->size));
-      cpu_mem_write_32(pv->addr + SOCLIB_BLOCK_OP,
-                       endian_le32(SOCLIB_BLOCK_OP_ERASE));
-    }
-  else if (pv->rqtype & (DEV_MEM_OP_PAGE_READ | DEV_MEM_OP_PAGE_WRITE))
-    { 
-      pv->size = 1 << (pv->blk_log2 + rq->sc_log2);
-      pv->data = rq->sc_data[pv->progress];
+      if (rq->page.page_log2 < pv->blk_log2)
+        return -ERANGE;  /* unsupported page size */
+
+      if (!rq->page.sc_count)
+        return -EAGAIN;
+
+      uint_fast8_t i = pv->progress;
+      pv->data = rq->page.sc[i].data;
+      pv->size = 1 << rq->page.page_log2;
 
       cpu_mem_write_32(pv->addr + SOCLIB_BLOCK_LBA,
-                       endian_le32((rq->addr >> pv->blk_log2) +
-                                   (pv->progress << rq->sc_log2)));
+                       endian_le32(rq->page.sc[i].addr >> pv->blk_log2));
       cpu_mem_write_32(pv->addr + SOCLIB_BLOCK_BUFFER,
                        endian_le32((uint32_t)pv->data));
       cpu_mem_write_32(pv->addr + SOCLIB_BLOCK_COUNT,
-                       endian_le32(1 << rq->sc_log2));
+                       endian_le32(pv->size >> pv->blk_log2));
 
-      if (pv->rqtype & DEV_MEM_OP_PAGE_WRITE)
+      switch (pv->rqtype & _DEV_MEM_OP_MASK)
         {
+        case _DEV_MEM_READ:
+          cpu_mem_write_32(pv->addr + SOCLIB_BLOCK_OP,
+                           endian_le32(SOCLIB_BLOCK_OP_READ));
+          return 0;
+        case _DEV_MEM_WRITE:
           cpu_dcache_invld_buf(pv->data, pv->size);
           cpu_mem_write_32(pv->addr + SOCLIB_BLOCK_OP,
                            endian_le32(SOCLIB_BLOCK_OP_WRITE));
-        }
-      else /* if (pv->rqtype & DEV_MEM_OP_PAGE_READ) */
-        {
+          return 0;
+        case _DEV_MEM_ERASE:
           cpu_mem_write_32(pv->addr + SOCLIB_BLOCK_OP,
-                           endian_le32(SOCLIB_BLOCK_OP_READ));
+                           endian_le32(SOCLIB_BLOCK_OP_ERASE));
+          return 0;
         }
     }
-  else if (pv->rqtype & (DEV_MEM_OP_PARTIAL_WRITE | DEV_MEM_OP_PARTIAL_READ))
+  else if (pv->rqtype & _DEV_MEM_PARTIAL)
     {
-      pv->size = rq->size;
-      pv->data = rq->data;
+      if (rq->partial.addr + rq->partial.size
+          > (uint64_t)pv->blk_count << pv->blk_log2)
+        return -ERANGE;
+
+      if (!rq->partial.size)
+        return -EAGAIN;
+
+      if (rq->partial.addr >> pv->blk_log2
+          != (rq->partial.addr + rq->partial.size - 1) >> pv->blk_log2)
+        return -ERANGE;  /* partial access crosses page boundary */
+
+      pv->data = rq->partial.data;
+      pv->size = rq->partial.size;
 
       cpu_mem_write_32(pv->addr + SOCLIB_BLOCK_LBA,
-                       endian_le32((rq->addr >> pv->blk_log2)));
+                       endian_le32((rq->partial.addr >> pv->blk_log2)));
       cpu_mem_write_32(pv->addr + SOCLIB_BLOCK_COUNT,
-                       endian_le32(rq->size));
+                       endian_le32(pv->size));
       cpu_mem_write_32(pv->addr + SOCLIB_BLOCK_BUFFER,
                        endian_le32((uint32_t)pv->data));
       cpu_mem_write_32(pv->addr + SOCLIB_BLOCK_OFFSET,
-                       endian_le32((uint32_t)rq->addr & ((1 << pv->blk_log2) - 1)));
-      cpu_dcache_invld_buf(rq->data, rq->size);
-      cpu_mem_write_32(pv->addr + SOCLIB_BLOCK_OP,
-                       endian_le32(pv->rqtype & DEV_MEM_OP_PARTIAL_WRITE
-                                   ? SOCLIB_BLOCK_OP_PARTIAL_WRITE
-                                   : SOCLIB_BLOCK_OP_PARTIAL_READ));
+                       endian_le32((uint32_t)rq->partial.addr & bit_mask(0, pv->blk_log2)));
+
+      switch (pv->rqtype & _DEV_MEM_OP_MASK)
+        {
+        case _DEV_MEM_READ:
+          cpu_mem_write_32(pv->addr + SOCLIB_BLOCK_OP,
+                           endian_le32(SOCLIB_BLOCK_OP_PARTIAL_READ));
+          return 0;
+        case _DEV_MEM_WRITE:
+          cpu_dcache_invld_buf(pv->data, pv->size);
+          cpu_mem_write_32(pv->addr + SOCLIB_BLOCK_OP,
+                           endian_le32(SOCLIB_BLOCK_OP_PARTIAL_WRITE));
+          return 0;
+        }
     }
+  else if (!pv->rqtype)
+    {
+      return -EAGAIN;
+    }
+
+  return -ENOTSUP;
 }
 
 static void soclib_block_rq_end(struct device_s *dev);
@@ -169,47 +196,19 @@ static void soclib_block_rq_start(struct device_s *dev)
   struct soclib_block_context_s *pv = dev->drv_pv;
   struct dev_mem_rq_s *rq = dev_mem_rq_s_cast(dev_request_queue_head(&pv->queue));
 
-  if (!pv->running)
-    {
-      pv->running = 1;
-      pv->rqtype = rq->type & (DEV_MEM_OP_PAGE_READ | DEV_MEM_OP_PAGE_WRITE |
-                               DEV_MEM_OP_PARTIAL_READ | DEV_MEM_OP_PARTIAL_WRITE |
-                               DEV_MEM_OP_PAGE_ERASE);
-      rq->err = 0;
+  assert(!pv->running);
 
-      if (rq->band_mask & 0xfe)
-        rq->err = -ENOTSUP;
-      else if (rq->type & (DEV_MEM_OP_PAGE_ERASE | DEV_MEM_OP_PAGE_READ | DEV_MEM_OP_PAGE_WRITE))
-        {
-          if (rq->addr & ((1 << pv->blk_log2) - 1))
-            rq->err = -EINVAL;  /* address not page aligned */
-          else if (rq->size & ((1 << rq->sc_log2) - 1))
-            rq->err = -EINVAL;  /* total count not aligned on scattered count */
-          else if ((rq->addr >> pv->blk_log2) + rq->size > pv->blk_count)
-            rq->err = -ERANGE;
-        }
-      else if (rq->type & (DEV_MEM_OP_PARTIAL_WRITE | DEV_MEM_OP_PARTIAL_READ |
-                           DEV_MEM_OP_CACHE_INVALIDATE | DEV_MEM_OP_CACHE_FLUSH))
-        {
-          if (rq->type & (DEV_MEM_OP_PARTIAL_WRITE | DEV_MEM_OP_PARTIAL_READ))
-            {
-              if (rq->addr >> pv->blk_log2 != (rq->addr + rq->size - 1) >> pv->blk_log2)
-                rq->err = -EINVAL;  /* partial access crosses page boundary */
-            }
-          else if (rq->addr + rq->size > (uint64_t)pv->blk_count << pv->blk_log2)
-            rq->err = -ERANGE;
-        }
-      else
-        {
-          rq->err = -ENOTSUP;
-        }
-    }
-
+  pv->running = 1;
+  pv->rqtype = rq->type & ~(_DEV_MEM_FLUSH | _DEV_MEM_INVAL);
   pv->progress = 0;
+  rq->err = 0;
 
-  if (!rq->err && (rq->band_mask & 1) && pv->rqtype && rq->size)
-    soclib_block_op_start(pv, rq);
+  if (rq->band_mask != 1)
+    rq->err = -ENOTSUP;
   else
+    rq->err = soclib_block_op_start(pv, rq);
+
+  if (rq->err || !pv->rqtype)
     soclib_block_rq_end(dev);
 }
 
@@ -219,14 +218,12 @@ static void soclib_block_rq_end(struct device_s *dev)
   struct soclib_block_context_s *pv = dev->drv_pv;
   struct dev_mem_rq_s *rq = dev_mem_rq_s_cast(dev_request_queue_head(&pv->queue));
 
-  pv->rqtype = pv->rqtype & (pv->rqtype - 1);
+  if (rq->err == -EAGAIN)
+    rq->err = 0;
 
-  if (rq->err || !pv->rqtype)
-    {
-      dev_request_queue_pop(&pv->queue);
-      kroutine_exec(&rq->base.kr);
-      pv->running = 0;
-    }
+  dev_request_queue_pop(&pv->queue);
+  kroutine_exec(&rq->base.kr);
+  pv->running = 0;
 
   if (!dev_request_queue_isempty(&pv->queue))
     soclib_block_rq_start(dev);
@@ -262,14 +259,14 @@ static DEV_MEM_INFO(soclib_block_info)
   switch (pv->memtype)
     {
     case SOCLIB_BLOCK_TYPE_DISK:
-      info->flags |= DEV_MEM_WRITABLE;
+      info->flags |= DEV_MEM_PAGE_WRITE | DEV_MEM_PAGE_READ;
     case SOCLIB_BLOCK_TYPE_RODISK:
       info->type = DEV_MEM_DISK;
       break;
     case SOCLIB_BLOCK_TYPE_NOR_FLASH:
       info->type = DEV_MEM_FLASH;
       info->erase_log2 = info->page_log2;
-      info->flags |= DEV_MEM_ERASE_ONE | DEV_MEM_WRITABLE |
+      info->flags |= DEV_MEM_PAGE_WRITE | DEV_MEM_PAGE_READ | DEV_MEM_ERASE_ONE |
         DEV_MEM_PARTIAL_WRITE | DEV_MEM_PARTIAL_READ;
       break;
     }
@@ -299,15 +296,13 @@ static DEV_IRQ_SRC_PROCESS(soclib_block_irq)
     case SOCLIB_BLOCK_STATUS_WRITE_SUCCESS:
       assert(rq != NULL);
 
-      if (rq->type & (DEV_MEM_OP_PAGE_READ | DEV_MEM_OP_PAGE_WRITE))
+      if ((rq->type & _DEV_MEM_PAGE) &&
+          ++pv->progress < rq->page.sc_count)
         {
-          if ((++pv->progress << rq->sc_log2) < rq->size)
-            {
-              soclib_block_op_start(pv, rq);
-              break;
-            }
+          rq->err = soclib_block_op_start(pv, rq);
+          if (!rq->err)
+            break;
         }
-
       soclib_block_rq_end(dev);
       break;
 

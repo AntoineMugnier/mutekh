@@ -18,6 +18,8 @@
     Copyright (c) 2014, Nicolas Pouillon <nipo@ssji.net>
 */
 
+#define LOGK_MODULE_ID "nrfU"
+
 #include <hexo/types.h>
 #include <hexo/endian.h>
 #include <hexo/iospace.h>
@@ -378,9 +380,6 @@ static error_t nrf5x_uarte_config(struct nrf5x_uarte_priv *pv,
   if (cfg->stop_bits != 1)
     return -ENOTSUP;
 
-  if (cfg->half_duplex)
-    return -ENOTSUP;
-
   switch  (cfg->parity) {
   case DEV_UART_PARITY_NONE:
     config |= NRF_UARTE_CONFIG_PARITY_DISABLED;
@@ -431,7 +430,6 @@ static DEV_INIT(nrf5x_uarte_char_init)
     .stop_bits = 1,
     .parity = DEV_UART_PARITY_NONE,
     .flow_ctrl = 0,
-    .half_duplex = 0,
   };
 
   pv = mem_alloc(sizeof(*pv), mem_scope_sys);
@@ -443,6 +441,14 @@ static DEV_INIT(nrf5x_uarte_char_init)
 
   if (device_res_get_uint(dev, DEV_RES_MEM, 0, &pv->addr, NULL))
     goto free_pv;
+
+#ifdef CONFIG_DRIVER_NRF5X_PRINTK
+  if (pv->addr == CONFIG_MUTEK_PRINTK_ADDR)
+    {
+      logk_error("UARTE driver on same uart as prink");
+      goto free_pv;
+    }
+#endif
 
   if (device_iomux_setup(dev, "<rx? >tx? >rts? <cts?", NULL, id, NULL))
     goto free_pv;
@@ -496,7 +502,6 @@ static DEV_INIT(nrf5x_uarte_char_init)
     config.stop_bits   = r->u.uart.stop_bits;
     config.parity      = r->u.uart.parity;
     config.flow_ctrl   = r->u.uart.flow_ctrl;
-    config.half_duplex = r->u.uart.half_duplex;
   }
 #endif
 
@@ -539,12 +544,13 @@ static DEV_CLEANUP(nrf5x_uarte_char_cleanup)
   dev_request_queue_destroy(&pv->rx_q);
   dev_request_queue_destroy(&pv->tx_q);
 
+  device_iomux_cleanup(dev);
   mem_free(pv);
 
   return 0;
 }
 
-DRIVER_DECLARE(nrf5x_uarte_drv, 0, "nRF52 Serial"
+DRIVER_DECLARE(nrf5x_uarte_drv, 0, "nRF52 Serial dma"
 #if defined(CONFIG_DEVICE_UART)
                ",UART"
 #endif

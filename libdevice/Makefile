@@ -9,7 +9,6 @@ enum_headers = include/device/types.h \
                include/device/class/crypto.h \
                include/device/class/timer.h \
                include/device/class/rfpacket.h \
-               include/device/class/persist.h \
                include/device/class/uart.h \
                include/device/valio/hwclock.h \
                include/device/class/nfc.h \
@@ -85,10 +84,6 @@ endif
 ifeq ($(CONFIG_DEVICE_UART), defined)
 objs += device_uart.o
 objs-$(CONFIG_DEVICE_SHELL_UART) += shell_uart.o
-endif
-
-ifeq ($(CONFIG_DEVICE_PERSIST), defined)
-objs += device_persist.o
 endif
 
 objs-$(CONFIG_DEVICE_USBDEV) += device_usbdev.o device_usbdev_helpers.o

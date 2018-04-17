@@ -21,6 +21,12 @@
 #ifndef MUTEK_THREAD_H_
 #define MUTEK_THREAD_H_
 
+/**
+ * @file
+ * @module {Core::Kernel services}
+ * @short Kernel thread service
+ */
+
 #include <mutek/mem_alloc.h>
 #include <hexo/types.h>
 #include <hexo/context.h>

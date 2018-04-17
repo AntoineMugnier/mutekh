@@ -370,6 +370,8 @@ static DEV_CLEANUP(stm32_pwm_cleanup)
   struct stm32_pwm_private_s *pv = dev->drv_pv;
 
   do { uint32_t register _reg = endian_le32(cpu_mem_read_32(( ((((pv->addr)))) + (STM32_TIMER_CR1_ADDR) ))); STM32_TIMER_CR1_CEN_SET( (_reg), 0 ); cpu_mem_write_32( ( ((((pv->addr)))) + (STM32_TIMER_CR1_ADDR) ), endian_le32(_reg) ); } while (0);
+
+  device_iomux_cleanup(dev);
   mem_free(pv);
 
   return 0;

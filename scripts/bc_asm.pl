@@ -78,14 +78,14 @@ sub warning
     if ( ref $loc ) {
         push @warnings, { obj => $loc, msg => $msg };
     } else {
-        print STDERR $loc.": ".$msg;
+        print STDERR $loc.": warning: ".$msg;
     }
 }
 
 sub warnings_print
 {
     foreach my $w ( sort { $a->{obj}->{line} <=> $b->{obj}->{line} } @warnings ) {
-        print STDERR "$w->{obj}->{file}:$w->{obj}->{line}: $w->{msg}";
+        print STDERR "$w->{obj}->{file}:$w->{obj}->{line}: warning: $w->{msg}";
     }
 }
 
@@ -124,7 +124,7 @@ sub eval_expr
 {
     my ( $expr, $loc ) = @_;
 
-    our $num = qr/(?>[-+]?\b\d+\b)/xs;
+    our $num = qr/(?> (?:(?<![\w).'])[-+])? \b\d+\b)/xs;
 
     my $bit = sub {
         my $x = shift;
@@ -134,8 +134,8 @@ sub eval_expr
 
     while (1) {
         next if ($expr =~ s/'(.)'/ord($1)/ge);
-        next if ($expr =~ s/\s*([-+]?)(0[Xx][a-fA-F0-9]+)\s*/$1.hex($2)/ge);
-	next if ($expr =~ s/bitpos\(($num)\)/$bit->($1)/ge);
+        next if ($expr =~ s/\s*\b(0[Xx][a-fA-F0-9]+)\b\s*/hex($1)/ge);
+	next if ($expr =~ s/\bbitpos\(($num)\)/$bit->($1)/ge);
 	next if ($expr =~ s/\(\s*($num)\s*\)/$1/ge);
 	next if ($expr =~ s/($num)\s*\*\s*($num)/int($1)*int($2)/ge);
 	next if ($expr =~ s/($num)\s*\/\s*($num)/int($2) ? int(int($1)\/int($2)) : 0/ge);
@@ -147,6 +147,12 @@ sub eval_expr
 	next if ($expr =~ s/($num)\s*&\s*($num)/int($1)&int($2)/ge);
 	next if ($expr =~ s/($num)\s*\|\s*($num)/int($1)|int($2)/ge);
 	next if ($expr =~ s/($num)\s*\^\s*($num)/int($1)^int($2)/ge);
+	next if ($expr =~ s/($num)\s*==\s*($num)/int($1)==int($2)?1:0/ge);
+	next if ($expr =~ s/($num)\s*\!=\s*($num)/int($1)!=int($2)?1:0/ge);
+	next if ($expr =~ s/($num)\s*<\s*($num)/int($1)<int($2)?1:0/ge);
+	next if ($expr =~ s/($num)\s*<=\s*($num)/int($1)<=int($2)?1:0/ge);
+	next if ($expr =~ s/($num)\s*>\s*($num)/int($1)>int($2)?1:0/ge);
+	next if ($expr =~ s/($num)\s*>=\s*($num)/int($1)>=int($2)?1:0/ge);
 	last;
     }
 
@@ -160,12 +166,12 @@ sub eval_expr
 sub check_num
 {
     my ( $thisop, $argidx, $min, $max ) = @_;
-    my $expr = $thisop->{args}->[$argidx];
+    my $arg = $thisop->{args}->[$argidx];
 
-    $expr = eval_expr( $expr, $thisop );
+    my $expr = eval_expr( $arg, $thisop );
 
     if (!defined $expr) {
-        error($thisop, "expected number as operand $argidx of `$thisop->{name}', got `$expr'.\n");
+        error($thisop, "expected number as operand $argidx of `$thisop->{name}', got `$arg'.\n");
     }
 
     $expr = int($expr);
@@ -179,19 +185,43 @@ sub check_num
     return $expr;
 }
 
-sub check_label
+sub get_label
 {
     my ( $thisop, $argidx ) = @_;
     my $lbl = $thisop->{args}->[$argidx];
 
     if ( $lbl !~ /^[a-zA-Z_]\w*$/ ) {
-        error($thisop, "expected label as operand $argidx of `$thisop->{name}'.\n");
+        error($thisop, "expected identifier as operand $argidx of `$thisop->{name}'.\n");
     }
 
     my $l = $labels{$lbl};
 
     if ( not defined $l ) {
-        error($thisop, "undefined label `$lbl' used with `$thisop->{name}'.\n");
+        error($thisop, "undefined identifier `$lbl' used with `$thisop->{name}'.\n");
+    }
+
+    return ( $l, $lbl );
+}
+
+sub check_proto
+{
+    my ( $thisop, $argidx ) = @_;
+    my ( $l ) = get_label( $thisop, $argidx );
+
+    if ( !$l->{proto} ) {
+        error($thisop, "can not use a label or function as a prototype\n");
+    }
+
+    return $l;
+}
+
+sub check_label
+{
+    my ( $thisop, $argidx ) = @_;
+    my ( $l, $lbl ) = get_label( $thisop, $argidx );
+
+    if ( $l->{proto} ) {
+        error($thisop, "can not use a prototype as a label\n");
     }
 
     if ( not $l->{export} ) {
@@ -543,17 +573,17 @@ sub parse_call8
     my $thisop = shift;
 
     my $link = check_reg($thisop, 0);
-    $thisop->{reloadout} |= 1 << $link;
     push @{$thisop->{out}}, $link;
 
-    $thisop->{target} = check_label8($thisop, 1, 256);
-    $thisop->{target}->{called}++;
+    my $tgt = check_label8($thisop, 1, 256);
+    $thisop->{target} = $tgt;
+    $tgt->{called}++;
 
     if ( $link == 0 ) {
 	error($thisop, "call8 can not modify register 0\n");
     }
 
-    if ( $thisop->{disp} == 2 ) {
+    if ( $thisop->{disp} == 2 || $thisop->{disp} == 0 ) {
 	error($thisop, "call8 can not have a zero displacement\n");
     }
 }
@@ -563,7 +593,6 @@ sub parse_call32
     my $thisop = shift;
 
     my $link = check_reg($thisop, 0);
-    $thisop->{reloadout} |= 1 << $link;
     push @{$thisop->{out}}, $link;
 
     $thisop->{target} = check_label($thisop, 1);
@@ -592,6 +621,17 @@ sub parse_ret
     my $thisop = shift;
 
     push @{$thisop->{in}}, check_reg($thisop, 0);
+}
+
+sub parse_call
+{
+    my $thisop = shift;
+
+    my $tgt_link = check_reg($thisop, 0);
+    push @{$thisop->{in}}, $tgt_link;
+    push @{$thisop->{out}}, $tgt_link;
+
+    $thisop->{target} = check_proto($thisop, 1);
 }
 
 sub parse_loop
@@ -861,19 +901,26 @@ sub parse
 	    push @lbls, $l;
             next;
         }
+        if ($l =~ /^\s*\.assert\s+(.*?)\s*$/) {
+            error($loc, "static assert failed `$1'\n")
+                if eval_expr( $1, $loc ) != 1;
+            next;
+        }
         if ($l =~ /^\s*\.define\s+(\w+)\s+(.*?)\s*$/) {
             error($loc, "expr already defined\n") if defined $defs{$1};
             $defs{$1} = $2;
             next;
         }
-        if ($l =~ /^\s*\.func\s+(\w+)\s*$/) {
-            my $name = $1;
+        if ($l =~ /^\s*\.(func|proto)\s+(\w+)\s*$/) {
+            my $proto = $1 eq 'proto';
+            my $name = $2;
             error($loc, "label `$name' already defined\n") if defined $labels{$name};
             error($loc, "nested function\n") if defined $func;
             error($loc, "label before a function\n") if scalar @lbls;
 	    my $l = { file => $file,
                       line => $line,
                       name => $name,
+                      proto => $proto,
                       func => 1,
                       input => 0,
                       output => 0,
@@ -882,13 +929,13 @@ sub parse
                       regalias => { }
             };
             $labels{$name} = $l;
-	    push @lbls, $l;
+	    push @lbls, $l unless $proto;
             $func = $l;
             next;
         }
-        if ($l =~ /^\s*\.endfunc\s*$/) {
+        if ($l =~ /^\s*\.(endfunc|endproto)\s*$/) {
             error($loc, "no function to end\n") if !defined $func;
-            error($loc, "label at end of function\n") if scalar @lbls;
+            error($loc, "label at end of function\n") if (scalar @lbls);
             # declare global aliases for function input/output regs
             while (my ($k, $v) = each(%{$func->{regalias}})) {
                 $global_regalias{$func->{name}.':'.$k} = $v
@@ -917,6 +964,19 @@ sub parse
         if ($l =~ /^\s*\.(input|output|clobber|preserve)\s+(.*?)\s*$/) {
             error($loc, "$1 regs not inside a function\n") if !defined $func;
             regs_mask_parse($loc, $1, $2, \$func->{$1}, $func->{regalias} );
+            next;
+        }
+        if ($l =~ /^\s*\.implement\s+(\w+)\s*$/) {
+            error($loc, ".implement not inside a function\n") if !defined $func;
+	    my $l = $labels{$1};
+            error($loc, "undefined prototype `$1'\n")
+                if !$l || !$l->{proto};
+            $func->{implement} = $l;
+            foreach (qw(input output clobber preserve)) {
+                error($loc, "can't use .implement after register alias") if $func->{$_};
+                $func->{$_} = $l->{$_};
+            }
+            $func->{regalias} = { %{$l->{regalias}} };
             next;
         }
         if ($l =~ /^\s*\.mode\s+(.*?)\s*$/) {
@@ -957,6 +1017,8 @@ sub parse
             error($loc, "bad directive syntax `.$1'\n");
         }
         if ($l =~ /^\s*(\w+)\b\s*(.*?)\s*$/) {
+            error($loc, "code in function prototype\n")
+                if $func && $func->{proto};
             my $opname = $1;
             my @args = args_split($2);
             my $thisop = {
@@ -1058,6 +1120,11 @@ our %asm = (
         parse => \&parse_jmp32, backend => ('jmpr'),
         flushregs => 1, op_jmp => 1, op_tail => 1
     },
+    'call'  => {
+        words => 1, code => 0x2ff0, argscnt => 2,
+        parse => \&parse_call, backend => ('call'),
+        flushregs => 1, reloadregs => 1, op_call => 1,
+    },
     'call8'  => {
         words => 1, code => 0x2000, argscnt => 2,
         parse => \&parse_call8, backend => ('call8'),
@@ -1090,7 +1157,7 @@ our %asm = (
     },
     'jmp' => {  # same implementation as ret, different semantics
         words => 1, code => 0x2000, argscnt => 1,
-        parse => \&parse_ret, backend => ('ret'),
+        parse => \&parse_ret, backend => ('jmp'),
         flushregs => 1, op_tail => 1
     },
     'loop' => {
@@ -1420,22 +1487,44 @@ sub parse_args
 
 	$thisop->{op} = $op;
 
-        # bit mask of arguments which require a register write back
-        # rather than a register load, updated by the backend parse
-        # handler
+        # Bit mask of arguments which require a register write back
+        # before the native code generated for the instruction. The
+        # default behavior is to have the vm register loaded in an
+        # allocated cpu register before the instruction. This must be
+        # used when the native code loads its input directly from the
+        # vm registers array and needs no allocated cpu
+        # register. This may be updated by the backend parse handler.
         $thisop->{flushin} = 0;
 
-        # bit mask of input arguments which are written back by the
-        # instruction, ignored when flushin is set for the argument.
+        # Bit mask of input arguments which are written back by the
+        # native code generated for the instruction. When set, the wb
+        # mark of the registers are cleared so that no write back will
+        # occur later. This can be used to prevent later overwritting of
+        # a result stored directly in the vm register array. The default
+        # behavior is to leave the wb mark untouched for input
+        # arguments. This may be updated by the backend parse handler.
         $thisop->{wbin} = 0;
 
-        # bit mask of arguments which require a register reload rather
-        # than an output register allocation, updated by the backend
-        # parse handler
+        # Bit mask of arguments which require a register reload after
+        # the native code generated for the instruction rather than
+        # the allocation of an output register before the
+        # instruction. The default behavior is to have a cpu register
+        # allocated for the instruction to store its output. This must
+        # be used when the native code stores the result of the
+        # instruction directly into the vm registers array and needs
+        # no allocated cpu register. This may be updated by the
+        # backend parse handler.
         $thisop->{reloadout} = 0;
 
-        # bit mask of output arguments which are written back by the
-        # instruction, ignored when reloadout is set for the argument.
+        # Bit mask of output arguments which are written back by the
+        # instruction, ignored when reloadout is set for the
+        # argument. The default behavior is to set the wb mark for the
+        # output arguments so that the allocated cpu registers are
+        # later written back properly in the vm registers array. This
+        # must be used when the native code stores the result of the
+        # instruction directly into the vm registers array and takes
+        # care of keeping the allocated cpu registers in sync. This
+        # may be updated by the backend parse handler.
         $thisop->{wbout} = 0;
 
         # bit mask of clobbered cpu registers
@@ -1603,7 +1692,7 @@ extern const bc_opcode_t _${bc_name}_bytecode_end;
             print OUT "#define ".uc($l->{name})."_BCARGS(";
             print OUT join(', ', map { $_->{name} } sort { $a->{id} <=> $b->{id} } values %inputs);
             print OUT ") ";
-            print OUT join(', ', ($inmask, map { '('.$_->{name}.')' } sort { $a->{reg} <=> $b->{reg} } values %inputs));
+            print OUT join(', ', ($inmask, map { '(bc_reg_t)('.$_->{name}.')' } sort { $a->{reg} <=> $b->{reg} } values %inputs));
             print OUT "\n";
         }
     }
@@ -1743,14 +1832,10 @@ sub write_asm
         my $lbl_refs;
         $lbl_refs += $_->{used} foreach ( @{$thisop->{labels}} );
 
-        # if the instruction may read any vm regs directly from memory
-        # or if we are the target of a jump, then flush all cpu working regs
-        if ( $op->{flushregs} || $lbl_refs ) {
-            $regs_flush->();
-        }
-
         # write labels
         if ( $lbl_refs ) {
+            $regs_flush->();
+
             error($thisop, "label inside conditional\n") if defined $cond;
 
             foreach my $l (@{$thisop->{labels}}) {
@@ -1796,6 +1881,11 @@ sub write_asm
             }
             push @wregin, $r2w{$i};
           }
+        }
+
+        if ( $op->{flushregs} ) {
+            # if the instruction requires updating all vm regs
+            $regs_flush->();
         }
 
         # handle mov using copy on write unless involved in a conditional
@@ -2057,7 +2147,7 @@ sub check_regs
                      }
 
                      # schedule checking of the called function
-                     push @entries, $l unless ( $entries_done{$l}++ );
+                     push @entries, $l unless ( $l->{proto} || $entries_done{$l}++ );
 
                  } elsif ( $func ) {
                      warning($thisop, "call target is not a function, unable to track registers state\n");
@@ -2141,6 +2231,7 @@ sub check_regs
      # schedule analysis of exported labels
      foreach my $l ( values %labels ) {
          next unless $l->{export};
+         next if $l->{proto};
          next if $entries_done{$l}++;
          push @entries, $l
      }
@@ -2185,12 +2276,15 @@ sub check_regs
                         ( $func->{clobber} & $func->{preserve} & $m );
                  error($func, "function `$func->{name}' register %$i is already declared global\n")
                      if ( ( $func->{output} | $func->{input} | $func->{clobber} | $func->{preserve} ) & $global_regmask & $m );
-                 warning($func, "register %$i is declared as input of function `$func->{name}' but never used\n")
-                     if ( $func->{input} & ~$rd_mask & $m );
-                 warning($func, "register %$i is declared as output of function `$func->{name}' but never written\n")
-                     if ( $func->{output} & ~($wr_mask | $func->{input}) & $m );
-                 warning($func, "register %$i is declared clobbered in function `$func->{name}' but never written\n")
-                     if ( $func->{clobber} & ~$wr_mask & $m );
+
+                 if ( !$func->{proto} ) {
+                     warning($func, "register %$i is declared as input of function `$func->{name}' but never used\n")
+                         if ( $func->{input} & ~$rd_mask & $m );
+                     warning($func, "register %$i is declared as output of function `$func->{name}' but never written\n")
+                         if ( $func->{output} & ~($wr_mask | $func->{input}) & $m );
+                     warning($func, "register %$i is declared clobbered in function `$func->{name}' but never written\n")
+                         if ( $func->{clobber} & ~$wr_mask & $m );
+                 }
              }
          }
      }

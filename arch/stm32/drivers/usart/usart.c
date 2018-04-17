@@ -583,25 +583,10 @@ static DEV_INIT(stm32_usart_init)
 #endif
 
   /* check for default configuration resource. */
-  struct dev_resource_s *r = device_res_get(dev, DEV_RES_UART, 0);
-
-  error_t err = -1;
-  if (r != NULL)
-    {
-      struct dev_uart_config_s cfg =
-        {
-          .baudrate    = r->u.uart.baudrate,
-          .data_bits   = r->u.uart.data_bits,
-          .stop_bits   = r->u.uart.stop_bits,
-          .parity      = r->u.uart.parity,
-          .flow_ctrl   = r->u.uart.flow_ctrl,
-          .half_duplex = r->u.uart.half_duplex
-        };
-
-      err = stm32_usart_config_simple(pv, &cfg);
-      if (err)
-        goto err_fifo;
-    }
+  struct dev_uart_config_s cfg;
+  if (!device_get_res_uart(dev, &cfg) &&
+      stm32_usart_config_simple(pv, &cfg))
+    goto err_fifo;
 
 #if defined(CONFIG_DEVICE_IRQ)
   device_irq_source_init(dev, pv->irq_ep, 1, &stm32_usart_irq);
@@ -666,6 +651,7 @@ static DEV_CLEANUP(stm32_usart_cleanup)
   dev_request_queue_destroy(&pv->read_q);
   dev_request_queue_destroy(&pv->write_q);
 
+  device_iomux_cleanup(dev);
   mem_free(pv);
 
   return 0;

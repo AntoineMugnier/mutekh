@@ -59,7 +59,7 @@ DEV_DECLARE_STATIC(usart1_dev, "uart1", 0, stm32_usart_drv,
                    DEV_STATIC_RES_IOMUX("rx", 0, /* PA10 */ 0*16+10, 0 /* no remap */, 0),
 
                    /* default configuration. */
-                   DEV_STATIC_RES_UART(115200, 8, DEV_UART_PARITY_NONE, 1, 0, 0)
+                   DEV_STATIC_RES_UART(115200, 8, DEV_UART_PARITY_NONE, 1, 0)
                    );
 
 /* USART2. */
@@ -76,7 +76,7 @@ DEV_DECLARE_STATIC(usart2_dev, "uart2", 0, stm32_usart_drv,
                    DEV_STATIC_RES_IOMUX("rx", 0, /* PA3 */ 0*16+3, 0 /* no remap */, 0),
 
                    /* default configuration. */
-                   DEV_STATIC_RES_UART(115200, 8, DEV_UART_PARITY_NONE, 1, 0, 0)
+                   DEV_STATIC_RES_UART(115200, 8, DEV_UART_PARITY_NONE, 1, 0)
                    );
 
 #endif

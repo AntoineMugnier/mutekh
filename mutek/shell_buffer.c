@@ -103,7 +103,7 @@ void shell_buffer_drop(void * data)
   struct mutek_shell_context_s *sctx = b->sctx;
 
   LOCK_SPIN_IRQ(&sctx->lock);
-  ensure(b->use--);
+  b->use = 0;
   LOCK_RELEASE_IRQ(&sctx->lock);
 #else
   mem_free(data);
@@ -118,7 +118,7 @@ static void shell_hexdump(struct termui_console_s *con, const uint8_t *data,
 
   if (more)
     {
-      left = size - dump_size;
+      left = size - dump_size - offset;
       size = dump_size;
     }
 
@@ -171,17 +171,25 @@ void * shell_buffer_get(const struct termui_console_s *con,
   struct mutek_shell_buffer_s *b;
 
   LOCK_SPIN_IRQ(&sctx->lock);
-  b = shell_buffer_pool_lookup(&sctx->bufs, name);
 
-  if (b && b->use)
-    b = NULL;
+  if (!name)
+    b = shell_buffer_pool_head(&sctx->bufs);
+  else
+    b = shell_buffer_pool_lookup(&sctx->bufs, name);
+
+  if (b)
+    {
+      if (b->use || (type && b->type != type))
+        b = NULL;
+      else
+        b->use = 1;
+    }
 
   LOCK_RELEASE_IRQ(&sctx->lock);
 
-  if (!b || (type && b->type != type))
+  if (!b)
     return NULL;
 
-  b->use = 1;
   if (size)
     *size = b->size;
 
@@ -419,6 +427,8 @@ static TERMUI_CON_COMMAND_PROTOTYPE(shell_buffer_cmd_hexdump)
   else if (c->offset + size > bsize)
     size = bsize - c->offset;
 
+  if (!c->bufname.str)
+    termui_con_printf(con, "Content of %s:\n", shell_buffer_name(data));
   shell_hexdump(con, data, c->offset, bsize, size);
 
   shell_buffer_drop(data);
@@ -548,7 +558,7 @@ static TERMUI_CON_GROUP_DECL(shell_buffer_subgroup) =
 
   TERMUI_CON_ENTRY(shell_buffer_cmd_hexdump, "hexdump",
     TERMUI_CON_OPTS_CTX(shell_buffer_opts,
-                        BUFFER_OPT_BUFNAME, BUFFER_OPT_OFFSET | BUFFER_OPT_SIZE,
+                        0, BUFFER_OPT_BUFNAME | BUFFER_OPT_OFFSET | BUFFER_OPT_SIZE,
                         shell_buffer_opts_cleanup)
   )
 

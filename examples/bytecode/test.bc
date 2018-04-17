@@ -1,420 +1,73 @@
 
-        // load custom instruction definitions
-	.custom print
+.name test
 
-        .name test_bytecode
+// load custom instruction definitions
+.custom print
 
-        // force use of virtual machine
-        // .backend bytecode
+// bytecode entry point
+test_bytecode_entry:
 
-        // enable vm debug traces
-        // trace	1, 1
+    // buffer provided by the C code
+    .entry %0
+    // use this buffer as an execution stack
+    add8   %0, 31 * 4
 
-    // CST8, CCALL, NEQ
-        cst8	%2, 11
-        ccall	%2, %1
-        cst8	%3, 143
-        neq	%3, %2
-        abort
+    // invoke fact(5)
+    cst8   %fact:arg, 5
+    call8  %fact:link, fact
+    printi %fact:result       // our custom instruction
 
-    // CST8, XOR, NEQ, EQ
-        cst8	%1, 0
-        xor32	%2, %2
-        neq	%1, %2
-        abort
-        neq0	%1
-        abort
-        neq0	%2
-        abort
-        eq	%1, %2
-        jmp8	next1
-        abort
-next1:
-    // CST8, EQ, ADD
-        cst8	%1, 42
-        eq	%1, %2
-        abort
-        neq	%1, %2
-        jmp8	next2
-        abort
-next2:
-        add8	%2, 21
-        add8	%2, 21
-        neq	%1, %2
-        abort
+    // invoke fact(7)
+    cst8   %1, 7
+    call8  %10, fact
+    printi %1
 
-    // LT, LTEQ
-        lt	%1, %2
-        abort
-        lteq	%1, %2
-        jmp8	next3
-        abort
-next3:
-        add8	%1, 1
-        lt	%1, %2
-        abort
-        lteq	%1, %2
-        abort
-        lt	%2, %1
-        jmp8	next4
-        abort
-next4:
-        lteq	%2, %1
-        jmp8	next5
-        abort
-next5:
-    // LOOP backward, ADD8 positiv
-        cst8	%1, 0
-        cst8	%2, 5
-add:
-        add8	%1, 2
-        loop	%2, add
-        cst8	%2, 10
-        neq	%1, %2
-        abort
+    // terminate bytecode execution
+    end
 
-    // ADD8 negative
-        cst8	%1, 15
-        cst8	%2, 5
-add8:
-        add8	%1, -2
-        loop	%2, add8
-        cst8	%2, 5
-        neq	%1, %2
-        abort
+// recursive factorial function
+.func fact
+    // declare link register and stack pointer registers
+    .input %10 link, %0 sp
 
-    // LOOP forward, JMP
-        cst8	%1, 0
-        cst8	%2, 5
-re:
-        loop	%2, fwd
-        add8	%1, 2
-        jmp8	re
-fwd:
-        cst8	%2, 10
-        neq	%1, %2
-        abort
+    // declare input argument register
+    .input %1 arg
 
-    // TSTC, TSTS
-        cst8	%1, 0x55
-        tst32c	%1, 2
-        abort
-        tst32s	%1, 2
-        jmp8	next6
-        abort
-next6:
-        tst32s	%1, 1
-        abort
-        tst32c	%1, 1
-        jmp8	next7
-        abort
-next7:
-        tst32c	%1, 1
-        shi32l	%1, 1
-        tst32c	%1, 1
-        abort
-        tst32s	%1, 1
-        jmp8	next8
-        abort
-next8:
-        tst32s	%1, 2
-        abort
-        tst32c	%1, 2
-        jmp8	next9
-        abort
-next9:
+    // declare result register
+    .output %1 result
 
-	shr32     %1, %2
-    // BITC, BITS
-        cst8	%1, 0x0f
-        bit32s	%1, 5
-        tst32c	%1, 5
-        abort
-        bit32c	%1, 2
-        tst32s	%1, 2
-        abort
-        cst8	%2, 0x2b
-        neq	%1, %2
-        abort
+    // declare clobbered registers
+    .clobber %2 tmp
 
-    // LD8, LD8I
-        mov	%1, %0
-        add8	%1, 5
-        mov	%4, %1
-        ld8	%2, %1
-        cst8	%3, 'a'
-        neq	%3, %2
-        abort
-        neq	%4, %1
-        abort
-        ld8i	%2, %1
-        ld8i	%2, %1
-        cst8	%3, 'r'
-        neq	%3, %2
-        abort
+    // declare modified but properly restored registers
+    .preserve %10, %0
 
-    // MUL, CST16, CST32, CST16X
-        cst16	%1, 0x1234, 0
-        cst32	%2, 0x5678abcd, 0
-        mul32	%2, %1
-        cst16	%3, 0xffff, 16
-        and32	%2, %3
-        cst32	%3, 0x0c970000, 0
-        neq	%3, %2
-        abort
+    // push return addess on stack
+    std	%link, %sp
 
-    // ST32I, ST32, LD32
-        cst32	%2, 0x12345678, 0
-        mov	%1, %0
-        st32i	%2, %1
-        shi32l	%2, 1
-        st32	%2, %1
-        ld32	%3, %1
-        cst32	%5, 0x2468acf0, 0
-        neq	%5, %2
-        abort
-        add8	%1, -4
-        neq	%1, %0
-        abort
-        ld32	%4, %1
-        cst32	%2, 0x12345678, 0
-        neq	%4, %2
-        abort
+    // terminate if arg == 1
+    cst8 %tmp, 1
+    eq	 %arg, %tmp
+      jmp8	fact_end
 
-    // STE32, LDE32
-        ld32e	%4, %0, 4
-        neq	%5, %4
-        abort
-        add8	%1, 12
-        shi32l	%4, 1
-        st32e	%4, %1, -8
-        ld32e	%5, %0, 4
-        cst32	%2, 0x48d159e0, 0
-        neq	%5, %2
-        abort
+    // save arg which is also the result register
+    std	%arg, %sp
 
-        skipodd %1
-        abort
+    // recursive call fact(arg-1)
+    add8  %arg, -1
+    call8 %link, fact
 
-        skipodd %2
-        jmp8 next10
-        abort
-next10:
+    // restore arg
+    ldi	%tmp, %sp
+    // multiply result of fact(arg-1) with arg
+    mul32 %result, %tmp
 
-    // SUB, NEG
-        cst8	%1, 0x42
-        cst8	%2, 0x12
-	sub	%1, %2
-	add8    %1, -0x30
-	neq0	%1
-	abort
-	add8    %1, -0x30
-	neg	%1
-	bit32c	%1, 4
-	bit32c	%1, 5
-	neq0	%1
-	abort
-
-    // EQ0, NEQ0
-	cst8	%1, 42
-	eq0	%1
-	abort
-	neq0	%1
-	jmp8 next11
-	abort
-next11:
-	add8	%1, -42
-	neq0	%1
-	abort
-	eq0	%1
-	jmp8 next12
-	abort
-next12:
-    // EXTZ
-	cst8	%1, 0x42
-	mov	%2, %1
-	extz	%2, 7
-	neq	%1, %2
-	abort
-	mov	%2, %1
-	extz	%2, 15
-	neq	%1, %2
-	abort
-	cst8	%1, 0x82
-	mov	%2, %1
-	extz	%2, 7
-	neq	%1, %2
-	abort
-	mov	%2, %1
-	extz	%2, 15
-	neq	%1, %2
-	abort
-	cst16	%1, 0xff82, 0
-	mov	%2, %1
-	extz	%2, 11
-	eq	%1, %2
-	abort
-	cst16	%3, 0xf82, 0
-	neq	%3, %2
-	abort
-	mov	%2, %1
-	extz	%2, 7
-	eq	%1, %2
-	abort
-	cst8	%3, 0x82
-	neq	%3, %2
-	abort
-	mov	%2, %1
-	extz	%2, 15
-	neq	%1, %2
-	abort
-
-    // EXTS
-	cst8	%1, 0x42
-	mov	%2, %1
-	exts	%2, 7
-	neq	%1, %2
-	abort
-	mov	%2, %1
-	exts	%2, 15
-	neq	%1, %2
-	abort
-	cst8	%1, 0x82
-	mov	%2, %1
-	exts	%2, 7
-	eq	%1, %2
-	abort
-	extz	%2, 31
-	cst32	%1, 0xffffff82, 0
-	neq	%1, %2
-	abort
-	cst16	%2, 0x382, 0
-	mov	%3, %2
-	exts	%2, 10
-	neq	%3, %2
-	abort
-	exts	%2, 9
-	neq	%1, %2
-	abort
-
-    // MSBS
-	cst8	%1, 0x42
-	msbs32	%1
-	cst8	%2, 6
-	neq	%1, %2
-	abort
-	cst32	%1, 0xffffff82, 0
-	msbs32	%1
-	cst8	%2, 31
-	neq	%1, %2
-	abort
-
-    // NOT, ANDN
-	cst16	%1, 0x55aa, 0
-	not32	%1
-	cst32	%2, 0xffffaa55, 0
-	neq	%1, %2
-	abort
-	cst8    %3, 0xf0
-	andn32    %2, %3
-	cst32	%1, 0xffffaa05, 0
-	neq	%1, %2
-	abort
-
-    // LADDR
-	laddr16 %1, data
-	ld8	%2, %1
-	cst8	%3, 0xac
-	xor32	%2, %3
-	cst8	%1, 0xff
-	neq	%1, %2
-	abort
-
-    // GADDR
-	gaddr   %1, data
-	ld8	%2, %1
-	not32	%2
-	extz	%2, 7
-	neq	%3, %2
-	abort
-
-    // SHIL, SHIR
-	cst8	%1, 0x3c
-	shi32l    %1, 8
-	cst16	%2, 0x3c00, 0
-	neq	%1, %2
-	abort
-	shi32l    %1, 4
-	cst32	%2, 0x3c000, 0
-	neq	%1, %2
-	abort
-	shi32r    %1, 1
-	cst32	%2, 0x1e000, 0
-	neq	%1, %2
-	abort
-
-    // SHL, SHR
-	cst8	%1, 0xc3
-	cst8	%5, 8
-	shl32     %1, %5
-	cst16	%2, 0xc300, 0
-	neq	%1, %2
-	abort
-	cst8	%5, 4
-	shl32     %1, %5
-	cst32	%2, 0xc3000, 0
-	neq	%1, %2
-	abort
-	cst8	%5, 1
-	shr32     %1, %5
-	cst32	%2, 0x61800, 0
-	neq	%1, %2
-	abort
-
-    // hello world using the custom prints instruction
-        mov	%2, %0
-        mov	%1, %0
-        cst8	%5, 'H'
-        st8i	%5, %1
-        cst8	%5, 'e'
-        st8i	%5, %1
-        cst8	%5, 'l'
-        st8i	%5, %1
-        st8i	%5, %1
-        cst8	%5, 'o'
-        st8i	%5, %1
-        cst8	%5, 0
-        st8i	%5, %1
-
-        prints	%2
-
-    // recursive factorial invocation
-        mov	%13, %0
-        add8	%13, 120
-        cst8	%1, 5
-        call32	%10, fact
-        cst8	%3, 120
-        neq	%1, %3
-        abort
-        end
-
-    // recursive factorial function
-fact:
-        std	%10, %13
-        cst8	%2, 1
-        eq	%1, %2
-        jmp8	fact_end
-        std	%1, %13
-        add8	%1, -1
-        call8	%10, fact
-        ldi	%2, %13
-        mul32	%1, %2
 fact_end:
-        printi	%1
-        ldi	%10, %13
-        ret	%10
 
-data:
-	.export data
-	.data16  0x5353
+    // restore return addess from stack
+    ldi	%link, %sp
 
+    // return
+    ret	%link
+
+.endfunc

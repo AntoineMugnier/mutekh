@@ -27,7 +27,19 @@
    @short IO muxing driver API
    @index {IO muxing} {Device classes}
    @csee DRIVER_CLASS_IOMUX
- */
+
+   @section {Purpose}
+
+   This class provides functions to configure the pin muxing used by a
+   device inside a chip.
+
+   This is mainly intended for use by device drivers: the @ref
+   device_iomux_setup function is called from the device driver
+   initialization function and the @ref device_iomux_cleanup is called
+   when the driver is unloaded.
+
+   @end section
+*/
 
 #ifndef __DEVICE_IOMUX_H__
 #define __DEVICE_IOMUX_H__
@@ -44,8 +56,11 @@ typedef uint16_t iomux_io_id_t;
 typedef uint32_t iomux_mux_t;
 typedef uint32_t iomux_config_t;
 
+/** This is a reserved invalid demux value. */
 #define IOMUX_INVALID_DEMUX 255
+/** This is a reserved invalid io index value. */
 #define IOMUX_INVALID_ID 65535
+/** This is a reserved invalid mux value. */
 #define IOMUX_INVALID_MUX 255
 
 /** @see dev_iomux_setup_t */
@@ -54,8 +69,18 @@ typedef uint32_t iomux_config_t;
                                       enum dev_pin_driving_e dir,   \
                                       iomux_mux_t mux, iomux_config_t config)
 
-/** @This function configures the IO specified by the @tt io_id
-    parameter. The meaning of the @tt config parameter is driver specific. */
+/** @This configures the IO specified by the @tt io_id
+    parameter. The meaning of the @tt config parameter is driver specific.
+
+    When the value of the @tt mux parameter is @tt IOMUX_INVALID_MUX,
+    only the direction of the io is updated.
+
+    @This is called by the device_iomux_fetch and @ref
+    device_iomux_cleanup2 function when a device driver is loaded and
+    unloaded.
+
+    It may also be called by a device driver directly in order to
+    dynamically change the direction of a pin. */
 typedef DEV_IOMUX_SETUP(dev_iomux_setup_t);
 
 DRIVER_CLASS_TYPES(DRIVER_CLASS_IOMUX, iomux,
@@ -70,17 +95,37 @@ DRIVER_CLASS_TYPES(DRIVER_CLASS_IOMUX, iomux,
   })
 
 /**
-   @This sets the muxing configuration of IOs whose names are listed
-   in the @tt io_list string. IO muxing information from device
-   resources are used.
+   @This fetches the pin muxing information and sets the muxing
+   configuration of IOs whose names are listed in the @tt io_list
+   string. IO muxing information from device resources are used.
 
-   If the device has a @ref DEV_RES_DEV_PARAM resource entry named @tt
-   iomux, the target IO mux controller, will be configured by calling
-   the @ref dev_iomux_setup_t function for each IO in the list.
+   The device must have a @ref DEV_RES_DEV_PARAM resource entry named
+   @tt iomux which specifies the target IO mux controller. @This
+   calls the @ref device_iomux_fetch function.
+
+   Example:
+   @code
+   device_iomux_setup(uart, ">tx <rx >rts? <cts?", NULL, NULL, NULL);
+   @end code
+*/
+config_depend(CONFIG_DEVICE_IOMUX)
+error_t device_iomux_setup(struct device_s *dev, const char *io_list,
+                           iomux_demux_t *demux, iomux_io_id_t *io_id,
+                           iomux_config_t *config);
+
+/**
+   @This fetches the pin muxing information and optionally sets the
+   muxing configuration of IOs whose names are listed in the @tt
+   io_list string. IO muxing information from device resources are
+   used.
 
    When not @tt NULL, the @tt demux, @tt io_id and @tt config arrays
    are updated with the associated values from the device resources
    for listed IOs.
+
+   This also calls the @ref dev_iomux_setup_t function of the @tt
+   iomux device driver for each IO in the list unless the parameter is
+   @tt NULL.
 
    The list string must contain space separated label names. All IO
    labels in the list are required to match available device resources
@@ -96,13 +141,34 @@ DRIVER_CLASS_TYPES(DRIVER_CLASS_IOMUX, iomux,
 
    Example:
    @code
-   device_iomux_setup(uart, ">tx <rx >rts? <cts?", NULL, NULL, NULL);
+   device_iomux_fetch(uart, &pv->iomux, ">tx <rx >rts? <cts?", NULL, NULL, NULL);
    @end code
+
+   @see device_iomux_setup
 */
 config_depend(CONFIG_DEVICE_IOMUX)
-error_t device_iomux_setup(struct device_s *dev, const char *io_list,
+error_t device_iomux_fetch(struct device_s *dev,
+                           struct device_iomux_s *iomux, const char *io_list,
                            iomux_demux_t *demux, iomux_io_id_t *io_id,
                            iomux_config_t *config);
+
+/**
+   @This resets the direction of all IOs found in the resources.
+
+   The device must have a @ref DEV_RES_DEV_PARAM resource entry named
+   @tt iomux which specifies the target IO mux controller. @This
+   calls the @ref device_iomux_cleanup2 function.
+*/
+config_depend(CONFIG_DEVICE_IOMUX)
+void device_iomux_cleanup(struct device_s *dev);
+
+/**
+   @This resets the direction of all IOs found in the resources.
+
+   @see device_iomux_cleanup
+*/
+config_depend(CONFIG_DEVICE_IOMUX)
+void device_iomux_cleanup2(struct device_s *dev, struct device_iomux_s *iomux);
 
 /** @This adds an IO mux entry to the device resources list.
 

@@ -543,6 +543,7 @@ static DEV_CLEANUP(nrf5x_i2c_cleanup)
 
   dev_drv_i2c_ctrl_context_cleanup(&pv->i2c_ctrl_ctx);
 
+  device_iomux_cleanup(dev);
   mem_free(pv);
 
   return 0;

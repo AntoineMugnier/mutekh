@@ -852,9 +852,6 @@ static bool_t bc_run_##fcname##_alu(struct bc_context_s *ctx, uint16_t op)
   dispatch_MUL:
     dst = (uint32_t)(dst * src);
     break;
-  dispatch_MOD:
-    dst = (uint32_t)dst % (uint32_t)src;
-    break;
   dispatch_DIV:
     BC_CONFIG_SANDBOX(
       if (src == 0 && sandbox)
@@ -1060,15 +1057,19 @@ bc_opcode_t bc_run_##fcname(struct bc_context_s *ctx)
 
       dispatch_jmp: {
           int8_t disp = op >> 4;
-          if (disp)             /* jmp8 */
+          bc_reg_t link = (uintptr_t)pc - code_offset + 2;
+          const uint16_t *tgt = (void*)(uintptr_t)(code_offset + *dstp - 2);
+          switch ((uint8_t)disp)
             {
+            case 0xff:          /* call */
+              *dstp = link;
+            case 0x00:          /* ret/jmp */
+              pc = tgt;
+              break;
+            default:            /* jmp8 */
               if (op & 0xf)     /* call8 */
-                *dstp = (uintptr_t)pc - code_offset;
+                *dstp = link;
               pc += (intptr_t)disp;
-            }
-          else                  /* ret */
-            {
-              pc = (void*)(uintptr_t)(code_offset + *dstp);
             }
           goto check_pc;
         }

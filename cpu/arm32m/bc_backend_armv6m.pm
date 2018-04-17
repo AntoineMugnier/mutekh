@@ -188,6 +188,29 @@ sub out_ret {
 	   "    .ltorg\n";
 }
 
+sub out_jmp {
+    my ($thisop, $wi) = @_;
+    return "    adds $reg[$wi], #1\n".   # set thumb mode bit
+           "    bx $reg[$wi]\n".
+	   "    .ltorg\n";
+}
+
+sub parse_call {
+    my ($thisop) = @_;
+    $thisop->{wbin} = 1;
+}
+
+sub out_call {
+    my ($thisop, $wi) = @_;
+    return "    adr r0, 2f\n".
+           "    adds r0, #1\n".
+           "    str r0, [r4, #".($thisop->{out}->[0] * 4)."]\n".
+	   "    adds $reg[$wi], #1\n".   # set thumb mode bit
+           "    bx $reg[$wi]\n".
+           "    .balign 4\n".
+           "2:\n";
+}
+
 sub out_pack {
     my ($thisop, @w) = @_;
 
@@ -537,7 +560,7 @@ sub out_bitc {
     $r .= "    mov $reg[$wo], $reg[$wi]\n" if ( $wi != $wo );
     if ($x >= 8) {
 	$r .= "    movs r0, #1\n".
-	      "    lsrs r0, #$x\n";
+	      "    lsls r0, #$x\n";
     } else {
 	$r .= "    movs r0, #".(1 << $x)."\n";
     }
@@ -551,7 +574,7 @@ sub out_bits {
     $r .= "    mov $reg[$wo], $reg[$wi]\n" if ( $wi != $wo );
     if ($x >= 8) {
 	$r .= "    movs r0, #1\n".
-	      "    lsrs r0, #$x\n";
+	      "    lsls r0, #$x\n";
     } else {
 	$r .= "    movs r0, #".(1 << $x)."\n";
     }

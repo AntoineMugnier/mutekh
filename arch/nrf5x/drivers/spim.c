@@ -101,9 +101,9 @@ static DEV_SPI_CTRL_CONFIG(nrf5x_spim_config)
   nrf_reg_set(pv->addr, NRF_SPIM_CONFIG, config);
 
   rate = cfg->bit_rate1k * 1024;
-  if (rate > 1000000) {
-    printk("nRF5x SPI Warning: bit rate capped to 1MHz (was %d)\n", rate);
-    rate = 1000000;
+  if (rate > 8000000) {
+    printk("nRF5x SPI Warning: bit rate capped to 8MHz (was %d)\n", rate);
+    rate = 8000000;
   }
 
   nrf_reg_set(pv->addr, NRF_SPIM_FREQUENCY,
@@ -292,18 +292,16 @@ static DEV_SPI_CTRL_TRANSFER(nrf5x_spim_transfer)
 
   LOCK_SPIN_IRQ(&dev->lock);
 
+  tr->err = 0;
+
   if (pv->current_transfer) {
     tr->err = -EBUSY;
   } else if (tr->cs_op != DEV_SPI_CS_NOP_NOP) {
     tr->err = -ENOTSUP;
-  } else if (!(0x17 >> tr->data.out_width) || !(0x16 >> tr->data.in_width)) {
-    tr->err = -EINVAL;
-  } else {
-    assert(tr->data.count > 0);
+  } else if (tr->data.count > 0) {
     done = 0;
 
     pv->current_transfer = tr;
-    tr->err = 0;
 
     nrf5x_spim_next_start(pv);
   }
@@ -402,6 +400,7 @@ static DEV_CLEANUP(nrf5x_spim_cleanup)
   nrf_reg_set(pv->addr, NRF_SPIM_PSEL_MISO, (uint32_t)-1);
   nrf_reg_set(pv->addr, NRF_SPIM_PSEL_MOSI, (uint32_t)-1);
 
+  device_iomux_cleanup(dev);
   mem_free(pv);
 
   return 0;

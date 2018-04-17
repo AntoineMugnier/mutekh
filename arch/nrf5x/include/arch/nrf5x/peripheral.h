@@ -219,7 +219,7 @@ void nrf_evt_disable(uintptr_t base, uint8_t evt)
 ALWAYS_INLINE
 uint32_t nrf_reg_get(uintptr_t base, uint16_t id)
 {
-    uintptr_t addr = base | NRF_REGISTER | ((uintptr_t)id << 2);
+    uintptr_t addr = base + NRF_REGISTER + ((uintptr_t)id << 2);
     return cpu_mem_read_32(addr);
 }
 
@@ -230,7 +230,7 @@ uint32_t nrf_reg_get(uintptr_t base, uint16_t id)
 ALWAYS_INLINE
 void nrf_reg_set(uintptr_t base, uint16_t id, uint32_t data)
 {
-    uintptr_t addr = base | NRF_REGISTER | ((uintptr_t)id << 2);
+    uintptr_t addr = base + NRF_REGISTER + ((uintptr_t)id << 2);
     cpu_mem_write_32(addr, data);
 }
 

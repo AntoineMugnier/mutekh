@@ -1,0 +1,11 @@
+This examples uses the I2C slave class to emulate behavior of a M24xx
+EEPROM:
+
+- 2-byte offset address,
+- write at arbitrary locations,
+- full write possible.
+
+It could be tested with Crobe and Proby:
+
+$ python3 -m crobe.cmd.write -e 'pro/i2c/eeprom(addr_bytes=2,size=1024,saddr=0x2a,page_size=32)' -t 0 foo.bin
+$ python3 -m crobe.cmd.read -e 'pro/i2c/eeprom(addr_bytes=2,size=1024,saddr=0x2a,page_size=32)' -t 0 foo2.bin 

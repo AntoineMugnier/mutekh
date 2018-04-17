@@ -3,38 +3,36 @@
 #include <mutek/bytecode.h>
 
 #define BC_CUSTOM_PRINTI 0x1000
-#define BC_CUSTOM_PRINTS 0x2000
-#define BC_CUSTOM_SKIPODD 0x3000
-
-static BC_CCALL_FUNCTION(c_func)
-{
-    return dst * 13;
-}
 
 extern const struct bc_descriptor_s test_bytecode;
 
 void app_start(void)
 {
   struct bc_context_s vm;
-  char buf[128] = "testbarx";
 
-  bc_init(&vm, &test_bytecode, 2, buf, &c_func);
-  //  bc_set_addr_range(&vm, (uintptr_t)buf, (uintptr_t)buf + sizeof(buf) - 1);
-  //  bc_dump(&vm);
+  bc_init(&vm, &test_bytecode);
+
+  /* provide a buffer for use by our bytecode program */
+  uintptr_t buffer[32];
+  bc_set_reg(&vm, 0, (uintptr_t)buffer);
 
   while (1)
     {
       uint16_t r = bc_run(&vm);
 
-      if (!r)
+      switch (r)
         {
-          printk("done\n");
-          return;  /* terminate */
-        }
-      if (!(r & 0x8000))
-        {
-          printk("bytecode execution error\n");
-          return; /* error */
+        case BC_RUN_STATUS_END:
+          printk("bytecode done");
+          return;
+
+        case BC_RUN_STATUS_FAULT:
+          printk("bytecode error");
+          bc_dump(&vm, 1);
+          return;
+
+        default:
+          break;
         }
 
       switch (r & 0x7000)
@@ -42,19 +40,9 @@ void app_start(void)
         case BC_CUSTOM_PRINTI:
           printk("%u\n", bc_get_reg(&vm, r & 0xf));
           break;
-        case BC_CUSTOM_PRINTS:
-          printk("%s\n", (char*)bc_get_reg(&vm, r & 0xf));
-          break;
-        case BC_CUSTOM_SKIPODD:
-          if (r & 1)
-            bc_skip(&vm);
-          break;
         default:
           printk("bad custom bytecode opcode\n");
           return;
         }
     }
-
-  while (1)
-   ;
 }

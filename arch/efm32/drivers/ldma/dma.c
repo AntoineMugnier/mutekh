@@ -646,6 +646,9 @@ static error_t efm32_dev_dma_update_rq(struct efm32_dma_context_s *pv, uint8_t c
   uint32_t xfercnt = endian_le32(cpu_mem_read_32(pv->addr + EFR32_LDMA_CH_CTRL_ADDR(chan)));
   xfercnt = EFR32_LDMA_CH_CTRL_XFERCNT_GET(xfercnt);
 
+  rq->cancel.size = 0;
+  rq->cancel.desc_idx = 0;
+
   if (rq->loop_count_m1)
   /* 2D copy */
     return -ENOTSUP;

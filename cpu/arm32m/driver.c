@@ -205,7 +205,7 @@ static DEV_USE(arm_use)
       struct device_s *dev = sink->dev;
       struct arm_dev_private_s *pv = dev->drv_pv;
       pv->freq = chg->freq;
-# ifdef CONFIG_DEVICE_IRQ
+# if defined(CONFIG_DEVICE_IRQ) && defined(CONFIG_CPU_ARM32M_TIMER_SYSTICK)
       pv->systick_rev += 2;
 # endif
       return 0;

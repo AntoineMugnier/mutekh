@@ -61,17 +61,22 @@ enum driver_class_e
   DRIVER_CLASS_IOMUX,
   DRIVER_CLASS_UART,
   DRIVER_CLASS_I2C_CTRL,
+  DRIVER_CLASS_I2C_SLAVE,
   DRIVER_CLASS_MEM,
   DRIVER_CLASS_RFPACKET,
   DRIVER_CLASS_CRYPTO,
   DRIVER_CLASS_CPU,
   DRIVER_CLASS_VALIO,
-  DRIVER_CLASS_PERSIST,
   DRIVER_CLASS_USBDEV,
   DRIVER_CLASS_DISPLAY,
   DRIVER_CLASS_SMI,
   DRIVER_CLASS_PHY,
+
+  // local
   DRIVER_CLASS_NFC,
+
+  // merged default
+  DRIVER_CLASS_BITBANG,
 
   /* Custom driver class IDs should be registered in @ref
       #CONFIG_DEVICE_CUSTOM_CLASS_COUNT enum config token.
@@ -137,9 +142,9 @@ struct dev_enum_ident_s
    @param _class the class to match, -1 for wildcard
  */
 #define DEV_ENUM_PCI_ENTRY(_vendor, _device, _class)		\
-	{ .type = DEV_ENUM_TYPE_PCI, { .pci = {				\
-				.vendor = _vendor, .device = _device,	\
-				.class = _class } } }
+        { .type = DEV_ENUM_TYPE_PCI, { .pci = {				\
+                                .vendor = _vendor, .device = _device,	\
+                                .class = _class } } }
 
 /**
    Shortcut for creating an ISA entry in a static @cref dev_enum_ident_s
@@ -148,8 +153,8 @@ struct dev_enum_ident_s
    @param _vendor the vendor id to match
  */
 #define DEV_ENUM_ISA_ENTRY(_vendor)						\
-	{ .type = DEV_ENUM_TYPE_PCI, { .isa = {				\
-				.vendor = _vendor } } }
+        { .type = DEV_ENUM_TYPE_PCI, { .isa = {				\
+                                .vendor = _vendor } } }
 
 /**
    Shortcut for creating an ATA entry in a static @cref dev_enum_ident_s
@@ -158,8 +163,8 @@ struct dev_enum_ident_s
    @param _str the string to match from the device
  */
 #define DEV_ENUM_ATA_ENTRY(_str)							\
-	{ .type = DEV_ENUM_TYPE_ATA, { .ata = {				\
-				.str = _str } } }
+        { .type = DEV_ENUM_TYPE_ATA, { .ata = {				\
+                                .str = _str } } }
 
 /**
    Shortcut for creating a flat-device-tree entry in a static
@@ -168,8 +173,8 @@ struct dev_enum_ident_s
    @param _name The string to match from the device-tree
  */
 #define DEV_ENUM_FDTNAME_ENTRY(_name)	\
-	{ .type = DEV_ENUM_TYPE_FDTNAME, { .fdtname = {		\
-				.name = _name } } }
+        { .type = DEV_ENUM_TYPE_FDTNAME, { .fdtname = {		\
+                                .name = _name } } }
 
 /**
    Shortcut for creating a Gaisler entry in a static @cref dev_enum_ident_s
@@ -179,8 +184,8 @@ struct dev_enum_ident_s
    @param _device the device id to match, -1 for wildcard
  */
 #define DEV_ENUM_GAISLER_ENTRY(_vendor, _device)		\
-	{ .type = DEV_ENUM_TYPE_GAISLER, { .grlib = {				\
-				.vendor = _vendor, .device = _device } } }
+        { .type = DEV_ENUM_TYPE_GAISLER, { .grlib = {				\
+                                .vendor = _vendor, .device = _device } } }
 
 /**
    Shortcut for creating a Generic with vendor/device ids and version
@@ -432,6 +437,11 @@ struct driver_s
 #define DRIVER_PV(...) \
 typedef __VA_ARGS__ driver_pv_t;
 
+/** @This is used to declare a driver private data local variable from
+    dev */
+#define DEVICE_PV(pvdata, device)               \
+  driver_pv_t *pvdata = (device)->drv_pv
+
 /** @This declares a @ref driver_s object. Implemented device
     classes must be specified as extra parameters. */
 #define DRIVER_DECLARE(symbol_, flags_, pretty_, prefix_, ...)   \
@@ -448,7 +458,7 @@ typedef __VA_ARGS__ driver_pv_t;
 /** @internal */
 struct driver_registry_s
 {
-  const struct driver_s *driver;  
+  const struct driver_s *driver;
   const struct dev_enum_ident_s	*id_table;
   size_t id_count;
 };
@@ -700,7 +710,7 @@ ALWAYS_INLINE bool_t device_cmp_accessor(const struct device_accessor_s *a,
   return a->dev == b->dev && a->number == b->number;
 }
 
-/** 
+/**
     @This initializes a device accessor object after lookup in the
     device tree. The @tt root parameter may be @tt NULL to lookup from
     the device tree root.
@@ -821,4 +831,3 @@ error_t device_release_driver(struct device_s *dev);
 error_t dev_driver_notsup_fcn(void);
 
 #endif
-

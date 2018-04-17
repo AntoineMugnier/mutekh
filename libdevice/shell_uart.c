@@ -60,7 +60,6 @@ static TERMUI_CON_COMMAND_PROTOTYPE(dev_shell_uart_config)
     .data_bits = used & UART_OPT_BITS ? c->bits : 8,
     .stop_bits = used & UART_OPT_STOP ? c->stop : 1,
     .flow_ctrl = !!(used & UART_OPT_FLOW),
-    .half_duplex = 0,
     .parity = used & UART_OPT_PARITY ? c->parity : DEV_UART_PARITY_NONE,
   };
 

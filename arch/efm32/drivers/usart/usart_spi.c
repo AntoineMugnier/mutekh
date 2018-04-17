@@ -66,9 +66,9 @@ DRIVER_PV(struct efm32_usart_spi_context_s
   struct dev_clock_sink_ep_s     clk_ep;
 
 #if defined(CONFIG_DRIVER_EFM32_DMA) || defined(CONFIG_DRIVER_EFR32_DMA)
-  DEV_DMA_RQ_TYPE(1)             dma_rd_rq; 
-  struct dev_dma_rq_s            dma_wr_rq;
-  struct dev_dma_desc_s          dma_wr_desc;
+  struct dev_dma_rq_s            dma_rd_rq;
+  struct dev_dma_desc_s          dma_rd_desc;
+  DEV_DMA_RQ_TYPE(1)             dma_wr_rq; 
   struct device_dma_s            dma;
   struct device_s                *spi;
 #endif
@@ -313,21 +313,38 @@ static DEV_DMA_CALLBACK(efm32_spi_dma_write_done)
   return 0;
 }
 
+static enum dev_dma_inc_e efm32_usart_spi_get_dma_inc(uint_fast8_t width)
+{
+  switch (width)
+    {
+    case 4:
+      return DEV_DMA_INC_4_UNITS; 
+    case 2:
+      return DEV_DMA_INC_2_UNITS; 
+    case 1:
+      return DEV_DMA_INC_1_UNITS; 
+    default:
+      return DEV_DMA_INC_0_UNIT; 
+    }
+}
+
 static void efm32_usart_spi_start_dma(struct efm32_usart_spi_context_s *pv)
 {
   pv->dma_use = 1;
 
-  struct dev_dma_desc_s * desc = &pv->dma_wr_desc;
+  struct dev_dma_desc_s * desc = pv->dma_wr_rq.desc;
+  struct dev_spi_ctrl_transfer_s *tr = pv->tr;
 
   /* TX */
-  desc->src.mem.addr = (uintptr_t)pv->tr->data.out;
-  desc->src.mem.size = pv->tr->data.count - 1;
-
-  desc = pv->dma_rd_rq.desc;
+  desc->src.mem.addr = (uintptr_t)tr->data.out;
+  desc->src.mem.inc = efm32_usart_spi_get_dma_inc(tr->data.out_width);
+  desc->src.mem.size = tr->data.count - 1;
 
   /* RX */
-  desc->dst.mem.addr = (uintptr_t)pv->tr->data.in;
-  desc->src.mem.size = pv->tr->data.count - 1;
+  desc = &pv->dma_rd_desc;
+  desc->dst.mem.addr = (uintptr_t)tr->data.in;
+  desc->dst.mem.inc = efm32_usart_spi_get_dma_inc(tr->data.in_width);
+  desc->src.mem.size = tr->data.count - 1;
   
   /* Start DMA request */ 
   DEVICE_OP(&pv->dma, request, &pv->dma_rd_rq, &pv->dma_wr_rq, NULL);
@@ -344,14 +361,14 @@ static DEV_SPI_CTRL_TRANSFER(efm32_usart_spi_transfer)
 
   LOCK_SPIN_IRQ(&dev->lock);
 
+  tr->err = 0;
+
   if (pv->tr != NULL)
     tr->err = -EBUSY;
   else if (tr->cs_op != DEV_SPI_CS_NOP_NOP)
     tr->err = -ENOTSUP;
-  else
+  else if (tr->data.count > 0)
     {
-      assert(tr->data.count > 0);
-      tr->err = 0;
       pv->tr = tr;
       dev->start_count |= 1;
 
@@ -365,25 +382,7 @@ static DEV_SPI_CTRL_TRANSFER(efm32_usart_spi_transfer)
       cpu_mem_write_32(pv->addr + EFM32_USART_ROUTELOC0_ADDR, endian_le32(pv->route));
       cpu_mem_write_32(pv->addr + EFM32_USART_ROUTEPEN_ADDR, endian_le32(pv->enable));
 #elif CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFM
-
-  #if 0
-      if (tr->data.out == tr->data.in)
-        {
-          pv->route &= ~EFM32_USART_ROUTE_TXPEN;
-          if (device_iomux_setup(dev, "<mosi", NULL, NULL, NULL))
-            abort();
-        }
-      else
-        {
-        pv->route |= EFM32_USART_ROUTE_TXPEN;
-          if (device_iomux_setup(dev, ">mosi", NULL, NULL, NULL))
-            abort();
-        }
-  #endif
-
-       pv->route |= EFM32_USART_ROUTE_TXPEN;
       cpu_mem_write_32(pv->addr + EFM32_USART_ROUTE_ADDR, endian_le32(pv->route));
-      
 #else
 # error
 #endif
@@ -575,15 +574,14 @@ static DEV_INIT(efm32_usart_spi_init)
       device_get_param_dev_accessor(dev, "dma", &pv->dma.base, DRIVER_CLASS_DMA))
     goto err_irq;
 
-  struct dev_dma_rq_s *rq = &pv->dma_rd_rq.rq;
+  /* READ */
+  struct dev_dma_rq_s *rq = &pv->dma_rd_rq;
   struct dev_dma_desc_s *desc = rq->desc;
 
   desc->src.reg.addr = pv->addr + EFM32_USART_RXDATA_ADDR;
   desc->src.reg.width = 0;
   desc->src.reg.burst = 1;
-  desc->dst.mem.inc = DEV_DMA_INC_1_UNITS;
 
-  /* READ */
   rq->dev_link.src = read_link;
   rq->type = DEV_DMA_REG_MEM;
   rq->desc_count_m1 = 0;
@@ -593,12 +591,11 @@ static DEV_INIT(efm32_usart_spi_init)
   rq->cache_ptr = NULL;
 
   /* WRITE */
-  rq = &pv->dma_wr_rq;
-  desc = &pv->dma_wr_desc;
+  rq = &pv->dma_wr_rq.rq;
+  desc = pv->dma_wr_rq.desc;
 
   desc->dst.reg.addr = pv->addr + EFM32_USART_TXDATA_ADDR;
   desc->dst.reg.burst = EFM32_USART_FIFO_SIZE;
-  desc->src.mem.inc = DEV_DMA_INC_1_UNITS;
   desc->src.mem.width = 0;
 
   rq->dev_link.dst = write_link;
@@ -649,6 +646,7 @@ static DEV_CLEANUP(efm32_usart_spi_cleanup)
   dev_spi_context_cleanup(&pv->spi_ctrl_ctx);
 #endif
 
+  device_iomux_cleanup(dev);
   mem_free(pv);
 
   return 0;

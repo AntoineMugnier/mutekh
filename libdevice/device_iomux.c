@@ -50,17 +50,11 @@ static enum dev_pin_driving_e device_iomux_mode(char l)
   return DEV_PIN_DISABLED;
 }
 
-error_t device_iomux_setup(struct device_s *dev, const char *io_list,
+error_t device_iomux_fetch(struct device_s *dev,
+                           struct device_iomux_s *iomux, const char *io_list,
                            iomux_demux_t *demux, iomux_io_id_t *io_id,
                            iomux_config_t *config)
 {
-  struct device_iomux_s iomux;
-
-  error_t err, ent = device_get_param_dev_accessor(dev, "iomux",
-                                        &iomux.base, DRIVER_CLASS_IOMUX);
-  if (ent && ent != -ENOENT)
-    return ent;
-
   while (*io_list)
     {
       enum dev_pin_driving_e dir = device_iomux_mode(*io_list);
@@ -69,45 +63,87 @@ error_t device_iomux_setup(struct device_s *dev, const char *io_list,
 
       /* lookup io name in resources */
       struct dev_resource_s *r = device_res_get_from_name(dev, DEV_RES_IOMUX, 0, io_list);
+      iomux_demux_t d = IOMUX_INVALID_DEMUX;
+      iomux_io_id_t i = IOMUX_INVALID_ID;
+      iomux_config_t c = 0;
 
       /* skip io name */
       while (*io_list > ' ')
         {
           io_list++;
-          if (io_list[-1] == '?')
+          if (io_list[-1] == '?' && !r)
             goto done;
         }
+
       if (!r)
         return -ENOENT;
-    done:
 
-      if (r)
+      /* direction in resource label overrides the one in driver string */
+      enum dev_pin_driving_e dir2 = device_iomux_mode(*r->u.iomux.label);
+      if (dir2)
+        dir = dir2;
+
+      if (iomux)
         {
-          enum dev_pin_driving_e dir2 = device_iomux_mode(*r->u.iomux.label);
-          if (dir2)
-            dir = dir2;
-
-          /* configure io on iomux */
-          if (!ent && (err = DEVICE_OP(&iomux, setup, r->u.iomux.io_id, dir,
-                                       r->u.iomux.mux, r->u.iomux.config)))
+          /* configure io */
+          error_t err = DEVICE_OP(iomux, setup, r->u.iomux.io_id, dir,
+                                      r->u.iomux.mux, r->u.iomux.config);
+          if (err)
             return err;
         }
 
+      d = r->u.iomux.demux;
+      i = r->u.iomux.io_id;
+      c = r->u.iomux.config;
+
+    done:
       /* fill arrays */
       if (demux)
-        *demux++ = r ? r->u.iomux.demux : IOMUX_INVALID_DEMUX;
+        *demux++ = d;
       if (io_id)
-        *io_id++ = !ent && r ? r->u.iomux.io_id : IOMUX_INVALID_ID;
+        *io_id++ = i;
       if (config)
-        *config++ = ent && r ? r->u.iomux.config : 0;
+        *config++ = c;
 
       while (*io_list == ' ')
         io_list++;
     }
 
-  if (!ent)
-    device_put_accessor(&iomux.base);
-
   return 0;
 }
 
+error_t device_iomux_setup(struct device_s *dev, const char *io_list,
+                           iomux_demux_t *demux, iomux_io_id_t *io_id,
+                           iomux_config_t *config)
+{
+  struct device_iomux_s iomux;
+
+  error_t err = device_get_param_dev_accessor(dev, "iomux", &iomux.base, DRIVER_CLASS_IOMUX);
+  if (err)
+    return err;
+
+  err = device_iomux_fetch(dev, &iomux, io_list, demux, io_id, config);
+
+  device_put_accessor(&iomux.base);
+
+  return err;
+}
+
+void device_iomux_cleanup2(struct device_s *dev, struct device_iomux_s *iomux)
+{
+  DEVICE_RES_FOREACH(dev, r, {
+      if (r->type == DEV_RES_IOMUX)
+        DEVICE_OP(iomux, setup, r->u.iomux.io_id, DEV_PIN_DISABLED, IOMUX_INVALID_MUX, 0);
+  });
+}
+
+void device_iomux_cleanup(struct device_s *dev)
+{
+  struct device_iomux_s iomux;
+
+  if (!device_get_param_dev_accessor(dev, "iomux", &iomux.base, DRIVER_CLASS_IOMUX))
+    {
+      device_iomux_cleanup2(dev, &iomux);
+      device_put_accessor(&iomux.base);
+    }
+}

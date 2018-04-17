@@ -497,13 +497,12 @@ dev_shell_dump_device(struct termui_console_s *con, struct device_s *dev,
           static const char uart_parity[] = "NOE";
           termui_con_printf(con,
             "  UART: %d baud, %d-%c-%d"
-              "%s%s\n",
+              "%s\n",
             r->u.uart.baudrate,
             r->u.uart.data_bits,
             uart_parity[r->u.uart.parity],
             r->u.uart.stop_bits,
-            (r->u.uart.flow_ctrl ? ", flow control" : ""),
-            (r->u.uart.half_duplex ? ", half duplex" : "")
+            (r->u.uart.flow_ctrl ? ", flow control" : "")
           );
           break;
         }

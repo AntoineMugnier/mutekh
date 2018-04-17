@@ -214,6 +214,20 @@ error_t dev_pwm_wait_config(struct device_pwm_s *pdev, const struct dev_pwm_conf
      return rq.error;
 });
 
+config_depend_and2_inline(CONFIG_DEVICE_PWM, CONFIG_MUTEK_CONTEXT_SCHED,
+error_t dev_pwm_wait_rq(struct device_pwm_s *pdev, struct dev_pwm_rq_s *rq),
+{
+     struct dev_request_status_s status;
+
+     dev_request_sched_init(&rq->base, &status);
+
+     DEVICE_OP(pdev, config, rq);
+
+     dev_request_sched_wait(&status);
+
+     return rq->error;
+});
+
 /** @see dev_pwm_wait_config */
 BUSY_WAITING_FUNCTION
 config_depend_inline(CONFIG_DEVICE_PWM,

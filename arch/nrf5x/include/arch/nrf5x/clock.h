@@ -51,6 +51,9 @@ enum nrf5x_clock_register {
     NRF_CLOCK_CTIV = 78, // In .25s steps
     NRF_CLOCK_XTALFREQ = 84,
     NRF_CLOCK_TRACECONFIG = 87,
+#if CONFIG_NRF5X_MODEL == 52840
+    NRF_CLOCK_LFRCMODE = 109,
+#endif
 };
 
 #define NRF_CLOCK_HF_SRC_MASK      0x1
@@ -82,5 +85,8 @@ enum nrf5x_clock_register {
 # define NRF_CLOCK_TRACECONFIG_TRACEMUX_SERIAL 0x10000
 # define NRF_CLOCK_TRACECONFIG_TRACEMUX_PARALLEL 0x20000
 #endif
+
+#define NRF_CLOCK_LFRCMODE_MODE_ULP 0x1
+#define NRF_CLOCK_LFRCMODE_STATUS_ULP 0x10000
 
 #endif

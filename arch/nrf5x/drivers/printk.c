@@ -26,43 +26,51 @@
 #include <mutek/startup.h>
 
 #include <mutek/printk.h>
+#include <mutek/startup.h>
 #include <arch/nrf5x/uart.h>
 #include <arch/nrf5x/gpio.h>
 
 #include "printk.h"
 
-static inline void nrf5x_printk_out_char(uintptr_t addr, char c)
+static struct printk_backend_s nrf_printk_backend;
+
+static inline bool_t nrf5x_printk_out_char(uintptr_t addr, char c)
 {
-  uint32_t timeout = 0x100;
+  uint32_t timeout = 64000000 /* max cpu freq */ * 10 /* bits */
+                      / CONFIG_DRIVER_NRF5X_PRINTK_RATE;
 
   nrf_event_clear(addr, NRF_UART_TXDRDY);
-
   nrf_reg_set(addr, NRF_UART_TXD, c);
 
-  while (!nrf_event_check(addr, NRF_UART_TXDRDY) && --timeout)
-    ;
+  while (!nrf_event_check(addr, NRF_UART_TXDRDY))
+    if (!--timeout)
+      return 1;
+
+  return 0;
 }
 
-void nrf5x_printk_out_nodrv(uintptr_t addr, const char *str, size_t len)
+/* This function is also used from nrf5x_uart_printk (uart.c) */
+void nrf5x_printk_out(uintptr_t addr, const char *str, size_t len)
 {
   size_t i;
 
-  nrf_task_trigger(addr, NRF_UART_STARTTX);
-  nrf_event_clear(addr, NRF_UART_TXDRDY);
-
   for (i = 0; i < len; i++)
     {
-      if (str[i] == '\n')
-        nrf5x_printk_out_char(addr, '\r');
-      nrf5x_printk_out_char(addr, str[i]);
+      if (str[i] == '\n' && nrf5x_printk_out_char(addr, '\r'))
+        break;
+      if (nrf5x_printk_out_char(addr, str[i]))
+        break;
     }
-
-  nrf_task_trigger(addr, NRF_UART_STOPTX);
 }
 
 static PRINTK_HANDLER(nrf5x_printk)
 {
-  nrf5x_printk_out_nodrv(CONFIG_MUTEK_PRINTK_ADDR, str, len);
+  nrf_task_trigger(CONFIG_MUTEK_PRINTK_ADDR, NRF_UART_STARTTX);
+  nrf_event_clear(CONFIG_MUTEK_PRINTK_ADDR, NRF_UART_TXDRDY);
+
+  nrf5x_printk_out(CONFIG_MUTEK_PRINTK_ADDR, str, len);
+
+  nrf_task_trigger(CONFIG_MUTEK_PRINTK_ADDR, NRF_UART_STOPTX);
 }
 
 void nrf5x_printk_init()
@@ -88,6 +96,10 @@ void nrf5x_printk_init()
               NRF_UART_ENABLE,
               NRF_UART_ENABLE_ENABLED);
 
-  static struct printk_backend_s backend;
-  printk_register(&backend, nrf5x_printk);
+  printk_register(&nrf_printk_backend, nrf5x_printk);
+}
+
+void nrf5x_printk_cleanup()
+{
+  printk_unregister(&nrf_printk_backend);
 }

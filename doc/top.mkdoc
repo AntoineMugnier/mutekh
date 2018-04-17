@@ -23,6 +23,7 @@
 @include ../libpthread/libpthread.mkdoc
 @include ../libnetwork/libnetwork.mkdoc
 @include ../libinet/libinet.mkdoc
+@include ../libble/ble.mkdoc
 @include ../libfdt/libfdt.mkdoc
 @include ../libtermui/libtermui.mkdoc
 @include ../libgomp/libgomp.mkdoc

@@ -411,7 +411,11 @@ device/class/pwm.h
 device/class/crypto.h
 device/class/i2c.h
 device/class/spi.h
-device/class/persist.h
+device/class/display.h
+device/class/bitbang.h
+device/class/net.h
+device/class/smi.h
+device/class/pcm.h
 device/class/rfpacket.h
 device/class/uart.h
 device/class/valio.h

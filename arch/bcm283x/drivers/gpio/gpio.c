@@ -299,16 +299,19 @@ static DEV_IOMUX_SETUP(bcm283x_gpio_iomux_setup)
 
   uint32_t sel;
 
-  if (mux == BCM283X_GPIO_GPFSEL_FSEL_INPUT ||
-      mux == BCM283X_GPIO_GPFSEL_FSEL_OUTPUT)
+  switch (mux)
     {
+    case IOMUX_INVALID_MUX:
+    case BCM283X_GPIO_GPFSEL_FSEL_INPUT:
+    case BCM283X_GPIO_GPFSEL_FSEL_OUTPUT: {
       /* in/out */
       error_t err = bcm283x_gpio_mode(pv, dir, 1ULL << io_id, &sel);
       if (err)
         return err;
+      break;
     }
-  else
-    {
+
+    default:
       /* special function */
       sel = mux;
     }

@@ -1,3 +1,3 @@
 
-objs = msc.o flash.o
+objs = msc.o
 

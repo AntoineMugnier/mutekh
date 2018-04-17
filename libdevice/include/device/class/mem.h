@@ -66,34 +66,36 @@ ENUM_DESCRIPTOR(dev_mem_flags_e, strip:DEV_MEM_, upper, or);
 
 enum dev_mem_flags_e
 {
-  /** Memory is writable */
-  DEV_MEM_WRITABLE      = 0x0001,
   /** Memory is mapped in the processor address space and can be read
       by regular processor load instructions. */
-  DEV_MEM_MAPPED_READ   = 0x0002,
+  DEV_MEM_MAPPED_READ   = 0x0001,
   /** Memory is mapped in the processor address space and can be
       written by regular processor store instructions. */
-  DEV_MEM_MAPPED_WRITE  = 0x0004,
+  DEV_MEM_MAPPED_WRITE  = 0x0002,
   /** Data are fetched through a non-consistent cache and may not
       match actual content of memory. */
-  DEV_MEM_CACHED_READ   = 0x0008,
+  DEV_MEM_CACHED_READ   = 0x0004,
   /** Data are stored in a write back cache and my not be written
       immediately to the memory. */
-  DEV_MEM_CACHED_WRITE  = 0x0010,
+  DEV_MEM_CACHED_WRITE  = 0x0008,
   /** Support partial read of a page. */
-  DEV_MEM_PARTIAL_READ  = 0x0020,
+  DEV_MEM_PARTIAL_READ  = 0x0010,
   /** Support partial write of a page. */
-  DEV_MEM_PARTIAL_WRITE = 0x0040,
+  DEV_MEM_PARTIAL_WRITE = 0x0020,
   /** Partial read can cross page boundary. */
-  DEV_MEM_CROSS_READ    = 0x0080,
+  DEV_MEM_CROSS_READ    = 0x0040,
   /** Partial write can cross page boundary. */
-  DEV_MEM_CROSS_WRITE   = 0x0100,
+  DEV_MEM_CROSS_WRITE   = 0x0080,
+  /** Support page reading operations. */
+  DEV_MEM_PAGE_READ  = 0x0100,
+  /** Support page writing operations. */
+  DEV_MEM_PAGE_WRITE = 0x0200,
   /** Memory content is lost when the device is stopped. */
-  DEV_MEM_VOLATILE      = 0x0200,
+  DEV_MEM_VOLATILE      = 0x0400,
   /** Memory needs an erase operation in order to switch bits from 0 to 1. */
-  DEV_MEM_ERASE_ONE     = 0x0400,
+  DEV_MEM_ERASE_ONE     = 0x0800,
   /** Memory needs an erase operation in order to switch bits from 1 to 0. */
-  DEV_MEM_ERASE_ZERO    = 0x0800,
+  DEV_MEM_ERASE_ZERO    = 0x1000,
 };
 
 struct dev_mem_info_s
@@ -117,11 +119,13 @@ struct dev_mem_info_s
   /** @see erase_cycles_p */
   uint8_t BITFIELD(erase_cycles_m,3);
 
-  /** log2 of byte size of a page, 0=no paging */
+  /** log2 of default page size in bytes used for read and write
+      operations. */
   uint8_t page_log2;
 
-  /** log2 byte size of a page erase, 0=no paging. Only valid when
-      either @ref DEV_MEM_ERASE_ONE or @ref DEV_MEM_ERASE_ZERO is set. */
+  /** log2 of default page size in bytes used for erase operation,
+      Only valid when either @ref DEV_MEM_ERASE_ONE or @ref
+      DEV_MEM_ERASE_ZERO is set. */
   uint8_t erase_log2;
 
   /** log2 alignment of partial access. */
@@ -135,85 +139,122 @@ struct dev_mem_info_s
   /** type of memory */
   enum dev_mem_type_e  BITFIELD(type,3);
 
-  enum dev_mem_flags_e BITFIELD(flags,12);
+  enum dev_mem_flags_e BITFIELD(flags,13);
 };
 
-ENUM_DESCRIPTOR(dev_mem_rq_type_e, strip:DEV_MEM_OP_, upper, or);
+/** @internal */
+#define _DEV_MEM_CACHE 0x00
+/** @internal */
+#define _DEV_MEM_READ 0x01
+/** @internal */
+#define _DEV_MEM_WRITE 0x02
+/** @internal */
+#define _DEV_MEM_ERASE 0x04
+/** @internal */
+#define _DEV_MEM_OP_MASK 0x07
+
+/** @internal */
+#define _DEV_MEM_PAGE 0x08
+/** @internal */
+#define _DEV_MEM_PARTIAL 0x10
+/** @internal */
+#define _DEV_MEM_ALL 0x20
+
+/** @internal */
+#define _DEV_MEM_FLUSH 0x40
+/** @internal */
+#define _DEV_MEM_INVAL 0x80
 
 /* @This specifies available memory device operations. When combined,
    operations are performed in declaration order. */
-enum dev_mem_rq_type_e{
-
-  /** Invalidate read cache. Always succeed if there is no cache. Can
-      be combined with @ref DEV_MEM_OP_PARTIAL_READ or @ref
-      DEV_MEM_OP_PAGE_READ. The @tt size field of the request indicates
-      the number of bytes unless it is combined with a @ref
-      DEV_MEM_OP_PAGE_READ operation. */
-  DEV_MEM_OP_CACHE_INVALIDATE   = 0x0001,
-  /** Erase a page on a flash device, perform a TRIM on a disk device.
-      Can be combined with @ref DEV_MEM_OP_PAGE_WRITE. The @tt size
-      field of the request indicates the number of erased pages. The
-      address must be page aligned. This may no be supported by all devices. */
-  DEV_MEM_OP_PAGE_ERASE         = 0x0002,
-  /** Partial page read. The @tt size field of the request indicates
-      the number of bytes. The transfer must not cross page
-      boundaries. This may no be supported by all devices. */
-  DEV_MEM_OP_PARTIAL_READ       = 0x0004,
-  /** Partial page write. The @tt size field of the request indicates
-      the number of bytes. The transfer must not cross page
-      boundaries. This may no be supported by all devices. */
-  DEV_MEM_OP_PARTIAL_WRITE      = 0x0008,
-  /** Pages read with scattered data buffers. The @tt size field of
-      the request indicates the number of written pages and the @tt
-      sc_log2 field indicates the number of pages per buffer. The
-      address must be page aligned. */
-  DEV_MEM_OP_PAGE_READ          = 0x0010,
-  /** Pages write with scattered data buffers. The @tt size field of
-      the request indicates the number of read pages and the @tt
-      sc_log2 field indicates the number of pages per buffer. The
-      address must be page aligned.  */
-  DEV_MEM_OP_PAGE_WRITE         = 0x0020,
-  /** Flush write cache. Always succeed if there is no cache.  Can be
-      combined with @ref DEV_MEM_OP_PARTIAL_WRITE or @ref
-      DEV_MEM_OP_PAGE_WRITE. The @tt size field of the request
-      indicates the number of bytes unless it is combined with a @ref
-      DEV_MEM_OP_PAGE_WRITE operation. */
-  DEV_MEM_OP_CACHE_FLUSH        = 0x0040,
-  DEV_MEM_OP_CONFIG             = 0x0080,
+enum dev_mem_rq_type_e
+{
+  DEV_MEM_OP_NOP                    = _DEV_MEM_CACHE,
+  /** Partial page read. All fields in @ref dev_mem_rq_s::partial must
+      be set. Read operations crossing page boundaries may not be supported. */
+  DEV_MEM_OP_PARTIAL_READ           = _DEV_MEM_READ | _DEV_MEM_PARTIAL,
+  /** Same as @ref DEV_MEM_OP_PARTIAL_READ, do not rely on cache content. */
+  DEV_MEM_OP_PARTIAL_READ_UNCACHED  = _DEV_MEM_READ | _DEV_MEM_PARTIAL | _DEV_MEM_FLUSH,
+  /** Partial page write. All fields in @ref dev_mem_rq_s::partial
+      must be set. Write operations crossing page boundaries may not
+      be supported. */
+  DEV_MEM_OP_PARTIAL_WRITE          = _DEV_MEM_WRITE | _DEV_MEM_PARTIAL,
+  /** Same as DEV_MEM_OP_PARTIAL_WRITE, do not keep data in the write cache. */
+  DEV_MEM_OP_PARTIAL_WRITE_THROUGH  = _DEV_MEM_WRITE | _DEV_MEM_PARTIAL | _DEV_MEM_FLUSH,
+  /** Pages read with scattered data buffers. All fields in @ref
+      dev_mem_rq_s::page must be set. */
+  DEV_MEM_OP_PAGE_READ              = _DEV_MEM_READ | _DEV_MEM_PAGE,
+  /** Same as @ref DEV_MEM_OP_PAGE_READ, do not rely on cache content. */
+  DEV_MEM_OP_PAGE_READ_UNCACHED     = _DEV_MEM_READ | _DEV_MEM_PAGE | _DEV_MEM_FLUSH,
+  /** Pages write with scattered data buffers. All fields in @ref
+      dev_mem_rq_s::page must be set. */
+  DEV_MEM_OP_PAGE_WRITE             = _DEV_MEM_WRITE | _DEV_MEM_PAGE,
+  /** Same as DEV_MEM_OP_PAGE_WRITE, do not keep data in the write cache. */
+  DEV_MEM_OP_PAGE_WRITE_THROUGH     = _DEV_MEM_WRITE | _DEV_MEM_PAGE | _DEV_MEM_FLUSH,
+  /** Erase pages on a flash device or perform a TRIM on a disk
+      device. All fields in @ref dev_mem_rq_s::page must be set except
+      @tt sc_data. */
+  DEV_MEM_OP_PAGE_ERASE             = _DEV_MEM_ERASE | _DEV_MEM_PAGE,
+  /** Erase the whole device. */
+  DEV_MEM_OP_ERASE                  = _DEV_MEM_ERASE | _DEV_MEM_ALL,
+  /** Flush the whole write cache. Always succeed if there is no cache. */
+  DEV_MEM_OP_CACHE_FLUSH            = _DEV_MEM_CACHE | _DEV_MEM_FLUSH | _DEV_MEM_ALL,
+  /** Invalidate the whole read cache. Always succeed if there is no cache. */
+  DEV_MEM_OP_CACHE_INVALIDATE       = _DEV_MEM_CACHE | _DEV_MEM_INVAL | _DEV_MEM_ALL,
+  /** Partially flush the write cache. All fields in @ref dev_mem_rq_s::partial
+      must be set. Always succeed if there is no cache. */
+  DEV_MEM_OP_CACHE_PARTIAL_FLUSH    = _DEV_MEM_CACHE | _DEV_MEM_FLUSH,
+  /** Partially invalidates the read cache. All fields in @ref
+      dev_mem_rq_s::partial must be set. Always succeed if there is no
+      cache. */
+  DEV_MEM_OP_CACHE_PARTIAL_INVAL    = _DEV_MEM_CACHE | _DEV_MEM_INVAL,
 };
 
-struct dev_mem_config_s;
+struct dev_mem_page_sc_s
+{
+  /** Byte address of accessed page on the device. The address has to be
+      aligned on the default page size as reported in @ref dev_mem_info_s. */
+  uint64_t            addr;
+
+  /* Buffers used to store the accessed pages */
+  uint8_t             *data;
+};
 
 struct dev_mem_rq_s
 {
   struct dev_request_s          base;
 
-  /* Requested operation */
+  /** Requested operation */
   enum dev_mem_rq_type_e        BITFIELD(type,8);
 
   error_t                       err;
 
-  /* Mask of bands present in data */
+  /** Mask of bands present in data */
   uint8_t                       band_mask;
 
-  /* log2 of the number of pages in a single @ref sc_data buffer. */
-  uint8_t                       sc_log2;
-
-  /* Size of data, granularity depends on the requested operation. */
-  size_t                        size;
-
-  /* Access byte address */
-  uint64_t                      addr;
-
   union {
-    /* buffer for @ref DEV_MEM_OP_PARTIAL_READ and @ref
-       DEV_MEM_OP_PARTIAL_WRITE operations */
-    uint8_t *data;
-    /* array of page buffers for @ref DEV_MEM_OP_PAGE_READ and @ref
-       DEV_MEM_OP_PAGE_WRITE operations */
-    uint8_t **sc_data;
+    struct {
+      /** Byte address of access */
+      uint64_t                  addr;
 
-    struct dev_mem_config_s    *cfg;
+      /** Buffers used to store accessed data */
+      uint8_t                   *data;
+
+      /** Bytes count */
+      uint32_t                  size;
+    } partial;
+
+    struct {
+      /** Array of source and destination page addresses. */
+      const struct dev_mem_page_sc_s *sc;
+
+      /** Number of entries in the the @tt sc array. */
+      uint8_t                   sc_count:4;
+
+      /** Log2 of page size used for the access. It can not be less
+          than the default page size reported in @ref dev_mem_info_s. */
+      uint8_t                   page_log2;
+    } page;
   };
 };
 
@@ -254,8 +295,7 @@ typedef DEV_MEM_INFO(dev_mem_info_t);
     @list
       @item @tt 0 : Success
       @item @tt 1 : at least one corrected ECC error on read (not fatal)
-      @item @tt -EINVAL : invalid request parameter
-      @item @tt -ERANGE : page index out of range
+      @item @tt -ERANGE : addres or size out of range or not properly aligned
       @item @tt -ENOTSUP : operation not supported on this device
       @item @tt -EIO : IO error
       @item @tt -EBADDATA : uncorrectable ECC error on read
@@ -316,10 +356,17 @@ error_t dev_mem_wait_op(struct device_mem_s *accessor,
 })
 
 /** @internal @This handles read/write operations to mapped memories
-    using the @ref memcpy function. */
+    using the @ref memcpy function. It can be used in device drivers. */
 config_depend(CONFIG_DEVICE_MEM)
-void dev_mem_mapped_op_helper(uintptr_t base, uint_fast8_t page_log2,
-                              struct dev_mem_rq_s *rq);
+error_t dev_mem_mapped_op_helper(uintptr_t base, uintptr_t end,
+                                 struct dev_mem_rq_s * __restrict__ rq);
+
+/** @internal @This handles read/write operations to platform flash
+    using the @ref flash_erase and @ref flash_write functions. */
+config_depend(CONFIG_DEVICE_MEM)
+error_t dev_mem_flash_op(uintptr_t base, uintptr_t end,
+                         uint_fast8_t page_log2,
+                         struct dev_mem_rq_s * __restrict__ rq);
 
 #endif
 

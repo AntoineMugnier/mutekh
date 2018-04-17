@@ -361,6 +361,8 @@ static TERMUI_CON_COMMAND_PROTOTYPE(shell_rfpacket_pk_configure)
         pk->tx_pb_len = c->tx_pb_len;
       if (used & RFPACKET_OPT_PB_LEN)
         pk->pb_pattern_len = c->pb_pattern_len;
+      if (used & RFPACKET_OPT_SW_VAL)
+        pk->sw_value = c->sw_value;
       if (used & RFPACKET_OPT_PB_VAL)
         pk->pb_pattern = c->pb_pattern;
       break;}
@@ -377,6 +379,8 @@ static TERMUI_CON_COMMAND_PROTOTYPE(shell_rfpacket_pk_configure)
       if (used & RFPACKET_OPT_PB_LEN)
         pk->pb_len = c->pb_pattern_len;
       break;}
+    default:
+      break;
     }
 
   return 0;
@@ -404,7 +408,7 @@ static KROUTINE_EXEC(shell_rfpacket_rx_cb)
   struct shell_rfpacket_rx_pkt_s *rxpkt = shell_rfpacket_rx_pkt_s_from_rx(rx);
 
   if (rx->size)
-    printk("Rx packet size: %d\n", rx->size);
+    printk("Rx packet: %P\n", rx->buf, rx->size);
 
   /* Drop allocated RX buffer here */
   shell_buffer_drop(rxpkt->data);
@@ -421,10 +425,21 @@ static struct dev_rfpacket_rx_s *shell_rfpacket_rx_alloc(struct dev_rfpacket_rq_
 
   struct shell_rfpacket_rx_pkt_s *rxpkt = shell_buffer_reuse(con, sizeof(struct shell_rfpacket_rx_pkt_s), "rxpkt", shell_rfpacket_rx_alloc, 0);
 
-  rxpkt->data = shell_buffer_new(con, size, "rxdata", 0, 0);
-
-  if (!rxpkt || !rxpkt->data)
+  if (!rxpkt)
     return NULL;
+
+  rxpkt->data = shell_buffer_new(con, size, "rxdata", shell_rfpacket_rx_alloc + 4, 0);
+
+  /* Reuse a old buffer if possible when allocation failed */
+
+  if (!rxpkt->data)
+    rxpkt->data = shell_buffer_reuse(con, size, "rxdata", shell_rfpacket_rx_alloc + 4, 0);
+
+  if (!rxpkt->data)
+    {
+      shell_buffer_drop(rxpkt);
+      return NULL;
+    }
 
   struct dev_rfpacket_rx_s *rx = &rxpkt->rx;
 
@@ -458,8 +473,8 @@ static TERMUI_CON_COMMAND_PROTOTYPE(shell_rfpacket_receive)
   rq->rf_cfg = rf;
   rq->pk_cfg = pk;
 
-  if (!(used & RFPACKET_OPT_LIFETIME && c->lifetime))
-    c->lifetime = 2000;
+  if (!(used & RFPACKET_OPT_LIFETIME))
+    c->lifetime = 10000;
 
   struct device_timer_s timer;
 
@@ -474,6 +489,8 @@ static TERMUI_CON_COMMAND_PROTOTYPE(shell_rfpacket_receive)
 #else
   error_t err = dev_rfpacket_spin_request(&c->accessor, &rq);
 #endif
+
+  device_put_accessor(&timer.base);
 
   if (err)
     termui_con_printf(con, "RX failed with error: %d\n", err);
@@ -499,16 +516,20 @@ static TERMUI_CON_COMMAND_PROTOTYPE(shell_rfpacket_send)
       rq.tx_buf = (uint8_t*)c->data.addr;
       rq.tx_size = c->data.size;
     }
-  else if (used & RFPACKET_OPT_SIZE)
+  else 
     {
-      data = shell_buffer_reuse((const struct termui_console_s *)con, c->size, "data", NULL, 0);
+      /* Default packet size */
+      if (!(used & RFPACKET_OPT_SIZE))
+        c->size = 28;
 
+      data = shell_buffer_reuse((const struct termui_console_s *)con, c->size, "data", NULL, 0);
+     
       if (data == NULL)
         return -EINVAL;
-
+     
       for (uint16_t i = 0; i<c->size; i++)
         data[i] = i;
-
+     
       rq.tx_buf = data;
       rq.tx_size = c->size;
     }
@@ -531,16 +552,13 @@ static TERMUI_CON_COMMAND_PROTOTYPE(shell_rfpacket_send)
   rq.rf_cfg = rf;
   rq.pk_cfg = pk;
 
-  if (!(used & RFPACKET_OPT_LIFETIME))
-    c->lifetime = 10000;
-
 #if defined(CONFIG_MUTEK_CONTEXT_SCHED)
   error_t err = dev_rfpacket_wait_request(&c->accessor, &rq);
 #else
   error_t err = dev_rfpacket_spin_request(&c->accessor, &rq);
 #endif
 
-  if (used & RFPACKET_OPT_SIZE)
+  if (!(used & RFPACKET_OPT_DATA))
     shell_buffer_drop(data);
     
   if (err == 0)
@@ -646,9 +664,8 @@ TERMUI_CON_GROUP_DECL(dev_shell_rfpacket_group) =
 {
   TERMUI_CON_ENTRY(shell_rfpacket_send, "send",
     TERMUI_CON_OPTS_CTX(dev_rfpacket_opts,
-                        RFPACKET_OPT_DEV | RFPACKET_OPT_DATA |
-                        RFPACKET_OPT_SIZE | RFPACKET_OPT_RFCFG | RFPACKET_OPT_PKCFG,
-                        RFPACKET_OPT_PWR,
+                        RFPACKET_OPT_DEV | RFPACKET_OPT_RFCFG | RFPACKET_OPT_PKCFG,
+                        RFPACKET_OPT_PWR | RFPACKET_OPT_DATA | RFPACKET_OPT_SIZE,
                         rfpacket_opts_cleanup)
   )
 

@@ -158,7 +158,8 @@ static error_t cc26xx_gpio_mode(gpio_id_t io_first, gpio_id_t io_last,
   iocfg_reg &= ~CC26XX_IOC_IOCFG_HYST_EN;         //Input Hysteresis disable
 
   iocfg_set_mode(&iocfg_reg, &oe, mode);
-  iocfg_set_mux(&iocfg_reg, mux);
+  if (mux != IOMUX_INVALID_MUX)
+    iocfg_set_mux(&iocfg_reg, mux);
   iocfg_set_irq(&iocfg_reg, sense);
 
   cc26xx_gpio_mode_reg(io_first, io_last, mask, iocfg_reg, oe);

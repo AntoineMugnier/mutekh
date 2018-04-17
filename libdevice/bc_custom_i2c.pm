@@ -16,9 +16,9 @@ main::custom_cond_op('i2c_yieldc_delay',  1,    0x0190, \&parse_reg );
 main::custom_op('i2c_addr_set',           1,    0x0710, \&parse_reg );
 main::custom_op('i2c_addr_get',           1,    0x0700, \&parse_rego );
 
-main::custom_op('i2c_gpioset',            2,    0x0400, \&parse_gpio_set );
-main::custom_op('i2c_gpioget',            2,    0x0500, \&parse_gpio_get );
-main::custom_op('i2c_gpiomode',           2,    0x0600, \&parse_gpio_mode );
+main::custom_op('i2c_gpiomode',           2,    0x0800, \&parse_gpio_mode );
+main::custom_op('i2c_gpioget',            2,    0x0a00, \&parse_gpio_get );
+main::custom_op('i2c_gpioset',            2,    0x0c00, \&parse_gpio_set );
 
 main::custom_op('i2c_rdm',                3,    0xc100, \&parse_xxm );
 main::custom_op('i2c_wrm',                3,    0xc000, \&parse_xxm );
@@ -102,7 +102,7 @@ sub parse_gpio_set
     my $i = main::check_num( $thisop, 0, 0, 15 );
     my $r = main::check_reg( $thisop, 1 );
     $thisop->{in}->[0] = $r;
-    $thisop->{code} |= ($i << 4) | $r;
+    $thisop->{code} |= ($i << 5) | $r;
 }
 
 sub parse_gpio_get
@@ -111,15 +111,15 @@ sub parse_gpio_get
     my $i = main::check_num( $thisop, 0, 0, 15 );
     my $r = main::check_reg( $thisop, 1 );
     $thisop->{out}->[0] = $r;
-    $thisop->{code} |= ($i << 4) | $r;
+    $thisop->{code} |= ($i << 5) | $r;
 }
 
 sub parse_gpio_mode
 {
     my $thisop = shift;
     my $i = main::check_num( $thisop, 0, 0, 15 );
-    my $m = main::check_num( $thisop, 0, 0, 15 );
-    $thisop->{code} |= ($a << 4) | $m;
+    my $m = main::check_num( $thisop, 1, 0, 31 );
+    $thisop->{code} |= ($i << 5) | $m;
 }
 
 return 1;

@@ -348,7 +348,7 @@ DEV_IOMUX_SETUP(stm32_gpio_iomux_setup)
     goto end;
 
   /* remap io if required. */
-  if (mux)
+  if (mux != IOMUX_INVALID_MUX)
     stm32_gpio_apply_remap(mux);
 
 end:

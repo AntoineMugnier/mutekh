@@ -1,6 +1,8 @@
 
 package bc_custom_spi;
 
+use strict;
+
 main::custom_op('spi_nodelay',        0,      0x0300 );
 main::custom_op('spi_deadline',       1,      0x0340, \&parse_reg );
 main::custom_op('spi_delay',          1,      0x0380, \&parse_reg );
@@ -26,6 +28,7 @@ main::custom_op('spi_rd',             3,      0x1000, \&parse_rd );
 main::custom_op('spi_wr',             3,      0x2000, \&parse_wr );
 main::custom_op('spi_swp',            4,      0x3000, \&parse_swp );
 
+main::custom_op('spi_cs' ,            1,      0x4010, \&parse_cs );
 main::custom_op('spi_pad',            2,      0x4000, \&parse_pad );
 main::custom_op('spi_rdm',            3,      0x4400, \&parse_xxm );
 main::custom_op('spi_wrm',            3,      0x4800, \&parse_xxm );
@@ -121,6 +124,13 @@ sub parse_swp
     $thisop->{code} |= ($cs << 14) | (($l - 1) << 8) | ($wr << 4) | $rd;
 }
 
+sub parse_cs
+{
+    my $thisop = shift;
+    my $cs = check_csop( $thisop, 0, \%csops2 );
+    $thisop->{code} |= ($cs << 8);
+}
+
 sub parse_pad
 {
     my $thisop = shift;
@@ -159,27 +169,27 @@ sub parse_swpm
 sub parse_gpio_set
 {
     my $thisop = shift;
-    my $i = main::check_num( $thisop, 0, 0, 31 );
+    my $i = main::check_num( $thisop, 0, 0, 15 );
     my $r = main::check_reg( $thisop, 1 );
     $thisop->{in}->[0] = $r;
-    $thisop->{code} |= ($i << 4) | $r;
+    $thisop->{code} |= ($i << 5) | $r;
 }
 
 sub parse_gpio_get
 {
     my $thisop = shift;
-    my $i = main::check_num( $thisop, 0, 0, 31 );
+    my $i = main::check_num( $thisop, 0, 0, 15 );
     my $r = main::check_reg( $thisop, 1 );
     $thisop->{out}->[0] = $r;
-    $thisop->{code} |= ($i << 4) | $r;
+    $thisop->{code} |= ($i << 5) | $r;
 }
 
 sub parse_gpio_mode
 {
     my $thisop = shift;
-    my $i = main::check_num( $thisop, 0, 0, 31 );
-    my $m = main::check_num( $thisop, 0, 0, 15 );
-    $thisop->{code} |= ($a << 4) | $m;
+    my $i = main::check_num( $thisop, 0, 0, 15 );
+    my $m = main::check_num( $thisop, 1, 0, 31 );
+    $thisop->{code} |= ($i << 5) | $m;
 }
 
 return 1;

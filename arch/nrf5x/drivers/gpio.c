@@ -204,18 +204,17 @@ static DEV_GPIO_SET_MODE(nrf5x_gpio_set_mode)
   if (nrf5x_gpio_mode(mode, &nrf_mode))
     return -ENOTSUP;
 
-  uint32_t m = (endian_le32_na_load(mask) << io_first)
-    & bit_range(io_first, io_last);
-
   LOCK_SPIN_IRQ_SCOPED(&dev->lock);
 
-  for (uint8_t pin = io_first; pin <= io_last; ++pin) {
-    if (!bit_get(m, pin))
+  uint_fast8_t count = io_last - io_first + 1;
+  for (uint_fast8_t i = 0; i < count; i++) {
+
+    if (!bit_get(mask[i / 8], i % 8))
       continue;
 
-    logk_trace("%s %d %x\n", __FUNCTION__, pin, nrf_mode);
+    logk_trace("%s %d %x\n", __FUNCTION__, i + io_first, nrf_mode);
 
-    nrf_reg_set(GPIO_ADDR, NRF_GPIO_PIN_CNF(pin), nrf_mode);
+    nrf_reg_set(GPIO_ADDR, NRF_GPIO_PIN_CNF(i + io_first), nrf_mode);
   }
 
   return 0;
@@ -223,28 +222,65 @@ static DEV_GPIO_SET_MODE(nrf5x_gpio_set_mode)
 
 static DEV_GPIO_SET_OUTPUT(nrf5x_gpio_set_output)
 {
+  if (io_last > CONFIG_NRF5X_GPIO_COUNT ||
+      io_first > io_last)
+    return -ERANGE;
+
+  uint64_t cm, sm, tmask;
+  uint64_t cmp = 0;
+  uint64_t smp = 0;
+
+  uint_fast8_t shift = io_first % 32;
+  int_fast8_t mlen  = io_last - io_first + 1;
+
   struct device_s *dev = gpio->dev;
-
-  if (io_last > CONFIG_NRF5X_GPIO_COUNT)
-    return -ERANGE;
-
-  if (io_first > CONFIG_NRF5X_GPIO_COUNT)
-    return -ERANGE;
-
-  uint32_t mask = bit_range(io_first, io_last);
-  uint32_t setm = (endian_le32_na_load(set_mask) << io_first) & mask;
-  uint32_t clearm = (endian_le32_na_load(clear_mask) << io_first) | ~mask;
-
   LOCK_SPIN_IRQ_SCOPED(&dev->lock);
 
-  uint32_t out = nrf_reg_get(GPIO_ADDR, NRF_GPIO_OUT);
-  uint32_t next = setm ^ (out & (setm ^ clearm));
+ mask:
+  /* compute mask word for next clear_mask and set_mask */
+  tmask = mlen > 32 ? 0xffffffff : bit_mask(0, mlen);
 
-  logk_trace("%s %d-%d clr %08x set %08x %08x -> %08x\n",
-         __FUNCTION__, io_first, io_last, clearm, setm,
-         out, next);
+ loop:
+  /* compute set and clear masks */
+  cm = (uint32_t)((uint16_t)~endian_le32_na_load(clear_mask) & tmask);
+  cmp = ((cm << shift) | cmp);
+  clear_mask += 4;
 
-  nrf_reg_set(GPIO_ADDR, NRF_GPIO_OUT, next);
+  sm = (uint32_t)(endian_le32_na_load(set_mask) & tmask);
+  smp = ((sm << shift) | smp);
+  set_mask += 4;
+
+  mlen -= 32;
+
+ last:;
+  /* update DOUT register */
+
+  uintptr_t a = NRF_GPIO_BANK_OFFSET(io_first);
+  uint32_t x = nrf_reg_get(GPIO_ADDR, a + NRF_GPIO_OUT);
+  uint32_t y = smp ^ (x & (smp ^ ~cmp));
+  nrf_reg_set(GPIO_ADDR, a + NRF_GPIO_OUT, y);
+
+  logk_trace("%s %d-%d clr %08llx set %08llx %08x -> %08x\n",
+             __FUNCTION__, io_first, io_last, cmp, smp, x, y);
+
+#if CONFIG_NRF5X_GPIO_COUNT > 32
+  cmp >>= 32;
+  smp >>= 32;
+
+  io_first = (io_first | (32 - 1)) + 1;
+
+  if (mlen >= 32)
+    goto loop;   /* mask is still 0xffffffff, no need to recompute */
+
+  if (io_first <= io_last)
+    {
+      if (mlen < 0)
+	goto last;   /* last remaining bits in next register, mask
+                        bits already available */
+
+      goto mask;     /* need to compute new mask for the last word */
+    }
+#endif
 
   return 0;
 }
@@ -258,9 +294,32 @@ static DEV_GPIO_GET_INPUT(nrf5x_gpio_get_input)
 
   LOCK_SPIN_IRQ_SCOPED(&dev->lock);
 
-  uint32_t mask = bit_mask(0, io_last - io_first + 1);
-  uint32_t in = nrf_reg_get(GPIO_ADDR, NRF_GPIO_IN) >> io_first;
-  endian_le32_na_store(data, in & mask);
+  uint64_t vp, v;
+  uint_fast8_t shift = io_first % 32;
+  uintptr_t a = NRF_GPIO_BANK_OFFSET(io_first);
+
+#if CONFIG_NRF5X_GPIO_COUNT > 32
+  uint_fast8_t bf = io_first / 32;
+  uint_fast8_t bl = io_last / 32;
+#endif
+
+  vp = nrf_reg_get(GPIO_ADDR, a + NRF_GPIO_IN);  /* get P0 inputs */
+  vp >>= shift;
+
+#if CONFIG_NRF5X_GPIO_COUNT > 32
+  while (bf++ < bl)
+    {
+      a += NRF_GPIO_BANK_OFFSET(1);
+      v = nrf_reg_get(GPIO_ADDR, a + NRF_GPIO_IN);  /* get P1, P2, ... inputs */
+      v = (v << (32 - shift)) | vp ;
+      vp = v >> 32;
+
+      endian_le32_na_store(data, endian_le32((uint32_t)v));
+      data += 4;
+    }
+#endif
+
+  endian_le32_na_store(data, endian_le32((uint32_t)vp));
 
   return 0;
 }
@@ -302,7 +361,7 @@ static DEV_IRQ_SINK_UPDATE(nrf5x_gpio_icu_sink_update)
   if (te >= CONFIG_DRIVER_NRF5X_GPIO_ICU_CHANNEL_COUNT)
     return;
 
-  if (pin >= CONFIG_NRF5X_GPIO_COUNT || pin < 0)
+  if (pin >= 32 || pin < 0)
     return;
 
   for (uint8_t i = 0; i < CONFIG_DRIVER_NRF5X_GPIO_ICU_CHANNEL_COUNT; ++i) {
@@ -361,7 +420,7 @@ static DEV_ICU_GET_SINK(nrf5x_gpio_icu_get_sink)
   struct device_s *dev = accessor->dev;
   struct nrf5x_gpio_private_s *pv = dev->drv_pv;
 
-  if (id >= CONFIG_NRF5X_GPIO_COUNT)
+  if (id >= __MIN(CONFIG_NRF5X_GPIO_COUNT, 32))
     return NULL;
 
 #if CONFIG_DRIVER_NRF5X_GPIO_ICU_CHANNEL_COUNT
@@ -469,16 +528,16 @@ static DEV_GPIO_REQUEST(nrf5x_gpio_request)
                                       rq->input.data);
     break;
 
-  case DEV_GPIO_UNTIL: {
+  case DEV_GPIO_UNTIL:
 # if defined(CONFIG_DRIVER_NRF5X_GPIO_UNTIL)
-    LOCK_SPIN_IRQ_SCOPED(&dev->lock);
-    dev_request_queue_pushback(&pv->queue, &rq->base);
-    kroutine_exec(&pv->until_checker);
-    return;
-#else
-    rq->error = -ENOTSUP;
+    if (rq->io_last < __MIN(CONFIG_NRF5X_GPIO_COUNT, 32)) {
+      LOCK_SPIN_IRQ_SCOPED(&dev->lock);
+      dev_request_queue_pushback(&pv->queue, &rq->base);
+      kroutine_exec(&pv->until_checker);
+      return;
+    }
 #endif
-  }
+    rq->error = -ENOTSUP;
   }
 
   kroutine_exec(&rq->base.kr);

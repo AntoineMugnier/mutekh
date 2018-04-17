@@ -161,14 +161,15 @@
     @item spi_wr                   @item wr, l, e      @item @tt{1e10 llll ---- rrrr}
     @item spi_swp                  @item wr, rd, l, e  @item @tt{1e11 llll rrrr rrrr}
 
-    @item spi_pad                  @item rl, e         @item @tt{1100 00ee ---- llll}
+    @item spi_cs                   @item e             @item @tt{1100 00ee ---1 ----}
+    @item spi_pad                  @item rl, e         @item @tt{1100 00ee ---0 llll}
     @item spi_rdm                  @item ra, rl, e     @item @tt{1100 01ee aaaa llll}
     @item spi_wrm                  @item ra, rl, e     @item @tt{1100 10ee aaaa llll}
     @item spi_swpm                 @item rar, raw, rl, e @item @tt{1100 11ee aaaa llll}
 
-    @item spi_gpiomode             @item i, r          @item @tt{1000 100i iiii mmmm}
-    @item spi_gpioget              @item i, r          @item @tt{1000 101i iiii rrrr}
-    @item spi_gpioset              @item i, r          @item @tt{1000 110i iiii rrrr}
+    @item spi_gpiomode             @item i, mode       @item @tt{1000 100i iiim mmmm}
+    @item spi_gpioget              @item i, r          @item @tt{1000 101i iii- rrrr}
+    @item spi_gpioset              @item i, r          @item @tt{1000 110i iii- rrrr}
    @end table
 
    @section {spi_nodelay}
@@ -334,8 +335,13 @@
    @end section
 
    @section {spi_pad}
-   The @tt spi_wrm instruction is similar to @xref{spi_swpm} but
+   The @tt spi_pad instruction is similar to @xref{spi_swpm} but
    discards data read from the slave and send padding bytes.
+   @end section
+
+   @section {spi_cs}
+   The @tt spi_cs instruction performs a zero length transfer,
+   only updating the chip select signal as specified.
    @end section
 
    @section {spi_gpioset}
@@ -495,10 +501,8 @@ typedef DEV_SPI_CTRL_CONFIG(dev_spi_ctrl_config_t);
     requests. */
 struct dev_spi_ctrl_data_s
 {
-  /** Number of SPI words to transfer. If this value is 0, the @ref in
-      and @ref out pointers may be @tt NULL and the callback function
-      will not be invoked. This field will be updated during the
-      transfer. */
+  /** Number of SPI words to transfer. This field will be updated
+      during the transfer. */
   size_t                   count;
 
   /** Pointer to input buffer data, the data type used to store SPI
@@ -552,14 +556,17 @@ struct dev_spi_ctrl_transfer_s
 /**
    @This starts an SPI transfer. A single spi data transfer can be
    started at the same time. This is the low level transfer function
-   of the SPI device class. The @ref dev_spi_bytecode_start function is
-   able to schedule complex requests for several SPI slaves on the
-   same bus.
+   of the SPI device class. The @ref dev_spi_transaction_start and
+   @ref dev_spi_bytecode_start functions are able to schedule
+   requests for several SPI slaves on the same bus.
 
    All fields of the transfer object except @tt pvdata, @tt err and
    @tt accessor must be properly initialized before calling this
-   function. The @tt count field can not be 0. The transfer will fail
-   with @tt -EBUSY if an other transfer is currently being processed.
+   function. The transfer will fail with @tt -EBUSY if an other
+   transfer is currently being processed.
+
+   The @tt count field may be 0 if only the chip select operation
+   needs to be performed.
 
    The @ref kroutine_exec function will be called on @tt tr->kr when
    the transfer ends. This can happen before this function

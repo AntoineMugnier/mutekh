@@ -40,6 +40,7 @@ PRE_HEADER_LIST:=$(OBJ_DIR)/enums.h
 CLEAN_FILE_LIST:=
 GLOBAL_DOC_HEADERS:=
 ENUM_HEADER_LIST:=
+DEPS_LIST:=
 
 include $(MUTEK_SRC_DIR)/scripts/local.mk
 

@@ -406,6 +406,7 @@ static DEV_CLEANUP(nrf5x_gpio_pwm_cleanup)
 
   device_irq_source_unlink(dev, pv->irq_ep, 1);
 
+  device_iomux_cleanup(dev);
   mem_free(pv);
 
   return 0;

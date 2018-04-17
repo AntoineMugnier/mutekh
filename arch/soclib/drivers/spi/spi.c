@@ -239,38 +239,31 @@ static DEV_SPI_CTRL_TRANSFER(soclib_spi_transfer)
 
   LOCK_SPIN_IRQ(&dev->lock);
 
-  if (pv->tr != NULL)
-    {
-      tr->err = -EBUSY;
-      goto done;
-    }
-
-  assert(tr->data.count > 0);
-
-  pv->tr = tr;
-
-  pv->fifo_lvl = 0;
-  tr->err = 0;
-
   enum dev_spi_cs_op_e cs_op = tr->cs_op;
-  if (cs_op != DEV_SPI_CS_NOP_NOP)
+  uint_fast8_t cs_id = tr->cs_cfg.id;
+
+  if (pv->tr != NULL)
+    tr->err = -EBUSY;
+  else if (cs_id >= pv->gpout_cnt)
+    tr->err = -ENOTSUP;
+  else
     {
-      uint_fast8_t cs_id = tr->cs_cfg.id;
-      if (cs_id >= pv->gpout_cnt)
-        {
-          tr->err = -ENOTSUP;
-          goto done;
-        }
       uint32_t csmask = 1 << cs_id;
       uint32_t csval = (tr->cs_cfg.polarity ^ (cs_op >> 1) ^ 1) << cs_id;
       uint32_t gpout = (endian_le32(cpu_mem_read_32(pv->addr + SOCLIB_SPI_GPOUT_ADDR)) & ~csmask) | csval;
       cpu_mem_write_32(pv->addr + SOCLIB_SPI_GPOUT_ADDR, endian_le32(gpout));
+      tr->err = 0;
+
+      if (tr->data.count > 0)
+        {
+          pv->tr = tr;
+          pv->fifo_lvl = 0;
+
+          cpu_mem_write_32(pv->addr + SOCLIB_SPI_TLEN_ADDR, endian_le32(tr->data.count));
+          done = soclib_spi_transfer_tx(dev);
+        }
     }
 
-  cpu_mem_write_32(pv->addr + SOCLIB_SPI_TLEN_ADDR, endian_le32(tr->data.count));
-  done = soclib_spi_transfer_tx(dev);
-
- done:;
   LOCK_RELEASE_IRQ(&dev->lock);
 
   if (done)

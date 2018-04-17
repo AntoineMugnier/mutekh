@@ -46,7 +46,6 @@
 #define USE_RX 1
 #define USE_TX 2
 
-#if defined(CONFIG_DRIVER_NRF5X_UART)
 #if CONFIG_DRIVER_NRF5X_UART_SWFIFO > 0
 # include <gct_platform.h>
 # include <gct/container_ring.h>
@@ -64,15 +63,15 @@ static PRINTK_HANDLER(nrf5x_uart_printk);
 
 DRIVER_PV(struct nrf5x_uart_priv
 {
+#if defined(CONFIG_DRIVER_NRF5X_PRINTK)
+  struct printk_backend_s printk;
+#endif
+
   uintptr_t addr;
 
 #if CONFIG_DRIVER_NRF5X_UART_SWFIFO > 0
   uart_fifo_root_t rx_fifo;
   uart_fifo_root_t tx_fifo;
-#endif
-
-#if defined(CONFIG_DRIVER_NRF5X_PRINTK)
-  struct printk_backend_s printk;
 #endif
 
   /* tty input request queue and char fifo */
@@ -352,9 +351,6 @@ static error_t nrf5x_uart_config(
     if (cfg->stop_bits != 1)
         return -ENOTSUP;
 
-    if (cfg->half_duplex)
-        return -ENOTSUP;
-
     switch  (cfg->parity) {
     case DEV_UART_PARITY_NONE:
         config |= NRF_UART_CONFIG_PARITY_DISABLED;
@@ -466,13 +462,39 @@ static DEV_INIT(nrf5x_uart_char_init)
     struct nrf5x_uart_priv *pv;
     iomux_io_id_t id[4];
     struct dev_uart_config_s config = {
+#if defined(CONFIG_DRIVER_NRF5X_PRINTK)
+        .baudrate = CONFIG_DRIVER_NRF5X_PRINTK_RATE,
+#else
         .baudrate = 115200,
+#endif
         .data_bits = 8,
         .stop_bits = 1,
         .parity = DEV_UART_PARITY_NONE,
         .flow_ctrl = 0,
-        .half_duplex = 0,
     };
+
+    uintptr_t addr;
+    if (device_res_get_uint(dev, DEV_RES_MEM, 0, &addr, NULL))
+        goto free_pv;
+
+#if defined(CONFIG_DEVICE_UART)
+    /* If there is a config resource, apply it. */
+    struct dev_resource_s *r = device_res_get(dev, DEV_RES_UART, 0);
+
+    if (r) {
+        config.baudrate    = r->u.uart.baudrate;
+        config.data_bits   = r->u.uart.data_bits;
+        config.stop_bits   = r->u.uart.stop_bits;
+        config.parity      = r->u.uart.parity;
+        config.flow_ctrl   = r->u.uart.flow_ctrl;
+
+# if defined(CONFIG_DRIVER_NRF5X_PRINTK)
+        if (addr == CONFIG_MUTEK_PRINTK_ADDR &&
+            config.baudrate != CONFIG_DRIVER_NRF5X_PRINTK_RATE)
+          logk_warning("uart config overrides printk baudrate");
+# endif
+    }
+#endif
 
     pv = mem_alloc(sizeof(*pv), mem_scope_sys);
     if (!pv)
@@ -480,9 +502,7 @@ static DEV_INIT(nrf5x_uart_char_init)
 
     dev->drv_pv = pv;
     memset(pv, 0, sizeof(*pv));
-
-    if (device_res_get_uint(dev, DEV_RES_MEM, 0, &pv->addr, NULL))
-        goto free_pv;
+    pv->addr = addr;
 
     if (device_iomux_setup(dev, "<rx? >tx? >rts? <cts?", NULL, id, NULL))
         goto free_pv;
@@ -535,29 +555,14 @@ static DEV_INIT(nrf5x_uart_char_init)
     if (device_irq_source_link(dev, &pv->irq_ep, 1, -1))
         goto free_queue;
 
-# if defined(CONFIG_DRIVER_NRF5X_PRINTK)
-    config.baudrate = CONFIG_DRIVER_NRF5X_PRINTK_RATE;
-# endif
-
-#if defined(CONFIG_DEVICE_UART)
-    /* If there is a config resource, apply it. */
-    struct dev_resource_s *r = device_res_get(dev, DEV_RES_UART, 0);
-
-    if (r) {
-        config.baudrate    = r->u.uart.baudrate;
-        config.data_bits   = r->u.uart.data_bits;
-        config.stop_bits   = r->u.uart.stop_bits;
-        config.parity      = r->u.uart.parity;
-        config.flow_ctrl   = r->u.uart.flow_ctrl;
-        config.half_duplex = r->u.uart.half_duplex;
-    }
-#endif
-
     nrf5x_uart_config(pv, &config);
 
 #if defined(CONFIG_DRIVER_NRF5X_PRINTK)
     if (pv->addr == CONFIG_MUTEK_PRINTK_ADDR)
-      printk_register(&pv->printk, nrf5x_uart_printk);
+      {
+        nrf5x_printk_cleanup();
+        printk_register(&pv->printk, nrf5x_uart_printk);
+      }
 #endif
 
     pv->txdrdy = 1;
@@ -585,27 +590,28 @@ static DEV_INIT(nrf5x_uart_char_init)
 static DEV_CLEANUP(nrf5x_uart_char_cleanup)
 {
     struct nrf5x_uart_priv *pv = dev->drv_pv;
-
-#if defined(CONFIG_DRIVER_NRF5X_PRINTK)
-    if (pv->addr == CONFIG_MUTEK_PRINTK_ADDR)
-      printk_unregister(&pv->printk);
-#endif
+    uintptr_t addr = pv->addr;
 
     if (!dev_request_queue_isempty(&pv->rx_q)
         || !dev_request_queue_isempty(&pv->tx_q))
       return -EBUSY;
 
-    nrf_it_disable_mask(pv->addr, -1);
+#if defined(CONFIG_DRIVER_NRF5X_PRINTK)
+    if (addr == CONFIG_MUTEK_PRINTK_ADDR)
+      printk_unregister(&pv->printk);
+#endif
+
+    nrf_it_disable_mask(addr, -1);
 
     device_irq_source_unlink(dev, &pv->irq_ep, 1);
 
-    nrf_task_trigger(pv->addr, NRF_UART_STOPRX);
-    nrf_task_trigger(pv->addr, NRF_UART_STOPTX);
+    nrf_task_trigger(addr, NRF_UART_STOPRX);
+    nrf_task_trigger(addr, NRF_UART_STOPTX);
 
-    nrf_reg_set(pv->addr, NRF_UART_PSELRXD, (uint32_t)-1);
-    nrf_reg_set(pv->addr, NRF_UART_PSELTXD, (uint32_t)-1);
-    nrf_reg_set(pv->addr, NRF_UART_PSELRTS, (uint32_t)-1);
-    nrf_reg_set(pv->addr, NRF_UART_PSELCTS, (uint32_t)-1);
+    nrf_reg_set(addr, NRF_UART_PSELRXD, (uint32_t)-1);
+    nrf_reg_set(addr, NRF_UART_PSELTXD, (uint32_t)-1);
+    nrf_reg_set(addr, NRF_UART_PSELRTS, (uint32_t)-1);
+    nrf_reg_set(addr, NRF_UART_PSELCTS, (uint32_t)-1);
 
 #if CONFIG_DRIVER_NRF5X_UART_SWFIFO > 0
     uart_fifo_destroy(&pv->tx_fifo);
@@ -615,7 +621,13 @@ static DEV_CLEANUP(nrf5x_uart_char_cleanup)
     dev_request_queue_destroy(&pv->rx_q);
     dev_request_queue_destroy(&pv->tx_q);
 
+    device_iomux_cleanup(dev);
     mem_free(pv);
+
+#if defined(CONFIG_DRIVER_NRF5X_PRINTK)
+    if (addr == CONFIG_MUTEK_PRINTK_ADDR)
+      nrf5x_printk_init();
+#endif
 
     return 0;
 }
@@ -648,23 +660,22 @@ static PRINTK_HANDLER(nrf5x_uart_printk)
 
   if (enabled) {
     if (pv->txdrdy) {
-      pv->txdrdy = 0;
+      nrf_it_disable(pv->addr, NRF_UART_TXDRDY);
     } else {
       while (!nrf_event_check(pv->addr, NRF_UART_TXDRDY))
         ;
     }
   } else {
+    nrf_it_disable(pv->addr, NRF_UART_TXDRDY);
     nrf_task_trigger(pv->addr, NRF_UART_STARTTX);
   }
 
-  nrf_it_disable(pv->addr, NRF_UART_TXDRDY);
+  nrf5x_printk_out(pv->addr, str, len);
 
-  nrf5x_printk_out_nodrv(pv->addr, str, len);
+  pv->txdrdy = 1;
 
-  if (!enabled) {
-    nrf_event_clear(pv->addr, NRF_UART_TXDRDY);
+  if (!enabled)
     nrf_task_trigger(pv->addr, NRF_UART_STOPTX);
-  }
 
   nrf_it_enable(pv->addr, NRF_UART_TXDRDY);
 
@@ -672,5 +683,3 @@ static PRINTK_HANDLER(nrf5x_uart_printk)
 }
 
 #endif
-
-#endif /* CONFIG_DRIVER_NRF5X_UART */

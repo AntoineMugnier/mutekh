@@ -35,8 +35,11 @@
 #define EFM32_IRQ_CRYOTIMER      32
 #define EFM32_IRQ_RFSENSE        33
 #define EFM32_IRQ_FPUEH          34
+#define EFM32_IRQ_WTIMER0        36
 #define EFM32_IRQ_USART2_RX      40
 #define EFM32_IRQ_USART2_TX      41
+#define EFM32_IRQ_USART3_RX      43
+#define EFM32_IRQ_USART3_TX      44
 
 
 #endif /* !IRQ_H_ */

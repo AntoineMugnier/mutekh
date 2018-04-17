@@ -26,11 +26,11 @@
 (defconst bc-font-lock-keywords
   (list
    ; Builtins
-   '("\\.\\(backend\\|c\\(lobber\\|onst\\|ustom\\)\\|d\\(ata16\\|efine\\)\\|e\\(ntry\\|xport\\)\\|global\\|input\\|name\\|output\\|preserve\\)" . font-lock-builtin-face)
+   '("\\.\\(assert\\|backend\\|c\\(lobber\\|onst\\|ustom\\)\\|d\\(ata16\\|efine\\)\\|e\\(ntry\\|xport\\)\\|global\\|input\\|name\\|output\\|preserve\\)" . font-lock-keyword-face)
    ; Preprocessed values
    '("\\(_\\(const\\|offsetof\\|sizeof\\)\\|bitpos\\|#define\\)" . font-lock-preprocessor-face)
    ; jmp[...] target
-   '("\\b\\(jmp\\(?:8\\|32\\)\\)[ \t]+\\(\\(?:\\s_\\|\\sw\\)+\\)"
+   '("\\b\\(jmp\\(?:8\\|16\\|32\\)\\)[ \t]+\\(\\(?:\\s_\\|\\sw\\)+\\)"
      (1 font-lock-builtin-face)
      (2 font-lock-reference-face))
    ; %label:name
@@ -39,11 +39,11 @@
      (2 font-lock-function-name-face)
      (3 font-lock-variable-name-face))
    ; .func label / .export label
-   '("\\(\\.\\(?:func\\|export\\)\\)[ \t]+\\(\\(?:\\s_\\|\\sw\\)+\\)"
+   '("\\(\\.\\(?:func\\|proto\\|export\\|implement\\)\\)[ \t]+\\(\\(?:\\s_\\|\\sw\\)+\\)"
      (1 font-lock-keyword-face)
-     (2 font-lock-function-name-face t))
-   ; .endfunc
-   '("\\(\\.endfunc\\)" 1 font-lock-keyword-face)
+     (2 font-lock-reference-face t))
+   ; .endfunc / .endproto
+   '("\\.\\(end\\(func\\|proto\\)\\)" 1 font-lock-keyword-face)
    ; %n name register aliasing
    '("\\(%\\)\\([0-9]+\\)[ \t]+\\(\\(?:\\s_\\|\\sw\\)+\\)\\b"
      (1 font-lock-variable-name-face t)
@@ -54,13 +54,13 @@
    ; label:
    '("^\\(\\(?:\\s_\\|\\sw\\)+\\):" . font-lock-reference-face)
    ; call %label:var, label
-   '("\\bcall\\(?:8\\|32\\)[^,]+,[ \t]*\\(\\(?:\\s_\\|\\sw\\)+\\)" 1 font-lock-function-name-face t)
+   '("\\bcall[^,]+,[ \t]*\\(\\(?:\\s_\\|\\sw\\)+\\)" 1 font-lock-reference-face t)
    ; loop ..., label
-   '("\\bloop[^,]+,[ \t]*\\(\\(?:\\s_\\|\\sw\\)+\\)" 1 font-lock-reference-face t)
+   '("\\bloop\\b[^,]+,[ \t]*\\(\\(?:\\s_\\|\\sw\\)+\\)" 1 font-lock-reference-face t)
    ; #preprocessor
    '("^#\\(if\\|warning\\|error\\|endif\\|elif\\|include\\)" . font-lock-preprocessor-face)
    ; builtins
-   '("\\b\\(a\\(bort\\|dd8?\\|ndn?32\\)\\|bit32[cs]\\|c\\(all\\(32\\|8\\)\\|call\\|st\\(8\\|16\\|32\\|64\\)\\)\\|d\\(ie\\|ump\\)\\|e\\(nd\\|q0?\\|xt[sz]\\)\\|gaddr\\|jmp\\(8\\|32\\)\\|l\\(addr\\(16\\|32\\)\\|d\\(8\\|16\\|32\\|64\\)[ei]?\\|t\\(eq\\)?s?\\)\\|m\\(ov\\|sbs32\\|ul32\\)\\|n\\(e\\(g\\|q0?\\)\\|op\\|ot32\\)\\|or32\\|pack\\(8\\|\\(16\\|32\\)\\(le\\|be\\)\\)\\|ret\\|sh\\(i32[lr]\\|[lr]32\\)\\|s\\(t\\(8\\|16\\|32\\|64\\)[ei]?\\|ub\\|wap\\(16\\|32\\)\\(le\\|be\\)?\\)\\|t\\(race\\|st32[cs]\\)\\|unpack\\(8\\|\\(16\\|32\\)\\(le\\|be\\)\\)\\|xor32\\)\\b" 1 font-lock-builtin-face)
+   '("\\b\\(a\\(bort\\|dd8?\\|ndn?32\\)\\|bit32[cs]\\|c\\(all\\(8\\|16\\|32\\|\\)\\|st\\(8\\|16\\|32\\|64\\|\\)\\)\\|d\\(ie\\|ump\\)\\|e\\(nd\\|q0?\\|xt[sz]\\)\\|gaddr\\|jmp\\(8\\|32\\)\\|l\\(addr\\(16\\|32\\)\\|d\\(8\\|16\\|32\\|64\\|\\)[ei]?\\|oop\\|t\\(eq\\)?s?\\)\\|m\\(o\\(v\\|de\\)\\|sbs32\\|ul32\\)\\|n\\(e\\(g\\|q0?\\)\\|op\\|ot32\\)\\|or32\\|pack\\(8\\|\\(16\\|32\\)\\(le\\|be\\)\\)\\|ret\\|sh\\(i32[lr]\\|[lr]32\\)\\|s\\(t\\(8\\|16\\|32\\|64\\)[ei]?\\|ub\\|wap\\(16\\|32\\)\\(le\\|be\\)?\\)\\|t\\(race\\|st32[cs]\\)\\|unpack\\(8\\|\\(16\\|32\\)\\(le\\|be\\)\\)\\|xor32\\)\\b" 1 font-lock-builtin-face)
    ; ALL_CAPS_CONSTANTS
    '("[A-Z_][A-Z0-9_]+" . font-lock-constant-face)
    ; #include "something"
@@ -70,6 +70,7 @@
 
 (defvar bc-syntax-table
   (let ((st (make-syntax-table)))
+    (modify-syntax-entry ?_ "w" st)
     ; C-style comments
     (modify-syntax-entry ?/ ". 124" st)
     (modify-syntax-entry ?* ". 23b" st)
@@ -95,8 +96,8 @@
    (and (looking-at "\\(\\sw\\|\\s_\\)+:\\s-*$") 0)
    ;; #preprocessor directives
    (and (looking-at "\\(#\\sw+\\)") 0)
-   ;; .custom, .func, .endfunc, .name, .backend
-   (and (looking-at "\\(\\.\\(custom\\|func\\|endfunc\\|name\\|backend\\)\\)") 0)
+   ;; .custom, .func, .endfunc, .proto, .endproto, .name, .backend
+   (and (looking-at "\\(\\.\\(custom\\|func\\|endfunc\\|proto\\|endproto\\|name\\|backend\\)\\)") 0)
    bc-basic-indent))
 
 (defvar bc-mode-map

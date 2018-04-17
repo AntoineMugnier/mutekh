@@ -374,14 +374,14 @@ static DEV_SPI_CTRL_TRANSFER(pic32_spi_transfer)
 
   LOCK_SPIN_IRQ(&dev->lock);
 
+  tr->err = 0;
+
   if (pv->tr != NULL)
     tr->err = -EBUSY;
   else if (tr->cs_op != DEV_SPI_CS_NOP_NOP)
     tr->err = -ENOTSUP;
-  else
+  else if (tr->data.count > 0)
     {
-      assert(tr->data.count > 0);
-      tr->err = 0;
       pv->tr = tr;
 
 #ifdef CONFIG_DRIVER_PIC32_DMA
@@ -550,6 +550,7 @@ static DEV_CLEANUP(pic32_spi_cleanup)
   dev_spi_context_cleanup(&pv->spi_ctrl_ctx);
 #endif
 
+  device_iomux_cleanup(dev);
   mem_free(pv);
 }
 

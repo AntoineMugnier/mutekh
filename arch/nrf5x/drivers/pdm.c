@@ -279,6 +279,7 @@ static DEV_CLEANUP(nrf52_pdm_cleanup)
   nrf_reg_set(PDM_ADDR, NRF_PDM_PSEL_CLK, (uint32_t)-1);
   nrf_reg_set(PDM_ADDR, NRF_PDM_PSEL_DIN, (uint32_t)-1);
 
+  device_iomux_cleanup(dev);
   mem_free(pv);
 
   return 0;

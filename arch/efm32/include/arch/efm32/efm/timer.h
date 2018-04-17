@@ -322,12 +322,7 @@
     #define EFM32_TIMER_CC_CTRL_INSEL_PIN              0x00000000
     #define EFM32_TIMER_CC_CTRL_INSEL_PRS              0x00000001
 /** Enable digital filter. @multiple */
-  #define EFM32_TIMER_CC_CTRL_FILT(v)                ((EFM32_TIMER_CC_CTRL_FILT_##v) << 21)
-  #define EFM32_TIMER_CC_CTRL_FILT_SET(x, v)         do { (x) = (((x) & ~0x200000) | ((EFM32_TIMER_CC_CTRL_FILT_##v) << 21)); } while(0)
-  #define EFM32_TIMER_CC_CTRL_FILT_SETVAL(x, v)      do { (x) = (((x) & ~0x200000) | ((v) << 21)); } while(0)
-  #define EFM32_TIMER_CC_CTRL_FILT_GET(x)            (((x) >> 21) & 0x1)
-    #define EFM32_TIMER_CC_CTRL_FILT_DISBALED          0x00000000
-    #define EFM32_TIMER_CC_CTRL_FILT_ENABLED           0x00000001
+  #define EFM32_TIMER_CC_CTRL_FILT                 0x00200000
 /** These bits control which edges the edge detector triggers on. The output is
    used for input capture and external clock input. @multiple */
   #define EFM32_TIMER_CC_CTRL_ICEDGE(v)              ((EFM32_TIMER_CC_CTRL_ICEDGE_##v) << 24)

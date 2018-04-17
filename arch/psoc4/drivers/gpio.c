@@ -320,9 +320,12 @@ static DEV_IOMUX_SETUP(psoc4_gpio_iomux_setup)
                      bit(PSOC4_IO_PIN(io_id)));
 
   /* HSIOM Mux mode */
-  tmp = cpu_mem_read_32(HPA(PSOC4_IO_PORT(io_id)) + HSIOM_PORT_SEL_ADDR);
-  HSIOM_PORT_SEL_IO_SEL_SETVAL(PSOC4_IO_PIN(io_id), tmp, mux);
-  cpu_mem_write_32(HPA(PSOC4_IO_PORT(io_id)) + HSIOM_PORT_SEL_ADDR, tmp);
+  if (mux != IOMUX_INVALID_MUX)
+    {
+      tmp = cpu_mem_read_32(HPA(PSOC4_IO_PORT(io_id)) + HSIOM_PORT_SEL_ADDR);
+      HSIOM_PORT_SEL_IO_SEL_SETVAL(PSOC4_IO_PIN(io_id), tmp, mux);
+      cpu_mem_write_32(HPA(PSOC4_IO_PORT(io_id)) + HSIOM_PORT_SEL_ADDR, tmp);
+    }
 
   LOCK_RELEASE_IRQ(&dev->lock);
 

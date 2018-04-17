@@ -143,6 +143,8 @@ static error_t efm32_pwm_duty(struct device_s *dev, uint_fast8_t channel)
     return -ERANGE; 
 
   uint32_t x = (pv->duty[channel].num * top) / pv->duty[channel].denom;
+  if (pv->duty[channel].num == pv->duty[channel].denom)
+    x = top + 1;
 
   cpu_mem_write_32(pv->addr + EFM32_TIMER_CC_CCV_ADDR(channel), endian_le32(x));
 
@@ -383,6 +385,7 @@ static DEV_CLEANUP(efm32_pwm_cleanup)
 
   dev_drv_clock_cleanup(dev, &pv->clk_ep);
 
+  device_iomux_cleanup(dev);
   mem_free(pv);
 
   return 0;
