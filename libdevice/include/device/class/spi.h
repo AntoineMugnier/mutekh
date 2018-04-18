@@ -161,8 +161,8 @@
     @item spi_wr                   @item wr, l, e      @item @tt{1e10 llll ---- rrrr}
     @item spi_swp                  @item wr, rd, l, e  @item @tt{1e11 llll rrrr rrrr}
 
-    @item spi_cs                   @item e             @item @tt{1100 00ee ---1 ----}
-    @item spi_pad                  @item rl, e         @item @tt{1100 00ee ---0 llll}
+    @item spi_cs                   @item e             @item @tt{1100 00ee 1--- ----}
+    @item spi_pad                  @item p, rl, e      @item @tt{1100 00ee 0ppp llll}
     @item spi_rdm                  @item ra, rl, e     @item @tt{1100 01ee aaaa llll}
     @item spi_wrm                  @item ra, rl, e     @item @tt{1100 10ee aaaa llll}
     @item spi_swpm                 @item rar, raw, rl, e @item @tt{1100 11ee aaaa llll}
@@ -336,7 +336,8 @@
 
    @section {spi_pad}
    The @tt spi_pad instruction is similar to @xref{spi_swpm} but
-   discards data read from the slave and send padding bytes.
+   discards data read from the slave and send padding bytes. Four packed
+   bytes are used as padding pattern.
    @end section
 
    @section {spi_cs}

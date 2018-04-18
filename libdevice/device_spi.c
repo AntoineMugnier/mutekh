@@ -460,12 +460,12 @@ device_spi_bytecode_exec(struct dev_spi_ctrl_context_s *q,
           switch (op & 0x0c00)
             {
             case 0x0000:  /* spi_pad */
-              if (op & 0x0010)
+              if (op & 0x0080)
                 tr->data.count = 0; /* spi_cs */
               tr->data.in_width = 0;
               tr->data.out_width = 0;
               tr->data.in = NULL;
-              tr->data.out = "\xff\xff\xff\xff";
+              tr->data.out = bc_get_bytepack(&rq->vm, ra);
               break;
             case 0x0400:  /* rdm */
               tr->data.in_width = 1;

@@ -29,7 +29,7 @@ main::custom_op('spi_wr',             3,      0x2000, \&parse_wr );
 main::custom_op('spi_swp',            4,      0x3000, \&parse_swp );
 
 main::custom_op('spi_cs' ,            1,      0x4010, \&parse_cs );
-main::custom_op('spi_pad',            2,      0x4000, \&parse_pad );
+main::custom_op('spi_pad',            3,      0x4000, \&parse_pad );
 main::custom_op('spi_rdm',            3,      0x4400, \&parse_xxm );
 main::custom_op('spi_wrm',            3,      0x4800, \&parse_xxm );
 main::custom_op('spi_swpm',           4,      0x4c00, \&parse_swpm );
@@ -134,10 +134,13 @@ sub parse_cs
 sub parse_pad
 {
     my $thisop = shift;
-    my $r = main::check_reg( $thisop, 0 );
-    $thisop->{in}->[0] = $r;
-    my $cs = check_csop( $thisop, 1, \%csops2 );
-    $thisop->{code} |= ($cs << 8) | $r;
+    my $p = main::check_reg( $thisop, 0, 0, 7 );
+    $thisop->{packin_reg} = $p;
+    $thisop->{packin_bytes} = 4;
+    my $rl = main::check_reg( $thisop, 1 );
+    $thisop->{in}->[0] = $rl;
+    my $cs = check_csop( $thisop, 2, \%csops2 );
+    $thisop->{code} |= ($cs << 8) | ($p << 4) | $rl;
 }
 
 sub parse_xxm
