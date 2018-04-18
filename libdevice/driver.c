@@ -60,7 +60,7 @@ error_t device_get_api(struct device_s *dev,
     return -EBUSY;
 
   const struct driver_class_s *c = NULL;
-  uint8_t mask = 0xff;
+  __unused__ uint8_t mask = 0xff;
 
   if (cl != DRIVER_CLASS_NONE)
     {
