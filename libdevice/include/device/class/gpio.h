@@ -454,13 +454,6 @@ error_t dev_gpio_wait_until(struct device_gpio_s *accessor, gpio_id_t id,
   return rq.error;
 })
 
-/** @This changes the mode of multiple GPIO pins using the synchronous API. */
-config_depend(CONFIG_DEVICE_GPIO)
-error_t device_gpio_map_set_mode(struct device_gpio_s *accessor,
-                                 const gpio_id_t *map, const gpio_width_t *wmap,
-                                 uint_fast8_t count, /* enum dev_pin_driving_e */ ...);
-
-
 /** @This adds a GPIO pins binding to the device resources list.
     @csee DEV_RES_GPIO @see #DEV_STATIC_RES_GPIO */
 config_depend_and2_alwaysinline(CONFIG_DEVICE_GPIO, CONFIG_DEVICE_RESOURCE_ALLOC,
@@ -512,23 +505,64 @@ error_t device_res_add_gpio(struct device_s *dev, const char *label,
 #endif
 
 /**
-   This initializes an array of GPIO ids from a list of pin labels. If
-   the @tt wmap parameter is not @tt NULL, the associated size of pin
-   range is also stored.
+   @This retrieves index of GPIO pins declared device resources from
+   a list of pin labels. It can optionally set the mode of the pins.
+
+   The index of the pins named in the @tt pin_list string are stored
+   in the @tt map array. If the @tt wmap parameter is not @tt NULL,
+   the associated size of pin range is also stored.
 
    The list is composed by space separated pin label names. All pin
    names present in the list must match an available device resource
-   unless the name is suffixed by @tt{?}. A value of -1 is stored in
-   the array if the pin is not available in the device tree.
+   unless the name is suffixed by @tt{?}. The value @ref
+   GPIO_INVALID_ID is stored in the @tt map array if an optional pin
+   is not declared.
 
    If a label in the list is suffixed by @em {:width}, the pin width
-   declared in the resource must match the @em width number.
+   declared in the resource must match the specified width.
+
+   If a label is prefixed by a pin direction symbol, the mode of the
+   associated pins is changed accordingly. The @tt accessor parameter
+   may be @tt NULL if this feature is not used.
+
+   @section {Examples}
+   @code
+   gpio_id_t map[3];
+   device_res_gpio_map(&gpio, dev, "<irq:1 >rst:1 <bus:8 >sleep?:1", map, NULL);
+   @end code
+
+   @code
+   gpio_id_t map[2];
+   gpio_width_t wmap[2];
+   device_res_gpio_map(NULL, dev, "ioa iob?", map, wmap);
+   @end code
+   @end section
+
+   @see dev_pin_driving_e @see device_gpio_get_setup
 */
 config_depend(CONFIG_DEVICE_GPIO)
+error_t device_gpio_setup(const struct device_gpio_s *accessor,
+                          struct device_s *dev, const char *pin_list,
+                          gpio_id_t *map, gpio_width_t *wmap);
+
+/** @This setups an accessor to the gpio device declared using @ref
+    #DEV_STATIC_RES_DEV_GPIO in the resources then calls the @ref
+    device_gpio_setup function.
+
+    When the function succeed, the accessor is left initialized and
+    must be released by the caller. */
+config_depend(CONFIG_DEVICE_GPIO)
+error_t device_gpio_get_setup(struct device_gpio_s *accessor,
+                              struct device_s *dev, const char *pin_list,
+                              gpio_id_t *map, gpio_width_t *wmap);
+
+__attribute__((deprecated("use the device_gpio_setup* function instead")))
 error_t device_res_gpio_map(struct device_s *dev, const char *pin_list,
                             gpio_id_t *map, gpio_width_t *wmap);
 
+__attribute__((deprecated("pass direction symbols to the device_gpio_setup* function instead")))
+error_t device_gpio_map_set_mode(struct device_gpio_s *accessor,
+                                 const gpio_id_t *map, const gpio_width_t *wmap,
+                                 uint_fast8_t count, /* enum dev_pin_driving_e */ ...);
 
 #endif
-
-

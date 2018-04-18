@@ -80,8 +80,19 @@ error_t device_gpio_map_set_mode(struct device_gpio_s *accessor,
 error_t device_res_gpio_map(struct device_s *dev, const char *pin_list,
                             gpio_id_t *map, gpio_width_t *wmap)
 {
+  return device_gpio_setup(NULL, dev, pin_list, map, wmap);
+}
+
+error_t device_gpio_setup(const struct device_gpio_s *gpio,
+                          struct device_s *dev, const char *pin_list,
+                          gpio_id_t *map, gpio_width_t *wmap)
+{
   while (*pin_list)
     {
+      enum dev_pin_driving_e dir = device_io_mode_symbol(*pin_list);
+      if (dir)
+        pin_list++;
+
       struct dev_resource_s *r = device_res_get_from_name(dev, DEV_RES_GPIO, 0, pin_list);
 
       while (*pin_list && *pin_list != ':' && *pin_list != '?' && *pin_list != ' ')
@@ -92,14 +103,27 @@ error_t device_res_gpio_map(struct device_s *dev, const char *pin_list,
       else if (!r)
         return -ENOENT;
 
-      *map++ = r ? r->u.gpio.id : GPIO_INVALID_ID;
+      gpio_id_t id = GPIO_INVALID_ID;
+      gpio_width_t w = 0;
+
+      if (r)
+        {
+          id = r->u.gpio.id;
+          w = r->u.gpio.width;
+
+          if (dir != DEV_PIN_DISABLED &&
+              DEVICE_OP(gpio, set_mode, id, id + w - 1, dev_gpio_mask1, dir))
+            return -EIO;
+        }
+
+      *map++ = id;
       if (wmap)
-        *wmap++ = r ? r->u.gpio.width : 0;
+        *wmap++ = w;
 
       if (*pin_list == ':')
         {
-          uint_fast8_t w = strtoul(pin_list + 1, (char**)&pin_list, 0);
-          if (r && r->u.gpio.width != w)
+          if (r && r->u.gpio.width !=
+              strtoul(pin_list + 1, (char**)&pin_list, 0))
             return -ERANGE;
         }
 
@@ -108,6 +132,20 @@ error_t device_res_gpio_map(struct device_s *dev, const char *pin_list,
     }
 
   return 0;
+}
+
+error_t device_gpio_get_setup(struct device_gpio_s *gpio,
+                              struct device_s *dev, const char *pin_list,
+                              gpio_id_t *map, gpio_width_t *wmap)
+{
+  if (device_get_param_dev_accessor(dev, "gpio", &gpio->base, DRIVER_CLASS_GPIO))
+    return -ENOENT;
+
+  error_t err = device_gpio_setup(gpio, dev, pin_list, map, wmap);
+  if (err)
+    device_put_accessor(&gpio->base);
+
+  return err;
 }
 
 DEV_GPIO_REQUEST(dev_gpio_request_async_to_sync)
