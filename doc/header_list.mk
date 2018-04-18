@@ -1,6 +1,6 @@
 
 BASE_MODULES += libfdt libpthread libm libvfs hexo mutek libc   \
-libdevice libnetwork libinet libble
+libdevice libnetwork libinet libble libpersist
 
 ARCH_HEADER= arch/hexo/atomic.h arch/hexo/lock.h	\
 	arch/hexo/types.h

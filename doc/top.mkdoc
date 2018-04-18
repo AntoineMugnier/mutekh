@@ -28,6 +28,7 @@
 @include ../libtermui/libtermui.mkdoc
 @include ../libgomp/libgomp.mkdoc
 @include ../liblua/liblua.mkdoc
+@include ../libpersist/persist.mkdoc
 
 @include ../arch/arch.mkdoc
 @include ../cpu/cpu.mkdoc

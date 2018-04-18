@@ -21,54 +21,9 @@
 
 /**
    @file
-   @module {Libraries::Persist}
-   @short Persistent configuration device driver
-
-   @section {Description}
-
-   The @tt persist library offers a basic and simple
-   configuration storage service in flash memory.
-
-   Operations involve:
-   @list
-   @item Read a value,
-   @item Write a value,
-   @item Delete a value,
-   @item Pack storage backend (reclaim unused space),
-   @item Erase storage.
-   @end list
-
-   @tt persist devices can hold up to 2^16 values, distinguished
-   through their UID (unique identifier).
-
-   Stored values must have a static declaration (@see
-   persist_descriptor_s).  Values may be of one of two types:
-   @list
-   @item Blobs, binary objects read/write verbatim;
-   @item Counters, 64 bit values that can either be added to or erased.
-   @end list
-
-   In order to be able to share a declaration among various similar
-   values, requests may set an @tt uid_offset that gets added to the
-   descriptor's UID when looking up value in storage backend.
-
-   Storage backend takes all possible measures to ensure value
-   validity and durability.  In particular, special care is taken to
-   ensure no data is lost in case of power outage during write phases.
-
-   Size of blobs is known in advance and is part of their declaration.
-   They cannot extend beyond their preallocated size.
-
-   Size of counters must be at least 8 bytes, They make no interest
-   under 9 bytes.  Any byte beyond 8-th serves as an optimization on
-   increment operations: increments are done in-place using spare bits
-   as an unary value that adds to the counter.  This makes sense on
-   flash-based storage backends where a page-erase operation is
-   required before writing new data.  Optimal size to allocate to a
-   counter is a usage-dependant tradeof.
-
-   @end section
- */
+   @module {Libraries::Persistent configuration service}
+   @short Persistent configuration library
+*/
 
 #ifndef __PERSIST_H__
 #define __PERSIST_H__
