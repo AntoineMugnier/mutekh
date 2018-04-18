@@ -16,7 +16,7 @@
     Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
     02110-1301 USA.
 
-    Copyright Alexandre Becoulet <alexandre.becoulet@free.fr> (c) 2014
+    Copyright Sebastien Cerdan <sebcerdan@gmail.com> (c) 2018
 
 */
 
@@ -32,7 +32,6 @@
 #endif
 
 #include <hexo/iospace.h>
-#include <hexo/endian.h>
 #include <arch/efm32/irq.h>
 #include <arch/efm32/pin.h>
 #include <arch/efm32/clock.h>
@@ -57,30 +56,46 @@ void efm32_board_init()
   cpu_mem_write_32(cmu + EFM32_CMU_HFPERCLKEN0_ADDR, endian_le32(x));
 
   uint32_t gpio = EFM32_GPIO_ADDR;
-  uint32_t button_pin = 25;
+  uint32_t pin = EFM32_PE3;
 
-  /* wait for button to be released */
-  uint32_t bank = button_pin / 16;
-  uint32_t h = (button_pin >> 1) & 4;
+  /* Wait for button to be released */
+  uint32_t bank = pin / 16;
+  uint32_t h = (pin >> 1) & 4;
 
   x = cpu_mem_read_32(gpio + EFM32_GPIO_MODEL_ADDR(bank) + h);
-  EFM32_GPIO_MODEL_MODE_SET(button_pin % 8, x, INPUT);
+  EFM32_GPIO_MODEL_MODE_SET(pin % 8, x, INPUT);
   cpu_mem_write_32(gpio + EFM32_GPIO_MODEL_ADDR(bank) + h, x);
 
   while (!(cpu_mem_read_32(gpio + EFM32_GPIO_DIN_ADDR(bank))
-           & EFM32_GPIO_DIN_DIN(button_pin % 16)))
+           & EFM32_GPIO_DIN_DIN(pin % 16)))
     ;
 
-#if CONFIG_MUTEK_PRINTK_ADDR == 0x4000e000 &&   \
-  CONFIG_DRIVER_EFM32_USART_PRINTK_PIN == 64
+  /* Set LED0 on  */
+  pin = EFM32_PF6;
+  bank = pin / 16;
+  h = (pin >> 1) & 4;
 
-  /* set EFM_BC_EN (PF7) high on stk3[678]00 */
-  x = cpu_mem_read_32(gpio + EFM32_GPIO_MODEL_ADDR(5));
-  EFM32_GPIO_MODEL_MODE_SET(7, x, PUSHPULL);
-  cpu_mem_write_32(gpio + EFM32_GPIO_MODEL_ADDR(5), x);
+  x = cpu_mem_read_32(gpio + EFM32_GPIO_MODEL_ADDR(bank) + h);
+  EFM32_GPIO_MODEL_MODE_SET(pin % 8, x, PUSHPULL);
+  cpu_mem_write_32(gpio + EFM32_GPIO_MODEL_ADDR(bank) + h, x);
 
-  cpu_mem_write_32(gpio + EFM32_GPIO_DOUTSET_ADDR(5),
-                   EFM32_GPIO_DOUTSET_DOUTSET(7));
+  cpu_mem_write_32(gpio + EFM32_GPIO_DOUTSET_ADDR(bank),
+                   EFM32_GPIO_DOUTSET_DOUTSET(pin % 16));
+
+#if CONFIG_MUTEK_PRINTK_ADDR == 0x4000c800 &&   \
+  CONFIG_DRIVER_EFM32_USART_PRINTK_PIN == EFM32_PB3
+
+  /* Enable VCOM  */
+  pin = EFM32_PA12;
+  bank = pin / 16;
+  h = (pin >> 1) & 4;
+
+  x = cpu_mem_read_32(gpio + EFM32_GPIO_MODEL_ADDR(bank) + h);
+  EFM32_GPIO_MODEL_MODE_SET(pin % 8, x, PUSHPULL);
+  cpu_mem_write_32(gpio + EFM32_GPIO_MODEL_ADDR(bank) + h, x);
+
+  cpu_mem_write_32(gpio + EFM32_GPIO_DOUTSET_ADDR(bank),
+                   EFM32_GPIO_DOUTSET_DOUTSET(pin % 16));
 #endif
 }
 
@@ -152,32 +167,29 @@ DEV_DECLARE_STATIC(dma_dev, "dma", 0, efm32_dma_drv,
 
 #if defined(CONFIG_DRIVER_EFM32_USART_SPI)
 
-DEV_DECLARE_STATIC(usart1_dev, "spi1", 0, efm32_usart_spi_drv,
+DEV_DECLARE_STATIC(usart0_dev, "spirf", 0, efm32_usart_spi_drv,
 
-                   DEV_STATIC_RES_MEM(0x4000c400, 0x4000c800),
+                   DEV_STATIC_RES_MEM(0x4000c000, 0x4000c400),
 # ifdef CONFIG_DEVICE_CLOCK
-                   DEV_STATIC_RES_CLK_SRC("/recmu", EFM32_CLOCK_USART1, 0),
+                   DEV_STATIC_RES_CLK_SRC("/recmu", EFM32_CLOCK_USART0, 0),
 # else
                    DEV_STATIC_RES_FREQ(14000000, 1),
 # endif
 
                    DEV_STATIC_RES_DEV_ICU("/cpu"),
-                   DEV_STATIC_RES_IRQ(0, EFM32_IRQ_USART1_RX, DEV_IRQ_SENSE_RISING_EDGE, 0, 1),
+                   DEV_STATIC_RES_IRQ(0, EFM32_IRQ_USART0_RX, DEV_IRQ_SENSE_RISING_EDGE, 0, 1),
 
 #if defined(CONFIG_DRIVER_EFM32_DMA)
                    DEV_STATIC_RES_DEV_PARAM("dma", "/dma"),
                    /* Read channel must have higher priority than write channel */
-                   DEV_STATIC_RES_DMA((1 << 0), (EFM32_DMA_SOURCE_USART1 | (EFM32_DMA_SIGNAL_USART1RXDATAV << 8))),
-                   DEV_STATIC_RES_DMA((1 << 1), (EFM32_DMA_SOURCE_USART1 | (EFM32_DMA_SIGNAL_USART1TXEMPTY << 8))),
+                   DEV_STATIC_RES_DMA((1 << 0), (EFM32_DMA_SOURCE_USART0 | (EFM32_DMA_SIGNAL_USART0RXDATAV << 8))),
+                   DEV_STATIC_RES_DMA((1 << 1), (EFM32_DMA_SOURCE_USART0 | (EFM32_DMA_SIGNAL_USART0TXEMPTY << 8))),
 #endif
 
                    DEV_STATIC_RES_DEV_IOMUX("/gpio"),
-                   DEV_STATIC_RES_IOMUX("clk",  EFM32_LOC1, EFM32_PD2, 0, 0),
-                   DEV_STATIC_RES_IOMUX("miso", EFM32_LOC1, EFM32_PD1, 0, 0),
-                   DEV_STATIC_RES_IOMUX("mosi", EFM32_LOC1, EFM32_PD0, 0, 0),
-#if 0
-                   DEV_STATIC_RES_IOMUX("cs",   EFM32_LOC1, EFM32_PD3, 0, 0),
-#endif
+                   DEV_STATIC_RES_IOMUX("clk",  EFM32_LOC0, EFM32_PE12, 0, 0),
+                   DEV_STATIC_RES_IOMUX("miso", EFM32_LOC0, EFM32_PE11, 0, 0),
+                   DEV_STATIC_RES_IOMUX("mosi", EFM32_LOC0, EFM32_PE10, 0, 0),
 
 #ifdef CONFIG_DRIVER_EFM32_RTC
                    DEV_STATIC_RES_DEV_TIMER("/rtc")
@@ -189,21 +201,21 @@ DEV_DECLARE_STATIC(usart1_dev, "spi1", 0, efm32_usart_spi_drv,
 
 #if defined(CONFIG_DRIVER_EFM32_USART_CHAR)
 
-DEV_DECLARE_STATIC(uart0_dev, "uart0", 0, efm32_usart_drv,
+DEV_DECLARE_STATIC(usart2_dev, "usart2", 0, efm32_usart_drv,
                    DEV_STATIC_RES_MEM(0x4000e000, 0x4000e400),
 # ifdef CONFIG_DEVICE_CLOCK
-                   DEV_STATIC_RES_CLK_SRC("/recmu", EFM32_CLOCK_UART0, 0),
+                   DEV_STATIC_RES_CLK_SRC("/recmu", EFM32_CLOCK_USART2, 0),
 # else
                    DEV_STATIC_RES_FREQ(14000000, 1),
 # endif
 
                    DEV_STATIC_RES_DEV_ICU("/cpu"),
-                   DEV_STATIC_RES_IRQ(0, EFM32_IRQ_UART0_RX, DEV_IRQ_SENSE_RISING_EDGE, 0, 1),
-                   DEV_STATIC_RES_IRQ(1, EFM32_IRQ_UART0_TX, DEV_IRQ_SENSE_RISING_EDGE, 0, 1),
+                   DEV_STATIC_RES_IRQ(0, EFM32_IRQ_USART2_RX, DEV_IRQ_SENSE_RISING_EDGE, 0, 1),
+                   DEV_STATIC_RES_IRQ(1, EFM32_IRQ_USART2_TX, DEV_IRQ_SENSE_RISING_EDGE, 0, 1),
 
                    DEV_STATIC_RES_DEV_IOMUX("/gpio"),
-                   DEV_STATIC_RES_IOMUX("rx", EFM32_LOC1, EFM32_PE1, 0, 0),
-                   DEV_STATIC_RES_IOMUX("tx", EFM32_LOC1, EFM32_PE0, 0, 0),
+                   DEV_STATIC_RES_IOMUX("rx", EFM32_LOC1, EFM32_PB4, 0, 0),
+                   DEV_STATIC_RES_IOMUX("tx", EFM32_LOC1, EFM32_PB3, 0, 0),
 
                    DEV_STATIC_RES_UART(115200, 8, 0, 0, 0)
                    );
@@ -298,28 +310,8 @@ DEV_DECLARE_STATIC(i2c_dev, "i2c1", 0, efm32_i2c_drv,
 
                    DEV_STATIC_RES_DEV_IOMUX("/gpio"),
 
-                   DEV_STATIC_RES_IOMUX("scl", EFM32_LOC0, EFM32_PC5, 0, 0),
-                   DEV_STATIC_RES_IOMUX("sda", EFM32_LOC0, EFM32_PC4, 0, 0)
-                   );
-
-#endif
-
-#ifdef CONFIG_DRIVER_EFM32_I2C_SLAVE
-
-DEV_DECLARE_STATIC(i2c_dev, "i2cs0", 0, efm32_i2c_slave_drv,
-                   DEV_STATIC_RES_MEM(0x4000a400, 0x4000a800),
-# ifdef CONFIG_DEVICE_CLOCK
-                   DEV_STATIC_RES_CLK_SRC("/recmu", EFM32_CLOCK_I2C1, 0),
-# else
-                   DEV_STATIC_RES_FREQ(14000000, 1),
-# endif
-                   DEV_STATIC_RES_DEV_ICU("/cpu"),
-                   DEV_STATIC_RES_IRQ(0, EFM32_IRQ_I2C1, DEV_IRQ_SENSE_RISING_EDGE, 0, 1),
-
-                   DEV_STATIC_RES_DEV_IOMUX("/gpio"),
-
-                   DEV_STATIC_RES_IOMUX("scl", EFM32_LOC0, EFM32_PC5, 0, 0),
-                   DEV_STATIC_RES_IOMUX("sda", EFM32_LOC0, EFM32_PC4, 0, 0)
+                   DEV_STATIC_RES_IOMUX("scl", EFM32_LOC2, EFM32_PE1, 0, 0),
+                   DEV_STATIC_RES_IOMUX("sda", EFM32_LOC2, EFM32_PE0, 0, 0)
                    );
 
 #endif
@@ -363,4 +355,22 @@ DEV_DECLARE_STATIC(usb_dev, "usb", 0, efm32_usbdev_drv,
                    DEV_STATIC_RES_DEV_PARAM("iomux", "/gpio"),
                    DEV_STATIC_RES_IOMUX("vbusen",  EFM32_LOC0, EFM32_PF5, 0, 0)
                    );
+#endif
+
+#ifdef CONFIG_DRIVER_RFPACKET_SI446X
+DEV_DECLARE_STATIC(si446x_dev, "rfpacket", 0, si446x_drv,
+		   /* spi controller */
+		   DEV_STATIC_RES_DEV_PARAM("spi", "/spirf"),
+		   /* gpio controller */
+                   DEV_STATIC_RES_DEV_PARAM("gpio", "/gpio"),
+                   /* irq */
+                   DEV_STATIC_RES_DEV_PARAM("icu", "/gpio"),
+                   DEV_STATIC_RES_IRQ(0, EFM32_PE13, DEV_IRQ_SENSE_FALLING_EDGE, 0, 1),
+                   /* GPIO */
+                   DEV_STATIC_RES_GPIO("nirq", EFM32_PE13,  1),  
+                   DEV_STATIC_RES_GPIO("cts",  EFM32_PE14,  1), 
+                   DEV_STATIC_RES_GPIO("sdn",  EFM32_PE8,  1), 
+                   /* chip select */
+                   DEV_STATIC_RES_UINT_PARAM("gpio-cs-id", EFM32_PE9),
+);
 #endif

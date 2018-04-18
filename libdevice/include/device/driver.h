@@ -61,6 +61,7 @@ enum driver_class_e
   DRIVER_CLASS_IOMUX,
   DRIVER_CLASS_UART,
   DRIVER_CLASS_I2C_CTRL,
+  DRIVER_CLASS_I2C_SLAVE,
   DRIVER_CLASS_MEM,
   DRIVER_CLASS_RFPACKET,
   DRIVER_CLASS_CRYPTO,
@@ -430,6 +431,11 @@ struct driver_s
 /** @This is used to declare a driver private data structure */
 #define DRIVER_PV(...) \
 typedef __VA_ARGS__ driver_pv_t;
+
+/** @This is used to declare a driver private data local variable from
+    dev */
+#define DEVICE_PV(pvdata, device)               \
+  driver_pv_t *pvdata = (device)->drv_pv
 
 /** @This declares a @ref driver_s object. Implemented device
     classes must be specified as extra parameters. */

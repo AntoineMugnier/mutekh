@@ -448,9 +448,34 @@ DEV_INIT(efm32_i2c_init)
   if (device_iomux_setup(dev, ",scl ,sda", loc, NULL, NULL))
     goto err_queue;
 
+#if (CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_XG1) ||\
+    (CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_XG12)
+  uint32_t enable = 0;
+  uint32_t route = 0;
+
+  if (loc[0] != IOMUX_INVALID_DEMUX)
+    {
+      enable |= EFM32_I2C_ROUTEPEN_SCLPEN;
+      EFM32_I2C_ROUTELOC0_SCLLOC_SET(route, loc[0]);
+    }
+  if (loc[1] != IOMUX_INVALID_DEMUX)
+    {
+      enable |= EFM32_I2C_ROUTEPEN_SDAPEN;
+      EFM32_I2C_ROUTELOC0_SDALOC_SET(route, loc[1]);
+    }
+
+  if (enable == 0)
+    goto err_queue;
+
+  cpu_mem_write_32(pv->addr + EFM32_I2C_ROUTELOC0_ADDR, endian_le32(route));
+  cpu_mem_write_32(pv->addr + EFM32_I2C_ROUTEPEN_ADDR, endian_le32(enable));
+#elif CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFM
   uint32_t route = EFM32_I2C_ROUTE_SCLPEN | EFM32_I2C_ROUTE_SDAPEN;
   EFM32_I2C_ROUTE_LOCATION_SETVAL(route, loc[0]);
   cpu_mem_write_32(pv->addr + EFM32_I2C_ROUTE_ADDR, endian_le32(route));
+#else
+# error
+#endif
 
   device_irq_source_init(dev, &pv->irq_ep, 1, &efm32_i2c_irq);
   if (device_irq_source_link(dev, &pv->irq_ep, 1, -1))

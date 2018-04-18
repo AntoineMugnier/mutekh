@@ -42,14 +42,6 @@
 
 struct usb_ctrl_setup_s;
 
-//#define CONFIG_USBDEV_DEBUG
-
-#ifdef CONFIG_USBDEV_DEBUG
-# define usbdev_printk(...) do { printk(__VA_ARGS__); } while(0)
-#else
-# define usbdev_printk(...) do { } while(0)
-#endif
-
 /* This informs stack on USB event */
 
 enum dev_usbdev_event_e

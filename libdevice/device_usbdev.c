@@ -20,6 +20,8 @@
 
 */
 
+#define LOGK_MODULE_ID "usbd"
+
 #include <device/device.h>
 #include <device/driver.h>
 #include <device/resources.h>
@@ -62,17 +64,18 @@ static void usbdev_set_ep0_state(struct dev_usbdev_context_s *ctx,
                                  enum dev_usbdev_ctrl_ep_state_e state)
                              
 {
-  usbdev_printk("USBDEV EP0: %d\n", state);
+  logk_trace("ep0 state: %d", state);
   ctx->ep0_state = state;
 }
 
+__unused__
 static void usbdev_dump_setup(const struct usb_ctrl_setup_s *setup)
 {
-  printk("  bRequestType: %x\n", usb_setup_reqtype_get(setup));
-  printk("  bRequest: %x\n", usb_setup_request_get(setup));
-  printk("  wValue: %x\n", usb_setup_value_get(setup));
-  printk("  wIndex: %x\n", usb_setup_index_get(setup));
-  printk("  wLength: %x\n", usb_setup_length_get(setup));
+  logk("  bRequestType: %x", usb_setup_reqtype_get(setup));
+  logk("  bRequest: %x", usb_setup_request_get(setup));
+  logk("  wValue: %x", usb_setup_value_get(setup));
+  logk("  wIndex: %x", usb_setup_index_get(setup));
+  logk("  wLength: %x", usb_setup_length_get(setup));
 }
 
 static size_t usbdev_copy_buffer(struct dev_usbdev_context_s *ctx,
@@ -658,7 +661,7 @@ static void usbdev_service_data(struct dev_usbdev_context_s *ctx, error_t err)
 
 static void usbdev_ep0_service_setup(struct dev_usbdev_context_s *ctx)
 {
-//  usbdev_printk("USBDEV SERVICE_SETUP\n");
+  logk_trace("Service setup");
 
   const struct usb_ctrl_setup_s *setup = (const void *)ctx->setup;
 
@@ -771,7 +774,7 @@ static void usbdev_fsm_attached(struct dev_usbdev_context_s *ctx);
 
 static void usbdev_fsm_detached(struct dev_usbdev_context_s *ctx)
 {
-  usbdev_printk("USBDEV DETACHED %d\n", ctx->event);
+  logk_trace("Detached %d", ctx->event);
 
   ctx->state = DEV_USBDEV_DETACHED;
 
@@ -786,7 +789,7 @@ static void usbdev_fsm_detached(struct dev_usbdev_context_s *ctx)
 
 static void usbdev_fsm_attached(struct dev_usbdev_context_s *ctx)
 {
-  usbdev_printk("USBDEV ATTACHED %d\n", ctx->event);
+  logk_trace("Attached %d", ctx->event);
 
   ctx->state = DEV_USBDEV_ATTACHED;
 
@@ -810,7 +813,7 @@ static void usbdev_fsm_attached(struct dev_usbdev_context_s *ctx)
 
 static void usbdev_fsm_default(struct dev_usbdev_context_s *ctx)
 {
-  usbdev_printk("USBDEV DEFAULT %d\n", ctx->event);
+  logk_trace("Default %d", ctx->event);
 
   ctx->state = DEV_USBDEV_DEFAULT;
 
@@ -903,7 +906,7 @@ static void usbdev_fsm_unconfiguration(struct dev_usbdev_context_s *ctx)
 
 static void usbdev_fsm_addressed(struct dev_usbdev_context_s *ctx)
 {
-  usbdev_printk("USBDEV ADDRESSED\n");
+  logk_trace("Addressed");
 
   ctx->state = DEV_USBDEV_ADDRESS;
 
@@ -965,7 +968,7 @@ disable:
 
 static void usbdev_fsm_configured(struct dev_usbdev_context_s *ctx)
 {
-  usbdev_printk("USBDEV CONFIGURED\n");
+  logk_trace("Configured");
 
   ctx->state = DEV_USBDEV_CONFIGURED;
 
@@ -1278,7 +1281,7 @@ static void usbdev_set_configuration(struct dev_usbdev_context_s *ctx, const str
   uint8_t i = 0;
   error_t err;
 
-  usbdev_printk("USBDEV SET CONFIGURATION %d\n", cfg_number);
+  logk_trace("Set Configuration %d", cfg_number);
 
   /* Only one configuration */
   if (cfg_number > 1)
@@ -1332,7 +1335,7 @@ static void usbdev_set_configuration(struct dev_usbdev_context_s *ctx, const str
           return usbdev_enable_service(ctx);
         case -ENOTSUP:
           /* Unsupported configuration */
-          printk("USBDEV ERROR: Configuration not supported by hardware\n");
+          logk_error("ERROR: Configuration not supported by hardware");
           return usbdev_ep0_stall(ctx, DEV_USBDEV_CTRL_STATUS_IN_STALL);
         case -EAGAIN:
           /* Configuration is on-going */
@@ -1425,7 +1428,7 @@ static inline void usbdev_string_out_desc(struct dev_usbdev_context_s *ctx, size
   const char * str = NULL;
   size_t idx = 0;
 
-  usbdev_printk("USBDEV GET STRING DESCRIPTOR\n");
+  logk_trace("Get String Descriptor");
 
   /* Langid table */
   if (index == 0)
@@ -1511,7 +1514,7 @@ static inline void usbdev_out_desc(struct dev_usbdev_context_s *ctx, const struc
     {
       case USB_DEVICE_DESCRIPTOR :
         {
-          usbdev_printk("USBDEV GET DEVICE DESCRIPTOR \n");
+          logk_trace("Get Device Descriptor ");
           if (dindex)
             return usbdev_ep0_stall(ctx, DEV_USBDEV_DATA_IN_STALL);
 
@@ -1527,7 +1530,7 @@ static inline void usbdev_out_desc(struct dev_usbdev_context_s *ctx, const struc
       case USB_CONFIGURATION_DESCRIPTOR:
         /* Return configuration, interfaces and endpoints descriptors
            in a single response */
-        usbdev_printk("USBDEV GET CONFIG DESCRIPTOR\n");
+        logk_trace("Get Config Descriptor");
         while(!ctx->it.done)
           {
             if (ctx->it.service == NULL)
@@ -1564,7 +1567,7 @@ static inline void usbdev_out_desc(struct dev_usbdev_context_s *ctx, const struc
 
 static inline void usbdev_set_address(struct dev_usbdev_context_s *ctx, const struct usb_ctrl_setup_s *setup)
 {
-  usbdev_printk("USBDEV SET ADDRESS\n");
+  logk_trace("Set Address");
 
   if (usb_setup_value_get(setup) > 127 ||
       usb_setup_index_get(setup) ||
@@ -1600,7 +1603,7 @@ static inline void usbdev_set_address(struct dev_usbdev_context_s *ctx, const st
 
 static inline void usbdev_get_interface(struct dev_usbdev_context_s *ctx, const struct usb_ctrl_setup_s *setup)
 {
-  usbdev_printk("USBDEV GET INTERFACE\n");
+  logk_trace("Get Interface");
 
   if (usb_setup_length_get(setup) != 1 ||
       usb_setup_value_get(setup))
@@ -1669,7 +1672,7 @@ static void usbdev_set_interface(struct dev_usbdev_context_s *ctx, const struct 
 
   const struct usbdev_interface_s * i;
 
-  usbdev_printk("USBDEV SET INTERFACE\n");
+  logk_trace("Set Interface");
 
   GCT_FOREACH(usbdev_service, &ctx->service, service,
     {
@@ -1768,8 +1771,12 @@ static void usbdev_ep0_standard_setup(struct dev_usbdev_context_s *ctx)
         return usbdev_set_interface(ctx, setup);
 
       default:
-        printk("Unsupported USB request:\n");
-        usbdev_dump_setup(setup);
+        logk_error("Unsupported USB request:");
+        logk_error("  bRequestType: %x", usb_setup_reqtype_get(setup));
+        logk_error("  bRequest: %x", usb_setup_request_get(setup));
+        logk_error("  wValue: %x", usb_setup_value_get(setup));
+        logk_error("  wIndex: %x", usb_setup_index_get(setup));
+        logk_error("  wLength: %x", usb_setup_length_get(setup));
 
         if (usb_setup_length_get(setup))
           {
@@ -1868,7 +1875,7 @@ static KROUTINE_EXEC(usbdev_config_done)
         }
       break;
     default:
-      printk("USBDEV: Error on configuration type %d\n", ctx->cfg.type);
+      logk_error("Error on configuration type %d", ctx->cfg.type);
       break;
     }
 }
@@ -1944,10 +1951,10 @@ static KROUTINE_EXEC(usbdev_transfer_done)
         default:
           abort();
         }
-      printk("Control tranfer 0 aborted\n");
+      logk("Control tranfer 0 aborted");
       /* Unexpected end of control transfer */
     default:
-      printk("USBDEV: Error on transfer 0\n");
+      logk_error("Error on transfer 0");
       abort();
     }
 }
@@ -2164,7 +2171,7 @@ error_t usbdev_stack_request(struct device_usbdev_s *dev,
               usbdev_ep0_status_in(ctx);
             break;
           default:
-            printk("USBDEV BAD STATE %d %d\n", ctx->state, ctx->ep0_state);
+            logk_error("Bad State %d %d", ctx->state, ctx->ep0_state);
             abort();
         }
       break;
