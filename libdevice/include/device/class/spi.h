@@ -693,6 +693,8 @@ struct dev_spi_ctrl_transaction_rq_s
 
   /** Transfer data buffer */
   struct dev_spi_ctrl_data_s data;
+
+  enum dev_spi_cs_op_e     cs_op:2;
 };
 
 STRUCT_INHERIT(dev_spi_ctrl_transaction_rq_s, dev_spi_ctrl_base_rq_s, base);
@@ -875,6 +877,7 @@ config_depend_alwaysinline(CONFIG_DEVICE_SPI_TRANSACTION,
 void dev_spi_transaction_init(struct dev_spi_ctrl_transaction_rq_s *rq),
 {
   memset(rq, 0, sizeof(*rq));
+  rq->cs_op = DEV_SPI_CS_SET_CLR;
 })
 
 /** This helper function initializes a @xref{SPI transaction request}

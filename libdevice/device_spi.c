@@ -552,7 +552,7 @@ static void device_spi_ctrl_run(struct dev_spi_ctrl_context_s *q)
           {
             struct dev_spi_ctrl_transaction_rq_s *trq = dev_spi_ctrl_transaction_rq_s_cast(rq);
             q->transfer.data = trq->data;
-            //            memcpy(&q->transfer.data, &trq->data, sizeof(trq->data));
+            q->transfer.cs_op = trq->cs_op;
             r = device_spi_ctrl_transfer(q, rq, DEV_SPI_CS_SET_CLR);
           }
 # endif
