@@ -32,6 +32,7 @@
 #endif
 
 #include <hexo/iospace.h>
+#include <hexo/endian.h>
 #include <arch/efm32/irq.h>
 #include <arch/efm32/pin.h>
 #include <arch/efm32/clock.h>
