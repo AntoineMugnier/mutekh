@@ -117,7 +117,6 @@ struct sx127x_config_s
   dev_rfpacket_pwr_t rssi_th;
 };
 
-#include <arch/efm32/timer.h>
 #include <device/clock.h>
 
 struct sx127x_private_s
