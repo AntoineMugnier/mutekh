@@ -26,30 +26,6 @@
 
 #include <stdarg.h>
 
-static enum dev_pin_driving_e device_iomux_mode(char l)
-{
-  struct switch_s { char c; char n; };
-  static const struct switch_s sw[10] = {
-    { '^', DEV_PIN_OPENSOURCE },
-    { '_', DEV_PIN_OPENDRAIN },
-    { '`', DEV_PIN_OPENSOURCE_PULLDOWN },
-    { '+', DEV_PIN_INPUT_PULLUP },
-    { ',', DEV_PIN_OPENDRAIN_PULLUP },
-    { '-', DEV_PIN_INPUT_PULLDOWN },
-    { 0, 0 },
-    { '<', DEV_PIN_INPUT },
-    { '=', DEV_PIN_INPUT_PULL },
-    { '>', DEV_PIN_PUSHPULL },
-  };
-
-  /* decode direction symbol using a perfect hash */
-  uint32_t x = ((319838000U * (uint32_t)l) >> 28);
-  if (x < 10 && sw[x].c == l)
-    return sw[x].n;
-
-  return DEV_PIN_DISABLED;
-}
-
 error_t device_iomux_fetch(struct device_s *dev,
                            struct device_iomux_s *iomux, const char *io_list,
                            iomux_demux_t *demux, iomux_io_id_t *io_id,
@@ -57,7 +33,7 @@ error_t device_iomux_fetch(struct device_s *dev,
 {
   while (*io_list)
     {
-      enum dev_pin_driving_e dir = device_iomux_mode(*io_list);
+      enum dev_pin_driving_e dir = device_io_mode_symbol(*io_list);
       if (dir)
         io_list++;
 
@@ -79,7 +55,7 @@ error_t device_iomux_fetch(struct device_s *dev,
         return -ENOENT;
 
       /* direction in resource label overrides the one in driver string */
-      enum dev_pin_driving_e dir2 = device_iomux_mode(*r->u.iomux.label);
+      enum dev_pin_driving_e dir2 = device_io_mode_symbol(*r->u.iomux.label);
       if (dir2)
         dir = dir2;
 

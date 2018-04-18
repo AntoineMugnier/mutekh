@@ -1017,5 +1017,9 @@ ALWAYS_INLINE error_t device_get_param_uint_array(const struct device_s *dev,
   return 0;
 }
 
+/** @This returns a @ref dev_pin_driving_e value from a char
+    symbol. @ref DEV_PIN_DISABLED is returned if the passed char is
+    not recognized. */
+enum dev_pin_driving_e device_io_mode_symbol(char l);
 
 #endif

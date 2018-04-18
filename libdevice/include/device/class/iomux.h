@@ -31,12 +31,16 @@
    @section {Purpose}
 
    This class provides functions to configure the pin muxing used by a
-   device inside a chip.
+   device @b internal to a chip.
 
    This is mainly intended for use by device drivers: the @ref
    device_iomux_setup function is called from the device driver
    initialization function and the @ref device_iomux_cleanup is called
    when the driver is unloaded.
+
+   Using this API to configure IOs used to drive an external device is
+   wrong. The @xref{General purpose IO} class must be used for that
+   purpose.
 
    @end section
 */
@@ -95,18 +99,21 @@ DRIVER_CLASS_TYPES(DRIVER_CLASS_IOMUX, iomux,
   })
 
 /**
-   @This fetches the pin muxing information and sets the muxing
-   configuration of IOs whose names are listed in the @tt io_list
-   string. IO muxing information from device resources are used.
+   @This fetches the pin muxing information declared device resources
+   and sets the muxing configuration of IOs whose names are listed in
+   the @tt io_list string.
 
    The device must have a @ref DEV_RES_DEV_PARAM resource entry named
    @tt iomux which specifies the target IO mux controller. @This
    calls the @ref device_iomux_fetch function.
 
-   Example:
+   @section {Examples}
    @code
    device_iomux_setup(uart, ">tx <rx >rts? <cts?", NULL, NULL, NULL);
    @end code
+   @end section
+
+   @see dev_pin_driving_e
 */
 config_depend(CONFIG_DEVICE_IOMUX)
 error_t device_iomux_setup(struct device_s *dev, const char *io_list,

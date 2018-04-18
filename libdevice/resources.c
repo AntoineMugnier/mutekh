@@ -246,3 +246,27 @@ error_t device_get_param_dev_accessor(struct device_s *dev,
   return device_get_accessor_by_path(acc, &dev->node, r->u.str_param.value, cl);
 }
 
+enum dev_pin_driving_e device_io_mode_symbol(char l)
+{
+  struct switch_s { char c; char n; };
+  static const struct switch_s sw[10] = {
+    { '^', DEV_PIN_OPENSOURCE },
+    { '_', DEV_PIN_OPENDRAIN },
+    { '`', DEV_PIN_OPENSOURCE_PULLDOWN },
+    { '+', DEV_PIN_INPUT_PULLUP },
+    { ',', DEV_PIN_OPENDRAIN_PULLUP },
+    { '-', DEV_PIN_INPUT_PULLDOWN },
+    { 0, 0 },
+    { '<', DEV_PIN_INPUT },
+    { '=', DEV_PIN_INPUT_PULL },
+    { '>', DEV_PIN_PUSHPULL },
+  };
+
+  /* decode direction symbol using a perfect hash */
+  uint32_t x = ((319838000U * (uint32_t)l) >> 28);
+  if (x < 10 && sw[x].c == l)
+    return sw[x].n;
+
+  return DEV_PIN_DISABLED;
+}
+
