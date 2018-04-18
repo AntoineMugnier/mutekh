@@ -615,16 +615,11 @@ static DEV_INIT(max3420_usbdev_init)
 
   static const gpio_width_t pin_wmap[3] = {1, 1, 1};
 
-  if (device_res_gpio_map(dev, "rst:1 nirq:1 gpx:1", pv->pin_map, NULL))
+  if (device_gpio_setup(gpio, dev, ">rst:1 <nirq:1 <gpx:1", pv->pin_map, NULL))
     goto err_srq;
 
   srq->gpio_map = pv->pin_map;
   srq->gpio_wmap = pin_wmap;
-
-  if (device_gpio_map_set_mode(gpio, pv->pin_map, pin_wmap, 3,
-                               DEV_PIN_PUSHPULL, DEV_PIN_INPUT,
-                               DEV_PIN_INPUT))
-    goto err_srq;
 
   /* kroutine */
   kroutine_init_deferred(&srq->base.base.kr, &max3420_spi_rq_done);

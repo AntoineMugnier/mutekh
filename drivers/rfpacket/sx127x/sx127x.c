@@ -1817,12 +1817,7 @@ static DEV_INIT(sx127x_init)
 
   static const gpio_width_t pin_wmap[SX127X_PIN_COUNT] = {1, 1, 1};
 
-  if (device_res_gpio_map(dev, "rst:1 dio0:1 dio4:1", pv->pin_map, NULL))
-    goto err_timer;
-
-  if (device_gpio_map_set_mode(gpio, pv->pin_map, pin_wmap, 3,
-                               DEV_PIN_PUSHPULL, DEV_PIN_INPUT,
-                               DEV_PIN_INPUT))
+  if (device_gpio_setup(gpio, dev, ">rst:1 <dio0:1 <dio4:1", pv->pin_map, NULL))
     goto err_timer;
 
   srq->gpio_map = pv->pin_map;
