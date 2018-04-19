@@ -22,7 +22,7 @@
 
 #ifdef CONFIG_DEVICE
 # include <device/class/iomux.h>
-# include <device/class/uart.h>
+# include <device/resource/uart.h>
 # include <device/class/gpio.h>
 # include <device/class/timer.h>
 # include <device/class/i2c.h>

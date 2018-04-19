@@ -12,41 +12,18 @@
     Lesser General Public License for more details.
 
     You should have received a copy of the GNU Lesser General Public
-    License along with MutekH; if not, write to the Free Software
-    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
-    02110-1301 USA.
+    License along with this program.  If not, see
+    <http://www.gnu.org/licenses/>.
 
+    Copyright Nicolas Pouillon <nipo@ssji.net> (c) 2018
     Copyright Julien Peeters <contact@julienpeeters.net> (c) 2014
-
 */
 
-/**
-   @file
-   @module {Core::Devices support library}
-   @short UART configuration driver API
-   @index {UART configuration} {Device classes}
-   @csee DRIVER_CLASS_UART
-
-   UART class only defines configuration parameters for UART devices.
-   Data path of UART devices goes through the Character device class.
-
-   Parameters addresed by this class are:
-   @list
-   @item Baud rate,
-   @item Character bit size,
-   @item Character framing (Start, stop bits, parity),
-   @item Line control (flow control)
-   @end list
- */
-
-#ifndef __DEVICE_UART_H__
-#define __DEVICE_UART_H__
+#ifndef __DEVICE_RESOURCE_UART_H__
+#define __DEVICE_RESOURCE_UART_H__
 
 #include <hexo/types.h>
-#include <hexo/error.h>
-
 #include <device/device.h>
-#include <device/driver.h>
 #include <device/resources.h>
 
 ENUM_DESCRIPTOR(dev_uart_parity_e, strip:DEV_UART_PARITY_, upper);
@@ -78,41 +55,9 @@ struct dev_uart_config_s
   enum dev_uart_parity_e BITFIELD(parity,2);
 };
 
-
-/* forward declarations. */
-struct device_uart_s;
-
-/** @see dev_uart_config_t */
-#define DEV_UART_CONFIG(n) error_t (n)(struct device_uart_s     *accessor, \
-                                      struct dev_uart_config_s *cfg)
-
-/** @This configures the uart device with the given configuration. */
-typedef DEV_UART_CONFIG(dev_uart_config_t);
-
-DRIVER_CLASS_TYPES(DRIVER_CLASS_UART, uart,
-                   dev_uart_config_t *f_config;
-                  );
-
-/** @see driver_uart_s */
-#define DRIVER_UART_METHODS(prefix)                            \
-  ((const struct driver_class_s*)&(const struct driver_uart_s){ \
-    .class_ = DRIVER_CLASS_UART,                               \
-    .f_config = prefix ## _config,                             \
-  })
-
-
-/** @This is a wrapper for the @ref dev_uart_config_t function */
-ALWAYS_INLINE
-error_t dev_uart_config(struct device_uart_s     *accessor,
-                        struct dev_uart_config_s *cfg)
-{
-  return DEVICE_OP(accessor, config, cfg);
-}
-
-
 /** @This appends a UART resource entry to the device tree.
     @csee DEV_RES_UART */
-config_depend_and2_alwaysinline(CONFIG_DEVICE_UART, CONFIG_DEVICE_RESOURCE_ALLOC,
+config_depend_alwaysinline(CONFIG_DEVICE_RESOURCE_ALLOC,
 error_t device_res_add_uart(struct device_s           *dev,
                             const struct dev_uart_config_s *cfg),
 {
@@ -166,4 +111,3 @@ ALWAYS_INLINE error_t device_get_res_uart(const struct device_s *dev,
   }
 
 #endif
-

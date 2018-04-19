@@ -492,7 +492,6 @@ dev_shell_dump_device(struct termui_console_s *con, struct device_s *dev,
           break;
         }
 #endif
-#ifdef CONFIG_DEVICE_UART
         case DEV_RES_UART: {
           static const char uart_parity[] = "NOE";
           termui_con_printf(con,
@@ -506,7 +505,6 @@ dev_shell_dump_device(struct termui_console_s *con, struct device_s *dev,
           );
           break;
         }
-#endif
         case DEV_RES_ID:
           termui_con_printf(con, "  Numerical identifier %x %x\n", r->u.id.major, r->u.id.minor);
           break;
@@ -879,7 +877,7 @@ static TERMUI_CON_GROUP_DECL(dev_shell_subgroup) =
 #ifdef CONFIG_DEVICE_ENUM
   TERMUI_CON_GROUP_ENTRY(dev_shell_enum_group, "enum")
 #endif
-#ifdef CONFIG_DEVICE_SHELL_UART
+#if defined(CONFIG_DEVICE_VALIO_UART_CONFIG)
   TERMUI_CON_GROUP_ENTRY(dev_shell_uart_group, "uart")
 #endif
 #if defined(CONFIG_DEVICE_VALIO_HWCLOCK)

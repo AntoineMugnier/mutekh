@@ -33,7 +33,11 @@
 #include <device/driver.h>
 #include <device/irq.h>
 #include <device/class/char.h>
-#include <device/class/uart.h>
+#include <device/resource/uart.h>
+#ifdef CONFIG_DEVICE_VALIO_UART_CONFIG
+# include <device/class/valio.h>
+# include <device/valio/uart_config.h>
+#endif
 #include <device/class/iomux.h>
 
 #include <arch/nrf5x/uarte.h>
@@ -67,7 +71,7 @@ static void nrf5x_uarte_request_finish(struct device_s *dev,
                                        struct dev_char_rq_s *rq,
                                        size_t count)
 {
-  struct nrf5x_uarte_priv *pv = dev->drv_pv;
+  __unused__ struct nrf5x_uarte_priv *pv = dev->drv_pv;
 
   rq->size -= count;
   rq->data += count;
@@ -404,18 +408,26 @@ static error_t nrf5x_uarte_config(struct nrf5x_uarte_priv *pv,
   return 0;
 }
 
-#if defined(CONFIG_DEVICE_UART)
+#if defined(CONFIG_DEVICE_VALIO_UART_CONFIG)
 
-static DEV_UART_CONFIG(nrf5x_uarte_uart_config)
+static DEV_VALIO_REQUEST(nrf5x_uarte_valio_request)
 {
   struct device_s *dev = accessor->dev;
   struct nrf5x_uarte_priv *pv = dev->drv_pv;
 
-  LOCK_SPIN_IRQ_SCOPED(&dev->lock);
+  if (req->type != DEVICE_VALIO_WRITE
+      || req->attribute != VALIO_UART_CONFIG) {
+    req->error = -ENOTSUP;
+  } else {
+    LOCK_SPIN_IRQ_SCOPED(&dev->lock);
 
-  return nrf5x_uarte_config(pv, cfg);
+    req->error = nrf5x_uarte_config(pv, req->data);
+  }
+
+  kroutine_exec(&req->base.kr);
 }
 
+#define nrf5x_uarte_valio_cancel (dev_valio_cancel_t*)dev_driver_notsup_fcn
 #endif
 
 #define nrf5x_uarte_char_use dev_use_generic
@@ -493,7 +505,6 @@ static DEV_INIT(nrf5x_uarte_char_init)
   if (device_irq_source_link(dev, &pv->irq_ep, 1, -1))
     goto free_queue;
 
-#if defined(CONFIG_DEVICE_UART)
   struct dev_resource_s *r = device_res_get(dev, DEV_RES_UART, 0);
 
   if (r) {
@@ -503,7 +514,6 @@ static DEV_INIT(nrf5x_uarte_char_init)
     config.parity      = r->u.uart.parity;
     config.flow_ctrl   = r->u.uart.flow_ctrl;
   }
-#endif
 
   nrf5x_uarte_config(pv, &config);
 
@@ -551,12 +561,12 @@ static DEV_CLEANUP(nrf5x_uarte_char_cleanup)
 }
 
 DRIVER_DECLARE(nrf5x_uarte_drv, 0, "nRF52 Serial dma"
-#if defined(CONFIG_DEVICE_UART)
+#if defined(CONFIG_DEVICE_VALIO_UART_CONFIG)
                ",UART"
 #endif
                , nrf5x_uarte_char,
-#if defined(CONFIG_DEVICE_UART)
-               DRIVER_UART_METHODS(nrf5x_uarte_uart),
+#if defined(CONFIG_DEVICE_VALIO_UART_CONFIG)
+               DRIVER_VALIO_METHODS(nrf5x_uarte_valio),
 #endif
                DRIVER_CHAR_METHODS(nrf5x_uarte));
 

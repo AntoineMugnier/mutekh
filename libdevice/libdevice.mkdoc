@@ -417,9 +417,9 @@ device/class/net.h
 device/class/smi.h
 device/class/pcm.h
 device/class/rfpacket.h
-device/class/uart.h
 device/class/valio.h
 device/class/usbdev.h
+device/resource/uart.h
 
 device/valio/adc.h
 device/valio/button.h
@@ -429,6 +429,7 @@ device/valio/led.h
 device/valio/motion.h
 device/valio/motion_sensor.h
 device/valio/touchpad.h
+device/valio/uart_config.h
 
 device/usb/usb.h
 }

@@ -9,8 +9,8 @@ enum_headers = include/device/types.h \
                include/device/class/crypto.h \
                include/device/class/timer.h \
                include/device/class/rfpacket.h \
-               include/device/class/uart.h \
                include/device/class/spi.h \
+               include/device/resource/uart.h \
                include/device/valio/hwclock.h
 
 objs = driver.o device.o resources.o init.o request.o
@@ -82,15 +82,16 @@ objs += device_crypto.o
 objs-$(CONFIG_DEVICE_SHELL_CRYPTO) += shell_crypto.o
 endif
 
-ifeq ($(CONFIG_DEVICE_UART), defined)
-objs += device_uart.o
-objs-$(CONFIG_DEVICE_SHELL_UART) += shell_uart.o
-endif
-
 objs-$(CONFIG_DEVICE_USBDEV) += device_usbdev.o device_usbdev_helpers.o
 
 ifeq ($(CONFIG_DEVICE_VALIO), defined)
 objs += device_valio.o
+endif
+
+objs += device_uart.o
+
+ifeq ($(CONFIG_DEVICE_VALIO_UART_CONFIG), defined)
+objs-$(CONFIG_DEVICE_SHELL) += shell_uart.o
 endif
 
 ifeq ($(CONFIG_DEVICE_VALIO_HWCLOCK), defined)

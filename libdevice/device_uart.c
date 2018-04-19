@@ -18,7 +18,7 @@
   Copyright (c) Nicolas Pouillon <nipo@ssji.net>, 2016
 */
 
-#include <device/class/uart.h>
+#include <device/resource/uart.h>
 #include <hexo/enum.h>
 
 const char dev_uart_parity_e[] = ENUM_DESC_DEV_UART_PARITY_E;

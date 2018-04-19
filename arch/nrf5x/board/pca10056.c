@@ -20,7 +20,7 @@
 
 #include <device/resources.h>
 #include <device/class/iomux.h>
-#include <device/class/uart.h>
+#include <device/resource/uart.h>
 #include <device/class/gpio.h>
 #include <device/class/cmu.h>
 #include <arch/nrf5x/ids.h>

@@ -32,7 +32,7 @@
 #include <device/irq.h>
 #include <device/class/char.h>
 #include <device/class/iomux.h>
-#include <device/class/uart.h>
+#include <device/resource/uart.h>
 #include <device/clock.h>
 
 #include <arch/efm32/usart.h>

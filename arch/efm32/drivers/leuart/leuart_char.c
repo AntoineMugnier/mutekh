@@ -42,7 +42,7 @@ static void efm32_leuart_write_reg(uint32_t addr, uintptr_t reg, uint32_t x)
 #include <device/irq.h>
 #include <device/class/char.h>
 #include <device/class/iomux.h>
-#include <device/class/uart.h>
+#include <device/resource/uart.h>
 #include <device/clock.h>
 
 #if CONFIG_DRIVER_EFM32_LEUART_SWFIFO > 0

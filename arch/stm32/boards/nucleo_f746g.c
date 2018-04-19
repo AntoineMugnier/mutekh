@@ -43,7 +43,7 @@ DEV_DECLARE_STATIC(cpu_dev, "cpu", DEVICE_FLAG_CPU, arm32m_drv,
 
 #if defined(CONFIG_DRIVER_STM32_USART)
 
-#include <device/class/uart.h>
+#include <device/resource/uart.h>
 
 /* USART1. */
 DEV_DECLARE_STATIC(usart1_dev, "uart1", 0, stm32_usart_drv,

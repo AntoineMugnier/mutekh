@@ -27,7 +27,7 @@
 # include <device/class/cmu.h>
 # include <device/class/dma.h>
 # include <device/class/i2c.h>
-# include <device/class/uart.h>
+# include <device/resource/uart.h>
 #endif
 
 #include <hexo/iospace.h>

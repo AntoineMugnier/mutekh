@@ -35,7 +35,9 @@
 #include <device/irq.h>
 #include <device/class/char.h>
 #include <device/class/iomux.h>
-#include <device/class/uart.h>
+#include <device/resource/uart.h>
+#include <device/class/valio.h>
+#include <device/resource/uart.h>
 
 #include <arch/stm32/usart.h>
 
@@ -486,10 +488,18 @@ error_t stm32_usart_config_simple(struct stm32_usart_context_s *pv,
 }
 
 static
-DEV_UART_CONFIG(stm32_usart_config)
+DEV_VALIO_REQUEST(stm32_usart_valio_request)
 {
-  struct device_s              *dev = accessor->dev;
-  struct stm32_usart_context_s *pv  = dev->drv_pv;
+  struct device_s *dev = accessor->dev;
+  struct stm32_usart_context_s *pv = dev->drv_pv;
+
+  if (req->type != DEVICE_VALIO_WRITE
+      || req->attribute != VALIO_UART_CONFIG) {
+    req->error = -ENOTSUP;
+    kroutine_exec(&req->base.kr);
+  }
+
+  struct dev_uart_config_s *cfg = req->data;
 
   /* disable the usart. */
   uint32_t a = pv->addr + STM32_USART_CR1_ADDR;
@@ -499,10 +509,10 @@ DEV_UART_CONFIG(stm32_usart_config)
   STM32_USART_CR1_UE_SET(x, 0);
   cpu_mem_write_32(a, endian_le32(x));
 
-  error_t err = stm32_usart_config_simple(pv, cfg);
+  req->error = stm32_usart_config_simple(pv, cfg);
 
   /* (re-)enable the usart. */
-  if (!err && enabled)
+  if (!req->error && enabled)
     {
       x = endian_le32(cpu_mem_read_32(a));
       STM32_USART_CR1_UE_SET(x, 1);
@@ -510,12 +520,14 @@ DEV_UART_CONFIG(stm32_usart_config)
     }
 
 #if defined(CONFIG_DEBUG)
-  if (err && enabled)
+  if (req->error && enabled)
     printk("uart: configuration left unchanged.\n");
 #endif
 
-  return err;
+  kroutine_exec(&req->base.kr);
 }
+
+#define stm32_usart_valio_cancel (dev_valio_cancel_t*)dev_driver_notsup_fcn
 
 
 #define stm32_usart_use dev_use_generic
@@ -659,7 +671,7 @@ static DEV_CLEANUP(stm32_usart_cleanup)
 
 DRIVER_DECLARE(stm32_usart_drv, 0, "STM32 USART", stm32_usart,
                DRIVER_CHAR_METHODS(stm32_usart),
-               DRIVER_UART_METHODS(stm32_usart));
+               DRIVER_VALIO_METHODS(stm32_usart_valio));
 
 DRIVER_REGISTER(stm32_usart_drv);
 

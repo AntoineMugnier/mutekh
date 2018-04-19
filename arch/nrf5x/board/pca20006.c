@@ -21,7 +21,7 @@
 #include <device/resources.h>
 #include <device/irq.h>
 #include <device/class/iomux.h>
-#include <device/class/uart.h>
+#include <device/resource/uart.h>
 #include <device/class/cmu.h>
 #include <device/class/icu.h>
 #include <arch/nrf5x/ids.h>

@@ -31,7 +31,11 @@
 #include <device/driver.h>
 #include <device/irq.h>
 #include <device/class/char.h>
-#include <device/class/uart.h>
+#include <device/resource/uart.h>
+#ifdef CONFIG_DEVICE_VALIO_UART_CONFIG
+# include <device/class/valio.h>
+# include <device/valio/uart_config.h>
+#endif
 #include <device/class/iomux.h>
 #include <device/clock.h>
 
@@ -574,18 +578,24 @@ static error_t psoc4_uart_config(struct device_s *dev,
   return 0;
 }
 
-#if defined(CONFIG_DEVICE_UART)
-static DEV_UART_CONFIG(psoc4_uart_uart_config)
+#if defined(CONFIG_DEVICE_VALIO_UART_CONFIG)
+static DEV_VALIO_REQUEST(psoc4_uart_valio_request)
 {
   struct device_s *dev = accessor->dev;
-  error_t err;
 
-  LOCK_SPIN_IRQ(&dev->lock);
-  err = psoc4_uart_config(dev, cfg);
-  LOCK_RELEASE_IRQ(&dev->lock);
+  if (req->type != DEVICE_VALIO_WRITE
+      || req->attribute != VALIO_UART_CONFIG) {
+    req->error = -ENOTSUP;
+  } else {
+    LOCK_SPIN_IRQ_SCOPED(&dev->lock);
 
-  return err;
+    req->error = psoc4_uart_config(dev, req->data);
+  }
+
+  kroutine_exec(&req->base.kr);
 }
+
+#define psoc4_uart_valio_cancel (dev_valio_cancel_t*)dev_driver_notsup_fcn
 #endif
 
 static DEV_USE(psoc4_uart_char_use)
@@ -725,7 +735,6 @@ static DEV_INIT(psoc4_uart_char_init)
   uart_fifo_init(&pv->rx_fifo);
   uart_fifo_init(&pv->tx_fifo);
 
-#if defined(CONFIG_DEVICE_UART)
   /* If there is a config resource, apply it. */
   struct dev_resource_s *r = device_res_get(dev, DEV_RES_UART, 0);
 
@@ -735,9 +744,7 @@ static DEV_INIT(psoc4_uart_char_init)
     config.stop_bits   = r->u.uart.stop_bits;
     config.parity      = r->u.uart.parity;
     config.flow_ctrl   = r->u.uart.flow_ctrl && pv->has_ctsrts;
-    config.half_duplex = r->u.uart.half_duplex;
   }
-#endif
 
   psoc4_uart_scb_init(dev);
 
@@ -792,12 +799,12 @@ static DEV_CLEANUP(psoc4_uart_char_cleanup)
 }
 
 DRIVER_DECLARE(psoc4_uart_drv, 0, "SCB Serial"
-#if defined(CONFIG_DEVICE_UART)
+#if defined(CONFIG_DEVICE_VALIO_UART_CONFIG)
                "+UART"
 #endif
                , psoc4_uart_char,
-#if defined(CONFIG_DEVICE_UART)
-               DRIVER_UART_METHODS(psoc4_uart_uart),
+#if defined(CONFIG_DEVICE_VALIO_UART_CONFIG)
+               DRIVER_VALIO_METHODS(psoc4_uart_valio),
 #endif
                DRIVER_CHAR_METHODS(psoc4_uart));
 

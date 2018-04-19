@@ -26,7 +26,7 @@
 # include <device/class/iomux.h>
 # include <device/class/dma.h>
 # include <device/class/cmu.h>
-# include <device/class/uart.h>
+# include <device/resource/uart.h>
 #endif
 
 #include <hexo/iospace.h>

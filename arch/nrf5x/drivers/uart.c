@@ -34,7 +34,11 @@
 #include <device/driver.h>
 #include <device/irq.h>
 #include <device/class/char.h>
-#include <device/class/uart.h>
+#include <device/resource/uart.h>
+#if defined(CONFIG_DEVICE_VALIO_UART_CONFIG)
+# include <device/class/valio.h>
+# include <device/valio/uart_config.h>
+#endif
 #include <device/class/iomux.h>
 #include <device/clock.h>
 
@@ -388,18 +392,26 @@ static error_t nrf5x_uart_config(
     return 0;
 }
 
-#if defined(CONFIG_DEVICE_UART)
+#if defined(CONFIG_DEVICE_VALIO_UART_CONFIG)
 
-static DEV_UART_CONFIG(nrf5x_uart_uart_config)
+static DEV_VALIO_REQUEST(nrf5x_uart_valio_request)
 {
-    struct device_s *dev = accessor->dev;
-    struct nrf5x_uart_priv *pv = dev->drv_pv;
+  struct device_s *dev = accessor->dev;
+  struct nrf5x_uart_priv *pv = dev->drv_pv;
 
-    error_t err = nrf5x_uart_config(pv, cfg);
+  if (req->type != DEVICE_VALIO_WRITE
+      || req->attribute != VALIO_UART_CONFIG) {
+    req->error = -ENOTSUP;
+  } else {
+    LOCK_SPIN_IRQ_SCOPED(&dev->lock);
 
-    return err;
+    req->error = nrf5x_uart_config(pv, req->data);
+  }
+
+  kroutine_exec(&req->base.kr);
 }
 
+#define nrf5x_uart_valio_cancel (dev_valio_cancel_t*)dev_driver_notsup_fcn
 #endif
 
 
@@ -475,9 +487,8 @@ static DEV_INIT(nrf5x_uart_char_init)
 
     uintptr_t addr;
     if (device_res_get_uint(dev, DEV_RES_MEM, 0, &addr, NULL))
-        goto free_pv;
+        return -ENOENT;
 
-#if defined(CONFIG_DEVICE_UART)
     /* If there is a config resource, apply it. */
     struct dev_resource_s *r = device_res_get(dev, DEV_RES_UART, 0);
 
@@ -494,7 +505,6 @@ static DEV_INIT(nrf5x_uart_char_init)
           logk_warning("uart config overrides printk baudrate");
 # endif
     }
-#endif
 
     pv = mem_alloc(sizeof(*pv), mem_scope_sys);
     if (!pv)
@@ -633,12 +643,12 @@ static DEV_CLEANUP(nrf5x_uart_char_cleanup)
 }
 
 DRIVER_DECLARE(nrf5x_uart_drv, 0, "nRF5x Serial"
-#if defined(CONFIG_DEVICE_UART)
+#if defined(CONFIG_DEVICE_VALIO_UART_CONFIG)
                ",UART"
 #endif
                , nrf5x_uart_char,
-#if defined(CONFIG_DEVICE_UART)
-               DRIVER_UART_METHODS(nrf5x_uart_uart),
+#if defined(CONFIG_DEVICE_VALIO_UART_CONFIG)
+               DRIVER_VALIO_METHODS(nrf5x_uart_valio),
 #endif
                DRIVER_CHAR_METHODS(nrf5x_uart));
 
