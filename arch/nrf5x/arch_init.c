@@ -23,7 +23,6 @@
 #include <string.h>
 
 #include <mutek/mem_alloc.h>
-#include <mutek/mem_alloc.h>
 #include <hexo/flash.h>
 
 #include <arch/nrf5x/nvmc.h>
