@@ -97,12 +97,18 @@ static DEV_IRQ_SRC_PROCESS(efm32_usb_irq)
       if (irq & EFM32_USB_IF_VREGOSL) 
         {
           cpu_mem_write_32(pv->synpv.addr - EFM32_USB_SYNOPSYS_ADDR + EFM32_USB_IFC_ADDR, EFM32_USB_IFC_VREGOSL);
+#ifdef CONFIG_DEVICE_CLOCK_THROTTLE
+          dev_clock_sink_throttle(&pv->clk_ep[1], 0);
+#endif
           synopsys_usbdev_event(&pv->synpv, USBDEV_EVENT_DISCONNECT);
         }
 
       if (irq & EFM32_USB_IF_VREGOSH) 
         {
           cpu_mem_write_32(pv->synpv.addr - EFM32_USB_SYNOPSYS_ADDR + EFM32_USB_IFC_ADDR, EFM32_USB_IFC_VREGOSH);
+#ifdef CONFIG_DEVICE_CLOCK_THROTTLE
+          dev_clock_sink_throttle(&pv->clk_ep[1], 1);
+#endif
           synopsys_usbdev_event(&pv->synpv, USBDEV_EVENT_CONNECT);
         }
 
@@ -209,11 +215,6 @@ static DEV_INIT(efm32_usbdev_init)
     goto err_clk1;
 
   efm32_usb_reset_device(dev);
-
-  /* Check if device is connected */
-  uint32_t x = cpu_mem_read_32(pv->synpv.addr - EFM32_USB_SYNOPSYS_ADDR + EFM32_USB_STATUS_ADDR);
-  if (endian_le32(x) & EFM32_USB_IF_VREGOSH)
-    synopsys_usbdev_event(&pv->synpv, USBDEV_EVENT_CONNECT);
   
   device_irq_source_init(dev, &pv->irq_eps, 1, &efm32_usb_irq);
 
@@ -224,6 +225,15 @@ static DEV_INIT(efm32_usbdev_init)
   if (usbdev_stack_init(dev, &pv->synpv.usbdev_ctx, SYNOPSYS_USBDEV_EP_MSK,
                         SYNOPSYS_USBDEV_EP_MSK, &efm32_usbdev_ops_s))
     goto err_irq;
+
+  /* Check if device is connected */
+  uint32_t x = cpu_mem_read_32(pv->synpv.addr - EFM32_USB_SYNOPSYS_ADDR + EFM32_USB_STATUS_ADDR);
+  if (endian_le32(x) & EFM32_USB_IF_VREGOSH) {
+    synopsys_usbdev_event(&pv->synpv, USBDEV_EVENT_CONNECT);
+#ifdef CONFIG_DEVICE_CLOCK_THROTTLE
+    dev_clock_sink_throttle(&pv->clk_ep[1], 1);
+#endif
+  }
 
   return 0;
 

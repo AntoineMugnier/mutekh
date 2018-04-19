@@ -358,6 +358,11 @@ DEV_DECLARE_STATIC(usb_dev, "usb", 0, efm32_usbdev_drv,
                    DEV_STATIC_RES_MEM(0x400c4000, 0x400c4400),
                    DEV_STATIC_RES_CLK_SRC("/recmu", EFM32_CLOCK_USB, 0),
                    DEV_STATIC_RES_CLK_SRC("/recmu", EFM32_CLOCK_USBC, 1),
+
+                   // 2 device modes: Idle, Running
+                   // Running mode requires 48MHz XO on USB Core clock
+                   DEV_STATIC_RES_CLOCK_MODES(1, 0, 3),
+
                    DEV_STATIC_RES_DEV_PARAM("icu", "/cpu"),
                    DEV_STATIC_RES_IRQ(0, EFM32_IRQ_USB, DEV_IRQ_SENSE_RISING_EDGE, 0, 1),
                    DEV_STATIC_RES_DEV_PARAM("iomux", "/gpio"),
