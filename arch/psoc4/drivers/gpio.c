@@ -114,7 +114,7 @@ static DEV_GPIO_SET_MODE(psoc4_gpio_set_mode)
     return err;
 
   uint64_t m
-    = (endian_le64_na_load(mask) & bit_mask(io_last - io_first + 1))
+    = (endian_le64_na_load(mask) & bit_mask(0, io_last - io_first + 1))
     << io_first;
 
   LOCK_SPIN_IRQ(&dev->lock);
@@ -187,8 +187,7 @@ static DEV_GPIO_GET_INPUT(psoc4_gpio_get_input)
 
   dprintk("Read %llx\n", tmp);
 
-  tmp >>= io_first;
-  tmp &= bit_mask(io_last - io_first + 1);
+  tmp = bit_get_range(tmp, io_first, io_last);
   endian_le64_na_store(data, tmp);
 
   dprintk("Read2 %llx\n", tmp);
