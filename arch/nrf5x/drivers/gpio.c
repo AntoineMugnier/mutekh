@@ -294,7 +294,7 @@ static DEV_GPIO_GET_INPUT(nrf5x_gpio_get_input)
 
   LOCK_SPIN_IRQ_SCOPED(&dev->lock);
 
-  uint64_t vp, v;
+  uint64_t vp;
   uint_fast8_t shift = io_first % 32;
   uintptr_t a = NRF_GPIO_BANK_OFFSET(io_first);
 
@@ -309,6 +309,7 @@ static DEV_GPIO_GET_INPUT(nrf5x_gpio_get_input)
 #if CONFIG_NRF5X_GPIO_COUNT > 32
   while (bf++ < bl)
     {
+      uint64_t v;
       a += NRF_GPIO_BANK_OFFSET(1);
       v = nrf_reg_get(GPIO_ADDR, a + NRF_GPIO_IN);  /* get P1, P2, ... inputs */
       v = (v << (32 - shift)) | vp ;
