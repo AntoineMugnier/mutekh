@@ -33,6 +33,11 @@
 #include <device/resources.h>
 #include <device/driver.h>
 #include <device/irq.h>
+#include <device/resource/uart.h>
+#if defined(CONFIG_DEVICE_VALIO_UART_CONFIG)
+# include <device/class/valio.h>
+# include <device/valio/uart_config.h>
+#endif
 
 #include <device/usb/usb.h>
 #include <device/usb/cdc.h>
@@ -214,9 +219,35 @@ struct usbdev_acm_private_s
   uint8_t interface_start_index;
   dev_usbdev_ep_map_t epi_map;
   dev_usbdev_ep_map_t epo_map;
+
+#if defined(CONFIG_DEVICE_VALIO_UART_CONFIG)
+  dev_request_queue_root_t coding_notify_queue;
+#endif
 };
 
 DRIVER_PV(struct usbdev_acm_private_s);
+
+static
+void cdc_line_coding_set(struct usbdev_cdc_line_coding_s *coding,
+                         const struct dev_uart_config_s *cfg)
+{
+  coding->dwDTERate = endian_le32(cfg->baudrate);
+  coding->bCharFormat = (cfg->stop_bits == 1) ? 0 : 2;
+  coding->bParityType = cfg->parity;
+  coding->bDataBits = cfg->data_bits;
+}
+
+#if defined(CONFIG_DEVICE_VALIO_UART_CONFIG)
+static
+void cdc_line_coding_parse(const struct usbdev_cdc_line_coding_s *coding,
+                           struct dev_uart_config_s *cfg)
+{
+  cfg->baudrate = endian_le32(coding->dwDTERate);
+  cfg->stop_bits = (coding->bCharFormat == 0) ? 1 : 2;
+  cfg->parity = coding->bParityType;
+  cfg->data_bits = coding->bDataBits;
+}
+#endif
 
 static
 void usbdev_service_char_read(struct device_s *dev);
@@ -443,6 +474,18 @@ KROUTINE_EXEC(usbdev_acm_transfer_cb)
 
   /* Push request on stack */
   usbdev_stack_request(&pv->usb, &pv->service, &pv->rq);
+
+#if defined(CONFIG_DEVICE_VALIO_UART_CONFIG)
+  /* Notify listeners */
+  GCT_FOREACH(dev_request_queue, &pv->coding_notify_queue, item, {
+      struct dev_valio_rq_s *rq = dev_valio_rq_s_cast(item);
+
+      dev_request_queue_remove(&pv->coding_notify_queue, &rq->base);
+      rq->error = 0;
+      cdc_line_coding_parse(&pv->coding, rq->data);
+      kroutine_exec(&rq->base.kr);
+    });
+#endif
 }
 
 static
@@ -665,12 +708,77 @@ DEV_CHAR_REQUEST(usbdev_acm_request)
     kroutine_exec(&rq->base.kr);
 }
 
+#if defined(CONFIG_DEVICE_VALIO_UART_CONFIG)
+static
+DEV_VALIO_CANCEL(usbdev_acm_valio_cancel)
+{
+  struct device_s *dev = accessor->dev;
+  struct usbdev_acm_private_s *pv = dev->drv_pv;
+  error_t err = -ENOENT;
+
+  LOCK_SPIN_IRQ(&dev->lock);
+
+  GCT_FOREACH(dev_request_queue, &pv->coding_notify_queue, item, {
+      struct dev_valio_rq_s *rq = dev_valio_rq_s_cast(item);
+
+      if (rq != req)
+        GCT_FOREACH_CONTINUE;
+
+      dev_request_queue_remove(&pv->coding_notify_queue, &rq->base);
+      err = 0;
+      GCT_FOREACH_BREAK;
+    });
+
+  LOCK_RELEASE_IRQ(&dev->lock);
+
+  return err;
+}
+
+static
+DEV_VALIO_REQUEST(usbdev_acm_valio_request)
+{
+  struct device_s               *dev = accessor->dev;
+  struct usbdev_acm_private_s   *pv = dev->drv_pv;
+
+  if (req->attribute != VALIO_UART_CONFIG) {
+    req->error = -ENOTSUP;
+    kroutine_exec(&req->base.kr);
+  }
+
+  LOCK_SPIN_IRQ_SCOPED(&dev->lock);
+
+  switch (req->type) {
+  case DEVICE_VALIO_WRITE:
+    cdc_line_coding_set(&pv->coding, req->data);
+    goto done;
+
+  case DEVICE_VALIO_READ:
+    cdc_line_coding_parse(&pv->coding, req->data);
+
+  done:
+    req->error = 0;
+    kroutine_exec(&req->base.kr);
+    return;
+
+  case DEVICE_VALIO_WAIT_EVENT:
+    dev_request_queue_pushback(&pv->coding_notify_queue, &req->base);
+    return;
+  }
+}
+#endif
+
 #define usbdev_acm_use dev_use_generic
 
 static
 DEV_INIT(usbdev_acm_init)
 {
   error_t err = 0;
+  struct dev_uart_config_s cfg = {
+    .baudrate = 115200,
+    .data_bits = 8,
+    .parity = DEV_UART_PARITY_NONE,
+    .stop_bits = 1,
+  };
 
   struct usbdev_acm_private_s *pv;
 
@@ -700,13 +808,8 @@ DEV_INIT(usbdev_acm_init)
   pv->wtr.base.pvdata = dev;
   pv->rtr.base.pvdata = dev;
 
-  pv->coding.dwDTERate = endian_le32(115200);
-  /* 1 Stop bit */
-  pv->coding.bCharFormat = 0;
-  /* No parity */
-  pv->coding.bParityType = 0;
-  /* Data bits */
-  pv->coding.dwDTERate = 8;
+  device_get_res_uart(dev, &cfg);
+  cdc_line_coding_set(&pv->coding, &cfg);
 
   pv->service.desc = &usb_cdc_acm_service;
   pv->service.pv = dev;
@@ -720,6 +823,9 @@ DEV_INIT(usbdev_acm_init)
 
   dev_request_queue_init(&pv->read_q);
   dev_request_queue_init(&pv->write_q);
+#if defined(CONFIG_DEVICE_VALIO_UART_CONFIG)
+  dev_request_queue_init(&pv->coding_notify_queue);
+#endif
 
   struct usbdev_service_rq_s *rq = &pv->rq;
 
@@ -761,6 +867,9 @@ DEV_CLEANUP(usbdev_acm_cleanup)
 
   dev_request_queue_destroy(&pv->read_q);
   dev_request_queue_destroy(&pv->write_q);
+#if defined(CONFIG_DEVICE_VALIO_UART_CONFIG)
+  dev_request_queue_destroy(&pv->coding_notify_queue);
+#endif
 
   usbdev_stack_free(&pv->usb, pv->rbuffer);
   usbdev_stack_free(&pv->usb, pv->wbuffer);
@@ -773,6 +882,9 @@ DEV_CLEANUP(usbdev_acm_cleanup)
 }
 
 DRIVER_DECLARE(usbdev_acm_drv, 0, "CDC-ACM Dev", usbdev_acm,
+#if defined(CONFIG_DEVICE_VALIO_UART_CONFIG)
+               DRIVER_VALIO_METHODS(usbdev_acm_valio),
+#endif
                DRIVER_CHAR_METHODS(usbdev_acm));
 
 DRIVER_REGISTER(usbdev_acm_drv);
