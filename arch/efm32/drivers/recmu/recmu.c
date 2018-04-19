@@ -327,6 +327,14 @@ DRIVER_PV(struct efm32_recmu_private_s
   efm32_clock_mask_t notify_mask; /* source ep with notification enabled */
 #endif
 
+#ifdef CONFIG_DEVICE_CLOCK_THROTTLE
+  uint8_t configid_cur;
+  uint8_t configid_next;
+  uint8_t configid_app;
+
+  struct kroutine_s configid_updater;
+#endif
+
   uint32_t lfclksel;            /* mux value of lfclksel (without gating) */
 
   /** registers used for next config */
@@ -341,6 +349,10 @@ DRIVER_PV(struct efm32_recmu_private_s
   uint32_t r_lfapresc0;
   uint32_t r_lfbpresc0;
 });
+
+#ifdef CONFIG_DEVICE_CLOCK_THROTTLE
+static void efm32_recmu_configid_refresh(struct device_s *dev);
+#endif
 
 static error_t
 efm32_recmu_get_node_freq(struct efm32_recmu_private_s *pv,
@@ -1327,13 +1339,19 @@ DRIVER_CMU_CONFIG_OPS_DECLARE(efm32_recmu);
 static DEV_CMU_APP_CONFIGID_SET(efm32_recmu_app_configid_set)
 {
   struct device_s *dev = accessor->dev;
-  error_t err;
 
-  LOCK_SPIN_IRQ(&dev->lock);
-  err = dev_cmu_configid_set(dev, &efm32_recmu_config_ops, config_id);
-  LOCK_RELEASE_IRQ(&dev->lock);
+  LOCK_SPIN_IRQ_SCOPED(&dev->lock);
 
-  return err;
+#ifndef CONFIG_DEVICE_CLOCK_THROTTLE
+  return dev_cmu_configid_set(dev, &efm32_recmu_config_ops, config_id);
+#else
+  struct efm32_recmu_private_s *pv = dev->drv_pv;
+
+  pv->configid_app = config_id;
+  efm32_recmu_configid_refresh(dev);
+
+  return 0;
+#endif
 }
 
 static DEV_CLOCK_SRC_SETUP(efm32_recmu_ep_setup)
@@ -1355,6 +1373,12 @@ static DEV_CLOCK_SRC_SETUP(efm32_recmu_ep_setup)
       return 0;
     case DEV_CLOCK_SRC_SETUP_NONOTIFY:
       pv->notify_mask &= ~mask;
+      return 0;
+#endif
+
+#ifdef CONFIG_DEVICE_CLOCK_THROTTLE
+    case DEV_CLOCK_SRC_SETUP_THROTTLE:
+      efm32_recmu_configid_refresh(dev);
       return 0;
 #endif
 
@@ -1406,24 +1430,65 @@ static DEV_USE(efm32_recmu_use)
 {
   switch (op)
     {
-#ifdef CONFIG_DRIVER_EFM32_RECMU_SLEEPDEEP
     case DEV_USE_SLEEP: {
       struct device_s *dev = param;
       struct efm32_recmu_private_s *pv = dev->drv_pv;
+#ifdef CONFIG_DEVICE_CLOCK_THROTTLE
+      if (pv->configid_cur != pv->configid_next)
+        kroutine_exec(&pv->configid_updater);
+#endif
+#ifdef CONFIG_DRIVER_EFM32_RECMU_SLEEPDEEP
       efm32_recmu_clock_gate(pv, pv->use_mask);
 
       if (pv->hfclk_parent == EFM32_CLOCK_HFRCO &&
           !(pv->dep_mask & efm32_clock_em1_mask))
         cpu_mem_write_32(ARMV7M_SCR_ADDR, ARMV7M_SCR_SLEEPDEEP);
-
+#endif
       return 0;
     }
-#endif
 
     default:
       return dev_use_generic(param, op);
     }
 }
+
+#ifdef CONFIG_DEVICE_CLOCK_THROTTLE
+static void efm32_recmu_configid_refresh(struct device_s *dev)
+{
+  struct efm32_recmu_private_s *pv = dev->drv_pv;
+
+  uint_fast8_t configid = pv->configid_app;
+
+  for (size_t i = EFM32_CLOCK_OUT0; i < EFM32_CLOCK_count; ++i)
+    {
+      uint_fast8_t cid = pv->src[i - EFM32_CLOCK_FIRST_EP].configid_min;
+      configid = __MAX(configid, cid);
+    }
+
+  pv->configid_next = configid;
+
+  if (pv->configid_cur == pv->configid_next)
+    return;
+
+  if (pv->configid_cur < pv->configid_next) {
+    pv->configid_cur = pv->configid_next;
+    dev_cmu_configid_set(dev, &efm32_recmu_config_ops, pv->configid_next);
+  } else {
+    device_sleep_schedule(dev);
+  }
+}
+
+static KROUTINE_EXEC(efm32_recmu_configid_update)
+{
+  struct efm32_recmu_private_s *pv = KROUTINE_CONTAINER(kr, *pv, configid_updater);
+  struct device_s *dev = pv->src[0].dev;
+
+  LOCK_SPIN_IRQ_SCOPED(&dev->lock);
+
+  pv->configid_cur = pv->configid_next;
+  dev_cmu_configid_set(dev, &efm32_recmu_config_ops, pv->configid_next);
+}
+#endif
 
 static DEV_INIT(efm32_recmu_init)
 {
@@ -1502,6 +1567,10 @@ static DEV_INIT(efm32_recmu_init)
   pv->lfbclk_parent = EFM32_CLOCK_LFRCO;
 #ifdef EFM32_CLOCK_USBC
   pv->usbcclk_parent = EFM32_CLOCK_HFCLK;
+#endif
+
+#ifdef CONFIG_DEVICE_CLOCK_THROTTLE
+  kroutine_init_deferred(&pv->configid_updater, &efm32_recmu_configid_update);
 #endif
 
   efm32_recmu_read_config(pv);
