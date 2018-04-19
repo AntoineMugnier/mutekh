@@ -110,15 +110,15 @@ DEV_DECLARE_STATIC(recmu_dev, "recmu", 0, efm32_recmu_drv,
                    /* config 0: run on HFRCO @ 14Mhz */
                    DEV_STATIC_RES_CMU_MUX(EFM32_CLOCK_LFRCO, EFM32_CLOCK_LFACLK, 0b0111, 1, 1),
                    DEV_STATIC_RES_CMU_MUX(EFM32_CLOCK_HFRCO, EFM32_CLOCK_HFCLK,  0b0011, 1, 1),
-                   DEV_STATIC_RES_CMU_OSC(EFM32_CLOCK_HFRCO, 0b0001, 14000000, 1),
+                   DEV_STATIC_RES_CMU_OSC_ACC(EFM32_CLOCK_HFRCO, 0b0001, 14000000, 1, 3, 25), // 2.15%
                    /* config 1: run on HFRCO @ 28Mhz */
-                   DEV_STATIC_RES_CMU_OSC(EFM32_CLOCK_HFRCO, 0b0010, 28000000, 1),
+                   DEV_STATIC_RES_CMU_OSC_ACC(EFM32_CLOCK_HFRCO, 0b0010, 28000000, 1, 1, 25), // 1.78%
                    /* config 2: run on LFRCO @ 32khz */
                    DEV_STATIC_RES_CMU_MUX(EFM32_CLOCK_LFRCO, EFM32_CLOCK_HFCLK,  0b0100, 1, 1),
 
                    /* config 3: run on crystals HFXO @ 48Mhz, LFXO @ 32Khz */
-                   DEV_STATIC_RES_CMU_OSC(EFM32_CLOCK_LFXO, 0b1000, 32768, 1),
-                   DEV_STATIC_RES_CMU_OSC(EFM32_CLOCK_HFXO, 0b1000, 48000000, 1),
+                   DEV_STATIC_RES_CMU_OSC_ACC(EFM32_CLOCK_LFXO, 0b1000, 32768, 1, 2, 15), // 20ppm
+                   DEV_STATIC_RES_CMU_OSC_ACC(EFM32_CLOCK_HFXO, 0b1000, 48000000, 1, 2, 15), // 20ppm
                    DEV_STATIC_RES_CMU_MUX(EFM32_CLOCK_LFXO, EFM32_CLOCK_LFACLK, 0b1000, 1, 1),
                    DEV_STATIC_RES_CMU_MUX(EFM32_CLOCK_HFXO, EFM32_CLOCK_HFCLK,  0b1000, 1, 1)
                    );

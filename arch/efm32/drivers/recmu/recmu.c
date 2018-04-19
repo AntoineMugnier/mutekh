@@ -486,20 +486,24 @@ efm32_recmu_get_node_freq(struct efm32_recmu_private_s *pv,
 
     case EFM32_CLOCK_HFRCO: {
       static const uint8_t hfrcoband[8] = { 1, 7, 11, 14, 21, 28 };
+      static const uint8_t hfrcoacc[8] = { 0xd8, 0x98, 0x98, 0x59, 0x39, 0x59 };
+      uint_fast8_t band = EFM32_CMU_HFRCOCTRL_BAND_GET(endian_le32(
+        cpu_mem_read_32(EFM32_CMU_ADDR + EFM32_CMU_HFRCOCTRL_ADDR)));
       freq->denom = 1;
-      freq->num = hfrcoband[EFM32_CMU_HFRCOCTRL_BAND_GET(endian_le32(
-        cpu_mem_read_32(EFM32_CMU_ADDR + EFM32_CMU_HFRCOCTRL_ADDR)))] * 1000000;
-      dev_freq_acc_set(freq, 4, 27); /* 1% */
+      freq->num = hfrcoband[band] * 1000000;
+      dev_freq_acc_set(freq, hfrcoacc[band] >> 5, hfrcoacc[band] & 0x1f);
       break;
     }
 
 #ifdef EFM32_CLOCK_AUXHFRCO
     case EFM32_CLOCK_AUXHFRCO: {
       static const uint8_t auxfrcoband[8] = { 14, 11, 7, 1, 0, 0, 28, 21 };
+      static const uint8_t auxfrcoacc[8] = { 0x59, 0x98, 0x98, 0xd8, 0, 0, 0x59, 0x39 };
+      uint_fast8_t band = EFM32_CMU_AUXHFRCOCTRL_BAND_GET(endian_le32(
+        cpu_mem_read_32(EFM32_CMU_ADDR + EFM32_CMU_AUXHFRCOCTRL_ADDR)));
       freq->denom = 1;
-      freq->num = auxfrcoband[EFM32_CMU_AUXHFRCOCTRL_BAND_GET(endian_le32(
-        cpu_mem_read_32(EFM32_CMU_ADDR + EFM32_CMU_AUXHFRCOCTRL_ADDR)))] * 1000000;
-      dev_freq_acc_set(freq, 4, 27); /* 1% */
+      freq->num = auxfrcoband[band] * 1000000;
+      dev_freq_acc_set(freq, auxfrcoacc[band] >> 5, auxfrcoacc[band] & 0x1f);
       break;
     }
 #endif
@@ -507,13 +511,13 @@ efm32_recmu_get_node_freq(struct efm32_recmu_private_s *pv,
     case EFM32_CLOCK_LFRCO:
       freq->denom = 1;
       freq->num = 32768;
-      dev_freq_acc_set(freq, 4, 27); /* 1% */
+      dev_freq_acc_set(freq, 4, 26); /* 5% */
       break;
 
     case EFM32_CLOCK_ULFRCO:
       freq->denom = 1;
       freq->num = 1000;
-      dev_freq_acc_set(freq, 4, 27); /* 1% */
+      dev_freq_acc_set(freq, 2, 30); /* 60% */
       break;
 
     default:
