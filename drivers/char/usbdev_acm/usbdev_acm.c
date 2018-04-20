@@ -464,8 +464,27 @@ KROUTINE_EXEC(usbdev_acm_transfer_cb)
   struct device_s *dev = rq->pvdata;
   struct usbdev_acm_private_s *pv = dev->drv_pv;
 
-  /* Update coding parameters */
-  memcpy(&pv->coding, rq->ctrl.buffer, sizeof(struct usbdev_cdc_line_coding_s));
+  if (memcmp(&pv->coding, rq->ctrl.buffer,
+             sizeof(struct usbdev_cdc_line_coding_s))) {
+    /* Update coding parameters */
+    memcpy(&pv->coding, rq->ctrl.buffer, sizeof(struct usbdev_cdc_line_coding_s));
+
+#if defined(CONFIG_DEVICE_VALIO_UART_CONFIG)
+    struct dev_uart_config_s config;
+
+    cdc_line_coding_parse(&pv->coding, &config);
+
+    /* Notify listeners */
+    GCT_FOREACH(dev_request_queue, &pv->coding_notify_queue, item, {
+        struct dev_valio_rq_s *rq = dev_valio_rq_s_cast(item);
+
+        dev_request_queue_remove(&pv->coding_notify_queue, &rq->base);
+        rq->error = 0;
+        memcpy(rq->data, &config, sizeof(config));
+        kroutine_exec(&rq->base.kr);
+      });
+#endif
+  }
 
   rq->type = USBDEV_GET_COMMAND;
   rq->error = 0;
@@ -474,18 +493,6 @@ KROUTINE_EXEC(usbdev_acm_transfer_cb)
 
   /* Push request on stack */
   usbdev_stack_request(&pv->usb, &pv->service, &pv->rq);
-
-#if defined(CONFIG_DEVICE_VALIO_UART_CONFIG)
-  /* Notify listeners */
-  GCT_FOREACH(dev_request_queue, &pv->coding_notify_queue, item, {
-      struct dev_valio_rq_s *rq = dev_valio_rq_s_cast(item);
-
-      dev_request_queue_remove(&pv->coding_notify_queue, &rq->base);
-      rq->error = 0;
-      cdc_line_coding_parse(&pv->coding, rq->data);
-      kroutine_exec(&rq->base.kr);
-    });
-#endif
 }
 
 static
