@@ -41,8 +41,10 @@
 inline void * memset(void *dst, int_fast8_t _s, size_t count)
 {
   int8_t s = _s;
-  const reg_t v = (uint8_t)s * (reg_t)0x0101010101010101LL;
   int8_t *a = dst;
+
+#ifndef CONFIG_LIBC_STRING_SMALL
+  const reg_t v = (uint8_t)s * (reg_t)0x0101010101010101LL;
   reg_t *r;
 
   /* align */
@@ -55,7 +57,11 @@ inline void * memset(void *dst, int_fast8_t _s, size_t count)
   for (r = (reg_t*)a; count; count -= sizeof(reg_t))
       *r++ = v;
 
-  for (a = (int8_t*)r; ucount; ucount--)
+  count = ucount;
+  a = (int8_t*)r;
+#endif
+
+  for (; count; count--)
       *a++ = s;
 
   return dst;
@@ -71,6 +77,7 @@ void *memcpy( void *_dst, const void *_src, size_t size )
   reg_t *dst = _dst;
   const reg_t *src = _src;
 
+#ifndef CONFIG_LIBC_STRING_SMALL
   if (((uintptr_t)dst & reg_t_log2_m1) == 0 && ((uintptr_t)src & reg_t_log2_m1) == 0) {
     while (size >= sizeof(reg_t)) {
       *dst++ = *src++;
@@ -79,7 +86,7 @@ void *memcpy( void *_dst, const void *_src, size_t size )
   } else {
     // In the end, we'll only use register copier loop if non-aligned
     // access is CPU-optimized
-#if (defined(HAS_CPU_ENDIAN_64_NA_STORE) && defined(HAS_CPU_ENDIAN_64_NA_LOAD)) \
+# if (defined(HAS_CPU_ENDIAN_64_NA_STORE) && defined(HAS_CPU_ENDIAN_64_NA_LOAD)) \
   || (CONFIG_CPU_NONALIGNED_ACCESS & 8)
     if (sizeof(reg_t) == 8) {
       while (size >= sizeof(reg_t)) {
@@ -87,8 +94,8 @@ void *memcpy( void *_dst, const void *_src, size_t size )
         size -= sizeof(reg_t);
       }
     }
-#endif
-#if (defined(HAS_CPU_ENDIAN_32_NA_STORE) && defined(HAS_CPU_ENDIAN_32_NA_LOAD)) \
+# endif
+# if (defined(HAS_CPU_ENDIAN_32_NA_STORE) && defined(HAS_CPU_ENDIAN_32_NA_LOAD)) \
   || (CONFIG_CPU_NONALIGNED_ACCESS & 4)
     if (sizeof(reg_t) == 4) {
       while (size >= sizeof(reg_t)) {
@@ -96,8 +103,8 @@ void *memcpy( void *_dst, const void *_src, size_t size )
         size -= sizeof(reg_t);
       }
     }
-#endif
-#if (defined(HAS_CPU_ENDIAN_16_NA_STORE) && defined(HAS_CPU_ENDIAN_16_NA_LOAD)) \
+# endif
+# if (defined(HAS_CPU_ENDIAN_16_NA_STORE) && defined(HAS_CPU_ENDIAN_16_NA_LOAD)) \
   || (CONFIG_CPU_NONALIGNED_ACCESS & 2)
     if (sizeof(reg_t) == 2) {
       while (size >= sizeof(reg_t)) {
@@ -105,8 +112,9 @@ void *memcpy( void *_dst, const void *_src, size_t size )
         size -= sizeof(reg_t);
       }
     }
-#endif
+# endif
   }
+#endif
 
   uint8_t *cdst = (uint8_t*)dst;
   uint8_t *csrc = (uint8_t*)src;
