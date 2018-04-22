@@ -20,6 +20,8 @@
 
 */
 
+#define LOGK_MODULE_ID "faul"
+
 #include <mutek/printk.h>
 #include <mutek/startup.h>
 
@@ -50,23 +52,23 @@ static CPU_EXCEPTION_HANDLER(fault_handler)
 
   lock_spin(&fault_lock);
 
-  printk("CPU Fault: cpuid(%u) faultid(%u-%s)\n", cpu_id(), type, name);
-  printk("Execution pointer: %p, Bad address (if any): %p\n"
-	 "Registers:\n"
-		 , (void*)execptr, (void*)dataptr);
+  logk_error("CPU Fault: cpuid(%u) faultid(%u-%s)", cpu_id(), type, name);
+  logk_error("Execution pointer: %p, Bad address (if any): %p",
+             (void*)execptr, (void*)dataptr);
+  logk_error("Registers:");
 
   reg_t *r = regs->gpr;
   for (i = 0; i < CPU_CONTEXT_REG_COUNT; i++)
 # ifdef CPU_CONTEXT_REG_NAMES
-    printk("%s=%p%c", reg_names[i], (void*)*(r + i), (i + 1) % 4 ? ' ' : '\n');
+    logk_error(" %s=%p", reg_names[i], (void*)*(r + i));
 # else
-    printk("%p%c", (void*)*(r + i), (i + 1) % 4 ? ' ' : '\n');
+    logk_error(" %p", (void*)*(r + i));
 # endif
 
-  printk("Stack top (%p):\n", (void*)stackptr);
+  logk_error("Stack:");
 
   for (i = 0; i < 12; i++)
-	  printk("%p%c", (void*)(uintptr_t)sp[i], (i + 1) % 4 ? ' ' : '\n');
+    logk_error(" %p: %p", &sp[i], (void*)(uintptr_t)sp[i]);
 
   lock_release(&fault_lock);
 #endif
