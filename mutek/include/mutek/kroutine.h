@@ -297,6 +297,13 @@ ALWAYS_INLINE void kroutine_init(struct kroutine_s *kr,
 #endif
 }
 
+/** @This initializes a kroutine with the @ref KROUTINE_NONE policy. */
+ALWAYS_INLINE void kroutine_init_none(struct kroutine_s *kr)
+{
+  kr->policy = KROUTINE_NONE;
+  kr->exec = NULL;
+}
+
 /** @This initializes a kroutine with the @ref KROUTINE_IMMEDIATE policy. */
 ALWAYS_INLINE void kroutine_init_immediate(struct kroutine_s *kr,
                                            kroutine_exec_t *exec)
