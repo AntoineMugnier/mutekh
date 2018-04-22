@@ -6,15 +6,21 @@
   CONFIG_LICENSE_APP_LGPL
 
   # Libs
-  CONFIG_PTHREAD
-  CONFIG_PTHREAD_MAIN
 
 %include scripts/options.build
 %include arch/arch.build
 
+  CONFIG_COMPILE_NOBITFIELD! undefined
+  CONFIG_COMPILE_COLLECT! undefined
+  CONFIG_APP_START!
+
+%section test_context
+  CONFIG_MUTEK_THREAD!
+  CONFIG_HEXO_CONTEXT!
   CONFIG_HEXO_CONTEXT_STATS!
   CONFIG_MUTEK_CONTEXT_SCHED_MIGRATION!
-  CONFIG_COMPILE_NOBITFIELD! undefined
+%else
+  CONFIG_HEXO_CONTEXT! undefined
 
 %section test_smp
   %subsection emu-*-*

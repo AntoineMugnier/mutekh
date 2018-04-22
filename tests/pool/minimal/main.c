@@ -1,4 +1,5 @@
 #include <mutek/printk.h>
+#include <mutek/startup.h>
 #include <hexo/power.h>
 
 void app_start()

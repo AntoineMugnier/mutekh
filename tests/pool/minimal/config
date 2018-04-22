@@ -9,11 +9,43 @@ CONFIG_LICENSE_APP_LGPL
 
 CONFIG_APP_START
 
-CONFIG_HEXO_IRQ! undefined
-CONFIG_DEVICE_IRQ! undefined
-CONFIG_DEVICE! undefined
-
-CONFIG_MUTEK_MEMALLOC_SIMPLE!
+CONFIG_LIBC_STRING_SMALL!
+#CONFIG_MUTEK_MEMALLOC_SIMPLE!
 CONFIG_LIBC_FORMATTER_SIMPLE!
 
-CONFIG_COMPILE_COLLECT
+# more undefined ref error are found when disabled
+%section collect
+  CONFIG_COMPILE_COLLECT
+%else
+  CONFIG_COMPILE_COLLECT! undefined
+
+%section t_no_irq
+  CONFIG_HEXO_IRQ! undefined
+%else
+  CONFIG_HEXO_IRQ!
+
+%section t_no_device
+  CONFIG_DEVICE! undefined
+%else
+  CONFIG_DEVICE
+
+%section t_no_context
+  CONFIG_HEXO_CONTEXT! undefined
+%else
+  CONFIG_HEXO_CONTEXT
+
+%section t_no_sched
+  CONFIG_MUTEK_SCHED! undefined
+%else
+  CONFIG_MUTEK_SCHED
+
+%section t_no_alloc
+  CONFIG_MUTEK_MEMALLOC! undefined
+%else
+  CONFIG_MUTEK_MEMALLOC
+
+%section t_no_printk
+  CONFIG_MUTEK_PRINTK! undefined
+%else
+  CONFIG_MUTEK_PRINTK
+

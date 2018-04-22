@@ -31,3 +31,4 @@ ifeq ($(CONFIG_CPU_X86), defined)
 objs = test_x86.o
 endif
 
+objs += start.o
