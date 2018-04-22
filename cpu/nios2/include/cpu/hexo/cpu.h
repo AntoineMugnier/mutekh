@@ -103,15 +103,17 @@ cpu_trap(void)
 
 ALWAYS_INLINE void cpu_dcache_invld(void *ptr)
 {
+#ifdef CONFIG_ARCH_SOCLIB
   __asm__ volatile (
-# ifdef CONFIG_ARCH_SOCLIB
 		    " ldw zero, (%0)"
 		    : : "r" (ptr)
-# else
-		      "nop"::
-# endif
 		    : "memory"
 		    );
+#endif
+}
+
+ALWAYS_INLINE void cpu_dcache_flush(void *ptr)
+{
 }
 
 ALWAYS_INLINE size_t cpu_dcache_line_size(void)

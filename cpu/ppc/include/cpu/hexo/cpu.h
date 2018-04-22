@@ -83,6 +83,16 @@ ALWAYS_INLINE void cpu_dcache_invld(void *ptr)
                 );
 }
 
+ALWAYS_INLINE void cpu_dcache_flush(void *ptr)
+{
+  asm volatile (
+                "dcbf 0, %0"
+                :
+                : "r" (ptr)
+                : "memory"
+                );
+}
+
 ALWAYS_INLINE size_t cpu_dcache_line_size(void)
 {
   return CONFIG_CPU_CACHE_LINE;

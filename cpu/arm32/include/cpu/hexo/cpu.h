@@ -105,6 +105,19 @@ ALWAYS_INLINE void cpu_dcache_invld(void *ptr)
 #endif
 }
 
+ALWAYS_INLINE void cpu_dcache_flush(void *ptr)
+{
+#if defined(CONFIG_CPU_CACHE)
+    THUMB_TMP_VAR;
+	asm(
+        THUMB_TO_ARM
+        "mcr p15, 0, %[ptr], c7, c14, 1\n\t"
+        ARM_TO_THUMB
+        /*:*/ THUMB_OUT(:)
+        : [ptr] "r"(ptr));
+#endif
+}
+
 ALWAYS_INLINE size_t cpu_dcache_line_size(void)
 {
 #if defined(CONFIG_CPU_CACHE)
