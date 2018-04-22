@@ -102,6 +102,7 @@ char *
 strcpy(char *dest, const char *src);
 #define strcpy __builtin_strcpy
 
+config_depend(CONFIG_MUTEK_MEMALLOC)
 char *  __attribute__ ((malloc))
 strdup(const char *s);
 #define strdup __builtin_strdup

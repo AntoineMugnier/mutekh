@@ -39,15 +39,19 @@ C_HEADER_BEGIN
 
 #include "alloca.h"
 
+config_depend(CONFIG_MUTEK_MEMALLOC)
 void * __attribute__ ((malloc))
 calloc(size_t nmemb, size_t size);
 
+config_depend(CONFIG_MUTEK_MEMALLOC)
 void * __attribute__ ((malloc))
 malloc(size_t size);
 
+config_depend(CONFIG_MUTEK_MEMALLOC)
 void 
 free(void *ptr);
 
+config_depend(CONFIG_MUTEK_MEMALLOC_SMART)
 void * __attribute__ ((malloc))
 realloc(void *ptr, size_t size);
 

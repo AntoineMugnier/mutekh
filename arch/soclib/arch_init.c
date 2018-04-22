@@ -86,6 +86,8 @@ void soclib_memcheck_initsmp()
 
 /////////////////////////////////////////////////////////////////////
 
+#ifdef CONFIG_MUTEK_MEMALLOC
+
 #include <mutek/mem_alloc.h>
 #include <mutek/mem_region.h>
 #include <mutek/mem_alloc.h>
@@ -96,6 +98,8 @@ void soclib_mem_init()
                                          (void*)(CONFIG_STARTUP_HEAP_ADDR +
                                                  CONFIG_STARTUP_HEAP_SIZE));
 }
+
+#endif
 
 /////////////////////////////////////////////////////////////////////
 

@@ -28,6 +28,7 @@ free(void *ptr)
     mem_free(ptr);
 }
 
+#ifdef CONFIG_MUTEK_MEMALLOC_SMART
 void *
 realloc(void *ptr, size_t size)
 {
@@ -73,3 +74,4 @@ realloc(void *ptr, size_t size)
   return p;
 }
 
+#endif

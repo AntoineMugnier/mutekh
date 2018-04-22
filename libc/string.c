@@ -303,7 +303,7 @@ inline char * strcpy (char *s1, const char *s2)
 
 /********************************/
 
-#ifndef HAS_CPU_STRDUP
+#if !defined(HAS_CPU_STRDUP) && defined(CONFIG_MUTEK_MEMALLOC)
 #undef strdup
 inline char *strdup(const char *s)
 {

@@ -72,6 +72,7 @@ void mutek_mem_alloc_init()
   cpu_mem_write_32(CONFIG_STARTUP_STACK_ADDR, 0x42ab8d64);
 }
 
+# ifdef CONFIG_DEVICE_CPU
 void mutek_startup_stack_reclaim()
 {
   /* check the guard value of the startup stack */
@@ -81,6 +82,7 @@ void mutek_startup_stack_reclaim()
   /* merge the startup stack space in the allocator default region */
   memory_allocator_extend(default_region, (void*)CONFIG_STARTUP_STACK_ADDR, CONFIG_STARTUP_STACK_SIZE);
 }
+# endif
 
 #endif
 

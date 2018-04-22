@@ -59,25 +59,35 @@ typedef	error_t		gct_err_t;
 typedef size_t		_gct_index_t;
 typedef ssize_t		_gct_sindex_t;
 
-ALWAYS_INLINE void* _gct_malloc(size_t s)
+ALWAYS_INLINE
+void* _gct_malloc(size_t s)
 {
+#ifdef CONFIG_MUTEK_MEMALLOC
   extern void *malloc(size_t);
-
   return malloc(s);
+#else
+  return NULL;
+#endif
 }
 
-ALWAYS_INLINE void* _gct_realloc(void *p, size_t s)
+ALWAYS_INLINE
+void* _gct_realloc(void *p, size_t s)
 {
+#ifdef CONFIG_MUTEK_MEMALLOC_SMART
   extern void *realloc(void *, size_t);
-
   return realloc(p, s);
+#else
+  return NULL;
+#endif
 }
 
-ALWAYS_INLINE void _gct_free(void *p)
+ALWAYS_INLINE
+void _gct_free(void *p)
 {
+#ifdef CONFIG_MUTEK_MEMALLOC
   extern void free(void *);
-
   free(p);
+#endif
 }
 
 #include <gct_atomic.h>

@@ -3,7 +3,6 @@ DIR_CFLAGS = -D_HEXO_INTTYPES_DEPRECATED
 
 objs =						\
 string.o					\
-alloc.o						\
 intconv.o					\
 rand.o						\
 error.o						\
@@ -11,7 +10,7 @@ qsort.o						\
 stdlib.o					\
 unistd.o
 
-
+objs-$(CONFIG_MUTEK_MEMALLOC) += alloc.o
 objs-$(CONFIG_LIBC_TIME) += time.o
 objs-$(CONFIG_LIBC_ASSERT) += assert.o
 objs-$(CONFIG_LIBC_STREAM) += stdio.o
