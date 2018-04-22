@@ -138,6 +138,7 @@ cc1310                = Config("cc1310-f128-rgz",            _cc26xx_features)
 
 all_cpus             = OrMatch(soclib_mips32el,  # mips32
                                soclib_arm32,     # arm32
+                               soclib_arm32_big, # arm32
                                soclib_ppc,       # ppc
                                soclib_sparc,     # sparc
                                soclib_nios2,     # nios2
