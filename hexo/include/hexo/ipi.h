@@ -40,7 +40,9 @@ C_HEADER_BEGIN
 
 #include "error.h"
 #include "local.h"
-#include <device/device.h>
+#ifdef CONFIG_DEVICE
+# include <device/device.h>
+#endif
 
 #define IPI_MSG_FUNC(n) void (n)(void *priv)
 

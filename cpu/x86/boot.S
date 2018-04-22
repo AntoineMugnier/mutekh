@@ -23,6 +23,10 @@
 #include <hexo/asm.h>
 #include <hexo/cpu.h>
 
+#ifdef CONFIG_ARCH_SMP
+# include <device/class/cpu.h>
+#endif
+
 /* 
  * 16 bits real mode initialisation code is used just after cpu
  * reset. It can be used when code is embedded in a ROM or for
@@ -119,7 +123,7 @@ FUNC_START(.text, mutekh_entry)
         test    %ebx, %ebx
         jz      2f
 
-        movl    CPU_TREE_CPU_ID(%ebx), %ecx
+        movl    _offsetof(cpu_tree_s, cpu_id)(%ebx), %ecx
         xorl    $CPU_TREE_XOR_VALUE, %ecx
         cmp     %eax, %ecx
 
@@ -130,13 +134,13 @@ FUNC_START(.text, mutekh_entry)
         setb    %cl
         movzx   %cl, %ecx
         dec     %ecx
-        movl    CPU_TREE_CHILDS(0)(%ebx, %ecx, 4), %ebx
+        movl    _offsetof(cpu_tree_s, childs)(%ebx, %ecx, 4), %ebx
 
         jmp     4b
 3:
         
         /* get address of the cpu stack */
-        movl    CPU_TREE_STACK(%ebx), %esp
+        movl    _offsetof(cpu_tree_s, stack)(%ebx), %esp
         addl    $CONFIG_HEXO_CPU_STACK_SIZE, %esp
 #  ifdef CONFIG_COMPILE_FRAMEPTR
         movl    %esp, %ebp

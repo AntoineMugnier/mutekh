@@ -6,6 +6,10 @@
 #include <hexo/interrupt.h>
 #include <mutek/startup.h>
 
+#ifdef CONFIG_DEVICE
+# include <device/class/cpu.h>
+#endif
+
 #include <mutek/mem_alloc.h>
 
 #include <string.h>

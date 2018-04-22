@@ -22,6 +22,10 @@
 #include <hexo/asm.h>
 #include <hexo/cpu.h>
 
+#ifdef CONFIG_ARCH_SMP
+# include <device/class/cpu.h>
+#endif
+
 #ifdef CONFIG_LOAD_RESET_SEPARATE
 .section .reset,"ax",@progbits
 CPU_NAME_DECL(reset_vector):
@@ -79,7 +83,7 @@ FUNC_START(.text, mutekh_entry)
         nop
 
         /* get node cpu id and compare */
-        ld      [%g5 + CPU_TREE_CPU_ID], %g3
+        ld      [%g5 + _offsetof(cpu_tree_s, cpu_id)], %g3
         xor     %g3,    %g2,    %g3
         cmp     %g3,    %g4
 
@@ -91,14 +95,14 @@ FUNC_START(.text, mutekh_entry)
         addx    %g0, 0, %g6
         sll     %g6,    2,     %g6
         add     %g6,    %g5,   %g6
-        ld      [%g6 + CPU_TREE_CHILDS(0)], %g5
+        ld      [%g6 + _offsetof(cpu_tree_s, childs)], %g5
 
         b       4b
         nop
 
 3:      
         /* get address of the cpu stack */
-        ld      [%g5 + CPU_TREE_STACK], %sp
+        ld      [%g5 + _offsetof(cpu_tree_s, stack)], %sp
         set     CONFIG_HEXO_CPU_STACK_SIZE - SPARC_STACK_REDZONE, %g2
         add     %sp,    %g2,    %sp
 #  ifdef CONFIG_COMPILE_FRAMEPTR

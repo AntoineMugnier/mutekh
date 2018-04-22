@@ -70,6 +70,9 @@ void soclib_memcheck_init()
 }
 
 # ifdef CONFIG_ARCH_SMP
+
+#include <device/class/cpu.h>
+
 void soclib_memcheck_initsmp()
 {
   if (!cpu_isbootstrap())

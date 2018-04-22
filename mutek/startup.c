@@ -29,6 +29,7 @@
 
 #ifdef CONFIG_DEVICE
 # include <device/device.h>
+# include <device/class/cpu.h>
 #endif
 
 #include <stdlib.h>

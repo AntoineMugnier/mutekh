@@ -51,6 +51,7 @@
 
 struct kroutine_s;
 struct kroutine_sequence_s;
+struct cpu_tree_s;
 
 /** @This flags are passed to the @ref kroutine_exec_t handler */
 enum kroutine_exec_flags_e

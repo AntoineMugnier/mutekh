@@ -24,6 +24,10 @@
 #include <hexo/asm.h>
 #include <hexo/cpu.h>
 
+#ifdef CONFIG_ARCH_SMP
+# include <device/class/cpu.h>
+#endif
+
 #ifdef CONFIG_LOAD_RESET_SEPARATE
 .section .reset,"ax",@progbits
 CPU_NAME_DECL(reset_vector):
@@ -80,7 +84,7 @@ FUNC_START(.text, mutekh_entry)
         beq     2f
 
         /* get node cpu id */
-        lwz     3,              CPU_TREE_CPU_ID(5)
+        lwz     3,              _offsetof(cpu_tree_s, cpu_id)(5)
         xor     3,      2,      3
 
         /* matching node */
@@ -94,13 +98,13 @@ FUNC_START(.text, mutekh_entry)
 
         slwi    6,      6,      2
         add     6,      6,      5
-        lwz     5,              CPU_TREE_CHILDS(0)(6)
+        lwz     5,              _offsetof(cpu_tree_s, childs)(6)
 
         b       4b
 
 3:
         /* get address of the cpu stack */        
-        lwz     1,              CPU_TREE_STACK(5)
+        lwz     1,              _offsetof(cpu_tree_s, stack)(5)
         LI32    2,              (CONFIG_HEXO_CPU_STACK_SIZE \
                               - CONFIG_HEXO_STACK_ALIGN)
         add     1,      1,      2

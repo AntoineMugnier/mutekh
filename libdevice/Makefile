@@ -18,6 +18,8 @@ objs = driver.o device.o resources.o init.o request.o
 objs-$(CONFIG_DEVICE_IRQ) += irq.o
 objs-$(CONFIG_DEVICE_SLEEP) += sleep.o
 
+objs-$(CONFIG_DEVICE_CPU) += device_cpu.o
+
 ifeq ($(CONFIG_DEVICE_ENUM), defined)
 objs += device_enum.o
 objs-$(CONFIG_DEVICE_SHELL) += shell_enum.o
