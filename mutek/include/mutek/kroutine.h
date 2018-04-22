@@ -306,7 +306,7 @@ ALWAYS_INLINE void kroutine_init_immediate(struct kroutine_s *kr,
 }
 
 /** @This initializes a kroutine with the @ref KROUTINE_TRIGGER policy. */
-config_depend_alwaysinline(CONFIG_MUTEK_KROUTINE_TRIGGER,
+config_depend_inline(CONFIG_MUTEK_KROUTINE_TRIGGER,
 void kroutine_init_trigger(struct kroutine_s *kr,
                            kroutine_exec_t *exec),
 {
@@ -319,7 +319,7 @@ void kroutine_init_trigger(struct kroutine_s *kr,
 });
 
 /** @This initializes a kroutine with the @ref KROUTINE_DEFERRED policy. */
-config_depend_alwaysinline(CONFIG_MUTEK_KROUTINE_SCHED,
+config_depend_inline(CONFIG_MUTEK_KROUTINE_SCHED,
 void kroutine_init_deferred(struct kroutine_s *kr,
                             kroutine_exec_t *exec),
 {
@@ -336,23 +336,14 @@ void kroutine_init_deferred(struct kroutine_s *kr,
 
 /** @This initializes a kroutine with the @ref KROUTINE_CPU_DEFERRED
     policy. The target processor used for execution must be specified. */
-config_depend_and2_alwaysinline(CONFIG_ARCH_SMP, CONFIG_MUTEK_KROUTINE_SCHED,
+config_depend_and2(CONFIG_ARCH_SMP, CONFIG_MUTEK_KROUTINE_SCHED)
 void kroutine_init_deferred_cpu(struct kroutine_s *kr,
                                 kroutine_exec_t *exec,
-                                struct cpu_tree_s *cpu),
-{
-  kr->policy = KROUTINE_CPU_DEFERRED;
-  kr->exec = exec;
-  atomic_fast8_set(&kr->state, KROUTINE_INVALID);
-  kr->cls = cpu->cls;
-#if CONFIG_MUTEK_SCHED_PRIORITIES > 1
-  kr->priority = KROUTINE_DEFAULT_PRIORITY;
-#endif
-});
+                                struct cpu_tree_s *cpu);
 
 /** @This initializes a kroutine with the @ref KROUTINE_CPU_DEFERRED policy.
     The execution will take place on the current processor. */
-config_depend_alwaysinline(CONFIG_MUTEK_KROUTINE_SCHED,
+config_depend_inline(CONFIG_MUTEK_KROUTINE_SCHED,
 void kroutine_init_deferred_local(struct kroutine_s *kr,
                                   kroutine_exec_t *exec),
 {
@@ -369,7 +360,7 @@ void kroutine_init_deferred_local(struct kroutine_s *kr,
 
 /** @This initializes a kroutine with the @ref KROUTINE_CPU_DEFERRED policy.
     The execution will take place on the current processor. */
-config_depend_alwaysinline(CONFIG_MUTEK_KROUTINE_SCHED,
+config_depend_inline(CONFIG_MUTEK_KROUTINE_SCHED,
 void kroutine_init_deferred_seq(struct kroutine_s *kr,
                                 kroutine_exec_t *exec,
                                 struct kroutine_sequence_s *seq),
@@ -386,7 +377,7 @@ void kroutine_init_deferred_seq(struct kroutine_s *kr,
 });
 
 /** @This initializes a kroutine with the @ref KROUTINE_SCHED_SWITCH policy. */
-config_depend_alwaysinline(CONFIG_MUTEK_KROUTINE_SCHED,
+config_depend_inline(CONFIG_MUTEK_KROUTINE_SCHED,
 void kroutine_init_sched_switch(struct kroutine_s *kr,
                                 kroutine_exec_t *exec),
 {
@@ -403,23 +394,14 @@ void kroutine_init_sched_switch(struct kroutine_s *kr,
 
 /** @This initializes a kroutine with the @ref KROUTINE_CPU_SCHED_SWITCH policy.
     The target processor used for execution must be specified. */
-config_depend_and2_alwaysinline(CONFIG_ARCH_SMP, CONFIG_MUTEK_KROUTINE_SCHED,
+config_depend_and2(CONFIG_ARCH_SMP, CONFIG_MUTEK_KROUTINE_SCHED)
 void kroutine_init_sched_switch_cpu(struct kroutine_s *kr,
                                     kroutine_exec_t *exec,
-                                    struct cpu_tree_s *cpu),
-{
-  kr->policy = KROUTINE_CPU_SCHED_SWITCH;
-  kr->exec = exec;
-  atomic_fast8_set(&kr->state, KROUTINE_INVALID);
-  kr->cls = cpu->cls;
-#if CONFIG_MUTEK_SCHED_PRIORITIES > 1
-  kr->priority = KROUTINE_DEFAULT_PRIORITY;
-#endif
-});
+                                    struct cpu_tree_s *cpu);
 
 /** @This initializes a kroutine with the @ref KROUTINE_CPU_SCHED_SWITCH policy.
     The execution will take place on the current processor. */
-config_depend_alwaysinline(CONFIG_MUTEK_KROUTINE_SCHED,
+config_depend_inline(CONFIG_MUTEK_KROUTINE_SCHED,
 void kroutine_init_sched_switch_local(struct kroutine_s *kr,
                                       kroutine_exec_t *exec),
 {
@@ -436,7 +418,7 @@ void kroutine_init_sched_switch_local(struct kroutine_s *kr,
 
 /** @This initializes a kroutine with the @ref KROUTINE_CPU_SCHED_SWITCH policy.
     The execution will take place on the current processor. */
-config_depend_alwaysinline(CONFIG_MUTEK_KROUTINE_SCHED,
+config_depend_inline(CONFIG_MUTEK_KROUTINE_SCHED,
 void kroutine_init_sched_switch_seq(struct kroutine_s *kr,
                                     kroutine_exec_t *exec,
                                     struct kroutine_sequence_s *seq),
@@ -453,7 +435,7 @@ void kroutine_init_sched_switch_seq(struct kroutine_s *kr,
 });
 
 /** @This initializes a kroutine with the @ref KROUTINE_INTERRUPTIBLE policy. */
-config_depend_alwaysinline(CONFIG_MUTEK_KROUTINE_SCHED,
+config_depend_inline(CONFIG_MUTEK_KROUTINE_SCHED,
 void kroutine_init_interruptible(struct kroutine_s *kr,
                                  kroutine_exec_t *exec),
 {
@@ -470,23 +452,14 @@ void kroutine_init_interruptible(struct kroutine_s *kr,
 
 /** @This initializes a kroutine with the @ref KROUTINE_CPU_INTERRUPTIBLE
     policy. The target processor used for execution must be specified. */
-config_depend_and2_alwaysinline(CONFIG_ARCH_SMP, CONFIG_MUTEK_KROUTINE_SCHED,
+config_depend_and2(CONFIG_ARCH_SMP, CONFIG_MUTEK_KROUTINE_SCHED)
 void kroutine_init_interruptible_cpu(struct kroutine_s *kr,
                                      kroutine_exec_t *exec,
-                                     struct cpu_tree_s *cpu),
-{
-  kr->policy = KROUTINE_CPU_INTERRUPTIBLE;
-  kr->exec = exec;
-  atomic_fast8_set(&kr->state, KROUTINE_INVALID);
-  kr->cls = cpu->cls;
-#if CONFIG_MUTEK_SCHED_PRIORITIES > 1
-  kr->priority = KROUTINE_DEFAULT_PRIORITY;
-#endif
-});
+                                     struct cpu_tree_s *cpu);
 
 /** @This initializes a kroutine with the @ref KROUTINE_CPU_INTERRUPTIBLE policy.
     The execution will take place on the current processor. */
-config_depend_alwaysinline(CONFIG_MUTEK_KROUTINE_SCHED,
+config_depend_inline(CONFIG_MUTEK_KROUTINE_SCHED,
 void kroutine_init_interruptible_local(struct kroutine_s *kr,
                                        kroutine_exec_t *exec),
 {
@@ -504,7 +477,7 @@ void kroutine_init_interruptible_local(struct kroutine_s *kr,
 /** @This initializes a kroutine with the @ref KROUTINE_SEQ_INTERRUPTIBLE policy.
     The handler will not run concurrently with kroutines associated to the same
     sequence. */
-config_depend_alwaysinline(CONFIG_MUTEK_KROUTINE_SCHED,
+config_depend_inline(CONFIG_MUTEK_KROUTINE_SCHED,
 void kroutine_init_interruptible_seq(struct kroutine_s *kr,
                                      kroutine_exec_t *exec,
                                      struct kroutine_sequence_s *seq),
@@ -521,7 +494,7 @@ void kroutine_init_interruptible_seq(struct kroutine_s *kr,
 });
 
 /** @This initializes a kroutine with the @ref KROUTINE_IDLE policy. */
-config_depend_alwaysinline(CONFIG_MUTEK_KROUTINE_IDLE,
+config_depend_inline(CONFIG_MUTEK_KROUTINE_IDLE,
 void kroutine_init_idle(struct kroutine_s *kr,
                         kroutine_exec_t *exec),
 {
@@ -531,7 +504,7 @@ void kroutine_init_idle(struct kroutine_s *kr,
 });
 
 /** @This initializes a kroutine with the @ref KROUTINE_QUEUE policy. */
-config_depend_alwaysinline(CONFIG_MUTEK_KROUTINE_QUEUE,
+config_depend_inline(CONFIG_MUTEK_KROUTINE_QUEUE,
 void kroutine_init_queue(struct kroutine_s *kr,
                          kroutine_exec_t *exec,
                          struct kroutine_queue_s *queue),
@@ -544,7 +517,7 @@ void kroutine_init_queue(struct kroutine_s *kr,
 
 /** @This initializes a queue used to push kroutine initialized with
     the @ref KROUTINE_QUEUE policy. */
-config_depend_alwaysinline(CONFIG_MUTEK_KROUTINE_QUEUE,
+config_depend_inline(CONFIG_MUTEK_KROUTINE_QUEUE,
 error_t kroutine_queue_init(struct kroutine_queue_s *q,
                             struct semaphore_s *sem),
 {
@@ -558,7 +531,7 @@ error_t kroutine_queue_init(struct kroutine_queue_s *q,
 });
 
 /** @This releases resources associated to a kroutine sequence. */
-config_depend_alwaysinline(CONFIG_MUTEK_KROUTINE_QUEUE,
+config_depend_inline(CONFIG_MUTEK_KROUTINE_QUEUE,
 void kroutine_queue_cleanup(struct kroutine_queue_s *q),
 {
   kroutine_list_destroy(&q->list);
@@ -722,7 +695,7 @@ bool_t kroutine_trigger(struct kroutine_s *kr, enum kroutine_policy_e policy),
 
     This can be used to leave then resume a FSM loop when an
     asynchronous operation as not already completed. */
-config_depend_alwaysinline(CONFIG_MUTEK_KROUTINE_TRIGGER,
+config_depend_inline(CONFIG_MUTEK_KROUTINE_TRIGGER,
 bool_t kroutine_postpone(struct kroutine_s *kr, enum kroutine_policy_e policy),
 {
   assert(policy != KROUTINE_TRIGGER && kr->policy == KROUTINE_TRIGGER);
@@ -733,7 +706,7 @@ bool_t kroutine_postpone(struct kroutine_s *kr, enum kroutine_policy_e policy),
 });
 
 /** @This initializes a kroutine sequence. */
-config_depend_alwaysinline(CONFIG_MUTEK_KROUTINE_QUEUE,
+config_depend_inline(CONFIG_MUTEK_KROUTINE_QUEUE,
 error_t kroutine_seq_init(struct kroutine_sequence_s *seq),
 {
 #ifdef CONFIG_ARCH_SMP
