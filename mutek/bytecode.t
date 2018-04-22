@@ -18,6 +18,8 @@
  * Alexandre Becoulet <alexandre.becoulet@free.fr>
  */
 
+#define LOGK_MODULE_ID "bcvm"
+
 #include <mutek/printk.h>
 #include <mutek/bytecode.h>
 
@@ -228,7 +230,7 @@ static void bc_dump_op(const struct bc_context_s *ctx, const uint16_t *pc)
 # ifdef CONFIG_MUTEK_BYTECODE_NATIVE
   if (ctx->desc->flags & BC_FLAGS_NATIVE)
     {
-      printk("bytecode: pc=%p", pc);
+      logk_trace("bytecode: pc=%p, mode=%u", pc, mode);
     }
   else
 # endif
@@ -237,27 +239,30 @@ static void bc_dump_op(const struct bc_context_s *ctx, const uint16_t *pc)
       const void *code = ctx->desc->code;
       size_t size = ctx->desc->flags & BC_FLAGS_SIZEMASK;
 
-      printk("bytecode: pc=%p (%u)", pc, pc - (uint16_t*)code);
-
       if (pc >= (uint16_t*)code &&
           (uint8_t*)pc < (uint8_t*)code + size &&
           !((uintptr_t)pc & 1))
         {
           uint16_t op = endian_le16(*pc);
 
-          printk(", opcode=%04x (%s)", op, bc_opname(op));
+          logk_trace("bytecode: pc=%p (%u), opcode=%04x (%s), mode=%u",
+                 pc, pc - (uint16_t*)code,
+                 op, bc_opname(op), mode);
+        }
+      else
+        {
+          logk_trace("bytecode: pc=%p (%u), mode=%u",
+                 pc, pc - (uint16_t*)code, mode);
         }
 # endif
     }
-
-  printk(", mode=%u\n", ctx->mode);
 }
 
 static void bc_dump_regs(const struct bc_context_s *ctx)
 {
   uint_fast8_t i;
   for (i = 0; i < 16; i++)
-    printk("r%02u=%" BC_REG_FORMAT "%c", i, ctx->v[i], (i + 1) % 4 ? ' ' : '\n');
+    logk_trace(" r%02u: %" BC_REG_FORMAT, i, ctx->v[i]);
 }
 
 static void bc_dump_pc(const struct bc_context_s *ctx, const uint16_t *pc)
@@ -1240,7 +1245,7 @@ bc_opcode_t bc_run_##fcname(struct bc_context_s *ctx)
 
  err_die:
   BC_CONFIG_DEBUG(
-    printk("bytecode: die %p\n", pc);
+    logk_error("Die at %p", pc);
     bc_dump_pc(ctx, pc);
   );
 
