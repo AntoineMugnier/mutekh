@@ -67,6 +67,7 @@ lm32_reset_vector:
         seta    r1,     mutekh_entry
         b       r1
 
+#ifdef CONFIG_HEXO_EXCEP
         /* breakpoint */
         .org lm32_exception_vector + 1*32
         mv      r30,    r31
@@ -88,26 +89,25 @@ lm32_reset_vector:
         /* div by 0 */
         .org lm32_exception_vector + 5*32
         LM32_EXCEPT_ENTRY CPU_FAULT_DIV_BY_0
-
-        /* irq */
-        .org lm32_exception_vector + 6*32
-
-#ifdef CONFIG_HEXO_IRQ
-        seta    r31, lm32_irq_entry
-        b       r31
-#else
-        LM32_EXCEPT_ENTRY CPU_FAULT_LOST_IRQ
 #endif
 
+#ifdef CONFIG_HEXO_IRQ
+        /* irq */
+        .org lm32_exception_vector + 6*32
+        seta    r31, lm32_irq_entry
+        b       r31
+#endif
+
+#ifdef CONFIG_HEXO_EXCEP
         /* syscall */
         .org lm32_exception_vector + 7*32
-
         LM32_EXCEPT_ENTRY CPU_FAULT_SYSCALL
+#endif
 
-        .org lm32_exception_vector + 8*32
 lm32_exception_vector_end:
         .globl lm32_reset_vector_end
 
+#ifdef CONFIG_HEXO_EXCEP
 FUNC_START(.text, lm32_excep_entry)
 
         // save caller saved & r11, ra (r1 & r2 already saved)
@@ -145,6 +145,7 @@ FUNC_START(.text, lm32_excep_entry)
         bi      lm32_restore_preempt
 
 FUNC_END(lm32_excep_entry)
+#endif
 
 #ifdef CONFIG_HEXO_IRQ
 FUNC_START(.text, lm32_irq_entry)

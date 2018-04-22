@@ -7,6 +7,7 @@ from mt.base.expectation import *
 from mutekh.test.stages import configure, build, execute
 from mutekh.test.archs import *
 
+test_no_excep    = Config("t_no_excep")
 test_no_irq      = Config("t_no_irq")
 test_no_device   = Config("t_no_device")
 test_no_context  = Config("t_no_context")
@@ -25,7 +26,7 @@ Environment(
         Dimension(*all_cpus.filter_by_feature("+minimal").expand()),
 
         Dimension(test_no_irq, None),
-        Dimension(test_no_device, None),
+        Dimension(test_no_device, test_no_excep, None),
         Dimension(test_no_context, None),
         ],
 

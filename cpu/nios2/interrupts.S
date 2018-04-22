@@ -106,7 +106,8 @@ nios2_exception_vector:
         /*************************************************************
           exception handling
          **************************************************************/
-nios2_interrupt_ex:                                   
+#ifdef CONFIG_HEXO_EXCEP
+nios2_interrupt_ex:
 
         // save return address
         addi     r29,    r29,   -4
@@ -140,6 +141,9 @@ nios2_interrupt_ex:
         ldw     r29,    CPU_NIOS2_CONTEXT_PC(r24)
 
         br      nios2_preempt_and_restore
+#else
+1:      br 1b
+#endif
 
         /*************************************************************
           syscall handling

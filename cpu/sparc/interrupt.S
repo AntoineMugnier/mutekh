@@ -96,22 +96,26 @@ CPU_NAME_DECL(reset_vector):
 #endif
         PUT_ENTRY       0,          mutekh_entry
 
+#ifdef CONFIG_HEXO_EXCEP
       /* 11 faults 0x01 - 0x0b */
+        .org CPU_NAME_DECL(exception_vector) + 0x01 * 16
         PUT_ENTRIES     1,    11,   sparc_excep_entry
         PUT_EQ_ENTRIES  0x0c, 0x10, sparc_excep_entry,  0
+#endif
 
-      /* 15 irqs 0x11 - 0x1f */
 #ifdef CONFIG_HEXO_IRQ
+      /* 15 irqs 0x11 - 0x1f */
+        .org CPU_NAME_DECL(exception_vector) + 0x11 * 16
 # ifdef CONFIG_CPU_SPARC_BLOCK_NMI
         PUT_ENTRIES     0,    13,   sparc_irq_entry
         PUT_ENTRY       14,         sparc_nmi_entry
 # else
         PUT_ENTRIES     0,    14,   sparc_irq_entry
 # endif
-#else
-        PUT_EQ_ENTRIES  0,    14,   sparc_excep_entry, 0
 #endif
-        
+
+#ifdef CONFIG_HEXO_EXCEP
+        .org CPU_NAME_DECL(exception_vector) + 0x20 * 16
       /* 10 faults 0x20 - 0x3c */
         PUT_ENTRIES     12,   13,   sparc_excep_entry /* 0x20, 0x21 */
         PUT_EQ_ENTRIES  0x22, 0x23, sparc_excep_entry, 0
@@ -121,12 +125,12 @@ CPU_NAME_DECL(reset_vector):
         PUT_EQ_ENTRIES  0x2d, 0x3b, sparc_excep_entry, 0
         PUT_ENTRY       21,         sparc_excep_entry /* 0x3c */
         PUT_EQ_ENTRIES  0x3d, 0x7f, sparc_excep_entry, 0
+#endif
 
 #ifdef CONFIG_HEXO_USERMODE
+        .org CPU_NAME_DECL(exception_vector) + 0x80 * 16
       /* syscalls */
         PUT_ENTRIES     0x0, 0x7f, sparc_syscall_entry
-#else
-        PUT_EQ_ENTRIES  0x0, 0x7f, sparc_excep_entry, 0
 #endif
 
 
@@ -208,6 +212,7 @@ CPU_NAME_DECL(reset_vector):
 .endm
 
 
+#ifdef CONFIG_HEXO_EXCEP
 FUNC_START(.text, sparc_excep_entry)
 
         SPARC_EXCEPT_SAVE
@@ -257,7 +262,7 @@ FUNC_START(.text, sparc_excep_entry)
         ld     [%g5 + CPU_SPARC_CONTEXT_NPC], %l2
 
 FUNC_END(sparc_excep_entry)
-
+#endif
 
 #ifdef CONFIG_HEXO_USERMODE
 FUNC_START(.text, sparc_syscall_entry)

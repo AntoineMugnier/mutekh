@@ -134,6 +134,8 @@ static DEV_CPU_REG_INIT(arm_cpu_reg_init)
   void CPU_NAME_DECL(exception_vector)();
   void CPU_NAME_DECL(exception_vector_end)();
   soclib_mem_bypass_sp_check(&CPU_NAME_DECL(exception_vector), &CPU_NAME_DECL(exception_vector_end));
+
+#ifdef CONFIG_HEXO_EXCEP
   void arm_exc_undef();
   void arm_exc_undef_end();
   soclib_mem_bypass_sp_check(&arm_exc_undef, &arm_exc_undef_end);
@@ -146,6 +148,7 @@ static DEV_CPU_REG_INIT(arm_cpu_reg_init)
   void arm_exc_common_asm();
   void arm_exc_common_asm_end();
   soclib_mem_bypass_sp_check(&arm_exc_common_asm, &arm_exc_common_asm_end);
+# endif
 # ifdef CONFIG_HEXO_IRQ
   void arm_exc_irq();
   void arm_exc_irq_end();

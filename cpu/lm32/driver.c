@@ -152,9 +152,11 @@ static DEV_CPU_REG_INIT(lm32_cpu_reg_init)
   void lm32_restore_preempt_end();
   soclib_mem_bypass_sp_check(&lm32_restore_preempt, &lm32_restore_preempt_end);
 
+# ifdef CONFIG_HEXO_EXCEP
   void lm32_excep_entry();
   void lm32_excep_entry_end();
   soclib_mem_bypass_sp_check(&lm32_excep_entry, &lm32_excep_entry_end);
+# endif
 #endif
 
   CPU_LOCAL_SET(cpu_device, dev);

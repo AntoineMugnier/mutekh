@@ -354,60 +354,63 @@
 CPU_NAME_DECL(exception_vector):
         .globl CPU_NAME_DECL(exception_vector)
 
+#ifdef CONFIG_HEXO_EXCEP
         /* critical interrupt (critical, async) */
         .org 0x100
         PPC_EXCEPT_SAVE mfsrr2 mfsrr3
         PPC_EXCEPT_FAULT 0
 1:      b 1b
+#endif
 
-
+#ifdef CONFIG_HEXO_EXCEP
         /* machine check (critical, async, imprecise) */
         .org 0x200
         PPC_EXCEPT_SAVE mfsrr2 mfsrr3
         PPC_EXCEPT_FAULT 0
 1:      b 1b
+#endif
 
-
+#ifdef CONFIG_HEXO_EXCEP
         /* data storage */
         .org 0x300
         PPC_EXCEPT_SAVE mfsrr0 mfsrr1
         PPC_EXCEPT_PREEMPT_CLEAR
         PPC_EXCEPT_FAULT CPU_EXCEPTION_DATA_ERROR
         b ppc_preempt_and_restore
+#endif
 
-
+#ifdef CONFIG_HEXO_EXCEP
         /* instr storage */
         .org 0x400
         PPC_EXCEPT_SAVE mfsrr0 mfsrr1
         PPC_EXCEPT_PREEMPT_CLEAR
         PPC_EXCEPT_FAULT CPU_EXCEPTION_INS_ERROR
         b ppc_preempt_and_restore
+#endif
 
-
+#ifdef CONFIG_HEXO_IRQ
         /* external (async) */
         .org 0x500
         PPC_EXCEPT_SAVE mfsrr0 mfsrr1
         PPC_EXCEPT_PREEMPT_CLEAR
-#ifdef CONFIG_HEXO_IRQ
         PPC_EXCEPT_IRQ 0
-#else
-        PPC_EXCEPT_FAULT CPU_EXCEPTION_IRQ        
-#endif
         b ppc_preempt_and_restore
+#endif
 
-
+#ifdef CONFIG_HEXO_EXCEP
         /* alignment */
         .org 0x600
         PPC_EXCEPT_SAVE mfsrr0 mfsrr1
         PPC_EXCEPT_PREEMPT_CLEAR
         PPC_EXCEPT_FAULT CPU_EXCEPTION_DATA_ALIGN
         b ppc_preempt_and_restore
+#endif
 
-
+#if defined(CONFIG_HEXO_LAZY_SWITCH) || defined(CONFIG_HEXO_EXCEP)
         /* program */
         .org 0x700
         PPC_EXCEPT_SAVE mfsrr0 mfsrr1
-#if defined(CONFIG_HEXO_LAZY_SWITCH) && defined(CONFIG_HEXO_FPU)
+# if defined(CONFIG_HEXO_LAZY_SWITCH) && defined(CONFIG_HEXO_FPU)
         // real error if fpu already enabled
         andi.   10,     8,      PPC_MSR_FPU_ENABLED
         bne     1f
@@ -416,32 +419,31 @@ CPU_NAME_DECL(exception_vector):
         mtsrr1  8
         b       ppc_restore_only
 1:
-#endif
+# endif
+# ifdef CONFIG_HEXO_EXCEP
         PPC_EXCEPT_PREEMPT_CLEAR
         PPC_EXCEPT_FAULT CPU_EXCEPTION_ILLEGAL_INS
         b ppc_preempt_and_restore
+# endif
+#endif
 
-
-
+#ifdef CONFIG_HEXO_EXCEP
         /* fpu unusable */
         .org 0x800
         PPC_EXCEPT_SAVE mfsrr0 mfsrr1
         PPC_EXCEPT_PREEMPT_CLEAR
         PPC_EXCEPT_FAULT CPU_EXCEPTION_ILLEGAL_INS
         b ppc_preempt_and_restore
+#endif
 
-
+#ifdef CONFIG_HEXO_USERMODE
         /* syscall */
         .org 0xc00
         PPC_EXCEPT_SAVE mfsrr0 mfsrr1
         PPC_EXCEPT_PREEMPT_CLEAR
-#ifdef CONFIG_HEXO_USERMODE
         PPC_EXCEPT_SYSCALL
-	// FIXME do not need to restore everything for syscall
-#else
-        PPC_EXCEPT_FAULT CPU_EXCEPTION_SYSCALL
+        b ppc_preempt_and_restore
 #endif
-        ; b ppc_preempt_and_restore
 
 FUNC_START(.text, ppc_preempt_and_restore)
         PPC_EXCEPT_PREEMPT

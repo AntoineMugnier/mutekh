@@ -221,6 +221,7 @@ FUNC_START(.text, mips_exception)
          **************************************************************/
 interrupt_ex:                                   
 
+#ifdef CONFIG_HEXO_EXCEP
         // get epc
         mfc0    $5,     $CPU_MIPS_EPC
         sw      $5,     CPU_MIPS_CONTEXT_PC($16)
@@ -271,7 +272,14 @@ interrupt_ex:
 #endif
 
         j       mips_preempt_and_restore
-
+#else /* !CONFIG_HEXO_EXCEP */
+1:
+        /* idle loop */
+# ifdef CONFIG_CPU_WAIT_IRQ
+        wait
+# endif
+        b 1b
+#endif
         /*************************************************************
           syscall handling
          **************************************************************/

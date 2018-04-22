@@ -90,7 +90,6 @@ SECTIONS
                 CPU_NAME_DECL(exception_vector_end) = .;
 	}
 
-        ASSERT(SIZEOF(.excep) != 0, "Empty .excep section")
 #endif
 
 #ifdef CONFIG_LOAD_EXCEPTIONS_COPY
@@ -100,7 +99,6 @@ SECTIONS
                 CPU_NAME_DECL(exception_vector_end) = .;
 	}
 
-        ASSERT(SIZEOF(.excep) != 0, "Empty .excep section")
 
 	__exception_load_start = LOADADDR(.excep);
 	__exception_load_end = LMAEND(.excep);
@@ -120,8 +118,6 @@ SECTIONS
 		KEEP(*(.excep))
                 CPU_NAME_DECL(exception_vector_end) = .;
 
-                ASSERT(CPU_NAME_DECL(exception_vector_start) != CPU_NAME_DECL(exception_vector_end),
-                       "Empty .excep section");
 #endif
 
 #ifdef CONFIG_LOAD_SMP_RESET_TEXT

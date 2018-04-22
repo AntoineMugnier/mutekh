@@ -1,8 +1,9 @@
 
 DIR_CFLAGS = -D_HEXO_INTTYPES_DEPRECATED
 
-objs += fault.o startup.o kroutine.o
+objs += startup.o kroutine.o
 
+objs-$(CONFIG_MUTEK_FAULT_HANDLER) += fault.o
 objs-$(CONFIG_MUTEK_MEMALLOC) += mem_alloc.o
 objs-$(CONFIG_MUTEK_CONSOLE) += console.o
 objs-$(CONFIG_MUTEK_SHELL) += shell.o shell_mem.o shell_buffer.o

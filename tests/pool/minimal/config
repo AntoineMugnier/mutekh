@@ -19,6 +19,11 @@ CONFIG_LIBC_FORMATTER_SIMPLE!
 %else
   CONFIG_COMPILE_COLLECT! undefined
 
+%section t_no_excep
+  CONFIG_HEXO_EXCEP! undefined
+%else
+#  CONFIG_HEXO_EXCEP!
+
 %section t_no_irq
   CONFIG_HEXO_IRQ! undefined
 %else

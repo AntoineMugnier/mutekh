@@ -161,6 +161,7 @@ static DEV_CPU_REG_INIT(sparc_cpu_reg_init)
   extern __ldscript_symbol_t CPU_NAME_DECL(exception_vector_end);
   soclib_mem_bypass_sp_check(&CPU_NAME_DECL(exception_vector), &CPU_NAME_DECL(exception_vector_end));
 
+# ifdef CONFIG_HEXO_EXCEP
   void sparc_excep_entry();
   void sparc_excep_entry_end();
   soclib_mem_bypass_sp_check(&sparc_excep_entry, &sparc_excep_entry_end);
@@ -168,6 +169,7 @@ static DEV_CPU_REG_INIT(sparc_cpu_reg_init)
   void sparc_except_restore();
   void sparc_except_restore_end();
   soclib_mem_bypass_sp_check(&sparc_except_restore, &sparc_except_restore_end);
+# endif
 
 # ifdef CONFIG_HEXO_IRQ
   void sparc_irq_entry();

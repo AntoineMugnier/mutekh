@@ -59,35 +59,50 @@ CPU_NAME_DECL(reset_vector):
 #endif
 
 .macro ARM_EXCEP_ENTRY n, func
-\n:
 #ifdef CONFIG_CPU_ARM32_BIG_BE8
         setend  be
+#else
+        .org CPU_NAME_DECL(exception_vector) + \n * 4
 #endif
         ldr     pc, =\func
 .endm
 
-        ARM_EXCEP_ENTRY 1, mutekh_entry
-        ARM_EXCEP_ENTRY 2, arm_exc_undef
-#ifdef CONFIG_HEXO_USERMODE
-        ARM_EXCEP_ENTRY 3, arm_exc_swi
-#else
-        ARM_EXCEP_ENTRY 3, arm_exc_undef
-#endif
-        ARM_EXCEP_ENTRY 4, arm_exc_pabt
-        ARM_EXCEP_ENTRY 5, arm_exc_dabt
-        ARM_EXCEP_ENTRY 6, arm_exc_undef // reserved
-#ifdef CONFIG_CPU_ARM32_CUSTOM_IRQ_HANDLER
-        ARM_EXCEP_ENTRY 7, arm_c_irq_handler
-#elif defined(CONFIG_HEXO_IRQ)
-        ARM_EXCEP_ENTRY 7, arm_exc_irq
-#else
-        ARM_EXCEP_ENTRY 7, arm_exc_undef
+1:
+    ARM_EXCEP_ENTRY 0, mutekh_entry
+
+2:
+#ifdef CONFIG_HEXO_EXCEP
+    ARM_EXCEP_ENTRY 1, arm_exc_undef
 #endif
 
-#ifdef CONFIG_CPU_ARM32_CUSTOM_FIQ_HANDLER
-        ARM_EXCEP_ENTRY 8, arm_c_fiq_handler
-#else
-        ARM_EXCEP_ENTRY 8, arm_exc_undef
+3:
+#ifdef CONFIG_HEXO_USERMODE
+    ARM_EXCEP_ENTRY 2, arm_exc_swi
+#endif
+
+4:
+#ifdef CONFIG_HEXO_EXCEP
+    ARM_EXCEP_ENTRY 3, arm_exc_pabt
+#endif
+
+5:
+#ifdef CONFIG_HEXO_EXCEP
+    ARM_EXCEP_ENTRY 4, arm_exc_dabt
+#endif
+
+6:
+#ifdef CONFIG_HEXO_EXCEP
+    ARM_EXCEP_ENTRY 5, arm_exc_undef // reserved
+#endif
+
+7:
+#ifdef CONFIG_HEXO_IRQ
+    ARM_EXCEP_ENTRY 6, arm_exc_irq
+#endif
+
+8:
+#ifdef CONFIG_HEXO_IRQ
+    b 8b   /* FIQ */
 #endif
 
 /**********************************************************/
@@ -153,6 +168,7 @@ CPU_NAME_DECL(reset_vector):
 .endm
 
 
+#ifdef CONFIG_HEXO_EXCEP
 FUNC_START(.text, arm_exc_undef)
     /* r14 is exc pc + 4 */
     sub    lr, lr, #4
@@ -238,6 +254,7 @@ FUNC_START(.text, arm_exc_common_asm)
 #endif
 
 FUNC_END(arm_exc_common_asm)
+#endif /* CONFIG_HEXO_EXCEP */
 
 
 #ifdef CONFIG_HEXO_CONTEXT_PREEMPT

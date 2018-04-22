@@ -44,46 +44,41 @@ CPU_NAME_DECL(reset_vector):
         .word mutekh_entry
 
         /* nmi */
+        .org CPU_NAME_DECL(exception_vector) + 2 * 4
         .word arm_exc_dummy
 
         /* faults */
-#if CONFIG_CPU_ARM32M_ARCH_VERSION >= 7
+        .org CPU_NAME_DECL(exception_vector) + 3 * 4
+#ifdef CONFIG_HEXO_EXCEP
+# if CONFIG_CPU_ARM32M_ARCH_VERSION >= 7
         .word arm_exc_hardfault /* hardfault */
         .word arm_exc_memmanage /* memmanage */
         .word arm_exc_busfault /* busfault */
         .word arm_exc_usagefault /* usagefault */
-#else
+# else
         .word arm_exc_fault /* hardfault */
-        .irp r, 4, 5, 6,
+# endif
+
+#else /* !CONFIG_HEXO_EXCEP */
+        .irp r, 3, 4, 5, 6
          .word arm_exc_dummy
         .endr
 #endif
-        /* reserved */
-        .irp r, 7, 8, 9, 10
-          .word arm_exc_dummy
-        .endr
 
         /* syscall */
 #ifdef CONFIG_HEXO_USERMODE
+        .org CPU_NAME_DECL(exception_vector) + 11 * 4
         .word arm_exc_svcall
-#else
-        .word arm_exc_dummy
 #endif
-        
-        /* debug monitor (v7m only)*/
-        .word arm_exc_dummy
-
-        /* reserved */
-        .word arm_exc_dummy
 
         /* pendsv */
 #ifdef CONFIG_HEXO_CONTEXT_PREEMPT
+        .org CPU_NAME_DECL(exception_vector) + 14 * 4
         .word cpu_context_jumpto_irq
-#else
-        .word arm_exc_dummy
 #endif
 
 #ifdef CONFIG_HEXO_IRQ
+        .org CPU_NAME_DECL(exception_vector) + 15 * 4
         /* systick */
         .word arm_exc_irq
 
@@ -91,15 +86,11 @@ CPU_NAME_DECL(reset_vector):
         .rept CONFIG_CPU_ARM32M_M_IRQ_COUNT
          .word arm_exc_irq
         .endr
-#else
-        .word arm_exc_dummy
-        .rept CONFIG_CPU_ARM32M_M_IRQ_COUNT
-         .word arm_exc_dummy
-        .endr        
 #endif
 
 FUNC_START(.text, arm_exc_dummy)
-1:      b 1b
+1:      wfi
+        b 1b
 FUNC_END(arm_exc_dummy)
 
 /***********************************************************/
@@ -147,7 +138,8 @@ FUNC_END(arm_exc_irq)
 
 /********************************************************** fault */
 
-#if CONFIG_CPU_ARM32M_ARCH_VERSION >= 7
+#ifdef CONFIG_HEXO_EXCEP
+# if CONFIG_CPU_ARM32M_ARCH_VERSION >= 7
 FUNC_START(.text, arm_exc_hardfault)
         ldr     r1,     = ARMV7M_HFSR_ADDR
         ldr     r1,     [r1]
@@ -189,7 +181,7 @@ FUNC_START(.text, arm_exc_usagefault)
 
         b       arm_exc_fault
 FUNC_END(arm_exc_usagefault)
-#endif
+# endif
 
 FUNC_START(.text, arm_exc_fault)
 
@@ -264,7 +256,7 @@ FUNC_START(.text, arm_exc_fault)
         bx      r1
 # endif
 FUNC_END(arm_exc_fault)
-
+#endif
 
 /********************************************************** syscall */
 
