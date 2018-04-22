@@ -34,6 +34,8 @@
    Caller saved: r1-r15, r24-r25, lo, hi, f0-f19, fcsr
 */
 
+#ifdef CONFIG_HEXO_CONTEXT
+
 FUNC_START(.text, cpu_context_switch)
         .set push
         .set noat
@@ -235,8 +237,7 @@ FUNC_START(.text, cpu_context_jumpto)
 
 FUNC_END(cpu_context_jumpto)
 
-
-
+#endif /* CONFIG_HEXO_CONTEXT */
 
 
 FUNC_START(.text, cpu_context_set)
@@ -278,8 +279,7 @@ FUNC_START(.text, cpu_context_set)
 FUNC_END(cpu_context_set)
 
 
-
-
+#ifdef CONFIG_HEXO_CONTEXT
 
 FUNC_START(.text, cpu_context_stack_use)
         .set push                       
@@ -371,3 +371,4 @@ FUNC_END(cpu_context_set_user)
 
 #endif
 
+#endif /* CONFIG_HEXO_CONTEXT */

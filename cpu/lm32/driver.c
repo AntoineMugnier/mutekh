@@ -38,6 +38,10 @@
 #include <mutek/mem_alloc.h>
 #include <mutek/printk.h>
 
+#ifdef CONFIG_SOCLIB_MEMCHECK
+# include <arch/soclib/mem_checker.h>
+#endif
+
 #ifdef CONFIG_CPU_LM32_SOCLIB
 # define LM32_IRQ_SENSE_MODE DEV_IRQ_SENSE_HIGH_LEVEL
 #else
@@ -137,6 +141,20 @@ static DEV_CPU_REG_INIT(lm32_cpu_reg_init)
   /* Enable all irq lines. On SMP platforms other CPUs won't be able to enable these lines later. */
   asm volatile ("wcsr	IM, %0" :: "r" ((1 << CONFIG_CPU_LM32_IRQ_COUNT)-1));
 # endif
+#endif
+
+#ifdef CONFIG_SOCLIB_MEMCHECK
+  void lm32_exception_vector();
+  void lm32_exception_vector_end();
+  soclib_mem_bypass_sp_check(&lm32_exception_vector, &lm32_exception_vector_end);
+
+  void lm32_restore_preempt();
+  void lm32_restore_preempt_end();
+  soclib_mem_bypass_sp_check(&lm32_restore_preempt, &lm32_restore_preempt_end);
+
+  void lm32_excep_entry();
+  void lm32_excep_entry_end();
+  soclib_mem_bypass_sp_check(&lm32_excep_entry, &lm32_excep_entry_end);
 #endif
 
   CPU_LOCAL_SET(cpu_device, dev);

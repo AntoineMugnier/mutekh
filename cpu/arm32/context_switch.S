@@ -34,6 +34,8 @@
     + Arguments: r0-r3
 */
 
+#ifdef CONFIG_HEXO_CONTEXT
+
 FUNC_START(.text, cpu_context_switch)
     // get context registers save array
     CONTEXT_LOCAL_ADDR arm_context_regs, r2, r3
@@ -100,8 +102,8 @@ FUNC_START(.text, cpu_context_jumpto)
 #endif
 
     // restore tls pointer from context struct
-    ldr  r3, [r0, #_offsetof(context_s, tls, 4)]
-    TLS_BASE_SET r3, r2
+    ldr  r2, [r0, #_offsetof(context_s, tls, 4)]
+    TLS_BASE_SET r2, r3
 
     // context registers save array
     CONTEXT_LOCAL_addr arm_context_regs, r2, r3
@@ -121,15 +123,16 @@ FUNC_START(.text, cpu_context_jumpto)
 
     // Set sp to context &arm_context_regs for all error modes
     CPU_EXC_SP_SETUP r2
+    mov    r11, r2
 
-arm_context_jumpto_fast:
-    .globl arm_context_jumpto_fast
+    b      arm_context_jumpto_fast
 
-    /* We are in ABORT mode from here */
-    msr  cpsr_c, #(ARM_PSR_IRQ_DIS | ARM_PSR_FIQ_DIS | ARM_PSR_MODE_ABORT)
+FUNC_END(cpu_context_jumpto)
 
-    ldr     r1, [sp, #CPU_ARM_CONTEXT_CPSR]
-    add     r0, sp, #CPU_ARM_CONTEXT_GPR(13)
+/* in: pointer to cpu_context_s in r11 */
+FUNC_START(.text, arm_context_jumpto_fast)
+    ldr     r1, [r11, #CPU_ARM_CONTEXT_CPSR]
+    add     r0, r11, #CPU_ARM_CONTEXT_GPR(13)
 
     // restore r13 and r14
     msr     cpsr_c, #(ARM_PSR_IRQ_DIS | ARM_PSR_FIQ_DIS | ARM_PSR_MODE_SUPER)
@@ -165,8 +168,9 @@ arm_context_jumpto_fast:
     // Restore
     movs     pc, lr
 
-FUNC_END(cpu_context_jumpto)
+FUNC_END(arm_context_jumpto_fast)
 
+#endif /* CONFIG_HEXO_CONTEXT */
 
 FUNC_START(.text, cpu_context_set)
 #ifdef CONFIG_SOCLIB_MEMCHECK
@@ -205,7 +209,7 @@ FUNC_START(.text, cpu_context_set)
     bx   r2
 FUNC_END(cpu_context_set)
 
-
+#ifdef CONFIG_HEXO_CONTEXT
 
 FUNC_START(.text, cpu_context_stack_use)
 #ifdef CONFIG_SOCLIB_MEMCHECK
@@ -287,3 +291,4 @@ FUNC_END(cpu_context_set_user)
 
 #endif
 
+#endif /* CONFIG_HEXO_CONTEXT */

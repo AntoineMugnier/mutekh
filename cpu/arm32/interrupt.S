@@ -92,53 +92,26 @@ CPU_NAME_DECL(reset_vector):
 
 /**********************************************************/
 
-    /* r14 is exc pc + 4 */
-FUNC_START(.text, arm_exc_undef)
-    sub    lr, lr, #4
-    stm    sp, {r0, r1, r2, r3, r4, r5, r6, r7, r8, r9, r10, r11, r12}
-    mov    r0, #CPU_EXCEPTION_ILLEGAL_INS
-    b   arm_exc_common_asm
-FUNC_END(arm_exc_undef)
-
-    /* r14 is error pc + 4 */
-FUNC_START(.text, arm_exc_pabt)
-    sub    lr, lr, #4
-    stm    sp, {r0, r1, r2, r3, r4, r5, r6, r7, r8, r9, r10, r11, r12}
-    mov    r0, #CPU_EXCEPTION_INS_ERROR
-    b   arm_exc_common_asm
-FUNC_END(arm_exc_pabt)
-
-    /* r14 is error pc + 8 */
-FUNC_START(.text, arm_exc_dabt)
-    sub    lr, lr, #8
-    stm    sp, {r0, r1, r2, r3, r4, r5, r6, r7, r8, r9, r10, r11, r12}
-    mov    r0, #CPU_EXCEPTION_DATA_ERROR
-    b   arm_exc_common_asm
-FUNC_END(arm_exc_dabt)
-
+#ifdef CONFIG_HEXO_CONTEXT
 .macro ARM_EXC_SAVECONTEXT
-    /* SP points to cpu_context_s when mode is either IRQ, ABORT, UNDEF */
-    mov    r1, sp
-
     /* Save PC */
-    str    lr, [r1, #CPU_ARM_CONTEXT_GPR(15)]
+    str    lr, [sp, #CPU_ARM_CONTEXT_GPR(15)]
 
     /* Tell what to restore */
     mov    r2, #CPU_ARM_CONTEXT_RESTORE_CALLEE|CPU_ARM_CONTEXT_RESTORE_CALLER
-    str    r2, [r1, #CPU_ARM_CONTEXT_SAVE_MASK]
+    str    r2, [sp, #CPU_ARM_CONTEXT_SAVE_MASK]
 
     /* Take old msr, save it */
     mrs    r2, spsr
-    str    r2, [r1, #CPU_ARM_CONTEXT_CPSR]
+    str    r2, [sp, #CPU_ARM_CONTEXT_CPSR]
 
-    /* we have to save sp and lr from SUPER or USER mode */
+    /* we still have to save sp and lr from SUPER or USER mode */
+    add    r4, sp, #CPU_ARM_CONTEXT_GPR(13)
 
     /* switch to SUPER */
     msr    cpsr_c, #(ARM_PSR_IRQ_DIS | ARM_PSR_FIQ_DIS | ARM_PSR_MODE_SUPER)
 
-    add    r4, r1, #CPU_ARM_CONTEXT_GPR(13)
-
-#if defined(CONFIG_HEXO_USERMODE)
+# if defined(CONFIG_HEXO_USERMODE)
     /* r2 is still cpsr */
     tst    r2, #0xf
     /* if 0 (eq) we come from user */
@@ -147,31 +120,147 @@ FUNC_END(arm_exc_dabt)
     stmeq  r4, {r13, r14}^
     /* We were from super, so save super's sp and lr */
     stmne  r4, {r13, r14}
-#else
+# else
     stm    r4, {r13, r14}
+# endif
+.endm
 #endif
 
+.macro ARM_EXC_ENTRY mode id
+#ifdef CONFIG_HEXO_CONTEXT
+    /* SP points to cpu_context_s when mode is either IRQ, ABORT, UNDEF */
+    stm    sp, {r0, r1, r2, r3, r4, r5, r6, r7, r8, r9, r10, r11, r12}
+#else
+    /* save r12 */
+    mov    sp, r12
+    msr    cpsr_c, #(ARM_PSR_IRQ_DIS | ARM_PSR_FIQ_DIS | ARM_PSR_MODE_SUPER)
+
+    /* get stack pointer from SUPER */
+    sub    r12, sp, #_sizeof(struct cpu_context_s)
+    msr    cpsr_c, #(ARM_PSR_IRQ_DIS | ARM_PSR_FIQ_DIS | \mode)
+
+    /* store cpu_context_s on stack */
+    stm    r12, {r0, r1, r2, r3, r4, r5, r6, r7, r8, r9, r10, r11}
+    str    sp, [r12, #CPU_ARM_CONTEXT_GPR(12)]
+    str    lr, [r12, #CPU_ARM_CONTEXT_GPR(15)]
+    add    r4, r12, #_sizeof(struct cpu_context_s)
+    str    r4, [r12, #CPU_ARM_CONTEXT_GPR(13)]
+
+    /* setup sp reg */
+    mov    sp, r12
+#endif
+    mov    r0, #\id
 .endm
+
+
+FUNC_START(.text, arm_exc_undef)
+    /* r14 is exc pc + 4 */
+    sub    lr, lr, #4
+    ARM_EXC_ENTRY ARM_PSR_MODE_UNDEF CPU_EXCEPTION_ILLEGAL_INS
+    b   arm_exc_common_asm
+FUNC_END(arm_exc_undef)
+
+FUNC_START(.text, arm_exc_pabt)
+    /* r14 is error pc + 4 */
+    sub    lr, lr, #4
+    ARM_EXC_ENTRY ARM_PSR_MODE_ABORT CPU_EXCEPTION_INS_ERROR
+    b   arm_exc_common_asm
+FUNC_END(arm_exc_pabt)
+
+FUNC_START(.text, arm_exc_dabt)
+    /* r14 is error pc + 8 */
+    sub    lr, lr, #8
+    ARM_EXC_ENTRY ARM_PSR_MODE_ABORT CPU_EXCEPTION_DATA_ERROR
+    b   arm_exc_common_asm
+FUNC_END(arm_exc_dabt)
+
 
 FUNC_START(.text, arm_exc_common_asm)
 
-    ARM_EXC_SAVECONTEXT
+    /* SP points to cpu_context_s when mode is either IRQ, ABORT, UNDEF,
+       cpu_context_s is stored on stack when !CONFIG_HEXO_CONTEXT */
+    mov    r3, sp
 
-    mov    r2,  r13
+#ifdef CONFIG_HEXO_CONTEXT
+    ARM_EXC_SAVECONTEXT     /* switch to SUPER */
+
+    mov    r1,  sp
+    /* switch to FIQ because it has many shadow regs */
     msr    cpsr_c, #(ARM_PSR_IRQ_DIS | ARM_PSR_FIQ_DIS | ARM_PSR_MODE_FIQ)
-    mov    r13,  r2
+    mov    sp,  r1          /* import our stack pointer from SUPER */
+
+    /* passed to arm_context_jumpto_fast / arm_except_preempt */
+    mov    r11, r3
+#endif
 
 #ifdef CONFIG_HEXO_CONTEXT_PREEMPT
     /* clear preempt handler */
-    mov    r3, #0
-    CPU_LOCAL_st cpu_preempt_handler, r4, r2, r3
+    mov    r12, #0
+    CPU_LOCAL_st cpu_preempt_handler, r2, r4, r12
 #endif
 
-    b      arm_exc_common /* pass r0, r1 */
+#ifdef CONFIG_HEXO_USERMODE
+    tst    r2, #0xf
+    bne    1f
+
+    CONTEXT_LOCAL_ld cpu_user_exception_handler, r12, r2
+    cmp    r12, #0
+    bne    2f
+1:
+#endif
+
+    CPU_LOCAL_ld cpu_exception_handler, r12, r2
+2:
+    /* first arg is number, already in r0 */
+    /* fourth arg is cpu_context_s, already in r3 */
+
+    /* fifth arg on stack */
+    ldr     r2, [r3, #CPU_ARM_CONTEXT_GPR(13)]
+    push    {r2}
+
+    /* second arg is pc */
+    ldr     r1, [r3, #CPU_ARM_CONTEXT_GPR(15)]
+
+    /* third arg */
+    mov     r2, #0
+
+    blx    r12
+    add    sp, #4
+
+#if defined(CONFIG_HEXO_CONTEXT_PREEMPT)
+    b      arm_except_preempt
+#elif defined(CONFIG_HEXO_CONTEXT)
+    b      arm_context_jumpto_fast
+#else
+    ldm    sp,   {r0, r1, r2, r3, r4, r5, r6, r7, r8, r9, r10, r11, r12}
+    ldr    lr,   [sp, #CPU_ARM_CONTEXT_GPR(15)]
+    movs   pc,   lr
+#endif
 
 FUNC_END(arm_exc_common_asm)
 
 
+#ifdef CONFIG_HEXO_CONTEXT_PREEMPT
+FUNC_START(.text, arm_except_preempt)
+    /* test the preempt handler */
+    CPU_LOCAL_ld cpu_preempt_handler, r12, r2
+    movs   r12, r12
+    beq    arm_context_jumpto_fast
+
+    /* call the preempt handler and test the result */
+    blx    r12
+    movs   r0, r0
+    beq    arm_context_jumpto_fast
+
+# ifdef CONFIG_HEXO_CONTEXT_STATS
+    mov    r4, r0
+    bl     context_preempt_stats
+    mov    r0, r4
+# endif
+
+    b      cpu_context_jumpto
+FUNC_END(arm_except_preempt)
+#endif
 
 #if defined(CONFIG_HEXO_IRQ) && !defined(CONFIG_CPU_ARM32_CUSTOM_IRQ_HANDLER)
     /* r14 is error pc + 4 */
@@ -182,8 +271,10 @@ FUNC_START(.text, arm_exc_irq)
     msr    cpsr_c, #(ARM_PSR_IRQ_DIS | ARM_PSR_FIQ_DIS | ARM_PSR_MODE_FIQ)
     mov    r8,   r0
     mov    r9,   r1
+# ifdef CONFIG_HEXO_CONTEXT
     mov    r10,  r2
     mov    r11,  r3
+# endif
 
     /* get stack pointer */
 # ifndef CONFIG_HEXO_INTERRUPT_STACK
@@ -200,9 +291,9 @@ FUNC_START(.text, arm_exc_irq)
 # endif
 
     /* call C handler */
-    CPU_LOCAL_ld cpu_interrupt_handler, r2, r3
+    CPU_LOCAL_ld cpu_interrupt_handler, r12, r1
     mov    r0, #0
-    blx    r2
+    blx    r12
 
 # ifdef CONFIG_HEXO_CONTEXT_PREEMPT
     /* test the preempt handler */
@@ -219,8 +310,10 @@ FUNC_START(.text, arm_exc_irq)
     /* restore caller saved regs from fiq shadowed regs */
     mov    r0,   r8
     mov    r1,   r9
+# ifdef CONFIG_HEXO_CONTEXT
     mov    r2,  r10
     mov    r3,  r11
+# endif
     msr    cpsr_c, #(ARM_PSR_IRQ_DIS | ARM_PSR_FIQ_DIS | ARM_PSR_MODE_IRQ)
 
     /* return from irq */
@@ -298,8 +391,17 @@ FUNC_START(.text, arm_exc_swi)
     CPU_LOCAL_st cpu_preempt_handler, r1, r2, r3
 # endif
 
-    mov    r0,  r11
-    b      arm_swi_common       /* pass r0 */
+    CONTEXT_LOCAL_ld cpu_syscall_handler, r12, r2
+    mov    r0, #0
+    mov    r1,  r11
+    blx    r12
+
+# ifdef CONFIG_HEXO_CONTEXT_PREEMPT
+    b      arm_except_preempt
+# else
+    b      arm_context_jumpto_fast
+# endif
+
 FUNC_END(arm_exc_swi)
 #endif
 

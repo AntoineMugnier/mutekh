@@ -38,6 +38,10 @@
 #include <mutek/mem_alloc.h>
 #include <mutek/printk.h>
 
+#ifdef CONFIG_SOCLIB_MEMCHECK
+# include <arch/soclib/mem_checker.h>
+#endif
+
 DRIVER_PV(struct ppc_dev_private_s
 {
 #ifdef CONFIG_DEVICE_IRQ
@@ -113,6 +117,12 @@ static DEV_CPU_REG_INIT(ppc_cpu_reg_init)
 # ifdef CONFIG_DEVICE_IRQ
   /* Enable all irq lines. On SMP platforms other CPUs won't be able to enable these lines later. */
 # endif
+#endif
+
+#ifdef CONFIG_SOCLIB_MEMCHECK
+  void ppc_restore();
+  void ppc_restore_end();
+  soclib_mem_bypass_sp_check(&ppc_restore, &ppc_restore_end);
 #endif
 
   CPU_LOCAL_SET(cpu_device, dev);

@@ -27,6 +27,8 @@
 #include <hexo/local.h>
 #include <hexo/lock.h>
 
+#ifdef CONFIG_HEXO_CONTEXT
+
 FUNC_START(.text, cpu_context_switch)
 
 #ifdef CONFIG_HEXO_USERMODE
@@ -143,9 +145,7 @@ cpu_context_restore_kernel:
 
 FUNC_END(cpu_context_jumpto)
 
-
-
-
+#endif /* CONFIG_HEXO_CONTEXT */
 
 FUNC_START(.text, cpu_context_set)
 
@@ -162,9 +162,7 @@ FUNC_START(.text, cpu_context_set)
 
 FUNC_END(cpu_context_set)
 
-
-
-
+#ifdef CONFIG_HEXO_CONTEXT
 
 FUNC_START(.text, cpu_context_stack_use)
 
@@ -251,3 +249,4 @@ FUNC_START(.text, cpu_context_set_user)
 FUNC_END(cpu_context_set_user)
 
 #endif
+#endif /* CONFIG_HEXO_CONTEXT */

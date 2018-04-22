@@ -151,9 +151,11 @@ static DEV_CPU_REG_INIT(sparc_cpu_reg_init)
   /* all these functions may execute with briefly invalid stack & frame
      pointer registers due to register window switch. */
 
+#ifdef CONFIG_HEXO_CONTEXT
   void cpu_context_jumpto();
   void cpu_context_jumpto_end();
   soclib_mem_bypass_sp_check(&cpu_context_jumpto, &cpu_context_jumpto_end);
+#endif
 
   extern __ldscript_symbol_t CPU_NAME_DECL(exception_vector);
   extern __ldscript_symbol_t CPU_NAME_DECL(exception_vector_end);

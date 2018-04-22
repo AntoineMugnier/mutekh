@@ -24,11 +24,16 @@
 #include <hexo/cpu.h>
 
 .macro LM32_GET_REGARRAY  // get context registers save array
-#if 0
+#ifdef CONFIG_HEXO_CONTEXT
+# if 0
         addi    r31,    r25,     lo(lm32_context_regs)
           // lm32 As doesnt support lo() with addi
-#else
+# else
         .int    0x373f0000 + lm32_context_regs
+# endif
+#else
+        // store cpu_context_s on stack
+        addi    r31,    sp,     -_sizeof(struct cpu_context_s)
 #endif
 .endm
 
@@ -50,12 +55,12 @@
 
 .section .excep,"ax",@progbits
 
-CPU_NAME_DECL(exception_vector):
-        .globl CPU_NAME_DECL(exception_vector)
+lm32_exception_vector:
+        .globl lm32_exception_vector
 
 #ifndef CONFIG_LOAD_RESET_SEPARATE
-CPU_NAME_DECL(reset_vector):
-        .globl CPU_NAME_DECL(reset_vector)
+lm32_reset_vector:
+        .globl lm32_reset_vector
 #endif
         /* reset */
         xor     r0,     r0,     r0
@@ -63,29 +68,29 @@ CPU_NAME_DECL(reset_vector):
         b       r1
 
         /* breakpoint */
-        .org CPU_NAME_DECL(exception_vector) + 1*32
+        .org lm32_exception_vector + 1*32
         mv      r30,    r31
         LM32_EXCEPT_ENTRY CPU_FAULT_BREAKPOINT
 
         /* iberr*/
-        .org CPU_NAME_DECL(exception_vector) + 2*32
+        .org lm32_exception_vector + 2*32
         LM32_EXCEPT_ENTRY CPU_FAULT_INS_BERR
 
         /* watchpoint */
-        .org CPU_NAME_DECL(exception_vector) + 3*32
+        .org lm32_exception_vector + 3*32
         mv      r30,    r31
         LM32_EXCEPT_ENTRY CPU_FAULT_WATCHPOINT
 
         /* dberr */
-        .org CPU_NAME_DECL(exception_vector) + 4*32
+        .org lm32_exception_vector + 4*32
         LM32_EXCEPT_ENTRY CPU_FAULT_DATA_BERR
 
         /* div by 0 */
-        .org CPU_NAME_DECL(exception_vector) + 5*32
+        .org lm32_exception_vector + 5*32
         LM32_EXCEPT_ENTRY CPU_FAULT_DIV_BY_0
 
         /* irq */
-        .org CPU_NAME_DECL(exception_vector) + 6*32
+        .org lm32_exception_vector + 6*32
 
 #ifdef CONFIG_HEXO_IRQ
         seta    r31, lm32_irq_entry
@@ -95,11 +100,13 @@ CPU_NAME_DECL(reset_vector):
 #endif
 
         /* syscall */
-        .org CPU_NAME_DECL(exception_vector) + 7*32
+        .org lm32_exception_vector + 7*32
 
         LM32_EXCEPT_ENTRY CPU_FAULT_SYSCALL
 
-        .org CPU_NAME_DECL(exception_vector) + 8*32
+        .org lm32_exception_vector + 8*32
+lm32_exception_vector_end:
+        .globl lm32_reset_vector_end
 
 FUNC_START(.text, lm32_excep_entry)
 
@@ -123,6 +130,11 @@ FUNC_START(.text, lm32_excep_entry)
         mv      r4,     r31
         mv      r5,     sp
 
+#ifndef CONFIG_HEXO_CONTEXT
+        // skip cpu_context_s on stack
+        mv      sp,     r31
+#endif
+
         seta    r10,    cpu_exception_handler
         lw      r10,    (r10 + 0)
         call    r10
@@ -138,6 +150,10 @@ FUNC_END(lm32_excep_entry)
 FUNC_START(.text, lm32_irq_entry)
 
         LM32_GET_REGARRAY
+#ifndef CONFIG_HEXO_CONTEXT
+        // skip cpu_context_s on stack
+        mv      sp,     r31
+#endif
 
         // save caller saved regs & r11, ra
         .irp r, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 29
@@ -165,6 +181,8 @@ FUNC_START(.text, lm32_irq_entry)
         and     r2,     r11,    r2
         xor     r2,     r11,    r2
         wcsr    IP,     r2
+
+        bi      lm32_restore_preempt
 
 FUNC_END(lm32_irq_entry)
 #endif
@@ -221,6 +239,10 @@ FUNC_START(.text, lm32_restore_preempt)
         .irp r, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 29
         lw      r\r, (r31 + CPU_LM32_CONTEXT_GPR(\r))
         .endr
+
+#ifndef CONFIG_HEXO_CONTEXT
+        addi    sp,     sp,     _sizeof(struct cpu_context_s)
+#endif
 
         // return
         eret

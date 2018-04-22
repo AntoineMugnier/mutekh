@@ -27,8 +27,7 @@
 # include <arch/soclib/mem_checker.h>
 #endif
 
-/*
-*/
+#ifdef CONFIG_HEXO_CONTEXT
 
 FUNC_START(.text, cpu_context_switch)
 
@@ -127,7 +126,7 @@ FUNC_START(.text, cpu_context_jumpto)
 
 FUNC_END(cpu_context_jumpto)
 
-
+#endif /* CONFIG_HEXO_CONTEXT */
 
 FUNC_START(.text, cpu_context_set)
 
@@ -163,6 +162,7 @@ FUNC_START(.text, cpu_context_set)
 
 FUNC_END(cpu_context_set)
 
+#ifdef CONFIG_HEXO_CONTEXT
 
 
 FUNC_START(.text, cpu_context_stack_use)
@@ -201,3 +201,4 @@ FUNC_START(.text, cpu_context_stack_use)
 
 FUNC_END(cpu_context_stack_use)
 
+#endif /* CONFIG_HEXO_CONTEXT */

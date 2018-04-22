@@ -68,8 +68,11 @@ struct context_s
 };
 
 /** @internal */
+config_depend(CONFIG_HEXO_CONTEXT)
 extern CONTEXT_LOCAL uintptr_t context_stack_start;
+
 /** @internal */
+config_depend(CONFIG_HEXO_CONTEXT)
 extern CONTEXT_LOCAL uintptr_t context_stack_end;
 
 /** @showvalue @This is the context entry point function prototype */
@@ -106,9 +109,11 @@ typedef CONTEXT_IRQEN(context_irqen_t);
 #include "cpu/hexo/context.h"
 
 /** @internal @This only performs processor specific part of the job. @csee context_switch_to */
+config_depend(CONFIG_HEXO_CONTEXT)
 void cpu_context_switch(struct context_s *new);
 
 /** @internal @This only performs processor specific part of the job. @csee context_jump_to */
+config_depend(CONFIG_HEXO_CONTEXT)
 __attribute__((noreturn))
 void cpu_context_jumpto(struct context_s *new);
 
@@ -119,27 +124,30 @@ void cpu_context_set(uintptr_t stack, size_t stack_size, void *jumpto);
 /** @internal @This executes a function using given context stack.
     Current context stack content is preserved.
     @This only performs processor specific part of the job. @csee context_stack_use */
+config_depend(CONFIG_HEXO_CONTEXT)
 __attribute__((noreturn))
 void cpu_context_stack_use(struct context_s *context,
                            context_entry_t *func, void *param);
 
 /** @internal @This intializes given context to match cpu current execution state.
     @This only performs processor specific part of the job. @csee context_bootstrap */
+config_depend(CONFIG_HEXO_CONTEXT)
 error_t cpu_context_bootstrap(struct context_s *context);
 
 /** @internal @This initializes context and prepares first context execution.
     @This only performs processor specific part of the job. @csee context_init */
+config_depend(CONFIG_HEXO_CONTEXT)
 error_t cpu_context_init(struct context_s *context, context_entry_t *entry, void *param);
 
 /** @internal @This cleanups given context resources.
     @This only performs processor specific part of the job. @csee context_init */
+config_depend(CONFIG_HEXO_CONTEXT)
 void cpu_context_destroy(struct context_s *context);
 
-# if defined(CONFIG_HEXO_USERMODE)
 /** @This sets user stack pointer and jump to a new function in user mode. */
+config_depend_and2(CONFIG_HEXO_CONTEXT, CONFIG_HEXO_USERMODE)
 __attribute__((noreturn))
 void cpu_context_set_user(uintptr_t stack_ptr, uintptr_t entry, reg_t param);
-# endif
 
 # ifdef CONFIG_HEXO_CONTEXT_PREEMPT
 /** @This sets a preemption handler function local to the executing
@@ -153,7 +161,9 @@ void cpu_context_set_user(uintptr_t stack_ptr, uintptr_t entry, reg_t param);
     disabled.
 
     @see #CONTEXT_PREEMPT */
-ALWAYS_INLINE error_t context_set_preempt(context_preempt_t *func);
+config_depend_alwaysinline(CONFIG_HEXO_CONTEXT,
+error_t context_set_preempt(context_preempt_t *func), ;
+);
 # endif
 
 # ifdef CONFIG_HEXO_CONTEXT_IRQEN
@@ -161,60 +171,70 @@ ALWAYS_INLINE error_t context_set_preempt(context_preempt_t *func);
     executing processor. It is called when the interrupt enable state
     is restored by the @ref cpu_interrupt_restorestate function. The
     handler pointer is reset to @tt NULL on context switch. */
-ALWAYS_INLINE void context_set_irqen(context_irqen_t *func);
+config_depend_alwaysinline(CONFIG_HEXO_CONTEXT,
+void context_set_irqen(context_irqen_t *func), ;
 # endif
 
 /** @This sets address of a lock which must be unlocked on next context
     restoration. The lock address is reset to NULL once unlock has been performed. */
-ALWAYS_INLINE void context_set_unlock(struct context_s *context, lock_t *unlock)
+config_depend_alwaysinline(CONFIG_HEXO_CONTEXT,
+void context_set_unlock(struct context_s *context, lock_t *unlock),
 {
 # if defined(CONFIG_HEXO_LOCK_DEBUG) || defined(CONFIG_ARCH_SMP)
   context->unlock = unlock;
 # endif
-}
+});
 
 /** @internal */
+config_depend(CONFIG_HEXO_CONTEXT)
 extern CONTEXT_LOCAL struct context_s *context_cur;
 
 /** @internal */
+config_depend(CONFIG_HEXO_CONTEXT)
 extern CPU_LOCAL struct context_s cpu_main_context;
 
 /** @This executes the given function using given existing context
     stack while the context is not actually running. @see sched_tmp_context */
+config_depend_alwaysinline(CONFIG_HEXO_CONTEXT,
 __attribute__((noreturn))
-ALWAYS_INLINE void context_stack_use(struct context_s *context,
-                                     context_entry_t *func, void *param)
+void context_stack_use(struct context_s *context,
+                       context_entry_t *func, void *param),
 {
   cpu_context_stack_use(context, func, param);
-}
+});
 
 /** @This initializes a context object using current processor execution state. */
+config_depend(CONFIG_HEXO_CONTEXT)
 error_t context_bootstrap(struct context_s *context, uintptr_t stack, size_t stack_size);
 
 /** @This initializes a context object allocating a new context */
+config_depend(CONFIG_HEXO_CONTEXT)
 error_t context_init(struct context_s *context,
 		     void *stack_start, void *stack_end,
 		     context_entry_t *entry, void *param);
 
 /** @This frees ressource associated with a context and return a pointer to
     context stack buffer  */
+config_depend(CONFIG_HEXO_CONTEXT)
 void * context_destroy(struct context_s *context);
 
 
-
-#ifdef CONFIG_HEXO_CONTEXT_STATS
 /** @internal @This updates context stats when current context is preempted */
+config_depend(CONFIG_HEXO_CONTEXT_STATS)
 void context_preempt_stats(struct context_s *context);
-/** @internal @This updates context stats when leaving current context on switch. */
-void context_leave_stats(struct context_s *context);
-/** @internal @This updates context stats when entering current context on switch. */
-void context_enter_stats(struct context_s *context);
-#endif
 
+/** @internal @This updates context stats when leaving current context on switch. */
+config_depend(CONFIG_HEXO_CONTEXT_STATS)
+void context_leave_stats(struct context_s *context);
+
+/** @internal @This updates context stats when entering current context on switch. */
+config_depend(CONFIG_HEXO_CONTEXT_STATS)
+void context_enter_stats(struct context_s *context);
 
 
 /** @This saves current context and restore given context. */
-ALWAYS_INLINE void context_switch_to(struct context_s *context)
+config_depend_alwaysinline(CONFIG_HEXO_CONTEXT,
+void context_switch_to(struct context_s *context),
 {
 #ifdef CONFIG_HEXO_CONTEXT_STATS
   struct context_s *cur = CONTEXT_LOCAL_GET(context_cur);
@@ -233,12 +253,12 @@ ALWAYS_INLINE void context_switch_to(struct context_s *context)
 #ifdef CONFIG_HEXO_CONTEXT_STATS
   context_enter_stats(cur);
 #endif
-}
+});
 
 /** @This restores given context without saving current context. */
-ALWAYS_INLINE void
-__attribute__((noreturn))
-context_jump_to(struct context_s *context)
+config_depend_alwaysinline(CONFIG_HEXO_CONTEXT,
+void __attribute__((noreturn))
+context_jump_to(struct context_s *context),
 {
 #if 0 //def CONFIG_HEXO_CONTEXT_STATS
   struct context_s *cur = CONTEXT_LOCAL_GET(context_cur);
@@ -250,13 +270,14 @@ context_jump_to(struct context_s *context)
   mmu_context_switch_to(context->mmu);
 #endif
   cpu_context_jumpto(context);
-}
+});
 
 /** @This returns a pointer to current context */
-ALWAYS_INLINE struct context_s * context_current(void)
+config_depend_alwaysinline(CONFIG_HEXO_CONTEXT,
+struct context_s * context_current(void),
 {
   return CONTEXT_LOCAL_GET(context_cur);
-}
+});
 
 #endif
 

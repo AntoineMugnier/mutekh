@@ -56,6 +56,8 @@
         Have a look to interrupt.S for interrupt context switch and preemption.
 */
 
+#ifdef CONFIG_HEXO_CONTEXT
+
 FUNC_START(.text, cpu_context_switch)
         .set nobreak
         .set noat
@@ -156,6 +158,9 @@ FUNC_START(.text, cpu_context_jumpto)
         eret
 FUNC_END(cpu_context_jumpto)
 
+#endif /* CONFIG_HEXO_CONTEXT */
+
+
 FUNC_START(.text, cpu_context_set)
         .set nobreak
         .set noat
@@ -193,6 +198,9 @@ FUNC_START(.text, cpu_context_set)
         jmp     r6
         
 FUNC_END(cpu_context_set)
+
+
+#ifdef CONFIG_HEXO_CONTEXT
 
 FUNC_START(.text, cpu_context_stack_use)
         .set nobreak
@@ -258,3 +266,4 @@ FUNC_END(cpu_context_set_user)
 
 #endif
 
+#endif /* CONFIG_HEXO_CONTEXT */

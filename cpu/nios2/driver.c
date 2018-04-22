@@ -38,6 +38,10 @@
 #include <mutek/mem_alloc.h>
 #include <mutek/printk.h>
 
+#ifdef CONFIG_SOCLIB_MEMCHECK
+# include <arch/soclib/mem_checker.h>
+#endif
+
 DRIVER_PV(struct nios2_dev_private_s
 {
 #ifdef CONFIG_DEVICE_IRQ
@@ -142,6 +146,12 @@ static DEV_CPU_REG_INIT(nios2_cpu_reg_init)
 # ifdef CONFIG_HEXO_USERMODE
   cpu_local_storage[pv->node.cpu_id] = pv->node.cls;
 # endif
+#endif
+
+#ifdef CONFIG_SOCLIB_MEMCHECK
+  void nios2_exception_vector();
+  void nios2_exception_vector_end();
+  soclib_mem_bypass_sp_check(&nios2_exception_vector, &nios2_exception_vector_end);
 #endif
 
   CPU_LOCAL_SET(cpu_device, dev);

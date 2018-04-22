@@ -162,9 +162,14 @@ static DEV_CPU_REG_INIT(arm_cpu_reg_init)
   soclib_mem_bypass_sp_check(&cpu_context_set_user, &cpu_context_set_user_end);
 # endif
 
+# ifdef CONFIG_HEXO_CONTEXT
   void cpu_context_jumpto();
   void cpu_context_jumpto_end();
   soclib_mem_bypass_sp_check(&cpu_context_jumpto, &cpu_context_jumpto_end);
+  void arm_context_jumpto_fast();
+  void arm_context_jumpto_fast_end();
+  soclib_mem_bypass_sp_check(&arm_context_jumpto_fast, &arm_context_jumpto_fast_end);
+# endif
 #endif
 }
 

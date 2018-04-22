@@ -105,20 +105,34 @@ FUNC_START(.text, mips_exception)
         lw      $27,    cpu_local_storage($26)       
 # endif
 
+#ifdef CONFIG_HEXO_CONTEXT
         // get context local storage
         CPU_LOCAL_op lw,   __context_data_base, $26, $26
         // get context registers save array
-#ifdef CONFIG_HEXO_CONTEXT_NESTED
+# ifdef CONFIG_HEXO_CONTEXT_NESTED
         lw      $26,            %lo(mips_context_regs_ptr)($26)
-#else
+# else
         addiu   $26,            %lo(mips_context_regs)
+# endif
+#else // !CONFIG_HEXO_CONTEXT
+        // store cpu_context_s on stack
+        addiu   $sp,    - _sizeof(struct cpu_context_s)
+        move    $26,            $sp
 #endif
 
         // save only 6 "caller saved" registers yet (syscall args ragtable)
-        // save gp ptr, stack ptr, frame ptr, return address
-        .irp    r, 4, 5, 6, 7, 8, 9, 16, 28, 29, 30, 31
+        // save gp ptr, frame ptr, return address
+        .irp    r, 4, 5, 6, 7, 8, 9, 16, 28, 30, 31
         sw      $\r,            CPU_MIPS_CONTEXT_GPR(\r)($26)
         .endr
+
+        /* save stack ptr */
+#ifdef CONFIG_HEXO_CONTEXT
+        sw      $sp,    CPU_MIPS_CONTEXT_GPR(29)($26)
+#else
+        addiu   $16,    $sp,    _sizeof(struct cpu_context_s)
+        sw      $16,    CPU_MIPS_CONTEXT_GPR(29)($26)
+#endif
 
         // use $16 as a preserved register accross C functions to keep pointer to regs
         move    $16,    $26

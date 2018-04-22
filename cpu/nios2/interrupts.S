@@ -28,9 +28,9 @@
 
 .section        .excep,"ax",@progbits         
 
+nios2_exception_vector:
+        .globl nios2_exception_vector
         .set noat
-CPU_NAME_DECL(exception_vector):
-        .globl CPU_NAME_DECL(exception_vector)
 
 #if defined(CONFIG_HEXO_USERMODE) && defined(CONFIG_ARCH_SMP)
         /* restore cpu local storage */
@@ -41,14 +41,23 @@ CPU_NAME_DECL(exception_vector):
         ldw     CPU_NIOS2_CLS_REG, (r24)
 #endif
 
+#ifdef CONFIG_HEXO_CONTEXT
         // get context local storage
         CPU_LOCAL_op ldw, __context_data_base, r24, r24
         addi    r24,    r24,    %lo(nios2_context_regs)
+#else
+        // store cpu_context_s on stack
+        addi    r24,    sp,    -_sizeof(struct cpu_context_s)
+#endif
 
         // save caller saved
         .irp    r, 4, 5, 6, 7, 8, 9, 27, 28, 31
         stw     r\r,            CPU_NIOS2_CONTEXT_GPR(\r)(r24)
         .endr
+
+#ifndef CONFIG_HEXO_CONTEXT
+        mov     sp,     r24
+#endif
 
         // save status register
         rdctl   r9,             estatus
@@ -225,3 +234,5 @@ nios2_restore:
 
         eret
 
+nios2_exception_vector_end:
+        .globl nios2_exception_vector_end

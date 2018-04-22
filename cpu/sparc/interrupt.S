@@ -147,8 +147,13 @@ CPU_NAME_DECL(reset_vector):
         CPU_LOCAL_ld  __context_data_base, %g7
 #endif
 
+#ifdef CONFIG_HEXO_CONTEXT
         // get context registers save array in g5
         add     %g7, %lo(sparc_context_regs), %g5
+#else
+        // store cpu_context_s on stack
+        sub     %i6, _sizeof(struct cpu_context_s), %g5
+#endif
 
 #if CONFIG_CPU_SPARC_WINCOUNT < 3
         /* need to save %o* registers to preserve %i* registers in
@@ -176,7 +181,11 @@ CPU_NAME_DECL(reset_vector):
 #endif
 
         // use interrupted code stack
+#ifdef CONFIG_HEXO_CONTEXT
         mov     %i6,    %o6
+#else
+        mov     %g5,    %o6
+#endif
 
 .endm
 

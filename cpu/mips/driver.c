@@ -151,10 +151,16 @@ static DEV_CPU_REG_INIT(mips_cpu_reg_init)
 # endif
 #endif
 
-#if defined(CONFIG_SOCLIB_MEMCHECK) && defined(CONFIG_HEXO_USERMODE)
+#ifdef CONFIG_SOCLIB_MEMCHECK
+# ifdef CONFIG_HEXO_USERMODE
   void cpu_context_set_user();
   void cpu_context_set_user_end();
   soclib_mem_bypass_sp_check(&cpu_context_set_user, &cpu_context_set_user_end);
+# endif
+
+  void mips_exception();
+  void mips_exception_end();
+  soclib_mem_bypass_sp_check(&mips_exception, &mips_exception_end);
 #endif
 
   CPU_LOCAL_SET(cpu_device, dev);

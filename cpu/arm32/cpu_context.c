@@ -5,11 +5,13 @@
 #include <hexo/interrupt.h>
 #include <mutek/scheduler.h>
 
+#ifdef CONFIG_HEXO_CONTEXT
+
+CONTEXT_LOCAL struct cpu_context_s arm_context_regs;
+
 #ifdef CONFIG_HEXO_CONTEXT_PREEMPT
 CPU_LOCAL context_preempt_t *cpu_preempt_handler = (context_preempt_t*)1;
 #endif
-
-CONTEXT_LOCAL struct cpu_context_s arm_context_regs;
 
 #if CONFIG_CPU_ARM32_ARCH_VERSION < 6
 CPU_LOCAL void *__context_data_base;
@@ -79,68 +81,7 @@ cpu_context_destroy(struct context_s *context)
 #endif
 }
 
-__attribute__((noreturn))
-extern void arm_context_jumpto_back();
-
-static void arm_except_preempt()
-{
-    void arm_context_jumpto_fast();
-
-# ifdef CONFIG_HEXO_CONTEXT_PREEMPT
-    struct context_s *ctx = NULL;
-    context_preempt_t *handler = CPU_LOCAL_GET(cpu_preempt_handler);
-    if ( handler ) {
-        ctx = handler();
-    }
-
-    if ( ctx ) {
-# ifdef CONFIG_HEXO_CONTEXT_STATS
-        context_preempt_stats(ctx);
-# endif
-        return cpu_context_jumpto(ctx);
-    }
-#endif
-
-    return arm_context_jumpto_fast();
-}
-
-#ifdef CONFIG_HEXO_USERMODE
-extern CONTEXT_LOCAL cpu_exception_handler_t  *cpu_user_exception_handler;
-#endif
-
-extern CPU_LOCAL cpu_exception_handler_t  *cpu_exception_handler;
-
-void arm_exc_common(reg_t no, struct cpu_context_s *context);
-
-void arm_exc_common(reg_t no, struct cpu_context_s *context)
-{
-    cpu_exception_handler_t *handler = NULL;
-#ifdef CONFIG_HEXO_USERMODE
-    if ( (context->cpsr & 0xf) == 0 )
-        handler = CONTEXT_LOCAL_GET(cpu_user_exception_handler);
-    if ( handler == NULL )
-#endif  
-        handler = CPU_LOCAL_GET(cpu_exception_handler);
-    handler(no,
-            context->gpr[15],
-            0, context,
-            context->gpr[13]);
-
-    return arm_except_preempt();
-}
-
-#ifdef CONFIG_HEXO_USERMODE
-extern CONTEXT_LOCAL cpu_syscall_handler_t  *cpu_syscall_handler;
-
-void arm_swi_common(struct cpu_context_s *context)
-{
-    cpu_syscall_handler_t *handler =
-        CONTEXT_LOCAL_GET(cpu_syscall_handler);
-    handler(0, context);
-
-    return arm_except_preempt();
-}
-#endif
+#endif /* CONFIG_HEXO_CONTEXT */
 
 void cpu_exception_resume_pc(struct cpu_context_s *regs, uintptr_t pc)
 {

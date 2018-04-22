@@ -93,6 +93,8 @@ C_HEADER_BEGIN
 #   define CONTEXT_LOCAL
 #  endif
 
+#ifdef CONFIG_HEXO_CONTEXT
+
 # ifndef CONTEXT_LOCAL_SET
 /** @this must be used to set context local variables */
 #  define CONTEXT_LOCAL_SET(n, v)	{ *(typeof(n)*)((uintptr_t)CONTEXT_GET_TLS() + (uintptr_t)&(n)) = (v); }
@@ -122,6 +124,8 @@ C_HEADER_BEGIN
 # ifndef CONTEXT_LOCAL_TLS_ADDR
 #  define CONTEXT_LOCAL_TLS_ADDR(tls, n)	({ (typeof(n)*)((uintptr_t)(tls) + (uintptr_t)&(n)); })
 # endif
+
+#endif
 
 /************************************************************************/
 

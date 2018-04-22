@@ -23,6 +23,8 @@
 #include <hexo/context.h>
 #include <hexo/local.h>
 
+#ifdef CONFIG_HEXO_CONTEXT
+
 #ifdef CONFIG_HEXO_CONTEXT_PREEMPT
 CPU_LOCAL context_preempt_t *cpu_preempt_handler = (context_preempt_t*)1;
 #endif
@@ -83,6 +85,8 @@ cpu_context_destroy(struct context_s *context)
   reg_t		*stack = (reg_t*)context->stack_ptr;
 #endif
 }
+
+#endif /* CONFIG_HEXO_CONTEXT */
 
 void cpu_exception_resume_pc(struct cpu_context_s *regs, uintptr_t pc)
 {

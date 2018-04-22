@@ -38,6 +38,8 @@
 
 .syntax unified
 
+#ifdef CONFIG_HEXO_CONTEXT
+
 FUNC_START(.text, cpu_context_switch)
 
         /* context registers save array from tls */
@@ -235,7 +237,7 @@ FUNC_START(.text, cpu_context_jumpto_irq)
 FUNC_END(cpu_context_jumpto_irq)
 #endif
 
-
+#endif /* CONFIG_HEXO_CONTEXT */
 
 FUNC_START(.text, cpu_context_set)
 
@@ -251,6 +253,7 @@ FUNC_START(.text, cpu_context_set)
 
 FUNC_END(cpu_context_set)
 
+#ifdef CONFIG_HEXO_CONTEXT
 
 FUNC_START(.text, cpu_context_entry)
         mov     r0,     r5
@@ -305,3 +308,4 @@ FUNC_END(cpu_context_set_user)
 
 #endif
 
+#endif /* CONFIG_HEXO_CONTEXT */

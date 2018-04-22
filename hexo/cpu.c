@@ -61,6 +61,8 @@ void cpu_dcache_flush_buf(void *ptr, size_t size)
 
 #endif
 
+#ifdef CONFIG_DEVICE_CPU
+
 /* This is the root node of the cpus tree. */
 struct cpu_tree_s *cpu_tree = NULL;
 
@@ -150,4 +152,6 @@ void cpu_tree_node_cleanup(struct cpu_tree_s *node)
   mem_free(node->cls);
 #endif
 }
+
+#endif
 

@@ -62,14 +62,29 @@
         // preserve r2
         mtspr   PPC_SPRG(2),    2
 
+#ifdef CONFIG_HEXO_CONTEXT
         // get context local storage
         mfspr   2,              PPC_SPRG(4)
         // get context registers save array
         addi    2,      2,      ppc_context_regs@l
 
         // save stack pointer and r0
-        stw     1,              CPU_PPC_CONTEXT_GPR( 1)(2)
         stw     0,              CPU_PPC_CONTEXT_GPR( 0)(2)
+        stw     1,              CPU_PPC_CONTEXT_GPR( 1)(2)
+
+        // preserve ppc abi redzone
+        addi    1,      1,      -224
+
+#else
+        // store cpu_context_s on stack and preserve ppc abi redzone
+        addi    1,      1,      -_sizeof(struct cpu_context_s) - 224
+        mr      2,      1
+
+        // save stack pointer and r0
+        stw     0,              CPU_PPC_CONTEXT_GPR( 0)(2)
+        addi    0,      1,      _sizeof(struct cpu_context_s) + 224
+        stw     0,              CPU_PPC_CONTEXT_GPR( 1)(2)
+#endif
 
         // save condition register
         mfcr    0
@@ -82,9 +97,6 @@
         xori    0,      0,      PPC_MSR_FPU_ENABLED
         mtmsr   0
 #endif
-
-        // preserve ppc abi redzone
-        addi    1,      1,      -224
 
         // save caller saved gp registers 2 to 13
         SMW_GP  2,      3,      13
@@ -142,7 +154,7 @@
 //      mr      4,      4               // arg1 execptr
         mfdear  5                       // arg2 data error
         mr      6,      2               // arg3 reg table
-        addi    7,      1,      224     // arg4 sp, skip redzone
+        lwz     7,      CPU_PPC_CONTEXT_GPR( 1)(2)     // arg4 sp
 
         // find right handler
 #ifdef CONFIG_HEXO_USERMODE
@@ -431,11 +443,14 @@ CPU_NAME_DECL(exception_vector):
 #endif
         ; b ppc_preempt_and_restore
 
-
-ppc_preempt_and_restore:
+FUNC_START(.text, ppc_preempt_and_restore)
         PPC_EXCEPT_PREEMPT
-  ppc_restore_only:
+        b ppc_restore
+FUNC_END(ppc_preempt_and_restore)
+
+FUNC_START(.text, ppc_restore)
         PPC_EXCEPT_RESTORE
+FUNC_END(ppc_restore)
 
 /* apu unavailable */
 // .org 0xf20

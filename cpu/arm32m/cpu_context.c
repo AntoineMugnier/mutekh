@@ -24,6 +24,8 @@
 #include <hexo/interrupt.h>
 #include <mutek/scheduler.h>
 
+#ifdef CONFIG_HEXO_CONTEXT
+
 #ifdef CONFIG_HEXO_CONTEXT_PREEMPT
 CPU_LOCAL context_preempt_t *cpu_preempt_handler = (context_preempt_t*)1;
 #endif
@@ -83,11 +85,6 @@ cpu_context_destroy(struct context_s *context)
 #endif
 }
 
-void cpu_exception_resume_pc(struct cpu_context_s *regs, uintptr_t pc)
-{
-    regs->gpr[15] = pc;
-}
-
 #ifdef CONFIG_HEXO_CONTEXT_IRQEN
 void arm_interrupt_restore(void)
 {
@@ -101,3 +98,9 @@ void arm_interrupt_restore(void)
 }
 #endif
 
+#endif /* CONFIG_HEXO_CONTEXT */
+
+void cpu_exception_resume_pc(struct cpu_context_s *regs, uintptr_t pc)
+{
+    regs->gpr[15] = pc;
+}

@@ -199,12 +199,18 @@ FUNC_START(.text, arm_exc_fault)
         ldr     r0,     [r0]
         mov     r12,    r0
 
+#ifdef CONFIG_HEXO_CONTEXT
         /* tls */
         mrs     r3,     psp
 
         /* fourth arg is cpu_context_s */
         ldr     r0,     = arm_context_regs
         add     r3,     r0
+#else
+        /* store cpu_context_s on stack */
+        add     sp,     #- _sizeof(struct cpu_context_s)
+        mov     r3,     sp
+#endif
 
 #if CONFIG_CPU_ARM32M_ARCH_VERSION >= 7
         str     r1,     [r3, #CPU_ARM_CONTEXT_CFSR]
@@ -212,11 +218,13 @@ FUNC_START(.text, arm_exc_fault)
 
         /* second arg is pc */
         ldr     r1,     [sp, #20]
-
         str     r1,     [r3, #CPU_ARM_CONTEXT_PC]
 
         /* fifth arg is stack pointer */
         mov     r0,     r13
+#ifndef CONFIG_HEXO_CONTEXT
+        adds    r0,     #_sizeof(struct cpu_context_s)
+#endif
         push    {r0}
 
         /* first arg is interrupt number */
@@ -230,11 +238,18 @@ FUNC_START(.text, arm_exc_fault)
 #endif
 
         blx     r12
+        /* pop fifth arg */
         add     sp,     #4
 
+#ifdef CONFIG_HEXO_CONTEXT
         mrs     r1,     psp
         ldr     r2,     = arm_context_regs
         add     r1,     r2
+#else
+        mov     r1,     sp
+        /* pop cpu_context_s */
+        add     sp,     #_sizeof(struct cpu_context_s)
+#endif
 
         ldr     r3,     [r1, #CPU_ARM_CONTEXT_PC]
         str     r3,     [sp, #20]
