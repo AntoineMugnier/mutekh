@@ -19,6 +19,8 @@
 
 */
 
+#define LOGK_MODULE_ID "devi"
+
 #include <mutek/startup.h>
 #include <mutek/printk.h>
 
@@ -33,7 +35,7 @@
 void libdevice_cpu_regs_initsmp()
 {
   if (cpu_isbootstrap())
-    printk("device: cpu(s) reg init: ");
+    logk_debug("cpu reg init...");
 
   mutekh_startup_smp_barrier();
 
@@ -46,7 +48,7 @@ void libdevice_cpu_regs_initsmp()
   /* get cpu API in processor device driver */
   if (device_get_accessor(&cpu_dev.base, cpu->cpu_dev, DRIVER_CLASS_CPU, 0))
     {
-      printk("\nerror: Unable to use driver to initialize CPU %i (device %p).\n", id, cpu->cpu_dev);
+      logk_error("Unable to use driver to initialize CPU %i (device %p)", id, cpu->cpu_dev);
       abort();
     }
 
@@ -55,11 +57,8 @@ void libdevice_cpu_regs_initsmp()
 
   device_put_accessor(&cpu_dev.base);
 
-  printk(" %u ", id);
+  logk_debug(" - %u done", id);
 
   mutekh_startup_smp_barrier();
-
-  if (cpu_isbootstrap())
-    printk("\n");
 }
 

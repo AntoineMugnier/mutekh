@@ -21,6 +21,8 @@
 
 */
 
+#define LOGK_MODULE_ID "devc"
+
 #include <device/device.h>
 #include <device/driver.h>
 #include <device/class/cmu.h>
@@ -252,7 +254,7 @@ error_t dev_clock_sink_link(struct dev_clock_sink_ep_s *sink,
 
           if (done)
             {
-              printk("device: duplicate clock source resource entry for %p device.\n", dev);
+              logk_error("Duplicate clock source resource entry for %p device", dev);
               return -EINVAL;
             }
 
@@ -261,7 +263,7 @@ error_t dev_clock_sink_link(struct dev_clock_sink_ep_s *sink,
           done = 1;
           if (device_get_accessor_by_path(&cmu.base, &dev->node, r->u.clock_src.src, DRIVER_CLASS_CMU))
             {
-              printk("device: no initialized clock provider available for %p device.\n", dev);
+              logk_error("No initialized clock provider available for %p device", dev);
               return -ENOENT;
             }
 
@@ -276,7 +278,7 @@ error_t dev_clock_sink_link(struct dev_clock_sink_ep_s *sink,
           if (DEVICE_OP(&cmu, node_info, r->u.clock_src.src_ep, &mask, &info) ||
               !(mask & DEV_CMU_INFO_SRC))
             {
-              printk("device: clock provider %p does not have a source endpoint with node id %u.\n",
+              logk_error("Clock provider %p does not have a source endpoint with node id %u",
                      cmu.dev, r->u.clock_src.src_ep);
               err = -EINVAL;
               goto unlock;
@@ -292,7 +294,7 @@ error_t dev_clock_sink_link(struct dev_clock_sink_ep_s *sink,
                 }
               else if (device_get_res_freq(dev, freq, id))
                 {
-                  printk("device: unable to get frequency %u for device %p.\n", id, dev);
+                  logk_error("Unable to get frequency %u for device %p", id, dev);
                   err = -EINVAL;
                   goto unlock;
                 }
@@ -347,7 +349,7 @@ error_t dev_clock_sink_link(struct dev_clock_sink_ep_s *sink,
     });
 
   if (!done)
-    printk("device: no clock source resource entry for sink %u of device %p.\n", id, dev);
+    logk_error("No clock source resource entry for sink %u of device %p", id, dev);
 
   return err;
 }
