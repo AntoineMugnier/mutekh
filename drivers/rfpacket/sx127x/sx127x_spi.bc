@@ -217,6 +217,7 @@ __rx_alloc_error:
     /* Wait for deadline if any */
         spi_yield_deadline      %deadline
     /* Start RX */
+__retry_rx:
         cst8                    %sx127x_mode_set:mode,  SX1276_OPMODE_RECEIVER
         call8                   %sx127x_mode_set:link,  sx127x_mode_set
     /* Stay in RX until lifetime is up */
@@ -224,6 +225,9 @@ __rx_alloc_error:
           jmp8                  __rx_timeout
     /* An interrupt has been raised */
         call8                   %sx127x_check_irq:link,  sx127x_check_irq
+    /* Not a packet IRQ, check preamble */
+        call8                   %test_rx_on_going:link,  test_rx_on_going
+        jmp8                    __retry_rx
 __rx_timeout:
         jmp8                    sx127x_entry_cancel
 .endfunc

@@ -148,7 +148,7 @@ struct sx127x_private_s
   /* SX127x gpio mapping */
   gpio_id_t                          pin_map[SX127X_PIN_COUNT];
   /* SX127x interrupts. */
-  struct dev_irq_src_s               src_ep;
+  struct dev_irq_src_s               src_ep[2];
   /* TX/RX request queue */
   dev_request_queue_root_t           queue;
   /* RX continuous request */

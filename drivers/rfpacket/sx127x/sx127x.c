@@ -1133,6 +1133,8 @@ static inline void sx127x_start_rx(struct sx127x_private_s *pv, struct dev_rfpac
 
       sx127x_rfp_set_state(pv, SX127X_STATE_RX);
 
+      device_irq_src_enable(&pv->src_ep[1]);
+
       sx127x_bytecode_start(pv, &sx127x_entry_rx,
         SX127X_ENTRY_RX_BCARGS(&pv->deadline, &pv->timeout, cmd));
     break;
@@ -1236,6 +1238,8 @@ static void sx127x_rfp_end_rq(struct sx127x_private_s *pv, error_t err)
 
   dev_request_queue_pop(&pv->queue);
   kroutine_exec(&rq->base.kr);
+
+  device_irq_src_disable(&pv->src_ep[1]);
 
   if (rq->err)
     sx127x_rfp_process_group(pv, rq->err_group);
@@ -1637,7 +1641,7 @@ static void sx127x_clean(struct device_s *dev)
 {
   struct sx127x_private_s *pv = dev->drv_pv;
 
-  device_irq_source_unlink(dev, &pv->src_ep, 1);
+  device_irq_source_unlink(dev, pv->src_ep, 2);
 
   device_stop(&pv->timer->base);
 
@@ -1840,14 +1844,17 @@ static DEV_INIT(sx127x_init)
   bc_set_trace(&srq->vm, 0, 0);
 
   /* irq */
-  device_irq_source_init(dev, &pv->src_ep, 1, &sx127x_irq_process);
+  device_irq_source_init(dev, pv->src_ep, 2, &sx127x_irq_process);
 
-  if (device_irq_source_link(dev, &pv->src_ep, 1, -1))
+  if (device_irq_source_link(dev, pv->src_ep, 2, -1))
     goto err_timer;
+
+  /* Disable DIO4 as irq */
+  device_irq_src_disable(&pv->src_ep[1]);
 
   bc_set_reg(&srq->vm, R_CTX_PV, (uintptr_t)pv);
 
-  sx127x_bytecode_start(pv, &sx127x_entry_reset, 0); 
+  sx127x_bytecode_start(pv, &sx127x_entry_reset, 0);
 
   pv->state = SX127X_STATE_INITIALISING;
 
@@ -1856,7 +1863,7 @@ static DEV_INIT(sx127x_init)
   return -EAGAIN;
 
 err_link:
-  device_irq_source_unlink(dev, &pv->src_ep, 1);
+  device_irq_source_unlink(dev, pv->src_ep, 1);
 err_timer:
   device_stop(&pv->timer->base);
 err_srq:
