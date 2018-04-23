@@ -119,7 +119,6 @@ void efm32_i2c_slave_data_queue_cancel(driver_pv_t *pv)
       if (!rq)
         break;
 
-      rq->error = -ECANCELED;
       kroutine_exec(&rq->base.kr);
     }
 }
@@ -172,6 +171,8 @@ void efm32_i2c_slave_rx_byte(driver_pv_t *pv, struct dev_i2c_slave_rq_s *rq)
   rq->transfer.data++;
   rq->transfer.size--;
 
+  rq->error = 0;
+  
   logk_debug("%s %02x, %d bytes to go, %s at end", __func__,
              data, rq->transfer.size, rq->transfer.end_ack ? "ACK" : "NACK");
 
@@ -209,6 +210,8 @@ void efm32_i2c_slave_tx_byte(driver_pv_t *pv, struct dev_i2c_slave_rq_s *rq)
   uint8_t data = *rq->transfer.data;
 
   assert(rq->transfer.size);
+
+  rq->error = 0;
 
   logk_debug("%s %02x", __func__, data);
   
@@ -420,6 +423,7 @@ DEV_I2C_SLAVE_REQUEST(efm32_i2c_slave_request)
           /* fallthrough */
 
         case STATE_TRANSMITTING:
+          rq->error = -ECANCELED;
           dev_request_queue_pushback(&pv->queue, &rq->base);
           break;
 
@@ -437,18 +441,21 @@ DEV_I2C_SLAVE_REQUEST(efm32_i2c_slave_request)
         case STATE_RECEIVING_BLOCKED:
           logk_debug(" unlock blocked");
           pv->state = STATE_RECEIVING;
+          rq->error = -ECANCELED;
           dev_request_queue_pushback(&pv->queue, &rq->base);
           cpu_mem_write_32(pv->addr + EFM32_I2C_CMD_ADDR,
                            endian_le32(EFM32_I2C_CMD_ACK));
           break;
 
         case STATE_RECEIVING:
+          rq->error = -ECANCELED;
           dev_request_queue_pushback(&pv->queue, &rq->base);
           break;
 
         case STATE_RECEIVING_WAITING:
           logk_debug(" unlock waiting");
           pv->state = STATE_RECEIVING;
+          rq->error = -ECANCELED;
           dev_request_queue_pushback(&pv->queue, &rq->base);
           efm32_i2c_slave_rx_byte(pv, rq);
           break;
