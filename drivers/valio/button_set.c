@@ -18,6 +18,8 @@
     Copyright (c) Nicolas Pouillon <nipo@ssji.net> 2015
 */
 
+#define LOGK_MODULE_ID "btns"
+
 #include <hexo/types.h>
 #include <hexo/endian.h>
 #include <hexo/iospace.h>
@@ -35,11 +37,6 @@
 #include <device/class/gpio.h>
 #include <device/class/valio.h>
 #include <device/valio/keyboard.h>
-
-/* #define dprintk printk */
-#ifndef dprintk
-# define dprintk(x...) do{}while(0)
-#endif
 
 struct bs_context_s
 {
@@ -76,8 +73,8 @@ static void bs_state_read(struct bs_context_s *pv,
     button++;
   }
 
-  dprintk("%s %llx %llx %P\n", __FUNCTION__, mask, value,
-         rq->data, pv->state_size);
+  logk_trace("%s %llx %llx %P", __FUNCTION__, mask, value,
+             rq->data, pv->state_size);
 }
 
 static void bs_gpio_read(struct device_s *dev)
@@ -141,7 +138,7 @@ static DEV_VALIO_REQUEST(button_set_request)
   struct bs_context_s *pv = dev->drv_pv;
   bool_t was_empty = 0;
 
-  dprintk("%s\n", __FUNCTION__);
+  logk_trace("%s", __FUNCTION__);
 
   if (req->attribute != VALIO_KEYBOARD_MAP) {
     req->error = -EINVAL;
@@ -217,12 +214,18 @@ static DEV_INIT(button_set_init)
   dev->drv_pv = pv;
 
   err = device_get_param_dev_accessor(dev, "gpio", &pv->gpio.base, DRIVER_CLASS_GPIO);
-  if (err)
+  if (err) {
+    logk_error("Cannot get GPIO accessor");
     goto free_pv;
+  }
 
-  err = device_res_gpio_map(dev, "pins", &id, &width);
-  if (err)
+  err = device_gpio_get_setup(&pv->gpio, dev, "pins", &id, &width);
+  if (err) {
+    logk_error("No 'pins' param");
     goto put_gpio;
+  }
+
+  logk_trace("Keyboard pins: %d/%d", id, width);
 
   err = device_get_param_uint(dev, "mask", &tmp);
   if (err)
