@@ -7,3 +7,4 @@ subdirs-$(CONFIG_DRIVER_CHAR_MUX) += mux
 subdirs-$(CONFIG_DRIVER_CHAR_PIPE) += pipe
 subdirs-$(CONFIG_DRIVER_HD44780) += hd44780
 subdirs-$(CONFIG_DRIVER_CHAR_USBDEV_ACM) += usbdev_acm
+subdirs-$(CONFIG_DRIVER_UART_FORWARDER) += uart_forwarder
