@@ -69,8 +69,24 @@
 /* Bulk endpoint max packet size */
 #define USBDEV_SERV_CHAR_BULK_SIZE 64
 
-#define USBDEV_SERV_CHAR_INTF_CTRL 0
-#define USBDEV_SERV_CHAR_INTF_DATA 1
+enum usbdev_serv_char_intf_e
+{
+  USBDEV_SERV_CHAR_INTF_CTRL,
+  USBDEV_SERV_CHAR_INTF_DATA,
+  USBDEV_SERV_CHAR_INTF_COUNT,
+};
+
+static const struct usb_interface_association_descriptor_s iad_acm =
+{
+  .head.bLength = sizeof(iad_acm),
+  .head.bDescriptorType = USB_DESC_INTERFACE_ASSOCIATION,
+  .bFirstInterface = USBDEV_SERV_CHAR_INTF_CTRL, // will be offsetted
+  .bInterfaceCount = USBDEV_SERV_CHAR_INTF_COUNT,
+  .bFunctionClass = USB_DEV_CLASS_COMM,
+  .bFunctionSubClass = USB_CDC_SUBCLASS_ACM,
+  .bFunctionProtocol = USB_CDC_PROTOCOL_NONE,
+  .iFunction = 3,
+};
 
 /* Functionnal descriptor */
 
@@ -220,10 +236,14 @@ struct usbdev_acm_private_s
   dev_usbdev_ep_map_t epi_map;
   dev_usbdev_ep_map_t epo_map;
 
+  const char *function;
+  
 #if defined(CONFIG_DEVICE_VALIO_UART_CONFIG)
   dev_request_queue_root_t coding_notify_queue;
 #endif
 };
+
+STRUCT_COMPOSE(usbdev_acm_private_s, service);
 
 DRIVER_PV(struct usbdev_acm_private_s);
 
@@ -594,11 +614,22 @@ KROUTINE_EXEC(usbdev_acm_ctrl_cb)
   usbdev_stack_request(&pv->usb, &pv->service, &pv->rq);
 }
 
+static USBDEV_GET_STRING(usbdev_acm_get_string)
+{
+  const struct usbdev_acm_private_s *pv = const_usbdev_acm_private_s_from_service(service);
+
+  if (idx == 3)
+    return pv->function;
+
+  return NULL;
+}
+
 /* USB CDC ACM service */
 static const struct usbdev_service_descriptor_s usb_cdc_acm_service =
 {
   /* Local descriptor */
   USBDEV_SERVICE_DESCRIPTOR(
+      &iad_acm.head,
       &interface_cdc_ctrl.intf.desc.head,
       &cdc_header.head,
       &cdc_call_mgmt.head,
@@ -615,11 +646,12 @@ static const struct usbdev_service_descriptor_s usb_cdc_acm_service =
     &interface_cdc_data0
     ),
 
-  .str_cnt = 2,
+  .str_cnt = 3,
   .string =
     "CDC ACM Data\0"
     "CDC ACM Control\0",
 
+  .get_string = usbdev_acm_get_string,
   .replace = usbdev_acm_replace,
 };
 
@@ -821,6 +853,8 @@ DEV_INIT(usbdev_acm_init)
   pv->service.desc = &usb_cdc_acm_service;
   pv->service.pv = dev;
 
+  device_get_param_str_default(dev, "function", &pv->function, "serial port");
+  
   /* Get endpoint map from ressources */
   dev_res_get_usbdev_epmap(dev, &pv->service);
 
