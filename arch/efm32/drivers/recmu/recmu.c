@@ -357,6 +357,7 @@ static void efm32_recmu_configid_refresh(struct device_s *dev);
 static error_t
 efm32_recmu_get_node_freq(struct efm32_recmu_private_s *pv,
                           struct dev_freq_s *freq,
+                          uint32_t *rdiv,
                           dev_cmu_node_id_t node)
 {
   uint32_t div;
@@ -475,7 +476,7 @@ efm32_recmu_get_node_freq(struct efm32_recmu_private_s *pv,
   switch (node)
     {
     case EFM32_CLOCK_LE:
-      if (efm32_recmu_get_node_freq(pv, freq, EFM32_CLOCK_HFCORECLK))
+      if (efm32_recmu_get_node_freq(pv, freq, NULL, EFM32_CLOCK_HFCORECLK))
         return -EINVAL;
 # if (CONFIG_EFM32_FAMILY == EFM32_FAMILY_LEOPARD) \
   || (CONFIG_EFM32_FAMILY == EFM32_FAMILY_WONDER) \
@@ -541,6 +542,9 @@ efm32_recmu_get_node_freq(struct efm32_recmu_private_s *pv,
   if (!freq->num || !freq->denom)
     return -EINVAL;
 
+  if (rdiv)
+    *rdiv = div;
+  
   if (freq->denom > 1)
     {
       uint64_t g = gcd64(freq->num, freq->denom);
@@ -1228,7 +1232,7 @@ static DEV_CMU_COMMIT(efm32_recmu_commit)
       id += EFM32_CLOCK_FIRST_EP;
 
       struct dev_clock_notify_s notify;
-      if (efm32_recmu_get_node_freq(pv, &notify.freq, id))
+      if (efm32_recmu_get_node_freq(pv, &notify.freq, NULL, id))
         abort();
       dev_cmu_src_notify(src, &notify);
 
@@ -1287,9 +1291,15 @@ static DEV_CMU_NODE_INFO(efm32_recmu_node_info)
   if (node_id >= EFM32_CLOCK_count)
     return -EINVAL;
 
-  if (*mask & (DEV_CMU_INFO_FREQ | DEV_CMU_INFO_ACCURACY))
-    if (efm32_recmu_get_node_freq(pv, &info->freq, node_id))
-      *mask &= ~(DEV_CMU_INFO_FREQ | DEV_CMU_INFO_ACCURACY);
+  if (*mask & (DEV_CMU_INFO_FREQ | DEV_CMU_INFO_ACCURACY | DEV_CMU_INFO_SCALE))
+    {
+      uint32_t div = 0;
+      if (efm32_recmu_get_node_freq(pv, &info->freq, &div, node_id))
+        *mask &= ~(DEV_CMU_INFO_FREQ | DEV_CMU_INFO_ACCURACY | DEV_CMU_INFO_SCALE);
+
+      info->scale.num = 1;
+      info->scale.denom = div;
+    }
 
 #ifdef CONFIG_DRIVER_EFM32_RECMU_NAMES
   info->name = efm32_clock_names[node_id];
