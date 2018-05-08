@@ -261,6 +261,17 @@ struct usb_configuration_descriptor_s
   uint8_t  bMaxPower;
 }__attribute__((packed));
 
+// See IAD
+struct usb_interface_association_descriptor_s
+{
+  struct usb_descriptor_header_s head;
+  uint8_t  bFirstInterface;
+  uint8_t  bInterfaceCount;
+  uint8_t  bFunctionClass;
+  uint8_t  bFunctionSubClass;
+  uint8_t  bFunctionProtocol;
+  uint8_t  iFunction;
+}__attribute__((packed));
 
 /** String descriptor for LANGID */
 struct usb_string_descriptor_zero_s

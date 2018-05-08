@@ -58,6 +58,21 @@ USBDEV_REPLACE(usbdev_descriptor_replace)
       to_patch->iInterface += it->service->start.str;
     break;
   }
+
+  case USB_DESC_INTERFACE_ASSOCIATION: {
+    struct usb_interface_association_descriptor_s *to_patch = (void *)dst;
+
+    /* Replace interface number */
+    offset = offsetof(struct usb_interface_association_descriptor_s, bFirstInterface);
+    if (begin <= offset && offset < end)
+      to_patch->bFirstInterface += it->service->start.intf;
+
+    /* Replace function string index */
+    offset = offsetof(struct usb_interface_association_descriptor_s, iFunction);
+    if (begin <= offset && offset < end && to_patch->iFunction)
+      to_patch->iFunction += it->service->start.str;
+    break;
+  }
   }
 }
 
