@@ -1368,7 +1368,7 @@ static bool_t usbdev_configuration_out_desc(struct dev_usbdev_context_s *ctx)
 
   struct usb_configuration_descriptor_s desc = {
       .head.bLength = sizeof(struct usb_configuration_descriptor_s),
-      .head.bDescriptorType = USB_CONFIGURATION_DESCRIPTOR,
+      .head.bDescriptorType = USB_DESC_CONFIGURATION,
       .wTotalLength = endian_le16(len),
       .bNumInterfaces = intf,
       .bConfigurationValue = 1,
@@ -1399,7 +1399,7 @@ static bool_t usbdev_service_out_desc(struct dev_usbdev_context_s *ctx)
                      - begin);
       end = begin + usbdev_copy_buffer(ctx, src);
 
-      if (src->bDescriptorType == USB_INTERFACE_DESCRIPTOR)
+      if (src->bDescriptorType == USB_DESC_INTERFACE)
         ctx->it.intf_index = usb_interface_alt_get((const struct usb_interface_descriptor_s *)src);
 
       if (s->replace)
@@ -1439,7 +1439,7 @@ static inline void usbdev_string_out_desc(struct dev_usbdev_context_s *ctx, size
       struct usb_string_descriptor_s *desc = (struct usb_string_descriptor_s*)&d;
 
       desc->head.bLength = 2 + sizeof(struct usb_descriptor_header_s);
-      desc->head.bDescriptorType = USB_STRING_DESCRIPTOR;
+      desc->head.bDescriptorType = USB_DESC_STRING;
       desc->wData[0] = endian_le16(CONFIG_USBDEV_USB_LANGID);
 
       usbdev_copy_buffer(ctx, &desc->head);
@@ -1487,7 +1487,7 @@ static inline void usbdev_string_out_desc(struct dev_usbdev_context_s *ctx, size
   uint8_t desc[s];
 
   desc[0] = s;
-  desc[1] = USB_STRING_DESCRIPTOR;
+  desc[1] = USB_DESC_STRING;
 
   for (size_t i = 0; i < len; i++)
     {
@@ -1512,7 +1512,7 @@ static inline void usbdev_out_desc(struct dev_usbdev_context_s *ctx, const struc
 
   switch (usb_setup_value_get(setup) >> 8)
     {
-      case USB_DEVICE_DESCRIPTOR :
+      case USB_DESC_DEVICE :
         {
           logk_trace("Get Device Descriptor ");
           if (dindex)
@@ -1524,10 +1524,10 @@ static inline void usbdev_out_desc(struct dev_usbdev_context_s *ctx, const struc
           ctx->it.done = (ctx->it.desc_offset == 0);
           break;
         }
-      case USB_STRING_DESCRIPTOR :
+      case USB_DESC_STRING :
         usbdev_string_out_desc(ctx, dindex);
         break;
-      case USB_CONFIGURATION_DESCRIPTOR:
+      case USB_DESC_CONFIGURATION:
         /* Return configuration, interfaces and endpoints descriptors
            in a single response */
         logk_trace("Get Config Descriptor");
@@ -2280,7 +2280,7 @@ static const struct usbdev_device_info_s usb_default_devinfo =
   .desc =
     {
       .head.bLength = sizeof(struct usb_device_descriptor_s),
-      .head.bDescriptorType = USB_DEVICE_DESCRIPTOR,
+      .head.bDescriptorType = USB_DESC_DEVICE,
       .bcdUSB = endian_le16(CONFIG_USBDEV_USB_REVISION),
       .bDeviceClass = 0,
       .bDeviceSubClass = 0,

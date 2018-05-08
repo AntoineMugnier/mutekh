@@ -30,7 +30,7 @@ USBDEV_REPLACE(usbdev_descriptor_replace)
   size_t offset;
 
   switch (src->bDescriptorType) {
-  case USB_ENDPOINT_DESCRIPTOR: {
+  case USB_DESC_ENDPOINT: {
     const struct usb_endpoint_descriptor_s *orig = (const void *)src;
     struct usb_endpoint_descriptor_s *to_patch = (void *)dst;
 
@@ -43,7 +43,7 @@ USBDEV_REPLACE(usbdev_descriptor_replace)
     break;
   }
 
-  case USB_INTERFACE_DESCRIPTOR: {
+  case USB_DESC_INTERFACE: {
     /* Store alternate setting number for endpoint descriptor */
     struct usb_interface_descriptor_s *to_patch = (void *)dst;
 

@@ -53,7 +53,7 @@ static const struct usbdev_device_info_s usbdevinfo =
   .desc =
     {
       .head.bLength = sizeof(struct usb_device_descriptor_s),
-      .head.bDescriptorType = USB_DEVICE_DESCRIPTOR,
+      .head.bDescriptorType = USB_DESC_DEVICE,
       .bcdUSB = endian_le16(CONFIG_USBDEV_USB_REVISION),
       .bDeviceClass = 0,
       .bDeviceSubClass = 0,
@@ -86,7 +86,7 @@ static const struct usbdev_device_info_s usbdevinfo =
 static const struct usb_endpoint_descriptor_s ep_in_1 =
 {
   .head.bLength = sizeof(struct usb_endpoint_descriptor_s),
-  .head.bDescriptorType = USB_ENDPOINT_DESCRIPTOR,
+  .head.bDescriptorType = USB_DESC_ENDPOINT,
   .bEndpointAddress = USB_EP_IN | 0,
   .bmAttributes = USB_EP_BULK,
   .wMaxPacketSize = endian_le16(USBDEV_TEST_BULK_ALT_SIZE),
@@ -96,7 +96,7 @@ static const struct usb_endpoint_descriptor_s ep_in_1 =
 static const struct usb_endpoint_descriptor_s ep_out_1 =
 {
   .head.bLength = sizeof(struct usb_endpoint_descriptor_s),
-  .head.bDescriptorType = USB_ENDPOINT_DESCRIPTOR,
+  .head.bDescriptorType = USB_DESC_ENDPOINT,
   .bEndpointAddress = USB_EP_OUT | 0,
   .bmAttributes = USB_EP_BULK,
   .wMaxPacketSize = endian_le16(USBDEV_TEST_BULK_ALT_SIZE),
@@ -107,7 +107,7 @@ static const struct usbdev_interface_s interface_test_a1 =
 {
   .desc = {
     .head.bLength = sizeof(struct usb_interface_descriptor_s),
-    .head.bDescriptorType = USB_INTERFACE_DESCRIPTOR,
+    .head.bDescriptorType = USB_DESC_INTERFACE,
     .bInterfaceNumber = USBDEV_SERV_TEST_BULK_INTF,
     .bAlternateSetting = 1,
     .bNumEndpoints = 2,
@@ -126,7 +126,7 @@ static const struct usbdev_interface_s interface_test_a1 =
 static const struct usb_endpoint_descriptor_s ep_in_0 =
 {
   .head.bLength = sizeof(struct usb_endpoint_descriptor_s),
-  .head.bDescriptorType = USB_ENDPOINT_DESCRIPTOR,
+  .head.bDescriptorType = USB_DESC_ENDPOINT,
   .bEndpointAddress = USB_EP_IN | 0,
   .bmAttributes = USB_EP_BULK,
   .wMaxPacketSize = endian_le16(USBDEV_TEST_BULK_SIZE),
@@ -136,7 +136,7 @@ static const struct usb_endpoint_descriptor_s ep_in_0 =
 static const struct usb_endpoint_descriptor_s ep_out_0 =
 {
   .head.bLength = sizeof(struct usb_endpoint_descriptor_s),
-  .head.bDescriptorType = USB_ENDPOINT_DESCRIPTOR,
+  .head.bDescriptorType = USB_DESC_ENDPOINT,
   .bEndpointAddress = USB_EP_OUT | 0,
   .bmAttributes = USB_EP_BULK,
   .wMaxPacketSize = endian_le16(USBDEV_TEST_BULK_SIZE),
@@ -148,7 +148,7 @@ static const struct usbdev_interface_default_s interface_test_a0 =
   .intf = {
     .desc = {
       .head.bLength = sizeof(struct usb_interface_descriptor_s),
-      .head.bDescriptorType = USB_INTERFACE_DESCRIPTOR,
+      .head.bDescriptorType = USB_DESC_INTERFACE,
       .bInterfaceNumber = USBDEV_SERV_TEST_BULK_INTF,
       .bAlternateSetting = 0,
       .bNumEndpoints = 2,
@@ -177,7 +177,7 @@ static const struct usbdev_interface_default_s interface_test_a0 =
 static const struct usb_endpoint_descriptor_s ep_in_2 =
 {
   .head.bLength = sizeof(struct usb_endpoint_descriptor_s),
-  .head.bDescriptorType = USB_ENDPOINT_DESCRIPTOR,
+  .head.bDescriptorType = USB_DESC_ENDPOINT,
   .bEndpointAddress = USB_EP_IN | USBDEV_SERV_TEST_BULK_ENDPOINT,
   .bmAttributes = USB_EP_ISOCHRONOUS,
   .wMaxPacketSize = endian_le16((0 << 11) |USB_TEST_ISOCHONOUS_SIZE),
@@ -187,7 +187,7 @@ static const struct usb_endpoint_descriptor_s ep_in_2 =
 static const struct usb_endpoint_descriptor_s ep_out_2 =
 {
   .head.bLength = sizeof(struct usb_endpoint_descriptor_s),
-  .head.bDescriptorType = USB_ENDPOINT_DESCRIPTOR,
+  .head.bDescriptorType = USB_DESC_ENDPOINT,
   .bEndpointAddress = USB_EP_OUT | USBDEV_SERV_TEST_BULK_ENDPOINT,
   .bmAttributes = USB_EP_ISOCHRONOUS,
   .wMaxPacketSize = endian_le16((0 << 11) | USB_TEST_ISOCHONOUS_SIZE),
@@ -199,7 +199,7 @@ static const struct usbdev_interface_default_s interface_test_b0 =
   .intf = {
     .desc = {
       .head.bLength = sizeof(struct usb_interface_descriptor_s),
-      .head.bDescriptorType = USB_INTERFACE_DESCRIPTOR,
+      .head.bDescriptorType = USB_DESC_INTERFACE,
       .bInterfaceNumber = USBDEV_SERV_TEST_ISO_INTF,
       .bAlternateSetting = 0,
       .bNumEndpoints = 2,
@@ -225,7 +225,7 @@ static const struct usbdev_interface_default_s interface_test_b0 =
 static const struct usb_endpoint_descriptor_s ep_in_3 =
 {
   .head.bLength = sizeof(struct usb_endpoint_descriptor_s),
-  .head.bDescriptorType = USB_ENDPOINT_DESCRIPTOR,
+  .head.bDescriptorType = USB_DESC_ENDPOINT,
   .bEndpointAddress = USB_EP_IN | (USBDEV_SERV_TEST_ISOCHRONOUS_ENDPOINT +
                                    USBDEV_SERV_TEST_BULK_ENDPOINT),
   .bmAttributes = USB_EP_INTERRUPT,
@@ -236,7 +236,7 @@ static const struct usb_endpoint_descriptor_s ep_in_3 =
 static const struct usb_endpoint_descriptor_s ep_out_3 =
 {
   .head.bLength = sizeof(struct usb_endpoint_descriptor_s),
-  .head.bDescriptorType = USB_ENDPOINT_DESCRIPTOR,
+  .head.bDescriptorType = USB_DESC_ENDPOINT,
   .bEndpointAddress = USB_EP_OUT | (USBDEV_SERV_TEST_ISOCHRONOUS_ENDPOINT +
                                     USBDEV_SERV_TEST_BULK_ENDPOINT),
   .bmAttributes = USB_EP_INTERRUPT,
@@ -249,7 +249,7 @@ static const struct usbdev_interface_default_s interface_test_c0 =
   .intf = {
     .desc = {
       .head.bLength = sizeof(struct usb_interface_descriptor_s),
-      .head.bDescriptorType = USB_INTERFACE_DESCRIPTOR,
+      .head.bDescriptorType = USB_DESC_INTERFACE,
       .bInterfaceNumber = USBDEV_SERV_TEST_IRQ_INTF,
       .bAlternateSetting = 0,
       .bNumEndpoints = 2,
@@ -275,7 +275,7 @@ static const struct usbdev_interface_default_s interface_test_c0 =
 static const struct usb_endpoint_descriptor_s ep_4 =
 {
   .head.bLength = sizeof(struct usb_endpoint_descriptor_s),
-  .head.bDescriptorType = USB_ENDPOINT_DESCRIPTOR,
+  .head.bDescriptorType = USB_DESC_ENDPOINT,
   .bEndpointAddress = (USBDEV_SERV_TEST_ISOCHRONOUS_ENDPOINT +
                        USBDEV_SERV_TEST_BULK_ENDPOINT +
                        USBDEV_SERV_TEST_INTERRUPT_ENDPOINT),
@@ -289,7 +289,7 @@ static const struct usbdev_interface_default_s interface_test_d0 =
   .intf = {
     .desc = {
       .head.bLength = sizeof(struct usb_interface_descriptor_s),
-      .head.bDescriptorType = USB_INTERFACE_DESCRIPTOR,
+      .head.bDescriptorType = USB_DESC_INTERFACE,
       .bInterfaceNumber = USBDEV_SERV_TEST_CTRL_INTF,
       .bAlternateSetting = 0,
       .bNumEndpoints = 1,

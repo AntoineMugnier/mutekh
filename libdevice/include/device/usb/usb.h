@@ -67,24 +67,67 @@ enum usb_endpoint_dir_e
 
 enum usb_descriptor_type_e
 {
-  USB_DEVICE_DESCRIPTOR              = 1,
-  USB_CONFIGURATION_DESCRIPTOR       = 2,
-  USB_STRING_DESCRIPTOR              = 3,
-  USB_INTERFACE_DESCRIPTOR           = 4,
-  USB_ENDPOINT_DESCRIPTOR            = 5,
-  USB_DEVICE_QUALIFIER_DESCRIPTOR    = 6,
-  USB_OTHER_SPEED_CONFIG_DESCRIPTOR  = 7, 
-  USB_INTERFACE_POWER_DESCRIPTOR     = 8
+  USB_DESC_DEVICE                = 1,
+  USB_DESC_CONFIGURATION         = 2,
+  USB_DESC_STRING                = 3,
+  USB_DESC_INTERFACE             = 4,
+  USB_DESC_ENDPOINT              = 5,
+  USB_DESC_DEVICE_QUALIFIER      = 6,
+  USB_DESC_OTHER_SPEED_CONFIG    = 7, 
+  USB_DESC_INTERFACE_POWER       = 8,
+  USB_DESC_OTG                   = 9,
+  USB_DESC_DEBUG                 = 10,
+  USB_DESC_INTERFACE_ASSOCIATION = 11,
 };
 
 enum usb_device_class_code_e
 {
-  /** CDC */
-  USB_CLASS_CDC                  = 0x02,
-  USB_CLASS_HID                  = 0x03,
-  USB_CLASS_HUB                  = 0x09,  
-  USB_CLASS_MSD                  = 0x08,  
-  USB_CLASS_CDC_DATA             = 0x0A,
+  USB_DEV_CLASS_SEE_INTERFACE        = 0x00,
+  USB_DEV_CLASS_AUDIO                = 0x01,
+  USB_DEV_CLASS_COMM                 = 0x02,
+  USB_DEV_CLASS_HID                  = 0x03,
+  USB_DEV_CLASS_PHYSICAL             = 0x05,
+  USB_DEV_CLASS_IMAGE                = 0x06,
+  USB_DEV_CLASS_PRINTER              = 0x07,
+  USB_DEV_CLASS_MASS_STORAGE         = 0x08,
+  USB_DEV_CLASS_HUB                  = 0x09,
+  USB_DEV_CLASS_COMM_DATA            = 0x0A,
+  USB_DEV_CLASS_SMART_CARD           = 0x0B,
+  USB_DEV_CLASS_CONTENT_SECURITY     = 0x0D,
+  USB_DEV_CLASS_VIDEO                = 0x0E,
+  USB_DEV_CLASS_PERSONAL_HEALTHCARE  = 0x0F,
+  USB_DEV_CLASS_AUDIO_VIDEO          = 0x10,
+  USB_DEV_CLASS_BILLBOARD            = 0x11,
+  USB_DEV_CLASS_TYPEC_BRIDGE         = 0x12,
+  USB_DEV_CLASS_DIAGNOSTIC           = 0xDC,
+  USB_DEV_CLASS_WIRELESS             = 0xE0,
+  USB_DEV_CLASS_MISCELLANEOUS        = 0xEF,
+  USB_DEV_CLASS_APPLICATION_SPECIFIC = 0xFE,
+  USB_DEV_CLASS_VENDOR_SPECIFIC      = 0xFF,
+};
+
+enum usb_device_misc_subclass_e
+{
+  USB_DEV_MISC_SUBCLASS_SYNC  = 0x01,
+  USB_DEV_MISC_SUBCLASS_MULTI = 0x02,
+  USB_DEV_MISC_SUBCLASS_CABLE = 0x03,
+  USB_DEV_MISC_SUBCLASS_RNDIS = 0x04,
+  USB_DEV_MISC_SUBCLASS_USB3  = 0x05,
+  USB_DEV_MISC_SUBCLASS_STEP  = 0x06,
+  USB_DEV_MISC_SUBCLASS_CICAM = 0x07,
+};
+
+enum usb_device_application_subclass_e
+{
+  USB_DEV_APP_SUBCLASS_DFU  = 0x01,
+  USB_DEV_APP_SUBCLASS_IRDA = 0x02,
+  USB_DEV_APP_SUBCLASS_TEST = 0x03,
+};
+
+enum usb_device_misc_multi_protocol_e
+{
+  USB_DEV_MISC_MULTI_PROTO_IAD  = 0x01,
+  USB_DEV_MISC_MULTI_PROTO_WAMP = 0x02,
 };
 
 enum dev_usbdev_state_e

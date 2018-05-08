@@ -47,7 +47,7 @@ static const struct usbdev_device_info_s usbdevinfo =
   .desc =
     {
       .head.bLength = sizeof(struct usb_device_descriptor_s),
-      .head.bDescriptorType = USB_DEVICE_DESCRIPTOR,
+      .head.bDescriptorType = USB_DESC_DEVICE,
       .bcdUSB = endian_le16(CONFIG_USBDEV_USB_REVISION),
       .bDeviceClass = 0,
       .bDeviceSubClass = 0,
