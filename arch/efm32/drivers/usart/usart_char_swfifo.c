@@ -530,6 +530,7 @@ static DEV_USE(efm32_usart_char_use)
 static DEV_INIT(efm32_usart_char_init)
 {
   struct efm32_usart_context_s	*pv;
+  error_t err;
 
   pv = mem_alloc(sizeof(*pv), (mem_scope_sys));
   dev->drv_pv = pv;
@@ -539,14 +540,20 @@ static DEV_INIT(efm32_usart_char_init)
 
   memset(pv, 0, sizeof(*pv));
 
-  if (device_res_get_uint(dev, DEV_RES_MEM, 0, &pv->addr, NULL))
+  err = device_res_get_uint(dev, DEV_RES_MEM, 0, &pv->addr, NULL);
+  if (err) {
+    logk_error("Bad device address");
     goto err_mem;
+  }
 
   /* setup pinmux */
   iomux_io_id_t pin[2];
   iomux_demux_t loc[2];
-  if (device_iomux_setup(dev, "<rx? >tx?", loc, pin, NULL))
+  err = device_iomux_setup(dev, "<rx? >tx?", loc, pin, NULL);
+  if (err) {
+    logk_error("Bad pins");
     goto err_mem;
+  }
 
 #if (CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_XG1) ||\
     (CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_XG12)
@@ -563,8 +570,11 @@ static DEV_INIT(efm32_usart_char_init)
       enable |= EFM32_USART_ROUTEPEN_TXPEN;
       EFM32_USART_ROUTELOC0_TXLOC_SETVAL(route, loc[1]);
     }
-  if (enable == 0)
+  if (enable == 0) {
+    err = -EINVAL;
+    logk_error("Bad IOMUX")
     goto err_mem;
+  }
 #elif CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFM
   uint32_t route = 0;
   if (loc[0] != IOMUX_INVALID_DEMUX)
@@ -574,8 +584,11 @@ static DEV_INIT(efm32_usart_char_init)
 
   EFM32_USART_ROUTE_LOCATION_SETVAL(route, loc[0] != IOMUX_INVALID_DEMUX ? loc[0] : loc[1]);
 
-  if (route == 0)
+  if (route == 0) {
+    err = -EINVAL;
+    logk_error("Bad IOMUX");
     goto err_mem;
+  }
 #else
 # error
 #endif
@@ -590,9 +603,13 @@ static DEV_INIT(efm32_usart_char_init)
   uart_fifo_init(&pv->read_fifo);
   uart_fifo_init(&pv->write_fifo);
 
-  if (dev_drv_clock_init(dev, &pv->clk_ep, 0, DEV_CLOCK_EP_FREQ_NOTIFY |
-                     DEV_CLOCK_EP_POWER_CLOCK | DEV_CLOCK_EP_GATING_SYNC, &pv->freq))
+  err = dev_drv_clock_init(
+    dev, &pv->clk_ep, 0, DEV_CLOCK_EP_FREQ_NOTIFY |
+    DEV_CLOCK_EP_POWER_CLOCK | DEV_CLOCK_EP_GATING_SYNC, &pv->freq);
+  if (err) {
+    logk_error("Bad clock init");
     goto err_fifo;
+  }
 
   /* wait for current TX to complete */
   if (cpu_mem_read_32(pv->addr + EFM32_USART_STATUS_ADDR)
@@ -648,8 +665,11 @@ static DEV_INIT(efm32_usart_char_init)
   device_irq_source_init(dev, &pv->irq_ep[0], 1, &efm32_usart_irq_rx);
   device_irq_source_init(dev, &pv->irq_ep[1], 1, &efm32_usart_irq_tx);
 
-  if (device_irq_source_link(dev, pv->irq_ep, 2, -1))
+  err = device_irq_source_link(dev, pv->irq_ep, 2, -1);
+  if (err) {
+    logk_error("Bad IRQ");
     goto err_irq;
+  }
 
   return 0;
 
@@ -662,7 +682,7 @@ static DEV_INIT(efm32_usart_char_init)
   dev_request_queue_destroy(&pv->write_q);
  err_mem:
   mem_free(pv);
-  return -1;
+  return err;
 }
 
 static DEV_CLEANUP(efm32_usart_char_cleanup)
