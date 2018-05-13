@@ -52,14 +52,16 @@
                      | EFM32_I2C_IF_SSTOP       \
                      | EFM32_I2C_IF_ACK         \
                      | EFM32_I2C_IF_NACK        \
-                     | EFM32_I2C_IF_ARBLOST     \
+                     | EFM32_I2C_IF_BUSERR      \
+                     | EFM32_I2C_IF_CLTO        \
                      )
 
 #define RX_IRQ_MASK (0                          \
                      | EFM32_I2C_IF_RXDATAV     \
                      | EFM32_I2C_IF_RSTART      \
                      | EFM32_I2C_IF_SSTOP       \
-                     | EFM32_I2C_IF_ARBLOST     \
+                     | EFM32_I2C_IF_BUSERR      \
+                     | EFM32_I2C_IF_CLTO        \
                      )
 
 enum efm32_i2c_slave_state_e
@@ -82,6 +84,7 @@ struct efm32_i2c_slave_pv_s
   struct dev_irq_src_s irq_ep;
   dev_request_queue_root_t queue;
   struct dev_i2c_slave_rq_s *addr_sel;
+  uint8_t timeout;
 };
 
 DRIVER_PV(struct efm32_i2c_slave_pv_s);
@@ -151,6 +154,7 @@ void efm32_i2c_slave_tx_setup(driver_pv_t *pv)
 
   pv->state = STATE_TRANSMITTING_UNDERFLOW;
   cpu_mem_write_32(pv->addr + EFM32_I2C_IEN_ADDR, endian_le32(TX_IRQ_MASK));
+  pv->timeout = 10;
 }
 
 static
@@ -160,12 +164,15 @@ void efm32_i2c_slave_rx_setup(driver_pv_t *pv)
 
   pv->state = STATE_RECEIVING_BLOCKED;
   cpu_mem_write_32(pv->addr + EFM32_I2C_IEN_ADDR, endian_le32(RX_IRQ_MASK));
+  pv->timeout = 10;
 }
 
   static
 void efm32_i2c_slave_rx_byte(driver_pv_t *pv, struct dev_i2c_slave_rq_s *rq)
 {
   uint8_t data = endian_le32(cpu_mem_read_32(pv->addr + EFM32_I2C_RXDATA_ADDR));
+
+  pv->timeout = 10;
 
   *rq->transfer.data = data;
   rq->transfer.data++;
@@ -209,6 +216,8 @@ void efm32_i2c_slave_tx_byte(driver_pv_t *pv, struct dev_i2c_slave_rq_s *rq)
 {
   uint8_t data = *rq->transfer.data;
 
+  pv->timeout = 10;
+
   assert(rq->transfer.size);
 
   rq->error = 0;
@@ -244,7 +253,7 @@ DEV_IRQ_SRC_PROCESS(efm32_i2c_slave_irq)
         return;
 
       /* End of data phase conditions */
-      if (irq & (EFM32_I2C_IF_RSTART | EFM32_I2C_IF_SSTOP | EFM32_I2C_IF_ARBLOST))
+      if (irq & (EFM32_I2C_IF_RSTART | EFM32_I2C_IF_SSTOP))
         {
           logk_debug(" terminated");
 
@@ -255,8 +264,54 @@ DEV_IRQ_SRC_PROCESS(efm32_i2c_slave_irq)
 
           if (!pv->addr_sel)
             dev->start_count &= ~1;
+
+          continue;
         }
-  
+
+      /* Errors */
+      if (irq & (EFM32_I2C_IF_BUSERR | EFM32_I2C_IF_ARBLOST))
+        {
+          logk_debug(" error");
+
+          cpu_mem_write_32(pv->addr + EFM32_I2C_CMD_ADDR,
+                           endian_le32(EFM32_I2C_CMD_ABORT));
+
+          if (pv->state != STATE_IDLE) {
+            efm32_i2c_slave_data_queue_cancel(pv);
+            efm32_i2c_slave_idle_setup(pv);
+          }
+
+          if (!pv->addr_sel)
+            dev->start_count &= ~1;
+
+          continue;
+        }
+
+      /* Timeout */
+      if (irq & (EFM32_I2C_IF_CLTO))
+        {
+          logk_debug(" clto");
+
+          if (pv->timeout == 0)
+            {
+              cpu_mem_write_32(pv->addr + EFM32_I2C_CMD_ADDR,
+                               endian_le32(EFM32_I2C_CMD_ABORT));
+              if (pv->state != STATE_IDLE) {
+                efm32_i2c_slave_data_queue_cancel(pv);
+                efm32_i2c_slave_idle_setup(pv);
+              }
+
+              if (!pv->addr_sel)
+                dev->start_count &= ~1;
+
+              continue;
+            }
+          else
+            {
+              pv->timeout--;
+            }
+        }
+      
       /* Slave address selection */
       if (irq & EFM32_I2C_IF_ADDRA)
         {
@@ -603,7 +658,9 @@ DEV_INIT(efm32_i2c_slave_init)
     goto err_clk;
 
   /* Enable controller */
-  uint32_t x = EFM32_I2C_CTRL_EN | EFM32_I2C_CTRL_SLAVE;
+  uint32_t x = EFM32_I2C_CTRL_EN
+    | EFM32_I2C_CTRL_SLAVE
+    | EFM32_I2C_CTRL_CLTO_SHIFT_VAL(1024PCC);
   cpu_mem_write_32(pv->addr + EFM32_I2C_CTRL_ADDR, endian_le32(x));
 
   /* Clear interrupts flags */
