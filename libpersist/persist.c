@@ -629,6 +629,8 @@ void persist_context_init(struct persist_context_s *ctx,
                           uintptr_t dev_addr, size_t dev_size,
                           size_t page_size)
 {
+  assert(dev_size >= (2 * page_size));
+
   ctx->addr = dev_addr;
   ctx->slot_size = (dev_size >> 1) & (~(page_size - 1));
   ctx->page_size = page_size;
