@@ -62,7 +62,7 @@ struct ble_security_db_s
   struct dev_rng_s *rng;
 #endif
 #if defined(CONFIG_BLE_SECURITY_DB)
-  struct device_persist_s persist;
+  struct persist_context_s persist;
 
   uint8_t pk[16];
   uint8_t irk[16];

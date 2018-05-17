@@ -65,25 +65,25 @@ struct ble_security_db_entry_s
 #if defined(CONFIG_BLE_SECURITY_DB)
 static const struct persist_descriptor_s security_db_entry_blob = {
   .uid = 0x3200,
-  .type = DEV_PERSIST_BLOB,
+  .type = PERSIST_BLOB,
   .size = sizeof(struct ble_security_db_entry_s),
 };
 
 static const struct persist_descriptor_s security_db_subscribed_blob = {
   .uid = 0x3220,
-  .type = DEV_PERSIST_BLOB,
+  .type = PERSIST_BLOB,
   .size = BLE_SUBSCRIBED_CHAR_COUNT * sizeof(struct ble_subscription_s),
 };
 
 static const struct persist_descriptor_s security_db_device_counter = {
   .uid = 0x3301,
-  .type = DEV_PERSIST_COUNTER,
+  .type = PERSIST_COUNTER,
   .size = 16,
 };
 
 static const struct persist_descriptor_s security_db_pk_blob = {
   .uid = 0x3300,
-  .type = DEV_PERSIST_BLOB,
+  .type = PERSIST_BLOB,
   .size = 16,
 };
 
@@ -183,9 +183,11 @@ error_t ble_security_db_init(struct ble_security_db_s *db,
   memset(db, 0, sizeof(*db));
 
 #if defined(CONFIG_BLE_SECURITY_DB)
-  err = device_get_accessor_by_path(&db->persist.base, NULL, persist, DRIVER_CLASS_PERSIST);
-  if (err)
-    return err;
+  /* err = device_get_accessor_by_path(&db->persist.base, NULL, persist, DRIVER_CLASS_PERSIST); */
+  /* if (err) */
+  /*   return err; */
+  // ici il faut init le context !!! au lieu du get accessor
+  persist_context_init(&db->persist, 0x5000, 0x2000, 0x1000);
 #endif
 
   err = device_get_accessor_by_path(&db->aes.base, NULL, aes, DRIVER_CLASS_CRYPTO);
@@ -199,10 +201,17 @@ error_t ble_security_db_init(struct ble_security_db_s *db,
   err = persist_wait_read(&db->persist, &security_db_pk_blob, 0, &tmp);
   if (!err) {
     memcpy(db->pk, tmp, 16);
-
     printk("Loaded device private key: %P\n", db->pk, 16);
   } else {
-    err = dev_rng_wait_read(db->rng, db->pk, 16);
+
+    // TEST
+    printk("CREATE\n");
+    uint8_t tmp2[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16};
+    memcpy(db->pk, tmp2, 16);
+    printk("MEMCPY done\n");
+    // end TEST
+
+    err = dev_rng_wait_read(db->rng, db->pk, 16); /* FIXME: ça passe pas...PK not init ????.!!!!! */
     if (err)
       goto put_aes;
 
@@ -264,7 +273,7 @@ error_t ble_security_db_init(struct ble_security_db_s *db,
   device_put_accessor(&db->aes.base);
  put_persist:
 #if defined(CONFIG_BLE_SECURITY_DB)
-  device_put_accessor(&db->persist.base);
+  //device_put_accessor(&db->persist.base);
 #endif
   return err;
 }
@@ -272,7 +281,7 @@ error_t ble_security_db_init(struct ble_security_db_s *db,
 void ble_security_db_cleanup(struct ble_security_db_s *db)
 {
 #if defined(CONFIG_BLE_SECURITY_DB)
-  device_put_accessor(&db->persist.base);
+  //device_put_accessor(&db->persist.base);
 #endif
   device_put_accessor(&db->aes.base);
 }

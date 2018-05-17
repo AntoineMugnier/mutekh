@@ -24,7 +24,7 @@
 #include <mutek/printk.h>
 
 #if defined(CONFIG_BLE_SECURITY_DB)
-# include <device/class/persist.h>
+# include <persist/persist.h>
 # include <device/class/crypto.h>
 #endif
 
@@ -380,4 +380,3 @@ void ble_peer_subscriptions_set(struct ble_peer_s *peer,
   memcpy(peer->subscriptions, subscriptions,
          sizeof(struct ble_subscription_s) * BLE_SUBSCRIBED_CHAR_COUNT);
 }
-
