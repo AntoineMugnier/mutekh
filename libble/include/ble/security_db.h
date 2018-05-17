@@ -32,7 +32,7 @@
 #include <hexo/types.h>
 #include <ble/protocol/address.h>
 #if defined(CONFIG_BLE_SECURITY_DB)
-# include <device/class/persist.h>
+# include <persist/persist.h>
 #endif
 #if defined(CONFIG_BLE_CRYPTO)
 # include <device/class/crypto.h>
