@@ -7,7 +7,12 @@
 
 #include <device/device.h>
 #include <device/driver.h>
-#include <device/class/persist.h>
+
+#if defined(CONFIG_BLE_SECURITY_DB)
+  #include <persist/persist.h>
+#endif
+
+
 
 #include <hexo/power.h>
 
@@ -21,9 +26,9 @@
 
 #define dprintk(...) do{}while(0)
 
-static const struct dev_persist_descriptor_s beacon_config_blob = {
+static const struct persist_descriptor_s beacon_config_blob = {
   .uid = 0x7700,
-  .type = DEV_PERSIST_BLOB,
+  .type = PERSIST_BLOB,
   .size = sizeof(struct ble_beacon_config_s),
 };
 
@@ -36,8 +41,8 @@ struct app_s
   struct beacon_config_s beacon_config;
   struct led_s led[3];
   struct net_layer_s *beaconer;
-#if defined(CONFIG_DEVICE_PERSIST)
-  struct device_persist_s persist;
+#if defined(CONFIG_BLE_SECURITY_DB)
+  struct persist_context_s persist;
   bool_t config_changed;
 #endif
 };
@@ -77,9 +82,9 @@ void peri_connection_closed(struct ble_stack_connection_s *conn, uint8_t reason)
 static void config_save(struct app_s *app)
 {
 #if defined(CONFIG_DEVICE_PERSIST)
-  dev_persist_wait_write(&app->persist,
-                         &beacon_config_blob,
-                         0, &app->beacon_config.config);
+  persist_wait_write(&app->persist,
+                     &beacon_config_blob,
+                     0, &app->beacon_config.config);
 
   app->config_changed = 0;
 #endif
@@ -91,9 +96,9 @@ static void config_load(struct app_s *app)
   error_t err;
   const struct ble_beacon_config_s *config;
 
-  err = dev_persist_wait_read(&app->persist,
-                              &beacon_config_blob,
-                              0, (const void**)&config);
+  err = persist_wait_read(&app->persist,
+                          &beacon_config_blob,
+                          0, (const void**)&config);
 
   if (!err) {
     memcpy(&app->beacon_config.config, config, sizeof(*config));
@@ -211,7 +216,7 @@ static CONTEXT_ENTRY(main)
   config_load(app);
   ble_stack_context_address_non_resolvable_generate(
          &app->context, &app->beacon_config.config.local_addr);
-    
+
   err = ble_beacon_create(&app->context, &app->beacon_config.config, &app->beaconer);
   ensure(!err && "beaconer create failed");
 }
