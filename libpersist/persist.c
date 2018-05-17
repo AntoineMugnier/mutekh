@@ -1,3 +1,4 @@
+#define LOGK_MODULE_ID "prst"
 /*
     This file is part of MutekH.
 
