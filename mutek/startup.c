@@ -173,6 +173,8 @@ void mutekh_startup(void *arg)
   /* call all bootstrap init functions */
   INIT_BOOTSTRAP_INIT();
 
+  logk_debug("Bootstrap init done");
+
 #if defined(CONFIG_DEVICE_CPU)
   const struct cpu_tree_s *cpu = cpu_tree_lookup(CONFIG_ARCH_BOOTSTRAP_CPU_ID);
   assert(cpu != NULL && "processor id not found in the cpu tree.");
@@ -189,11 +191,14 @@ void mutekh_startup_smp()
   /* call smp init functions */
   INIT_SMP_INIT();
 
+  logk_error("Reached end of init, halting");
   abort();
 }
 
 void mutekh_startup_devready()
 {
+  logk("System started");
+
   INIT_DEVREADY_INIT();
 }
 

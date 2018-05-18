@@ -1,7 +1,7 @@
 
 enum_headers = include/hexo/power.h
 
-DIR_CFLAGS = -D_HEXO_INTTYPES_DEPRECATED
+DIR_CFLAGS = -D_HEXO_INTTYPES_DEPRECATED -DLOGK_MODULE_ID='"hexo"'
 
 objs = cpu.o interrupt.o enum.o atomic.o bit.o flash.o
 

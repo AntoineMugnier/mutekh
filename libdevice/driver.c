@@ -21,8 +21,6 @@
     Copyright (c) 2011 Institut Telecom / Telecom ParisTech
 */
 
-#define LOGK_MODULE_ID "ddrv"
-
 #include <hexo/error.h>
 #include <hexo/ordering.h>
 
@@ -484,13 +482,13 @@ static void device_update_status(struct device_s *dev, error_t err)
  switch (err)
     {
     case 0:
-      logk_debug(" - %p %s done", dev, dev->node.name);
+      logk_debug(" - %s init done", dev->node.name);
       dev->status = DEVICE_INIT_DONE;
       break;
 
     case -EAGAIN:
 #if defined(CONFIG_DEVICE_INIT_PARTIAL) || defined(CONFIG_DEVICE_INIT_ASYNC)
-      logk_debug(" - %p %s ongoing", dev, dev->node.name);
+      logk_debug(" - %s init ongoing", dev->node.name);
       dev->status = DEVICE_INIT_ONGOING;
       break;
 #else
@@ -501,13 +499,13 @@ static void device_update_status(struct device_s *dev, error_t err)
 #ifdef CONFIG_DEVICE_INIT_PARTIAL
       if (dev->init_mask)
         {
-          logk_debug(" - %p %s partial (err=%i)", dev, dev->node.name, err);
+          logk_debug(" - %s init partial (err=%i)", dev->node.name, err);
           dev->status = DEVICE_INIT_PARTIAL;
         }
       else
 #endif
         {
-          logk_error(" - %p %s fail (err=%i)", dev, dev->node.name, err);
+          logk_error(" - %s fail (err=%i)", dev->node.name, err);
 #ifdef CONFIG_DEVICE_TREE
           assert(device_list_isempty(&dev->node.children));
 #endif
@@ -528,9 +526,6 @@ static void device_update_status(struct device_s *dev, error_t err)
 void device_async_init_done(struct device_s *dev, error_t err)
 {
   assert(dev->status == DEVICE_INIT_ONGOING);
-
-  logk_debug("Initializing %p %s...", dev, dev->node.name);
-
   device_update_status(dev, err);
 }
 
@@ -763,8 +758,8 @@ static error_t device_init_driver_nolock(struct device_s *dev)
 #endif
             default:
             missing:
-              logk_error(" - %p %s dependency error `%s'",
-                     dev, dev->node.name, path);
+              logk_error(" - %s dependency error on `%s'",
+                     dev->node.name, path);
               dev->status = DEVICE_INIT_FAILED;
               return -ENOENT;
 
@@ -795,7 +790,7 @@ static error_t device_init_driver_nolock(struct device_s *dev)
     return -EAGAIN;
 #endif
 
-  logk_debug("Initializing %p %s...", dev, dev->node.name);
+  logk_debug("Init %s", dev->node.name);
 
   /* device init */
   err = drv->f_init(dev, cl_missing);

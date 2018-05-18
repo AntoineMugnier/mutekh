@@ -20,6 +20,7 @@
 
 */
 
+#undef LOGK_MODULE_ID
 #define LOGK_MODULE_ID "usbd"
 
 #include <device/device.h>
