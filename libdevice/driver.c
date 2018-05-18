@@ -449,7 +449,7 @@ static void libdevice_drivers_init()
 #endif
       )
     {
-      INIT_DEVREADY_INIT();
+      mutekh_startup_devready();
       device_init_pass = 2;
       order_smp_write();
     }
