@@ -57,12 +57,6 @@ void nrf5x_init(void)
 #if CONFIG_NRF5X_MODEL >= 52000 && \
     CONFIG_NRF5X_MODEL < 53000
 
-# ifndef CONFIG_DRIVER_NRF52_NFCT
-  if (cpu_mem_read_32(NRF_UICR_NFCPINS) & NRF_UICR_NFCPINS_PROTECT_NFC) {
-    flash_page_write(NRF_UICR_NFCPINS, (void*)(const uint32_t[]){ ~NRF_UICR_NFCPINS_PROTECT_NFC }, 4);
-    cpu_mem_write_32(ARMV7M_AIRCR_ADDR, 0x5FA0004);
-  }
-# endif
 
   uintptr_t nvmc = NRF_PERIPHERAL_ADDR(NRF5X_NVMC);
   nrf_reg_set(nvmc, NRF_NVMC_ICACHECNF, NRF_NVMC_ICACHECNF_CACHEEN_ENABLED);
