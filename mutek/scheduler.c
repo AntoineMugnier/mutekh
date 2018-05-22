@@ -26,6 +26,8 @@
 
 #include <mutek/semaphore.h>
 #include <mutek/startup.h>
+#include <mutek/printk.h>
+
 #include <hexo/local.h>
 #include <hexo/cpu.h>
 #include <hexo/ipi.h>
@@ -908,11 +910,14 @@ void mutek_scheduler_start(void)
 #endif
 
   cpu_interrupt_disable();
-# ifndef CONFIG_ARCH_SMP
+
   mutekh_startup_smp_barrier();
   if (cpu_isbootstrap())
-# endif
-    sched_started = 1;
+    {
+      sched_started = 1;
+      logk_debug("Starting scheduler loop");
+    }
+
   mutekh_startup_smp_barrier();
   sched_context_idle();
 }

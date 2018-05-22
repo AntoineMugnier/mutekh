@@ -19,8 +19,6 @@
 
 */
 
-#define LOGK_MODULE_ID "devi"
-
 #include <mutek/startup.h>
 #include <mutek/printk.h>
 
@@ -57,7 +55,7 @@ void libdevice_cpu_regs_initsmp()
 
   device_put_accessor(&cpu_dev.base);
 
-  logk_debug(" - %u done", id);
+  logk_debug(" - cpu %u done", id);
 
   mutekh_startup_smp_barrier();
 }

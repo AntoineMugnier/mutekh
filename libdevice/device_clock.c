@@ -21,6 +21,7 @@
 
 */
 
+#undef LOGK_MODULE_ID
 #define LOGK_MODULE_ID "devc"
 
 #include <device/device.h>

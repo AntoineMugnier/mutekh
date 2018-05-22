@@ -20,8 +20,6 @@
 
 */
 
-#define LOGK_MODULE_ID "faul"
-
 #include <mutek/printk.h>
 #include <mutek/startup.h>
 
@@ -53,22 +51,22 @@ static CPU_EXCEPTION_HANDLER(fault_handler)
   lock_spin(&fault_lock);
 
   logk_error("CPU Fault: cpuid(%u) faultid(%u-%s)", cpu_id(), type, name);
-  logk_error("Execution pointer: %p, Bad address (if any): %p",
+  logk(" - PC: %p, Bad address: %p",
              (void*)execptr, (void*)dataptr);
-  logk_error("Registers:");
+  logk_debug(" - Registers:");
 
   reg_t *r = regs->gpr;
   for (i = 0; i < CPU_CONTEXT_REG_COUNT; i++)
 # ifdef CPU_CONTEXT_REG_NAMES
-    logk_error(" %s=%p", reg_names[i], (void*)*(r + i));
+    logk_debug(" %s=%p", reg_names[i], (void*)*(r + i));
 # else
-    logk_error(" %p", (void*)*(r + i));
+    logk_debug(" %p", (void*)*(r + i));
 # endif
 
-  logk_error("Stack:");
+  logk_debug("Stack:");
 
   for (i = 0; i < 12; i++)
-    logk_error(" %p: %p", &sp[i], (void*)(uintptr_t)sp[i]);
+    logk_debug(" %p: %p", &sp[i], (void*)(uintptr_t)sp[i]);
 
   lock_release(&fault_lock);
 #endif

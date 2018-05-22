@@ -1,5 +1,5 @@
 
-DIR_CFLAGS = -D_HEXO_INTTYPES_DEPRECATED
+DIR_CFLAGS = -D_HEXO_INTTYPES_DEPRECATED -DLOGK_MODULE_ID='"dev "'
 
 enum_headers = include/device/types.h \
                include/device/driver.h \

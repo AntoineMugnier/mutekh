@@ -53,6 +53,8 @@ void mutekh_startup(void *arg);
     initializations of the @ref #INIT_SMP group. */
 void mutekh_startup_smp(void);
 
+void mutekh_startup_devready(void);
+
 #ifdef CONFIG_ARCH_SMP
 /** Spin barrier which can be used to synchronize processors when
     performing intializations of the @ref #INIT_SMP group. */

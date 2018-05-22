@@ -21,8 +21,6 @@
 
 */
 
-#define LOGK_MODULE_ID "dirq"
-
 #include <device/device.h>
 #include <device/resources.h>
 #include <device/driver.h>
@@ -352,7 +350,7 @@ error_t device_irq_source_link(struct device_s *dev, struct dev_irq_src_s *srcs,
 
       if (!icu_path)
         {
-          logk_error("Missing icu device resource for device %p", dev);
+          logk_error("%s: Missing icu device resource", dev->node.name);
           return -ENOENT;
         }
 
@@ -360,15 +358,16 @@ error_t device_irq_source_link(struct device_s *dev, struct dev_irq_src_s *srcs,
 
       if (src_id >= src_count)
         {
-          logk_error("Driver for device %p does not provide source endpoint for IRQ output %u",
-                 dev, src_id);
+          logk_error("%s: Driver does not provide source endpoint for IRQ output %u",
+                 dev->node.name, src_id);
           err = -ENOENT;
           goto error;
         }
 
       if (done[src_id])
         {
-          logk_error("Multiple resource entries for IRQ source endpoint %u", dev, src_id);
+          logk_error("%s: Multiple resource entries for IRQ source endpoint %u",
+                     dev->node.name, src_id);
           err = -ENOENT;
           goto error;
         }
@@ -376,7 +375,8 @@ error_t device_irq_source_link(struct device_s *dev, struct dev_irq_src_s *srcs,
       struct device_icu_s icu;
       if (device_get_accessor_by_path(&icu.base, &dev->node, icu_path, DRIVER_CLASS_ICU))
         {
-          logk_error("Can not use %s device as an interrupt controller", icu_path);
+          logk_error("%s: Can not use `%s' device as an interrupt controller",
+                     dev->node.name, icu_path);
           err = -EINVAL;
           goto error;
         }
@@ -389,7 +389,8 @@ error_t device_irq_source_link(struct device_s *dev, struct dev_irq_src_s *srcs,
 
       if (!sink)
         {
-          logk_error("Interrupt controller %p does not have sink endpoint for IRQ input %u", icu_dev, r->u.irq.sink_id);
+          logk_error("%s: Interrupt controller `%s' does not have sink endpoint for IRQ input %u",
+                     dev->node.name, icu_dev->node.name, r->u.irq.sink_id);
           err = -EINVAL;
           goto error;
         }
@@ -410,7 +411,8 @@ error_t device_irq_source_link(struct device_s *dev, struct dev_irq_src_s *srcs,
         {
           if (irq_id != src->irq_id)
             {
-              logk_error("Irq linked to multiple sinks with different logical ids", icu_dev);
+              logk_error("%s: Irq linked to multiple sinks with different logical ids",
+                         icu_dev->node.name);
               err = -EINVAL;
               goto error;
             }
@@ -425,7 +427,8 @@ error_t device_irq_source_link(struct device_s *dev, struct dev_irq_src_s *srcs,
           trig_mode &= sink->sense_link;
           if (!trig_mode)
             {
-              logk_error("Icu %p can't share a sink endpoint with a different trigger mode", icu_dev);
+              logk_error("%s: Can't share a sink endpoint with a different trigger modes",
+                         icu_dev->node.name);
               err = -EINVAL;
               goto error;
             }
@@ -440,7 +443,8 @@ error_t device_irq_source_link(struct device_s *dev, struct dev_irq_src_s *srcs,
               trig_mode &= sink->sense_all;
               if (!trig_mode)
                 {
-                  logk_error("Trigger modes of IRQ source %u of device %p not supported by sink", src_id, dev);
+                  logk_error("%s: Trigger modes of IRQ source %u not supported by sink",
+                             dev->node.name, src_id);
                   err = -EINVAL;
                   goto error;
                 }
@@ -453,7 +457,7 @@ error_t device_irq_source_link(struct device_s *dev, struct dev_irq_src_s *srcs,
       /* setup interrupt controller */
       if ((err = device_icu_source_link(src, &route_mask)))
         {
-          logk_error("Unable to link IRQ source %u of device %p", src_id, dev);
+          logk_error("%s: Unable to link IRQ source %u", dev->node.name, src_id);
           err = -EINVAL;
           goto error;
         }
@@ -479,7 +483,8 @@ error_t device_irq_source_link(struct device_s *dev, struct dev_irq_src_s *srcs,
   for (i = 0; i < src_count; i++)
     if (!done[i])
       {
-        logk_error("Unable to link IRQ source endpoint %u of device %p, no IRQ resource entry", i, dev);
+        logk_error("%s: Unable to link IRQ source endpoint %u, no IRQ resource entry",
+                   dev->node.name, i);
         err = -ENOENT;
         goto error;
       }
@@ -634,7 +639,7 @@ error_t device_icu_irq_bind(struct dev_irq_src_s *src, const char *icu_name,
 
     err = device_get_accessor_by_path(&icu.base, NULL, icu_name, DRIVER_CLASS_ICU);
     if (err) {
-        logk_error("Error while getting icu \"%s\": %d", icu_name, err);
+        logk_error("Unable to get icu `%s'", icu_name);
         return err;
     }
 

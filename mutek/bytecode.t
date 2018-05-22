@@ -18,6 +18,7 @@
  * Alexandre Becoulet <alexandre.becoulet@free.fr>
  */
 
+#undef LOGK_MODULE_ID
 #define LOGK_MODULE_ID "bcvm"
 
 #include <mutek/printk.h>
