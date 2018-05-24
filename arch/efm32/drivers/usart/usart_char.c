@@ -109,24 +109,20 @@ static void efm32_usart_try_read(struct device_s *dev)
 #endif
 
       /* try to read more characters directly from device buffer */
-      if ( size < rq->size && (cpu_mem_read_32(pv->addr + EFM32_USART_STATUS_ADDR)
-                                   & endian_le32(EFM32_USART_STATUS_RXDATAV)) )
-        {
-          rq->data[size++] = endian_le32(cpu_mem_read_32(pv->addr + EFM32_USART_RXDATAX_ADDR));
-        }
+      while (size < rq->size && (cpu_mem_read_32(pv->addr + EFM32_USART_STATUS_ADDR)
+                                   & endian_le32(EFM32_USART_STATUS_RXDATAV)))
+        rq->data[size++] = endian_le32(cpu_mem_read_32(pv->addr + EFM32_USART_RXDATAX_ADDR));
 
-      if (size)
-        {
-          rq->size -= size;
-          rq->data += size;
-          rq->error = 0;
+      rq->size -= size;
+      rq->data += size;
 
-          if ((rq->type & _DEV_CHAR_PARTIAL) || rq->size == 0)
-            {
-              dev_request_queue_pop(&pv->read_q);
-              kroutine_exec(&rq->base.kr);
-              continue;
-            }
+      if ((rq->type & _DEV_CHAR_NONBLOCK) ||
+          ((rq->type & _DEV_CHAR_PARTIAL) && size) ||
+          rq->size == 0)
+        {
+          dev_request_queue_pop(&pv->read_q);
+          kroutine_exec(&rq->base.kr);
+          continue;
         }
 
 #ifdef CONFIG_DEVICE_IRQ
@@ -204,7 +200,7 @@ static void efm32_usart_try_write(struct device_s *dev)
           /* driver fifo is empty, try to write as many characters as
              possible from request directly to the device fifo */
 #endif
-          if (size < rq->size && (cpu_mem_read_32(pv->addr + EFM32_USART_STATUS_ADDR)
+          while (size < rq->size && (cpu_mem_read_32(pv->addr + EFM32_USART_STATUS_ADDR)
                     & endian_le32(EFM32_USART_STATUS_TXBL)))
             {
               cpu_mem_write_32(pv->addr + EFM32_USART_TXDATAX_ADDR,
@@ -220,18 +216,16 @@ static void efm32_usart_try_write(struct device_s *dev)
           size += uart_fifo_pushback_array(&pv->write_fifo, rq->data + size, rq->size - size);
 #endif
 
-      if (size)
-        {
-          rq->size -= size;
-          rq->data += size;
-          rq->error = 0;
+      rq->size -= size;
+      rq->data += size;
 
-          if ((rq->type & _DEV_CHAR_PARTIAL) || rq->size == 0)
-            {
-              dev_request_queue_pop(&pv->write_q);
-              kroutine_exec(&rq->base.kr);
-              continue;
-            }
+      if ((rq->type & _DEV_CHAR_NONBLOCK) ||
+          ((rq->type & _DEV_CHAR_PARTIAL) && size) ||
+          rq->size == 0)
+        {
+          dev_request_queue_pop(&pv->write_q);
+          kroutine_exec(&rq->base.kr);
+          continue;
         }
 
 #ifdef CONFIG_DEVICE_IRQ
@@ -263,8 +257,10 @@ static DEV_CHAR_REQUEST(efm32_usart_request)
 
   LOCK_SPIN_IRQ(&dev->lock);
 
+  rq->error = 0;
   switch (rq->type)
     {
+    case DEV_CHAR_READ_NONBLOCK:
     case DEV_CHAR_READ_PARTIAL:
     case DEV_CHAR_READ: {
       dev_request_queue_pushback(&pv->read_q, dev_char_rq_s_base(rq));
@@ -276,6 +272,8 @@ static DEV_CHAR_REQUEST(efm32_usart_request)
       break;
     }
 
+    case DEV_CHAR_WRITE_NONBLOCK_FLUSH:
+    case DEV_CHAR_WRITE_NONBLOCK:
     case DEV_CHAR_WRITE_PARTIAL_FLUSH:
     case DEV_CHAR_WRITE_FLUSH:
     case DEV_CHAR_WRITE_PARTIAL:
