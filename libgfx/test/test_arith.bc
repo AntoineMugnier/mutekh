@@ -1,0 +1,305 @@
+
+.name test
+.custom gfx
+
+#include <gfx/bytecode.h>
+
+test_bytecode_entry:
+
+    .entry %0
+    cst32	    %1, GFX_SURFACE(512, 256, 0), 0
+    gfx_surface     %0, %1, 0
+
+    // gfx_subv, GFX_XY
+    cst32       %0, GFX_XY(0x555, 0x555), 0
+    cst32       %1, GFX_XY(-1, 2), 0
+    gfx_subv     %0, %1
+    cst32       %2, GFX_XY(0x556, 0x553), 0
+    neq %0, %2
+     die
+
+    // gfx_addv, GFX_XY
+    gfx_addv     %0, %1
+    cst32       %2, GFX_XY(0x555, 0x555), 0
+    neq %0, %2
+     die
+
+    // gfx_unpacks, gfx_unpack, GFX_XYF
+    cst32       %0, GFX_XYF(0x1234, 0x5678), 0
+    gfx_unpack  %2, %3, %0
+    cst16       %1, 0x1234, 0
+    neq         %2, %1
+     die
+    cst16       %1, 0x5678, 0
+    neq         %3, %1
+     die
+
+    cst32       %0, GFX_XYF(0x9234, 0xa678), 0
+    gfx_unpack  %2, %3, %0
+    cst16       %1, 0x9234, 0
+    neq         %2, %1
+     die
+    cst16       %1, 0xa678, 0
+    neq         %3, %1
+     die
+
+    cst32       %0, GFX_XYF(0x1234, 0x5678), 0
+    gfx_unpacks %2, %3, %0
+    cst16       %1, 0x1234, 0
+    neq         %2, %1
+     die
+    cst16       %1, 0x5678, 0
+    neq         %3, %1
+     die
+
+    cst32       %0, GFX_XYF(0x9234, 0xa678), 0
+    gfx_unpacks %2, %3, %0
+    cst32       %1, 0xffff9234, 0
+    neq         %2, %1
+     die
+    cst32       %1, 0xffffa678, 0
+    neq         %3, %1
+     die
+
+    // gfx_pack
+    gfx_pack    %5, %2, %3
+    neq         %5, %0
+     die
+
+    // gfx_packx
+    cst32       %0, GFX_XYF(0x1234, 0x5678), 0
+    cst32       %1, GFX_XYF(0xabcd, 0x5678), 0
+    cst16       %2, 0xabcd, 0
+    gfx_packx   %0, %2
+    neq         %1, %0
+     die
+
+    // gfx_packx0
+    cst32       %0, GFX_XYF(0x1234, 0x5678), 0
+    cst32       %1, GFX_XYF(0xabcd, 0), 0
+    cst16       %2, 0xabcd, 0
+    gfx_packx0  %0, %2
+    neq         %1, %0
+     die
+
+    // gfx_packy
+    cst32       %0, GFX_XYF(0x1234, 0x5678), 0
+    cst32       %1, GFX_XYF(0x1234, 0xabcd), 0
+    cst16       %3, 0xabcd, 0
+    gfx_packy   %0, %3
+    neq         %1, %0
+     die
+
+    // gfx_pack0y
+    cst32       %0, GFX_XYF(0x1234, 0x5678), 0
+    cst32       %1, GFX_XYF(0, 0xabcd), 0
+    cst16       %3, 0xabcd, 0
+    gfx_pack0y  %0, %3
+    neq         %1, %0
+     die
+
+    // gfx_addv gfx_subv
+    cst16       %8, 0x7ffe, 0
+    cst8        %9, 255
+l1:
+    rand32      %0
+    and32       %0, %8
+    rand32      %1
+    and32       %1, %8
+    gfx_pack    %4, %0, %1
+
+    rand32      %2
+    and32       %2, %8
+    rand32      %3
+    and32       %3, %8
+    gfx_pack    %5, %2, %3
+
+    gfx_addv    %5, %4
+    add         %2, %0
+    add         %3, %1
+    gfx_pack    %6, %2, %3
+
+    neq         %5, %6
+     die
+
+    gfx_subv    %5, %4
+    sub         %2, %0
+    sub         %3, %1
+    gfx_pack    %6, %2, %3
+
+    neq         %5, %6
+     die
+
+    loop        %9, l1
+
+    // gfx_addx, gfx_addy, gfx_mulxy
+    cst8        %9, 255
+l2:
+    rand32      %0
+    exts        %0, 15
+    rand32      %1
+    exts        %1, 15
+    gfx_pack    %4, %0, %1
+
+    rand32      %2
+    exts        %2, 15
+
+    gfx_addx    %4, %2
+    add         %0, %2
+    gfx_pack    %6, %0, %1
+
+    neq         %4, %6
+     die
+
+    gfx_addy    %4, %2
+    add         %1, %2
+    gfx_pack    %6, %0, %1
+
+    neq         %4, %6
+     die
+
+    gfx_unpack  %0, %1, %4
+    gfx_mulxy   %4, %2
+    mul32       %0, %2
+    shi32r      %0, 5
+    mul32       %1, %2
+    shi32r      %1, 5
+    gfx_pack    %6, %0, %1
+
+    neq         %4, %6
+     die
+
+    loop        %9, l2
+
+    // gfx_addxi, gfx_addyi
+    cst8        %9, 255
+l3:
+    rand32      %0
+    exts        %0, 15
+    rand32      %1
+    exts        %1, 15
+    gfx_pack    %2, %0, %1
+
+    gfx_addxi   %2, 42
+    cst16       %5, 42 * 32, 0
+    add         %0, %5
+    gfx_pack    %6, %0, %1
+
+    neq         %2, %6
+     die
+
+    gfx_addxi   %2, -41
+    cst16       %5, 41 * 32, 0
+    sub         %0, %5
+    gfx_pack    %6, %0, %1
+
+    gfx_addyi   %2, 42
+    cst16       %5, 42 * 32, 0
+    add         %1, %5
+    gfx_pack    %6, %0, %1
+
+    neq         %2, %6
+     die
+
+    gfx_addyi   %2, -41
+    cst16       %5, 41 * 32, 0
+    sub         %1, %5
+    gfx_pack    %6, %0, %1
+
+    neq         %2, %6
+     die
+
+    loop        %9, l3
+
+    // gfx_negv
+    cst32       %2, GFX_XY(27, 55), 0
+    cst32       %3, GFX_XY(-27, -55), 0
+    gfx_negv    %2
+    neq         %2, %3
+     die
+
+    // gfx_negx_swpv
+    cst32       %2, GFX_XY(27, 55), 0
+    cst32       %3, GFX_XY(55, -27), 0
+    gfx_negx_swpv %2
+    neq         %2, %3
+     die
+
+    // gfx_mul
+    cst32       %1, 27<<5, 0
+    cst32       %2, 41<<5, 0
+    cst32       %3, (27*41)<<5, 0
+    gfx_mul     %1, %2
+    neq         %1, %3
+     die
+
+    cst32       %1, 27<<5, 0
+    neg         %1
+    cst32       %2, 41<<5, 0
+    cst32       %3, (27*41)<<5, 0
+    neg         %3
+    gfx_mul     %1, %2
+    neq         %1, %3
+     die
+
+    // gfx_size
+    gfx_size    %2, 0
+    cst32       %3, GFX_XY(512, 256), 0
+    neq         %2, %3
+     die
+
+    // gfx_hypot
+    cst32       %2, GFX_XY(-40, 30), 0
+    gfx_hypot   %2
+    cst32       %1, 50<<5, 0
+    neq         %2, %1
+     die
+
+    // gfx_sqrt
+    cst32       %2, 81<<5, 0
+    gfx_sqrt    %2
+    cst32       %1, 9<<5, 0
+    neq         %2, %1
+     die
+
+    // gfx_hypot, gfx_sincos
+    cst16       %15, 100 << 5, 0
+    cst8        %9, 255
+    cst8        %8, 2
+l4:
+    rand32      %1
+    gfx_sincos  %1, %15
+
+    gfx_hypot   %1
+    sub         %1, %15
+
+    tst32s      %1, 31   /* abs */
+     neg        %1
+
+    lt          %8, %1
+     die
+    loop        %9, l4
+
+    // gfx_hypot, gfx_sin, gfx_cos
+    cst8        %9, 255
+    cst8        %8, 2
+l5:
+    rand32      %4
+    mov         %5, %4
+    gfx_cos     %4, %15
+    gfx_sin     %5, %15
+    gfx_pack    %1, %4, %5
+
+    gfx_hypot   %1
+    sub         %1, %15
+
+    tst32s      %1, 31   /* abs */
+     neg        %1
+
+    lt          %8, %1
+     die
+    loop        %9, l5
+
+    end
+//    dump
+//    die

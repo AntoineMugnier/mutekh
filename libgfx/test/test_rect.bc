@@ -1,0 +1,43 @@
+
+.name test
+.custom gfx
+
+#include <gfx/bytecode.h>
+
+test_bytecode_entry:
+
+	.entry %0
+
+	cst32	    %1, GFX_SURFACE(512, 256, 0), 0
+	gfx_surface %0, %1, 0
+
+//	gfx_attr_l8    255
+
+loop:
+	cst32       %0, GFX_XY(100, 100), 0
+	cst32       %7, GFX_XY(300, 230), 0
+	cst32       %6, GFX_XY(384, 128), 0
+	cst32       %2, GFX_XY(0, 40), 0
+	cst32       %3, GFX_XY(1, 2), 0
+	cst32	    %14, 0x500000, 0
+	cst8        %15, 0
+
+loop2:
+	gfx_clear 100
+	gfx_rect_r %7, %0
+	gfx_disp 0
+	add8        %15, 1
+	tst32c	    %15, 6
+	jmp8 loop2
+
+loop3:
+	add8        %15, -1
+	gfx_clear 100
+	gfx_rect_fr %7, %0
+	gfx_disp 0
+	neq0	    %15
+	 jmp8 loop3
+
+	jmp8 loop
+
+	end

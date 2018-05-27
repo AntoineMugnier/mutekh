@@ -1,0 +1,89 @@
+
+.name test
+.custom gfx
+
+#include <gfx/bytecode.h>
+
+test_bytecode_entry:
+
+	.entry %0
+
+	cst32	    %1, GFX_SURFACE(512, 256, 0), 0
+	gfx_surface %0, %1, 0
+
+	gfx_clear   0
+
+	/* fill surface with random bubbles */
+	cst8	    %5, 255
+r:
+	rand32      %2
+	cst32       %7, GFX_XY(511, 255), 0
+	and32	    %7, %2
+
+	rand32      %2
+	cst8        %15, 15
+	and32	    %15, %2
+	gfx_circle  %7, 15
+
+	loop	    %5, r
+
+	gfx_swap    0, 1
+
+loop:
+	cst32	    %10, 0x20000, 0
+	add         %10, %0
+	gfx_surface %10, %1, 0
+
+	cst32       %3, GFX_XY(1, 1), 0
+	cst32       %7, GFX_XY(0, 0), 0
+	cst32       %2, GFX_XY(250, 0), 0
+	cst32       %15, GFX_XY(100, 100), 0
+
+        cst8        %5, 64
+loop1:
+	gfx_clear 0
+	gfx_blit    %7, %2, 1
+
+	mov 	    %4, %7
+	gfx_addv    %4, %15
+	gfx_rect    %4, %7
+
+	gfx_disp    0
+
+	gfx_addv    %7, %3
+
+        loop %5, loop1
+
+        cst8        %5, 64
+loop2:
+	gfx_clear 0
+	gfx_blit    %7, %2, 1
+
+	mov 	    %4, %7
+	gfx_addv    %4, %15
+	gfx_rect    %4, %7
+
+	gfx_disp    0
+
+	gfx_addv    %2, %3
+
+        loop %5, loop2
+
+loop3:
+	gfx_clear 0
+	gfx_blit    %7, %2, 1
+
+	mov 	    %4, %7
+	add	    %4, %15
+	gfx_rect    %4, %7
+
+ 	gfx_disp    0
+
+	gfx_subv    %15, %3
+
+	neq0	    %15
+	 jmp8 loop3
+
+ 	gfx_disp    1
+//	jmp8	loop
+	end

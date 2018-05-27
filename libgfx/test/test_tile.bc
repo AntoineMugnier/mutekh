@@ -1,0 +1,85 @@
+
+.name test
+.custom gfx
+
+#include <gfx/bytecode.h>
+
+test_bytecode_entry:
+
+    .entry %0
+
+    cst32	    %1, GFX_SURFACE(512, 256, 0), 0
+    cst32	    %10, 0x20000, 0
+    add         %10, %0
+    gfx_surface %10, %1, 0
+
+    cst32	    %1, GFX_SURFACE(32, 256, 0), 0
+    gfx_surface %0, %1, 1
+
+    cst32	    %2, GFX_TILEMAP(8, 11, 32), 0
+    gfx_tilemap %2, 1
+
+    cst16	    %4, GFX_XY(0, 128), 0
+    cst32	    %5, GFX_XY(511, 128), 0
+    gfx_line %4, %5
+
+    cst16	    %4, GFX_XY(128, 0), 0
+    cst16	    %5, GFX_XY(128, 255), 0
+    gfx_line %4, %5
+
+    cst16	    %4, GFX_XY(0, 64), 0
+    cst32	    %5, GFX_XY(511, 64), 0
+    gfx_line %4, %5
+
+    cst16	    %4, GFX_XY(64, 0), 0
+    cst32	    %5, GFX_XY(64, 255), 0
+    gfx_line %4, %5
+
+    cst32	    %4, GFX_XY(64, 64), 0
+    laddr16     %3, str
+
+    ld8i %15, %3   /* read and skip the len byte */
+
+    gfx_tilestr %4, %3, %15, 0
+    gfx_tilestr %4, %3, %15, 1
+    gfx_tilestr %4, %3, %15, 2
+    gfx_tilestr %4, %3, %15, 3
+
+    cst32	    %4, GFX_XY(128, 128), 0
+    gfx_tilestrc %4, %3, %15, 0
+
+    cst32	    %4, GFX_XY(128, 140), 0
+    gfx_tilestrc %4, %3, %15, 1
+
+    cst32	    %4, GFX_XY(128, 128), 0
+    gfx_tilestrc %4, %3, %15, 2
+
+    cst32	    %4, GFX_XY(140, 128), 0
+    gfx_tilestrc %4, %3, %15, 3
+
+    cst16	    %4, GFX_XY(0, 32), 0
+    cst16	    %5, GFX_XY(64, 32), 0
+    gfx_line %4, %5
+
+    cst16	    %4, GFX_XY(32, 0), 0
+    cst16	    %5, GFX_XY(32, 255), 0
+    gfx_line %4, %5
+
+    cst8 %0, '?'
+    cst16	    %4, GFX_XY(32, 32), 0
+    gfx_tile %4, %0
+
+    cst16	    %4, GFX_XY(0, 96), 0
+    cst16	    %5, GFX_XY(64, 96), 0
+    gfx_line %4, %5
+
+    cst8 %0, '?'
+    cst16	    %4, GFX_XY(32, 96), 0
+    gfx_tilec %4, %0
+
+    gfx_disp    0
+
+    end
+
+str:
+	strp "Miaou miaou !!!"  /* pascal type string */

@@ -1,0 +1,110 @@
+
+.name test
+.custom gfx
+
+#include <gfx/bytecode.h>
+
+#define W 512
+#define H 256
+#define A 3     // scroll step
+
+test_bytecode_entry:
+
+    .entry %0
+
+    cst32	    %1, GFX_SURFACE(W, H, 0), 0
+    gfx_surface %0, %1, 0
+
+    gfx_clear   0
+
+    /* fill surface with random bubbles */
+    cst8	    %5, 255
+r:
+    rand32      %2
+    cst32       %7, GFX_XY(511, 255), 0
+    and32	    %7, %2
+
+    rand32      %2
+    cst8        %15, 15
+    and32	    %15, %2
+    gfx_circle  %7, 15
+
+    loop	    %5, r
+
+d:
+
+    cst8	    %5, 32
+d0:
+    gfx_disp    0
+
+    // wrap
+    cst32       %15, GFX_XY(A, H), 0
+    cst32       %1, GFX_XY(W-A, 0), 0
+    cst32       %2, GFX_XY(0, 0), 0
+    gfx_blit    %1, %2, 0
+
+    // scroll left
+    cst32       %15, GFX_XY(W-A, H), 0
+    cst32       %1, GFX_XY(0, 0), 0
+    cst32       %2, GFX_XY(A, 0), 0
+    gfx_blit_o  %1, %2
+
+    loop        %5, d0
+
+    cst8	%5, 32
+d2:
+    gfx_disp    0
+
+    // wrap
+    cst32       %15, GFX_XY(W, A), 0
+    cst32       %1, GFX_XY(0, 0), 0
+    cst32       %2, GFX_XY(0, H-A), 0
+    gfx_blit    %1, %2, 0
+
+    // scroll down
+    cst32       %15, GFX_XY(W, H-A), 0
+    cst32       %1, GFX_XY(0, A), 0
+    cst32       %2, GFX_XY(0, 0), 0
+    gfx_blit_o  %1, %2
+
+    loop        %5, d2
+
+    cst8	%5, 32
+d1:
+    gfx_disp    0
+
+    // wrap
+    cst32       %15, GFX_XY(A, H), 0
+    cst32       %1, GFX_XY(0, 0), 0
+    cst32       %2, GFX_XY(W-A, 0), 0
+    gfx_blit    %1, %2, 0
+
+    // scroll right
+    cst32       %15, GFX_XY(W-A, H), 0
+    cst32       %1, GFX_XY(A, 0), 0
+    cst32       %2, GFX_XY(0, 0), 0
+    gfx_blit_o  %1, %2
+
+    loop        %5, d1
+
+    cst8	%5, 32
+d3:
+    gfx_disp    0
+
+    // wrap
+    cst32       %15, GFX_XY(W, A), 0
+    cst32       %1, GFX_XY(0, H-A), 0
+    cst32       %2, GFX_XY(0, 0), 0
+    gfx_blit    %1, %2, 0
+
+    // scroll up
+    cst32       %15, GFX_XY(W, H-A), 0
+    cst32       %1, GFX_XY(0, 0), 0
+    cst32       %2, GFX_XY(0, A), 0
+    gfx_blit_o  %1, %2
+
+    loop        %5, d3
+
+    jmp8        d
+
+    end
