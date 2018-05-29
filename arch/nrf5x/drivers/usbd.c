@@ -20,8 +20,8 @@
 
 #define LOGK_MODULE_ID "nusb"
 
-#define ERRATA_104
-#define ERRATA_166
+//#define ERRATA_104
+//#define ERRATA_166
 
 #include <mutek/mem_alloc.h>
 #include <mutek/printk.h>

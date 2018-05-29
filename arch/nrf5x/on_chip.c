@@ -148,7 +148,7 @@ DEV_DECLARE_STATIC(ble_radio, "ble", 0, nrf5x_ble_drv,
 
 #if defined(CONFIG_DRIVER_NRF52_USBD)
 
-DEV_DECLARE_STATIC(usb_dev, "usbdev", 0, nrf5x_usbd_drv,
+DEV_DECLARE_STATIC(usb_dev, "usb", 0, nrf5x_usbd_drv,
                    NRF_STATIC_RES_PERIPHERAL_MEM(NRF5X_USBD),
                    DEV_STATIC_RES_DEV_ICU("/cpu"),
                    DEV_STATIC_RES_IRQ(0, NRF5X_USBD, DEV_IRQ_SENSE_HIGH_LEVEL, 0, 1),
