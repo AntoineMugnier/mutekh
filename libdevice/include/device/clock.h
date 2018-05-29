@@ -340,6 +340,14 @@ struct dev_clock_src_ep_s
   uint8_t                notify_count;
 # endif
 
+  /** endpoint flags */
+  enum dev_clock_ep_flags_e BITFIELD(flags,8);
+
+# if defined(CONFIG_DEVICE_CLOCK_SHARING)
+  uint32_t BITFIELD(power_count,8);
+  uint32_t BITFIELD(clock_count,8);
+#endif
+
 # if defined(CONFIG_DEVICE_CLOCK_THROTTLE)
 #  if defined(CONFIG_DEVICE_CLOCK_SHARING)
   /** @internal counter of sinks requesting a given minimal config ID,
@@ -353,9 +361,6 @@ struct dev_clock_src_ep_s
   uint32_t BITFIELD(configid_min,
                     CONFIG_DEVICE_CMU_CONFIGID_COUNT_LOG2);
 # endif
-
-  /** endpoint flags */
-  enum dev_clock_ep_flags_e BITFIELD(flags,8);
 #endif
 };
 
@@ -385,6 +390,9 @@ struct dev_clock_sink_ep_s
   struct dev_clock_sink_ep_s *next;
 # endif
 
+  /** endpoint flags */
+  enum dev_clock_ep_flags_e BITFIELD(flags,8);
+
 # ifdef CONFIG_DEVICE_CLOCK_THROTTLE
   /** @internal lookup table used to convert between device driver
       specific mode id to minimal CMU config mode ID.  This is copied
@@ -399,9 +407,6 @@ struct dev_clock_sink_ep_s
   uint32_t BITFIELD(configid_min, CONFIG_DEVICE_CMU_CONFIGID_COUNT_LOG2);
 #  endif
 # endif
-
-  /** endpoint flags */
-  enum dev_clock_ep_flags_e BITFIELD(flags,8);
 #endif
 };
 

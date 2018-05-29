@@ -36,44 +36,34 @@ error_t dev_clock_sink_gate(struct dev_clock_sink_ep_s *sink,
 {
   struct dev_clock_src_ep_s *src = sink->src;
   error_t err = -EBUSY;
+  enum dev_clock_ep_flags_e changes = (sink->flags ^ gates) & DEV_CLOCK_EP_ANY;
+
+  if (!changes)
+    return 0;
 
   LOCK_SPIN_IRQ(&src->dev->lock);
+# if defined(CONFIG_DEVICE_CLOCK_SHARING)
+  if (changes & DEV_CLOCK_EP_CLOCK) {
+    if (gates & DEV_CLOCK_EP_CLOCK)
+      src->clock_count++;
+    else
+      src->clock_count--;
+  }
 
-  if ((sink->flags ^ gates) & DEV_CLOCK_EP_ANY)
-    {
-      err = 0;
-      sink->flags = gates | (sink->flags & ~DEV_CLOCK_EP_ANY);
-
-      enum dev_clock_ep_flags_e src_gates = src->flags & DEV_CLOCK_EP_ANY;
-
-# ifdef CONFIG_DEVICE_CLOCK_SHARING
-      if (src_gates & ~gates)
-        {
-          /* if a gate disabling is suggested for this sink,
-             also check other sinks. */
-          struct dev_clock_sink_ep_s *osink = src->sink_head;
-          while (osink != NULL)
-            {
-              gates |= osink->flags & DEV_CLOCK_EP_ANY;
-              osink = osink->next;
-            }
-        }
+  if (changes & DEV_CLOCK_EP_POWER) {
+    if (gates & DEV_CLOCK_EP_POWER)
+      src->power_count++;
+    else
+      src->power_count--;
+  }
 # endif
 
-      if (src_gates ^ gates)
-        {
-          /* initiate source endpoint gates change */
-          union dev_clock_src_setup_u setup;
-          setup.flags = gates | (sink->flags & DEV_CLOCK_EP_GATING_SYNC);
-          err = src->f_setup(src, DEV_CLOCK_SRC_SETUP_GATES, &setup);
-        }
-    }
-  else
-    {
-      enum dev_clock_ep_flags_e src_gates = src->flags & DEV_CLOCK_EP_ANY;
-      if (!((src_gates ^ gates) & DEV_CLOCK_EP_ANY))
-        err = 0;
-    }
+  sink->flags ^= changes;
+
+  /* initiate source endpoint gates change */
+  union dev_clock_src_setup_u setup;
+  setup.flags = gates | (sink->flags & DEV_CLOCK_EP_GATING_SYNC);
+  err = src->f_setup(src, DEV_CLOCK_SRC_SETUP_GATES, &setup);
 
   LOCK_RELEASE_IRQ(&src->dev->lock);
 
@@ -117,7 +107,7 @@ void dev_cmu_src_update_async(struct dev_clock_src_ep_s *src,
       const struct driver_s *drv = dev->drv;
 
       LOCK_SPIN_IRQ(&dev->lock);
-      if ((sink->flags & DEV_CLOCK_EP_ANY) == gates)
+      if (!(sink->flags & DEV_CLOCK_EP_GATING_SYNC))
         drv->f_use(sink, DEV_USE_CLOCK_SINK_GATE_DONE);
       LOCK_RELEASE_IRQ(&dev->lock);
 
@@ -317,6 +307,16 @@ error_t dev_clock_sink_link(struct dev_clock_sink_ep_s *sink,
                 src->f_setup(src, DEV_CLOCK_SRC_SETUP_NOTIFY, NULL);
 #endif
 
+#if defined(CONFIG_DEVICE_CLOCK_SHARING)
+              // Always update the refcounts
+              if (sink->flags & DEV_CLOCK_EP_CLOCK)
+                src->clock_count++;
+
+              if (sink->flags & DEV_CLOCK_EP_POWER)
+                src->power_count++;
+#endif
+
+              // Setup gates if changes are requested
               if (~src->flags & sink->flags & DEV_CLOCK_EP_ANY)
                 {
                   enum dev_clock_ep_flags_e flags = src->flags | sink->flags;
@@ -362,34 +362,13 @@ void dev_clock_sink_unlink(struct dev_clock_sink_ep_s *sink)
   if (src == NULL)
     return;
 
+  // Remove requirements from endpoint, if any
+  if (sink->flags & DEV_CLOCK_EP_ANY)
+    dev_clock_sink_gate(sink, 0);
+
   LOCK_SPIN_IRQ(&src->dev->lock);
 
-  struct dev_clock_sink_ep_s **s = &src->sink_head;
-  enum dev_clock_ep_flags_e flags = 0;
-
-#ifdef CONFIG_DEVICE_CLOCK_SHARING
-  while (*s)
-    {
-      if (*s == sink)
-        {
-          *s = sink->next;
-          sink->src = NULL;
-        }
-      else
-        {
-          flags |= sink->flags & DEV_CLOCK_EP_ANY;
-          s = &sink->next;
-        }
-    }
-#else
-  *s = NULL;
-  sink->src = NULL;
-#endif
   src->dev->ref_count--;
-
-  if (~flags & src->flags & DEV_CLOCK_EP_ANY)
-    src->f_setup(src, DEV_CLOCK_SRC_SETUP_GATES,
-                 (const union dev_clock_src_setup_u*)&flags);
 
 #ifdef CONFIG_DEVICE_CLOCK_VARFREQ
   if ((sink->flags & DEV_CLOCK_EP_FREQ_NOTIFY) &&
