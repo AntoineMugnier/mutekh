@@ -596,7 +596,7 @@ BC_CCALL_FUNCTION(sx127x_next_hopping_freq)
 
   assert(pv->rx_cont);
 
-  uint32_t mask = pv->rx_cont->mask;
+  uint32_t mask = pv->rx_cont->rx_chan_mask;
 
   uint32_t tmp = ~((1 << (pv->cfg.channel + 1)) - 1) & mask;
   uint8_t next = tmp ? bit_ctz(tmp) : bit_ctz(mask);
@@ -687,7 +687,7 @@ static uint32_t sx127x_set_cmd(struct sx127x_private_s *pv, struct dev_rfpacket_
       case DEV_RFPACKET_RQ_RX_CONT:
         if (rq->pk_cfg->format == DEV_RFPACKET_FMT_RAW)
           cmd |= CMD_RXC_RAW;
-        if (rq->mask != 1)
+        if (rq->rx_chan_mask != 1)
         /* Rx scanning on several channels */
           cmd |= CMD_RX_SCANNING;
       case DEV_RFPACKET_RQ_RX:

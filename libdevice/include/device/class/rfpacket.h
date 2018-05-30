@@ -592,8 +592,8 @@ struct dev_rfpacket_rq_s
           significant bit of this mask corresponds to
           @ref dev_rfpacket_rq_s::channel and must always be set.
           When a  packet is received, @ref dev_rfpacket_rx_s::channel
-          corresponds to the reception channel */
-      uint32_t                        mask;
+          corresponds to the receiving channel. */
+      uint32_t                        rx_chan_mask;
     };
 
     struct {
