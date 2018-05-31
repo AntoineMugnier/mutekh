@@ -128,27 +128,17 @@ error_t dev_timer_init_sec_ceil(struct device_timer_s *accessor, dev_timer_delay
   return 0;
 }
 
-error_t dev_timer_get_sec(struct device_timer_s *accessor, dev_timer_delay_t *delay,
-                          dev_timer_cfgrev_t *rev, dev_timer_delay_t s_delay, uint32_t r_unit)
+error_t dev_timer_get_sec(struct device_timer_s *accessor, uint64_t *stime,
+                          dev_timer_cfgrev_t *rev, dev_timer_value_t tvalue, uint32_t r_unit)
 {
-  struct dev_timer_config_s cfg;
-  error_t err;
-
-  err = DEVICE_OP(accessor, config, &cfg, 0);
+  uint64_t num = tvalue * r_unit, denom = 1;
+  error_t err = dev_timer_frac(accessor, &denom, &num, rev, 0);
   if (err)
     return err;
-  if (!DEV_FREQ_IS_VALID(cfg.freq))
-    return -EIO;
 
-  uint64_t d = ((uint64_t)r_unit * cfg.res * cfg.freq.denom * s_delay)
-    / ((uint64_t)cfg.freq.num);
+  uint64_t d = num / denom;
 
-  if (d > (uint64_t)(dev_timer_delay_t)-1)
-    return -ERANGE;
-
-  *delay = d ? d : 1;
-  if (rev)
-    *rev = cfg.rev;
+  *stime = d;
 
   return 0;
 }

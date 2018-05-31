@@ -377,8 +377,8 @@ error_t dev_timer_frac(struct device_timer_s *accessor,
 /** @This works like @ref dev_timer_init_sec but convert from timer
     unit to second based unit. */
 config_depend(CONFIG_DEVICE_TIMER)
-error_t dev_timer_get_sec(struct device_timer_s *accessor, dev_timer_delay_t *delay,
-                          dev_timer_cfgrev_t *rev, dev_timer_delay_t s_delay, uint32_t r_unit);
+error_t dev_timer_get_sec(struct device_timer_s *accessor, uint64_t *stime,
+                          dev_timer_cfgrev_t *rev, dev_timer_value_t tvalue, uint32_t r_unit);
 
 /** @This computes two shift amounts which can be used for fast
     conversion between a delay in second based unit and a delay in
