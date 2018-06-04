@@ -228,6 +228,7 @@ static const char * bc_opname(uint16_t op)
 #ifdef CONFIG_MUTEK_BYTECODE_DEBUG
 static void bc_dump_op(const struct bc_context_s *ctx, const uint16_t *pc)
 {
+  uint8_t mode = ctx->mode;
 # ifdef CONFIG_MUTEK_BYTECODE_NATIVE
   if (ctx->desc->flags & BC_FLAGS_NATIVE)
     {
