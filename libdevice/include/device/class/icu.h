@@ -55,10 +55,10 @@ typedef DEV_ICU_GET_SINK(dev_icu_get_sink_t);
 #define DEV_ICU_LINK(n)	error_t (n) (struct device_icu_s *accessor, struct dev_irq_sink_s *sink, \
                                      struct dev_irq_src_s *src, dev_irq_route_t *route_mask, \
                                      struct dev_irq_src_s **bypass)
-/** @This configure the hardware after the link between a sink and a
-    source endpoints have changed. This is called from the @ref
-    device_irq_source_link and @ref device_irq_source_unlink functions.
-
+/** @This configure the hardware when a link between a sink and a
+    source endpoint has changed. This is called after linking from the
+    @ref device_irq_source_link function and before unlinking from the
+    @ref device_irq_source_unlink functions.
 
     @This is called with a @tt NULL pointer for the @tt route_mask
     parameter when a link between two endpoint is to be broken. When

@@ -56,16 +56,6 @@ static const struct dev_irq_src_s device_irq_dummy_src_ep = {
   .process = device_irq_dummy_process
 };
 
-static void device_irq_sink_cleanup(struct dev_irq_sink_s *sink)
-{
-  if (!sink->base.link_count)
-    {
-      if (sink->sense_all != DEV_IRQ_SENSE_ID_BUS)
-        sink->update(sink, DEV_IRQ_SENSE_NONE, 0);
-      sink->base.links.single = (void*)&device_irq_dummy_src_ep;
-    }
-}
-
 /****************************************/
 
 static error_t device_irq_ep_link_half(struct dev_irq_ep_s *a, struct dev_irq_ep_s *b)
@@ -155,32 +145,6 @@ static error_t device_irq_ep_unlink_half(struct dev_irq_ep_s *a, struct dev_irq_
   return -ENOENT;
 }
 
-static void device_irq_ep_unlink_all(struct dev_irq_ep_s *a)
-{
-  switch (a->link_count)
-    {
-    case 0:
-      return;
-
-    case 1:
-      device_irq_ep_unlink_half(a->links.single, a);
-      a->link_count = 0;
-      return;
-
-#if defined(CONFIG_DEVICE_IRQ_SHARING) || defined(CONFIG_DEVICE_IRQ_MULTI_SINK)
-    default: {
-      struct dev_irq_ep_s **r = a->links.array;
-      uint_fast8_t i;
-      for (i = 0; i < a->link_count; i++)
-        ensure(device_irq_ep_unlink_half(r[i], a));
-      mem_free(r);
-      a->link_count = 0;
-      return;
-    }
-#endif
-    }
-}
-
 static
 error_t device_irq_ep_link(struct dev_irq_src_s *source, struct dev_irq_sink_s *sink)
 {
@@ -207,19 +171,30 @@ error_t device_irq_ep_link(struct dev_irq_src_s *source, struct dev_irq_sink_s *
   return 0;
 }
 
-static
-error_t device_irq_ep_unlink(struct dev_irq_src_s *source, struct dev_irq_sink_s *sink)
+static void device_irq_sink_unlink(struct dev_irq_src_s *src,
+                                   struct dev_irq_sink_s *sink)
 {
-  assert(source != NULL || sink != NULL);
+#ifdef CONFIG_DEVICE_IRQ_SHARING
+  if (sink->base.link_count == 1)
+#endif
+    if (sink->sense_all != DEV_IRQ_SENSE_ID_BUS)
+      sink->update(sink, DEV_IRQ_SENSE_NONE, 0);
 
-  if (device_irq_ep_unlink_half(&source->base, &sink->base))
-    return -ENOENT;
-  ensure(!device_irq_ep_unlink_half(&sink->base, &source->base));
-  device_irq_sink_cleanup(sink);
+  struct device_icu_s icu;
+  if (!device_get_accessor(&icu.base, sink->base.dev, DRIVER_CLASS_ICU, 0))
+    {
+      DEVICE_OP(&icu, link, sink, src, NULL, NULL);
+      device_put_accessor(&icu.base);
+    }
 
   sink->base.dev->ref_count--;
 
-  return 0;
+  ensure(!device_irq_ep_unlink_half(&sink->base, &src->base));
+
+#ifdef CONFIG_DEVICE_IRQ_SHARING
+  if (sink->base.link_count == 0)
+#endif
+    sink->base.links.single = (void*)&device_irq_dummy_src_ep;
 }
 
 void device_irq_source_init(struct device_s *dev, struct dev_irq_src_s *sources,
@@ -318,15 +293,43 @@ static error_t device_icu_source_link(struct dev_irq_src_s *src, dev_irq_route_t
   return err;
 }
 
-void device_irq_source_unlink(struct device_s *dev, struct dev_irq_src_s *sources, uint_fast8_t src_count)
+void device_irq_source_unlink(struct device_s *dev, struct dev_irq_src_s *srcs,
+                              uint_fast8_t src_count)
 {
   uint_fast8_t i = 0;
 
+  /* drop all links to this source ep */
   for (; i < src_count; i++)
     {
-      struct dev_irq_src_s *src = sources + i;
-      device_icu_source_link(src, NULL);
-      device_irq_ep_unlink_all(dev_irq_src_s_base(src));
+      struct dev_irq_src_s *src = srcs + i;
+
+      switch (src->base.link_count)
+        {
+        case 0:
+          return;
+
+        case 1: {
+          struct dev_irq_sink_s *sink = (void*)src->base.links.single;
+          device_irq_sink_unlink(src, sink);
+          src->base.link_count = 0;
+          return;
+        }
+
+#if defined(CONFIG_DEVICE_IRQ_SHARING) || defined(CONFIG_DEVICE_IRQ_MULTI_SINK)
+        default: {
+          struct dev_irq_ep_s **r = src->base.links.array;
+          uint_fast8_t i;
+          for (i = 0; i < src->base.link_count; i++)
+            {
+              struct dev_irq_sink_s *sink = (void*)r[i];
+              device_irq_sink_unlink(src, sink);
+            }
+          mem_free(r);
+          src->base.link_count = 0;
+          return;
+        }
+#endif
+        }
     }
 }
 
@@ -668,7 +671,8 @@ error_t device_icu_irq_bind(struct dev_irq_src_s *src, const char *icu_name,
 
     if (device_icu_source_link(src, &route_mask))
       {
-        device_irq_ep_unlink(src, sink);
+        device_irq_ep_unlink_half(&src->base, &sink->base);
+        device_irq_sink_unlink(src, sink);
         err = -EBUSY;
         goto out;
       }

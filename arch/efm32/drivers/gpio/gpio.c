@@ -646,6 +646,7 @@ static DEV_ICU_LINK(efm32_gpio_icu_link)
   struct efm32_gpio_private_s *pv = dev->drv_pv;
   uint_fast8_t sink_id = sink - pv->sink;
   uint_fast8_t bank = efm32_gpio_icupv_bank(sink);
+  uint_fast8_t h = (sink_id & 8) >> 1; /* 4 when using high registers */
 
 #ifdef CONFIG_DEVICE_IRQ_SHARING
   if (sink->base.link_count > 1)
@@ -659,8 +660,6 @@ static DEV_ICU_LINK(efm32_gpio_icu_link)
   if (*bypass)
     return 0;
 #endif
-
-  uintptr_t h = (sink_id & 8) >> 1; /* 4 when using high registers */
 
   /* Select bank */
   uint32_t x = endian_le32(cpu_mem_read_32(EFM32_GPIO_ADDR + EFM32_GPIO_EXTIPSELL_ADDR + h));
@@ -684,9 +683,6 @@ static DEV_ICU_LINK(efm32_gpio_icu_link)
 
   /* Clear interrupt */
   cpu_mem_write_32(EFM32_GPIO_ADDR + EFM32_GPIO_IFC_ADDR, endian_le32(bit(sink_id)));
-  x = endian_le32(cpu_mem_read_32(EFM32_GPIO_ADDR + EFM32_GPIO_IEN_ADDR));
-  x |= bit(sink_id);
-  cpu_mem_write_32(EFM32_GPIO_ADDR + EFM32_GPIO_IEN_ADDR, endian_le32(x));
 
   return 0;
 }
