@@ -697,7 +697,11 @@ DEV_CHAR_REQUEST(usbdev_acm_request)
   struct device_s               *dev = accessor->dev;
   struct usbdev_acm_private_s   *pv = dev->drv_pv;
 
-  assert(rq->size);
+  if (rq->size == 0)
+    {
+      kroutine_exec(&rq->base.kr);
+      return;
+    }
 
   LOCK_SPIN_IRQ(&dev->lock);
 
