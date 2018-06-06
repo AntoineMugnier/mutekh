@@ -202,7 +202,7 @@ DEV_DECLARE_STATIC(usart0_dev, "spirf", 0, efm32_usart_spi_drv,
 #if defined(CONFIG_DRIVER_EFM32_USART_CHAR)
 
 DEV_DECLARE_STATIC(usart2_dev, "usart2", 0, efm32_usart_drv,
-                   DEV_STATIC_RES_MEM(0x4000e000, 0x4000e400),
+                   DEV_STATIC_RES_MEM(0x4000c800, 0x4000cc00),
 # ifdef CONFIG_DEVICE_CLOCK
                    DEV_STATIC_RES_CLK_SRC("/recmu", EFM32_CLOCK_USART2, 0),
 # else
