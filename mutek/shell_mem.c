@@ -1,5 +1,6 @@
 
 #include <hexo/iospace.h>
+#include <hexo/flash.h>
 
 #include <mutek/shell.h>
 #include <stdlib.h>
@@ -79,6 +80,19 @@ static TERMUI_CON_COMMAND_PROTOTYPE(shell_mem_r8)
   return 0;
 }
 
+static TERMUI_CON_COMMAND_PROTOTYPE(shell_mem_flash_erase)
+{
+  return flash_page_erase(strto_uintl32(argv[0], NULL, 0))
+    ? -EINVAL : 0;
+}
+
+static TERMUI_CON_COMMAND_PROTOTYPE(shell_mem_flash_write)
+{
+  return flash_page_write(strto_uintl32(argv[0], NULL, 0),
+                          (void*)argv[1], argl[1])
+    ? -EINVAL : 0;
+}
+
 static TERMUI_CON_GROUP_DECL(shell_mem_subgroup) =
 {
 #ifdef CONFIG_MUTEK_MEMALLOC_SMART
@@ -117,6 +131,14 @@ static TERMUI_CON_GROUP_DECL(shell_mem_subgroup) =
 
   TERMUI_CON_ENTRY(shell_mem_r8, "r8",
     TERMUI_CON_ARGS(1, 1)
+  )
+
+  TERMUI_CON_ENTRY(shell_mem_flash_erase, "flash_erase",
+    TERMUI_CON_ARGS(1, 1)
+  )
+
+  TERMUI_CON_ENTRY(shell_mem_flash_write, "flash_write",
+    TERMUI_CON_ARGS(2, 2)
   )
 
   TERMUI_CON_LIST_END
