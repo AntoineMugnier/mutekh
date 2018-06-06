@@ -575,36 +575,37 @@ static DEV_CMU_CONFIG_OSC(efm32_recmu_config_osc)
         default:
           return -ENOTSUP;
         }
+      uint_fast8_t band;
       switch (freq->num)
         {
-        case 0:
-          break;
         case 1000000:
-          EFM32_CMU_HFRCOCTRL_BAND_SET(pv->r_hfrcoctrl, 1MHZ);
+          band = EFM32_CMU_HFRCOCTRL_BAND_1MHZ;
           break;
         case 7000000:
-          EFM32_CMU_HFRCOCTRL_BAND_SET(pv->r_hfrcoctrl, 7MHZ);
+          band = EFM32_CMU_HFRCOCTRL_BAND_7MHZ;
           break;
         case 11000000:
-          EFM32_CMU_HFRCOCTRL_BAND_SET(pv->r_hfrcoctrl, 11MHZ);
+          band = EFM32_CMU_HFRCOCTRL_BAND_11MHZ;
           break;
         case 14000000:
-          EFM32_CMU_HFRCOCTRL_BAND_SET(pv->r_hfrcoctrl, 14MHZ);
+          band = EFM32_CMU_HFRCOCTRL_BAND_14MHZ;
           break;
         case 21000000:
-          EFM32_CMU_HFRCOCTRL_BAND_SET(pv->r_hfrcoctrl, 21MHZ);
+          band = EFM32_CMU_HFRCOCTRL_BAND_21MHZ;
           break;
 # if (CONFIG_EFM32_FAMILY == EFM32_FAMILY_LEOPARD) \
   || (CONFIG_EFM32_FAMILY == EFM32_FAMILY_WONDER) \
   || (CONFIG_EFM32_FAMILY == EFM32_FAMILY_GIANT) \
   || (CONFIG_EFM32_FAMILY == EFM32_FAMILY_GECKO)
         case 28000000:
-          EFM32_CMU_HFRCOCTRL_BAND_SET(pv->r_hfrcoctrl, 28MHZ);
+          band = EFM32_CMU_HFRCOCTRL_BAND_28MHZ;
           break;
 # endif
         default:
           return -ENOTSUP;
         }
+      pv->r_hfrcoctrl = (band << EFM32_CMU_HFRCOCTRL_BAND_SHIFT) |
+        cpu_mem_read_8(/* device information page */ 0xfe081dc + band);
 #ifdef CONFIG_DEVICE_CLOCK_VARFREQ
       pv->chg_mask |= EFM32_CLK_MASK(node_id);
 #endif
@@ -625,35 +626,36 @@ static DEV_CMU_CONFIG_OSC(efm32_recmu_config_osc)
         default:
           return -ENOTSUP;
         }
+      uint_fast8_t band;
       switch (freq->num)
         {
-        case 0:
-          break;
         case 1000000:
-          EFM32_CMU_AUXHFRCOCTRL_BAND_SET(pv->r_auxhfrcoctrl, 1MHZ);
+          band = EFM32_CMU_AUXHFRCOCTRL_BAND_1MHZ;
           break;
         case 7000000:
-          EFM32_CMU_AUXHFRCOCTRL_BAND_SET(pv->r_auxhfrcoctrl, 7MHZ);
+          band = EFM32_CMU_AUXHFRCOCTRL_BAND_7MHZ;
           break;
         case 11000000:
-          EFM32_CMU_AUXHFRCOCTRL_BAND_SET(pv->r_auxhfrcoctrl, 11MHZ);
+          band = EFM32_CMU_AUXHFRCOCTRL_BAND_11MHZ;
           break;
         case 14000000:
-          EFM32_CMU_AUXHFRCOCTRL_BAND_SET(pv->r_auxhfrcoctrl, 14MHZ);
+          band = EFM32_CMU_AUXHFRCOCTRL_BAND_14MHZ;
           break;
         case 21000000:
-          EFM32_CMU_AUXHFRCOCTRL_BAND_SET(pv->r_auxhfrcoctrl, 21MHZ);
+          band = EFM32_CMU_AUXHFRCOCTRL_BAND_21MHZ;
           break;
 # if (CONFIG_EFM32_FAMILY == EFM32_FAMILY_LEOPARD) \
   || (CONFIG_EFM32_FAMILY == EFM32_FAMILY_WONDER) \
   || (CONFIG_EFM32_FAMILY == EFM32_FAMILY_GIANT)
         case 28000000:
-          EFM32_CMU_AUXHFRCOCTRL_BAND_SET(pv->r_auxhfrcoctrl, 28MHZ);
+          band = EFM32_CMU_AUXHFRCOCTRL_BAND_28MHZ;
           break;
 # endif
         default:
           return -ENOTSUP;
         }
+      pv->r_auxhfrcoctrl = (band << EFM32_CMU_AUXHFRCOCTRL_BAND_SHIFT) |
+        cpu_mem_read_8(/* device information page */ 0xfe081d4 + band);
 #ifdef CONFIG_DEVICE_CLOCK_VARFREQ
       pv->chg_mask |= EFM32_CLK_MASK(node_id);
 #endif
