@@ -24,6 +24,17 @@ void gfx_bc_init(struct gfx_bc_context_s *ctx)
   gfx_tilemap_init(&ctx->tilemap, &ctx->s[0], 1, 1, 0);
 }
 
+static inline void *
+gfx_translate_addr(struct bc_context_s *vm, bc_reg_t addr,
+                   size_t size, bool_t writable)
+{
+#ifdef CONFIG_MUTEK_BYTECODE_SANDBOX
+  if (vm->sandbox)
+    return bc_translate_addr(vm, addr, size, writable);
+#endif
+  return (void*)p;
+}
+
 error_t gfx_bc_run(struct bc_context_s *vm,
 		   struct gfx_bc_context_s *ctx,
 		   uint16_t op)
@@ -49,7 +60,8 @@ error_t gfx_bc_run(struct bc_context_s *vm,
 	  gfx_surface_bytes(&s, w, h, fmt))
 	return -ERANGE;
 
-      void *data = bc_translate_addr(vm, p, s, 0);
+      void *data = gfx_translate_addr(vm, p, s, 0);
+
       if (!data || gfx_surface_init(ctx->s + n, data,
 				    s, w, h, fmt))
 	return -ERANGE;
@@ -206,7 +218,7 @@ error_t gfx_bc_run(struct bc_context_s *vm,
       gfx_pos_t y = gfx_vector_yint(s);
 
       bc_reg_t p = bc_get_reg(vm, op & 15);
-      const uint8_t *str = bc_translate_addr(vm, p, len, 0);
+      const uint8_t *str = gfx_translate_addr(vm, p, len, 0);
 
       enum gfx_direction_e dir = (op >> 8) & 3;
       if (str != NULL)
