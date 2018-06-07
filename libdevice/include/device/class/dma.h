@@ -225,6 +225,7 @@ struct dev_dma_rq_s;
     to start a new operation from this callback. This callback may be
     invoked from the interrupt handler of the DMA controller. Deferred
     execution must be implemented as needed. */
+
 typedef DEV_DMA_CALLBACK(dev_dma_callback_t);
 
 #define GCT_CONTAINER_ALGO_dev_dma_queue CLIST
@@ -355,11 +356,33 @@ typedef DEVDMA_REQUEST(devdma_request_t);
    In case of success the @ref cancel structure field of the request
    contains information about cancelled request
 */
+
 typedef DEV_DMA_CANCEL(devdma_cancel_t);
+
+struct dev_dma_status_s
+{
+  uintptr_t   src_addr;
+  uintptr_t   dst_addr;
+};
+
+/** @see dev_dma_status_t */
+#define DEV_DMA_GET_STATUS(n)	error_t  (n) (struct device_dma_s *accessor,    \
+                                              struct dev_dma_rq_s *rq,          \
+                                              struct dev_dma_status_s * status)
+
+/**
+   @This get status of a dma request.
+
+   In case of success the @ref cancel structure field of the request
+   contains information about cancelled request
+*/
+
+typedef DEV_DMA_GET_STATUS(devdma_get_status_t);
 
 DRIVER_CLASS_TYPES(DRIVER_CLASS_DMA, dma,
                    devdma_request_t *f_request;
                    devdma_cancel_t *f_cancel;
+                   devdma_get_status_t *f_get_status;
                    );
 
 /** @see driver_dma_s */
@@ -368,6 +391,7 @@ DRIVER_CLASS_TYPES(DRIVER_CLASS_DMA, dma,
     .class_ = DRIVER_CLASS_DMA,                                  \
     .f_cancel = prefix ## _cancel,                               \
     .f_request = prefix ## _request,                             \
+    .f_get_status = prefix ## _get_status,                       \
   })
 
 #ifdef CONFIG_DEVICE_DMA

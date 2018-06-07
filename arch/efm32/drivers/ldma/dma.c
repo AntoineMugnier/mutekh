@@ -689,6 +689,56 @@ static error_t efm32_dev_dma_update_rq(struct efm32_dma_context_s *pv, uint8_t c
   return 0;
 }
 
+static DEV_DMA_GET_STATUS(efm32_dma_get_status)
+{
+  struct device_s *dev = accessor->dev;
+  struct efm32_dma_context_s *pv = dev->drv_pv;
+  error_t err = 0;
+
+  LOCK_SPIN_IRQ(&dev->lock);
+
+  switch (rq->drv_pv)
+  {
+    case EFR32_DMA_ENQUEUED:
+      status->dst_addr = rq->desc->dst.mem.addr;
+      status->src_addr = rq->desc->src.mem.addr;
+      err = 0;
+      break;
+
+    case EFR32_DMA_DONE:
+      err = -EBUSY;
+      break;
+
+    case EFR32_DMA_ONGOING:{
+      /* Request is not terminated */
+      uint8_t chan_msk = rq->chan_mask;
+
+      while(1)
+        {
+          assert(chan_msk);
+
+          uint8_t chan = bit_ctz(chan_msk);
+          uint8_t msk  = (1 << chan);
+
+          chan_msk &= ~msk;
+
+          if (pv->chan[chan].rq != rq)
+            continue;
+            
+          status->dst_addr = endian_le32(cpu_mem_read_32(pv->addr + EFR32_LDMA_CH_DST_ADDR(chan)));
+          status->src_addr = endian_le32(cpu_mem_read_32(pv->addr + EFR32_LDMA_CH_SRC_ADDR(chan)));
+          
+          break;
+        }}
+      break;
+    default:
+      abort();
+  }
+
+  LOCK_RELEASE_IRQ(&dev->lock);
+
+  return err;
+}
 static DEV_DMA_CANCEL(efm32_dma_cancel)
 {
   struct device_s *dev = accessor->dev;

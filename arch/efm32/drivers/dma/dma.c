@@ -848,6 +848,80 @@ static DEV_DMA_CANCEL(efm32_dma_cancel)
   return err;
 }
 
+static DEV_DMA_GET_STATUS(efm32_dma_get_status)
+{
+  struct device_s *dev = accessor->dev;
+  struct efm32_dma_context_s *pv = dev->drv_pv;
+
+  LOCK_SPIN_IRQ_SCOPED(&dev->lock);
+
+  switch (rq->drv_pv)
+    {
+    case EFR32_DMA_ENQUEUED:
+      status->dst_addr = rq->desc->dst.mem.addr;
+      status->src_addr = rq->desc->src.mem.addr;
+      return 0;
+
+    case EFR32_DMA_DONE:
+      return -EBUSY;
+
+    case EFR32_DMA_ONGOING:;
+      /* Request is not terminated */
+      uint8_t chan_msk = rq->chan_mask;
+
+      while(1)
+        {
+          assert(chan_msk);
+
+          uint8_t chan = bit_ctz(chan_msk);
+          uint8_t msk  = (1 << chan);
+          chan_msk &= ~msk;
+          struct efm32_dma_chan_state_s * state = pv->chan + chan;
+
+          if (pv->chan[chan].rq != rq)
+            continue;
+
+          uintptr_t priaddr = (uintptr_t)pv->primary + PL230_CHANNEL_SIZE * chan;
+          uintptr_t altaddr = cpu_mem_read_32(pv->addr + PL230_DMA_ALTCTRLBASE_ADDR) + PL230_CHANNEL_SIZE * (chan);
+
+          uint32_t prirem = cpu_mem_read_32(priaddr + DMA_CHANNEL_CFG_ADDR);
+          prirem = DMA_CHANNEL_CFG_N_MINUS_1_GET(prirem);
+
+          uint32_t altrem = cpu_mem_read_32(altaddr + DMA_CHANNEL_CFG_ADDR);
+          altrem = DMA_CHANNEL_CFG_N_MINUS_1_GET(altrem);
+
+          bool_t alt = (cpu_mem_read_32(pv->addr + PL230_DMA_CHALTS_ADDR) >> chan) & 1;
+
+          size_t done = 0;
+
+          if (rq->type & _DEV_DMA_CONTINUOUS)
+            /* Ping-Pong mode */
+            {
+              done = rq->desc[state->lidx].src.mem.size;
+              done -= alt ? altrem : prirem; 
+            }
+          else if (rq->desc_count_m1)
+            /* Scatter-gather */
+              return -ENOTSUP;
+          else
+            /* Basic mode */
+            done = rq->desc[0].src.mem.size - prirem;
+          
+          status->dst_addr = rq->desc->dst.mem.addr + done;
+          status->src_addr = rq->desc->src.mem.addr + done;
+
+          return 0;
+        }
+      return -ENOENT;
+
+    default:
+      abort();
+    }
+
+  return -ENOTSUP;
+}
+
+
 static DEV_INIT(efm32_dma_init)
 {
   struct efm32_dma_context_s *pv;
