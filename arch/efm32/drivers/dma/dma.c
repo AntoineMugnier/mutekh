@@ -327,6 +327,7 @@ static error_t efm32_dma_basic_setup(struct efm32_dma_context_s *pv,
   if (efm32_dma_get_src(rq))
     mode = DMA_CHANNEL_CFG_CYCLE_CTR_BASIC;
 
+
   struct efm32_dma_descriptor_s ctrl;
 
   error_t err = efm32_dma_set_ctrl(rq, rq->desc, &ctrl, mode);
@@ -893,11 +894,13 @@ static DEV_DMA_GET_STATUS(efm32_dma_get_status)
           bool_t alt = (cpu_mem_read_32(pv->addr + PL230_DMA_CHALTS_ADDR) >> chan) & 1;
 
           size_t done = 0;
+	  uint8_t lidx = 0;
 
           if (rq->type & _DEV_DMA_CONTINUOUS)
             /* Ping-Pong mode */
             {
-              done = rq->desc[state->lidx].src.mem.size;
+	      lidx = state->lidx;
+              done = rq->desc[lidx].src.mem.size;
               done -= alt ? altrem : prirem; 
             }
           else if (rq->desc_count_m1)
@@ -905,10 +908,10 @@ static DEV_DMA_GET_STATUS(efm32_dma_get_status)
               return -ENOTSUP;
           else
             /* Basic mode */
-            done = rq->desc[0].src.mem.size - prirem;
+            done = rq->desc[lidx].src.mem.size - prirem;
           
-          status->dst_addr = rq->desc->dst.mem.addr + done;
-          status->src_addr = rq->desc->src.mem.addr + done;
+          status->dst_addr = rq->desc[lidx].dst.mem.addr + done;
+          status->src_addr = rq->desc[lidx].src.mem.addr + done;
 
           return 0;
         }

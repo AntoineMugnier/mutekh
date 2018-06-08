@@ -441,6 +441,7 @@ static void efm32_usart_dma_timeout_irq(struct efm32_usart_context_s *pv)
   pv->wptr = (uint8_t*)status.dst_addr;
   /* Check Overflow */
   efm32_usart_check_dma_ovf(pv);
+
   kroutine_exec(&pv->read_kr);
 }
 
@@ -714,7 +715,7 @@ static error_t efm32_usart_timeout_init(struct efm32_usart_context_s *pv,
   cpu_mem_write_32(addr + EFM32_TIMER_CC_CTRL_ADDR(CC_CHANNEL), endian_le32(x));
 
   struct dev_freq_s freq = {
-      .num   = CONFIG_DRIVER_EFM32_USART_RATE,
+      .num   = pv->cfg.baudrate,
       .denom = CONFIG_DRIVER_EFM32_USART_CHAR_DMA_TIMEOUT_SYMBOL,
     };
 
