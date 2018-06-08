@@ -33,7 +33,6 @@ enum timer_opts_e
   TIMER_OPT_TDELAY = 0x02,
   TIMER_OPT_MDELAY = 0x04,
   TIMER_OPT_RES    = 0x08,
-  TIMER_OPT_BUSY   = 0x10,
 };
 
 struct termui_optctx_dev_timer_opts
@@ -84,18 +83,8 @@ static TERMUI_CON_COMMAND_PROTOTYPE(dev_shell_timer_wait)
       rq.rev = 0;
     }
 
-  if (used & TIMER_OPT_BUSY)
-    {
-      if (dev_timer_busy_wait_delay(&c->timer, rq.delay))
-        return -EINVAL;
-    }
-  else
-    {
-#ifdef CONFIG_MUTEK_CONTEXT_SCHED
-      if (dev_timer_wait_request(&c->timer, &rq))
-#endif
-        return -EINVAL;
-    }
+  if (dev_timer_wait_request(&c->timer, &rq))
+    return -EINVAL;
 
   return 0;
 }
@@ -145,20 +134,21 @@ static TERMUI_CON_COMMAND_PROTOTYPE(dev_shell_timer_convert)
 {
   struct termui_optctx_dev_timer_opts *c = ctx;
 
-  dev_timer_delay_t delay;
   dev_timer_cfgrev_t rev;
 
   if (used & TIMER_OPT_MDELAY)
     {
+      dev_timer_delay_t delay;
       if (dev_timer_init_sec(&c->timer, &delay, &rev, c->delay, 1000))
         return -EINVAL;
       termui_con_printf(con, "tick : %"PRItimerDelay"\n", delay);
     }
   else
     {
-      if (dev_timer_get_sec(&c->timer, &delay, &rev, c->delay, 1000))
+      uint64_t stime;
+      if (dev_timer_get_sec(&c->timer, &stime, &rev, c->delay, 1000))
         return -EINVAL;
-      termui_con_printf(con, "msec : %"PRItimerDelay"\n", delay);
+      termui_con_printf(con, "msec : %"PRIu64"\n", stime);
     }
 
   return 0;
@@ -181,9 +171,6 @@ static TERMUI_CON_OPT_DECL(dev_timer_opts) =
   TERMUI_CON_OPT_INTEGER_ENTRY("-r", "--resolution", TIMER_OPT_RES, struct termui_optctx_dev_timer_opts, delay, 1,
                                TERMUI_CON_OPT_CONSTRAINTS(TIMER_OPT_RES, 0))
 
-  TERMUI_CON_OPT_ENTRY("-b", "--busy-wait", TIMER_OPT_BUSY,
-                       TERMUI_CON_OPT_CONSTRAINTS(TIMER_OPT_BUSY, 0))
-
   TERMUI_CON_LIST_END
 };
 
@@ -195,7 +182,7 @@ TERMUI_CON_GROUP_DECL(dev_shell_timer_group) =
   TERMUI_CON_ENTRY(dev_shell_timer_wait, "wait",
 		   TERMUI_CON_OPTS_CTX(dev_timer_opts,
                                        TIMER_OPT_DEV | TIMER_OPT_TDELAY | TIMER_OPT_MDELAY,
-                                       TIMER_OPT_BUSY, timer_opts_cleanup)
+                                       0, timer_opts_cleanup)
                    )
 
   TERMUI_CON_ENTRY(dev_shell_timer_config, "config",
