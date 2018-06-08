@@ -38,6 +38,7 @@
 #include <mutek/kroutine.h>
 
 #include <arch/efm32/rtc.h>
+#include <arch/efm32/devaddr.h>
 
 #define EFM32_RTC_HW_WIDTH 24
 #define EFM32_RTC_HW_MASK  0xffffff
@@ -45,8 +46,6 @@
 
 DRIVER_PV(struct efm32_rtc_private_s
 {
-  /* Timer address */
-  uintptr_t addr;
 #ifdef CONFIG_DEVICE_CLOCK
   dev_timer_cfgrev_t rev;
 #endif
@@ -71,19 +70,19 @@ static inline void efm32_rtc_start_counter(struct efm32_rtc_private_s *pv)
 #ifdef CONFIG_DEVICE_CLOCK_GATING
   dev_clock_sink_gate(&pv->clk_ep, DEV_CLOCK_EP_POWER_CLOCK);
 #endif
-  while (cpu_mem_read_32(pv->addr + EFM32_RTC_SYNCBUSY_ADDR) &
+  while (cpu_mem_read_32(EFM32_RTC_ADDR + EFM32_RTC_SYNCBUSY_ADDR) &
          endian_le32(EFM32_RTC_SYNCBUSY_CTRL))
     ;
-  cpu_mem_write_32(pv->addr + EFM32_RTC_CTRL_ADDR, endian_le32(EFM32_RTC_CTRL_EN(COUNT)));
+  cpu_mem_write_32(EFM32_RTC_ADDR + EFM32_RTC_CTRL_ADDR, endian_le32(EFM32_RTC_CTRL_EN(COUNT)));
 }
 
 /* This function stops the hardware rtc counter. */
 static inline void efm32_rtc_stop_counter(struct efm32_rtc_private_s *pv)
 {
-  while (cpu_mem_read_32(pv->addr + EFM32_RTC_SYNCBUSY_ADDR) &
+  while (cpu_mem_read_32(EFM32_RTC_ADDR + EFM32_RTC_SYNCBUSY_ADDR) &
          endian_le32(EFM32_RTC_SYNCBUSY_CTRL))
     ;
-  cpu_mem_write_32(pv->addr + EFM32_RTC_CTRL_ADDR, 0);
+  cpu_mem_write_32(EFM32_RTC_ADDR + EFM32_RTC_CTRL_ADDR, 0);
 #ifdef CONFIG_DEVICE_CLOCK_GATING
   dev_clock_sink_gate(&pv->clk_ep, DEV_CLOCK_EP_POWER);
 #endif
@@ -95,12 +94,12 @@ static inline void efm32_rtc_stop_counter(struct efm32_rtc_private_s *pv)
    most recent rtc value. */
 static uint64_t get_timer_value(struct efm32_rtc_private_s *pv)
 {
-  uint64_t value = endian_le32(cpu_mem_read_32(pv->addr + EFM32_RTC_CNT_ADDR));
+  uint64_t value = endian_le32(cpu_mem_read_32(EFM32_RTC_ADDR + EFM32_RTC_CNT_ADDR));
 
 #ifdef CONFIG_DEVICE_IRQ
   if (value < EFM32_RTC_HW_MASK / 2)      /* check if a wrap just occured */
     {
-      uint32_t x = endian_le32(cpu_mem_read_32(pv->addr + EFM32_RTC_IF_ADDR));
+      uint32_t x = endian_le32(cpu_mem_read_32(EFM32_RTC_ADDR + EFM32_RTC_IF_ADDR));
       if (x & EFM32_RTC_IF_OF)
         value += 1ULL << EFM32_RTC_HW_WIDTH;
     }
@@ -117,7 +116,7 @@ static uint64_t get_timer_value(struct efm32_rtc_private_s *pv)
    channel 0. */
 static inline void efm32_rtc_disable_compare(struct efm32_rtc_private_s *pv)
 {
-  cpu_mem_write_32(pv->addr + EFM32_RTC_IEN_ADDR, endian_le32(EFM32_RTC_IEN_OF));
+  cpu_mem_write_32(EFM32_RTC_ADDR + EFM32_RTC_IEN_ADDR, endian_le32(EFM32_RTC_IEN_OF));
 }
 
 static void efm32_rtc_request_start(struct efm32_rtc_private_s *pv,
@@ -132,18 +131,18 @@ static void efm32_rtc_request_start(struct efm32_rtc_private_s *pv,
   uint32_t s = 5;
 
   /* enable compare interrupt */
-  cpu_mem_write_32(pv->addr + EFM32_RTC_IEN_ADDR, endian_le32(EFM32_RTC_IEN_COMP0 | EFM32_RTC_IEN_OF));
+  cpu_mem_write_32(EFM32_RTC_ADDR + EFM32_RTC_IEN_ADDR, endian_le32(EFM32_RTC_IEN_COMP0 | EFM32_RTC_IEN_OF));
 
   do {
     /* write deadline in Compare 0 channel */
-    while (cpu_mem_read_32(pv->addr + EFM32_RTC_SYNCBUSY_ADDR) &
+    while (cpu_mem_read_32(EFM32_RTC_ADDR + EFM32_RTC_SYNCBUSY_ADDR) &
            endian_le32(EFM32_RTC_SYNCBUSY_COMP0))
       ;
 
-    cpu_mem_write_32(pv->addr + EFM32_RTC_COMP0_ADDR, endian_le32(d + s));
+    cpu_mem_write_32(EFM32_RTC_ADDR + EFM32_RTC_COMP0_ADDR, endian_le32(d + s));
 
     /* hw compare for == only, check for race condition */
-    uint32_t c = cpu_mem_read_32(pv->addr + EFM32_RTC_CNT_ADDR);
+    uint32_t c = cpu_mem_read_32(EFM32_RTC_ADDR + EFM32_RTC_CNT_ADDR);
 
     if ((d - c /* LE domain write skew */ - 4) & (1 << (EFM32_RTC_HW_WIDTH - 1)))
       {
@@ -160,13 +159,13 @@ static DEV_IRQ_SRC_PROCESS(efm32_rtc_irq)
  
   lock_spin(&dev->lock);
 
-  uint64_t value = endian_le32(cpu_mem_read_32(pv->addr + EFM32_RTC_CNT_ADDR));
-  uint32_t irq = endian_le32(cpu_mem_read_32(pv->addr + EFM32_RTC_IF_ADDR))
+  uint64_t value = endian_le32(cpu_mem_read_32(EFM32_RTC_ADDR + EFM32_RTC_CNT_ADDR));
+  uint32_t irq = endian_le32(cpu_mem_read_32(EFM32_RTC_ADDR + EFM32_RTC_IF_ADDR))
     & (EFM32_RTC_IF_COMP0 | EFM32_RTC_IF_OF);
 
   if (irq)
     {
-      cpu_mem_write_32(pv->addr + EFM32_RTC_IFC_ADDR, endian_le32(irq));
+      cpu_mem_write_32(EFM32_RTC_ADDR + EFM32_RTC_IFC_ADDR, endian_le32(irq));
 
       if (dev->start_count == 0)
         goto err;
@@ -246,7 +245,7 @@ static DEV_TIMER_CANCEL(efm32_rtc_cancel)
           if (rqnext != NULL)
             {
               /* start next request, raise irq on race condition */
-              cpu_mem_write_32(pv->addr + EFM32_RTC_IFC_ADDR, endian_le32(EFM32_RTC_IFC_COMP0));
+              cpu_mem_write_32(EFM32_RTC_ADDR + EFM32_RTC_IFC_ADDR, endian_le32(EFM32_RTC_IFC_COMP0));
               efm32_rtc_request_start(pv, rqnext, get_timer_value(pv));
             }
           else
@@ -306,7 +305,7 @@ static DEV_TIMER_REQUEST(efm32_rtc_request)
       /* start request, raise irq on race condition */
       if (dev_request_pqueue_prev(&pv->queue, dev_timer_rq_s_base(rq)) == NULL)
         {
-          cpu_mem_write_32(pv->addr + EFM32_RTC_IFC_ADDR, endian_le32(EFM32_RTC_IFC_COMP0));
+          cpu_mem_write_32(EFM32_RTC_ADDR + EFM32_RTC_IFC_ADDR, endian_le32(EFM32_RTC_IFC_COMP0));
           efm32_rtc_request_start(pv, rq, value);
         }
 
@@ -427,10 +426,9 @@ static DEV_INIT(efm32_rtc_init)
 {
   struct efm32_rtc_private_s  *pv;
 
-  uintptr_t addr;
-
-  if (device_res_get_uint(dev, DEV_RES_MEM, 0, &addr, NULL))
-    return -ENOENT;
+  __unused__ uintptr_t addr = 0;
+  assert(device_res_get_uint(dev, DEV_RES_MEM, 0, &addr, NULL) == 0 &&
+         EFM32_RTC_ADDR == addr);
 
   pv = mem_alloc(sizeof(struct efm32_rtc_private_s), (mem_scope_sys));
 
@@ -438,7 +436,6 @@ static DEV_INIT(efm32_rtc_init)
     return -ENOMEM;
 
   memset(pv, 0, sizeof(*pv));
-  pv->addr = addr;
   dev->drv_pv = pv;
 
   /* enable clock */
@@ -466,18 +463,18 @@ static DEV_INIT(efm32_rtc_init)
 
 #ifdef CONFIG_DEVICE_IRQ
   /* Clear interrupts */
-  cpu_mem_write_32(pv->addr + EFM32_RTC_IFC_ADDR, endian_le32(EFM32_RTC_IFC_MASK));
+  cpu_mem_write_32(EFM32_RTC_ADDR + EFM32_RTC_IFC_ADDR, endian_le32(EFM32_RTC_IFC_MASK));
 
   /* Enable Overflow interrupts */
-  cpu_mem_write_32(pv->addr + EFM32_RTC_IEN_ADDR, endian_le32(EFM32_RTC_IEN_OF));
+  cpu_mem_write_32(EFM32_RTC_ADDR + EFM32_RTC_IEN_ADDR, endian_le32(EFM32_RTC_IEN_OF));
 
   pv->swvalue = 0;
 #else
-  cpu_mem_write_32(pv->addr + EFM32_RTC_IEN_ADDR, 0);
+  cpu_mem_write_32(EFM32_RTC_ADDR + EFM32_RTC_IEN_ADDR, 0);
 #endif
 
   /* Ctrl register configuration */
-  cpu_mem_write_32(pv->addr + EFM32_RTC_CTRL_ADDR, endian_le32(EFM32_RTC_CTRL_DEBUGRUN(FROZEN) |
+  cpu_mem_write_32(EFM32_RTC_ADDR + EFM32_RTC_CTRL_ADDR, endian_le32(EFM32_RTC_CTRL_DEBUGRUN(FROZEN) |
                                                                EFM32_RTC_CTRL_EN(RESET) |
                                                                EFM32_RTC_CTRL_COMP0TOP(TOPMAX)));
 
