@@ -2003,12 +2003,13 @@ sub read_build_config
 		    $line = "%common";
 		} else {
 		    error( "$file:$lnum: unbalanced %end.");
+                    next;
 		}
 	    } else {
 		shift @ignore;
 		shift @cur_sections;
+                next;
 	    }
-	    next;
 	}
 
 	if ($line =~ /^\s* %common\b/x) {
