@@ -3,21 +3,23 @@
 use Getopt::Long;
 use strict;
 
-my ( $help, $name, $align, $section, $size, $output, $input )
-    = ( 0, "blob", 1, undef, 0, "-" );
+my ( $help, $name, $align, $section, $size, $header, $output, $input )
+    = ( 0, "blob", 1, undef, undef, 0, "-" );
 
 Getopt::Long::Configure("no_ignore_case");
 my $r = GetOptions("n=s" => \$name, "a=i" => \$align,
                    "s=s" => \$section, "S" => \$size,
-                   "o=s" => \$output, "h" => \$help);
+                   "H" => \$header, "o=s" => \$output,
+                   "h" => \$help);
 
 if ( $help ) {
-    print STDERR 
+    print STDERR
 "usage: blob2c.pl [ -n symbol_name ] [ -s symbol_section ] blob > output
     -n name      Change symbol name (default = 'blob')
     -a value     Add an alignment attribute on blob variable
     -s name      Change section name (no default (.rodata))
     -S           Also emit a size symbol '<name>_size'
+    -H           Define C headers according to -n option
     -o name      Change section output file name (default stdout)
 ";
     exit 1;
@@ -34,7 +36,12 @@ if ( $output ne "-" ) {
     open( STDOUT, ">$output" ) or die 'unable to open output file';
 }
 
-print "#include <stdint.h>\n" if ( $size );
+if ( $header ) {
+    print "#ifndef _${name}_H\n";
+    print "#define _${name}_H\n\n";
+}
+
+print "#include <stdint.h>\n\n" if ( $size );
 print "__attribute__((section \"$section\"))\n" if ( defined $section );
 print "__attribute__((aligned ($align)))\n" if ( defined $align );
 print "const unsigned char $name\[\] = {\n";
@@ -54,5 +61,8 @@ if ( $size ) {
     print "const size_t ${name}_size = $tlen;\n"
 }
 
-exit 0;
+if ( $header ) {
+    print "\n#endif /* !_${name}_H */\n";
+}
 
+exit 0;
