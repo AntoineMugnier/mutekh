@@ -205,8 +205,10 @@ static KROUTINE_EXEC(endpoint_read_done)
   struct pipe_s *pipe = ep->pipe;
   size_t size = ep->rq.data - ep->data;
 
-  if (ep->rq.error)
+  if (ep->rq.error) {
+    logk_error("read done err %d", ep->rq.error);
     return endpoint_read_schedule(ep);
+  }
 
   logk_debug("%s %d bytes in", ep_flow[pipe->src], size);
 
@@ -214,7 +216,7 @@ static KROUTINE_EXEC(endpoint_read_done)
       &pipe->buffer, ep->data, size);
 
   if (written != size)
-    logk_debug("%s buffer overflowed by %d bytes",
+    logk_error("%s buffer overflowed by %d bytes",
                ep_flow[pipe->src], size - written);
 
   endpoint_read_schedule(ep);
