@@ -32,7 +32,7 @@ gfx_translate_addr(struct bc_context_s *vm, bc_reg_t addr,
   if (vm->sandbox)
     return bc_translate_addr(vm, addr, size, writable);
 #endif
-  return (void*)p;
+  return (void*)addr;
 }
 
 error_t gfx_bc_run(struct bc_context_s *vm,
