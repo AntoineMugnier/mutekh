@@ -219,7 +219,7 @@ static TERMUI_CON_COMMAND_PROTOTYPE(shell_crypto_random)
     return -EINVAL;
 
   void *state = malloc(info.state_size);
-  if (!state)
+  if (info.state_size && !state)
     return -EINVAL;
 
   memset(state, 0x55, info.state_size);
