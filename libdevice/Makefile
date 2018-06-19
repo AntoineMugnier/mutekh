@@ -67,7 +67,7 @@ endif
 
 ifeq ($(CONFIG_DEVICE_MEM), defined)
 objs += device_mem.o
-objs-$(CONFIG_DEVICE_SHELL) += shell_mem.o
+objs-$(CONFIG_DEVICE_SHELL_MEM) += shell_mem.o
 endif
 
 objs-$(CONFIG_DEVICE_SHELL) += shell.o
