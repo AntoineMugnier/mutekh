@@ -61,6 +61,10 @@ void efm32_clock_enable()
   cpu_mem_write_32(b + EFM32_CMU_LFACLKEN0_ADDR, EFM32_CMU_LFACLKEN0_MASK);
   cpu_mem_write_32(b + EFM32_CMU_LFBCLKEN0_ADDR, EFM32_CMU_LFBCLKEN0_MASK);
 
+  /* Enable LFRCO */
+  cpu_mem_write_32(EFM32_CMU_ADDR + EFM32_CMU_OSCENCMD_ADDR, EFM32_CMU_OSCENCMD_LFRCOEN);
+  while (!(cpu_mem_read_32(EFM32_CMU_ADDR + EFM32_CMU_STATUS_ADDR) & EFM32_CMU_STATUS_LFRCORDY))
+    ;
 }
 
 #endif
