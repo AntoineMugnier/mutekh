@@ -9,7 +9,7 @@ all: test_tile.out test_circle.out test_line.out test_rect.out test_arc.out test
 %.h: %.t
 	perl backslash.pl $< $@
 
-%.out: %.bc bc_custom_gfx.pm
+%.out: %.bc bc_custom_gfx.pm $(TSRC:.t=.h) $(HSRC)
 	cpp -I ../include $< | perl $(MUTEKH)scripts/decl_filter.pl | perl $(MUTEKH)scripts/bc_asm.pl -w 2 -b blob -p . -o $@
 
 test: test.c $(CSRC) $(TSRC:.t=.h) $(HSRC)
