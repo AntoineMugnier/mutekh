@@ -69,6 +69,7 @@
 
 #define EFR32_RX_IRQ_FRC_MSK      (EFR32_FRC_IF_RXDONE     |      \
                                    EFR32_FRC_IF_RXOF       |      \
+                                   EFR32_FRC_IF_RXABORTED  |      \
                                    EFR32_FRC_IF_BLOCKERROR |      \
                                    EFR32_FRC_IF_FRAMEERROR)
 
