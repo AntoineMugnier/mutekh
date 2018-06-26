@@ -401,8 +401,6 @@
     CONFIG_EFM32_RAMSIZE 0x40000
   %end
 
-  %end
-
   %requiretypes family
   %requiretypes sram
   %requiretypes flash
