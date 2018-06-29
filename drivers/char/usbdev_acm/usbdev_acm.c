@@ -224,6 +224,7 @@ struct usbdev_acm_private_s
 
   bool_t read_started;
   bool_t write_started;
+  bool_t zlp;
 
   size_t remaining;
 
@@ -399,17 +400,24 @@ KROUTINE_EXEC(usbdev_acm_write_cb)
 
   LOCK_SPIN_IRQ_SCOPED(&dev->lock);
 
-
   if (tr->error)
     {
       /* USB reset or disconnected */
       logk_debug("Write -EPIPE");
       usbdev_service_end_request(dev, 0, tr->error);
+      return;
+    }
+
+  struct usbdev_acm_private_s *pv = dev->drv_pv;
+
+  if (pv->zlp)
+    {
+      tr->size = 0;
+      pv->zlp = 0;
+      usbdev_service_char_write(dev);
     }
   else
-    {
-      usbdev_service_try_write(dev);
-    }
+    usbdev_service_try_write(dev);
 }
 
 static
@@ -443,6 +451,8 @@ void usbdev_service_char_write(struct device_s *dev)
   tr->type = DEV_USBDEV_DATA_IN;
   tr->error = 0;
   tr->base.pvdata = dev;
+
+  pv->zlp = tr->size == USBDEV_SERV_CHAR_BULK_SIZE ? 1 : 0; 
 
   /* Push transfer to stack */
   error_t err = usbdev_stack_transfer(&pv->usb, &pv->service, tr, &ep_bulk_in);
