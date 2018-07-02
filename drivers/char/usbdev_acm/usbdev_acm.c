@@ -273,7 +273,7 @@ void cdc_line_coding_parse(const struct usbdev_cdc_line_coding_s *coding,
 static
 void usbdev_service_char_read(struct device_s *dev);
 static
-void usbdev_service_char_write(struct device_s *dev);
+void usbdev_service_char_write(struct device_s *dev, bool_t flush);
 
 static
 void usbdev_service_end_request(struct device_s *dev, bool_t read, error_t err)
@@ -361,6 +361,7 @@ void usbdev_service_try_write(struct device_s *dev)
   uint8_t * p = tr->data = pv->wbuffer;
 
   tr->size = 0;
+  bool_t flush = 0;
 
   while(1)
     {
@@ -368,14 +369,15 @@ void usbdev_service_try_write(struct device_s *dev)
 
       pv->write_started = 1;
 
-      if (rq == NULL || tr->size == USBDEV_SERV_CHAR_BUFFER_SIZE)
+      if (rq == NULL || tr->size == USBDEV_SERV_CHAR_BUFFER_SIZE || flush)
         {
           if (tr->size)
-            usbdev_service_char_write(dev);
+            usbdev_service_char_write(dev, flush);
           else
             pv->write_started = 0;
           break;
         }
+
 
       size_t s = USBDEV_SERV_CHAR_BUFFER_SIZE - tr->size;
       size_t min = s < rq->size ? s : rq->size;
@@ -386,6 +388,8 @@ void usbdev_service_try_write(struct device_s *dev)
       p += min;
       rq->data += min;
       rq->size -= min;
+
+      flush = (rq->size == 0) && (rq->type & _DEV_CHAR_FLUSH);
 
       if (rq->type == DEV_CHAR_WRITE_PARTIAL || rq->size == 0)
         usbdev_service_end_request(dev, 0, 0);
@@ -411,10 +415,11 @@ KROUTINE_EXEC(usbdev_acm_write_cb)
   struct usbdev_acm_private_s *pv = dev->drv_pv;
 
   if (pv->zlp)
+  /* A zero length packet must be sent */
     {
       tr->size = 0;
       pv->zlp = 0;
-      usbdev_service_char_write(dev);
+      usbdev_service_char_write(dev, 0);
     }
   else
     usbdev_service_try_write(dev);
@@ -443,16 +448,20 @@ KROUTINE_EXEC(usbdev_acm_read_cb)
 }
 
 static
-void usbdev_service_char_write(struct device_s *dev)
+void usbdev_service_char_write(struct device_s *dev, bool_t flush)
 {
   struct usbdev_acm_private_s *pv = dev->drv_pv;
   struct dev_usbdev_request_s *tr = &pv->wtr;
+
 
   tr->type = DEV_USBDEV_DATA_IN;
   tr->error = 0;
   tr->base.pvdata = dev;
 
-  pv->zlp = tr->size == USBDEV_SERV_CHAR_BULK_SIZE ? 1 : 0; 
+  pv->zlp = 0;
+  /* ZLP when size is multiple of MPS and _DEV_CHAR_FLUSH request */
+  if (tr->size % USBDEV_SERV_CHAR_BULK_SIZE == 0)
+    pv->zlp = flush;
 
   /* Push transfer to stack */
   error_t err = usbdev_stack_transfer(&pv->usb, &pv->service, tr, &ep_bulk_in);
