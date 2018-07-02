@@ -199,7 +199,22 @@ static inline error_t si446x_build_pk_config(struct si446x_ctx_s *pv, struct dev
 
   /** Configure CRC */
 
-  p = 0; /*  CRC SEED ALL 0 */
+  /* only all 0 or all 1s are supported for CRC seed */
+  switch (cfg->crc_seed)
+    {
+    case 0xff:
+    case 0xffff:
+    case 0xffffffff:
+      p = 0x80;
+      break;
+
+    case 0x00:
+      p = 0;
+      break;
+
+    default:
+      return -ENOTSUP;
+    }
 
   switch (cfg->crc)
     {

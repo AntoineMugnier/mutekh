@@ -59,6 +59,7 @@ enum rfpacket_opts_e
   RFPACKET_OPT_HEADER    = 0x800000,
   RFPACKET_OPT_CRATE     = 0x1000000,
   RFPACKET_OPT_PKCFG     = 0x2000000,
+  RFPACKET_OPT_CRCSEED   = 0x4000000,
 };
 
 #define RFPACKET_OPT_RF_CFG_MSK (RFPACKET_OPT_FREQ | \
@@ -72,6 +73,7 @@ enum rfpacket_opts_e
 
 
 #define RFPACKET_OPT_PKT_CFG_MSK (RFPACKET_OPT_CRC | \
+                                  RFPACKET_OPT_CRCSEED | \
                                   RFPACKET_OPT_FORMAT |\
                                   RFPACKET_OPT_ENCODING |\
                                   RFPACKET_OPT_SW_VAL |\
@@ -116,6 +118,7 @@ struct termui_optctx_dev_rfpacket_opts
           enum dev_rfpacket_format_e format;
           uint8_t encoding;
           uint32_t crc;
+          uint32_t crc_seed;
           uint32_t sw_value;
           uint32_t pb_pattern;
           uint8_t sw_len;
@@ -149,7 +152,7 @@ static void shell_rfpacket_print_rf_cfg(struct termui_console_s *con,
   termui_con_printf(con, "   \n");
   termui_con_printf(con, "   Modulation:   %d\n", rf->mod);
   termui_con_printf(con, "   Drate:        %d\n", rf->drate);
-  termui_con_printf(con, "   Frequency:    %d\n", rf->frequency);
+  termui_con_printf(con, "   Frequency:    %u\n", rf->frequency);
   termui_con_printf(con, "   Chan spacing: %d\n", rf->chan_spacing);
   termui_con_printf(con, "   Bandwidth:    %d\n", rf->bw);
 
@@ -190,6 +193,7 @@ static void shell_rfpacket_print_pk_cfg(struct termui_console_s *con,
     case DEV_RFPACKET_FMT_SLPC:{
       struct dev_rfpacket_pk_cfg_basic_s *slpc = dev_rfpacket_pk_cfg_basic_s_cast(pk);
       termui_con_printf(con, "   CRC:            0x%x\n", slpc->crc);
+      termui_con_printf(con, "   CRC_seed:       0x%x\n", slpc->crc_seed);
       termui_con_printf(con, "   SW value:       0x%x\n", slpc->sw_value);
       termui_con_printf(con, "   SW len:         %d\n", slpc->sw_len);
       termui_con_printf(con, "   PB pattern:     0x%x\n", slpc->pb_pattern);
@@ -353,6 +357,8 @@ static TERMUI_CON_COMMAND_PROTOTYPE(shell_rfpacket_pk_configure)
       struct dev_rfpacket_pk_cfg_basic_s *pk = dev_rfpacket_pk_cfg_basic_s_cast(cfg);
       if (used & RFPACKET_OPT_CRC)
         pk->crc = c->crc;
+      if (used & RFPACKET_OPT_CRCSEED)
+        pk->crc_seed = c->crc_seed;
       if (used & RFPACKET_OPT_SW_LEN)
         pk->sw_len = c->sw_len;
       if (used & RFPACKET_OPT_RX_PB_LEN)
@@ -631,6 +637,9 @@ static TERMUI_CON_OPT_DECL(dev_rfpacket_opts) =
   TERMUI_CON_OPT_INTEGER_ENTRY("-c", "--crc", RFPACKET_OPT_CRC, struct termui_optctx_dev_rfpacket_opts, crc, 1,
                               TERMUI_CON_OPT_CONSTRAINTS(RFPACKET_OPT_CRC, 0))
 
+  TERMUI_CON_OPT_INTEGER_ENTRY("-z", "--crc_seed", RFPACKET_OPT_CRCSEED, struct termui_optctx_dev_rfpacket_opts, crc_seed, 1,
+                              TERMUI_CON_OPT_CONSTRAINTS(RFPACKET_OPT_CRCSEED, 0))
+
   TERMUI_CON_OPT_INTEGER_ENTRY("-a", "--sw_value", RFPACKET_OPT_SW_VAL, struct termui_optctx_dev_rfpacket_opts, sw_value, 1,
                               TERMUI_CON_OPT_CONSTRAINTS(RFPACKET_OPT_SW_VAL, 0))
 
@@ -679,7 +688,7 @@ TERMUI_CON_GROUP_DECL(dev_shell_rfpacket_group) =
 
   TERMUI_CON_ENTRY(shell_rfpacket_pk_configure, "pktconfig",
     TERMUI_CON_OPTS_CTX(dev_rfpacket_opts, 0,
-                        RFPACKET_OPT_PKCFG | RFPACKET_OPT_SW_VAL | RFPACKET_OPT_SW_LEN | RFPACKET_OPT_PB_VAL | RFPACKET_OPT_PB_LEN | RFPACKET_OPT_RX_PB_LEN | RFPACKET_OPT_TX_PB_LEN | RFPACKET_OPT_ENCODING | RFPACKET_OPT_CRC | RFPACKET_OPT_HEADER | RFPACKET_OPT_CRATE | RFPACKET_OPT_FORMAT,
+                        RFPACKET_OPT_PKCFG | RFPACKET_OPT_SW_VAL | RFPACKET_OPT_SW_LEN | RFPACKET_OPT_PB_VAL | RFPACKET_OPT_PB_LEN | RFPACKET_OPT_RX_PB_LEN | RFPACKET_OPT_TX_PB_LEN | RFPACKET_OPT_ENCODING | RFPACKET_OPT_CRC | RFPACKET_OPT_HEADER | RFPACKET_OPT_CRATE | RFPACKET_OPT_FORMAT | RFPACKET_OPT_CRCSEED,
                         rfpacket_opts_cleanup)
   )
 

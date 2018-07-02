@@ -265,6 +265,10 @@ static error_t sx127x_build_pkt_config(struct sx127x_private_s * pv, struct dev_
   *pk++ = 3;
   *pk++ = SX1276_REG_PACKETCONFIG1 | 0x80;
 
+  if (pk_cfg->crc_seed != 0xffff &&
+      !(pk_cfg->crc_seed == 0 && !pk_cfg->crc))
+    return -ENOTSUP;
+
   uint8_t cfg = 0;
 
   switch (pk_cfg->crc)

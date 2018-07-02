@@ -207,7 +207,7 @@ static inline error_t efr32_pkt_config(struct radio_efr32_rfp_ctx_s *ctx,
     }
 
   cpu_mem_write_32(EFR32_CRC_ADDR + EFR32_CRC_POLY_ADDR, x);
-  cpu_mem_write_32(EFR32_CRC_ADDR + EFR32_CRC_INIT_ADDR, 0x0);
+  cpu_mem_write_32(EFR32_CRC_ADDR + EFR32_CRC_INIT_ADDR, EFR32_CRC_INIT_INIT(cfg->crc_seed));
 
   return 0;
 }

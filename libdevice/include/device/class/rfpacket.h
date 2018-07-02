@@ -278,6 +278,9 @@ struct dev_rfpacket_pk_cfg_basic_s
       checked. CRC is always transmitted Most significant bits first */
   uint32_t                      crc;
 
+  /** Specifies the CRC initialization value */
+  uint32_t                      crc_seed;
+
   /** Sync word value. Most significant bits are transmitted first */
   uint32_t                      sw_value;
 
