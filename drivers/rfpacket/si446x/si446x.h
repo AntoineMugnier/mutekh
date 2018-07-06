@@ -173,9 +173,10 @@ struct si446x_ctx_s
   /* Request for received packets */
   struct dev_rfpacket_rx_s *rxrq;
   struct dev_rfpacket_rq_s *rq;
+  const uint8_t *rftune;
   /* Current working size and buffer */
-  uint16_t size;
   uint8_t *buffer;
+  uint16_t size;
   /* Interrupt count */
   uint8_t icount;
   uint8_t flags;
@@ -183,7 +184,6 @@ struct si446x_ctx_s
   int16_t pwr;
   bool_t bcrun;
   uint8_t pending;
-
   /* Rssi, carrier level */
   uint8_t carrier, jam_rssi;
   uint32_t rssi;

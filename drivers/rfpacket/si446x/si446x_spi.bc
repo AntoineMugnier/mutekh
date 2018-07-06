@@ -84,6 +84,21 @@
         ld8i                    %size,                 %buffer
         jmp8                    config_init
   config_done:
+        lde                     %buffer,                  %R_CTX_PV,      _offsetof(si446x_ctx_s, rftune)
+        eq0                     %buffer
+          jmp8                  tune_done
+tune_loop:
+        ld8i                    %size,                 %buffer
+        eq0                     %size
+          jmp8                  tune_done
+        tst32s                  %size,                 7
+          jmp8                  tune_done
+        call16                  %poll_gpio:link,       poll_gpio
+        spi_wrm                 %buffer,               %size,	CS_PULSE
+        add                     %buffer,               %size
+        jmp8                    tune_loop
+
+tune_done:
         mov                     %delay,                 %basetime
         shi32l                  %delay,                 12
         spi_yieldc_delay        %delay

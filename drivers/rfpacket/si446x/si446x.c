@@ -1508,6 +1508,9 @@ static DEV_INIT(si446x_init)
 
   pv->pwr = 0xFFFF;
 
+  if (device_get_param_blob(dev, "rftune", 0, (void**)&pv->rftune))
+    pv->rftune = NULL;
+
   /* Start initialisation */
   si446x_rfp_set_state(pv, SI446X_STATE_INITIALISING);
 
