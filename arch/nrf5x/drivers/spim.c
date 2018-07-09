@@ -165,7 +165,7 @@ static void nrf5x_spim_next_start(struct nrf5x_spim_context_s *pv)
 
   switch (tr->data.out_width) {
   case 0:
-    nrf_reg_set(pv->addr, NRF_SPIM_ORC, *(const uint32_t *)tr->data.out);
+    nrf_reg_set(pv->addr, NRF_SPIM_ORC, endian_le32_na_load(tr->data.out));
     nrf_reg_set(pv->addr, NRF_SPIM_TXD_PTR, 0);
     break;
 
@@ -240,7 +240,7 @@ static void nrf5x_spim_next_start(struct nrf5x_spim_context_s *pv)
     logk_trace("out: %P\n", nrf_reg_get(pv->addr, NRF_SPIM_TXD_PTR), count);
 
   nrf_reg_set(pv->addr, NRF_SPIM_TXD_MAXCNT, tr->data.out_width ? count : 0);
-  nrf_reg_set(pv->addr, NRF_SPIM_RXD_MAXCNT, tr->data.in && tr->data.in_width ? count : 0);
+  nrf_reg_set(pv->addr, NRF_SPIM_RXD_MAXCNT, count);
 
 #if defined(CONFIG_DRIVER_NRF52_SPIM_PAN58)
   if (nrf_reg_get(pv->addr, NRF_SPIM_RXD_MAXCNT) <= 1
