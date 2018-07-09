@@ -1513,7 +1513,9 @@ sub normalize
 
     if ( $value =~ /^\d+$/ ) {
         return int($value);
-    } elsif ( $value =~ /^0[xb][a-fA-F0-9]+$/ ) {
+    } elsif ( $value =~ /^0[bB][01]+$/ ) {
+        return oct($value);
+    } elsif ( $value =~ /^0[xX][a-fA-F0-9]+$/ ) {
         return oct($value);
     } else {
         return $value;

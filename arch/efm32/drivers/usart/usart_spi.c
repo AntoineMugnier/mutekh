@@ -501,9 +501,6 @@ static DEV_INIT(efm32_usart_spi_init)
 
 #if (CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_XG1) ||\
     (CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_XG12)
-  pv->enable = 0;
-  pv->route = 0;
-
   if (loc[0] != IOMUX_INVALID_DEMUX)
     {
       pv->enable |= EFM32_USART_ROUTEPEN_CLKPEN;

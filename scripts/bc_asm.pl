@@ -2270,7 +2270,7 @@ sub check_regs
          if ( $func ) {
              for (my $i = 0; $i < 16; $i++) {
                  my $m = ( 1 << $i );
-                 error($func, "function `$func->{name}' register %$i is declared with incompatible roles\n")
+                 error($func, "function `$func->{name}' register %$i is declared with incompatible constraints\n")
                      if ( $func->{output} & $func->{clobber} & $m ) ||
                         ( $func->{output} & $func->{preserve} & $m ) ||
                         ( $func->{clobber} & $func->{preserve} & $m );

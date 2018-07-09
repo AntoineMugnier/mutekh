@@ -94,7 +94,8 @@ enum dev_char_rq_type_e
       not terminate until all data have been read. */
   DEV_CHAR_READ = _DEV_CHAR_ALL,
   /** Read data from the device. If no error occur, the request does
-      not terminate until all data have been read. No data is stored. */
+      not terminate until all data have been read. The size field is
+      updated but no data is stored. */
   DEV_CHAR_DISCARD = _DEV_CHAR_ALL | _DEV_CHAR_FLUSH,
   /** Write data to the device. If no error occur, the request does
       not terminate until all data have been written. */

@@ -477,7 +477,8 @@ static error_t efm32_dma_process(struct efm32_dma_context_s *pv, struct dev_dma_
   if (!(rq->chan_mask & EFM32_DMA_CHANNEL_MASK))
     return -ENOENT;
 
-  if (rq->desc_count_m1 + 1 > CONFIG_DRIVER_EFM32_DMA_LINKED_LIST_SIZE)
+  if (rq->desc_count_m1 + 1 > CONFIG_DRIVER_EFM32_DMA_LINKED_LIST_SIZE ||
+      rq->desc->src.mem.size + 1 > 1024) /* FIXME this check first descriptor only */
     return -ENOTSUP;
 
   uint8_t chan_msk = rq->chan_mask & pv->free_channel_mask;

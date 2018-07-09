@@ -372,6 +372,7 @@
 
    The following instructions are available to dump raw data in the program:
    @table 2
+     @item Instruction @item Description
      @item @tt{data8 value, ...} @item Dump at least one 8 bits word value in the program.
      @item @tt{data[16,32] value, ...} @item Dump at least one aligned multi-bytes value with platform endianess.
      @item @tt{data[16,32][le,be] value, ...} @item Dump at least one aligned multi-bytes value with specified endianess.
