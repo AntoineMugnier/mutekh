@@ -654,7 +654,7 @@ tune_done:
         ret                     %link
 .endfunc
 
-#ifdef CONFIG_DRIVER_RFPACKET_SLEEP
+#ifdef CONFIG_DRIVER_RFPACKET_SI446X_SLEEP
 .func si446x_entry_ready
         .export si446x_entry_ready
         .clobber %0, %4, %11, %12, %13

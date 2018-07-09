@@ -846,7 +846,7 @@ static void si446x_rfp_idle(struct si446x_ctx_s *pv)
 
   if (!rq)
     {
-#ifdef CONFIG_DRIVER_RFPACKET_SLEEP
+#ifdef CONFIG_DRIVER_RFPACKET_SI446X_SLEEP
      /* delayed clock disable */
       device_sleep_schedule(pv->dev);
 #endif
@@ -967,7 +967,7 @@ static DEV_RFPACKET_REQUEST(si446x_rfp_request)
             pv->rx_cont = rq;
             si446x_rfp_idle(pv);
             break;
-#ifdef CONFIG_DRIVER_RFPACKET_SLEEP
+#ifdef CONFIG_DRIVER_RFPACKET_SI446X_SLEEP
           case SI446X_STATE_SLEEP:
             if (!pv->bcrun)
               {
@@ -1005,7 +1005,7 @@ static DEV_RFPACKET_REQUEST(si446x_rfp_request)
               case SI446X_STATE_READY:
                 si446x_rfp_idle(pv);
                 break;
-#ifdef CONFIG_DRIVER_RFPACKET_SLEEP
+#ifdef CONFIG_DRIVER_RFPACKET_SI446X_SLEEP
               case SI446X_STATE_SLEEP:
                 if (!pv->bcrun)
                   {
@@ -1333,7 +1333,7 @@ static inline void si446x_jamming(struct si446x_ctx_s *pv)
   }
 }
 
-#ifdef CONFIG_DRIVER_RFPACKET_SLEEP
+#ifdef CONFIG_DRIVER_RFPACKET_SI446X_SLEEP
 /* Transceiver is sleeping when this function is called */
 static inline void si446x_sleep(struct si446x_ctx_s *pv)
 {
@@ -1383,7 +1383,7 @@ static KROUTINE_EXEC(si446x_spi_rq_done)
 
   switch (pv->state)
   {
-#ifdef CONFIG_DRIVER_RFPACKET_SLEEP
+#ifdef CONFIG_DRIVER_RFPACKET_SI446X_SLEEP
     case SI446X_STATE_SLEEP:
       si446x_sleep(pv);
       break;
@@ -1471,7 +1471,7 @@ static DEV_USE(si446x_use)
 {
   switch (op)
     {
-#ifdef CONFIG_DRIVER_RFPACKET_SLEEP
+#ifdef CONFIG_DRIVER_RFPACKET_SI446X_SLEEP
     case DEV_USE_SLEEP: {
       struct device_s *dev = param;
       struct si446x_ctx_s *pv = dev->drv_pv;
@@ -1611,7 +1611,7 @@ static DEV_CLEANUP(si446x_cleanup)
   switch (pv->state)
     {
     case SI446X_STATE_READY:
-#ifdef CONFIG_DRIVER_RFPACKET_SLEEP
+#ifdef CONFIG_DRIVER_RFPACKET_SI446X_SLEEP
     case SI446X_STATE_SLEEP:
 #endif
       assert(dev_request_queue_isempty(&pv->queue));
