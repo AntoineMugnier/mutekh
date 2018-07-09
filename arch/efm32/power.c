@@ -23,6 +23,14 @@
 #include <hexo/power.h>
 #include <hexo/iospace.h>
 #include <cpu/arm32m/v7m.h>
+#include <mutek/startup.h>
+
+#include <arch/efm32/devaddr.h>
+
+#if CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFM
+# include <arch/efm32/rmu.h>
+# include <arch/efm32/emu.h>
+#endif
 
 error_t power_reboot()
 {
@@ -37,7 +45,36 @@ error_t power_shutdown()
   return ENOTSUP;
 }
 
+uint16_t efm32_reset_cause = 0;
+
 enum power_reset_cause_e power_reset_cause(void)
 {
+#if CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFM
+  if (efm32_reset_cause & EFM32_RMU_RSTCAUSE_PORST)
+    return POWER_RESET_CAUSE_POWERUP;
+  if (efm32_reset_cause & EFM32_RMU_RSTCAUSE_EXTRST)
+    return POWER_RESET_CAUSE_HARD;
+  if (efm32_reset_cause & EFM32_RMU_RSTCAUSE_LOCKUPRST)
+    return POWER_RESET_CAUSE_FAULT;
+  if (efm32_reset_cause & EFM32_RMU_RSTCAUSE_SYSREQRST)
+    return POWER_RESET_CAUSE_SOFT;
+  if (efm32_reset_cause & (EFM32_RMU_RSTCAUSE_BODUNREGRST | EFM32_RMU_RSTCAUSE_BODREGRST))
+    return POWER_RESET_CAUSE_BROWNOUT;
+  if (efm32_reset_cause & EFM32_RMU_RSTCAUSE_WDOGRST)
+    return POWER_RESET_CAUSE_WATCHDOG;
+#endif
   return POWER_RESET_CAUSE_UNKNOWN;
+}
+
+void efm32_copy_reset_cause()
+{
+#if CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFM
+  efm32_reset_cause = cpu_mem_read_32(EFM32_RMU_ADDR + EFM32_RMU_RSTCAUSE_ADDR);
+
+  /* clear causes */
+  cpu_mem_write_32(EFM32_RMU_ADDR + EFM32_RMU_CMD_ADDR, EFM32_RMU_CMD_RCCLR);
+
+  cpu_mem_write_32(EFM32_EMU_ADDR + EFM32_EMU_AUXCTRL_ADDR, EFM32_EMU_AUXCTRL_HRCCLR);
+  cpu_mem_write_32(EFM32_EMU_ADDR + EFM32_EMU_AUXCTRL_ADDR, 0);
+#endif
 }

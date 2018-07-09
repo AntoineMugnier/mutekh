@@ -49,6 +49,7 @@ enum power_reset_cause_e
   POWER_RESET_CAUSE_WATCHDOG,
   POWER_RESET_CAUSE_WAKEUP,
   POWER_RESET_CAUSE_FAULT,
+  POWER_RESET_CAUSE_BROWNOUT,
 };
 
 /** Get chip reset cause. */
