@@ -97,6 +97,15 @@ DEV_DECLARE_STATIC(cpu_dev, "cpu", DEVICE_FLAG_CPU, arm32m_drv,
 
 #endif
 
+
+#ifdef CONFIG_DRIVER_EFM32_HWRAND
+DEV_DECLARE_STATIC(hwrand_dev, "hwrand", 0, efm32_hwrand_drv,
+                   DEV_STATIC_RES_MEM(0x400c8000, 0x400c8400), /* CMU */
+                   DEV_STATIC_RES_MEM(0x40080000, 0x40080400)  /* RTC */
+                   );
+#endif
+
+
 #ifdef CONFIG_DRIVER_EFM32_RECMU
 
 DEV_DECLARE_STATIC(recmu_dev, "recmu", 0, efm32_recmu_drv,
@@ -106,6 +115,10 @@ DEV_DECLARE_STATIC(recmu_dev, "recmu", 0, efm32_recmu_drv,
 
                    DEV_STATIC_RES_DEV_ICU("/cpu"),
                    DEV_STATIC_RES_IRQ(0, EFM32_IRQ_CMU, DEV_IRQ_SENSE_RISING_EDGE, 0, 1),
+
+#ifdef CONFIG_DRIVER_EFM32_HWRAND
+                   DEV_STATIC_RES_DEV_PARAM("after", "/hwrand"),
+#endif
 
                    /* config 0: run on HFRCO @ 14Mhz */
                    DEV_STATIC_RES_CMU_MUX(EFM32_CLOCK_LFRCO, EFM32_CLOCK_LFACLK, 0b0111, 1, 1),
