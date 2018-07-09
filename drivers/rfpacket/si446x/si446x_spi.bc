@@ -53,8 +53,8 @@
         call16                  %poll_cts_rsp:link,     poll_cts_rsp
         spi_rd                  %tmp,                   3,      CS_END
         unpack32le              %tmp,                   1,      3
-        extz                    %tmp,                   23
-        cst32                   %id,                    SI446X_CHIP_INFO,       0
+        extz                    %tmp,                   15
+        cst32                   %id,                    0x4400 | CONFIG_DRIVER_RFPACKET_SI446X_CHIPREV,       0
         neq                     %tmp,                   %id
           abort
   patch_loop:

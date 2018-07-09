@@ -258,8 +258,6 @@ DRIVER_PV(struct si446x_ctx_s);
                    \--------------- JAMMING       (16)
 */
 
-#define SI446X_CHIP_INFO        (CONFIG_DRIVER_RFPACKET_SI446X_CHIPPART | CONFIG_DRIVER_RFPACKET_SI446X_CHIPREV)
-
 #define STATUS_RX_ALMOST_FULL   8
 #define STATUS_TX_ALMOST_EMPTY  9
 #define STATUS_OTHER_ERR        10

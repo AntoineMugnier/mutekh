@@ -89,11 +89,9 @@
 
 %section ezr32-stk6200a
   %inherit ezr32-stk620xa
-  CONFIG_DRIVER_RFPACKET_SI446X_CHIPPART 0x604400 
 
 %section ezr32-stk6202a
   %inherit ezr32-stk620xa
-  CONFIG_DRIVER_RFPACKET_SI446X_CHIPPART 0x614400
 
 %section ezr32-stk620xa
   %inherit efm32-lg330-f256-bga
