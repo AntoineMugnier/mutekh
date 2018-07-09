@@ -231,8 +231,7 @@ tune_done:
         ld32e                   %tmp,            %R_CTX_PV,     _offsetof(si446x_ctx_s, rq, 4)
         ld16e                   %size,           %tmp,          _offsetof(dev_rfpacket_rq_s, tx_size, 2)
         /* Add 1 for the size byte */
-        cst8                    %tmp,            1
-        add                     %size,           %tmp
+        add8                    %size,           1
         shi32l                  %size,           16
         cst32                   %tmp,            0xFF000000,  0
         and32                   %tmp,            %size
