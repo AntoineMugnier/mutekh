@@ -150,12 +150,28 @@ static const uint8_t si446x_rf_cmd[] = {
 };
 
 struct si446x_rf_regs_s;
-struct dev_rfpacket_rf_cfg_s;
-struct dev_rfpacket_pk_cfg_s;
 
-size_t si446x_modem_configure(struct si446x_rf_regs_s *out,
-			      const struct dev_rfpacket_rf_cfg_s *rf_cfg,
-                              const struct dev_rfpacket_pk_cfg_s *pk_cfg);
+/*
+  synth_ratio can be used to convert between AFC freq_offset and frequency in Hz:
+  F = (freq_offset * synth_ratio) >> 23
+*/
+
+enum si446x_modulation_e {
+	MOD_RAW,
+	MOD_OOK,
+	MOD_2FSK,
+	MOD_2GFSK,
+	MOD_4FSK,
+	MOD_4GFSK,
+};
+
+bool_t modem_calc(struct si446x_rf_regs_s *out,
+                  uint32_t *synth_ratio,
+                  enum si446x_modulation_e mod,
+                  uint32_t freq, uint32_t rate,
+                  uint32_t fdev, uint32_t rxbw,
+                  uint32_t channel_spacing,
+                  bool_t manchester);
 
 #endif
 

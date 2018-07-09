@@ -260,6 +260,85 @@ static inline error_t si446x_build_pk_config(struct si446x_ctx_s *pv, struct dev
   return 0;
 }
 
+static bool_t
+si446x_modem_configure(struct si446x_ctx_s *pv,
+                       struct si446x_rf_regs_s *out,
+                       const struct dev_rfpacket_rf_cfg_s *rf_cfg,
+                       const struct dev_rfpacket_pk_cfg_s *pk_cfg)
+{
+  static const uint8_t tab[] = {
+    [DEV_RFPACKET_FSK * 2] = MOD_2FSK,
+    [DEV_RFPACKET_FSK * 2 + 1] = MOD_4FSK,
+    [DEV_RFPACKET_GFSK * 2] = MOD_2GFSK,
+    [DEV_RFPACKET_GFSK * 2 + 1] = MOD_4GFSK,
+    [DEV_RFPACKET_ASK * 2] = MOD_OOK,
+  };
+
+  uint8_t idx = rf_cfg->mod * 2;
+  uint32_t fdev = 0;
+
+  switch (rf_cfg->mod)
+    {
+    case DEV_RFPACKET_GFSK:
+    case DEV_RFPACKET_FSK:
+      {
+        const struct dev_rfpacket_rf_cfg_fsk_s * c =
+          const_dev_rfpacket_rf_cfg_fsk_s_cast(rf_cfg);
+
+        switch (c->symbols)
+          {
+#ifdef CONFIG_DRIVER_RFPACKET_SI446X_MOD_2FSK
+          case 2:
+            break;
+#endif
+#ifdef CONFIG_DRIVER_RFPACKET_SI446X_MOD_4FSK
+          case 4:
+            break;
+#endif
+          default:
+            return 0;
+          }
+
+        fdev = c->deviation;
+
+        idx += (c->symbols == 4);
+        break;
+      }
+#ifdef CONFIG_DRIVER_RFPACKET_SI446X_MOD_00K
+    case DEV_RFPACKET_ASK:
+      {
+        const struct dev_rfpacket_rf_cfg_ask_s * c =
+          const_dev_rfpacket_rf_cfg_ask_s_cast(rf_cfg);
+
+        if (c->symbols != 2)
+          return 0;
+
+        break;
+      }
+#endif
+    default:
+      return 0;
+    }
+
+  bool_t manchester;
+
+  switch (pk_cfg->encoding)
+    {
+    case DEV_RFPACKET_CLEAR:
+      manchester = 0;
+      break;
+    case DEV_RFPACKET_MANCHESTER:
+      manchester = 1;
+      break;
+    default:
+      return 0;
+    }
+
+  return modem_calc(out, &pv->synth_ratio, tab[idx], rf_cfg->frequency, rf_cfg->drate,
+                    fdev, rf_cfg->bw, rf_cfg->chan_spacing, manchester);
+}
+
+
 static inline error_t si446x_build_rf_config(struct si446x_ctx_s *pv,
                                              struct si446x_rf_regs_s *out,
                                              struct dev_rfpacket_rq_s *rq)
@@ -268,7 +347,7 @@ static inline error_t si446x_build_rf_config(struct si446x_ctx_s *pv,
 
   const struct dev_rfpacket_rf_cfg_s *cfg = rq->rf_cfg;
 
-  if (!si446x_modem_configure(out, rq->rf_cfg, rq->pk_cfg))
+  if (!si446x_modem_configure(pv, out, rq->rf_cfg, rq->pk_cfg))
     return -ENOTSUP;
 
   /** Configure RSSI_threshold */
@@ -568,20 +647,6 @@ static void si446x_rfp_end_rq(struct si446x_ctx_s *pv, error_t err)
   }
 }
 
-
-static inline void si446x_check_rxc_freq(struct si446x_ctx_s *pv, struct dev_rfpacket_rq_s *rq)
-{
-  struct dev_rfpacket_rf_cfg_s * cfg = (struct dev_rfpacket_rf_cfg_s *)rq->rf_cfg;
-
-  uint32_t freq = cfg->frequency + rq->channel * cfg->chan_spacing;
-
-  if (pv->frequency != freq)
-    {
-      pv->rssi = SET_RSSI(SI446X_RSSI_AVERAGE_DEFAULT) << 8;
-      pv->frequency = freq;
-    }
-}
-
 static inline void si446x_start_rx(struct si446x_ctx_s *pv, struct dev_rfpacket_rq_s *rq)
 {
   assert(pv->state == SI446X_STATE_READY);
@@ -593,6 +658,9 @@ static inline void si446x_start_rx(struct si446x_ctx_s *pv, struct dev_rfpacket_
 
   pv->rq = rq;
 
+  struct dev_rfpacket_rf_cfg_s * cfg = (struct dev_rfpacket_rf_cfg_s *)rq->rf_cfg;
+  uint32_t freq = cfg->frequency + rq->channel * cfg->chan_spacing;
+
   switch (rq->type)
   {
     case DEV_RFPACKET_RQ_RX:
@@ -600,6 +668,7 @@ static inline void si446x_start_rx(struct si446x_ctx_s *pv, struct dev_rfpacket_
 
       pv->deadline = rq->deadline ? rq->deadline : t;
       pv->timeout = pv->deadline + rq->lifetime;
+      pv->frequency = freq;
 
       si446x_rfp_set_state(pv, SI446X_STATE_RX);
 
@@ -610,7 +679,11 @@ static inline void si446x_start_rx(struct si446x_ctx_s *pv, struct dev_rfpacket_
     case DEV_RFPACKET_RQ_RX_CONT:
       si446x_printk("RC\n");
 
-      si446x_check_rxc_freq(pv, rq);
+      if (pv->frequency != freq)
+        {
+          pv->rssi = SET_RSSI(SI446X_RSSI_AVERAGE_DEFAULT) << 8;
+          pv->frequency = freq;
+        }
 
       pv->flags |= SI446X_FLAGS_RX_CONTINOUS;
 
@@ -1135,6 +1208,7 @@ static inline void si446x_rfp_end_rxrq(struct si446x_ctx_s *pv, bool_t err)
   rx->err = err;
   rx->carrier = GET_RSSI(pv->carrier) << 3;
   rx->rssi = GET_RSSI(pv->rssi >> 8) << 3;
+  rx->frequency = pv->frequency + (((int64_t)pv->synth_ratio * pv->afc_offset) >> 23);
   rx->timestamp = pv->timestamp;
   rx->channel = rq->channel;
   if (rq->anchor == DEV_RFPACKET_TIMESTAMP_START)

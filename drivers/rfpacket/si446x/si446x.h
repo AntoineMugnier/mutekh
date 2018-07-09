@@ -188,6 +188,8 @@ struct si446x_ctx_s
   uint8_t carrier, jam_rssi;
   uint32_t rssi;
   /* Frequency associated to last Rssi measurment */
+  int16_t afc_offset;
+  uint32_t synth_ratio;
   uint32_t frequency;
 
   enum si446x_state_s state:8;

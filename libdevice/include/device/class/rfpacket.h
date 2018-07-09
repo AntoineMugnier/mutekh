@@ -439,6 +439,9 @@ struct dev_rfpacket_rx_s
   /** RX signal power over noise power ratio. */
   dev_rfpacket_pwr_t                snr;
 
+  /** Measured RX frequency */
+  uint32_t                          frequency;
+
   /** Channel of the received packet. */
   uint8_t                           channel;
 

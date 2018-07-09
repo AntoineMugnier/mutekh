@@ -68,24 +68,6 @@
 
 #define CONFIG_DRIVER_RFPACKET_SI446X_PFM 2	/* 1 or 2 */
 
-enum si446x_modulation_e {
-	MOD_RAW,
-	MOD_OOK,
-	MOD_2FSK,
-	MOD_2GFSK,
-	MOD_4FSK,
-	MOD_4GFSK,
-};
-
-enum si446x_mc_cfg_msk_e {
-	SI446X_MC_MOD          = 1,
-	SI446X_MC_FREQUENCY    = 2,
-	SI446X_MC_DEVIATION    = 4,
-	SI446X_MC_BW           = 8,
-	SI446X_MC_DRATE        = 16,
-	SI446X_MC_ENCODING     = 32,
-};
-
 #ifdef __MUTEKH__
 
 #include <device/class/rfpacket.h>
@@ -135,13 +117,13 @@ static inline double round(double r)
 	return (uint32_t)(r + .5);
 }
 
-static bool_t modem_calc(struct si446x_rf_regs_s *out,
-                         enum si446x_mc_cfg_msk_e mask,
-                         enum si446x_modulation_e mod,
-                         uint32_t freq, uint32_t rate,
-                         uint32_t fdev, uint32_t rxbw,
-                         uint32_t channel_spacing,
-                         bool_t manchester)
+bool_t modem_calc(struct si446x_rf_regs_s *out,
+                  uint32_t *synth_ratio,
+                  enum si446x_modulation_e mod,
+                  uint32_t freq, uint32_t rate,
+                  uint32_t fdev, uint32_t rxbw,
+                  uint32_t channel_spacing,
+                  bool_t manchester)
 {
   const struct si446x_synth_regs_s *synth;
   struct si446x_freq_ctl_regs_s *freq_ctl = &out->freq;
@@ -307,6 +289,8 @@ static bool_t modem_calc(struct si446x_rf_regs_s *out,
   freq_ctl->frac_2 = freq_frac >> 16;
   freq_ctl->frac_1 = freq_frac >> 8;
   freq_ctl->frac_0 = freq_frac;
+
+  *synth_ratio = CONFIG_DRIVER_RFPACKET_SI446X_FREQ_XO * CONFIG_DRIVER_RFPACKET_SI446X_PFM * 16 / freq_band;
 
   /********************* FREQ_CONTROL_CHANNEL_STEP_SIZE */
 
@@ -652,14 +636,16 @@ int main(int argc, char *argv[])
   double rxbw = atof(argv[4]);
   double rate = atof(argv[5]);
   uint32_t manchester = !!atoi(argv[6]);
+  uint32_t sr;
 
   struct si446x_rf_regs_s r;
-  if (!modem_calc(&r, -1, mod, freq, rate, fdev, rxbw, 0x200000, manchester))
+  if (!modem_calc(&r, &sr, mod, freq, rate, fdev, rxbw, 0x200000, manchester))
     {
       fprintf(stderr, "error\n");
       return -1;
     }
 
+  fprintf(stderr, "synth ratio 0x%X\n", sr);
   printf("set MODEM_MOD_TYPE 0x%02X\n", r.modem.mod_type);
   printf("set MODEM_MAP_CONTROL 0x%02X\n", r.modem.map_control);
   printf("set MODEM_DSM_CTRL 0x%02X\n", r.modem.dsm_ctrl);
@@ -783,72 +769,6 @@ int main(int argc, char *argv[])
   printf("set MODEM_RSSI_MUTE 0x%02X\n", 113);
 
   return 0;
-}
-
-#else
-
-size_t si446x_modem_configure(struct si446x_rf_regs_s *out,
-                              const struct dev_rfpacket_rf_cfg_s *rf_cfg,
-                              const struct dev_rfpacket_pk_cfg_s *pk_cfg)
-{
-  static const uint8_t tab[] = {
-    [DEV_RFPACKET_FSK * 2] = MOD_2FSK,
-    [DEV_RFPACKET_FSK * 2 + 1] = MOD_4FSK,
-    [DEV_RFPACKET_GFSK * 2] = MOD_2GFSK,
-    [DEV_RFPACKET_GFSK * 2 + 1] = MOD_4GFSK,
-    [DEV_RFPACKET_ASK * 2] = MOD_OOK,
-  };
-
-  uint8_t idx = rf_cfg->mod * 2;
-  uint32_t fdev = 0;
-
-  switch (rf_cfg->mod)
-    {
-    case DEV_RFPACKET_GFSK:
-    case DEV_RFPACKET_FSK:
-      {
-        const struct dev_rfpacket_rf_cfg_fsk_s * c =
-          const_dev_rfpacket_rf_cfg_fsk_s_cast(rf_cfg);
-
-        switch (c->symbols)
-          {
-#ifdef CONFIG_DRIVER_RFPACKET_SI446X_MOD_2FSK
-          case 2:
-            break;
-#endif
-#ifdef CONFIG_DRIVER_RFPACKET_SI446X_MOD_4FSK
-          case 4:
-            break;
-#endif
-          default:
-            return 0;
-          }
-
-        fdev = c->deviation;
-
-        idx += (c->symbols == 4);
-        break;
-      }
-#ifdef CONFIG_DRIVER_RFPACKET_SI446X_MOD_00K
-    case DEV_RFPACKET_ASK:
-      {
-        const struct dev_rfpacket_rf_cfg_ask_s * c =
-          const_dev_rfpacket_rf_cfg_ask_s_cast(rf_cfg);
-
-        if (c->symbols != 2)
-          return 0;
-
-        break;
-      }
-#endif
-    default:
-      return 0;
-    }
-
-  bool_t manchester = (pk_cfg->encoding == DEV_RFPACKET_MANCHESTER);
-
-  return modem_calc(out, -1, tab[idx], rf_cfg->frequency, rf_cfg->drate,
-                    fdev, rf_cfg->bw, rf_cfg->chan_spacing, manchester);
 }
 
 #endif
