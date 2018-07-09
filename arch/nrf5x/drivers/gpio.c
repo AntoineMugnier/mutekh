@@ -362,7 +362,7 @@ static DEV_IRQ_SINK_UPDATE(nrf5x_gpio_icu_sink_update)
   if (te >= CONFIG_DRIVER_NRF5X_GPIO_ICU_CHANNEL_COUNT)
     return;
 
-  if (pin >= 32 || pin < 0)
+  if (pin >= CONFIG_NRF5X_GPIO_COUNT || pin < 0)
     return;
 
   for (uint8_t i = 0; i < CONFIG_DRIVER_NRF5X_GPIO_ICU_CHANNEL_COUNT; ++i) {
@@ -421,7 +421,7 @@ static DEV_ICU_GET_SINK(nrf5x_gpio_icu_get_sink)
   struct device_s *dev = accessor->dev;
   struct nrf5x_gpio_private_s *pv = dev->drv_pv;
 
-  if (id >= __MIN(CONFIG_NRF5X_GPIO_COUNT, 32))
+  if (id >= CONFIG_NRF5X_GPIO_COUNT)
     return NULL;
 
 #if CONFIG_DRIVER_NRF5X_GPIO_ICU_CHANNEL_COUNT
