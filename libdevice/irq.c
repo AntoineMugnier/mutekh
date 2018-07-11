@@ -306,13 +306,13 @@ void device_irq_source_unlink(struct device_s *dev, struct dev_irq_src_s *srcs,
       switch (src->base.link_count)
         {
         case 0:
-          return;
+          break;
 
         case 1: {
           struct dev_irq_sink_s *sink = (void*)src->base.links.single;
           device_irq_sink_unlink(src, sink);
           src->base.link_count = 0;
-          return;
+          break;
         }
 
 #if defined(CONFIG_DEVICE_IRQ_SHARING) || defined(CONFIG_DEVICE_IRQ_MULTI_SINK)
@@ -326,7 +326,7 @@ void device_irq_source_unlink(struct device_s *dev, struct dev_irq_src_s *srcs,
             }
           mem_free(r);
           src->base.link_count = 0;
-          return;
+          break;
         }
 #endif
         }
