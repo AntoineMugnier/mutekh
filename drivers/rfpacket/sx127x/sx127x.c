@@ -233,9 +233,12 @@ static error_t sx127x_build_pkt_config(struct sx127x_private_s * pv, struct dev_
     {
       uint8_t x = pk_cfg->sw_value >> ((sw - i - 1) * 8);
 
-      x = ((x & 0x55) << 1) | ((0xAA & x) >> 1);
-      x = ((x & 0x33) << 2) | ((0xCC & x) >> 2);
-      x = ((x & 0x0F) << 4) | ((0xF0 & x) >> 4);
+      if (rq->pk_cfg->format == DEV_RFPACKET_FMT_IO)
+        {
+          x = ((x & 0x55) << 1) | ((0xAA & x) >> 1);
+          x = ((x & 0x33) << 2) | ((0xCC & x) >> 2);
+          x = ((x & 0x0F) << 4) | ((0xF0 & x) >> 4);
+        }
 
       *pk++ = x;
     }
