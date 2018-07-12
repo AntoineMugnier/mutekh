@@ -325,7 +325,7 @@ __no_rx_ongoing:
         .output %7 data
         /* Read RSSI */
         cst8                    %tmp,            SX1276_REG_RSSIVALUE
-        pack8                   %tmp,            2
+        pack16le                %tmp,            1,      2
         spi_swp                 %tmp,            %tmp,   2,      CS_PULSE
         unpack8                 %tmp,            2
         ret                     %link
