@@ -189,6 +189,7 @@ struct si446x_ctx_s
   uint32_t rssi;
   /* Frequency associated to last Rssi measurment */
   int16_t afc_offset;
+  uint16_t osc_ppb;
   uint32_t synth_ratio;
   uint32_t frequency;
 

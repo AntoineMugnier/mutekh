@@ -171,6 +171,7 @@ bool_t modem_calc(struct si446x_rf_regs_s *out,
                   uint32_t freq, uint32_t rate,
                   uint32_t fdev, uint32_t rxbw,
                   uint32_t channel_spacing,
+                  uint32_t freq_err,
                   bool_t manchester);
 
 #endif

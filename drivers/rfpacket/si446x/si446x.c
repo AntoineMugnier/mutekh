@@ -21,6 +21,8 @@
 
 */
 
+#define LOGK_MODULE_ID "si44"
+
 #include "si446x.h"
 #include "si446x_spi.o.h"
 
@@ -334,8 +336,11 @@ si446x_modem_configure(struct si446x_ctx_s *pv,
       return 0;
     }
 
+  uint32_t rx_tx_freq_err = rf_cfg->freq_err   /* remote freq error */
+    + (uint64_t)rf_cfg->frequency * pv->osc_ppb / 1000000000; /* local freq error */
+
   return modem_calc(out, &pv->synth_ratio, tab[idx], rf_cfg->frequency, rf_cfg->drate,
-                    fdev, rf_cfg->bw, rf_cfg->chan_spacing, manchester);
+                    fdev, rf_cfg->rx_bw, rf_cfg->chan_spacing, rx_tx_freq_err, manchester);
 }
 
 
@@ -1571,9 +1576,6 @@ static DEV_INIT(si446x_init)
 
   kroutine_init_deferred(&srq->base.base.kr, &si446x_spi_rq_done);
 
-  /* Disable bytecode trace */
-  bc_set_trace(&srq->vm, 0, 0);
-
   /* irq io pin */
   device_irq_source_init(dev, &pv->src_ep, 1, &si446x_irq_source_process);
 
@@ -1581,6 +1583,12 @@ static DEV_INIT(si446x_init)
     goto err_timer;
 
   pv->pwr = 0xFFFF;
+
+  struct dev_freq_s osc;
+  if (!device_get_res_freq(dev, &osc, 0))
+    pv->osc_ppb = dev_freq_acc_ppb(&osc);
+  else
+    pv->osc_ppb = 20000;
 
   if (device_get_param_blob(dev, "rftune", 0, (const void**)&pv->rftune))
     pv->rftune = NULL;
