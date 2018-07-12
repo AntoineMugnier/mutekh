@@ -135,6 +135,7 @@ struct sx127x_private_s
   /* Time to achieve rx detection */
   dev_timer_delay_t                  tpbrx;
 
+  uint16_t                           osc_ppb;
   /* Interrupt count */
   uint8_t                            icount;
   uint8_t                            cancel;

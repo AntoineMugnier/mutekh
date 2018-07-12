@@ -28,9 +28,12 @@
 
 */
 
+#define LOGK_MODULE_ID "sx12"
+
 #include "sx127x_spi.h"
 #include "sx127x_spi.o.h"
 
+#include <mutek/printk.h>
 #include <hexo/endian.h>
 
 #define CONFIG_DRIVER_RFPACKET_CLK_SOURCE
@@ -101,38 +104,35 @@ struct sx127x_config_bw_s
 
 static const struct sx127x_config_bw_s sx127x_config_bw_tbl[] =
 {
-    { 2600  , 0x17 },
-    { 3100  , 0x0F },
-    { 3900  , 0x07 },
-    { 5200  , 0x16 },
-    { 6300  , 0x0E },
-    { 7800  , 0x06 },
-    { 10400 , 0x15 },
-    { 12500 , 0x0D },
-    { 15600 , 0x05 },
-    { 20800 , 0x14 },
-    { 25000 , 0x0C },
-    { 31300 , 0x04 },
-    { 41700 , 0x13 },
-    { 50000 , 0x0B },
-    { 62500 , 0x03 },
-    { 83333 , 0x12 },
-    { 100000, 0x0A },
-    { 125000, 0x02 },
-    { 166700, 0x11 },
-    { 200000, 0x09 },
-    { 250000, 0x01 },
-    /* Invalid bandwidth */
-    { 300000, 0x00 }, 
+ /* RX bandwidth given in datasheet is for single side band. */
+    { 2 * 2600  , 0x17 },
+    { 2 * 3100  , 0x0F },
+    { 2 * 3900  , 0x07 },
+    { 2 * 5200  , 0x16 },
+    { 2 * 6300  , 0x0E },
+    { 2 * 7800  , 0x06 },
+    { 2 * 10400 , 0x15 },
+    { 2 * 12500 , 0x0D },
+    { 2 * 15600 , 0x05 },
+    { 2 * 20800 , 0x14 },
+    { 2 * 25000 , 0x0C },
+    { 2 * 31300 , 0x04 },
+    { 2 * 41700 , 0x13 },
+    { 2 * 50000 , 0x0B },
+    { 2 * 62500 , 0x03 },
+    { 2 * 83333 , 0x12 },
+    { 2 * 100000, 0x0A },
+    { 2 * 125000, 0x02 },
+    { 2 * 166700, 0x11 },
+    { 2 * 200000, 0x09 },
+    { 2 * 250000, 0x01 },
 };
 
 static uint8_t sx127x_get_bw(uint32_t bw)
 {
   for (uint16_t i = 0; i < ARRAY_SIZE(sx127x_config_bw_tbl); i++)
     {
-      if ((bw >= sx127x_config_bw_tbl[i].bw) && 
-        (bw < sx127x_config_bw_tbl[i + 1].bw))
-
+      if (bw <= sx127x_config_bw_tbl[i].bw)
         return sx127x_config_bw_tbl[i].bits;
     }
 
@@ -140,7 +140,9 @@ static uint8_t sx127x_get_bw(uint32_t bw)
 }
 
 #ifdef CONFIG_DRIVER_RFPACKET_SX127X_RAW_MODE
-static error_t sx127x_build_raw_config(struct sx127x_private_s * pv, struct dev_rfpacket_rq_s *rq, uint8_t **p)
+static error_t sx127x_build_raw_config(struct sx127x_private_s * __restrict__ pv,
+                                       struct dev_rfpacket_rq_s * __restrict__  rq,
+                                       uint8_t **p)
 {
   const struct dev_rfpacket_pk_cfg_raw_s *pk_cfg = const_dev_rfpacket_pk_cfg_raw_s_cast(rq->pk_cfg);
 
@@ -153,15 +155,8 @@ static error_t sx127x_build_raw_config(struct sx127x_private_s * pv, struct dev_
 
   uint8_t * pk = *p;
 
-  pv->cfg.rxcfg = SX1276_RXCONFIG_AFCAUTO_ON |
-                  SX1276_RXCONFIG_AGCAUTO_ON |
-                  SX1276_RXCONFIG_RESTARTRXONCOLLISION_ON |
-                  SX1276_RXCONFIG_RXTRIGER_RSSI;
-
-  *pk++ = 2;
-  *pk++ = SX1276_REG_LNA | 0x80;
-  *pk++ = SX1276_LNA_BOOST_ON;
-  *pk++ = pv->cfg.rxcfg;
+  pv->cfg.rxcfg |= SX1276_RXCONFIG_RESTARTRXONCOLLISION_ON
+                |  SX1276_RXCONFIG_RXTRIGER_RSSI;
 
   /* Packet config mode */
   *pk++ = 1;
@@ -182,7 +177,9 @@ static error_t sx127x_build_raw_config(struct sx127x_private_s * pv, struct dev_
 }
 #endif
 
-static error_t sx127x_build_pkt_config(struct sx127x_private_s * pv, struct dev_rfpacket_rq_s *rq, uint8_t **p)
+static error_t sx127x_build_pkt_config(struct sx127x_private_s * __restrict__ pv,
+                                       struct dev_rfpacket_rq_s * __restrict__  rq,
+                                       uint8_t **p)
 {
   uint8_t * pk = *p;
   const struct dev_rfpacket_pk_cfg_basic_s *pk_cfg = const_dev_rfpacket_pk_cfg_basic_s_cast(rq->pk_cfg);
@@ -193,16 +190,7 @@ static error_t sx127x_build_pkt_config(struct sx127x_private_s * pv, struct dev_
   *pk++ = SX1276_REG_FIFOTHRESH | 0x80;
   *pk++ = 0x80 | 0x3F;
 
-  /* LNA gain and RXConfig */
-
-  pv->cfg.rxcfg = SX1276_RXCONFIG_AFCAUTO_ON |
-                  SX1276_RXCONFIG_AGCAUTO_ON |
-                  SX1276_RXCONFIG_RXTRIGER_PREAMBLEDETECT;
-  
-  *pk++ = 2;
-  *pk++ = SX1276_REG_LNA | 0x80;
-  *pk++ = SX1276_LNA_BOOST_ON;
-  *pk++ = pv->cfg.rxcfg;
+  pv->cfg.rxcfg |= SX1276_RXCONFIG_RXTRIGER_PREAMBLEDETECT;
 
   /* Preamble and Sync Word config */
 
@@ -329,9 +317,58 @@ static error_t sx127x_build_pkt_config(struct sx127x_private_s * pv, struct dev_
   return 0;
 }
 
-static error_t sx127x_build_fsk_config(struct sx127x_private_s * pv, struct dev_rfpacket_rq_s *rq, uint8_t **f)
+static error_t sx1276_build_bw_config(struct sx127x_private_s * __restrict__ pv,
+                                      const struct dev_rfpacket_rf_cfg_s * __restrict__ rf_cfg,
+                                      uint8_t **f, uint32_t default_)
+{
+  uint8_t * rf = *f;
+
+  /* Bandwidth */
+  *rf++ = 2;
+  *rf++ = SX1276_REG_RXBW | 0x80;
+
+  uint32_t bw = rf_cfg->rx_bw;
+
+  if (bw == 0)
+    bw = default_;
+
+  uint8_t bwcode = sx127x_get_bw(bw);
+  logk_trace("bandwidth: %u : 0x%02x", bw, bwcode);
+
+  if (!bwcode)
+    return -EINVAL;
+
+  *rf++ = bwcode;
+
+  uint32_t rx_tx_freq_err = rf_cfg->freq_err   /* remote freq error */
+    + (uint64_t)rf_cfg->frequency * pv->osc_ppb / 1000000000; /* local freq error */
+
+  /* AFC Bandwidth */
+  bw += rx_tx_freq_err * 2;
+  bwcode = sx127x_get_bw(bw);
+  logk_trace("AFC bandwidth: %u : 0x%02x", bw, bwcode);
+
+  *rf++ = bwcode ? bwcode : /* 500k */ 0x01;
+
+  pv->cfg.rxcfg |= SX1276_RXCONFIG_AFCAUTO_ON;
+
+  *rf++ = 1;
+  *rf++ = SX1276_REG_AFCFEI;
+  *rf++ = SX1276_AFCFEI_AFCAUTOCLEAR_ON;
+
+  *f = rf;
+
+  return 0;
+}
+
+static error_t sx127x_build_fsk_config(struct sx127x_private_s * __restrict__ pv,
+                                       struct dev_rfpacket_rq_s * __restrict__ rq, uint8_t **f)
 {
   const struct dev_rfpacket_rf_cfg_fsk_s * fsk = const_dev_rfpacket_rf_cfg_fsk_s_cast(rq->rf_cfg);
+
+  if (sx1276_build_bw_config(pv, rq->rf_cfg, f,   /* carson rule */
+                             rq->rf_cfg->drate + 2 * fsk->deviation))
+    return -EINVAL;
 
   uint8_t * rf = *f;
 
@@ -380,13 +417,19 @@ static error_t sx127x_build_fsk_config(struct sx127x_private_s * pv, struct dev_
   return 0;
 }
 
-static error_t sx127x_build_ask_config(struct sx127x_private_s * pv, struct dev_rfpacket_rq_s *rq, uint8_t **f)
+static error_t sx127x_build_ask_config(struct sx127x_private_s * __restrict__ pv,
+                                       struct dev_rfpacket_rq_s * __restrict__ rq,
+                                       uint8_t **f)
 {
   const struct dev_rfpacket_rf_cfg_ask_s * ask = const_dev_rfpacket_rf_cfg_ask_s_cast(rq->rf_cfg);
   
   if (ask->symbols > 2)
     return -EINVAL;
-  
+
+  if (sx1276_build_bw_config(pv, rq->rf_cfg, f,
+                             2 * rq->rf_cfg->drate))
+    return -EINVAL;
+
   uint8_t * rf = *f;
 
   if (ask->fairtx.mode == DEV_RFPACKET_LBT)
@@ -422,7 +465,8 @@ static error_t sx127x_build_ask_config(struct sx127x_private_s * pv, struct dev_
   return 0;
 }
 
-static inline error_t sx127x_check_config(struct sx127x_private_s *pv, struct dev_rfpacket_rq_s *rq)
+static inline error_t sx127x_check_config(struct sx127x_private_s * __restrict__ pv,
+                                          struct dev_rfpacket_rq_s * __restrict__ rq)
 {
   assert(rq && (pv->bcrun == 0));
 
@@ -450,6 +494,8 @@ static inline error_t sx127x_check_config(struct sx127x_private_s *pv, struct de
   bool_t change = 0;
   uint8_t *cfg = pv->cfg.cfg;
 
+  pv->cfg.rxcfg = SX1276_RXCONFIG_AGCAUTO_ON;
+
   if ((rfcfg != pv->rf_cfg) || rfcfg->cache.dirty)
   /* Test if new RF configuration or previous configuration modified */
     {
@@ -472,23 +518,6 @@ static inline error_t sx127x_check_config(struct sx127x_private_s *pv, struct de
       uint16_t dr = (CONFIG_DRIVER_RFPACKET_SX127X_FREQ_XO/rfcfg->drate);
       endian_be16_na_store(cfg, dr);
       cfg += 2;
-
-      /* Bandwidth */
-      *cfg++ = 2;
-      *cfg++ = SX1276_REG_RXBW | 0x80;
-  
-      uint8_t bw = sx127x_get_bw(rfcfg->bw);
-
-      if (!bw)
-        return -EINVAL;
-  
-      uint8_t afcbw = sx127x_get_bw(rfcfg->bw);
- 
-      if (!afcbw)
-        return -EINVAL;
-  
-      *cfg++ = bw;
-      *cfg++ = afcbw;
 
       switch (rfcfg->mod)
         {
@@ -542,7 +571,13 @@ static inline error_t sx127x_check_config(struct sx127x_private_s *pv, struct de
 
   if (!change)
     return 0;
-  
+
+  /* LNA gain and RXConfig */
+  *cfg++ = 2;
+  *cfg++ = SX1276_REG_LNA | 0x80;
+  *cfg++ = SX1276_LNA_BOOST_ON | SX1276_LNA_GAIN_G1;
+  *cfg++ = pv->cfg.rxcfg;
+
   /* End of data */
   *cfg = 0;
 
@@ -1792,6 +1827,12 @@ static DEV_INIT(sx127x_init)
   if (!pv->dump) 
     return -ENOMEM;
 #endif
+
+  struct dev_freq_s osc;
+  if (!device_get_res_freq(dev, &osc, 0))
+    pv->osc_ppb = dev_freq_acc_ppb(&osc);
+  else
+    pv->osc_ppb = 20000;
 
   struct dev_spi_ctrl_bytecode_rq_s * srq  = &pv->spi_rq;
   struct device_gpio_s              * gpio = NULL;
