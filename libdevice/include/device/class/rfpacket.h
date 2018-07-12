@@ -134,8 +134,16 @@ struct dev_rfpacket_rf_cfg_s
   /** RF frequency in Hz */
   uint32_t                      chan_spacing;
 
-  /** bandwidth in Hz */
-  uint32_t                      bw;
+  /** Receiver bandwidth in Hz. Computed automatically when 0. */
+  uint32_t                      rx_bw;
+
+  /** Maximum expected frequency error of the remote
+      transmitter. Expressed as @em {abs(actual tx freq - expected freq)}.
+
+      The frequency error contribution on the receiver side due to the
+      local oscilator (@em {abs(actual rx freq - expected freq)})
+      should be added by the driver and not included here. */
+  uint32_t                      freq_err;
 };
 
 STRUCT_DESCRIPTOR(dev_rfpacket_rf_cfg_s);

@@ -93,7 +93,8 @@ static const struct dev_rfpacket_rf_cfg_fsk_s rfcfg =
      .jam_rssi = (-90) << 3,  
      .frequency = 868000000,
      .chan_spacing = 100000,
-     .bw = 100000,
+     .rx_bw = 0,
+     .freq_err = 868 * 20 /* ppm */,
    },
  .fairtx = 
    {

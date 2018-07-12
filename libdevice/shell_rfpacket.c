@@ -60,6 +60,7 @@ enum rfpacket_opts_e
   RFPACKET_OPT_CRATE     = 0x1000000,
   RFPACKET_OPT_PKCFG     = 0x2000000,
   RFPACKET_OPT_CRCSEED   = 0x4000000,
+  RFPACKET_OPT_FREQERR   = 0x8000000,
 };
 
 #define RFPACKET_OPT_RF_CFG_MSK (RFPACKET_OPT_FREQ | \
@@ -110,8 +111,9 @@ struct termui_optctx_dev_rfpacket_opts
           uint8_t symbols;
           uint32_t frequency;
           uint32_t deviation;
-          uint32_t bw;
+          uint32_t rx_bw;
           uint32_t drate;
+          uint32_t freq_err;
           uint8_t  spreading;
           uint8_t  iq_inv;
           /* Packet configuration */  
@@ -154,7 +156,8 @@ static void shell_rfpacket_print_rf_cfg(struct termui_console_s *con,
   termui_con_printf(con, "   Drate:        %d\n", rf->drate);
   termui_con_printf(con, "   Frequency:    %u\n", rf->frequency);
   termui_con_printf(con, "   Chan spacing: %d\n", rf->chan_spacing);
-  termui_con_printf(con, "   Bandwidth:    %d\n", rf->bw);
+  termui_con_printf(con, "   Bandwidth:    %d\n", rf->rx_bw);
+  termui_con_printf(con, "   Freq error:   %d\n", rf->freq_err);
 
   switch (rf->mod)
     {
@@ -264,7 +267,9 @@ static TERMUI_CON_COMMAND_PROTOTYPE(shell_rfpacket_rf_configure)
   if (used & RFPACKET_OPT_FREQ)
     cfg->frequency = c->frequency;
   if (used & RFPACKET_OPT_BW)
-    cfg->bw = c->bw;
+    cfg->rx_bw = c->rx_bw;
+  if (used & RFPACKET_OPT_FREQERR)
+    cfg->freq_err = c->freq_err;
   if (used & RFPACKET_OPT_DRATE)
     cfg->drate = c->drate;
 
@@ -613,8 +618,11 @@ static TERMUI_CON_OPT_DECL(dev_rfpacket_opts) =
   TERMUI_CON_OPT_INTEGER_ENTRY("-v", "--dev", RFPACKET_OPT_DEVIATION, struct termui_optctx_dev_rfpacket_opts, deviation, 1,
                               TERMUI_CON_OPT_CONSTRAINTS(RFPACKET_OPT_DEVIATION, 0))
 
-  TERMUI_CON_OPT_INTEGER_ENTRY("-b", "--bw", RFPACKET_OPT_BW, struct termui_optctx_dev_rfpacket_opts, bw, 1,
+  TERMUI_CON_OPT_INTEGER_ENTRY("-b", "--bw", RFPACKET_OPT_BW, struct termui_optctx_dev_rfpacket_opts, rx_bw, 1,
                               TERMUI_CON_OPT_CONSTRAINTS(RFPACKET_OPT_BW, 0))
+
+  TERMUI_CON_OPT_INTEGER_ENTRY("-Q", "--freq-err", RFPACKET_OPT_FREQERR, struct termui_optctx_dev_rfpacket_opts, freq_err, 1,
+                              TERMUI_CON_OPT_CONSTRAINTS(RFPACKET_OPT_FREQERR, 0))
 
   TERMUI_CON_OPT_INTEGER_ENTRY("-E", "--drate", RFPACKET_OPT_DRATE, struct termui_optctx_dev_rfpacket_opts, drate, 1,
                               TERMUI_CON_OPT_CONSTRAINTS(RFPACKET_OPT_DRATE, 0))
