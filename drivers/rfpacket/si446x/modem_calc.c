@@ -41,6 +41,7 @@
       API_hi_pfm_div_mode
       API_inputBW            = !API_RXBW
       API_crystal_tol
+      API_Ch_Fil_Bw_AFC
 
     The Rx bandwidth is calculated automatically when 0.
 
@@ -49,7 +50,6 @@
       API_if_mode            = 2.0
       API_High_perf_Ch_Fil   = 1.0
       API_OSRtune            = 0.0
-      API_Ch_Fil_Bw_AFC      = 0.0
       API_ant_div            = 0.0
       API_pm_pattern         = 0.0
       API_afc_en             = 1
@@ -89,13 +89,14 @@
 #define CONFIG_DRIVER_RFPACKET_SI446X_MOD_2FSK
 #define CONFIG_DRIVER_RFPACKET_SI446X_MOD_4FSK
 #define CONFIG_DRIVER_RFPACKET_SI446X_AFC
+#define CONFIG_DRIVER_RFPACKET_SI446X_AFCBD
 
 #define __unused__ __attribute__((unused))
 
 #define __MIN(a, b) ({ const typeof(a) __a = (a); const typeof(b) __b = (b); __b < __a ? __b : __a; })
 #define __MAX(a, b) ({ const typeof(a) __a = (a); const typeof(b) __b = (b); __b > __a ? __b : __a; })
 #define bit_clz32(x) (__builtin_clzll(x) + 32 - sizeof(long long) * 8)
-#defined logk_trace(...) fprintf(stderr, __VA_ARGS__)
+#define logk_trace(...) fprintf(stderr, __VA_ARGS__)
 
 FILE * fp;
 typedef uint8_t bool_t;
@@ -180,7 +181,7 @@ bool_t modem_calc(struct si446x_rf_regs_s *out,
   uint8_t detector;
   uint8_t min_osr;
 
-  uint32_t mod_bw;
+  double mod_bw;
   double rxbw = rxbw_, rxbw_rate;
 
   static const struct si446x_synth_regs_s synth_tab[4] = {
@@ -254,6 +255,7 @@ bool_t modem_calc(struct si446x_rf_regs_s *out,
 
   rxbw_rate = __MAX(rxbw * 4. / rate, min_osr);
   rxbw /= 1000.;
+  mod_bw /= 1000;
 
   modem->mdm_ctrl = ph_src << 7;
 
@@ -371,19 +373,23 @@ bool_t modem_calc(struct si446x_rf_regs_s *out,
 
   switch (mod) {
 #ifdef CONFIG_DRIVER_RFPACKET_SI446X_MOD_OOK
-  case MOD_OOK:
-    decim_g = __MIN(5, __MAX(1, floor_log2(decim_f / 7)));
+  case MOD_OOK: {
+    uint32_t ndec = floor_log2(decim_f / 7);
+    if (ndec < 1)
+      return 0;
+    decim_g = __MIN(5, ndec);
     rate_th = 0;
     modem->bcr_misc1 = 0xc0;
     modem->raw_search2 = 148;
     break;
+  }
 #endif
 #ifdef CONFIG_DRIVER_RFPACKET_SI446X_MOD_2FSK
   case MOD_2GFSK:
     spike = 64 * .65;
   case MOD_2FSK:
     modem->tx_ramp_delay = 1;
-    if ((fdev_rate > 10) && (mod_bw > 200000))
+    if ((fdev_rate > 10) && (mod_bw > 200))
       modem->dec_cfg0 |= (1 << 6);
 #endif
 #ifdef CONFIG_DRIVER_RFPACKET_SI446X_MOD_RAW
@@ -498,19 +504,27 @@ bool_t modem_calc(struct si446x_rf_regs_s *out,
   modem->adc_ctrl = 0;
   modem->agc_control = 0x62;
 
-  static const uint16_t n1678[16] = {
+  static const uint16_t filters_bw[16] = {
     9157, 8245, 7409, 6611, 5936, 5354, 4839, 4361,
     3932, 3532, 3172, 2825, 2557, 2302, 2075, 0
   };
 
-  double coef_band = rxbw * decim_b * (1 << decim_a);
-  uint32_t coef_idx = 0;
+  double coef_band1 = rxbw * decim_b * (1 << decim_a);
+  uint_fast8_t coef_idx1 = 0, coef_idx2 = 0;
+#ifdef CONFIG_DRIVER_RFPACKET_SI446X_AFCBD
+  double coef_band2 = mod_bw * decim_b * (1 << decim_a);
+#endif
   for (i = 1; i < 16; i++) {
-    if (CONFIG_DRIVER_RFPACKET_SI446X_FREQ_XO / 300000000. * n1678[i] < coef_band) {
-      coef_idx = i - 1;
-      break;
-    }
+    double cbw = CONFIG_DRIVER_RFPACKET_SI446X_FREQ_XO / 300000000. * filters_bw[i];
+    if (!coef_idx1 && cbw < coef_band1)
+      coef_idx1 = i;
+#ifdef CONFIG_DRIVER_RFPACKET_SI446X_AFCBD
+    if (!coef_idx2 && cbw < coef_band2)
+      coef_idx2 = i;
+#endif
   }
+
+  coef_idx1--;
 
   modem->fsk4_gain1 = 0x80;
   modem->fsk4_gain0 = 26;
@@ -525,6 +539,10 @@ bool_t modem_calc(struct si446x_rf_regs_s *out,
   switch (mod) {
 #ifdef CONFIG_DRIVER_RFPACKET_SI446X_MOD_OOK
   case MOD_OOK:
+# ifdef CONFIG_DRIVER_RFPACKET_SI446X_AFCBD
+    coef_idx2 = coef_idx1;
+    modem->afc_gain_1 |= 0x40;
+# endif
     if (manchester)
       modem->agc_control |= 0x80;
     if (rate <= 500)
@@ -536,7 +554,7 @@ bool_t modem_calc(struct si446x_rf_regs_s *out,
     qual_factor = 1.5;
   case MOD_2FSK:
     if (rate >= 300000)
-      coef_idx++;
+      coef_idx1++;
     goto fsk3;
 #endif
 #ifdef CONFIG_DRIVER_RFPACKET_SI446X_MOD_4FSK
@@ -553,18 +571,26 @@ bool_t modem_calc(struct si446x_rf_regs_s *out,
   defined(CONFIG_DRIVER_RFPACKET_SI446X_MOD_4FSK) || \
   defined(CONFIG_DRIVER_RFPACKET_SI446X_MOD_RAW)
   fsk3:
-    modem->afc_gain_1 |= 0x80;
-    modem->agc_control |= 0x80;
 # ifdef CONFIG_DRIVER_RFPACKET_SI446X_AFC
+#  ifdef CONFIG_DRIVER_RFPACKET_SI446X_AFCBD
+    coef_idx2 = __MAX(coef_idx1, coef_idx2 - 1);
+    modem->afc_gain_1 |= 0x40;
+#  endif
+    modem->afc_gain_1 |= 0x80;
     modem->afc_misc |= 0x40;
 # endif
+    modem->agc_control |= 0x80;
     break;
 #endif
   default:
     return 0;
   }
 
-  double afc_c = __MAX((CONFIG_DRIVER_RFPACKET_SI446X_FREQ_XO / 300000000. * n1678[coef_idx] / (decim_b << decim_a)), rxbw);
+#ifndef CONFIG_DRIVER_RFPACKET_SI446X_AFCBD
+  coef_idx2 = coef_idx1;
+#endif
+
+  double afc_c = __MAX((CONFIG_DRIVER_RFPACKET_SI446X_FREQ_XO / 300000000. * filters_bw[coef_idx1] / (decim_b << decim_a)), rxbw);
 
   double afc_d = afc_a > 4095 ? .38 : .4;
   if (fdev_rate >= 2)
@@ -625,8 +651,8 @@ bool_t modem_calc(struct si446x_rf_regs_s *out,
     { 0xa2, 0xa0, 0x97, 0x8a, 0x79, 0x66, 0x52,  0x3f, 0x2e, 0x1f, 0x14, 0x0b, 0x06, 0x02,  0x00, 0x00, 0x00, 0x40 },
   };
 
-  memcpy(out->modem.rx1_coe, si446x_rx_chflt_coe[coef_idx], 18);
-  memcpy(out->modem.rx2_coe, si446x_rx_chflt_coe[coef_idx], 18);
+  memcpy(out->modem.rx1_coe, si446x_rx_chflt_coe[coef_idx1], 18);
+  memcpy(out->modem.rx2_coe, si446x_rx_chflt_coe[coef_idx2], 18);
   out->modem.rx2_coe[17] ^= (!afc_b << 6);
 
   return 1;
