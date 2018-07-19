@@ -59,29 +59,18 @@ static DEV_TIMER_CONFIG(si446x_timer_config)
 
 /**************************** RFPACKET PART ********************************/
 
-#ifdef SI446X_DEBUG
 static void si446x_dump_config(uint8_t *ptr, const uint8_t *c)
 {
   uint16_t i = 0;
+  size_t size;
 
-  while(1)
+  while ((size = c[i]))
     {
-      size_t size = c[i];
-
-      if (!size)
-        break;
-
-      printk("0x11 0x%x 0x%x 0x%x ", c[i + 1], size, c[i + 2]);
-
-      for (uint8_t j = 0; j < size; j++)
-        {
-          printk("0x%x ", ptr[c[i + 3] + j]);
-        }
-      printk("\n");
+      logk_trace("cfg: 11 %02x %02x %02x : %P", c[i + 1], size, c[i + 2],
+                 ptr + c[i + 3], size);
       i += 4;
     }
 }
-#endif
 
 /* Register value  for a 4dbm step from -40 to 13 dbm */
 
@@ -90,7 +79,7 @@ uint8_t pa_pwr_lvl[14] = {0, 1, 1, 2, 3, 4, 6, 8, 12, 18, 27, 43, 68, 152};
 
 static inline void si446x_rfp_set_state(struct si446x_ctx_s *pv, enum si446x_state_s state)
 {
-  si446x_printk("si446x: state %d\n", state);
+  logk_trace("si446x: state %d", state);
   pv->state = state;
 }
 
@@ -138,7 +127,7 @@ static void si446x_bytecode_start(struct si446x_ctx_s *pv, const void *e, uint16
   assert(pv->bcrun == 0);
   pv->bcrun = 1;
 
-  si446x_printk("bcstart\n");
+  logk_trace("bcstart");
   va_list ap;
   va_start(ap, mask);
   ensure(dev_spi_bytecode_start_va(&pv->spi, srq, e, mask, ap) == 0);
@@ -151,7 +140,7 @@ static inline error_t si446x_build_pk_config(struct si446x_ctx_s *pv, struct dev
 {
   struct si446x_pkt_regs_s * pkt = &pv->pk_buff;
 
-  si446x_printk("PKT configuration\n");
+  logk_trace("PKT configuration");
 
   if (rq->pk_cfg->format != DEV_RFPACKET_FMT_SLPC)
     return -ENOTSUP;
@@ -255,9 +244,7 @@ static inline error_t si446x_build_pk_config(struct si446x_ctx_s *pv, struct dev
     }
 
   pkt->crc = p;
-#ifdef SI446X_DEBUG
   si446x_dump_config((uint8_t*)pkt, si446x_pk_cmd);
-#endif
 
   return 0;
 }
@@ -348,7 +335,7 @@ static inline error_t si446x_build_rf_config(struct si446x_ctx_s *pv,
                                              struct si446x_rf_regs_s *out,
                                              struct dev_rfpacket_rq_s *rq)
 {
-  si446x_printk("RF configuration\n");
+  logk_trace("RF configuration");
 
   const struct dev_rfpacket_rf_cfg_s *cfg = rq->rf_cfg;
 
@@ -395,9 +382,7 @@ static inline error_t si446x_build_rf_config(struct si446x_ctx_s *pv,
 
   pv->jam_rssi = SET_RSSI(cfg->jam_rssi >> 3);
 
-#ifdef SI446X_DEBUG
   si446x_dump_config((uint8_t*)out, si446x_rf_cmd);
-#endif
 
   return 0;
 }
@@ -414,7 +399,7 @@ static void si446x_rf_config_done(struct si446x_ctx_s *pv, const struct dev_rfpa
   /* 8 * Time bit + SLEEP->RX time*/
   pv->ccad = e->tb + pv->rspt;
 
-  si446x_printk("ccad : %d\n", pv->ccad);
+  logk_trace("ccad : %d", pv->ccad);
 
 #ifdef CONFIG_ARCH_SOCLIB
   pv->mpst *= 10;
@@ -669,7 +654,7 @@ static inline void si446x_start_rx(struct si446x_ctx_s *pv, struct dev_rfpacket_
   switch (rq->type)
   {
     case DEV_RFPACKET_RQ_RX:
-      si446x_printk("R\n");
+      logk_trace("R");
 
       pv->deadline = rq->deadline ? rq->deadline : t;
       pv->timeout = pv->deadline + rq->lifetime;
@@ -682,7 +667,7 @@ static inline void si446x_start_rx(struct si446x_ctx_s *pv, struct dev_rfpacket_
       break;
 
     case DEV_RFPACKET_RQ_RX_CONT:
-      si446x_printk("RC\n");
+      logk_trace("RC");
 
       if (pv->frequency != freq)
         {
@@ -749,7 +734,7 @@ static inline void si446x_start_tx(struct si446x_ctx_s *pv)
 
       pv->timeout = pv->deadline + rq->lifetime;
 
-      si446x_printk("TF\n");
+      logk_trace("TF");
 
       if (t >= pv->timeout)
       /* Timeout date is already reached */
@@ -766,7 +751,7 @@ static inline void si446x_start_tx(struct si446x_ctx_s *pv)
 #endif
     case DEV_RFPACKET_RQ_TX:
 
-      si446x_printk("T\n");
+      logk_trace("T");
 
       pwr = si446X_get_pwr_lvl(pv, rq->tx_pwr);
 
@@ -860,7 +845,7 @@ static void si446x_rfp_idle(struct si446x_ctx_s *pv)
 
   pv->rq = rq;
 
-  si446x_printk("si446x: idle %d\n", rq->type);
+  logk_trace("si446x: idle %d", rq->type);
 
   /* Check transceiver configuration */
   switch (si446x_check_config(pv, rq))
@@ -929,7 +914,7 @@ static DEV_RFPACKET_REQUEST(si446x_rfp_request)
     assert(rq != pv->rx_cont);
     assert(rq != pv->next_rx_cont);
 
-    si446x_printk("req %d %d %d\n", rq->type, rq->tx_size, pv->state);
+    logk_trace("req %d %d %d", rq->type, rq->tx_size, pv->state);
 
     rq->err = 0;
 
@@ -1033,7 +1018,7 @@ static DEV_RFPACKET_CANCEL(si446x_rfp_cancel)
   struct device_s *dev = accessor->dev;
   struct si446x_ctx_s *pv = dev->drv_pv;
 
-  si446x_printk("cancel %d\n", pv->state);
+  logk_trace("cancel %d", pv->state);
 
   error_t err = -EBUSY;
 
@@ -1125,7 +1110,7 @@ BC_CCALL_FUNCTION(si446x_alloc)
   struct dev_rfpacket_rq_s *rq;
   uintptr_t p = 0;
 
-  si446x_printk("si446x: RX alloc %d\n", pv->size);
+  logk_trace("si446x: RX alloc %d", pv->size);
 
   LOCK_SPIN_IRQ(&pv->dev->lock);
 
@@ -1164,7 +1149,7 @@ BC_CCALL_FUNCTION(si446x_alloc)
 
   p = (uintptr_t)pv->buffer;
 
-  si446x_printk("%d\n", pv->size);
+  logk_trace("%d", pv->size);
 
 error:
 
@@ -1227,7 +1212,7 @@ end:
 /* Transceiver is idle when this function is called */
 static inline void si446x_rfp_error(struct si446x_ctx_s *pv)
 {
-  si446x_printk("si446x: -EIO error %d\n", pv->state);
+  logk_trace("si446x: -EIO error %d", pv->state);
   /* Terminate allocated rx request */
   si446x_rfp_end_rxrq(pv, 1);
 
@@ -1259,7 +1244,7 @@ static inline void si446x_rx_irq(struct si446x_ctx_s *pv)
   si446x_rfp_end_rxrq(pv, err);
 
   if (err)
-    printk("crc\n");
+    logk_trace("crc error");
 
   switch (pv->state)
   {
@@ -1286,7 +1271,7 @@ static inline void si446x_tx_irq(struct si446x_ctx_s *pv)
 {
   struct dev_rfpacket_rq_s *rq = dev_rfpacket_rq_s_cast(dev_request_queue_head(&pv->queue));
 
-  si446x_printk("si446x: TX irq\n");
+  logk_trace("si446x: TX irq");
 
   assert(rq);
 
@@ -1321,7 +1306,7 @@ static inline void si446x_tx_irq(struct si446x_ctx_s *pv)
 /* Transceiver is idle when this function is called */
 static inline void si446x_jamming(struct si446x_ctx_s *pv)
 {
-  si446x_printk("si446x: Jamming %d %d %d\n", pv->state, GET_RSSI((int16_t)(pv->rssi >> 8)),
+  logk_trace("si446x: Jamming %d %d %d", pv->state, GET_RSSI((int16_t)(pv->rssi >> 8)),
                 GET_RSSI((int16_t)(pv->jam_rssi >> 8)));
 
   assert(pv->rxrq == NULL);
@@ -1351,10 +1336,10 @@ static inline void si446x_sleep(struct si446x_ctx_s *pv)
       si446x_bytecode_start(pv, &si446x_entry_ready, 0, 0);
       si446x_rfp_set_state(pv, SI446X_STATE_AWAKING);
     }
-  #ifdef SI446X_DEBUG
   else
-    si446x_printk("sleeping\n");
-  #endif
+    {
+      logk_trace("sleeping");
+    }
 }
 #endif
 
@@ -1369,7 +1354,7 @@ static KROUTINE_EXEC(si446x_spi_rq_done)
   pv->bcrun = 0;
   pv->bc_status = bc_get_reg(&srq->vm, STATUS);
 
-  si446x_printk("bdone %d 0x%x\n", pv->state, pv->bc_status);
+  logk_trace("bdone %d 0x%x", pv->state, pv->bc_status);
 
   if (pv->state != SI446X_STATE_INITIALISING)
     assert(!srq->base.err);
@@ -1393,7 +1378,7 @@ static KROUTINE_EXEC(si446x_spi_rq_done)
       si446x_sleep(pv);
       break;
     case SI446X_STATE_AWAKING:
-      si446x_printk("awaken\n");
+      logk_trace("awaken");
       si446x_rfp_idle(pv);
       break;
 #endif
@@ -1455,7 +1440,7 @@ static DEV_IRQ_SRC_PROCESS(si446x_irq_source_process)
   struct si446x_ctx_s *pv = dev->drv_pv;
   struct dev_spi_ctrl_bytecode_rq_s *srq = &pv->spi_rq;
 
-  si446x_printk("irq\n");
+  logk_trace("irq");
 
   lock_spin(&dev->lock);
 
@@ -1484,7 +1469,7 @@ static DEV_USE(si446x_use)
       switch (pv->state)
       {
         case SI446X_STATE_READY:
-          si446x_printk("sleep\n");
+          logk_trace("sleep");
           assert(pv->bcrun == 0);
           si446x_rfp_set_state(pv, SI446X_STATE_SLEEP);
           si446x_bytecode_start(pv, &si446x_entry_sleep, 0, 0);
