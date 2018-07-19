@@ -624,9 +624,6 @@ static DEV_INIT(max3420_usbdev_init)
   /* kroutine */
   kroutine_init_deferred(&srq->base.base.kr, &max3420_spi_rq_done);
 
-  /* Disable bytecode trace */
-  bc_set_trace(&srq->vm, 0, 0);
-
   /* irq io pin */
   device_irq_source_init(dev, &pv->src_ep, 1, &max3420_irq_source_process);
 

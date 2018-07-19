@@ -1888,9 +1888,6 @@ static DEV_INIT(sx127x_init)
 
   bc_set_reg(&srq->vm, R_CTX_PV, (uintptr_t)pv);
 
-  /* Disable bytecode trace */
-  bc_set_trace(&srq->vm, 0, 0);
-
   /* irq */
   device_irq_source_init(dev, pv->src_ep, 2, &sx127x_irq_process);
 

@@ -250,8 +250,7 @@ sub parse_trace
 {
     my $thisop = shift;
 
-    check_num($thisop, 0, 0, 1);
-    check_num($thisop, 1, 0, 1);
+    check_num($thisop, 0, 0, 7);
 }
 
 sub parse_cmp1
@@ -1084,7 +1083,7 @@ our %asm = (
         parse => \&parse_noarg, backend => ('nop'),
     },
     'trace'  => {
-        words => 1, code => 0x0008, argscnt => 2,
+        words => 1, code => 0x0008, argscnt => 1,
         parse => \&parse_trace, backend => ('trace'),
     },
     'add8'  => {

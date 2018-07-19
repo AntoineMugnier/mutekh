@@ -106,8 +106,7 @@ bc_init(struct bc_context_s *ctx,
   ctx->max_cycles = -1;
 #endif
 #ifdef CONFIG_MUTEK_BYTECODE_TRACE
-  ctx->trace = 0;
-  ctx->trace_regs = 0;
+  ctx->trace = BC_TRACE_DISABLED;
 #endif
 #if CONFIG_MUTEK_BYTECODE_BREAKPOINTS > 0
   ctx->bp_mask = 0;
@@ -143,8 +142,7 @@ bc_init_sandbox(struct bc_context_s *ctx, const struct bc_descriptor_s *desc,
       ctx->data_addr_mask = 7;
     }
 #ifdef CONFIG_MUTEK_BYTECODE_TRACE
-  ctx->trace = 0;
-  ctx->trace_regs = 0;
+  ctx->trace = BC_TRACE_DISABLED;
 #endif
 #if CONFIG_MUTEK_BYTECODE_BREAKPOINTS > 0
   ctx->bp_mask = 0;
@@ -169,7 +167,7 @@ static const char * bc_opname(uint16_t op)
     { 0xffff, 0x0001, "dump" },
     { 0xffff, 0x0002, "abort" },
     { 0xffff, 0x0003, "die" },
-    { 0xfffc, 0x0008, "trace" },
+    { 0xfff8, 0x0008, "trace" },
     { 0xfff0, 0x0000, "nop" },
     { 0xf000, 0x0000, "add8" },
     { 0xf000, 0x1000, "cst8" },
@@ -226,13 +224,15 @@ static const char * bc_opname(uint16_t op)
 #endif
 
 #ifdef CONFIG_MUTEK_BYTECODE_DEBUG
-static void bc_dump_op(const struct bc_context_s *ctx, const uint16_t *pc)
+static void bc_dump_op(const char *cap,
+                       const struct bc_context_s *ctx,
+                       const uint16_t *pc)
 {
   uint8_t mode = ctx->mode;
 # ifdef CONFIG_MUTEK_BYTECODE_NATIVE
   if (ctx->desc->flags & BC_FLAGS_NATIVE)
     {
-      logk_trace("bytecode: pc=%p, mode=%u", pc, mode);
+      logk_debug("%s: pc=%p, mode=%u", cap, pc, mode);
     }
   else
 # endif
@@ -247,14 +247,14 @@ static void bc_dump_op(const struct bc_context_s *ctx, const uint16_t *pc)
         {
           uint16_t op = endian_le16(*pc);
 
-          logk_trace("bytecode: pc=%p (%u), opcode=%04x (%s), mode=%u",
-                 pc, pc - (uint16_t*)code,
-                 op, bc_opname(op), mode);
+          logk_debug("%s: pc=%p (%u), opcode=%04x (%s), mode=%u",
+                     cap, pc, pc - (uint16_t*)code,
+                     op, bc_opname(op), mode);
         }
       else
         {
-          logk_trace("bytecode: pc=%p (%u), mode=%u",
-                 pc, pc - (uint16_t*)code, mode);
+          logk_debug("%s: pc=%p (%u), mode=%u",
+                     cap, pc, pc - (uint16_t*)code, mode);
         }
 # endif
     }
@@ -263,21 +263,34 @@ static void bc_dump_op(const struct bc_context_s *ctx, const uint16_t *pc)
 static void bc_dump_regs(const struct bc_context_s *ctx)
 {
   uint_fast8_t i;
-  for (i = 0; i < 16; i++)
-    logk_trace(" r%02u: %" BC_REG_FORMAT, i, ctx->v[i]);
+  for (i = 0; i < 16; i += 4)
+    logk_debug("r%02u: %" BC_REG_FORMAT" %" BC_REG_FORMAT" %" BC_REG_FORMAT" %" BC_REG_FORMAT,
+               i, ctx->v[i], ctx->v[i + 1], ctx->v[i + 2], ctx->v[i + 3]);
 }
 
 static void bc_dump_pc(const struct bc_context_s *ctx, const uint16_t *pc)
 {
-  bc_dump_op(ctx, pc);
+  bc_dump_op("dump", ctx, pc);
   bc_dump_regs(ctx);
+}
+
+#endif
+
+#ifdef CONFIG_MUTEK_BYTECODE_TRACE
+static void bc_trace_pc(const char *cap,
+                        const struct bc_context_s *ctx,
+                        const uint16_t *pc)
+{
+  bc_dump_op(cap, ctx, pc);
+  if (ctx->trace & _BC_TRACE_REGS)
+    bc_dump_regs(ctx);
 }
 #endif
 
 void bc_dump(const struct bc_context_s *ctx, bool_t regs)
 {
 #ifdef CONFIG_MUTEK_BYTECODE_DEBUG
-  bc_dump_op(ctx, (void*)(ctx->pc & (intptr_t)-2));
+  bc_dump_op("dump", ctx, (void*)(ctx->pc & (intptr_t)-2));
   if (regs)
     bc_dump_regs(ctx);
 #endif
@@ -884,7 +897,8 @@ bc_opcode_t bc_run_##fcname(struct bc_context_s *ctx)
   const struct bc_descriptor_s * __restrict__ desc = ctx->desc;
   const uint16_t *pc = (void*)(ctx->pc & (intptr_t)-2);
   bool_t skip = ctx->pc & 1;
-  uint16_t op = 0;
+  bc_opcode_t op = 0;
+  bc_opcode_t status;
 
   BC_CONFIG_SANDBOX(
     int_fast16_t max_cycles = ctx->max_cycles;
@@ -903,6 +917,11 @@ bc_opcode_t bc_run_##fcname(struct bc_context_s *ctx)
     if (desc->flags & (BC_FLAGS_SANDBOX | BC_FLAGS_NATIVE))
       return BC_RUN_STATUS_FAULT;
     const uintptr_t code_offset = 0;
+  );
+
+  BC_CONFIG_TRACE(
+    if (ctx->trace & _BC_TRACE_JUMP)
+      bc_trace_pc("resume at   ", ctx, pc);
   );
 
   for (;; pc++)
@@ -956,9 +975,9 @@ bc_opcode_t bc_run_##fcname(struct bc_context_s *ctx)
                 {
                   if ((uintptr_t)pc == bp)
                     {
-                      ctx->vpc = pc;
                       ctx->bp_skip = 1;
-                      return BC_RUN_STATUS_BREAK;
+                      status = BC_RUN_STATUS_BREAK;
+                      goto ret;
                     }
                   bp_mask ^= m;
                 }
@@ -971,21 +990,16 @@ bc_opcode_t bc_run_##fcname(struct bc_context_s *ctx)
         {
           if (max_cycles == 0)
             {
-              ctx->vpc = pc;
-              ctx->max_cycles = 0;
-              return BC_RUN_STATUS_CYCLES;
+              status = BC_RUN_STATUS_CYCLES;
+              goto ret;
             }
           max_cycles--;
         }
   );
 
   BC_CONFIG_TRACE(
-      if (ctx->trace)
-        {
-          if (ctx->trace_regs)
-            bc_dump_regs(ctx);
-          bc_dump_op(ctx, pc);
-        }
+      if (ctx->trace & _BC_TRACE_ALL)
+        bc_trace_pc("before", ctx, pc);
   );
 
       /* custom op */
@@ -995,12 +1009,9 @@ bc_opcode_t bc_run_##fcname(struct bc_context_s *ctx)
             ctx->skip = 1;
           );
 
-          ctx->vpc = pc + 1;
-          BC_CONFIG_SANDBOX(
-            if (sandbox)
-              ctx->max_cycles = max_cycles;
-          );
-          return op;
+          pc++;
+          status = op;
+          goto ret;
         }
 
       bc_reg_t *dstp = &ctx->v[op & 0xf];
@@ -1029,12 +1040,8 @@ bc_opcode_t bc_run_##fcname(struct bc_context_s *ctx)
             }
           if (op == 0)          /* end */
             {
-              ctx->vpc = pc;
-              BC_CONFIG_SANDBOX(
-                if (sandbox)
-                  ctx->max_cycles = max_cycles;
-              );
-              return BC_RUN_STATUS_END;
+              status = BC_RUN_STATUS_END;
+              goto ret;
             }
         BC_CONFIG_DEBUG(
           else if (op == 1)     /* dump */
@@ -1043,8 +1050,7 @@ bc_opcode_t bc_run_##fcname(struct bc_context_s *ctx)
         BC_CONFIG_TRACE(
           else if (op & 8)      /* trace */
             {
-              ctx->trace = op & 1;
-              ctx->trace_regs = (op & 2) >> 1;
+              ctx->trace = op & 7;
             }
         )
           else if (op & 2)
@@ -1232,6 +1238,10 @@ bc_opcode_t bc_run_##fcname(struct bc_context_s *ctx)
           if (sandbox && (pc + 1 < (uint16_t*)desc->code || ((uintptr_t)pc & 1)))
             goto err_pc;
         );
+        BC_CONFIG_TRACE(
+          if (ctx->trace & _BC_TRACE_JUMP)
+            bc_trace_pc("jump to     ", ctx, pc + 1);
+         );
 	break;
 
       } while (0);
@@ -1246,18 +1256,21 @@ bc_opcode_t bc_run_##fcname(struct bc_context_s *ctx)
   assert(!"bytecode pc out of range");
 
  err_die:
-  BC_CONFIG_DEBUG(
-    logk_error("Die at %p", pc);
-    bc_dump_pc(ctx, pc);
-  );
+  logk_error("die at %p", pc);
 
  err_ret:
+  status = BC_RUN_STATUS_FAULT;
+ ret:
+  BC_CONFIG_TRACE(
+    if (ctx->trace & _BC_TRACE_JUMP)
+      bc_trace_pc("leave before", ctx, pc);
+  );
   ctx->vpc = pc;
   BC_CONFIG_SANDBOX(
     if (sandbox)
       ctx->max_cycles = max_cycles;
   );
-  return BC_RUN_STATUS_FAULT;
+  return status;
 }
 /* backslash-region-end */
 

@@ -85,7 +85,7 @@ sub out_nop {
 
 sub out_trace {
     my ($thisop) = @_;
-    return fmt0( $thisop, 0, ($thisop->{args}->[1] << 1) | ($thisop->{args}->[0] << 0) );
+    return fmt0( $thisop, 0, $thisop->{args}->[0]);
 }
 
 sub out_add8 {

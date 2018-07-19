@@ -52,7 +52,7 @@ void app_start()
     bc_set_reg(&vm, i, 0x5a5a5a5a);
   bc_set_pc(&vm, &test_bytecode_entry);
 
-  //  bc_set_trace(&vm, 1, 1);
+  //  bc_set_trace(&vm, BC_TRACE_ALL);
   //  bc_dump(&vm, 1);
 
   while (1)

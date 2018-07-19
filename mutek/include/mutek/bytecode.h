@@ -319,7 +319,7 @@
      @item @tt{dump} @item Dump registers to debug output. @see #CONFIG_MUTEK_BYTECODE_DEBUG
      @item @tt{abort} @item Terminate bytecode execution and report an error.
      @item @tt{die} @item Terminate by calling the libc @ref abort function.
-     @item @tt{trace flags} @item Enable or disable debug trace. @see bc_set_trace
+     @item @tt{trace mode} @item Enable or disable debug trace. @see bc_set_trace
      @item @tt{ccall reg} @item Call a C function. The address of the function is in the source
      register. Bytecode in compiled form will not be portable.
      @see bc_ccall_function_t
@@ -392,8 +392,7 @@
     @item abort               @item               @item @tt{0000 0000 0000 0010} @item  0
     @item die                 @item               @item @tt{0000 0000 0000 0011} @item  0
     @item nop                 @item               @item @tt{0000 0000 0000 0100} @item  0
-    @item trace               @item x             @item @tt{0000 0000 0000 10xx} @item  0
-    @item ---                 @item               @item @tt{0000 0000 0000 11xx} @item  0
+    @item trace               @item m             @item @tt{0000 0000 0000 1mmm} @item  0
     @item add8                @item r, +/-v       @item @tt{0000 vvvv vvvv rrrr} @item  0
     @item cst8                @item r, v          @item @tt{0001 vvvv vvvv rrrr} @item  0
     @item call8               @item r, lbl        @item @tt{0010 llll llll rrrr} @item  0
@@ -484,6 +483,19 @@ enum bc_flags_s
   BC_FLAGS_SIZEMASK = 0x00ffffff,
 };
 
+#define _BC_TRACE_ALL 1
+#define _BC_TRACE_JUMP 2
+#define _BC_TRACE_REGS 4
+
+enum bc_trace_e
+{
+  BC_TRACE_DISABLED  = 0,
+  BC_TRACE_ALL       = _BC_TRACE_ALL,
+  BC_TRACE_JUMP      = _BC_TRACE_JUMP,
+  BC_TRACE_ALL_REGS  = _BC_TRACE_ALL | _BC_TRACE_REGS,
+  BC_TRACE_JUMP_REGS = _BC_TRACE_JUMP | _BC_TRACE_REGS,
+};
+
 struct bc_context_s;
 
 /** @This can be used to declare bytecode entry points. @see bc_set_pc */
@@ -550,8 +562,7 @@ struct bc_context_s
   bool_t BITFIELD(bp_skip,1);
 #endif
 #ifdef CONFIG_MUTEK_BYTECODE_TRACE
-  bool_t BITFIELD(trace,1);
-  bool_t BITFIELD(trace_regs,1);
+  enum bc_trace_e BITFIELD(trace,3);
 #endif
 #ifdef CONFIG_MUTEK_BYTECODE_SANDBOX
   /** @see bc_init_sandbox */
@@ -729,11 +740,10 @@ bc_set_pc(struct bc_context_s *ctx, const void *pc)
     not defined, this function has no effect. The @tt trace
     instruction can be used to enable and disable trace output. */
 ALWAYS_INLINE void
-bc_set_trace(struct bc_context_s *ctx, bool_t enabled, bool_t regs)
+bc_set_trace(struct bc_context_s *ctx, enum bc_trace_e mode)
 {
 #ifdef CONFIG_MUTEK_BYTECODE_TRACE
-  ctx->trace = enabled;
-  ctx->trace_regs = regs;
+  ctx->trace = mode;
 #endif
 }
 
