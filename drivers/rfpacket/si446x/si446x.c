@@ -397,7 +397,7 @@ static void si446x_rf_config_done(struct si446x_ctx_s *pv, const struct dev_rfpa
   /* Time in timer unit to fill 128 bytes in fifo */
   pv->mpst = 128 * e->tb;
   /* 8 * Time bit + SLEEP->RX time*/
-  pv->ccad = e->tb + pv->rspt;
+  pv->ccad = e->tb + pv->bt;
 
   logk_trace("ccad : %d", pv->ccad);
 
@@ -1536,9 +1536,7 @@ static DEV_INIT(si446x_init)
     goto err_mem;
 
   /* Base 500 us time */
-  dev_timer_init_sec(pv->timer, &pv->bt, 0, 500, 1000000);
-  /* Other delays */
-  dev_timer_init_sec(pv->timer, &pv->rspt, 0, SI446X_RESPONSE_TIME, 1000000);
+  dev_timer_init_sec(pv->timer, &pv->bt, 0, SI446X_BASE_TIME, 1000000);
 
   /* Start timer */
   if (device_start(&pv->timer->base))

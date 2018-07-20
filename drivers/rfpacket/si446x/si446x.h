@@ -46,8 +46,8 @@
 #define SI446X_RESPONSE_TIME                     500       /* us */
 #define SI446X_BASE_TIME                         500       /* us */
 #define SI446X_TIME_BEFORE_RETRY_SHIFT           6
-#define SI446X_RSSI_SAMPLING_PERIOD              5
-#define SI446X_RSSI_AVERAGE_DEFAULT              -120
+#define SI446X_RSSI_SAMPLING_PERIOD              8         /* bt log2 */
+#define SI446X_RSSI_AVERAGE_DEFAULT              -126
 #define SI446X_RSSI_AVERAGE_LOG2_WINDOW_SIZE     8
 #define SI446X_RSSI_AVERAGE_WINDOW_SIZE          (1 << SI446X_RSSI_AVERAGE_LOG2_WINDOW_SIZE)
 
@@ -162,8 +162,6 @@ struct si446x_ctx_s
 
   /* base 500 us time */
   dev_timer_delay_t bt;
-  /* Sleep to Rx transition time */
-  dev_timer_delay_t rspt;
   /* Time before checking cca status in us*/
   dev_timer_delay_t ccad;
   /* Time to send a complete fifo in us */

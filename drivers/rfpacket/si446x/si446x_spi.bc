@@ -337,12 +337,10 @@ tune_done:
         ld32e                   %old,                     %R_CTX_PV,   _offsetof(si446x_ctx_s, rssi, 4)
   rssi_compute:
         cst32                   %tmp,                     SI446X_RSSI_AVERAGE_WINDOW_SIZE - 1,  0
-        shi32l                  %tmp,                     8
         mul32                   %old,                     %tmp
-        shi32r                  %old,                     8
         add                     %new,                     %get_rssi:current,
         shi32r                  %new,                     SI446X_RSSI_AVERAGE_LOG2_WINDOW_SIZE
-  update_rssi:
+        /* update rssi */
         st32e                   %new,                     %R_CTX_PV,     _offsetof(si446x_ctx_s, rssi, 4)
         ld8e                    %jam,                     %R_CTX_PV,     _offsetof(si446x_ctx_s, jam_rssi)
         shi32l                  %jam,                     8
@@ -405,7 +403,7 @@ tune_done:
         .input %1 deadline
         .input %2 timeout
         .input %3 channel
-        .clobber %0, %1, %2, %3, %4, %5, %6, %7, %10, %11, %12, %13
+        .clobber %0, %1, %2, %3, %4, %5, %6, %7, %9, %10, %11, %12, %13
         call8                   %si446x_tx_init:link,                si446x_tx_init
         mov                     %si446x_start_tx:channel,            %channel
         cst32                   %si446x_start_tx:mode,               0x33,  16
@@ -790,7 +788,6 @@ tune_done:
         tst32s                  %tmp,             0
         ret                     %link
         ld32e                   %tmp,             %R_CTX_PV,           _offsetof(si446x_ctx_s, bt, 4)
-        shi32r                  %tmp,             1
         spi_yield_delay         %tmp
         loop                    %retry,           poll_gpio_loop
         /* timeout */
