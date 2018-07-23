@@ -1945,9 +1945,18 @@ sub read_build_config
     my $lnum = 0;
     my @ignore = ( 0 );
     my @cur_sections = ( ["common"] );
+    my ( $line, $line0 );
 
-    foreach my $line (<FILE>) {
+    foreach my $line1 (<FILE>) {
 	$lnum++;
+
+        if ($line1 =~ /\\$/) {
+            $line0 .= $`;
+            next;
+        } else {
+            $line = $line0 . $line1;
+            $line0 = '';
+        }
 
 	# skip empty lines and comment lines
 	next if ($line =~ /^[ \t]*(\#.*)?$/);
