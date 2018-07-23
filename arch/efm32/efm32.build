@@ -219,16 +219,16 @@
   %requiretypes sram
   %requiretypes flash
 
-%section efr32-LgXLNNN-fX-gmX efm32-jgXLNNN-fX-gmX efm32-pgXLNNN-fX-gmX
+%section efr32-LgXLNNN-fX-* efm32-jgXLNNN-fX-* efm32-pgXLNNN-fX-*
   %types architecture
 
   CONFIG_ARCH_EFM32
 
-  %subsection efr32-Lg1LNNN-fX-gmX efm32-jg1LNNN-fX-gmX efm32-pg1LNNN-fX-gmX
+  %subsection efr32-Lg1LNNN-fX-* efm32-jg1LNNN-fX-* efm32-pg1LNNN-fX-*
     CONFIG_EFM32_ARCHREV EFM32_ARCHREV_EFR_XG1
   %end
 
-  %subsection efr32-Lg12LNNN-fX-gmX efm32-jg12LNNN-fX-gmX
+  %subsection efr32-Lg12LNNN-fX-* efm32-jg12LNNN-fX-*
     CONFIG_EFM32_ARCHREV EFM32_ARCHREV_EFR_XG12
   %end
 
@@ -280,7 +280,7 @@
   CONFIG_CPU_ARM32M_M_IRQ_COUNT 49
 %end
 
-  %subsection efm32-jgXLNNN-fX-gmX
+  %subsection efm32-jgXLNNN-fX-*
     CONFIG_EFM32_FAMILY EFM32_FAMILY_JADE
   %end
 

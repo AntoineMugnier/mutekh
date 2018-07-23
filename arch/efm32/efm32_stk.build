@@ -65,38 +65,53 @@
   CONFIG_DRIVER_EFM32_USART_PRINTK_PIN 64
   CONFIG_DRIVER_EFM32_USART_PRINTK_LOC 1
 
-%section efr32-stk6066a-fg1p132-f256-gm48
+%section efr32-stk6000a efr32-brd4151a
+  %inherit efr32-mg1p232-f256-gm48
+  %inherit efm32-pcb4001-xg1
+
+%section efr32-stk6066a efr32-stk6060a efr32-stk6061a efr32-stk6062a efr32-stk6063a efr32-stk6065a \
+         efr32-brd4252a efr32-brd4250a efr32-brd4250b efr32-brd4251a efr32-brd4251b efr32-brd4251d
   %inherit efr32-fg1p132-f256-gm48
+  %inherit efm32-pcb4001-xg1
 
-%section efr32-stk6066a-mg12p433-f1024-gm48
+%section efr32-stk6000b efr32-brd4103a efr32-brd4161a efr32-brd4162a
+  %inherit efr32-mg12p332-f1024-gl125
+  %inherit efm32-pcb4001-xg12
+
+%section efr32-brd4253a efr32-brd4254a
+  %inherit efr32-fg12p433-f1024-gl125
+  %inherit efm32-pcb4001-xg12
+
+%section efr32-stk6005a efr32-brd4163a efr32-brd4164a
+  %inherit efr32-mg12p433-f1024-gl125
+  %inherit efm32-pcb4001-xg12
+
+%section efr32-brd4170a efr32-brd4172a efr32-brd4172b efr32-brd4173a
   %inherit efr32-mg12p433-f1024-gm48
+  %inherit efm32-pcb4001-xg12
 
-%section efr32-stk6066a-*
-  CONFIG_EFM32_BOARD stk6066a
+%section efm32-pcb4001-xg12
+  CONFIG_EFM32_BOARD pcb4001_xg12
+  CONFIG_EFM32_BOARD_INIT
 
   CONFIG_DEVICE_CLOCK_GATING undefined
   CONFIG_DEVICE_CLOCK_VARFREQ undefined
+
+  CONFIG_MUTEK_CONSOLE_DEVICE_PATHS "usart0"
 
   CONFIG_DRIVER_EFM32_USART_PRINTK
   CONFIG_DRIVER_EFM32_USART_PRINTK_PIN 0
   CONFIG_DRIVER_EFM32_USART_PRINTK_LOC 0
   CONFIG_MUTEK_PRINTK_ADDR 0x40010000
-  CONFIG_EFM32_BOARD_INIT
 
 #  CONFIG_MUTEK_PRINTK_ADDR 0x4004a000
   CONFIG_DRIVER_EFM32_LEUART_PRINTK_PIN 2
   CONFIG_DRIVER_EFM32_LEUART_PRINTK_LOC 2
 
-%section ezr32-stk6200a
-  %inherit ezr32-stk620xa
-
-%section ezr32-stk6202a
-  %inherit ezr32-stk620xa
-
-%section ezr32-stk620xa
+%section ezr32-stk6200a ezr32-stk6201a ezr32-stk6202a ezr32-brd4502a
   %inherit efm32-lg330-f256-bga
 
-  CONFIG_EFM32_BOARD stk620xa
+  CONFIG_EFM32_BOARD pcb4001_ezr32lg
   CONFIG_EFM32_BOARD_INIT
   CONFIG_DRIVER_RFPACKET_SI446X
   CONFIG_MUTEK_CONSOLE_DEVICE_PATHS "usart2"
