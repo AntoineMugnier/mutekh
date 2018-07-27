@@ -38,8 +38,12 @@ CPU_NAME_DECL(exception_vector):
 CPU_NAME_DECL(reset_vector):
         .globl CPU_NAME_DECL(reset_vector)
 
+#ifdef CONFIG_CPU_ARM32M_BARE_BOOT
+        .2byte 0x4800   /* ldr r0, = mutekh_entry */
+        .2byte 0x4700   /* bx r0 */
+#else
         .word CONFIG_STARTUP_STACK_ADDR + CONFIG_STARTUP_STACK_SIZE
-
+#endif
         /* reset */
         .word mutekh_entry
 
