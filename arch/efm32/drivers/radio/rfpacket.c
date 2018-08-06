@@ -88,11 +88,11 @@ static inline error_t efr32_rf_config(struct radio_efr32_rfp_ctx_s *ctx,
     {
       ctx->rf_cfg = (struct dev_rfpacket_rf_cfg_s *)rfcfg;
 
-      if (rfcfg->mod != DEV_RFPACKET_GFSK)
-	return -ENOTSUP;
+      uint32_t div = cpu_mem_read_32(EFR32_SYNTH_ADDR + EFR32_SYNTH_DIVCTRL_ADDR);
+      uint64_t f = ((uint64_t)(rfcfg->frequency) * div) << 19;
+      f /= EFR32_RADIO_HFXO_CLK;
+      cpu_mem_write_32(EFR32_SYNTH_ADDR + EFR32_SYNTH_FREQ_ADDR, (uint32_t)f);
 
-      if (rfcfg->frequency != 868000000)
-	return -ENOTSUP;
 
       if (rfcfg->drate != 38400)
 	return -ENOTSUP;
