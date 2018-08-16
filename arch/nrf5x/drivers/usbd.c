@@ -77,7 +77,7 @@ struct nrf5x_usb_private_s
   struct dev_usbdev_context_s usbdev_ctx;
 
   struct dev_usbdev_config_s *cfg;
-  struct dev_usbdev_request_s *tr[NRF5X_EP_COUNT][2];
+  struct dev_usbdev_rq_s *tr[NRF5X_EP_COUNT][2];
   uint8_t mps[NRF5X_EP_COUNT][2];
 };
 
@@ -133,7 +133,7 @@ static void dma_start(struct nrf5x_usb_private_s *pv, uintptr_t off, uint_fast8_
 }
 
 static void nrf5x_usbd_tx(struct nrf5x_usb_private_s *pv,
-                              struct dev_usbdev_request_s *tr)
+                              struct dev_usbdev_rq_s *tr)
 {
   logk_trace("DMA+Tx to IN/EP%d (%d bytes): %P", tr->ep, tr->size, tr->data, tr->size);
 
@@ -157,7 +157,7 @@ static void nrf5x_usbd_tx(struct nrf5x_usb_private_s *pv,
 }
 
 static void nrf5x_usbd_rx_dma(struct nrf5x_usb_private_s *pv,
-                              struct dev_usbdev_request_s *tr)
+                              struct dev_usbdev_rq_s *tr)
 {
   size_t epsize = cpu_mem_read_32(pv->addr + USBD_SIZE_EPOUT_ADDR(tr->ep));
 
@@ -178,7 +178,7 @@ static void nrf5x_usbd_rx_dma(struct nrf5x_usb_private_s *pv,
 }
 
 static void nrf5x_usbd_rx_prepare(struct nrf5x_usb_private_s *pv,
-                                  struct dev_usbdev_request_s *tr)
+                                  struct dev_usbdev_rq_s *tr)
 {
   logk_trace("Rx from OUT/EP%d prepare (%d) current ep size: %d, outcs: %02x",
              tr->ep, tr->size,
@@ -476,7 +476,7 @@ static void nrf5x_usbd_event(struct device_s *dev, uint8_t event)
 
 static void nrf5x_usbd_stack_event(struct nrf5x_usb_private_s *pv)
 {
-  struct dev_usbdev_request_s *tr;
+  struct dev_usbdev_rq_s *tr;
 
   if (pv->tr[0][0])
     tr = pv->tr[0][0];
@@ -848,7 +848,7 @@ static KROUTINE_EXEC(nrf5x_usbd_irq_handler)
 
   if (pending & USBD_INTEN_EP0SETUP) {
     pending &= ~USBD_INTEN_EP0SETUP;
-    struct dev_usbdev_request_s *tr = pv->tr[0][0];
+    struct dev_usbdev_rq_s *tr = pv->tr[0][0];
 
     logk_trace("EP0 Setup IRQ %p", tr);
     
@@ -883,7 +883,7 @@ static KROUTINE_EXEC(nrf5x_usbd_irq_handler)
 
       nrf5x_usbd_rx_dma(pv, pv->tr[0][0]);
     } else if((pv->tx_running & bit(0)) && pv->tr[0][1]) {
-      struct dev_usbdev_request_s *tr = pv->tr[0][1];
+      struct dev_usbdev_rq_s *tr = pv->tr[0][1];
 
       pv->tx_running &= ~bit(0);
 
@@ -936,7 +936,7 @@ static KROUTINE_EXEC(nrf5x_usbd_irq_handler)
       if((pv->tx_running & bit(i))
          && pv->tr[i][1]
          && (epdatastatus & bit(i))) {
-        struct dev_usbdev_request_s *tr = pv->tr[i][1];
+        struct dev_usbdev_rq_s *tr = pv->tr[i][1];
 
         pv->tx_running &= ~bit(i);
 
@@ -966,7 +966,7 @@ static KROUTINE_EXEC(nrf5x_usbd_irq_handler)
         && (pending & USBD_INTEN_ENDEPOUT(i))
         && (pv->tr[i][0])
         ) {
-      struct dev_usbdev_request_s *tr = pv->tr[i][0];
+      struct dev_usbdev_rq_s *tr = pv->tr[i][0];
 
 #warning Ensure device is still enabled
       nrf_it_disable_mask(pv->addr, USBD_INTEN_ENDEPOUT(i));

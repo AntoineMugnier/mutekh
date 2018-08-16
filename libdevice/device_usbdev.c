@@ -107,7 +107,7 @@ static inline bool_t usbdev_is_included(size_t index, size_t start, size_t cnt)
 
 static error_t usbdev_is_valid_transfer(struct dev_usbdev_context_s *ctx,
                                         struct usbdev_endpoint_s *ep,
-                                        struct dev_usbdev_request_s *tr)
+                                        struct dev_usbdev_rq_s *tr)
 {
   if (ctx->state != DEV_USBDEV_CONFIGURED)
   /* Device not configured */
@@ -124,7 +124,7 @@ static error_t usbdev_is_valid_transfer(struct dev_usbdev_context_s *ctx,
 /* Return 0 if transfer is transfer is terminated  */
 static bool_t usbdev_start_transfer(struct dev_usbdev_context_s *ctx,
                                     struct usbdev_endpoint_s *ep,
-                                    struct dev_usbdev_request_s *tr)
+                                    struct dev_usbdev_rq_s *tr)
 {
   error_t ret = ctx->ops->f_transfer(ctx, tr);
 
@@ -152,7 +152,7 @@ static bool_t usbdev_start_transfer(struct dev_usbdev_context_s *ctx,
 static void usbdev_process_queue(struct dev_usbdev_context_s *ctx,
                                  struct usbdev_endpoint_s *ep)
 {
-  struct dev_usbdev_request_s * tr;
+  struct dev_usbdev_rq_s * tr;
 
   while(1)
     {
@@ -360,7 +360,7 @@ static void usbdev_disable_service(struct dev_usbdev_context_s *ctx)
 static error_t usbdev_ctrl_transaction(struct dev_usbdev_context_s *ctx,
                                        enum dev_usbdev_rq_type_e type)
 {
-  struct dev_usbdev_request_s *tr = &ctx->tr;
+  struct dev_usbdev_rq_s *tr = &ctx->tr;
   const struct usb_ctrl_setup_s *setup = (const void *)ctx->setup;
 
   tr->ep = 0;
@@ -1963,7 +1963,7 @@ static KROUTINE_EXEC(usbdev_transfer_done)
 /* This is executed from an interrupt handler */
 
 static void usbdev_stack_transfer_0_done(struct dev_usbdev_context_s *ctx,
-                                         struct dev_usbdev_request_s *tr)
+                                         struct dev_usbdev_rq_s *tr)
 {
   if (tr->error)
     goto kroutine;
@@ -2036,7 +2036,7 @@ void usbdev_stack_config_done(struct dev_usbdev_context_s *ctx)
 /* This is executed with lock */
 
 void usbdev_stack_request_done(struct dev_usbdev_context_s *ctx,
-                                struct dev_usbdev_request_s *tr)
+                                struct dev_usbdev_rq_s *tr)
 {
   assert(tr != NULL);
 
@@ -2199,7 +2199,7 @@ error_t usbdev_stack_request(struct device_usbdev_s *dev,
 
 error_t usbdev_stack_transfer(struct device_usbdev_s *dev,
                               struct usbdev_service_s *service,
-                              struct dev_usbdev_request_s *tr,
+                              struct dev_usbdev_rq_s *tr,
                               const struct usb_endpoint_descriptor_s *desc)
 {
   struct dev_usbdev_context_s *ctx = device_usbdev_context(dev);
@@ -2369,7 +2369,7 @@ error_t usbdev_stack_cleanup(struct dev_usbdev_context_s *ctx)
   return 0;
 }
 
-enum usb_transfert_direction_e dev_usbdev_get_transfer_dir(struct dev_usbdev_request_s *tr)
+enum usb_transfert_direction_e dev_usbdev_get_transfer_dir(struct dev_usbdev_rq_s *tr)
 {
   switch (tr->type)
     {

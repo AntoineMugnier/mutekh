@@ -33,8 +33,8 @@
         ld8e                    %R_ARG4,         %R_CTX_PV, _offsetof(max3420_usbdev_private_s, mps) + (N)
 
 #define MAX3420_GET_TRANSFER_INFO()                   \
-        lde                     %R_BUFF,         %R_TRANSFER,   _offsetof(dev_usbdev_request_s, data) ;\
-        ld32e                   %R_SIZE,         %R_TRANSFER,   _offsetof(dev_usbdev_request_s, size, 4)
+        lde                     %R_BUFF,         %R_TRANSFER,   _offsetof(dev_usbdev_rq_s, data) ;\
+        ld32e                   %R_SIZE,         %R_TRANSFER,   _offsetof(dev_usbdev_rq_s, size, 4)
 
 #define MAX3420_WRITE(REG, A, B)                \
 	cst16			%REG,            (((B) << 8) | (A)),  0 ;\
@@ -241,10 +241,10 @@ max3420_data_in_irq:
         call32                  %R_LINK,         max3420_disable_irq
         eq0                     %R_TRANSFER
           jmp8                    max3420_entry_irq
-        ld32e                   %R_SIZE,         %R_TRANSFER,   _offsetof(dev_usbdev_request_s, size, 4)
+        ld32e                   %R_SIZE,         %R_TRANSFER,   _offsetof(dev_usbdev_rq_s, size, 4)
         eq0                     %R_SIZE
           jmp8                    max3420_set_done
-        ld8e                    %R_TMP0,         %R_TRANSFER,   _offsetof(dev_usbdev_request_s, type, 1)
+        ld8e                    %R_TMP0,         %R_TRANSFER,   _offsetof(dev_usbdev_rq_s, type, 1)
         cst8                    %R_TMP1,         _const(DEV_USBDEV_PARTIAL_DATA_IN)
         eq                      %R_TMP0,         %R_TMP1
           jmp8                    max3420_set_done
@@ -314,17 +314,17 @@ max3420_data_out:
         and32                   %R_TMP0,         %R_SIZE
         neq0                    %R_TMP0
           jmp8                    max3420_set_done
-        ld32e                   %R_SIZE,         %R_TRANSFER,   _offsetof(dev_usbdev_request_s, size, 4)
+        ld32e                   %R_SIZE,         %R_TRANSFER,   _offsetof(dev_usbdev_rq_s, size, 4)
         eq0                     %R_SIZE
           jmp8                    max3420_set_done
-        ld8e                    %R_TMP0,         %R_TRANSFER,   _offsetof(dev_usbdev_request_s, type, 1)
+        ld8e                    %R_TMP0,         %R_TRANSFER,   _offsetof(dev_usbdev_rq_s, type, 1)
         cst8                    %R_TMP1,         _const(DEV_USBDEV_PARTIAL_DATA_OUT)
         eq                      %R_TMP0,         %R_TMP1
           jmp8                    max3420_set_done
         cst8                    %R_TMP0,         MAX3420_EP0_MASK
         neq                     %R_TMP0,         %R_ARG3
           jmp8                    max3420_try_data_out
-        ld16e                   %R_TMP0,         %R_TRANSFER,     _offsetof(dev_usbdev_request_s, rem, 2)
+        ld16e                   %R_TMP0,         %R_TRANSFER,     _offsetof(dev_usbdev_rq_s, rem, 2)
         eq0                     %R_TMP0
           jmp8                    max3420_set_done
         jmp8                    max3420_try_data_out
@@ -479,18 +479,18 @@ max3420_update_transfer:
         /* R_ARG3: Endpoint mask */
         add                     %R_BUFF,         %R_SIZE
         /* Update transfer data pointer */
-        ste                     %R_BUFF,         %R_TRANSFER,     _offsetof(dev_usbdev_request_s, data)
+        ste                     %R_BUFF,         %R_TRANSFER,     _offsetof(dev_usbdev_rq_s, data)
         /* Update transfer size */
-        ld32e                   %R_TMP0,         %R_TRANSFER,     _offsetof(dev_usbdev_request_s, size, 4)
+        ld32e                   %R_TMP0,         %R_TRANSFER,     _offsetof(dev_usbdev_rq_s, size, 4)
         sub                     %R_TMP0,         %R_SIZE
-        st32e                   %R_TMP0,         %R_TRANSFER,     _offsetof(dev_usbdev_request_s, size, 4)
+        st32e                   %R_TMP0,         %R_TRANSFER,     _offsetof(dev_usbdev_rq_s, size, 4)
         /* Update remaining field for EP0 */
         cst8                    %R_TMP0,         MAX3420_EP0_MASK
         neq                     %R_TMP0,         %R_ARG3
           ret                     %R_LINK
-        ld16e                   %R_TMP0,         %R_TRANSFER,     _offsetof(dev_usbdev_request_s, rem, 2)
+        ld16e                   %R_TMP0,         %R_TRANSFER,     _offsetof(dev_usbdev_rq_s, rem, 2)
         sub                     %R_TMP0,         %R_SIZE
-        st16e                   %R_TMP0,         %R_TRANSFER,     _offsetof(dev_usbdev_request_s, rem, 2)
+        st16e                   %R_TMP0,         %R_TRANSFER,     _offsetof(dev_usbdev_rq_s, rem, 2)
         ret                     %R_LINK
 
 /*---------------------------------------------------------------------------*/

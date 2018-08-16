@@ -25,7 +25,7 @@
 
 struct usbdev_test_info_s
 {
-  struct dev_usbdev_request_s tr;
+  struct dev_usbdev_rq_s tr;
   const struct usb_endpoint_descriptor_s * edesc;
   uint32_t last;
   uint16_t base;
@@ -34,7 +34,7 @@ struct usbdev_test_info_s
   char * desc;
 };
 
-STRUCT_INHERIT(usbdev_test_info_s, dev_usbdev_request_s, tr);
+STRUCT_INHERIT(usbdev_test_info_s, dev_usbdev_rq_s, tr);
 
 struct usbdev_test_service_s
 {
@@ -118,7 +118,7 @@ static bool_t lfsr_data_check(uint8_t *data, size_t len, uint32_t *sd)
 static void usbdev_service_start_transfer(struct usbdev_test_service_s *pv,
                                           struct usbdev_test_info_s * info)
 {
-  struct dev_usbdev_request_s *tr = &info->tr;
+  struct dev_usbdev_rq_s *tr = &info->tr;
   /* Push transfer to stack */
   error_t err = usbdev_stack_transfer(&pv->usb, &pv->service, tr, info->edesc);
 
@@ -156,7 +156,7 @@ static void usbdev_service_test_write(struct usbdev_test_service_s *pv,
 
   lfsr_data(info->buffer, info->base, &info->last); 
 
-  struct dev_usbdev_request_s *tr = &info->tr;
+  struct dev_usbdev_rq_s *tr = &info->tr;
 
   tr->size = info->base;
   tr->data = info->buffer;
@@ -175,7 +175,7 @@ static void usbdev_service_test_write(struct usbdev_test_service_s *pv,
 static void usbdev_service_test_read(struct usbdev_test_service_s *pv,
                                      struct usbdev_test_info_s * info)
 {
-  struct dev_usbdev_request_s *tr = &info->tr;
+  struct dev_usbdev_rq_s *tr = &info->tr;
 
   info->base = info->max;
 
@@ -188,7 +188,7 @@ static void usbdev_service_test_read(struct usbdev_test_service_s *pv,
 
 static KROUTINE_EXEC(usbdev_service_test_write_cb)
 {
-  struct dev_usbdev_request_s *tr = KROUTINE_CONTAINER(kr, *tr, base.kr);
+  struct dev_usbdev_rq_s *tr = KROUTINE_CONTAINER(kr, *tr, base.kr);
   struct usbdev_test_info_s * info = usbdev_test_info_s_cast(tr);
   struct usbdev_test_service_s *pv = tr->base.pvdata;
 
@@ -240,7 +240,7 @@ static KROUTINE_EXEC(usbdev_service_test_write_cb)
 
 static KROUTINE_EXEC(usbdev_service_test_read_cb)
 {
-  struct dev_usbdev_request_s *tr = KROUTINE_CONTAINER(kr, *tr, base.kr);
+  struct dev_usbdev_rq_s *tr = KROUTINE_CONTAINER(kr, *tr, base.kr);
   struct usbdev_test_info_s * info = usbdev_test_info_s_cast(tr);
   struct usbdev_test_service_s *pv = tr->base.pvdata;
 
@@ -302,7 +302,7 @@ static void usbdev_test_service_disconnect(struct usbdev_test_service_s *pv)
 #if USBDEV_SERV_TEST_CONTROL_N_ENDPOINT
 static KROUTINE_EXEC(usbdev_test_ctrl_n_cb)
 {
-  struct dev_usbdev_request_s *tr = KROUTINE_CONTAINER(kr, *tr, base.kr);
+  struct dev_usbdev_rq_s *tr = KROUTINE_CONTAINER(kr, *tr, base.kr);
   struct usbdev_test_info_s * info = usbdev_test_info_s_cast(tr);
   struct usbdev_test_service_s *pv = tr->base.pvdata;
   uint16_t done;
@@ -656,7 +656,7 @@ void app_start()
   ensure(!(DEVICE_OP(&clock, app_configid_set, 3)));
 #endif
 
-  struct dev_usbdev_request_s *tr;
+  struct dev_usbdev_rq_s *tr;
 
 #if USBDEV_SERV_TEST_BULK_ENDPOINT
   pv.rbulk.buffer = usbdev_stack_allocate(&pv.usb, USBDEV_TEST_BULK_BUFFER_SIZE);

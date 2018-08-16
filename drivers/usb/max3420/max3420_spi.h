@@ -146,7 +146,7 @@ DRIVER_PV(struct max3420_usbdev_private_s
   dev_timer_delay_t bt;
   /* On-going transfer */
   struct dev_usbdev_config_s * cfg;
-  struct dev_usbdev_request_s *tr[MAX3420_EP_COUNT + 1];
+  struct dev_usbdev_rq_s *tr[MAX3420_EP_COUNT + 1];
   uint8_t mps[MAX3420_EP_COUNT + 1];
   /* USB device context */
   struct dev_usbdev_context_s usbdev_ctx;

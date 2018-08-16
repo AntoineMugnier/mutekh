@@ -38,8 +38,8 @@ struct synopsys_usbdev_private_s
   struct usbdev_endpoint_s epo[CONFIG_DRIVER_USB_SYNOPSYS_EP_COUNT];
   /* On-going transfer */
   struct dev_usbdev_config_s * cfg;
-  struct dev_usbdev_request_s *tri[CONFIG_DRIVER_USB_SYNOPSYS_EP_COUNT + 1];
-  struct dev_usbdev_request_s *tro[CONFIG_DRIVER_USB_SYNOPSYS_EP_COUNT + 1];
+  struct dev_usbdev_rq_s *tri[CONFIG_DRIVER_USB_SYNOPSYS_EP_COUNT + 1];
+  struct dev_usbdev_rq_s *tro[CONFIG_DRIVER_USB_SYNOPSYS_EP_COUNT + 1];
   /* Disabling mask */
   uint8_t imask, omask;
   uint8_t event;
@@ -63,7 +63,7 @@ error_t synopsys_usbdev_config(struct device_s *dev,
                                struct dev_usbdev_config_s * cfg);
 
 error_t synopsys_usbdev_transfer(struct synopsys_usbdev_private_s *pv,
-                                 struct dev_usbdev_request_s * tr);
+                                 struct dev_usbdev_rq_s * tr);
 
 bool_t synopsys_usb_irq(struct synopsys_usbdev_private_s *pv);
 

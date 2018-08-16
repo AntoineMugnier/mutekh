@@ -64,7 +64,7 @@ static uint8_t max3420_usbdev_set_event(struct max3420_usbdev_private_s *pv)
 
 static void max3420_usbdev_process_ep0(struct max3420_usbdev_private_s *pv)
 {
-  struct dev_usbdev_request_s * tr = pv->tr[0];
+  struct dev_usbdev_rq_s * tr = pv->tr[0];
   struct dev_spi_ctrl_bytecode_rq_s *srq = &pv->spi_rq;
 
   assert(tr);
@@ -126,7 +126,7 @@ static void max3420_usbdev_process_ep0(struct max3420_usbdev_private_s *pv)
 
 static void max3420_usbdev_process_epn(struct max3420_usbdev_private_s *pv, uint8_t index)
 {
-  struct dev_usbdev_request_s * tr = pv->tr[index];
+  struct dev_usbdev_rq_s * tr = pv->tr[index];
 
   assert(tr);
 
@@ -422,7 +422,7 @@ static DEV_IRQ_SRC_PROCESS(max3420_irq_source_process)
 static void max3420_usbdev_tr_done(struct device_s *dev)
 {
   struct max3420_usbdev_private_s *pv = dev->drv_pv;
-  struct dev_usbdev_request_s * tr;
+  struct dev_usbdev_rq_s * tr;
 
   uint8_t msk = pv->done & MAX3420_EP_MASK;
 
@@ -446,7 +446,7 @@ static void max3420_usbdev_tr_done(struct device_s *dev)
 static void max3420_usbdev_config_done(struct device_s *dev)
 {
   struct max3420_usbdev_private_s *pv = dev->drv_pv;
-  struct dev_usbdev_request_s * tr;
+  struct dev_usbdev_rq_s * tr;
 
   switch (pv->cfg->type)
     {
@@ -489,7 +489,7 @@ static error_t max3420_usbdev_clean(struct device_s *dev)
 
 static void max3420_usbdev_raise_event(struct max3420_usbdev_private_s *pv)
 {
-  struct dev_usbdev_request_s * tr = pv->tr[0];
+  struct dev_usbdev_rq_s * tr = pv->tr[0];
 
   if (tr)
   /* Terminate on-going transfer */

@@ -43,9 +43,9 @@ DRIVER_PV(struct pic32_usbdev_private_s
   /* Transfers */
   uint16_t sout[CONFIG_DRIVER_PIC32_USBDEV_EP_COUNT + 1];
   uint16_t sin[CONFIG_DRIVER_PIC32_USBDEV_EP_COUNT + 1];
-  struct dev_usbdev_request_s *tr0;
-  struct dev_usbdev_request_s *tri[CONFIG_DRIVER_PIC32_USBDEV_EP_COUNT];
-  struct dev_usbdev_request_s *tro[CONFIG_DRIVER_PIC32_USBDEV_EP_COUNT];
+  struct dev_usbdev_rq_s *tr0;
+  struct dev_usbdev_rq_s *tri[CONFIG_DRIVER_PIC32_USBDEV_EP_COUNT];
+  struct dev_usbdev_rq_s *tro[CONFIG_DRIVER_PIC32_USBDEV_EP_COUNT];
   /* Dma busy mask */
   uint8_t dma_busy;
   uint8_t event;
@@ -215,8 +215,8 @@ static error_t pic32_usbdev_configure(struct pic32_usbdev_private_s *pv,
 
 static void pic32_usbdev_transfer_done(struct pic32_usbdev_private_s *pv, uint8_t idx, bool_t in)
 {
-  struct dev_usbdev_request_s **tra;
-  struct dev_usbdev_request_s *tr;
+  struct dev_usbdev_rq_s **tra;
+  struct dev_usbdev_rq_s *tr;
   
   tra = idx ? (in ? &pv->tri[idx - 1] : &pv->tro[idx - 1]) : &pv->tr0;
   tr = *tra;
@@ -227,7 +227,7 @@ static void pic32_usbdev_transfer_done(struct pic32_usbdev_private_s *pv, uint8_
 
 static void pic32_usbdev_unconfigure(struct pic32_usbdev_private_s *pv)
 {
-  struct dev_usbdev_request_s * tr;
+  struct dev_usbdev_rq_s * tr;
 
   for (uint8_t i = 0; i < CONFIG_DRIVER_PIC32_USBDEV_EP_COUNT; i++)
     {
@@ -292,7 +292,7 @@ static uint8_t pic32_usbdev_select_dma(struct pic32_usbdev_private_s *pv)
 }
 
 static void pic32_usbdev_dma_start(struct pic32_usbdev_private_s *pv,
-                                   struct dev_usbdev_request_s *tr,
+                                   struct dev_usbdev_rq_s *tr,
                                    size_t size, uint8_t dma_idx)
 {
   /* Retrieve physical address */
@@ -319,7 +319,7 @@ static void pic32_usbdev_dma_start(struct pic32_usbdev_private_s *pv,
   pv->dma_busy |= 1 << idx;
 }
 
-static error_t pic32_usbdev_read(struct pic32_usbdev_private_s *pv, struct dev_usbdev_request_s *tr);
+static error_t pic32_usbdev_read(struct pic32_usbdev_private_s *pv, struct dev_usbdev_rq_s *tr);
 
 static void pic32_usbdev_set_iecs0(struct pic32_usbdev_private_s *pv, uint32_t mask)
 {
@@ -328,7 +328,7 @@ static void pic32_usbdev_set_iecs0(struct pic32_usbdev_private_s *pv, uint32_t m
   cpu_mem_write_32(pv->addr + PIC32_USB_IECS0_ADDR, endian_le32(x));
 }
 
-static error_t pic32_usbdev_read_fifo_done(struct pic32_usbdev_private_s *pv, struct dev_usbdev_request_s *tr,
+static error_t pic32_usbdev_read_fifo_done(struct pic32_usbdev_private_s *pv, struct dev_usbdev_rq_s *tr,
                                            uint32_t size)
 {
   uint32_t x;
@@ -381,7 +381,7 @@ static error_t pic32_usbdev_read_fifo_done(struct pic32_usbdev_private_s *pv, st
   return -EAGAIN;
 }
 
-static error_t pic32_usbdev_read(struct pic32_usbdev_private_s *pv, struct dev_usbdev_request_s *tr)
+static error_t pic32_usbdev_read(struct pic32_usbdev_private_s *pv, struct dev_usbdev_rq_s *tr)
 {
   uint32_t size = endian_le32(cpu_mem_read_32(pv->addr + PIC32_USB_IECS2_ADDR));
   size = PIC32_USB_IECS2_RXCNT_GET(size);
@@ -410,7 +410,7 @@ static error_t pic32_usbdev_read(struct pic32_usbdev_private_s *pv, struct dev_u
 }
 
 static bool_t pic32_usbdev_data_in_done(struct pic32_usbdev_private_s *pv,
-                                        struct dev_usbdev_request_s *tr)
+                                        struct dev_usbdev_rq_s *tr)
 {
   bool_t ret = 0;
 
@@ -428,7 +428,7 @@ static bool_t pic32_usbdev_data_in_done(struct pic32_usbdev_private_s *pv,
 }
 
 static void pic32_usbdev_write_fifo_done(struct pic32_usbdev_private_s *pv,
-                                         struct dev_usbdev_request_s *tr)
+                                         struct dev_usbdev_rq_s *tr)
 {
   assert(tr != NULL);
   assert(tr->type == DEV_USBDEV_PARTIAL_DATA_IN ||
@@ -453,7 +453,7 @@ static DEV_IRQ_SRC_PROCESS(pic32_usb_dma_irq)
 {
   struct device_s *dev = ep->base.dev;
   struct pic32_usbdev_private_s *pv = dev->drv_pv;
-  struct dev_usbdev_request_s *tr;
+  struct dev_usbdev_rq_s *tr;
 
   lock_spin(&dev->lock);
 
@@ -504,7 +504,7 @@ static DEV_IRQ_SRC_PROCESS(pic32_usb_dma_irq)
   lock_release(&dev->lock);
 }
 
-static void pic32_usbdev_send_data(struct pic32_usbdev_private_s *pv, struct dev_usbdev_request_s *tr)
+static void pic32_usbdev_send_data(struct pic32_usbdev_private_s *pv, struct dev_usbdev_rq_s *tr)
 {
   uint32_t size, trsize, x;
 
@@ -554,7 +554,7 @@ static DEV_USBDEV_REQUEST(pic32_usbdev_transfer)
 {
   struct device_s *dev = ctx->dev;
   struct pic32_usbdev_private_s *pv = dev->drv_pv;
-  struct dev_usbdev_request_s **tra;
+  struct dev_usbdev_rq_s **tra;
 
   error_t err = -EAGAIN;
 
@@ -665,7 +665,7 @@ static void pic32_usb_reset_device(struct device_s *dev)
 
 static void pic32_usbdev_data_in_end(struct pic32_usbdev_private_s *pv, uint8_t idx)
 {
-  struct dev_usbdev_request_s *tr = idx ? pv->tri[idx - 1] : pv->tr0;
+  struct dev_usbdev_rq_s *tr = idx ? pv->tri[idx - 1] : pv->tr0;
 
   if (tr == NULL)
     return;
@@ -716,7 +716,7 @@ done:
 static void pic32_usbdev_status(struct pic32_usbdev_private_s *pv)
 /* Status has been sent */
 {
-  struct dev_usbdev_request_s *tr = pv->tr0;
+  struct dev_usbdev_rq_s *tr = pv->tr0;
 
   pv->pstatus = 1;
 
@@ -749,7 +749,7 @@ static void pic32_usbdev_epin_irq(struct pic32_usbdev_private_s *pv, uint8_t idx
 
   /* Endpoint 0 IN/OUT interrupt */
 
-  struct dev_usbdev_request_s *tr = pv->tr0;
+  struct dev_usbdev_rq_s *tr = pv->tr0;
   uint32_t irq = endian_le32(cpu_mem_read_32(pv->addr + PIC32_USB_IECS0_ADDR));
   
   if (irq & PIC32_USB_IECS0_SETUPEND) 
@@ -804,7 +804,7 @@ static void pic32_usbdev_epout_irq(struct pic32_usbdev_private_s *pv, uint8_t id
 
   pv->prx |= 1 << idx;
 
-  struct dev_usbdev_request_s *tr = pv->tro[idx - 1];
+  struct dev_usbdev_rq_s *tr = pv->tro[idx - 1];
 
   if (tr)
     {
@@ -827,7 +827,7 @@ static void pic32_usbdev_epout_irq(struct pic32_usbdev_private_s *pv, uint8_t id
 
 static void pic32_usbdev_stack_event(struct pic32_usbdev_private_s *pv)
 {
-  struct dev_usbdev_request_s *tr = pv->tr0;
+  struct dev_usbdev_rq_s *tr = pv->tr0;
 
   if (tr == NULL)
     return;

@@ -209,8 +209,8 @@ struct ecm_private_s
 
   struct kroutine_sequence_s seq;
   struct usbdev_service_rq_s rq;
-  struct dev_usbdev_request_s tx_rq;
-  struct dev_usbdev_request_s rx_rq;
+  struct dev_usbdev_rq_s tx_rq;
+  struct dev_usbdev_rq_s rx_rq;
   uint8_t * tx_buffer;
   uint8_t * rx_buffer;
 
@@ -362,7 +362,7 @@ void ecm_usb_link_notify(struct ecm_private_s *pv, bool_t up)
 
 static KROUTINE_EXEC(ecm_bulk_in_done)
 {
-  struct dev_usbdev_request_s *tx_rq =  KROUTINE_CONTAINER(kr, *tx_rq, base.kr);
+  struct dev_usbdev_rq_s *tx_rq =  KROUTINE_CONTAINER(kr, *tx_rq, base.kr);
   struct ecm_private_s *pv = ecm_private_s_from_tx_rq(tx_rq);
 
   if (pv->tx_rq.error && pv->tx_current) {
@@ -375,7 +375,7 @@ static KROUTINE_EXEC(ecm_bulk_in_done)
 
 static KROUTINE_EXEC(ecm_bulk_out_done)
 {
-  struct dev_usbdev_request_s *rx_rq =  KROUTINE_CONTAINER(kr, *rx_rq, base.kr);
+  struct dev_usbdev_rq_s *rx_rq =  KROUTINE_CONTAINER(kr, *rx_rq, base.kr);
   struct ecm_private_s *pv = ecm_private_s_from_rx_rq(rx_rq);
   struct net_task_s *task;
   struct net_addr_s src, dst;

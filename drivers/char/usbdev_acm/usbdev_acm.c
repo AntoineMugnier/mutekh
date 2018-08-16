@@ -216,10 +216,10 @@ struct usbdev_acm_private_s
 
   struct usbdev_cdc_line_coding_s coding;
 
-  struct dev_usbdev_request_s wtr;
+  struct dev_usbdev_rq_s wtr;
   uint8_t *wbuffer;
 
-  struct dev_usbdev_request_s rtr;
+  struct dev_usbdev_rq_s rtr;
   uint8_t *rbuffer;
 
   bool_t read_started;
@@ -313,7 +313,7 @@ static
 void usbdev_service_try_read(struct device_s *dev)
 {
   struct usbdev_acm_private_s *pv = dev->drv_pv;
-  struct dev_usbdev_request_s *tr = &pv->rtr;
+  struct dev_usbdev_rq_s *tr = &pv->rtr;
   struct dev_char_rq_s *rq;
 
   while(1)
@@ -356,7 +356,7 @@ static
 void usbdev_service_try_write(struct device_s *dev)
 {
   struct usbdev_acm_private_s *pv = dev->drv_pv;
-  struct dev_usbdev_request_s *tr = &pv->wtr;
+  struct dev_usbdev_rq_s *tr = &pv->wtr;
 
   uint8_t * p = tr->data = pv->wbuffer;
 
@@ -399,7 +399,7 @@ void usbdev_service_try_write(struct device_s *dev)
 static
 KROUTINE_EXEC(usbdev_acm_write_cb)
 {
-  struct dev_usbdev_request_s *tr = KROUTINE_CONTAINER(kr, *tr, base.kr);
+  struct dev_usbdev_rq_s *tr = KROUTINE_CONTAINER(kr, *tr, base.kr);
   struct device_s *dev = tr->base.pvdata;
 
   LOCK_SPIN_IRQ_SCOPED(&dev->lock);
@@ -428,7 +428,7 @@ KROUTINE_EXEC(usbdev_acm_write_cb)
 static
 KROUTINE_EXEC(usbdev_acm_read_cb)
 {
-  struct dev_usbdev_request_s *tr = KROUTINE_CONTAINER(kr, *tr, base.kr);
+  struct dev_usbdev_rq_s *tr = KROUTINE_CONTAINER(kr, *tr, base.kr);
   struct device_s *dev = tr->base.pvdata;
   struct usbdev_acm_private_s *pv = dev->drv_pv;
 
@@ -451,7 +451,7 @@ static
 void usbdev_service_char_write(struct device_s *dev, bool_t flush)
 {
   struct usbdev_acm_private_s *pv = dev->drv_pv;
-  struct dev_usbdev_request_s *tr = &pv->wtr;
+  struct dev_usbdev_rq_s *tr = &pv->wtr;
 
 
   tr->type = DEV_USBDEV_DATA_IN;
@@ -477,7 +477,7 @@ static
 void usbdev_service_char_read(struct device_s *dev)
 {
   struct usbdev_acm_private_s *pv = dev->drv_pv;
-  struct dev_usbdev_request_s *tr = &pv->rtr;
+  struct dev_usbdev_rq_s *tr = &pv->rtr;
 
   tr->size = USBDEV_SERV_CHAR_BUFFER_SIZE;
   tr->type = DEV_USBDEV_DATA_OUT;

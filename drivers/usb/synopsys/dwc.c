@@ -279,10 +279,10 @@ static void synopsys_usbdev_set_flag(struct synopsys_usbdev_private_s *pv, bool_
 }
 
 static bool_t synopsys_usbedv_is_ctrl_ep(struct synopsys_usbdev_private_s *pv,
-                                      struct dev_usbdev_request_s * tr);
+                                      struct dev_usbdev_rq_s * tr);
 
 static void synopsys_usbdev_get_in_tsize(struct synopsys_usbdev_private_s *pv,
-                                      struct dev_usbdev_request_s *tr,
+                                      struct dev_usbdev_rq_s *tr,
                                       size_t *size, size_t *pktcnt)
 {
   if (tr->type == DEV_USBDEV_CTRL_STATUS_IN)
@@ -313,7 +313,7 @@ static void synopsys_usbdev_get_in_tsize(struct synopsys_usbdev_private_s *pv,
 }
 
 static void synopsys_usbdev_send_data(struct synopsys_usbdev_private_s *pv,
-                                   struct dev_usbdev_request_s *tr)
+                                   struct dev_usbdev_rq_s *tr)
 {
   uint32_t x, diepctl;
   uint32_t size, pcnt;
@@ -338,7 +338,7 @@ static void synopsys_usbdev_send_data(struct synopsys_usbdev_private_s *pv,
 }
 
 static void synopsys_usbdev_get_out_tsize(struct synopsys_usbdev_private_s *pv,
-                                       struct dev_usbdev_request_s *tr,
+                                       struct dev_usbdev_rq_s *tr,
                                        size_t *size, size_t *pktcnt)
 {
   *pktcnt = 1;
@@ -357,7 +357,7 @@ static void synopsys_usbdev_get_out_tsize(struct synopsys_usbdev_private_s *pv,
 }
 
 static void synopsys_usbdev_get_data(struct synopsys_usbdev_private_s *pv,
-                                     struct dev_usbdev_request_s *tr)
+                                     struct dev_usbdev_rq_s *tr)
 {
   uint32_t size, pcnt;
 
@@ -381,13 +381,13 @@ static void synopsys_usbdev_get_data(struct synopsys_usbdev_private_s *pv,
 }
 
 static bool_t synopsys_usbedv_is_ctrl_ep(struct synopsys_usbdev_private_s *pv,
-                                      struct dev_usbdev_request_s * tr)
+                                      struct dev_usbdev_rq_s * tr)
 {
   return ((pv->ctrl & (1 << tr->ep)) != 0);
 }
 
 static inline void synopsys_usbdev_end_in_transfer(struct synopsys_usbdev_private_s *pv,
-                                                struct dev_usbdev_request_s * tr)
+                                                struct dev_usbdev_rq_s * tr)
 {
   if (tr->type == DEV_USBDEV_CTRL_STATUS_IN)
     goto done;
@@ -424,7 +424,7 @@ done:
 }
 
 static inline void synopsys_usbdev_end_out_transfer(struct synopsys_usbdev_private_s *pv,
-                                                 struct dev_usbdev_request_s * tr)
+                                                 struct dev_usbdev_rq_s * tr)
 {
   if (tr->type == DEV_USBDEV_CTRL_SETUP ||
       tr->type == DEV_USBDEV_CTRL_STATUS_OUT)
@@ -469,7 +469,7 @@ done:
 
 void synopsys_usbdev_stack_event(struct synopsys_usbdev_private_s *pv)
 {
-  struct dev_usbdev_request_s *tr;
+  struct dev_usbdev_rq_s *tr;
 
   pv->pevent = 0;
 
@@ -492,7 +492,7 @@ void synopsys_usbdev_stack_event(struct synopsys_usbdev_private_s *pv)
 
 static void synopsys_usbdev_end_transfer(struct synopsys_usbdev_private_s *pv, bool_t cb) 
 {
-  struct dev_usbdev_request_s * tr;
+  struct dev_usbdev_rq_s * tr;
 
   /* Clear global out NAK interrupt */
   uint32_t x = cpu_mem_read_32(pv->addr + SYNOPSYS_USB_DCTL_ADDR);
@@ -698,7 +698,7 @@ done:
 
 void synopsys_usbdev_abort_ep0(struct synopsys_usbdev_private_s *pv)
 {
-  struct dev_usbdev_request_s *tr = pv->tro[0];
+  struct dev_usbdev_rq_s *tr = pv->tro[0];
 
   /* Terminate on-going transfer */
   if (tr && tr->type == DEV_USBDEV_EVENT)
@@ -765,7 +765,7 @@ error_t synopsys_usbdev_config(struct device_s *dev,
 }
 
 error_t synopsys_usbdev_transfer(struct synopsys_usbdev_private_s *pv, 
-                                 struct dev_usbdev_request_s * tr)
+                                 struct dev_usbdev_rq_s * tr)
 {
   //printk("R%d %d\n", tr->ep, tr->type);
   error_t err = -EAGAIN;
@@ -877,7 +877,7 @@ static void synopsys_usbdev_epin_irq(struct synopsys_usbdev_private_s *pv, uint8
 
   if (irq & (SYNOPSYS_USB_DIEPINT_TIMEOUT | SYNOPSYS_USB_DIEPINT_XFERCOMPL))
     {
-      struct dev_usbdev_request_s *tr;
+      struct dev_usbdev_rq_s *tr;
   
       tr = pv->tri[idx];
   
@@ -926,7 +926,7 @@ static void synopsys_usbdev_epout_irq(struct synopsys_usbdev_private_s *pv, uint
 
   if (irq & (SYNOPSYS_USB_DOEPINT_XFERCOMPL | SYNOPSYS_USB_DOEPINT_SETUP))
     {
-       struct dev_usbdev_request_s *tr;
+       struct dev_usbdev_rq_s *tr;
        
        tr = pv->tro[idx];
        
