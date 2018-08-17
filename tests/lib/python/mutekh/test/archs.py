@@ -74,7 +74,7 @@ efm32_wonder         = Config("efm32-stk3800",                          _efm32_e
 
 _efm32_efrxg1_features      = _arm32m_features + ["arch:efm32", "spi", "timer", "char", "gpio", "minimal"]
 
-efm32_efrxg1         = Config("efr32-stk6066a-fg1p132-f256-gm48",       _efm32_efrxg1_features)
+efm32_efrxg1         = Config("efr32-stk6000b",                         _efm32_efrxg1_features)
 
 ##################################################
 # Nordic nrf5x
