@@ -110,7 +110,7 @@ static DEV_CHAR_REQUEST(mydrv_uart_request)
       break;
     }
 
-  kroutine_exec(&rq->base.kr);
+  dev_char_rq_done(rq);
 }
 
 static DEV_CHAR_CANCEL(mydrv_uart_cancel)

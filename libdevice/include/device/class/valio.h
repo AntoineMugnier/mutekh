@@ -227,7 +227,7 @@ struct dev_valio_rq_s
     error_t error;
 };
 
-STRUCT_INHERIT(dev_valio_rq_s, dev_request_s, base);
+DEV_REQUEST_INHERIT(valio); DEV_REQUEST_QUEUE_OPS(valio);
 
 /** @see dev_valio_request_t */
 #define DEV_VALIO_REQUEST(n) void (n) (                             \

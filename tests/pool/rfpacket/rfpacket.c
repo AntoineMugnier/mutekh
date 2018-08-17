@@ -283,9 +283,9 @@ static KROUTINE_EXEC(rfp_test_tx_callback)
 #ifdef RFP_TEST_SLEEP
 static KROUTINE_EXEC(rfp_test_wait_before_push_cb)
 {
-  struct dev_timer_rq_s *trq = KROUTINE_CONTAINER(kr, *trq, rq.kr);
+  struct dev_timer_rq_s *trq = KROUTINE_CONTAINER(kr, *trq, base.kr);
   struct rfp_test_rq_s *base = rfp_test_rq_s_from_trq(trq);
-  rfp_test_push_random_req(trq->rq.pvdata, &base->rq);
+  rfp_test_push_random_req(trq->base.pvdata, &base->rq);
 }
 
 static void rfp_test_wait_before_push(struct rfp_test_pv_s *pv, struct dev_rfpacket_rq_s *rq)
@@ -295,16 +295,16 @@ static void rfp_test_wait_before_push(struct rfp_test_pv_s *pv, struct dev_rfpac
 
   trq->delay = pv->base_time * 256;
   trq->rev = 0;
-  trq->rq.pvdata = pv;
+  trq->base.pvdata = pv;
 
-  kroutine_init_deferred(&trq->rq.kr, rfp_test_wait_before_push_cb);
+  dev_timer_rq_init(trq, rfp_test_wait_before_push_cb);
 
   error_t err = DEVICE_OP(&pv->timer, request, trq);
 
   switch (err)
     {
     case -ETIMEDOUT:
-      kroutine_exec(&trq->rq.kr);
+      kroutine_exec(&trq->base.kr);
     case 0:
     default:
       break;
@@ -341,7 +341,7 @@ static void rfp_test_push_random_req(struct rfp_test_pv_s *pv, struct dev_rfpack
 #ifdef RFP_TEST_RX_CONTINOUS
       /* Cancel RX continous */
       if (pv->rx_cont && DEVICE_OP(&pv->rfp, cancel, pv->rx_cont) == 0)
-        kroutine_exec(&pv->rx_cont->base.kr);
+        dev_rfpacket_rq_done(pv->rx_cont);
 #endif
     case 4 ... 7:
 #ifdef RFP_TEST_TX_FAIR
@@ -375,11 +375,11 @@ static void rfp_test_push_random_req(struct rfp_test_pv_s *pv, struct dev_rfpack
 #ifdef RFP_TEST_TX_FAIR
     case DEV_RFPACKET_RQ_TX_FAIR:
 #endif
-      kroutine_init_deferred(&rq->base.kr, &rfp_test_tx_callback);
+      dev_rfpacket_rq_init(rq, &rfp_test_tx_callback);
       break;
     case DEV_RFPACKET_RQ_RX:
     case DEV_RFPACKET_RQ_RX_CONT:
-      kroutine_init_deferred(&rq->base.kr, &rfp_test_rx_callback);
+      dev_rfpacket_rq_init(rq, &rfp_test_rx_callback);
       break;
     }
 

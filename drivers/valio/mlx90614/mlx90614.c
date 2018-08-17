@@ -135,8 +135,8 @@ void mlx90614_temperature_update(struct device_s *dev, enum mlx90614_channel_e c
         GCT_FOREACH_CONTINUE;
 
       temp->temperature = value;
-      dev_request_queue_remove(&pv->queue, &rq->base);
-      kroutine_exec(&rq->base.kr);
+      dev_valio_rq_remove(&pv->queue, rq);
+      dev_valio_rq_done(rq);
     });
 }
 
@@ -151,21 +151,21 @@ DEV_VALIO_REQUEST(mlx90614_request)
 
   if (pv->state == MLX90614_UNINITIALIZED) {
     req->error = -EAGAIN;
-    kroutine_exec(&req->base.kr);
+    dev_valio_rq_done(req);
     return;
   }
 
   if (req->type == DEVICE_VALIO_WRITE
       || req->attribute != VALIO_TEMPERATURE_VALUE) {
     req->error = -ENOTSUP;
-    kroutine_exec(&req->base.kr);
+    dev_valio_rq_done(req);
     return;
   }
 
   LOCK_SPIN_IRQ(&dev->lock);
   req->error = 0;
   req->base.drvdata = (void *)(uintptr_t)accessor->number;
-  dev_request_queue_pushback(&pv->queue, &req->base);
+  dev_valio_rq_pushback(&pv->queue, req);
 
   if (req->type == DEVICE_VALIO_READ)
     mlx90614_read(dev);
@@ -189,7 +189,7 @@ DEV_VALIO_CANCEL(mlx90614_cancel)
       if (rq != req)
         GCT_FOREACH_CONTINUE;
 
-      dev_request_queue_remove(&pv->queue, &rq->base);
+      dev_valio_rq_remove(&pv->queue, rq);
       err = 0;
       GCT_FOREACH_BREAK;
     });
@@ -274,7 +274,7 @@ KROUTINE_EXEC(mlx90614_i2c_done)
 static
 KROUTINE_EXEC(mlx90614_timer_done)
 {
-  struct mlx90614_context_s *pv = KROUTINE_CONTAINER(kr, *pv, timer_rq.rq.kr);
+  struct mlx90614_context_s *pv = KROUTINE_CONTAINER(kr, *pv, timer_rq.base.kr);
   struct device_s *dev = pv->i2c_rq.base.base.pvdata;
 
   LOCK_SPIN_IRQ(&dev->lock);
@@ -283,7 +283,7 @@ KROUTINE_EXEC(mlx90614_timer_done)
 
   if (pv->state == MLX90614_WAITING) {
     pv->state = MLX90614_IDLE;
-    if (!dev_request_queue_isempty(&pv->queue))
+    if (!dev_rq_queue_isempty(&pv->queue))
       mlx90614_read(dev);
   }
 
@@ -304,7 +304,7 @@ static DEV_INIT(mlx90614_init)
 
   dev->drv_pv = pv;
 
-  dev_request_queue_init(&pv->queue);
+  dev_rq_queue_init(&pv->queue);
 
   err = device_get_param_uint(dev, "period", &period);
   if (err)
@@ -325,10 +325,10 @@ static DEV_INIT(mlx90614_init)
   dev_timer_init_sec(pv->timer, &pv->timer_rq.delay, 0, period, 1000);
 
   pv->i2c_rq.base.base.pvdata = dev;
-  pv->timer_rq.rq.pvdata = dev;
+  pv->timer_rq.base.pvdata = dev;
 
-  kroutine_init_deferred(&pv->i2c_rq.base.base.kr, mlx90614_i2c_done);
-  kroutine_init_deferred(&pv->timer_rq.rq.kr, mlx90614_timer_done);
+  dev_i2c_ctrl_rq_init(&pv->i2c_rq.base, mlx90614_i2c_done);
+  dev_timer_rq_init(&pv->timer_rq, mlx90614_timer_done);
 
   dev_i2c_bytecode_start(&pv->i2c, &pv->i2c_rq, &mlx90614_discover,
                          MLX90614_DISCOVER_BCARGS());
@@ -344,12 +344,12 @@ static DEV_CLEANUP(mlx90614_cleanup)
 {
   struct mlx90614_context_s *pv = dev->drv_pv;
 
-  if (!dev_request_queue_isempty(&pv->queue)
+  if (!dev_rq_queue_isempty(&pv->queue)
       || pv->state != MLX90614_IDLE)
     return -EBUSY;
 
   dev_drv_i2c_bytecode_cleanup(&pv->i2c, &pv->i2c_rq);
-  dev_request_queue_destroy(&pv->queue);
+  dev_rq_queue_destroy(&pv->queue);
 
   mem_free(pv);
 

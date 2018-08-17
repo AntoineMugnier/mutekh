@@ -126,7 +126,7 @@ static DEV_MEM_REQUEST(efm32_msc_request)
       UNREACHABLE();
     }
 
-  kroutine_exec(&rq->base.kr);
+  dev_mem_rq_done(rq);
 }
 
 static DEV_USE(efm32_msc_use)

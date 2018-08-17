@@ -57,7 +57,7 @@ static void cc26xx_uart_try_read(struct device_s *dev)
   struct cc26xx_uart_context_s  *pv = dev->drv_pv;
   struct dev_char_rq_s          *rq;
 
-  while ((rq = dev_char_rq_s_cast(dev_request_queue_head(&pv->read_q))))
+  while ((rq = dev_char_rq_head(&pv->read_q)))
     {
       size_t size = 0;
 
@@ -82,8 +82,8 @@ static void cc26xx_uart_try_read(struct device_s *dev)
 
           if (rq->type == _DEV_CHAR_PARTIAL || rq->size == 0)
             {
-              dev_request_queue_pop(&pv->read_q);
-              kroutine_exec(&rq->base.kr);
+              dev_char_rq_pop(&pv->read_q);
+              dev_char_rq_done(rq);
               continue;
             }
         }
@@ -138,7 +138,7 @@ static void cc26xx_uart_try_write(struct device_s *dev)
 
   while (1)
     {
-      rq = dev_char_rq_s_cast(dev_request_queue_head(&pv->write_q));
+      rq = dev_char_rq_head(&pv->write_q);
       if (rq == NULL)
         {
           pv->write_started = 0;
@@ -183,8 +183,8 @@ static void cc26xx_uart_try_write(struct device_s *dev)
 
         if (rq->type == _DEV_CHAR_PARTIAL || rq->size == 0)
           {
-            dev_request_queue_pop(&pv->write_q);
-            kroutine_exec(&rq->base.kr);
+            dev_char_rq_pop(&pv->write_q);
+            dev_char_rq_done(rq);
             continue;
           }
       }
@@ -227,7 +227,7 @@ static DEV_CHAR_REQUEST(cc26xx_uart_request)
       case DEV_CHAR_READ_PARTIAL:
       case DEV_CHAR_READ:
         {
-          dev_request_queue_pushback(&pv->read_q, dev_char_rq_s_base(rq));
+          dev_char_rq_pushback(&pv->read_q, rq);
 
 #ifdef CONFIG_DEVICE_IRQ
           /* Enable RX timeout IRQ */
@@ -249,7 +249,7 @@ static DEV_CHAR_REQUEST(cc26xx_uart_request)
       case DEV_CHAR_WRITE_PARTIAL:
       case DEV_CHAR_WRITE:
         {
-          dev_request_queue_pushback(&pv->write_q, dev_char_rq_s_base(rq));
+          dev_char_rq_pushback(&pv->write_q, rq);
           if (!pv->write_started)
             {
               pv->write_started = 1;
@@ -266,7 +266,7 @@ static DEV_CHAR_REQUEST(cc26xx_uart_request)
   if (err)
     {
       rq->error = err;
-      kroutine_exec(&rq->base.kr);
+      dev_char_rq_done(rq);
     }
 }
 
@@ -375,8 +375,8 @@ static DEV_INIT(cc26xx_uart_init)
   //disable the uart
   cpu_mem_write_32(CC26XX_UART0_BASE + CC26XX_UART_CTL_ADDR, 0);
 
-  dev_request_queue_init(&pv->read_q);
-  dev_request_queue_init(&pv->write_q);
+  dev_rq_queue_init(&pv->read_q);
+  dev_rq_queue_init(&pv->write_q);
 
 #if CONFIG_DRIVER_CHAR_CC26XX_UART_SWFIFO > 0
   uart_fifo_init(&pv->read_fifo);
@@ -442,8 +442,8 @@ static DEV_INIT(cc26xx_uart_init)
   uart_fifo_destroy(&pv->write_fifo);
   uart_fifo_destroy(&pv->read_fifo);
 # endif
-  dev_request_queue_destroy(&pv->read_q);
-  dev_request_queue_destroy(&pv->write_q);
+  dev_rq_queue_destroy(&pv->read_q);
+  dev_rq_queue_destroy(&pv->write_q);
 #endif
  err_mem:
   mem_free(pv);
@@ -473,8 +473,8 @@ static DEV_CLEANUP(cc26xx_uart_cleanup)
   uart_fifo_destroy(&pv->read_fifo);
 #endif
 
-  dev_request_queue_destroy(&pv->read_q);
-  dev_request_queue_destroy(&pv->write_q);
+  dev_rq_queue_destroy(&pv->read_q);
+  dev_rq_queue_destroy(&pv->write_q);
 
   device_iomux_cleanup(dev);
   mem_free(pv);

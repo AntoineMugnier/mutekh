@@ -108,7 +108,7 @@ static DEV_IRQ_SRC_PROCESS(nrf52_pdm_irq)
       nrf_task_trigger(PDM_ADDR, NRF_PDM_STOP);
     }
 
-    kroutine_exec(&rq->base.kr);
+    dev_pcm_rq_done(rq);
   }
 
   if (nrf_event_check(PDM_ADDR, NRF_PDM_STOPPED)) {

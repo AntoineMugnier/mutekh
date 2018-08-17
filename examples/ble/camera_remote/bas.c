@@ -25,7 +25,7 @@ static void batt_schedule_next(struct batt_s *batt)
 
 static KROUTINE_EXEC(batt_sample)
 {
-  struct batt_s *batt = KROUTINE_CONTAINER(kr, *batt, waiter.rq.kr);
+  struct batt_s *batt = KROUTINE_CONTAINER(kr, *batt, waiter.base.kr);
 
   dprintk("%s %d\n", __FUNCTION__, batt->adc_busy);
 
@@ -116,8 +116,8 @@ error_t bas_register(struct batt_s *batt,
 {
   memset(batt, 0, sizeof(*batt));
 
-  kroutine_init_sched_switch(&batt->waiter.rq.kr, batt_sample);
-  kroutine_init_sched_switch(&batt->adc_req.base.kr, batt_adc_done);
+  dev_timer_rq_init(&batt->waiter, batt_sample);
+  dev_valio_rq_init(&batt->adc_req, batt_adc_done);
 
   if (device_get_accessor_by_path(&batt->timer.base, NULL, "/rtc1", DRIVER_CLASS_TIMER))
     return -ENOENT;
@@ -132,7 +132,7 @@ error_t bas_register(struct batt_s *batt,
 
   dev_timer_init_sec(&batt->timer, &batt->interval, NULL, 30, 1);
 
-  kroutine_exec(&batt->waiter.rq.kr);
+  kroutine_exec(&batt->waiter.base.kr);
 
   return ble_gattdb_service_register(&batt->dbs, db, &batt_service);
 }

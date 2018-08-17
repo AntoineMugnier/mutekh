@@ -38,7 +38,7 @@
 
 const char dev_timer_capabilities_e[] = ENUM_DESC_DEV_TIMER_CAPABILITIES_E;
 
-GCT_CONTAINER_KEY_PROTOTYPES(dev_request_pqueue, extern inline, dev_timer_pqueue, dev_timer_pqueue,
+GCT_CONTAINER_KEY_PROTOTYPES(dev_request_pqueue, extern inline, __dev_timer_pqueue, dev_timer_pqueue,
                              remove, insert);
 
 extern inline error_t dev_timer_frac(struct device_timer_s *accessor,

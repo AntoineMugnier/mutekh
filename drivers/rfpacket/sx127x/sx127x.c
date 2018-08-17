@@ -612,7 +612,7 @@ static inline void sx127x_rfp_process_group(struct sx127x_private_s *pv, bool_t 
 
   while (1)
   {
-    rq = dev_rfpacket_rq_s_cast(dev_request_queue_head(&pv->queue));
+    rq = dev_rfpacket_rq_head(&pv->queue);
 
     if (!rq || rq->err_group != group)
       break;
@@ -622,8 +622,8 @@ static inline void sx127x_rfp_process_group(struct sx127x_private_s *pv, bool_t 
     rq->err = -ECANCELED;
     rq->base.drvdata = NULL;
 
-    dev_request_queue_pop(&pv->queue);
-    kroutine_exec(&rq->base.kr);
+    dev_rfpacket_rq_pop(&pv->queue);
+    dev_rfpacket_rq_done(rq);
   }
 }
 /* This compute the next frequency that will be used for channel scanning */
@@ -661,7 +661,7 @@ BC_CCALL_FUNCTION(sx127x_alloc)
   switch (pv->state)
   {
     case SX127X_STATE_RX:
-      rq = dev_rfpacket_rq_s_cast(dev_request_queue_head(&pv->queue));
+      rq = dev_rfpacket_rq_head(&pv->queue);
       break;
     case SX127X_STATE_RXC:
     case SX127X_STATE_RX_SCANNING:
@@ -763,7 +763,7 @@ static void sx127x_rfp_end_rxrq(struct sx127x_private_s *pv, bool_t err, size_t 
 #ifdef CONFIG_DRIVER_RFPACKET_SX127X_RAW_MODE
       case SX127X_STATE_RX_RAW:
       case SX127X_STATE_RX_RAW_PENDING_STOP:
-        rq = dev_rfpacket_rq_s_cast(dev_request_queue_head(&pv->queue));
+        rq = dev_rfpacket_rq_head(&pv->queue);
         break;
       case SX127X_STATE_RXC_RAW:
       case SX127X_STATE_RXC_RAW_PENDING_STOP:
@@ -771,7 +771,7 @@ static void sx127x_rfp_end_rxrq(struct sx127x_private_s *pv, bool_t err, size_t 
         break;
 #endif
       case SX127X_STATE_RX:
-        rq = dev_rfpacket_rq_s_cast(dev_request_queue_head(&pv->queue));
+        rq = dev_rfpacket_rq_head(&pv->queue);
         break;
       case SX127X_STATE_RXC_STOP:
       case SX127X_STATE_RXC:
@@ -803,7 +803,7 @@ static void sx127x_rfp_end_rxrq(struct sx127x_private_s *pv, bool_t err, size_t 
 
 static inline void sx127x_start_tx_raw(struct sx127x_private_s *pv)
 {
-  struct dev_rfpacket_rq_s *rq = dev_rfpacket_rq_s_cast(dev_request_queue_head(&pv->queue));
+  struct dev_rfpacket_rq_s *rq = dev_rfpacket_rq_head(&pv->queue);
 
   assert(pv->state == SX127X_STATE_IDLE);
   assert(rq->pk_cfg->format == DEV_RFPACKET_FMT_RAW);
@@ -857,7 +857,7 @@ static void sx127x_rx_raw_timeout(struct sx127x_private_s *pv)
 
 static KROUTINE_EXEC(sx127x_rx_raw_timeout_kr)
 {
-  struct dev_timer_rq_s *trq = KROUTINE_CONTAINER(kr, *trq, rq.kr);
+  struct dev_timer_rq_s *trq = KROUTINE_CONTAINER(kr, *trq, base.kr);
   struct sx127x_private_s *pv = sx127x_private_s_from_trq(trq);
 
   LOCK_SPIN_IRQ(&pv->dev->lock);
@@ -930,7 +930,7 @@ done:
 
 static void sx127x_start_tx_bitbang(struct sx127x_private_s *pv)
 {
-  struct dev_rfpacket_rq_s *rq = dev_rfpacket_rq_s_cast(dev_request_queue_head(&pv->queue));
+  struct dev_rfpacket_rq_s *rq = dev_rfpacket_rq_head(&pv->queue);
 
   assert(rq && (rq->pk_cfg->format == DEV_RFPACKET_FMT_RAW));
 
@@ -940,7 +940,7 @@ static void sx127x_start_tx_bitbang(struct sx127x_private_s *pv)
   pv->brq.count = rq->tx_size;
   pv->brq.symbols = (void *)rq->tx_buf;
 
-  kroutine_init_deferred(&pv->brq.base.kr, sx127x_bitbang_tx_done);
+  dev_bitbang_rq_init(&pv->brq, sx127x_bitbang_tx_done);
   DEVICE_OP(&pv->bitbang, request, &pv->brq);
 }
 
@@ -954,7 +954,7 @@ static void sx127x_start_rx_bitbang(struct sx127x_private_s *pv)
   pv->brq.count = rx->size;
   pv->brq.symbols = rx->buf;
 
-  kroutine_init_deferred(&pv->brq.base.kr, sx127x_bitbang_rx_done);
+  dev_bitbang_rq_init(&pv->brq, sx127x_bitbang_rx_done);
   DEVICE_OP(&pv->bitbang, request, &pv->brq);
 }
 
@@ -974,7 +974,7 @@ static void sx127x_rx_raw_startup(struct sx127x_private_s *pv)
       /* Timeout date is already reached */
       if (t >= pv->timeout)
         return sx127x_rx_raw_timeout(pv);
-      rq = dev_rfpacket_rq_s_cast(dev_request_queue_head(&pv->queue));
+      rq = dev_rfpacket_rq_head(&pv->queue);
       break;
     case SX127X_STATE_RXC_RAW_PENDING_STOP:
       sx127x_rfp_set_state(pv, SX127X_STATE_RXC_RAW_STOP);
@@ -1024,9 +1024,9 @@ static void sx127x_rx_raw_startup(struct sx127x_private_s *pv)
   trq->deadline = pv->timeout;
   trq->delay = 0;
   trq->rev = 0;
-  trq->rq.pvdata = pv;
+  trq->base.pvdata = pv;
 
-  kroutine_init_deferred(&trq->rq.kr, sx127x_rx_raw_timeout_kr);
+  dev_timer_rq_init(trq, sx127x_rx_raw_timeout_kr);
 
   error_t err = DEVICE_OP(pv->timer, request, trq);
 
@@ -1062,7 +1062,7 @@ static void sx127x_rx_raw_end(struct sx127x_private_s *pv)
       rq->err = 0;
       /* RX continuous cancelled or replaced */ 
       if (pv->next_rx_cont != pv->rx_cont)
-        kroutine_exec(&rq->base.kr);
+        dev_rfpacket_rq_done(rq);
       pv->rx_cont = pv->next_rx_cont;
       pv->next_rx_cont = NULL;
       return sx127x_rfp_idle(pv);
@@ -1129,7 +1129,7 @@ static void sx127x_retry_rx(struct sx127x_private_s *pv)
 {
   assert(pv->state == SX127X_STATE_RX);
 
-  struct dev_rfpacket_rq_s * rq = dev_rfpacket_rq_s_cast(dev_request_queue_head(&pv->queue));
+  struct dev_rfpacket_rq_s * rq = dev_rfpacket_rq_head(&pv->queue);
   pv->cancel = 0;
 
   assert(rq && rq->type == DEV_RFPACKET_RQ_RX);
@@ -1202,7 +1202,7 @@ static inline void sx127x_start_rx(struct sx127x_private_s *pv, struct dev_rfpac
 
 static void sx127x_start_tx(struct sx127x_private_s *pv)
 {
-  struct dev_rfpacket_rq_s *rq = dev_rfpacket_rq_s_cast(dev_request_queue_head(&pv->queue));
+  struct dev_rfpacket_rq_s *rq = dev_rfpacket_rq_head(&pv->queue);
 
   assert(rq);
   assert(pv->state == SX127X_STATE_IDLE);
@@ -1260,7 +1260,7 @@ static void sx127x_rfp_end_rxc(struct sx127x_private_s *pv, error_t err)
 
   if (pv->next_rx_cont != pv->rx_cont)
     {
-      kroutine_exec(&pv->rx_cont->base.kr);
+      dev_rfpacket_rq_done(pv->rx_cont);
       pv->rx_cont = pv->next_rx_cont;
     }
 
@@ -1271,15 +1271,15 @@ static void sx127x_rfp_end_rxc(struct sx127x_private_s *pv, error_t err)
 
 static void sx127x_rfp_end_rq(struct sx127x_private_s *pv, error_t err)
 {
-  struct dev_rfpacket_rq_s * rq = dev_rfpacket_rq_s_cast(dev_request_queue_head(&pv->queue));
+  struct dev_rfpacket_rq_s * rq = dev_rfpacket_rq_head(&pv->queue);
 
   assert(rq && rq->type != DEV_RFPACKET_RQ_RX_CONT);
 
   rq->err = err;
   rq->base.drvdata = NULL;
 
-  dev_request_queue_pop(&pv->queue);
-  kroutine_exec(&rq->base.kr);
+  dev_rfpacket_rq_pop(&pv->queue);
+  dev_rfpacket_rq_done(rq);
 
   device_irq_src_disable(&pv->src_ep[1]);
 
@@ -1295,7 +1295,7 @@ static void sx127x_rfp_idle(struct sx127x_private_s *pv)
 
   sx127x_rfp_set_state(pv, SX127X_STATE_IDLE);
 
-  struct dev_rfpacket_rq_s *rq = dev_rfpacket_rq_s_cast(dev_request_queue_head(&pv->queue));
+  struct dev_rfpacket_rq_s *rq = dev_rfpacket_rq_head(&pv->queue);
 
   if (!rq)
     rq = pv->rx_cont;
@@ -1369,7 +1369,7 @@ static DEV_RFPACKET_REQUEST(sx127x_request)
             case SX127X_STATE_RXC_RAW_PENDING_STOP:
             case SX127X_STATE_RXC_RAW_STOP:
               if (pv->next_rx_cont && pv->next_rx_cont != pv->rx_cont)
-                kroutine_exec(&pv->next_rx_cont->base.kr);
+                dev_rfpacket_rq_done(pv->next_rx_cont);
             case SX127X_STATE_RXC_RAW_ALLOC:
             case SX127X_STATE_RXC_RAW:
               assert(pv->rx_cont);
@@ -1387,7 +1387,7 @@ static DEV_RFPACKET_REQUEST(sx127x_request)
             case SX127X_STATE_RXC_STOP:
               assert(pv->rx_cont);
               if (pv->next_rx_cont && pv->next_rx_cont != pv->rx_cont)
-                kroutine_exec(&pv->next_rx_cont->base.kr);
+                dev_rfpacket_rq_done(pv->next_rx_cont);
               pv->next_rx_cont = rq;
               break;
             case SX127X_STATE_IDLE:
@@ -1398,15 +1398,15 @@ static DEV_RFPACKET_REQUEST(sx127x_request)
             default:
               assert(pv->next_rx_cont == NULL);
               if (pv->rx_cont)
-                kroutine_exec(&pv->rx_cont->base.kr);
+                dev_rfpacket_rq_done(pv->rx_cont);
               pv->rx_cont = rq;
               break;
           }
       }
     else
       {
-        bool_t empty = dev_request_queue_isempty(&pv->queue);
-        dev_request_queue_pushback(&pv->queue, dev_rfpacket_rq_s_base(rq));
+        bool_t empty = dev_rq_queue_isempty(&pv->queue);
+        dev_rfpacket_rq_pushback(&pv->queue, rq);
         rq->base.drvdata = pv;
 
         if (empty)
@@ -1474,7 +1474,7 @@ static inline void sx127x_rx_done(struct sx127x_private_s *pv)
 
 static inline void sx127x_tx_done(struct sx127x_private_s *pv)
 {
-  struct dev_rfpacket_rq_s *rq = dev_rfpacket_rq_s_cast(dev_request_queue_head(&pv->queue));
+  struct dev_rfpacket_rq_s *rq = dev_rfpacket_rq_head(&pv->queue);
   dprintk("TX irq\n");
 
   assert(rq);
@@ -1549,7 +1549,7 @@ static DEV_RFPACKET_CANCEL(sx127x_cancel)
 
   LOCK_SPIN_IRQ(&dev->lock);
 
-  struct dev_rfpacket_rq_s *hrq = dev_rfpacket_rq_s_cast(dev_request_queue_head(&pv->queue));
+  struct dev_rfpacket_rq_s *hrq = dev_rfpacket_rq_head(&pv->queue);
 
   if (rq == pv->rx_cont)
     {
@@ -1600,7 +1600,7 @@ static DEV_RFPACKET_CANCEL(sx127x_cancel)
     {
       err = 0;
       rq->base.drvdata = NULL;
-      dev_request_queue_remove(&pv->queue, dev_rfpacket_rq_s_base(rq));
+      dev_rfpacket_rq_remove(&pv->queue, rq);
     }
 
   LOCK_RELEASE_IRQ(&dev->lock);
@@ -1882,9 +1882,9 @@ static DEV_INIT(sx127x_init)
   kroutine_init_deferred(&pv->kr, &sx127x_retry_startup_kr);
 #endif
 
-  dev_request_queue_init(&pv->queue);
+  dev_rq_queue_init(&pv->queue);
 
-  kroutine_init_deferred(&srq->base.base.kr, &sx127x_spi_rq_done);
+  dev_spi_ctrl_rq_init(&srq->base, &sx127x_spi_rq_done);
 
   bc_set_reg(&srq->vm, R_CTX_PV, (uintptr_t)pv);
 
@@ -1925,7 +1925,7 @@ static DEV_CLEANUP(sx127x_cleanup)
   switch (pv->state)
     {
     case SX127X_STATE_IDLE:
-      assert(dev_request_queue_isempty(&pv->queue));
+      assert(dev_rq_queue_isempty(&pv->queue));
       break;
     default:
       return -EBUSY;

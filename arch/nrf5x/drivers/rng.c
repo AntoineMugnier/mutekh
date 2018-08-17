@@ -68,7 +68,7 @@ static DEV_IRQ_SRC_PROCESS(nrf5x_rng_irq)
 
   LOCK_SPIN_SCOPED(&dev->lock);
 
-  rq = dev_crypto_rq_s_cast(dev_request_queue_head(&pv->queue));
+  rq = dev_crypto_rq_head(&pv->queue);
   if (rq) {
     if (nrf_event_check(RNG_ADDR, NRF_RNG_VALRDY)) {
       nrf_event_clear(RNG_ADDR, NRF_RNG_VALRDY);
@@ -77,11 +77,11 @@ static DEV_IRQ_SRC_PROCESS(nrf5x_rng_irq)
       rq->len--;
 
       if (!rq->len) {
-        dev_request_queue_pop(&pv->queue);
+        dev_crypto_rq_pop(&pv->queue);
         rq->base.drvdata = 0;
-        kroutine_exec(&rq->base.kr);
+        dev_crypto_rq_done(rq);
 
-        rq = dev_crypto_rq_s_cast(dev_request_queue_head(&pv->queue));
+        rq = dev_crypto_rq_head(&pv->queue);
       }
 
       if (rq) {
@@ -111,15 +111,15 @@ static DEV_CRYPTO_REQUEST(nrf5x_rng_request)
   bool_t start;
 
   if (!rq->len) {
-    kroutine_exec(&rq->base.kr);
+    dev_crypto_rq_done(rq);
     return;
   }
 
   LOCK_SPIN_IRQ_SCOPED(&dev->lock);
 
-  start = dev_request_queue_isempty(&pv->queue);
+  start = dev_rq_queue_isempty(&pv->queue);
 
-  dev_request_queue_pushback(&pv->queue, &rq->base);
+  dev_crypto_rq_pushback(&pv->queue, rq);
   rq->base.drvdata = dev;
 
   if (start)
@@ -148,7 +148,7 @@ static DEV_INIT(nrf5x_rng_init)
   assert(device_res_get_uint(dev, DEV_RES_MEM, 0, &addr, NULL) == 0 &&
          RNG_ADDR == addr);
 
-  dev_request_queue_init(&pv->queue);
+  dev_rq_queue_init(&pv->queue);
 
   nrf_it_disable_mask(RNG_ADDR, -1);
   nrf_reg_set(RNG_ADDR, NRF_RNG_CONFIG, NRF_RNG_CONFIG_DERCEN_ENABLED);
@@ -164,10 +164,10 @@ static DEV_CLEANUP(nrf5x_rng_cleanup)
 {
   struct nrf5x_rng_private_s *pv = dev->drv_pv;
 
-  if (!dev_request_queue_isempty(&pv->queue))
+  if (!dev_rq_queue_isempty(&pv->queue))
     return -EBUSY;
 
-  dev_request_queue_destroy(&pv->queue);
+  dev_rq_queue_destroy(&pv->queue);
   nrf_it_disable_mask(RNG_ADDR, -1);
   device_irq_source_unlink(dev, pv->irq_ep, 1);
 

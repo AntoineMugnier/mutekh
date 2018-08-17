@@ -198,8 +198,8 @@ void app_start(void)
   err = device_get_accessor_by_path(&ctx->slave.base, NULL, "i2cs0", DRIVER_CLASS_I2C_SLAVE);
   ensure(!err && "Could not get I2C device instance");
 
-  kroutine_init_deferred(&ctx->ssel_rq.base.kr, ssel_done);
-  kroutine_init_deferred(&ctx->data_rq.base.kr, data_done);
+  dev_i2c_slave_rq_init(&ctx->ssel_rq, ssel_done);
+  dev_i2c_slave_rq_init(&ctx->data_rq, data_done);
 
   ctx->state = SLAVE_IDLE;
   ssel_rq_enqueue(ctx);

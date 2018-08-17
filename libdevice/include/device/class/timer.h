@@ -138,7 +138,7 @@ struct dev_freq_s;
 /** Timer request @csee dev_timer_request_t */
 struct dev_timer_rq_s
 {
-  struct dev_request_s          rq;
+  struct dev_request_s          base;
 
   /** absolute timer deadline, used when @tt delay is 0 */
   dev_timer_value_t             deadline;
@@ -148,15 +148,17 @@ struct dev_timer_rq_s
   dev_timer_cfgrev_t            rev;
 };
 
-STRUCT_INHERIT(dev_timer_rq_s, dev_request_s, rq);
+DEV_REQUEST_INHERIT(timer);
 
 /* expand the dev_timer_pqueue_insert function usable with generic
    device request priority queue. */
 GCT_CONTAINER_KEY_TYPES(dev_request_pqueue, CUSTOM, SCALAR,
                         dev_timer_rq_s_cast(dev_request_pqueue_item)->deadline, dev_timer_pqueue);
 
-GCT_CONTAINER_KEY_FCNS(dev_request_pqueue, ASC, inline, dev_timer_pqueue, dev_timer_pqueue,
+GCT_CONTAINER_KEY_FCNS(dev_request_pqueue, ASC, inline, __dev_timer_pqueue, dev_timer_pqueue,
                        remove, insert);
+
+DEV_REQUEST_PQUEUE_OPS(timer);
 
 ENUM_DESCRIPTOR(dev_timer_capabilities_e, strip:DEV_TIMER_CAP_, upper, or);
 
@@ -449,7 +451,7 @@ dev_timer_delay_check_t2s(int_fast8_t shift, dev_timer_delay_t delay)
 
 ALWAYS_INLINE bool_t dev_timer_request_is_scheduled(const struct dev_timer_rq_s *rq)
 {
-  return rq->rq.drvdata != NULL;
+  return rq->base.drvdata != NULL;
 }
 
 /** @This checks if the time specified by @tt delay has elapsed since
@@ -474,7 +476,7 @@ error_t dev_timer_wait_request(struct device_timer_s *accessor,
 {
   struct dev_request_status_s st;
 
-  dev_request_sched_init(&rq->rq, &st);
+  dev_request_sched_init(&rq->base, &st);
   error_t err = DEVICE_OP(accessor, request, rq);
 
   if (!err) {

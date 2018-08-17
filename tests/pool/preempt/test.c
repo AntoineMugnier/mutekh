@@ -174,7 +174,7 @@ void main()
 
   ensure(dev_timer_init_sec(&timer_dev, &timer_rq.delay, NULL, 10, 1000) == 0);
 
-  kroutine_init_immediate(&timer_rq.rq.kr, timeout_kr);
+  dev_timer_rq_init_immediate(&timer_rq, timeout_kr);
   timer_rq.deadline = 0;
   timer_rq.rev = 0;
 

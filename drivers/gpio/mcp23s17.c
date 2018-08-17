@@ -95,7 +95,7 @@ static void mcp23s17_next(struct device_s *dev)
       return;
     }
 #endif
-  if ((rq = dev_gpio_rq_s_cast(dev_request_queue_head(&pv->rq_pending))))
+  if ((rq = dev_gpio_rq_head(&pv->rq_pending)))
     {
       pv->current_op = MCP23S17_REQUEST_OP;
       pv->pending_op &= ~MCP23S17_REQUEST_OP;
@@ -117,7 +117,7 @@ static KROUTINE_EXEC(mcp23s17_spi_done)
   switch (pv->current_op)
     {
       case MCP23S17_REQUEST_OP:
-        rq = dev_gpio_rq_s_cast(dev_request_queue_head(&pv->rq_pending));
+        rq = dev_gpio_rq_head(&pv->rq_pending);
         rq->error = pv->spi_req.base.err;
         switch (rq->type)
           {
@@ -128,9 +128,9 @@ static KROUTINE_EXEC(mcp23s17_spi_done)
             case DEV_GPIO_INPUT_IRQ_RANGE:
               break;
           }
-        dev_request_queue_pop(&pv->rq_pending);
+        dev_gpio_rq_pop(&pv->rq_pending);
         rq->base.drvdata = NULL;
-        kroutine_exec(&rq->base.kr);
+        dev_gpio_rq_done(rq);
         break;
 #ifdef CONFIG_DRIVER_MCP23S17_ICU
       case MCP23S17_IRQ_PROCESS_OP:
@@ -273,7 +273,7 @@ static DEV_GPIO_REQUEST(mcp23s17_request)
 
   LOCK_SPIN_IRQ(&dev->lock);
 
-  dev_request_queue_pushback(&pv->rq_pending, &rq->base);
+  dev_gpio_rq_pushback(&pv->rq_pending, rq);
 
   pv->pending_op |= MCP23S17_REQUEST_OP;
   if (!pv->current_op)
@@ -433,7 +433,7 @@ static error_t spi_config(
   bc_set_reg(&pv->spi_req.vm, 0, 1);
   bc_set_reg(&pv->spi_req.vm, 1, pv);
 
-  kroutine_init_immediate(&pv->spi_req.base.base.kr, &mcp23s17_spi_done);
+  dev_spi_ctrl_rq_init(&pv->spi_req.base, &mcp23s17_spi_done);
 
   return 0;
 }
@@ -465,7 +465,7 @@ static DEV_INIT(mcp23s17_init)
 
   pv->iodir_cache = -1;
 
-  dev_request_queue_init(&pv->rq_pending);
+  dev_rq_queue_init(&pv->rq_pending);
 
 #ifdef CONFIG_DRIVER_MCP23S17_ICU
   device_irq_source_init(dev, &pv->src_ep, 1, &mcp23s17_source_process);
@@ -511,7 +511,7 @@ static DEV_CLEANUP(mcp23s17_cleanup)
   device_irq_source_unlink(dev, &pv->src_ep, 1);
 #endif
 
-  dev_request_queue_destroy(&pv->rq_pending);
+  dev_rq_queue_destroy(&pv->rq_pending);
 
   mem_free(pv);
   return 0;

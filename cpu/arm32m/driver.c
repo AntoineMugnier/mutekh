@@ -336,7 +336,7 @@ static DEV_INIT(arm_init)
 
 #ifdef CONFIG_CPU_ARM32M_TIMER_SYSTICK
   pv->systick_start = 0;
-  dev_request_pqueue_init(&pv->systick_queue);
+  dev_rq_pqueue_init(&pv->systick_queue);
   pv->systick_period = CONFIG_CPU_ARM32M_TIMER_SYSTICK_PERIOD;
 # ifdef CONFIG_DEVICE_IRQ
   pv->systick_rev = 1;

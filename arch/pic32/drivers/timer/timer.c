@@ -153,7 +153,7 @@ static void pic32_timer_test_queue(struct device_s *dev)
 
   while (1)
     {
-      struct dev_timer_rq_s *rq = dev_timer_rq_s_cast(dev_request_pqueue_head(&pv->queue));
+      struct dev_timer_rq_s *rq = dev_timer_rq_head(&pv->queue);
 
       if (rq == NULL)
         {
@@ -170,12 +170,12 @@ static void pic32_timer_test_queue(struct device_s *dev)
         if (!pic32_timer_request_start(pv, rq, value))
           break;
 
-      dev_timer_pqueue_remove(&pv->queue, dev_timer_rq_s_base(rq));
+      dev_timer_rq_remove(&pv->queue, rq);
       pic32_timer_disable_compare(pv);
-      rq->rq.drvdata = NULL;
+      rq->base.drvdata = NULL;
 
       lock_release_irq2(&dev->lock, &pv->irq_save);
-      kroutine_exec(&rq->rq.kr);
+      dev_timer_rq_done(rq);
       lock_spin_irq2(&dev->lock, &pv->irq_save);
     }
 }
@@ -228,16 +228,16 @@ static DEV_TIMER_CANCEL(pic32_timer_cancel)
 
   lock_spin_irq2(&dev->lock, &pv->irq_save);
 
-  if (rq->rq.drvdata == pv)
+  if (rq->base.drvdata == pv)
     {
       struct dev_timer_rq_s *rqnext = NULL;
-      bool_t first = (dev_request_pqueue_prev(&pv->queue, dev_timer_rq_s_base(rq)) == NULL);
+      bool_t first = (dev_timer_rq_prev(&pv->queue, rq) == NULL);
 
       if (first)
-        rqnext = dev_timer_rq_s_cast(dev_request_pqueue_next(&pv->queue, dev_timer_rq_s_base(rq)));
+        rqnext = dev_timer_rq_next(&pv->queue, rq);
 
-      dev_timer_pqueue_remove(&pv->queue, dev_timer_rq_s_base(rq));
-      rq->rq.drvdata = NULL;
+      dev_timer_rq_remove(&pv->queue, rq);
+      rq->base.drvdata = NULL;
 
       /* Request was at top of queue */
       if (first)
@@ -291,11 +291,11 @@ static DEV_TIMER_REQUEST(pic32_timer_request)
       else
         {
           dev->start_count |= 1;
-          dev_timer_pqueue_insert(&pv->queue, dev_timer_rq_s_base(rq));
-          rq->rq.drvdata = pv;
+          dev_timer_rq_insert(&pv->queue, rq);
+          rq->base.drvdata = pv;
 
           /* start request, raise irq on race condition */
-          if (dev_request_pqueue_prev(&pv->queue, dev_timer_rq_s_base(rq)) == NULL)
+          if (dev_timer_rq_prev(&pv->queue, rq) == NULL)
             if (pic32_timer_request_start(pv, rq, value))
               pic32_timer_test_queue(dev);
         }
@@ -440,7 +440,7 @@ static DEV_INIT(pic32_timer_init)
 
   pv->cap |= DEV_TIMER_CAP_REQUEST;
 
-  dev_request_pqueue_init(&pv->queue);
+  dev_rq_pqueue_init(&pv->queue);
 
   /* Stop timer  and  OC */
   cpu_mem_write_32(pv->taddr + PIC32_TIMER_CON_ADDR, 0);
@@ -486,7 +486,7 @@ static DEV_CLEANUP(pic32_timer_cleanup)
   cpu_mem_write_32(pv->caddr[0] + PIC32_OUTPUT_COMPARE_CON_ADDR, 0);
   cpu_mem_write_32(pv->caddr[1] + PIC32_OUTPUT_COMPARE_CON_ADDR, 0);
 
-  dev_request_pqueue_destroy(&pv->queue);
+  dev_rq_pqueue_destroy(&pv->queue);
   device_irq_source_unlink(dev, pv->irq_ep, 3);
 
   mem_free(pv);

@@ -96,7 +96,7 @@ static void pcal6408a_handle_next(struct device_s *dev)
     return;
   }
 
-  rq = dev_gpio_rq_s_cast(dev_request_queue_head(&pv->queue));
+  rq = dev_gpio_rq_head(&pv->queue);
 
   if (!rq)
     return;
@@ -186,8 +186,8 @@ static KROUTINE_EXEC(pcal6408a_i2c_done)
                 range & mask & (data ^ cur));
 
         if (range & mask & (data ^ cur)) {
-          dev_request_queue_remove(&pv->until_queue, &rq->base);
-          kroutine_exec(&rq->base.kr);
+          dev_gpio_rq_remove(&pv->until_queue, rq);
+          dev_gpio_rq_done(rq);
         }
       });
     // Dont break, notify read is actually an IO get: fallthroug is OK
@@ -200,18 +200,18 @@ static KROUTINE_EXEC(pcal6408a_i2c_done)
           uint_fast8_t range = bit_range(rq->io_first, rq->io_last);
           rq->input.data[0] = ((bc_get_reg(&pv->i2c_rq.vm, 0) & range) >> rq->io_first);
           dprintk("%s %p io get done %02x\n", __FUNCTION__, rq, rq->input.data[0]);
-          dev_request_queue_remove(&pv->queue, brq);
-          kroutine_exec(&rq->base.kr);
+          dev_gpio_rq_remove(&pv->queue, rq);
+          dev_gpio_rq_done(rq);
         }
       });
     break;
 
   case STATE_IO_SET: {
-    struct dev_gpio_rq_s *rq = dev_gpio_rq_s_cast(dev_request_queue_head(&pv->queue));
+    struct dev_gpio_rq_s *rq = dev_gpio_rq_head(&pv->queue);
     if (rq && (rq->type == DEV_GPIO_SET_OUTPUT || rq->type == DEV_GPIO_MODE)) {
       dprintk("%s %p io set done\n", __FUNCTION__, rq);
-      dev_request_queue_pop(&pv->queue);
-      kroutine_exec(&rq->base.kr);
+      dev_gpio_rq_pop(&pv->queue);
+      dev_gpio_rq_done(rq);
     }
     break;
   }
@@ -235,12 +235,12 @@ static DEV_GPIO_REQUEST(pcal6408a_request)
   switch (rq->type) {
   default:
     dprintk("%s request %p\n", __FUNCTION__, rq);
-    dev_request_queue_pushback(&pv->queue, &rq->base);
+    dev_gpio_rq_pushback(&pv->queue, rq);
     break;
 
   case DEV_GPIO_UNTIL:
     dprintk("%s until %p\n", __FUNCTION__, rq);
-    dev_request_queue_pushback(&pv->until_queue, &rq->base);
+    dev_gpio_rq_pushback(&pv->until_queue, rq);
     pv->until_mask_dirty = 1;
     break;
   }
@@ -287,11 +287,11 @@ static DEV_INIT(pcal6408a_init)
   if (err)
     goto err_i2c;
 
-  kroutine_init_deferred(&pv->i2c_rq.base.base.kr, pcal6408a_i2c_done);
+  dev_i2c_ctrl_rq_init(&pv->i2c_rq.base, pcal6408a_i2c_done);
   pv->i2c_rq.base.base.pvdata = dev;
 
-  dev_request_queue_init(&pv->queue);
-  dev_request_queue_init(&pv->until_queue);
+  dev_rq_queue_init(&pv->queue);
+  dev_rq_queue_init(&pv->until_queue);
 
   dev->drv_pv = pv;
 
@@ -312,12 +312,12 @@ static DEV_CLEANUP(pcal6408a_cleanup)
 {
   struct pcal6408a_priv_s *pv = dev->drv_pv;
 
-  if (!dev_request_queue_isempty(&pv->queue))
+  if (!dev_rq_queue_isempty(&pv->queue))
     return -EBUSY;
 
   dev_drv_i2c_bytecode_cleanup(&pv->i2c, &pv->i2c_rq);
-  dev_request_queue_destroy(&pv->queue);
-  dev_request_queue_destroy(&pv->until_queue);
+  dev_rq_queue_destroy(&pv->queue);
+  dev_rq_queue_destroy(&pv->until_queue);
   mem_free(pv);
 
   return 0;

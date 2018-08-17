@@ -60,7 +60,7 @@ void net_sched_wakeup(struct net_scheduler_s *sched)
 
 static KROUTINE_EXEC(net_scheduler_timeout)
 {
-  struct net_scheduler_s *sched = KROUTINE_CONTAINER(kr, *sched, timer_rq.rq.kr);
+  struct net_scheduler_s *sched = KROUTINE_CONTAINER(kr, *sched, timer_rq.base.kr);
 
   net_sched_wakeup(sched);
 }
@@ -300,7 +300,7 @@ error_t net_scheduler_init(
             scheduler_pool_grow, mem_scope_sys);
 
   sched->timer_rq.rq.drvdata = NULL;
-  kroutine_init_immediate(&sched->timer_rq.rq.kr, net_scheduler_timeout);
+  dev_timer_rq_init_immediate(&sched->timer_rq, net_scheduler_timeout);
 
   device_start(&sched->timer.base);
 

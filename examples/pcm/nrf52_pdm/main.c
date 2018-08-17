@@ -118,7 +118,7 @@ void app_start(void)
   app->kbd_rq.attribute = VALIO_KEYBOARD_MAP;
   app->kbd_rq.data = &app->cur_state;
   app->kbd_rq.type = DEVICE_VALIO_WAIT_EVENT;
-  kroutine_init_idle(&app->kbd_rq.base.kr, kbd_done);
+  dev_valio_rq_init(&app->kbd_rq, kbd_done);
 
   app->pcm_rq.sample_rate = RATE;
   app->pcm_rq.stream_count = 1;
@@ -127,7 +127,7 @@ void app_start(void)
   app->pcm_rq.stream[0].direction = DEV_PCM_DIR_INPUT;
   app->pcm_rq.stream[0].channel_id = 0;
   atomic_set(&app->pcm_rq.frames_left, 3);
-  kroutine_init_deferred(&app->pcm_rq.base.kr, pcm_frame);
+  dev_pcm_rq_init(&app->pcm_rq, pcm_frame);
 
   app->pcm_run = 0;
 

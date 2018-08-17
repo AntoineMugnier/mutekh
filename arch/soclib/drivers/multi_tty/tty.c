@@ -70,7 +70,7 @@ void soclib_tty_try_read(struct device_s *dev, struct soclib_tty_tty_s *tty)
   __unused__ uintptr_t addr = pv->addr + TTY_SOCLIB_REG_SPAN * (tty - pv->ttys);
   struct dev_char_rq_s *rq;
 
-  while ((rq = dev_char_rq_s_cast(dev_request_queue_head(&tty->read_q)))) {
+  while ((rq = dev_char_rq_head(&tty->read_q))) {
 
 #ifdef CONFIG_DEVICE_IRQ
     if (tty_fifo_isempty(&tty->read_fifo))
@@ -97,9 +97,9 @@ void soclib_tty_try_read(struct device_s *dev, struct soclib_tty_tty_s *tty)
     if (rq->size == 0 || (rq->type & _DEV_CHAR_PARTIAL)) {
     done:
       rq->error = 0;
-      dev_request_queue_pop(&tty->read_q);
+      dev_char_rq_pop(&tty->read_q);
       rq->base.drvdata = NULL;
-      kroutine_exec(&rq->base.kr);
+      dev_char_rq_done(rq);
     }
   }
 }
@@ -120,7 +120,7 @@ static DEV_CHAR_CANCEL(soclib_tty_cancel)
       err = -EBUSY;
       if (rq->base.drvdata == tty)
         {
-          dev_request_queue_remove(&tty->read_q, dev_char_rq_s_base(rq));
+          dev_char_rq_remove(&tty->read_q, rq);
           rq->base.drvdata = NULL;
           err = 0;
         }
@@ -154,7 +154,7 @@ static DEV_CHAR_REQUEST(soclib_tty_request)
 #endif
   case DEV_CHAR_READ_PARTIAL:
   case DEV_CHAR_READ:
-    dev_request_queue_pushback(&tty->read_q, dev_char_rq_s_base(rq));
+    dev_char_rq_pushback(&tty->read_q, rq);
     rq->base.drvdata = tty;
     soclib_tty_try_read(dev, tty);
     break;
@@ -186,7 +186,7 @@ static DEV_CHAR_REQUEST(soclib_tty_request)
   LOCK_RELEASE_IRQ(&dev->lock);
 
   if (done_rq)
-    kroutine_exec(&done_rq->base.kr);
+    dev_char_rq_done(done_rq);
 }
 
 #ifdef CONFIG_DEVICE_IRQ
@@ -281,7 +281,7 @@ static DEV_INIT(soclib_tty_init)
   for (i = 0; i < count; i++)
     {
       struct soclib_tty_tty_s *tty = pv->ttys + i;
-      dev_request_queue_init(&tty->read_q);
+      dev_rq_queue_init(&tty->read_q);
 #ifdef CONFIG_DEVICE_IRQ
       tty_fifo_init(&tty->read_fifo);
 #endif
@@ -303,7 +303,7 @@ static DEV_CLEANUP(soclib_tty_cleanup)
   for (i = 0; i < pv->count; i++)
     {
       struct soclib_tty_tty_s *tty = pv->ttys + i;
-      if (!dev_request_queue_isempty(&tty->read_q))
+      if (!dev_rq_queue_isempty(&tty->read_q))
         return -EBUSY;
     }
 
@@ -313,7 +313,7 @@ static DEV_CLEANUP(soclib_tty_cleanup)
 #ifdef CONFIG_DEVICE_IRQ
       tty_fifo_destroy(&tty->read_fifo);
 #endif
-      dev_request_queue_destroy(&tty->read_q);
+      dev_rq_queue_destroy(&tty->read_q);
     }
 
 #ifdef CONFIG_DEVICE_IRQ

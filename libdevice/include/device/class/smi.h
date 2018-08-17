@@ -69,7 +69,7 @@ struct dev_smi_rq_s
   error_t error;
 };
 
-STRUCT_INHERIT(dev_smi_rq_s, dev_request_s, base);
+DEV_REQUEST_INHERIT(smi); DEV_REQUEST_QUEUE_OPS(smi);
 
 /** @see dev_smi_request_t */
 #define DEV_SMI_REQUEST(n) void (n) (                              \

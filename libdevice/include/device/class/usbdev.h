@@ -70,7 +70,7 @@ typedef int8_t dev_usbdev_cfgrev_t;
 enum dev_usbdev_rq_type_e
 {
   /** No transfer. Get event on USB device controller. The @ref
-      dev_usbdev_request_s::event field of the request is used to return
+      dev_usbdev_rq_s::event field of the request is used to return
       one or more events of type @ref enum dev_usbdev_event_e */
   DEV_USBDEV_EVENT,
   /** Get SETUP stage packet from host. The request returns only when a setup
@@ -80,20 +80,20 @@ enum dev_usbdev_rq_type_e
   /** Send data to host. The request is terminated only when the whole data
       buffer is sent. This can be achieved in multiple DATA IN transactions
       on the USB bus. When used in conjunction with the
-      dev_usbdev_request_s::size field set to 0, a Zero Length Packet is
+      dev_usbdev_rq_s::size field set to 0, a Zero Length Packet is
       generated. */
   DEV_USBDEV_DATA_IN,
   /** Send data to host. The request does not terminate until at least one
       byte of data has been sent to the host. When used in conjunction with the
-      dev_usbdev_request_s::size field set to 0, a Zero Length Packet is
+      dev_usbdev_rq_s::size field set to 0, a Zero Length Packet is
       generated. */
   DEV_USBDEV_PARTIAL_DATA_IN,
   /** Send a STALL PID in response to the next DATA IN stage transaction. */
   DEV_USBDEV_DATA_IN_STALL,
   /** Get data from host. The request is terminated when either the
-      @ref dev_usbdev_request_s::buffer is full or when a short packet is
+      @ref dev_usbdev_rq_s::buffer is full or when a short packet is
       received. For CONTROL endpoint, the request is also terminated when
-      @ref the dev_usbdev_request_s::rem field is null which means that the
+      @ref the dev_usbdev_rq_s::rem field is null which means that the
       CONTROL data stage is terminated.*/
   DEV_USBDEV_DATA_OUT,
   /** Get data from host. The request does not terminated until at least one
@@ -122,7 +122,7 @@ struct device_usbdev_s;
     transactions. This type of request are appropriated to device controller
     exposing a transaction level interface.
  */
-struct dev_usbdev_request_s
+struct dev_usbdev_rq_s
 {
   struct dev_request_s          base;
 
@@ -157,11 +157,11 @@ struct dev_usbdev_request_s
   uint8_t                       event;
 };
 
-STRUCT_INHERIT(dev_usbdev_request_s, dev_request_s, base);
+DEV_REQUEST_INHERIT(usbdev); DEV_REQUEST_QUEUE_OPS(usbdev);
 
 struct dev_usbdev_context_s;
 
-#define DEV_USBDEV_REQUEST(n)	error_t (n) (struct dev_usbdev_context_s *ctx, struct dev_usbdev_request_s *tr)
+#define DEV_USBDEV_REQUEST(n)	error_t (n) (struct dev_usbdev_context_s *ctx, struct dev_usbdev_rq_s *tr)
 
 /**
   USB device class request() function type. Post a request on an USB device
@@ -216,7 +216,7 @@ SETUP | DATA OUT | ... | DATA OUT STALL
 
   If a transfer is running on an endpoint and this endpoint is unconfigured due
   to a switch to an interface alternate configuration, the @ref
-  usbdev_stack_request_done is called and @ref dev_usbdev_request_s::error field is
+  usbdev_stack_request_done is called and @ref dev_usbdev_rq_s::error field is
   set to -EAGAIN.
 
   Each control endpoint must always have a active request for incoming setup
@@ -230,7 +230,7 @@ SETUP | DATA OUT | ... | DATA OUT STALL
   NAK token in response to the DATA stage transaction from host.
 
   For isochronous endpoints, if a packet has been dropped because no request
-  has been posted in time, @ref dev_usbdev_request_s::error field will be set to
+  has been posted in time, @ref dev_usbdev_rq_s::error field will be set to
   @tt -ETIMEDOUT on the next request posted on this endpoint.
 
   @list
@@ -249,7 +249,7 @@ SETUP | DATA OUT | ... | DATA OUT STALL
 typedef DEV_USBDEV_REQUEST(dev_usbdev_request_t);
 
 config_depend(CONFIG_DEVICE_USBDEV)
-void usbdev_stack_request_done(struct dev_usbdev_context_s *ctx, struct dev_usbdev_request_s *tr);
+void usbdev_stack_request_done(struct dev_usbdev_context_s *ctx, struct dev_usbdev_rq_s *tr);
 
 enum dev_usbdev_cfg_e
 {
@@ -272,7 +272,7 @@ enum dev_usbdev_cfg_e
       endpoints except endpoint zero must be unconfigured in this case.
       When unconfiguring controller, all on-going transfer must be terminated with
       @ref dev_usbdev_config_s::error field set to @tt -EPIPE. @ref
-      dev_usbdev_request_s::size field of on-going transfer might not be updated
+      dev_usbdev_rq_s::size field of on-going transfer might not be updated
       in this case. */
   DEV_USBDEV_UNCONFIGURE          = 2,
   /** Set controller address. This is used when a SET ADDRESS command from host
@@ -289,7 +289,7 @@ enum dev_usbdev_cfg_e
       alternate settings for an interface during enumeration. The driver must
       unconfigure each endpoint that are not used anymore. This must be done
       neatly since no data of on-going transfer must be lost except on
-      isochronous endpoints. The @ref dev_usbdev_request_s::size field of any
+      isochronous endpoints. The @ref dev_usbdev_rq_s::size field of any
       on-going request must be updated an the request must be terminated with
       @tt -EAGAIN error code.
       At this point, the new interface configuration can be set by the driver.
@@ -690,16 +690,16 @@ error_t usbdev_stack_request(struct device_usbdev_s *dev, struct usbdev_service_
 
     When a SET INTERFACE command from host change the setting of an interface, all
     the associated endpoints have their revision number changed. If the @ref
-    dev_usbdev_request_s::rev field of request is different from the current
+    dev_usbdev_rq_s::rev field of request is different from the current
     endpoint revision, @tt -EAGAIN is returned either by this function or by
     kroutine.
     When a service post a request while it should not, @tt -EPIPE error is returned
     either by this function or by kroutine. In this case, the
-    @ref dev_usbdev_request_s::size might not be updated. */
+    @ref dev_usbdev_rq_s::size might not be updated. */
 config_depend(CONFIG_DEVICE_USBDEV)
 error_t usbdev_stack_transfer(struct device_usbdev_s *dev,
                               struct usbdev_service_s *service,
-                              struct dev_usbdev_request_s *tr,
+                              struct dev_usbdev_rq_s *tr,
                               const struct usb_endpoint_descriptor_s *desc);
 
 #define USBDEV_SERVICE_DESCRIPTOR(...)   \
@@ -809,7 +809,7 @@ struct dev_usbdev_context_s
     /** Configuration request for USB driver */
     struct dev_usbdev_config_s cfg;
     /** Endpoint 0 transfer */
-    struct dev_usbdev_request_s tr;
+    struct dev_usbdev_rq_s tr;
   };
 
   /** Endpoint buffer */
@@ -881,7 +881,7 @@ uint8_t usbdev_stack_get_ep_addr(const struct usb_endpoint_descriptor_s *desc,
 
 config_depend(CONFIG_DEVICE_USBDEV)
 enum usb_transfert_direction_e
-dev_usbdev_get_transfer_dir(struct dev_usbdev_request_s *tr);
+dev_usbdev_get_transfer_dir(struct dev_usbdev_rq_s *tr);
 
 config_depend(CONFIG_DEVICE_USBDEV)
 error_t dev_res_get_usbdev_epmap(struct device_s *dev,

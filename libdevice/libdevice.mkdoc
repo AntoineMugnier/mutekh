@@ -241,7 +241,7 @@ static KROUTINE_EXEC(timer_event)
 
 void timer_start()
 {
-  kroutine_init_immediate(&timer_rq.rq.kr, timer_event);
+  dev_timer_rq_init_immediate(&timer_rq, timer_event);
   ... DEVICE_OP(&timer_dev, request, &timer_rq);
 }
     @end code
@@ -340,7 +340,7 @@ static KROUTINE_EXEC(char_read_done)
 
 void start()
 {
-  kroutine_init_deferred(&char_rq.rq.kr, char_read_done);
+  dev_timer_rq_init(&char_rq, char_read_done);
   DEVICE_OP(&char_dev, request, &char_rq);
   ...
 }
@@ -376,7 +376,7 @@ static KROUTINE_EXEC(timer_event)
 
 void start()
 {
-  kroutine_init_immediate(&timer_rq.rq.kr, timer_event);
+  dev_timer_rq_init_immediate(&timer_rq, timer_event);
   error_t err = DEVICE_OP(&timer_dev, request, &timer_rq);
   ...
 }

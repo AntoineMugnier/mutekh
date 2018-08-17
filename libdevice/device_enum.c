@@ -49,7 +49,7 @@ dev_drv_enum_child_init(dev_request_queue_root_t *q, struct device_s *cdev)
                   cdev->ref_count--;
                   rq->error = err;
                 case 0:
-                  kroutine_exec(&rq->base.kr);
+                  dev_enum_rq_done(rq);
                   rq->base.drvdata = NULL;
                   GCT_FOREACH_DROP;
                 }
@@ -89,7 +89,7 @@ dev_drv_enum_init_enqueue(dev_request_queue_root_t *q, struct dev_enum_rq_s *rq)
           cdev->ref_count++;
         default:
           rq->error = err;
-          kroutine_exec(&rq->base.kr);
+          dev_enum_rq_done(rq);
           break;
         }
       break;
@@ -99,11 +99,11 @@ dev_drv_enum_init_enqueue(dev_request_queue_root_t *q, struct dev_enum_rq_s *rq)
     postpone:
       cdev->ref_count++;
       rq->base.drvdata = q;
-      dev_request_queue_pushback(q, dev_enum_rq_s_base(rq));
+      dev_enum_rq_pushback(q, rq);
       break;
     default:
       rq->error = -EBUSY;
-      kroutine_exec(&rq->base.kr);
+      dev_enum_rq_done(rq);
       break;
     }
 
@@ -124,7 +124,7 @@ void dev_drv_enum_request_generic(dev_request_queue_root_t *q,
     case DEV_ENUM_LIST_EVENT:
       if (rq->list.rev < 1)
         {
-          kroutine_exec(&rq->base.kr);
+          dev_enum_rq_done(rq);
           rq->list.rev = 1;
           break;
         }
@@ -135,7 +135,7 @@ void dev_drv_enum_request_generic(dev_request_queue_root_t *q,
       if (rq->init.dev->node.parent != &dev->node)
         {
           rq->error = -ENOENT;
-          kroutine_exec(&rq->base.kr);
+          dev_enum_rq_done(rq);
           break;
         }
       dev_drv_enum_init_enqueue(q, rq);
@@ -159,7 +159,7 @@ error_t dev_drv_enum_cancel_generic(dev_request_queue_root_t *q,
       switch (rq->type)
         {
         case DEV_ENUM_INIT_EVENT:
-          dev_request_queue_remove(q, dev_enum_rq_s_base(rq));
+          dev_enum_rq_remove(q, rq);
         default:
           rq->base.drvdata = NULL;
         }

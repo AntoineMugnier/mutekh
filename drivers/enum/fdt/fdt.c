@@ -633,7 +633,7 @@ static DEV_INIT(enum_fdt_init)
 
   dev->drv_pv = pv;
 
-  dev_request_queue_init(&pv->queue);
+  dev_rq_queue_init(&pv->queue);
 
   struct enum_fdt_parse_ctx_s ctx = {
     .dev = dev,
@@ -677,7 +677,7 @@ static DEV_CLEANUP(enum_fdt_cleanup)
 {
   struct enum_fdt_pv_s *pv = dev->drv_pv;
 
-  if (!dev_request_queue_isempty(&pv->queue))
+  if (!dev_rq_queue_isempty(&pv->queue))
     return -EBUSY;
 
   mem_free(pv);

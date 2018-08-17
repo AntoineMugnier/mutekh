@@ -238,7 +238,7 @@ cfg_end:
   LOCK_RELEASE_IRQ(&dev->lock);
 
   rq->error = err;
-  kroutine_exec(&rq->base.kr);
+  dev_pwm_rq_done(rq);
 }
 
 #ifdef CONFIG_DEVICE_CLOCK_VARFREQ

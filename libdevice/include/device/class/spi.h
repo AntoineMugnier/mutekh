@@ -401,7 +401,7 @@ struct device_spi_ctrl_s;
 struct driver_spi_ctrl_s;
 struct dev_spi_ctrl_transfer_s;
 struct dev_spi_ctrl_config_s;
-struct dev_spi_ctrl_base_rq_s;
+struct dev_spi_ctrl_rq_s;
 struct dev_spi_ctrl_bytecode_rq_s;
 struct dev_spi_ctrl_transaction_rq_s;
 struct dev_spi_ctrl_context_s;
@@ -633,7 +633,7 @@ struct dev_spi_ctrl_bytecode_rq_s;
 /***************************************** request */
 
 /** @This is the SPI scheduler request base structure. */
-struct dev_spi_ctrl_base_rq_s
+struct dev_spi_ctrl_rq_s
 {
   struct dev_request_s base;
 
@@ -678,7 +678,7 @@ struct dev_spi_ctrl_base_rq_s
   bool_t                  BITFIELD(bytecode,1);
 };
 
-STRUCT_INHERIT(dev_spi_ctrl_base_rq_s, dev_request_s, base);
+DEV_REQUEST_INHERIT(spi_ctrl);
 
 #endif
 
@@ -687,10 +687,10 @@ STRUCT_INHERIT(dev_spi_ctrl_base_rq_s, dev_request_s, base);
 /** @This is the @xcref {SPI transaction request} structure.
 
     Fields common to all types of requests are inherited from @ref
-    dev_spi_ctrl_base_rq_s. */
+    dev_spi_ctrl_rq_s. */
 struct dev_spi_ctrl_transaction_rq_s
 {
-  struct dev_spi_ctrl_base_rq_s base;
+  struct dev_spi_ctrl_rq_s base;
 
   /** Transfer data buffer */
   struct dev_spi_ctrl_data_s data;
@@ -698,7 +698,7 @@ struct dev_spi_ctrl_transaction_rq_s
   enum dev_spi_cs_op_e     cs_op:2;
 };
 
-STRUCT_INHERIT(dev_spi_ctrl_transaction_rq_s, dev_spi_ctrl_base_rq_s, base);
+STRUCT_INHERIT(dev_spi_ctrl_transaction_rq_s, dev_spi_ctrl_rq_s, base);
 
 #endif
 
@@ -707,10 +707,10 @@ STRUCT_INHERIT(dev_spi_ctrl_transaction_rq_s, dev_spi_ctrl_base_rq_s, base);
 /** @This is the @xcref {SPI bytecode request} structure.
 
     Fields common to all types of requests are inherited from @cref
-    dev_spi_ctrl_base_rq_s. */
+    dev_spi_ctrl_rq_s. */
 struct dev_spi_ctrl_bytecode_rq_s
 {
-  struct dev_spi_ctrl_base_rq_s base;
+  struct dev_spi_ctrl_rq_s base;
 
   /** bytecode virtual machine context */
   struct bc_context_s      vm;
@@ -735,7 +735,7 @@ struct dev_spi_ctrl_bytecode_rq_s
   bool_t                  BITFIELD(wakeup_able,1);
 };
 
-STRUCT_INHERIT(dev_spi_ctrl_bytecode_rq_s, dev_spi_ctrl_base_rq_s, base);
+STRUCT_INHERIT(dev_spi_ctrl_bytecode_rq_s, dev_spi_ctrl_rq_s, base);
 
 #endif
 
@@ -745,7 +745,7 @@ struct dev_spi_ctrl_context_s
 {
 #ifdef CONFIG_DEVICE_SPI_REQUEST
   dev_request_queue_root_t      queue;
-  struct dev_spi_ctrl_base_rq_s *current;
+  struct dev_spi_ctrl_rq_s *current;
 
 # ifdef CONFIG_DEVICE_SPI_BYTECODE_TIMER
   struct dev_spi_ctrl_bytecode_rq_s *timeout;
@@ -919,7 +919,7 @@ dev_spi_timer(struct device_spi_ctrl_s *ctrl),
 /** This function returns an accessor to the gpio device of the request. */
 config_depend_alwaysinline(CONFIG_DEVICE_SPI_BYTECODE_GPIO,
 struct device_gpio_s *
-dev_spi_request_gpio(struct dev_spi_ctrl_base_rq_s *rq),
+dev_spi_request_gpio(struct dev_spi_ctrl_rq_s *rq),
 {
   return &rq->gpio;
 })

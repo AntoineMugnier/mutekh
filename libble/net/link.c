@@ -584,7 +584,7 @@ error_t link_crypto_setup(struct ble_link_s *link,
   
   err = dev_crypto_wait_op(&link->crypto, &link->crypto_rq);
 
-  kroutine_init_sched_switch(&link->crypto_rq.base.kr, link_crypto_done);
+  dev_crypto_rq_init(&link->crypto_rq, link_crypto_done);
 
   return err;
 }

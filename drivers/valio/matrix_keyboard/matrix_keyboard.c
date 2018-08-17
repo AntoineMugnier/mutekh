@@ -248,11 +248,11 @@ static KROUTINE_EXEC(matrix_keyboard_runner)
         LOCK_SPIN_IRQ_SCOPED(&dev->lock);
         if (memcmp(pv->cur_state, pv->last_state, pv->state_size)) {
           memcpy(pv->last_state, pv->cur_state, pv->state_size);
-          struct dev_valio_rq_s *rq = dev_valio_rq_s_cast(dev_request_queue_pop(&pv->queue));
+          struct dev_valio_rq_s *rq = dev_valio_rq_pop(&pv->queue);
           if (rq) {
             memcpy(rq->data, pv->last_state, pv->state_size);
             rq->error = 0;
-            kroutine_exec(&rq->base.kr);
+            dev_valio_rq_done(rq);
           }
         }
 
@@ -297,8 +297,8 @@ static KROUTINE_EXEC(matrix_keyboard_gpio_done)
 
 static KROUTINE_EXEC(matrix_keyboard_timer_done)
 {
-  struct matrix_keyboard_ctx_s *pv = KROUTINE_CONTAINER(kr, *pv, timer_rq.rq.kr);
-  struct device_s *dev = pv->timer_rq.rq.pvdata;
+  struct matrix_keyboard_ctx_s *pv = KROUTINE_CONTAINER(kr, *pv, timer_rq.base.kr);
+  struct device_s *dev = pv->timer_rq.base.pvdata;
 
   dprintk("%s\n", __FUNCTION__);
 
@@ -316,25 +316,25 @@ static DEV_VALIO_REQUEST(matrix_keyboard_request)
 
   if (req->attribute != VALIO_KEYBOARD_MAP) {
     req->error = -EINVAL;
-    kroutine_exec(&req->base.kr);
+    dev_valio_rq_done(req);
     return;
   }
  
   switch (req->type) {
   default:
     req->error = -ENOTSUP;
-    kroutine_exec(&req->base.kr);
+    dev_valio_rq_done(req);
     break;
 
   case DEVICE_VALIO_READ:
     memcpy(req->data, pv->last_state, pv->state_size);
-    kroutine_exec(&req->base.kr);
+    dev_valio_rq_done(req);
     req->error = 0;
     break;
 
   case DEVICE_VALIO_WAIT_EVENT: {
     LOCK_SPIN_IRQ_SCOPED(&dev->lock);
-    dev_request_queue_pushback(&pv->queue, &req->base);
+    dev_valio_rq_pushback(&pv->queue, req);
 
     if (pv->state == MATRIX_KEYBOARD_IDLE)
       kroutine_exec(&pv->vm_runner);
@@ -440,7 +440,7 @@ static DEV_INIT(matrix_keyboard_init)
     tmp = 10;
   pv->refresh_max = tmp;
 
-  dev_request_queue_init(&pv->queue);
+  dev_rq_queue_init(&pv->queue);
 
   uint8_t mask[8] = {};
 
@@ -455,10 +455,10 @@ static DEV_INIT(matrix_keyboard_init)
             mask, DEV_PIN_OPENDRAIN);
 
   pv->gpio_rq.base.pvdata = dev;
-  pv->timer_rq.rq.pvdata = dev;
+  pv->timer_rq.base.pvdata = dev;
 
-  kroutine_init_deferred(&pv->gpio_rq.base.kr, matrix_keyboard_gpio_done);
-  kroutine_init_deferred(&pv->timer_rq.rq.kr, matrix_keyboard_timer_done);
+  dev_gpio_rq_init(&pv->gpio_rq, matrix_keyboard_gpio_done);
+  dev_timer_rq_init(&pv->timer_rq, matrix_keyboard_timer_done);
   kroutine_init_deferred(&pv->vm_runner, matrix_keyboard_runner);
 
   bc_init(&pv->vm, &matrix_keyboard_io_bytecode);
@@ -485,11 +485,11 @@ static DEV_CLEANUP(matrix_keyboard_cleanup)
 {
   struct matrix_keyboard_ctx_s *pv = dev->drv_pv;
 
-  if (!dev_request_queue_isempty(&pv->queue)
+  if (!dev_rq_queue_isempty(&pv->queue)
       || !(pv->state == MATRIX_KEYBOARD_IDLE))
     return -EBUSY;
 
-  dev_request_queue_destroy(&pv->queue);
+  dev_rq_queue_destroy(&pv->queue);
   device_put_accessor(&pv->timer.base);
   device_put_accessor(&pv->gpio.base);
 

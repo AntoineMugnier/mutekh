@@ -110,7 +110,7 @@ bool_t efm32_adc_request_next(struct efm32_adc_private_s * pv)
   struct dev_valio_rq_s  *   rq;
   struct valio_adc_group_s * group;
 
-  rq = dev_valio_rq_s_cast(dev_request_queue_head(&pv->queue));
+  rq = dev_valio_rq_head(&pv->queue);
   if (!rq)
     return 0;
 
@@ -143,21 +143,21 @@ DEV_VALIO_REQUEST(efm32_adc_request)
   if (!group->mask)
     {
       req->error = -ENOTSUP;
-      kroutine_exec(&req->base.kr);
+      dev_valio_rq_done(req);
       return;
     }
 
   if (req->attribute != VALIO_ADC_VALUE || req->type != DEVICE_VALIO_READ)
     {
       req->error = -ENOTSUP;
-      kroutine_exec(&req->base.kr);
+      dev_valio_rq_done(req);
       return;
     }
 
   LOCK_SPIN_IRQ(&dev->lock);
 
-  bool_t empty = dev_request_queue_isempty(&pv->queue);
-  dev_request_queue_pushback(&pv->queue, &req->base);
+  bool_t empty = dev_rq_queue_isempty(&pv->queue);
+  dev_valio_rq_pushback(&pv->queue, req);
 
   if (empty)
     efm32_adc_request_next(pv);
@@ -184,7 +184,7 @@ DEV_IRQ_SRC_PROCESS(efm32_adc_irq)
 
   lock_spin(&dev->lock);
 
-  rq = dev_valio_rq_s_cast(dev_request_queue_head(&pv->queue));
+  rq = dev_valio_rq_head(&pv->queue);
   if (!rq)
     goto stop;
 
@@ -214,11 +214,11 @@ DEV_IRQ_SRC_PROCESS(efm32_adc_irq)
     }
 
 callback:
-  dev_request_queue_pop(&pv->queue);
+  dev_valio_rq_pop(&pv->queue);
   rq->error = 0;
 
   lock_release(&dev->lock);
-  kroutine_exec(&rq->base.kr);
+  dev_valio_rq_done(rq);
   lock_spin(&dev->lock);
 
   if (!efm32_adc_request_next(pv))
@@ -305,7 +305,7 @@ DEV_INIT(efm32_adc_init)
   cpu_mem_write_32(pv->addr + EFM32_ADC_CTRL_ADDR, endian_le32(x));
   cpu_mem_write_32(pv->addr + EFM32_ADC_CMD_ADDR, endian_le32(EFM32_ADC_CMD_SINGLESTOP));
 
-  dev_request_queue_init(&pv->queue);
+  dev_rq_queue_init(&pv->queue);
 
   pv->config       = config;
   pv->config_count = config_count;

@@ -50,7 +50,7 @@
        .size = sizeof(data),
    };
 
-   kroutine_init_deferred(&rq.base.kr, my_callback);
+   dev_char_rq_init(&rq, my_callback);
 
    DEVICE_OP(&char_dev, request, &rq);
    @end code
@@ -162,7 +162,7 @@ struct dev_char_rq_s
   error_t error;
 };
 
-STRUCT_INHERIT(dev_char_rq_s, dev_request_s, base);
+DEV_REQUEST_INHERIT(char); DEV_REQUEST_QUEUE_OPS(char);
 
 /** @see dev_char_request_t */
 #define DEV_CHAR_REQUEST(n)                                             \

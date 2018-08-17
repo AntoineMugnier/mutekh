@@ -114,7 +114,7 @@ static DEV_CHAR_REQUEST(emu_tty_request)
   } while (rq->size > 0 && !rq->error && !partial);
 
  end:
-  kroutine_exec(&rq->base.kr);
+  dev_char_rq_done(rq);
 }
 
 const struct driver_s emu_tty_drv;

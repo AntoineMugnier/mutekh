@@ -78,7 +78,7 @@ static void pcf8574_handle_next(struct device_s *dev)
     return;
   }
 
-  rq = dev_gpio_rq_s_cast(dev_request_queue_head(&pv->queue));
+  rq = dev_gpio_rq_head(&pv->queue);
 
   if (!rq)
     return;
@@ -141,8 +141,8 @@ static KROUTINE_EXEC(pcf8574_i2c_done)
                 range & mask & (data ^ cur));
 
         if (range & mask & (data ^ cur)) {
-          dev_request_queue_remove(&pv->until_queue, &rq->base);
-          kroutine_exec(&rq->base.kr);
+          dev_gpio_rq_remove(&pv->until_queue, rq);
+          dev_gpio_rq_done(rq);
         }
       });
     // Dont break, notify read is actually an IO get: fallthroug is OK
@@ -155,18 +155,18 @@ static KROUTINE_EXEC(pcf8574_i2c_done)
           uint_fast8_t range = bit_range(rq->io_first, rq->io_last);
           rq->input.data[0] = ((pv->input & range) >> rq->io_first);
           dprintk("%s %p io get done %02x\n", __FUNCTION__, rq, rq->input.data[0]);
-          dev_request_queue_remove(&pv->queue, brq);
-          kroutine_exec(&rq->base.kr);
+          dev_gpio_rq_remove(&pv->queue, rq);
+          dev_gpio_rq_done(rq);
         }
       });
     break;
 
   case STATE_IO_SET: {
-    struct dev_gpio_rq_s *rq = dev_gpio_rq_s_cast(dev_request_queue_head(&pv->queue));
+    struct dev_gpio_rq_s *rq = dev_gpio_rq_head(&pv->queue);
     if (rq && rq->type == DEV_GPIO_SET_OUTPUT) {
       dprintk("%s %p io set done\n", __FUNCTION__, rq);
-      dev_request_queue_pop(&pv->queue);
-      kroutine_exec(&rq->base.kr);
+      dev_gpio_rq_pop(&pv->queue);
+      dev_gpio_rq_done(rq);
     }
     break;
   }
@@ -210,13 +210,13 @@ static DEV_GPIO_REQUEST(pcf8574_request)
       rq->error = -ENOTSUP;
       break;
     }
-    kroutine_exec(&rq->base.kr);
+    dev_gpio_rq_done(rq);
     return;
 
   case DEV_GPIO_UNTIL:
     if (pv->no_irq) {
       rq->error = -ENOTSUP;
-      kroutine_exec(&rq->base.kr);
+      dev_gpio_rq_done(rq);
       return;
     }
     break;
@@ -232,7 +232,7 @@ static DEV_GPIO_REQUEST(pcf8574_request)
   switch (rq->type) {
   default:
     dprintk("%s request %p\n", __FUNCTION__, rq);
-    dev_request_queue_pushback(&pv->queue, &rq->base);
+    dev_gpio_rq_pushback(&pv->queue, rq);
     break;
 
   case DEV_GPIO_UNTIL:
@@ -243,10 +243,10 @@ static DEV_GPIO_REQUEST(pcf8574_request)
 
     if (range & mask & (data ^ pv->input)) {
       rq->error = 0;
-      kroutine_exec(&rq->base.kr);
+      dev_gpio_rq_done(rq);
       return;
     } else {
-      dev_request_queue_pushback(&pv->until_queue, &rq->base);
+      dev_gpio_rq_pushback(&pv->until_queue, rq);
     }
     break;
   }
@@ -296,10 +296,10 @@ static DEV_INIT(pcf8574_init)
   pv->i2c_txn.transfer_count = 1;
   pv->i2c_transfer[0].size = 1;
 
-  kroutine_init_deferred(&pv->i2c_txn.base.base.kr, pcf8574_i2c_done);
+  dev_i2c_ctrl_rq_init(&pv->i2c_txn.base, pcf8574_i2c_done);
   
-  dev_request_queue_init(&pv->queue);
-  dev_request_queue_init(&pv->until_queue);
+  dev_rq_queue_init(&pv->queue);
+  dev_rq_queue_init(&pv->until_queue);
 
   dev->drv_pv = pv;
 
@@ -315,15 +315,15 @@ static DEV_CLEANUP(pcf8574_cleanup)
 {
   struct pcf8574_priv_s *pv = dev->drv_pv;
 
-  if (!dev_request_queue_isempty(&pv->queue))
+  if (!dev_rq_queue_isempty(&pv->queue))
     return -EBUSY;
 
-  if (!dev_request_queue_isempty(&pv->until_queue))
+  if (!dev_rq_queue_isempty(&pv->until_queue))
     return -EBUSY;
 
   dev_drv_i2c_transaction_cleanup(&pv->i2c, &pv->i2c_txn);
-  dev_request_queue_destroy(&pv->queue);
-  dev_request_queue_destroy(&pv->until_queue);
+  dev_rq_queue_destroy(&pv->queue);
+  dev_rq_queue_destroy(&pv->until_queue);
   mem_free(pv);
 
   return 0;

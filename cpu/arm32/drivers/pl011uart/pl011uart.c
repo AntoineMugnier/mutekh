@@ -74,7 +74,7 @@ static bool_t pl011uart_try_read(struct device_s *dev)
   struct dev_char_rq_s		*rq;
   bool_t ack_done = 0;
 
-  while ((rq = dev_char_rq_s_cast(dev_request_queue_head(&pv->read_q))))
+  while ((rq = dev_char_rq_head(&pv->read_q)))
     {
       size_t size = 0;
 
@@ -99,8 +99,8 @@ static bool_t pl011uart_try_read(struct device_s *dev)
 
           if ((rq->type & _DEV_CHAR_PARTIAL) || rq->size == 0)
             {
-              dev_request_queue_pop(&pv->read_q);
-              kroutine_exec(&rq->base.kr);
+              dev_char_rq_pop(&pv->read_q);
+              dev_char_rq_done(rq);
               continue;
             }
         }
@@ -142,7 +142,7 @@ static void pl011uart_try_write(struct device_s *dev)
     }
 #endif
 
-  while ((rq = dev_char_rq_s_cast(dev_request_queue_head(&pv->write_q))))
+  while ((rq = dev_char_rq_head(&pv->write_q)))
     {
       size_t size = 0;
 
@@ -177,8 +177,8 @@ static void pl011uart_try_write(struct device_s *dev)
 
           if ((rq->type & _DEV_CHAR_PARTIAL) || rq->size == 0)
             {
-              dev_request_queue_pop(&pv->write_q);
-              kroutine_exec(&rq->base.kr);
+              dev_char_rq_pop(&pv->write_q);
+              dev_char_rq_done(rq);
               continue;
             }
         }
@@ -208,7 +208,7 @@ static DEV_CHAR_REQUEST(pl011uart_request)
     {
     case DEV_CHAR_READ_PARTIAL:
     case DEV_CHAR_READ: {
-      dev_request_queue_pushback(&pv->read_q, dev_char_rq_s_base(rq));
+      dev_char_rq_pushback(&pv->read_q, rq);
       if (!pv->read_started)
         {
           pv->read_started = 1;
@@ -221,7 +221,7 @@ static DEV_CHAR_REQUEST(pl011uart_request)
     case DEV_CHAR_WRITE_FLUSH:
     case DEV_CHAR_WRITE_PARTIAL:
     case DEV_CHAR_WRITE: {
-      dev_request_queue_pushback(&pv->write_q, dev_char_rq_s_base(rq));
+      dev_char_rq_pushback(&pv->write_q, rq);
       if (!pv->write_started)
         {
           pv->write_started = 1;
@@ -238,7 +238,7 @@ static DEV_CHAR_REQUEST(pl011uart_request)
   if (err)
     {
       rq->error = err;
-      kroutine_exec(&rq->base.kr);
+      dev_char_rq_done(rq);
     }
 }
 
@@ -311,8 +311,8 @@ static DEV_INIT(pl011uart_init)
   cpu_mem_write_32(pv->addr + PL011_DMACR_ADDR, 0);
   cpu_mem_write_32(pv->addr + PL011_LCRH_ADDR, 0);
 
-  dev_request_queue_init(&pv->read_q);
-  dev_request_queue_init(&pv->write_q);
+  dev_rq_queue_init(&pv->read_q);
+  dev_rq_queue_init(&pv->write_q);
 
 #if CONFIG_DRIVER_CHAR_PL011_SWFIFO > 0
   uart_fifo_init(&pv->read_fifo);
@@ -364,8 +364,8 @@ static DEV_INIT(pl011uart_init)
   uart_fifo_destroy(&pv->write_fifo);
   uart_fifo_destroy(&pv->read_fifo);
 # endif
-  dev_request_queue_destroy(&pv->read_q);
-  dev_request_queue_destroy(&pv->write_q);
+  dev_rq_queue_destroy(&pv->read_q);
+  dev_rq_queue_destroy(&pv->write_q);
 #endif
  err_mem:
   mem_free(pv);
@@ -390,8 +390,8 @@ static DEV_CLEANUP(pl011uart_cleanup)
   uart_fifo_destroy(&pv->read_fifo);
 #endif
 
-  dev_request_queue_destroy(&pv->read_q);
-  dev_request_queue_destroy(&pv->write_q);
+  dev_rq_queue_destroy(&pv->read_q);
+  dev_rq_queue_destroy(&pv->write_q);
 
   mem_free(pv);
   return 0;

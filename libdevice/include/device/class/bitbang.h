@@ -186,7 +186,7 @@ struct dev_bitbang_rq_s
   struct dev_freq_s                  unit;
 };
 
-STRUCT_INHERIT(dev_bitbang_rq_s, dev_request_s, base);
+DEV_REQUEST_INHERIT(bitbang); DEV_REQUEST_QUEUE_OPS(bitbang);
 
 /** @see dev_bitbang_request_t */
 #define DEV_BITBANG_REQUEST(n)	void  (n) (const struct device_bitbang_s *accessor,\

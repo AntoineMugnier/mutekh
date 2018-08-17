@@ -230,7 +230,7 @@ static const struct hid_service_handler_s hid_handler = {
 
 static KROUTINE_EXEC(app_timeout_handle)
 {
-  struct app_s *app = KROUTINE_CONTAINER(kr, *app, timeout_rq.rq.kr);
+  struct app_s *app = KROUTINE_CONTAINER(kr, *app, timeout_rq.base.kr);
   dev_timer_value_t now;
 
   DEVICE_OP(&app->timer, get_value, &now, 0);
@@ -307,13 +307,13 @@ static CONTEXT_ENTRY(main)
   app->button_rq.attribute = VALIO_KEYBOARD_MAP;
   app->button_rq.type = DEVICE_VALIO_WAIT_EVENT;
   app->button_rq.data = &app->button_state;
-  kroutine_init_sched_switch(&app->button_rq.base.kr, button_changed);
+  dev_valio_rq_init(&app->button_rq, button_changed);
   DEVICE_OP(&app->button, request, &app->button_rq);
 
   dev_timer_value_t now;
   DEVICE_OP(&app->timer, get_value, &now, 0);
 
-  kroutine_init_deferred(&app->timeout_rq.rq.kr, app_timeout_handle);
+  dev_timer_rq_init(&app->timeout_rq, app_timeout_handle);
   dev_timer_init_sec(&app->timer, &app->second, NULL, 1, 1);
   app->adv_time = app->second * 30;
   app->idle_time = app->second * 120;

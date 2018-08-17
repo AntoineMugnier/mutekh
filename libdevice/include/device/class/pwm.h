@@ -110,7 +110,7 @@ struct dev_pwm_rq_s
   error_t                 error;
 };
 
-STRUCT_INHERIT(dev_pwm_rq_s, dev_request_s, base);
+DEV_REQUEST_INHERIT(pwm); DEV_REQUEST_QUEUE_OPS(pwm);
 
 /** @see dev_pwm_config_t */
 #define DEV_PWM_CONFIG(n) void (n)(struct device_pwm_s *pdev, \

@@ -63,7 +63,7 @@ static bool_t mydrv_do_read(struct mydrv_context_s *pv)
     {
       /* get the next request from our queue */
       struct dev_char_rq_s *rq;
-      rq = dev_char_rq_s_cast(dev_request_queue_head(&pv->read_q));
+      rq = dev_char_rq_head(&pv->read_q);
 
       if (rq == NULL)
         return 1;               /* no more request to serve */
@@ -71,10 +71,10 @@ static bool_t mydrv_do_read(struct mydrv_context_s *pv)
       if (rq->size == 0) /* terminate rq if no buffer space is left */
         {
           /* remove the request from the queue */
-          dev_request_queue_pop(&pv->read_q);
+          dev_char_rq_pop(&pv->read_q);
 
           /* signal the request owner that we did the job eventually */
-          kroutine_exec(&rq->base.kr);
+          dev_char_rq_done(rq);
         }
 
       else if (/* test if at least one byte is available from the UART. */
@@ -107,7 +107,7 @@ static DEV_CHAR_REQUEST(mydrv_uart_request)
     {
     case DEV_CHAR_READ:
       /* Push the read request at the end of our queue. */
-      dev_request_queue_pushback(&pv->read_q, dev_char_rq_s_base(rq));
+      dev_char_rq_pushback(&pv->read_q, rq);
 
       /* Try to process any requests present on the queue. */
       mydrv_do_read(pv);
@@ -129,12 +129,12 @@ static DEV_CHAR_REQUEST(mydrv_uart_request)
           rq->size--;
         }
 
-      kroutine_exec(&rq->base.kr);
+      dev_char_rq_done(rq);
       return;
 
     case DEV_CHAR_WRITE_POLL:
       /* we are always ready to write */
-      kroutine_exec(&rq->base.kr);
+      dev_char_rq_done(rq);
       return;
 
     case DEV_CHAR_READ_PARTIAL:
@@ -145,7 +145,7 @@ static DEV_CHAR_REQUEST(mydrv_uart_request)
 
     default:
       rq->error = -ENOTSUP;
-      kroutine_exec(&rq->base.kr);
+      dev_char_rq_done(rq);
       return;
     }
 }
@@ -196,7 +196,7 @@ static DEV_INIT(mydrv_init)
   pv->addr = addr;
 
   /* initializes our queue of read requests */
-  dev_request_queue_init(&pv->read_q);
+  dev_rq_queue_init(&pv->read_q);
 
   /* setup irq line */
   device_irq_source_init(dev, &pv->irq_eps, 1, mydrv_uart_irq);
@@ -214,11 +214,11 @@ static DEV_CLEANUP(mydrv_cleanup)
   struct mydrv_context_s *pv = dev->drv_pv;
 
   /* does not allow device cleanup when there are pending requests. */
-  if (!dev_request_queue_isempty(&pv->read_q))
+  if (!dev_rq_queue_isempty(&pv->read_q))
     return -EBUSY;
 
   /* cleanup our queue of read requests */
-  dev_request_queue_destroy(&pv->read_q);
+  dev_rq_queue_destroy(&pv->read_q);
 
   device_irq_source_unlink(dev, &pv->irq_eps, 1);
 

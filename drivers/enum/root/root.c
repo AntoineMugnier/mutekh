@@ -91,7 +91,7 @@ static DEV_INIT(enum_root_init)
 
   dev->drv_pv = pv;
 
-  dev_request_queue_init(&pv->queue);
+  dev_rq_queue_init(&pv->queue);
 #endif
 
   return 0;
@@ -102,7 +102,7 @@ static DEV_CLEANUP(enum_root_cleanup)
 #if 0 && defined(CONFIG_DEVICE_ENUM)
   struct enum_root_pv_s *pv = dev->drv_pv;
 
-  if (!dev_request_queue_isempty(&pv->queue))
+  if (!dev_rq_queue_isempty(&pv->queue))
     return -EBUSY;
 
   mem_free(pv);

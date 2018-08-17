@@ -138,7 +138,7 @@ struct dev_pcm_rq_s
   } stream[0];
 };
 
-STRUCT_INHERIT(dev_pcm_rq_s, dev_request_s, base);
+DEV_REQUEST_INHERIT(pcm); DEV_REQUEST_QUEUE_OPS(pcm);
 
 /** @see dev_pcm_request_t */
 #define DEV_PCM_REQUEST(n)                                               \

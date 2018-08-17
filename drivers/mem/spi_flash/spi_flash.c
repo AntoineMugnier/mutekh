@@ -45,7 +45,7 @@ static void spi_flash_pv_cleanup(struct device_s *dev)
   struct spi_flash_private_s *pv = dev->drv_pv;
   dev_drv_spi_bytecode_cleanup(&pv->spi, &pv->srq);
 
-  dev_request_queue_destroy(&pv->queue);
+  dev_rq_queue_destroy(&pv->queue);
 
   mem_free(pv);
 }
@@ -57,7 +57,7 @@ spi_flash_push(struct device_s *dev, struct dev_mem_rq_s *rq)
 
   LOCK_SPIN_IRQ(&dev->lock);
 
-  dev_request_queue_pushback(&pv->queue, dev_mem_rq_s_base(rq));
+  dev_mem_rq_pushback(&pv->queue, rq);
 
   if (pv->state == SPI_FLASH_STATE_IDLE)
     pv->state = SPI_FLASH_STATE_BUSY;
@@ -79,11 +79,11 @@ spi_flash_next(struct device_s *dev, error_t err)
     err = 0;
 
   LOCK_SPIN_IRQ(&dev->lock);
-  rq = dev_mem_rq_s_cast(dev_request_queue_pop(&pv->queue));
+  rq = dev_mem_rq_pop(&pv->queue);
   rq->err = err;
-  kroutine_exec(&rq->base.kr);
+  dev_mem_rq_done(rq);
 
-  rq = dev_mem_rq_s_cast(dev_request_queue_head(&pv->queue));
+  rq = dev_mem_rq_head(&pv->queue);
   if (rq == NULL)
     {
       pv->state = SPI_FLASH_STATE_IDLE;
@@ -101,7 +101,7 @@ spi_flash_cur(struct device_s *dev)
   struct dev_mem_rq_s *rq;
 
   LOCK_SPIN_IRQ(&dev->lock);
-  rq = dev_mem_rq_s_cast(dev_request_queue_head(&pv->queue));
+  rq = dev_mem_rq_head(&pv->queue);
   if (rq)
     pv->state = SPI_FLASH_STATE_BUSY;
   else
@@ -321,7 +321,7 @@ error_t spi_flash_init_common(struct device_s *dev,
 
   srq->base.base.pvdata = dev;
 
-  kroutine_init_deferred(&srq->base.base.kr, &spi_flash_srq_done);
+  dev_spi_ctrl_rq_init(&srq->base, &spi_flash_srq_done);
 
   /* compute erase and write delays */
   dev_timer_init_sec(timer, &pv->byte_erase_delay, 0, info->byte_erase_delay, 1000000);
@@ -339,7 +339,7 @@ error_t spi_flash_init_common(struct device_s *dev,
   bc_set_reg(&srq->vm, SPI_FLASH_BCCONST_SEND_HEADER,
 	     (uintptr_t)info->send_header);
 
-  dev_request_queue_init(&pv->queue);
+  dev_rq_queue_init(&pv->queue);
 
   /* starts device init sequence */
   if (dev_spi_bytecode_start(&pv->spi, srq, &spi_flash_bc_detect, 0))
@@ -358,7 +358,7 @@ DEV_CLEANUP(spi_flash_cleanup)
 {
   struct spi_flash_private_s *pv = dev->drv_pv;
 
-  if (!dev_request_queue_isempty(&pv->queue))
+  if (!dev_rq_queue_isempty(&pv->queue))
     return -EBUSY;
 
   spi_flash_pv_cleanup(dev);

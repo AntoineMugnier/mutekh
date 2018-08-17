@@ -81,7 +81,7 @@ static DEV_MEM_REQUEST(ram_request)
       dev_mem_mapped_op_helper(b->addr, b->end, rq);
     }
 
-  kroutine_exec(&rq->base.kr);
+  dev_mem_rq_done(rq);
 }
 
 static DEV_USE(ram_use)

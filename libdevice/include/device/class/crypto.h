@@ -310,7 +310,7 @@ struct dev_crypto_rq_s
   uint8_t                               *auth;
 };
 
-STRUCT_INHERIT(dev_crypto_rq_s, dev_request_s, base);
+DEV_REQUEST_INHERIT(crypto); DEV_REQUEST_QUEUE_OPS(crypto);
 
 /** @see dev_crypto_info_t */
 #define DEV_CRYPTO_INFO(n) error_t (n) (struct device_crypto_s *accessor, \

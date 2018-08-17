@@ -112,7 +112,7 @@ static KROUTINE_EXEC(bs_gpio_done)
   switch (pv->gpio_rq.type) {
   default:
   case DEV_GPIO_MODE:
-    if (dev_request_queue_isempty(&pv->queue))
+    if (dev_rq_queue_isempty(&pv->queue))
       break;
 
   case DEV_GPIO_GET_INPUT:
@@ -120,8 +120,8 @@ static KROUTINE_EXEC(bs_gpio_done)
     GCT_FOREACH(dev_request_queue, &pv->queue, brq, {
         struct dev_valio_rq_s *rq = dev_valio_rq_s_cast(brq);
         bs_state_read(pv, rq);
-        dev_request_queue_remove(&pv->queue, &rq->base);
-        kroutine_exec(&rq->base.kr);
+        dev_valio_rq_remove(&pv->queue, rq);
+        dev_valio_rq_done(rq);
       });
     break;
 
@@ -153,8 +153,8 @@ static DEV_VALIO_REQUEST(button_set_request)
   case DEVICE_VALIO_WAIT_EVENT:
     req->error = 0;
     LOCK_SPIN_IRQ(&dev->lock);
-    was_empty = dev_request_queue_isempty(&pv->queue);
-    dev_request_queue_pushback(&pv->queue, &req->base);
+    was_empty = dev_rq_queue_isempty(&pv->queue);
+    dev_valio_rq_pushback(&pv->queue, req);
     if (was_empty && !pv->busy)
       bs_gpio_wait(dev);
     LOCK_RELEASE_IRQ(&dev->lock);
@@ -167,7 +167,7 @@ static DEV_VALIO_REQUEST(button_set_request)
   }
 
  done:
-  kroutine_exec(&req->base.kr);
+  dev_valio_rq_done(req);
 }
 
 static DEV_VALIO_CANCEL(button_set_cancel)
@@ -185,7 +185,7 @@ static DEV_VALIO_CANCEL(button_set_cancel)
               });
 
   if (err == 0) {
-    dev_request_queue_remove(&pv->queue, &req->base);
+    dev_valio_rq_remove(&pv->queue, req);
 
     device_sleep_schedule(dev);
   }
@@ -235,7 +235,7 @@ static DEV_INIT(button_set_init)
   endian_le64_na_store(pv->mask, mask);
   pv->state_size = (bit_popc64(mask) + 7) / 8;
 
-  dev_request_queue_init(&pv->queue);
+  dev_rq_queue_init(&pv->queue);
 
   err = device_get_param_uint(dev, "active", &tmp);
   pv->active_high = err || tmp;
@@ -243,10 +243,12 @@ static DEV_INIT(button_set_init)
   pv->gpio_rq.base.pvdata = dev;
   pv->gpio_rq.io_first = id;
   pv->gpio_rq.io_last = id + width - 1;
-  kroutine_init_deferred(&pv->gpio_rq.base.kr, bs_gpio_done);
   pv->gpio_rq.type = DEV_GPIO_MODE;
   pv->gpio_rq.mode.mask = pv->mask;
   pv->gpio_rq.mode.mode = pv->active_high ? DEV_PIN_INPUT_PULLDOWN : DEV_PIN_INPUT_PULLUP;
+
+  dev_gpio_rq_init(&pv->gpio_rq, bs_gpio_done);
+
   pv->busy = 1;
 
   memset(pv->cur, pv->active_high ? 0 : 0xff, sizeof(pv->cur));
@@ -266,12 +268,12 @@ static DEV_CLEANUP(button_set_cleanup)
 {
   struct bs_context_s *pv = dev->drv_pv;
 
-  if (!dev_request_queue_isempty(&pv->queue))
+  if (!dev_rq_queue_isempty(&pv->queue))
     return -EBUSY;
 
   device_put_accessor(&pv->gpio.base);
 
-  dev_request_queue_destroy(&pv->queue);
+  dev_rq_queue_destroy(&pv->queue);
 
   mem_free(pv);
 

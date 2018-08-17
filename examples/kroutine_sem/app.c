@@ -53,7 +53,7 @@ void app_start()
   timer_rq.rev = 0;
 
     /* makes the timer_event function execute from the worker thread */
-  kroutine_init_queue(&timer_rq.rq.kr, timer_event, &worker_queue);
+  dev_timer_rq_init_queue(&timer_rq, timer_event, &worker_queue);
 
     /* timer kick off */
   ensure(DEVICE_OP(&timer_dev, request, &timer_rq) == 0);

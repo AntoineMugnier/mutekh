@@ -30,7 +30,7 @@ void main()
   pbrq.type      = DEVICE_VALIO_WAIT_EVENT;
   pbrq.data      = &btn_upd;
 
-  kroutine_init_immediate(&pbrq.base.kr, &push_button_pressed);
+  dev_valio_rq_init(&pbrq, &push_button_pressed);
 
   DEVICE_OP(&pbdev, request, &pbrq);
 

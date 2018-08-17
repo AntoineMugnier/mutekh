@@ -118,7 +118,7 @@ static DEV_TIMER_REQUEST(nrf5x_timer_request)
 
   LOCK_SPIN_IRQ_SCOPED(&dev->lock);
 
-  if (dev_request_pqueue_isempty(&pv->queue)) {
+  if (dev_rq_pqueue_isempty(&pv->queue)) {
     if (!dev->start_count)
       nrf5x_timer_start(pv);
 
@@ -133,10 +133,10 @@ static DEV_TIMER_REQUEST(nrf5x_timer_request)
   if (rq->deadline <= value + 256)
     return -ETIMEDOUT;
 
-  dev_timer_pqueue_insert(&pv->queue, &rq->rq);
-  rq->rq.drvdata = pv;
+  dev_timer_rq_insert(&pv->queue, rq);
+  rq->base.drvdata = pv;
 
-  if (dev_request_pqueue_head(&pv->queue) == &rq->rq)
+  if (dev_timer_rq_head(&pv->queue) == rq)
     nrf5x_deadline_set(pv, rq->deadline);
 
   return 0;
@@ -148,18 +148,18 @@ static DEV_TIMER_CANCEL(nrf5x_timer_cancel)
   struct nrf5x_timer_context_s *pv = dev->drv_pv;
   struct dev_timer_rq_s *head;
 
-  if (rq->rq.drvdata != pv)
+  if (rq->base.drvdata != pv)
     return -ETIMEDOUT;
 
   LOCK_SPIN_IRQ_SCOPED(&dev->lock);
 
-  head = dev_timer_rq_s_cast(dev_request_pqueue_head(&pv->queue));
+  head = dev_timer_rq_head(&pv->queue);
 
-  dev_timer_pqueue_remove(&pv->queue, &rq->rq);
-  rq->rq.drvdata = NULL;
+  dev_timer_rq_remove(&pv->queue, rq);
+  rq->base.drvdata = NULL;
 
   if (rq == head) {
-    head = dev_timer_rq_s_cast(dev_request_pqueue_head(&pv->queue));
+    head = dev_timer_rq_head(&pv->queue);
 
     if (head)
       nrf5x_deadline_set(pv, head->deadline);
@@ -167,7 +167,7 @@ static DEV_TIMER_CANCEL(nrf5x_timer_cancel)
       nrf5x_deadline_disable(pv);
   }
 
-  if (dev_request_pqueue_isempty(&pv->queue))
+  if (dev_rq_pqueue_isempty(&pv->queue))
     device_sleep_schedule(dev);
 
   return 0;
@@ -207,7 +207,7 @@ static DEV_USE(nrf5x_timer_use)
     struct device_s *dev = acc->dev;
     struct nrf5x_timer_context_s *pv = dev->drv_pv;
 
-    if (dev_request_pqueue_isempty(&pv->queue))
+    if (dev_rq_pqueue_isempty(&pv->queue))
       device_sleep_schedule(dev);
 
     return 0;
@@ -249,16 +249,16 @@ static DEV_IRQ_SRC_PROCESS(nrf5x_timer_irq)
   if (nrf_event_check(pv->addr, NRF_TIMER_COMPARE(DEADLINE)))
     nrf_event_clear(pv->addr, NRF_TIMER_COMPARE(DEADLINE));
 
-  while ((rq = dev_timer_rq_s_cast(dev_request_pqueue_head(&pv->queue))))
+  while ((rq = dev_timer_rq_head(&pv->queue)))
     {
       if (nrf5x_timer_value_get(pv) < rq->deadline)
         break;
 
-      dev_request_pqueue_pop(&pv->queue);
-      rq->rq.drvdata = 0;
+      dev_timer_rq_remove(&pv->queue, rq);
+      rq->base.drvdata = 0;
 
       lock_release(&dev->lock);
-      kroutine_exec(&rq->rq.kr);
+      dev_timer_rq_done(rq);
       lock_spin(&dev->lock);
     }
 
@@ -348,7 +348,7 @@ static DEV_INIT(nrf5x_timer_init)
   pv->freq.num = 16000000;
   pv->freq.denom = 1;
 
-  dev_request_pqueue_init(&pv->queue);
+  dev_rq_pqueue_init(&pv->queue);
   pv->base = 0;
 
   nrf_reg_set(pv->addr, NRF_TIMER_CC(OVERFLOW), 0);
@@ -369,10 +369,10 @@ static DEV_CLEANUP(nrf5x_timer_cleanup)
 {
   struct nrf5x_timer_context_s *pv = dev->drv_pv;
 
-  if (!dev_request_pqueue_isempty(&pv->queue))
+  if (!dev_rq_pqueue_isempty(&pv->queue))
     return -EBUSY;
 
-  dev_request_pqueue_destroy(&pv->queue);
+  dev_rq_pqueue_destroy(&pv->queue);
   nrf_it_disable_mask(pv->addr, -1);
 #if defined(CONFIG_DEVICE_CLOCK)
   dev_drv_clock_cleanup(dev, &pv->clock_sink);

@@ -258,7 +258,7 @@ struct dev_mem_rq_s
   };
 };
 
-STRUCT_INHERIT(dev_mem_rq_s, dev_request_s, base);
+DEV_REQUEST_INHERIT(mem); DEV_REQUEST_QUEUE_OPS(mem);
 
 /** @see dev_mem_info_t */
 #define DEV_MEM_INFO(n)	error_t  (n) (struct device_mem_s *accessor, \

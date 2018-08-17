@@ -144,8 +144,8 @@ static bool_t usbdev_start_transfer(struct dev_usbdev_context_s *ctx,
     }
 
   /* Remove from queue */
-  dev_request_queue_pop(&ep->queue);
-  kroutine_exec(&tr->base.kr);
+  dev_usbdev_rq_pop(&ep->queue);
+  dev_usbdev_rq_done(tr);
   return 0;
 }
 
@@ -156,7 +156,7 @@ static void usbdev_process_queue(struct dev_usbdev_context_s *ctx,
 
   while(1)
     {
-      tr = dev_usbdev_request_s_cast(dev_request_queue_head(&ep->queue));
+      tr = dev_usbdev_rq_head(&ep->queue);
 
       if (tr == NULL || ep->busy || ep->disabled)
         break;
@@ -166,8 +166,8 @@ static void usbdev_process_queue(struct dev_usbdev_context_s *ctx,
       if (tr->error)
         {
           /* Remove from queue */
-          dev_request_queue_pop(&ep->queue);
-          kroutine_exec(&tr->base.kr);
+          dev_usbdev_rq_pop(&ep->queue);
+          dev_usbdev_rq_done(tr);
         }
       else if (usbdev_start_transfer(ctx, ep, tr))
         break;
@@ -2056,13 +2056,13 @@ void usbdev_stack_request_done(struct dev_usbdev_context_s *ctx,
 
   ep->busy = 0;
   /* Remove from queue */
-  dev_request_queue_pop(&ep->queue);
+  dev_usbdev_rq_pop(&ep->queue);
 
   /* Update Endpoint revision only when revision error */
   if (tr->error == -EAGAIN)
     tr->rev = ep->rev;
 
-  kroutine_exec(&tr->base.kr);
+  dev_usbdev_rq_done(tr);
 
   /* Process next transfer */
   usbdev_process_queue(ctx, ep);
@@ -2230,8 +2230,8 @@ error_t usbdev_stack_transfer(struct device_usbdev_s *dev,
         goto done;
     }
 
-  bool_t empty = dev_request_queue_isempty(&ep->queue);
-  dev_request_queue_pushback(&ep->queue, dev_usbdev_request_s_base(tr));
+  bool_t empty = dev_rq_queue_isempty(&ep->queue);
+  dev_usbdev_rq_pushback(&ep->queue, tr);
 
   /* Queue is empty and endpoint is neither disabled or busy */
   if (empty && !ep->disabled && !ep->busy)
@@ -2263,10 +2263,10 @@ static void usbdev_ep_init_cleanup(struct dev_usbdev_context_s *ctx,
         {
           ep->disabled = 0;
           ep->busy = 0;
-          dev_request_queue_init(&ep->queue);
+          dev_rq_queue_init(&ep->queue);
         }
       else
-        dev_request_queue_destroy(&ep->queue);
+        dev_rq_queue_destroy(&ep->queue);
 
       msk ^= 1 << idx;
     }

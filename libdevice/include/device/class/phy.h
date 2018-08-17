@@ -75,7 +75,7 @@ struct dev_phy_rq_s
   };
 };
 
-STRUCT_INHERIT(dev_phy_rq_s, dev_request_s, base);
+DEV_REQUEST_INHERIT(phy); DEV_REQUEST_QUEUE_OPS(phy);
 
 /** @see dev_phy_request_t */
 #define DEV_PHY_REQUEST(n) void (n) (                              \

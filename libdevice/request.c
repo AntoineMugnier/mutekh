@@ -23,13 +23,17 @@
 #include <device/request.h>
 #include <mutek/semaphore.h>
 
-GCT_CONTAINER_PROTOTYPES(dev_request_queue, extern inline, dev_request_queue,
-                         init, destroy, push, pushback, pop, remove, isempty, head, tail, next);
+GCT_CONTAINER_PROTOTYPES(dev_request_queue, extern inline, dev_rq_queue,
+                         init, destroy, isempty);
 
-GCT_CONTAINER_PROTOTYPES(dev_request_pqueue, extern inline, dev_request_pqueue,
-                         init, destroy, pop, isempty, head, prev, next, remove);
+GCT_CONTAINER_PROTOTYPES(dev_request_queue, extern inline, __dev_rq_queue,
+                         pushback, pop, remove, head);
 
-extern inline KROUTINE_EXEC(dev_request_spin_done);
+GCT_CONTAINER_PROTOTYPES(dev_request_pqueue, extern inline, dev_rq_pqueue,
+                         init, destroy, isempty);
+
+GCT_CONTAINER_PROTOTYPES(dev_request_pqueue, extern inline, __dev_rq_pqueue,
+                         head, prev, next);
 
 extern inline KROUTINE_EXEC(dev_request_spin_done);
 
@@ -67,7 +71,7 @@ dev_request_delayed_end(struct dev_request_dlqueue_s *q,
 KROUTINE_EXEC(dev_request_delayed_kr)
 {
   struct dev_request_dlqueue_s *d = KROUTINE_CONTAINER(kr, struct dev_request_dlqueue_s, kr);
-  struct dev_request_s *rq = dev_request_queue_head(&d->queue);
+  struct dev_request_s *rq = __dev_rq_queue_head(&d->queue);
 
   d->func(rq->drvdata, rq);
 }

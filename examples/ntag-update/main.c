@@ -42,7 +42,7 @@ void tag_write(struct ctx_s *ctx)
 {
   printk("Writing...\n");
   
-  kroutine_init_deferred(&ctx->tag_rq.base.kr, tag_write_done);
+  dev_char_rq_init(&ctx->tag_rq, tag_write_done);
   ctx->tag_rq.data = ctx->buffer;
   ctx->tag_rq.size = 64;
   ctx->tag_rq.type = DEV_CHAR_WRITE_FRAME;
@@ -55,7 +55,7 @@ void tag_read(struct ctx_s *ctx)
 {
   printk("Reading...\n");
 
-  kroutine_init_deferred(&ctx->tag_rq.base.kr, tag_read_done);
+  dev_char_rq_init(&ctx->tag_rq, tag_read_done);
   ctx->tag_rq.data = ctx->buffer;
   ctx->tag_rq.size = 64;
   ctx->tag_rq.type = DEV_CHAR_READ_FRAME;
@@ -132,7 +132,7 @@ static void timeout_reset(struct ctx_s *ctx)
   
   //printk("Tag timeout reset\n");
 
-  if (ctx->timer_rq.rq.pvdata) {
+  if (ctx->timer_rq.base.pvdata) {
     err = DEVICE_OP(&ctx->timer, cancel, &ctx->timer_rq);
     if (err) {
       //printk("Cancel failed: %d\n", err);
@@ -140,7 +140,7 @@ static void timeout_reset(struct ctx_s *ctx)
     }
   }
   
-  ctx->timer_rq.rq.pvdata = ctx;
+  ctx->timer_rq.base.pvdata = ctx;
   //printk("Timeout: %d\n", ctx->timer_rq.delay);
   err = DEVICE_OP(&ctx->timer, request, &ctx->timer_rq);
   if (err) {
@@ -151,12 +151,12 @@ static void timeout_reset(struct ctx_s *ctx)
 static
 KROUTINE_EXEC(tag_timeout)
 {
-  struct ctx_s *ctx = KROUTINE_CONTAINER(kr, *ctx, timer_rq.rq.kr);
+  struct ctx_s *ctx = KROUTINE_CONTAINER(kr, *ctx, timer_rq.base.kr);
   error_t err;
   
   printk("Tag timeout !\n");
 
-  ctx->timer_rq.rq.pvdata = NULL;
+  ctx->timer_rq.base.pvdata = NULL;
 
   err = DEVICE_OP(&ctx->tag, cancel, &ctx->tag_rq);
   
@@ -272,12 +272,12 @@ void app_start(void)
   ctx->crc_rq.len = 4;
   ctx->crc_rq.op = DEV_CRYPTO_INIT | DEV_CRYPTO_FINALIZE;
 
-  ctx->timer_rq.rq.pvdata = NULL;
+  ctx->timer_rq.base.pvdata = NULL;
 
-  kroutine_init_deferred(&ctx->timer_rq.rq.kr, &tag_timeout);
+  dev_timer_rq_init(&ctx->timer_rq, &tag_timeout);
   dev_timer_init_sec(&ctx->timer, &ctx->timer_rq.delay, 0, 1, 2);
 
-  kroutine_init_deferred(&ctx->crc_rq.base.kr, crc_done);
+  dev_crypto_rq_init(&ctx->crc_rq, crc_done);
   
   tag_read(ctx);
 }

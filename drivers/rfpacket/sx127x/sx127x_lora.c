@@ -261,8 +261,7 @@ static
 void sx127x_next_request(struct device_s * dev)
 {
   struct sx127x_private_s  * pv   = dev->drv_pv;
-  struct dev_request_s *     base = dev_request_queue_head(&pv->queue);
-  struct dev_rfpacket_rq_s * rq   = dev_rfpacket_rq_s_cast(base);
+  struct dev_rfpacket_rq_s * rq   = dev_rfpacket_rq_head(&pv->queue);
 
   bool_t changed = 0;
 
@@ -386,7 +385,7 @@ void sx127x_rx_packet_end(struct device_s * dev)
 
   if (pv->next_rq->type != DEV_RFPACKET_RQ_RX_CONT)
     {
-      dev_request_queue_pop(&pv->queue);
+      dev_rfpacket_rq_pop(&pv->queue);
       pv->next_rq = NULL;
     }
   pv->rx_last = NULL;
@@ -415,7 +414,7 @@ void sx127x_rx_timeout(struct device_s * dev)
   if (pv->next_rq && pv->next_rq != pv->rx_cont_rq)
     {
       struct dev_rfpacket_rq_s * rq = pv->next_rq;
-      dev_request_queue_pop(&pv->queue);
+      dev_rfpacket_rq_pop(&pv->queue);
 
 #if defined(CONFIG_DRIVER_RFPACKET_SX127X_STATS)
   ++pv->stats.rx_err_count;
@@ -423,7 +422,7 @@ void sx127x_rx_timeout(struct device_s * dev)
 
       rq->err = -ETIMEDOUT;
       lock_release(&dev->lock);
-      kroutine_exec(&rq->base.kr);
+      dev_rfpacket_rq_done(rq);
       lock_spin(&dev->lock);
 
       pv->next_rq = NULL;
@@ -457,7 +456,7 @@ void sx127x_tx_end(struct device_s * dev)
 
   dprintk("TX: sent %d bytes!\n", rq->tx_size);
 
-  dev_request_queue_pop(&pv->queue);
+  dev_rfpacket_rq_pop(&pv->queue);
   pv->next_rq = NULL;
 
 #if defined(CONFIG_DEVICE_SPI_BYTECODE_TIMER)
@@ -469,7 +468,7 @@ void sx127x_tx_end(struct device_s * dev)
 #endif
 
   lock_release(&dev->lock);
-  kroutine_exec(&rq->base.kr);
+  dev_rfpacket_rq_done(rq);
   lock_spin(&dev->lock);
 
   /* Process next request if any */
@@ -482,7 +481,7 @@ void sx127x_config_update(struct device_s * dev)
   struct sx127x_private_s * pv = dev->drv_pv;
 
   struct dev_rfpacket_rq_s * rq =
-    dev_rfpacket_rq_s_cast(dev_request_queue_head(&pv->queue));
+    dev_rfpacket_rq_head(&pv->queue);
 
   if (!rq)
     rq = pv->rx_cont_rq;
@@ -617,10 +616,10 @@ void sx127x_process_request(struct device_s * dev)
 
     default:
       rq->err = -ENOTSUP;
-      dev_request_queue_pop(&pv->queue);
+      dev_rfpacket_rq_pop(&pv->queue);
 
       lock_release(&dev->lock);
-      kroutine_exec(&rq->base.kr);
+      dev_rfpacket_rq_done(rq);
       lock_spin(&dev->lock);
 
       sx127x_next_request(dev);
@@ -639,7 +638,7 @@ DEV_RFPACKET_REQUEST(sx127x_request)
 
   LOCK_SPIN_IRQ(&dev->lock);
 
-  empty = dev_request_queue_isempty(&pv->queue);
+  empty = dev_rq_queue_isempty(&pv->queue);
 
   va_start(vl, accessor);
 
@@ -656,7 +655,7 @@ DEV_RFPACKET_REQUEST(sx127x_request)
               rq->err = -EBUSY;
 
               lock_release(&dev->lock);
-              kroutine_exec(&rq->base.kr);
+              dev_rfpacket_rq_done(rq);
               lock_spin(&dev->lock);
             }
           else
@@ -666,7 +665,7 @@ DEV_RFPACKET_REQUEST(sx127x_request)
         }
       else
         {
-          dev_request_queue_pushback(&pv->queue, dev_rfpacket_rq_s_base(rq));
+          dev_rfpacket_rq_pushback(&pv->queue, rq);
         }
     }
 
@@ -708,7 +707,7 @@ void sx127x_cancel_end(struct device_s * dev)
   if (pv->rx_cont_rq == pv->next_rq)
     pv->rx_cont_rq = NULL;
   else
-    dev_request_queue_pop(&pv->queue);
+    dev_rfpacket_rq_pop(&pv->queue);
 }
 
 static
@@ -738,7 +737,7 @@ DEV_RFPACKET_CANCEL(sx127x_cancel)
         }
       else
         {
-          dev_request_queue_remove(&pv->queue, &rq->base);
+          dev_rfpacket_rq_remove(&pv->queue, rq);
           dprintk("cancel request %p.\n", rq);
         }
     }
@@ -859,7 +858,7 @@ void sx127x_crypto_rng_end(struct device_s * dev)
   rq->err = 0;
 
   lock_release(&dev->lock);
-  kroutine_exec(&rq->base.kr);
+  dev_rfpacket_rq_done(rq);
   lock_spin(&dev->lock);
 
   pv->crypto_rq = NULL;
@@ -912,7 +911,7 @@ DEV_CRYPTO_REQUEST(sx127x_crypto_request)
   LOCK_RELEASE_IRQ(&dev->lock);
 
   if (rq->err)
-    kroutine_exec(&rq->base.kr);
+    dev_rfpacket_rq_done(rq);
 }
 
 #endif // CONFIG_DRIVER_CRYPTO_SX127X_RNG
@@ -950,7 +949,7 @@ static KROUTINE_EXEC(sx127x_spi_rq_done)
 
   if (!pv->done)
     {
-      if (pv->state == SX127X_STATE_RX_CONTINUOUS && !dev_request_queue_isempty(&pv->queue))
+      if (pv->state == SX127X_STATE_RX_CONTINUOUS && !dev_rq_queue_isempty(&pv->queue))
         sx127x_next_request(dev);
       goto end;
     }
@@ -1042,12 +1041,12 @@ static DEV_INIT(sx127x_init)
                                DEV_PIN_PUSHPULL, DEV_PIN_INPUT, DEV_PIN_INPUT))
     goto err_timer;
 
-  dev_request_queue_init(&pv->queue);
+  dev_rq_queue_init(&pv->queue);
 #if defined(CONFIG_DRIVER_RFPACKET_SX127X_CRYPTO_RNG)
-  dev_request_queue_init(&pv->crypt_queue);
+  dev_rq_queue_init(&pv->crypt_queue);
 #endif
 
-  kroutine_init_deferred(&srq->base.base.kr, &sx127x_spi_rq_done);
+  dev_spi_ctrl_rq_init(&srq->base, &sx127x_spi_rq_done);
   bc_set_reg(&srq->vm, R_CTX_PV, (uintptr_t)pv);
 
   /* Disable bytecode trace */
@@ -1097,9 +1096,9 @@ static DEV_CLEANUP(sx127x_cleanup)
 
   device_irq_source_unlink(dev, pv->src_ep, 1);
 
-  dev_request_queue_destroy(&pv->queue);
+  dev_rq_queue_destroy(&pv->queue);
 #if defined(CONFIG_DRIVER_RFPACKET_SX127X_CRYPTO_RNG)
-  dev_request_queue_destroy(&pv->crypt_queue);
+  dev_rq_queue_destroy(&pv->crypt_queue);
 #endif
 
   dev_drv_spi_bytecode_cleanup(&pv->spi, &pv->spi_rq);

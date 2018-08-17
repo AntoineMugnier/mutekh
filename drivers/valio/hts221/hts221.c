@@ -80,9 +80,9 @@ hts221_error(struct device_s *dev, struct hts221_private_s *pv, error_t error)
   pv->state = HTS221_ERROR;
 
   struct dev_valio_rq_s *rq;
-  while ((rq = dev_valio_rq_s_cast(dev_request_queue_pop(&pv->queue)))) {
+  while ((rq = dev_valio_rq_pop(&pv->queue))) {
     rq->error = error;
-    kroutine_exec(&rq->base.kr);
+    dev_valio_rq_done(rq);
   }
 }
 
@@ -182,19 +182,19 @@ KROUTINE_EXEC(hts221_read_done)
         break;
       }
       }
-      dev_request_queue_remove(&pv->queue, &rq->base);
-      kroutine_exec(&rq->base.kr);
+      dev_valio_rq_remove(&pv->queue, rq);
+      dev_valio_rq_done(rq);
     });
 
-  if (!dev_request_queue_isempty(&pv->queue))
+  if (!dev_rq_queue_isempty(&pv->queue))
     hts221_wait(dev);
 }
 
 static
 KROUTINE_EXEC(hts221_wait_done)
 {
-  struct hts221_private_s *pv  = KROUTINE_CONTAINER(kr, *pv, timer_rq.rq.kr);
-  struct device_s *dev = pv->timer_rq.rq.pvdata;
+  struct hts221_private_s *pv  = KROUTINE_CONTAINER(kr, *pv, timer_rq.base.kr);
+  struct device_s *dev = pv->timer_rq.base.pvdata;
 
   logk_trace("%s %d", __func__, pv->state);
 
@@ -203,7 +203,7 @@ KROUTINE_EXEC(hts221_wait_done)
   if (pv->state == HTS221_WAITING)
     pv->state = HTS221_IDLE;
 
-  if (!dev_request_queue_isempty(&pv->queue))
+  if (!dev_rq_queue_isempty(&pv->queue))
     hts221_read(dev);
 }
 
@@ -217,14 +217,14 @@ DEV_VALIO_REQUEST(hts221_request)
 
   if (req->type == DEVICE_VALIO_WRITE) {
     req->error = -EINVAL;
-    kroutine_exec(&req->base.kr);
+    dev_valio_rq_done(req);
     return;
   }
 
   if (req->attribute != VALIO_TEMPERATURE_VALUE &&
       req->attribute != VALIO_HUMIDITY) {
     req->error = -EINVAL;
-    kroutine_exec(&req->base.kr);
+    dev_valio_rq_done(req);
     return;
   }
 
@@ -232,10 +232,10 @@ DEV_VALIO_REQUEST(hts221_request)
 
   if (pv->state == HTS221_ERROR) {
     req->error = -EIO;
-    kroutine_exec(&req->base.kr);
+    dev_valio_rq_done(req);
   } else {
     req->error = 0;
-    dev_request_queue_pushback(&pv->queue, &req->base);
+    dev_valio_rq_pushback(&pv->queue, req);
 
     if (req->type == DEVICE_VALIO_READ)
       hts221_read(dev);
@@ -257,7 +257,7 @@ DEV_VALIO_CANCEL(hts221_cancel)
   GCT_FOREACH(dev_request_queue, &pv->queue, item, {
       struct dev_valio_rq_s *rq = dev_valio_rq_s_cast(item);
       if (rq == req) {
-        dev_request_queue_remove(&pv->queue, dev_valio_rq_s_base(rq));
+        dev_valio_rq_remove(&pv->queue, rq);
         return 0;
       }
     });
@@ -271,7 +271,7 @@ hts221_clean(struct device_s *dev)
   struct hts221_private_s *pv = dev->drv_pv;
 
   dev_drv_i2c_bytecode_cleanup(&pv->i2c, &pv->i2c_rq);
-  dev_request_queue_destroy(&pv->queue);
+  dev_rq_queue_destroy(&pv->queue);
   dev->drv_pv = NULL;
   mem_free(pv);
 }
@@ -318,7 +318,7 @@ KROUTINE_EXEC(hts221_init_done)
     / (int32_t)(h1_t0_value - h0_t0_value);
   pv->h0_t0_milx256 = h0_rhx2 * 5 * 256 - h0_t0_value * pv->milx256_per_lsb;
 
-  kroutine_init_deferred(&pv->i2c_rq.base.base.kr, &hts221_read_done);
+  dev_i2c_ctrl_rq_init(&pv->i2c_rq.base, &hts221_read_done);
   hts221_read(dev);
 }
 
@@ -339,7 +339,7 @@ DEV_INIT(hts221_init)
   memset(pv, 0, sizeof(*pv));
   dev->drv_pv = pv;
 
-  dev_request_queue_init(&pv->queue);
+  dev_rq_queue_init(&pv->queue);
 
   err = device_get_param_uint(dev, "period", &period);
   if (err)
@@ -363,8 +363,8 @@ DEV_INIT(hts221_init)
   if (err)
     goto err_queue;
 
-  kroutine_init_deferred(&pv->timer_rq.rq.kr, &hts221_wait_done);
-  pv->timer_rq.rq.pvdata = dev;
+  dev_timer_rq_init(&pv->timer_rq, &hts221_wait_done);
+  pv->timer_rq.base.pvdata = dev;
   dev_timer_init_sec(pv->timer, &pv->timer_rq.delay, 0, period, 1000);
 
   dev_timer_init_sec(pv->timer, &delay, 0, 1, 1000);
@@ -374,13 +374,13 @@ DEV_INIT(hts221_init)
   bc_set_reg(&pv->i2c_rq.vm, HTS221_I2C_BCGLOBAL_CONV_TIME, delay);
 
   pv->i2c_rq.base.base.pvdata = dev;
-  kroutine_init_deferred(&pv->i2c_rq.base.base.kr, &hts221_init_done);
+  dev_i2c_ctrl_rq_init(&pv->i2c_rq.base, &hts221_init_done);
   dev_i2c_bytecode_start(&pv->i2c, &pv->i2c_rq, &hts221_bc_initialize, 0);
 
   return -EAGAIN;
 
  err_queue:
-  dev_request_queue_destroy(&pv->queue);
+  dev_rq_queue_destroy(&pv->queue);
   mem_free(pv);
   return err;
 }

@@ -55,10 +55,10 @@ adxl362_error(struct device_s *dev, struct adxl362_private_s *pv, error_t error)
     device_irq_src_disable(&pv->irq_ep);
 
   struct dev_valio_rq_s *rq;
-  while ((rq = dev_valio_rq_s_cast(dev_request_queue_pop(&pv->queue))))
+  while ((rq = dev_valio_rq_pop(&pv->queue)))
     {
       rq->error = error;
-      kroutine_exec(&rq->base.kr);
+      dev_valio_rq_done(rq);
     }
 }
 
@@ -68,7 +68,7 @@ adxl362_clean(struct device_s *dev, struct adxl362_private_s *pv)
   logk_trace("%s", __func__);
 
   dev_drv_spi_bytecode_cleanup(&pv->spi, &pv->spi_rq);
-  dev_request_queue_destroy(&pv->queue);
+  dev_rq_queue_destroy(&pv->queue);
   mem_free(pv);
 }
 
@@ -83,7 +83,7 @@ adxl362_next(struct adxl362_private_s *pv)
   if (pv->spi_rq.base.base.pvdata)
     return;
 
-  if ((!dev_request_queue_isempty(&pv->queue) && pv->state == ADXL362_STATE_IDLE)
+  if ((!dev_rq_queue_isempty(&pv->queue) && pv->state == ADXL362_STATE_IDLE)
       || pv->config_pending)
     adxl362_write_config(pv);
   else if (pv->read_pending)
@@ -127,7 +127,7 @@ KROUTINE_EXEC(adxl362_read_conv_done)
   uint8_t status = bc_get_reg(&pv->spi_rq.vm, ADXL362_BC_READ_CONV_BCOUT_STATUS);
   bool_t active = !!(status & ADXL362_REG_STATUS_AWAKE_MASK);
 
-  if (dev_request_queue_isempty(&pv->queue))
+  if (dev_rq_queue_isempty(&pv->queue))
     device_sleep_schedule(dev);
 
   GCT_FOREACH(dev_request_queue, &pv->queue, item, {
@@ -137,12 +137,12 @@ KROUTINE_EXEC(adxl362_read_conv_done)
     if (rq->type == DEVICE_VALIO_WAIT_EVENT && !active && !pv->was_active)
       GCT_FOREACH_CONTINUE;
 
-    dev_request_queue_remove(&pv->queue, dev_valio_rq_s_base(rq));
+    dev_valio_rq_remove(&pv->queue, rq);
     state->active = active;
     state->data.axis[VALIO_MS_ACCEL_X] = data[0];
     state->data.axis[VALIO_MS_ACCEL_Y] = data[1];
     state->data.axis[VALIO_MS_ACCEL_Z] = data[2];
-    kroutine_exec(&rq->base.kr);
+    dev_valio_rq_done(rq);
   });
 
   pv->was_active = active;
@@ -165,7 +165,7 @@ KROUTINE_EXEC(adxl362_idle_set_done)
   pv->spi_rq.base.base.pvdata = NULL;
   pv->state = ADXL362_STATE_IDLE;
 
-  if (!dev_request_queue_isempty(&pv->queue))
+  if (!dev_rq_queue_isempty(&pv->queue))
     adxl362_write_config(pv);
   
   LOCK_RELEASE_IRQ(&dev->lock);
@@ -180,7 +180,7 @@ adxl362_read_conv(struct adxl362_private_s *pv)
 
   pv->spi_rq.base.base.pvdata = dev;
   pv->read_pending = 0;
-  kroutine_init_deferred(&pv->spi_rq.base.base.kr, &adxl362_read_conv_done);
+  dev_spi_ctrl_rq_init(&pv->spi_rq.base, &adxl362_read_conv_done);
   dev_spi_bytecode_start(&pv->spi, &pv->spi_rq, &adxl362_bc_read_conv, 0);
 }
 
@@ -192,7 +192,7 @@ adxl362_shutdown(struct adxl362_private_s *pv)
   logk_trace("%s", __func__);
 
   pv->spi_rq.base.base.pvdata = dev;
-  kroutine_init_deferred(&pv->spi_rq.base.base.kr, &adxl362_idle_set_done);
+  dev_spi_ctrl_rq_init(&pv->spi_rq.base, &adxl362_idle_set_done);
   dev_spi_bytecode_start(&pv->spi, &pv->spi_rq, &adxl362_bc_set_idle, 0);
 }
 
@@ -356,7 +356,7 @@ adxl362_write_config(struct adxl362_private_s *pv)
 
   pv->spi_rq.base.base.pvdata = dev;
   pv->config_pending = 0;
-  kroutine_init_deferred(&pv->spi_rq.base.base.kr, &adxl362_config_done);
+  dev_spi_ctrl_rq_init(&pv->spi_rq.base, &adxl362_config_done);
   dev_spi_bytecode_start(&pv->spi, &pv->spi_rq, &adxl362_bc_config,
                          ADXL362_BC_CONFIG_BCARGS(config[0], config[1],
                                                   config[2], config[3]));
@@ -402,19 +402,19 @@ DEV_VALIO_REQUEST(adxl362_request)
           data->axis[VALIO_MS_ACCEL_X] = pv->offset[VALIO_MS_ACCEL_X];
           data->axis[VALIO_MS_ACCEL_Y] = pv->offset[VALIO_MS_ACCEL_Y];
           data->axis[VALIO_MS_ACCEL_Z] = pv->offset[VALIO_MS_ACCEL_Z];
-          kroutine_exec(&req->base.kr);
+          dev_valio_rq_done(req);
           break;
 
         case VALIO_MS_CONFIG:
           req->error = 0;
           config = (struct valio_ms_config_s *)req->data;
           *config = pv->config;
-          kroutine_exec(&req->base.kr);
+          dev_valio_rq_done(req);
           break;
 
         case VALIO_MS_STATE:
           req->error = 0;
-          dev_request_queue_pushback(&pv->queue, &req->base);
+          dev_valio_rq_pushback(&pv->queue, req);
           pv->read_pending = 1;
           adxl362_next(pv);
           break;
@@ -429,7 +429,7 @@ DEV_VALIO_REQUEST(adxl362_request)
           pv->offset[VALIO_MS_ACCEL_X] = data->axis[VALIO_MS_ACCEL_X];
           pv->offset[VALIO_MS_ACCEL_Y] = data->axis[VALIO_MS_ACCEL_Y];
           pv->offset[VALIO_MS_ACCEL_Z] = data->axis[VALIO_MS_ACCEL_Z];
-          kroutine_exec(&req->base.kr);
+          dev_valio_rq_done(req);
           break;
 
         case VALIO_MS_CONFIG:
@@ -439,7 +439,7 @@ DEV_VALIO_REQUEST(adxl362_request)
           pv->config_pending = 1;
           pv->read_pending = 1;
           adxl362_next(pv);
-          kroutine_exec(&req->base.kr);
+          dev_valio_rq_done(req);
           break;
         }
         break;
@@ -448,7 +448,7 @@ DEV_VALIO_REQUEST(adxl362_request)
       switch (req->attribute) {
       case VALIO_MS_STATE:
         req->error = 0;
-        dev_request_queue_pushback(&pv->queue, &req->base);
+        dev_valio_rq_pushback(&pv->queue, req);
         adxl362_next(pv);
         break;
       }
@@ -459,7 +459,7 @@ end:
   LOCK_RELEASE_IRQ(&dev->lock);
 
   if (req->error < 0)
-    kroutine_exec(&req->base.kr);
+    dev_valio_rq_done(req);
 }
 
 /*----------------------------------------------------------------------------*/
@@ -480,7 +480,7 @@ DEV_VALIO_CANCEL(adxl362_cancel)
     struct dev_valio_rq_s *rq = dev_valio_rq_s_cast(item);
     if (rq == req)
       {
-        dev_request_queue_remove(&pv->queue, dev_valio_rq_s_base(rq));
+        dev_valio_rq_remove(&pv->queue, rq);
         err = 0;
         GCT_FOREACH_BREAK;
       }
@@ -500,7 +500,7 @@ static DEV_USE(adxl362_use)
     struct device_s *dev = param;
     struct adxl362_private_s *pv = dev->drv_pv;
 
-    if (dev_request_queue_isempty(&pv->queue) && pv->state == ADXL362_STATE_RUNNING)
+    if (dev_rq_queue_isempty(&pv->queue) && pv->state == ADXL362_STATE_RUNNING)
       adxl362_shutdown(pv);
 
     return 0;
@@ -525,7 +525,7 @@ DEV_INIT(adxl362_init)
   memset(pv, 0, sizeof(*pv));
   dev->drv_pv = pv;
 
-  dev_request_queue_init(&pv->queue);
+  dev_rq_queue_init(&pv->queue);
 
   pv->state = ADXL362_STATE_INIT;
 
@@ -562,7 +562,7 @@ DEV_INIT(adxl362_init)
   dev_timer_init_sec(pv->timer, &reset_latency, 0, 1, 2);
 
   pv->spi_rq.base.base.pvdata = dev;
-  kroutine_init_deferred(&pv->spi_rq.base.base.kr, &adxl362_init_done);
+  dev_spi_ctrl_rq_init(&pv->spi_rq.base, &adxl362_init_done);
   dev_spi_bytecode_start(&pv->spi, &pv->spi_rq, &adxl362_bc_reset,
                          ADXL362_BC_RESET_BCARGS(reset_latency));
 

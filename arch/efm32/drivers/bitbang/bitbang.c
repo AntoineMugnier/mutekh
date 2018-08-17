@@ -79,7 +79,7 @@ static void efm32_bitbang_ctx_start_rx(struct efm32_bitbang_ctx_s *pv, struct de
 
 static void efm32_bitbang_freq(struct efm32_bitbang_ctx_s *pv)
 {
-  struct dev_bitbang_rq_s *rq = dev_bitbang_rq_s_cast(dev_request_queue_head(&pv->queue));
+  struct dev_bitbang_rq_s *rq = dev_bitbang_rq_head(&pv->queue);
 
   if ((pv->sfreq.num == rq->unit.num) && (rq->unit.denom == pv->sfreq.denom))
     return;
@@ -95,7 +95,7 @@ static void efm32_bitbang_freq(struct efm32_bitbang_ctx_s *pv)
 
 static void bitbang_process_next(struct efm32_bitbang_ctx_s *pv)
 {
-  struct dev_bitbang_rq_s *rq = dev_bitbang_rq_s_cast(dev_request_queue_head(&pv->queue));
+  struct dev_bitbang_rq_s *rq = dev_bitbang_rq_head(&pv->queue);
 
   pv->pending = 0;
 
@@ -115,8 +115,8 @@ static void bitbang_process_next(struct efm32_bitbang_ctx_s *pv)
       default:
         rq->err = -ENOTSUP;
         rq->base.drvdata = NULL;
-        dev_request_queue_pop(&pv->queue);
-        kroutine_exec(&rq->base.kr);
+        dev_bitbang_rq_pop(&pv->queue);
+        dev_bitbang_rq_done(rq);
         break;
     }
 }
@@ -135,7 +135,7 @@ static void efm32_bitbang_end_wr_rq(struct efm32_bitbang_ctx_s *pv)
 {
   LOCK_SPIN_IRQ(&pv->dev->lock);
 
-  struct dev_bitbang_rq_s *rq = dev_bitbang_rq_s_cast(dev_request_queue_head(&pv->queue));
+  struct dev_bitbang_rq_s *rq = dev_bitbang_rq_head(&pv->queue);
 
   assert(rq && rq->type == DEV_BITBANG_WR);
 
@@ -143,8 +143,8 @@ static void efm32_bitbang_end_wr_rq(struct efm32_bitbang_ctx_s *pv)
   rq->base.drvdata = NULL;
 
   /* End current request */
-  dev_request_queue_pop(&pv->queue);
-  kroutine_exec(&rq->base.kr);
+  dev_bitbang_rq_pop(&pv->queue);
+  dev_bitbang_rq_done(rq);
 
   /* Process next request */
   kroutine_exec(&pv->kr);
@@ -171,7 +171,7 @@ static DEV_DMA_CALLBACK(sx127x_bitbang_tx_dma_done)
 
 static void efm32_bitbang_end_rd_rq(struct efm32_bitbang_ctx_s *pv, error_t err, size_t size)
 {
-  struct dev_bitbang_rq_s *rq = dev_bitbang_rq_s_cast(dev_request_queue_head(&pv->queue));
+  struct dev_bitbang_rq_s *rq = dev_bitbang_rq_head(&pv->queue);
 
   if (rq == NULL)
     return;
@@ -182,8 +182,8 @@ static void efm32_bitbang_end_rd_rq(struct efm32_bitbang_ctx_s *pv, error_t err,
   rq->err = err;
   rq->base.drvdata = NULL;
 
-  dev_request_queue_pop(&pv->queue);
-  kroutine_exec(&rq->base.kr);
+  dev_bitbang_rq_pop(&pv->queue);
+  dev_bitbang_rq_done(rq);
 }
 
 static DEV_DMA_CALLBACK(sx127x_bitbang_rx_dma_done)
@@ -374,7 +374,7 @@ static DEV_BITBANG_CANCEL(efm32_bitbang_cancel)
 
   LOCK_SPIN_IRQ(&dev->lock);
 
-  struct dev_bitbang_rq_s *hrq = dev_bitbang_rq_s_cast(dev_request_queue_head(&pv->queue));
+  struct dev_bitbang_rq_s *hrq = dev_bitbang_rq_head(&pv->queue);
 
   if (rq == hrq)
     {
@@ -387,7 +387,7 @@ static DEV_BITBANG_CANCEL(efm32_bitbang_cancel)
             if (err)
               break;
             rq->base.drvdata = NULL;
-            dev_request_queue_pop(&pv->queue);
+            dev_bitbang_rq_pop(&pv->queue);
             bitbang_process_next(pv);
             break; 
           case DEV_BITBANG_WR:
@@ -401,7 +401,7 @@ static DEV_BITBANG_CANCEL(efm32_bitbang_cancel)
     {
       err = 0;
       rq->base.drvdata = NULL;
-      dev_request_queue_remove(&pv->queue, dev_bitbang_rq_s_base(rq));
+      dev_bitbang_rq_remove(&pv->queue, rq);
     }
 
   LOCK_RELEASE_IRQ(&dev->lock);
@@ -417,8 +417,8 @@ static DEV_BITBANG_REQUEST(efm32_bitbang_request)
 
   LOCK_SPIN_IRQ(&dev->lock);
 
-  bool_t empty = dev_request_queue_isempty(&pv->queue);
-  dev_request_queue_pushback(&pv->queue, dev_bitbang_rq_s_base(rq));
+  bool_t empty = dev_rq_queue_isempty(&pv->queue);
+  dev_bitbang_rq_pushback(&pv->queue, rq);
   rq->base.drvdata = pv;
 
   if (empty && !pv->pending)
@@ -489,7 +489,7 @@ static DEV_INIT(efm32_bitbang_init)
 
   pv->dev = dev;
   
-  dev_request_queue_init(&pv->queue);
+  dev_rq_queue_init(&pv->queue);
 
   /* Init GPIO stuff */
 

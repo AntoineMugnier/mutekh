@@ -103,7 +103,7 @@ static DEV_INIT(a9mpcore_init)
 
   dev->drv_pv = pv;
 
-  dev_request_queue_init(&pv->queue);
+  dev_rq_queue_init(&pv->queue);
 
   if (device_res_get_uint(dev, DEV_RES_MEM, 0, &pv->addr, NULL))
     goto err_mem;
@@ -163,7 +163,7 @@ static DEV_CLEANUP(a9mpcore_cleanup)
 {
   struct a9mpcore_private_s *pv = dev->drv_pv;
 
-  if (!dev_request_queue_isempty(&pv->queue))
+  if (!dev_rq_queue_isempty(&pv->queue))
     return -EBUSY;
 
   mem_free(pv);

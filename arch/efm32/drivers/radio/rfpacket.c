@@ -291,7 +291,7 @@ static void efr32_rfp_try_restart_tx(struct radio_efr32_rfp_ctx_s *ctx)
 {
   dev_timer_value_t time = efr32_protimer_get_value(&ctx->pv.pti);
 
-  struct dev_rfpacket_rq_s *rq = dev_rfpacket_rq_s_cast(dev_request_queue_head(&ctx->queue));
+  struct dev_rfpacket_rq_s *rq = dev_rfpacket_rq_head(&ctx->queue);
 
   assert(rq->type == DEV_RFPACKET_RQ_TX_FAIR);
 
@@ -310,7 +310,7 @@ static void efr32_rfp_start_tx(struct radio_efr32_rfp_ctx_s *ctx)
   cpu_mem_write_32(EFR32_SEQ_DEADLINE_ADDR, 0);
 
   struct dev_rfpacket_rq_s *rq;
-  rq = dev_rfpacket_rq_s_cast(dev_request_queue_head(&ctx->queue));
+  rq = dev_rfpacket_rq_head(&ctx->queue);
 
   assert(rq);
 
@@ -446,14 +446,14 @@ static inline void efr32_rfp_process_group(struct radio_efr32_rfp_ctx_s *ctx, bo
 
   while (1)
   {
-    rq = dev_rfpacket_rq_s_cast(dev_request_queue_head(&ctx->queue));
+    rq = dev_rfpacket_rq_head(&ctx->queue);
 
     if (!rq || rq->err_group != group)
       break;
 
     rq->err = -ECANCELED;
-    dev_request_queue_pop(&ctx->queue);
-    kroutine_exec(&rq->base.kr);
+    dev_rfpacket_rq_pop(&ctx->queue);
+    dev_rfpacket_rq_done(rq);
   }
 }
 
@@ -491,7 +491,7 @@ static void efr32_rfp_read_done(struct radio_efr32_rfp_ctx_s *ctx)
         assert(ctx->rx_cont);
         if (ctx->next_rx_cont != ctx->rx_cont)
           {
-            kroutine_exec(&ctx->rx_cont->base.kr);
+            dev_rfpacket_rq_done(ctx->rx_cont);
             ctx->rx_cont = ctx->next_rx_cont;
           }
         ctx->next_rx_cont = NULL;
@@ -548,12 +548,12 @@ static KROUTINE_EXEC(efr32_rfp_rx)
 
 static void efr32_rfp_end_rq(struct radio_efr32_rfp_ctx_s *ctx, error_t err)
 {
-  struct dev_rfpacket_rq_s * rq = dev_rfpacket_rq_s_cast(dev_request_queue_head(&ctx->queue));
+  struct dev_rfpacket_rq_s * rq = dev_rfpacket_rq_head(&ctx->queue);
 
   assert(rq && rq->type != DEV_RFPACKET_RQ_RX_CONT);
 
-  dev_request_queue_pop(&ctx->queue);
-  kroutine_exec(&rq->base.kr);
+  dev_rfpacket_rq_pop(&ctx->queue);
+  dev_rfpacket_rq_done(rq);
 
   rq->err = err;
 
@@ -606,7 +606,7 @@ static void efr32_rfp_rx_irq(struct radio_efr32_rfp_ctx_s *ctx, uint32_t irq)
        rq = ctx->rx_cont;
        break;
      case EFR32_RFP_STATE_RX:
-       rq = dev_rfpacket_rq_s_cast(dev_request_queue_head(&ctx->queue));
+       rq = dev_rfpacket_rq_head(&ctx->queue);
        break;
      default:
        abort();
@@ -666,7 +666,7 @@ static void efr32_rfp_rx_irq(struct radio_efr32_rfp_ctx_s *ctx, uint32_t irq)
 
 static inline void efr32_rfp_tx_irq(struct radio_efr32_rfp_ctx_s *ctx, uint32_t irq)
 {
-  struct dev_rfpacket_rq_s *rq = dev_rfpacket_rq_s_cast(dev_request_queue_head(&ctx->queue));
+  struct dev_rfpacket_rq_s *rq = dev_rfpacket_rq_head(&ctx->queue);
   assert(rq);
 
   switch (ctx->state)
@@ -759,7 +759,7 @@ static void efr32_rfp_idle(struct radio_efr32_rfp_ctx_s *ctx)
 
   efr32_radio_set_state(ctx, EFR32_RFP_STATE_IDLE);
 
-  struct dev_rfpacket_rq_s *rq = dev_rfpacket_rq_s_cast(dev_request_queue_head(&ctx->queue));
+  struct dev_rfpacket_rq_s *rq = dev_rfpacket_rq_head(&ctx->queue);
 
   if (!rq)
     rq = ctx->rx_cont;
@@ -777,7 +777,7 @@ static void efr32_rfp_idle(struct radio_efr32_rfp_ctx_s *ctx)
 
       /* Rx continuous */	
       rq->err = -ENOTSUP;
-      kroutine_exec(&ctx->rx_cont->base.kr);
+      dev_rfpacket_rq_done(ctx->rx_cont);
       return;
     }
 
@@ -839,7 +839,7 @@ static DEV_RFPACKET_REQUEST(efr32_radio_request)
         {
           case EFR32_RFP_STATE_RXC_STOPPING_PENDING_RX:
             if (ctx->next_rx_cont && ctx->next_rx_cont != ctx->rx_cont)
-              kroutine_exec(&ctx->next_rx_cont->base.kr);
+              dev_rfpacket_rq_done(ctx->next_rx_cont);
             ctx->next_rx_cont = rq;
             break;
           case EFR32_RFP_STATE_RXC_PENDING_RX:
@@ -854,7 +854,7 @@ static DEV_RFPACKET_REQUEST(efr32_radio_request)
             assert(ctx->rx_cont);
             /* Replace the current RX continous */
             efr32_rfp_disable(ctx);
-            kroutine_exec(&ctx->rx_cont->base.kr);
+            dev_rfpacket_rq_done(ctx->rx_cont);
           case EFR32_RFP_STATE_IDLE:
             ctx->rx_cont = rq;
             efr32_rfp_idle(ctx);
@@ -862,15 +862,15 @@ static DEV_RFPACKET_REQUEST(efr32_radio_request)
           default:
             assert(ctx->next_rx_cont == NULL);
             if (ctx->rx_cont)
-              kroutine_exec(&ctx->rx_cont->base.kr);
+              dev_rfpacket_rq_done(ctx->rx_cont);
             ctx->rx_cont = rq;
             break;
         }
       }
     else
       {
-        bool_t empty = dev_request_queue_isempty(&ctx->queue);
-        dev_request_queue_pushback(&ctx->queue, dev_rfpacket_rq_s_base(rq));
+        bool_t empty = dev_rq_queue_isempty(&ctx->queue);
+        dev_rfpacket_rq_pushback(&ctx->queue, rq);
         rq->base.drvdata = ctx;
 
         if (empty)
@@ -961,7 +961,7 @@ static DEV_RFPACKET_CANCEL(efr32_radio_cancel)
     {
       err = 0;
       rq->base.drvdata = NULL;
-      dev_request_queue_remove(&ctx->queue, dev_rfpacket_rq_s_base(rq));
+      dev_rfpacket_rq_remove(&ctx->queue, rq);
     }
 
   LOCK_RELEASE_IRQ(&dev->lock);
@@ -984,16 +984,16 @@ static DEV_TIMER_CANCEL(efr32_rfpacket_timer_cancel)
 
   LOCK_SPIN_IRQ(&dev->lock);
 
-  if (rq->rq.drvdata == ctx)
+  if (rq->base.drvdata == ctx)
     {
       struct dev_timer_rq_s *rqnext = NULL;
-      bool_t first = (dev_request_pqueue_prev(&pv->pti.queue, dev_timer_rq_s_base(rq)) == NULL);
+      bool_t first = (dev_timer_rq_prev(&pv->pti.queue, rq) == NULL);
 
       if (first)
-        rqnext = dev_timer_rq_s_cast(dev_request_pqueue_next(&pv->pti.queue, dev_timer_rq_s_base(rq)));
+        rqnext = dev_timer_rq_next(&pv->pti.queue, rq);
 
-      dev_timer_pqueue_remove(&pv->pti.queue, dev_timer_rq_s_base(rq));
-      rq->rq.drvdata = NULL;
+      dev_timer_rq_remove(&pv->pti.queue, rq);
+      rq->base.drvdata = NULL;
 
       if (first)
         {
@@ -1044,11 +1044,11 @@ static DEV_TIMER_REQUEST(efr32_rfpacket_timer_request)
       else
         {
           dev->start_count |= 1;
-          dev_timer_pqueue_insert(&pti->queue, dev_timer_rq_s_base(rq));
-          rq->rq.drvdata = ctx;
+          dev_timer_rq_insert(&pti->queue, rq);
+          rq->base.drvdata = ctx;
 
           /* start request, raise irq on race condition */
-          if (dev_request_pqueue_prev(&pti->queue, dev_timer_rq_s_base(rq)) == NULL)
+          if (dev_timer_rq_prev(&pti->queue, rq) == NULL)
             efr32_protimer_request_start(pti, value, rq->deadline, EFR32_PROTIMER_CHANNEL);
         }
     }
@@ -1172,8 +1172,7 @@ static void efr32_rfp_timer_irq(struct device_s *dev)
       /* CC channel irq */
       while (1)
         {
-          struct dev_timer_rq_s *rq;
-          rq = dev_timer_rq_s_cast(dev_request_pqueue_head(&pti->queue));
+          struct dev_timer_rq_s *rq = dev_timer_rq_head(&pti->queue);
           if (rq == NULL)
             break;
 
@@ -1184,12 +1183,12 @@ static void efr32_rfp_timer_irq(struct device_s *dev)
             if (!efr32_protimer_request_start(pti, value, rq->deadline, EFR32_PROTIMER_CHANNEL))
               break;
 
-          dev_timer_pqueue_remove(&pti->queue, dev_timer_rq_s_base(rq));
+          dev_timer_rq_remove(&pti->queue, rq);
           efr32_protimer_disable_compare(pti, EFR32_PROTIMER_CHANNEL);
-          rq->rq.drvdata = NULL;
+          rq->base.drvdata = NULL;
 
           lock_release(&dev->lock);
-          kroutine_exec(&rq->rq.kr);
+          dev_timer_rq_done(rq);
           lock_spin(&dev->lock);
         }
     }
@@ -1290,8 +1289,8 @@ static DEV_INIT(efr32_radio_init)
   assert(pv->freq.denom == 1);
 
   /* Queues init */
-  dev_request_queue_init(&ctx->queue);
-  dev_request_pqueue_init(&pv->pti.queue);
+  dev_rq_queue_init(&ctx->queue);
+  dev_rq_pqueue_init(&pv->pti.queue);
 
   /* Interrupt init */
   device_irq_source_init(dev, pv->irq_ep, EFR32_RADIO_IRQ_COUNT,
@@ -1320,14 +1319,14 @@ static DEV_CLEANUP(efr32_radio_cleanup)
   struct radio_efr32_rfp_ctx_s *ctx = dev->drv_pv;
   struct radio_efr32_ctx_s *pv = &ctx->pv;
 
-  if (!dev_request_queue_isempty(&ctx->queue) || ctx->rx_cont || 
+  if (!dev_rq_queue_isempty(&ctx->queue) || ctx->rx_cont || 
        dev->start_count > 0)
     return -EBUSY;
 
   device_irq_source_unlink(dev, pv->irq_ep, EFR32_RADIO_IRQ_COUNT);
 
-  dev_request_pqueue_destroy(&pv->pti.queue);
-  dev_request_queue_destroy(&ctx->queue);
+  dev_rq_pqueue_destroy(&pv->pti.queue);
+  dev_rq_queue_destroy(&ctx->queue);
 
   mem_free(ctx);
 

@@ -52,9 +52,9 @@ enum device_i2c_ret_e {
 static enum device_i2c_ret_e device_i2c_ctrl_sched(struct dev_i2c_ctrl_context_s *q);
 static void device_i2c_ctrl_run(struct dev_i2c_ctrl_context_s *q);
 static enum device_i2c_ret_e device_i2c_ctrl_end(struct dev_i2c_ctrl_context_s *q,
-                                                 struct dev_i2c_ctrl_base_rq_s *rq);
+                                                 struct dev_i2c_ctrl_rq_s *rq);
 static enum device_i2c_ret_e device_i2c_ctrl_transfer(struct dev_i2c_ctrl_context_s *q,
-                                                      struct dev_i2c_ctrl_base_rq_s *rq,
+                                                      struct dev_i2c_ctrl_rq_s *rq,
                                                       uint8_t *data, uint16_t size,
                                                       enum dev_i2c_op_e type);
 
@@ -77,7 +77,7 @@ static inline bool_t op_has_delay(uint16_t op)
 static KROUTINE_EXEC(device_i2c_ctrl_transfer_end)
 {
   struct dev_i2c_ctrl_transfer_s  *tr = KROUTINE_CONTAINER(kr, *tr, kr);
-  struct dev_i2c_ctrl_base_rq_s   *rq = tr->pvdata;
+  struct dev_i2c_ctrl_rq_s   *rq = tr->pvdata;
   struct dev_i2c_ctrl_context_s     *q = device_i2c_ctrl_context(rq->ctrl);
 
   lock_spin_irq(&q->lock);
@@ -143,7 +143,7 @@ static KROUTINE_EXEC(device_i2c_ctrl_transfer_end)
 
 static enum device_i2c_ret_e
 device_i2c_ctrl_transfer(struct dev_i2c_ctrl_context_s *q,
-                         struct dev_i2c_ctrl_base_rq_s *rq,
+                         struct dev_i2c_ctrl_rq_s *rq,
                          uint8_t *data, uint16_t size,
                          enum dev_i2c_op_e type)
 {
@@ -164,7 +164,7 @@ device_i2c_ctrl_transfer(struct dev_i2c_ctrl_context_s *q,
 
 static enum device_i2c_ret_e
 device_i2c_ctrl_end(struct dev_i2c_ctrl_context_s *q,
-                    struct dev_i2c_ctrl_base_rq_s *rq)
+                    struct dev_i2c_ctrl_rq_s *rq)
 {
   assert(rq->enqueued);
 # ifdef CONFIG_DEVICE_I2C_BYTECODE_TIMER
@@ -185,7 +185,7 @@ device_i2c_ctrl_end(struct dev_i2c_ctrl_context_s *q,
   else
     {
       assert(q->current == NULL);
-      dev_request_queue_remove(&q->queue, &rq->base);
+      __dev_rq_queue_remove(&q->queue, &rq->base);
     }
 
   rq->enqueued = 0;
@@ -203,8 +203,8 @@ device_i2c_ctrl_end(struct dev_i2c_ctrl_context_s *q,
 #  ifdef CONFIG_DEVICE_I2C_BYTECODE_TIMER
 static KROUTINE_EXEC(device_i2c_ctrl_timeout)
 {
-  struct dev_timer_rq_s *trq = KROUTINE_CONTAINER(kr, *trq, rq.kr);
-  struct dev_i2c_ctrl_context_s *q = trq->rq.pvdata;
+  struct dev_timer_rq_s *trq = KROUTINE_CONTAINER(kr, *trq, base.kr);
+  struct dev_i2c_ctrl_context_s *q = trq->base.pvdata;
 
   lock_spin_irq(&q->lock);
 
@@ -229,8 +229,8 @@ device_i2c_ctrl_delay(struct dev_i2c_ctrl_context_s *q,
       trq->deadline = rq->sleep_before;
       trq->delay = 0;
       trq->rev = 0;
-      kroutine_init_deferred(&trq->rq.kr, device_i2c_ctrl_timeout);
-      trq->rq.pvdata = q;
+      dev_timer_rq_init(trq, device_i2c_ctrl_timeout);
+      trq->base.pvdata = q;
 
       err = DEVICE_OP(&q->timer, request, trq);
 
@@ -256,7 +256,7 @@ device_i2c_ctrl_delay(struct dev_i2c_ctrl_context_s *q,
 static enum device_i2c_ret_e
 device_i2c_ctrl_sched(struct dev_i2c_ctrl_context_s *q)
 {
-  struct dev_i2c_ctrl_base_rq_s *rq = NULL;
+  struct dev_i2c_ctrl_rq_s *rq = NULL;
   assert(q->current == NULL);
 
   /* find next candidate request in queue */
@@ -269,14 +269,14 @@ device_i2c_ctrl_sched(struct dev_i2c_ctrl_context_s *q)
       DEVICE_OP(&q->timer, get_value, &t, 0);
 
       GCT_FOREACH_NOLOCK(dev_request_queue, &q->queue, item, {
-          struct dev_i2c_ctrl_base_rq_s * const rqitem
-            = dev_i2c_ctrl_base_rq_s_cast(item);
+          struct dev_i2c_ctrl_rq_s * const rqitem
+            = dev_i2c_ctrl_rq_s_cast(item);
           struct dev_i2c_ctrl_bytecode_rq_s * const bcrq
             = dev_i2c_ctrl_bytecode_rq_s_cast(rqitem);
           /* FIXME use dev_timer_check_timeout */
           if (!rqitem->bytecode || bcrq->sleep_before <= t)
             {
-              dev_request_queue_remove(&q->queue, item);
+              __dev_rq_queue_remove(&q->queue, item);
               rq = rqitem;
               goto found;
             }
@@ -293,7 +293,7 @@ device_i2c_ctrl_sched(struct dev_i2c_ctrl_context_s *q)
     }
 #  endif
 
-  rq = dev_i2c_ctrl_base_rq_s_cast(dev_request_queue_pop(&q->queue));
+  rq = dev_i2c_ctrl_rq_s_cast(__dev_rq_queue_pop(&q->queue));
   if (rq == NULL)
     return DEVICE_I2C_IDLE;
 
@@ -431,7 +431,7 @@ device_i2c_bytecode_exec(struct dev_i2c_ctrl_context_s *q,
                   lock_release_irq(&q->lock);
                   continue;
                 }
-              dev_request_queue_pushback(&q->queue, &rq->base.base);
+              __dev_rq_queue_pushback(&q->queue, &rq->base.base);
               q->current = NULL;
               return DEVICE_I2C_CONTINUE;
 
@@ -512,7 +512,7 @@ void device_i2c_ctrl_run(struct dev_i2c_ctrl_context_s *q)
   enum device_i2c_ret_e r;
   do {
     r = DEVICE_I2C_IDLE;
-    struct dev_i2c_ctrl_base_rq_s *rq = q->current;
+    struct dev_i2c_ctrl_rq_s *rq = q->current;
     if (rq != NULL)
       {
         if (rq->bytecode)
@@ -528,7 +528,7 @@ void device_i2c_ctrl_run(struct dev_i2c_ctrl_context_s *q)
 #endif
           }
       }
-    else if (!dev_request_queue_isempty(&q->queue))
+    else if (!dev_rq_queue_isempty(&q->queue))
       r = device_i2c_ctrl_sched(q);
   } while (r == DEVICE_I2C_CONTINUE);
 
@@ -542,14 +542,14 @@ KROUTINE_EXEC(device_i2c_ctrl_resume)
 
   lock_spin_irq(&q->lock);
 
-  struct dev_i2c_ctrl_base_rq_s *rq = q->current;
+  struct dev_i2c_ctrl_rq_s *rq = q->current;
   assert(rq != NULL);
 
   device_i2c_ctrl_run(q);
 }
 
 static bool_t device_i2c_ctrl_entry(struct dev_i2c_ctrl_context_s *q,
-                                    struct dev_i2c_ctrl_base_rq_s *rq)
+                                    struct dev_i2c_ctrl_rq_s *rq)
 {
   if (q->current != NULL)
     return 1;
@@ -588,7 +588,7 @@ void dev_i2c_transaction_start(struct device_i2c_ctrl_s *ctrl,
   rq->transfer_index = 0;
 
   if (device_i2c_ctrl_entry(q, &rq->base))
-    dev_request_queue_pushback(&q->queue, &rq->base.base);
+    __dev_rq_queue_pushback(&q->queue, &rq->base.base);
 
   lock_release_irq(&q->lock);
 }
@@ -635,7 +635,7 @@ error_t dev_i2c_bytecode_start_va(struct device_i2c_ctrl_s *ctrl,
       rq->wakeup_able = 0;
 
       if (device_i2c_ctrl_entry(q, &rq->base))
-        dev_request_queue_pushback(&q->queue, &rq->base.base);
+        __dev_rq_queue_pushback(&q->queue, &rq->base.base);
     }
 
 err:
@@ -676,7 +676,7 @@ error_t device_i2c_bytecode_wakeup(struct device_i2c_ctrl_s *ctrl,
       bc_skip(&rq->vm);
       rq->wakeup_able = 0;
       if (!device_i2c_ctrl_entry(q, &rq->base))
-        dev_request_queue_remove(&q->queue, &rq->base.base);
+        __dev_rq_queue_remove(&q->queue, &rq->base.base);
     }
   else
     {
@@ -701,7 +701,7 @@ error_t dev_drv_i2c_ctrl_context_init_(struct device_s *dev, struct dev_i2c_ctrl
 # endif
 
   q->current = NULL;
-  dev_request_queue_init(&q->queue);
+  dev_rq_queue_init(&q->queue);
   lock_init_irq(&q->lock);
   memset(&q->transfer, 0, sizeof(q->transfer));
 #ifdef CONFIG_DEVICE_I2C_BYTECODE
@@ -713,7 +713,7 @@ error_t dev_drv_i2c_ctrl_context_init_(struct device_s *dev, struct dev_i2c_ctrl
 void dev_drv_i2c_ctrl_context_cleanup_(struct dev_i2c_ctrl_context_s *q)
 {
   lock_destroy_irq(&q->lock);
-  dev_request_queue_destroy(&q->queue);
+  dev_rq_queue_destroy(&q->queue);
 # ifdef CONFIG_DEVICE_I2C_BYTECODE_TIMER
   device_put_accessor(&q->timer.base);
 # endif
@@ -722,7 +722,7 @@ void dev_drv_i2c_ctrl_context_cleanup_(struct dev_i2c_ctrl_context_s *q)
 
 static
 error_t dev_drv_i2c_init(struct device_s *dev,
-                         struct dev_i2c_ctrl_base_rq_s *rq,
+                         struct dev_i2c_ctrl_rq_s *rq,
                          struct device_i2c_ctrl_s *ctrl)
 {
   struct dev_resource_s *r;

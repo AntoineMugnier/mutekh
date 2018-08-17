@@ -89,7 +89,7 @@ static void gaisler_apbuart_try_read(struct device_s *dev)
   struct gaisler_apbuart_context_s	*pv = dev->drv_pv;
   struct dev_char_rq_s		*rq;
 
-  while ((rq = dev_char_rq_s_cast(dev_request_queue_head(&pv->read_q))))
+  while ((rq = dev_char_rq_head(&pv->read_q)))
     {
       size_t size = 0;
 
@@ -111,8 +111,8 @@ static void gaisler_apbuart_try_read(struct device_s *dev)
 
           if ((rq->type & _DEV_CHAR_PARTIAL) || rq->size == 0)
             {
-              dev_request_queue_pop(&pv->read_q);
-              kroutine_exec(&rq->base.kr);
+              dev_char_rq_pop(&pv->read_q);
+              dev_char_rq_done(rq);
               continue;
             }
         }
@@ -149,7 +149,7 @@ static void gaisler_apbuart_try_write(struct device_s *dev)
     }
 #endif
 
-  while ((rq = dev_char_rq_s_cast(dev_request_queue_head(&pv->write_q))))
+  while ((rq = dev_char_rq_head(&pv->write_q)))
     {
       size_t size = 0;
 
@@ -184,8 +184,8 @@ static void gaisler_apbuart_try_write(struct device_s *dev)
 
           if ((rq->type & _DEV_CHAR_PARTIAL) || rq->size == 0)
             {
-              dev_request_queue_pop(&pv->write_q);
-              kroutine_exec(&rq->base.kr);
+              dev_char_rq_pop(&pv->write_q);
+              dev_char_rq_done(rq);
               continue;
             }
         }
@@ -215,7 +215,7 @@ static DEV_CHAR_REQUEST(gaisler_apbuart_request)
     {
     case DEV_CHAR_READ_PARTIAL:
     case DEV_CHAR_READ: {
-      dev_request_queue_pushback(&pv->read_q, dev_char_rq_s_base(rq));
+      dev_char_rq_pushback(&pv->read_q, rq);
       if (!pv->read_started)
         {
           pv->read_started = 1;
@@ -228,7 +228,7 @@ static DEV_CHAR_REQUEST(gaisler_apbuart_request)
     case DEV_CHAR_WRITE_FLUSH:
     case DEV_CHAR_WRITE_PARTIAL:
     case DEV_CHAR_WRITE: {
-      dev_request_queue_pushback(&pv->write_q, dev_char_rq_s_base(rq));
+      dev_char_rq_pushback(&pv->write_q, rq);
       if (!pv->write_started)
         {
           pv->write_started = 1;
@@ -245,7 +245,7 @@ static DEV_CHAR_REQUEST(gaisler_apbuart_request)
   if (err)
     {
       rq->error = err;
-      kroutine_exec(&rq->base.kr);
+      dev_char_rq_done(rq);
     }
 }
 
@@ -292,8 +292,8 @@ static DEV_INIT(gaisler_apbuart_init)
   /* enable transmitter and receiver */
   c |= (APBUART_REG_CTRL_TE | APBUART_REG_CTRL_RE);
 
-  dev_request_queue_init(&pv->read_q);
-  dev_request_queue_init(&pv->write_q);
+  dev_rq_queue_init(&pv->read_q);
+  dev_rq_queue_init(&pv->write_q);
 
   uart_fifo_init(&pv->read_fifo);
 
@@ -325,8 +325,8 @@ static DEV_INIT(gaisler_apbuart_init)
  err_fifo:
   uart_fifo_destroy(&pv->write_fifo);
   uart_fifo_destroy(&pv->read_fifo);
-  dev_request_queue_destroy(&pv->read_q);
-  dev_request_queue_destroy(&pv->write_q);
+  dev_rq_queue_destroy(&pv->read_q);
+  dev_rq_queue_destroy(&pv->write_q);
 #endif
  err_mem:
   mem_free(pv);
@@ -358,8 +358,8 @@ static DEV_CLEANUP(gaisler_apbuart_cleanup)
 
   uart_fifo_destroy(&pv->read_fifo);
 
-  dev_request_queue_destroy(&pv->read_q);
-  dev_request_queue_destroy(&pv->write_q);
+  dev_rq_queue_destroy(&pv->read_q);
+  dev_rq_queue_destroy(&pv->write_q);
 
   mem_free(pv);
 

@@ -179,7 +179,7 @@ static void efm32_usart_try_write(struct device_s *dev)
   cpu_mem_write_32(pv->addr + EFM32_USART_IFC_ADDR,
                    endian_le32(EFM32_USART_IFC_TXC));
 
-  while ((rq = dev_char_rq_s_cast(dev_request_queue_head(&pv->write_q))))
+  while ((rq = dev_char_rq_head(&pv->write_q)))
     {
       size_t size = 0;
 
@@ -199,8 +199,8 @@ static void efm32_usart_try_write(struct device_s *dev)
 
           if ((rq->type & _DEV_CHAR_PARTIAL) || rq->size == 0)
             {
-              dev_request_queue_pop(&pv->write_q);
-              kroutine_exec(&rq->base.kr);
+              dev_char_rq_pop(&pv->write_q);
+              dev_char_rq_done(rq);
               continue;
             }
         }
@@ -225,13 +225,13 @@ static void efm32_usart_end_rq(struct efm32_usart_context_s *pv,
                                error_t err)
 {
   rq->error = err;
-  dev_request_queue_pop(&pv->read_q);
-  kroutine_exec(&rq->base.kr);
+  dev_char_rq_pop(&pv->read_q);
+  dev_char_rq_done(rq);
 }
 
 static void efm32_usart_update_read_rq(struct efm32_usart_context_s *pv, size_t size)
 {
-  struct dev_char_rq_s *rq = dev_char_rq_s_cast(dev_request_queue_head(&pv->read_q));
+  struct dev_char_rq_s *rq = dev_char_rq_head(&pv->read_q);
 
   assert(rq);
 
@@ -269,7 +269,7 @@ static size_t efm32_usart_get_read_size(struct efm32_usart_context_s *pv)
 
   while(1)
     {
-      struct dev_char_rq_s *rq = dev_char_rq_s_cast(dev_request_queue_head(&pv->read_q));
+      struct dev_char_rq_s *rq = dev_char_rq_head(&pv->read_q);
 
       size = 0;
 
@@ -362,7 +362,7 @@ static KROUTINE_EXEC(efm32_usart_dma_process_next_write)
 
   LOCK_SPIN_IRQ(&pv->usart->lock);
 
-  struct dev_char_rq_s *rq = dev_char_rq_s_cast(dev_request_queue_head(&pv->write_q));
+  struct dev_char_rq_s *rq = dev_char_rq_head(&pv->write_q);
 
   assert(rq);
 
@@ -376,18 +376,18 @@ static KROUTINE_EXEC(efm32_usart_dma_process_next_write)
 
 static void efm32_usart_tx_dma_end(struct efm32_usart_context_s *pv, error_t err)
 {
-  struct dev_char_rq_s *crq = dev_char_rq_s_cast(dev_request_queue_head(&pv->write_q));
+  struct dev_char_rq_s *crq = dev_char_rq_head(&pv->write_q);
 
   crq->data += crq->size;
   crq->size = 0;
   crq->error = err;
 
-  dev_request_queue_pop(&pv->write_q);
-  kroutine_exec(&crq->base.kr);
+  dev_char_rq_pop(&pv->write_q);
+  dev_char_rq_done(crq);
 
-  crq = dev_char_rq_s_cast(dev_request_queue_head(&pv->write_q));
+  crq = dev_char_rq_head(&pv->write_q);
 
-  if (dev_request_queue_isempty(&pv->write_q))
+  if (dev_rq_queue_isempty(&pv->write_q))
     return;
 
   /* We can not restart DMA core in DMA callback */
@@ -396,7 +396,7 @@ static void efm32_usart_tx_dma_end(struct efm32_usart_context_s *pv, error_t err
 
 static void efm32_usart_usart_start_tx_dma(struct efm32_usart_context_s *pv)
 {
-  struct dev_char_rq_s *rq = dev_char_rq_s_cast(dev_request_queue_head(&pv->write_q));
+  struct dev_char_rq_s *rq = dev_char_rq_head(&pv->write_q);
   struct dev_dma_desc_s * desc = &pv->dma_wr_desc;
 
   /* TX */
@@ -448,7 +448,7 @@ static void efm32_usart_dma_timeout_irq(struct efm32_usart_context_s *pv)
 static void efm32_usart_start_tx(struct device_s *dev)
 {
   struct efm32_usart_context_s	*pv = dev->drv_pv;
-  struct dev_char_rq_s *rq = dev_char_rq_s_cast(dev_request_queue_head(&pv->write_q));
+  struct dev_char_rq_s *rq = dev_char_rq_head(&pv->write_q);
 
   if (rq == NULL)
   /* Write queue is empty */
@@ -504,7 +504,7 @@ static DEV_CHAR_REQUEST(efm32_usart_request)
     {
     case DEV_CHAR_READ:
     case DEV_CHAR_READ_PARTIAL: {
-      dev_request_queue_pushback(&pv->read_q, dev_char_rq_s_base(rq));
+      dev_char_rq_pushback(&pv->read_q, rq);
       efm32_usart_start_rx(dev);
       break;
     }
@@ -512,8 +512,8 @@ static DEV_CHAR_REQUEST(efm32_usart_request)
     case DEV_CHAR_WRITE_FLUSH:
     case DEV_CHAR_WRITE_PARTIAL:
     case DEV_CHAR_WRITE: {
-      bool_t empty = dev_request_queue_isempty(&pv->write_q);
-      dev_request_queue_pushback(&pv->write_q, dev_char_rq_s_base(rq));
+      bool_t empty = dev_rq_queue_isempty(&pv->write_q);
+      dev_char_rq_pushback(&pv->write_q, rq);
       dev->start_count |= EFM32_USART_STARTED_WRITE;
 #ifdef CONFIG_DEVICE_CLOCK_GATING
       dev_clock_sink_gate(&pv->clk_ep[0], DEV_CLOCK_EP_POWER_CLOCK);
@@ -534,7 +534,7 @@ static DEV_CHAR_REQUEST(efm32_usart_request)
   if (err)
     {
       rq->error = err;
-      kroutine_exec(&rq->base.kr);
+      dev_char_rq_done(rq);
     }
 }
 
@@ -573,7 +573,7 @@ static DEV_VALIO_REQUEST(efm32_usart_valio_request)
         }
     }
 
-  kroutine_exec(&req->base.kr);
+  dev_char_rq_done(req);
 }
 
 #define efm32_usart_valio_cancel (dev_valio_cancel_t*)dev_driver_notsup_fcn
@@ -803,8 +803,8 @@ static DEV_INIT(efm32_usart_char_init)
 #endif
 
   /* init software fifos */
-  dev_request_queue_init(&pv->read_q);
-  dev_request_queue_init(&pv->write_q);
+  dev_rq_queue_init(&pv->read_q);
+  dev_rq_queue_init(&pv->write_q);
 
   if (dev_drv_clock_init(dev, &pv->clk_ep[0], 0, DEV_CLOCK_EP_FREQ_NOTIFY |
                      DEV_CLOCK_EP_POWER_CLOCK | DEV_CLOCK_EP_GATING_SYNC, &pv->freq))
@@ -946,8 +946,8 @@ static DEV_INIT(efm32_usart_char_init)
  err_irq:
   device_irq_source_unlink(dev, pv->irq_ep, 2);
  err_fifo:
-  dev_request_queue_destroy(&pv->read_q);
-  dev_request_queue_destroy(&pv->write_q);
+  dev_rq_queue_destroy(&pv->read_q);
+  dev_rq_queue_destroy(&pv->write_q);
  err_mem:
   mem_free(pv);
   return -1;
@@ -969,8 +969,8 @@ static DEV_CLEANUP(efm32_usart_char_cleanup)
   dev_drv_clock_cleanup(dev, &pv->clk_ep[0]);
   dev_drv_clock_cleanup(dev, &pv->clk_ep[1]);
 
-  dev_request_queue_destroy(&pv->read_q);
-  dev_request_queue_destroy(&pv->write_q);
+  dev_rq_queue_destroy(&pv->read_q);
+  dev_rq_queue_destroy(&pv->write_q);
 
   device_iomux_cleanup(dev);
   mem_free(pv);

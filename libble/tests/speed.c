@@ -28,7 +28,7 @@ static KROUTINE_EXEC(done2)
         printk("%30s", text);          \
                                                                         \
         dev_timer_init_sec(&timer, &timer_req.delay, NULL, ms, 1000);   \
-        kroutine_init(&timer_req.rq.kr, done2, KROUTINE_IMMEDIATE);     \
+        dev_timer_rq_init_immediate(&timer_req.base.kr, done2);           \
         DEVICE_OP(&timer, request, &timer_req);                         \
                                                                         \
         uint32_t iter_count = 0;                                        \

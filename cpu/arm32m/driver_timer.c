@@ -60,8 +60,7 @@ void arm_timer_systick_irq(struct device_s *dev)
 
   while (pv->systick_start & 1)
     {
-      struct dev_timer_rq_s *rq =
-        dev_timer_rq_s_cast(dev_request_pqueue_head(&pv->systick_queue));
+      struct dev_timer_rq_s *rq = dev_timer_rq_head(&pv->systick_queue);
 
       if (rq == NULL)
         {
@@ -76,11 +75,11 @@ void arm_timer_systick_irq(struct device_s *dev)
       if (rq->deadline > pv->systick_value)
         break;
 
-      rq->rq.drvdata = NULL;
-      dev_timer_pqueue_remove(&pv->systick_queue, dev_timer_rq_s_base(rq));
+      rq->base.drvdata = NULL;
+      dev_timer_rq_remove(&pv->systick_queue, rq);
 
       lock_release(&dev->lock);
-      kroutine_exec(&rq->rq.kr);
+      dev_timer_rq_done(rq);
       lock_spin(&dev->lock);
     }
 
@@ -124,8 +123,8 @@ DEV_TIMER_REQUEST(arm_timer_request)
           break;
         }
 
-      dev_timer_pqueue_insert(&pv->systick_queue, dev_timer_rq_s_base(rq));
-      rq->rq.drvdata = pv;
+      dev_timer_rq_insert(&pv->systick_queue, rq);
+      rq->base.drvdata = pv;
 
       /* start timer if needed */
       if (pv->systick_start == 0)
@@ -163,15 +162,15 @@ DEV_TIMER_CANCEL(arm_timer_cancel)
 
       LOCK_SPIN_IRQ(&dev->lock);
 
-      if (rq->rq.drvdata == pv)
+      if (rq->base.drvdata == pv)
         {
           assert(pv->systick_start & 1);
 
-          rq->rq.drvdata = NULL;
-          dev_timer_pqueue_remove(&pv->systick_queue, dev_timer_rq_s_base(rq));
+          rq->base.drvdata = NULL;
+          dev_timer_rq_remove(&pv->systick_queue, rq);
 
           /* stop timer if not in use */
-          if (dev_request_pqueue_isempty(&pv->systick_queue))
+          if (dev_rq_pqueue_isempty(&pv->systick_queue))
             {
               pv->systick_start &= ~1;
               if (pv->systick_start == 0)

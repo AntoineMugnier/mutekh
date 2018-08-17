@@ -72,9 +72,9 @@ static void pca9557_req_done(
 {
     struct pca9557_private_s *pv = dev->drv_pv;
 
-    dev_request_queue_pop(&pv->pending);
+    dev_gpio_rq_pop(&pv->pending);
     rq->base.drvdata = NULL;
-    kroutine_exec(&rq->base.kr);
+    dev_gpio_rq_done(rq);
     pca9557_req_next(dev);
 }
 
@@ -83,8 +83,7 @@ static KROUTINE_EXEC(pca9557_i2c_write_done)
     struct pca9557_private_s *pv
         = KROUTINE_CONTAINER(kr, *pv, i2c_req.base.kr);
     struct dev_gpio_rq_s *rq
-        = dev_gpio_rq_s_cast(
-            dev_request_queue_head(&pv->pending));
+        = dev_gpio_rq_head(&pv->pending);
     struct device_s *dev = pv->i2c_req.base.pvdata;
 
     LOCK_SPIN_IRQ_SCOPED(&dev->lock);
@@ -98,8 +97,7 @@ static KROUTINE_EXEC(pca9557_i2c_read_done)
     struct pca9557_private_s *pv
         = KROUTINE_CONTAINER(kr, *pv, i2c_req.base.kr);
     struct dev_gpio_rq_s *rq
-        = dev_gpio_rq_s_cast(
-            dev_request_queue_head(&pv->pending));
+        = dev_gpio_rq_head(&pv->pending);
     struct device_s *dev = pv->i2c_req.base.pvdata;
 
     LOCK_SPIN_IRQ_SCOPED(&dev->lock);
@@ -113,7 +111,7 @@ static KROUTINE_EXEC(pca9557_i2c_read_done)
 static void pca9557_mode_update(
     struct pca9557_private_s *pv)
 {
-    kroutine_init_immediate(&pv->i2c_req.base.kr, pca9557_i2c_write_done);
+    dev_i2c_ctrl_rq_init(&pv->i2c_req.base, pca9557_i2c_write_done);
 
     pv->i2c_req.transfer = pv->i2c_transfer;
     pv->i2c_transfer[0].data = pv->command;
@@ -129,7 +127,7 @@ static void pca9557_mode_update(
 static void pca9557_output_update(
     struct pca9557_private_s *pv)
 {
-    kroutine_init_immediate(&pv->i2c_req.base.kr, pca9557_i2c_write_done);
+    dev_i2c_ctrl_rq_init(&pv->i2c_req.base, pca9557_i2c_write_done);
 
     pv->i2c_req.transfer = pv->i2c_transfer;
     pv->i2c_transfer[0].data = pv->command;
@@ -145,7 +143,7 @@ static void pca9557_output_update(
 static void pca9557_input_get(
     struct pca9557_private_s *pv)
 {
-    kroutine_init_immediate(&pv->i2c_req.base.kr, pca9557_i2c_read_done);
+    dev_i2c_ctrl_rq_init(&pv->i2c_req.base, pca9557_i2c_read_done);
 
     pv->i2c_req.transfer = pv->i2c_transfer;
     pv->i2c_transfer[0].data = pv->command;
@@ -220,9 +218,7 @@ static void pca9557_req_serve(
 static void pca9557_req_next(struct device_s *dev)
 {
     struct pca9557_private_s *pv = dev->drv_pv;
-    struct dev_gpio_rq_s *rq
-        = dev_gpio_rq_s_cast(
-            dev_request_queue_head(&pv->pending));
+    struct dev_gpio_rq_s *rq = dev_gpio_rq_head(&pv->pending);
 
     if (rq)
         pca9557_req_serve(dev, rq);
@@ -240,9 +236,9 @@ static DEV_GPIO_REQUEST(pca9557_request)
 
     LOCK_SPIN_IRQ_SCOPED(&dev->lock);
 
-    bool_t empty = dev_request_queue_isempty(&pv->pending);
+    bool_t empty = dev_rq_queue_isempty(&pv->pending);
 
-    dev_request_queue_pushback(&pv->pending, &rq->base);
+    dev_gpio_rq_pushback(&pv->pending, rq);
     if (empty)
         pca9557_req_serve(dev, rq);
 }
@@ -281,7 +277,7 @@ static DEV_INIT(pca9557_init)
     pv->input_value = 0;
     pv->output_value = 0;
 
-    dev_request_queue_init(&pv->pending);
+    dev_rq_queue_init(&pv->pending);
 
     pv->i2c_req.base.pvdata = dev;
     pv->i2c_req.saddr = pv->saddr;

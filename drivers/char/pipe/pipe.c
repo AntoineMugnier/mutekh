@@ -75,7 +75,7 @@ static DEV_CHAR_CANCEL(char_pipe_cancel)
 
   if (q != NULL)
     {
-      dev_request_queue_remove(q, dev_char_rq_s_base(rq));
+      dev_char_rq_remove(q, rq);
       rq->base.drvdata = NULL;
       err = 0;
     }
@@ -118,15 +118,15 @@ static bool_t char_pipe_rq2rq(struct device_s *dev,
 
       if (done1)
         {
-          dev_request_queue_pop(q);
+          dev_char_rq_pop(q);
           rq1->base.drvdata = NULL;
-          kroutine_exec(&rq1->base.kr);
-          rq1 = dev_char_rq_s_cast(dev_request_queue_head(q));
+          dev_char_rq_done(rq1);
+          rq1 = dev_char_rq_head(q);
         }
 
       if (done0)
         {
-          kroutine_exec(&rq0->base.kr);
+          dev_char_rq_done(rq0);
           return 0;
         }
     }
@@ -151,7 +151,7 @@ static bool_t char_pipe_fifo2rq(struct device_s *dev,
       if (!rq->size || (rq->type & (_DEV_CHAR_PARTIAL | _DEV_CHAR_NONBLOCK)))
         {
         done:
-          kroutine_exec(&rq->base.kr);
+          dev_char_rq_done(rq);
           return 0;
         }
     }
@@ -174,7 +174,7 @@ static bool_t char_pipe_rq2fifo(struct device_s *dev,
       if (!rq->size || (rq->type & (_DEV_CHAR_PARTIAL | _DEV_CHAR_NONBLOCK)))
         {
         done:
-          kroutine_exec(&rq->base.kr);
+          dev_char_rq_done(rq);
           return 0;
         }
     }
@@ -204,7 +204,7 @@ static DEV_CHAR_REQUEST(char_pipe_request)
     case DEV_CHAR_READ_NONBLOCK:
     case DEV_CHAR_READ: {
       q = &pv->rq_q[num ^ 0];
-      struct dev_char_rq_s *wr_rq = dev_char_rq_s_cast(dev_request_queue_head(q));
+      struct dev_char_rq_s *wr_rq = dev_char_rq_head(q);
       if (
 #ifdef CONFIG_DRIVER_CHAR_PIPE_FIFO
           char_pipe_fifo2rq(dev, rq, &pv->fifo[num ^ 0]) &&
@@ -223,7 +223,7 @@ static DEV_CHAR_REQUEST(char_pipe_request)
     case DEV_CHAR_WRITE_NONBLOCK:
     case DEV_CHAR_WRITE: {
       q = &pv->rq_q[num ^ 1];
-      struct dev_char_rq_s *rd_rq = dev_char_rq_s_cast(dev_request_queue_head(q));
+      struct dev_char_rq_s *rd_rq = dev_char_rq_head(q);
       if ((rd_rq == NULL || (rd_rq->type & _DEV_CHAR_WRITE) ||
            char_pipe_rq2rq(dev, rq, rd_rq, q))
 #ifdef CONFIG_DRIVER_CHAR_PIPE_FIFO
@@ -241,7 +241,7 @@ static DEV_CHAR_REQUEST(char_pipe_request)
           break;
         }
       done = 0;
-      dev_request_queue_pushback(q, dev_char_rq_s_base(rq));
+      dev_char_rq_pushback(q, rq);
       rq->base.drvdata = q;
     default:
       break;
@@ -252,7 +252,7 @@ static DEV_CHAR_REQUEST(char_pipe_request)
   if (done)
     {
       rq->error = err;
-      kroutine_exec(&rq->base.kr);
+      dev_char_rq_done(rq);
     }
 }
 
@@ -299,8 +299,8 @@ static DEV_INIT(char_pipe_init)
   if (!pv)
     return -ENOMEM;
 
-  dev_request_queue_init(&pv->rq_q[0]);
-  dev_request_queue_init(&pv->rq_q[1]);
+  dev_rq_queue_init(&pv->rq_q[0]);
+  dev_rq_queue_init(&pv->rq_q[1]);
 
 #ifdef CONFIG_DRIVER_CHAR_PIPE_FIFO
   pipe_fifo_init(&pv->fifo[0]);
@@ -320,8 +320,8 @@ static DEV_CLEANUP(char_pipe_cleanup)
 {
   struct char_pipe_context_s *pv = dev->drv_pv;
 
-  if (!dev_request_queue_isempty(&pv->rq_q[0]) ||
-      !dev_request_queue_isempty(&pv->rq_q[1]))
+  if (!dev_rq_queue_isempty(&pv->rq_q[0]) ||
+      !dev_rq_queue_isempty(&pv->rq_q[1]))
     return -EBUSY;
 
 #ifdef CONFIG_DRIVER_CHAR_PIPE_FIFO

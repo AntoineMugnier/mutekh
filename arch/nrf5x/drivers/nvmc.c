@@ -126,7 +126,7 @@ static DEV_MEM_REQUEST(nrf5x_nvmc_request)
       UNREACHABLE();
     }
 
-  kroutine_exec(&rq->base.kr);
+  dev_mem_rq_done(rq);
 }
 
 static DEV_USE(nrf5x_nvmc_use)

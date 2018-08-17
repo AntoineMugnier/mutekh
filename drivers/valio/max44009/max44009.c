@@ -90,7 +90,7 @@ void max44009_read(struct device_s *dev)
   pv->state = MAX44009_READING;
   pv->irq_pending = 0;
 
-  kroutine_init_deferred(&pv->i2c_rq.base.base.kr, max44009_read_done);
+  dev_i2c_ctrl_rq_init(&pv->i2c_rq.base, max44009_read_done);
   dev_i2c_bytecode_start(&pv->i2c, &pv->i2c_rq, &max44009_bc_read,
                          MAX44009_BC_READ_BCARGS());
 }
@@ -116,7 +116,7 @@ void max44009_wait_setup(struct device_s *dev)
   pv->state = MAX44009_WAIT_SETUP;
   pv->limits_dirty = 0;
 
-  kroutine_init_deferred(&pv->i2c_rq.base.base.kr, max44009_wait_setup_done);
+  dev_i2c_ctrl_rq_init(&pv->i2c_rq.base, max44009_wait_setup_done);
   dev_i2c_bytecode_start(&pv->i2c, &pv->i2c_rq, &max44009_bc_wait_setup,
                          MAX44009_BC_WAIT_SETUP_BCARGS());
 }
@@ -139,7 +139,7 @@ void max44009_shutdown(struct device_s *dev)
 
   pv->state = MAX44009_SHUTTING_DOWN;
 
-  kroutine_init_deferred(&pv->i2c_rq.base.base.kr, max44009_shutdown_done);
+  dev_i2c_ctrl_rq_init(&pv->i2c_rq.base, max44009_shutdown_done);
   dev_i2c_bytecode_start(&pv->i2c, &pv->i2c_rq, &max44009_bc_shutdown,
                          MAX44009_BC_SHUTDOWN_BCARGS());
 }
@@ -155,7 +155,7 @@ DEV_VALIO_REQUEST(max44009_request)
 
   if (pv->state == MAX44009_INITING) {
     req->error = -EAGAIN;
-    kroutine_exec(&req->base.kr);
+    dev_valio_rq_done(req);
     return;
   }
 
@@ -167,7 +167,7 @@ DEV_VALIO_REQUEST(max44009_request)
       goto notsup;
 
     req->error = 0;
-    dev_request_queue_pushback(&pv->queue, &req->base);
+    dev_valio_rq_pushback(&pv->queue, req);
 
     if (req->type == DEVICE_VALIO_READ)
       max44009_read(dev);
@@ -180,10 +180,10 @@ DEV_VALIO_REQUEST(max44009_request)
       bc_set_reg(&pv->i2c_rq.vm, MAX44009_I2C_BCGLOBAL_IF_ABOVE, l->if_above);
       bc_set_reg(&pv->i2c_rq.vm, MAX44009_I2C_BCGLOBAL_IF_BELOW, l->if_below);
       req->error = 0;
-      kroutine_exec(&req->base.kr);
+      dev_valio_rq_done(req);
 
       pv->limits_dirty = 1;
-      if (!dev_request_queue_isempty(&pv->queue))
+      if (!dev_rq_queue_isempty(&pv->queue))
         max44009_wait_setup(dev);
 
       return;
@@ -193,7 +193,7 @@ DEV_VALIO_REQUEST(max44009_request)
   default:
   notsup:
     req->error = -ENOTSUP;
-    kroutine_exec(&req->base.kr);
+    dev_valio_rq_done(req);
     return;
   }
 }
@@ -215,12 +215,12 @@ DEV_VALIO_CANCEL(max44009_cancel)
       if (rq != req)
         GCT_FOREACH_CONTINUE;
 
-      dev_request_queue_remove(&pv->queue, &rq->base);
+      dev_valio_rq_remove(&pv->queue, rq);
       err = 0;
       GCT_FOREACH_BREAK;
     });
 
-  if (dev_request_queue_isempty(&pv->queue))
+  if (dev_rq_queue_isempty(&pv->queue))
     device_sleep_schedule(dev);
 
   return err;
@@ -252,8 +252,8 @@ KROUTINE_EXEC(max44009_read_done)
 
       l->mlux = value;
       rq->error = 0;
-      dev_request_queue_remove(&pv->queue, &rq->base);
-      kroutine_exec(&rq->base.kr);
+      dev_valio_rq_remove(&pv->queue, rq);
+      dev_valio_rq_done(rq);
     });
 
   device_sleep_schedule(dev);
@@ -271,7 +271,7 @@ KROUTINE_EXEC(max44009_wait_setup_done)
 
   pv->state = MAX44009_WAITING;
 
-  if (dev_request_queue_isempty(&pv->queue))
+  if (dev_rq_queue_isempty(&pv->queue))
     max44009_shutdown(dev);
   else if (pv->limits_dirty)
     max44009_wait_setup(dev);
@@ -289,7 +289,7 @@ KROUTINE_EXEC(max44009_shutdown_done)
 
   pv->state = MAX44009_IDLE;
 
-  if (!dev_request_queue_isempty(&pv->queue))
+  if (!dev_rq_queue_isempty(&pv->queue))
     max44009_read(dev);
 }
 
@@ -339,7 +339,7 @@ static DEV_USE(max44009_use)
     struct device_s *dev = param;
     struct max44009_context_s *pv = dev->drv_pv;
 
-    if (dev_request_queue_isempty(&pv->queue))
+    if (dev_rq_queue_isempty(&pv->queue))
       max44009_shutdown(dev);
     else
       max44009_wait_setup(dev);
@@ -365,7 +365,7 @@ static DEV_INIT(max44009_init)
 
   dev->drv_pv = pv;
 
-  dev_request_queue_init(&pv->queue);
+  dev_rq_queue_init(&pv->queue);
 
   device_irq_source_init(dev, &pv->irq_ep, 1, &max44009_irq);
   err = device_irq_source_link(dev, &pv->irq_ep, 1, -1);
@@ -379,7 +379,7 @@ static DEV_INIT(max44009_init)
     goto free_irq;
 
   pv->i2c_rq.base.base.pvdata = dev;
-  kroutine_init_deferred(&pv->i2c_rq.base.base.kr, max44009_init_done);
+  dev_i2c_ctrl_rq_init(&pv->i2c_rq.base, max44009_init_done);
   dev_i2c_bytecode_start(&pv->i2c, &pv->i2c_rq, &max44009_bc_shutdown,
                          MAX44009_BC_SHUTDOWN_BCARGS());
 
@@ -396,12 +396,12 @@ static DEV_CLEANUP(max44009_cleanup)
 {
   struct max44009_context_s *pv = dev->drv_pv;
 
-  if (!dev_request_queue_isempty(&pv->queue)
+  if (!dev_rq_queue_isempty(&pv->queue)
       || pv->state != MAX44009_IDLE)
     return -EBUSY;
 
   dev_drv_i2c_bytecode_cleanup(&pv->i2c, &pv->i2c_rq);
-  dev_request_queue_destroy(&pv->queue);
+  dev_rq_queue_destroy(&pv->queue);
   device_irq_source_unlink(dev, &pv->irq_ep, 1);
   mem_free(pv);
 

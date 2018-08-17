@@ -96,7 +96,7 @@ static DEV_CRYPTO_REQUEST(efm32_hwrand_request)
 
   LOCK_RELEASE_IRQ(&dev->lock);
 
-  kroutine_exec(&rq->base.kr);
+  dev_crypto_rq_done(rq);
 }
 
 static DEV_INIT(efm32_hwrand_init)

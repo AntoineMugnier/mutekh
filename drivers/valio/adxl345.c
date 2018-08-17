@@ -72,13 +72,12 @@ KROUTINE_EXEC(adxl345_offset_write_done)
 
     LOCK_SPIN_IRQ(&dev->lock);
 
-    struct dev_request_s  *base = dev_request_queue_head(&pv->queue);
-    struct dev_valio_rq_s *rq   = dev_valio_rq_s_cast(base);
+    struct dev_valio_rq_s *rq   = dev_valio_rq_head(&pv->queue);
 
     rq->error = 0;
-    dev_request_queue_pop(&pv->queue);
+    dev_valio_rq_pop(&pv->queue);
 
-    kroutine_exec(&rq->base.kr);
+    dev_valio_rq_done(rq);
 
     adxl345_request_run(dev, pv);
     LOCK_RELEASE_IRQ(&dev->lock);
@@ -105,7 +104,7 @@ void adxl345_do_offset_write(struct device_s          *dev,
     pv->i2c_req.transfer_count = 1;
 
     pv->i2c_req.base.pvdata = dev;
-    kroutine_init_immediate(&pv->i2c_req.base.kr, &adxl345_offset_write_done);
+    dev_i2c_ctrl_rq_init(&pv->i2c_req.base, &adxl345_offset_write_done);
 
     DEVICE_OP(&pv->i2c, request, &pv->i2c_req);
 }
@@ -121,8 +120,7 @@ KROUTINE_EXEC(adxl345_offset_read_done)
 
     LOCK_SPIN_IRQ(&dev->lock);
 
-    struct dev_request_s            *base = dev_request_queue_head(&pv->queue);
-    struct dev_valio_rq_s           *rq   = dev_valio_rq_s_cast(base);
+    struct dev_valio_rq_s           *rq   = dev_valio_rq_head(&pv->queue);
     struct valio_motion_axis_data_s *val  = rq->data;
 
     val->x = (int32_t) pv->rdata[0];
@@ -130,9 +128,9 @@ KROUTINE_EXEC(adxl345_offset_read_done)
     val->z = (int32_t) pv->rdata[2];
 
     rq->error = 0;
-    dev_request_queue_pop(&pv->queue);
+    dev_valio_rq_pop(&pv->queue);
 
-    kroutine_exec(&rq->base.kr);
+    dev_valio_rq_done(rq);
 
     adxl345_request_run(dev, pv);
     LOCK_RELEASE_IRQ(&dev->lock);
@@ -158,7 +156,7 @@ void adxl345_do_offset_read(struct device_s          *dev,
     pv->i2c_req.transfer_count = 2;
 
     pv->i2c_req.base.pvdata = dev;
-    kroutine_init_immediate(&pv->i2c_req.base.kr, &adxl345_offset_read_done);
+    dev_i2c_ctrl_rq_init(&pv->i2c_req.base, &adxl345_offset_read_done);
 
     DEVICE_OP(&pv->i2c, request, &pv->i2c_req);
 }
@@ -174,8 +172,7 @@ KROUTINE_EXEC(adxl345_data_read_done)
 
     LOCK_SPIN_IRQ(&dev->lock);
 
-    struct dev_request_s       *base = dev_request_queue_head(&pv->queue);
-    struct dev_valio_rq_s      *rq   = dev_valio_rq_s_cast(base);
+    struct dev_valio_rq_s      *rq   = dev_valio_rq_head(&pv->queue);
     struct valio_motion_data_s *data  = rq->data;
 
     data->accel.axis = VALIO_MOTION_ACC_XYZ;
@@ -186,11 +183,11 @@ KROUTINE_EXEC(adxl345_data_read_done)
     data->gyro.axis = 0;
     data->comp.axis = 0;
 
-    dev_request_queue_pop(&pv->queue);
+    dev_valio_rq_pop(&pv->queue);
 
     rq->error = 0;
 
-    kroutine_exec(&rq->base.kr);
+    dev_valio_rq_done(rq);
 
     adxl345_request_run(dev, pv);
     LOCK_RELEASE_IRQ(&dev->lock);
@@ -216,7 +213,7 @@ void adxl345_do_data_read(struct device_s          *dev,
     pv->i2c_req.transfer_count = 2;
 
     pv->i2c_req.base.pvdata = dev;
-    kroutine_init_immediate(&pv->i2c_req.base.kr, &adxl345_data_read_done);
+    dev_i2c_ctrl_rq_init(&pv->i2c_req.base, &adxl345_data_read_done);
 
     DEVICE_OP(&pv->i2c, request, &pv->i2c_req);
 }
@@ -224,16 +221,10 @@ void adxl345_do_data_read(struct device_s          *dev,
 static
 void adxl345_request_run(struct device_s *dev, struct adxl345_private_s *pv)
 {
-    struct dev_request_s  *base;
-    struct dev_valio_rq_s *rq;
+    struct dev_valio_rq_s *rq = dev_valio_rq_head(&pv->queue);
 
-    if (dev_request_queue_isempty(&pv->queue))
+    if (rq == NULL)
         return;
-
-    base = dev_request_queue_head(&pv->queue);
-    assert(base != NULL);
-
-    rq = dev_valio_rq_s_cast(base);
 
     switch (rq->type)
     {
@@ -289,7 +280,7 @@ DEV_VALIO_REQUEST(adxl345_request)
 
         case VALIO_MOTION_ACCEL_OFST:
         case VALIO_MOTION_DATA:
-            dev_request_queue_push(&pv->queue, &req->base);
+            dev_valio_rq_pushback(&pv->queue, req);
             err = 1;
             break;
         }
@@ -303,7 +294,7 @@ DEV_VALIO_REQUEST(adxl345_request)
             break;
 
         case VALIO_MOTION_ACCEL_OFST:
-            dev_request_queue_push(&pv->queue, &req->base);
+            dev_valio_rq_pushback(&pv->queue, req);
             err = 1;
             break;
         }
@@ -318,7 +309,7 @@ DEV_VALIO_REQUEST(adxl345_request)
     if (err < 0)
     {
         req->error = err;
-        kroutine_exec(&req->base.kr);
+        dev_valio_rq_done(req);
     }
 }
 
@@ -346,7 +337,7 @@ static DEV_INIT(adxl345_init)
         goto err_pv;
     }
 
-    dev_request_queue_init(&pv->queue);
+    dev_rq_queue_init(&pv->queue);
 
     dev->drv_pv = pv;
 
@@ -362,7 +353,7 @@ static DEV_CLEANUP(adxl345_cleanup)
     struct adxl345_private_s *pv = dev->drv_pv;
 
     device_put_accessor(&pv->i2c.base);
-    dev_request_queue_destroy(&pv->queue);
+    dev_rq_queue_destroy(&pv->queue);
     mem_free(pv);
 }
 

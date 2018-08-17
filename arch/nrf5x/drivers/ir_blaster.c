@@ -268,10 +268,10 @@ static void nrf52_ir_step(struct device_s *dev)
     pv->state = ST_IDLE;
     pv->current = NULL;
     rq->error = 0;
-    kroutine_exec(&rq->base.kr);
+    dev_valio_rq_done(rq);
     nrf_it_set_mask(pv->addr, 0);
 
-    pv->current = dev_valio_rq_s_cast(dev_request_queue_pop(&pv->queue));
+    pv->current = dev_valio_rq_pop(&pv->queue);
     goto again;
   }
 }
@@ -341,23 +341,23 @@ static DEV_VALIO_REQUEST(nrf52_ir_request)
     goto nosup;
   }
 
-  if (dev_request_queue_isempty(&pv->queue) && pv->current == NULL) {
+  if (dev_rq_queue_isempty(&pv->queue) && pv->current == NULL) {
     pv->current = req;
     nrf52_ir_step(dev);
   } else {
-    dev_request_queue_pushback(&pv->queue, &req->base);
+    dev_valio_rq_pushback(&pv->queue, req);
   }
 
   return;
 
  nosup:
   req->error = -ENOTSUP;
-  kroutine_exec(&req->base.kr);
+  dev_valio_rq_done(req);
   return;
 
  inval:
   req->error = -EINVAL;
-  kroutine_exec(&req->base.kr);
+  dev_valio_rq_done(req);
   return;
 }
 
@@ -381,7 +381,7 @@ static DEV_VALIO_CANCEL(nrf52_ir_cancel)
   if (err)
     return err;
 
-  dev_request_queue_remove(&pv->queue, &req->base);
+  dev_valio_rq_remove(&pv->queue, req);
 
   return 0;
 }
@@ -440,7 +440,7 @@ static DEV_INIT(nrf52_ir_init)
   if (device_irq_source_link(dev, &pv->irq_ep, 1, -1))
     goto free_pv;
 
-  dev_request_queue_init(&pv->queue);
+  dev_rq_queue_init(&pv->queue);
 
   return 0;
 
@@ -454,7 +454,7 @@ static DEV_CLEANUP(nrf52_ir_cleanup)
 {
   struct nrf52_ir_pv_s *pv = dev->drv_pv;
 
-  if (!dev_request_queue_isempty(&pv->queue))
+  if (!dev_rq_queue_isempty(&pv->queue))
     return -EBUSY;
 
   nrf_it_disable_mask(pv->addr, -1);
@@ -470,7 +470,7 @@ static DEV_CLEANUP(nrf52_ir_cleanup)
   nrf_reg_set(pv->addr, NRF_PWM_PSEL_OUT2, (uint32_t)-1);
   nrf_reg_set(pv->addr, NRF_PWM_PSEL_OUT3, (uint32_t)-1);
 
-  dev_request_queue_destroy(&pv->queue);
+  dev_rq_queue_destroy(&pv->queue);
 
   device_iomux_cleanup(dev);
   mem_free(pv);

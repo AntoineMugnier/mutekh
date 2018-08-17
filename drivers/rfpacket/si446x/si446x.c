@@ -548,7 +548,7 @@ static inline void si446x_rfp_process_group(struct si446x_ctx_s *pv, bool_t grou
 
   while (1)
   {
-    rq = dev_rfpacket_rq_s_cast(dev_request_queue_head(&pv->queue));
+    rq = dev_rfpacket_rq_head(&pv->queue);
 
     if (!rq || rq->err_group != group)
       break;
@@ -558,8 +558,8 @@ static inline void si446x_rfp_process_group(struct si446x_ctx_s *pv, bool_t grou
     rq->err = -ECANCELED;
     rq->base.drvdata = NULL;
 
-    dev_request_queue_pop(&pv->queue);
-    kroutine_exec(&rq->base.kr);
+    dev_rfpacket_rq_pop(&pv->queue);
+    dev_rfpacket_rq_done(rq);
   }
 }
 static void si446x_rfp_end_rxc(struct si446x_ctx_s *pv, error_t err)
@@ -574,7 +574,7 @@ static void si446x_rfp_end_rxc(struct si446x_ctx_s *pv, error_t err)
 #ifdef CONFIG_DRIVER_RFPACKET_SI446X_CCA
     case SI446X_STATE_TX_LBT_PENDING_RXC:
       if (rq)
-        kroutine_exec(&rq->base.kr);
+        dev_rfpacket_rq_done(rq);
       pv->rx_cont = pv->next_rx_cont;
       pv->next_rx_cont = NULL;
       return si446x_rfp_idle(pv);
@@ -583,14 +583,14 @@ static void si446x_rfp_end_rxc(struct si446x_ctx_s *pv, error_t err)
       assert(pv->next_rx_cont == NULL);
     case SI446X_STATE_CONFIG_RXC_PENDING_STOP:
       assert(rq && rq != pv->next_rx_cont);
-      kroutine_exec(&rq->base.kr);
+      dev_rfpacket_rq_done(rq);
       pv->rx_cont = pv->next_rx_cont;
       pv->next_rx_cont = NULL;
       return si446x_rfp_idle(pv);
     case SI446X_STATE_RXC_JAMMING:
       assert(rq);
       pv->rssi = SET_RSSI(SI446X_RSSI_AVERAGE_DEFAULT) << 8;
-      kroutine_exec(&rq->base.kr);
+      dev_rfpacket_rq_done(rq);
       if (pv->next_rx_cont != pv->rx_cont)
         pv->rx_cont = pv->next_rx_cont;
       else
@@ -601,7 +601,7 @@ static void si446x_rfp_end_rxc(struct si446x_ctx_s *pv, error_t err)
       assert(rq);
       if (pv->next_rx_cont != pv->rx_cont)
         {
-          kroutine_exec(&pv->rx_cont->base.kr);
+          dev_rfpacket_rq_done(pv->rx_cont);
           pv->rx_cont = pv->next_rx_cont;
         }
       pv->next_rx_cont = NULL;
@@ -613,15 +613,15 @@ static void si446x_rfp_end_rxc(struct si446x_ctx_s *pv, error_t err)
 
 static void si446x_rfp_end_rq(struct si446x_ctx_s *pv, error_t err)
 {
-  struct dev_rfpacket_rq_s * rq = dev_rfpacket_rq_s_cast(dev_request_queue_head(&pv->queue));
+  struct dev_rfpacket_rq_s * rq = dev_rfpacket_rq_head(&pv->queue);
 
   assert(rq && rq->type != DEV_RFPACKET_RQ_RX_CONT);
 
   rq->err = err;
   rq->base.drvdata = NULL;
 
-  dev_request_queue_pop(&pv->queue);
-  kroutine_exec(&rq->base.kr);
+  dev_rfpacket_rq_pop(&pv->queue);
+  dev_rfpacket_rq_done(rq);
 
   if (rq->err)
     si446x_rfp_process_group(pv, rq->err_group);
@@ -692,7 +692,7 @@ static inline void si446x_retry_rx(struct si446x_ctx_s *pv)
 {
   assert(pv->state == SI446X_STATE_RX);
 
-  struct dev_rfpacket_rq_s * rq = dev_rfpacket_rq_s_cast(dev_request_queue_head(&pv->queue));
+  struct dev_rfpacket_rq_s * rq = dev_rfpacket_rq_head(&pv->queue);
 
   assert(rq && rq->type == DEV_RFPACKET_RQ_RX);
   pv->rq = rq;
@@ -710,7 +710,7 @@ static inline void si446x_retry_rx(struct si446x_ctx_s *pv)
 
 static inline void si446x_start_tx(struct si446x_ctx_s *pv)
 {
-  struct dev_rfpacket_rq_s *rq = dev_rfpacket_rq_s_cast(dev_request_queue_head(&pv->queue));
+  struct dev_rfpacket_rq_s *rq = dev_rfpacket_rq_head(&pv->queue);
 
   assert(rq && rq->tx_size < SI446X_MAX_PACKET_SIZE);
 
@@ -772,7 +772,7 @@ static inline void si446x_start_tx(struct si446x_ctx_s *pv)
 
 static inline void si446x_retry_tx(struct si446x_ctx_s *pv, bool_t refill)
 {
-  struct dev_rfpacket_rq_s *rq = dev_rfpacket_rq_s_cast(dev_request_queue_head(&pv->queue));
+  struct dev_rfpacket_rq_s *rq = dev_rfpacket_rq_head(&pv->queue);
   assert(rq && rq->type == DEV_RFPACKET_RQ_TX_FAIR);
 
   pv->rq = rq;
@@ -829,7 +829,7 @@ static void si446x_rfp_idle(struct si446x_ctx_s *pv)
 
   si446x_rfp_set_state(pv, SI446X_STATE_READY);
 
-  struct dev_rfpacket_rq_s *rq = dev_rfpacket_rq_s_cast(dev_request_queue_head(&pv->queue));
+  struct dev_rfpacket_rq_s *rq = dev_rfpacket_rq_head(&pv->queue);
 
   if (!rq)
     rq = pv->rx_cont;
@@ -932,20 +932,20 @@ static DEV_RFPACKET_REQUEST(si446x_rfp_request)
             assert(pv->rx_cont);
 	    /* Another RX continous request is already pending */
             if (pv->next_rx_cont && pv->next_rx_cont != pv->rx_cont)
-              kroutine_exec(&pv->next_rx_cont->base.kr);
+              dev_rfpacket_rq_done(pv->next_rx_cont);
             pv->next_rx_cont = rq;
             break;
 #ifdef CONFIG_DRIVER_RFPACKET_SI446X_CCA
           case SI446X_STATE_TX_LBT_PENDING_RXC:
             if (pv->next_rx_cont)
-              kroutine_exec(&pv->next_rx_cont->base.kr);
+              dev_rfpacket_rq_done(pv->next_rx_cont);
           case SI446X_STATE_TX_LBT:
             pv->next_rx_cont = rq;
             si446x_rfp_set_state(pv, SI446X_STATE_TX_LBT_PENDING_RXC);
             break;
           case SI446X_STATE_CONFIG_RXC_PENDING_STOP:
             if (pv->next_rx_cont)
-              kroutine_exec(&pv->next_rx_cont->base.kr);
+              dev_rfpacket_rq_done(pv->next_rx_cont);
           case SI446X_STATE_CONFIG_RXC:
             assert(pv->rx_cont);
             pv->next_rx_cont = rq;
@@ -969,15 +969,15 @@ static DEV_RFPACKET_REQUEST(si446x_rfp_request)
           default:
             assert(pv->next_rx_cont == NULL);
             if (pv->rx_cont)
-              kroutine_exec(&pv->rx_cont->base.kr);
+              dev_rfpacket_rq_done(pv->rx_cont);
             pv->rx_cont = rq;
             break;
         }
       }
     else
       {
-        bool_t empty = dev_request_queue_isempty(&pv->queue);
-        dev_request_queue_pushback(&pv->queue, dev_rfpacket_rq_s_base(rq));
+        bool_t empty = dev_rq_queue_isempty(&pv->queue);
+        dev_rfpacket_rq_pushback(&pv->queue, rq);
         rq->base.drvdata = pv;
 
         if (empty)
@@ -1026,7 +1026,7 @@ static DEV_RFPACKET_CANCEL(si446x_rfp_cancel)
 
   LOCK_SPIN_IRQ(&dev->lock);
 
-  struct dev_rfpacket_rq_s *hrq = dev_rfpacket_rq_s_cast(dev_request_queue_head(&pv->queue));
+  struct dev_rfpacket_rq_s *hrq = dev_rfpacket_rq_head(&pv->queue);
 
   if (rq == pv->rx_cont)
     {
@@ -1083,7 +1083,7 @@ static DEV_RFPACKET_CANCEL(si446x_rfp_cancel)
     {
       err = 0;
       rq->base.drvdata = NULL;
-      dev_request_queue_remove(&pv->queue, dev_rfpacket_rq_s_base(rq));
+      dev_rfpacket_rq_remove(&pv->queue, rq);
     }
 
   LOCK_RELEASE_IRQ(&dev->lock);
@@ -1117,7 +1117,7 @@ BC_CCALL_FUNCTION(si446x_alloc)
   switch (pv->state)
   {
     case SI446X_STATE_RX:
-      rq = dev_rfpacket_rq_s_cast(dev_request_queue_head(&pv->queue));
+      rq = dev_rfpacket_rq_head(&pv->queue);
       break;
 #ifdef CONFIG_DRIVER_RFPACKET_SI446X_CCA
     case SI446X_STATE_TX_LBT:
@@ -1176,7 +1176,7 @@ static inline void si446x_rfp_end_rxrq(struct si446x_ctx_s *pv, bool_t err)
   switch (pv->state)
   {
     case SI446X_STATE_RX:
-      rq = dev_rfpacket_rq_s_cast(dev_request_queue_head(&pv->queue));
+      rq = dev_rfpacket_rq_head(&pv->queue);
       break;
 #ifdef CONFIG_DRIVER_RFPACKET_SI446X_CCA
     case SI446X_STATE_TX_LBT:
@@ -1269,7 +1269,7 @@ static inline void si446x_rx_irq(struct si446x_ctx_s *pv)
 
 static inline void si446x_tx_irq(struct si446x_ctx_s *pv)
 {
-  struct dev_rfpacket_rq_s *rq = dev_rfpacket_rq_s_cast(dev_request_queue_head(&pv->queue));
+  struct dev_rfpacket_rq_s *rq = dev_rfpacket_rq_head(&pv->queue);
 
   logk_trace("si446x: TX irq");
 
@@ -1329,7 +1329,7 @@ static inline void si446x_sleep(struct si446x_ctx_s *pv)
 {
   assert(pv->bcrun == 0);
 
-  bool_t empty = dev_request_queue_isempty(&pv->queue);
+  bool_t empty = dev_rq_queue_isempty(&pv->queue);
 
   if (!empty || pv->rx_cont)
     {
@@ -1555,9 +1555,9 @@ static DEV_INIT(si446x_init)
   srq->gpio_map = pv->pin_map;
   srq->gpio_wmap = pin_wmap;
 
-  dev_request_queue_init(&pv->queue);
+  dev_rq_queue_init(&pv->queue);
 
-  kroutine_init_deferred(&srq->base.base.kr, &si446x_spi_rq_done);
+  dev_spi_ctrl_rq_init(&srq->base, &si446x_spi_rq_done);
 
   /* irq io pin */
   device_irq_source_init(dev, &pv->src_ep, 1, &si446x_irq_source_process);
@@ -1605,7 +1605,7 @@ static DEV_CLEANUP(si446x_cleanup)
 #ifdef CONFIG_DRIVER_RFPACKET_SI446X_SLEEP
     case SI446X_STATE_SLEEP:
 #endif
-      assert(dev_request_queue_isempty(&pv->queue));
+      assert(dev_rq_queue_isempty(&pv->queue));
       break;
     default:
       return -EBUSY;

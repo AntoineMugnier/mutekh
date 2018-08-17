@@ -92,14 +92,14 @@ static KROUTINE_EXEC(hd44780_runner)
     switch (pv->state) {
     case HD44780_WAIT_CHAR:
     again:
-      rq = dev_char_rq_s_cast(dev_request_queue_head(&pv->queue));
+      rq = dev_char_rq_head(&pv->queue);
       if (!rq)
         goto busy;
 
       if (rq->size == 0) {
-        dev_request_queue_pop(&pv->queue);
+        dev_char_rq_pop(&pv->queue);
         rq->base.drvdata = NULL;
-        kroutine_exec(&rq->base.kr);
+        dev_char_rq_done(rq);
         goto again;
       }
 
@@ -199,8 +199,8 @@ static KROUTINE_EXEC(hd44780_gpio_done)
 
 static KROUTINE_EXEC(hd44780_timer_done)
 {
-  struct hd44780_ctx_s *pv = KROUTINE_CONTAINER(kr, *pv, timer_rq.rq.kr);
-  struct device_s *dev = pv->timer_rq.rq.pvdata;
+  struct hd44780_ctx_s *pv = KROUTINE_CONTAINER(kr, *pv, timer_rq.base.kr);
+  struct device_s *dev = pv->timer_rq.base.pvdata;
 
   logk_trace("%s", __func__);
 
@@ -225,7 +225,7 @@ static DEV_CHAR_REQUEST(hd4780_request)
 
   default:
     rq->error = -ENOTSUP;
-    kroutine_exec(&rq->base.kr);
+    dev_char_rq_done(rq);
     return;
   }
 
@@ -237,7 +237,7 @@ static DEV_CHAR_REQUEST(hd4780_request)
 
   LOCK_SPIN_IRQ_SCOPED(&dev->lock);
 
-  dev_request_queue_pushback(&pv->queue, &rq->base);
+  dev_char_rq_pushback(&pv->queue, rq);
   if (pv->state == HD44780_WAIT_CHAR)
     kroutine_exec(&pv->vm_runner);
 }
@@ -252,9 +252,9 @@ static DEV_CHAR_CANCEL(hd4780_cancel)
 
   LOCK_SPIN_IRQ_SCOPED(&dev->lock);
 
-  dev_request_queue_remove(&pv->queue, &rq->base);
+  dev_char_rq_remove(&pv->queue, rq);
 
-  if (dev_request_queue_isempty(&pv->queue))
+  if (dev_rq_queue_isempty(&pv->queue))
     device_sleep_schedule(dev);
 
   return 0;
@@ -313,16 +313,16 @@ static DEV_INIT(hd4780_init)
   if (err)
     goto err_gpio;
     
-  dev_request_queue_init(&pv->queue);
+  dev_rq_queue_init(&pv->queue);
 
   pv->gpio_rq.base.pvdata = dev;
-  pv->timer_rq.rq.pvdata = dev;
+  pv->timer_rq.base.pvdata = dev;
   pv->gpio_rq.output.set_mask = &pv->reg;
   pv->gpio_rq.output.clear_mask = &pv->reg;
   pv->gpio_rq.type = DEV_GPIO_SET_OUTPUT;
 
-  kroutine_init_deferred(&pv->gpio_rq.base.kr, &hd44780_gpio_done);
-  kroutine_init_deferred(&pv->timer_rq.rq.kr, &hd44780_timer_done);
+  dev_gpio_rq_init(&pv->gpio_rq, &hd44780_gpio_done);
+  dev_timer_rq_init(&pv->timer_rq, &hd44780_timer_done);
   kroutine_init_deferred(&pv->vm_runner, &hd44780_runner);
 
   bc_init(&pv->vm, &hd44780_io_bytecode);
@@ -351,11 +351,11 @@ static DEV_CLEANUP(hd4780_cleanup)
 {
   struct hd44780_ctx_s *pv = dev->drv_pv;
 
-  if (!dev_request_queue_isempty(&pv->queue)
+  if (!dev_rq_queue_isempty(&pv->queue)
       || !(pv->state == HD44780_IDLE || pv->state == HD44780_WAIT_CHAR))
     return -EBUSY;
 
-  dev_request_queue_destroy(&pv->queue);
+  dev_rq_queue_destroy(&pv->queue);
   device_put_accessor(&pv->timer.base);
   device_put_accessor(&pv->gpio.base);
 

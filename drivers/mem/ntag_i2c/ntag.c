@@ -97,7 +97,7 @@ void ntag_timeout_reset(struct device_s *dev)
 {
   struct ntag_private_s *pv = dev->drv_pv;
 
-  if (pv->timer_rq.rq.pvdata) {
+  if (pv->timer_rq.base.pvdata) {
     logk_debug("Seems timer is active, trying to cancel");
     if (DEVICE_OP(pv->timer, cancel, &pv->timer_rq)) {
       logk_debug("Cancel failed");
@@ -105,7 +105,7 @@ void ntag_timeout_reset(struct device_s *dev)
     }
   }
   
-  pv->timer_rq.rq.pvdata = dev;
+  pv->timer_rq.base.pvdata = dev;
   DEVICE_OP(pv->timer, request, &pv->timer_rq);
 }
   
@@ -181,7 +181,7 @@ void ntag_next(struct device_s *dev)
     if (rq && crq->type & _DEV_CHAR_WRITE) {
       logk_debug("Failing write request...");
       crq->error = -EIO;
-      dev_request_queue_remove(&pv->char_queue, rq);
+      dev_char_rq_remove(&pv->char_queue, crq);
       kroutine_exec(&rq->kr);
     }
 
@@ -297,7 +297,7 @@ KROUTINE_EXEC(ntag_i2c_done)
 #endif
       dev_mem_rq_s_cast(rq)->err = pv->i2c_rq.base.err;
       if (pv->i2c_rq.base.err || dev_mem_rq_s_cast(rq)->size == 0) {
-        dev_request_queue_remove(&pv->mem_queue, rq);
+        dev_mem_rq_remove(&pv->mem_queue, rq);
         kroutine_exec(&rq->kr);
         pv->rq = NULL;
       }
@@ -307,7 +307,7 @@ KROUTINE_EXEC(ntag_i2c_done)
     case NTAG_RQ_CHAR:
       if (pv->i2c_rq.base.err != -EAGAIN) {
         dev_char_rq_s_cast(rq)->error = pv->i2c_rq.base.err;
-        dev_request_queue_remove(&pv->char_queue, rq);
+        dev_char_rq_remove(&pv->char_queue, rq);
         kroutine_exec(&rq->kr);
         pv->rq = NULL;
       }
@@ -329,20 +329,20 @@ DEV_MEM_REQUEST(ntag_mem_request)
       || rq->type & (DEV_MEM_OP_PARTIAL_READ | DEV_MEM_OP_PARTIAL_WRITE)
       ) {
     rq->err = -ENOTSUP;
-    kroutine_exec(&rq->base.kr);
+    dev_mem_rq_done(rq);
     return;
   }
 
   if (rq->addr % 16) {
     rq->err = -EINVAL;
-    kroutine_exec(&rq->base.kr);
+    dev_mem_rq_done(rq);
     return;
   }
 
   if (rq->addr + (rq->size << (4 + rq->sc_log2))
       > bc_get_reg(&pv->i2c_rq.vm, NTAG_I2C_BCGLOBAL_SIZE)) {
     rq->err = -EINVAL;
-    kroutine_exec(&rq->base.kr);
+    dev_mem_rq_done(rq);
     return;
   }
     
@@ -353,7 +353,7 @@ DEV_MEM_REQUEST(ntag_mem_request)
 
   LOCK_SPIN_IRQ_SCOPED(&dev->lock);
 
-  dev_request_queue_pushback(&pv->mem_queue, &rq->base);
+  dev_mem_rq_pushback(&pv->mem_queue, rq);
   ntag_next(dev);
 }
 
@@ -361,14 +361,14 @@ DEV_MEM_REQUEST(ntag_mem_request)
 static
 KROUTINE_EXEC(ntag_timeout)
 {
-  struct ntag_private_s *pv  = KROUTINE_CONTAINER(kr, *pv, timer_rq.rq.kr);
-  struct device_s *dev = pv->timer_rq.rq.pvdata;
+  struct ntag_private_s *pv  = KROUTINE_CONTAINER(kr, *pv, timer_rq.base.kr);
+  struct device_s *dev = pv->timer_rq.base.pvdata;
 
   logk_debug("Timeout");
 
   LOCK_SPIN_IRQ_SCOPED(&dev->lock);
 
-  pv->timer_rq.rq.pvdata = NULL;
+  pv->timer_rq.base.pvdata = NULL;
   pv->must_refresh = 1;
 
   ntag_next(dev);
@@ -384,7 +384,7 @@ DEV_CHAR_REQUEST(ntag_char_request)
       || rq->type & ~(DEV_CHAR_READ_FRAME | DEV_CHAR_WRITE_FRAME)
       ) {
     rq->error = -ENOTSUP;
-    kroutine_exec(&rq->base.kr);
+    dev_mem_rq_done(rq);
     return;
   }
 
@@ -394,7 +394,7 @@ DEV_CHAR_REQUEST(ntag_char_request)
   
   LOCK_SPIN_IRQ_SCOPED(&dev->lock);
 
-  dev_request_queue_pushback(&pv->char_queue, &rq->base);
+  dev_mem_rq_pushback(&pv->char_queue, rq);
   ntag_next(dev);
 }
 
@@ -413,7 +413,7 @@ DEV_CHAR_CANCEL(ntag_char_cancel)
   GCT_FOREACH(dev_request_queue, &pv->char_queue, item, {
       if (item != &rq->base)
         GCT_FOREACH_CONTINUE;
-      dev_request_queue_remove(&pv->char_queue, item);
+      dev_char_rq_remove(&pv->char_queue, item);
       err = 0;
       GCT_FOREACH_BREAK;
     });
@@ -461,9 +461,9 @@ DEV_INIT(ntag_init)
   if (err)
     goto err_pv;
 
-  dev_request_queue_init(&pv->char_queue);
+  dev_rq_queue_init(&pv->char_queue);
 #endif
-  dev_request_queue_init(&pv->mem_queue);
+  dev_rq_queue_init(&pv->mem_queue);
 
   err = dev_drv_i2c_bytecode_init(dev, &pv->i2c_rq, &ntag_i2c_bytecode,
                                   &pv->i2c,
@@ -490,11 +490,11 @@ DEV_INIT(ntag_init)
   pv->i2c_rq.gpio_map = pv->gpio_map;
   pv->i2c_rq.gpio_wmap = pv->gpio_wmap;
 
-  kroutine_init_deferred(&pv->timer_rq.rq.kr, &ntag_timeout);
+  dev_timer_rq_init(&pv->timer_rq, &ntag_timeout);
   dev_timer_init_sec(pv->timer, &pv->timer_rq.delay, 0, 1, 10);
 #endif
 
-  kroutine_init_deferred(&pv->i2c_rq.base.base.kr, &ntag_i2c_done);
+  dev_i2c_ctrl_rq_init(&pv->i2c_rq.base, &ntag_i2c_done);
   pv->i2c_rq.base.base.pvdata = dev;
   dev_i2c_bytecode_start(&pv->i2c, &pv->i2c_rq, &ntag_bc_init, NTAG_BC_INIT_BCARGS());
 
@@ -516,9 +516,9 @@ DEV_CLEANUP(ntag_cleanup)
     return -EBUSY;
 
   dev_drv_i2c_bytecode_cleanup(&pv->i2c, &pv->i2c_rq);
-  dev_request_queue_destroy(&pv->mem_queue);
+  dev_rq_queue_destroy(&pv->mem_queue);
 #ifdef CONFIG_DRIVER_NTAG_I2C_PASSTHROUGH
-  dev_request_queue_destroy(&pv->char_queue);
+  dev_rq_queue_destroy(&pv->char_queue);
   device_irq_source_unlink(dev, &pv->irq_ep, 1);
 #endif
   mem_free(pv);

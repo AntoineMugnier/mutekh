@@ -57,7 +57,7 @@ static KROUTINE_EXEC(midi_button_pressed)
 
   midi->last_keyboard_state = midi->keyboard_state;
   midi->keyboard_rq.type = DEVICE_VALIO_WAIT_UPDATE;
-  kroutine_init(&midi->keyboard_rq.base.kr, midi_button_pressed, KROUTINE_INTERRUPTIBLE);
+  dev_valio_rq_init(&midi->keyboard_rq.base.kr, midi_button_pressed);
   DEVICE_OP(&midi->keyboard, request, &midi->keyboard_rq);
 
   uint8_t msg[20];
@@ -148,7 +148,7 @@ static KROUTINE_EXEC(midi_motion)
     ble_gatt_db_char_changed(&midi->reg, 0, 1, msg, ptr);
 
   midi->motion_rq.type = DEVICE_VALIO_WAIT_UPDATE;
-  kroutine_init(&midi->motion_rq.base.kr, midi_motion, KROUTINE_INTERRUPTIBLE);
+  dev_valio_rq_init(&midi->motion_rq.base.kr, midi_motion);
   DEVICE_OP(&midi->motion_sensor, request, &midi->motion_rq);
 }
 
@@ -162,7 +162,7 @@ error_t midi_service_register(struct midi_s *midi,
     return -ENOENT;
   }
 
-  kroutine_init(&midi->keyboard_rq.base.kr, midi_button_pressed, KROUTINE_INTERRUPTIBLE);
+  dev_valio_rq_init(&midi->keyboard_rq.base.kr, midi_button_pressed);
   midi->keyboard_rq.type = DEVICE_VALIO_READ;
   midi->keyboard_rq.attribute = VALIO_KEYBOARD_MAP;
   midi->keyboard_rq.data = &midi->keyboard_state;
@@ -180,7 +180,7 @@ error_t midi_service_register(struct midi_s *midi,
     return -ENOENT;
   }
 
-  kroutine_init(&midi->motion_rq.base.kr, midi_motion, KROUTINE_INTERRUPTIBLE);
+  dev_valio_rq_init(&midi->motion_rq.base.kr, midi_motion);
   midi->motion_rq.type = DEVICE_VALIO_READ;
   midi->motion_rq.attribute = VALIO_MS_STATE;
   midi->motion_rq.data = &midi->motion_state;

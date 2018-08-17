@@ -97,7 +97,7 @@ static void efm32_leuart_try_read(struct device_s *dev)
   struct efm32_leuart_context_s	*pv = dev->drv_pv;
   struct dev_char_rq_s		*rq;
 
-  while ((rq = dev_char_rq_s_cast(dev_request_queue_head(&pv->read_q))))
+  while ((rq = dev_char_rq_head(&pv->read_q)))
     {
       size_t size = 0;
 
@@ -121,8 +121,8 @@ static void efm32_leuart_try_read(struct device_s *dev)
 
           if ((rq->type & _DEV_CHAR_PARTIAL) || rq->size == 0)
             {
-              dev_request_queue_pop(&pv->read_q);
-              kroutine_exec(&rq->base.kr);
+              dev_char_rq_pop(&pv->read_q);
+              dev_char_rq_done(rq);
               continue;
             }
         }
@@ -185,7 +185,7 @@ static void efm32_leuart_try_write(struct device_s *dev)
     }
 #endif
 
-  while ((rq = dev_char_rq_s_cast(dev_request_queue_head(&pv->write_q))))
+  while ((rq = dev_char_rq_head(&pv->write_q)))
     {
       size_t size = 0;
 
@@ -218,8 +218,8 @@ static void efm32_leuart_try_write(struct device_s *dev)
 
           if ((rq->type & _DEV_CHAR_PARTIAL) || rq->size == 0)
             {
-              dev_request_queue_pop(&pv->write_q);
-              kroutine_exec(&rq->base.kr);
+              dev_char_rq_pop(&pv->write_q);
+              dev_char_rq_done(rq);
               continue;
             }
         }
@@ -257,7 +257,7 @@ static DEV_CHAR_REQUEST(efm32_leuart_request)
     {
     case DEV_CHAR_READ_PARTIAL:
     case DEV_CHAR_READ: {
-      dev_request_queue_pushback(&pv->read_q, dev_char_rq_s_base(rq));
+      dev_char_rq_pushback(&pv->read_q, rq);
       dev->start_count |= EFM32_LEUART_STARTED_READ;
 #ifdef CONFIG_DEVICE_CLOCK_GATING
       dev_clock_sink_gate(&pv->clk_ep, DEV_CLOCK_EP_POWER_CLOCK);
@@ -270,7 +270,7 @@ static DEV_CHAR_REQUEST(efm32_leuart_request)
     case DEV_CHAR_WRITE_FLUSH:
     case DEV_CHAR_WRITE_PARTIAL:
     case DEV_CHAR_WRITE: {
-      dev_request_queue_pushback(&pv->write_q, dev_char_rq_s_base(rq));
+      dev_char_rq_pushback(&pv->write_q, rq);
       dev->start_count |= EFM32_LEUART_STARTED_WRITE;
 #ifdef CONFIG_DEVICE_CLOCK_GATING
       dev_clock_sink_gate(&pv->clk_ep, DEV_CLOCK_EP_POWER_CLOCK);
@@ -292,7 +292,7 @@ static DEV_CHAR_REQUEST(efm32_leuart_request)
   if (err)
     {
       rq->error = err;
-      kroutine_exec(&rq->base.kr);
+      dev_char_rq_done(rq);
     }
 }
 
@@ -455,8 +455,8 @@ static DEV_INIT(efm32_leuart_init)
 #endif
 
   /* init software fifos */
-  dev_request_queue_init(&pv->read_q);
-  dev_request_queue_init(&pv->write_q);
+  dev_rq_queue_init(&pv->read_q);
+  dev_rq_queue_init(&pv->write_q);
 
 #if CONFIG_DRIVER_EFM32_LEUART_SWFIFO > 0
   uart_fifo_init(&pv->read_fifo);
@@ -504,8 +504,8 @@ static DEV_INIT(efm32_leuart_init)
   uart_fifo_destroy(&pv->write_fifo);
   uart_fifo_destroy(&pv->read_fifo);
 # endif
-  dev_request_queue_destroy(&pv->read_q);
-  dev_request_queue_destroy(&pv->write_q);
+  dev_rq_queue_destroy(&pv->read_q);
+  dev_rq_queue_destroy(&pv->write_q);
 #endif
  err_clk:
   dev_drv_clock_cleanup(dev, &pv->clk_ep);
@@ -538,8 +538,8 @@ static DEV_CLEANUP(efm32_leuart_cleanup)
   uart_fifo_destroy(&pv->read_fifo);
 #endif
 
-  dev_request_queue_destroy(&pv->read_q);
-  dev_request_queue_destroy(&pv->write_q);
+  dev_rq_queue_destroy(&pv->read_q);
+  dev_rq_queue_destroy(&pv->write_q);
 
   device_iomux_cleanup(dev);
   mem_free(pv);

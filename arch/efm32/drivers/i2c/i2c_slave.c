@@ -115,14 +115,14 @@ void efm32_i2c_slave_data_queue_cancel(driver_pv_t *pv)
   for (;;)
     {
       struct dev_i2c_slave_rq_s *rq
-        = dev_i2c_slave_rq_s_cast(dev_request_queue_pop(&pv->queue));
+        = dev_i2c_slave_rq_pop(&pv->queue);
 
       logk_debug("%s %p", __func__, rq);
 
       if (!rq)
         break;
 
-      kroutine_exec(&rq->base.kr);
+      dev_i2c_slave_rq_done(rq);
     }
 }
 
@@ -132,8 +132,8 @@ void efm32_i2c_slave_rq_end(driver_pv_t *pv,
                             error_t err)
 {
   rq->error = err;
-  dev_request_queue_remove(&pv->queue, &rq->base);
-  kroutine_exec(&rq->base.kr);
+  dev_i2c_slave_remove(&pv->queue, rq);
+  dev_i2c_slave_rq_done(rq);
 }
 
 static
@@ -201,7 +201,7 @@ void efm32_i2c_slave_rx_byte(driver_pv_t *pv, struct dev_i2c_slave_rq_s *rq)
     {
       efm32_i2c_slave_rq_end(pv, rq, 0);
 
-      rq = dev_i2c_slave_rq_s_cast(dev_request_queue_head(&pv->queue));
+      rq = dev_i2c_slave_rq_head(&pv->queue);
 
       if (rq)
           cpu_mem_write_32(pv->addr + EFM32_I2C_CMD_ADDR,
@@ -337,7 +337,7 @@ DEV_IRQ_SRC_PROCESS(efm32_i2c_slave_irq)
               s->selection.read = read;
               s->error = 0;
 
-              kroutine_exec(&s->base.kr);
+              dev_i2c_slave_rq_done(s);
 
               if (read)
                 {
@@ -364,7 +364,7 @@ DEV_IRQ_SRC_PROCESS(efm32_i2c_slave_irq)
           assert(pv->state == STATE_RECEIVING);
 
           struct dev_i2c_slave_rq_s *rq
-            = dev_i2c_slave_rq_s_cast(dev_request_queue_head(&pv->queue));
+            = dev_i2c_slave_rq_head(&pv->queue);
 
           if (rq)
             efm32_i2c_slave_rx_byte(pv, rq);
@@ -380,7 +380,7 @@ DEV_IRQ_SRC_PROCESS(efm32_i2c_slave_irq)
           assert(pv->state == STATE_TRANSMITTING);
 
           struct dev_i2c_slave_rq_s *rq
-            = dev_i2c_slave_rq_s_cast(dev_request_queue_head(&pv->queue));
+            = dev_i2c_slave_rq_head(&pv->queue);
 
           assert(rq);
           
@@ -393,7 +393,7 @@ DEV_IRQ_SRC_PROCESS(efm32_i2c_slave_irq)
               rq->transfer.end_ack = 1;
               efm32_i2c_slave_rq_end(pv, rq, 0);
 
-              rq = dev_i2c_slave_rq_s_cast(dev_request_queue_head(&pv->queue));
+              rq = dev_i2c_slave_rq_head(&pv->queue);
               if (rq)
                 efm32_i2c_slave_tx_byte(pv, rq);
               else
@@ -409,7 +409,7 @@ DEV_IRQ_SRC_PROCESS(efm32_i2c_slave_irq)
           if (pv->state == STATE_TRANSMITTING)
             {
               struct dev_i2c_slave_rq_s *rq
-                = dev_i2c_slave_rq_s_cast(dev_request_queue_head(&pv->queue));
+                = dev_i2c_slave_rq_head(&pv->queue);
 
               if (rq)
                 {
@@ -446,7 +446,7 @@ DEV_I2C_SLAVE_REQUEST(efm32_i2c_slave_request)
         {
           logk_debug(" busy");
           rq->error = -ENOTSUP;
-          kroutine_exec(&rq->base.kr);
+          dev_i2c_slave_rq_done(rq);
           return;
         }
 
@@ -479,13 +479,13 @@ DEV_I2C_SLAVE_REQUEST(efm32_i2c_slave_request)
 
         case STATE_TRANSMITTING:
           rq->error = -ECANCELED;
-          dev_request_queue_pushback(&pv->queue, &rq->base);
+          dev_i2c_slave_rq_pushback(&pv->queue, rq);
           break;
 
         default:
           logk_debug(" bad sequencing");
           rq->error = -EINVAL;
-          kroutine_exec(&rq->base.kr);
+          dev_i2c_slave_rq_done(rq);
           return;
         }
       break;
@@ -497,28 +497,28 @@ DEV_I2C_SLAVE_REQUEST(efm32_i2c_slave_request)
           logk_debug(" unlock blocked");
           pv->state = STATE_RECEIVING;
           rq->error = -ECANCELED;
-          dev_request_queue_pushback(&pv->queue, &rq->base);
+          dev_i2c_slave_rq_pushback(&pv->queue, rq);
           cpu_mem_write_32(pv->addr + EFM32_I2C_CMD_ADDR,
                            endian_le32(EFM32_I2C_CMD_ACK));
           break;
 
         case STATE_RECEIVING:
           rq->error = -ECANCELED;
-          dev_request_queue_pushback(&pv->queue, &rq->base);
+          dev_i2c_slave_rq_pushback(&pv->queue, rq);
           break;
 
         case STATE_RECEIVING_WAITING:
           logk_debug(" unlock waiting");
           pv->state = STATE_RECEIVING;
           rq->error = -ECANCELED;
-          dev_request_queue_pushback(&pv->queue, &rq->base);
+          dev_i2c_slave_rq_pushback(&pv->queue, rq);
           efm32_i2c_slave_rx_byte(pv, rq);
           break;
 
         default:
           logk_debug(" bad sequencing");
           rq->error = -EINVAL;
-          kroutine_exec(&rq->base.kr);
+          dev_i2c_slave_rq_done(rq);
           return;
         }
       break;
@@ -526,7 +526,7 @@ DEV_I2C_SLAVE_REQUEST(efm32_i2c_slave_request)
     default:
       logk_debug(" wtf ?");
       rq->error = -ENOTSUP;
-      kroutine_exec(&rq->base.kr);
+      dev_i2c_slave_rq_done(rq);
       return;
     }
 }
@@ -671,7 +671,7 @@ DEV_INIT(efm32_i2c_slave_init)
   dev_clock_sink_gate(&pv->clk_ep, DEV_CLOCK_EP_POWER);
 #endif
 
-  dev_request_queue_init(&pv->queue);
+  dev_rq_queue_init(&pv->queue);
   pv->addr_sel = NULL;
   
   return 0;
@@ -694,10 +694,10 @@ DEV_CLEANUP(efm32_i2c_slave_cleanup)
 {
   DEVICE_PV(pv, dev);
 
-  if (pv->addr_sel || !dev_request_queue_isempty(&pv->queue))
+  if (pv->addr_sel || !dev_rq_queue_isempty(&pv->queue))
     return -EBUSY;
 
-  dev_request_queue_destroy(&pv->queue);
+  dev_rq_queue_destroy(&pv->queue);
 
 #ifdef CONFIG_DEVICE_CLOCK_GATING
   dev_clock_sink_gate(&pv->clk_ep, DEV_CLOCK_EP_POWER_CLOCK);

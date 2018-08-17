@@ -224,7 +224,7 @@ static inline void new_request_handler(struct dev_timer_rq_s *timer_rq,
   display_request(pvdata);
 
   pvdata->state = TEST_TIMER_STATE_WAIT_FOR_DEADLINE;
-  kroutine_init_immediate(&timer_rq->rq.kr, request_handler);
+  dev_timer_rq_init_immediate(timer_rq, request_handler);
   error_t err = DEVICE_OP(&timer_dev_g, request, timer_rq);
 
   if (err)
@@ -235,8 +235,8 @@ static inline void new_request_handler(struct dev_timer_rq_s *timer_rq,
                   pvdata->id, delay);
         }
       pvdata->state = TEST_TIMER_STATE_NEW_REQUEST;
-      kroutine_init_sched_switch(&timer_rq->rq.kr, request_handler);
-      kroutine_exec(&timer_rq->rq.kr);
+      dev_timer_rq_init_sched_switch(timer_rq, request_handler);
+      kroutine_exec(&timer_rq->base.kr);
     }
   else
     {
@@ -256,8 +256,8 @@ static inline void irq_handler(struct dev_timer_rq_s *timer_rq,
 {
   DEVICE_OP(&ref_dev_g, get_value, &pvdata->ref_deadline, 0);
   pvdata->state = TEST_TIMER_STATE_DEADLINE_REACHED;
-  kroutine_init_sched_switch(&timer_rq->rq.kr, request_handler);
-  kroutine_exec(&timer_rq->rq.kr);
+  dev_timer_rq_init_sched_switch(timer_rq, request_handler);
+  kroutine_exec(&timer_rq->base.kr);
 }
 
 
@@ -274,8 +274,8 @@ static inline void deadline_handler(struct dev_timer_rq_s *timer_rq,
 
   /* ready to post new request */
   pvdata->state = TEST_TIMER_STATE_NEW_REQUEST;
-  kroutine_init_sched_switch(&timer_rq->rq.kr, request_handler);
-  kroutine_exec(&timer_rq->rq.kr);
+  dev_timer_rq_init_sched_switch(timer_rq, request_handler);
+  kroutine_exec(&timer_rq->base.kr);
 }
 
 
@@ -336,7 +336,7 @@ static KROUTINE_EXEC(kcancel_handler)
         break;
     }
     pvdata_g[id].state = TEST_TIMER_STATE_NEW_REQUEST;
-    kroutine_exec(&request_g[id].rq.kr);
+    kroutine_exec(&request_g[id].base.kr);
 }
 #endif
 
@@ -382,12 +382,12 @@ static inline void run_requests(void)
     {
       pvdata_g[id].state = TEST_TIMER_STATE_NEW_REQUEST;
       pvdata_g[id].id = id;
-      request_g[id].rq.pvdata = &pvdata_g[id];
-      kroutine_init_sched_switch(&request_g[id].rq.kr, request_handler);
+      request_g[id].base.pvdata = &pvdata_g[id];
+      dev_timer_rq_init_sched_switch(&request_g[id], request_handler);
     }
 
   for (id = 0; id < RQ_NB; id++)
-    kroutine_exec(&request_g[id].rq.kr);
+    kroutine_exec(&request_g[id].base.kr);
 }
 
 

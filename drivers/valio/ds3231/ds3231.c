@@ -112,7 +112,7 @@ static void ds3231_request_run(struct device_s *dev,
                                 struct ds3231_priv_s *pv)
 {
   struct dev_valio_rq_s *rq
-    = dev_valio_rq_s_cast(dev_request_queue_head(&pv->queue));
+    = dev_valio_rq_head(&pv->queue);
 
   if (!rq)
     return;
@@ -149,7 +149,7 @@ static KROUTINE_EXEC(ds3231_done)
   struct dev_valio_rq_s *rq;
 
   LOCK_SPIN_IRQ(&dev->lock);
-  rq = dev_valio_rq_s_cast(dev_request_queue_pop(&pv->queue));
+  rq = dev_valio_rq_pop(&pv->queue);
   ds3231_request_run(dev, pv);
   LOCK_RELEASE_IRQ(&dev->lock);
 
@@ -171,7 +171,7 @@ static KROUTINE_EXEC(ds3231_done)
     clk->year = bcd2year(pv->buffer[T(YEARS)]);
   }
 
-  kroutine_exec(&rq->base.kr);
+  dev_valio_rq_done(rq);
 }
 
 static DEV_VALIO_REQUEST(ds3231_request)
@@ -185,14 +185,14 @@ static DEV_VALIO_REQUEST(ds3231_request)
       || (req->type != DEVICE_VALIO_READ
           && req->type != DEVICE_VALIO_WRITE)) {
     req->error = -ENOTSUP;
-    kroutine_exec(&req->base.kr);
+    dev_valio_rq_done(req);
     return;
   }
 
   LOCK_SPIN_IRQ_SCOPED(&dev->lock);
-  bool_t was_empty = dev_request_queue_isempty(&pv->queue);
+  bool_t was_empty = dev_rq_queue_isempty(&pv->queue);
 
-  dev_request_queue_push(&pv->queue, &req->base);
+  dev_valio_rq_pushback(&pv->queue, req);
 
   if (was_empty)
     ds3231_request_run(dev, pv);
@@ -205,10 +205,10 @@ static DEV_VALIO_CANCEL(ds3231_cancel)
   
   LOCK_SPIN_IRQ_SCOPED(&dev->lock);
 
-  if (req == dev_valio_rq_s_cast(dev_request_queue_head(&pv->queue)))
+  if (req == dev_valio_rq_head(&pv->queue))
     return -EBUSY;
 
-  dev_request_queue_remove(&pv->queue, &req->base);
+  dev_valio_rq_remove(&pv->queue, req);
 
   return 0;
 }
@@ -239,9 +239,9 @@ static DEV_INIT(ds3231_init)
   pv->i2c_transfer[0].type = DEV_I2C_CTRL_TRANSACTION_WRITE;
   pv->i2c_transfer[1].data = pv->buffer;
 
-  kroutine_init_deferred(&pv->i2c_txn.base.base.kr, ds3231_done);
+  dev_i2c_ctrl_rq_init(&pv->i2c_txn.base, ds3231_done);
   
-  dev_request_queue_init(&pv->queue);
+  dev_rq_queue_init(&pv->queue);
 
   dev->drv_pv = pv;
 
@@ -257,11 +257,11 @@ static DEV_CLEANUP(ds3231_cleanup)
 {
   struct ds3231_priv_s *pv = dev->drv_pv;
 
-  if (!dev_request_queue_isempty(&pv->queue))
+  if (!dev_rq_queue_isempty(&pv->queue))
     return -EBUSY;
 
   dev_drv_i2c_transaction_cleanup(&pv->i2c, &pv->i2c_txn);
-  dev_request_queue_destroy(&pv->queue);
+  dev_rq_queue_destroy(&pv->queue);
   mem_free(pv);
 
   return 0;

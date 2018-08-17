@@ -197,7 +197,7 @@ struct dev_i2c_slave_rq_s
   error_t error;
 };
 
-STRUCT_INHERIT(dev_i2c_slave_rq_s, dev_request_s, base);
+DEV_REQUEST_INHERIT(i2c_slave); DEV_REQUEST_QUEUE_OPS(i2c_slave);
 
 /** @see dev_i2c_slave_request_t */
 #define DEV_I2C_SLAVE_REQUEST(n) \

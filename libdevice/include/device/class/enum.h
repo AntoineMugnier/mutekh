@@ -74,7 +74,7 @@ struct dev_enum_rq_s
   };
 };
 
-STRUCT_INHERIT(dev_enum_rq_s, dev_request_s, base);
+DEV_REQUEST_INHERIT(enum); DEV_REQUEST_QUEUE_OPS(enum);
 
 /** @see dev_enum_match_driver_t */
 #define DEV_ENUM_MATCH_DRIVER(n) bool_t (n)(struct device_enum_s *accessor, \

@@ -178,8 +178,8 @@ static KROUTINE_EXEC(nrf5x_gpio_until_check)
 
         if ((cur ^ ref) & mask) {
           logk_debug("%s %p done\n", __FUNCTION__, rq);
-          dev_request_queue_remove(&pv->queue, &rq->base);
-          kroutine_exec(&rq->base.kr);
+          dev_gpio_rq_remove(&pv->queue, rq);
+          dev_gpio_rq_done(rq);
         } else {
           logk_debug("%s %p still waiting\n", __FUNCTION__, rq);
           mask_next |= mask;
@@ -533,7 +533,7 @@ static DEV_GPIO_REQUEST(nrf5x_gpio_request)
 # if defined(CONFIG_DRIVER_NRF5X_GPIO_UNTIL)
     if (rq->io_last < __MIN(CONFIG_NRF5X_GPIO_COUNT, 32)) {
       LOCK_SPIN_IRQ_SCOPED(&dev->lock);
-      dev_request_queue_pushback(&pv->queue, &rq->base);
+      dev_gpio_rq_pushback(&pv->queue, rq);
       kroutine_exec(&pv->until_checker);
       return;
     }
@@ -541,7 +541,7 @@ static DEV_GPIO_REQUEST(nrf5x_gpio_request)
     rq->error = -ENOTSUP;
   }
 
-  kroutine_exec(&rq->base.kr);
+  dev_gpio_rq_done(rq);
 }
 
 #define nrf5x_gpio_cancel (dev_gpio_cancel_t*)&dev_driver_notsup_fcn
@@ -588,7 +588,7 @@ static DEV_INIT(nrf5x_gpio_init)
 # endif
 # if defined(CONFIG_DRIVER_NRF5X_GPIO_UNTIL)
   kroutine_init_deferred(&pv->until_checker, nrf5x_gpio_until_check);
-  dev_request_queue_init(&pv->queue);
+  dev_rq_queue_init(&pv->queue);
 # endif
 #endif
 

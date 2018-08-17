@@ -115,14 +115,13 @@ void sd1306_next(struct device_s *dev)
   if (pv->spi_rq.base.base.pvdata)
     return;
 
-  struct dev_request_s *rq;
+  struct dev_mem_rq_s *mrq;
 
-  while ((rq = dev_request_queue_head(&pv->queue))) {
-    struct dev_mem_rq_s *mrq = dev_mem_rq_s_cast(rq);
+  while ((mrq = dev_mem_rq_head(&pv->queue))) {
 
     if (mrq->size == 0) {
-      dev_request_queue_remove(&pv->queue, rq);
-      kroutine_exec(&rq->kr);
+      dev_mem_rq_remove(&pv->queue, mrq);
+      dev_mem_rq_done(mrq);
       continue;
     }
 
@@ -186,7 +185,7 @@ DEV_MEM_REQUEST(sd1306_request)
       || !(rq->type & (DEV_MEM_OP_PARTIAL_WRITE | DEV_MEM_OP_PARTIAL_WRITE))
       ) {
     rq->err = -ENOTSUP;
-    kroutine_exec(&rq->base.kr);
+    dev_mem_rq_done(rq);
     return;
   }
 
@@ -194,7 +193,7 @@ DEV_MEM_REQUEST(sd1306_request)
 
   LOCK_SPIN_IRQ_SCOPED(&dev->lock);
 
-  dev_request_queue_pushback(&pv->queue, &rq->base);
+  dev_mem_rq_pushback(&pv->queue, rq);
   sd1306_next(dev);
 }
 
@@ -276,7 +275,7 @@ DEV_INIT(sd1306_init)
   memset(pv, 0, sizeof(*pv));
   dev->drv_pv = pv;
 
-  dev_request_queue_init(&pv->queue);
+  dev_rq_queue_init(&pv->queue);
 
   err = dev_drv_clock_init(dev, &pv->power_source, 0, 0, NULL);
   if (err)
@@ -309,7 +308,7 @@ DEV_INIT(sd1306_init)
   pv->spi_rq.gpio_map = pv->gpio_map;
   pv->spi_rq.gpio_wmap = pv->gpio_wmap;
 
-  kroutine_init_deferred(&pv->spi_rq.base.base.kr, &sd1306_spi_done);
+  dev_spi_ctrl_rq_init(&pv->spi_rq.base, &sd1306_spi_done);
 
   return 0;
 
@@ -329,7 +328,7 @@ DEV_CLEANUP(sd1306_cleanup)
     return -EBUSY;
 
   dev_drv_spi_bytecode_cleanup(&pv->spi, &pv->spi_rq);
-  dev_request_queue_destroy(&pv->queue);
+  dev_rq_queue_destroy(&pv->queue);
   dev_drv_clock_cleanup(dev, &pv->power_source);
   mem_free(pv);
 

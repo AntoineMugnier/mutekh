@@ -84,7 +84,7 @@ static void i2c_eeprom_request_run(
     struct device_s *dev)
 {
     struct i2c_eeprom_priv_s *pv = dev->drv_pv;
-    struct dev_mem_rq_s *rq = dev_mem_rq_s_cast(dev_request_queue_head(&pv->queue));
+    struct dev_mem_rq_s *rq = dev_mem_rq_head(&pv->queue);
 
     pv->busy = 1;
     pv->page = 0;
@@ -150,8 +150,8 @@ static KROUTINE_EXEC(i2c_eeprom_done)
     if (!done) {
         i2c_rq_run(dev, rq);
     } else {
-        dev_request_queue_pop(&pv->queue);
-        if (dev_request_queue_isempty(&pv->queue))
+        dev_mem_rq_pop(&pv->queue);
+        if (dev_rq_queue_isempty(&pv->queue))
             pv->busy = 0;
         else
             i2c_eeprom_request_run(dev);
@@ -162,7 +162,7 @@ static KROUTINE_EXEC(i2c_eeprom_done)
     if (!done)
         return;
 
-    kroutine_exec(&done->base.kr);
+    dev_mem_rq_done(done);
 }
 
 static void i2c_rq_run(
@@ -171,7 +171,7 @@ static void i2c_rq_run(
 {
     struct i2c_eeprom_priv_s *pv = dev->drv_pv;
 
-    kroutine_init_deferred(&pv->i2c_req.base.base.kr, i2c_eeprom_done);
+    dev_i2c_ctrl_rq_init(&pv->i2c_req.base, i2c_eeprom_done);
 
     pv->i2c_req.base.saddr = pv->saddr + (rq->addr >> (pv->addr_size * 8));
     pv->i2c_req.base.base.pvdata = dev;
@@ -258,7 +258,7 @@ static DEV_MEM_REQUEST(i2c_eeprom_request)
         goto out;
     }
 
-    dev_request_queue_pushback(&pv->queue, &rq->base);
+    dev_mem_rq_pushback(&pv->queue, rq);
     if (!pv->busy)
       i2c_eeprom_request_run(dev);
     rq = NULL;
@@ -269,7 +269,7 @@ out:
     if (!rq)
         return;
 
-    kroutine_exec(&rq->base.kr);
+    dev_mem_rq_done(rq);
 }
 
 
@@ -310,7 +310,7 @@ static DEV_INIT(i2c_eeprom_init)
     pv->addr_size = addr_size;
     pv->last_was_write = 0;
 
-    dev_request_queue_init(&pv->queue);
+    dev_rq_queue_init(&pv->queue);
 
     dev->drv_pv = pv;
 
@@ -329,7 +329,7 @@ static DEV_CLEANUP(i2c_eeprom_cleanup)
         return -EBUSY;
 
     device_put_accessor(&pv->bus.base);
-    dev_request_queue_destroy(&pv->queue);
+    dev_rq_queue_destroy(&pv->queue);
     mem_free(pv);
 
     return 0;

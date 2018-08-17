@@ -63,7 +63,7 @@ static DEV_IRQ_SRC_PROCESS(nrf5x_adc_irq)
 
   LOCK_SPIN_SCOPED(&dev->lock);
 
-  rq = dev_valio_rq_s_cast(dev_request_queue_head(&pv->queue));
+  rq = dev_valio_rq_head(&pv->queue);
   if (rq) {
     group = rq->data;
 
@@ -77,14 +77,14 @@ static DEV_IRQ_SRC_PROCESS(nrf5x_adc_irq)
       pv->index++;
 
       if (!pv->todo) {
-        dev_request_queue_pop(&pv->queue);
+        dev_valio_rq_pop(&pv->queue);
 
         rq->base.drvdata = 0;
         rq->error = 0;
 
-        kroutine_exec(&rq->base.kr);
+        dev_valio_rq_done(rq);
 
-        rq = dev_valio_rq_s_cast(dev_request_queue_head(&pv->queue));
+        rq = dev_valio_rq_head(&pv->queue);
       }
 
       if (rq) {
@@ -124,7 +124,7 @@ static void nrf5x_adc_request_start(struct device_s *dev)
   struct dev_valio_rq_s *rq;
   struct valio_adc_group_s *group;
 
-  rq = dev_valio_rq_s_cast(dev_request_queue_head(&pv->queue));
+  rq = dev_valio_rq_head(&pv->queue);
 
   assert(rq);
 
@@ -152,21 +152,21 @@ static DEV_VALIO_REQUEST(nrf5x_adc_request)
 
   if (!group->mask) {
     req->error = -ENOTSUP;
-    kroutine_exec(&req->base.kr);
+    dev_valio_rq_done(req);
     return;
   }
 
   if (req->attribute != VALIO_ADC_VALUE || req->type != DEVICE_VALIO_READ) {
     req->error = -ENOTSUP;
-    kroutine_exec(&req->base.kr);
+    dev_valio_rq_done(req);
     return;
   }
 
   LOCK_SPIN_IRQ_SCOPED(&dev->lock);
 
-  start = dev_request_queue_isempty(&pv->queue);
+  start = dev_rq_queue_isempty(&pv->queue);
 
-  dev_request_queue_pushback(&pv->queue, &req->base);
+  dev_valio_rq_pushback(&pv->queue, req);
   req->base.drvdata = dev;
 
   if (start)
@@ -183,7 +183,7 @@ static DEV_VALIO_CANCEL(nrf5x_adc_cancel)
 
   if (req->base.drvdata == dev) {
     err = 0;
-    dev_request_queue_remove(&pv->queue, &req->base);
+    dev_valio_rq_remove(&pv->queue, req);
   }
 
   return err;
@@ -219,7 +219,7 @@ static DEV_INIT(nrf5x_adc_init)
   assert(device_res_get_uint(dev, DEV_RES_MEM, 0, &addr, NULL) == 0 &&
          ADC_ADDR == addr);
 
-  dev_request_queue_init(&pv->queue);
+  dev_rq_queue_init(&pv->queue);
 
   nrf_it_disable_mask(ADC_ADDR, -1);
 
@@ -237,10 +237,10 @@ static DEV_CLEANUP(nrf5x_adc_cleanup)
 {
   struct nrf5x_adc_private_s *pv = dev->drv_pv;
 
-  if (!dev_request_queue_isempty(&pv->queue))
+  if (!dev_rq_queue_isempty(&pv->queue))
     return -EBUSY;
 
-  dev_request_queue_destroy(&pv->queue);
+  dev_rq_queue_destroy(&pv->queue);
   nrf_it_disable_mask(ADC_ADDR, -1);
   device_irq_source_unlink(dev, pv->irq_ep, 1);
 

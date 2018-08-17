@@ -80,7 +80,7 @@ static DEV_CHAR_REQUEST(mydrv_null_request)
      complex drivers this is often deferred because we rely on an
      hardware interrupt or on an asynchronous operation we started on
      an other device. */
-  kroutine_exec(&rq->base.kr);
+  dev_char_rq_done(rq);
 }
 
 /* This function is required by the DRIVER_CHAR_METHODS(mydrv_null)

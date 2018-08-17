@@ -315,7 +315,7 @@ static DEV_INIT(apbctrl_init)
 
   dev->drv_pv = pv;
 
-  dev_request_queue_init(&pv->queue);
+  dev_rq_queue_init(&pv->queue);
 
   apbctrl_scan(dev, begin);
 
@@ -326,7 +326,7 @@ static DEV_CLEANUP(apbctrl_cleanup)
 {
   struct apbctrl_pv_s *pv = dev->drv_pv;
 
-  if (!dev_request_queue_isempty(&pv->queue))
+  if (!dev_rq_queue_isempty(&pv->queue))
     return -EBUSY;
 
   mem_free(pv);

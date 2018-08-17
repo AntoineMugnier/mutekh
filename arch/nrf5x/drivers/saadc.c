@@ -60,7 +60,7 @@ static DEV_IRQ_SRC_PROCESS(nrf5x_saadc_irq)
 
   LOCK_SPIN_SCOPED(&dev->lock);
 
-  rq = dev_valio_rq_s_cast(dev_request_queue_head(&pv->queue));
+  rq = dev_valio_rq_head(&pv->queue);
   if (rq && nrf_event_check(SAADC_ADDR, NRF_SAADC_DONE)) {
     nrf_event_clear(SAADC_ADDR, NRF_SAADC_DONE);
 
@@ -68,14 +68,14 @@ static DEV_IRQ_SRC_PROCESS(nrf5x_saadc_irq)
 
     nrf_task_trigger(SAADC_ADDR, NRF_SAADC_STOP);
   
-    dev_request_queue_pop(&pv->queue);
+    dev_valio_rq_pop(&pv->queue);
 
     rq->base.drvdata = 0;
     rq->error = 0;
 
-    kroutine_exec(&rq->base.kr);
+    dev_valio_rq_done(rq);
 
-    rq = dev_valio_rq_s_cast(dev_request_queue_head(&pv->queue));
+    rq = dev_valio_rq_head(&pv->queue);
 
     if (rq) {
       nrf5x_saadc_request_start(dev);
@@ -92,7 +92,7 @@ static void nrf5x_saadc_request_start(struct device_s *dev)
   struct dev_valio_rq_s *rq;
   struct valio_adc_group_s *group;
 
-  rq = dev_valio_rq_s_cast(dev_request_queue_head(&pv->queue));
+  rq = dev_valio_rq_head(&pv->queue);
   assert(rq);
 
   group = rq->data;
@@ -134,8 +134,8 @@ static DEV_VALIO_REQUEST(nrf5x_saadc_request)
 
   LOCK_SPIN_IRQ_SCOPED(&dev->lock);
 
-  start = dev_request_queue_isempty(&pv->queue);
-  dev_request_queue_pushback(&pv->queue, &req->base);
+  start = dev_rq_queue_isempty(&pv->queue);
+  dev_valio_rq_pushback(&pv->queue, req);
   req->base.drvdata = dev;
   if (start)
     nrf5x_saadc_request_start(dev);
@@ -144,7 +144,7 @@ static DEV_VALIO_REQUEST(nrf5x_saadc_request)
 
  notsup:
     req->error = -ENOTSUP;
-    kroutine_exec(&req->base.kr);
+    dev_valio_rq_done(req);
 }
 
 static DEV_VALIO_CANCEL(nrf5x_saadc_cancel)
@@ -154,11 +154,11 @@ static DEV_VALIO_CANCEL(nrf5x_saadc_cancel)
 
   LOCK_SPIN_IRQ_SCOPED(&dev->lock);
 
-  if (req == dev_valio_rq_s_cast(dev_request_queue_head(&pv->queue)))
+  if (req == dev_valio_rq_head(&pv->queue))
     return -EBUSY;
   
   if (req->base.drvdata == dev) {
-    dev_request_queue_remove(&pv->queue, &req->base);
+    dev_valio_rq_remove(&pv->queue, req);
     return 0;
   }
 
@@ -241,7 +241,7 @@ static DEV_INIT(nrf5x_saadc_init)
   assert(device_res_get_uint(dev, DEV_RES_MEM, 0, &addr, NULL) == 0 &&
          SAADC_ADDR == addr);
 
-  dev_request_queue_init(&pv->queue);
+  dev_rq_queue_init(&pv->queue);
 
   nrf_it_disable_mask(SAADC_ADDR, -1);
   return 0;
@@ -256,10 +256,10 @@ static DEV_CLEANUP(nrf5x_saadc_cleanup)
 {
   struct nrf5x_saadc_private_s *pv = dev->drv_pv;
 
-  if (!dev_request_queue_isempty(&pv->queue))
+  if (!dev_rq_queue_isempty(&pv->queue))
     return -EBUSY;
 
-  dev_request_queue_destroy(&pv->queue);
+  dev_rq_queue_destroy(&pv->queue);
   nrf_it_disable_mask(SAADC_ADDR, -1);
   device_irq_source_unlink(dev, pv->irq_ep, 1);
 

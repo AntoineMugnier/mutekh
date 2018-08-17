@@ -457,7 +457,7 @@ efm32_gpio_request_until(struct device_s *dev,
   if (!ifall)
     goto empty;
   rq->base.drvuint = ifall;
-  dev_request_queue_pushback(&pv->queue, &rq->base);
+  dev_gpio_rq_pushback(&pv->queue, rq);
   return;
 
  done:
@@ -473,7 +473,7 @@ efm32_gpio_request_until(struct device_s *dev,
                    endian_le32(irise | ifall));
 
  empty:
-  kroutine_exec(&rq->base.kr);
+  dev_gpio_rq_done(rq);
 }
 #endif
 
@@ -516,7 +516,7 @@ static DEV_GPIO_CANCEL(efm32_gpio_cancel)
       if (m == 0)
         return -EBUSY;
 
-      dev_request_queue_remove(&pv->queue, &rq->base);
+      dev_gpio_rq_remove(&pv->queue, rq);
       efm32_gpio_until_clear(m);
       cpu_mem_write_32(EFM32_GPIO_ADDR + EFM32_GPIO_IFC_ADDR, endian_le32(m));
       rq->base.drvuint = 0;
@@ -771,7 +771,7 @@ static DEV_INIT(efm32_gpio_init)
   cpu_mem_write_32(EFM32_GPIO_ADDR + EFM32_GPIO_IEN_ADDR, 0);
 
 #ifdef CONFIG_DRIVER_EFM32_GPIO_UNTIL
-  dev_request_queue_init(&pv->queue);
+  dev_rq_queue_init(&pv->queue);
 #endif
 
 #ifdef CONFIG_DEVICE_IRQ
@@ -815,7 +815,7 @@ static DEV_CLEANUP(efm32_gpio_cleanup)
   dev_drv_clock_cleanup(dev, &pv->clk_ep);
 
 #ifdef CONFIG_DRIVER_EFM32_GPIO_UNTIL
-  dev_request_queue_destroy(&pv->queue);
+  dev_rq_queue_destroy(&pv->queue);
 #endif
 
   mem_free(pv);

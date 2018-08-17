@@ -98,7 +98,7 @@ static void nrf5x_uart_request_finish(struct device_s *dev,
 {
   rq->error = 0;
   logk_trace("rq %p done", rq);
-  kroutine_exec(&rq->base.kr);
+  dev_char_rq_done(rq);
 }
 
 static bool_t nrf5x_uart_tx_fifo_refill(
@@ -106,12 +106,10 @@ static bool_t nrf5x_uart_tx_fifo_refill(
     struct nrf5x_uart_priv *pv)
 {
     struct dev_char_rq_s *rq;
-    struct dev_request_s *drq;
     size_t count;
     bool_t processed = 0;
 
-    while ((drq = dev_request_queue_head(&pv->tx_q))) {
-        rq = dev_char_rq_s_cast(drq);
+    while ((rq = dev_char_rq_head(&pv->tx_q))) {
 
         assert(rq->type == DEV_CHAR_WRITE_PARTIAL
                || rq->type == DEV_CHAR_WRITE_PARTIAL_FLUSH
@@ -133,7 +131,7 @@ static bool_t nrf5x_uart_tx_fifo_refill(
         if (rq->size == 0
             || rq->type == DEV_CHAR_WRITE_PARTIAL
             || rq->type == DEV_CHAR_WRITE_PARTIAL_FLUSH) {
-            dev_request_queue_pop(&pv->tx_q);
+            dev_char_rq_pop(&pv->tx_q);
 
             nrf5x_uart_request_finish(dev, rq);
         }
@@ -147,12 +145,10 @@ static bool_t nrf5x_uart_rx_fifo_flush(
     struct nrf5x_uart_priv *pv)
 {
     struct dev_char_rq_s *rq;
-    struct dev_request_s *drq;
     size_t count;
     bool_t processed = 0;
 
-    while ((drq = dev_request_queue_head(&pv->rx_q))) {
-        rq = dev_char_rq_s_cast(drq);
+    while ((rq = dev_char_rq_head(&pv->rx_q))) {
 
         assert(rq->type == DEV_CHAR_READ_PARTIAL || rq->type == DEV_CHAR_READ);
 
@@ -169,7 +165,7 @@ static bool_t nrf5x_uart_rx_fifo_flush(
         processed = 1;
 
         if (rq->size == 0 || rq->type == DEV_CHAR_READ_PARTIAL) {
-            dev_request_queue_pop(&pv->rx_q);
+            dev_char_rq_pop(&pv->rx_q);
 
             device_sleep_schedule(dev);
 
@@ -208,10 +204,10 @@ static bool_t nrf5x_io_process_one(
         uart_fifo_pushback(&pv->rx_fifo, chr);
     }
 
-    if (!dev_request_queue_isempty(&pv->rx_q))
+    if (!dev_rq_queue_isempty(&pv->rx_q))
       processed |= nrf5x_uart_rx_fifo_flush(dev, pv);
 
-    if (!dev_request_queue_isempty(&pv->tx_q))
+    if (!dev_rq_queue_isempty(&pv->tx_q))
       processed |= nrf5x_uart_tx_fifo_refill(dev, pv);
 
  tx_again:
@@ -282,7 +278,7 @@ static DEV_CHAR_REQUEST(nrf5x_uart_request)
 
   default:
     rq->error = -ENOTSUP;
-    kroutine_exec(&rq->base.kr);
+    dev_char_rq_done(rq);
     return;
   }
 
@@ -292,7 +288,7 @@ static DEV_CHAR_REQUEST(nrf5x_uart_request)
 
   rq->error = 0;
 
-  dev_request_queue_pushback(q, &rq->base);
+  dev_char_rq_pushback(q, rq);
   if (!(dev->start_count & use)) {
     if (use == USE_RX) {
       logk_trace("%s START RX", __FUNCTION__);
@@ -330,10 +326,10 @@ static DEV_CHAR_CANCEL(nrf5x_uart_cancel)
 
   LOCK_SPIN_IRQ_SCOPED(&dev->lock);
 
-  if (dev_request_queue_head(q) == &rq->base)
+  if (dev_char_rq_head(q) == rq)
     return -EBUSY;
 
-  dev_request_queue_remove(q, &rq->base);
+  dev_char_rq_remove(q, rq);
   device_sleep_schedule(dev);
 
   return 0;
@@ -408,7 +404,7 @@ static DEV_VALIO_REQUEST(nrf5x_uart_valio_request)
     req->error = nrf5x_uart_config(pv, req->data);
   }
 
-  kroutine_exec(&req->base.kr);
+  dev_char_rq_done(req);
 }
 
 #define nrf5x_uart_valio_cancel (dev_valio_cancel_t*)dev_driver_notsup_fcn
@@ -443,10 +439,10 @@ static DEV_USE(nrf5x_uart_char_use)
       struct nrf5x_uart_priv *pv = dev->drv_pv;
       uint16_t before = dev->start_count;
 
-      if (dev_request_queue_isempty(&pv->rx_q))
+      if (dev_rq_queue_isempty(&pv->rx_q))
         dev->start_count &= ~USE_RX;
 
-      if (dev_request_queue_isempty(&pv->tx_q)
+      if (dev_rq_queue_isempty(&pv->tx_q)
           && uart_fifo_isempty(&pv->tx_fifo)
           && pv->txdrdy)
         dev->start_count &= ~USE_TX;
@@ -547,8 +543,8 @@ static DEV_INIT(nrf5x_uart_char_init)
 
     CPU_INTERRUPT_RESTORESTATE;
 
-    dev_request_queue_init(&pv->rx_q);
-    dev_request_queue_init(&pv->tx_q);
+    dev_rq_queue_init(&pv->rx_q);
+    dev_rq_queue_init(&pv->tx_q);
 
 #if CONFIG_DRIVER_NRF5X_UART_SWFIFO > 0
     uart_fifo_init(&pv->rx_fifo);
@@ -588,8 +584,8 @@ static DEV_INIT(nrf5x_uart_char_init)
     uart_fifo_destroy(&pv->rx_fifo);
 #endif
 
-    dev_request_queue_destroy(&pv->rx_q);
-    dev_request_queue_destroy(&pv->tx_q);
+    dev_rq_queue_destroy(&pv->rx_q);
+    dev_rq_queue_destroy(&pv->tx_q);
 
   free_pv:
     mem_free(pv);
@@ -602,8 +598,8 @@ static DEV_CLEANUP(nrf5x_uart_char_cleanup)
     struct nrf5x_uart_priv *pv = dev->drv_pv;
     uintptr_t addr = pv->addr;
 
-    if (!dev_request_queue_isempty(&pv->rx_q)
-        || !dev_request_queue_isempty(&pv->tx_q))
+    if (!dev_rq_queue_isempty(&pv->rx_q)
+        || !dev_rq_queue_isempty(&pv->tx_q))
       return -EBUSY;
 
 #if defined(CONFIG_DRIVER_NRF5X_PRINTK)
@@ -628,8 +624,8 @@ static DEV_CLEANUP(nrf5x_uart_char_cleanup)
     uart_fifo_destroy(&pv->rx_fifo);
 #endif
 
-    dev_request_queue_destroy(&pv->rx_q);
-    dev_request_queue_destroy(&pv->tx_q);
+    dev_rq_queue_destroy(&pv->rx_q);
+    dev_rq_queue_destroy(&pv->tx_q);
 
     device_iomux_cleanup(dev);
     mem_free(pv);

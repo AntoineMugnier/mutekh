@@ -165,14 +165,14 @@ static void char_mux_chan_rx_error(struct device_s *dev, struct char_mux_channel
   CHAR_MUX_DEBUG(">>> %p %s %i\n", dev, __func__, err);
   struct dev_char_rq_s * __restrict__ rq;
 
-  if ((rq = dev_char_rq_s_cast(dev_request_queue_head(&chan->read_q))))
+  if ((rq = dev_char_rq_head(&chan->read_q)))
     {
       rq->error = err;
       chan->rq_done = 0;
-      dev_request_queue_pop(&chan->read_q);
+      dev_char_rq_pop(&chan->read_q);
       rq->base.drvdata = NULL;
 
-      kroutine_exec(&rq->base.kr);
+      dev_char_rq_done(rq);
     }
   else
     {
@@ -204,7 +204,7 @@ static error_t char_mux_try_read(struct device_s *dev, struct char_mux_channel_s
 
   while (1)
     {
-      rq = dev_char_rq_s_cast(dev_request_queue_head(&chan->read_q));
+      rq = dev_char_rq_head(&chan->read_q);
 
       if (rq == NULL)
         break;
@@ -242,9 +242,9 @@ static error_t char_mux_try_read(struct device_s *dev, struct char_mux_channel_s
       /* end of read request on virtual char device */
       chan->rq_done = 0;
     done:
-      dev_request_queue_pop(&chan->read_q);
+      dev_char_rq_pop(&chan->read_q);
       rq->base.drvdata = NULL;
-      kroutine_exec(&rq->base.kr);
+      dev_char_rq_done(rq);
     }
 
   *size = j;
@@ -271,7 +271,7 @@ static DEV_CHAR_CANCEL(char_mux_cancel)
       if (rq->base.drvdata == chan)
         {
           chan->rq_done = 0;
-          dev_request_queue_remove(&chan->read_q, dev_char_rq_s_base(rq));
+          dev_char_rq_remove(&chan->read_q, rq);
           rq->base.drvdata = NULL;
           err = 0;
         }
@@ -326,7 +326,7 @@ static DEV_CHAR_REQUEST(char_mux_request)
 #ifdef CONFIG_DRIVER_CHAR_MUX_RX_FIFOS
       size_t l = chan->fifo_size;
       /* there should be no pending request when the fifo contains data. */
-      assert(l == 0 || dev_request_queue_isempty(&chan->read_q));
+      assert(l == 0 || dev_rq_queue_isempty(&chan->read_q));
 
       if ((rq->type & _DEV_CHAR_FRAME) && chan->fifo_frame != l)
         {
@@ -342,14 +342,14 @@ static DEV_CHAR_REQUEST(char_mux_request)
 
       rq->error = 0;
       rq->base.drvdata = chan;
-      dev_request_queue_pushback(&chan->read_q, dev_char_rq_s_base(rq));
+      dev_char_rq_pushback(&chan->read_q, rq);
 
 #ifdef CONFIG_DRIVER_CHAR_MUX_RX_FIFOS
       /* try to read from channel fifo */
       if ((err = char_mux_try_read(dev, chan, chan->fifo, &l, !chan->started)))
         {
           chan->rq_done = 0;
-          dev_request_queue_pop(&chan->read_q);
+          dev_char_rq_pop(&chan->read_q);
           rq->base.drvdata = NULL;
           break;
         }
@@ -364,7 +364,7 @@ static DEV_CHAR_REQUEST(char_mux_request)
     case DEV_CHAR_WRITE_PARTIAL:
     case DEV_CHAR_WRITE: {
       rq->base.drvuint = num;
-      dev_request_queue_pushback(&pv->write_q, dev_char_rq_s_base(rq));
+      dev_char_rq_pushback(&pv->write_q, rq);
       do_tx = char_mux_start_tx(dev);
       break;
     }
@@ -383,7 +383,7 @@ static DEV_CHAR_REQUEST(char_mux_request)
   if (err)
     {
       rq->error = err;
-      kroutine_exec(&rq->base.kr);
+      dev_char_rq_done(rq);
     }
 }
 
@@ -518,7 +518,7 @@ static KROUTINE_EXEC(char_mux_io_read_done)
       /* do not start an io rx on permanent error when there is no
          more channel requests */
       for (i = 0; i < pv->chan_count; i++)
-        if (!dev_request_queue_isempty(&(pv->chans + i)->read_q))
+        if (!dev_rq_queue_isempty(&(pv->chans + i)->read_q))
           goto restart;
       pv->rx_state = CHAR_MUX_RX_IDLE;
       do_rx = 0;
@@ -624,7 +624,7 @@ static KROUTINE_EXEC(char_mux_io_read_done)
 static bool_t char_mux_start_tx(struct device_s *dev)
 {
   struct char_mux_context_s *pv = dev->drv_pv;
-  struct dev_char_rq_s *trq = dev_char_rq_s_cast(dev_request_queue_head(&pv->write_q));
+  struct dev_char_rq_s *trq = dev_char_rq_head(&pv->write_q);
 
   CHAR_MUX_DEBUG(">>> %p %s %u %u\n", dev, __func__, pv->tx_state, pv->rx_state);
 
@@ -669,7 +669,7 @@ static KROUTINE_EXEC(char_mux_io_write_done)
   struct dev_char_rq_s *rq = KROUTINE_CONTAINER(kr, *rq, base.kr);
   struct device_s *dev = rq->base.pvdata;
   struct char_mux_context_s *pv = dev->drv_pv;
-  struct dev_char_rq_s *trq = dev_char_rq_s_cast(dev_request_queue_head(&pv->write_q));
+  struct dev_char_rq_s *trq = dev_char_rq_head(&pv->write_q);
   bool_t do_tx = 1;
 
   CHAR_MUX_DEBUG(">>> %p %s %u %u err:%u\n", dev, __func__, pv->tx_state, pv->rx_state, rq->error);
@@ -709,8 +709,8 @@ static KROUTINE_EXEC(char_mux_io_write_done)
           trq->error = 0;
         trq_end:
           pv->tx_rq_done = 0;
-          dev_request_queue_pop(&pv->write_q);
-          kroutine_exec(&trq->base.kr);
+          dev_char_rq_pop(&pv->write_q);
+          dev_char_rq_done(trq);
         }
       pv->tx_state = CHAR_MUX_TX_IDLE;
       do_tx = char_mux_start_tx(dev);
@@ -804,14 +804,14 @@ static DEV_INIT(char_mux_init)
   if (device_get_param_dev_accessor(dev, "io", &pv->io.base, DRIVER_CLASS_CHAR))
     goto err_mem;
 
-  dev_request_queue_init(&pv->write_q);
+  dev_rq_queue_init(&pv->write_q);
 
   __unused__ uint8_t *fifo = (void*)(pv->chans + num);
   for (i = 0; i < num; i++)
     {
       struct char_mux_channel_s *chan = pv->chans + i;
 
-      dev_request_queue_init(&chan->read_q);
+      dev_rq_queue_init(&chan->read_q);
 
 #ifdef CONFIG_DRIVER_CHAR_MUX_RX_FIFOS
       size_t fifo_size = fsizes[i];
@@ -827,11 +827,10 @@ static DEV_INIT(char_mux_init)
 
   pv->read_rq.type = DEV_CHAR_READ;
   pv->read_rq.base.pvdata = dev;
-  kroutine_init_deferred(&pv->read_rq.base.kr, char_mux_io_read_done);
+  dev_char_rq_init(&pv->read_rq, char_mux_io_read_done);
 
   pv->write_rq.base.pvdata = dev;
-  kroutine_init_deferred(&pv->write_rq.base.kr, char_mux_io_write_done);
-
+  dev_char_rq_init(&pv->write_rq, char_mux_io_write_done);
 
   pv->tx_rq_done = 0;
   pv->tx_state = CHAR_MUX_TX_IDLE;
@@ -850,11 +849,11 @@ static DEV_CLEANUP(char_mux_cleanup)
   uint_fast8_t i;
 
   if (pv->tx_state != CHAR_MUX_TX_IDLE ||
-      !dev_request_queue_isempty(&pv->write_q))
+      !dev_rq_queue_isempty(&pv->write_q))
     return -EBUSY;
 
   for (i = 0; i < pv->chan_count; i++)
-    if (!dev_request_queue_isempty(&(pv->chans + i)->read_q))
+    if (!dev_rq_queue_isempty(&(pv->chans + i)->read_q))
       return -EBUSY;
 
   if (pv->rx_state != CHAR_MUX_RX_IDLE &&

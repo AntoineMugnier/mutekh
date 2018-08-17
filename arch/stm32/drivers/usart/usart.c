@@ -37,6 +37,7 @@
 #include <device/class/iomux.h>
 #include <device/resource/uart.h>
 #include <device/class/valio.h>
+#include <device/valio/uart_config.h>
 #include <device/resource/uart.h>
 
 #include <arch/stm32/usart.h>
@@ -114,7 +115,7 @@ void stm32_usart_try_read(struct device_s *dev)
 
   uint32_t a, x;
 
-  while ((rq = dev_char_rq_s_cast(dev_request_queue_head(&pv->read_q))))
+  while ((rq = dev_char_rq_head(&pv->read_q)))
     {
       size_t size = 0;
 
@@ -143,8 +144,8 @@ void stm32_usart_try_read(struct device_s *dev)
 
           if ((rq->type & _DEV_CHAR_PARTIAL) || rq->size == 0)
             {
-              dev_request_queue_pop(&pv->read_q);
-              kroutine_exec(&rq->base.kr);
+              dev_char_rq_pop(&pv->read_q);
+              dev_char_rq_done(rq);
               /* look for another pending read request. */
               continue;
             }
@@ -192,7 +193,7 @@ void stm32_usart_try_write(struct device_s *dev)
     }
 #endif
 
-  while ((rq = dev_char_rq_s_cast(dev_request_queue_head(&pv->write_q))))
+  while ((rq = dev_char_rq_head(&pv->write_q)))
     {
       size_t size = 0;
 
@@ -236,8 +237,8 @@ void stm32_usart_try_write(struct device_s *dev)
 
           if ((rq->type & _DEV_CHAR_PARTIAL) || rq->size == 0)
             {
-              dev_request_queue_pop(&pv->write_q);
-              kroutine_exec(&rq->base.kr);
+              dev_char_rq_pop(&pv->write_q);
+              dev_char_rq_done(rq);
               /* look for another pending write request. */
               continue;
             }
@@ -290,7 +291,7 @@ DEV_CHAR_REQUEST(stm32_usart_request)
   {
     case DEV_CHAR_READ_PARTIAL:
     case DEV_CHAR_READ: {
-      dev_request_queue_pushback(&pv->read_q, dev_char_rq_s_base(rq));
+      dev_char_rq_pushback(&pv->read_q, rq);
       if (!(dev->start_count & STM32_USART_STARTED_READ))
         {
           dev->start_count |= STM32_USART_STARTED_READ;
@@ -303,7 +304,7 @@ DEV_CHAR_REQUEST(stm32_usart_request)
     case DEV_CHAR_WRITE_FLUSH:
     case DEV_CHAR_WRITE_PARTIAL:
     case DEV_CHAR_WRITE: {
-      dev_request_queue_pushback(&pv->write_q, dev_char_rq_s_base(rq));
+      dev_char_rq_pushback(&pv->write_q, rq);
       if (!(dev->start_count & STM32_USART_STARTED_WRITE))
         {
           dev->start_count |= STM32_USART_STARTED_WRITE;
@@ -320,7 +321,7 @@ DEV_CHAR_REQUEST(stm32_usart_request)
   if (err)
     {
       rq->error = err;
-      kroutine_exec(&rq->base.kr);
+      dev_char_rq_done(rq);
     }
 }
 
@@ -353,7 +354,7 @@ DEV_IRQ_SRC_PROCESS(stm32_usart_irq)
 #if CONFIG_DRIVER_STM32_USART_SWFIFO > 0
     if (usart_fifo_isempty(&pv->write_fifo))
 #else
-    if (dev_request_queue_isempty(&pv->write_q))
+    if (dev_rq_queue_isempty(&pv->write_q))
 #endif
       break;
   }
@@ -496,7 +497,7 @@ DEV_VALIO_REQUEST(stm32_usart_valio_request)
   if (req->type != DEVICE_VALIO_WRITE
       || req->attribute != VALIO_UART_CONFIG) {
     req->error = -ENOTSUP;
-    kroutine_exec(&req->base.kr);
+    dev_valio_rq_done(req);
   }
 
   struct dev_uart_config_s *cfg = req->data;
@@ -524,7 +525,7 @@ DEV_VALIO_REQUEST(stm32_usart_valio_request)
     printk("uart: configuration left unchanged.\n");
 #endif
 
-  kroutine_exec(&req->base.kr);
+  dev_valio_rq_done(req);
 }
 
 #define stm32_usart_valio_cancel (dev_valio_cancel_t*)dev_driver_notsup_fcn
@@ -557,8 +558,8 @@ static DEV_INIT(stm32_usart_init)
   cpu_mem_write_32(pv->addr + STM32_USART_CR3_ADDR, 0);
 
   /* initialize request queues. */
-  dev_request_queue_init(&pv->read_q);
-  dev_request_queue_init(&pv->write_q);
+  dev_rq_queue_init(&pv->read_q);
+  dev_rq_queue_init(&pv->write_q);
 
 #if CONFIG_DRIVER_STM32_USART_SWFIFO > 0
   usart_fifo_init(&pv->read_fifo);
@@ -629,8 +630,8 @@ err_fifo:
   usart_fifo_destroy(&pv->read_fifo);
   usart_fifo_destroy(&pv->write_fifo);
 # endif
-  dev_request_queue_destroy(&pv->read_q);
-  dev_request_queue_destroy(&pv->write_q);
+  dev_rq_queue_destroy(&pv->read_q);
+  dev_rq_queue_destroy(&pv->write_q);
 #endif
 
 err_mem:
@@ -660,8 +661,8 @@ static DEV_CLEANUP(stm32_usart_cleanup)
 #endif
 
   /* destroy request queues. */
-  dev_request_queue_destroy(&pv->read_q);
-  dev_request_queue_destroy(&pv->write_q);
+  dev_rq_queue_destroy(&pv->read_q);
+  dev_rq_queue_destroy(&pv->write_q);
 
   device_iomux_cleanup(dev);
   mem_free(pv);

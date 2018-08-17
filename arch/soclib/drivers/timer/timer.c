@@ -120,8 +120,7 @@ static DEV_IRQ_SRC_PROCESS(soclib_timer_irq)
 
       while (1)
         {
-          struct dev_timer_rq_s *rq;
-          rq = dev_timer_rq_s_cast(dev_request_pqueue_head(&p->queue));
+          struct dev_timer_rq_s *rq = dev_timer_rq_head(&p->queue);
 
           if (!rq)
             {
@@ -137,11 +136,11 @@ static DEV_IRQ_SRC_PROCESS(soclib_timer_irq)
           if (rq->deadline > p->value)
             break;
 
-          rq->rq.drvdata = NULL;
-          dev_timer_pqueue_remove(&p->queue, dev_timer_rq_s_base(rq));
+          rq->base.drvdata = NULL;
+          dev_timer_rq_remove(&p->queue, rq);
 
           lock_release(&dev->lock);
-          kroutine_exec(&rq->rq.kr);
+          dev_timer_rq_done(rq);
           lock_spin(&dev->lock);
         }
     }
@@ -181,8 +180,8 @@ static DEV_TIMER_REQUEST(soclib_timer_request)
         err = -ETIMEDOUT;
       else
         {
-          rq->rq.drvdata = p;
-          dev_timer_pqueue_insert(&p->queue, dev_timer_rq_s_base(rq));
+          rq->base.drvdata = p;
+          dev_timer_rq_insert(&p->queue, rq);
 
           /* start timer if needed */
           if (p->start_count == 0)
@@ -219,15 +218,15 @@ static DEV_TIMER_CANCEL(soclib_timer_cancel)
 
   LOCK_SPIN_IRQ(&dev->lock);
 
-  if (rq->rq.drvdata == p)
+  if (rq->base.drvdata == p)
     {
       assert(p->start_count & 1);
 
-      dev_timer_pqueue_remove(&p->queue, dev_timer_rq_s_base(rq));
-      rq->rq.drvdata = NULL;
+      dev_timer_rq_remove(&p->queue, rq);
+      rq->base.drvdata = NULL;
 
       /* stop timer if not in use */
-      if (dev_request_pqueue_isempty(&p->queue))
+      if (dev_rq_pqueue_isempty(&p->queue))
         {
           p->start_count &= ~1;
           if (p->start_count == 0)
@@ -508,7 +507,7 @@ static DEV_INIT(soclib_timer_init)
 # ifdef CONFIG_DEVICE_IRQ
       p->rev = 1;
       p->value = 0;
-      dev_request_pqueue_init(&p->queue);
+      dev_rq_pqueue_init(&p->queue);
       p->period = resolution;
       cpu_mem_write_32(TIMER_REG_ADDR(pv->addr, TIMER_IRQ, i), 0);
 # endif
@@ -538,7 +537,7 @@ static DEV_CLEANUP(soclib_timer_cleanup)
       cpu_mem_write_32(TIMER_REG_ADDR(pv->addr, TIMER_MODE, i), 0);
 #ifdef CONFIG_DEVICE_IRQ
       struct soclib_timer_state_s *p = pv->t + i;
-      dev_request_pqueue_destroy(&p->queue);
+      dev_rq_pqueue_destroy(&p->queue);
 #endif
     }
 

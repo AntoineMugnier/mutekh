@@ -154,8 +154,7 @@ static void cc26xx_timer_rq_handler(struct device_s *dev)
 
   while (1)
     {
-      struct dev_timer_rq_s *rq;
-      rq = dev_timer_rq_s_cast(dev_request_pqueue_head(&pv->queue));
+      struct dev_timer_rq_s *rq = dev_timer_rq_head(&pv->queue);
       if (rq == NULL)
         {
           dev->start_count &= ~1;
@@ -171,12 +170,12 @@ static void cc26xx_timer_rq_handler(struct device_s *dev)
         if (!cc26xx_timer_request_start(pv, rq, value))
           break;
 
-      dev_timer_pqueue_remove(&pv->queue, dev_timer_rq_s_base(rq));
+      dev_timer_rq_remove(&pv->queue, rq);
       cc26xx_timer_disable_compare(pv);
-      rq->rq.drvdata = NULL;
+      rq->base.drvdata = NULL;
 
       lock_release(&dev->lock);
-      kroutine_exec(&rq->rq.kr);
+      dev_timer_rq_done(rq);
       lock_spin(&dev->lock);
     }
 
@@ -223,16 +222,16 @@ static DEV_TIMER_CANCEL(cc26xx_timer_cancel)
 
   LOCK_SPIN_IRQ(&dev->lock);
 
-  if (rq->rq.drvdata == pv)
+  if (rq->base.drvdata == pv)
     {
       struct dev_timer_rq_s *rqnext = NULL;
-      bool_t first = (dev_request_pqueue_prev(&pv->queue, dev_timer_rq_s_base(rq)) == NULL);
+      bool_t first = (dev_timer_rq_prev(&pv->queue, rq) == NULL);
 
       if (first)
-        rqnext = dev_timer_rq_s_cast(dev_request_pqueue_next(&pv->queue, dev_timer_rq_s_base(rq)));
+        rqnext = dev_timer_rq_next(&pv->queue, rq);
 
-      dev_timer_pqueue_remove(&pv->queue, dev_timer_rq_s_base(rq));
-      rq->rq.drvdata = NULL;
+      dev_timer_rq_remove(&pv->queue, rq);
+      rq->base.drvdata = NULL;
 
       if (first)
         {
@@ -290,11 +289,11 @@ static DEV_TIMER_REQUEST(cc26xx_timer_request)
       else
         {
           dev->start_count |= 1;
-          dev_timer_pqueue_insert(&pv->queue, dev_timer_rq_s_base(rq));
-          rq->rq.drvdata = pv;
+          dev_timer_rq_insert(&pv->queue, rq);
+          rq->base.drvdata = pv;
 
           /* start request, raise irq on race condition */
-          if (dev_request_pqueue_prev(&pv->queue, dev_timer_rq_s_base(rq)) == NULL)
+          if (dev_timer_rq_prev(&pv->queue, rq) == NULL)
             if (cc26xx_timer_request_start(pv, rq, value))
               cc26xx_timer_rq_handler(dev);
         }
@@ -452,7 +451,7 @@ static DEV_INIT(cc26xx_timer_init)
   if (device_irq_source_link(dev, &pv->irq_eps, 1, 1))
     goto err_mem;
 
-  dev_request_pqueue_init(&pv->queue);
+  dev_rq_pqueue_init(&pv->queue);
 #else
   pv->cap |= DEV_TIMER_CAP_TICKLESS;
 #endif
@@ -504,7 +503,7 @@ static DEV_CLEANUP(cc26xx_timer_cleanup)
   cc26xx_timer_stop_counter(pv);
 
 #ifdef CONFIG_DEVICE_IRQ
-  dev_request_pqueue_destroy(&pv->queue);
+  dev_rq_pqueue_destroy(&pv->queue);
 
   device_irq_source_unlink(dev, &pv->irq_eps, 1);
 #endif

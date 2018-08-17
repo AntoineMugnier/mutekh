@@ -114,8 +114,8 @@ void max6675_temperature_update(struct device_s *dev, bool_t error, int32_t valu
         rq->error = -EIO;
 
       temp->temperature = value;
-      dev_request_queue_remove(&pv->queue, &rq->base);
-      kroutine_exec(&rq->base.kr);
+      dev_valio_rq_remove(&pv->queue, rq);
+      dev_valio_rq_done(rq);
     });
 }
 
@@ -131,13 +131,13 @@ DEV_VALIO_REQUEST(max6675_request)
   if (req->type == DEVICE_VALIO_WRITE
       || req->attribute != VALIO_TEMPERATURE_VALUE) {
     req->error = -ENOTSUP;
-    kroutine_exec(&req->base.kr);
+    dev_valio_rq_done(req);
     return;
   }
 
   LOCK_SPIN_IRQ(&dev->lock);
   req->error = 0;
-  dev_request_queue_pushback(&pv->queue, &req->base);
+  dev_valio_rq_pushback(&pv->queue, req);
 
   if (req->type == DEVICE_VALIO_READ)
     max6675_read(dev);
@@ -161,7 +161,7 @@ DEV_VALIO_CANCEL(max6675_cancel)
       if (rq != req)
         GCT_FOREACH_CONTINUE;
 
-      dev_request_queue_remove(&pv->queue, &rq->base);
+      dev_valio_rq_remove(&pv->queue, rq);
       err = 0;
       GCT_FOREACH_BREAK;
     });
@@ -198,7 +198,7 @@ KROUTINE_EXEC(max6675_spi_done)
 static
 KROUTINE_EXEC(max6675_timer_done)
 {
-  struct max6675_context_s *pv = KROUTINE_CONTAINER(kr, *pv, timer_rq.rq.kr);
+  struct max6675_context_s *pv = KROUTINE_CONTAINER(kr, *pv, timer_rq.base.kr);
   struct device_s *dev = pv->spi_rq.base.base.pvdata;
 
   LOCK_SPIN_IRQ(&dev->lock);
@@ -207,7 +207,7 @@ KROUTINE_EXEC(max6675_timer_done)
 
   if (pv->state == MAX6675_WAITING) {
     pv->state = MAX6675_IDLE;
-    if (!dev_request_queue_isempty(&pv->queue))
+    if (!dev_rq_queue_isempty(&pv->queue))
       max6675_read(dev);
   }
 
@@ -232,7 +232,7 @@ static DEV_INIT(max6675_init)
   if (err)
     goto free_pv;
   
-  dev_request_queue_init(&pv->queue);
+  dev_rq_queue_init(&pv->queue);
 
   err = device_get_param_uint(dev, "period", &period);
   if (err)
@@ -265,10 +265,10 @@ static DEV_INIT(max6675_init)
   pv->spi_rq.data.in = &pv->rdata;
   pv->spi_rq.data.in_width = 1;
   pv->spi_rq.data.out_width = 1;
-  pv->timer_rq.rq.pvdata = dev;
+  pv->timer_rq.base.pvdata = dev;
 
-  kroutine_init_deferred(&pv->spi_rq.base.base.kr, max6675_spi_done);
-  kroutine_init_deferred(&pv->timer_rq.rq.kr, max6675_timer_done);
+  dev_spi_ctrl_rq_init(&pv->spi_rq.base, max6675_spi_done);
+  dev_timer_rq_init(&pv->timer_rq, max6675_timer_done);
 
   return 0;
 
@@ -283,12 +283,12 @@ static DEV_CLEANUP(max6675_cleanup)
 {
   struct max6675_context_s *pv = dev->drv_pv;
 
-  if (!dev_request_queue_isempty(&pv->queue)
+  if (!dev_rq_queue_isempty(&pv->queue)
       || pv->state != MAX6675_IDLE)
     return -EBUSY;
 
   dev_drv_spi_transaction_cleanup(&pv->spi, &pv->spi_rq);
-  dev_request_queue_destroy(&pv->queue);
+  dev_rq_queue_destroy(&pv->queue);
   device_put_accessor(&pv->timer.base);
 
   mem_free(pv);

@@ -112,8 +112,7 @@ static DEV_IRQ_SRC_PROCESS(push_button_irq)
   struct device_s *dev = ep->base.dev;
   struct push_button_context_s *pv  = dev->drv_pv;
 
-  struct dev_request_s *base = dev_request_queue_head(&pv->queue);
-  struct dev_valio_rq_s *rq = dev_valio_rq_s_cast(base);
+  struct dev_valio_rq_s *rq = dev_valio_rq_head(&pv->queue);
 
   lock_spin(&dev->lock);
 
@@ -176,8 +175,8 @@ static DEV_IRQ_SRC_PROCESS(push_button_irq)
 
   if (done)
     {
-      dev_request_queue_pop(&pv->queue);
-      kroutine_exec(&rq->base.kr);
+      dev_valio_rq_pop(&pv->queue);
+      dev_valio_rq_done(rq);
     }
 
   lock_release(&dev->lock);
@@ -209,7 +208,7 @@ static DEV_VALIO_REQUEST(push_button_request)
   
     case DEVICE_VALIO_WAIT_EVENT:
       done = 0;
-      dev_request_queue_pushback(&pv->queue, &req->base);
+      dev_valio_rq_pushback(&pv->queue, req);
       break;
   
     default:
@@ -220,7 +219,7 @@ static DEV_VALIO_REQUEST(push_button_request)
   LOCK_RELEASE_IRQ(&dev->lock);
 
   if (done)
-    kroutine_exec(&req->base.kr);
+    dev_valio_rq_done(req);
 }
 
 
@@ -259,18 +258,18 @@ static DEV_INIT(push_button_init)
       device_start(&pv->timer.base);
       dev_timer_shift_sec(&pv->timer, &pv->shifta, &pv->shiftb, 0, 1, 1000);
 #ifdef CONFIG_DRIVER_PUSH_BUTTON_SOFT_DEBOUNCING
-      pv->trq.rq.pvdata = dev;
+      pv->trq.base.pvdata = dev;
       pv->trq.rq.drvdata = NULL;
       pv->trq.deadline = 0;
       pv->trq.rev = 2;
-      kroutine_init_immediate(&pv->trq.rq.kr, push_button_lock_timeout);
+      dev_timer_rq_init_immediate(&pv->trq, push_button_lock_timeout);
 #endif
     }
   else
     device_init_accessor(&pv->timer);
 #endif
 
-  dev_request_queue_init(&pv->queue);
+  dev_rq_queue_init(&pv->queue);
 
   device_irq_source_init(dev, &pv->irq_ep, 1, &push_button_irq);
 
@@ -292,7 +291,7 @@ static DEV_CLEANUP(push_button_cleanup)
   device_irq_source_unlink(dev, &pv->irq_ep, 1);
 
   /* Destroy request queue */
-  dev_request_queue_destroy(&pv->queue);
+  dev_rq_queue_destroy(&pv->queue);
 
   /* deallocate private driver context. */
   mem_free(pv);

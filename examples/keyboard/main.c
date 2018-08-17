@@ -77,7 +77,7 @@ void app_start(void)
   app->kbd_rq.attribute = VALIO_KEYBOARD_MAP;
   app->kbd_rq.data = &app->cur_state;
   app->kbd_rq.type = DEVICE_VALIO_WAIT_EVENT;
-  kroutine_init_idle(&app->kbd_rq.base.kr, kbd_done);
+  dev_valio_rq_init(&app->kbd_rq, kbd_done);
 
   DEVICE_OP(&app->keyboard, request, &app->kbd_rq);
 }

@@ -28,7 +28,7 @@ error_t led_init(struct led_s *led, uint8_t pin, bool_t polarity)
 
   device_start(&led->timer.base);
 
-  kroutine_init_sched_switch(&led->timer_rq.rq.kr, led_delay_done);
+  dev_timer_rq_init_sched_switch(&led->timer_rq, led_delay_done);
 
   led->polarity = polarity;
   led->pin = pin;
@@ -123,12 +123,12 @@ static void led_schedule_next(struct led_s *led, dev_timer_value_t next)
   dprintk("led schdule at %lld: %d\n", next, err);
 
   if (err == -ETIMEDOUT)
-    kroutine_exec(&led->timer_rq.rq.kr);
+    kroutine_exec(&led->timer_rq.base.kr);
 }
 
 static KROUTINE_EXEC(led_delay_done)
 {
-  struct led_s *led = KROUTINE_CONTAINER(kr, *led, timer_rq.rq.kr);
+  struct led_s *led = KROUTINE_CONTAINER(kr, *led, timer_rq.base.kr);
 
   led->scheduled = 0;
 

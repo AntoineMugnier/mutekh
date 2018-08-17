@@ -212,10 +212,10 @@ static bool_t psoc4_uart_tx_fifo_refill(struct device_s* dev)
     if (rq->size == 0
         || rq->type == DEV_CHAR_WRITE_PARTIAL
         || rq->type == DEV_CHAR_WRITE_PARTIAL_FLUSH) {
-      dev_request_queue_pop(&pv->tx_q);
+      dev_char_rq_pop(&pv->tx_q);
 
       dwritek("(", 1);
-      kroutine_exec(&rq->base.kr);
+      dev_char_rq_done(rq);
     }
   }
 
@@ -248,10 +248,10 @@ static bool_t psoc4_uart_rx_fifo_flush(struct device_s *dev)
     processed = 1;
 
     if (rq->size == 0 || rq->type == DEV_CHAR_READ_PARTIAL) {
-      dev_request_queue_pop(&pv->rx_q);
+      dev_char_rq_pop(&pv->rx_q);
 
       dwritek(")", 1);
-      kroutine_exec(&rq->base.kr);
+      dev_char_rq_done(rq);
     }
   }
 
@@ -326,11 +326,11 @@ static void psoc4_uart_process_one(struct device_s *dev)
   changed |= psoc4_uart_rx_fifo_flush(dev);
 
   dprintk("%s tx q %s, fifo %s, hwfifo %s\n", __FUNCTION__,
-          dev_request_queue_isempty(&pv->tx_q) ? "empty" : "!empty",
+          dev_rq_queue_isempty(&pv->tx_q) ? "empty" : "!empty",
           uart_fifo_isempty(&pv->tx_fifo) ? "empty" : "!empty",
           psoc4_uart_tx_hwfifo_isempty(pv->addr) ? "empty" : "!empty");
 
-  if (dev_request_queue_isempty(&pv->tx_q) && uart_fifo_isempty(&pv->tx_fifo)) {
+  if (dev_rq_queue_isempty(&pv->tx_q) && uart_fifo_isempty(&pv->tx_fifo)) {
     if (psoc4_uart_tx_hwfifo_isempty(pv->addr)) {
       psoc4_uart_tx_irq_disable(pv->addr);
       device_sleep_schedule(dev);
@@ -398,7 +398,7 @@ static DEV_CHAR_REQUEST(psoc4_uart_request)
 
   default:
     rq->error = -ENOTSUP;
-    kroutine_exec(&rq->base.kr);
+    dev_char_rq_done(rq);
     return;
   }
 
@@ -411,7 +411,7 @@ static DEV_CHAR_REQUEST(psoc4_uart_request)
   dev->start_count |= USE_HAS_REQ;
 
   rq->error = 0;
-  dev_request_queue_pushback(q, &rq->base);
+  dev_char_rq_pushback(q, rq);
   psoc4_uart_process_one(dev);
 
   LOCK_RELEASE_IRQ(&dev->lock);
@@ -444,7 +444,7 @@ static DEV_CHAR_CANCEL(psoc4_uart_cancel)
   if (dev_request_queue_head(q) == &rq->base) {
     err = -EBUSY;
   } else {
-    dev_request_queue_remove(q, &rq->base);
+    dev_char_rq_remove(q, rq);
     err = 0;
   }
 
@@ -592,7 +592,7 @@ static DEV_VALIO_REQUEST(psoc4_uart_valio_request)
     req->error = psoc4_uart_config(dev, req->data);
   }
 
-  kroutine_exec(&req->base.kr);
+  dev_char_rq_done(req);
 }
 
 #define psoc4_uart_valio_cancel (dev_valio_cancel_t*)dev_driver_notsup_fcn
@@ -629,8 +629,8 @@ static DEV_USE(psoc4_uart_char_use)
     struct device_s *dev = param;
     struct psoc4_uart_pv_s *pv = dev->drv_pv;
 
-    if (dev_request_queue_isempty(&pv->rx_q)
-        && dev_request_queue_isempty(&pv->tx_q)) {
+    if (dev_rq_queue_isempty(&pv->rx_q)
+        && dev_rq_queue_isempty(&pv->tx_q)) {
       dev->start_count &= ~USE_HAS_REQ;
       psoc4_uart_stop(dev);
     }
@@ -729,8 +729,8 @@ static DEV_INIT(psoc4_uart_char_init)
   dprintk("UART clock init freq %d/%d\n",
          (uint32_t)pv->freq.num, (uint32_t)pv->freq.denom);
 
-  dev_request_queue_init(&pv->rx_q);
-  dev_request_queue_init(&pv->tx_q);
+  dev_rq_queue_init(&pv->rx_q);
+  dev_rq_queue_init(&pv->tx_q);
 
   uart_fifo_init(&pv->rx_fifo);
   uart_fifo_init(&pv->tx_fifo);
@@ -756,8 +756,8 @@ static DEV_INIT(psoc4_uart_char_init)
   uart_fifo_destroy(&pv->tx_fifo);
   uart_fifo_destroy(&pv->rx_fifo);
 
-  dev_request_queue_destroy(&pv->rx_q);
-  dev_request_queue_destroy(&pv->tx_q);
+  dev_rq_queue_destroy(&pv->rx_q);
+  dev_rq_queue_destroy(&pv->tx_q);
 
  unlink_irq:
   device_irq_source_unlink(dev, &pv->irq_ep, 1);
@@ -772,8 +772,8 @@ static DEV_CLEANUP(psoc4_uart_char_cleanup)
 {
   struct psoc4_uart_pv_s *pv = dev->drv_pv;
 
-  if (!dev_request_queue_isempty(&pv->rx_q)
-      || !dev_request_queue_isempty(&pv->tx_q))
+  if (!dev_rq_queue_isempty(&pv->rx_q)
+      || !dev_rq_queue_isempty(&pv->tx_q))
     return -EBUSY;
 
   psoc4_uart_scb_cleanup(dev);
@@ -789,8 +789,8 @@ static DEV_CLEANUP(psoc4_uart_char_cleanup)
   uart_fifo_destroy(&pv->tx_fifo);
   uart_fifo_destroy(&pv->rx_fifo);
 
-  dev_request_queue_destroy(&pv->rx_q);
-  dev_request_queue_destroy(&pv->tx_q);
+  dev_rq_queue_destroy(&pv->rx_q);
+  dev_rq_queue_destroy(&pv->tx_q);
 
   device_iomux_cleanup(dev);
   mem_free(pv);

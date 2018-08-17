@@ -65,8 +65,7 @@ void soclib_xicu_pti_irq_process(struct device_s *dev, uint_fast8_t number)
 
   while (1)
     {
-      struct dev_timer_rq_s *rq;
-      rq = dev_timer_rq_s_cast(dev_request_pqueue_head(&p->queue));
+      struct dev_timer_rq_s *rq = dev_timer_rq_head(&p->queue);
 
       if (!rq)
         {
@@ -82,11 +81,11 @@ void soclib_xicu_pti_irq_process(struct device_s *dev, uint_fast8_t number)
       if (rq->deadline > p->value)
         break;
 
-      rq->rq.drvdata = 0;
-      dev_timer_pqueue_remove(&p->queue, dev_timer_rq_s_base(rq));
+      rq->base.drvdata = 0;
+      dev_timer_rq_remove(&p->queue, rq);
 
       lock_release(&dev->lock);
-      kroutine_exec(&rq->rq.kr);
+      dev_timer_rq_done(rq);
       lock_spin(&dev->lock);
     }
 
@@ -128,8 +127,8 @@ DEV_TIMER_REQUEST(soclib_xicu_timer_request)
         err = -ETIMEDOUT;
       else
         {
-          rq->rq.drvdata = p;
-          dev_timer_pqueue_insert(&p->queue, dev_timer_rq_s_base(rq));
+          rq->base.drvdata = p;
+          dev_timer_rq_insert(&p->queue, rq);
 
           /* start timer if needed */
           if (p->start_count == 0)
@@ -171,15 +170,15 @@ DEV_TIMER_CANCEL(soclib_xicu_timer_cancel)
 
   LOCK_SPIN_IRQ(&dev->lock);
 
-  if (rq->rq.drvdata == p)
+  if (rq->base.drvdata == p)
     {
       assert(p->start_count & 1);
 
-      dev_timer_pqueue_remove(&p->queue, dev_timer_rq_s_base(rq));
-      rq->rq.drvdata = 0;
+      dev_timer_rq_remove(&p->queue, rq);
+      rq->base.drvdata = 0;
 
       /* stop timer if not in use */
-      if (dev_request_pqueue_isempty(&p->queue))
+      if (dev_rq_pqueue_isempty(&p->queue))
         {
           p->start_count &= ~1;
           if (p->start_count == 0)

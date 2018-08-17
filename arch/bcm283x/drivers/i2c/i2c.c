@@ -181,8 +181,8 @@ bcm283x_i2c_start_write(struct bcm283x_i2c_private_s *pv)
 static
 KROUTINE_EXEC(bcm283x_i2c_timeout)
 {
-  struct dev_timer_rq_s         *rq = KROUTINE_CONTAINER(kr, *rq, rq.kr);
-  struct device_s               *dev = rq->rq.pvdata;
+  struct dev_timer_rq_s         *rq = KROUTINE_CONTAINER(kr, *rq, base.kr);
+  struct device_s               *dev = rq->base.pvdata;
   struct bcm283x_i2c_private_s  *pv = dev->drv_pv;
 
   LOCK_SPIN_IRQ(&dev->lock);
@@ -492,8 +492,8 @@ DEV_INIT(bcm283x_i2c_init)
   if (!device_get_param_dev_accessor(dev, "timer", &pv->dev_timer.base, DRIVER_CLASS_TIMER))
     {
       pv->timer_rq.rev = 0;
-      pv->timer_rq.rq.pvdata = dev;
-      kroutine_init_deferred(&pv->timer_rq.rq.kr, bcm283x_i2c_timeout);
+      pv->timer_rq.base.pvdata = dev;
+      dev_timer_rq_init(&pv->timer_rq, bcm283x_i2c_timeout);
     }
 
   pv->state = BCM283X_I2C_STATE_IDLE;

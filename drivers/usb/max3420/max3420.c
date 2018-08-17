@@ -622,7 +622,7 @@ static DEV_INIT(max3420_usbdev_init)
   srq->gpio_wmap = pin_wmap;
 
   /* kroutine */
-  kroutine_init_deferred(&srq->base.base.kr, &max3420_spi_rq_done);
+  dev_spi_ctrl_rq_init(&srq->base, &max3420_spi_rq_done);
 
   /* irq io pin */
   device_irq_source_init(dev, &pv->src_ep, 1, &max3420_irq_source_process);

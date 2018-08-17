@@ -77,13 +77,13 @@ static void nrf5x_uarte_request_finish(struct device_s *dev,
   rq->data += count;
 
   logk_trace("%s DONE %p %p %d\n", __FUNCTION__, rq, rq->data, rq->size);
-  kroutine_exec(&rq->base.kr);
+  dev_char_rq_done(rq);
 }
 
 static void nrf5x_uarte_rx_start(struct device_s *dev)
 {
   struct nrf5x_uarte_priv *pv = dev->drv_pv;
-  struct dev_char_rq_s *rq = dev_char_rq_s_cast(dev_request_queue_head(&pv->rx_q));
+  struct dev_char_rq_s *rq = dev_char_rq_head(&pv->rx_q);
 
   logk_trace("%s START RX %p %p %d\n", __FUNCTION__, rq, rq->data, rq->size);
 
@@ -110,7 +110,7 @@ static void nrf5x_uarte_rx_start(struct device_s *dev)
 static void nrf5x_uarte_tx_start(struct device_s *dev)
 {
   struct nrf5x_uarte_priv *pv = dev->drv_pv;
-  struct dev_char_rq_s *rq = dev_char_rq_s_cast(dev_request_queue_head(&pv->tx_q));
+  struct dev_char_rq_s *rq = dev_char_rq_head(&pv->tx_q);
   uintptr_t source = (uintptr_t)rq->data;
   size_t size = rq->size;
 
@@ -183,7 +183,7 @@ static DEV_IRQ_SRC_PROCESS(nrf5x_uarte_irq)
       if (pv->from_rom) {
         pv->from_rom = 0;
         
-        rq = dev_char_rq_s_cast(dev_request_queue_head(&pv->tx_q));
+        rq = dev_char_rq_head(&pv->tx_q);
         rq->size -= xfered;
         rq->data += xfered;
 
@@ -193,12 +193,12 @@ static DEV_IRQ_SRC_PROCESS(nrf5x_uarte_irq)
         }
       }
 
-      rq = dev_char_rq_s_cast(dev_request_queue_pop(&pv->tx_q));
+      rq = dev_char_rq_pop(&pv->tx_q);
       assert(rq);
 
       nrf5x_uarte_request_finish(dev, rq, xfered);
 
-      rq = dev_char_rq_s_cast(dev_request_queue_head(&pv->tx_q));
+      rq = dev_char_rq_head(&pv->tx_q);
       if (rq)
         nrf5x_uarte_tx_start(dev);
 
@@ -212,7 +212,7 @@ static DEV_IRQ_SRC_PROCESS(nrf5x_uarte_irq)
       logk_trace("%s ERROR\n", __FUNCTION__);
 
       uint32_t error = nrf_reg_get(pv->addr, NRF_UARTE_ERRORSRC);
-      rq = dev_char_rq_s_cast(dev_request_queue_head(&pv->rx_q));
+      rq = dev_char_rq_head(&pv->rx_q);
       assert(rq);
 
       nrf_event_clear(pv->addr, NRF_UARTE_RXTO);
@@ -249,7 +249,7 @@ static DEV_IRQ_SRC_PROCESS(nrf5x_uarte_irq)
       nrf_it_disable(pv->addr, NRF_UARTE_RXTO);
       nrf_it_disable(pv->addr, NRF_UARTE_ERROR);
 
-      rq = dev_char_rq_s_cast(dev_request_queue_head(&pv->rx_q));
+      rq = dev_char_rq_head(&pv->rx_q);
       xfered = nrf_reg_get(pv->addr, NRF_UARTE_RXD_AMOUNT);
 
       logk_trace("%s END RX, must flush: %d, %P\n", __FUNCTION__, pv->must_flush,
@@ -258,7 +258,7 @@ static DEV_IRQ_SRC_PROCESS(nrf5x_uarte_irq)
       if (pv->must_flush) {
         pv->must_flush = 0;
 
-        rq = dev_char_rq_s_cast(dev_request_queue_head(&pv->rx_q));
+        rq = dev_char_rq_head(&pv->rx_q);
         assert(rq);
 
         rq->size -= xfered;
@@ -271,12 +271,12 @@ static DEV_IRQ_SRC_PROCESS(nrf5x_uarte_irq)
       } else {
         nrf_it_disable(pv->addr, NRF_UARTE_ENDRX);
 
-        rq = dev_char_rq_s_cast(dev_request_queue_pop(&pv->rx_q));
+        rq = dev_char_rq_pop(&pv->rx_q);
         assert(rq);
 
         nrf5x_uarte_request_finish(dev, rq, xfered);
 
-        rq = dev_char_rq_s_cast(dev_request_queue_head(&pv->rx_q));
+        rq = dev_char_rq_head(&pv->rx_q);
         if (rq)
           nrf5x_uarte_rx_start(dev);
       }
@@ -311,7 +311,7 @@ static DEV_CHAR_REQUEST(nrf5x_uarte_request)
 
   default:
     rq->error = -ENOTSUP;
-    kroutine_exec(&rq->base.kr);
+    dev_char_rq_done(rq);
     return;
   }
 
@@ -321,8 +321,8 @@ static DEV_CHAR_REQUEST(nrf5x_uarte_request)
 
   rq->error = 0;
 
-  start = dev_request_queue_isempty(q);
-  dev_request_queue_pushback(q, &rq->base);
+  start = dev_rq_queue_isempty(q);
+  dev_char_rq_pushback(q, rq);
 
   if (start) {
     logk_trace("%s START\n", __FUNCTION__);
@@ -357,10 +357,10 @@ static DEV_CHAR_CANCEL(nrf5x_uarte_cancel)
 
   LOCK_SPIN_IRQ_SCOPED(&dev->lock);
 
-  if (dev_request_queue_head(q) == &rq->base)
+  if (dev_char_rq_head(q) == rq)
     return -EBUSY;
 
-  dev_request_queue_remove(q, &rq->base);
+  dev_char_rq_remove(q, rq);
 
   return 0;
 }
@@ -371,8 +371,8 @@ static error_t nrf5x_uarte_config(struct nrf5x_uarte_priv *pv,
   uint32_t config = 0;
   uintptr_t baudrate = cfg->baudrate;
 
-  if (!dev_request_queue_isempty(&pv->rx_q)
-      || !dev_request_queue_isempty(&pv->tx_q))
+  if (!dev_rq_queue_isempty(&pv->rx_q)
+      || !dev_rq_queue_isempty(&pv->tx_q))
     return -EBUSY;
 
   if (cfg->data_bits != 8)
@@ -424,7 +424,7 @@ static DEV_VALIO_REQUEST(nrf5x_uarte_valio_request)
     req->error = nrf5x_uarte_config(pv, req->data);
   }
 
-  kroutine_exec(&req->base.kr);
+  dev_char_rq_done(req);
 }
 
 #define nrf5x_uarte_valio_cancel (dev_valio_cancel_t*)dev_driver_notsup_fcn
@@ -465,8 +465,8 @@ static DEV_INIT(nrf5x_uarte_char_init)
   if (device_iomux_setup(dev, "<rx? >tx? >rts? <cts?", NULL, id, NULL))
     goto free_pv;
 
-  dev_request_queue_init(&pv->rx_q);
-  dev_request_queue_init(&pv->tx_q);
+  dev_rq_queue_init(&pv->rx_q);
+  dev_rq_queue_init(&pv->tx_q);
 
   CPU_INTERRUPT_SAVESTATE_DISABLE;
 
@@ -522,8 +522,8 @@ static DEV_INIT(nrf5x_uarte_char_init)
   return 0;
 
  free_queue:
-  dev_request_queue_destroy(&pv->rx_q);
-  dev_request_queue_destroy(&pv->tx_q);
+  dev_rq_queue_destroy(&pv->rx_q);
+  dev_rq_queue_destroy(&pv->tx_q);
 
  free_pv:
   mem_free(pv);
@@ -535,8 +535,8 @@ static DEV_CLEANUP(nrf5x_uarte_char_cleanup)
 {
   struct nrf5x_uarte_priv *pv = dev->drv_pv;
 
-  if (!dev_request_queue_isempty(&pv->rx_q)
-      || !dev_request_queue_isempty(&pv->tx_q))
+  if (!dev_rq_queue_isempty(&pv->rx_q)
+      || !dev_rq_queue_isempty(&pv->tx_q))
     return -EBUSY;
 
   nrf_it_disable_mask(pv->addr, -1);
@@ -551,8 +551,8 @@ static DEV_CLEANUP(nrf5x_uarte_char_cleanup)
   nrf_reg_set(pv->addr, NRF_UARTE_PSEL_RTS, (uint32_t)-1);
   nrf_reg_set(pv->addr, NRF_UARTE_PSEL_CTS, (uint32_t)-1);
 
-  dev_request_queue_destroy(&pv->rx_q);
-  dev_request_queue_destroy(&pv->tx_q);
+  dev_rq_queue_destroy(&pv->rx_q);
+  dev_rq_queue_destroy(&pv->tx_q);
 
   device_iomux_cleanup(dev);
   mem_free(pv);

@@ -112,29 +112,27 @@ static DEV_IRQ_SRC_PROCESS(bcm283x_systimer_irq)
         break;
 
       cpu_mem_write_32(pv->addr + BCM283X_SYSTIMER_STATUS, endian_le32(status));
-      struct dev_request_s *rq;
+      struct dev_timer_rq_s *rq;
 
-      while ((rq = dev_request_pqueue_head(&pv->queue)))
+      while ((rq = dev_timer_rq_head(&pv->queue)))
         {
-          struct dev_timer_rq_s *trq = dev_timer_rq_s_cast(rq);
-
-          if (trq->deadline > get_timer_value(pv))
+          if (rq->deadline > get_timer_value(pv))
             break;
 
-          struct dev_request_s *next = dev_request_pqueue_next(&pv->queue, rq);
-          dev_timer_pqueue_remove(&pv->queue, rq);
-          rq->drvdata = NULL;
+          struct dev_timer_rq_s *next = dev_timer_rq_next(&pv->queue, rq);
+          dev_timer_rq_remove(&pv->queue, rq);
+          rq->base.drvdata = NULL;
 
           if (next != NULL)
             {
-              trq = dev_timer_rq_s_cast(next);
-              if (trq->deadline > get_timer_value(pv))
+              rq = next;
+              if (rq->deadline > get_timer_value(pv))
                 cpu_mem_write_32(pv->addr + BCM283X_SYSTIMER_CMP(BCM283X_SYSTIMER_CMP_CHANNEL),
-                                 endian_le32(trq->deadline));
+                                 endian_le32(rq->deadline));
             }
 
           lock_release(&dev->lock);
-          kroutine_exec(&rq->kr);
+          dev_timer_rq_done(rq);
           lock_spin(&dev->lock);
         }
     }
@@ -152,16 +150,16 @@ static DEV_TIMER_CANCEL(bcm283x_systimer_cancel)
 
   LOCK_SPIN_IRQ(&dev->lock);
 
-  if (rq->rq.drvdata == pv)
+  if (rq->base.drvdata == pv)
     {
       struct dev_timer_rq_s *rqnext = NULL;
-      bool_t first = (dev_request_pqueue_prev(&pv->queue, dev_timer_rq_s_base(rq)) == NULL);
+      bool_t first = (dev_timer_rq_prev(&pv->queue, rq) == NULL);
 
       if (first)
-        rqnext = dev_timer_rq_s_cast(dev_request_pqueue_next(&pv->queue, dev_timer_rq_s_base(rq)));
+        rqnext = dev_timer_rq_next(&pv->queue, rq);
 
-      dev_timer_pqueue_remove(&pv->queue, dev_timer_rq_s_base(rq));
-      rq->rq.drvdata = NULL;
+      dev_timer_rq_remove(&pv->queue, rq);
+      rq->base.drvdata = NULL;
 
       if (rqnext)
         set_timer_compare(pv, rqnext->deadline);
@@ -199,10 +197,10 @@ static DEV_TIMER_REQUEST(bcm283x_systimer_request)
         err = -ETIMEDOUT;
       else
         {
-          dev_timer_pqueue_insert(&pv->queue, dev_timer_rq_s_base(rq));
-          rq->rq.drvdata = pv;
+          dev_timer_rq_insert(&pv->queue, rq);
+          rq->base.drvdata = pv;
 
-          if (dev_request_pqueue_prev(&pv->queue, dev_timer_rq_s_base(rq)) == NULL)
+          if (dev_timer_rq_prev(&pv->queue, rq) == NULL)
             set_timer_compare(pv, rq->deadline);
         }
     }
@@ -287,7 +285,7 @@ static DEV_INIT(bcm283x_systimer_init)
   if (device_irq_source_link(dev, pv->irq_eps, 4, 1 << BCM283X_SYSTIMER_CMP_CHANNEL))
     goto err_mem;
 
-  dev_request_pqueue_init(&pv->queue);
+  dev_rq_pqueue_init(&pv->queue);
   pv->skew = 1;
 #endif
 
@@ -305,7 +303,7 @@ static DEV_CLEANUP(bcm283x_systimer_cleanup)
   struct bcm283x_systimer_private_s *pv = dev->drv_pv;
 
 #ifdef CONFIG_DEVICE_IRQ
-  dev_request_pqueue_destroy(&pv->queue);
+  dev_rq_pqueue_destroy(&pv->queue);
 
   device_irq_source_unlink(dev, pv->irq_eps, 4);
 #endif

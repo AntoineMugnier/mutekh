@@ -296,7 +296,7 @@ struct driver_s;
 struct device_i2c_ctrl_s;
 struct driver_i2c_ctrl_s;
 struct dev_i2c_ctrl_transfer_s;
-struct dev_i2c_ctrl_base_rq_s;
+struct dev_i2c_ctrl_rq_s;
 struct dev_i2c_ctrl_bytecode_rq_s;
 struct dev_i2c_ctrl_transaction_rq_s;
 struct dev_i2c_ctrl_context_s;
@@ -471,7 +471,7 @@ DRIVER_CTX_CLASS_TYPES(DRIVER_CLASS_I2C_CTRL, i2c_ctrl,
 #ifdef CONFIG_DEVICE_I2C_REQUEST
 
 /** @This is the I2C scheduler request base structure. */
-struct dev_i2c_ctrl_base_rq_s
+struct dev_i2c_ctrl_rq_s
 {
   struct dev_request_s              base;
 
@@ -493,7 +493,7 @@ struct dev_i2c_ctrl_base_rq_s
   bool_t BITFIELD(bytecode,1);
 };
 
-STRUCT_INHERIT(dev_i2c_ctrl_base_rq_s, dev_request_s, base);
+DEV_REQUEST_INHERIT(i2c_ctrl);
 
 #endif
 
@@ -527,7 +527,7 @@ struct dev_i2c_ctrl_transaction_data_s {
 /** @This is the @xcref {I2C transaction request} structure. */
 struct dev_i2c_ctrl_transaction_rq_s
 {
-  struct dev_i2c_ctrl_base_rq_s base;
+  struct dev_i2c_ctrl_rq_s base;
 
     /** Array of transfers to perform */
     struct dev_i2c_ctrl_transaction_data_s *transfer;
@@ -542,7 +542,7 @@ struct dev_i2c_ctrl_transaction_rq_s
     uint8_t transfer_index;
 };
 
-STRUCT_INHERIT(dev_i2c_ctrl_transaction_rq_s, dev_i2c_ctrl_base_rq_s, base);
+STRUCT_INHERIT(dev_i2c_ctrl_transaction_rq_s, dev_i2c_ctrl_rq_s, base);
 
 #endif
 
@@ -553,7 +553,7 @@ STRUCT_INHERIT(dev_i2c_ctrl_transaction_rq_s, dev_i2c_ctrl_base_rq_s, base);
 /** @This is the @xcref {I2C bytecode request} structure. */
 struct dev_i2c_ctrl_bytecode_rq_s
 {
-  struct dev_i2c_ctrl_base_rq_s base;
+  struct dev_i2c_ctrl_rq_s base;
 
   /** bytecode virtual machine context */
   struct bc_context_s vm;
@@ -579,7 +579,7 @@ struct dev_i2c_ctrl_bytecode_rq_s
   bool_t BITFIELD(wakeup_able,1);
 };
 
-STRUCT_INHERIT(dev_i2c_ctrl_bytecode_rq_s, dev_i2c_ctrl_base_rq_s, base);
+STRUCT_INHERIT(dev_i2c_ctrl_bytecode_rq_s, dev_i2c_ctrl_rq_s, base);
 
 #endif
 
@@ -594,7 +594,7 @@ struct dev_i2c_ctrl_context_s
   /** @internal */
   dev_request_queue_root_t          queue;
   /** @internal */
-  struct dev_i2c_ctrl_base_rq_s     *current;
+  struct dev_i2c_ctrl_rq_s     *current;
 
 #ifdef CONFIG_DEVICE_I2C_BYTECODE_TIMER
   /** @internal */

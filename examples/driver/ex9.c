@@ -67,7 +67,7 @@ static bool_t mydrv_do_read(struct mydrv_context_s *pv)
     {
       /* get the next request from our queue */
       struct dev_char_rq_s *rq;
-      rq = dev_char_rq_s_cast(dev_request_queue_head(&pv->read_q));
+      rq = dev_char_rq_head(&pv->read_q);
       if (rq == NULL)
         return 1;
 
@@ -131,14 +131,14 @@ static bool_t mydrv_do_read(struct mydrv_context_s *pv)
 
     end_rq:
       /* remove the request at the queue head */
-      dev_request_queue_pop(&pv->read_q);
+      dev_char_rq_pop(&pv->read_q);
 
       /* remove our marking so that any call to
          mydrv_uart_cancel will fail properly. */
       rq->base.drvdata = NULL;
 
       /* signal the request owner that we did the job eventually */
-      kroutine_exec(&rq->base.kr);
+      dev_char_rq_done(rq);
 
       /* see if we can serve more requests present on the queue with
          more data from the UART */
@@ -162,7 +162,7 @@ static DEV_CHAR_REQUEST(mydrv_uart_request)
     case DEV_CHAR_READ_POLL:
     case DEV_CHAR_READ_NONBLOCK:
     case DEV_CHAR_DISCARD:
-      dev_request_queue_pushback(&pv->read_q, dev_char_rq_s_base(rq));
+      dev_char_rq_pushback(&pv->read_q, rq);
 
       /* We use a driver reserved field in the request to mark the
          request as currently processed by the device. */
@@ -184,16 +184,16 @@ static DEV_CHAR_REQUEST(mydrv_uart_request)
           rq->size--;
         }
 
-      kroutine_exec(&rq->base.kr);
+      dev_char_rq_done(rq);
       return;
 
     case DEV_CHAR_WRITE_POLL:
-      kroutine_exec(&rq->base.kr);
+      dev_char_rq_done(rq);
       return;
 
     default:
       rq->error = -ENOTSUP;
-      kroutine_exec(&rq->base.kr);
+      dev_char_rq_done(rq);
       return;
     }
 }
@@ -222,7 +222,7 @@ static DEV_CHAR_CANCEL(mydrv_uart_cancel)
         return -EBUSY;
 
       /* We have to forget the request and remove our marking. */
-      dev_request_queue_remove(&pv->read_q, dev_char_rq_s_base(rq));
+      dev_char_rq_remove(&pv->read_q, rq);
       rq->base.drvdata = NULL;
 
       return 0;
@@ -269,7 +269,7 @@ static DEV_INIT(mydrv_init)
   pv->addr = addr;
 
   /* initializes our queue of read requests */
-  dev_request_queue_init(&pv->read_q);
+  dev_rq_queue_init(&pv->read_q);
 
   /* setup irq line */
   device_irq_source_init(dev, &pv->irq_eps, 1, mydrv_uart_irq);
@@ -286,10 +286,10 @@ static DEV_CLEANUP(mydrv_cleanup)
 {
   struct mydrv_context_s *pv = dev->drv_pv;
 
-  if (!dev_request_queue_isempty(&pv->read_q))
+  if (!dev_rq_queue_isempty(&pv->read_q))
     return -EBUSY;
 
-  dev_request_queue_destroy(&pv->read_q);
+  dev_rq_queue_destroy(&pv->read_q);
 
   device_irq_source_unlink(dev, &pv->irq_eps, 1);
 

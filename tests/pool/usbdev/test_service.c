@@ -294,7 +294,7 @@ static void usbdev_test_service_disconnect(struct usbdev_test_service_s *pv)
   pv->service_enabled = 0;
 
   pv->rq.type = USBDEV_GET_COMMAND;
-  kroutine_init_deferred_seq(&pv->rq.kr, &usbdev_test_ctrl_cb, &pv->seq);
+  dev_timer_rq_init_seq(pv, &usbdev_test_ctrl_cb, &pv->seq);
   /* Push request on stack */
   usbdev_stack_request(&pv->usb, &pv->service, &pv->rq);
 }
@@ -670,7 +670,7 @@ void app_start()
   tr = &pv.rbulk.tr;
   tr->type = DEV_USBDEV_DATA_OUT;
   tr->base.pvdata = &pv;
-  kroutine_init_deferred_seq(&tr->base.kr, &usbdev_service_test_read_cb, &pv.seq);
+  dev_usbdev_rq_init_seq(tr, &usbdev_service_test_read_cb, &pv.seq);
 
   pv.wbulk.buffer = usbdev_stack_allocate(&pv.usb, USBDEV_TEST_BULK_BUFFER_SIZE);
 
@@ -683,7 +683,7 @@ void app_start()
   tr = &pv.wbulk.tr;
   tr->type = DEV_USBDEV_DATA_IN;
   tr->base.pvdata = &pv;
-  kroutine_init_deferred_seq(&tr->base.kr, &usbdev_service_test_write_cb, &pv.seq);
+  dev_usbdev_rq_init_seq(tr, &usbdev_service_test_write_cb, &pv.seq);
 
 #endif
 #if USBDEV_SERV_TEST_ISOCHRONOUS_ENDPOINT
@@ -697,7 +697,7 @@ void app_start()
       tr = &pv.riso[i].tr;
       tr->type = DEV_USBDEV_PARTIAL_DATA_OUT;
       tr->base.pvdata = &pv;
-      kroutine_init_deferred_seq(&tr->base.kr, &usbdev_service_test_read_cb, &pv.seq);
+      dev_usbdev_rq_init_seq(tr, &usbdev_service_test_read_cb, &pv.seq);
       
       pv.wiso[i].buffer = usbdev_stack_allocate(&pv.usb, USB_TEST_ISOCHONOUS_SIZE);
       pv.wiso[i].max = USB_TEST_ISOCHONOUS_SIZE;
@@ -707,7 +707,7 @@ void app_start()
       tr = &pv.wiso[i].tr;
       tr->type = DEV_USBDEV_DATA_IN;
       tr->base.pvdata = &pv;
-      kroutine_init_deferred_seq(&tr->base.kr, &usbdev_service_test_write_cb, &pv.seq);
+      dev_usbdev_rq_init_seq(tr, &usbdev_service_test_write_cb, &pv.seq);
     }
 #endif
 #if USBDEV_SERV_TEST_INTERRUPT_ENDPOINT
@@ -719,7 +719,7 @@ void app_start()
    tr = &pv.rirq.tr;
    tr->type = DEV_USBDEV_PARTIAL_DATA_OUT;
    tr->base.pvdata = &pv;
-   kroutine_init_deferred_seq(&tr->base.kr, &usbdev_service_test_read_cb, &pv.seq);
+   dev_usbdev_rq_init_seq(tr, &usbdev_service_test_read_cb, &pv.seq);
    
    pv.rirq.buffer = usbdev_stack_allocate(&pv.usb, USB_TEST_INTERRUPT_SIZE);
    pv.rirq.max = USB_TEST_INTERRUPT_SIZE;
@@ -729,7 +729,7 @@ void app_start()
    tr = &pv.wirq.tr;
    tr->type = DEV_USBDEV_DATA_IN;
    tr->base.pvdata = &pv;
-   kroutine_init_deferred_seq(&tr->base.kr, &usbdev_service_test_write_cb, &pv.seq);
+   dev_usbdev_rq_init_seq(tr, &usbdev_service_test_write_cb, &pv.seq);
 #endif
 #if USBDEV_SERV_TEST_CONTROL_N_ENDPOINT
   pv.ctrl.buffer = usbdev_stack_allocate(&pv.usb, USB_TEST_CONTROL_SIZE);
@@ -739,7 +739,7 @@ void app_start()
 
   tr = &pv.ctrl.tr;
   tr->base.pvdata = &pv;
-  kroutine_init_deferred_seq(&tr->base.kr, &usbdev_test_ctrl_n_cb, &pv.seq);
+  dev_usbdev_rq_init_seq(tr, &usbdev_test_ctrl_n_cb, &pv.seq);
 #endif
 
   /* Attach description to USB device */

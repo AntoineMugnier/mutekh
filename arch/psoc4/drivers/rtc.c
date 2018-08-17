@@ -231,11 +231,11 @@ static DEV_TIMER_REQUEST(psoc4_rtc_request)
   dev_timer_value_t value;
   error_t err = 0;
 
-  //  assert(rq->rq.drvdata == NULL);
+  //  assert(rq->base.drvdata == NULL);
 
   LOCK_SPIN_IRQ(&dev->lock);
 
-  if (dev_request_pqueue_isempty(&pv->queue)) {
+  if (dev_rq_pqueue_isempty(&pv->queue)) {
     if (!dev->start_count)
       psoc4_rtc_start(pv);
 
@@ -250,17 +250,17 @@ static DEV_TIMER_REQUEST(psoc4_rtc_request)
   if (rq->deadline <= value) {
     err = -ETIMEDOUT;
 
-    if (dev_request_pqueue_isempty(&pv->queue)) {
+    if (dev_rq_pqueue_isempty(&pv->queue)) {
       dev->start_count &= ~1;
 
       if (!dev->start_count)
         psoc4_rtc_stop(pv);
     }
   } else {
-    dev_timer_pqueue_insert(&pv->queue, &rq->rq);
-    rq->rq.drvdata = pv;
+    dev_timer_rq_insert(&pv->queue, rq);
+    rq->base.drvdata = pv;
 
-    if (dev_request_pqueue_head(&pv->queue) == &rq->rq)
+    if (dev_timer_rq_head(&pv->queue) == rq)
       psoc4_rtc_deadline_set(pv, rq->deadline);
   }
 
@@ -278,16 +278,16 @@ static DEV_TIMER_CANCEL(psoc4_rtc_cancel)
 
   LOCK_SPIN_IRQ(&dev->lock);
 
-  if (rq->rq.drvdata != pv)
+  if (rq->base.drvdata != pv)
     goto out;
 
-  head = dev_timer_rq_s_cast(dev_request_pqueue_head(&pv->queue));
+  head = dev_timer_rq_head(&pv->queue);
 
-  dev_timer_pqueue_remove(&pv->queue, &rq->rq);
-  rq->rq.drvdata = NULL;
+  dev_timer_rq_remove(&pv->queue, rq);
+  rq->base.drvdata = NULL;
 
   if (rq == head) {
-    head = dev_timer_rq_s_cast(dev_request_pqueue_head(&pv->queue));
+    head = dev_timer_rq_head(&pv->queue);
 
     if (head)
       psoc4_rtc_deadline_set(pv, head->deadline);
@@ -297,7 +297,7 @@ static DEV_TIMER_CANCEL(psoc4_rtc_cancel)
 
   err = 0;
 
-  if (dev_request_pqueue_isempty(&pv->queue)) {
+  if (dev_rq_pqueue_isempty(&pv->queue)) {
     dev->start_count &= ~1;
 
     if (!dev->start_count)
@@ -371,7 +371,7 @@ static DEV_IRQ_SRC_PROCESS(psoc4_rtc_irq)
   if (~high & (uint32_t)pv->base & bit(31))
     pv->base += bit(31);
 
-  while ((rq = dev_timer_rq_s_cast(dev_request_pqueue_head(&pv->queue)))) {
+  while ((rq = dev_timer_rq_head(&pv->queue))) {
     dev_timer_value_t value = psoc4_rtc_value_get(pv);
 
     dprintk("%s now %llx\n", __FUNCTION__, value);
@@ -379,11 +379,11 @@ static DEV_IRQ_SRC_PROCESS(psoc4_rtc_irq)
     if (value < rq->deadline)
       break;
 
-    dev_request_pqueue_pop(&pv->queue);
-    rq->rq.drvdata = 0;
+    dev_timer_rq_remove(&pv->queue, rq);
+    rq->base.drvdata = 0;
 
     lock_release(&dev->lock);
-    kroutine_exec(&rq->rq.kr);
+    dev_timer_rq_done(rq);
     lock_spin(&dev->lock);
   }
 
@@ -476,7 +476,7 @@ static DEV_INIT(psoc4_rtc_init)
   cpu_mem_write_32(SRSS + SRSS_WDT_CONFIG_ADDR, config);
   CPU_INTERRUPT_RESTORESTATE;
 
-  dev_request_pqueue_init(&pv->queue);
+  dev_rq_pqueue_init(&pv->queue);
   pv->base = 0;
 
   return 0;
@@ -492,10 +492,10 @@ static DEV_CLEANUP(psoc4_rtc_cleanup)
 {
   struct psoc4_rtc_context_s *pv = dev->drv_pv;
 
-  if (!dev_request_pqueue_isempty(&pv->queue))
+  if (!dev_rq_pqueue_isempty(&pv->queue))
     return -EBUSY;
 
-  dev_request_pqueue_destroy(&pv->queue);
+  dev_rq_pqueue_destroy(&pv->queue);
 
   CPU_INTERRUPT_SAVESTATE_DISABLE;
 

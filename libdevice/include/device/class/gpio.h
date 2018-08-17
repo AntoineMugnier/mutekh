@@ -281,7 +281,7 @@ struct dev_gpio_rq_s
   };
 };
 
-STRUCT_INHERIT(dev_gpio_rq_s, dev_request_s, base);
+DEV_REQUEST_INHERIT(gpio); DEV_REQUEST_QUEUE_OPS(gpio);
 
 /** Helper that implements asynchronous f_request from other
     synchronous primitives.

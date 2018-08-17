@@ -189,7 +189,7 @@ static DEV_INIT(soclib_xicu_init)
       cpu_mem_write_32(XICU_REG_ADDR(pv->addr, XICU_PTI_PER, i), 0);
 
 # ifdef CONFIG_DRIVER_SOCLIB_XICU_ICU
-      dev_request_pqueue_init(&p->queue);
+      dev_rq_pqueue_init(&p->queue);
       p->period = resolution;
       p->value = 0;
       p->rev = 1;
@@ -223,7 +223,7 @@ static DEV_CLEANUP(soclib_xicu_cleanup)
   for (i = 0; i < pv->pti_count; i++)
     {
       struct soclib_xicu_pti_s *p = pv->pti + i;
-      if (!dev_request_pqueue_isempty(&p->queue))
+      if (!dev_rq_pqueue_isempty(&p->queue))
         return -EBUSY;
     }
 
@@ -231,7 +231,7 @@ static DEV_CLEANUP(soclib_xicu_cleanup)
     {
       struct soclib_xicu_pti_s *p = pv->pti + i;
       cpu_mem_write_32(XICU_REG_ADDR(pv->addr, XICU_MSK_PTI_ENABLE, i), 0);
-      dev_request_pqueue_destroy(&p->queue);
+      dev_rq_pqueue_destroy(&p->queue);
     }
 # endif
 

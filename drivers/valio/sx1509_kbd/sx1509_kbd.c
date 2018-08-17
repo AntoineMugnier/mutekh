@@ -72,27 +72,27 @@ static DEV_VALIO_REQUEST(sx1509_kbd_request)
 
   if (req->attribute != VALIO_KEYBOARD_MAP) {
     req->error = -EINVAL;
-    kroutine_exec(&req->base.kr);
+    dev_valio_rq_done(req);
     return;
   }
 
   switch (req->type) {
   default:
     req->error = -ENOTSUP;
-    kroutine_exec(&req->base.kr);
+    dev_valio_rq_done(req);
     return;
 
   case DEVICE_VALIO_WAIT_EVENT: {
     LOCK_SPIN_IRQ_SCOPED(&dev->lock);
     req->error = 0;
-    dev_request_queue_pushback(&pv->queue, &req->base);
+    dev_valio_rq_pushback(&pv->queue, req);
     return;
   }
 
   case DEVICE_VALIO_READ:
     endian_le64_na_store(req->data, pv->value_last);
     req->error = 0;
-    kroutine_exec(&req->base.kr);
+    dev_valio_rq_done(req);
     return;
   }
 }
@@ -106,9 +106,9 @@ static DEV_VALIO_CANCEL(sx1509_kbd_cancel)
 
   GCT_FOREACH(dev_request_queue, &pv->queue, item,
               if (item == &req->base) {
-                dev_request_queue_remove(&pv->queue, &req->base);
+                dev_valio_rq_remove(&pv->queue, req);
 
-                if (dev_request_queue_isempty(&pv->queue))
+                if (dev_rq_queue_isempty(&pv->queue))
                   device_sleep_schedule(dev);
 
                 return 0;
@@ -124,7 +124,7 @@ static DEV_USE(sx1509_kbd_use)
     struct device_s *dev = param;
     struct sx1509_kbd_context_s *pv = dev->drv_pv;
 
-    if (dev_request_queue_isempty(&pv->queue)
+    if (dev_rq_queue_isempty(&pv->queue)
         && pv->state == STATE_IDLE) {
       dev_i2c_bytecode_start(&pv->i2c, &pv->i2c_rq, &sx1509_kbd_disable,
                              SX1509_KBD_DISABLE_BCARGS());
@@ -166,13 +166,12 @@ static void sx1509_kbd_update(struct sx1509_kbd_context_s *pv, uint16_t rowcol)
     dprintk("Keyboard state: %04x %016llx\n", rowcol, pv->value_cur);
     pv->value_last = pv->value_cur;
 
-    for (struct dev_request_s *rq = dev_request_queue_pop(&pv->queue);
-         rq;
-         rq = dev_request_queue_pop(&pv->queue)) {
-      struct dev_valio_rq_s *vrq = dev_valio_rq_s_cast(rq);
-      endian_le64_na_store(vrq->data, pv->value_last);
-      kroutine_exec(&vrq->base.kr);
-    }
+    struct dev_valio_rq_s *vrq;
+    while ((vrq = dev_valio_rq_pop(&pv->queue)))
+      {
+        endian_le64_na_store(vrq->data, pv->value_last);
+        dev_valio_rq_done(vrq);
+      }
 
     device_sleep_schedule(pv->i2c_rq.base.base.pvdata);
   }
@@ -187,7 +186,7 @@ static void sx1509_kbd_update(struct sx1509_kbd_context_s *pv, uint16_t rowcol)
 
 static KROUTINE_EXEC(sx1509_kbd_timeout)
 {
-  struct sx1509_kbd_context_s *pv = KROUTINE_CONTAINER(kr, *pv, timer_rq.rq.kr);
+  struct sx1509_kbd_context_s *pv = KROUTINE_CONTAINER(kr, *pv, timer_rq.base.kr);
 
   sx1509_kbd_update(pv, 0);
 }
@@ -219,7 +218,7 @@ static KROUTINE_EXEC(sx1509_kbd_i2c_done)
     break;
 
   case STATE_DISABLING:
-    if (!dev_request_queue_isempty(&pv->queue)) {
+    if (!dev_rq_queue_isempty(&pv->queue)) {
       dev_i2c_bytecode_start(&pv->i2c, &pv->i2c_rq, &sx1509_kbd_reset,
                              SX1509_KBD_DISABLE_BCARGS());
       pv->state = STATE_INIT;
@@ -256,7 +255,7 @@ static DEV_INIT(sx1509_kbd_init)
     goto free_pv;
   pv->cols = tmp;
 
-  dev_request_queue_init(&pv->queue);
+  dev_rq_queue_init(&pv->queue);
 
   device_irq_source_init(dev, &pv->irq_ep, 1, &sx1509_kbd_irq);
   err = device_irq_source_link(dev, &pv->irq_ep, 1, -1);
@@ -273,11 +272,11 @@ static DEV_INIT(sx1509_kbd_init)
 
   pv->i2c_rq.base.base.pvdata = dev;
 
-  kroutine_init_deferred(&pv->i2c_rq.base.base.kr, &sx1509_kbd_i2c_done);
+  dev_i2c_ctrl_rq_init(&pv->i2c_rq.base, &sx1509_kbd_i2c_done);
   dev_i2c_bytecode_start(&pv->i2c, &pv->i2c_rq, &sx1509_kbd_reset,
                          SX1509_KBD_RESET_BCARGS(pv->rows, pv->cols, init_delay));
 
-  kroutine_init_deferred(&pv->timer_rq.rq.kr, &sx1509_kbd_timeout);
+  dev_timer_rq_init(&pv->timer_rq, &sx1509_kbd_timeout);
   dev_timer_init_sec(pv->timer, &pv->timer_rq.delay, 0, 1, 50);
 
   return 0;
@@ -291,11 +290,11 @@ static DEV_CLEANUP(sx1509_kbd_cleanup)
 {
   struct sx1509_kbd_context_s *pv = dev->drv_pv;
 
-  if (!dev_request_queue_isempty(&pv->queue))
+  if (!dev_rq_queue_isempty(&pv->queue))
     return -EBUSY;
 
   device_irq_source_unlink(dev, &pv->irq_ep, 1);
-  dev_request_queue_destroy(&pv->queue);
+  dev_rq_queue_destroy(&pv->queue);
 
   mem_free(pv);
 

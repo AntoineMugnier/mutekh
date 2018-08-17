@@ -61,6 +61,7 @@ struct dev_request_s
   union {
     GCT_CONTAINER_ENTRY(dev_request_queue, queue_entry);
     GCT_CONTAINER_ENTRY(dev_request_pqueue, pqueue_entry);
+    uintptr_t pushed;
   };
 
   /** Caller private data */
@@ -79,12 +80,168 @@ struct dev_request_s
 STRUCT_COMPOSE(dev_request_s, kr);
 
 GCT_CONTAINER_TYPES(dev_request_queue, struct dev_request_s *, queue_entry);
-GCT_CONTAINER_FCNS(dev_request_queue, inline, dev_request_queue,
-                   init, destroy, push, pushback, pop, remove, isempty, head, tail, next);
+
+GCT_CONTAINER_FCNS(dev_request_queue, inline, dev_rq_queue,
+                   init, destroy, isempty);
+
+GCT_CONTAINER_FCNS(dev_request_queue, inline, __dev_rq_queue,
+                   pushback, pop, remove, head);
+
+#define DEV_REQUEST_QUEUE_OPS(class_)                                   \
+                                                                        \
+/** @This returns the oldest class_ request in the given queue.         \
+    A @tt NULL pointer is returned if the queue is empty.               \
+    For use in device drivers. */                                       \
+ALWAYS_INLINE struct dev_##class_##_rq_s *                              \
+dev_##class_##_rq_head(dev_request_queue_root_t *q)                     \
+{                                                                       \
+  return dev_##class_##_rq_s##_cast(__dev_rq_queue_head(q));            \
+}                                                                       \
+                                                                        \
+/** @This insert a new class_ request at the end of the given queue.    \
+    For use in device drivers. */                                       \
+ALWAYS_INLINE void                                                      \
+dev_##class_##_rq_pushback(dev_request_queue_root_t *q,                 \
+                           struct dev_##class_##_rq_s *rq)              \
+{                                                                       \
+  assert(rq->base.pushed == 0xdead);                                    \
+  __dev_rq_queue_pushback(q, &rq->base);                                \
+}                                                                       \
+                                                                        \
+/** @This removes and return the oldest class_ request in the queue.    \
+    A @tt NULL pointer is returned if the queue is empty.               \
+    For use in device drivers. */                                       \
+ALWAYS_INLINE struct dev_##class_##_rq_s *                              \
+dev_##class_##_rq_pop(dev_request_queue_root_t *q)                      \
+{                                                                       \
+  struct dev_##class_##_rq_s *rq;                                       \
+  rq = dev_##class_##_rq_s##_cast(__dev_rq_queue_pop(q));               \
+  IFASSERT(rq->base.pushed = 0xdead);                                   \
+  return rq;                                                            \
+}                                                                       \
+                                                                        \
+/** @This removes the specified class_ request from the queue.          \
+    For use in device drivers. */                                       \
+ALWAYS_INLINE void                                                      \
+dev_##class_##_rq_remove(dev_request_queue_root_t *q, struct dev_##class_##_rq_s *rq) \
+{                                                                       \
+  assert(rq->base.pushed != 0xdead);                                    \
+  __dev_rq_queue_remove(q, &rq->base);                                  \
+  IFASSERT(rq->base.pushed = 0xdead);                                   \
+}
 
 GCT_CONTAINER_TYPES(dev_request_pqueue, struct dev_request_s *, pqueue_entry);
-GCT_CONTAINER_FCNS(dev_request_pqueue, inline, dev_request_pqueue,
-                   init, destroy, pop, isempty, head, prev, next, remove);
+
+GCT_CONTAINER_FCNS(dev_request_pqueue, inline, dev_rq_pqueue,
+                   init, destroy, isempty);
+
+GCT_CONTAINER_FCNS(dev_request_pqueue, inline, __dev_rq_pqueue,
+                   head, prev, next);
+
+#define DEV_REQUEST_PQUEUE_OPS(class_)                                  \
+                                                                        \
+/** @This returns the first class_ request in the given priority queue. \
+    A @tt NULL pointer is returned if the queue is empty.               \
+    For use in device drivers. */                                       \
+ALWAYS_INLINE struct dev_##class_##_rq_s *                              \
+dev_##class_##_rq_head(dev_request_pqueue_root_t *q)                    \
+{                                                                       \
+  return dev_##class_##_rq_s##_cast(__dev_rq_pqueue_head(q));           \
+}                                                                       \
+                                                                        \
+/** @This returns the class_ request after the given request in the     \
+    priority queue. A @tt NULL pointer is returned if request is the    \
+    last one. For use in device drivers. */                             \
+ALWAYS_INLINE struct dev_##class_##_rq_s *                              \
+dev_##class_##_rq_next(dev_request_pqueue_root_t *q,                    \
+                       struct dev_##class_##_rq_s *rq)                  \
+{                                                                       \
+  return dev_##class_##_rq_s##_cast(__dev_rq_pqueue_next(q, &rq->base));    \
+}                                                                       \
+                                                                        \
+/** @This returns the class_ request before the given request in the    \
+    priority queue. A @tt NULL pointer is returned if request is the    \
+    first one. For use in device drivers. */                            \
+ALWAYS_INLINE struct dev_##class_##_rq_s *                              \
+dev_##class_##_rq_prev(dev_request_pqueue_root_t *q,                    \
+                       struct dev_##class_##_rq_s *rq)                  \
+{                                                                       \
+  return dev_##class_##_rq_s##_cast(__dev_rq_pqueue_prev(q, &rq->base));    \
+}                                                                       \
+                                                                        \
+/** @This insert a new class_ request at the right location             \
+    in the given priority queue. For use in device drivers. */          \
+ALWAYS_INLINE void                                                      \
+dev_##class_##_rq_insert(dev_request_pqueue_root_t *q,                  \
+                         struct dev_##class_##_rq_s *rq)                \
+{                                                                       \
+  assert(rq->base.pushed == 0xdead);                                    \
+  __dev_##class_##_pqueue_insert(q, &rq->base);                         \
+}                                                                       \
+                                                                        \
+/** @This removes the specified class_ request from the priority queue. \
+    For use in device drivers.  */                                      \
+ALWAYS_INLINE void                                                      \
+dev_##class_##_rq_remove(dev_request_pqueue_root_t *q,                  \
+                         struct dev_##class_##_rq_s *rq)                \
+{                                                                       \
+  assert(rq->base.pushed != 0xdead);                                    \
+  __dev_##class_##_pqueue_remove(q, &rq->base);                         \
+  IFASSERT(rq->base.pushed = 0xdead);                                   \
+}
+
+#define DEV_REQUEST_INHERIT(class_)                                     \
+STRUCT_INHERIT(dev_##class_##_rq_s, dev_request_s, base);               \
+                                                                        \
+/** @This initializes the given class_ request callback.                \
+    This must be used before submitting the request to a driver. */     \
+ALWAYS_INLINE void                                                      \
+dev_##class_##_rq_init_immediate(struct dev_##class_##_rq_s *rq,        \
+                                 kroutine_exec_t *exec)                 \
+{                                                                       \
+  kroutine_init_immediate(&rq->base.kr, exec);                          \
+  IFASSERT(rq->base.pushed = 0xdead);                                   \
+}                                                                       \
+                                                                        \
+/** @This initializes the given class_ request callback.                \
+    This must be used before submitting the request to a driver. */     \
+config_depend_alwaysinline(CONFIG_MUTEK_KROUTINE_SCHED,                 \
+void dev_##class_##_rq_init(struct dev_##class_##_rq_s *rq,             \
+                            kroutine_exec_t *exec),                     \
+{                                                                       \
+  kroutine_init_deferred(&rq->base.kr, exec);                           \
+  IFASSERT(rq->base.pushed = 0xdead);                                   \
+});                                                                     \
+                                                                        \
+/** @This initializes the given class_ request callback.                \
+    This must be used before submitting the request to a driver. */     \
+config_depend_alwaysinline(CONFIG_MUTEK_KROUTINE_SCHED,                 \
+void dev_##class_##_rq_init_seq(struct dev_##class_##_rq_s *rq,         \
+                                kroutine_exec_t *exec,                  \
+                                struct kroutine_sequence_s *seq),       \
+{                                                                       \
+  kroutine_init_deferred_seq(&rq->base.kr, exec, seq);                  \
+  IFASSERT(rq->base.pushed = 0xdead);                                   \
+});                                                                     \
+                                                                        \
+/** @This initializes the given class_ request callback.                \
+    This must be used before submitting the request to a driver. */     \
+config_depend_alwaysinline(CONFIG_MUTEK_KROUTINE_QUEUE,                 \
+void dev_##class_##_rq_init_queue(struct dev_##class_##_rq_s *rq,       \
+                                  kroutine_exec_t *exec,                \
+                                  struct kroutine_queue_s *queue),      \
+{                                                                       \
+  kroutine_init_queue(&rq->base.kr, exec, queue);                       \
+  IFASSERT(rq->base.pushed = 0xdead);                                   \
+})                                                                      \
+                                                                        \
+/** @This invokes or schedules execution of the class_ request          \
+    callback associated to the request. For use in device drivers. */   \
+ALWAYS_INLINE void                                                      \
+dev_##class_##_rq_done(struct dev_##class_##_rq_s *rq)                  \
+{                                                                       \
+  kroutine_exec(&rq->base.kr);                                          \
+}
 
 struct dev_request_status_s
 {
@@ -109,6 +266,7 @@ dev_request_spin_init(struct dev_request_s *rq,
 {
   status->done = 0;
   rq->pvdata = status;
+  IFASSERT(rq->pushed = 0xdead);
   kroutine_init_immediate(&rq->kr, &dev_request_spin_done);
 }
 
@@ -145,6 +303,7 @@ dev_request_sched_init(struct dev_request_s *rq,
   lock_init(&status->lock);
   status->ctx = NULL;
   rq->pvdata = status;
+  IFASSERT(rq->pushed = 0xdead);
   kroutine_init_immediate(&rq->kr, &dev_request_sched_done);
 }
 
@@ -183,6 +342,7 @@ config_depend_inline(CONFIG_MUTEK_SEMAPHORE,
 void dev_request_poll_init(struct dev_request_s *rq,
                            const struct semaphore_poll_s *give),
 {
+  IFASSERT(rq->pushed = 0xdead);
   kroutine_init_immediate(&rq->kr, &dev_request_sem_done);
   rq->pvdata = (void*)give;
 })
@@ -229,7 +389,7 @@ dev_request_delayed_init(struct dev_request_dlqueue_s *q,
                          dev_request_delayed_func_t *f)
 {
 #ifdef CONFIG_DEVICE_DELAYED_REQUEST
-  dev_request_queue_init(&q->queue);
+  dev_rq_queue_init(&q->queue);
   kroutine_init_sched_switch(&q->kr, dev_request_delayed_kr);
 #endif
   q->func = f;
@@ -240,7 +400,7 @@ ALWAYS_INLINE void
 dev_request_delayed_cleanup(struct dev_request_dlqueue_s *q)
 {
 #ifdef CONFIG_DEVICE_DELAYED_REQUEST
-  dev_request_queue_destroy(&q->queue);
+  dev_rq_queue_destroy(&q->queue);
 #endif
 }
 
@@ -259,8 +419,8 @@ dev_request_delayed_end(struct dev_request_dlqueue_s *q,
     {
       struct device_s *dev = accessor->dev;
       LOCK_SPIN_IRQ(&dev->lock);
-      dev_request_queue_remove(&q->queue, rq);
-      if (!dev_request_queue_isempty(&q->queue))
+      __dev_rq_queue_remove(&q->queue, rq);
+      if (!dev_rq_queue_isempty(&q->queue))
         kroutine_exec(&q->kr); /* delayed exec next rq */
       LOCK_RELEASE_IRQ(&dev->lock);
     }
@@ -273,7 +433,7 @@ ALWAYS_INLINE bool_t
 dev_request_delayed_isidle(struct dev_request_dlqueue_s *q)
 {
 #ifdef CONFIG_DEVICE_DELAYED_REQUEST
-  return dev_request_queue_isempty(&q->queue);
+  return dev_rq_queue_isempty(&q->queue);
 #else
   return 1;
 #endif
@@ -308,9 +468,9 @@ dev_request_delayed_push(struct device_accessor_s *accessor,
   if (critical || !interruptible)
     {
       LOCK_SPIN_IRQ(&dev->lock);
-      empty = dev_request_queue_isempty(&q->queue);
+      empty = dev_rq_queue_isempty(&q->queue);
       rq->drvdata = accessor;
-      dev_request_queue_pushback(&q->queue, rq);
+      __dev_rq_queue_pushback(&q->queue, rq);
       if (empty && !interruptible)
         kroutine_exec(&q->kr); /* delayed exec */
       LOCK_RELEASE_IRQ(&dev->lock);

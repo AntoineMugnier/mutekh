@@ -75,7 +75,7 @@ static inline void enst_rttimer_irq_process(struct device_s *dev, uint_fast8_t n
 
   struct dev_timer_rq_s *rq;
 
-  while ((rq = dev_timer_rq_s_cast(dev_request_pqueue_head(&p->queue))))
+  while ((rq = dev_timer_rq_head(&p->queue)))
     {
       assert(dev->start_count >= 1);
 
@@ -89,11 +89,11 @@ static inline void enst_rttimer_irq_process(struct device_s *dev, uint_fast8_t n
 	  break;
 	}
 
-      rq->rq.drvdata = NULL;
-      dev_timer_pqueue_remove(&p->queue, dev_timer_rq_s_base(rq));
+      rq->base.drvdata = NULL;
+      dev_timer_rq_remove(&p->queue, rq);
 
       lock_release(&dev->lock);
-      kroutine_exec(&rq->rq.kr);
+      dev_timer_rq_done(rq);
       lock_spin(&dev->lock);
 
       dev->start_count--;
@@ -170,16 +170,16 @@ static DEV_TIMER_CANCEL(enst_rttimer_cancel)
 
   LOCK_SPIN_IRQ(&dev->lock);
 
-  if (rq->rq.drvdata == p)
+  if (rq->base.drvdata == p)
     {
       struct dev_timer_rq_s *rqnext = NULL;
-      bool_t first = (dev_request_pqueue_prev(&p->queue, dev_timer_rq_s_base(rq)) == NULL);
+      bool_t first = (dev_timer_rq_prev(&p->queue, rq) == NULL);
 
       if (first)
-        rqnext = dev_timer_rq_s_cast(dev_request_pqueue_next(&p->queue, dev_timer_rq_s_base(rq)));
+        rqnext = dev_timer_rq_next(&p->queue, rq);
 
-      dev_timer_pqueue_remove(&p->queue, dev_timer_rq_s_base(rq));
-      rq->rq.drvdata = NULL;
+      dev_timer_rq_remove(&p->queue, rq);
+      rq->base.drvdata = NULL;
 
       /* stop timer if not in use */
       dev->start_count--;
@@ -239,11 +239,11 @@ static DEV_TIMER_REQUEST(enst_rttimer_request)
         err = -ETIMEDOUT;
       else
         {
-          rq->rq.drvdata = p;
-          dev_timer_pqueue_insert(&p->queue, dev_timer_rq_s_base(rq));
+          rq->base.drvdata = p;
+          dev_timer_rq_insert(&p->queue, rq);
 
           /* adjust earliest deadline if needed */
-          if (dev_request_pqueue_prev(&p->queue, dev_timer_rq_s_base(rq)) == NULL)
+          if (dev_timer_rq_prev(&p->queue, rq) == NULL)
             {
               cpu_mem_write_32(pv->addr + RT_TIMER_RTCTMP_ADDR, RT_TIMER_ENDIAN32(rq->deadline >> 32));
               cpu_mem_write_32(RT_TIMER_REG_ADDR(pv->addr, RT_TIMER_DLN1_ADDR, accessor->number), RT_TIMER_ENDIAN32(rq->deadline));
@@ -456,7 +456,7 @@ static DEV_INIT(enst_rttimer_init)
   for (i = 0; i < t_count; i++)
     {
       struct enst_rttimer_state_s *p = pv->t + i;
-      dev_request_pqueue_init(&p->queue);
+      dev_rq_pqueue_init(&p->queue);
     }
 
   cpu_mem_write_32(pv->addr + RT_TIMER_CTRL_ADDR,
@@ -488,7 +488,7 @@ static DEV_CLEANUP(enst_rttimer_cleanup)
   for (i = 0; i < pv->t_count; i++)
     {
       struct enst_rttimer_state_s *p = pv->t + i;
-      dev_request_pqueue_destroy(&p->queue);
+      dev_rq_pqueue_destroy(&p->queue);
     }
 
   device_irq_source_unlink(dev, pv->irq_eps, pv->t_count);

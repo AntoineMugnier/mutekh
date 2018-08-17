@@ -118,7 +118,7 @@ static KROUTINE_EXEC(mtch6102_channels_done)
 
     LOCK_SPIN_IRQ(&dev->lock);
 
-    kroutine_init_immediate(&pv->i2c_req.base.kr, mtch6102_mode_done);
+    dev_i2c_ctrl_rq_init(&pv->i2c_req.base, mtch6102_mode_done);
 
     pv->i2c_req.base.pvdata = dev;
     pv->i2c_req.transfer = pv->i2c_transfer;
@@ -145,7 +145,7 @@ static void mtch6102_configure(
 
     dprintk("%s\n", __FUNCTION__);
 
-    kroutine_init_immediate(&pv->i2c_req.base.kr, mtch6102_channels_done);
+    dev_i2c_ctrl_rq_init(&pv->i2c_req.base, mtch6102_channels_done);
 
     pv->i2c_req.base.pvdata = dev;
     pv->i2c_req.transfer = pv->i2c_transfer;
@@ -193,12 +193,12 @@ static KROUTINE_EXEC(mtch6102_state_done)
                || st.touch != pv->last_state.touch
                || (st.touch && (st.x != pv->last_state.x
                                 || st.y != pv->last_state.y)))) {
-        dev_request_queue_remove(&pv->queue, &rq->base);
+        dev_valio_rq_remove(&pv->queue, rq);
         memcpy(rq->data, &st, sizeof(st));
         rq->error = 0;
 
         pv->last_state = st;
-        kroutine_exec(&rq->base.kr);
+        dev_valio_rq_done(rq);
     } else {
         // Consider change was not big enough for WAIT_UPDATE to
         // succeed.
@@ -214,7 +214,7 @@ static void mtch6102_request_run(
     struct mtch6102_priv_s *pv,
     bool_t from_irq)
 {
-    bool_t empty = dev_request_queue_isempty(&pv->queue);
+    bool_t empty = dev_rq_queue_isempty(&pv->queue);
 
     dprintk("%s %d %d %s\n", __FUNCTION__, from_irq, pv->pending,
            empty ? "empty" : "rq");
@@ -237,7 +237,7 @@ static void mtch6102_request_run(
         return;
     }
 
-    kroutine_init_immediate(&pv->i2c_req.base.kr, mtch6102_state_done);
+    dev_i2c_ctrl_rq_init(&pv->i2c_req.base, mtch6102_state_done);
 
     assert(rq->attribute == VALIO_TOUCHPAD_STATE);
 
@@ -281,7 +281,7 @@ static DEV_VALIO_REQUEST(mtch6102_request)
             break;
 
         case VALIO_TOUCHPAD_STATE:
-            dev_request_queue_push(&pv->queue, &req->base);
+            dev_valio_rq_pushback(&pv->queue, req);
             err = 1;
             break;
         }
@@ -291,7 +291,7 @@ static DEV_VALIO_REQUEST(mtch6102_request)
     case DEVICE_VALIO_WAIT_EVENT:
         switch (req->attribute) {
         case VALIO_TOUCHPAD_STATE:
-            dev_request_queue_pushback(&pv->queue, &req->base);
+            dev_valio_rq_pushback(&pv->queue, req);
             err = 1;
             break;
 
@@ -309,7 +309,7 @@ static DEV_VALIO_REQUEST(mtch6102_request)
     if (err <= 0) {
         req->error = err;
         
-        kroutine_exec(&req->base.kr);
+        dev_valio_rq_done(req);
     }
 }
 
@@ -373,7 +373,7 @@ static DEV_INIT(mtch6102_init)
     if (device_irq_source_link(dev, &pv->irq, 1, -1))
         goto err_pv;
 
-    dev_request_queue_init(&pv->queue);
+    dev_rq_queue_init(&pv->queue);
 
     dev->drv_pv = pv;
 
@@ -392,7 +392,7 @@ static DEV_CLEANUP(mtch6102_cleanup)
     struct mtch6102_priv_s *pv = dev->drv_pv;
 
     device_put_accessor(&pv->i2c.base);
-    dev_request_queue_destroy(&pv->queue);
+    dev_rq_queue_destroy(&pv->queue);
     mem_free(pv);
 }
 

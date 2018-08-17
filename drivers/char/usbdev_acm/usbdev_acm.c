@@ -284,29 +284,23 @@ void usbdev_service_end_request(struct device_s *dev, bool_t read, error_t err)
   if (read)
     {
       pv->read_started = 0;
-      rq = dev_char_rq_s_cast(dev_request_queue_head(&pv->read_q));
+      rq = dev_char_rq_pop(&pv->read_q);
       if (rq)
-        {
-          rq->base.drvdata = NULL;
-          dev_request_queue_pop(&pv->read_q);
-        }
+        rq->base.drvdata = NULL;
     }
   else
     {
       pv->write_started = 0;
-      rq = dev_char_rq_s_cast(dev_request_queue_head(&pv->write_q));
+      rq = dev_char_rq_pop(&pv->write_q);
       if (rq)
-        {
-          rq->base.drvdata = NULL;
-          dev_request_queue_pop(&pv->write_q);
-        }
+        rq->base.drvdata = NULL;
     }
 
   if (rq == 0)
     return;
 
   rq->error = err;
-  kroutine_exec(&rq->base.kr);
+  dev_char_rq_done(rq);
 }
 
 static
@@ -318,7 +312,7 @@ void usbdev_service_try_read(struct device_s *dev)
 
   while(1)
     {
-      rq = dev_char_rq_s_cast(dev_request_queue_head(&pv->read_q));
+      rq = dev_char_rq_head(&pv->read_q);
 
       pv->read_started = 1;
 
@@ -365,7 +359,7 @@ void usbdev_service_try_write(struct device_s *dev)
 
   while(1)
     {
-      struct dev_char_rq_s *rq = dev_char_rq_s_cast(dev_request_queue_head(&pv->write_q));
+      struct dev_char_rq_s *rq = dev_char_rq_head(&pv->write_q);
 
       pv->write_started = 1;
 
@@ -517,10 +511,10 @@ KROUTINE_EXEC(usbdev_acm_transfer_cb)
     GCT_FOREACH(dev_request_queue, &pv->coding_notify_queue, item, {
         struct dev_valio_rq_s *rq = dev_valio_rq_s_cast(item);
 
-        dev_request_queue_remove(&pv->coding_notify_queue, &rq->base);
+        dev_valio_rq_remove(&pv->coding_notify_queue, rq);
         rq->error = 0;
         memcpy(rq->data, &config, sizeof(config));
-        kroutine_exec(&rq->base.kr);
+        dev_char_rq_done(rq);
       });
 #endif
   }
@@ -691,7 +685,7 @@ DEV_CHAR_CANCEL(usbdev_acm_cancel)
         return -EBUSY;
 
       rq->base.drvdata = NULL;
-      dev_request_queue_remove(&pv->read_q, dev_char_rq_s_base(rq));
+      dev_char_rq_remove(&pv->read_q, rq);
       return 0;
 
     case DEV_CHAR_WRITE_PARTIAL:
@@ -702,7 +696,7 @@ DEV_CHAR_CANCEL(usbdev_acm_cancel)
         return -EBUSY;
 
       rq->base.drvdata = NULL;
-      dev_request_queue_remove(&pv->write_q, dev_char_rq_s_base(rq));
+      dev_char_rq_remove(&pv->write_q, rq);
       return 0;
 
     default:
@@ -718,7 +712,7 @@ DEV_CHAR_REQUEST(usbdev_acm_request)
 
   if (rq->size == 0)
     {
-      kroutine_exec(&rq->base.kr);
+      dev_char_rq_done(rq);
       return;
     }
 
@@ -743,7 +737,7 @@ DEV_CHAR_REQUEST(usbdev_acm_request)
           rq->error = -EPIPE;
           break;
         }
-      dev_request_queue_pushback(&pv->read_q, dev_char_rq_s_base(rq));
+      dev_char_rq_pushback(&pv->read_q, rq);
       /* Start a USB bulk read transfer */
       if (!pv->read_started && pv->service_enabled)
         usbdev_service_try_read(dev);
@@ -753,7 +747,7 @@ DEV_CHAR_REQUEST(usbdev_acm_request)
     case DEV_CHAR_WRITE:
     case DEV_CHAR_WRITE_PARTIAL_FLUSH:
     case DEV_CHAR_WRITE_FLUSH:
-      dev_request_queue_pushback(&pv->write_q, dev_char_rq_s_base(rq));
+      dev_char_rq_pushback(&pv->write_q, rq);
       /* Start a USB bulk write transfer */
       if (!pv->write_started && pv->service_enabled)
         usbdev_service_try_write(dev);
@@ -767,7 +761,7 @@ DEV_CHAR_REQUEST(usbdev_acm_request)
   LOCK_RELEASE_IRQ(&dev->lock);
 
   if (rq->error)
-    kroutine_exec(&rq->base.kr);
+    dev_char_rq_done(rq);
 }
 
 #if defined(CONFIG_DEVICE_VALIO_UART_CONFIG)
@@ -780,16 +774,12 @@ DEV_VALIO_CANCEL(usbdev_acm_valio_cancel)
 
   LOCK_SPIN_IRQ(&dev->lock);
 
-  GCT_FOREACH(dev_request_queue, &pv->coding_notify_queue, item, {
-      struct dev_valio_rq_s *rq = dev_valio_rq_s_cast(item);
-
-      if (rq != req)
-        GCT_FOREACH_CONTINUE;
-
-      dev_request_queue_remove(&pv->coding_notify_queue, &rq->base);
+  if (rq->base.drvdata == dev)
+    {
+      dev_valio_rq_remove(&pv->coding_notify_queue, rq);
+      rq->base.drvdata = NULL;
       err = 0;
-      GCT_FOREACH_BREAK;
-    });
+    }
 
   LOCK_RELEASE_IRQ(&dev->lock);
 
@@ -804,7 +794,7 @@ DEV_VALIO_REQUEST(usbdev_acm_valio_request)
 
   if (req->attribute != VALIO_UART_CONFIG) {
     req->error = -ENOTSUP;
-    kroutine_exec(&req->base.kr);
+    dev_char_rq_done(req);
   }
 
   LOCK_SPIN_IRQ_SCOPED(&dev->lock);
@@ -819,11 +809,12 @@ DEV_VALIO_REQUEST(usbdev_acm_valio_request)
 
   done:
     req->error = 0;
-    kroutine_exec(&req->base.kr);
+    dev_char_rq_done(req);
     return;
 
   case DEVICE_VALIO_WAIT_EVENT:
-    dev_request_queue_pushback(&pv->coding_notify_queue, &req->base);
+    dev_valio_rq_pushback(&pv->coding_notify_queue, req);
+    req->base.drvdata = dev;
     return;
   }
 }
@@ -885,10 +876,10 @@ DEV_INIT(usbdev_acm_init)
   if (err)
     goto err_rbuffer;
 
-  dev_request_queue_init(&pv->read_q);
-  dev_request_queue_init(&pv->write_q);
+  dev_rq_queue_init(&pv->read_q);
+  dev_rq_queue_init(&pv->write_q);
 #if defined(CONFIG_DEVICE_VALIO_UART_CONFIG)
-  dev_request_queue_init(&pv->coding_notify_queue);
+  dev_rq_queue_init(&pv->coding_notify_queue);
 #endif
 
   struct usbdev_service_rq_s *rq = &pv->rq;
@@ -900,8 +891,8 @@ DEV_INIT(usbdev_acm_init)
   kroutine_seq_init(&pv->seq);
 
   kroutine_init_deferred_seq(&rq->kr, &usbdev_acm_ctrl_cb, &pv->seq);
-  kroutine_init_deferred_seq(&pv->wtr.base.kr, &usbdev_acm_write_cb, &pv->seq);
-  kroutine_init_deferred_seq(&pv->rtr.base.kr, &usbdev_acm_read_cb, &pv->seq);
+  dev_usbdev_rq_init_seq(&pv->wtr, &usbdev_acm_write_cb, &pv->seq);
+  dev_usbdev_rq_init_seq(&pv->rtr, &usbdev_acm_read_cb, &pv->seq);
 
   /* Push initial request on stack */
   err = usbdev_stack_request(&pv->usb, &pv->service, &pv->rq);
@@ -929,10 +920,10 @@ DEV_CLEANUP(usbdev_acm_cleanup)
   if (usbdev_stack_service_unregister(&pv->usb, &pv->service))
     return -EBUSY;
 
-  dev_request_queue_destroy(&pv->read_q);
-  dev_request_queue_destroy(&pv->write_q);
+  dev_rq_queue_destroy(&pv->read_q);
+  dev_rq_queue_destroy(&pv->write_q);
 #if defined(CONFIG_DEVICE_VALIO_UART_CONFIG)
-  dev_request_queue_destroy(&pv->coding_notify_queue);
+  dev_rq_queue_destroy(&pv->coding_notify_queue);
 #endif
 
   usbdev_stack_free(&pv->usb, pv->rbuffer);

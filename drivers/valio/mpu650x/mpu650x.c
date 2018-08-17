@@ -262,7 +262,7 @@ void mpu650x_request_serve_queue(struct device_s *dev)
   if (!pv->has_fresh_data)
     return;
 
-  if (dev_request_queue_isempty(&pv->queue)) {
+  if (dev_rq_queue_isempty(&pv->queue)) {
     //    dprintk("%s queue empty\n", __FUNCTION__);
     device_sleep_schedule(dev);
   }
@@ -288,8 +288,8 @@ void mpu650x_request_serve_queue(struct device_s *dev)
                   s->data.axis[i] = pv->value_last[i];
                 s->active = pv->stable_left || pv->has_moved;
                 rq->error = 0;
-                dev_request_queue_remove(&pv->queue, &rq->base);
-                kroutine_exec(&rq->base.kr);
+                dev_valio_rq_remove(&pv->queue, rq);
+                dev_valio_rq_done(rq);
                 break;
               }
               );
@@ -387,7 +387,7 @@ static DEV_VALIO_REQUEST(mpu650x_request)
       }
       // fallthrough
     case DEVICE_VALIO_WAIT_EVENT:
-      dev_request_queue_pushback(&pv->queue, &req->base);
+      dev_valio_rq_pushback(&pv->queue, req);
 
       if (pv->state < MPU650X_STREAMING)
         mpu650x_state_switch(dev, MPU650X_STREAMING);
@@ -398,7 +398,7 @@ static DEV_VALIO_REQUEST(mpu650x_request)
       break;
     }
 
-    kroutine_exec(&req->base.kr);
+    dev_valio_rq_done(req);
     break;
   }
 
@@ -424,7 +424,7 @@ static DEV_VALIO_REQUEST(mpu650x_request)
       break;
     }
 
-    kroutine_exec(&req->base.kr);
+    dev_valio_rq_done(req);
     break;
   }
 
@@ -451,7 +451,7 @@ static DEV_VALIO_REQUEST(mpu650x_request)
       break;
     }
 
-    kroutine_exec(&req->base.kr);
+    dev_valio_rq_done(req);
     break;
   }
 
@@ -469,7 +469,7 @@ static DEV_VALIO_CANCEL(mpu650x_cancel)
 
   GCT_FOREACH(dev_request_queue, &pv->queue, item,
               if (item == &req->base) {
-                dev_request_queue_remove(&pv->queue, &req->base);
+                dev_valio_rq_remove(&pv->queue, req);
                 return 0;
               });
 
@@ -483,7 +483,7 @@ static DEV_USE(mpu650x_use)
     struct device_s *dev = param;
     struct mpu650x_context_s *pv = dev->drv_pv;
 
-    if (dev_request_queue_isempty(&pv->queue))
+    if (dev_rq_queue_isempty(&pv->queue))
       mpu650x_state_switch(dev, MPU650X_GATE_OFF);
 
     return 0;
@@ -518,7 +518,7 @@ static DEV_INIT(mpu650x_init)
 
   dev->drv_pv = pv;
 
-  dev_request_queue_init(&pv->queue);
+  dev_rq_queue_init(&pv->queue);
 
 #ifdef CONFIG_DRIVER_MPU650X_POWERGATE
   err = dev_drv_clock_init(dev, &pv->power_source, 0, 0, NULL);
@@ -555,7 +555,7 @@ static DEV_INIT(mpu650x_init)
   dev_timer_delay_t ten_ms;
   dev_timer_init_sec(pv->timer, &ten_ms, 0, 1, 100);
 
-  kroutine_init_deferred(&pv->bus_rq.base.base.kr, &mpu650x_bus_done);
+  dev_i2c_ctrl_rq_init(&pv->bus_rq.base, &mpu650x_bus_done);
   bc_set_reg(&pv->bus_rq.vm, MPU650X_BUS_BCGLOBAL_PV, (uintptr_t)pv);
 
   pv->stable_count = 20;
@@ -589,7 +589,7 @@ static DEV_CLEANUP(mpu650x_cleanup)
 {
   struct mpu650x_context_s *pv = dev->drv_pv;
 
-  if (!dev_request_queue_isempty(&pv->queue)
+  if (!dev_rq_queue_isempty(&pv->queue)
       || pv->state != MPU650X_POWER_OFF)
     return -EBUSY;
 
@@ -599,7 +599,7 @@ static DEV_CLEANUP(mpu650x_cleanup)
 
   bus_bytecode_cleanup(&pv->bus, &pv->bus_rq);
   device_irq_source_unlink(dev, &pv->irq_ep, 1);
-  dev_request_queue_destroy(&pv->queue);
+  dev_rq_queue_destroy(&pv->queue);
 
   mem_free(pv);
 

@@ -247,7 +247,7 @@ static DEV_INIT(cmu_gpio_power_async_init)
 
   dev_clock_source_init(dev, &pv->src_ep, &cmu_gpio_power_async_ep_setup);
 
-  kroutine_init_deferred(&pv->gpio_rq.base.kr, cmu_gpio_power_async_done);
+  dev_gpio_rq_init(&pv->gpio_rq, cmu_gpio_power_async_done);
 
   pv->gpio_rq.type = DEV_GPIO_MODE;
   pv->gpio_rq.io_first

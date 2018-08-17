@@ -717,7 +717,7 @@ static DEV_INIT(ecm_init)
   if (err)
     goto err_rx_buffer;
 
-  pv->rq.pvdata = dev;
+  pv->base.pvdata = dev;
   pv->rq.type = USBDEV_GET_COMMAND; 
   pv->rq.error = 0;
 
@@ -734,9 +734,9 @@ static DEV_INIT(ecm_init)
   pv->rx_rq.rev = 1;
 
   kroutine_seq_init(&pv->seq);
-  kroutine_init_deferred_seq(&pv->rq.kr, &ecm_ctrl_cb, &pv->seq);
-  kroutine_init_deferred_seq(&pv->tx_rq.base.kr, &ecm_bulk_in_done, &pv->seq);
-  kroutine_init_deferred_seq(&pv->rx_rq.base.kr, &ecm_bulk_out_done, &pv->seq);
+  dev_timer_rq_init_seq(pv, &ecm_ctrl_cb, &pv->seq);
+  dev_usbdev_rq_init_seq(&pv->tx_rq, &ecm_bulk_in_done, &pv->seq);
+  dev_usbdev_rq_init_seq(&pv->rx_rq, &ecm_bulk_out_done, &pv->seq);
 
   usbdev_stack_request(&pv->usb, &pv->service, &pv->rq);
 

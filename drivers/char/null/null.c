@@ -53,7 +53,7 @@ static DEV_CHAR_REQUEST(dev_null_request)
       rq->error = -ENOTSUP;
     }
 
-  kroutine_exec(&rq->base.kr);
+  dev_char_rq_done(rq);
 }
 
 static DEV_INIT(dev_null_init)

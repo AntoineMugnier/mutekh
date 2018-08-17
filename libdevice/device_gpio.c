@@ -174,5 +174,5 @@ DEV_GPIO_REQUEST(dev_gpio_request_async_to_sync)
     break;
   }
 
-  kroutine_exec(&rq->base.kr);
+  dev_gpio_rq_done(rq);
 }

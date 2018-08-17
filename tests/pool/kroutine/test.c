@@ -277,7 +277,7 @@ static void test_init()
 
   ensure(dev_timer_init_sec(&timer_dev, &timer_rq.delay, NULL, 100, 1000) == 0);
 
-  kroutine_init_immediate(&timer_rq.rq.kr, irq_kr_func);
+  dev_timer_rq_init_immediate(&timer_rq, irq_kr_func);
   timer_rq.deadline = 0;
   timer_rq.rev = 0;
 

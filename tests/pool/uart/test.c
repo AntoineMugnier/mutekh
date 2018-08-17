@@ -210,7 +210,7 @@ static void char_test_start_write(struct char_test_pv_s *pv)
   rq->size = pv->wsize;
   rq->data = pv->wdata;
 
-  kroutine_init_deferred(&rq->base.kr, &char_test_tx_callback);
+  dev_char_rq_init(rq, &char_test_tx_callback);
 
   DEVICE_OP(&pv->cdev, request, rq);
 
@@ -224,7 +224,7 @@ static void char_test_start_read(struct char_test_pv_s *pv)
   rq->size = pv->rsize;
   rq->data = pv->rdata;
 
-  kroutine_init_deferred(&rq->base.kr, &char_test_rx_callback);
+  dev_char_rq_init(rq, &char_test_rx_callback);
   DEVICE_OP(&pv->cdev, request, rq);
 }
 
@@ -233,7 +233,7 @@ static struct char_test_pv_s pv;
 /* The delay is elapsed. We consider that the other board is ready to RX */
 static KROUTINE_EXEC(delay_elapsed)
 {
-  struct dev_timer_rq_s *trq = KROUTINE_CONTAINER(kr, *trq, rq.kr);
+  struct dev_timer_rq_s *trq = KROUTINE_CONTAINER(kr, *trq, base.kr);
   struct char_test_pv_s *pv = char_test_pv_s_from_trq(trq);
 
   /* Lenght of next RX */
@@ -249,12 +249,12 @@ static void wait_before_start(struct char_test_pv_s *pv)
   struct dev_timer_rq_s *trq = &pv->trq;
 
   trq->rev = 0;
-  trq->rq.pvdata = pv;
+  trq->base.pvdata = pv;
 
   dev_timer_init_sec(&pv->timer, &trq->delay, 0, 2, 1);
 
   /* Kroutine called when delay is elapsed */ 
-  kroutine_init_deferred(&trq->rq.kr, delay_elapsed);
+  dev_timer_rq_init(trq, delay_elapsed);
   ensure(DEVICE_OP(&pv->timer, request, trq) == 0);
 }
 

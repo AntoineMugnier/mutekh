@@ -105,7 +105,7 @@ DRIVER_PV(struct i2c_bb_ctx_s);
 static KROUTINE_EXEC(i2c_bb_runner)
 {
   struct i2c_bb_ctx_s *pv = KROUTINE_CONTAINER(kr, *pv, vm_runner);
-  struct device_s *dev = pv->timer_rq.rq.pvdata;
+  struct device_s *dev = pv->timer_rq.base.pvdata;
   uint16_t op;
   bool_t run = 0;
   error_t err;
@@ -383,8 +383,8 @@ static KROUTINE_EXEC(i2c_bb_gpio_done)
 
 static KROUTINE_EXEC(i2c_bb_timer_done)
 {
-  struct i2c_bb_ctx_s *pv = KROUTINE_CONTAINER(kr, *pv, timer_rq.rq.kr);
-  struct device_s *dev = pv->timer_rq.rq.pvdata;
+  struct i2c_bb_ctx_s *pv = KROUTINE_CONTAINER(kr, *pv, timer_rq.base.kr);
+  struct device_s *dev = pv->timer_rq.base.pvdata;
 
   dprintk("%s\n", __FUNCTION__);
 
@@ -453,11 +453,11 @@ static DEV_INIT(i2c_bb_init)
 
 #if HAS_ASYNC
   pv->gpio_rq.base.pvdata = dev;
-  kroutine_init_deferred(&pv->gpio_rq.base.kr, i2c_bb_gpio_done);
+  dev_gpio_rq_init(&pv->gpio_rq, i2c_bb_gpio_done);
 #endif
 
-  pv->timer_rq.rq.pvdata = dev;
-  kroutine_init_deferred(&pv->timer_rq.rq.kr, i2c_bb_timer_done);
+  pv->timer_rq.base.pvdata = dev;
+  dev_timer_rq_init(&pv->timer_rq, i2c_bb_timer_done);
   kroutine_init_deferred(&pv->vm_runner, i2c_bb_runner);
 
   bc_init(&pv->vm, &i2c_bb_io_bytecode);

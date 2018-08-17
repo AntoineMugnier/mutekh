@@ -621,7 +621,7 @@ struct dev_rfpacket_rq_s
   };
 };
 
-STRUCT_INHERIT(dev_rfpacket_rq_s, dev_request_s, base);
+DEV_REQUEST_INHERIT(rfpacket); DEV_REQUEST_QUEUE_OPS(rfpacket);
 
 /** @see dev_rfpacket_request_t */
 #define DEV_RFPACKET_REQUEST(n)	void  (n) (const struct device_rfpacket_s *accessor, ...)
