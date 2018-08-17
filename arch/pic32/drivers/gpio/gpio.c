@@ -518,6 +518,8 @@ static DEV_CLEANUP(pic32_gpio_cleanup)
     }
 #endif
   mem_free(pv);
+
+  return 0;
 }
 
 DRIVER_DECLARE(pic32_gpio_drv, 0, "PIC32 GPIO", pic32_gpio,

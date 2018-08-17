@@ -52,7 +52,8 @@ void section_data_init(void)
 
 ///////////////////////////////////////////////////// zero .bss
 
-#if defined(CONFIG_LOAD_ROM) || defined(CONFIG_LOAD_BOOTLOAD)
+#if !defined(CONFIG_LOAD_NO_ZERO_IN_BSS) && \
+  (defined(CONFIG_LOAD_ROM) || defined(CONFIG_LOAD_BOOTLOAD))
 
 void section_bss_init(void)
 {

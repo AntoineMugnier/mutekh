@@ -212,7 +212,7 @@ static void cc26xx_uart_try_write(struct device_s *dev)
 
 #define cc26xx_uart_cancel (dev_char_cancel_t*)&dev_driver_notsup_fcn
 
-DEV_CHAR_REQUEST(cc26xx_uart_request)
+static DEV_CHAR_REQUEST(cc26xx_uart_request)
 {
   struct device_s               *dev = accessor->dev;
   struct cc26xx_uart_context_s  *pv = dev->drv_pv;

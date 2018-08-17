@@ -490,6 +490,8 @@ static DEV_CLEANUP(pic32_timer_cleanup)
   device_irq_source_unlink(dev, pv->irq_ep, 3);
 
   mem_free(pv);
+
+  return 0;
 }
 
 DRIVER_DECLARE(pic32_timer_drv, 0, "PIC32 Timer", pic32_timer,

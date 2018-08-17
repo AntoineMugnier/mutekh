@@ -412,6 +412,8 @@ static DEV_CLEANUP(pic32_uart_char_cleanup)
 
   device_iomux_cleanup(dev);
   mem_free(pv);
+
+  return 0;
 }
 
 DRIVER_DECLARE(pic32_uart_drv, 0, "PIC32 UART", pic32_uart_char,

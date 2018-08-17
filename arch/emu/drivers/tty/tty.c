@@ -126,6 +126,7 @@ static DEV_INIT(emu_tty_init)
 
 static DEV_CLEANUP(emu_tty_cleanup)
 {
+  return 0;
 }
 
 #define emu_tty_use dev_use_generic

@@ -22,7 +22,9 @@
 
 #include <mutek/startup.h>
 #include <hexo/endian.h>
+#include <hexo/bit.h>
 
+#if 0
 static void *
 mem_ibmpc_memsize_probe(void *start)
 {
@@ -47,6 +49,7 @@ mem_ibmpc_memsize_probe(void *start)
 
   return (void*)x;
 }
+#endif
 
 #include <mutek/mem_alloc.h>
 #include <mutek/mem_region.h>
@@ -73,7 +76,8 @@ DEV_DECLARE_STATIC(cpu_dev, "cpu", DEVICE_FLAG_CPU, x86_drv,
 
 /////////////////////////////////////////////////////////////////////
 
+#ifdef CONFIG_ARCH_SMP
 void ibmpc_start_cpus()
 {
 }
-
+#endif

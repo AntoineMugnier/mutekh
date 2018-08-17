@@ -296,6 +296,8 @@ static DEV_CLEANUP(push_button_cleanup)
 
   /* deallocate private driver context. */
   mem_free(pv);
+
+  return 0;
 }
 
 DRIVER_DECLARE(push_button_drv, 0, "Push-button", push_button,

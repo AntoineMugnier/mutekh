@@ -304,6 +304,8 @@ static DEV_CLEANUP(gaisler_irqmp_cleanup)
   mem_free(pv->sinks);
 #endif
   mem_free(pv);
+
+  return 0;
 }
 
 DRIVER_DECLARE(gaisler_irqmp_drv, 0, "Gaisler IRQMP irq controller", gaisler_irqmp,

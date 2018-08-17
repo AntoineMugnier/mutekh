@@ -110,15 +110,13 @@ static bool_t nrf5x_is_usb_vbus_present(void)
 }
 #endif
 
+#if CONFIG_NRF5X_MODEL == 52840
 static bool_t nrf5x_clock_lfrc_is_ulp(void)
 {
-#if CONFIG_NRF5X_MODEL == 52840
   return nrf_reg_get(CLOCK_ADDR, NRF_CLOCK_LFRCMODE)
     == (NRF_CLOCK_LFRCMODE_MODE_ULP | NRF_CLOCK_LFRCMODE_STATUS_ULP);
-#else
-  return 0;
-#endif
 }
+#endif
 
 static uint_fast8_t nrf5x_clock_lf_src(void)
 {

@@ -203,6 +203,8 @@ static DEV_CLEANUP(pic32_icu_cleanup)
 
   device_iomux_cleanup(dev);
   mem_free(pv);
+
+  return 0;
 }
 
 DRIVER_DECLARE(pic32_icu_drv, 0, "PIC32 irq controller", pic32_icu,

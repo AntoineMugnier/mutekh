@@ -552,6 +552,8 @@ static DEV_CLEANUP(pic32_spi_cleanup)
 
   device_iomux_cleanup(dev);
   mem_free(pv);
+
+  return 0;
 }
 
 DRIVER_DECLARE(pic32_spi_drv, 0, "PIC32 SPI", pic32_spi,

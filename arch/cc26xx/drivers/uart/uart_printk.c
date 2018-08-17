@@ -3,6 +3,7 @@
 #include <hexo/iospace.h>
 
 #include <mutek/printk.h>
+#include <mutek/startup.h>
 
 #include <arch/cc26xx/memory_map.h>
 #include <arch/cc26xx/prcm.h>

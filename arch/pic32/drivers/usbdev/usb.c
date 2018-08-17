@@ -332,7 +332,6 @@ static error_t pic32_usbdev_read_fifo_done(struct pic32_usbdev_private_s *pv, st
                                            uint32_t size)
 {
   uint32_t x;
-  uint32_t *s = (uint32_t *)tr->data;
 
   tr->data += size;
   tr->size -= size;
@@ -343,7 +342,7 @@ static error_t pic32_usbdev_read_fifo_done(struct pic32_usbdev_private_s *pv, st
         {
         case DEV_USBDEV_CTRL_SETUP:
           assert(tr->size == 0);
-          if (usb_setup_length_get(s) == 0)
+          if (usb_setup_length_get(tr->data) == 0)
             pv->status_stage = 1;
           return 0;
         case DEV_USBDEV_PARTIAL_DATA_OUT:

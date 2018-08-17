@@ -11,7 +11,7 @@ pthread_t pthread[THREAD_COUNT];
 
 size_t count = 0;
 
-void *f(void *param)
+static void *f(void *param)
 {
   int i;
   for (i = 0; i < TEST_CYCLES; i++)

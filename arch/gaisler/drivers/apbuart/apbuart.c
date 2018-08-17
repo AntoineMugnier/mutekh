@@ -201,7 +201,7 @@ static void gaisler_apbuart_try_write(struct device_s *dev)
 
 #define gaisler_apbuart_cancel (dev_char_cancel_t*)&dev_driver_notsup_fcn
 
-DEV_CHAR_REQUEST(gaisler_apbuart_request)
+static DEV_CHAR_REQUEST(gaisler_apbuart_request)
 {
   struct device_s               *dev = accessor->dev;
   struct gaisler_apbuart_context_s	*pv = dev->drv_pv;
@@ -362,6 +362,8 @@ static DEV_CLEANUP(gaisler_apbuart_cleanup)
   dev_request_queue_destroy(&pv->write_q);
 
   mem_free(pv);
+
+  return 0;
 }
 
 DRIVER_DECLARE(gaisler_apbuart_drv, 0, "Gaisler APB UART", gaisler_apbuart,

@@ -136,7 +136,7 @@ CPU_LOCAL void *__cpu_data_base;
 static DEV_CPU_REG_INIT(x86_cpu_reg_init)
 {
   struct device_s *dev = accessor->dev;
-  struct x86_dev_private_s *pv = dev->drv_pv;
+  __unused__ struct x86_dev_private_s *pv = dev->drv_pv;
 
   /* set GDT pointer */
   cpu_x86_set_gdt(gdt, ARCH_GDT_SIZE);

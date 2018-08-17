@@ -69,6 +69,13 @@ ALWAYS_INLINE void cpu_dcache_invld(void *ptr)
 #endif
 }
 
+ALWAYS_INLINE void cpu_dcache_flush(void *ptr)
+{
+#ifndef CONFIG_CPU_CACHE_COHERENCY
+# error
+#endif
+}
+
 ALWAYS_INLINE size_t cpu_dcache_line_size(void)
 {
   return 0;			/* FIXME */

@@ -506,7 +506,7 @@ static DEV_IOMUX_SETUP(nrf5x_gpio_iomux_setup)
 static DEV_GPIO_REQUEST(nrf5x_gpio_request)
 {
   struct device_s *dev = gpio->dev;
-  struct nrf5x_gpio_private_s *pv = dev->drv_pv;
+  __unused__ struct nrf5x_gpio_private_s *pv = dev->drv_pv;
 
   logk_trace("%s\n", __FUNCTION__);
 

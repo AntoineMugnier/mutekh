@@ -2,6 +2,7 @@
 #include <mutek/printk.h>
 #include <hexo/power.h>
 #include <mutek/kroutine.h>
+#include <mutek/startup.h>
 #include <hexo/atomic.h>
 
 #define TEST_CTX_CNT 8

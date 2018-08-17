@@ -66,7 +66,7 @@ static const struct usbdev_device_info_s usbdevinfo =
   .iconfig = 0,
   .power = 50,
   .str_cnt = 2,
-  .string = "MutekH\0\Test\0"
+  .string = "MutekH\0Test\0"
 };
 
 void app_start(void)
