@@ -21,6 +21,11 @@
 
 */
 
+/**
+   @file
+   @module {Libraries::Lightweight 2d graphic}
+*/
+
 #ifndef _GFX_ARC_H_
 #define _GFX_ARC_H_
 

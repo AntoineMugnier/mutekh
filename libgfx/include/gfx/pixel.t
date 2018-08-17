@@ -21,6 +21,11 @@
 
 */
 
+/**
+   @file
+   @module {Libraries::Lightweight 2d graphic}
+*/
+
 #ifndef _GFX_PIXEL_H_
 #define _GFX_PIXEL_H_
 

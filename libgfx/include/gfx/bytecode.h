@@ -21,6 +21,11 @@
 
 */
 
+/**
+   @file
+   @module {Libraries::Lightweight 2d graphic}
+*/
+
 #ifndef _GFX_BYTECODE_H_
 #define _GFX_BYTECODE_H_
 

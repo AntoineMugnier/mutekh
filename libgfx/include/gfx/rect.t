@@ -21,6 +21,11 @@
 
 */
 
+/**
+   @file
+   @module {Libraries::Lightweight 2d graphic}
+*/
+
 #include <gfx/gfx.h>
 
 #ifndef _GFX_RECT_H_

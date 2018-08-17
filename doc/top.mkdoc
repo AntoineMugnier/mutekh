@@ -29,6 +29,7 @@
 @include ../libgomp/libgomp.mkdoc
 @include ../liblua/liblua.mkdoc
 @include ../libpersist/persist.mkdoc
+@include ../libgfx/gfx.mkdoc
 
 @include ../arch/arch.mkdoc
 @include ../cpu/cpu.mkdoc
