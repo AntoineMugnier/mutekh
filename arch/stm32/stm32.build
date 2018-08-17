@@ -90,6 +90,8 @@
   CONFIG_LOAD_EXCEPTIONS_SEPARATE undefined
   CONFIG_LOAD_EXCEPTIONS_TEXT
 
+  CONFIG_DEVICE_CLOCK undefined
+
   ########### Flash size
 
   %subsection stm32-?NNN?4
