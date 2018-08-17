@@ -35,8 +35,6 @@ objs += device_timer.o
 objs-$(CONFIG_DEVICE_SHELL_TIMER) += shell_timer.o
 endif
 
-objs-$(CONFIG_DEVICE_BLOCK) += device_block.o
-
 ifeq ($(CONFIG_DEVICE_I2C), defined)
 objs += device_i2c.o
 objs-$(CONFIG_DEVICE_SHELL_I2C) += shell_i2c.o
@@ -47,7 +45,6 @@ objs += device_spi.o
 objs-$(CONFIG_DEVICE_SHELL_SPI) += shell_spi.o
 endif
 
-objs-$(CONFIG_DEVICE_LCD) += device_lcd.o
 objs-$(CONFIG_DEVICE_IOMUX) += device_iomux.o
 
 ifeq ($(CONFIG_DEVICE_RFPACKET), defined)
