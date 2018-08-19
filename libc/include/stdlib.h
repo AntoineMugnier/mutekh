@@ -132,22 +132,67 @@ void *bsearch(
 
 /******************** random */
 
-typedef reg_t	__rand_type_t;
+/** @This specifies the maximum value returned by the
+    @ref rand and @ref random functions. @showvalue */
+#define RAND_MAX 0x7fffffff
 
-#ifdef CONFIG_LIBC_RAND_LFSR
-# define RAND_MAX	((__rand_type_t)-1)
-#else
-# define RAND_MAX	(sizeof (__rand_type_t) > 1 ? 32767 : 255)
-#endif
+/** @internal seed for standard @ref rand and @ref random functions */
+extern __compiler_uint_t __rand_seed;
 
-__rand_type_t rand(void);
-__rand_type_t rand_r(__rand_type_t *seedp);
-void srand(__rand_type_t seed);
+/** @internal pseudo random generator backend for standard functions,
+    relies on a 32 bits lfsr. */
+uint32_t __rand_r32(__compiler_uint_t *seedp);
 
-__rand_type_t random(void);
-void srandom(__rand_type_t seed);
-char *initstate(__rand_type_t seed, char *state, size_t n);
-char *setstate(char *state);
+/** @This returns a value in the range @em{[0, RAND_MAX]}. */
+ALWAYS_INLINE __compiler_sint_t rand(void)
+{
+  return __rand_r32(&__rand_seed);
+}
+
+/** @This returns a value in the range @em{[0, RAND_MAX]} and update
+    the user provided seed. */
+ALWAYS_INLINE __compiler_sint_t rand_r(__compiler_uint_t *seedp)
+{
+  return __rand_r32(seedp);
+}
+
+/** @This sets the seed used by the @ref rand and @ref random
+    functions. Because the seed is used system-wide, different
+    software componenents may update the seed, resulting in unexpected
+    behavior. */
+__attribute__((deprecated("Random seed is used system-wide")))
+ALWAYS_INLINE void srand(__compiler_uint_t seed)
+{
+  __rand_seed = seed;
+}
+
+/** @This is the same as @ref rand. */
+ALWAYS_INLINE __compiler_slong_t random(void)
+{
+  return __rand_r32(&__rand_seed);
+}
+
+/** @This is the same as @ref srand. */
+__attribute__((deprecated("Random seed is used system-wide")))
+ALWAYS_INLINE void srandom(__compiler_uint_t seed)
+{
+  __rand_seed = seed;
+}
+
+/** @This returns an unsigned 32 bits pseudo random value. The
+    internal state is 64 bits wide and can not be assigned directly.
+    @see rand_64_merge @see rand_64_r */
+uint32_t rand_64(void);
+
+/** @This returns an unsigned 32 bits pseudo random value
+    and update the user provided seed. */
+uint32_t rand_64_r(uint64_t *s);
+
+/** @This contributes entropy to the internal state which is used by
+    the @ref rand_64 function. Note that this does not just assign a
+    new value to the internal state which still depends on the
+    previous state. */
+void rand_64_merge(const void *data, size_t size);
 
 /******************** abort */
 

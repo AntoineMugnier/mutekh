@@ -22,85 +22,60 @@
 
 #include <stdlib.h>
 
-static __rand_type_t	random_seed = 1;
+/********************* standard rand */
 
-/* Use Linear congruential PRNG */
-__rand_type_t rand_r(__rand_type_t *seedp)
+__compiler_uint_t __rand_seed = 1;
+
+uint32_t __rand_r32(__compiler_uint_t *s)
 {
-  __rand_type_t	res;
+  __compiler_uint_t r = *s;
+  r |= !r;
+  r = (-(r & 1) & 0x9eb5a9de) ^ (r >> 1);
+  *s = r;
+  return r & 0x7fffffff;
+}
 
-#ifdef CONFIG_LIBC_RAND_LFSR
-  __rand_type_t	taps;
+/********************* rand 64 */
 
-  if (sizeof(__rand_type_t) == 1)
-    taps = (__rand_type_t)0xb8;
-  else if (sizeof(__rand_type_t) == 2)
-    taps = (__rand_type_t)0xec83;
-  else if (sizeof(__rand_type_t) == 4)
-    taps = (__rand_type_t)0xec82f6cbUL;
-  else if (sizeof(__rand_type_t) == 8)
-    taps = (__rand_type_t)0x81ec82f69eb5a9d3ULL;
+static uint64_t rand_64_seed = 1;
 
-  res = (*seedp >> 1) ^ ((__rand_type_t)(-(*seedp & 1)) & taps);
-  *seedp = res;
-#else
-  if (sizeof(__rand_type_t) > 1)
+static uint32_t _rand_64_r(uint64_t *s)
+{
+  uint64_t r = *s;
+
+  /* 64 bits lfsr */
+  *s = r = (-(r & 1) & 0x81ec82f69eb5a9d3ULL) ^ (r >> 1);
+
+  /* diffusion, use two 32 x 32 -> 64 mul and xor folding */
+  const uint64_t c = 2466808117 /* prime */;
+  r = ((uint32_t)r * c) ^ ((uint32_t)(r >> 32) * c);
+
+  return r ^ (r >> 32);
+}
+
+void rand_64_merge(const void *data, size_t size)
+{
+  const uint8_t *d = data;
+  uint64_t r = rand_64_seed;
+
+  while (size--)
     {
-      /* Knuth & Lewis */
-      uint32_t	x = *seedp * 1664525 + 1013904223;
-      *seedp = x;
-
-      res = (x >> 16) & 0x7fff;
+      /* use a single 32 x 32 -> 64 mul per iteration */
+      uint32_t s = r ^ *d++;
+      r ^= (uint64_t)s * 16777619 /* fnv prime */;
     }
-  else
-    {
-      uint8_t	x = *seedp * 137 + 187;
-      *seedp = x;
-      res = x;
-    }
-#endif
 
-  return res;
+  rand_64_seed = r | !r;
 }
 
-__rand_type_t rand(void)
+uint32_t rand_64()
 {
-  return rand_r(&random_seed);
+  return _rand_64_r(&rand_64_seed);
 }
 
-void srand(__rand_type_t seed)
+uint32_t rand_64_r(uint64_t *s)
 {
-#ifdef CONFIG_LIBC_RAND_LFSR
-  if (!seed)
-    seed++;
-#endif
-  random_seed = seed;
-}
-
-/* ************************************************** */
-
-__rand_type_t random(void)
-{
-  /* FIXME */
-  return rand();
-}
-
-void srandom(__rand_type_t seed)
-{
-  /* FIXME */
-  srand(seed);
-}
-
-char *initstate(__rand_type_t seed, char *state, size_t n)
-{
-  /* FIXME */
-  srand(seed);
-  return state;
-}
-
-char *setstate(char *state)
-{
-  /* FIXME */
-  return state;
+  *s |= !*s;
+  return _rand_64_r(s);
 }
 
