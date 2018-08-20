@@ -56,10 +56,12 @@ enum dev_enum_rq_type_e
 
 struct dev_enum_rq_s
 {
-  struct dev_request_s base;
+  union {
+    struct dev_request_s base;
+    FIELD_USING(struct dev_request_s, error);
+  };
 
   enum dev_enum_rq_type_e type:8;
-  error_t error;
 
   union {
     struct {

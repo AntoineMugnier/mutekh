@@ -268,7 +268,7 @@ void persist_pack(struct persist_context_s *ctx,
                   struct persist_rq_s *rq)
 {
   persist_pack_process(ctx);
-  rq->err = 0;
+  rq->error = 0;
   kroutine_exec(&rq->kr);
 }
 
@@ -446,7 +446,7 @@ static error_t persist_read_process(struct persist_context_s *ctx,
 void persist_read(struct persist_context_s *ctx,
                   struct persist_rq_s *rq)
 {
-  rq->err = persist_read_process(ctx, rq);
+  rq->error = persist_read_process(ctx, rq);
   kroutine_exec(&rq->kr);
 }
 
@@ -515,7 +515,7 @@ static error_t persist_erase_process(struct persist_context_s *ctx)
 void persist_erase(struct persist_context_s *ctx,
                    struct persist_rq_s *rq)
 {
-  rq->err = persist_erase_process(ctx);
+  rq->error = persist_erase_process(ctx);
   kroutine_exec(&rq->kr);
 }
 
@@ -598,7 +598,7 @@ static error_t persist_write_process(struct persist_context_s *ctx,
 void persist_write(struct persist_context_s *ctx,
                    struct persist_rq_s *rq)
 {
-  rq->err = persist_write_process(ctx, rq);
+  rq->error = persist_write_process(ctx, rq);
   kroutine_exec(&rq->kr);
 }
 
@@ -621,7 +621,7 @@ static error_t persist_remove_process(struct persist_context_s *ctx,
 void persist_remove(struct persist_context_s *ctx,
                     struct persist_rq_s *rq)
 {
-  rq->err = persist_remove_process(ctx, rq);
+  rq->error = persist_remove_process(ctx, rq);
   kroutine_exec(&rq->kr);
 }
 

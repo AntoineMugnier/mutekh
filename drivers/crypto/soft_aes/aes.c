@@ -81,7 +81,7 @@ static DEV_REQUEST_DELAYED_FUNC(soft_aes_process)
                             CONFIG_DRIVER_CRYPTO_SOFT_AES_CTXCOUNT);
   struct soft_aes_context_s *actx = pv->actx + ctx->cache_id;
 
-  rq->err = -ENOTSUP;
+  rq->error = -ENOTSUP;
 
   if (!ctx_ok)
     {

@@ -48,6 +48,6 @@ void soft_aes_ecb(struct soft_aes_context_s *actx,
         endian_be32_na_store(out + i + j * 4, b[j]);
     }
 
-  rq->err = 0;
+  rq->error = 0;
 }
 

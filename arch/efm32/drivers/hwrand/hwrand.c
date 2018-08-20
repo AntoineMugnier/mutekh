@@ -63,19 +63,19 @@ static DEV_CRYPTO_REQUEST(efm32_hwrand_request)
 
   struct efm32_hwrand_private_s * __restrict__ pv = dev->drv_pv;
 
-  rq->err = -ENOENT;
+  rq->error = -ENOENT;
   if (pv)
     {
       struct dev_crypto_context_s * __restrict__ ctx = rq->ctx;
 
-      rq->err = -ENOTSUP;
+      rq->error = -ENOTSUP;
       if (ctx->mode == DEV_CRYPTO_MODE_RANDOM &&
           (rq->op & DEV_CRYPTO_FINALIZE))
         {
           size_t l = pv->size - pv->ptr;
           size_t rl = rq->len;
 
-          rq->err = -ENOENT;
+          rq->error = -ENOENT;
           if (rl <= l)
             {
               uint_fast8_t ptr = pv->ptr;
@@ -83,7 +83,7 @@ static DEV_CRYPTO_REQUEST(efm32_hwrand_request)
               memcpy(rq->out, r, rl);
               memset(r, 0, rl);
               pv->ptr = ptr + rl;
-              rq->err = 0;
+              rq->error = 0;
 
               if (rl == l)
                 {

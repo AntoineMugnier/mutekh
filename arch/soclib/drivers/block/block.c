@@ -201,14 +201,14 @@ static void soclib_block_rq_start(struct device_s *dev)
   pv->running = 1;
   pv->rqtype = rq->type & ~(_DEV_MEM_FLUSH | _DEV_MEM_INVAL);
   pv->progress = 0;
-  rq->err = 0;
+  rq->error = 0;
 
   if (rq->band_mask != 1)
-    rq->err = -ENOTSUP;
+    rq->error = -ENOTSUP;
   else
-    rq->err = soclib_block_op_start(pv, rq);
+    rq->error = soclib_block_op_start(pv, rq);
 
-  if (rq->err || !pv->rqtype)
+  if (rq->error || !pv->rqtype)
     soclib_block_rq_end(dev);
 }
 
@@ -218,8 +218,8 @@ static void soclib_block_rq_end(struct device_s *dev)
   struct soclib_block_context_s *pv = dev->drv_pv;
   struct dev_mem_rq_s *rq = dev_mem_rq_head(&pv->queue);
 
-  if (rq->err == -EAGAIN)
-    rq->err = 0;
+  if (rq->error == -EAGAIN)
+    rq->error = 0;
 
   dev_mem_rq_pop(&pv->queue);
   dev_mem_rq_done(rq);
@@ -299,8 +299,8 @@ static DEV_IRQ_SRC_PROCESS(soclib_block_irq)
       if ((rq->type & _DEV_MEM_PAGE) &&
           ++pv->progress < rq->page.sc_count)
         {
-          rq->err = soclib_block_op_start(pv, rq);
-          if (!rq->err)
+          rq->error = soclib_block_op_start(pv, rq);
+          if (!rq->error)
             break;
         }
       soclib_block_rq_end(dev);
@@ -312,7 +312,7 @@ static DEV_IRQ_SRC_PROCESS(soclib_block_irq)
     case SOCLIB_BLOCK_STATUS_ERASE_ERROR:
       assert(rq != NULL);
 
-      rq->err = -EIO;
+      rq->error = -EIO;
       soclib_block_rq_end(dev);
       break;
 

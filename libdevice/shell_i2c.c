@@ -144,7 +144,7 @@ static TERMUI_CON_COMMAND_PROTOTYPE(dev_shell_i2c_scan)
       dev_i2c_spin_transaction(&data->ctrl, &rq);
 #endif
 
-      if (rq.base.err != -EHOSTUNREACH)
+      if (rq.error != -EHOSTUNREACH)
         {
           termui_con_printf(con, "found slave @ 0x%02x\n", saddr);
           count++;
@@ -171,27 +171,10 @@ static TERMUI_CON_COMMAND_PROTOTYPE(dev_shell_i2c_io)
   dev_i2c_spin_transaction(&data->ctrl, &rq);
 #endif
 
-  switch (rq.base.err)
+  if (rq.error && rq.error != -EAGAIN)
     {
-      case -EBUSY:
-        termui_con_printf(con, "Error: I2C controller busy.\n");
-        return rq.base.err;
-
-      case -EHOSTUNREACH:
-        termui_con_printf(con, "Error: Invalid slave address.\n");
-        return rq.base.err;
-
-      case -EIO:
-        termui_con_printf(con, "Error: Unexpected I/O error.\n");
-        return rq.base.err;
-
-      case -ENOTSUP:
-        termui_con_printf(con, "Error: Operation not supported.\n");
-        return rq.base.err;
-
-      case -EAGAIN:
-      default:
-        break;
+      termui_con_printf(con, "error: %i.\n", rq.error);
+      return -EINVAL;
     }
 
   bool_t restart = 0;
@@ -204,12 +187,12 @@ static TERMUI_CON_COMMAND_PROTOTYPE(dev_shell_i2c_io)
         termui_con_printf(con, "RESTART\n");
 
       if (tr->type == DEV_I2C_CTRL_TRANSACTION_WRITE &&
-          rq.base.err == -EAGAIN &&
+          rq.error == -EAGAIN &&
           i == rq.transfer_index)
         {
           termui_con_printf(con, "Error: NACK received\n");
           termui_con_printf(con, "STOP\n");
-          return rq.base.err;
+          return -EINVAL;
         }
       else
         termui_con_printf(con, "%s (%u/%u bytes): %P\n",
@@ -220,9 +203,10 @@ static TERMUI_CON_COMMAND_PROTOTYPE(dev_shell_i2c_io)
       if (i + 1 < rq.transfer_count && tr->type != data->transfer[i + 1].type)
         restart = 1;
     }
-    termui_con_printf(con, "STOP\n");
 
-  return rq.base.err;
+  termui_con_printf(con, "STOP\n");
+
+  return 0;
 }
 
 static TERMUI_CON_OPT_DECL(dev_i2c_opts) =

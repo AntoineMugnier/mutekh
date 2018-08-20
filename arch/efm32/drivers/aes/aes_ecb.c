@@ -56,5 +56,5 @@ void efm32_aes_ecb(struct efm32_aes_context_s * __restrict__ actx,
       in += 16;
     }
 
-  rq->err = 0;
+  rq->error = 0;
 }

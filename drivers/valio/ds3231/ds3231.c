@@ -155,8 +155,8 @@ static KROUTINE_EXEC(ds3231_done)
 
   assert(rq);
 
-  if (pv->i2c_txn.base.err) {
-    rq->error = pv->i2c_txn.base.err;
+  if (pv->i2c_txn.error) {
+    rq->error = pv->i2c_txn.error;
   } else if (rq->type == DEVICE_VALIO_READ) {
     struct valio_hwclock_s *clk = rq->data;
     

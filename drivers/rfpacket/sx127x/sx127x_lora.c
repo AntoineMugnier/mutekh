@@ -420,7 +420,7 @@ void sx127x_rx_timeout(struct device_s * dev)
   ++pv->stats.rx_err_count;
 #endif
 
-      rq->err = -ETIMEDOUT;
+      rq->error = -ETIMEDOUT;
       lock_release(&dev->lock);
       dev_rfpacket_rq_done(rq);
       lock_spin(&dev->lock);
@@ -615,7 +615,7 @@ void sx127x_process_request(struct device_s * dev)
       break;
 
     default:
-      rq->err = -ENOTSUP;
+      rq->error = -ENOTSUP;
       dev_rfpacket_rq_pop(&pv->queue);
 
       lock_release(&dev->lock);
@@ -652,7 +652,7 @@ DEV_RFPACKET_REQUEST(sx127x_request)
         {
           if (pv->rx_cont_rq)
             {
-              rq->err = -EBUSY;
+              rq->error = -EBUSY;
 
               lock_release(&dev->lock);
               dev_rfpacket_rq_done(rq);
@@ -855,7 +855,7 @@ void sx127x_crypto_rng_end(struct device_s * dev)
     memcpy(rq->out, rq->ctx->state_data,
            __MIN(rq->len, CONFIG_DRIVER_CRYPTO_SX127X_RNG_SIZE));
 
-  rq->err = 0;
+  rq->error = 0;
 
   lock_release(&dev->lock);
   dev_rfpacket_rq_done(rq);
@@ -894,13 +894,13 @@ DEV_CRYPTO_REQUEST(sx127x_crypto_request)
   struct device_s *         dev = accessor->dev;
   struct sx127x_private_s * pv  = dev->drv_pv;
 
-  rq->err = 0;
+  rq->error = 0;
 
   LOCK_SPIN_IRQ(&dev->lock);
 
   if (pv->state != SX127X_STATE_IDLE)
     {
-      rq->err = -EBUSY;
+      rq->error = -EBUSY;
     }
   else
     {
@@ -910,7 +910,7 @@ DEV_CRYPTO_REQUEST(sx127x_crypto_request)
 
   LOCK_RELEASE_IRQ(&dev->lock);
 
-  if (rq->err)
+  if (rq->error)
     dev_rfpacket_rq_done(rq);
 }
 
@@ -926,7 +926,7 @@ static KROUTINE_EXEC(sx127x_spi_rq_done)
 
   LOCK_SPIN_IRQ(&dev->lock);
 
-  if (srq->base.err)
+  if (srq->error)
     abort();
 
   if (pv->icount != bc_get_reg(&srq->vm, R_ICOUNT))

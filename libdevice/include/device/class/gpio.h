@@ -240,9 +240,10 @@ enum dev_gpio_request_type
 
 struct dev_gpio_rq_s
 {
-  struct dev_request_s base;
-
-  error_t error;
+  union {
+    struct dev_request_s base;
+    FIELD_USING(struct dev_request_s, error);
+  };
 
   /** index of the first io to act on */
   gpio_id_t                   io_first;

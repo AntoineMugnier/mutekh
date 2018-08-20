@@ -80,7 +80,7 @@ spi_flash_next(struct device_s *dev, error_t err)
 
   LOCK_SPIN_IRQ(&dev->lock);
   rq = dev_mem_rq_pop(&pv->queue);
-  rq->err = err;
+  rq->error = err;
   dev_mem_rq_done(rq);
 
   rq = dev_mem_rq_head(&pv->queue);
@@ -211,7 +211,7 @@ static KROUTINE_EXEC(spi_flash_srq_done)
     case SPI_FLASH_STATE_INIT: {
       pv->state = SPI_FLASH_STATE_IDLE;
 
-      if (srq->base.err)
+      if (srq->error)
         {
           err = -EIO;
           spi_flash_pv_cleanup(dev);
@@ -223,7 +223,7 @@ static KROUTINE_EXEC(spi_flash_srq_done)
 
     case SPI_FLASH_STATE_BUSY: {
       struct dev_mem_rq_s *rq;
-      err = srq->base.err ? -EIO : 0;
+      err = srq->error ? -EIO : 0;
 
       while ((rq = spi_flash_next(dev, err)))
 	{

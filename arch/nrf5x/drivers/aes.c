@@ -591,34 +591,34 @@ static bool_t nrf5x_aes_ccm(struct nrf5x_aes_private_s *pv,
   struct nrf5x_aes_state_s *state = ctx->state_data;
 
   if (!state) {
-    rq->err = -EINVAL;
+    rq->error = -EINVAL;
     return 0;
   }
 
-  rq->err = -ENOTSUP;
+  rq->error = -ENOTSUP;
 
   if (rq->op & DEV_CRYPTO_INIT) {
     memcpy(state->ccm.key, ctx->key_data, 16);
     memcpy(state->ccm.iv, rq->iv_ctr, 8);
-    rq->err = 0;
+    rq->error = 0;
   }
 
   if (rq->op & DEV_CRYPTO_FINALIZE) {
     uint8_t cleartext_size = rq->in[1] - (rq->op & DEV_CRYPTO_INVERSE ? 4 : 0);
 
     if (cleartext_size <= NRF_CCM_MAX_HW_PACKET_SIZE) {
-      rq->err = -EAGAIN;
+      rq->error = -EAGAIN;
       nrf5x_aes_ccm_hw_start(pv, rq);
       return 1;
     }
 
 #if NRF_CCM_MAX_SW_PACKET_SIZE != NRF_CCM_MAX_HW_PACKET_SIZE
     if (rq->op & DEV_CRYPTO_INVERSE)
-      rq->err = nrf5x_aes_ccm_sw_decrypt(pv, rq);
+      rq->error = nrf5x_aes_ccm_sw_decrypt(pv, rq);
     else
-      rq->err = nrf5x_aes_ccm_sw_encrypt(pv, rq);
+      rq->error = nrf5x_aes_ccm_sw_encrypt(pv, rq);
 #else
-    rq->err = -ENOTSUP;
+    rq->error = -ENOTSUP;
 #endif
   }
 
@@ -693,12 +693,12 @@ static DEV_IRQ_SRC_PROCESS(nrf5x_aes_irq)
           printk(" Ctx: %P\n", state, sizeof(*state));
           printk(" Scr: %P\n", pv->scratch, sizeof(pv->scratch));
 #endif  
-          rq->err = -EINVAL;
+          rq->error = -EINVAL;
         } else {
-          rq->err = 0;
+          rq->error = 0;
         }
       } else {
-        rq->err = 0;
+        rq->error = 0;
       }
 
       /* order_io_mem(); */
@@ -726,27 +726,27 @@ static DEV_REQUEST_DELAYED_FUNC(nrf5x_aes_process)
   struct dev_crypto_context_s *ctx = rq->ctx;
   bool_t delayed = 0;
 
-  rq->err = -ENOTSUP;
+  rq->error = -ENOTSUP;
 
   if (!ctx) {
-    rq->err = -EINVAL;
+    rq->error = -EINVAL;
     goto end;
   }
 
   switch ((int)ctx->mode) {
   case DEV_CRYPTO_MODE_ECB:
-    rq->err = nrf5x_aes_encrypt(rq);
+    rq->error = nrf5x_aes_encrypt(rq);
     break;
 
 #ifdef CONFIG_DRIVER_NRF5X_AES_RANDOM
   case DEV_CRYPTO_MODE_RANDOM:
-    rq->err = nrf5x_aes_drbg(rq);
+    rq->error = nrf5x_aes_drbg(rq);
     break;
 #endif
 
 #ifdef CONFIG_DRIVER_NRF5X_AES_CMAC
   case DEV_CRYPTO_MODE_HMAC:
-    rq->err = nrf5x_aes_cmac(rq);
+    rq->error = nrf5x_aes_cmac(rq);
     break;
 #endif
 

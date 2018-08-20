@@ -108,12 +108,12 @@ static KROUTINE_EXEC(i2c_eeprom_done)
     drq = dev_request_queue_head(&pv->queue);
     rq = dev_mem_rq_s_cast(drq);
 
-    if (pv->i2c_req.base.err) {
+    if (pv->i2c_req.error) {
         // Write ACK polling
-        if (pv->last_was_write && pv->i2c_req.base.err == -EHOSTUNREACH)
+        if (pv->last_was_write && pv->i2c_req.error == -EHOSTUNREACH)
           goto out;
 
-        rq->err = -EIO;
+        rq->error = -EIO;
         done = rq;
         goto out;
     }
@@ -237,7 +237,7 @@ static DEV_MEM_REQUEST(i2c_eeprom_request)
     LOCK_SPIN_IRQ(&dev->lock);
 
     if (rq->type & DEV_MEM_OP_PAGE_ERASE) {
-        rq->err = -ENOTSUP;
+        rq->error = -ENOTSUP;
         goto out;
     }
 
@@ -248,13 +248,13 @@ static DEV_MEM_REQUEST(i2c_eeprom_request)
         | DEV_MEM_OP_PAGE_WRITE;
     
     if (!rq->type) {
-        rq->err = -ENOTSUP;
+        rq->error = -ENOTSUP;
         goto out;
     }
 
     // More than one request bit at a time
     if (rq->type & (rq->type - 1)) {
-        rq->err = -EINVAL;
+        rq->error = -EINVAL;
         goto out;
     }
 

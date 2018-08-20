@@ -94,8 +94,10 @@ struct dev_pwm_config_s
 
 struct dev_pwm_rq_s
 {
-  /* Generic request. */
-  struct dev_request_s          base;
+  union {
+    struct dev_request_s base;
+    FIELD_USING(struct dev_request_s, error);
+  };
 
   /* Channel configurations. */
   const struct dev_pwm_config_s *cfg;
@@ -105,9 +107,6 @@ struct dev_pwm_rq_s
 
   /* Setter mask. */
   uint_fast8_t            mask;
-
-  /* Error. */
-  error_t                 error;
 };
 
 DEV_REQUEST_INHERIT(pwm); DEV_REQUEST_QUEUE_OPS(pwm);
@@ -201,7 +200,6 @@ error_t dev_pwm_wait_config(struct device_pwm_s *pdev, const struct dev_pwm_conf
      {
        .cfg = cfg,
        .chan_mask = 1,
-       .error = 0,
        .mask = mask,
      };
 
@@ -239,7 +237,6 @@ error_t dev_pwm_spin_config(struct device_pwm_s *pdev, const struct dev_pwm_conf
      {
        .cfg = cfg,
        .chan_mask = 1,
-       .error = 0,
        .mask = mask,
      };
 

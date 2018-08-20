@@ -154,7 +154,7 @@ void ntag_next(struct device_s *dev)
 
       return;
     } else {
-      mrq->err = -EINVAL;
+      mrq->error = -EINVAL;
       mrq->size = 0;
       continue;
     }
@@ -271,7 +271,7 @@ KROUTINE_EXEC(ntag_i2c_done)
   pv->i2c_rq.base.base.pvdata = NULL;
 
   logk_debug("%s %d pt nc %02x ns %02x",
-             __func__, pv->i2c_rq.base.err,
+             __func__, pv->i2c_rq.error,
              bc_get_reg(&pv->i2c_rq.vm, NTAG_I2C_BCGLOBAL_NC),
              bc_get_reg(&pv->i2c_rq.vm, NTAG_I2C_BCGLOBAL_NS));
 
@@ -295,8 +295,8 @@ KROUTINE_EXEC(ntag_i2c_done)
     switch ((uintptr_t)(rq->drvdata)) {
     case NTAG_RQ_MEM:
 #endif
-      dev_mem_rq_s_cast(rq)->err = pv->i2c_rq.base.err;
-      if (pv->i2c_rq.base.err || dev_mem_rq_s_cast(rq)->size == 0) {
+      dev_mem_rq_s_cast(rq)->err = pv->i2c_rq.error;
+      if (pv->i2c_rq.error || dev_mem_rq_s_cast(rq)->size == 0) {
         dev_mem_rq_remove(&pv->mem_queue, rq);
         kroutine_exec(&rq->kr);
         pv->rq = NULL;
@@ -305,8 +305,8 @@ KROUTINE_EXEC(ntag_i2c_done)
       break;
 
     case NTAG_RQ_CHAR:
-      if (pv->i2c_rq.base.err != -EAGAIN) {
-        dev_char_rq_s_cast(rq)->error = pv->i2c_rq.base.err;
+      if (pv->i2c_rq.error != -EAGAIN) {
+        dev_char_rq_s_cast(rq)->error = pv->i2c_rq.error;
         dev_char_rq_remove(&pv->char_queue, rq);
         kroutine_exec(&rq->kr);
         pv->rq = NULL;
@@ -328,25 +328,25 @@ DEV_MEM_REQUEST(ntag_mem_request)
   if (rq->band_mask != 1
       || rq->type & (DEV_MEM_OP_PARTIAL_READ | DEV_MEM_OP_PARTIAL_WRITE)
       ) {
-    rq->err = -ENOTSUP;
+    rq->error = -ENOTSUP;
     dev_mem_rq_done(rq);
     return;
   }
 
   if (rq->addr % 16) {
-    rq->err = -EINVAL;
+    rq->error = -EINVAL;
     dev_mem_rq_done(rq);
     return;
   }
 
   if (rq->addr + (rq->size << (4 + rq->sc_log2))
       > bc_get_reg(&pv->i2c_rq.vm, NTAG_I2C_BCGLOBAL_SIZE)) {
-    rq->err = -EINVAL;
+    rq->error = -EINVAL;
     dev_mem_rq_done(rq);
     return;
   }
     
-  rq->err = 0;
+  rq->error = 0;
 #ifdef CONFIG_DRIVER_NTAG_I2C_PASSTHROUGH
   rq->base.drvdata = (void*)(uintptr_t)NTAG_RQ_MEM;
 #endif

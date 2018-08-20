@@ -279,11 +279,12 @@ enum dev_crypto_op_e
 
 struct dev_crypto_rq_s
 {
-  struct dev_request_s                  base;
+  union {
+    struct dev_request_s base;
+    FIELD_USING(struct dev_request_s, error);
+  };
 
   enum dev_crypto_op_e                  BITFIELD(op,3);
-
-  error_t                               err;
 
   /** Key used for encryption/decryption */
   struct dev_crypto_context_s           *ctx;

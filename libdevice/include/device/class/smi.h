@@ -53,7 +53,10 @@ enum dev_smi_request_type_e
 
 struct dev_smi_rq_s
 {
-  struct dev_request_s base;
+  union {
+    struct dev_request_s base;
+    FIELD_USING(struct dev_request_s, error);
+  };
 
   /** Destination address on bus */
   uint16_t phy:5;
@@ -66,7 +69,6 @@ struct dev_smi_rq_s
   /** Value buffer. */
   uint16_t value;
 
-  error_t error;
 };
 
 DEV_REQUEST_INHERIT(smi); DEV_REQUEST_QUEUE_OPS(smi);

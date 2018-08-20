@@ -124,9 +124,11 @@ struct device_usbdev_s;
  */
 struct dev_usbdev_rq_s
 {
-  struct dev_request_s          base;
+  union {
+    struct dev_request_s base;
+    FIELD_USING(struct dev_request_s, error);
+  };
 
-  error_t                       error;
   /** Size of the @tt data buffer. For receiving data, size must be a multiple
       of the max packet size of the endpoint. */
   uint32_t                      size;

@@ -184,12 +184,12 @@ DEV_MEM_REQUEST(sd1306_request)
       || rq->type & (DEV_MEM_OP_PARTIAL_READ | DEV_MEM_OP_PAGE_READ)
       || !(rq->type & (DEV_MEM_OP_PARTIAL_WRITE | DEV_MEM_OP_PARTIAL_WRITE))
       ) {
-    rq->err = -ENOTSUP;
+    rq->error = -ENOTSUP;
     dev_mem_rq_done(rq);
     return;
   }
 
-  rq->err = 0;
+  rq->error = 0;
 
   LOCK_SPIN_IRQ_SCOPED(&dev->lock);
 

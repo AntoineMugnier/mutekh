@@ -145,9 +145,9 @@ static TERMUI_CON_COMMAND_PROTOTYPE(shell_crypto_cipher)
 
   dev_crypto_wait_op(&c->accessor, &rq);
 
-  if (rq.err)
+  if (rq.error)
     {
-      termui_con_printf(con, "err: %i\n", rq.err);
+      termui_con_printf(con, "err: %i\n", rq.error);
       return -EINVAL;
     }
 
@@ -198,9 +198,9 @@ static TERMUI_CON_COMMAND_PROTOTYPE(shell_crypto_hash)
 
   dev_crypto_wait_op(&c->accessor, &rq);
 
-  if (rq.err)
+  if (rq.error)
     {
-      termui_con_printf(con, "err: %i\n", rq.err);
+      termui_con_printf(con, "err: %i\n", rq.error);
       return -EINVAL;
     }
 
@@ -257,9 +257,9 @@ static TERMUI_CON_COMMAND_PROTOTYPE(shell_crypto_random)
 
   dev_crypto_wait_op(&c->accessor, &rq);
 
-  if (rq.err)
+  if (rq.error)
     {
-      termui_con_printf(con, "err: %i\n", rq.err);
+      termui_con_printf(con, "err: %i\n", rq.error);
       err = -EINVAL;
       goto err_rqout;
     }

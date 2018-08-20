@@ -269,7 +269,7 @@ static DEV_REQUEST_DELAYED_FUNC(soft_crc_process)
   struct dev_crypto_context_s *ctx = rq->ctx;
   struct soft_crc_state_s *st = ctx->state_data;
 
-  rq->err = -ENOTSUP;
+  rq->error = -ENOTSUP;
 
   if (ctx->mode != DEV_CRYPTO_MODE_HASH)
     goto pop;
@@ -330,7 +330,7 @@ static DEV_REQUEST_DELAYED_FUNC(soft_crc_process)
 
   if (rq->op & DEV_CRYPTO_FINALIZE)
     {
-      rq->err = -EINVAL;
+      rq->error = -EINVAL;
 
       switch (rq->len)
         {
@@ -351,7 +351,7 @@ static DEV_REQUEST_DELAYED_FUNC(soft_crc_process)
         }
     }
 
-  rq->err = 0;
+  rq->error = 0;
 
  pop:
   dev_request_delayed_end(&pv->queue, rq_);

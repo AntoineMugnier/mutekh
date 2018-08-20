@@ -160,7 +160,7 @@ device_spi_ctrl_end(struct dev_spi_ctrl_context_s *q,
       __dev_rq_queue_remove(&q->queue, &rq->base);
     }
 
-  rq->err = err;
+  rq->error = err;
   rq->enqueued = 0;
 # ifdef CONFIG_LIBC_ASSERT
   rq->cs_state = 0;
@@ -613,7 +613,7 @@ void dev_spi_transaction_start(struct device_spi_ctrl_s *ctrl,
 
   assert(!rq->base.enqueued);
 
-  rq->base.err = 0;
+  rq->error = 0;
   rq->base.enqueued = 1;
 #  ifdef CONFIG_DEVICE_SPI_BYTECODE
   rq->base.bytecode = 0;
@@ -648,7 +648,7 @@ error_t dev_spi_bytecode_start_va(struct device_spi_ctrl_s *ctrl,
 
 #  ifdef CONFIG_DEVICE_SPI_BYTECODE_TIMER
       if (device_check_accessor(&q->timer.base) &&
-          (rq->base.err = device_start(&q->timer.base)))
+          (rq->error = device_start(&q->timer.base)))
         {
           kroutine_exec(&rq->base.base.kr);
           goto err;
@@ -662,7 +662,7 @@ error_t dev_spi_bytecode_start_va(struct device_spi_ctrl_s *ctrl,
 
       bc_set_regs_va(&rq->vm, mask, ap);
 
-      rq->base.err = 0;
+      rq->error = 0;
       rq->base.enqueued = 1;
 #  ifdef CONFIG_DEVICE_SPI_TRANSACTION
       rq->base.bytecode = 1;
@@ -989,7 +989,7 @@ dev_spi_wait_bytecode(struct device_spi_ctrl_s *ctrl,
   if (err)
     return err;
   dev_request_sched_wait(&st);
-  return rq->base.err;
+  return rq->error;
 }
 # endif
 
@@ -1003,7 +1003,7 @@ dev_spi_wait_transaction(struct device_spi_ctrl_s *ctrl,
   dev_request_sched_init(&rq->base.base, &st);
   dev_spi_transaction_start(ctrl, rq);
   dev_request_sched_wait(&st);
-  return rq->base.err;
+  return rq->error;
 }
 # endif
 

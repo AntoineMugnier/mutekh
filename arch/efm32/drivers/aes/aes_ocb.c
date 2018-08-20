@@ -413,12 +413,12 @@ void efm32_aes_ocb(struct efm32_aes_context_s * __restrict__ actx,
 
   if (rq->op & DEV_CRYPTO_INVERSE)
     {
-      rq->err = dev_crypto_memcmp(rq->auth, p.p8, ctx->auth_len) ? -EBADDATA : 0;
+      rq->error = dev_crypto_memcmp(rq->auth, p.p8, ctx->auth_len) ? -EBADDATA : 0;
     }
   else
     {
       memcpy(rq->auth, p.p8, ctx->auth_len);
-      rq->err = 0;
+      rq->error = 0;
     }
 }
 

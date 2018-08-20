@@ -30,6 +30,7 @@
 #define __DEVICE_REQUEST_H__
 
 #include <hexo/types.h>
+#include <hexo/decls.h>
 
 #include <gct_platform.h>
 #include <gct/container_clist.h>
@@ -56,7 +57,11 @@
 
 struct dev_request_s
 {
-  struct kroutine_s                     kr;
+  union {
+    struct kroutine_s                     kr;
+    FIELD_ALIAS(struct kroutine_s,        pv,
+                error_t,                  error);
+  };
 
   union {
     GCT_CONTAINER_ENTRY(dev_request_queue, queue_entry);

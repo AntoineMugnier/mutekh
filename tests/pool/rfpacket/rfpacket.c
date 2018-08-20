@@ -234,13 +234,13 @@ static KROUTINE_EXEC(rfp_test_rx_callback)
   struct dev_rfpacket_rq_s *rq = KROUTINE_CONTAINER(kr, *rq, base.kr);
   struct rfp_test_pv_s *pv = rq->base.pvdata;
 
-  if (rq->err == -ENOTSUP)
+  if (rq->error == -ENOTSUP)
     printk("Bad RX configuration\n");
 
   if (rq == pv->rx_cont)
     {
       pv->rx_cont = NULL;
-      if (rq->err ==  -EBUSY)
+      if (rq->error ==  -EBUSY)
           printk("Jamming \n");
     }
   
@@ -267,10 +267,10 @@ static KROUTINE_EXEC(rfp_test_tx_callback)
   struct dev_rfpacket_rq_s *rq = KROUTINE_CONTAINER(kr, *rq, base.kr);
   struct rfp_test_pv_s *pv = rq->base.pvdata;
 
-  if (rq->err == -ENOTSUP)
+  if (rq->error == -ENOTSUP)
     printk("Bad TX configuration\n");
 
-  if (rq->err == -ETIMEDOUT)
+  if (rq->error == -ETIMEDOUT)
     printk("TX timeout\n");
 
 #ifdef RFP_TEST_SLEEP

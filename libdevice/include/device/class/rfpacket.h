@@ -542,7 +542,10 @@ enum dev_rfpacket_timestamp_anchor_e
 
 struct dev_rfpacket_rq_s
 {
-  struct dev_request_s               base;
+  union {
+    struct dev_request_s base;
+    FIELD_USING(struct dev_request_s, error);
+  };
 
   /** This specifies the RF configuration to use during the request. */
   const struct dev_rfpacket_rf_cfg_s *rf_cfg;
@@ -582,7 +585,6 @@ struct dev_rfpacket_rq_s
   int16_t                           channel;
 
   /** Request completion error, set by the driver */
-  error_t                           err;
 
   /** When a request in the queue terminates with an error or get
       canceled, all subsequent requests with the same error groups are
@@ -717,7 +719,7 @@ error_t dev_rfpacket_spin_request(
     dev_request_spin_init(&rq->base, &status);
     DEVICE_OP(accessor, request, rq, NULL);
     dev_request_spin_wait(&status);
-    return rq->err;
+    return rq->error;
 });
 
 config_depend_and2_inline(CONFIG_DEVICE_RFPACKET, CONFIG_MUTEK_CONTEXT_SCHED,
@@ -732,7 +734,7 @@ error_t dev_rfpacket_wait_request(
     dev_request_sched_init(&rq->base, &status);
     DEVICE_OP(accessor, request, rq, NULL);
     dev_request_sched_wait(&status);
-    return rq->err;
+    return rq->error;
 });
 
 #endif

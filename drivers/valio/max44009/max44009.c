@@ -322,9 +322,9 @@ KROUTINE_EXEC(max44009_init_done)
 
   assert(pv->state == MAX44009_INITING);
 
-  device_async_init_done(dev, pv->i2c_rq.base.err);
+  device_async_init_done(dev, pv->i2c_rq.error);
 
-  if (pv->i2c_rq.base.err)
+  if (pv->i2c_rq.error)
     return;
 
   pv->state = MAX44009_IDLE;

@@ -238,7 +238,7 @@ KROUTINE_EXEC(mlx90614_i2c_done)
   logk_debug("%s state %d", __func__, pv->state);
 
   if (pv->state == MLX90614_UNINITIALIZED) {
-    if (!pv->i2c_rq.base.err) {
+    if (!pv->i2c_rq.error) {
       uint32_t id0 = bc_get_reg(&pv->i2c_rq.vm, MLX90614_DISCOVER_BCOUT_ID0);
       uint32_t id1 = bc_get_reg(&pv->i2c_rq.vm, MLX90614_DISCOVER_BCOUT_ID1);
       uint32_t dual = bc_get_reg(&pv->i2c_rq.vm, MLX90614_DISCOVER_BCOUT_DUAL);
@@ -248,9 +248,9 @@ KROUTINE_EXEC(mlx90614_i2c_done)
       pv->dual = dual;
     }
 
-    device_async_init_done(dev, pv->i2c_rq.base.err);
+    device_async_init_done(dev, pv->i2c_rq.error);
 
-    if (pv->i2c_rq.base.err)
+    if (pv->i2c_rq.error)
       goto out;
   }
   

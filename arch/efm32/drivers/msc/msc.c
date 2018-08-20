@@ -105,20 +105,20 @@ static DEV_MEM_REQUEST(efm32_msc_request)
   struct efm32_msc_context_s *pv = dev->drv_pv;
 #endif
 
-  rq->err = 0;
+  rq->error = 0;
   switch (accessor->number)
     {
     case 0:                     /* RAM */
-      rq->err = dev_mem_mapped_op_helper(0x20000000, 0x20000000 + CONFIG_EFM32_RAMSIZE, rq);
+      rq->error = dev_mem_mapped_op_helper(0x20000000, 0x20000000 + CONFIG_EFM32_RAMSIZE, rq);
       break;
     case 1:                     /* FLASH code */
-      rq->err = dev_mem_flash_op(0, CONFIG_EFM32_FLASHSIZE, EFM32_FLASH_PAGE_SIZE, rq);
+      rq->error = dev_mem_flash_op(0, CONFIG_EFM32_FLASHSIZE, EFM32_FLASH_PAGE_SIZE, rq);
       break;
     case 2:                     /* FLASH userdata */
 #if CONFIG_EFM32_FAMILY == EFM32_FAMILY_GIANT
-      rq->err = dev_mem_flash_op(0x0fe00000, 0x0fe00000 + (1 << 11), 11, rq);
+      rq->error = dev_mem_flash_op(0x0fe00000, 0x0fe00000 + (1 << 11), 11, rq);
 #else
-      rq->err = dev_mem_flash_op(0x0fe00000, 0x0fe00000 + (1 << EFM32_FLASH_PAGE_SIZE),
+      rq->error = dev_mem_flash_op(0x0fe00000, 0x0fe00000 + (1 << EFM32_FLASH_PAGE_SIZE),
                                  EFM32_FLASH_PAGE_SIZE, rq);
 #endif
       break;

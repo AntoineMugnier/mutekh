@@ -60,7 +60,7 @@ void efm32_aes_cbc_encrypt(struct efm32_aes_context_s * __restrict__ actx,
   if (rq->op & DEV_CRYPTO_FINALIZE)
     memcpy(iv, out - 16, 16);
 
-  rq->err = 0;
+  rq->error = 0;
 }
 
 void efm32_aes_cbc_decrypt(struct efm32_aes_context_s * __restrict__ actx,
@@ -120,6 +120,6 @@ void efm32_aes_cbc_decrypt(struct efm32_aes_context_s * __restrict__ actx,
       endian_be32_na_store(iv + 0,  x3);
     }
 
-  rq->err = 0;
+  rq->error = 0;
 }
 

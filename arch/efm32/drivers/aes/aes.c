@@ -129,7 +129,7 @@ static DEV_REQUEST_DELAYED_FUNC(efm32_aes_process)
                 *out++ = rout.r8[r];
             }
         }
-      rq->err = 0;
+      rq->error = 0;
       goto pop;
     }
 #endif
@@ -138,7 +138,7 @@ static DEV_REQUEST_DELAYED_FUNC(efm32_aes_process)
                             CONFIG_DRIVER_EFM32_AES_CTXCOUNT);
   struct efm32_aes_context_s *actx = pv->actx + ctx->cache_id;
 
-  rq->err = -ENOTSUP;
+  rq->error = -ENOTSUP;
 
   if ((rq->op & DEV_CRYPTO_INVERSE)
 #ifdef CONFIG_DRIVER_EFM32_AES_CTR

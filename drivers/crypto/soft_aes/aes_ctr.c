@@ -77,6 +77,6 @@ void soft_aes_ctr(struct soft_aes_context_s *actx,
       memcpy(rq->iv_ctr, p.p8 + 16 - ctx->iv_len, ctx->iv_len);
     }
 
-  rq->err = 0;
+  rq->error = 0;
 }
 

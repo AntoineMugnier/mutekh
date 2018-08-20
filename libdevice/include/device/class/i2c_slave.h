@@ -165,7 +165,10 @@ enum dev_i2c_slave_op_e
 
 struct dev_i2c_slave_rq_s
 {
-  struct dev_request_s base;
+  union {
+    struct dev_request_s base;
+    FIELD_USING(struct dev_request_s, error);
+  };
 
   enum dev_i2c_slave_op_e BITFIELD(type, 2);
 
@@ -194,7 +197,6 @@ struct dev_i2c_slave_rq_s
     } selection;
   };
   
-  error_t error;
 };
 
 DEV_REQUEST_INHERIT(i2c_slave); DEV_REQUEST_QUEUE_OPS(i2c_slave);

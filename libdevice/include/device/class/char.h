@@ -147,7 +147,10 @@ enum dev_char_rq_type_e
 
 struct dev_char_rq_s
 {
-  struct dev_request_s base;
+  union {
+    struct dev_request_s base;
+    FIELD_USING(struct dev_request_s, error);
+  };
 
   /** request type */
   enum dev_char_rq_type_e type;
@@ -159,7 +162,6 @@ struct dev_char_rq_s
   size_t size;
 
   /** error code set by driver */
-  error_t error;
 };
 
 DEV_REQUEST_INHERIT(char); DEV_REQUEST_QUEUE_OPS(char);

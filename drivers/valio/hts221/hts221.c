@@ -130,12 +130,12 @@ KROUTINE_EXEC(hts221_read_done)
   struct device_s *dev = pv->i2c_rq.base.base.pvdata;
   const uint8_t *buf = bc_get_bytepack(&pv->i2c_rq.vm, HTS221_I2C_BCGLOBAL_BUFFER);
 
-  logk_trace("%s %d", __func__, pv->i2c_rq.base.err);
+  logk_trace("%s %d", __func__, pv->i2c_rq.error);
 
   LOCK_SPIN_IRQ_SCOPED(&dev->lock);
 
-  if (pv->i2c_rq.base.err) {
-    hts221_error(dev, pv, pv->i2c_rq.base.err);
+  if (pv->i2c_rq.error) {
+    hts221_error(dev, pv, pv->i2c_rq.error);
     return;
   }
 
@@ -285,14 +285,14 @@ KROUTINE_EXEC(hts221_init_done)
   struct device_s *dev = pv->i2c_rq.base.base.pvdata;
   const uint8_t *buf = bc_get_bytepack(&pv->i2c_rq.vm, HTS221_I2C_BCGLOBAL_BUFFER);
 
-  logk_trace("%s %d", __func__, pv->i2c_rq.base.err);
+  logk_trace("%s %d", __func__, pv->i2c_rq.error);
 
   LOCK_SPIN_IRQ_SCOPED(&dev->lock);
 
-  if (pv->i2c_rq.base.err) {
-    hts221_error(dev, pv, pv->i2c_rq.base.err);
+  if (pv->i2c_rq.error) {
+    hts221_error(dev, pv, pv->i2c_rq.error);
     hts221_clean(dev);
-    device_async_init_done(dev, pv->i2c_rq.base.err);
+    device_async_init_done(dev, pv->i2c_rq.error);
     return;
   }
 

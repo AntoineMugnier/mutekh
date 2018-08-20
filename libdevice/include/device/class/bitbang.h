@@ -147,7 +147,10 @@ enum dev_bitbang_sym_width_e
 
 struct dev_bitbang_rq_s
 {
-  struct dev_request_s               base;
+  union {
+    struct dev_request_s base;
+    FIELD_USING(struct dev_request_s, error);
+  };
 
   /** @This specifies the operation to perform */
   enum dev_bitbang_rq_rtype_e        type;
@@ -156,7 +159,6 @@ struct dev_bitbang_rq_s
   enum dev_bitbang_sym_width_e       sym_width;
 
   /** Request completion error, set by the driver */
-  error_t                            err;
 
   /** Number of symbols in the array. This must initialy be set to the
      size of the symbols array. When the request type is a read, this

@@ -211,7 +211,7 @@ persist_wait_read(struct persist_context_s *ctx,
   persist_sched_wait(&st);
 
   *data = rq.data;
-  return rq.err;
+  return rq.error;
 });
 
 /** Synchronous persist device operation function. This function use
@@ -235,7 +235,7 @@ persist_wait_write(struct persist_context_s *ctx,
   persist_write(ctx, &rq);
   persist_sched_wait(&st);
 
-  return rq.err;
+  return rq.error;
 });
 
 /** Synchronous persist device operation function. This function use
@@ -257,7 +257,7 @@ persist_wait_remove(struct persist_context_s *ctx,
   persist_remove(ctx, &rq);
   persist_sched_wait(&st);
 
-  return rq.err;
+  return rq.error;
 });
 
 /** Synchronous persist device operation function. This function use
@@ -280,7 +280,7 @@ persist_wait_inc(struct persist_context_s *ctx,
   persist_write(ctx, &rq);
   persist_sched_wait(&st);
 
-  return rq.err;
+  return rq.error;
 });
 
 /** Synchronous persist device operation function. This function use
@@ -305,7 +305,7 @@ persist_wait_counter_read(struct persist_context_s *ctx,
   persist_sched_wait(&st);
 
   *value = rq.counter;
-  return rq.err;
+  return rq.error;
 });
 
 #endif

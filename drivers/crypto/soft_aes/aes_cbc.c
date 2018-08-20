@@ -75,6 +75,6 @@ void soft_aes_cbc(struct soft_aes_context_s *actx,
     for (i = 0; i < 4; i++)
       endian_be32_na_store(rq->iv_ctr + i * 4, iv[i]);
 
-  rq->err = 0;
+  rq->error = 0;
 }
 

@@ -144,7 +144,7 @@ KROUTINE_EXEC(crc_done)
 {
   struct ctx_s *ctx = KROUTINE_CONTAINER(kr, *ctx, crc_rq.base.kr);
 
-  printk("CRC done %d\n", ctx->crc_rq.err);
+  printk("CRC done %d\n", ctx->crc_rq.error);
   ctx->crc_rq.op = 0;
 
   switch (ctx->mode) {

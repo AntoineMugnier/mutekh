@@ -118,7 +118,7 @@ static KROUTINE_EXEC(mcp23s17_spi_done)
     {
       case MCP23S17_REQUEST_OP:
         rq = dev_gpio_rq_head(&pv->rq_pending);
-        rq->error = pv->spi_req.base.err;
+        rq->error = pv->spi_req.error;
         switch (rq->type)
           {
             case DEV_GPIO_GET_INPUT:

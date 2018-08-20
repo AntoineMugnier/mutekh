@@ -100,7 +100,7 @@ static KROUTINE_EXEC(device_i2c_ctrl_transfer_end)
           if (!access_is_conditional(q->op)
               || (tr->err != -EHOSTUNREACH && tr->err != -EAGAIN))
             {
-              rq->err = tr->err;
+              rq->error = tr->err;
               if (device_i2c_ctrl_end(q, rq) == DEVICE_I2C_RESET)
                 {
                   q->tr_in_progress = 0;
@@ -132,7 +132,7 @@ static KROUTINE_EXEC(device_i2c_ctrl_transfer_end)
       trq->transfer_index++;
     else
     {
-      rq->err = tr->err;
+      rq->error = tr->err;
       device_i2c_ctrl_end(q, rq);
     }
 
@@ -248,7 +248,7 @@ device_i2c_ctrl_delay(struct dev_i2c_ctrl_context_s *q,
         }
     }
 
-  rq->base.err = err;
+  rq->error = err;
   return device_i2c_ctrl_end(q, &rq->base);
 }
 #  endif
@@ -467,7 +467,7 @@ device_i2c_bytecode_exec(struct dev_i2c_ctrl_context_s *q,
 
   lock_spin_irq(&q->lock);
 
-  rq->base.err = err;
+  rq->error = err;
   return device_i2c_ctrl_end(q, &rq->base);
 }
 # endif
@@ -582,7 +582,7 @@ void dev_i2c_transaction_start(struct device_i2c_ctrl_s *ctrl,
 
   assert(!rq->base.enqueued);
 
-  rq->base.err = 0;
+  rq->error = 0;
   rq->base.enqueued = 1;
   rq->base.bytecode = 0;
   rq->transfer_index = 0;
@@ -615,7 +615,7 @@ error_t dev_i2c_bytecode_start_va(struct device_i2c_ctrl_s *ctrl,
 
 #  ifdef CONFIG_DEVICE_I2C_BYTECODE_TIMER
       if (device_check_accessor(&q->timer.base) &&
-          (rq->base.err = device_start(&q->timer.base)))
+          (rq->error = device_start(&q->timer.base)))
         {
           kroutine_exec(&rq->base.base.kr);
           goto err;
@@ -628,7 +628,7 @@ error_t dev_i2c_bytecode_start_va(struct device_i2c_ctrl_s *ctrl,
 
       bc_set_regs_va(&rq->vm, mask, ap);
 
-      rq->base.err = 0;
+      rq->error = 0;
       rq->base.enqueued = 1;
       rq->base.bytecode = 1;
       rq->wakeup = 0;

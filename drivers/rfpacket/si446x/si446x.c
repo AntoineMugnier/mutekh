@@ -555,7 +555,7 @@ static inline void si446x_rfp_process_group(struct si446x_ctx_s *pv, bool_t grou
 
     assert(rq->type != DEV_RFPACKET_RQ_RX_CONT);
 
-    rq->err = -ECANCELED;
+    rq->error = -ECANCELED;
     rq->base.drvdata = NULL;
 
     dev_rfpacket_rq_pop(&pv->queue);
@@ -567,7 +567,7 @@ static void si446x_rfp_end_rxc(struct si446x_ctx_s *pv, error_t err)
   struct dev_rfpacket_rq_s * rq = pv->rx_cont;
 
   if (rq)
-    rq->err = err;
+    rq->error = err;
 
   switch (pv->state)
   {
@@ -617,13 +617,13 @@ static void si446x_rfp_end_rq(struct si446x_ctx_s *pv, error_t err)
 
   assert(rq && rq->type != DEV_RFPACKET_RQ_RX_CONT);
 
-  rq->err = err;
+  rq->error = err;
   rq->base.drvdata = NULL;
 
   dev_rfpacket_rq_pop(&pv->queue);
   dev_rfpacket_rq_done(rq);
 
-  if (rq->err)
+  if (rq->error)
     si446x_rfp_process_group(pv, rq->err_group);
 
   switch (pv->state)
@@ -916,7 +916,7 @@ static DEV_RFPACKET_REQUEST(si446x_rfp_request)
 
     logk_trace("req %d %d %d", rq->type, rq->tx_size, pv->state);
 
-    rq->err = 0;
+    rq->error = 0;
 
     if (rq->type == DEV_RFPACKET_RQ_RX_CONT)
       {
@@ -1357,7 +1357,7 @@ static KROUTINE_EXEC(si446x_spi_rq_done)
   logk_trace("bdone %d 0x%x", pv->state, pv->bc_status);
 
   if (pv->state != SI446X_STATE_INITIALISING)
-    assert(!srq->base.err);
+    assert(!srq->error);
 
   if (pv->bc_status & _MSK(STATUS_OTHER_ERR))
     {
@@ -1383,7 +1383,7 @@ static KROUTINE_EXEC(si446x_spi_rq_done)
       break;
 #endif
     case SI446X_STATE_INITIALISING:
-      if (srq->base.err)
+      if (srq->error)
         {
           si446x_clean(dev);
           device_async_init_done(dev, -EIO);

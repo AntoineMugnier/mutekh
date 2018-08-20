@@ -71,10 +71,10 @@ static DEV_MEM_REQUEST(ram_request)
   struct device_s *dev = accessor->dev;
   struct ram_context_s *pv = dev->drv_pv;
 
-  rq->err = 0;
+  rq->error = 0;
 
   if (rq->band_mask & 0xfe)
-    rq->err = -ENOENT;
+    rq->error = -ENOENT;
   else if (rq->band_mask & 1)
     {
       const struct ram_bank_s *b = pv->bank + accessor->number;

@@ -339,13 +339,13 @@ static KROUTINE_EXEC(mpu650x_bus_done)
 
   assert(dev);
 
-  dprintk("%s %d %P\n", __FUNCTION__, pv->bus_rq.base.err, pv->value_last, 12);
+  dprintk("%s %d %P\n", __FUNCTION__, pv->bus_rq.error, pv->value_last, 12);
 
   LOCK_SPIN_IRQ_SCOPED(&dev->lock);
 
   pv->bus_rq.base.base.pvdata = NULL;
 
-  if (!pv->bus_rq.base.err) {
+  if (!pv->bus_rq.error) {
     pv->error_count = 0;
   } else {
     pv->error_count++;

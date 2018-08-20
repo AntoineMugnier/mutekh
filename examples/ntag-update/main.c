@@ -173,7 +173,7 @@ KROUTINE_EXEC(crc_done)
   uint32_t got = endian_le32_na_load(ctx->buffer + 4);
   uint32_t expected = ~endian_be32_na_load(ctx->crc_data);
   
-  //printk("CRC done %d, got %08x, expected %08x\n", ctx->crc_rq.err,
+  //printk("CRC done %d, got %08x, expected %08x\n", ctx->crc_rq.error,
   //       got, expected);
 
   tag_packet_check_done(ctx, got == expected);

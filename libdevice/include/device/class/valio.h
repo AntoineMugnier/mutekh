@@ -212,7 +212,10 @@ enum dev_valio_request_type_e
     @see dev_valio_request_t */
 struct dev_valio_rq_s
 {
+  union {
     struct dev_request_s base;
+    FIELD_USING(struct dev_request_s, error);
+  };
 
     /** Attribute identifier */
     uint16_t attribute;
@@ -223,8 +226,6 @@ struct dev_valio_rq_s
     /** Data buffer used to store the value. The byte size of the
         buffer is fixed for a given attribute identifier. */
     void *data;
-
-    error_t error;
 };
 
 DEV_REQUEST_INHERIT(valio); DEV_REQUEST_QUEUE_OPS(valio);

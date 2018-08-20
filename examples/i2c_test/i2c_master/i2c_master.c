@@ -153,8 +153,8 @@ i2c_master_test_bc_1(struct i2c_master_test_ctx_s *ctx)
   dev_i2c_wait_bytecode(&ctx->i2c_ctrl, &ctx->i2c_bc_rq, &i2c_master_bc_test_1_reg,
                         0xff, 0, 1, 2, 3, 4, 5, 6, 7);
 
-  if (ctx->i2c_bc_rq.base.err)
-    return ctx->i2c_bc_rq.base.err;
+  if (ctx->i2c_bc_rq.error)
+    return ctx->i2c_bc_rq.error;
 
   dev_i2c_wait_bytecode(&ctx->i2c_ctrl, &ctx->i2c_bc_rq, &i2c_master_bc_read_debug_info, 0);
 #if I2C_MASTER_DISPLAY_DEBUG
@@ -168,8 +168,8 @@ i2c_master_test_bc_1(struct i2c_master_test_ctx_s *ctx)
   i2c_master_init_mem(ctx);
 
   dev_i2c_wait_bytecode(&ctx->i2c_ctrl, &ctx->i2c_bc_rq, &i2c_master_bc_test_1_mem, 0);
-  if (ctx->i2c_bc_rq.base.err)
-    return ctx->i2c_bc_rq.base.err;
+  if (ctx->i2c_bc_rq.error)
+    return ctx->i2c_bc_rq.error;
 
   dev_i2c_wait_bytecode(&ctx->i2c_ctrl, &ctx->i2c_bc_rq, &i2c_master_bc_read_debug_info, 0);
 #if I2C_MASTER_DISPLAY_DEBUG
@@ -201,8 +201,8 @@ i2c_master_test_bc_2(struct i2c_master_test_ctx_s *ctx)
   dev_i2c_wait_bytecode(&ctx->i2c_ctrl, &ctx->i2c_bc_rq, &i2c_master_bc_test_2_reg,
                         0xff, 0, 1, 2, 3, 4, 5, 6, 7);
 
-  if (ctx->i2c_bc_rq.base.err)
-    return ctx->i2c_bc_rq.base.err;
+  if (ctx->i2c_bc_rq.error)
+    return ctx->i2c_bc_rq.error;
 
   dev_i2c_wait_bytecode(&ctx->i2c_ctrl, &ctx->i2c_bc_rq, &i2c_master_bc_read_debug_info, 0);
 #if I2C_MASTER_DISPLAY_DEBUG
@@ -216,8 +216,8 @@ i2c_master_test_bc_2(struct i2c_master_test_ctx_s *ctx)
   i2c_master_init_mem(ctx);
 
   dev_i2c_wait_bytecode(&ctx->i2c_ctrl, &ctx->i2c_bc_rq, &i2c_master_bc_test_2_mem, 0);
-  if (ctx->i2c_bc_rq.base.err)
-    return ctx->i2c_bc_rq.base.err;
+  if (ctx->i2c_bc_rq.error)
+    return ctx->i2c_bc_rq.error;
 
   dev_i2c_wait_bytecode(&ctx->i2c_ctrl, &ctx->i2c_bc_rq, &i2c_master_bc_read_debug_info, 0);
 #if I2C_MASTER_DISPLAY_DEBUG
@@ -248,8 +248,8 @@ i2c_master_test_bc_3(struct i2c_master_test_ctx_s *ctx)
   dev_i2c_wait_bytecode(&ctx->i2c_ctrl, &ctx->i2c_bc_rq, &i2c_master_bc_test_3_reg,
                         0xff, 0, 1, 2, 3, 4, 5, 6, 7);
 
-  if (ctx->i2c_bc_rq.base.err)
-    return ctx->i2c_bc_rq.base.err;
+  if (ctx->i2c_bc_rq.error)
+    return ctx->i2c_bc_rq.error;
 
   dev_i2c_wait_bytecode(&ctx->i2c_ctrl, &ctx->i2c_bc_rq, &i2c_master_bc_read_debug_info, 0);
 #if I2C_MASTER_DISPLAY_DEBUG
@@ -263,8 +263,8 @@ i2c_master_test_bc_3(struct i2c_master_test_ctx_s *ctx)
   i2c_master_init_mem(ctx);
 
   dev_i2c_wait_bytecode(&ctx->i2c_ctrl, &ctx->i2c_bc_rq, &i2c_master_bc_test_3_mem, 0);
-  if (ctx->i2c_bc_rq.base.err)
-    return ctx->i2c_bc_rq.base.err;
+  if (ctx->i2c_bc_rq.error)
+    return ctx->i2c_bc_rq.error;
 
   dev_i2c_wait_bytecode(&ctx->i2c_ctrl, &ctx->i2c_bc_rq, &i2c_master_bc_read_debug_info, 0);
 #if I2C_MASTER_DISPLAY_DEBUG
@@ -295,8 +295,8 @@ i2c_master_test_bc_4(struct i2c_master_test_ctx_s *ctx)
   dev_i2c_wait_bytecode(&ctx->i2c_ctrl, &ctx->i2c_bc_rq, &i2c_master_bc_test_4_reg,
                         0xff, 0, 1, 2, 3, 4, 5, 6, 7);
 
-  if (ctx->i2c_bc_rq.base.err)
-    return ctx->i2c_bc_rq.base.err;
+  if (ctx->i2c_bc_rq.error)
+    return ctx->i2c_bc_rq.error;
 
   dev_i2c_wait_bytecode(&ctx->i2c_ctrl, &ctx->i2c_bc_rq, &i2c_master_bc_read_debug_info, 0);
 #if I2C_MASTER_DISPLAY_DEBUG
@@ -310,8 +310,8 @@ i2c_master_test_bc_4(struct i2c_master_test_ctx_s *ctx)
   i2c_master_init_mem(ctx);
 
   dev_i2c_wait_bytecode(&ctx->i2c_ctrl, &ctx->i2c_bc_rq, &i2c_master_bc_test_4_mem, 0);
-  if (ctx->i2c_bc_rq.base.err)
-    return ctx->i2c_bc_rq.base.err;
+  if (ctx->i2c_bc_rq.error)
+    return ctx->i2c_bc_rq.error;
 
   dev_i2c_wait_bytecode(&ctx->i2c_ctrl, &ctx->i2c_bc_rq, &i2c_master_bc_read_debug_info, 0);
 #if I2C_MASTER_DISPLAY_DEBUG
@@ -341,7 +341,7 @@ i2c_master_test_bc_5(struct i2c_master_test_ctx_s *ctx)
   dev_i2c_wait_bytecode(&ctx->i2c_ctrl, &ctx->i2c_bc_rq, &i2c_master_bc_test_5_reg,
                         0xff, 0, 1, 2, I2C_SLAVE_INVALID_BYTE, 4, 5, 6, 7);
 
-  if (ctx->i2c_bc_rq.base.err != -EAGAIN)
+  if (ctx->i2c_bc_rq.error != -EAGAIN)
     return TEST_FAILED;
 
   dev_i2c_wait_bytecode(&ctx->i2c_ctrl, &ctx->i2c_bc_rq, &i2c_master_bc_read_debug_info, 0);
@@ -358,7 +358,7 @@ i2c_master_test_bc_5(struct i2c_master_test_ctx_s *ctx)
   ctx->buffer[3] = I2C_SLAVE_INVALID_BYTE;
 
   dev_i2c_wait_bytecode(&ctx->i2c_ctrl, &ctx->i2c_bc_rq, &i2c_master_bc_test_5_mem, 0);
-  if (ctx->i2c_bc_rq.base.err != -EAGAIN)
+  if (ctx->i2c_bc_rq.error != -EAGAIN)
     return TEST_FAILED;
 
   dev_i2c_wait_bytecode(&ctx->i2c_ctrl, &ctx->i2c_bc_rq, &i2c_master_bc_read_debug_info, 0);
@@ -392,7 +392,7 @@ i2c_master_test_bc_6(struct i2c_master_test_ctx_s *ctx)
 
   ctx->i2c_bc_rq.base.saddr = slave_addr;
 
-  if (ctx->i2c_bc_rq.base.err != -EHOSTUNREACH)
+  if (ctx->i2c_bc_rq.error != -EHOSTUNREACH)
     return TEST_FAILED;
 
   /* mem */
@@ -405,7 +405,7 @@ i2c_master_test_bc_6(struct i2c_master_test_ctx_s *ctx)
 
   ctx->i2c_bc_rq.base.saddr = slave_addr;
 
-  if (ctx->i2c_bc_rq.base.err != -EHOSTUNREACH)
+  if (ctx->i2c_bc_rq.error != -EHOSTUNREACH)
     return TEST_FAILED;
 
   return 0;
@@ -430,8 +430,8 @@ i2c_master_test_bc_7(struct i2c_master_test_ctx_s *ctx)
   dev_i2c_wait_bytecode(&ctx->i2c_ctrl, &ctx->i2c_bc_rq, &i2c_master_bc_test_7_reg,
                         0x1ff, 0, 1, 2, 3, 4, 5, 6, 7, 8);
 
-  if (ctx->i2c_bc_rq.base.err)
-    return ctx->i2c_bc_rq.base.err;
+  if (ctx->i2c_bc_rq.error)
+    return ctx->i2c_bc_rq.error;
   if ((bc_get_reg(&ctx->i2c_bc_rq.vm, 8) & 0xff) != 1)
     return TEST_FAILED;
 
@@ -449,8 +449,8 @@ i2c_master_test_bc_7(struct i2c_master_test_ctx_s *ctx)
   bc_set_reg(&ctx->i2c_bc_rq.vm, 8, 8);
 
   dev_i2c_wait_bytecode(&ctx->i2c_ctrl, &ctx->i2c_bc_rq, &i2c_master_bc_test_7_mem, 0);
-  if (ctx->i2c_bc_rq.base.err)
-    return ctx->i2c_bc_rq.base.err;
+  if (ctx->i2c_bc_rq.error)
+    return ctx->i2c_bc_rq.error;
   if ((bc_get_reg(&ctx->i2c_bc_rq.vm, 8) & 0xff) != 1)
     return TEST_FAILED;
 
@@ -483,8 +483,8 @@ i2c_master_test_bc_8(struct i2c_master_test_ctx_s *ctx)
   dev_i2c_wait_bytecode(&ctx->i2c_ctrl, &ctx->i2c_bc_rq, &i2c_master_bc_test_8_reg,
                         0x1ff, 0, 1, 2, I2C_SLAVE_INVALID_BYTE, 4, 5, 6, 7, 8);
 
-  if (ctx->i2c_bc_rq.base.err)
-    return ctx->i2c_bc_rq.base.err;
+  if (ctx->i2c_bc_rq.error)
+    return ctx->i2c_bc_rq.error;
   if ((bc_get_reg(&ctx->i2c_bc_rq.vm, 8) & 0xff) != 0)
     return TEST_FAILED;
 
@@ -503,8 +503,8 @@ i2c_master_test_bc_8(struct i2c_master_test_ctx_s *ctx)
   bc_set_reg(&ctx->i2c_bc_rq.vm, 8, 8);
 
   dev_i2c_wait_bytecode(&ctx->i2c_ctrl, &ctx->i2c_bc_rq, &i2c_master_bc_test_8_mem, 0);
-  if (ctx->i2c_bc_rq.base.err)
-    return ctx->i2c_bc_rq.base.err;
+  if (ctx->i2c_bc_rq.error)
+    return ctx->i2c_bc_rq.error;
   if ((bc_get_reg(&ctx->i2c_bc_rq.vm, 8) & 0xff) != 0)
     return TEST_FAILED;
 
@@ -537,8 +537,8 @@ i2c_master_test_bc_9(struct i2c_master_test_ctx_s *ctx)
   dev_i2c_wait_bytecode(&ctx->i2c_ctrl, &ctx->i2c_bc_rq, &i2c_master_bc_test_9_reg,
                         0x1ff, 0, 1, 2, 3, 4, 5, 6, 7, 8);
 
-  if (ctx->i2c_bc_rq.base.err)
-    return ctx->i2c_bc_rq.base.err;
+  if (ctx->i2c_bc_rq.error)
+    return ctx->i2c_bc_rq.error;
   if ((bc_get_reg(&ctx->i2c_bc_rq.vm, 8) & 0xff) != 1)
     return TEST_FAILED;
 
@@ -556,8 +556,8 @@ i2c_master_test_bc_9(struct i2c_master_test_ctx_s *ctx)
   bc_set_reg(&ctx->i2c_bc_rq.vm, 8, 8);
 
   dev_i2c_wait_bytecode(&ctx->i2c_ctrl, &ctx->i2c_bc_rq, &i2c_master_bc_test_9_mem, 0);
-  if (ctx->i2c_bc_rq.base.err)
-    return ctx->i2c_bc_rq.base.err;
+  if (ctx->i2c_bc_rq.error)
+    return ctx->i2c_bc_rq.error;
   if ((bc_get_reg(&ctx->i2c_bc_rq.vm, 8) & 0xff) != 1)
     return TEST_FAILED;
 
@@ -593,8 +593,8 @@ i2c_master_test_bc_10(struct i2c_master_test_ctx_s *ctx)
 
   ctx->i2c_bc_rq.base.saddr = slave_addr;
 
-  if (ctx->i2c_bc_rq.base.err)
-    return ctx->i2c_bc_rq.base.err;
+  if (ctx->i2c_bc_rq.error)
+    return ctx->i2c_bc_rq.error;
 
   if ((bc_get_reg(&ctx->i2c_bc_rq.vm, 8) & 0xff) != 0)
     return TEST_FAILED;
@@ -610,8 +610,8 @@ i2c_master_test_bc_10(struct i2c_master_test_ctx_s *ctx)
   dev_i2c_wait_bytecode(&ctx->i2c_ctrl, &ctx->i2c_bc_rq, &i2c_master_bc_test_10_mem, 0);
   ctx->i2c_bc_rq.base.saddr = slave_addr;
 
-  if (ctx->i2c_bc_rq.base.err)
-    return ctx->i2c_bc_rq.base.err;
+  if (ctx->i2c_bc_rq.error)
+    return ctx->i2c_bc_rq.error;
 
   if ((bc_get_reg(&ctx->i2c_bc_rq.vm, 8) & 0xff) != 0)
     return TEST_FAILED;
@@ -653,8 +653,8 @@ i2c_master_test_tr_1(struct i2c_master_test_ctx_s *ctx)
   ctx->i2c_tr_rq.transfer_count = sizeof(tr) / sizeof(tr[0]);
 
   dev_i2c_wait_transaction(&ctx->i2c_ctrl, &ctx->i2c_tr_rq);
-  if (ctx->i2c_tr_rq.base.err)
-    return ctx->i2c_tr_rq.base.err;
+  if (ctx->i2c_tr_rq.error)
+    return ctx->i2c_tr_rq.error;
 
   dev_i2c_wait_bytecode(&ctx->i2c_ctrl, &ctx->i2c_bc_rq, &i2c_master_bc_read_debug_info, 0);
 #if I2C_MASTER_DISPLAY_DEBUG
@@ -700,8 +700,8 @@ i2c_master_test_tr_2(struct i2c_master_test_ctx_s *ctx)
   ctx->i2c_tr_rq.transfer_count = sizeof(tr) / sizeof(tr[0]);
 
   dev_i2c_wait_transaction(&ctx->i2c_ctrl, &ctx->i2c_tr_rq);
-  if (ctx->i2c_tr_rq.base.err)
-    return ctx->i2c_tr_rq.base.err;
+  if (ctx->i2c_tr_rq.error)
+    return ctx->i2c_tr_rq.error;
 
   dev_i2c_wait_bytecode(&ctx->i2c_ctrl, &ctx->i2c_bc_rq, &i2c_master_bc_read_debug_info, 0);
 #if I2C_MASTER_DISPLAY_DEBUG
@@ -747,8 +747,8 @@ i2c_master_test_tr_3(struct i2c_master_test_ctx_s *ctx)
   ctx->i2c_tr_rq.transfer_count = sizeof(tr) / sizeof(tr[0]);
 
   dev_i2c_wait_transaction(&ctx->i2c_ctrl, &ctx->i2c_tr_rq);
-  if (ctx->i2c_tr_rq.base.err)
-    return ctx->i2c_tr_rq.base.err;
+  if (ctx->i2c_tr_rq.error)
+    return ctx->i2c_tr_rq.error;
 
   dev_i2c_wait_bytecode(&ctx->i2c_ctrl, &ctx->i2c_bc_rq, &i2c_master_bc_read_debug_info, 0);
 #if I2C_MASTER_DISPLAY_DEBUG
@@ -797,8 +797,8 @@ i2c_master_test_tr_4(struct i2c_master_test_ctx_s *ctx)
   ctx->i2c_tr_rq.transfer_count = sizeof(tr) / sizeof(tr[0]);
 
   dev_i2c_wait_transaction(&ctx->i2c_ctrl, &ctx->i2c_tr_rq);
-  if (ctx->i2c_tr_rq.base.err)
-    return ctx->i2c_tr_rq.base.err;
+  if (ctx->i2c_tr_rq.error)
+    return ctx->i2c_tr_rq.error;
 
 #else
 
@@ -815,8 +815,8 @@ i2c_master_test_tr_4(struct i2c_master_test_ctx_s *ctx)
   ctx->i2c_tr_rq.transfer_count = sizeof(tr1) / sizeof(tr1[0]);
 
   dev_i2c_wait_transaction(&ctx->i2c_ctrl, &ctx->i2c_tr_rq);
-  if (ctx->i2c_tr_rq.base.err)
-    return ctx->i2c_tr_rq.base.err;
+  if (ctx->i2c_tr_rq.error)
+    return ctx->i2c_tr_rq.error;
 
   struct dev_i2c_ctrl_transaction_data_s tr2[] =
   {
@@ -831,8 +831,8 @@ i2c_master_test_tr_4(struct i2c_master_test_ctx_s *ctx)
   ctx->i2c_tr_rq.transfer_count = sizeof(tr2) / sizeof(tr2[0]);
 
   dev_i2c_wait_transaction(&ctx->i2c_ctrl, &ctx->i2c_tr_rq);
-  if (ctx->i2c_tr_rq.base.err)
-    return ctx->i2c_tr_rq.base.err;
+  if (ctx->i2c_tr_rq.error)
+    return ctx->i2c_tr_rq.error;
 
 #endif
 
@@ -875,7 +875,7 @@ i2c_master_test_tr_5(struct i2c_master_test_ctx_s *ctx)
   ctx->i2c_tr_rq.base.saddr = I2C_SLAVE_INVALID_ADDR;
 
   dev_i2c_wait_transaction(&ctx->i2c_ctrl, &ctx->i2c_tr_rq);
-  if (ctx->i2c_tr_rq.base.err != -EHOSTUNREACH)
+  if (ctx->i2c_tr_rq.error != -EHOSTUNREACH)
     return TEST_FAILED;
 
   ctx->i2c_tr_rq.base.saddr = slave_addr;
@@ -913,7 +913,7 @@ i2c_master_test_tr_6(struct i2c_master_test_ctx_s *ctx)
   ctx->buffer[3] = I2C_SLAVE_INVALID_BYTE;
 
   dev_i2c_wait_transaction(&ctx->i2c_ctrl, &ctx->i2c_tr_rq);
-  if (ctx->i2c_tr_rq.base.err != -EAGAIN)
+  if (ctx->i2c_tr_rq.error != -EAGAIN)
     return TEST_FAILED;
   if (ctx->i2c_tr_rq.transfer_index != 0)
     return TEST_FAILED;
@@ -964,7 +964,7 @@ i2c_master_test_tr_7(struct i2c_master_test_ctx_s *ctx)
   ctx->buffer[6] = I2C_SLAVE_INVALID_BYTE;
 
   dev_i2c_wait_transaction(&ctx->i2c_ctrl, &ctx->i2c_tr_rq);
-  if (ctx->i2c_tr_rq.base.err != -EAGAIN)
+  if (ctx->i2c_tr_rq.error != -EAGAIN)
     return TEST_FAILED;
   if (ctx->i2c_tr_rq.transfer_index != 1)
     return TEST_FAILED;

@@ -265,7 +265,7 @@ static DEV_REQUEST_DELAYED_FUNC(soft_salsa_process)
   uint32_t * __restrict__ st = ctx->state_data;
   salsa_cipher_t *cipher;
 
-  rq->err = -ENOTSUP;
+  rq->error = -ENOTSUP;
 
   switch (accessor->number)
     {
@@ -368,7 +368,7 @@ static DEV_REQUEST_DELAYED_FUNC(soft_salsa_process)
       st[7] = offset >> 32;
       st[6] = offset;
 
-      rq->err = 0;
+      rq->error = 0;
       break;
     }
 #endif
@@ -416,7 +416,7 @@ static DEV_REQUEST_DELAYED_FUNC(soft_salsa_process)
             }
           memcpy(st, rout.r32, sizeof(soft_salsa_state_t));
         }
-      rq->err = 0;
+      rq->error = 0;
       break;
     }
 #endif

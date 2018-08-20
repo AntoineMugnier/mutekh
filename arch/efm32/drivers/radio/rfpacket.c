@@ -451,7 +451,7 @@ static inline void efr32_rfp_process_group(struct radio_efr32_rfp_ctx_s *ctx, bo
     if (!rq || rq->err_group != group)
       break;
 
-    rq->err = -ECANCELED;
+    rq->error = -ECANCELED;
     dev_rfpacket_rq_pop(&ctx->queue);
     dev_rfpacket_rq_done(rq);
   }
@@ -555,9 +555,9 @@ static void efr32_rfp_end_rq(struct radio_efr32_rfp_ctx_s *ctx, error_t err)
   dev_rfpacket_rq_pop(&ctx->queue);
   dev_rfpacket_rq_done(rq);
 
-  rq->err = err;
+  rq->error = err;
 
-  if (rq->err)
+  if (rq->error)
     efr32_rfp_process_group(ctx, rq->err_group);
 
   /* Timeout has occured before we fill RX fifo */
@@ -682,7 +682,7 @@ static inline void efr32_rfp_tx_irq(struct radio_efr32_rfp_ctx_s *ctx, uint32_t 
   /* Packet sent */
     {
       /* Set timestamp */
-      rq->err = 0;
+      rq->error = 0;
       rq->tx_timestamp = 0;
     }
   else
@@ -776,7 +776,7 @@ static void efr32_rfp_idle(struct radio_efr32_rfp_ctx_s *ctx)
         return efr32_rfp_end_rq(ctx, -ENOTSUP);
 
       /* Rx continuous */	
-      rq->err = -ENOTSUP;
+      rq->error = -ENOTSUP;
       dev_rfpacket_rq_done(ctx->rx_cont);
       return;
     }
@@ -830,7 +830,7 @@ static DEV_RFPACKET_REQUEST(efr32_radio_request)
 
     efr32_radio_printk("R %d %d\n", rq->type, ctx->state);
 
-    rq->err = 0;
+    rq->error = 0;
 
     if (rq->type == DEV_RFPACKET_RQ_RX_CONT)
       {

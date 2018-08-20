@@ -219,7 +219,7 @@ static KROUTINE_EXEC(link_crypto_done)
 
   assert(task && tmp);
 
-  err = link->crypto_rq.err;
+  err = link->crypto_rq.error;
 
   if (err == -EAGAIN) {
     printk("EAGAIN in CCM ???\n");

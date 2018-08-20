@@ -619,7 +619,7 @@ static inline void sx127x_rfp_process_group(struct sx127x_private_s *pv, bool_t 
 
     assert(rq->type != DEV_RFPACKET_RQ_RX_CONT);
 
-    rq->err = -ECANCELED;
+    rq->error = -ECANCELED;
     rq->base.drvdata = NULL;
 
     dev_rfpacket_rq_pop(&pv->queue);
@@ -892,7 +892,7 @@ static KROUTINE_EXEC(sx127x_bitbang_rx_done)
   struct dev_bitbang_rq_s *rq = &pv->brq;
   
   /* End allocated RX */
-  sx127x_rfp_end_rxrq(pv, rq->err, rq->count);
+  sx127x_rfp_end_rxrq(pv, rq->error, rq->count);
 
   switch (pv->state)
   {
@@ -1059,7 +1059,7 @@ static void sx127x_rx_raw_end(struct sx127x_private_s *pv)
   {
     case SX127X_STATE_RXC_RAW_STOP:
       rq = pv->rx_cont;
-      rq->err = 0;
+      rq->error = 0;
       /* RX continuous cancelled or replaced */ 
       if (pv->next_rx_cont != pv->rx_cont)
         dev_rfpacket_rq_done(rq);
@@ -1256,7 +1256,7 @@ static void sx127x_rfp_end_rxc(struct sx127x_private_s *pv, error_t err)
 
   assert(rq);
 
-  rq->err = err;
+  rq->error = err;
 
   if (pv->next_rx_cont != pv->rx_cont)
     {
@@ -1275,7 +1275,7 @@ static void sx127x_rfp_end_rq(struct sx127x_private_s *pv, error_t err)
 
   assert(rq && rq->type != DEV_RFPACKET_RQ_RX_CONT);
 
-  rq->err = err;
+  rq->error = err;
   rq->base.drvdata = NULL;
 
   dev_rfpacket_rq_pop(&pv->queue);
@@ -1283,7 +1283,7 @@ static void sx127x_rfp_end_rq(struct sx127x_private_s *pv, error_t err)
 
   device_irq_src_disable(&pv->src_ep[1]);
 
-  if (rq->err)
+  if (rq->error)
     sx127x_rfp_process_group(pv, rq->err_group);
 
   return sx127x_rfp_idle(pv);
@@ -1753,7 +1753,7 @@ static KROUTINE_EXEC(sx127x_spi_rq_done)
   switch (pv->state)
   {
     case SX127X_STATE_INITIALISING:
-      if (srq->base.err)
+      if (srq->error)
         {
           sx127x_clean(dev);
           device_async_init_done(dev, -EIO);

@@ -356,7 +356,7 @@ void efm32_aes_ocb_encrypt(struct efm32_aes_context_s * __restrict__ actx,
 
   memcpy(rq->auth, p.p8, ctx->auth_len);
 
-  rq->err = 0;
+  rq->error = 0;
 }
 
 void efm32_aes_ocb_decrypt(struct efm32_aes_context_s * __restrict__ actx,
@@ -528,6 +528,6 @@ void efm32_aes_ocb_decrypt(struct efm32_aes_context_s * __restrict__ actx,
   uint8_t c = 0;
   for (i = 0; i < ctx->auth_len; i++)
     c = rq->auth[i] ^ p.p8[i];
-  rq->err = c ? -EBADDATA : 0;
+  rq->error = c ? -EBADDATA : 0;
 }
 

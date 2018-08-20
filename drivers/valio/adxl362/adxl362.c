@@ -111,10 +111,10 @@ KROUTINE_EXEC(adxl362_read_conv_done)
     goto next;
   }
 
-  if (pv->spi_rq.base.err)
+  if (pv->spi_rq.error)
     {
-      logk_error("%s SPI error: %d", __func__, pv->spi_rq.base.err);
-      adxl362_error(dev, pv, pv->spi_rq.base.err);
+      logk_error("%s SPI error: %d", __func__, pv->spi_rq.error);
+      adxl362_error(dev, pv, pv->spi_rq.error);
       goto end;
     }
 
@@ -221,7 +221,7 @@ KROUTINE_EXEC(adxl362_config_done)
 {
   struct adxl362_private_s  *pv  = KROUTINE_CONTAINER(kr, *pv, spi_rq.base.base.kr);
   struct device_s           *dev = pv->spi_rq.base.base.pvdata;
-  error_t                    err = pv->spi_rq.base.err;
+  error_t                    err = pv->spi_rq.error;
 
   LOCK_SPIN_IRQ(&dev->lock);
 
@@ -253,7 +253,7 @@ KROUTINE_EXEC(adxl362_init_done)
 {
   struct adxl362_private_s  *pv  = KROUTINE_CONTAINER(kr, *pv, spi_rq.base.base.kr);
   struct device_s           *dev = pv->spi_rq.base.base.pvdata;
-  error_t                    err = pv->spi_rq.base.err;
+  error_t                    err = pv->spi_rq.error;
 
   LOCK_SPIN_IRQ(&dev->lock);
 

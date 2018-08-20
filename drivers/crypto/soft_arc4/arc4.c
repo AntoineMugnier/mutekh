@@ -133,7 +133,7 @@ static DEV_REQUEST_DELAYED_FUNC(soft_arc4_process)
   struct dev_crypto_context_s *ctx = rq->ctx;
   struct soft_arc4_state_s *st = ctx->state_data;
 
-  rq->err = -ENOTSUP;
+  rq->error = -ENOTSUP;
 
   switch (ctx->mode)
     {
@@ -157,7 +157,7 @@ static DEV_REQUEST_DELAYED_FUNC(soft_arc4_process)
         }
 
       soft_arc4_stream(st, rq->in, rq->out, rq->len);
-      rq->err = 0;
+      rq->error = 0;
       break;
     }
 #endif
@@ -182,7 +182,7 @@ static DEV_REQUEST_DELAYED_FUNC(soft_arc4_process)
         }
       if (rq->op & DEV_CRYPTO_FINALIZE)
         soft_arc4_stream(st, NULL, rq->out, rq->len);
-      rq->err = 0;
+      rq->error = 0;
       break;
     }
 #endif

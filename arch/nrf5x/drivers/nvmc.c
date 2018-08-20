@@ -110,17 +110,17 @@ static DEV_MEM_REQUEST(nrf5x_nvmc_request)
   struct nrf5x_nvmc_context_s *pv = dev->drv_pv;
 #endif
 
-  rq->err = 0;
+  rq->error = 0;
   switch (accessor->number)
     {
     case BANK_CODE: {
       uint32_t size = nrf5x_flash_page_size() * nrf5x_flash_page_count();
       uint_fast8_t page_log2 = bit_msb_index(cpu_mem_read_32(NRF_FICR_CODEPAGESIZE));
-      rq->err = dev_mem_flash_op(0, size, page_log2, rq);
+      rq->error = dev_mem_flash_op(0, size, page_log2, rq);
       break;
     }
     case BANK_UICR:
-      rq->err = dev_mem_flash_op(NRF_UICR_BASE, NRF_UICR_BASE + 128, 7, rq);
+      rq->error = dev_mem_flash_op(NRF_UICR_BASE, NRF_UICR_BASE + 128, 7, rq);
       break;
     default:
       UNREACHABLE();

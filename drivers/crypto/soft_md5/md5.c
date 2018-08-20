@@ -164,7 +164,7 @@ static DEV_REQUEST_DELAYED_FUNC(soft_md5_process)
   struct dev_crypto_context_s *ctx = rq->ctx;
   struct soft_md5_state_s *st = ctx->state_data;
 
-  rq->err = -ENOTSUP;
+  rq->error = -ENOTSUP;
 
   if (ctx->mode != DEV_CRYPTO_MODE_HASH)
     goto pop;
@@ -185,7 +185,7 @@ static DEV_REQUEST_DELAYED_FUNC(soft_md5_process)
 
   if (rq->op & DEV_CRYPTO_FINALIZE)
     {
-      rq->err = -EINVAL;
+      rq->error = -EINVAL;
       if (rq->len != 16)
         goto pop;
 
@@ -215,7 +215,7 @@ static DEV_REQUEST_DELAYED_FUNC(soft_md5_process)
         endian_le32_na_store(rq->out + i * 4, st->state[i]);
     }
   
-  rq->err = 0;
+  rq->error = 0;
 
  pop:
   dev_request_delayed_end(&pv->queue, rq_);

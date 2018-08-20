@@ -222,12 +222,13 @@ struct dev_mem_page_sc_s
 
 struct dev_mem_rq_s
 {
-  struct dev_request_s          base;
+  union {
+    struct dev_request_s base;
+    FIELD_USING(struct dev_request_s, error);
+  };
 
   /** Requested operation */
   enum dev_mem_rq_type_e        BITFIELD(type,8);
-
-  error_t                       err;
 
   /** Mask of bands present in data */
   uint8_t                       band_mask;
@@ -333,7 +334,7 @@ error_t dev_mem_spin_op(struct device_mem_s *accessor,
   dev_request_spin_init(&rq->base, &st);
   DEVICE_OP(accessor, request, rq);
   dev_request_spin_wait(&st);
-  return rq->err;
+  return rq->error;
 })
 
 /** Synchronous memory device operation function. This function use
@@ -352,7 +353,7 @@ error_t dev_mem_wait_op(struct device_mem_s *accessor,
   dev_request_sched_init(&rq->base, &st);
   DEVICE_OP(accessor, request, rq);
   dev_request_sched_wait(&st);
-  return rq->err;
+  return rq->error;
 })
 
 /** @internal @This handles read/write operations to mapped memories

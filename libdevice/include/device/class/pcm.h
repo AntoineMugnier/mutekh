@@ -115,11 +115,12 @@ enum dev_pcm_data_direction_e
  */
 struct dev_pcm_rq_s
 {
-  struct dev_request_s base;
+  union {
+    struct dev_request_s base;
+    FIELD_USING(struct dev_request_s, error);
+  };
 
-  uint8_t offline_buffer_index : 1;
-
-  error_t error;
+  uint8_t offline_buffer_index :1;
 
   uint32_t sample_rate;
   uint32_t effective_sample_rate;

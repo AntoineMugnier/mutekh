@@ -79,7 +79,7 @@ void soft_aes_cmac(struct soft_aes_context_s *actx,
       in += 16;
     }
 
-  rq->err = 0;
+  rq->error = 0;
 
   if (rq->op & DEV_CRYPTO_FINALIZE)
     {
@@ -118,7 +118,7 @@ void soft_aes_cmac(struct soft_aes_context_s *actx,
             c |= endian_be32_na_load(rq->auth + i * 4) ^ iv[i];
 
           if (c)
-            rq->err = -EBADDATA;
+            rq->error = -EBADDATA;
         }
       else
         {

@@ -473,7 +473,10 @@ DRIVER_CTX_CLASS_TYPES(DRIVER_CLASS_I2C_CTRL, i2c_ctrl,
 /** @This is the I2C scheduler request base structure. */
 struct dev_i2c_ctrl_rq_s
 {
-  struct dev_request_s              base;
+  union {
+    struct dev_request_s base;
+    FIELD_USING(struct dev_request_s, error);
+  };
 
   /** @internal */
   struct device_i2c_ctrl_s          *ctrl;
@@ -481,10 +484,6 @@ struct dev_i2c_ctrl_rq_s
   /** Address of the I2C slave device (may be 7 or 10 bits wide). If this field
       is greater than 127, it will be considered as a 10 bits wide address. */
   uint16_t saddr;
-
-  /** Request completion error, the meaning is the same as for the @ref
-      dev_i2c_ctrl_transfer_s::err field. */
-  error_t err;
 
   /** @internal This flag indicates that the request has not ended yet. */
   bool_t BITFIELD(enqueued,1);
@@ -527,7 +526,10 @@ struct dev_i2c_ctrl_transaction_data_s {
 /** @This is the @xcref {I2C transaction request} structure. */
 struct dev_i2c_ctrl_transaction_rq_s
 {
-  struct dev_i2c_ctrl_rq_s base;
+  union {
+    struct dev_i2c_ctrl_rq_s base;
+    FIELD_USING(struct dev_i2c_ctrl_rq_s, error);
+  };
 
     /** Array of transfers to perform */
     struct dev_i2c_ctrl_transaction_data_s *transfer;
@@ -553,7 +555,10 @@ STRUCT_INHERIT(dev_i2c_ctrl_transaction_rq_s, dev_i2c_ctrl_rq_s, base);
 /** @This is the @xcref {I2C bytecode request} structure. */
 struct dev_i2c_ctrl_bytecode_rq_s
 {
-  struct dev_i2c_ctrl_rq_s base;
+  union {
+    struct dev_i2c_ctrl_rq_s base;
+    FIELD_USING(struct dev_i2c_ctrl_rq_s, error);
+  };
 
   /** bytecode virtual machine context */
   struct bc_context_s vm;

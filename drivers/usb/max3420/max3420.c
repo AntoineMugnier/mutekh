@@ -525,7 +525,7 @@ static KROUTINE_EXEC(max3420_spi_rq_done)
     {
       pv->pending &= ~MAX3420_INIT_MASK;
 
-      if (srq->base.err)
+      if (srq->error)
         {
           max3420_usbdev_clean(dev);
           device_async_init_done(dev, -EIO);
@@ -541,7 +541,7 @@ static KROUTINE_EXEC(max3420_spi_rq_done)
       device_async_init_done(dev, 0);
     }
 
-  assert(!srq->base.err);
+  assert(!srq->error);
 
   if (pv->event || (pv->done & MAX3420_DIS_MASK))
     max3420_usbdev_raise_event(pv);

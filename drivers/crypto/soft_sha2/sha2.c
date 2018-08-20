@@ -399,7 +399,7 @@ static DEV_REQUEST_DELAYED_FUNC(soft_sha2_process)
   struct dev_crypto_context_s *ctx = rq->ctx;
   void *st_ = ctx->state_data;
 
-  rq->err = -ENOTSUP;
+  rq->error = -ENOTSUP;
 
   if (ctx->mode != DEV_CRYPTO_MODE_HASH)
     goto pop;
@@ -466,7 +466,7 @@ static DEV_REQUEST_DELAYED_FUNC(soft_sha2_process)
   if (rq->op & DEV_CRYPTO_FINALIZE)
     {
       uint_fast8_t i;
-      rq->err = -EINVAL;
+      rq->error = -EINVAL;
       switch (accessor->number)
         {
 #ifdef CONFIG_DRIVER_CRYPTO_SOFT_SHA224
@@ -518,7 +518,7 @@ static DEV_REQUEST_DELAYED_FUNC(soft_sha2_process)
         }
     }
 
-  rq->err = 0;
+  rq->error = 0;
 
  pop:
   dev_request_delayed_end(&pv->queue, rq_);

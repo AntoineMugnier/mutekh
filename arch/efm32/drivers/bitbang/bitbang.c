@@ -113,7 +113,7 @@ static void bitbang_process_next(struct efm32_bitbang_ctx_s *pv)
         efm32_bitbang_ctx_start_tx(pv, rq);
         break; 
       default:
-        rq->err = -ENOTSUP;
+        rq->error = -ENOTSUP;
         rq->base.drvdata = NULL;
         dev_bitbang_rq_pop(&pv->queue);
         dev_bitbang_rq_done(rq);
@@ -139,7 +139,7 @@ static void efm32_bitbang_end_wr_rq(struct efm32_bitbang_ctx_s *pv)
 
   assert(rq && rq->type == DEV_BITBANG_WR);
 
-  rq->err = 0;
+  rq->error = 0;
   rq->base.drvdata = NULL;
 
   /* End current request */
@@ -179,7 +179,7 @@ static void efm32_bitbang_end_rd_rq(struct efm32_bitbang_ctx_s *pv, error_t err,
   assert(rq->type == DEV_BITBANG_RD);
 
   rq->count = size;
-  rq->err = err;
+  rq->error = err;
   rq->base.drvdata = NULL;
 
   dev_bitbang_rq_pop(&pv->queue);

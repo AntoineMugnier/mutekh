@@ -635,7 +635,10 @@ struct dev_spi_ctrl_bytecode_rq_s;
 /** @This is the SPI scheduler request base structure. */
 struct dev_spi_ctrl_rq_s
 {
-  struct dev_request_s base;
+  union {
+    struct dev_request_s base;
+    FIELD_USING(struct dev_request_s, error);
+  };
 
   /** @internal */
   struct device_spi_ctrl_s *ctrl;
@@ -651,9 +654,6 @@ struct dev_spi_ctrl_rq_s
       mechanism will be used if available. @see dev_spi_request_gpio */
   struct device_gpio_s    gpio;
 #endif
-
-  /** Request completion error */
-  error_t                  err;
 
   /** Chip select configuration of the slave */
   struct dev_spi_cs_config_s cs_cfg;
@@ -690,7 +690,10 @@ DEV_REQUEST_INHERIT(spi_ctrl);
     dev_spi_ctrl_rq_s. */
 struct dev_spi_ctrl_transaction_rq_s
 {
-  struct dev_spi_ctrl_rq_s base;
+  union {
+    struct dev_spi_ctrl_rq_s base;
+    FIELD_USING(struct dev_spi_ctrl_rq_s, error);
+  };
 
   /** Transfer data buffer */
   struct dev_spi_ctrl_data_s data;
@@ -710,7 +713,10 @@ STRUCT_INHERIT(dev_spi_ctrl_transaction_rq_s, dev_spi_ctrl_rq_s, base);
     dev_spi_ctrl_rq_s. */
 struct dev_spi_ctrl_bytecode_rq_s
 {
-  struct dev_spi_ctrl_rq_s base;
+  union {
+    struct dev_spi_ctrl_rq_s base;
+    FIELD_USING(struct dev_spi_ctrl_rq_s, error);
+  };
 
   /** bytecode virtual machine context */
   struct bc_context_s      vm;

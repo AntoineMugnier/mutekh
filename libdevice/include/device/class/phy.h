@@ -56,7 +56,10 @@ enum dev_phy_request_type_e
 
 struct dev_phy_rq_s
 {
-  struct dev_request_s base;
+  union {
+    struct dev_request_s base;
+    FIELD_USING(struct dev_request_s, error);
+  };
 
   enum dev_phy_request_type_e type;
 

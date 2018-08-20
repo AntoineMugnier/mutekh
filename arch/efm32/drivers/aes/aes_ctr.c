@@ -94,6 +94,6 @@ void efm32_aes_ctr(struct efm32_aes_context_s * __restrict__ actx,
       memcpy(rq->iv_ctr, p.p8 + 16 - ctx->iv_len, ctx->iv_len);
     }
 
-  rq->err = 0;
+  rq->error = 0;
 }
 
