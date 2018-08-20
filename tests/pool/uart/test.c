@@ -145,7 +145,7 @@ static void char_test_cycle(struct char_test_pv_s *pv)
 
 static KROUTINE_EXEC(char_test_tx_callback)
 {
-  struct dev_char_rq_s *rq = KROUTINE_CONTAINER(kr, *rq, base.kr);
+  struct dev_char_rq_s *rq = dev_char_rq_from_kr(kr);
   struct char_test_pv_s *pv = rq->pvdata;
 
   if (rq->error)
@@ -167,7 +167,7 @@ static KROUTINE_EXEC(char_test_tx_callback)
 
 static KROUTINE_EXEC(char_test_rx_callback)
 {
-  struct dev_char_rq_s *rq = KROUTINE_CONTAINER(kr, *rq, base.kr);
+  struct dev_char_rq_s *rq = dev_char_rq_from_kr(kr);
   struct char_test_pv_s *pv = rq->pvdata;
 
   if (rq->error)

@@ -867,7 +867,7 @@ static KROUTINE_EXEC(sx127x_rx_raw_timeout_kr)
 
 static KROUTINE_EXEC(sx127x_bitbang_tx_done)
 {
-  struct dev_bitbang_rq_s *rq = KROUTINE_CONTAINER(kr, *rq, base.kr);
+  struct dev_bitbang_rq_s *rq = dev_bitbang_rq_from_kr(kr);
   struct sx127x_private_s *pv = sx127x_private_s_from_brq(rq);
 
   LOCK_SPIN_IRQ(&pv->dev->lock);
@@ -884,7 +884,7 @@ static KROUTINE_EXEC(sx127x_bitbang_tx_done)
 
 static KROUTINE_EXEC(sx127x_bitbang_rx_done)
 {
-  struct dev_bitbang_rq_s *rq = KROUTINE_CONTAINER(kr, *rq, base.kr);
+  struct dev_bitbang_rq_s *rq = dev_bitbang_rq_from_kr(kr);
   struct sx127x_private_s *pv = sx127x_private_s_from_brq(rq);
 
   LOCK_SPIN_IRQ(&pv->dev->lock);

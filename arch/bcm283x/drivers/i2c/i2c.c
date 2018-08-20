@@ -181,7 +181,7 @@ bcm283x_i2c_start_write(struct bcm283x_i2c_private_s *pv)
 static
 KROUTINE_EXEC(bcm283x_i2c_timeout)
 {
-  struct dev_timer_rq_s         *rq = KROUTINE_CONTAINER(kr, *rq, base.kr);
+  struct dev_timer_rq_s *rq = dev_timer_rq_from_kr(kr);
   struct device_s               *dev = rq->pvdata;
   struct bcm283x_i2c_private_s  *pv = dev->drv_pv;
 

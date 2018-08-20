@@ -14,7 +14,7 @@ DRIVER_PV(struct devinit_test_pv_s
 # ifdef CONFIG_DEVICE_INIT_ASYNC
 static KROUTINE_EXEC(devinit_test_timeout)
 {
-  struct dev_timer_rq_s *rq = KROUTINE_CONTAINER(kr, *rq, base.kr);
+  struct dev_timer_rq_s *rq = dev_timer_rq_from_kr(kr);
   struct device_s *dev = rq->pvdata;
   struct devinit_test_pv_s *pv = dev->drv_pv;
 

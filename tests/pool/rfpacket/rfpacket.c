@@ -231,7 +231,7 @@ static struct dev_rfpacket_rx_s *rfp_test_rx_alloc(struct dev_rfpacket_rq_s *rq,
 
 static KROUTINE_EXEC(rfp_test_rx_callback)
 {
-  struct dev_rfpacket_rq_s *rq = KROUTINE_CONTAINER(kr, *rq, base.kr);
+  struct dev_rfpacket_rq_s *rq = dev_rfpacket_rq_from_kr(kr);
   struct rfp_test_pv_s *pv = rq->pvdata;
 
   if (rq->error == -ENOTSUP)
@@ -264,7 +264,7 @@ static int16_t rfp_test_set_rand_power()
 
 static KROUTINE_EXEC(rfp_test_tx_callback)
 {
-  struct dev_rfpacket_rq_s *rq = KROUTINE_CONTAINER(kr, *rq, base.kr);
+  struct dev_rfpacket_rq_s *rq = dev_rfpacket_rq_from_kr(kr);
   struct rfp_test_pv_s *pv = rq->pvdata;
 
   if (rq->error == -ENOTSUP)

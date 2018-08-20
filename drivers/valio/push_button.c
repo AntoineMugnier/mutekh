@@ -70,7 +70,7 @@ DRIVER_PV(struct push_button_context_s
 
 static KROUTINE_EXEC(push_button_lock_timeout)
 {
-   struct dev_valio_rq_s *rq = KROUTINE_CONTAINER(kr, *rq, base.kr);
+   struct dev_valio_rq_s *rq = dev_valio_rq_from_kr(kr);
    struct device_s *dev = rq->pvdata;
    struct push_button_context_s *pv  = dev->drv_pv;
 

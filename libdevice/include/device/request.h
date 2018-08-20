@@ -246,6 +246,14 @@ ALWAYS_INLINE void                                                      \
 dev_##class_##_rq_done(struct dev_##class_##_rq_s *rq)                  \
 {                                                                       \
   kroutine_exec(&rq->base.kr);                                          \
+}                                                                       \
+                                                                        \
+/** @This retrieves a pointer to the request when in the request        \
+    completion callback routine. */                                     \
+ALWAYS_INLINE struct dev_##class_##_rq_s *                              \
+dev_##class_##_rq_from_kr(struct kroutine_s *kr)                        \
+{                                                                       \
+  return dev_##class_##_rq_s##_cast(dev_request_s_from_kr(kr));         \
 }
 
 struct dev_request_status_s
