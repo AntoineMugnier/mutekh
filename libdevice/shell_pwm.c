@@ -87,12 +87,12 @@ TERMUI_CON_COMMAND_PROTOTYPE(dev_shell_pwm_config)
   if (used & PWM_OPT_POL)
     data->mask |= DEV_PWM_MASK_POL;
 
-  error_t err = dev_pwm_wait_config(&data->pwm, &data->cfg, data->mask);
+  error_t err = dev_pwm_wait_op(&data->pwm, &data->cfg, data->mask);
 
   if (err)
-    termui_con_printf(con, "error: failed to apply pwm configuration.\n");
+    termui_con_printf(con, "error: %i.\n", err);
 
-  return err;
+  return 0;
 }
 
 static TERMUI_CON_OPT_DECL(dev_pwm_opts) =

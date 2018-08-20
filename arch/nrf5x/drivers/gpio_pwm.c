@@ -276,7 +276,7 @@ static DEV_IRQ_SRC_PROCESS(nrf5x_gpio_pwm_irq)
   nrf5x_gpio_pwm_update(pv, 0);
 }
 
-static DEV_PWM_CONFIG(nrf5x_gpio_pwm_config)
+static DEV_PWM_REQUEST(nrf5x_gpio_pwm_request)
 {
   struct device_s *dev = pdev->dev;
   struct nrf5x_gpio_pwm_context_s *pv = dev->drv_pv;

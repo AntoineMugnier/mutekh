@@ -44,7 +44,7 @@ uint8_t on_led_color_write(struct ble_gattdb_client_s *client,
   };
 
   dev_request_sched_init(&rq.base, &status);
-  DEVICE_OP(&led->pwm, config, &rq);
+  DEVICE_OP(&led->pwm, request, &rq);
   dev_request_sched_wait(&status);
 
   return 0;
@@ -86,7 +86,7 @@ error_t led_service_register(struct led_s *led,
   };
 
   dev_request_sched_init(&rq.base, &status);
-  DEVICE_OP(&led->pwm, config, &rq);
+  DEVICE_OP(&led->pwm, request, &rq);
   dev_request_sched_wait(&status);
 
   printk("PWM init: %d\n", rq.error);

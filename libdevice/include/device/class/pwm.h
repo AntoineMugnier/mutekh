@@ -113,8 +113,8 @@ struct dev_pwm_rq_s
 DEV_REQUEST_INHERIT(pwm); DEV_REQUEST_QUEUE_OPS(pwm);
 
 /** @see dev_pwm_config_t */
-#define DEV_PWM_CONFIG(n) void (n)(struct device_pwm_s *pdev, \
-                                  struct dev_pwm_rq_s  *rq)
+#define DEV_PWM_REQUEST(n) void (n)(struct device_pwm_s *pdev, \
+                                    struct dev_pwm_rq_s  *rq)
 
 /** @This configures some PWM channels. The first channel to configure
     is identified by the device accessor number. Subsequent channels
@@ -169,17 +169,17 @@ DEV_REQUEST_INHERIT(pwm); DEV_REQUEST_QUEUE_OPS(pwm);
 
    The kroutine of the request may be executed from within this
    function. Please read @xref {Nested device request completion}. */
-typedef DEV_PWM_CONFIG(dev_pwm_config_t);
+typedef DEV_PWM_REQUEST(dev_pwm_request_t);
 
 DRIVER_CLASS_TYPES(DRIVER_CLASS_PWM, pwm,
-                   dev_pwm_config_t *f_config;
+                   dev_pwm_request_t *f_request;
                   );
 
 /** @see driver_pwm_s */
 #define DRIVER_PWM_METHODS(prefix)                            \
   ((const struct driver_class_s*)&(const struct driver_pwm_s){  \
     .class_ = DRIVER_CLASS_PWM,                               \
-    .f_config = prefix ## _config,                            \
+    .f_request = prefix ## _request,                            \
   })
 
 

@@ -165,7 +165,7 @@ static void efm32_pwm_polarity(struct device_s *dev, uint_fast8_t channel, enum 
   cpu_mem_write_32(pv->addr + EFM32_TIMER_CC_CTRL_ADDR(channel), endian_le32(x));
 }
 
-static DEV_PWM_CONFIG(efm32_pwm_config)
+static DEV_PWM_REQUEST(efm32_pwm_request)
 {
   struct device_s            *dev = pdev->dev;
   struct efm32_pwm_private_s *pv  = dev->drv_pv;
