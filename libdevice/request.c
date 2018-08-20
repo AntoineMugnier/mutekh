@@ -35,15 +35,6 @@ GCT_CONTAINER_PROTOTYPES(dev_request_pqueue, extern inline, dev_rq_pqueue,
 GCT_CONTAINER_PROTOTYPES(dev_request_pqueue, extern inline, __dev_rq_pqueue,
                          head, prev, next);
 
-extern inline KROUTINE_EXEC(dev_request_spin_done);
-
-extern inline void
-dev_request_spin_init(struct dev_request_s *rq,
-                      struct dev_request_status_s *status);
-
-extern inline void
-dev_request_spin_wait(struct dev_request_status_s *status);
-
 #ifdef CONFIG_MUTEK_CONTEXT_SCHED
 
 extern inline KROUTINE_EXEC(dev_request_sched_done);

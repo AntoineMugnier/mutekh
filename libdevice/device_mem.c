@@ -37,10 +37,6 @@ dev_mem_wait_op(struct device_mem_s *accessor,
                 struct dev_mem_rq_s *rq);
 #endif
 
-extern inline error_t
-dev_mem_spin_op(struct device_mem_s *accessor,
-                struct dev_mem_rq_s *rq);
-
 error_t dev_mem_mapped_op_helper(uintptr_t base, uintptr_t end,
                                  struct dev_mem_rq_s * __restrict__ rq)
 {

@@ -27,10 +27,6 @@ const char dev_rfpacket_encoding_e[] = ENUM_DESC_DEV_RFPACKET_ENCODING_E;
 const char dev_rfpacket_format_e[] = ENUM_DESC_DEV_RFPACKET_FORMAT_E;
 const char dev_rfpacket_lora_encoding_e[] = ENUM_DESC_DEV_RFPACKET_LORA_ENCODING_E;
 
-extern inline error_t dev_rfpacket_spin_request(
-       const struct device_rfpacket_s *accessor,
-       struct dev_rfpacket_rq_s *rq);
-
 # ifdef CONFIG_MUTEK_CONTEXT_SCHED
 
 extern inline error_t dev_rfpacket_wait_request(

@@ -138,11 +138,7 @@ static TERMUI_CON_COMMAND_PROTOTYPE(dev_shell_i2c_scan)
   for (uint8_t saddr = 0; saddr < 128; ++saddr)
     {
       rq.base.saddr = saddr;
-#if defined(CONFIG_MUTEK_CONTEXT_SCHED)
       dev_i2c_wait_transaction(&data->ctrl, &rq);
-#else
-      dev_i2c_spin_transaction(&data->ctrl, &rq);
-#endif
 
       if (rq.error != -EHOSTUNREACH)
         {
@@ -165,11 +161,7 @@ static TERMUI_CON_COMMAND_PROTOTYPE(dev_shell_i2c_io)
   rq.transfer = data->transfer;
   rq.transfer_count = data->transfer_count;
 
-#if defined(CONFIG_MUTEK_CONTEXT_SCHED)
   dev_i2c_wait_transaction(&data->ctrl, &rq);
-#else
-  dev_i2c_spin_transaction(&data->ctrl, &rq);
-#endif
 
   if (rq.error && rq.error != -EAGAIN)
     {

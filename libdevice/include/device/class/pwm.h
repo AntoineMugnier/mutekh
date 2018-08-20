@@ -226,28 +226,5 @@ error_t dev_pwm_wait_rq(struct device_pwm_s *pdev, struct dev_pwm_rq_s *rq),
      return rq->error;
 });
 
-/** @see dev_pwm_wait_config */
-BUSY_WAITING_FUNCTION
-config_depend_inline(CONFIG_DEVICE_PWM,
-error_t dev_pwm_spin_config(struct device_pwm_s *pdev, const struct dev_pwm_config_s *cfg, uint_fast8_t mask),
-{
-     struct dev_request_status_s status;
-
-     struct dev_pwm_rq_s rq =
-     {
-       .cfg = cfg,
-       .chan_mask = 1,
-       .mask = mask,
-     };
-
-     dev_request_spin_init(&rq.base, &status);
-
-     DEVICE_OP(pdev, config, &rq);
-
-     dev_request_spin_wait(&status);
-
-     return rq.error;
-})
-
 #endif
 

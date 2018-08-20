@@ -21,25 +21,6 @@
 
 #include <device/class/valio.h>
 
-extern inline error_t dev_valio_spin_request(
-    const struct device_valio_s *accessor,
-    struct dev_valio_rq_s *rq);
-
-extern inline error_t dev_valio_spin_read(
-    const struct device_valio_s *accessor,
-    uint16_t attribute,
-    void *data);
-
-extern inline error_t dev_valio_spin_write(
-    const struct device_valio_s *accessor,
-    uint16_t attribute,
-    const void *data);
-
-extern inline error_t dev_valio_spin_update(
-    const struct device_valio_s *accessor,
-    uint16_t attribute,
-    void *data);
-
 #if defined(CONFIG_MUTEK_CONTEXT_SCHED)
 # include <mutek/scheduler.h>
 

@@ -524,15 +524,6 @@ error_t dev_timer_wait_delay(struct device_timer_s *accessor,
   return err;
 });
 
-/** Synchronous timer busy-wait function. @This spins in a loop
-    waiting for the requested delay. @This returns @tt -ERANGE if the
-    requested delay is greater than half the maximum timer value
-    because counter overlap can not be handled properly in this
-    case. */
-BUSY_WAITING_FUNCTION
-config_depend(CONFIG_DEVICE_TIMER)
-error_t dev_timer_busy_wait_delay(struct device_timer_s *accessor, dev_timer_delay_t delay);
-
 #ifdef CONFIG_DEVICE_TIMER
 /** @This provides a @ref DEV_RES_DEV_PARAM resource entry which
     specifies a dependency on a timer device. */

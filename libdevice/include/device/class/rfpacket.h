@@ -706,22 +706,6 @@ DRIVER_CLASS_TYPES(DRIVER_CLASS_RFPACKET, rfpacket,
     .f_stats = prefix ## _stats,                                   \
   })
 
-BUSY_WAITING_FUNCTION
-config_depend_inline(CONFIG_DEVICE_RFPACKET,
-error_t dev_rfpacket_spin_request(
-       const struct device_rfpacket_s *accessor,
-       struct dev_rfpacket_rq_s *rq),
-{
-    if (rq->type == DEV_RFPACKET_RQ_RX_CONT)
-      return -ENOTSUP;
-
-    struct dev_request_status_s status;
-    dev_request_spin_init(&rq->base, &status);
-    DEVICE_OP(accessor, request, rq, NULL);
-    dev_request_spin_wait(&status);
-    return rq->error;
-});
-
 config_depend_and2_inline(CONFIG_DEVICE_RFPACKET, CONFIG_MUTEK_CONTEXT_SCHED,
 error_t dev_rfpacket_wait_request(
        const struct device_rfpacket_s *accessor,

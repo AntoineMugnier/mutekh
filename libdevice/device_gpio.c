@@ -31,9 +31,6 @@ const uint8_t dev_gpio_mask1[8] = { 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x
 __attribute__((aligned(8)))
 const uint8_t dev_gpio_mask0[8] = { };
 
-extern inline error_t dev_gpio_spin_rq(struct device_gpio_s *accessor,
-                                       struct dev_gpio_rq_s *rq);
-
 #ifdef CONFIG_MUTEK_CONTEXT_SCHED
 
 extern inline error_t dev_gpio_wait_rq(struct device_gpio_s *accessor,

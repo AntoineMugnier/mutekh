@@ -87,11 +87,7 @@ TERMUI_CON_COMMAND_PROTOTYPE(dev_shell_pwm_config)
   if (used & PWM_OPT_POL)
     data->mask |= DEV_PWM_MASK_POL;
 
-#if defined(CONFIG_MUTEK_CONTEXT_SCHED)
   error_t err = dev_pwm_wait_config(&data->pwm, &data->cfg, data->mask);
-#else
-  error_t err = dev_pwm_spin_config(&data->pwm, &data->cfg, data->mask);
-#endif
 
   if (err)
     termui_con_printf(con, "error: failed to apply pwm configuration.\n");

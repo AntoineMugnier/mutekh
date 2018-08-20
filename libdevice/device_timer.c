@@ -211,57 +211,6 @@ error_t dev_timer_check_timeout(struct device_timer_s *accessor,
   return ((((*start + delay) & cfg.max) - v) & b) != 0;
 }
 
-error_t dev_timer_busy_wait_delay(struct device_timer_s *accessor, dev_timer_delay_t delay)
-{
-  // get max timer value (power of 2 minus 1)
-  struct dev_timer_config_s cfg;
-  error_t err;
-
-  err = DEVICE_OP(accessor, config, &cfg, 0);
-  if (err)
-    return err;
-
-  // compute wrapping mask
-  dev_timer_value_t b = (cfg.max >> 1) + 1;
-  if (delay >= b)
-    return -ERANGE;
-
-  if (cfg.cap & DEV_TIMER_CAP_STOPPABLE)
-    if (device_start(&accessor->base))
-      return -EBUSY;
-
-  // compute wrapped deadline
-  dev_timer_value_t d;
-  if (DEVICE_OP(accessor, get_value, &d, cfg.rev))
-    {
-      err = -EIO;
-      goto stop;
-    }
-
-  d = (d + delay) & cfg.max;
-
-  while (1)
-    {
-      dev_timer_value_t v;
-      if (DEVICE_OP(accessor, get_value, &v, cfg.rev))
-        {
-          err = -EIO;
-          goto stop;
-        }
-
-      // x will wrap when the deadline is reached
-      if ((d - v) & b)
-        break;
-    }
-
-  err = 0;
- stop:
-  if (cfg.cap & DEV_TIMER_CAP_STOPPABLE)
-    device_stop(&accessor->base);
-
-  return err;
-}
-
 #ifdef CONFIG_MUTEK_CONTEXT_SCHED
 extern inline
 error_t dev_timer_wait_request(struct device_timer_s *accessor, struct dev_timer_rq_s *rq);

@@ -28,10 +28,6 @@
 const char dev_crypto_mode_e[] = ENUM_DESC_DEV_CRYPTO_MODE_E;
 const char dev_crypto_op_e[] = ENUM_DESC_DEV_CRYPTO_OP_E;
 
-extern inline error_t
-dev_crypto_spin_op(struct device_crypto_s *accessor,
-                   struct dev_crypto_rq_s *rq);
-
 extern inline bool_t
 dev_crypto_ctx_bind(struct dev_crypto_context_s *ctx,
                     struct dev_crypto_context_s *ctx_array[],

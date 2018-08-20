@@ -95,11 +95,7 @@ static TERMUI_CON_COMMAND_PROTOTYPE(shell_char_read)
   rq.size = c->size;
   rq.data = data;
 
-#if defined(CONFIG_MUTEK_CONTEXT_SCHED)
   ssize_t s_read = dev_char_wait_request(&c->accessor, &rq);
-#else
-  ssize_t s_read = dev_char_spin_request(&c->accessor, &rq);
-#endif
 
   if (rq.error)
     {
@@ -126,11 +122,7 @@ static TERMUI_CON_COMMAND_PROTOTYPE(shell_char_write)
   rq.size = c->data.len;
   rq.data = (uint8_t*)c->data.str;
 
-#if defined(CONFIG_MUTEK_CONTEXT_SCHED)
   ssize_t w_size = dev_char_wait_request(&c->accessor, &rq);
-#else
-  ssize_t w_size = dev_char_spin_request(&c->accessor, &rq);
-#endif
 
   if (rq.error)
     {

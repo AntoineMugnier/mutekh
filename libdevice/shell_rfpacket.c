@@ -495,11 +495,7 @@ static TERMUI_CON_COMMAND_PROTOTYPE(shell_rfpacket_receive)
   if (dev_timer_init_sec(&timer, &rq->lifetime, 0, c->lifetime, 1000))
     return -EINVAL;
 
-#if defined(CONFIG_MUTEK_CONTEXT_SCHED)
   error_t err = dev_rfpacket_wait_request(&c->accessor, rq);
-#else
-  error_t err = dev_rfpacket_spin_request(&c->accessor, &rq);
-#endif
 
   device_put_accessor(&timer.base);
 
@@ -563,11 +559,7 @@ static TERMUI_CON_COMMAND_PROTOTYPE(shell_rfpacket_send)
   rq.rf_cfg = rf;
   rq.pk_cfg = pk;
 
-#if defined(CONFIG_MUTEK_CONTEXT_SCHED)
   error_t err = dev_rfpacket_wait_request(&c->accessor, &rq);
-#else
-  error_t err = dev_rfpacket_spin_request(&c->accessor, &rq);
-#endif
 
   if (!(used & RFPACKET_OPT_DATA))
     shell_buffer_drop(data);

@@ -257,36 +257,6 @@ struct dev_request_status_s
   bool_t done;
 };
 
-inline KROUTINE_EXEC(dev_request_spin_done)
-{
-  struct dev_request_s *rq = KROUTINE_CONTAINER(kr, *rq, kr);
-  struct dev_request_status_s *status = rq->pvdata;
-
-  status->done = 1;
-}
-
-inline void
-dev_request_spin_init(struct dev_request_s *rq,
-                      struct dev_request_status_s *status)
-{
-  status->done = 0;
-  rq->pvdata = status;
-  IFASSERT(rq->pushed = 0xdead);
-  kroutine_init_immediate(&rq->kr, &dev_request_spin_done);
-}
-
-inline void
-dev_request_spin_wait(struct dev_request_status_s *status)
-{
-# ifdef CONFIG_DEVICE_IRQ
-  assert(cpu_is_interruptible());
-# endif
-
-  do {
-    order_compiler_mem();
-  } while (!status->done);
-}
-
 # ifdef CONFIG_MUTEK_CONTEXT_SCHED
 inline KROUTINE_EXEC(dev_request_sched_done)
 {
