@@ -177,6 +177,20 @@ const_##cont_s##_from_##field(typeof(((const struct cont_s*)0)->field) *x) \
   return (const void*)((const uint8_t*)x - __builtin_offsetof(const struct cont_s, field)); \
 }
 
+#define FIELD_ALIAS(type_s, field_s, type_a, field_a)                   \
+  struct {                                                              \
+    uint8_t field_a##_padding_[__builtin_offsetof(type_s, field_s)];    \
+    type_a field_a;                                                     \
+    uint8_t _alias_is_too_large[-(sizeof(((type_s*)0)->field_s)         \
+                                  < sizeof(type_a))];                   \
+  }
+
+#define FIELD_USING(type_s, field_s)                                    \
+  struct {                                                              \
+    uint8_t field_s##_padding_[__builtin_offsetof(type_s, field_s)];    \
+    typeof(((type_s*)0)->field_s) field_s;                              \
+  }
+
 #endif /* 1 */
 
 #ifdef __MKDOC__
@@ -225,6 +239,57 @@ cont_s##_from_##field(void *x);
 
 # define STATIC_ASSERT(error, expr)
 # define FIRST_FIELD_ASSERT(struct_name, field)
+
+/** @This may be used to declare a field named @tt field_a of type @tt
+    type_a aliasing a @tt field_s in declared in a stucture @tt
+    type_s. The struct and the field alias must be nested in an union.
+    @see #FIELD_USING
+
+@code
+struct base_s
+{
+  ...
+  size_t size;
+  ...
+};
+
+struct main_s
+{
+  union {
+    struct base_s                  base;
+    FIELD_ALIAS(struct base_s,     size,
+      size_t,                      main_size)
+  };
+};
+@end code
+*/
+#define FIELD_ALIAS(type_s, field_s, type_a, field_a)   \
+  type_a field_a;
+
+/** @This may be used to reuse declaration of a field from a base struct.
+    The struct and the field alias must be nested in an union.
+    @see #FIELD_ALIAS
+
+@code
+struct base_s
+{
+  ...
+  size_t size;
+  ...
+};
+
+struct main_s
+{
+  union {
+    struct base_s                  base;
+    FIELD_USING(struct base_s,     size);
+  };
+};
+@end code
+*/
+#define FIELD_USING(type_s, field_s)            \
+  typeof(type_s::field_s) field_s;
+
 #endif
 
 #ifdef CONFIG_COMPILE_NOBITFIELD
