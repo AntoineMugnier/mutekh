@@ -282,6 +282,7 @@ struct dev_crypto_rq_s
   union {
     struct dev_request_s base;
     FIELD_USING(struct dev_request_s, error);
+    FIELD_USING(struct dev_request_s, pvdata);
   };
 
   enum dev_crypto_op_e                  BITFIELD(op,3);

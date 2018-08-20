@@ -56,6 +56,7 @@ struct dev_smi_rq_s
   union {
     struct dev_request_s base;
     FIELD_USING(struct dev_request_s, error);
+    FIELD_USING(struct dev_request_s, pvdata);
   };
 
   /** Destination address on bus */

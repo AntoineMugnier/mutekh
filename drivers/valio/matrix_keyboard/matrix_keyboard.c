@@ -100,7 +100,7 @@ DRIVER_PV(struct matrix_keyboard_ctx_s);
 static KROUTINE_EXEC(matrix_keyboard_runner)
 {
   struct matrix_keyboard_ctx_s *pv = KROUTINE_CONTAINER(kr, *pv, vm_runner);
-  struct device_s *dev = pv->gpio_rq.base.pvdata;
+  struct device_s *dev = pv->gpio_rq.pvdata;
   uint16_t op;
   bool_t run = 0;
 
@@ -267,7 +267,7 @@ static KROUTINE_EXEC(matrix_keyboard_runner)
 static KROUTINE_EXEC(matrix_keyboard_gpio_done)
 {
   struct matrix_keyboard_ctx_s *pv = KROUTINE_CONTAINER(kr, *pv, gpio_rq.base.kr);
-  struct device_s *dev = pv->gpio_rq.base.pvdata;
+  struct device_s *dev = pv->gpio_rq.pvdata;
 
   dprintk("%s\n", __FUNCTION__);
 
@@ -298,7 +298,7 @@ static KROUTINE_EXEC(matrix_keyboard_gpio_done)
 static KROUTINE_EXEC(matrix_keyboard_timer_done)
 {
   struct matrix_keyboard_ctx_s *pv = KROUTINE_CONTAINER(kr, *pv, timer_rq.base.kr);
-  struct device_s *dev = pv->timer_rq.base.pvdata;
+  struct device_s *dev = pv->timer_rq.pvdata;
 
   dprintk("%s\n", __FUNCTION__);
 
@@ -454,8 +454,8 @@ static DEV_INIT(matrix_keyboard_init)
             pv->pin_id[GPIO_COLUMNS], pv->pin_id[GPIO_COLUMNS] + pv->pin_width[GPIO_COLUMNS] - 1,
             mask, DEV_PIN_OPENDRAIN);
 
-  pv->gpio_rq.base.pvdata = dev;
-  pv->timer_rq.base.pvdata = dev;
+  pv->gpio_rq.pvdata = dev;
+  pv->timer_rq.pvdata = dev;
 
   dev_gpio_rq_init(&pv->gpio_rq, matrix_keyboard_gpio_done);
   dev_timer_rq_init(&pv->timer_rq, matrix_keyboard_timer_done);

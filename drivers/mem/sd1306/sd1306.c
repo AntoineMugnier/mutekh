@@ -100,7 +100,7 @@ void sd1306_write(struct device_s *dev,
   struct sd1306_private_s *pv = dev->drv_pv;
   logk_trace("%s", __func__);
 
-  pv->spi_rq.base.base.pvdata = dev;
+  pv->spi_rq.pvdata = dev;
   dev_spi_bytecode_start(&pv->spi, &pv->spi_rq, &sd1306_bc_write,
                          SD1306_BC_WRITE_BCARGS(page, column, data, count));
 }
@@ -112,7 +112,7 @@ void sd1306_next(struct device_s *dev)
 
   logk_trace("%s", __func__);
 
-  if (pv->spi_rq.base.base.pvdata)
+  if (pv->spi_rq.pvdata)
     return;
 
   struct dev_mem_rq_s *mrq;
@@ -163,13 +163,13 @@ static
 KROUTINE_EXEC(sd1306_spi_done)
 {
   struct sd1306_private_s *pv  = KROUTINE_CONTAINER(kr, *pv, spi_rq.base.base.kr);
-  struct device_s *dev = pv->spi_rq.base.base.pvdata;
+  struct device_s *dev = pv->spi_rq.pvdata;
 
   assert(dev);
 
   LOCK_SPIN_IRQ_SCOPED(&dev->lock);
 
-  pv->spi_rq.base.base.pvdata = NULL;
+  pv->spi_rq.pvdata = NULL;
 
   sd1306_next(dev);
 }
@@ -205,8 +205,8 @@ sd1306_enable(struct device_s *dev)
   dev_clock_sink_gate(&pv->power_source, DEV_CLOCK_EP_POWER);
   dev_gpio_out(pv->gpio, pv->spi_rq.base.cs_cfg.id, 1);
 
-  assert(pv->spi_rq.base.base.pvdata == NULL);
-  pv->spi_rq.base.base.pvdata = dev;
+  assert(pv->spi_rq.pvdata == NULL);
+  pv->spi_rq.pvdata = dev;
 
   dev_timer_delay_t reset_latency;
   dev_timer_init_sec(pv->timer, &reset_latency, 0, 1, 1000);
@@ -304,7 +304,7 @@ DEV_INIT(sd1306_init)
   if (err)
     goto err_pv;
 
-  pv->spi_rq.base.base.pvdata = NULL;
+  pv->spi_rq.pvdata = NULL;
   pv->spi_rq.gpio_map = pv->gpio_map;
   pv->spi_rq.gpio_wmap = pv->gpio_wmap;
 
@@ -324,7 +324,7 @@ DEV_CLEANUP(sd1306_cleanup)
 
   struct sd1306_private_s *pv = dev->drv_pv;
 
-  if (pv->spi_rq.base.base.pvdata)
+  if (pv->spi_rq.pvdata)
     return -EBUSY;
 
   dev_drv_spi_bytecode_cleanup(&pv->spi, &pv->spi_rq);

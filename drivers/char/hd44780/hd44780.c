@@ -81,7 +81,7 @@ DRIVER_PV(struct hd44780_ctx_s);
 static KROUTINE_EXEC(hd44780_runner)
 {
   struct hd44780_ctx_s *pv = KROUTINE_CONTAINER(kr, *pv, vm_runner);
-  struct device_s *dev = pv->gpio_rq.base.pvdata;
+  struct device_s *dev = pv->gpio_rq.pvdata;
   uint16_t op;
   struct dev_char_rq_s *rq;
 
@@ -186,7 +186,7 @@ static KROUTINE_EXEC(hd44780_runner)
 static KROUTINE_EXEC(hd44780_gpio_done)
 {
   struct hd44780_ctx_s *pv = KROUTINE_CONTAINER(kr, *pv, gpio_rq.base.kr);
-  struct device_s *dev = pv->gpio_rq.base.pvdata;
+  struct device_s *dev = pv->gpio_rq.pvdata;
 
   logk_trace("%s", __func__);
 
@@ -200,7 +200,7 @@ static KROUTINE_EXEC(hd44780_gpio_done)
 static KROUTINE_EXEC(hd44780_timer_done)
 {
   struct hd44780_ctx_s *pv = KROUTINE_CONTAINER(kr, *pv, timer_rq.base.kr);
-  struct device_s *dev = pv->timer_rq.base.pvdata;
+  struct device_s *dev = pv->timer_rq.pvdata;
 
   logk_trace("%s", __func__);
 
@@ -315,8 +315,8 @@ static DEV_INIT(hd4780_init)
     
   dev_rq_queue_init(&pv->queue);
 
-  pv->gpio_rq.base.pvdata = dev;
-  pv->timer_rq.base.pvdata = dev;
+  pv->gpio_rq.pvdata = dev;
+  pv->timer_rq.pvdata = dev;
   pv->gpio_rq.output.set_mask = &pv->reg;
   pv->gpio_rq.output.clear_mask = &pv->reg;
   pv->gpio_rq.type = DEV_GPIO_SET_OUTPUT;

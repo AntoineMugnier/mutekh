@@ -202,7 +202,7 @@ static error_t spi_flash_start(struct device_s *dev, struct dev_mem_rq_s *rq)
 static KROUTINE_EXEC(spi_flash_srq_done)
 {
   struct dev_spi_ctrl_bytecode_rq_s *srq = KROUTINE_CONTAINER(kr, *srq, base.base.kr);
-  struct device_s *dev = srq->base.base.pvdata;
+  struct device_s *dev = srq->pvdata;
   struct spi_flash_private_s *pv = dev->drv_pv;
   error_t err = 0;
 
@@ -319,7 +319,7 @@ error_t spi_flash_init_common(struct device_s *dev,
                                 &info->spi_cfg, &pv->spi, NULL, &timer))
     goto err_mem;
 
-  srq->base.base.pvdata = dev;
+  srq->pvdata = dev;
 
   dev_spi_ctrl_rq_init(&srq->base, &spi_flash_srq_done);
 

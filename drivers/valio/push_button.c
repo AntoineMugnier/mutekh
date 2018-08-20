@@ -71,7 +71,7 @@ DRIVER_PV(struct push_button_context_s
 static KROUTINE_EXEC(push_button_lock_timeout)
 {
    struct dev_valio_rq_s *rq = KROUTINE_CONTAINER(kr, *rq, base.kr);
-   struct device_s *dev = rq->base.pvdata;
+   struct device_s *dev = rq->pvdata;
    struct push_button_context_s *pv  = dev->drv_pv;
 
    LOCK_SPIN_IRQ(&dev->lock);
@@ -258,7 +258,7 @@ static DEV_INIT(push_button_init)
       device_start(&pv->timer.base);
       dev_timer_shift_sec(&pv->timer, &pv->shifta, &pv->shiftb, 0, 1, 1000);
 #ifdef CONFIG_DRIVER_PUSH_BUTTON_SOFT_DEBOUNCING
-      pv->trq.base.pvdata = dev;
+      pv->trq.pvdata = dev;
       pv->trq.rq.drvdata = NULL;
       pv->trq.deadline = 0;
       pv->trq.rev = 2;

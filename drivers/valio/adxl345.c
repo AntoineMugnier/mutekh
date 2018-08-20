@@ -68,7 +68,7 @@ KROUTINE_EXEC(adxl345_offset_write_done)
     struct adxl345_private_s *pv;
 
     pv = KROUTINE_CONTAINER(kr, *pv, i2c_req.base.kr);
-    dev = pv->i2c_req.base.pvdata;
+    dev = pv->i2c_req.pvdata;
 
     LOCK_SPIN_IRQ(&dev->lock);
 
@@ -103,7 +103,7 @@ void adxl345_do_offset_write(struct device_s          *dev,
 
     pv->i2c_req.transfer_count = 1;
 
-    pv->i2c_req.base.pvdata = dev;
+    pv->i2c_req.pvdata = dev;
     dev_i2c_ctrl_rq_init(&pv->i2c_req.base, &adxl345_offset_write_done);
 
     DEVICE_OP(&pv->i2c, request, &pv->i2c_req);
@@ -116,7 +116,7 @@ KROUTINE_EXEC(adxl345_offset_read_done)
     struct adxl345_private_s *pv;
 
     pv = KROUTINE_CONTAINER(kr, *pv, i2c_req.base.kr);
-    dev = pv->i2c_req.base.pvdata;
+    dev = pv->i2c_req.pvdata;
 
     LOCK_SPIN_IRQ(&dev->lock);
 
@@ -155,7 +155,7 @@ void adxl345_do_offset_read(struct device_s          *dev,
 
     pv->i2c_req.transfer_count = 2;
 
-    pv->i2c_req.base.pvdata = dev;
+    pv->i2c_req.pvdata = dev;
     dev_i2c_ctrl_rq_init(&pv->i2c_req.base, &adxl345_offset_read_done);
 
     DEVICE_OP(&pv->i2c, request, &pv->i2c_req);
@@ -168,7 +168,7 @@ KROUTINE_EXEC(adxl345_data_read_done)
     struct adxl345_private_s *pv;
 
     pv = KROUTINE_CONTAINER(kr, *pv, i2c_req.base.kr);
-    dev = pv->i2c_req.base.pvdata;
+    dev = pv->i2c_req.pvdata;
 
     LOCK_SPIN_IRQ(&dev->lock);
 
@@ -212,7 +212,7 @@ void adxl345_do_data_read(struct device_s          *dev,
 
     pv->i2c_req.transfer_count = 2;
 
-    pv->i2c_req.base.pvdata = dev;
+    pv->i2c_req.pvdata = dev;
     dev_i2c_ctrl_rq_init(&pv->i2c_req.base, &adxl345_data_read_done);
 
     DEVICE_OP(&pv->i2c, request, &pv->i2c_req);

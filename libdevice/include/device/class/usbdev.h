@@ -127,6 +127,7 @@ struct dev_usbdev_rq_s
   union {
     struct dev_request_s base;
     FIELD_USING(struct dev_request_s, error);
+    FIELD_USING(struct dev_request_s, pvdata);
   };
 
   /** Size of the @tt data buffer. For receiving data, size must be a multiple

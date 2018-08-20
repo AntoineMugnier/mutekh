@@ -118,6 +118,7 @@ struct dev_pcm_rq_s
   union {
     struct dev_request_s base;
     FIELD_USING(struct dev_request_s, error);
+    FIELD_USING(struct dev_request_s, pvdata);
   };
 
   uint8_t offline_buffer_index :1;

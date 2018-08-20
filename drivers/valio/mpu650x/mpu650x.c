@@ -64,7 +64,7 @@ bool_t bus_is_busy(struct device_s *dev)
 {
   struct mpu650x_context_s *pv = dev->drv_pv;
 
-  return pv->bus_rq.base.base.pvdata != NULL;
+  return pv->bus_rq.pvdata != NULL;
 }
 
 static
@@ -74,7 +74,7 @@ void mpu650x_run(struct device_s *dev, bytecode_entry_t *entry)
 
   assert(!bus_is_busy(dev));
 
-  pv->bus_rq.base.base.pvdata = dev;
+  pv->bus_rq.pvdata = dev;
   bus_bytecode_start(&pv->bus, &pv->bus_rq, entry, 0);
 }
 
@@ -131,7 +131,7 @@ void mpu650x_state_advance(struct device_s *dev)
   struct mpu650x_context_s *pv = dev->drv_pv;
 
  again:
-  if (pv->bus_rq.base.base.pvdata)
+  if (pv->bus_rq.pvdata)
     return;
 
   if (pv->target_state == pv->state) {
@@ -335,7 +335,7 @@ static DEV_IRQ_SRC_PROCESS(mpu650x_irq)
 static KROUTINE_EXEC(mpu650x_bus_done)
 {
   struct mpu650x_context_s *pv = KROUTINE_CONTAINER(kr, *pv, bus_rq.base.base.kr);
-  struct device_s *dev = pv->bus_rq.base.base.pvdata;
+  struct device_s *dev = pv->bus_rq.pvdata;
 
   assert(dev);
 
@@ -343,7 +343,7 @@ static KROUTINE_EXEC(mpu650x_bus_done)
 
   LOCK_SPIN_IRQ_SCOPED(&dev->lock);
 
-  pv->bus_rq.base.base.pvdata = NULL;
+  pv->bus_rq.pvdata = NULL;
 
   if (!pv->bus_rq.error) {
     pv->error_count = 0;

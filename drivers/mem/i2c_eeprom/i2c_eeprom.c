@@ -101,7 +101,7 @@ static KROUTINE_EXEC(i2c_eeprom_done)
     struct device_s *dev;
 
     pv = KROUTINE_CONTAINER(kr, *pv, i2c_req.base.base.kr);
-    dev = pv->i2c_req.base.base.pvdata;
+    dev = pv->i2c_req.pvdata;
 
     LOCK_SPIN_IRQ(&dev->lock);
 
@@ -174,7 +174,7 @@ static void i2c_rq_run(
     dev_i2c_ctrl_rq_init(&pv->i2c_req.base, i2c_eeprom_done);
 
     pv->i2c_req.base.saddr = pv->saddr + (rq->addr >> (pv->addr_size * 8));
-    pv->i2c_req.base.base.pvdata = dev;
+    pv->i2c_req.pvdata = dev;
     pv->i2c_req.transfer = pv->i2c_transfer;
 
     pv->i2c_req.transfer_count = 2;

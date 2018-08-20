@@ -15,7 +15,7 @@ DRIVER_PV(struct devinit_test_pv_s
 static KROUTINE_EXEC(devinit_test_timeout)
 {
   struct dev_timer_rq_s *rq = KROUTINE_CONTAINER(kr, *rq, base.kr);
-  struct device_s *dev = rq->base.pvdata;
+  struct device_s *dev = rq->pvdata;
   struct devinit_test_pv_s *pv = dev->drv_pv;
 
   LOCK_SPIN_IRQ(&dev->lock);
@@ -58,7 +58,7 @@ static DEV_INIT(devinit_test_init)
     goto err_acc;
 
   pv->rq.rev = 0;
-  pv->rq.base.pvdata = dev;
+  pv->rq.pvdata = dev;
   dev_timer_rq_init(&pv->rq, devinit_test_timeout);
 
   ensure(DEVICE_OP(&pv->timer, request, &pv->rq) == 0);

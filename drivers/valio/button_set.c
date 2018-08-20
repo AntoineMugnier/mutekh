@@ -103,7 +103,7 @@ static void bs_gpio_wait(struct device_s *dev)
 static KROUTINE_EXEC(bs_gpio_done)
 {
   struct bs_context_s *pv = KROUTINE_CONTAINER(kr, *pv, gpio_rq.base.kr);
-  struct device_s *dev = pv->gpio_rq.base.pvdata;
+  struct device_s *dev = pv->gpio_rq.pvdata;
 
   LOCK_SPIN_IRQ(&dev->lock);
 
@@ -240,7 +240,7 @@ static DEV_INIT(button_set_init)
   err = device_get_param_uint(dev, "active", &tmp);
   pv->active_high = err || tmp;
 
-  pv->gpio_rq.base.pvdata = dev;
+  pv->gpio_rq.pvdata = dev;
   pv->gpio_rq.io_first = id;
   pv->gpio_rq.io_last = id + width - 1;
   pv->gpio_rq.type = DEV_GPIO_MODE;

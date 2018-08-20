@@ -921,7 +921,7 @@ DEV_CRYPTO_REQUEST(sx127x_crypto_request)
 static KROUTINE_EXEC(sx127x_spi_rq_done)
 {
   struct dev_spi_ctrl_bytecode_rq_s * srq = KROUTINE_CONTAINER(kr, *srq, base.base.kr);
-  struct device_s *                   dev = srq->base.base.pvdata;
+  struct device_s *                   dev = srq->pvdata;
   struct sx127x_private_s *           pv  = dev->drv_pv;
 
   LOCK_SPIN_IRQ(&dev->lock);
@@ -1025,7 +1025,7 @@ static DEV_INIT(sx127x_init)
 
   srq->base.cs_cfg.polarity = DEV_SPI_ACTIVE_LOW;
 
-  srq->base.base.pvdata = dev;
+  srq->pvdata = dev;
 
   /* Init GPIO stuff */
 

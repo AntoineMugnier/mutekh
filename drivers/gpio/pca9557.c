@@ -84,7 +84,7 @@ static KROUTINE_EXEC(pca9557_i2c_write_done)
         = KROUTINE_CONTAINER(kr, *pv, i2c_req.base.kr);
     struct dev_gpio_rq_s *rq
         = dev_gpio_rq_head(&pv->pending);
-    struct device_s *dev = pv->i2c_req.base.pvdata;
+    struct device_s *dev = pv->i2c_req.pvdata;
 
     LOCK_SPIN_IRQ_SCOPED(&dev->lock);
 
@@ -98,7 +98,7 @@ static KROUTINE_EXEC(pca9557_i2c_read_done)
         = KROUTINE_CONTAINER(kr, *pv, i2c_req.base.kr);
     struct dev_gpio_rq_s *rq
         = dev_gpio_rq_head(&pv->pending);
-    struct device_s *dev = pv->i2c_req.base.pvdata;
+    struct device_s *dev = pv->i2c_req.pvdata;
 
     LOCK_SPIN_IRQ_SCOPED(&dev->lock);
 
@@ -279,7 +279,7 @@ static DEV_INIT(pca9557_init)
 
     dev_rq_queue_init(&pv->pending);
 
-    pv->i2c_req.base.pvdata = dev;
+    pv->i2c_req.pvdata = dev;
     pv->i2c_req.saddr = pv->saddr;
 
     return 0;

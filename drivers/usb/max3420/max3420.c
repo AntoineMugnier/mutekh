@@ -516,7 +516,7 @@ static const struct dev_usbdev_driver_ops_s max3420_usbdev_ops_s = {
 static KROUTINE_EXEC(max3420_spi_rq_done)
 {
   struct dev_spi_ctrl_bytecode_rq_s *srq = KROUTINE_CONTAINER(kr, *srq, base.base.kr);
-  struct device_s *dev = srq->base.base.pvdata;
+  struct device_s *dev = srq->pvdata;
   struct max3420_usbdev_private_s *pv = dev->drv_pv;
 
   LOCK_SPIN_IRQ(&dev->lock);
@@ -609,7 +609,7 @@ static DEV_INIT(max3420_usbdev_init)
   /* Base 500 us time */
   dev_timer_init_sec(timer, &pv->bt, 0, 500, 1000000);
 
-  srq->base.base.pvdata = dev;
+  srq->pvdata = dev;
 
   /* init GPIO stuff */
 

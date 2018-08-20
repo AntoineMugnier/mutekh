@@ -177,7 +177,7 @@ static
 KROUTINE_EXEC(max6675_spi_done)
 {
   struct max6675_context_s *pv = KROUTINE_CONTAINER(kr, *pv, spi_rq.base.base.kr);
-  struct device_s *dev = pv->spi_rq.base.base.pvdata;
+  struct device_s *dev = pv->spi_rq.pvdata;
 
   LOCK_SPIN_IRQ(&dev->lock);
 
@@ -199,7 +199,7 @@ static
 KROUTINE_EXEC(max6675_timer_done)
 {
   struct max6675_context_s *pv = KROUTINE_CONTAINER(kr, *pv, timer_rq.base.kr);
-  struct device_s *dev = pv->spi_rq.base.base.pvdata;
+  struct device_s *dev = pv->spi_rq.pvdata;
 
   LOCK_SPIN_IRQ(&dev->lock);
 
@@ -259,13 +259,13 @@ static DEV_INIT(max6675_init)
     goto put_timer;
 
   dev_timer_init_sec(&pv->timer, &pv->timer_rq.delay, 0, period, 1000);
-  pv->spi_rq.base.base.pvdata = dev;
+  pv->spi_rq.pvdata = dev;
   pv->spi_rq.data.count = 2;
   pv->spi_rq.data.out = &pv->rdata;
   pv->spi_rq.data.in = &pv->rdata;
   pv->spi_rq.data.in_width = 1;
   pv->spi_rq.data.out_width = 1;
-  pv->timer_rq.base.pvdata = dev;
+  pv->timer_rq.pvdata = dev;
 
   dev_spi_ctrl_rq_init(&pv->spi_rq.base, max6675_spi_done);
   dev_timer_rq_init(&pv->timer_rq, max6675_timer_done);

@@ -96,7 +96,7 @@ static KROUTINE_EXEC(mtch6102_mode_done)
     dprintk("%s\n", __FUNCTION__);
 
     pv = KROUTINE_CONTAINER(kr, *pv, i2c_req.base.kr);
-    dev = pv->i2c_req.base.pvdata;
+    dev = pv->i2c_req.pvdata;
 
     LOCK_SPIN_IRQ(&dev->lock);
 
@@ -114,13 +114,13 @@ static KROUTINE_EXEC(mtch6102_channels_done)
     dprintk("%s\n", __FUNCTION__);
 
     pv = KROUTINE_CONTAINER(kr, *pv, i2c_req.base.kr);
-    dev = pv->i2c_req.base.pvdata;
+    dev = pv->i2c_req.pvdata;
 
     LOCK_SPIN_IRQ(&dev->lock);
 
     dev_i2c_ctrl_rq_init(&pv->i2c_req.base, mtch6102_mode_done);
 
-    pv->i2c_req.base.pvdata = dev;
+    pv->i2c_req.pvdata = dev;
     pv->i2c_req.transfer = pv->i2c_transfer;
     pv->i2c_req.saddr = pv->saddr;
     pv->i2c_transfer[0].data = pv->wdata;
@@ -147,7 +147,7 @@ static void mtch6102_configure(
 
     dev_i2c_ctrl_rq_init(&pv->i2c_req.base, mtch6102_channels_done);
 
-    pv->i2c_req.base.pvdata = dev;
+    pv->i2c_req.pvdata = dev;
     pv->i2c_req.transfer = pv->i2c_transfer;
     pv->i2c_req.saddr = pv->saddr;
     pv->i2c_transfer[0].data = pv->wdata;
@@ -170,7 +170,7 @@ static KROUTINE_EXEC(mtch6102_state_done)
     struct device_s *dev;
 
     pv = KROUTINE_CONTAINER(kr, *pv, i2c_req.base.kr);
-    dev = pv->i2c_req.base.pvdata;
+    dev = pv->i2c_req.pvdata;
 
     LOCK_SPIN_IRQ(&dev->lock);
 
@@ -241,7 +241,7 @@ static void mtch6102_request_run(
 
     assert(rq->attribute == VALIO_TOUCHPAD_STATE);
 
-    pv->i2c_req.base.pvdata = dev;
+    pv->i2c_req.pvdata = dev;
     pv->i2c_req.transfer = pv->i2c_transfer;
     pv->i2c_req.saddr = pv->saddr;
     pv->i2c_transfer[0].data = pv->wdata;

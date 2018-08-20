@@ -109,7 +109,7 @@ static void mcp23s17_next(struct device_s *dev)
 static KROUTINE_EXEC(mcp23s17_spi_done)
 {
   struct mcp23s17_private_s *pv = KROUTINE_CONTAINER(kr, *pv, spi_req.base.base.kr);
-  struct device_s           *dev = pv->spi_req.base.base.pvdata;
+  struct device_s           *dev = pv->spi_req.pvdata;
   struct dev_gpio_rq_s      *rq;
 
   LOCK_SPIN_IRQ(&dev->lock);
@@ -428,7 +428,7 @@ static error_t spi_config(
                                 &spi_config, &pv->spi, NULL, NULL))
     return -ENOTSUP;
 
-  pv->spi_req.base.base.pvdata = dev;
+  pv->spi_req.pvdata = dev;
 
   bc_set_reg(&pv->spi_req.vm, 0, 1);
   bc_set_reg(&pv->spi_req.vm, 1, pv);

@@ -120,7 +120,7 @@ static KROUTINE_EXEC(pcf8574_i2c_done)
 {
   struct pcf8574_priv_s *pv
     = KROUTINE_CONTAINER(kr, *pv, i2c_txn.base.base.kr);
-  struct device_s *dev = pv->i2c_txn.base.base.pvdata;
+  struct device_s *dev = pv->i2c_txn.pvdata;
 
   dprintk("%s\n", __FUNCTION__);
 
@@ -291,7 +291,7 @@ static DEV_INIT(pcf8574_init)
   err = device_irq_source_link(dev, &pv->irq_ep, 1, -1);
   pv->no_irq = !!err;
 
-  pv->i2c_txn.base.base.pvdata = dev;
+  pv->i2c_txn.pvdata = dev;
   pv->i2c_txn.transfer = pv->i2c_transfer;
   pv->i2c_txn.transfer_count = 1;
   pv->i2c_transfer[0].size = 1;

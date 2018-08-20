@@ -717,17 +717,17 @@ static DEV_INIT(ecm_init)
   if (err)
     goto err_rx_buffer;
 
-  pv->base.pvdata = dev;
+  pv->pvdata = dev;
   pv->rq.type = USBDEV_GET_COMMAND; 
   pv->rq.error = 0;
 
-  pv->tx_rq.base.pvdata = dev;
+  pv->tx_rq.pvdata = dev;
   pv->tx_rq.type = DEV_USBDEV_DATA_IN;
   pv->tx_rq.data = pv->tx_buffer;
   pv->tx_rq.error = 0;
   pv->tx_rq.rev = 1;
 
-  pv->rx_rq.base.pvdata = dev;
+  pv->rx_rq.pvdata = dev;
   pv->rx_rq.type = DEV_USBDEV_DATA_OUT;
   pv->rx_rq.data = pv->rx_buffer;
   pv->rx_rq.error = 0;

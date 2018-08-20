@@ -146,7 +146,7 @@ static void char_test_cycle(struct char_test_pv_s *pv)
 static KROUTINE_EXEC(char_test_tx_callback)
 {
   struct dev_char_rq_s *rq = KROUTINE_CONTAINER(kr, *rq, base.kr);
-  struct char_test_pv_s *pv = rq->base.pvdata;
+  struct char_test_pv_s *pv = rq->pvdata;
 
   if (rq->error)
     printk("TX error %d\n", rq->error);
@@ -168,7 +168,7 @@ static KROUTINE_EXEC(char_test_tx_callback)
 static KROUTINE_EXEC(char_test_rx_callback)
 {
   struct dev_char_rq_s *rq = KROUTINE_CONTAINER(kr, *rq, base.kr);
-  struct char_test_pv_s *pv = rq->base.pvdata;
+  struct char_test_pv_s *pv = rq->pvdata;
 
   if (rq->error)
     printk("RX error %d\n", rq->error);
@@ -206,7 +206,7 @@ static void char_test_start_write(struct char_test_pv_s *pv)
   char_set_data(pv, pv->wsize - 2);
 
   rq->type = DEV_CHAR_WRITE;
-  rq->base.pvdata = pv;
+  rq->pvdata = pv;
   rq->size = pv->wsize;
   rq->data = pv->wdata;
 
@@ -220,7 +220,7 @@ static void char_test_start_read(struct char_test_pv_s *pv)
   struct dev_char_rq_s *rq = &pv->rrq;
 
   rq->type = DEV_CHAR_READ;
-  rq->base.pvdata = pv;
+  rq->pvdata = pv;
   rq->size = pv->rsize;
   rq->data = pv->rdata;
 
@@ -249,7 +249,7 @@ static void wait_before_start(struct char_test_pv_s *pv)
   struct dev_timer_rq_s *trq = &pv->trq;
 
   trq->rev = 0;
-  trq->base.pvdata = pv;
+  trq->pvdata = pv;
 
   dev_timer_init_sec(&pv->timer, &trq->delay, 0, 2, 1);
 

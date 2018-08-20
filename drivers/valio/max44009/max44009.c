@@ -230,7 +230,7 @@ static
 KROUTINE_EXEC(max44009_read_done)
 {
   struct max44009_context_s *pv = KROUTINE_CONTAINER(kr, *pv, i2c_rq.base.base.kr);
-  struct device_s *dev = pv->i2c_rq.base.base.pvdata;
+  struct device_s *dev = pv->i2c_rq.pvdata;
 
   LOCK_SPIN_IRQ_SCOPED(&dev->lock);
 
@@ -263,7 +263,7 @@ static
 KROUTINE_EXEC(max44009_wait_setup_done)
 {
   struct max44009_context_s *pv = KROUTINE_CONTAINER(kr, *pv, i2c_rq.base.base.kr);
-  struct device_s *dev = pv->i2c_rq.base.base.pvdata;
+  struct device_s *dev = pv->i2c_rq.pvdata;
 
   LOCK_SPIN_IRQ_SCOPED(&dev->lock);
 
@@ -283,7 +283,7 @@ static
 KROUTINE_EXEC(max44009_shutdown_done)
 {
   struct max44009_context_s *pv = KROUTINE_CONTAINER(kr, *pv, i2c_rq.base.base.kr);
-  struct device_s *dev = pv->i2c_rq.base.base.pvdata;
+  struct device_s *dev = pv->i2c_rq.pvdata;
 
   LOCK_SPIN_IRQ_SCOPED(&dev->lock);
 
@@ -314,7 +314,7 @@ static
 KROUTINE_EXEC(max44009_init_done)
 {
   struct max44009_context_s *pv = KROUTINE_CONTAINER(kr, *pv, i2c_rq.base.base.kr);
-  struct device_s *dev = pv->i2c_rq.base.base.pvdata;
+  struct device_s *dev = pv->i2c_rq.pvdata;
 
   LOCK_SPIN_IRQ_SCOPED(&dev->lock);
 
@@ -378,7 +378,7 @@ static DEV_INIT(max44009_init)
   if (err)
     goto free_irq;
 
-  pv->i2c_rq.base.base.pvdata = dev;
+  pv->i2c_rq.pvdata = dev;
   dev_i2c_ctrl_rq_init(&pv->i2c_rq.base, max44009_init_done);
   dev_i2c_bytecode_start(&pv->i2c, &pv->i2c_rq, &max44009_bc_shutdown,
                          MAX44009_BC_SHUTDOWN_BCARGS());

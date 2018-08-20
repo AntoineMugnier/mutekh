@@ -173,7 +173,7 @@ static void sx1509_kbd_update(struct sx1509_kbd_context_s *pv, uint16_t rowcol)
         dev_valio_rq_done(vrq);
       }
 
-    device_sleep_schedule(pv->i2c_rq.base.base.pvdata);
+    device_sleep_schedule(pv->i2c_rq.pvdata);
   }
 
   pv->last_rowcol = rowcol;
@@ -270,7 +270,7 @@ static DEV_INIT(sx1509_kbd_init)
 
   dev_timer_init_sec(pv->timer, &init_delay, 0, 1, 100);
 
-  pv->i2c_rq.base.base.pvdata = dev;
+  pv->i2c_rq.pvdata = dev;
 
   dev_i2c_ctrl_rq_init(&pv->i2c_rq.base, &sx1509_kbd_i2c_done);
   dev_i2c_bytecode_start(&pv->i2c, &pv->i2c_rq, &sx1509_kbd_reset,

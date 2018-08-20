@@ -499,7 +499,7 @@ static bool_t char_mux_start_rx(struct device_s *dev)
 static KROUTINE_EXEC(char_mux_io_read_done)
 {
   struct dev_char_rq_s *rq = KROUTINE_CONTAINER(kr, *rq, base.kr);
-  struct device_s *dev = rq->base.pvdata;
+  struct device_s *dev = rq->pvdata;
   struct char_mux_context_s *pv = dev->drv_pv;
   bool_t do_rx = 1;
 
@@ -667,7 +667,7 @@ static bool_t char_mux_start_tx(struct device_s *dev)
 static KROUTINE_EXEC(char_mux_io_write_done)
 {
   struct dev_char_rq_s *rq = KROUTINE_CONTAINER(kr, *rq, base.kr);
-  struct device_s *dev = rq->base.pvdata;
+  struct device_s *dev = rq->pvdata;
   struct char_mux_context_s *pv = dev->drv_pv;
   struct dev_char_rq_s *trq = dev_char_rq_head(&pv->write_q);
   bool_t do_tx = 1;
@@ -826,10 +826,10 @@ static DEV_INIT(char_mux_init)
     }
 
   pv->read_rq.type = DEV_CHAR_READ;
-  pv->read_rq.base.pvdata = dev;
+  pv->read_rq.pvdata = dev;
   dev_char_rq_init(&pv->read_rq, char_mux_io_read_done);
 
-  pv->write_rq.base.pvdata = dev;
+  pv->write_rq.pvdata = dev;
   dev_char_rq_init(&pv->write_rq, char_mux_io_write_done);
 
   pv->tx_rq_done = 0;

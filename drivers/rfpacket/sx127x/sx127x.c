@@ -1024,7 +1024,7 @@ static void sx127x_rx_raw_startup(struct sx127x_private_s *pv)
   trq->deadline = pv->timeout;
   trq->delay = 0;
   trq->rev = 0;
-  trq->base.pvdata = pv;
+  trq->pvdata = pv;
 
   dev_timer_rq_init(trq, sx127x_rx_raw_timeout_kr);
 
@@ -1728,7 +1728,7 @@ static void sx127x_print_registers(struct sx127x_private_s *pv)
 static KROUTINE_EXEC(sx127x_spi_rq_done)
 {
   struct dev_spi_ctrl_bytecode_rq_s *srq = KROUTINE_CONTAINER(kr, *srq, base.base.kr);
-  struct device_s *dev = srq->base.base.pvdata;
+  struct device_s *dev = srq->pvdata;
   struct sx127x_private_s *pv = dev->drv_pv;
 
   LOCK_SPIN_IRQ(&dev->lock);
@@ -1863,7 +1863,7 @@ static DEV_INIT(sx127x_init)
 #endif
 
   srq->base.cs_cfg.polarity = DEV_SPI_ACTIVE_LOW;
-  srq->base.base.pvdata = dev;
+  srq->pvdata = dev;
 
   /* Init GPIO stuff */
 

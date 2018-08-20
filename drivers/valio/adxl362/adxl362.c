@@ -80,7 +80,7 @@ adxl362_next(struct adxl362_private_s *pv)
   logk_trace("%s state %d read pending %d conf pending %d",
              __func__, pv->state, pv->read_pending, pv->config_pending);
 
-  if (pv->spi_rq.base.base.pvdata)
+  if (pv->spi_rq.pvdata)
     return;
 
   if ((!dev_rq_queue_isempty(&pv->queue) && pv->state == ADXL362_STATE_IDLE)
@@ -96,14 +96,14 @@ static
 KROUTINE_EXEC(adxl362_read_conv_done)
 {
   struct adxl362_private_s  *pv  = KROUTINE_CONTAINER(kr, *pv, spi_rq.base.base.kr);
-  struct device_s           *dev = pv->spi_rq.base.base.pvdata;
+  struct device_s           *dev = pv->spi_rq.pvdata;
   int32_t data[3];
 
   LOCK_SPIN_IRQ(&dev->lock);
 
   logk_trace("%s", __func__);
 
-  pv->spi_rq.base.base.pvdata = NULL;
+  pv->spi_rq.pvdata = NULL;
 
   if (pv->state != ADXL362_STATE_RUNNING) {
     logk_trace("%s not running", __func__);
@@ -158,11 +158,11 @@ static
 KROUTINE_EXEC(adxl362_idle_set_done)
 {
   struct adxl362_private_s  *pv  = KROUTINE_CONTAINER(kr, *pv, spi_rq.base.base.kr);
-  struct device_s           *dev = pv->spi_rq.base.base.pvdata;
+  struct device_s           *dev = pv->spi_rq.pvdata;
 
   LOCK_SPIN_IRQ(&dev->lock);
 
-  pv->spi_rq.base.base.pvdata = NULL;
+  pv->spi_rq.pvdata = NULL;
   pv->state = ADXL362_STATE_IDLE;
 
   if (!dev_rq_queue_isempty(&pv->queue))
@@ -178,7 +178,7 @@ adxl362_read_conv(struct adxl362_private_s *pv)
 
   logk_trace("%s", __func__);
 
-  pv->spi_rq.base.base.pvdata = dev;
+  pv->spi_rq.pvdata = dev;
   pv->read_pending = 0;
   dev_spi_ctrl_rq_init(&pv->spi_rq.base, &adxl362_read_conv_done);
   dev_spi_bytecode_start(&pv->spi, &pv->spi_rq, &adxl362_bc_read_conv, 0);
@@ -191,7 +191,7 @@ adxl362_shutdown(struct adxl362_private_s *pv)
 
   logk_trace("%s", __func__);
 
-  pv->spi_rq.base.base.pvdata = dev;
+  pv->spi_rq.pvdata = dev;
   dev_spi_ctrl_rq_init(&pv->spi_rq.base, &adxl362_idle_set_done);
   dev_spi_bytecode_start(&pv->spi, &pv->spi_rq, &adxl362_bc_set_idle, 0);
 }
@@ -220,14 +220,14 @@ static
 KROUTINE_EXEC(adxl362_config_done)
 {
   struct adxl362_private_s  *pv  = KROUTINE_CONTAINER(kr, *pv, spi_rq.base.base.kr);
-  struct device_s           *dev = pv->spi_rq.base.base.pvdata;
+  struct device_s           *dev = pv->spi_rq.pvdata;
   error_t                    err = pv->spi_rq.error;
 
   LOCK_SPIN_IRQ(&dev->lock);
 
   logk_debug("%s spi err %d", __func__, err);
 
-  pv->spi_rq.base.base.pvdata = NULL;
+  pv->spi_rq.pvdata = NULL;
 
   if (pv->state != ADXL362_STATE_ERROR)
     {
@@ -252,14 +252,14 @@ static
 KROUTINE_EXEC(adxl362_init_done)
 {
   struct adxl362_private_s  *pv  = KROUTINE_CONTAINER(kr, *pv, spi_rq.base.base.kr);
-  struct device_s           *dev = pv->spi_rq.base.base.pvdata;
+  struct device_s           *dev = pv->spi_rq.pvdata;
   error_t                    err = pv->spi_rq.error;
 
   LOCK_SPIN_IRQ(&dev->lock);
 
   logk_debug("%s spi err %d", __func__, err);
 
-  pv->spi_rq.base.base.pvdata = NULL;
+  pv->spi_rq.pvdata = NULL;
 
   if (!err)
     {
@@ -354,7 +354,7 @@ adxl362_write_config(struct adxl362_private_s *pv)
                 )
   };
 
-  pv->spi_rq.base.base.pvdata = dev;
+  pv->spi_rq.pvdata = dev;
   pv->config_pending = 0;
   dev_spi_ctrl_rq_init(&pv->spi_rq.base, &adxl362_config_done);
   dev_spi_bytecode_start(&pv->spi, &pv->spi_rq, &adxl362_bc_config,
@@ -551,7 +551,7 @@ DEV_INIT(adxl362_init)
   pv->spi_rq.gpio_map = pv->pin_map;
   pv->spi_rq.gpio_wmap = pin_wmap;
 
-  pv->spi_rq.base.base.pvdata = NULL;
+  pv->spi_rq.pvdata = NULL;
 
   pv->config.period = 20;
   pv->config.sleep_time = 500;
@@ -561,7 +561,7 @@ DEV_INIT(adxl362_init)
   dev_timer_delay_t reset_latency;
   dev_timer_init_sec(pv->timer, &reset_latency, 0, 1, 2);
 
-  pv->spi_rq.base.base.pvdata = dev;
+  pv->spi_rq.pvdata = dev;
   dev_spi_ctrl_rq_init(&pv->spi_rq.base, &adxl362_init_done);
   dev_spi_bytecode_start(&pv->spi, &pv->spi_rq, &adxl362_bc_reset,
                          ADXL362_BC_RESET_BCARGS(reset_latency));
@@ -580,7 +580,7 @@ DEV_CLEANUP(adxl362_cleanup)
 
   struct adxl362_private_s *pv = dev->drv_pv;
 
-  if (pv->spi_rq.base.base.pvdata)
+  if (pv->spi_rq.pvdata)
     return -EBUSY;
 
   switch (pv->state) {

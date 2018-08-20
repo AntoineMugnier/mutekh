@@ -190,7 +190,7 @@ static KROUTINE_EXEC(usbdev_service_test_write_cb)
 {
   struct dev_usbdev_rq_s *tr = KROUTINE_CONTAINER(kr, *tr, base.kr);
   struct usbdev_test_info_s * info = usbdev_test_info_s_cast(tr);
-  struct usbdev_test_service_s *pv = tr->base.pvdata;
+  struct usbdev_test_service_s *pv = tr->pvdata;
 
 
   switch(tr->error)
@@ -242,7 +242,7 @@ static KROUTINE_EXEC(usbdev_service_test_read_cb)
 {
   struct dev_usbdev_rq_s *tr = KROUTINE_CONTAINER(kr, *tr, base.kr);
   struct usbdev_test_info_s * info = usbdev_test_info_s_cast(tr);
-  struct usbdev_test_service_s *pv = tr->base.pvdata;
+  struct usbdev_test_service_s *pv = tr->pvdata;
 
   switch(tr->error)
     {
@@ -304,7 +304,7 @@ static KROUTINE_EXEC(usbdev_test_ctrl_n_cb)
 {
   struct dev_usbdev_rq_s *tr = KROUTINE_CONTAINER(kr, *tr, base.kr);
   struct usbdev_test_info_s * info = usbdev_test_info_s_cast(tr);
-  struct usbdev_test_service_s *pv = tr->base.pvdata;
+  struct usbdev_test_service_s *pv = tr->pvdata;
   uint16_t done;
 
   if (tr->error == -EPIPE)
@@ -669,7 +669,7 @@ void app_start()
 
   tr = &pv.rbulk.tr;
   tr->type = DEV_USBDEV_DATA_OUT;
-  tr->base.pvdata = &pv;
+  tr->pvdata = &pv;
   dev_usbdev_rq_init_seq(tr, &usbdev_service_test_read_cb, &pv.seq);
 
   pv.wbulk.buffer = usbdev_stack_allocate(&pv.usb, USBDEV_TEST_BULK_BUFFER_SIZE);
@@ -682,7 +682,7 @@ void app_start()
 
   tr = &pv.wbulk.tr;
   tr->type = DEV_USBDEV_DATA_IN;
-  tr->base.pvdata = &pv;
+  tr->pvdata = &pv;
   dev_usbdev_rq_init_seq(tr, &usbdev_service_test_write_cb, &pv.seq);
 
 #endif
@@ -696,7 +696,7 @@ void app_start()
 
       tr = &pv.riso[i].tr;
       tr->type = DEV_USBDEV_PARTIAL_DATA_OUT;
-      tr->base.pvdata = &pv;
+      tr->pvdata = &pv;
       dev_usbdev_rq_init_seq(tr, &usbdev_service_test_read_cb, &pv.seq);
       
       pv.wiso[i].buffer = usbdev_stack_allocate(&pv.usb, USB_TEST_ISOCHONOUS_SIZE);
@@ -706,7 +706,7 @@ void app_start()
 
       tr = &pv.wiso[i].tr;
       tr->type = DEV_USBDEV_DATA_IN;
-      tr->base.pvdata = &pv;
+      tr->pvdata = &pv;
       dev_usbdev_rq_init_seq(tr, &usbdev_service_test_write_cb, &pv.seq);
     }
 #endif
@@ -718,7 +718,7 @@ void app_start()
 
    tr = &pv.rirq.tr;
    tr->type = DEV_USBDEV_PARTIAL_DATA_OUT;
-   tr->base.pvdata = &pv;
+   tr->pvdata = &pv;
    dev_usbdev_rq_init_seq(tr, &usbdev_service_test_read_cb, &pv.seq);
    
    pv.rirq.buffer = usbdev_stack_allocate(&pv.usb, USB_TEST_INTERRUPT_SIZE);
@@ -728,7 +728,7 @@ void app_start()
 
    tr = &pv.wirq.tr;
    tr->type = DEV_USBDEV_DATA_IN;
-   tr->base.pvdata = &pv;
+   tr->pvdata = &pv;
    dev_usbdev_rq_init_seq(tr, &usbdev_service_test_write_cb, &pv.seq);
 #endif
 #if USBDEV_SERV_TEST_CONTROL_N_ENDPOINT
@@ -738,7 +738,7 @@ void app_start()
   pv.ctrl.desc = "endpoint of additionnal control interface";
 
   tr = &pv.ctrl.tr;
-  tr->base.pvdata = &pv;
+  tr->pvdata = &pv;
   dev_usbdev_rq_init_seq(tr, &usbdev_test_ctrl_n_cb, &pv.seq);
 #endif
 

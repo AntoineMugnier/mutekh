@@ -150,6 +150,7 @@ struct dev_bitbang_rq_s
   union {
     struct dev_request_s base;
     FIELD_USING(struct dev_request_s, error);
+    FIELD_USING(struct dev_request_s, pvdata);
   };
 
   /** @This specifies the operation to perform */

@@ -202,7 +202,7 @@ static KROUTINE_EXEC(rfp_test_rx_packet_callback)
 
 static struct dev_rfpacket_rx_s *rfp_test_rx_alloc(struct dev_rfpacket_rq_s *rq, size_t size)
 {
-  struct rfp_test_pv_s *pv = rq->base.pvdata;
+  struct rfp_test_pv_s *pv = rq->pvdata;
 
   if ((rand() % 16) == 0)
     return NULL;
@@ -232,7 +232,7 @@ static struct dev_rfpacket_rx_s *rfp_test_rx_alloc(struct dev_rfpacket_rq_s *rq,
 static KROUTINE_EXEC(rfp_test_rx_callback)
 {
   struct dev_rfpacket_rq_s *rq = KROUTINE_CONTAINER(kr, *rq, base.kr);
-  struct rfp_test_pv_s *pv = rq->base.pvdata;
+  struct rfp_test_pv_s *pv = rq->pvdata;
 
   if (rq->error == -ENOTSUP)
     printk("Bad RX configuration\n");
@@ -265,7 +265,7 @@ static int16_t rfp_test_set_rand_power()
 static KROUTINE_EXEC(rfp_test_tx_callback)
 {
   struct dev_rfpacket_rq_s *rq = KROUTINE_CONTAINER(kr, *rq, base.kr);
-  struct rfp_test_pv_s *pv = rq->base.pvdata;
+  struct rfp_test_pv_s *pv = rq->pvdata;
 
   if (rq->error == -ENOTSUP)
     printk("Bad TX configuration\n");
@@ -285,7 +285,7 @@ static KROUTINE_EXEC(rfp_test_wait_before_push_cb)
 {
   struct dev_timer_rq_s *trq = KROUTINE_CONTAINER(kr, *trq, base.kr);
   struct rfp_test_rq_s *base = rfp_test_rq_s_from_trq(trq);
-  rfp_test_push_random_req(trq->base.pvdata, &base->rq);
+  rfp_test_push_random_req(trq->pvdata, &base->rq);
 }
 
 static void rfp_test_wait_before_push(struct rfp_test_pv_s *pv, struct dev_rfpacket_rq_s *rq)
@@ -295,7 +295,7 @@ static void rfp_test_wait_before_push(struct rfp_test_pv_s *pv, struct dev_rfpac
 
   trq->delay = pv->base_time * 256;
   trq->rev = 0;
-  trq->base.pvdata = pv;
+  trq->pvdata = pv;
 
   dev_timer_rq_init(trq, rfp_test_wait_before_push_cb);
 
@@ -315,7 +315,7 @@ static void rfp_test_wait_before_push(struct rfp_test_pv_s *pv, struct dev_rfpac
 static void rfp_test_push_random_req(struct rfp_test_pv_s *pv, struct dev_rfpacket_rq_s *rq)
 {
   rq->err_group = 0;
-  rq->base.pvdata = pv;
+  rq->pvdata = pv;
   rq->anchor = DEV_RFPACKET_TIMESTAMP_END;
 
   rq->pk_cfg = &pkcfg.base;

@@ -165,7 +165,7 @@ static KROUTINE_EXEC(pcal6408a_i2c_done)
 {
   struct pcal6408a_priv_s *pv
     = KROUTINE_CONTAINER(kr, *pv, i2c_rq.base.base.kr);
-  struct device_s *dev = pv->i2c_rq.base.base.pvdata;
+  struct device_s *dev = pv->i2c_rq.pvdata;
 
   dprintk("%s\n", __FUNCTION__);
 
@@ -288,7 +288,7 @@ static DEV_INIT(pcal6408a_init)
     goto err_i2c;
 
   dev_i2c_ctrl_rq_init(&pv->i2c_rq.base, pcal6408a_i2c_done);
-  pv->i2c_rq.base.base.pvdata = dev;
+  pv->i2c_rq.pvdata = dev;
 
   dev_rq_queue_init(&pv->queue);
   dev_rq_queue_init(&pv->until_queue);

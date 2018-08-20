@@ -59,6 +59,7 @@ struct dev_enum_rq_s
   union {
     struct dev_request_s base;
     FIELD_USING(struct dev_request_s, error);
+    FIELD_USING(struct dev_request_s, pvdata);
   };
 
   enum dev_enum_rq_type_e type:8;

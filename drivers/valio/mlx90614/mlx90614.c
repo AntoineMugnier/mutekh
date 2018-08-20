@@ -231,7 +231,7 @@ static
 KROUTINE_EXEC(mlx90614_i2c_done)
 {
   struct mlx90614_context_s *pv = KROUTINE_CONTAINER(kr, *pv, i2c_rq.base.base.kr);
-  struct device_s *dev = pv->i2c_rq.base.base.pvdata;
+  struct device_s *dev = pv->i2c_rq.pvdata;
 
   LOCK_SPIN_IRQ(&dev->lock);
 
@@ -275,7 +275,7 @@ static
 KROUTINE_EXEC(mlx90614_timer_done)
 {
   struct mlx90614_context_s *pv = KROUTINE_CONTAINER(kr, *pv, timer_rq.base.kr);
-  struct device_s *dev = pv->i2c_rq.base.base.pvdata;
+  struct device_s *dev = pv->i2c_rq.pvdata;
 
   LOCK_SPIN_IRQ(&dev->lock);
 
@@ -324,8 +324,8 @@ static DEV_INIT(mlx90614_init)
 
   dev_timer_init_sec(pv->timer, &pv->timer_rq.delay, 0, period, 1000);
 
-  pv->i2c_rq.base.base.pvdata = dev;
-  pv->timer_rq.base.pvdata = dev;
+  pv->i2c_rq.pvdata = dev;
+  pv->timer_rq.pvdata = dev;
 
   dev_i2c_ctrl_rq_init(&pv->i2c_rq.base, mlx90614_i2c_done);
   dev_timer_rq_init(&pv->timer_rq, mlx90614_timer_done);

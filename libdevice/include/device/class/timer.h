@@ -138,7 +138,11 @@ struct dev_freq_s;
 /** Timer request @csee dev_timer_request_t */
 struct dev_timer_rq_s
 {
-  struct dev_request_s          base;
+  union {
+    struct dev_request_s base;
+    FIELD_USING(struct dev_request_s, pvdata);
+    FIELD_USING(struct dev_request_s, drvdata);
+  };
 
   /** absolute timer deadline, used when @tt delay is 0 */
   dev_timer_value_t             deadline;

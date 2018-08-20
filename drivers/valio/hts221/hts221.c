@@ -127,7 +127,7 @@ static
 KROUTINE_EXEC(hts221_read_done)
 {
   struct hts221_private_s *pv  = KROUTINE_CONTAINER(kr, *pv, i2c_rq.base.base.kr);
-  struct device_s *dev = pv->i2c_rq.base.base.pvdata;
+  struct device_s *dev = pv->i2c_rq.pvdata;
   const uint8_t *buf = bc_get_bytepack(&pv->i2c_rq.vm, HTS221_I2C_BCGLOBAL_BUFFER);
 
   logk_trace("%s %d", __func__, pv->i2c_rq.error);
@@ -194,7 +194,7 @@ static
 KROUTINE_EXEC(hts221_wait_done)
 {
   struct hts221_private_s *pv  = KROUTINE_CONTAINER(kr, *pv, timer_rq.base.kr);
-  struct device_s *dev = pv->timer_rq.base.pvdata;
+  struct device_s *dev = pv->timer_rq.pvdata;
 
   logk_trace("%s %d", __func__, pv->state);
 
@@ -282,7 +282,7 @@ static
 KROUTINE_EXEC(hts221_init_done)
 {
   struct hts221_private_s *pv  = KROUTINE_CONTAINER(kr, *pv, i2c_rq.base.base.kr);
-  struct device_s *dev = pv->i2c_rq.base.base.pvdata;
+  struct device_s *dev = pv->i2c_rq.pvdata;
   const uint8_t *buf = bc_get_bytepack(&pv->i2c_rq.vm, HTS221_I2C_BCGLOBAL_BUFFER);
 
   logk_trace("%s %d", __func__, pv->i2c_rq.error);
@@ -364,7 +364,7 @@ DEV_INIT(hts221_init)
     goto err_queue;
 
   dev_timer_rq_init(&pv->timer_rq, &hts221_wait_done);
-  pv->timer_rq.base.pvdata = dev;
+  pv->timer_rq.pvdata = dev;
   dev_timer_init_sec(pv->timer, &pv->timer_rq.delay, 0, period, 1000);
 
   dev_timer_init_sec(pv->timer, &delay, 0, 1, 1000);
@@ -373,7 +373,7 @@ DEV_INIT(hts221_init)
 
   bc_set_reg(&pv->i2c_rq.vm, HTS221_I2C_BCGLOBAL_CONV_TIME, delay);
 
-  pv->i2c_rq.base.base.pvdata = dev;
+  pv->i2c_rq.pvdata = dev;
   dev_i2c_ctrl_rq_init(&pv->i2c_rq.base, &hts221_init_done);
   dev_i2c_bytecode_start(&pv->i2c, &pv->i2c_rq, &hts221_bc_initialize, 0);
 

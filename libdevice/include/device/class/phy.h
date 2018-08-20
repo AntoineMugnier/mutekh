@@ -59,6 +59,7 @@ struct dev_phy_rq_s
   union {
     struct dev_request_s base;
     FIELD_USING(struct dev_request_s, error);
+    FIELD_USING(struct dev_request_s, pvdata);
   };
 
   enum dev_phy_request_type_e type;

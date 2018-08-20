@@ -476,6 +476,7 @@ struct dev_i2c_ctrl_rq_s
   union {
     struct dev_request_s base;
     FIELD_USING(struct dev_request_s, error);
+    FIELD_USING(struct dev_request_s, pvdata);
   };
 
   /** @internal */
@@ -529,6 +530,7 @@ struct dev_i2c_ctrl_transaction_rq_s
   union {
     struct dev_i2c_ctrl_rq_s base;
     FIELD_USING(struct dev_i2c_ctrl_rq_s, error);
+    FIELD_USING(struct dev_i2c_ctrl_rq_s, pvdata);
   };
 
     /** Array of transfers to perform */
@@ -558,6 +560,7 @@ struct dev_i2c_ctrl_bytecode_rq_s
   union {
     struct dev_i2c_ctrl_rq_s base;
     FIELD_USING(struct dev_i2c_ctrl_rq_s, error);
+    FIELD_USING(struct dev_i2c_ctrl_rq_s, pvdata);
   };
 
   /** bytecode virtual machine context */

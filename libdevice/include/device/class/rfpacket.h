@@ -545,6 +545,7 @@ struct dev_rfpacket_rq_s
   union {
     struct dev_request_s base;
     FIELD_USING(struct dev_request_s, error);
+    FIELD_USING(struct dev_request_s, pvdata);
   };
 
   /** This specifies the RF configuration to use during the request. */

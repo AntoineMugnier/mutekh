@@ -394,7 +394,7 @@ static
 KROUTINE_EXEC(usbdev_acm_write_cb)
 {
   struct dev_usbdev_rq_s *tr = KROUTINE_CONTAINER(kr, *tr, base.kr);
-  struct device_s *dev = tr->base.pvdata;
+  struct device_s *dev = tr->pvdata;
 
   LOCK_SPIN_IRQ_SCOPED(&dev->lock);
 
@@ -423,7 +423,7 @@ static
 KROUTINE_EXEC(usbdev_acm_read_cb)
 {
   struct dev_usbdev_rq_s *tr = KROUTINE_CONTAINER(kr, *tr, base.kr);
-  struct device_s *dev = tr->base.pvdata;
+  struct device_s *dev = tr->pvdata;
   struct usbdev_acm_private_s *pv = dev->drv_pv;
 
   LOCK_SPIN_IRQ_SCOPED(&dev->lock);
@@ -450,7 +450,7 @@ void usbdev_service_char_write(struct device_s *dev, bool_t flush)
 
   tr->type = DEV_USBDEV_DATA_IN;
   tr->error = 0;
-  tr->base.pvdata = dev;
+  tr->pvdata = dev;
 
   pv->zlp = 0;
   /* ZLP when size is multiple of MPS and _DEV_CHAR_FLUSH request */
@@ -858,8 +858,8 @@ DEV_INIT(usbdev_acm_init)
   if (!pv->rbuffer)
     goto err_wbuffer;
 
-  pv->wtr.base.pvdata = dev;
-  pv->rtr.base.pvdata = dev;
+  pv->wtr.pvdata = dev;
+  pv->rtr.pvdata = dev;
 
   device_get_res_uart(dev, &cfg);
   cdc_line_coding_set(&pv->coding, &cfg);

@@ -58,8 +58,8 @@ static void rtt_poll_enable(struct device_s *dev)
   struct rtt_private_s *pv = dev->drv_pv;
 
 #if defined(CONFIG_DRIVER_CHAR_RTT_TIMER)
-  if (!pv->timer_rq.base.pvdata) {
-    pv->timer_rq.base.pvdata = dev;
+  if (!pv->timer_rq.pvdata) {
+    pv->timer_rq.pvdata = dev;
     pv->timer_rq.deadline = 0;
     ensure(DEVICE_OP(&pv->timer, request, &pv->timer_rq) == 0);
   }
@@ -128,7 +128,7 @@ static KROUTINE_EXEC(rtt_tick)
 {
 #if defined(CONFIG_DRIVER_CHAR_RTT_TIMER)
   struct rtt_private_s *pv = KROUTINE_CONTAINER(kr, *pv, timer_rq.base.kr);
-  struct device_s *dev = pv->timer_rq.base.pvdata;
+  struct device_s *dev = pv->timer_rq.pvdata;
 #elif defined(CONFIG_DRIVER_CHAR_RTT_IDLE)
   struct rtt_private_s *pv = KROUTINE_CONTAINER(kr, *pv, poller);
   struct device_s *dev = pv->dev;
@@ -139,7 +139,7 @@ static KROUTINE_EXEC(rtt_tick)
 
   LOCK_SPIN_IRQ(&dev->lock);
 #if defined(CONFIG_DRIVER_CHAR_RTT_TIMER)
-  pv->timer_rq.base.pvdata = NULL;
+  pv->timer_rq.pvdata = NULL;
 #endif
   rtt_try_io(dev);
   LOCK_RELEASE_IRQ(&dev->lock);

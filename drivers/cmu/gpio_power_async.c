@@ -57,7 +57,7 @@ bool_t cmu_gpio_power_async_is_requested(struct cmu_gpio_power_async_private_s *
 static
 bool_t cmu_gpio_power_async_is_gpio_busy(struct cmu_gpio_power_async_private_s *pv)
 {
-  return !!pv->gpio_rq.base.pvdata;
+  return !!pv->gpio_rq.pvdata;
 }
 
 static DEV_CMU_NODE_INFO(cmu_gpio_power_async_node_info)
@@ -102,7 +102,7 @@ error_t cmu_gpio_power_async_update(struct cmu_gpio_power_async_private_s *pv)
   else
     pv->gpio_rq.output.set_mask = pv->gpio_rq.output.clear_mask = dev_gpio_mask0;
 
-  pv->gpio_rq.base.pvdata = pv->src_ep.dev;
+  pv->gpio_rq.pvdata = pv->src_ep.dev;
   pv->gpio_rq.type = DEV_GPIO_SET_OUTPUT;
 
   DEVICE_OP(&pv->gpio_dev, request, &pv->gpio_rq);
@@ -113,13 +113,13 @@ error_t cmu_gpio_power_async_update(struct cmu_gpio_power_async_private_s *pv)
 static KROUTINE_EXEC(cmu_gpio_power_async_done)
 {
   struct cmu_gpio_power_async_private_s *pv = KROUTINE_CONTAINER(kr, *pv, gpio_rq.base.kr);
-  struct device_s *dev = pv->gpio_rq.base.pvdata;
+  struct device_s *dev = pv->gpio_rq.pvdata;
 
   dprintk("%s async API done\n", __FUNCTION__);
 
   LOCK_SPIN_IRQ(&dev->lock);
 
-  pv->gpio_rq.base.pvdata = NULL;
+  pv->gpio_rq.pvdata = NULL;
 
   bool_t cur_value = (pv->gpio_rq.output.set_mask == dev_gpio_mask1);
   bool_t active = pv->active_up == cur_value;
@@ -256,7 +256,7 @@ static DEV_INIT(cmu_gpio_power_async_init)
 
   pv->gpio_rq.mode.mask = dev_gpio_mask1;
   pv->gpio_rq.mode.mode = DEV_PIN_PUSHPULL;
-  pv->gpio_rq.base.pvdata = pv->src_ep.dev;
+  pv->gpio_rq.pvdata = pv->src_ep.dev;
 
   DEVICE_OP(&pv->gpio_dev, request, &pv->gpio_rq);
 

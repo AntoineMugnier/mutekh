@@ -168,7 +168,7 @@ static KROUTINE_EXEC(pcf8563_done)
 {
   struct pcf8563_priv_s *pv
     = KROUTINE_CONTAINER(kr, *pv, i2c_txn.base.base.kr);
-  struct device_s *dev = pv->i2c_txn.base.base.pvdata;
+  struct device_s *dev = pv->i2c_txn.pvdata;
   struct dev_valio_rq_s *rq;
 
   LOCK_SPIN_IRQ(&dev->lock);
@@ -257,7 +257,7 @@ static DEV_INIT(pcf8563_init)
   if (err)
     goto err_pv;
 
-  pv->i2c_txn.base.base.pvdata = dev;
+  pv->i2c_txn.pvdata = dev;
   pv->i2c_txn.transfer = pv->i2c_transfer;
   pv->i2c_txn.transfer_count = 2;
   pv->i2c_transfer[0].data = &pv->reg;

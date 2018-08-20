@@ -97,7 +97,7 @@ void ntag_timeout_reset(struct device_s *dev)
 {
   struct ntag_private_s *pv = dev->drv_pv;
 
-  if (pv->timer_rq.base.pvdata) {
+  if (pv->timer_rq.pvdata) {
     logk_debug("Seems timer is active, trying to cancel");
     if (DEVICE_OP(pv->timer, cancel, &pv->timer_rq)) {
       logk_debug("Cancel failed");
@@ -105,7 +105,7 @@ void ntag_timeout_reset(struct device_s *dev)
     }
   }
   
-  pv->timer_rq.base.pvdata = dev;
+  pv->timer_rq.pvdata = dev;
   DEVICE_OP(pv->timer, request, &pv->timer_rq);
 }
   
@@ -117,7 +117,7 @@ void ntag_next(struct device_s *dev)
 
   logk_trace("%s", __func__);
 
-  if (pv->i2c_rq.base.base.pvdata)
+  if (pv->i2c_rq.pvdata)
     return;
 
   while ((rq = dev_request_queue_head(&pv->mem_queue))) {
@@ -138,7 +138,7 @@ void ntag_next(struct device_s *dev)
     logk_debug("merged %d contiguous SC buffers, starts at %x", sc_count, block);
     
     if (mrq->type & DEV_MEM_OP_PAGE_WRITE) {
-      pv->i2c_rq.base.base.pvdata = dev;
+      pv->i2c_rq.pvdata = dev;
       pv->rq = rq;
       dev_i2c_bytecode_start(
           &pv->i2c, &pv->i2c_rq, &ntag_bc_write,
@@ -146,7 +146,7 @@ void ntag_next(struct device_s *dev)
 
       return;
     } else if (mrq->type & DEV_MEM_OP_PAGE_READ) {
-      pv->i2c_rq.base.base.pvdata = dev;
+      pv->i2c_rq.pvdata = dev;
       pv->rq = rq;
       dev_i2c_bytecode_start(
           &pv->i2c, &pv->i2c_rq, &ntag_bc_read,
@@ -164,7 +164,7 @@ void ntag_next(struct device_s *dev)
   if (pv->must_refresh) {
     pv->must_refresh = 0;
     logk_debug("Refreshing state...");
-    pv->i2c_rq.base.base.pvdata = dev;
+    pv->i2c_rq.pvdata = dev;
     dev_i2c_bytecode_start(
         &pv->i2c, &pv->i2c_rq, &ntag_bc_passthrough_update,
         NTAG_BC_PASSTHROUGH_UPDATE_BCARGS());
@@ -187,7 +187,7 @@ void ntag_next(struct device_s *dev)
 
     if (nc & (NC_PT_ON | NC_FD_ON_MASK | NC_FD_OFF_MASK)) {
       logk_debug("Disabling passthrough...");
-      pv->i2c_rq.base.base.pvdata = dev;
+      pv->i2c_rq.pvdata = dev;
       dev_i2c_bytecode_start(
           &pv->i2c, &pv->i2c_rq, &ntag_bc_passthrough_disable,
           NTAG_BC_PASSTHROUGH_DISABLE_BCARGS());
@@ -198,7 +198,7 @@ void ntag_next(struct device_s *dev)
 
   if (!(nc & NC_PT_ON)) {
     logk_debug("Enabling passthrough...");
-    pv->i2c_rq.base.base.pvdata = dev;
+    pv->i2c_rq.pvdata = dev;
     dev_i2c_bytecode_start(
       &pv->i2c, &pv->i2c_rq, &ntag_bc_passthrough_enable,
       NTAG_BC_PASSTHROUGH_ENABLE_BCARGS());
@@ -220,7 +220,7 @@ void ntag_next(struct device_s *dev)
   if (crq->type & _DEV_CHAR_WRITE) {
     if (nc & NC_PT_TO_I2C) {
       logk_debug("Switching to TX");
-      pv->i2c_rq.base.base.pvdata = dev;
+      pv->i2c_rq.pvdata = dev;
       dev_i2c_bytecode_start(
           &pv->i2c, &pv->i2c_rq, &ntag_bc_pt_send_start,
           NTAG_BC_PT_SEND_START_BCARGS());
@@ -229,7 +229,7 @@ void ntag_next(struct device_s *dev)
   } else {
     if (!(nc & NC_PT_TO_I2C)) {
       logk_debug("Switching to RX");
-      pv->i2c_rq.base.base.pvdata = dev;
+      pv->i2c_rq.pvdata = dev;
       dev_i2c_bytecode_start(
           &pv->i2c, &pv->i2c_rq, &ntag_bc_pt_recv_start,
           NTAG_BC_PT_RECV_START_BCARGS());
@@ -239,7 +239,7 @@ void ntag_next(struct device_s *dev)
 
   if (crq->type & _DEV_CHAR_WRITE) {
     logk_debug("Switching to TX and sending");
-    pv->i2c_rq.base.base.pvdata = dev;
+    pv->i2c_rq.pvdata = dev;
     pv->rq = rq;
     dev_i2c_bytecode_start(
         &pv->i2c, &pv->i2c_rq, &ntag_bc_pt_send,
@@ -247,7 +247,7 @@ void ntag_next(struct device_s *dev)
     return;
   } else if (ns & NS_I2C_READY) {
     logk_debug("Ready for reading buffer, reading");
-    pv->i2c_rq.base.base.pvdata = dev;
+    pv->i2c_rq.pvdata = dev;
     pv->rq = rq;
     dev_i2c_bytecode_start(
         &pv->i2c, &pv->i2c_rq, &ntag_bc_pt_recv,
@@ -266,9 +266,9 @@ static
 KROUTINE_EXEC(ntag_i2c_done)
 {
   struct ntag_private_s *pv  = KROUTINE_CONTAINER(kr, *pv, i2c_rq.base.base.kr);
-  struct device_s *dev = pv->i2c_rq.base.base.pvdata;
+  struct device_s *dev = pv->i2c_rq.pvdata;
   
-  pv->i2c_rq.base.base.pvdata = NULL;
+  pv->i2c_rq.pvdata = NULL;
 
   logk_debug("%s %d pt nc %02x ns %02x",
              __func__, pv->i2c_rq.error,
@@ -362,13 +362,13 @@ static
 KROUTINE_EXEC(ntag_timeout)
 {
   struct ntag_private_s *pv  = KROUTINE_CONTAINER(kr, *pv, timer_rq.base.kr);
-  struct device_s *dev = pv->timer_rq.base.pvdata;
+  struct device_s *dev = pv->timer_rq.pvdata;
 
   logk_debug("Timeout");
 
   LOCK_SPIN_IRQ_SCOPED(&dev->lock);
 
-  pv->timer_rq.base.pvdata = NULL;
+  pv->timer_rq.pvdata = NULL;
   pv->must_refresh = 1;
 
   ntag_next(dev);
@@ -486,7 +486,7 @@ DEV_INIT(ntag_init)
   /* if (err) */
   /*   goto err_pv; */
 
-  pv->i2c_rq.base.base.pvdata = NULL;
+  pv->i2c_rq.pvdata = NULL;
   pv->i2c_rq.gpio_map = pv->gpio_map;
   pv->i2c_rq.gpio_wmap = pv->gpio_wmap;
 
@@ -495,7 +495,7 @@ DEV_INIT(ntag_init)
 #endif
 
   dev_i2c_ctrl_rq_init(&pv->i2c_rq.base, &ntag_i2c_done);
-  pv->i2c_rq.base.base.pvdata = dev;
+  pv->i2c_rq.pvdata = dev;
   dev_i2c_bytecode_start(&pv->i2c, &pv->i2c_rq, &ntag_bc_init, NTAG_BC_INIT_BCARGS());
 
   return 0;
@@ -512,7 +512,7 @@ DEV_CLEANUP(ntag_cleanup)
 
   struct ntag_private_s *pv = dev->drv_pv;
 
-  if (pv->i2c_rq.base.base.pvdata)
+  if (pv->i2c_rq.pvdata)
     return -EBUSY;
 
   dev_drv_i2c_bytecode_cleanup(&pv->i2c, &pv->i2c_rq);

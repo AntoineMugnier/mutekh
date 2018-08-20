@@ -382,7 +382,7 @@ static inline void run_requests(void)
     {
       pvdata_g[id].state = TEST_TIMER_STATE_NEW_REQUEST;
       pvdata_g[id].id = id;
-      request_g[id].base.pvdata = &pvdata_g[id];
+      request_g[id].pvdata = &pvdata_g[id];
       dev_timer_rq_init_sched_switch(&request_g[id], request_handler);
     }
 

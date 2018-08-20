@@ -255,7 +255,7 @@ static void pic32_spi_restart(struct pic32_spi_context_s * pv)
 static KROUTINE_EXEC(dma_callback)
 {
   struct dev_dma_rq_s *rq = KROUTINE_CONTAINER(kr, *rq, base.kr);
-  struct device_s *dev = (struct device_s *)rq->base.pvdata;
+  struct device_s *dev = (struct device_s *)rq->pvdata;
   struct pic32_spi_context_s *pv = dev->drv_pv;
   
   lock_spin(&dev->lock);
@@ -481,7 +481,7 @@ static DEV_INIT(pic32_spi_init)
 
   pv->intlrq.rq.arch_rq = 1;
   pv->intlrq.rq.type = DEV_DMA_INTERLEAVED;
-  pv->intlrq.rq.base.pvdata = dev;
+  pv->intlrq.rq.pvdata = dev;
 
   /* WRITE */
 
@@ -507,7 +507,7 @@ static DEV_INIT(pic32_spi_init)
 
   pv->brq.rq.arch_rq = 1;
   pv->brq.rq.type = DEV_DMA_BASIC;
-  pv->brq.rq.base.pvdata = dev;
+  pv->brq.rq.pvdata = dev;
   pv->brq.rq.basic.dst = pv->addr + PIC32_SPI_BUF_ADDR;
   pv->brq.rq.param[0].dst_inc = DEV_DMA_INC_NONE;
   pv->brq.rq.param[0].const_data = 0;

@@ -189,7 +189,7 @@ device_spi_ctrl_end(struct dev_spi_ctrl_context_s *q,
 static KROUTINE_EXEC(device_spi_ctrl_timeout)
 {
   struct dev_timer_rq_s *trq = KROUTINE_CONTAINER(kr, *trq, base.kr);
-  struct dev_spi_ctrl_context_s *q = trq->base.pvdata;
+  struct dev_spi_ctrl_context_s *q = trq->pvdata;
 
   lock_spin_irq(&q->lock);
 
@@ -215,7 +215,7 @@ device_spi_ctrl_delay(struct dev_spi_ctrl_context_s *q,
       trq->delay = 0;
       trq->rev = 0;
       dev_timer_rq_init(trq, device_spi_ctrl_timeout);
-      trq->base.pvdata = q;
+      trq->pvdata = q;
 
       err = DEVICE_OP(&q->timer, request, trq);
 

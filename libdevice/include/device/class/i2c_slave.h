@@ -168,6 +168,7 @@ struct dev_i2c_slave_rq_s
   union {
     struct dev_request_s base;
     FIELD_USING(struct dev_request_s, error);
+    FIELD_USING(struct dev_request_s, pvdata);
   };
 
   enum dev_i2c_slave_op_e BITFIELD(type, 2);

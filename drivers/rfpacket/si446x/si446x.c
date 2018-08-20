@@ -1346,7 +1346,7 @@ static inline void si446x_sleep(struct si446x_ctx_s *pv)
 static KROUTINE_EXEC(si446x_spi_rq_done)
 {
   struct dev_spi_ctrl_bytecode_rq_s *srq = KROUTINE_CONTAINER(kr, *srq, base.base.kr);
-  struct device_s *dev = srq->base.base.pvdata;
+  struct device_s *dev = srq->pvdata;
   struct si446x_ctx_s *pv = dev->drv_pv;
 
   LOCK_SPIN_IRQ(&dev->lock);
@@ -1542,7 +1542,7 @@ static DEV_INIT(si446x_init)
   if (device_start(&pv->timer->base))
     goto err_srq;
 
-  srq->base.base.pvdata = dev;
+  srq->pvdata = dev;
   pv->dev = dev;
 
   /* init GPIO stuff */
