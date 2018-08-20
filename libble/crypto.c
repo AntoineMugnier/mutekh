@@ -27,7 +27,7 @@
 
 #include <device/class/crypto.h>
 
-error_t ble_e(struct device_crypto_s *dev,
+error_t ble_e(const struct device_crypto_s *dev,
               const uint8_t *key,
               const uint8_t *in,
               uint8_t *out)
@@ -50,7 +50,7 @@ error_t ble_e(struct device_crypto_s *dev,
   return dev_crypto_wait_rq(dev, &rq);
 }
 
-error_t ble_ah(struct device_crypto_s *dev,
+error_t ble_ah(const struct device_crypto_s *dev,
                const uint8_t *k,
                const uint8_t *r,
                uint8_t *out)
@@ -70,7 +70,7 @@ error_t ble_ah(struct device_crypto_s *dev,
   return err;
 }
 
-error_t ble_c1(struct device_crypto_s *dev,
+error_t ble_c1(const struct device_crypto_s *dev,
                const uint8_t *k,
                const uint8_t *r,
                const uint8_t *preq,
@@ -108,7 +108,7 @@ error_t ble_c1(struct device_crypto_s *dev,
   return 0;
 }
 
-error_t ble_s1(struct device_crypto_s *dev,
+error_t ble_s1(const struct device_crypto_s *dev,
                const uint8_t *k,
                const uint8_t *r1,
                const uint8_t *r2,
@@ -129,7 +129,7 @@ error_t ble_s1(struct device_crypto_s *dev,
   return 0;
 }
 
-error_t ble_aes_cmac(struct device_crypto_s *dev,
+error_t ble_aes_cmac(const struct device_crypto_s *dev,
                      const uint8_t *k,
                      const uint8_t *msg, size_t len,
                      uint8_t *out)

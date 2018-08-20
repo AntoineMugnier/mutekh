@@ -68,7 +68,7 @@ struct dev_crypto_rq_s;
    Key, in and out are in usual ECB order (what Bluetooth spec
    explains as big-endian).
  */
-error_t ble_e(struct device_crypto_s *dev,
+error_t ble_e(const struct device_crypto_s *dev,
               const uint8_t *key,
               const uint8_t *in,
               uint8_t *out);
@@ -110,7 +110,7 @@ error_t ble_ccm_decrypt(
    This function is usually used for random address resolution with
    @tt IRK.
  */
-error_t ble_ah(struct device_crypto_s *dev,
+error_t ble_ah(const struct device_crypto_s *dev,
                const uint8_t *k,
                const uint8_t *r,
                uint8_t *out);
@@ -120,7 +120,7 @@ error_t ble_ah(struct device_crypto_s *dev,
 
    This function is usually used for (legacy) pairing confirmation.
  */
-error_t ble_c1(struct device_crypto_s *dev,
+error_t ble_c1(const struct device_crypto_s *dev,
                const uint8_t *k,
                const uint8_t *r,
                const uint8_t *preq,
@@ -135,7 +135,7 @@ error_t ble_c1(struct device_crypto_s *dev,
    @tt Key, @tt r1, @tt r2 and out are in Bluetooth (little-endian)
    order.
  */
-error_t ble_s1(struct device_crypto_s *dev,
+error_t ble_s1(const struct device_crypto_s *dev,
                const uint8_t *k,
                const uint8_t *r1,
                const uint8_t *r2,
@@ -148,7 +148,7 @@ error_t ble_s1(struct device_crypto_s *dev,
 
    @tt data and @tt size point a byte-stream.
  */
-error_t ble_aes_cmac(struct device_crypto_s *dev,
+error_t ble_aes_cmac(const struct device_crypto_s *dev,
                      const uint8_t *k,
                      const uint8_t *data,
                      size_t size,
@@ -159,7 +159,7 @@ error_t ble_aes_cmac(struct device_crypto_s *dev,
 
    This function is usually used for (secure) pairing confirmation.
  */
-error_t ble_f4(struct device_crypto_s *dev,
+error_t ble_f4(const struct device_crypto_s *dev,
                const uint8_t *u,
                const uint8_t *v,
                const uint8_t *x,
@@ -171,7 +171,7 @@ error_t ble_f4(struct device_crypto_s *dev,
 
    This function is usually used for key generation.
  */
-error_t ble_f5(struct device_crypto_s *dev,
+error_t ble_f5(const struct device_crypto_s *dev,
                const uint8_t *w,
                const uint8_t *n1, const uint8_t *n2,
                const struct ble_addr_s *a1,
@@ -183,7 +183,7 @@ error_t ble_f5(struct device_crypto_s *dev,
 
    This function is usually used for (secure) connection check.
  */
-error_t ble_f6(struct device_crypto_s *dev,
+error_t ble_f6(const struct device_crypto_s *dev,
                const uint8_t *w,
                const uint8_t *n1, const uint8_t *n2,
                const uint8_t *r, uint32_t io_cap,
@@ -196,7 +196,7 @@ error_t ble_f6(struct device_crypto_s *dev,
 
    This function is usually used for (secure) passkey check.
  */
-error_t ble_g2(struct device_crypto_s *dev,
+error_t ble_g2(const struct device_crypto_s *dev,
                const uint8_t *u, const uint8_t *v,
                const uint8_t *x, const uint8_t *y,
                uint32_t *out);

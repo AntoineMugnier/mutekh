@@ -317,7 +317,7 @@ DEV_REQUEST_WAIT_FUNC(gpio);
     @see dev_gpio_set_output_t @see dev_gpio_wait_out
     @xsee {Synchronous and asynchronous operation} */
 config_depend_alwaysinline(CONFIG_DEVICE_GPIO,
-error_t dev_gpio_out(struct device_gpio_s *accessor, gpio_id_t id, bool_t x),
+error_t dev_gpio_out(const struct device_gpio_s *accessor, gpio_id_t id, bool_t x),
 {
   const uint8_t *p = x ? dev_gpio_mask1 : dev_gpio_mask0;
   return DEVICE_OP(accessor, set_output, id, id, p, p);
@@ -343,7 +343,7 @@ error_t dev_gpio_wait_out(const struct device_gpio_s *accessor, gpio_id_t id, bo
     @see dev_gpio_set_mode_t @see dev_gpio_wait_mode
     @xsee {Synchronous and asynchronous operation} */
 config_depend_alwaysinline(CONFIG_DEVICE_GPIO,
-error_t dev_gpio_mode(struct device_gpio_s *accessor, gpio_id_t id,
+error_t dev_gpio_mode(const struct device_gpio_s *accessor, gpio_id_t id,
                       enum dev_pin_driving_e mode),
 {
   return DEVICE_OP(accessor, set_mode, id, id, dev_gpio_mask1, mode);
@@ -370,7 +370,7 @@ error_t dev_gpio_wait_mode(const struct device_gpio_s *accessor, gpio_id_t id,
     @see dev_gpio_get_input_t @see dev_gpio_wait_input
     @xsee {Synchronous and asynchronous operation} */
 config_depend_alwaysinline(CONFIG_DEVICE_GPIO,
-bool_t dev_gpio_input(struct device_gpio_s *accessor, gpio_id_t id, error_t *err),
+bool_t dev_gpio_input(const struct device_gpio_s *accessor, gpio_id_t id, error_t *err),
 {
   uint8_t x[8];
   error_t e = DEVICE_OP(accessor, get_input, id, id, x);
@@ -501,7 +501,7 @@ error_t device_res_add_gpio(struct device_s *dev, const char *label,
    @see dev_pin_driving_e @see device_gpio_get_setup
 */
 config_depend(CONFIG_DEVICE_GPIO)
-error_t device_gpio_setup(const struct device_gpio_s *accessor,
+error_t device_gpio_setup(struct device_gpio_s *accessor,
                           struct device_s *dev, const char *pin_list,
                           gpio_id_t *map, gpio_width_t *wmap);
 
@@ -521,7 +521,7 @@ error_t device_res_gpio_map(struct device_s *dev, const char *pin_list,
                             gpio_id_t *map, gpio_width_t *wmap);
 
 __attribute__((deprecated("pass direction symbols to the device_gpio_setup* function instead")))
-error_t device_gpio_map_set_mode(struct device_gpio_s *accessor,
+error_t device_gpio_map_set_mode(const struct device_gpio_s *accessor,
                                  const gpio_id_t *map, const gpio_width_t *wmap,
                                  uint_fast8_t count, /* enum dev_pin_driving_e */ ...);
 

@@ -349,7 +349,7 @@ void dev_request_poll_init(struct dev_request_s *rq,
 # endif
 
 /** @see dev_request_delay_func_t */
-#define DEV_REQUEST_DELAYED_FUNC(n) void (n)(struct device_accessor_s *accessor, \
+#define DEV_REQUEST_DELAYED_FUNC(n) void (n)(const struct device_accessor_s *accessor, \
                                              struct dev_request_s *rq_)
 
 /** @This is the device request processing function which is called
@@ -412,7 +412,7 @@ dev_request_delayed_end(struct dev_request_dlqueue_s *q,
                         struct dev_request_s *rq)
 {
 #ifdef CONFIG_DEVICE_DELAYED_REQUEST
-  struct device_accessor_s *accessor = rq->drvdata;
+  const struct device_accessor_s *accessor = rq->drvdata;
 
   if (accessor != NULL)
     {
@@ -455,7 +455,7 @@ dev_request_delayed_isidle(struct dev_request_dlqueue_s *q)
     interrupts disabled.
 */
 inline void
-dev_request_delayed_push(struct device_accessor_s *accessor,
+dev_request_delayed_push(const struct device_accessor_s *accessor,
                          struct dev_request_dlqueue_s *q,
                          struct dev_request_s *rq, bool_t critical)
 {
@@ -468,7 +468,7 @@ dev_request_delayed_push(struct device_accessor_s *accessor,
     {
       LOCK_SPIN_IRQ(&dev->lock);
       empty = dev_rq_queue_isempty(&q->queue);
-      rq->drvdata = accessor;
+      rq->drvdata = (void*)accessor;
       __dev_rq_queue_pushback(&q->queue, rq);
       if (empty && !interruptible)
         kroutine_exec(&q->kr); /* delayed exec */

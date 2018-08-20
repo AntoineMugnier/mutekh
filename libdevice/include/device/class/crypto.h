@@ -315,7 +315,7 @@ struct dev_crypto_rq_s
 DEV_REQUEST_INHERIT(crypto); DEV_REQUEST_QUEUE_OPS(crypto);
 
 /** @see dev_crypto_info_t */
-#define DEV_CRYPTO_INFO(n) error_t (n) (struct device_crypto_s *accessor, \
+#define DEV_CRYPTO_INFO(n) error_t (n) (const struct device_crypto_s *accessor, \
                                         struct dev_crypto_info_s *info)
 
 /** @This retrieves information about the cryptographic algorithm
@@ -323,7 +323,7 @@ DEV_REQUEST_INHERIT(crypto); DEV_REQUEST_QUEUE_OPS(crypto);
 typedef DEV_CRYPTO_INFO(dev_crypto_info_t);
 
 /** @see dev_crypto_request_t */
-#define DEV_CRYPTO_REQUEST(n) void (n) (struct device_crypto_s *accessor,   \
+#define DEV_CRYPTO_REQUEST(n) void (n) (const struct device_crypto_s *accessor,   \
                                         struct dev_crypto_rq_s *rq)
 
 /** @This starts cryptographic processing.

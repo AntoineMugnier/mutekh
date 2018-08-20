@@ -69,7 +69,7 @@ MUTEK_SHELL_ROOT_ENTRY(quit, TERMUI_CON_BUILTIN_QUIT(-1) );
 
 extern __ldscript_symbol_t shell_cmd_table;
 
-void mutek_shell_start(struct device_char_s *c, const char *term,
+void mutek_shell_start(const struct device_char_s *c, const char *term,
                        const struct termui_con_entry_s * const *root,
                        const char *prompt)
 {

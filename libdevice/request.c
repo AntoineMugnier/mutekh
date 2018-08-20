@@ -51,7 +51,7 @@ dev_request_sched_wait(struct dev_request_status_s *status);
 #ifdef CONFIG_DEVICE_DELAYED_REQUEST
 
 extern inline void
-dev_request_delayed_push(struct device_accessor_s *accessor,
+dev_request_delayed_push(const struct device_accessor_s *accessor,
                          struct dev_request_dlqueue_s *d,
                          struct dev_request_s *rq, bool_t critical);
 extern inline void

@@ -50,11 +50,13 @@ static TERMUI_TERMIO_FCN_CLEANUP(termui_dev_cleanup)
 }
 
 termui_err_t
-termui_dev_io_init(struct termui_term_s *tm, struct device_char_s *dev, const char *type)
+termui_dev_io_init(struct termui_term_s *tm,
+                   const struct device_char_s *dev,
+                   const char *type)
 {
   memset(tm->type, 0, TERMUI_TYPESTR_MAXLEN);
   tm->ioerr = 0;
-  tm->io_pv = dev;
+  tm->io_pv = (void*)dev;
 
   /* register tty operations in term object */
   tm->s_write = termui_dev_write;

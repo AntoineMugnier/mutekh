@@ -33,7 +33,7 @@
 
 #include "check.h"
 
-static void crypto_test_c1(struct device_crypto_s *aes)
+static void crypto_test_c1(const struct device_crypto_s *aes)
 {
   const struct ble_addr_s ia = {
     .type = BLE_ADDR_RANDOM,
@@ -61,7 +61,7 @@ static void crypto_test_c1(struct device_crypto_s *aes)
         0xea, 0x88, 0x89, 0x87, 0xef, 0x3f, 0x1e, 0x1e);
 }
 
-static void crypto_test_s1(struct device_crypto_s *aes)
+static void crypto_test_s1(const struct device_crypto_s *aes)
 {
   const uint8_t k[16] = {};
   const uint8_t r1[] = {0x88, 0x77, 0x66, 0x55, 0x44, 0x33, 0x22, 0x11,
@@ -77,7 +77,7 @@ static void crypto_test_s1(struct device_crypto_s *aes)
         0x9b, 0xf4, 0xb0, 0xe8, 0xf0, 0xe1, 0x1f, 0x9a);
 }
 
-static void crypto_test_ah(struct device_crypto_s *aes)
+static void crypto_test_ah(const struct device_crypto_s *aes)
 {
   const uint8_t k[16] = {0x9b, 0x7d, 0x39, 0x0a, 0xa6, 0x10, 0x10, 0x34,
                          0x05, 0xad, 0xc8, 0x57, 0xa3, 0x34, 0x02, 0xec};

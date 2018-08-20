@@ -218,7 +218,7 @@ struct dev_timer_skew_s
 };
 
 /** @see dev_timer_request_t */
-#define DEV_TIMER_REQUEST(n)	error_t  (n) (struct device_timer_s *accessor, \
+#define DEV_TIMER_REQUEST(n)	error_t  (n) (const struct device_timer_s *accessor, \
                                               struct dev_timer_rq_s *rq)
 
 /**
@@ -256,7 +256,7 @@ struct dev_timer_skew_s
 typedef DEV_TIMER_REQUEST(dev_timer_request_t);
 
 /** @see dev_timer_cancel_t */
-#define DEV_TIMER_CANCEL(n)	error_t  (n) (struct device_timer_s *accessor, \
+#define DEV_TIMER_CANCEL(n)	error_t  (n) (const struct device_timer_s *accessor, \
                                               struct dev_timer_rq_s *rq)
 
 /**
@@ -273,7 +273,7 @@ typedef DEV_TIMER_CANCEL(dev_timer_cancel_t);
 
 
 /** @see dev_timer_get_value_t */
-#define DEV_TIMER_GET_VALUE(n)	error_t (n) (struct device_timer_s *accessor, \
+#define DEV_TIMER_GET_VALUE(n)	error_t (n) (const struct device_timer_s *accessor, \
                                              dev_timer_value_t *value,  \
                                              dev_timer_cfgrev_t rev)
 
@@ -297,7 +297,7 @@ typedef DEV_TIMER_GET_VALUE(dev_timer_get_value_t);
 
 
 /** @see dev_timer_config_t */
-#define DEV_TIMER_CONFIG(n)	error_t (n) (struct device_timer_s *accessor, \
+#define DEV_TIMER_CONFIG(n)	error_t (n) (const struct device_timer_s *accessor, \
                                              struct dev_timer_config_s *cfg, \
                                              dev_timer_res_t res)
 
@@ -356,17 +356,17 @@ DRIVER_CLASS_TYPES(DRIVER_CLASS_TIMER, timer,
     read (-EIO) or if the timer overlap period is to short for the
     delay (-ERANGE). */
 config_depend(CONFIG_DEVICE_TIMER)
-error_t dev_timer_init_sec(struct device_timer_s *accessor, dev_timer_delay_t *delay,
+error_t dev_timer_init_sec(const struct device_timer_s *accessor, dev_timer_delay_t *delay,
                            dev_timer_cfgrev_t *rev, dev_timer_delay_t s_delay, uint32_t r_unit);
 
 /** @see dev_timer_init_sec. */
 config_depend(CONFIG_DEVICE_TIMER)
-error_t dev_timer_init_sec_round(struct device_timer_s *accessor, dev_timer_delay_t *delay,
+error_t dev_timer_init_sec_round(const struct device_timer_s *accessor, dev_timer_delay_t *delay,
                                  dev_timer_cfgrev_t *rev, dev_timer_delay_t s_delay, uint32_t r_unit);
 
 /** @see dev_timer_init_sec. */
 config_depend(CONFIG_DEVICE_TIMER)
-error_t dev_timer_init_sec_ceil(struct device_timer_s *accessor, dev_timer_delay_t *delay,
+error_t dev_timer_init_sec_ceil(const struct device_timer_s *accessor, dev_timer_delay_t *delay,
                                 dev_timer_cfgrev_t *rev, dev_timer_delay_t s_delay, uint32_t r_unit);
 
 /** @This multiplies the given fraction by the @em {timer frequency /
@@ -376,14 +376,14 @@ error_t dev_timer_init_sec_ceil(struct device_timer_s *accessor, dev_timer_delay
     The resulting fraction can be used for conversion between timer
     units and second based delay.*/
 config_depend(CONFIG_DEVICE_TIMER)
-error_t dev_timer_frac(struct device_timer_s *accessor,
+error_t dev_timer_frac(const struct device_timer_s *accessor,
                        uint64_t *num, uint64_t *denom,
                        dev_timer_cfgrev_t *rev, bool_t reduce);
 
 /** @This works like @ref dev_timer_init_sec but convert from timer
     unit to second based unit. */
 config_depend(CONFIG_DEVICE_TIMER)
-error_t dev_timer_get_sec(struct device_timer_s *accessor, uint64_t *stime,
+error_t dev_timer_get_sec(const struct device_timer_s *accessor, uint64_t *stime,
                           dev_timer_cfgrev_t *rev, dev_timer_value_t tvalue, uint32_t r_unit);
 
 /** @This computes two shift amounts which can be used for fast
@@ -410,7 +410,7 @@ error_t dev_timer_get_sec(struct device_timer_s *accessor, uint64_t *stime,
     Either the @tt shift_a or the @tt shift_b pointer may be @tt NULL.
 */
 config_depend(CONFIG_DEVICE_TIMER)
-error_t dev_timer_shift_sec(struct device_timer_s *accessor,
+error_t dev_timer_shift_sec(const struct device_timer_s *accessor,
                             int8_t *shift_a, int8_t *shift_b,
                             dev_timer_cfgrev_t *rev,
                             dev_timer_delay_t s_delay, uint32_t r_unit);
@@ -467,7 +467,7 @@ ALWAYS_INLINE bool_t dev_timer_request_is_scheduled(const struct dev_timer_rq_s 
     success, 0 is returned if the time has not elapsed yet and 1 is
     returned on timeout. */
 config_depend(CONFIG_DEVICE_TIMER)
-error_t dev_timer_check_timeout(struct device_timer_s *accessor,
+error_t dev_timer_check_timeout(const struct device_timer_s *accessor,
                                 dev_timer_delay_t delay,
                                 const dev_timer_value_t *start);
 
@@ -475,7 +475,7 @@ error_t dev_timer_check_timeout(struct device_timer_s *accessor,
     put the current context in wait state waiting for the given
     request to terminate. */
 config_depend_and2_inline(CONFIG_DEVICE_TIMER, CONFIG_MUTEK_CONTEXT_SCHED,
-error_t dev_timer_wait_rq(struct device_timer_s *accessor,
+error_t dev_timer_wait_rq(const struct device_timer_s *accessor,
                                struct dev_timer_rq_s *rq),
 {
   struct dev_request_status_s st;
@@ -495,7 +495,7 @@ error_t dev_timer_wait_rq(struct device_timer_s *accessor,
     put the current context in wait state waiting for the specified
     deadline. */
 config_depend_and2_inline(CONFIG_DEVICE_TIMER, CONFIG_MUTEK_CONTEXT_SCHED,
-error_t dev_timer_wait_deadline(struct device_timer_s *accessor,
+error_t dev_timer_wait_deadline(const struct device_timer_s *accessor,
                                 dev_timer_value_t deadline,
                                 dev_timer_cfgrev_t rev),
 {
@@ -511,7 +511,7 @@ error_t dev_timer_wait_deadline(struct device_timer_s *accessor,
     put the current context in wait state waiting for the specified
     delay. The function never returns @tt -ETIMEDOUT. */
 config_depend_and2_inline(CONFIG_DEVICE_TIMER, CONFIG_MUTEK_CONTEXT_SCHED,
-error_t dev_timer_wait_delay(struct device_timer_s *accessor,
+error_t dev_timer_wait_delay(const struct device_timer_s *accessor,
                              dev_timer_delay_t delay,
                              dev_timer_cfgrev_t rev),
 {

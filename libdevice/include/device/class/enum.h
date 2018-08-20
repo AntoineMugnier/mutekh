@@ -80,7 +80,7 @@ struct dev_enum_rq_s
 DEV_REQUEST_INHERIT(enum); DEV_REQUEST_QUEUE_OPS(enum);
 
 /** @see dev_enum_match_driver_t */
-#define DEV_ENUM_MATCH_DRIVER(n) bool_t (n)(struct device_enum_s *accessor, \
+#define DEV_ENUM_MATCH_DRIVER(n) bool_t (n)(const struct device_enum_s *accessor, \
                                             const struct dev_enum_ident_s *ident, \
                                             size_t count, struct device_s *dev)
 

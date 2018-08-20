@@ -31,7 +31,7 @@
 
 #include "check.h"
 
-static void ccm_test_core(struct device_crypto_s *aes)
+static void ccm_test_core(const struct device_crypto_s *aes)
 {
   struct dev_crypto_context_s ctx;
   struct dev_crypto_rq_s rq;

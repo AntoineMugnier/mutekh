@@ -685,7 +685,7 @@ struct usbdev_service_s
 /** @This is called by services to retrieve a control command or to transfer
     data on control endpoint 0. */
 config_depend(CONFIG_DEVICE_USBDEV)
-error_t usbdev_stack_request(struct device_usbdev_s *dev, struct usbdev_service_s *service,
+error_t usbdev_stack_request(const struct device_usbdev_s *dev, struct usbdev_service_s *service,
                              struct usbdev_service_rq_s *rq);
 
 /** @This is called by services to transfer data on control endpoint other than
@@ -700,7 +700,7 @@ error_t usbdev_stack_request(struct device_usbdev_s *dev, struct usbdev_service_
     either by this function or by kroutine. In this case, the
     @ref dev_usbdev_rq_s::size might not be updated. */
 config_depend(CONFIG_DEVICE_USBDEV)
-error_t usbdev_stack_transfer(struct device_usbdev_s *dev,
+error_t usbdev_stack_transfer(const struct device_usbdev_s *dev,
                               struct usbdev_service_s *service,
                               struct dev_usbdev_rq_s *tr,
                               const struct usb_endpoint_descriptor_s *desc);
@@ -841,7 +841,7 @@ STRUCT_COMPOSE(dev_usbdev_context_s, kr);
     implementing its own service. @This can only be called when device is
     stopped. Otherwise it returns -EBUSY. */
 config_depend(CONFIG_DEVICE_USBDEV)
-error_t usbdev_stack_service_register(struct device_usbdev_s *dev,
+error_t usbdev_stack_service_register(const struct device_usbdev_s *dev,
                                       struct usbdev_service_s *service);
 
 /** @This detach an USB service from an USB device controller. This is called
@@ -849,7 +849,7 @@ error_t usbdev_stack_service_register(struct device_usbdev_s *dev,
     implementing its own service. @This can only called when device is stopped.
     Otherwise it returns -EBUSY */
 config_depend(CONFIG_DEVICE_USBDEV)
-error_t usbdev_stack_service_unregister(struct device_usbdev_s *dev,
+error_t usbdev_stack_service_unregister(const struct device_usbdev_s *dev,
                                         struct usbdev_service_s *service);
 
 /** @This allocates a buffer compliant with USB device controller. Most
@@ -857,15 +857,15 @@ error_t usbdev_stack_service_unregister(struct device_usbdev_s *dev,
     or send buffer. Returns 0 when the required allocation failed otherwise
     returns a pointer on the buffer. */
 config_depend(CONFIG_DEVICE_USBDEV)
-void * usbdev_stack_allocate(struct device_usbdev_s *dev, size_t size);
+void * usbdev_stack_allocate(const struct device_usbdev_s *dev, size_t size);
 
 /** @This frees an allocated buffer. */
 config_depend(CONFIG_DEVICE_USBDEV)
-void usbdev_stack_free(struct device_usbdev_s *dev, void * ptr);
+void usbdev_stack_free(const struct device_usbdev_s *dev, void * ptr);
 
 /* @This attach an USB device description to an USB device controller.*/
 config_depend(CONFIG_DEVICE_USBDEV)
-void usbdev_stack_set_device_info(struct device_usbdev_s *dev,
+void usbdev_stack_set_device_info(const struct device_usbdev_s *dev,
                                   const struct usbdev_device_info_s *info);
 
 /* @This returns endpoint 0 max packet size */

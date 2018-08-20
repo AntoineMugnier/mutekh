@@ -41,7 +41,7 @@ const char dev_timer_capabilities_e[] = ENUM_DESC_DEV_TIMER_CAPABILITIES_E;
 GCT_CONTAINER_KEY_PROTOTYPES(dev_request_pqueue, extern inline, __dev_timer_pqueue, dev_timer_pqueue,
                              remove, insert);
 
-extern inline error_t dev_timer_frac(struct device_timer_s *accessor,
+extern inline error_t dev_timer_frac(const struct device_timer_s *accessor,
                                      uint64_t *num, uint64_t *denom,
                                      dev_timer_cfgrev_t *rev, bool_t reduce)
 {
@@ -73,7 +73,7 @@ extern inline error_t dev_timer_frac(struct device_timer_s *accessor,
   return 0;
 }
 
-error_t dev_timer_init_sec(struct device_timer_s *accessor, dev_timer_delay_t *delay,
+error_t dev_timer_init_sec(const struct device_timer_s *accessor, dev_timer_delay_t *delay,
                            dev_timer_cfgrev_t *rev, dev_timer_delay_t s_delay, uint32_t r_unit)
 {
   uint64_t num = s_delay, denom = r_unit;
@@ -90,7 +90,7 @@ error_t dev_timer_init_sec(struct device_timer_s *accessor, dev_timer_delay_t *d
   return 0;
 }
 
-error_t dev_timer_init_sec_round(struct device_timer_s *accessor, dev_timer_delay_t *delay,
+error_t dev_timer_init_sec_round(const struct device_timer_s *accessor, dev_timer_delay_t *delay,
                                  dev_timer_cfgrev_t *rev, dev_timer_delay_t s_delay, uint32_t r_unit)
 {
   uint64_t num = s_delay, denom = r_unit;
@@ -109,7 +109,7 @@ error_t dev_timer_init_sec_round(struct device_timer_s *accessor, dev_timer_dela
   return 0;
 }
 
-error_t dev_timer_init_sec_ceil(struct device_timer_s *accessor, dev_timer_delay_t *delay,
+error_t dev_timer_init_sec_ceil(const struct device_timer_s *accessor, dev_timer_delay_t *delay,
                                 dev_timer_cfgrev_t *rev, dev_timer_delay_t s_delay, uint32_t r_unit)
 {
   uint64_t num = s_delay, denom = r_unit;
@@ -128,7 +128,7 @@ error_t dev_timer_init_sec_ceil(struct device_timer_s *accessor, dev_timer_delay
   return 0;
 }
 
-error_t dev_timer_get_sec(struct device_timer_s *accessor, uint64_t *stime,
+error_t dev_timer_get_sec(const struct device_timer_s *accessor, uint64_t *stime,
                           dev_timer_cfgrev_t *rev, dev_timer_value_t tvalue, uint32_t r_unit)
 {
   uint64_t num = tvalue * r_unit, denom = 1;
@@ -143,7 +143,7 @@ error_t dev_timer_get_sec(struct device_timer_s *accessor, uint64_t *stime,
   return 0;
 }
 
-error_t dev_timer_shift_sec(struct device_timer_s *accessor,
+error_t dev_timer_shift_sec(const struct device_timer_s *accessor,
                             int8_t *shift_a, int8_t *shift_b,
                             dev_timer_cfgrev_t *rev,
                             dev_timer_delay_t s_delay, uint32_t r_unit)
@@ -188,7 +188,7 @@ error_t dev_timer_shift_sec(struct device_timer_s *accessor,
   return 0;
 }
 
-error_t dev_timer_check_timeout(struct device_timer_s *accessor,
+error_t dev_timer_check_timeout(const struct device_timer_s *accessor,
                                 dev_timer_delay_t delay,
                                 const dev_timer_value_t *start)
 {
@@ -213,15 +213,15 @@ error_t dev_timer_check_timeout(struct device_timer_s *accessor,
 
 #ifdef CONFIG_MUTEK_CONTEXT_SCHED
 extern inline
-error_t dev_timer_wait_rq(struct device_timer_s *accessor, struct dev_timer_rq_s *rq);
+error_t dev_timer_wait_rq(const struct device_timer_s *accessor, struct dev_timer_rq_s *rq);
 
 extern inline
-error_t dev_timer_wait_deadline(struct device_timer_s *accessor,
+error_t dev_timer_wait_deadline(const struct device_timer_s *accessor,
                                 dev_timer_value_t deadline,
                                 dev_timer_cfgrev_t rev);
 
 extern inline
-error_t dev_timer_wait_delay(struct device_timer_s *accessor,
+error_t dev_timer_wait_delay(const struct device_timer_s *accessor,
                              dev_timer_delay_t delay,
                              dev_timer_cfgrev_t rev);
 #endif

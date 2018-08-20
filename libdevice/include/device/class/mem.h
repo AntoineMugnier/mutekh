@@ -263,7 +263,7 @@ struct dev_mem_rq_s
 DEV_REQUEST_INHERIT(mem); DEV_REQUEST_QUEUE_OPS(mem);
 
 /** @see dev_mem_info_t */
-#define DEV_MEM_INFO(n)	error_t  (n) (struct device_mem_s *accessor, \
+#define DEV_MEM_INFO(n)	error_t  (n) (const struct device_mem_s *accessor, \
                                       struct dev_mem_info_s *info,      \
                                       uint8_t band_index)
 
@@ -285,7 +285,7 @@ typedef DEV_MEM_INFO(dev_mem_info_t);
 
 
 /** @see dev_mem_request_t */
-#define DEV_MEM_REQUEST(n)	void  (n) (struct device_mem_s *accessor,   \
+#define DEV_MEM_REQUEST(n)	void  (n) (const struct device_mem_s *accessor,   \
                                            struct dev_mem_rq_s *rq)
 
 /** @This enqueues a memory device operation request.

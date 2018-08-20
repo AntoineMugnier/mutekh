@@ -547,7 +547,7 @@ struct dev_##cl##_context_s;                                            \
     private data. This is used by the libdevice generic code of the     \
     class, not relevant for all classes. */                             \
 ALWAYS_INLINE struct dev_##cl##_context_s *                             \
-device_##cl##_context(struct device_##cl##_s *x)                        \
+device_##cl##_context(const struct device_##cl##_s *x)                  \
 {                                                                       \
   return (void*)((uint8_t*)x->dev->drv_pv + x->api->ctx_offset);        \
 }

@@ -67,7 +67,7 @@ DRIVER_PV(struct stm32_pwm_private_s
 });
 
 static
-error_t stm32_pwm_validate(struct device_pwm_s *pdev,
+error_t stm32_pwm_validate(const struct device_pwm_s *pdev,
                            struct dev_pwm_rq_s *rq)
 {
   struct stm32_pwm_private_s *pv   = pdev->dev->drv_pv;

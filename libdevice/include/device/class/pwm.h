@@ -113,7 +113,7 @@ struct dev_pwm_rq_s
 DEV_REQUEST_INHERIT(pwm); DEV_REQUEST_QUEUE_OPS(pwm);
 
 /** @see dev_pwm_config_t */
-#define DEV_PWM_REQUEST(n) void (n)(struct device_pwm_s *pdev, \
+#define DEV_PWM_REQUEST(n) void (n)(const struct device_pwm_s *pdev, \
                                     struct dev_pwm_rq_s  *rq)
 
 /** @This configures some PWM channels. The first channel to configure

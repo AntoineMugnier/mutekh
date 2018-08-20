@@ -63,7 +63,7 @@ DRIVER_PV(struct efm32_pwm_private_s
   struct dev_clock_sink_ep_s clk_ep;
 });
 
-static error_t efm32_pwm_validate_parameter(struct device_pwm_s *pdev, struct dev_pwm_rq_s *rq)
+static error_t efm32_pwm_validate_parameter(const struct device_pwm_s *pdev, struct dev_pwm_rq_s *rq)
 {
   struct efm32_pwm_private_s *pv  = pdev->dev->drv_pv;
   struct dev_freq_s freq = rq->cfg[0].freq;

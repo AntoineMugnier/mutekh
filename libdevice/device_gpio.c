@@ -47,7 +47,7 @@ extern inline bool_t dev_gpio_wait_input(const struct device_gpio_s *accessor, g
 
 #endif
 
-error_t device_gpio_map_set_mode(struct device_gpio_s *accessor,
+error_t device_gpio_map_set_mode(const struct device_gpio_s *accessor,
                                  const gpio_id_t *map, const gpio_width_t *wmap,
                                  uint_fast8_t count, /* enum dev_pin_driving_e */ ...)
 {
@@ -80,7 +80,7 @@ error_t device_res_gpio_map(struct device_s *dev, const char *pin_list,
   return device_gpio_setup(NULL, dev, pin_list, map, wmap);
 }
 
-error_t device_gpio_setup(const struct device_gpio_s *gpio,
+error_t device_gpio_setup(struct device_gpio_s *gpio,
                           struct device_s *dev, const char *pin_list,
                           gpio_id_t *map, gpio_width_t *wmap)
 {

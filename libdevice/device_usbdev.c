@@ -496,19 +496,19 @@ static void usbdev_enable_service(struct dev_usbdev_context_s *ctx)
 }
 
 
-void * usbdev_stack_allocate(struct device_usbdev_s *dev, size_t size)
+void * usbdev_stack_allocate(const struct device_usbdev_s *dev, size_t size)
 {
   struct dev_usbdev_context_s *ctx = device_usbdev_context(dev);
   return ctx->ops->f_alloc(ctx, size);
 }
 
-void  usbdev_stack_free(struct device_usbdev_s *dev, void * ptr)
+void  usbdev_stack_free(const struct device_usbdev_s *dev, void * ptr)
 {
   struct dev_usbdev_context_s *ctx = device_usbdev_context(dev);
   ctx->ops->f_free(ctx, ptr);
 }
 
-error_t usbdev_stack_service_register(struct device_usbdev_s *dev,
+error_t usbdev_stack_service_register(const struct device_usbdev_s *dev,
                                       struct usbdev_service_s *service)
 {
   struct dev_usbdev_context_s *ctx = device_usbdev_context(dev);
@@ -533,7 +533,7 @@ error_t usbdev_stack_service_register(struct device_usbdev_s *dev,
 
 /* Remove a USB service on a USB controller */
 
-error_t usbdev_stack_service_unregister(struct device_usbdev_s *dev,
+error_t usbdev_stack_service_unregister(const struct device_usbdev_s *dev,
                                         struct usbdev_service_s *service)
 {
   struct dev_usbdev_context_s *ctx = device_usbdev_context(dev);
@@ -577,7 +577,7 @@ uint8_t usbdev_stack_get_ep_addr(const struct usb_endpoint_descriptor_s *desc,
 
 /* This set information on USB device */
 
-void usbdev_stack_set_device_info(struct device_usbdev_s *dev,
+void usbdev_stack_set_device_info(const struct device_usbdev_s *dev,
                                   const struct usbdev_device_info_s *info)
 {
   struct dev_usbdev_context_s *ctx = device_usbdev_context(dev);
@@ -2071,7 +2071,7 @@ void usbdev_stack_request_done(struct dev_usbdev_context_s *ctx,
 /* This function is called by services to retrieve a ctrl command or to
  * read/wite on control endpoint 0 */
 
-error_t usbdev_stack_request(struct device_usbdev_s *dev,
+error_t usbdev_stack_request(const struct device_usbdev_s *dev,
                              struct usbdev_service_s *service,
                              struct usbdev_service_rq_s *rq)
 {
@@ -2197,7 +2197,7 @@ error_t usbdev_stack_request(struct device_usbdev_s *dev,
 
 /* Service entry point. Executed with lock */
 
-error_t usbdev_stack_transfer(struct device_usbdev_s *dev,
+error_t usbdev_stack_transfer(const struct device_usbdev_s *dev,
                               struct usbdev_service_s *service,
                               struct dev_usbdev_rq_s *tr,
                               const struct usb_endpoint_descriptor_s *desc)

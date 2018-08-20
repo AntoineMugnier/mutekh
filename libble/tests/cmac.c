@@ -33,7 +33,7 @@
 
 #include "check.h"
 
-static void crypto_test_cmac(struct device_crypto_s *aes)
+static void crypto_test_cmac(const struct device_crypto_s *aes)
 {
   uint8_t out[16];
   const uint8_t k[] = {
