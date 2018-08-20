@@ -150,24 +150,24 @@ DEV_VALIO_REQUEST(mlx90614_request)
   logk_debug("%s %p", __func__, req);
 
   if (pv->state == MLX90614_UNINITIALIZED) {
-    req->error = -EAGAIN;
+    rq->error = -EAGAIN;
     dev_valio_rq_done(req);
     return;
   }
 
-  if (req->type == DEVICE_VALIO_WRITE
-      || req->attribute != VALIO_TEMPERATURE_VALUE) {
-    req->error = -ENOTSUP;
+  if (rq->type == DEVICE_VALIO_WRITE
+      || rq->attribute != VALIO_TEMPERATURE_VALUE) {
+    rq->error = -ENOTSUP;
     dev_valio_rq_done(req);
     return;
   }
 
   LOCK_SPIN_IRQ(&dev->lock);
-  req->error = 0;
-  req->base.drvdata = (void *)(uintptr_t)accessor->number;
+  rq->error = 0;
+  rq->base.drvdata = (void *)(uintptr_t)accessor->number;
   dev_valio_rq_pushback(&pv->queue, req);
 
-  if (req->type == DEVICE_VALIO_READ)
+  if (rq->type == DEVICE_VALIO_READ)
     mlx90614_read(dev);
   LOCK_RELEASE_IRQ(&dev->lock);
 }

@@ -372,17 +372,17 @@ static DEV_VALIO_REQUEST(mpu650x_request)
 
   LOCK_SPIN_IRQ_SCOPED(&dev->lock);
 
-  switch (req->attribute) {
+  switch (rq->attribute) {
   case VALIO_MS_STATE: {
-    struct valio_ms_state_s *s = req->data;
+    struct valio_ms_state_s *s = rq->data;
 
-    switch (req->type) {
+    switch (rq->type) {
     case DEVICE_VALIO_READ:
       if (pv->state >= MPU650X_STREAMING) {
         for (size_t i = 0; i < 6; ++i)
           s->data.axis[i] = pv->value_last[i];
         s->active = !!pv->stable_left;
-        req->error = 0;
+        rq->error = 0;
         break;
       }
       // fallthrough
@@ -394,7 +394,7 @@ static DEV_VALIO_REQUEST(mpu650x_request)
       return;
 
     default:
-      req->error = -ENOTSUP;
+      rq->error = -ENOTSUP;
       break;
     }
 
@@ -403,24 +403,24 @@ static DEV_VALIO_REQUEST(mpu650x_request)
   }
 
   case VALIO_MS_CONFIG: {
-    struct valio_ms_config_s *c = req->data;
+    struct valio_ms_config_s *c = rq->data;
 
-    switch (req->type) {
+    switch (rq->type) {
     case DEVICE_VALIO_WRITE:
       dprintk("%s config write\n", __FUNCTION__);
       mpu650x_config_set(dev, c);
       mpu650x_state_reset(dev, MPU650X_POWER_OFF);
-      req->error = 0;
+      rq->error = 0;
       break;
 
     case DEVICE_VALIO_READ:
       dprintk("%s config read\n", __FUNCTION__);
       mpu650x_config_get(dev, c);
-      req->error = 0;
+      rq->error = 0;
       break;
 
     default:
-      req->error = -ENOTSUP;
+      rq->error = -ENOTSUP;
       break;
     }
 
@@ -429,25 +429,25 @@ static DEV_VALIO_REQUEST(mpu650x_request)
   }
 
   case VALIO_MS_CALIB: {
-    struct valio_ms_data_s *d = req->data;
+    struct valio_ms_data_s *d = rq->data;
 
-    switch (req->type) {
+    switch (rq->type) {
     case DEVICE_VALIO_WRITE:
       dprintk("%s calib write\n", __FUNCTION__);
       for (size_t i = 0; i < 6; ++i)
         pv->offset[i] = d->axis[i];
-      req->error = 0;
+      rq->error = 0;
       break;
 
     case DEVICE_VALIO_READ:
       dprintk("%s calib read\n", __FUNCTION__);
       for (size_t i = 0; i < 6; ++i)
         d->axis[i] = pv->offset[i];
-      req->error = 0;
+      rq->error = 0;
       break;
 
     default:
-      req->error = -ENOTSUP;
+      rq->error = -ENOTSUP;
       break;
     }
 
@@ -468,7 +468,7 @@ static DEV_VALIO_CANCEL(mpu650x_cancel)
   LOCK_SPIN_IRQ_SCOPED(&dev->lock);
 
   GCT_FOREACH(dev_request_queue, &pv->queue, item,
-              if (item == &req->base) {
+              if (item == &rq->base) {
                 dev_valio_rq_remove(&pv->queue, req);
                 return 0;
               });

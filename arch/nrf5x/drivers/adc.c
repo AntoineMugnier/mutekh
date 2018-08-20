@@ -143,21 +143,21 @@ static DEV_VALIO_REQUEST(nrf5x_adc_request)
 {
   struct device_s *dev = accessor->dev;
   struct nrf5x_adc_private_s *pv = dev->drv_pv;
-  struct valio_adc_group_s *group = req->data;
+  struct valio_adc_group_s *group = rq->data;
   bool_t start;
 
-  req->error = 0;
+  rq->error = 0;
 
-  logk_trace("%s %d %d %02x\n", __FUNCTION__, req->type, req->attribute, group->mask);
+  logk_trace("%s %d %d %02x\n", __FUNCTION__, rq->type, rq->attribute, group->mask);
 
   if (!group->mask) {
-    req->error = -ENOTSUP;
+    rq->error = -ENOTSUP;
     dev_valio_rq_done(req);
     return;
   }
 
-  if (req->attribute != VALIO_ADC_VALUE || req->type != DEVICE_VALIO_READ) {
-    req->error = -ENOTSUP;
+  if (rq->attribute != VALIO_ADC_VALUE || rq->type != DEVICE_VALIO_READ) {
+    rq->error = -ENOTSUP;
     dev_valio_rq_done(req);
     return;
   }
@@ -167,7 +167,7 @@ static DEV_VALIO_REQUEST(nrf5x_adc_request)
   start = dev_rq_queue_isempty(&pv->queue);
 
   dev_valio_rq_pushback(&pv->queue, req);
-  req->base.drvdata = dev;
+  rq->base.drvdata = dev;
 
   if (start)
     nrf5x_adc_request_start(dev);
@@ -181,7 +181,7 @@ static DEV_VALIO_CANCEL(nrf5x_adc_cancel)
 
   LOCK_SPIN_IRQ_SCOPED(&dev->lock);
 
-  if (req->base.drvdata == dev) {
+  if (rq->base.drvdata == dev) {
     err = 0;
     dev_valio_rq_remove(&pv->queue, req);
   }

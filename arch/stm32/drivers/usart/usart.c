@@ -494,13 +494,13 @@ DEV_VALIO_REQUEST(stm32_usart_valio_request)
   struct device_s *dev = accessor->dev;
   struct stm32_usart_context_s *pv = dev->drv_pv;
 
-  if (req->type != DEVICE_VALIO_WRITE
-      || req->attribute != VALIO_UART_CONFIG) {
-    req->error = -ENOTSUP;
+  if (rq->type != DEVICE_VALIO_WRITE
+      || rq->attribute != VALIO_UART_CONFIG) {
+    rq->error = -ENOTSUP;
     dev_valio_rq_done(req);
   }
 
-  struct dev_uart_config_s *cfg = req->data;
+  struct dev_uart_config_s *cfg = rq->data;
 
   /* disable the usart. */
   uint32_t a = pv->addr + STM32_USART_CR1_ADDR;
@@ -510,10 +510,10 @@ DEV_VALIO_REQUEST(stm32_usart_valio_request)
   STM32_USART_CR1_UE_SET(x, 0);
   cpu_mem_write_32(a, endian_le32(x));
 
-  req->error = stm32_usart_config_simple(pv, cfg);
+  rq->error = stm32_usart_config_simple(pv, cfg);
 
   /* (re-)enable the usart. */
-  if (!req->error && enabled)
+  if (!rq->error && enabled)
     {
       x = endian_le32(cpu_mem_read_32(a));
       STM32_USART_CR1_UE_SET(x, 1);
@@ -521,7 +521,7 @@ DEV_VALIO_REQUEST(stm32_usart_valio_request)
     }
 
 #if defined(CONFIG_DEBUG)
-  if (req->error && enabled)
+  if (rq->error && enabled)
     printk("uart: configuration left unchanged.\n");
 #endif
 

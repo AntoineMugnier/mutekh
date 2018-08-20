@@ -266,13 +266,13 @@ DEV_VALIO_REQUEST(adxl345_request)
 
     LOCK_SPIN_IRQ(&dev->lock);
 
-    switch (req->type)
+    switch (rq->type)
     {
     default:
         break;
 
     case DEVICE_VALIO_READ:
-        switch (req->attribute)
+        switch (rq->attribute)
         {
         default:
             err = -ENOTSUP;
@@ -287,7 +287,7 @@ DEV_VALIO_REQUEST(adxl345_request)
         break;
 
     case DEVICE_VALIO_WRITE:
-        switch (req->attribute)
+        switch (rq->attribute)
         {
         default:
             err = -ENOTSUP;
@@ -308,7 +308,7 @@ DEV_VALIO_REQUEST(adxl345_request)
 
     if (err < 0)
     {
-        req->error = err;
+        rq->error = err;
         dev_valio_rq_done(req);
     }
 }

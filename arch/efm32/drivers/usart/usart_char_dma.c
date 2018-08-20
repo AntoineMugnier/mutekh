@@ -545,27 +545,27 @@ static DEV_VALIO_REQUEST(efm32_usart_valio_request)
   struct device_s *dev = accessor->dev;
   struct efm32_usart_context_s *pv = dev->drv_pv;
 
-  req->error = -ENOTSUP;
+  rq->error = -ENOTSUP;
 
-  if (req->attribute == VALIO_UART_CONFIG)
+  if (rq->attribute == VALIO_UART_CONFIG)
     {
-      switch (req->type)
+      switch (rq->type)
         {
         case DEVICE_VALIO_READ:
           LOCK_SPIN_IRQ(&dev->lock);
-          *(struct dev_uart_config_s*)req->data = pv->cfg;
+          *(struct dev_uart_config_s*)rq->data = pv->cfg;
           LOCK_RELEASE_IRQ(&dev->lock);
 
-          req->error = 0;
+          rq->error = 0;
           break;
 
         case DEVICE_VALIO_WRITE:
           LOCK_SPIN_IRQ(&dev->lock);
-          pv->cfg = *(struct dev_uart_config_s*)req->data;
+          pv->cfg = *(struct dev_uart_config_s*)rq->data;
           efm32_usart_char_cfg_apply(dev);
           LOCK_RELEASE_IRQ(&dev->lock);
 
-          req->error = 0;
+          rq->error = 0;
           break;
 
         default:

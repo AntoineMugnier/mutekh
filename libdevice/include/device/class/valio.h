@@ -232,7 +232,7 @@ DEV_REQUEST_INHERIT(valio); DEV_REQUEST_QUEUE_OPS(valio);
 /** @see dev_valio_request_t */
 #define DEV_VALIO_REQUEST(n) void (n) (                             \
     const struct device_valio_s *accessor,                           \
-    struct dev_valio_rq_s *req)
+    struct dev_valio_rq_s *rq)
 
 /** @This enqueues a request.
 
@@ -246,7 +246,7 @@ typedef DEV_VALIO_REQUEST(dev_valio_request_t);
 /** @see dev_valio_request_t */
 #define DEV_VALIO_CANCEL(n) error_t (n) (                             \
     const struct device_valio_s *accessor,                           \
-    struct dev_valio_rq_s *req)
+    struct dev_valio_rq_s *rq)
 
 /** This function is able to cancels a @ref DEVICE_VALIO_WAIT_EVENT
     request which have previously been passed to the @ref
@@ -279,15 +279,15 @@ BUSY_WAITING_FUNCTION
 config_depend_inline(CONFIG_DEVICE_VALIO,
 error_t dev_valio_spin_request(
     const struct device_valio_s *accessor,
-    struct dev_valio_rq_s *req),
+    struct dev_valio_rq_s *rq),
 {
     struct dev_request_status_s status;
 
-    dev_request_spin_init(&req->base, &status);
+    dev_request_spin_init(&rq->base, &status);
     DEVICE_OP(accessor, request, req);
     dev_request_spin_wait(&status);
 
-    return req->error;
+    return rq->error;
 });
 
 
@@ -308,11 +308,11 @@ error_t dev_valio_spin_read(
         .data = data,
     };
 
-    dev_request_spin_init(&req.base, &status);
+    dev_request_spin_init(&rq.base, &status);
     DEVICE_OP(accessor, request, &req);
     dev_request_spin_wait(&status);
 
-    return req.error;
+    return rq.error;
 });
 
 /** @This perform a @ref DEVICE_VALIO_WRITE operation and wait for
@@ -332,11 +332,11 @@ error_t dev_valio_spin_write(
         .data = (void*)data,
     };
 
-    dev_request_spin_init(&req.base, &status);
+    dev_request_spin_init(&rq.base, &status);
     DEVICE_OP(accessor, request, &req);
     dev_request_spin_wait(&status);
 
-    return req.error;
+    return rq.error;
 });
 
 /** @This perform a @ref DEVICE_VALIO_WAIT_EVENT operation and wait
@@ -356,28 +356,28 @@ error_t dev_valio_spin_update(
         .data = data,
     };
 
-    dev_request_spin_init(&req.base, &status);
+    dev_request_spin_init(&rq.base, &status);
     DEVICE_OP(accessor, request, &req);
     dev_request_spin_wait(&status);
 
-    return req.error;
+    return rq.error;
 });
 
 /** @This is scheduler wait wrapper for the @ref dev_valio_request_t function */
 config_depend_and2_inline(CONFIG_DEVICE_VALIO, CONFIG_MUTEK_CONTEXT_SCHED,
 error_t dev_valio_wait_request(
     const struct device_valio_s *accessor,
-    struct dev_valio_rq_s *req),
+    struct dev_valio_rq_s *rq),
 {
       struct dev_request_status_s status;
 
-      dev_request_sched_init(&req->base, &status);
+      dev_request_sched_init(&rq->base, &status);
 
       DEVICE_OP(accessor, request, req);
 
       dev_request_sched_wait(&status);
 
-      return req->error;
+      return rq->error;
 });
 
 /** @This perform a @ref DEVICE_VALIO_READ operation and stop the

@@ -213,17 +213,17 @@ DEV_VALIO_REQUEST(hts221_request)
   struct device_s *dev = accessor->dev;
   struct hts221_private_s *pv = dev->drv_pv;
 
-  logk_trace("%s %p type %d att %d", __func__, req, req->type, req->attribute);
+  logk_trace("%s %p type %d att %d", __func__, req, rq->type, rq->attribute);
 
-  if (req->type == DEVICE_VALIO_WRITE) {
-    req->error = -EINVAL;
+  if (rq->type == DEVICE_VALIO_WRITE) {
+    rq->error = -EINVAL;
     dev_valio_rq_done(req);
     return;
   }
 
-  if (req->attribute != VALIO_TEMPERATURE_VALUE &&
-      req->attribute != VALIO_HUMIDITY) {
-    req->error = -EINVAL;
+  if (rq->attribute != VALIO_TEMPERATURE_VALUE &&
+      rq->attribute != VALIO_HUMIDITY) {
+    rq->error = -EINVAL;
     dev_valio_rq_done(req);
     return;
   }
@@ -231,13 +231,13 @@ DEV_VALIO_REQUEST(hts221_request)
   LOCK_SPIN_IRQ_SCOPED(&dev->lock);
 
   if (pv->state == HTS221_ERROR) {
-    req->error = -EIO;
+    rq->error = -EIO;
     dev_valio_rq_done(req);
   } else {
-    req->error = 0;
+    rq->error = 0;
     dev_valio_rq_pushback(&pv->queue, req);
 
-    if (req->type == DEVICE_VALIO_READ)
+    if (rq->type == DEVICE_VALIO_READ)
       hts221_read(dev);
     else
       hts221_wait(dev);

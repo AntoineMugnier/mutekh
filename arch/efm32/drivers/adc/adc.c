@@ -136,20 +136,20 @@ DEV_VALIO_REQUEST(efm32_adc_request)
   struct device_s *            dev = accessor->dev;
   struct efm32_adc_private_s * pv  = dev->drv_pv;
 
-  struct valio_adc_group_s * group = req->data;
+  struct valio_adc_group_s * group = rq->data;
 
-  req->error = 0;
+  rq->error = 0;
 
   if (!group->mask)
     {
-      req->error = -ENOTSUP;
+      rq->error = -ENOTSUP;
       dev_valio_rq_done(req);
       return;
     }
 
-  if (req->attribute != VALIO_ADC_VALUE || req->type != DEVICE_VALIO_READ)
+  if (rq->attribute != VALIO_ADC_VALUE || rq->type != DEVICE_VALIO_READ)
     {
-      req->error = -ENOTSUP;
+      rq->error = -ENOTSUP;
       dev_valio_rq_done(req);
       return;
     }

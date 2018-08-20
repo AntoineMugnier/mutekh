@@ -208,10 +208,10 @@ static DEV_VALIO_REQUEST(pcf8563_request)
 
   dprintk("%s\n", __FUNCTION__);
 
-  if (req->attribute != VALIO_HWCLOCK_DATE
-      || (req->type != DEVICE_VALIO_READ
-          && req->type != DEVICE_VALIO_WRITE)) {
-    req->error = -ENOTSUP;
+  if (rq->attribute != VALIO_HWCLOCK_DATE
+      || (rq->type != DEVICE_VALIO_READ
+          && rq->type != DEVICE_VALIO_WRITE)) {
+    rq->error = -ENOTSUP;
     dev_valio_rq_done(req);
     return;
   }

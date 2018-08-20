@@ -128,18 +128,18 @@ DEV_VALIO_REQUEST(max6675_request)
 
   logk_debug("%s %p", __func__, req);
 
-  if (req->type == DEVICE_VALIO_WRITE
-      || req->attribute != VALIO_TEMPERATURE_VALUE) {
-    req->error = -ENOTSUP;
+  if (rq->type == DEVICE_VALIO_WRITE
+      || rq->attribute != VALIO_TEMPERATURE_VALUE) {
+    rq->error = -ENOTSUP;
     dev_valio_rq_done(req);
     return;
   }
 
   LOCK_SPIN_IRQ(&dev->lock);
-  req->error = 0;
+  rq->error = 0;
   dev_valio_rq_pushback(&pv->queue, req);
 
-  if (req->type == DEVICE_VALIO_READ)
+  if (rq->type == DEVICE_VALIO_READ)
     max6675_read(dev);
   LOCK_RELEASE_IRQ(&dev->lock);
 }

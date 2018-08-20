@@ -314,22 +314,22 @@ static DEV_VALIO_REQUEST(matrix_keyboard_request)
   struct device_s *dev = accessor->dev;
   struct matrix_keyboard_ctx_s *pv = dev->drv_pv;
 
-  if (req->attribute != VALIO_KEYBOARD_MAP) {
-    req->error = -EINVAL;
+  if (rq->attribute != VALIO_KEYBOARD_MAP) {
+    rq->error = -EINVAL;
     dev_valio_rq_done(req);
     return;
   }
  
-  switch (req->type) {
+  switch (rq->type) {
   default:
-    req->error = -ENOTSUP;
+    rq->error = -ENOTSUP;
     dev_valio_rq_done(req);
     break;
 
   case DEVICE_VALIO_READ:
-    memcpy(req->data, pv->last_state, pv->state_size);
+    memcpy(rq->data, pv->last_state, pv->state_size);
     dev_valio_rq_done(req);
-    req->error = 0;
+    rq->error = 0;
     break;
 
   case DEVICE_VALIO_WAIT_EVENT: {

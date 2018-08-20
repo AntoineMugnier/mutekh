@@ -116,12 +116,12 @@ static DEV_VALIO_REQUEST(nrf5x_saadc_request)
 {
   struct device_s *dev = accessor->dev;
   struct nrf5x_saadc_private_s *pv = dev->drv_pv;
-  struct valio_adc_group_s *group = req->data;
+  struct valio_adc_group_s *group = rq->data;
   bool_t start;
 
-  req->error = 0;
+  rq->error = 0;
 
-  logk_trace("%s %d %d %02x\n", __FUNCTION__, req->type, req->attribute, group->mask);
+  logk_trace("%s %d %d %02x\n", __FUNCTION__, rq->type, rq->attribute, group->mask);
 
   if (!group->mask)
     goto notsup;
@@ -129,21 +129,21 @@ static DEV_VALIO_REQUEST(nrf5x_saadc_request)
   if ((group->mask + 1) != (1 << pv->channel_count))
     goto notsup;
 
-  if (req->attribute != VALIO_ADC_VALUE || req->type != DEVICE_VALIO_READ)
+  if (rq->attribute != VALIO_ADC_VALUE || rq->type != DEVICE_VALIO_READ)
     goto notsup;
 
   LOCK_SPIN_IRQ_SCOPED(&dev->lock);
 
   start = dev_rq_queue_isempty(&pv->queue);
   dev_valio_rq_pushback(&pv->queue, req);
-  req->base.drvdata = dev;
+  rq->base.drvdata = dev;
   if (start)
     nrf5x_saadc_request_start(dev);
 
   return;
 
  notsup:
-    req->error = -ENOTSUP;
+    rq->error = -ENOTSUP;
     dev_valio_rq_done(req);
 }
 
@@ -157,7 +157,7 @@ static DEV_VALIO_CANCEL(nrf5x_saadc_cancel)
   if (req == dev_valio_rq_head(&pv->queue))
     return -EBUSY;
   
-  if (req->base.drvdata == dev) {
+  if (rq->base.drvdata == dev) {
     dev_valio_rq_remove(&pv->queue, req);
     return 0;
   }

@@ -792,29 +792,29 @@ DEV_VALIO_REQUEST(usbdev_acm_valio_request)
   struct device_s               *dev = accessor->dev;
   struct usbdev_acm_private_s   *pv = dev->drv_pv;
 
-  if (req->attribute != VALIO_UART_CONFIG) {
-    req->error = -ENOTSUP;
+  if (rq->attribute != VALIO_UART_CONFIG) {
+    rq->error = -ENOTSUP;
     dev_char_rq_done(req);
   }
 
   LOCK_SPIN_IRQ_SCOPED(&dev->lock);
 
-  switch (req->type) {
+  switch (rq->type) {
   case DEVICE_VALIO_WRITE:
-    cdc_line_coding_set(&pv->coding, req->data);
+    cdc_line_coding_set(&pv->coding, rq->data);
     goto done;
 
   case DEVICE_VALIO_READ:
-    cdc_line_coding_parse(&pv->coding, req->data);
+    cdc_line_coding_parse(&pv->coding, rq->data);
 
   done:
-    req->error = 0;
+    rq->error = 0;
     dev_char_rq_done(req);
     return;
 
   case DEVICE_VALIO_WAIT_EVENT:
     dev_valio_rq_pushback(&pv->coding_notify_queue, req);
-    req->base.drvdata = dev;
+    rq->base.drvdata = dev;
     return;
   }
 }

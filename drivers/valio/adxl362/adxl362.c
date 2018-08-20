@@ -374,31 +374,31 @@ DEV_VALIO_REQUEST(adxl362_request)
 
   logk_trace("%s state %d", __func__, pv->state);
 
-  req->error = 0;
+  rq->error = 0;
 
   if (pv->state == ADXL362_STATE_INIT)
     {
-      req->error = -EBUSY;
+      rq->error = -EBUSY;
       goto end;
     }
 
   if (pv->state == ADXL362_STATE_ERROR)
     {
-      req->error = -EIO;
+      rq->error = -EIO;
       goto end;
     }
 
-  req->error = -ENOTSUP;
+  rq->error = -ENOTSUP;
   struct valio_ms_data_s    *data;
   struct valio_ms_config_s  *config;
 
-  switch (req->type)
+  switch (rq->type)
     {
       case DEVICE_VALIO_READ:
-        switch (req->attribute) {
+        switch (rq->attribute) {
         case VALIO_MS_CALIB:
-          req->error = 0;
-          data = (struct valio_ms_data_s *)req->data;
+          rq->error = 0;
+          data = (struct valio_ms_data_s *)rq->data;
           data->axis[VALIO_MS_ACCEL_X] = pv->offset[VALIO_MS_ACCEL_X];
           data->axis[VALIO_MS_ACCEL_Y] = pv->offset[VALIO_MS_ACCEL_Y];
           data->axis[VALIO_MS_ACCEL_Z] = pv->offset[VALIO_MS_ACCEL_Z];
@@ -406,14 +406,14 @@ DEV_VALIO_REQUEST(adxl362_request)
           break;
 
         case VALIO_MS_CONFIG:
-          req->error = 0;
-          config = (struct valio_ms_config_s *)req->data;
+          rq->error = 0;
+          config = (struct valio_ms_config_s *)rq->data;
           *config = pv->config;
           dev_valio_rq_done(req);
           break;
 
         case VALIO_MS_STATE:
-          req->error = 0;
+          rq->error = 0;
           dev_valio_rq_pushback(&pv->queue, req);
           pv->read_pending = 1;
           adxl362_next(pv);
@@ -422,10 +422,10 @@ DEV_VALIO_REQUEST(adxl362_request)
         break;
 
       case DEVICE_VALIO_WRITE:
-        switch (req->attribute) {
+        switch (rq->attribute) {
         case VALIO_MS_CALIB:
-          req->error = 0;
-          data = (struct valio_ms_data_s *)req->data;
+          rq->error = 0;
+          data = (struct valio_ms_data_s *)rq->data;
           pv->offset[VALIO_MS_ACCEL_X] = data->axis[VALIO_MS_ACCEL_X];
           pv->offset[VALIO_MS_ACCEL_Y] = data->axis[VALIO_MS_ACCEL_Y];
           pv->offset[VALIO_MS_ACCEL_Z] = data->axis[VALIO_MS_ACCEL_Z];
@@ -433,8 +433,8 @@ DEV_VALIO_REQUEST(adxl362_request)
           break;
 
         case VALIO_MS_CONFIG:
-          req->error = 0;
-          config = (struct valio_ms_config_s *)req->data;
+          rq->error = 0;
+          config = (struct valio_ms_config_s *)rq->data;
           pv->config = *config;
           pv->config_pending = 1;
           pv->read_pending = 1;
@@ -445,9 +445,9 @@ DEV_VALIO_REQUEST(adxl362_request)
         break;
 
     case DEVICE_VALIO_WAIT_EVENT:
-      switch (req->attribute) {
+      switch (rq->attribute) {
       case VALIO_MS_STATE:
-        req->error = 0;
+        rq->error = 0;
         dev_valio_rq_pushback(&pv->queue, req);
         adxl362_next(pv);
         break;
@@ -458,7 +458,7 @@ DEV_VALIO_REQUEST(adxl362_request)
 end:
   LOCK_RELEASE_IRQ(&dev->lock);
 
-  if (req->error < 0)
+  if (rq->error < 0)
     dev_valio_rq_done(req);
 }
 

@@ -193,13 +193,13 @@ static DEV_VALIO_REQUEST(push_button_request)
 
   LOCK_SPIN_IRQ(&dev->lock);
  
-  req->error = 0;
+  rq->error = 0;
 
-  struct valio_button_read_s * data = (struct valio_button_read_s*)req->data;
+  struct valio_button_read_s * data = (struct valio_button_read_s*)rq->data;
  
-  switch (req->type) {
+  switch (rq->type) {
     case DEVICE_VALIO_WRITE:
-      req->error = -ENOTSUP;
+      rq->error = -ENOTSUP;
       break;
 
     case DEVICE_VALIO_READ:
@@ -212,7 +212,7 @@ static DEV_VALIO_REQUEST(push_button_request)
       break;
   
     default:
-      req->error = -EINVAL;
+      rq->error = -EINVAL;
       break;
     }
 

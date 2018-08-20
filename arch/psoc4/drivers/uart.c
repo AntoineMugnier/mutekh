@@ -583,13 +583,13 @@ static DEV_VALIO_REQUEST(psoc4_uart_valio_request)
 {
   struct device_s *dev = accessor->dev;
 
-  if (req->type != DEVICE_VALIO_WRITE
-      || req->attribute != VALIO_UART_CONFIG) {
-    req->error = -ENOTSUP;
+  if (rq->type != DEVICE_VALIO_WRITE
+      || rq->attribute != VALIO_UART_CONFIG) {
+    rq->error = -ENOTSUP;
   } else {
     LOCK_SPIN_IRQ_SCOPED(&dev->lock);
 
-    req->error = psoc4_uart_config(dev, req->data);
+    rq->error = psoc4_uart_config(dev, rq->data);
   }
 
   dev_char_rq_done(req);

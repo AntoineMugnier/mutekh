@@ -269,13 +269,13 @@ static DEV_VALIO_REQUEST(mtch6102_request)
 
     LOCK_SPIN_IRQ(&dev->lock);
 
-    switch (req->type) {
+    switch (rq->type) {
     case DEVICE_VALIO_READ:
-        switch (req->attribute) {
+        switch (rq->attribute) {
         case VALIO_TOUCHPAD_SIZE:
-            ((struct valio_touchpad_size_s *)req->data)->width
+            ((struct valio_touchpad_size_s *)rq->data)->width
                 = pv->width * MTCH6102_POINT_PER_CELL;
-            ((struct valio_touchpad_size_s *)req->data)->height
+            ((struct valio_touchpad_size_s *)rq->data)->height
                 = pv->height * MTCH6102_POINT_PER_CELL;
             err = 0;
             break;
@@ -289,7 +289,7 @@ static DEV_VALIO_REQUEST(mtch6102_request)
         break;
 
     case DEVICE_VALIO_WAIT_EVENT:
-        switch (req->attribute) {
+        switch (rq->attribute) {
         case VALIO_TOUCHPAD_STATE:
             dev_valio_rq_pushback(&pv->queue, req);
             err = 1;
@@ -307,7 +307,7 @@ static DEV_VALIO_REQUEST(mtch6102_request)
     LOCK_RELEASE_IRQ(&dev->lock);
 
     if (err <= 0) {
-        req->error = err;
+        rq->error = err;
         
         dev_valio_rq_done(req);
     }

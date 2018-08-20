@@ -70,28 +70,28 @@ static DEV_VALIO_REQUEST(sx1509_kbd_request)
 
   dprintk("%s\n", __FUNCTION__);
 
-  if (req->attribute != VALIO_KEYBOARD_MAP) {
-    req->error = -EINVAL;
+  if (rq->attribute != VALIO_KEYBOARD_MAP) {
+    rq->error = -EINVAL;
     dev_valio_rq_done(req);
     return;
   }
 
-  switch (req->type) {
+  switch (rq->type) {
   default:
-    req->error = -ENOTSUP;
+    rq->error = -ENOTSUP;
     dev_valio_rq_done(req);
     return;
 
   case DEVICE_VALIO_WAIT_EVENT: {
     LOCK_SPIN_IRQ_SCOPED(&dev->lock);
-    req->error = 0;
+    rq->error = 0;
     dev_valio_rq_pushback(&pv->queue, req);
     return;
   }
 
   case DEVICE_VALIO_READ:
-    endian_le64_na_store(req->data, pv->value_last);
-    req->error = 0;
+    endian_le64_na_store(rq->data, pv->value_last);
+    rq->error = 0;
     dev_valio_rq_done(req);
     return;
   }
@@ -105,7 +105,7 @@ static DEV_VALIO_CANCEL(sx1509_kbd_cancel)
   LOCK_SPIN_IRQ_SCOPED(&dev->lock);
 
   GCT_FOREACH(dev_request_queue, &pv->queue, item,
-              if (item == &req->base) {
+              if (item == &rq->base) {
                 dev_valio_rq_remove(&pv->queue, req);
 
                 if (dev_rq_queue_isempty(&pv->queue))

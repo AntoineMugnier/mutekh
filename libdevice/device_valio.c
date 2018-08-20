@@ -23,7 +23,7 @@
 
 extern inline error_t dev_valio_spin_request(
     const struct device_valio_s *accessor,
-    struct dev_valio_rq_s *req);
+    struct dev_valio_rq_s *rq);
 
 extern inline error_t dev_valio_spin_read(
     const struct device_valio_s *accessor,
@@ -45,7 +45,7 @@ extern inline error_t dev_valio_spin_update(
 
 extern inline error_t dev_valio_wait_request(
     const struct device_valio_s *accessor,
-    struct dev_valio_rq_s *req);
+    struct dev_valio_rq_s *rq);
 
 extern inline error_t dev_valio_wait_read(
     const struct device_valio_s *accessor,

@@ -313,12 +313,12 @@ static DEV_VALIO_REQUEST(nrf52_ir_request)
 {
   struct device_s *dev = accessor->dev;
   struct nrf52_ir_pv_s *pv = dev->drv_pv;
-  const struct valio_ir_command_s *cmd = req->data;
+  const struct valio_ir_command_s *cmd = rq->data;
 
-  if (req->type != DEVICE_VALIO_WRITE)
+  if (rq->type != DEVICE_VALIO_WRITE)
     goto nosup;
 
-  if (req->attribute != VALIO_IR_COMMAND)
+  if (rq->attribute != VALIO_IR_COMMAND)
     goto nosup;
 
   logk_debug("%s %d\n", __FUNCTION__, cmd->type);
@@ -351,12 +351,12 @@ static DEV_VALIO_REQUEST(nrf52_ir_request)
   return;
 
  nosup:
-  req->error = -ENOTSUP;
+  rq->error = -ENOTSUP;
   dev_valio_rq_done(req);
   return;
 
  inval:
-  req->error = -EINVAL;
+  rq->error = -EINVAL;
   dev_valio_rq_done(req);
   return;
 }
@@ -373,7 +373,7 @@ static DEV_VALIO_CANCEL(nrf52_ir_cancel)
     return -EBUSY;
 
   GCT_FOREACH(dev_request_queue, &pv->queue, item,
-              if (item == &req->base) {
+              if (item == &rq->base) {
                 err = 0;
                 GCT_FOREACH_BREAK;
               });

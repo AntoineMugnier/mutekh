@@ -154,32 +154,32 @@ DEV_VALIO_REQUEST(max44009_request)
   logk_debug("%s %p", __func__, req);
 
   if (pv->state == MAX44009_INITING) {
-    req->error = -EAGAIN;
+    rq->error = -EAGAIN;
     dev_valio_rq_done(req);
     return;
   }
 
   LOCK_SPIN_IRQ_SCOPED(&dev->lock);
 
-  switch (req->attribute) {
+  switch (rq->attribute) {
   case VALIO_LUMINOSITY_VALUE:
-    if (req->type == DEVICE_VALIO_WRITE)
+    if (rq->type == DEVICE_VALIO_WRITE)
       goto notsup;
 
-    req->error = 0;
+    rq->error = 0;
     dev_valio_rq_pushback(&pv->queue, req);
 
-    if (req->type == DEVICE_VALIO_READ)
+    if (rq->type == DEVICE_VALIO_READ)
       max44009_read(dev);
     return;
 
   case VALIO_LUMINOSITY_LIMITS:
-    if (req->type == DEVICE_VALIO_WRITE) {
-      struct valio_luminosity_limits_s *l = req->data;
+    if (rq->type == DEVICE_VALIO_WRITE) {
+      struct valio_luminosity_limits_s *l = rq->data;
 
       bc_set_reg(&pv->i2c_rq.vm, MAX44009_I2C_BCGLOBAL_IF_ABOVE, l->if_above);
       bc_set_reg(&pv->i2c_rq.vm, MAX44009_I2C_BCGLOBAL_IF_BELOW, l->if_below);
-      req->error = 0;
+      rq->error = 0;
       dev_valio_rq_done(req);
 
       pv->limits_dirty = 1;
@@ -192,7 +192,7 @@ DEV_VALIO_REQUEST(max44009_request)
 
   default:
   notsup:
-    req->error = -ENOTSUP;
+    rq->error = -ENOTSUP;
     dev_valio_rq_done(req);
     return;
   }

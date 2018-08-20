@@ -140,18 +140,18 @@ static DEV_VALIO_REQUEST(button_set_request)
 
   logk_trace("%s", __FUNCTION__);
 
-  if (req->attribute != VALIO_KEYBOARD_MAP) {
-    req->error = -EINVAL;
+  if (rq->attribute != VALIO_KEYBOARD_MAP) {
+    rq->error = -EINVAL;
     goto done;
   }
 
-  switch (req->type) {
+  switch (rq->type) {
   default:
-    req->error = -ENOTSUP;
+    rq->error = -ENOTSUP;
     goto done;
 
   case DEVICE_VALIO_WAIT_EVENT:
-    req->error = 0;
+    rq->error = 0;
     LOCK_SPIN_IRQ(&dev->lock);
     was_empty = dev_rq_queue_isempty(&pv->queue);
     dev_valio_rq_pushback(&pv->queue, req);
@@ -162,7 +162,7 @@ static DEV_VALIO_REQUEST(button_set_request)
 
   case DEVICE_VALIO_READ:
     bs_state_read(pv, req);
-    req->error = 0;
+    rq->error = 0;
     goto done;
   }
 
@@ -179,7 +179,7 @@ static DEV_VALIO_CANCEL(button_set_cancel)
   LOCK_SPIN_IRQ(&dev->lock);
 
   GCT_FOREACH(dev_request_queue, &pv->queue, item,
-              if (item == &req->base) {
+              if (item == &rq->base) {
                 err = 0;
                 GCT_FOREACH_BREAK;
               });

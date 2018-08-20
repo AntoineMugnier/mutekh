@@ -395,13 +395,13 @@ static DEV_VALIO_REQUEST(nrf5x_uart_valio_request)
   struct device_s *dev = accessor->dev;
   struct nrf5x_uart_priv *pv = dev->drv_pv;
 
-  if (req->type != DEVICE_VALIO_WRITE
-      || req->attribute != VALIO_UART_CONFIG) {
-    req->error = -ENOTSUP;
+  if (rq->type != DEVICE_VALIO_WRITE
+      || rq->attribute != VALIO_UART_CONFIG) {
+    rq->error = -ENOTSUP;
   } else {
     LOCK_SPIN_IRQ_SCOPED(&dev->lock);
 
-    req->error = nrf5x_uart_config(pv, req->data);
+    rq->error = nrf5x_uart_config(pv, rq->data);
   }
 
   dev_char_rq_done(req);
