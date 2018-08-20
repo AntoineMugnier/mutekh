@@ -184,7 +184,7 @@ error_t device_wait_accessor(struct device_accessor_s *acc, struct device_s *dev
     .init.class_ = cl,
   };
 
-  error_t err = dev_enum_wait_request(&edev, &rq);
+  error_t err = dev_enum_wait_rq(&edev, &rq);
 
   device_put_accessor(&edev.base);
 

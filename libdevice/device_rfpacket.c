@@ -29,7 +29,7 @@ const char dev_rfpacket_lora_encoding_e[] = ENUM_DESC_DEV_RFPACKET_LORA_ENCODING
 
 # ifdef CONFIG_MUTEK_CONTEXT_SCHED
 
-extern inline error_t dev_rfpacket_wait_request(
+extern inline error_t dev_rfpacket_wait_rq(
        const struct device_rfpacket_s *accessor,
        struct dev_rfpacket_rq_s *rq);
 

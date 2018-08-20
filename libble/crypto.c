@@ -47,7 +47,7 @@ error_t ble_e(struct device_crypto_s *dev,
     .len = 16,
   };
 
-  return dev_crypto_wait_op(dev, &rq);
+  return dev_crypto_wait_rq(dev, &rq);
 }
 
 error_t ble_ah(struct device_crypto_s *dev,
@@ -150,7 +150,7 @@ error_t ble_aes_cmac(struct device_crypto_s *dev,
     .len = 16,
   };
 
-  return dev_crypto_wait_op(dev, &rq);
+  return dev_crypto_wait_rq(dev, &rq);
 }
 
 #if 0

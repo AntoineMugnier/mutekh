@@ -32,7 +32,7 @@ extern inline ssize_t dev_char_wait_op(
     const struct device_char_s *accessor,
     enum dev_char_rq_type_e type, uint8_t *data, size_t size);
 
-extern inline ssize_t dev_char_wait_request(
+extern inline error_t dev_char_wait_rq(
     const struct device_char_s *accessor,
     struct dev_char_rq_s *rq);
 

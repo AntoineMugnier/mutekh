@@ -64,7 +64,7 @@ static void ccm_test_core(struct device_crypto_s *aes)
   rq.ctx = &ctx;
   rq.iv_ctr = (void*)iv;
 
-  err = dev_crypto_wait_op(aes, &rq);
+  err = dev_crypto_wait_rq(aes, &rq);
   ensure(!err);
 
   // START_ENC_RSP1
@@ -80,7 +80,7 @@ static void ccm_test_core(struct device_crypto_s *aes)
   ccm_state.sent_by_master = 1;
   ccm_state.packet_counter = 0;
 
-  err = dev_crypto_wait_op(aes, &rq);
+  err = dev_crypto_wait_rq(aes, &rq);
   ensure(!err);
 
   CHECK("START_ENC_RSP1 Encrypt", out,  0x0f,  0x05,  0x9f,  0xcd,  0xa7,  0xf4,  0x48, );
@@ -91,7 +91,7 @@ static void ccm_test_core(struct device_crypto_s *aes)
   memcpy(in, (const uint8_t[]){ 0x0f,  0x05,  0x9f,  0xcd,  0xa7,  0xf4,  0x48, }, 7);
   rq.len = 7;
 
-  err = dev_crypto_wait_op(aes, &rq);
+  err = dev_crypto_wait_rq(aes, &rq);
   ensure(!err);
 
   CHECK("START_ENC_RSP1 Decrypt", out,  0x0f,  0x01,  0x06, );
@@ -106,7 +106,7 @@ static void ccm_test_core(struct device_crypto_s *aes)
   ccm_state.sent_by_master = 0;
   ccm_state.packet_counter = 0;
 
-  err = dev_crypto_wait_op(aes, &rq);
+  err = dev_crypto_wait_rq(aes, &rq);
   ensure(!err);
 
   CHECK("START_ENC_RSP2 Encrypt", out,  0x07,  0x05, 0xa3,  0x4c,  0x13,  0xa4,  0x15, );
@@ -117,7 +117,7 @@ static void ccm_test_core(struct device_crypto_s *aes)
   memcpy(in, (const uint8_t[]){ 0x07,  0x05, 0xa3,  0x4c,  0x13,  0xa4,  0x15, }, 7);
   rq.len = 7;
 
-  err = dev_crypto_wait_op(aes, &rq);
+  err = dev_crypto_wait_rq(aes, &rq);
   ensure(!err);
 
   CHECK("START_ENC_RSP2 Decrypt", out,  0x07,  0x01,  0x06, );
@@ -136,7 +136,7 @@ static void ccm_test_core(struct device_crypto_s *aes)
   ccm_state.sent_by_master = 1;
   ccm_state.packet_counter = 1;
 
-  err = dev_crypto_wait_op(aes, &rq);
+  err = dev_crypto_wait_rq(aes, &rq);
   ensure(!err);
 
   CHECK("Data packet1 Encrypt", out,
@@ -158,7 +158,7 @@ static void ccm_test_core(struct device_crypto_s *aes)
         0x33, }, 33);
   rq.len = 33;
 
-  err = dev_crypto_wait_op(aes, &rq);
+  err = dev_crypto_wait_rq(aes, &rq);
   ensure(!err);
 
   CHECK("Data packet1 Decrypt", out,
@@ -180,7 +180,7 @@ static void ccm_test_core(struct device_crypto_s *aes)
     rq.in = in;
     rq.out = tmp + 4;
     rq.len = len;
-    err = dev_crypto_wait_op(aes, &rq);
+    err = dev_crypto_wait_rq(aes, &rq);
     ensure(!err);
     ensure(tmp[4] == 0xe);
     ensure(tmp[5] == len + 4);
@@ -188,7 +188,7 @@ static void ccm_test_core(struct device_crypto_s *aes)
     rq.in = tmp + 4;
     rq.out = out;
     rq.len = len + 4;
-    err = dev_crypto_wait_op(aes, &rq);
+    err = dev_crypto_wait_rq(aes, &rq);
     ensure(!err);
     ensure(!memcmp(in, out, len));
   }
@@ -206,7 +206,7 @@ static void ccm_test_core(struct device_crypto_s *aes)
     rq.in = in;
     rq.out = tmp + 4;
     rq.len = len;
-    err = dev_crypto_wait_op(aes, &rq);
+    err = dev_crypto_wait_rq(aes, &rq);
     ensure(!err);
     ensure(tmp[4] == 0xe);
     ensure(tmp[5] == len + 4);
@@ -215,7 +215,7 @@ static void ccm_test_core(struct device_crypto_s *aes)
     rq.in = tmp + 4;
     rq.out = out;
     rq.len = len + 4;
-    err = dev_crypto_wait_op(aes, &rq);
+    err = dev_crypto_wait_rq(aes, &rq);
     ensure(err);
   }
 }

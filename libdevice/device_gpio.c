@@ -33,16 +33,16 @@ const uint8_t dev_gpio_mask0[8] = { };
 
 #ifdef CONFIG_MUTEK_CONTEXT_SCHED
 
-extern inline error_t dev_gpio_wait_rq(struct device_gpio_s *accessor,
+extern inline error_t dev_gpio_wait_rq(const struct device_gpio_s *accessor,
                                        struct dev_gpio_rq_s *rq);
 
-extern inline error_t dev_gpio_wait_mode(struct device_gpio_s *accessor, gpio_id_t id,
+extern inline error_t dev_gpio_wait_mode(const struct device_gpio_s *accessor, gpio_id_t id,
                                          enum dev_pin_driving_e mode);
 
-extern inline error_t dev_gpio_wait_out(struct device_gpio_s *accessor, gpio_id_t id,
+extern inline error_t dev_gpio_wait_out(const struct device_gpio_s *accessor, gpio_id_t id,
                                         bool_t x);
 
-extern inline bool_t dev_gpio_wait_input(struct device_gpio_s *accessor, gpio_id_t id,
+extern inline bool_t dev_gpio_wait_input(const struct device_gpio_s *accessor, gpio_id_t id,
                                          error_t *err);
 
 #endif

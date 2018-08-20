@@ -24,21 +24,21 @@
 #if defined(CONFIG_MUTEK_CONTEXT_SCHED)
 # include <mutek/scheduler.h>
 
-extern inline error_t dev_valio_wait_request(
+extern inline error_t dev_valio_wait_rq(
     const struct device_valio_s *accessor,
     struct dev_valio_rq_s *rq);
 
-extern inline error_t dev_valio_wait_read(
+extern inline error_t dev_valio_wait_op(DEVICE_VALIO_READ, 
     const struct device_valio_s *accessor,
     uint16_t attribute,
     void *data);
 
-extern inline error_t dev_valio_wait_write(
+extern inline error_t dev_valio_wait_op(DEVICE_VALIO_WRITE, 
     const struct device_valio_s *accessor,
     uint16_t attribute,
     const void *data);
 
-extern inline error_t dev_valio_wait_update(
+extern inline error_t dev_valio_wait_op(DEVICE_VALIO_UPDATE, 
     const struct device_valio_s *accessor,
     uint16_t attribute,
     void *data);

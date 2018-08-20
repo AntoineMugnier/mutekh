@@ -83,7 +83,7 @@ static TERMUI_CON_COMMAND_PROTOTYPE(dev_shell_timer_wait)
       rq.rev = 0;
     }
 
-  if (dev_timer_wait_request(&c->timer, &rq))
+  if (dev_timer_wait_rq(&c->timer, &rq))
     return -EINVAL;
 
   return 0;

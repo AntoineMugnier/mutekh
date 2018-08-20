@@ -582,7 +582,7 @@ error_t link_crypto_setup(struct ble_link_s *link,
   link->ccm_state[LINK_OUT].packet_counter = 0;
   link->ccm_state[LINK_OUT].sent_by_master = link_is_master(link);
   
-  err = dev_crypto_wait_op(&link->crypto, &link->crypto_rq);
+  err = dev_crypto_wait_rq(&link->crypto, &link->crypto_rq);
 
   dev_crypto_rq_init(&link->crypto_rq, link_crypto_done);
 

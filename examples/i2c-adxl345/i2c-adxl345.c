@@ -37,7 +37,7 @@ void main()
 
   while (1)
     {
-      if (dev_valio_wait_read(&accel, VALIO_MOTION_DATA, &data))
+      if (dev_valio_wait_op(DEVICE_VALIO_READ, &accel, VALIO_MOTION_DATA, &data))
         goto err_accessor;
 
       printk("i2c-adxl345: X:%d Y:%d Z:%d\n",

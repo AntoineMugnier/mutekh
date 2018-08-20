@@ -495,7 +495,7 @@ static TERMUI_CON_COMMAND_PROTOTYPE(shell_rfpacket_receive)
   if (dev_timer_init_sec(&timer, &rq->lifetime, 0, c->lifetime, 1000))
     return -EINVAL;
 
-  error_t err = dev_rfpacket_wait_request(&c->accessor, rq);
+  error_t err = dev_rfpacket_wait_rq(&c->accessor, rq);
 
   device_put_accessor(&timer.base);
 
@@ -559,7 +559,7 @@ static TERMUI_CON_COMMAND_PROTOTYPE(shell_rfpacket_send)
   rq.rf_cfg = rf;
   rq.pk_cfg = pk;
 
-  error_t err = dev_rfpacket_wait_request(&c->accessor, &rq);
+  error_t err = dev_rfpacket_wait_rq(&c->accessor, &rq);
 
   if (!(used & RFPACKET_OPT_DATA))
     shell_buffer_drop(data);

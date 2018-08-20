@@ -324,25 +324,6 @@ DRIVER_CLASS_TYPES(DRIVER_CLASS_MEM, mem,
     .f_request = prefix ## _request,                             \
   })
 
-/** Synchronous memory device operation function. This function use
-    the scheduler api to put current context in wait state during the
-    request.
-
-    This function take care of initializing some fields of the
-    request, the @tt type, @tt band_mask, @tt page_count,
-    @tt sc_log2 and @tt page_index fields must be initialized by the
-    caller. */
-config_depend_and2_inline(CONFIG_DEVICE_MEM, CONFIG_MUTEK_CONTEXT_SCHED,
-error_t dev_mem_wait_op(struct device_mem_s *accessor,
-                        struct dev_mem_rq_s *rq),
-{
-  struct dev_request_status_s st;
-  dev_request_sched_init(&rq->base, &st);
-  DEVICE_OP(accessor, request, rq);
-  dev_request_sched_wait(&st);
-  return rq->error;
-})
-
 /** @internal @This handles read/write operations to mapped memories
     using the @ref memcpy function. It can be used in device drivers. */
 config_depend(CONFIG_DEVICE_MEM)
@@ -355,6 +336,8 @@ config_depend(CONFIG_DEVICE_MEM)
 error_t dev_mem_flash_op(uintptr_t base, uintptr_t end,
                          uint_fast8_t page_log2,
                          struct dev_mem_rq_s * __restrict__ rq);
+
+DEV_REQUEST_WAIT_FUNC(mem);
 
 #endif
 

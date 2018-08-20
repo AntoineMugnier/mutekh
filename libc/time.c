@@ -277,7 +277,7 @@ error_t usleep(uint_fast32_t usec)
   rq.delay = libc_time_usec_den * usec / libc_time_usec_num;
   rq.rev = 0;
 
-  if (dev_timer_wait_request(&libc_timer_dev, &rq)) 
+  if (dev_timer_wait_rq(&libc_timer_dev, &rq)) 
     return -1;
 
   return 0;
@@ -293,7 +293,7 @@ error_t sleep(uint_fast32_t sec)
   rq.delay = libc_time_sec_den * sec / libc_time_sec_num;
   rq.rev = 0;
 
-  if (dev_timer_wait_request(&libc_timer_dev, &rq))
+  if (dev_timer_wait_rq(&libc_timer_dev, &rq))
     return -1;
 
   return 0;
@@ -309,7 +309,7 @@ error_t nanosleep(const struct timespec *rqtp, struct timespec *rmtp)
   rq.delay = libc_time_nsec_den * ns / libc_time_nsec_num;
   rq.rev = 0;
 
-  if (dev_timer_wait_request(&libc_timer_dev, &rq))
+  if (dev_timer_wait_rq(&libc_timer_dev, &rq))
     return -1;
 
   if (rmtp)

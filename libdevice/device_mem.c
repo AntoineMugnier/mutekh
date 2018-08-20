@@ -33,7 +33,7 @@ const char dev_mem_flags_e[] = ENUM_DESC_DEV_MEM_FLAGS_E;
 
 # ifdef CONFIG_MUTEK_CONTEXT_SCHED
 extern inline error_t
-dev_mem_wait_op(struct device_mem_s *accessor,
+dev_mem_wait_rq(const struct device_mem_s *accessor,
                 struct dev_mem_rq_s *rq);
 #endif
 

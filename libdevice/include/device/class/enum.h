@@ -122,18 +122,7 @@ DRIVER_CLASS_TYPES(DRIVER_CLASS_ENUM, enum,
     .f_cancel = prefix ## _cancel,                                \
   })
 
-config_depend_and2_inline(CONFIG_DEVICE_ENUM, CONFIG_MUTEK_CONTEXT_SCHED,
-error_t dev_enum_wait_request(const struct device_enum_s *accessor,
-                              struct dev_enum_rq_s *rq),
-{
-    struct dev_request_status_s status;
-
-    dev_request_sched_init(&rq->base, &status);
-    DEVICE_OP(accessor, request, rq);
-    dev_request_sched_wait(&status);
-
-    return rq->error;
-})
+DEV_REQUEST_WAIT_FUNC(enum);
 
 /** @internal @This is a generic implementation of the @ref
     DEV_ENUM_INIT_EVENT request handler suitable for most enum

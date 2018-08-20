@@ -143,7 +143,7 @@ static TERMUI_CON_COMMAND_PROTOTYPE(shell_crypto_cipher)
       rq.ad = (void*)c->ad.str;
     }
 
-  dev_crypto_wait_op(&c->accessor, &rq);
+  dev_crypto_wait_rq(&c->accessor, &rq);
 
   if (rq.error)
     {
@@ -196,7 +196,7 @@ static TERMUI_CON_COMMAND_PROTOTYPE(shell_crypto_hash)
     .len = c->out_len,
   };
 
-  dev_crypto_wait_op(&c->accessor, &rq);
+  dev_crypto_wait_rq(&c->accessor, &rq);
 
   if (rq.error)
     {
@@ -255,7 +255,7 @@ static TERMUI_CON_COMMAND_PROTOTYPE(shell_crypto_random)
       rq.len = c->out_len;
     }
 
-  dev_crypto_wait_op(&c->accessor, &rq);
+  dev_crypto_wait_rq(&c->accessor, &rq);
 
   if (rq.error)
     {

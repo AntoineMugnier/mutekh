@@ -95,7 +95,7 @@ static TERMUI_CON_COMMAND_PROTOTYPE(shell_char_read)
   rq.size = c->size;
   rq.data = data;
 
-  ssize_t s_read = dev_char_wait_request(&c->accessor, &rq);
+  dev_char_wait_rq(&c->accessor, &rq);
 
   if (rq.error)
     {
@@ -104,6 +104,7 @@ static TERMUI_CON_COMMAND_PROTOTYPE(shell_char_read)
       return -EINVAL;
     }
 
+  size_t s_read = c->data.len - rq.size;
   if (used & CHAR_OPT_HEX)
     termui_con_printf(con, "read %zu bytes: %P\n", s_read, data, s_read);
   else
@@ -122,7 +123,7 @@ static TERMUI_CON_COMMAND_PROTOTYPE(shell_char_write)
   rq.size = c->data.len;
   rq.data = (uint8_t*)c->data.str;
 
-  ssize_t w_size = dev_char_wait_request(&c->accessor, &rq);
+  dev_char_wait_rq(&c->accessor, &rq);
 
   if (rq.error)
     {
@@ -131,7 +132,7 @@ static TERMUI_CON_COMMAND_PROTOTYPE(shell_char_write)
     }
 
   if (used & CHAR_OPT_PARTIAL)
-    termui_con_printf(con, "write %zu bytes\n", w_size);
+    termui_con_printf(con, "write %zu bytes\n", c->data.len - rq.size);
 
   return 0;
 }

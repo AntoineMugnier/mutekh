@@ -148,11 +148,11 @@ static CONTEXT_ENTRY(thread)
 
               printk("%2u:part init  a:%llx sz:%zx", i,
                      rq.partial.addr, rq.partial.size);
-              ensure(!dev_mem_wait_op(&mem_dev, &rq));
+              ensure(!dev_mem_wait_rq(&mem_dev, &rq));
 
               rq.partial.addr = p[i].addr + psize;
               rq.partial.data = p[i].data + psize;
-              ensure(!dev_mem_wait_op(&mem_dev, &rq));
+              ensure(!dev_mem_wait_rq(&mem_dev, &rq));
 
               printk(" d:%P\n", p[i].data, __MIN(16, rq.partial.size));
             }
@@ -179,7 +179,7 @@ static CONTEXT_ENTRY(thread)
 
               printk("%2u:page init  a:%llx pl2:%u scc:%u", i,
                      sc.addr, rq.page.page_log2, rq.page.sc_count);
-              ensure(!dev_mem_wait_op(&mem_dev, &rq));
+              ensure(!dev_mem_wait_rq(&mem_dev, &rq));
               printk(" d:%P ... %P ...\n",
                      p[i].data, __MIN(16, psize * 2),
                      p[i].data + psize, __MIN(16, psize * 2));
@@ -203,7 +203,7 @@ static CONTEXT_ENTRY(thread)
 
               printk("%2u:page read  a:%llx pl2:%u scc:%u", i,
                      sc[0].addr, rq.page.page_log2, rq.page.sc_count);
-              ensure(!dev_mem_wait_op(&mem_dev, &rq));
+              ensure(!dev_mem_wait_rq(&mem_dev, &rq));
               printk(" d:%P ... %P ...\n",
                      ptmp, __MIN(16, psize * 2),
                      ptmp + psize, __MIN(16, psize * 2));
@@ -228,7 +228,7 @@ static CONTEXT_ENTRY(thread)
 
               printk("%2u:page read  a:%llx pl2:%u scc:%u", i,
                      sc.addr, rq.page.page_log2, rq.page.sc_count);
-              ensure(!dev_mem_wait_op(&mem_dev, &rq));
+              ensure(!dev_mem_wait_rq(&mem_dev, &rq));
               printk(" d:%P ... %P ...\n",
                      ptmp, __MIN(16, psize * 2),
                      ptmp + psize, __MIN(16, psize * 2));
@@ -248,7 +248,7 @@ static CONTEXT_ENTRY(thread)
 
               printk("%2u:part check a:%llx sz:%zx", i,
                      rq.partial.addr, rq.partial.size);
-              ensure(!dev_mem_wait_op(&mem_dev, &rq));
+              ensure(!dev_mem_wait_rq(&mem_dev, &rq));
               printk(" d:%P\n", ptmp, __MIN(16, rq.partial.size));
 
               ensure(!memcmp_verbose(ptmp, p[i].data, psize * 2));
@@ -276,7 +276,7 @@ static CONTEXT_ENTRY(thread)
 
               printk("%2u:part read  a:%llx sz:%zx", i,
                      rq.partial.addr, rq.partial.size);
-              ensure(!dev_mem_wait_op(&mem_dev, &rq));
+              ensure(!dev_mem_wait_rq(&mem_dev, &rq));
               printk(" d:%P\n",
                      ptmp, __MIN(16, rq.partial.size));
               ensure(!memcmp_verbose(ptmp, p[i].data + o, s));
@@ -317,7 +317,7 @@ static CONTEXT_ENTRY(thread)
 
               printk("%2u:part write  a:%llx sz:%zx", i,
                      rq.partial.addr, rq.partial.size);
-              ensure(!dev_mem_wait_op(&mem_dev, &rq));
+              ensure(!dev_mem_wait_rq(&mem_dev, &rq));
               printk(" d:%P\n",
                      p[i].data + o, __MIN(16, rq.partial.size));
             }
@@ -353,7 +353,7 @@ static CONTEXT_ENTRY(thread)
                      sc.addr, rq.page.page_log2, rq.page.sc_count,
                      sc.data, __MIN(16, psize * 2),
                      sc.data + psize, __MIN(16, psize * 2));
-              ensure(!dev_mem_wait_op(&mem_dev, &rq));
+              ensure(!dev_mem_wait_rq(&mem_dev, &rq));
             }
           break;
 
@@ -381,7 +381,7 @@ static CONTEXT_ENTRY(thread)
 
               printk("%2u:page erase a:%llx pl2:%u scc:%u\n", i,
                      sc.addr, rq.page.page_log2, rq.page.sc_count);
-              ensure(!dev_mem_wait_op(&mem_dev, &rq));
+              ensure(!dev_mem_wait_rq(&mem_dev, &rq));
             }
           break;
         }

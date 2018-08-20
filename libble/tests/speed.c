@@ -275,7 +275,7 @@ void speed_test(void)
     rq.ctx = &ctx;
     rq.iv_ctr = (void*)iv;
 
-    err = dev_crypto_wait_op(&aes, &rq);
+    err = dev_crypto_wait_rq(&aes, &rq);
     ensure(!err);
   
     rq.op = DEV_CRYPTO_FINALIZE;
@@ -352,7 +352,7 @@ void speed_test(void)
     rq.ctx = &ctx;
     rq.iv_ctr = (void*)iv;
 
-    err = dev_crypto_wait_op(&aes, &rq);
+    err = dev_crypto_wait_rq(&aes, &rq);
     ensure(!err);
   
     rq.op = DEV_CRYPTO_FINALIZE | DEV_CRYPTO_INVERSE;

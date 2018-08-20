@@ -310,20 +310,7 @@ DRIVER_CLASS_TYPES(DRIVER_CLASS_GPIO, gpio,
     .f_cancel = prefix ## _cancel,                                \
   })
 
-/** Blocking GPIO device request function. This function uses the
-    scheduler api to put the current context in wait state during the
-    request. @see dev_gpio_request_t
-    @xsee {Synchronous and asynchronous operation} */
-config_depend_and2_inline(CONFIG_DEVICE_GPIO, CONFIG_MUTEK_CONTEXT_SCHED,
-error_t dev_gpio_wait_rq(struct device_gpio_s *accessor,
-                         struct dev_gpio_rq_s *rq),
-{
-  struct dev_request_status_s st;
-  dev_request_sched_init(&rq->base, &st);
-  DEVICE_OP(accessor, request, rq);
-  dev_request_sched_wait(&st);
-  return rq->error;
-})
+DEV_REQUEST_WAIT_FUNC(gpio);
 
 /** @This sets the value of a single gpio pin relying on the
     synchronous driver API. This will not work with all GPIO controllers.
@@ -341,18 +328,14 @@ error_t dev_gpio_out(struct device_gpio_s *accessor, gpio_id_t id, bool_t x),
     request. @see dev_gpio_set_output_t @see dev_gpio_out
     @xsee {Synchronous and asynchronous operation} */
 config_depend_and2_inline(CONFIG_DEVICE_GPIO, CONFIG_MUTEK_CONTEXT_SCHED,
-error_t dev_gpio_wait_out(struct device_gpio_s *accessor, gpio_id_t id, bool_t x),
+error_t dev_gpio_wait_out(const struct device_gpio_s *accessor, gpio_id_t id, bool_t x),
 {
   struct dev_gpio_rq_s rq;
-  struct dev_request_status_s st;
   const uint8_t *p = x ? dev_gpio_mask1 : dev_gpio_mask0;
   rq.io_first = rq.io_last = id;
   rq.type = DEV_GPIO_SET_OUTPUT;
   rq.output.set_mask = rq.output.clear_mask = p;
-  dev_request_sched_init(&rq.base, &st);
-  DEVICE_OP(accessor, request, &rq);
-  dev_request_sched_wait(&st);
-  return rq.error;
+  return dev_gpio_wait_rq(accessor, &rq);
 })
 
 /** @This changes the mode of a single gpio pin relying on the
@@ -371,19 +354,15 @@ error_t dev_gpio_mode(struct device_gpio_s *accessor, gpio_id_t id,
     request. @see dev_gpio_set_mode_t @see dev_gpio_mode
     @xsee {Synchronous and asynchronous operation} */
 config_depend_and2_inline(CONFIG_DEVICE_GPIO, CONFIG_MUTEK_CONTEXT_SCHED,
-error_t dev_gpio_wait_mode(struct device_gpio_s *accessor, gpio_id_t id,
+error_t dev_gpio_wait_mode(const struct device_gpio_s *accessor, gpio_id_t id,
                            enum dev_pin_driving_e mode),
 {
   struct dev_gpio_rq_s rq;
-  struct dev_request_status_s st;
   rq.io_first = rq.io_last = id;
   rq.type = DEV_GPIO_MODE;
   rq.mode.mask = dev_gpio_mask1;
   rq.mode.mode = mode;
-  dev_request_sched_init(&rq.base, &st);
-  DEVICE_OP(accessor, request, &rq);
-  dev_request_sched_wait(&st);
-  return rq.error;
+  return dev_gpio_wait_rq(accessor, &rq);
 })
 
 /** @This reads the value of a single gpio pin relying on the
@@ -405,17 +384,14 @@ bool_t dev_gpio_input(struct device_gpio_s *accessor, gpio_id_t id, error_t *err
     request. @see dev_gpio_get_input_t @see dev_gpio_input
     @xsee {Synchronous and asynchronous operation} */
 config_depend_and2_inline(CONFIG_DEVICE_GPIO, CONFIG_MUTEK_CONTEXT_SCHED,
-bool_t dev_gpio_wait_input(struct device_gpio_s *accessor, gpio_id_t id, error_t *err),
+bool_t dev_gpio_wait_input(const struct device_gpio_s *accessor, gpio_id_t id, error_t *err),
 {
   struct dev_gpio_rq_s rq;
-  struct dev_request_status_s st;
   uint8_t x[8];
   rq.io_first = rq.io_last = id;
   rq.type = DEV_GPIO_GET_INPUT;
   rq.input.data = x;
-  dev_request_sched_init(&rq.base, &st);
-  DEVICE_OP(accessor, request, &rq);
-  dev_request_sched_wait(&st);
+  dev_gpio_wait_rq(accessor, &rq);
   if (err != NULL)
     *err = rq.error;
   return x[0] & 1;
@@ -426,20 +402,16 @@ bool_t dev_gpio_wait_input(struct device_gpio_s *accessor, gpio_id_t id, error_t
     request. @see dev_gpio_get_input_t @see dev_gpio_input
     @xsee {Synchronous and asynchronous operation} */
 config_depend_and2_inline(CONFIG_DEVICE_GPIO, CONFIG_MUTEK_CONTEXT_SCHED,
-error_t dev_gpio_wait_until(struct device_gpio_s *accessor, gpio_id_t id,
+error_t dev_gpio_wait_until(const struct device_gpio_s *accessor, gpio_id_t id,
                             bool_t x),
 {
   struct dev_gpio_rq_s rq;
-  struct dev_request_status_s st;
   const uint8_t *p = x ? dev_gpio_mask1 : dev_gpio_mask0;
   rq.io_first = rq.io_last = id;
   rq.type = DEV_GPIO_UNTIL;
   rq.until.mask = dev_gpio_mask1;
   rq.until.data = p;
-  dev_request_sched_init(&rq.base, &st);
-  DEVICE_OP(accessor, request, &rq);
-  dev_request_sched_wait(&st);
-  return rq.error;
+  return dev_gpio_wait_rq(accessor, &rq);
 })
 
 /** @This adds a GPIO pins binding to the device resources list.

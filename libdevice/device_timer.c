@@ -213,7 +213,7 @@ error_t dev_timer_check_timeout(struct device_timer_s *accessor,
 
 #ifdef CONFIG_MUTEK_CONTEXT_SCHED
 extern inline
-error_t dev_timer_wait_request(struct device_timer_s *accessor, struct dev_timer_rq_s *rq);
+error_t dev_timer_wait_rq(struct device_timer_s *accessor, struct dev_timer_rq_s *rq);
 
 extern inline
 error_t dev_timer_wait_deadline(struct device_timer_s *accessor,

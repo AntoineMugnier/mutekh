@@ -72,9 +72,9 @@ static TERMUI_CON_COMMAND_PROTOTYPE(dev_shell_uart_config)
     config.flow_ctrl = !!(used & UART_OPT_FLOW);
     config.parity = used & UART_OPT_PARITY ? c->parity : DEV_UART_PARITY_NONE;
 
-    return dev_valio_wait_write(&c->device, VALIO_UART_CONFIG, &config);
+    return dev_valio_wait_op(DEVICE_VALIO_WRITE, &c->device, VALIO_UART_CONFIG, &config);
   } else {
-    error_t err = dev_valio_wait_read(&c->device, VALIO_UART_CONFIG, &config);
+    error_t err = dev_valio_wait_op(DEVICE_VALIO_READ, &c->device, VALIO_UART_CONFIG, &config);
 
     if (err) {
       termui_con_printf(con, "Error %d\n", err);

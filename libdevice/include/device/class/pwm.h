@@ -182,6 +182,7 @@ DRIVER_CLASS_TYPES(DRIVER_CLASS_PWM, pwm,
     .f_request = prefix ## _request,                            \
   })
 
+DEV_REQUEST_WAIT_FUNC(pwm);
 
 /** @This configures the PWM devices and blocks until the configuration is
     effective or an error occured.
@@ -193,38 +194,15 @@ DRIVER_CLASS_TYPES(DRIVER_CLASS_PWM, pwm,
     @param mask a bitmask defining which configuration fields to consider.
  */
 config_depend_and2_inline(CONFIG_DEVICE_PWM, CONFIG_MUTEK_CONTEXT_SCHED,
-error_t dev_pwm_wait_config(struct device_pwm_s *pdev, const struct dev_pwm_config_s *cfg, uint_fast8_t mask),
+error_t dev_pwm_wait_op(const struct device_pwm_s *acc,
+                        const struct dev_pwm_config_s *cfg,
+                        uint_fast8_t mask),
 {
-     struct dev_request_status_s status;
-
-     struct dev_pwm_rq_s rq =
-     {
-       .cfg = cfg,
-       .chan_mask = 1,
-       .mask = mask,
-     };
-
-     dev_request_sched_init(&rq.base, &status);
-
-     DEVICE_OP(pdev, config, &rq);
-
-     dev_request_sched_wait(&status);
-
-     return rq.error;
-});
-
-config_depend_and2_inline(CONFIG_DEVICE_PWM, CONFIG_MUTEK_CONTEXT_SCHED,
-error_t dev_pwm_wait_rq(struct device_pwm_s *pdev, struct dev_pwm_rq_s *rq),
-{
-     struct dev_request_status_s status;
-
-     dev_request_sched_init(&rq->base, &status);
-
-     DEVICE_OP(pdev, config, rq);
-
-     dev_request_sched_wait(&status);
-
-     return rq->error;
+  struct dev_pwm_rq_s rq;
+  rq.cfg = cfg;
+  rq.chan_mask = 1;
+  rq.mask = mask;
+  return dev_pwm_wait_rq(acc, &rq);
 });
 
 #endif

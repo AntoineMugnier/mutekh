@@ -708,7 +708,7 @@ DRIVER_CLASS_TYPES(DRIVER_CLASS_RFPACKET, rfpacket,
   })
 
 config_depend_and2_inline(CONFIG_DEVICE_RFPACKET, CONFIG_MUTEK_CONTEXT_SCHED,
-error_t dev_rfpacket_wait_request(
+error_t dev_rfpacket_wait_rq(
        const struct device_rfpacket_s *accessor,
        struct dev_rfpacket_rq_s *rq),
 {

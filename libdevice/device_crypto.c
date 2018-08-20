@@ -72,7 +72,7 @@ void dev_rng_cleanup(struct dev_rng_s *rng)
 #ifdef CONFIG_MUTEK_CONTEXT_SCHED
 
 extern inline error_t
-dev_crypto_wait_op(struct device_crypto_s *accessor,
+dev_crypto_wait_rq(const struct device_crypto_s *accessor,
                    struct dev_crypto_rq_s *rq);
 
 error_t dev_rng_wait_read(struct dev_rng_s *rng, void *data, size_t size)
@@ -88,7 +88,7 @@ error_t dev_rng_wait_read(struct dev_rng_s *rng, void *data, size_t size)
     .len = size,
   };
 
-  return dev_crypto_wait_op(&rng->device, &rq);
+  return dev_crypto_wait_rq(&rng->device, &rq);
 }
 
 error_t dev_rng_wait_seed(struct dev_rng_s *rng, const void *data, size_t size)
@@ -104,7 +104,7 @@ error_t dev_rng_wait_seed(struct dev_rng_s *rng, const void *data, size_t size)
     .ad = data,
   };
 
-  return dev_crypto_wait_op(&rng->device, &rq);
+  return dev_crypto_wait_rq(&rng->device, &rq);
 }
 
 error_t dev_rng_wait_seed_from_other(struct dev_rng_s *rng,

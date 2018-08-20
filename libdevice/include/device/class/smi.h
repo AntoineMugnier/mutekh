@@ -99,20 +99,7 @@ DRIVER_CLASS_TYPES(DRIVER_CLASS_SMI, smi,
     .f_request = prefix ## _request,                                  \
   })
 
-/** @This is scheduler wait wrapper for the @ref dev_smi_request_t function */
-config_depend_and2_inline(CONFIG_DEVICE_SMI, CONFIG_MUTEK_CONTEXT_SCHED,
-error_t dev_smi_wait_request(
-    const struct device_smi_s *accessor,
-    struct dev_smi_rq_s *rq),
-{
-  struct dev_request_status_s status;
-
-  dev_request_sched_init(&rq->base, &status);
-  DEVICE_OP(accessor, request, rq);
-  dev_request_sched_wait(&status);
-
-  return rq->error;
-});
+DEV_REQUEST_WAIT_FUNC(smi);
 
 /** @This perform a @ref DEVICE_SMI_READ operation and stop the
     scheduler context during the request. */
@@ -129,7 +116,7 @@ error_t dev_smi_wait_read(
     .reg = reg,
   };
 
-  error_t err = dev_smi_wait_request(accessor, &rq);
+  error_t err = dev_smi_wait_rq(accessor, &rq);
 
   *data = rq.data;
 
@@ -152,7 +139,7 @@ error_t dev_smi_wait_write(
     .data = data,
   };
 
-  return dev_smi_wait_request(accessor, &rq);
+  return dev_smi_wait_rq(accessor, &rq);
 });
 
 #ifdef CONFIG_DEVICE_SMI

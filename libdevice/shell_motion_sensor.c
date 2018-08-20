@@ -62,14 +62,14 @@ static TERMUI_CON_COMMAND_PROTOTYPE(shell_ms_autocal)
   while (latest.active || !former.active) {
     former = latest;
 
-    err = dev_valio_wait_update(&c->accessor, VALIO_MS_STATE, &latest);
+    err = dev_valio_wait_op(DEVICE_VALIO_UPDATE, &c->accessor, VALIO_MS_STATE, &latest);
     if (err) {
       termui_con_printf(con, "Wait with error: %d\n", err);
       return 0;
     }
   }
 
-  err = dev_valio_wait_read(&c->accessor, VALIO_MS_CALIB, &latest.data);
+  err = dev_valio_wait_op(DEVICE_VALIO_READ, &c->accessor, VALIO_MS_CALIB, &latest.data);
   if (err) {
     termui_con_printf(con, "Calibration read failed with error: %d\n", err);
     return 0;
@@ -80,7 +80,7 @@ static TERMUI_CON_COMMAND_PROTOTYPE(shell_ms_autocal)
   for (size_t i = 0; i < 9; ++i)
     former.data.axis[i] = latest.data.axis[i] - former.data.axis[i];
 
-  err = dev_valio_wait_write(&c->accessor, VALIO_MS_CALIB, &former.data);
+  err = dev_valio_wait_op(DEVICE_VALIO_WRITE, &c->accessor, VALIO_MS_CALIB, &former.data);
   if (err) {
     termui_con_printf(con, "Calibration read failed with error: %d\n", err);
     return 0;
@@ -106,7 +106,7 @@ static TERMUI_CON_COMMAND_PROTOTYPE(shell_ms_read)
   struct valio_ms_state_s state = {};
   error_t err;
 
-  err = dev_valio_wait_read(&c->accessor, VALIO_MS_STATE, &state);
+  err = dev_valio_wait_op(DEVICE_VALIO_READ, &c->accessor, VALIO_MS_STATE, &state);
   if (err) {
     termui_con_printf(con, "Request failed with error: %d\n", err);
     return 0;
@@ -134,7 +134,7 @@ static TERMUI_CON_COMMAND_PROTOTYPE(shell_ms_stream)
   error_t err;
 
   do {
-    err = dev_valio_wait_update(&c->accessor, VALIO_MS_STATE, &state);
+    err = dev_valio_wait_op(DEVICE_VALIO_UPDATE, &c->accessor, VALIO_MS_STATE, &state);
     if (err) {
       termui_con_printf(con, "Request failed with error: %d\n", err);
       return 0;
@@ -162,7 +162,7 @@ static TERMUI_CON_COMMAND_PROTOTYPE(shell_ms_configure)
   struct valio_ms_config_s config;
   error_t err;
 
-  err = dev_valio_wait_read(&c->accessor, VALIO_MS_CONFIG, &config);
+  err = dev_valio_wait_op(DEVICE_VALIO_READ, &c->accessor, VALIO_MS_CONFIG, &config);
   if (err) {
     termui_con_printf(con, "Configuration read failed with error: %d\n", err);
     return 0;
@@ -177,7 +177,7 @@ static TERMUI_CON_COMMAND_PROTOTYPE(shell_ms_configure)
   if (used & MS_OPT_SLEEP_TIME)
     config.sleep_time = c->config.sleep_time;
 
-  err = dev_valio_wait_write(&c->accessor, VALIO_MS_CONFIG, &config);
+  err = dev_valio_wait_op(DEVICE_VALIO_WRITE, &c->accessor, VALIO_MS_CONFIG, &config);
   if (err) {
     termui_con_printf(con, "Calibration read failed with error: %d\n", err);
     return 0;

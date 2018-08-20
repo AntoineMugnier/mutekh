@@ -276,75 +276,23 @@ DRIVER_CLASS_TYPES(DRIVER_CLASS_VALIO, valio,
     .f_cancel = prefix ## _cancel,                            \
   })
 
-/** @This is scheduler wait wrapper for the @ref dev_valio_request_t function */
+DEV_REQUEST_WAIT_FUNC(valio);
+
+/** @This perform an operation and stop the
+    scheduler context during the request.
+    @csee dev_valio_wait_rq */
 config_depend_and2_inline(CONFIG_DEVICE_VALIO, CONFIG_MUTEK_CONTEXT_SCHED,
-error_t dev_valio_wait_request(
-    const struct device_valio_s *accessor,
-    struct dev_valio_rq_s *rq),
-{
-      struct dev_request_status_s status;
-
-      dev_request_sched_init(&rq->base, &status);
-
-      DEVICE_OP(accessor, request, req);
-
-      dev_request_sched_wait(&status);
-
-      return rq->error;
-});
-
-/** @This perform a @ref DEVICE_VALIO_READ operation and stop the
-    scheduler context during the request. */
-config_depend_and2_inline(CONFIG_DEVICE_VALIO, CONFIG_MUTEK_CONTEXT_SCHED,
-error_t dev_valio_wait_read(
+error_t dev_valio_wait_op(
+    enum dev_valio_request_type_e type,
     const struct device_valio_s *accessor,
     uint16_t attribute,
     void *data),
 {
-    struct dev_valio_rq_s req =
-    {
-        .type = DEVICE_VALIO_READ,
-        .attribute = attribute,
-        .data = data,
-    };
-
-    return dev_valio_wait_request(accessor, &req);
-});
-
-/** @This perform a @ref DEVICE_VALIO_WRITE operation and stop the
-    scheduler context during the request. */
-config_depend_and2_inline(CONFIG_DEVICE_VALIO, CONFIG_MUTEK_CONTEXT_SCHED,
-error_t dev_valio_wait_write(
-    const struct device_valio_s *accessor,
-    uint16_t attribute,
-    const void *data),
-{
-    struct dev_valio_rq_s req =
-    {
-        .type = DEVICE_VALIO_WRITE,
-        .attribute = attribute,
-        .data = (void*)data,
-    };
-
-    return dev_valio_wait_request(accessor, &req);
-});
-
-/** @This perform a @ref DEVICE_VALIO_WAIT_EVENT operation and stop
-    the scheduler context during the request. */
-config_depend_and2_inline(CONFIG_DEVICE_VALIO, CONFIG_MUTEK_CONTEXT_SCHED,
-error_t dev_valio_wait_update(
-    const struct device_valio_s *accessor,
-    uint16_t attribute,
-    void *data),
-{
-    struct dev_valio_rq_s req =
-    {
-        .type = DEVICE_VALIO_WAIT_EVENT,
-        .attribute = attribute,
-        .data = data,
-    };
-
-    return dev_valio_wait_request(accessor, &req);
+  struct dev_valio_rq_s rq;
+  rq.type = type;
+  rq.attribute = attribute;
+  rq.data = data;
+  return dev_valio_wait_rq(accessor, &rq);
 });
 
 #endif

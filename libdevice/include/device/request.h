@@ -55,6 +55,7 @@
 //#define GCT_CONTAINER_ALGO_dev_request_pqueue AVL_P
 #define GCT_CONTAINER_ALGO_dev_request_pqueue CLIST
 
+/** Device request base */
 struct dev_request_s
 {
   union {
@@ -310,6 +311,21 @@ dev_request_sched_wait(struct dev_request_status_s *status)
 }
 
 # endif
+
+#define DEV_REQUEST_WAIT_FUNC(class_)                                     \
+/** This function use the scheduler api to put current context in       \
+    wait state during the request. This can only be called from a       \
+    scheduler context. */                                               \
+config_depend_inline(CONFIG_MUTEK_CONTEXT_SCHED,                        \
+error_t dev_##class_##_wait_rq(const struct device_##class_##_s *acc,   \
+                               struct dev_##class_##_rq_s *rq),         \
+{                                                                       \
+    struct dev_request_status_s status;                                 \
+    dev_request_sched_init(&rq->base, &status);                         \
+    DEVICE_OP(acc, request, rq);                                        \
+    dev_request_sched_wait(&status);                                    \
+    return rq->error;                                                   \
+})
 
 #ifdef CONFIG_MUTEK_SEMAPHORE
 

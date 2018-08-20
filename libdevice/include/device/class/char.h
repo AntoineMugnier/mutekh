@@ -250,38 +250,21 @@ DRIVER_CLASS_TYPES(DRIVER_CLASS_CHAR, char,
     .f_cancel = prefix ## _cancel,                               \
   })
 
-config_depend_and2_inline(CONFIG_DEVICE_CHAR, CONFIG_MUTEK_CONTEXT_SCHED,
-ssize_t dev_char_wait_request(const struct device_char_s *accessor,
-                              struct dev_char_rq_s *rq),
-{
-    struct dev_request_status_s status;
-    ssize_t todo = rq->size;
+DEV_REQUEST_WAIT_FUNC(char);
 
-    dev_request_sched_init(&rq->base, &status);
-    DEVICE_OP(accessor, request, rq);
-    dev_request_sched_wait(&status);
-
-    return rq->error ? rq->error : (todo - rq->size);
-})
-
-/** Synchronous helper function. This function uses the scheduler api
-    to put current context in wait state until the operation
-    completes.
-
-    @returns transferred size or a negative error code
-*/
+/** Blocking helper function. This function uses the scheduler api to
+    put current context in wait state until the operation completes.
+    @returns transferred size or -1 in case of error.
+    @csee dev_char_wait_rq */
 config_depend_and2_inline(CONFIG_DEVICE_CHAR, CONFIG_MUTEK_CONTEXT_SCHED,
 ssize_t dev_char_wait_op(const struct device_char_s *accessor,
                          enum dev_char_rq_type_e type, uint8_t *data, size_t size),
 {
-    struct dev_char_rq_s rq =
-    {
-        .type = type,
-        .data = data,
-        .size = size,
-    };
-
-    return dev_char_wait_request(accessor, &rq);
+  struct dev_char_rq_s rq;
+  rq.type = type;
+  rq.data = data;
+  rq.size = size;
+  return dev_char_wait_rq(accessor, &rq) ? -1 : size - rq.size;
 })
 
 #endif

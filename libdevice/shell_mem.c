@@ -172,7 +172,7 @@ static TERMUI_CON_COMMAND_PROTOTYPE(dev_shell_mem_read)
       struct dev_mem_page_sc_s sc[sc_cnt];
       dev_shell_set_sc(&rq, data, sc, sc_cnt, c);
 
-      if ((err = dev_mem_wait_op(&c->mem, &rq)))
+      if ((err = dev_mem_wait_rq(&c->mem, &rq)))
         {
           termui_con_printf(con, "error %i\n", err);
           err = -EINVAL;
@@ -211,7 +211,7 @@ static TERMUI_CON_COMMAND_PROTOTYPE(dev_shell_mem_write)
   struct dev_mem_page_sc_s sc[sc_cnt];
   dev_shell_set_sc(&rq, data, sc, sc_cnt, c);
 
-  error_t err = dev_mem_wait_op(&c->mem, &rq);
+  error_t err = dev_mem_wait_rq(&c->mem, &rq);
 
   if (err)
     termui_con_printf(con, "error %i\n", err);
@@ -237,7 +237,7 @@ static TERMUI_CON_COMMAND_PROTOTYPE(dev_shell_mem_erase)
   struct dev_mem_page_sc_s sc[sc_cnt];
   dev_shell_set_sc(&rq, NULL, sc, sc_cnt, c);
 
-  error_t err = dev_mem_wait_op(&c->mem, &rq);
+  error_t err = dev_mem_wait_rq(&c->mem, &rq);
 
   if (err)
     termui_con_printf(con, "error %i\n", err);

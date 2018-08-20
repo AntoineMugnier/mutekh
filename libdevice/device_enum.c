@@ -24,7 +24,7 @@
 #include <device/request.h>
 
 extern error_t
-dev_enum_wait_request(const struct device_enum_s *accessor,
+dev_enum_wait_rq(const struct device_enum_s *accessor,
                       struct dev_enum_rq_s *rq);
 
 void

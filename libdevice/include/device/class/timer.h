@@ -475,7 +475,7 @@ error_t dev_timer_check_timeout(struct device_timer_s *accessor,
     put the current context in wait state waiting for the given
     request to terminate. */
 config_depend_and2_inline(CONFIG_DEVICE_TIMER, CONFIG_MUTEK_CONTEXT_SCHED,
-error_t dev_timer_wait_request(struct device_timer_s *accessor,
+error_t dev_timer_wait_rq(struct device_timer_s *accessor,
                                struct dev_timer_rq_s *rq),
 {
   struct dev_request_status_s st;
@@ -504,7 +504,7 @@ error_t dev_timer_wait_deadline(struct device_timer_s *accessor,
   rq.deadline = deadline;
   rq.rev = rev;
 
-  return dev_timer_wait_request(accessor, &rq);
+  return dev_timer_wait_rq(accessor, &rq);
 });
 
 /** Synchronous timer wait function. @This uses the scheduler API to
@@ -520,7 +520,7 @@ error_t dev_timer_wait_delay(struct device_timer_s *accessor,
   rq.delay = delay;
   rq.rev = rev;
 
-  error_t err = dev_timer_wait_request(accessor, &rq);
+  error_t err = dev_timer_wait_rq(accessor, &rq);
 
   if (err == -ETIMEDOUT)
     err = 0;
