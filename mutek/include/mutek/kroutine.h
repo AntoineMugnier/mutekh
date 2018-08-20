@@ -229,6 +229,8 @@ struct kroutine_s
 #if CONFIG_MUTEK_SCHED_PRIORITIES > 1 && defined(CONFIG_MUTEK_KROUTINE_SCHED)
   uint8_t                      priority;
 #endif
+  /* user private */
+  uint8_t                      pv;
 }
 #ifdef CONFIG_MUTEK_KROUTINE_QUEUE
                            *, queue_entry)
