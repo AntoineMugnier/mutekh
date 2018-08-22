@@ -1194,20 +1194,19 @@ static inline void si446x_rfp_end_rxrq(struct si446x_ctx_s *pv)
   }
 
   assert(rq);
-
-  if (err)
-    goto end;
-
   rx->err = err;
-  rx->carrier = GET_RSSI(pv->carrier) << 3;
-  rx->rssi = GET_RSSI(pv->rssi >> 8) << 3;
-  rx->frequency = pv->frequency + (((int64_t)pv->synth_ratio * pv->afc_offset) >> 23);
-  rx->timestamp = pv->timestamp;
-  rx->channel = rq->channel;
-  if (rq->anchor == DEV_RFPACKET_TIMESTAMP_START)
-    rx->timestamp -= pv->rxrq->size * pv->cache_array[pv->id].tb;
-  
-end:
+
+  if (!err)
+    {
+      rx->carrier = GET_RSSI(pv->carrier) << 3;
+      rx->rssi = GET_RSSI(pv->rssi >> 8) << 3;
+      rx->frequency = pv->frequency + (((int64_t)pv->synth_ratio * pv->afc_offset) >> 23);
+      rx->timestamp = pv->timestamp;
+      rx->channel = rq->channel;
+      if (rq->anchor == DEV_RFPACKET_TIMESTAMP_START)
+        rx->timestamp -= pv->rxrq->size * pv->cache_array[pv->id].tb;
+    }
+
   kroutine_exec(&rx->kr);
   pv->rxrq = NULL;
 }
