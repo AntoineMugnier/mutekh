@@ -132,27 +132,30 @@ sub eval_expr
         return log2($x);
     };
 
+    $expr =~ s/\s+//g;
+
     while (1) {
         next if ($expr =~ s/'(.)'/ord($1)/ge);
-        next if ($expr =~ s/\s*\b(0[Xx][a-fA-F0-9]+)\b\s*/hex($1)/ge);
+        next if ($expr =~ s/\b(\d+)[uUlL]+\b/$1/ge);
+        next if ($expr =~ s/\b(0[Xx][a-fA-F0-9]+)\b/hex($1)/ge);
 	next if ($expr =~ s/\bbitpos\(($num)\)/$bit->($1)/ge);
-	next if ($expr =~ s/\(\s*($num)\s*\)/$1/ge);
-	next if ($expr =~ s/($num)\s*\*\s*($num)/int($1)*int($2)/ge);
-	next if ($expr =~ s/($num)\s*\/\s*($num)/int($2) ? int(int($1)\/int($2)) : 0/ge);
-	next if ($expr =~ s/($num)\s*%\s*($num)/int($2) ? int($1)%int($2) : 0/ge);
-	next if ($expr =~ s/($num)\s*\+\s*($num)/int($1)+int($2)/ge);
-	next if ($expr =~ s/($num)\s*-\s*($num)/int($1)-int($2)/ge);
-	next if ($expr =~ s/($num)\s*>>\s*($num)/int($1)>>int($2)/ge);
-	next if ($expr =~ s/($num)\s*<<\s*($num)/int($1)<<int($2)/ge);
-	next if ($expr =~ s/($num)\s*&\s*($num)/int($1)&int($2)/ge);
-	next if ($expr =~ s/($num)\s*\|\s*($num)/int($1)|int($2)/ge);
-	next if ($expr =~ s/($num)\s*\^\s*($num)/int($1)^int($2)/ge);
-	next if ($expr =~ s/($num)\s*==\s*($num)/int($1)==int($2)?1:0/ge);
-	next if ($expr =~ s/($num)\s*\!=\s*($num)/int($1)!=int($2)?1:0/ge);
-	next if ($expr =~ s/($num)\s*<\s*($num)/int($1)<int($2)?1:0/ge);
-	next if ($expr =~ s/($num)\s*<=\s*($num)/int($1)<=int($2)?1:0/ge);
-	next if ($expr =~ s/($num)\s*>\s*($num)/int($1)>int($2)?1:0/ge);
-	next if ($expr =~ s/($num)\s*>=\s*($num)/int($1)>=int($2)?1:0/ge);
+        next if ($expr =~ s/(?<!\w)\(([^()]+)\)/eval_expr($1,$loc)/ge);
+	next if ($expr =~ s/($num)\*($num)/int($1)*int($2)/ge);
+	next if ($expr =~ s/($num)\/($num)/int($2) ? int(int($1)\/int($2)) : 0/ge);
+	next if ($expr =~ s/($num)%($num)/int($2) ? int($1)%int($2) : 0/ge);
+	next if ($expr =~ s/($num)\+($num)/int($1)+int($2)/ge);
+	next if ($expr =~ s/($num)-($num)/int($1)-int($2)/ge);
+	next if ($expr =~ s/($num)>>($num)/int($1)>>int($2)/ge);
+	next if ($expr =~ s/($num)<<($num)/int($1)<<int($2)/ge);
+	next if ($expr =~ s/($num)&($num)/int($1)&int($2)/ge);
+	next if ($expr =~ s/($num)\|($num)/int($1)|int($2)/ge);
+	next if ($expr =~ s/($num)\^($num)/int($1)^int($2)/ge);
+	next if ($expr =~ s/($num)==($num)/int($1)==int($2)?1:0/ge);
+	next if ($expr =~ s/($num)\!=($num)/int($1)!=int($2)?1:0/ge);
+	next if ($expr =~ s/($num)<($num)/int($1)<int($2)?1:0/ge);
+	next if ($expr =~ s/($num)<=($num)/int($1)<=int($2)?1:0/ge);
+	next if ($expr =~ s/($num)>($num)/int($1)>int($2)?1:0/ge);
+	next if ($expr =~ s/($num)>=($num)/int($1)>=int($2)?1:0/ge);
 	last;
     }
 
