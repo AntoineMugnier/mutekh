@@ -1178,40 +1178,17 @@ static inline void si446x_rfp_error(struct si446x_ctx_s *pv)
   }
 }
 
-static inline void si446x_tx_irq(struct si446x_ctx_s *pv)
+static inline void si446x_rfp_end_txrq(struct si446x_ctx_s *pv)
 {
   struct dev_rfpacket_rq_s *rq = dev_rfpacket_rq_head(&pv->queue);
-
-  logk_trace("si446x: TX irq");
-
-  assert(rq);
 
 #ifdef CONFIG_DRIVER_RFPACKET_SI446X_STATISTICS
   pv->stats.tx_count++;
 #endif
 
-  switch (pv->state)
-  {
-#ifdef CONFIG_DRIVER_RFPACKET_SI446X_CCA
-    case SI446X_STATE_TX_LBT:
-    case SI446X_STATE_TX_LBT_STOPPING_RXC:
-      if (pv->bc_status & bit(STATUS_TX_TIMEOUT))
-        {
- #ifdef CONFIG_DRIVER_RFPACKET_SI446X_STATISTICS
-          pv->stats.tx_err_count++;
- #endif
-          return si446x_rfp_end_rq(pv, -ETIMEDOUT);
-        }
-#endif
-    case SI446X_STATE_TX:
-      /* Packet has been transmitted */
-      rq->tx_timestamp = pv->timestamp;
-      if (rq->anchor == DEV_RFPACKET_TIMESTAMP_START)
-        rq->tx_timestamp -= rq->tx_size * pv->cache_array[pv->id].tb;
-      return si446x_rfp_end_rq(pv, 0);
-    default:
-      abort();
-  }
+  rq->tx_timestamp = pv->timestamp;
+  if (rq->anchor == DEV_RFPACKET_TIMESTAMP_START)
+    rq->tx_timestamp -= rq->tx_size * pv->cache_array[pv->id].tb;
 }
 
 #ifdef CONFIG_DRIVER_RFPACKET_SI446X_SLEEP
@@ -1314,11 +1291,24 @@ static KROUTINE_EXEC(si446x_spi_rq_done)
           si446x_retry_tx(pv, 0);
           break;
         }
+      if (pv->bc_status & bit(STATUS_TX_TIMEOUT))
+        {
+# ifdef CONFIG_DRIVER_RFPACKET_SI446X_STATISTICS
+          pv->stats.tx_err_count++;
+# endif
+          si446x_rfp_end_rq(pv, -ETIMEDOUT);
+          break;
+        }
 #endif
     case SI446X_STATE_TX:
       if (pv->bc_status & STATUS_TX_END_MSK)
-        si446x_tx_irq(pv);
+        {
+          /* Packet has been transmitted */
+          si446x_rfp_end_txrq(pv);
+          si446x_rfp_end_rq(pv, 0);
+        }
       break;
+
     case SI446X_STATE_STOPPING_RXC:
       if (pv->bc_status & STATUS_RX_END_MSK)
         {
