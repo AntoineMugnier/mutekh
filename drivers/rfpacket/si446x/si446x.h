@@ -26,6 +26,7 @@
 #include <mutek/mem_alloc.h>
 #include <mutek/printk.h>
 #include <mutek/bytecode.h>
+#include <hexo/bit.h>
 
 #include <device/resources.h>
 #include <device/device.h>
@@ -273,22 +274,20 @@ DRIVER_PV(struct si446x_ctx_s);
 #define STATUS_INFO_MSK         0x00FFFF00
 #define STATUS_PH_MSK           0x3B
 
-#define _MSK(idx)                  (1 << idx)
+#define STATUS_RX_IRQ_MSK       (bit(STATUS_PACKET_RX)      |\
+                                 bit(STATUS_CRC_ERROR)      |\
+                                 bit(STATUS_RX_ALMOST_FULL))
 
-#define STATUS_RX_IRQ_MSK       (_MSK(STATUS_PACKET_RX)      |\
-                                 _MSK(STATUS_CRC_ERROR)      |\
-                                 _MSK(STATUS_RX_ALMOST_FULL))
+#define STATUS_TX_IRQ_MSK       (bit(STATUS_PACKET_TX)      |\
+                                 bit(STATUS_TX_ALMOST_EMPTY))
 
-#define STATUS_TX_IRQ_MSK       (_MSK(STATUS_PACKET_TX)      |\
-                                 _MSK(STATUS_TX_ALMOST_EMPTY))
+#define STATUS_RX_END_MSK       (bit(STATUS_PACKET_RX)     |\
+                                 bit(STATUS_CRC_ERROR)     |\
+                                 bit(STATUS_JAMMING)       |\
+                                 bit(STATUS_RX_TIMEOUT))
 
-#define STATUS_RX_END_MSK       (_MSK(STATUS_PACKET_RX)     |\
-                                 _MSK(STATUS_CRC_ERROR)     |\
-                                 _MSK(STATUS_JAMMING)       |\
-                                 _MSK(STATUS_RX_TIMEOUT))
-
-#define STATUS_TX_END_MSK       (_MSK(STATUS_PACKET_TX)     |\
-                                 _MSK(STATUS_TX_TIMEOUT))
+#define STATUS_TX_END_MSK       (bit(STATUS_PACKET_TX)     |\
+                                 bit(STATUS_TX_TIMEOUT))
 
 
 #define SI446X_PART_INFO_CMD      0x01

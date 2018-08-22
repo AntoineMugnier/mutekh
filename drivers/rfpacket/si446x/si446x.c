@@ -1165,8 +1165,8 @@ static inline void si446x_rfp_end_rxrq(struct si446x_ctx_s *pv)
   if (rx == NULL)
     return;
 
-  bool_t err = !!(pv->bc_status & (_MSK(STATUS_CRC_ERROR) |
-                                   _MSK(STATUS_OTHER_ERR)));
+  bool_t err = !!(pv->bc_status & (bit(STATUS_CRC_ERROR) |
+                                   bit(STATUS_OTHER_ERR)));
 
 #ifdef CONFIG_DRIVER_RFPACKET_SI446X_STATISTICS
   pv->stats.rx_count++;
@@ -1256,7 +1256,7 @@ static inline void si446x_tx_irq(struct si446x_ctx_s *pv)
 #ifdef CONFIG_DRIVER_RFPACKET_SI446X_CCA
     case SI446X_STATE_TX_LBT:
     case SI446X_STATE_TX_LBT_PENDING_RXC:
-      if (pv->bc_status & _MSK(STATUS_TX_TIMEOUT))
+      if (pv->bc_status & bit(STATUS_TX_TIMEOUT))
         {
  #ifdef CONFIG_DRIVER_RFPACKET_SI446X_STATISTICS
           pv->stats.tx_err_count++;
@@ -1331,13 +1331,13 @@ static KROUTINE_EXEC(si446x_spi_rq_done)
   if (pv->state != SI446X_STATE_INITIALISING)
     assert(!srq->error);
 
-  if (pv->bc_status & _MSK(STATUS_OTHER_ERR))
+  if (pv->bc_status & bit(STATUS_OTHER_ERR))
     {
       si446x_rfp_error(pv);
       goto end;
     }
 
-  if (pv->bc_status & _MSK(STATUS_JAMMING))
+  if (pv->bc_status & bit(STATUS_JAMMING))
     {
       si446x_jamming(pv);
       goto end;
@@ -1370,7 +1370,7 @@ static KROUTINE_EXEC(si446x_spi_rq_done)
       if (pv->bc_status & STATUS_RX_END_MSK)
         {
           si446x_rfp_end_rxrq(pv);
-          if (pv->bc_status & _MSK(STATUS_RX_TIMEOUT))
+          if (pv->bc_status & bit(STATUS_RX_TIMEOUT))
             si446x_rfp_end_rq(pv, 0);
           else
             si446x_retry_rx(pv);
