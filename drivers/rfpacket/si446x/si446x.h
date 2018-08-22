@@ -101,7 +101,7 @@ enum si446x_state_s
   SI446X_STATE_STOPPING_RXC,
   SI446X_STATE_TX,
   SI446X_STATE_TX_LBT,                  /* 12 */
-  SI446X_STATE_TX_LBT_PENDING_RXC,
+  SI446X_STATE_TX_LBT_STOPPING_RXC,
 };
 
 struct si446x_modem_config_s
@@ -200,7 +200,6 @@ struct si446x_ctx_s
   struct dev_spi_ctrl_bytecode_rq_s spi_rq;
 
   struct dev_rfpacket_rq_s      *rx_cont;
-  struct dev_rfpacket_rq_s      *next_rx_cont;
 
   /* Queue for requests */
   dev_request_queue_root_t queue;
