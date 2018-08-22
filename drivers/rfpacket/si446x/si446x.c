@@ -1158,12 +1158,15 @@ error:
   bc_set_reg(ctx, 0, p);
 }
 
-static inline void si446x_rfp_end_rxrq(struct si446x_ctx_s *pv, bool_t err)
+static inline void si446x_rfp_end_rxrq(struct si446x_ctx_s *pv)
 {
   struct dev_rfpacket_rx_s *rx = pv->rxrq;
 
   if (rx == NULL)
     return;
+
+  bool_t err = !!(pv->bc_status & (_MSK(STATUS_CRC_ERROR) |
+                                   _MSK(STATUS_OTHER_ERR)));
 
 #ifdef CONFIG_DRIVER_RFPACKET_SI446X_STATISTICS
   pv->stats.rx_count++;
@@ -1214,7 +1217,7 @@ static inline void si446x_rfp_error(struct si446x_ctx_s *pv)
 {
   logk_trace("si446x: -EIO error %d", pv->state);
   /* Terminate allocated rx request */
-  si446x_rfp_end_rxrq(pv, 1);
+  si446x_rfp_end_rxrq(pv);
 
   switch (pv->state)
   {
@@ -1231,36 +1234,6 @@ static inline void si446x_rfp_error(struct si446x_ctx_s *pv)
     case SI446X_STATE_STOPPING_RXC:
       return si446x_rfp_end_rxc(pv, 0);
     case SI446X_STATE_RXC:
-      return si446x_rfp_idle(pv);
-    default:
-      abort();
-  }
-}
-
-/* Transceiver is idle when this function is called */
-static inline void si446x_rx_irq(struct si446x_ctx_s *pv)
-{
-  bool_t err = pv->bc_status & STATUS_RX_ERR_MSK ? 1 : 0;
-  si446x_rfp_end_rxrq(pv, err);
-
-  if (err)
-    logk_trace("crc error");
-
-  switch (pv->state)
-  {
-    case SI446X_STATE_RX:
-      if (pv->bc_status & _MSK(STATUS_RX_TIMEOUT))
-        return si446x_rfp_end_rq(pv, 0);
-      return si446x_retry_rx(pv);
-#ifdef CONFIG_DRIVER_RFPACKET_SI446X_CCA
-    case SI446X_STATE_TX_LBT:
-    case SI446X_STATE_TX_LBT_PENDING_RXC:
-      return si446x_retry_tx(pv, 0);
-#endif
-    case SI446X_STATE_STOPPING_RXC:
-      return si446x_rfp_end_rxc(pv, 0);
-    case SI446X_STATE_RXC:
-      assert(pv->next_rx_cont == NULL);
       return si446x_rfp_idle(pv);
     default:
       abort();
@@ -1395,16 +1368,30 @@ static KROUTINE_EXEC(si446x_spi_rq_done)
       si446x_rfp_idle(pv);
       break;
     case SI446X_STATE_RX:
+      if (pv->bc_status & STATUS_RX_END_MSK)
+        {
+          si446x_rfp_end_rxrq(pv);
+          if (pv->bc_status & _MSK(STATUS_RX_TIMEOUT))
+            si446x_rfp_end_rq(pv, 0);
+          else
+            si446x_retry_rx(pv);
+        }
+      break;
     case SI446X_STATE_RXC:
       if (pv->bc_status & STATUS_RX_END_MSK)
-        si446x_rx_irq(pv);
+        {
+          si446x_rfp_end_rxrq(pv);
+          assert(pv->next_rx_cont == NULL);
+          si446x_rfp_idle(pv);
+        }
       break;
 #ifdef CONFIG_DRIVER_RFPACKET_SI446X_CCA
     case SI446X_STATE_TX_LBT:
     case SI446X_STATE_TX_LBT_PENDING_RXC:
       if (pv->bc_status & STATUS_RX_END_MSK)
         {
-          si446x_rx_irq(pv);
+          si446x_rfp_end_rxrq(pv);
+          si446x_retry_tx(pv, 0);
           break;
         }
 #endif
@@ -1415,7 +1402,8 @@ static KROUTINE_EXEC(si446x_spi_rq_done)
     case SI446X_STATE_STOPPING_RXC:
       if (pv->bc_status & STATUS_RX_END_MSK)
         {
-          si446x_rx_irq(pv);
+          si446x_rfp_end_rxrq(pv);
+          si446x_rfp_end_rxc(pv, 0);
           break;
         }
     case SI446X_STATE_CONFIG_RXC_PENDING_STOP:

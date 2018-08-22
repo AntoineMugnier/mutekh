@@ -287,8 +287,6 @@ DRIVER_PV(struct si446x_ctx_s);
                                  _MSK(STATUS_JAMMING)       |\
                                  _MSK(STATUS_RX_TIMEOUT))
 
-#define STATUS_RX_ERR_MSK       (_MSK(STATUS_CRC_ERROR))
-
 #define STATUS_TX_END_MSK       (_MSK(STATUS_PACKET_TX)     |\
                                  _MSK(STATUS_TX_TIMEOUT))
 
