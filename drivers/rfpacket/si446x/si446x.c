@@ -1275,26 +1275,6 @@ static inline void si446x_tx_irq(struct si446x_ctx_s *pv)
   }
 }
 
-/* Transceiver is idle when this function is called */
-static inline void si446x_jamming(struct si446x_ctx_s *pv)
-{
-  logk_trace("si446x: Jamming %d %d %d", pv->state, GET_RSSI((int16_t)(pv->rssi >> 8)),
-                GET_RSSI((int16_t)(pv->jam_rssi >> 8)));
-
-  assert(pv->rxrq == NULL);
-
-  switch (pv->state)
-  {
-    case SI446X_STATE_RXC:
-      assert(pv->next_rx_cont == NULL);
-    case SI446X_STATE_STOPPING_RXC:
-      si446x_rfp_set_state(pv, SI446X_STATE_RXC_JAMMING);
-      return si446x_rfp_end_rxc(pv, -EBUSY);
-    default:
-      abort();
-  }
-}
-
 #ifdef CONFIG_DRIVER_RFPACKET_SI446X_SLEEP
 /* Transceiver is sleeping when this function is called */
 static inline void si446x_sleep(struct si446x_ctx_s *pv)
@@ -1337,12 +1317,6 @@ static KROUTINE_EXEC(si446x_spi_rq_done)
       goto end;
     }
 
-  if (pv->bc_status & bit(STATUS_JAMMING))
-    {
-      si446x_jamming(pv);
-      goto end;
-    }
-
   switch (pv->state)
   {
 #ifdef CONFIG_DRIVER_RFPACKET_SI446X_SLEEP
@@ -1377,7 +1351,17 @@ static KROUTINE_EXEC(si446x_spi_rq_done)
         }
       break;
     case SI446X_STATE_RXC:
-      if (pv->bc_status & STATUS_RX_END_MSK)
+      if (pv->bc_status & bit(STATUS_JAMMING))
+        {
+          logk_trace("Jamming %d %d",
+                     GET_RSSI((int16_t)(pv->rssi >> 8)),
+                     GET_RSSI((int16_t)(pv->jam_rssi >> 8)));
+          assert(pv->rxrq == NULL);
+          assert(pv->next_rx_cont == NULL);
+          si446x_rfp_set_state(pv, SI446X_STATE_RXC_JAMMING);
+          si446x_rfp_end_rxc(pv, -EBUSY);
+        }
+      else if (pv->bc_status & STATUS_RX_END_MSK)
         {
           si446x_rfp_end_rxrq(pv);
           assert(pv->next_rx_cont == NULL);
