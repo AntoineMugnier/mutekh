@@ -578,8 +578,7 @@ static void si446x_rfp_end_rxc(struct si446x_ctx_s *pv, error_t err)
       pv->rx_cont = NULL;
       return si446x_rfp_idle(pv);
 #endif
-    case SI446X_STATE_RXC_JAMMING:
-      pv->rssi = SET_RSSI(SI446X_RSSI_AVERAGE_DEFAULT) << 8;
+    case SI446X_STATE_RXC:
     case SI446X_STATE_CONFIG_RXC:
     case SI446X_STATE_CONFIG_RXC_PENDING_STOP:
       assert(rq);
@@ -938,7 +937,6 @@ static DEV_RFPACKET_REQUEST(si446x_rfp_request)
             dev_rfpacket_rq_done(rq);
             break;
 
-          case SI446X_STATE_RXC_JAMMING:
           case SI446X_STATE_INITIALISING:
             UNREACHABLE();
         }
@@ -1298,7 +1296,7 @@ static KROUTINE_EXEC(si446x_spi_rq_done)
                      GET_RSSI((int16_t)(pv->rssi >> 8)),
                      GET_RSSI((int16_t)(pv->jam_rssi >> 8)));
           assert(pv->rxrq == NULL);
-          si446x_rfp_set_state(pv, SI446X_STATE_RXC_JAMMING);
+          pv->rssi = SET_RSSI(SI446X_RSSI_AVERAGE_DEFAULT) << 8;
           si446x_rfp_end_rxc(pv, -EBUSY);
         }
       else if (pv->bc_status & STATUS_RX_END_MSK)
