@@ -663,7 +663,7 @@ static inline void si446x_start_rx(struct si446x_ctx_s *pv, struct dev_rfpacket_
       si446x_rfp_set_state(pv, SI446X_STATE_RX);
 
       si446x_bytecode_start(pv, &si446x_entry_rx,
-        SI446X_ENTRY_RX_BCARGS(&pv->deadline, &pv->timeout, rq->channel));
+        SI446X_ENTRY_RX_BCARGS(rq->channel));
       break;
 
     case DEV_RFPACKET_RQ_RX_CONT:
@@ -705,7 +705,7 @@ static inline void si446x_retry_rx(struct si446x_ctx_s *pv)
     return si446x_rfp_end_rq(pv, 0);
 
   si446x_bytecode_start(pv, &si446x_entry_rx,
-    SI446X_ENTRY_RX_BCARGS(&pv->deadline, &pv->timeout, rq->channel));
+    SI446X_ENTRY_RX_BCARGS(rq->channel));
 }
 
 static inline void si446x_start_tx(struct si446x_ctx_s *pv)
@@ -745,8 +745,7 @@ static inline void si446x_start_tx(struct si446x_ctx_s *pv)
       si446x_rfp_set_state(pv, SI446X_STATE_TX_LBT);
 
       si446x_bytecode_start(pv, &si446x_entry_tx_cca,
-              SI446X_ENTRY_TX_CCA_BCARGS(pwr, &pv->deadline, &pv->timeout,
-                                         rq->channel));
+              SI446X_ENTRY_TX_CCA_BCARGS(pwr, rq->channel));
       break;
 #endif
     case DEV_RFPACKET_RQ_TX:
@@ -758,7 +757,7 @@ static inline void si446x_start_tx(struct si446x_ctx_s *pv)
       si446x_rfp_set_state(pv, SI446X_STATE_TX);
 
       si446x_bytecode_start(pv, &si446x_entry_tx,
-              SI446X_ENTRY_TX_BCARGS(pwr, &pv->deadline, rq->channel));
+              SI446X_ENTRY_TX_BCARGS(pwr, rq->channel));
       break;
 
     default:
@@ -796,8 +795,7 @@ static inline void si446x_retry_tx(struct si446x_ctx_s *pv, bool_t refill)
             return si446x_rfp_end_rq(pv, -ETIMEDOUT);
 
           si446x_bytecode_start(pv, &si446x_entry_tx_cca,
-            SI446X_ENTRY_TX_CCA_BCARGS(0, &pv->deadline, &pv->timeout,
-                                       rq->channel));
+            SI446X_ENTRY_TX_CCA_BCARGS(0, rq->channel));
         }
       else
         {
@@ -810,7 +808,7 @@ static inline void si446x_retry_tx(struct si446x_ctx_s *pv, bool_t refill)
             }
 
           si446x_bytecode_start(pv, &si446x_entry_retry_tx_cca,
-                  SI446X_ENTRY_RETRY_TX_CCA_BCARGS(&pv->timeout, rq->channel));
+                  SI446X_ENTRY_RETRY_TX_CCA_BCARGS(rq->channel));
         }
       break;
 

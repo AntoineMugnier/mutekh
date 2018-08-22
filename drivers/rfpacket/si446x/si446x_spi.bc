@@ -292,14 +292,15 @@ tune_done:
 .func si446x_entry_tx
         .export si446x_entry_tx
         .input %0 power
-        .input %1 deadline
         .input %3 channel
         .clobber %0, %3, %4, %5, %6 buffer, %7, %11, %12, %13
         call8                   %si446x_tx_init:link,     si446x_tx_init
         cst32                   %si446x_start_tx:mode,    0x30,  16
         mov                     %si446x_start_tx:channel, %channel
         /* Wait deadline before TX */
-        spi_yield_deadline      %deadline
+        mov                     %0,                       %R_CTX_PV
+        add8                    %0,                       _offsetof(si446x_ctx_s, deadline, 8)
+        spi_yield_deadline      %0
         call8                   %si446x_start_tx:link,  si446x_start_tx
         jmp16                   transfer_ongoing
 .endfunc
@@ -370,13 +371,13 @@ tune_done:
 .endfunc
 
 .func si446x_entry_rx
-        .input %1 deadline
-        .input %2 timeout
         .input %4 channel
         .clobber %0, %1, %3, %4, %5, %6, %10, %11, %12, %13
         .export si446x_entry_rx
         /* Wait deadline before RX */
-        spi_yield_deadline      %deadline
+        mov                     %0,                       %R_CTX_PV
+        add8                    %0,                       _offsetof(si446x_ctx_s, deadline, 8)
+        spi_yield_deadline      %0
         call16                  %poll_gpio:link,        poll_gpio
         /* Configure latch at Sync Word detection */
         cst8                    %set_rssi_control:mode, 0x02
@@ -386,7 +387,9 @@ tune_done:
         mov                     %si446x_start_rx:channel, %channel
         call8                   %si446x_start_rx:link,    si446x_start_rx
   rx_wait:  
-        spi_yieldc_deadline     %timeout
+        mov                     %0,                       %R_CTX_PV
+        add8                    %0,                       _offsetof(si446x_ctx_s, timeout, 8)
+        spi_yieldc_deadline     %0
           jmp8                  rx_timeout
         /* Irq is pending */
         call16                  %si446x_check_irq:link,  si446x_check_irq
@@ -400,10 +403,8 @@ tune_done:
 .func si446x_entry_tx_cca
         .export si446x_entry_tx_cca
         .input %0 power
-        .input %1 deadline
-        .input %2 timeout
         .input %3 channel
-        .clobber %0, %1, %2, %3, %4, %5, %6, %7, %9, %10, %11, %12, %13
+        .clobber %0, %1, %2, %3, %4, %5, %6, %7, %10, %11, %12, %13
         call8                   %si446x_tx_init:link,                si446x_tx_init
         mov                     %si446x_start_tx:channel,            %channel
         cst32                   %si446x_start_tx:mode,               0x33,  16
@@ -411,19 +412,21 @@ tune_done:
         /* Update TX for a later start */
         call16                  %si446x_start_tx:link,               si446x_start_tx
         /* Wait deadline before TX */
-        spi_yield_deadline      %deadline
+        mov                     %0,                       %R_CTX_PV
+        add8                    %0,                       _offsetof(si446x_ctx_s, deadline, 8)
+        spi_yield_deadline      %0
         mov                     %si446x_entry_retry_tx_cca:channel,  %channel
-        mov                     %si446x_entry_retry_tx_cca:timeout,  %timeout
         jmp8 si446x_entry_retry_tx_cca
 .endfunc
 
 .func si446x_entry_retry_tx_cca
         .export si446x_entry_retry_tx_cca
-        .input %9 timeout
         .input %7 channel
         .clobber %0, %1, %2 tbr, %3, %4, %5, %6, %10, %11, %12, %13
         /* Test if timeout date is reached */
-        spi_deadline            %timeout
+        mov                     %0,                       %R_CTX_PV
+        add8                    %0,                       _offsetof(si446x_ctx_s, timeout, 8)
+        spi_deadline            %0
         spi_elapsed
           jmp8                  tx_fail
         /* Clean any pending interrupt */
