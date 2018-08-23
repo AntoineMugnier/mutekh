@@ -413,6 +413,19 @@ static void si446x_rf_config_done(struct si446x_ctx_s *pv, const struct dev_rfpa
 static void si446x_rfp_end_rq(struct si446x_ctx_s *pv, error_t err);
 static void si446x_rfp_end_rxc(struct si446x_ctx_s *pv, error_t err);
 
+static void si446x_rf_config_notsup(struct si446x_ctx_s *pv,
+                                    struct dev_rfpacket_rq_s *rq)
+{
+  switch (rq->type)
+    {
+    case DEV_RFPACKET_RQ_RX_CONT:
+    case DEV_RFPACKET_RQ_RX_TIMEOUT:
+      return si446x_rfp_end_rxc(pv, -ENOTSUP);
+    default:
+      return si446x_rfp_end_rq(pv, -ENOTSUP);
+    }
+}
+
 static KROUTINE_EXEC(si446x_config_deferred)
 {
   struct si446x_ctx_s *pv = si446x_ctx_s_from_kr(kr);
@@ -420,7 +433,8 @@ static KROUTINE_EXEC(si446x_config_deferred)
 
   assert(pv->bcrun == 0);
 
-  if (rq->type == DEV_RFPACKET_RQ_RX_CONT)
+  if (rq->type == DEV_RFPACKET_RQ_RX_CONT ||
+      rq->type == DEV_RFPACKET_RQ_RX_TIMEOUT)
     assert((pv->state == SI446X_STATE_CONFIG_RXC) ||
            (pv->state == SI446X_STATE_CONFIG_RXC_PENDING_STOP));
   else
@@ -432,21 +446,22 @@ static KROUTINE_EXEC(si446x_config_deferred)
   if (si446x_build_rf_config(pv, &e->data, rq) == 0)
     return si446x_rf_config_done(pv, cfg);
 
-  /** Unsupported configuration */
-  if (rq->type == DEV_RFPACKET_RQ_RX_CONT)
-    return si446x_rfp_end_rxc(pv, -ENOTSUP);
-  else
-    return si446x_rfp_end_rq(pv, -ENOTSUP);
+  si446x_rf_config_notsup(pv, rq);
 }
 
 static inline error_t si446x_check_config(struct si446x_ctx_s *pv, struct dev_rfpacket_rq_s *rq)
 {
   assert(pv->bcrun == 0);
 
-  if (rq->type == DEV_RFPACKET_RQ_RX_CONT)
-    si446x_rfp_set_state(pv, SI446X_STATE_CONFIG_RXC);
-  else
-    si446x_rfp_set_state(pv, SI446X_STATE_CONFIG);
+  switch (rq->type)
+    {
+    case DEV_RFPACKET_RQ_RX_CONT:
+    case DEV_RFPACKET_RQ_RX_TIMEOUT:
+      si446x_rfp_set_state(pv, SI446X_STATE_CONFIG_RXC);
+      break;
+    default:
+      si446x_rfp_set_state(pv, SI446X_STATE_CONFIG);
+    }
 
   const struct dev_rfpacket_rf_cfg_s *rfcfg = rq->rf_cfg;
 
@@ -553,7 +568,8 @@ static inline void si446x_rfp_process_group(struct si446x_ctx_s *pv, bool_t grou
     if (!rq || rq->err_group != group)
       break;
 
-    assert(rq->type != DEV_RFPACKET_RQ_RX_CONT);
+    assert(rq->type != DEV_RFPACKET_RQ_RX_CONT &&
+           rq->type != DEV_RFPACKET_RQ_RX_TIMEOUT);
 
     rq->error = -ECANCELED;
     rq->base.drvdata = NULL;
@@ -597,7 +613,8 @@ static void si446x_rfp_end_rq(struct si446x_ctx_s *pv, error_t err)
 {
   struct dev_rfpacket_rq_s * rq = dev_rfpacket_rq_head(&pv->queue);
 
-  assert(rq && rq->type != DEV_RFPACKET_RQ_RX_CONT);
+  assert(rq && rq->type != DEV_RFPACKET_RQ_RX_CONT &&
+         rq->type != DEV_RFPACKET_RQ_RX_TIMEOUT);
 
   rq->error = err;
   rq->base.drvdata = NULL;
@@ -648,9 +665,19 @@ static inline void si446x_start_rx(struct si446x_ctx_s *pv, struct dev_rfpacket_
         SI446X_ENTRY_RX_BCARGS(rq->channel));
       break;
 
+    case DEV_RFPACKET_RQ_RX_TIMEOUT:
+      /* FIXME check if RQ timeout has already elapsed,
+         FIXME do this before computing configuration */
+      logk_trace("RT");
+      pv->flags &= ~SI446X_FLAGS_RXC_INFINITE;
+      pv->timeout = rq->deadline;
+      goto rxc;
+
     case DEV_RFPACKET_RQ_RX_CONT:
       logk_trace("RC");
+      pv->flags |= SI446X_FLAGS_RXC_INFINITE;
 
+    rxc:
       if (pv->frequency != freq)
         {
           pv->rssi = SET_RSSI(SI446X_RSSI_AVERAGE_DEFAULT) << 8;
@@ -835,10 +862,7 @@ static void si446x_rfp_idle(struct si446x_ctx_s *pv)
       return;
     case -ENOTSUP:
       /** Unsupported configuration */
-      if (rq->type == DEV_RFPACKET_RQ_RX_CONT)
-        return si446x_rfp_end_rxc(pv, -ENOTSUP);
-      else
-        return si446x_rfp_end_rq(pv, -ENOTSUP);
+      return si446x_rf_config_notsup(pv, rq);
     default:
       /* Configuration is already applied */
       si446x_rfp_set_state(pv, SI446X_STATE_READY);
@@ -854,6 +878,7 @@ static void si446x_rfp_idle(struct si446x_ctx_s *pv)
       return si446x_start_tx(pv);
     case DEV_RFPACKET_RQ_RX:
     case DEV_RFPACKET_RQ_RX_CONT:
+    case DEV_RFPACKET_RQ_RX_TIMEOUT:
       return si446x_start_rx(pv, rq);
     default:
       return si446x_rfp_end_rq(pv, -ENOTSUP);
@@ -897,8 +922,16 @@ static DEV_RFPACKET_REQUEST(si446x_rfp_request)
 
     rq->error = 0;
 
-    if (rq->type == DEV_RFPACKET_RQ_RX_CONT)
+    switch (rq->type)
       {
+      case DEV_RFPACKET_RQ_RX_TIMEOUT:
+        if (rq->lifetime != 0)
+          {
+            dev_timer_value_t t;
+            DEVICE_OP(pv->timer, get_value, &t, 0);
+            rq->deadline = t + rq->lifetime;
+          }
+      case DEV_RFPACKET_RQ_RX_CONT:
         rq->base.drvdata = NULL;
         switch (pv->state)
         {
@@ -938,16 +971,19 @@ static DEV_RFPACKET_REQUEST(si446x_rfp_request)
           case SI446X_STATE_INITIALISING:
             UNREACHABLE();
         }
-      }
-    else
-      {
+        break;
+
+      case DEV_RFPACKET_RQ_RX:
+      case DEV_RFPACKET_RQ_TX_FAIR:
+      case DEV_RFPACKET_RQ_TX: {
         bool_t empty = dev_rq_queue_isempty(&pv->queue);
         dev_rfpacket_rq_pushback(&pv->queue, rq);
         rq->base.drvdata = pv;
 
-        if (empty)
-          {
-            switch (pv->state)
+        if (!empty)
+          break;
+
+        switch (pv->state)
             {
               case SI446X_STATE_RXC:
                 assert(pv->rx_cont);
@@ -965,8 +1001,11 @@ static DEV_RFPACKET_REQUEST(si446x_rfp_request)
 #endif
               default:
                 break;
+
+              case SI446X_STATE_INITIALISING:
+                UNREACHABLE();
             }
-          }
+      }
       }
   }
 
@@ -1254,13 +1293,15 @@ static KROUTINE_EXEC(si446x_spi_rq_done)
       si446x_rfp_idle(pv);
       break;
     case SI446X_STATE_RX:
-      if (pv->bc_status & STATUS_RX_END_MSK)
+      if (pv->bc_status & bit(STATUS_RX_TIMEOUT))
         {
           si446x_rfp_end_rxrq(pv);
-          if (pv->bc_status & bit(STATUS_RX_TIMEOUT))
-            si446x_rfp_end_rq(pv, 0);
-          else
-            si446x_retry_rx(pv);
+          si446x_rfp_end_rq(pv, 0);
+        }
+      else if (pv->bc_status & STATUS_RX_END_MSK)
+        {
+          si446x_rfp_end_rxrq(pv);
+          si446x_retry_rx(pv);
         }
       break;
     case SI446X_STATE_RXC:
@@ -1271,7 +1312,12 @@ static KROUTINE_EXEC(si446x_spi_rq_done)
                      GET_RSSI((int16_t)(pv->jam_rssi >> 8)));
           assert(pv->rxrq == NULL);
           pv->rssi = SET_RSSI(SI446X_RSSI_AVERAGE_DEFAULT) << 8;
-          si446x_rfp_end_rxc(pv, -EBUSY);
+          si446x_rfp_end_rxc(pv, -EAGAIN);
+        }
+      else if (pv->bc_status & bit(STATUS_RX_TIMEOUT))
+        {
+          si446x_rfp_end_rxrq(pv);
+          si446x_rfp_end_rxc(pv, 0);
         }
       else if (pv->bc_status & STATUS_RX_END_MSK)
         {

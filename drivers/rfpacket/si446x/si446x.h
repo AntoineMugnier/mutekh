@@ -240,6 +240,7 @@ DRIVER_PV(struct si446x_ctx_s);
 
 #define SI446X_FLAGS_RX_CONTINOUS     0x00000001  /* rx continous ongoing */
 #define SI446X_FLAGS_RX_ON            0x00000002  /* rx during tx */
+#define SI446X_FLAGS_RXC_INFINITE     0x00000004  /* rx continous has no lifetime */
 #define SI446X_FLAGS_TX_POWER         0x00000010  /* tx power must be configured */
 
 /*
