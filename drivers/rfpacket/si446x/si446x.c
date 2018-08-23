@@ -909,12 +909,10 @@ static DEV_RFPACKET_REQUEST(si446x_rfp_request)
             break;
 #ifdef CONFIG_DRIVER_RFPACKET_SI446X_SLEEP
           case SI446X_STATE_SLEEP:
-            if (!pv->bcrun)
-              {
-                assert(pv->rx_cont == NULL);
-                si446x_bytecode_start(pv, &si446x_entry_ready, 0, 0);
-                si446x_rfp_set_state(pv, SI446X_STATE_AWAKING);
-              }
+            assert(pv->rx_cont == NULL);
+            si446x_bytecode_start(pv, &si446x_entry_ready, 0, 0);
+            si446x_rfp_set_state(pv, SI446X_STATE_AWAKING);
+          case SI446X_STATE_ENTER_SLEEP:
 #endif
           case SI446X_STATE_AWAKING:
           case SI446X_STATE_CONFIG:
@@ -961,11 +959,9 @@ static DEV_RFPACKET_REQUEST(si446x_rfp_request)
                 break;
 #ifdef CONFIG_DRIVER_RFPACKET_SI446X_SLEEP
               case SI446X_STATE_SLEEP:
-                if (!pv->bcrun)
-                  {
-                    si446x_bytecode_start(pv, &si446x_entry_ready, 0, 0);
-                    si446x_rfp_set_state(pv, SI446X_STATE_AWAKING);
-                  }
+                si446x_bytecode_start(pv, &si446x_entry_ready, 0, 0);
+                si446x_rfp_set_state(pv, SI446X_STATE_AWAKING);
+              case SI446X_STATE_ENTER_SLEEP:
 #endif
               default:
                 break;
@@ -1193,7 +1189,7 @@ static inline void si446x_rfp_end_txrq(struct si446x_ctx_s *pv)
 
 #ifdef CONFIG_DRIVER_RFPACKET_SI446X_SLEEP
 /* Transceiver is sleeping when this function is called */
-static inline void si446x_sleep(struct si446x_ctx_s *pv)
+static inline void si446x_check_wakeup(struct si446x_ctx_s *pv)
 {
   assert(pv->bcrun == 0);
 
@@ -1236,8 +1232,9 @@ static KROUTINE_EXEC(si446x_spi_rq_done)
   switch (pv->state)
   {
 #ifdef CONFIG_DRIVER_RFPACKET_SI446X_SLEEP
-    case SI446X_STATE_SLEEP:
-      si446x_sleep(pv);
+    case SI446X_STATE_ENTER_SLEEP:
+      si446x_rfp_set_state(pv, SI446X_STATE_SLEEP);
+      si446x_check_wakeup(pv);
       break;
     case SI446X_STATE_AWAKING:
       logk_trace("awaken");
@@ -1319,6 +1316,8 @@ static KROUTINE_EXEC(si446x_spi_rq_done)
     case SI446X_STATE_CONFIG_RXC_PENDING_STOP:
       si446x_rfp_end_rxc(pv, 0);
       break;
+
+    case SI446X_STATE_SLEEP:
     default:
       abort();
       break;
@@ -1369,7 +1368,7 @@ static DEV_USE(si446x_use)
         case SI446X_STATE_READY:
           logk_trace("sleep");
           assert(pv->bcrun == 0);
-          si446x_rfp_set_state(pv, SI446X_STATE_SLEEP);
+          si446x_rfp_set_state(pv, SI446X_STATE_ENTER_SLEEP);
           si446x_bytecode_start(pv, &si446x_entry_sleep, 0, 0);
           break;
 
