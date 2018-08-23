@@ -589,7 +589,7 @@ static void si446x_rfp_end_rxc(struct si446x_ctx_s *pv, error_t err)
       assert(rq);
       return si446x_rfp_idle(pv);
     default:
-      abort();
+      UNREACHABLE();
   }
 }
 
@@ -666,7 +666,7 @@ static inline void si446x_start_rx(struct si446x_ctx_s *pv, struct dev_rfpacket_
       break;
 
     default:
-      abort();
+      UNREACHABLE();
   }
 }
 
@@ -743,7 +743,7 @@ static inline void si446x_start_tx(struct si446x_ctx_s *pv)
       break;
 
     default:
-      abort();
+      UNREACHABLE();
   }
 }
 
@@ -795,7 +795,7 @@ static inline void si446x_retry_tx(struct si446x_ctx_s *pv, bool_t refill)
       break;
 
     default:
-      abort();
+      UNREACHABLE();
   }
 }
 
@@ -1066,7 +1066,7 @@ BC_CCALL_FUNCTION(si446x_alloc)
       rq = NULL;
       break;
     default:
-      abort();
+      UNREACHABLE();
   }
 
   if (rq == NULL)
@@ -1125,7 +1125,7 @@ static inline void si446x_rfp_end_rxrq(struct si446x_ctx_s *pv)
       rq = pv->rx_cont;
       break;
     default:
-      abort();
+      UNREACHABLE();
   }
 
   assert(rq);
@@ -1170,7 +1170,7 @@ static inline void si446x_rfp_error(struct si446x_ctx_s *pv)
     case SI446X_STATE_RXC:
       return si446x_rfp_idle(pv);
     default:
-      abort();
+      UNREACHABLE();
   }
 }
 
@@ -1319,8 +1319,7 @@ static KROUTINE_EXEC(si446x_spi_rq_done)
 
     case SI446X_STATE_SLEEP:
     default:
-      abort();
-      break;
+      UNREACHABLE();
   }
 
 
