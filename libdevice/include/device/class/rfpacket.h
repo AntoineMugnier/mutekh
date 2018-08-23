@@ -492,7 +492,7 @@ enum dev_rfpacket_rq_rtype_e
       DEV_RFPACKET_RQ_RX_CONT request is running. */
   DEV_RFPACKET_RQ_TX_FAIR,
 
-  /** Schedule a time limited RX period. This is pushed on the
+  /** Schedule an RX period. This is pushed on the
       requests queue and will be processed in order. It will not run
       until the @ref dev_rfpacket_rq_s::deadline has been reached.
       The request terminates successfully when the RX lifetime is
@@ -515,21 +515,36 @@ enum dev_rfpacket_rq_rtype_e
       DEV_RFPACKET_RQ_RX_CONT request is running. */
   DEV_RFPACKET_RQ_RX,
 
-  /** Put the transceiver in continuous RX state. Unlike other type of
-      requests, this is not stored on the queue. This request is
-      active when no other request are in the queue. This request
-      terminates successfully only when a new request of the same type
-      is started. However it will terminate with the @tt -EBUSY error
-      if the channel is jammed according to the value of the @ref
+  /** Put the transceiver in continuous RX state. This request is not
+      pushed in the queue of scheduled requests. A single such request
+      can be submitted at the same time. The request will terminate
+      immediately with the @tt -EBUSY error if an other continuous
+      request is currently active.
+
+      Some scheduled requests with a null deadline can be used at the
+      same time as a continuous RX. In this case, the continuous RX
+      request stays in the background and will resume operation as
+      soon as the scheduled requests end.
+
+      This request terminates with the @tt -EAGAIN error if the
+      channel is jammed according to the value of the @ref
       dev_rfpacket_rf_cfg_s::rssi_th field. The @ref
-      dev_rfpacket_cancel_t function can be used to stop the RX.
+      dev_rfpacket_cancel_t function can be used to end this request.
 
       Partially received frames, frames allocation error, and frames
-      with a bad CRC are not reported and will not end the request.
-
-      This request can not be used at the same time as other requests
-      with a non zero deadline. */
+      with a bad CRC are not reported and will not end the request. */
   DEV_RFPACKET_RQ_RX_CONT,
+
+  /** Put the transceiver in continuous RX state for a limited period
+      of time. This is similar to a @ref DEV_RFPACKET_RQ_RX_CONT
+      request but the @ref dev_rfpacket_rq_s::deadline and @ref
+      dev_rfpacket_rq_s::lifetime fields are not ignored. Instead they
+      are used to specify the when the RX must end.
+
+      If the @tt lifetime field is not zero, the @tt deadline field
+      will be computed automatically. In the other case, an absolute
+      deadline timer value must be provided in this field. */
+  DEV_RFPACKET_RQ_RX_TIMEOUT,
 };
 
 enum dev_rfpacket_timestamp_anchor_e
@@ -596,7 +611,7 @@ struct dev_rfpacket_rq_s
   enum dev_rfpacket_timestamp_anchor_e   BITFIELD(anchor,1); 
 
   /** This specifies the type of the request. */
-  enum dev_rfpacket_rq_rtype_e      BITFIELD(type,2);
+  enum dev_rfpacket_rq_rtype_e      BITFIELD(type,3);
 
   union {
     struct {
