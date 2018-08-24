@@ -295,12 +295,12 @@ tune_done:
         .input %3 channel
         .clobber %0, %3, %4, %5, %6 buffer, %7, %11, %12, %13
         call8                   %si446x_tx_init:link,     si446x_tx_init
-        cst32                   %si446x_start_tx:mode,    0x30,  16
-        mov                     %si446x_start_tx:channel, %channel
         /* Wait deadline before TX */
         mov                     %0,                       %R_CTX_PV
         add8                    %0,                       _offsetof(si446x_ctx_s, deadline, 8)
         spi_yield_deadline      %0
+        cst32                   %si446x_start_tx:mode,    0x30,  16
+        mov                     %si446x_start_tx:channel, %channel
         call8                   %si446x_start_tx:link,  si446x_start_tx
         jmp16                   transfer_ongoing
 .endfunc

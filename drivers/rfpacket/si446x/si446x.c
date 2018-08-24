@@ -597,12 +597,10 @@ static void si446x_rfp_end_rxc(struct si446x_ctx_s *pv, error_t err)
     case SI446X_STATE_RXC:
     case SI446X_STATE_CONFIG_RXC:
     case SI446X_STATE_CONFIG_RXC_PENDING_STOP:
+    case SI446X_STATE_STOPPING_RXC:
       assert(rq);
       dev_rfpacket_rq_done(rq);
       pv->rx_cont = NULL;
-      return si446x_rfp_idle(pv);
-    case SI446X_STATE_STOPPING_RXC:
-      assert(rq);
       return si446x_rfp_idle(pv);
     default:
       UNREACHABLE();
@@ -1354,11 +1352,7 @@ static KROUTINE_EXEC(si446x_spi_rq_done)
 
     case SI446X_STATE_STOPPING_RXC:
       if (pv->bc_status & STATUS_RX_END_MSK)
-        {
-          si446x_rfp_end_rxrq(pv);
-          si446x_rfp_end_rxc(pv, 0);
-          break;
-        }
+        si446x_rfp_end_rxrq(pv);
     case SI446X_STATE_CONFIG_RXC_PENDING_STOP:
       si446x_rfp_end_rxc(pv, 0);
       break;
