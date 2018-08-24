@@ -135,7 +135,7 @@ static DEV_VALIO_REQUEST(nrf5x_saadc_request)
   LOCK_SPIN_IRQ_SCOPED(&dev->lock);
 
   start = dev_rq_queue_isempty(&pv->queue);
-  dev_valio_rq_pushback(&pv->queue, req);
+  dev_valio_rq_pushback(&pv->queue, rq);
   rq->base.drvdata = dev;
   if (start)
     nrf5x_saadc_request_start(dev);
@@ -144,7 +144,7 @@ static DEV_VALIO_REQUEST(nrf5x_saadc_request)
 
  notsup:
     rq->error = -ENOTSUP;
-    dev_valio_rq_done(req);
+    dev_valio_rq_done(rq);
 }
 
 static DEV_VALIO_CANCEL(nrf5x_saadc_cancel)
@@ -154,11 +154,11 @@ static DEV_VALIO_CANCEL(nrf5x_saadc_cancel)
 
   LOCK_SPIN_IRQ_SCOPED(&dev->lock);
 
-  if (req == dev_valio_rq_head(&pv->queue))
+  if (rq == dev_valio_rq_head(&pv->queue))
     return -EBUSY;
   
   if (rq->base.drvdata == dev) {
-    dev_valio_rq_remove(&pv->queue, req);
+    dev_valio_rq_remove(&pv->queue, rq);
     return 0;
   }
 

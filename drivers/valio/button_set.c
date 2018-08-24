@@ -154,20 +154,20 @@ static DEV_VALIO_REQUEST(button_set_request)
     rq->error = 0;
     LOCK_SPIN_IRQ(&dev->lock);
     was_empty = dev_rq_queue_isempty(&pv->queue);
-    dev_valio_rq_pushback(&pv->queue, req);
+    dev_valio_rq_pushback(&pv->queue, rq);
     if (was_empty && !pv->busy)
       bs_gpio_wait(dev);
     LOCK_RELEASE_IRQ(&dev->lock);
     return;
 
   case DEVICE_VALIO_READ:
-    bs_state_read(pv, req);
+    bs_state_read(pv, rq);
     rq->error = 0;
     goto done;
   }
 
  done:
-  dev_valio_rq_done(req);
+  dev_valio_rq_done(rq);
 }
 
 static DEV_VALIO_CANCEL(button_set_cancel)
@@ -185,7 +185,7 @@ static DEV_VALIO_CANCEL(button_set_cancel)
               });
 
   if (err == 0) {
-    dev_valio_rq_remove(&pv->queue, req);
+    dev_valio_rq_remove(&pv->queue, rq);
 
     device_sleep_schedule(dev);
   }

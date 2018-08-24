@@ -152,13 +152,13 @@ static DEV_VALIO_REQUEST(nrf5x_adc_request)
 
   if (!group->mask) {
     rq->error = -ENOTSUP;
-    dev_valio_rq_done(req);
+    dev_valio_rq_done(rq);
     return;
   }
 
   if (rq->attribute != VALIO_ADC_VALUE || rq->type != DEVICE_VALIO_READ) {
     rq->error = -ENOTSUP;
-    dev_valio_rq_done(req);
+    dev_valio_rq_done(rq);
     return;
   }
 
@@ -166,7 +166,7 @@ static DEV_VALIO_REQUEST(nrf5x_adc_request)
 
   start = dev_rq_queue_isempty(&pv->queue);
 
-  dev_valio_rq_pushback(&pv->queue, req);
+  dev_valio_rq_pushback(&pv->queue, rq);
   rq->base.drvdata = dev;
 
   if (start)
@@ -183,7 +183,7 @@ static DEV_VALIO_CANCEL(nrf5x_adc_cancel)
 
   if (rq->base.drvdata == dev) {
     err = 0;
-    dev_valio_rq_remove(&pv->queue, req);
+    dev_valio_rq_remove(&pv->queue, rq);
   }
 
   return err;

@@ -28,17 +28,8 @@ extern inline error_t dev_valio_wait_rq(
     const struct device_valio_s *accessor,
     struct dev_valio_rq_s *rq);
 
-extern inline error_t dev_valio_wait_op(DEVICE_VALIO_READ, 
-    const struct device_valio_s *accessor,
-    uint16_t attribute,
-    void *data);
-
-extern inline error_t dev_valio_wait_op(DEVICE_VALIO_WRITE, 
-    const struct device_valio_s *accessor,
-    uint16_t attribute,
-    const void *data);
-
-extern inline error_t dev_valio_wait_op(DEVICE_VALIO_UPDATE, 
+extern inline error_t dev_valio_wait_op(
+    enum dev_valio_request_type_e type,
     const struct device_valio_s *accessor,
     uint16_t attribute,
     void *data);

@@ -71,16 +71,16 @@ static void net_scheduler_timeout_schedule(struct net_scheduler_s *sched)
 
   task = net_timeout_queue_head(&sched->delayed_tasks);
   if (!task) {
-    if (sched->timer_rq.rq.drvdata)
+    if (sched->timer_rq.base.drvdata)
       DEVICE_OP(&sched->timer, cancel, &sched->timer_rq);
     return;
   }
 
-  if (sched->timer_rq.rq.drvdata
+  if (sched->timer_rq.base.drvdata
       && sched->timer_rq.deadline == task->timeout.deadline)
     return;
 
-  if (sched->timer_rq.rq.drvdata)
+  if (sched->timer_rq.base.drvdata)
     DEVICE_OP(&sched->timer, cancel, &sched->timer_rq);
 
   sched->timer_rq.deadline = task->timeout.deadline;
@@ -227,7 +227,7 @@ static CONTEXT_ENTRY(net_scheduler_worker)
     CPU_INTERRUPT_RESTORESTATE;
   }
 
-  if (sched->timer_rq.rq.drvdata)
+  if (sched->timer_rq.base.drvdata)
     DEVICE_OP(&sched->timer, cancel, &sched->timer_rq);
 
   cpu_interrupt_disable();
@@ -299,7 +299,7 @@ error_t net_scheduler_init(
   slab_init(&sched->task_pool, sizeof(struct net_task_s),
             scheduler_pool_grow, mem_scope_sys);
 
-  sched->timer_rq.rq.drvdata = NULL;
+  sched->timer_rq.base.drvdata = NULL;
   dev_timer_rq_init_immediate(&sched->timer_rq, net_scheduler_timeout);
 
   device_start(&sched->timer.base);

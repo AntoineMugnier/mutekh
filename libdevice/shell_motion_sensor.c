@@ -62,7 +62,7 @@ static TERMUI_CON_COMMAND_PROTOTYPE(shell_ms_autocal)
   while (latest.active || !former.active) {
     former = latest;
 
-    err = dev_valio_wait_op(DEVICE_VALIO_UPDATE, &c->accessor, VALIO_MS_STATE, &latest);
+    err = dev_valio_wait_op(DEVICE_VALIO_WAIT_EVENT, &c->accessor, VALIO_MS_STATE, &latest);
     if (err) {
       termui_con_printf(con, "Wait with error: %d\n", err);
       return 0;
@@ -134,7 +134,7 @@ static TERMUI_CON_COMMAND_PROTOTYPE(shell_ms_stream)
   error_t err;
 
   do {
-    err = dev_valio_wait_op(DEVICE_VALIO_UPDATE, &c->accessor, VALIO_MS_STATE, &state);
+    err = dev_valio_wait_op(DEVICE_VALIO_WAIT_EVENT, &c->accessor, VALIO_MS_STATE, &state);
     if (err) {
       termui_con_printf(con, "Request failed with error: %d\n", err);
       return 0;

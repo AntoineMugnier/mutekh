@@ -110,7 +110,7 @@ struct persist_rq_s
   uint16_t uid_offset;
 
   /** Access return status */
-  error_t err;
+  error_t error;
 
   union {
     /**
