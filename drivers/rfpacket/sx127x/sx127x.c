@@ -749,7 +749,7 @@ static uint32_t sx127x_set_cmd(struct sx127x_private_s *pv, struct dev_rfpacket_
   return cmd;
 }
 
-static void sx127x_rfp_end_rxrq(struct sx127x_private_s *pv, bool_t err, size_t size)
+static void sx127x_rfp_end_rxrq(struct sx127x_private_s *pv, error_t err, size_t size)
 {
   struct dev_rfpacket_rx_s *rx = pv->rxrq;
 
@@ -790,7 +790,7 @@ static void sx127x_rfp_end_rxrq(struct sx127x_private_s *pv, bool_t err, size_t 
   rx->carrier = 0;
   rx->rssi = 0;
   rx->timestamp = pv->timestamp;
-  rx->err = err;
+  rx->error = err;
 
   if (rq->anchor == DEV_RFPACKET_TIMESTAMP_START)
     rx->timestamp -= pv->rxrq->size * pv->timebit * 8;
@@ -1697,7 +1697,7 @@ static inline void sx127x_rfp_error(struct sx127x_private_s *pv)
 {
   dprintk("sx127x: -EIO error %d\n", pv->state);
   /* Terminate allocated rx request */
-  sx127x_rfp_end_rxrq(pv, 1, 0);
+  sx127x_rfp_end_rxrq(pv, -EIO, 0);
 
   switch (pv->state)
   {

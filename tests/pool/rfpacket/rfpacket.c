@@ -184,7 +184,7 @@ static KROUTINE_EXEC(rfp_test_rx_packet_callback)
   struct dev_rfpacket_rx_s *rx = dev_rfpacket_rx_s_from_kr(kr);
   struct rfp_test_rx_s *base = rfp_test_rx_s_from_rx(rx);
 
-  if (!rx->err)
+  if (!rx->error)
     {
       uint8_t  * p = (uint8_t *)rx->buf;
       printk("rx chan %d %P\n", rx->channel, p, rx->size);

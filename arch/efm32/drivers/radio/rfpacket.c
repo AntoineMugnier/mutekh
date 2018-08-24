@@ -509,7 +509,7 @@ static void efr32_rfp_read_packet(struct radio_efr32_rfp_ctx_s *ctx, bool_t lock
 
   rx->timestamp = 0;
   rx->snr = 0;
-  rx->err = 0;
+  rx->error = 0;
   rx->carrier = 0;
  
   uint8_t *p = (uint8_t *)rx->buf;

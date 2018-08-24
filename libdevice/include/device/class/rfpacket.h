@@ -453,10 +453,14 @@ struct dev_rfpacket_rx_s
   /** Channel of the received packet. */
   uint8_t                           channel;
 
-  /** RX error. This is set by the driver if the packet is malformed
-      or contains bit errors. If no data is available due to the
-      error, the @tt size field must be 0. */
-  bool_t                            err;
+  /** When the opration completes and the packet is malformed,
+      contains bit errors or has a bad CRC, this field is set to @tt
+      -EBADDATA by the driver. The @tt -EIO error indicates that the
+      driver was not able to receive and store the packet properly.
+
+      If no data is available due to the error, the @tt size field is
+      set to 0. */
+  error_t                           error;
 };
 
 STRUCT_COMPOSE(dev_rfpacket_rx_s, kr);
@@ -504,9 +508,6 @@ enum dev_rfpacket_rq_rtype_e
       request terminates successfully when its lifetime expires,
       receiving packets do not terminate the request.
 
-      Partially received frames, frames allocation error, and frames
-      with a bad CRC are not reported and will not end the request.
-
       The request will terminate with the @tt -EBUSY error if the
       channel is jammed according to the value of the @ref
       dev_rfpacket_rf_cfg_s::rssi_th field.
@@ -529,10 +530,7 @@ enum dev_rfpacket_rq_rtype_e
       This request terminates with the @tt -EAGAIN error if the
       channel is jammed according to the value of the @ref
       dev_rfpacket_rf_cfg_s::rssi_th field. The @ref
-      dev_rfpacket_cancel_t function can be used to end this request.
-
-      Partially received frames, frames allocation error, and frames
-      with a bad CRC are not reported and will not end the request. */
+      dev_rfpacket_cancel_t function can be used to end this request. */
   DEV_RFPACKET_RQ_RX_CONT,
 
   /** Put the transceiver in continuous RX state for a limited period

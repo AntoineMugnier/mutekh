@@ -1137,8 +1137,12 @@ static inline void si446x_rfp_end_rxrq(struct si446x_ctx_s *pv)
   if (rx == NULL)
     return;
 
-  bool_t err = !!(pv->bc_status & (bit(STATUS_CRC_ERROR) |
-                                   bit(STATUS_OTHER_ERR)));
+  error_t err = 0;
+
+  if (bit_get(pv->bc_status, STATUS_OTHER_ERR))
+    err = -EIO;
+  else if (bit_get(pv->bc_status, STATUS_CRC_ERROR))
+    err = -EBADDATA;
 
 #ifdef CONFIG_DRIVER_RFPACKET_SI446X_STATISTICS
   pv->stats.rx_count++;
@@ -1166,7 +1170,7 @@ static inline void si446x_rfp_end_rxrq(struct si446x_ctx_s *pv)
   }
 
   assert(rq);
-  rx->err = err;
+  rx->error = err;
 
   if (!err)
     {
@@ -1177,6 +1181,10 @@ static inline void si446x_rfp_end_rxrq(struct si446x_ctx_s *pv)
       rx->channel = rq->channel;
       if (rq->anchor == DEV_RFPACKET_TIMESTAMP_START)
         rx->timestamp -= pv->rxrq->size * pv->cache_array[pv->id].tb;
+    }
+  else
+    {
+      rx->size = 0;
     }
 
   kroutine_exec(&rx->kr);
