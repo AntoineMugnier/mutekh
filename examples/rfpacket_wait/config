@@ -1,0 +1,20 @@
+
+  %set OUTPUT_NAME rfwait
+
+  # New source code module to be compiled
+  %append MODULES $(OUTPUT_NAME):$(CONFIGPATH)
+
+  %include scripts/options.build
+  %include arch/arch.build
+
+  # Application license
+  CONFIG_LICENSE_APP_LGPL
+
+  # Features
+  CONFIG_APP_START
+
+  CONFIG_MUTEK_THREAD
+
+  CONFIG_DRIVER_EFM32_PWM undefined
+  CONFIG_DRIVER_EFM32_I2C undefined
+

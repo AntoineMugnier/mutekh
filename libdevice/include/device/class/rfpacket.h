@@ -735,4 +735,103 @@ error_t dev_rfpacket_wait_rq(
     return rq->error;
 });
 
+/** @This is a context used by blocking helper functions for the
+    rfpacket class of devices. @see dev_rfpacket_wait_init */
+struct dev_rfpacket_wait_ctx_s
+{
+#ifdef CONFIG_MUTEK_CONTEXT_SCHED
+  const struct device_rfpacket_s *rf_dev;
+  lock_t lock;
+  struct sched_context_s *sched_ctx;
+  struct dev_rfpacket_rq_s tx_rq;
+  struct dev_rfpacket_rq_s rx_rq;
+  struct dev_rfpacket_rx_s rx;
+#endif
+};
+
+/** @This initializes a context for use by rfpacket blocking helper
+    functions.  @csee dev_rfpacket_wait_init @csee
+    dev_rfpacket_start_rx @csee dev_rfpacket_stop_rx @csee
+    dev_rfpacket_wait_rx @csee dev_rfpacket_wait_tx @csee
+    dev_rfpacket_wait_cleanup */
+config_depend_and2(CONFIG_DEVICE_RFPACKET, CONFIG_MUTEK_CONTEXT_SCHED)
+error_t dev_rfpacket_wait_init(struct dev_rfpacket_wait_ctx_s *ctx,
+                               const struct device_rfpacket_s *rf_dev,
+                               const struct dev_rfpacket_rf_cfg_s *rf_cfg,
+                               const struct dev_rfpacket_pk_cfg_s *pk_cfg);
+
+/** @This can be used to put the transceiver in RX state. This
+    function does not block. The @ref dev_rfpacket_wait_rx must then
+    be called in order to receive some packets.
+
+    If the @tt timeout parameter is not 0, the RX will stop after the
+    specified delay has elapsed. It can also be stopped by calling the
+    @ref dev_rfpacket_stop_rx function. The RX may as well end at any
+    time in case of error (bad config, jamming, ...).
+
+    The function returns @tt -EBUSY if the transceiver is already in
+    RX state. The function returns 0 in order to acknowledge the
+    request to start the RX.
+
+    The configuration objects passed to the @ref dev_rfpacket_wait_init
+    function are used. If the configuration objects need to be updated,
+    the RX must be stopped and started again.
+
+    The @tt ctx object storage must remain valid until the RX is stopped. */
+config_depend_and2(CONFIG_DEVICE_RFPACKET, CONFIG_MUTEK_CONTEXT_SCHED)
+error_t dev_rfpacket_start_rx(struct dev_rfpacket_wait_ctx_s *ctx,
+                              uint_fast16_t channel, dev_timer_delay_t timeout);
+
+/** @This waits for an incoming packet and stores the received packet
+    in the provided buffer. The @ref dev_rfpacket_start_rx function
+    must have been called previously.
+
+    The current scheduler context is stopped waiting for an incoming
+    packet.
+
+    @This may return the following errors:
+    @list
+      @item @tt -EBUSY if the transceiver is not currently in RX state.
+      @item @tt -ETIMEDOUT if the timeout delay has elapsed while
+        waiting for a packet.
+      @item Any other error code reported by the transceiver error
+        while waiting for a packet. This does not mean end of RX.
+      @item @tt 0 if a packet has been received and stored in the
+        provided buffer.
+    @end list
+
+    The @tt size parameter must initially indicate the size of the
+    buffer and is updated with the size of the received
+    packet. Packets too large to fit the provided buffer are ignored.
+
+    Because receiving a packet does not remove the transceiver from RX
+    state, this function can be called multiple times. */
+config_depend_and2(CONFIG_DEVICE_RFPACKET, CONFIG_MUTEK_CONTEXT_SCHED)
+error_t dev_rfpacket_wait_rx(struct dev_rfpacket_wait_ctx_s *ctx,
+                             uint8_t *buffer, size_t *size);
+
+/** @This can be used to remove the transceiver from RX state.
+    @see dev_rfpacket_start_rx
+
+    The current scheduler context is stopped until the transceiver RX
+    has stopped. */
+config_depend_and2(CONFIG_DEVICE_RFPACKET, CONFIG_MUTEK_CONTEXT_SCHED)
+error_t dev_rfpacket_stop_rx(struct dev_rfpacket_wait_ctx_s *ctx);
+
+/** @This transmit a packet. If the transceiver is currently in RX
+    state, the RX will resume after transmitting the packet.  When the
+    @tt timeout parameter is not 0, a fair TX is used.
+
+    The current scheduler context is stopped until the transceiver
+    has transmitted the packet. */
+config_depend_and2(CONFIG_DEVICE_RFPACKET, CONFIG_MUTEK_CONTEXT_SCHED)
+error_t dev_rfpacket_wait_tx(struct dev_rfpacket_wait_ctx_s *ctx,
+                             const uint8_t *data, size_t size,
+                             uint_fast16_t channel, dev_rfpacket_pwr_t pwr,
+                             dev_timer_delay_t timeout);
+
+/** @This release resource used by the blocking rfpacket context. */
+config_depend_and2(CONFIG_DEVICE_RFPACKET, CONFIG_MUTEK_CONTEXT_SCHED)
+error_t dev_rfpacket_wait_cleanup(struct dev_rfpacket_wait_ctx_s *ctx);
+
 #endif
