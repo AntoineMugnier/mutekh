@@ -158,6 +158,7 @@ struct si446x_cache_entry_s
 
 struct si446x_ctx_s
 {
+  dev_timer_value_t rxc_timeout;
   dev_timer_value_t timeout;
   dev_timer_value_t deadline;
   dev_timer_value_t timestamp;

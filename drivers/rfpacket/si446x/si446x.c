@@ -666,7 +666,7 @@ static inline void si446x_start_rx(struct si446x_ctx_s *pv, struct dev_rfpacket_
          FIXME do this before computing configuration */
       logk_trace("RT");
       pv->flags &= ~SI446X_FLAGS_RXC_INFINITE;
-      pv->timeout = rq->deadline;
+      pv->rxc_timeout = rq->deadline;
       goto rxc;
 
     case DEV_RFPACKET_RQ_RX_CONT:
