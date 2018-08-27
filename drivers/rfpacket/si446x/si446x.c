@@ -578,6 +578,7 @@ static inline void si446x_rfp_process_group(struct si446x_ctx_s *pv, bool_t grou
     dev_rfpacket_rq_done(rq);
   }
 }
+
 static void si446x_rfp_end_rxc(struct si446x_ctx_s *pv, error_t err)
 {
   struct dev_rfpacket_rq_s * rq = pv->rx_cont;
@@ -586,25 +587,22 @@ static void si446x_rfp_end_rxc(struct si446x_ctx_s *pv, error_t err)
     rq->error = err;
 
   switch (pv->state)
-  {
+    {
 #ifdef CONFIG_DRIVER_RFPACKET_SI446X_CCA
     case SI446X_STATE_TX_LBT_STOPPING_RXC:
-      if (rq)
-        dev_rfpacket_rq_done(rq);
-      pv->rx_cont = NULL;
-      return si446x_rfp_idle(pv);
 #endif
     case SI446X_STATE_RXC:
     case SI446X_STATE_CONFIG_RXC:
     case SI446X_STATE_CONFIG_RXC_PENDING_STOP:
     case SI446X_STATE_STOPPING_RXC:
+    case SI446X_STATE_PAUSE_RXC:
       assert(rq);
       dev_rfpacket_rq_done(rq);
       pv->rx_cont = NULL;
       return si446x_rfp_idle(pv);
     default:
       UNREACHABLE();
-  }
+    }
 }
 
 static void si446x_rfp_end_rq(struct si446x_ctx_s *pv, error_t err)
@@ -887,8 +885,6 @@ static void si446x_cancel_rxc(struct si446x_ctx_s *pv)
 {
   struct dev_spi_ctrl_bytecode_rq_s *srq = &pv->spi_rq;
 
-  si446x_rfp_set_state(pv, SI446X_STATE_STOPPING_RXC);
-
   pv->flags &= ~SI446X_FLAGS_RX_CONTINOUS;
 
   assert(pv->bcrun);
@@ -959,6 +955,7 @@ static DEV_RFPACKET_REQUEST(si446x_rfp_request)
               }
           case SI446X_STATE_RXC:
           case SI446X_STATE_STOPPING_RXC:
+          case SI446X_STATE_PAUSE_RXC:
           case SI446X_STATE_CONFIG_RXC_PENDING_STOP:
           case SI446X_STATE_CONFIG_RXC:
           case SI446X_STATE_TX_LBT_STOPPING_RXC:
@@ -986,6 +983,7 @@ static DEV_RFPACKET_REQUEST(si446x_rfp_request)
               case SI446X_STATE_RXC:
                 assert(pv->rx_cont);
                 assert(rq->deadline == 0);
+                si446x_rfp_set_state(pv, SI446X_STATE_PAUSE_RXC);
                 si446x_cancel_rxc(pv);
                 break;
               case SI446X_STATE_READY:
@@ -1034,6 +1032,9 @@ static DEV_RFPACKET_CANCEL(si446x_rfp_cancel)
           break;
         case SI446X_STATE_RXC:
           si446x_cancel_rxc(pv);
+        case SI446X_STATE_PAUSE_RXC:
+          si446x_rfp_set_state(pv, SI446X_STATE_STOPPING_RXC);
+        case SI446X_STATE_STOPPING_RXC:
           break;
 #ifdef CONFIG_DRIVER_RFPACKET_SI446X_CCA
         case SI446X_STATE_TX_LBT:
@@ -1041,9 +1042,8 @@ static DEV_RFPACKET_CANCEL(si446x_rfp_cancel)
           break;
         case SI446X_STATE_CONFIG_RXC_PENDING_STOP:
         case SI446X_STATE_TX_LBT_STOPPING_RXC:
-#endif
-        case SI446X_STATE_STOPPING_RXC:
           break;
+#endif
         default:
           err = 0;
           pv->rx_cont = NULL;
@@ -1095,6 +1095,7 @@ BC_CCALL_FUNCTION(si446x_alloc)
     case SI446X_STATE_TX_LBT:
     case SI446X_STATE_TX_LBT_STOPPING_RXC:
 #endif
+    case SI446X_STATE_PAUSE_RXC:
     case SI446X_STATE_RXC:
       rq = pv->rx_cont;
       break;
@@ -1162,6 +1163,7 @@ static inline void si446x_rfp_end_rxrq(struct si446x_ctx_s *pv)
     case SI446X_STATE_TX_LBT_STOPPING_RXC:
 #endif
     case SI446X_STATE_STOPPING_RXC:
+    case SI446X_STATE_PAUSE_RXC:
     case SI446X_STATE_RXC:
       rq = pv->rx_cont;
       break;
@@ -1211,6 +1213,7 @@ static inline void si446x_rfp_error(struct si446x_ctx_s *pv)
       break;
 #endif
     case SI446X_STATE_STOPPING_RXC:
+    case SI446X_STATE_PAUSE_RXC:
       return si446x_rfp_end_rxc(pv, 0);
     case SI446X_STATE_RXC:
       return si446x_rfp_idle(pv);
@@ -1296,6 +1299,7 @@ static KROUTINE_EXEC(si446x_spi_rq_done)
       device_async_init_done(dev, 0);
     case SI446X_STATE_CONFIG_RXC:
     case SI446X_STATE_CONFIG:
+    case SI446X_STATE_PAUSE_RXC:
       si446x_rfp_idle(pv);
       break;
     case SI446X_STATE_RX:
