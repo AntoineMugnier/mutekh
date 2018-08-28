@@ -592,10 +592,10 @@ static DEV_INIT(efm32_usart_spi_init)
   desc = pv->dma_wr_rq.desc;
 
   desc->dst.reg.addr = pv->addr + EFM32_USART_TXDATA_ADDR;
-  desc->dst.reg.burst = EFM32_USART_FIFO_SIZE;
+  desc->dst.reg.burst = 1;
   desc->src.mem.width = 0;
 
-  rq->dev_link.dst = write_link | (EFM32_DMA_SIGNAL_USARTTXEMPTY << 8);
+  rq->dev_link.dst = write_link | (EFM32_DMA_SIGNAL_USARTTXBL << 8);
   rq->type = DEV_DMA_MEM_REG;
   rq->desc_count_m1 = 0;
   rq->loop_count_m1 = 0;
