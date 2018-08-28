@@ -183,7 +183,7 @@ struct si446x_ctx_s
   uint8_t flags;
   /* Last power level */
   int16_t pwr;
-  bool_t bcrun;
+
   uint8_t pending;
   /* Rssi, carrier level */
   uint8_t carrier, jam_rssi;

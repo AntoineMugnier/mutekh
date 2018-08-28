@@ -124,9 +124,6 @@ static void si446x_bytecode_start(struct si446x_ctx_s *pv, const void *e, uint16
   pv->bc_status &= STATUS_IRQ_MSK;
   bc_set_reg(&srq->vm, STATUS, pv->bc_status);
 
-  assert(pv->bcrun == 0);
-  pv->bcrun = 1;
-
   logk_trace("bcstart");
   va_list ap;
   va_start(ap, mask);
@@ -431,8 +428,6 @@ static KROUTINE_EXEC(si446x_config_deferred)
   struct si446x_ctx_s *pv = si446x_ctx_s_from_kr(kr);
   struct dev_rfpacket_rq_s *rq = pv->rq;
 
-  assert(pv->bcrun == 0);
-
   if (rq->type == DEV_RFPACKET_RQ_RX_CONT ||
       rq->type == DEV_RFPACKET_RQ_RX_TIMEOUT)
     assert((pv->state == SI446X_STATE_CONFIG_RXC) ||
@@ -451,8 +446,6 @@ static KROUTINE_EXEC(si446x_config_deferred)
 
 static inline error_t si446x_check_config(struct si446x_ctx_s *pv, struct dev_rfpacket_rq_s *rq)
 {
-  assert(pv->bcrun == 0);
-
   switch (rq->type)
     {
     case DEV_RFPACKET_RQ_RX_CONT:
@@ -828,8 +821,6 @@ static inline void si446x_retry_tx(struct si446x_ctx_s *pv, bool_t refill)
 
 static void si446x_rfp_idle(struct si446x_ctx_s *pv)
 {
-  assert(pv->bcrun == 0);
-
   si446x_rfp_set_state(pv, SI446X_STATE_READY);
 
   struct dev_rfpacket_rq_s *rq = dev_rfpacket_rq_head(&pv->queue);
@@ -886,8 +877,6 @@ static void si446x_cancel_rxc(struct si446x_ctx_s *pv)
   struct dev_spi_ctrl_bytecode_rq_s *srq = &pv->spi_rq;
 
   pv->flags &= ~SI446X_FLAGS_RX_CONTINOUS;
-
-  assert(pv->bcrun);
 
   /* Wakeup periodic rssi sampling */
   dev_spi_bytecode_wakeup(&pv->spi, srq);
@@ -1220,8 +1209,6 @@ static inline void si446x_rfp_end_txrq(struct si446x_ctx_s *pv)
 /* Transceiver is sleeping when this function is called */
 static inline void si446x_check_wakeup(struct si446x_ctx_s *pv)
 {
-  assert(pv->bcrun == 0);
-
   bool_t empty = dev_rq_queue_isempty(&pv->queue);
 
   if (!empty || pv->rx_cont)
@@ -1244,7 +1231,6 @@ static KROUTINE_EXEC(si446x_spi_rq_done)
 
   LOCK_SPIN_IRQ(&dev->lock);
 
-  pv->bcrun = 0;
   pv->bc_status = bc_get_reg(&srq->vm, STATUS);
 
   logk_trace("bdone %d 0x%x", pv->state, pv->bc_status);
@@ -1355,10 +1341,6 @@ static KROUTINE_EXEC(si446x_spi_rq_done)
       UNREACHABLE();
   }
 
-
-  if (!pv->bcrun && (pv->icount != (pv->bc_status & STATUS_IRQ_MSK)))
-    si446x_bytecode_start(pv, &si446x_entry_irq, 0, 0);
-
 end:
   LOCK_RELEASE_IRQ(&dev->lock);
 }
@@ -1379,9 +1361,6 @@ static DEV_IRQ_SRC_PROCESS(si446x_irq_source_process)
   DEVICE_OP(pv->timer, get_value, &pv->timestamp, 0);
   /* Wakeup any waiting instruction */
   dev_spi_bytecode_wakeup(&pv->spi, srq);
-  /* Try to enter bytecode if not running */
-  if (!pv->bcrun)
-    si446x_bytecode_start(pv, &si446x_entry_irq, 0, 0);
 
   lock_release(&dev->lock);
 }
@@ -1399,7 +1378,6 @@ static DEV_USE(si446x_use)
       {
         case SI446X_STATE_READY:
           logk_trace("sleep");
-          assert(pv->bcrun == 0);
           si446x_rfp_set_state(pv, SI446X_STATE_ENTER_SLEEP);
           si446x_bytecode_start(pv, &si446x_entry_sleep, 0, 0);
           break;
