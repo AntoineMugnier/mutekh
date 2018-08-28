@@ -268,9 +268,8 @@ DEV_DECLARE_STATIC(usart_dev, "spi", 0, efm32_usart_spi_drv,
                    DEV_STATIC_RES_IRQ(0, EFM32_IRQ_USART1_RX, DEV_IRQ_SENSE_RISING_EDGE, 0, 1),
     #if defined(CONFIG_DRIVER_EFR32_DMA)
                    DEV_STATIC_RES_DEV_PARAM("dma", "/dma"),
-                   /* Read channel must have higher priority than write channel */
-                   DEV_STATIC_RES_DMA((1 << 0), (EFM32_DMA_SOURCE_USART1 | (EFM32_DMA_SIGNAL_USART1RXDATAV << 8))),
-                   DEV_STATIC_RES_DMA((1 << 1), (EFM32_DMA_SOURCE_USART1 | (EFM32_DMA_SIGNAL_USART1TXEMPTY << 8))),
+                   DEV_STATIC_RES_DMA((1 << 0), EFM32_DMA_SOURCE_USART1),
+                   DEV_STATIC_RES_DMA((1 << 1), EFM32_DMA_SOURCE_USART1),
     #endif
 
                    DEV_STATIC_RES_DEV_IOMUX("/gpio"),
@@ -287,9 +286,8 @@ DEV_DECLARE_STATIC(usart_dev, "spi", 0, efm32_usart_spi_drv,
                    DEV_STATIC_RES_IRQ(0, EFM32_IRQ_USART2_RX, DEV_IRQ_SENSE_RISING_EDGE, 0, 1),
     #if defined(CONFIG_DRIVER_EFR32_DMA)
                    DEV_STATIC_RES_DEV_PARAM("dma", "/dma"),
-                   /* Read channel must have higher priority than write channel */
-                   DEV_STATIC_RES_DMA((1 << 0), (EFM32_DMA_SOURCE_USART2 | (EFM32_DMA_SIGNAL_USART2RXDATAV << 8))),
-                   DEV_STATIC_RES_DMA((1 << 1), (EFM32_DMA_SOURCE_USART2 | (EFM32_DMA_SIGNAL_USART2TXEMPTY << 8))),
+                   DEV_STATIC_RES_DMA((1 << 0), EFM32_DMA_SOURCE_USART2),
+                   DEV_STATIC_RES_DMA((1 << 1), EFM32_DMA_SOURCE_USART2),
     #endif
 
                    DEV_STATIC_RES_DEV_IOMUX("/gpio"),

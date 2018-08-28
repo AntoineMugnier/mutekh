@@ -43,7 +43,6 @@
 
 #include <device/class/dma.h>
 #include <arch/efm32/dma_source.h>
-#include <arch/efm32/dma_source.h>
 #include <arch/efm32/gpio.h>
 #include <arch/efm32/prs.h>
 #include <arch/efm32/devaddr.h>
@@ -902,7 +901,7 @@ static DEV_INIT(efm32_usart_char_init)
       desc->dst.mem.addr = (uintptr_t)pv->rx_buffer + i * (CONFIG_DRIVER_EFM32_USART_CHAR_DMA_FIFO_SIZE/2);
     }
 
-  rq->dev_link.src = read_link;
+  rq->dev_link.src = read_link | (EFM32_DMA_SIGNAL_USARTRXDATAV << 8);
   rq->type = DEV_DMA_REG_MEM_CONT;
   rq->desc_count_m1 = 1;
   rq->loop_count_m1 = 0;
@@ -920,7 +919,7 @@ static DEV_INIT(efm32_usart_char_init)
   desc->src.mem.inc = DEV_DMA_INC_1_UNITS;
   desc->src.mem.width = 0;
 
-  rq->dev_link.dst = write_link;
+  rq->dev_link.dst = write_link | (EFM32_DMA_SIGNAL_USARTTXBL << 8);
   rq->type = DEV_DMA_MEM_REG;
   rq->desc_count_m1 = 0;
   rq->loop_count_m1 = 0;

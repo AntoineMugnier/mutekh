@@ -579,7 +579,7 @@ static DEV_INIT(efm32_usart_spi_init)
   desc->src.reg.width = 0;
   desc->src.reg.burst = 1;
 
-  rq->dev_link.src = read_link;
+  rq->dev_link.src = read_link | (EFM32_DMA_SIGNAL_USARTRXDATAV << 8);
   rq->type = DEV_DMA_REG_MEM;
   rq->desc_count_m1 = 0;
   rq->loop_count_m1 = 0;
@@ -595,7 +595,7 @@ static DEV_INIT(efm32_usart_spi_init)
   desc->dst.reg.burst = EFM32_USART_FIFO_SIZE;
   desc->src.mem.width = 0;
 
-  rq->dev_link.dst = write_link;
+  rq->dev_link.dst = write_link | (EFM32_DMA_SIGNAL_USARTTXEMPTY << 8);
   rq->type = DEV_DMA_MEM_REG;
   rq->desc_count_m1 = 0;
   rq->loop_count_m1 = 0;
