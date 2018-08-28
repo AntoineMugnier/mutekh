@@ -810,6 +810,18 @@ config_depend_and2(CONFIG_DEVICE_RFPACKET, CONFIG_MUTEK_CONTEXT_SCHED)
 error_t dev_rfpacket_wait_rx(struct dev_rfpacket_wait_ctx_s *ctx,
                              uint8_t *buffer, size_t *size);
 
+/** @This provides a buffer in advance to store the next incoming
+    packet. The @ref dev_rfpacket_wait_rx function must then be used
+    with the same buffer. This helps being ready to catch a reply
+    right after sending a packet.
+
+    Once this function has been called, it is not allowed to call the
+    @ref dev_rfpacket_stop_rx function without first calling the @ref
+    dev_rfpacket_wait_rx function. */
+config_depend_and2(CONFIG_DEVICE_RFPACKET, CONFIG_MUTEK_CONTEXT_SCHED)
+error_t dev_rfpacket_prepare_rx(struct dev_rfpacket_wait_ctx_s *ctx,
+                                uint8_t *buffer, size_t size);
+
 /** @This can be used to remove the transceiver from RX state.
     @see dev_rfpacket_start_rx
 
@@ -832,6 +844,6 @@ error_t dev_rfpacket_wait_tx(struct dev_rfpacket_wait_ctx_s *ctx,
 
 /** @This release resource used by the blocking rfpacket context. */
 config_depend_and2(CONFIG_DEVICE_RFPACKET, CONFIG_MUTEK_CONTEXT_SCHED)
-error_t dev_rfpacket_wait_cleanup(struct dev_rfpacket_wait_ctx_s *ctx);
+void dev_rfpacket_wait_cleanup(struct dev_rfpacket_wait_ctx_s *ctx);
 
 #endif
