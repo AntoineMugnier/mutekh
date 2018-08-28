@@ -49,6 +49,13 @@ enum device_spi_ret_e {
   DEVICE_SPI_WAIT,
 };
 
+enum device_spi_wakeup_e
+{
+  DEVICE_SPI_WAKEUP_NONE  = 0b00,
+  DEVICE_SPI_WAKEUP_YIELDC = 0b01,
+  DEVICE_SPI_WAKEUP_SLEEP = 0b10,
+};
+
 static enum device_spi_ret_e device_spi_ctrl_sched(struct dev_spi_ctrl_context_s *q);
 static void device_spi_ctrl_run(struct dev_spi_ctrl_context_s *q);
 static enum device_spi_ret_e device_spi_ctrl_end(struct dev_spi_ctrl_context_s *q,
@@ -352,20 +359,37 @@ device_spi_bytecode_exec(struct dev_spi_ctrl_context_s *q,
 
               switch (op & 0x0300)
                 {
-                case 0x0000:    /* yield */
+                case 0x0000: {  /* yield / sleep */
                   lock_spin_irq(&q->lock);
                   assert(!rq->base.cs_state);
-                  rq->wakeup_able = !(op & 0x0020);
-                  if (rq->wakeup_able && rq->wakeup)
-                    {
-                      rq->wakeup = 0;
+                  enum device_spi_wakeup_e w = (op & 0x0030) >> 4;
+                  switch (w)
+                     {
+                     case DEVICE_SPI_WAKEUP_YIELDC:
+                       if (!rq->wakeup)
+                         {
+                         case DEVICE_SPI_WAKEUP_NONE:
+                           __dev_rq_queue_pushback(&q->queue, &rq->base.base);
+                           break;
+                         }
                       bc_skip(&rq->vm);
-                      lock_release_irq(&q->lock);
-                      continue;
-                    }
-                  __dev_rq_queue_pushback(&q->queue, &rq->base.base);
+                      goto yieldc_done;
+
+                     case DEVICE_SPI_WAKEUP_SLEEP:
+                       if (!rq->wakeup)
+                         break;
+                     yieldc_done:
+                       rq->wakeup = 0;
+                       lock_release_irq(&q->lock);
+                       continue;
+
+                     default:
+                       UNREACHABLE();
+                     }
+                  rq->wakeup_able = w;
                   q->current = NULL;
                   return DEVICE_SPI_CONTINUE;
+                }
 
                 case 0x0200: {  /* wait */
                   lock_spin_irq(&q->lock);
@@ -394,6 +418,7 @@ device_spi_bytecode_exec(struct dev_spi_ctrl_context_s *q,
                       break;
                     }
                   continue;
+                }
 #  endif
 
                 default:
@@ -668,7 +693,7 @@ error_t dev_spi_bytecode_start_va(struct device_spi_ctrl_s *ctrl,
       rq->base.bytecode = 1;
 #  endif
       rq->wakeup = 0;
-      rq->wakeup_able = 0;
+      rq->wakeup_able = DEVICE_SPI_WAKEUP_NONE;
 
       if (device_spi_ctrl_entry(q, &rq->base))
         __dev_rq_queue_pushback(&q->queue, &rq->base.base);
@@ -704,15 +729,33 @@ error_t dev_spi_bytecode_wakeup(struct device_spi_ctrl_s *ctrl,
     {
       err = -EBUSY;
     }
-  else if (q->current != &rq->base && rq->wakeup_able)
+  else if (q->current != &rq->base)
     {
-#  ifdef CONFIG_DEVICE_SPI_BYTECODE_TIMER
+      enum device_spi_wakeup_e w = rq->wakeup_able;
+      rq->wakeup_able = DEVICE_SPI_WAKEUP_NONE;
+ #  ifdef CONFIG_DEVICE_SPI_BYTECODE_TIMER
       rq->sleep_before = 0;
-#  endif
-      bc_skip(&rq->vm);
-      rq->wakeup_able = 0;
-      if (!device_spi_ctrl_entry(q, &rq->base))
-        __dev_rq_queue_remove(&q->queue, &rq->base.base);
+ #  endif
+      switch (w)
+        {
+        case DEVICE_SPI_WAKEUP_YIELDC:
+          bc_skip(&rq->vm);
+          if (!device_spi_ctrl_entry(q, &rq->base))
+            __dev_rq_queue_remove(&q->queue, &rq->base.base);
+          break;
+
+        case DEVICE_SPI_WAKEUP_SLEEP:
+          if (device_spi_ctrl_entry(q, &rq->base))
+            __dev_rq_queue_pushback(&q->queue, &rq->base.base);
+          break;
+
+        case DEVICE_SPI_WAKEUP_NONE:
+          rq->wakeup = 1;
+          break;
+
+        default:
+          UNREACHABLE();
+        }
     }
   else
     {

@@ -9,13 +9,15 @@ main::custom_op('spi_delay',          1,      0x0380, \&parse_reg );
 main::custom_op('spi_timestamp',      1,      0x03c0, \&parse_reg );
 main::custom_cond_op('spi_elapsed',   0,      0x03e0 );
 
-main::custom_op('spi_yield',          0,      0x0020 );
-main::custom_op('spi_yield_delay',    1,      0x00a0, \&parse_reg );
-main::custom_op('spi_yield_deadline', 1,      0x0060, \&parse_reg );
+main::custom_op('spi_yield',          0,      0x0000 );
+main::custom_op('spi_yield_delay',    1,      0x0080, \&parse_reg );
+main::custom_op('spi_yield_deadline', 1,      0x0040, \&parse_reg );
 
-main::custom_cond_op('spi_yieldc',          0,   0x0000 );
-main::custom_cond_op('spi_yieldc_delay' ,   1,   0x0080, \&parse_reg );
-main::custom_cond_op('spi_yieldc_deadline', 1,   0x0040, \&parse_reg );
+main::custom_cond_op('spi_yieldc',          0,   0x0010 );
+main::custom_cond_op('spi_yieldc_delay' ,   1,   0x0090, \&parse_reg );
+main::custom_cond_op('spi_yieldc_deadline', 1,   0x0050, \&parse_reg );
+
+main::custom_cond_op('spi_sleep',          0,   0x0020 );
 
 main::custom_op('spi_wait',           0,      0x0200 );
 main::custom_op('spi_wait_delay',     1,      0x0280, \&parse_reg );

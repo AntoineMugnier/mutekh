@@ -143,12 +143,13 @@
     @item spi_timestamp            @item r             @item @tt{1000 0011 110- rrrr}
     @item spi_elapsed              @item               @item @tt{1000 0011 111- ----}
 
-    @item spi_yield                @item               @item @tt{1000 0000 001- ----}
-    @item spi_yield_delay          @item r             @item @tt{1000 0000 101- rrrr}
-    @item spi_yield_deadline       @item r             @item @tt{1000 0000 011- rrrr}
-    @item spi_yieldc               @item               @item @tt{1000 0000 000- ----}
-    @item spi_yieldc_delay         @item r             @item @tt{1000 0000 100- rrrr}
-    @item spi_yieldc_deadline      @item r             @item @tt{1000 0000 010- rrrr}
+    @item spi_yield                @item               @item @tt{1000 0000 0000 ----}
+    @item spi_yield_delay          @item r             @item @tt{1000 0000 1000 rrrr}
+    @item spi_yield_deadline       @item r             @item @tt{1000 0000 0100 rrrr}
+    @item spi_yieldc               @item               @item @tt{1000 0000 0001 ----}
+    @item spi_yieldc_delay         @item r             @item @tt{1000 0000 1001 rrrr}
+    @item spi_yieldc_deadline      @item r             @item @tt{1000 0000 0101 rrrr}
+    @item spi_sleep                @item               @item @tt{1000 0000 0010 ----}
 
     @item spi_wait                 @item               @item @tt{1000 0010 00-- ----}
     @item spi_wait_delay           @item r             @item @tt{1000 0010 10-- rrrr}
@@ -227,6 +228,12 @@
    This works like @xref {spi_yield} but the delay can be canceled by
    @ref dev_spi_bytecode_wakeup. When the delay is canceled, the
    next instruction is skipped.
+   @end section
+
+   @section {spi_sleep}
+   This instruction allows other requests targeting slave on the same
+   SPI bus to be processed. The @ref dev_spi_bytecode_wakeup function
+   must be called in order to resume execution of the bytecode.
    @end section
 
    @section {spi_yield_delay}
@@ -741,7 +748,7 @@ struct dev_spi_ctrl_bytecode_rq_s
   /** @internal */
   bool_t                  BITFIELD(wakeup,1);
   /** @internal */
-  bool_t                  BITFIELD(wakeup_able,1);
+  bool_t                  BITFIELD(wakeup_able,2);
 };
 
 STRUCT_INHERIT(dev_spi_ctrl_bytecode_rq_s, dev_spi_ctrl_rq_s, base);
