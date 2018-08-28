@@ -1115,6 +1115,11 @@ BC_CCALL_FUNCTION(si446x_alloc)
   if (rx == NULL)
     goto error;
 
+  rx->channel = rq->channel;
+  rx->timestamp =
+    rq->anchor == DEV_RFPACKET_TIMESTAMP_START
+    ? pv->cache_array[pv->id].tb : 0;
+
   pv->rxrq = rx;
   pv->buffer = (uint8_t*)rx->buf;
 
@@ -1151,27 +1156,6 @@ static inline void si446x_rfp_end_rxrq(struct si446x_ctx_s *pv)
     pv->stats.rx_err_count++;
 #endif
 
-  struct dev_rfpacket_rq_s *rq = NULL;
-
-  switch (pv->state)
-  {
-    case SI446X_STATE_RX:
-      rq = dev_rfpacket_rq_head(&pv->queue);
-      break;
-#ifdef CONFIG_DRIVER_RFPACKET_SI446X_CCA
-    case SI446X_STATE_TX_LBT:
-    case SI446X_STATE_TX_LBT_STOPPING_RXC:
-#endif
-    case SI446X_STATE_STOPPING_RXC:
-    case SI446X_STATE_PAUSE_RXC:
-    case SI446X_STATE_RXC:
-      rq = pv->rx_cont;
-      break;
-    default:
-      UNREACHABLE();
-  }
-
-  assert(rq);
   rx->error = err;
 
   if (!err)
@@ -1179,10 +1163,7 @@ static inline void si446x_rfp_end_rxrq(struct si446x_ctx_s *pv)
       rx->carrier = GET_RSSI(pv->carrier) << 3;
       rx->rssi = GET_RSSI(pv->rssi >> 8) << 3;
       rx->frequency = pv->frequency + (((int64_t)pv->synth_ratio * pv->afc_offset) >> 23);
-      rx->timestamp = pv->timestamp;
-      rx->channel = rq->channel;
-      if (rq->anchor == DEV_RFPACKET_TIMESTAMP_START)
-        rx->timestamp -= pv->rxrq->size * pv->cache_array[pv->id].tb;
+      rx->timestamp = pv->timestamp - ((dev_timer_delay_t)/* tb */rx->timestamp * rx->size);
     }
   else
     {
