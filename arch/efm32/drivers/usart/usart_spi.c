@@ -313,42 +313,47 @@ static DEV_DMA_CALLBACK(efm32_spi_dma_write_done)
   return 0;
 }
 
-static enum dev_dma_inc_e efm32_usart_spi_get_dma_inc(uint_fast8_t width)
-{
-  switch (width)
-    {
-    case 4:
-      return DEV_DMA_INC_4_UNITS; 
-    case 2:
-      return DEV_DMA_INC_2_UNITS; 
-    case 1:
-      return DEV_DMA_INC_1_UNITS; 
-    default:
-      return DEV_DMA_INC_0_UNIT; 
-    }
-}
-
 static void efm32_usart_spi_start_dma(struct efm32_usart_spi_context_s *pv)
 {
   pv->dma_use = 1;
 
   struct dev_dma_desc_s * desc = pv->dma_wr_rq.desc;
-  struct dev_spi_ctrl_transfer_s *tr = pv->tr;
+  struct dev_spi_ctrl_transfer_s * __restrict__ tr = pv->tr;
+
+  static const uint8_t dma_inc[8] = {
+    DEV_DMA_INC_0_UNIT,
+    DEV_DMA_INC_1_UNITS,
+    DEV_DMA_INC_2_UNITS,
+    DEV_DMA_INC_0_UNIT,
+    DEV_DMA_INC_4_UNITS,
+    DEV_DMA_INC_0_UNIT,
+    DEV_DMA_INC_0_UNIT,
+    DEV_DMA_INC_0_UNIT,
+  };
 
   /* TX */
   desc->src.mem.addr = (uintptr_t)tr->data.out;
-  desc->src.mem.inc = efm32_usart_spi_get_dma_inc(tr->data.out_width);
+  desc->src.mem.inc = dma_inc[tr->data.out_width];
   desc->src.mem.size = tr->data.count - 1;
 
   /* RX */
   desc = &pv->dma_rd_desc;
-  desc->dst.mem.addr = (uintptr_t)tr->data.in;
-  desc->dst.mem.inc = efm32_usart_spi_get_dma_inc(tr->data.in_width);
   desc->src.mem.size = tr->data.count - 1;
-  
+
+  if (tr->data.in != NULL)
+    {
+      desc->dst.mem.addr = (uintptr_t)tr->data.in;
+      desc->dst.mem.inc = dma_inc[tr->data.in_width];
+    }
+  else
+    {
+      static uint32_t dummy;
+      desc->dst.mem.addr = (uintptr_t)&dummy;
+      desc->dst.mem.inc = DEV_DMA_INC_0_UNIT;
+    }
+
   /* Start DMA request */ 
   DEVICE_OP(&pv->dma, request, &pv->dma_rd_rq, &pv->dma_wr_rq, NULL);
-
 }
 #endif
 
