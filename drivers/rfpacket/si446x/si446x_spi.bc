@@ -354,8 +354,7 @@ tune_done:
           jmp8                  rxc_infinite
         mov                     %tmp,                    %R_CTX_PV
         add8                    %tmp,                    _offsetof(si446x_ctx_s, rxc_timeout, 8)
-        spi_deadline            %tmp
-        spi_elapsed
+        spi_elapsed_r           %tmp
           jmp8                  rxc_timeout
   rxc_infinite:
 
@@ -441,8 +440,7 @@ tune_done:
         /* Test if timeout date is reached */
         mov                     %0,                       %R_CTX_PV
         add8                    %0,                       _offsetof(si446x_ctx_s, timeout, 8)
-        spi_deadline            %0
-        spi_elapsed
+        spi_elapsed_r           %0
           jmp8                  tx_fail
         /* Clean any pending interrupt */
         cst8                    %0,                       SI446X_INT_STATUS_CMD

@@ -401,19 +401,25 @@ device_spi_bytecode_exec(struct dev_spi_ctrl_context_s *q,
                 }
 
 #  ifdef CONFIG_DEVICE_SPI_BYTECODE_TIMER
-                case 0x0300:
-                  switch (op & 0x00e0)
+                case 0x0300: {
+                  dev_timer_value_t *r = (void*)bc_get_reg(&rq->vm, op & 0xf);
+                  switch (op & 0x00f0)
                     {
                     case 0x0000: /* nodelay */
                       rq->sleep_before = 0;
                       break;
 
                     case 0x00c0: /* timestamp */
-                      *(dev_timer_value_t*)bc_get_reg(&rq->vm, op & 0xf) = t;
+                      *r = t;
                       break;
 
                     case 0x00e0: /* elapsed */
                       if (t < rq->sleep_before)
+                        bc_skip(&rq->vm);
+                      break;
+
+                    case 0x00f0: /* elapsed_r */
+                      if (t < *r)
                         bc_skip(&rq->vm);
                       break;
                     }
