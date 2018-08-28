@@ -1274,13 +1274,16 @@ static KROUTINE_EXEC(si446x_spi_rq_done)
         {
           si446x_rfp_end_rxrq(pv);
           si446x_rfp_end_rq(pv, 0);
+          break;
         }
-      else if (pv->bc_status & STATUS_RX_END_MSK)
+      if (pv->bc_status & STATUS_RX_END_MSK)
         {
           si446x_rfp_end_rxrq(pv);
           si446x_retry_rx(pv);
+          break;
         }
-      break;
+      UNREACHABLE();
+
     case SI446X_STATE_RXC:
       if (pv->bc_status & bit(STATUS_JAMMING))
         {
@@ -1290,18 +1293,22 @@ static KROUTINE_EXEC(si446x_spi_rq_done)
           assert(pv->rxrq == NULL);
           pv->rssi = SET_RSSI(SI446X_RSSI_AVERAGE_DEFAULT) << 8;
           si446x_rfp_end_rxc(pv, -EAGAIN);
+          break;
         }
-      else if (pv->bc_status & bit(STATUS_RX_TIMEOUT))
+      if (pv->bc_status & bit(STATUS_RX_TIMEOUT))
         {
           si446x_rfp_end_rxrq(pv);
           si446x_rfp_end_rxc(pv, 0);
+          break;
         }
-      else if (pv->bc_status & STATUS_RX_END_MSK)
+      if (pv->bc_status & STATUS_RX_END_MSK)
         {
           si446x_rfp_end_rxrq(pv);
           si446x_rfp_idle(pv);
+          break;
         }
-      break;
+      UNREACHABLE();
+
 #ifdef CONFIG_DRIVER_RFPACKET_SI446X_CCA
     case SI446X_STATE_TX_LBT:
     case SI446X_STATE_TX_LBT_STOPPING_RXC:
@@ -1326,8 +1333,9 @@ static KROUTINE_EXEC(si446x_spi_rq_done)
           /* Packet has been transmitted */
           si446x_rfp_end_txrq(pv);
           si446x_rfp_end_rq(pv, 0);
+          break;
         }
-      break;
+      UNREACHABLE();
 
     case SI446X_STATE_STOPPING_RXC:
       if (pv->bc_status & STATUS_RX_END_MSK)
