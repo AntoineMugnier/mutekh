@@ -598,17 +598,16 @@ tune_done:
       /* Try to allocate buffer */
         gaddr                   %tmp,                   si446x_alloc
         mov                     %0,                     %R_CTX_PV
+        /* Get address of allocated buffer */
         ccall                   %tmp
-        /* Return address of allocated buffer */
-        neq0                    %buffer
-          jmp8                  read_start
         /* Rx allocation error */
-        jmp8                    si446x_error
+        eq0                     %buffer
+          jmp8                  si446x_error
    read_start:
         ld16e                   %size,                  %R_CTX_PV,     _offsetof(si446x_ctx_s, size, 2)
         /* RX packet interrupt raises after RX threshold interrupt */
         eq0                     %size
-          jmp8                  rssi
+          jmp8                  read_end
         tst32s                  %STATUS,                STATUS_PACKET_RX
           jmp8                  read_last
         /* Compare remaining buffer size to fifo state */
@@ -632,9 +631,9 @@ tune_done:
         spi_rdm                 %buffer,                %rxcnt,         CS_END
         mov                     %update_packet:count,   %rxcnt
         call16                  %update_packet:link,    update_packet
+   read_end:
         tst32c                  %STATUS,                STATUS_PACKET_RX
           jmp8                  transfer_ongoing
-   rssi:
         call8                   %get_rssi:link,         get_rssi
         st8e                    %get_rssi:latched,      %R_CTX_PV,     _offsetof(si446x_ctx_s, carrier)
         st16e                   %get_rssi:afc,          %R_CTX_PV,     _offsetof(si446x_ctx_s, afc_offset)
