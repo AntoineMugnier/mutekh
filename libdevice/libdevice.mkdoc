@@ -383,6 +383,22 @@ void start()
       @end code
     @end section
 
+    @section {Request cancellation}
+      When a request cancellation function is provided by the driver,
+      the function return value indicates if the request has been
+      canceled immediately. In this case the function returns 0 and
+      the completion handler is never invoked.
+
+      When this is not possible, the driver will terminate the request
+      as soon as possible and the completion handler will be invoked
+      as usual.
+
+      In the user code, canceling a request may be performed from a
+      critical section in order to avoid race conditions due to the
+      two possible code paths. For that reason, the driver must never
+      invoke the completion handler directly from its cancel function.
+    @end section
+
   @end section
 
 @end moduledef

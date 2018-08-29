@@ -688,17 +688,18 @@ typedef DEV_RFPACKET_REQUEST(dev_rfpacket_request_t);
 #define DEV_RFPACKET_CANCEL(n)	error_t (n) (const struct device_rfpacket_s *accessor, \
                                              struct dev_rfpacket_rq_s *rq)
 
-/*  @This forces early termination of a request which have previously been passed to the
-    @ref dev_rfpacket_request_t function.
-    
+/*  @This forces early termination of a request which have previously
+    been passed to the @ref dev_rfpacket_request_t function.
+
     The function returns 0 if the request has been canceled.
     In this case, the request kroutine is not executed
     and the @ref dev_rfpacket_rq_s can be reused immediately by the caller.
     
-    This function returns @tt -EBUSY if
-    the request has already ended normally or will terminate soon.
-    In the later case, some packets may still be received or transmitted
-    before the request kroutine is executed.
+    This function returns @tt -EBUSY if the request has already ended
+    normally or will terminate soon. In the later case, no particular
+    error is reported on request completion. In the later case, some
+    packets may still be received or transmitted before the request
+    kroutine is executed.
 */
 typedef DEV_RFPACKET_CANCEL(dev_rfpacket_cancel_t);
 
