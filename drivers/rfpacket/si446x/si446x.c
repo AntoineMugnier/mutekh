@@ -79,7 +79,7 @@ uint8_t pa_pwr_lvl[14] = {0, 1, 1, 2, 3, 4, 6, 8, 12, 18, 27, 43, 68, 152};
 
 static inline void si446x_rfp_set_state(struct si446x_ctx_s *pv, enum si446x_state_s state)
 {
-  logk_trace("si446x: state %d", state);
+  logk_trace("state %d", state);
   pv->state = state;
 }
 
@@ -839,7 +839,7 @@ static void si446x_rfp_idle(struct si446x_ctx_s *pv)
 
   pv->rq = rq;
 
-  logk_trace("si446x: idle %d", rq->type);
+  logk_trace("idle %d", rq->type);
 
   /* Check transceiver configuration */
   switch (si446x_check_config(pv, rq))
@@ -1071,7 +1071,7 @@ BC_CCALL_FUNCTION(si446x_alloc)
   struct dev_rfpacket_rq_s *rq;
   uintptr_t p = 0;
 
-  logk_trace("si446x: RX alloc %d", pv->size);
+  logk_trace("RX alloc %d", pv->size);
 
   LOCK_SPIN_IRQ(&pv->dev->lock);
 
@@ -1166,7 +1166,7 @@ static inline void si446x_rfp_end_rxrq(struct si446x_ctx_s *pv)
 /* Transceiver is idle when this function is called */
 static inline void si446x_rfp_error(struct si446x_ctx_s *pv)
 {
-  logk_trace("si446x: -EIO error %d", pv->state);
+  logk_trace("-EIO error %d", pv->state);
   /* Terminate allocated rx request */
   si446x_rfp_end_rxrq(pv);
 
