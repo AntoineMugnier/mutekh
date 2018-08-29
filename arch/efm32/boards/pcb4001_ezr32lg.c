@@ -32,6 +32,7 @@
 #endif
 
 #include <hexo/iospace.h>
+#include <hexo/endian.h>
 #include <arch/efm32/irq.h>
 #include <arch/efm32/pin.h>
 #include <arch/efm32/clock.h>
@@ -69,18 +70,6 @@ void efm32_board_init()
   while (!(cpu_mem_read_32(gpio + EFM32_GPIO_DIN_ADDR(bank))
            & EFM32_GPIO_DIN_DIN(pin % 16)))
     ;
-
-  /* Set LED0 on  */
-  pin = EFM32_PF6;
-  bank = pin / 16;
-  h = (pin >> 1) & 4;
-
-  x = cpu_mem_read_32(gpio + EFM32_GPIO_MODEL_ADDR(bank) + h);
-  EFM32_GPIO_MODEL_MODE_SET(pin % 8, x, PUSHPULL);
-  cpu_mem_write_32(gpio + EFM32_GPIO_MODEL_ADDR(bank) + h, x);
-
-  cpu_mem_write_32(gpio + EFM32_GPIO_DOUTSET_ADDR(bank),
-                   EFM32_GPIO_DOUTSET_DOUTSET(pin % 16));
 
 #if CONFIG_MUTEK_PRINTK_ADDR == 0x4000c800 &&   \
   CONFIG_DRIVER_EFM32_USART_PRINTK_PIN == EFM32_PB3
