@@ -843,7 +843,7 @@ static bool_t bc_run_##fcname##_alu(struct bc_context_s *ctx, uint16_t op)
     dst = (uint32_t)(dst | src);
     break;
   dispatch_RAND:
-    dst = (uint32_t)rand();
+    dst = (uint32_t)rand_64();
     break;
   dispatch_XOR:
     dst = (uint32_t)(dst ^ src);
