@@ -965,7 +965,7 @@ bc_opcode_t bc_run_vm(struct bc_context_s *ctx)
 
               /* call/jmp */
               if (op & 0x0010)     /* save return address */
-                *dstp = (uintptr_t)pc - code_offset;
+                *dstp = (uintptr_t)pc - code_offset + 2;
 
               pc = (const uint16_t*)(desc->code + x);
               goto check_pc;
