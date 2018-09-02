@@ -143,21 +143,21 @@ DEV_VALIO_REQUEST(efm32_adc_request)
   if (!group->mask)
     {
       rq->error = -ENOTSUP;
-      dev_valio_rq_done(req);
+      dev_valio_rq_done(rq);
       return;
     }
 
   if (rq->attribute != VALIO_ADC_VALUE || rq->type != DEVICE_VALIO_READ)
     {
       rq->error = -ENOTSUP;
-      dev_valio_rq_done(req);
+      dev_valio_rq_done(rq);
       return;
     }
 
   LOCK_SPIN_IRQ(&dev->lock);
 
   bool_t empty = dev_rq_queue_isempty(&pv->queue);
-  dev_valio_rq_pushback(&pv->queue, req);
+  dev_valio_rq_pushback(&pv->queue, rq);
 
   if (empty)
     efm32_adc_request_next(pv);

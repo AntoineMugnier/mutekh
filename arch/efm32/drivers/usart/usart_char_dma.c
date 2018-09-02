@@ -572,7 +572,7 @@ static DEV_VALIO_REQUEST(efm32_usart_valio_request)
         }
     }
 
-  dev_char_rq_done(req);
+  dev_valio_rq_done(rq);
 }
 
 #define efm32_usart_valio_cancel (dev_valio_cancel_t*)dev_driver_notsup_fcn
