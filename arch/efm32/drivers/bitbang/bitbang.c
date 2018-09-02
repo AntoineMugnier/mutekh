@@ -576,9 +576,7 @@ static DEV_INIT(efm32_bitbang_init)
   return 0;
 
  err_clk:
-#ifdef CONFIG_DEVICE_CLOCK
   dev_drv_clock_cleanup(dev, &pv->clk_ep);
-#endif
  err_mem:
   mem_free(pv);
   return -1;
@@ -595,9 +593,7 @@ static DEV_CLEANUP(efm32_bitbang_cleanup)
 
   cpu_mem_write_32(pv->addr + EFM32_TIMER_CMD_ADDR, endian_le32(EFM32_TIMER_CMD_STOP));
 
-#ifdef CONFIG_DEVICE_CLOCK
   dev_drv_clock_cleanup(dev, &pv->clk_ep);
-#endif
 
   mem_free(pv);
 
