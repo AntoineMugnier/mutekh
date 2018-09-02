@@ -43,6 +43,7 @@
 #include <mutek/kroutine.h>
 #include <mutek/printk.h>
 
+#include <arch/efm32/dma_source.h>
 #include <arch/efm32/timer.h>
 
 DRIVER_PV(struct efm32_bitbang_ctx_s
@@ -555,8 +556,8 @@ static DEV_INIT(efm32_bitbang_init)
   if (dma_tx_mask != dma_rx_mask)
     goto err_clk;
 
-  pv->dma_rx_link = dma_rx_link;
-  pv->dma_tx_link = dma_tx_link;
+  pv->dma_rx_link = dma_rx_link | (EFM32_DMA_SIGNAL_TIMERCC0 << 8);
+  pv->dma_tx_link = dma_tx_link | (EFM32_DMA_SIGNAL_TIMERUFOF << 8);
 
   struct dev_dma_rq_s *rq = &pv->dma_rq;
   
