@@ -175,7 +175,8 @@ void efm32_leuart_printk_init()
   cpu_mem_write_32(leuart + EFM32_LEUART_CTRL_ADDR, 0);
 
   /* Baudrate */
-#define LEUART_CLOCK 32768
+  //#define LEUART_CLOCK (38400000/2/8)
+#define LEUART_CLOCK CONFIG_DRIVER_EFM32_LEUART_CLOCK
 #define RATE (256ULL * LEUART_CLOCK / CONFIG_DRIVER_EFM32_LEUART_RATE - 256)
 
 #if RATE > EFM32_LEUART_CLKDIV_MASK || RATE < 0
