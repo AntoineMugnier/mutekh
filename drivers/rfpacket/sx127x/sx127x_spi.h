@@ -175,6 +175,9 @@ struct sx127x_private_s
 
   struct device_bitbang_s            bitbang;
   struct dev_bitbang_rq_s            brq;
+#ifdef CONFIG_DRIVER_RFPACKET_SX127X_STATS
+  struct dev_rfpacket_stats_s stats;
+#endif
 };
 
 STRUCT_COMPOSE(sx127x_private_s, kr);

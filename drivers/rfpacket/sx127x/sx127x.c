@@ -753,6 +753,12 @@ static void sx127x_rfp_end_rxrq(struct sx127x_private_s *pv, error_t err, size_t
 {
   struct dev_rfpacket_rx_s *rx = pv->rxrq;
 
+#ifdef CONFIG_DRIVER_RFPACKET_SX127X_STATS
+  pv->stats.rx_count++;
+  if (err)
+    pv->stats.rx_err_count++;
+#endif
+
   if (rx == NULL)
     return;
 
@@ -1479,12 +1485,21 @@ static inline void sx127x_tx_done(struct sx127x_private_s *pv)
 
   assert(rq);
 
+#ifdef CONFIG_DRIVER_RFPACKET_SX127X_STATS
+  pv->stats.tx_count++;
+#endif
+
   switch (pv->state)
   {
     case SX127X_STATE_TX_FAIR:
       if (!(pv->bc_status & _MSK(STATUS_TX_SENT)))
-      /* Lifetime is up */
-        return sx127x_rfp_end_rq(pv, -ETIMEDOUT);
+        {
+#ifdef CONFIG_DRIVER_RFPACKET_SX127X_STATS
+          pv->stats.tx_err_count++;
+#endif
+          /* Lifetime is up */
+          return sx127x_rfp_end_rq(pv, -ETIMEDOUT);
+        }
     case SX127X_STATE_TX:
       /* Packet has been transmitted */
       rq->tx_timestamp = pv->timestamp;
@@ -1610,7 +1625,14 @@ static DEV_RFPACKET_CANCEL(sx127x_cancel)
 
 static DEV_RFPACKET_STATS(sx127x_stats)
 {
+#ifdef CONFIG_DRIVER_RFPACKET_SX127X_STATS
+  struct device_s *dev = accessor->dev;
+  struct sx127x_private_s *pv = dev->drv_pv;
+  memcpy(stats, &pv->stats, sizeof(*stats));
+  return 0;
+#else
   return -ENOTSUP;
+#endif
 }
 
 /* ******************************** TIMER ************************************/
