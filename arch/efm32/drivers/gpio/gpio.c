@@ -243,7 +243,12 @@ static error_t efm32_gpio_mode(gpio_id_t io_first, gpio_id_t io_last,
       mde = EFM32_GPIO_MODEL_MODE_DISABLED;
       break;
     case DEV_PIN_PUSHPULL:
+#if (CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_XG1) ||\
+    (CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_XG12)
       mde = EFM32_GPIO_MODEL_MODE_PUSHPULL;
+#else
+      mde = EFM32_GPIO_MODEL_MODE_PUSHPULLDRIVE;
+#endif
       break;
     case DEV_PIN_INPUT:
       mde = EFM32_GPIO_MODEL_MODE_INPUT;
@@ -254,7 +259,12 @@ static error_t efm32_gpio_mode(gpio_id_t io_first, gpio_id_t io_last,
       mde = EFM32_GPIO_MODEL_MODE_INPUTPULL;
       break;
     case DEV_PIN_OPENDRAIN:
+#if (CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_XG1) ||\
+    (CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_XG12)
       mde = EFM32_GPIO_MODEL_MODE_WIREDAND;
+#else
+      mde = EFM32_GPIO_MODEL_MODE_WIREDANDDRIVE;
+#endif
       break;
     case DEV_PIN_OPENSOURCE:
       mde = EFM32_GPIO_MODEL_MODE_WIREDOR;
@@ -787,6 +797,13 @@ static DEV_INIT(efm32_gpio_init)
                        &efm32_gpio_icu_sink_update,
                        DEV_IRQ_SENSE_FALLING_EDGE | DEV_IRQ_SENSE_RISING_EDGE |
                        DEV_IRQ_SENSE_ANY_EDGE);
+#endif
+
+#if CONFIG_DRIVER_EFM32_GPIO_DRIVE_STRENGH > 0
+  uint_fast8_t i;
+  for (i = 0; i < 6; i++)
+    cpu_mem_write_32(EFM32_GPIO_ADDR + EFM32_GPIO_CTRL_ADDR(i),
+                     ((CONFIG_DRIVER_EFM32_GPIO_DRIVE_STRENGH) >> (i * 2)) & 0x3);
 #endif
 
   return 0;
