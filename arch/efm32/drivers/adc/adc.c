@@ -235,7 +235,7 @@ stop:
                    endian_le32(EFM32_ADC_CMD_SINGLESTOP));
 
 #if defined(CONFIG_DEVICE_CLOCK_GATING)
-  dev_clock_sink_gate(&pv->clk_ep, DEV_CLOCK_EP_NONE);
+  dev_clock_sink_gate(&pv->clk_ep, DEV_CLOCK_EP_POWER);
 #endif
 
 end:
@@ -311,6 +311,10 @@ DEV_INIT(efm32_adc_init)
   pv->config_count = config_count;
 
   dev->drv_pv = pv;
+
+#if defined(CONFIG_DEVICE_CLOCK_GATING)
+  dev_clock_sink_gate(&pv->clk_ep, DEV_CLOCK_EP_POWER);
+#endif
 
   return 0;
 
