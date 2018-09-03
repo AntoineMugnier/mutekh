@@ -104,7 +104,7 @@ static TERMUI_CON_COMMAND_PROTOTYPE(shell_char_read)
       return -EINVAL;
     }
 
-  size_t s_read = c->data.len - rq.size;
+  size_t s_read = c->size - rq.size;
   if (used & CHAR_OPT_HEX)
     termui_con_printf(con, "read %zu bytes: %P\n", s_read, data, s_read);
   else
