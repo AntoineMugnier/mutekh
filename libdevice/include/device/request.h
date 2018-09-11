@@ -122,7 +122,7 @@ dev_##class_##_rq_pop(dev_request_queue_root_t *q)                      \
 {                                                                       \
   struct dev_##class_##_rq_s *rq;                                       \
   rq = dev_##class_##_rq_s##_cast(__dev_rq_queue_pop(q));               \
-  IFASSERT(rq->base.pushed = 0xdead);                                   \
+  IFASSERT(if (rq) rq->base.pushed = 0xdead);                           \
   return rq;                                                            \
 }                                                                       \
                                                                         \
@@ -246,6 +246,7 @@ void dev_##class_##_rq_init_queue(struct dev_##class_##_rq_s *rq,       \
 ALWAYS_INLINE void                                                      \
 dev_##class_##_rq_done(struct dev_##class_##_rq_s *rq)                  \
 {                                                                       \
+  assert(rq->base.pushed == 0xdead);                                    \
   kroutine_exec(&rq->base.kr);                                          \
 }                                                                       \
                                                                         \
