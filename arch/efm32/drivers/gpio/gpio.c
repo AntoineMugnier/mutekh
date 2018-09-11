@@ -722,8 +722,8 @@ static DEV_IRQ_SRC_PROCESS(efm32_gpio_source_process)
               x ^= m;
               efm32_gpio_until_clear(m);
               rq->drvuint = 0;
-              kroutine_exec(&rq->kr);
-              GCT_FOREACH_DROP;
+              dev_gpio_rq_remove(&pv->queue, dev_gpio_rq_s_cast(rq));
+              dev_gpio_rq_done(dev_gpio_rq_s_cast(rq));
             }
       });
 #endif
