@@ -132,7 +132,7 @@ void efm32_i2c_slave_rq_end(driver_pv_t *pv,
                             error_t err)
 {
   rq->error = err;
-  dev_i2c_slave_remove(&pv->queue, rq);
+  dev_i2c_slave_rq_remove(&pv->queue, rq);
   dev_i2c_slave_rq_done(rq);
 }
 
