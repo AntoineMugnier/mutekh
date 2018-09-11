@@ -58,7 +58,7 @@ void __assert_fail(const char *file, uint_fast16_t line,
 /** @multiple @this is the standard @tt assert macro */
 # else
 #  define assert(expr) ((void) 0)
-#  define IFASSERT(...)
+#  define IFASSERT(...) do {} while (0)
 # endif
 
 # if defined(CONFIG_LIBC_ASSERT)
