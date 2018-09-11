@@ -514,7 +514,7 @@ KROUTINE_EXEC(usbdev_acm_transfer_cb)
         dev_valio_rq_remove(&pv->coding_notify_queue, rq);
         rq->error = 0;
         memcpy(rq->data, &config, sizeof(config));
-        dev_char_rq_done(rq);
+        dev_valio_rq_done(rq);
       });
 #endif
   }
@@ -794,7 +794,7 @@ DEV_VALIO_REQUEST(usbdev_acm_valio_request)
 
   if (rq->attribute != VALIO_UART_CONFIG) {
     rq->error = -ENOTSUP;
-    dev_char_rq_done(req);
+    dev_valio_rq_done(rq);
   }
 
   LOCK_SPIN_IRQ_SCOPED(&dev->lock);
@@ -809,11 +809,11 @@ DEV_VALIO_REQUEST(usbdev_acm_valio_request)
 
   done:
     rq->error = 0;
-    dev_char_rq_done(req);
+    dev_valio_rq_done(rq);
     return;
 
   case DEVICE_VALIO_WAIT_EVENT:
-    dev_valio_rq_pushback(&pv->coding_notify_queue, req);
+    dev_valio_rq_pushback(&pv->coding_notify_queue, rq);
     rq->base.drvdata = dev;
     return;
   }
