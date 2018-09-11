@@ -229,9 +229,9 @@ static DEV_INIT(button_set_init)
 
   err = device_get_param_uint(dev, "mask", &tmp);
   if (err)
-    tmp = (uintptr_t)dev_gpio_mask1;
+    tmp = -1;
 
-  uint64_t mask = (*(uint64_t *)tmp) & bit_mask(0, width);
+  uint64_t mask = tmp & bit_mask(0, width);
   endian_le64_na_store(pv->mask, mask);
   pv->state_size = (bit_popc64(mask) + 7) / 8;
 
