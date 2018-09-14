@@ -456,6 +456,9 @@ device_spi_bytecode_exec(struct dev_spi_ctrl_context_s *q,
                 }
               uint_fast8_t i = (op >> 5) & 0xf;
               gpio_id_t id = rq->gpio_map[i];
+              if (id == GPIO_INVALID_ID)
+                continue;
+
               gpio_width_t w = rq->gpio_wmap[i];
               uint8_t value[8];
 
