@@ -52,8 +52,8 @@ void __assert_fail(void);
 void __assert_fail(const char *file, uint_fast16_t line,
                    const char *func, const char *expr);
 #  define assert(expr) ((void) ((expr) ? 0 : __assert_fail(MUTEK_CFILE, __LINE__, __func__, #expr)))
-#  define IFASSERT(...) do { __VA_ARGS__ ; } while (0)
 #  endif
+#  define IFASSERT(...) do { __VA_ARGS__ ; } while (0)
 
 /** @multiple @this is the standard @tt assert macro */
 # else
