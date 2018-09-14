@@ -70,7 +70,7 @@
 #define SI446X_IO_SDN  0
 #define SI446X_IO_NIRQ 1
 #define SI446X_IO_CTS  2
-#define SI446X_IO_RSSI 3
+#define SI446X_IO_XOEN 3
 
 #define SI446X_CTS_RETRIES  32
 

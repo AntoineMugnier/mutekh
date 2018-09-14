@@ -37,6 +37,9 @@
         shi32l                  %delay,                 3
         cst8                    %tmp,                   1
         spi_gpioset             SI446X_IO_SDN,          %tmp
+#ifdef CONFIG_DRIVER_RFPACKET_SI446X_TCXO
+        spi_gpioset             SI446X_IO_XOEN,         %tmp
+#endif
         spi_yield_delay         %delay
         cst8                    %tmp,                   0
         spi_gpioset             SI446X_IO_SDN,          %tmp
@@ -670,7 +673,11 @@ tune_done:
 #ifdef CONFIG_DRIVER_RFPACKET_SI446X_SLEEP
 .func si446x_entry_ready
         .export si446x_entry_ready
-        .clobber %0, %4, %11, %12, %13
+        .clobber %0 tmp, %4, %11, %12, %13
+#ifdef CONFIG_DRIVER_RFPACKET_SI446X_TCXO
+        cst8                    %tmp,                   1
+        spi_gpioset             SI446X_IO_XOEN,         %tmp
+#endif
         call8                   %poll_gpio:link,        poll_gpio
         call8                   %state_ready:link,      state_ready
         /* Wait for device to be ready */
@@ -680,12 +687,17 @@ tune_done:
 
 .func si446x_entry_sleep
         .export si446x_entry_sleep
-        .clobber %0, %11, %12, %13
+        .clobber %0 tmp, %11, %12, %13
         /* change state */
         cst16			%0,                     0x0134, 0
         pack16le		%0,                     1,      2
         call8                   %poll_gpio:link,        poll_gpio
         spi_wr                  %0,                     2,	CS_PULSE
+#ifdef CONFIG_DRIVER_RFPACKET_SI446X_TCXO
+        call8                   %poll_gpio:link,        poll_gpio
+        cst8                    %tmp,                   0
+        spi_gpioset             SI446X_IO_XOEN,         %tmp
+#endif
         end
 .endfunc
 #endif
