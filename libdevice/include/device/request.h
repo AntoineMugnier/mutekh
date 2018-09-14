@@ -29,6 +29,7 @@
 #ifndef __DEVICE_REQUEST_H__
 #define __DEVICE_REQUEST_H__
 
+#include <assert.h>
 #include <hexo/types.h>
 #include <hexo/decls.h>
 
