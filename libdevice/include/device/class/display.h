@@ -36,6 +36,7 @@
 
 #include <device/driver.h>
 #include <device/request.h>
+#include <device/resources.h>
 
 struct driver_s;
 struct dev_display_rq_s;
