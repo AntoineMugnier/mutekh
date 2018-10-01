@@ -163,10 +163,15 @@ static CONTEXT_ENTRY(shell_thread)
 
 static TERMUI_CON_COMMAND_PROTOTYPE(shell_char_shell)
 {
+  static const struct thread_attr_s a = {
+    .stack_size = CONFIG_MUTEK_SHELL_STACK_SIZE,
+    .scope = mem_scope_sys,
+  };
+
   struct thread_params_s p;
   p.c = ctx;
   semaphore_init(&p.sem, 0);
-  thread_create(shell_thread, &p, NULL);
+  thread_create(shell_thread, &p, &a);
   semaphore_take(&p.sem, 1);
   semaphore_destroy(&p.sem);
   return 0;
