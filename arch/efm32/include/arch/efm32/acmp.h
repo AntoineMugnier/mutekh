@@ -160,9 +160,9 @@
 /** Enable/disable analog comparator output to pin. @multiple */
   #define EFM32_ACMP_ROUTE_ACMPPPEN                0x00000001
 /** Decides the location of the ACMP I/O pin. @multiple */
-  #define EFM32_ACMP_ROUTE_LOCATION(v)             ((EFM32_ACMP_ROUTE_LOCATION_##v) << 1)
-  #define EFM32_ACMP_ROUTE_LOCATION_SET(x, v)      do { (x) = (((x) & ~0x2) | ((EFM32_ACMP_ROUTE_LOCATION_##v) << 1)); } while(0)
-  #define EFM32_ACMP_ROUTE_LOCATION_GET(x)         (((x) >> 1) & 0x1)
+  #define EFM32_ACMP_ROUTE_LOCATION(v)             ((EFM32_ACMP_ROUTE_LOCATION_##v) << 8)
+  #define EFM32_ACMP_ROUTE_LOCATION_SET(x, v)      do { (x) = (((x) & ~0x2) | ((EFM32_ACMP_ROUTE_LOCATION_##v) << 8)); } while(0)
+  #define EFM32_ACMP_ROUTE_LOCATION_GET(x)         (((x) >> 8) & 0x1)
     #define EFM32_ACMP_ROUTE_LOCATION_LOC0           0x00000000
     #define EFM32_ACMP_ROUTE_LOCATION_LOC1           0x00000001
 
