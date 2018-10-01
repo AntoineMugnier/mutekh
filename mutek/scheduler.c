@@ -675,6 +675,7 @@ sched_wait_unlock_ctx(sched_queue_root_t *queue)
   assert(sched_started);
   assert(!cpu_is_interruptible());
   assert(sched == cur->scheduler);
+  assert(CPU_LOCAL_ADDR(cpu_main_context) != cur->context);
 
   /* add current context to queue, assume queue is already locked */
   sched_queue_nolock_pushback(queue, cur);
@@ -737,7 +738,9 @@ void sched_stop_unlock(lock_t *lock)
 {
   struct scheduler_s *sched = __scheduler_get();
   struct sched_context_s *next;
+  __unused__ struct sched_context_s *cur = CONTEXT_LOCAL_GET(sched_cur);
 
+  assert(CPU_LOCAL_ADDR(cpu_main_context) != cur->context);
   assert(sched_started);
   assert(!cpu_is_interruptible());
 
