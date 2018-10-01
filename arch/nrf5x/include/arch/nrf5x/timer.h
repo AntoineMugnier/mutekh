@@ -53,6 +53,19 @@ enum nrf5x_timer_shorts {
 #define NRF_TIMER_COMPARE_STOP(x) (NRF_TIMER_COMPARE0_STOP + (x))
 };
 
+enum nrf5x_timer_frequency_t {
+    NRF_TIMER_FREQ_16MHz = 0, ///< Timer frequency 16 MHz.
+    NRF_TIMER_FREQ_8MHz,      ///< Timer frequency 8 MHz.
+    NRF_TIMER_FREQ_4MHz,      ///< Timer frequency 4 MHz.
+    NRF_TIMER_FREQ_2MHz,      ///< Timer frequency 2 MHz.
+    NRF_TIMER_FREQ_1MHz,      ///< Timer frequency 1 MHz.
+    NRF_TIMER_FREQ_500kHz,    ///< Timer frequency 500 kHz.
+    NRF_TIMER_FREQ_250kHz,    ///< Timer frequency 250 kHz.
+    NRF_TIMER_FREQ_125kHz,    ///< Timer frequency 125 kHz.
+    NRF_TIMER_FREQ_62500Hz,   ///< Timer frequency 62500 Hz.
+    NRF_TIMER_FREQ_31250Hz    ///< Timer frequency 31250 Hz.
+};
+
 #define NRF_TIMER_MODE_TIMER 0
 #define NRF_TIMER_MODE_COUNTER 1
 #define NRF_TIMER_MODE_LOW_POWER_COUNTER 2
