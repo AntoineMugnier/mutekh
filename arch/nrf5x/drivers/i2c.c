@@ -41,6 +41,9 @@
 
 #define GPIO_ADDR NRF5X_GPIO_ADDR
 
+#undef logk_debug
+#define logk_debug logk_trace
+
 struct nrf5x_i2c_priv_s
 {
   uintptr_t addr;
