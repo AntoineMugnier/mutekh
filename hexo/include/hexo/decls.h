@@ -56,7 +56,7 @@
 # ifdef CONFIG_RELEASE
 #  define UNREACHABLE()  __builtin_unreachable()
 # else
-#  define UNREACHABLE()  abort()
+#  define UNREACHABLE()  do { assert(!"reachable"); abort(); } while (0)
 # endif
 
 # define ALWAYS_INLINE inline __attribute__((always_inline))
