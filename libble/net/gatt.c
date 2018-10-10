@@ -551,7 +551,7 @@ error_t gatt_read(struct ble_gatt_s *gatt,
   task->read.value_size = task->read.offset + written;
 
   if (written == 0 && task->read.offset && !task->error)
-    task->error = BLE_ATT_ERR_ATTRIBUTE_NOT_LONG;
+    task->error = BLE_ATT_ERR_INVALID_OFFSET;
 
   return 0;
 }
