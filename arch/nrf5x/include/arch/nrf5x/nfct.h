@@ -55,6 +55,7 @@ enum nrf5x_ccm_event {
 enum nrf5x_ccm_short {
     NRF_NFCT_FIELDDETECT_ACTIVATE = 0,
     NRF_NFCT_FIELDLOST_SENSE = 1,
+    NRF_NFCT_TXFRAMEEND_ENABLERXDATA = 5,
 };
 
 enum nrf5x_ccm_register {
