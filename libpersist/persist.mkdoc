@@ -1,4 +1,3 @@
-
 @moduledef{Persistent configuration service} {Libraries}
  @short Persistent configuration storage library
 
@@ -26,7 +25,9 @@
 
    In order to be able to share a declaration among various similar
    values, requests may set an @tt uid_offset that gets added to the
-   descriptor's UID when looking up value in storage backend.
+   descriptor's UID when looking up value in storage backend. As a
+   consequence of that, if offsets are used, UID must be choosen
+   carefully to avoid collisions.
 
    Storage backend takes all possible measures to ensure value
    validity and durability.  In particular, special care is taken to
