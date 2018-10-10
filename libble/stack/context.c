@@ -18,6 +18,8 @@
     Copyright Nicolas Pouillon <nipo@ssji.net> (c) 2015
 */
 
+#define LOGK_MODULE_ID "lble"
+
 #include <ble/stack/context.h>
 #include <ble/protocol/data.h>
 #include <ble/protocol/advertise.h>
@@ -48,19 +50,19 @@ error_t ble_stack_context_init(struct ble_stack_context_s *ctx,
 
   err = dev_rng_init(&ctx->rng, sec_name);
   if (err) {
-    printk("Error while initing DRBG: %d\n", err);
+    logk_error("Error while initing DRBG: %d", err);
     return err;
   }
 
   err = dev_rng_init(&rng, rng_name);
   if (err) {
-    printk("Error while initing RNG: %d\n", err);
+    logk_error("Error while initing RNG: %d", err);
     goto rng_close;
   }
 
   err = dev_rng_wait_seed_from_other(&ctx->rng, &rng, 16);
   if (err) {
-    printk("Error while seeding from RNG: %d\n", err);
+    logk_error("Error while seeding from RNG: %d", err);
     goto rng_close2;
   }
 
@@ -69,14 +71,14 @@ error_t ble_stack_context_init(struct ble_stack_context_s *ctx,
 #if defined(CONFIG_BLE_CRYPTO)
   err = device_get_accessor_by_path(&ctx->crypto.base, NULL, sec_name, DRIVER_CLASS_CRYPTO);
   if (err) {
-    printk("Error while opening crypto device: %d\n", err);
+    logk_error("Error while opening crypto device: %d", err);
     goto rng_close;
   }
 #endif
 
   err = device_get_accessor_by_path(&ctx->ble.base, NULL, ble_name, DRIVER_CLASS_NET);
   if (err) {
-    printk("Error while opening BLE network device: %d\n", err);
+    logk_error("Error while opening BLE network device: %d", err);
     goto crypto_close;
   }
 
@@ -87,14 +89,14 @@ error_t ble_stack_context_init(struct ble_stack_context_s *ctx,
 
   err = net_scheduler_init(&ctx->scheduler, &ctx->packet_pool, rtc_name);
   if (err) {
-    printk("Error while initializing net scheduler: %d\n", err);
+    logk_error("Error while initializing net scheduler: %d", err);
     goto gatt_db_cleanup;
   }
 
 #if defined(CONFIG_BLE_CRYPTO)
   err = ble_security_db_init(&ctx->security_db, persist_name, sec_name, &ctx->rng);
   if (err) {
-    printk("Error while initializing peer db: %d\n", err);
+    logk_error("Error while initializing peer db: %d", err);
     goto sched_cleanup;
   }
 #endif
@@ -179,7 +181,7 @@ uint32_t ble_stack_access_address_generate(struct ble_stack_context_s *ctx)
 {
   for (;;) {
     uint8_t tmp[16];
-  
+
     dev_rng_wait_read(&ctx->rng, tmp, 16);
 
     for (uint8_t offset = 0; offset <= 12; ++offset) {
