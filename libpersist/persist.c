@@ -1,4 +1,3 @@
-#define LOGK_MODULE_ID "prst"
 /*
     This file is part of MutekH.
 
@@ -21,12 +20,65 @@
     Copyright Alexandre Becoulet <alexandre.becoulet@free.fr> (c) 2018
 */
 
+#define LOGK_MODULE_ID "prst"
+
 #include <persist/persist.h>
 #include <hexo/flash.h>
 #include <mutek/printk.h>
 #include <mutek/kroutine.h>
 
 #define PERSIST_MAGIC 0x58a1fb3e
+
+#ifdef CONFIG_PERSIST_RAM_BACKEND
+/** @RAM back end for test purpose */
+static inline reg_t
+prst_ram_write(uintptr_t addr,
+               const uint8_t *data,
+               size_t size)
+{
+  for (size_t i = 0; i < size; i++)
+    *((uint8_t *) addr + i) &= data[i];
+
+  return 0;
+}
+
+static inline reg_t
+prst_ram_erase(uintptr_t addr)
+{
+  memset((void *) addr, 0xff, _TMP_PAGESIZE);
+  return 0;
+}
+#endif
+
+/** @wrappers for trace */
+static inline reg_t
+prst_flash_page_write(uintptr_t addr,
+                      const uint8_t *data,
+                      size_t size)
+{
+  logk_trace("l.%d flash write at 0x%08x, data starting at "
+             "0x%08x of size %zu",
+             __LINE__, addr, data, size);
+
+#ifdef CONFIG_PERSIST_RAM_BACKEND
+    return prst_ram_write(addr, data, size);
+#else
+    return flash_page_write(addr, data, size);
+#endif
+}
+
+static inline reg_t
+prst_flash_page_erase(uintptr_t addr)
+{
+  logk_trace("l.%d flash erase at 0x%08x", __LINE__, addr);
+
+#ifdef CONFIG_PERSIST_RAM_BACKEND
+    return prst_ram_erase(addr);
+#else
+    return flash_page_erase(addr);
+#endif
+}
+
 
 enum slot_state_e
 {
@@ -77,7 +129,7 @@ static void persist_storage_erase(struct persist_context_s *ctx,
          address_is_aligned(size, page_size));
 
   while (size) {
-    flash_page_erase(base);
+    prst_flash_page_erase(base);
     base += page_size;
     size -= page_size;
   }
@@ -87,11 +139,13 @@ static void persist_storage_write(uintptr_t base,
                                   const void *data,
                                   size_t size)
 {
+  logk_trace("persist_storage_write: base: %08x, data: %p, size: %zu",
+             base, data, size);
   assert(address_is_aligned(base, 4) &&
          address_is_aligned(data, 4) &&
          address_is_aligned(size, 4));
 
-  flash_page_write(base, data, size);
+  prst_flash_page_write(base, data, size);
 }
 
 static inline size_t item_size(const struct persist_descriptor_s *desc)
@@ -105,7 +159,7 @@ static void persist_item_invalidate(struct persist_context_s *ctx,
   struct persist_descriptor_s desc = *hdr;
   desc.state = PERSIST_STATE_ERASED;
 
-  logk_trace("%s %d %x %d at %p\n", __FUNCTION__, desc.type, desc.uid, desc.size, hdr);
+  logk_trace("%s %d %x %d at %p", __FUNCTION__, desc.type, desc.uid, desc.size, hdr);
 
   persist_storage_write((uintptr_t)hdr, &desc, sizeof(desc));
 
@@ -120,7 +174,7 @@ static void persist_write_blob(struct persist_context_s *ctx,
 {
   uint32_t size = item_size(desc);
 
-  logk_trace("%s %d %x %d at %08x\n", __FUNCTION__, desc->type, desc->uid, desc->size, writep);
+  logk_trace("%s %d %x %d at %08x", __FUNCTION__, desc->type, desc->uid, desc->size, writep);
 
   desc->state = PERSIST_STATE_BUSY;
   persist_storage_write(writep, desc, sizeof(*desc));
@@ -147,7 +201,7 @@ static void persist_write_counter(struct persist_context_s *ctx,
 
   assert(desc->size > sizeof(value));
 
-  logk_trace("%s %d %x %d at %08x\n", __FUNCTION__, desc->type, desc->uid, desc->size, writep);
+  logk_trace("%s %d %x %d at %08x", __FUNCTION__, desc->type, desc->uid, desc->size, writep);
 
   desc->state = PERSIST_STATE_BUSY;
   persist_storage_write(writep, desc, sizeof(*desc));
@@ -289,8 +343,8 @@ static void persist_slot_state_read(struct persist_context_s *ctx,
       || header->state != PERSIST_STATE_WRITTEN
       || header->size != ctx->slot_size) {
     state->state = SLOT_BROKEN;
-    logk_debug("slot %d magic %08x size %d state %d\n", slot, header->magic, header->size, header->state);
-    logk_debug("slot %d bad header\n", slot);
+    logk_debug("slot %d magic %08x size %d state %d", slot, header->magic, header->size, header->state);
+    logk_debug("slot %d bad header", slot);
     return;
   }
 
@@ -302,12 +356,12 @@ static void persist_slot_state_read(struct persist_context_s *ctx,
     switch (desc->state) {
     case PERSIST_STATE_FREE:
       if (persist_storage_is_clean(point, end - point)) {
-        logk_trace("slot %d clean end reached used %d\n", slot, state->used);
+        logk_trace("slot %d clean end reached used %d", slot, state->used);
         state->available = ctx->slot_size - sizeof(*header) - state->used;
         return;
       }
 
-      logk_trace("slot %d unclean end reached\n", slot);
+      logk_trace("slot %d unclean end reached", slot);
       return;
 
     case PERSIST_STATE_BUSY:
@@ -327,7 +381,7 @@ static void persist_slot_state_read(struct persist_context_s *ctx,
     // We may have point == end if slot is full to the last byte
     if (point < base + sizeof(*header) || point > end) {
       state->state = SLOT_BROKEN;
-      logk_trace("slot %d overflow\n", slot);
+      logk_trace("slot %d overflow", slot);
       break;
     }
   }
@@ -343,7 +397,7 @@ static void persist_discover(struct persist_context_s *ctx)
     persist_slot_state_read(ctx, &state[i], i);
 
     if (state[i].state == SLOT_CLEAN) {
-      logk_trace("slot %d clean\n", i);
+      logk_trace("slot %d clean", i);
 
       ctx->current_slot = i;
       ctx->used = state[i].used;
@@ -356,7 +410,7 @@ static void persist_discover(struct persist_context_s *ctx)
   // None of them is CLEAN, but we may have one with MUST_PACK ?
   for (uint8_t i = 0; i < 2; ++i) {
     if (state[i].state == SLOT_MUST_PACK) {
-      logk_trace("slot %d must pack\n", i);
+      logk_trace("slot %d must pack", i);
 
       ctx->current_slot = i;
       persist_pack_process(ctx);
@@ -364,7 +418,7 @@ static void persist_discover(struct persist_context_s *ctx)
     }
   }
 
-  logk_trace("all broken\n");
+  logk_trace("all broken");
   // None is CLEAN, nor MUST_PACK, erase first one
   ctx->current_slot = 0;
   persist_erase_process(ctx);
@@ -380,7 +434,7 @@ persist_find(struct persist_context_s *ctx,
 
   struct persist_descriptor_s desc = *ref;
 
-  logk_trace("Find %d %x\n", desc.type, desc.uid);
+  logk_trace("Find %d %x", desc.type, desc.uid);
 
   while (point > current && point < current + size) {
     const struct persist_descriptor_s *cur = (const void *)point;
@@ -388,32 +442,34 @@ persist_find(struct persist_context_s *ctx,
     if (point + item_size(cur) > current + size)
       break;
 
+    logk_trace("dump from point: %P", point, 20);
     point += item_size(cur);
 
     logk_trace(" %p %d %x %d size: %d (%d)...", cur, cur->type, cur->uid, cur->state,
            cur->size, item_size(cur));
 
+    logk_trace("dump from cur: %P", cur, 20);
     if (cur->state != PERSIST_STATE_WRITTEN) {
-      logk_trace(" bad state\n");
+      logk_trace(" bad state");
       continue;
     }
 
     if (cur->uid != desc.uid) {
-      logk_trace(" bad uid\n");
+      logk_trace(" bad uid");
       continue;
     }
 
     if (cur->type != desc.type) {
-      logk_trace(" bad type\n");
+      logk_trace(" bad type");
       continue;
     }
 
-    logk_trace(" OK\n");
+    logk_trace(" OK");
 
     return cur;
   }
 
-  logk_trace(" %p Not found\n", point);
+  logk_trace(" %p Not found", point);
 
   return NULL;
 }
@@ -426,12 +482,16 @@ static error_t persist_read_process(struct persist_context_s *ctx,
 
   const struct persist_descriptor_s *found = persist_find(ctx, &ref);
 
+  logk_trace("dump from found: %P", found, 20);
+
   if (!found)
     return -ENOENT;
 
   switch (found->type) {
   case PERSIST_BLOB:
+    logk_trace("found type = BLOB");
     rq->data = (const void *)(found + 1);
+    logk_trace("rq data : %P", found + 1, 20);
     break;
 
   case PERSIST_COUNTER:
@@ -464,10 +524,10 @@ static void persist_counter_zero_range(const struct persist_descriptor_s *hdr,
   uint32_t last_mask = bit_mask(0, last_bit);
   uint32_t mask = first_mask;
 
-  logk_trace("zero range %d - %d\n", first_bit, last_bit);
+  logk_trace("zero range %d - %d", first_bit, last_bit);
 
-  logk_trace("first: %d@%d %08x\n", first_bit, first_word, first_mask);
-  logk_trace("last: %d@%d %08x\n", last_bit, last_word, last_mask);
+  logk_trace("first: %d@%d %08x", first_bit, first_word, first_mask);
+  logk_trace("last: %d@%d %08x", last_bit, last_word, last_mask);
 
   if (first_word == last_word)
     last_mask &= first_mask;
@@ -482,7 +542,7 @@ static void persist_counter_zero_range(const struct persist_descriptor_s *hdr,
 
   last_mask = ~last_mask;
 
-  logk_trace("last write: @%08x %08x\n", bits + last_word * sizeof(uint32_t), last_mask);
+  logk_trace("last write: @%08x %08x", bits + last_word * sizeof(uint32_t), last_mask);
 
   persist_storage_write(bits + last_word * sizeof(uint32_t), &last_mask, sizeof(last_mask));
 }
@@ -525,10 +585,10 @@ static error_t persist_write_process(struct persist_context_s *ctx,
   struct persist_descriptor_s ref = *rq->descriptor;
   ref.uid += rq->uid_offset;
 
-  logk_trace("%s %d %x %d\n", __FUNCTION__, ref.type, ref.uid, ref.size);
+  logk_trace("%s %d %x %d", __FUNCTION__, ref.type, ref.uid, ref.size);
 
   const struct persist_descriptor_s *found = persist_find(ctx, &ref);
-  logk_trace("Value found: %p\n", found);
+  logk_trace("Value found: %p", found);
 
   if (!found)
     goto append;
@@ -546,7 +606,7 @@ static error_t persist_write_process(struct persist_context_s *ctx,
     uint32_t bits = (item_size(found) - sizeof(*found) - sizeof(uint64_t)) * 8;
     uint32_t zeroes = persist_counter_offset_get(found);
 
-    logk_trace("%s counter %lld + %d/%d + %lld\n",
+    logk_trace("%s counter %lld + %d/%d + %lld",
            __FUNCTION__, persist_counter_base_get(found),
            zeroes, bits, rq->counter);
 
@@ -566,7 +626,7 @@ static error_t persist_write_process(struct persist_context_s *ctx,
     + ctx->slot_size * ctx->current_slot
     + ctx->used;
 
-  logk_trace("Append %d %x. needed: %d, reclaimable: %d, available: %d, used: %d\n",
+  logk_trace("Append %d %x. needed: %d, reclaimable: %d, available: %d, used: %d",
          ref.type, ref.uid,
          needed, ctx->reclaimable, ctx->available, ctx->used);
 
@@ -576,11 +636,14 @@ static error_t persist_write_process(struct persist_context_s *ctx,
   if (needed > ctx->available) {
     persist_pack_process(ctx);
     found = persist_find(ctx, &ref);
-    logk_trace("Value found after repack: %p\n", found);
+    logk_trace("Value found after repack: %p", found);
     writep = ctx->addr
       + ctx->slot_size * ctx->current_slot
       + ctx->used;
   }
+
+  if (found == NULL)
+    logk_trace("Warning, found == NULL");
 
   switch (ref.type) {
   case PERSIST_BLOB:
@@ -647,6 +710,8 @@ static KROUTINE_EXEC(persist_sched_done)
 {
   struct persist_rq_s *rq = KROUTINE_CONTAINER(kr, *rq, kr);
   struct persist_status_s *status = rq->pvdata;
+
+  logk_trace("sched_done: rq data: %P", rq->data, 20);
 
   LOCK_SPIN_IRQ(&status->lock);
   if (status->ctx != NULL)

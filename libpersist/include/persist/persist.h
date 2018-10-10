@@ -36,6 +36,14 @@
 
 #include <mutek/kroutine.h>
 
+/** backend choice */
+#ifdef CONFIG_PERSIST_RAM_BACKEND
+#define PERSIST_FLASH_ERASE_VALUE 0xff
+#ifndef CONFIG_PERSIST_RAM_BACKEND_PAGESIZE
+#define CONFIG_PERSIST_RAM_BACKEND_PAGESIZE 0x1000
+#endif
+#endif
+
 /** @internal */
 enum persist_state_e
 {
@@ -46,6 +54,14 @@ enum persist_state_e
 };
 
 ENUM_DESCRIPTOR(persist_type_e, strip:PERSIST_, upper);
+
+/**  Persist config */
+struct persist_config
+{
+  uintptr_t dev_addr;
+  size_t dev_size;              /* must be at least 2 * page_size */
+  size_t page_size;
+};
 
 /** Persistent storage context */
 struct persist_context_s
@@ -259,6 +275,42 @@ persist_wait_remove(struct persist_context_s *ctx,
 
   return rq.error;
 });
+
+/** Synchronous persist device operation function. This function use
+    the scheduler api to put current context in wait state during the
+    request. */
+config_depend_and2_inline(CONFIG_PERSIST, CONFIG_MUTEK_CONTEXT_SCHED,
+inline error_t
+persist_wait_pack(struct persist_context_s *ctx),
+{
+  struct persist_rq_s rq = {
+  };
+
+  struct persist_status_s st;
+  persist_sched_init(&rq, &st);
+  persist_pack(ctx, &rq);
+  persist_sched_wait(&st);
+
+  return rq.error;
+ });
+
+/** Synchronous persist device operation function. This function use
+    the scheduler api to put current context in wait state during the
+    request. */
+config_depend_and2_inline(CONFIG_PERSIST, CONFIG_MUTEK_CONTEXT_SCHED,
+inline error_t
+persist_wait_erase(struct persist_context_s *ctx),
+{
+  struct persist_rq_s rq = {
+  };
+
+  struct persist_status_s st;
+  persist_sched_init(&rq, &st);
+  persist_erase(ctx, &rq);
+  persist_sched_wait(&st);
+
+  return rq.error;
+ });
 
 /** Synchronous persist device operation function. This function use
     the scheduler api to put current context in wait state during the
