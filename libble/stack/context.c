@@ -43,7 +43,7 @@ error_t ble_stack_context_init(struct ble_stack_context_s *ctx,
                                const char *rtc_name,
                                const char *rng_name,
                                const char *sec_name,
-                               const char *persist_name)
+                               const struct persist_config *persist)
 {
   error_t err;
   struct dev_rng_s rng;
@@ -94,7 +94,7 @@ error_t ble_stack_context_init(struct ble_stack_context_s *ctx,
   }
 
 #if defined(CONFIG_BLE_CRYPTO)
-  err = ble_security_db_init(&ctx->security_db, persist_name, sec_name, &ctx->rng);
+  err = ble_security_db_init(&ctx->security_db, persist, sec_name, &ctx->rng);
   if (err) {
     logk_error("Error while initializing peer db: %d", err);
     goto sched_cleanup;

@@ -78,7 +78,7 @@ struct ble_security_db_s
    NULL if Security DB is @ref {#CONFIG_BLE_SECURITY_DB} {disabled}
  */
 error_t ble_security_db_init(struct ble_security_db_s *security_db,
-                             const char *persist,
+                             const struct persist_config *persist,
                              const char *aes,
                              struct dev_rng_s *rng);
 
