@@ -142,7 +142,6 @@ static void persist_storage_write(uintptr_t base,
   logk_trace("persist_storage_write: base: %08x, data: %p, size: %zu",
              base, data, size);
   assert(address_is_aligned(base, 4) &&
-         address_is_aligned(data, 4) &&
          address_is_aligned(size, 4));
 
   prst_flash_page_write(base, data, size);
