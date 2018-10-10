@@ -42,6 +42,13 @@ reg_t flash_page_erase(uintptr_t page)
   uint8_t reg = NRF_NVMC_ERASEPAGE;
 #endif
 
+#if CONFIG_NRF5X_MODEL == 52840
+  if (page == NRF_UICR_BASE) {
+    reg = NRF_NVMC_ERASEUICR;
+    page = 0x1;
+  }
+#endif
+
   CPU_INTERRUPT_SAVESTATE_DISABLE;
 
   nrf_reg_set(NVMC_ADDR, NRF_NVMC_CONFIG, NRF_NVMC_CONFIG_ERASE);
