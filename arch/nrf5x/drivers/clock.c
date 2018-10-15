@@ -460,7 +460,6 @@ static DEV_IRQ_SRC_PROCESS(nrf5x_clock_irq)
       pv->cal_done = 0;
 #endif
       nrf5x_clock_lfclk_stop();
-      dev_cmu_src_update_async(&pv->src[NRF_CLOCK_SRC_LFCLK], 0);
     }
 
 #ifdef CONFIG_DEVICE_CLOCK_VARFREQ
@@ -693,8 +692,6 @@ static DEV_CLOCK_SRC_SETUP(nrf5x_clock_ep_setup)
 #endif
 
   case DEV_CLOCK_SRC_SETUP_LINK:
-    if (param->sink->flags & DEV_CLOCK_EP_GATING_SYNC)
-      return -ENOTSUP;
     return 0;
 
   case DEV_CLOCK_SRC_SETUP_UNLINK:
@@ -702,15 +699,29 @@ static DEV_CLOCK_SRC_SETUP(nrf5x_clock_ep_setup)
 
   case DEV_CLOCK_SRC_SETUP_GATES:
     switch (id) {
-    case NRF_CLOCK_SRC_LFCLK:
-      if (!!(param->flags & DEV_CLOCK_EP_CLOCK) == nrf5x_clock_lfclk_is_running()) {
-        dev_cmu_src_update_sync(src, param->flags);
-        return 0;
-      } else {
-        pv->lfclk_required = !!(param->flags & DEV_CLOCK_EP_CLOCK);
-        nrf5x_clock_lfclk_start();
-        return -EAGAIN;
+    case NRF_CLOCK_SRC_LFCLK: {
+      bool_t cken = !!(param->flags & DEV_CLOCK_EP_CLOCK);
+      if (cken != pv->lfclk_required) {
+
+        pv->lfclk_required = cken;
+        nrf5x_clock_lfclk_start();    /* trigger irq in both cases */
+
+        if (cken) {
+          if (param->flags & DEV_CLOCK_EP_GATING_SYNC) {
+            while (!nrf_event_check(CLOCK_ADDR, NRF_CLOCK_LFCLKSTARTED))
+              ;
+            nrf_event_clear(CLOCK_ADDR, NRF_CLOCK_LFCLKSTARTED);
+          } else {
+            return -EAGAIN;
+          }
+        } else {
+          /* lazy disable in irq */
+        }
       }
+
+      dev_cmu_src_update_sync(src, param->flags);
+      return 0;
+    }
 
     case NRF_CLOCK_SRC_HFCLK:
       dev_cmu_src_update_sync(src, param->flags);
