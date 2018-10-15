@@ -683,7 +683,7 @@ static DEV_CLOCK_SRC_SETUP(nrf5x_clock_ep_setup)
 
 #ifdef CONFIG_DEVICE_CLOCK_THROTTLE
   case DEV_CLOCK_SRC_SETUP_THROTTLE:
-    logk_debug("src %d throttle %d->%d",
+    logk_trace("src %d throttle %d->%d",
             id,
             param->throttle.configid_old,
             param->throttle.configid_new);
@@ -772,7 +772,7 @@ static void nrf5x_clock_configid_refresh(struct device_s *dev)
             __MAX((uint_fast8_t)pv->src[NRF_CLOCK_SRC_LFCLK].configid_min,
                   (uint_fast8_t)pv->src[NRF_CLOCK_SRC_HFCLK].configid_min));
 
-  logk_debug("%d %d %d: %d->%d",
+  logk_trace("%d %d %d: %d->%d",
           (uint_fast8_t)pv->configid_app,
           (uint_fast8_t)pv->src[NRF_CLOCK_SRC_LFCLK].configid_min,
           (uint_fast8_t)pv->src[NRF_CLOCK_SRC_HFCLK].configid_min,
@@ -811,7 +811,7 @@ static KROUTINE_EXEC(nrf5x_clock_configid_update)
 
   LOCK_SPIN_IRQ_SCOPED(&dev->lock);
 
-  logk_debug("config id %d->%d", pv->configid_cur, pv->configid_next);
+  logk_trace("config id %d->%d", pv->configid_cur, pv->configid_next);
 
   pv->configid_cur = pv->configid_next;
   dev_cmu_configid_set(dev, &nrf5x_clock_config_ops, pv->configid_next);
