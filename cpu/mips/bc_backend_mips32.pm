@@ -436,7 +436,7 @@ sub parse_rand {
 sub out_rand {
     my ($thisop, $wo) = @_;
 
-    return "    jal rand\n".
+    return "    jal rand_64\n".
            "    move $reg[$wo], \$v0\n";
 }
 

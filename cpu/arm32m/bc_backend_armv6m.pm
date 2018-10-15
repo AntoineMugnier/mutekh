@@ -520,7 +520,7 @@ sub parse_rand {
 sub out_rand {
     my ($thisop, $wo) = @_;
 
-    return "    bl rand\n".
+    return "    bl rand_64\n".
            "    movs $reg[$wo], r0\n";
 }
 
