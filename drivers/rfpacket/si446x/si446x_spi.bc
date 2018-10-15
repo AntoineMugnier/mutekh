@@ -597,10 +597,9 @@ tune_done:
         call8                   %get_rx_size:link,      get_rx_size
         st16e                   %get_rx_size:size,      %R_CTX_PV,       _offsetof(si446x_ctx_s, size, 2)
       /* Try to allocate buffer */
-        gaddr                   %tmp,                   si446x_alloc
-        mov                     %0,                     %R_CTX_PV
+        gaddr                   %buffer,                   si446x_alloc
         /* Get address of allocated buffer */
-        ccall                   %tmp
+        ccall                   %buffer
         /* Rx allocation error */
         eq0                     %buffer
           jmp8                  si446x_error

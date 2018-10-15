@@ -1067,7 +1067,7 @@ static void si446x_clean(struct device_s *dev)
 
 BC_CCALL_FUNCTION(si446x_alloc)
 {
-  struct si446x_ctx_s *pv = (struct si446x_ctx_s *)bc_get_reg(ctx, 0);
+  struct si446x_ctx_s *pv = (struct si446x_ctx_s *)bc_get_reg(ctx, R_CTX_PV);
   struct dev_rfpacket_rq_s *rq;
   uintptr_t p = 0;
 
@@ -1122,7 +1122,7 @@ error:
 
   LOCK_RELEASE_IRQ(&pv->dev->lock);
 
-  bc_set_reg(ctx, 0, p);
+  return p;
 }
 
 static inline void si446x_rfp_end_rxrq(struct si446x_ctx_s *pv)
