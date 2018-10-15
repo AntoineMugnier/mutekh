@@ -242,9 +242,15 @@ static error_t dev_console_parse_fract(const char                 *arg,
       fract->denom = div;
     }
 
-  uint64_t gcd = gcd64(fract->num, fract->denom);
-  fract->num /= gcd;
-  fract->denom /= gcd;
+  if (fract->denom == 0)
+    return -EINVAL;
+
+  if (fract->num > 1)
+    {
+      uint64_t gcd = gcd64(fract->num, fract->denom);
+      fract->num /= gcd;
+      fract->denom /= gcd;
+    }
 
   return 0;
 }
