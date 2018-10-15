@@ -718,6 +718,12 @@ struct dev_spi_ctrl_transaction_rq_s
 
 STRUCT_INHERIT(dev_spi_ctrl_transaction_rq_s, dev_spi_ctrl_rq_s, base);
 
+static ALWAYS_INLINE struct dev_spi_ctrl_transaction_rq_s *
+dev_spi_ctrl_transaction_rq_from_kr(struct kroutine_s *kr)
+{
+  return dev_spi_ctrl_transaction_rq_s_cast(dev_spi_ctrl_rq_from_kr(kr));
+}
+
 #endif
 
 #ifdef CONFIG_DEVICE_SPI_BYTECODE
@@ -758,6 +764,12 @@ struct dev_spi_ctrl_bytecode_rq_s
 };
 
 STRUCT_INHERIT(dev_spi_ctrl_bytecode_rq_s, dev_spi_ctrl_rq_s, base);
+
+static ALWAYS_INLINE struct dev_spi_ctrl_bytecode_rq_s *
+dev_spi_ctrl_bytecode_rq_from_kr(struct kroutine_s *kr)
+{
+  return dev_spi_ctrl_bytecode_rq_s_cast(dev_spi_ctrl_rq_from_kr(kr));
+}
 
 #endif
 
