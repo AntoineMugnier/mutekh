@@ -68,6 +68,8 @@ error_t system(const char *cmd)
 
 #define GCD_ALGO(utype, stype)                                          \
 {                                                                       \
+  assert(a != 0 && b != 0);                                             \
+                                                                        \
   while (a)                                                             \
     {                                                                   \
       /* swap A and B if A < B */                                       \
