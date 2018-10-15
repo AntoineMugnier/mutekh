@@ -469,14 +469,10 @@ error_t gfx_surface_init(struct gfx_surface_s *s, gfx_word_t *data,
                          size_t bytes, gfx_pos_t w, gfx_pos_t h,
                          enum gfx_surface_format fmt);
 
-/** @This computes the size in bits needed to store the surface data.
-    This may not be byte aligned. @see gfx_surface_bytes */
-error_t gfx_surface_bits(size_t *bits, gfx_pos_t w, gfx_pos_t h,
-			 enum gfx_surface_format fmt);
-
 /** @This computes the size in bytes needed to store the surface data. */
-error_t gfx_surface_bytes(size_t *bytes, gfx_pos_t w, gfx_pos_t h,
-			  enum gfx_surface_format fmt);
+error_t gfx_surface_storage(size_t *bytes, size_t *row_bytes,
+                            gfx_pos_t w, gfx_pos_t h,
+                            enum gfx_surface_format fmt);
 
 /** @This initializes a surface with a dummy single pixel storage. */
 void

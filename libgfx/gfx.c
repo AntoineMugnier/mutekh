@@ -29,10 +29,10 @@
 
 #include <assert.h>
 
-error_t gfx_surface_bits(size_t *bits_, gfx_pos_t w, gfx_pos_t h,
-			 enum gfx_surface_format fmt)
+error_t gfx_surface_storage(size_t *bytes, size_t *row_bytes,
+                            gfx_pos_t w, gfx_pos_t h,
+                            enum gfx_surface_format fmt)
 {
-  uint_fast8_t l2bpp = gfx_fmt_desc[fmt].l2bpp;
   uint_fast8_t l2ppw = gfx_fmt_desc[fmt].l2ppw;
 
 #ifdef CONFIG_GFX_LOG2_SURFACE_SIZE
@@ -40,82 +40,63 @@ error_t gfx_surface_bits(size_t *bits_, gfx_pos_t w, gfx_pos_t h,
     return -ENOTSUP;
 
   uint_fast8_t l2w = bit_msb_index(w);
-  uint_fast8_t l2h = bit_msb_index(h);
 
-  /* surface data size in bits */
-  uint32_t bits = 1 << (l2w + l2h + l2bpp);
-#else
-  uint32_t bits = (w * h) << l2bpp;
-#endif
-
-  /* must not be less than a word */
-  if (bits & ((1 << l2ppw) - 1))
-    return -ERANGE;
-
-#ifdef CONFIG_GFX_LOG2_SURFACE_SIZE
   /* a single row must not be less than a word */
   if (l2w < l2ppw)
-    return -ERANGE;
+    return -ENOTSUP;
+
+  size_t wpr = 1 << (l2w - l2ppw); /* words per row */
+#else
+  size_t wpr = ((w - 1) >> l2ppw) + 1;
 #endif
 
-  *bits_ = bits;
-  return 0;
-}
+  if (bytes)
+    {
+      size_t b = wpr * h;
+      *bytes = (b + !b) * sizeof(gfx_word_t);
+    }
 
-error_t gfx_surface_bytes(size_t *bytes, gfx_pos_t w, gfx_pos_t h,
-			  enum gfx_surface_format fmt)
-{
-  size_t bits;
-  if (gfx_surface_bits(&bits, w, h, fmt))
-    return -ERANGE;
-  *bytes = align_pow2_up(bits, 8 << CONFIG_GFX_LOG2_WORD_WIDTH) >> 3;
+  if (row_bytes)
+    *row_bytes = wpr * sizeof(gfx_word_t);
+
   return 0;
 }
 
 error_t gfx_surface_init(struct gfx_surface_s *s, gfx_word_t *data,
-                         size_t bytes, gfx_pos_t w, gfx_pos_t h,
+                         size_t bytes_, gfx_pos_t w, gfx_pos_t h,
                          enum gfx_surface_format fmt)
 {
   uint_fast8_t l2bpp = gfx_fmt_desc[fmt].l2bpp;
   uint_fast8_t l2ppw = gfx_fmt_desc[fmt].l2ppw;
 
-  size_t bits;
-  if (gfx_surface_bits(&bits, w, h, fmt))
+  size_t bytes, row_bytes;
+  if (gfx_surface_storage(&bytes, &row_bytes, w, h, fmt))
+    return -ERANGE;
+
+  if (bytes_ < bytes)
     return -ERANGE;
 
 #ifdef CONFIG_GFX_LOG2_SURFACE_SIZE
-  gfx_addr_t mask = (1 << (l2w + l2h - l2ppw)) - 1;
-  if (mask >= bytes)
-    return -ERANGE;
+  uint_fast8_t l2w = bit_msb_index(w);
+  uint_fast8_t l2h = bit_msb_index(h);
 
+  gfx_addr_t mask = bytes - 1;
   s->mask = mask;
   s->l2bw = l2w - l2ppw;
   s->l2w = l2w;
   s->l2h = l2h;
 
-# if 0
-  fprintf(stderr, "surface ptr:%x l2w:%u l2h:%u fmt:%u l2bpp:%u bits:%u l2bw:%u mask:%08x\n",
-          s->ptr, l2w, l2h, fmt, l2bpp, bits, s->l2bw, s->mask);
-# endif
-
 #else
-  /* row size in words, round up */
-  uint16_t bw = ((w - 1) >> l2ppw) + 1;
-  gfx_addr_t bsize = bw * h;
-
-  if (!bsize || (bsize << (l2bpp + l2ppw)) > bytes * 8)
-    return -ERANGE;
-
-  s->bsize = bsize;
-  s->bw = bw;
+  s->bsize = bytes / sizeof(gfx_word_t);
+  s->bw = row_bytes / sizeof(gfx_word_t);
   s->w = w;
   s->h = h;
+#endif
 
 # if 0
-  fprintf(stderr, "surface ptr:%x w:%u h:%u fmt:%u l2bpp:%u bw:%u bsize:%08x\n",
-          s->ptr, w, h, fmt, l2bpp, bw, bsize);
+  logk("surface ptr:%x w:%u h:%u fmt:%u l2bpp:%u bytes:%u row_bytes:%u\n",
+          s->ptr, w, h, fmt, l2bpp, bytes, row_bytes);
 # endif
-#endif
 
   s->ptr = data;
   s->fmt = fmt;
@@ -385,7 +366,8 @@ gfx_draw_tile_string(const struct gfx_surface_s * __restrict__ s,
 
   while (size--)
     {
-      gfx_draw_tile(s, t, *str++, x, y, center);
+      uint8_t *c = *str++;
+      gfx_draw_tile(s, t, c, x, y, center);
       x += xd;
       y += yd;
     }

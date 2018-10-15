@@ -57,7 +57,7 @@ error_t gfx_bc_run(struct bc_context_s *vm,
 
       size_t s;
       if (/* enforce 32 bits alignment */ (p & 3) ||
-	  gfx_surface_bytes(&s, w, h, fmt))
+	  gfx_surface_storage(&s, NULL, w, h, fmt))
 	return -ERANGE;
 
       void *data = gfx_translate_addr(vm, p, s, 0);
