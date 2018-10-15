@@ -682,7 +682,7 @@ bc_set_regs(struct bc_context_s *ctx, uint16_t mask, ...);
 
 /** @This returns the value of one of the 16 virtual machine registers */
 ALWAYS_INLINE uintptr_t
-bc_get_reg(struct bc_context_s *ctx, uint_fast8_t i)
+bc_get_reg(const struct bc_context_s *ctx, uint_fast8_t i)
 {
   return ctx->v[i];
 }
@@ -690,7 +690,7 @@ bc_get_reg(struct bc_context_s *ctx, uint_fast8_t i)
 /** @This returns a pointer to a packed array of bytes stored in virtual
     machine register storage. See the @tt pack and @tt unpack instructions. */
 ALWAYS_INLINE uint8_t *
-bc_get_bytepack(struct bc_context_s *ctx, uint_fast8_t i)
+bc_get_bytepack(const struct bc_context_s *ctx, uint_fast8_t i)
 {
   return (uint8_t*)(ctx->v + i);
 }
@@ -700,7 +700,7 @@ bc_get_bytepack(struct bc_context_s *ctx, uint_fast8_t i)
     is to high for the specified number of bytes, a pointer to
     register 0 is retured instead. */
 ALWAYS_INLINE uint8_t *
-bc_get_bytepack_safe(struct bc_context_s *ctx, uint_fast8_t i,
+bc_get_bytepack_safe(const struct bc_context_s *ctx, uint_fast8_t i,
                      size_t bytes)
 {
   size_t reg_count = (((bytes - 1) | 3) + 1) >> 2;
@@ -719,7 +719,7 @@ bc_set_reg(struct bc_context_s *ctx, uint_fast8_t i, uintptr_t value)
 /** @This returns the value of the virtual machine program counter in
     the host address space. @see bc_get_sandbox_pc */
 ALWAYS_INLINE const void *
-bc_get_pc(struct bc_context_s *ctx)
+bc_get_pc(const struct bc_context_s *ctx)
 {
   return ctx->vpc;
 }
