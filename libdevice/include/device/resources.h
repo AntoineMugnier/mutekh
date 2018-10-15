@@ -121,8 +121,6 @@ enum dev_resource_type_e
         specific. */
     DEV_RES_DMA,
     /** USB device endpoint mapping.*/
-    DEV_RES_DISPLAY,
-    /** Specific display settings.*/
     DEV_RES_USBDEV,
     /** Number of resource types */
     DEV_RES_TYPES_COUNT,
@@ -196,13 +194,6 @@ struct dev_resource_s
       uint32_t                  channel_mask;
       uint16_t                  link;
     }                           dma;
-
-    /** @see DEV_RES_DISPLAY */
-    struct {
-      uint32_t                  xres;
-      uint32_t                  yres;
-      uint16_t                  ppi;
-    }                           display;
 
     /** @see DEV_RES_USBDEV */
     struct {

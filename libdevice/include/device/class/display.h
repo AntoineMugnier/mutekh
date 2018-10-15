@@ -95,8 +95,10 @@ enum dev_display_transform_e
   DEV_DISPLAY_ROT_90  = (1 << 2)
 };
 
-/** @This specifies fields of the @ref dev_display_surface_s structure. */
-enum dev_display_changes_e
+/** @This specifies fields of the @ref dev_display_surface_s structure
+    that have been modified by the @ref dev_display_callback_t
+    function. */
+enum dev_display_surface_changes_e
 {
   DEV_DISPLAY_CH_DATA      = (1 << 0),
   DEV_DISPLAY_CH_PALETTE   = (1 << 1),
@@ -108,6 +110,30 @@ enum dev_display_changes_e
   DEV_DISPLAY_CH_ALPHA     = (1 << 7),
   DEV_DISPLAY_CH_STRIDE    = (1 << 8),
   DEV_DISPLAY_CH_TRANSFORM = (1 << 9),
+  DEV_DISPLAY_CH_SINIT     = 0x3ff,
+};
+
+/** @This specifies fields of the @ref dev_display_rq_s structure
+    that have been modified by the @ref dev_display_callback_t
+    function. */
+enum dev_display_rq_changes_e
+{
+  DEV_DISPLAY_CH_RATE      = (1 << 0),
+  DEV_DISPLAY_CH_SYNC      = (1 << 1),
+  DEV_DISPLAY_CH_SCOUNT    = (1 << 2),
+  DEV_DISPLAY_CH_RINIT     = 0x7,
+};
+
+enum dev_display_rq_sync_e
+{
+  /** Display the next frame based on the current frame rate. */
+  DEV_DISPLAY_VSYNC,
+  /** Schedule display of the next frame at the deadline from the
+      request structure. */
+  DEV_DISPLAY_SCHEDULE,
+  /** Keep the current frame displayed until the @ref
+      dev_display_resume_t function is called. */
+  DEV_DISPLAY_PERSIST,
 };
 
 enum dev_display_op_e
@@ -122,7 +148,7 @@ struct dev_display_mode_info_s
 {
   /** width of the screen in pixels */
   dev_display_coord_t width;
-  /**  height of the screen in pixels */
+  /** height of the screen in pixels */
   dev_display_coord_t height;
 
   /** Mask of surface pixel formats which can be used when this mode
@@ -158,10 +184,6 @@ struct dev_display_mode_info_s
 
   /** Specifies if padding is allowed between rows in surface data. */
   uint8_t padding:1;
-
-  /** Specifies some supported refresh rates in frames per
-      second. Zero padded as needed. */
-  uint8_t rates[7];
 };
 
 /** @see dev_display_info_s */
@@ -186,7 +208,11 @@ struct dev_display_info_s
 
   /** Mask of surface fields which can be updated by the @ref
       dev_display_callback_t function. */
-  enum dev_display_changes_e  changes:16;
+  enum dev_display_surface_changes_e  schanges:16;
+
+  /** Mask of request fields which can be updated by the @ref
+      dev_display_callback_t function. */
+  enum dev_display_rq_changes_e  rchanges:8;
 
   /** Number of descriptors in the @ref modes array */
   uint8_t modes_count;
@@ -198,6 +224,10 @@ struct dev_display_info_s
 
   /** Mask of supported transforms */
   enum dev_display_transform_e transform_mask;
+
+  /** Specifies if parts of the display not covered by a surface are
+      persistent between frames. */
+  uint8_t persistent:1;
 
   /** Mask of supported surface operations @see dev_display_op_e */
   uint8_t op_mask;
@@ -244,8 +274,15 @@ struct dev_display_surface_s
   void *palette;
 
   /** When the request callback returns 1, it must also updates this
-      field in order to indicate which fields have been updated. */
-  enum dev_display_changes_e  changes:16;
+      field in order to indicate which fields have been updated. When
+      the surface is to be displayed for the first time in a request,
+      @ref DEV_DISPLAY_CH_SINIT must be used.
+
+      The driver will clear all bits except @ref DEV_DISPLAY_CH_DATA
+      after display of the surface. When the display is persistent (see
+      @ref dev_display_mode_info_s), the driver will also clear @ref
+      DEV_DISPLAY_CH_DATA. */
+  enum dev_display_surface_changes_e  changes:16;
 
   /** @multiple coordinates of the pixel in the surface shown at
       (xstart, ystart) on the display. */
@@ -259,13 +296,13 @@ struct dev_display_surface_s
       described in @ref dev_display_fmt_info_s */
   uint8_t format;
 
-  /** 0 is transparent, 1 is transparent */
+  /** 0 is transparent, 255 is opaque */
   uint8_t alpha;
 
   /** surface operator. */
   enum dev_display_op_e op;
 
-  /** size of a single row in bytes. */
+  /** storage size of a single row in bytes. */
   uint16_t stride;
 
   /** This applies some transform to the scan order. The scan order
@@ -274,8 +311,8 @@ struct dev_display_surface_s
 };
 
 /** @csee dev_display_callback_t */
-#define DEV_DISPLAY_CALLBACK(n) bool_t (n)(struct dev_display_rq_s *rq, \
-                                           dev_display_date_t next_date, uint16_t next_id)
+#define DEV_DISPLAY_CALLBACK(n)                                         \
+  bool_t (n)(struct dev_display_rq_s *rq, dev_display_date_t date)
 
 /** @This is called when the display has been refreshed. The ownership
     of the surface buffer is transferred back to the user.
@@ -293,6 +330,9 @@ struct dev_display_surface_s
         allowed in the capabilities.
     @end list
 
+    It may also update most fields of the surfaces. The @ref
+    dev_display_surface_s::changes field needs to be updated as well.
+
     The @tt next_date parameter gives an estimate of the date of the
     next call to this function, assuming the @ref deadline field of
     the request will be zero. The @tt next_id parameter is useful for
@@ -306,43 +346,55 @@ typedef DEV_DISPLAY_CALLBACK(dev_display_callback_t);
 /** @see dev_display_request_t */
 struct dev_display_rq_s
 {
-  /** This can be used to delay the invocation of the @ref f_done
-      callback function. The callback will be called immediately after
-      the first display if zero. The deadline can be set far in the
-      future and then changed by calling the @ref dev_display_deadline_t
-      function of the driver.
+  union {
+    struct dev_request_s base;
+    FIELD_USING(struct dev_request_s, error);
+    FIELD_USING(struct dev_request_s, pvdata);
+  };
 
-      If the display hardware refreshes periodically, the callback
-      will be called at the end of the first refresh after the
-      deadline.
+  union {
+    /** This can be used to schedule the next display at the specified
+        absolute time. @see DEV_DISPLAY_SCHEDULE */
+    dev_display_date_t deadline;
 
-      The driver should also implement the timer device class in order
-      to provide access to the time base of the display */
-  dev_display_date_t deadline; 
+    /** Display refresh rate in frames per second.
+        @see DEV_DISPLAY_KEEP_RATE @see DEV_DISPLAY_NEW_RATE */
+    struct {
+      uint16_t num, denom;
+    } rate;
+  };
 
-  /** This function is called when the display has been refreshed and
-      the deadline has been reached. See @ref dev_display_callback_t
-      for details. */
+  /** This function is called when the display has been refreshed.
+      See @ref dev_display_callback_t for details. */
   dev_display_callback_t *f_done;
 
   /** This points to an array of surface descriptors involved in
      refresh of the display. This can be changed during execution of
      the request. In this case, the @tt changes field of the
      new descriptors must be updated accordingly. */
-  const struct dev_display_surface_s *surfaces;
+  struct dev_display_surface_s *surfaces;
+
+  /** When the request callback returns 1, it must also updates this
+      field in order to indicate which fields have been updated. When
+      the request is pushed, @ref DEV_DISPLAY_CH_RINIT must be used.
+
+      The driver will clear all bits after display of the surface. */
+  enum dev_display_rq_changes_e changes;
+
+  /** This specifies when the @ref dev_display_callback_t function is
+      invoked. */
+  enum dev_display_rq_sync_e sync;
 
   /** This specifies the number of surfaces involved in refresh of the
-     display. This can be changed during execution of the request. */
+     display. */
   uint8_t surfaces_count;
 
   /** index of the display mode. Display mode index is device specific
       and is described in @ref dev_display_mode_info_s. */
   uint8_t mode;
-
-  /** Display refresh rate in frames per second. Some supported rates
-      are specified in @ref dev_display_mode_info_s. */
-  uint8_t rate;
 };
+
+DEV_REQUEST_INHERIT(display);
 
 /** @see dev_display_request_t */
 #define DEV_DISPLAY_REQUEST(n)                                         \
@@ -350,10 +402,10 @@ struct dev_display_rq_s
     const struct device_display_s *accessor,                           \
     struct dev_display_rq_s *rq)
 
-/** @This starts a display refresh request. When the display has been
-    refreshed, the @ref dev_display_callback_t function provided in
-    the request is invoked. The callback has to decide if the request
-    terminates or continues with an other refresh cycle.
+/** @This starts a display request. When the display has been
+    refreshed, the @ref dev_display_callback_t function provided along
+    with the request is invoked. The callback has to decide if the
+    request terminates or continues with an other refresh cycle.
 
     This function may return the following error codes:
     @list
@@ -367,64 +419,23 @@ struct dev_display_rq_s
     The display may switch off when no request is running. */
 typedef DEV_DISPLAY_REQUEST(dev_display_request_t);
 
-/** @see dev_display_deadline_t */
-#define DEV_DISPLAY_DEADLINE(n)                                       \
+/** @see dev_display_resume_t */
+#define DEV_DISPLAY_RESUME(n)                                         \
   error_t (n)(                                                        \
     const struct device_display_s *accessor,                          \
-    struct dev_display_rq_s *rq,                                      \
-    dev_display_date_t deadline, int16_t frame_id)
+    struct dev_display_rq_s *rq)
 
-/** @This changes the deadline of the request before the callback is
-    invoked. This can be used to reschedule the change of the
-    currently displayed frame.
-
-    The identifier provided by the last callback must be passed. The
-    identifier of the first frame before the first invocation of the
-    callback is 0.
-
-    The function returns @tt -ENOENT if the frame identifier does not
-    match the index of the frame currently displayed. */
-typedef DEV_DISPLAY_DEADLINE(dev_display_deadline_t);
-
-
-/** @see dev_display_config_t */
-struct dev_display_config_s
-{
-  /** Display brightness */
-  uint8_t brightness;
-};
-
-struct dev_display_screeninfo_s
-{
-  /** Horizontal resolution of the screen. */
-  uint32_t xres;
-
-/** Vertical resolution of the screen. */
-  uint32_t yres;
-
-/** PPI of the screen. */
-  uint16_t ppi;
-};
-
-
-/** @see dev_display_config_t */
-#define DEV_DISPLAY_CONFIG(n)                                          \
-  error_t (n)(                                                         \
-    const struct device_display_s *accessor,                           \
-    struct dev_display_config_s *cfg)
-
-/** @This changes the configuration of the display.
-    This can be used while a request is running. */
-typedef DEV_DISPLAY_CONFIG(dev_display_config_t);
-
+/** When the @ref dev_display_callback_t function has been called and
+    the request use the @ref DEV_DISPLAY_PERSIST sync mode, this
+    function must be called in order to trigger the next refresh. */
+typedef DEV_DISPLAY_RESUME(dev_display_resume_t);
 
 
 DRIVER_CLASS_TYPES(DRIVER_CLASS_DISPLAY, display,
                    dev_display_info_t              *f_info;
-                   dev_display_config_t            *f_config;
                    dev_display_alloc_t             *f_alloc;
                    dev_display_request_t           *f_request;
-                   dev_display_deadline_t          *f_deadline;
+                   dev_display_resume_t            *f_resume;
                    );
 
 /** @see driver_display_s */
@@ -432,37 +443,9 @@ DRIVER_CLASS_TYPES(DRIVER_CLASS_DISPLAY, display,
   ((const struct driver_class_s*)&(const struct driver_display_s){     \
     .class_ = DRIVER_CLASS_DISPLAY,                                    \
       .f_info     = prefix ## _info,                                   \
-      .f_config   = prefix ## _config,                                 \
       .f_alloc    = prefix ## _alloc,                                  \
       .f_request  = prefix ## _request,                                \
-      .f_deadline = prefix ## _deadline,                               \
+      .f_resume   = prefix ## _resume,                                 \
   })
-
-ALWAYS_INLINE error_t device_get_res_display(const struct device_s *dev,
-                                          struct dev_display_screeninfo_s *cfg)
-{
-  struct dev_resource_s *r;
-
-  r = device_res_get(dev, DEV_RES_DISPLAY, 0);
-  if (r == NULL)
-    return -ENOENT;
-
-  cfg->xres = r->u.display.xres;
-  cfg->yres = r->u.display.yres;
-  cfg->ppi  = r->u.display.ppi;
-
-  return 0;
-}
-
-# define DEV_STATIC_RES_DISPLAY(width_, height_, ppi_)               \
-  {                                                                  \
-    .type = DEV_RES_DISPLAY,                                         \
-       .u = { .display = {                                           \
-      .xres = (width_),                                              \
-      .yres = (height_),                                             \
-      .ppi = (ppi_),                                                 \
-    } }                                                              \
-  }
-
 
 #endif
