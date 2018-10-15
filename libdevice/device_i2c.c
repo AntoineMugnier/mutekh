@@ -191,7 +191,11 @@ device_i2c_ctrl_end(struct dev_i2c_ctrl_context_s *q,
   rq->enqueued = 0;
 
 # ifdef CONFIG_DEVICE_I2C_BYTECODE_TIMER
-  if (device_check_accessor(&q->timer.base))
+  if (device_check_accessor(&q->timer.base)
+#  ifdef CONFIG_DEVICE_SPI_TRANSACTION
+      && rq->bytecode
+#  endif
+      )
     device_stop(&q->timer.base);
 # endif
 
