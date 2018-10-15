@@ -1238,6 +1238,14 @@ static KROUTINE_EXEC(si446x_spi_rq_done)
   if (pv->state != SI446X_STATE_INITIALISING)
     assert(!srq->error);
 
+  if (pv->icount != (pv->bc_status & STATUS_IRQ_MSK))
+    {
+      /* FIXME bytecode should be written so that is does not leave
+         when an irq is expected */
+      si446x_bytecode_start(pv, &si446x_entry_irq, 0, 0);
+      goto end;
+    }
+
   if (pv->bc_status & bit(STATUS_OTHER_ERR))
     {
       si446x_rfp_error(pv);
