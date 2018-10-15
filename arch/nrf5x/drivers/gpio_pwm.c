@@ -283,7 +283,7 @@ static DEV_PWM_REQUEST(nrf5x_gpio_pwm_request)
 
   rq->chan_mask <<= pdev->number;
 
-  dev_request_delayed_push(device_pwm_s_base(pdev),
+  dev_request_delayed_push(&pdev->base,
                            &pv->queue, dev_pwm_rq_s_base(rq), 1);
 }
 

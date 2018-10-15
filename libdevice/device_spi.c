@@ -604,8 +604,7 @@ static KROUTINE_EXEC(device_spi_ctrl_resume)
 
   lock_spin_irq(&q->lock);
 
-  struct dev_spi_ctrl_rq_s *rq = q->current;
-  assert(rq != NULL);
+  assert(q->current != NULL);
 
   device_spi_ctrl_run(q);
 }

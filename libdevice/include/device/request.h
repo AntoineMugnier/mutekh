@@ -46,6 +46,7 @@
 # include <hexo/interrupt.h>
 #endif
 
+#include <hexo/decls.h>
 #include <assert.h>
 
 /* Container algorithm used for of queue device requests */
