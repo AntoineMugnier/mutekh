@@ -18,7 +18,7 @@ main::custom_cond_op('spi_yieldc',          0,   0x0010 );
 main::custom_cond_op('spi_yieldc_delay' ,   1,   0x0090, \&parse_reg );
 main::custom_cond_op('spi_yieldc_deadline', 1,   0x0050, \&parse_reg );
 
-main::custom_cond_op('spi_sleep',          0,   0x0020 );
+main::custom_op('spi_sleep',          0,      0x0020 );
 
 main::custom_op('spi_wait',           0,      0x0200 );
 main::custom_op('spi_wait_delay',     1,      0x0280, \&parse_reg );
