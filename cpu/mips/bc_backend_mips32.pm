@@ -423,9 +423,10 @@ sub parse_ccall {
 }
 
 sub out_ccall {
-    my ($thisop, $wi0) = @_;
+    my ($thisop, $wo, $wi0) = @_;
     return "    move \$a0, \$17\n".
-           "    jalr $reg[$wi0]\n";
+           "    jalr $reg[$wi0]\n".
+           "    move $reg[$wo], \$v0\n";
 }
 
 sub parse_rand {

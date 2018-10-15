@@ -505,10 +505,10 @@ sub parse_ccall {
 }
 
 sub out_ccall {
-    my ($thisop, $wi0) = @_;
+    my ($thisop, $wo, $wi0) = @_;
     my $r = "    mov r0, r4\n";
-    $r .= "    mov r12, $reg[$wi0]\n";
-    $r .= "    blx r12\n";
+    $r .= "    blx $reg[$wi0]\n";
+    $r .= "    mov $reg[$wo], r0\n";
     return $r;
 }
 

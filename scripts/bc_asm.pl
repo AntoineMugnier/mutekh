@@ -339,6 +339,7 @@ sub parse_ccall
     my $thisop = shift;
 
     push @{$thisop->{in}}, check_reg($thisop, 0);
+    push @{$thisop->{out}}, check_reg($thisop, 0);
 }
 
 sub parse_rand
@@ -1266,7 +1267,7 @@ our %asm = (
     'ccall' => {
         words => 1, code => 0x4900, argscnt => 1,
         parse => \&parse_ccall, backend => ('ccall'),
-        flushregs => 1, reloadregs => 1,
+        flushregs => 1,
     },
     'and32' => {
         words => 1, code => 0x4a00, argscnt => 2,

@@ -873,7 +873,7 @@ enum bc_opcode_pack_e
 };
 
 /** @see #BC_CCALL_FUNCTION */
-#define BC_CCALL_FUNCTION(n) void (n)(struct bc_context_s *ctx)
+#define BC_CCALL_FUNCTION(n) bc_reg_t (n)(const struct bc_context_s *ctx)
 /** C function type invoked by the @tt ccall instruction. */
 typedef BC_CCALL_FUNCTION(bc_ccall_function_t);
 

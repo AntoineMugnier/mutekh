@@ -852,7 +852,7 @@ static bool_t bc_run_##fcname##_alu(struct bc_context_s *ctx, uint16_t op)
   BC_CONFIG_SANDBOX(
       if (!sandbox)
   )
-        ((bc_ccall_function_t*)(uintptr_t)src)(ctx);
+       dst = ((bc_ccall_function_t*)(uintptr_t)src)(ctx);
     break;
   dispatch_AND:
     dst = (uint32_t)(dst & src);
