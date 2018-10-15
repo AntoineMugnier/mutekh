@@ -574,11 +574,7 @@ formatter_printf(void *ctx, printf_output_func_t * const fcn,
 	char	*str = (char*)(uintptr_t)val;
 
         if (!str)
-          {
-            len = 6;
-            buf = "(null)";
-            break;
-          }
+          goto null_string;
 
 #ifndef CONFIG_LIBC_FORMATTER_SIMPLE
 	size_t	maxlen;
@@ -594,7 +590,8 @@ formatter_printf(void *ctx, printf_output_func_t * const fcn,
 
 	buf = (char*)(uintptr_t)val;
 	len = str - buf;
-      }	break;
+	break;
+      }
 
 	/* hexdump data buffer */
       case ('P'): {
@@ -602,6 +599,9 @@ formatter_printf(void *ctx, printf_output_func_t * const fcn,
 #ifndef CONFIG_LIBC_FORMATTER_SIMPLE
         const size_t chunk_size = 16;
         const uint8_t *data = (const uint8_t*)(uintptr_t)val;
+        if (!data)
+          goto null_string;
+
         while (len)
           {
             bool_t last = len <= chunk_size;
@@ -618,6 +618,10 @@ formatter_printf(void *ctx, printf_output_func_t * const fcn,
           }
 #endif
         goto printf_state_main;
+      null_string:
+        len = 6;
+        buf = "(null)";
+        break;
       }
 
 	/* string data buffer */
