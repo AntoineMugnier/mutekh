@@ -58,10 +58,14 @@ DRIVER_PV(struct nrf5x_timer_context_s
 #define DEADLINE 1
 #define VALUE 2
 
+/** Offset a request deadline by this amount if it is close to the
+    current timer value. */
+#define NRF5X_TIMER_SKEW 0
+
 static void nrf5x_timer_start(struct nrf5x_timer_context_s *pv)
 {
 #if defined(CONFIG_DEVICE_CLOCK)
-  dev_clock_sink_gate(&pv->clock_sink, DEV_CLOCK_EP_CLOCK);
+  ensure(!dev_clock_sink_gate(&pv->clock_sink, DEV_CLOCK_EP_CLOCK));
 #endif
   nrf_task_trigger(pv->addr, NRF_TIMER_START);
   nrf_it_enable(pv->addr, NRF_TIMER_COMPARE(OVERFLOW));
@@ -85,29 +89,57 @@ static dev_timer_value_t nrf5x_timer_value_get(
 {
   uint32_t counter;
 
-  CPU_INTERRUPT_SAVESTATE_DISABLE;
   nrf_task_trigger(pv->addr, NRF_TIMER_CAPTURE(VALUE));
   counter = nrf_reg_get(pv->addr, NRF_TIMER_CC(VALUE));
   if (!(counter >> (pv->width - 1))
       && nrf_event_check(pv->addr, NRF_TIMER_COMPARE(OVERFLOW)))
     counter += bit(pv->width);
-  CPU_INTERRUPT_RESTORESTATE;
 
   return pv->base + counter;
 }
 
-static void nrf5x_deadline_set(
-  struct nrf5x_timer_context_s *pv,
-  dev_timer_value_t next_deadline)
+static void
+nrf5x_timer_flush(struct device_s *dev,
+                  struct dev_timer_rq_s *head)
 {
-  nrf_reg_set(pv->addr, NRF_TIMER_CC(DEADLINE), next_deadline);
-  nrf_it_enable(pv->addr, NRF_TIMER_COMPARE(DEADLINE));
-}
+  struct nrf5x_timer_context_s *pv = dev->drv_pv;
 
-static void nrf5x_deadline_disable(
-  struct nrf5x_timer_context_s *pv)
-{
-  nrf_it_disable(pv->addr, NRF_TIMER_COMPARE(DEADLINE));
+  dev_timer_value_t v = nrf5x_timer_value_get(pv);
+
+  while (head) {
+
+    dev_timer_value_t d = head->deadline;
+
+    if (v < d) {
+
+      if (NRF5X_TIMER_SKEW != 0 &&
+          v + NRF5X_TIMER_SKEW > d)
+        d = v + NRF5X_TIMER_SKEW;
+
+      nrf_reg_set(pv->addr, NRF_TIMER_CC(DEADLINE), d);
+      nrf_it_enable(pv->addr, NRF_TIMER_COMPARE(DEADLINE));
+
+      v = nrf5x_timer_value_get(pv);
+
+      if (v < d)
+        return;
+    }
+
+    dev_timer_rq_remove(&pv->queue, head);
+    head->base.drvdata = NULL;
+
+    dev_timer_rq_done(head);
+
+    head = dev_timer_rq_head(&pv->queue);
+  }
+
+  if (dev->start_count & 1)
+    {
+      nrf_it_disable(pv->addr, NRF_TIMER_COMPARE(DEADLINE));
+
+      if (--dev->start_count == 0)
+        nrf5x_timer_stop(pv);
+    }
 }
 
 static DEV_TIMER_REQUEST(nrf5x_timer_request)
@@ -118,26 +150,30 @@ static DEV_TIMER_REQUEST(nrf5x_timer_request)
 
   LOCK_SPIN_IRQ_SCOPED(&dev->lock);
 
-  if (dev_rq_pqueue_isempty(&pv->queue)) {
-    if (!dev->start_count)
-      nrf5x_timer_start(pv);
+  bool_t empty = dev_rq_pqueue_isempty(&pv->queue);
 
-    dev->start_count |= 1;
-  }
+  if (!dev->start_count)
+    nrf5x_timer_start(pv);
+  dev->start_count |= 1;
 
   value = nrf5x_timer_value_get(pv);
 
   if (rq->delay)
     rq->deadline = value + rq->delay;
 
-  if (rq->deadline <= value + 256)
+  if (rq->deadline <= value) {
+
+    if (empty && --dev->start_count == 0 /* clear lsb */)
+      nrf5x_timer_stop(pv);
+
     return -ETIMEDOUT;
+  }
 
   dev_timer_rq_insert(&pv->queue, rq);
   rq->base.drvdata = pv;
 
   if (dev_timer_rq_head(&pv->queue) == rq)
-    nrf5x_deadline_set(pv, rq->deadline);
+    nrf5x_timer_flush(dev, rq);
 
   return 0;
 }
@@ -148,10 +184,10 @@ static DEV_TIMER_CANCEL(nrf5x_timer_cancel)
   struct nrf5x_timer_context_s *pv = dev->drv_pv;
   struct dev_timer_rq_s *head;
 
+  LOCK_SPIN_IRQ_SCOPED(&dev->lock);
+
   if (rq->base.drvdata != pv)
     return -ETIMEDOUT;
-
-  LOCK_SPIN_IRQ_SCOPED(&dev->lock);
 
   head = dev_timer_rq_head(&pv->queue);
 
@@ -160,15 +196,8 @@ static DEV_TIMER_CANCEL(nrf5x_timer_cancel)
 
   if (rq == head) {
     head = dev_timer_rq_head(&pv->queue);
-
-    if (head)
-      nrf5x_deadline_set(pv, head->deadline);
-    else
-      nrf5x_deadline_disable(pv);
+    nrf5x_timer_flush(dev, head);
   }
-
-  if (dev_rq_pqueue_isempty(&pv->queue))
-    device_sleep_schedule(dev);
 
   return 0;
 }
@@ -178,18 +207,6 @@ static DEV_USE(nrf5x_timer_use)
   switch (op) {
   default:
     return dev_use_generic(param, op);
-
-  case DEV_USE_SLEEP: {
-    struct device_s *dev = param;
-    struct nrf5x_timer_context_s *pv = dev->drv_pv;
-
-    dev->start_count &= ~1;
-
-    if (!dev->start_count)
-      nrf5x_timer_stop(pv);
-
-    return 0;
-  }
 
   case DEV_USE_START: {
     struct device_accessor_s *acc = param;
@@ -207,8 +224,8 @@ static DEV_USE(nrf5x_timer_use)
     struct device_s *dev = acc->dev;
     struct nrf5x_timer_context_s *pv = dev->drv_pv;
 
-    if (dev_rq_pqueue_isempty(&pv->queue))
-      device_sleep_schedule(dev);
+    if (!dev->start_count)
+      nrf5x_timer_stop(pv);
 
     return 0;
   }
@@ -224,11 +241,11 @@ static DEV_TIMER_GET_VALUE(nrf5x_timer_get_value)
 
   LOCK_SPIN_IRQ_SCOPED(&dev->lock);
 
+  if (dev->start_count == 0)
+    return -EBUSY;
+
   if (value)
     *value = nrf5x_timer_value_get(pv);
-
-  if (rev)
-    return -EAGAIN;
 
   return 0;
 }
@@ -237,7 +254,6 @@ static DEV_IRQ_SRC_PROCESS(nrf5x_timer_irq)
 {
   struct device_s *dev = ep->base.dev;
   struct nrf5x_timer_context_s *pv = dev->drv_pv;
-  struct dev_timer_rq_s *rq;
 
   LOCK_SPIN_SCOPED(&dev->lock);
 
@@ -246,26 +262,10 @@ static DEV_IRQ_SRC_PROCESS(nrf5x_timer_irq)
     pv->base += 1ULL << pv->width;
   }
 
-  if (nrf_event_check(pv->addr, NRF_TIMER_COMPARE(DEADLINE)))
+  if (nrf_event_check(pv->addr, NRF_TIMER_COMPARE(DEADLINE))) {
     nrf_event_clear(pv->addr, NRF_TIMER_COMPARE(DEADLINE));
-
-  while ((rq = dev_timer_rq_head(&pv->queue)))
-    {
-      if (nrf5x_timer_value_get(pv) < rq->deadline)
-        break;
-
-      dev_timer_rq_remove(&pv->queue, rq);
-      rq->base.drvdata = 0;
-
-      lock_release(&dev->lock);
-      dev_timer_rq_done(rq);
-      lock_spin(&dev->lock);
-    }
-
-  if (rq)
-    nrf5x_deadline_set(pv, rq->deadline);
-  else if (!dev->start_count)
-    nrf5x_deadline_disable(pv);
+    nrf5x_timer_flush(dev, dev_timer_rq_head(&pv->queue));
+  }
 }
 
 static DEV_TIMER_CONFIG(nrf5x_timer_config)
@@ -283,7 +283,6 @@ static DEV_TIMER_CONFIG(nrf5x_timer_config)
     cfg->cap = DEV_TIMER_CAP_STOPPABLE
       | DEV_TIMER_CAP_HIGHRES
       | DEV_TIMER_CAP_TICKLESS
-      | DEV_TIMER_CAP_KEEPVALUE
       | DEV_TIMER_CAP_REQUEST;
     cfg->max = -1;
   }
@@ -341,7 +340,8 @@ static DEV_INIT(nrf5x_timer_init)
     goto free_pv;
 
 #if defined(CONFIG_DEVICE_CLOCK)
-  if (dev_drv_clock_init(dev, &pv->clock_sink, 0, 0, &pv->freq))
+  if (dev_drv_clock_init(dev, &pv->clock_sink, 0,
+                         DEV_CLOCK_EP_GATING_SYNC, &pv->freq))
     goto unlink_irq;
 #endif
 
