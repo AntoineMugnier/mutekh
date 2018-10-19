@@ -856,7 +856,7 @@ static TERMUI_CON_GROUP_DECL(dev_shell_subgroup) =
 #ifdef CONFIG_DEVICE_SHELL_TIMER
   TERMUI_CON_GROUP_ENTRY(dev_shell_timer_group, "timer")
 #endif
-#ifdef CONFIG_DEVICE_MEM
+#ifdef CONFIG_DEVICE_SHELL_MEM
   TERMUI_CON_GROUP_ENTRY(dev_shell_mem_group, "mem")
 #endif
 #ifdef CONFIG_DEVICE_SHELL_PWM
