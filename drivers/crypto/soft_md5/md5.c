@@ -226,7 +226,7 @@ static DEV_CRYPTO_REQUEST(soft_md5_request)
   struct device_s *dev = accessor->dev;
   struct soft_md5_private_s *pv = dev->drv_pv;
 
-  dev_request_delayed_push(device_crypto_s_base(accessor),
+  dev_request_delayed_push(&accessor->base,
                            &pv->queue, dev_crypto_rq_s_base(rq), 0);
 }
 
