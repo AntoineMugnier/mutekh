@@ -497,6 +497,9 @@ device_i2c_transaction_exec(struct dev_i2c_ctrl_context_s *q,
       case DEV_I2C_CTRL_TRANSACTION_WRITE:
         type = 0;
         break;
+
+    default:
+      UNREACHABLE();
     }
 
   if (rq->transfer_index + 1 == rq->transfer_count)
