@@ -51,7 +51,7 @@ DEV_DECLARE_STATIC(clock_dev, "clock", 0, nrf5x_clock_drv,
 #if defined(CONFIG_DRIVER_NRF52_UARTE) || defined(CONFIG_DRIVER_NRF5X_UART)
 
 DEV_DECLARE_STATIC(uart_dev, "uart0", 0,
-# if defined(CONFIG_DRIVER_NRF5X_UARTE) && \
+# if defined(CONFIG_DRIVER_NRF52_UARTE) && \
   !(defined(CONFIG_DRIVER_NRF5X_PRINTK) && CONFIG_MUTEK_PRINTK_ADDR == NRF5X_UARTE0)
                    nrf5x_uarte_drv,
 # else
