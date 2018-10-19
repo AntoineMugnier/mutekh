@@ -10,20 +10,30 @@
 #include <device/class/iomux.h>
 #include <device/class/cmu.h>
 #include <device/resource/uart.h>
-#include <arch/efm32/pin.h>
-#include <arch/efm32/clock.h>
-#include <arch/efm32/irq.h>
-#include <arch/efm32/cmu.h>
-#include <arch/efm32/devaddr.h>
+
+#if defined(CONFIG_ARCH_EFM32)
+# include <arch/efm32/pin.h>
+# include <arch/efm32/clock.h>
+# include <arch/efm32/irq.h>
+# include <arch/efm32/cmu.h>
+# include <arch/efm32/devaddr.h>
+# include <arch/efm32/dma_source.h>
+#endif
 
 #include "usb.h"
 
 DEV_DECLARE_STATIC(acm0, "acm0", 0, usbdev_acm_drv,
   DEV_STATIC_RES_USBDEV_EP_MAP(0, 0x21, 0x01),
   DEV_STATIC_RES_DEVCLASS_PARAM("usb-ctrl", "/usb", DRIVER_CLASS_USBDEV),
+  DEV_STATIC_RES_UART(921600, 8, 0, 1, 0),
+#if defined(CONFIG_ARCH_EFM32)
   DEV_STATIC_RES_STR_PARAM("function", "Tx: PD0, Rx: PD1"),
+#elif defined(CONFIG_ARCH_NRF5X)
+  DEV_STATIC_RES_STR_PARAM("function", "Tx: P0.6, Rx: P0.8"),
+#endif
   );
 
+#if defined(CONFIG_ARCH_EFM32)
 DEV_DECLARE_STATIC(
   serial0_dev, "serial0", 0, efm32_usart_drv,
   DEV_STATIC_RES_MEM(0x4000c400, 0x4000c800),
@@ -39,11 +49,17 @@ DEV_DECLARE_STATIC(
  
   DEV_STATIC_RES_UART(115200, 8, 0, 1, 0)
   );
+#endif
 
 DEV_DECLARE_STATIC(
   forwarder_dev, "forwarder", 0, uart_forwarder_drv,
   DEV_STATIC_RES_DEV_PARAM("master", "/acm0"),
+#if defined(CONFIG_ARCH_EFM32)
   DEV_STATIC_RES_DEV_PARAM("slave", "/serial0"),
+#elif defined(CONFIG_ARCH_NRF5X)
+  DEV_STATIC_RES_DEV_PARAM("slave", "/uart0"),
+#endif
+
 
   DEV_STATIC_RES_UINT_PARAM("m_read_size", 16),
   DEV_STATIC_RES_UINT_PARAM("m2s_size", 64),
@@ -85,7 +101,7 @@ void usb_dev_init(void)
 
   error_t err;
 
-#ifndef CONFIG_DEVICE_CLOCK_THROTTLE
+#if !defined(CONFIG_DEVICE_CLOCK_THROTTLE) && defined(CONFIG_ARCH_EFM32)
   {
     struct device_cmu_s clock;
     err = device_get_accessor_by_path(&clock.base, NULL, "recmu", DRIVER_CLASS_CMU);
