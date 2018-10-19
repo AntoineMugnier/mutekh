@@ -20,8 +20,10 @@
 
 #define LOGK_MODULE_ID "nusb"
 
-#define ERRATA_104
+//#define ERRATA_104
 #define ERRATA_166
+#define ERRATA_171
+#define ERRATA_187
 
 #include <mutek/mem_alloc.h>
 #include <mutek/printk.h>
@@ -636,19 +638,32 @@ static KROUTINE_EXEC(nrf5x_usbd_update)
 
   LOCK_SPIN_IRQ_SCOPED(&dev->lock);
 
-  logk_trace("%s: %s, HF clock %s, Vbus %s, reg %s, ip %s",
+  logk_trace("%s: wanted %s, clock %s, vbus %s, vreg %s, ip %s",
          __func__,
-         pv->wanted ? "wanted" : "idle",
-         pv->hfclk_ok ? "OK" : "wait",
-         pv->vbus_present ? "present" : "absent",
-         pv->reg_ready ? "ready" : "waiting",
-         pv->started ? "started" : "idle");
+         pv->wanted ? "OK" : "--",
+         pv->hfclk_ok ? "OK" : "--",
+         pv->vbus_present ? "OK" : "--",
+         pv->reg_ready ? "OK" : "--",
+         pv->started ? "OK" : "--");
 
   if (pv->wanted) {
     logk_trace("USBD Wanted");
 
     if (pv->vbus_present) {
       if (cpu_mem_read_32(pv->addr + USBD_ENABLE_ADDR) == 0) {
+#ifdef ERRATA_187
+        *(volatile uint32_t *)0x4006EC00 = 0x00009375;
+        *(volatile uint32_t *)0x4006ED14 = 0x00000003;
+        *(volatile uint32_t *)0x4006EC00 = 0x00009375;
+#endif
+#ifdef ERRATA_171
+        if(*(volatile uint32_t *)0x4006EC00 == 0x00000000)
+          {
+            *(volatile uint32_t *)0x4006EC00 = 0x00009375;
+          }
+        *(volatile uint32_t *)0x4006EC14 = 0x000000C0;
+        *(volatile uint32_t *)0x4006EC00 = 0x00009375;
+#endif
         cpu_mem_write_32(pv->addr + USBD_ENABLE_ADDR, USBD_ENABLE_ENABLE);
         logk_trace("Enabling IP");
       }
@@ -843,6 +858,19 @@ static KROUTINE_EXEC(nrf5x_usbd_irq_handler)
 
     if (cause & USBD_EVENTCAUSE_READY) {
       logk_trace("USB Ready");
+#ifdef ERRATA_187
+      *(volatile uint32_t *)0x4006EC00 = 0x00009375;
+      *(volatile uint32_t *)0x4006ED14 = 0x00000000;
+      *(volatile uint32_t *)0x4006EC00 = 0x00009375;
+#endif
+#ifdef ERRARA_171
+      if(*(volatile uint32_t *)0x4006EC00 == 0x00000000)
+        {
+          *(volatile uint32_t *)0x4006EC00 = 0x00009375;
+        }
+      *(volatile uint32_t *)0x4006EC14 = 0x00000000;
+      *(volatile uint32_t *)0x4006EC00 = 0x00009375;
+#endif
     }
   }
 
