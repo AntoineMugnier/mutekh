@@ -67,6 +67,8 @@ struct ble_stack_context_s
   struct device_crypto_s crypto;
 };
 
+struct persist_config;
+
 /**
    @this initializes a stack context from relevant device paths.
  */
