@@ -1742,6 +1742,7 @@ static void usbdev_set_interface(struct dev_usbdev_context_s *ctx, const struct 
 #endif
   if (alt)
     return usbdev_ep0_stall(ctx, DEV_USBDEV_CTRL_STATUS_IN_STALL);
+  return usbdev_ep0_status_in(ctx);
 }
 
 
