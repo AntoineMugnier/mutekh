@@ -1602,6 +1602,23 @@ static inline void usbdev_set_address(struct dev_usbdev_context_s *ctx, const st
     }
 }
 
+static inline
+void usbdev_get_status(struct dev_usbdev_context_s *ctx,
+                       const struct usb_ctrl_setup_s *setup)
+{
+  logk_trace("Get status");
+
+  if (usb_setup_length_get(setup) != 2 ||
+      usb_setup_value_get(setup))
+    return usbdev_ep0_stall(ctx, DEV_USBDEV_DATA_IN_STALL);
+
+  ctx->it.data_pkt_size = usb_setup_length_get(setup);
+  ctx->it.done = 1;
+  ctx->data[0] = 0;
+  ctx->data[1] = 0;
+  return usbdev_ep0_data_in(ctx);
+}
+
 static inline void usbdev_get_interface(struct dev_usbdev_context_s *ctx, const struct usb_ctrl_setup_s *setup)
 {
   logk_trace("Get Interface");
@@ -1762,6 +1779,9 @@ static void usbdev_ep0_standard_setup(struct dev_usbdev_context_s *ctx)
 
       case USB_GET_INTERFACE:
         return usbdev_get_interface(ctx, setup);
+
+      case USB_GET_STATUS:
+        return usbdev_get_status(ctx, setup);
 
       case USB_SET_ADDRESS:
         return usbdev_set_address(ctx, setup);
