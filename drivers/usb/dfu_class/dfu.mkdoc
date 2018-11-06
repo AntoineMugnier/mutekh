@@ -1,0 +1,70 @@
+@section {USB DFU Class}
+
+@section {Specification recap}
+
+DFU Device Class is designing for updating device firmware in the
+field.  Service only uses the control endpoint 0 with class-specific
+requests.
+
+DFU Class Specification defines both a "functional" mode and a "DFU"
+mode. The "functional" mode is supposed to be the way your device runs
+on a normal mode. DFU service may be exposed in this mode to let the
+Host know device firmware may actually be updated, and to give a path
+for Host to query device to reboot to bootloader. "DFU" mode is
+supposed to be a subset of device functionality where only writing to
+memory is avaliable.
+
+"DFU" mode provides 3 basic operations:
+@list
+ @item Read current firmware ("upload"),
+ @item Write new firmware ("download"),
+ @item Reboot device to its functional state after write ("manifestation").
+@end list
+
+@end section
+
+@section {MutekH Implementation}
+
+At the time of writing this document, DFU class is only supported for
+"DFU" mode. Entering device DFU mode is therefore not generically
+supported by MutekH. Application may implement this mechanism by
+itself.
+
+DFU Class "DFU" mode is implemented as a genenric service where
+backing storage is a memory device class.
+
+DFU service code will simply expose the backing storage, for both
+upload and download, using its page size as a block size. This way,
+block numbers in the DFU protocol are mapped to page numbers.  Upon
+successful download and manifestation, DFU class will reboot the
+platform. It is up to bootloader code to jump to target firmware if
+needed.
+
+Typical device declaration will be:
+
+@code
+DEV_DECLARE_STATIC(dfu0, "dfu0", 0, usbdev_dfu_drv,
+                   DEV_STATIC_RES_DEVCLASS_PARAM("usb-ctrl", "/usb", DRIVER_CLASS_USBDEV),
+                   DEV_STATIC_RES_DEVCLASS_PARAM("storage", "/mem[1]", DRIVER_CLASS_MEM),
+                   );
+@end code
+
+If needed, you may add a memory region resource to limit to a subset
+of the backing storage. If size is left to 0, the device will be used
+to its end.
+
+@code
+DEV_DECLARE_STATIC(dfu0, "dfu0", 0, usbdev_dfu_drv,
+                   DEV_STATIC_RES_DEVCLASS_PARAM("usb-ctrl", "/usb", DRIVER_CLASS_USBDEV),
+                   DEV_STATIC_RES_DEVCLASS_PARAM("storage", "/mem[1]", DRIVER_CLASS_MEM),
+                   DEV_STATIC_RES_MEM(CONFIG_LOAD_ROM_RO_SIZE, 0),
+                   );
+@end code
+
+This way, DFU device will expose @tt mem[1] from @tt
+CONFIG_LOAD_ROM_RO_SIZE to the end. This is probably the most useful
+configuration for devices where bootloader sits at start of ROM.
+
+@end section
+
+@end section
