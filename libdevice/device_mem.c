@@ -126,6 +126,12 @@ error_t dev_mem_flash_op(uintptr_t base, uintptr_t end,
                   err = 0;
                   break;
 
+                case _DEV_MEM_ERASE | _DEV_MEM_WRITE:
+                  err = flash_page_erase(addr);
+                  if (err)
+                    break;
+                  // fallthrough
+
                 case _DEV_MEM_WRITE:
                   err = flash_page_write(addr, (void*)data, ps);
                   break;
