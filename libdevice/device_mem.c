@@ -93,29 +93,28 @@ error_t dev_mem_mapped_op_helper(uintptr_t base, uintptr_t end,
   return -ENOTSUP;
 }
 
-error_t dev_mem_flash_op(uintptr_t base, uintptr_t end,
-                         uint_fast8_t page_log2,
+error_t dev_mem_flash_op(const struct dev_mem_flash_op_info_s *info,
                          struct dev_mem_rq_s * __restrict__ rq)
 {
   enum dev_mem_rq_type_e type = rq->type & ~(_DEV_MEM_FLUSH | _DEV_MEM_INVAL);
-  size_t ps = 1 << page_log2;
+  size_t ps = 1 << info->page_log2;
 
   if (type & _DEV_MEM_PAGE)
     {
-      if (rq->page.page_log2 < page_log2)
+      if (rq->page.page_log2 < info->page_log2)
         return -ERANGE;
 
-      uint_fast16_t pcnt = 1 << (rq->page.page_log2 - page_log2);
+      uint_fast16_t pcnt = 1 << (rq->page.page_log2 - info->page_log2);
       size_t i, j, scc = rq->page.sc_count;
 
       for (i = 0; i < scc; i++)
         {
           uint8_t *data = rq->page.sc[i].data;
-          uintptr_t addr = base + rq->page.sc[i].addr;
+          uintptr_t addr = info->base + rq->page.sc[i].addr;
 
           for (j = 0; j < pcnt; j++)
             {
-              if (end - addr < ps)
+              if (info->end - addr < ps)
                 return -ERANGE;
 
               error_t err;
@@ -127,17 +126,17 @@ error_t dev_mem_flash_op(uintptr_t base, uintptr_t end,
                   break;
 
                 case _DEV_MEM_ERASE | _DEV_MEM_WRITE:
-                  err = flash_page_erase(addr);
+                  err = info->page_erase(addr);
                   if (err)
                     break;
                   // fallthrough
 
                 case _DEV_MEM_WRITE:
-                  err = flash_page_write(addr, (void*)data, ps);
+                  err = info->write(addr, (void*)data, ps);
                   break;
 
                 case _DEV_MEM_ERASE:
-                  err = flash_page_erase(addr);
+                  err = info->page_erase(addr);
                   break;
 
                 default:
@@ -154,12 +153,12 @@ error_t dev_mem_flash_op(uintptr_t base, uintptr_t end,
     }
   else if (type & _DEV_MEM_PARTIAL)
     {
-      uintptr_t a = base + rq->partial.addr;
+      uintptr_t a = info->base + rq->partial.addr;
       uintptr_t s = rq->partial.size;
 
       if ((a | s) & 3)
         return -ERANGE;
-      if (end - a < s)
+      if (info->end - a < s)
         return -ERANGE;
 
       switch (type & _DEV_MEM_OP_MASK)
@@ -173,7 +172,7 @@ error_t dev_mem_flash_op(uintptr_t base, uintptr_t end,
             return -ERANGE;   // cross page boundary
 
           if (s > 0 &&
-              flash_page_write(a, rq->partial.data, s))
+              info->write(a, rq->partial.data, s))
             return -EIO;
           return 0;
         }

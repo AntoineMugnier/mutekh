@@ -330,11 +330,21 @@ config_depend(CONFIG_DEVICE_MEM)
 error_t dev_mem_mapped_op_helper(uintptr_t base, uintptr_t end,
                                  struct dev_mem_rq_s * __restrict__ rq);
 
+struct dev_mem_flash_op_info_s
+{
+  uintptr_t base;
+  uintptr_t end;
+  size_t page_log2;
+  reg_t (*page_erase)(uintptr_t page_addr);
+  reg_t (*write)(uintptr_t addr,
+                 const uint8_t *data,
+                 size_t size);
+};
+
 /** @internal @This handles read/write operations to platform flash
     using the @ref flash_erase and @ref flash_write functions. */
 config_depend(CONFIG_DEVICE_MEM)
-error_t dev_mem_flash_op(uintptr_t base, uintptr_t end,
-                         uint_fast8_t page_log2,
+error_t dev_mem_flash_op(const struct dev_mem_flash_op_info_s *info,
                          struct dev_mem_rq_s * __restrict__ rq);
 
 DEV_REQUEST_WAIT_FUNC(mem);

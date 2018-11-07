@@ -43,9 +43,12 @@ enum nrf5x_flash_bank
   BANK_UICR,
 };
 
-DRIVER_PV(struct nrf5x_nvmc_private_s
+struct nrf5x_nvmc_private_s
 {
-});
+  struct dev_mem_flash_op_info_s flash_info
+};
+
+DRIVER_PV(struct nrf5x_nvmc_private_s);
 
 size_t nrf5x_flash_page_size(void)
 {
@@ -105,23 +108,27 @@ static DEV_MEM_INFO(nrf5x_nvmc_info)
 
 static DEV_MEM_REQUEST(nrf5x_nvmc_request)
 {
-#if 0
   struct device_s *dev = accessor->dev;
   struct nrf5x_nvmc_context_s *pv = dev->drv_pv;
-#endif
+  static const struct dev_mem_flash_op_info_s uicr_info = {
+    .base = NRF_UICR_BASE,
+    .end = NRF_UICR_BASE + 128,
+    .page_log2 = 7,
+    .page_erase = flash_page_erase,
+    .write = flash_page_write,
+  };
 
   rq->error = 0;
   switch (accessor->number)
     {
-    case BANK_CODE: {
-      uint32_t size = nrf5x_flash_page_size() * nrf5x_flash_page_count();
-      uint_fast8_t page_log2 = bit_msb_index(cpu_mem_read_32(NRF_FICR_CODEPAGESIZE));
-      rq->error = dev_mem_flash_op(0, size, page_log2, rq);
+    case BANK_CODE:
+      rq->error = dev_mem_flash_op(&pv->flash_info, rq);
       break;
-    }
+
     case BANK_UICR:
-      rq->error = dev_mem_flash_op(NRF_UICR_BASE, NRF_UICR_BASE + 128, 7, rq);
+      rq->error = dev_mem_flash_op(&uicr_info, rq);
       break;
+
     default:
       UNREACHABLE();
     }
@@ -139,9 +146,11 @@ static DEV_USE(nrf5x_nvmc_use)
       if (accessor->number > 1)
         return -ENOTSUP;
       return 0;
+
     case DEV_USE_LAST_NUMBER:
       accessor->number = 1;
       return 0;
+
     default:
       return dev_use_generic(param, op);
     }
@@ -149,38 +158,39 @@ static DEV_USE(nrf5x_nvmc_use)
 
 static DEV_INIT(nrf5x_nvmc_init)
 {
-#if 0
   struct nrf5x_nvmc_context_s	*pv;
 
-  /* allocate private driver data */
-  pv = mem_alloc(sizeof(*pv), (mem_scope_sys));
-  dev->drv_pv = pv;
+  uintptr_t addr;
+  error_t err = device_res_get_uint(dev, DEV_RES_MEM, 0, &addr, NULL);
 
-  if (!pv)
-    return -ENOMEM;
-#endif
+  if (err)
+    return err;
 
-  uintptr_t                 addr;
-  if (device_res_get_uint(dev, DEV_RES_MEM, 0, &addr, NULL))
-    return -1;
   assert(addr == NRF_PERIPHERAL_ADDR(NRF5X_NVMC));
 
-  return 0;
+  /* allocate private driver data */
+  pv = mem_alloc(sizeof(*pv), mem_scope_sys);
+  if (!pv)
+    return -ENOMEM;
 
-#if 0
- err_mem:
-  mem_free(pv);
-  return -1;
-#endif
+
+  dev->drv_pv = pv;
+
+  pv->flash_info.base = 0;
+  pv->flash_info.end = nrf5x_flash_page_size() * nrf5x_flash_page_count();
+  pv->flash_info.page_log2 = bit_msb_index(cpu_mem_read_32(NRF_FICR_CODEPAGESIZE));
+  pv->flash_info.page_erase = flash_page_erase;
+  pv->flash_info.write = flash_page_write;
+
+  return 0;
 }
 
 static DEV_CLEANUP(nrf5x_nvmc_cleanup)
 {
-#if 0
-  struct nrf5x_nvmc_context_s	*pv = dev->drv_pv;
+  struct nrf5x_nvmc_context_s *pv = dev->drv_pv;
 
   mem_free(pv);
-#endif
+
   return 0;
 }
 
