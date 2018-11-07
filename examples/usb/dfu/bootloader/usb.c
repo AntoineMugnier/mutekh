@@ -10,10 +10,15 @@
 
 #include "usb.h"
 
+DEV_DECLARE_STATIC(flash_partitions, "flash", 0, mem_part_drv,
+                   DEV_STATIC_RES_DEVCLASS_PARAM("backend", "/mem[1]", DRIVER_CLASS_MEM),
+                   DEV_STATIC_RES_MEM(0, CONFIG_LOAD_ROM_RO_SIZE),
+                   DEV_STATIC_RES_MEM(CONFIG_LOAD_ROM_RO_SIZE, 0),
+                   );
+
 DEV_DECLARE_STATIC(dfu0, "dfu0", 0, usbdev_dfu_drv,
                    DEV_STATIC_RES_DEVCLASS_PARAM("usb-ctrl", "/usb", DRIVER_CLASS_USBDEV),
-                   DEV_STATIC_RES_DEVCLASS_PARAM("storage", "/mem[1]", DRIVER_CLASS_MEM),
-                   DEV_STATIC_RES_MEM(CONFIG_LOAD_ROM_RO_SIZE, 0),
+                   DEV_STATIC_RES_DEVCLASS_PARAM("storage", "/flash[1]", DRIVER_CLASS_MEM),
                    );
 
 #define DEVICE_VENDOR "MutekH"

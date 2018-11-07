@@ -119,7 +119,6 @@ struct dfu_private_s
   bool_t mem_busy;
   
   size_t page_log2;
-  size_t block_base;
   size_t block_count;
   
   size_t offset;
@@ -212,7 +211,7 @@ static void dfu_ep0_zlp(struct dfu_private_s *pv)
 static
 void dfu_upload_block(struct dfu_private_s *pv)
 {
-  size_t block = pv->block + pv->block_base;
+  size_t block = pv->block;
 
   if (pv->block >= pv->block_count) {
     logk("Block overflow");
@@ -306,7 +305,7 @@ static KROUTINE_EXEC(dfu_download_done)
 {
   struct usbdev_service_rq_s *usb_rq =  KROUTINE_CONTAINER(kr, *usb_rq, kr);
   struct dfu_private_s *pv = dfu_private_s_from_usb_rq(usb_rq);
-  size_t block = pv->block + pv->block_base;
+  size_t block = pv->block;
 
   memcpy(pv->data + pv->offset, pv->usb_rq.ctrl.buffer, pv->usb_rq.ctrl.size);
   pv->offset += pv->usb_rq.ctrl.size;
@@ -586,37 +585,13 @@ static DEV_INIT(dfu_init)
     goto err_mem;
   }
 
+  pv->block_count = info.size;
   pv->page_log2 = info.page_log2;
-
-  uintptr_t base, size;
-  err = device_res_get_uint(dev, DEV_RES_MEM, 0, &base, &size);
-  if (err) {
-    base = 0;
-    size = info.size << info.page_log2;
-  }
-
-  pv->block_base = (base + (1 << info.page_log2) - 1) >> info.page_log2;
-  size_t block_end = (base + size + (1 << info.page_log2) - 1) >> info.page_log2;
-
-  if (pv->block_base >= info.size) {
-    logk_error("DFU Zone starts beyond end of backing storage");
-    goto err_mem;
-  }
 
   pv->data = mem_alloc(1 << pv->page_log2, (mem_scope_sys));
   if (!pv->data) {
     logk_error("Cannot allocate page store");
     goto err_mem;
-  }
-
-  if (size == 0)
-    pv->block_count = info.size - pv->block_base;
-  else
-    pv->block_count = block_end - pv->block_base;
-    
-  if (pv->block_base + pv->block_count > info.size) {
-    pv->block_count = info.size - pv->block_base;
-    logk_warning("DFU Zone truncated to %d blocks", pv->block_count);
   }
   
   pv->service.desc = &dfu_service_desc;
@@ -628,8 +603,8 @@ static DEV_INIT(dfu_init)
   if (err)
     goto err_data;
 
-  logk_error("DFU service ready, exposing %d blocks of %d bytes",
-             pv->block_count, 1 << pv->page_log2);
+  logk("DFU service ready, exposing %d blocks of %d bytes",
+       pv->block_count, 1 << pv->page_log2);
 
   pv->usb_rq.type = USBDEV_GET_COMMAND; 
   pv->usb_rq.error = 0;

@@ -24,11 +24,11 @@ How to generate binaries
 
 Generate the bootloader image::
 
-  $ make CONF=examples/usb/dfu/functional/config BUILD=efm32-stk3600:binary
+  $ make CONF=examples/usb/dfu/functional/config BUILD=efm32-stk3600:release:binary
 
 Generate the target firmware and the matching `DFU` image::
 
-  $ make CONF=examples/usb/dfu/bootloader/config BUILD=efm32-stk3600:binary
+  $ make CONF=examples/usb/dfu/bootloader/config BUILD=efm32-stk3600:release:binary
   $ python3 examples/usb/dfu/dfu_gen.py \
       dfu_functional-efm32-leopard.bin \
       dfu_functional-efm32-leopard.dfu \

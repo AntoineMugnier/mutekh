@@ -45,19 +45,22 @@ Typical device declaration will be:
 @code
 DEV_DECLARE_STATIC(dfu0, "dfu0", 0, usbdev_dfu_drv,
                    DEV_STATIC_RES_DEVCLASS_PARAM("usb-ctrl", "/usb", DRIVER_CLASS_USBDEV),
-                   DEV_STATIC_RES_DEVCLASS_PARAM("storage", "/mem[1]", DRIVER_CLASS_MEM),
+                   DEV_STATIC_RES_DEVCLASS_PARAM("storage", "/mem", DRIVER_CLASS_MEM),
                    );
 @end code
 
-If needed, you may add a memory region resource to limit to a subset
-of the backing storage. If size is left to 0, the device will be used
-to its end.
+If needed, you may use a partition device to limit to a subset
+of the backing storage.
 
 @code
+DEV_DECLARE_STATIC(code_partition, "code", 0, mem_part_drv,
+                   DEV_STATIC_RES_DEVCLASS_PARAM("backend", "/mem[1]", DRIVER_CLASS_MEM),
+                   DEV_STATIC_RES_MEM(CONFIG_LOAD_ROM_RO_SIZE, 0),
+                   );
+
 DEV_DECLARE_STATIC(dfu0, "dfu0", 0, usbdev_dfu_drv,
                    DEV_STATIC_RES_DEVCLASS_PARAM("usb-ctrl", "/usb", DRIVER_CLASS_USBDEV),
-                   DEV_STATIC_RES_DEVCLASS_PARAM("storage", "/mem[1]", DRIVER_CLASS_MEM),
-                   DEV_STATIC_RES_MEM(CONFIG_LOAD_ROM_RO_SIZE, 0),
+                   DEV_STATIC_RES_DEVCLASS_PARAM("storage", "/code", DRIVER_CLASS_MEM),
                    );
 @end code
 
