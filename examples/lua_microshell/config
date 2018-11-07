@@ -28,11 +28,6 @@
   %include arch/arch.build
   %include scripts/options.build
 
-%section emu-*-*
-
-  CONFIG_DRIVER_BLOCK_EMU
-  CONFIG_DRIVER_BLOCK_EMU_BLOCKSIZE 2048
-
 %section rtld
 
   CONFIG_LIBELF_RTLD
