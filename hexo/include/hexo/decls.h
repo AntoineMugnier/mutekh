@@ -112,7 +112,7 @@
 
 #ifndef STATIC_ASSERT
 #define STATIC_ASSERT(error, expr)                              \
-  extern char assertion_failure__##error[-(char)!(expr)];
+  __attribute__((unused)) extern char assertion_failure__##error[-(char)!(expr)];
 #endif
 
 #ifndef FIRST_FIELD_ASSERT
