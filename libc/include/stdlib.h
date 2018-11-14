@@ -184,9 +184,16 @@ ALWAYS_INLINE void srandom(__compiler_uint_t seed)
     @see rand_64_merge @see rand_64_r */
 uint32_t rand_64(void);
 
+/** @This returns an unsigned 32 bits pseudo random value uniformly
+    distributed over the specified range @em {[min, max]}. @see rand_64 */
+uint32_t rand_64_range(uint32_t min, uint32_t max);
+
 /** @This returns an unsigned 32 bits pseudo random value
     and update the user provided seed. */
 uint32_t rand_64_r(uint64_t *s);
+
+/** @see rand_64_r @see rand_64_range */
+uint32_t rand_64_range_r(uint64_t *s, uint32_t min, uint32_t max);
 
 /** @This contributes entropy to the internal state which is used by
     the @ref rand_64 function. Note that this does not just assign a

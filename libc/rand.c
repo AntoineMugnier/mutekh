@@ -53,6 +53,19 @@ static uint32_t _rand_64_r(uint64_t *s)
   return r ^ (r >> 32);
 }
 
+static uint32_t _rand_64_range_r(uint64_t *s, uint32_t min, uint32_t max)
+{
+  uint32_t r = 0;
+  uint32_t range = max - min;
+  if (range)
+    {
+      r = _rand_64_r(s);
+      if (++range)
+        r = (r * (uint64_t)range) >> 32;
+    }
+  return min + r;
+}
+
 void rand_64_merge(const void *data, size_t size)
 {
   const uint8_t *d = data;
@@ -73,9 +86,19 @@ uint32_t rand_64()
   return _rand_64_r(&rand_64_seed);
 }
 
+uint32_t rand_64_range(uint32_t min, uint32_t max)
+{
+  return _rand_64_range_r(&rand_64_seed, min, max);
+}
+
 uint32_t rand_64_r(uint64_t *s)
 {
   *s |= !*s;
   return _rand_64_r(s);
 }
 
+uint32_t rand_64_range_r(uint64_t *s, uint32_t min, uint32_t max)
+{
+  *s |= !*s;
+  return _rand_64_range_r(s, min, max);
+}
