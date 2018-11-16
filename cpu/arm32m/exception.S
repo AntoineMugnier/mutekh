@@ -204,23 +204,59 @@ FUNC_START(.text, arm_exc_fault)
         add     r3,     r0
 #else
         /* store cpu_context_s on stack */
-        add     sp,     #- _sizeof(struct cpu_context_s)
         mov     r3,     sp
+        adds    r3,     #- _sizeof(struct cpu_context_s)
 #endif
 
 #if CONFIG_CPU_ARM32M_ARCH_VERSION >= 7
         str     r1,     [r3, #CPU_ARM_CONTEXT_CFSR]
 #endif
 
-        /* second arg is pc */
+        /* store all registers in cpu_context_s */
+        ldr     r1,     [sp, #0]
+        str     r1,     [r3, #CPU_ARM_CONTEXT_R0]
+        ldr     r1,     [sp, #4]
+        str     r1,     [r3, #CPU_ARM_CONTEXT_R1]
+        ldr     r1,     [sp, #8]
+        str     r1,     [r3, #CPU_ARM_CONTEXT_R2]
+        ldr     r1,     [sp, #12]
+        str     r1,     [r3, #CPU_ARM_CONTEXT_R3]
+        str     r4,     [r3, #CPU_ARM_CONTEXT_R4]
+        str     r5,     [r3, #CPU_ARM_CONTEXT_R5]
+        str     r6,     [r3, #CPU_ARM_CONTEXT_R6]
+        str     r7,     [r3, #CPU_ARM_CONTEXT_R7]
+#if CONFIG_CPU_ARM32M_ARCH_VERSION >= 7
+        str     r8,     [r3, #CPU_ARM_CONTEXT_R8]
+        str     r9,     [r3, #CPU_ARM_CONTEXT_R9]
+        str     r10,    [r3, #CPU_ARM_CONTEXT_R10]
+        str     r11,    [r3, #CPU_ARM_CONTEXT_R11]
+#else
+        mov     r1,     r8
+        str     r1,     [r3, #CPU_ARM_CONTEXT_R8]
+        mov     r1,     r9
+        str     r1,     [r3, #CPU_ARM_CONTEXT_R9]
+        mov     r1,     r10
+        str     r1,     [r3, #CPU_ARM_CONTEXT_R10]
+        mov     r1,     r11
+        str     r1,     [r3, #CPU_ARM_CONTEXT_R11]
+#endif
+        ldr     r1,     [sp, #16]
+        str     r1,     [r3, #CPU_ARM_CONTEXT_R12]
         ldr     r1,     [sp, #20]
+        str     r1,     [r3, #CPU_ARM_CONTEXT_LR]
+
+        /* second arg is pc */
+        ldr     r1,     [sp, #24]
         str     r1,     [r3, #CPU_ARM_CONTEXT_PC]
 
         /* fifth arg is stack pointer */
-        mov     r0,     r13
+        mov     r0,     sp
+        adds    r0,     0x20     /* skip values pushed by cpu */
 #ifndef CONFIG_HEXO_CONTEXT
-        adds    r0,     #_sizeof(struct cpu_context_s)
+        /* skip cpu_context_s stored on stack */
+        mov     sp,     r3
 #endif
+        str     r0,     [r3, #CPU_ARM_CONTEXT_SP]
         push    {r0}
 
         /* first arg is interrupt number */

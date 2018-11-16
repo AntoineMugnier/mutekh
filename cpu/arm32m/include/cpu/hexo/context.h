@@ -68,9 +68,9 @@ struct cpu_context_s
 };
 
 /** name of registers accessible using cpu_context_s::gpr */
-#  define CPU_CONTEXT_REG_NAMES CPU_GPREG_NAMES, "xpsr"
+#  define CPU_CONTEXT_REG_NAMES CPU_GPREG_NAMES
 /** number of registers in cpu_context_s::gpr */
-#  define CPU_CONTEXT_REG_COUNT 17
+#  define CPU_CONTEXT_REG_COUNT 16
 
 # ifdef CONFIG_HEXO_CONTEXT_PREEMPT
 /** @internal */
