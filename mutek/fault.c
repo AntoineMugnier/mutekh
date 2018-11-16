@@ -51,22 +51,22 @@ static CPU_EXCEPTION_HANDLER(fault_handler)
   lock_spin(&fault_lock);
 
   logk_error("CPU Fault: cpuid(%u) faultid(%u-%s)", cpu_id(), type, name);
-  logk(" - PC: %p, Bad address: %p",
+  logk("  PC: @ %p, Bad address: @ %p",
              (void*)execptr, (void*)dataptr);
-  logk_debug(" - Registers:");
+  logk_debug("  Registers:");
 
   reg_t *r = regs->gpr;
   for (i = 0; i < CPU_CONTEXT_REG_COUNT; i++)
 # ifdef CPU_CONTEXT_REG_NAMES
-    logk_debug(" %s=%p", reg_names[i], (void*)*(r + i));
+    logk_debug("   %4s: %p", reg_names[i], (void*)*(r + i));
 # else
-    logk_debug(" %p", (void*)*(r + i));
+    logk_debug("   %p", (void*)*(r + i));
 # endif
 
-  logk_debug("Stack:");
+  logk("  Stack: @ %p", sp);
 
-  for (i = 0; i < 12; i++)
-    logk_debug(" %p: %p", &sp[i], (void*)(uintptr_t)sp[i]);
+  for (i = 0; i < 24; i += 4)
+    logk_debug("    %p %p %p %p", sp[i], sp[i+1], sp[i+2], sp[i+3]);
 
   lock_release(&fault_lock);
 #endif
