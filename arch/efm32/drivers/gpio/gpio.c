@@ -731,6 +731,7 @@ static DEV_IRQ_SRC_PROCESS(efm32_gpio_source_process)
       cpu_mem_write_32(EFM32_GPIO_ADDR + EFM32_GPIO_IFC_ADDR, endian_le32(x));
 
 #ifdef CONFIG_DRIVER_EFM32_GPIO_ICU
+      x &= bit_mask(0, CONFIG_DRIVER_EFM32_GPIO_IRQ_COUNT);
       while (x)
         {
           uint_fast8_t i = bit_ctz(x);
@@ -779,6 +780,7 @@ static DEV_INIT(efm32_gpio_init)
     goto err_mem;
 
   cpu_mem_write_32(EFM32_GPIO_ADDR + EFM32_GPIO_IEN_ADDR, 0);
+  cpu_mem_write_32(EFM32_GPIO_ADDR + EFM32_GPIO_IFC_ADDR, 0xffffffff);
 
 #ifdef CONFIG_DRIVER_EFM32_GPIO_UNTIL
   dev_rq_queue_init(&pv->queue);
