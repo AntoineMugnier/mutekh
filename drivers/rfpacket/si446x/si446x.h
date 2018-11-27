@@ -44,7 +44,6 @@
 #define SI446X_MAX_RSSI_VALUE                    -52       /* in 0.125 dbm */
 #define SI446X_MAX_PACKET_SIZE                   256
 #define SI446X_PKT_CFG_BUFFER_SIZE               32
-#define SI446X_RESPONSE_TIME                     500       /* us */
 #define SI446X_BASE_TIME                         500       /* us */
 #define SI446X_TIME_BEFORE_RETRY_SHIFT           6
 #define SI446X_RSSI_SAMPLING_PERIOD              8         /* bt log2 */
@@ -74,6 +73,10 @@
 
 #define SI446X_CTS_RETRIES  32
 
+#define SI446X_WUTR_VALUE   0 
+#define SI446X_WUT_MIN_TIME (122 * 1000 * (1 << SI446X_WUTR_VALUE)) /* ns */
+#define SI446X_RX_THRESHOLD 0x14
+  
 #define STATUS          15
 #define R_CTX_PV        14
 
@@ -119,28 +122,39 @@ struct si446x_modem_config_s
 
 struct si446x_pkt_regs_s
 {
-  struct
-    {
-      uint8_t len;
-      uint8_t val[4];
-    }sw;
+  struct {
+    uint8_t len;
+    uint8_t val[4];
+  } sw;
 
-  struct
-    {
-      uint8_t tx_pb_len;
-      uint8_t rx_pb_len;
-      uint8_t _unused;
-      uint8_t timeout;
-      uint8_t general;
-    }preamble;
+  struct {
+    uint8_t tx_length;
+    uint8_t config_std_1;
+    uint8_t config_nstd;
+    uint8_t config_std_2;
+    uint8_t config;
+  } preamble;
+
+#ifdef CONFIG_DRIVER_RFPACKET_SI446X_WUT
+  uint8_t clk;
+  struct {
+    uint8_t m[2];
+    uint8_t r;
+    uint8_t ldc;
+  } wut;
+#endif
 
   uint8_t crc;
 }__attribute__((packed));
 
 static const uint8_t si446x_pk_cmd[] = {
-  5, 0x11, 0,  __builtin_offsetof(struct si446x_pkt_regs_s, sw),
-  5, 0x10, 0,  __builtin_offsetof(struct si446x_pkt_regs_s, preamble),
-  1, 0x12, 0,  __builtin_offsetof(struct si446x_pkt_regs_s, crc),
+  5, 0x11, 0x00,  __builtin_offsetof(struct si446x_pkt_regs_s, sw),
+  5, 0x10, 0x00,  __builtin_offsetof(struct si446x_pkt_regs_s, preamble),
+  1, 0x12, 0x00,  __builtin_offsetof(struct si446x_pkt_regs_s, crc),
+#ifdef CONFIG_DRIVER_RFPACKET_SI446X_WUT
+  4, 0x00, 0x05,  __builtin_offsetof(struct si446x_pkt_regs_s, wut),
+  1, 0x00, 0x01,  __builtin_offsetof(struct si446x_pkt_regs_s, clk),
+#endif
   0
 };
 

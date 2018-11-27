@@ -321,6 +321,51 @@ tune_done:
         ret                     %link
 .endfunc
 
+#ifdef CONFIG_DRIVER_RFPACKET_SI446X_WUT
+.func si446x_entry_rx_wake_up
+        .input %4 channel
+        .clobber %0, %1 tmp,  %3, %4, %5, %6, %10, %11, %12, %13
+        .export si446x_entry_rx_wake_up
+        /* Update RX channel */
+        cst32                   %0,                       0x080000 | SI446X_START_RX_CMD,   0
+        shi32l                  %channel,                 8
+        or32                    %0,                       %channel
+        pack32le		%0,                       1,     3
+        call16                  %poll_gpio:link,          poll_gpio
+        spi_wr                  %0,                       3,	CS_PULSE
+        /* Configure latch at Sync Word detection */
+        call16                  %poll_gpio:link,          poll_gpio
+        cst8                    %set_rssi_control:mode,   0x02
+        call8                   %set_rssi_control:link,   set_rssi_control
+  start_wut:
+        /* Enable LDC */
+        cst8			%1,                      0x42
+        call16                  %poll_gpio:link,         poll_gpio
+        cst32			%0,                      0x04010011,   0
+        pack32le		%0,                      2,     5
+        spi_wr                  %0,                      5,	CS_PULSE
+
+        /* Wait for bytecode wakeup */
+        spi_sleep
+
+        /* Disable LDC */
+        cst8			%1,                      0
+        cst32			%0,                      0x04010011,   0
+        pack32le		%0,                      2,     5
+        call16                  %poll_gpio:link,         poll_gpio
+        spi_wr                  %0,                      5,	CS_PULSE
+
+        /* Test if irq is pending */
+        call16                  %si446x_check_irq:link,   si446x_check_irq
+        /* Test if RXC has been canceled */
+        ld8e                    %tmp,                     %R_CTX_PV,   _offsetof(si446x_ctx_s, flags, 1)
+        tst32c                  %tmp,                     0
+          jmp8                  si446x_stop_rx
+        jmp8                    start_wut
+
+.endfunc
+#endif
+
 .func si446x_entry_rx_cont
         .input %4 channel
         .clobber %0, %1 tmp jam, %2, %3 old new, %4, %5, %6, %7 period, %10, %11, %12, %13
@@ -328,7 +373,7 @@ tune_done:
         call16                  %poll_gpio:link,          poll_gpio
         /* Configure latch at Sync Word detection */
         cst8                    %set_rssi_control:mode,   0x02
-        call8                   %set_rssi_control:link,   set_rssi_control
+        call16                  %set_rssi_control:link,   set_rssi_control
         /* Start Rx */
         cst32                   %si446x_start_rx:state,   0x0,    8
         mov                     %si446x_start_rx:channel, %channel
@@ -395,14 +440,14 @@ tune_done:
         mov                     %0,                       %R_CTX_PV
         add8                    %0,                       _offsetof(si446x_ctx_s, deadline, 8)
         spi_yield_deadline      %0
-        call16                  %poll_gpio:link,        poll_gpio
+        call16                  %poll_gpio:link,          poll_gpio
         /* Configure latch at Sync Word detection */
-        cst8                    %set_rssi_control:mode, 0x02
-        call8                   %set_rssi_control:link, set_rssi_control
+        cst8                    %set_rssi_control:mode,   0x02
+        call16                  %set_rssi_control:link,   set_rssi_control
         /* Start Rx */
         cst32                   %si446x_start_rx:state,   0x0,    8
         mov                     %si446x_start_rx:channel, %channel
-        call8                   %si446x_start_rx:link,    si446x_start_rx
+        call16                  %si446x_start_rx:link,    si446x_start_rx
   rx_wait:  
         mov                     %0,                       %R_CTX_PV
         add8                    %0,                       _offsetof(si446x_ctx_s, timeout, 8)
@@ -422,7 +467,7 @@ tune_done:
         .input %0 power
         .input %3 channel
         .clobber %0, %1, %2, %3, %4, %5, %6, %7, %10, %11, %12, %13
-        call8                   %si446x_tx_init:link,                si446x_tx_init
+        call16                  %si446x_tx_init:link,                si446x_tx_init
         mov                     %si446x_start_tx:channel,            %channel
         cst32                   %si446x_start_tx:mode,               0x33,  16
         mov                     %si446x_start_tx:channel,            %channel
@@ -456,7 +501,7 @@ tune_done:
         /* Start RX */
         mov                     %si446x_start_rx:channel, %channel
         cst32                   %si446x_start_rx:state,   0x7,    8
-        call8                   %si446x_start_rx:link,    si446x_start_rx
+        call16                  %si446x_start_rx:link,    si446x_start_rx
         ld32e                   %0,                       %R_CTX_PV,   _offsetof(si446x_ctx_s, ccad, 4)
         spi_yield_delay         %0
         /* Read status  */

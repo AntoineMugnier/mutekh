@@ -169,20 +169,20 @@ static inline error_t si446x_build_pk_config(struct si446x_ctx_s *pv, struct dev
   uint32_t msk = (1 << (cfg->pb_pattern_len + 1)) - 1;
   uint32_t preamble = cfg->pb_pattern & msk;
 
-  uint8_t p;
-
-  if (preamble == (0xAAAAAAAA & msk))
-    p = (1 << 5) | (1 << 0) ; /* TYPE 1010 */
-  else if (preamble == (0x55555555 & msk))
-    p = (2 << 0); /* TYPE 0101  */
-  else
+  if (cfg->tx_pb_len > 255 * 8)
     return -ENOTSUP;
 
-  pkt->preamble.tx_pb_len = cfg->tx_pb_len >> 2;
-  pkt->preamble.rx_pb_len = cfg->rx_pb_len;
-  pkt->preamble._unused = 0;
-  pkt->preamble.timeout = 0;
-  pkt->preamble.general = p;
+  pkt->preamble.tx_length = cfg->tx_pb_len >> 3;
+  pkt->preamble.config_std_1 = SI446X_RX_THRESHOLD;
+  pkt->preamble.config_nstd = 0;
+  pkt->preamble.config_std_2 = 0;
+
+  if (preamble == (0xAAAAAAAA & msk))
+    pkt->preamble.config = (1 << 5) | (1 << 4) | (1 << 0);
+  else if (preamble == (0x55555555 & msk))
+    pkt->preamble.config = (2 << 0) | (1 << 4) | (1 << 1);
+  else
+    return -ENOTSUP;
 
   /** Configure CRC */
 
@@ -216,8 +216,59 @@ static inline error_t si446x_build_pk_config(struct si446x_ctx_s *pv, struct dev
       }
   return -ENOTSUP;
  crc_ok:
+
+#ifdef CONFIG_DRIVER_RFPACKET_SI446X_WUT
+  /*
+    Trxp = Tldc + Twut
+    Tldc = Twup + Trx
+
+    Tldc:    Wake-up + Rx time
+    Twup:    Wake-up time
+    Trx:     Effective RX time
+    Twut:    Sleep time
+    Trxp:    RX preamble time
+
+     __________                   __
+    |          |                 |
+    |          |_________________|
+
+    <---><----->
+     Twup  Trx
+    <----------> <-------------->
+       Tldc         Twut
+    <--------------------------->
+               Trxp
+  */
+
+  pkt->clk = 0;
+
+  if (cfg->rx_pb_len > SI446X_RX_THRESHOLD)
     {
+      /* Time bit in ns */
+      dev_timer_delay_t tb = 1000000000 / rq->rf_cfg->drate;
+
+      uint32_t trx = (SI446X_RX_THRESHOLD + 8 /* Margin */) * tb;
+      uint32_t tldc = trx + SI446X_BASE_TIME * 1000;
+
+      /* Get the wake-up period in number of 122 us */
+      pkt->wut.ldc = (SI446X_WUT_MIN_TIME - 1 + tldc) / SI446X_WUT_MIN_TIME;
+
+      int32_t twut = (cfg->rx_pb_len - 64 /* Margin */) * tb - pkt->wut.ldc * SI446X_WUT_MIN_TIME;
+
+      logk_trace("twut: %i\n", twut);
+
+      if (twut > 0)
+        {
+          endian_be16_na_store(pkt->wut.m, twut / SI446X_WUT_MIN_TIME);
+          pkt->wut.r = 0x20 | SI446X_WUTR_VALUE;
+          pkt->clk = 0x01;
+
+          logk_trace("ldc: %d", tldc);
+          logk_trace("sleep_time: %d", twut);
+          logk_trace("rx_time: %d", trx);
+        }
     }
+#endif
 
   si446x_dump_config((uint8_t*)pkt, si446x_pk_cmd);
 
@@ -305,7 +356,6 @@ si446x_modem_configure(struct si446x_ctx_s *pv,
                     fdev, rf_cfg->rx_bw, rf_cfg->chan_spacing, rx_tx_freq_err, manchester);
 }
 
-
 static inline error_t si446x_build_rf_config(struct si446x_ctx_s *pv,
                                              struct si446x_rf_regs_s *out,
                                              struct dev_rfpacket_rq_s *rq)
@@ -369,8 +419,8 @@ static void si446x_rf_config_done(struct si446x_ctx_s *pv, const struct dev_rfpa
   struct si446x_cache_entry_s *e = &pv->cache_array[pv->id % SI446X_RF_CONFIG_CACHE_ENTRY];
   struct si446x_rf_regs_s *data = &e->data;
 
-  /* Time in timer unit to fill 128 bytes in fifo */
-  pv->mpst = 128 * e->tb;
+  /* Maximum time to wait before aborting transfer */
+  pv->mpst = 400 * e->tb;
   /* 8 * Time bit + SLEEP->RX time*/
   pv->ccad = e->tb + pv->bt;
 
@@ -656,8 +706,18 @@ static inline void si446x_start_rx(struct si446x_ctx_s *pv, struct dev_rfpacket_
 
       si446x_rfp_set_state(pv, SI446X_STATE_RXC);
 
-      si446x_bytecode_start(pv, &si446x_entry_rx_cont,
-        SI446X_ENTRY_RX_CONT_BCARGS(rq->channel));
+#ifdef CONFIG_DRIVER_RFPACKET_SI446X_WUT
+      if (pv->pk_buff.clk)
+	{
+          si446x_bytecode_start(pv, &si446x_entry_rx_wake_up,
+                                SI446X_ENTRY_RX_WAKE_UP_BCARGS(rq->channel));
+	}
+      else
+#endif
+        {
+          si446x_bytecode_start(pv, &si446x_entry_rx_cont,
+                                SI446X_ENTRY_RX_CONT_BCARGS(rq->channel));
+        }
       break;
 
     default:
