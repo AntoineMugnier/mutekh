@@ -192,54 +192,33 @@ static inline error_t si446x_build_pk_config(struct si446x_ctx_s *pv, struct dev
     case 0xff:
     case 0xffff:
     case 0xffffffff:
-      p = 0x80;
+      pkt->crc = 0x80;
       break;
 
     case 0x00:
-      p = 0;
+      pkt->crc = 0;
       break;
 
     default:
       return -ENOTSUP;
     }
 
-  switch (cfg->crc)
+  static const uint32_t crcs[] = {
+    0, 0x07, 0x5B93, 0x90D9, 0x8005, 0x1021,
+    0x741b8cd7, 0x04c11db7, 0x1edc6f41, 0x3D65
+  };
+
+  for (uint_fast8_t i = 0; i < ARRAY_SIZE(crcs); i++)
+    if (crcs[i] == cfg->crc)
+      {
+        pkt->crc |= i;
+        goto crc_ok;
+      }
+  return -ENOTSUP;
+ crc_ok:
     {
-    case 0:
-      p |= 0; /* NO CRC */;
-      break;
-    case 0x07:
-      p |= 1; /* CRC8-ITU_T */;
-      break;
-    case 0x5B93:
-      p |= 2; /* CRC16-IEC */;
-      break;
-    case 0x90D9:
-      p |= 3; /* CRC16-BAICHEVA */;
-      break;
-    case 0x8005:
-      p |= 4; /* CRC16-IBM */;
-      break;
-    case 0x1021:
-      p |= 5; /* CRC16-CCIT */;
-      break;
-    case 0x741b8cd7:
-      p |= 6; /* CRC32-KOOPMAN */;
-      break;
-    case 0x04c11db7:
-      p |= 7; /* CRC32-IEEE8023 */;
-      break;
-    case 0x1edc6f41:
-      p |= 8; /* CRC32-CASTAGNOLI */;
-      break;
-    case 0x3D65:
-      p |= 9; /* CRC16-DNP */;
-      break;
-    default:
-      return -ENOTSUP;
     }
 
-  pkt->crc = p;
   si446x_dump_config((uint8_t*)pkt, si446x_pk_cmd);
 
   return 0;
