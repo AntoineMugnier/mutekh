@@ -517,20 +517,23 @@ enum dev_rfpacket_rq_rtype_e
   DEV_RFPACKET_RQ_RX,
 
   /** Put the transceiver in continuous RX state. This request is not
-      pushed in the queue of scheduled requests. A single such request
-      can be submitted at the same time. The request will terminate
-      immediately with the @tt -EBUSY error if an other continuous
-      request is currently active.
+      pushed in the queue of scheduled requests. An other queue is
+      used for @ref DEV_RFPACKET_RQ_RX_CONT and @ref
+      DEV_RFPACKET_RQ_RX_TIMEOUT requests. When the hardware supports
+      listening on multiple rf and pkt configurations at the same
+      time, these requests are served in parallel. In the other case,
+      the request with the shortest timeout are served first.
 
       Some scheduled requests with a null deadline can be used at the
-      same time as a continuous RX. In this case, the continuous RX
-      request stays in the background and will resume operation as
-      soon as the scheduled requests end.
+      same time as continuous RX requests. In this case, the
+      continuous RX request stays in the background and will resume
+      operation as soon as the scheduled requests end.
 
       This request terminates with the @tt -EAGAIN error if the
       channel is jammed according to the value of the @ref
       dev_rfpacket_rf_cfg_s::rssi_th field. The @ref
-      dev_rfpacket_cancel_t function can be used to end this request. */
+      dev_rfpacket_cancel_t function can be used to end this type of
+      request. */
   DEV_RFPACKET_RQ_RX_CONT,
 
   /** Put the transceiver in continuous RX state for a limited period
@@ -637,7 +640,26 @@ struct dev_rfpacket_rq_s
   };
 };
 
-DEV_REQUEST_INHERIT(rfpacket); DEV_REQUEST_QUEUE_OPS(rfpacket);
+DEV_REQUEST_INHERIT(rfpacket);
+DEV_REQUEST_QUEUE_OPS(rfpacket);
+
+GCT_CONTAINER_KEY_TYPES(dev_request_queue, CUSTOM, SCALAR,
+                        dev_rfpacket_rq_s_cast(dev_request_queue_item)->deadline,
+                        dev_rfpacket_queue);
+
+GCT_CONTAINER_KEY_FCNS(dev_request_queue, ASC, inline, __dev_rfpacket_queue,
+                       dev_rfpacket_queue,
+                       insert);
+
+/** @This insert a new rfpacket request in the queue in deadline
+    order. */
+ALWAYS_INLINE void
+dev_rfpacket_rq_insert(dev_request_queue_root_t *q,
+                       struct dev_rfpacket_rq_s *rq)
+{
+  assert(rq->base.pushed == 0xdead);
+  __dev_rfpacket_queue_insert(q, &rq->base);
+}
 
 /** @see dev_rfpacket_request_t */
 #define DEV_RFPACKET_REQUEST(n)	void  (n) (const struct device_rfpacket_s *accessor, ...)
