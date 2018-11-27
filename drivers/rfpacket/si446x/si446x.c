@@ -72,11 +72,6 @@ static void si446x_dump_config(uint8_t *ptr, const uint8_t *c)
     }
 }
 
-/* Register value  for a 4dbm step from -40 to 13 dbm */
-
-uint8_t pa_pwr_lvl[14] = {0, 1, 1, 2, 3, 4, 6, 8, 12, 18, 27, 43, 68, 152};
-/*                                            -12 -8  -4   0   4   8   12   dbm */
-
 static inline void si446x_rfp_set_state(struct si446x_ctx_s *pv, enum si446x_state_s state)
 {
   logk_trace("state %d", state);
@@ -103,6 +98,10 @@ static inline uint8_t si446X_get_pwr_lvl(struct si446x_ctx_s *pv, int16_t pwr)
 
   if (p > max)
     p = max;
+
+  /* Register value  for a 4dbm step from -40 to 13 dbm */
+  static const uint8_t pa_pwr_lvl[14] = {0, 1, 1, 2, 3, 4, 6, 8, 12, 18, 27, 43, 68, 152};
+  /*                                            -12 -8  -4   0   4   8   12   dbm */
 
   uint8_t idx = p >> 5;
   uint16_t xa = idx << 5;
