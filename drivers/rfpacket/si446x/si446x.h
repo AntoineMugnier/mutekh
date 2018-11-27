@@ -201,7 +201,8 @@ struct si446x_ctx_s
   struct device_timer_s *timer;
   struct dev_spi_ctrl_bytecode_rq_s spi_rq;
 
-  struct dev_rfpacket_rq_s      *rx_cont;
+  /* Queue for continue/timeout RX requests */
+  dev_request_queue_root_t rx_cont_queue;
 
   /* Queue for requests */
   dev_request_queue_root_t queue;
