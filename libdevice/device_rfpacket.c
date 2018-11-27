@@ -195,7 +195,7 @@ error_t dev_rfpacket_wait_init(struct dev_rfpacket_wait_ctx_s *ctx,
 
 void dev_rfpacket_wait_cleanup(struct dev_rfpacket_wait_ctx_s *ctx)
 {
-  struct dev_rfpacket_rq_s *rx_rq = &ctx->rx_rq;
+  IFASSERT(struct dev_rfpacket_rq_s *rx_rq = &ctx->rx_rq);
   assert(rx_rq->base.pvuint == RFPACKET_RX_IDLE);
   lock_destroy(&ctx->lock);
 }

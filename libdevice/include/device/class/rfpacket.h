@@ -302,12 +302,13 @@ struct dev_rfpacket_pk_cfg_basic_s
   uint32_t                      BITFIELD(pb_pattern_len,5);
 
   /** Size of transmitted preamble in bits. When the requested value
-      is not supported, it must be rounded to a higher value. */
-  uint16_t                       tx_pb_len;
+      is not supported, it is rounded to a higher value by the driver. */
+  uint16_t                      tx_pb_len;
 
-  /** Size of expected RX preamble in bits. When the requested value
-      is not supported, it must be rounded to a lower value. */
-  uint8_t                       rx_pb_len;
+  /** Size of expected preamble lenght in bits. The driver will
+      configure the hardware so that a packet transmitted with a
+      preamble lenght equal or greater than this is received properly. */
+  uint16_t                      rx_pb_len;
 };
 
 STRUCT_INHERIT(dev_rfpacket_pk_cfg_basic_s, dev_rfpacket_pk_cfg_s, base);
