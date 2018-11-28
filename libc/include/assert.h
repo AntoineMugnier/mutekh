@@ -39,32 +39,43 @@ C_HEADER_BEGIN
 # warning NDEBUG is deprecated here, use CONFIG_LIBC_ASSERT or CONFIG_DEBUG
 #endif
 
+#ifndef LOGK_MODULE_ID
+/** A four characters @ref logk module id defined for the current compilation unit. */
+# define LOGK_MODULE_ID "none"
+#endif
+
 # if defined(CONFIG_LIBC_ASSERT)
 
 #  ifndef MUTEK_CFILE
 #   define MUTEK_CFILE ""
 #  endif
 
+/** @internal */
+#  define __assert_filter() ({                                          \
+  __unused__ uint32_t id = ((LOGK_MODULE_ID[0] << 24) |                 \
+                            (LOGK_MODULE_ID[1] << 16) |                 \
+                            (LOGK_MODULE_ID[2] << 8)  |                 \
+                            LOGK_MODULE_ID[3]);                         \
+  !(CONFIG_LIBC_ASSERT_FILTER_EXPR); })
+
 #  if defined(CONFIG_LIBC_ASSERT_SIMPLE) || !defined(CONFIG_MUTEK_PRINTK)
 void __assert_fail(void);
-#  define assert(expr) ((void) ((expr) ? 0 : __assert_fail()))
+#   define __assert(expr, str) ((void) ((expr) ? 0 : __assert_fail()))
 #  else
-void __assert_fail(const char *file, uint_fast16_t line,
-                   const char *func, const char *expr);
-#  define assert(expr) ((void) ((expr) ? 0 : __assert_fail(MUTEK_CFILE, __LINE__, __func__, #expr)))
+void __assert_fail(const char *file, uint_fast16_t line, const char *expr);
+#   define __assert(expr, str) ((void) ((expr) ? 0 : __assert_fail(MUTEK_CFILE, __LINE__, str)))
 #  endif
-#  define IFASSERT(...) do { __VA_ARGS__ ; } while (0)
+/** @this is the standard @tt assert macro */
+#  define assert(expr) __assert(__assert_filter() || (expr), #expr)
+#  define IFASSERT(...) __VA_ARGS__
+/** @this macro does the same as the @ref #assert macro, but
+    still execute @tt expr when @ref #CONFIG_LIBC_ASSERT is
+    disabled */
+#  define ensure(expr) __assert((expr) || __assert_filter(), #expr)
 
-/** @multiple @this is the standard @tt assert macro */
 # else
 #  define assert(expr) ((void) 0)
-#  define IFASSERT(...) do {} while (0)
-# endif
-
-# if defined(CONFIG_LIBC_ASSERT)
-/** @multiple @this macro does the same as the @ref #assert macro, but still execute @tt expr when @ref #CONFIG_LIBC_ASSERT is disabled */
-#  define ensure(expr) assert(expr)
-# else
+#  define IFASSERT(...)
 #  define ensure(expr) ((void) (expr))
 # endif
 

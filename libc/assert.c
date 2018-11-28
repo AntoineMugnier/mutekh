@@ -15,8 +15,7 @@ static bool_t already_failed = 0;
 # if defined(CONFIG_LIBC_ASSERT_SIMPLE) || !defined(CONFIG_MUTEK_PRINTK)
 void __assert_fail(void)
 # else
-void __assert_fail(const char *file, uint_fast16_t line,
-                   const char *func, const char *expr)
+void __assert_fail(const char *file, uint_fast16_t line, const char *expr)
 # endif
 {
   if (!already_failed)
@@ -26,7 +25,7 @@ void __assert_fail(const char *file, uint_fast16_t line,
 #  if defined(CONFIG_LIBC_ASSERT_SIMPLE)
       printk("Assertion failed at pc=%p\n", __builtin_return_address(0));
 #  else
-      printk("Assertion failed at %s:%u:%s(): (%s) is false\n", file, line, func, expr);
+      printk("Assertion failed at %s:%u: (%s) is false\n", file, line, expr);
 #  endif
 # endif
       cpu_trap();
