@@ -682,6 +682,7 @@ tune_done:
         call8                   %get_rssi:link,         get_rssi
         st8e                    %get_rssi:latched,      %R_CTX_PV,     _offsetof(si446x_ctx_s, carrier)
         st16e                   %get_rssi:afc,          %R_CTX_PV,     _offsetof(si446x_ctx_s, afc_offset)
+	call8 			%abort_rx:link,         abort_rx
         end
 .endfunc
 
