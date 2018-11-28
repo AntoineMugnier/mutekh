@@ -63,6 +63,8 @@
 
 */
 
+#define LOGK_MODULE_ID "si44"
+
 #include <stdlib.h>
 #include <assert.h>
 #include <string.h>
@@ -72,7 +74,6 @@
 
 #ifdef __MUTEKH__
 
-#define LOGK_MODULE_ID "si44"
 #include <device/class/rfpacket.h>
 #include <mutek/printk.h>
 #include <hexo/bit.h>
