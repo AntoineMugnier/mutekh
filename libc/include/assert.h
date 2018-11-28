@@ -73,10 +73,22 @@ void __assert_fail(const char *file, uint_fast16_t line, const char *expr);
     disabled */
 #  define ensure(expr) __assert((expr) || __assert_filter(), #expr)
 
+/** @this macro can be used when the control flow can not reach a
+    point. When @ref CONFIG_LIBC_ASSERT is defined, reaching this
+    point is treated as an assertion failure. In the other case, @tt
+    __builtin_unreachable is used. */
+#  define UNREACHABLE()  do {                                           \
+    if (__assert_filter())                                              \
+      __builtin_unreachable();                                          \
+    else                                                                \
+      __assert(0, "UNREACHABLE()");                                     \
+  } while (0)
+
 # else
 #  define assert(expr) ((void) 0)
 #  define IFASSERT(...)
 #  define ensure(expr) ((void) (expr))
+#  define UNREACHABLE()  __builtin_unreachable()
 # endif
 
 C_HEADER_END

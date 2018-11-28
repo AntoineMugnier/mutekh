@@ -53,12 +53,6 @@
 #  define DEPRECATED(message)   __attribute__((deprecated))
 # endif
 
-# ifdef CONFIG_RELEASE
-#  define UNREACHABLE()  __builtin_unreachable()
-# else
-#  define UNREACHABLE()  do { assert(!"reachable"); abort(); } while (0)
-# endif
-
 # define ALWAYS_INLINE inline __attribute__((always_inline))
 
 # if 1 // mkdoc:skip
