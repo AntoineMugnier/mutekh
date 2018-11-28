@@ -112,6 +112,13 @@ ssize_t vlogk_(const char *format, va_list ap);
 config_depend(CONFIG_MUTEK_PRINTK)
 ssize_t logk_(const char *format, ...);
 
+#ifdef CONFIG_MUTEK_PRINTK_COLOR
+/** @internal */
+# define LOGK_COLOR(x) "\x1b[" #x "m"
+#else
+# define LOGK_COLOR(x) ""
+#endif
+
 /** @internal */
 #define logk_level_(log_func, level_str, format, ...)                   \
   do {                                                                  \
@@ -125,31 +132,31 @@ ssize_t logk_(const char *format, ...);
        __do_log = !!(CONFIG_MUTEK_PRINTK_COMPILE_EXPR);                 \
     }                                                                   \
     if (__do_log)                                                       \
-      log_func(level_str "[" LOGK_MODULE_ID "] " format "\n",           \
+      log_func(level_str format "\n",                                   \
                ## __VA_ARGS__);                                         \
   } while (0)
 
 #ifdef CONFIG_MUTEK_PRINTK
 /** @multiple @This sends a line to the printk backends with the @ref
     LOGK_LEVEL_TRACE level */
-# define vlogk_trace(format, ap)   logk_level_(vlogk_, "\x10", format, ap)
-# define logk_trace(format...)   logk_level_(logk_, "\x10", format)
+# define vlogk_trace(format, ap)   logk_level_(vlogk_, "\x10[" LOGK_COLOR(34) LOGK_MODULE_ID LOGK_COLOR() "] ", format, ap)
+# define logk_trace(format...)   logk_level_(logk_, "\x10[" LOGK_COLOR(34) LOGK_MODULE_ID LOGK_COLOR() "] ", format)
 /** @multiple @This sends a line to the printk backends with the @ref
     LOGK_LEVEL_DEBUG level */
-# define vlogk_debug(format, ap)   logk_level_(vlogk_, "\x20", format, ap)
-# define logk_debug(format...)   logk_level_(logk_, "\x20", format)
+# define vlogk_debug(format, ap)   logk_level_(vlogk_, "\x20[" LOGK_COLOR(36) LOGK_MODULE_ID LOGK_COLOR() "] ", format, ap)
+# define logk_debug(format...)   logk_level_(logk_, "\x20[" LOGK_COLOR(36) LOGK_MODULE_ID LOGK_COLOR() "] ", format)
 /** @multiple @This sends a line to the printk backends with the @ref
     LOGK_LEVEL_NORMAL level */
-# define vlogk(format, ap)         logk_level_(vlogk_, "\x30", format, ap)
-# define logk(format...)         logk_level_(logk_, "\x30", format)
+# define vlogk(format, ap)         logk_level_(vlogk_, "\x30[" LOGK_COLOR(97) LOGK_MODULE_ID LOGK_COLOR() "] ", format, ap)
+# define logk(format...)         logk_level_(logk_, "\x30[" LOGK_COLOR(97) LOGK_MODULE_ID LOGK_COLOR() "] ", format)
 /** @multiple @This sends a line to the printk backends with the @ref
     LOGK_LEVEL_WARNING level */
-# define vlogk_warning(format, ap) logk_level_(vlogk_, "\x40", format, ap)
-# define logk_warning(format...) logk_level_(logk_, "\x40", format)
+# define vlogk_warning(format, ap) logk_level_(vlogk_, "\x40[" LOGK_COLOR(93) LOGK_MODULE_ID LOGK_COLOR() "] ", format, ap)
+# define logk_warning(format...) logk_level_(logk_, "\x40[" LOGK_COLOR(93) LOGK_MODULE_ID LOGK_COLOR() "] ", format)
 /** @multiple @This sends a line to the printk backends with the @ref
     LOGK_LEVEL_ERROR level */
-# define vlogk_error(format, ap)   logk_level_(vlogk_, "\x50", format, ap)
-# define logk_error(format...)   logk_level_(logk_, "\x50", format)
+# define vlogk_error(format, ap)   logk_level_(vlogk_, "\x50[" LOGK_COLOR(91) LOGK_MODULE_ID LOGK_COLOR() "] ", format, ap)
+# define logk_error(format...)   logk_level_(logk_, "\x50[" LOGK_COLOR(91) LOGK_MODULE_ID LOGK_COLOR() "] ", format)
 
 #else
 

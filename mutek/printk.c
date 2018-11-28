@@ -82,7 +82,7 @@ inline ssize_t vlogk_(const char *format, va_list ap)
 #endif
 
   struct logk_filter_s f = {
-    .id = endian_be32_na_load(format + 2),
+    .id = endian_be32_na_load(format + 2 + sizeof(LOGK_COLOR(XX)) - 1),
     .level = format[0]
   };
 
