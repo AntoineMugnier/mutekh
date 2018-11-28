@@ -192,8 +192,7 @@ void mutekh_startup_smp()
   /* call smp init functions */
   INIT_SMP_INIT();
 
-  logk_error("Reached end of init, halting");
-  abort();
+  mutek_startup_halt();
 }
 
 void mutekh_startup_devready()
@@ -217,3 +216,10 @@ void mutek_app_initsmp()
 }
 #endif
 
+void mutek_startup_halt(void)
+{
+  logk("System halted");
+  cpu_interrupt_disable();
+  while (1)
+    cpu_interrupt_wait();
+}

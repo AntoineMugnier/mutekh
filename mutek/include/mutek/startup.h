@@ -73,6 +73,8 @@ ALWAYS_INLINE void mutekh_startup_smp_barrier(void)
     #CONFIG_MUTEK_SMP_APP_START is defined. */
 void app_start(void);
 
+void mutek_startup_halt(void);
+
 C_HEADER_END
 
 #endif
