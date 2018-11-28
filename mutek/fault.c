@@ -20,7 +20,6 @@
 
 */
 
-#include <mutek/printk.h>
 #include <mutek/startup.h>
 
 #include <hexo/interrupt.h>
@@ -29,6 +28,7 @@
 #include <hexo/power.h>
 
 #ifdef CONFIG_MUTEK_PRINTK
+#include <mutek/printk.h>
 static lock_t fault_lock;
 #endif
 
@@ -71,12 +71,9 @@ static CPU_EXCEPTION_HANDLER(fault_handler)
   lock_release(&fault_lock);
 #endif
 
-#ifdef CONFIG_RELEASE
-  power_reboot();
-#else
+  void CONFIG_MUTEK_FAULT_FINISH(void);
   while (1)
-    ;
-#endif
+    CONFIG_MUTEK_FAULT_FINISH();
 }
 
 void mutek_fault_initsmp(void)

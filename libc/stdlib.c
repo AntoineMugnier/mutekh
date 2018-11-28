@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <mutek/printk.h>
+#include <mutek/startup.h>
 #include <hexo/bit.h>
 
 void exit(uint_fast8_t status)
@@ -18,10 +19,10 @@ error_t atexit(void (*function)(void))
 
 void abort(void)
 {
-  cpu_trap();
-
+  logk_error("Aborted at pc=%p\n", __builtin_return_address(0));
+  void CONFIG_MUTEK_FAULT_FINISH(void);
   while (1)
-    ;
+    CONFIG_MUTEK_FAULT_FINISH();
 }
 
 void *bsearch(
