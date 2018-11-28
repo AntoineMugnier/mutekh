@@ -29,11 +29,11 @@ void __assert_fail(const char *file, uint_fast16_t line, const char *expr)
       printk("Assertion failed at %s:%u: (%s) is false\n", file, line, expr);
 #  endif
 # endif
-
-      void CONFIG_MUTEK_FAULT_FINISH(void);
-      while (1)
-        CONFIG_MUTEK_FAULT_FINISH();
     }
+
+  void CONFIG_MUTEK_FAULT_FINISH(void);
+  while (1)
+    CONFIG_MUTEK_FAULT_FINISH();
 }
 
 #endif

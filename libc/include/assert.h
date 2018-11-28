@@ -59,9 +59,11 @@ C_HEADER_BEGIN
   !(CONFIG_LIBC_ASSERT_FILTER_EXPR); })
 
 #  if defined(CONFIG_LIBC_ASSERT_SIMPLE) || !defined(CONFIG_MUTEK_PRINTK)
+__attribute__((noreturn))
 void __assert_fail(void);
 #   define __assert(expr, str) ((void) ((expr) ? 0 : __assert_fail()))
 #  else
+__attribute__((noreturn))
 void __assert_fail(const char *file, uint_fast16_t line, const char *expr);
 #   define __assert(expr, str) ((void) ((expr) ? 0 : __assert_fail(MUTEK_CFILE, __LINE__, str)))
 #  endif
@@ -82,7 +84,7 @@ void __assert_fail(const char *file, uint_fast16_t line, const char *expr);
       __builtin_unreachable();                                          \
     else                                                                \
       __assert(0, "UNREACHABLE()");                                     \
-  } while (0)
+  } while (1)
 
 # else
 #  define assert(expr) ((void) 0)
