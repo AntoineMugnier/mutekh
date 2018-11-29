@@ -440,7 +440,7 @@ device_spi_bytecode_exec(struct dev_spi_ctrl_context_s *q,
                 }
               else              /* width */
                 {
-                  rcfg->word_width = op & 0x001f;
+                  rcfg->word_width = (op & 0x001f) + 1;
                   rcfg->bit_order = (op >> 5) & 1;
                 }
               continue;
