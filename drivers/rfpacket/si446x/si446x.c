@@ -1332,7 +1332,6 @@ static KROUTINE_EXEC(si446x_spi_rq_done)
       device_async_init_done(dev, 0);
     case SI446X_STATE_CONFIG_RXC:
     case SI446X_STATE_CONFIG:
-    case SI446X_STATE_PAUSE_RXC:
       si446x_rfp_idle(pv);
       break;
     case SI446X_STATE_RX:
@@ -1350,6 +1349,7 @@ static KROUTINE_EXEC(si446x_spi_rq_done)
         }
       UNREACHABLE();
 
+    case SI446X_STATE_PAUSE_RXC:
     case SI446X_STATE_RXC:
       if (pv->bc_status & bit(STATUS_JAMMING))
         {
@@ -1373,7 +1373,8 @@ static KROUTINE_EXEC(si446x_spi_rq_done)
           si446x_rfp_idle(pv);
           break;
         }
-      UNREACHABLE();
+      si446x_rfp_idle(pv);
+      break;
 
 #ifdef CONFIG_DRIVER_RFPACKET_SI446X_CCA
     case SI446X_STATE_TX_LBT:

@@ -698,11 +698,14 @@ tune_done:
         cst8                    %0,         SI446X_FIFO_INFO_CMD
         pack8			%0,         2
         spi_wr                  %0,         2,	CS_PULSE
+        tst32c                  %mask,      0
+          jmp8                  fifo_flush_done
         /* fifo bug */
         ld32e                   %delay,     %R_CTX_PV,           _offsetof(si446x_ctx_s, bt, 4)
         shi32l                  %delay,     3
         spi_yieldc_delay        %delay
           nop
+      fifo_flush_done:
         ret                     %link
 .endfunc
 
