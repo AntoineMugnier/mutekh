@@ -621,3 +621,7 @@ void memxor(void *dest_, const void *a_, const void *b_, size_t size)
     dest[i] = a[i] ^ b[i];
 }
 
+extern inline uint32_t fnv1a_32_update(uint32_t f, uint8_t x);
+extern inline uint64_t fnv1a_32(const void *data, size_t len);
+extern inline uint64_t fnv1a_64_update(uint64_t f, uint8_t x);
+extern inline uint64_t fnv1a_64(const void *data, size_t len);

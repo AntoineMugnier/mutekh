@@ -196,6 +196,51 @@ stpcpy(char *dest, const char *src);
 
 const char *strerror(error_t errnum);
 
+#define FNV_32_INIT 0x811c9dc5
+#define FNV_64_INIT 0xcbf29ce484222325ULL
+
+inline uint32_t fnv1a_32_update(uint32_t f, uint8_t x)
+{
+  f ^= x;
+#if CONFIG_CPU_HARDWARE_MUL >= 32
+  f *= 0x01000193;
+#else
+  uint32_t f3 = f + (f << 1);
+  f = (f << 24) + (f << 4) + f3 + (f3 << 7);
+#endif
+  return f;
+}
+
+inline uint64_t fnv1a_32(const void *data, size_t len)
+{
+  uint32_t f = FNV_32_INIT;
+  const uint8_t *d = data;
+  for (size_t i = 0; i < len; i++)
+    f = fnv1a_32_update(f, d[i]);
+  return f;
+}
+
+inline uint64_t fnv1a_64_update(uint64_t f, uint8_t x)
+{
+  f ^= x;
+#if CONFIG_CPU_HARDWARE_MUL >= 64
+  f = (f * 0x1b3) + (f << 40);
+#else
+  uint64_t f3 = f + (f << 1);
+  f = (f << 40) + (f3 << 7) + (f3 << 4) + f3;
+#endif
+  return f;
+}
+
+inline uint64_t fnv1a_64(const void *data, size_t len)
+{
+  uint64_t f = FNV_64_INIT;
+  const uint8_t *d = data;
+  for (size_t i = 0; i < len; i++)
+    f = fnv1a_64_update(f, d[i]);
+  return f;
+}
+
 C_HEADER_END
 
 #endif
