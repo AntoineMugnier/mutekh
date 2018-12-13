@@ -1,0 +1,23 @@
+  %set OUTPUT_NAME persist
+
+  # New source code module to be compiled
+  %append MODULES $(OUTPUT_NAME):$(CONFIGPATH)
+
+  %include scripts/options.build
+  %include arch/arch.build
+
+  # Application license
+  CONFIG_LICENSE_APP_LGPL
+
+  # Features
+  CONFIG_APP_START
+
+  CONFIG_MUTEK_CONTEXT_SCHED
+
+  # Libpersist
+  CONFIG_PERSIST
+  CONFIG_PERSIST_RAM_BACKEND
+
+  CONFIG_MUTEK_PRINTK_RUNTIME_LEVEL LOGK_LEVEL_DEBUG
+  CONFIG_MUTEK_PRINTK_RUNTIME_EXPR level >= CONFIG_MUTEK_PRINTK_RUNTIME_LEVEL && (id == 'pste')
+  CONFIG_MUTEK_PRINTK_COMPILE_EXPR CONFIG_MUTEK_PRINTK_RUNTIME_EXPR
