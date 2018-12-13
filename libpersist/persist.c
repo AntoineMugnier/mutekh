@@ -45,7 +45,7 @@ prst_ram_write(uintptr_t addr,
 static inline reg_t
 prst_ram_erase(uintptr_t addr)
 {
-  memset((void *) addr, 0xff, _TMP_PAGESIZE);
+  memset((void *) addr, 0xff, CONFIG_PERSIST_RAM_BACKEND_PAGESIZE);
   return 0;
 }
 #endif
