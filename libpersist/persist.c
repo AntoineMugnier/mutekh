@@ -609,12 +609,14 @@ static error_t persist_write_process(struct persist_context_s *ctx,
            __FUNCTION__, persist_counter_base_get(found),
            zeroes, bits, rq->counter);
 
-    if (zeroes + rq->counter < bits) {
-      persist_counter_zero_range(found, zeroes, zeroes + rq->counter);
+    uint64_t counter = zeroes + rq->counter;
+    rq->counter = counter + persist_counter_base_get(found);
+
+    if (counter < bits) {
+      persist_counter_zero_range(found, zeroes, counter);
       return 0;
     }
 
-    rq->counter += persist_counter_base_get(found) + zeroes;
     break;
   }
   }
@@ -767,7 +769,7 @@ persist_wait_remove(struct persist_context_s *ctx,
 extern inline error_t
 persist_wait_inc(struct persist_context_s *ctx,
                  const struct persist_descriptor_s *desc,
-                 uint16_t uid_offset);
+                 uint16_t uid_offset, uint64_t *counter);
 
 extern inline error_t
 persist_wait_counter_read(struct persist_context_s *ctx,

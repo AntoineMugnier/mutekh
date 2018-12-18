@@ -99,14 +99,14 @@ enum persist_type_e
 /** Value descriptor. */
 struct persist_descriptor_s
 {
-  /** Platform-wise identifier. @tt rq->uid_offset is added to this
-      id. */
+  /** Platform-wide identifier. @ref persist_rq_s::uid_offset is added
+      to this id when a requested is performed. */
   uint16_t uid;
   /** Type */
   uint16_t type:1;
   /** Reseved bits. @internal */
   uint16_t state:3;
-  /** Byte size for blobs, size of integer part for counters. */
+  /** Byte size of blobs, byte size of bitmap for counters. */
   uint16_t size:12;
 } __attribute__((packed));
 
@@ -151,6 +151,8 @@ struct persist_rq_s
     uint64_t counter;
   };
 };
+
+STRUCT_COMPOSE(persist_rq_s, kr);
 
 /** Initialize a context for access to a persistent storage in a
     memory area. */
@@ -314,23 +316,28 @@ persist_wait_erase(struct persist_context_s *ctx),
 
 /** Synchronous persist device operation function. This function use
     the scheduler api to put current context in wait state during the
-    request. */
+    request. The value of @tt counter must contain the increment and
+    is replaced by the value of the counter after the operation. */
 config_depend_and2_inline(CONFIG_PERSIST, CONFIG_MUTEK_CONTEXT_SCHED,
 inline error_t
 persist_wait_inc(struct persist_context_s *ctx,
                  const struct persist_descriptor_s *desc,
-                 uint16_t uid_offset),
+                 uint16_t uid_offset, uint64_t *counter),
 {
   struct persist_rq_s rq = {
     .descriptor = desc,
     .uid_offset = uid_offset,
-    .counter = 1,
+    .counter = *counter,
   };
 
   struct persist_status_s st;
   persist_sched_init(&rq, &st);
   persist_write(ctx, &rq);
   persist_sched_wait(&st);
+
+  *counter = rq.counter;
+
+  *counter = rq.counter;
 
   return rq.error;
 });

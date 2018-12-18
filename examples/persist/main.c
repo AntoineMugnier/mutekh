@@ -104,13 +104,13 @@ static struct my_data d2 =
 static struct my_counter c1 =
   {
    .uid_offset = 0,
-   .value = 0,
+   .value = 1
   };
 
 static struct my_counter c2 =
   {
    .uid_offset = 1,
-   .value = 50,
+   .value = 2,
   };
 
 
@@ -180,15 +180,26 @@ void app_start()
     {
       err = persist_wait_inc(&prst_ctx,
                              &counter_entry,
-                             c1.uid_offset);
+                             c1.uid_offset,
+                             &(c1.value));
+
+      logk_debug("c1 : %llu", c1.value);
+
       if (err)
         ERROR("c1 inc fail: %d (%hhu)", err, i);
 
       err = persist_wait_inc(&prst_ctx,
                              &counter_entry,
-                             c2.uid_offset);
+                             c2.uid_offset,
+                             &(c2.value));
+
+      logk_debug("c2 : %llu", c2.value);
+
       if (err)
         ERROR("c2 inc fail: %d (%hhu)", err, i);
+
+      c1.value = 1;
+      c2.value = 2;
     }
 
   /* COUNTER entries READ */
@@ -201,8 +212,9 @@ void app_start()
   if (err)
     ERROR("c1 read fail: %d)", err);
 
-  c1.value += cout;
-  assert(c1.value == 10);
+  logk_debug("c1 read : %llu", cout);
+
+  assert(cout == 10);
 
   err = persist_wait_counter_read(&prst_ctx,
                                   &counter_entry,
@@ -211,8 +223,9 @@ void app_start()
   if (err)
     ERROR("c2 read fail: %d)", err);
 
-  c2.value += cout;
-  assert(c2.value == 60);
+  logk_debug("c2 read : %llu", cout);
+
+  assert(cout == 20);
 
   logk_debug("persist example ok");
 
