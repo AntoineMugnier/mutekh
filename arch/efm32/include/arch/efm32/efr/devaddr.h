@@ -2,6 +2,7 @@
 #ifndef EFM32_DEVADDR_H_
 #define EFM32_DEVADDR_H_
 
+#define EFM32_RTCC_ADDR      0x40042000
 #define EFM32_RMU_ADDR 	     0x400e5000
 #define EFM32_EMU_ADDR       0x400e3000
 #define EFM32_CMU_ADDR       0x400e4000

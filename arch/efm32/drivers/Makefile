@@ -2,6 +2,7 @@ subdirs-$(CONFIG_DRIVER_EFM32_LEUART) += leuart
 subdirs-$(CONFIG_DRIVER_EFM32_USART) += usart
 subdirs-$(CONFIG_DRIVER_EFM32_TIMER) += timer 
 subdirs-$(CONFIG_DRIVER_EFM32_RTC) += rtc 
+subdirs-$(CONFIG_DRIVER_EFM32_RTCC) += rtcc
 subdirs-$(CONFIG_DRIVER_EFM32_GPIO) += gpio
 subdirs += i2c
 subdirs-$(CONFIG_DRIVER_EFM32_RECMU) += recmu

@@ -234,6 +234,17 @@ DEV_DECLARE_STATIC(gpio_dev, "gpio", 0, efm32_gpio_drv,
 
 #endif
 
+#ifdef CONFIG_DRIVER_EFM32_RTCC
+
+DEV_DECLARE_STATIC(rtcc_dev, "rtcc", 0, efm32_rtcc_drv,
+                   DEV_STATIC_RES_MEM(0x40042000, 0x40042400),
+                   DEV_STATIC_RES_FREQ(32768, 1),
+                   DEV_STATIC_RES_DEV_ICU("/cpu"),
+                   DEV_STATIC_RES_IRQ(0, EFM32_IRQ_RTCC, DEV_IRQ_SENSE_RISING_EDGE, 0, 1),
+                   );
+
+#endif
+
 #ifdef CONFIG_DRIVER_EFM32_TIMER
 
 DEV_DECLARE_STATIC(timer1_dev, "timer0", 0, efm32_timer_drv,
@@ -300,7 +311,9 @@ DEV_DECLARE_STATIC(usart_dev, "spi", 0, efm32_usart_spi_drv,
    #error
   #endif
 
-  #ifdef CONFIG_DRIVER_EFM32_TIMER
+  #ifdef CONFIG_DRIVER_EFM32_RTCC
+                   DEV_STATIC_RES_DEV_TIMER("/rtcc")
+  #elif defined(CONFIG_DRIVER_EFM32_TIMER)
                    DEV_STATIC_RES_DEV_TIMER("/timer0")
   #endif
                    );

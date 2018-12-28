@@ -3,322 +3,419 @@
 ***************************************/
 
 /*
-   bfgen -o cdefs cdefs_use_reg_mask=1                                         \
-     -i rtcc.bf -O rtcc.h
+   bfgen -o cdefs cdefs_use_reg_mask=1 cdefs_use_field_setval=1                \
+     cdefs_use_field_shift=1 cdefs_use_field_shifted_mask=1                    \
+     cdefs_sfx_field_shifter=_SHIFT_VAL
 */
 
-#ifndef _EFM32_RTC_BFGEN_DEFS_
-#define _EFM32_RTC_BFGEN_DEFS_
+#ifndef _EFM32_RTCC_BFGEN_DEFS_
+#define _EFM32_RTCC_BFGEN_DEFS_
 
-#define EFM32_RTC_CTRL_ADDR                          0x00000000
-#define EFM32_RTC_CTRL_MASK                          0x0003df35
-  #define EFM32_RTC_CTRL_EN                        0x00000001
-  #define EFM32_RTC_CTRL_DEBUGRUN                  0x00000004
-  #define EFM32_RTC_CTRL_PRECCV0TOP                0x00000010
-  #define EFM32_RTC_CTRL_CCV1TOP                   0x00000020
-  #define EFM32_RTC_CTRL_CNTPRESC(v)               ((EFM32_RTC_CTRL_CNTPRESC_##v) << 8)
-  #define EFM32_RTC_CTRL_CNTPRESC_SET(x, v)        do { (x) = (((x) & ~0xf00) | ((EFM32_RTC_CTRL_CNTPRESC_##v) << 8)); } while(0)
-  #define EFM32_RTC_CTRL_CNTPRESC_GET(x)           (((x) >> 8) & 0xf)
+#define EFM32_RTCC_CTRL_ADDR                         0x00000000
+#define EFM32_RTCC_CTRL_MASK                         0x00039f35
+  #define EFM32_RTCC_CTRL_ENABLE                   0x00000001
+  #define EFM32_RTCC_CTRL_ENABLE_SHIFT             0
+  #define EFM32_RTCC_CTRL_DEBUGRUN                 0x00000004
+  #define EFM32_RTCC_CTRL_DEBUGRUN_SHIFT           2
+  #define EFM32_RTCC_CTRL_PRECCV0TOP               0x00000010
+  #define EFM32_RTCC_CTRL_PRECCV0TOP_SHIFT         4
+  #define EFM32_RTCC_CTRL_CCV1TOP                  0x00000020
+  #define EFM32_RTCC_CTRL_CCV1TOP_SHIFT            5
+  #define EFM32_RTCC_CTRL_CNTPRESC                 0x00000f00
+  #define EFM32_RTCC_CTRL_CNTPRESC_SHIFT           8
+  #define EFM32_RTCC_CTRL_CNTPRESC_SHIFT_VAL(v)    ((EFM32_RTCC_CTRL_CNTPRESC_##v) << 8)
+  #define EFM32_RTCC_CTRL_CNTPRESC_SET(x, v)       do { (x) = (((x) & ~0xf00) | ((EFM32_RTCC_CTRL_CNTPRESC_##v) << 8)); } while(0)
+  #define EFM32_RTCC_CTRL_CNTPRESC_SETVAL(x, v)    do { (x) = (((x) & ~0xf00) | ((v) << 8)); } while(0)
+  #define EFM32_RTCC_CTRL_CNTPRESC_GET(x)          (((x) >> 8) & 0xf)
 /**  */
-    #define EFM32_RTC_CTRL_CNTPRESC_DIV1             0x00000000
+    #define EFM32_RTCC_CTRL_CNTPRESC_DIV1            0x00000000
 /**  */
-    #define EFM32_RTC_CTRL_CNTPRESC_DIV2             0x00000001
+    #define EFM32_RTCC_CTRL_CNTPRESC_DIV2            0x00000001
 /**  */
-    #define EFM32_RTC_CTRL_CNTPRESC_DIV4             0x00000002
+    #define EFM32_RTCC_CTRL_CNTPRESC_DIV4            0x00000002
 /**  */
-    #define EFM32_RTC_CTRL_CNTPRESC_DIV8             0x00000003
+    #define EFM32_RTCC_CTRL_CNTPRESC_DIV8            0x00000003
 /**  */
-    #define EFM32_RTC_CTRL_CNTPRESC_DIV16            0x00000004
+    #define EFM32_RTCC_CTRL_CNTPRESC_DIV16           0x00000004
 /**  */
-    #define EFM32_RTC_CTRL_CNTPRESC_DIV32            0x00000005
+    #define EFM32_RTCC_CTRL_CNTPRESC_DIV32           0x00000005
 /**  */
-    #define EFM32_RTC_CTRL_CNTPRESC_DIV64            0x00000006
+    #define EFM32_RTCC_CTRL_CNTPRESC_DIV64           0x00000006
 /**  */
-    #define EFM32_RTC_CTRL_CNTPRESC_DIV128           0x00000007
+    #define EFM32_RTCC_CTRL_CNTPRESC_DIV128          0x00000007
 /**  */
-    #define EFM32_RTC_CTRL_CNTPRESC_DIV256           0x00000008
+    #define EFM32_RTCC_CTRL_CNTPRESC_DIV256          0x00000008
 /**  */
-    #define EFM32_RTC_CTRL_CNTPRESC_DIV512           0x00000009
+    #define EFM32_RTCC_CTRL_CNTPRESC_DIV512          0x00000009
 /**  */
-    #define EFM32_RTC_CTRL_CNTPRESC_DIV1024          0x0000000a
+    #define EFM32_RTCC_CTRL_CNTPRESC_DIV1024         0x0000000a
 /**  */
-    #define EFM32_RTC_CTRL_CNTPRESC_DIV2048          0x0000000b
+    #define EFM32_RTCC_CTRL_CNTPRESC_DIV2048         0x0000000b
 /**  */
-    #define EFM32_RTC_CTRL_CNTPRESC_DIV4096          0x0000000c
+    #define EFM32_RTCC_CTRL_CNTPRESC_DIV4096         0x0000000c
 /**  */
-    #define EFM32_RTC_CTRL_CNTPRESC_DIV8192          0x0000000d
+    #define EFM32_RTCC_CTRL_CNTPRESC_DIV8192         0x0000000d
 /**  */
-    #define EFM32_RTC_CTRL_CNTPRESC_DIV16384         0x0000000e
+    #define EFM32_RTCC_CTRL_CNTPRESC_DIV16384        0x0000000e
 /**  */
-    #define EFM32_RTC_CTRL_CNTPRESC_DIV32768         0x0000000f
-  #define EFM32_RTC_CTRL_CNTTICK                   0x00001000
-  #define EFM32_RTC_CTRL_BUMODETSEN                0x00004000
-  #define EFM32_RTC_CTRL_OSCFDETEN                 0x00008000
-  #define EFM32_RTC_CTRL_CNTMODE                   0x00010000
-  #define EFM32_RTC_CTRL_LYEARCORRDIS              0x00020000
+    #define EFM32_RTCC_CTRL_CNTPRESC_DIV32768        0x0000000f
+  #define EFM32_RTCC_CTRL_CNTTICK                  0x00001000
+  #define EFM32_RTCC_CTRL_CNTTICK_SHIFT            12
+  #define EFM32_RTCC_CTRL_OSCFDETEN                0x00008000
+  #define EFM32_RTCC_CTRL_OSCFDETEN_SHIFT          15
+  #define EFM32_RTCC_CTRL_CNTMODE                  0x00010000
+  #define EFM32_RTCC_CTRL_CNTMODE_SHIFT            16
+  #define EFM32_RTCC_CTRL_LYEARCORRDIS             0x00020000
+  #define EFM32_RTCC_CTRL_LYEARCORRDIS_SHIFT       17
 
-#define EFM32_RTC_PRECNT_ADDR                        0x00000004
-#define EFM32_RTC_PRECNT_MASK                        0x00007fff
-  #define EFM32_RTC_PRECNT_PRECNT(v)               ((v) << 0)
-  #define EFM32_RTC_PRECNT_PRECNT_SET(x, v)        do { (x) = (((x) & ~0x7fff) | ((v) << 0)); } while(0)
-  #define EFM32_RTC_PRECNT_PRECNT_GET(x)           (((x) >> 0) & 0x7fff)
+#define EFM32_RTCC_PRECNT_ADDR                       0x00000004
+#define EFM32_RTCC_PRECNT_MASK                       0x00007fff
+  #define EFM32_RTCC_PRECNT_PRECNT                 0x00007fff
+  #define EFM32_RTCC_PRECNT_PRECNT_SHIFT           0
+  #define EFM32_RTCC_PRECNT_PRECNT_SHIFT_VAL(v)    ((v) << 0)
+  #define EFM32_RTCC_PRECNT_PRECNT_SET(x, v)       do { (x) = (((x) & ~0x7fff) | ((v) << 0)); } while(0)
+  #define EFM32_RTCC_PRECNT_PRECNT_GET(x)          (((x) >> 0) & 0x7fff)
 
-#define EFM32_RTC_CNT_ADDR                           0x00000008
-#define EFM32_RTC_CNT_MASK                           0xffffffff
-  #define EFM32_RTC_CNT_CNT(v)                     ((v) << 0)
-  #define EFM32_RTC_CNT_CNT_SET(x, v)              do { (x) = (((x) & ~0xffffffff) | ((v) << 0)); } while(0)
-  #define EFM32_RTC_CNT_CNT_GET(x)                 (((x) >> 0) & 0xffffffff)
+#define EFM32_RTCC_CNT_ADDR                          0x00000008
+#define EFM32_RTCC_CNT_MASK                          0xffffffff
+  #define EFM32_RTCC_CNT_CNT                       0xffffffff
+  #define EFM32_RTCC_CNT_CNT_SHIFT                 0
+  #define EFM32_RTCC_CNT_CNT_SHIFT_VAL(v)          ((v) << 0)
+  #define EFM32_RTCC_CNT_CNT_SET(x, v)             do { (x) = (((x) & ~0xffffffff) | ((v) << 0)); } while(0)
+  #define EFM32_RTCC_CNT_CNT_GET(x)                (((x) >> 0) & 0xffffffff)
 
-#define EFM32_RTC_COMBCNT_ADDR                       0x0000000c
-#define EFM32_RTC_COMBCNT_MASK                       0xffffffff
-  #define EFM32_RTC_COMBCNT_PRECNT(v)              ((v) << 0)
-  #define EFM32_RTC_COMBCNT_PRECNT_SET(x, v)       do { (x) = (((x) & ~0x7fff) | ((v) << 0)); } while(0)
-  #define EFM32_RTC_COMBCNT_PRECNT_GET(x)          (((x) >> 0) & 0x7fff)
-  #define EFM32_RTC_COMBCNT_CNTLSB(v)              ((v) << 15)
-  #define EFM32_RTC_COMBCNT_CNTLSB_SET(x, v)       do { (x) = (((x) & ~0xffff8000) | ((v) << 15)); } while(0)
-  #define EFM32_RTC_COMBCNT_CNTLSB_GET(x)          (((x) >> 15) & 0x1ffff)
+#define EFM32_RTCC_COMBCNT_ADDR                      0x0000000c
+#define EFM32_RTCC_COMBCNT_MASK                      0xffffffff
+  #define EFM32_RTCC_COMBCNT_PRECNT                0x00007fff
+  #define EFM32_RTCC_COMBCNT_PRECNT_SHIFT          0
+  #define EFM32_RTCC_COMBCNT_PRECNT_SHIFT_VAL(v)   ((v) << 0)
+  #define EFM32_RTCC_COMBCNT_PRECNT_SET(x, v)      do { (x) = (((x) & ~0x7fff) | ((v) << 0)); } while(0)
+  #define EFM32_RTCC_COMBCNT_PRECNT_GET(x)         (((x) >> 0) & 0x7fff)
+  #define EFM32_RTCC_COMBCNT_CNTLSB                0xffff8000
+  #define EFM32_RTCC_COMBCNT_CNTLSB_SHIFT          15
+  #define EFM32_RTCC_COMBCNT_CNTLSB_SHIFT_VAL(v)   ((v) << 15)
+  #define EFM32_RTCC_COMBCNT_CNTLSB_SET(x, v)      do { (x) = (((x) & ~0xffff8000) | ((v) << 15)); } while(0)
+  #define EFM32_RTCC_COMBCNT_CNTLSB_GET(x)         (((x) >> 15) & 0x1ffff)
 
-#define EFM32_RTC_TIME_ADDR                          0x00000010
-#define EFM32_RTC_TIME_MASK                          0x003f7f7f
-  #define EFM32_RTC_TIME_SECU(v)                   ((v) << 0)
-  #define EFM32_RTC_TIME_SECU_SET(x, v)            do { (x) = (((x) & ~0xf) | ((v) << 0)); } while(0)
-  #define EFM32_RTC_TIME_SECU_GET(x)               (((x) >> 0) & 0xf)
-  #define EFM32_RTC_TIME_SECT(v)                   ((v) << 4)
-  #define EFM32_RTC_TIME_SECT_SET(x, v)            do { (x) = (((x) & ~0x70) | ((v) << 4)); } while(0)
-  #define EFM32_RTC_TIME_SECT_GET(x)               (((x) >> 4) & 0x7)
-  #define EFM32_RTC_TIME_MINU(v)                   ((v) << 8)
-  #define EFM32_RTC_TIME_MINU_SET(x, v)            do { (x) = (((x) & ~0xf00) | ((v) << 8)); } while(0)
-  #define EFM32_RTC_TIME_MINU_GET(x)               (((x) >> 8) & 0xf)
-  #define EFM32_RTC_TIME_MINT(v)                   ((v) << 12)
-  #define EFM32_RTC_TIME_MINT_SET(x, v)            do { (x) = (((x) & ~0x7000) | ((v) << 12)); } while(0)
-  #define EFM32_RTC_TIME_MINT_GET(x)               (((x) >> 12) & 0x7)
-  #define EFM32_RTC_TIME_HOURU(v)                  ((v) << 16)
-  #define EFM32_RTC_TIME_HOURU_SET(x, v)           do { (x) = (((x) & ~0xf0000) | ((v) << 16)); } while(0)
-  #define EFM32_RTC_TIME_HOURU_GET(x)              (((x) >> 16) & 0xf)
-  #define EFM32_RTC_TIME_HOURT(v)                  ((v) << 20)
-  #define EFM32_RTC_TIME_HOURT_SET(x, v)           do { (x) = (((x) & ~0x300000) | ((v) << 20)); } while(0)
-  #define EFM32_RTC_TIME_HOURT_GET(x)              (((x) >> 20) & 0x3)
+#define EFM32_RTCC_TIME_ADDR                         0x00000010
+#define EFM32_RTCC_TIME_MASK                         0x003f7f7f
+  #define EFM32_RTCC_TIME_SECU                     0x0000000f
+  #define EFM32_RTCC_TIME_SECU_SHIFT               0
+  #define EFM32_RTCC_TIME_SECU_SHIFT_VAL(v)        ((v) << 0)
+  #define EFM32_RTCC_TIME_SECU_SET(x, v)           do { (x) = (((x) & ~0xf) | ((v) << 0)); } while(0)
+  #define EFM32_RTCC_TIME_SECU_GET(x)              (((x) >> 0) & 0xf)
+  #define EFM32_RTCC_TIME_SECT                     0x00000070
+  #define EFM32_RTCC_TIME_SECT_SHIFT               4
+  #define EFM32_RTCC_TIME_SECT_SHIFT_VAL(v)        ((v) << 4)
+  #define EFM32_RTCC_TIME_SECT_SET(x, v)           do { (x) = (((x) & ~0x70) | ((v) << 4)); } while(0)
+  #define EFM32_RTCC_TIME_SECT_GET(x)              (((x) >> 4) & 0x7)
+  #define EFM32_RTCC_TIME_MINU                     0x00000f00
+  #define EFM32_RTCC_TIME_MINU_SHIFT               8
+  #define EFM32_RTCC_TIME_MINU_SHIFT_VAL(v)        ((v) << 8)
+  #define EFM32_RTCC_TIME_MINU_SET(x, v)           do { (x) = (((x) & ~0xf00) | ((v) << 8)); } while(0)
+  #define EFM32_RTCC_TIME_MINU_GET(x)              (((x) >> 8) & 0xf)
+  #define EFM32_RTCC_TIME_MINT                     0x00007000
+  #define EFM32_RTCC_TIME_MINT_SHIFT               12
+  #define EFM32_RTCC_TIME_MINT_SHIFT_VAL(v)        ((v) << 12)
+  #define EFM32_RTCC_TIME_MINT_SET(x, v)           do { (x) = (((x) & ~0x7000) | ((v) << 12)); } while(0)
+  #define EFM32_RTCC_TIME_MINT_GET(x)              (((x) >> 12) & 0x7)
+  #define EFM32_RTCC_TIME_HOURU                    0x000f0000
+  #define EFM32_RTCC_TIME_HOURU_SHIFT              16
+  #define EFM32_RTCC_TIME_HOURU_SHIFT_VAL(v)       ((v) << 16)
+  #define EFM32_RTCC_TIME_HOURU_SET(x, v)          do { (x) = (((x) & ~0xf0000) | ((v) << 16)); } while(0)
+  #define EFM32_RTCC_TIME_HOURU_GET(x)             (((x) >> 16) & 0xf)
+  #define EFM32_RTCC_TIME_HOURT                    0x00300000
+  #define EFM32_RTCC_TIME_HOURT_SHIFT              20
+  #define EFM32_RTCC_TIME_HOURT_SHIFT_VAL(v)       ((v) << 20)
+  #define EFM32_RTCC_TIME_HOURT_SET(x, v)          do { (x) = (((x) & ~0x300000) | ((v) << 20)); } while(0)
+  #define EFM32_RTCC_TIME_HOURT_GET(x)             (((x) >> 20) & 0x3)
 
-#define EFM32_RTC_DATE_ADDR                          0x00000014
-#define EFM32_RTC_DATE_MASK                          0x07ff1f3f
-  #define EFM32_RTC_DATE_DAYOMU(v)                 ((v) << 0)
-  #define EFM32_RTC_DATE_DAYOMU_SET(x, v)          do { (x) = (((x) & ~0xf) | ((v) << 0)); } while(0)
-  #define EFM32_RTC_DATE_DAYOMU_GET(x)             (((x) >> 0) & 0xf)
-  #define EFM32_RTC_DATE_DAYOMT(v)                 ((v) << 4)
-  #define EFM32_RTC_DATE_DAYOMT_SET(x, v)          do { (x) = (((x) & ~0x30) | ((v) << 4)); } while(0)
-  #define EFM32_RTC_DATE_DAYOMT_GET(x)             (((x) >> 4) & 0x3)
-  #define EFM32_RTC_DATE_MONTHU(v)                 ((v) << 8)
-  #define EFM32_RTC_DATE_MONTHU_SET(x, v)          do { (x) = (((x) & ~0xf00) | ((v) << 8)); } while(0)
-  #define EFM32_RTC_DATE_MONTHU_GET(x)             (((x) >> 8) & 0xf)
-  #define EFM32_RTC_DATE_MONTHT                    0x00001000
-  #define EFM32_RTC_DATE_YEARU(v)                  ((v) << 16)
-  #define EFM32_RTC_DATE_YEARU_SET(x, v)           do { (x) = (((x) & ~0xf0000) | ((v) << 16)); } while(0)
-  #define EFM32_RTC_DATE_YEARU_GET(x)              (((x) >> 16) & 0xf)
-  #define EFM32_RTC_DATE_YEART(v)                  ((v) << 20)
-  #define EFM32_RTC_DATE_YEART_SET(x, v)           do { (x) = (((x) & ~0xf00000) | ((v) << 20)); } while(0)
-  #define EFM32_RTC_DATE_YEART_GET(x)              (((x) >> 20) & 0xf)
-  #define EFM32_RTC_DATE_DAYOW(v)                  ((v) << 24)
-  #define EFM32_RTC_DATE_DAYOW_SET(x, v)           do { (x) = (((x) & ~0x7000000) | ((v) << 24)); } while(0)
-  #define EFM32_RTC_DATE_DAYOW_GET(x)              (((x) >> 24) & 0x7)
+#define EFM32_RTCC_DATE_ADDR                         0x00000014
+#define EFM32_RTCC_DATE_MASK                         0x07ff1f3f
+  #define EFM32_RTCC_DATE_DAYOMU                   0x0000000f
+  #define EFM32_RTCC_DATE_DAYOMU_SHIFT             0
+  #define EFM32_RTCC_DATE_DAYOMU_SHIFT_VAL(v)      ((v) << 0)
+  #define EFM32_RTCC_DATE_DAYOMU_SET(x, v)         do { (x) = (((x) & ~0xf) | ((v) << 0)); } while(0)
+  #define EFM32_RTCC_DATE_DAYOMU_GET(x)            (((x) >> 0) & 0xf)
+  #define EFM32_RTCC_DATE_DAYOMT                   0x00000030
+  #define EFM32_RTCC_DATE_DAYOMT_SHIFT             4
+  #define EFM32_RTCC_DATE_DAYOMT_SHIFT_VAL(v)      ((v) << 4)
+  #define EFM32_RTCC_DATE_DAYOMT_SET(x, v)         do { (x) = (((x) & ~0x30) | ((v) << 4)); } while(0)
+  #define EFM32_RTCC_DATE_DAYOMT_GET(x)            (((x) >> 4) & 0x3)
+  #define EFM32_RTCC_DATE_MONTHU                   0x00000f00
+  #define EFM32_RTCC_DATE_MONTHU_SHIFT             8
+  #define EFM32_RTCC_DATE_MONTHU_SHIFT_VAL(v)      ((v) << 8)
+  #define EFM32_RTCC_DATE_MONTHU_SET(x, v)         do { (x) = (((x) & ~0xf00) | ((v) << 8)); } while(0)
+  #define EFM32_RTCC_DATE_MONTHU_GET(x)            (((x) >> 8) & 0xf)
+  #define EFM32_RTCC_DATE_MONTHT                   0x00001000
+  #define EFM32_RTCC_DATE_MONTHT_SHIFT             12
+  #define EFM32_RTCC_DATE_YEARU                    0x000f0000
+  #define EFM32_RTCC_DATE_YEARU_SHIFT              16
+  #define EFM32_RTCC_DATE_YEARU_SHIFT_VAL(v)       ((v) << 16)
+  #define EFM32_RTCC_DATE_YEARU_SET(x, v)          do { (x) = (((x) & ~0xf0000) | ((v) << 16)); } while(0)
+  #define EFM32_RTCC_DATE_YEARU_GET(x)             (((x) >> 16) & 0xf)
+  #define EFM32_RTCC_DATE_YEART                    0x00f00000
+  #define EFM32_RTCC_DATE_YEART_SHIFT              20
+  #define EFM32_RTCC_DATE_YEART_SHIFT_VAL(v)       ((v) << 20)
+  #define EFM32_RTCC_DATE_YEART_SET(x, v)          do { (x) = (((x) & ~0xf00000) | ((v) << 20)); } while(0)
+  #define EFM32_RTCC_DATE_YEART_GET(x)             (((x) >> 20) & 0xf)
+  #define EFM32_RTCC_DATE_DAYOW                    0x07000000
+  #define EFM32_RTCC_DATE_DAYOW_SHIFT              24
+  #define EFM32_RTCC_DATE_DAYOW_SHIFT_VAL(v)       ((v) << 24)
+  #define EFM32_RTCC_DATE_DAYOW_SET(x, v)          do { (x) = (((x) & ~0x7000000) | ((v) << 24)); } while(0)
+  #define EFM32_RTCC_DATE_DAYOW_GET(x)             (((x) >> 24) & 0x7)
 
-#define EFM32_RTC_IF_ADDR                            0x00000018
-#define EFM32_RTC_IF_MASK                            0x000007ff
-  #define EFM32_RTC_IF_OF                          0x00000001
-  #define EFM32_RTC_IF_CC_COUNT                    3
-  #define EFM32_RTC_IF_CC(fidx)                    (0x00000002 << ((fidx)))
-  #define EFM32_RTC_IF_OSCFAIL                     0x00000010
-  #define EFM32_RTC_IF_CNTTICK                     0x00000020
-  #define EFM32_RTC_IF_MINTICK                     0x00000040
-  #define EFM32_RTC_IF_HOURTICK                    0x00000080
-  #define EFM32_RTC_IF_DAYTICK                     0x00000100
-  #define EFM32_RTC_IF_DAYOWOF                     0x00000200
-  #define EFM32_RTC_IF_MONTHTICK                   0x00000400
+#define EFM32_RTCC_IF_ADDR                           0x00000018
+#define EFM32_RTCC_IF_MASK                           0x000007ff
+  #define EFM32_RTCC_IF_OF                         0x00000001
+  #define EFM32_RTCC_IF_OF_SHIFT                   0
+  #define EFM32_RTCC_IF_CC_COUNT                   3
+  #define EFM32_RTCC_IF_CC(fidx)                   (0x00000002 << ((fidx)))
+  #define EFM32_RTCC_IF_CC_SHIFT(fidx)             ((fidx) + 1)
+  #define EFM32_RTCC_IF_OSCFAIL                    0x00000010
+  #define EFM32_RTCC_IF_OSCFAIL_SHIFT              4
+  #define EFM32_RTCC_IF_CNTTICK                    0x00000020
+  #define EFM32_RTCC_IF_CNTTICK_SHIFT              5
+  #define EFM32_RTCC_IF_MINTICK                    0x00000040
+  #define EFM32_RTCC_IF_MINTICK_SHIFT              6
+  #define EFM32_RTCC_IF_HOURTICK                   0x00000080
+  #define EFM32_RTCC_IF_HOURTICK_SHIFT             7
+  #define EFM32_RTCC_IF_DAYTICK                    0x00000100
+  #define EFM32_RTCC_IF_DAYTICK_SHIFT              8
+  #define EFM32_RTCC_IF_DAYOWOF                    0x00000200
+  #define EFM32_RTCC_IF_DAYOWOF_SHIFT              9
+  #define EFM32_RTCC_IF_MONTHTICK                  0x00000400
+  #define EFM32_RTCC_IF_MONTHTICK_SHIFT            10
 
-#define EFM32_RTC_IFS_ADDR                           0x0000001c
-#define EFM32_RTC_IFS_MASK                           0x000007ff
-  #define EFM32_RTC_IFS_OF                         0x00000001
-  #define EFM32_RTC_IFS_CC_COUNT                   3
-  #define EFM32_RTC_IFS_CC(fidx)                   (0x00000002 << ((fidx)))
-  #define EFM32_RTC_IFS_OSCFAIL                    0x00000010
-  #define EFM32_RTC_IFS_CNTTICK                    0x00000020
-  #define EFM32_RTC_IFS_MINTICK                    0x00000040
-  #define EFM32_RTC_IFS_HOURTICK                   0x00000080
-  #define EFM32_RTC_IFS_DAYTICK                    0x00000100
-  #define EFM32_RTC_IFS_DAYOWOF                    0x00000200
-  #define EFM32_RTC_IFS_MONTHTICK                  0x00000400
+#define EFM32_RTCC_IFS_ADDR                          0x0000001c
+#define EFM32_RTCC_IFS_MASK                          0x000007ff
+  #define EFM32_RTCC_IFS_OF                        0x00000001
+  #define EFM32_RTCC_IFS_OF_SHIFT                  0
+  #define EFM32_RTCC_IFS_CC_COUNT                  3
+  #define EFM32_RTCC_IFS_CC(fidx)                  (0x00000002 << ((fidx)))
+  #define EFM32_RTCC_IFS_CC_SHIFT(fidx)            ((fidx) + 1)
+  #define EFM32_RTCC_IFS_OSCFAIL                   0x00000010
+  #define EFM32_RTCC_IFS_OSCFAIL_SHIFT             4
+  #define EFM32_RTCC_IFS_CNTTICK                   0x00000020
+  #define EFM32_RTCC_IFS_CNTTICK_SHIFT             5
+  #define EFM32_RTCC_IFS_MINTICK                   0x00000040
+  #define EFM32_RTCC_IFS_MINTICK_SHIFT             6
+  #define EFM32_RTCC_IFS_HOURTICK                  0x00000080
+  #define EFM32_RTCC_IFS_HOURTICK_SHIFT            7
+  #define EFM32_RTCC_IFS_DAYTICK                   0x00000100
+  #define EFM32_RTCC_IFS_DAYTICK_SHIFT             8
+  #define EFM32_RTCC_IFS_DAYOWOF                   0x00000200
+  #define EFM32_RTCC_IFS_DAYOWOF_SHIFT             9
+  #define EFM32_RTCC_IFS_MONTHTICK                 0x00000400
+  #define EFM32_RTCC_IFS_MONTHTICK_SHIFT           10
 
-#define EFM32_RTC_IFC_ADDR                           0x00000020
-#define EFM32_RTC_IFC_MASK                           0x000007ff
-  #define EFM32_RTC_IFC_OF                         0x00000001
-  #define EFM32_RTC_IFC_CC_COUNT                   3
-  #define EFM32_RTC_IFC_CC(fidx)                   (0x00000002 << ((fidx)))
-  #define EFM32_RTC_IFC_OSCFAIL                    0x00000010
-  #define EFM32_RTC_IFC_CNTTICK                    0x00000020
-  #define EFM32_RTC_IFC_MINTICK                    0x00000040
-  #define EFM32_RTC_IFC_HOURTICK                   0x00000080
-  #define EFM32_RTC_IFC_DAYTICK                    0x00000100
-  #define EFM32_RTC_IFC_DAYOWOF                    0x00000200
-  #define EFM32_RTC_IFC_MONTHTICK                  0x00000400
+#define EFM32_RTCC_IFC_ADDR                          0x00000020
+#define EFM32_RTCC_IFC_MASK                          0x000007ff
+  #define EFM32_RTCC_IFC_OF                        0x00000001
+  #define EFM32_RTCC_IFC_OF_SHIFT                  0
+  #define EFM32_RTCC_IFC_CC_COUNT                  3
+  #define EFM32_RTCC_IFC_CC(fidx)                  (0x00000002 << ((fidx)))
+  #define EFM32_RTCC_IFC_CC_SHIFT(fidx)            ((fidx) + 1)
+  #define EFM32_RTCC_IFC_OSCFAIL                   0x00000010
+  #define EFM32_RTCC_IFC_OSCFAIL_SHIFT             4
+  #define EFM32_RTCC_IFC_CNTTICK                   0x00000020
+  #define EFM32_RTCC_IFC_CNTTICK_SHIFT             5
+  #define EFM32_RTCC_IFC_MINTICK                   0x00000040
+  #define EFM32_RTCC_IFC_MINTICK_SHIFT             6
+  #define EFM32_RTCC_IFC_HOURTICK                  0x00000080
+  #define EFM32_RTCC_IFC_HOURTICK_SHIFT            7
+  #define EFM32_RTCC_IFC_DAYTICK                   0x00000100
+  #define EFM32_RTCC_IFC_DAYTICK_SHIFT             8
+  #define EFM32_RTCC_IFC_DAYOWOF                   0x00000200
+  #define EFM32_RTCC_IFC_DAYOWOF_SHIFT             9
+  #define EFM32_RTCC_IFC_MONTHTICK                 0x00000400
+  #define EFM32_RTCC_IFC_MONTHTICK_SHIFT           10
 
-#define EFM32_RTC_IEN_ADDR                           0x00000024
-#define EFM32_RTC_IEN_MASK                           0x000007ff
-  #define EFM32_RTC_IEN_OF                         0x00000001
-  #define EFM32_RTC_IEN_CC_COUNT                   3
-  #define EFM32_RTC_IEN_CC(fidx)                   (0x00000002 << ((fidx)))
-  #define EFM32_RTC_IEN_OSCFAIL                    0x00000010
-  #define EFM32_RTC_IEN_CNTTICK                    0x00000020
-  #define EFM32_RTC_IEN_MINTICK                    0x00000040
-  #define EFM32_RTC_IEN_HOURTICK                   0x00000080
-  #define EFM32_RTC_IEN_DAYTICK                    0x00000100
-  #define EFM32_RTC_IEN_DAYOWOF                    0x00000200
-  #define EFM32_RTC_IEN_MONTHTICK                  0x00000400
+#define EFM32_RTCC_IEN_ADDR                          0x00000024
+#define EFM32_RTCC_IEN_MASK                          0x000007ff
+  #define EFM32_RTCC_IEN_OF                        0x00000001
+  #define EFM32_RTCC_IEN_OF_SHIFT                  0
+  #define EFM32_RTCC_IEN_CC_COUNT                  3
+  #define EFM32_RTCC_IEN_CC(fidx)                  (0x00000002 << ((fidx)))
+  #define EFM32_RTCC_IEN_CC_SHIFT(fidx)            ((fidx) + 1)
+  #define EFM32_RTCC_IEN_OSCFAIL                   0x00000010
+  #define EFM32_RTCC_IEN_OSCFAIL_SHIFT             4
+  #define EFM32_RTCC_IEN_CNTTICK                   0x00000020
+  #define EFM32_RTCC_IEN_CNTTICK_SHIFT             5
+  #define EFM32_RTCC_IEN_MINTICK                   0x00000040
+  #define EFM32_RTCC_IEN_MINTICK_SHIFT             6
+  #define EFM32_RTCC_IEN_HOURTICK                  0x00000080
+  #define EFM32_RTCC_IEN_HOURTICK_SHIFT            7
+  #define EFM32_RTCC_IEN_DAYTICK                   0x00000100
+  #define EFM32_RTCC_IEN_DAYTICK_SHIFT             8
+  #define EFM32_RTCC_IEN_DAYOWOF                   0x00000200
+  #define EFM32_RTCC_IEN_DAYOWOF_SHIFT             9
+  #define EFM32_RTCC_IEN_MONTHTICK                 0x00000400
+  #define EFM32_RTCC_IEN_MONTHTICK_SHIFT           10
 
-#define EFM32_RTC_STATUS_ADDR                        0x00000028
-#define EFM32_RTC_STATUS_MASK                        0x00000001
-  #define EFM32_RTC_STATUS_BUMODETS                0x00000001
+#define EFM32_RTCC_CMD_ADDR                          0x0000002c
+#define EFM32_RTCC_CMD_MASK                          0x00000001
+  #define EFM32_RTCC_CMD_CLRSTATUS                 0x00000001
+  #define EFM32_RTCC_CMD_CLRSTATUS_SHIFT           0
 
-#define EFM32_RTC_CMD_ADDR                           0x0000002c
-#define EFM32_RTC_CMD_MASK                           0x00000001
-  #define EFM32_RTC_CMD_CLRSTATUS                  0x00000001
+#define EFM32_RTCC_SYNCBUSY_ADDR                     0x00000030
+#define EFM32_RTCC_SYNCBUSY_MASK                     0x00000020
+  #define EFM32_RTCC_SYNCBUSY_CMD                  0x00000020
+  #define EFM32_RTCC_SYNCBUSY_CMD_SHIFT            5
 
-#define EFM32_RTC_SYNCBUSY_ADDR                      0x00000030
-#define EFM32_RTC_SYNCBUSY_MASK                      0x00000020
-  #define EFM32_RTC_SYNCBUSY_CMD                   0x00000020
+#define EFM32_RTCC_POWERDOWN_ADDR                    0x00000034
+#define EFM32_RTCC_POWERDOWN_MASK                    0x00000001
+  #define EFM32_RTCC_POWERDOWN_RAM                 0x00000001
+  #define EFM32_RTCC_POWERDOWN_RAM_SHIFT           0
 
-#define EFM32_RTC_POWERDOWN_ADDR                     0x00000034
-#define EFM32_RTC_POWERDOWN_MASK                     0x00000001
-  #define EFM32_RTC_POWERDOWN_RAM                  0x00000001
+#define EFM32_RTCC_LOCK_ADDR                         0x00000038
+#define EFM32_RTCC_LOCK_MASK                         0x0000ffff
+  #define EFM32_RTCC_LOCK_LOCKKEY                  0x0000ffff
+  #define EFM32_RTCC_LOCK_LOCKKEY_SHIFT            0
+  #define EFM32_RTCC_LOCK_LOCKKEY_SHIFT_VAL(v)     ((EFM32_RTCC_LOCK_LOCKKEY_##v) << 0)
+  #define EFM32_RTCC_LOCK_LOCKKEY_SET(x, v)        do { (x) = (((x) & ~0xffff) | ((EFM32_RTCC_LOCK_LOCKKEY_##v) << 0)); } while(0)
+  #define EFM32_RTCC_LOCK_LOCKKEY_SETVAL(x, v)     do { (x) = (((x) & ~0xffff) | ((v) << 0)); } while(0)
+  #define EFM32_RTCC_LOCK_LOCKKEY_GET(x)           (((x) >> 0) & 0xffff)
+/**  */
+    #define EFM32_RTCC_LOCK_LOCKKEY_UNLOCKED         0x00000000
+/**  */
+    #define EFM32_RTCC_LOCK_LOCKKEY_LOCKED           0x00000001
 
-#define EFM32_RTC_LOCK_ADDR                          0x00000038
-#define EFM32_RTC_LOCK_MASK                          0x0000ffff
-  #define EFM32_RTC_LOCK_LOCKKEY(v)                ((EFM32_RTC_LOCK_LOCKKEY_##v) << 0)
-  #define EFM32_RTC_LOCK_LOCKKEY_SET(x, v)         do { (x) = (((x) & ~0xffff) | ((EFM32_RTC_LOCK_LOCKKEY_##v) << 0)); } while(0)
-  #define EFM32_RTC_LOCK_LOCKKEY_GET(x)            (((x) >> 0) & 0xffff)
-/**  */
-    #define EFM32_RTC_LOCK_LOCKKEY_UNLOCKED          0x00000000
-/**  */
-    #define EFM32_RTC_LOCK_LOCKKEY_LOCKED            0x00000001
+#define EFM32_RTCC_EM4WUEN_ADDR                      0x0000003c
+#define EFM32_RTCC_EM4WUEN_MASK                      0x00000001
+  #define EFM32_RTCC_EM4WUEN_EM4WU                 0x00000001
+  #define EFM32_RTCC_EM4WUEN_EM4WU_SHIFT           0
 
-#define EFM32_RTC_EM4WUEN_ADDR                       0x0000003c
-#define EFM32_RTC_EM4WUEN_MASK                       0x00000001
-  #define EFM32_RTC_EM4WUEN_EM4WU                  0x00000001
+#define EFM32_RTCC_CC_CTRL_ADDR(ridx)                (0x00000040 + (ridx) * 16)
+#define EFM32_RTCC_CC_CTRL_COUNT                     3
+#define EFM32_RTCC_CC_CTRL_MASK                      0x0003fbff
+  #define EFM32_RTCC_CC_CTRL_MODE                  0x00000003
+  #define EFM32_RTCC_CC_CTRL_MODE_SHIFT            0
+  #define EFM32_RTCC_CC_CTRL_MODE_SHIFT_VAL(v)     ((EFM32_RTCC_CC_CTRL_MODE_##v) << 0)
+  #define EFM32_RTCC_CC_CTRL_MODE_SET(x, v)        do { (x) = (((x) & ~0x3) | ((EFM32_RTCC_CC_CTRL_MODE_##v) << 0)); } while(0)
+  #define EFM32_RTCC_CC_CTRL_MODE_SETVAL(x, v)     do { (x) = (((x) & ~0x3) | ((v) << 0)); } while(0)
+  #define EFM32_RTCC_CC_CTRL_MODE_GET(x)           (((x) >> 0) & 0x3)
+/**  */
+    #define EFM32_RTCC_CC_CTRL_MODE_OFF              0x00000000
+/**  */
+    #define EFM32_RTCC_CC_CTRL_MODE_INPUTCAPTURE     0x00000001
+/**  */
+    #define EFM32_RTCC_CC_CTRL_MODE_OUTPUTCOMPARE    0x00000002
+  #define EFM32_RTCC_CC_CTRL_CMOA                  0x0000000c
+  #define EFM32_RTCC_CC_CTRL_CMOA_SHIFT            2
+  #define EFM32_RTCC_CC_CTRL_CMOA_SHIFT_VAL(v)     ((EFM32_RTCC_CC_CTRL_CMOA_##v) << 2)
+  #define EFM32_RTCC_CC_CTRL_CMOA_SET(x, v)        do { (x) = (((x) & ~0xc) | ((EFM32_RTCC_CC_CTRL_CMOA_##v) << 2)); } while(0)
+  #define EFM32_RTCC_CC_CTRL_CMOA_SETVAL(x, v)     do { (x) = (((x) & ~0xc) | ((v) << 2)); } while(0)
+  #define EFM32_RTCC_CC_CTRL_CMOA_GET(x)           (((x) >> 2) & 0x3)
+/**  */
+    #define EFM32_RTCC_CC_CTRL_CMOA_PULSE            0x00000000
+/**  */
+    #define EFM32_RTCC_CC_CTRL_CMOA_TOGGLE           0x00000001
+/**  */
+    #define EFM32_RTCC_CC_CTRL_CMOA_CLEAR            0x00000002
+/**  */
+    #define EFM32_RTCC_CC_CTRL_CMOA_UP               0x00000003
+  #define EFM32_RTCC_CC_CTRL_ICEDGE                0x00000030
+  #define EFM32_RTCC_CC_CTRL_ICEDGE_SHIFT          4
+  #define EFM32_RTCC_CC_CTRL_ICEDGE_SHIFT_VAL(v)   ((EFM32_RTCC_CC_CTRL_ICEDGE_##v) << 4)
+  #define EFM32_RTCC_CC_CTRL_ICEDGE_SET(x, v)      do { (x) = (((x) & ~0x30) | ((EFM32_RTCC_CC_CTRL_ICEDGE_##v) << 4)); } while(0)
+  #define EFM32_RTCC_CC_CTRL_ICEDGE_SETVAL(x, v)   do { (x) = (((x) & ~0x30) | ((v) << 4)); } while(0)
+  #define EFM32_RTCC_CC_CTRL_ICEDGE_GET(x)         (((x) >> 4) & 0x3)
+/**  */
+    #define EFM32_RTCC_CC_CTRL_ICEDGE_RISING         0x00000000
+/**  */
+    #define EFM32_RTCC_CC_CTRL_ICEDGE_FALLING        0x00000001
+/**  */
+    #define EFM32_RTCC_CC_CTRL_ICEDGE_BOTH           0x00000002
+/**  */
+    #define EFM32_RTCC_CC_CTRL_ICEDGE_NONE           0x00000003
+  #define EFM32_RTCC_CC_CTRL_PRSSEL                0x000003c0
+  #define EFM32_RTCC_CC_CTRL_PRSSEL_SHIFT          6
+  #define EFM32_RTCC_CC_CTRL_PRSSEL_SHIFT_VAL(v)   ((v) << 6)
+  #define EFM32_RTCC_CC_CTRL_PRSSEL_SET(x, v)      do { (x) = (((x) & ~0x3c0) | ((v) << 6)); } while(0)
+  #define EFM32_RTCC_CC_CTRL_PRSSEL_GET(x)         (((x) >> 6) & 0xf)
+  #define EFM32_RTCC_CC_CTRL_COMPBASE              0x00000800
+  #define EFM32_RTCC_CC_CTRL_COMPBASE_SHIFT        11
+  #define EFM32_RTCC_CC_CTRL_COMPMASK              0x0001f000
+  #define EFM32_RTCC_CC_CTRL_COMPMASK_SHIFT        12
+  #define EFM32_RTCC_CC_CTRL_COMPMASK_SHIFT_VAL(v) ((v) << 12)
+  #define EFM32_RTCC_CC_CTRL_COMPMASK_SET(x, v)    do { (x) = (((x) & ~0x1f000) | ((v) << 12)); } while(0)
+  #define EFM32_RTCC_CC_CTRL_COMPMASK_GET(x)       (((x) >> 12) & 0x1f)
+  #define EFM32_RTCC_CC_CTRL_DAYCC                 0x00020000
+  #define EFM32_RTCC_CC_CTRL_DAYCC_SHIFT           17
 
-#define EFM32_RTC_CC_CTRL_ADDR(ridx)                 (0x00000040 + (ridx) * 16)
-#define EFM32_RTC_CC_CTRL_COUNT                      3
-#define EFM32_RTC_CC_CTRL_MASK                       0x0003fbff
-  #define EFM32_RTC_CC_CTRL_MODE(v)                ((EFM32_RTC_CC_CTRL_MODE_##v) << 0)
-  #define EFM32_RTC_CC_CTRL_MODE_SET(x, v)         do { (x) = (((x) & ~0x3) | ((EFM32_RTC_CC_CTRL_MODE_##v) << 0)); } while(0)
-  #define EFM32_RTC_CC_CTRL_MODE_GET(x)            (((x) >> 0) & 0x3)
-/**  */
-    #define EFM32_RTC_CC_CTRL_MODE_OFF               0x00000000
-/**  */
-    #define EFM32_RTC_CC_CTRL_MODE_INPUTCAPTURE      0x00000001
-/**  */
-    #define EFM32_RTC_CC_CTRL_MODE_OUTPUTCOMPARE     0x00000002
-  #define EFM32_RTC_CC_CTRL_CMOA(v)                ((EFM32_RTC_CC_CTRL_CMOA_##v) << 2)
-  #define EFM32_RTC_CC_CTRL_CMOA_SET(x, v)         do { (x) = (((x) & ~0xc) | ((EFM32_RTC_CC_CTRL_CMOA_##v) << 2)); } while(0)
-  #define EFM32_RTC_CC_CTRL_CMOA_GET(x)            (((x) >> 2) & 0x3)
-/**  */
-    #define EFM32_RTC_CC_CTRL_CMOA_PULSE             0x00000000
-/**  */
-    #define EFM32_RTC_CC_CTRL_CMOA_TOGGLE            0x00000001
-/**  */
-    #define EFM32_RTC_CC_CTRL_CMOA_CLEAR             0x00000002
-/**  */
-    #define EFM32_RTC_CC_CTRL_CMOA_SET               0x00000003
-  #define EFM32_RTC_CC_CTRL_ICEDGE(v)              ((EFM32_RTC_CC_CTRL_ICEDGE_##v) << 4)
-  #define EFM32_RTC_CC_CTRL_ICEDGE_SET(x, v)       do { (x) = (((x) & ~0x30) | ((EFM32_RTC_CC_CTRL_ICEDGE_##v) << 4)); } while(0)
-  #define EFM32_RTC_CC_CTRL_ICEDGE_GET(x)          (((x) >> 4) & 0x3)
-/**  */
-    #define EFM32_RTC_CC_CTRL_ICEDGE_RISING          0x00000000
-/**  */
-    #define EFM32_RTC_CC_CTRL_ICEDGE_FALLING         0x00000001
-/**  */
-    #define EFM32_RTC_CC_CTRL_ICEDGE_BOTH            0x00000002
-/**  */
-    #define EFM32_RTC_CC_CTRL_ICEDGE_NONE            0x00000003
-  #define EFM32_RTC_CC_CTRL_PRSSEL(v)              ((EFM32_RTC_CC_CTRL_PRSSEL_##v) << 6)
-  #define EFM32_RTC_CC_CTRL_PRSSEL_SET(x, v)       do { (x) = (((x) & ~0x3c0) | ((EFM32_RTC_CC_CTRL_PRSSEL_##v) << 6)); } while(0)
-  #define EFM32_RTC_CC_CTRL_PRSSEL_GET(x)          (((x) >> 6) & 0xf)
-/**  */
-    #define EFM32_RTC_CC_CTRL_PRSSEL_PRSCH0          0x00000000
-/**  */
-    #define EFM32_RTC_CC_CTRL_PRSSEL_PRSCH1          0x00000001
-/**  */
-    #define EFM32_RTC_CC_CTRL_PRSSEL_PRSCH2          0x00000002
-/**  */
-    #define EFM32_RTC_CC_CTRL_PRSSEL_PRSCH3          0x00000003
-/**  */
-    #define EFM32_RTC_CC_CTRL_PRSSEL_PRSCH4          0x00000004
-/**  */
-    #define EFM32_RTC_CC_CTRL_PRSSEL_PRSCH5          0x00000005
-/**  */
-    #define EFM32_RTC_CC_CTRL_PRSSEL_PRSCH6          0x00000006
-/**  */
-    #define EFM32_RTC_CC_CTRL_PRSSEL_PRSCH7          0x00000007
-/**  */
-    #define EFM32_RTC_CC_CTRL_PRSSEL_PRSCH8          0x00000008
-/**  */
-    #define EFM32_RTC_CC_CTRL_PRSSEL_PRSCH9          0x00000009
-/**  */
-    #define EFM32_RTC_CC_CTRL_PRSSEL_PRSCH10         0x0000000a
-/**  */
-    #define EFM32_RTC_CC_CTRL_PRSSEL_PRSCH11         0x0000000b
-  #define EFM32_RTC_CC_CTRL_COMPBASE               0x00000800
-  #define EFM32_RTC_CC_CTRL_COMPMASK(v)            ((v) << 12)
-  #define EFM32_RTC_CC_CTRL_COMPMASK_SET(x, v)     do { (x) = (((x) & ~0x1f000) | ((v) << 12)); } while(0)
-  #define EFM32_RTC_CC_CTRL_COMPMASK_GET(x)        (((x) >> 12) & 0x1f)
-  #define EFM32_RTC_CC_CTRL_DAYCC                  0x00020000
+#define EFM32_RTCC_CC_CCV_ADDR(ridx)                 (0x00000044 + (ridx) * 16)
+#define EFM32_RTCC_CC_CCV_COUNT                      3
+#define EFM32_RTCC_CC_CCV_MASK                       0xffffffff
+  #define EFM32_RTCC_CC_CCV_CCV                    0xffffffff
+  #define EFM32_RTCC_CC_CCV_CCV_SHIFT              0
+  #define EFM32_RTCC_CC_CCV_CCV_SHIFT_VAL(v)       ((v) << 0)
+  #define EFM32_RTCC_CC_CCV_CCV_SET(x, v)          do { (x) = (((x) & ~0xffffffff) | ((v) << 0)); } while(0)
+  #define EFM32_RTCC_CC_CCV_CCV_GET(x)             (((x) >> 0) & 0xffffffff)
 
-#define EFM32_RTC_CC_CCV_ADDR(ridx)                  (0x00000044 + (ridx) * 16)
-#define EFM32_RTC_CC_CCV_COUNT                       3
-#define EFM32_RTC_CC_CCV_MASK                        0xffffffff
-  #define EFM32_RTC_CC_CCV_CCV(v)                  ((v) << 0)
-  #define EFM32_RTC_CC_CCV_CCV_SET(x, v)           do { (x) = (((x) & ~0xffffffff) | ((v) << 0)); } while(0)
-  #define EFM32_RTC_CC_CCV_CCV_GET(x)              (((x) >> 0) & 0xffffffff)
+#define EFM32_RTCC_CC_TIME_ADDR(ridx)                (0x00000048 + (ridx) * 16)
+#define EFM32_RTCC_CC_TIME_COUNT                     3
+#define EFM32_RTCC_CC_TIME_MASK                      0x003f7f7f
+  #define EFM32_RTCC_CC_TIME_SECU                  0x0000000f
+  #define EFM32_RTCC_CC_TIME_SECU_SHIFT            0
+  #define EFM32_RTCC_CC_TIME_SECU_SHIFT_VAL(v)     ((v) << 0)
+  #define EFM32_RTCC_CC_TIME_SECU_SET(x, v)        do { (x) = (((x) & ~0xf) | ((v) << 0)); } while(0)
+  #define EFM32_RTCC_CC_TIME_SECU_GET(x)           (((x) >> 0) & 0xf)
+  #define EFM32_RTCC_CC_TIME_SECT                  0x00000070
+  #define EFM32_RTCC_CC_TIME_SECT_SHIFT            4
+  #define EFM32_RTCC_CC_TIME_SECT_SHIFT_VAL(v)     ((v) << 4)
+  #define EFM32_RTCC_CC_TIME_SECT_SET(x, v)        do { (x) = (((x) & ~0x70) | ((v) << 4)); } while(0)
+  #define EFM32_RTCC_CC_TIME_SECT_GET(x)           (((x) >> 4) & 0x7)
+  #define EFM32_RTCC_CC_TIME_MINU                  0x00000f00
+  #define EFM32_RTCC_CC_TIME_MINU_SHIFT            8
+  #define EFM32_RTCC_CC_TIME_MINU_SHIFT_VAL(v)     ((v) << 8)
+  #define EFM32_RTCC_CC_TIME_MINU_SET(x, v)        do { (x) = (((x) & ~0xf00) | ((v) << 8)); } while(0)
+  #define EFM32_RTCC_CC_TIME_MINU_GET(x)           (((x) >> 8) & 0xf)
+  #define EFM32_RTCC_CC_TIME_MINT                  0x00007000
+  #define EFM32_RTCC_CC_TIME_MINT_SHIFT            12
+  #define EFM32_RTCC_CC_TIME_MINT_SHIFT_VAL(v)     ((v) << 12)
+  #define EFM32_RTCC_CC_TIME_MINT_SET(x, v)        do { (x) = (((x) & ~0x7000) | ((v) << 12)); } while(0)
+  #define EFM32_RTCC_CC_TIME_MINT_GET(x)           (((x) >> 12) & 0x7)
+  #define EFM32_RTCC_CC_TIME_HOURU                 0x000f0000
+  #define EFM32_RTCC_CC_TIME_HOURU_SHIFT           16
+  #define EFM32_RTCC_CC_TIME_HOURU_SHIFT_VAL(v)    ((v) << 16)
+  #define EFM32_RTCC_CC_TIME_HOURU_SET(x, v)       do { (x) = (((x) & ~0xf0000) | ((v) << 16)); } while(0)
+  #define EFM32_RTCC_CC_TIME_HOURU_GET(x)          (((x) >> 16) & 0xf)
+  #define EFM32_RTCC_CC_TIME_HOURT                 0x00300000
+  #define EFM32_RTCC_CC_TIME_HOURT_SHIFT           20
+  #define EFM32_RTCC_CC_TIME_HOURT_SHIFT_VAL(v)    ((v) << 20)
+  #define EFM32_RTCC_CC_TIME_HOURT_SET(x, v)       do { (x) = (((x) & ~0x300000) | ((v) << 20)); } while(0)
+  #define EFM32_RTCC_CC_TIME_HOURT_GET(x)          (((x) >> 20) & 0x3)
 
-#define EFM32_RTC_CC_TIME_ADDR(ridx)                 (0x00000048 + (ridx) * 16)
-#define EFM32_RTC_CC_TIME_COUNT                      3
-#define EFM32_RTC_CC_TIME_MASK                       0x003f7f7f
-  #define EFM32_RTC_CC_TIME_SECU(v)                ((v) << 0)
-  #define EFM32_RTC_CC_TIME_SECU_SET(x, v)         do { (x) = (((x) & ~0xf) | ((v) << 0)); } while(0)
-  #define EFM32_RTC_CC_TIME_SECU_GET(x)            (((x) >> 0) & 0xf)
-  #define EFM32_RTC_CC_TIME_SECT(v)                ((v) << 4)
-  #define EFM32_RTC_CC_TIME_SECT_SET(x, v)         do { (x) = (((x) & ~0x70) | ((v) << 4)); } while(0)
-  #define EFM32_RTC_CC_TIME_SECT_GET(x)            (((x) >> 4) & 0x7)
-  #define EFM32_RTC_CC_TIME_MINU(v)                ((v) << 8)
-  #define EFM32_RTC_CC_TIME_MINU_SET(x, v)         do { (x) = (((x) & ~0xf00) | ((v) << 8)); } while(0)
-  #define EFM32_RTC_CC_TIME_MINU_GET(x)            (((x) >> 8) & 0xf)
-  #define EFM32_RTC_CC_TIME_MINT(v)                ((v) << 12)
-  #define EFM32_RTC_CC_TIME_MINT_SET(x, v)         do { (x) = (((x) & ~0x7000) | ((v) << 12)); } while(0)
-  #define EFM32_RTC_CC_TIME_MINT_GET(x)            (((x) >> 12) & 0x7)
-  #define EFM32_RTC_CC_TIME_HOURU(v)               ((v) << 16)
-  #define EFM32_RTC_CC_TIME_HOURU_SET(x, v)        do { (x) = (((x) & ~0xf0000) | ((v) << 16)); } while(0)
-  #define EFM32_RTC_CC_TIME_HOURU_GET(x)           (((x) >> 16) & 0xf)
-  #define EFM32_RTC_CC_TIME_HOURT(v)               ((v) << 20)
-  #define EFM32_RTC_CC_TIME_HOURT_SET(x, v)        do { (x) = (((x) & ~0x300000) | ((v) << 20)); } while(0)
-  #define EFM32_RTC_CC_TIME_HOURT_GET(x)           (((x) >> 20) & 0x3)
+#define EFM32_RTCC_CC_DATE_ADDR(ridx)                (0x0000004c + (ridx) * 16)
+#define EFM32_RTCC_CC_DATE_COUNT                     3
+#define EFM32_RTCC_CC_DATE_MASK                      0x00001f3f
+  #define EFM32_RTCC_CC_DATE_DAYU                  0x0000000f
+  #define EFM32_RTCC_CC_DATE_DAYU_SHIFT            0
+  #define EFM32_RTCC_CC_DATE_DAYU_SHIFT_VAL(v)     ((v) << 0)
+  #define EFM32_RTCC_CC_DATE_DAYU_SET(x, v)        do { (x) = (((x) & ~0xf) | ((v) << 0)); } while(0)
+  #define EFM32_RTCC_CC_DATE_DAYU_GET(x)           (((x) >> 0) & 0xf)
+  #define EFM32_RTCC_CC_DATE_DAYT                  0x00000030
+  #define EFM32_RTCC_CC_DATE_DAYT_SHIFT            4
+  #define EFM32_RTCC_CC_DATE_DAYT_SHIFT_VAL(v)     ((v) << 4)
+  #define EFM32_RTCC_CC_DATE_DAYT_SET(x, v)        do { (x) = (((x) & ~0x30) | ((v) << 4)); } while(0)
+  #define EFM32_RTCC_CC_DATE_DAYT_GET(x)           (((x) >> 4) & 0x3)
+  #define EFM32_RTCC_CC_DATE_MONTHU                0x00000f00
+  #define EFM32_RTCC_CC_DATE_MONTHU_SHIFT          8
+  #define EFM32_RTCC_CC_DATE_MONTHU_SHIFT_VAL(v)   ((v) << 8)
+  #define EFM32_RTCC_CC_DATE_MONTHU_SET(x, v)      do { (x) = (((x) & ~0xf00) | ((v) << 8)); } while(0)
+  #define EFM32_RTCC_CC_DATE_MONTHU_GET(x)         (((x) >> 8) & 0xf)
+  #define EFM32_RTCC_CC_DATE_MONTHT                0x00001000
+  #define EFM32_RTCC_CC_DATE_MONTHT_SHIFT          12
 
-#define EFM32_RTC_CC_DATE_ADDR(ridx)                 (0x0000004c + (ridx) * 16)
-#define EFM32_RTC_CC_DATE_COUNT                      3
-#define EFM32_RTC_CC_DATE_MASK                       0x00001f3f
-  #define EFM32_RTC_CC_DATE_DAYU(v)                ((v) << 0)
-  #define EFM32_RTC_CC_DATE_DAYU_SET(x, v)         do { (x) = (((x) & ~0xf) | ((v) << 0)); } while(0)
-  #define EFM32_RTC_CC_DATE_DAYU_GET(x)            (((x) >> 0) & 0xf)
-  #define EFM32_RTC_CC_DATE_DAYT(v)                ((v) << 4)
-  #define EFM32_RTC_CC_DATE_DAYT_SET(x, v)         do { (x) = (((x) & ~0x30) | ((v) << 4)); } while(0)
-  #define EFM32_RTC_CC_DATE_DAYT_GET(x)            (((x) >> 4) & 0x3)
-  #define EFM32_RTC_CC_DATE_MONTHU(v)              ((v) << 8)
-  #define EFM32_RTC_CC_DATE_MONTHU_SET(x, v)       do { (x) = (((x) & ~0xf00) | ((v) << 8)); } while(0)
-  #define EFM32_RTC_CC_DATE_MONTHU_GET(x)          (((x) >> 8) & 0xf)
-  #define EFM32_RTC_CC_DATE_MONTHT                 0x00001000
-
-#define EFM32_RTC_RET_REG_ADDR(ridx)                 (0x00000104 + (ridx) * 4)
-#define EFM32_RTC_RET_REG_COUNT                      32
-#define EFM32_RTC_RET_REG_MASK                       0xffffffff
-  #define EFM32_RTC_RET_REG_REG(v)                 ((v) << 0)
-  #define EFM32_RTC_RET_REG_REG_SET(x, v)          do { (x) = (((x) & ~0xffffffff) | ((v) << 0)); } while(0)
-  #define EFM32_RTC_RET_REG_REG_GET(x)             (((x) >> 0) & 0xffffffff)
+#define EFM32_RTCC_RET_REG_ADDR(ridx)                (0x00000104 + (ridx) * 4)
+#define EFM32_RTCC_RET_REG_COUNT                     32
+#define EFM32_RTCC_RET_REG_MASK                      0xffffffff
+  #define EFM32_RTCC_RET_REG_REG                   0xffffffff
+  #define EFM32_RTCC_RET_REG_REG_SHIFT             0
+  #define EFM32_RTCC_RET_REG_REG_SHIFT_VAL(v)      ((v) << 0)
+  #define EFM32_RTCC_RET_REG_REG_SET(x, v)         do { (x) = (((x) & ~0xffffffff) | ((v) << 0)); } while(0)
+  #define EFM32_RTCC_RET_REG_REG_GET(x)            (((x) >> 0) & 0xffffffff)
 
 #endif
 
