@@ -46,7 +46,7 @@
 
 static void efm32_wait_button_released()
 {
-  uint32_t button_pin = 86;
+  uint32_t button_pin = EFM32_PF6;
   uint32_t x;
 
   /* wait for button to be released */
@@ -138,7 +138,8 @@ void efm32_board_init()
   cpu_mem_write_32(EFM32_CMU_ADDR + EFM32_CMU_CTRL_ADDR, x);
 
   cpu_mem_write_32(EFM32_CMU_ADDR + EFM32_CMU_HFRADIOCLKEN0_ADDR, EFM32_CMU_HFRADIOCLKEN0_MASK);
- #if (CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_XG12)
+ #if (CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_XG12) ||\
+     (CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_XG14)
   cpu_mem_write_32(EFM32_CMU_ADDR + EFM32_CMU_HFRADIOALTCLKEN0_ADDR, EFM32_CMU_HFRADIOALTCLKEN0_MASK);
  #endif
 #endif 
@@ -259,7 +260,8 @@ DEV_DECLARE_STATIC(dma_dev, "dma", 0, efm32_dma_drv,
 
 DEV_DECLARE_STATIC(usart_dev, "spi", 0, efm32_usart_spi_drv,
 
-  #if (CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_XG1)
+  #if (CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_XG1) ||\
+      (CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_XG14)
 
                    DEV_STATIC_RES_MEM(0x40010400, 0x40010800),
                    DEV_STATIC_RES_FREQ(HFXO_FREQ, 1),

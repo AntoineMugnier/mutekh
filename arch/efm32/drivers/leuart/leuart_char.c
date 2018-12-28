@@ -416,7 +416,8 @@ static DEV_INIT(efm32_leuart_init)
     goto err_clk;
 
 #if (CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_XG1) ||\
-    (CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_XG12)
+    (CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_XG12) ||\
+    (CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_XG14) 
 
   uint32_t enable = 0;
   uint32_t route = 0;

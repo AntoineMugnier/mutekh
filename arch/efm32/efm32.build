@@ -233,6 +233,10 @@
     CONFIG_EFM32_ARCHREV EFM32_ARCHREV_EFR_XG12
   %end
 
+  %subsection efr32-Lg14LNNN-fX-*
+    CONFIG_EFM32_ARCHREV EFM32_ARCHREV_EFR_XG14
+  %end
+
   %types family
   %set BUILD_NAME efr32
 
@@ -326,14 +330,14 @@
 
   ########### Ram size
 
-  %subsection efr32-fg12P2NN-*-*
+  %subsection efr32-?g14P2NN-f256-*
     %types sram
-    CONFIG_EFM32_RAMSIZE 0x20000
+    CONFIG_EFM32_RAMSIZE 0x8000
   %end
 
-  %subsection efr32-fg12P4NN-*-*
+  %subsection efr32-?g14P4NN-f128-*
     %types sram
-    CONFIG_EFM32_RAMSIZE 0x40000
+    CONFIG_EFM32_RAMSIZE 0x4000
   %end
 
   %subsection efr32-mg12P3NN-*-*
@@ -342,6 +346,21 @@
   %end
 
   %subsection efr32-mg12P4NN-*-*
+    %types sram
+    CONFIG_EFM32_RAMSIZE 0x40000
+  %end
+
+  %subsection efr32-mg12P1NN-*-*
+    %types sram
+    CONFIG_EFM32_RAMSIZE 0x20000
+  %end
+
+  %subsection efr32-fg12P2NN-*-*
+    %types sram
+    CONFIG_EFM32_RAMSIZE 0x20000
+  %end
+
+  %subsection efr32-fg12P4NN-*-*
     %types sram
     CONFIG_EFM32_RAMSIZE 0x40000
   %end

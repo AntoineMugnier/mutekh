@@ -78,6 +78,10 @@
   %inherit efr32-mg12p332-f1024-gl125
   %inherit efm32-pcb4001-xg12
 
+%section efr32-stk6060b efr32-stk6061b efr32-stk6062b efr32-stk6063b efr32-stk6065b
+  %inherit efr32-fg14p233-f256-gm48
+  %inherit efm32-pcb4001-xg12
+
 %section efr32-brd4253a efr32-brd4254a
   %inherit efr32-fg12p433-f1024-gl125
   %inherit efm32-pcb4001-xg12

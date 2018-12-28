@@ -7,6 +7,8 @@
 # include "efr/gpio.h"
 #elif CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_XG12
 # include "efr/gpio.h"
+#elif CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_XG14
+# include "efr/gpio.h"
 #else
 # error not supported
 #endif

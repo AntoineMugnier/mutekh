@@ -24,6 +24,8 @@
 # include "efr/dma.h"
 #elif CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_XG12
 # include "efr/dma.h"
+#elif CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_XG14
+# include "efr/dma.h"
 
 #else
 # error
