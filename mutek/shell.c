@@ -89,7 +89,8 @@ void mutek_shell_start(const struct device_char_s *c, const char *term,
   shell_context_init(sctx);
 
   termui_dev_io_init(tm, c, term);
-  termui_con_init(con, tm, root);
+  termui_con_init(con, tm, root, CONFIG_MUTEK_SHELL_BUF_SIZE,
+                  CONFIG_MUTEK_SHELL_LINE_SIZE);
 
   termui_con_set_private(con, sctx);
   termui_con_set_prompt(con, prompt);

@@ -1,5 +1,6 @@
 
 #include <stdlib.h>
+#include <assert.h>
 
 #include <termui/term.h>
 #include <termui/getline.h>
@@ -8,6 +9,10 @@
 #include <termui/console_opt.h>
 
 #include <mutek/console.h>
+
+#include <device/device.h>
+#include <device/driver.h>
+#include <device/class/char.h>
 
 static TERMUI_CON_COMMAND_PROTOTYPE(foo_command)
 {
@@ -65,7 +70,7 @@ void main()
   assert(device_check_accessor(&console_dev.base));
 
   termui_dev_io_init(&tm, &console_dev, "xterm");
-  termui_con_init(&con, &tm, root_group);
+  termui_con_init(&con, &tm, root_group, 1024, 256);
 
   termui_con_set_prompt(&con, "[%31Aconsole%A] ");
 

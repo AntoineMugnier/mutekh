@@ -36,12 +36,17 @@
 
 #include <mutek/console.h>
 
+#include <device/device.h>
+#include <device/driver.h>
+#include <device/class/char.h>
+
 /* line completion handler found in getline_lua_complete.c */
 TERMUI_GETLINE_FCN_COMPLETE(lua_complete);
 
 static TERMUI_GETLINE_FCN_PROMPT(prompt)
 {
-  return termui_term_printf(tm, "[%31Alua%A] ");
+  termui_term_printf(tm, "[%31Alua%A] ");
+  return 0;
 }
 
 void main()
@@ -57,12 +62,11 @@ void main()
   luaL_openlibs(luast);
 
   termui_dev_io_init(&tm, &console_dev, "xterm");
-  termui_getline_init(&tm, &bhv, 256);
+  termui_getline_init(&tm, &bhv, 1024, 256);
   termui_term_set_private(&tm, luast);
 
   termui_term_printf(&tm, "libtermui lua getline example, use Ctrl-D to quit\n\n");
 
-  termui_getline_history_init(&bhv, 64); /* 64 entries max */
   termui_getline_complete_init(&bhv, lua_complete);
   termui_getline_setprompt(&bhv, prompt);
 
@@ -77,8 +81,6 @@ void main()
       /* skip blank line */
       if (!*(line += strspn(line, "\n\r\t ")))
 	continue;
-
-      termui_getline_history_addlast(&bhv);
 
       if (luaL_loadbuffer(luast, line, strlen(line), ""))
 	{
