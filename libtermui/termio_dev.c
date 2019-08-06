@@ -49,7 +49,7 @@ static TERMUI_TERMIO_FCN_CLEANUP(termui_dev_cleanup)
 {
 }
 
-termui_err_t
+void
 termui_dev_io_init(struct termui_term_s *tm,
                    const struct device_char_s *dev,
                    const char *type)
@@ -67,7 +67,5 @@ termui_dev_io_init(struct termui_term_s *tm,
 
   strncpy(tm->type, type, TERMUI_TYPESTR_MAXLEN);
   termui_term_set(tm);
-
-  return 0;
 }
 

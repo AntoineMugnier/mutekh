@@ -163,7 +163,7 @@ bool_t shell_buffer_collect_all(struct mutek_shell_context_s *sctx);
 /** @This starts an interactive shell. This function does not returns
     until the shell is exited by the user. */
 config_depend(CONFIG_MUTEK_SHELL)
-void mutek_shell_start(const struct device_char_s *c, const char *term,
+error_t mutek_shell_start(const struct device_char_s *c, const char *term,
                        const struct termui_con_entry_s * const *root,
                        const char *prompt);
 
