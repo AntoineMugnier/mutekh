@@ -233,7 +233,7 @@ struct dev_crypto_context_s
   void                          *state_data;
 
   /** Key data */
-  uint8_t                       *key_data;
+  const uint8_t                 *key_data;
   /** Key length in bytes. */
   uint8_t                       key_len;
 
