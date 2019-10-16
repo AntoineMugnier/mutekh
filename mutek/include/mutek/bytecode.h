@@ -842,7 +842,7 @@ void bc_dump(const struct bc_context_s *ctx, bool_t regs);
         @ref BC_RUN_STATUS_BREAK. The bytecode may then be resumed.
     @end list
 
-    This function will eiter run the virtual machine or jump to the
+    This function will either run the virtual machine or jump to the
     machine compiled bytecode. The type of bytecode is guessed from
     the descriptor.
 */
