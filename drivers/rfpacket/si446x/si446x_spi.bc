@@ -540,6 +540,10 @@ tune_done:
 
 
  start_tx_cca:
+        /* Timestamp to note end of Rx */
+        mov                     %0,                       %R_CTX_PV
+        add8                    %0,                       _offsetof(si446x_ctx_s, txcca_timestamp, 8)
+        spi_timestamp           %0
         /* Configure check RSSI threshold at latch */
         cst8                    %set_rssi_control:mode,   0x23
         call16                  %set_rssi_control:link,   set_rssi_control

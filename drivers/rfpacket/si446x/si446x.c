@@ -1263,6 +1263,10 @@ static inline void si446x_rfp_end_txrq(struct si446x_ctx_s *pv)
   rq->tx_timestamp = pv->timestamp;
   if (rq->anchor == DEV_RFPACKET_TIMESTAMP_START)
     rq->tx_timestamp -= rq->tx_size * pv->cache_array[pv->id].tb;
+
+  if (rq->type == DEV_RFPACKET_RQ_TX_FAIR) {
+    rq->tx_lbt_td = rq->tx_timestamp - pv->txcca_timestamp;
+  }
 }
 
 #ifdef CONFIG_DRIVER_RFPACKET_SI446X_SLEEP
@@ -1725,7 +1729,4 @@ const uint8_t si446x_config[] = {
   0x05, 0x11, 0x12, 0x01, 0x10, 0xA2,
   0x0B, 0x11, 0x12, 0x07, 0x22, 0x01, 0x00, 0x82, 0x00, 0xFF, 0x00, 0x0a,
   0x00
-
-  // Update GPIO 2 & 3 to export TX/RX state
-  // 0x08 0x13 0x00 0x00 0x20 0x21 0x00 0x00 0x00
 };
