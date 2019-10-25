@@ -484,13 +484,13 @@ tune_done:
 .func si446x_entry_retry_tx_cca
         .export si446x_entry_retry_tx_cca
         .input %7 channel
-        .clobber %0, %1, %2 tbr, %3, %4, %5, %6, %10, %11, %12, %13
+        .clobber %0, %1, %2, %3, %4, %5, %6, %8 tbr, %10, %11, %12, %13
 
         // Init Rx if needed
         ld8e                    %0,                     %R_CTX_PV,   _offsetof(si446x_ctx_s, flags, 1)
         tst32c                  %0,                     bitpos(SI446X_FLAGS_RX_ON)
           jmp8                  start_retry
-        /* Start RX */
+        // Start RX
         mov                     %si446x_start_rx:channel, %channel
         cst32                   %si446x_start_rx:state,   0x0,    8
         call16                  %si446x_start_rx:link,    si446x_start_rx
