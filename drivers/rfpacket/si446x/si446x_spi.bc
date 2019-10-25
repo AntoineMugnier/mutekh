@@ -513,20 +513,22 @@ tune_done:
         ld8e                    %0,                     %R_CTX_PV,   _offsetof(si446x_ctx_s, flags, 1)
         tst32c                  %0,                     bitpos(SI446X_FLAGS_RX_ON)
           jmp8                  wait_no_rx
-        /* Configure RSSI latch at Sync Word detection */
+        // Configure RSSI latch at Sync Word detection
         cst8                    %set_rssi_control:mode, 0x02
         call16                  %set_rssi_control:link, set_rssi_control
-        /* Wait in RX before retrying */
+        // Set time before retry
         ld32e                   %tbr,                   %R_CTX_PV,   _offsetof(si446x_ctx_s, bt, 4)
         shi32l                  %tbr,                   SI446X_TIME_BEFORE_RETRY_SHIFT
+
   wait_before_retry:
         spi_yieldc_delay        %tbr
           jmp8                  check_rx
-        /* Irq is pending */
+        // Irq is pending
         call16                  %si446x_check_irq:link,  si446x_check_irq
         jmp8                    wait_before_retry
+
   check_rx:
-        /* Test if packet is being received */
+        // Test if packet is being received
         call16                  %get_status:link,       get_status
         tst32s                  %get_status:status,     1
           jmp8                  transfer_ongoing
