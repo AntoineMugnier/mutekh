@@ -532,6 +532,12 @@ tune_done:
         call16                  %get_status:link,       get_status
         tst32s                  %get_status:status,     1
           jmp8                  transfer_ongoing
+        // Check RSSI to see if channel is busy
+        call16                  %get_rssi:link,         get_rssi
+        ld8e                    %3,                     %R_CTX_PV,   _offsetof(si446x_ctx_s, lbt_rssi, 1)
+        // If rssi is over lbt threshold, restart rx
+        lt                      %3,                     %get_rssi:current
+          jmp8                  start_retry
         // Timestamp to note end of Rx
         mov                     %8,                       %R_CTX_PV
         add8                    %8,                       _offsetof(si446x_ctx_s, txcca_timestamp, 8)
