@@ -495,18 +495,18 @@ tune_done:
         cst32                   %si446x_start_rx:state,   0x0,    8
         call16                  %si446x_start_rx:link,    si446x_start_rx
 
- start_retry:
+  start_retry:
         // Clean any pending interrupt
-        mov                     %0,                       %R_CTX_PV
-        add8                    %0,                       _offsetof(si446x_ctx_s, timeout, 8)
-        spi_elapsed_r           %0
-          jmp8                  tx_fail
-        /* Clean any pending interrupt */
         cst8                    %0,                       SI446X_INT_STATUS_CMD
         pack8                   %0,                       1
         spi_wr                  %0,                       1,    CS_PULSE
         call16                  %poll_gpio:link,          poll_gpio
-
+  test_timeout:
+        // Test if timeout date is reached
+        mov                     %0,                       %R_CTX_PV
+        add8                    %0,                       _offsetof(si446x_ctx_s, timeout, 8)
+        spi_elapsed_r           %0
+          jmp8                  tx_fail
 
   test_rx:
         /* Test if reception is possible */
@@ -519,7 +519,6 @@ tune_done:
         // Set time before retry
         ld32e                   %tbr,                   %R_CTX_PV,   _offsetof(si446x_ctx_s, bt, 4)
         shi32l                  %tbr,                   SI446X_TIME_BEFORE_RETRY_SHIFT
-
   wait_before_retry:
         spi_yieldc_delay        %tbr
           jmp8                  check_rx
@@ -537,7 +536,7 @@ tune_done:
         ld8e                    %3,                     %R_CTX_PV,   _offsetof(si446x_ctx_s, lbt_rssi, 1)
         // If rssi is over lbt threshold, restart rx
         lt                      %3,                     %get_rssi:current
-          jmp8                  start_retry
+          jmp8                  test_timeout
         // Timestamp to note end of Rx
         mov                     %8,                       %R_CTX_PV
         add8                    %8,                       _offsetof(si446x_ctx_s, txcca_timestamp, 8)
@@ -555,7 +554,7 @@ tune_done:
         add8                    %8,                       _offsetof(si446x_ctx_s, txcca_timestamp, 8)
         spi_timestamp           %8
 
- start_tx_cca:
+  start_tx_cca:
         // Configure check RSSI threshold at latch
         cst8                    %set_rssi_control:mode,   0x23
         call16                  %set_rssi_control:link,   set_rssi_control
