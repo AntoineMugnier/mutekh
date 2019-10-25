@@ -201,7 +201,9 @@ struct si446x_ctx_s
 
   uint8_t pending;
   /* Rssi, carrier level */
-  uint8_t carrier, jam_rssi;
+  uint8_t carrier;
+  uint8_t jam_rssi;
+  uint8_t lbt_rssi;
   uint32_t rssi;
   /* Frequency associated to last Rssi measurment */
   int16_t afc_offset;

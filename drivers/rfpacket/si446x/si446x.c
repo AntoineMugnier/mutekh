@@ -403,6 +403,7 @@ static inline error_t si446x_build_rf_config(struct si446x_ctx_s *pv,
     return -ENOTSUP;
 
   out->rssi_th = SET_RSSI(rssi_th >> 3);
+  pv->lbt_rssi = out->rssi_th;
 
   if (cfg->jam_rssi > SI446X_MAX_RSSI_VALUE)
     return -ENOTSUP;
