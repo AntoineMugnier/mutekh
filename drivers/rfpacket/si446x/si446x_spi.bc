@@ -532,6 +532,11 @@ tune_done:
         call16                  %get_status:link,       get_status
         tst32s                  %get_status:status,     1
           jmp8                  transfer_ongoing
+        // Timestamp to note end of Rx
+        mov                     %8,                       %R_CTX_PV
+        add8                    %8,                       _offsetof(si446x_ctx_s, txcca_timestamp, 8)
+        spi_timestamp           %8
+        // Abort Rx and start Tx
         call8                   %abort_rx:link,         abort_rx
         jmp8                    start_tx_cca
   wait_no_rx:
@@ -539,13 +544,12 @@ tune_done:
         ld32e                   %tbr,                   %R_CTX_PV,   _offsetof(si446x_ctx_s, bt, 4)
         shi32l                  %tbr,                   SI446X_TIME_BEFORE_RETRY_SHIFT
         spi_yield_delay         %tbr
-
+        // Timestamp to note end of Rx
+        mov                     %8,                       %R_CTX_PV
+        add8                    %8,                       _offsetof(si446x_ctx_s, txcca_timestamp, 8)
+        spi_timestamp           %8
 
  start_tx_cca:
-        /* Timestamp to note end of Rx */
-        mov                     %0,                       %R_CTX_PV
-        add8                    %0,                       _offsetof(si446x_ctx_s, txcca_timestamp, 8)
-        spi_timestamp           %0
         /* Configure check RSSI threshold at latch */
         cst8                    %set_rssi_control:mode,   0x23
         call16                  %set_rssi_control:link,   set_rssi_control
