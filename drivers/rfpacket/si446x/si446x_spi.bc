@@ -496,7 +496,7 @@ tune_done:
         call16                  %si446x_start_rx:link,    si446x_start_rx
 
  start_retry:
-        /* Test if timeout date is reached */
+        // Clean any pending interrupt
         mov                     %0,                       %R_CTX_PV
         add8                    %0,                       _offsetof(si446x_ctx_s, timeout, 8)
         spi_elapsed_r           %0
@@ -556,26 +556,25 @@ tune_done:
         spi_timestamp           %8
 
  start_tx_cca:
-        /* Configure check RSSI threshold at latch */
+        // Configure check RSSI threshold at latch
         cst8                    %set_rssi_control:mode,   0x23
         call16                  %set_rssi_control:link,   set_rssi_control
-        /* Start RX */
+        // Start RX
         mov                     %si446x_start_rx:channel, %channel
         cst32                   %si446x_start_rx:state,   0x7,    8
         call16                  %si446x_start_rx:link,    si446x_start_rx
-        /* Wait for latch */
+        // Wait for latch
         ld32e                   %0,                       %R_CTX_PV,   _offsetof(si446x_ctx_s, ccad, 4)
         spi_yield_delay         %0
-        /* Read status  */
+        // Read status
         call16                  %get_status:link,       get_status
-        /* Test if packet is leaving */
+        // Test if packet is leaving
         tst32s                  %get_status:status,     2
           jmp8                  transfer_ongoing
         jmp8                  start_retry
 
-
   tx_fail:
-        /* Timeout occurred */
+        // Timeout occurred
         bit32s                  %STATUS,                STATUS_TX_TIMEOUT
         jmp8                    si446x_rx_tx_error
 .endfunc
