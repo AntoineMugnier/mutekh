@@ -234,7 +234,7 @@
    @table 2
      @item Instruction @item Description
      @item @tt{eq reg, reg} @item Compare two registers and skip the next instruction if they are not equal.
-     @item @tt{neq reg, reg} @item Compare two registers and skip the next instruction if thay are equal.
+     @item @tt{neq reg, reg} @item Compare two registers and skip the next instruction if they are equal.
      @item @tt{eq0 reg} @item Skip the next instruction if the register is not zero.
      @item @tt{neq0 reg} @item Skip the next instruction if the register is zero.
      @item @tt{lt reg, reg} @item Perform an unsigned comparison of two registers and skip
