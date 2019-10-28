@@ -772,7 +772,6 @@ static inline void si446x_start_tx(struct si446x_ctx_s *pv)
     case DEV_RFPACKET_RQ_TX_FAIR:
 
       pv->timeout = pv->deadline + rq->lifetime;
-
       logk_trace("TF");
 
       if (t >= pv->timeout)
@@ -780,6 +779,9 @@ static inline void si446x_start_tx(struct si446x_ctx_s *pv)
         return si446x_rfp_end_rq(pv, -ETIMEDOUT);
 
       pwr = si446X_get_pwr_lvl(pv, rq->tx_pwr);
+
+      // Init lbt state
+      pv->lbt_state = SI446X_LBT_STATE_FREE;
 
       si446x_rfp_set_state(pv, SI446X_STATE_TX_LBT);
 
@@ -833,6 +835,9 @@ static inline void si446x_retry_tx(struct si446x_ctx_s *pv, bool_t refill)
           /* Timeout date is already reached */
             return si446x_rfp_end_rq(pv, -ETIMEDOUT);
 
+          // Init lbt state
+          pv->lbt_state = SI446X_LBT_STATE_FREE;
+
           si446x_bytecode_start(pv, &si446x_entry_tx_cca,
             SI446X_ENTRY_TX_CCA_BCARGS(0, rq->channel));
         }
@@ -845,6 +850,9 @@ static inline void si446x_retry_tx(struct si446x_ctx_s *pv, bool_t refill)
               pv->size -= SI446X_FIFO_SIZE - 1;
               pv->buffer += SI446X_FIFO_SIZE - 1;
             }
+
+          // Init lbt state
+          pv->lbt_state = SI446X_LBT_STATE_FREE;
 
           si446x_bytecode_start(pv, &si446x_entry_retry_tx_cca,
                   SI446X_ENTRY_RETRY_TX_CCA_BCARGS(rq->channel));

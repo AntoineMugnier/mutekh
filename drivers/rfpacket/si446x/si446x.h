@@ -87,6 +87,12 @@
 # define si446x_printk(...) do { } while(0)
 #endif
 
+// LBT Bytecode State
+#define SI446X_LBT_STATE_FREE 0
+#define SI446X_LBT_STATE_BUSY 1
+
+
+
 BC_CCALL_FUNCTION(si446x_alloc);
 
 enum si446x_state_s
@@ -200,6 +206,8 @@ struct si446x_ctx_s
   int16_t pwr;
 
   uint8_t pending;
+  // LBT state
+  uint8_t lbt_state;
   /* Rssi, carrier level */
   uint8_t carrier;
   uint8_t jam_rssi;
