@@ -534,9 +534,6 @@ tune_done:
         // Check RSSI to see if channel is busy
         call16                  %get_rssi:link,         get_rssi
         ld8e                    %rssi,                  %R_CTX_PV,   _offsetof(si446x_ctx_s, lbt_rssi, 1)
-        // lt                      %rssi,                  %get_rssi:current
-        //     jmp8                test_timeout
-        // jmp8                    timestamp
 
  // Lbt state machine
         ld8e                    %curr_state,            %R_CTX_PV,   _offsetof(si446x_ctx_s, lbt_state, 1)
