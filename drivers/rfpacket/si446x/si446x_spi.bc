@@ -484,12 +484,12 @@ tune_done:
 .func si446x_entry_retry_tx_cca
         .export si446x_entry_retry_tx_cca
         .input %7 channel
-        .clobber %0, %1, %2, %3, %4, %5, %6, %8 tbr, %10, %11, %12, %13
+        .clobber %0, %1, %2, %3 rssi, %4 curr_state, %5 new_state, %6, %8 tbr, %10, %11, %12, %13
 
         // Init Rx if needed
         ld8e                    %0,                     %R_CTX_PV,   _offsetof(si446x_ctx_s, flags, 1)
         tst32c                  %0,                     bitpos(SI446X_FLAGS_RX_ON)
-          jmp8                  start_retry
+            jmp8                start_retry
         // Start RX
         mov                     %si446x_start_rx:channel, %channel
         cst32                   %si446x_start_rx:state,   0x0,    8
@@ -506,13 +506,13 @@ tune_done:
         mov                     %0,                       %R_CTX_PV
         add8                    %0,                       _offsetof(si446x_ctx_s, timeout, 8)
         spi_elapsed_r           %0
-          jmp8                  tx_fail
+            jmp8                tx_fail
 
   test_rx:
-        /* Test if reception is possible */
+        // Test if reception is possible
         ld8e                    %0,                     %R_CTX_PV,   _offsetof(si446x_ctx_s, flags, 1)
         tst32c                  %0,                     bitpos(SI446X_FLAGS_RX_ON)
-          jmp8                  wait_no_rx
+            jmp8                  wait_no_rx
         // Configure RSSI latch at Sync Word detection
         cst8                    %set_rssi_control:mode, 0x02
         call16                  %set_rssi_control:link, set_rssi_control
@@ -521,7 +521,7 @@ tune_done:
         shi32l                  %tbr,                   SI446X_TIME_BEFORE_RETRY_SHIFT
   wait_before_retry:
         spi_yieldc_delay        %tbr
-          jmp8                  check_rx
+            jmp8                check_rx
         // Irq is pending
         call16                  %si446x_check_irq:link,  si446x_check_irq
         jmp8                    wait_before_retry
@@ -530,16 +530,48 @@ tune_done:
         // Test if packet is being received
         call16                  %get_status:link,       get_status
         tst32s                  %get_status:status,     1
-          jmp8                  transfer_ongoing
+            jmp8                transfer_ongoing
         // Check RSSI to see if channel is busy
         call16                  %get_rssi:link,         get_rssi
-        ld8e                    %3,                     %R_CTX_PV,   _offsetof(si446x_ctx_s, lbt_rssi, 1)
-        // If rssi is over lbt threshold, restart rx
-        lt                      %3,                     %get_rssi:current
-          jmp8                  test_timeout
+        ld8e                    %rssi,                  %R_CTX_PV,   _offsetof(si446x_ctx_s, lbt_rssi, 1)
+        // lt                      %rssi,                  %get_rssi:current
+        //     jmp8                test_timeout
+        // jmp8                    timestamp
+
+ // Lbt state machine
+        ld8e                    %curr_state,            %R_CTX_PV,   _offsetof(si446x_ctx_s, lbt_state, 1)
+        cst8                    %5,                     SI446X_LBT_STATE_FREE
+        neq                     %curr_state,            %5
+            jmp8                  lbt_busy
+ // LBT_Free
+        lt                      %get_rssi:current,      %rssi
+            // Exit FSM if rssi is low and we can send
+            jmp8                timestamp
+        // Change state + restart rx
+        cst8                    %new_state,             SI446X_LBT_STATE_BUSY
+        mov                     %4,                     %R_CTX_PV
+        add8                    %4,                     _offsetof(si446x_ctx_s, lbt_state, 1)
+        st8                     %new_state,             %4
+        jmp8                    test_timeout
+
+ lbt_busy:
+ // LBT_Busy
+        lt                      %rssi,                  %get_rssi:current
+            // Restart rx if rssi still too high
+            jmp8                test_timeout
+        // Change state + restart rx
+        cst8                    %new_state,             SI446X_LBT_STATE_FREE
+        mov                     %4,                     %R_CTX_PV
+        add8                    %4,                     _offsetof(si446x_ctx_s, lbt_state, 1)
+        st8                     %new_state,             %4
+        jmp8                    test_timeout
+
+
+
+ timestamp:
         // Timestamp to note end of Rx
-        mov                     %8,                       %R_CTX_PV
-        add8                    %8,                       _offsetof(si446x_ctx_s, txcca_timestamp, 8)
+        mov                     %8,                     %R_CTX_PV
+        add8                    %8,                     _offsetof(si446x_ctx_s, txcca_timestamp, 8)
         spi_timestamp           %8
         // Abort Rx and start Tx
         call8                   %abort_rx:link,         abort_rx
@@ -550,8 +582,8 @@ tune_done:
         shi32l                  %tbr,                   SI446X_TIME_BEFORE_RETRY_SHIFT
         spi_yield_delay         %tbr
         // Timestamp to note end of Rx
-        mov                     %8,                       %R_CTX_PV
-        add8                    %8,                       _offsetof(si446x_ctx_s, txcca_timestamp, 8)
+        mov                     %8,                     %R_CTX_PV
+        add8                    %8,                     _offsetof(si446x_ctx_s, txcca_timestamp, 8)
         spi_timestamp           %8
 
   start_tx_cca:
