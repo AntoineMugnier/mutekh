@@ -59,6 +59,13 @@ static DEV_TIMER_CONFIG(si446x_timer_config)
 
 /**************************** RFPACKET PART ********************************/
 
+static dev_timer_delay_t si446x_calc_lbt_rand_rime(dev_timer_value_t timebase, dev_timer_value_t curr_time) {
+    dev_timer_delay_t base_time = timebase * SI446X_LBT_BASE_TIME_MULT;
+    uint8_t mult = (uint8_t)(curr_time * rand() % SI446X_LBT_RAND_TIME_MAX_MOD);
+    dev_timer_delay_t rand_time = timebase * mult;
+    return (base_time + rand_time);
+}
+
 static void si446x_dump_config(uint8_t *ptr, const uint8_t *c)
 {
   uint16_t i = 0;
@@ -782,6 +789,8 @@ static inline void si446x_start_tx(struct si446x_ctx_s *pv)
 
       // Init lbt state
       pv->lbt_state = SI446X_LBT_STATE_FREE;
+      // Init lbt random waiting value
+      pv->lbt_rand_time = si446x_calc_lbt_rand_rime(pv->bt, t);
 
       si446x_rfp_set_state(pv, SI446X_STATE_TX_LBT);
 

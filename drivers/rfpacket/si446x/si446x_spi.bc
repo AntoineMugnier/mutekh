@@ -558,12 +558,17 @@ lbt_busy:
         add8                    %4,                     _offsetof(si446x_ctx_s, lbt_state, 1)
         st8                     %new_state,             %4
         // Jump
-        jmp8                    set_wait_time
+        jmp8                    set_random_wait_time
 
 set_short_wait_time:
         // Set shorter waiting time
         ld32e                   %tbr,                   %R_CTX_PV,   _offsetof(si446x_ctx_s, bt, 4)
         shi32l                  %tbr,                   SI446X_LBT_POLL_SHIFT
+        jmp8                    test_timeout
+
+set_random_wait_time:
+        // Set random waiting time
+        ld32e                   %tbr,                   %R_CTX_PV,   _offsetof(si446x_ctx_s, lbt_rand_time, 4)
         jmp8                    test_timeout
 
 timestamp:

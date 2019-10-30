@@ -47,6 +47,8 @@
 #define SI446X_BASE_TIME                         500       /* us */
 #define SI446X_LBT_WAIT_SHIFT                    3         // = SI446X_BASE_TIME * 2 ^ 3 = 4 ms
 #define SI446X_LBT_POLL_SHIFT                    1         // = SI446X_BASE_TIME * 2 ^ 1 = 1 ms
+#define SI446X_LBT_BASE_TIME_MULT                8         // = SI446X_BASE_TIME * 8 = 4 ms
+#define SI446X_LBT_RAND_TIME_MAX_MOD             9
 #define SI446X_RSSI_SAMPLING_PERIOD              8         /* bt log2 */
 #define SI446X_RSSI_AVERAGE_DEFAULT              -126
 #define SI446X_RSSI_AVERAGE_LOG2_WINDOW_SIZE     8
@@ -209,6 +211,7 @@ struct si446x_ctx_s
   uint8_t pending;
   // LBT state
   uint8_t lbt_state;
+  dev_timer_delay_t lbt_rand_time;
   /* Rssi, carrier level */
   uint8_t carrier;
   uint8_t jam_rssi;
