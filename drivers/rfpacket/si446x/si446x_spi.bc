@@ -503,6 +503,24 @@ tx_cca_clean_it:
         // Jump to main function
         jmp8 si446x_main_tx_cca
 .endfunc
+
+.func si446x_entry_retry_tx_cca
+        .export si446x_entry_retry_tx_cca
+        .input %3 channel
+        .clobber %0, %7, %8
+
+        // Clean any pending interrupt
+        cst8                    %0,                       SI446X_INT_STATUS_CMD
+        pack8                   %0,                       1
+        spi_wr                  %0,                       1,    CS_PULSE
+        // Set waiting time
+        ld32e                   %si446x_main_tx_cca:tbr,  %R_CTX_PV,   _offsetof(si446x_ctx_s, lbt_rand_time, 4)
+        // Set channel
+        mov                     %si446x_main_tx_cca:channel,  %channel
+        // Jump to main function
+        jmp8 si446x_main_tx_cca
+.endfunc
+
 .func si446x_main_tx_cca
         .input %7 channel,
         .input %8 tbr, // time before retry
