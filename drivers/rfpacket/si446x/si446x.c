@@ -21,6 +21,12 @@
 
 */
 
+/* TODO Optimisation driver
+-> Cas Rx continu qui se remet pour s'annuler ensuite (cf capture écran chronogramme spi)
+-> Flush fifo systématiques évitables ?
+*/
+
+
 #define LOGK_MODULE_ID "si44"
 
 #include "si446x.h"
