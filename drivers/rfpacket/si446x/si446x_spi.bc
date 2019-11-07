@@ -526,7 +526,7 @@ tx_cca_clean_it:
         .input %8 tbr, // time before retry
         .clobber %0, %1, %2, %3 rssi, %4 curr_state, %5 new_state, %6, %8, %10, %11, %12, %13
 
-test_timeout:
+    test_timeout:
         // Test if timeout date is reached
         mov                     %0,                     %R_CTX_PV
         add8                    %0,                     _offsetof(si446x_ctx_s, timeout, 8)
@@ -536,14 +536,14 @@ test_timeout:
         ld8e                    %0,                     %R_CTX_PV,   _offsetof(si446x_ctx_s, flags, 1)
         tst32c                  %0,                     bitpos(SI446X_FLAGS_RX_ON)
             jmp8                  wait_no_rx
-wait_tbr:
+    wait_tbr:
         spi_yieldc_delay        %tbr
             jmp8                check_rx
         // Irq is pending
         call16                  %si446x_check_irq:link,  si446x_check_irq
         jmp8                    wait_tbr
 
-check_rx:
+    check_rx:
         // Test if packet is being received
         call16                  %get_status:link,       get_status
         tst32s                  %get_status:status,     1
@@ -559,7 +559,7 @@ check_rx:
         // LBT Free State
         lt                      %get_rssi:current,      %rssi
             jmp8                lbt_end_rx // Exit FSM if rssi is low and we can send
-lbt_set_busy:
+    lbt_set_busy:
         // Change state to busy and restart rx
         cst8                    %new_state,             SI446X_LBT_STATE_BUSY
         mov                     %4,                     %R_CTX_PV
@@ -567,7 +567,7 @@ lbt_set_busy:
         st8                     %new_state,             %4
         jmp8                    set_short_wait_time
 
-lbt_busy:
+    lbt_busy:
         // LBT Busy State
         lt                      %rssi,                  %get_rssi:current
             jmp8                set_short_wait_time // Restart rx if rssi still too high
@@ -578,18 +578,18 @@ lbt_busy:
         st8                     %new_state,             %4
         jmp8                    set_random_wait_time
 
-set_short_wait_time:
+    set_short_wait_time:
         // Set short waiting time
         ld32e                   %tbr,                   %R_CTX_PV,   _offsetof(si446x_ctx_s, bt, 4)
         shi32l                  %tbr,                   SI446X_LBT_POLL_SHIFT
         jmp8                    test_timeout
 
-set_random_wait_time:
+    set_random_wait_time:
         // Set random waiting time
         ld32e                   %tbr,                   %R_CTX_PV,   _offsetof(si446x_ctx_s, lbt_rand_time, 4)
         jmp8                    test_timeout
 
-lbt_end_rx:
+    lbt_end_rx:
         // Timestamp to note end of Rx
         mov                     %8,                     %R_CTX_PV
         add8                    %8,                     _offsetof(si446x_ctx_s, txcca_timestamp, 8)
@@ -598,7 +598,7 @@ lbt_end_rx:
         call8                   %abort_rx:link,         abort_rx
         jmp8                    start_tx_cca
 
-wait_no_rx:
+    wait_no_rx:
         // Abort Rx and wait
         call8                   %abort_rx:link,         abort_rx
         spi_yield_delay         %tbr
@@ -606,7 +606,7 @@ wait_no_rx:
         mov                     %8,                     %R_CTX_PV
         add8                    %8,                     _offsetof(si446x_ctx_s, txcca_timestamp, 8)
         spi_timestamp           %8
-start_tx_cca:
+    start_tx_cca:
         // Configure check RSSI threshold at latch
         cst8                    %set_rssi_control:mode,   0x23
         call16                  %set_rssi_control:link,   set_rssi_control
@@ -633,7 +633,7 @@ start_tx_cca:
         // Go back to lbt fsm
         jmp8                    lbt_set_busy
 
-  tx_timeout:
+    tx_timeout:
         // Timeout occurred
         bit32s                  %STATUS,                STATUS_TX_TIMEOUT
         jmp8                    si446x_rx_tx_error
@@ -737,7 +737,7 @@ start_tx_cca:
           jmp8                  read_start
         call8                   %get_rx_size:link,      get_rx_size
         st16e                   %get_rx_size:size,      %R_CTX_PV,       _offsetof(si446x_ctx_s, size, 2)
-      /* Try to allocate buffer */
+        /* Try to allocate buffer */
         gaddr                   %buffer,                   si446x_alloc
         /* Get address of allocated buffer */
         ccall                   %buffer
