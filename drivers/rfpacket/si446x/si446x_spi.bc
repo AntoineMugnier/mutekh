@@ -375,6 +375,10 @@ tune_done:
         .clobber %0, %1 tmp jam, %2, %3 old new, %4, %5, %6, %7 period, %10, %11, %12, %13
         .export si446x_entry_rx_cont
         call16                  %poll_gpio:link,          poll_gpio
+        /* Test if RXC has been canceled */
+        ld8e                    %tmp,                    %R_CTX_PV,   _offsetof(si446x_ctx_s, flags, 1)
+        tst32c                  %tmp,                    bitpos(SI446X_FLAGS_RX_CONTINOUS)
+            end
         /* Configure latch at Sync Word detection */
         cst8                    %set_rssi_control:mode,   0x02
         call16                  %set_rssi_control:link,   set_rssi_control
