@@ -974,3 +974,24 @@ tx_cca_clean_it:
         /* timeout */
         abort
 .endfunc
+
+.func get_status_and_rssi
+        .input %6 link
+        .clobber %10, %11, %12, %13
+        .output %0 current, %1 latched, %2 afc, %3 status
+        call8                   %poll_gpio:link,        poll_gpio
+        cst8                    %0,                     SI446X_MODEM_STATUS_CMD
+        pack8                   %0,                     1
+        spi_wr                  %0,                     1,    CS_PULSE
+        call8                   %poll_cts_rsp:link,     poll_cts_rsp
+        spi_rd                  %10,                    8,    CS_END
+        unpack16be              %10,                    4,      8
+        mov                     %afc,                   %13
+        mov                     %0,                     %11
+        pack16be                %0,                     1,      2
+        unpack8                 %0,                     2
+        mov                     %status,                %10
+        pack16be                %status,                1,      2
+        unpack8                 %status,                1
+        ret                     %link
+.endfunc
