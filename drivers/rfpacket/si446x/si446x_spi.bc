@@ -488,14 +488,14 @@ tune_done:
         ld8e                    %0,                       %R_CTX_PV,   _offsetof(si446x_ctx_s, flags, 1)
         tst32c                  %0,                       bitpos(SI446X_FLAGS_RX_ON)
             jmp8                tx_cca_clean_it
+        // Configure RSSI latch at Sync Word detection
+        cst8                    %set_rssi_control:mode,   0x02
+        call16                  %set_rssi_control:link,   set_rssi_control
         // Start RX
         mov                     %si446x_start_rx:channel, %channel
         cst32                   %si446x_start_rx:state,   0x0,    8
         call16                  %si446x_start_rx:link,    si446x_start_rx
         call16                  %poll_gpio:link,          poll_gpio
-        // Configure RSSI latch at Sync Word detection
-        cst8                    %set_rssi_control:mode,   0x02
-        call16                  %set_rssi_control:link,   set_rssi_control
 tx_cca_clean_it:
         // Clean any pending interrupt
         call16                  %clean_irq:link,        clean_irq
