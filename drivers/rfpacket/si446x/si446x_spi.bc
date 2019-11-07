@@ -318,6 +318,10 @@ tune_done:
         or32                    %0,              %channel
         pack32le                %0,              2,     6
         spi_wr                  %0,              6,    CS_PULSE
+        // Wait for operation to finish
+        ld32e                   %0,              %R_CTX_PV,           _offsetof(si446x_ctx_s, bt, 4)
+        shi32r                  %0,              3 // 125µs
+        spi_yield_delay         %0
         ret                     %link
 .endfunc
 
@@ -795,13 +799,19 @@ tx_cca_clean_it:
         pack8                   %0,         2
         spi_wr                  %0,         2,    CS_PULSE
         tst32c                  %mask,      0
-          jmp8                  fifo_flush_done
+          jmp8                  fifo_flush_wait_rx
         /* fifo bug */
         ld32e                   %delay,     %R_CTX_PV,           _offsetof(si446x_ctx_s, bt, 4)
         shi32l                  %delay,     3
         spi_yieldc_delay        %delay
           nop
-      fifo_flush_done:
+        jmp8                  fifo_flush_done
+        // Test wait fifo flush rx
+    fifo_flush_wait_rx:
+        ld32e                   %delay,     %R_CTX_PV,           _offsetof(si446x_ctx_s, bt, 4)
+        shi32r                  %delay,     5
+        spi_yield_delay         %delay
+    fifo_flush_done:
         ret                     %link
 .endfunc
 
