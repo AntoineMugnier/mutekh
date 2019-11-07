@@ -545,11 +545,10 @@ tx_cca_clean_it:
 
     check_rx:
         // Test if packet is being received
-        call16                  %get_status:link,       get_status
-        tst32s                  %get_status:status,     1
+        call16                  %get_status_and_rssi:link,       get_status_and_rssi
+        tst32s                  %get_status_and_rssi:status,     1
             jmp8                transfer_ongoing
         // Get RSSI threshold and current value
-        call16                  %get_rssi:link,         get_rssi
         ld8e                    %rssi,                  %R_CTX_PV,   _offsetof(si446x_ctx_s, lbt_rssi, 1)
         // Lbt state machine
         ld8e                    %curr_state,            %R_CTX_PV,   _offsetof(si446x_ctx_s, lbt_state, 1)
