@@ -513,7 +513,7 @@ tx_cca_clean_it:
 .func si446x_entry_retry_tx_cca
         .export si446x_entry_retry_tx_cca
         .input %3 channel
-        .clobber %0, %7, %8
+        .clobber %0, %4, %7, %8
 
         // Clean any pending interrupt
         call16                  %clean_irq:link,        clean_irq
