@@ -185,6 +185,7 @@ struct si446x_ctx_s
   dev_timer_value_t timeout;
   dev_timer_value_t deadline;
   dev_timer_value_t timestamp;
+  // Timestamp for txcca
   dev_timer_value_t txcca_timestamp;
 
   /* base 500 us time */

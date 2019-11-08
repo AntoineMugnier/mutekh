@@ -924,6 +924,7 @@ static void si446x_rfp_idle(struct si446x_ctx_s *pv)
     case DEV_RFPACKET_RQ_TX_FAIR:
 #endif
     case DEV_RFPACKET_RQ_TX:
+      pv->txcca_timestamp = 0;
       return si446x_start_tx(pv);
     case DEV_RFPACKET_RQ_RX:
     case DEV_RFPACKET_RQ_RX_CONT:
@@ -1287,7 +1288,7 @@ static inline void si446x_rfp_end_txrq(struct si446x_ctx_s *pv)
     rq->tx_timestamp -= rq->tx_size * pv->cache_array[pv->id].tb;
 
   if (rq->type == DEV_RFPACKET_RQ_TX_FAIR) {
-    rq->tx_lbt_td = rq->tx_timestamp - pv->txcca_timestamp;
+    rq->tx_lbt_td = pv->timestamp - (rq->tx_size * pv->cache_array[pv->id].tb) - pv->txcca_timestamp;
   }
 }
 
