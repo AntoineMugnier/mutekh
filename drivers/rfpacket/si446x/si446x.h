@@ -74,7 +74,7 @@
 #define SI446X_IO_CTS  2
 #define SI446X_IO_XOEN 3
 
-#define SI446X_CTS_RETRIES  32
+#define SI446X_CTS_RETRIES  255
 
 #define SI446X_WUTR_VALUE   0 
 #define SI446X_WUT_MIN_TIME (122 * 1000 * (1 << SI446X_WUTR_VALUE)) /* ns */
