@@ -972,10 +972,9 @@ tx_cca_clean_it:
         // Check CTS
         call8                   %poll_gpio:link,        poll_gpio
         // Send read buff command + 9 padding bytes
-        cst32                   %10,                    0xffffff00,      0
-        add8                    %10,                    SI446X_READ_BUFF_CMD
-        cst32                   %11,                    0xffffffff,      0
-        cst32                   %12,                    0xffffffff,      0
+        cst32                   %10,                    SI446X_READ_BUFF_CMD,   0
+        cst32                   %11,                    0,      0
+        cst32                   %12,                    0,      0
         pack32le                %10,                    3,      10
         spi_swp                 %10,                    %10,    10,    CS_END
         // Unpack result (first 2 bytes are meaningless)
