@@ -389,13 +389,13 @@ tune_done:
         ld32e                   %period,                  %R_CTX_PV,   _offsetof(si446x_ctx_s, bt, 4)
         shi32l                  %period,                  SI446X_RSSI_SAMPLING_PERIOD
   rssi_loop:
-        call16                  %get_rssi:link,           get_rssi
-        shi32l                  %get_rssi:current,        8
+        call16                  %get_status_and_rssi:link,           get_status_and_rssi
+        shi32l                  %get_status_and_rssi:current,        8
         ld32e                   %old,                     %R_CTX_PV,   _offsetof(si446x_ctx_s, rssi, 4)
   rssi_compute:
         cst32                   %tmp,                     SI446X_RSSI_AVERAGE_WINDOW_SIZE - 1,  0
         mul32                   %old,                     %tmp
-        add                     %new,                     %get_rssi:current,
+        add                     %new,                     %get_status_and_rssi:current,
         shi32r                  %new,                     SI446X_RSSI_AVERAGE_LOG2_WINDOW_SIZE
         /* update rssi */
         st32e                   %new,                     %R_CTX_PV,     _offsetof(si446x_ctx_s, rssi, 4)
@@ -560,7 +560,7 @@ tx_cca_clean_it:
         neq                     %curr_state,            %5
             jmp8                  lbt_busy
         // LBT Free State
-        lt                      %get_rssi:current,      %rssi
+        lt                      %get_status_and_rssi:current,      %rssi
             jmp8                lbt_end_rx // Exit FSM if rssi is low and we can send
     lbt_set_busy:
         // Change state to busy and restart rx
@@ -572,7 +572,7 @@ tx_cca_clean_it:
 
     lbt_busy:
         // LBT Busy State
-        lt                      %rssi,                  %get_rssi:current
+        lt                      %rssi,                  %get_status_and_rssi:current
             jmp8                set_short_wait_time // Restart rx if rssi still too high
         // Change state to free and restart rx
         cst8                    %new_state,             SI446X_LBT_STATE_FREE
@@ -677,37 +677,24 @@ tx_cca_clean_it:
         end
 .endfunc
 
-.func get_rssi
-        .input %6 link
-        .clobber %10, %11, %12, %13
-        .output %0 current, %1 latched, %2 afc
-        cst8                    %0,                     SI446X_MODEM_STATUS_CMD
-        pack8                   %0,                     1
-        call16                  %poll_gpio:link,        poll_gpio
-        spi_wr                  %0,                     1,    CS_PULSE
-        call16                  %poll_cts_rsp:link,     poll_cts_rsp
-        spi_rd                  %10,                    8,    CS_END
-        unpack16be              %10,                    4,      8
-        mov                     %afc,                   %13
-        mov                     %0,                     %11
-        pack16be                %0,                     1,      2
-        unpack8                 %0,                     2
-        ret                     %link
-.endfunc
-
 .func get_rx_size
         .input %4 link
         .clobber %3 tmp, %10, %11, %12, %13
         .output %2 size
         /* Retrieve size of incoming packet */
+        call16                  %poll_gpio:link,        poll_gpio
         cst8                    %tmp,                   SI446X_PACKET_INFO_CMD
         pack8                   %tmp,                   1
-        call16                  %poll_gpio:link,        poll_gpio
         spi_wr                  %tmp,                   1,    CS_PULSE
-        call16                  %poll_cts_rsp:link,     poll_cts_rsp
-        spi_rd                  %size,                  2,    CS_END
-        unpack16le              %size,                  1,      2
-        shi32r                  %size,                  8
+        call16                  %poll_gpio:link,        poll_gpio
+        cst32                   %10,                    SI446X_READ_BUFF_CMD,      0
+        pack32le                %10,                    1,           4
+        spi_swp                 %10,                    %10,         4,    CS_END
+        unpack32be              %10,                    1,           4
+        shi32l                  %10,                    24
+        mov                     %size,                  %10
+        pack32be                %size,                  1,           1
+        unpack8                 %size,                  1
         ret                     %link
 .endfunc
 
@@ -776,9 +763,9 @@ tx_cca_clean_it:
    read_end:
         tst32c                  %STATUS,                STATUS_PACKET_RX
           jmp8                  transfer_ongoing
-        call8                   %get_rssi:link,         get_rssi
-        st8e                    %get_rssi:latched,      %R_CTX_PV,     _offsetof(si446x_ctx_s, carrier)
-        st16e                   %get_rssi:afc,          %R_CTX_PV,     _offsetof(si446x_ctx_s, afc_offset)
+        call16                  %get_status_and_rssi:link,         get_status_and_rssi
+        st8e                    %get_status_and_rssi:latched,      %R_CTX_PV,     _offsetof(si446x_ctx_s, carrier)
+        st16e                   %get_status_and_rssi:afc,          %R_CTX_PV,     _offsetof(si446x_ctx_s, afc_offset)
         call8                   %abort_rx:link,         abort_rx
         end
 .endfunc
