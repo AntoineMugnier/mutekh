@@ -332,6 +332,7 @@ DRIVER_PV(struct si446x_ctx_s);
 #define SI446X_PH_STATUS_CMD      0x21
 #define SI446X_START_TX_CMD       0x31
 #define SI446X_START_RX_CMD       0x32
+#define SI446X_READ_BUFF_CMD      0x44
 #define SI446X_WRITE_FIFO_CMD     0x66
 #define SI446X_READ_FIFO_CMD      0x77
 
