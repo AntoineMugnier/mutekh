@@ -179,14 +179,20 @@ tune_done:
 
 .func get_status
         .input %5 link
-        .output %0 tmp status
+        .output %0 status
         .clobber %10, %11, %12, %13
         call16                  %poll_gpio:link,        poll_gpio
-        cst8                    %tmp,                   SI446X_MODEM_STATUS_CMD
-        pack8                   %tmp,                   1
-        spi_wr                  %tmp,                   1,    CS_PULSE
-        call16                  %poll_cts_rsp:link,     poll_cts_rsp
-        spi_rd                  %status,                1,      CS_END
+        cst8                    %11,                    SI446X_MODEM_STATUS_CMD
+        pack8                   %11,                    1
+        spi_wr                  %11,                    1,    CS_PULSE
+        call16                  %poll_gpio:link,        poll_gpio
+        cst32                   %10,                    SI446X_READ_BUFF_CMD,      0
+        pack32le                %10,                    1,           3
+        spi_swp                 %10,                    %10,         3,    CS_END
+        unpack32be              %10,                    1,           3
+        shi32l                  %10,                    16
+        mov                     %status,                %10
+        pack32be                %status,                1,           1
         unpack8                 %status,                1
         ret                     %link
 .endfunc
@@ -850,13 +856,27 @@ tx_cca_clean_it:
 
 .func si446x_process_irq
         .clobber %0, %1, %2, %3, %4, %5 size, %6, %10, %11, %12, %13
-        /* Get irq status */
+        // Check CTS
+        call8                   %poll_gpio:link,        poll_gpio
+        // Send Irq status cmd
         cst8                    %0,                     SI446X_INT_STATUS_CMD
         pack8                   %0,                     1
-        call8                   %poll_gpio:link,        poll_gpio
         spi_wr                  %0,                     1,    CS_PULSE
-        call8                   %poll_cts_rsp:link,     poll_cts_rsp
-        spi_rd                  %0,                     3,    CS_END
+        // Check CTS
+        call16                  %poll_gpio:link,        poll_gpio
+        // Send read buff comd + 4 padding bytes
+        cst32                   %10,                    SI446X_READ_BUFF_CMD,    0
+        cst32                   %11,                    0,           0
+        pack32le                %10,                    2,           5
+        spi_swp                 %10,                    %10,         5,    CS_END
+        // Recompose irq status (3rd, 4th and 5th bytes)
+        unpack32be              %10,                    2,           5
+        shi32l                  %10,                    16
+        shi32r                  %11,                    16
+        or32                    %10,                    %11
+        mov                     %0,                     %10
+        pack32be                %0,                     1,           3
+        // Spread each status bytes
         unpack8                 %0,                     3
         /* Build status */
         cst8                    %1,                     STATUS_PH_MSK
@@ -884,7 +904,7 @@ tx_cca_clean_it:
         ld16e                   %size,                  %R_CTX_PV,           _offsetof(si446x_ctx_s, size, 2)
         eq0                     %size
         /* All bytes have been written */
-          jmp8                  transfer_ongoing
+          jmp16                 transfer_ongoing
         cst8                    %write_fifo:count,      SI446X_FIFO_THRESHOLD
         call8                   %poll_gpio:link,        poll_gpio
         call8                   %write_fifo:link,       write_fifo
