@@ -43,11 +43,12 @@
         spi_yield_delay         %delay
         cst8                    %tmp,                   0
         spi_gpioset             SI446X_IO_SDN,          %tmp
-
+        // Wait 2ms for chip to reset
         mov                     %delay,                 %basetime
-        shi32l                  %delay,                 5
+        shi32l                  %delay,                 2
         spi_yield_delay         %delay
-        call16                  %poll_gpio:link,        poll_gpio
+        // Wait CTS
+        call16                  %wait_cts:link,        wait_cts
 
         /* Check device */
         cst8                    %tmp,                   SI446X_PART_INFO_CMD
@@ -67,15 +68,8 @@
           jmp8                  config_init
         spi_wrm                 %buffer,               %size,    CS_PULSE
         add                     %buffer,               %size
-  patch_cts_loop:
-        /* read CTS */
-        cst16                   %tmp,                  0xff44, 0
-        pack16le                %tmp,                  1,       2
-        spi_swp                 %tmp,                  %tmp,    2,    CS_PULSE
-        unpack8                 %tmp,                  2
-        cst8                    %tmp,                  0xff
-        neq                     %tmp,                  %cts
-          jmp8                  patch_cts_loop
+        // Wait CTS
+        call16                  %wait_cts:link,        wait_cts
         jmp8                    patch_loop
 
   config_init:
