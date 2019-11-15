@@ -1139,13 +1139,23 @@ static void si446x_clean(struct device_s *dev)
 {
   struct si446x_ctx_s *pv = dev->drv_pv;
 
-  device_irq_source_unlink(dev, &pv->src_ep, 1);
+  device_irq_source_unlink(dev, pv->src_ep, SI446X_IRQ_SRC_COUNT);
 
   device_stop(&pv->timer->base);
 
   dev_drv_spi_bytecode_cleanup(&pv->spi, &pv->spi_rq);
 
   mem_free(pv);
+}
+
+BC_CCALL_FUNCTION(si446x_enable_cts_irq) {
+  struct si446x_ctx_s *pv = (struct si446x_ctx_s *)bc_get_reg(ctx, R_CTX_PV);
+  struct dev_irq_src_s *p_irq_src = &pv->src_ep[SI446X_IRQ_SRC_CTS];
+  // TODO Prevent race condition by locking irq till the driver is in yieldc ?
+  // Enable cts irq
+  device_irq_src_enable(p_irq_src);
+  // Return maximum waiting time
+  return (pv->bt << SI446X_MAX_WAIT_CTS_SHIFT);
 }
 
 BC_CCALL_FUNCTION(si446x_alloc)
@@ -1458,16 +1468,16 @@ static DEV_IRQ_SRC_PROCESS(si446x_irq_source_process)
   struct si446x_ctx_s *pv = dev->drv_pv;
   struct dev_spi_ctrl_bytecode_rq_s *srq = &pv->spi_rq;
 
-  dev_timer_value_t ts;
-  DEVICE_OP(pv->timer, get_value, &ts, 0);
-  logk_trace("[%d] irq", (uint32_t)ts);
-
   lock_spin(&dev->lock);
 
-  pv->icount++;
-
-  /* Get timer value */
-  DEVICE_OP(pv->timer, get_value, &pv->timestamp, 0);
+  // Check irq endpoint
+  if (ep == &pv->src_ep[SI446X_IRQ_SRC_NIRQ]) {
+    pv->icount++;
+    /* Get timer value */
+    DEVICE_OP(pv->timer, get_value, &pv->timestamp, 0);
+  } else {
+    device_irq_src_disable(&pv->src_ep[SI446X_IRQ_SRC_CTS]);
+  }
   /* Wakeup any waiting instruction */
   dev_spi_bytecode_wakeup(&pv->spi, srq);
 
@@ -1580,11 +1590,13 @@ static DEV_INIT(si446x_init)
 
   dev_spi_ctrl_rq_init(&srq->base, &si446x_spi_rq_done);
 
-  /* irq io pin */
-  device_irq_source_init(dev, &pv->src_ep, 1, &si446x_irq_source_process);
+  /* Init irq*/
+  device_irq_source_init(dev, pv->src_ep, SI446X_IRQ_SRC_COUNT, &si446x_irq_source_process);
 
-  if (device_irq_source_link(dev, &pv->src_ep, 1, 1))
+  if (device_irq_source_link(dev, pv->src_ep, SI446X_IRQ_SRC_COUNT, 0x3))
     goto err_timer;
+
+  device_irq_src_disable(&pv->src_ep[SI446X_IRQ_SRC_CTS]);
 
   pv->pwr = 0xFFFF;
 

@@ -45,6 +45,7 @@
 #define SI446X_MAX_PACKET_SIZE                   256
 #define SI446X_PKT_CFG_BUFFER_SIZE               32
 #define SI446X_BASE_TIME                         500       /* us */
+#define SI446X_MAX_WAIT_CTS_SHIFT                6         // = SI446X_BASE_TIME * 2 ^ 4 = 32 ms
 #define SI446X_LBT_WAIT_SHIFT                    3         // = SI446X_BASE_TIME * 2 ^ 3 = 4 ms
 #define SI446X_LBT_POLL_SHIFT                    1         // = SI446X_BASE_TIME * 2 ^ 1 = 1 ms
 #define SI446X_LBT_BASE_TIME_MULT                8         // = SI446X_BASE_TIME * 8 = 4 ms
@@ -97,6 +98,7 @@
 
 
 BC_CCALL_FUNCTION(si446x_alloc);
+BC_CCALL_FUNCTION(si446x_enable_cts_irq);
 
 enum si446x_state_s
 {
@@ -115,6 +117,12 @@ enum si446x_state_s
   SI446X_STATE_TX,
   SI446X_STATE_TX_LBT,
   SI446X_STATE_TX_LBT_STOPPING_RXC,
+};
+
+enum si446x_irq_srx {
+  SI446X_IRQ_SRC_NIRQ = 0,
+  SI446X_IRQ_SRC_CTS,
+  SI446X_IRQ_SRC_COUNT,
 };
 
 struct si446x_modem_config_s
@@ -226,7 +234,7 @@ struct si446x_ctx_s
 
   enum si446x_state_s state:8;
 
-  struct dev_irq_src_s src_ep;
+  struct dev_irq_src_s src_ep[SI446X_IRQ_SRC_COUNT];
   struct device_spi_ctrl_s spi;
   struct device_timer_s *timer;
   struct dev_spi_ctrl_bytecode_rq_s spi_rq;
