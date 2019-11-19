@@ -501,7 +501,8 @@ tx_cca_clean_it:
         call16                  %clean_irq:link,        clean_irq
         // Set waiting time
         ld32e                   %si446x_main_tx_cca:tbr,  %R_CTX_PV,   _offsetof(si446x_ctx_s, bt, 4)
-        shi32l                  %si446x_main_tx_cca:tbr,  SI446X_LBT_WAIT_SHIFT
+        cst8                    %0,                       SI446X_LBT_BASE_TIME_MULT
+        mul32                   %si446x_main_tx_cca:tbr,  %0
         // Jump to main function
         jmp8 si446x_main_tx_cca
 .endfunc
