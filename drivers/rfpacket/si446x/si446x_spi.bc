@@ -108,7 +108,7 @@ tune_done:
         .input %7 link
         .input %0 buffer
         .input %1 cmd
-        .clobber %1, %4 size, %5 head, %6 tmp, %11, %12
+        .clobber %1, %4 size, %5 head, %6 tmp, %11, %12, %13
   config_loop:
         ld8i                    %size,                 %cmd
         eq0                     %size
@@ -154,7 +154,7 @@ tune_done:
 .func si446x_entry_pkt_config
         .input %0 buffer
         .input %1 cmd
-        .clobber %1, %4, %5, %6, %7, %11, %12
+        .clobber %1, %4, %5, %6, %7, %11, %12, %13
         .export si446x_entry_pkt_config
         call8                   %si446x_config:link,   si446x_config
         end
@@ -163,7 +163,7 @@ tune_done:
 .func si446x_entry_rf_config
         .input %0 buffer
         .input %1 cmd
-        .clobber %0, %1, %4 size, %5 head, %6 tmp, %7, %11, %12
+        .clobber %0, %1, %4 size, %5 head, %6 tmp, %7, %11, %12, %13
         .export si446x_entry_rf_config
         call8                   %si446x_config:link,   si446x_config
         /* End of configuration */
@@ -174,7 +174,7 @@ tune_done:
 .func get_status
         .input %5 link
         .output %0 status
-        .clobber %10, %11, %12
+        .clobber %10, %11, %12, %13
         // Wait CTS
         call16                  %wait_cts:link,        wait_cts
         cst8                    %11,                    SI446X_MODEM_STATUS_CMD
@@ -195,7 +195,7 @@ tune_done:
 
 .func set_tx_power
         .input %4 link, %0 power
-        .clobber %5 tmp, %6, %11, %12
+        .clobber %5 tmp, %6, %11, %12, %13
         ld8e                    %tmp,            %R_CTX_PV,   _offsetof(si446x_ctx_s, flags, 1)
         tst32c                  %tmp,            bitpos(SI446X_FLAGS_TX_POWER)
           ret                   %link
@@ -229,7 +229,7 @@ tune_done:
         .input %4 link
         .input %0 mode /* TX immediate or update */
         .input %3 channel
-        .clobber %0 tmp, %5 cmd, %6 size, %11, %12
+        .clobber %0 tmp, %5 cmd, %6 size, %11, %12, %13
         cst32                   %cmd,            SI446X_START_TX_CMD,   0
         or32                    %cmd,            %mode
         mov                     %6,              %channel
@@ -255,7 +255,7 @@ tune_done:
 .func fifo_init
   /* Write packet size to fifo */
   .input %4 link
-  .clobber %0 tmp rq, %6 size buffer, %11, %12
+  .clobber %0 tmp rq, %6 size buffer, %11, %12, %13
   .output %5 count free
         cst8                    %free,                  SI446X_FIFO_SIZE - 1
         ld16e                   %size,                  %R_CTX_PV,     _offsetof(si446x_ctx_s, size, 2)
@@ -277,7 +277,7 @@ tune_done:
 .func set_rssi_control
         .input %3 link
         .input %1 mode
-        .clobber %0, %1, %11, %12
+        .clobber %0, %1, %11, %12, %13
         cst32                   %0,                      0x4C012011,   0
         pack32le                %0,                      2,     5
         // Wait CTS
@@ -289,7 +289,7 @@ tune_done:
 .func si446x_tx_init
         .input %0 power
         .input %7 link
-        .clobber %0, %4, %5, %6, %11, %12
+        .clobber %0, %4, %5, %6, %11, %12, %13
         call8                   %set_tx_power:link,       set_tx_power
         /* Write packet size to fifo */
         call8                   %fifo_init:link,          fifo_init
@@ -318,7 +318,7 @@ tune_done:
         .input %5 link
         .input %1 state  /** RX timeout state  */
         .input %3 channel
-        .clobber %0, %1, %3, %11, %12
+        .clobber %0, %1, %3, %11, %12, %13
         cst32                   %0,              SI446X_START_RX_CMD,   0
         shi32l                  %channel,        8
         or32                    %0,              %channel
@@ -645,7 +645,7 @@ tx_cca_clean_it:
 .func si446x_abort
         .input %6 link
         .input %5 mask  /** Fifo flush mask */
-        .clobber %0, %1, %4, %11, %12
+        .clobber %0, %1, %4, %11, %12, %13
         call8                   %state_ready:link,      state_ready
         mov                     %flush_fifo:mask,       %mask
         call8                   %flush_fifo:link,       flush_fifo
@@ -655,7 +655,7 @@ tx_cca_clean_it:
 
 .func abort_rx
         .input %3 link
-        .clobber %0, %1, %4, %5, %6, %11, %12
+        .clobber %0, %1, %4, %5, %6, %11, %12, %13
         cst8                    %si446x_abort:mask,     0x2
         call8                   %si446x_abort:link,     si446x_abort
         ret                     %link
@@ -663,7 +663,7 @@ tx_cca_clean_it:
 
 .func abort_rx_tx
         .input %2 link
-        .clobber %0, %1, %4, %5, %6, %11, %12
+        .clobber %0, %1, %4, %5, %6, %11, %12, %13
         cst8                    %si446x_abort:mask,     0x3
         call8                   %si446x_abort:link,     si446x_abort
         ret                     %link
@@ -671,14 +671,14 @@ tx_cca_clean_it:
 
 .func si446x_rx_tx_error
         .export si446x_rx_tx_error
-        .clobber %0, %1, %2, %4, %5, %6, %11, %12
+        .clobber %0, %1, %2, %4, %5, %6, %11, %12, %13
         call8                   %abort_rx_tx:link,      abort_rx_tx
         end
 .endfunc
 
 .func get_rx_size
         .input %4 link
-        .clobber %3 tmp, %10, %11, %12
+        .clobber %3 tmp, %10, %11, %12, %13
         .output %2 size
         // Wait CTS
         call16                  %wait_cts:link,          wait_cts
@@ -698,7 +698,7 @@ tx_cca_clean_it:
 .endfunc
 
 .func rx_error
-        .clobber %0, %1, %3, %4, %5, %6, %11, %12
+        .clobber %0, %1, %3, %4, %5, %6, %11, %12, %13
         call8                   %abort_rx:link,         abort_rx
         end
 .endfunc
@@ -780,7 +780,7 @@ tx_cca_clean_it:
 .func flush_fifo
         .input %1 mask  /** FIFO RX/TX mask */
         .input %4 link
-        .clobber %0 delay, %11, %12
+        .clobber %0 delay, %11, %12, %13
         cst8                    %0,         SI446X_FIFO_INFO_CMD
         pack8                   %0,         2
         // Wait CTS
@@ -800,7 +800,7 @@ tx_cca_clean_it:
 
 .func state_ready
         .input %4 link
-        .clobber %0, %11, %12
+        .clobber %0, %11, %12, %13
         cst16                   %0,             0x0334, 0
         pack16le                %0,             1,      2
         // Wait CTS
@@ -812,7 +812,7 @@ tx_cca_clean_it:
 #ifdef CONFIG_DRIVER_RFPACKET_SI446X_SLEEP
 .func si446x_entry_ready
         .export si446x_entry_ready
-        .clobber %0 tmp, %4, %11, %12
+        .clobber %0 tmp, %4, %11, %12, %13
 #ifdef CONFIG_DRIVER_RFPACKET_SI446X_TCXO
         cst8                    %tmp,                   1
         spi_gpioset             SI446X_IO_XOEN,         %tmp
@@ -825,7 +825,7 @@ tx_cca_clean_it:
 
 .func si446x_entry_sleep
         .export si446x_entry_sleep
-        .clobber %0 tmp, %11, %12
+        .clobber %0 tmp, %11, %12, %13
         /* change state */
         cst16                   %0,                     0x0134, 0
         pack16le                %0,                     1,      2
@@ -922,7 +922,7 @@ tx_cca_clean_it:
 .func write_fifo
         .input %4 link
         .input %5 count /* Number of free place in fifo */
-        .clobber %0 tmp, %6 size buffer, %11, %12
+        .clobber %0 tmp, %6 size buffer, %11, %12, %13
         .output %5
         ld16e                   %size,                  %R_CTX_PV,     _offsetof(si446x_ctx_s, size, 2)
         lt                      %size,                  %count
@@ -939,7 +939,7 @@ tx_cca_clean_it:
 
 .func clean_irq
         .input %4 link
-        .clobber %0, %11, %12
+        .clobber %0, %11, %12, %13
         cst32                   %0,                     STATUS_INFO_MSK,     0
         and32                   %STATUS,                %0
         ld8e                    %0,                     %R_CTX_PV,   _offsetof(si446x_ctx_s, icount, 1)
@@ -966,7 +966,7 @@ tx_cca_clean_it:
 
 .func wait_cts
         .input %11 link
-        .clobber %12 tmp
+        .clobber %12 tmp, %13 delay
         // Test if CTS is high
         spi_gpioget             SI446X_IO_CTS,    %tmp
         tst32s                  %tmp,             0
@@ -974,9 +974,12 @@ tx_cca_clean_it:
         // Enable irq
         gaddr                   %tmp,             si446x_enable_cts_irq
         ccall                   %tmp
+        // Set delay
+        lde                     %delay,             %R_CTX_PV,          _offsetof(si446x_ctx_s, bt, 4)
+        shi32l                  %delay,             SI446X_MAX_WAIT_CTS_SHIFT
         // Wait irq or timeout
     sleep_wait_cts:
-        spi_yieldc_delay        %tmp
+        spi_yieldc_delay        %delay
             // Timeout
             jmp8                timeout_cts
         // Irq, check CTS value
@@ -997,7 +1000,7 @@ tx_cca_clean_it:
 
 .func get_status_and_rssi
         .input %6 link
-        .clobber %10, %11, %12
+        .clobber %10, %11, %12, %13
         .output %0 current, %1 latched, %2 afc, %3 status
         // Wait CTS
         call8                   %wait_cts:link,        wait_cts
