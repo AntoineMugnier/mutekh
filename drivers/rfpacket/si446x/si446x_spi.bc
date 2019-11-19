@@ -985,7 +985,7 @@ tx_cca_clean_it:
         // Irq, check CTS value
         spi_gpioget             SI446X_IO_CTS,    %tmp
         tst32s                  %tmp,             0
-            ret                 %link
+            jmp8                cts_end
         // Other irq, go back to wait cts irq
         jmp8                    sleep_wait_cts
 
@@ -993,9 +993,15 @@ tx_cca_clean_it:
         // Check CTS in case we missed irq
         spi_gpioget             SI446X_IO_CTS,    %tmp
         tst32s                  %tmp,             0
-            ret                 %link
+            jmp8                cts_end
         // Error CTS still bad, chip ko ?
         abort
+
+    cts_end:
+        // Disable irq
+        gaddr                   %tmp,             si446x_disable_cts_irq
+        ccall                   %tmp
+        ret                     %link
 .endfunc
 
 .func get_status_and_rssi

@@ -97,8 +97,9 @@
 
 
 
-BC_CCALL_FUNCTION(si446x_alloc);
 BC_CCALL_FUNCTION(si446x_enable_cts_irq);
+BC_CCALL_FUNCTION(si446x_disable_cts_irq);
+BC_CCALL_FUNCTION(si446x_alloc);
 
 enum si446x_state_s
 {
