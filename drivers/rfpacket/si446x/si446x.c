@@ -1597,12 +1597,20 @@ static DEV_INIT(si446x_init)
   dev_spi_ctrl_rq_init(&srq->base, &si446x_spi_rq_done);
 
   /* Init irq*/
+#ifdef CONFIG_DRIVER_RFPACKET_SI446X_CTS_IRQ
   device_irq_source_init(dev, pv->src_ep, SI446X_IRQ_SRC_COUNT, &si446x_irq_source_process);
 
-  if (device_irq_source_link(dev, pv->src_ep, SI446X_IRQ_SRC_COUNT, 0x3))
+  if (device_irq_source_link(dev, pv->src_ep, SI446X_IRQ_SRC_COUNT, 0x3)) {
     goto err_timer;
-
+  }
   device_irq_src_disable(&pv->src_ep[SI446X_IRQ_SRC_CTS]);
+#else
+  device_irq_source_init(dev, pv->src_ep, 1, &si446x_irq_source_process);
+
+  if (device_irq_source_link(dev, pv->src_ep, 1, 0x3)) {
+    goto err_timer;
+  }
+#endif
 
   pv->pwr = 0xFFFF;
 
