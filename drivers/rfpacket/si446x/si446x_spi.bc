@@ -952,25 +952,28 @@ tx_cca_clean_it:
 
 .func poll_gpio
         .input %11 link
-        .clobber %12 tmp, %13 retry
-        cst8                    %retry,           SI446X_CTS_RETRIES
+        .clobber %12 tmp, %13 timeout
+        // Set timeout
+        ld32e                   %timeout,         %R_CTX_PV,           _offsetof(si446x_ctx_s, bt, 4)
+        shi32l                  %timeout,         SI446X_MAX_WAIT_CTS_SHIFT
   poll_gpio_loop:
-        // Test if CTS is
+        // Test if CTS is high
         spi_gpioget             SI446X_IO_CTS,    %tmp
         tst32s                  %tmp,             0
             ret                 %link
+        // Check if timeout is reached
+        spi_elapsed_r           %timeout
+            abort
         // Set retry timer to 31.25µs
         ld32e                   %tmp,             %R_CTX_PV,           _offsetof(si446x_ctx_s, bt, 4)
         shi32r                  %tmp,             4
         // Limit to 1 timer unit
         eq0                     %tmp
             cst8                %tmp,             1
-        // Wait before retry
+        // Yield before retry
         spi_yield_delay         %tmp
-        // TODO, CTS as interrupt to avoid polling
-        loop                    %retry,           poll_gpio_loop
-        // Out of retries
-        abort
+        // Retry
+        jmp8                    poll_gpio_loop
 .endfunc
 
 .func get_status_and_rssi
