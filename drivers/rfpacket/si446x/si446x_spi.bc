@@ -1010,14 +1010,8 @@ poll_cts_loop:
         // Check if timeout is reached
         spi_elapsed_r           %timeout
             abort
-        // Set retry timer to 31.25µs
-        ld32e                   %tmp,             %R_CTX_PV,           _offsetof(si446x_ctx_s, bt, 4)
-        shi32r                  %tmp,             4
-        // Limit to 1 timer unit
-        eq0                     %tmp
-            cst8                %tmp,             1
         // Yield before retry
-        spi_yield_delay         %tmp
+        spi_yield
         // Retry
         jmp8                    poll_cts_loop
 #endif
