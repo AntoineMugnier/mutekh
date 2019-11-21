@@ -22,8 +22,7 @@
 */
 
 /* TODO Optimisation driver
--> Cas Rx continu qui se remet pour s'annuler ensuite (cf capture écran chronogramme spi)
--> Flush fifo systématiques évitables ?
+  Study unnecessary operations (abor rx, flush fifo, clean irq)
 */
 
 
