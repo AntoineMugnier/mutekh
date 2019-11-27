@@ -584,6 +584,10 @@ tx_cca_retry_start:
         mov                     %4,                     %R_CTX_PV
         add8                    %4,                     _offsetof(si446x_ctx_s, lbt_state, 1)
         st8                     %new_state,             %4
+        // Test if reception is possible
+        ld8e                    %0,                     %R_CTX_PV,   _offsetof(si446x_ctx_s, flags, 1)
+        tst32c                  %0,                     bitpos(SI446X_FLAGS_RX_ON)
+            jmp8                set_long_wait_time
         jmp8                    set_short_wait_time
 
     lbt_busy:
@@ -598,14 +602,20 @@ tx_cca_retry_start:
         jmp8                    set_random_wait_time
 
     set_short_wait_time:
-        // Set short waiting time
+        // Set short waiting time (rssi poll)
         ld32e                   %tbr,                   %R_CTX_PV,   _offsetof(si446x_ctx_s, bt, 4)
         shi32l                  %tbr,                   SI446X_LBT_POLL_SHIFT
         jmp8                    test_timeout
 
     set_random_wait_time:
-        // Set random waiting time
+        // Set random waiting time (lbt random wait time)
         ld32e                   %tbr,                   %R_CTX_PV,   _offsetof(si446x_ctx_s, lbt_rand_time, 4)
+        jmp8                    test_timeout
+
+    set_long_wait_time:
+        // Set long waiting time (no rx)
+        ld32e                   %tbr,                   %R_CTX_PV,   _offsetof(si446x_ctx_s, bt, 4)
+        shi32l                  %tbr,                   SI446X_LBT_NO_RX_SHIFT
         jmp8                    test_timeout
 
     lbt_end_rx:
@@ -643,9 +653,6 @@ tx_cca_retry_start:
             jmp8                  transfer_ongoing
         // Failed to send, channel is busy - Clean any pending interrupt
         call16                  %clean_irq:link,        clean_irq
-        // Configure RSSI latch at Sync Word detection
-        cst8                    %set_rssi_control:mode, 0x02
-        call16                  %set_rssi_control:link, set_rssi_control
         // Go back to lbt fsm
         jmp8                    lbt_set_busy
 
