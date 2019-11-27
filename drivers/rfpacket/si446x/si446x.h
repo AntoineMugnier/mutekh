@@ -45,7 +45,8 @@
 #define SI446X_MAX_PACKET_SIZE                   256
 #define SI446X_PKT_CFG_BUFFER_SIZE               32
 #define SI446X_BASE_TIME                         500       /* us */
-#define SI446X_MAX_WAIT_CTS_SHIFT                6         // = SI446X_BASE_TIME * 2 ^ 4 = 32 ms
+#define SI446X_MAX_WAIT_CTS_SHIFT                6         // = SI446X_BASE_TIME * 2 ^ 6 = 32 ms
+#define SI446X_LBT_NO_RX_SHIFT                   4         // = SI446X_BASE_TIME * 2 ^ 4 = 8 ms
 #define SI446X_LBT_WAIT_SHIFT                    3         // = SI446X_BASE_TIME * 2 ^ 3 = 4 ms
 #define SI446X_LBT_POLL_SHIFT                    1         // = SI446X_BASE_TIME * 2 ^ 1 = 1 ms
 #define SI446X_LBT_BASE_TIME_MULT                10        // = SI446X_BASE_TIME * 10 = 5 ms
