@@ -1137,13 +1137,13 @@ static DEV_RFPACKET_CANCEL(si446x_rfp_cancel)
 static void si446x_clean(struct device_s *dev)
 {
   struct si446x_ctx_s *pv = dev->drv_pv;
-
+#ifdef CONFIG_DRIVER_RFPACKET_SI446X_CTS_IRQ
   device_irq_source_unlink(dev, pv->src_ep, SI446X_IRQ_SRC_COUNT);
-
+#else
+  device_irq_source_unlink(dev, pv->src_ep, 1);
+#endif
   device_stop(&pv->timer->base);
-
   dev_drv_spi_bytecode_cleanup(&pv->spi, &pv->spi_rq);
-
   mem_free(pv);
 }
 
