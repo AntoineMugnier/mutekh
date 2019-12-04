@@ -1017,8 +1017,8 @@ poll_cts_loop:
         spi_gpioget             SI446X_IO_CTS,    %tmp
         tst32s                  %tmp,             0
             jmp8                cts_end
-        // Error CTS still bad, chip ko ?
-        abort
+        // Error CTS still bad
+            jmp8                cts_error
 
     cts_end:
         // Disable irq
@@ -1028,7 +1028,7 @@ poll_cts_loop:
 #else // CTS POLLING METHOD
         // Check if timeout is reached
         spi_elapsed_r           %timeout
-            abort
+            jmp8                cts_error
         // Yield before retry
         spi_yield
         // Retry
@@ -1074,4 +1074,9 @@ poll_cts_loop:
         unpack8                 %status,                1
         // Return
         ret                     %link
+.endfunc
+
+.func cts_error
+    bit32s                  %STATUS,                STATUS_OTHER_ERR
+    end
 .endfunc
