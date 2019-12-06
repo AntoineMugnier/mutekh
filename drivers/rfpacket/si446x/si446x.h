@@ -34,15 +34,16 @@
 #include <device/irq.h>
 
 #include <string.h>
+#include <stdbool.h>
 
 #include <device/class/spi.h>
 #include <device/class/gpio.h>
 #include <device/class/rfpacket.h>
 
 #include "modem_calc.h"
+#include "rfpacket_core.h"
 
 #define SI446X_MAX_RSSI_VALUE                    -52       /* in 0.125 dbm */
-#define SI446X_MAX_PACKET_SIZE                   256
 #define SI446X_PKT_CFG_BUFFER_SIZE               32
 #define SI446X_BASE_TIME                         500       /* us */
 #define SI446X_MAX_WAIT_CTS_SHIFT                6         // = SI446X_BASE_TIME * 2 ^ 6 = 32 ms
@@ -99,25 +100,6 @@
 BC_CCALL_FUNCTION(si446x_enable_cts_irq);
 BC_CCALL_FUNCTION(si446x_disable_cts_irq);
 BC_CCALL_FUNCTION(si446x_alloc);
-
-enum si446x_state_s
-{
-  SI446X_STATE_INITIALISING,
-  SI446X_STATE_ENTER_SLEEP,
-  SI446X_STATE_SLEEP,
-  SI446X_STATE_AWAKING,
-  SI446X_STATE_READY,
-  SI446X_STATE_CONFIG,
-  SI446X_STATE_CONFIG_RXC,
-  SI446X_STATE_CONFIG_RXC_PENDING_STOP,
-  SI446X_STATE_RX,
-  SI446X_STATE_RXC,
-  SI446X_STATE_STOPPING_RXC,
-  SI446X_STATE_PAUSE_RXC,
-  SI446X_STATE_TX,
-  SI446X_STATE_TX_LBT,
-  SI446X_STATE_TX_LBT_STOPPING_RXC,
-};
 
 enum si446x_irq_srx {
   SI446X_IRQ_SRC_NIRQ = 0,
@@ -179,88 +161,56 @@ static const uint8_t si446x_pk_cmd[] = {
 
 #define SI446X_RF_CONFIG_CACHE_ENTRY 1
 
-struct si446x_cache_entry_s
-{
+struct si446x_cache_entry_s {
   struct dev_rfpacket_rf_cfg_s * cfg;
   struct si446x_rf_regs_s data;
   /* Time byte in timer units */
   dev_timer_delay_t tb;
 };
 
-struct si446x_ctx_s
-{
-  dev_timer_value_t rxc_timeout;
-  dev_timer_value_t timeout;
-  dev_timer_value_t deadline;
-  dev_timer_value_t timestamp;
-  // Timestamp for txcca
-  dev_timer_value_t txcca_timestamp;
-
-  /* base 500 us time */
+struct si446x_ctx_s {
+  // Base time balue (500µs)
   dev_timer_delay_t bt;
-  /* Time before checking cca status in us*/
+  // Time before checking cca status in us
   dev_timer_delay_t ccad;
-  /* Time to send a complete fifo in us */
+  // Time to send a complete fifo in us
   dev_timer_delay_t mpst;
-
-  struct device_s *dev;
-  /* Request for received packets */
-  struct dev_rfpacket_rx_s *rxrq;
-  struct dev_rfpacket_rq_s *rq;
   const uint8_t *rftune;
-  /* Current working size and buffer */
-  uint8_t *buffer;
-  uint16_t size;
-  /* Interrupt count */
+  // Interrupt count
   uint8_t icount;
   uint8_t flags;
-  /* Last power level */
+  // Last power level
   int16_t pwr;
-
-  uint8_t pending;
-  // LBT state
+  // LBT info
   uint8_t lbt_state;
   dev_timer_delay_t lbt_rand_time;
-  /* Rssi, carrier level */
+  // Rssi, carrier level
   uint8_t carrier;
   uint8_t jam_rssi;
   uint8_t lbt_rssi;
   uint32_t rssi;
-  /* Frequency associated to last Rssi measurment */
+  // Frequency associated to last Rssi measurment
   int16_t afc_offset;
   uint16_t osc_ppb;
   uint32_t synth_ratio;
   uint32_t frequency;
-
-  enum si446x_state_s state:8;
-
+  // Generic rfpacket context struct
+  struct rfpacket_ctx_s gctx;
+  // Device structs
+  struct device_s *dev;
   struct dev_irq_src_s src_ep[SI446X_IRQ_SRC_COUNT];
   struct device_spi_ctrl_s spi;
-  struct device_timer_s *timer;
   struct dev_spi_ctrl_bytecode_rq_s spi_rq;
-
-  /* Queue for continue/timeout RX requests */
-  dev_request_queue_root_t rx_cont_queue;
-
-  /* Queue for requests */
-  dev_request_queue_root_t queue;
-
-  /* pending irqs */
+  // Bytecode status
   uintptr_t bc_status;
-
-  /* Kroutine for configuration */
+  // Kroutine for configuration
   struct kroutine_s kr;
   struct si446x_pkt_regs_s pk_buff;
-  struct dev_rfpacket_pk_cfg_s * pk_cfg;
+  struct dev_rfpacket_pk_cfg_s *pk_cfg;
   struct si446x_cache_entry_s cache_array[SI446X_RF_CONFIG_CACHE_ENTRY];
-  /* Current cache cfg in use */
+  // Current cache cfg in use 
   uint8_t id;
-
   gpio_id_t pin_map[4];
-
-#ifdef CONFIG_DRIVER_RFPACKET_SI446X_STATISTICS
-  struct dev_rfpacket_stats_s stats;
-#endif
 };
 
 STRUCT_COMPOSE(si446x_ctx_s, kr);
