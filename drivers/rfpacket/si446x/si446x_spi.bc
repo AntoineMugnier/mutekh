@@ -210,14 +210,14 @@ tune_done:
   .input %4 link
   .input %5 count
   .clobber %6 buffer rem
-        ld32e                   %buffer,                %R_CTX_PV,     _offsetof(si446x_ctx_s, buffer, 4)
+        ld32e                   %buffer,                %R_CTX_PV,     _offsetof(si446x_ctx_s, gctx.buffer, 4)
         /* Update buffer */
         add                     %buffer,                %count
-        st32e                   %buffer,                %R_CTX_PV,     _offsetof(si446x_ctx_s, buffer, 4)
+        st32e                   %buffer,                %R_CTX_PV,     _offsetof(si446x_ctx_s, gctx.buffer, 4)
         /* Update remaining size */
-        ld16e                   %rem,                   %R_CTX_PV,     _offsetof(si446x_ctx_s, size, 2)
+        ld16e                   %rem,                   %R_CTX_PV,     _offsetof(si446x_ctx_s, gctx.size, 2)
         sub                     %rem,                   %count
-        st16e                   %rem,                   %R_CTX_PV,     _offsetof(si446x_ctx_s, size, 2)
+        st16e                   %rem,                   %R_CTX_PV,     _offsetof(si446x_ctx_s, gctx.size, 2)
         ret                     %link
 .endfunc
 
@@ -231,7 +231,7 @@ tune_done:
         mov                     %6,              %channel
         shi32l                  %6,              8
         or32                    %cmd,            %6
-        ld32e                   %tmp,            %R_CTX_PV,     _offsetof(si446x_ctx_s, rq, 4)
+        ld32e                   %tmp,            %R_CTX_PV,     _offsetof(si446x_ctx_s, gctx.rq, 4)
         ld16e                   %size,           %tmp,          _offsetof(dev_rfpacket_rq_s, tx_size, 2)
         /* Add 1 for the size byte */
         add8                    %size,           1
@@ -254,7 +254,7 @@ tune_done:
   .clobber %0 tmp rq, %6 size buffer, %11, %12, %13
   .output %5 count free
         cst8                    %free,                  SI446X_FIFO_SIZE - 1
-        ld16e                   %size,                  %R_CTX_PV,     _offsetof(si446x_ctx_s, size, 2)
+        ld16e                   %size,                  %R_CTX_PV,     _offsetof(si446x_ctx_s, gctx.size, 2)
         lt                      %size,                  %free
           mov                   %count,                 %size
         cst8                    %tmp,                   SI446X_WRITE_FIFO_CMD
@@ -264,7 +264,7 @@ tune_done:
         // Wait CTS
         call16                  %wait_cts:link,        wait_cts
         spi_wr                  %tmp,                   2,              CS_START
-        lde                     %rq,                    %R_CTX_PV,     _offsetof(si446x_ctx_s, rq)
+        lde                     %rq,                    %R_CTX_PV,     _offsetof(si446x_ctx_s, gctx.rq)
         ld32e                   %buffer,                %rq,           _offsetof(dev_rfpacket_rq_s, tx_buf, 4)
         spi_wrm                 %buffer,                %count,         CS_END
         ret                     %link
@@ -302,7 +302,7 @@ tune_done:
         call8                   %si446x_tx_init:link,     si446x_tx_init
         /* Wait deadline before TX */
         mov                     %0,                       %R_CTX_PV
-        add8                    %0,                       _offsetof(si446x_ctx_s, deadline, 8)
+        add8                    %0,                       _offsetof(si446x_ctx_s, gctx.deadline, 8)
         spi_yield_deadline      %0
         cst32                   %si446x_start_tx:mode,    0x30,  16
         mov                     %si446x_start_tx:channel, %channel
@@ -410,7 +410,7 @@ tune_done:
         tst32s                  %tmp,                    bitpos(SI446X_FLAGS_RXC_INFINITE)
           jmp8                  rxc_infinite
         mov                     %tmp,                    %R_CTX_PV
-        add8                    %tmp,                    _offsetof(si446x_ctx_s, rxc_timeout, 8)
+        add8                    %tmp,                    _offsetof(si446x_ctx_s, gctx.rxc_timeout, 8)
         spi_elapsed_r           %tmp
           jmp8                  rxc_timeout
   rxc_infinite:
@@ -447,7 +447,7 @@ tune_done:
         .export si446x_entry_rx
         /* Wait deadline before RX */
         mov                     %0,                       %R_CTX_PV
-        add8                    %0,                       _offsetof(si446x_ctx_s, deadline, 8)
+        add8                    %0,                       _offsetof(si446x_ctx_s, gctx.deadline, 8)
         spi_yield_deadline      %0
         /* Configure latch at Sync Word detection */
         cst8                    %set_rssi_control:mode,   0x02
@@ -458,7 +458,7 @@ tune_done:
         call16                  %si446x_start_rx:link,    si446x_start_rx
   rx_wait:
         mov                     %0,                       %R_CTX_PV
-        add8                    %0,                       _offsetof(si446x_ctx_s, timeout, 8)
+        add8                    %0,                       _offsetof(si446x_ctx_s, gctx.timeout, 8)
         spi_yieldc_deadline     %0
           jmp8                  rx_timeout
         /* Irq is pending */
@@ -469,7 +469,6 @@ tune_done:
         jmp8                    si446x_stop_rx
 .endfunc
 
-#ifdef CONFIG_DRIVER_RFPACKET_SI446X_CCA
 .func si446x_entry_tx_cca
         .export si446x_entry_tx_cca
         .input %0 power
@@ -484,7 +483,7 @@ tune_done:
         call16                  %si446x_start_tx:link,    si446x_start_tx
         // Wait deadline
         mov                     %0,                       %R_CTX_PV
-        add8                    %0,                       _offsetof(si446x_ctx_s, deadline, 8)
+        add8                    %0,                       _offsetof(si446x_ctx_s, gctx.deadline, 8)
         spi_yield_deadline      %0
         // Set channel
         mov                     %si446x_main_tx_cca:channel,  %channel
@@ -545,7 +544,7 @@ tx_cca_retry_start:
     test_timeout:
         // Test if timeout date is reached
         mov                     %0,                     %R_CTX_PV
-        add8                    %0,                     _offsetof(si446x_ctx_s, timeout, 8)
+        add8                    %0,                     _offsetof(si446x_ctx_s, gctx.timeout, 8)
         spi_elapsed_r           %0
             jmp8                tx_timeout
         // Test if reception is possible
@@ -617,7 +616,7 @@ tx_cca_retry_start:
     lbt_end_rx:
         // Timestamp to note end of Rx
         mov                     %8,                     %R_CTX_PV
-        add8                    %8,                     _offsetof(si446x_ctx_s, txcca_timestamp, 8)
+        add8                    %8,                     _offsetof(si446x_ctx_s, gctx.lbt_timestamp, 8)
         spi_timestamp           %8
         // Abort Rx and start Tx
         call8                   %abort_rx:link,         abort_rx
@@ -629,7 +628,7 @@ tx_cca_retry_start:
         spi_yield_delay         %tbr
         // Timestamp to note end of Rx
         mov                     %8,                     %R_CTX_PV
-        add8                    %8,                     _offsetof(si446x_ctx_s, txcca_timestamp, 8)
+        add8                    %8,                     _offsetof(si446x_ctx_s, gctx.lbt_timestamp, 8)
         spi_timestamp           %8
     start_tx_cca:
         // Configure check RSSI threshold at latch
@@ -657,7 +656,7 @@ tx_cca_retry_start:
         bit32s                  %STATUS,                STATUS_TX_TIMEOUT
         jmp8                    si446x_rx_tx_error
 .endfunc
-#endif
+
 .func si446x_abort
         .input %6 link
         .input %5 mask  /** Fifo flush mask */
@@ -737,11 +736,11 @@ tx_cca_retry_start:
         .clobber %0 buffer, %1 rxcnt, %2 size, %3 tmp rq, %4, %5, %6, %10, %11, %12, %13
         .export si446x_entry_read_fifo
         /* Check if RX buffer is allocated */
-        lde                     %rq,                    %R_CTX_PV,      _offsetof(si446x_ctx_s, rxrq)
+        lde                     %rq,                    %R_CTX_PV,      _offsetof(si446x_ctx_s, gctx.rxrq)
         neq0                    %rq
           jmp8                  read_start
         call8                   %get_rx_size:link,      get_rx_size
-        st16e                   %get_rx_size:size,      %R_CTX_PV,       _offsetof(si446x_ctx_s, size, 2)
+        st16e                   %get_rx_size:size,      %R_CTX_PV,       _offsetof(si446x_ctx_s, gctx.size, 2)
         /* Try to allocate buffer */
         gaddr                   %buffer,                si446x_alloc
         /* Get address of allocated buffer */
@@ -750,7 +749,7 @@ tx_cca_retry_start:
         eq0                     %buffer
           jmp8                  si446x_error
    read_start:
-        ld16e                   %size,                  %R_CTX_PV,     _offsetof(si446x_ctx_s, size, 2)
+        ld16e                   %size,                  %R_CTX_PV,     _offsetof(si446x_ctx_s, gctx.size, 2)
         /* RX packet interrupt raises after RX threshold interrupt */
         eq0                     %size
           jmp8                  read_end
@@ -769,7 +768,7 @@ tx_cca_retry_start:
         /* Bad behaviour */
         jmp8                    si446x_error
    read_fifo:
-        ld32e                   %buffer,                %R_CTX_PV,     _offsetof(si446x_ctx_s, buffer, 4)
+        ld32e                   %buffer,                %R_CTX_PV,     _offsetof(si446x_ctx_s, gctx.buffer, 4)
         cst8                    %tmp,                   SI446X_READ_FIFO_CMD
         pack8                   %tmp,                   1
         // Wait CTS
@@ -913,7 +912,7 @@ tx_cca_retry_start:
         tst32s                  %STATUS,                STATUS_PACKET_TX
           end
         bit32c                  %STATUS,                STATUS_TX_ALMOST_EMPTY
-        ld16e                   %size,                  %R_CTX_PV,           _offsetof(si446x_ctx_s, size, 2)
+        ld16e                   %size,                  %R_CTX_PV,           _offsetof(si446x_ctx_s, gctx.size, 2)
         eq0                     %size
         /* All bytes have been written */
           jmp16                 transfer_ongoing
@@ -940,10 +939,10 @@ tx_cca_retry_start:
         .input %5 count /* Number of free place in fifo */
         .clobber %0 tmp, %6 size buffer, %11, %12, %13
         .output %5
-        ld16e                   %size,                  %R_CTX_PV,     _offsetof(si446x_ctx_s, size, 2)
+        ld16e                   %size,                  %R_CTX_PV,     _offsetof(si446x_ctx_s, gctx.size, 2)
         lt                      %size,                  %count
           mov                   %count,                 %size
-        ld32e                   %buffer,                %R_CTX_PV,     _offsetof(si446x_ctx_s, buffer, 4)
+        ld32e                   %buffer,                %R_CTX_PV,     _offsetof(si446x_ctx_s, gctx.buffer, 4)
         cst8                    %tmp,                   SI446X_WRITE_FIFO_CMD
         pack8                   %tmp,                   1,
         // Wait CTS
