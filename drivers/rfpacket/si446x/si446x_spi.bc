@@ -96,10 +96,6 @@ tune_loop:
         jmp8                    tune_loop
 
 tune_done:
-        mov                     %delay,                 %basetime
-        shi32l                  %delay,                 12
-        spi_yieldc_delay        %delay
-          abort
         call16                  %clean_irq:link,       clean_irq
         end
 .endfunc
