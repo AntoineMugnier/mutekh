@@ -500,7 +500,7 @@ tune_done:
         call16                  %si446x_start_rx:link,    si446x_start_rx
 tx_cca_clean_it:
         // Clean any pending interrupt
-        call16                  %clean_irq:link,          clean_irq
+        //call16                  %clean_irq:link,          clean_irq
         // Set waiting time
         ld32e                   %si446x_main_tx_cca:tbr,  %R_CTX_PV,   _offsetof(si446x_ctx_s, bt, 4)
         cst8                    %0,                       SI446X_LBT_BASE_TIME_MULT
@@ -527,7 +527,7 @@ tx_cca_clean_it:
         call16                  %si446x_start_rx:link,    si446x_start_rx
 tx_cca_retry_start:
         // Clean any pending interrupt
-        call16                  %clean_irq:link,             clean_irq
+        //call16                  %clean_irq:link,             clean_irq
         // Set waiting time
         ld32e                   %si446x_main_tx_cca:tbr,     %R_CTX_PV,   _offsetof(si446x_ctx_s, lbt_rand_time, 4)
         // Set channel
@@ -647,7 +647,7 @@ tx_cca_retry_start:
         tst32s                  %get_status:status,     2
             jmp8                  transfer_ongoing
         // Failed to send, channel is busy - Clean any pending interrupt
-        call16                  %clean_irq:link,        clean_irq
+        //call16                  %clean_irq:link,        clean_irq
         // Go back to lbt fsm
         jmp8                    lbt_set_busy
 
@@ -664,7 +664,7 @@ tx_cca_retry_start:
         call8                   %state_ready:link,      state_ready
         mov                     %flush_fifo:mask,       %mask
         call8                   %flush_fifo:link,       flush_fifo
-        call16                  %clean_irq:link,        clean_irq
+        //call16                  %clean_irq:link,        clean_irq
         ret                     %link
 .endfunc
 
@@ -783,7 +783,7 @@ tx_cca_retry_start:
         call16                  %get_status_and_rssi:link,         get_status_and_rssi
         st8e                    %get_status_and_rssi:latched,      %R_CTX_PV,     _offsetof(si446x_ctx_s, carrier)
         st16e                   %get_status_and_rssi:afc,          %R_CTX_PV,     _offsetof(si446x_ctx_s, afc_offset)
-        call8                   %abort_rx:link,         abort_rx
+        //call8                   %abort_rx:link,         abort_rx
         end
 .endfunc
 
