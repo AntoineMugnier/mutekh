@@ -1,0 +1,20 @@
+
+  %set OUTPUT_NAME test_rflbt_master
+
+  # New source code module to be compiled
+  %append MODULES $(OUTPUT_NAME):$(CONFIGPATH)
+
+  # Application license
+  CONFIG_LICENSE_APP_LGPL
+
+  %include scripts/options.build
+  %include arch/arch.build
+
+  # Libs
+  CONFIG_APP_START
+  CONFIG_MUTEK_SLAB
+  CONFIG_COMPILE_OPTIMIZE 2
+
+  CONFIG_MUTEK_KROUTINE_SCHED defined
+
+  CONFIG_DEVICE_RFPACKET
