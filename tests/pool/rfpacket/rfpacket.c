@@ -18,8 +18,8 @@
 
     Copyright (c) 2018 Sebastien CERDAN <sebcerdan@gmail.com>
 
-    This is a test application for rfpacket API. It tests the 
-    REQUEST and CANCEL methods of a rfpacket driver. Each operation 
+    This is a test application for rfpacket API. It tests the
+    REQUEST and CANCEL methods of a rfpacket driver. Each operation
     is randomly generated and pushed on rfpacket driver.
 
     The RFP_TEST_SLEEP macro when enabled introduces a sleep delay
@@ -39,6 +39,8 @@
 #include <hexo/decls.h>
 #include <hexo/endian.h>
 #include <hexo/iospace.h>
+
+#include <stdbool.h>
 
 #include <device/resources.h>
 #include <device/class/timer.h>
@@ -64,45 +66,41 @@ static const struct dev_rfpacket_pk_cfg_basic_s pkcfg = {
     .base = {
         .format = DEV_RFPACKET_FMT_SLPC,
         .encoding = DEV_RFPACKET_CLEAR,
-        .cache = 
-          {
+        .cache = {
             .id = 0,
             .dirty = 0
           },
     },
     .crc = 0x8005,
-    .sw_value = 0xB42B,
+    .crc_seed = 0xffff,
+    .sw_value = 0xabba,
     .sw_len = 15,
-    .pb_pattern = 0x1,
-    .pb_pattern_len = 1, 
+    .pb_pattern = 0x2,
+    .pb_pattern_len = 1,
     .tx_pb_len = 64,
     .rx_pb_len = 16,
 };
 
-static const struct dev_rfpacket_rf_cfg_fsk_s rfcfg = 
-{
- .base =
-   {
+static const struct dev_rfpacket_rf_cfg_fsk_s rfcfg = {
+ .base = {
      .mod = DEV_RFPACKET_GFSK,
-     .cache = 
-       {
+     .cache = {
          .id = 0,
          .dirty = 0
-       },
+     },
      .drate = 38400,
-     .jam_rssi = (-90) << 3,  
-     .frequency = 868000000,
-     .chan_spacing = 100000,
+     .jam_rssi = (-90) << 3,
+     .frequency = 865027875,
+     .chan_spacing = 93750,
      .rx_bw = 0,
      .freq_err = 868 * 20 /* ppm */,
-   },
- .fairtx = 
-   {
+ },
+ .fairtx = {
      .mode = DEV_RFPACKET_LBT,
      .lbt.rssi = (-95) << 3,
      .lbt.duration = 5000, /** us */
-   },
- .deviation = 35000, 
+  },
+ .deviation = 19200,
  .symbols = 2,
 };
 
@@ -120,17 +118,13 @@ STRUCT_COMPOSE(rfp_test_rq_s, trq);
 
 struct rfp_test_pv_s
 {
+  bool_t is_rxcont_on;
   struct device_rfpacket_s rfp;
   struct device_timer_s timer;
-
   struct rfp_test_rq_s rq[RFP_TEST_RQ_NUMBER];
-
   struct dev_rfpacket_rq_s *rx_cont;
-
   struct dev_timer_rq_s timer_rq;
-
   uint8_t txdata[MAX_PACKET_SIZE];
-
   uint32_t base_time;
 };
 
@@ -183,19 +177,15 @@ static KROUTINE_EXEC(rfp_test_rx_packet_callback)
 {
   struct dev_rfpacket_rx_s *rx = dev_rfpacket_rx_s_from_kr(kr);
   struct rfp_test_rx_s *base = rfp_test_rx_s_from_rx(rx);
+  dev_timer_value_t t;
+  DEVICE_OP(&base->pv->timer, get_value, &t, 0);
 
-  if (!rx->error)
-    {
-      uint8_t  * p = (uint8_t *)rx->buf;
-      printk("rx chan %d %P\n", rx->channel, p, rx->size);
-
-      for (uint16_t i = 0; i< rx->size; i++)
-        {
-          if (p[i] != i)
-            printk("rx error %d %d\n", i, p[i]);
-        }
-    }
-
+  if (!rx->error) {
+    uint8_t *p = (uint8_t *)rx->buf;
+    printk("[%lld] RX PACKET on chan %d %P\n", t, rx->channel, p, rx->size);
+  } else {
+    printk("[%lld] RX PACKET error %d\n", t, rx->error);
+  }
   slab_free(&rxbuffer_slab, rx->buf);
   slab_free(&rx_slab, base);
 }
@@ -233,21 +223,27 @@ static KROUTINE_EXEC(rfp_test_rx_callback)
 {
   struct dev_rfpacket_rq_s *rq = dev_rfpacket_rq_from_kr(kr);
   struct rfp_test_pv_s *pv = rq->pvdata;
+  dev_timer_value_t t;
+  DEVICE_OP(&pv->timer, get_value, &t, 0);
 
-  if (rq->error == -ENOTSUP)
-    printk("Bad RX configuration\n");
+  if (rq->error == -ENOTSUP) {
+    printk("[%lld] RX bad configuration\n", t);
+  } else if (rq->error == -ETIMEDOUT) {
+    printk("[%lld] RX timeout\n", t);
+  } else if (rq->error) {
+    printk("[%lld] RX end with error: %d\n", t, rq->error);
+  } else {
+    printk("[%lld] RX end ok\n", t);
+  }
+  if (rq == pv->rx_cont) {
+    pv->rx_cont = NULL;
+    pv->is_rxcont_on = false;
+  }
 
-  if (rq == pv->rx_cont)
-    {
-      pv->rx_cont = NULL;
-      if (rq->error ==  -EBUSY)
-          printk("Jamming \n");
-    }
-  
 #ifdef RFP_TEST_SLEEP
-  return rfp_test_wait_before_push(pv, rq);
+  rfp_test_wait_before_push(pv, rq);
 #else
-  return rfp_test_push_random_req(pv, rq);
+  rfp_test_push_random_req(pv, rq);
 #endif
 }
 
@@ -266,17 +262,22 @@ static KROUTINE_EXEC(rfp_test_tx_callback)
 {
   struct dev_rfpacket_rq_s *rq = dev_rfpacket_rq_from_kr(kr);
   struct rfp_test_pv_s *pv = rq->pvdata;
+  dev_timer_value_t t;
+  DEVICE_OP(&pv->timer, get_value, &t, 0);
 
-  if (rq->error == -ENOTSUP)
-    printk("Bad TX configuration\n");
-
-  if (rq->error == -ETIMEDOUT)
-    printk("TX timeout\n");
-
+  if (rq->error == -ENOTSUP) {
+    printk("[%lld] TX bad configuration\n", t);
+  } else if (rq->error == -ETIMEDOUT) {
+    printk("[%lld] TX timeout\n", t);
+  } else if (rq->error) {
+    printk("[%lld] TX end with error: %d\n", t, rq->error);
+  } else {
+    printk("[%lld] TX end ok\n", t);
+  }
 #ifdef RFP_TEST_SLEEP
-  return rfp_test_wait_before_push(pv, rq);
+  rfp_test_wait_before_push(pv, rq);
 #else
-  return rfp_test_push_random_req(pv, rq);
+  rfp_test_push_random_req(pv, rq);
 #endif
 }
 
@@ -285,6 +286,11 @@ static KROUTINE_EXEC(rfp_test_wait_before_push_cb)
 {
   struct dev_timer_rq_s *trq = KROUTINE_CONTAINER(kr, *trq, base.kr);
   struct rfp_test_rq_s *base = rfp_test_rq_s_from_trq(trq);
+  struct rfp_test_pv_s *pv = trq->pvdata;
+  dev_timer_value_t t;
+  DEVICE_OP(&pv->timer, get_value, &t, 0);
+
+  printk("[%lld] SLEEP end\n", t);
   rfp_test_push_random_req(trq->pvdata, &base->rq);
 }
 
@@ -293,7 +299,7 @@ static void rfp_test_wait_before_push(struct rfp_test_pv_s *pv, struct dev_rfpac
   struct rfp_test_rq_s *base = rfp_test_rq_s_from_rq(rq);
   struct dev_timer_rq_s *trq = &base->trq;
 
-  trq->delay = pv->base_time * 256;
+  trq->delay = pv->base_time * 500;
   trq->rev = 0;
   trq->pvdata = pv;
 
@@ -323,28 +329,51 @@ static void rfp_test_push_random_req(struct rfp_test_pv_s *pv, struct dev_rfpack
 
   rq->channel = 0;
 
-  uint8_t type =  rand() % 16;
+  uint8_t type =  rand_64_range(0, 4);
+
+  dev_timer_value_t t;
+  DEVICE_OP(&pv->timer, get_value, &t, 0);
 
   switch (type)
     {
-    case 0 ... 1:
+    case 0:
 #ifdef RFP_TEST_RX_CONTINOUS
-      /* Start RX continous */
-      rq->type = DEV_RFPACKET_RQ_RX_CONT;
-      rq->deadline = 0;
-      rq->lifetime = 0;
-      rq->rx_alloc = &rfp_test_rx_alloc;
-      pv->rx_cont = rq;
+      if (!pv->is_rxcont_on) {
+        // Start RX continous
+        printk("[%lld] RX CONT start req\n", t);
+        rq->type = DEV_RFPACKET_RQ_RX_CONT;
+        rq->deadline = 0;
+        rq->lifetime = 0;
+        rq->rx_alloc = &rfp_test_rx_alloc;
+        pv->rx_cont = rq;
+        pv->is_rxcont_on = true;
+      } else {
+        // Cancel RX continous
+        printk("[%lld] RX CONT cancel req then rx req\n", t);
+        if (pv->rx_cont && DEVICE_OP(&pv->rfp, cancel, pv->rx_cont) == 0) {
+          pv->rx_cont = NULL;
+          pv->is_rxcont_on = false;
+        }
+        // Push Rx req to replace
+        rq->type = DEV_RFPACKET_RQ_RX;
+        rq->deadline = rfp_test_set_random_deadline(pv);
+        rq->lifetime = rfp_test_set_random_lifetime(pv);
+        rq->rx_alloc = &rfp_test_rx_alloc;
+      }
       break;
 #endif
-    case 2 ... 3:
+    case 1:
 #ifdef RFP_TEST_RX_CONTINOUS
-      /* Cancel RX continous */
-      if (pv->rx_cont && DEVICE_OP(&pv->rfp, cancel, pv->rx_cont) == 0)
-        dev_rfpacket_rq_done(pv->rx_cont);
+      printk("[%lld] RX CONT TIMEOUT req\n", t);
+      rq->type = DEV_RFPACKET_RQ_RX_TIMEOUT;
+      rq->deadline = 0;
+      rq->lifetime = rfp_test_set_random_lifetime(pv);
+      rq->rx_alloc = &rfp_test_rx_alloc;
+      break;
 #endif
-    case 4 ... 7:
+    case 2:
 #ifdef RFP_TEST_TX_FAIR
+      printk("[%lld] TX FAIR req\n", t);
       rq->type = DEV_RFPACKET_RQ_TX_FAIR;
       rq->deadline = rfp_test_set_random_deadline(pv);
       rq->lifetime = 8 * pv->base_time;
@@ -353,7 +382,8 @@ static void rfp_test_push_random_req(struct rfp_test_pv_s *pv, struct dev_rfpack
       rq->tx_pwr = rfp_test_set_rand_power();
       break;
 #endif
-    case 8 ... 11:
+    case 3:
+      printk("[%lld] TX req\n", t);
       rq->type = DEV_RFPACKET_RQ_TX;
       rq->deadline = rfp_test_set_random_deadline(pv);
       rq->lifetime = 0;
@@ -361,7 +391,8 @@ static void rfp_test_push_random_req(struct rfp_test_pv_s *pv, struct dev_rfpack
       rq->tx_buf = pv->txdata;
       rq->tx_pwr = rfp_test_set_rand_power();
       break;
-    case 12 ... 15:
+    case 4:
+      printk("[%lld] RX req\n", t);
       rq->type = DEV_RFPACKET_RQ_RX;
       rq->deadline = rfp_test_set_random_deadline(pv);
       rq->lifetime = rfp_test_set_random_lifetime(pv);
@@ -372,12 +403,11 @@ static void rfp_test_push_random_req(struct rfp_test_pv_s *pv, struct dev_rfpack
   switch (rq->type)
     {
     case DEV_RFPACKET_RQ_TX:
-#ifdef RFP_TEST_TX_FAIR
     case DEV_RFPACKET_RQ_TX_FAIR:
-#endif
       dev_rfpacket_rq_init(rq, &rfp_test_tx_callback);
       break;
     case DEV_RFPACKET_RQ_RX:
+    case DEV_RFPACKET_RQ_RX_TIMEOUT:
     case DEV_RFPACKET_RQ_RX_CONT:
       dev_rfpacket_rq_init(rq, &rfp_test_rx_callback);
       break;
