@@ -42,6 +42,7 @@
 #include <device/request.h>
 
 #include <hexo/enum.h>
+#include <stdint.h>
 
 struct device_rfpacket_s;
 struct dev_rfpacket_rq_s;
@@ -141,7 +142,7 @@ struct dev_rfpacket_rf_cfg_s
       transmitter. Expressed as @em {abs(actual tx freq - expected freq)}.
 
       The frequency error contribution on the receiver side due to the
-      local oscilator (@em {abs(actual rx freq - expected freq)})
+      local oscillator (@em {abs(actual rx freq - expected freq)})
       should be added by the driver and not included here. */
   uint32_t                      freq_err;
 };
@@ -584,18 +585,23 @@ struct dev_rfpacket_rq_s
     dev_timer_value_t               tx_timestamp;
   };
 
-  /** For @ref DEV_RFPACKET_RQ_RX requests, this field defines the
-      duration of the RX period. Multiple packets may be received during
-      the request.
-      For @ref DEV_RFPACKET_RQ_TX_LBT requests, this field specifies
-      how long to wait for the channel to become clear before aborting
-      the transmit.
-      In both cases the actual execution time of a request may be
-      longer than the lifetime because an ongoing RX may start at the
-      end of the period and will not be aborted.
-      This field is not used by @ref DEV_RFPACKET_RQ_RX_CONT and @ref
-      DEV_RFPACKET_RQ_TX requests. */
-  dev_timer_delay_t                 lifetime;
+  union {
+    /** For @ref DEV_RFPACKET_RQ_RX requests, this field defines the
+        duration of the RX period. Multiple packets may be received during
+        the request.
+        For @ref DEV_RFPACKET_RQ_TX_LBT requests, this field specifies
+        how long to wait for the channel to become clear before aborting
+        the transmit.
+        In both cases the actual execution time of a request may be
+        longer than the lifetime because an ongoing RX may start at the
+        end of the period and will not be aborted.
+        This field is not used by @ref DEV_RFPACKET_RQ_RX_CONT and @ref
+        DEV_RFPACKET_RQ_TX requests. */
+    dev_timer_delay_t                 lifetime;
+    /** TBD    
+      */
+    dev_timer_delay_t                 tx_lbt_td;
+  };
 
   /** This specifies an frequency offset for this request according to
       the @ref dev_rfpacket_rf_cfg_s::frequency and @ref
