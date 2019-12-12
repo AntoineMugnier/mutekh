@@ -3,6 +3,7 @@
 
 #include <device/class/rfpacket.h>
 
+/** @This specifies the internal state used in the rfpacket fsm */
 enum dev_rfpacket_state_s {
 	DEV_RFPACKET_STATE_INITIALISING,
 	DEV_RFPACKET_STATE_ENTER_SLEEP,
@@ -21,6 +22,7 @@ enum dev_rfpacket_state_s {
 	DEV_RFPACKET_STATE_TX_LBT_STOPPING_RXC,
 };
 
+/** @This specifies the possible request status for the rfpacket fsm */
 enum dev_rfpacket_status_s {
 	DEV_RFPACKET_STATUS_RX_DONE = 0,
 	DEV_RFPACKET_STATUS_TX_DONE,
@@ -35,7 +37,7 @@ enum dev_rfpacket_status_s {
 // Cross-reference forward declaration
 struct dev_rfpacket_ctx_s;
 
-// Driver interface prototypes
+/** @This are the function prototypes in @ref dev_rfpacket_driver_interface_s */
 typedef error_t (*dev_rfpacket_driver_check_config)(struct dev_rfpacket_ctx_s *gpv, struct dev_rfpacket_rq_s *rq);
 typedef void (*dev_rfpacket_driver_rx)(struct dev_rfpacket_ctx_s *gpv, struct dev_rfpacket_rq_s *rq, bool_t isRetry);
 typedef void (*dev_rfpacket_driver_tx)(struct dev_rfpacket_ctx_s *gpv, struct dev_rfpacket_rq_s *rq, bool_t isRetry);
@@ -44,6 +46,7 @@ typedef bool_t (*dev_rfpacket_driver_wakeup)(struct dev_rfpacket_ctx_s *gpv);
 typedef bool_t (*dev_rfpacket_driver_sleep)(struct dev_rfpacket_ctx_s *gpv);
 typedef void (*dev_rfpacket_driver_idle)(struct dev_rfpacket_ctx_s *gpv);
 
+/** @This structure contains the driver callback used in the rfpacket fsm, @csee dev_rfpacket_ctx_s */
 struct dev_rfpacket_driver_interface_s {
 	dev_rfpacket_driver_check_config check_config;
 	dev_rfpacket_driver_rx rx;
@@ -54,6 +57,7 @@ struct dev_rfpacket_driver_interface_s {
 	dev_rfpacket_driver_idle idle;
 };
 
+/** @This struct contains all the data to run a rfpacket fsm instance */
 struct dev_rfpacket_ctx_s {
 	// Time values
 	dev_timer_value_t timeout;
@@ -87,16 +91,60 @@ struct dev_rfpacket_ctx_s {
 #endif
 };
 
-// Rfpacket event functions
+/** @This function is called by a rfpacket driver to check if the rfpacket
+	fsm is not in an init state. Returns @tt TRUE if it isn't in init. */
+config_depend(CONFIG_DEVICE_RFPACKET)
 bool_t dev_rfpacket_init_done(struct dev_rfpacket_ctx_s *pv);
-void dev_rfpacket_config_notsup(struct dev_rfpacket_ctx_s *pv, struct dev_rfpacket_rq_s *rq);
+
+/** @This function is called by a rfpacket driver to check if the rfpacket
+	fsm is in a configuration state. Returns @tt TRUE if it is in configuration. */
+config_depend(CONFIG_DEVICE_RFPACKET)
 bool_t dev_rfpacket_config_state_check(struct dev_rfpacket_ctx_s *pv, struct dev_rfpacket_rq_s *rq);
-bool_t dev_rfpacket_can_rxtx(struct dev_rfpacket_ctx_s *pv, struct dev_rfpacket_rq_s *rq);
-void dev_rfpacket_request(struct dev_rfpacket_ctx_s *pv, struct dev_rfpacket_rq_s *rq);
-error_t dev_rfpacket_cancel(struct dev_rfpacket_ctx_s *pv, struct dev_rfpacket_rq_s *rq);
-uintptr_t dev_rfpacket_alloc(struct dev_rfpacket_ctx_s *pv);
-void dev_rfpacket_req_done(struct device_s *dev, struct dev_rfpacket_ctx_s *pv);
-error_t dev_rfpacket_use(void *param, enum dev_use_op_e op, struct dev_rfpacket_ctx_s *pv);
-void dev_rfpacket_init(struct dev_rfpacket_ctx_s *pv);
+
+/** @This function is called by a rfpacket driver to check if it can clean the
+	driver instance. Returns @tt 0 if allowed, @tt -EBUSY otherwise*/
+config_depend(CONFIG_DEVICE_RFPACKET)
 error_t dev_rfpacket_clean_check(struct dev_rfpacket_ctx_s *pv);
+
+/** @This function is called by a rfpacket driver to check if it can rx during a tx.
+	This will only happen if the driver receives a @tt DEV_RFPACKET_RQ_TX_FAIR request
+	while it has an active @tt DEV_RFPACKET_RQ_RX_CONT or @tt DEV_RFPACKET_RQ_RX_TIMEOUT
+	request. Returns @tt TRUE only if the tx and rx configuration are the same structure. */
+config_depend(CONFIG_DEVICE_RFPACKET)
+bool_t dev_rfpacket_can_rxtx(struct dev_rfpacket_ctx_s *pv, struct dev_rfpacket_rq_s *rq);
+
+/** @This function is called by a rfpacket driver to indicate that it encountered
+	an unsupported configuration. */
+config_depend(CONFIG_DEVICE_RFPACKET)
+void dev_rfpacket_config_notsup(struct dev_rfpacket_ctx_s *pv, struct dev_rfpacket_rq_s *rq);
+
+/** @This function is called by a rfpacket driver to process an incoming request
+	through the rfpacket fsm. */
+config_depend(CONFIG_DEVICE_RFPACKET)
+void dev_rfpacket_request(struct dev_rfpacket_ctx_s *pv, struct dev_rfpacket_rq_s *rq);
+
+/** @This function is called by a rfpacket driver to cancel a request through 
+	the rfpacket fsm. */
+config_depend(CONFIG_DEVICE_RFPACKET)
+error_t dev_rfpacket_cancel(struct dev_rfpacket_ctx_s *pv, struct dev_rfpacket_rq_s *rq);
+
+/** @This function is called by a rfpacket driver to allocate a rx buffer through
+	the rfpacket fsm. */
+config_depend(CONFIG_DEVICE_RFPACKET)
+uintptr_t dev_rfpacket_alloc(struct dev_rfpacket_ctx_s *pv);
+
+/** @This function is called by a rfpacket driver to process a request end through
+	the rfpacket fsm. */
+config_depend(CONFIG_DEVICE_RFPACKET)
+void dev_rfpacket_req_done(struct device_s *dev, struct dev_rfpacket_ctx_s *pv);
+
+/** @This function is called by a rfpacket driver to process a @ref DEV_USE call through
+	the rfpacket fsm. */
+config_depend(CONFIG_DEVICE_RFPACKET)
+error_t dev_rfpacket_use(void *param, enum dev_use_op_e op, struct dev_rfpacket_ctx_s *pv);
+
+/** @This function is called by a rfpacket driver to initialize	the rfpacket fsm. */
+config_depend(CONFIG_DEVICE_RFPACKET)
+void dev_rfpacket_init(struct dev_rfpacket_ctx_s *pv);
+
 #endif
