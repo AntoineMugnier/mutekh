@@ -41,7 +41,6 @@
 #include <device/class/rfpacket.h>
 
 #include "modem_calc.h"
-#include "rfpacket_core.h"
 
 #define SI446X_MAX_RSSI_VALUE                    -52       /* in 0.125 dbm */
 #define SI446X_PKT_CFG_BUFFER_SIZE               32

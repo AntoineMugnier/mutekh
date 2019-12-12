@@ -25,7 +25,6 @@
 
 #include "si446x.h"
 #include "si446x_spi.o.h"
-#include "rfpacket_core.h"
 
 static dev_timer_delay_t si446x_calc_lbt_rand_rime(dev_timer_value_t timebase, dev_timer_value_t curr_time);
 static void si446x_fill_status(struct si446x_ctx_s *pv);
