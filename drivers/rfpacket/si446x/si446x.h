@@ -195,7 +195,7 @@ struct si446x_ctx_s {
   uint32_t synth_ratio;
   uint32_t frequency;
   // Generic rfpacket context struct
-  struct rfpacket_ctx_s gctx;
+  struct dev_rfpacket_ctx_s gctx;
   // Device structs
   struct device_s *dev;
   struct dev_irq_src_s src_ep[SI446X_IRQ_SRC_COUNT];

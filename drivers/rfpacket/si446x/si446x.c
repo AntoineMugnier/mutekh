@@ -39,15 +39,15 @@ static inline error_t si446x_build_rf_config(struct si446x_ctx_s *pv, struct si4
 static void si446x_rf_config_done(struct si446x_ctx_s *pv, const struct dev_rfpacket_rf_cfg_s *cfg);
 static void si446x_clean(struct device_s *dev);
 // Lib device rfpacket interface functions
-static error_t si446x_check_config(struct rfpacket_ctx_s *gpv, struct dev_rfpacket_rq_s *rq);
-static void si446x_rx(struct rfpacket_ctx_s *gpv, struct dev_rfpacket_rq_s *rq, bool_t isRetry);
-static void si446x_tx(struct rfpacket_ctx_s *gpv, struct dev_rfpacket_rq_s *rq, bool_t isRetry);
-static void si446x_cancel_rxc(struct rfpacket_ctx_s *gpv);
-static bool_t si446x_wakeup(struct rfpacket_ctx_s *gpv);
-static bool_t si446x_sleep(struct rfpacket_ctx_s *gpv);
-static void si446x_idle(struct rfpacket_ctx_s *gpv);
+static error_t si446x_check_config(struct dev_rfpacket_ctx_s *gpv, struct dev_rfpacket_rq_s *rq);
+static void si446x_rx(struct dev_rfpacket_ctx_s *gpv, struct dev_rfpacket_rq_s *rq, bool_t isRetry);
+static void si446x_tx(struct dev_rfpacket_ctx_s *gpv, struct dev_rfpacket_rq_s *rq, bool_t isRetry);
+static void si446x_cancel_rxc(struct dev_rfpacket_ctx_s *gpv);
+static bool_t si446x_wakeup(struct dev_rfpacket_ctx_s *gpv);
+static bool_t si446x_sleep(struct dev_rfpacket_ctx_s *gpv);
+static void si446x_idle(struct dev_rfpacket_ctx_s *gpv);
 
-static const struct rfpacket_driver_interface_s si446x_itfc = {
+static const struct dev_rfpacket_driver_interface_s si446x_itfc = {
   si446x_check_config,
   si446x_rx,
   si446x_tx,
@@ -96,21 +96,21 @@ static dev_timer_delay_t si446x_calc_lbt_rand_rime(dev_timer_value_t timebase, d
 
 static void si446x_fill_status(struct si446x_ctx_s *pv) {
   if (pv->bc_status & bit(STATUS_OTHER_ERR)) {
-    pv->gctx.status = RFPACKET_STATUS_OTHER_ERR;
+    pv->gctx.status = DEV_RFPACKET_STATUS_OTHER_ERR;
   } else if (pv->bc_status & bit(STATUS_JAMMING)) {
-    pv->gctx.status = RFPACKET_STATUS_JAMMING_ERR;
+    pv->gctx.status = DEV_RFPACKET_STATUS_JAMMING_ERR;
   } else if (pv->bc_status & bit(STATUS_CRC_ERROR)) {
-    pv->gctx.status = RFPACKET_STATUS_CRC_ERR;
+    pv->gctx.status = DEV_RFPACKET_STATUS_CRC_ERR;
   } else if (pv->bc_status & bit(STATUS_TX_TIMEOUT)) {
-    pv->gctx.status = RFPACKET_STATUS_TX_TIMEOUT;
+    pv->gctx.status = DEV_RFPACKET_STATUS_TX_TIMEOUT;
   } else if (pv->bc_status & bit(STATUS_RX_TIMEOUT)) {
-    pv->gctx.status = RFPACKET_STATUS_RX_TIMEOUT;
+    pv->gctx.status = DEV_RFPACKET_STATUS_RX_TIMEOUT;
   } else if (pv->bc_status & bit(STATUS_PACKET_TX)) {
-    pv->gctx.status = RFPACKET_STATUS_TX_DONE;
+    pv->gctx.status = DEV_RFPACKET_STATUS_TX_DONE;
   } else if (pv->bc_status & bit(STATUS_PACKET_RX)) {
-    pv->gctx.status = RFPACKET_STATUS_RX_DONE;
+    pv->gctx.status = DEV_RFPACKET_STATUS_RX_DONE;
   } else {
-    pv->gctx.status = RFPACKET_STATUS_MISC;
+    pv->gctx.status = DEV_RFPACKET_STATUS_MISC;
   }
 }
 
@@ -506,7 +506,7 @@ static KROUTINE_EXEC(si446x_config_deferred) {
   struct si446x_ctx_s *pv = si446x_ctx_s_from_kr(kr);
   struct dev_rfpacket_rq_s *rq = pv->gctx.rq;
 
-  assert(rfpacket_config_state_check(&pv->gctx, rq));
+  assert(dev_rfpacket_config_state_check(&pv->gctx, rq));
 
   const struct dev_rfpacket_rf_cfg_s *cfg = rq->rf_cfg;
   struct si446x_cache_entry_s *e = &pv->cache_array[cfg->cache.id % SI446X_RF_CONFIG_CACHE_ENTRY];
@@ -514,13 +514,13 @@ static KROUTINE_EXEC(si446x_config_deferred) {
   if (si446x_build_rf_config(pv, &e->data, rq) == 0)
     return si446x_rf_config_done(pv, cfg);
 
-  rfpacket_config_notsup(&pv->gctx, rq);
+  dev_rfpacket_config_notsup(&pv->gctx, rq);
 }
 
 
 
 
-static error_t si446x_check_config(struct rfpacket_ctx_s *gpv, struct dev_rfpacket_rq_s *rq) {
+static error_t si446x_check_config(struct dev_rfpacket_ctx_s *gpv, struct dev_rfpacket_rq_s *rq) {
   struct si446x_ctx_s *pv = gpv->pvdata;
   const struct dev_rfpacket_rf_cfg_s *rfcfg = rq->rf_cfg;
 
@@ -548,7 +548,7 @@ static error_t si446x_check_config(struct rfpacket_ctx_s *gpv, struct dev_rfpack
     }
     pv->flags &= ~SI446X_FLAGS_RX_ON;
     // Test if RX is allowed during TX
-    if (rfpacket_can_rxtx(&pv->gctx, rq)) {
+    if (dev_rfpacket_can_rxtx(&pv->gctx, rq)) {
       pv->flags |= SI446X_FLAGS_RX_ON;
     }
   #else
@@ -601,7 +601,7 @@ static error_t si446x_check_config(struct rfpacket_ctx_s *gpv, struct dev_rfpack
   return -EAGAIN;
 }
 
-static void si446x_rx(struct rfpacket_ctx_s *gpv, struct dev_rfpacket_rq_s *rq, bool_t isRetry) {
+static void si446x_rx(struct dev_rfpacket_ctx_s *gpv, struct dev_rfpacket_rq_s *rq, bool_t isRetry) {
   struct si446x_ctx_s *pv = gpv->pvdata;
   struct dev_rfpacket_rf_cfg_s * cfg = (struct dev_rfpacket_rf_cfg_s *)rq->rf_cfg;
   uint32_t freq = cfg->frequency + rq->channel * cfg->chan_spacing;
@@ -647,7 +647,7 @@ static void si446x_rx(struct rfpacket_ctx_s *gpv, struct dev_rfpacket_rq_s *rq, 
   }
 }
 
-static void si446x_tx(struct rfpacket_ctx_s *gpv, struct dev_rfpacket_rq_s *rq, bool_t isRetry) {
+static void si446x_tx(struct dev_rfpacket_ctx_s *gpv, struct dev_rfpacket_rq_s *rq, bool_t isRetry) {
   struct si446x_ctx_s *pv = gpv->pvdata;
   uint8_t pwr;
 
@@ -692,7 +692,7 @@ static void si446x_tx(struct rfpacket_ctx_s *gpv, struct dev_rfpacket_rq_s *rq, 
   }
 }
 
-static void si446x_cancel_rxc(struct rfpacket_ctx_s *gpv) {
+static void si446x_cancel_rxc(struct dev_rfpacket_ctx_s *gpv) {
   struct si446x_ctx_s *pv = gpv->pvdata;
   struct dev_spi_ctrl_bytecode_rq_s *srq = &pv->spi_rq;
 
@@ -702,7 +702,7 @@ static void si446x_cancel_rxc(struct rfpacket_ctx_s *gpv) {
 }
 
 // Transceiver is sleeping when this function is called
-static bool_t si446x_wakeup(struct rfpacket_ctx_s *gpv) {
+static bool_t si446x_wakeup(struct dev_rfpacket_ctx_s *gpv) {
 #ifdef CONFIG_DRIVER_RFPACKET_SI446X_SLEEP
   struct si446x_ctx_s *pv = gpv->pvdata;
   si446x_bytecode_start(pv, &si446x_entry_ready, 0, 0);
@@ -712,7 +712,7 @@ static bool_t si446x_wakeup(struct rfpacket_ctx_s *gpv) {
 #endif
 }
 
-static bool_t si446x_sleep(struct rfpacket_ctx_s *gpv) {
+static bool_t si446x_sleep(struct dev_rfpacket_ctx_s *gpv) {
 #ifdef CONFIG_DRIVER_RFPACKET_SI446X_SLEEP
   struct si446x_ctx_s *pv = gpv->pvdata;
   si446x_bytecode_start(pv, &si446x_entry_sleep, 0, 0);
@@ -722,7 +722,7 @@ static bool_t si446x_sleep(struct rfpacket_ctx_s *gpv) {
 #endif
 }
 
-static void si446x_idle(struct rfpacket_ctx_s *gpv) {
+static void si446x_idle(struct dev_rfpacket_ctx_s *gpv) {
 #ifdef CONFIG_DRIVER_RFPACKET_SI446X_SLEEP
   struct si446x_ctx_s *pv = gpv->pvdata;
   // Delayed clock disable
@@ -754,7 +754,7 @@ BC_CCALL_FUNCTION(si446x_alloc) {
   uintptr_t p = 0;
 
   LOCK_SPIN_IRQ(&pv->dev->lock);
-  p = rfpacket_alloc(&pv->gctx);
+  p = dev_rfpacket_alloc(&pv->gctx);
   LOCK_RELEASE_IRQ(&pv->dev->lock);
 
   return p;
@@ -777,7 +777,7 @@ static DEV_RFPACKET_REQUEST(si446x_rfp_request) {
     }
     logk_trace("req %d %d", rq->type, rq->tx_size);
     rq->error = 0;
-    rfpacket_request(&pv->gctx, rq);
+    dev_rfpacket_request(&pv->gctx, rq);
   }
   LOCK_RELEASE_IRQ(&dev->lock);
 }
@@ -791,7 +791,7 @@ static DEV_RFPACKET_CANCEL(si446x_rfp_cancel) {
   assert(rq);
 
   LOCK_SPIN_IRQ(&dev->lock);
-  err = rfpacket_cancel(&pv->gctx, rq);
+  err = dev_rfpacket_cancel(&pv->gctx, rq);
   LOCK_RELEASE_IRQ(&dev->lock);
 
   return err;
@@ -807,7 +807,7 @@ static KROUTINE_EXEC(si446x_spi_rq_done) {
   pv->bc_status = bc_get_reg(&srq->vm, STATUS);
   logk_trace("bdone 0x%x", pv->bc_status);
 
-  if (rfpacket_init_done(&pv->gctx)) {
+  if (dev_rfpacket_init_done(&pv->gctx)) {
     assert(!srq->error);
   } else if (srq->error) {
     // Couldn't initialize
@@ -818,7 +818,7 @@ static KROUTINE_EXEC(si446x_spi_rq_done) {
     si446x_fill_rx_info(pv, pv->gctx.rxrq);
   }
   si446x_fill_status(pv);
-  rfpacket_req_done(dev, &pv->gctx);
+  dev_rfpacket_req_done(dev, &pv->gctx);
 
 end:
   LOCK_RELEASE_IRQ(&dev->lock);
@@ -848,7 +848,7 @@ static DEV_USE(si446x_use) {
   struct device_s *dev = param;
   struct si446x_ctx_s *pv = dev->drv_pv;
 
-  return rfpacket_use(param, op, &pv->gctx);
+  return dev_rfpacket_use(param, op, &pv->gctx);
 }
 
 static DEV_RFPACKET_STATS(si446x_rfp_stats) {
@@ -944,7 +944,7 @@ static DEV_INIT(si446x_init) {
   pv->gctx.pvdata = pv;
   pv->gctx.drv = &si446x_itfc;
   // Init generic context
-  rfpacket_init(&pv->gctx);
+  dev_rfpacket_init(&pv->gctx);
 
   pv->pwr = 0xFFFF;
 
@@ -975,7 +975,7 @@ static DEV_INIT(si446x_init) {
 
 static DEV_CLEANUP(si446x_cleanup) {
   struct si446x_ctx_s *pv = dev->drv_pv;
-  error_t err = rfpacket_clean_check(&pv->gctx);
+  error_t err = dev_rfpacket_clean_check(&pv->gctx);
 
   if (!err) {
     si446x_clean(dev);
