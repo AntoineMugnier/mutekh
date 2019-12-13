@@ -1015,7 +1015,9 @@ void dev_rfpacket_req_done(struct device_s *dev, struct dev_rfpacket_ctx_s *pv) 
     break;
 
     case DEV_RFPACKET_STATE_INITIALISING:
+#ifdef CONFIG_DEVICE_INIT_ASYNC
       device_async_init_done(dev, 0);
+#endif
     case DEV_RFPACKET_STATE_CONFIG_RXC:
     case DEV_RFPACKET_STATE_CONFIG:
       rfpacket_idle(pv);
@@ -1084,6 +1086,7 @@ void dev_rfpacket_req_done(struct device_s *dev, struct dev_rfpacket_ctx_s *pv) 
 config_depend(CONFIG_DEVICE_RFPACKET)
 error_t dev_rfpacket_use(void *param, enum dev_use_op_e op, struct dev_rfpacket_ctx_s *pv) {
   switch (op) {
+#ifdef CONFIG_DEVICE_SLEEP
     case DEV_USE_SLEEP:
       switch (pv->state) {
         case DEV_RFPACKET_STATE_READY:
@@ -1096,6 +1099,7 @@ error_t dev_rfpacket_use(void *param, enum dev_use_op_e op, struct dev_rfpacket_
         default:
           break;
       }
+#endif
     default:
       return dev_use_generic(param, op);
     break;
