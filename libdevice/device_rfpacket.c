@@ -1127,3 +1127,9 @@ error_t dev_rfpacket_clean_check(struct dev_rfpacket_ctx_s *pv) {
   }
   return 0;
 }
+
+config_depend(CONFIG_DEVICE_RFPACKET)
+void dev_rfpacket_clean(struct dev_rfpacket_ctx_s *pv) {
+  dev_rq_queue_destroy(&pv->queue);
+  dev_rq_queue_destroy(&pv->rx_cont_queue);
+}

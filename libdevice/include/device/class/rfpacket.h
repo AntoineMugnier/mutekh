@@ -1043,4 +1043,8 @@ error_t dev_rfpacket_use(void *param, enum dev_use_op_e op, struct dev_rfpacket_
 /** @This function is called by a rfpacket driver to initialize the rfpacket fsm. */
 config_depend(CONFIG_DEVICE_RFPACKET)
 void dev_rfpacket_init(struct dev_rfpacket_ctx_s *pv);
+
+/** @This function is called by a rfpacket driver to clean the rfpacket fsm instance. */
+config_depend(CONFIG_DEVICE_RFPACKET)
+void dev_rfpacket_clean(struct dev_rfpacket_ctx_s *pv);
 #endif

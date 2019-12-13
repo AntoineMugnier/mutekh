@@ -498,6 +498,7 @@ static void si446x_clean(struct device_s *dev) {
 #endif
   device_stop(&pv->gctx.timer->base);
   dev_drv_spi_bytecode_cleanup(&pv->spi, &pv->spi_rq);
+  dev_rfpacket_clean(&pv->gctx);
   mem_free(pv);
 }
 
