@@ -402,8 +402,8 @@ si446x_modem_configure(struct si446x_ctx_s *pv,
       return 0;
     }
 
-  uint32_t rx_tx_freq_err = rf_cfg->freq_err   /* remote freq error */
-    + (uint64_t)rf_cfg->frequency * pv->osc_ppb / 1000000000; /* local freq error */
+  uint32_t rx_tx_freq_err = rf_cfg->freq_err   // remote freq error
+    + (uint64_t)rf_cfg->frequency * pv->osc_ppb / 1000000000; // local freq error
 
   return modem_calc(out, &pv->synth_ratio, tab[idx], rf_cfg->frequency, rf_cfg->drate,
                     fdev, rf_cfg->rx_bw, rf_cfg->chan_spacing, rx_tx_freq_err, manchester);
@@ -411,68 +411,54 @@ si446x_modem_configure(struct si446x_ctx_s *pv,
 
 static inline error_t si446x_build_rf_config(struct si446x_ctx_s *pv,
                                              struct si446x_rf_regs_s *out,
-                                             struct dev_rfpacket_rq_s *rq)
-{
+                                             struct dev_rfpacket_rq_s *rq) {
   logk_trace("RF configuration");
-
   const struct dev_rfpacket_rf_cfg_s *cfg = rq->rf_cfg;
 
-  if (!si446x_modem_configure(pv, out, rq->rf_cfg, rq->pk_cfg))
+  if (!si446x_modem_configure(pv, out, rq->rf_cfg, rq->pk_cfg)) {
     return -ENOTSUP;
-
-  /** Configure RSSI_threshold */
-
+  }
+  // Configure RSSI_threshold
   const struct dev_rfpacket_rf_cfg_fairtx_s *fairtx = NULL;
 
-  switch (cfg->mod)
-    {
+  switch (cfg->mod) {
     case DEV_RFPACKET_GFSK:
-    case DEV_RFPACKET_FSK:
-      {
-        const struct dev_rfpacket_rf_cfg_fsk_s * c =
-          const_dev_rfpacket_rf_cfg_fsk_s_cast(cfg);
-        fairtx = &c->fairtx;
-        break;
-      }
-    case DEV_RFPACKET_ASK:
-      {
-        const struct dev_rfpacket_rf_cfg_ask_s * c =
-          const_dev_rfpacket_rf_cfg_ask_s_cast(cfg);
-        fairtx = &c->fairtx;
-        break;
-      }
-    default:
-      break;
-    }
+    case DEV_RFPACKET_FSK: {
+      const struct dev_rfpacket_rf_cfg_fsk_s * c = const_dev_rfpacket_rf_cfg_fsk_s_cast(cfg);
+      fairtx = &c->fairtx;
+    break;}
 
+    case DEV_RFPACKET_ASK: {
+      const struct dev_rfpacket_rf_cfg_ask_s * c = const_dev_rfpacket_rf_cfg_ask_s_cast(cfg);
+      fairtx = &c->fairtx;
+    break;}
+
+    default:
+    break;
+  }
   int16_t rssi_th = SI446X_MAX_RSSI_VALUE;
 
-  if (fairtx && fairtx->mode == DEV_RFPACKET_LBT)
+  if (fairtx && fairtx->mode == DEV_RFPACKET_LBT) {
     rssi_th = fairtx->lbt.rssi;
-
-  if (rssi_th > SI446X_MAX_RSSI_VALUE)
+  }
+  if (rssi_th > SI446X_MAX_RSSI_VALUE) {
     return -ENOTSUP;
-
+  }
   out->rssi_th = SET_RSSI(rssi_th >> 3);
   pv->lbt_rssi = out->rssi_th;
 
-  if (cfg->jam_rssi > SI446X_MAX_RSSI_VALUE)
+  if (cfg->jam_rssi > SI446X_MAX_RSSI_VALUE) {
     return -ENOTSUP;
-
+  }
   pv->jam_rssi = SET_RSSI(cfg->jam_rssi >> 3);
-
   si446x_dump_config((uint8_t*)out, si446x_rf_cmd);
-
   return 0;
 }
 
-static void si446x_rf_config_done(struct si446x_ctx_s *pv, const struct dev_rfpacket_rf_cfg_s *cfg)
-{
+static void si446x_rf_config_done(struct si446x_ctx_s *pv, const struct dev_rfpacket_rf_cfg_s *cfg) {
   pv->id = cfg->cache.id;
-
   struct si446x_cache_entry_s *e = &pv->cache_array[pv->id % SI446X_RF_CONFIG_CACHE_ENTRY];
   struct si446x_rf_regs_s *data = &e->data;
-
   // Maximum time to wait before aborting transfer
   pv->mpst = 400 * e->tb;
   // 8 * Time bit + SLEEP->RX time
@@ -484,7 +470,6 @@ static void si446x_rf_config_done(struct si446x_ctx_s *pv, const struct dev_rfpa
   pv->mpst *= 10;
   pv->ccad *= 10;
 #endif
-
   si446x_bytecode_start(pv, &si446x_entry_rf_config, SI446X_ENTRY_RF_CONFIG_BCARGS(
                                      (uintptr_t)data, (uintptr_t)si446x_rf_cmd));
 }
@@ -505,15 +490,12 @@ static void si446x_clean(struct device_s *dev) {
 static KROUTINE_EXEC(si446x_config_deferred) {
   struct si446x_ctx_s *pv = si446x_ctx_s_from_kr(kr);
   struct dev_rfpacket_rq_s *rq = pv->gctx.rq;
-
-  assert(dev_rfpacket_config_state_check(&pv->gctx, rq));
-
   const struct dev_rfpacket_rf_cfg_s *cfg = rq->rf_cfg;
   struct si446x_cache_entry_s *e = &pv->cache_array[cfg->cache.id % SI446X_RF_CONFIG_CACHE_ENTRY];
 
-  if (si446x_build_rf_config(pv, &e->data, rq) == 0)
+  if (si446x_build_rf_config(pv, &e->data, rq) == 0) {
     return si446x_rf_config_done(pv, cfg);
-
+  }
   dev_rfpacket_config_notsup(&pv->gctx, rq);
 }
 
@@ -813,6 +795,7 @@ static KROUTINE_EXEC(si446x_spi_rq_done) {
     // Couldn't initialize
     si446x_clean(dev);
     device_async_init_done(dev, -EIO);
+    goto end;
   }
   if (pv->bc_status & bit(STATUS_PACKET_RX)) {
     si446x_fill_rx_info(pv, pv->gctx.rxrq);
