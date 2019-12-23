@@ -862,6 +862,8 @@ struct dev_rfpacket_ctx_s {
   struct dev_rfpacket_rq_s *rq;
   // Current working size and buffer
   uint8_t *buffer;
+  /** This value represents the size of the buffer to allocate. 
+      It must be filled by the driver before requesting allocation. */  
   uint16_t size;
   // State
   enum dev_rfpacket_state_s state;
@@ -991,12 +993,6 @@ void dev_rfpacket_wait_cleanup(struct dev_rfpacket_wait_ctx_s *ctx);
   fsm is not in an init state. Returns @tt TRUE if it isn't in init. */
 config_depend(CONFIG_DEVICE_RFPACKET)
 bool_t dev_rfpacket_init_done(struct dev_rfpacket_ctx_s *pv);
-
-/** @This function is called by a rfpacket driver to check if the rfpacket
-  fsm is in a configuration state. Returns @tt TRUE if it is in configuration. */
-config_depend(CONFIG_DEVICE_RFPACKET)
-bool_t dev_rfpacket_config_state_check(struct dev_rfpacket_ctx_s *pv, 
-                     struct dev_rfpacket_rq_s *rq);
 
 /** @This function is called by a rfpacket driver to check if it can clean the
   driver instance. Returns @tt 0 if allowed, @tt -EBUSY otherwise*/

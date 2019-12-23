@@ -655,7 +655,7 @@ static inline void rfpacket_retry_tx(struct dev_rfpacket_ctx_s *pv, bool_t resta
 
 // Transceiver is idle when this function is called
 static inline void rfpacket_error(struct dev_rfpacket_ctx_s *pv) {
-  logk_trace("-EIO error %d", pv->state);
+  logk_trace("error %d", pv->state);
   // Terminate allocated rx request
   rfpacket_end_rxrq(pv);
 
@@ -778,16 +778,6 @@ void dev_rfpacket_config_notsup(struct dev_rfpacket_ctx_s *pv, struct dev_rfpack
     default:
       rfpacket_end_rq(pv, -ENOTSUP);
     break;
-  }
-}
-
-config_depend(CONFIG_DEVICE_RFPACKET)
-bool_t dev_rfpacket_config_state_check(struct dev_rfpacket_ctx_s *pv, struct dev_rfpacket_rq_s *rq) {
-  if (rq->type == DEV_RFPACKET_RQ_RX_CONT || rq->type == DEV_RFPACKET_RQ_RX_TIMEOUT) {
-    return((pv->state == DEV_RFPACKET_STATE_CONFIG_RXC)
-      || (pv->state == DEV_RFPACKET_STATE_CONFIG_RXC_PENDING_STOP));
-  } else {
-    return(pv->state == DEV_RFPACKET_STATE_CONFIG);
   }
 }
 
