@@ -1,16 +1,16 @@
 /*
     This file is part of MutekH.
-    
+
     MutekH is free software; you can redistribute it and/or modify it
     under the terms of the GNU Lesser General Public License as
     published by the Free Software Foundation; version 2.1 of the
     License.
-    
+
     MutekH is distributed in the hope that it will be useful, but
     WITHOUT ANY WARRANTY; without even the implied warranty of
     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
     Lesser General Public License for more details.
-    
+
     You should have received a copy of the GNU Lesser General Public
     License along with MutekH; if not, write to the Free Software
     Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
@@ -384,10 +384,13 @@ DEV_DECLARE_STATIC(si446x_dev, "rfpacket", 0, si446x_drv,
                    /* irq */
                    DEV_STATIC_RES_DEV_PARAM("icu", "/gpio"),
                    DEV_STATIC_RES_IRQ(0, EFM32_PE13, DEV_IRQ_SENSE_FALLING_EDGE, 0, 1),
+#ifdef CONFIG_DRIVER_RFPACKET_SI446X_CTS_IRQ
+                   DEV_STATIC_RES_IRQ(1, EFM32_PC4, DEV_IRQ_SENSE_RISING_EDGE, 0, 1),
+#endif
                    /* GPIO */
-                   DEV_STATIC_RES_GPIO("nirq", EFM32_PE13,  1),  
-                   DEV_STATIC_RES_GPIO("cts",  EFM32_PE14,  1), 
-                   DEV_STATIC_RES_GPIO("sdn",  EFM32_PE8,  1), 
+                   DEV_STATIC_RES_GPIO("nirq", EFM32_PE13,  1),
+                   DEV_STATIC_RES_GPIO("cts",  EFM32_PE14,  1),
+                   DEV_STATIC_RES_GPIO("sdn",  EFM32_PE8,  1),
                    /* chip select */
                    DEV_STATIC_RES_UINT_PARAM("gpio-cs-id", EFM32_PE9),
 );
