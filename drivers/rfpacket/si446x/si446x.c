@@ -26,6 +26,7 @@
 #include "si446x.h"
 #include "si446x_spi.o.h"
 
+error_t si446x_get_time(struct dev_rfpacket_ctx_s *gpv, dev_timer_value_t *value);
 static dev_timer_delay_t si446x_calc_lbt_rand_rime(dev_timer_value_t timebase, dev_timer_value_t curr_time);
 static void si446x_fill_status(struct si446x_ctx_s *pv);
 static void si446x_fill_rx_info(struct si446x_ctx_s *pv, struct dev_rfpacket_rx_s *rx);
@@ -47,6 +48,7 @@ static bool_t si446x_sleep(struct dev_rfpacket_ctx_s *gpv);
 static void si446x_idle(struct dev_rfpacket_ctx_s *gpv);
 
 static const struct dev_rfpacket_driver_interface_s si446x_itfc = {
+  si446x_get_time,
   si446x_check_config,
   si446x_rx,
   si446x_tx,
@@ -62,28 +64,33 @@ static DEV_TIMER_CANCEL(si446x_timer_cancel)
 {
   struct device_s *dev = accessor->dev;
   struct si446x_ctx_s *pv = dev->drv_pv;
-  return DEVICE_OP(pv->gctx.timer, cancel, rq);
+  return DEVICE_OP(pv->timer, cancel, rq);
 }
 
 static DEV_TIMER_REQUEST(si446x_timer_request)
 {
   struct device_s *dev = accessor->dev;
   struct si446x_ctx_s *pv = dev->drv_pv;
-  return DEVICE_OP(pv->gctx.timer, request, rq);
+  return DEVICE_OP(pv->timer, request, rq);
 }
 
 static DEV_TIMER_GET_VALUE(si446x_timer_get_value)
 {
   struct device_s *dev = accessor->dev;
   struct si446x_ctx_s *pv = dev->drv_pv;
-  return DEVICE_OP(pv->gctx.timer, get_value, value, rev);
+  return DEVICE_OP(pv->timer, get_value, value, rev);
 }
 
 static DEV_TIMER_CONFIG(si446x_timer_config)
 {
   struct device_s *dev = accessor->dev;
   struct si446x_ctx_s *pv = dev->drv_pv;
-  return DEVICE_OP(pv->gctx.timer, config, cfg, res);
+  return DEVICE_OP(pv->timer, config, cfg, res);
+}
+
+error_t si446x_get_time(struct dev_rfpacket_ctx_s *gpv, dev_timer_value_t *value) {
+  struct si446x_ctx_s *pv = gpv->pvdata;
+  return DEVICE_OP(pv->timer, get_value, value, 0);
 }
 
 /**************************** RFPACKET PART ********************************/
@@ -481,7 +488,7 @@ static void si446x_clean(struct device_s *dev) {
 #else
   device_irq_source_unlink(dev, pv->src_ep, 1);
 #endif
-  device_stop(&pv->gctx.timer->base);
+  device_stop(&pv->timer->base);
   dev_drv_spi_bytecode_cleanup(&pv->spi, &pv->spi_rq);
   dev_rfpacket_clean(&pv->gctx);
   mem_free(pv);
@@ -571,7 +578,7 @@ static error_t si446x_check_config(struct dev_rfpacket_ctx_s *gpv, struct dev_rf
   e->cfg = (struct dev_rfpacket_rf_cfg_s * )rfcfg;
   // Time byte in us
   dev_timer_delay_t tb = 8000000/rq->rf_cfg->drate;
-  dev_timer_init_sec(pv->gctx.timer, &(e->tb), 0, tb, 1000000);
+  dev_timer_init_sec(pv->timer, &(e->tb), 0, tb, 1000000);
   // Send value to generic struct
   pv->gctx.time_byte = e->tb;
 
@@ -655,7 +662,7 @@ static void si446x_tx(struct dev_rfpacket_ctx_s *gpv, struct dev_rfpacket_rq_s *
       case DEV_RFPACKET_RQ_TX_FAIR: {
         // Get time value
         dev_timer_value_t t;
-        DEVICE_OP(pv->gctx.timer, get_value, &t, 0);
+        DEVICE_OP(pv->timer, get_value, &t, 0);
         // Init lbt info
         pv->lbt_state = SI446X_LBT_STATE_FREE;
         pv->lbt_rand_time = si446x_calc_lbt_rand_rime(pv->bt, t);
@@ -819,7 +826,7 @@ static DEV_IRQ_SRC_PROCESS(si446x_irq_source_process) {
     // Increment irq count
     pv->icount++;
     // Get timer value
-    DEVICE_OP(pv->gctx.timer, get_value, &pv->gctx.timestamp, 0);
+    DEVICE_OP(pv->timer, get_value, &pv->gctx.timestamp, 0);
   }
   // Wakeup any waiting instruction
   dev_spi_bytecode_wakeup(&pv->spi, srq);
@@ -879,14 +886,14 @@ static DEV_INIT(si446x_init) {
     .word_width = 8,
   };
 
-  if (dev_drv_spi_bytecode_init(dev, srq, &si446x_bytecode, &spi_cfg, &pv->spi, &gpio, &pv->gctx.timer))
+  if (dev_drv_spi_bytecode_init(dev, srq, &si446x_bytecode, &spi_cfg, &pv->spi, &gpio, &pv->timer))
     goto err_mem;
 
   // Base 500 us time
-  dev_timer_init_sec(pv->gctx.timer, &pv->bt, 0, SI446X_BASE_TIME, 1000000);
+  dev_timer_init_sec(pv->timer, &pv->bt, 0, SI446X_BASE_TIME, 1000000);
 
   // Start timer
-  if (device_start(&pv->gctx.timer->base))
+  if (device_start(&pv->timer->base))
     goto err_srq;
 
   srq->pvdata = dev;
@@ -948,7 +955,7 @@ static DEV_INIT(si446x_init) {
   return -EAGAIN;
 
  err_timer:
-  device_stop(&pv->gctx.timer->base);
+  device_stop(&pv->timer->base);
  err_srq:
   dev_drv_spi_bytecode_cleanup(&pv->spi, srq);
  err_mem:

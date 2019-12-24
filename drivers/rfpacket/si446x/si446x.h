@@ -200,6 +200,7 @@ struct si446x_ctx_s {
   struct dev_irq_src_s src_ep[SI446X_IRQ_SRC_COUNT];
   struct device_spi_ctrl_s spi;
   struct dev_spi_ctrl_bytecode_rq_s spi_rq;
+  struct device_timer_s *timer;
   // Bytecode status
   uintptr_t bc_status;
   // Kroutine for configuration
