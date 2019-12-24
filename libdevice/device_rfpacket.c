@@ -537,7 +537,7 @@ static inline void rfpacket_start_rx(struct dev_rfpacket_ctx_s *pv, struct dev_r
   pv->rq = rq;
   // Get timer value
   dev_timer_value_t t;
-  DEVICE_OP(pv->timer, get_value, &t, 0);
+  pv->drv->get_time(pv, &t);
 
   switch (rq->type) {
     case DEV_RFPACKET_RQ_RX:
@@ -572,7 +572,7 @@ static inline void rfpacket_retry_rx(struct dev_rfpacket_ctx_s *pv) {
 
   // Get timer value
   dev_timer_value_t t;
-  DEVICE_OP(pv->timer, get_value, &t, 0);
+  pv->drv->get_time(pv, &t);
   // Check for timeout
   if (t >= pv->timeout) {
     rfpacket_end_rq(pv, 0);
@@ -590,7 +590,7 @@ static inline void rfpacket_start_tx(struct dev_rfpacket_ctx_s *pv, struct dev_r
   pv->buffer = (uint8_t *)rq->tx_buf;
   // Get timer value
   dev_timer_value_t t;
-  DEVICE_OP(pv->timer, get_value, &t, 0);
+  pv->drv->get_time(pv, &t);
   // Set deadline
   pv->deadline = rq->deadline ? rq->deadline : t;
 
@@ -633,7 +633,7 @@ static inline void rfpacket_retry_tx(struct dev_rfpacket_ctx_s *pv, bool_t resta
     case DEV_RFPACKET_STATE_TX_LBT_STOPPING_RXC: {
       // Get time value
       dev_timer_value_t t;
-      DEVICE_OP(pv->timer, get_value, &t, 0);
+      pv->drv->get_time(pv, &t);
       if (t >= pv->timeout) {
         // Timeout date is already reached
         rfpacket_end_rq(pv, -ETIMEDOUT);
@@ -689,7 +689,7 @@ static error_t rfpacket_check_config(struct dev_rfpacket_ctx_s *pv, struct dev_r
       rfpacket_set_state(pv, DEV_RFPACKET_STATE_CONFIG_RXC);
       // Get time value
       dev_timer_value_t t;
-      DEVICE_OP(pv->timer, get_value, &t, 0);
+      pv->drv->get_time(pv, &t);
       if (t >= rq->deadline) {
         // Timeout date is already reached
         return -ETIMEDOUT;
@@ -799,7 +799,7 @@ void dev_rfpacket_request(struct dev_rfpacket_ctx_s *pv, struct dev_rfpacket_rq_
     case DEV_RFPACKET_RQ_RX_TIMEOUT:
       if (rq->lifetime != 0) {
         dev_timer_value_t t;
-        DEVICE_OP(pv->timer, get_value, &t, 0);
+        pv->drv->get_time(pv, &t);
         rq->deadline = t + rq->lifetime;
       }
     case DEV_RFPACKET_RQ_RX_CONT:
@@ -1105,7 +1105,6 @@ void dev_rfpacket_init(struct dev_rfpacket_ctx_s *pv) {
   dev_rq_queue_init(&pv->rx_cont_queue);
   // Check key structures were filled by driver
   assert(pv->drv);
-  assert(pv->timer);
 }
 
 config_depend(CONFIG_DEVICE_RFPACKET)

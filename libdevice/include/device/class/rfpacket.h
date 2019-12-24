@@ -817,6 +817,7 @@ enum dev_rfpacket_status_s {
 struct dev_rfpacket_ctx_s;
 
 /** @This are the function prototypes in @ref dev_rfpacket_driver_interface_s */
+typedef error_t (*dev_rfpacket_driver_get_time)(struct dev_rfpacket_ctx_s *gpv, dev_timer_value_t *value);
 typedef error_t (*dev_rfpacket_driver_check_config)(struct dev_rfpacket_ctx_s *gpv, struct dev_rfpacket_rq_s *rq);
 typedef void (*dev_rfpacket_driver_rx)(struct dev_rfpacket_ctx_s *gpv, struct dev_rfpacket_rq_s *rq, bool_t isRetry);
 typedef void (*dev_rfpacket_driver_tx)(struct dev_rfpacket_ctx_s *gpv, struct dev_rfpacket_rq_s *rq, bool_t isRetry);
@@ -827,6 +828,7 @@ typedef void (*dev_rfpacket_driver_idle)(struct dev_rfpacket_ctx_s *gpv);
 
 /** @This structure contains the driver callback used in the rfpacket fsm, @csee dev_rfpacket_ctx_s */
 struct dev_rfpacket_driver_interface_s {
+  dev_rfpacket_driver_get_time get_time;
   dev_rfpacket_driver_check_config check_config;
   dev_rfpacket_driver_rx rx;
   dev_rfpacket_driver_tx tx;
@@ -871,9 +873,6 @@ struct dev_rfpacket_ctx_s {
       @ref dev_rfpacket_req_done. It must report if an error occurred or not
       during the request execution. */
   enum dev_rfpacket_status_s status;
-  /** This pointer to a timer device must be filled by the rfpacket driver before
-      calling @ref dev_rfpacket_init*/
-  struct device_timer_s *timer;
   // Queues
   dev_request_queue_root_t rx_cont_queue;
   dev_request_queue_root_t queue;
