@@ -92,15 +92,10 @@ extern const size_t seqcode_size;
 struct radio_efr32_ctx_s
 {
   struct device_s               *dev;
-
   struct dev_irq_src_s          irq_ep[EFR32_RADIO_IRQ_COUNT];
   struct dev_freq_s             freq;
-  dev_timer_value_t             deadline;
-
   uint8_t                       rx_length_buffer[64];
-
   uint32_t*                     pdbg;
-
   /* Used for memory copy */
   struct kroutine_s             kr;
   struct efr32_protimer_s       pti;
