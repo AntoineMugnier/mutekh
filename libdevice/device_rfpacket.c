@@ -832,6 +832,7 @@ void dev_rfpacket_request(struct dev_rfpacket_ctx_s *pv, struct dev_rfpacket_rq_
         case DEV_RFPACKET_STATE_CONFIG_RXC_PENDING_STOP:
         case DEV_RFPACKET_STATE_CONFIG_RXC:
         case DEV_RFPACKET_STATE_TX_LBT_STOPPING_RXC:
+        case DEV_RFPACKET_STATE_INITIALISING:
           dev_rfpacket_rq_insert(&pv->rx_cont_queue, rq);
         break;
 
@@ -843,9 +844,6 @@ void dev_rfpacket_request(struct dev_rfpacket_ctx_s *pv, struct dev_rfpacket_rq_
             pv->drv->cancel_rxc(pv);
           }
         break;
-
-        case DEV_RFPACKET_STATE_INITIALISING:
-          UNREACHABLE();
       }
       break;
 
@@ -878,11 +876,9 @@ void dev_rfpacket_request(struct dev_rfpacket_ctx_s *pv, struct dev_rfpacket_rq_
             UNREACHABLE();
           }
         case DEV_RFPACKET_STATE_ENTER_SLEEP:
+        case DEV_RFPACKET_STATE_INITIALISING:
         default:
         break;
-
-        case DEV_RFPACKET_STATE_INITIALISING:
-          UNREACHABLE();
       }
     }
   }
