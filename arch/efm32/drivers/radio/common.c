@@ -47,12 +47,12 @@ void efr32_radio_debug_port(struct radio_efr32_ctx_s *pv, uint8_t val)
 
 void efr32_radio_debug_init(struct radio_efr32_ctx_s *pv)
 {
-  uint32_t * p = EFR32_RADIO_DEBUG_ADDR;
+  uint32_t *p = (void *)EFR32_RADIO_DEBUG_ADDR;
 
   memset(p, 0, EFR32_RADIO_DEBUG_SIZE);
 
   p[0] = EFR32_RADIO_DEBUG_ADDR;
-  uint32_t *base = EFR32_RADIO_DEBUG_ADDR;
+  uint32_t *base = (void *)EFR32_RADIO_DEBUG_ADDR;
   pv->pdbg = base + 1;
 
   /* Set PB6 to PB9 in output */
@@ -64,14 +64,14 @@ void efr32_radio_debug_init(struct radio_efr32_ctx_s *pv)
   x = cpu_mem_read_32(a);
   cpu_mem_write_32(a, x | 0x44);
 
-  efr32_radio_debug_port(pv, 0xF); 
+  efr32_radio_debug_port(pv, 0xF);
 }
 
 void efr32_radio_print_debug(char *p, struct radio_efr32_ctx_s *pv)
 {
   efr32_radio_printk(p);
 
-  uint32_t *base = EFR32_RADIO_DEBUG_ADDR;
+  uint32_t *base = (void *)EFR32_RADIO_DEBUG_ADDR;
   uint32_t *end = (uint32_t *)base[0];
 
   if (pv->pdbg == NULL)
@@ -84,7 +84,7 @@ void efr32_radio_print_debug(char *p, struct radio_efr32_ctx_s *pv)
     return;
 
   while(1)
-  { 
+  {
     if (pv->pdbg == (uint32_t *)(EFR32_RADIO_DEBUG_ADDR + EFR32_RADIO_DEBUG_SIZE))
       pv->pdbg = base + 1;
 
