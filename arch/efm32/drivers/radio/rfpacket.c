@@ -59,7 +59,7 @@ static void efr32_rfp_req_done(struct radio_efr32_rfp_ctx_s *ctx);
 static void efr32_rfp_set_cca_threshold(struct radio_efr32_rfp_ctx_s *ctx, struct dev_rfpacket_rq_s *rq);
 static void efr32_rfp_start_tx_lbt(struct radio_efr32_rfp_ctx_s *ctx, struct dev_rfpacket_rq_s *rq);
 static void efr32_rfp_disable(struct radio_efr32_rfp_ctx_s *ctx);
-static void efr32_rfp_start_rx_scheduled(struct radio_efr32_rfp_ctx_s *ctx, dev_timer_value_t t);
+static void efr32_rfp_start_rx_scheduled(struct radio_efr32_rfp_ctx_s *ctx);
 static void efr32_rfp_read_packet(struct radio_efr32_rfp_ctx_s *ctx);
 static void efr32_rfp_rx_irq(struct radio_efr32_rfp_ctx_s *ctx, uint32_t irq);
 static inline void efr32_rfp_tx_irq(struct radio_efr32_rfp_ctx_s *ctx, uint32_t irq);
@@ -555,7 +555,7 @@ static void efr32_rfp_disable(struct radio_efr32_rfp_ctx_s *ctx) {
   cpu_mem_write_32(EFR32_FRC_ADDR + EFR32_FRC_IF_ADDR, 0);
 }
 
-static void efr32_rfp_start_rx_scheduled(struct radio_efr32_rfp_ctx_s *ctx, dev_timer_value_t t) {
+static void efr32_rfp_start_rx_scheduled(struct radio_efr32_rfp_ctx_s *ctx) {
   struct radio_efr32_ctx_s *pv = &ctx->pv;
 
 #if EFR32_PROTIMER_HW_WIDTH < 64
@@ -563,7 +563,14 @@ static void efr32_rfp_start_rx_scheduled(struct radio_efr32_rfp_ctx_s *ctx, dev_
 #endif
   dev_timer_value_t start = ctx->gctx.deadline;
   dev_timer_value_t end = ctx->gctx.timeout;
+  dev_timer_value_t t = efr32_protimer_get_value(&pv->pti);
 
+  if (end < t) {
+    // Deadline already reached
+    efr32_rfp_fill_status(ctx, DEV_RFPACKET_STATUS_RX_TIMEOUT);
+    efr32_rfp_req_done(ctx);
+    return;
+  }
   uint32_t x = EFR32_PROTIMER_RXCTRL_RXSETEVENT(0, ALWAYS) |
                EFR32_PROTIMER_RXCTRL_RXCLREVENT(0, ALWAYS) |
                EFR32_PROTIMER_RXCTRL_RXSETEVENT(1, CC1)    |
@@ -676,7 +683,6 @@ static error_t efr32_radio_check_config(struct dev_rfpacket_ctx_s *gpv, struct d
 
 static void efr32_radio_rx(struct dev_rfpacket_ctx_s *gpv, struct dev_rfpacket_rq_s *rq, bool_t isRetry) {
   struct radio_efr32_rfp_ctx_s *ctx = gpv->pvdata;
-  struct radio_efr32_ctx_s *pv = &ctx->pv;
 
   cpu_mem_write_32(EFR32_SEQ_DEADLINE_ADDR, 0);
   // Check RAC state
@@ -684,15 +690,6 @@ static void efr32_radio_rx(struct dev_rfpacket_ctx_s *gpv, struct dev_rfpacket_r
   assert(EFR32_RAC_STATUS_STATE_GET(x) == EFR32_RAC_STATUS_STATE_OFF);
   // Clear buffer
   cpu_mem_write_32(EFR32_BUFC_ADDR + EFR32_BUFC_CMD_ADDR(1), EFR32_BUFC_CMD_CLEAR);
-
-  dev_timer_value_t t = efr32_protimer_get_value(&pv->pti);
-
-  if (ctx->gctx.timeout < t) {
-    // Deadline already reached
-    efr32_rfp_fill_status(ctx, DEV_RFPACKET_STATUS_RX_TIMEOUT);
-    efr32_rfp_req_done(ctx);
-    return;
-  }
   // Retry or not
   switch (rq->type) {
     case DEV_RFPACKET_RQ_RX_CONT:
@@ -704,7 +701,7 @@ static void efr32_radio_rx(struct dev_rfpacket_ctx_s *gpv, struct dev_rfpacket_r
 
     case DEV_RFPACKET_RQ_RX:
       // Scheduled RX
-      efr32_rfp_start_rx_scheduled(ctx, t);
+      efr32_rfp_start_rx_scheduled(ctx);
     break;
     // TODO RQ RX TIMEOUT support
     default:
