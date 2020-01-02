@@ -179,7 +179,7 @@ static DEV_TIMER_CONFIG(efr32_rfpacket_timer_config) {
   error_t err = 0;
 
   LOCK_SPIN_IRQ(&dev->lock);
-  cfg->freq = pv->freq;
+  memcpy(&cfg->freq, &pv->freq, sizeof(struct dev_freq_s));
 
   if (res) {
     if (dev->start_count) {
@@ -749,6 +749,7 @@ static void efr32_radio_tx(struct dev_rfpacket_ctx_s *gpv, struct dev_rfpacket_r
 static void efr32_radio_cancel_rxc(struct dev_rfpacket_ctx_s *gpv) {
   struct radio_efr32_rfp_ctx_s *ctx = gpv->pvdata;
   efr32_rfp_disable(ctx);
+  efr32_rfp_req_done(ctx);
 }
 
 static bool_t efr32_radio_wakeup(struct dev_rfpacket_ctx_s *gpv) {
