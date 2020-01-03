@@ -24,27 +24,27 @@
 
 entry_state_off:
         /* 1 */
-        jmp              __entry_state_off           
+        jmp              __entry_state_off
 
 entry_state_rxwarm:
         /* 2 */
-        jmp              __entry_rxwarm           
+        jmp              __entry_rxwarm
 
 entry_state_rxsearch:
         /* 3 */
-        jmp              __entry_rxsearch           
+        jmp              __entry_rxsearch
 
 entry_state_rxframe:
         /* 4 */
-        jmp              __entry_rxframe           
+        jmp              __entry_rxframe
 
 entry_state_rxpd:
         /* 5 */
-        jmp              __entry_rxpd_ovf           
+        jmp              __entry_rxpd
 
 entry_state_rx2rx:
         /* 6 */
-        jmp              __entry_rx2rx           
+        jmp              __entry_rx2rx
 
 entry_state_rxoverflow:
         /* 5 */
@@ -81,6 +81,8 @@ entry_state_shutdown:
 #include "common.h"
 #include "debug.seq"
 
+#define MODE_NOTEST
+
 #define RESET_SP()                                              \
         cst32            r0, EFR32_SEQ_STACK_POINTER_ADDR;      \
         st.rac           [EFR32_RAC_ADDR + EFR32_RAC_R_ADDR(6)], r0
@@ -97,9 +99,6 @@ __entry_rxwarm:        // function call from: entry_state_rxwarm
         RESET_SP()
         STACK_TEST(2)
 	/* Test if buffer is empty before warming */
-        ld.rac           r0, [EFR32_RAC_ADDR + EFR32_RAC_IFPGACTRL_ADDR] 
-        andi.nowb        r0, EFR32_RAC_IFPGACTRL_BANDSEL(SG)            
-        jz               _rxwarmstart
         cst32            r1, EFR32_BUFC_ADDR + EFR32_BUFC_STATUS_ADDR(1)      
         ld               r0, [r1]          
         andi.nowb        r0, 0xff            
@@ -126,36 +125,23 @@ __entry_rxwarm:        // function call from: entry_state_rxwarm
         bitband          [r1], EFR32_MODEM_IF_RXFRAMEDET0_IDX, SET, 0
         end                                  
 
-__entry_rxpd_ovf:        // function call from: entry_state_rxpd, entry_state_rxoverflow
+__entry_rxpd_ovf:        // function call from: entry_state_rxoverflow
+        RESET_SP()
+        GPIO_LOG(0)
+        cst8             r1,  EFR32_RAC_STATUS_STATE_OFF
+        st.rac           [EFR32_RAC_ADDR + EFR32_RAC_FORCESTATE_ADDR], r1
+        jmp              _rxpd_end
+__entry_rxpd:            // function call from: entry_state_rxpd
         // in {r1, sp, pc, sr0, sr1, sr3}
         GPIO_LOG(5)
         RESET_SP()
-        STACK_TEST(5)
-        /* Test buf1 overflow */
-        cst32            r4, EFR32_BUFC_ADDR + EFR32_BUFC_IF_ADDR    
-        ld               r2, [r4]            
-        cst32            r0, EFR32_BUFC_IF_OF(1)            
-        and              r2, r0             
-        /* No overflow */
-        jz               _no_ovf           
-        /* Clear buf1 ovf irq */
-        addi             r4, 8	  
-        st               [r4], r2            
-        cst32            r4, EFR32_FRC_ADDR + EFR32_FRC_IFS_ADDR    
-        bitband          [r4], EFR32_FRC_IF_RXABORTED_IDX, SET, 0  
-        jmp              _set_idle
-    _no_ovf:
+#ifdef MODE_NOTEST        
         ld.rac           r0, [EFR32_RAC_ADDR + EFR32_RAC_IFPGACTRL_ADDR] 
         andi.nowb        r0, EFR32_RAC_IFPGACTRL_BANDSEL(SG)            
-        jnz              _set_idle
+        jnz              _rxpd_end
         cst32            r1, 250
         call             _schedule_next_op
-        jmp              _rxpd_end
-    _set_idle:
-        /* Stop Rx */
-        call 		 __stop_rx
-        cst8             r1,  EFR32_RAC_STATUS_STATE_OFF
-        st.rac           [EFR32_RAC_ADDR + EFR32_RAC_FORCESTATE_ADDR], r1
+#endif
     _rxpd_end:
         end                                  
 
@@ -164,12 +150,6 @@ __entry_rx2rx:        // function call from: entry_state_rx2rx
         GPIO_LOG(6)
         RESET_SP()
         STACK_TEST(6)
-        call 		 __stop_rx
-        cst8             r1,  EFR32_RAC_STATUS_STATE_OFF
-        st.rac           [EFR32_RAC_ADDR + EFR32_RAC_FORCESTATE_ADDR], r1
-        cst32            r0, EFR32_FRC_ADDR + EFR32_FRC_IFS_ADDR
-	/* Raise RX aborted error */
-        bitband          [r0], EFR32_FRC_IF_RXABORTED_IDX, SET, 0  
         end                                  
 
 __entry_rx2tx:        // function call from: entry_state_rx2tx
@@ -177,6 +157,13 @@ __entry_rx2tx:        // function call from: entry_state_rx2tx
         GPIO_LOG(7)
         STACK_TEST(7)
         RESET_SP()
+        ld.rac           r0, [EFR32_RAC_ADDR + EFR32_RAC_IFPGACTRL_ADDR] 
+        andi.nowb        r0, EFR32_RAC_IFPGACTRL_BANDSEL(SG)
+        jz               __rx2tx_wait 
+        call             __tx_warm
+        end
+  __rx2tx_wait:
+        /* Wait at leat 50 us in BLE before ending RX */
         sleep            316            /* Wait for 150 us */
         end
 
@@ -186,20 +173,7 @@ __entry_txwarm:        // function call from: entry_state_txwarm
         RESET_SP()
         STACK_TEST(8)
         call             _wait_before_op
-        call             _reset_tx
-        call             _clear_hfxoretimectrl_en_bit
-
-        /* Might Clear CMU HFXOCTRL1 SQBMODE here */
-
-        cst32            r2, EFR32_SYNTH_ADDR + EFR32_SYNTH_CMD_ADDR       
-        bitband          [r2], EFR32_SYNTH_CMD_SYNTHSTOP_IDX, SET, 0     
-        /* Disable if */
-        bitband          [r2], EFR32_SYNTH_CMD_DISABLEIF_IDX, SET, 0    
-
-        /* Set synthenctrl.lpfbwsel bit */
-        cst32            r3, EFR32_RAC_SYNTHENCTRL_LPFBWSEL
-        call             __cfg_synth 
-        call             __start_tx
+        call             __tx_warm
         end
 
 __entry_tx:        // function call from: entry_state_tx
@@ -214,8 +188,10 @@ __entry_txpd:        // function call from: entry_state_txpd
         GPIO_LOG(0xa)
         RESET_SP()
         STACK_TEST(0xa)
+#ifdef MODE_NOTEST        
         cst32            r1, 180
         call             _schedule_next_op
+#endif
         end
 
 __entry_tx2rx:        // function call from: entry_state_tx2rx
@@ -247,6 +223,7 @@ __entry_rxsearch:        // function call from: entry_state_rxsearch
         STACK_TEST(3)
         RESET_SP()
         GPIO_LOG(3)
+#ifdef MODE_NOTEST        
         ld.rac           r0, [EFR32_RAC_ADDR + EFR32_RAC_IFPGACTRL_ADDR] 
         andi.nowb        r0, EFR32_RAC_IFPGACTRL_BANDSEL(SG)            
         jnz              _rxsearch_end
@@ -265,6 +242,7 @@ __entry_rxsearch:        // function call from: entry_state_rxsearch
         cst32            r0, EFR32_FRC_ADDR + EFR32_FRC_IFS_ADDR
         bitband          [r0], EFR32_FRC_IF_RXABORTED_IDX, SET, 0  
     _rxsearch_end:
+#endif
         end
 
 __entry_rxframe:        // function call from: entry_state_rxframe
@@ -274,6 +252,24 @@ __entry_rxframe:        // function call from: entry_state_rxframe
         STACK_TEST(4)
         call 		 __stop_rx
         end
+
+__tx_warm:
+        call             _reset_tx
+        call             _clear_hfxoretimectrl_en_bit
+
+        /* Might Clear CMU HFXOCTRL1 SQBMODE here */
+
+        cst32            r2, EFR32_SYNTH_ADDR + EFR32_SYNTH_CMD_ADDR       
+        bitband          [r2], EFR32_SYNTH_CMD_SYNTHSTOP_IDX, SET, 0     
+        /* Disable if */
+        bitband          [r2], EFR32_SYNTH_CMD_DISABLEIF_IDX, SET, 0    
+
+        /* Set synthenctrl.lpfbwsel bit */
+        cst32            r3, EFR32_RAC_SYNTHENCTRL_LPFBWSEL
+        call             __cfg_synth 
+        call             __start_tx
+        ret
+
 
 __stop_rx:
         cst8             r0,  EFR32_RAC_RXENSRCEN_ADDR    
@@ -466,10 +462,6 @@ __start_tx:
         // Set PA CTuneSel
         cst32            r0, EFR32_RAC_ADDR + EFR32_RAC_RFENCTRL_ADDR    
         bitband          [r0], EFR32_RAC_RFENCTRL_PACTUNESEL_IDX, SET, 1    
-
-        cst32            r0, 0x5c00c0c4      
-        st.rac           [EFR32_RAC_ADDR + EFR32_RAC_PACTRL0_ADDR], r0   
-        st.rac           [EFR32_RAC_ADDR + EFR32_RAC_SGPACTRL0_ADDR], r0 
         ld.rac           r0, [EFR32_RAC_ADDR + EFR32_RAC_IFPGACTRL_ADDR] 
         andi.nowb        r0, EFR32_RAC_IFPGACTRL_BANDSEL(SG)            
         jz               _txconfig_2p4          
