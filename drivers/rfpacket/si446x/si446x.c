@@ -845,7 +845,7 @@ static DEV_RFPACKET_STATS(si446x_rfp_stats) {
 #ifdef CONFIG_DEVICE_RFPACKET_STATISTICS
   struct device_s *dev = accessor->dev;
   struct si446x_ctx_s *pv = dev->drv_pv;
-  memcpy(stats, &pv->stats, sizeof(*stats));
+  memcpy(stats, &pv->gctx.stats, sizeof(*stats));
   return 0;
 #else
   return -ENOTSUP;
