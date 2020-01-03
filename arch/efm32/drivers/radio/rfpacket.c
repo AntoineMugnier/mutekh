@@ -35,12 +35,16 @@
 
 #define EFR32_RADIO_RFP_BUFFER_SIZE 256
 
+#define EFR32_RX_IRQ_FRC_MSK      (EFR32_FRC_IF_RXDONE     |      \
+                                   EFR32_FRC_IF_RXOF       |      \
+                                   EFR32_FRC_IF_BLOCKERROR |      \
+                                   EFR32_FRC_IF_FRAMEERROR)
+
 DRIVER_PV(struct radio_efr32_rfp_ctx_s
 {
   struct radio_efr32_ctx_s pv;
   uint8_t sg_buffer[EFR32_RADIO_RFP_BUFFER_SIZE];
-  // Timer device struct
-  struct device_timer_s timer_s;
+  bool_t sleep;
   // Generic rfpacket context struct
   struct dev_rfpacket_ctx_s gctx;
   // Current config
@@ -54,16 +58,19 @@ static void efr32_rfp_timer_irq(struct device_s *dev);
 static error_t efr32_radio_get_time(struct dev_rfpacket_ctx_s *gpv, dev_timer_value_t *value);
 static inline error_t efr32_rf_config(struct radio_efr32_rfp_ctx_s *ctx, struct dev_rfpacket_rq_s *rq);
 static inline error_t efr32_pkt_config(struct radio_efr32_rfp_ctx_s *ctx, struct dev_rfpacket_rq_s *rq);
+static bool_t efr32_check_rac_off(struct radio_efr32_rfp_ctx_s *ctx);
 static inline void  efr32_rfp_fill_status(struct radio_efr32_rfp_ctx_s *ctx, enum dev_rfpacket_status_s status);
 static void efr32_rfp_req_done(struct radio_efr32_rfp_ctx_s *ctx);
 static void efr32_rfp_set_cca_threshold(struct radio_efr32_rfp_ctx_s *ctx, struct dev_rfpacket_rq_s *rq);
 static void efr32_rfp_start_tx_lbt(struct radio_efr32_rfp_ctx_s *ctx, struct dev_rfpacket_rq_s *rq);
 static void efr32_rfp_disable(struct radio_efr32_rfp_ctx_s *ctx);
 static void efr32_rfp_start_rx_scheduled(struct radio_efr32_rfp_ctx_s *ctx);
+static int16_t efr32_rfp_get_rssi(struct radio_efr32_rfp_ctx_s *ctx, uintptr_t a);
 static void efr32_rfp_read_packet(struct radio_efr32_rfp_ctx_s *ctx);
 static void efr32_rfp_rx_irq(struct radio_efr32_rfp_ctx_s *ctx, uint32_t irq);
 static inline void efr32_rfp_tx_irq(struct radio_efr32_rfp_ctx_s *ctx, uint32_t irq);
-static error_t efr32_rfp_init(struct radio_efr32_rfp_ctx_s *ctx);
+static error_t efr32_rfp_fsk_init(struct radio_efr32_rfp_ctx_s *ctx);
+static error_t efr32_rfp_sigfox_init(struct radio_efr32_rfp_ctx_s *ctx);
 // Lib device rfpacket interface functions
 static error_t efr32_radio_check_config(struct dev_rfpacket_ctx_s *gpv, struct dev_rfpacket_rq_s *rq);
 static void efr32_radio_rx(struct dev_rfpacket_ctx_s *gpv, struct dev_rfpacket_rq_s *rq, bool_t isRetry);
@@ -83,9 +90,6 @@ static const struct dev_rfpacket_driver_interface_s efr32_radio_itfc = {
   efr32_radio_sleep,
   efr32_radio_idle,
 };
-
-#define efr32_radio_use dev_use_generic
-#define efr32_radio_stats (dev_rfpacket_stats_t *)&dev_driver_notsup_fcn
 
 /**************************** TIMER PART ********************************/
 
@@ -223,9 +227,11 @@ static void efr32_rfp_timer_irq(struct device_s *dev) {
     // Tx timeout test
     if (irq & EFR32_PROTIMER_IF_LBTFAILURE) {
       // Check RAC state
-      if (x != EFR32_RAC_STATUS_STATE_OFF) {
-        efr32_rfp_disable(ctx);
+      if (x == EFR32_RAC_STATUS_STATE_RXFRAME) {
+        // A packet is being received
+        break;
       }
+      efr32_rfp_disable(ctx);
       efr32_rfp_fill_status(ctx, DEV_RFPACKET_STATUS_TX_TIMEOUT);
       efr32_rfp_req_done(ctx);
     }
@@ -297,14 +303,28 @@ static inline error_t efr32_rf_config(struct radio_efr32_rfp_ctx_s *ctx,
 
   // Test if new RF configuration or previous configuration modified
   if ((rfcfg != ctx->rf_cfg) || rfcfg->cache.dirty) {
-    if (rfcfg->drate != 38400) {
-     return -ENOTSUP;
+    if (rfcfg->mod == DEV_RFPACKET_GFSK) {
+      efr32_rfp_fsk_init(ctx);
+    }
+#ifdef CONFIG_RFPACKET_SIGFOX
+     else if (rfcfg->mod == DEV_RFPACKET_SIGFOX) {
+      efr32_rfp_sigfox_init(ctx);
+    }
+#endif
+    else {
+      return -ENOTSUP;
     }
     ctx->rf_cfg = (struct dev_rfpacket_rf_cfg_s *)rfcfg;
     uint32_t div = cpu_mem_read_32(EFR32_SYNTH_ADDR + EFR32_SYNTH_DIVCTRL_ADDR);
+    div = EFR32_SYNTH_DIVCTRL_LODIVFREQCTRL_GET(div);
+    // Configure frequency
     uint64_t f = ((uint64_t)(rfcfg->frequency) * div) << 19;
     f /= EFR32_RADIO_HFXO_CLK;
     cpu_mem_write_32(EFR32_SYNTH_ADDR + EFR32_SYNTH_FREQ_ADDR, (uint32_t)f);
+    // Configure channel spacing
+    uint64_t chsp = ((uint64_t)(rfcfg->chan_spacing) * div) << 19;
+    chsp /= EFR32_RADIO_HFXO_CLK;
+    cpu_mem_write_32(EFR32_SYNTH_ADDR + EFR32_SYNTH_CHSP_ADDR, (uint32_t)chsp);
     // FIXME FILL TIME BYTE INFO
     // dev_timer_delay_t tb = 8000000 / rfcfg->drate;
     // dev_timer_init_sec(ctx->gctx.timer, &(ctx->gctx.time_byte), 0, tb, 1000000);
@@ -319,17 +339,71 @@ static inline error_t efr32_pkt_config(struct radio_efr32_rfp_ctx_s *ctx,
   if ((pkcfg == ctx->pk_cfg) && !pkcfg->cache.dirty) {
     return 0;
   }
-  ctx->pk_cfg = (struct dev_rfpacket_pk_cfg_s *)pkcfg;
+#ifdef CONFIG_RFPACKET_SIGFOX
+  if (rq->pk_cfg->format == DEV_RFPACKET_FMT_SIGFOX_TX) {
+    cpu_mem_write_32(EFR32_FRC_ADDR + EFR32_FRC_DATABUFFER_ADDR, 0x6f);
+    cpu_mem_write_32(EFR32_FRC_ADDR + EFR32_FRC_WHITEPOLY_ADDR, 0x80);
+    cpu_mem_write_32(EFR32_FRC_ADDR + EFR32_FRC_WHITEINIT_ADDR, 0xff);
+    cpu_mem_write_32(EFR32_FRC_ADDR + EFR32_FRC_FECCTRL_ADDR, 0x2);
+    cpu_mem_write_32(EFR32_FRC_ADDR + EFR32_FRC_FCD_ADDR(0), 0xff);
+    cpu_mem_write_32(EFR32_FRC_ADDR + EFR32_FRC_FCD_ADDR(2), 0x1ff);
+    // No additionnal length byte
+    uint32_t x = EFR32_FRC_CTRL_RXFCDMODE(FCDMODE0) |
+                 EFR32_FRC_CTRL_TXFCDMODE(FCDMODE0) |
+                 EFR32_FRC_CTRL_BITORDER(MSB) |
+                 EFR32_FRC_CTRL_BITSPERWORD(7);
+    cpu_mem_write_32(EFR32_FRC_ADDR + EFR32_FRC_CTRL_ADDR, x);
+    x = EFR32_FRC_DFLCTRL_DFLMODE(DISABLE);
+    cpu_mem_write_32(EFR32_FRC_ADDR + EFR32_FRC_DFLCTRL_ADDR, x);
+    cpu_mem_write_32(EFR32_FRC_ADDR + EFR32_FRC_MAXLENGTH_ADDR, EFR32_RADIO_RFP_BUFFER_SIZE - 1);
+    // No preamble - No Sync word - No CRC
+    return 0;
+  }
+#endif
   if (rq->pk_cfg->format != DEV_RFPACKET_FMT_SLPC) {
     return -ENOTSUP;
   }
+  cpu_mem_write_32(EFR32_FRC_ADDR + EFR32_FRC_RXCTRL_ADDR, EFR32_FRC_RXCTRL_BUFRESTOREFRAMEERROR |
+                                                           EFR32_FRC_RXCTRL_BUFRESTORERXABORTED);
+  cpu_mem_write_32(EFR32_FRC_ADDR + EFR32_FRC_TRAILRXDATA_ADDR, EFR32_FRC_TRAILRXDATA_RSSI);
+  cpu_mem_write_32(EFR32_FRC_ADDR + EFR32_FRC_FCD_ADDR(0), EFR32_FRC_FCD_CALCCRC |
+                                                           EFR32_FRC_FCD_SKIPWHITE);
+  cpu_mem_write_32(EFR32_FRC_ADDR + EFR32_FRC_FCD_ADDR(1), EFR32_FRC_FCD_WORDS(255) |
+                                                           EFR32_FRC_FCD_INCLUDECRC |
+                                                           EFR32_FRC_FCD_CALCCRC |
+                                                           EFR32_FRC_FCD_SKIPWHITE);
+  cpu_mem_write_32(EFR32_FRC_ADDR + EFR32_FRC_FCD_ADDR(2), EFR32_FRC_FCD_BUFFER(1) |
+                                                           EFR32_FRC_FCD_CALCCRC |
+                                                           EFR32_FRC_FCD_SKIPWHITE);
+  cpu_mem_write_32(EFR32_FRC_ADDR + EFR32_FRC_FCD_ADDR(3), EFR32_FRC_FCD_WORDS(255) |
+                                                           EFR32_FRC_FCD_BUFFER(1) |
+                                                           EFR32_FRC_FCD_INCLUDECRC |
+                                                           EFR32_FRC_FCD_CALCCRC |
+                                                           EFR32_FRC_FCD_SKIPWHITE);
+  // Configure variable length mode
+  uint32_t x = EFR32_FRC_CTRL_RXFCDMODE(FCDMODE2) |
+               EFR32_FRC_CTRL_TXFCDMODE(FCDMODE2) |
+               EFR32_FRC_CTRL_BITORDER(MSB) |
+               EFR32_FRC_CTRL_BITSPERWORD(7);
+
+  cpu_mem_write_32(EFR32_FRC_ADDR + EFR32_FRC_CTRL_ADDR, x);
+
+  x = EFR32_FRC_DFLCTRL_DFLMODE(SINGLEBYTE) |
+      EFR32_FRC_DFLCTRL_MINLENGTH(1) |
+      EFR32_FRC_DFLCTRL_DFLBITS(8);
+
+  cpu_mem_write_32(EFR32_FRC_ADDR + EFR32_FRC_DFLCTRL_ADDR, x);
+  cpu_mem_write_32(EFR32_FRC_ADDR + EFR32_FRC_MAXLENGTH_ADDR, EFR32_RADIO_RFP_BUFFER_SIZE - 1);
+
+  ctx->pk_cfg = (struct dev_rfpacket_pk_cfg_s *)pkcfg;
+
   const struct dev_rfpacket_pk_cfg_basic_s *cfg = const_dev_rfpacket_pk_cfg_basic_s_cast(rq->pk_cfg);
   // Configure Sync Word
   uint8_t sw = cfg->sw_len + 1;
   if ((sw >> 5) || (sw % 4)) {
     return -ENOTSUP;
   }
-  uint32_t x = EFR32_MODEM_CTRL1_SYNCBITS(cfg->sw_len);
+  x = EFR32_MODEM_CTRL1_SYNCBITS(cfg->sw_len);
   cpu_mem_write_32(EFR32_MODEM_ADDR + EFR32_MODEM_CTRL1_ADDR, x);
 
   x = cfg->sw_value;
@@ -345,14 +419,14 @@ static inline error_t efr32_pkt_config(struct radio_efr32_rfp_ctx_s *ctx,
   if ((cfg->pb_pattern_len + 1) >> 4) {
     return -ENOTSUP;
   }
-  x = EFR32_MODEM_PRE_BASE(cfg->pb_pattern_len);
+  x = EFR32_MODEM_PRE_BASEBITS(cfg->pb_pattern_len);
   uint32_t msk = (1 << (cfg->pb_pattern_len + 1)) - 1;
   uint32_t preamble = cfg->pb_pattern & msk;
 
   if (preamble == (0xAAAAAAAA & msk)) {
-    EFR32_MODEM_PRE_BASEBITS_SET(x, 1); // TYPE 1010
+    EFR32_MODEM_PRE_BASE_SET(x, 10); // TYPE 1010
   } else if (preamble == (0x55555555 & msk)) {
-    EFR32_MODEM_PRE_BASEBITS_SET(x, 0); // TYPE 0101
+    EFR32_MODEM_PRE_BASE_SET(x, 01); // TYPE 0101
   } else {
     return -ENOTSUP;
   }
@@ -405,8 +479,59 @@ static inline error_t efr32_pkt_config(struct radio_efr32_rfp_ctx_s *ctx,
   return 0;
 }
 
+static bool_t efr32_check_rac_off(struct radio_efr32_rfp_ctx_s *ctx) {
+  // Check RAC state
+  uint32_t x = endian_le32(cpu_mem_read_32(EFR32_RAC_ADDR + EFR32_RAC_STATUS_ADDR));
+  if (EFR32_RAC_STATUS_STATE_GET(x) != EFR32_RAC_STATUS_STATE_OFF) {
+    cpu_mem_write_32(EFR32_RAC_ADDR + EFR32_RAC_IFC_ADDR, EFR32_RAC_IF_STATECHANGE);
+    cpu_mem_write_32(EFR32_RAC_ADDR + EFR32_RAC_IEN_ADDR, EFR32_RAC_IF_STATECHANGE);
+    x = endian_le32(cpu_mem_read_32(EFR32_RAC_ADDR + EFR32_RAC_STATUS_ADDR));
+    // Trigger IRQ in case we missed the transition
+    if (EFR32_RAC_STATUS_STATE_GET(x) == EFR32_RAC_STATUS_STATE_OFF) {
+      cpu_mem_write_32(EFR32_RAC_ADDR + EFR32_RAC_IFS_ADDR, EFR32_RAC_IF_STATECHANGE);
+    }
+    return 0;
+  }
+  return 1;
+}
+
+static void efr32_rfp_cfg_rac_dbg(struct radio_efr32_rfp_ctx_s *ctx) {
+  uint32_t x;
+  /* Set PC9 to PC11 in output */
+  uint32_t a = 0x4000a008 + 2 * 0x30;
+  x = cpu_mem_read_32(a);
+  cpu_mem_write_32(a, x | (0x444 << 4));
+  /* Configure PRS channel 9/10/11 on PC9/10/11 */
+  x = EFR32_PRS_ROUTEPEN_CHPEN(9)  |
+      EFR32_PRS_ROUTEPEN_CHPEN(10) |
+      EFR32_PRS_ROUTEPEN_CHPEN(11);
+
+  cpu_mem_write_32(EFM32_PRS_ADDR + EFR32_PRS_ROUTEPEN_ADDR, x);
+
+  x = EFR32_PRS_ROUTELOC2_CH9LOC(14) |
+      EFR32_PRS_ROUTELOC2_CH10LOC(4) |
+      EFR32_PRS_ROUTELOC2_CH11LOC(4);
+
+  cpu_mem_write_32(EFM32_PRS_ADDR + EFR32_PRS_ROUTELOC2_ADDR, x);
+  /* PC9 */
+  x = EFR32_PRS_CH_CTRL_SOURCESEL(RAC);
+  EFR32_PRS_CH_CTRL_SIGSEL_SETVAL(x, 1); //RAC TX
+
+  cpu_mem_write_32(EFM32_PRS_ADDR + EFR32_PRS_CH_CTRL_ADDR(9), x);
+  /* PC10 */
+  x = EFR32_PRS_CH_CTRL_SOURCESEL(RAC);
+  EFR32_PRS_CH_CTRL_SIGSEL_SETVAL(x, 2); //RAC RX
+
+  cpu_mem_write_32(EFM32_PRS_ADDR + EFR32_PRS_CH_CTRL_ADDR(10), x);
+  /* PC11 */
+  x = EFR32_PRS_CH_CTRL_SOURCESEL(MODEML);
+  EFR32_PRS_CH_CTRL_SIGSEL_SETVAL(x, 0); //MODEM FRAME DET
+
+  cpu_mem_write_32(EFM32_PRS_ADDR + EFR32_PRS_CH_CTRL_ADDR(11), x);
+}
+
 #ifdef CONFIG_DRIVER_EFR32_DEBUG
-static void efr32_rfp_cfg_prs_dbg(struct radio_efr32_rfp_ctx_s *ctx) {
+static void efr32_rfp_cfg_protimer_dbg(struct radio_efr32_rfp_ctx_s *ctx) {
   uint32_t x;
   // Set PC9 to PC11 in output
   uint32_t a = 0x4000a008 + 2 * 0x30;
@@ -501,7 +626,9 @@ static void efr32_rfp_start_tx_lbt(struct radio_efr32_rfp_ctx_s *ctx, struct dev
   cpu_mem_write_32(EFR32_PROTIMER_ADDR + EFR32_PROTIMER_LBTCTRL_ADDR, x);
   cpu_mem_write_32(EFR32_PROTIMER_ADDR + EFR32_PROTIMER_RANDOM_ADDR, 1);
 
-#if (CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_XG12)
+#if (CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_XG12) || \
+    (CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_XG13) ||\
+    (CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_XG14)
   cpu_mem_write_32(EFR32_PROTIMER_ADDR + EFR32_PROTIMER_LBTSTATE1_ADDR, EFR32_PROTIMER_LBTSTATE1_EXP(1));
 #endif
 
@@ -543,14 +670,6 @@ static void efr32_rfp_disable(struct radio_efr32_rfp_ctx_s *ctx) {
   // Disable TX
   cpu_mem_write_32(EFR32_RAC_ADDR + EFR32_RAC_CMD_ADDR, EFR32_RAC_CMD_TXDIS);
   cpu_mem_write_32(EFR32_RAC_ADDR + EFR32_RAC_FORCESTATE_ADDR, EFR32_RAC_STATUS_STATE_OFF);
-  // Check RAC state
-  while(1) {
-    // FIXME Use state change interrupt here or schedule a timer interrupt
-    x = endian_le32(cpu_mem_read_32(EFR32_RAC_ADDR + EFR32_RAC_STATUS_ADDR));
-    if (EFR32_RAC_STATUS_STATE_GET(x) == EFR32_RAC_STATUS_STATE_OFF) {
-      break;
-    }
-  }
   // Clear irq
   cpu_mem_write_32(EFR32_FRC_ADDR + EFR32_FRC_IF_ADDR, 0);
 }
@@ -585,6 +704,20 @@ static void efr32_rfp_start_rx_scheduled(struct radio_efr32_rfp_ctx_s *ctx) {
   efr32_protimer_request_start(&pv->pti, t, end, EFR32_PROTIMER_RX_STOP_CHANNEL);
 }
 
+static int16_t efr32_rfp_get_rssi(struct radio_efr32_rfp_ctx_s *ctx, uintptr_t a) {
+  int16_t x = cpu_mem_read_32(EFR32_AGC_ADDR + a);
+  x >>= EFR32_AGC_RSSI_RSSIFRAC_IDX;
+
+  if ((x >> 9) & 1) {
+    // Negative value
+    uint16_t msk = EFR32_AGC_RSSI_MASK >> EFR32_AGC_RSSI_RSSIFRAC_IDX;
+    x |= 0xFFFF ^ msk;
+    x -= 1;
+    x = -(~x & msk);
+  }
+  return  (x << 3) >> 2;
+}
+
 
 
 
@@ -599,7 +732,7 @@ static void efr32_rfp_read_packet(struct radio_efr32_rfp_ctx_s *ctx) {
   for (uint16_t i = 0; i < rx->size; i++) {
     p[i] = cpu_mem_read_32(EFR32_BUFC_ADDR + EFR32_BUFC_READDATA_ADDR(1));
   }
-  rx->rssi = cpu_mem_read_32(EFR32_BUFC_ADDR + EFR32_BUFC_READDATA_ADDR(1));
+  rx->rssi = efr32_rfp_get_rssi(ctx, EFR32_AGC_FRAMERSSI_ADDR);
   // Call rfpacket to process request completion
   efr32_rfp_req_done(ctx);
 }
@@ -620,11 +753,12 @@ static void efr32_rfp_rx_irq(struct radio_efr32_rfp_ctx_s *ctx, uint32_t irq) {
   if (irq != EFR32_FRC_IF_RXDONE) {
     // Flush RX fifo
     cpu_mem_write_32(EFR32_BUFC_ADDR + EFR32_BUFC_CMD_ADDR(1), EFR32_BUFC_CMD_CLEAR);
-    cpu_mem_write_32(EFR32_BUFC_ADDR + EFR32_BUFC_CMD_ADDR(2), EFR32_BUFC_CMD_CLEAR);
     efr32_rfp_fill_status(ctx, DEV_RFPACKET_STATUS_OTHER_ERR); // FIXME SCAN ERRORS, CRC?
     efr32_rfp_req_done(ctx);
     return;
   }
+
+
   uint16_t size = cpu_mem_read_32(EFR32_BUFC_ADDR + EFR32_BUFC_READDATA_ADDR(1));
 
   cpu_mem_write_32(EFR32_BUFC_ADDR + EFR32_BUFC_CMD_ADDR(2), EFR32_BUFC_CMD_CLEAR);
@@ -673,7 +807,7 @@ static inline void efr32_rfp_tx_irq(struct radio_efr32_rfp_ctx_s *ctx, uint32_t 
 static error_t efr32_radio_check_config(struct dev_rfpacket_ctx_s *gpv, struct dev_rfpacket_rq_s *rq) {
   struct radio_efr32_rfp_ctx_s *ctx = gpv->pvdata;
 
-  if (efr32_pkt_config(ctx, rq) || efr32_rf_config(ctx, rq)) {
+  if (efr32_rf_config(ctx, rq) || efr32_pkt_config(ctx, rq)) {
     // Unsupported configuration
     return -ENOTSUP;
   } else {
@@ -685,12 +819,21 @@ static void efr32_radio_rx(struct dev_rfpacket_ctx_s *gpv, struct dev_rfpacket_r
   struct radio_efr32_rfp_ctx_s *ctx = gpv->pvdata;
 
   cpu_mem_write_32(EFR32_SEQ_DEADLINE_ADDR, 0);
+  // Configure AGC
+  uint32_t x = cpu_mem_read_32(EFR32_AGC_ADDR + EFR32_AGC_CTRL1_ADDR);
+  EFR32_AGC_CTRL1_RSSIPERIOD_SET(x, 5);
+  cpu_mem_write_32(EFR32_AGC_ADDR + EFR32_AGC_CTRL1_ADDR, x);
+  x = cpu_mem_read_32(EFR32_AGC_ADDR + EFR32_AGC_CTRL0_ADDR);
+  EFR32_AGC_CTRL0_MODE_SET(x, LOCKPREDET);
+  cpu_mem_write_32(EFR32_AGC_ADDR + EFR32_AGC_CTRL0_ADDR, x);
   // Check RAC state
-  uint32_t x = endian_le32(cpu_mem_read_32(EFR32_RAC_ADDR + EFR32_RAC_STATUS_ADDR));
+  x = endian_le32(cpu_mem_read_32(EFR32_RAC_ADDR + EFR32_RAC_STATUS_ADDR));
   assert(EFR32_RAC_STATUS_STATE_GET(x) == EFR32_RAC_STATUS_STATE_OFF);
   // Clear buffer
   cpu_mem_write_32(EFR32_BUFC_ADDR + EFR32_BUFC_CMD_ADDR(1), EFR32_BUFC_CMD_CLEAR);
-  // Retry or not
+  // Set channel
+  cpu_mem_write_32(EFR32_SYNTH_ADDR + EFR32_SYNTH_CHCTRL_ADDR, rq->channel);
+  // Check rq type
   switch (rq->type) {
     case DEV_RFPACKET_RQ_RX_CONT:
       // Enable RX
@@ -715,16 +858,25 @@ static void efr32_radio_tx(struct dev_rfpacket_ctx_s *gpv, struct dev_rfpacket_r
   cpu_mem_write_32(EFR32_SEQ_DEADLINE_ADDR, 0);
   // Check retry
   if (isRetry) {
-    // TODO LBT FEATURES + LBT TIMESTAMP
+    // Clear buffer
+    cpu_mem_write_32(EFR32_BUFC_ADDR + EFR32_BUFC_CMD_ADDR(1), EFR32_BUFC_CMD_CLEAR);
+    // Restart tx lbt
     efr32_rfp_start_tx_lbt(ctx, rq);
+    // TODO LBT FEATURES + LBT TIMESTAMP
   }
   // Check RAC state
   uint32_t x = endian_le32(cpu_mem_read_32(EFR32_RAC_ADDR + EFR32_RAC_STATUS_ADDR));
   assert(EFR32_RAC_STATUS_STATE_GET(x) == EFR32_RAC_STATUS_STATE_OFF);
   // Clear buffer
   cpu_mem_write_32(EFR32_BUFC_ADDR + EFR32_BUFC_CMD_ADDR(0), EFR32_BUFC_CMD_CLEAR);
-  // Fill buffer
-  cpu_mem_write_32(EFR32_BUFC_ADDR + EFR32_BUFC_WRITEDATA_ADDR(0), rq->tx_size);
+  cpu_mem_write_32(EFR32_BUFC_ADDR + EFR32_BUFC_CMD_ADDR(1), EFR32_BUFC_CMD_CLEAR);
+  // Write length when required
+#ifdef CONFIG_RFPACKET_SIGFOX
+    cpu_mem_write_32(EFR32_FRC_ADDR + EFR32_FRC_WCNTCMP0_ADDR, rq->tx_size - 1);
+# else
+    cpu_mem_write_32(EFR32_BUFC_ADDR + EFR32_BUFC_WRITEDATA_ADDR(0), rq->tx_size);
+#endif
+  // Fill payload
   uint8_t *p = (uint8_t *)rq->tx_buf;
   for(uint16_t i = 0; i < rq->tx_size; i++) {
     cpu_mem_write_32(EFR32_BUFC_ADDR + EFR32_BUFC_WRITEDATA_ADDR(0), (uint32_t)p[i]);
@@ -753,18 +905,44 @@ static void efr32_radio_cancel_rxc(struct dev_rfpacket_ctx_s *gpv) {
 }
 
 static bool_t efr32_radio_wakeup(struct dev_rfpacket_ctx_s *gpv) {
-  //struct radio_efr32_rfp_ctx_s *ctx = gpv->pvdata;
-  return false; // TODO SUPPORT SLEEP
+#ifdef CONFIG_DRIVER_EFR32_RFPACKET_SLEEP
+  struct radio_efr32_rfp_ctx_s *ctx = gpv->pvdata;
+  // Wakeup radio if sleeping
+  if (ctx->sleep) {
+    for (uint8_t i = 0; i < EFR32_RADIO_CLK_EP_COUNT; i++) {
+      dev_clock_sink_gate(&pv->clk_ep[i], DEV_CLOCK_EP_POWER_CLOCK);
+    }
+    ctx->sleep = false;
+  }
+  return true;
+#else
+  return false;
+#endif
 }
 
 static bool_t efr32_radio_sleep(struct dev_rfpacket_ctx_s *gpv) {
-  //struct radio_efr32_rfp_ctx_s *ctx = gpv->pvdata;
-  return false; // TODO SUPPORT SLEEP
+#ifdef CONFIG_DRIVER_EFR32_RFPACKET_SLEEP
+  struct radio_efr32_rfp_ctx_s *ctx = gpv->pvdata;
+  // Put radio to sleep if awake
+  if (!ctx->sleep) {
+    for (uint8_t i = 0; i < EFR32_RADIO_CLK_EP_COUNT; i++) {
+       dev_clock_sink_gate(&pv->clk_ep[i], DEV_CLOCK_EP_POWER);
+    }
+    ctx->sleep = true;
+  }
+  return true;
+#else
+  return false;
+#endif
 }
 
 static void efr32_radio_idle(struct dev_rfpacket_ctx_s *gpv) {
-  //struct radio_efr32_rfp_ctx_s *ctx = gpv->pvdata;
-  return; // TODO SUPPORT SLEEP
+#ifdef CONFIG_DRIVER_EFR32_RFPACKET_SLEEP
+  struct radio_efr32_rfp_ctx_s *ctx = gpv->pvdata;
+  struct radio_efr32_ctx_s *pv = &ctx->pv;
+  // Delayed clock disable
+  device_sleep_schedule(pv->dev);
+#endif
 }
 
 
@@ -812,12 +990,13 @@ static DEV_IRQ_SRC_PROCESS(efr32_radio_irq) {
   struct device_s *dev = ep->base.dev;
   struct radio_efr32_rfp_ctx_s *ctx = dev->drv_pv;
   uint32_t irq = 0;
+  uint32_t idx = ep - ctx->pv.irq_ep;
 
   lock_spin(&dev->lock);
   // Set timestamp
   ctx->gctx.timestamp = efr32_protimer_get_value(&ctx->pv.pti);
   // Process irq
-  switch (ep - ctx->pv.irq_ep) {
+  switch (idx) {
     case 0:
       irq = cpu_mem_read_32(EFR32_MODEM_ADDR + EFR32_MODEM_IF_ADDR);
       irq &= cpu_mem_read_32(EFR32_MODEM_ADDR + EFR32_MODEM_IEN_ADDR);
@@ -827,9 +1006,13 @@ static DEV_IRQ_SRC_PROCESS(efr32_radio_irq) {
 
     case 1:
     case 2:
-      irq = cpu_mem_read_32(EFR32_RAC_ADDR + EFR32_RAC_IF_ADDR);
-      irq &= cpu_mem_read_32(EFR32_RAC_ADDR + EFR32_RAC_IEN_ADDR);
+      cpu_mem_write_32(EFR32_RAC_ADDR + EFR32_RAC_IEN_ADDR, 0);
+      cpu_mem_write_32(EFR32_RAC_ADDR + EFR32_RAC_IFC_ADDR, EFR32_RAC_IF_STATECHANGE);
       efr32_radio_printk("rac irq: 0x%x\n", irq);
+      // Check that Rac is idle
+      if (efr32_check_rac_off(ctx)) {
+        efr32_rfp_req_done(ctx);
+      }
     break;
 
     case 3:
@@ -857,12 +1040,31 @@ static DEV_IRQ_SRC_PROCESS(efr32_radio_irq) {
     break;
 
     default:
-      efr32_radio_printk("irq: %d\n", ep - ctx->pv.irq_ep);
+      efr32_radio_printk("irq: %d\n", idx);
       abort();
     break;
   }
   lock_release(&dev->lock);
 }
+
+static DEV_USE(efr32_radio_use) {
+  struct device_s *dev = param;
+  struct radio_efr32_rfp_ctx_s *ctx = dev->drv_pv;
+
+  return dev_rfpacket_use(param, op, &ctx->gctx);
+}
+
+static DEV_RFPACKET_STATS(efr32_radio_stats) {
+#ifdef CONFIG_DEVICE_RFPACKET_STATISTICS
+  struct device_s *dev = accessor->dev;
+  struct radio_efr32_rfp_ctx_s *ctx = dev->drv_pv;
+  memcpy(stats, &ctx->gctx.stats, sizeof(*stats));
+  return 0;
+#else
+  return -ENOTSUP;
+#endif
+}
+
 
 static DEV_INIT(efr32_radio_init);
 static DEV_CLEANUP(efr32_radio_cleanup);
@@ -888,8 +1090,14 @@ static DEV_INIT(efr32_radio_init) {
   dev->drv_pv = ctx;
   pv->dev = dev;
 
-  if (efr32_rfp_init(ctx)) {
-    goto err_mem;
+  // Clock init
+  if (dev_drv_clock_init(dev, &pv->pti.clk_ep, 0, DEV_CLOCK_EP_POWER_CLOCK | DEV_CLOCK_EP_GATING_SYNC, NULL)) {
+    goto err_clk;
+  }
+  for (uint8_t i = 0; i < EFR32_RADIO_CLK_EP_COUNT; i++) {
+    if (dev_drv_clock_init(dev, &pv->clk_ep[i], i + 1, DEV_CLOCK_EP_POWER_CLOCK | DEV_CLOCK_EP_GATING_SYNC, NULL)) {
+      goto err_clk;
+    }
   }
   uint32_t x = cpu_mem_read_32(EFR32_PROTIMER_ADDR + EFR32_PROTIMER_IEN_ADDR);
 
@@ -910,18 +1118,50 @@ static DEV_INIT(efr32_radio_init) {
   assert(pv->freq.denom == 1);
   // Queue init
   dev_rq_pqueue_init(&pv->pti.queue);
+  // Sequencer code initialisaton
+  efr32_radio_seq_init(pv, seqcode, 4 * seqcode_size);
+  // Turn off radio
+  efr32_rfp_disable(ctx);
+  // Timer init
+  efr32_protimer_init(&pv->pti);
+  // TX/RX buffers initialization
+  x = bit_ctz32(EFR32_RADIO_RFP_BUFFER_SIZE) - 6;
+
+  cpu_mem_write_32(EFR32_BUFC_ADDR + EFR32_BUFC_CTRL_ADDR(0), x);
+  cpu_mem_write_32(EFR32_BUFC_ADDR + EFR32_BUFC_ADDR_ADDR(0), (uint32_t)ctx->sg_buffer);
+
+  cpu_mem_write_32(EFR32_BUFC_ADDR + EFR32_BUFC_CTRL_ADDR(1), x);
+  cpu_mem_write_32(EFR32_BUFC_ADDR + EFR32_BUFC_ADDR_ADDR(1), (uint32_t)ctx->sg_buffer);
+
+  cpu_mem_write_32(EFR32_BUFC_ADDR + EFR32_BUFC_ADDR_ADDR(2), (uint32_t)pv->rx_length_buffer);
+  cpu_mem_write_32(EFR32_BUFC_ADDR + EFR32_BUFC_CTRL_ADDR(2), 0);
+  // Clear buffer
+  for (uint8_t i = 0; i < 4; i++) {
+    cpu_mem_write_32(EFR32_BUFC_ADDR + EFR32_BUFC_CMD_ADDR(i), EFR32_BUFC_CMD_CLEAR);
+  }
+  // Enable irq
+  cpu_mem_write_32(EFR32_FRC_ADDR + EFR32_FRC_IFC_ADDR, EFR32_FRC_IF_MASK);
+  x = EFR32_TX_IRQ_FRC_MSK | EFR32_RX_IRQ_FRC_MSK;
+  cpu_mem_write_32(EFR32_FRC_ADDR + EFR32_FRC_IEN_ADDR, x);
   // Interrupt init
   device_irq_source_init(dev, pv->irq_ep, EFR32_RADIO_IRQ_COUNT, &efr32_radio_irq);
-
   if (device_irq_source_link(dev, pv->irq_ep, EFR32_RADIO_IRQ_COUNT, -1)) {
     goto err_mem;
   }
+  // Start timer
   dev->start_count |= 1;
   efr32_protimer_start_counter(&pv->pti);
-
 #ifdef CONFIG_DRIVER_EFR32_DEBUG
-  efr32_rfp_cfg_prs_dbg(ctx);
+  efr32_rfp_cfg_rac_dbg(ctx);
+  efr32_radio_debug_port(pv, 0x0);
   efr32_radio_debug_init(pv);
+#endif
+#ifdef CONFIG_DRIVER_EFR32_RFPACKET_SLEEP
+  // Radio is allowed to go to sleep
+  for (uint8_t i = 0; i < EFR32_RADIO_CLK_EP_COUNT; i++) {
+    dev_clock_sink_gate(&pv->clk_ep[i], DEV_CLOCK_EP_POWER);
+  }
+  ctx->sleep = true; // TODO PLAN WAKE-UP BY APP ?
 #endif
   // Note pvdata and interface into generic context
   ctx->gctx.pvdata = ctx;
@@ -932,7 +1172,10 @@ static DEV_INIT(efr32_radio_init) {
   efr32_rfp_fill_status(ctx, DEV_RFPACKET_STATUS_MISC);
   efr32_rfp_req_done(ctx);
   return 0;
-
+err_clk:
+  for (uint8_t i = 0; i < 8; i++) {
+    dev_drv_clock_cleanup(dev, &pv->clk_ep[i]);
+  }
 err_mem:
   mem_free(ctx);
   return -1;
@@ -952,440 +1195,235 @@ static DEV_CLEANUP(efr32_radio_cleanup) {
   return err;
 }
 
-static error_t efr32_rfp_init(struct radio_efr32_rfp_ctx_s *ctx) {
-  cpu_mem_write_32(EFR32_FRC_ADDR + EFR32_FRC_RXCTRL_ADDR, EFR32_FRC_RXCTRL_BUFRESTOREFRAMEERROR |
-                                                           EFR32_FRC_RXCTRL_BUFRESTORERXABORTED);
-
-  cpu_mem_write_32(EFR32_FRC_ADDR + EFR32_FRC_TRAILRXDATA_ADDR, EFR32_FRC_TRAILRXDATA_RSSI);
-
-  cpu_mem_write_32(EFR32_FRC_ADDR + EFR32_FRC_FCD_ADDR(0), EFR32_FRC_FCD_CALCCRC |
-                                                           EFR32_FRC_FCD_SKIPWHITE);
-  cpu_mem_write_32(EFR32_FRC_ADDR + EFR32_FRC_FCD_ADDR(1), EFR32_FRC_FCD_WORDS(255) |
-                                                           EFR32_FRC_FCD_INCLUDECRC |
-                                                           EFR32_FRC_FCD_CALCCRC |
-                                                           EFR32_FRC_FCD_SKIPWHITE);
-
-  cpu_mem_write_32(EFR32_FRC_ADDR + EFR32_FRC_FCD_ADDR(2), EFR32_FRC_FCD_BUFFER(1) |
-                                                           EFR32_FRC_FCD_CALCCRC |
-                                                           EFR32_FRC_FCD_SKIPWHITE);
-
-  cpu_mem_write_32(EFR32_FRC_ADDR + EFR32_FRC_FCD_ADDR(3), EFR32_FRC_FCD_WORDS(255) |
-                                                           EFR32_FRC_FCD_BUFFER(1) |
-                                                           EFR32_FRC_FCD_INCLUDECRC |
-                                                           EFR32_FRC_FCD_CALCCRC |
-                                                           EFR32_FRC_FCD_SKIPWHITE);
-
-  cpu_mem_write_32(EFR32_SYNTH_ADDR + EFR32_SYNTH_CTRL_ADDR, EFR32_SYNTH_CTRL_DITHERDSMINPUT |
-                                                           EFR32_SYNTH_CTRL_DITHERDSMOUTPUT(7) |
-                                                           EFR32_SYNTH_CTRL_DITHERDAC(3) |
-                                                           EFR32_SYNTH_CTRL_LOCKTHRESHOLD(3) |
-                                                           EFR32_SYNTH_CTRL_AUXLOCKTHRESHOLD(5) |
-                                                           EFR32_SYNTH_CTRL_PRSMUX0(DISABLED) |
-                                                           EFR32_SYNTH_CTRL_PRSMUX1(DISABLED) |
-                                                           EFR32_SYNTH_CTRL_DEMMODE);
-
-  cpu_mem_write_32(EFR32_SYNTH_ADDR + EFR32_SYNTH_CALCTRL_ADDR, EFR32_SYNTH_CALCTRL_NUMCYCLES(1) |
-                                                           EFR32_SYNTH_CALCTRL_CAPCALCYCLEWAIT(CYCLES1) |
-                                                           EFR32_SYNTH_CALCTRL_STARTUPTIMING(10) |
-                                                           EFR32_SYNTH_CALCTRL_AUXCALCYCLES(4) |
-                                                           EFR32_SYNTH_CALCTRL_AUXCALCYCLEWAIT(CYCLES64));
-
-  cpu_mem_write_32(EFR32_SYNTH_ADDR + EFR32_SYNTH_VCDACCTRL_ADDR, EFR32_SYNTH_VCDACCTRL_VCDACVAL(35));
-  // Frequency 868 MHz
-  cpu_mem_write_32(EFR32_SYNTH_ADDR + EFR32_SYNTH_FREQ_ADDR, EFR32_SYNTH_FREQ_FREQ(35553280));
-
-  cpu_mem_write_32(EFR32_SYNTH_ADDR + EFR32_SYNTH_IFFREQ_ADDR, EFR32_SYNTH_IFFREQ_IFFREQ(16384) |
-                                                               EFR32_SYNTH_IFFREQ_LOSIDE);
-
-  cpu_mem_write_32(EFR32_SYNTH_ADDR + EFR32_SYNTH_DIVCTRL_ADDR, EFR32_SYNTH_DIVCTRL_LODIVFREQCTRL(LODIV3) |
-                                                           EFR32_SYNTH_DIVCTRL_AUXLODIVFREQCTRL(LODIV1));
-  // Channel spacing
-  cpu_mem_write_32(EFR32_SYNTH_ADDR + EFR32_SYNTH_CHSP_ADDR, EFR32_SYNTH_CHSP_CHSP(4096));
-
-  cpu_mem_write_32(EFR32_SYNTH_ADDR + EFR32_SYNTH_VCOTUNING_ADDR, EFR32_SYNTH_VCOTUNING_VCOTUNING(125));
-
-  cpu_mem_write_32(EFR32_SYNTH_ADDR + EFR32_SYNTH_VCOGAIN_ADDR, EFR32_SYNTH_VCOGAIN_VCOGAIN(35));
-
-  cpu_mem_write_32(EFR32_SYNTH_ADDR + EFR32_SYNTH_CAPCALCYCLECNT_ADDR, EFR32_SYNTH_CAPCALCYCLECNT_CAPCALCYCLECNT(127));
-
-  cpu_mem_write_32(EFR32_RAC_ADDR + EFR32_RAC_CTRL_ADDR, EFR32_RAC_CTRL_ACTIVEPOL |
-                                                         EFR32_RAC_CTRL_PAENPOL |
-                                                         EFR32_RAC_CTRL_LNAENPOL);
-
-  cpu_mem_write_32(EFR32_RAC_ADDR + EFR32_RAC_LVDSCTRL_ADDR, EFR32_RAC_LVDSCTRL_LVDSCURR(3));
-
-  cpu_mem_write_32(EFR32_RAC_ADDR + EFR32_RAC_LVDSIDLESEQ_ADDR, EFR32_RAC_LVDSIDLESEQ_LVDSIDLESEQ(188));
-
-  cpu_mem_write_32(EFR32_RAC_ADDR + EFR32_RAC_HFXORETIMECTRL_ADDR, EFR32_RAC_HFXORETIMECTRL_LIMITH(4) |
-                                                           EFR32_RAC_HFXORETIMECTRL_LIMITL(5));
-
-  cpu_mem_write_32(EFR32_RAC_ADDR + EFR32_RAC_WAITSNSH_ADDR, EFR32_RAC_WAITSNSH_WAITSNSH(1));
-
-  cpu_mem_write_32(EFR32_RAC_ADDR + EFR32_RAC_PRESC_ADDR, EFR32_RAC_PRESC_STIMER(7));
-
-  cpu_mem_write_32(EFR32_RAC_ADDR + EFR32_RAC_SYNTHENCTRL_ADDR, EFR32_RAC_SYNTHENCTRL_VCOEN |
-                                                                EFR32_RAC_SYNTHENCTRL_LODIVEN |
-                                                                EFR32_RAC_SYNTHENCTRL_CHPEN |
-                                                                EFR32_RAC_SYNTHENCTRL_LPFEN |
-                                                                EFR32_RAC_SYNTHENCTRL_SYNTHCLKEN |
-                                                                EFR32_RAC_SYNTHENCTRL_SYNTHSTARTREQ |
-                                                                EFR32_RAC_SYNTHENCTRL_CHPLDOEN |
-                                                                EFR32_RAC_SYNTHENCTRL_LODIVSYNCCLKEN |
-                                                                EFR32_RAC_SYNTHENCTRL_MMDLDOEN |
-                                                                EFR32_RAC_SYNTHENCTRL_VCOLDOEN |
-                                                                EFR32_RAC_SYNTHENCTRL_VCODIVEN);
-
-  cpu_mem_write_32(EFR32_RAC_ADDR + EFR32_RAC_SYNTHREGCTRL_ADDR, EFR32_RAC_SYNTHREGCTRL_MMDLDOAMPCURR(3) |
-                                                           EFR32_RAC_SYNTHREGCTRL_MMDLDOVREFTRIM(3) |
-                                                           EFR32_RAC_SYNTHREGCTRL_VCOLDOAMPCURR(3) |
-                                                           EFR32_RAC_SYNTHREGCTRL_VCOLDOVREFTRIM(3) |
-                                                           EFR32_RAC_SYNTHREGCTRL_CHPLDOAMPCURR(3) |
-                                                           EFR32_RAC_SYNTHREGCTRL_CHPLDOVREFTRIM(3));
-
-  cpu_mem_write_32(EFR32_RAC_ADDR + EFR32_RAC_VCOCTRL_ADDR, EFR32_RAC_VCOCTRL_VCOAMPLITUDE(10) |
-                                                            EFR32_RAC_VCOCTRL_VCODETAMPLITUDE(10) |
-                                                            EFR32_RAC_VCOCTRL_VCODETEN |
-                                                            EFR32_RAC_VCOCTRL_VCODETMODE |
-                                                            EFR32_RAC_VCOCTRL_VCOAREGCURR(1) |
-                                                            EFR32_RAC_VCOCTRL_VCOCREGCURR(2) |
-                                                            EFR32_RAC_VCOCTRL_VCODIVCURR(15));
-
-  cpu_mem_write_32(EFR32_RAC_ADDR + EFR32_RAC_MMDCTRL_ADDR, EFR32_RAC_MMDCTRL_MMDDIVDCDC(123) |
-                                                            EFR32_RAC_MMDCTRL_MMDDIVRSDCDC(1) |
-                                                            EFR32_RAC_MMDCTRL_MMDDIVRSDIG(1) |
-                                                            EFR32_RAC_MMDCTRL_MMDENDCDC |
-                                                            EFR32_RAC_MMDCTRL_MMDENRSDCDC |
-                                                            EFR32_RAC_MMDCTRL_MMDENRSDIG);
-
-  cpu_mem_write_32(EFR32_RAC_ADDR + EFR32_RAC_CHPCTRL_ADDR, EFR32_RAC_CHPCTRL_CHPBIAS(6) |
-                                                           EFR32_RAC_CHPCTRL_CHPCURR(5));
-
-  cpu_mem_write_32(EFR32_RAC_ADDR + EFR32_RAC_CHPCAL_ADDR, EFR32_RAC_CHPCAL_PSRC(4) |
-                                                           EFR32_RAC_CHPCAL_NSRC(4));
-
-  cpu_mem_write_32(EFR32_RAC_ADDR + EFR32_RAC_LPFCTRL_ADDR, EFR32_RAC_LPFCTRL_LPFINPUTCAP(3) |
-                                                           EFR32_RAC_LPFCTRL_LPFSWITCHINGEN |
-                                                           EFR32_RAC_LPFCTRL_LPFGNDSWITCHINGEN |
-                                                           EFR32_RAC_LPFCTRL_LPFBWTX(2));
-
-  cpu_mem_write_32(EFR32_RAC_ADDR + EFR32_RAC_AUXCTRL_ADDR, EFR32_RAC_AUXCTRL_CHPCURR(3) |
-                                                           EFR32_RAC_AUXCTRL_RXAMP(16) |
-                                                           EFR32_RAC_AUXCTRL_LDOAMPCURR(4) |
-                                                           EFR32_RAC_AUXCTRL_LDOVREFTRIM(6) |
-                                                           EFR32_RAC_AUXCTRL_LPFRES(1));
-
-  // Sub-G PA configuration
-  cpu_mem_write_32(EFR32_RAC_ADDR + EFR32_RAC_SGRFENCTRL0_ADDR, EFR32_RAC_SGRFENCTRL0_LNAMIXBIASEN |
-                                                           EFR32_RAC_SGRFENCTRL0_LNAMIXLOBIASEN |
-                                                           EFR32_RAC_SGRFENCTRL0_LNAMIXRFBIASEN);
-
-  cpu_mem_write_32(EFR32_RAC_ADDR + EFR32_RAC_SGLNAMIXCTRL_ADDR, EFR32_RAC_SGLNAMIXCTRL_CASCODEBIAS(3) |
-                                                           EFR32_RAC_SGLNAMIXCTRL_LOBIAS(3) |
-                                                           EFR32_RAC_SGLNAMIXCTRL_VREG(3) |
-                                                           EFR32_RAC_SGLNAMIXCTRL_RFBIAS(3) |
-                                                           EFR32_RAC_SGLNAMIXCTRL_SGREGAMPCURR(3));
-
-  cpu_mem_write_32(EFR32_RAC_ADDR + EFR32_RAC_SGPACTRL0_ADDR, EFR32_RAC_SGPACTRL0_CASCODE(EN3SLICES) |
-                                                           EFR32_RAC_SGPACTRL0_SLICE(EN3SLICES) |
-                                                           EFR32_RAC_SGPACTRL0_STRIPE(8) |
-                                                           EFR32_RAC_SGPACTRL0_DACGLITCHCTRL);
-
-  cpu_mem_write_32(EFR32_RAC_ADDR + EFR32_RAC_SGPAPKDCTRL_ADDR, EFR32_RAC_SGPAPKDCTRL_VTHSEL(23) |
-                                                           EFR32_RAC_SGPAPKDCTRL_CAPSEL(3) |
-                                                           EFR32_RAC_SGPAPKDCTRL_I2VCM(2) |
-                                                           EFR32_RAC_SGPAPKDCTRL_PKDBIASTH(4));
-
-  cpu_mem_write_32(EFR32_RAC_ADDR + EFR32_RAC_SGPABIASCTRL0_ADDR, EFR32_RAC_SGPABIASCTRL0_LDOBIAS |
-                                                           EFR32_RAC_SGPABIASCTRL0_PABIAS(1) |
-                                                           EFR32_RAC_SGPABIASCTRL0_BUF0BIAS(1) |
-                                                           EFR32_RAC_SGPABIASCTRL0_BUF12BIAS(1) |
-                                                           EFR32_RAC_SGPABIASCTRL0_SGDACFILTBANDWIDTH(7));
-
-  cpu_mem_write_32(EFR32_RAC_ADDR + EFR32_RAC_SGPABIASCTRL1_ADDR, EFR32_RAC_SGPABIASCTRL1_VLDO(3) |
-                                                           EFR32_RAC_SGPABIASCTRL1_VLDOFB(2) |
-                                                           EFR32_RAC_SGPABIASCTRL1_VCASCODEHV(5) |
-                                                           EFR32_RAC_SGPABIASCTRL1_VCASCODELV(4) |
-                                                           EFR32_RAC_SGPABIASCTRL1_SGVBATDETTHRESHOLD(2));
-
-  cpu_mem_write_32(EFR32_RAC_ADDR + EFR32_RAC_RFBIASCTRL_ADDR, EFR32_RAC_RFBIASCTRL_LDOVREF(4) |
-                                                           EFR32_RAC_RFBIASCTRL_LDOAMPCURR(3));
-
-  cpu_mem_write_32(EFR32_RAC_ADDR + EFR32_RAC_RFBIASCAL_ADDR, EFR32_RAC_RFBIASCAL_VREF(22) |
-                                                           EFR32_RAC_RFBIASCAL_BIAS(28) |
-                                                           EFR32_RAC_RFBIASCAL_TEMPCO(48));
-
-  cpu_mem_write_32(EFR32_RAC_ADDR + EFR32_RAC_LNAMIXCTRL1_ADDR, EFR32_RAC_LNAMIXCTRL1_TRIMAUXPLLCLK(E0) |
-                                                           EFR32_RAC_LNAMIXCTRL1_TRIMVCASLDO |
-                                                           EFR32_RAC_LNAMIXCTRL1_TRIMVREGMIN(1));
-
-  cpu_mem_write_32(EFR32_RAC_ADDR + EFR32_RAC_IFPGACTRL_ADDR, EFR32_RAC_IFPGACTRL_VLDO(3) |
-                                                           EFR32_RAC_IFPGACTRL_BANDSEL(SG) |
-                                                           EFR32_RAC_IFPGACTRL_CASCBIAS(7) |
-                                                           EFR32_RAC_IFPGACTRL_TRIMVCASLDO |
-                                                           EFR32_RAC_IFPGACTRL_TRIMVCM(3) |
-                                                           EFR32_RAC_IFPGACTRL_TRIMVREGMIN(1));
-
-  cpu_mem_write_32(EFR32_RAC_ADDR + EFR32_RAC_IFPGACAL_ADDR, EFR32_RAC_IFPGACAL_IRAMP(2) |
-                                                           EFR32_RAC_IFPGACAL_IRPHASE(10) |
-                                                           EFR32_RAC_IFPGACAL_OFFSETI(64));
-
-  cpu_mem_write_32(EFR32_RAC_ADDR + EFR32_RAC_IFFILTCTRL_ADDR, EFR32_RAC_IFFILTCTRL_CENTFREQ(7) |
-                                                           EFR32_RAC_IFFILTCTRL_VCM(2) |
-                                                           EFR32_RAC_IFFILTCTRL_VREG(4));
-
-  cpu_mem_write_32(EFR32_RAC_ADDR + EFR32_RAC_IFADCCTRL_ADDR, EFR32_RAC_IFADCCTRL_REALMODE |
-                                                           EFR32_RAC_IFADCCTRL_VLDOSERIES(3) |
-                                                           EFR32_RAC_IFADCCTRL_VLDOSERIESCURR(3) |
-                                                           EFR32_RAC_IFADCCTRL_VLDOSHUNT(2) |
-                                                           EFR32_RAC_IFADCCTRL_VLDOCLKGEN(3) |
-                                                           EFR32_RAC_IFADCCTRL_VCM(E2) |
-                                                           EFR32_RAC_IFADCCTRL_OTA1CURRENT(2) |
-                                                           EFR32_RAC_IFADCCTRL_OTA2CURRENT(2) |
-                                                           EFR32_RAC_IFADCCTRL_OTA3CURRENT(2) |
-                                                           EFR32_RAC_IFADCCTRL_REGENCLKDELAY(3) |
-                                                           EFR32_RAC_IFADCCTRL_ENABLECLK |
-                                                           EFR32_RAC_IFADCCTRL_INVERTCLK);
-
-  cpu_mem_write_32(EFR32_RAC_ADDR + EFR32_RAC_RCTUNE_ADDR, EFR32_RAC_RCTUNE_IFADCRCTUNE(34) |
-                                                           EFR32_RAC_RCTUNE_IFFILT(34));
-
-  cpu_mem_write_32(EFR32_RAC_ADDR + EFR32_RAC_APC_ADDR, EFR32_RAC_APC_AMPCONTROLLIMITSW(255));
-
-  cpu_mem_write_32(EFR32_RAC_ADDR + EFR32_RAC_CHPCTRL1_ADDR, EFR32_RAC_CHPCTRL1_BYPREPLDORX |
-                                                           EFR32_RAC_CHPCTRL1_TRIMREPLDO(1));
-
-  cpu_mem_write_32(EFR32_RAC_ADDR + EFR32_RAC_MMDCTRL1_ADDR, EFR32_RAC_MMDCTRL1_BYPREPLDORX |
-                                                           EFR32_RAC_MMDCTRL1_TRIMREPLDO(1));
-
-  cpu_mem_write_32(EFR32_MODEM_ADDR + EFR32_MODEM_FREQOFFEST_ADDR, EFR32_MODEM_FREQOFFEST_FREQOFFEST(9) |
-                                                           EFR32_MODEM_FREQOFFEST_CORRVAL(115) |
-                                                           EFR32_MODEM_FREQOFFEST_SOFTVAL(221));
-
-  cpu_mem_write_32(EFR32_MODEM_ADDR + EFR32_MODEM_MIXCTRL_ADDR, EFR32_MODEM_MIXCTRL_MODE(NORMAL) |
-                                                           EFR32_MODEM_MIXCTRL_DIGIQSWAPEN);
-
-  cpu_mem_write_32(EFR32_MODEM_ADDR + EFR32_MODEM_CTRL0_ADDR, EFR32_MODEM_CTRL0_MAPFSK(MAP0) |
-                                                           EFR32_MODEM_CTRL0_CODING(NRZ) |
-                                                           EFR32_MODEM_CTRL0_MODFORMAT(FSK2) |
-                                                           EFR32_MODEM_CTRL0_DSSSSHIFTS(NOSHIFT) |
-                                                           EFR32_MODEM_CTRL0_DSSSDOUBLE(DIS) |
-                                                           EFR32_MODEM_CTRL0_DIFFENCMODE(DIS) |
-                                                           EFR32_MODEM_CTRL0_SHAPING(EVENLENGTH) |
-                                                           EFR32_MODEM_CTRL0_DEMODRAWDATASEL(DIS) |
-                                                           EFR32_MODEM_CTRL0_FRAMEDETDEL(DEL0));
-
-  cpu_mem_write_32(EFR32_MODEM_ADDR + EFR32_MODEM_CTRL2_ADDR, EFR32_MODEM_CTRL2_SQITHRESH(200) |
-                                                           EFR32_MODEM_CTRL2_TXPINMODE(OFF) |
-                                                           EFR32_MODEM_CTRL2_DATAFILTER(LEN7) |
-                                                           EFR32_MODEM_CTRL2_RATESELMODE(NOCHANGE) |
-                                                           EFR32_MODEM_CTRL2_DMASEL(SOFT));
-
-  cpu_mem_write_32(EFR32_MODEM_ADDR + EFR32_MODEM_CTRL3_ADDR, EFR32_MODEM_CTRL3_PRSDINSEL(PRSCH0) |
-                                                           EFR32_MODEM_CTRL3_ANTDIVMODE(ANTENNA0) |
-                                                           EFR32_MODEM_CTRL3_TSAMPMODE(ON) |
-                                                           EFR32_MODEM_CTRL3_TSAMPDEL(3) |
-                                                           EFR32_MODEM_CTRL3_TSAMPLIM(8));
-
-  cpu_mem_write_32(EFR32_MODEM_ADDR + EFR32_MODEM_CTRL4_ADDR, EFR32_MODEM_CTRL4_ADCSATLEVEL(CONS64));
-  // Baudrate 38400 bit/s
-  cpu_mem_write_32(EFR32_MODEM_ADDR + EFR32_MODEM_TXBR_ADDR, EFR32_MODEM_TXBR_TXBRNUM(31875) |
-                                                             EFR32_MODEM_TXBR_TXBRDEN(255));
-
-  cpu_mem_write_32(EFR32_MODEM_ADDR + EFR32_MODEM_RXBR_ADDR, EFR32_MODEM_RXBR_RXBRNUM(19) |
-                                                           EFR32_MODEM_RXBR_RXBRDEN(27) |
-                                                           EFR32_MODEM_RXBR_RXBRINT(3));
-
-  cpu_mem_write_32(EFR32_MODEM_ADDR + EFR32_MODEM_CF_ADDR, EFR32_MODEM_CF_DEC0(DF3) |
-                                                           EFR32_MODEM_CF_DEC1(44) |
-                                                           EFR32_MODEM_CF_CFOSR(CF7) |
-                                                           EFR32_MODEM_CF_DEC1GAIN(ADD0));
-
-  cpu_mem_write_32(EFR32_MODEM_ADDR + EFR32_MODEM_TIMING_ADDR, EFR32_MODEM_TIMING_TIMTHRESH(27) |
-                                                           EFR32_MODEM_TIMING_TIMINGBASES(7) |
-                                                           EFR32_MODEM_TIMING_OFFSUBNUM(13) |
-                                                           EFR32_MODEM_TIMING_OFFSUBDEN(8) |
-                                                           EFR32_MODEM_TIMING_FASTRESYNC(DIS));
-
-  cpu_mem_write_32(EFR32_MODEM_ADDR + EFR32_MODEM_MODINDEX_ADDR, EFR32_MODEM_MODINDEX_MODINDEXM(20) |
-                                                           EFR32_MODEM_MODINDEX_MODINDEXE(27) |
-                                                           EFR32_MODEM_MODINDEX_FREQGAINE(3) |
-                                                           EFR32_MODEM_MODINDEX_FREQGAINM(7));
-
-  cpu_mem_write_32(EFR32_MODEM_ADDR + EFR32_MODEM_SHAPING0_ADDR, EFR32_MODEM_SHAPING0_COEFF0(4) |
-                                                           EFR32_MODEM_SHAPING0_COEFF1(10) |
-                                                           EFR32_MODEM_SHAPING0_COEFF2(20) |
-                                                           EFR32_MODEM_SHAPING0_COEFF3(34));
-
-  cpu_mem_write_32(EFR32_MODEM_ADDR + EFR32_MODEM_SHAPING1_ADDR, EFR32_MODEM_SHAPING1_COEFF4(50) |
-                                                           EFR32_MODEM_SHAPING1_COEFF5(65) |
-                                                           EFR32_MODEM_SHAPING1_COEFF6(74) |
-                                                           EFR32_MODEM_SHAPING1_COEFF7(79));
-
-  cpu_mem_write_32(EFR32_MODEM_ADDR + EFR32_MODEM_RAMPCTRL_ADDR, EFR32_MODEM_RAMPCTRL_RAMPRATE2(6));
-  cpu_mem_write_32(EFR32_MODEM_ADDR + EFR32_MODEM_RAMPLEV_ADDR, EFR32_MODEM_RAMPLEV_RAMPLEV2(150));
-  cpu_mem_write_32(EFR32_MODEM_ADDR + EFR32_MODEM_DCCOMP_ADDR, EFR32_MODEM_DCCOMP_DCESTIEN |
-                                                           EFR32_MODEM_DCCOMP_DCCOMPEN |
-                                                           EFR32_MODEM_DCCOMP_DCCOMPGEAR(3) |
-                                                           EFR32_MODEM_DCCOMP_DCLIMIT(FULLSCALE));
-
-  cpu_mem_write_32(EFR32_MODEM_ADDR + EFR32_MODEM_DCESTI_ADDR, EFR32_MODEM_DCESTI_DCCOMPESTIVALI(51) |
-                                                               EFR32_MODEM_DCESTI_DCCOMPESTIVALQ(32679));
-
-  cpu_mem_write_32(EFR32_MODEM_ADDR + EFR32_MODEM_SRCCHF_ADDR, EFR32_MODEM_SRCCHF_SRCRATIO1(128) |
-                                                               EFR32_MODEM_SRCCHF_SRCRATIO2(1024));
-
-  cpu_mem_write_32(EFR32_MODEM_ADDR + EFR32_MODEM_DSATHD0_ADDR, EFR32_MODEM_DSATHD0_SPIKETHD(100) |
-                                                           EFR32_MODEM_DSATHD0_UNMODTHD(4) |
-                                                           EFR32_MODEM_DSATHD0_FDEVMINTHD(12) |
-                                                           EFR32_MODEM_DSATHD0_FDEVMAXTHD(120));
-
-  cpu_mem_write_32(EFR32_MODEM_ADDR + EFR32_MODEM_DSATHD1_ADDR, EFR32_MODEM_DSATHD1_POWABSTHD(5000) |
-                                                           EFR32_MODEM_DSATHD1_POWRELTHD(DISABLED) |
-                                                           EFR32_MODEM_DSATHD1_DSARSTCNT(2) |
-                                                           EFR32_MODEM_DSATHD1_RSSIJMPTHD(6) |
-                                                           EFR32_MODEM_DSATHD1_FREQLATDLY(1) |
-                                                           EFR32_MODEM_DSATHD1_PWRFLTBYP |
-                                                           EFR32_MODEM_DSATHD1_AMPFLTBYP |
-                                                           EFR32_MODEM_DSATHD1_PWRDETDIS);
-
-  cpu_mem_write_32(EFR32_MODEM_ADDR + EFR32_MODEM_DSACTRL_ADDR, EFR32_MODEM_DSACTRL_DSAMODE(DISABLED) |
-                                                           EFR32_MODEM_DSACTRL_ARRTHD(7) |
-                                                           EFR32_MODEM_DSACTRL_ARRTOLERTHD0(2) |
-                                                           EFR32_MODEM_DSACTRL_ARRTOLERTHD1(4) |
-                                                           EFR32_MODEM_DSACTRL_FREQAVGSYM |
-                                                           EFR32_MODEM_DSACTRL_DSARSTON);
-
-  cpu_mem_write_32(EFR32_MODEM_ADDR + EFR32_MODEM_VITERBIDEMOD_ADDR, EFR32_MODEM_VITERBIDEMOD_VITERBIKSI1(64) |
-                                                           EFR32_MODEM_VITERBIDEMOD_VITERBIKSI2(48) |
-                                                           EFR32_MODEM_VITERBIDEMOD_VITERBIKSI3(32));
-
-  cpu_mem_write_32(EFR32_MODEM_ADDR + EFR32_MODEM_VTCORRCFG0_ADDR, EFR32_MODEM_VTCORRCFG0_EXPECTPATT(349879) |
-                                                           EFR32_MODEM_VTCORRCFG0_EXPSYNCLEN(8) |
-                                                           EFR32_MODEM_VTCORRCFG0_BUFFHEAD(2));
-
-  cpu_mem_write_32(EFR32_MODEM_ADDR + EFR32_MODEM_DIGMIXCTRL_ADDR, EFR32_MODEM_DIGMIXCTRL_DIGMIXFREQ(32768) |
-                                                           EFR32_MODEM_DIGMIXCTRL_DIGMIXMODE);
-
-  cpu_mem_write_32(EFR32_MODEM_ADDR + EFR32_MODEM_VTCORRCFG1_ADDR, EFR32_MODEM_VTCORRCFG1_CORRSHFTLEN(32) |
-                                                           EFR32_MODEM_VTCORRCFG1_VTFRQLIM(192));
-
-  cpu_mem_write_32(EFR32_MODEM_ADDR + EFR32_MODEM_VTTRACK_ADDR, EFR32_MODEM_VTTRACK_FREQTRACKMODE(DISABLED) |
-                                                           EFR32_MODEM_VTTRACK_TIMTRACKTHD(2) |
-                                                           EFR32_MODEM_VTTRACK_TIMEACQUTHD(238) |
-                                                           EFR32_MODEM_VTTRACK_TIMEOUTMODE |
-                                                           EFR32_MODEM_VTTRACK_TIMGEAR(GEAR0));
-
-  cpu_mem_write_32(EFR32_MODEM_ADDR + EFR32_MODEM_BREST_ADDR, EFR32_MODEM_BREST_BRESTINT(7) |
-                                                           EFR32_MODEM_BREST_BRESTNUM(11));
-  cpu_mem_write_32(EFR32_MODEM_ADDR + EFR32_MODEM_POE_ADDR, EFR32_MODEM_POE_POEI(511));
-
-  cpu_mem_write_32(EFR32_AGC_ADDR + EFR32_AGC_RSSI_ADDR, EFR32_AGC_RSSI_RSSIFRAC(3) |
-                                                           EFR32_AGC_RSSI_RSSIINT(149));
-  cpu_mem_write_32(EFR32_AGC_ADDR + EFR32_AGC_FRAMERSSI_ADDR, EFR32_AGC_FRAMERSSI_FRAMERSSIINT(128));
-
-  cpu_mem_write_32(EFR32_AGC_ADDR + EFR32_AGC_CTRL1_ADDR, EFR32_AGC_CTRL1_RSSIPERIOD(3));
-
-  cpu_mem_write_32(EFR32_AGC_ADDR + EFR32_AGC_CTRL2_ADDR, EFR32_AGC_CTRL2_HYST(3) |
-                                                           EFR32_AGC_CTRL2_FASTLOOPDEL(10) |
-                                                           EFR32_AGC_CTRL2_CFLOOPDEL(26) |
-                                                           EFR32_AGC_CTRL2_ADCRSTFASTLOOP(GAINREDUCTION) |
-                                                           EFR32_AGC_CTRL2_ADCRSTSTARTUP);
-
-  cpu_mem_write_32(EFR32_AGC_ADDR + EFR32_AGC_IFPEAKDET_ADDR, EFR32_AGC_IFPEAKDET_PKDTHRESH1(2) |
-                                                           EFR32_AGC_IFPEAKDET_PKDTHRESH2(8));
-
-  cpu_mem_write_32(EFR32_AGC_ADDR + EFR32_AGC_RFPEAKDET_ADDR, EFR32_AGC_RFPEAKDET_RFPKDTHRESH1(5) |
-                                                           EFR32_AGC_RFPEAKDET_RFPKDTHRESH2(13));
-
-  cpu_mem_write_32(EFR32_AGC_ADDR + EFR32_AGC_GAINRANGE_ADDR, EFR32_AGC_GAINRANGE_MAXGAIN(62) |
-                                                           EFR32_AGC_GAINRANGE_MINGAIN(112));
-
-  cpu_mem_write_32(EFR32_AGC_ADDR + EFR32_AGC_GAININDEX_ADDR, EFR32_AGC_GAININDEX_NUMINDEXPGA(12) |
-                                                           EFR32_AGC_GAININDEX_NUMINDEXDEGEN(3) |
-                                                           EFR32_AGC_GAININDEX_NUMINDEXSLICES(6) |
-                                                           EFR32_AGC_GAININDEX_NUMINDEXATTEN(18));
-
-  cpu_mem_write_32(EFR32_AGC_ADDR + EFR32_AGC_SLICECODE_ADDR, EFR32_AGC_SLICECODE_SLICECODEINDEX0(3) |
-                                                           EFR32_AGC_SLICECODE_SLICECODEINDEX1(4) |
-                                                           EFR32_AGC_SLICECODE_SLICECODEINDEX2(5) |
-                                                           EFR32_AGC_SLICECODE_SLICECODEINDEX3(6) |
-                                                           EFR32_AGC_SLICECODE_SLICECODEINDEX4(8) |
-                                                           EFR32_AGC_SLICECODE_SLICECODEINDEX5(10) |
-                                                           EFR32_AGC_SLICECODE_SLICECODEINDEX6(12));
-
-  cpu_mem_write_32(EFR32_AGC_ADDR + EFR32_AGC_ATTENCODE1_ADDR, EFR32_AGC_ATTENCODE1_ATTENCODEINDEX1(1) |
-                                                           EFR32_AGC_ATTENCODE1_ATTENCODEINDEX2(2) |
-                                                           EFR32_AGC_ATTENCODE1_ATTENCODEINDEX3(3) |
-                                                           EFR32_AGC_ATTENCODE1_ATTENCODEINDEX4(4) |
-                                                           EFR32_AGC_ATTENCODE1_ATTENCODEINDEX5(5) |
-                                                           EFR32_AGC_ATTENCODE1_ATTENCODEINDEX6(6));
-
-  cpu_mem_write_32(EFR32_AGC_ADDR + EFR32_AGC_ATTENCODE2_ADDR, EFR32_AGC_ATTENCODE2_ATTENCODEINDEX7(7) |
-                                                           EFR32_AGC_ATTENCODE2_ATTENCODEINDEX8(8) |
-                                                           EFR32_AGC_ATTENCODE2_ATTENCODEINDEX9(9) |
-                                                           EFR32_AGC_ATTENCODE2_ATTENCODEINDEX10(10) |
-                                                           EFR32_AGC_ATTENCODE2_ATTENCODEINDEX11(11) |
-                                                           EFR32_AGC_ATTENCODE2_ATTENCODEINDEX12(12));
-
-  cpu_mem_write_32(EFR32_AGC_ADDR + EFR32_AGC_ATTENCODE3_ADDR, EFR32_AGC_ATTENCODE3_ATTENCODEINDEX13(13) |
-                                                           EFR32_AGC_ATTENCODE3_ATTENCODEINDEX14(14) |
-                                                           EFR32_AGC_ATTENCODE3_ATTENCODEINDEX15(15) |
-                                                           EFR32_AGC_ATTENCODE3_ATTENCODEINDEX16(16) |
-                                                           EFR32_AGC_ATTENCODE3_ATTENCODEINDEX17(17) |
-                                                           EFR32_AGC_ATTENCODE3_ATTENCODEINDEX18(18));
-
-  cpu_mem_write_32(EFR32_AGC_ADDR + EFR32_AGC_GAINSTEPLIM_ADDR, EFR32_AGC_GAINSTEPLIM_FASTSTEPDOWN(5) |
-                                                           EFR32_AGC_GAINSTEPLIM_FASTSTEPUP(2) |
-                                                           EFR32_AGC_GAINSTEPLIM_CFLOOPSTEPMAX(8) |
-                                                           EFR32_AGC_GAINSTEPLIM_SLOWDECAYCNT(1) |
-                                                           EFR32_AGC_GAINSTEPLIM_ADCATTENMODE(DISABLE));
-
-  cpu_mem_write_32(EFR32_AGC_ADDR + EFR32_AGC_LOOPDEL_ADDR, EFR32_AGC_LOOPDEL_PKDWAIT(25) |
-                                                           EFR32_AGC_LOOPDEL_IFPGADEL(12) |
-                                                           EFR32_AGC_LOOPDEL_LNASLICESDEL(16));
-  cpu_mem_write_32(EFR32_AGC_ADDR + EFR32_AGC_MININDEX_ADDR, EFR32_AGC_MININDEX_INDEXMINSLICES(18) |
-                                                           EFR32_AGC_MININDEX_INDEXMINDEGEN(24) |
-                                                           EFR32_AGC_MININDEX_INDEXMINPGA(27));
-  struct radio_efr32_ctx_s *pv = &ctx->pv;
-  // Sequencer code initialization
-  efr32_radio_seq_init(pv, seqcode, 4 * seqcode_size);
-  // Turn off radio
-  efr32_rfp_disable(ctx);
-  // Timer init
-  efr32_protimer_init(&pv->pti);
-  uint32_t x = bit_ctz32(EFR32_RADIO_RFP_BUFFER_SIZE) - 6;
-  // TX/RX buffers initialization
-  cpu_mem_write_32(EFR32_BUFC_ADDR + EFR32_BUFC_CTRL_ADDR(0), x);
-  cpu_mem_write_32(EFR32_BUFC_ADDR + EFR32_BUFC_ADDR_ADDR(0), (uint32_t)ctx->sg_buffer);
-
-  cpu_mem_write_32(EFR32_BUFC_ADDR + EFR32_BUFC_CTRL_ADDR(1), x);
-  cpu_mem_write_32(EFR32_BUFC_ADDR + EFR32_BUFC_ADDR_ADDR(1), (uint32_t)ctx->sg_buffer);
-
-  cpu_mem_write_32(EFR32_BUFC_ADDR + EFR32_BUFC_ADDR_ADDR(2), (uint32_t)ctx->pv.rx_length_buffer);
-  cpu_mem_write_32(EFR32_BUFC_ADDR + EFR32_BUFC_CTRL_ADDR(2), 0);
-  // Configure variable length mode
-  x = EFR32_FRC_CTRL_RXFCDMODE(FCDMODE2) |
-      EFR32_FRC_CTRL_TXFCDMODE(FCDMODE2) |
-      EFR32_FRC_CTRL_BITORDER(MSB) |
-      EFR32_FRC_CTRL_BITSPERWORD(7);
-
-  cpu_mem_write_32(EFR32_FRC_ADDR + EFR32_FRC_CTRL_ADDR, x);
-
-  x = EFR32_FRC_DFLCTRL_DFLMODE(SINGLEBYTE) |
-      EFR32_FRC_DFLCTRL_MINLENGTH(1) |
-      EFR32_FRC_DFLCTRL_DFLBITS(8);
-
-  cpu_mem_write_32(EFR32_FRC_ADDR + EFR32_FRC_DFLCTRL_ADDR, x);
-  cpu_mem_write_32(EFR32_FRC_ADDR + EFR32_FRC_MAXLENGTH_ADDR, EFR32_RADIO_RFP_BUFFER_SIZE - 1);
-  // Clear buffer
-  for (uint8_t i = 0; i < 4; i++) {
-    cpu_mem_write_32(EFR32_BUFC_ADDR + EFR32_BUFC_CMD_ADDR(i), EFR32_BUFC_CMD_CLEAR);
+static error_t efr32_rfp_fsk_init(struct radio_efr32_rfp_ctx_s *ctx) {
+  uint32_t base[2] = {EFR32_FRC_ADDR, EFR32_RADIO_SEQ_RAM_ADDR};
+  uint16_t i = 0;
+
+  const uint32_t generated[] = {
+    0x00013008UL, 0x0100AC13UL,
+    0x00023030UL, 0x00104000UL,
+    /*    3034 */ 0x00000003UL,
+    0x00013040UL, 0x00000000UL,
+    0x000140A0UL, 0x0F0027AAUL,
+    0x000140B8UL, 0x0023C000UL,
+    0x000140F4UL, 0x00001020UL,
+    0x00024134UL, 0x00000880UL,
+    /*    4138 */ 0x000087F6UL,
+    0x00024140UL, 0x008800E0UL,
+    /*    4144 */ 0x4D52E6C1UL,
+    0x00044160UL, 0x00000000UL,
+    /*    4164 */ 0x00000000UL,
+    /*    4168 */ 0x00000006UL,
+    /*    416C */ 0x00000006UL,
+    0x00086014UL, 0x00000010UL,
+    /*    6018 */ 0x04000000UL,
+    /*    601C */ 0x0002C00FUL,
+    /*    6020 */ 0x00005000UL,
+    /*    6024 */ 0x0008D000UL,
+    /*    6028 */ 0x03000000UL,
+    /*    602C */ 0x00000000UL,
+    /*    6030 */ 0x00000000UL,
+    0x00046050UL, 0x00FF7C83UL,
+    /*    6054 */ 0x00000F73UL,
+    /*    6058 */ 0x00000160UL,
+    /*    605C */ 0x00140011UL,
+    0x000C6078UL, 0x11A0071BUL,
+    /*    607C */ 0x00000000UL,
+    /*    6080 */ 0x003B0373UL,
+    /*    6084 */ 0x00000000UL,
+    /*    6088 */ 0x00000000UL,
+    /*    608C */ 0x22140A04UL,
+    /*    6090 */ 0x4F4A4132UL,
+    /*    6094 */ 0x00000000UL,
+    /*    6098 */ 0x00000000UL,
+    /*    609C */ 0x00000000UL,
+    /*    60A0 */ 0x00000000UL,
+    /*    60A4 */ 0x00000000UL,
+    0x000760E4UL, 0x04000080UL,
+    /*    60E8 */ 0x00000000UL,
+    /*    60EC */ 0x07830464UL,
+    /*    60F0 */ 0x3AC81388UL,
+    /*    60F4 */ 0x000A209CUL,
+    /*    60F8 */ 0x00206100UL,
+    /*    60FC */ 0x123556B7UL,
+    0x00036104UL, 0x00108000UL,
+    /*    6108 */ 0x29043020UL,
+    /*    610C */ 0x0040BB88UL,
+    0x00016120UL, 0x00000000UL,
+    0x00086130UL, 0x00FA53E8UL,
+    /*    6134 */ 0x00000000UL,
+    /*    6138 */ 0x00000000UL,
+    /*    613C */ 0x00000000UL,
+    /*    6140 */ 0x00000000UL,
+    /*    6144 */ 0x00000000UL,
+    /*    6148 */ 0x00000000UL,
+    /*    614C */ 0x00000001UL,
+    0x00077014UL, 0x000270FEUL,
+    /*    7018 */ 0x00000300UL,
+    /*    701C */ 0x834A0060UL,
+    /*    7020 */ 0x00000000UL,
+    /*    7024 */ 0x00000082UL,
+    /*    7028 */ 0x00000000UL,
+    /*    702C */ 0x000000D5UL,
+    0x00027048UL, 0x0000383EUL,
+    /*    704C */ 0x000025BCUL,
+    0x00037070UL, 0x00120105UL,
+    /*    7074 */ 0x00083019UL,
+    /*    7078 */ 0x006D8480UL,
+    0xFFFFFFFFUL,
+  };
+  while(1) {
+    uint32_t v0 = generated[i];
+
+    if (v0 == 0xFFFFFFFF) {
+      break;
+    }
+    uint32_t offset = (v0 >> 24) & 0xFF;
+    uint32_t count = (v0 >> 16) & 0xFF;
+    uint32_t idx = 0;
+    assert(offset< 2);
+
+    while(count--) {
+      uint32_t addr = (v0 & 0xFFFF) + idx;
+      addr |= base[offset];
+      uint32_t v1 = generated[i + 1];
+      cpu_mem_write_32(addr, v1);
+      printk("0x%x 0x%x\n", addr, v1);
+      i += 1;
+      idx += 4;
+    }
+    i += 1;
   }
-  // Enable irq
-  x = cpu_mem_read_32(EFR32_FRC_ADDR + EFR32_FRC_IEN_ADDR);
-  x |= EFR32_TX_IRQ_FRC_MSK | EFR32_RX_IRQ_FRC_MSK;
-  cpu_mem_write_32(EFR32_FRC_ADDR + EFR32_FRC_IFC_ADDR, x);
-  cpu_mem_write_32(EFR32_FRC_ADDR + EFR32_FRC_IEN_ADDR, x);
+  cpu_mem_write_32(EFR32_SYNTH_ADDR + EFR32_SYNTH_CTRL_ADDR, 0x100ac3f);
+  cpu_mem_write_32(EFR32_SYNTH_ADDR + EFR32_SYNTH_CALCTRL_ADDR, 0x42801);
+  cpu_mem_write_32(EFR32_SYNTH_ADDR + EFR32_SYNTH_VCDACCTRL_ADDR, 0x23);
+  cpu_mem_write_32(EFR32_SYNTH_ADDR + EFR32_SYNTH_CHCTRL_ADDR, 0x18);
+  cpu_mem_write_32(EFR32_SYNTH_ADDR + EFR32_SYNTH_VCOTUNING_ADDR, 0x7f);
+  cpu_mem_write_32(EFR32_SYNTH_ADDR + EFR32_SYNTH_VCOGAIN_ADDR, 0x23);
+  cpu_mem_write_32(EFR32_SYNTH_ADDR + EFR32_SYNTH_AUXVCDACCTRL_ADDR, 0x7);
+  cpu_mem_write_32(EFR32_SYNTH_ADDR + EFR32_SYNTH_CAPCALCYCLECNT_ADDR, 0x3b);
+
+  cpu_mem_write_32(EFR32_RAC_ADDR + EFR32_RAC_CTRL_ADDR, 0x380);
+  cpu_mem_write_32(EFR32_RAC_ADDR + EFR32_RAC_LVDSCTRL_ADDR, 0xc);
+  cpu_mem_write_32(EFR32_RAC_ADDR + EFR32_RAC_LVDSIDLESEQ_ADDR, 0xbc);
+  cpu_mem_write_32(EFR32_RAC_ADDR + EFR32_RAC_HFXORETIMECTRL_ADDR, 0x540);
+  cpu_mem_write_32(EFR32_RAC_ADDR + EFR32_RAC_PRESC_ADDR, 0x7);
+  cpu_mem_write_32(EFR32_RAC_ADDR + EFR32_RAC_SYNTHENCTRL_ADDR, 0x87f2);
+  cpu_mem_write_32(EFR32_RAC_ADDR + EFR32_RAC_SYNTHREGCTRL_ADDR, 0x3636d80);
+  cpu_mem_write_32(EFR32_RAC_ADDR + EFR32_RAC_MMDCTRL_ADDR, 0x1147b);
+  cpu_mem_write_32(EFR32_RAC_ADDR + EFR32_RAC_CHPCTRL_ADDR, 0x2e);
+  cpu_mem_write_32(EFR32_RAC_ADDR + EFR32_RAC_CHPCAL_ADDR, 0x24);
+  cpu_mem_write_32(EFR32_RAC_ADDR + EFR32_RAC_AUXCTRL_ADDR, 0x1688030);
+  cpu_mem_write_32(EFR32_RAC_ADDR + EFR32_RAC_RFENCTRL_ADDR, 0x1001000);
+  cpu_mem_write_32(EFR32_RAC_ADDR + EFR32_RAC_SGRFENCTRL0_ADDR, 0xb0000);
+  cpu_mem_write_32(EFR32_RAC_ADDR + EFR32_RAC_SGLNAMIXCTRL_ADDR, 0x186db00);
+  cpu_mem_write_32(EFR32_RAC_ADDR + EFR32_RAC_SGPACTRL0_ADDR, 0x491fdfe0);
+  cpu_mem_write_32(EFR32_RAC_ADDR + EFR32_RAC_SGPAPKDCTRL_ADDR, 0x108d000);
+  cpu_mem_write_32(EFR32_RAC_ADDR + EFR32_RAC_SGPABIASCTRL0_ADDR, 0x7000445);
+  cpu_mem_write_32(EFR32_RAC_ADDR + EFR32_RAC_SGPABIASCTRL1_ADDR, 0x84523);
+  cpu_mem_write_32(EFR32_RAC_ADDR + EFR32_RAC_RFBIASCTRL_ADDR, 0x34);
+  cpu_mem_write_32(EFR32_RAC_ADDR + EFR32_RAC_RFBIASCAL_ADDR, 0x30191a);
+  cpu_mem_write_32(EFR32_RAC_ADDR + EFR32_RAC_IFPGACAL_ADDR, 0x46404301);
+  cpu_mem_write_32(EFR32_RAC_ADDR + EFR32_RAC_RCTUNE_ADDR, 0x1f001f);
+  cpu_mem_write_32(EFR32_RAC_ADDR + EFR32_RAC_APC_ADDR, 0xff000000L);
+
+  cpu_mem_write_32(EFR32_MODEM_ADDR + EFR32_MODEM_FREQOFFEST_ADDR, 0xed9d0000L);
+  cpu_mem_write_32(EFR32_MODEM_ADDR + EFR32_MODEM_RAMPCTRL_ADDR, 0x600);
+  cpu_mem_write_32(EFR32_MODEM_ADDR + EFR32_MODEM_RAMPLEV_ADDR, 0x960000);
+  cpu_mem_write_32(EFR32_MODEM_ADDR + EFR32_MODEM_DCCOMP_ADDR, 0x33);
+  cpu_mem_write_32(EFR32_MODEM_ADDR + EFR32_MODEM_BREST_ADDR, 0x2c7);
+  cpu_mem_write_32(EFR32_MODEM_ADDR + EFR32_MODEM_POE_ADDR, 0x1ff);
+
+  cpu_mem_write_32(EFR32_AGC_ADDR + EFR32_AGC_SLICECODE_ADDR, 0xca86543);
+  cpu_mem_write_32(EFR32_AGC_ADDR + EFR32_AGC_ATTENCODE1_ADDR, 0x6543210);
+  cpu_mem_write_32(EFR32_AGC_ADDR + EFR32_AGC_ATTENCODE2_ADDR, 0x18b52507);
+  cpu_mem_write_32(EFR32_AGC_ADDR + EFR32_AGC_ATTENCODE3_ADDR, 0x25183dcd);
+
   return 0;
 }
 
+static error_t efr32_rfp_sigfox_init(struct radio_efr32_rfp_ctx_s *ctx) {
+  cpu_mem_write_32(EFR32_SYNTH_ADDR + EFR32_SYNTH_CTRL_ADDR, 0x100ac3f);
+  cpu_mem_write_32(EFR32_SYNTH_ADDR + EFR32_SYNTH_CALCTRL_ADDR, 0x42801);
+  cpu_mem_write_32(EFR32_SYNTH_ADDR + EFR32_SYNTH_VCDACCTRL_ADDR, 0x23);
+  cpu_mem_write_32(EFR32_SYNTH_ADDR + EFR32_SYNTH_IFFREQ_ADDR, 0x10231c);
+  cpu_mem_write_32(EFR32_SYNTH_ADDR + EFR32_SYNTH_DIVCTRL_ADDR, 0x3);
+  cpu_mem_write_32(EFR32_SYNTH_ADDR + EFR32_SYNTH_VCOTUNING_ADDR, 0x7b);
+  cpu_mem_write_32(EFR32_SYNTH_ADDR + EFR32_SYNTH_VCOGAIN_ADDR, 0x22);
+  cpu_mem_write_32(EFR32_SYNTH_ADDR + EFR32_SYNTH_AUXVCDACCTRL_ADDR, 0x7);
+  cpu_mem_write_32(EFR32_SYNTH_ADDR + EFR32_SYNTH_CAPCALCYCLECNT_ADDR, 0x7f);
+
+  cpu_mem_write_32(EFR32_RAC_ADDR + EFR32_RAC_CTRL_ADDR, 0x380);
+  cpu_mem_write_32(EFR32_RAC_ADDR + EFR32_RAC_LVDSCTRL_ADDR, 0xc);
+  cpu_mem_write_32(EFR32_RAC_ADDR + EFR32_RAC_LVDSIDLESEQ_ADDR, 0xbc);
+  cpu_mem_write_32(EFR32_RAC_ADDR + EFR32_RAC_HFXORETIMECTRL_ADDR, 0x540);
+  cpu_mem_write_32(EFR32_RAC_ADDR + EFR32_RAC_WAITMASK_ADDR, 0x1);
+  cpu_mem_write_32(EFR32_RAC_ADDR + EFR32_RAC_WAITSNSH_ADDR, 0x1);
+  cpu_mem_write_32(EFR32_RAC_ADDR + EFR32_RAC_STIMER_ADDR, 0xd);
+  cpu_mem_write_32(EFR32_RAC_ADDR + EFR32_RAC_STIMERCOMP_ADDR, 0x4a45);
+  cpu_mem_write_32(EFR32_RAC_ADDR + EFR32_RAC_VECTADDR_ADDR, 0x21000000);
+  cpu_mem_write_32(EFR32_RAC_ADDR + EFR32_RAC_SEQCTRL_ADDR, 0x1);
+  cpu_mem_write_32(EFR32_RAC_ADDR + EFR32_RAC_PRESC_ADDR, 0x7);
+  cpu_mem_write_32(EFR32_RAC_ADDR + EFR32_RAC_SR_ADDR(0), 0x40010049);
+  cpu_mem_write_32(EFR32_RAC_ADDR + EFR32_RAC_SYNTHREGCTRL_ADDR, 0x3636d80);
+  cpu_mem_write_32(EFR32_RAC_ADDR + EFR32_RAC_VCOCTRL_ADDR, 0xf0027aa);
+  cpu_mem_write_32(EFR32_RAC_ADDR + EFR32_RAC_MMDCTRL_ADDR, 0x1147b);
+  cpu_mem_write_32(EFR32_RAC_ADDR + EFR32_RAC_CHPCTRL_ADDR, 0x2e);
+  cpu_mem_write_32(EFR32_RAC_ADDR + EFR32_RAC_CHPCAL_ADDR, 0x24);
+  cpu_mem_write_32(EFR32_RAC_ADDR + EFR32_RAC_LPFCTRL_ADDR, 0xf3c000);
+  cpu_mem_write_32(EFR32_RAC_ADDR + EFR32_RAC_AUXCTRL_ADDR, 0x1360010);
+  cpu_mem_write_32(EFR32_RAC_ADDR + EFR32_RAC_RFENCTRL_ADDR, 0x1ff057);
+  cpu_mem_write_32(EFR32_RAC_ADDR + EFR32_RAC_RFENCTRL0_ADDR, 0x3000000);
+  cpu_mem_write_32(EFR32_RAC_ADDR + EFR32_RAC_SGRFENCTRL0_ADDR, 0x3000000);
+  cpu_mem_write_32(EFR32_RAC_ADDR + EFR32_RAC_SGLNAMIXCTRL_ADDR, 0x186db00);
+  cpu_mem_write_32(EFR32_RAC_ADDR + EFR32_RAC_SGPACTRL0_ADDR, 0x423fffe8);
+  cpu_mem_write_32(EFR32_RAC_ADDR + EFR32_RAC_SGPAPKDCTRL_ADDR, 0x108d700);
+  cpu_mem_write_32(EFR32_RAC_ADDR + EFR32_RAC_SGPABIASCTRL0_ADDR, 0x7000445);
+  cpu_mem_write_32(EFR32_RAC_ADDR + EFR32_RAC_SGPABIASCTRL1_ADDR, 0x84523);
+  cpu_mem_write_32(EFR32_RAC_ADDR + EFR32_RAC_RFBIASCTRL_ADDR, 0x35);
+  cpu_mem_write_32(EFR32_RAC_ADDR + EFR32_RAC_RFBIASCAL_ADDR, 0x301e15);
+  cpu_mem_write_32(EFR32_RAC_ADDR + EFR32_RAC_LNAMIXCTRL1_ADDR, 0x880);
+  cpu_mem_write_32(EFR32_RAC_ADDR + EFR32_RAC_IFPGACTRL_ADDR, 0x87f6);
+  cpu_mem_write_32(EFR32_RAC_ADDR + EFR32_RAC_IFPGACAL_ADDR, 0x44400246);
+  cpu_mem_write_32(EFR32_RAC_ADDR + EFR32_RAC_IFFILTCTRL_ADDR, 0x880020);
+  cpu_mem_write_32(EFR32_RAC_ADDR + EFR32_RAC_IFADCCTRL_ADDR, 0x4d52e6c1);
+  cpu_mem_write_32(EFR32_RAC_ADDR + EFR32_RAC_RCTUNE_ADDR, 0x220022);
+  cpu_mem_write_32(EFR32_RAC_ADDR + EFR32_RAC_APC_ADDR, 0xff000000L);
+  cpu_mem_write_32(EFR32_RAC_ADDR + EFR32_RAC_CHPCTRL1_ADDR, 0x6);
+  cpu_mem_write_32(EFR32_RAC_ADDR + EFR32_RAC_MMDCTRL1_ADDR, 0x6);
+
+  cpu_mem_write_32(EFR32_MODEM_ADDR + EFR32_MODEM_FREQOFFEST_ADDR, 0x2a8c0000);
+  cpu_mem_write_32(EFR32_MODEM_ADDR + EFR32_MODEM_MIXCTRL_ADDR, 0x10);
+  /* DBPSK */
+  cpu_mem_write_32(EFR32_MODEM_ADDR + EFR32_MODEM_CTRL0_ADDR, 0x20000c0);
+  cpu_mem_write_32(EFR32_MODEM_ADDR + EFR32_MODEM_CTRL1_ADDR, 0x12c80c);
+  cpu_mem_write_32(EFR32_MODEM_ADDR + EFR32_MODEM_CTRL4_ADDR, 0x13000000);
+  cpu_mem_write_32(EFR32_MODEM_ADDR + EFR32_MODEM_CTRL5_ADDR, 0x600);
+  cpu_mem_write_32(EFR32_MODEM_ADDR + EFR32_MODEM_TXBR_ADDR, 0x1bb80);
+  cpu_mem_write_32(EFR32_MODEM_ADDR + EFR32_MODEM_RXBR_ADDR, 0x841);
+  cpu_mem_write_32(EFR32_MODEM_ADDR + EFR32_MODEM_CF_ADDR, 0x8010eb4);
+  cpu_mem_write_32(EFR32_MODEM_ADDR + EFR32_MODEM_PRE_ADDR, 0x92);
+  cpu_mem_write_32(EFR32_MODEM_ADDR + EFR32_MODEM_SYNC0_ADDR, 0x1ac0);
+  cpu_mem_write_32(EFR32_MODEM_ADDR + EFR32_MODEM_TIMING_ADDR, 0x22c004b);
+  cpu_mem_write_32(EFR32_MODEM_ADDR + EFR32_MODEM_MODINDEX_ADDR, 0x2F4);
+  cpu_mem_write_32(EFR32_MODEM_ADDR + EFR32_MODEM_SHAPING0_ADDR, 0x3b261100);
+  cpu_mem_write_32(EFR32_MODEM_ADDR + EFR32_MODEM_SHAPING1_ADDR, 0x7b726350);
+  cpu_mem_write_32(EFR32_MODEM_ADDR + EFR32_MODEM_SHAPING2_ADDR, 0x7f);
+  cpu_mem_write_32(EFR32_MODEM_ADDR + EFR32_MODEM_RAMPCTRL_ADDR, 0xf00);
+  cpu_mem_write_32(EFR32_MODEM_ADDR + EFR32_MODEM_RAMPLEV_ADDR, 0x960000);
+  cpu_mem_write_32(EFR32_MODEM_ADDR + EFR32_MODEM_DCCOMP_ADDR, 0x33);
+  cpu_mem_write_32(EFR32_MODEM_ADDR + EFR32_MODEM_DCESTI_ADDR, 0x3f7e00a3);
+  cpu_mem_write_32(EFR32_MODEM_ADDR + EFR32_MODEM_SRCCHF_ADDR, 0xcc15088bL);
+  cpu_mem_write_32(EFR32_MODEM_ADDR + EFR32_MODEM_DSATHD0_ADDR, 0x7830464);
+  cpu_mem_write_32(EFR32_MODEM_ADDR + EFR32_MODEM_DSATHD1_ADDR, 0x3ac81388);
+  cpu_mem_write_32(EFR32_MODEM_ADDR + EFR32_MODEM_DSACTRL_ADDR, 0x62090);
+  cpu_mem_write_32(EFR32_MODEM_ADDR + EFR32_MODEM_VITERBIDEMOD_ADDR, 0x206100);
+  cpu_mem_write_32(EFR32_MODEM_ADDR + EFR32_MODEM_VTCORRCFG0_ADDR, 0x208556b7);
+  cpu_mem_write_32(EFR32_MODEM_ADDR + EFR32_MODEM_DIGMIXCTRL_ADDR, 0x10bb3f);
+  cpu_mem_write_32(EFR32_MODEM_ADDR + EFR32_MODEM_VTCORRCFG1_ADDR, 0x3020);
+  cpu_mem_write_32(EFR32_MODEM_ADDR + EFR32_MODEM_VTTRACK_ADDR, 0xbb88);
+  cpu_mem_write_32(EFR32_MODEM_ADDR + EFR32_MODEM_BREST_ADDR, 0x2);
+  cpu_mem_write_32(EFR32_MODEM_ADDR + EFR32_MODEM_POE_ADDR, 0x1ff);
+
+  return 0;
+}
