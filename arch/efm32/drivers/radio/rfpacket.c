@@ -1290,7 +1290,7 @@ static error_t efr32_rfp_fsk_init(struct radio_efr32_rfp_ctx_s *ctx) {
       addr |= base[offset];
       uint32_t v1 = generated[i + 1];
       cpu_mem_write_32(addr, v1);
-      printk("0x%x 0x%x\n", addr, v1);
+      efr32_radio_printk("0x%x 0x%x\n", addr, v1);
       i += 1;
       idx += 4;
     }
