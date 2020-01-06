@@ -70,7 +70,9 @@ static void efr32_rfp_read_packet(struct radio_efr32_rfp_ctx_s *ctx);
 static void efr32_rfp_rx_irq(struct radio_efr32_rfp_ctx_s *ctx, uint32_t irq);
 static inline void efr32_rfp_tx_irq(struct radio_efr32_rfp_ctx_s *ctx, uint32_t irq);
 static error_t efr32_rfp_fsk_init(struct radio_efr32_rfp_ctx_s *ctx);
+#ifdef CONFIG_RFPACKET_SIGFOX
 static error_t efr32_rfp_sigfox_init(struct radio_efr32_rfp_ctx_s *ctx);
+#endif
 // Lib device rfpacket interface functions
 static error_t efr32_radio_check_config(struct dev_rfpacket_ctx_s *gpv, struct dev_rfpacket_rq_s *rq);
 static void efr32_radio_rx(struct dev_rfpacket_ctx_s *gpv, struct dev_rfpacket_rq_s *rq, bool_t isRetry);
@@ -495,6 +497,7 @@ static bool_t efr32_check_rac_off(struct radio_efr32_rfp_ctx_s *ctx) {
   return 1;
 }
 
+#ifdef CONFIG_DRIVER_EFR32_DEBUG
 static void efr32_rfp_cfg_rac_dbg(struct radio_efr32_rfp_ctx_s *ctx) {
   uint32_t x;
   /* Set PC9 to PC11 in output */
@@ -530,7 +533,6 @@ static void efr32_rfp_cfg_rac_dbg(struct radio_efr32_rfp_ctx_s *ctx) {
   cpu_mem_write_32(EFM32_PRS_ADDR + EFR32_PRS_CH_CTRL_ADDR(11), x);
 }
 
-#ifdef CONFIG_DRIVER_EFR32_DEBUG
 static void efr32_rfp_cfg_protimer_dbg(struct radio_efr32_rfp_ctx_s *ctx) {
   uint32_t x;
   // Set PC9 to PC11 in output
@@ -1342,6 +1344,7 @@ static error_t efr32_rfp_fsk_init(struct radio_efr32_rfp_ctx_s *ctx) {
   return 0;
 }
 
+#ifdef CONFIG_RFPACKET_SIGFOX
 static error_t efr32_rfp_sigfox_init(struct radio_efr32_rfp_ctx_s *ctx) {
   cpu_mem_write_32(EFR32_SYNTH_ADDR + EFR32_SYNTH_CTRL_ADDR, 0x100ac3f);
   cpu_mem_write_32(EFR32_SYNTH_ADDR + EFR32_SYNTH_CALCTRL_ADDR, 0x42801);
@@ -1427,3 +1430,4 @@ static error_t efr32_rfp_sigfox_init(struct radio_efr32_rfp_ctx_s *ctx) {
 
   return 0;
 }
+#endif
