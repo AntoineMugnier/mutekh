@@ -105,11 +105,11 @@ void efr32_radio_dump_registers(struct radio_efr32_ctx_s *pv);
 void efr32_radio_dump_range(struct radio_efr32_ctx_s *pv, char * str, uintptr_t start, size_t size);
 void efr32_radio_debug_port(struct radio_efr32_ctx_s *pv, uint8_t val);
 void efr32_radio_debug_init(struct radio_efr32_ctx_s *pv);
-void debug_toggle_pin();
+void debug_toggle_pin(void);
 void efr32_radio_seq_init(struct radio_efr32_ctx_s *pv, const uint8_t *seq, size_t count);
-void set_cw();
-void set_pn9();
-void stoptx();
+void set_cw(void);
+void set_pn9(void);
+void stoptx(void);
 
 
 #endif /* !COMMON_H_ */

@@ -72,7 +72,7 @@ void efr32_radio_print_debug(char *p, struct radio_efr32_ctx_s *pv)
 
 #endif
 
-void debug_toggle_pin()
+void debug_toggle_pin(void)
 {
 #if CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_XG12
   uint32_t o = 2;
@@ -147,7 +147,7 @@ void efr32_radio_seq_init(struct radio_efr32_ctx_s *pv, const uint8_t *seq, size
   memset((uint8_t *)(p + 0x1F00), 0, 0x100);
 }
 
-void set_cw()
+void set_cw(void)
 {
   uint32_t x = cpu_mem_read_32(EFR32_RAC_ADDR + EFR32_RAC_LPFCTRL_ADDR);
   EFR32_RAC_LPFCTRL_LPFBWTX_SET(x, 0);
@@ -179,13 +179,13 @@ void set_cw()
   cpu_mem_write_32(EFR32_RAC_ADDR + EFR32_RAC_CMD_ADDR, EFR32_RAC_CMD_TXEN);
 }
 
-void stoptx()
+void stoptx(void)
 {
   /* Stop Tx */
   cpu_mem_write_32(EFR32_RAC_ADDR + EFR32_RAC_CMD_ADDR, EFR32_RAC_CMD_TXDIS);
 }
 
-void set_pn9()
+void set_pn9(void)
 {
   uint32_t x = cpu_mem_read_32(EFR32_FRC_ADDR + EFR32_FRC_FCD_ADDR(0));
   x &= ~EFR32_FRC_FCD_SKIPWHITE;
