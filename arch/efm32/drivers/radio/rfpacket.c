@@ -828,9 +828,6 @@ static void efr32_radio_rx(struct dev_rfpacket_ctx_s *gpv, struct dev_rfpacket_r
   x = cpu_mem_read_32(EFR32_AGC_ADDR + EFR32_AGC_CTRL0_ADDR);
   EFR32_AGC_CTRL0_MODE_SET(x, LOCKPREDET);
   cpu_mem_write_32(EFR32_AGC_ADDR + EFR32_AGC_CTRL0_ADDR, x);
-  // Check RAC state
-  x = endian_le32(cpu_mem_read_32(EFR32_RAC_ADDR + EFR32_RAC_STATUS_ADDR));
-  assert(EFR32_RAC_STATUS_STATE_GET(x) == EFR32_RAC_STATUS_STATE_OFF);
   // Clear buffer
   cpu_mem_write_32(EFR32_BUFC_ADDR + EFR32_BUFC_CMD_ADDR(1), EFR32_BUFC_CMD_CLEAR);
   // Set channel
@@ -1297,7 +1294,7 @@ static error_t efr32_rfp_fsk_init(struct radio_efr32_rfp_ctx_s *ctx) {
       addr |= base[offset];
       uint32_t v1 = generated[i + 1];
       cpu_mem_write_32(addr, v1);
-      efr32_radio_printk("0x%x 0x%x\n", addr, v1);
+      //efr32_radio_printk("0x%x 0x%x\n", addr, v1);
       i += 1;
       idx += 4;
     }
