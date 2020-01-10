@@ -675,10 +675,9 @@ static inline void rfpacket_error(struct dev_rfpacket_ctx_s *pv) {
       rfpacket_end_rxc(pv, 0);
       return;
     case DEV_RFPACKET_STATE_RXC:
+    default:
       rfpacket_idle(pv);
       return;
-    default:
-      UNREACHABLE();
   }
 }
 
@@ -979,7 +978,7 @@ uintptr_t dev_rfpacket_alloc(struct dev_rfpacket_ctx_s *pv) {
   pv->buffer = (uint8_t*)rx->buf;
 
   assert(rx->size == pv->size);
-  logk_trace("%d", pv->size);
+  logk_trace("alloc size: %d", pv->size);
   return (uintptr_t)pv->buffer;
 }
 

@@ -773,7 +773,7 @@ static void efr32_rfp_rx_irq(struct radio_efr32_rfp_ctx_s *ctx, uint32_t irq) {
   ctx->gctx.size = size;
   uintptr_t p = dev_rfpacket_alloc(&ctx->gctx);
 
-  if (p != 0) {
+  if (p == 0) {
     // Flush RX fifo
     cpu_mem_write_32(EFR32_BUFC_ADDR + EFR32_BUFC_CMD_ADDR(1), EFR32_BUFC_CMD_CLEAR);
     cpu_mem_write_32(EFR32_BUFC_ADDR + EFR32_BUFC_CMD_ADDR(2), EFR32_BUFC_CMD_CLEAR);
@@ -848,9 +848,14 @@ static void efr32_radio_rx(struct dev_rfpacket_ctx_s *gpv, struct dev_rfpacket_r
       // Scheduled RX
       efr32_rfp_start_rx_scheduled(ctx);
     break;
-    // TODO RQ RX TIMEOUT support
+
+    // TODO RQ RX TIMEOUT support$
+
     default:
-      assert(1);
+      // Not supported
+      efr32_rfp_fill_status(ctx, DEV_RFPACKET_STATUS_OTHER_ERR);
+      efr32_rfp_req_done(ctx);
+    break;
   }
 }
 
@@ -903,6 +908,7 @@ static void efr32_radio_tx(struct dev_rfpacket_ctx_s *gpv, struct dev_rfpacket_r
 static void efr32_radio_cancel_rxc(struct dev_rfpacket_ctx_s *gpv) {
   struct radio_efr32_rfp_ctx_s *ctx = gpv->pvdata;
   efr32_rfp_disable(ctx);
+  efr32_rfp_fill_status(ctx, DEV_RFPACKET_STATUS_MISC);
   efr32_rfp_req_done(ctx);
 }
 
@@ -997,6 +1003,7 @@ static DEV_IRQ_SRC_PROCESS(efr32_radio_irq) {
   lock_spin(&dev->lock);
   // Set timestamp
   ctx->gctx.timestamp = efr32_protimer_get_value(&ctx->pv.pti);
+  efr32_radio_printk("irq: %d\n", idx);
   // Process irq
   switch (idx) {
     case 0:
@@ -1013,6 +1020,7 @@ static DEV_IRQ_SRC_PROCESS(efr32_radio_irq) {
       efr32_radio_printk("rac irq: 0x%x\n", irq);
       // Check that Rac is idle
       if (efr32_check_rac_off(ctx)) {
+        efr32_rfp_fill_status(ctx, DEV_RFPACKET_STATUS_MISC);
         efr32_rfp_req_done(ctx);
       }
     break;
@@ -1042,7 +1050,6 @@ static DEV_IRQ_SRC_PROCESS(efr32_radio_irq) {
     break;
 
     default:
-      efr32_radio_printk("irq: %d\n", idx);
       abort();
     break;
   }
