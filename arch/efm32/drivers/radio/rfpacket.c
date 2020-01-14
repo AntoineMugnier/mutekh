@@ -23,6 +23,7 @@
 #include <stdbool.h>
 #include "common.h"
 #include "protimer.h"
+#include <device/class/iomux.h>
 
 /* LBT parameters */
 #define EFR32_ETSI_LBT_TIME              5000ULL     /*us*/
@@ -846,7 +847,7 @@ static void efr32_radio_rx(struct dev_rfpacket_ctx_s *gpv, struct dev_rfpacket_r
       efr32_rfp_start_rx_scheduled(ctx);
     break;
 
-    // TODO RQ RX TIMEOUT support$
+    // TODO RQ RX TIMEOUT support
 
     default:
       // Not supported
@@ -1102,18 +1103,6 @@ static DEV_INIT(efr32_radio_init) {
       goto err_clk;
     }
   }
-  uint32_t x = cpu_mem_read_32(EFR32_PROTIMER_ADDR + EFR32_PROTIMER_IEN_ADDR);
-
-  x |=  EFR32_PROTIMER_IF_CC(EFR32_PROTIMER_RX_STOP_CHANNEL) |
-        EFR32_PROTIMER_IF_LBTFAILURE;
-
-  cpu_mem_write_32(EFR32_PROTIMER_ADDR + EFR32_PROTIMER_IEN_ADDR, x);
-
-  // TC0 synchronized on PRECNTOF, prescaler decremented on PRECNTOF
-  x = cpu_mem_read_32(EFR32_PROTIMER_ADDR + EFR32_PROTIMER_CTRL_ADDR);
-  x |= EFR32_PROTIMER_CTRL_TOUT_SRC(0, PRECNTOF);
-  cpu_mem_write_32(EFR32_PROTIMER_ADDR + EFR32_PROTIMER_CTRL_ADDR, x);
-
   pv->freq.num = EFR32_RADIO_HFXO_CLK;
   pv->freq.denom = 1;
 
@@ -1127,6 +1116,15 @@ static DEV_INIT(efr32_radio_init) {
   efr32_rfp_disable(ctx);
   // Timer init
   efr32_protimer_init(&pv->pti);
+  // Add specific rfpacket protimer initialisation
+  uint32_t x = cpu_mem_read_32(EFR32_PROTIMER_ADDR + EFR32_PROTIMER_IEN_ADDR);
+  x |=  EFR32_PROTIMER_IF_CC(EFR32_PROTIMER_RX_STOP_CHANNEL) |
+        EFR32_PROTIMER_IF_LBTFAILURE;
+  cpu_mem_write_32(EFR32_PROTIMER_ADDR + EFR32_PROTIMER_IEN_ADDR, x);
+  // TC0 synchronized on PRECNTOF, prescaler decremented on PRECNTOF
+  x = cpu_mem_read_32(EFR32_PROTIMER_ADDR + EFR32_PROTIMER_CTRL_ADDR);
+  x |= EFR32_PROTIMER_CTRL_TOUT_SRC(0, PRECNTOF);
+  cpu_mem_write_32(EFR32_PROTIMER_ADDR + EFR32_PROTIMER_CTRL_ADDR, x);
   // TX/RX buffers initialization
   x = bit_ctz32(EFR32_RADIO_RFP_BUFFER_SIZE) - 6;
 
@@ -1146,6 +1144,17 @@ static DEV_INIT(efr32_radio_init) {
   cpu_mem_write_32(EFR32_FRC_ADDR + EFR32_FRC_IFC_ADDR, EFR32_FRC_IF_MASK);
   x = EFR32_TX_IRQ_FRC_MSK | EFR32_RX_IRQ_FRC_MSK;
   cpu_mem_write_32(EFR32_FRC_ADDR + EFR32_FRC_IEN_ADDR, x);
+#ifdef CONFIG_DRIVER_EFR32_RFPACKET_ANT_DIV
+  // Setup pinmux
+  iomux_demux_t loc[2];
+  if (device_iomux_setup(dev, ">sel? >nsel?", loc, NULL, NULL))
+    goto err_mem;
+
+  x = EFR32_MODEM_ROUTEPEN_ANT0PEN | EFR32_MODEM_ROUTEPEN_ANT1PEN;
+  cpu_mem_write_32(EFR32_MODEM_ADDR + EFR32_MODEM_ROUTEPEN_ADDR, x);
+  x = EFR32_MODEM_ROUTELOC1_ANT0LOC(loc[0]) | EFR32_MODEM_ROUTELOC1_ANT1LOC(loc[1]);
+  cpu_mem_write_32(EFR32_MODEM_ADDR + EFR32_MODEM_ROUTELOC1_ADDR, x);
+#endif
   // Interrupt init
   device_irq_source_init(dev, pv->irq_ep, EFR32_RADIO_IRQ_COUNT, &efr32_radio_irq);
   if (device_irq_source_link(dev, pv->irq_ep, EFR32_RADIO_IRQ_COUNT, -1)) {
@@ -1193,6 +1202,9 @@ static DEV_CLEANUP(efr32_radio_cleanup) {
     device_irq_source_unlink(dev, pv->irq_ep, EFR32_RADIO_IRQ_COUNT);
     dev_rq_pqueue_destroy(&pv->pti.queue);
     dev_rfpacket_clean(&ctx->gctx);
+ #ifdef CONFIG_DRIVER_EFR32_RFPACKET_ANT_DIV
+  device_iomux_cleanup(dev);
+#endif
     mem_free(ctx);
   }
   return err;
@@ -1222,14 +1234,23 @@ static error_t efr32_rfp_fsk_init(struct radio_efr32_rfp_ctx_s *ctx) {
     /*    6018 */ 0x04000000UL,
     /*    601C */ 0x0002C00FUL,
     /*    6020 */ 0x00005000UL,
-    /*    6024 */ 0x0008D000UL,
+#ifdef CONFIG_DRIVER_EFR32_RFPACKET_ANT_DIV
+    /*    6024 */ (EFR32_MODEM_CTRL3_ANTDIVMODE(ANTSELRSSI) |
+#else
+    /*    6024 */ (EFR32_MODEM_CTRL3_ANTDIVMODE(ANTENNA0) |
+#endif
+                   EFR32_MODEM_CTRL3_TSAMPMODE(ON) |
+                   EFR32_MODEM_CTRL3_TSAMPDEL(3) |
+                   EFR32_MODEM_CTRL3_TSAMPLIM(8)),
     /*    6028 */ 0x03000000UL,
     /*    602C */ 0x00000000UL,
     /*    6030 */ 0x00000000UL,
-    0x00046050UL, 0x00FF7C83UL,
+    0x00066050UL, 0x00FF7C83UL,
     /*    6054 */ 0x00000F73UL,
     /*    6058 */ 0x00000160UL,
     /*    605C */ 0x00140011UL,
+    /*    6060 */ 0x000075E3UL,
+    /*    6064 */ 0x00000000UL,
     0x000C6078UL, 0x11A0071BUL,
     /*    607C */ 0x00000000UL,
     /*    6080 */ 0x003B0373UL,
