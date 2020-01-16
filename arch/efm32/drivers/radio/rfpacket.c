@@ -295,8 +295,16 @@ static error_t efr32_radio_get_time(struct dev_rfpacket_ctx_s *gpv, dev_timer_va
   return 0;
 }
 
+static dev_timer_delay_t efr32_radio_calc_time(struct radio_efr32_rfp_ctx_s *ctx, uint32_t drate) {
+  struct radio_efr32_ctx_s *pv = &ctx->pv;
+  uint64_t result, num, denom;
+  num = 8000000 / drate * pv->freq.num;
+  denom = 1000000 * pv->freq.denom;
+  result = num / denom;
+  dev_timer_delay_t tb = (dev_timer_delay_t)result;
+  return tb;
 
-
+}
 
 /**************************** RFPACKET PART ********************************/
 
@@ -328,9 +336,8 @@ static inline error_t efr32_rf_config(struct radio_efr32_rfp_ctx_s *ctx,
     uint64_t chsp = ((uint64_t)(rfcfg->chan_spacing) * div) << 19;
     chsp /= EFR32_RADIO_HFXO_CLK;
     cpu_mem_write_32(EFR32_SYNTH_ADDR + EFR32_SYNTH_CHSP_ADDR, (uint32_t)chsp);
-    // FIXME FILL TIME BYTE INFO
-    // dev_timer_delay_t tb = 8000000 / rfcfg->drate;
-    // dev_timer_init_sec(ctx->gctx.timer, &(ctx->gctx.time_byte), 0, tb, 1000000);
+    // Calc time byte
+    ctx->gctx.time_byte = efr32_radio_calc_time(ctx, rfcfg->drate);
   }
   return 0;
 }
@@ -611,6 +618,8 @@ static void efr32_rfp_set_cca_threshold(struct radio_efr32_rfp_ctx_s *ctx,
 }
 
 static void efr32_rfp_start_tx_lbt(struct radio_efr32_rfp_ctx_s *ctx, struct dev_rfpacket_rq_s *rq) {
+  struct radio_efr32_ctx_s *pv = &ctx->pv;
+
   cpu_mem_write_32(EFR32_PROTIMER_ADDR + EFR32_PROTIMER_TOUTCNTTOP_ADDR(0), EFR32_PROTIMER_TOUTCNTTOP_PCNTTOP(4));
   cpu_mem_write_32(EFR32_PROTIMER_ADDR + EFR32_PROTIMER_TOUTCOMP_ADDR(0), EFR32_PROTIMER_TOUTCOMP_PCNTCOMP(1));
 
@@ -648,6 +657,9 @@ static void efr32_rfp_start_tx_lbt(struct radio_efr32_rfp_ctx_s *ctx, struct dev
 
   uint32_t nbsym = (EFR32_ETSI_LBT_TIME * rq->rf_cfg->drate)/1000000;
   nbsym = bit_ctz(pow2_up(nbsym));
+
+  // FIXME Timestamp between rx and tx
+  ctx->gctx.lbt_timestamp = efr32_protimer_get_value(&pv->pti);
 
   assert(nbsym < 15);
   // Configure AGC
@@ -760,16 +772,13 @@ static void efr32_rfp_rx_irq(struct radio_efr32_rfp_ctx_s *ctx, uint32_t irq) {
     efr32_rfp_req_done(ctx);
     return;
   }
-
-
   uint16_t size = cpu_mem_read_32(EFR32_BUFC_ADDR + EFR32_BUFC_READDATA_ADDR(1));
-
   cpu_mem_write_32(EFR32_BUFC_ADDR + EFR32_BUFC_CMD_ADDR(2), EFR32_BUFC_CMD_CLEAR);
 
   uint32_t status = cpu_mem_read_32(EFR32_BUFC_ADDR + EFR32_BUFC_STATUS_ADDR(1));
   status = EFR32_BUFC_STATUS_BYTES_GET(status);
 
-  assert(EFR32_BUFC_STATUS_BYTES_GET(status) >= size);
+  assert(status >= size);
   // Asking for buffer allocation
   ctx->gctx.size = size;
   uintptr_t p = dev_rfpacket_alloc(&ctx->gctx);
@@ -1167,13 +1176,6 @@ static DEV_INIT(efr32_radio_init) {
   efr32_rfp_cfg_rac_dbg(ctx);
   efr32_radio_debug_port(pv, 0x0);
   efr32_radio_debug_init(pv);
-#endif
-#ifdef CONFIG_DRIVER_EFR32_RFPACKET_SLEEP
-  // Radio is allowed to go to sleep
-  for (uint8_t i = 0; i < EFR32_RADIO_CLK_EP_COUNT; i++) {
-    dev_clock_sink_gate(&pv->clk_ep[i], DEV_CLOCK_EP_POWER);
-  }
-  ctx->sleep = true; // TODO PLAN WAKE-UP BY APP ?
 #endif
   // Note pvdata and interface into generic context
   ctx->gctx.pvdata = ctx;
