@@ -1064,7 +1064,7 @@ void dev_rfpacket_req_done(struct device_s *dev, struct dev_rfpacket_ctx_s *pv) 
 
     case DEV_RFPACKET_STATE_SLEEP:
     default:
-      UNREACHABLE();
+      rfpacket_idle(pv);
   }
 }
 
