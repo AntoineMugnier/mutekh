@@ -45,6 +45,7 @@
 #define SYNC_TIME_MS 250 // Waiting time between slave detection packet
 #define RX_TIME_MS 25 // Maximum waiting time for slave test response and time between test packets
 #define DISTURB_DEADLINE_MS 0 // Waiting time before sending disturb packet
+#define TD_MS_TICK_NB 32 // Value to divide td to get ms
 
 // Commands
 #define NEXT_CMD 'n'
@@ -67,7 +68,8 @@
 #define CRC_SIZE 2
 #define PAYLOAD_LENGTH_SIZE 1
 // Assuming the slave use the same tx preamble length as the master
-#define PCKT_TIME(size) (((pkcfg.tx_pb_len + pkcfg.sw_len + 1 + 8 * ((size) + CRC_SIZE + PAYLOAD_LENGTH_SIZE)) * pv.msec * 1000) / rfcfg.base.drate)
+#define PCKT_SIZE(size) (pkcfg.tx_pb_len + pkcfg.sw_len + 1 + 8 * ((size) + CRC_SIZE + PAYLOAD_LENGTH_SIZE))
+#define PCKT_TIME(size) (((uint64_t)PCKT_SIZE(size) * 1000 * pv.msec) / rfcfg.base.drate)
 
 // --- Private Types ---
 enum _test_rflbt_state {
@@ -177,7 +179,7 @@ static const struct dev_rfpacket_rf_cfg_fsk_s rfcfg = {
         },
         .drate = 38400,
         .jam_rssi = (-90) << 3,
-        .frequency = 865011875,
+        .frequency = 865054875,
         .chan_spacing = 93750,
         .rx_bw = 0,
         .freq_err = 868 * 20 /* ppm */,
@@ -238,7 +240,7 @@ static KROUTINE_EXEC(test_rflbt_rx_pckt_cb) {
         // Check data
         if (*(char *)pBuff == ACK_RSP) {
             pv.reply_time = rx->timestamp - pv.reply_time - (PCKT_TIME(rx->size));
-            //printk("Time: %ld ticks\n", (long)pv.reply_time);
+            //printk("Time: %lld ticks\n", pv.reply_time);
             if ((pv.state == STATE_TEST_LBT_BSY) || (pv.state == STATE_TEST_LBT_BSY_RND)) {
                 pv.results_array[pv.val_counter] = (uint32_t)(pv.reply_time);
                 //printk("Reply time: %d %d\n", pv.val_counter, pv.resultks[pv.val_counter]);
@@ -257,6 +259,8 @@ static KROUTINE_EXEC(test_rflbt_rx_pckt_cb) {
             for (uint8_t idx = 0; idx < rx->size; idx++) {
                 pv.time_dead += pBuff[idx] << (8*idx);
             }
+            // Normalize value to tick number
+            pv.time_dead = pv.time_dead * pv.msec / TD_MS_TICK_NB;
         }
     }
 }
@@ -339,7 +343,8 @@ static void test_rflbt_wait(uint32_t wait_time) {
     dev_timer_rq_init(trq, test_rflbt_wait_cb);
     error_t err = DEVICE_OP(&pv.timer_dev, request, trq);
 
-    if (err == ETIMEDOUT) {
+    if (err == -ETIMEDOUT) {
+        printk("Warning: Timer timeout\n");
         kroutine_exec(&trq->base.kr);
     } else if (err) {
         printk("Error: Timer failed: %d\n", err);
@@ -348,8 +353,8 @@ static void test_rflbt_wait(uint32_t wait_time) {
 
 static void test_rflbt_button(void) {
     struct dev_gpio_rq_s *grq = &pv.grq_struct;
-    grq->io_first = EFM32_PB10;
-    grq->io_last = EFM32_PB10;
+    grq->io_first = EFM32_PF6;
+    grq->io_last = EFM32_PF6;
     grq->type = DEV_GPIO_UNTIL;
     grq->until.mask = dev_gpio_mask1;
     pv.gpio_data[0] = 0x1;
@@ -668,18 +673,20 @@ static void test_rflbt_process(void) {
 void app_start(void) {
     printk("*** START OF TEST ***\n");
     // Retrieve devices
-    ensure(!device_get_accessor_by_path(&pv.rf_dev.base, NULL, "rfpacket0", DRIVER_CLASS_RFPACKET));
-    ensure(!device_get_accessor_by_path(&pv.timer_dev.base,  NULL, "rfpacket0", DRIVER_CLASS_TIMER));
+    ensure(!device_get_accessor_by_path(&pv.rf_dev.base, NULL, "efr32_radio", DRIVER_CLASS_RFPACKET));
+    ensure(!device_get_accessor_by_path(&pv.timer_dev.base,  NULL, "efr32_radio", DRIVER_CLASS_TIMER));
     ensure(!device_get_accessor_by_path(&pv.gpio_dev.base,  NULL, "gpio", DRIVER_CLASS_GPIO));
     // Set timer reference
     dev_timer_init_sec(&pv.timer_dev, &pv.msec, 0, 1, 1000);
+    printk("Msec: %d\n", pv.msec);
     // Init buffer
     for (uint8_t idx = 1; idx < sizeof(pv.dist_buf)/10; idx++) {
         pv.dist_buf[idx*10] = 0x55;
     }
     // Init button
-    DEVICE_OP(&pv.gpio_dev, set_mode, EFM32_PB10, EFM32_PB10, dev_gpio_mask1, DEV_PIN_INPUT_PULLUP);
-    //dev_gpio_mode(&pv.gpio_dev, EFM32_PB10, DEV_PIN_INPUT_PULLUP);
+    DEVICE_OP(&pv.gpio_dev, set_mode, EFM32_PF6, EFM32_PF6, dev_gpio_mask1, DEV_PIN_INPUT_PULLUP);
+    //DEVICE_OP(&pv.gpio_dev, set_mode, EFM32_PB10, EFM32_PB10, dev_gpio_mask1, DEV_PIN_INPUT_PULLUP);
+    //dev_gpio_mode(&pv.gpio_dev, EFM32_PF6, DEV_PIN_INPUT_PULLUP);
     // Init module
     test_rflbt_baserq(&pv.rq_struct);
     test_rflbt_baserq(&pv.rq_disturb);
