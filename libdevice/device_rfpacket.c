@@ -541,16 +541,20 @@ static inline void rfpacket_start_rx(struct dev_rfpacket_ctx_s *pv, struct dev_r
 
   switch (rq->type) {
     case DEV_RFPACKET_RQ_RX:
-      logk_trace("R");
-      rfpacket_set_state(pv, DEV_RFPACKET_STATE_RX);
       pv->deadline = rq->deadline ? rq->deadline : t;
       pv->timeout = pv->deadline + rq->lifetime;
+      logk_trace("R");
+      if (t >= pv->timeout) {
+        // Timeout date is already reached
+        return rfpacket_end_rq(pv, -ETIMEDOUT);
+      }
+      rfpacket_set_state(pv, DEV_RFPACKET_STATE_RX);
     break;
 
     case DEV_RFPACKET_RQ_RX_TIMEOUT:
+      pv->rxc_timeout = rq->deadline;
       logk_trace("RT");
       rfpacket_set_state(pv, DEV_RFPACKET_STATE_RXC);
-      pv->rxc_timeout = rq->deadline;
     break;
 
     case DEV_RFPACKET_RQ_RX_CONT:

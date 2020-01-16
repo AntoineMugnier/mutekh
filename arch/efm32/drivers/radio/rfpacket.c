@@ -699,12 +699,6 @@ static void efr32_rfp_start_rx_scheduled(struct radio_efr32_rfp_ctx_s *ctx) {
   dev_timer_value_t end = ctx->gctx.timeout;
   dev_timer_value_t t = efr32_protimer_get_value(&pv->pti);
 
-  if (end < t) {
-    // Deadline already reached
-    efr32_rfp_fill_status(ctx, DEV_RFPACKET_STATUS_RX_TIMEOUT);
-    efr32_rfp_req_done(ctx);
-    return;
-  }
   uint32_t x = EFR32_PROTIMER_RXCTRL_RXSETEVENT(0, ALWAYS) |
                EFR32_PROTIMER_RXCTRL_RXCLREVENT(0, ALWAYS) |
                EFR32_PROTIMER_RXCTRL_RXSETEVENT(1, CC1)    |
@@ -844,6 +838,8 @@ static void efr32_radio_rx(struct dev_rfpacket_ctx_s *gpv, struct dev_rfpacket_r
   cpu_mem_write_32(EFR32_SYNTH_ADDR + EFR32_SYNTH_CHCTRL_ADDR, rq->channel);
   // Check rq type
   switch (rq->type) {
+    // TODO RQ RX TIMEOUT support
+    // RX CONT + timer irq to ignore if cancel?
     case DEV_RFPACKET_RQ_RX_CONT:
       // Enable RX
       x = cpu_mem_read_32(EFR32_RAC_ADDR + EFR32_RAC_RXENSRCEN_ADDR);
@@ -856,7 +852,6 @@ static void efr32_radio_rx(struct dev_rfpacket_ctx_s *gpv, struct dev_rfpacket_r
       efr32_rfp_start_rx_scheduled(ctx);
     break;
 
-    // TODO RQ RX TIMEOUT support
 
     default:
       // Not supported
@@ -876,7 +871,7 @@ static void efr32_radio_tx(struct dev_rfpacket_ctx_s *gpv, struct dev_rfpacket_r
     cpu_mem_write_32(EFR32_BUFC_ADDR + EFR32_BUFC_CMD_ADDR(1), EFR32_BUFC_CMD_CLEAR);
     // Restart tx lbt
     efr32_rfp_start_tx_lbt(ctx, rq);
-    // TODO LBT FEATURES + LBT TIMESTAMP
+    // TODO LBT FEATURES
   }
   // Clear buffer
   cpu_mem_write_32(EFR32_BUFC_ADDR + EFR32_BUFC_CMD_ADDR(0), EFR32_BUFC_CMD_CLEAR);
