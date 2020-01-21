@@ -852,7 +852,6 @@ struct dev_rfpacket_ctx_s {
   /** This timestamp must be filled by the rfpacket driver as soon as possible
       when it receives a tx or rx event. */
   dev_timer_value_t timestamp;
-  dev_timer_value_t rxc_timeout;
   /** This timestamp must be filled by the driver as soon as possible
       when it stops listening during a @tt DEV_RFPACKET_RQ_TX_FAIR request. */
   dev_timer_value_t lbt_timestamp;

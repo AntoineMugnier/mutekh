@@ -174,6 +174,9 @@ struct si446x_ctx_s {
   dev_timer_delay_t ccad;
   // Time to send a complete fifo in us
   dev_timer_delay_t mpst;
+  // Time before rxc timeout
+  dev_timer_value_t rxc_timeout;
+  // Config
   const uint8_t *rftune;
   // Interrupt count
   uint8_t icount;

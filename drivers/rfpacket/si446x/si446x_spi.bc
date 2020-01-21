@@ -410,7 +410,7 @@ tune_done:
         tst32s                  %tmp,                    bitpos(SI446X_FLAGS_RXC_INFINITE)
           jmp8                  rxc_infinite
         mov                     %tmp,                    %R_CTX_PV
-        add8                    %tmp,                    _offsetof(si446x_ctx_s, gctx.rxc_timeout, 8)
+        add8                    %tmp,                    _offsetof(si446x_ctx_s, rxc_timeout, 8)
         spi_elapsed_r           %tmp
           jmp8                  rxc_timeout
   rxc_infinite:

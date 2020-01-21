@@ -607,6 +607,7 @@ static void si446x_rx(struct dev_rfpacket_ctx_s *gpv, struct dev_rfpacket_rq_s *
     break;
 
     case DEV_RFPACKET_RQ_RX_TIMEOUT:
+      pv->rxc_timeout = rq->deadline;
       pv->flags &= ~SI446X_FLAGS_RXC_INFINITE;
       goto rxc;
 
