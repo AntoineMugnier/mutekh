@@ -509,6 +509,7 @@ static void rfpacket_end_rxc(struct dev_rfpacket_ctx_s *pv, error_t err) {
 
     default:
       UNREACHABLE();
+    break;
   }
 }
 
@@ -552,7 +553,6 @@ static inline void rfpacket_start_rx(struct dev_rfpacket_ctx_s *pv, struct dev_r
     break;
 
     case DEV_RFPACKET_RQ_RX_TIMEOUT:
-      pv->rxc_timeout = rq->deadline;
       logk_trace("RT");
       rfpacket_set_state(pv, DEV_RFPACKET_STATE_RXC);
     break;
@@ -564,6 +564,7 @@ static inline void rfpacket_start_rx(struct dev_rfpacket_ctx_s *pv, struct dev_r
 
     default:
       UNREACHABLE();
+    break;
   }
   pv->drv->rx(pv, rq, false);
 }
@@ -620,6 +621,7 @@ static inline void rfpacket_start_tx(struct dev_rfpacket_ctx_s *pv, struct dev_r
 
     default:
       UNREACHABLE();
+    break;
   }
 }
 
@@ -654,6 +656,7 @@ static inline void rfpacket_retry_tx(struct dev_rfpacket_ctx_s *pv, bool_t resta
 
     default:
       UNREACHABLE();
+    break;
   }
 }
 
@@ -806,47 +809,52 @@ void dev_rfpacket_request(struct dev_rfpacket_ctx_s *pv, struct dev_rfpacket_rq_
         rq->deadline = t + rq->lifetime;
       }
     case DEV_RFPACKET_RQ_RX_CONT:
-      rq->base.drvdata = pv;
       if (rq->type == DEV_RFPACKET_RQ_RX_CONT) {
         rq->deadline = -1;
       }
-      switch (pv->state) {
-        case DEV_RFPACKET_STATE_READY:
-          assert(dev_rq_queue_isempty(&pv->rx_cont_queue));
-          dev_rfpacket_rq_insert(&pv->rx_cont_queue, rq);
-          rfpacket_idle(pv);
-        break;
+      // Check if rxcont queue empty
+      if (dev_rq_queue_isempty(&pv->rx_cont_queue)) {
+        // Note pvdata
+        rq->base.drvdata = pv;
+        // Check current state
+        switch (pv->state) {
+          case DEV_RFPACKET_STATE_READY:
+            dev_rfpacket_rq_insert(&pv->rx_cont_queue, rq);
+            rfpacket_idle(pv);
+          break;
 
-        case DEV_RFPACKET_STATE_SLEEP:
-          assert(dev_rq_queue_isempty(&pv->rx_cont_queue));
-          if (pv->drv->wakeup(pv)) {
-            rfpacket_set_state(pv, DEV_RFPACKET_STATE_AWAKING);
-          } else {
+          case DEV_RFPACKET_STATE_SLEEP:
+            assert(dev_rq_queue_isempty(&pv->rx_cont_queue));
+            if (pv->drv->wakeup(pv)) {
+              rfpacket_set_state(pv, DEV_RFPACKET_STATE_AWAKING);
+            } else {
+              UNREACHABLE();
+            }
+          case DEV_RFPACKET_STATE_ENTER_SLEEP:
+          case DEV_RFPACKET_STATE_AWAKING:
+          case DEV_RFPACKET_STATE_CONFIG:
+          case DEV_RFPACKET_STATE_RX:
+          case DEV_RFPACKET_STATE_TX:
+          case DEV_RFPACKET_STATE_TX_LBT:
+          case DEV_RFPACKET_STATE_INITIALISING:
+            // Queued till all other requests are done
+            dev_rfpacket_rq_insert(&pv->rx_cont_queue, rq);
+          break;
+
+          case DEV_RFPACKET_STATE_STOPPING_RXC:
+          case DEV_RFPACKET_STATE_PAUSE_RXC:
+          case DEV_RFPACKET_STATE_CONFIG_RXC_PENDING_STOP:
+          case DEV_RFPACKET_STATE_CONFIG_RXC:
+          case DEV_RFPACKET_STATE_TX_LBT_STOPPING_RXC:
+          case DEV_RFPACKET_STATE_RXC:
+            // Not compatible with empty rxcont queue
             UNREACHABLE();
-          }
-        case DEV_RFPACKET_STATE_ENTER_SLEEP:
-        case DEV_RFPACKET_STATE_AWAKING:
-        case DEV_RFPACKET_STATE_CONFIG:
-        case DEV_RFPACKET_STATE_RX:
-        case DEV_RFPACKET_STATE_TX:
-        case DEV_RFPACKET_STATE_TX_LBT:
-        case DEV_RFPACKET_STATE_STOPPING_RXC:
-        case DEV_RFPACKET_STATE_PAUSE_RXC:
-        case DEV_RFPACKET_STATE_CONFIG_RXC_PENDING_STOP:
-        case DEV_RFPACKET_STATE_CONFIG_RXC:
-        case DEV_RFPACKET_STATE_TX_LBT_STOPPING_RXC:
-        case DEV_RFPACKET_STATE_INITIALISING:
-          dev_rfpacket_rq_insert(&pv->rx_cont_queue, rq);
-        break;
-
-        case DEV_RFPACKET_STATE_RXC:
-          dev_rfpacket_rq_insert(&pv->rx_cont_queue, rq);
-          // TODO share the radio when using the same configuration
-          if (rq == dev_rfpacket_rq_head(&pv->rx_cont_queue)) {
-            rfpacket_set_state(pv, DEV_RFPACKET_STATE_PAUSE_RXC);
-            pv->drv->cancel_rxc(pv);
-          }
-        break;
+          break;
+        }
+      } else {
+        // Return -EBUSY, only one rxc at a time
+        rq->error = -EBUSY;
+        dev_rfpacket_rq_done(rq);
       }
       break;
 
@@ -963,6 +971,7 @@ uintptr_t dev_rfpacket_alloc(struct dev_rfpacket_ctx_s *pv) {
 
     default:
       UNREACHABLE();
+    break;
   }
   if (rq == NULL) {
     return 0;
@@ -1068,7 +1077,8 @@ void dev_rfpacket_req_done(struct device_s *dev, struct dev_rfpacket_ctx_s *pv) 
 
     case DEV_RFPACKET_STATE_SLEEP:
     default:
-      rfpacket_idle(pv);
+      UNREACHABLE();
+    break;
   }
 }
 
