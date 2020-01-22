@@ -765,7 +765,6 @@ static DEV_RFPACKET_REQUEST(si446x_rfp_request) {
     if (rq == NULL) {
       break;
     }
-    logk_trace("req %d %d", rq->type, rq->tx_size);
     rq->error = 0;
     dev_rfpacket_request(&pv->gctx, rq);
   }
@@ -777,7 +776,6 @@ static DEV_RFPACKET_CANCEL(si446x_rfp_cancel) {
   struct si446x_ctx_s *pv = dev->drv_pv;
   error_t err = 0;
 
-  logk_trace("cancel");
   assert(rq);
 
   LOCK_SPIN_IRQ(&dev->lock);
@@ -799,17 +797,21 @@ static KROUTINE_EXEC(si446x_spi_rq_done) {
 
   if (dev_rfpacket_init_done(&pv->gctx)) {
     assert(!srq->error);
-  } else if (srq->error) {
-    // Couldn't initialize
-    si446x_clean(dev);
-    device_async_init_done(dev, -EIO);
-    goto end;
+  } else {
+    if (srq->error) {
+      // Couldn't initialize
+      si446x_clean(dev);
+      device_async_init_done(dev, -EIO);
+      goto end;
+    } else {
+      device_async_init_done(dev, 0);
+    }
   }
   if (pv->bc_status & bit(STATUS_PACKET_RX)) {
     si446x_fill_rx_info(pv, pv->gctx.rxrq);
   }
   si446x_fill_status(pv);
-  dev_rfpacket_req_done(dev, &pv->gctx);
+  dev_rfpacket_req_done(&pv->gctx);
 
 end:
   LOCK_RELEASE_IRQ(&dev->lock);
