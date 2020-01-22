@@ -784,21 +784,18 @@ struct dev_rfpacket_wait_ctx_s
 
 /** @This specifies the internal state used in the rfpacket fsm */
 enum dev_rfpacket_state_s {
-  DEV_RFPACKET_STATE_INITIALISING,
+  DEV_RFPACKET_STATE_INITIALIZING,
   DEV_RFPACKET_STATE_ENTER_SLEEP,
   DEV_RFPACKET_STATE_SLEEP,
   DEV_RFPACKET_STATE_AWAKING,
   DEV_RFPACKET_STATE_READY,
   DEV_RFPACKET_STATE_CONFIG,
   DEV_RFPACKET_STATE_CONFIG_RXC,
-  DEV_RFPACKET_STATE_CONFIG_RXC_PENDING_STOP,
   DEV_RFPACKET_STATE_RX,
   DEV_RFPACKET_STATE_RXC,
-  DEV_RFPACKET_STATE_STOPPING_RXC,
   DEV_RFPACKET_STATE_PAUSE_RXC,
   DEV_RFPACKET_STATE_TX,
   DEV_RFPACKET_STATE_TX_LBT,
-  DEV_RFPACKET_STATE_TX_LBT_STOPPING_RXC,
 };
 
 /** @This specifies the possible request status for the rfpacket fsm */
@@ -861,6 +858,9 @@ struct dev_rfpacket_ctx_s {
   // Request for received packets
   struct dev_rfpacket_rx_s *rxrq;
   struct dev_rfpacket_rq_s *rq;
+  // Requests internal flags
+  uint8_t rq_flags;
+  uint8_t rxc_flags;
   // Current working size and buffer
   uint8_t *buffer;
   /** This value represents the size of the buffer to allocate. 
@@ -1004,6 +1004,10 @@ error_t dev_rfpacket_clean_check(struct dev_rfpacket_ctx_s *pv);
 config_depend(CONFIG_DEVICE_RFPACKET)
 bool_t dev_rfpacket_can_rxtx(struct dev_rfpacket_ctx_s *pv, struct dev_rfpacket_rq_s *rq);
 
+/** @This function is called by a rfpacket driver to indicate that it had a rxc timeout irq. */
+config_depend(CONFIG_DEVICE_RFPACKET)
+void dev_rfpacket_rxc_timeout(struct dev_rfpacket_ctx_s *pv);
+
 /** @This function is called by a rfpacket driver to indicate that it encountered
   an unsupported configuration. */
 config_depend(CONFIG_DEVICE_RFPACKET)
@@ -1027,7 +1031,7 @@ uintptr_t dev_rfpacket_alloc(struct dev_rfpacket_ctx_s *pv);
 /** @This function is called by a rfpacket driver to process a request end through
   the rfpacket fsm. */
 config_depend(CONFIG_DEVICE_RFPACKET)
-void dev_rfpacket_req_done(struct device_s *dev, struct dev_rfpacket_ctx_s *pv);
+void dev_rfpacket_req_done(struct dev_rfpacket_ctx_s *pv);
 
 /** @This function is called by a rfpacket driver to process a @ref DEV_USE call through
   the rfpacket fsm. */
