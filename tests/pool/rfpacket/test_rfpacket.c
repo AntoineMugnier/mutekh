@@ -90,7 +90,7 @@ static const struct dev_rfpacket_rf_cfg_fsk_s rfcfg = {
      },
      .drate = 38400,
      .jam_rssi = (-90) << 3,
-     .frequency = 86504875,
+     .frequency = 865056875,
      .chan_spacing = 93750,
      .rx_bw = 0,
      .freq_err = 868 * 20 /* ppm */,
@@ -230,6 +230,8 @@ static KROUTINE_EXEC(rfp_test_rx_callback)
     printk("[%lld] RX bad configuration\n", t);
   } else if (rq->error == -ETIMEDOUT) {
     printk("[%lld] RX timeout\n", t);
+  } else if (rq->error == -EBUSY) {
+    printk("[%lld] RX busy\n", t);
   } else if (rq->error) {
     printk("[%lld] RX end with error: %d\n", t, rq->error);
   } else {
