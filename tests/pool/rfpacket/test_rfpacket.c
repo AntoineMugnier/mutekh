@@ -51,7 +51,7 @@
 #define RFP_TEST_TIMER_PATH    "efr32_radio"
 #define RFP_TEST_DEVICE_0_PATH "efr32_radio"
 
-#define TEST_BASE_TIME_US 1000  /** us */
+#define TEST_BASE_TIME_US 1000
 
 #define RFP_TEST_TX_FAIR
 #define RFP_TEST_RX_CONTINOUS
@@ -93,19 +93,18 @@ static const struct dev_rfpacket_rf_cfg_fsk_s rfcfg = {
      .frequency = 865056875,
      .chan_spacing = 93750,
      .rx_bw = 0,
-     .freq_err = 868 * 20 /* ppm */,
+     .freq_err = 868 * 20 // ppm
  },
  .fairtx = {
      .mode = DEV_RFPACKET_LBT,
      .lbt.rssi = (-95) << 3,
-     .lbt.duration = 5000, /** us */
+     .lbt.duration = 5000, // us
   },
  .deviation = 19200,
  .symbols = 2,
 };
 
-struct rfp_test_rq_s
-{
+struct rfp_test_rq_s {
   struct dev_rfpacket_rq_s rq;
 #ifdef RFP_TEST_SLEEP
   struct dev_timer_rq_s trq;
@@ -116,8 +115,7 @@ STRUCT_COMPOSE(rfp_test_rq_s, rq);
 STRUCT_COMPOSE(rfp_test_rq_s, trq);
 #endif
 
-struct rfp_test_pv_s
-{
+struct rfp_test_pv_s {
   bool_t is_rxcont_on;
   struct device_rfpacket_s rfp;
   struct device_timer_s timer;
@@ -128,53 +126,47 @@ struct rfp_test_pv_s
   uint32_t base_time;
 };
 
+struct rfp_test_rx_s {
+  struct rfp_test_pv_s *pv;
+  struct dev_rfpacket_rx_s rx;
+};
+STRUCT_COMPOSE(rfp_test_rx_s, rx);
+
 static struct slab_s rxbuffer_slab;
 static struct slab_s rx_slab;
+static struct rfp_test_pv_s pv;
 
 #ifdef RFP_TEST_SLEEP
 static void rfp_test_wait_before_push(struct rfp_test_pv_s *pv, struct dev_rfpacket_rq_s *rq);
 #endif
 static void rfp_test_push_random_req(struct rfp_test_pv_s *pv, struct dev_rfpacket_rq_s *rq);
 
-static size_t rfp_test_grow_rxbuffer(struct slab_s *slab, size_t current)
-{
+static size_t rfp_test_grow_rxbuffer(struct slab_s *slab, size_t current) {
   return 4;
 }
 
-static size_t rfp_test_grow_rx(struct slab_s *slab, size_t current)
-{
+static size_t rfp_test_grow_rx(struct slab_s *slab, size_t current) {
   return 4;
 }
 
-static uint64_t rfp_test_set_random_deadline(struct rfp_test_pv_s *pv)
-{
+static uint64_t rfp_test_set_random_deadline(struct rfp_test_pv_s *pv) {
 #ifdef RFP_TEST_RX_CONTINOUS
   return 0;
 #else
   dev_timer_value_t t;
 
-  if (DEVICE_OP(&pv->timer, get_value, &t, 0))
+  if (DEVICE_OP(&pv->timer, get_value, &t, 0)) {
     abort();
-
+  }
   return t + (rand()%32) * pv->base_time;
 #endif
 }
 
-static uint32_t rfp_test_set_random_lifetime(struct rfp_test_pv_s *pv)
-{
+static uint32_t rfp_test_set_random_lifetime(struct rfp_test_pv_s *pv) {
   return ((64 + rand()%0xFF) * pv->base_time);
 }
 
-struct rfp_test_rx_s
-{
-  struct rfp_test_pv_s *pv;
-  struct dev_rfpacket_rx_s rx;
-};
-
-STRUCT_COMPOSE(rfp_test_rx_s, rx);
-
-static KROUTINE_EXEC(rfp_test_rx_packet_callback)
-{
+static KROUTINE_EXEC(rfp_test_rx_packet_callback) {
   struct dev_rfpacket_rx_s *rx = dev_rfpacket_rx_s_from_kr(kr);
   struct rfp_test_rx_s *base = rfp_test_rx_s_from_rx(rx);
   dev_timer_value_t t;
@@ -190,37 +182,29 @@ static KROUTINE_EXEC(rfp_test_rx_packet_callback)
   slab_free(&rx_slab, base);
 }
 
-static struct dev_rfpacket_rx_s *rfp_test_rx_alloc(struct dev_rfpacket_rq_s *rq, size_t size)
-{
+static struct dev_rfpacket_rx_s *rfp_test_rx_alloc(struct dev_rfpacket_rq_s *rq, size_t size) {
   struct rfp_test_pv_s *pv = rq->pvdata;
 
-  if ((rand() % 16) == 0)
+  if ((rand() % 16) == 0) {
     return NULL;
-
+  }
   struct rfp_test_rx_s *base = (struct rfp_test_rx_s *)slab_alloc(&rx_slab);
-
-  if (base == NULL)
+  if (base == NULL) {
     return NULL;
-
+  }
   base->pv = pv;
   struct dev_rfpacket_rx_s *rx = &base->rx;
-
   rx->buf = (uint8_t *)slab_alloc(&rxbuffer_slab);
-
-  if (rx->buf == NULL)
-    {
-      slab_free(&rx_slab, base);
-      return NULL;
-    }
-
+  if (rx->buf == NULL) {
+    slab_free(&rx_slab, base);
+    return NULL;
+  }
   kroutine_init_deferred(&rx->kr, &rfp_test_rx_packet_callback);
   rx->size = size;
-
   return rx;
 }
 
-static KROUTINE_EXEC(rfp_test_rx_callback)
-{
+static KROUTINE_EXEC(rfp_test_rx_callback) {
   struct dev_rfpacket_rq_s *rq = dev_rfpacket_rq_from_kr(kr);
   struct rfp_test_pv_s *pv = rq->pvdata;
   dev_timer_value_t t;
@@ -241,7 +225,6 @@ static KROUTINE_EXEC(rfp_test_rx_callback)
     pv->rx_cont = NULL;
     pv->is_rxcont_on = false;
   }
-
 #ifdef RFP_TEST_SLEEP
   rfp_test_wait_before_push(pv, rq);
 #else
@@ -249,19 +232,16 @@ static KROUTINE_EXEC(rfp_test_rx_callback)
 #endif
 }
 
-static inline uint8_t rfp_test_set_rand_size()
-{
+static inline uint8_t rfp_test_set_rand_size(void) {
   return 1 + (rand() % (MAX_PACKET_SIZE - 2));
 }
 
-static int16_t rfp_test_set_rand_power()
-{
+static int16_t rfp_test_set_rand_power(void) {
   int16_t p = (16 - rand() % 16) << 3;
   return p;
 }
 
-static KROUTINE_EXEC(rfp_test_tx_callback)
-{
+static KROUTINE_EXEC(rfp_test_tx_callback) {
   struct dev_rfpacket_rq_s *rq = dev_rfpacket_rq_from_kr(kr);
   struct rfp_test_pv_s *pv = rq->pvdata;
   dev_timer_value_t t;
@@ -284,8 +264,7 @@ static KROUTINE_EXEC(rfp_test_tx_callback)
 }
 
 #ifdef RFP_TEST_SLEEP
-static KROUTINE_EXEC(rfp_test_wait_before_push_cb)
-{
+static KROUTINE_EXEC(rfp_test_wait_before_push_cb) {
   struct dev_timer_rq_s *trq = KROUTINE_CONTAINER(kr, *trq, base.kr);
   struct rfp_test_rq_s *base = rfp_test_rq_s_from_trq(trq);
   struct rfp_test_pv_s *pv = trq->pvdata;
@@ -296,32 +275,27 @@ static KROUTINE_EXEC(rfp_test_wait_before_push_cb)
   rfp_test_push_random_req(trq->pvdata, &base->rq);
 }
 
-static void rfp_test_wait_before_push(struct rfp_test_pv_s *pv, struct dev_rfpacket_rq_s *rq)
-{
+static void rfp_test_wait_before_push(struct rfp_test_pv_s *pv, struct dev_rfpacket_rq_s *rq) {
   struct rfp_test_rq_s *base = rfp_test_rq_s_from_rq(rq);
   struct dev_timer_rq_s *trq = &base->trq;
 
   trq->delay = pv->base_time * 500;
   trq->rev = 0;
   trq->pvdata = pv;
-
   dev_timer_rq_init(trq, rfp_test_wait_before_push_cb);
-
   error_t err = DEVICE_OP(&pv->timer, request, trq);
 
-  switch (err)
-    {
+  switch (err) {
     case -ETIMEDOUT:
       kroutine_exec(&trq->base.kr);
     case 0:
     default:
-      break;
-    }
+    break;
+  }
 }
 #endif
 
-static void rfp_test_push_random_req(struct rfp_test_pv_s *pv, struct dev_rfpacket_rq_s *rq)
-{
+static void rfp_test_push_random_req(struct rfp_test_pv_s *pv, struct dev_rfpacket_rq_s *rq) {
   rq->err_group = 0;
   rq->pvdata = pv;
   rq->anchor = DEV_RFPACKET_TIMESTAMP_END;
@@ -336,8 +310,7 @@ static void rfp_test_push_random_req(struct rfp_test_pv_s *pv, struct dev_rfpack
   dev_timer_value_t t;
   DEVICE_OP(&pv->timer, get_value, &t, 0);
 
-  switch (type)
-    {
+  switch (type) {
     case 0:
 #ifdef RFP_TEST_RX_CONTINOUS
       if (!pv->is_rxcont_on) {
@@ -402,40 +375,34 @@ static void rfp_test_push_random_req(struct rfp_test_pv_s *pv, struct dev_rfpack
       break;
     }
 
-  switch (rq->type)
-    {
+  switch (rq->type) {
     case DEV_RFPACKET_RQ_TX:
     case DEV_RFPACKET_RQ_TX_FAIR:
       dev_rfpacket_rq_init(rq, &rfp_test_tx_callback);
-      break;
+    break;
+
     case DEV_RFPACKET_RQ_RX:
     case DEV_RFPACKET_RQ_RX_TIMEOUT:
     case DEV_RFPACKET_RQ_RX_CONT:
       dev_rfpacket_rq_init(rq, &rfp_test_rx_callback);
-      break;
-    }
-
+    break;
+  }
   DEVICE_OP(&pv->rfp, request, rq, NULL);
 }
 
-
-static struct rfp_test_pv_s pv;
-
-void app_start(void)
-{
+void app_start(void) {
   memset(&pv, 0, sizeof(pv));
-
   ensure(!device_get_accessor_by_path(&pv.rfp.base, NULL, RFP_TEST_DEVICE_0_PATH, DRIVER_CLASS_RFPACKET));
   ensure(!device_get_accessor_by_path(&pv.timer.base,  NULL, RFP_TEST_TIMER_PATH, DRIVER_CLASS_TIMER));
-
   dev_timer_init_sec(&pv.timer, &pv.base_time, 0, TEST_BASE_TIME_US, 1000000);
 
-  for(uint16_t i = 0; i < MAX_PACKET_SIZE; i++)
+  for(uint16_t i = 0; i < MAX_PACKET_SIZE; i++) {
     pv.txdata[i] = i;
-
+  }
   slab_init(&rxbuffer_slab, MAX_PACKET_SIZE, &rfp_test_grow_rxbuffer, mem_scope_sys);
   slab_init(&rx_slab, sizeof(struct rfp_test_rx_s), &rfp_test_grow_rx, mem_scope_sys);
 
-  for (uint8_t i = 0; i< RFP_TEST_RQ_NUMBER; i++)
+  for (uint8_t i = 0; i< RFP_TEST_RQ_NUMBER; i++) {
     rfp_test_push_random_req(&pv, &pv.rq[i].rq);
+  }
 }
