@@ -11,6 +11,7 @@ net \
 printk \
 rtt \
 rfpacket \
+smi \
 spi \
 timer \
 usb \
