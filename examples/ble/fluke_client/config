@@ -1,0 +1,25 @@
+%set OUTPUT_NAME fluke_client
+%append MODULES app:$(CONFIGPATH)
+
+CONFIG_COMPILE_COLLECT
+CONFIG_COMPILE_DEBUG
+CONFIG_MUTEK_THREAD
+
+CONFIG_LICENSE_APP_BSD
+
+# Libs
+CONFIG_APP_START
+
+%inherit ble-central
+#%inherit ble-security
+#%inherit printk
+
+CONFIG_BLE_PROFILE_FLUKE_CENTRAL
+
+%include arch/arch.build
+%include scripts/options.build
+%include examples/ble/ble.build
+
+CONFIG_DRIVER_NRF5X_NVMC undefined
+
+CONFIG_HEXO_CPU_STACK_SIZE 0x1000
