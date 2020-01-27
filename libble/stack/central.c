@@ -278,6 +278,9 @@ static void ctr_scan_destroyed(void *delegate, struct net_layer_s *layer)
 {
   struct ble_central_s *ctr = delegate;
 
+  if (layer == ctr->scan)
+    ctr->scan = NULL;
+  
   ctr_state_update(ctr);
 }
 
