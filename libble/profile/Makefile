@@ -1,0 +1,1 @@
+subdirs-$(CONFIG_BLE_PROFILE_FLUKE_CENTRAL) += fluke
