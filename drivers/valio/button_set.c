@@ -44,10 +44,12 @@ struct bs_context_s
   struct device_gpio_s gpio;
   struct dev_gpio_rq_s gpio_rq;
 
+  uint64_t active_high;
+  uint64_t pull;
+
   uint8_t mask[8];
   uint8_t cur[8];
 
-  bool_t active_high;
   bool_t busy;
   uint8_t state_size;
 };
@@ -57,6 +59,10 @@ DRIVER_PV(struct bs_context_s);
 static void bs_state_read(struct bs_context_s *pv,
                           struct dev_valio_rq_s *rq)
 {
+  for (uint8_t i = 0; i < 8; ++i) {
+    pv->cur[i] &= pv->mask[i];
+  }
+
   uint64_t mask = endian_le64_na_load(pv->mask);
   uint64_t value = endian_le64_na_load(pv->cur);
   uint8_t button = 0;
@@ -66,14 +72,16 @@ static void bs_state_read(struct bs_context_s *pv,
   while (mask) {
     uint8_t b = bit_ctz64(mask);
 
-    if (bit_get(value, b) == pv->active_high)
+    if (bit_get(value, b) == bit_get(pv->active_high, b))
       ((uint8_t *)rq->data)[button / 8] |= 1 << (button & 7);
 
     BIT_CLEAR(mask, b);
     button++;
   }
 
-  logk_trace("%s %llx %llx %P", __FUNCTION__, mask, value,
+  mask = endian_le64_na_load(pv->mask);
+
+  logk_trace("%s %llx %llx %llx %P", __FUNCTION__, mask, value, pv->active_high,
              rq->data, pv->state_size);
 }
 
@@ -83,7 +91,7 @@ static void bs_gpio_read(struct device_s *dev)
 
   pv->gpio_rq.type = DEV_GPIO_GET_INPUT;
   pv->gpio_rq.input.data = pv->cur;
-
+  
   pv->busy = 1;
   DEVICE_OP(&pv->gpio, request, &pv->gpio_rq);
 }
@@ -95,6 +103,9 @@ static void bs_gpio_wait(struct device_s *dev)
   pv->gpio_rq.type = DEV_GPIO_UNTIL;
   pv->gpio_rq.until.mask = pv->mask;
   pv->gpio_rq.until.data = pv->cur;
+
+  logk_trace("%s %P", __FUNCTION__,
+             pv->cur, pv->state_size);
 
   pv->busy = 1;
   DEVICE_OP(&pv->gpio, request, &pv->gpio_rq);
@@ -204,6 +215,7 @@ static DEV_INIT(button_set_init)
   uintptr_t tmp;
   gpio_id_t id;
   gpio_width_t width;
+  uint8_t button = 0;
 
   pv = mem_alloc(sizeof(*pv), mem_scope_sys);
   if (!pv)
@@ -238,22 +250,50 @@ static DEV_INIT(button_set_init)
   dev_rq_queue_init(&pv->queue);
 
   err = device_get_param_uint(dev, "active", &tmp);
-  pv->active_high = err || tmp;
+  pv->active_high = -(err || tmp);
+
+  err = device_get_param_uint(dev, "active_mask", &tmp);
+  if (!err)
+    pv->active_high = tmp;
+
+  err = device_get_param_uint(dev, "pull", &tmp);
+  if (!err)
+    pv->pull = tmp;
+  else
+    pv->pull = -1;
+
+  while (mask) {
+    uint8_t b = bit_ctz64(mask);
+
+    if (bit_get(pv->pull, b)) {
+      if (bit_get(pv->active_high, b)) {
+        dev_gpio_mode(&pv->gpio, id + b, DEV_PIN_INPUT_PULLDOWN);
+      } else {
+        dev_gpio_mode(&pv->gpio, id + b, DEV_PIN_INPUT_PULLUP);
+      }
+    } else {
+        dev_gpio_mode(&pv->gpio, id + b, DEV_PIN_INPUT);
+    }
+    
+    button++;
+    BIT_CLEAR(mask, b);
+  }
 
   pv->gpio_rq.pvdata = dev;
   pv->gpio_rq.io_first = id;
   pv->gpio_rq.io_last = id + width - 1;
-  pv->gpio_rq.type = DEV_GPIO_MODE;
   pv->gpio_rq.mode.mask = pv->mask;
-  pv->gpio_rq.mode.mode = pv->active_high ? DEV_PIN_INPUT_PULLDOWN : DEV_PIN_INPUT_PULLUP;
+  pv->gpio_rq.type = DEV_GPIO_GET_INPUT;
+//  pv->gpio_rq.mode.mode = pv->active_high ? DEV_PIN_INPUT_PULLDOWN : DEV_PIN_INPUT_PULLUP;
 
   dev_gpio_rq_init(&pv->gpio_rq, bs_gpio_done);
 
-  pv->busy = 1;
+  pv->busy = 0;
 
-  memset(pv->cur, pv->active_high ? 0 : 0xff, sizeof(pv->cur));
-
-  DEVICE_OP(&pv->gpio, request, &pv->gpio_rq);
+  endian_le64_na_store(pv->cur, pv->active_high);
+//  memset(pv->cur, pv->active_high ? 0 : 0xff, sizeof(pv->cur));
+//
+//  DEVICE_OP(&pv->gpio, request, &pv->gpio_rq);
 
   return 0;
 
