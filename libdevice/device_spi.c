@@ -28,6 +28,7 @@
 #include <device/request.h>
 
 #include <mutek/bytecode.h>
+#include <mutek/printk.h>
 
 #ifdef CONFIG_MUTEK_CONTEXT_SCHED
 # include <mutek/scheduler.h>
@@ -132,6 +133,7 @@ device_spi_ctrl_transfer(struct dev_spi_ctrl_context_s *q,
       else
         {
           /* this request requires a chip select configuration */
+          logk_error("chip select config missing, %x", csop);
           err = -ENOENT;
           goto err;
         }
