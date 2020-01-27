@@ -118,8 +118,12 @@ struct ble_scan_item_s *ble_scan_filter_device_get(struct ble_scan_filter_s *sf,
   item->device.first_seen = net_scheduler_time_get(sf->layer.scheduler);
   ble_scan_list_insert(&sf->devices, item);
   item->policy = BLE_SCAN_FILTER_MONITOR;
+#ifdef CONFIG_BLE_CRYPTO
   item->device.known = ble_security_db_contains(sf->peerdb, addr);
-
+#else
+  item->device.known = 0;
+#endif
+  
   ble_scan_filter_cleanup_later(sf);
 
   return item;
@@ -129,6 +133,7 @@ static
 bool_t ble_scan_filter_address_resolve(struct ble_scan_filter_s *sf,
                                        struct ble_addr_s *adva)
 {
+#ifdef CONFIG_BLE_CRYPTO
   struct ble_peer_s peer;
   error_t err;
 
@@ -145,6 +150,9 @@ bool_t ble_scan_filter_address_resolve(struct ble_scan_filter_s *sf,
 
   *adva = peer.addr;
   return 1;
+#else
+  return 0;
+#endif
 }
 
 static

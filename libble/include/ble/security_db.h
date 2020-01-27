@@ -38,6 +38,8 @@
 # include <device/class/crypto.h>
 #endif
 
+struct persist_context_s;
+struct persist_config;
 struct dev_rng_s;
 struct ble_peer_s;
 

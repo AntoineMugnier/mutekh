@@ -99,11 +99,13 @@ static void ctr_conn_state_changed(struct ble_stack_connection_s *conn,
   if (!connected && ctr->mode & BLE_CENTRAL_CONNECTABLE)
     scan_start(ctr);
 
+#ifdef CONFIG_BLE_CRYPTO
   if (connected
       && !(ctr->mode & BLE_CENTRAL_PAIRABLE)
       && conn->peer.paired
       && conn->peer.ltk_present)
     ble_llcp_encryption_enable(conn->llcp);
+#endif
 
   ctr_state_update(ctr);
 }
@@ -212,7 +214,11 @@ static error_t scan_start(struct ble_central_s *ctr)
   }
 
   struct ble_scan_filter_param_s filter_params = {
+#ifdef CONFIG_BLE_CRYPTO
     .peerdb = &ctr->context->security_db,
+#else
+    .peerdb = NULL,
+#endif
     .scan_params = ctr->params,
   };
 
