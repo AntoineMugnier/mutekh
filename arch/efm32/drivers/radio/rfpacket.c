@@ -41,6 +41,11 @@
                                    EFR32_FRC_IF_BLOCKERROR |      \
                                    EFR32_FRC_IF_FRAMEERROR)
 
+enum efr32_rac_irq_type {
+  EFR32_RAC_IRQ_TIMEOUT,
+  EFR32_RAC_IRQ_TXRX,
+};
+
 DRIVER_PV(struct radio_efr32_rfp_ctx_s {
   struct radio_efr32_ctx_s pv;
   uint8_t sg_buffer[EFR32_RADIO_RFP_BUFFER_SIZE];
@@ -48,6 +53,8 @@ DRIVER_PV(struct radio_efr32_rfp_ctx_s {
   // Req status
   enum dev_rfpacket_status_s done_status;
   enum dev_rfpacket_status_s timeout_status;
+  // RAC irq type
+  enum efr32_rac_irq_type rac_irq_type;
   // RQ_RX_TIMEOUT time request struct
   struct dev_timer_rq_s rx_cont_trq;
   // Generic rfpacket context struct
@@ -66,7 +73,6 @@ static void efr32_rfp_timer_irq(struct device_s *dev);
 static error_t efr32_radio_get_time(struct dev_rfpacket_ctx_s *gpv, dev_timer_value_t *value);
 static inline error_t efr32_rf_config(struct radio_efr32_rfp_ctx_s *ctx, struct dev_rfpacket_rq_s *rq);
 static inline error_t efr32_pkt_config(struct radio_efr32_rfp_ctx_s *ctx, struct dev_rfpacket_rq_s *rq);
-static bool_t efr32_check_rac_off(struct radio_efr32_rfp_ctx_s *ctx);
 static inline void  efr32_rfp_set_status_timeout(struct radio_efr32_rfp_ctx_s *ctx, enum dev_rfpacket_status_s status);
 static void efr32_rfp_req_timeout(struct radio_efr32_rfp_ctx_s *ctx);
 static inline void  efr32_rfp_set_status_done(struct radio_efr32_rfp_ctx_s *ctx, enum dev_rfpacket_status_s status);
@@ -74,12 +80,12 @@ static void efr32_rfp_req_done(struct radio_efr32_rfp_ctx_s *ctx);
 static void efr32_rfp_req_done_direct(struct radio_efr32_rfp_ctx_s *ctx, enum dev_rfpacket_status_s status);
 static void efr32_rfp_set_cca_threshold(struct radio_efr32_rfp_ctx_s *ctx, struct dev_rfpacket_rq_s *rq);
 static void efr32_rfp_start_tx_lbt(struct radio_efr32_rfp_ctx_s *ctx, struct dev_rfpacket_rq_s *rq);
-static void efr32_rfp_disable(struct radio_efr32_rfp_ctx_s *ctx);
+static bool_t efr32_rfp_disable(struct radio_efr32_rfp_ctx_s *ctx);
 static void efr32_rfp_start_rx_scheduled(struct radio_efr32_rfp_ctx_s *ctx);
 static int16_t efr32_rfp_get_rssi(struct radio_efr32_rfp_ctx_s *ctx, uintptr_t a);
 static void efr32_rfp_read_packet(struct radio_efr32_rfp_ctx_s *ctx);
 static void efr32_rfp_rx_irq(struct radio_efr32_rfp_ctx_s *ctx, uint32_t irq);
-static inline void efr32_rfp_tx_irq(struct radio_efr32_rfp_ctx_s *ctx, uint32_t irq);
+static void efr32_rfp_tx_irq(struct radio_efr32_rfp_ctx_s *ctx, uint32_t irq);
 static error_t efr32_rfp_fsk_init(struct radio_efr32_rfp_ctx_s *ctx);
 #ifdef CONFIG_RFPACKET_SIGFOX
 static error_t efr32_rfp_sigfox_init(struct radio_efr32_rfp_ctx_s *ctx);
@@ -237,32 +243,47 @@ static void efr32_rfp_timer_irq(struct device_s *dev) {
 
     uint32_t x = endian_le32(cpu_mem_read_32(EFR32_RAC_ADDR + EFR32_RAC_STATUS_ADDR));
     x = EFR32_RAC_STATUS_STATE_GET(x);
-    // Tx timeout test
+
     if (irq & EFR32_PROTIMER_IF_LBTFAILURE) {
-      // Check RAC state
-      if (x == EFR32_RAC_STATUS_STATE_RXFRAME) {
-        // A packet is being received
-        break;
-      }
-      efr32_rfp_disable(ctx);
+      // Tx LBT timeout
       efr32_radio_printk("tx timeout\n");
       efr32_rfp_set_status_timeout(ctx, DEV_RFPACKET_STATUS_TX_TIMEOUT);
-      efr32_rfp_req_timeout(ctx);
-    }
-    // Compare channel Rx end interrupt
-    if (irq & EFR32_PROTIMER_IF_CC(EFR32_PROTIMER_RX_STOP_CHANNEL)) {
+      // Check if packet incoming
+      if (!dev_rfpacket_is_packet_incoming(&ctx->gctx)) {
+        // No packet incoming, try to disable radio
+        if (efr32_rfp_disable(ctx)) {
+          // Disable already done, call req timeout
+          efr32_rfp_req_timeout(ctx);
+        } else {
+          // Disable pending irq
+          ctx->rac_irq_type = EFR32_RAC_IRQ_TIMEOUT;
+        }
+      } else {
+        // Call req timeout
+        efr32_rfp_req_timeout(ctx);
+      }
+    } else if (irq & EFR32_PROTIMER_IF_CC(EFR32_PROTIMER_RX_STOP_CHANNEL)) {
       // Rx timeout
       efr32_protimer_disable_compare(pti, EFR32_PROTIMER_RX_STOP_CHANNEL);
-      // Check RAC state
-      if (x != EFR32_RAC_STATUS_STATE_OFF) {
-        efr32_rfp_disable(ctx);
-      }
       efr32_radio_printk("rx timeout\n");
       efr32_rfp_set_status_timeout(ctx, DEV_RFPACKET_STATUS_RX_TIMEOUT);
-      efr32_rfp_req_timeout(ctx);
+      // Check if packet incoming
+      if (!dev_rfpacket_is_packet_incoming(&ctx->gctx)) {
+        // No packet incoming, try to disable radio
+        if (efr32_rfp_disable(ctx)) {
+          // Disable already done, call req timeout
+          efr32_rfp_req_timeout(ctx);
+        } else {
+          // Disable pending irq
+          ctx->rac_irq_type = EFR32_RAC_IRQ_TIMEOUT;
+        }
+      } else {
+        // Call req timeout
+        efr32_rfp_req_timeout(ctx);
+      }
     }
-    // Timer class interrupts
     if (!(irq & (EFR32_PROTIMER_IF_CC(EFR32_PROTIMER_CHANNEL) | EFR32_PROTIMER_IF_WRAPCNTOF))) {
+      // Timer class interrupts
       break;
     }
 #if EFR32_PROTIMER_HW_WIDTH < 64
@@ -550,22 +571,6 @@ static inline error_t efr32_pkt_config(struct radio_efr32_rfp_ctx_s *ctx,
   return 0;
 }
 
-static bool_t efr32_check_rac_off(struct radio_efr32_rfp_ctx_s *ctx) {
-  // Check RAC state
-  uint32_t x = endian_le32(cpu_mem_read_32(EFR32_RAC_ADDR + EFR32_RAC_STATUS_ADDR));
-  if (EFR32_RAC_STATUS_STATE_GET(x) != EFR32_RAC_STATUS_STATE_OFF) {
-    cpu_mem_write_32(EFR32_RAC_ADDR + EFR32_RAC_IFC_ADDR, EFR32_RAC_IF_STATECHANGE);
-    cpu_mem_write_32(EFR32_RAC_ADDR + EFR32_RAC_IEN_ADDR, EFR32_RAC_IF_STATECHANGE);
-    x = endian_le32(cpu_mem_read_32(EFR32_RAC_ADDR + EFR32_RAC_STATUS_ADDR));
-    // Trigger IRQ in case we missed the transition
-    if (EFR32_RAC_STATUS_STATE_GET(x) == EFR32_RAC_STATUS_STATE_OFF) {
-      cpu_mem_write_32(EFR32_RAC_ADDR + EFR32_RAC_IFS_ADDR, EFR32_RAC_IF_STATECHANGE);
-    }
-    return 0;
-  }
-  return 1;
-}
-
 #ifdef CONFIG_DRIVER_EFR32_DEBUG
 static void efr32_rfp_cfg_rac_dbg(struct radio_efr32_rfp_ctx_s *ctx) {
   uint32_t x;
@@ -649,7 +654,7 @@ static KROUTINE_EXEC(efr32_radio_rq_timeout) {
 
   efr32_radio_printk("req timeout\n");
   ctx->gctx.status = ctx->timeout_status;
-  dev_rfpacket_req_done(&ctx->gctx);
+  dev_rfpacket_rxtx_timeout(&ctx->gctx);
 }
 
 static void efr32_rfp_req_timeout(struct radio_efr32_rfp_ctx_s *ctx) {
@@ -684,9 +689,7 @@ static void efr32_rfp_req_done_direct(struct radio_efr32_rfp_ctx_s *ctx, enum de
   dev_rfpacket_req_done(&ctx->gctx);
 }
 
-
-static void efr32_rfp_set_cca_threshold(struct radio_efr32_rfp_ctx_s *ctx,
-                                        struct dev_rfpacket_rq_s *rq) {
+static void efr32_rfp_set_cca_threshold(struct radio_efr32_rfp_ctx_s *ctx, struct dev_rfpacket_rq_s *rq) {
   const struct dev_rfpacket_rf_cfg_fsk_s * c = const_dev_rfpacket_rf_cfg_fsk_s_cast(rq->rf_cfg);
   int16_t r = c->fairtx.lbt.rssi >> 3;
   int8_t v = (r & 0x7F) | (r < 0 ? 0x80 : 0);
@@ -761,18 +764,28 @@ static void efr32_rfp_start_tx_lbt(struct radio_efr32_rfp_ctx_s *ctx, struct dev
   cpu_mem_write_32(EFR32_PROTIMER_ADDR + EFR32_PROTIMER_CMD_ADDR, EFR32_PROTIMER_CMD_LBTSTART);
 }
 
-static void efr32_rfp_disable(struct radio_efr32_rfp_ctx_s *ctx) {
+static bool_t efr32_rfp_disable(struct radio_efr32_rfp_ctx_s *ctx) {
   // Disable RX
   uint32_t x = cpu_mem_read_32(EFR32_RAC_ADDR + EFR32_RAC_RXENSRCEN_ADDR);
   x &= ~0xF;
-
   cpu_mem_write_32(EFR32_RAC_ADDR + EFR32_RAC_RXENSRCEN_ADDR, 0);
   cpu_mem_write_32(EFR32_FRC_ADDR + EFR32_FRC_CMD_ADDR, EFR32_FRC_CMD_RXABORT);
-  // Disable TX
+  // Disable Tx
   cpu_mem_write_32(EFR32_RAC_ADDR + EFR32_RAC_CMD_ADDR, EFR32_RAC_CMD_TXDIS);
+  // Turn RAX off
   cpu_mem_write_32(EFR32_RAC_ADDR + EFR32_RAC_FORCESTATE_ADDR, EFR32_RAC_STATUS_STATE_OFF);
   // Clear irq
   cpu_mem_write_32(EFR32_FRC_ADDR + EFR32_FRC_IF_ADDR, 0);
+  // Check RAC state
+  x = endian_le32(cpu_mem_read_32(EFR32_RAC_ADDR + EFR32_RAC_STATUS_ADDR));
+  if (EFR32_RAC_STATUS_STATE_GET(x) != EFR32_RAC_STATUS_STATE_OFF) {
+    // Set RAC interrupt
+    cpu_mem_write_32(EFR32_RAC_ADDR + EFR32_RAC_IFC_ADDR, EFR32_RAC_IF_STATECHANGE);
+    cpu_mem_write_32(EFR32_RAC_ADDR + EFR32_RAC_IEN_ADDR, EFR32_RAC_IF_STATECHANGE);
+    //cpu_mem_write_32(EFR32_RAC_ADDR + EFR32_RAC_IFS_ADDR, EFR32_RAC_IF_STATECHANGE);
+    return false;
+  }
+  return true;
 }
 
 static void efr32_rfp_start_rx_scheduled(struct radio_efr32_rfp_ctx_s *ctx) {
@@ -830,30 +843,34 @@ static void efr32_rfp_read_packet(struct radio_efr32_rfp_ctx_s *ctx) {
   rx->rssi = efr32_rfp_get_rssi(ctx, EFR32_AGC_FRAMERSSI_ADDR);
   // Call rfpacket to process request completion
   efr32_radio_printk("read packet\n");
-  efr32_rfp_set_status_done(ctx, DEV_RFPACKET_STATUS_RX_DONE);
-  efr32_rfp_req_done(ctx);
+  if (efr32_rfp_disable(ctx)) {
+    efr32_rfp_req_done_direct(ctx, DEV_RFPACKET_STATUS_RX_DONE);
+  } else {
+    efr32_rfp_set_status_done(ctx, DEV_RFPACKET_STATUS_RX_DONE);
+    ctx->rac_irq_type = EFR32_RAC_IRQ_TXRX;
+  }
 }
 
-// static KROUTINE_EXEC(efr32_rfp_rx) {
-//   struct radio_efr32_ctx_s *pv = radio_efr32_ctx_s_from_kr(kr);
-//   struct radio_efr32_rfp_ctx_s *ctx = radio_efr32_rfp_ctx_s_from_pv(pv);
+static KROUTINE_EXEC(efr32_rfp_rx) {
+  struct radio_efr32_ctx_s *pv = radio_efr32_ctx_s_from_kr(kr);
+  struct radio_efr32_rfp_ctx_s *ctx = radio_efr32_rfp_ctx_s_from_pv(pv);
 
-//   efr32_rfp_read_packet(ctx);
-// }
+  efr32_rfp_read_packet(ctx);
+}
 
 static void efr32_rfp_rx_irq(struct radio_efr32_rfp_ctx_s *ctx, uint32_t irq) {
-  //struct radio_efr32_ctx_s *pv = &ctx->pv;
-
-  // Check RAC state
-  uint32_t x = endian_le32(cpu_mem_read_32(EFR32_RAC_ADDR + EFR32_RAC_STATUS_ADDR));
-  x = EFR32_RAC_STATUS_STATE_GET(x);
+  struct radio_efr32_ctx_s *pv = &ctx->pv;
 
   if (irq != EFR32_FRC_IF_RXDONE) {
     // Flush RX fifo
     cpu_mem_write_32(EFR32_BUFC_ADDR + EFR32_BUFC_CMD_ADDR(1), EFR32_BUFC_CMD_CLEAR);
     efr32_radio_printk("crc err\n");
     efr32_rfp_set_status_done(ctx, DEV_RFPACKET_STATUS_CRC_ERR);
-    efr32_rfp_req_done(ctx);
+    if (efr32_rfp_disable(ctx)) {
+      efr32_rfp_req_done(ctx);
+    } else {
+      ctx->rac_irq_type = EFR32_RAC_IRQ_TXRX;
+    }
     return;
   }
   uint16_t size = cpu_mem_read_32(EFR32_BUFC_ADDR + EFR32_BUFC_READDATA_ADDR(1));
@@ -873,16 +890,21 @@ static void efr32_rfp_rx_irq(struct radio_efr32_rfp_ctx_s *ctx, uint32_t irq) {
     cpu_mem_write_32(EFR32_BUFC_ADDR + EFR32_BUFC_CMD_ADDR(2), EFR32_BUFC_CMD_CLEAR);
     efr32_radio_printk("alloc err\n");
     efr32_rfp_set_status_done(ctx, DEV_RFPACKET_STATUS_OTHER_ERR);
-    efr32_rfp_req_done(ctx);
+    if (efr32_rfp_disable(ctx)) {
+      efr32_rfp_req_done(ctx);
+    } else {
+      ctx->rac_irq_type = EFR32_RAC_IRQ_TXRX;
+    }
     return;
   }
+  // Warn of incoming packet
+  dev_rfpacket_packet_incoming(&ctx->gctx);
   // Ask to read outside of irq
-  efr32_rfp_read_packet(ctx);
-  // kroutine_init_deferred(&pv->kr, &efr32_rfp_rx);
-  // kroutine_exec(&pv->kr);
+  kroutine_init_deferred(&pv->kr, &efr32_rfp_rx);
+  kroutine_exec(&pv->kr);
 }
 
-static inline void efr32_rfp_tx_irq(struct radio_efr32_rfp_ctx_s *ctx, uint32_t irq) {
+static void efr32_rfp_tx_irq(struct radio_efr32_rfp_ctx_s *ctx, uint32_t irq) {
   // If tx is over
   if (irq & EFR32_FRC_IF_TXDONE) {
     // Set status
@@ -893,8 +915,29 @@ static inline void efr32_rfp_tx_irq(struct radio_efr32_rfp_ctx_s *ctx, uint32_t 
     efr32_rfp_set_status_done(ctx, DEV_RFPACKET_STATUS_OTHER_ERR);
   }
   efr32_radio_printk("tx packet\n");
-  // Call rfpacket to process request completion
-  efr32_rfp_req_done(ctx);
+  if (efr32_rfp_disable(ctx)) {
+    // Call rfpacket to process request completion
+    efr32_rfp_req_done(ctx);
+  } else {
+    // Wait for rac irq
+    ctx->rac_irq_type = EFR32_RAC_IRQ_TXRX;
+  }
+}
+
+static void efr32_rfp_rac_irq(struct radio_efr32_rfp_ctx_s *ctx) {
+  switch(ctx->rac_irq_type) {
+    case EFR32_RAC_IRQ_TIMEOUT:
+      efr32_rfp_req_timeout(ctx);
+    break;
+
+    case EFR32_RAC_IRQ_TXRX:
+      efr32_rfp_req_done(ctx);
+    break;
+
+    default:
+      UNREACHABLE();
+    break;
+  }
 }
 
 
@@ -985,7 +1028,7 @@ static void efr32_radio_tx(struct dev_rfpacket_ctx_s *gpv, struct dev_rfpacket_r
     cpu_mem_write_32(EFR32_BUFC_ADDR + EFR32_BUFC_CMD_ADDR(1), EFR32_BUFC_CMD_CLEAR);
     // Restart tx lbt
     efr32_rfp_start_tx_lbt(ctx, rq);
-    // TODO LBT FEATURES
+    // TODO LBT FEATURES (no rx, lbt norm)
   }
   // Clear buffer
   cpu_mem_write_32(EFR32_BUFC_ADDR + EFR32_BUFC_CMD_ADDR(0), EFR32_BUFC_CMD_CLEAR);
@@ -1021,9 +1064,15 @@ static void efr32_radio_tx(struct dev_rfpacket_ctx_s *gpv, struct dev_rfpacket_r
 
 static void efr32_radio_cancel_rxc(struct dev_rfpacket_ctx_s *gpv) {
   struct radio_efr32_rfp_ctx_s *ctx = gpv->pvdata;
-  efr32_rfp_disable(ctx);
   efr32_radio_printk("rxc canceled\n");
-  efr32_rfp_req_done_direct(ctx, DEV_RFPACKET_STATUS_MISC);
+  if (efr32_rfp_disable(ctx)) {
+    // Disable already done, call req done
+    efr32_rfp_req_done_direct(ctx, DEV_RFPACKET_STATUS_MISC);
+  } else {
+    // Disable is pending irq
+    efr32_rfp_set_status_done(ctx, DEV_RFPACKET_STATUS_MISC);
+    ctx->rac_irq_type = EFR32_RAC_IRQ_TXRX;
+  }
 }
 
 static bool_t efr32_radio_wakeup(struct dev_rfpacket_ctx_s *gpv) {
@@ -1037,6 +1086,7 @@ static bool_t efr32_radio_wakeup(struct dev_rfpacket_ctx_s *gpv) {
     ctx->sleep = false;
   }
   return true;
+  efr32_rfp_req_done_direct(ctx, DEV_RFPACKET_STATUS_MISC);
 #else
   return false;
 #endif
@@ -1131,13 +1181,7 @@ static DEV_IRQ_SRC_PROCESS(efr32_radio_irq) {
       cpu_mem_write_32(EFR32_RAC_ADDR + EFR32_RAC_IEN_ADDR, 0);
       cpu_mem_write_32(EFR32_RAC_ADDR + EFR32_RAC_IFC_ADDR, EFR32_RAC_IF_STATECHANGE);
       efr32_radio_printk("rac irq: 0x%x\n", irq);
-      // Check that Rac is idle
-      if (efr32_check_rac_off(ctx)) {
-        // TODO check if useful
-        efr32_radio_printk("pouet\n");
-        efr32_rfp_set_status_done(ctx, DEV_RFPACKET_STATUS_MISC);
-        efr32_rfp_req_done(ctx);
-      }
+      efr32_rfp_rac_irq(ctx);
     break;
 
     case 3:
@@ -1165,7 +1209,7 @@ static DEV_IRQ_SRC_PROCESS(efr32_radio_irq) {
     break;
 
     default:
-      abort();
+      UNREACHABLE();
     break;
   }
   lock_release(&dev->lock);
@@ -1188,7 +1232,6 @@ static DEV_RFPACKET_STATS(efr32_radio_stats) {
   return -ENOTSUP;
 #endif
 }
-
 
 static DEV_INIT(efr32_radio_init);
 static DEV_CLEANUP(efr32_radio_cleanup);
