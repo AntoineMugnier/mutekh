@@ -147,25 +147,25 @@ DEV_VALIO_REQUEST(mlx90614_request)
   struct mlx90614_context_s *pv = dev->drv_pv;
   (void)pv;
 
-  logk_debug("%s %p", __func__, req);
+  logk_debug("%s %p", __func__, rq);
 
   if (pv->state == MLX90614_UNINITIALIZED) {
     rq->error = -EAGAIN;
-    dev_valio_rq_done(req);
+    dev_valio_rq_done(rq);
     return;
   }
 
   if (rq->type == DEVICE_VALIO_WRITE
       || rq->attribute != VALIO_TEMPERATURE_VALUE) {
     rq->error = -ENOTSUP;
-    dev_valio_rq_done(req);
+    dev_valio_rq_done(rq);
     return;
   }
 
   LOCK_SPIN_IRQ(&dev->lock);
   rq->error = 0;
   rq->base.drvdata = (void *)(uintptr_t)accessor->number;
-  dev_valio_rq_pushback(&pv->queue, req);
+  dev_valio_rq_pushback(&pv->queue, rq);
 
   if (rq->type == DEVICE_VALIO_READ)
     mlx90614_read(dev);
@@ -181,15 +181,15 @@ DEV_VALIO_CANCEL(mlx90614_cancel)
 
   LOCK_SPIN_IRQ(&dev->lock);
 
-  logk_debug("%s %p", __func__, req);
+  logk_debug("%s %p", __func__, rq);
 
   GCT_FOREACH(dev_request_queue, &pv->queue, item, {
-      struct dev_valio_rq_s *rq = dev_valio_rq_s_cast(item);
+      struct dev_valio_rq_s *frq = dev_valio_rq_s_cast(item);
 
-      if (rq != req)
+      if (frq != rq)
         GCT_FOREACH_CONTINUE;
 
-      dev_valio_rq_remove(&pv->queue, rq);
+      dev_valio_rq_remove(&pv->queue, frq);
       err = 0;
       GCT_FOREACH_BREAK;
     });
