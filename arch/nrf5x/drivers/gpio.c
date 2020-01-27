@@ -18,6 +18,8 @@
     Copyright (c) 2014 Nicolas Pouillon <nipo@ssji.net>
 */
 
+#define LOGK_MODULE_ID "ngpo"
+
 #include <hexo/types.h>
 #include <hexo/endian.h>
 #include <hexo/iospace.h>
