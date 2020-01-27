@@ -793,7 +793,6 @@ enum dev_rfpacket_state_s {
   DEV_RFPACKET_STATE_CONFIG_RXC,
   DEV_RFPACKET_STATE_RX,
   DEV_RFPACKET_STATE_RXC,
-  DEV_RFPACKET_STATE_PAUSE_RXC,
   DEV_RFPACKET_STATE_TX,
   DEV_RFPACKET_STATE_TX_LBT,
 };
@@ -1003,6 +1002,18 @@ error_t dev_rfpacket_clean_check(struct dev_rfpacket_ctx_s *pv);
   request. Returns @tt TRUE only if the tx and rx configuration are the same structure. */
 config_depend(CONFIG_DEVICE_RFPACKET)
 bool_t dev_rfpacket_can_rxtx(struct dev_rfpacket_ctx_s *pv, struct dev_rfpacket_rq_s *rq);
+
+/** @This function is called by a rfpacket driver to know if a packet is incoming. */
+config_depend(CONFIG_DEVICE_RFPACKET)
+bool_t dev_rfpacket_is_packet_incoming(struct dev_rfpacket_ctx_s *pv);
+
+/** @This function is called by a rfpacket driver to indicate that it had a packet irq. */
+config_depend(CONFIG_DEVICE_RFPACKET)
+void dev_rfpacket_packet_incoming(struct dev_rfpacket_ctx_s *pv);
+
+/** @This function is called by a rfpacket driver to indicate that it had a rx or tx timeout irq. */
+config_depend(CONFIG_DEVICE_RFPACKET)
+void dev_rfpacket_rxtx_timeout(struct dev_rfpacket_ctx_s *pv);
 
 /** @This function is called by a rfpacket driver to indicate that it had a rxc timeout irq. */
 config_depend(CONFIG_DEVICE_RFPACKET)
