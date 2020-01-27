@@ -52,6 +52,13 @@ DEV_DECLARE_STATIC(lcd, "lcd", 0, sd1306_drv,
 #include <device/class/cmu.h>
 #include <device/class/spi.h>
 
+enum gpio_id_e
+{
+  GPIO_ID_RESET,
+  GPIO_ID_DC,
+  GPIO_COUNT,
+};
+
 struct sd1306_private_s
 {
   struct device_spi_ctrl_s spi;
@@ -59,9 +66,11 @@ struct sd1306_private_s
   struct device_timer_s *timer;
   struct dev_spi_ctrl_bytecode_rq_s spi_rq;
   dev_request_queue_root_t queue;
-  gpio_id_t gpio_map[2];
-  gpio_width_t gpio_wmap[2];
+  gpio_id_t gpio_map[GPIO_COUNT];
+  gpio_width_t gpio_wmap[GPIO_COUNT];
+#if defined(CONFIG_DRIVER_MEM_SD1306_POWER_GATING)
   struct dev_clock_sink_ep_s power_source;
+#endif
 };
 
 DRIVER_PV(struct sd1306_private_s);
@@ -80,7 +89,6 @@ static DEV_MEM_INFO(sd1306_info)
   
   info->type = DEV_MEM_RAM;
   info->flags = 0
-    | DEV_MEM_WRITABLE
     | DEV_MEM_VOLATILE
     | DEV_MEM_PARTIAL_WRITE
     | DEV_MEM_CROSS_WRITE
@@ -118,42 +126,22 @@ void sd1306_next(struct device_s *dev)
   struct dev_mem_rq_s *mrq;
 
   while ((mrq = dev_mem_rq_head(&pv->queue))) {
-
-    if (mrq->size == 0) {
+    if (mrq->partial.size == 0) {
       dev_mem_rq_remove(&pv->queue, mrq);
       dev_mem_rq_done(mrq);
       continue;
     }
 
-    if (mrq->type & DEV_MEM_OP_PAGE_WRITE) {
-      uint8_t page = mrq->addr >> 7;
-      const uint8_t *buffer = mrq->sc_data[0];
+    uint8_t page = mrq->partial.addr >> 7;
+    uint8_t col = mrq->partial.addr & 0x7f;
+    const uint8_t *buffer = mrq->partial.data;
+    uint8_t used = __MIN(mrq->partial.size, 128 - col);
 
-      mrq->addr += 128;
-      mrq->sc_data++;
-      mrq->size--;
+    mrq->partial.addr += used;
+    mrq->partial.data += used;
+    mrq->partial.size -= used;
 
-      sd1306_write(dev, page, 2, buffer, 128);
-
-      return;
-    }
-
-    if (mrq->type & DEV_MEM_OP_PARTIAL_WRITE) {
-      uint8_t page = mrq->addr >> 7;
-      uint8_t col = mrq->addr & 0x7f;
-      const uint8_t *buffer = mrq->data;
-      uint8_t used = __MIN(mrq->size, 128 - col);
-
-      mrq->addr += used;
-      mrq->data += used;
-      mrq->size -= used;
-
-      sd1306_write(dev, page, col + 2, buffer, used);
-
-      return;
-    }
-
-    assert(0);
+    sd1306_write(dev, page, col, buffer, used);
 
     return;
   }
@@ -180,10 +168,7 @@ DEV_MEM_REQUEST(sd1306_request)
   struct device_s *dev = accessor->dev;
   struct sd1306_private_s *pv = dev->drv_pv;
 
-  if (rq->band_mask != 1
-      || rq->type & (DEV_MEM_OP_PARTIAL_READ | DEV_MEM_OP_PAGE_READ)
-      || !(rq->type & (DEV_MEM_OP_PARTIAL_WRITE | DEV_MEM_OP_PARTIAL_WRITE))
-      ) {
+  if (rq->type != DEV_MEM_OP_PARTIAL_WRITE) {
     rq->error = -ENOTSUP;
     dev_mem_rq_done(rq);
     return;
@@ -202,7 +187,9 @@ sd1306_enable(struct device_s *dev)
 {
   struct sd1306_private_s *pv = dev->drv_pv;
 
+#if defined(CONFIG_DRIVER_MEM_SD1306_POWER_GATING)
   dev_clock_sink_gate(&pv->power_source, DEV_CLOCK_EP_POWER);
+#endif
   dev_gpio_out(pv->gpio, pv->spi_rq.base.cs_cfg.id, 1);
 
   assert(pv->spi_rq.pvdata == NULL);
@@ -220,8 +207,10 @@ sd1306_disable(struct device_s *dev)
 {
   struct sd1306_private_s *pv = dev->drv_pv;
 
+#if defined(CONFIG_DRIVER_MEM_SD1306_POWER_GATING)
   dev_clock_sink_gate(&pv->power_source, DEV_CLOCK_EP_NONE);
-  dev_gpio_out(pv->gpio, pv->gpio_map[0], 0);
+#endif
+  dev_gpio_out(pv->gpio, pv->gpio_map[GPIO_ID_RESET], 0);
   dev_gpio_out(pv->gpio, pv->spi_rq.base.cs_cfg.id, 0);
 }
 
@@ -277,16 +266,18 @@ DEV_INIT(sd1306_init)
 
   dev_rq_queue_init(&pv->queue);
 
+#if defined(CONFIG_DRIVER_MEM_SD1306_POWER_GATING)
   err = dev_drv_clock_init(dev, &pv->power_source, 0, 0, NULL);
   if (err)
     goto err_pv;
-
+#endif
+  
   static const struct dev_spi_ctrl_config_s spi_config = {
     .ck_mode = DEV_SPI_CK_MODE_0,
     .bit_order = DEV_SPI_MSB_FIRST,
     .miso_pol = DEV_SPI_ACTIVE_HIGH,
     .mosi_pol = DEV_SPI_ACTIVE_HIGH,
-    .bit_rate1k = 1000,
+    .bit_rate1k = 7811,
     .word_width = 8,
   };
 
@@ -295,12 +286,8 @@ DEV_INIT(sd1306_init)
   if (err)
     goto err_pv;
 
-  err = device_res_gpio_map(dev, "reset:1 dc:1", pv->gpio_map, pv->gpio_wmap);
-  if (err)
-    goto err_pv;
-
-  err = device_gpio_map_set_mode(pv->gpio, pv->gpio_map, pv->gpio_wmap, 2,
-                                 DEV_PIN_PUSHPULL, DEV_PIN_PUSHPULL);
+  err = device_gpio_setup(pv->gpio, dev,
+                          ">reset:1 >dc:1", pv->gpio_map, pv->gpio_wmap);
   if (err)
     goto err_pv;
 
@@ -309,6 +296,8 @@ DEV_INIT(sd1306_init)
   pv->spi_rq.gpio_wmap = pv->gpio_wmap;
 
   dev_spi_ctrl_rq_init(&pv->spi_rq.base, &sd1306_spi_done);
+
+  logk_trace("%s done", __func__);
 
   return 0;
 
@@ -329,7 +318,9 @@ DEV_CLEANUP(sd1306_cleanup)
 
   dev_drv_spi_bytecode_cleanup(&pv->spi, &pv->spi_rq);
   dev_rq_queue_destroy(&pv->queue);
+#if defined(CONFIG_DRIVER_MEM_SD1306_POWER_GATING)
   dev_drv_clock_cleanup(dev, &pv->power_source);
+#endif
   mem_free(pv);
 
   return 0;
@@ -339,4 +330,3 @@ DRIVER_DECLARE(sd1306_drv, 0, "SD1306", sd1306,
                DRIVER_MEM_METHODS(sd1306));
 
 DRIVER_REGISTER(sd1306_drv);
-

@@ -54,6 +54,7 @@
 #define CMD_POWER(tmp, n)            COMMAND(tmp, 0xae | n)
 #define CMD_TOP_LINE(tmp, n)         COMMAND(tmp, 0x40 | n)
 #define CMD_LEFT_COLUMN(tmp, n)      COMMAND_8(tmp, 0xd3, n)
+#define CMD_DCDC(tmp, n)             COMMAND_8(tmp, 0x8d, 0x10 | ((n) << 2))
 #define CMD_FLIP_H(tmp, n)           COMMAND(tmp, 0xa0 | n)
 #define CMD_FLIP_V(tmp, n)           COMMAND(tmp, 0xc0 | ((n) << 3))
     
@@ -109,15 +110,37 @@
     spi_yield_delay %reset_latency
 
     START_COMMAND(%0)
-    CMD_SET_CONTRAST(%0, 0x7f)
+    CMD_SET_CONTRAST(%0, 0x40)
     CMD_FORCE_ON(%0, 0)
+    COMMAND_8(%0, 0xa8, 63)
+    CMD_DCDC(%0, 1)
+    COMMAND_8(%0, 0xda, 0x12)
+    COMMAND_8(%0, 0xd5, 0x80)
+    COMMAND_8(%0, 0xd9, 0x22)
+    COMMAND_8(%0, 0xdb, 0x20)
     CMD_INVERSE(%0, 0)
+    CMD_TOP_LINE(%0, 0) // 10
+    CMD_LEFT_COLUMN(%0, 0) // Decale l'affichage sur la petite longueur
+    CMD_FLIP_H(%0, 0) // Grande longueur
+    CMD_FLIP_V(%0, 1) // Petite longueur
+    CMD_ADDRESSING_MODE(%0, VERTICAL)
     CMD_POWER(%0, 1)
-    CMD_TOP_LINE(%0, 0)
-    CMD_LEFT_COLUMN(%0, 0)
-    CMD_FLIP_H(%0, 0)
-    CMD_FLIP_V(%0, 1)
-    CMD_ADDRESSING_MODE(%0, PAGE)
+
+    // Now display is:
+    //
+    // page (8x line)
+    //  0    ...     7    column
+    // +-----...------+
+    // |              |    0
+    // |              |    1
+    // .              .
+    // .              .    ...
+    // .              .
+    // |              |    126
+    // |              |    127
+    // +-----...------+
+    //
+    // For each page (8 lines), LSB on left.
 
     end
 .endfunc
