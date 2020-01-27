@@ -188,7 +188,7 @@
   
   %subsection shell-uart
     CONFIG_DRIVER_NRF5X_UART
-    CONFIG_DEVICE_UART
+    CONFIG_DEVICE_CHAR
     %inherit shell
   %end
   
