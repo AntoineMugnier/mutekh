@@ -822,6 +822,7 @@ extern TERMUI_CON_GROUP_DECL(dev_shell_enum_group);
 extern TERMUI_CON_GROUP_DECL(dev_shell_uart_group);
 extern TERMUI_CON_GROUP_DECL(dev_shell_hwclock_group);
 extern TERMUI_CON_GROUP_DECL(dev_shell_ms_group);
+extern TERMUI_CON_GROUP_DECL(dev_shell_smi_group);
 
 static TERMUI_CON_GROUP_DECL(dev_shell_subgroup) =
 {
@@ -891,6 +892,9 @@ static TERMUI_CON_GROUP_DECL(dev_shell_subgroup) =
 #endif
 #if defined(CONFIG_DEVICE_VALIO_MOTION_SENSOR)
   TERMUI_CON_GROUP_ENTRY(dev_shell_ms_group, "motion")
+#endif
+#if defined(CONFIG_DEVICE_SMI)
+  TERMUI_CON_GROUP_ENTRY(dev_shell_smi_group, "smi")
 #endif
   TERMUI_CON_LIST_END
 };

@@ -9,6 +9,7 @@ enum_headers = include/device/types.h \
                include/device/class/crypto.h \
                include/device/class/timer.h \
                include/device/class/rfpacket.h \
+               include/device/class/smi.h \
                include/device/class/spi.h \
                include/device/resource/uart.h \
                include/device/valio/hwclock.h
@@ -43,6 +44,11 @@ endif
 ifeq ($(CONFIG_DEVICE_SPI), defined)
 objs += device_spi.o
 objs-$(CONFIG_DEVICE_SHELL_SPI) += shell_spi.o
+endif
+
+ifeq ($(CONFIG_DEVICE_SMI), defined)
+objs += device_smi.o
+objs-$(CONFIG_DEVICE_SHELL_SMI) += shell_smi.o
 endif
 
 objs-$(CONFIG_DEVICE_IOMUX) += device_iomux.o
