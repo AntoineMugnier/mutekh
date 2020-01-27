@@ -239,7 +239,7 @@ static DEV_INIT(char_rtt_init)
   dev->drv_pv = pv;
 
 #if defined(CONFIG_DRIVER_CHAR_RTT_TIMER)
-  dev_timer_rq_init_sched_switch(&pv->timer_rq, rtt_tick);
+  dev_timer_rq_init(&pv->timer_rq, rtt_tick);
   dev_timer_init_sec(&pv->timer, &pv->timer_rq.delay, 0, 1, 20);
 #elif defined(CONFIG_DRIVER_CHAR_RTT_IDLE)
   kroutine_init_idle(&pv->poller, rtt_tick);
