@@ -18,6 +18,8 @@
     Copyright Nicolas Pouillon <nipo@ssji.net> (c) 2015
 */
 
+#define LOGK_MODULE_ID "gatD"
+
 #include <mutek/printk.h>
 #include <mutek/mem_alloc.h>
 #include <mutek/buffer_pool.h>
@@ -32,9 +34,6 @@
 #include <ble/uuid.h>
 
 #include <hexo/decls.h>
-
-#define dprintk(...) do{}while(0)
-//#define dprintk printk
 
 GCT_CONTAINER_FCNS(ble_gattdb_listener_list, static, ble_gattdb_listener_list,
                    init, destroy, pushback, remove);
@@ -135,7 +134,7 @@ error_t ble_gattdb_service_register(struct ble_gattdb_registry_s *reg,
   if (!reg->handle)
     return -ENOMEM;
 
-  dprintk("DB service " BLE_UUID_FMT " append %d attrs\n",
+  logk_trace("DB service " BLE_UUID_FMT " append %d attrs",
          BLE_UUID_ARG(service->type), att_count);
 
   ble_gattdb_listener_list_init(&reg->listener_list);
@@ -175,7 +174,7 @@ error_t ble_gattdb_service_register(struct ble_gattdb_registry_s *reg,
     reg->handle[att].index = srv;
     reg->handle[att].descriptor = 0;
 
-    printk("Include %d/%d: %p\n", srv, reg->include_count, reg->service->include[srv]);
+    logk_debug("Include %d/%d: %p", srv, reg->include_count, reg->service->include[srv]);
 
     att++;
   }

@@ -18,6 +18,8 @@
     Copyright (c) Nicolas Pouillon <nipo@ssji.net> 2015
 */
 
+#define LOGK_MODULE_ID "l2cp"
+
 #include <mutek/printk.h>
 #include <mutek/buffer_pool.h>
 
@@ -31,9 +33,6 @@
 #include <ble/protocol/l2cap.h>
 
 #include <ble/net/generic.h>
-
-//#define dprintk printk
-#define dprintk(...) do{}while(0)
 
 struct ble_l2cap_s;
 struct ble_sm_s;
@@ -77,8 +76,8 @@ void ble_l2cap_task_handle(struct net_layer_s *layer,
 
     // TODO: Handle fragmentation
 
-    dprintk("L2CAP rx ll %d, size %d, length %d, cid %d\n",
-            task->packet.dst_addr.llid, size, length, cid);
+    logk_trace("L2CAP rx ll %d, size %d, length %d, cid %d",
+               task->packet.dst_addr.llid, size, length, cid);
 
     if (task->packet.dst_addr.llid != BLE_LL_DATA_START)
       break;
@@ -104,7 +103,7 @@ void ble_l2cap_task_handle(struct net_layer_s *layer,
     }
 
     if (target) {
-      dprintk("L2CAP %d > %P\n",
+      logk_trace("L2CAP %d > %P",
               cid,
               task->packet.buffer->data + task->packet.buffer->begin,
               task->packet.buffer->end - task->packet.buffer->begin);
@@ -121,7 +120,7 @@ void ble_l2cap_task_handle(struct net_layer_s *layer,
     uint16_t cid = task->packet.dst_addr.cid;
     uint8_t header[] = {size & 0xff, size >> 8, cid & 0xff, cid >> 8};
 
-    dprintk("L2CAP %d < %P\n",
+    logk_trace("L2CAP %d < %P",
             cid,
             task->packet.buffer->data + task->packet.buffer->begin,
             task->packet.buffer->end - task->packet.buffer->begin);
@@ -197,7 +196,7 @@ void ble_l2cap_destroyed(struct net_layer_s *layer)
 {
   struct ble_l2cap_s *l2cap = ble_l2cap_s_from_layer(layer);
 
-  dprintk("L2cap %p destroyed\n", l2cap);
+  logk_debug("L2cap %p destroyed", l2cap);
 
   mem_free(l2cap);
 }

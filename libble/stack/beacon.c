@@ -18,6 +18,8 @@
     Copyright Nicolas Pouillon <nipo@ssji.net> (c) 2015
 */
 
+#define LOGK_MODULE_ID "beac"
+
 #include <ble/stack/context.h>
 #include <ble/stack/beacon.h>
 #include <ble/net/adv.h>
@@ -98,7 +100,7 @@ error_t ble_beacon_update(
 
   ble_beacon_config_apply(&params, config);
 
-  printk("Beacon config updated: "BLE_UUID_FMT" %d:%d, %d dbm @1m, interval: %d ms\n",
+  logk("Beacon config updated: "BLE_UUID_FMT" %d:%d, %d dbm @1m, interval: %d ms",
          BLE_UUID_ARG(&config->group_uuid),
          config->major, config->minor, config->one_meter_rssi,
          config->interval_ms);

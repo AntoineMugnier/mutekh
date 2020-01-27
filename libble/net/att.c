@@ -18,6 +18,8 @@
     Copyright (c) Nicolas Pouillon <nipo@ssji.net> 2015
 */
 
+#define LOGK_MODULE_ID "att_"
+
 #include <mutek/printk.h>
 #include <mutek/buffer_pool.h>
 
@@ -33,9 +35,6 @@
 
 #include <string.h>
 #include "att_encoding.h"
-
-#define dprintk(...) do{}while(0)
-//#define dprintk printk
 
 STRUCT_COMPOSE(ble_att_s, layer);
 
@@ -168,7 +167,7 @@ static void att_command_handle(struct ble_att_s *att, struct net_task_s *task)
   pkt->end = pkt->begin + 5;
 
  respond:
-  dprintk("Att rsp < %P\n", pkt->data + pkt->begin, pkt->end - pkt->begin);
+  logk_trace("rsp < %P", pkt->data + pkt->begin, pkt->end - pkt->begin);
   net_task_packet_respond(task, att->layer.parent, 0, &dst);
   return;
 
@@ -187,11 +186,11 @@ void ble_att_task_handle(struct net_layer_s *layer,
     break;
 
   case NET_TASK_QUERY:
-    dprintk("Att query from %p\n", task->source);
+    logk_trace("query from %p", task->source);
 
     if (ble_att_transaction_s_from_task(task)->command == BLE_ATT_HANDLE_VALUE_NOTIF
         && !net_task_queue_isempty(&att->transaction_queue)) {
-      dprintk("Too many requests pending, telling we are busy\n");
+      logk("Too many requests pending, telling we are busy");
       net_task_query_respond_push(task, -EBUSY);
       return;
     }
@@ -201,13 +200,13 @@ void ble_att_task_handle(struct net_layer_s *layer,
     return;
 
   case NET_TASK_RESPONSE:
-    dprintk("Att response from %p\n", task->source);
+    logk_trace("response from %p", task->source);
     if (ble_att_opcode_is_response_expected(ble_att_transaction_s_from_task(task)->command))
       att_response_send(att, ble_att_transaction_s_from_task(task));
     break;
 
   case NET_TASK_INBOUND: {
-    dprintk("Att inb > %P\n", task->packet.buffer->data + task->packet.buffer->begin, task->packet.buffer->end - task->packet.buffer->begin);
+    logk_trace("inb > %P", task->packet.buffer->data + task->packet.buffer->begin, task->packet.buffer->end - task->packet.buffer->begin);
 
     const uint8_t *header = &task->packet.buffer->data[task->packet.buffer->begin];
     uint8_t op = *header;
@@ -241,14 +240,14 @@ void ble_att_task_handle(struct net_layer_s *layer,
   case NET_TASK_OUTBOUND: {
     uint8_t header[3];
     if (task->packet.src_addr.att) {
-      dprintk("Att not %d > %P\n", 
+      logk_trace("not %d > %P", 
               task->packet.src_addr.att,
               task->packet.buffer->data + task->packet.buffer->begin,
               task->packet.buffer->end - task->packet.buffer->begin);
       header[0] = BLE_ATT_HANDLE_VALUE_NOTIF;
       endian_le16_na_store(header + 1, task->packet.src_addr.att);
     } else if (task->packet.dst_addr.att) {
-      dprintk("Att wrt %d > %P\n", 
+      logk_trace("wrt %d > %P", 
               task->packet.dst_addr.att,
               task->packet.buffer->data + task->packet.buffer->begin,
               task->packet.buffer->end - task->packet.buffer->begin);
@@ -277,7 +276,7 @@ void ble_att_destroyed(struct net_layer_s *layer)
 {
   struct ble_att_s *att = ble_att_s_from_layer(layer);
 
-  dprintk("Att %p destroyed\n", att);
+  logk_trace("%p destroyed", att);
 
   mem_free(att);
 }
@@ -384,7 +383,7 @@ static void att_req_destroy(void *mem)
 {
   struct ble_att_transaction_s *task = mem;
 
-  dprintk("Att req %p destroy\n", mem);
+  logk_trace("req %p destroy", mem);
 
   if (task->packet)
     buffer_refdec(task->packet);
@@ -399,7 +398,7 @@ struct ble_att_transaction_s *att_request_allocate(struct ble_att_s *att,
   if (!txn)
     return NULL;
 
-  dprintk("Att req %p alloc\n", txn);
+  logk_trace("req %p alloc", txn);
 
   txn->task.destroy_func = att_req_destroy;
   txn->packet = NULL;
@@ -429,11 +428,11 @@ static void att_transaction_first_send(struct ble_att_s *att)
 
     bool_t with_response = ble_att_opcode_is_response_expected(txn->command);
 
-    dprintk("%s %p %d %s response\n", __FUNCTION__,
+    logk_trace("%s %p %d %s response", __FUNCTION__,
             txn, txn->command, with_response ? "with" : "without");
 
     if (att->transaction_pending && with_response) {
-      dprintk(" A transaction is pending and ours expects a response\n");
+      logk_trace(" A transaction is pending and ours expects a response");
       break;
     }
 
@@ -468,7 +467,7 @@ static void att_transaction_first_send(struct ble_att_s *att)
 
     dst.unreliable = !with_response;
 
-    dprintk("Att req < %P\n", req->data + req->begin, req->end - req->begin);
+    logk_trace("req < %P", req->data + req->begin, req->end - req->begin);
     net_task_outbound_push(req_task, att->layer.parent, &att->layer, 0, NULL, &dst, req);
     buffer_refdec(req);
 
@@ -516,7 +515,7 @@ static error_t att_response_send(struct ble_att_s *att,
     goto error_free_buffer;
   }
 
-  dprintk("Att rsp < %P\n", rsp->data + rsp->begin, rsp->end - rsp->begin);
+  logk_trace("rsp < %P", rsp->data + rsp->begin, rsp->end - rsp->begin);
   net_task_outbound_push(rsp_task, att->layer.parent, &att->layer, 0, NULL, &dst, rsp);
 
  error_free_buffer:

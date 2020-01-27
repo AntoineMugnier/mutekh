@@ -18,6 +18,8 @@
     Copyright Nicolas Pouillon <nipo@ssji.net> (c) 2015
 */
 
+#define LOGK_MODULE_ID "bpdb"
+
 #include <hexo/types.h>
 #include <ble/protocol/address.h>
 
@@ -37,12 +39,6 @@
 
 #include <string.h>
 #include "security_db_priv.h"
-
-#if 0
-# define dprintk printk
-#else
-# define dprintk(k...) do {} while (0)
-#endif
 
 #if defined(CONFIG_BLE_SECURITY_DB)
 static
@@ -88,18 +84,18 @@ error_t ble_peer_sk_get(struct ble_peer_s *peer,
   uint8_t pk[16], skd_rev[16];
   error_t err;
 
-  dprintk("%s peer %lld, random %lld, ediv %04x\n", __FUNCTION__,
+  logk_trace("%s peer %lld, random %lld, ediv %04x", __FUNCTION__,
          peer->id, did, ediv);
 
 #if defined(CONFIG_BLE_SECURITY_DB)
   if (ediv || did) {
     // LTK mode
-    dprintk("  LTK lookup mode\n");
+    logk_trace("  LTK lookup mode");
 
     if (did != peer->id) {
-      dprintk("  peer %lld is not loaded\n", did);
+      logk_trace("  peer %lld is not loaded", did);
       err = ble_peer_lookup_id(peer->db, peer, random, ediv);
-      dprintk("  peer %lld lookup: %d\n", did, err);
+      logk_trace("  peer %lld lookup: %d", did, err);
       if (err)
         return err;
     }
@@ -108,7 +104,7 @@ error_t ble_peer_sk_get(struct ble_peer_s *peer,
     if (err)
       return err;
 
-    printk("LTK:        %P\n", tmp, 16);
+    logk_debug("LTK:        %P", tmp, 16);
 
     memrevcpy(pk, tmp, 16);
   } else
@@ -116,25 +112,25 @@ error_t ble_peer_sk_get(struct ble_peer_s *peer,
   {
     // STK mode when just paired
 
-    printk("  STK lookup mode, STK: %d\n", peer->stk_present);
+    logk_debug("  STK lookup mode, STK: %d", peer->stk_present);
 
     if (!peer->stk_present)
       return -ENOENT;
 
-    printk("STK:        %P\n", peer->stk, 16);
+    logk_debug("STK:        %P", peer->stk, 16);
 
     memrevcpy(pk, peer->stk, 16);
 
     peer->stk_present = 0;
   }
 
-  dprintk("SKD:        %P\n", skd, 16);
+  logk_trace("SKD:        %P", skd, 16);
 
   memrevcpy(skd_rev, skd, 16);
 
   err = ble_e(&peer->db->aes, pk, skd_rev, sk);
 
-  dprintk("SK:         %P\n", sk, 16);
+  logk_trace("SK:         %P", sk, 16);
 
   return err;
 }
@@ -188,7 +184,7 @@ error_t ble_peer_reset(struct ble_peer_s *peer)
 
 void ble_peer_addr_set(struct ble_peer_s *peer, const struct ble_addr_s *addr)
 {
-  printk("%s peer id %lld\n", __FUNCTION__, peer->id);
+  logk_debug("%s peer id %lld", __FUNCTION__, peer->id);
 
 #if defined(CONFIG_BLE_CRYPTO)
   if (!peer->db)
@@ -232,7 +228,7 @@ error_t ble_peer_id_get(struct ble_peer_s *peer, uint8_t *random, uint16_t *ediv
 
 void ble_peer_irk_set(struct ble_peer_s *peer, const uint8_t *irk)
 {
-  printk("%s peer id %lld\n", __FUNCTION__, peer->id);
+  logk_debug("%s peer id %lld", __FUNCTION__, peer->id);
 
   if (!peer->db)
     return;
@@ -258,7 +254,7 @@ error_t ble_peer_paired(struct ble_peer_s *peer,
   if (!peer->db && bonded)
     return -ENOTSUP;
 
-  printk("%s peer id %lld\n", __FUNCTION__, peer->id);
+  logk_debug("%s peer id %lld", __FUNCTION__, peer->id);
 
 #if defined(CONFIG_BLE_SECURITY_DB)
   peer->bonded = bonded;
@@ -282,15 +278,15 @@ error_t ble_peer_save(struct ble_peer_s *peer)
   struct ble_security_db_s *db = peer->db;
   error_t err;
 
-  printk("Saving peer %lld\n", peer->id);
+  logk_debug("Saving peer %lld", peer->id);
 
   if (!db) {
-    printk("No DB for peer\n");
+    logk_error("No DB for peer");
     return -EINVAL;
   }
 
   if (!peer->paired && !peer->bonded && !peer->addr_present && !peer->irk_present) {
-    printk("Not saving useless peer %lld\n", peer->id);
+    logk_error("Not saving useless peer %lld", peer->id);
     return -EINVAL;
   }
 
@@ -344,25 +340,25 @@ error_t ble_peer_master_sk_get(struct ble_peer_s *peer,
     memset(rand, 0, 8);
     *ediv = 0;
 
-    printk("STK:        %P\n", peer->stk, 16);
+    logk_debug("STK:        %P", peer->stk, 16);
 
     peer->stk_present = 0;
   } else if (peer->identity_present && peer->ltk_present) {
     memrevcpy(pk, peer->ltk, 16);
     memcpy(rand, peer->rand, 8);
     *ediv = peer->ediv;
-    printk("LTK:        %P\n", peer->ltk, 16);
+    logk_debug("LTK:        %P", peer->ltk, 16);
   } else {
     return -ENOENT;
   }
 
-  dprintk("SKD:        %P\n", skd, 16);
+  logk_trace("SKD:        %P", skd, 16);
 
   memrevcpy(skd_rev, skd, 16);
 
   error_t err = ble_e(&peer->db->aes, pk, skd_rev, sk);
 
-  dprintk("SK:         %P\n", pk, 16);
+  logk_trace("SK:         %P", pk, 16);
 
   return err;
 }

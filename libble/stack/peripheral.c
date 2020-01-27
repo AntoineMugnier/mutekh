@@ -152,7 +152,7 @@ bool_t peri_connection_requested(void *delegate, struct net_layer_s *layer,
   }
 
   /* if ((peri->mode & BLE_PERIPHERAL_PAIRABLE) && known_device) { */
-  /*   printk(" ignored: we are paired and connection comes from a known device"); */
+  /*   logk_error(" ignored: we are paired and connection comes from a known device"); */
   /*   return 1; */
   /* } */
 #endif

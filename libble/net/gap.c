@@ -18,6 +18,8 @@
     Copyright (c) Nicolas Pouillon <nipo@ssji.net> 2015
 */
 
+#define LOGK_MODULE_ID "bgap"
+
 #include <mutek/printk.h>
 #include <mutek/buffer_pool.h>
 
@@ -101,7 +103,7 @@ static void gap_update_conn_in(struct ble_gap_s *gap, uint32_t sec)
 
     dev_timer_init_sec(&gap->layer.scheduler->timer, &ticks, NULL, sec, 1);
 
-    printk("GAP asking for new connection parametters in %d ticks\n",
+    logk_trace("Asking for new connection parametters in %d ticks",
            (int)ticks);
 
     net_task_timeout_push(timeout, &gap->layer, net_scheduler_time_get(gap->layer.scheduler) + ticks, 0);
@@ -124,7 +126,7 @@ void ble_gap_task_handle(struct net_layer_s *layer,
     break;
 
   case NET_TASK_TIMEOUT: {
-    printk("GAP asking for new connection parametters to LLCP\n");
+    logk_trace("Asking for new connection parametters to LLCP");
     gap->conn_update_task = NULL;
 
     target = gap->layer.parent;
@@ -136,18 +138,18 @@ void ble_gap_task_handle(struct net_layer_s *layer,
     if (task->query.opcode != BLE_GAP_CONN_PARAMS_UPDATE)
       break;
 
-    printk("GAP conn params update response from %s: %d\n",
+    logk_trace("Conn params update response from %s: %d",
            task->source == layer->parent ? "LLCP" : "Sig",
            task->query.err);
 
     if (task->query.err && task->source == layer->parent) {
-      printk("LLCP does not support conn params update\n");
+      logk_trace("LLCP does not support conn params update");
 
       target = gap->sig;
       goto ask;
     }
 
-    printk("Conn update retrying later...\n");
+    logk_trace("Conn update retrying later...");
     gap_update_conn_in(gap, 30);
     break;
   }

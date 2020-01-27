@@ -18,6 +18,8 @@
     Copyright (c) Nicolas Pouillon <nipo@ssji.net> 2015
 */
 
+#define LOGK_MODULE_ID "bsig"
+
 #include <mutek/printk.h>
 #include <mutek/buffer_pool.h>
 
@@ -30,9 +32,6 @@
 #include <ble/protocol/l2cap.h>
 
 #include <ble/net/generic.h>
-
-//#define dprintk printk
-#define dprintk(...) do{}while(0)
 
 struct ble_signalling_handler_s;
 
@@ -156,7 +155,7 @@ void ble_sig_task_handle(struct net_layer_s *layer,
     return;
 
   case NET_TASK_QUERY:
-    dprintk("SIG Query, %x, current %p\n", task->query.opcode, sig->pending_conn_params);
+    logk_trace("SIG Query, %x, current %p", task->query.opcode, sig->pending_conn_params);
 
     switch (task->query.opcode) {
     case BLE_GAP_CONN_PARAMS_UPDATE: {

@@ -18,6 +18,8 @@
     Copyright Nicolas Pouillon <nipo@ssji.net> (c) 2015
 */
 
+#define LOGK_MODULE_ID "bcon"
+
 #include <ble/stack/context.h>
 #include <ble/stack/connection.h>
 #include <ble/protocol/data.h>
@@ -54,7 +56,7 @@ static void conn_state_update(struct ble_stack_connection_s *conn)
 static void ble_stack_connection_dropped(struct ble_stack_connection_s *conn,
                                           uint8_t reason)
 {
-  printk("Connection dropped: %d, phy %p llcp %p\n", reason,
+  logk_trace("Connection dropped: %d, phy %p llcp %p", reason,
          conn->phy, conn->llcp);
 
   if (!conn->phy || !conn->llcp)
@@ -75,7 +77,7 @@ static void conn_phy_lost(void *delegate, struct net_layer_s *layer, uint8_t rea
 {
   struct ble_stack_connection_s *conn = delegate;
 
-  printk("Connection PHY dropped: %d, layer %p, phy %p\n", reason,
+  logk_trace("Connection PHY dropped: %d, layer %p, phy %p", reason,
          layer, conn->phy);
 
   if (layer != conn->phy)
@@ -88,7 +90,7 @@ static void conn_llcp_closed(void *delegate, struct net_layer_s *layer, uint8_t 
 {
   struct ble_stack_connection_s *conn = delegate;
 
-  printk("Connection LLCP dropped: %d\n", reason);
+  logk_trace("Connection LLCP dropped: %d", reason);
 
   if (layer != conn->llcp)
     return;
@@ -100,7 +102,7 @@ static void conn_llcp_destroyed(void *delegate, struct net_layer_s *layer)
 {
   struct ble_stack_connection_s *conn = delegate;
 
-  printk("LLCP layer released\n");
+  logk_trace("LLCP layer released");
   if (layer != conn->llcp)
     return;
 
@@ -112,7 +114,7 @@ static void conn_phy_destroyed(void *delegate, struct net_layer_s *layer)
 {
   struct ble_stack_connection_s *conn = delegate;
 
-  printk("PHY layer released\n");
+  logk_trace("PHY layer released");
   if (layer != conn->phy)
     return;
 
@@ -124,7 +126,7 @@ static void conn_att_destroyed(void *delegate, struct net_layer_s *layer)
 {
   struct ble_stack_connection_s *conn = delegate;
 
-  printk("ATT layer released\n");
+  logk_trace("ATT layer released");
   if (layer != conn->att)
     return;
 
@@ -139,7 +141,7 @@ void conn_pairing_requested(void *delegate, struct net_layer_s *layer,
 {
   struct ble_stack_connection_s *conn = delegate;
 
-  printk("Pairing requested\n");
+  logk_debug("Pairing requested");
 
   conn->chandler->pairing_requested(conn, bonding);
 }
@@ -150,7 +152,7 @@ void conn_pairing_failed(void *delegate, struct net_layer_s *layer,
 {
   struct ble_stack_connection_s *conn = delegate;
 
-  printk("Slave pairing failed\n");
+  logk_debug("Slave pairing failed");
 
   conn->chandler->pairing_failed(conn, reason);
 }
@@ -160,7 +162,7 @@ void conn_pairing_success(void *delegate, struct net_layer_s *layer)
 {
   struct ble_stack_connection_s *conn = delegate;
 
-  printk("Conn pairing success\n");
+  logk_debug("Conn pairing success");
 
   conn->handler->pairing_success(conn);
 }
@@ -170,7 +172,7 @@ void conn_bonding_success(void *delegate, struct net_layer_s *layer)
 {
   struct ble_stack_connection_s *conn = delegate;
 
-  printk("Conn bonding success\n");
+  logk_debug("Conn bonding success");
 
   conn->chandler->bonding_success(conn);
 }
@@ -221,7 +223,7 @@ error_t ble_stack_connection_create(struct ble_stack_connection_s *conn,
                   conn, &conn_phy_vtable.base,
                   &phy);
   if (err) {
-    printk("error while creating phy: %d\n", err);
+    logk_error("error while creating phy: %d", err);
     return err;
   }
 
@@ -233,26 +235,26 @@ error_t ble_stack_connection_create(struct ble_stack_connection_s *conn,
 
   err = ble_link_create(&context->scheduler, &link_params, NULL, NULL, &link);
   if (err) {
-    printk("error while creating link: %d\n", err);
+    logk_error("error while creating link: %d", err);
     goto out_phy;
   }
 
   err = net_layer_bind(phy, NULL, link);
   if (err) {
-    printk("error while binding link to phy: %d\n", err);
+    logk_error("error while binding link to phy: %d", err);
     goto out_link;
   }
 
   err = ble_l2cap_create(&context->scheduler, NULL, NULL, &l2cap);
   if (err) {
-    printk("error while creating l2cap: %d\n", err);
+    logk_error("error while creating l2cap: %d", err);
     goto out_link;
   }
 
   cid = BLE_LINK_CHILD_L2CAP;
   err = net_layer_bind(link, &cid, l2cap);
   if (err) {
-    printk("error while binding l2cap to link: %d\n", err);
+    logk_error("error while binding l2cap to link: %d", err);
     goto out_l2cap;
   }
 
@@ -275,14 +277,14 @@ error_t ble_stack_connection_create(struct ble_stack_connection_s *conn,
 
   err = ble_llcp_create(&context->scheduler, &llcp_params, conn, &conn_llcp_vtable.base, &llcp);
   if (err) {
-    printk("error while creating llcp: %d\n", err);
+    logk_error("error while creating llcp: %d", err);
     goto out_l2cap;
   }
 
   cid = BLE_LINK_CHILD_LLCP;
   err = net_layer_bind(link, &cid, llcp);
   if (err) {
-    printk("error while binding llcp to link: %d\n", err);
+    logk_error("error while binding llcp to link: %d", err);
     goto out_llcp;
   }
 
@@ -300,28 +302,28 @@ error_t ble_stack_connection_create(struct ble_stack_connection_s *conn,
     
   err = ble_sm_create(&context->scheduler, &sm_params, conn, &conn_sm_vtable.base, &sm);
   if (err) {
-    printk("error while creating sm: %d\n", err);
+    logk_error("error while creating sm: %d", err);
     goto out_llcp;
   }
 
   cid = BLE_L2CAP_CID_SM;
   err = net_layer_bind(l2cap, &cid, sm);
   if (err) {
-    printk("error while binding sm to l2cap: %d\n", err);
+    logk_error("error while binding sm to l2cap: %d", err);
     goto out_sm;
   }
 #endif
 
   err = ble_att_create(&context->scheduler, conn, &conn_att_vtable, &att);
   if (err) {
-    printk("error while creating att: %d\n", err);
+    logk_error("error while creating att: %d", err);
     goto out_sm;
   }
 
   cid = BLE_L2CAP_CID_ATT;
   err = net_layer_bind(l2cap, &cid, att);
   if (err) {
-    printk("error while binding gatt to l2cap: %d\n", err);
+    logk_error("error while binding gatt to l2cap: %d", err);
     goto out_att;
   }
 
@@ -332,27 +334,27 @@ error_t ble_stack_connection_create(struct ble_stack_connection_s *conn,
 
   err = ble_gatt_create(&context->scheduler, &gatt_params, NULL, NULL, &gatt);
   if (err) {
-    printk("error while creating gatt: %d\n", err);
+    logk_error("error while creating gatt: %d", err);
     goto out_att;
   }
 
   cid = BLE_ATT_SERVER;
   err = net_layer_bind(att, &cid, gatt);
   if (err) {
-    printk("error while binding gatt to att: %d\n", err);
+    logk_error("error while binding gatt to att: %d", err);
     goto out_gatt;
   }
 
   err = ble_signalling_create(&context->scheduler, NULL, NULL, &signalling);
   if (err) {
-    printk("error while creating signalling: %d\n", err);
+    logk_error("error while creating signalling: %d", err);
     goto out_gatt;
   }
 
   cid = BLE_L2CAP_CID_SIGNALLING;
   err = net_layer_bind(l2cap, &cid, signalling);
   if (err) {
-    printk("error while binding signalling to l2cap: %d\n", err);
+    logk_error("error while binding signalling to l2cap: %d", err);
     goto out_signalling;
   }
 
@@ -362,18 +364,18 @@ error_t ble_stack_connection_create(struct ble_stack_connection_s *conn,
   };
   err = ble_gap_create(&context->scheduler, &gap_params, NULL, NULL, &gap);
   if (err) {
-    printk("error while creating gap: %d\n", err);
+    logk_error("error while creating gap: %d", err);
     goto out_signalling;
   }
 
   cid = BLE_LLCP_CHILD_GAP;
   err = net_layer_bind(llcp, &cid, gap);
   if (err) {
-    printk("error while binding gap to phy: %d\n", err);
+    logk_error("error while binding gap to phy: %d", err);
     goto out_gap;
   }
 
-  printk("Connection creation done\n");
+  logk_debug("Connection creation done");
 
  out_gap:
   net_layer_refdec(gap);
@@ -455,7 +457,7 @@ void ble_stack_connection_pairing_accept(struct ble_stack_connection_s *conn,
                                          uint32_t pin,
                                          const void *oob_data)
 {
-  printk("Pairing accepted\n");
+  logk_debug("Pairing accepted");
 
   if (conn->sm)
     ble_sm_pairing_accept(conn->sm, mitm_protection, pin, oob_data);
@@ -465,7 +467,7 @@ void ble_stack_connection_pairing_request(struct ble_stack_connection_s *conn,
                                          bool_t mitm_protection,
                                          bool_t bonding)
 {
-  printk("Pairing requesting\n");
+  logk_debug("Pairing requesting");
 
   if (conn->sm)
     ble_sm_pairing_request(conn->sm, mitm_protection, bonding);
@@ -474,7 +476,7 @@ void ble_stack_connection_pairing_request(struct ble_stack_connection_s *conn,
 void ble_stack_connection_pairing_abort(struct ble_stack_connection_s *conn,
                                         enum sm_reason reason)
 {
-  printk("Pairing abort\n");
+  logk_debug("Pairing abort");
 
   if (conn->sm)
     ble_sm_pairing_abort(conn->sm, reason);

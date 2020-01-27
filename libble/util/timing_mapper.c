@@ -18,7 +18,11 @@
     Copyright Nicolas Pouillon <nipo@ssji.net> (c) 2015
 */
 
+#define LOGK_MODULE_ID "timm"
+
 #include <string.h>
+
+#include <mutek/printk.h>
 
 #include <hexo/types.h>
 #include <ble/protocol/advertise.h>
@@ -211,7 +215,7 @@ error_t ble_timing_mapper_update_push(struct ble_timing_mapper_s *tm,
 {
   int16_t after_update = update->instant - tm->last_event;
 
-  //printk("Timing update instant %d, last event %d\n", update->instant, tm->last_event);
+  //logk_trace("Timing update instant %d, last event %d", update->instant, tm->last_event);
 
   if (after_update < 0)
     return -ETIMEDOUT;
@@ -287,9 +291,9 @@ static uint32_t cu_tk(struct ble_timing_mapper_s *tm, uint32_t units)
   uint32_t tk3 = cu_tk_32k(tm, units);
   uint32_t tkf = cu_tk_fixed(tm, units);
 
-  dprintk("%d CU ticks dynamic: %d, 32k: %d, fixed: %d\n",
-         units,
-         tkd, tk3, tkf);
+  logk_trace("%d CU ticks dynamic: %d, 32k: %d, fixed: %d\n",
+             units,
+             tkd, tk3, tkf);
 
   return __MAX(tkd, __MAX(tk3, tkf));
 #endif
@@ -402,7 +406,7 @@ static uint32_t cu_ww_tk(struct ble_timing_mapper_s *tm, uint32_t units)
 
   DEVICE_OP(&tm->timer, config, &config, 0);
 
-  dprintk("%d CU WW clock acc: %dppm (%d ppm) static: %d, timer: %d, dynamic: %d\n",
+  logk_trace("%d CU WW clock acc: %dppm (%d ppm) static: %d, timer: %d, dynamic: %d",
          units,
          dev_freq_acc_ppb(&config.freq) / 1000,
          CONFIG_BLE_SLEEP_CLOCK_PPM,

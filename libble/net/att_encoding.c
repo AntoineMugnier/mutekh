@@ -27,11 +27,6 @@
 #include <string.h>
 #include "att_encoding.h"
 
-#include <mutek/printk.h>
-
-#define dprintk(...) do{}while(0)
-//#define dprintk printk
-
 error_t att_error_serialize(struct buffer_s *p,
                             uint8_t command,
                             uint16_t handle,
@@ -121,7 +116,6 @@ error_t att_response_serialize(struct buffer_s *p,
       memcpy(&p->data[p->end + 2], hv->value, txn->read_by_type.handle_value_stride - 2);
 
       p->end += txn->read_by_type.handle_value_stride;
-      dprintk(" now at %d\n", p->end);
     }
 
     return 0;

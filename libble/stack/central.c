@@ -18,6 +18,8 @@
     Copyright Nicolas Pouillon <nipo@ssji.net> (c) 2015
 */
 
+#define LOGK_MODULE_ID "bcen"
+
 #include <ble/protocol/l2cap.h>
 #include <ble/protocol/advertise.h>
 #include <ble/protocol/gap.h>
@@ -84,7 +86,7 @@ static KROUTINE_EXEC(ble_central_state_update)
 
   ctr->last_state = state;
 
-  printk("Central state now %d\n", state);
+  logk_trace("Central state now %d", state);
 
   ctr->handler->state_changed(ctr, state);
 }
@@ -111,7 +113,7 @@ void ctr_conn_pairing_success(struct ble_stack_connection_s *conn)
 {
   struct ble_central_s *ctr = ble_central_s_from_conn(conn);
 
-  printk("Central pairing success\n");
+  logk_trace("Central pairing success");
 
   if (!ctr->conn.llcp)
     return;
@@ -119,7 +121,7 @@ void ctr_conn_pairing_success(struct ble_stack_connection_s *conn)
   error_t err = ble_llcp_encryption_enable(ctr->conn.llcp);
 
   if (err) {
-    printk("Encryption enable error: %d\n", err);
+    logk_error("Encryption enable error: %d", err);
     ble_stack_connection_drop(&ctr->conn);
   }
 }
@@ -138,17 +140,17 @@ bool_t ctr_connection_requested(void *delegate, struct net_layer_s *layer,
   struct ble_central_s *ctr = delegate;
   error_t err;
 
-  printk("Connection request from "BLE_ADDR_FMT"...", BLE_ADDR_ARG(&conn->master));
+  logk_trace("Connection request from "BLE_ADDR_FMT"...", BLE_ADDR_ARG(&conn->master));
 
 #if defined(CONFIG_BLE_CRYPTO)
   if (ctr->conn.sm) {
-    printk(" still have sm\n");
+    logk_error("Cannot accept connection, still have sm");
     return 1;
   }
 #endif
 
   if (ctr->conn.phy) {
-    printk(" still have master\n");
+    logk_error("Cannot accept connection, still have master");
     return 1;
   }
 
@@ -175,12 +177,12 @@ static error_t scan_start(struct ble_central_s *ctr)
   error_t err;
 
   if (ctr->conn.phy) {
-    printk("Cannot scan: has master\n");
+    logk_error("Cannot scan: has master");
     return 0;
   }
 
   if (ctr->scan) {
-    printk("Cannot scan: has scan\n");
+    logk_error("Cannot scan: has scan");
     return 0;
   }
 
@@ -195,7 +197,7 @@ static error_t scan_start(struct ble_central_s *ctr)
 
   ctr->params.timing = ctr->conn_params;
 
-  printk("Central scanning starting\n");
+  logk_trace("Central scanning starting");
 
   err = DEVICE_OP(&ctr->context->ble, layer_create,
                   &ctr->context->scheduler,
@@ -204,7 +206,7 @@ static error_t scan_start(struct ble_central_s *ctr)
                   ctr, &ctr_scan_vtable.base,
                   &ctr->scan);
   if (err) {
-    printk("Scanning start failed: %d\n", err);
+    logk_error("Scanning start failed: %d", err);
     ctr->scan = NULL;
     goto out;
   }
@@ -218,7 +220,7 @@ static error_t scan_start(struct ble_central_s *ctr)
                                &filter_params, ctr, &central_scan_filter_vtable.base,
                                &ctr->scan_filter);
   if (err) {
-    printk("Scanning filter creation failed: %d\n", err);
+    logk_error("Scanning filter creation failed: %d", err);
     goto scan_forget;
   }
 
@@ -229,7 +231,7 @@ static error_t scan_start(struct ble_central_s *ctr)
   if (!err)
     goto out;
 
-  printk("Scan filter binding failed: %d\n", err);
+  logk_error("Scan filter binding failed: %d", err);
 
  scan_forget:
   net_layer_refdec(ctr->scan);
@@ -270,8 +272,6 @@ static void ctr_scan_destroyed(void *delegate, struct net_layer_s *layer)
 {
   struct ble_central_s *ctr = delegate;
 
-  printk("Scanner layer destroyed\n");
-
   ctr_state_update(ctr);
 }
 
@@ -286,7 +286,7 @@ void ble_central_mode_set(struct ble_central_s *ctr, uint8_t mode)
 #if defined(CONFIG_BLE_SECURITY_DB)
   if (ble_security_db_count(&ctr->context->security_db) == 0
       && mode & BLE_CENTRAL_CONNECTABLE) {
-    printk("No peer in sec db, pairing mode forced\n");
+    logk_trace("No peer in sec db, pairing mode forced");
     mode |= BLE_CENTRAL_PAIRABLE;
   }
 #else

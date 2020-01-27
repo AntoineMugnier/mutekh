@@ -18,6 +18,8 @@
     Copyright (c) Nicolas Pouillon <nipo@ssji.net> 2015
 */
 
+#define LOGK_MODULE_ID "blnk"
+
 #include <mutek/printk.h>
 #include <mutek/buffer_pool.h>
 
@@ -30,9 +32,6 @@
 #include <ble/net/generic.h>
 #include <ble/ccm_params.h>
 #include <ble/protocol/data.h>
-
-//#define dprintk printk
-#define dprintk(...) do{}while(0)
 
 struct ble_link_s;
 struct ble_sm_s;
@@ -108,7 +107,7 @@ static void link_state_set(struct ble_link_s *link, enum ble_link_state_e state)
   if (link->state == state)
     return;
 
-  dprintk("%s %d -> %d\n", __FUNCTION__, link->state, state);
+  logk_trace("%s %d -> %d", __FUNCTION__, link->state, state);
 
 #if defined(CONFIG_BLE_CRYPTO)
   bool_t crypto_state_changed = state == LINK_ENC_RUNNING || link->state == LINK_ENC_RUNNING;
@@ -129,7 +128,7 @@ static void link_task_forward(struct ble_link_s *link, struct net_task_s *task)
 {
   struct net_layer_s *dest = NULL;
 
-  dprintk("%s %P...", __FUNCTION__,
+  logk_trace("%s %P...", __FUNCTION__,
           task->packet.buffer->data + task->packet.buffer->begin,
           task->packet.buffer->end - task->packet.buffer->begin);
 
@@ -139,19 +138,19 @@ static void link_task_forward(struct ble_link_s *link, struct net_task_s *task)
 
     switch (task->packet.dst_addr.llid) {
     case BLE_LL_RESERVED:
-      dprintk(" Bad packet type: error\n");
+      logk_error(" Bad packet type: error");
       link_state_set(link, LINK_FAILED);
       break;
 
     case BLE_LL_DATA_START:
     case BLE_LL_DATA_CONT:
-      dprintk(" to L2CAP\n");
+      logk_trace(" to L2CAP");
       if (link->state != LINK_FAILED)
         dest = link->l2cap;
       break;
 
     case BLE_LL_CONTROL:
-      dprintk(" to LLCP\n");
+      logk_trace(" to LLCP");
       dest = link->llcp;
 
 #if defined(CONFIG_BLE_CRYPTO)
@@ -177,7 +176,7 @@ static void link_task_forward(struct ble_link_s *link, struct net_task_s *task)
       break;
     }
   } else {
-    dprintk(" to parent\n");
+    logk_trace(" to parent");
     dest = link->layer.parent;
 
 #if defined(CONFIG_BLE_CRYPTO)
@@ -222,7 +221,7 @@ static KROUTINE_EXEC(link_crypto_done)
   err = link->crypto_rq.error;
 
   if (err == -EAGAIN) {
-    printk("EAGAIN in CCM ???\n");
+    logk_error("EAGAIN in CCM ???");
     DEVICE_OP(&link->crypto, request, &link->crypto_rq);
     cpu_interrupt_restorestate(&irq_state);
     return;
@@ -238,14 +237,14 @@ static KROUTINE_EXEC(link_crypto_done)
 
   cpu_interrupt_restorestate(&irq_state);
 
-  dprintk("%s %p %P\n", __FUNCTION__, tmp->data + tmp->begin,
+  logk_trace("%s %p %P", __FUNCTION__, tmp->data + tmp->begin,
           tmp->data + tmp->begin,
           tmp->end - tmp->begin);
 
   assert(err != -EAGAIN);
 
   if (err) {
-    printk("Crypto error, task type: %d, in payload %P, out payload %P, error %d\n",
+    logk_error("Crypto error, task type: %d, in payload %P, out payload %P, error %d",
            task->type,
            link->tmp_packet->data + link->tmp_packet->begin,
            link->tmp_packet->end - link->tmp_packet->begin,
@@ -263,7 +262,7 @@ static KROUTINE_EXEC(link_crypto_done)
         && (task->packet.buffer->data[task->packet.buffer->begin] & 3) == BLE_LL_CONTROL) {
       uint8_t opcode = task->packet.buffer->data[task->packet.buffer->begin + 2];
 
-      dprintk("Master llcp opcode %d\n", opcode);
+      logk_debug("Master llcp opcode %d", opcode);
 
       switch (link->state) {
       default:
@@ -298,7 +297,7 @@ static void link_task_crypt(struct ble_link_s *link, struct net_task_s *task)
   assert(!link->ccm_task);
   assert(link->tmp_packet);
 
-  dprintk("%s\n", __FUNCTION__);
+  logk_trace("%s", __FUNCTION__);
 
   assert(buffer_refcount(task->packet.buffer) == 1);
 
@@ -344,7 +343,7 @@ static void link_task_crypt(struct ble_link_s *link, struct net_task_s *task)
   link->crypto_rq.len = in->end - in->begin;
   CPU_INTERRUPT_RESTORESTATE;
 
-  dprintk("%s %p -> %p %d\n", __FUNCTION__, link->crypto_rq.in, link->crypto_rq.out, link->crypto_rq.len);
+  logk_trace("%s %p -> %p %d", __FUNCTION__, link->crypto_rq.in, link->crypto_rq.out, link->crypto_rq.len);
 
   net_layer_refinc(&link->layer);
   DEVICE_OP(&link->crypto, request, &link->crypto_rq);
@@ -377,13 +376,13 @@ static void link_crypto_next(struct ble_link_s *link)
     return;
 #endif
 
-  dprintk("%s\n", __FUNCTION__);
+  logk_trace("%s", __FUNCTION__);
 
  again:
   task = NULL;
 
   if (!link->layer.parent) {
-    dprintk("%s No parent, flushing queue\n", __FUNCTION__);
+    logk_trace("%s No parent, flushing queue", __FUNCTION__);
     while ((task = net_task_queue_pop(&link->queue)))
       net_task_destroy(task);
     return;
@@ -396,7 +395,7 @@ static void link_crypto_next(struct ble_link_s *link)
   case LINK_ENC_STARTING2:
   case LINK_ENC_PAUSED:
   case LINK_ENC_STOPPING:
-    dprintk("%s in state %d, getting non-data or inbound packets\n", __FUNCTION__, link->state);
+    logk_trace("%s in state %d, getting non-data or inbound packets", __FUNCTION__, link->state);
     GCT_FOREACH(net_task_queue, &link->queue, t,
                 if (t->type == NET_TASK_INBOUND
                     || (t->source == link->llcp && is_enc_control(t->packet.buffer))) {
@@ -408,7 +407,7 @@ static void link_crypto_next(struct ble_link_s *link)
 #endif
 
   case LINK_FAILED:
-    dprintk("%s in state %d, getting non-data outbound packets\n", __FUNCTION__, link->state);
+    logk_trace("%s in state %d, getting non-data outbound packets", __FUNCTION__, link->state);
     GCT_FOREACH(net_task_queue, &link->queue, t,
                 if (t->source == link->llcp && (t->packet.buffer->end - t->packet.buffer->begin) <= 2) {
                   net_task_queue_nolock_remove(&link->queue, t);
@@ -425,7 +424,7 @@ static void link_crypto_next(struct ble_link_s *link)
   if (!task)
     return;
 
-  dprintk("%s state %d handling %P\n", __FUNCTION__,
+  logk_trace("%s state %d handling %P", __FUNCTION__,
           link->state,
           task->packet.buffer->data + task->packet.buffer->begin,
           task->packet.buffer->end - task->packet.buffer->begin);
@@ -484,7 +483,7 @@ void ble_link_task_handle(struct net_layer_s *layer,
 {
   struct ble_link_s *link = ble_link_s_from_layer(layer);
 
-  /* dprintk("%s %d\n", __FUNCTION__, task->type); */
+  /* logk_trace("%s %d", __FUNCTION__, task->type); */
 
   assert(cpu_is_interruptible());
 
@@ -493,14 +492,14 @@ void ble_link_task_handle(struct net_layer_s *layer,
     if (!link->layer.parent)
       break;
 
-    dprintk("%s < %P\n", __FUNCTION__,
+    logk_trace("%s < %P", __FUNCTION__,
             task->packet.buffer->data + task->packet.buffer->begin,
             task->packet.buffer->end - task->packet.buffer->begin);
 
     assert(task->packet.buffer);
 
     if (task->packet.dst_addr.unreliable && link->outbound_accepted_count < 0) {
-      dprintk("Dropping unreliable packet because of overflow\n");
+      logk("Dropping unreliable packet because of overflow");
       break;
     }
 
@@ -516,7 +515,7 @@ void ble_link_task_handle(struct net_layer_s *layer,
     return;
 
   case NET_TASK_INBOUND:
-    dprintk("%s > %P\n", __FUNCTION__,
+    logk_trace("%s > %P", __FUNCTION__,
             task->packet.buffer->data + task->packet.buffer->begin,
             task->packet.buffer->end - task->packet.buffer->begin);
 
@@ -548,7 +547,7 @@ void ble_link_task_handle(struct net_layer_s *layer,
       struct ble_link_flow_update_s *up
         = ble_link_flow_update_s_from_task(task);
       link->outbound_accepted_count = up->accepted_count;
-      /* dprintk("Now at %d accepted packets\n", link->outbound_accepted_count); */
+      /* logk_trace("Now at %d accepted packets", link->outbound_accepted_count); */
       break;
     }
     }
@@ -637,7 +636,7 @@ void ble_link_destroyed(struct net_layer_s *layer)
 {
   struct ble_link_s *link = ble_link_s_from_layer(layer);
 
-  dprintk("Data link-layer %p destroyed\n", link);
+  logk_trace("Data link-layer %p destroyed", link);
 
   net_task_queue_destroy(&link->queue);
 

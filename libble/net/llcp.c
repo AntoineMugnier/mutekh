@@ -18,6 +18,8 @@
     Copyright (c) Nicolas Pouillon <nipo@ssji.net> 2015
 */
 
+#define LOGK_MODULE_ID "llcp"
+
 #include <mutek/printk.h>
 #include <mutek/buffer_pool.h>
 
@@ -33,9 +35,6 @@
 
 #include <ble/peer.h>
 #include <device/class/crypto.h>
-
-//#define dprintk printk
-#define dprintk(...) do{}while(0)
 
 struct ble_llcp_s;
 
@@ -297,7 +296,7 @@ static void ble_llcp_packet_handle(struct ble_llcp_s *llcp, struct net_task_s *t
   bool_t is_slave = llcp_is_slave(llcp);
   bool_t fatal = 0;
 
-  dprintk("LLCP %s req %P...", is_slave ? "slave" : "master", p->data + p->begin, p->end - p->begin);
+  logk_trace("%s req %P...", is_slave ? "slave" : "master", p->data + p->begin, p->end - p->begin);
 
   switch (p->data[p->begin]) {
   case BLE_LL_CONNECTION_UPDATE_REQ: {
@@ -323,7 +322,7 @@ static void ble_llcp_packet_handle(struct ble_llcp_s *llcp, struct net_task_s *t
 
     ble_data_conn_params_update_parse(&p->data[p->begin], &up->update);
 
-    dprintk("connection parameters update %d lat %d to %d at %d\n",
+    logk_trace("connection parameters update %d lat %d to %d at %d",
             up->update.timing.interval,
             up->update.timing.latency,
             up->update.timing.timeout,
@@ -353,7 +352,7 @@ static void ble_llcp_packet_handle(struct ble_llcp_s *llcp, struct net_task_s *t
 
     up->task.destroy_func = memory_allocator_push;
 
-    dprintk("channel map update\n");
+    logk_trace("channel map update");
 
     up->channel_map = endian_le32_na_load(args) | ((uint64_t)args[4] << 32);
     up->instant = endian_le16_na_load(args + 5);
@@ -363,13 +362,13 @@ static void ble_llcp_packet_handle(struct ble_llcp_s *llcp, struct net_task_s *t
   }
 
   case BLE_LL_TERMINATE_IND:
-    dprintk("LLCP terminated %d\n", args[0]);
+    logk_trace("terminated %d", args[0]);
 
     llcp_connection_closed(llcp, args[0]);
     break;
 
   case BLE_LL_PING_REQ:
-    dprintk("ping req\n");
+    logk_trace("ping req");
 
     p->data[p->begin] = BLE_LL_PING_RSP;
     p->end = p->begin + 1;
@@ -380,7 +379,7 @@ static void ble_llcp_packet_handle(struct ble_llcp_s *llcp, struct net_task_s *t
     if (llcp->version_sent)
       break;
 
-    dprintk("version ind\n");
+    logk_trace("version ind");
 
     llcp->version_sent = 1;
 
@@ -396,7 +395,7 @@ static void ble_llcp_packet_handle(struct ble_llcp_s *llcp, struct net_task_s *t
   case BLE_LL_ENC_REQ: {
     uint8_t skd[16];
 
-    dprintk("enc req\n");
+    logk_trace("enc req");
 
     if (!is_slave) {
       reason = BLE_COMMAND_DISALLOWED;
@@ -430,14 +429,14 @@ static void ble_llcp_packet_handle(struct ble_llcp_s *llcp, struct net_task_s *t
       goto error;
     }
 
-    dprintk("skdm:      %P\n", args + 10, 8);
-    dprintk("ivm:       %P\n", args + 18, 4);
+    logk_trace("skdm:      %P", args + 10, 8);
+    logk_trace("ivm:       %P", args + 18, 4);
 
-    dprintk("rand:      %P\n", args, 8);
-    dprintk("ediv:      %d\n", endian_le16_na_load(args + 8));
+    logk_trace("rand:      %P", args, 8);
+    logk_trace("ediv:      %d", endian_le16_na_load(args + 8));
 
-    dprintk("skds:      %P\n", llcp->local_skd, 8);
-    dprintk("ivs:       %P\n", setup->iv + 4, 4);
+    logk_trace("skds:      %P", llcp->local_skd, 8);
+    logk_trace("ivs:       %P", setup->iv + 4, 4);
 
     memcpy(skd, args + 10, 8);
     memcpy(skd + 8, llcp->local_skd, 8);
@@ -453,8 +452,8 @@ static void ble_llcp_packet_handle(struct ble_llcp_s *llcp, struct net_task_s *t
       goto error;
     }
 
-    dprintk("SK:        %P\n", setup->sk, 16);
-    dprintk("IV:        %P\n", setup->iv, 8);
+    logk_trace("SK:        %P", setup->sk, 16);
+    logk_trace("IV:        %P", setup->iv, 8);
 
 #if defined(CONFIG_BLE_SECURITY_DB)
     setup->authenticated = llcp->peer->mitm_protection;
@@ -492,8 +491,8 @@ static void ble_llcp_packet_handle(struct ble_llcp_s *llcp, struct net_task_s *t
 
     error_t err;
 
-    dprintk("skdm:      %P\n", llcp->local_skd, 8);
-    dprintk("ivm:       %P\n", llcp->local_iv, 4);
+    logk_trace("skdm:      %P", llcp->local_skd, 8);
+    logk_trace("ivm:       %P", llcp->local_iv, 4);
 
     memcpy(skd, llcp->local_skd, 8);
     memcpy(skd + 8, args, 8);
@@ -505,17 +504,17 @@ static void ble_llcp_packet_handle(struct ble_llcp_s *llcp, struct net_task_s *t
       goto error;
     }
 
-    dprintk("rand:      %P\n", rand, 8);
-    dprintk("ediv:      %d\n", ediv);
+    logk_trace("rand:      %P", rand, 8);
+    logk_trace("ediv:      %d", ediv);
 
-    dprintk("skds:      %P\n", args, 8);
-    dprintk("ivs:       %P\n", args + 8, 4);
+    logk_trace("skds:      %P", args, 8);
+    logk_trace("ivs:       %P", args + 8, 4);
 
     memcpy(setup->iv, llcp->local_iv, 4);
     memcpy(setup->iv + 4, args + 8, 4);
 
-    dprintk("SK:        %P\n", setup->sk, 16);
-    dprintk("IV:        %P\n", setup->iv, 8);
+    logk_trace("SK:        %P", setup->sk, 16);
+    logk_trace("IV:        %P", setup->iv, 8);
 
 #if defined(CONFIG_BLE_SECURITY_DB)
     setup->authenticated = llcp->peer->mitm_protection;
@@ -537,7 +536,7 @@ static void ble_llcp_packet_handle(struct ble_llcp_s *llcp, struct net_task_s *t
     if (!llcp->layer.parent)
       break;
 
-    dprintk("start enc req\n");
+    logk_trace("start enc req");
 
     p->data[p->begin + 0] = BLE_LL_START_ENC_RSP;
     p->end = p->begin + 1;
@@ -551,7 +550,7 @@ static void ble_llcp_packet_handle(struct ble_llcp_s *llcp, struct net_task_s *t
     if (!llcp->layer.parent)
       break;
 
-    dprintk("start enc rsp\n");
+    logk_trace("start enc rsp");
 
     p->data[p->begin + 0] = BLE_LL_START_ENC_RSP;
     p->end = p->begin + 1;
@@ -567,7 +566,7 @@ static void ble_llcp_packet_handle(struct ble_llcp_s *llcp, struct net_task_s *t
     if (!llcp->layer.parent)
       break;
 
-    dprintk("pause enc req\n");
+    logk_trace("pause enc req");
 
     p->data[p->begin + 0] = BLE_LL_PAUSE_ENC_RSP;
     p->end = p->begin + 1;
@@ -578,7 +577,7 @@ static void ble_llcp_packet_handle(struct ble_llcp_s *llcp, struct net_task_s *t
     if (is_slave)
       break;
 
-    dprintk("pause enc rsp\n");
+    logk_trace("pause enc rsp");
 
     p->data[p->begin + 0] = BLE_LL_PAUSE_ENC_RSP;
     p->end = p->begin + 1;
@@ -615,7 +614,7 @@ static void ble_llcp_packet_handle(struct ble_llcp_s *llcp, struct net_task_s *t
     }
 
   case BLE_LL_PING_RSP:
-    dprintk("ping rsp\n");
+    logk_trace("ping rsp");
     llcp_query_pending_respond(llcp, BLE_LLCP_PING, 0);
     break;
 
@@ -648,7 +647,7 @@ static void ble_llcp_packet_handle(struct ble_llcp_s *llcp, struct net_task_s *t
 
   send_features:
 
-    dprintk("features\n");
+    logk_trace("features");
 
     llcp->features_exchanged = 1;
     llcp->features = SUPPORTED_FEATURES & endian_le64_na_load(args);
@@ -675,7 +674,7 @@ static void ble_llcp_packet_handle(struct ble_llcp_s *llcp, struct net_task_s *t
     break;
 
   case BLE_LL_REJECT_IND_EXT:
-    dprintk("reject %d %d\n", args[0], args[1]);
+    logk_trace("reject %d %d", args[0], args[1]);
 
     switch (args[0]) {
     case BLE_LL_CONNECTION_PARAM_REQ:
@@ -718,13 +717,13 @@ static void ble_llcp_packet_handle(struct ble_llcp_s *llcp, struct net_task_s *t
     break;
   }
 
-  dprintk("Done\n");
+  logk_trace("Done");
 
   net_task_destroy(task);
   return;
 
  error:
-  dprintk("rejected: %d\n", reason);
+  logk_trace("rejected: %d", reason);
 
   p->data[p->begin + 1] = p->data[p->begin + 0];
   p->data[p->begin + 0] = BLE_LL_REJECT_IND_EXT;
@@ -851,7 +850,7 @@ static void ble_llcp_query_handle(struct ble_llcp_s *llcp, struct net_task_s *ta
   struct buffer_s *p;
   bool_t is_slave = llcp_is_slave(llcp);
 
-  dprintk("%s %x\n", __FUNCTION__, task->query.opcode);
+  logk_trace("%s %x", __FUNCTION__, task->query.opcode);
 
   switch (task->query.opcode) {
   case BLE_LLCP_PING:
@@ -944,7 +943,7 @@ static void ble_llcp_query_handle(struct ble_llcp_s *llcp, struct net_task_s *ta
       endian_le16_na_store(p->data + p->begin + 10, 0);
       memset(p->data + p->begin + 12, 0xff, 12);
 
-      dprintk("%s sending %d\n", __FUNCTION__, p->data[p->begin]);
+      logk_trace("%s sending %d", __FUNCTION__, p->data[p->begin]);
 
       net_task_outbound_push(in, llcp->layer.parent, &llcp->layer,
                             0, NULL, &dst, p);
@@ -964,7 +963,7 @@ static void ble_llcp_timeout_handle(struct ble_llcp_s *llcp, struct net_task_s *
   struct net_task_s *in;
   struct buffer_s *p;
 
-  dprintk("%s %p %p\n", __FUNCTION__, task, llcp->feature_req_later);
+  logk_trace("%s %p %p", __FUNCTION__, task, llcp->feature_req_later);
 
   if (task == llcp->feature_req_later) {
     llcp->feature_req_later = NULL;
@@ -989,7 +988,7 @@ static void ble_llcp_timeout_handle(struct ble_llcp_s *llcp, struct net_task_s *
     p->data[p->begin + 0] = llcp_is_slave(llcp) ? BLE_LL_SLAVE_FEATURE_REQ : BLE_LL_FEATURE_REQ;
     endian_le64_na_store(p->data + p->begin + 1, SUPPORTED_FEATURES);
 
-    dprintk("%s sending %d\n", __FUNCTION__, p->data[p->begin]);
+    logk_trace("%s sending %d", __FUNCTION__, p->data[p->begin]);
 
     net_task_outbound_push(in, llcp->layer.parent, &llcp->layer,
                           0, NULL, &dst, p);
@@ -1072,7 +1071,7 @@ void ble_llcp_unbound(struct net_layer_s *layer,
 
 static void llcp_feature_req_later(struct ble_llcp_s *llcp)
 {
-  dprintk("%s\n", __FUNCTION__);
+  logk_trace("%s", __FUNCTION__);
 
   if (llcp->feature_req_later) {
     net_scheduler_task_cancel(llcp->layer.scheduler,
@@ -1080,7 +1079,7 @@ static void llcp_feature_req_later(struct ble_llcp_s *llcp)
     llcp->feature_req_later = NULL;
   }
 
-  dprintk("%s\n", __FUNCTION__);
+  logk_trace("%s", __FUNCTION__);
 
   struct net_task_s *timeout = net_scheduler_task_alloc(llcp->layer.scheduler);
   if (timeout) {
@@ -1108,7 +1107,7 @@ void ble_llcp_destroyed(struct net_layer_s *layer)
 {
   struct ble_llcp_s *llcp = ble_llcp_s_from_layer(layer);
 
-  dprintk("Llcp %p destroyed\n", llcp);
+  logk_trace("%p destroyed", llcp);
 
   mem_free(llcp);
 }

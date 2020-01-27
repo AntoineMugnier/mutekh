@@ -18,6 +18,8 @@
     Copyright (c) Nicolas Pouillon <nipo@ssji.net> 2015
 */
 
+#define LOGK_MODULE_ID "bscn"
+
 #include <mutek/printk.h>
 #include <mutek/buffer_pool.h>
 
@@ -34,9 +36,6 @@
 
 #include <gct_platform.h>
 #include <gct/container_avl_p.h>
-
-//#define dprintk printk
-#define dprintk(...) do{}while(0)
 
 #define GCT_CONTAINER_ALGO_ble_scan_list AVL_P
 
@@ -91,7 +90,7 @@ void ble_scan_filter_destroyed(struct net_layer_s *layer)
 
   ble_scan_list_destroy(&sf->devices);
 
-  dprintk("Scan filter %p destroyed\n", sf);
+  logk_trace("Scan filter %p destroyed", sf);
 
   mem_free(sf);
 }
@@ -140,7 +139,7 @@ bool_t ble_scan_filter_address_resolve(struct ble_scan_filter_s *sf,
   if (!peer.identity_present)
     return 0;
 
-  dprintk("Resolved address "BLE_ADDR_FMT" to "BLE_ADDR_FMT"\n",
+  logk_trace("Resolved address "BLE_ADDR_FMT" to "BLE_ADDR_FMT"",
          BLE_ADDR_ARG(adva),
          BLE_ADDR_ARG(&peer.addr));
 
@@ -178,7 +177,7 @@ void ble_scan_filter_adv_handle(struct ble_scan_filter_s *sf,
     break;
   }
 
-  dprintk("Got adv %p %P\n", item,
+  logk_trace("Got adv %p %P", item,
          buffer->data + buffer->begin,
          buffer->end - buffer->begin);
 
@@ -186,7 +185,7 @@ void ble_scan_filter_adv_handle(struct ble_scan_filter_s *sf,
 
   if (adva.type == BLE_ADDR_RANDOM
       && ble_addr_random_type(&adva) == BLE_ADDR_RANDOM_RESOLVABLE) {
-    dprintk("From random "BLE_ADDR_FMT"\n", BLE_ADDR_ARG(&adva));
+    logk_trace("From random "BLE_ADDR_FMT"", BLE_ADDR_ARG(&adva));
 
     if (!ble_scan_filter_address_resolve(sf, &adva))
       return;
@@ -303,9 +302,9 @@ void ble_scan_filter_adv_handle(struct ble_scan_filter_s *sf,
 
  params_update:
 #if 0
-  dprintk("New policy table (default %d)\n", sf->scan_params.default_policy);
+  logk_trace("New policy table (default %d)", sf->scan_params.default_policy);
   for (size_t i = 0; i < sf->scan_params.target_count; ++i)
-    dprintk(" "BLE_ADDR_FMT": %d\n", BLE_ADDR_ARG(&sf->scan_params.target[i].addr), sf->scan_params.target[i].policy);
+    logk_trace(" "BLE_ADDR_FMT": %d", BLE_ADDR_ARG(&sf->scan_params.target[i].addr), sf->scan_params.target[i].policy);
 #endif
 
   ble_scanner_params_update(sf->layer.parent, &sf->scan_params);
@@ -383,7 +382,7 @@ static void ble_scan_filter_dandling(struct net_layer_s *layer)
 {
   struct ble_scan_filter_s *sf = ble_scan_filter_s_from_layer(layer);
 
-  dprintk("Scan filter %p dandling\n", sf);
+  logk_trace("Scan filter %p dandling", sf);
 
   net_scheduler_from_layer_cancel(sf->layer.scheduler, &sf->layer);
 

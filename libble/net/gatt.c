@@ -18,6 +18,8 @@
     Copyright (c) Nicolas Pouillon <nipo@ssji.net> 2015
 */
 
+#define LOGK_MODULE_ID "gatt"
+
 #include <mutek/printk.h>
 #include <mutek/buffer_pool.h>
 
@@ -37,9 +39,6 @@
 #include <ble/security_db.h>
 
 #include <ble/net/generic.h>
-
-#define dprintk(...) do{}while(0)
-//#define dprintk printk
 
 struct ble_gatt_s
 {
@@ -177,7 +176,7 @@ static void att_req_destroy(void *mem)
 {
   struct ble_att_transaction_s *task = mem;
 
-  dprintk("Gatt txn %p destroy\n", mem);
+  logk_trace("Gatt txn %p destroy", mem);
 
   if (task->packet)
     buffer_refdec(task->packet);
@@ -204,7 +203,7 @@ error_t ble_gatt_att_value_changed(struct ble_gattdb_client_s *client,
     if (!txn)
       return -ENOMEM;
 
-    dprintk("Gatt txn %p alloc\n", txn);
+    logk_trace("Gatt txn %p alloc", txn);
 
     txn->task.destroy_func = att_req_destroy;
     txn->packet = NULL;
@@ -283,7 +282,7 @@ static void ble_gatt_context_changed(struct net_layer_s *layer)
   gatt->client.encrypted = layer->context.addr.encrypted;
   gatt->client.authenticated = layer->context.addr.authenticated;
 
-  dprintk("Gatt client layer now %s\n", gatt->client.encrypted ? "encrypted" : "clear text");
+  logk_trace("Gatt client layer now %s", gatt->client.encrypted ? "encrypted" : "clear text");
 
   ble_gattdb_client_subscription_set(&gatt->client, gatt->peer->subscriptions, BLE_SUBSCRIBED_CHAR_COUNT);
 }
@@ -381,7 +380,7 @@ error_t gatt_find_information(struct ble_gatt_s *gatt,
   uint8_t err;
   bool_t once = 0;
 
-  dprintk("Find information %d-%d\n",
+  logk_trace("Find information %d-%d",
           task->find_information.start, task->find_information.end);
 
   for (err = ble_gattdb_client_seek(&gatt->client, task->find_information.start);
@@ -397,7 +396,7 @@ error_t gatt_find_information(struct ble_gatt_s *gatt,
     if (err)
       break;
 
-    dprintk("  %d " BLE_UUID_FMT "\n", handle, BLE_UUID_ARG(type));
+    logk_trace("  %d " BLE_UUID_FMT "", handle, BLE_UUID_ARG(type));
 
     ai->handle = handle;
     ai->type = *type;
@@ -419,7 +418,7 @@ error_t gatt_find_by_type_value(struct ble_gatt_s *gatt,
   uint8_t *tmp_data = alloca(task->find_by_type_value.value_size + 1);
   bool_t once = 0;
 
-  dprintk("Find by type value %d-%d " BLE_UUID_FMT " %P\n",
+  logk_trace("Find by type value %d-%d " BLE_UUID_FMT " %P",
           task->find_by_type_value.start, task->find_by_type_value.end,
           BLE_UUID_ARG(&task->find_by_type_value.type),
           task->find_by_type_value.value, task->find_by_type_value.value_size);
@@ -449,7 +448,7 @@ error_t gatt_find_by_type_value(struct ble_gatt_s *gatt,
     uint16_t end_group = gatt->client.cursor.registry->start_handle
       + gatt->client.cursor.registry->handle_count - 1;
 
-    dprintk(" from %d to %d\n", handle, end_group);
+    logk_trace(" from %d to %d", handle, end_group);
 
     hi->found = handle;
     hi->end_group = end_group;
@@ -470,7 +469,7 @@ error_t gatt_read_by_type(struct ble_gatt_s *gatt,
   bool_t once = 0;
   uint8_t err;
 
-  dprintk("Read by type %d-%d " BLE_UUID_FMT "\n",
+  logk_trace("Read by type %d-%d " BLE_UUID_FMT "",
           task->read_by_type.start, task->read_by_type.end,
           BLE_UUID_ARG(&task->read_by_type.type));
 
@@ -483,7 +482,7 @@ error_t gatt_read_by_type(struct ble_gatt_s *gatt,
     uint16_t handle = ble_gattdb_client_tell(&gatt->client);
     err = ble_gattdb_client_type_get(&gatt->client, &type);
 
-    dprintk(" % 4d err %d: " BLE_UUID_FMT "\n",
+    logk_trace(" % 4d err %d: " BLE_UUID_FMT "",
             handle, err, BLE_UUID_ARG(type));
 
     if (err)
@@ -507,7 +506,7 @@ error_t gatt_read_by_type(struct ble_gatt_s *gatt,
                                (uint8_t *)task->read_by_type.handle_value + task->read_by_type.handle_value_size + 2,
                                &written);
 
-    dprintk(" %d: %P\n",
+    logk_trace(" %d: %P",
             ble_gattdb_client_tell(&gatt->client),
             (uint8_t *)task->read_by_type.handle_value + task->read_by_type.handle_value_size + 2,
             written);
@@ -537,7 +536,7 @@ error_t gatt_read(struct ble_gatt_s *gatt,
 {
   size_t written;
 
-  dprintk("Read %d\n", task->read.handle);
+  logk_trace("Read %d", task->read.handle);
 
   task->error = ble_gattdb_client_seek(&gatt->client, task->read.handle);
   if (task->error)
@@ -561,10 +560,10 @@ error_t gatt_read_multiple(struct ble_gatt_s *gatt,
 {
   size_t written;
 
-  dprintk("Read multiple", __FUNCTION__);
+  logk_trace("Read multiple", __FUNCTION__);
 
   for (size_t i = 0; i < task->read_multiple.handle_count && task->read_multiple.buffer_size < task->read_multiple.buffer_size_max; ++i) {
-    dprintk(" %d", task->read_multiple.handle[i]);
+    logk_trace(" %d", task->read_multiple.handle[i]);
     task->error = ble_gattdb_client_seek(&gatt->client, task->read_multiple.handle[i]);
     if (task->error)
       return 0;
@@ -578,7 +577,7 @@ error_t gatt_read_multiple(struct ble_gatt_s *gatt,
     task->read_multiple.buffer_size += written;
   }
 
-  dprintk("\n");
+  logk_trace("");
 
   return 0;
 }
@@ -589,7 +588,7 @@ error_t gatt_read_by_group_type(struct ble_gatt_s *gatt,
   uint8_t err;
   bool_t once = 0;
 
-  dprintk("Read by group type %d-%d " BLE_UUID_FMT "\n",
+  logk_trace("Read by group type %d-%d " BLE_UUID_FMT "",
           task->read_by_group_type.start, task->read_by_group_type.end, BLE_UUID_ARG(&task->read_by_group_type.type));
 
   task->error = 0;
@@ -623,7 +622,7 @@ error_t gatt_read_by_group_type(struct ble_gatt_s *gatt,
       written = task->read_by_group_type.attribute_data_size_max - 4;
     }
 
-    dprintk(" reading handle %d, %d bytes max\n",
+    logk_trace(" reading handle %d, %d bytes max",
             handle, written);
 
     struct ble_att_data_s *ad = (void*)((uint8_t*)task->read_by_group_type.attribute_data
@@ -641,7 +640,7 @@ error_t gatt_read_by_group_type(struct ble_gatt_s *gatt,
                        + gatt->client.cursor.registry->handle_count
                        - 1);
 
-    dprintk(" %d - %d %P\n",
+    logk_trace(" %d - %d %P",
             handle, gatt->client.cursor.registry->start_handle
             + gatt->client.cursor.registry->handle_count
             - 1, ad->value, written);
@@ -660,7 +659,7 @@ error_t gatt_read_by_group_type(struct ble_gatt_s *gatt,
 error_t _gatt_write(struct ble_gatt_s *gatt, uint16_t handle, const void *data, size_t size)
 {
   error_t err;
-  dprintk("Write %d %P\n", handle, data, size);
+  logk_trace("Write %d %P", handle, data, size);
 
   err = ble_gattdb_client_seek(&gatt->client, handle);
   if (err)
