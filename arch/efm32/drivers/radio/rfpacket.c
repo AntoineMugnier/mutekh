@@ -255,7 +255,7 @@ static void efr32_rfp_timer_irq(struct device_s *dev) {
           // Disable already done, call req timeout
           efr32_rfp_req_timeout(ctx);
         } else {
-          // Disable pending irq
+          // Disable is pending irq
           ctx->rac_irq_type = EFR32_RAC_IRQ_TIMEOUT;
         }
       } else {
@@ -274,7 +274,7 @@ static void efr32_rfp_timer_irq(struct device_s *dev) {
           // Disable already done, call req timeout
           efr32_rfp_req_timeout(ctx);
         } else {
-          // Disable pending irq
+          // Disable is pending irq
           ctx->rac_irq_type = EFR32_RAC_IRQ_TIMEOUT;
         }
       } else {
@@ -958,6 +958,8 @@ static error_t efr32_radio_check_config(struct dev_rfpacket_ctx_s *gpv, struct d
 static KROUTINE_EXEC(efr32_rfp_rxc_timeout_cb) {
   struct dev_timer_rq_s *trq = KROUTINE_CONTAINER(kr, *trq, base.kr);
   struct radio_efr32_rfp_ctx_s *ctx = trq->pvdata;
+  assert(ctx);
+  efr32_radio_printk("rxc timeout\n");
   // Warn libdevice that we reached a rxc timeout
   dev_rfpacket_rxc_timeout(&ctx->gctx);
 }
@@ -990,10 +992,11 @@ static void efr32_radio_rx(struct dev_rfpacket_ctx_s *gpv, struct dev_rfpacket_r
       // Set timeout irq
       ctx->rx_cont_trq.deadline = rq->deadline;
       ctx->rx_cont_trq.rev = 0;
+      ctx->rx_cont_trq.pvdata = ctx;
       dev_timer_rq_init(&ctx->rx_cont_trq, efr32_rfp_rxc_timeout_cb);
       if (efr32_radio_timer_req(ctx, &ctx->rx_cont_trq) == -ETIMEDOUT) {
           // Deadline already passed
-          efr32_radio_printk("rx timeout early\n");
+          efr32_radio_printk("rxc timeout early\n");
           efr32_rfp_req_done_direct(ctx, DEV_RFPACKET_STATUS_RX_TIMEOUT);
           return;
       }

@@ -877,9 +877,8 @@ void dev_rfpacket_rxc_timeout(struct dev_rfpacket_ctx_s *pv) {
         if (pv->rxc_flags & bit(RFPACKET_FLAG_PENDING_RX)) {
           BIT_SET(pv->rxc_flags, RFPACKET_FLAG_TIMEOUT);
         } else {
+          BIT_SET(pv->rxc_flags, RFPACKET_FLAG_TIMEOUT);
           pv->drv->cancel_rxc(pv);
-          pv->status = DEV_RFPACKET_STATUS_RX_TIMEOUT;
-          dev_rfpacket_req_done(pv);
         }
       break;
 
@@ -1003,6 +1002,7 @@ error_t dev_rfpacket_cancel(struct dev_rfpacket_ctx_s *pv, struct dev_rfpacket_r
       case DEV_RFPACKET_STATE_RXC:
         // Check if not pending rx
         if (!(pv->rxc_flags & (bit(RFPACKET_FLAG_PENDING_RX) | bit(RFPACKET_FLAG_PAUSED)))) {
+          BIT_SET(pv->rxc_flags, RFPACKET_FLAG_CANCELED);
           pv->drv->cancel_rxc(pv);
         }
       case DEV_RFPACKET_STATE_CONFIG_RXC:
