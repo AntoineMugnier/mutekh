@@ -45,7 +45,7 @@
 #define SI446X_MAX_PACKET_SIZE                   256
 #define SI446X_PKT_CFG_BUFFER_SIZE               32
 #define SI446X_BASE_TIME                         500       /* us */
-#define SI446X_TIME_BEFORE_RETRY_SHIFT           6
+#define SI446X_TIME_BEFORE_RETRY_SHIFT           3
 #define SI446X_RSSI_SAMPLING_PERIOD              8         /* bt log2 */
 #define SI446X_RSSI_AVERAGE_DEFAULT              -126
 #define SI446X_RSSI_AVERAGE_LOG2_WINDOW_SIZE     8

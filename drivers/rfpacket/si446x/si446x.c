@@ -123,7 +123,9 @@ static void si446x_bytecode_start(struct si446x_ctx_s *pv, const void *e, uint16
   pv->bc_status &= STATUS_IRQ_MSK;
   bc_set_reg(&srq->vm, STATUS, pv->bc_status);
 
-  logk_trace("bcstart");
+  dev_timer_value_t ts;
+  DEVICE_OP(pv->timer, get_value, &ts, 0);
+  logk_trace("[%d] bcstart", (uint32_t)ts);
   va_list ap;
   va_start(ap, mask);
   ensure(dev_spi_bytecode_start_va(&pv->spi, srq, e, mask, ap) == 0);
@@ -748,8 +750,7 @@ static inline void si446x_retry_rx(struct si446x_ctx_s *pv)
 static inline void si446x_start_tx(struct si446x_ctx_s *pv)
 {
   struct dev_rfpacket_rq_s *rq = dev_rfpacket_rq_head(&pv->queue);
-
-  assert(rq && rq->tx_size < SI446X_MAX_PACKET_SIZE);
+  assert(rq && (rq->tx_size < SI446X_MAX_PACKET_SIZE));
 
   pv->rq = rq;
   pv->size = rq->tx_size;
@@ -938,7 +939,9 @@ static DEV_RFPACKET_REQUEST(si446x_rfp_request)
     if (rq == NULL)
       break;
 
-    logk_trace("req %d %d %d", rq->type, rq->tx_size, pv->state);
+    dev_timer_value_t ts;
+    DEVICE_OP(pv->timer, get_value, &ts, 0);
+    logk_trace("[%d] req %d %d %d", (uint32_t)ts, rq->type, rq->tx_size, pv->state);
 
     rq->error = 0;
 
@@ -1291,7 +1294,9 @@ static KROUTINE_EXEC(si446x_spi_rq_done)
 
   pv->bc_status = bc_get_reg(&srq->vm, STATUS);
 
-  logk_trace("bdone %d 0x%x", pv->state, pv->bc_status);
+  dev_timer_value_t ts;
+  DEVICE_OP(pv->timer, get_value, &ts, 0);
+  logk_trace("[%d] bdone %d 0x%x", (uint32_t)ts, pv->state, pv->bc_status);
 
   if (pv->state != SI446X_STATE_INITIALISING)
     assert(!srq->error);
@@ -1426,7 +1431,9 @@ static DEV_IRQ_SRC_PROCESS(si446x_irq_source_process)
   struct si446x_ctx_s *pv = dev->drv_pv;
   struct dev_spi_ctrl_bytecode_rq_s *srq = &pv->spi_rq;
 
-  logk_trace("irq");
+  dev_timer_value_t ts;
+  DEVICE_OP(pv->timer, get_value, &ts, 0);
+  logk_trace("[%d] irq", (uint32_t)ts);
 
   lock_spin(&dev->lock);
 
@@ -1718,4 +1725,7 @@ const uint8_t si446x_config[] = {
   0x05, 0x11, 0x12, 0x01, 0x10, 0xA2,
   0x0B, 0x11, 0x12, 0x07, 0x22, 0x01, 0x00, 0x82, 0x00, 0xFF, 0x00, 0x0a,
   0x00
+
+  // Update GPIO 2 & 3 to export TX/RX state
+  // 0x08 0x13 0x00 0x00 0x20 0x21 0x00 0x00 0x00
 };
