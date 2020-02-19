@@ -48,7 +48,7 @@
 #define SI446X_MAX_WAIT_CTS_SHIFT                6         // = SI446X_BASE_TIME * 2 ^ 4 = 32 ms
 #define SI446X_LBT_WAIT_SHIFT                    3         // = SI446X_BASE_TIME * 2 ^ 3 = 4 ms
 #define SI446X_LBT_POLL_SHIFT                    1         // = SI446X_BASE_TIME * 2 ^ 1 = 1 ms
-#define SI446X_LBT_BASE_TIME_MULT                8         // = SI446X_BASE_TIME * 8 = 4 ms
+#define SI446X_LBT_BASE_TIME_MULT                10        // = SI446X_BASE_TIME * 10 = 5 ms
 #define SI446X_LBT_RAND_TIME_MAX_MULT            8
 #define SI446X_RSSI_SAMPLING_PERIOD              8         /* bt log2 */
 #define SI446X_RSSI_AVERAGE_DEFAULT              -126
@@ -74,8 +74,6 @@
 #define SI446X_IO_NIRQ 1
 #define SI446X_IO_CTS  2
 #define SI446X_IO_XOEN 3
-
-#define SI446X_CTS_RETRIES  255
 
 #define SI446X_WUTR_VALUE   0 
 #define SI446X_WUT_MIN_TIME (122 * 1000 * (1 << SI446X_WUTR_VALUE)) /* ns */
