@@ -1,0 +1,19 @@
+%set OUTPUT_NAME hid_master
+%append MODULES $(OUTPUT_NAME):$(CONFIGPATH)
+
+CONFIG_LICENSE_APP_BSD
+
+CONFIG_APP_START
+CONFIG_MUTEK_THREAD
+
+CONFIG_COMPILE_COLLECT
+
+CONFIG_HEXO_CPU_STACK_SIZE 0x1000
+CONFIG_BLE_PROFILE_HID_CLIENT
+
+%inherit ble-central
+%inherit ble-security
+
+%include arch/arch.build
+%include scripts/options.build
+%include examples/ble/ble.build
