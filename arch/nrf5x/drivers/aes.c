@@ -767,7 +767,7 @@ static DEV_CRYPTO_REQUEST(nrf5x_aes_request)
   struct device_s *dev = accessor->dev;
   struct nrf5x_aes_private_s *pv = dev->drv_pv;
 
-  dev_request_delayed_push(device_crypto_s_base(accessor),
+  dev_request_delayed_push(device_crypto_s_base((struct device_crypto_s*)accessor),
                            &pv->queue, dev_crypto_rq_s_base(rq), 1);
 }
 
