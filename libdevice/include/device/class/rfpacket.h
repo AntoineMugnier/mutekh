@@ -247,6 +247,7 @@ enum dev_rfpacket_format_e
      */
   DEV_RFPACKET_FMT_RAW,
 
+  DEV_RFPACKET_FMT_SIGFOX,
 };
 
 ENUM_DESCRIPTOR(dev_rfpacket_encoding_e, strip:DEV_RFPACKET_, upper);
