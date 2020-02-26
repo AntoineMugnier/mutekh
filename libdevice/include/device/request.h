@@ -325,7 +325,7 @@ error_t dev_##class_##_wait_rq(const struct device_##class_##_s *acc,   \
 {                                                                       \
     struct dev_request_status_s status;                                 \
     dev_request_sched_init(&rq->base, &status);                         \
-    DEVICE_OP(acc, request, rq);                                        \
+    DEVICE_OP((struct device_##class_##_s *)acc, request, rq);          \
     dev_request_sched_wait(&status);                                    \
     return rq->error;                                                   \
 })
