@@ -1,5 +1,9 @@
-#ifndef FLUKE_GATT_CLIENT_H_
-#define FLUKE_GATT_CLIENT_H_
+#ifndef FLUKE_CLIENT_H_
+#define FLUKE_CLIENT_H_
+
+#include <hexo/decls.h>
+#include <hexo/types.h>
+#include <net/layer.h>
 
 struct net_layer_delegate_vtable_s;
 struct net_scheduler_s;

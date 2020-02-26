@@ -1,1 +1,1 @@
-objs = gatt_client.o measurement.o central.o
+objs = client.o measurement.o central.o
