@@ -1115,6 +1115,25 @@ error_t memory_allocator_stats(struct memory_allocator_region_s *region,
 #endif
 }
 
+#ifdef CONFIG_MUTEK_PRINTK
+void memory_allocator_dumpk(struct memory_allocator_region_s *region)
+{
+  GCT_FOREACH(block_list, &region->block_root, item,
+  {
+    if (header_is_endblock(item))
+      {
+        printk(" END\n");
+      }
+    else
+      {
+        logk(" %c at %p: %zu bytes",
+               header_is_alloc(item) ? 'A' : 'F',
+               item, header_get_size(&region->block_root, item));
+      }
+  });
+}
+#endif
+
 #ifdef CONFIG_MUTEK_SHELL
 
 #include <mutek/shell.h>

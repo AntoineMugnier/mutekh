@@ -78,6 +78,10 @@ size_t memory_allocator_region_size(struct memory_allocator_region_s *region);
 /** @internal @this return the size of given memory region */
 void* memory_allocator_region_address(struct memory_allocator_region_s *region);
 
+/** @This dumps the list of memory allocator blocks of the specified region. */
+config_depend_and2(CONFIG_MUTEK_PRINTK, CONFIG_MUTEK_MEMALLOC_SMART)
+void memory_allocator_dumpk(struct memory_allocator_region_s *region);
+
 #if defined(CONFIG_MUTEK_MEM_REGION)
 #include <mutek/mem_region.h>
 #endif
