@@ -155,6 +155,14 @@ DEV_DECLARE_STATIC(cpu_dev, "cpu", DEVICE_FLAG_CPU, arm32m_drv,
 
 #endif
 
+#ifdef CONFIG_DRIVER_EFM32_MSC
+
+DEV_DECLARE_STATIC(msc_dev, "mem", 0, efm32_msc_drv,
+                   DEV_STATIC_RES_MEM(0x400e0000, 0x400e0800)
+                   );
+
+#endif
+
 #if defined(CONFIG_DRIVER_EFM32_USART_CHAR)
 
 DEV_DECLARE_STATIC(uart0_dev, "usart0", 0, efm32_usart_drv,
