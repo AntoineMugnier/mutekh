@@ -79,6 +79,8 @@ error_t mutek_shell_start(const struct device_char_s *c, const char *term,
   struct termui_console_s *con;
   struct mutek_shell_context_s *sctx;
 
+  logk("Shell thread start");
+
   if (root == NULL)
     root = (void*)&shell_cmd_table;
 
