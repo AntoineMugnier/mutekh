@@ -575,7 +575,7 @@
         cst8                   %s2lp_get_packet:rx_done, true
         call8                  %s2lp_get_packet:link,    s2lp_get_packet
         // Set bc_status
-        cst8                   %status,         S2LP_BC_STATUS_TX_DONE
+        cst8                   %status,         S2LP_BC_STATUS_RX_DONE
         st8e                   %status,         %S2LP_CTX_PV,   _offsetof(s2lp_ctx_s, bc_status, 1)
         end
 
