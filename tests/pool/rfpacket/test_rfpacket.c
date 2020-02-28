@@ -48,12 +48,12 @@
 
 #define RFP_TEST_RQ_NUMBER 2
 #define MAX_PACKET_SIZE 256
-#define RFP_TEST_TIMER_PATH    "efr32_radio"
-#define RFP_TEST_DEVICE_0_PATH "efr32_radio"
+#define RFP_TEST_TIMER_PATH    "rfpacket0"
+#define RFP_TEST_DEVICE_0_PATH "rfpacket0"
 
 #define TEST_BASE_TIME_US 1000
 
-#define RFP_TEST_TX_FAIR
+//#define RFP_TEST_TX_FAIR
 #define RFP_TEST_RX_CONTINOUS
 #define RFP_TEST_SLEEP
 
@@ -90,7 +90,7 @@ static const struct dev_rfpacket_rf_cfg_fsk_s rfcfg = {
      },
      .drate = 38400,
      .jam_rssi = (-90) << 3,
-     .frequency = 865056875,
+     .frequency = 865056875 - 13000,
      .chan_spacing = 93750,
      .rx_bw = 0,
      .freq_err = 868 * 20 // ppm
@@ -237,7 +237,7 @@ static inline uint8_t rfp_test_set_rand_size(void) {
 }
 
 static int16_t rfp_test_set_rand_power(void) {
-  int16_t p = (16 - rand() % 16) << 3;
+  int16_t p = (14 - rand() % 14) << 3;
   return p;
 }
 
