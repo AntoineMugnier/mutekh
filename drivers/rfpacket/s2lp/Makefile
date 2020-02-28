@@ -1,0 +1,1 @@
+objs = s2lp.o s2lp_spi.o s2lp_config.o

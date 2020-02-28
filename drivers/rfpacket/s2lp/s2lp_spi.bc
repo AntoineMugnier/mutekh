@@ -1,0 +1,986 @@
+/*
+    This file is part of MutekH.
+
+    MutekH is free software; you can redistribute it and/or modify it
+    under the terms of the GNU Lesser General Public License as
+    published by the Free Software Foundation; version 2.1 of the
+    License.
+
+    MutekH is distributed in the hope that it will be useful, but
+    WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+    Lesser General Public License for more details.
+
+    You should have received a copy of the GNU Lesser General Public
+    License along with MutekH; if not, write to the Free Software
+    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+    02110-1301 USA.
+*/
+
+#include <device/class/spi.h>
+#include "s2lp_regs.h"
+#include "s2lp.h"
+
+.custom spi
+.name s2lp
+.const %S2LP_CTX_PV
+.global %S2LP_STATUS
+
+/*
+    Note: Whenever it sends a command, the driver will update the %S2LP_STATUS register if possible
+*/
+
+// Entry point to reset the transceiver
+.func s2lp_entry_reset
+        .export s2lp_entry_reset
+        .input %0 basetime
+        .input %1 buffer
+        .clobber %1, %2 tmp cmd, %3 size delay id, %4
+        // Set reset time
+        mov                    %delay,          %basetime
+        shi32l                 %delay,          1
+        // Reset chip
+        cst8                   %tmp,            1
+        spi_gpioset            S2LP_IO_SDN,     %tmp
+        spi_yield_delay        %delay
+        cst8                   %tmp,            0
+        spi_gpioset            S2LP_IO_SDN,     %tmp
+        // Wait for chip to start
+        mov                    %delay,          %basetime
+        shi32l                 %delay,          2
+        spi_yield_delay        %delay
+        // Check device (S2LP_READ_REG_BYTE, S2LP_DEVICE_INFO1_ADDR)
+        cst16                  %cmd,            0xF001, 0
+        pack32le               %cmd,            1,      3
+        spi_swp                %cmd,   %tmp,    3,      CS_PULSE
+        unpack32be             %tmp,            1,      3
+        // Filter status
+        mov                    %S2LP_STATUS,    %tmp
+        shi32r                 %S2LP_STATUS,    16
+        shi32r                 %tmp,            8
+        extz                   %tmp,            7
+        // Compare id values
+        cst8                   %id,             S2LP_PART_NUMBER
+        neq                    %tmp,            %id
+            abort
+        // Put chip to standby (S2LP_CMD_HEADER_BYTE, S2LP_CMD_STANDBY)
+        cst16                  %cmd,            0x6380, 0
+        pack32le               %cmd,            1,      2
+        spi_wr                 %cmd,            2,      CS_PULSE
+        // Load config
+    config_init_loop:
+        ld8i                   %size,           %buffer
+        // Check if end of array (terminated by a 0)
+        eq0                    %size
+            jmp8               config_init_done
+        spi_wrm                %buffer,         %size,    CS_PULSE
+        add                    %buffer,         %size
+        jmp8                   config_init_loop
+
+    config_init_done:
+        // Put chip to ready (S2LP_CMD_HEADER_BYTE, S2LP_CMD_READY)
+        cst16                  %cmd,            0x6280, 0
+        pack32le               %cmd,            1,      2
+        spi_wr                 %cmd,            2,      CS_PULSE
+        // Clear IRQs
+        call16                 %s2lp_clear_irq:link,  s2lp_clear_irq
+        end
+.endfunc
+
+// Entry point to configure the transceiver
+.func s2lp_entry_config
+        .export s2lp_entry_config
+        .input %0 rf_buff
+        .input %1 pk_buff
+        .clobber %2 cmd, %3, %4, %5 tmp
+        // Test rf config flags
+        ld8e                   %tmp,                   %S2LP_CTX_PV,   _offsetof(s2lp_ctx_s, flags, 1)
+        tst32s                 %tmp,                   bitpos(S2LP_FLAGS_RF_CONFIG_OK)
+            jmp8               config_packet
+        // Send rf config
+        mov                    %s2lp_config:buffer,    %rf_buff
+        cst8                   %s2lp_config:buff_size, S2LP_RF_CFG_DATA_SIZE
+        call16                 %s2lp_config:link,      s2lp_config
+    config_packet:
+        // Test packet config flags
+        ld8e                   %tmp,                   %S2LP_CTX_PV,   _offsetof(s2lp_ctx_s, flags, 1)
+        tst32s                 %tmp,                   bitpos(S2LP_FLAGS_PK_CONFIG_OK)
+            jmp8               config_end
+        // Send packet config
+        mov                    %s2lp_config:buffer,    %pk_buff
+        cst8                   %s2lp_config:buff_size, S2LP_PK_CFG_DATA_SIZE
+        call8                  %s2lp_config:link,      s2lp_config
+    config_end:
+        end
+.endfunc
+
+// Entry point to send a packet through the transceiver
+.func s2lp_entry_tx
+        .export s2lp_entry_tx
+        .input %0 power
+        .input %1 channel
+        .clobber %1, %2 deadline, %3, %4, %5, %7
+        // TODO Deactivate CSMA
+        // Prepare tx
+        call16                  %s2lp_tx_init:link,     s2lp_tx_init
+        // Check state
+        cst8                   %s2lp_check_state:state, S2LP_STATE0_STATE_OFFSET(S2LP_STATE_READY)
+        call16                 %s2lp_check_state:link,  s2lp_check_state
+        // Wait deadline before tx
+        mov                    %deadline,              %S2LP_CTX_PV
+        add8                   %deadline,              _offsetof(s2lp_ctx_s, gctx.deadline, 8)
+        spi_yield_deadline     %deadline
+        // Start tx and wait for irq
+        call16                 %s2lp_start_tx:link,    s2lp_start_tx
+        jmp16                  s2lp_wait_irq
+.endfunc
+
+// Entry point to send a packet through the transceiver, using lbt
+.func s2lp_entry_tx_lbt
+        .export s2lp_entry_tx_lbt
+        .input %0 power
+        .input %1 channel
+        .clobber %0, %1, %2 deadline flags tmp, %3, %4, %5, %7
+        // TODO Activate CSMA
+        // Prepare tx
+        call16                 %s2lp_tx_init:link,     s2lp_tx_init
+        // Check state
+        cst8                   %s2lp_check_state:state, S2LP_STATE0_STATE_OFFSET(S2LP_STATE_READY)
+        call8                  %s2lp_check_state:link,  s2lp_check_state
+        // Wait deadline before tx
+        mov                    %deadline,              %S2LP_CTX_PV
+        add8                   %deadline,              _offsetof(s2lp_ctx_s, gctx.deadline, 8)
+        spi_yield_deadline     %deadline
+        // Init Rx if needed
+        ld8e                   %flags,                 %S2LP_CTX_PV,   _offsetof(s2lp_ctx_s, flags, 1)
+        tst32c                 %flags,                 bitpos(S2LP_FLAGS_RX_TX_OK)
+            jmp8               tx_lbt_set_time
+        // Start RX
+        call16                 %s2lp_start_rx:link,    s2lp_start_rx
+    tx_lbt_set_time:
+        // Set waiting time
+        ld32e                  %s2lp_main_tx_lbt:tbr,  %S2LP_CTX_PV,   _offsetof(s2lp_ctx_s, bt, 4)
+        cst8                   %tmp,                   S2LP_LBT_BASE_TIME_MULT
+        mul32                  %s2lp_main_tx_lbt:tbr,  %tmp
+        // Jump to main function
+        jmp16                  s2lp_main_tx_lbt
+.endfunc
+
+// Entry point to retry to send a packet through the transceiver, using lbt
+.func s2lp_entry_retry_tx_lbt
+        .export s2lp_entry_retry_tx_lbt
+        .clobber %0, %1, %2 flags, %3, %4
+        // Check state
+        call8                  %s2lp_update_status:link, s2lp_update_status
+        cst8                   %s2lp_check_state:state, S2LP_STATE0_STATE_OFFSET(S2LP_STATE_READY)
+        call8                  %s2lp_check_state:link,  s2lp_check_state
+        // Init Rx if needed
+        ld8e                   %flags,                 %S2LP_CTX_PV,   _offsetof(s2lp_ctx_s, flags, 1)
+        tst32c                 %flags,                 bitpos(S2LP_FLAGS_RX_TX_OK)
+            jmp8               tx_lbt_retry_start
+        // Start RX
+        call16                 %s2lp_start_rx:link,    s2lp_start_rx
+    tx_lbt_retry_start:
+        // Set waiting time
+        ld32e                  %s2lp_main_tx_lbt:tbr,  %S2LP_CTX_PV, _offsetof(s2lp_ctx_s, lbt_rand_time, 4)
+        // Jump to main function
+        jmp16                  s2lp_main_tx_lbt
+.endfunc
+
+// Entry point to start regular rx on transceiver
+.func s2lp_entry_rx
+        .export s2lp_entry_rx
+        .input %1 channel
+        .clobber %1, %2 deadline timeout status, %3, %4, %5, %6, %7
+        // Set channel
+        call16                 %s2lp_set_chan:link,    s2lp_set_chan
+        // Check state
+        cst8                   %s2lp_check_state:state, S2LP_STATE0_STATE_OFFSET(S2LP_STATE_READY)
+        call8                  %s2lp_check_state:link,  s2lp_check_state
+        // Wait deadline before rx
+        mov                    %deadline,              %S2LP_CTX_PV
+        add8                   %deadline,              _offsetof(s2lp_ctx_s, gctx.deadline, 8)
+        spi_yield_deadline     %deadline
+        // Start rx
+        call16                 %s2lp_start_rx:link,    s2lp_start_rx
+    rx_wait:
+        mov                    %timeout,              %S2LP_CTX_PV
+        add8                   %timeout,              _offsetof(s2lp_ctx_s, gctx.timeout, 8)
+        spi_yieldc_deadline    %timeout
+            jmp8               rx_timeout
+        // Check irq
+        call16                 %s2lp_check_irq:link,  s2lp_check_irq
+        jmp8                   rx_wait
+    rx_timeout:
+        // Stop rx
+        cst8                   %s2lp_abort:mask, 0x1
+        call16                 %s2lp_abort:link, s2lp_abort
+        // Set bc_status
+        cst8                   %status,         S2LP_BC_STATUS_RX_TIMEOUT
+        st8e                   %status,         %S2LP_CTX_PV,   _offsetof(s2lp_ctx_s, bc_status, 1)
+        end
+.endfunc
+
+// Entry point to start continuous rx on transceiver
+.func s2lp_entry_rx_cont
+        .export s2lp_entry_rx_cont
+        .input %1 channel
+        .clobber %0 period, %1, %2 avg status, %3 tmp jam, %4, %5, %6, %7
+        // Test if rxc has been canceled
+        ld8e                   %tmp,            %S2LP_CTX_PV,   _offsetof(s2lp_ctx_s, flags, 1)
+        tst32c                 %tmp,            bitpos(S2LP_FLAGS_RX_CONTINOUS)
+            end
+        // Set channel
+        call8                  %s2lp_set_chan:link,    s2lp_set_chan
+        // Check state
+        cst8                   %s2lp_check_state:state, S2LP_STATE0_STATE_OFFSET(S2LP_STATE_READY)
+        call8                  %s2lp_check_state:link,  s2lp_check_state
+        // Start rx
+        call16                 %s2lp_start_rx:link,    s2lp_start_rx
+        // Set rssi sample period
+        ld32e                  %period,         %S2LP_CTX_PV,   _offsetof(s2lp_ctx_s, bt, 4)
+        shi32l                 %period,         S2LP_RSSI_PERIOD_SHIFT
+    rssi_sample:
+        // Get rssi value
+        call16                 %s2lp_get_curr_rssi:link, s2lp_get_curr_rssi
+        // Update rssi average
+        ld32e                  %avg,            %S2LP_CTX_PV,   _offsetof(s2lp_ctx_s, avg_rssi, 4)
+        cst32                  %tmp,            S2LP_RSSI_AVG_WEIGHT,  0
+        mul32                  %avg,            %tmp
+        add                    %avg,            %s2lp_get_curr_rssi:rssi
+        shi32r                 %avg,            S2LP_RSSI_AVG_SHIFT
+        st32e                  %avg,            %S2LP_CTX_PV,   _offsetof(s2lp_ctx_s, avg_rssi, 4)
+        // Compare to jamming value
+        ld8e                   %jam,            %S2LP_CTX_PV,   _offsetof(s2lp_ctx_s, jam_rssi)
+        lt                     %jam,            %avg
+            jmp8               jamming
+        // Check timeout
+        ld8e                   %tmp,            %S2LP_CTX_PV,   _offsetof(s2lp_ctx_s, flags, 1)
+        tst32s                 %tmp,            bitpos(S2LP_FLAGS_RXC_INFINITE)
+            jmp8               rxc_infinite
+        mov                    %tmp,            %S2LP_CTX_PV
+        add8                   %tmp,            _offsetof(s2lp_ctx_s, gctx.timeout, 8)
+        spi_elapsed_r          %tmp
+            jmp8               rxc_timeout
+    rxc_infinite:
+        spi_yieldc_delay       %period
+            jmp8               rssi_sample
+        // Check irq
+        call16                 %s2lp_check_irq:link,  s2lp_check_irq
+        // Check if rxc cancelled
+        ld8e                   %tmp,            %S2LP_CTX_PV,   _offsetof(s2lp_ctx_s, flags, 1)
+        tst32c                 %tmp,            bitpos(S2LP_FLAGS_RX_CONTINOUS)
+            end
+        // Return to sampling
+        jmp8                   rssi_sample
+
+    rxc_timeout:
+        // Stop rx
+        cst8                   %s2lp_abort:mask, 0x1
+        call16                 %s2lp_abort:link, s2lp_abort
+        // Set bc_status
+        cst8                   %status,         S2LP_BC_STATUS_RX_TIMEOUT
+        st8e                   %status,         %S2LP_CTX_PV,   _offsetof(s2lp_ctx_s, bc_status, 1)
+        end
+
+    jamming:
+        // Stop rx
+        cst8                   %s2lp_abort:mask, 0x1
+        call16                 %s2lp_abort:link, s2lp_abort
+        // Set bc_status
+        cst8                   %status,         S2LP_BC_STATUS_JAMMING_ERR
+        st8e                   %status,         %S2LP_CTX_PV,   _offsetof(s2lp_ctx_s, bc_status, 1)
+        end
+.endfunc
+
+// Send a config array to the transceiver
+.func s2lp_config
+        .input %4 link
+        .input %2 buffer
+        .input %3 buff_size
+        .clobber %2, %3, %5 size
+    config_loop:
+        // Check if there is still data to send
+        eq0                    %buff_size
+            ret                %link
+        // Check if command size is coherent
+        ld8i                   %size,          %buffer
+        lt                     %buff_size,     %size
+            abort
+        // Send data to spi
+        spi_wrm                %buffer,        %size,    CS_PULSE
+        // Advance in buffer and repeat
+        add                    %buffer,        %size
+        sub                    %buff_size,     %size
+        jmp8                   config_loop
+.endfunc
+
+.func s2lp_update_status
+        .input %4 link
+        .clobber %2 cmd
+        // Send command (S2LP_READ_REG_BYTE, S2LP_MC_STATE1_ADDR)
+        cst16                  %cmd,           0x8D01,   0
+        pack32le               %cmd,           1,        4
+        spi_swp                %cmd,           %cmd,     4,  CS_PULSE
+        // Retrieve status
+        unpack32be             %cmd,           1,        4
+        mov                    %S2LP_STATUS,   %cmd
+        shi32r                 %S2LP_STATUS,   16
+        ret                    %link
+.endfunc
+
+// Check if transceiver state correspond to value, throw error if failed
+.func s2lp_check_state
+        .input %4 link
+        .input %2 state
+        .clobber %1, %2, %3 tmp, %4
+         // Check state
+        cst32                  %tmp,                  S2LP_STATE0_STATE_REGMASK,  0
+        and32                  %tmp,                  %S2LP_STATUS
+        neq                    %tmp,                  %state
+            jmp16              s2lp_error
+        ret                    %link
+.endfunc
+
+// Initalize transceiver registers for tx
+.func s2lp_tx_init
+        .input %7 link
+        .input %0 power
+        .input %1 channel
+        .clobber %2, %3, %4, %5
+        // Prepare tx
+        call8                  %s2lp_set_tx_power:link,   s2lp_set_tx_power
+        call8                  %s2lp_set_chan:link,       s2lp_set_chan
+        call8                  %s2lp_set_packet_len:link, s2lp_set_packet_len
+        // Prepare fifo
+        cst8                   %s2lp_write_fifo:fifo_count, S2LP_FIFO_SIZE
+        call8                  %s2lp_write_fifo:link,       s2lp_write_fifo
+        call8                  %s2lp_update_pckt:link,      s2lp_update_pckt
+        ret                    %link
+.endfunc
+
+// Set tx power
+.func s2lp_set_tx_power
+        .input %4 link
+        .input %0 power
+        .clobber %2 tmp, %3
+        // Manage power flag
+        ld8e                   %tmp,            %S2LP_CTX_PV,   _offsetof(s2lp_ctx_s, flags, 1)
+        tst32s                 %tmp,            bitpos(S2LP_FLAGS_TX_POWER_OK)
+            ret                %link
+        bit32s                 %tmp,            bitpos(S2LP_FLAGS_TX_POWER_OK)
+        st8e                   %tmp,            %S2LP_CTX_PV,   _offsetof(s2lp_ctx_s, flags, 1)
+        // Set spi command (S2LP_WRITE_REG_BYTE, S2LP_PA_POWER8_ADDR, power value)
+        cst16                  %tmp,            0x5A00,    0
+        mov                    %3,              %power
+        pack16le               %tmp,            2,         3
+        // Send data
+        spi_swp                %tmp,            %tmp,      3,  CS_PULSE
+        // Retrieve status
+        unpack32be             %tmp,            1,      3
+        mov                    %S2LP_STATUS,    %tmp
+        shi32r                 %S2LP_STATUS,    16
+        ret                    %link
+.endfunc
+
+// Set tx/rx channel
+.func s2lp_set_chan
+        .input %4 link
+        .input %1 channel
+        .clobber %2 tmp, %3
+        // Set spi command (S2LP_WRITE_REG_BYTE, S2LP_CHNUM_ADDR, channel_nb)
+        cst16                  %tmp,            0x0D00,      0
+        mov                    %3,              %channel
+        pack16le               %tmp,            2,           3
+        // Send data
+        spi_swp                %tmp,            %tmp,        3,    CS_PULSE
+        // Retrieve status
+        unpack32be             %tmp,            1,      3
+        mov                    %S2LP_STATUS,    %tmp
+        shi32r                 %S2LP_STATUS,    16
+        ret                    %link
+.endfunc
+
+// Set tx packet length
+.func s2lp_set_packet_len
+        .input %4 link
+        .clobber %2 tmp, %3 size
+        // Set spi command (S2LP_WRITE_REG_BYTE, S2LP_PCKTLEN0_ADDR, packet_size)
+        cst16                  %tmp,            0x3200,      0
+        ld16e                  %size,           %S2LP_CTX_PV,   _offsetof(s2lp_ctx_s, gctx.size, 2)
+        pack16le               %tmp,            2,           3
+        // Send data
+        spi_swp                %tmp,            %tmp,        3,    CS_PULSE
+        // Retrieve status
+        unpack32be             %tmp,            1,      3
+        mov                    %S2LP_STATUS,    %tmp
+        shi32r                 %S2LP_STATUS,    16
+        ret                    %link
+.endfunc
+
+// Send data to transceiver tx fifo
+.func s2lp_write_fifo
+        .input %4 link
+        .input %5 fifo_count
+        .clobber %2 size buffer cmd
+        .output %5 count
+        // Packet size to free fifo size comparison
+        ld16e                  %size,          %S2LP_CTX_PV,  _offsetof(s2lp_ctx_s, gctx.size, 2)
+        lt                     %size,          %fifo_count
+            mov                %count,         %size
+        // Send write tx fifo command (S2LP_WRITE_REG_BYTE, S2LP_FIFO_ADDRESS)
+        cst16                  %cmd,           0xFF00,   0
+        pack16le               %cmd,           1,        2
+        spi_swp                %cmd,           %cmd,     2,  CS_START
+        // Retrieve status
+        unpack32be             %cmd,           1,        2
+        mov                    %S2LP_STATUS,   %cmd
+        shi32r                 %S2LP_STATUS,   16
+        // Load and send data to fifo
+        ld32e                  %buffer,        %S2LP_CTX_PV,  _offsetof(s2lp_ctx_s, gctx.buffer, 4)
+        spi_wrm                %buffer,        %count,        CS_END
+        ret                    %link
+.endfunc
+
+// Update packet size and buffer address
+.func s2lp_update_pckt
+        .input %4 link
+        .input %5 count
+        .clobber %2 buffer rem
+        // Advance buffer
+        ld32e                  %buffer,         %S2LP_CTX_PV,     _offsetof(s2lp_ctx_s, gctx.buffer, 4)
+        add                    %buffer,         %count
+        st32e                  %buffer,         %S2LP_CTX_PV,     _offsetof(s2lp_ctx_s, gctx.buffer, 4)
+        // Update remaining size
+        ld16e                  %rem,            %S2LP_CTX_PV,     _offsetof(s2lp_ctx_s, gctx.size, 2)
+        sub                    %rem,            %count
+        st16e                  %rem,            %S2LP_CTX_PV,     _offsetof(s2lp_ctx_s, gctx.size, 2)
+        ret                    %link
+.endfunc
+
+// Send start tx command to transceiver
+.func s2lp_start_tx
+        .input %4 link
+        .clobber %2 cmd
+        // Set tx command (S2LP_CMD_HEADER_BYTE, S2LP_CMD_TX)
+        cst16                  %cmd,            0x6080,   0
+        pack16le               %cmd,            1,        2
+        // Send command
+        spi_swp                %cmd,            %cmd,     2,    CS_PULSE
+        // Retrieve status
+        unpack32be             %cmd,            1,        2
+        mov                    %S2LP_STATUS,    %cmd
+        shi32r                 %S2LP_STATUS,    16
+        ret                    %link
+.endfunc
+
+// Send start rx command to transceiver
+.func s2lp_start_rx
+        .input %4 link
+        .clobber %2 cmd
+         // Set rx command (S2LP_CMD_HEADER_BYTE, S2LP_CMD_RX)
+        cst16                  %cmd,            0x6180,   0
+        pack16le               %cmd,            1,        2
+        // Send command
+        spi_swp                %cmd,            %cmd,     2,    CS_PULSE
+        // Retrieve status
+        unpack32be             %cmd,            1,        2
+        mov                    %S2LP_STATUS,    %cmd
+        shi32r                 %S2LP_STATUS,    16
+        ret                    %link
+.endfunc
+
+
+// Pending irq from transceiver
+.func s2lp_wait_irq
+        .clobber %1 delay, %2, %3, %4, %5, %6, %7
+        // Set delay
+        ld32e                  %delay,         %S2LP_CTX_PV,   _offsetof(s2lp_ctx_s, bt, 4)
+        shi32l                 %delay,         S2LP_WAIT_IRQ_SHIFT
+    wait_next_irq:
+        // Wait for irq
+        spi_yieldc_delay       %delay
+            // Irq timeout
+            jmp16              s2lp_error
+        // Test for irq
+        call16                 %s2lp_check_irq:link,  s2lp_check_irq
+        ld32e                  %delay,         %S2LP_CTX_PV,   _offsetof(s2lp_ctx_s, bt, 4)
+        jmp8                   wait_next_irq
+.endfunc
+
+// Check irq pin value, jump to process irq directly if necessary
+.func s2lp_check_irq
+        .input %4 link
+        .clobber %1, %2 gpio, %3, %4, %5, %6, %7
+        // Check irq pin active
+        spi_gpioget            S2LP_IO_NIRQ,       %gpio
+        tst32c                 %gpio,              0
+            jmp8               s2lp_process_irq
+        ret                    %link
+.endfunc
+
+// Process irq
+.func s2lp_process_irq
+        .clobber %1 cmd irq3 status, %2 irq2, %3 irq1, %4 irq0, %5, %6, %7
+        // Init register
+        cst8                   %irq2,          0
+        // Send read irq status request (S2LP_READ_REG_BYTE, S2LP_IRQ_STATUS3_ADDR) and get status
+        cst16                  %cmd,           0xFA01,   0
+        pack32le               %cmd,           2,        6
+        spi_swp                %cmd,           %irq3,    6,         CS_PULSE
+        unpack32be             %irq3,          2,        6
+        // Filter status
+        mov                    %S2LP_STATUS,   %irq3
+        shi32r                 %S2LP_STATUS,   16
+        // Get irq0 (6th byte)
+        mov                    %irq0,          %irq2
+        shi32r                 %irq0,          16
+        extz                   %irq0,          7
+        // Get irq1 (5th byte)
+        mov                    %irq1,          %irq2
+        shi32r                 %irq1,          24
+        extz                   %irq1,          7
+        // Get irq2 (4th byte)
+        mov                    %irq2,          %irq3
+        extz                   %irq2,          7
+        // Get irq3 (3rd byte)
+        shi32r                 %irq3,          8
+        extz                   %irq3,          7
+        // Process irq
+        tst32s                 %irq0,          bitpos(S2LP_IRQ_TX_FIFO_ERROR)
+            jmp16              s2lp_error
+        tst32s                 %irq0,          bitpos(S2LP_IRQ_RX_FIFO_ERROR)
+            jmp16              s2lp_error
+        tst32s                 %irq0,          bitpos(S2LP_IRQ_CRC_ERROR)
+            jmp8               process_crc_error
+        tst32s                 %irq0,          bitpos(S2LP_IRQ_RX_DATA_READY)
+            jmp8               process_rx_done_irq
+        tst32s                 %irq0,          bitpos(S2LP_IRQ_TX_DATA_SENT)
+            jmp8               process_tx_done_irq
+        tst32s                 %irq1,          bitpos(S2LP_IRQ_TX_FIFO_ALMOST_EMPTY)
+            jmp8               process_tx_fifo_irq
+        tst32s                 %irq1,          bitpos(S2LP_IRQ_RX_FIFO_ALMOST_FULL)
+            jmp8               process_rx_fifo_irq
+        // Unknown irq
+        jmp8                   s2lp_error
+
+    process_tx_done_irq:
+        // Set bc_status
+        cst8                   %status,         S2LP_BC_STATUS_TX_DONE
+        st8e                   %status,         %S2LP_CTX_PV,   _offsetof(s2lp_ctx_s, bc_status, 1)
+        end
+
+    process_rx_done_irq:
+        // Get packet data
+        cst8                   %s2lp_get_packet:rx_done, true
+        call8                  %s2lp_get_packet:link,    s2lp_get_packet
+        // Set bc_status
+        cst8                   %status,         S2LP_BC_STATUS_TX_DONE
+        st8e                   %status,         %S2LP_CTX_PV,   _offsetof(s2lp_ctx_s, bc_status, 1)
+        end
+
+    process_rx_fifo_irq:
+        // Get packet data
+        cst8                   %s2lp_get_packet:rx_done, false
+        call8                  %s2lp_get_packet:link,    s2lp_get_packet
+        jmp8                   s2lp_wait_irq
+
+    process_tx_fifo_irq:
+        // Refill fifo
+        call8                  %s2lp_refill_fifo:link, s2lp_refill_fifo
+        jmp8                   s2lp_wait_irq
+
+    process_crc_error:
+        // Set bc_status
+        cst8                   %status,         S2LP_BC_STATUS_CRC_ERR
+        st8e                   %status,         %S2LP_CTX_PV,   _offsetof(s2lp_ctx_s, bc_status, 1)
+        // Stop rx
+        cst8                   %s2lp_abort:mask, 0x1
+        call8                  %s2lp_abort:link, s2lp_abort
+        end
+.endfunc
+
+// Refill tx fifo data
+.func s2lp_refill_fifo
+        .input %7 link
+        .clobber %2 size, %4, %5
+        // Check remaining size
+        ld16e                  %size,           %S2LP_CTX_PV,  _offsetof(s2lp_ctx_s, gctx.size, 2)
+        eq0                    %size
+            // All bytes have been written
+            ret                    %link
+        // Send data
+        cst8                   %s2lp_write_fifo:fifo_count, (S2LP_FIFO_SIZE - S2LP_FIFO_THRESHOLD)
+        call8                  %s2lp_write_fifo:link,       s2lp_write_fifo
+        call16                 %s2lp_update_pckt:link,      s2lp_update_pckt
+        ret                    %link
+.endfunc
+
+// Get packet from transceiver, jump to error if allocation failed
+.func s2lp_get_packet
+        .input %7 link
+        .input %6 rx_done
+        .clobber %1, %2 buffer, %3 size, %4, %5
+        // Check if RX buffer is allocated
+        lde                    %buffer,        %S2LP_CTX_PV,   _offsetof(s2lp_ctx_s, gctx.rxrq)
+        neq0                   %buffer
+            jmp8               read_start
+        // Get packet size
+        call8                  %s2lp_get_rx_size:link,  s2lp_get_rx_size
+        // Store value
+        st16e                  %s2lp_get_rx_size:size,  %S2LP_CTX_PV,   _offsetof(s2lp_ctx_s, gctx.size, 2)
+        // Allocate buffer
+        gaddr                  %buffer,        s2lp_alloc
+        ccall                  %buffer
+        // Check value
+        eq0                    %buffer
+            // Allocation error
+            jmp8               s2lp_error
+    read_start:
+        // Check size
+        ld16e                  %size,          %S2LP_CTX_PV,  _offsetof(s2lp_ctx_s, gctx.size, 2)
+        eq0                    %size
+            jmp8               read_end
+        // Check if packet is complete
+        eq0                    %rx_done
+            jmp8               read_last
+        cst8                   %s2lp_read_fifo:rx_size,  S2LP_FIFO_THRESHOLD
+        lteq                   %size,          %s2lp_read_fifo:rx_size
+            jmp8               read_last
+        // Read received data
+        call8                  %s2lp_read_fifo:link,    s2lp_read_fifo
+        call16                 %s2lp_update_pckt:link,  s2lp_update_pckt
+        jmp8                   read_end
+
+    read_last:
+        // Read last received data
+        mov                    %s2lp_read_fifo:rx_size, %size
+        call8                  %s2lp_read_fifo:link,    s2lp_read_fifo
+        call16                 %s2lp_update_pckt:link,  s2lp_update_pckt
+    read_end:
+        // Check if packet is over
+        eq0                    %rx_done
+            ret                %link
+        // Retrieve packet rssi
+        call8                  %s2lp_get_rx_rssi:link,  s2lp_get_rx_rssi
+        st8e                   %s2lp_get_rx_rssi:afc,   %S2LP_CTX_PV,  _offsetof(s2lp_ctx_s, afc_offset)
+        st8e                   %s2lp_get_rx_rssi:rssi,  %S2LP_CTX_PV,  _offsetof(s2lp_ctx_s, carrier)
+        ret                    %link
+.endfunc
+
+// Read data from transceiver rx fifo
+.func s2lp_read_fifo
+        .input %4 link
+        .input %1 rx_size
+        .clobber %2 buffer cmd
+        .output %5 count
+        // Send read rx fifo command (S2LP_READ_REG_BYTE, S2LP_FIFO_ADDRESS)
+        cst16                  %cmd,           0xFF01,   0
+        pack16le               %cmd,           1,        2
+        spi_swp                %cmd,           %cmd,     2,  CS_START
+        // Retrieve status
+        unpack32be             %cmd,           1,        2
+        mov                    %S2LP_STATUS,   %cmd
+        shi32r                 %S2LP_STATUS,   16
+        // Read data from fifo
+        ld32e                  %buffer,        %S2LP_CTX_PV,  _offsetof(s2lp_ctx_s, gctx.buffer, 4)
+        spi_rdm                %buffer,        %rx_size,      CS_END
+        mov                    %count,         %rx_size
+        ret                    %link
+.endfunc
+
+// Get received packet size
+.func s2lp_get_rx_size
+        .input %4 link
+        .clobber %2 cmd
+        .output %3 size
+        // Send read command (S2LP_READ_REG_BYTE, S2LP_RX_PCKT_LEN0_ADDR)
+        cst16                  %cmd,           0xA501,    0
+        pack32le               %cmd,           1,         3
+        spi_swp                %cmd,           %cmd,      3,      CS_PULSE
+        unpack32be             %cmd,           1,         3
+        // Filter status
+        mov                    %S2LP_STATUS,   %cmd
+        shi32r                 %S2LP_STATUS,   16
+        mov                    %size,          %cmd
+        shi32r                 %size,          8
+        extz                   %size,          7
+        ret                    %link
+.endfunc
+
+// Get rssi info from received packet
+.func s2lp_get_rx_rssi
+        .input %4 link
+        .clobber %1 cmd status1, %2 status2
+        .output %3 afc
+        .output %5 rssi
+        // Init registers
+        cst8                   %status2,       0
+        // Send read command (S2LP_READ_REG_BYTE, S2LP_AFC_CORR_ADDR)
+        cst16                  %cmd,           0x9E01,    0
+        pack32le               %cmd,           2,         6
+        spi_swp                %cmd,           %status1,  6,      CS_PULSE
+        unpack32be             %status1,       2,         6
+        // Filter status
+        mov                    %S2LP_STATUS,   %status1
+        shi32r                 %S2LP_STATUS,   16
+        extz                   %status1,       15
+        // Get afc value (3rd received byte)
+        mov                    %afc,           %status1
+        shi32r                 %afc,           8
+        extz                   %afc,           7
+        // Get rssi value (6th received byte)
+        mov                    %rssi,          %status2
+        shi32r                 %afc,           16
+        extz                   %afc,           7
+        ret                    %link
+.endfunc
+
+// Get current rssi value
+.func s2lp_get_curr_rssi
+        .input %4 link
+        .clobber %2 cmd
+        .output %1 rssi
+        // Send read command (S2LP_READ_REG_BYTE, S2LP_RSSI_LEVEL_RUN_ADDR)
+        cst16                  %cmd,           0xEF01,    0
+        pack32le               %cmd,           1,         3
+        spi_swp                %cmd,           %cmd,      3,      CS_PULSE
+        unpack32be             %cmd,           1,         3
+        // Filter status
+        mov                    %S2LP_STATUS,   %cmd
+        shi32r                 %S2LP_STATUS,   16
+        // Get rssi value (3rd byte)
+        mov                    %rssi,          %cmd
+        shi32r                 %rssi,          8
+        extz                   %rssi,          7
+        ret                    %link
+.endfunc
+
+// Bytecode error process
+.func s2lp_error
+        .clobber %1, %2 status, %3, %4
+        // Set bc_status
+        cst8                   %status,         S2LP_BC_STATUS_OTHER_ERR
+        st8e                   %status,         %S2LP_CTX_PV,   _offsetof(s2lp_ctx_s, bc_status, 1)
+        // Abort tx/rx
+        cst8                   %s2lp_abort:mask, 0x3
+        call8                  %s2lp_abort:link, s2lp_abort
+        end
+.endfunc
+
+// Abort transceiver current operation, mask: bit 0: flush fifo rx, bit 1: flush fifo tx
+.func s2lp_abort
+        .input %4 link
+        .input %1 mask // flush fifo mask
+        .clobber %2 cmd tmp, %3 state
+        // Check status
+        cst32                  %state,           S2LP_STATE0_STATE_REGMASK,   0
+        and32                  %state,           %S2LP_STATUS
+        cst8                   %tmp,             S2LP_STATE0_STATE_OFFSET(S2LP_STATE_READY)
+        eq                     %state,           %tmp
+            jmp8               flush_fifo
+        cst8                   %tmp,             S2LP_STATE0_STATE_OFFSET(S2LP_STATE_RX)
+        eq                     %state,           %tmp
+            jmp8               abort_tx_rx
+        cst8                   %tmp,             S2LP_STATE0_STATE_OFFSET(S2LP_STATE_TX)
+        eq                     %state,           %tmp
+            jmp8               abort_tx_rx
+        // Send ready command
+        cst16                  %cmd,             0x6280,   0
+        pack16le               %cmd,             1,        2
+        spi_wr                 %cmd,             2,        CS_START
+        jmp8                   flush_fifo
+
+    abort_tx_rx:
+        // Send sabort command
+        cst16                  %cmd,             0x6780,   0
+        pack16le               %cmd,             1,        2
+        spi_wr                 %cmd,             2,        CS_CONTINUE
+    flush_fifo:
+        // Rx flush test
+        tst32s                 %mask,            0
+            cst16              %cmd,             0x7180,   0
+        // Tx flush test
+        tst32s                 %mask,            1
+            cst16              %cmd,             0x7280,   0
+        // Both flush test
+        cst8                   %tmp,             0x3
+        eq                     %tmp,             %mask
+            cst32              %cmd,             0x72807180,  0
+        // Send command
+        pack32le               %cmd,             1,        4
+        spi_wr                 %cmd,             4,        CS_END
+        // TODO Clear IRQs ?
+        ret                    %link
+.endfunc
+
+// .func s2lp_set_csma
+//         .input %4 link
+//         .input %1 value
+//         .clobber %2 cmd, %3 reg_val
+//         // Set header (S2LP_WRITE_REG_BYTE, S2LP_PROTOCOL1_ADDR)
+//         cst16                  %cmd,             0x3A00,   0
+//         // Get config reg value
+//         ld8e                   %reg_val,         %S2LP_CTX_PV,   _offsetof(s2lp_ctx_s, &(pk_cfg_array[20]), 1)
+//         and32                   %reg_val,         %value
+//         // Send command
+//         pack16le               %cmd,             2,        3
+//         spi_swp                %cmd,             %cmd,     3,  CS_PULSE
+//         // Retrieve status
+//         unpack32be             %cmd,             1,        3
+//         mov                    %S2LP_STATUS,     %cmd
+//         shi32r                 %S2LP_STATUS,     8
+//         ret                    %link
+// .endfunc
+
+.func s2lp_main_tx_lbt
+        .input %0 tbr, // time before retry
+        .clobber %0, %1 timeout status flags, %2 tmp, %3 rssi, %4 curr_state new_state, %5, %6, %7
+    test_timeout:
+        // Test if timeout date is reached
+        mov                    %timeout,         %S2LP_CTX_PV
+        add8                   %timeout,         _offsetof(s2lp_ctx_s, gctx.timeout, 8)
+        spi_elapsed_r          %timeout
+            jmp8               tx_timeout
+        // Test if rx possible
+        ld8e                   %flags,           %S2LP_CTX_PV,   _offsetof(s2lp_ctx_s, flags, 1)
+        tst32c                 %flags,           bitpos(S2LP_FLAGS_RX_TX_OK)
+            jmp8               wait_no_rx
+    wait_in_rx:
+        spi_yieldc_delay       %tbr
+            jmp8               check_rx
+        // Irq is pending
+        call16                 %s2lp_check_irq:link,  s2lp_check_irq
+        jmp8                   wait_in_rx
+
+    check_rx:
+        // Get rssi values
+        call8                  %s2lp_get_curr_rssi:link, s2lp_get_curr_rssi
+        ld8e                   %rssi,            %S2LP_CTX_PV,   _offsetof(s2lp_ctx_s, lbt_rssi, 1)
+        // Lbt state machine
+        ld8e                   %curr_state,      %S2LP_CTX_PV,   _offsetof(s2lp_ctx_s, lbt_state, 1)
+        cst8                   %tmp,             S2LP_LBT_STATE_FREE
+        neq                    %curr_state,      %tmp
+            jmp8               lbt_busy
+        // Lbt free state
+        lt                     %s2lp_get_curr_rssi:rssi,  %rssi
+            // Start tx if rssi is low
+            jmp8               lbt_end_rx
+    lbt_set_busy:
+        // Change state to busy and restart rx
+        cst8                   %new_state,       S2LP_LBT_STATE_BUSY
+        mov                    %tmp,             %S2LP_CTX_PV
+        add8                   %tmp,             _offsetof(s2lp_ctx_s, lbt_state, 1)
+        st8                    %new_state,       %tmp
+        // Test if rx possible
+        ld8e                   %flags,           %S2LP_CTX_PV,   _offsetof(s2lp_ctx_s, flags, 1)
+        tst32c                 %flags,           bitpos(S2LP_FLAGS_RX_TX_OK)
+            jmp8               set_long_wait_time
+        jmp8                   set_short_wait_time
+
+    lbt_busy:
+        // LBT Busy State
+        lt                     %rssi,            %s2lp_get_curr_rssi:rssi
+            // Restart rx if rssi still too high
+            jmp8               set_short_wait_time
+        // Change state to free and restart rx
+        cst8                   %new_state,       S2LP_LBT_STATE_FREE
+        mov                    %tmp,             %S2LP_CTX_PV
+        add8                   %tmp,             _offsetof(s2lp_ctx_s, lbt_state, 1)
+        st8                    %new_state,       %tmp
+        jmp8                   set_random_wait_time
+
+    set_short_wait_time:
+        // Set short waiting time (rssi poll)
+        ld32e                  %tbr,             %S2LP_CTX_PV,   _offsetof(s2lp_ctx_s, bt, 4)
+        shi32l                 %tbr,             S2LP_LBT_POLL_SHIFT
+        jmp8                   test_timeout
+
+    set_random_wait_time:
+        // Set random waiting time (lbt random wait time)
+        ld32e                  %tbr,             %S2LP_CTX_PV,   _offsetof(s2lp_ctx_s, lbt_rand_time, 4)
+        jmp8                   test_timeout
+
+    set_long_wait_time:
+        // Set long waiting time (no rx)
+        ld32e                  %tbr,             %S2LP_CTX_PV,   _offsetof(s2lp_ctx_s, bt, 4)
+        shi32l                 %tbr,             S2LP_LBT_NO_RX_SHIFT
+        jmp8                   test_timeout
+
+    lbt_end_rx:
+        // Stop rx
+        cst8                   %s2lp_abort:mask, 0x1
+        call8                  %s2lp_abort:link, s2lp_abort
+        // Timestamp to note end of rx
+        mov                    %tmp,             %S2LP_CTX_PV
+        add8                   %tmp,             _offsetof(s2lp_ctx_s, gctx.lbt_timestamp, 8)
+        spi_timestamp          %tmp
+        jmp8                   start_tx_lbt
+
+
+    wait_no_rx:
+        // Stop rx and wait
+        cst8                   %s2lp_abort:mask, 0x1
+        call8                  %s2lp_abort:link, s2lp_abort
+        spi_yield_delay        %tbr
+        // Timestamp to note end of rx
+        mov                    %tmp,             %S2LP_CTX_PV
+        add8                   %tmp,             _offsetof(s2lp_ctx_s, gctx.lbt_timestamp, 8)
+        spi_timestamp          %tmp
+    start_tx_lbt:
+        // Start tx
+        call16                 %s2lp_start_tx:link,    s2lp_start_tx
+        // Wait for irq
+        ld32e                  %tbr,             %S2LP_CTX_PV,   _offsetof(s2lp_ctx_s, bt, 4)
+        shi32l                 %tbr,             S2LP_LBT_WAIT_CSMA_SHIFT
+    wait_csma:
+        spi_yieldc_delay       %tbr
+            // Fail to send packet
+            jmp8               lbt_set_busy
+        // Check irq
+        call16                 %s2lp_check_irq:link,  s2lp_check_irq
+        // Go back to waiting
+        jmp8                   wait_csma
+
+    tx_timeout:
+        // Stop tx/rx
+        cst8                   %s2lp_abort:mask, 0x3
+        call16                 %s2lp_abort:link, s2lp_abort
+        // Set bc_status
+        cst8                   %status,          S2LP_BC_STATUS_RX_TIMEOUT
+        st8e                   %status,          %S2LP_CTX_PV,   _offsetof(s2lp_ctx_s, bc_status, 1)
+        end
+.endfunc
+
+.func s2lp_clear_irq
+        .input %4 link
+        .clobber %2 cmd, %3
+        // Init %3
+        cst8                   %3,             0x0
+        // Set cmd (S2LP_READ_REG_BYTE, S2LP_IRQ_STATUS3_ADDR)
+        cst16                  %cmd,           0xFA01,   0
+        pack32le               %cmd,           2,        6
+        spi_swp                %cmd,           %cmd,     6,         CS_PULSE
+        unpack32be             %cmd,           2,        6
+        // Retrieve status
+        mov                    %S2LP_STATUS,   %cmd
+        shi32r                 %S2LP_STATUS,   16
+        ret                    %link
+.endfunc
+
+// TODO define sleep token
+#ifdef CONFIG_DRIVER_RFPACKET_S2LP_SLEEP
+.func s2lp_entry_ready
+        .export s2lp_entry_ready
+        .clobber %0 tmp, %4, %11, %12, %13
+        // TODO
+        end
+.endfunc
+
+.func s2lp_entry_sleep
+        .export s2lp_entry_sleep
+        .clobber %0 tmp, %11, %12, %13
+        // TODO
+        end
+.endfunc
+#endif
