@@ -789,12 +789,19 @@
         .input %4 link
         .input %1 mask // flush fifo mask
         .clobber %2 cmd tmp, %3 state
+        // Update status
+        cst16                  %cmd,             0x8D01,   0
+        pack32le               %cmd,             1,        4
+        spi_swp                %cmd,             %cmd,     4,  CS_PULSE
+        unpack32be             %cmd,             1,        4
+        mov                    %S2LP_STATUS,     %cmd
+        shi32r                 %S2LP_STATUS,     16
         // Check status
         cst32                  %state,           S2LP_STATE0_STATE_REGMASK,   0
         and32                  %state,           %S2LP_STATUS
         cst8                   %tmp,             S2LP_STATE0_STATE_OFFSET(S2LP_STATE_READY)
         eq                     %state,           %tmp
-            jmp8               flush_fifo
+            jmp8               rx_flush_fifo
         cst8                   %tmp,             S2LP_STATE0_STATE_OFFSET(S2LP_STATE_RX)
         eq                     %state,           %tmp
             jmp8               abort_tx_rx
@@ -804,36 +811,31 @@
         // Send ready command
         cst16                  %cmd,             0x6280,   0
         pack16le               %cmd,             1,        2
-        spi_wr                 %cmd,             2,        CS_PULSE
-        jmp8                   flush_fifo
+        spi_wr                 %cmd,             2,        CS_START
+        jmp8                   rx_flush_fifo
 
     abort_tx_rx:
         // Send sabort command
         cst16                  %cmd,             0x6780,   0
         pack16le               %cmd,             1,        2
-        spi_wr                 %cmd,             2,        CS_PULSE
-    flush_fifo:
-        // Both flush test
-        cst8                   %3,               0x3
-        neq                    %3,               %mask
-            jmp8               simple_flush
-        cst32                  %cmd,             0x72807180,  0
-        // Send command
-        pack32le               %cmd,             1,        4
-        spi_wr                 %cmd,             4,        CS_START
-        jmp8                   clear_irq
-
-    simple_flush:
-        // Rx flush test
-        tst32s                 %mask,            0
-            cst16              %cmd,             0x7180,   0
-        // Tx flush test
-        tst32s                 %mask,            1
-            cst16              %cmd,             0x7280,   0
-        // Send command
-        pack32le               %cmd,             1,        2
         spi_wr                 %cmd,             2,        CS_START
+    rx_flush_fifo:
+        tst32c                 %mask,            0
+            jmp8               tx_flush_fifo
+        // Send flush rx fifo command
+        cst16                  %cmd,             0x7180,   0
+        pack32le               %cmd,             1,        2
+        spi_wr                 %cmd,             2,        CS_CONTINUE
+    tx_flush_fifo:
+        tst32c                 %mask,            1
+            jmp8               clear_irq
+        cst16                  %cmd,             0x7280,   0
+        // Send tx flush fifo command
+        pack32le               %cmd,             1,        2
+        spi_wr                 %cmd,             2,        CS_CONTINUE
     clear_irq:
+        // Pad %3
+        cst16                  %3,               0x00,     0
         // Clear irqs
         cst16                  %cmd,             0xFA01,   0
         pack32le               %cmd,             2,        6
