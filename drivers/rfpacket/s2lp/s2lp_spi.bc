@@ -19,6 +19,7 @@
 
 #include <device/class/spi.h>
 #include "s2lp_regs.h"
+#include "s2lp_config.h"
 #include "s2lp.h"
 
 .custom spi
@@ -109,7 +110,7 @@
         // Send packet config
         mov                    %s2lp_config:buffer,    %pk_buff
         cst8                   %s2lp_config:buff_size, S2LP_PK_CFG_DATA_SIZE
-        call8                  %s2lp_config:link,      s2lp_config
+        call16                 %s2lp_config:link,      s2lp_config
     config_end:
         end
 .endfunc
@@ -126,6 +127,9 @@
         // Check state
         cst8                   %s2lp_check_state:state, S2LP_STATE0_STATE_OFFSET(S2LP_STATE_READY)
         call16                 %s2lp_check_state:link,  s2lp_check_state
+        // Set tx fifo mux
+        cst8                   %s2lp_set_fifo_mux:value, 1
+        call16                 %s2lp_set_fifo_mux:link, s2lp_set_fifo_mux
         // Wait deadline before tx
         mov                    %deadline,              %S2LP_CTX_PV
         add8                   %deadline,              _offsetof(s2lp_ctx_s, gctx.deadline, 8)
@@ -146,7 +150,7 @@
         call16                 %s2lp_tx_init:link,     s2lp_tx_init
         // Check state
         cst8                   %s2lp_check_state:state, S2LP_STATE0_STATE_OFFSET(S2LP_STATE_READY)
-        call8                  %s2lp_check_state:link,  s2lp_check_state
+        call16                 %s2lp_check_state:link,  s2lp_check_state
         // Wait deadline before tx
         mov                    %deadline,              %S2LP_CTX_PV
         add8                   %deadline,              _offsetof(s2lp_ctx_s, gctx.deadline, 8)
@@ -155,6 +159,9 @@
         ld8e                   %flags,                 %S2LP_CTX_PV,   _offsetof(s2lp_ctx_s, flags, 1)
         tst32c                 %flags,                 bitpos(S2LP_FLAGS_RX_TX_OK)
             jmp8               tx_lbt_set_time
+        // Set rx fifo mux
+        cst8                   %s2lp_set_fifo_mux:value, 0
+        call16                 %s2lp_set_fifo_mux:link, s2lp_set_fifo_mux
         // Start RX
         call16                 %s2lp_start_rx:link,    s2lp_start_rx
     tx_lbt_set_time:
@@ -178,6 +185,9 @@
         ld8e                   %flags,                 %S2LP_CTX_PV,   _offsetof(s2lp_ctx_s, flags, 1)
         tst32c                 %flags,                 bitpos(S2LP_FLAGS_RX_TX_OK)
             jmp8               tx_lbt_retry_start
+        // Set rx fifo mux
+        cst8                   %s2lp_set_fifo_mux:value, 0
+        call16                 %s2lp_set_fifo_mux:link, s2lp_set_fifo_mux
         // Start RX
         call16                 %s2lp_start_rx:link,    s2lp_start_rx
     tx_lbt_retry_start:
@@ -197,6 +207,9 @@
         // Check state
         cst8                   %s2lp_check_state:state, S2LP_STATE0_STATE_OFFSET(S2LP_STATE_READY)
         call8                  %s2lp_check_state:link,  s2lp_check_state
+        // Set rx fifo mux
+        cst8                   %s2lp_set_fifo_mux:value, 0
+        call16                 %s2lp_set_fifo_mux:link, s2lp_set_fifo_mux
         // Wait deadline before rx
         mov                    %deadline,              %S2LP_CTX_PV
         add8                   %deadline,              _offsetof(s2lp_ctx_s, gctx.deadline, 8)
@@ -235,6 +248,9 @@
         // Check state
         cst8                   %s2lp_check_state:state, S2LP_STATE0_STATE_OFFSET(S2LP_STATE_READY)
         call8                  %s2lp_check_state:link,  s2lp_check_state
+        // Set rx fifo mux
+        cst8                   %s2lp_set_fifo_mux:value, 0
+        call16                 %s2lp_set_fifo_mux:link, s2lp_set_fifo_mux
         // Start rx
         call16                 %s2lp_start_rx:link,    s2lp_start_rx
         // Set rssi sample period
@@ -825,14 +841,39 @@
         ret                    %link
 .endfunc
 
+// Set mux for fifo irq (1 for Tx, 0 for Rx)
+.func s2lp_set_fifo_mux
+        .input %4 link
+        .input %1 value
+        .clobber %1, %2 cmd offset reg_addr, %3 reg_val
+        // Get config reg value
+        ld32e                  %reg_addr,        %S2LP_CTX_PV,   _offsetof(s2lp_ctx_s, pk_cfg_array, 4)
+        ld8e                   %reg_val,         %reg_addr,   S2LP_PKCFG_PROT2_OFFSET
+        // Set value
+        bit32c                 %reg_val,         bitpos(S2LP_PROTOCOL2_FIFO_GPIO_OUT_MUX_SEL_REGMASK)
+        shi32l                 %value,           bitpos(S2LP_PROTOCOL2_FIFO_GPIO_OUT_MUX_SEL_REGMASK)
+        or32                   %reg_val,         %value
+        // Set header (S2LP_WRITE_REG_BYTE, S2LP_PROTOCOL2_ADDR)
+        cst16                  %cmd,             0x3900,   0
+        // Send command
+        pack16le               %cmd,             2,        3
+        spi_swp                %cmd,             %cmd,     3,  CS_PULSE
+        // Retrieve status
+        unpack32be             %cmd,             1,        3
+        mov                    %S2LP_STATUS,     %cmd
+        shi32r                 %S2LP_STATUS,     8
+        ret                    %link
+.endfunc
+
 // .func s2lp_set_csma
+           // TODO
 //         .input %4 link
 //         .input %1 value
 //         .clobber %2 cmd, %3 reg_val
 //         // Set header (S2LP_WRITE_REG_BYTE, S2LP_PROTOCOL1_ADDR)
 //         cst16                  %cmd,             0x3A00,   0
 //         // Get config reg value
-//         ld8e                   %reg_val,         %S2LP_CTX_PV,   _offsetof(s2lp_ctx_s, &(pk_cfg_array[20]), 1)
+//         ld8e                   %reg_val,         %S2LP_CTX_PV,   _offsetof(s2lp_ctx_s, pk_cfg_array, 1)
 //         and32                   %reg_val,         %value
 //         // Send command
 //         pack16le               %cmd,             2,        3
@@ -843,6 +884,22 @@
 //         shi32r                 %S2LP_STATUS,     8
 //         ret                    %link
 // .endfunc
+
+.func s2lp_clear_irq
+        .input %4 link
+        .clobber %2 cmd, %3
+        // Init %3
+        cst8                   %3,             0x0
+        // Set cmd (S2LP_READ_REG_BYTE, S2LP_IRQ_STATUS3_ADDR)
+        cst16                  %cmd,           0xFA01,   0
+        pack32le               %cmd,           2,        6
+        spi_swp                %cmd,           %cmd,     6,         CS_PULSE
+        unpack32be             %cmd,           2,        6
+        // Retrieve status
+        mov                    %S2LP_STATUS,   %cmd
+        shi32r                 %S2LP_STATUS,   16
+        ret                    %link
+.endfunc
 
 .func s2lp_main_tx_lbt
         .input %0 tbr, // time before retry
@@ -928,17 +985,19 @@
         spi_timestamp          %tmp
         jmp8                   start_tx_lbt
 
-
     wait_no_rx:
         // Stop rx and wait
         cst8                   %s2lp_abort:mask, 0x1
-        call8                  %s2lp_abort:link, s2lp_abort
+        call16                 %s2lp_abort:link, s2lp_abort
         spi_yield_delay        %tbr
         // Timestamp to note end of rx
         mov                    %tmp,             %S2LP_CTX_PV
         add8                   %tmp,             _offsetof(s2lp_ctx_s, gctx.lbt_timestamp, 8)
         spi_timestamp          %tmp
     start_tx_lbt:
+        // Set tx fifo mux
+        cst8                   %s2lp_set_fifo_mux:value, 1
+        call16                 %s2lp_set_fifo_mux:link, s2lp_set_fifo_mux
         // Start tx
         call16                 %s2lp_start_tx:link,    s2lp_start_tx
         // Wait for irq
@@ -947,6 +1006,7 @@
     wait_csma:
         spi_yieldc_delay       %tbr
             // Fail to send packet
+            // TODO CHECK STATE (abort tx ?)
             jmp8               lbt_set_busy
         // Check irq
         call16                 %s2lp_check_irq:link,  s2lp_check_irq
@@ -961,22 +1021,6 @@
         cst8                   %status,          S2LP_BC_STATUS_RX_TIMEOUT
         st8e                   %status,          %S2LP_CTX_PV,   _offsetof(s2lp_ctx_s, bc_status, 1)
         end
-.endfunc
-
-.func s2lp_clear_irq
-        .input %4 link
-        .clobber %2 cmd, %3
-        // Init %3
-        cst8                   %3,             0x0
-        // Set cmd (S2LP_READ_REG_BYTE, S2LP_IRQ_STATUS3_ADDR)
-        cst16                  %cmd,           0xFA01,   0
-        pack32le               %cmd,           2,        6
-        spi_swp                %cmd,           %cmd,     6,         CS_PULSE
-        unpack32be             %cmd,           2,        6
-        // Retrieve status
-        mov                    %S2LP_STATUS,   %cmd
-        shi32r                 %S2LP_STATUS,   16
-        ret                    %link
 .endfunc
 
 // TODO define sleep token

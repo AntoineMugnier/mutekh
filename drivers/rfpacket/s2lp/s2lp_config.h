@@ -20,8 +20,34 @@
 #ifndef S2LP_CONFIG_H_
 #define S2LP_CONFIG_H_
 
+#include "s2lp.h"
+
 // Init config table
 extern const uint8_t s2lp_config[];
+
+// Rf config structure
+// Header Rssi th
+// (3) Rssi Threshold
+// Header modulation / channel filter
+// (7) Ch_Space, Ch_Num, Mod4 to Mod0, Ch_flt
+// Header power
+// (18) PA_Power0, PA_Config1, PA_Config0, Synth_Config2
+// Header frequency
+// (25) Synt3 to Synt0
+// Header Xo conf
+// (31) Xo conf 1
+
+
+
+// Packet config structure
+// Header PCKTCTRL
+// (3) PCKTCTRL6 to PCKTCTRL1
+// Header SYNC
+// (12) Sync double word (big endian)
+// Header PROTOCOL
+// (19) PROTOCOL2 to PROTOCOL0
+#define S2LP_PKCFG_PROT2_OFFSET 19
+#define S2LP_PKCFG_PROT1_OFFSET 20
 
 // Public functions
 error_t s2lp_build_config(struct s2lp_ctx_s *pv);

@@ -63,7 +63,7 @@
 #define S2LP_BASE_TIME 500 // in us
 #define S2LP_RSSI_PERIOD_SHIFT 8 // = S2LP_BASE_TIME * 2 ^ 8 = 128 ms
 #define S2LP_RESET_SHIFT 1 // = S2LP_BASE_TIME * 2 ^ 1 = 1 ms
-#define S2LP_WAIT_IRQ_SHIFT 6 // = S2LP_BASE_TIME * 2 ^ 6 = 32 ms
+#define S2LP_WAIT_IRQ_SHIFT 7 // = S2LP_BASE_TIME * 2 ^ 7 = 64 ms
 
 // Rssi values
 #define S2LP_RSSI_AVG_DEF_VAL -120 // arbitrary, in dbm
@@ -149,8 +149,8 @@ struct s2lp_ctx_s {
   const struct dev_rfpacket_rf_cfg_s *rf_cfg;
   const struct dev_rfpacket_pk_cfg_s *pk_cfg;
   // Config arrays
-  uint8_t rf_cfg_array[S2LP_RF_CFG_ARRAY_SIZE];
-  uint8_t pk_cfg_array[S2LP_PK_CFG_ARRAY_SIZE];
+  uint8_t *rf_cfg_array;
+  uint8_t *pk_cfg_array;
   // Gpio map
   gpio_id_t pin_map[2];
 };

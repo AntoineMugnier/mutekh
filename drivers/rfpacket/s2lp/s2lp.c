@@ -344,7 +344,6 @@ static DEV_RFPACKET_REQUEST(s2lp_rfp_request) {
     if (rq == NULL) {
       break;
     }
-    logk_trace("req %d %d", rq->type, rq->tx_size);
     rq->error = 0;
     dev_rfpacket_request(&pv->gctx, rq);
   }
@@ -447,12 +446,19 @@ static DEV_INIT(s2lp_init) {
   memset(pv, 0, sizeof(*pv));
   dev->drv_pv = pv;
 
+  // Init config arrays
+  pv->rf_cfg_array = mem_alloc(S2LP_RF_CFG_ARRAY_SIZE, (mem_scope_sys));
+  pv->pk_cfg_array = mem_alloc(S2LP_PK_CFG_ARRAY_SIZE, (mem_scope_sys));
+
+  if (!pv->rf_cfg_array || !pv->pk_cfg_array){
+    return -ENOMEM;
+  }
   // Init status
   pv->bc_status = S2LP_BC_STATUS_MISC;
 
   // Init config structs
-  s2lp_init_rf_cfg_array(pv->rf_cfg_array, ARRAY_SIZE(pv->rf_cfg_array));
-  s2lp_init_pk_cfg_array(pv->pk_cfg_array, ARRAY_SIZE(pv->pk_cfg_array));
+  s2lp_init_rf_cfg_array(pv->rf_cfg_array, S2LP_RF_CFG_ARRAY_SIZE);
+  s2lp_init_pk_cfg_array(pv->pk_cfg_array, S2LP_PK_CFG_ARRAY_SIZE);
 
   // Init bytecode
   struct dev_spi_ctrl_bytecode_rq_s *srq = &pv->spi_rq;

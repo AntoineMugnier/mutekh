@@ -636,25 +636,26 @@ static error_t s2lp_build_pk_config(struct s2lp_ctx_s *pv, struct dev_rfpacket_r
   }
 
   // Set fifo threshold trigger
-  uint8_t *pProtocol2 = &pv->pk_cfg_array[19];
+  // FIXME DO THIS IN BYTECODE !!!
+  // uint8_t *pProtocol2 = &pv->pk_cfg_array[19];
 
-  switch (rq->type) {
-    case DEV_RFPACKET_RQ_TX_FAIR:
-    case DEV_RFPACKET_RQ_TX:
-      // Set Tx Fifo trigger
-      *pProtocol2 |= S2LP_PROTOCOL2_FIFO_GPIO_OUT_MUX_SEL_REGMASK;
-    break;
+  // switch (rq->type) {
+  //   case DEV_RFPACKET_RQ_TX_FAIR:
+  //   case DEV_RFPACKET_RQ_TX:
+  //     // Set Tx Fifo trigger
+  //     *pProtocol2 |= S2LP_PROTOCOL2_FIFO_GPIO_OUT_MUX_SEL_REGMASK;
+  //   break;
 
-    case DEV_RFPACKET_RQ_RX:
-    case DEV_RFPACKET_RQ_RX_CONT:
-    case DEV_RFPACKET_RQ_RX_TIMEOUT:
-      // Set Rx Fifo trigger
-      *pProtocol2 &= ~S2LP_PROTOCOL2_FIFO_GPIO_OUT_MUX_SEL_REGMASK;
-    break;
+  //   case DEV_RFPACKET_RQ_RX:
+  //   case DEV_RFPACKET_RQ_RX_CONT:
+  //   case DEV_RFPACKET_RQ_RX_TIMEOUT:
+  //     // Set Rx Fifo trigger
+  //     *pProtocol2 &= ~S2LP_PROTOCOL2_FIFO_GPIO_OUT_MUX_SEL_REGMASK;
+  //   break;
 
-    default:
-    break;
-  }
+  //   default:
+  //   break;
+  // }
 
   // TODO LDC configuration if needed
 
@@ -715,18 +716,6 @@ uint8_t s2lp_build_pwr(struct s2lp_ctx_s *pv, int16_t pwr) {
   return reg_pwr;
 }
 
-// Rf config structure
-// Header Rssi th
-// (3) Rssi Threshold
-// Header modulation / channel filter
-// (7) Ch_Space, Ch_Num, Mod4 to Mod0, Ch_flt
-// Header power
-// (18) PA_Power0, PA_Config1, PA_Config0, Synth_Config2
-// Header frequency
-// (25) Synt3 to Synt0
-// Header Xo conf
-// (31) Xo conf 1
-
 void s2lp_init_rf_cfg_array(uint8_t *pArray, uint16_t array_size) {
   // Check size
   assert(array_size == S2LP_RF_CFG_ARRAY_SIZE);
@@ -753,14 +742,6 @@ void s2lp_init_rf_cfg_array(uint8_t *pArray, uint16_t array_size) {
   pArray[21] = 0xd0; // Synth_Config2
 }
 
-// Packet config structure
-// Header PCKTCTRL
-// (3) PCKTCTRL6 to PCKTCTRL1
-// Header SYNC
-// (12) Sync double word (big endian)
-// Header PROTOCOL
-// (19) PROTOCOL2 to PROTOCOL0
-
 void s2lp_init_pk_cfg_array(uint8_t *pArray, uint16_t array_size) {
   // Check size
   assert(array_size == S2LP_PK_CFG_ARRAY_SIZE);
@@ -781,6 +762,8 @@ void s2lp_init_pk_cfg_array(uint8_t *pArray, uint16_t array_size) {
   pArray[20] = 0x00; // PROTOCOL1
   pArray[21] = 0x08; // PROTOCOL0
 }
+
+
 
 // Init config table
 const uint8_t s2lp_config[] = {
