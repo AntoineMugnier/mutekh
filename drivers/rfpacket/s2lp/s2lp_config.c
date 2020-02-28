@@ -17,6 +17,8 @@
     02110-1301 USA.
 */
 
+#define LOGK_MODULE_ID "s2lp"
+
 #include "s2lp.h"
 #include "s2lp_regs.h"
 #include "s2lp_config.h"
