@@ -788,29 +788,40 @@
         // Send ready command
         cst16                  %cmd,             0x6280,   0
         pack16le               %cmd,             1,        2
-        spi_wr                 %cmd,             2,        CS_START
+        spi_wr                 %cmd,             2,        CS_PULSE
         jmp8                   flush_fifo
 
     abort_tx_rx:
         // Send sabort command
         cst16                  %cmd,             0x6780,   0
         pack16le               %cmd,             1,        2
-        spi_wr                 %cmd,             2,        CS_CONTINUE
+        spi_wr                 %cmd,             2,        CS_PULSE
     flush_fifo:
+        // Both flush test
+        cst8                   %3,               0x3
+        neq                    %3,               %mask
+            jmp8               simple_flush
+        cst32                  %cmd,             0x72807180,  0
+        // Send command
+        pack32le               %cmd,             1,        4
+        spi_wr                 %cmd,             4,        CS_START
+        jmp8                   clear_irq
+
+    simple_flush:
         // Rx flush test
         tst32s                 %mask,            0
             cst16              %cmd,             0x7180,   0
         // Tx flush test
         tst32s                 %mask,            1
             cst16              %cmd,             0x7280,   0
-        // Both flush test
-        cst8                   %tmp,             0x3
-        eq                     %tmp,             %mask
-            cst32              %cmd,             0x72807180,  0
         // Send command
-        pack32le               %cmd,             1,        4
-        spi_wr                 %cmd,             4,        CS_END
-        // TODO Clear IRQs ?
+        pack32le               %cmd,             1,        2
+        spi_wr                 %cmd,             2,        CS_START
+    clear_irq:
+        // Clear irqs
+        cst16                  %cmd,             0xFA01,   0
+        pack32le               %cmd,             2,        6
+        spi_wr                 %cmd,             6,    CS_END
         ret                    %link
 .endfunc
 
