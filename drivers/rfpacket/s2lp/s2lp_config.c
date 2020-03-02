@@ -719,6 +719,8 @@ uint8_t s2lp_build_pwr(struct s2lp_ctx_s *pv, int16_t pwr) {
 void s2lp_init_rf_cfg_array(uint8_t *pArray, uint16_t array_size) {
   // Check size
   assert(array_size == S2LP_RF_CFG_ARRAY_SIZE);
+  // Reset memory
+  memset(pArray, 0, array_size);
   // Header Rssi th
   pArray[0] = 0x03;
   pArray[1] = S2LP_WRITE_REG_BYTE;
@@ -745,6 +747,8 @@ void s2lp_init_rf_cfg_array(uint8_t *pArray, uint16_t array_size) {
 void s2lp_init_pk_cfg_array(uint8_t *pArray, uint16_t array_size) {
   // Check size
   assert(array_size == S2LP_PK_CFG_ARRAY_SIZE);
+  // Reset memory
+  memset(pArray, 0, array_size);
   // Header PCKTCTRL
   pArray[0] = 0x08; // Size
   pArray[1] = S2LP_WRITE_REG_BYTE;
