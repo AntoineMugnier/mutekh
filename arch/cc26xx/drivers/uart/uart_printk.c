@@ -22,7 +22,7 @@ static void printk_out_char(uint8_t c)
 
 static PRINTK_HANDLER(printk_out)
 {
-  uint_fast8_t i;
+  size_t i;
 
   for (i = 0; i < len; i++)
     {

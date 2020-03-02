@@ -44,7 +44,7 @@ static inline void printk_out_char(char c)
 
 static PRINTK_HANDLER(efm32_leuart_printk_out)
 {
-  uint_fast8_t i;
+  size_t i;
 
   for (i = 0; i < len; i++)
   {

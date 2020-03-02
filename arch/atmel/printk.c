@@ -70,7 +70,7 @@ void atmel_printk_avr32sim_init()
 
 static PRINTK_HANDLER(printk_out)
 {
-  uint_fast8_t i;
+  size_t i;
 
   for (i = 0; i < len; i++)
     {
