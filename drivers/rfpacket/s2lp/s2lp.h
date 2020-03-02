@@ -67,7 +67,7 @@
 
 // Rssi values
 #define S2LP_RSSI_AVG_DEF_VAL -120 // arbitrary, in dbm
-#define S2LP_RSSI_AVG_SHIFT 5 // = 2 ^ 5 = 32
+#define S2LP_RSSI_AVG_SHIFT 5 // = 2 ^ 5 = 32 ms
 #define S2LP_RSSI_AVG_WEIGHT (1 << S2LP_RSSI_AVG_SHIFT) - 1 // = 31
 
 // Lbt values
