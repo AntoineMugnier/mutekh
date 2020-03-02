@@ -30,27 +30,38 @@ uint32_t __rand_r32(__compiler_uint_t *s)
 {
   __compiler_uint_t r = *s;
   r |= !r;
-  r = (-(r & 1) & 0x9eb5a9de) ^ (r >> 1);
+
+  /* 32 bit Xorshift */
+  r ^= r << 13;
+  r ^= r >> 17;
+  r ^= r << 5;
+
   *s = r;
   return r & 0x7fffffff;
 }
 
 /********************* rand 64 */
 
-static uint64_t rand_64_seed = 1;
+static uint64_t rand_64_seed = 0x123456789abcdef0ULL;
 
 static uint32_t _rand_64_r(uint64_t *s)
 {
   uint64_t r = *s;
 
-  /* 64 bits lfsr */
-  *s = r = (-(r & 1) & 0x81ec82f69eb5a9d3ULL) ^ (r >> 1);
+  /* 64 bit Xorshift generator */
+  r ^= r >> 12;
+  r ^= r << 25;
+  r ^= r >> 27;
+  *s = r;
 
-  /* diffusion, use two 32 x 32 -> 64 mul and xor folding */
-  const uint64_t c = 2466808117 /* prime */;
-  r = ((uint32_t)r * c) ^ ((uint32_t)(r >> 32) * c);
+  uint32_t l = r;
+  uint32_t m = r >> 16;
+  uint32_t h = r >> 32;
 
-  return r ^ (r >> 32);
+  /* non linear diffusion step using 32 bit output muls */
+  return (h * l) ^ (~m * 2466808117U);
+
+  /* pass TestU01 Crush */
 }
 
 static uint32_t _rand_64_range_r(uint64_t *s, uint32_t min, uint32_t max)
