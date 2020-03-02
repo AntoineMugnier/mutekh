@@ -233,8 +233,10 @@
 #define S2LP_DEVICE_INFO0_ADDR           ((uint8_t)0xF1)
 
 // State registers
-#define S2LP_MC_STATE1_ADDR          ((uint8_t)0x8D)
-#define S2LP_MC_STATE0_ADDR          ((uint8_t)0x8E)
+#define S2LP_MC_STATE1_ADDR              ((uint8_t)0x8D)
+#define S2LP_MC_STATE0_ADDR              ((uint8_t)0x8E)
+#define S2LP_TX_FIFO_STATUS_ADDR         ((uint8_t)0x8F)
+#define S2LP_RX_FIFO_STATUS_ADDR         ((uint8_t)0x90)
 
 // State registers masks
 #define S2LP_STATE1_RCO_CAL_OK_REGMASK      ((uint8_t)0x10)
