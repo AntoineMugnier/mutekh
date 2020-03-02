@@ -634,29 +634,6 @@ static error_t s2lp_build_pk_config(struct s2lp_ctx_s *pv, struct dev_rfpacket_r
       return -ENOTSUP;
     break;
   }
-
-  // Set fifo threshold trigger
-  // FIXME DO THIS IN BYTECODE !!!
-  uint8_t *pProtocol2 = &pv->pk_cfg_array[19];
-
-  switch (rq->type) {
-    case DEV_RFPACKET_RQ_TX_FAIR:
-    case DEV_RFPACKET_RQ_TX:
-      // Set Tx Fifo trigger
-      *pProtocol2 |= S2LP_PROTOCOL2_FIFO_GPIO_OUT_MUX_SEL_REGMASK;
-    break;
-
-    case DEV_RFPACKET_RQ_RX:
-    case DEV_RFPACKET_RQ_RX_CONT:
-    case DEV_RFPACKET_RQ_RX_TIMEOUT:
-      // Set Rx Fifo trigger
-      *pProtocol2 &= ~S2LP_PROTOCOL2_FIFO_GPIO_OUT_MUX_SEL_REGMASK;
-    break;
-
-    default:
-    break;
-  }
-
   // TODO LDC configuration if needed
 
   // Activate packet variable length and manchester coding
