@@ -637,25 +637,25 @@ static error_t s2lp_build_pk_config(struct s2lp_ctx_s *pv, struct dev_rfpacket_r
 
   // Set fifo threshold trigger
   // FIXME DO THIS IN BYTECODE !!!
-  // uint8_t *pProtocol2 = &pv->pk_cfg_array[19];
+  uint8_t *pProtocol2 = &pv->pk_cfg_array[19];
 
-  // switch (rq->type) {
-  //   case DEV_RFPACKET_RQ_TX_FAIR:
-  //   case DEV_RFPACKET_RQ_TX:
-  //     // Set Tx Fifo trigger
-  //     *pProtocol2 |= S2LP_PROTOCOL2_FIFO_GPIO_OUT_MUX_SEL_REGMASK;
-  //   break;
+  switch (rq->type) {
+    case DEV_RFPACKET_RQ_TX_FAIR:
+    case DEV_RFPACKET_RQ_TX:
+      // Set Tx Fifo trigger
+      *pProtocol2 |= S2LP_PROTOCOL2_FIFO_GPIO_OUT_MUX_SEL_REGMASK;
+    break;
 
-  //   case DEV_RFPACKET_RQ_RX:
-  //   case DEV_RFPACKET_RQ_RX_CONT:
-  //   case DEV_RFPACKET_RQ_RX_TIMEOUT:
-  //     // Set Rx Fifo trigger
-  //     *pProtocol2 &= ~S2LP_PROTOCOL2_FIFO_GPIO_OUT_MUX_SEL_REGMASK;
-  //   break;
+    case DEV_RFPACKET_RQ_RX:
+    case DEV_RFPACKET_RQ_RX_CONT:
+    case DEV_RFPACKET_RQ_RX_TIMEOUT:
+      // Set Rx Fifo trigger
+      *pProtocol2 &= ~S2LP_PROTOCOL2_FIFO_GPIO_OUT_MUX_SEL_REGMASK;
+    break;
 
-  //   default:
-  //   break;
-  // }
+    default:
+    break;
+  }
 
   // TODO LDC configuration if needed
 
@@ -771,8 +771,8 @@ const uint8_t s2lp_config[] = {
   0x6, S2LP_WRITE_REG_BYTE, S2LP_FIFO_CONFIG3_ADDR, S2LP_FIFO_THRESHOLD, S2LP_FIFO_THRESHOLD, S2LP_FIFO_THRESHOLD, S2LP_FIFO_THRESHOLD,
   // IRQs Masks
   // 0x6, S2LP_WRITE_REG_BYTE, S2LP_IRQ_MASK3_ADDR, S2LP_IRQ_REG_3_VALUE, S2LP_IRQ_REG_2_VALUE,
-  // S2LP_IRQ_REG_1_VALUE, S2LP_IRQ_REG_0_VALUE,
-  0x6, S2LP_WRITE_REG_BYTE, S2LP_IRQ_MASK3_ADDR, 0x00, 0x00, 0x0B, 0x7F,
+  // S2LP_IRQ_REG_1_VALUE, S2LP_IRQ_REG_0_VALUE, // 0x0B 0x7D
+  0x6, S2LP_WRITE_REG_BYTE, S2LP_IRQ_MASK3_ADDR, 0x00, 0x00, 0x0B, 0x7D,
   // CSMA config
   0x4, S2LP_WRITE_REG_BYTE, S2LP_CSMA_CONF1_ADDR, (S2LP_CSMA_CONF1_DEF_VAL | S2LP_CSMA_PERIOD_64TBIT),
   (S2LP_CSMA0_CCA_LEN_OFFSET(1) | 0x1), // TODO check pour le nombre de back off

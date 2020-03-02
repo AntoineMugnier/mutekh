@@ -286,9 +286,18 @@
         // Check if rxc cancelled
         ld8e                   %tmp,            %S2LP_CTX_PV,   _offsetof(s2lp_ctx_s, flags, 1)
         tst32c                 %tmp,            bitpos(S2LP_FLAGS_RX_CONTINOUS)
-            end
+            jmp8               rxc_cancel
         // Return to sampling
         jmp8                   rssi_sample
+
+    rxc_cancel:
+        // Stop rx
+        cst8                   %s2lp_abort:mask, 0x1
+        call16                 %s2lp_abort:link, s2lp_abort
+        // Set bc_status
+        cst8                   %status,         S2LP_BC_STATUS_MISC
+        st8e                   %status,         %S2LP_CTX_PV,   _offsetof(s2lp_ctx_s, bc_status, 1)
+        end
 
     rxc_timeout:
         // Stop rx
