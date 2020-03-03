@@ -508,6 +508,26 @@ static error_t s2lp_build_pk_config(struct s2lp_ctx_s *pv, struct dev_rfpacket_r
 
   logk_trace("PKT configuration");
 
+  // Check format
+  if (cfg->base.format != DEV_RFPACKET_FMT_SLPC) {
+    return -ENOTSUP;
+  }
+  // Configure encoding
+  uint8_t *pPcktCtrl2 = &pv->pk_cfg_array[7];
+
+  switch (cfg->base.encoding) {
+    default:
+    case DEV_RFPACKET_CLEAR:
+      *pPcktCtrl2 &= ~S2LP_PCKTCTRL2_MANCHESTER_EN_REGMASK;
+    break;
+
+    case DEV_RFPACKET_MANCHESTER:
+      *pPcktCtrl2 |= S2LP_PCKTCTRL2_MANCHESTER_EN_REGMASK;
+    break;
+  }
+  // Activate packet variable length
+  *pPcktCtrl2 |= S2LP_PCKTCTRL2_FIX_VAR_LEN_REGMASK;
+
   // Configure Sync Word
   uint8_t *pSync_len = &pv->pk_cfg_array[3];
   uint8_t sync_len = cfg->sw_len + 1;
@@ -636,10 +656,6 @@ static error_t s2lp_build_pk_config(struct s2lp_ctx_s *pv, struct dev_rfpacket_r
   }
   // TODO LDC configuration if needed
 
-  // Activate packet variable length and manchester coding
-  uint8_t *pPcktCtrl2 = &pv->pk_cfg_array[7];
-  *pPcktCtrl2 |= S2LP_PCKTCTRL2_FIX_VAR_LEN_REGMASK;
-  *pPcktCtrl2 |= S2LP_PCKTCTRL2_MANCHESTER_EN_REGMASK;
   return 0;
 }
 
