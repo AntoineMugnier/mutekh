@@ -177,12 +177,18 @@
 #define S2LP_PA_CONFIG0_ADDR   ((uint8_t)0x64)
 
 // Misc registers
-#define S2LP_CLOCKREC1_ADDR    ((uint8_t)0x20)
-#define S2LP_CLOCKREC0_ADDR    ((uint8_t)0x21)
-#define S2LP_XO_RCO_CONF1_ADDR ((uint8_t)0x6C)
-#define S2LP_XO_RCO_CONF0_ADDR ((uint8_t)0x6D)
+#define S2LP_ANT_SELECT_CONF_ADDR ((uint8_t)0x1F)
+#define S2LP_CLOCKREC1_ADDR       ((uint8_t)0x20)
+#define S2LP_CLOCKREC0_ADDR       ((uint8_t)0x21)
+#define S2LP_XO_RCO_CONF1_ADDR    ((uint8_t)0x6C)
+#define S2LP_XO_RCO_CONF0_ADDR    ((uint8_t)0x6D)
 
 // Misc registers masks
+#define S2LP_ANT_EQU_CTRL_REGMASK        ((uint8_t)0x60)
+#define S2LP_ANT_CS_BLANKING_REGMASK     ((uint8_t)0x10)
+#define S2LP_ANT_AS_ENABLE_REGMASK       ((uint8_t)0x08)
+#define S2LP_ANT_AS_MEAS_TIME_REGMASK    ((uint8_t)0x07)
+
 #define S2LP_CLKREC1_P_GAIN_SLOW_REGMASK ((uint8_t)0xE0)
 #define S2LP_CLKREC1_ALGO_SEL_REGMASK    ((uint8_t)0x10)
 #define S2LP_CLKREC1_I_GAIN_SLOW_REGMASK ((uint8_t)0x0F)
