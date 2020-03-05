@@ -186,6 +186,11 @@
 #define S2LP_CLOCKREC0_ADDR       ((uint8_t)0x21)
 #define S2LP_XO_RCO_CONF1_ADDR    ((uint8_t)0x6C)
 #define S2LP_XO_RCO_CONF0_ADDR    ((uint8_t)0x6D)
+#define S2LP_PM_CONF4_ADDR        ((uint8_t)0x75)
+#define S2LP_PM_CONF3_ADDR        ((uint8_t)0x76)
+#define S2LP_PM_CONF2_ADDR        ((uint8_t)0x77)
+#define S2LP_PM_CONF1_ADDR        ((uint8_t)0x78)
+#define S2LP_PM_CONF0_ADDR        ((uint8_t)0x79)
 
 // Misc registers masks
 #define S2LP_ANT_EQU_CTRL_REGMASK        ((uint8_t)0x60)
@@ -208,6 +213,19 @@
 #define S2LP_XO0_REFDIV_REGMASK          ((uint8_t)0x08)
 #define S2LP_XO0_EXT_RCO_OSC_REGMASK     ((uint8_t)0x02)
 #define S2LP_XO0_RCO_CALIBRATION_REGMASK ((uint8_t)0x01)
+
+#define S2LP_PM4_TEMP_SENSOR_EN_REGMASK    ((uint8_t)0x80)
+#define S2LP_PM4_TEMP_SENS_BUFF_EN_REGMASK ((uint8_t)0x40)
+#define S2LP_PM4_EXT_SMPS_REGMASK          ((uint8_t)0x20)
+
+#define S2LP_PM3_KRM_EN_REGMASK            ((uint8_t)0x80)
+#define S2LP_PM3_KRM_14_8_REGMASK          ((uint8_t)0x7F)
+
+#define S2LP_PM1_BATTERY_LVL_EN_REGMASK    ((uint8_t)0x40)
+#define S2LP_PM1_SET_BLD_TH_REGMASK        ((uint8_t)0x30)
+
+#define S2LP_PM0_SET_SMPS_LVL_REGMASK      ((uint8_t)0x70)
+#define S2LP_PM0_SLEEP_MODE_SEL_REGMASK    ((uint8_t)0x01)
 
 // Power registers masks
 #define S2LP_DIG_SMOOTH_EN_REGMASK      ((uint8_t)0x80)
@@ -397,6 +415,7 @@
 
 // Misc registers calues
 #define S2LP_ANT_DEF_VAL        0x45
+#define S2LP_PM0_DEF_VAL        0x42
 
 // Id registers value
 #define S2LP_PART_NUMBER        0x03
