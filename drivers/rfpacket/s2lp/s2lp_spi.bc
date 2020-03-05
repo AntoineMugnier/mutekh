@@ -121,7 +121,6 @@
         .input %0 power
         .input %1 channel
         .clobber %1, %2 deadline, %3, %4, %5, %7
-        // TODO Deactivate CSMA
         // Prepare tx
         call16                  %s2lp_tx_init:link,     s2lp_tx_init
         // Check state
@@ -148,27 +147,26 @@
         .input %0 power
         .input %1 channel
         .clobber %0, %1, %2 deadline flags tmp, %3, %4, %5, %7
-        // TODO Activate CSMA
         // Prepare tx
         call16                 %s2lp_tx_init:link,     s2lp_tx_init
         // Check state
         cst8                   %s2lp_check_state:state, S2LP_STATE0_STATE_OFFSET(S2LP_STATE_READY)
         call16                 %s2lp_check_state:link,  s2lp_check_state
-        // Enable csma
-        cst8                   %s2lp_set_csma:value, 1
-        call16                 %s2lp_set_csma:link, s2lp_set_csma
         // Wait deadline before tx
         mov                    %deadline,              %S2LP_CTX_PV
         add8                   %deadline,              _offsetof(s2lp_ctx_s, gctx.deadline, 8)
         spi_yield_deadline     %deadline
-        // Init Rx if needed
+        // Init rx if needed
         ld8e                   %flags,                 %S2LP_CTX_PV,   _offsetof(s2lp_ctx_s, flags, 1)
         tst32c                 %flags,                 bitpos(S2LP_FLAGS_RX_TX_OK)
             jmp8               tx_lbt_set_time
+        // Disable csma
+        cst8                   %s2lp_set_csma:value, 0
+        call16                 %s2lp_set_csma:link, s2lp_set_csma
         // Set rx fifo mux
         cst8                   %s2lp_set_fifo_mux:value, 0
         call16                 %s2lp_set_fifo_mux:link, s2lp_set_fifo_mux
-        // Start RX
+        // Start rx
         call16                 %s2lp_start_rx:link,    s2lp_start_rx
     tx_lbt_set_time:
         // Set waiting time
@@ -201,6 +199,9 @@
         // Check state
         cst8                   %s2lp_check_state:state, S2LP_STATE0_STATE_OFFSET(S2LP_STATE_READY)
         call8                  %s2lp_check_state:link,  s2lp_check_state
+        // Disable csma
+        cst8                   %s2lp_set_csma:value, 0
+        call16                 %s2lp_set_csma:link, s2lp_set_csma
         // Set rx fifo mux
         cst8                   %s2lp_set_fifo_mux:value, 0
         call16                 %s2lp_set_fifo_mux:link, s2lp_set_fifo_mux
@@ -245,6 +246,9 @@
         // Check state
         cst8                   %s2lp_check_state:state, S2LP_STATE0_STATE_OFFSET(S2LP_STATE_READY)
         call8                  %s2lp_check_state:link,  s2lp_check_state
+        // Disable csma
+        cst8                   %s2lp_set_csma:value, 0
+        call16                 %s2lp_set_csma:link, s2lp_set_csma
         // Set rx fifo mux
         cst8                   %s2lp_set_fifo_mux:value, 0
         call16                 %s2lp_set_fifo_mux:link, s2lp_set_fifo_mux
@@ -944,6 +948,9 @@
         ld8e                   %flags,                 %S2LP_CTX_PV,   _offsetof(s2lp_ctx_s, flags, 1)
         tst32c                 %flags,                 bitpos(S2LP_FLAGS_RX_TX_OK)
             jmp8               tx_lbt_retry_start
+        // Disable csma
+        cst8                   %s2lp_set_csma:value, 0
+        call16                 %s2lp_set_csma:link, s2lp_set_csma
         // Set rx fifo mux
         cst8                   %s2lp_set_fifo_mux:value, 0
         call16                 %s2lp_set_fifo_mux:link, s2lp_set_fifo_mux
@@ -1051,23 +1058,16 @@
         add8                   %tmp,             _offsetof(s2lp_ctx_s, gctx.lbt_timestamp, 8)
         spi_timestamp          %tmp
     start_tx_lbt:
+        // Enable csma
+        cst8                   %s2lp_set_csma:value, 1
+        call16                 %s2lp_set_csma:link, s2lp_set_csma
         // Set tx fifo mux
         cst8                   %s2lp_set_fifo_mux:value, 1
         call16                 %s2lp_set_fifo_mux:link, s2lp_set_fifo_mux
         // Start tx
-        call16                 %s2lp_start_tx:link,    s2lp_start_tx
+        call16                 %s2lp_start_tx:link, s2lp_start_tx
         // Wait for irq
-        ld32e                  %tbr,             %S2LP_CTX_PV,   _offsetof(s2lp_ctx_s, bt, 4)
-        shi32l                 %tbr,             S2LP_LBT_WAIT_CSMA_SHIFT
-    wait_csma:
-        spi_yieldc_delay       %tbr
-            // Fail to send packet
-            // TODO CHECK STATE (abort tx ?)
-            jmp8               lbt_set_busy
-        // Check irq
-        call16                 %s2lp_check_irq:link,  s2lp_check_irq
-        // Go back to waiting
-        jmp8                   wait_csma
+        jmp16                  s2lp_wait_irq
 
     tx_timeout:
         // Stop tx/rx
