@@ -131,6 +131,7 @@
 #define S2LP_MOD1_ADDR          ((uint8_t)0x11)
 #define S2LP_MOD0_ADDR          ((uint8_t)0x12)
 #define S2LP_CHFLT_ADDR         ((uint8_t)0x13)
+#define S2LP_RSSI_FLT_ADDR           ((uint8_t)0x17)
 #define S2LP_RSSI_TH_ADDR       ((uint8_t)0x18)
 #define S2LP_SYNTH_CONFIG2_ADDR ((uint8_t)0x65)
 
@@ -148,6 +149,9 @@
 #define S2LP_SYNT_27_24_REGMASK    ((uint8_t)0x0F)
 
 #define S2LP_PLL_PFD_SPLIT_EN_REGMASK  ((uint8_t)0x04)
+
+#define S2LP_RSSI_FLT_GAIN_REGMASK    ((uint8_t)0xF0)
+#define S2LP_RSSI_FLT_CS_MODE_REGMASK ((uint8_t)0x0C)
 
 // Csma registers
 #define S2LP_CSMA_CONF3_ADDR       ((uint8_t)0x4C)
@@ -379,12 +383,20 @@
 #define S2LP_MOD_ASK_OOK      0x50 // OOK modulation selected.
 #define S2LP_MOD_POLAR        0x60 // OOK modulation selected.
 
-// CSMA registers values
-#define S2LP_CSMA_CONF1_DEF_VAL  0x4
-#define S2LP_CSMA_PERIOD_64TBIT  0   // CSMA/CA: Sets CCA period to 64*TBIT 
-#define S2LP_CSMA_PERIOD_128TBIT 1   // CSMA/CA: Sets CCA period to 128*TBIT 
-#define S2LP_CSMA_PERIOD_256TBIT 2   // CSMA/CA: Sets CCA period to 256*TBIT 
-#define S2LP_CSMA_PERIOD_512TBIT 3   // CSMA/CA: Sets CCA period to 512*TBIT 
+// Csma registers values
+#define S2LP_CSMA_CONF1_DEF_VAL   0x4
+#define S2LP_CSMA_PERIOD_64TBIT   0   // CSMA/CA: Sets CCA period to 64*TBIT 
+#define S2LP_CSMA_PERIOD_128TBIT  1   // CSMA/CA: Sets CCA period to 128*TBIT 
+#define S2LP_CSMA_PERIOD_256TBIT  2   // CSMA/CA: Sets CCA period to 256*TBIT 
+#define S2LP_CSMA_PERIOD_512TBIT  3   // CSMA/CA: Sets CCA period to 512*TBIT 
+#define S2LP_RSSI_FLT_DEV_VAL     0xE3
+#define S2LP_RSSI_CS_MODE_STATIC  0x0
+#define S2LP_RSSI_CS_MODE_DYN6DB  0x4
+#define S2LP_RSSI_CS_MODE_DYN12DB 0x8
+#define S2LP_RSSI_CS_MODE_DYN18DB 0xC
+
+// Misc registers calues
+#define S2LP_ANT_DEF_VAL        0x45
 
 // Id registers value
 #define S2LP_PART_NUMBER        0x03
