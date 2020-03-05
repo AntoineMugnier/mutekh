@@ -182,25 +182,13 @@
 // Entry point to retry to send a packet through the transceiver, using lbt
 .func s2lp_entry_retry_tx_lbt
         .export s2lp_entry_retry_tx_lbt
-        .clobber %0, %1, %2 flags, %3, %4
+        .clobber %0, %1, %2, %3, %4
         // Check state
         call8                  %s2lp_update_status:link, s2lp_update_status
         cst8                   %s2lp_check_state:state, S2LP_STATE0_STATE_OFFSET(S2LP_STATE_READY)
         call8                  %s2lp_check_state:link,  s2lp_check_state
-        // Init Rx if needed
-        ld8e                   %flags,                 %S2LP_CTX_PV,   _offsetof(s2lp_ctx_s, flags, 1)
-        tst32c                 %flags,                 bitpos(S2LP_FLAGS_RX_TX_OK)
-            jmp8               tx_lbt_retry_start
-        // Set rx fifo mux
-        cst8                   %s2lp_set_fifo_mux:value, 0
-        call16                 %s2lp_set_fifo_mux:link, s2lp_set_fifo_mux
-        // Start RX
-        call16                 %s2lp_start_rx:link,    s2lp_start_rx
-    tx_lbt_retry_start:
-        // Set waiting time
-        ld32e                  %s2lp_main_tx_lbt:tbr,  %S2LP_CTX_PV, _offsetof(s2lp_ctx_s, lbt_rand_time, 4)
         // Jump to main function
-        jmp16                  s2lp_main_tx_lbt
+        jmp16                  s2lp_main_retry_tx_lbt
 .endfunc
 
 // Entry point to start regular rx on transceiver
@@ -230,6 +218,7 @@
         // Check irq
         call16                 %s2lp_check_irq:link,  s2lp_check_irq
         jmp8                   rx_wait
+
     rx_timeout:
         // Stop rx
         cst8                   %s2lp_abort:mask, 0x1
@@ -595,8 +584,10 @@
             jmp8               process_tx_fifo_irq
         tst32s                 %irq1,          bitpos(S2LP_IRQ_RX_FIFO_ALMOST_FULL)
             jmp8               process_rx_fifo_irq
+        tst32s                 %irq1,          bitpos(S2LP_IRQ_MAX_BO_CCA_REACHED)
+            jmp16              s2lp_main_retry_tx_lbt
         // Unknown irq
-        jmp16                   s2lp_error
+        jmp16                  s2lp_error
 
     process_tx_done_irq:
         // Set bc_status
@@ -953,6 +944,24 @@
         ret                    %link
 .endfunc
 
+.func s2lp_main_retry_tx_lbt
+        .clobber %0, %1, %2 flags, %3, %4
+        // Init Rx if needed
+        ld8e                   %flags,                 %S2LP_CTX_PV,   _offsetof(s2lp_ctx_s, flags, 1)
+        tst32c                 %flags,                 bitpos(S2LP_FLAGS_RX_TX_OK)
+            jmp8               tx_lbt_retry_start
+        // Set rx fifo mux
+        cst8                   %s2lp_set_fifo_mux:value, 0
+        call16                 %s2lp_set_fifo_mux:link, s2lp_set_fifo_mux
+        // Start RX
+        call16                 %s2lp_start_rx:link,    s2lp_start_rx
+    tx_lbt_retry_start:
+        // Set waiting time
+        ld32e                  %s2lp_main_tx_lbt:tbr,  %S2LP_CTX_PV, _offsetof(s2lp_ctx_s, lbt_rand_time, 4)
+        // Jump to main function
+        jmp16                  s2lp_main_tx_lbt
+.endfunc
+
 .func s2lp_main_tx_lbt
         .input %0 tbr, // time before retry
         .clobber %0, %1 timeout status flags, %2 tmp, %3 rssi, %4 curr_state new_state, %5, %6, %7
@@ -975,7 +984,7 @@
 
     check_rx:
         // Get rssi values
-        call8                  %s2lp_get_curr_rssi:link, s2lp_get_curr_rssi
+        call16                 %s2lp_get_curr_rssi:link, s2lp_get_curr_rssi
         ld8e                   %rssi,            %S2LP_CTX_PV,   _offsetof(s2lp_ctx_s, lbt_rssi, 1)
         // Lbt state machine
         ld8e                   %curr_state,      %S2LP_CTX_PV,   _offsetof(s2lp_ctx_s, lbt_state, 1)
@@ -1030,7 +1039,7 @@
     lbt_end_rx:
         // Stop rx
         cst8                   %s2lp_abort:mask, 0x1
-        call16                  %s2lp_abort:link, s2lp_abort
+        call16                 %s2lp_abort:link, s2lp_abort
         // Timestamp to note end of rx
         mov                    %tmp,             %S2LP_CTX_PV
         add8                   %tmp,             _offsetof(s2lp_ctx_s, gctx.lbt_timestamp, 8)
