@@ -71,7 +71,6 @@
 #define S2LP_RSSI_AVG_WEIGHT (1 << S2LP_RSSI_AVG_SHIFT) - 1 // = 31
 
 // Lbt values
-#define S2LP_LBT_WAIT_CSMA_SHIFT 1 // = S2LP_BASE_TIME * 2 ^ 1 = 1 ms
 #define S2LP_LBT_NO_RX_SHIFT 4 // = S2LP_BASE_TIME * 2 ^ 4 = 8 ms
 #define S2LP_LBT_POLL_SHIFT 1 // = S2LP_BASE_TIME * 2 ^ 1 = 1 ms
 #define S2LP_LBT_BASE_TIME_MULT 10 // = S2LP_BASE_TIME * 10 = 5 ms
