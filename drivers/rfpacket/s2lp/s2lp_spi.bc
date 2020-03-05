@@ -221,6 +221,7 @@
 
     rx_timeout:
         // Stop rx
+        call16                 %s2lp_update_status:link, s2lp_update_status
         cst8                   %s2lp_abort:mask, 0x1
         call16                 %s2lp_abort:link, s2lp_abort
         call16                 %s2lp_clear_irq:link, s2lp_clear_irq
@@ -293,12 +294,16 @@
         // Set bc_status
         cst8                   %status,         S2LP_BC_STATUS_MISC
         st8e                   %status,         %S2LP_CTX_PV,   _offsetof(s2lp_ctx_s, bc_status, 1)
+        // Update status
+        call16                 %s2lp_update_status:link, s2lp_update_status
         jmp8                   rxc_end
 
     rxc_timeout:
         // Set bc_status
         cst8                   %status,         S2LP_BC_STATUS_RX_TIMEOUT
         st8e                   %status,         %S2LP_CTX_PV,   _offsetof(s2lp_ctx_s, bc_status, 1)
+        // Update status
+        call16                 %s2lp_update_status:link, s2lp_update_status
         jmp8                   rxc_end
 
     jamming:
@@ -335,6 +340,7 @@
         jmp8                   config_loop
 .endfunc
 
+// Update the value of %S2LP_STATUS
 .func s2lp_update_status
         .input %4 link
         .clobber %2 cmd
@@ -549,7 +555,7 @@
         pack32le               %cmd,           2,        6
         spi_swp                %cmd,           %irq3,    6,         CS_PULSE
         unpack32be             %irq3,          2,        6
-        // Filter status
+        // Retrieve status
         mov                    %S2LP_STATUS,   %irq3
         shi32r                 %S2LP_STATUS,   16
         // Get irq0 (6th byte)
@@ -786,7 +792,7 @@
         pack32le               %cmd,           1,         4
         spi_swp                %cmd,           %cmd,      4,      CS_PULSE
         unpack32be             %cmd,           1,         4
-        // Filter status
+        // Retrieve status
         mov                    %S2LP_STATUS,   %cmd
         shi32r                 %S2LP_STATUS,   16
         // Get rssi value (4th byte)
@@ -815,6 +821,7 @@
         cst8                   %status,         S2LP_BC_STATUS_OTHER_ERR
         st8e                   %status,         %S2LP_CTX_PV,   _offsetof(s2lp_ctx_s, bc_status, 1)
         // Abort tx/rx
+        call16                 %s2lp_update_status:link, s2lp_update_status
         cst8                   %s2lp_abort:mask, 0x3
         call8                  %s2lp_abort:link, s2lp_abort
         call16                 %s2lp_clear_irq:link, s2lp_clear_irq
@@ -826,13 +833,6 @@
         .input %4 link
         .input %1 mask // flush fifo mask
         .clobber %2 cmd tmp, %3 state
-        // Update status
-        cst16                  %cmd,             0x8D01,   0
-        pack32le               %cmd,             1,        4
-        spi_swp                %cmd,             %cmd,     4,  CS_PULSE
-        unpack32be             %cmd,             1,        4
-        mov                    %S2LP_STATUS,     %cmd
-        shi32r                 %S2LP_STATUS,     16
         // Check status
         cst32                  %state,           S2LP_STATE0_STATE_REGMASK,   0
         and32                  %state,           %S2LP_STATUS
@@ -1042,6 +1042,7 @@
 
     wait_no_rx:
         // Stop rx and wait
+        call16                 %s2lp_update_status:link, s2lp_update_status
         cst8                   %s2lp_abort:mask, 0x1
         call16                 %s2lp_abort:link, s2lp_abort
         spi_yield_delay        %tbr
@@ -1070,6 +1071,7 @@
 
     tx_timeout:
         // Stop tx/rx
+        call16                 %s2lp_update_status:link, s2lp_update_status
         cst8                   %s2lp_abort:mask, 0x3
         call16                 %s2lp_abort:link, s2lp_abort
         call16                 %s2lp_clear_irq:link, s2lp_clear_irq
