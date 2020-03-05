@@ -223,6 +223,7 @@
         // Stop rx
         cst8                   %s2lp_abort:mask, 0x1
         call16                 %s2lp_abort:link, s2lp_abort
+        call16                 %s2lp_clear_irq:link, s2lp_clear_irq
         // Set bc_status
         cst8                   %status,         S2LP_BC_STATUS_RX_TIMEOUT
         st8e                   %status,         %S2LP_CTX_PV,   _offsetof(s2lp_ctx_s, bc_status, 1)
@@ -289,30 +290,26 @@
         jmp8                   rssi_sample
 
     rxc_cancel:
-        // Stop rx
-        cst8                   %s2lp_abort:mask, 0x1
-        call16                 %s2lp_abort:link, s2lp_abort
         // Set bc_status
         cst8                   %status,         S2LP_BC_STATUS_MISC
         st8e                   %status,         %S2LP_CTX_PV,   _offsetof(s2lp_ctx_s, bc_status, 1)
-        end
+        jmp8                   rxc_end
 
     rxc_timeout:
-        // Stop rx
-        cst8                   %s2lp_abort:mask, 0x1
-        call16                 %s2lp_abort:link, s2lp_abort
         // Set bc_status
         cst8                   %status,         S2LP_BC_STATUS_RX_TIMEOUT
         st8e                   %status,         %S2LP_CTX_PV,   _offsetof(s2lp_ctx_s, bc_status, 1)
-        end
+        jmp8                   rxc_end
 
     jamming:
-        // Stop rx
-        cst8                   %s2lp_abort:mask, 0x1
-        call16                 %s2lp_abort:link, s2lp_abort
         // Set bc_status
         cst8                   %status,         S2LP_BC_STATUS_JAMMING_ERR
         st8e                   %status,         %S2LP_CTX_PV,   _offsetof(s2lp_ctx_s, bc_status, 1)
+    rxc_end:
+        // Stop rx
+        cst8                   %s2lp_abort:mask, 0x1
+        call16                 %s2lp_abort:link, s2lp_abort
+        call16                 %s2lp_clear_irq:link, s2lp_clear_irq
         end
 .endfunc
 
@@ -622,6 +619,7 @@
         // Stop rx
         cst8                   %s2lp_abort:mask, 0x1
         call8                  %s2lp_abort:link, s2lp_abort
+        call16                 %s2lp_clear_irq:link, s2lp_clear_irq
         end
 .endfunc
 
@@ -806,6 +804,7 @@
         // Abort tx/rx
         cst8                   %s2lp_abort:mask, 0x1
         call8                  %s2lp_abort:link, s2lp_abort
+        call16                 %s2lp_clear_irq:link, s2lp_clear_irq
         end
 .endfunc
 
@@ -818,6 +817,7 @@
         // Abort tx/rx
         cst8                   %s2lp_abort:mask, 0x3
         call8                  %s2lp_abort:link, s2lp_abort
+        call16                 %s2lp_clear_irq:link, s2lp_clear_irq
         end
 .endfunc
 
@@ -848,35 +848,29 @@
         // Send ready command
         cst16                  %cmd,             0x6280,   0
         pack16le               %cmd,             1,        2
-        spi_wr                 %cmd,             2,        CS_START
+        spi_wr                 %cmd,             2,        CS_PULSE
         jmp8                   rx_flush_fifo
 
     abort_tx_rx:
         // Send sabort command
         cst16                  %cmd,             0x6780,   0
         pack16le               %cmd,             1,        2
-        spi_wr                 %cmd,             2,        CS_START
+        spi_wr                 %cmd,             2,        CS_PULSE
     rx_flush_fifo:
         tst32c                 %mask,            0
             jmp8               tx_flush_fifo
         // Send flush rx fifo command
         cst16                  %cmd,             0x7180,   0
         pack32le               %cmd,             1,        2
-        spi_wr                 %cmd,             2,        CS_CONTINUE
+        spi_wr                 %cmd,             2,        CS_PULSE
     tx_flush_fifo:
         tst32c                 %mask,            1
-            jmp8               clear_irq
-        cst16                  %cmd,             0x7280,   0
+            jmp8               abort_end
         // Send tx flush fifo command
+        cst16                  %cmd,             0x7280,   0
         pack32le               %cmd,             1,        2
-        spi_wr                 %cmd,             2,        CS_CONTINUE
-    clear_irq:
-        // Pad %3
-        cst16                  %3,               0x00,     0
-        // Clear irqs
-        cst16                  %cmd,             0xFA01,   0
-        pack32le               %cmd,             2,        6
-        spi_wr                 %cmd,             6,    CS_END
+        spi_wr                 %cmd,             2,        CS_PULSE
+    abort_end:
         ret                    %link
 .endfunc
 
@@ -1078,6 +1072,7 @@
         // Stop tx/rx
         cst8                   %s2lp_abort:mask, 0x3
         call16                 %s2lp_abort:link, s2lp_abort
+        call16                 %s2lp_clear_irq:link, s2lp_clear_irq
         // Set bc_status
         cst8                   %status,          S2LP_BC_STATUS_RX_TIMEOUT
         st8e                   %status,          %S2LP_CTX_PV,   _offsetof(s2lp_ctx_s, bc_status, 1)
