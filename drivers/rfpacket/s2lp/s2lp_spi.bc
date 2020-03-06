@@ -1076,7 +1076,7 @@
         call16                 %s2lp_abort:link, s2lp_abort
         call16                 %s2lp_clear_irq:link, s2lp_clear_irq
         // Set bc_status
-        cst8                   %status,          S2LP_BC_STATUS_RX_TIMEOUT
+        cst8                   %status,          S2LP_BC_STATUS_TX_TIMEOUT
         st8e                   %status,          %S2LP_CTX_PV,   _offsetof(s2lp_ctx_s, bc_status, 1)
         end
 .endfunc
