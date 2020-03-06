@@ -674,6 +674,9 @@
         // Read fifo item count
         call8                  %s2lp_read_fifo_status:link,  s2lp_read_fifo_status
         // Check fifo size vs remaining size
+        eq0                    %s2lp_read_fifo:rx_size
+            // Empty fifo
+            jmp8               s2lp_bad_data
         lt                     %size,          %s2lp_read_fifo:rx_size
             // Too much data received
             jmp8               s2lp_bad_data
