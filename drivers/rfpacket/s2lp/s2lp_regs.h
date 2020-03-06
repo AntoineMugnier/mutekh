@@ -375,7 +375,7 @@
 #define S2LP_IRQ_TX_START_TIME       (1 << 2)      // only for debug; TX circuitry startup time; see TX_START_COUNTER
 #define S2LP_IRQ_RX_START_TIME       (1 << 3)      // only for debug; RX circuitry startup time; see TX_START_COUNTER
 #define S2LP_IRQ_RX_TIMEOUT          (1 << 4)      // RX operation timeout
-#define S2LP_IRQ_RX_SNIFF_TIMEOUT    (1 << 5)      // RX sniff opeartion timeout
+#define S2LP_IRQ_RX_SNIFF_TIMEOUT    (1 << 5)      // RX sniff operation timeout
 
 // Packet register values
 #define S2LP_PKT_PREAMBLE_MODE_1 ((uint8_t)0x00) // 0101 (2FSK) / 0111 (4FSK)
