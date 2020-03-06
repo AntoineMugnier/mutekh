@@ -99,16 +99,17 @@
   ||||\-------- TX_POWER_OK  (3)
   |||\--------- RF_CONFIG_OK (4)
   ||\---------- PK_CONFIG_OK (5)
-  |\----------- UNUSED       (6)
+  |\----------- TX_LBT_ON    (6)
   \------------ UNUSED       (7)
 */
 
-#define S2LP_FLAGS_RX_CONTINOUS 0x01  // rx continous is active
-#define S2LP_FLAGS_RXC_INFINITE 0x02  // rx continous has no lifetime
-#define S2LP_FLAGS_RX_TX_OK     0x04  // rx during tx_lbt is possible
-#define S2LP_FLAGS_TX_POWER_OK  0x08  // tx power don't need to be configured
-#define S2LP_FLAGS_RF_CONFIG_OK 0x10  // rf config don't need to be configured
-#define S2LP_FLAGS_PK_CONFIG_OK 0x20  // packet config don't need to be configured
+#define S2LP_FLAGS_RX_CONTINOUS 0x01 // rx continous is active
+#define S2LP_FLAGS_RXC_INFINITE 0x02 // rx continous has no lifetime
+#define S2LP_FLAGS_RX_TX_OK     0x04 // rx during tx_lbt is possible
+#define S2LP_FLAGS_TX_POWER_OK  0x08 // tx power don't need to be configured
+#define S2LP_FLAGS_RF_CONFIG_OK 0x10 // rf config don't need to be configured
+#define S2LP_FLAGS_PK_CONFIG_OK 0x20 // packet config don't need to be configured
+#define S2LP_FLAGS_TX_LBT       0x40 // current tx request is tx_lbt
 
 BC_CCALL_FUNCTION(s2lp_alloc);
 

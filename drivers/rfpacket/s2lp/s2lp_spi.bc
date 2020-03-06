@@ -126,9 +126,6 @@
         // Check state
         cst8                   %s2lp_check_state:state, S2LP_STATE0_STATE_OFFSET(S2LP_STATE_READY)
         call16                 %s2lp_check_state:link,  s2lp_check_state
-        // Disable csma
-        cst8                   %s2lp_set_csma:value, 0
-        call16                 %s2lp_set_csma:link, s2lp_set_csma
         // Set tx fifo mux
         cst8                   %s2lp_set_fifo_mux:value, 1
         call16                 %s2lp_set_fifo_mux:link, s2lp_set_fifo_mux
@@ -160,9 +157,6 @@
         ld8e                   %flags,                 %S2LP_CTX_PV,   _offsetof(s2lp_ctx_s, flags, 1)
         tst32c                 %flags,                 bitpos(S2LP_FLAGS_RX_TX_OK)
             jmp8               tx_lbt_set_time
-        // Disable csma
-        cst8                   %s2lp_set_csma:value, 0
-        call16                 %s2lp_set_csma:link, s2lp_set_csma
         // Set rx fifo mux
         cst8                   %s2lp_set_fifo_mux:value, 0
         call16                 %s2lp_set_fifo_mux:link, s2lp_set_fifo_mux
@@ -199,9 +193,6 @@
         // Check state
         cst8                   %s2lp_check_state:state, S2LP_STATE0_STATE_OFFSET(S2LP_STATE_READY)
         call8                  %s2lp_check_state:link,  s2lp_check_state
-        // Disable csma
-        cst8                   %s2lp_set_csma:value, 0
-        call16                 %s2lp_set_csma:link, s2lp_set_csma
         // Set rx fifo mux
         cst8                   %s2lp_set_fifo_mux:value, 0
         call16                 %s2lp_set_fifo_mux:link, s2lp_set_fifo_mux
@@ -245,9 +236,6 @@
         // Check state
         cst8                   %s2lp_check_state:state, S2LP_STATE0_STATE_OFFSET(S2LP_STATE_READY)
         call8                  %s2lp_check_state:link,  s2lp_check_state
-        // Disable csma
-        cst8                   %s2lp_set_csma:value, 0
-        call16                 %s2lp_set_csma:link, s2lp_set_csma
         // Set rx fifo mux
         cst8                   %s2lp_set_fifo_mux:value, 0
         call16                 %s2lp_set_fifo_mux:link, s2lp_set_fifo_mux
@@ -548,7 +536,7 @@
 
 // Process irq
 .func s2lp_process_irq
-        .clobber %1 cmd irq3 status, %2 irq2, %3 irq1, %4 irq0, %5, %6, %7
+        .clobber %1 cmd irq3 status flags, %2 irq2, %3 irq1, %4 irq0, %5, %6, %7
         // Init register
         cst8                   %irq2,          0
         // Send read irq status request (S2LP_READ_REG_BYTE, S2LP_IRQ_STATUS3_ADDR) and get status
@@ -597,6 +585,13 @@
         // Set bc_status
         cst8                   %status,         S2LP_BC_STATUS_TX_DONE
         st8e                   %status,         %S2LP_CTX_PV,   _offsetof(s2lp_ctx_s, bc_status, 1)
+        // Disable csma if needed
+        ld8e                   %flags,                 %S2LP_CTX_PV,   _offsetof(s2lp_ctx_s, flags, 1)
+        tst32c                 %flags,                 bitpos(S2LP_FLAGS_TX_LBT)
+            jmp8               tx_done_irq_end
+        cst8                   %s2lp_set_csma:value, 0
+        call16                 %s2lp_set_csma:link, s2lp_set_csma
+    tx_done_irq_end:
         end
 
     process_rx_done_irq:
@@ -625,7 +620,7 @@
         st8e                   %status,         %S2LP_CTX_PV,   _offsetof(s2lp_ctx_s, bc_status, 1)
         // Stop rx
         cst8                   %s2lp_abort:mask, 0x1
-        call8                  %s2lp_abort:link, s2lp_abort
+        call16                  %s2lp_abort:link, s2lp_abort
         call16                 %s2lp_clear_irq:link, s2lp_clear_irq
         end
 .endfunc
@@ -641,7 +636,7 @@
             ret                    %link
         // Send data
         cst8                   %s2lp_write_fifo:fifo_count, (S2LP_FIFO_SIZE - S2LP_FIFO_THRESHOLD)
-        call8                  %s2lp_write_fifo:link,       s2lp_write_fifo
+        call16                  %s2lp_write_fifo:link,       s2lp_write_fifo
         call16                 %s2lp_update_pckt:link,      s2lp_update_pckt
         ret                    %link
 .endfunc
@@ -817,10 +812,17 @@
 
 // Bytecode error process
 .func s2lp_error
-        .clobber %1, %2 status, %3, %4
+        .clobber %1, %2 status flags, %3, %4
         // Set bc_status
         cst8                   %status,         S2LP_BC_STATUS_OTHER_ERR
         st8e                   %status,         %S2LP_CTX_PV,   _offsetof(s2lp_ctx_s, bc_status, 1)
+        // Disable csma if needed
+        ld8e                   %flags,                 %S2LP_CTX_PV,   _offsetof(s2lp_ctx_s, flags, 1)
+        tst32c                 %flags,                 bitpos(S2LP_FLAGS_TX_LBT)
+            jmp8               error_abort
+        cst8                   %s2lp_set_csma:value, 0
+        call16                 %s2lp_set_csma:link, s2lp_set_csma
+    error_abort:
         // Abort tx/rx
         cst8                   %s2lp_abort:mask, 0x3
         call8                  %s2lp_abort:link, s2lp_abort

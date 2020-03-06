@@ -260,11 +260,13 @@ static void s2lp_tx(struct dev_rfpacket_ctx_s *gpv, struct dev_rfpacket_rq_s *rq
         // Init lbt info
         pv->lbt_state = S2LP_LBT_STATE_FREE;
         pv->lbt_rand_time = s2lp_calc_lbt_rand_time(pv->bt, t);
+        pv->flags |= S2LP_FLAGS_TX_LBT;
         pwr = s2lp_build_pwr(pv, rq->tx_pwr);
         s2lp_bytecode_start(pv, &s2lp_entry_tx_lbt, S2LP_ENTRY_TX_LBT_BCARGS(pwr, rq->channel));
       break;
 
       case DEV_RFPACKET_RQ_TX:
+        pv->flags &= ~S2LP_FLAGS_TX_LBT;
         pwr = s2lp_build_pwr(pv, rq->tx_pwr);
         s2lp_bytecode_start(pv, &s2lp_entry_tx, S2LP_ENTRY_TX_BCARGS(pwr, rq->channel));
       break;
