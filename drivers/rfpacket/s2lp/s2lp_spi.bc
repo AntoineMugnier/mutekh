@@ -942,6 +942,7 @@
 .endfunc
 #endif
 
+// Clear irqs
 .func s2lp_clear_irq
         .input %4 link
         .clobber %2 cmd, %3
@@ -958,6 +959,7 @@
         ret                    %link
 .endfunc
 
+// Restart tx lbt process
 .func s2lp_main_retry_tx_lbt
         .clobber %0, %1, %2 flags, %3, %4
         // Init Rx if needed
@@ -981,6 +983,7 @@
         jmp16                  s2lp_main_tx_lbt
 .endfunc
 
+// Tx lbt process
 .func s2lp_main_tx_lbt
         .input %0 tbr, // time before retry
         .clobber %0, %1 timeout status flags, %2 tmp, %3 rssi, %4 curr_state new_state, %5, %6, %7
