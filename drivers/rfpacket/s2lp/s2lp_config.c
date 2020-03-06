@@ -775,7 +775,7 @@ const uint8_t s2lp_config[] = {
   0x3, S2LP_WRITE_REG_BYTE, S2LP_PM_CONF0_ADDR, (S2LP_PM0_DEF_VAL | S2LP_PM0_SLEEP_MODE_SEL_REGMASK),
   // CSMA config
   0x4, S2LP_WRITE_REG_BYTE, S2LP_CSMA_CONF1_ADDR, (S2LP_CSMA_CONF1_DEF_VAL | S2LP_CSMA_PERIOD_64TBIT),
-  (S2LP_CSMA0_CCA_LEN_OFFSET(1) | 0x00), // TODO check pour le nombre de back off
+  (S2LP_CSMA0_CCA_LEN_OFFSET(1) | 0x01), // TODO check pour le nombre de back off
   // Dig div config
   0x3, S2LP_WRITE_REG_BYTE, S2LP_XO_RCO_CONF1_ADDR, S2LP_RCO_CONF1_VAL,
   // If config
