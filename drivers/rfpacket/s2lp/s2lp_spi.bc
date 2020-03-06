@@ -582,9 +582,7 @@
         jmp16                  s2lp_error
 
     process_tx_done_irq:
-        // Set bc_status
-        cst8                   %status,         S2LP_BC_STATUS_TX_DONE
-        st8e                   %status,         %S2LP_CTX_PV,   _offsetof(s2lp_ctx_s, bc_status, 1)
+#ifdef CONFIG_DRIVER_RFPACKET_S2LP_USE_CSMA
         // Disable csma if needed
         ld8e                   %flags,                 %S2LP_CTX_PV,   _offsetof(s2lp_ctx_s, flags, 1)
         tst32c                 %flags,                 bitpos(S2LP_FLAGS_TX_LBT)
@@ -592,6 +590,10 @@
         cst8                   %s2lp_set_csma:value, 0
         call16                 %s2lp_set_csma:link, s2lp_set_csma
     tx_done_irq_end:
+#endif
+        // Set bc_status
+        cst8                   %status,         S2LP_BC_STATUS_TX_DONE
+        st8e                   %status,         %S2LP_CTX_PV,   _offsetof(s2lp_ctx_s, bc_status, 1)
         end
 
     process_rx_done_irq:
@@ -813,9 +815,7 @@
 // Bytecode error process
 .func s2lp_error
         .clobber %1, %2 status flags, %3, %4
-        // Set bc_status
-        cst8                   %status,         S2LP_BC_STATUS_OTHER_ERR
-        st8e                   %status,         %S2LP_CTX_PV,   _offsetof(s2lp_ctx_s, bc_status, 1)
+#ifdef CONFIG_DRIVER_RFPACKET_S2LP_USE_CSMA
         // Disable csma if needed
         ld8e                   %flags,                 %S2LP_CTX_PV,   _offsetof(s2lp_ctx_s, flags, 1)
         tst32c                 %flags,                 bitpos(S2LP_FLAGS_TX_LBT)
@@ -823,6 +823,10 @@
         cst8                   %s2lp_set_csma:value, 0
         call16                 %s2lp_set_csma:link, s2lp_set_csma
     error_abort:
+#endif
+        // Set bc_status
+        cst8                   %status,         S2LP_BC_STATUS_OTHER_ERR
+        st8e                   %status,         %S2LP_CTX_PV,   _offsetof(s2lp_ctx_s, bc_status, 1)
         // Abort tx/rx
         cst8                   %s2lp_abort:mask, 0x3
         call8                  %s2lp_abort:link, s2lp_abort
@@ -835,22 +839,27 @@
         .input %4 link
         .input %1 mask // flush fifo mask, must NOT be 0 for status update
         .clobber %2 cmd tmp, %3 state
+        // Init %2
+        cst8                   %2,               0
+        // Check mask value
         tst32c                 %mask,            0
             jmp8               abort_tx_flush_fifo
         // Send flush rx fifo command
         cst16                  %cmd,             0x7180,   0
         pack32le               %cmd,             1,        2
         spi_swp                %cmd,             %cmd,     2, CS_START
+        unpack32be             %cmd,             1,        2
     abort_tx_flush_fifo:
+        // Check mask value
         tst32c                 %mask,            1
             jmp8               abort_check_status
         // Send tx flush fifo command
         cst16                  %cmd,             0x7280,   0
         pack32le               %cmd,             1,        2
         spi_swp                %cmd,             %cmd,     2, CS_START
+        unpack32be             %cmd,             1,        2
     abort_check_status:
         // Retrieve status
-        unpack32be             %cmd,             1,        2
         mov                    %S2LP_STATUS,     %cmd
         shi32r                 %S2LP_STATUS,     16
         // Check status
@@ -904,6 +913,7 @@
         ret                    %link
 .endfunc
 
+#ifdef CONFIG_DRIVER_RFPACKET_S2LP_USE_CSMA
 // Set csma (1 to enable, 0 to disable)
 .func s2lp_set_csma
         .input %4 link
@@ -927,6 +937,7 @@
         shi32r                 %S2LP_STATUS,     16
         ret                    %link
 .endfunc
+#endif
 
 .func s2lp_clear_irq
         .input %4 link
@@ -950,9 +961,11 @@
         ld8e                   %flags,                 %S2LP_CTX_PV,   _offsetof(s2lp_ctx_s, flags, 1)
         tst32c                 %flags,                 bitpos(S2LP_FLAGS_RX_TX_OK)
             jmp8               tx_lbt_retry_start
+#ifdef CONFIG_DRIVER_RFPACKET_S2LP_USE_CSMA
         // Disable csma
         cst8                   %s2lp_set_csma:value, 0
         call16                 %s2lp_set_csma:link, s2lp_set_csma
+#endif
         // Set rx fifo mux
         cst8                   %s2lp_set_fifo_mux:value, 0
         call16                 %s2lp_set_fifo_mux:link, s2lp_set_fifo_mux
@@ -1059,9 +1072,11 @@
         add8                   %tmp,             _offsetof(s2lp_ctx_s, gctx.lbt_timestamp, 8)
         spi_timestamp          %tmp
     start_tx_lbt:
+#ifdef CONFIG_DRIVER_RFPACKET_S2LP_USE_CSMA
         // Enable csma
         cst8                   %s2lp_set_csma:value, 1
         call16                 %s2lp_set_csma:link, s2lp_set_csma
+#endif
         // Set tx fifo mux
         cst8                   %s2lp_set_fifo_mux:value, 1
         call16                 %s2lp_set_fifo_mux:link, s2lp_set_fifo_mux
