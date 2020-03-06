@@ -222,7 +222,6 @@
 
     rx_timeout:
         // Stop rx
-        call16                 %s2lp_update_status:link, s2lp_update_status
         cst8                   %s2lp_abort:mask, 0x1
         call16                 %s2lp_abort:link, s2lp_abort
         call16                 %s2lp_clear_irq:link, s2lp_clear_irq
@@ -299,7 +298,6 @@
         cst8                   %status,         S2LP_BC_STATUS_MISC
         st8e                   %status,         %S2LP_CTX_PV,   _offsetof(s2lp_ctx_s, bc_status, 1)
         // Update status
-        call16                 %s2lp_update_status:link, s2lp_update_status
         jmp8                   rxc_end
 
     rxc_timeout:
@@ -307,7 +305,6 @@
         cst8                   %status,         S2LP_BC_STATUS_RX_TIMEOUT
         st8e                   %status,         %S2LP_CTX_PV,   _offsetof(s2lp_ctx_s, bc_status, 1)
         // Update status
-        call16                 %s2lp_update_status:link, s2lp_update_status
         jmp8                   rxc_end
 
     jamming:
@@ -825,7 +822,6 @@
         cst8                   %status,         S2LP_BC_STATUS_OTHER_ERR
         st8e                   %status,         %S2LP_CTX_PV,   _offsetof(s2lp_ctx_s, bc_status, 1)
         // Abort tx/rx
-        call16                 %s2lp_update_status:link, s2lp_update_status
         cst8                   %s2lp_abort:mask, 0x3
         call8                  %s2lp_abort:link, s2lp_abort
         call16                 %s2lp_clear_irq:link, s2lp_clear_irq
@@ -835,14 +831,32 @@
 // Abort transceiver current operation, mask: bit 0: flush fifo rx, bit 1: flush fifo tx
 .func s2lp_abort
         .input %4 link
-        .input %1 mask // flush fifo mask
+        .input %1 mask // flush fifo mask, must NOT be 0 for status update
         .clobber %2 cmd tmp, %3 state
+        tst32c                 %mask,            0
+            jmp8               abort_tx_flush_fifo
+        // Send flush rx fifo command
+        cst16                  %cmd,             0x7180,   0
+        pack32le               %cmd,             1,        2
+        spi_swp                %cmd,             %cmd,     2, CS_START
+    abort_tx_flush_fifo:
+        tst32c                 %mask,            1
+            jmp8               abort_check_status
+        // Send tx flush fifo command
+        cst16                  %cmd,             0x7280,   0
+        pack32le               %cmd,             1,        2
+        spi_swp                %cmd,             %cmd,     2, CS_START
+    abort_check_status:
+        // Retrieve status
+        unpack32be             %cmd,             1,        2
+        mov                    %S2LP_STATUS,     %cmd
+        shi32r                 %S2LP_STATUS,     16
         // Check status
         cst32                  %state,           S2LP_STATE0_STATE_REGMASK,   0
         and32                  %state,           %S2LP_STATUS
         cst8                   %tmp,             S2LP_STATE0_STATE_OFFSET(S2LP_STATE_READY)
         eq                     %state,           %tmp
-            jmp8               rx_flush_fifo
+            jmp8               abort_end
         cst8                   %tmp,             S2LP_STATE0_STATE_OFFSET(S2LP_STATE_RX)
         eq                     %state,           %tmp
             jmp8               abort_tx_rx
@@ -853,26 +867,12 @@
         cst16                  %cmd,             0x6280,   0
         pack16le               %cmd,             1,        2
         spi_wr                 %cmd,             2,        CS_PULSE
-        jmp8                   rx_flush_fifo
+        jmp8                   abort_end
 
     abort_tx_rx:
         // Send sabort command
         cst16                  %cmd,             0x6780,   0
         pack16le               %cmd,             1,        2
-        spi_wr                 %cmd,             2,        CS_PULSE
-    rx_flush_fifo:
-        tst32c                 %mask,            0
-            jmp8               tx_flush_fifo
-        // Send flush rx fifo command
-        cst16                  %cmd,             0x7180,   0
-        pack32le               %cmd,             1,        2
-        spi_wr                 %cmd,             2,        CS_PULSE
-    tx_flush_fifo:
-        tst32c                 %mask,            1
-            jmp8               abort_end
-        // Send tx flush fifo command
-        cst16                  %cmd,             0x7280,   0
-        pack32le               %cmd,             1,        2
         spi_wr                 %cmd,             2,        CS_PULSE
     abort_end:
         ret                    %link
@@ -1049,7 +1049,6 @@
 
     wait_no_rx:
         // Stop rx and wait
-        call16                 %s2lp_update_status:link, s2lp_update_status
         cst8                   %s2lp_abort:mask, 0x1
         call16                 %s2lp_abort:link, s2lp_abort
         spi_yield_delay        %tbr
@@ -1071,7 +1070,6 @@
 
     tx_timeout:
         // Stop tx/rx
-        call16                 %s2lp_update_status:link, s2lp_update_status
         cst8                   %s2lp_abort:mask, 0x3
         call16                 %s2lp_abort:link, s2lp_abort
         call16                 %s2lp_clear_irq:link, s2lp_clear_irq
