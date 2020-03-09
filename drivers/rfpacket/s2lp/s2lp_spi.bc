@@ -510,8 +510,7 @@
 .func s2lp_wait_irq
         .clobber %1 delay, %2, %3, %4, %5, %6, %7
         // Set delay
-        ld32e                  %delay,         %S2LP_CTX_PV,   _offsetof(s2lp_ctx_s, bt, 4)
-        shi32l                 %delay,         S2LP_WAIT_IRQ_SHIFT
+        ld32e                  %delay,         %S2LP_CTX_PV,   _offsetof(s2lp_ctx_s, mpst, 4)
     wait_next_irq:
         // Wait for irq
         spi_yieldc_delay       %delay
@@ -838,6 +837,7 @@
 .endfunc
 
 // Abort transceiver current operation, mask: bit 0: flush fifo rx, bit 1: flush fifo tx
+// TODO Make sure clearing fifo before aborting doesn't leave leftover data
 .func s2lp_abort
         .input %4 link
         .input %1 mask // flush fifo mask, must NOT be 0 for status update

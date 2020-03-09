@@ -119,8 +119,10 @@ enum s2lp_irq_src {
 };
 
 struct s2lp_ctx_s {
-  // Base time value
-  dev_timer_delay_t bt;
+  // Time values
+  dev_timer_delay_t bt; // Base time unit
+  dev_timer_delay_t ccad; // Time to wait before checking cca
+  dev_timer_delay_t mpst; // Time it takes to reach tx fifo almost empty irq
   // Last power level
   int16_t pwr;
   // Lbt info

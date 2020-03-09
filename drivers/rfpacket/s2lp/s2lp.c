@@ -182,6 +182,9 @@ static error_t s2lp_check_config(struct dev_rfpacket_ctx_s *gpv, struct dev_rfpa
   // Calc time byte in us
   dev_timer_delay_t tb = 8000000 / rq->rf_cfg->drate;
   dev_timer_init_sec(pv->timer, &(pv->gctx.time_byte), 0, tb, 1000000);
+  // Calc other time constants
+  pv->mpst = 2 * (S2LP_FIFO_SIZE - S2LP_FIFO_THRESHOLD) * pv->gctx.time_byte + pv->bt;
+  pv->ccad = 2 * 8 * pv->gctx.time_byte + pv->bt;
   // Build conf
   error_t err = s2lp_build_config(pv);
 
