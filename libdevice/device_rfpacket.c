@@ -1115,6 +1115,8 @@ void dev_rfpacket_req_done(struct dev_rfpacket_ctx_s *pv) {
         rfpacket_end_rxrq(pv);
         rfpacket_end_rq(pv, 0);
       } else {
+        // Check for weird cases
+        assert((pv->status != DEV_RFPACKET_STATUS_TX_DONE) && (pv->status != DEV_RFPACKET_STATUS_TX_TIMEOUT));
         // Rx related event
         BIT_CLEAR(pv->rq_flags, RFPACKET_FLAG_PENDING_RX);
         rfpacket_end_rxrq(pv);
@@ -1139,6 +1141,8 @@ void dev_rfpacket_req_done(struct dev_rfpacket_ctx_s *pv) {
         rfpacket_end_rxrq(pv);
         rfpacket_end_rxc(pv, 0);
       } else {
+        // Check for weird cases
+        assert((pv->status != DEV_RFPACKET_STATUS_TX_DONE) && (pv->status != DEV_RFPACKET_STATUS_TX_TIMEOUT));
         // Rx related event or cancel rxc
         BIT_CLEAR(pv->rxc_flags, RFPACKET_FLAG_PENDING_RX);
         rfpacket_end_rxrq(pv);
@@ -1173,6 +1177,8 @@ void dev_rfpacket_req_done(struct dev_rfpacket_ctx_s *pv) {
     break;
 
     case DEV_RFPACKET_STATE_TX:
+      // Check for weird cases
+      assert(pv->status == DEV_RFPACKET_STATUS_TX_DONE);
       // Packet has been transmitted
       rfpacket_end_txrq(pv);
       rfpacket_end_rq(pv, 0);
