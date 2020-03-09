@@ -1060,6 +1060,7 @@
         // Stop rx
         cst8                   %s2lp_abort:mask, 0x1
         call16                 %s2lp_abort:link, s2lp_abort
+        call16                 %s2lp_clear_irq:link, s2lp_clear_irq
         // Timestamp to note end of rx
         mov                    %tmp,             %S2LP_CTX_PV
         add8                   %tmp,             _offsetof(s2lp_ctx_s, gctx.lbt_timestamp, 8)
@@ -1070,6 +1071,7 @@
         // Stop rx and wait
         cst8                   %s2lp_abort:mask, 0x1
         call16                 %s2lp_abort:link, s2lp_abort
+        call16                 %s2lp_clear_irq:link, s2lp_clear_irq
         spi_yield_delay        %tbr
         // Timestamp to note end of rx
         mov                    %tmp,             %S2LP_CTX_PV
