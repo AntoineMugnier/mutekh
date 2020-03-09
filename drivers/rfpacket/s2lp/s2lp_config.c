@@ -41,7 +41,7 @@
 
 #define S2LP_IRQ_REG_3_VALUE 0x0
 #define S2LP_IRQ_REG_2_VALUE 0x0
-#define S2LP_IRQ_REG_1_VALUE (S2LP_IRQ_MAX_BO_CCA_REACHED | S2LP_IRQ_TX_FIFO_ALMOST_EMPTY | S2LP_IRQ_RX_FIFO_ALMOST_FULL)
+#define S2LP_IRQ_REG_1_VALUE (S2LP_IRQ_TX_FIFO_ALMOST_EMPTY | S2LP_IRQ_RX_FIFO_ALMOST_FULL)
 #define S2LP_IRQ_REG_0_VALUE (S2LP_IRQ_RX_DATA_READY | S2LP_IRQ_TX_DATA_SENT | S2LP_IRQ_MAX_RE_TX_REACH | \
                               S2LP_IRQ_CRC_ERROR | S2LP_IRQ_TX_FIFO_ERROR | S2LP_IRQ_RX_FIFO_ERROR)
 
@@ -654,6 +654,10 @@ static error_t s2lp_build_pk_config(struct s2lp_ctx_s *pv, struct dev_rfpacket_r
       return -ENOTSUP;
     break;
   }
+  // Set csma persistant mode
+  uint8_t *pProt1 = &pv->pk_cfg_array[20];
+  *pProt1 |= S2LP_PROTOCOL1_CSMA_PERS_ON_REGMASK;
+
   // TODO LDC configuration if needed
 
   return 0;

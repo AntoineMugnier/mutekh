@@ -575,8 +575,6 @@
             jmp8               process_tx_fifo_irq
         tst32s                 %irq1,          bitpos(S2LP_IRQ_RX_FIFO_ALMOST_FULL)
             jmp8               process_rx_fifo_irq
-        tst32s                 %irq1,          bitpos(S2LP_IRQ_MAX_BO_CCA_REACHED)
-            jmp16              s2lp_main_retry_tx_lbt
         // Unknown irq
         jmp16                  s2lp_error
 
@@ -986,7 +984,7 @@
 // Tx lbt process
 .func s2lp_main_tx_lbt
         .input %0 tbr, // time before retry
-        .clobber %0, %1 timeout status flags, %2 tmp, %3 rssi, %4 curr_state new_state, %5, %6, %7
+        .clobber %0, %1 timeout status flags delay, %2 tmp, %3 rssi, %4 curr_state new_state, %5, %6, %7
     test_timeout:
         // Test if timeout date is reached
         mov                    %timeout,         %S2LP_CTX_PV
@@ -1088,8 +1086,22 @@
         call16                 %s2lp_set_fifo_mux:link, s2lp_set_fifo_mux
         // Start tx
         call16                 %s2lp_start_tx:link, s2lp_start_tx
-        // Wait for irq
+#ifndef CONFIG_DRIVER_RFPACKET_S2LP_USE_CSMA
         jmp16                  s2lp_wait_irq
+#else
+        // Set delay
+        ld32e                  %delay,           %S2LP_CTX_PV,   _offsetof(s2lp_ctx_s, ccad, 4)
+        spi_yield_delay        %delay
+        // Check status
+        call16                 %s2lp_update_status:link, s2lp_update_status
+        cst32                  %status,          S2LP_STATE0_STATE_REGMASK,  0
+        and32                  %status,          %S2LP_STATUS
+        cst8                   %tmp,             S2LP_STATE0_STATE_OFFSET(S2LP_STATE_TX)
+        eq                     %tmp,             %status
+            jmp16              s2lp_wait_irq
+        // Go back to lbt fsm
+        jmp8                   lbt_set_busy
+#endif
 
     tx_timeout:
         // Stop tx/rx
