@@ -638,6 +638,12 @@ void ble_link_destroyed(struct net_layer_s *layer)
 
   logk_trace("Data link-layer %p destroyed", link);
 
+#if defined(CONFIG_BLE_CRYPTO)
+  device_put_accessor(&link->crypto.base);
+  if (link->tmp_packet)
+    buffer_destroy(link->tmp_packet);
+#endif
+
   net_task_queue_destroy(&link->queue);
 
   mem_free(link);
@@ -706,6 +712,7 @@ error_t ble_link_create(struct net_scheduler_s *scheduler,
   link->ccm_ctx.state_data = link + 1;
 
   link->tmp_packet = net_layer_packet_alloc(&link->layer, link->layer.context.prefix_size, 0);
+  assert(link->tmp_packet);
 #endif
 
   link->state = LINK_CLEAR;
