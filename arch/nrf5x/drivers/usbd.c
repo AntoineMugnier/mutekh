@@ -230,7 +230,7 @@ static DEV_USBDEV_REQUEST(nrf5x_usb_transfer)
 
   if (tr->ep == 0 && pv->event) {
     err = -EIO;
-    logk_trace("request returned event");
+    logk_trace("request returned event %N", pv->event, ENUM_DESC_DEV_USBDEV_EVENT_E);
     tr->event = pv->event;
     pv->event = 0;
     goto end;
@@ -238,7 +238,8 @@ static DEV_USBDEV_REQUEST(nrf5x_usb_transfer)
 
   bool_t in = dev_usbdev_get_transfer_dir(tr) == USB_DEVICE_TO_HOST;
 
-  logk_trace("Transfer rq type %d on %s/EP%d", tr->type, in ? "IN" : "OUT", tr->ep);
+  logk_trace("Transfer rq type %N on %s/EP%d", tr->type, ENUM_DESC_DEV_USBDEV_RQ_TYPE_E,
+             in ? "IN" : "OUT", tr->ep);
 
   assert(pv->tr[tr->ep][in] == NULL);
 
@@ -455,6 +456,9 @@ static void nrf5x_usbd_event(struct device_s *dev, uint8_t event)
 {
   struct nrf5x_usb_private_s *pv = dev->drv_pv;
 
+  logk_trace("event, %N -> %N",
+             pv->event, ENUM_DESC_DEV_USBDEV_EVENT_E,
+             event, ENUM_DESC_DEV_USBDEV_EVENT_E);
   switch (event) {
   case USBDEV_EVENT_DISCONNECT:
     if (!pv->connected)
