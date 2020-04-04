@@ -18,6 +18,10 @@
 %section nrf52840-??aa
   %inherit nrf5x-52840-1024-256
 
+  %subsection nrf5x-vregh-33
+    CONFIG_NRF5X_VREGH 33
+  %end
+
 %section nrf5x-*-*-*
   %types architecture
 

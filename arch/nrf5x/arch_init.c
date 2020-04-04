@@ -85,3 +85,16 @@ void nrf5x_init(void)
   cpu_mem_write_32(0x40000ee4, cpu_mem_read_32(0x10000258));
 #endif
 }
+
+#if CONFIG_NRF5X_MODEL == 52840
+
+__attribute__((section(".uicr")))
+const uint32_t uicr[0x400] = {
+  [0 ... 0x3ff] = 0xffffffff,
+# ifdef CONFIG_NRF5X_VREGH
+  [0x304/4] = (CONFIG_NRF5X_VREGH / 3) - 6,
+# endif  
+};
+
+#endif
+
