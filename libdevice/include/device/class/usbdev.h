@@ -32,6 +32,7 @@
 
 #include <hexo/types.h>
 #include <hexo/error.h>
+#include <hexo/enum.h>
 
 #include <device/driver.h>
 #include <mutek/kroutine.h>
@@ -43,6 +44,8 @@
 struct usb_ctrl_setup_s;
 
 /* This informs stack on USB event */
+
+ENUM_DESCRIPTOR(dev_usbdev_event_e, strip:USBDEV_EVENT_, upper, or);
 
 enum dev_usbdev_event_e
 {
@@ -66,6 +69,8 @@ typedef uint16_t dev_usbdev_ep_map_t;
 typedef uint8_t dev_usbdev_ep_addr_t;
 /** Endpoint configuration revision number */
 typedef int8_t dev_usbdev_cfgrev_t;
+
+ENUM_DESCRIPTOR(dev_usbdev_rq_type_e, strip:DEV_USBDEV_, upper);
 
 enum dev_usbdev_rq_type_e
 {
@@ -740,6 +745,8 @@ struct dev_usbdev_desc_iterator_s
   /* Transfer done */
   bool_t done;
 };
+
+ENUM_DESCRIPTOR(dev_usbdev_ctrl_ep_state_e, strip:EP0_, upper);
 
 /** @internal */
 enum dev_usbdev_ctrl_ep_state_e

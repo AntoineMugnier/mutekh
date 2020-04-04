@@ -65,7 +65,7 @@ static void usbdev_set_ep0_state(struct dev_usbdev_context_s *ctx,
                                  enum dev_usbdev_ctrl_ep_state_e state)
                              
 {
-  logk_trace("ep0 state: %d", state);
+  logk_trace("ep0 state: %N", state, ENUM_DESC_DEV_USBDEV_CTRL_EP_STATE_E);
   ctx->ep0_state = state;
 }
 
@@ -814,7 +814,7 @@ static void usbdev_fsm_attached(struct dev_usbdev_context_s *ctx)
 
 static void usbdev_fsm_default(struct dev_usbdev_context_s *ctx)
 {
-  logk_trace("Default %d", ctx->event);
+  logk_trace("Default %N", ctx->event, ENUM_DESC_DEV_USBDEV_EVENT_E);
 
   ctx->state = DEV_USBDEV_DEFAULT;
 
@@ -969,7 +969,7 @@ disable:
 
 static void usbdev_fsm_configured(struct dev_usbdev_context_s *ctx)
 {
-  logk_trace("Configured");
+  logk_trace("Configured %N", ctx->ep0_state, ENUM_DESC_DEV_USBDEV_CTRL_EP_STATE_E);
 
   ctx->state = DEV_USBDEV_CONFIGURED;
 
@@ -1027,6 +1027,10 @@ static void usbdev_fsm_handle_event(struct dev_usbdev_context_s *ctx, uint8_t ev
 {
   ctx->event |= event;
 
+  logk_trace("handle_event state %N events %N",
+             ctx->state, ENUM_DESC_DEV_USBDEV_STATE_E,
+             ctx->event, ENUM_DESC_DEV_USBDEV_EVENT_E);
+  
   switch (ctx->state)
     {
       case DEV_USBDEV_DETACHED:

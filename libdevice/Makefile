@@ -11,6 +11,8 @@ enum_headers = include/device/types.h \
                include/device/class/rfpacket.h \
                include/device/class/smi.h \
                include/device/class/spi.h \
+               include/device/class/usbdev.h \
+               include/device/usb/usb.h \
                include/device/resource/uart.h \
                include/device/valio/hwclock.h
 
