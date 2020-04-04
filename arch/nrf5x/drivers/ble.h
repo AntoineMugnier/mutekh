@@ -156,6 +156,7 @@ DRIVER_PV(struct nrf5x_ble_context_s {
   uint32_t importance;
   bool_t precise_timing : 1;
   bool_t scheduled : 1;
+  bool_t closing : 1;
   uint8_t status;
 
   struct nrf5x_ble_private_s *pv;

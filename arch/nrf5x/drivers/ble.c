@@ -387,10 +387,15 @@ static void nrf5x_ble_event_close(struct nrf5x_ble_private_s *pv,
   assert(ctx);
 
   pv->current = NULL;
-  nrf5x_ble_context_list_remove(&pv->context_list, ctx);
+
+  if (ctx->scheduled) {
+    nrf5x_ble_context_list_remove(&pv->context_list, ctx);
+    ctx->scheduled = 0;
+  }
 
   ctx->status = status;
   nrf5x_ble_context_list_pushback(&pv->closed_list, ctx);
+  ctx->closing = 1;
 
   kroutine_exec(&pv->closer);
 }
@@ -401,6 +406,7 @@ static KROUTINE_EXEC(nrf5x_ble_closer_kr)
   struct nrf5x_ble_context_s *ctx;
   
   while ((ctx = nrf5x_ble_context_list_pop(&pv->closed_list))) {
+    ctx->closing = 0;
     ctx->handler->event_closed(ctx, ctx->status);
 
     nrf5x_ble_backlog_dump(ctx);
@@ -667,6 +673,13 @@ static
 void _ble_context_unschedule(struct nrf5x_ble_private_s *pv,
     struct nrf5x_ble_context_s *ctx)
 {
+  if (ctx->closing) {
+    ctx->closing = 0;
+    nrf5x_ble_context_list_remove(&pv->closed_list, ctx);
+    ctx->handler->event_closed(ctx, ctx->status);
+    return;
+  }
+
   if (!ctx->scheduled)
     return;
 
