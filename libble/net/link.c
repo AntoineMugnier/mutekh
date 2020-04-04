@@ -299,7 +299,7 @@ static void link_task_crypt(struct ble_link_s *link, struct net_task_s *task)
 
   logk_trace("%s", __FUNCTION__);
 
-  assert(buffer_refcount(task->packet.buffer) == 1);
+  //assert(buffer_refcount(task->packet.buffer) == 1);
 
   in = task->packet.buffer;
   in->data[in->begin] &= 3;
