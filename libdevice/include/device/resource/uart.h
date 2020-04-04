@@ -25,6 +25,7 @@
 #include <hexo/types.h>
 #include <device/device.h>
 #include <device/resources.h>
+#include <hexo/enum.h>
 
 ENUM_DESCRIPTOR(dev_uart_parity_e, strip:DEV_UART_PARITY_, upper);
 
