@@ -40,7 +40,7 @@ typedef __builtin_va_list va_list;
  * @showcontent
  * @tt stdarg standard funtion
  */
-#if defined(__GNUC__) && (__GNUC__ == 4 && __GNUC_MINOR__ >= 4 )
+#if defined(__GNUC__) && ((__GNUC__ == 4 && __GNUC_MINOR__ >= 4 ) || __GNUC__ >= 5)
     #define va_start(v, l) __builtin_va_start((v), (l)) 
 #else 
     #define va_start(v, l) __builtin_stdarg_start((v), (l)) 
