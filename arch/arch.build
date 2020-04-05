@@ -11,6 +11,7 @@
 %include cc26xx/cc26xx.build
 %include nrf5x/nrf5x.build
 %include psoc4/psoc4.build
+%include realview-eb/realview-eb.build
 
 %common
   %requiretypes architecture
