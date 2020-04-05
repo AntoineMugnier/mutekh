@@ -64,8 +64,6 @@ struct memory_allocator_header_s
 #endif
 };
 
-static const size_t mem_hdr_size = sizeof (struct memory_allocator_header_s);
-
 #ifdef CONFIG_MUTEK_MEMALLOC_CRC
 static const size_t mem_hdr_size_no_crc = sizeof (struct memory_allocator_header_s) - sizeof (uint32_t);
 #else
