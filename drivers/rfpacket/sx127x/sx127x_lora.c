@@ -92,7 +92,7 @@ void sx127x_config_rf_update(struct dev_rfpacket_rf_cfg_lora_s const * cfg,
 
   for (i = 0; i < ARRAY_SIZE(sx127x_config_bw_tbl); ++i)
     {
-      if (sx127x_config_bw_tbl[i].bw == cfg->base.bw)
+      if (sx127x_config_bw_tbl[i].bw == cfg->common.rx_bw)
         bw = sx127x_config_bw_tbl[i].bits;
     }
 
@@ -105,7 +105,7 @@ void sx127x_config_rf_update(struct dev_rfpacket_rf_cfg_lora_s const * cfg,
 
   /* If the symbol duration is more than 16ms, than low data rate optimization
    * must be enabled. */
-  uint8_t const ts = (uint16_t)(1 << cfg->spreading) * 1000 / cfg->base.bw;
+  uint8_t const ts = (uint16_t)(1 << cfg->spreading) * 1000 / cfg->common.rx_bw;
 
   if (ts >= 16)
     *modemcfg3 |= 0x8;
@@ -116,8 +116,8 @@ void sx127x_config_freq_update(struct dev_rfpacket_rf_cfg_lora_s const * rf_cfg,
                                int16_t                                   channel,
                                uint8_t                                   data[4])
 {
-  int32_t  const freq_offset = channel * rf_cfg->base.chan_spacing;
-  uint64_t const freq = (int64_t)rf_cfg->base.frequency + freq_offset;
+  int32_t  const freq_offset = channel * rf_cfg->common.chan_spacing;
+  uint64_t const freq = (int64_t)rf_cfg->common.frequency + freq_offset;
 
   /* Truncate to lowest 32 bits */
   uint32_t frf = (freq << 19) / CONFIG_DRIVER_RFPACKET_SX127X_FREQ_XO;
@@ -1031,15 +1031,12 @@ static DEV_INIT(sx127x_init)
 
   static const gpio_width_t pin_wmap[3] = {1, 1, 1};
 
-  if (device_res_gpio_map(dev, "rst:1 dio0:1 dio3:1", pv->pin_map, NULL))
+  // TODO check if correct syntax
+  if (device_gpio_setup(gpio, dev, ">rst:1 <dio0:1 <dio3:1", pv->pin_map, NULL))
     goto err_timer;
 
   srq->gpio_map = pv->pin_map;
   srq->gpio_wmap = pin_wmap;
-
-  if (device_gpio_map_set_mode(gpio, pv->pin_map, pin_wmap, 3,
-                               DEV_PIN_PUSHPULL, DEV_PIN_INPUT, DEV_PIN_INPUT))
-    goto err_timer;
 
   dev_rq_queue_init(&pv->queue);
 #if defined(CONFIG_DRIVER_RFPACKET_SX127X_CRYPTO_RNG)
@@ -1050,7 +1047,7 @@ static DEV_INIT(sx127x_init)
   bc_set_reg(&srq->vm, R_CTX_PV, (uintptr_t)pv);
 
   /* Disable bytecode trace */
-  bc_set_trace(&srq->vm, 0, 0);
+  bc_set_trace(&srq->vm, 0);
 
   /* irq io pin */
   device_irq_source_init(dev, pv->src_ep, 2, &sx127x_irq_process);

@@ -109,6 +109,12 @@ enum dev_rfpacket_modulation_e
   /** Lora modulation
       @see dev_rfpacket_rf_cfg_lora_s */
   DEV_RFPACKET_LORA,
+  /** Static configuration, configuration comes from data blobs defined as device resources
+      @see dev_rfpacket_rf_cfg_static_s */
+  DEV_RFPACKET_RF_STATIC,
+  /** External configuration, configuration comes from an external array
+      @see dev_rfpacket_rf_cfg_extern_s */
+  DEV_RFPACKET_RF_EXTERN,
 };
 
 /** This stores RF and modulation configuration. This may be inherited
@@ -116,18 +122,23 @@ enum dev_rfpacket_modulation_e
 struct dev_rfpacket_rf_cfg_s
 {
   /** Modulation type */
-  enum dev_rfpacket_modulation_e BITFIELD(mod,8);
+  enum dev_rfpacket_modulation_e mod;
 
   /** Configuration cache entry. the @tt use flag must be reset when the
       configuration changes. */
   struct dev_rfpacket_cfg_cache_s cache;
+};
 
+STRUCT_DESCRIPTOR(dev_rfpacket_rf_cfg_s);
+
+struct dev_rfpacket_rf_cfg_std_s
+{
   /** During a RX, a continuous signal above this level is considered
       jamming and will be reported as an error. */
   dev_rfpacket_pwr_t            jam_rssi;
 
   /** Datarate in bps */
-  uint32_t                      BITFIELD(drate,24);
+  uint32_t                      drate;
 
   /** RF frequency in Hz */
   uint32_t                      frequency;
@@ -144,10 +155,10 @@ struct dev_rfpacket_rf_cfg_s
       The frequency error contribution on the receiver side due to the
       local oscillator (@em {abs(actual rx freq - expected freq)})
       should be added by the driver and not included here. */
-  uint32_t                      freq_err;
+  uint32_t                      freq_err; 
 };
 
-STRUCT_DESCRIPTOR(dev_rfpacket_rf_cfg_s);
+STRUCT_DESCRIPTOR(dev_rfpacket_rf_cfg_std_s);
 
 /** @This specifies the policy of fair TX */
 enum dev_rfpacket_fairtx_e
@@ -185,6 +196,7 @@ struct dev_rfpacket_rf_cfg_fairtx_s
 struct dev_rfpacket_rf_cfg_fsk_s
 {
   struct dev_rfpacket_rf_cfg_s  base;
+  struct dev_rfpacket_rf_cfg_std_s common;
   struct dev_rfpacket_rf_cfg_fairtx_s fairtx;
 
   /** frequency deviation in Hz */
@@ -201,6 +213,7 @@ STRUCT_INHERIT(dev_rfpacket_rf_cfg_fsk_s, dev_rfpacket_rf_cfg_s, base);
 struct dev_rfpacket_rf_cfg_ask_s
 {
   struct dev_rfpacket_rf_cfg_s  base;
+  struct dev_rfpacket_rf_cfg_std_s common;
   struct dev_rfpacket_rf_cfg_fairtx_s fairtx;
 
   /** number of symbols, 2 for OOK */
@@ -214,6 +227,7 @@ STRUCT_INHERIT(dev_rfpacket_rf_cfg_ask_s, dev_rfpacket_rf_cfg_s, base);
 struct dev_rfpacket_rf_cfg_lora_s
 {
   struct dev_rfpacket_rf_cfg_s base;
+  struct dev_rfpacket_rf_cfg_std_s common;
 
   /** spreading factor (in log2 basis). */
   uint8_t                      BITFIELD(spreading,4);
@@ -223,6 +237,30 @@ struct dev_rfpacket_rf_cfg_lora_s
 };
 
 STRUCT_INHERIT(dev_rfpacket_rf_cfg_lora_s, dev_rfpacket_rf_cfg_s, base);
+
+/** @This extends the @ref dev_rfpacket_cfg_s object when the @ref
+ * DEV_RFPACKET_RF_STATIC modulation is in use. */
+struct dev_rfpacket_rf_cfg_static_s
+{
+  struct dev_rfpacket_rf_cfg_s base;
+
+  /** id of the configuration blob to use. */
+  uint8_t cfg_id;
+};
+
+STRUCT_INHERIT(dev_rfpacket_rf_cfg_static_s, dev_rfpacket_rf_cfg_s, base);
+
+/** @This extends the @ref dev_rfpacket_cfg_s object when the @ref
+ * DEV_RFPACKET_RF_EXTERN modulation is in use. */
+struct dev_rfpacket_rf_cfg_extern_s
+{
+  struct dev_rfpacket_rf_cfg_s base;
+
+  /** pointer to external config to use. */
+  void *p_cfg;
+};
+
+STRUCT_INHERIT(dev_rfpacket_rf_cfg_extern_s, dev_rfpacket_rf_cfg_s, base);
 
 /***************************************** packet format config */
 
@@ -248,7 +286,28 @@ enum dev_rfpacket_format_e
      */
   DEV_RFPACKET_FMT_RAW,
 
+  /** Static configuration, configuration comes from data blobs defined as device resources
+      @see dev_rfpacket_pk_cfg_static_s */
+  DEV_RFPACKET_FMT_STATIC,
+
+  /** External configuration, configuration comes from an external array
+      @see dev_rfpacket_pk_cfg_extern_s */
+  DEV_RFPACKET_FMT_EXTERN,
 };
+
+/** This stores packet format configuration. This may be inherited
+    depending on the value of the @tt format field. */
+struct dev_rfpacket_pk_cfg_s
+{
+  /** Packet format */
+  enum dev_rfpacket_format_e    format;
+
+  /** Configuration cache entry. the @tt use flag must be reset when the
+      configuration changes. */
+  struct dev_rfpacket_cfg_cache_s cache;
+};
+
+STRUCT_DESCRIPTOR(dev_rfpacket_pk_cfg_s);
 
 ENUM_DESCRIPTOR(dev_rfpacket_encoding_e, strip:DEV_RFPACKET_, upper);
 
@@ -261,26 +320,12 @@ enum dev_rfpacket_encoding_e
   DEV_RFPACKET_DSSS, 
 };
 
-/** This stores packet format configuration. This may be inherited
-    depending on the value of the @tt format field. */
-struct dev_rfpacket_pk_cfg_s
-{
-  /** Packet format */
-  enum dev_rfpacket_format_e    BITFIELD(format,8);
-
-  /** Data encoding and whitening */
-  enum dev_rfpacket_encoding_e  BITFIELD(encoding,4);
-
-  /** Configuration cache entry. the @tt use flag must be reset when the
-      configuration changes. */
-  struct dev_rfpacket_cfg_cache_s cache;
-};
-
-STRUCT_DESCRIPTOR(dev_rfpacket_pk_cfg_s);
-
 struct dev_rfpacket_pk_cfg_basic_s
 {
   struct dev_rfpacket_pk_cfg_s  base;
+
+  /** Data encoding and whitening */
+  enum dev_rfpacket_encoding_e  encoding;
 
   /** Specifies the CRC polynomial when relevant. for instance IBM
       CRC16 has value 0x18005. Zero means that the CRC field is not
@@ -373,6 +418,30 @@ struct dev_rfpacket_pk_cfg_lora_s
 };
 
 STRUCT_INHERIT(dev_rfpacket_pk_cfg_lora_s, dev_rfpacket_pk_cfg_s, base);
+
+/** @This extends the @ref dev_rfpacket_cfg_s object when the @ref
+ * DEV_RFPACKET_RF_STATIC modulation is in use. */
+struct dev_rfpacket_pk_cfg_static_s
+{
+  struct dev_rfpacket_pk_cfg_s base;
+
+  /** id of the configuration blob to use. */
+  uint8_t cfg_id;
+};
+
+STRUCT_INHERIT(dev_rfpacket_pk_cfg_static_s, dev_rfpacket_pk_cfg_s, base);
+
+/** @This extends the @ref dev_rfpacket_cfg_s object when the @ref
+ * DEV_RFPACKET_RF_EXTERN modulation is in use. */
+struct dev_rfpacket_pk_cfg_extern_s
+{
+  struct dev_rfpacket_pk_cfg_s base;
+
+  /** pointer to external config to use. */
+  void *p_cfg;
+};
+
+STRUCT_INHERIT(dev_rfpacket_pk_cfg_extern_s, dev_rfpacket_pk_cfg_s, base);
 
 /***************************************** stats */
 

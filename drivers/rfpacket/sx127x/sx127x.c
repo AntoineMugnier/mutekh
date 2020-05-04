@@ -76,7 +76,7 @@ static void sx127x_bytecode_start(struct sx127x_private_s *pv, const void *e, ui
   va_end(ap);
 }
 
-static inline void sx127x_config_freq_update(struct sx127x_private_s *pv, struct dev_rfpacket_rq_s * rq, uint32_t channel)
+static inline void sx127x_config_freq_update(struct sx127x_private_s *pv, uint32_t channel)
 {
   uint32_t const freq = (pv->cfg.coeff.freq + channel * pv->cfg.coeff.chan) >> 15;
   uint8_t *f = pv->cfg.freq;
@@ -88,12 +88,12 @@ static inline void sx127x_config_freq_update(struct sx127x_private_s *pv, struct
   pv->cfg.channel = channel;
 }
 
-static inline void sx127x_config_coeff_freq_update(struct sx127x_private_s *pv, struct dev_rfpacket_rq_s * rq)
+static inline void sx127x_config_coeff_freq_update(struct sx127x_private_s *pv, const struct dev_rfpacket_rf_cfg_std_s *rf_cfg, uint32_t channel)
 {
-  pv->cfg.coeff.freq = ((uint64_t)rq->rf_cfg->frequency << (19 + 15)) / CONFIG_DRIVER_RFPACKET_SX127X_FREQ_XO;
-  pv->cfg.coeff.chan = ((uint64_t)rq->rf_cfg->chan_spacing << (19 + 15)) / CONFIG_DRIVER_RFPACKET_SX127X_FREQ_XO;
+  pv->cfg.coeff.freq = ((uint64_t)rf_cfg->frequency << (19 + 15)) / CONFIG_DRIVER_RFPACKET_SX127X_FREQ_XO;
+  pv->cfg.coeff.chan = ((uint64_t)rf_cfg->chan_spacing << (19 + 15)) / CONFIG_DRIVER_RFPACKET_SX127X_FREQ_XO;
 
-  sx127x_config_freq_update(pv, rq, rq->channel);
+  sx127x_config_freq_update(pv, channel);
 }
 
 struct sx127x_config_bw_s
@@ -281,7 +281,7 @@ static error_t sx127x_build_pkt_config(struct sx127x_private_s * __restrict__ pv
 
   cfg |= SX1276_PACKETCONFIG1_PACKETFORMAT_VARIABLE;
 
-  switch (rq->pk_cfg->encoding)
+  switch (pk_cfg->encoding)
     {
     case DEV_RFPACKET_CLEAR:
       break;
@@ -318,7 +318,7 @@ static error_t sx127x_build_pkt_config(struct sx127x_private_s * __restrict__ pv
 }
 
 static error_t sx1276_build_bw_config(struct sx127x_private_s * __restrict__ pv,
-                                      const struct dev_rfpacket_rf_cfg_s * __restrict__ rf_cfg,
+                                      const struct dev_rfpacket_rf_cfg_std_s * __restrict__ rf_cfg,
                                       uint8_t **f, uint32_t default_)
 {
   uint8_t * rf = *f;
@@ -366,8 +366,8 @@ static error_t sx127x_build_fsk_config(struct sx127x_private_s * __restrict__ pv
 {
   const struct dev_rfpacket_rf_cfg_fsk_s * fsk = const_dev_rfpacket_rf_cfg_fsk_s_cast(rq->rf_cfg);
 
-  if (sx1276_build_bw_config(pv, rq->rf_cfg, f,   /* carson rule */
-                             rq->rf_cfg->drate + 2 * fsk->deviation))
+  if (sx1276_build_bw_config(pv, &fsk->common, f,   /* carson rule */
+                             fsk->common.drate + 2 * fsk->deviation))
     return -EINVAL;
 
   uint8_t * rf = *f;
@@ -426,8 +426,8 @@ static error_t sx127x_build_ask_config(struct sx127x_private_s * __restrict__ pv
   if (ask->symbols > 2)
     return -EINVAL;
 
-  if (sx1276_build_bw_config(pv, rq->rf_cfg, f,
-                             2 * rq->rf_cfg->drate))
+  if (sx1276_build_bw_config(pv, &ask->common, f,
+                             2 * ask->common.drate))
     return -EINVAL;
 
   uint8_t * rf = *f;
@@ -500,39 +500,54 @@ static inline error_t sx127x_check_config(struct sx127x_private_s * __restrict__
   /* Test if new RF configuration or previous configuration modified */
     {
       pv->rf_cfg = (struct dev_rfpacket_rf_cfg_s *)rfcfg;
+      const struct dev_rfpacket_rf_cfg_fsk_s *cfsk = NULL;
+      const struct dev_rfpacket_rf_cfg_ask_s *cask = NULL;
+      const struct dev_rfpacket_rf_cfg_std_s *common = NULL;
+
+      switch (rfcfg->mod)
+        {
+          case DEV_RFPACKET_FSK:
+          case DEV_RFPACKET_GFSK:
+            if (sx127x_build_fsk_config(pv, rq, &cfg)) {
+              return -ENOTSUP;
+            }
+            cfsk = const_dev_rfpacket_rf_cfg_fsk_s_cast(rfcfg);
+            common = &cfsk->common;
+            break;
+
+          case DEV_RFPACKET_ASK:
+            if (sx127x_build_ask_config(pv, rq, &cfg)) {
+              return -ENOTSUP;
+            }
+            cask = const_dev_rfpacket_rf_cfg_ask_s_cast(rfcfg);
+            common = &cask->common;
+            break;
+
+          default:
+            return -ENOTSUP;
+        }
+      if (common == NULL) {
+        return -ENOTSUP;
+      }
 
       /* Compute time to send a bit in us */
-      dev_timer_delay_t t = 1000000/rq->rf_cfg->drate;
+      dev_timer_delay_t t = 1000000/common->drate;
       dev_timer_init_sec(pv->timer, &pv->timebit, 0, t, 1000000);
 
       if (rfcfg->cache.dirty)
         ((struct dev_rfpacket_rf_cfg_s *)rfcfg)->cache.dirty = 0;
 
       /* Frequency */
-      sx127x_config_coeff_freq_update(pv, rq);
+      sx127x_config_coeff_freq_update(pv, common, rq->channel);
       
       /* Datarate */
       *cfg++ = 2;
       *cfg++ = SX1276_REG_BITRATEMSB | 0x80;
 
-      uint16_t dr = (CONFIG_DRIVER_RFPACKET_SX127X_FREQ_XO/rfcfg->drate);
+      uint16_t dr = (CONFIG_DRIVER_RFPACKET_SX127X_FREQ_XO/common->drate);
       endian_be16_na_store(cfg, dr);
       cfg += 2;
 
-      switch (rfcfg->mod)
-        {
-          case DEV_RFPACKET_FSK: 
-          case DEV_RFPACKET_GFSK: 
-            if (sx127x_build_fsk_config(pv, rq, &cfg))
-              return -ENOTSUP;
-            break;
-          case DEV_RFPACKET_ASK: 
-            if (sx127x_build_ask_config(pv, rq, &cfg))
-              return -ENOTSUP;
-            break;
-          default:
-            return -ENOTSUP;
-        }
 
       change = 1;
     }
@@ -643,11 +658,13 @@ BC_CCALL_FUNCTION(sx127x_next_hopping_freq)
   uint32_t tmp = ~((1 << (pv->cfg.channel + 1)) - 1) & mask;
   uint8_t next = tmp ? bit_ctz(tmp) : bit_ctz(mask);
 
-  sx127x_config_freq_update(pv, pv->rx_cont, next);
+  sx127x_config_freq_update(pv, next);
   
-  bc_set_reg(ctx, 0, next);
+  bc_set_reg((struct bc_context_s *)ctx, 0, next);
 
   LOCK_RELEASE_IRQ(&pv->dev->lock);
+
+  return 0;
 }
 
 BC_CCALL_FUNCTION(sx127x_alloc)
@@ -703,7 +720,8 @@ BC_CCALL_FUNCTION(sx127x_alloc)
 
 error:
   LOCK_RELEASE_IRQ(&pv->dev->lock);
-  bc_set_reg(ctx, 0, (uintptr_t)p);
+  bc_set_reg((struct bc_context_s *)ctx, 0, (uintptr_t)p);
+  return 0;
 }
 
 static uint32_t sx127x_set_cmd(struct sx127x_private_s *pv, struct dev_rfpacket_rq_s *rq)
@@ -744,7 +762,7 @@ static uint32_t sx127x_set_cmd(struct sx127x_private_s *pv, struct dev_rfpacket_
     return cmd;
 
   cmd |= CMD_FREQ_CHANGE;
-  sx127x_config_freq_update(pv, rq, rq->channel);
+  sx127x_config_freq_update(pv, rq->channel);
   
   return cmd;
 }

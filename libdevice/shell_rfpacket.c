@@ -153,34 +153,51 @@ static void shell_rfpacket_print_rf_cfg(struct termui_console_s *con,
 {
   termui_con_printf(con, "   \n");
   termui_con_printf(con, "   Modulation:   %d\n", rf->mod);
-  termui_con_printf(con, "   Drate:        %d\n", rf->drate);
-  termui_con_printf(con, "   Frequency:    %u\n", rf->frequency);
-  termui_con_printf(con, "   Chan spacing: %d\n", rf->chan_spacing);
-  termui_con_printf(con, "   Bandwidth:    %d\n", rf->rx_bw);
-  termui_con_printf(con, "   Freq error:   %d\n", rf->freq_err);
+
+  struct dev_rfpacket_rf_cfg_std_s *common = NULL;
 
   switch (rf->mod)
     {
     case DEV_RFPACKET_FSK: 
     case DEV_RFPACKET_GFSK: {
       struct dev_rfpacket_rf_cfg_fsk_s *fsk = dev_rfpacket_rf_cfg_fsk_s_cast(rf);
+      common = &fsk->common;
       termui_con_printf(con, "   Deviation:    %d\n", fsk->deviation);
       termui_con_printf(con, "   Symbols:      %d\n", fsk->symbols);
       break;
       }
     case DEV_RFPACKET_ASK: {
       struct dev_rfpacket_rf_cfg_ask_s *ask = dev_rfpacket_rf_cfg_ask_s_cast(rf);
+      common = &ask->common;
       termui_con_printf(con, "   Symbols:      %d\n", ask->symbols);
       break;
       }
     case DEV_RFPACKET_LORA: {
       struct dev_rfpacket_rf_cfg_lora_s *lora = dev_rfpacket_rf_cfg_lora_s_cast(rf);
+      common = &lora->common;
       termui_con_printf(con, "   Spreading:    %d\n", lora->spreading);
       termui_con_printf(con, "   IQ iverted:   %d\n", lora->iq_inverted);
       break;
       }
+    case DEV_RFPACKET_RF_STATIC: {
+      struct dev_rfpacket_rf_cfg_static_s *cstatic = dev_rfpacket_rf_cfg_static_s_cast(rf);
+      termui_con_printf(con, "   Blob id:    %d\n", cstatic->cfg_id);
+      break;
+      }
+    case DEV_RFPACKET_RF_EXTERN: {
+      struct dev_rfpacket_rf_cfg_extern_s *cextern = dev_rfpacket_rf_cfg_extern_s_cast(rf);
+      termui_con_printf(con, "   Config pointer:    %d\n", cextern->p_cfg);
+      break;
+      }
     default:
       break;
+    }
+    if (common != NULL) {
+      termui_con_printf(con, "   Drate:        %d\n", common->drate);
+      termui_con_printf(con, "   Frequency:    %u\n", common->frequency);
+      termui_con_printf(con, "   Chan spacing: %d\n", common->chan_spacing);
+      termui_con_printf(con, "   Bandwidth:    %d\n", common->rx_bw);
+      termui_con_printf(con, "   Freq error:   %d\n", common->freq_err);
     }
 }
 
@@ -189,12 +206,12 @@ static void shell_rfpacket_print_pk_cfg(struct termui_console_s *con,
 {
   termui_con_printf(con, "   \n");
   termui_con_printf(con, "   Format:         %d\n", pk->format);
-  termui_con_printf(con, "   Encoding:       %d\n", pk->encoding);
 
   switch (pk->format)
     {
     case DEV_RFPACKET_FMT_SLPC:{
       struct dev_rfpacket_pk_cfg_basic_s *slpc = dev_rfpacket_pk_cfg_basic_s_cast(pk);
+      termui_con_printf(con, "   Encoding:       %d\n", slpc->encoding);
       termui_con_printf(con, "   CRC:            0x%x\n", slpc->crc);
       termui_con_printf(con, "   CRC_seed:       0x%x\n", slpc->crc_seed);
       termui_con_printf(con, "   SW value:       0x%x\n", slpc->sw_value);
@@ -264,24 +281,15 @@ static TERMUI_CON_COMMAND_PROTOTYPE(shell_rfpacket_rf_configure)
 
   if (used & RFPACKET_OPT_MOD)
     cfg->mod = c->mod;
-  if (used & RFPACKET_OPT_FREQ)
-    cfg->frequency = c->frequency;
-  if (used & RFPACKET_OPT_BW)
-    cfg->rx_bw = c->rx_bw;
-  if (used & RFPACKET_OPT_FREQERR)
-    cfg->freq_err = c->freq_err;
-  if (used & RFPACKET_OPT_DRATE)
-    cfg->drate = c->drate;
 
-  /* Unconfigurable parameters */
-  cfg->chan_spacing = 10000;
-  cfg->jam_rssi = (-90) << 3;
+  struct dev_rfpacket_rf_cfg_std_s *common = NULL;
 
   switch (cfg->mod)
     {
     case DEV_RFPACKET_FSK: 
     case DEV_RFPACKET_GFSK: {
       struct dev_rfpacket_rf_cfg_fsk_s *fsk = dev_rfpacket_rf_cfg_fsk_s_cast(cfg);
+      common = &fsk->common;
       fsk->fairtx.lbt.rssi = (-95) << 3;
       fsk->fairtx.lbt.duration = 5000;
       if (used & RFPACKET_OPT_SYMB)
@@ -292,6 +300,7 @@ static TERMUI_CON_COMMAND_PROTOTYPE(shell_rfpacket_rf_configure)
       }
     case DEV_RFPACKET_ASK: {
       struct dev_rfpacket_rf_cfg_ask_s *ask = dev_rfpacket_rf_cfg_ask_s_cast(cfg);
+      common = &ask->common;
       ask->fairtx.lbt.rssi = (-95) << 3;
       ask->fairtx.lbt.duration = 5000;
       if (used & RFPACKET_OPT_SYMB)
@@ -300,13 +309,31 @@ static TERMUI_CON_COMMAND_PROTOTYPE(shell_rfpacket_rf_configure)
       }
     case DEV_RFPACKET_LORA: {
       struct dev_rfpacket_rf_cfg_lora_s *lora = dev_rfpacket_rf_cfg_lora_s_cast(cfg);
+      common = &lora->common;
       if (used & RFPACKET_OPT_SPREADING)
         lora->spreading = c->spreading;
       if (used & RFPACKET_OPT_IQ_INV)
         lora->iq_inverted = c->iq_inv;
       break;
       }
+    default:
+      break;
     }
+
+  if (common != NULL)
+   {
+    if (used & RFPACKET_OPT_FREQ)
+      common->frequency = c->frequency;
+    if (used & RFPACKET_OPT_BW)
+      common->rx_bw = c->rx_bw;
+    if (used & RFPACKET_OPT_FREQERR)
+      common->freq_err = c->freq_err;
+    if (used & RFPACKET_OPT_DRATE)
+      common->drate = c->drate;
+    /* Unconfigurable parameters */
+    common->chan_spacing = 10000;
+    common->jam_rssi = (-90) << 3;
+  }
 
   return 0;
 }
@@ -351,8 +378,6 @@ static TERMUI_CON_COMMAND_PROTOTYPE(shell_rfpacket_pk_configure)
 
   cfg->cache.dirty = 1;
 
-  if (used & RFPACKET_OPT_ENCODING)
-    cfg->encoding = c->encoding;
   if (used & RFPACKET_OPT_FORMAT)
     cfg->format = c->format;
 
@@ -360,6 +385,8 @@ static TERMUI_CON_COMMAND_PROTOTYPE(shell_rfpacket_pk_configure)
     {
     case DEV_RFPACKET_FMT_SLPC:{
       struct dev_rfpacket_pk_cfg_basic_s *pk = dev_rfpacket_pk_cfg_basic_s_cast(cfg);
+      if (used & RFPACKET_OPT_ENCODING)
+        pk->encoding = c->encoding;
       if (used & RFPACKET_OPT_CRC)
         pk->crc = c->crc;
       if (used & RFPACKET_OPT_CRCSEED)

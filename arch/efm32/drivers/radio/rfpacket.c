@@ -393,13 +393,17 @@ static error_t efr32_radio_timer_cancel(struct radio_efr32_rfp_ctx_s *ctx, struc
 static inline error_t efr32_rf_config(struct radio_efr32_rfp_ctx_s *ctx,
                                       struct dev_rfpacket_rq_s *rq) {
   const struct dev_rfpacket_rf_cfg_s *rfcfg = rq->rf_cfg;
+  const struct dev_rfpacket_rf_cfg_std_s *common = NULL;
 
   // Test if new RF configuration or previous configuration modified
   if ((rfcfg != ctx->rf_cfg) || rfcfg->cache.dirty) {
     if (rfcfg->mod == DEV_RFPACKET_GFSK) {
       efr32_rfp_fsk_init(ctx);
+      const struct dev_rfpacket_rf_cfg_fsk_s * c = const_dev_rfpacket_rf_cfg_fsk_s_cast(rfcfg);
+      common = &c->common;
     }
 #ifdef CONFIG_RFPACKET_SIGFOX
+     // TODO USE BLOB
      else if (rfcfg->mod == DEV_RFPACKET_SIGFOX) {
       efr32_rfp_sigfox_init(ctx);
     }
@@ -407,19 +411,21 @@ static inline error_t efr32_rf_config(struct radio_efr32_rfp_ctx_s *ctx,
     else {
       return -ENOTSUP;
     }
-    ctx->rf_cfg = (struct dev_rfpacket_rf_cfg_s *)rfcfg;
+    if (common == NULL) {
+      return -ENOTSUP;
+    }
     uint32_t div = cpu_mem_read_32(EFR32_SYNTH_ADDR + EFR32_SYNTH_DIVCTRL_ADDR);
     div = EFR32_SYNTH_DIVCTRL_LODIVFREQCTRL_GET(div);
     // Configure frequency
-    uint64_t f = ((uint64_t)(rfcfg->frequency) * div) << 19;
+    uint64_t f = ((uint64_t)(common->frequency) * div) << 19;
     f /= EFR32_RADIO_HFXO_CLK;
     cpu_mem_write_32(EFR32_SYNTH_ADDR + EFR32_SYNTH_FREQ_ADDR, (uint32_t)f);
     // Configure channel spacing
-    uint64_t chsp = ((uint64_t)(rfcfg->chan_spacing) * div) << 19;
+    uint64_t chsp = ((uint64_t)(common->chan_spacing) * div) << 19;
     chsp /= EFR32_RADIO_HFXO_CLK;
     cpu_mem_write_32(EFR32_SYNTH_ADDR + EFR32_SYNTH_CHSP_ADDR, (uint32_t)chsp);
     // Calc time byte
-    ctx->gctx.time_byte = efr32_radio_calc_time(ctx, rfcfg->drate);
+    ctx->gctx.time_byte = efr32_radio_calc_time(ctx, common->drate);
   }
   return 0;
 }
@@ -744,21 +750,27 @@ static void efr32_rfp_start_tx_lbt(struct radio_efr32_rfp_ctx_s *ctx, struct dev
       EFR32_PROTIMER_TXCTRL_TXSETEVENT(1, LBTSUCCESS);
   cpu_mem_write_32(EFR32_PROTIMER_ADDR + EFR32_PROTIMER_TXCTRL_ADDR, x);
 
-  uint32_t nbsym = (EFR32_ETSI_LBT_TIME * rq->rf_cfg->drate)/1000000;
-  nbsym = bit_ctz(pow2_up(nbsym));
+  if (rq->rf_cfg->mod == DEV_RFPACKET_GFSK) {
+    const struct dev_rfpacket_rf_cfg_fsk_s * c = const_dev_rfpacket_rf_cfg_fsk_s_cast(rq->rf_cfg);
+     uint32_t drate = c->common.drate;
 
-  // FIXME Timestamp between rx and tx
-  ctx->gctx.lbt_timestamp = efr32_protimer_get_value(&pv->pti);
+    uint32_t nbsym = (EFR32_ETSI_LBT_TIME * drate)/1000000;
+    nbsym = bit_ctz(pow2_up(nbsym));
 
-  assert(nbsym < 15);
+    // Configure rssi period
+    assert(nbsym < 15);
+    x = cpu_mem_read_32(EFR32_AGC_ADDR + EFR32_AGC_CTRL1_ADDR);
+    EFR32_AGC_CTRL1_RSSIPERIOD_SET(x, nbsym);
+    cpu_mem_write_32(EFR32_AGC_ADDR + EFR32_AGC_CTRL1_ADDR, x);
+  }
+
   // Configure AGC
   x = cpu_mem_read_32(EFR32_AGC_ADDR + EFR32_AGC_CTRL0_ADDR);
   EFR32_AGC_CTRL0_MODE_SET(x, CONT);
   cpu_mem_write_32(EFR32_AGC_ADDR + EFR32_AGC_CTRL0_ADDR, x);
 
-  x = cpu_mem_read_32(EFR32_AGC_ADDR + EFR32_AGC_CTRL1_ADDR);
-  EFR32_AGC_CTRL1_RSSIPERIOD_SET(x, nbsym);
-  cpu_mem_write_32(EFR32_AGC_ADDR + EFR32_AGC_CTRL1_ADDR, x);
+  // FIXME Timestamp between rx and tx
+  ctx->gctx.lbt_timestamp = efr32_protimer_get_value(&pv->pti);
 
   efr32_rfp_set_cca_threshold(ctx, rq);
   cpu_mem_write_32(EFR32_PROTIMER_ADDR + EFR32_PROTIMER_CMD_ADDR, EFR32_PROTIMER_CMD_LBTSTART);

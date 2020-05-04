@@ -304,8 +304,26 @@ static inline error_t si446x_build_pk_config(struct si446x_ctx_s *pv, struct dev
 
   if (cfg->rx_pb_len > SI446X_RX_THRESHOLD)
     {
+      uint32_t drate = 1;
+
+      switch(rq->rf_cfg->mod) {
+        case DEV_RFPACKET_GFSK:
+        case DEV_RFPACKET_FSK: {
+          const struct dev_rfpacket_rf_cfg_fsk_s * c = const_dev_rfpacket_rf_cfg_fsk_s_cast(cfg);
+          drate = c->common.drate;
+        break;}
+
+        case DEV_RFPACKET_ASK: {
+          const struct dev_rfpacket_rf_cfg_ask_s * c = const_dev_rfpacket_rf_cfg_ask_s_cast(cfg);
+          drate = c->common.drate;
+        break;}
+
+        default:
+          return -ENOTSUP;
+      }
+
       /* Time bit in ns */
-      dev_timer_delay_t tb = 1000000000 / rq->rf_cfg->drate;
+      dev_timer_delay_t tb = 1000000000 / drate;
 
       uint32_t trx = (SI446X_RX_THRESHOLD + 8 /* Margin */) * tb;
       uint32_t tldc = trx + SI446X_BASE_TIME * 1000;
@@ -339,8 +357,7 @@ static bool_t
 si446x_modem_configure(struct si446x_ctx_s *pv,
                        struct si446x_rf_regs_s *out,
                        const struct dev_rfpacket_rf_cfg_s *rf_cfg,
-                       const struct dev_rfpacket_pk_cfg_s *pk_cfg)
-{
+                       const struct dev_rfpacket_pk_cfg_s *pk_cfg) {
   static const uint8_t tab[] = {
     [DEV_RFPACKET_FSK * 2] = MOD_2FSK,
     [DEV_RFPACKET_FSK * 2 + 1] = MOD_4FSK,
@@ -351,14 +368,14 @@ si446x_modem_configure(struct si446x_ctx_s *pv,
 
   uint8_t idx = rf_cfg->mod * 2;
   uint32_t fdev = 0;
+  const struct dev_rfpacket_rf_cfg_std_s *common = NULL;
 
-  switch (rf_cfg->mod)
-    {
+  switch (rf_cfg->mod) {
     case DEV_RFPACKET_GFSK:
-    case DEV_RFPACKET_FSK:
-      {
-        const struct dev_rfpacket_rf_cfg_fsk_s * c =
-          const_dev_rfpacket_rf_cfg_fsk_s_cast(rf_cfg);
+    case DEV_RFPACKET_FSK: {
+      const struct dev_rfpacket_rf_cfg_fsk_s * c =
+      const_dev_rfpacket_rf_cfg_fsk_s_cast(rf_cfg);
+      common = &c->common;
 
         switch (c->symbols)
           {
@@ -384,6 +401,7 @@ si446x_modem_configure(struct si446x_ctx_s *pv,
       {
         const struct dev_rfpacket_rf_cfg_ask_s * c =
           const_dev_rfpacket_rf_cfg_ask_s_cast(rf_cfg);
+          common = &c->common;
 
         if (c->symbols != 2)
           return 0;
@@ -395,25 +413,32 @@ si446x_modem_configure(struct si446x_ctx_s *pv,
       return 0;
     }
 
-  bool_t manchester;
+  if (pk_cfg->format != DEV_RFPACKET_FMT_SLPC)
+    return -ENOTSUP;
 
-  switch (pk_cfg->encoding)
-    {
+  bool_t manchester;
+  const struct dev_rfpacket_pk_cfg_basic_s *cfg = const_dev_rfpacket_pk_cfg_basic_s_cast(pk_cfg);
+
+  switch (cfg->encoding) {
     case DEV_RFPACKET_CLEAR:
       manchester = 0;
-      break;
+    break;
+
     case DEV_RFPACKET_MANCHESTER:
       manchester = 1;
-      break;
+    break;
+    
     default:
       return 0;
-    }
+  }
+  if (common == NULL)
+    return 0;
 
-  uint32_t rx_tx_freq_err = rf_cfg->freq_err   // remote freq error
-    + (uint64_t)rf_cfg->frequency * pv->osc_ppb / 1000000000; // local freq error
+  uint32_t rx_tx_freq_err = common->freq_err   // remote freq error
+    + (uint64_t)common->frequency * pv->osc_ppb / 1000000000; // local freq error
 
-  return modem_calc(out, &pv->synth_ratio, tab[idx], rf_cfg->frequency, rf_cfg->drate,
-                    fdev, rf_cfg->rx_bw, rf_cfg->chan_spacing, rx_tx_freq_err, manchester);
+  return modem_calc(out, &pv->synth_ratio, tab[idx], common->frequency, common->drate,
+                    fdev, common->rx_bw, common->chan_spacing, rx_tx_freq_err, manchester);
 }
 
 static inline error_t si446x_build_rf_config(struct si446x_ctx_s *pv,
@@ -427,16 +452,19 @@ static inline error_t si446x_build_rf_config(struct si446x_ctx_s *pv,
   }
   // Configure RSSI_threshold
   const struct dev_rfpacket_rf_cfg_fairtx_s *fairtx = NULL;
+  const struct dev_rfpacket_rf_cfg_std_s *common = NULL;
 
   switch (cfg->mod) {
     case DEV_RFPACKET_GFSK:
     case DEV_RFPACKET_FSK: {
       const struct dev_rfpacket_rf_cfg_fsk_s * c = const_dev_rfpacket_rf_cfg_fsk_s_cast(cfg);
+      common = &c->common;
       fairtx = &c->fairtx;
     break;}
 
     case DEV_RFPACKET_ASK: {
       const struct dev_rfpacket_rf_cfg_ask_s * c = const_dev_rfpacket_rf_cfg_ask_s_cast(cfg);
+      common = &c->common;
       fairtx = &c->fairtx;
     break;}
 
@@ -454,10 +482,13 @@ static inline error_t si446x_build_rf_config(struct si446x_ctx_s *pv,
   out->rssi_th = SET_RSSI(rssi_th >> 3);
   pv->lbt_rssi = out->rssi_th;
 
-  if (cfg->jam_rssi > SI446X_MAX_RSSI_VALUE) {
+  if (common == NULL) {
     return -ENOTSUP;
   }
-  pv->jam_rssi = SET_RSSI(cfg->jam_rssi >> 3);
+  if (common->jam_rssi > SI446X_MAX_RSSI_VALUE) {
+    return -ENOTSUP;
+  }
+  pv->jam_rssi = SET_RSSI(common->jam_rssi >> 3);
   si446x_dump_config((uint8_t*)out, si446x_rf_cmd);
   return 0;
 }
@@ -479,6 +510,31 @@ static void si446x_rf_config_done(struct si446x_ctx_s *pv, const struct dev_rfpa
 #endif
   si446x_bytecode_start(pv, &si446x_entry_rf_config, SI446X_ENTRY_RF_CONFIG_BCARGS(
                                      (uintptr_t)data, (uintptr_t)si446x_rf_cmd));
+}
+
+static uint32_t si446x_calc_freq(const struct dev_rfpacket_rf_cfg_s *cfg, uint8_t chan) {
+  const struct dev_rfpacket_rf_cfg_std_s *common = NULL;
+  const struct dev_rfpacket_rf_cfg_fsk_s *cfsk = NULL;
+  const struct dev_rfpacket_rf_cfg_ask_s *cask = NULL;
+
+  switch (cfg->mod) {
+    case DEV_RFPACKET_GFSK:
+    case DEV_RFPACKET_FSK:
+      cfsk = const_dev_rfpacket_rf_cfg_fsk_s_cast(cfg);
+      common = &cfsk->common;
+    break;
+
+    case DEV_RFPACKET_ASK:
+      cask = const_dev_rfpacket_rf_cfg_ask_s_cast(cfg);
+      common = &cask->common;
+
+    default:
+    break;
+  }
+  if (common != NULL) {
+    return common->frequency + chan * common->chan_spacing;
+  }
+  return 0;
 }
 
 static void si446x_clean(struct device_s *dev) {
@@ -513,6 +569,7 @@ static error_t si446x_check_config(struct dev_rfpacket_ctx_s *gpv, struct dev_rf
   struct si446x_ctx_s *pv = gpv->pvdata;
   const struct dev_rfpacket_rf_cfg_s *rfcfg = rq->rf_cfg;
 
+  // Check fairtx mode
   if (rq->type == DEV_RFPACKET_RQ_TX_FAIR) {
 #ifdef CONFIG_DRIVER_RFPACKET_SI446X_CCA
     switch (rfcfg->mod) {
@@ -576,8 +633,26 @@ static error_t si446x_check_config(struct dev_rfpacket_ctx_s *gpv, struct dev_rf
   }
   // Update cache entry
   e->cfg = (struct dev_rfpacket_rf_cfg_s * )rfcfg;
-  // Time byte in us
-  dev_timer_delay_t tb = 8000000/rq->rf_cfg->drate;
+  // Calc time byte in us
+  uint32_t drate = 1;
+
+  switch (rfcfg->mod) {
+    case DEV_RFPACKET_GFSK:
+    case DEV_RFPACKET_FSK: {
+      const struct dev_rfpacket_rf_cfg_fsk_s * c = const_dev_rfpacket_rf_cfg_fsk_s_cast(rfcfg);
+      drate = c->common.drate;
+    break;
+    }
+    case DEV_RFPACKET_ASK: {
+      const struct dev_rfpacket_rf_cfg_ask_s * c = const_dev_rfpacket_rf_cfg_ask_s_cast(rfcfg);
+      drate = c->common.drate;
+    break;
+    }
+    default:
+    break;
+  }
+
+  dev_timer_delay_t tb = 8000000/drate;
   dev_timer_init_sec(pv->timer, &(e->tb), 0, tb, 1000000);
   // Send value to generic struct
   pv->gctx.time_byte = e->tb;
@@ -593,7 +668,7 @@ static error_t si446x_check_config(struct dev_rfpacket_ctx_s *gpv, struct dev_rf
 static void si446x_rx(struct dev_rfpacket_ctx_s *gpv, struct dev_rfpacket_rq_s *rq, bool_t isRetry) {
   struct si446x_ctx_s *pv = gpv->pvdata;
   struct dev_rfpacket_rf_cfg_s * cfg = (struct dev_rfpacket_rf_cfg_s *)rq->rf_cfg;
-  uint32_t freq = cfg->frequency + rq->channel * cfg->chan_spacing;
+  uint32_t freq = si446x_calc_freq(cfg, rq->channel);
 
   if (isRetry) {
     si446x_bytecode_start(pv, &si446x_entry_rx, SI446X_ENTRY_RX_BCARGS(rq->channel));
