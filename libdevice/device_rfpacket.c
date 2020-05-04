@@ -1002,7 +1002,6 @@ error_t dev_rfpacket_cancel(struct dev_rfpacket_ctx_s *pv, struct dev_rfpacket_r
       case DEV_RFPACKET_STATE_RXC:
         // Check if not pending rx
         if (!(pv->rxc_flags & (bit(RFPACKET_FLAG_PENDING_RX) | bit(RFPACKET_FLAG_PAUSED)))) {
-          BIT_SET(pv->rxc_flags, RFPACKET_FLAG_CANCELED);
           pv->drv->cancel_rxc(pv);
         }
       case DEV_RFPACKET_STATE_CONFIG_RXC:
@@ -1061,7 +1060,7 @@ uintptr_t dev_rfpacket_alloc(struct dev_rfpacket_ctx_s *pv) {
   }
   struct dev_rfpacket_rx_s *rx = rq->rx_alloc(rq, pv->size);
   if (rx == NULL) {
-    logk_trace("allox rx null");
+    logk_trace("alloc rx null");
     return 0;
   }
   rx->channel = rq->channel;
@@ -1134,7 +1133,7 @@ void dev_rfpacket_req_done(struct dev_rfpacket_ctx_s *pv) {
         logk_trace("jammed");
         assert(pv->rxrq == NULL);
         rfpacket_end_rxc(pv, -EAGAIN);
-      } else if (pv->rq_flags & (bit(RFPACKET_FLAG_CANCELED) | bit(RFPACKET_FLAG_TIMEOUT))) {
+      } else if (pv->rxc_flags & (bit(RFPACKET_FLAG_CANCELED) | bit(RFPACKET_FLAG_TIMEOUT))) {
         rfpacket_end_rxrq(pv);
         rfpacket_end_rxc(pv, 0);
       } else if (pv->status == DEV_RFPACKET_STATUS_RX_TIMEOUT) {
