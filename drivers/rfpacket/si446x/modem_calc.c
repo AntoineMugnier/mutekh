@@ -529,7 +529,7 @@ bool_t modem_calc(struct si446x_rf_regs_s *out,
 
   modem->fsk4_gain1 = 0x80;
   modem->fsk4_gain0 = 26;
-  modem->fsk4_map = 0;
+  modem->fsk4_map = 1;
 
   uint32_t fsk4_th = __MIN(65535, (uint32_t)round(fdev * 32768. / rate));
   modem->fsk4_th1 = fsk4_th >> 8;

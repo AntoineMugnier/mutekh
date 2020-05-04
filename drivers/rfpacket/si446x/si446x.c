@@ -377,28 +377,24 @@ si446x_modem_configure(struct si446x_ctx_s *pv,
       const_dev_rfpacket_rf_cfg_fsk_s_cast(rf_cfg);
       common = &c->common;
 
-        switch (c->symbols)
-          {
+      switch (c->symbols) {
 #ifdef CONFIG_DRIVER_RFPACKET_SI446X_MOD_2FSK
-          case 2:
-            break;
+        case 2:
+          fdev = c->deviation;
+        break;
 #endif
 #ifdef CONFIG_DRIVER_RFPACKET_SI446X_MOD_4FSK
-          case 4:
-            break;
-#endif
-          default:
-            return 0;
-          }
-
-        fdev = c->deviation;
-
-        idx += (c->symbols == 4);
+        case 4:
+          fdev = c->deviation / 3;
         break;
-      }
-#ifdef CONFIG_DRIVER_RFPACKET_SI446X_MOD_00K
-    case DEV_RFPACKET_ASK:
-      {
+#endif
+        default:
+          return 0;
+      }        
+      idx += (c->symbols == 4);
+  break; }
+#ifdef CONFIG_DRIVER_RFPACKET_SI446X_MOD_OOK
+    case DEV_RFPACKET_ASK: {
         const struct dev_rfpacket_rf_cfg_ask_s * c =
           const_dev_rfpacket_rf_cfg_ask_s_cast(rf_cfg);
           common = &c->common;
@@ -406,8 +402,7 @@ si446x_modem_configure(struct si446x_ctx_s *pv,
         if (c->symbols != 2)
           return 0;
 
-        break;
-      }
+    break; }
 #endif
     default:
       return 0;
