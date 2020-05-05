@@ -46,12 +46,20 @@ extern const uint8_t s2lp_config[];
 // (12) Sync double word (big endian)
 // Header PROTOCOL
 // (19) PROTOCOL2 to PROTOCOL0
+// Header Timer
+// (25) TIMERS5 to TIMERS2
 #define S2LP_PKCFG_PROT2_OFFSET 19
 #define S2LP_PKCFG_PROT1_OFFSET 20
+
+// LDC time values
+#define S2LP_LDC_RXT_US 2500
+#define S2LP_LDC_WUT_US 500
 
 // Public functions
 error_t s2lp_build_config(struct s2lp_ctx_s *pv);
 uint8_t s2lp_build_pwr(struct s2lp_ctx_s *pv, int16_t pwr);
+bool s2lp_config_check_fairtx_valid(const struct dev_rfpacket_rf_cfg_s *rfcfg);
+uint32_t s2lp_config_get_freq(const struct dev_rfpacket_rf_cfg_s *cfg, uint8_t chan);
 void s2lp_init_rf_cfg_array(uint8_t *pArray, uint16_t array_size);
 void s2lp_init_pk_cfg_array(uint8_t *pArray, uint16_t array_size);
 

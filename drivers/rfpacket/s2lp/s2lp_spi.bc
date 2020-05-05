@@ -31,6 +31,109 @@
     Note: Whenever it sends a command, the driver will update the %S2LP_STATUS register if possible
 */
 
+#ifdef CONFIG_DRIVER_RFPACKET_S2LP_LDC
+// Entry point to start regular rx on transceiver
+.func s2lp_entry_rxc_ldc
+        .export s2lp_entry_rxc_ldc
+        .input %1 channel
+        .clobber %1, %2 avg status, %3 tmp jam, %4, %5, %6, %7
+        // Test if rxc has been canceled
+        ld8e                   %tmp,            %S2LP_CTX_PV,   _offsetof(s2lp_ctx_s, flags, 1)
+        tst32c                 %tmp,            bitpos(S2LP_FLAGS_RX_CONTINOUS)
+            end
+        // Set channel
+
+        call16                 %s2lp_set_chan:link,    s2lp_set_chan
+        // Check state
+        cst8                   %s2lp_check_state:state, S2LP_STATE0_STATE_OFFSET(S2LP_STATE_READY)
+        call16                 %s2lp_check_state:link,  s2lp_check_state
+        // Set rx fifo mux
+        cst8                   %s2lp_set_fifo_mux:value, 0
+        call16                 %s2lp_set_fifo_mux:link, s2lp_set_fifo_mux
+    start_wut:
+        // Enable LDC
+        cst8                   %s2lp_set_ldc:value, 1
+        call16                 %s2lp_set_ldc:link, s2lp_set_ldc
+        // Start rx
+        call16                 %s2lp_start_rx:link,    s2lp_start_rx
+        // Sleep until wakeup
+        spi_sleep
+        // Disable LDC
+        cst8                   %s2lp_set_ldc:value, 0
+        call16                 %s2lp_set_ldc:link, s2lp_set_ldc
+        // Check irq
+        call16                 %s2lp_check_irq:link,  s2lp_check_irq
+        // Check timeout
+        ld8e                   %tmp,            %S2LP_CTX_PV,   _offsetof(s2lp_ctx_s, flags, 1)
+        tst32s                 %tmp,            bitpos(S2LP_FLAGS_RXC_INFINITE)
+            jmp8               rxc_ldc_infinite
+        mov                    %tmp,            %S2LP_CTX_PV
+        add8                   %tmp,            _offsetof(s2lp_ctx_s, gctx.timeout, 8)
+        spi_elapsed_r          %tmp
+            jmp8               rxc_ldc_timeout
+    rxc_ldc_infinite:
+        // Check if rxc cancelled
+        ld8e                   %tmp,            %S2LP_CTX_PV,   _offsetof(s2lp_ctx_s, flags, 1)
+        tst32c                 %tmp,            bitpos(S2LP_FLAGS_RX_CONTINOUS)
+            jmp8               rxc_ldc_cancel
+        // Get rssi value
+        call16                 %s2lp_get_curr_rssi:link, s2lp_get_curr_rssi
+        // Return to wut
+        jmp8                   start_wut
+
+    rxc_ldc_cancel:
+        // Set bc_status
+        cst8                   %status,         S2LP_BC_STATUS_MISC
+        st8e                   %status,         %S2LP_CTX_PV,   _offsetof(s2lp_ctx_s, bc_status, 1)
+        // Update status
+        jmp8                   rxc_ldc_end
+
+    rxc_ldc_timeout:
+        // Set bc_status
+        cst8                   %status,         S2LP_BC_STATUS_RX_TIMEOUT
+        st8e                   %status,         %S2LP_CTX_PV,   _offsetof(s2lp_ctx_s, bc_status, 1)
+        // Update status
+        jmp8                   rxc_ldc_end
+
+    rxc_ldc_end:
+        // Stop rx
+        cst8                   %s2lp_abort:mask, 0x1
+        call16                 %s2lp_abort:link, s2lp_abort
+        call16                 %s2lp_clear_irq:link, s2lp_clear_irq
+        end
+.endfunc
+#endif
+
+#ifdef CONFIG_DRIVER_RFPACKET_S2LP_SLEEP
+.func s2lp_entry_ready
+        .export s2lp_entry_ready
+        .clobber %1, %2 cmd, %3, %4
+        // Check state
+        call16                 %s2lp_update_status:link, s2lp_update_status
+        cst8                   %s2lp_check_state:state, S2LP_STATE0_STATE_OFFSET(S2LP_STATE_SLEEP)
+        call16                 %s2lp_check_state:link,  s2lp_check_state
+        // Send ready command (S2LP_CMD_HEADER_BYTE, S2LP_CMD_READY)
+        cst16                  %cmd,            0x6280, 0
+        pack32le               %cmd,            1,      2
+        spi_wr                 %cmd,            2,      CS_PULSE
+        end
+.endfunc
+
+.func s2lp_entry_sleep
+        .export s2lp_entry_sleep
+        .clobber %1, %2 cmd, %3, %4
+        // Check state
+        call16                 %s2lp_update_status:link, s2lp_update_status
+        cst8                   %s2lp_check_state:state, S2LP_STATE0_STATE_OFFSET(S2LP_STATE_READY)
+        call16                 %s2lp_check_state:link,  s2lp_check_state
+        // Send sleep command (S2LP_CMD_HEADER_BYTE, S2LP_CMD_SLEEP)
+        cst16                  %cmd,            0x6480, 0
+        pack32le               %cmd,            1,      2
+        spi_wr                 %cmd,            2,      CS_PULSE
+        end
+.endfunc
+#endif
+
 // Entry point to reset the transceiver
 .func s2lp_entry_reset
         .export s2lp_entry_reset
@@ -87,6 +190,36 @@
         call16                 %s2lp_clear_irq:link,  s2lp_clear_irq
         end
 .endfunc
+
+#ifdef CONFIG_DRIVER_RFPACKET_S2LP_SLEEP
+.func s2lp_entry_ready
+        .export s2lp_entry_ready
+        .clobber %1, %2 cmd, %3, %4
+        // Check state
+        call16                 %s2lp_update_status:link, s2lp_update_status
+        cst8                   %s2lp_check_state:state, S2LP_STATE0_STATE_OFFSET(S2LP_STATE_SLEEP)
+        call16                 %s2lp_check_state:link,  s2lp_check_state
+        // Send ready command (S2LP_CMD_HEADER_BYTE, S2LP_CMD_READY)
+        cst16                  %cmd,            0x6280, 0
+        pack32le               %cmd,            1,      2
+        spi_wr                 %cmd,            2,      CS_PULSE
+        end
+.endfunc
+
+.func s2lp_entry_sleep
+        .export s2lp_entry_sleep
+        .clobber %1, %2 cmd, %3, %4
+        // Check state
+        call16                 %s2lp_update_status:link, s2lp_update_status
+        cst8                   %s2lp_check_state:state, S2LP_STATE0_STATE_OFFSET(S2LP_STATE_READY)
+        call16                 %s2lp_check_state:link,  s2lp_check_state
+        // Send sleep command (S2LP_CMD_HEADER_BYTE, S2LP_CMD_SLEEP)
+        cst16                  %cmd,            0x6480, 0
+        pack32le               %cmd,            1,      2
+        spi_wr                 %cmd,            2,      CS_PULSE
+        end
+.endfunc
+#endif
 
 // Entry point to configure the transceiver
 .func s2lp_entry_config
@@ -597,6 +730,11 @@
         // Get packet data
         cst8                   %s2lp_get_packet:rx_done, true
         call8                  %s2lp_get_packet:link,    s2lp_get_packet
+#ifdef CONFIG_DRIVER_RFPACKET_S2LP_LDC
+        // Reset chip state if needed (no fifo flush)
+        cst8                   %s2lp_abort:mask, 0x0
+        call16                 %s2lp_abort:link, s2lp_abort
+#endif
         // Set bc_status
         cst8                   %status,         S2LP_BC_STATUS_RX_DONE
         st8e                   %status,         %S2LP_CTX_PV,   _offsetof(s2lp_ctx_s, bc_status, 1)
@@ -619,7 +757,7 @@
         st8e                   %status,         %S2LP_CTX_PV,   _offsetof(s2lp_ctx_s, bc_status, 1)
         // Stop rx
         cst8                   %s2lp_abort:mask, 0x1
-        call16                  %s2lp_abort:link, s2lp_abort
+        call16                 %s2lp_abort:link, s2lp_abort
         call16                 %s2lp_clear_irq:link, s2lp_clear_irq
         end
 .endfunc
@@ -839,30 +977,33 @@
 .func s2lp_abort
         .input %4 link
         .input %1 mask // flush fifo mask, must NOT be 0 for status update
-        .clobber %2 cmd tmp, %3 state
+        .clobber %1 delay, %2 cmd tmp, %3 state 
         // Init %2
         cst8                   %2,               0
         // Check mask value
-        tst32c                 %mask,            0
-            jmp8               abort_tx_flush_fifo
-        // Send flush rx fifo command
-        cst16                  %cmd,             0x7180,   0
-        pack32le               %cmd,             1,        2
-        spi_swp                %cmd,             %cmd,     2, CS_START
-        unpack32be             %cmd,             1,        2
-    abort_tx_flush_fifo:
-        // Check mask value
         tst32c                 %mask,            1
-            jmp8               abort_check_status
+            jmp8               abort_rx_flush_fifo
         // Send tx flush fifo command
         cst16                  %cmd,             0x7280,   0
         pack32le               %cmd,             1,        2
-        spi_swp                %cmd,             %cmd,     2, CS_START
+        spi_swp                %cmd,             %cmd,     2, CS_PULSE
         unpack32be             %cmd,             1,        2
-    abort_check_status:
         // Retrieve status
         mov                    %S2LP_STATUS,     %cmd
         shi32r                 %S2LP_STATUS,     16
+    abort_rx_flush_fifo:
+        // Check mask value
+        tst32c                 %mask,            0
+            jmp8               abort_check_status
+        // Send flush rx fifo command
+        cst16                  %cmd,             0x7180,   0
+        pack32le               %cmd,             1,        2
+        spi_swp                %cmd,             %cmd,     2, CS_PULSE
+        unpack32be             %cmd,             1,        2
+        // Retrieve status
+        mov                    %S2LP_STATUS,     %cmd
+        shi32r                 %S2LP_STATUS,     16
+    abort_check_status:
         // Check status
         cst32                  %state,           S2LP_STATE0_STATE_REGMASK,   0
         and32                  %state,           %S2LP_STATUS
@@ -875,10 +1016,42 @@
         cst8                   %tmp,             S2LP_STATE0_STATE_OFFSET(S2LP_STATE_TX)
         eq                     %state,           %tmp
             jmp8               abort_tx_rx
+        cst8                   %tmp,             S2LP_STATE0_STATE_OFFSET(S2LP_STATE_SLEEP_WAIT)
+        eq                     %state,           %tmp
+            jmp8               abort_sleep
         // Send ready command
         cst16                  %cmd,             0x6280,   0
         pack16le               %cmd,             1,        2
         spi_wr                 %cmd,             2,        CS_PULSE
+        jmp8                   abort_end
+
+    abort_sleep:
+        // Send sleep + ready command
+        cst16                  %cmd,             0x6480,   0
+        pack16le               %cmd,             1,        2
+        spi_wr                 %cmd,             2,        CS_PULSE
+        cst16                  %cmd,             0x6280,   0
+        pack16le               %cmd,             1,        2
+        spi_wr                 %cmd,             2,        CS_PULSE
+        // Wait for rco to finish
+        cst16                  %state,           S2LP_STATE0_STATE_OFFSET(S2LP_STATE_RX), 0
+        ld32e                  %delay,           %S2LP_CTX_PV,   _offsetof(s2lp_ctx_s, bt, 4)
+        //shi32l                 %delay,           S2LP_ABORT_LDC_SHIFT
+    abort_wait_ready:
+        spi_yield_delay        %delay
+        // Update status (S2LP_READ_REG_BYTE, S2LP_MC_STATE1_ADDR)
+        cst16                  %cmd,           0x8D01,   0
+        pack32le               %cmd,           1,        4
+        spi_swp                %cmd,           %cmd,     4,  CS_PULSE
+        // Retrieve status
+        unpack32be             %cmd,           1,        4
+        mov                    %S2LP_STATUS,   %cmd
+        shi32r                 %S2LP_STATUS,   16
+        // Check state
+        cst32                  %tmp,           S2LP_STATE0_STATE_REGMASK, 0
+        and32                  %tmp,           %S2LP_STATUS
+        eq                     %tmp,           %state
+            jmp8               abort_wait_ready
         jmp8                   abort_end
 
     abort_tx_rx:
@@ -914,6 +1087,23 @@
         ret                    %link
 .endfunc
 
+// Clear irqs
+.func s2lp_clear_irq
+        .input %4 link
+        .clobber %2 cmd, %3
+        // Init %3
+        cst8                   %3,             0x0
+        // Set cmd (S2LP_READ_REG_BYTE, S2LP_IRQ_STATUS3_ADDR)
+        cst16                  %cmd,           0xFA01,   0
+        pack32le               %cmd,           2,        6
+        spi_swp                %cmd,           %cmd,     6,         CS_PULSE
+        unpack32be             %cmd,           2,        6
+        // Retrieve status
+        mov                    %S2LP_STATUS,   %cmd
+        shi32r                 %S2LP_STATUS,   16
+        ret                    %link
+.endfunc
+
 #ifdef CONFIG_DRIVER_RFPACKET_S2LP_USE_CSMA
 // Set csma (1 to enable, 0 to disable)
 .func s2lp_set_csma
@@ -940,22 +1130,31 @@
 .endfunc
 #endif
 
-// Clear irqs
-.func s2lp_clear_irq
+#ifdef CONFIG_DRIVER_RFPACKET_S2LP_LDC
+// Set LDC mode (1 to enable, 0 to disable)
+.func s2lp_set_ldc
         .input %4 link
-        .clobber %2 cmd, %3
-        // Init %3
-        cst8                   %3,             0x0
-        // Set cmd (S2LP_READ_REG_BYTE, S2LP_IRQ_STATUS3_ADDR)
-        cst16                  %cmd,           0xFA01,   0
-        pack32le               %cmd,           2,        6
-        spi_swp                %cmd,           %cmd,     6,         CS_PULSE
-        unpack32be             %cmd,           2,        6
+        .input %1 value
+        .clobber %1, %2 cmd offset reg_addr, %3 reg_val
+        // Get config reg value
+        ld32e                  %reg_addr,        %S2LP_CTX_PV,   _offsetof(s2lp_ctx_s, pk_cfg_array, 4)
+        ld8e                   %reg_val,         %reg_addr,   S2LP_PKCFG_PROT1_OFFSET
+        // Set value
+        bit32c                 %reg_val,         bitpos(S2LP_PROTOCOL1_LDC_MODE_REGMASK)
+        shi32l                 %value,           bitpos(S2LP_PROTOCOL1_LDC_MODE_REGMASK)
+        or32                   %reg_val,         %value
+        // Set header (S2LP_WRITE_REG_BYTE, S2LP_PROTOCOL1_ADDR)
+        cst16                  %cmd,             0x3A00,   0
+        // Send command
+        pack16le               %cmd,             2,        3
+        spi_swp                %cmd,             %cmd,     3,  CS_PULSE
         // Retrieve status
-        mov                    %S2LP_STATUS,   %cmd
-        shi32r                 %S2LP_STATUS,   16
+        unpack32be             %cmd,             1,        3
+        mov                    %S2LP_STATUS,     %cmd
+        shi32r                 %S2LP_STATUS,     16
         ret                    %link
 .endfunc
+#endif
 
 // Restart tx lbt process
 .func s2lp_main_retry_tx_lbt
@@ -1115,20 +1314,3 @@
         st8e                   %status,          %S2LP_CTX_PV,   _offsetof(s2lp_ctx_s, bc_status, 1)
         end
 .endfunc
-
-// TODO define sleep token
-#ifdef CONFIG_DRIVER_RFPACKET_S2LP_SLEEP
-.func s2lp_entry_ready
-        .export s2lp_entry_ready
-        .clobber %0 tmp, %4, %11, %12, %13
-        // TODO
-        end
-.endfunc
-
-.func s2lp_entry_sleep
-        .export s2lp_entry_sleep
-        .clobber %0 tmp, %11, %12, %13
-        // TODO
-        end
-.endfunc
-#endif

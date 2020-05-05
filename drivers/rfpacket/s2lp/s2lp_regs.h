@@ -117,23 +117,24 @@
 #define S2LP_FIFO_CONFIG0_ADDR     ((uint8_t)0x3F)
 
 // Rf registers
-#define S2LP_SYNT3_ADDR         ((uint8_t)0x05)
-#define S2LP_SYNT2_ADDR         ((uint8_t)0x06)
-#define S2LP_SYNT1_ADDR         ((uint8_t)0x07)
-#define S2LP_SYNT0_ADDR         ((uint8_t)0x08)
-#define S2LP_IF_OFFSET_ANA_ADDR ((uint8_t)0x09)
-#define S2LP_IF_OFFSET_DIG_ADDR ((uint8_t)0x0A)
-#define S2LP_CH_SPACE_ADDR      ((uint8_t)0x0C)
-#define S2LP_CHNUM_ADDR         ((uint8_t)0x0D)
-#define S2LP_MOD4_ADDR          ((uint8_t)0x0E)
-#define S2LP_MOD3_ADDR          ((uint8_t)0x0F)
-#define S2LP_MOD2_ADDR          ((uint8_t)0x10)
-#define S2LP_MOD1_ADDR          ((uint8_t)0x11)
-#define S2LP_MOD0_ADDR          ((uint8_t)0x12)
-#define S2LP_CHFLT_ADDR         ((uint8_t)0x13)
-#define S2LP_RSSI_FLT_ADDR           ((uint8_t)0x17)
-#define S2LP_RSSI_TH_ADDR       ((uint8_t)0x18)
-#define S2LP_SYNTH_CONFIG2_ADDR ((uint8_t)0x65)
+#define S2LP_SYNT3_ADDR            ((uint8_t)0x05)
+#define S2LP_SYNT2_ADDR            ((uint8_t)0x06)
+#define S2LP_SYNT1_ADDR            ((uint8_t)0x07)
+#define S2LP_SYNT0_ADDR            ((uint8_t)0x08)
+#define S2LP_IF_OFFSET_ANA_ADDR    ((uint8_t)0x09)
+#define S2LP_IF_OFFSET_DIG_ADDR    ((uint8_t)0x0A)
+#define S2LP_CH_SPACE_ADDR         ((uint8_t)0x0C)
+#define S2LP_CHNUM_ADDR            ((uint8_t)0x0D)
+#define S2LP_MOD4_ADDR             ((uint8_t)0x0E)
+#define S2LP_MOD3_ADDR             ((uint8_t)0x0F)
+#define S2LP_MOD2_ADDR             ((uint8_t)0x10)
+#define S2LP_MOD1_ADDR             ((uint8_t)0x11)
+#define S2LP_MOD0_ADDR             ((uint8_t)0x12)
+#define S2LP_CHFLT_ADDR            ((uint8_t)0x13)
+#define S2LP_RSSI_FLT_ADDR         ((uint8_t)0x17)
+#define S2LP_RSSI_TH_ADDR          ((uint8_t)0x18)
+#define S2LP_PCKT_FLT_OPTIONS_ADDR ((uint8_t)0x40)
+#define S2LP_SYNTH_CONFIG2_ADDR    ((uint8_t)0x65)
 
 // Rf registers masks
 #define S2LP_MOD2_MOD_TYPE_REGMASK            ((uint8_t)0xF0)
@@ -152,6 +153,21 @@
 
 #define S2LP_RSSI_FLT_GAIN_REGMASK    ((uint8_t)0xF0)
 #define S2LP_RSSI_FLT_CS_MODE_REGMASK ((uint8_t)0x0C)
+
+#define S2LP_PCKT_FLT_RX_TIMEOUT_AND_OR_SEL_REGMASK  ((uint8_t)0x40)
+#define S2LP_PCKT_FLT_SOURCE_ADDR_FLT_REGMASK        ((uint8_t)0x10)
+#define S2LP_PCKT_FLT_DEST_VS_BROADCAST_ADDR_REGMASK ((uint8_t)0x08)
+#define S2LP_PCKT_FLT_DEST_VS_MULTICAST_ADDR_REGMASK ((uint8_t)0x04)
+#define S2LP_PCKT_FLT_DEST_VS_SOURCE_ADDR_REGMASK    ((uint8_t)0x02)
+#define S2LP_PCKT_FLT_CRC_FLT_REGMASK                ((uint8_t)0x01)
+
+// Timer registers
+#define S2LP_TIMERS5_ADDR     ((uint8_t)0x46)
+#define S2LP_TIMERS4_ADDR     ((uint8_t)0x47)
+#define S2LP_TIMERS3_ADDR     ((uint8_t)0x48)
+#define S2LP_TIMERS2_ADDR     ((uint8_t)0x49)
+#define S2LP_TIMERS1_ADDR     ((uint8_t)0x4A)
+#define S2LP_TIMERS0_ADDR     ((uint8_t)0x4B)
 
 // Csma registers
 #define S2LP_CSMA_CONF3_ADDR       ((uint8_t)0x4C)
@@ -431,5 +447,6 @@
 #define S2LP_STATE_LOCK_ST      0x14 // LOCK_ST
 #define S2LP_STATE_TX           0x5C // TX
 #define S2LP_STATE_SYNTH_SETUP  0x50 // SYNTH_SETUP
+#define S2LP_STATE_SLEEP_WAIT   0x7C // SLEEP_WAIT
 
 #endif

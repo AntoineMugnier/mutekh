@@ -56,14 +56,15 @@
 // Config array sizes
 #define S2LP_RF_CFG_ARRAY_SIZE 29
 #define S2LP_RF_CFG_DATA_SIZE S2LP_RF_CFG_ARRAY_SIZE - 4
-#define S2LP_PK_CFG_ARRAY_SIZE 22
-#define S2LP_PK_CFG_DATA_SIZE S2LP_PK_CFG_ARRAY_SIZE - 3
+#define S2LP_PK_CFG_ARRAY_SIZE 29
+#define S2LP_PK_CFG_DATA_SIZE S2LP_PK_CFG_ARRAY_SIZE - 4
 
 // Time values
 #define S2LP_BASE_TIME 500 // in us
 #define S2LP_RSSI_PERIOD_SHIFT 8 // = S2LP_BASE_TIME * 2 ^ 8 = 128 ms
 #define S2LP_RESET_SHIFT 1 // = S2LP_BASE_TIME * 2 ^ 1 = 1 ms
 #define S2LP_WAIT_IRQ_SHIFT 6 // = S2LP_BASE_TIME * 2 ^ 6 = 32 ms
+#define S2LP_ABORT_LDC_SHIFT 2 // = S2LP_BASE_TIME * 2 ^ -2 = 0.125 ms
 
 // Rssi values
 #define S2LP_RSSI_AVG_DEF_VAL -120 // arbitrary, in dbm

@@ -117,7 +117,7 @@ static void s2lp_fill_rx_info(struct s2lp_ctx_s *pv, struct dev_rfpacket_rx_s *r
   }
   rx->carrier = S2LP_GET_RSSI(pv->carrier) << 3;
   rx->rssi = S2LP_GET_RSSI(pv->avg_rssi) << 3;
-  rx->frequency = pv->frequency + pv->afc_offset; // FIXME test if value correct
+  rx->frequency = pv->frequency + pv->afc_offset;
 }
 
 static void s2lp_bytecode_start(struct s2lp_ctx_s *pv, const void *e, uint16_t mask, ...) {
@@ -151,8 +151,12 @@ static error_t s2lp_check_config(struct dev_rfpacket_ctx_s *gpv, struct dev_rfpa
   const struct dev_rfpacket_pk_cfg_s *pkcfg = rq->pk_cfg;
   bool_t conf_ok = true;
 
-  // Set rx_tx flags
   if (rq->type == DEV_RFPACKET_RQ_TX_FAIR) {
+    // Check that fair tx mode is set when request of type DEV_RFPACKET_RQ_TX_FAIR is used
+    if (!s2lp_config_check_fairtx_valid(rfcfg)) {
+      return -ENOTSUP;
+    }
+    // Set rx_tx flags
     pv->flags &= ~S2LP_FLAGS_RX_TX_OK;
     // Test if RX is allowed during TX
     if (dev_rfpacket_can_rxtx(&pv->gctx, rq)) {
@@ -163,15 +167,17 @@ static error_t s2lp_check_config(struct dev_rfpacket_ctx_s *gpv, struct dev_rfpa
   pv->flags &= ~S2LP_FLAGS_RF_CONFIG_OK;
   pv->flags &= ~S2LP_FLAGS_PK_CONFIG_OK;
 
-  if (pkcfg == pv->pk_cfg) {
-    pv->flags |= S2LP_FLAGS_RF_CONFIG_OK;
+  if ((pkcfg == pv->pk_cfg) && !pkcfg->cache.dirty) {
+    pv->flags |= S2LP_FLAGS_PK_CONFIG_OK;
   } else {
+    ((struct dev_rfpacket_pk_cfg_s *)pkcfg)->cache.dirty = 0;
     pv->pk_cfg = pkcfg;
     conf_ok = false;
   }
-  if (rfcfg == pv->rf_cfg) {
-    pv->flags |= S2LP_FLAGS_PK_CONFIG_OK;
+  if ((rfcfg == pv->rf_cfg) && !rfcfg->cache.dirty) {
+    pv->flags |= S2LP_FLAGS_RF_CONFIG_OK;
   } else {
+    ((struct dev_rfpacket_rf_cfg_s *)rfcfg)->cache.dirty = 0;
     pv->rf_cfg = rfcfg;
     conf_ok = false;
   }
@@ -179,12 +185,6 @@ static error_t s2lp_check_config(struct dev_rfpacket_ctx_s *gpv, struct dev_rfpa
   if (conf_ok) {
     return 0;
   }
-  // Calc time byte in us
-  dev_timer_delay_t tb = 8000000 / rq->rf_cfg->drate;
-  dev_timer_init_sec(pv->timer, &(pv->gctx.time_byte), 0, tb, 1000000);
-  // Calc other time constants
-  pv->mpst = 2 * (S2LP_FIFO_SIZE - S2LP_FIFO_THRESHOLD) * pv->gctx.time_byte + pv->bt;
-  pv->ccad = 2 * 8 * pv->gctx.time_byte + pv->bt;
   // Build conf
   error_t err = s2lp_build_config(pv);
 
@@ -197,8 +197,8 @@ static error_t s2lp_check_config(struct dev_rfpacket_ctx_s *gpv, struct dev_rfpa
 
 static void s2lp_rx(struct dev_rfpacket_ctx_s *gpv, struct dev_rfpacket_rq_s *rq, bool_t isRetry) {
   struct s2lp_ctx_s *pv = gpv->pvdata;
-  struct dev_rfpacket_rf_cfg_s * cfg = (struct dev_rfpacket_rf_cfg_s *)rq->rf_cfg;
-  uint32_t freq = cfg->frequency + rq->channel * cfg->chan_spacing;
+  struct dev_rfpacket_rf_cfg_s *cfg = (struct dev_rfpacket_rf_cfg_s *)rq->rf_cfg;
+  uint32_t freq = s2lp_config_get_freq(cfg, rq->channel);
 
   if (isRetry) {
     s2lp_bytecode_start(pv, &s2lp_entry_rx, S2LP_ENTRY_RX_BCARGS(rq->channel));
@@ -223,7 +223,11 @@ static void s2lp_rx(struct dev_rfpacket_ctx_s *gpv, struct dev_rfpacket_rq_s *rq
       // Reset rssi average value
       pv->avg_rssi = S2LP_SET_RSSI(S2LP_RSSI_AVG_DEF_VAL);
       pv->flags |= S2LP_FLAGS_RX_CONTINOUS;
+#ifdef CONFIG_DRIVER_RFPACKET_S2LP_LDC
+      s2lp_bytecode_start(pv, &s2lp_entry_rxc_ldc, S2LP_ENTRY_RX_CONT_BCARGS(rq->channel));
+#else
       s2lp_bytecode_start(pv, &s2lp_entry_rx_cont, S2LP_ENTRY_RX_CONT_BCARGS(rq->channel));
+#endif
     break;
 
     default:
