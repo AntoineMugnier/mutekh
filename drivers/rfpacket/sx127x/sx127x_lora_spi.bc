@@ -82,7 +82,7 @@ sx127x_entry_reset:
 
 sx127x_entry_irq:
         .export sx127x_entry_irq
-        xor32                   %R_ARG0,         %R_ARG0
+        cst8                    %R_ARG0,         0
         ld16e                   %R_ICOUNT,       %R_CTX_PV, _offsetof(sx127x_private_s, icount, 2)
         spi_gpioget             SX127X_IO_DIO0,  %R_TMP0
         tst32s                  %R_TMP0,         0
