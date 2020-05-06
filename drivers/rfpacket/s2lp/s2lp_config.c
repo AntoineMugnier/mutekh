@@ -620,6 +620,8 @@ static error_t s2lp_build_rf_config(struct s2lp_ctx_s *pv, struct dev_rfpacket_r
 
   //printk("Rf config array: %P\n", pv->rf_cfg_array, S2LP_RF_CFG_ARRAY_SIZE);
 
+  // Set current rf_cfg
+  pv->curr_rf_cfg = pv->rf_cfg_array;
   return 0;
 }
 
@@ -784,12 +786,12 @@ static error_t s2lp_build_pk_config(struct s2lp_ctx_s *pv, struct dev_rfpacket_r
     break;
   }
   // Set csma persistant mode
+  uint8_t *pProt2 = &pv->pk_cfg_array[19];
   uint8_t *pProt1 = &pv->pk_cfg_array[20];
   *pProt1 |= S2LP_PROTOCOL1_CSMA_PERS_ON_REGMASK;
 
 #ifdef CONFIG_DRIVER_RFPACKET_S2LP_LDC
   // Set LDC timer parameters
-  uint8_t *pProt2 = &pv->pk_cfg_array[19];
   uint8_t mult;
   uint8_t *pRxtCount = &pv->pk_cfg_array[25];
   uint8_t *pRxtPresc = &pv->pk_cfg_array[26];
@@ -812,6 +814,11 @@ static error_t s2lp_build_pk_config(struct s2lp_ctx_s *pv, struct dev_rfpacket_r
   s2lp_find_rxt_params(CONFIG_DRIVER_RFPACKET_S2LP_FREQ_XO, S2LP_LDC_RXT_US, pRxtCount, pRxtPresc);
 #endif
 
+  // Set current protocol values
+  pv->curr_prot1 = *pProt1;
+  pv->curr_prot2 = *pProt2;
+  // Set current pk_config
+  pv->curr_pk_cfg = pv->pk_cfg_array;
   return 0;
 }
 

@@ -112,6 +112,7 @@
 #define S2LP_FLAGS_PK_CONFIG_OK 0x20 // packet config don't need to be configured
 #define S2LP_FLAGS_TX_LBT       0x40 // current tx request is tx_lbt
 
+// Byte code functions
 BC_CCALL_FUNCTION(s2lp_alloc);
 
 enum s2lp_irq_src {
@@ -152,8 +153,13 @@ struct s2lp_ctx_s {
   const struct dev_rfpacket_rf_cfg_s *rf_cfg;
   const struct dev_rfpacket_pk_cfg_s *pk_cfg;
   // Config arrays
-  uint8_t *rf_cfg_array;
-  uint8_t *pk_cfg_array;
+  uint8_t rf_cfg_array[S2LP_RF_CFG_ARRAY_SIZE];
+  uint8_t pk_cfg_array[S2LP_PK_CFG_ARRAY_SIZE];
+  // Config values
+  uint8_t *curr_rf_cfg;
+  uint8_t *curr_pk_cfg;
+  uint8_t curr_prot1;
+  uint8_t curr_prot2;
   // Gpio map
   gpio_id_t pin_map[2];
 };

@@ -48,6 +48,8 @@ extern const uint8_t s2lp_config[];
 // (19) PROTOCOL2 to PROTOCOL0
 // Header Timer
 // (25) TIMERS5 to TIMERS2
+
+// Register offsets
 #define S2LP_PKCFG_PROT2_OFFSET 19
 #define S2LP_PKCFG_PROT1_OFFSET 20
 

@@ -1069,8 +1069,7 @@
         .input %1 value
         .clobber %1, %2 cmd offset reg_addr, %3 reg_val
         // Get config reg value
-        ld32e                  %reg_addr,        %S2LP_CTX_PV,   _offsetof(s2lp_ctx_s, pk_cfg_array, 4)
-        ld8e                   %reg_val,         %reg_addr,   S2LP_PKCFG_PROT2_OFFSET
+        ld8e                   %reg_val,         %S2LP_CTX_PV, _offsetof(s2lp_ctx_s, curr_prot2, 1)
         // Set value
         bit32c                 %reg_val,         bitpos(S2LP_PROTOCOL2_FIFO_GPIO_OUT_MUX_SEL_REGMASK)
         shi32l                 %value,           bitpos(S2LP_PROTOCOL2_FIFO_GPIO_OUT_MUX_SEL_REGMASK)
@@ -1111,8 +1110,7 @@
         .input %1 value
         .clobber %1, %2 cmd offset reg_addr, %3 reg_val
         // Get config reg value
-        ld32e                  %reg_addr,        %S2LP_CTX_PV,   _offsetof(s2lp_ctx_s, pk_cfg_array, 4)
-        ld8e                   %reg_val,         %reg_addr,   S2LP_PKCFG_PROT1_OFFSET
+        ld8e                   %reg_val,         %S2LP_CTX_PV, _offsetof(s2lp_ctx_s, curr_prot1, 1)
         // Set value
         bit32c                 %reg_val,         bitpos(S2LP_PROTOCOL1_CSMA_ON_REGMASK)
         shi32l                 %value,           bitpos(S2LP_PROTOCOL1_CSMA_ON_REGMASK)
@@ -1137,8 +1135,7 @@
         .input %1 value
         .clobber %1, %2 cmd offset reg_addr, %3 reg_val
         // Get config reg value
-        ld32e                  %reg_addr,        %S2LP_CTX_PV,   _offsetof(s2lp_ctx_s, pk_cfg_array, 4)
-        ld8e                   %reg_val,         %reg_addr,   S2LP_PKCFG_PROT1_OFFSET
+        ld8e                   %reg_val,         %S2LP_CTX_PV, _offsetof(s2lp_ctx_s, curr_prot1, 1)
         // Set value
         bit32c                 %reg_val,         bitpos(S2LP_PROTOCOL1_LDC_MODE_REGMASK)
         shi32l                 %value,           bitpos(S2LP_PROTOCOL1_LDC_MODE_REGMASK)

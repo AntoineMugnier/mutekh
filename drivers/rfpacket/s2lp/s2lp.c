@@ -99,7 +99,7 @@ static void s2lp_send_config(struct s2lp_ctx_s *pv) {
   logk_trace("Send config to device");
 
   s2lp_bytecode_start(pv, &s2lp_entry_config,
-    S2LP_ENTRY_CONFIG_BCARGS((uint8_t *)pv->rf_cfg_array, (uint8_t *)pv->pk_cfg_array));
+    S2LP_ENTRY_CONFIG_BCARGS(pv->curr_rf_cfg, pv->curr_pk_cfg));
 }
 
 static dev_timer_delay_t s2lp_calc_lbt_rand_time(dev_timer_value_t timebase, dev_timer_value_t curr_time) {
@@ -455,13 +455,6 @@ static DEV_INIT(s2lp_init) {
   memset(pv, 0, sizeof(*pv));
   dev->drv_pv = pv;
 
-  // Init config arrays
-  pv->rf_cfg_array = mem_alloc(S2LP_RF_CFG_ARRAY_SIZE, (mem_scope_sys));
-  pv->pk_cfg_array = mem_alloc(S2LP_PK_CFG_ARRAY_SIZE, (mem_scope_sys));
-
-  if (!pv->rf_cfg_array || !pv->pk_cfg_array){
-    return -ENOMEM;
-  }
   // Init status
   pv->bc_status = S2LP_BC_STATUS_MISC;
 
