@@ -870,13 +870,15 @@ error_t s2lp_build_config(struct s2lp_ctx_s *pv) {
 
   if ((pv->flags & S2LP_FLAGS_RF_CONFIG_OK) == 0) {
     err = s2lp_build_rf_config(pv, rq);
-    if (err) {
+    if (err != 0) {
+      pv->rf_cfg = NULL;
       return err;
     }
   }
   if ((pv->flags & S2LP_FLAGS_PK_CONFIG_OK) == 0) {
     err = s2lp_build_pk_config(pv, rq);
-    if (err) {
+    if (err != 0) {
+      pv->pk_cfg = NULL;
       return err;
     }
   }
