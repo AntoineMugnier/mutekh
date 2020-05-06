@@ -793,6 +793,8 @@ bool_t dev_rfpacket_init_done(struct dev_rfpacket_ctx_s *pv) {
 
 config_depend(CONFIG_DEVICE_RFPACKET)
 void dev_rfpacket_config_notsup(struct dev_rfpacket_ctx_s *pv, struct dev_rfpacket_rq_s *rq) {
+  logk_trace("Unsupported configuration.");
+
   switch (rq->type) {
     case DEV_RFPACKET_RQ_RX_CONT:
     case DEV_RFPACKET_RQ_RX_TIMEOUT:
