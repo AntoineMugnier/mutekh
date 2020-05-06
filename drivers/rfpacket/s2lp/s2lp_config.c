@@ -119,17 +119,14 @@ static const uint16_t s2lp_chan_bw_table[90] = {
                     18,   17,   16,   15,   14,   13,   13,   12,   11
 };
 
-static uint32_t s2lp_calc_datarate(uint32_t freq_xo, uint16_t cM, uint8_t cE);
-static void s2lp_find_datarate_params(uint32_t freq_xo, uint32_t datarate, uint16_t* pcM, uint8_t* pcE);
-static uint32_t s2lp_calc_freqdev(uint32_t freq_xo, uint8_t cM, uint8_t cE);
-static void s2lp_find_freqdev_params(uint32_t freq_xo, uint32_t freqdev, uint8_t* pcM, uint8_t* pcE);
-static uint8_t s2lp_calc_chan_spacing(uint32_t freq_xo, uint32_t channel_space);
-static void s2lp_find_channel_params(uint32_t freq_xo, uint32_t chan_bw, uint8_t* pcM, uint8_t* pcE);
-static uint32_t s2lp_calc_synth(uint32_t freq_xo, uint32_t frequency, uint8_t refdiv);
-static void s2lp_find_charge_pump_params(uint32_t freq_xo, uint32_t freq, uint8_t refdiv, uint8_t* cp_isel, uint8_t* pfd_split);
-static void s2lp_config_calc_time_consts(struct s2lp_ctx_s *pv, uint32_t drate);
+// Private functions prototypes
 static error_t s2lp_build_rf_config(struct s2lp_ctx_s *pv, struct dev_rfpacket_rq_s *rq);
 static error_t s2lp_build_pk_config(struct s2lp_ctx_s *pv, struct dev_rfpacket_rq_s *rq);
+
+
+// Private functions
+
+#ifndef CONFIG_DEVICE_RFPACKET_STATIC_RF_CONFIG
 
 static uint32_t s2lp_calc_datarate(uint32_t freq_xo, uint16_t cM, uint8_t cE) {
   uint64_t dr;
@@ -301,80 +298,6 @@ static void s2lp_find_charge_pump_params(uint32_t freq_xo, uint32_t freq, uint8_
   }
 }
 
-#ifdef CONFIG_DRIVER_RFPACKET_S2LP_LDC
-static void s2lp_find_wut_params(uint32_t timeval, uint8_t* pCount , uint8_t* pPresc, uint8_t* pMult) {
-  uint32_t n;
-  uint8_t i;
-
-  // Calc multiplier value
-  for(i = 0; i < 4; i++) {
-    if(timeval < (((uint32_t)((uint64_t)1000000 * 65536 / S2LP_FREQ_RCO)) << i)) {
-      break;
-    }
-  }
-  (*pMult) = i;
-  /* N cycles in the time base of the timer:
-     - clock of the timer is RCO frequency
-     - divide times 1000000 more because we have an input in us
-  */
-  n = (uint32_t)((uint64_t)timeval * (S2LP_FREQ_RCO >> i) / 1000000);
-
-  // Check if possible to reach that target with prescaler and counter of S2LP
-  if(n / 0xFF > 0xFD) {
-    // If not return the maximum possible value
-    (*pCount) = 0xFF;
-    (*pPresc) = 0xFF;
-    return;
-  }
-  // Prescaler is really 2 as min value
-  (*pPresc) = (n / 0xFF) + 2;
-  (*pCount) = n / (*pPresc);
-  // Decrement prescaler and counter according to the logic of this timer in S2LP
-  (*pPresc)--;
-  if((*pCount) > 1) {
-    (*pCount)--;
-  } else {
-    (*pCount) = 1;
-  }
-}
-
-static void s2lp_find_rxt_params(uint32_t freq_xo, uint32_t timeval , uint8_t* pCount , uint8_t* pPresc) {
-  uint32_t n;
-  uint64_t tgt,tgt1,tgt2;
-
-  if (CONFIG_DRIVER_RFPACKET_S2LP_FREQ_XO > S2LP_DIV_X0_THRESH) {
-    freq_xo /= 2;
-  }
-
-  /* N cycles in the time base of the timer:
-     - clock of the timer is freq_xo/1210
-     - divide times 1000000 more because we have an input in us
-  */
-  tgt = (uint64_t)timeval * freq_xo;
-  n = (uint32_t)(tgt / 1210000000);
-  tgt1 = (uint64_t)1210000000 * n;
-  tgt2 = (uint64_t)1210000000 * (n + 1);
-
-  n = ((tgt2 - tgt) < (tgt - tgt1)) ? (n + 1) : (n);
-
-  // Check if possible to reach that target with prescaler and counter of S2LP
-  if(n / 0xFF > 0xFD) {
-    // If not return the maximum possible value
-    (*pCount) = 0xFF;
-    (*pPresc) = 0xFF;
-    return;
-  }
-  // Prescaler is really 2 as min value
-  (*pPresc) = (n / 0xFF) + 2;
-  (*pCount) = n / (*pPresc);
-  // Decrement prescaler and counter according to the logic of this timer in S2LP
-  (*pPresc)--;
-  if((*pCount) == 0) {
-    (*pCount) = 1;
-  }
-}
-#endif
-
 static void s2lp_config_calc_time_consts(struct s2lp_ctx_s *pv, uint32_t drate) {
     // Calc time byte in us
   dev_timer_delay_t tb = 8000000 / drate;
@@ -384,10 +307,8 @@ static void s2lp_config_calc_time_consts(struct s2lp_ctx_s *pv, uint32_t drate) 
   pv->ccad = 2 * 8 * pv->gctx.time_byte + pv->bt;
 }
 
-static error_t s2lp_build_rf_config(struct s2lp_ctx_s *pv, struct dev_rfpacket_rq_s *rq) {
+static error_t s2lp_build_dynamic_rf_config(struct s2lp_ctx_s *pv, struct dev_rfpacket_rq_s *rq) {
   const struct dev_rfpacket_rf_cfg_s *cfg = rq->rf_cfg;
-
-  logk_trace("RF configuration");
 
   // Retrieve data struct
   const struct dev_rfpacket_rf_cfg_fairtx_s *fairtx = NULL;
@@ -624,11 +545,89 @@ static error_t s2lp_build_rf_config(struct s2lp_ctx_s *pv, struct dev_rfpacket_r
   pv->curr_rf_cfg_data = pv->rf_cfg_array;
   return 0;
 }
+#endif
 
-static error_t s2lp_build_pk_config(struct s2lp_ctx_s *pv, struct dev_rfpacket_rq_s *rq) {
+
+
+#ifndef CONFIG_DEVICE_RFPACKET_STATIC_PKT_CONFIG
+
+#ifdef CONFIG_DRIVER_RFPACKET_S2LP_LDC
+
+static void s2lp_find_wut_params(uint32_t timeval, uint8_t* pCount , uint8_t* pPresc, uint8_t* pMult) {
+  uint32_t n;
+  uint8_t i;
+
+  // Calc multiplier value
+  for(i = 0; i < 4; i++) {
+    if(timeval < (((uint32_t)((uint64_t)1000000 * 65536 / S2LP_FREQ_RCO)) << i)) {
+      break;
+    }
+  }
+  (*pMult) = i;
+  /* N cycles in the time base of the timer:
+     - clock of the timer is RCO frequency
+     - divide times 1000000 more because we have an input in us
+  */
+  n = (uint32_t)((uint64_t)timeval * (S2LP_FREQ_RCO >> i) / 1000000);
+
+  // Check if possible to reach that target with prescaler and counter of S2LP
+  if(n / 0xFF > 0xFD) {
+    // If not return the maximum possible value
+    (*pCount) = 0xFF;
+    (*pPresc) = 0xFF;
+    return;
+  }
+  // Prescaler is really 2 as min value
+  (*pPresc) = (n / 0xFF) + 2;
+  (*pCount) = n / (*pPresc);
+  // Decrement prescaler and counter according to the logic of this timer in S2LP
+  (*pPresc)--;
+  if((*pCount) > 1) {
+    (*pCount)--;
+  } else {
+    (*pCount) = 1;
+  }
+}
+
+static void s2lp_find_rxt_params(uint32_t freq_xo, uint32_t timeval , uint8_t* pCount , uint8_t* pPresc) {
+  uint32_t n;
+  uint64_t tgt,tgt1,tgt2;
+
+  if (CONFIG_DRIVER_RFPACKET_S2LP_FREQ_XO > S2LP_DIV_X0_THRESH) {
+    freq_xo /= 2;
+  }
+
+  /* N cycles in the time base of the timer:
+     - clock of the timer is freq_xo/1210
+     - divide times 1000000 more because we have an input in us
+  */
+  tgt = (uint64_t)timeval * freq_xo;
+  n = (uint32_t)(tgt / 1210000000);
+  tgt1 = (uint64_t)1210000000 * n;
+  tgt2 = (uint64_t)1210000000 * (n + 1);
+
+  n = ((tgt2 - tgt) < (tgt - tgt1)) ? (n + 1) : (n);
+
+  // Check if possible to reach that target with prescaler and counter of S2LP
+  if(n / 0xFF > 0xFD) {
+    // If not return the maximum possible value
+    (*pCount) = 0xFF;
+    (*pPresc) = 0xFF;
+    return;
+  }
+  // Prescaler is really 2 as min value
+  (*pPresc) = (n / 0xFF) + 2;
+  (*pCount) = n / (*pPresc);
+  // Decrement prescaler and counter according to the logic of this timer in S2LP
+  (*pPresc)--;
+  if((*pCount) == 0) {
+    (*pCount) = 1;
+  }
+}
+#endif
+
+static error_t s2lp_build_dynamic_pk_config(struct s2lp_ctx_s *pv, struct dev_rfpacket_rq_s *rq) {
   const struct dev_rfpacket_pk_cfg_s *cfg = rq->pk_cfg;
-
-  logk_trace("PKT configuration");
 
   // Retrieve data struct
   const struct dev_rfpacket_pk_cfg_basic_s *cbasic = NULL;
@@ -821,10 +820,49 @@ static error_t s2lp_build_pk_config(struct s2lp_ctx_s *pv, struct dev_rfpacket_r
   pv->curr_pk_cfg_data = pv->pk_cfg_array;
   return 0;
 }
+#endif
 
 
 
 
+static error_t s2lp_build_rf_config(struct s2lp_ctx_s *pv, struct dev_rfpacket_rq_s *rq) {
+  const struct dev_rfpacket_rf_cfg_s *cfg = rq->rf_cfg;
+
+  logk_trace("RF configuration");
+
+  switch (cfg->mod) {
+#ifndef CONFIG_DEVICE_RFPACKET_STATIC_RF_CONFIG
+    case DEV_RFPACKET_GFSK:
+    case DEV_RFPACKET_FSK:
+    case DEV_RFPACKET_ASK:
+      return s2lp_build_dynamic_rf_config(pv, rq);
+#endif
+
+
+    default:
+      return -ENOTSUP;    
+  }
+}
+
+static error_t s2lp_build_pk_config(struct s2lp_ctx_s *pv, struct dev_rfpacket_rq_s *rq) {
+  const struct dev_rfpacket_pk_cfg_s *cfg = rq->pk_cfg;
+
+  logk_trace("PKT configuration");
+
+  switch (cfg->format) {
+#ifndef CONFIG_DEVICE_RFPACKET_STATIC_PKT_CONFIG
+    case DEV_RFPACKET_FMT_SLPC:
+      return s2lp_build_dynamic_pk_config(pv, rq);
+#endif
+
+
+    default:
+      return -ENOTSUP;
+  }
+}
+
+
+// Public functions
 
 error_t s2lp_build_config(struct s2lp_ctx_s *pv) {
   error_t err = 0;
