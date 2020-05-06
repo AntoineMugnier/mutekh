@@ -99,7 +99,7 @@ static void s2lp_send_config(struct s2lp_ctx_s *pv) {
   logk_trace("Send config to device");
 
   s2lp_bytecode_start(pv, &s2lp_entry_config,
-    S2LP_ENTRY_CONFIG_BCARGS(pv->curr_rf_cfg, pv->curr_pk_cfg));
+    S2LP_ENTRY_CONFIG_BCARGS(pv->curr_rf_cfg_data, pv->curr_pk_cfg_data));
 }
 
 static dev_timer_delay_t s2lp_calc_lbt_rand_time(dev_timer_value_t timebase, dev_timer_value_t curr_time) {
