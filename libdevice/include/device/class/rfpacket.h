@@ -425,8 +425,8 @@ struct dev_rfpacket_pk_cfg_static_s
 {
   struct dev_rfpacket_pk_cfg_s base;
 
-  /** id of the configuration blob to use. */
-  uint8_t cfg_id;
+  /** name of the configuration blob to use. */
+  char *cfg_name;
 };
 
 STRUCT_INHERIT(dev_rfpacket_pk_cfg_static_s, dev_rfpacket_pk_cfg_s, base);
