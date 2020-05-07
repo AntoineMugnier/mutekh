@@ -543,6 +543,7 @@ static error_t s2lp_build_dynamic_rf_config(struct s2lp_ctx_s *pv, struct dev_rf
 
   // Set current rf_cfg
   pv->curr_rf_cfg_data = pv->rf_cfg_array;
+  pv->curr_rf_cfg_size = S2LP_RF_CFG_DATA_SIZE;
   return 0;
 }
 #endif
@@ -813,11 +814,14 @@ static error_t s2lp_build_dynamic_pk_config(struct s2lp_ctx_s *pv, struct dev_rf
   s2lp_find_rxt_params(CONFIG_DRIVER_RFPACKET_S2LP_FREQ_XO, S2LP_LDC_RXT_US, pRxtCount, pRxtPresc);
 #endif
 
+  //printk("Pk config array: %P\n", pv->pk_cfg_array, S2LP_PK_CFG_ARRAY_SIZE);
+
   // Set current protocol values
   pv->curr_prot1 = *pProt1;
   pv->curr_prot2 = *pProt2;
   // Set current pk_config
   pv->curr_pk_cfg_data = pv->pk_cfg_array;
+  pv->curr_pk_cfg_size = S2LP_PK_CFG_DATA_SIZE;
   return 0;
 }
 #endif

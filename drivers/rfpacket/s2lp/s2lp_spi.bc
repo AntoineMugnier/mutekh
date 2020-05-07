@@ -226,14 +226,14 @@
         .export s2lp_entry_config
         .input %0 rf_buff
         .input %1 pk_buff
-        .clobber %2 cmd, %3, %4, %5 tmp
+        .clobber %2, %3, %4, %5 tmp
         // Test rf config flags
         ld8e                   %tmp,                   %S2LP_CTX_PV,   _offsetof(s2lp_ctx_s, flags, 1)
         tst32s                 %tmp,                   bitpos(S2LP_FLAGS_RF_CONFIG_OK)
             jmp8               config_packet
         // Send rf config
         mov                    %s2lp_config:buffer,    %rf_buff
-        cst8                   %s2lp_config:buff_size, S2LP_RF_CFG_DATA_SIZE
+        ld8e                   %s2lp_config:buff_size, %S2LP_CTX_PV,   _offsetof(s2lp_ctx_s, curr_rf_cfg_size, 1)
         call16                 %s2lp_config:link,      s2lp_config
     config_packet:
         // Test packet config flags
@@ -242,7 +242,7 @@
             jmp8               config_end
         // Send packet config
         mov                    %s2lp_config:buffer,    %pk_buff
-        cst8                   %s2lp_config:buff_size, S2LP_PK_CFG_DATA_SIZE
+        ld8e                   %s2lp_config:buff_size, %S2LP_CTX_PV,   _offsetof(s2lp_ctx_s, curr_pk_cfg_size, 1)
         call16                 %s2lp_config:link,      s2lp_config
     config_end:
         end

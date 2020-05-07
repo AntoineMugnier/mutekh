@@ -158,6 +158,8 @@ struct s2lp_ctx_s {
   // Config values
   uint8_t *curr_rf_cfg_data;
   uint8_t *curr_pk_cfg_data;
+  uint8_t curr_rf_cfg_size;
+  uint8_t curr_pk_cfg_size;
   uint8_t curr_prot1;
   uint8_t curr_prot2;
   // Gpio map
