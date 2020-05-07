@@ -815,6 +815,7 @@ static error_t s2lp_build_dynamic_pk_config(struct s2lp_ctx_s *pv, struct dev_rf
 #endif
 
   //printk("Pk config array: %P\n", pv->pk_cfg_array, S2LP_PK_CFG_ARRAY_SIZE);
+  //printk("protocol regs: %d, %d\n", *pProt1, *pProt2);
 
   // Set current protocol values
   pv->curr_prot1 = *pProt1;
@@ -826,7 +827,39 @@ static error_t s2lp_build_dynamic_pk_config(struct s2lp_ctx_s *pv, struct dev_rf
 }
 #endif
 
+static error_t s2lp_build_static_rf_config(struct s2lp_ctx_s *pv, struct dev_rfpacket_rq_s *rq) {
+  const struct dev_rfpacket_rf_cfg_static_s *cstatic = const_dev_rfpacket_rf_cfg_static_s_cast(rq->rf_cfg);
+  struct s2lp_rf_cfg_s *cfg = NULL;
 
+  // Retrieve config
+  error_t err = device_get_param_blob(pv->dev, cstatic->cfg_name, 0, (const void **)cfg);
+  if (err != 0) {
+    return err;
+  }
+  assert(cfg);
+  // Note info
+  pv->curr_rf_cfg_data = cfg->config_data;
+  pv->curr_rf_cfg_size = cfg->config_size;
+  return 0;
+}
+
+static error_t s2lp_build_static_pk_config(struct s2lp_ctx_s *pv, struct dev_rfpacket_rq_s *rq) {
+  const struct dev_rfpacket_pk_cfg_static_s *cstatic = const_dev_rfpacket_pk_cfg_static_s_cast(rq->pk_cfg);
+  struct s2lp_pk_cfg_s *cfg = NULL;
+
+  // Retrieve config
+  error_t err = device_get_param_blob(pv->dev, cstatic->cfg_name, 0, (const void **)cfg);
+  if (err != 0) {
+    return err;
+  }
+  assert(cfg);
+  // Note info
+  pv->curr_prot1 = cfg->prot1;
+  pv->curr_prot2 = cfg->prot2;
+  pv->curr_pk_cfg_data = cfg->config_data;
+  pv->curr_pk_cfg_size = cfg->config_size;
+  return 0;
+}
 
 
 static error_t s2lp_build_rf_config(struct s2lp_ctx_s *pv, struct dev_rfpacket_rq_s *rq) {
@@ -842,6 +875,11 @@ static error_t s2lp_build_rf_config(struct s2lp_ctx_s *pv, struct dev_rfpacket_r
       return s2lp_build_dynamic_rf_config(pv, rq);
 #endif
 
+    case DEV_RFPACKET_RF_STATIC:
+      return s2lp_build_static_rf_config(pv, rq);
+
+    case DEV_RFPACKET_RF_EXTERN:
+      return 0;
 
     default:
       return -ENOTSUP;    
@@ -859,6 +897,11 @@ static error_t s2lp_build_pk_config(struct s2lp_ctx_s *pv, struct dev_rfpacket_r
       return s2lp_build_dynamic_pk_config(pv, rq);
 #endif
 
+    case DEV_RFPACKET_FMT_STATIC:
+      return s2lp_build_static_pk_config(pv, rq);
+
+    case DEV_RFPACKET_FMT_EXTERN:
+      return 0;
 
     default:
       return -ENOTSUP;
@@ -875,14 +918,20 @@ error_t s2lp_build_config(struct s2lp_ctx_s *pv) {
   if ((pv->flags & S2LP_FLAGS_RF_CONFIG_OK) == 0) {
     err = s2lp_build_rf_config(pv, rq);
     if (err != 0) {
+      // Clear rf cfg values
       pv->rf_cfg = NULL;
+      pv->curr_rf_cfg_data = NULL;
+      pv->curr_rf_cfg_size = 0;
       return err;
     }
   }
   if ((pv->flags & S2LP_FLAGS_PK_CONFIG_OK) == 0) {
     err = s2lp_build_pk_config(pv, rq);
     if (err != 0) {
+      // Clear pk  cfg values
       pv->pk_cfg = NULL;
+      pv->curr_pk_cfg_data = NULL;
+      pv->curr_pk_cfg_size = 0;
       return err;
     }
   }

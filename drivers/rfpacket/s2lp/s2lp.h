@@ -115,6 +115,21 @@
 // Byte code functions
 BC_CCALL_FUNCTION(s2lp_alloc);
 
+// Structs used for packet static and extern configurations
+struct s2lp_pk_cfg_s {
+  uint8_t prot1;
+  uint8_t prot2;
+  uint8_t config_size;
+  uint8_t config_data[];
+};
+
+// Structs used for rf static and extern configurations
+struct s2lp_rf_cfg_s {
+  uint8_t config_size;
+  uint8_t config_data[];  
+};
+
+// Irq sources enum
 enum s2lp_irq_src {
   S2LP_IRQ_SRC_NIRQ = 0,
   S2LP_IRQ_SRC_COUNT,
