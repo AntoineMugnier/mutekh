@@ -181,7 +181,7 @@ static void shell_rfpacket_print_rf_cfg(struct termui_console_s *con,
       }
     case DEV_RFPACKET_RF_STATIC: {
       struct dev_rfpacket_rf_cfg_static_s *cstatic = dev_rfpacket_rf_cfg_static_s_cast(rf);
-      termui_con_printf(con, "   Blob id:    %d\n", cstatic->cfg_id);
+      termui_con_printf(con, "   Blob name:    %s\n", cstatic->cfg_name);
       break;
       }
     case DEV_RFPACKET_RF_EXTERN: {
