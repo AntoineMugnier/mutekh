@@ -752,16 +752,20 @@ static void rfpacket_idle(struct dev_rfpacket_ctx_s *pv) {
     case -EAGAIN:
       // Configuration is being applied
       return;
+
+    default:
     case -ENOTSUP:
       // Unsupported configuration
       dev_rfpacket_config_notsup(pv, rq);
       return;
+
     case -ETIMEDOUT:
       // RQ timeout elapsed
       rfpacket_end_rxc(pv, -ETIMEDOUT);
       return;
-    default:
-      // Configuration is already applied
+
+    case 0:
+      // Configuration is OK
       rfpacket_set_state(pv, DEV_RFPACKET_STATE_READY);
     break;
   }
@@ -1134,7 +1138,7 @@ void dev_rfpacket_req_done(struct dev_rfpacket_ctx_s *pv) {
       if (pv->status == DEV_RFPACKET_STATUS_JAMMING_ERR) {
         logk_trace("jammed");
         assert(pv->rxrq == NULL);
-        rfpacket_end_rxc(pv, -EAGAIN);
+        rfpacket_end_rxc(pv, -EBUSY);
       } else if (pv->rxc_flags & (bit(RFPACKET_FLAG_CANCELED) | bit(RFPACKET_FLAG_TIMEOUT))) {
         rfpacket_end_rxrq(pv);
         rfpacket_end_rxc(pv, 0);
