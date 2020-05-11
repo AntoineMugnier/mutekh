@@ -179,12 +179,12 @@ static void shell_rfpacket_print_rf_cfg(struct termui_console_s *con,
       termui_con_printf(con, "   IQ iverted:   %d\n", lora->iq_inverted);
       break;
       }
-    case DEV_RFPACKET_RF_STATIC: {
+    case DEV_RFPACKET_MOD_STATIC: {
       struct dev_rfpacket_rf_cfg_static_s *cstatic = dev_rfpacket_rf_cfg_static_s_cast(rf);
       termui_con_printf(con, "   Blob name:    %s\n", cstatic->cfg_name);
       break;
       }
-    case DEV_RFPACKET_RF_EXTERN: {
+    case DEV_RFPACKET_MOD_EXTERN: {
       struct dev_rfpacket_rf_cfg_extern_s *cextern = dev_rfpacket_rf_cfg_extern_s_cast(rf);
       termui_con_printf(con, "   Config pointer:    %d\n", cextern->p_cfg);
       break;

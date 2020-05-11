@@ -111,10 +111,10 @@ enum dev_rfpacket_modulation_e
   DEV_RFPACKET_LORA,
   /** Static configuration, configuration comes from data blobs defined as device resources
       @see dev_rfpacket_rf_cfg_static_s */
-  DEV_RFPACKET_RF_STATIC,
+  DEV_RFPACKET_MOD_STATIC,
   /** External configuration, configuration comes from an external array
       @see dev_rfpacket_rf_cfg_extern_s */
-  DEV_RFPACKET_RF_EXTERN,
+  DEV_RFPACKET_MOD_EXTERN,
 };
 
 /** This stores RF and modulation configuration. This may be inherited

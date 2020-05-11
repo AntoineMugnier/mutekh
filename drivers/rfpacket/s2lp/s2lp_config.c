@@ -884,11 +884,11 @@ static error_t s2lp_build_rf_config(struct s2lp_ctx_s *pv, struct dev_rfpacket_r
       return s2lp_build_dynamic_rf_config(pv, rq);
 #endif
 
-    case DEV_RFPACKET_RF_STATIC:
+    case DEV_RFPACKET_MOD_STATIC:
       return s2lp_build_static_rf_config(pv, rq);
 
-    case DEV_RFPACKET_RF_EXTERN:
       return 0;
+    case DEV_RFPACKET_MOD_EXTERN:
 
     default:
       return -ENOTSUP;    
