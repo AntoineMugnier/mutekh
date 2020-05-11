@@ -847,7 +847,21 @@ static error_t s2lp_build_static_rf_config(struct s2lp_ctx_s *pv, struct dev_rfp
   pv->curr_rf_cfg_data = cfg->config_data;
   return 0;
 }
+
+static error_t s2lp_build_extern_rf_config(struct s2lp_ctx_s *pv, struct dev_rfpacket_rq_s *rq) {
+  const struct dev_rfpacket_rf_cfg_extern_s *cextern = const_dev_rfpacket_rf_cfg_extern_s_cast(rq->rf_cfg);
+
+  // Retrieve config
+  struct s2lp_rf_cfg_s *cfg = cextern->p_cfg;
+  assert(cfg);
+  // Calc time constants
+  s2lp_config_calc_time_consts(pv, cfg->drate);
+  // Note info
+  //printk("RF CONFIG: %d, %d, %d, %d, %P\n", cfg->drate, cfg->jam_rssi, cfg->lbt_rssi, cfg->config_size, cfg->config_data, cfg->config_size);
+  pv->jam_rssi = cfg->jam_rssi;
+  pv->lbt_rssi = cfg->lbt_rssi;
   pv->curr_rf_cfg_size = cfg->config_size;
+  pv->curr_rf_cfg_data = cfg->config_data;
   return 0;
 }
 
@@ -870,6 +884,20 @@ static error_t s2lp_build_static_pk_config(struct s2lp_ctx_s *pv, struct dev_rfp
   return 0;
 }
 
+static error_t s2lp_build_extern_pk_config(struct s2lp_ctx_s *pv, struct dev_rfpacket_rq_s *rq) {
+  const struct dev_rfpacket_pk_cfg_extern_s *cextern = const_dev_rfpacket_pk_cfg_extern_s_cast(rq->pk_cfg);
+
+  // Retrieve config
+  struct s2lp_pk_cfg_s *cfg = cextern->p_cfg;
+  assert(cfg);
+  // Note info
+  //printk("PK CONFIG: 0x%02x, 0x%02x, %d, %P\n", cfg->prot1, cfg->prot2, cfg->config_size, cfg->config_data, cfg->config_size);
+  pv->curr_prot1 = cfg->prot1;
+  pv->curr_prot2 = cfg->prot2;
+  pv->curr_pk_cfg_size = cfg->config_size;
+  pv->curr_pk_cfg_data = cfg->config_data;
+  return 0;
+}
 
 static error_t s2lp_build_rf_config(struct s2lp_ctx_s *pv, struct dev_rfpacket_rq_s *rq) {
   const struct dev_rfpacket_rf_cfg_s *cfg = rq->rf_cfg;
@@ -887,8 +915,8 @@ static error_t s2lp_build_rf_config(struct s2lp_ctx_s *pv, struct dev_rfpacket_r
     case DEV_RFPACKET_MOD_STATIC:
       return s2lp_build_static_rf_config(pv, rq);
 
-      return 0;
     case DEV_RFPACKET_MOD_EXTERN:
+      return s2lp_build_extern_rf_config(pv, rq);
 
     default:
       return -ENOTSUP;    
@@ -910,7 +938,7 @@ static error_t s2lp_build_pk_config(struct s2lp_ctx_s *pv, struct dev_rfpacket_r
       return s2lp_build_static_pk_config(pv, rq);
 
     case DEV_RFPACKET_FMT_EXTERN:
-      return 0;
+      return s2lp_build_extern_pk_config(pv, rq);
 
     default:
       return -ENOTSUP;
