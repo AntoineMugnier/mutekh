@@ -120,11 +120,20 @@ static const uint16_t s2lp_chan_bw_table[90] = {
 };
 
 // Private functions prototypes
+static void s2lp_config_calc_time_consts(struct s2lp_ctx_s *pv, uint32_t drate);
 static error_t s2lp_build_rf_config(struct s2lp_ctx_s *pv, struct dev_rfpacket_rq_s *rq);
 static error_t s2lp_build_pk_config(struct s2lp_ctx_s *pv, struct dev_rfpacket_rq_s *rq);
 
 
 // Private functions
+static void s2lp_config_calc_time_consts(struct s2lp_ctx_s *pv, uint32_t drate) {
+    // Calc time byte in us
+  dev_timer_delay_t tb = 8000000 / drate;
+  dev_timer_init_sec(pv->timer, &(pv->gctx.time_byte), 0, tb, 1000000);
+  // Calc other time constants
+  pv->mpst = 2 * (S2LP_FIFO_SIZE - S2LP_FIFO_THRESHOLD) * pv->gctx.time_byte + pv->bt;
+  pv->ccad = 2 * 8 * pv->gctx.time_byte + pv->bt;
+}
 
 #ifndef CONFIG_DEVICE_RFPACKET_STATIC_RF_CONFIG
 
@@ -296,15 +305,6 @@ static void s2lp_find_charge_pump_params(uint32_t freq_xo, uint32_t freq, uint8_
       *pfd_split = 1;
     }
   }
-}
-
-static void s2lp_config_calc_time_consts(struct s2lp_ctx_s *pv, uint32_t drate) {
-    // Calc time byte in us
-  dev_timer_delay_t tb = 8000000 / drate;
-  dev_timer_init_sec(pv->timer, &(pv->gctx.time_byte), 0, tb, 1000000);
-  // Calc other time constants
-  pv->mpst = 2 * (S2LP_FIFO_SIZE - S2LP_FIFO_THRESHOLD) * pv->gctx.time_byte + pv->bt;
-  pv->ccad = 2 * 8 * pv->gctx.time_byte + pv->bt;
 }
 
 static error_t s2lp_build_dynamic_rf_config(struct s2lp_ctx_s *pv, struct dev_rfpacket_rq_s *rq) {
@@ -832,13 +832,21 @@ static error_t s2lp_build_static_rf_config(struct s2lp_ctx_s *pv, struct dev_rfp
   struct s2lp_rf_cfg_s *cfg = NULL;
 
   // Retrieve config
-  error_t err = device_get_param_blob(pv->dev, cstatic->cfg_name, 0, (const void **)cfg);
+  error_t err = device_get_param_blob(pv->dev, cstatic->cfg_name, 0, (const void **)&cfg);
   if (err != 0) {
     return err;
   }
   assert(cfg);
+  // Calc time constants
+  s2lp_config_calc_time_consts(pv, cfg->drate);
   // Note info
+  //printk("RF CONFIG: %d, %d, %d, %d, %P\n", cfg->drate, cfg->jam_rssi, cfg->lbt_rssi, cfg->config_size, cfg->config_data, cfg->config_size);
+  pv->jam_rssi = cfg->jam_rssi;
+  pv->lbt_rssi = cfg->lbt_rssi;
+  pv->curr_rf_cfg_size = cfg->config_size;
   pv->curr_rf_cfg_data = cfg->config_data;
+  return 0;
+}
   pv->curr_rf_cfg_size = cfg->config_size;
   return 0;
 }
@@ -848,16 +856,17 @@ static error_t s2lp_build_static_pk_config(struct s2lp_ctx_s *pv, struct dev_rfp
   struct s2lp_pk_cfg_s *cfg = NULL;
 
   // Retrieve config
-  error_t err = device_get_param_blob(pv->dev, cstatic->cfg_name, 0, (const void **)cfg);
+  error_t err = device_get_param_blob(pv->dev, cstatic->cfg_name, 0, (const void **)&cfg);
   if (err != 0) {
     return err;
   }
   assert(cfg);
   // Note info
+  //printk("PK CONFIG: 0x%02x, 0x%02x, %d, %P\n", cfg->prot1, cfg->prot2, cfg->config_size, cfg->config_data, cfg->config_size);
   pv->curr_prot1 = cfg->prot1;
   pv->curr_prot2 = cfg->prot2;
-  pv->curr_pk_cfg_data = cfg->config_data;
   pv->curr_pk_cfg_size = cfg->config_size;
+  pv->curr_pk_cfg_data = cfg->config_data;
   return 0;
 }
 

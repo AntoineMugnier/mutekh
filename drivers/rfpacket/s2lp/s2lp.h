@@ -125,6 +125,9 @@ struct s2lp_pk_cfg_s {
 
 // Structs used for rf static and extern configurations
 struct s2lp_rf_cfg_s {
+  uint32_t drate;
+  uint8_t jam_rssi;
+  uint8_t lbt_rssi;
   uint8_t config_size;
   uint8_t config_data[];  
 };

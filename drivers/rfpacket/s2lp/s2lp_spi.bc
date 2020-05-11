@@ -452,6 +452,8 @@
             ret                %link
         // Check if command size is coherent
         ld8i                   %size,          %buffer
+        eq0                    %size,
+            abort
         lt                     %buff_size,     %size
             abort
         // Send data to spi
