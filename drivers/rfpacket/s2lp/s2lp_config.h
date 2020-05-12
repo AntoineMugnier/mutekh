@@ -49,13 +49,7 @@ extern const uint8_t s2lp_config[];
 // Header Timer
 // (25) TIMERS5 to TIMERS2
 
-// Register offsets
-#define S2LP_PKCFG_PROT2_OFFSET 19
-#define S2LP_PKCFG_PROT1_OFFSET 20
 
-// LDC time values
-#define S2LP_LDC_RXT_US 2500
-#define S2LP_LDC_WUT_US 500
 
 // Public functions
 error_t s2lp_build_config(struct s2lp_ctx_s *pv);
