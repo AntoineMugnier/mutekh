@@ -336,6 +336,7 @@ static error_t s2lp_build_dynamic_rf_config(struct s2lp_ctx_s *pv, struct dev_rf
   }
   // Calculate time values
   s2lp_config_calc_time_consts(pv, common->drate);
+  pv->curr_drate = common->drate;
 
   // Configure xo dig div
   uint32_t freq_xo = CONFIG_DRIVER_RFPACKET_S2LP_FREQ_XO;
@@ -798,20 +799,18 @@ static error_t s2lp_build_dynamic_pk_config(struct s2lp_ctx_s *pv, struct dev_rf
   uint8_t *pWutPresc = &pv->pk_cfg_array[27];
   uint8_t *pWutCount = &pv->pk_cfg_array[28];
 
-  // TODO SET LDC CALC FUNCTIONS
-  //  Twut < (tx_pb_len - 8) * Tbit - 0.1ms
-  // dev_timer_delay_t time_byte = 8000000 / rq->rf_cfg->drate;
-  // uint32_t max_twut = (cbasic->tx_pb_len / 8 - 1) * time_byte;
-  // max_twut = (max_twut > 100) ? (max_twut - 100) : (max_twut);
-  // uint32_t max_trxt = (cbasic->tx_pb_len + cbasic->sw_len + 1) / 8 * time_byte;
+  // Calc ldc timing values
+  dev_timer_delay_t time_byte = 8000000 / pv->curr_drate;
+  uint32_t ldc_wut = (cbasic->rx_pb_len / 8 - 1) * time_byte;
+  ldc_wut = (ldc_wut > 100) ? (ldc_wut - 100) : (ldc_wut);
+  uint32_t ldc_rxt = (cbasic->rx_pb_len + cbasic->sw_len + 1) / 8 * time_byte;
+  //printk("LDC wake up timer: %d, LDC rx timeout: %d\n", ldc_wut, ldc_rxt);
 
-  // printk("Maw Twut = %d, Max Trxt = %d\n", max_twut, max_trxt);
-
-  s2lp_find_wut_params(S2LP_LDC_WUT_US, pWutCount, pWutPresc, &mult);
+  s2lp_find_wut_params(ldc_wut, pWutCount, pWutPresc, &mult);
 
   *pProt2 |= (mult & S2LP_PROTOCOL2_LDC_TIMER_MULT_REGMASK);
 
-  s2lp_find_rxt_params(CONFIG_DRIVER_RFPACKET_S2LP_FREQ_XO, S2LP_LDC_RXT_US, pRxtCount, pRxtPresc);
+  s2lp_find_rxt_params(CONFIG_DRIVER_RFPACKET_S2LP_FREQ_XO, ldc_rxt, pRxtCount, pRxtPresc);
 #endif
 
   //printk("Pk config array: %P\n", pv->pk_cfg_array, S2LP_PK_CFG_ARRAY_SIZE);
@@ -843,6 +842,7 @@ static error_t s2lp_build_static_rf_config(struct s2lp_ctx_s *pv, struct dev_rfp
   //printk("RF CONFIG: %d, %d, %d, %d, %P\n", cfg->drate, cfg->jam_rssi, cfg->lbt_rssi, cfg->config_size, cfg->config_data, cfg->config_size);
   pv->jam_rssi = cfg->jam_rssi;
   pv->lbt_rssi = cfg->lbt_rssi;
+  pv->curr_drate = cfg->drate;
   pv->curr_rf_cfg_size = cfg->config_size;
   pv->curr_rf_cfg_data = cfg->config_data;
   return 0;
@@ -860,6 +860,7 @@ static error_t s2lp_build_extern_rf_config(struct s2lp_ctx_s *pv, struct dev_rfp
   //printk("RF CONFIG: %d, %d, %d, %d, %P\n", cfg->drate, cfg->jam_rssi, cfg->lbt_rssi, cfg->config_size, cfg->config_data, cfg->config_size);
   pv->jam_rssi = cfg->jam_rssi;
   pv->lbt_rssi = cfg->lbt_rssi;
+  pv->curr_drate = cfg->drate;
   pv->curr_rf_cfg_size = cfg->config_size;
   pv->curr_rf_cfg_data = cfg->config_data;
   return 0;

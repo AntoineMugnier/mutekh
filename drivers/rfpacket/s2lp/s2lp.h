@@ -184,6 +184,7 @@ struct s2lp_ctx_s {
   uint8_t curr_pk_cfg_size;
   uint8_t curr_prot1;
   uint8_t curr_prot2;
+  uint32_t curr_drate;
   // Gpio map
   gpio_id_t pin_map[2];
 };
