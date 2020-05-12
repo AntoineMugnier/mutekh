@@ -171,8 +171,12 @@ struct s2lp_ctx_s {
   const struct dev_rfpacket_rf_cfg_s *rf_cfg;
   const struct dev_rfpacket_pk_cfg_s *pk_cfg;
   // Config arrays
+#ifndef CONFIG_DEVICE_RFPACKET_STATIC_RF_CONFIG
   uint8_t rf_cfg_array[S2LP_RF_CFG_ARRAY_SIZE];
+#endif
+#ifndef CONFIG_DEVICE_RFPACKET_STATIC_PKT_CONFIG
   uint8_t pk_cfg_array[S2LP_PK_CFG_ARRAY_SIZE];
+#endif
   // Config values
   uint8_t *curr_rf_cfg_data;
   uint8_t *curr_pk_cfg_data;

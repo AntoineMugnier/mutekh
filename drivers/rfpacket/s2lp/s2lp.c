@@ -459,9 +459,12 @@ static DEV_INIT(s2lp_init) {
   pv->bc_status = S2LP_BC_STATUS_MISC;
 
   // Init config structs
+#ifndef CONFIG_DEVICE_RFPACKET_STATIC_RF_CONFIG
   s2lp_init_rf_cfg_array(pv->rf_cfg_array, S2LP_RF_CFG_ARRAY_SIZE);
+#endif
+#ifndef CONFIG_DEVICE_RFPACKET_STATIC_PKT_CONFIG
   s2lp_init_pk_cfg_array(pv->pk_cfg_array, S2LP_PK_CFG_ARRAY_SIZE);
-
+#endif
   // Init bytecode
   struct dev_spi_ctrl_bytecode_rq_s *srq = &pv->spi_rq;
   struct device_gpio_s *gpio;

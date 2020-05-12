@@ -1054,64 +1054,68 @@ uint32_t s2lp_config_get_freq(const struct dev_rfpacket_rf_cfg_s *cfg, uint8_t c
   return 0;
 }
 
-void s2lp_init_rf_cfg_array(uint8_t *pArray, uint16_t array_size) {
-  // Check size
-  assert(array_size == S2LP_RF_CFG_ARRAY_SIZE);
-  // Reset memory
-  memset(pArray, 0, array_size);
-  // Header Rssi th
-  pArray[0] = 0x03;
-  pArray[1] = S2LP_WRITE_REG_BYTE;
-  pArray[2] = S2LP_RSSI_TH_ADDR;
-  // Header modulation / channel filter
-  pArray[4] = 0x0a;
-  pArray[5] = S2LP_WRITE_REG_BYTE;
-  pArray[6] = S2LP_CH_SPACE_ADDR;
-  // Header power
-  pArray[15] = 0x06;
-  pArray[16] = S2LP_WRITE_REG_BYTE;
-  pArray[17] = S2LP_PA_POWER0_ADDR;
-  // Header frequency
-  pArray[22] = 0x06;
-  pArray[23] = S2LP_WRITE_REG_BYTE;
-  pArray[24] = S2LP_SYNT3_ADDR;
-  // Set reg default values
-  pArray[18] = 0x47; // PA_Power0
-  pArray[19] = 0x03; // PA_Config1
-  pArray[20] = 0x8a; // PA_Config0
-  pArray[21] = 0xd0; // Synth_Config2
-}
+#ifndef CONFIG_DEVICE_RFPACKET_STATIC_RF_CONFIG
+  void s2lp_init_rf_cfg_array(uint8_t *pArray, uint16_t array_size) {
+    // Check size
+    assert(array_size == S2LP_RF_CFG_ARRAY_SIZE);
+    // Reset memory
+    memset(pArray, 0, array_size);
+    // Header Rssi th
+    pArray[0] = 0x03;
+    pArray[1] = S2LP_WRITE_REG_BYTE;
+    pArray[2] = S2LP_RSSI_TH_ADDR;
+    // Header modulation / channel filter
+    pArray[4] = 0x0a;
+    pArray[5] = S2LP_WRITE_REG_BYTE;
+    pArray[6] = S2LP_CH_SPACE_ADDR;
+    // Header power
+    pArray[15] = 0x06;
+    pArray[16] = S2LP_WRITE_REG_BYTE;
+    pArray[17] = S2LP_PA_POWER0_ADDR;
+    // Header frequency
+    pArray[22] = 0x06;
+    pArray[23] = S2LP_WRITE_REG_BYTE;
+    pArray[24] = S2LP_SYNT3_ADDR;
+    // Set reg default values
+    pArray[18] = 0x47; // PA_Power0
+    pArray[19] = 0x03; // PA_Config1
+    pArray[20] = 0x8a; // PA_Config0
+    pArray[21] = 0xd0; // Synth_Config2
+  }
+#endif
 
-void s2lp_init_pk_cfg_array(uint8_t *pArray, uint16_t array_size) {
-  // Check size
-  assert(array_size == S2LP_PK_CFG_ARRAY_SIZE);
-  // Reset memory
-  memset(pArray, 0, array_size);
-  // Header PCKTCTRL
-  pArray[0] = 0x08; // Size
-  pArray[1] = S2LP_WRITE_REG_BYTE;
-  pArray[2] = S2LP_PCKTCTRL6_ADDR;
-  // Header SYNC
-  pArray[9] = 0x06;
-  pArray[10] = S2LP_WRITE_REG_BYTE;
-  pArray[11] = S2LP_SYNC3_ADDR;
-  // Header PROTOCOL
-  pArray[16] = 0x05;
-  pArray[17] = S2LP_WRITE_REG_BYTE;
-  pArray[18] = S2LP_PROTOCOL2_ADDR;
-  // Header TIMER
-  pArray[22] = 0x06;
-  pArray[23] = S2LP_WRITE_REG_BYTE;
-  pArray[24] = S2LP_TIMERS5_ADDR;
-  // Set reg default values
-  pArray[19] = 0x40; // PROTOCOL2
-  pArray[20] = S2LP_PROTOCOL1_AUTO_PCKT_FLT_REGMASK; // PROTOCOL1
-  pArray[21] = 0x08; // PROTOCOL0
-  pArray[25] = 0x01; // TIMER5
-  pArray[26] = 0x00; // TIMER4
-  pArray[27] = 0x01; // TIMER
-  pArray[28] = 0x00; // TIMER2
-}
+#ifndef CONFIG_DEVICE_RFPACKET_STATIC_PKT_CONFIG
+  void s2lp_init_pk_cfg_array(uint8_t *pArray, uint16_t array_size) {
+    // Check size
+    assert(array_size == S2LP_PK_CFG_ARRAY_SIZE);
+    // Reset memory
+    memset(pArray, 0, array_size);
+    // Header PCKTCTRL
+    pArray[0] = 0x08; // Size
+    pArray[1] = S2LP_WRITE_REG_BYTE;
+    pArray[2] = S2LP_PCKTCTRL6_ADDR;
+    // Header SYNC
+    pArray[9] = 0x06;
+    pArray[10] = S2LP_WRITE_REG_BYTE;
+    pArray[11] = S2LP_SYNC3_ADDR;
+    // Header PROTOCOL
+    pArray[16] = 0x05;
+    pArray[17] = S2LP_WRITE_REG_BYTE;
+    pArray[18] = S2LP_PROTOCOL2_ADDR;
+    // Header TIMER
+    pArray[22] = 0x06;
+    pArray[23] = S2LP_WRITE_REG_BYTE;
+    pArray[24] = S2LP_TIMERS5_ADDR;
+    // Set reg default values
+    pArray[19] = 0x40; // PROTOCOL2
+    pArray[20] = S2LP_PROTOCOL1_AUTO_PCKT_FLT_REGMASK; // PROTOCOL1
+    pArray[21] = 0x08; // PROTOCOL0
+    pArray[25] = 0x01; // TIMER5
+    pArray[26] = 0x00; // TIMER4
+    pArray[27] = 0x01; // TIMER
+    pArray[28] = 0x00; // TIMER2
+  }
+#endif
 
 
 

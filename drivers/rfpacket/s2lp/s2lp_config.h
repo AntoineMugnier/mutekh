@@ -62,7 +62,12 @@ error_t s2lp_build_config(struct s2lp_ctx_s *pv);
 uint8_t s2lp_build_pwr(struct s2lp_ctx_s *pv, int16_t pwr);
 bool s2lp_config_check_fairtx_valid(const struct dev_rfpacket_rf_cfg_s *rfcfg);
 uint32_t s2lp_config_get_freq(const struct dev_rfpacket_rf_cfg_s *cfg, uint8_t chan);
-void s2lp_init_rf_cfg_array(uint8_t *pArray, uint16_t array_size);
-void s2lp_init_pk_cfg_array(uint8_t *pArray, uint16_t array_size);
+
+#ifndef CONFIG_DEVICE_RFPACKET_STATIC_RF_CONFIG
+    void s2lp_init_rf_cfg_array(uint8_t *pArray, uint16_t array_size);
+#endif
+#ifndef CONFIG_DEVICE_RFPACKET_STATIC_PKT_CONFIG
+    void s2lp_init_pk_cfg_array(uint8_t *pArray, uint16_t array_size);
+#endif
 
 #endif
