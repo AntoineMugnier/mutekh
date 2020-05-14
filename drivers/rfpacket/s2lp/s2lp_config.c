@@ -127,7 +127,8 @@ static error_t s2lp_build_pk_config(struct s2lp_ctx_s *pv, struct dev_rfpacket_r
 
 // Private functions
 static void s2lp_config_calc_time_consts(struct s2lp_ctx_s *pv, uint32_t drate) {
-    // Calc time byte in us
+  assert(drate != 0);
+  // Calc time byte in us
   dev_timer_delay_t tb = 8000000 / drate;
   dev_timer_init_sec(pv->timer, &(pv->gctx.time_byte), 0, tb, 1000000);
   // Calc other time constants
@@ -800,6 +801,7 @@ static error_t s2lp_build_dynamic_pk_config(struct s2lp_ctx_s *pv, struct dev_rf
   uint8_t *pWutCount = &pv->pk_cfg_array[28];
 
   // Calc ldc timing values
+  assert(pv->curr_drate != 0);
   dev_timer_delay_t time_byte = 8000000 / pv->curr_drate;
   uint32_t ldc_wut = (cbasic->rx_pb_len / 8 - 1) * time_byte;
   ldc_wut = (ldc_wut > 100) ? (ldc_wut - 100) : (ldc_wut);
