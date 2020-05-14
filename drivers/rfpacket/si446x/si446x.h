@@ -162,9 +162,19 @@ static const uint8_t si446x_pk_cmd[] = {
 
 struct si446x_cache_entry_s {
   struct dev_rfpacket_rf_cfg_s * cfg;
+#ifndef CONFIG_DEVICE_RFPACKET_STATIC_RF_CONFIG
   struct si446x_rf_regs_s data;
+#endif
   /* Time byte in timer units */
   dev_timer_delay_t tb;
+};
+
+// Structs used for rf static and extern configurations
+struct si446x_rf_cfg_s {
+  uint32_t drate;
+  uint8_t jam_rssi;
+  uint8_t lbt_rssi;
+  uint8_t config_data[];
 };
 
 struct si446x_ctx_s {
@@ -208,12 +218,18 @@ struct si446x_ctx_s {
   uintptr_t bc_status;
   // Kroutine for configuration
   struct kroutine_s kr;
+#ifndef CONFIG_DEVICE_RFPACKET_STATIC_PKT_CONFIG
   struct si446x_pkt_regs_s pk_buff;
+#endif
   struct dev_rfpacket_pk_cfg_s *pk_cfg;
   struct si446x_cache_entry_s cache_array[SI446X_RF_CONFIG_CACHE_ENTRY];
   // Current cache cfg in use 
   uint8_t id;
   gpio_id_t pin_map[4];
+  // Currenf config values
+  uint32_t curr_drate;
+  uintptr_t curr_rf_cfg_data;
+  uintptr_t curr_pk_cfg_data;
 };
 
 STRUCT_COMPOSE(si446x_ctx_s, kr);
