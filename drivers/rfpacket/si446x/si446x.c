@@ -347,6 +347,7 @@ static inline error_t si446x_build_dynamic_pk_config(struct si446x_ctx_s *pv, co
 #endif
 
   si446x_dump_config((uint8_t*)pkt, si446x_pk_cmd);
+  //printk("PK CFG: %P\n", pkt, sizeof(struct si446x_pkt_regs_s));
   pv->curr_pk_cfg_data = (uintptr_t)pkt;
   return 0;
 }
@@ -394,7 +395,7 @@ si446x_modem_configure(struct si446x_ctx_s *pv,
 #endif
         default:
           return 0;
-      }        
+      }   
       idx += (c->symbols == 4);
   break; }
 #ifdef CONFIG_DRIVER_RFPACKET_SI446X_MOD_OOK
@@ -426,7 +427,7 @@ si446x_modem_configure(struct si446x_ctx_s *pv,
     case DEV_RFPACKET_MANCHESTER:
       manchester = 1;
     break;
-    
+
     default:
       return 0;
   }
@@ -483,6 +484,7 @@ static inline error_t si446x_build_dynamic_rf_config(struct si446x_ctx_s *pv,
   }
   out->rssi_th = SET_RSSI(rssi_th >> 3);
   pv->lbt_rssi = out->rssi_th;
+  //printk("LBT RSSI: %d\n", pv->lbt_rssi);
 
   if (common == NULL) {
     return -ENOTSUP;
@@ -491,8 +493,11 @@ static inline error_t si446x_build_dynamic_rf_config(struct si446x_ctx_s *pv,
     return -ENOTSUP;
   }
   pv->jam_rssi = SET_RSSI(common->jam_rssi >> 3);
+  //printk("JAM RSSI: %d\n", pv->jam_rssi);
   pv->curr_rf_cfg_data = (uintptr_t)&e->data;
   si446x_dump_config((uint8_t*)out, si446x_rf_cmd);
+  //printk("RF CFG: %P\n", (void *)out, 80);
+  //printk("RF CFG: %P\n", (void *)out + 70, 48);
   return 0;
 }
 
@@ -611,7 +616,7 @@ static error_t si446x_build_static_rf_config(struct si446x_ctx_s *pv, const stru
   // Calc time constants
   si446x_calc_time_consts(pv, cfg->drate);
   // Note info
-  printk("RF CONFIG: %d, %d, %d, %P\n", cfg->drate, cfg->jam_rssi, cfg->lbt_rssi, cfg->config_data, sizeof(struct si446x_rf_regs_s));
+  //printk("RF CONFIG: %d, %d, %d, %P\n", cfg->drate, cfg->jam_rssi, cfg->lbt_rssi, cfg->config_data, sizeof(struct si446x_rf_regs_s));
   pv->jam_rssi = cfg->jam_rssi;
   pv->lbt_rssi = cfg->lbt_rssi;
   pv->curr_drate = cfg->drate;
@@ -629,7 +634,7 @@ static error_t si446x_build_extern_rf_config(struct si446x_ctx_s *pv, const stru
   // Calc time constants
   si446x_calc_time_consts(pv, cfg->drate);
   // Note info
-  printk("RF CONFIG: %d, %d, %d, %P\n", cfg->drate, cfg->jam_rssi, cfg->lbt_rssi, cfg->config_data, sizeof(struct si446x_rf_regs_s));
+  //printk("RF CONFIG: %d, %d, %d, %P\n", cfg->drate, cfg->jam_rssi, cfg->lbt_rssi, cfg->config_data, sizeof(struct si446x_rf_regs_s));
   pv->jam_rssi = cfg->jam_rssi;
   pv->lbt_rssi = cfg->lbt_rssi;
   pv->curr_drate = cfg->drate;
@@ -662,7 +667,7 @@ static error_t si446x_build_rf_config(struct si446x_ctx_s *pv, const struct dev_
       return si446x_build_static_rf_config(pv, rfcfg);
 
     case DEV_RFPACKET_MOD_EXTERN:
-      *dynCfg = false; 
+      *dynCfg = false;
       return si446x_build_extern_rf_config(pv, rfcfg);
 
     default:
@@ -685,7 +690,7 @@ static error_t si446x_build_static_pk_config(struct si446x_ctx_s *pv, const stru
   }
   assert(cfg);
   // Note info
-  printk("PK CONFIG: %P\n", cfg, sizeof(struct si446x_pkt_regs_s));
+  //printk("PK CONFIG: %P\n", cfg, sizeof(struct si446x_pkt_regs_s));
   pv->curr_pk_cfg_data = (uintptr_t)cfg;
   return 0;
 }
@@ -695,7 +700,7 @@ static error_t si446x_build_extern_pk_config(struct si446x_ctx_s *pv, const stru
 
   assert(cextern->p_cfg);
   // Note info
-  printk("PK CONFIG: %P\n", cextern->p_cfg, sizeof(struct si446x_pkt_regs_s));
+  //printk("PK CONFIG: %P\n", cextern->p_cfg, sizeof(struct si446x_pkt_regs_s));
   pv->curr_pk_cfg_data = (uintptr_t)cextern->p_cfg;
   return 0;
 }
@@ -764,15 +769,17 @@ static error_t si446x_check_config(struct dev_rfpacket_ctx_s *gpv, struct dev_rf
   const struct dev_rfpacket_pk_cfg_s *pkcfg = rq->pk_cfg;
 
   if ((pkcfg != pv->pk_cfg) || pkcfg->cache.dirty) {
+      // Build new config
       error_t err = si446x_build_pk_config(pv, pkcfg);
       if (err) {
         return err;
       }
-      // Update pk config
+      // Update pk config info
       pv->pk_cfg = (struct dev_rfpacket_pk_cfg_s *)pkcfg;
       if (pkcfg->cache.dirty) {
         ((struct dev_rfpacket_pk_cfg_s *)pkcfg)->cache.dirty = 0;
       }
+      // Send config
       si446x_bytecode_start(pv, &si446x_entry_pkt_config, SI446X_ENTRY_PKT_CONFIG_BCARGS(
         pv->curr_pk_cfg_data, (uintptr_t)si446x_pk_cmd));
       return -EAGAIN;
