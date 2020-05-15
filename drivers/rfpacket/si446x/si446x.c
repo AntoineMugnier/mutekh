@@ -215,14 +215,8 @@ static void si446x_dump_config(uint8_t *ptr, const uint8_t *c) {
 #ifndef CONFIG_DEVICE_RFPACKET_STATIC_PKT_CONFIG
 /* Build a new packet configuration */
 static inline error_t si446x_build_dynamic_pk_config(struct si446x_ctx_s *pv, const struct dev_rfpacket_pk_cfg_s *pkcfg) {
-  struct si446x_pkt_regs_s *pkt = &pv->pk_buff;
-
-  logk_trace("PKT configuration");
-
-  if (pkcfg->format != DEV_RFPACKET_FMT_SLPC)
-    return -ENOTSUP;
-
   const struct dev_rfpacket_pk_cfg_basic_s *cfg = const_dev_rfpacket_pk_cfg_basic_s_cast(pkcfg);
+  struct si446x_pkt_regs_s *pkt = &pv->pk_buff;
 
   /** Configure Sync Word */
 
