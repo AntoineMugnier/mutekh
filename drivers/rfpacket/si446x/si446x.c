@@ -503,6 +503,10 @@ static KROUTINE_EXEC(si446x_config_deferred) {
   struct si446x_cache_entry_s *e = &pv->cache_array[cfg->cache.id % SI446X_RF_CONFIG_CACHE_ENTRY];
 
   if (si446x_build_dynamic_rf_config(pv, &e->data, rq) == 0) {
+    // Update cache entry
+    e->cfg = (struct dev_rfpacket_rf_cfg_s * )cfg;
+    ((struct dev_rfpacket_rf_cfg_s *)cfg)->cache.dirty = 0;
+    // Send config
     return si446x_send_rf_config(pv, cfg);
   }
   dev_rfpacket_config_notsup(&pv->gctx, rq);
@@ -733,16 +737,9 @@ static error_t si446x_check_config(struct dev_rfpacket_ctx_s *gpv, struct dev_rf
   struct si446x_cache_entry_s *e =
     &pv->cache_array[rfcfg->cache.id % SI446X_RF_CONFIG_CACHE_ENTRY];
 
-  if (e->cfg == rfcfg && !rfcfg->cache.dirty) {
-    if (rfcfg->cache.id == pv->id) {
-      // Config is in cache and is applied
-      return 0;
-    }
-    // Config is in cache but is not applied
-    si446x_send_rf_config(pv, rfcfg);
-    return -EAGAIN;
-  } else {
-    // New config
+  // Check rf config
+  if (rfcfg != e->cfg || rfcfg->cache.dirty) {
+    // Build new config
     err = si446x_build_rf_config(pv, rfcfg, &dynCfg);
     if (err != 0) {
       return err;
@@ -756,6 +753,10 @@ static error_t si446x_check_config(struct dev_rfpacket_ctx_s *gpv, struct dev_rf
       si446x_send_rf_config(pv, rfcfg);
       return -EAGAIN;
     }
+  } else if (rfcfg->cache.id != pv->id) {
+    // Config is in cache but is not applied
+    si446x_send_rf_config(pv, rfcfg);
+    return -EAGAIN;
   }
   // Check packet configuration
   const struct dev_rfpacket_pk_cfg_s *pkcfg = rq->pk_cfg;
@@ -777,16 +778,13 @@ static error_t si446x_check_config(struct dev_rfpacket_ctx_s *gpv, struct dev_rf
 #ifndef CONFIG_DEVICE_RFPACKET_STATIC_RF_CONFIG
   // Defer dynamic rf configuration processing
   if (dynCfg) {
-    // Update cache entry
-    e->cfg = (struct dev_rfpacket_rf_cfg_s * )rfcfg;
-    ((struct dev_rfpacket_rf_cfg_s *)rfcfg)->cache.dirty = 0;
     // Prepare configuration
     kroutine_init_deferred(&pv->kr, &si446x_config_deferred);
     kroutine_exec(&pv->kr);
     return -EAGAIN;
   }
 #endif
-  UNREACHABLE();
+  return 0;
 }
 
 static void si446x_rx(struct dev_rfpacket_ctx_s *gpv, struct dev_rfpacket_rq_s *rq, bool_t isRetry) {
