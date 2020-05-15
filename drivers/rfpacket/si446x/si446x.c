@@ -761,14 +761,14 @@ static error_t si446x_check_config(struct dev_rfpacket_ctx_s *gpv, struct dev_rf
   const struct dev_rfpacket_pk_cfg_s *pkcfg = rq->pk_cfg;
 
   if ((pkcfg != pv->pk_cfg) || pkcfg->cache.dirty) {
-      pv->pk_cfg = (struct dev_rfpacket_pk_cfg_s *)pkcfg;
-
-      if (pkcfg->cache.dirty) {
-        ((struct dev_rfpacket_pk_cfg_s *)pkcfg)->cache.dirty = 0;
-      }
       error_t err = si446x_build_pk_config(pv, pkcfg);
       if (err) {
         return err;
+      }
+      // Update pk config
+      pv->pk_cfg = (struct dev_rfpacket_pk_cfg_s *)pkcfg;
+      if (pkcfg->cache.dirty) {
+        ((struct dev_rfpacket_pk_cfg_s *)pkcfg)->cache.dirty = 0;
       }
       si446x_bytecode_start(pv, &si446x_entry_pkt_config, SI446X_ENTRY_PKT_CONFIG_BCARGS(
         pv->curr_pk_cfg_data, (uintptr_t)si446x_pk_cmd));
