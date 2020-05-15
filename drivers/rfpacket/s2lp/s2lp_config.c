@@ -835,6 +835,7 @@ static error_t s2lp_build_static_rf_config(struct s2lp_ctx_s *pv, struct dev_rfp
   // Retrieve config
   error_t err = device_get_param_blob(pv->dev, cstatic->cfg_name, 0, (const void **)&cfg);
   if (err != 0) {
+    logk_trace("Couldn't retrieve rf param blob.");
     return err;
   }
   assert(cfg);
@@ -875,6 +876,7 @@ static error_t s2lp_build_static_pk_config(struct s2lp_ctx_s *pv, struct dev_rfp
   // Retrieve config
   error_t err = device_get_param_blob(pv->dev, cstatic->cfg_name, 0, (const void **)&cfg);
   if (err != 0) {
+    logk_trace("Couldn't retrieve pk param blob.");
     return err;
   }
   assert(cfg);
