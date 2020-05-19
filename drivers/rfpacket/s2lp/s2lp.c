@@ -170,15 +170,11 @@ static error_t s2lp_check_config(struct dev_rfpacket_ctx_s *gpv, struct dev_rfpa
   if ((pkcfg == pv->pk_cfg) && !pkcfg->cache.dirty) {
     pv->flags |= S2LP_FLAGS_PK_CONFIG_OK;
   } else {
-    ((struct dev_rfpacket_pk_cfg_s *)pkcfg)->cache.dirty = 0;
-    pv->pk_cfg = pkcfg;
     conf_ok = false;
   }
   if ((rfcfg == pv->rf_cfg) && !rfcfg->cache.dirty) {
     pv->flags |= S2LP_FLAGS_RF_CONFIG_OK;
   } else {
-    ((struct dev_rfpacket_rf_cfg_s *)rfcfg)->cache.dirty = 0;
-    pv->rf_cfg = rfcfg;
     conf_ok = false;
   }
   // Check if conf changed
@@ -191,6 +187,7 @@ static error_t s2lp_check_config(struct dev_rfpacket_ctx_s *gpv, struct dev_rfpa
   if (err != 0) {
     return err;
   }
+  // Send conf
   s2lp_send_config(pv);
   return -EAGAIN;
 }

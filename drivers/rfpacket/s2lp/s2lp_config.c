@@ -960,22 +960,20 @@ error_t s2lp_build_config(struct s2lp_ctx_s *pv) {
   if ((pv->flags & S2LP_FLAGS_RF_CONFIG_OK) == 0) {
     err = s2lp_build_rf_config(pv, rq);
     if (err != 0) {
-      // Clear rf cfg values
-      pv->rf_cfg = NULL;
-      pv->curr_rf_cfg_data = NULL;
-      pv->curr_rf_cfg_size = 0;
       return err;
     }
+    // Update rf cfg values
+    ((struct dev_rfpacket_rf_cfg_s *)rq->rf_cfg)->cache.dirty = 0;
+    pv->rf_cfg = rq->rf_cfg;
   }
   if ((pv->flags & S2LP_FLAGS_PK_CONFIG_OK) == 0) {
     err = s2lp_build_pk_config(pv, rq);
     if (err != 0) {
-      // Clear pk  cfg values
-      pv->pk_cfg = NULL;
-      pv->curr_pk_cfg_data = NULL;
-      pv->curr_pk_cfg_size = 0;
       return err;
     }
+    // Update pk cfg values
+    ((struct dev_rfpacket_pk_cfg_s *)rq->pk_cfg)->cache.dirty = 0;
+    pv->pk_cfg = rq->pk_cfg;
   }
   return 0;
 }
