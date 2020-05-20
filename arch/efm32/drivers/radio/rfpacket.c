@@ -86,7 +86,9 @@ static int16_t efr32_rfp_get_rssi(struct radio_efr32_rfp_ctx_s *ctx, uintptr_t a
 static void efr32_rfp_read_packet(struct radio_efr32_rfp_ctx_s *ctx);
 static void efr32_rfp_rx_irq(struct radio_efr32_rfp_ctx_s *ctx, uint32_t irq);
 static void efr32_rfp_tx_irq(struct radio_efr32_rfp_ctx_s *ctx, uint32_t irq);
+#ifndef CONFIG_DEVICE_RFPACKET_STATIC_RF_CONFIG
 static error_t efr32_rfp_fsk_init(struct radio_efr32_rfp_ctx_s *ctx);
+#endif
 #ifdef CONFIG_RFPACKET_SIGFOX
 static error_t efr32_rfp_sigfox_init(struct radio_efr32_rfp_ctx_s *ctx);
 #endif
@@ -397,6 +399,7 @@ static error_t efr32_radio_timer_cancel(struct radio_efr32_rfp_ctx_s *ctx, struc
 
 /**************************** RFPACKET PART ********************************/
 
+#ifndef CONFIG_DEVICE_RFPACKET_STATIC_RF_CONFIG
 static error_t efr32_build_gfsk_rf_config(struct radio_efr32_rfp_ctx_s *ctx, struct dev_rfpacket_rq_s *rq) {
   const struct dev_rfpacket_rf_cfg_fsk_s *cfsk = const_dev_rfpacket_rf_cfg_fsk_s_cast(rq->rf_cfg);
   const struct dev_rfpacket_rf_cfg_std_s *common = &cfsk->common;
@@ -419,7 +422,9 @@ static error_t efr32_build_gfsk_rf_config(struct radio_efr32_rfp_ctx_s *ctx, str
   ctx->curr_drate = common->drate;
   return 0;
 }
+#endif
 
+#ifndef CONFIG_DEVICE_RFPACKET_STATIC_PKT_CONFIG
 static error_t efr32_build_slpc_pkt_config(struct radio_efr32_rfp_ctx_s *ctx, struct dev_rfpacket_rq_s *rq) {
   const struct dev_rfpacket_pk_cfg_basic_s *cfg = const_dev_rfpacket_pk_cfg_basic_s_cast(rq->pk_cfg);
 
@@ -535,7 +540,7 @@ static error_t efr32_build_slpc_pkt_config(struct radio_efr32_rfp_ctx_s *ctx, st
   cpu_mem_write_32(EFR32_CRC_ADDR + EFR32_CRC_INIT_ADDR, EFR32_CRC_INIT_INIT(cfg->crc_seed));
   return 0;
 }
-
+#endif
 
 
 static void efr32_send_radio_config(uint32_t cfg_size, uint32_t *p_cfg) {
@@ -590,8 +595,10 @@ static error_t efr32_build_extern_rf_config(struct radio_efr32_rfp_ctx_s *ctx, s
 
 static error_t efr32_build_rf_config(struct radio_efr32_rfp_ctx_s *ctx, struct dev_rfpacket_rq_s *rq) {
   switch (rq->rf_cfg->mod) {
+#ifndef CONFIG_DEVICE_RFPACKET_STATIC_RF_CONFIG
     case DEV_RFPACKET_GFSK:
       return efr32_build_gfsk_rf_config(ctx, rq);
+#endif
 
     case DEV_RFPACKET_MOD_STATIC:
       return efr32_build_static_rf_config(ctx, rq);
@@ -641,8 +648,10 @@ static error_t efr32_build_extern_pk_config(struct radio_efr32_rfp_ctx_s *ctx, s
 
 static error_t efr32_build_pkt_config(struct radio_efr32_rfp_ctx_s *ctx, struct dev_rfpacket_rq_s *rq) {
   switch (rq->pk_cfg->format) {
+#ifndef CONFIG_DEVICE_RFPACKET_STATIC_PKT_CONFIG
     case DEV_RFPACKET_FMT_SLPC: 
       return efr32_build_slpc_pkt_config(ctx, rq);
+#endif
 
     case DEV_RFPACKET_FMT_STATIC:
       return efr32_build_static_pk_config(ctx, rq);
@@ -1504,6 +1513,7 @@ static DEV_CLEANUP(efr32_radio_cleanup) {
   return err;
 }
 
+#ifndef CONFIG_DEVICE_RFPACKET_STATIC_RF_CONFIG
 static error_t efr32_rfp_fsk_init(struct radio_efr32_rfp_ctx_s *ctx) {
   uint32_t base[2] = {EFR32_FRC_ADDR, EFR32_RADIO_SEQ_RAM_ADDR};
   uint16_t i = 0;
@@ -1659,6 +1669,7 @@ static error_t efr32_rfp_fsk_init(struct radio_efr32_rfp_ctx_s *ctx) {
 
   return 0;
 }
+#endif
 
 #ifdef CONFIG_RFPACKET_SIGFOX
 static error_t efr32_rfp_sigfox_init(struct radio_efr32_rfp_ctx_s *ctx) {
