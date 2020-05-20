@@ -64,6 +64,8 @@ DRIVER_PV(struct radio_efr32_rfp_ctx_s {
   const struct dev_rfpacket_pk_cfg_s *pk_cfg;
   // Timeout kroutine
   struct kroutine_s kr;
+  // Config values
+  uint32_t curr_drate;
 });
 
 STRUCT_COMPOSE(radio_efr32_rfp_ctx_s, kr);
@@ -71,8 +73,6 @@ STRUCT_COMPOSE(radio_efr32_rfp_ctx_s, pv);
 
 static void efr32_rfp_timer_irq(struct device_s *dev);
 static error_t efr32_radio_get_time(struct dev_rfpacket_ctx_s *gpv, dev_timer_value_t *value);
-static inline error_t efr32_rf_config(struct radio_efr32_rfp_ctx_s *ctx, struct dev_rfpacket_rq_s *rq);
-static inline error_t efr32_pkt_config(struct radio_efr32_rfp_ctx_s *ctx, struct dev_rfpacket_rq_s *rq);
 static inline void  efr32_rfp_set_status_timeout(struct radio_efr32_rfp_ctx_s *ctx, enum dev_rfpacket_status_s status);
 static void efr32_rfp_req_timeout(struct radio_efr32_rfp_ctx_s *ctx);
 static inline void  efr32_rfp_set_status_done(struct radio_efr32_rfp_ctx_s *ctx, enum dev_rfpacket_status_s status);
@@ -331,6 +331,8 @@ static error_t efr32_radio_get_time(struct dev_rfpacket_ctx_s *gpv, dev_timer_va
 static dev_timer_delay_t efr32_radio_calc_time(struct radio_efr32_rfp_ctx_s *ctx, uint32_t drate) {
   struct radio_efr32_ctx_s *pv = &ctx->pv;
   uint64_t result, num, denom;
+
+  assert(drate);
   num = 8000000 / drate * pv->freq.num;
   denom = 1000000 * pv->freq.denom;
   result = num / denom;
@@ -388,79 +390,39 @@ static error_t efr32_radio_timer_cancel(struct radio_efr32_rfp_ctx_s *ctx, struc
   return err;
 }
 
+
+
+
+
+
 /**************************** RFPACKET PART ********************************/
 
-static inline error_t efr32_rf_config(struct radio_efr32_rfp_ctx_s *ctx,
-                                      struct dev_rfpacket_rq_s *rq) {
-  const struct dev_rfpacket_rf_cfg_s *rfcfg = rq->rf_cfg;
-  const struct dev_rfpacket_rf_cfg_std_s *common = NULL;
+static error_t efr32_build_gfsk_rf_config(struct radio_efr32_rfp_ctx_s *ctx, struct dev_rfpacket_rq_s *rq) {
+  const struct dev_rfpacket_rf_cfg_fsk_s *cfsk = const_dev_rfpacket_rf_cfg_fsk_s_cast(rq->rf_cfg);
+  const struct dev_rfpacket_rf_cfg_std_s *common = &cfsk->common;
 
-  // Test if new RF configuration or previous configuration modified
-  if ((rfcfg != ctx->rf_cfg) || rfcfg->cache.dirty) {
-    if (rfcfg->mod == DEV_RFPACKET_GFSK) {
-      efr32_rfp_fsk_init(ctx);
-      const struct dev_rfpacket_rf_cfg_fsk_s * c = const_dev_rfpacket_rf_cfg_fsk_s_cast(rfcfg);
-      common = &c->common;
-    }
-#ifdef CONFIG_RFPACKET_SIGFOX
-     // TODO USE BLOB
-     else if (rfcfg->mod == DEV_RFPACKET_SIGFOX) {
-      efr32_rfp_sigfox_init(ctx);
-    }
-#endif
-    else {
-      return -ENOTSUP;
-    }
-    if (common == NULL) {
-      return -ENOTSUP;
-    }
-    uint32_t div = cpu_mem_read_32(EFR32_SYNTH_ADDR + EFR32_SYNTH_DIVCTRL_ADDR);
-    div = EFR32_SYNTH_DIVCTRL_LODIVFREQCTRL_GET(div);
-    // Configure frequency
-    uint64_t f = ((uint64_t)(common->frequency) * div) << 19;
-    f /= EFR32_RADIO_HFXO_CLK;
-    cpu_mem_write_32(EFR32_SYNTH_ADDR + EFR32_SYNTH_FREQ_ADDR, (uint32_t)f);
-    // Configure channel spacing
-    uint64_t chsp = ((uint64_t)(common->chan_spacing) * div) << 19;
-    chsp /= EFR32_RADIO_HFXO_CLK;
-    cpu_mem_write_32(EFR32_SYNTH_ADDR + EFR32_SYNTH_CHSP_ADDR, (uint32_t)chsp);
-    // Calc time byte
-    ctx->gctx.time_byte = efr32_radio_calc_time(ctx, common->drate);
-  }
+  // Init config
+  efr32_rfp_fsk_init(ctx);
+  // Build config
+  uint32_t div = cpu_mem_read_32(EFR32_SYNTH_ADDR + EFR32_SYNTH_DIVCTRL_ADDR);
+  div = EFR32_SYNTH_DIVCTRL_LODIVFREQCTRL_GET(div);
+  // Configure frequency
+  uint64_t f = ((uint64_t)(common->frequency) * div) << 19;
+  f /= EFR32_RADIO_HFXO_CLK;
+  cpu_mem_write_32(EFR32_SYNTH_ADDR + EFR32_SYNTH_FREQ_ADDR, (uint32_t)f);
+  // Configure channel spacing
+  uint64_t chsp = ((uint64_t)(common->chan_spacing) * div) << 19;
+  chsp /= EFR32_RADIO_HFXO_CLK;
+  cpu_mem_write_32(EFR32_SYNTH_ADDR + EFR32_SYNTH_CHSP_ADDR, (uint32_t)chsp);
+  // Calc time byte
+  ctx->gctx.time_byte = efr32_radio_calc_time(ctx, common->drate);
+  ctx->curr_drate = common->drate;
   return 0;
 }
 
-static inline error_t efr32_pkt_config(struct radio_efr32_rfp_ctx_s *ctx,
-                                       struct dev_rfpacket_rq_s *rq) {
-  const struct dev_rfpacket_pk_cfg_s *pkcfg = rq->pk_cfg;
-  // Test if new Packet configuration or previous configuration modified
-  if ((pkcfg == ctx->pk_cfg) && !pkcfg->cache.dirty) {
-    return 0;
-  }
-#ifdef CONFIG_RFPACKET_SIGFOX
-  if (rq->pk_cfg->format == DEV_RFPACKET_FMT_SIGFOX_TX) {
-    cpu_mem_write_32(EFR32_FRC_ADDR + EFR32_FRC_DATABUFFER_ADDR, 0x6f);
-    cpu_mem_write_32(EFR32_FRC_ADDR + EFR32_FRC_WHITEPOLY_ADDR, 0x80);
-    cpu_mem_write_32(EFR32_FRC_ADDR + EFR32_FRC_WHITEINIT_ADDR, 0xff);
-    cpu_mem_write_32(EFR32_FRC_ADDR + EFR32_FRC_FECCTRL_ADDR, 0x2);
-    cpu_mem_write_32(EFR32_FRC_ADDR + EFR32_FRC_FCD_ADDR(0), 0xff);
-    cpu_mem_write_32(EFR32_FRC_ADDR + EFR32_FRC_FCD_ADDR(2), 0x1ff);
-    // No additionnal length byte
-    uint32_t x = EFR32_FRC_CTRL_RXFCDMODE(FCDMODE0) |
-                 EFR32_FRC_CTRL_TXFCDMODE(FCDMODE0) |
-                 EFR32_FRC_CTRL_BITORDER(MSB) |
-                 EFR32_FRC_CTRL_BITSPERWORD(7);
-    cpu_mem_write_32(EFR32_FRC_ADDR + EFR32_FRC_CTRL_ADDR, x);
-    x = EFR32_FRC_DFLCTRL_DFLMODE(DISABLE);
-    cpu_mem_write_32(EFR32_FRC_ADDR + EFR32_FRC_DFLCTRL_ADDR, x);
-    cpu_mem_write_32(EFR32_FRC_ADDR + EFR32_FRC_MAXLENGTH_ADDR, EFR32_RADIO_RFP_BUFFER_SIZE - 1);
-    // No preamble - No Sync word - No CRC
-    return 0;
-  }
-#endif
-  if (rq->pk_cfg->format != DEV_RFPACKET_FMT_SLPC) {
-    return -ENOTSUP;
-  }
+static error_t efr32_build_slpc_pkt_config(struct radio_efr32_rfp_ctx_s *ctx, struct dev_rfpacket_rq_s *rq) {
+  const struct dev_rfpacket_pk_cfg_basic_s *cfg = const_dev_rfpacket_pk_cfg_basic_s_cast(rq->pk_cfg);
+
   cpu_mem_write_32(EFR32_FRC_ADDR + EFR32_FRC_RXCTRL_ADDR, EFR32_FRC_RXCTRL_BUFRESTOREFRAMEERROR |
                                                            EFR32_FRC_RXCTRL_BUFRESTORERXABORTED);
   cpu_mem_write_32(EFR32_FRC_ADDR + EFR32_FRC_TRAILRXDATA_ADDR, EFR32_FRC_TRAILRXDATA_RSSI);
@@ -493,9 +455,6 @@ static inline error_t efr32_pkt_config(struct radio_efr32_rfp_ctx_s *ctx,
   cpu_mem_write_32(EFR32_FRC_ADDR + EFR32_FRC_DFLCTRL_ADDR, x);
   cpu_mem_write_32(EFR32_FRC_ADDR + EFR32_FRC_MAXLENGTH_ADDR, EFR32_RADIO_RFP_BUFFER_SIZE - 1);
 
-  ctx->pk_cfg = (struct dev_rfpacket_pk_cfg_s *)pkcfg;
-
-  const struct dev_rfpacket_pk_cfg_basic_s *cfg = const_dev_rfpacket_pk_cfg_basic_s_cast(rq->pk_cfg);
   // Configure Sync Word
   uint8_t sw = cfg->sw_len + 1;
   if ((sw >> 5) || (sw % 4)) {
@@ -576,6 +535,147 @@ static inline error_t efr32_pkt_config(struct radio_efr32_rfp_ctx_s *ctx,
   cpu_mem_write_32(EFR32_CRC_ADDR + EFR32_CRC_INIT_ADDR, EFR32_CRC_INIT_INIT(cfg->crc_seed));
   return 0;
 }
+
+
+
+static void efr32_send_radio_config(uint32_t cfg_size, uint32_t *p_cfg) {
+  // Parse config table (addr, data) pairs
+  for (uint32_t i = 0; i < cfg_size - 1; i += 2) {
+    // Retrieve data
+    uint32_t addr = p_cfg[i];
+    uint32_t data = p_cfg[i+1];
+    // Check addr and write data
+    assert(addr);
+    cpu_mem_write_32(addr, data);
+  }
+}
+
+static error_t efr32_build_static_rf_config(struct radio_efr32_rfp_ctx_s *ctx, struct dev_rfpacket_rq_s *rq) {
+  const struct dev_rfpacket_rf_cfg_static_s *cstatic = const_dev_rfpacket_rf_cfg_static_s_cast(rq->rf_cfg);
+  struct radio_efr32_rf_cfg_s *cfg = NULL;
+
+  // Retrieve config
+  error_t err = device_get_param_blob(ctx->pv.dev, cstatic->cfg_name, 0, (const void **)&cfg);
+  if (err != 0) {
+    logk_trace("Couldn't retrieve rf param blob.");
+    return err;
+  }
+  assert(cfg);
+  // Send config
+  efr32_send_radio_config(cfg->config_size, cfg->config_data);
+  // Note info
+  printk("RF CONFIG: %d, %d, %P\n", cfg->drate, cfg->config_size, cfg->config_data, cfg->config_size);
+  ctx->curr_drate = cfg->drate;
+  // Calc time constants
+  efr32_radio_calc_time(ctx, cfg->drate);
+  return 0;
+}
+
+static error_t efr32_build_extern_rf_config(struct radio_efr32_rfp_ctx_s *ctx, struct dev_rfpacket_rq_s *rq) {
+  const struct dev_rfpacket_rf_cfg_extern_s *cextern = const_dev_rfpacket_rf_cfg_extern_s_cast(rq->rf_cfg);
+
+  // Retrieve config
+  struct radio_efr32_rf_cfg_s *cfg = cextern->p_cfg;
+  assert(cfg);
+  // Send config
+  efr32_send_radio_config(cfg->config_size, cfg->config_data);
+  // Note info
+  printk("RF CONFIG: %d, %d, %P\n", cfg->drate, cfg->config_size, cfg->config_data, cfg->config_size);
+  ctx->curr_drate = cfg->drate;
+  // Calc time constants
+  efr32_radio_calc_time(ctx, cfg->drate);
+  return 0;
+}
+
+
+static error_t efr32_build_rf_config(struct radio_efr32_rfp_ctx_s *ctx, struct dev_rfpacket_rq_s *rq) {
+  switch (rq->rf_cfg->mod) {
+    case DEV_RFPACKET_GFSK:
+      return efr32_build_gfsk_rf_config(ctx, rq);
+
+    case DEV_RFPACKET_MOD_STATIC:
+      return efr32_build_static_rf_config(ctx, rq);
+
+    case DEV_RFPACKET_MOD_EXTERN:
+      return efr32_build_extern_rf_config(ctx, rq);
+
+    default:
+      return -ENOTSUP;
+  }
+// #ifdef CONFIG_RFPACKET_SIGFOX
+//     // TODO USE BLOB + add FREQ params
+//     efr32_rfp_sigfox_init(ctx);
+// #endif
+}
+
+static error_t efr32_build_static_pk_config(struct radio_efr32_rfp_ctx_s *ctx, struct dev_rfpacket_rq_s *rq) {
+  const struct dev_rfpacket_pk_cfg_static_s *cstatic = const_dev_rfpacket_pk_cfg_static_s_cast(rq->pk_cfg);
+  struct radio_efr32_pk_cfg_s *cfg = NULL;
+
+  // Retrieve config
+  error_t err = device_get_param_blob(ctx->pv.dev, cstatic->cfg_name, 0, (const void **)&cfg);
+  if (err != 0) {
+    logk_trace("Couldn't retrieve rf param blob.");
+    return err;
+  }
+  assert(cfg);
+  // Send config
+  efr32_send_radio_config(cfg->config_size, cfg->config_data);
+  // Note info
+  printk("PK CONFIG: %d, %P\n", cfg->config_size, cfg->config_data, cfg->config_size);
+  return 0;
+}
+
+static error_t efr32_build_extern_pk_config(struct radio_efr32_rfp_ctx_s *ctx, struct dev_rfpacket_rq_s *rq) {
+  const struct dev_rfpacket_pk_cfg_extern_s *cextern = const_dev_rfpacket_pk_cfg_extern_s_cast(rq->pk_cfg);
+
+  // Retrieve config
+  struct radio_efr32_pk_cfg_s *cfg = cextern->p_cfg;
+  assert(cfg);
+  // Send config
+  efr32_send_radio_config(cfg->config_size, cfg->config_data);
+  // Note info
+  printk("PK CONFIG: %d, %P\n", cfg->config_size, cfg->config_data, cfg->config_size);
+  return 0;
+}
+
+static error_t efr32_build_pkt_config(struct radio_efr32_rfp_ctx_s *ctx, struct dev_rfpacket_rq_s *rq) {
+  switch (rq->pk_cfg->format) {
+    case DEV_RFPACKET_FMT_SLPC: 
+      return efr32_build_slpc_pkt_config(ctx, rq);
+
+    case DEV_RFPACKET_FMT_STATIC:
+      return efr32_build_static_pk_config(ctx, rq);
+
+    case DEV_RFPACKET_FMT_EXTERN:
+      return efr32_build_extern_pk_config(ctx, rq);
+
+    default:
+      return -ENOTSUP;
+  }
+// #ifdef CONFIG_RFPACKET_SIGFOX
+//   // TODO PARAM BLOB
+//   cpu_mem_write_32(EFR32_FRC_ADDR + EFR32_FRC_DATABUFFER_ADDR, 0x6f);
+//   cpu_mem_write_32(EFR32_FRC_ADDR + EFR32_FRC_WHITEPOLY_ADDR, 0x80);
+//   cpu_mem_write_32(EFR32_FRC_ADDR + EFR32_FRC_WHITEINIT_ADDR, 0xff);
+//   cpu_mem_write_32(EFR32_FRC_ADDR + EFR32_FRC_FECCTRL_ADDR, 0x2);
+//   cpu_mem_write_32(EFR32_FRC_ADDR + EFR32_FRC_FCD_ADDR(0), 0xff);
+//   cpu_mem_write_32(EFR32_FRC_ADDR + EFR32_FRC_FCD_ADDR(2), 0x1ff);
+//   // No additionnal length byte
+//   uint32_t x = EFR32_FRC_CTRL_RXFCDMODE(FCDMODE0) |
+//                EFR32_FRC_CTRL_TXFCDMODE(FCDMODE0) |
+//                EFR32_FRC_CTRL_BITORDER(MSB) |
+//                EFR32_FRC_CTRL_BITSPERWORD(7);
+//   cpu_mem_write_32(EFR32_FRC_ADDR + EFR32_FRC_CTRL_ADDR, x);
+//   x = EFR32_FRC_DFLCTRL_DFLMODE(DISABLE);
+//   cpu_mem_write_32(EFR32_FRC_ADDR + EFR32_FRC_DFLCTRL_ADDR, x);
+//   cpu_mem_write_32(EFR32_FRC_ADDR + EFR32_FRC_MAXLENGTH_ADDR, EFR32_RADIO_RFP_BUFFER_SIZE - 1);
+//   // No preamble - No Sync word - No CRC
+//   return 0;
+// #endif
+}
+
+
 
 #ifdef CONFIG_DRIVER_EFR32_DEBUG
 static void efr32_rfp_cfg_rac_dbg(struct radio_efr32_rfp_ctx_s *ctx) {
@@ -958,13 +1058,36 @@ static void efr32_rfp_rac_irq(struct radio_efr32_rfp_ctx_s *ctx) {
 
 static error_t efr32_radio_check_config(struct dev_rfpacket_ctx_s *gpv, struct dev_rfpacket_rq_s *rq) {
   struct radio_efr32_rfp_ctx_s *ctx = gpv->pvdata;
+  error_t err;
 
-  if (efr32_rf_config(ctx, rq) || efr32_pkt_config(ctx, rq)) {
-    // Unsupported configuration
-    return -ENOTSUP;
-  } else {
-    return 0;
+  if ((rq->rf_cfg != ctx->rf_cfg) || rq->rf_cfg->cache.dirty) {
+    err = efr32_build_rf_config(ctx, rq);
+    if (err != 0) {
+      return err;
+    }
+    // Update rf cfg values
+    ((struct dev_rfpacket_rf_cfg_s *)rq->rf_cfg)->cache.dirty = 0;
+    ctx->rf_cfg = rq->rf_cfg;
   }
+  if ((rq->pk_cfg != ctx->pk_cfg) || rq->pk_cfg->cache.dirty) {
+    err = efr32_build_pkt_config(ctx, rq);
+    if (err != 0) {
+      return err;
+    }
+    // Update pk cfg values
+    ((struct dev_rfpacket_pk_cfg_s *)rq->pk_cfg)->cache.dirty = 0;
+    ctx->pk_cfg = rq->pk_cfg;
+  }
+  // Check rfp state off TODO FIND WHY THIS IS NEEDED
+  if (efr32_rfp_disable(ctx)) {
+    return 0;
+  } else {
+    // Disable is pending irq
+    efr32_rfp_set_status_done(ctx, DEV_RFPACKET_STATUS_MISC);
+    ctx->rac_irq_type = EFR32_RAC_IRQ_TXRX;
+    return -EAGAIN;
+  }
+  //return 0;
 }
 
 static KROUTINE_EXEC(efr32_rfp_rxc_timeout_cb) {
