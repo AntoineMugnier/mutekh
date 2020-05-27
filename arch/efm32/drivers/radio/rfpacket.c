@@ -50,6 +50,7 @@ DRIVER_PV(struct radio_efr32_rfp_ctx_s {
   struct radio_efr32_ctx_s pv;
   uint8_t sg_buffer[EFR32_RADIO_RFP_BUFFER_SIZE];
   bool_t sleep;
+  bool_t isSigfox;
   // Req status
   enum dev_rfpacket_status_s done_status;
   enum dev_rfpacket_status_s timeout_status;
@@ -569,6 +570,14 @@ static error_t efr32_build_static_rf_config(struct radio_efr32_rfp_ctx_s *ctx, s
     return err;
   }
   assert(cfg);
+  // Raise sigfox flag if needed
+#ifdef CONFIG_DRIVER_EFR32_SIGFOX
+  if (strcmp(cstatic->cfg_name, "rf_sigfox") == 0) {
+    ctx->isSigfox = true;
+  } else {
+    ctx->isSigfox = false;
+  }
+#endif
   // Send config
   efr32_send_radio_config(cfg->config_size, cfg->config_data);
   // Note info
@@ -1151,11 +1160,11 @@ static void efr32_radio_tx(struct dev_rfpacket_ctx_s *gpv, struct dev_rfpacket_r
   cpu_mem_write_32(EFR32_BUFC_ADDR + EFR32_BUFC_CMD_ADDR(0), EFR32_BUFC_CMD_CLEAR);
   cpu_mem_write_32(EFR32_BUFC_ADDR + EFR32_BUFC_CMD_ADDR(1), EFR32_BUFC_CMD_CLEAR);
   // Write length when required
-#ifdef CONFIG_DRIVER_EFR32_SIGFOX
+  if (ctx->isSigfox) {
     cpu_mem_write_32(EFR32_FRC_ADDR + EFR32_FRC_WCNTCMP0_ADDR, rq->tx_size - 1);
-#else
+  } else {
     cpu_mem_write_32(EFR32_BUFC_ADDR + EFR32_BUFC_WRITEDATA_ADDR(0), rq->tx_size);
-#endif
+  }
   // Fill payload
   uint8_t *p = (uint8_t *)rq->tx_buf;
   for(uint16_t i = 0; i < rq->tx_size; i++) {
