@@ -569,7 +569,7 @@ static error_t efr32_build_static_rf_config(struct radio_efr32_rfp_ctx_s *ctx, s
   // Send config
   efr32_send_radio_config(cfg->config_size, cfg->config_data);
   // Note info
-  printk("RF CONFIG: %d, %d, %P\n", cfg->drate, cfg->config_size, cfg->config_data, cfg->config_size);
+  //printk("RF CONFIG: %d, %d, %P\n", cfg->drate, cfg->config_size, cfg->config_data, cfg->config_size);
   ctx->curr_drate = cfg->drate;
   // Calc time constants
   efr32_radio_calc_time(ctx, cfg->drate);
@@ -585,7 +585,7 @@ static error_t efr32_build_extern_rf_config(struct radio_efr32_rfp_ctx_s *ctx, s
   // Send config
   efr32_send_radio_config(cfg->config_size, cfg->config_data);
   // Note info
-  printk("RF CONFIG: %d, %d, %P\n", cfg->drate, cfg->config_size, cfg->config_data, cfg->config_size);
+  //printk("RF CONFIG: %d, %d, %P\n", cfg->drate, cfg->config_size, cfg->config_data, cfg->config_size);
   ctx->curr_drate = cfg->drate;
   // Calc time constants
   efr32_radio_calc_time(ctx, cfg->drate);
@@ -629,7 +629,7 @@ static error_t efr32_build_static_pk_config(struct radio_efr32_rfp_ctx_s *ctx, s
   // Send config
   efr32_send_radio_config(cfg->config_size, cfg->config_data);
   // Note info
-  printk("PK CONFIG: %d, %P\n", cfg->config_size, cfg->config_data, cfg->config_size);
+  //printk("PK CONFIG: %d, %P\n", cfg->config_size, cfg->config_data, cfg->config_size);
   return 0;
 }
 
@@ -642,7 +642,7 @@ static error_t efr32_build_extern_pk_config(struct radio_efr32_rfp_ctx_s *ctx, s
   // Send config
   efr32_send_radio_config(cfg->config_size, cfg->config_data);
   // Note info
-  printk("PK CONFIG: %d, %P\n", cfg->config_size, cfg->config_data, cfg->config_size);
+  //printk("PK CONFIG: %d, %P\n", cfg->config_size, cfg->config_data, cfg->config_size);
   return 0;
 }
 
@@ -1087,16 +1087,7 @@ static error_t efr32_radio_check_config(struct dev_rfpacket_ctx_s *gpv, struct d
     ((struct dev_rfpacket_pk_cfg_s *)rq->pk_cfg)->cache.dirty = 0;
     ctx->pk_cfg = rq->pk_cfg;
   }
-  // Check rfp state off TODO FIND WHY THIS IS NEEDED
-  if (efr32_rfp_disable(ctx)) {
-    return 0;
-  } else {
-    // Disable is pending irq
-    efr32_rfp_set_status_done(ctx, DEV_RFPACKET_STATUS_MISC);
-    ctx->rac_irq_type = EFR32_RAC_IRQ_TXRX;
-    return -EAGAIN;
-  }
-  //return 0;
+  return 0;
 }
 
 static KROUTINE_EXEC(efr32_rfp_rxc_timeout_cb) {
