@@ -575,7 +575,7 @@ static error_t efr32_build_static_rf_config(struct radio_efr32_rfp_ctx_s *ctx, s
   //printk("RF CONFIG: %d, %d, %P\n", cfg->drate, cfg->config_size, cfg->config_data, cfg->config_size);
   ctx->curr_drate = cfg->drate;
   // Calc time constants
-  efr32_radio_calc_time(ctx, cfg->drate);
+  ctx->gctx.time_byte = efr32_radio_calc_time(ctx, cfg->drate);
   return 0;
 }
 
@@ -591,7 +591,7 @@ static error_t efr32_build_extern_rf_config(struct radio_efr32_rfp_ctx_s *ctx, s
   //printk("RF CONFIG: %d, %d, %P\n", cfg->drate, cfg->config_size, cfg->config_data, cfg->config_size);
   ctx->curr_drate = cfg->drate;
   // Calc time constants
-  efr32_radio_calc_time(ctx, cfg->drate);
+  ctx->gctx.time_byte = efr32_radio_calc_time(ctx, cfg->drate);
   return 0;
 }
 
