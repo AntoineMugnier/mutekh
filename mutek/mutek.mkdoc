@@ -36,4 +36,5 @@ mutek/shell.h
 mutek/slab.h
 mutek/startup.h
 mutek/thread.h
+mutek/lut.h
 }
