@@ -66,7 +66,7 @@
 #define S2LP_MIN_PA_VALUE -31 // dbm
 #define S2LP_MAX_PA_VALUE  14 // dbm
 
-#define S2LP_VALID_TX_POWER(Power)      ((Power) >= (S2LP_MIN_PA_VALUE) && (Power) <= (S2LP_MAX_PA_VALUE))
+#define S2LP_VALID_TX_POWER(Power)      ((Power) >= (S2LP_MIN_PA_VALUE * 8) && (Power) <= (S2LP_MAX_PA_VALUE * 8))
 
 #define S2LP_VCO_CENTER_FREQ 3600000000 // VCO center frequency in Hz
 #define S2LP_DIV_X0_THRESH   30000000   // Digital domain logic threshold for XTAL in Hz
@@ -979,11 +979,10 @@ error_t s2lp_build_config(struct s2lp_ctx_s *pv) {
 }
 
 uint8_t s2lp_build_pwr(struct s2lp_ctx_s *pv, int16_t pwr) {
-  int16_t pwr_dbm = pwr >> 3;
   uint8_t reg_pwr = 0;
 
   // Check if power valid
-  if (!S2LP_VALID_TX_POWER(pwr_dbm)) {
+  if (!S2LP_VALID_TX_POWER(pwr)) {
     logk_trace("Unsupported power level requested");
     return 0;
   }
@@ -997,10 +996,11 @@ uint8_t s2lp_build_pwr(struct s2lp_ctx_s *pv, int16_t pwr) {
   // Set new power value
   pv->pwr = pwr;
   // Calc power reg value
-  if (pwr_dbm >= 14) {
+  if (pwr >= (S2LP_MAX_PA_VALUE * 8)) {
     reg_pwr = 1;
   } else {
-    reg_pwr = (uint8_t)((int32_t)29 - 2 * pwr_dbm);
+    // Reg = 29 - 2 * dbm value
+    reg_pwr = (uint8_t)((int32_t)29 - (pwr / 4)); // 0.5 dbm res, power value is truncated 
   }
   return reg_pwr;
 }
