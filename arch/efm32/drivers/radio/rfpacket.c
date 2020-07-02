@@ -21,6 +21,7 @@
  */
 
 #include <stdbool.h>
+#include <math.h> // FIXME REMOVE EXP() USE
 #include "common.h"
 #include "protimer.h"
 #include <device/class/iomux.h>
@@ -40,6 +41,12 @@
                                    EFR32_FRC_IF_RXOF       |      \
                                    EFR32_FRC_IF_BLOCKERROR |      \
                                    EFR32_FRC_IF_FRAMEERROR)
+
+// Power calculation values
+#define EFR32_POW_MAX_DBM          128 // 0.125 dbm unit (16)
+#define EFR32_POW_MAX_RAW          240
+#define EFR32_POW_STRIPE_MAX_VAL   32
+#define EFR32_POW_LINEAR_THRES     98 // 0.125 dbm unit (12.25)
 
 enum efr32_rac_irq_type {
   EFR32_RAC_IRQ_TIMEOUT,
@@ -403,6 +410,50 @@ static error_t efr32_radio_timer_cancel(struct radio_efr32_rfp_ctx_s *ctx, struc
 
 /**************************** RFPACKET PART ********************************/
 
+static error_t efr32_calc_power(dev_rfpacket_pwr_t pwr_dbm, uint32_t *p_sgpac_val, uint32_t *p_pac_val) {
+  uint32_t pwr_raw = 0;
+  // Convert 0.125 dbm to raw
+  if (pwr_dbm > EFR32_POW_MAX_DBM) {
+    return -ENOTSUP;
+  }
+  if (pwr_dbm > EFR32_POW_LINEAR_THRES) {
+    pwr_raw = (pwr_dbm * 38) / 8 - 375;
+  } else {
+    // Exponential domain
+    // TODO APPROXIMATE EXP
+    pwr_raw = 20 * exp((double)pwr_dbm / 64);
+  }
+  if (pwr_raw == 0) {
+    pwr_raw = 1;
+  } else if (pwr_raw > EFR32_POW_MAX_RAW) {
+    pwr_raw = EFR32_POW_MAX_RAW;
+  }
+  // Calc reg value based on raw 
+  uint8_t stripe = pwr_raw % EFR32_POW_STRIPE_MAX_VAL;
+  uint8_t slice_cascode = (bit(pwr_raw / EFR32_POW_STRIPE_MAX_VAL + 1) - 1);
+  bool en_SGVBATDET = (pwr_raw >= 120) ? true : false;
+  uint32_t power_reg = (slice_cascode << EFR32_RAC_SGPACTRL0_CASCODE_IDX) | (slice_cascode << EFR32_RAC_SGPACTRL0_SLICE_IDX) |
+    (stripe << EFR32_RAC_SGPACTRL0_STRIPE_IDX) | EFR32_RAC_SGPACTRL0_DACGLITCHCTRL;
+  *p_pac_val = power_reg;
+  *p_sgpac_val = power_reg | (en_SGVBATDET << EFR32_RAC_SGPACTRL0_SGVBATDET_IDX);
+  return 0;
+}
+
+static error_t efr32_set_tx_power(struct dev_rfpacket_rq_s *rq) {
+  uint32_t sg_pac_reg, pac_reg;
+
+  error_t err = efr32_calc_power(rq->tx_pwr, &sg_pac_reg, &pac_reg);
+
+  if (err != 0) {
+    return err;
+  }
+  // Write power value
+  cpu_mem_write_32(EFR32_RAC_ADDR + EFR32_RAC_PACTRL0_ADDR, pac_reg);
+  cpu_mem_write_32(EFR32_RAC_ADDR + EFR32_RAC_SGPACTRL0_ADDR, sg_pac_reg);
+  return 0;
+}
+
+
 #ifndef CONFIG_DEVICE_RFPACKET_STATIC_RF_CONFIG
 static error_t efr32_build_gfsk_rf_config(struct radio_efr32_rfp_ctx_s *ctx, struct dev_rfpacket_rq_s *rq) {
   const struct dev_rfpacket_rf_cfg_fsk_s *cfsk = const_dev_rfpacket_rf_cfg_fsk_s_cast(rq->rf_cfg);
@@ -657,7 +708,7 @@ static error_t efr32_build_extern_pk_config(struct radio_efr32_rfp_ctx_s *ctx, s
 static error_t efr32_build_pkt_config(struct radio_efr32_rfp_ctx_s *ctx, struct dev_rfpacket_rq_s *rq) {
   switch (rq->pk_cfg->format) {
 #ifndef CONFIG_DEVICE_RFPACKET_STATIC_PKT_CONFIG
-    case DEV_RFPACKET_FMT_SLPC: 
+    case DEV_RFPACKET_FMT_SLPC:
       return efr32_build_slpc_pkt_config(ctx, rq);
 #endif
 
@@ -1172,6 +1223,8 @@ static void efr32_radio_tx(struct dev_rfpacket_ctx_s *gpv, struct dev_rfpacket_r
   }
   // Set channel
   cpu_mem_write_32(EFR32_SYNTH_ADDR + EFR32_SYNTH_CHCTRL_ADDR, rq->channel);
+  // Set power
+  efr32_set_tx_power(rq);
   // Enable TX
   switch (rq->type) {
     case DEV_RFPACKET_RQ_TX:
@@ -1423,8 +1476,8 @@ static DEV_INIT(efr32_radio_init) {
   cpu_mem_write_32(EFR32_BUFC_ADDR + EFR32_BUFC_CTRL_ADDR(1), x);
   cpu_mem_write_32(EFR32_BUFC_ADDR + EFR32_BUFC_ADDR_ADDR(1), (uint32_t)ctx->sg_buffer);
 
-  cpu_mem_write_32(EFR32_BUFC_ADDR + EFR32_BUFC_ADDR_ADDR(2), (uint32_t)pv->rx_length_buffer);
   cpu_mem_write_32(EFR32_BUFC_ADDR + EFR32_BUFC_CTRL_ADDR(2), 0);
+  cpu_mem_write_32(EFR32_BUFC_ADDR + EFR32_BUFC_ADDR_ADDR(2), (uint32_t)pv->rx_length_buffer);
   // Clear buffer
   for (uint8_t i = 0; i < 4; i++) {
     cpu_mem_write_32(EFR32_BUFC_ADDR + EFR32_BUFC_CMD_ADDR(i), EFR32_BUFC_CMD_CLEAR);
@@ -1624,7 +1677,8 @@ static error_t efr32_rfp_fsk_init(struct radio_efr32_rfp_ctx_s *ctx) {
   cpu_mem_write_32(EFR32_RAC_ADDR + EFR32_RAC_RFENCTRL_ADDR, 0x1001000);
   cpu_mem_write_32(EFR32_RAC_ADDR + EFR32_RAC_SGRFENCTRL0_ADDR, 0xb0000);
   cpu_mem_write_32(EFR32_RAC_ADDR + EFR32_RAC_SGLNAMIXCTRL_ADDR, 0x186db00);
-  cpu_mem_write_32(EFR32_RAC_ADDR + EFR32_RAC_SGPACTRL0_ADDR, 0x491fdfe0);
+  cpu_mem_write_32(EFR32_RAC_ADDR + EFR32_RAC_PACTRL0_ADDR, 0x5b01c1c0);
+  cpu_mem_write_32(EFR32_RAC_ADDR + EFR32_RAC_SGPACTRL0_ADDR, 0x5b01c1c0);
   cpu_mem_write_32(EFR32_RAC_ADDR + EFR32_RAC_SGPAPKDCTRL_ADDR, 0x108d000);
   cpu_mem_write_32(EFR32_RAC_ADDR + EFR32_RAC_SGPABIASCTRL0_ADDR, 0x7000445);
   cpu_mem_write_32(EFR32_RAC_ADDR + EFR32_RAC_SGPABIASCTRL1_ADDR, 0x84523);
