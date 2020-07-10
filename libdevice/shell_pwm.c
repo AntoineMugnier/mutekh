@@ -35,31 +35,29 @@ enum pwm_opt_e
   PWM_OPT_DEV  = 0x1,
   PWM_OPT_FREQ = 0x2,
   PWM_OPT_DUTY = 0x4,
-  PWM_OPT_POL  = 0x8
+  PWM_OPT_POL  = 0x8,
+  PWM_OPT_CHMSK = 0x10,
 };
 
 struct termui_optctx_dev_pwm_opts
 {
   /* pwm device. */
-  struct device_pwm_s         pwm;
+  struct device_pwm_s     pwm;
 
-  union
-  {
-    /* FIXME: should add selectable option in libtermui. */
-    struct {
-      /* pwm frequency. */
-      struct dev_freq_s       freq;
+  /* pwm frequency. */
+  struct dev_freq_s       freq;
 
-      /* pwm channel duty cycle. */
-      struct dev_freq_ratio_s duty;
+  /* pwm channel duty cycle. */
+  struct dev_freq_ratio_s duty;
 
-      /* pwm channel polarity. */
-      enum dev_pwm_polarity_e pol;
-    };
-    struct dev_pwm_config_s   cfg;
-  };
+  /* pwm channel polarity. */
+  enum dev_pwm_polarity_e pol;
 
-  uint_fast8_t                mask;
+  /* Mask of updated parameters. */
+  uint_fast8_t            param_mask;
+
+  /* Mask of impacted channels. */
+  uint32_t                chan_mask;
 };
 
 static
@@ -76,18 +74,30 @@ TERMUI_CON_COMMAND_PROTOTYPE(dev_shell_pwm_config)
 {
   struct termui_optctx_dev_pwm_opts *data = ctx;
 
-  data->mask = 0;
+  data->param_mask = 0;
+
+  if (!(used & PWM_OPT_CHMSK)) {
+    termui_con_printf(con, "You must specify a channel mask\n");
+    return -EINVAL;
+  }
 
   if (used & PWM_OPT_FREQ)
-    data->mask |= DEV_PWM_MASK_FREQ;
+    data->param_mask |= DEV_PWM_MASK_FREQ;
 
   if (used & PWM_OPT_DUTY)
-    data->mask |= DEV_PWM_MASK_DUTY;
+    data->param_mask |= DEV_PWM_MASK_DUTY;
 
   if (used & PWM_OPT_POL)
-    data->mask |= DEV_PWM_MASK_POL;
+    data->param_mask |= DEV_PWM_MASK_POL;
 
-  error_t err = dev_pwm_wait_op(&data->pwm, &data->cfg, data->mask);
+  struct dev_pwm_rq_s rq = {
+    .chan_mask = data->chan_mask,
+    .param_mask = data->param_mask,
+    .freq = data->freq,
+    .duty = data->duty, 
+    .pol = data->pol,
+  };
+  error_t err = DEVICE_OP(&data->pwm, config, &rq);
 
   if (err)
     termui_con_printf(con, "error: %i.\n", err);
@@ -122,6 +132,13 @@ static TERMUI_CON_OPT_DECL(dev_pwm_opts) =
     struct termui_optctx_dev_pwm_opts, pol, dev_pwm_polarity_e,
     TERMUI_CON_OPT_CONSTRAINTS(PWM_OPT_POL, PWM_OPT_DEV)
     TERMUI_CON_OPT_HELP("This option defines the polarity of the pwm signal",
+                        NULL)
+  )
+
+  TERMUI_CON_OPT_ENUM_ENTRY("-h", "--channel_mask", PWM_OPT_CHMSK,
+    struct termui_optctx_dev_pwm_opts, chan_mask,
+    TERMUI_CON_OPT_CONSTRAINTS(PWM_OPT_CHMSK, PWM_OPT_DEV)
+    TERMUI_CON_OPT_HELP("This option defines the channels affected by the parameters",
                         NULL)
   )
 
