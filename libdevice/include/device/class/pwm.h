@@ -144,7 +144,5 @@ DRIVER_CLASS_TYPES(DRIVER_CLASS_PWM, pwm,
     .f_config = prefix ## _config,                            \
   })
 
-DEV_REQUEST_WAIT_FUNC(pwm);
-
 #endif
 
