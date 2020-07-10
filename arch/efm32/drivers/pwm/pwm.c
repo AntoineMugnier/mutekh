@@ -181,7 +181,7 @@ static DEV_PWM_REQUEST(efm32_pwm_request)
   if (err)
     goto cfg_end;
  
-  bool_t freq_done = 0;
+  bool_t freq_done = false;
 
   bool_t start = !(pv->config & EFM32_PWM_CHANNEL_MSK);
 
@@ -202,7 +202,7 @@ static DEV_PWM_REQUEST(efm32_pwm_request)
           if (err)
             goto cfg_end;
 
-          freq_done = 1;
+          freq_done = true;
         }
 
       uint8_t channel = pdev->number + i;
