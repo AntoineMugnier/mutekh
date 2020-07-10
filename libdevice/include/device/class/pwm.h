@@ -50,7 +50,7 @@
 #include <device/resources.h>
 
 #include <hexo/enum.h>
-#include <hexo/lut.h>
+#include <mutek/lut.h>
 
 
 /* Forward declarations. */
