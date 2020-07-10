@@ -223,8 +223,10 @@ static DEV_PWM_REQUEST(efm32_pwm_request)
       if (!(pv->config & bit(channel)))
       /* Start channel */
         {
+          uint32_t x = endian_le32(cpu_mem_read_32(pv->addr + EFM32_TIMER_CC_CTRL_ADDR(channel)));
           pv->config |= bit(channel);
-          cpu_mem_write_32(pv->addr + EFM32_TIMER_CC_CTRL_ADDR(channel), EFM32_TIMER_CC_CTRL_MODE(PWM));
+          x |= EFM32_TIMER_CC_CTRL_MODE(PWM);
+          cpu_mem_write_32(pv->addr + EFM32_TIMER_CC_CTRL_ADDR(channel), x);
         }
     }
 
