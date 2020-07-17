@@ -21,6 +21,7 @@
 */
 
 #include <string.h>
+#include <stdbool.h>
 
 #include <hexo/types.h>
 #include <hexo/endian.h>
@@ -49,12 +50,10 @@ DRIVER_PV(struct efm32_pwm_private_s
 {
   /* PWM/timer base address. */
   uintptr_t                 addr;
-  /* Start count */
-  uint8_t                   count[EFM32_PWM_CHANNEL_MAX];
-  /* Channel started */
-  uint8_t                   start;
-  /* Channel configured */
-  uint8_t                   config;
+  /* Indicates if device has started */
+  bool                      started;
+  /* Mask of channels configured */
+  uint8_t                   config_mask;
   /* PWM configuration. */
   struct dev_freq_s         pwm_freq;
   struct dev_freq_ratio_s   duty[EFM32_PWM_CHANNEL_MAX];
@@ -66,39 +65,16 @@ DRIVER_PV(struct efm32_pwm_private_s
 static error_t efm32_pwm_validate_parameter(const struct device_pwm_s *pdev, struct dev_pwm_rq_s *rq)
 {
   struct efm32_pwm_private_s *pv  = pdev->dev->drv_pv;
-  struct dev_freq_s freq = rq->cfg[0].freq;
 
-  /* A channel is configured before being started */
-  if ((rq->chan_mask << pdev->number) & !pv->start)
-    return -EINVAL; 
+  /* A channel is configured before device is started */
+  if (!pv->started)
+    return -EINVAL;
 
-  uint8_t freq_msk = 0;
-
-  for (uint8_t i = 0; i < EFM32_PWM_CHANNEL_MAX; i++)
-    {
-      if (!(rq->chan_mask & bit(i)))
-        continue;
-
-      const struct dev_pwm_config_s * cfg = &rq->cfg[i];
-
-      if (rq->mask & DEV_PWM_MASK_FREQ)
-        {
-          freq_msk |= 1 << i;
-          /* Error on shared parameter frequency */
-          if ((cfg->freq.num != freq.num) || (cfg->freq.denom != freq.denom))
-            return -ENOTSUP; 
-        }
-    }
-
-  if (freq_msk)
-    {
-      /* Error on shared parameter frequency */
-      if (freq_msk != rq->chan_mask)
-       return -ENOTSUP;
-      if ((freq_msk << pdev->number) != pv->start)
-       return -ENOTSUP;
-    }
-
+  /* Shared parameter frequency must be changed for all started channels at once */
+  if ((rq->param_mask & DEV_PWM_MASK_FREQ) != 0) {
+    if ((rq->chan_mask | pv->config_mask) != rq->chan_mask)
+      return -ENOTSUP;
+  }
   return 0;
 }
 
@@ -165,82 +141,70 @@ static void efm32_pwm_polarity(struct device_s *dev, uint_fast8_t channel, enum 
   cpu_mem_write_32(pv->addr + EFM32_TIMER_CC_CTRL_ADDR(channel), endian_le32(x));
 }
 
-static DEV_PWM_REQUEST(efm32_pwm_request)
+static void efm32_pwm_start_channel(struct efm32_pwm_private_s *pv, uint_fast8_t channel)
+{
+  uint32_t x = endian_le32(cpu_mem_read_32(pv->addr + EFM32_TIMER_CC_CTRL_ADDR(channel)));
+  x |= EFM32_TIMER_CC_CTRL_MODE(PWM);
+  cpu_mem_write_32(pv->addr + EFM32_TIMER_CC_CTRL_ADDR(channel), x);
+}
+
+static DEV_PWM_CONFIG(efm32_pwm_config)
 {
   struct device_s            *dev = pdev->dev;
   struct efm32_pwm_private_s *pv  = dev->drv_pv;
 
-  assert(rq->chan_mask);
+  // No channel to update is an invalid request
+  if (rq->chan_mask == 0)
+    return -EINVAL;
 
   error_t err = 0;
-
-  LOCK_SPIN_IRQ(&dev->lock);
 
   /* Test if valid parameters */
   err = efm32_pwm_validate_parameter(pdev, rq);
   if (err)
-    goto cfg_end;
+    return err;
  
-  bool_t freq_done = false;
-
-  bool_t start = !(pv->config & EFM32_PWM_CHANNEL_MSK);
-
-  for (uint8_t i = 0; i < EFM32_PWM_CHANNEL_MAX - pdev->number; i++)
+  // Set frequency (only once as it's common to all channels)
+  if (rq->param_mask & DEV_PWM_MASK_FREQ) 
     {
+      pv->pwm_freq.num = rq->freq.num;
+      pv->pwm_freq.denom = rq->freq.denom;
+
+      err = efm32_pwm_freq(dev);
+
+      if (err)
+        return err;
+    }
+  // Configure duty cycle and polarity per channel
+  for (uint8_t i = 0; i < EFM32_PWM_CHANNEL_MAX; i++)
+    {
+      // Pass if channel not modified
       if (!(rq->chan_mask & bit(i)))
         continue;
 
-      const struct dev_pwm_config_s * cfg = &rq->cfg[i];
-
-      if ((rq->mask & DEV_PWM_MASK_FREQ) && !freq_done) 
+      // Set duty cycle
+      if (rq->param_mask & DEV_PWM_MASK_DUTY)
         {
-          pv->pwm_freq.num = cfg->freq.num;
-          pv->pwm_freq.denom = cfg->freq.denom;
+          pv->duty[i].num = rq->duty.num;
+          pv->duty[i].denom = rq->duty.denom;
 
-          err = efm32_pwm_freq(dev);
-
+          err = efm32_pwm_duty(dev, i);
           if (err)
-            goto cfg_end;
-
-          freq_done = true;
+            return err;
         }
 
-      uint8_t channel = pdev->number + i;
+      // Set polarity
+      if (rq->param_mask & DEV_PWM_MASK_POL)
+        efm32_pwm_polarity(dev, i, rq->pol);
 
-      if (rq->mask & DEV_PWM_MASK_DUTY)
+      /* Start channel if needed */
+      if (!(pv->config_mask & bit(i)))
         {
-          pv->duty[channel].num = cfg->duty.num;
-          pv->duty[channel].denom = cfg->duty.denom;
-
-          err = efm32_pwm_duty(dev, channel);
-          if (err)
-            goto cfg_end;
-        }
-
-      if (rq->mask & DEV_PWM_MASK_POL)
-        efm32_pwm_polarity(dev, channel, cfg->pol);
-
-      if (!(pv->config & bit(channel)))
-      /* Start channel */
-        {
-          uint32_t x = endian_le32(cpu_mem_read_32(pv->addr + EFM32_TIMER_CC_CTRL_ADDR(channel)));
-          pv->config |= bit(channel);
-          x |= EFM32_TIMER_CC_CTRL_MODE(PWM);
-          cpu_mem_write_32(pv->addr + EFM32_TIMER_CC_CTRL_ADDR(channel), x);
+          pv->config_mask |= bit(i);
+          efm32_pwm_start_channel(pv, i);
         }
     }
-
-  if (start)
-    /* Start counter */
-    cpu_mem_write_32(pv->addr + EFM32_TIMER_CMD_ADDR, endian_le32(EFM32_TIMER_CMD_START));
-
-
-cfg_end:
-
-  LOCK_RELEASE_IRQ(&dev->lock);
-
-  rq->error = err;
-  dev_pwm_rq_done(rq);
+  return 0;
 }
 
 #ifdef CONFIG_DEVICE_CLOCK_VARFREQ
@@ -248,60 +212,57 @@ static void efm32_pwm_clk_changed(struct device_s *dev)
 {
   struct efm32_pwm_private_s *pv = dev->drv_pv;
 
-  if (!pv->config)
+  if (!pv->config_mask)
     return;
 
   efm32_pwm_freq(dev);
 
   for (uint8_t i = 0; i < EFM32_PWM_CHANNEL_MAX; i++)
     {
-      if (pv->config & bit(i))
+      if (pv->config_mask & bit(i))
         efm32_pwm_duty(dev, i);
     }
 }
 #endif
 
-static error_t efm32_pwm_start(struct device_s *dev, uint_fast8_t channel)
+static error_t efm32_pwm_start(struct device_s *dev)
 {
   struct efm32_pwm_private_s *pv = dev->drv_pv;
 
 #ifdef CONFIG_DEVICE_CLOCK_GATING
-  if (!pv->start)
+  if (!pv->started)
     dev_clock_sink_gate(&pv->clk_ep, DEV_CLOCK_EP_POWER_CLOCK);
 #endif
-  pv->count[channel]++;
-  pv->start |= 1 << channel;
-
+  /* Start timer  */
+  cpu_mem_write_32(pv->addr + EFM32_TIMER_CMD_ADDR, endian_le32(EFM32_TIMER_CMD_START));
+  pv->started = true;
   return 0;
 }
 
-static error_t efm32_pwm_stop(struct device_s *dev, uint_fast8_t channel)
+static error_t efm32_pwm_stop(struct device_s *dev)
 {
   struct efm32_pwm_private_s *pv = dev->drv_pv;
 
-  if (!pv->count[channel])
-    return -EINVAL;
-
-  pv->count[channel]--;
-
-  uint8_t mask = 1 << channel;
-
-  if (!pv->count[channel])
+  // Parse and stop started channels
+  for (uint8_t i = 0; i < EFM32_PWM_CHANNEL_MAX; i++)
     {
+      // Pass if channel not configured
+      if (!(pv->config_mask & bit(i)))
+        continue;
       /* Stop channel */
-      cpu_mem_write_32(pv->addr + EFM32_TIMER_CC_CTRL_ADDR(channel), EFM32_TIMER_CC_CTRL_MODE(OFF));
-      pv->start &= ~mask;
+      cpu_mem_write_32(pv->addr + EFM32_TIMER_CC_CTRL_ADDR(i), EFM32_TIMER_CC_CTRL_MODE(OFF));
     }
+  // Clear config mask
+  pv->config_mask = 0;
 
-  pv->config &= ~mask;
-
-  if (!pv->start)
+  if (pv->started)
     {
 #ifdef CONFIG_DEVICE_CLOCK_GATING
       dev_clock_sink_gate(&pv->clk_ep, DEV_CLOCK_EP_POWER);
 #endif
-      /* Stop counter */
+      /* Stop timer */
       cpu_mem_write_32(pv->addr + EFM32_TIMER_CMD_ADDR, endian_le32(EFM32_TIMER_CMD_STOP));
+      pv->started = false;
     }
 
   return 0;
@@ -412,19 +373,10 @@ static DEV_USE(efm32_pwm_use)
 #endif
 
       case DEV_USE_START:
-        return efm32_pwm_start(accessor->dev, accessor->number);
+        return efm32_pwm_start(accessor->dev);
 
       case DEV_USE_STOP:
-        return efm32_pwm_stop(accessor->dev, accessor->number);
-
-      case DEV_USE_GET_ACCESSOR:
-        if (accessor->number >= EFM32_PWM_CHANNEL_MAX)
-          return -ENOTSUP;
-        return 0;
-
-      case DEV_USE_LAST_NUMBER:
-        accessor->number = EFM32_PWM_CHANNEL_MAX - 1;
-        return 0;
+        return efm32_pwm_stop(accessor->dev);
 
       default:
         return dev_use_generic(param, op);
@@ -435,4 +387,3 @@ DRIVER_DECLARE(efm32_pwm_drv, 0, "EFM32 PWM", efm32_pwm,
                DRIVER_PWM_METHODS(efm32_pwm));
 
 DRIVER_REGISTER(efm32_pwm_drv);
-
