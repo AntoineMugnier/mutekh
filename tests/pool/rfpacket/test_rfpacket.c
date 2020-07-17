@@ -65,12 +65,12 @@
 static const struct dev_rfpacket_pk_cfg_basic_s pkcfg = {
     .base = {
         .format = DEV_RFPACKET_FMT_SLPC,
-        .encoding = DEV_RFPACKET_CLEAR,
         .cache = {
             .id = 0,
             .dirty = 0
           },
     },
+    .encoding = DEV_RFPACKET_CLEAR,
     .crc = 0x8005,
     .crc_seed = 0xffff,
     .sw_value = 0xabba,
@@ -88,6 +88,8 @@ static const struct dev_rfpacket_rf_cfg_fsk_s rfcfg = {
          .id = 0,
          .dirty = 0
      },
+  },
+  .common = {
      .drate = 38400,
      .jam_rssi = (-90) << 3,
      .frequency = 865056875 - 13000,
