@@ -135,7 +135,7 @@ static TERMUI_CON_OPT_DECL(dev_pwm_opts) =
                         NULL)
   )
 
-  TERMUI_CON_OPT_ENUM_ENTRY("-h", "--channel_mask", PWM_OPT_CHMSK,
+  TERMUI_CON_OPT_FREQ_ENTRY("-h", "--channel_mask", PWM_OPT_CHMSK,
     struct termui_optctx_dev_pwm_opts, chan_mask,
     TERMUI_CON_OPT_CONSTRAINTS(PWM_OPT_CHMSK, PWM_OPT_DEV)
     TERMUI_CON_OPT_HELP("This option defines the channels affected by the parameters",
@@ -150,7 +150,7 @@ TERMUI_CON_GROUP_DECL(dev_shell_pwm_group) =
   TERMUI_CON_ENTRY(dev_shell_pwm_config, "config",
     TERMUI_CON_OPTS_CTX(dev_pwm_opts,
                         PWM_OPT_DEV,
-                        PWM_OPT_FREQ | PWM_OPT_DUTY | PWM_OPT_POL,
+                        PWM_OPT_FREQ | PWM_OPT_DUTY | PWM_OPT_POL | PWM_OPT_CHMSK,
                         pwm_opts_cleanup)
   )
 
