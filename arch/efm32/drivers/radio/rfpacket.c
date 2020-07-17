@@ -21,7 +21,6 @@
  */
 
 #include <stdbool.h>
-#include <math.h> // FIXME REMOVE EXP() USE
 #include "common.h"
 #include "protimer.h"
 #include <device/class/iomux.h>
@@ -43,15 +42,40 @@
                                    EFR32_FRC_IF_FRAMEERROR)
 
 // Power calculation values
-#define EFR32_POW_MAX_DBM          128 // 0.125 dbm unit (16)
-#define EFR32_POW_MAX_RAW          240
-#define EFR32_POW_STRIPE_MAX_VAL   32
-#define EFR32_POW_LINEAR_THRES     98 // 0.125 dbm unit (12.25)
+#define EFR32_POW_STRIPE_MAX_VAL  32
+#define EFR32_POW_MIN_DBM        -176 // 0.125 dbm unit (-22dbm)
+#define EFR32_POW_MAX_DBM         128 // 0.125 dbm unit (16dbm)
+#define EFR32_POW_MIN_RAW         1
+#define EFR32_POW_MAX_RAW         248
+#define EFR32_POW_THRES_0         121 // 15.125 dbm
+#define EFR32_POW_THRES_1         99 // 12.25 dbm
+#define EFR32_POW_THRES_2         63 // 7.875 dbm
+#define EFR32_POW_THRES_3         31 // 3.875 dbm
+#define EFR32_POW_THRES_4        -2 // -0.25 dbm
+#define EFR32_POW_THRES_5        -31 // -3.875 dbm
+#define EFR32_POW_THRES_6        -72 // -9 dbm
 
 enum efr32_rac_irq_type {
   EFR32_RAC_IRQ_TIMEOUT,
   EFR32_RAC_IRQ_TXRX,
 };
+
+typedef struct _efr32_pa_curve {
+    uint16_t slope;
+    int32_t offset;
+} efr32_pa_curve_t;
+
+static const efr32_pa_curve_t efr32_tx_pa_curves[] = {
+    { 11336, -1171644 },
+    { 4783, -378994 },
+    { 1165, -22748 },
+    { 588, 13485 },
+    { 380, 19712 },
+    { 240, 19146 },
+    { 138, 15607 },
+    { 39, 8239 },
+};
+
 
 DRIVER_PV(struct radio_efr32_rfp_ctx_s {
   struct radio_efr32_ctx_s pv;
@@ -81,6 +105,8 @@ STRUCT_COMPOSE(radio_efr32_rfp_ctx_s, pv);
 
 static void efr32_rfp_timer_irq(struct device_s *dev);
 static error_t efr32_radio_get_time(struct dev_rfpacket_ctx_s *gpv, dev_timer_value_t *value);
+static error_t efr32_calc_power(dev_rfpacket_pwr_t pwr_dbm, uint32_t *p_sgpac_val, uint32_t *p_pac_val);
+static error_t efr32_set_tx_power(struct dev_rfpacket_rq_s *rq);
 static inline void  efr32_rfp_set_status_timeout(struct radio_efr32_rfp_ctx_s *ctx, enum dev_rfpacket_status_s status);
 static void efr32_rfp_req_timeout(struct radio_efr32_rfp_ctx_s *ctx);
 static inline void  efr32_rfp_set_status_done(struct radio_efr32_rfp_ctx_s *ctx, enum dev_rfpacket_status_s status);
@@ -411,27 +437,49 @@ static error_t efr32_radio_timer_cancel(struct radio_efr32_rfp_ctx_s *ctx, struc
 /**************************** RFPACKET PART ********************************/
 
 static error_t efr32_calc_power(dev_rfpacket_pwr_t pwr_dbm, uint32_t *p_sgpac_val, uint32_t *p_pac_val) {
+  uint8_t pa_idx = 0;
+  int64_t pa_curve_value;
   uint32_t pwr_raw = 0;
-  // Convert 0.125 dbm to raw
-  if (pwr_dbm > EFR32_POW_MAX_DBM) {
-    return -ENOTSUP;
+  // Limit intput power value
+  if (pwr_dbm < EFR32_POW_MIN_DBM) {
+    pwr_dbm = EFR32_POW_MIN_DBM;
+    logk_trace("Power requested too low, setting value to %d", pwr_dbm);
+  } else if (pwr_dbm > EFR32_POW_MAX_DBM) {
+    pwr_dbm = EFR32_POW_MAX_DBM;
+    logk_trace("Power requested too high, setting value to %d", pwr_dbm);
   }
-  if (pwr_dbm > EFR32_POW_LINEAR_THRES) {
-    pwr_raw = (pwr_dbm * 38) / 8 - 375;
+  // Get pa curve index
+  if (pwr_dbm > EFR32_POW_THRES_0) {
+    pa_idx = 0;
+  } else if (pwr_dbm > EFR32_POW_THRES_1) {
+    pa_idx = 1;
+  } else if (pwr_dbm > EFR32_POW_THRES_2) {
+    pa_idx = 2;
+  } else if (pwr_dbm > EFR32_POW_THRES_3) {
+    pa_idx = 3;
+  } else if (pwr_dbm > EFR32_POW_THRES_4) {
+    pa_idx = 4;
+  } else if (pwr_dbm > EFR32_POW_THRES_5) {
+    pa_idx = 5;
+  } else if (pwr_dbm > EFR32_POW_THRES_6) {
+    pa_idx = 6;
   } else {
-    // Exponential domain
-    // TODO APPROXIMATE EXP
-    pwr_raw = 20 * exp((double)pwr_dbm / 64);
+    pa_idx = 7;
   }
-  if (pwr_raw == 0) {
-    pwr_raw = 1;
+  // Calc pa curve value
+  pa_curve_value = efr32_tx_pa_curves[pa_idx].slope * pwr_dbm + efr32_tx_pa_curves[pa_idx].offset;
+  // Calc raw and value rounding
+  pwr_raw = (pa_curve_value + 500) / 1000;
+  // Limit value
+  if (pwr_raw < EFR32_POW_MIN_RAW) {
+    pwr_raw = EFR32_POW_MIN_RAW;
   } else if (pwr_raw > EFR32_POW_MAX_RAW) {
     pwr_raw = EFR32_POW_MAX_RAW;
   }
-  // Calc reg value based on raw 
+  // Calc reg value based on raw
   uint8_t stripe = pwr_raw % EFR32_POW_STRIPE_MAX_VAL;
   uint8_t slice_cascode = (bit(pwr_raw / EFR32_POW_STRIPE_MAX_VAL + 1) - 1);
-  bool en_SGVBATDET = (pwr_raw >= 120) ? true : false;
+  bool en_SGVBATDET = (pwr_raw >= 120) ? true : false; // TODO check is useful ?
   uint32_t power_reg = (slice_cascode << EFR32_RAC_SGPACTRL0_CASCODE_IDX) | (slice_cascode << EFR32_RAC_SGPACTRL0_SLICE_IDX) |
     (stripe << EFR32_RAC_SGPACTRL0_STRIPE_IDX) | EFR32_RAC_SGPACTRL0_DACGLITCHCTRL;
   *p_pac_val = power_reg;
