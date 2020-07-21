@@ -85,7 +85,7 @@ enum dev_pwm_mask_e
   DEV_PWM_MASK_POL  = 0x4,
 };
 
-struct dev_pwm_rq_s
+struct dev_pwm_config_s
 {
   /* Mask of impacted channels. */
   uint32_t                chan_mask;
@@ -101,6 +101,15 @@ struct dev_pwm_rq_s
 
   /* Output polarity parameter */
   enum dev_pwm_polarity_e pol;
+};
+
+struct dev_pwm_rq_s
+{
+  /* Number of config to apply */
+  uint32_t                cfg_count;
+
+  /* Pointer to configuration table */
+  const struct dev_pwm_config_s *cfg;
 };
 
 /** @see dev_pwm_config_t */
