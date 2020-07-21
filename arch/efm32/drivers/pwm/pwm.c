@@ -96,12 +96,12 @@ static error_t efm32_pwm_freq(struct device_s *dev)
   uint64_t scale = (pv->core_freq.num * pv->pwm_freq.denom) / (pv->core_freq.denom * pv->pwm_freq.num);
 
   uint32_t msb = scale >> EFM32_PWM_HW_WIDTH;
-  
+
   uint8_t div = msb ? 1 + bit_msb_index(msb) : 0;
 
   if (div > 10)
-  /* Frequency can not be achieved */  
-    return -ERANGE; 
+  /* Frequency can not be achieved */
+    return -ERANGE;
 
   scale = scale / (1 << div);
 
@@ -111,7 +111,7 @@ static error_t efm32_pwm_freq(struct device_s *dev)
   EFM32_TIMER_CTRL_PRESC_SETVAL(x, div);
 
   uint32_t top = (scale - 1) & 0xFFFF;
- 
+
   /* Configure PWM */
   cpu_mem_write_32(pv->addr + EFM32_TIMER_CTRL_ADDR, endian_le32(x));
   cpu_mem_write_32(pv->addr + EFM32_TIMER_TOP_ADDR, endian_le32(top));
@@ -122,11 +122,11 @@ static error_t efm32_pwm_freq(struct device_s *dev)
 static error_t efm32_pwm_duty(struct device_s *dev, uint_fast8_t channel)
 {
   struct efm32_pwm_private_s *pv = dev->drv_pv;
-  
+
   uint16_t top = endian_le32(cpu_mem_read_32(pv->addr + EFM32_TIMER_TOP_ADDR));
 
   if (pv->duty[channel].num > pv->duty[channel].denom)
-    return -ERANGE; 
+    return -ERANGE;
 
   uint32_t x;
 
@@ -136,7 +136,6 @@ static error_t efm32_pwm_duty(struct device_s *dev, uint_fast8_t channel)
     x = (pv->duty[channel].num * top) / pv->duty[channel].denom;
 
   cpu_mem_write_32(pv->addr + EFM32_TIMER_CC_CCV_ADDR(channel), endian_le32(x));
-
   return 0;
 }
 
@@ -267,7 +266,7 @@ static error_t efm32_pwm_stop(struct device_s *dev)
 {
   struct efm32_pwm_private_s *pv = dev->drv_pv;
 
-  // Parse and stop started channels
+  /* Parse and stop started channels */
   for (uint8_t i = 0; i < EFM32_PWM_CHANNEL_MAX; i++)
     {
       uint8_t channel = efm32_pwm_get_mapped_channel(i, pv->ch_remap);
@@ -278,7 +277,7 @@ static error_t efm32_pwm_stop(struct device_s *dev)
       /* Stop channel */
       cpu_mem_write_32(pv->addr + EFM32_TIMER_CC_CTRL_ADDR(channel), EFM32_TIMER_CC_CTRL_MODE(OFF));
     }
-  // Clear config mask
+  /* Clear config mask */
   pv->config_mask = 0;
 
   if (pv->started)
@@ -308,7 +307,7 @@ static DEV_INIT(efm32_pwm_init)
 
   memset(pv, 0, sizeof(*pv));
   dev->drv_pv = pv;
-  
+
   if (device_res_get_uint(dev, DEV_RES_MEM, 0, &pv->addr, NULL))
     return -ENOENT;
 
@@ -334,14 +333,14 @@ static DEV_INIT(efm32_pwm_init)
   iomux_demux_t loc[EFM32_PWM_CHANNEL_MAX];
   if (device_iomux_setup(dev, ">cc0? >cc1? >cc2?", loc, NULL, NULL))
     goto err_clku;
- 
-  uint32_t x = EFM32_TIMER_CC_CTRL_MODE(OFF); 
+
+  uint32_t x = EFM32_TIMER_CC_CTRL_MODE(OFF);
   /* Disable Compare/Capture channels */
   for (uint8_t i = 0; i < EFM32_PWM_CHANNEL_MAX; i++)
     cpu_mem_write_32(pv->addr + EFM32_TIMER_CC_CTRL_ADDR(i), endian_le32(x));
 
   uint32_t route = 0;
-  for(uint8_t i = 0; i < EFM32_PWM_CHANNEL_MAX; i++)
+  for (uint8_t i = 0; i < EFM32_PWM_CHANNEL_MAX; i++)
     {
       if (loc[i] != IOMUX_INVALID_DEMUX)
         {
