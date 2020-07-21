@@ -90,12 +90,17 @@ TERMUI_CON_COMMAND_PROTOTYPE(dev_shell_pwm_config)
   if (used & PWM_OPT_POL)
     data->param_mask |= DEV_PWM_MASK_POL;
 
-  struct dev_pwm_rq_s rq = {
+  const struct dev_pwm_config_s cfg = {
     .chan_mask = data->chan_mask,
     .param_mask = data->param_mask,
     .freq = data->freq,
-    .duty = data->duty, 
+    .duty = data->duty,
     .pol = data->pol,
+  };
+
+  struct dev_pwm_rq_s rq = {
+    .cfg_count = 1,
+    .cfg = &cfg,
   };
   error_t err = DEVICE_OP(&data->pwm, config, &rq);
 
