@@ -58,11 +58,20 @@ DRIVER_PV(struct efm32_pwm_private_s
   struct dev_freq_s         pwm_freq;
   struct dev_freq_ratio_s   duty[EFM32_PWM_CHANNEL_MAX];
   struct dev_freq_s         core_freq;
+  /* Channels remap value */
+  uint32_t                  ch_remap;
 
   struct dev_clock_sink_ep_s clk_ep;
 });
 
-static error_t efm32_pwm_validate_parameter(const struct device_pwm_s *pdev, struct dev_pwm_rq_s *rq)
+static uint8_t efm32_pwm_get_mapped_channel(uint8_t channel, uint32_t ch_remap) {
+  if (ch_remap == 0)
+    return channel;
+  else
+    return LUT_8_4_GET(channel, ch_remap);
+}
+
+static error_t efm32_pwm_validate_parameter(const struct device_pwm_s *pdev, const struct dev_pwm_config_s *cfg)
 {
   struct efm32_pwm_private_s *pv  = pdev->dev->drv_pv;
 
@@ -71,8 +80,9 @@ static error_t efm32_pwm_validate_parameter(const struct device_pwm_s *pdev, str
     return -EINVAL;
 
   /* Shared parameter frequency must be changed for all started channels at once */
-  if ((rq->param_mask & DEV_PWM_MASK_FREQ) != 0) {
-    if ((rq->chan_mask | pv->config_mask) != rq->chan_mask)
+  if ((cfg->param_mask & DEV_PWM_MASK_FREQ) != 0)
+  {
+    if ((cfg->chan_mask | pv->config_mask) != cfg->chan_mask)
       return -ENOTSUP;
   }
   return 0;
@@ -118,6 +128,8 @@ static error_t efm32_pwm_duty(struct device_s *dev, uint_fast8_t channel)
   if (pv->duty[channel].num > pv->duty[channel].denom)
     return -ERANGE; 
 
+  uint32_t x;
+
   uint32_t x = (pv->duty[channel].num * top) / pv->duty[channel].denom;
   if (pv->duty[channel].num == pv->duty[channel].denom)
     x = top + 1;
@@ -153,57 +165,66 @@ static DEV_PWM_CONFIG(efm32_pwm_config)
   struct device_s            *dev = pdev->dev;
   struct efm32_pwm_private_s *pv  = dev->drv_pv;
 
-  // No channel to update is an invalid request
-  if (rq->chan_mask == 0)
-    return -EINVAL;
+  for (uint8_t idx = 0; idx < rq->cfg_count; idx++)
+  {
+    /* Get config from request */
+    assert(rq->cfg);
+    const struct dev_pwm_config_s cfg = rq->cfg[idx];
 
-  error_t err = 0;
+    /* No channel to update is an invalid request */
+    if (cfg.chan_mask == 0)
+      return -EINVAL;
 
-  /* Test if valid parameters */
-  err = efm32_pwm_validate_parameter(pdev, rq);
-  if (err)
-    return err;
- 
-  // Set frequency (only once as it's common to all channels)
-  if (rq->param_mask & DEV_PWM_MASK_FREQ) 
-    {
-      pv->pwm_freq.num = rq->freq.num;
-      pv->pwm_freq.denom = rq->freq.denom;
+    error_t err = 0;
 
-      err = efm32_pwm_freq(dev);
+    /* Test if valid parameters */
+    err = efm32_pwm_validate_parameter(pdev, &cfg);
+    if (err)
+      return err;
 
-      if (err)
-        return err;
-    }
-  // Configure duty cycle and polarity per channel
-  for (uint8_t i = 0; i < EFM32_PWM_CHANNEL_MAX; i++)
-    {
-      // Pass if channel not modified
-      if (!(rq->chan_mask & bit(i)))
-        continue;
+    /* Set frequency (only once as it's common to all channels) */
+    if (cfg.param_mask & DEV_PWM_MASK_FREQ)
+      {
+        pv->pwm_freq.num = cfg.freq.num;
+        pv->pwm_freq.denom = cfg.freq.denom;
 
-      // Set duty cycle
-      if (rq->param_mask & DEV_PWM_MASK_DUTY)
-        {
-          pv->duty[i].num = rq->duty.num;
-          pv->duty[i].denom = rq->duty.denom;
+        err = efm32_pwm_freq(dev);
+        if (err)
+          return err;
+      }
+    /* Configure duty cycle and polarity per channel */
+    for (uint8_t i = 0; i < EFM32_PWM_CHANNEL_MAX; i++)
+      {
+        /* Pass if channel not modified */
+        if (!(cfg.chan_mask & bit(i)))
+          continue;
 
-          err = efm32_pwm_duty(dev, i);
-          if (err)
-            return err;
-        }
+        /* Remap channel value */
+        uint8_t channel = efm32_pwm_get_mapped_channel(i, pv->ch_remap);
 
-      // Set polarity
-      if (rq->param_mask & DEV_PWM_MASK_POL)
-        efm32_pwm_polarity(dev, i, rq->pol);
+        /* Set duty cycle */
+        if (cfg.param_mask & DEV_PWM_MASK_DUTY)
+          {
+            pv->duty[channel].num = cfg.duty.num;
+            pv->duty[channel].denom = cfg.duty.denom;
 
-      /* Start channel if needed */
-      if (!(pv->config_mask & bit(i)))
-        {
-          pv->config_mask |= bit(i);
-          efm32_pwm_start_channel(pv, i);
-        }
-    }
+            err = efm32_pwm_duty(dev, channel);
+            if (err)
+              return err;
+          }
+
+        /* Set polarity */
+        if (cfg.param_mask & DEV_PWM_MASK_POL)
+          efm32_pwm_polarity(dev, channel, cfg.pol);
+
+        /* Start channel if needed */
+        if (!(pv->config_mask & bit(channel)))
+          {
+            pv->config_mask |= bit(channel);
+            efm32_pwm_start_channel(pv, channel);
+          }
+      }
+  }
   return 0;
 }
 
@@ -219,8 +240,10 @@ static void efm32_pwm_clk_changed(struct device_s *dev)
 
   for (uint8_t i = 0; i < EFM32_PWM_CHANNEL_MAX; i++)
     {
-      if (pv->config_mask & bit(i))
-        efm32_pwm_duty(dev, i);
+      uint8_t channel = efm32_pwm_get_mapped_channel(i, pv->ch_remap);
+
+      if (pv->config_mask & bit(channel))
+        efm32_pwm_duty(dev, channel);
     }
 }
 #endif
@@ -246,11 +269,13 @@ static error_t efm32_pwm_stop(struct device_s *dev)
   // Parse and stop started channels
   for (uint8_t i = 0; i < EFM32_PWM_CHANNEL_MAX; i++)
     {
-      // Pass if channel not configured
-      if (!(pv->config_mask & bit(i)))
+      uint8_t channel = efm32_pwm_get_mapped_channel(i, pv->ch_remap);
+
+      /* Pass if channel not configured */
+      if (!(pv->config_mask & bit(channel)))
         continue;
       /* Stop channel */
-      cpu_mem_write_32(pv->addr + EFM32_TIMER_CC_CTRL_ADDR(i), EFM32_TIMER_CC_CTRL_MODE(OFF));
+      cpu_mem_write_32(pv->addr + EFM32_TIMER_CC_CTRL_ADDR(channel), EFM32_TIMER_CC_CTRL_MODE(OFF));
     }
   // Clear config mask
   pv->config_mask = 0;
@@ -329,6 +354,10 @@ static DEV_INIT(efm32_pwm_init)
 #ifdef CONFIG_DEVICE_CLOCK_GATING
   dev_clock_sink_gate(&pv->clk_ep, DEV_CLOCK_EP_POWER);
 #endif
+
+  /* Get channel remapping */
+  if (device_get_param_uint(dev, "remap", &pv->ch_remap) != 0)
+    pv->ch_remap = 0;
 
   return 0;
 
