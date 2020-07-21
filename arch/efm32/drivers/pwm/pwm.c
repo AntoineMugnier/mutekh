@@ -130,9 +130,10 @@ static error_t efm32_pwm_duty(struct device_s *dev, uint_fast8_t channel)
 
   uint32_t x;
 
-  uint32_t x = (pv->duty[channel].num * top) / pv->duty[channel].denom;
-  if (pv->duty[channel].num == pv->duty[channel].denom)
+  if ((pv->duty[channel].denom == 0) || (pv->duty[channel].num == pv->duty[channel].denom))
     x = top + 1;
+  else
+    x = (pv->duty[channel].num * top) / pv->duty[channel].denom;
 
   cpu_mem_write_32(pv->addr + EFM32_TIMER_CC_CCV_ADDR(channel), endian_le32(x));
 
