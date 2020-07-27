@@ -46,13 +46,13 @@ enum valio_button_att {
     VALIO_BUTTON_RELEASE,
 };
 
-/* Return structure for @tt DEVICE_VALIO_WAIT_EVENT request type */ 
+/* Return structure for @tt DEVICE_VALIO_WAIT_EVENT request type */
 struct valio_button_update_s
 {
   uint16_t timestamp;
 };
 
-/* Return structure for @tt DEVICE_VALIO_READ request type */ 
+/* Return structure for @tt DEVICE_VALIO_READ request type */
 struct valio_button_read_s
 {
   bool_t state;

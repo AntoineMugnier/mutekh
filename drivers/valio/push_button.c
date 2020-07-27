@@ -192,25 +192,25 @@ static DEV_VALIO_REQUEST(push_button_request)
   bool_t done = 1;
 
   LOCK_SPIN_IRQ(&dev->lock);
- 
+
   rq->error = 0;
 
   struct valio_button_read_s * data = (struct valio_button_read_s*)rq->data;
- 
+
   switch (rq->type) {
     case DEVICE_VALIO_WRITE:
       rq->error = -ENOTSUP;
       break;
 
     case DEVICE_VALIO_READ:
-      data->state = pv->state; 
+      data->state = pv->state;
       break;
-  
+
     case DEVICE_VALIO_WAIT_EVENT:
       done = 0;
       dev_valio_rq_pushback(&pv->queue, rq);
       break;
-  
+
     default:
       rq->error = -EINVAL;
       break;
