@@ -52,7 +52,7 @@ DRIVER_PV(struct push_button_context_s
   /* Timer accessor */
   struct device_timer_s timer;
   /* fast conversion */
-  int_fast8_t shifta, shiftb;
+  int8_t shifta, shiftb;
   /* Last read value on timer */
   dev_timer_value_t last_value;
 #ifdef CONFIG_DRIVER_PUSH_BUTTON_SOFT_DEBOUNCING
@@ -208,7 +208,7 @@ static DEV_VALIO_REQUEST(push_button_request)
   
     case DEVICE_VALIO_WAIT_EVENT:
       done = 0;
-      dev_valio_rq_pushback(&pv->queue, req);
+      dev_valio_rq_pushback(&pv->queue, rq);
       break;
   
     default:
@@ -219,7 +219,7 @@ static DEV_VALIO_REQUEST(push_button_request)
   LOCK_RELEASE_IRQ(&dev->lock);
 
   if (done)
-    dev_valio_rq_done(req);
+    dev_valio_rq_done(rq);
 }
 
 
@@ -252,7 +252,7 @@ static DEV_INIT(push_button_init)
 
 #ifdef CONFIG_DRIVER_PUSH_BUTTON_TIMER
   /* Get accessor on timer */
-  if (!device_get_param_dev_accessor(dev, "button-timer", &pv->timer, DRIVER_CLASS_TIMER))
+  if (!device_get_param_dev_accessor(dev, "timer", &pv->timer.base, DRIVER_CLASS_TIMER))
     {
       /* Start timer */
       device_start(&pv->timer.base);
@@ -266,7 +266,7 @@ static DEV_INIT(push_button_init)
 #endif
     }
   else
-    device_init_accessor(&pv->timer);
+    device_init_accessor(&pv->timer.base);
 #endif
 
   dev_rq_queue_init(&pv->queue);
