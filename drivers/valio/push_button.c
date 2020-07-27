@@ -37,6 +37,7 @@
 #include <device/class/timer.h>
 #include <device/class/iomux.h>
 #include <device/class/valio.h>
+#include <device/class/gpio.h>
 #include <device/valio/button.h>
 
 DRIVER_PV(struct push_button_context_s
@@ -48,6 +49,9 @@ DRIVER_PV(struct push_button_context_s
   struct dev_irq_src_s irq_ep;
   /* request queue */
   dev_request_queue_root_t queue;
+  /* gpio dev and map */
+  struct device_gpio_s gpio;
+  gpio_id_t pin_map[1];
 #ifdef CONFIG_DRIVER_PUSH_BUTTON_TIMER
   /* Timer accessor */
   struct device_timer_s timer;
@@ -270,6 +274,10 @@ static DEV_INIT(push_button_init)
 #endif
 
   dev_rq_queue_init(&pv->queue);
+
+  /* Init GPIO and Irq */
+  if (device_gpio_get_setup(&pv->gpio, dev, "=pbirq:1", pv->pin_map, NULL))
+    goto err_mem;
 
   device_irq_source_init(dev, &pv->irq_ep, 1, &push_button_irq);
 
