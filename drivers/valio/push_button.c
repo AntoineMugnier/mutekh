@@ -262,11 +262,11 @@ static DEV_INIT(push_button_init)
       device_start(&pv->timer.base);
       dev_timer_shift_sec(&pv->timer, &pv->shifta, &pv->shiftb, 0, 1, 1000);
 #ifdef CONFIG_DRIVER_PUSH_BUTTON_SOFT_DEBOUNCING
+      dev_timer_init_sec(&pv->timer, &pv->timeout, 0,
+        CONFIG_DRIVER_PUSH_BUTTON_SOFT_DEBOUNCING_TIMING, 1000);
       pv->trq.pvdata = dev;
-      pv->trq.rq.drvdata = NULL;
-      pv->trq.deadline = 0;
-      pv->trq.rev = 2;
-      dev_timer_rq_init_immediate(&pv->trq, push_button_lock_timeout);
+      pv->trq.delay = pv->timeout;
+      dev_timer_rq_init(&pv->trq, push_button_lock_timeout);
 #endif
     }
   else
