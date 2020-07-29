@@ -20,6 +20,7 @@
 
 */
 
+#include <stdbool.h>
 
 #include <hexo/types.h>
 #include <hexo/endian.h>
@@ -42,30 +43,22 @@
 
 DRIVER_PV(struct push_button_context_s
 {
-  bool_t state;
-  /* Value when released */
-  bool_t release_state;
-  /* Interrupt endpoint */
-  struct dev_irq_src_s irq_ep;
-  /* request queue */
-  dev_request_queue_root_t queue;
-  /* gpio dev and map */
-  struct device_gpio_s gpio;
-  gpio_id_t pin_map[1];
+  bool busy; // Indicates that another wait event request is in action
+  uint8_t release_state; // Value when button is released
+  uint8_t current_state; // Current value
+  dev_request_queue_root_t queue; // Request queue
+  struct device_gpio_s gpio; // Gpio device
+  gpio_id_t pin_map[1]; // Gpio map
+  struct dev_gpio_rq_s gpio_rq; // Gpio request
 #ifdef CONFIG_DRIVER_PUSH_BUTTON_TIMER
-  /* Timer accessor */
-  struct device_timer_s timer;
-  /* fast conversion */
+  struct device_timer_s timer; //Timer device
   int8_t shifta, shiftb;
-  /* Last read value on timer */
-  dev_timer_value_t last_value;
+  dev_timer_value_t last_value; // Last read value on timer
 #ifdef CONFIG_DRIVER_PUSH_BUTTON_SOFT_DEBOUNCING
-  /* lock during debouncing */
-  bool_t lock;
-  /* debouncing timeout */
-  uint32_t timeout;
-  /* timer request */
-  struct dev_timer_rq_s trq;
+  bool debounce_lock; // Soft debouncing lock
+  bool debounce_was_locked; // Indicates that a soft debouncing lock was active
+  uint32_t debounce_timeout; // Debouncing timeout
+  struct dev_timer_rq_s debounce_trq; // Debouncing timer request
 #endif
 #endif
 });
@@ -79,31 +72,28 @@ static KROUTINE_EXEC(push_button_lock_timeout)
    struct push_button_context_s *pv  = dev->drv_pv;
 
    LOCK_SPIN_IRQ(&dev->lock);
-   pv->lock = 0;
+   pv->debounce_lock = false;
    LOCK_RELEASE_IRQ(&dev->lock);
+   if (pv->debounce_was_locked)
+   {
+    pv->debounce_was_locked = false;
+    DEVICE_OP(&pv->gpio, request, &pv->gpio_rq);
+   }
 }
 
 static bool_t push_button_timer_rq(struct device_s *dev)
 {
    struct push_button_context_s *pv  = dev->drv_pv;
 
-   while (1)
+   switch (DEVICE_OP(&pv->timer, request, &pv->debounce_trq))
      {
-       pv->trq.delay = pv->timeout;
-       switch (DEVICE_OP(&pv->timer, request, &pv->trq))
-         {
-         case -EAGAIN:
-           if (!dev_timer_init_sec(&pv->timer, &pv->timeout, &pv->trq.rev,
-                  CONFIG_DRIVER_PUSH_BUTTON_SOFT_DEBOUNCING_TIMING, 1000))
-             continue;
-         default:
-           printk("Push button driver: Timer error\n");
-           return 1;
-         case -ETIMEDOUT:
-           return 1;
-         case 0:
-           return 0;
-         }
+     default:
+       printk("Push button driver: Timer error\n");
+       return 1;
+     case -ETIMEDOUT:
+       return 1;
+     case 0:
+       return 0;
      }
 }
 
@@ -111,26 +101,26 @@ static bool_t push_button_timer_rq(struct device_s *dev)
 
 /***************************************** interrupt */
 
-static DEV_IRQ_SRC_PROCESS(push_button_irq)
+static KROUTINE_EXEC(push_button_event)
 {
-  struct device_s *dev = ep->base.dev;
+  struct dev_gpio_rq_s *grq = dev_gpio_rq_from_kr(kr);
+  struct device_s *dev = grq->pvdata;
   struct push_button_context_s *pv  = dev->drv_pv;
-
   struct dev_valio_rq_s *rq = dev_valio_rq_head(&pv->queue);
 
-  lock_spin(&dev->lock);
+if (grq->error != 0)
+{
+  printk("Push button driver: Gpio error %d\n", grq->error);
+  return;
+}
 
 #ifdef CONFIG_DRIVER_PUSH_BUTTON_SOFT_DEBOUNCING
-  if (pv->lock)
-    {
-      lock_release(&dev->lock);
-      return;
-    }
+  if (pv->debounce_lock)
+  {
+    pv->debounce_was_locked = true;
+    return;
+  }
 #endif
-
-  bool_t done = 0;
-
-  pv->state ^= 1;
 
   uint32_t timestamp = 0;
 
@@ -153,43 +143,54 @@ static DEV_IRQ_SRC_PROCESS(push_button_irq)
 
 #ifdef CONFIG_DRIVER_PUSH_BUTTON_SOFT_DEBOUNCING
   push_button_timer_rq(dev);
-  pv->lock = 1;
+  pv->debounce_lock = true;
 #endif
 
 #endif
+  /* Update gpio value */
+  pv->current_state = !pv->current_state;
 
-  if (rq)
+  /* Process request */
+  if (rq != NULL)
     {
+      bool rq_done = false;
       struct valio_button_update_s * data = (struct valio_button_update_s *)rq->data;
       data->timestamp = timestamp;
 
       switch ((enum valio_button_att)rq->attribute)
         {
           case VALIO_BUTTON_TOGGLE:
-            done = 1;
+            rq_done = 1;
             break;
+
           case VALIO_BUTTON_PUSH:
-            done = pv->release_state ^ pv->state;
-            break;
+            rq_done = (pv->current_state != pv->release_state);
+          break;
+
           case VALIO_BUTTON_RELEASE:
-            done = !(pv->release_state ^ pv->state);
+            rq_done = (pv->current_state == pv->release_state);
             break;
         }
+    /* Complete request */
+    if (rq_done)
+      {
+        pv->busy = false;
+        dev_valio_rq_pop(&pv->queue);
+        dev_valio_rq_done(rq);
+      }
+    /* Wait until gpio change */
+    else
+      {
+        DEVICE_OP(&pv->gpio, request, &pv->gpio_rq);
+      }
     }
-
-  if (done)
-    {
-      dev_valio_rq_pop(&pv->queue);
-      dev_valio_rq_done(rq);
-    }
-
-  lock_release(&dev->lock);
 }
 
 /***************************************** request */
 
 static DEV_VALIO_REQUEST(push_button_request)
 {
+
   struct device_s *dev = accessor->dev;
   struct push_button_context_s *pv  = dev->drv_pv;
 
@@ -197,9 +198,9 @@ static DEV_VALIO_REQUEST(push_button_request)
 
   LOCK_SPIN_IRQ(&dev->lock);
 
-  rq->error = 0;
-
   struct valio_button_read_s * data = (struct valio_button_read_s*)rq->data;
+
+  rq->error = 0;
 
   switch (rq->type) {
     case DEVICE_VALIO_WRITE:
@@ -207,12 +208,24 @@ static DEV_VALIO_REQUEST(push_button_request)
       break;
 
     case DEVICE_VALIO_READ:
-      data->state = pv->state;
+      /* Read gpio value */
+      pv->gpio_rq.type = DEV_GPIO_GET_INPUT;
+      pv->gpio_rq.input.data = (uint8_t *)&data->state;
+      DEVICE_OP(&pv->gpio, request, &pv->gpio_rq);
       break;
 
     case DEVICE_VALIO_WAIT_EVENT:
+      if (pv->busy) {
+        rq->error = -EBUSY;
+        break;
+      }
       done = 0;
+      pv->busy = true;
       dev_valio_rq_pushback(&pv->queue, rq);
+      pv->gpio_rq.type = DEV_GPIO_UNTIL;
+      pv->gpio_rq.until.mask = dev_gpio_mask1;
+      pv->gpio_rq.until.data = &pv->current_state;
+      DEVICE_OP(&pv->gpio, request, &pv->gpio_rq);
       break;
 
     default:
@@ -247,12 +260,11 @@ static DEV_INIT(push_button_init)
   /* Retrieve button release state from ressource */
   struct dev_resource_s *r = device_res_get_from_name(dev, DEV_RES_UINT_PARAM, 0, "release-state");
 
-  if (r)
-    pv->release_state = r->u.uint_param.value;
-  else
+  if (r == NULL)
     goto err_mem;
 
-  pv->state = pv->release_state;
+  pv->release_state = r->u.uint_param.value & 0x1;
+  pv->current_state = pv->release_state;
 
 #ifdef CONFIG_DRIVER_PUSH_BUTTON_TIMER
   /* Get accessor on timer */
@@ -262,11 +274,11 @@ static DEV_INIT(push_button_init)
       device_start(&pv->timer.base);
       dev_timer_shift_sec(&pv->timer, &pv->shifta, &pv->shiftb, 0, 1, 1000);
 #ifdef CONFIG_DRIVER_PUSH_BUTTON_SOFT_DEBOUNCING
-      dev_timer_init_sec(&pv->timer, &pv->timeout, 0,
+      dev_timer_init_sec(&pv->timer, &pv->debounce_timeout, 0,
         CONFIG_DRIVER_PUSH_BUTTON_SOFT_DEBOUNCING_TIMING, 1000);
-      pv->trq.pvdata = dev;
-      pv->trq.delay = pv->timeout;
-      dev_timer_rq_init(&pv->trq, push_button_lock_timeout);
+      pv->debounce_trq.pvdata = dev;
+      pv->debounce_trq.delay = pv->debounce_timeout;
+      dev_timer_rq_init(&pv->debounce_trq, push_button_lock_timeout);
 #endif
     }
   else
@@ -279,11 +291,10 @@ static DEV_INIT(push_button_init)
   if (device_gpio_get_setup(&pv->gpio, dev, "=pbirq:1", pv->pin_map, NULL))
     goto err_mem;
 
-  device_irq_source_init(dev, &pv->irq_ep, 1, &push_button_irq);
-
-  if (device_irq_source_link(dev, &pv->irq_ep, 1, -1))
-    goto err_mem;
-
+  pv->gpio_rq.io_first = pv->pin_map[0];
+  pv->gpio_rq.io_last = pv->pin_map[0];
+  pv->gpio_rq.pvdata = dev;
+  dev_gpio_rq_init(&pv->gpio_rq, push_button_event);
 
   return 0;
 
@@ -295,8 +306,6 @@ static DEV_INIT(push_button_init)
 static DEV_CLEANUP(push_button_cleanup)
 {
   struct push_button_context_s *pv = dev->drv_pv;
-
-  device_irq_source_unlink(dev, &pv->irq_ep, 1);
 
   /* Destroy request queue */
   dev_rq_queue_destroy(&pv->queue);
