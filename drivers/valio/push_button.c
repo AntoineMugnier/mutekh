@@ -140,6 +140,7 @@ static KROUTINE_EXEC(push_button_sustain_timeout)
   {
     /* Clear request flag */
     pv->sustain_trq_active = false;
+    pv->busy = false;
     dev_valio_rq_pop(&pv->queue);
     dev_valio_rq_done(rq);
   }
@@ -227,7 +228,7 @@ if (grq->error != 0)
 
 #ifdef CONFIG_DRIVER_PUSH_BUTTON_SUSTAINED
          case VALIO_BUTTON_SUSTAINED_PUSH:
-          /* Cancel timer requests */
+          /* Button released */
           if (pv->current_state == pv->release_state)
           {
             pv->was_sustained = false;
@@ -238,6 +239,7 @@ if (grq->error != 0)
               rq_done = true;
             }
           }
+          /* Button pushed and no timer request */
           else if (!pv->sustain_trq_active)
           {
             /* Activate callback */
