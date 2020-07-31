@@ -143,6 +143,7 @@ static KROUTINE_EXEC(push_button_sustain_timeout)
     pv->busy = false;
     dev_valio_rq_pop(&pv->queue);
     dev_valio_rq_done(rq);
+    return;
   }
   struct valio_button_update_s *data = (struct valio_button_update_s *)rq->data;
   /* Activate callback */
