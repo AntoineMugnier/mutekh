@@ -19,6 +19,7 @@
     Copyright Sebastien Cerdan <sebcerdan@gmail.com> (c) 2014
 
 */
+#define LOGK_MODULE_ID "pbtn"
 
 #include <stdbool.h>
 
@@ -66,7 +67,7 @@ static bool push_button_start_timer_rq(struct device_timer_s *timer, struct dev_
   switch (err)
   {
     default:
-      printk("Push button driver: Start timer req error %d\n", err);
+      logk_trace("start timer req error %d", err);
       return false;
     case -ETIMEDOUT:
       return false;
@@ -81,7 +82,7 @@ static bool push_button_cancel_timer_rq(struct device_timer_s *timer, struct dev
   switch (err)
   {
     default:
-      printk("Push button driver: Cancel timer req error %d\n", err);
+      logk_trace("cancel timer req error %d", err);
       return false;
     case -ETIMEDOUT:
     case -EBUSY:
@@ -154,13 +155,15 @@ static KROUTINE_EXEC(push_button_event)
   struct push_button_context_s *pv  = dev->drv_pv;
   struct dev_valio_rq_s *rq = dev_valio_rq_head(&pv->queue);
 
+/* Check for gpio error */
 if (grq->error != 0)
 {
-  printk("Push button driver: Gpio error %d\n", grq->error);
+  logk_trace("gpio error %d\n", grq->error);
   return;
 }
 
 #ifdef CONFIG_DRIVER_PUSH_BUTTON_SOFT_DEBOUNCING
+  /* Ignore event if soft debouncing lock on */
   if (pv->debounce_lock)
   {
     pv->debounce_was_locked = true;
