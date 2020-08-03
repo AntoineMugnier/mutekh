@@ -47,7 +47,7 @@ DRIVER_PV(struct push_button_context_s
   dev_timer_value_t last_value; // Last read value on timer
 #ifdef CONFIG_DRIVER_PUSH_BUTTON_SUSTAINED
   bool sustain_trq_active; // Indicates if sustain tiemr request is active
-  bool was_sustained; // Indicates if button was pressed during the whole time
+  bool cancel_sustain_trq; // Indicates if sustain tiemr request is to be canceled
   struct dev_timer_rq_s sustain_trq; // Sustain push timer request
 #endif
 #ifdef CONFIG_DRIVER_PUSH_BUTTON_SOFT_DEBOUNCING
@@ -125,8 +125,8 @@ static KROUTINE_EXEC(push_button_sustain_timeout)
 
   if (rq == NULL)
     return;
-  /* Cancel request if button was released but trq couldn't cancel */
-  if (!pv->was_sustained)
+  /* Cancel request */
+  if (pv->cancel_sustain_trq)
   {
     /* Clear request flag */
     pv->sustain_trq_active = false;
@@ -145,6 +145,82 @@ static KROUTINE_EXEC(push_button_sustain_timeout)
 }
 
 #endif
+
+
+static bool push_button_process_rq(struct push_button_context_s *pv, struct dev_valio_rq_s *rq)
+{
+  bool rq_done = false;
+  struct valio_button_update_s *data = (struct valio_button_update_s *)rq->data;
+
+  switch ((enum valio_button_att)rq->attribute)
+    {
+      case VALIO_BUTTON_TOGGLE:
+        rq_done = true;
+        break;
+
+      case VALIO_BUTTON_PUSH:
+        rq_done = (pv->current_state != pv->release_state);
+        break;
+
+      case VALIO_BUTTON_RELEASE:
+        rq_done = (pv->current_state == pv->release_state);
+        break;
+
+
+#ifdef CONFIG_DRIVER_PUSH_BUTTON_SUSTAINED
+     case VALIO_BUTTON_SUSTAINED_PUSH:
+      /* Button released */
+      if (pv->current_state == pv->release_state)
+      {
+        pv->cancel_sustain_trq = true;
+        /* Allow new request only if cancel successful */
+        if (push_button_cancel_timer_rq(&pv->timer, &pv->sustain_trq))
+        {
+          pv->sustain_trq_active = false;
+          rq_done = true;
+        }
+      }
+      /* Button pushed and no timer request */
+      else if (!pv->sustain_trq_active)
+      {
+        /* Activate callback */
+        data->pb_event(rq);
+        /* Start timer requests */
+        pv->cancel_sustain_trq = false;
+        pv->sustain_trq_active = true;
+        push_button_start_timer_rq(&pv->timer, &pv->sustain_trq);
+      }
+      break;
+#endif
+      default:
+        rq->error = -ENOTSUP;
+        rq_done = true;
+        break;
+    }
+  /* Process timestamp */
+  if (rq_done)
+  {
+    uint32_t timestamp = 0;
+
+#ifdef CONFIG_DRIVER_PUSH_BUTTON_TIMER
+    dev_timer_value_t value;
+
+    /* Get timer value */
+    if (!DEVICE_OP(&pv->timer, get_value, &value, 0))
+      timestamp = dev_timer_delay_shift_t2s(pv->shiftb, value - pv->last_value);
+
+    pv->last_value = value;
+
+    /* Saturate timestamp */
+    if (timestamp >> 16)
+      timestamp = (1 << 16) - 1;
+  #endif
+
+    /* Note timestamp */
+    data->timestamp = timestamp;
+  }
+  return rq_done;
+}
 
 /***************************************** event */
 
@@ -169,102 +245,31 @@ if (grq->error != 0)
     pv->debounce_was_locked = true;
     return;
   }
-#endif
-
-  uint32_t timestamp = 0;
-
-#ifdef CONFIG_DRIVER_PUSH_BUTTON_TIMER
-
-  dev_timer_value_t value;
-
-  if (device_check_accessor(&pv->timer.base))
-    {
-      /* Get timer value */
-      if (!DEVICE_OP(&pv->timer, get_value, &value, 0))
-        timestamp = dev_timer_delay_shift_t2s(pv->shiftb, value - pv->last_value);
-
-      pv->last_value = value;
-
-      /* Saturate timestamp */
-      if (timestamp >> 16)
-        timestamp = (1 << 16) - 1;
-    }
-
-#ifdef CONFIG_DRIVER_PUSH_BUTTON_SOFT_DEBOUNCING
+  /* Activate soft debouncing lock */
   push_button_start_timer_rq(&pv->timer, &pv->debounce_trq);
   pv->debounce_lock = true;
 #endif
 
-#endif
   /* Update gpio value */
   pv->current_state = !pv->current_state;
 
   /* Process request */
-  if (rq != NULL)
+  if (rq == NULL)
+    return;
+
+  if (push_button_process_rq(pv, rq))
     {
-      bool rq_done = false;
-      struct valio_button_update_s *data = (struct valio_button_update_s *)rq->data;
-
-      switch ((enum valio_button_att)rq->attribute)
-        {
-          case VALIO_BUTTON_TOGGLE:
-            rq_done = true;
-            break;
-
-          case VALIO_BUTTON_PUSH:
-            rq_done = (pv->current_state != pv->release_state);
-            break;
-
-          case VALIO_BUTTON_RELEASE:
-            rq_done = (pv->current_state == pv->release_state);
-            break;
-
-#ifdef CONFIG_DRIVER_PUSH_BUTTON_SUSTAINED
-         case VALIO_BUTTON_SUSTAINED_PUSH:
-          /* Button released */
-          if (pv->current_state == pv->release_state)
-          {
-            pv->was_sustained = false;
-            /* Allow new request only if cancel successful */
-            if (push_button_cancel_timer_rq(&pv->timer, &pv->sustain_trq))
-            {
-              pv->sustain_trq_active = false;
-              rq_done = true;
-            }
-          }
-          /* Button pushed and no timer request */
-          else if (!pv->sustain_trq_active)
-          {
-            /* Activate callback */
-            data->pb_event(rq);
-            /* Start timer requests */
-            pv->was_sustained = true;
-            pv->sustain_trq_active = true;
-            push_button_start_timer_rq(&pv->timer, &pv->sustain_trq);
-          }
-          break;
-#endif
-          default:
-            rq->error = -ENOTSUP;
-            rq_done = true;
-            break;
-        }
-    /* Complete request */
-    if (rq_done)
-      {
-        /* Note timestamp */
-        data->timestamp = timestamp;
-        /* End request */
-        pv->busy = false;
-        dev_valio_rq_pop(&pv->queue);
-        dev_valio_rq_done(rq);
-      }
-    /* Wait until gpio change */
-    else
-      {
-        DEVICE_OP(&pv->gpio, request, &pv->gpio_rq);
-      }
+      /* End request */
+      pv->busy = false;
+      dev_valio_rq_pop(&pv->queue);
+      dev_valio_rq_done(rq);
     }
+  else
+    {
+      /* Wait until gpio change */
+      DEVICE_OP(&pv->gpio, request, &pv->gpio_rq);
+    }
+
 }
 
 /***************************************** request */
