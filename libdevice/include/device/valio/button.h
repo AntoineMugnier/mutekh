@@ -45,6 +45,7 @@ enum valio_button_att {
     VALIO_BUTTON_PUSH,
     VALIO_BUTTON_RELEASE,
     VALIO_BUTTON_SUSTAINED_PUSH,
+    VALIO_BUTTON_DELAYED_PUSH,
 };
 
 typedef void (*valio_push_button_event_t)(struct dev_valio_rq_s *rq);

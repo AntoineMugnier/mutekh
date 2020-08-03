@@ -22,24 +22,13 @@
 
 #include <stdbool.h>
 
-#include <hexo/types.h>
-#include <hexo/endian.h>
-#include <hexo/iospace.h>
-#include <hexo/interrupt.h>
-
 #include <mutek/mem_alloc.h>
 #include <mutek/printk.h>
 
-#include <device/resources.h>
-#include <device/device.h>
-#include <device/driver.h>
-#include <device/irq.h>
-
 #include <device/class/timer.h>
-#include <device/class/iomux.h>
-#include <device/class/valio.h>
 #include <device/class/gpio.h>
 #include <device/valio/button.h>
+
 
 DRIVER_PV(struct push_button_context_s
 {
