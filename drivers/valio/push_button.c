@@ -121,10 +121,9 @@ static KROUTINE_EXEC(push_button_sustain_timeout)
   struct push_button_context_s *pv  = dev->drv_pv;
   struct dev_valio_rq_s *rq = dev_valio_rq_head(&pv->queue);
 
-  LOCK_SPIN_IRQ(&dev->lock);
-
   if (rq == NULL)
     return;
+
   /* Cancel request */
   if (pv->cancel_sustain_trq)
   {
@@ -135,6 +134,9 @@ static KROUTINE_EXEC(push_button_sustain_timeout)
     dev_valio_rq_done(rq);
     return;
   }
+
+  LOCK_SPIN_IRQ(&dev->lock);
+
   struct valio_button_update_s *data = (struct valio_button_update_s *)rq->data;
   /* Activate callback */
   data->pb_event(rq);
