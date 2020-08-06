@@ -378,29 +378,27 @@ static DEV_INIT(push_button_init)
 
 #ifdef CONFIG_DRIVER_PUSH_BUTTON_TIMER
   /* Get accessor on timer */
-  if (!device_get_param_dev_accessor(dev, "timer", &pv->timer.base, DRIVER_CLASS_TIMER))
-    {
-      /* Start timer */
-      device_start(&pv->timer.base);
-      dev_timer_shift_sec(&pv->timer, &pv->shifta, &pv->shiftb, 0, 1, 1000);
-      dev_timer_init_sec(&pv->timer, &pv->base_time, 0, 1, 1000);
+  if (device_get_param_dev_accessor(dev, "timer", &pv->timer.base, DRIVER_CLASS_TIMER) != 0)
+    goto err_mem;
+  /* Start timer */
+  device_start(&pv->timer.base);
+  dev_timer_shift_sec(&pv->timer, &pv->shifta, &pv->shiftb, 0, 1, 1000);
+  dev_timer_init_sec(&pv->timer, &pv->base_time, 0, 1, 1000);
+#endif
+
 
 #ifdef CONFIG_DRIVER_PUSH_BUTTON_SUSTAINED
-      pv->sustain_trq.pvdata = dev;
-      dev_timer_rq_init(&pv->sustain_trq, push_button_sustain_timeout);
+  pv->sustain_trq.pvdata = dev;
+  dev_timer_rq_init(&pv->sustain_trq, push_button_sustain_timeout);
 #endif
 
 #ifdef CONFIG_DRIVER_PUSH_BUTTON_SOFT_DEBOUNCING
-      pv->debounce_timeout = pv->base_time * CONFIG_DRIVER_PUSH_BUTTON_SOFT_DEBOUNCING_TIMING;
-      pv->debounce_trq.pvdata = dev;
-      pv->debounce_trq.delay = pv->debounce_timeout;
-      dev_timer_rq_init(&pv->debounce_trq, push_button_lock_timeout);
+  pv->debounce_timeout = pv->base_time * CONFIG_DRIVER_PUSH_BUTTON_SOFT_DEBOUNCING_TIMING;
+  pv->debounce_trq.pvdata = dev;
+  pv->debounce_trq.delay = pv->debounce_timeout;
+  dev_timer_rq_init(&pv->debounce_trq, push_button_lock_timeout);
 #endif
-    }
-  else
-    device_init_accessor(&pv->timer.base);
-#endif
-
+  /* Init request queue */
   dev_rq_queue_init(&pv->queue);
 
   /* Init GPIO and Irq */
