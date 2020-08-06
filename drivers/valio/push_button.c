@@ -45,6 +45,7 @@ DRIVER_PV(struct push_button_context_s
   int8_t shifta, shiftb;
   uint32_t base_time; // Time base for the driver
   dev_timer_value_t last_value; // Last read value on timer
+#endif
 #ifdef CONFIG_DRIVER_PUSH_BUTTON_SUSTAINED
   bool sustain_trq_active; // Indicates if sustain tiemr request is active
   bool cancel_sustain_trq; // Indicates if sustain tiemr request is to be canceled
@@ -55,7 +56,6 @@ DRIVER_PV(struct push_button_context_s
   bool debounce_was_locked; // Indicates that a soft debouncing lock was active
   uint32_t debounce_timeout; // Debouncing timeout
   struct dev_timer_rq_s debounce_trq; // Debouncing timer request
-#endif
 #endif
 });
 
@@ -91,6 +91,27 @@ static bool push_button_cancel_timer_rq(struct device_timer_s *timer, struct dev
       return true;
   }
 }
+
+static uint16_t push_button_timestamp(struct push_button_context_s *pv)
+{
+  uint32_t timestamp = 0;
+
+#ifdef CONFIG_DRIVER_PUSH_BUTTON_TIMER
+    dev_timer_value_t value;
+
+    /* Get timer value */
+    if (!DEVICE_OP(&pv->timer, get_value, &value, 0))
+      timestamp = dev_timer_delay_shift_t2s(pv->shiftb, value - pv->last_value);
+    /*  Saturate timestamp */
+    if (timestamp >> 16)
+      timestamp = (1 << 16) - 1;
+
+    pv->last_value = value;
+#endif
+
+  return timestamp;
+}
+#endif
 #endif
 
 #ifdef CONFIG_DRIVER_PUSH_BUTTON_SOFT_DEBOUNCING
@@ -145,9 +166,7 @@ static KROUTINE_EXEC(push_button_sustain_timeout)
 
   LOCK_RELEASE_IRQ(&dev->lock);
 }
-
 #endif
-
 
 static bool push_button_process_rq(struct push_button_context_s *pv, struct dev_valio_rq_s *rq)
 {
@@ -202,24 +221,8 @@ static bool push_button_process_rq(struct push_button_context_s *pv, struct dev_
   /* Process timestamp */
   if (rq_done)
   {
-    uint32_t timestamp = 0;
-
-#ifdef CONFIG_DRIVER_PUSH_BUTTON_TIMER
-    dev_timer_value_t value;
-
-    /* Get timer value */
-    if (!DEVICE_OP(&pv->timer, get_value, &value, 0))
-      timestamp = dev_timer_delay_shift_t2s(pv->shiftb, value - pv->last_value);
-
-    pv->last_value = value;
-
-    /* Saturate timestamp */
-    if (timestamp >> 16)
-      timestamp = (1 << 16) - 1;
-  #endif
-
     /* Note timestamp */
-    data->timestamp = timestamp;
+    data->timestamp = push_button_timestamp(pv);
   }
   return rq_done;
 }
