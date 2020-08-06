@@ -279,18 +279,12 @@ if (grq->error != 0)
 
 /***************************************** request */
 
-static DEV_VALIO_REQUEST(push_button_request)
 {
 
-  struct device_s *dev = accessor->dev;
-  struct push_button_context_s *pv  = dev->drv_pv;
-
+static void push_button_accept_rq(struct push_button_context_s *pv, struct dev_valio_rq_s *rq)
+{
   bool rq_done = true;
-
-  LOCK_SPIN_IRQ(&dev->lock);
-
   struct valio_button_read_s * data = (struct valio_button_read_s*)rq->data;
-
   rq->error = 0;
 
   switch (rq->type) {
@@ -306,7 +300,8 @@ static DEV_VALIO_REQUEST(push_button_request)
       break;
 
     case DEVICE_VALIO_WAIT_EVENT:
-      if (pv->busy) {
+      if (pv->busy)
+      {
         rq->error = -EBUSY;
         break;
       }
@@ -316,11 +311,15 @@ static DEV_VALIO_REQUEST(push_button_request)
         pv->sustain_trq.delay = pv->base_time * ((struct valio_button_update_s *)rq->data)->delay;
 #else
       if (rq->attribute == VALIO_BUTTON_SUSTAINED_PUSH)
+      {
         rq->error = -ENOTSUP;
+        break;
+      }
 #endif
       rq_done = false;
       pv->busy = true;
       dev_valio_rq_pushback(&pv->queue, rq);
+      /* Start gpio request */
       pv->gpio_rq.type = DEV_GPIO_UNTIL;
       pv->gpio_rq.until.mask = dev_gpio_mask1;
       pv->gpio_rq.until.data = &pv->current_state;
@@ -332,10 +331,22 @@ static DEV_VALIO_REQUEST(push_button_request)
       break;
     }
 
-  LOCK_RELEASE_IRQ(&dev->lock);
-
   if (rq_done)
     dev_valio_rq_done(rq);
+}
+
+static DEV_VALIO_REQUEST(push_button_request)
+{
+  struct device_s *dev = accessor->dev;
+  struct push_button_context_s *pv  = dev->drv_pv;
+
+  LOCK_SPIN_IRQ(&dev->lock);
+
+  /* Process requests */
+  push_button_accept_rq(pv, rq);
+
+  LOCK_RELEASE_IRQ(&dev->lock);
+
 }
 
 
