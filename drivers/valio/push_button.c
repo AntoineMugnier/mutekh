@@ -47,6 +47,15 @@ DRIVER_PV(struct push_button_context_s
   uint32_t base_time; // Time base for the driver
   dev_timer_value_t last_value; // Last read value on timer
 #endif
+
+#ifdef CONFIG_DRIVER_PUSH_BUTTON_DELAYED
+  dev_request_queue_root_t delay_queue; // Delayed request queue
+  struct dev_timer_rq_s delay_trq; // Delayed push timer request
+  bool cancel_delay_trq; // Indicates that delay trq is to be canceled
+  bool delay_trq_active; // Indicates that delay trq is active
+  uint32_t pushed_time; // Current button push duration
+#endif
+
 #ifdef CONFIG_DRIVER_PUSH_BUTTON_REPEAT
   bool repeat_trq_active; // Indicates if repeat tiemr request is active
   bool cancel_repeat_trq; // Indicates if repeat tiemr request is to be canceled
@@ -113,6 +122,105 @@ static uint16_t push_button_timestamp(struct push_button_context_s *pv)
   return timestamp;
 }
 #endif
+
+#ifdef CONFIG_DRIVER_PUSH_BUTTON_DELAYED
+static void push_button_calc_delay(struct push_button_context_s *pv)
+{
+  /* Parse requests to find min delay value */
+  uint32_t delay_min = ~0; // Init to max value
+
+  GCT_FOREACH(dev_request_queue, &pv->delay_queue, r, {
+    struct dev_valio_rq_s *rq = dev_valio_rq_s_cast(r);
+
+    if (rq->attribute == VALIO_BUTTON_DELAYED_PUSH)
+    {
+      /* Get request delay value */
+      struct valio_button_update_s *data = (struct valio_button_update_s *)rq->data;
+      delay_min = __MIN(delay_min, data->delay);
+    }
+  });
+  logk_trace("delay value %d", delay_min);
+  /* Throw error if 0 */
+  if (delay_min == 0)
+    UNREACHABLE();
+  /* Set delay trq to min delay value */
+  pv->delay_trq.delay = delay_min * pv->base_time;
+}
+
+static void push_button_end_delayed(struct push_button_context_s *pv)
+{
+  /* Parse requests */
+  GCT_FOREACH(dev_request_queue, &pv->delay_queue, r, {
+    struct dev_valio_rq_s *rq = dev_valio_rq_s_cast(r);
+
+    if (rq->attribute == VALIO_BUTTON_DELAYED_PUSH)
+    {
+      struct valio_button_update_s *data = (struct valio_button_update_s *)rq->data;
+
+      /* Check if delay reached */
+      if (pv->pushed_time >= data->delay)
+      {
+        dev_valio_rq_remove(&pv->queue, rq);
+        dev_valio_rq_done(rq);
+      }
+    }
+  });
+}
+
+static bool push_button_process_delayed_rq(struct push_button_context_s *pv)
+{
+  struct dev_valio_rq_s *rq = dev_valio_rq_head(&pv->delay_queue);
+
+  /* Check if there is a request */
+  if (rq == NULL)
+    return true;
+
+  /* Button released */
+  if (pv->current_state == pv->release_state)
+  {
+    pv->cancel_delay_trq = true;
+    /* Allow new request only if cancel successful */
+    if (push_button_cancel_timer_rq(&pv->timer, &pv->delay_trq))
+    {
+      pv->delay_trq_active = false;
+    }
+  }
+  else if (!pv->delay_trq_active)
+  {
+    /* Set delay trq value */
+    push_button_calc_delay(pv);
+    /* STart delay trq */
+    pv->cancel_delay_trq = false;
+    pv->delay_trq_active = true;
+    pv->pushed_time = 0;
+    push_button_start_timer_rq(&pv->timer, &pv->delay_trq);
+  }
+  return false;
+}
+
+static KROUTINE_EXEC(push_button_delay_timeout)
+{
+  struct dev_timer_rq_s *rq = dev_timer_rq_from_kr(kr);
+  struct device_s *dev = rq->pvdata;
+  struct push_button_context_s *pv  = dev->drv_pv;
+
+  if (rq == NULL)
+    return;
+
+  LOCK_SPIN_IRQ(&dev->lock);
+
+  /* Clear request flag */
+  pv->delay_trq_active = false;
+  /* Process timeout end */
+  if (!pv->cancel_delay_trq)
+  {
+    pv->pushed_time += rq->delay;
+    push_button_end_delayed(pv);
+    push_button_process_delayed_rq(pv);
+  }
+
+  LOCK_RELEASE_IRQ(&dev->lock);
+}
 #endif
 
 #ifdef CONFIG_DRIVER_PUSH_BUTTON_SOFT_DEBOUNCING
@@ -267,6 +375,11 @@ if (grq->error != 0)
   if (!push_button_process_rq(pv))
     restart_grq = true;
 
+#ifdef CONFIG_DRIVER_PUSH_BUTTON_DELAYED
+  /* Process delayed requests */
+  if (!push_button_process_delayed_rq(pv))
+    restart_grq = true;
+#endif
 
   /* Restart gpio rq */
   if (restart_grq)
@@ -277,7 +390,19 @@ if (grq->error != 0)
 
 /***************************************** request */
 
+static bool push_button_accept_delayed_rq(struct push_button_context_s *pv, struct dev_valio_rq_s *rq)
 {
+#ifdef CONFIG_DRIVER_PUSH_BUTTON_DELAYED
+  /* Accept the request */
+  dev_valio_rq_pushback(&pv->delay_queue, rq);
+  return true;
+#else
+  /* Refuse the request */
+  rq->error = -ENOTSUP;
+  dev_valio_rq_done(rq);
+  return false;
+#endif
+}
 
 static bool push_button_accept_rq(struct push_button_context_s *pv, struct dev_valio_rq_s *rq)
 {
@@ -340,6 +465,9 @@ static DEV_VALIO_REQUEST(push_button_request)
   LOCK_SPIN_IRQ(&dev->lock);
 
   /* Process requests */
+  if (rq->attribute == VALIO_BUTTON_DELAYED_PUSH)
+    start_grq |= push_button_accept_delayed_rq(pv, rq);
+  else
     start_grq |= push_button_accept_rq(pv, rq);
 
   if (start_grq && !pv->grq_active)
@@ -393,6 +521,13 @@ static DEV_INIT(push_button_init)
   dev_timer_init_sec(&pv->timer, &pv->base_time, 0, 1, 1000);
 #endif
 
+#ifdef CONFIG_DRIVER_PUSH_BUTTON_DELAYED
+  /* Init delay timer request */
+  pv->delay_trq.pvdata = dev;
+  dev_timer_rq_init(&pv->delay_trq, push_button_delay_timeout);
+  /* Init delay request queue */
+  dev_rq_queue_init(&pv->delay_queue);
+#endif
 
 #ifdef CONFIG_DRIVER_PUSH_BUTTON_REPEAT
   pv->repeat_trq.pvdata = dev;
