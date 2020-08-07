@@ -168,10 +168,14 @@ static KROUTINE_EXEC(push_button_sustain_timeout)
 }
 #endif
 
+/***************************************** event */
 static bool push_button_process_rq(struct push_button_context_s *pv, struct dev_valio_rq_s *rq)
 {
   bool rq_done = false;
   struct valio_button_update_s *data = (struct valio_button_update_s *)rq->data;
+
+  if (rq == NULL)
+    return true;
 
   switch ((enum valio_button_att)rq->attribute)
     {
@@ -186,7 +190,6 @@ static bool push_button_process_rq(struct push_button_context_s *pv, struct dev_
       case VALIO_BUTTON_RELEASE:
         rq_done = (pv->current_state == pv->release_state);
         break;
-
 
 #ifdef CONFIG_DRIVER_PUSH_BUTTON_SUSTAINED
      case VALIO_BUTTON_SUSTAINED_PUSH:
@@ -218,23 +221,24 @@ static bool push_button_process_rq(struct push_button_context_s *pv, struct dev_
         rq_done = true;
         break;
     }
-  /* Process timestamp */
+  /* Process request end */
   if (rq_done)
   {
     /* Note timestamp */
     data->timestamp = push_button_timestamp(pv);
+    /* End request */
+    dev_valio_rq_pop(&pv->queue);
+    dev_valio_rq_done(rq);
   }
   return rq_done;
 }
-
-/***************************************** event */
 
 static KROUTINE_EXEC(push_button_event)
 {
   struct dev_gpio_rq_s *grq = dev_gpio_rq_from_kr(kr);
   struct device_s *dev = grq->pvdata;
   struct push_button_context_s *pv  = dev->drv_pv;
-  struct dev_valio_rq_s *rq = dev_valio_rq_head(&pv->queue);
+  bool restart_grq = false;
 
 /* Check for gpio error */
 if (grq->error != 0)
@@ -259,22 +263,15 @@ if (grq->error != 0)
   pv->current_state = !pv->current_state;
 
   /* Process request */
-  if (rq == NULL)
-    return;
-
-  if (push_button_process_rq(pv, rq))
-    {
-      /* End request */
-      pv->busy = false;
-      dev_valio_rq_pop(&pv->queue);
-      dev_valio_rq_done(rq);
-    }
+  if (push_button_process_rq(pv))
+    pv->busy = false;
   else
-    {
-      /* Wait until gpio change */
-      DEVICE_OP(&pv->gpio, request, &pv->gpio_rq);
-    }
+    restart_grq = true;
 
+
+  /* Restart gpio rq */
+  if (restart_grq)
+    DEVICE_OP(&pv->gpio, request, &pv->gpio_rq);
 }
 
 /***************************************** request */
