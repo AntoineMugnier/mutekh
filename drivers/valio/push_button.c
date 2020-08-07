@@ -140,7 +140,8 @@ static void push_button_calc_delay(struct push_button_context_s *pv)
   if (delay_min == 0)
     UNREACHABLE();
   /* Set delay trq to min delay value */
-  pv->delay_trq.delay = delay_min * pv->base_time;
+  assert(delay_min > pv->pushed_time);
+  pv->delay_trq.delay = (delay_min - pv->pushed_time) * pv->base_time;
 }
 
 static void push_button_end_delayed(struct push_button_context_s *pv)
@@ -194,11 +195,11 @@ static bool push_button_process_delayed_rq(struct push_button_context_s *pv)
   else if (!pv->delay_trq_active)
   {
     /* Set delay trq value */
+    pv->pushed_time = 0;
     push_button_calc_delay(pv);
     /* Start delay trq */
     pv->cancel_delay_trq = false;
     pv->delay_trq_active = true;
-    pv->pushed_time = 0;
     push_button_start_timer_rq(&pv->timer, &pv->delay_trq);
   }
   return false;
@@ -220,7 +221,7 @@ static KROUTINE_EXEC(push_button_delay_timeout)
   /* Process timeout end */
   if (!pv->cancel_delay_trq)
   {
-    pv->pushed_time += rq->delay;
+    pv->pushed_time += rq->delay / pv->base_time;
     push_button_end_delayed(pv);
     push_button_continue_delayed_rq(pv);
   }
