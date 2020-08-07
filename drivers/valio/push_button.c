@@ -46,10 +46,10 @@ DRIVER_PV(struct push_button_context_s
   uint32_t base_time; // Time base for the driver
   dev_timer_value_t last_value; // Last read value on timer
 #endif
-#ifdef CONFIG_DRIVER_PUSH_BUTTON_SUSTAINED
-  bool sustain_trq_active; // Indicates if sustain tiemr request is active
-  bool cancel_sustain_trq; // Indicates if sustain tiemr request is to be canceled
-  struct dev_timer_rq_s sustain_trq; // Sustain push timer request
+#ifdef CONFIG_DRIVER_PUSH_BUTTON_REPEAT
+  bool repeat_trq_active; // Indicates if repeat tiemr request is active
+  bool cancel_repeat_trq; // Indicates if repeat tiemr request is to be canceled
+  struct dev_timer_rq_s repeat_trq; // Sustain push timer request
 #endif
 #ifdef CONFIG_DRIVER_PUSH_BUTTON_SOFT_DEBOUNCING
   bool debounce_lock; // Soft debouncing lock
@@ -133,9 +133,9 @@ static KROUTINE_EXEC(push_button_lock_timeout)
 }
 #endif
 
-#ifdef CONFIG_DRIVER_PUSH_BUTTON_SUSTAINED
+#ifdef CONFIG_DRIVER_PUSH_BUTTON_REPEAT
 
-static KROUTINE_EXEC(push_button_sustain_timeout)
+static KROUTINE_EXEC(push_button_repeat_timeout)
 {
   struct dev_timer_rq_s *trq = dev_timer_rq_from_kr(kr);
   struct device_s *dev = trq->pvdata;
@@ -146,10 +146,10 @@ static KROUTINE_EXEC(push_button_sustain_timeout)
     return;
 
   /* Cancel request */
-  if (pv->cancel_sustain_trq)
+  if (pv->cancel_repeat_trq)
   {
     /* Clear request flag */
-    pv->sustain_trq_active = false;
+    pv->repeat_trq_active = false;
     pv->busy = false;
     dev_valio_rq_pop(&pv->queue);
     dev_valio_rq_done(rq);
@@ -162,14 +162,14 @@ static KROUTINE_EXEC(push_button_sustain_timeout)
   /* Activate callback */
   data->pb_event(rq);
   /* Restart timer rq */
-  push_button_start_timer_rq(&pv->timer, &pv->sustain_trq);
+  push_button_start_timer_rq(&pv->timer, &pv->repeat_trq);
 
   LOCK_RELEASE_IRQ(&dev->lock);
 }
 #endif
 
 /***************************************** event */
-static bool push_button_process_rq(struct push_button_context_s *pv, struct dev_valio_rq_s *rq)
+static bool push_button_process_rq(struct push_button_context_s *pv)
 {
   bool rq_done = false;
   struct valio_button_update_s *data = (struct valio_button_update_s *)rq->data;
@@ -191,28 +191,28 @@ static bool push_button_process_rq(struct push_button_context_s *pv, struct dev_
         rq_done = (pv->current_state == pv->release_state);
         break;
 
-#ifdef CONFIG_DRIVER_PUSH_BUTTON_SUSTAINED
-     case VALIO_BUTTON_SUSTAINED_PUSH:
+#ifdef CONFIG_DRIVER_PUSH_BUTTON_REPEAT
+     case VALIO_BUTTON_REPEAT_PUSH:
       /* Button released */
       if (pv->current_state == pv->release_state)
       {
-        pv->cancel_sustain_trq = true;
+        pv->cancel_repeat_trq = true;
         /* Allow new request only if cancel successful */
-        if (push_button_cancel_timer_rq(&pv->timer, &pv->sustain_trq))
+        if (push_button_cancel_timer_rq(&pv->timer, &pv->repeat_trq))
         {
-          pv->sustain_trq_active = false;
+          pv->repeat_trq_active = false;
           rq_done = true;
         }
       }
       /* Button pushed and no timer request */
-      else if (!pv->sustain_trq_active)
+      else if (!pv->repeat_trq_active)
       {
         /* Activate callback */
         data->pb_event(rq);
         /* Start timer requests */
-        pv->cancel_sustain_trq = false;
-        pv->sustain_trq_active = true;
-        push_button_start_timer_rq(&pv->timer, &pv->sustain_trq);
+        pv->cancel_repeat_trq = false;
+        pv->repeat_trq_active = true;
+        push_button_start_timer_rq(&pv->timer, &pv->repeat_trq);
       }
       break;
 #endif
@@ -302,12 +302,12 @@ static void push_button_accept_rq(struct push_button_context_s *pv, struct dev_v
         rq->error = -EBUSY;
         break;
       }
-#ifdef CONFIG_DRIVER_PUSH_BUTTON_SUSTAINED
-      /* Initialize sustain timer request delay */
-      if (rq->attribute == VALIO_BUTTON_SUSTAINED_PUSH)
-        pv->sustain_trq.delay = pv->base_time * ((struct valio_button_update_s *)rq->data)->delay;
+#ifdef CONFIG_DRIVER_PUSH_BUTTON_REPEAT
+      /* Initialize repeat timer request delay */
+      if (rq->attribute == VALIO_BUTTON_REPEAT_PUSH)
+        pv->repeat_trq.delay = pv->base_time * ((struct valio_button_update_s *)rq->data)->delay;
 #else
-      if (rq->attribute == VALIO_BUTTON_SUSTAINED_PUSH)
+      if (rq->attribute == VALIO_BUTTON_REPEAT_PUSH)
       {
         rq->error = -ENOTSUP;
         break;
@@ -384,9 +384,9 @@ static DEV_INIT(push_button_init)
 #endif
 
 
-#ifdef CONFIG_DRIVER_PUSH_BUTTON_SUSTAINED
-  pv->sustain_trq.pvdata = dev;
-  dev_timer_rq_init(&pv->sustain_trq, push_button_sustain_timeout);
+#ifdef CONFIG_DRIVER_PUSH_BUTTON_REPEAT
+  pv->repeat_trq.pvdata = dev;
+  dev_timer_rq_init(&pv->repeat_trq, push_button_repeat_timeout);
 #endif
 
 #ifdef CONFIG_DRIVER_PUSH_BUTTON_SOFT_DEBOUNCING
