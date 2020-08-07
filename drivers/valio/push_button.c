@@ -131,15 +131,11 @@ static void push_button_calc_delay(struct push_button_context_s *pv)
 
   GCT_FOREACH(dev_request_queue, &pv->delay_queue, r, {
     struct dev_valio_rq_s *rq = dev_valio_rq_s_cast(r);
+    struct valio_button_update_s *data = (struct valio_button_update_s *)rq->data;
 
-    if (rq->attribute == VALIO_BUTTON_DELAYED_PUSH)
-    {
       /* Get request delay value */
-      struct valio_button_update_s *data = (struct valio_button_update_s *)rq->data;
       delay_min = __MIN(delay_min, data->delay);
-    }
   });
-  logk_trace("delay value %d", delay_min);
   /* Throw error if 0 */
   if (delay_min == 0)
     UNREACHABLE();
@@ -152,17 +148,13 @@ static void push_button_end_delayed(struct push_button_context_s *pv)
   /* Parse requests */
   GCT_FOREACH(dev_request_queue, &pv->delay_queue, r, {
     struct dev_valio_rq_s *rq = dev_valio_rq_s_cast(r);
-
-    if (rq->attribute == VALIO_BUTTON_DELAYED_PUSH)
-    {
-      struct valio_button_update_s *data = (struct valio_button_update_s *)rq->data;
+    struct valio_button_update_s *data = (struct valio_button_update_s *)rq->data;
 
       /* Check if delay reached */
       if (pv->pushed_time >= data->delay)
       {
         dev_valio_rq_remove(&pv->queue, rq);
         dev_valio_rq_done(rq);
-      }
     }
   });
 }
