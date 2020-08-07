@@ -53,6 +53,7 @@ typedef void (*valio_push_button_event_t)(struct dev_valio_rq_s *rq);
 /* Return structure for @tt DEVICE_VALIO_WAIT_EVENT request type */
 struct valio_button_update_s
 {
+  bool isActive; // Active flag for delayed event
   valio_push_button_event_t pb_event; // Callback for sustain event
   union {
     uint32_t delay; // delay value for repeat/delayed push event
