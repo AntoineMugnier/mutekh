@@ -49,6 +49,7 @@ DRIVER_PV(struct push_button_context_s
 #endif
 
 #ifdef CONFIG_DRIVER_PUSH_BUTTON_DELAYED
+  uint8_t active_delay_rq_count; // Counts the number of active delayed requests
   dev_request_queue_root_t delay_queue; // Delayed request queue
   struct dev_timer_rq_s delay_trq; // Delayed push timer request
   bool cancel_delay_trq; // Indicates that delay trq is to be canceled
@@ -133,7 +134,8 @@ static void push_button_calc_delay(struct push_button_context_s *pv)
     struct dev_valio_rq_s *rq = dev_valio_rq_s_cast(r);
     struct valio_button_update_s *data = (struct valio_button_update_s *)rq->data;
 
-      /* Get request delay value */
+    /* Get request delay value */
+    if (data->isActive)
       delay_min = __MIN(delay_min, data->delay);
   });
   /* Throw error if 0 */
@@ -151,12 +153,29 @@ static void push_button_end_delayed(struct push_button_context_s *pv)
     struct dev_valio_rq_s *rq = dev_valio_rq_s_cast(r);
     struct valio_button_update_s *data = (struct valio_button_update_s *)rq->data;
 
-      /* Check if delay reached */
-      if (pv->pushed_time >= data->delay)
-      {
-        dev_valio_rq_remove(&pv->queue, rq);
-        dev_valio_rq_done(rq);
+    /* Check if delay reached */
+    if (data->isActive && (pv->pushed_time >= data->delay))
+    {
+      /* End request */
+      data->isActive = false;
+      dev_valio_rq_remove(&pv->queue, rq);
+      dev_valio_rq_done(rq);
+      /* Decrement active requests count */
+      assert(pv->active_delay_rq_count > 0);
+      pv->active_delay_rq_count--;
     }
+  });
+}
+
+static void push_button_activate_delay_rq(struct push_button_context_s *pv)
+{
+  GCT_FOREACH(dev_request_queue, &pv->delay_queue, r, {
+    struct dev_valio_rq_s *rq = dev_valio_rq_s_cast(r);
+    struct valio_button_update_s *data = (struct valio_button_update_s *)rq->data;
+    /* Activate request */
+    data->isActive = true;
+    /* Increment active requests count */
+    pv->active_delay_rq_count++;
   });
 }
 
@@ -194,6 +213,8 @@ static bool push_button_process_delayed_rq(struct push_button_context_s *pv)
   }
   else if (!pv->delay_trq_active)
   {
+    /* Activate requests*/
+    push_button_activate_delay_rq(pv);
     /* Set delay trq value */
     pv->pushed_time = 0;
     push_button_calc_delay(pv);
@@ -399,8 +420,11 @@ if (grq->error != 0)
 
 static bool push_button_accept_delayed_rq(struct push_button_context_s *pv, struct dev_valio_rq_s *rq)
 {
+  struct valio_button_update_s *data = (struct valio_button_update_s *)rq->data;
+
 #ifdef CONFIG_DRIVER_PUSH_BUTTON_DELAYED
   /* Accept the request */
+  data->isActive = false;
   dev_valio_rq_pushback(&pv->delay_queue, rq);
   return true;
 #else
