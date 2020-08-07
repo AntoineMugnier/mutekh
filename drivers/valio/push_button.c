@@ -211,13 +211,10 @@ static KROUTINE_EXEC(push_button_delay_timeout)
   struct device_s *dev = rq->pvdata;
   struct push_button_context_s *pv  = dev->drv_pv;
 
-  if (rq == NULL)
-    return;
+  assert(rq);
 
   LOCK_SPIN_IRQ(&dev->lock);
 
-  /* Clear request flag */
-  pv->delay_trq_active = false;
   /* Process timeout end */
   if (!pv->cancel_delay_trq)
   {
@@ -225,6 +222,9 @@ static KROUTINE_EXEC(push_button_delay_timeout)
     push_button_end_delayed(pv);
     push_button_continue_delayed_rq(pv);
   }
+  /* Clear active flag */
+  else
+    pv->delay_trq_active = false;
 
   LOCK_RELEASE_IRQ(&dev->lock);
 }
