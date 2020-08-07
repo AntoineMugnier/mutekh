@@ -33,7 +33,6 @@
 
 DRIVER_PV(struct push_button_context_s
 {
-  bool busy; // Indicates that another wait event request is in action
   uint8_t release_state; // Value when button is released
   uint8_t current_state; // Current value
   dev_request_queue_root_t queue; // Request queue
@@ -150,7 +149,6 @@ static KROUTINE_EXEC(push_button_repeat_timeout)
   {
     /* Clear request flag */
     pv->repeat_trq_active = false;
-    pv->busy = false;
     dev_valio_rq_pop(&pv->queue);
     dev_valio_rq_done(rq);
     return;
@@ -263,9 +261,7 @@ if (grq->error != 0)
   pv->current_state = !pv->current_state;
 
   /* Process request */
-  if (push_button_process_rq(pv))
-    pv->busy = false;
-  else
+  if (!push_button_process_rq(pv))
     restart_grq = true;
 
 
@@ -282,6 +278,7 @@ static void push_button_accept_rq(struct push_button_context_s *pv, struct dev_v
 {
   bool rq_done = true;
   struct valio_button_read_s * data = (struct valio_button_read_s*)rq->data;
+  struct dev_valio_rq_s *prev_rq = dev_valio_rq_head(&pv->queue);
   rq->error = 0;
 
   switch (rq->type) {
@@ -297,7 +294,7 @@ static void push_button_accept_rq(struct push_button_context_s *pv, struct dev_v
       break;
 
     case DEVICE_VALIO_WAIT_EVENT:
-      if (pv->busy)
+      if (prev_rq != NULL)
       {
         rq->error = -EBUSY;
         break;
@@ -314,7 +311,6 @@ static void push_button_accept_rq(struct push_button_context_s *pv, struct dev_v
       }
 #endif
       rq_done = false;
-      pv->busy = true;
       dev_valio_rq_pushback(&pv->queue, rq);
       /* Start gpio request */
       pv->gpio_rq.type = DEV_GPIO_UNTIL;
