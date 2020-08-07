@@ -33,12 +33,14 @@
 
 DRIVER_PV(struct push_button_context_s
 {
+  bool grq_active; // Indicates that the gpio request is active
   uint8_t release_state; // Value when button is released
   uint8_t current_state; // Current value
   dev_request_queue_root_t queue; // Request queue
   struct device_gpio_s gpio; // Gpio device
   gpio_id_t pin_map[1]; // Gpio map
   struct dev_gpio_rq_s gpio_rq; // Gpio request
+
 #ifdef CONFIG_DRIVER_PUSH_BUTTON_TIMER
   struct device_timer_s timer; //Timer device
   int8_t shifta, shiftb;
@@ -269,13 +271,15 @@ if (grq->error != 0)
   /* Restart gpio rq */
   if (restart_grq)
     DEVICE_OP(&pv->gpio, request, &pv->gpio_rq);
+  else
+    pv->grq_active = false;
 }
 
 /***************************************** request */
 
 {
 
-static void push_button_accept_rq(struct push_button_context_s *pv, struct dev_valio_rq_s *rq)
+static bool push_button_accept_rq(struct push_button_context_s *pv, struct dev_valio_rq_s *rq)
 {
   bool rq_done = true;
   struct valio_button_read_s * data = (struct valio_button_read_s*)rq->data;
@@ -295,6 +299,7 @@ static void push_button_accept_rq(struct push_button_context_s *pv, struct dev_v
       break;
 
     case DEVICE_VALIO_WAIT_EVENT:
+      /* Only one request allowed at a time */
       if (prev_rq != NULL)
       {
         rq->error = -EBUSY;
@@ -313,11 +318,6 @@ static void push_button_accept_rq(struct push_button_context_s *pv, struct dev_v
 #endif
       rq_done = false;
       dev_valio_rq_pushback(&pv->queue, rq);
-      /* Start gpio request */
-      pv->gpio_rq.type = DEV_GPIO_UNTIL;
-      pv->gpio_rq.until.mask = dev_gpio_mask1;
-      pv->gpio_rq.until.data = &pv->current_state;
-      DEVICE_OP(&pv->gpio, request, &pv->gpio_rq);
       break;
 
     default:
@@ -327,17 +327,30 @@ static void push_button_accept_rq(struct push_button_context_s *pv, struct dev_v
 
   if (rq_done)
     dev_valio_rq_done(rq);
+
+  return rq_done;
 }
 
 static DEV_VALIO_REQUEST(push_button_request)
 {
   struct device_s *dev = accessor->dev;
   struct push_button_context_s *pv  = dev->drv_pv;
+  bool start_grq = false;
 
   LOCK_SPIN_IRQ(&dev->lock);
 
   /* Process requests */
-  push_button_accept_rq(pv, rq);
+    start_grq |= push_button_accept_rq(pv, rq);
+
+  if (start_grq && !pv->grq_active)
+  {
+    pv->grq_active = true;
+    /* Start gpio request */
+    pv->gpio_rq.type = DEV_GPIO_UNTIL;
+    pv->gpio_rq.until.mask = dev_gpio_mask1;
+    pv->gpio_rq.until.data = &pv->current_state;
+    DEVICE_OP(&pv->gpio, request, &pv->gpio_rq);
+  }
 
   LOCK_RELEASE_IRQ(&dev->lock);
 
@@ -428,4 +441,3 @@ DRIVER_DECLARE(push_button_drv, 0, "Push-button", push_button,
                DRIVER_VALIO_METHODS(push_button));
 
 DRIVER_REGISTER(push_button_drv);
-
