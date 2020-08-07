@@ -170,6 +170,7 @@ static KROUTINE_EXEC(push_button_repeat_timeout)
 static bool push_button_process_rq(struct push_button_context_s *pv)
 {
   bool rq_done = false;
+  struct dev_valio_rq_s *rq = dev_valio_rq_head(&pv->queue);
   struct valio_button_update_s *data = (struct valio_button_update_s *)rq->data;
 
   if (rq == NULL)
