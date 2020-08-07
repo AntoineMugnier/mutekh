@@ -167,10 +167,24 @@ static void push_button_end_delayed(struct push_button_context_s *pv)
   });
 }
 
+static void push_button_continue_delayed_rq(struct push_button_context_s *pv)
+{
+  /* Check if there is a request to continue */
+  if (pv->active_delay_rq_count == 0)
+  {
+    /* Clear active flag */
+    pv->delay_trq_active = false;
+    return;
+  }
+  /* Set delay trq value */
+  push_button_calc_delay(pv);
+  /* Start delay trq */
+  push_button_start_timer_rq(&pv->timer, &pv->delay_trq);
+}
+
 static bool push_button_process_delayed_rq(struct push_button_context_s *pv)
 {
   struct dev_valio_rq_s *rq = dev_valio_rq_head(&pv->delay_queue);
-
   /* Check if there is a request */
   if (rq == NULL)
     return true;
@@ -189,7 +203,7 @@ static bool push_button_process_delayed_rq(struct push_button_context_s *pv)
   {
     /* Set delay trq value */
     push_button_calc_delay(pv);
-    /* STart delay trq */
+    /* Start delay trq */
     pv->cancel_delay_trq = false;
     pv->delay_trq_active = true;
     pv->pushed_time = 0;
@@ -216,7 +230,7 @@ static KROUTINE_EXEC(push_button_delay_timeout)
   {
     pv->pushed_time += rq->delay;
     push_button_end_delayed(pv);
-    push_button_process_delayed_rq(pv);
+    push_button_continue_delayed_rq(pv);
   }
 
   LOCK_RELEASE_IRQ(&dev->lock);
