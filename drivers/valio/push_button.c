@@ -485,7 +485,7 @@ static bool push_button_accept_rq(struct push_button_context_s *pv, struct dev_v
   if (rq_done)
     dev_valio_rq_done(rq);
 
-  return rq_done;
+  return !rq_done;
 }
 
 static DEV_VALIO_REQUEST(push_button_request)
