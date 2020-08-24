@@ -78,8 +78,6 @@ DRIVER_PV(struct push_button_context_s
 #endif
 
 #ifdef CONFIG_DRIVER_PUSH_BUTTON_SOFT_DEBOUNCING
-  bool debounce_lock; // Soft debouncing lock
-  bool debounce_was_locked; // Indicates that a soft debouncing lock was active
   uint32_t debounce_timeout; // Debouncing timeout
   struct dev_timer_rq_s debounce_trq; // Debouncing timer request
 #endif
@@ -275,18 +273,14 @@ static KROUTINE_EXEC(push_button_delay_timeout)
 
 static KROUTINE_EXEC(push_button_lock_timeout)
 {
-   struct dev_timer_rq_s *rq = dev_timer_rq_from_kr(kr);
-   struct device_s *dev = rq->pvdata;
-   struct push_button_context_s *pv  = dev->drv_pv;
+  struct dev_timer_rq_s *rq = dev_timer_rq_from_kr(kr);
+  struct device_s *dev = rq->pvdata;
+  struct push_button_context_s *pv  = dev->drv_pv;
 
-   LOCK_SPIN_IRQ(&dev->lock);
-   pv->debounce_lock = false;
-   LOCK_RELEASE_IRQ(&dev->lock);
-   if (pv->debounce_was_locked)
-   {
-    pv->debounce_was_locked = false;
-    DEVICE_OP(&pv->gpio, request, &pv->gpio_rq);
-   }
+  LOCK_SPIN_IRQ(&dev->lock);
+  /* Resume gpio request */
+  DEVICE_OP(&pv->gpio, request, &pv->gpio_rq);
+  LOCK_RELEASE_IRQ(&dev->lock);
 }
 #endif
 
@@ -412,18 +406,6 @@ if (grq->error != 0)
   return;
 }
 
-#ifdef CONFIG_DRIVER_PUSH_BUTTON_SOFT_DEBOUNCING
-  /* Ignore event if soft debouncing lock on */
-  if (pv->debounce_lock)
-  {
-    pv->debounce_was_locked = true;
-    return;
-  }
-  /* Activate soft debouncing lock */
-  push_button_start_timer_rq(&pv->timer, &pv->debounce_trq);
-  pv->debounce_lock = true;
-#endif
-
   /* Update gpio value */
   pv->current_state = !pv->current_state;
 
@@ -440,8 +422,13 @@ if (grq->error != 0)
   /* Restart gpio rq check */
   if (restart_grq)
   {
+#ifdef CONFIG_DRIVER_PUSH_BUTTON_SOFT_DEBOUNCING
+    /* Wait debouncing trq before restarting request */
+    push_button_start_timer_rq(&pv->timer, &pv->debounce_trq);
+#else
     /* Restart gpio rq */
     DEVICE_OP(&pv->gpio, request, &pv->gpio_rq);
+#endif
   }
   /* End of gpio rq */
   else
