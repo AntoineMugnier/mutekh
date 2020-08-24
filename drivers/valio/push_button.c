@@ -36,6 +36,12 @@ enum pb_repeat_state_e {
   PB_REPEAT_STATE_CANCELED,
 };
 
+enum pb_delay_state_e {
+  PB_DELAY_STATE_IDLE,
+  PB_DELAY_STATE_ACTIVE,
+  PB_DELAY_STATE_CANCELED,
+};
+
 DRIVER_PV(struct push_button_context_s
 {
   bool grq_active; // Indicates that the gpio request is active
@@ -57,8 +63,7 @@ DRIVER_PV(struct push_button_context_s
   uint8_t active_delay_rq_count; // Counts the number of active delayed requests
   dev_request_queue_root_t delay_queue; // Delayed request queue
   struct dev_timer_rq_s delay_trq; // Delayed push timer request
-  bool cancel_delay_trq; // Indicates that delay trq is to be canceled
-  bool delay_trq_active; // Indicates that delay trq is active
+  enum pb_delay_state_e delay_state; // State of the delay process
   uint32_t pushed_time; // Current button push duration
 #endif
 
@@ -188,8 +193,8 @@ static void push_button_continue_delayed_rq(struct push_button_context_s *pv)
   /* Check if there is a request to continue */
   if (pv->active_delay_rq_count == 0)
   {
-    /* Clear active flag */
-    pv->delay_trq_active = false;
+    /* Go back to idle */
+    pv->delay_state = PB_DELAY_STATE_IDLE;
     return;
   }
   /* Set delay trq value */
@@ -208,14 +213,19 @@ static bool push_button_process_delayed_rq(struct push_button_context_s *pv)
   /* Button released */
   if (pv->current_state == pv->release_state)
   {
-    pv->cancel_delay_trq = true;
-    /* Allow new request only if cancel successful */
-    if (push_button_cancel_timer_rq(&pv->timer, &pv->delay_trq))
+    /* Check if timer req active */
+    if (pv->delay_state == PB_DELAY_STATE_ACTIVE)
     {
-      pv->delay_trq_active = false;
+      /* Try to cancel request */
+      if (push_button_cancel_timer_rq(&pv->timer, &pv->delay_trq))
+        pv->delay_state = PB_DELAY_STATE_IDLE;
+      /* If cancel fail, wait for timer request to end */
+      else
+        pv->delay_state = PB_DELAY_STATE_CANCELED;
     }
   }
-  else if (!pv->delay_trq_active)
+  /* Button pushed and delay trq inactive */
+  else if (pv->delay_state == PB_DELAY_STATE_IDLE)
   {
     /* Activate requests*/
     push_button_activate_delay_rq(pv);
@@ -223,8 +233,7 @@ static bool push_button_process_delayed_rq(struct push_button_context_s *pv)
     pv->pushed_time = 0;
     push_button_calc_delay(pv);
     /* Start delay trq */
-    pv->cancel_delay_trq = false;
-    pv->delay_trq_active = true;
+    pv->delay_state = PB_DELAY_STATE_ACTIVE;
     push_button_start_timer_rq(&pv->timer, &pv->delay_trq);
   }
   return false;
@@ -240,16 +249,17 @@ static KROUTINE_EXEC(push_button_delay_timeout)
 
   LOCK_SPIN_IRQ(&dev->lock);
 
-  /* Process timeout end */
-  if (!pv->cancel_delay_trq)
+  /* Check if request canceled */
+  if (pv->delay_state == PB_DELAY_STATE_CANCELED)
+  {
+    pv->delay_state = PB_DELAY_STATE_IDLE;
+  }
+  else
   {
     pv->pushed_time += rq->delay / pv->base_time;
     push_button_end_delayed(pv);
     push_button_continue_delayed_rq(pv);
   }
-  /* Clear active flag */
-  else
-    pv->delay_trq_active = false;
 
   LOCK_RELEASE_IRQ(&dev->lock);
 }
@@ -511,6 +521,7 @@ static DEV_VALIO_REQUEST(push_button_request)
   else
     start_grq |= push_button_accept_rq(pv, rq);
 
+  /* Start gpio rq check */
   if (start_grq && !pv->grq_active)
   {
     pv->grq_active = true;
