@@ -461,9 +461,7 @@ static bool push_button_accept_rq(struct push_button_context_s *pv, struct dev_v
 
     case DEVICE_VALIO_READ:
       /* Read gpio value */
-      pv->gpio_rq.type = DEV_GPIO_GET_INPUT;
-      pv->gpio_rq.input.data = (uint8_t *)&data->state;
-      DEVICE_OP(&pv->gpio, request, &pv->gpio_rq);
+      DEVICE_OP(&pv->gpio, get_input, pv->pin_map[0], pv->pin_map[0], &data->state);
       break;
 
     case DEVICE_VALIO_WAIT_EVENT:
