@@ -30,6 +30,11 @@
 #include <device/class/gpio.h>
 #include <device/valio/button.h>
 
+enum pb_repeat_state_e {
+  PB_REPEAT_STATE_IDLE,
+  PB_REPEAT_STATE_ACTIVE,
+  PB_REPEAT_STATE_CANCELED,
+};
 
 DRIVER_PV(struct push_button_context_s
 {
@@ -58,8 +63,7 @@ DRIVER_PV(struct push_button_context_s
 #endif
 
 #ifdef CONFIG_DRIVER_PUSH_BUTTON_REPEAT
-  bool repeat_trq_active; // Indicates if repeat tiemr request is active
-  bool cancel_repeat_trq; // Indicates if repeat tiemr request is to be canceled
+  enum pb_repeat_state_e repeat_state; // State of the repeat process
   struct dev_timer_rq_s repeat_trq; // Sustain push timer request
 #endif
 #ifdef CONFIG_DRIVER_PUSH_BUTTON_SOFT_DEBOUNCING
@@ -282,11 +286,12 @@ static KROUTINE_EXEC(push_button_repeat_timeout)
   if (rq == NULL)
     return;
 
-  /* Cancel request */
-  if (pv->cancel_repeat_trq)
+  /* Timer request canceled */
+  if (pv->repeat_state == PB_REPEAT_STATE_CANCELED)
   {
-    /* Clear request flag */
-    pv->repeat_trq_active = false;
+    /* Clear state */
+    pv->repeat_state = PB_REPEAT_STATE_IDLE;
+    /* End pb request */
     dev_valio_rq_pop(&pv->queue);
     dev_valio_rq_done(rq);
     return;
@@ -334,22 +339,28 @@ static bool push_button_process_rq(struct push_button_context_s *pv)
       /* Button released */
       if (pv->current_state == pv->release_state)
       {
-        pv->cancel_repeat_trq = true;
-        /* Allow new request only if cancel successful */
-        if (push_button_cancel_timer_rq(&pv->timer, &pv->repeat_trq))
+        /* Check if timer req active */
+        if (pv->repeat_state == PB_REPEAT_STATE_ACTIVE)
         {
-          pv->repeat_trq_active = false;
-          rq_done = true;
+          /* Try to cancel timer req */
+          if (push_button_cancel_timer_rq(&pv->timer, &pv->repeat_trq))
+          {
+            /* Cancel success */
+            pv->repeat_state = PB_REPEAT_STATE_IDLE;
+            rq_done = true;
+          }
+          /* Cancel fail, wait for timer request to end */
+          else
+            pv->repeat_state = PB_REPEAT_STATE_CANCELED;
         }
       }
       /* Button pushed and no timer request */
-      else if (!pv->repeat_trq_active)
+      else if (pv->repeat_state == PB_REPEAT_STATE_IDLE)
       {
         /* Activate callback */
         data->pb_event(rq);
         /* Start timer requests */
-        pv->cancel_repeat_trq = false;
-        pv->repeat_trq_active = true;
+        pv->repeat_state = PB_REPEAT_STATE_ACTIVE;
         push_button_start_timer_rq(&pv->timer, &pv->repeat_trq);
       }
       break;
@@ -364,7 +375,7 @@ static bool push_button_process_rq(struct push_button_context_s *pv)
   {
     /* Note timestamp */
     data->timestamp = push_button_timestamp(pv);
-    /* End request */
+    /* End pb request */
     dev_valio_rq_pop(&pv->queue);
     dev_valio_rq_done(rq);
   }
