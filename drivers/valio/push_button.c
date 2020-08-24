@@ -30,6 +30,11 @@
 #include <device/class/gpio.h>
 #include <device/valio/button.h>
 
+enum pb_gpio_req_state {
+  PB_GPIO_REQ_STATE_IDLE,
+  PB_GPIO_REQ_STATE_ACTIVE,
+};
+
 enum pb_repeat_state_e {
   PB_REPEAT_STATE_IDLE,
   PB_REPEAT_STATE_ACTIVE,
@@ -44,7 +49,7 @@ enum pb_delay_state_e {
 
 DRIVER_PV(struct push_button_context_s
 {
-  bool grq_active; // Indicates that the gpio request is active
+  enum pb_gpio_req_state grq_state; // State of the gpio request
   uint8_t release_state; // Value when button is released
   uint8_t current_state; // Current value
   dev_request_queue_root_t queue; // Request queue
@@ -71,6 +76,7 @@ DRIVER_PV(struct push_button_context_s
   enum pb_repeat_state_e repeat_state; // State of the repeat process
   struct dev_timer_rq_s repeat_trq; // Sustain push timer request
 #endif
+
 #ifdef CONFIG_DRIVER_PUSH_BUTTON_SOFT_DEBOUNCING
   bool debounce_lock; // Soft debouncing lock
   bool debounce_was_locked; // Indicates that a soft debouncing lock was active
@@ -431,11 +437,15 @@ if (grq->error != 0)
     restart_grq = true;
 #endif
 
-  /* Restart gpio rq */
+  /* Restart gpio rq check */
   if (restart_grq)
+  {
+    /* Restart gpio rq */
     DEVICE_OP(&pv->gpio, request, &pv->gpio_rq);
+  }
+  /* End of gpio rq */
   else
-    pv->grq_active = false;
+    pv->grq_state = PB_GPIO_REQ_STATE_IDLE;
 }
 
 /***************************************** request */
@@ -522,9 +532,9 @@ static DEV_VALIO_REQUEST(push_button_request)
     start_grq |= push_button_accept_rq(pv, rq);
 
   /* Start gpio rq check */
-  if (start_grq && !pv->grq_active)
+  if ((pv->grq_state == PB_GPIO_REQ_STATE_IDLE) && start_grq)
   {
-    pv->grq_active = true;
+    pv->grq_state = PB_GPIO_REQ_STATE_ACTIVE;
     /* Start gpio request */
     pv->gpio_rq.type = DEV_GPIO_UNTIL;
     pv->gpio_rq.until.mask = dev_gpio_mask1;
