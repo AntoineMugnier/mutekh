@@ -166,6 +166,8 @@ static void push_button_end_delayed(struct push_button_context_s *pv)
     /* Check if delay reached */
     if (data->isActive && (pv->pushed_time >= data->delay))
     {
+      /* Note timestamp */
+      data->timestamp = push_button_timestamp(pv);
       /* End request */
       data->isActive = false;
       dev_valio_rq_remove(&pv->queue, rq);
