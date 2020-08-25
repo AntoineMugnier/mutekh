@@ -126,9 +126,6 @@ static uint16_t push_button_timestamp(struct push_button_context_s *pv)
     /* Get timer value */
     if (!DEVICE_OP(&pv->timer, get_value, &value, 0))
       timestamp = dev_timer_delay_shift_t2s(pv->shiftb, value - pv->last_value);
-    /*  Saturate timestamp */
-    if (timestamp >> 16)
-      timestamp = (1 << 16) - 1;
 
     pv->last_value = value;
 #endif
