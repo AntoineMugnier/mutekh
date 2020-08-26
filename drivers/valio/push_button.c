@@ -560,14 +560,27 @@ static DEV_VALIO_REQUEST(push_button_request)
     start_grq |= push_button_accept_rq(pv, rq);
 
   /* Start gpio rq check */
-  if ((pv->grq_state == PB_GPIO_REQ_STATE_IDLE) && start_grq)
+  switch (pv->grq_state)
   {
-    pv->grq_state = PB_GPIO_REQ_STATE_ACTIVE;
-    /* Start gpio request */
-    pv->gpio_rq.type = DEV_GPIO_UNTIL;
-    pv->gpio_rq.until.mask = dev_gpio_mask1;
-    pv->gpio_rq.until.data = &pv->current_state;
-    DEVICE_OP(&pv->gpio, request, &pv->gpio_rq);
+    case PB_GPIO_REQ_STATE_IDLE:
+      /* Start gpio req if needed */
+      if (start_grq)
+      {
+        pv->grq_state = PB_GPIO_REQ_STATE_ACTIVE;
+        /* Start gpio request */
+        pv->gpio_rq.type = DEV_GPIO_UNTIL;
+        pv->gpio_rq.until.mask = dev_gpio_mask1;
+        pv->gpio_rq.until.data = &pv->current_state;
+        DEVICE_OP(&pv->gpio, request, &pv->gpio_rq);
+      }
+    break;
+
+    case PB_GPIO_REQ_STATE_ACTIVE:
+    /* Nothing to do */
+    break;
+
+    default:
+      UNREACHABLE();
   }
 
   LOCK_RELEASE_IRQ(&dev->lock);
