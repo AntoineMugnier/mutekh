@@ -198,12 +198,14 @@ static void push_button_continue_delayed_rq(struct push_button_context_s *pv)
   {
     /* Go back to idle */
     pv->delay_state = PB_DELAY_STATE_IDLE;
-    return;
   }
-  /* Set delay trq value */
-  push_button_calc_delay(pv);
-  /* Start delay trq */
-  push_button_start_timer_rq(&pv->timer, &pv->delay_trq);
+  else
+  {
+    /* Set delay trq value */
+    push_button_calc_delay(pv);
+    /* Start delay trq */
+    push_button_start_timer_rq(&pv->timer, &pv->delay_trq);
+  }
 }
 
 static bool push_button_process_delayed_rq(struct push_button_context_s *pv)
@@ -213,32 +215,46 @@ static bool push_button_process_delayed_rq(struct push_button_context_s *pv)
   if (rq == NULL)
     return true;
 
-  /* Button released */
-  if (pv->current_state == pv->release_state)
+  bool isPushed = (pv->current_state != pv->release_state);
+
+  switch (pv->delay_state)
   {
-    /* Check if timer req active */
-    if (pv->delay_state == PB_DELAY_STATE_ACTIVE)
-    {
-      /* Try to cancel request */
-      if (push_button_cancel_timer_rq(&pv->timer, &pv->delay_trq))
-        pv->delay_state = PB_DELAY_STATE_IDLE;
-      /* If cancel fail, wait for timer request to end */
-      else
-        pv->delay_state = PB_DELAY_STATE_CANCELED;
-    }
+    case PB_DELAY_STATE_IDLE:
+      /* Activate trq if button pushed */
+      if (isPushed)
+      {
+        pv->delay_state = PB_DELAY_STATE_ACTIVE;
+         /* Activate requests */
+        push_button_activate_delay_rq(pv);
+        /* Set delay trq value */
+        pv->pushed_time = 0;
+        push_button_calc_delay(pv);
+        /* Start delay trq */
+        push_button_start_timer_rq(&pv->timer, &pv->delay_trq);
+      }
+    break;
+
+    case PB_DELAY_STATE_ACTIVE:
+      /* Cancel trq if button released */
+      if (!isPushed)
+      {
+        /* Try to cancel request */
+        if (push_button_cancel_timer_rq(&pv->timer, &pv->delay_trq))
+          pv->delay_state = PB_DELAY_STATE_IDLE;
+        /* If cancel fail, wait for timer request to end */
+        else
+          pv->delay_state = PB_DELAY_STATE_CANCELED;
+      }
+    break;
+
+    case PB_DELAY_STATE_CANCELED:
+      /* Wait for trq to end */
+    break;
+
+    default:
+      UNREACHABLE();
   }
-  /* Button pushed and delay trq inactive */
-  else if (pv->delay_state == PB_DELAY_STATE_IDLE)
-  {
-    /* Activate requests*/
-    push_button_activate_delay_rq(pv);
-    /* Set delay trq value */
-    pv->pushed_time = 0;
-    push_button_calc_delay(pv);
-    /* Start delay trq */
-    pv->delay_state = PB_DELAY_STATE_ACTIVE;
-    push_button_start_timer_rq(&pv->timer, &pv->delay_trq);
-  }
+
   return false;
 }
 
@@ -252,16 +268,23 @@ static KROUTINE_EXEC(push_button_delay_timeout)
 
   LOCK_SPIN_IRQ(&dev->lock);
 
-  /* Check if request canceled */
-  if (pv->delay_state == PB_DELAY_STATE_CANCELED)
+  switch(pv->delay_state)
   {
-    pv->delay_state = PB_DELAY_STATE_IDLE;
-  }
-  else
-  {
-    pv->pushed_time += rq->delay / pv->base_time;
-    push_button_end_delayed(pv);
-    push_button_continue_delayed_rq(pv);
+    case PB_DELAY_STATE_ACTIVE:
+      /* Process requests */
+      pv->pushed_time += rq->delay / pv->base_time;
+      push_button_end_delayed(pv);
+      push_button_continue_delayed_rq(pv);
+    break;
+
+    case PB_DELAY_STATE_CANCELED:
+      /* Return to idle */
+      pv->delay_state = PB_DELAY_STATE_IDLE;
+    break;
+
+    case PB_DELAY_STATE_IDLE:
+    default:
+      UNREACHABLE();
   }
 
   LOCK_RELEASE_IRQ(&dev->lock);
@@ -295,24 +318,31 @@ static KROUTINE_EXEC(push_button_repeat_timeout)
   if (rq == NULL)
     return;
 
-  /* Timer request canceled */
-  if (pv->repeat_state == PB_REPEAT_STATE_CANCELED)
-  {
-    /* Clear state */
-    pv->repeat_state = PB_REPEAT_STATE_IDLE;
-    /* End pb request */
-    dev_valio_rq_pop(&pv->queue);
-    dev_valio_rq_done(rq);
-    return;
-  }
-
   LOCK_SPIN_IRQ(&dev->lock);
 
   struct valio_button_update_s *data = (struct valio_button_update_s *)rq->data;
-  /* Activate callback */
-  data->pb_event(rq);
-  /* Restart timer rq */
-  push_button_start_timer_rq(&pv->timer, &pv->repeat_trq);
+
+  switch(pv->repeat_state)
+  {
+    case PB_REPEAT_STATE_ACTIVE:
+      /* Activate callback */
+      data->pb_event(rq);
+      /* Restart timer rq */
+      push_button_start_timer_rq(&pv->timer, &pv->repeat_trq);
+    break;
+
+    case PB_REPEAT_STATE_CANCELED:
+      /* Return to idle */
+      pv->repeat_state = PB_REPEAT_STATE_IDLE;
+      /* End pb request */
+      dev_valio_rq_pop(&pv->queue);
+      dev_valio_rq_done(rq);
+    break;
+
+    case PB_REPEAT_STATE_IDLE:
+    default:
+      UNREACHABLE();
+  }
 
   LOCK_RELEASE_IRQ(&dev->lock);
 }
@@ -328,6 +358,7 @@ static bool push_button_process_rq(struct push_button_context_s *pv)
     return true;
 
   struct valio_button_update_s *data = (struct valio_button_update_s *)rq->data;
+  bool isPushed = (pv->current_state != pv->release_state);
 
   switch ((enum valio_button_att)rq->attribute)
     {
@@ -336,42 +367,53 @@ static bool push_button_process_rq(struct push_button_context_s *pv)
         break;
 
       case VALIO_BUTTON_PUSH:
-        rq_done = (pv->current_state != pv->release_state);
+        rq_done = isPushed;
         break;
 
       case VALIO_BUTTON_RELEASE:
-        rq_done = (pv->current_state == pv->release_state);
+        rq_done = !isPushed;
         break;
 
 #ifdef CONFIG_DRIVER_PUSH_BUTTON_REPEAT
-     case VALIO_BUTTON_REPEAT_PUSH:
-      /* Button released */
-      if (pv->current_state == pv->release_state)
-      {
-        /* Check if timer req active */
-        if (pv->repeat_state == PB_REPEAT_STATE_ACTIVE)
+      case VALIO_BUTTON_REPEAT_PUSH:
+        switch (pv->repeat_state)
         {
-          /* Try to cancel timer req */
-          if (push_button_cancel_timer_rq(&pv->timer, &pv->repeat_trq))
-          {
-            /* Cancel success */
-            pv->repeat_state = PB_REPEAT_STATE_IDLE;
-            rq_done = true;
-          }
-          /* Cancel fail, wait for timer request to end */
-          else
-            pv->repeat_state = PB_REPEAT_STATE_CANCELED;
+          case PB_REPEAT_STATE_IDLE:
+            /* Activate trq if button pushed */
+            if (isPushed)
+            {
+              pv->repeat_state = PB_REPEAT_STATE_ACTIVE;
+              /* Activate callback */
+              data->pb_event(rq);
+              /* Start timer requests */
+              push_button_start_timer_rq(&pv->timer, &pv->repeat_trq);
+            }
+          break;
+
+          case PB_REPEAT_STATE_ACTIVE:
+            /* Cancel trq if button released */
+            if (!isPushed)
+            {
+              /* Try to cancel timer req */
+              if (push_button_cancel_timer_rq(&pv->timer, &pv->repeat_trq))
+              {
+                /* Cancel success */
+                pv->repeat_state = PB_REPEAT_STATE_IDLE;
+                rq_done = true;
+              }
+              /* Cancel fail, wait for timer request to end */
+              else
+                pv->repeat_state = PB_REPEAT_STATE_CANCELED;
+            }
+          break;
+
+          case PB_REPEAT_STATE_CANCELED:
+            /* Wait for trq to end */
+          break;
+
+          default:
+            UNREACHABLE();
         }
-      }
-      /* Button pushed and no timer request */
-      else if (pv->repeat_state == PB_REPEAT_STATE_IDLE)
-      {
-        /* Activate callback */
-        data->pb_event(rq);
-        /* Start timer requests */
-        pv->repeat_state = PB_REPEAT_STATE_ACTIVE;
-        push_button_start_timer_rq(&pv->timer, &pv->repeat_trq);
-      }
       break;
 #endif
       default:
