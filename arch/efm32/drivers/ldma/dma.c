@@ -306,13 +306,13 @@ static error_t efm32_dma_loop_setup(struct efm32_dma_context_s *pv,
   dlist->dst = desc->dst.mem.stride - ((desc->src.mem.size + 1) * DEV_DMA_GET_INC(desc->dst.mem.inc));
   dlist->dst *= (1 << desc->src.mem.width);
 
-  dlist->link &= ~EFR32_LDMA_CH_LINK_LINK;
-
   state->last = efm32_dma_list_get_offset(pv, dlist);
+
+  struct efm32_dma_descriptor_s *l = efm32_dma_get_next_desc(dlist);
+  pv->list.head = efm32_dma_list_get_offset(pv, l);
 
   efm32_dma_set_link_addr(pv, dlist, state->last);
 
-  pv->list.head = (state->last + 1) % CONFIG_DRIVER_EFR32_DMA_LINKED_LIST_SIZE;
   pv->list.free -= 2;
 
   efm32_dma_start(pv, rq, chan);
@@ -349,6 +349,9 @@ static error_t efm32_dma_ping_pong_setup(struct efm32_dma_context_s *pv,
       if (i == rq->desc_count_m1)
       /* Last transfer must point to the first one */
         {
+          struct efm32_dma_descriptor_s *l = efm32_dma_get_next_desc(dlist);
+          pv->list.head = efm32_dma_list_get_offset(pv, l);
+
           efm32_dma_set_link_addr(pv, dlist, state->first);
           state->last = efm32_dma_list_get_offset(pv, dlist);
         }
@@ -361,7 +364,6 @@ static error_t efm32_dma_ping_pong_setup(struct efm32_dma_context_s *pv,
       dlist = efm32_dma_get_next_desc(dlist);
     }
 
-  pv->list.head = (state->last + 1) % CONFIG_DRIVER_EFR32_DMA_LINKED_LIST_SIZE;
   pv->list.free -= rq->desc_count_m1 + 1;
 
   efm32_dma_start(pv, rq, chan);
@@ -379,7 +381,7 @@ static error_t efm32_dma_list_setup(struct efm32_dma_context_s *pv,
   struct efm32_dma_chan_state_s * state = pv->chan + chan;
 
   uint32_t addr = pv->addr + EFR32_LDMA_CH_CFG_ADDR(chan);
-  uint32_t x = EFR32_LDMA_CH_LINK_LINK | (uint32_t)dlist;
+  uint32_t x = (uint32_t)dlist;
 
   cpu_mem_write_32(addr + 0, 0);
   cpu_mem_write_32(addr + 4, 0);
@@ -407,7 +409,7 @@ static error_t efm32_dma_list_setup(struct efm32_dma_context_s *pv,
       dlist = efm32_dma_get_next_desc(dlist);
     }
 
-  pv->list.head = (state->last + 1) % CONFIG_DRIVER_EFR32_DMA_LINKED_LIST_SIZE;
+  pv->list.head = efm32_dma_list_get_offset(pv, dlist);
   pv->list.free -= rq->desc_count_m1 + 1;
 
   efm32_dma_start(pv, rq, chan);
@@ -491,6 +493,7 @@ static DEVDMA_REQUEST(efm32_dma_request)
     if (start < 0)
     /* An error has been detected */
       {
+	printk("err %d\n", start);      
         rq->drv_pv = EFR32_DMA_DONE;
         break;
       }
@@ -551,7 +554,6 @@ static void efm32_dma_release_list(struct efm32_dma_context_s *pv, uint8_t i)
     pv->list.free += rq->desc_count_m1 + 1;
 
   dlist->link = (uint32_t)(pv->desc + pv->list.head);
-  dlist = (struct efm32_dma_descriptor_s *)(dlist->link & 0xfffffffc);
 
   pv->list.head = state->first;
 }
