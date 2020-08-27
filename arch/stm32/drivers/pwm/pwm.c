@@ -26,6 +26,7 @@
 #include <hexo/types.h>
 #include <hexo/endian.h>
 #include <hexo/iospace.h>
+#include <hexo/bit.h>
 
 #include <device/device.h>
 #include <device/resources.h>
@@ -153,10 +154,11 @@ void stm32_pwm_polarity(struct device_s         *dev,
     do { uint32_t register _reg = endian_le32(cpu_mem_read_32(( ((((pv->addr)))) + (STM32_TIMER_CCER_ADDR) ))); STM32_TIMER_CCER_CCP_SET( channel, _reg, LOW ); cpu_mem_write_32( ( ((((pv->addr)))) + (STM32_TIMER_CCER_ADDR) ), endian_le32(_reg) ); } while (0);
 }
 
-static DEV_PWM_CONFIG(stm32_pwm_request)
+static DEV_PWM_CONFIG(stm32_pwm_config)
 {
   struct device_s            *dev = pdev->dev;
   struct stm32_pwm_private_s *pv  = dev->drv_pv;
+  error_t err = 0;
 
   for (uint8_t idx = 0; idx < rq->cfg_count; idx++)
   {
@@ -169,15 +171,15 @@ static DEV_PWM_CONFIG(stm32_pwm_request)
       return -EINVAL;
 
     /* Test if valid parameters */
-    error_t err = stm32_pwm_validate(pdev, rq);
+    err = stm32_pwm_validate(pdev, &cfg);
     if (err)
       return err;
 
     /* Set frequency (only once as it's common to all channels) */
     if (cfg.param_mask & DEV_PWM_MASK_FREQ)
     {
-      pv->freq.num   = cfg->freq.num;
-      pv->freq.denom = cfg->freq.denom;
+      pv->freq.num   = cfg.freq.num;
+      pv->freq.denom = cfg.freq.denom;
 
       err = stm32_pwm_freq(dev);
       if (err)
@@ -187,17 +189,17 @@ static DEV_PWM_CONFIG(stm32_pwm_request)
     for (uint8_t ci = 0; ci < STM32_PWM_CHANNEL_MAX; ++ci)
     {
       /* Pass if channel not modified */
-      if (!(rq->chan_mask &  bit(i)))
+      if (!(cfg.chan_mask & bit(ci)))
         continue;
 
       /* Remap channel value */
-      uint8_t channel = stm32_pwm_get_mapped_channel(i, pv->ch_remap);
+      uint8_t channel = stm32_pwm_get_mapped_channel(ci, pv->ch_remap);
 
       /* Set duty cycle */
       if (cfg.param_mask & DEV_PWM_MASK_DUTY)
         {
-          pv->duty[channel].num   = cfg->duty.num;
-          pv->duty[channel].denom = cfg->duty.denom;
+          pv->duty[channel].num   = cfg.duty.num;
+          pv->duty[channel].denom = cfg.duty.denom;
 
           err = stm32_pwm_duty(dev, channel);
           if (err)
@@ -206,7 +208,7 @@ static DEV_PWM_CONFIG(stm32_pwm_request)
 
       /* Set polarity */
       if(cfg.param_mask  & DEV_PWM_MASK_POL)
-        stm32_pwm_polarity(dev, channel, cfg->pol);
+        stm32_pwm_polarity(dev, channel, cfg.pol);
 
       /* Start channel if needed */
       if (!(pv->config_mask & bit(channel)))
