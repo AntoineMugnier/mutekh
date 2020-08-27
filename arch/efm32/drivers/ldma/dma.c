@@ -493,7 +493,6 @@ static DEVDMA_REQUEST(efm32_dma_request)
     if (start < 0)
     /* An error has been detected */
       {
-	printk("err %d\n", start);      
         rq->drv_pv = EFR32_DMA_DONE;
         break;
       }
