@@ -21,6 +21,7 @@
 */
 
 #include <string.h>
+#include <stdbool.h>
 
 #include <hexo/types.h>
 #include <hexo/endian.h>
@@ -47,11 +48,10 @@ DRIVER_PV(struct stm32_pwm_private_s
 {
   /* PWM/timer base address. */
   uintptr_t                  addr;
-
-  /* PWM channel flags. */
-  uint8_t                    count[STM32_PWM_CHANNEL_MAX];
-  uint8_t                    start;
-  uint8_t                    config;
+  /* Indicates if device has started */
+  bool                      started;
+  /* Mask of channels configured */
+  uint8_t                   config_mask;
 
   /* PWM hardware counter width. */
   uint8_t                    hw_width;
@@ -64,49 +64,34 @@ DRIVER_PV(struct stm32_pwm_private_s
 
   /* PWM cached period. */
   uint32_t                   period;
+  /* Channels remap value */
+  uint32_t                  ch_remap;
+
 });
+
+static uint8_t stm32_pwm_get_mapped_channel(uint8_t channel, uint32_t ch_remap) {
+  if (ch_remap == 0)
+    return channel;
+  else
+    return LUT_8_4_GET(channel, ch_remap);
+}
 
 static
 error_t stm32_pwm_validate(const struct device_pwm_s *pdev,
-                           struct dev_pwm_rq_s *rq)
+                           const struct dev_pwm_config_s *cfg)
 {
   struct stm32_pwm_private_s *pv   = pdev->dev->drv_pv;
 
-  /* A channel is configured before being started. */
-  if ((rq->chan_mask << pdev->number) & ~pv->start)
+  /* A channel is configured before device is started */
+  if (!pv->started)
     return -EINVAL;
 
-  struct dev_freq_s const *freq = &rq->cfg[0].freq;
-
-  uint8_t freq_mask = 0;
-  uint8_t const max = STM32_PWM_CHANNEL_MAX - pdev->number;
-  uint8_t ci;
-  for (ci = 0; ci < max; ++ci)
-    {
-      if (!(rq->chan_mask & (1 << ci)))
-        continue;
-
-      const struct dev_pwm_config_s *cfg = &rq->cfg[ci];
-      if (rq->mask & DEV_PWM_MASK_FREQ)
-        {
-          freq_mask |= 1 << ci;
-
-          /* check shared parameter (frequency). */
-          if ((cfg->freq.num != freq->num) || (cfg->freq.denom != freq->denom))
-            return -ENOTSUP;
-        }
-    }
-
-  if (freq_mask)
-    {
-      /* check shard parameter (frequency). */
-      if (freq_mask != rq->chan_mask)
-        return -ENOTSUP;
-      /* check device are started before configuration. */
-      if ((freq_mask << pdev->number) != pv->start)
-        return -ENOTSUP;
-    }
-
+  /* Shared parameter frequency must be changed for all started channels at once */
+  if ((cfg->param_mask & DEV_PWM_MASK_FREQ) != 0)
+  {
+    if ((cfg->chan_mask | pv->config_mask) != cfg->chan_mask)
+      return -ENOTSUP;
+  }
   return 0;
 }
 
@@ -168,106 +153,106 @@ void stm32_pwm_polarity(struct device_s         *dev,
     do { uint32_t register _reg = endian_le32(cpu_mem_read_32(( ((((pv->addr)))) + (STM32_TIMER_CCER_ADDR) ))); STM32_TIMER_CCER_CCP_SET( channel, _reg, LOW ); cpu_mem_write_32( ( ((((pv->addr)))) + (STM32_TIMER_CCER_ADDR) ), endian_le32(_reg) ); } while (0);
 }
 
-static
-DEV_PWM_REQUEST(stm32_pwm_request)
+static DEV_PWM_CONFIG(stm32_pwm_request)
 {
   struct device_s            *dev = pdev->dev;
   struct stm32_pwm_private_s *pv  = dev->drv_pv;
 
-  uint_fast8_t ci;
-  bool_t       fdone = 0;
-  bool_t       start = !(pv->config & STM32_PWM_CHANNEL_MASK);
+  for (uint8_t idx = 0; idx < rq->cfg_count; idx++)
+  {
+    /* Get config from request */
+    assert(rq->cfg);
+    const struct dev_pwm_config_s cfg = rq->cfg[idx];
 
-  error_t err = 0;
-  LOCK_SPIN_IRQ(&dev->lock);
+    /* No channel to update is an invalid request */
+    if (cfg.chan_mask == 0)
+      return -EINVAL;
 
-  err = stm32_pwm_validate(pdev, rq);
-  if (err)
-    goto cfg_end;
+    /* Test if valid parameters */
+    error_t err = stm32_pwm_validate(pdev, rq);
+    if (err)
+      return err;
 
-  uint8_t max = STM32_PWM_CHANNEL_MAX - pdev->number;
-  for (ci = 0; ci < max; ++ci)
+    /* Set frequency (only once as it's common to all channels) */
+    if (cfg.param_mask & DEV_PWM_MASK_FREQ)
     {
-      if (!(rq->chan_mask & (1 << ci)))
+      pv->freq.num   = cfg->freq.num;
+      pv->freq.denom = cfg->freq.denom;
+
+      err = stm32_pwm_freq(dev);
+      if (err)
+        return err;
+    }
+    /* Configure duty cycle and polarity per channel */
+    for (uint8_t ci = 0; ci < STM32_PWM_CHANNEL_MAX; ++ci)
+    {
+      /* Pass if channel not modified */
+      if (!(rq->chan_mask &  bit(i)))
         continue;
 
-      struct dev_pwm_config_s const *cfg = &rq->cfg[ci];
-      if ((rq->mask & DEV_PWM_MASK_FREQ) && !fdone)
-        {
-          pv->freq.num   = cfg->freq.num;
-          pv->freq.denom = cfg->freq.denom;
+      /* Remap channel value */
+      uint8_t channel = stm32_pwm_get_mapped_channel(i, pv->ch_remap);
 
-          err = stm32_pwm_freq(dev);
-          if (err)
-            goto cfg_end;
-
-          fdone = 1;
-        }
-
-      uint8_t channel = pdev->number + ci;
-      if (rq->mask & DEV_PWM_MASK_DUTY)
+      /* Set duty cycle */
+      if (cfg.param_mask & DEV_PWM_MASK_DUTY)
         {
           pv->duty[channel].num   = cfg->duty.num;
           pv->duty[channel].denom = cfg->duty.denom;
 
           err = stm32_pwm_duty(dev, channel);
           if (err)
-            goto cfg_end;
+            return err;
         }
 
-      if(rq->mask & DEV_PWM_MASK_POL)
+      /* Set polarity */
+      if(cfg.param_mask  & DEV_PWM_MASK_POL)
         stm32_pwm_polarity(dev, channel, cfg->pol);
 
-      if (!(pv->config & (1 << channel)))
+      /* Start channel if needed */
+      if (!(pv->config_mask & bit(channel)))
         {
-          pv->config |= 1 << channel;
+          pv->config_mask |= bit(channel);
           do { uint32_t register _reg = endian_le32(cpu_mem_read_32(( ((((pv->addr)))) + (STM32_TIMER_CCER_ADDR) ))); STM32_TIMER_CCER_CCE_SET( channel, (_reg), 1 ); cpu_mem_write_32( ( ((((pv->addr)))) + (STM32_TIMER_CCER_ADDR) ), endian_le32(_reg) ); } while (0);
         }
     }
-
-  /* start counter. */
-  if (start)
-    {
-      cpu_mem_write_32( ( (((pv->addr))) + (STM32_TIMER_CNT_ADDR) ), endian_le32(0) );
-      do { uint32_t register _reg = endian_le32(cpu_mem_read_32(( ((((pv->addr)))) + (STM32_TIMER_CR1_ADDR) ))); STM32_TIMER_CR1_CEN_SET( (_reg), 1 ); cpu_mem_write_32( ( ((((pv->addr)))) + (STM32_TIMER_CR1_ADDR) ), endian_le32(_reg) ); } while (0);
-      do { uint32_t register _reg = endian_le32(cpu_mem_read_32(( ((((pv->addr)))) + (STM32_TIMER_EGR_ADDR) ))); STM32_TIMER_EGR_UG_SET( (_reg), 1 ); cpu_mem_write_32( ( ((((pv->addr)))) + (STM32_TIMER_EGR_ADDR) ), endian_le32(_reg) ); } while (0);
-    }
-
-cfg_end:
-  LOCK_RELEASE_IRQ(&dev->lock);
-
-  rq->error = err;
-  dev_pwm_rq_done(rq);
+  }
+  return err;
 }
 
-static
-error_t stm32_pwm_start_stop(struct device_s *dev,
-                             uint_fast8_t    channel,
-                             bool_t          start)
+static error_t stm32_pwm_start(struct device_s *dev)
 {
   struct stm32_pwm_private_s *pv = dev->drv_pv;
 
-  if (start)
-    {
-      ++pv->count[channel];
-      pv->start |= 1 << channel;
-      return 0;
-    }
-  else if (pv->count[channel] > 0)
-    {
-      --pv->count[channel];
-      if (pv->count[channel] == 0)
-        {
-          do { uint32_t register _reg = endian_le32(cpu_mem_read_32(( ((((pv->addr)))) + (STM32_TIMER_CCER_ADDR) ))); STM32_TIMER_CCER_CCE_SET( channel, (_reg), 1 ); cpu_mem_write_32( ( ((((pv->addr)))) + (STM32_TIMER_CCER_ADDR) ), endian_le32(_reg) ); } while (0);
-          pv->start &= ~(1 << channel);
-        }
+  /* Start counter. */
+  cpu_mem_write_32( ( (((pv->addr))) + (STM32_TIMER_CNT_ADDR) ), endian_le32(0) );
+  do { uint32_t register _reg = endian_le32(cpu_mem_read_32(( ((((pv->addr)))) + (STM32_TIMER_CR1_ADDR) ))); STM32_TIMER_CR1_CEN_SET( (_reg), 1 ); cpu_mem_write_32( ( ((((pv->addr)))) + (STM32_TIMER_CR1_ADDR) ), endian_le32(_reg) ); } while (0);
+  do { uint32_t register _reg = endian_le32(cpu_mem_read_32(( ((((pv->addr)))) + (STM32_TIMER_EGR_ADDR) ))); STM32_TIMER_EGR_UG_SET( (_reg), 1 ); cpu_mem_write_32( ( ((((pv->addr)))) + (STM32_TIMER_EGR_ADDR) ), endian_le32(_reg) ); } while (0);
+  pv->started = true;
 
-      if (pv->start == 0)
-        do { uint32_t register _reg = endian_le32(cpu_mem_read_32(( ((((pv->addr)))) + (STM32_TIMER_CR1_ADDR) ))); STM32_TIMER_CR1_CEN_SET( (_reg), 0 ); cpu_mem_write_32( ( ((((pv->addr)))) + (STM32_TIMER_CR1_ADDR) ), endian_le32(_reg) ); } while (0);
-      return 0;
-    }
+  return 0;
+}
 
-  return -EBUSY;
+static error_t stm32_pwm_stop(struct device_s *dev)
+{
+  struct stm32_pwm_private_s *pv = dev->drv_pv;
+
+  /* Parse and stop started channels */
+  for (uint8_t i = 0; i < STM32_PWM_CHANNEL_MAX; i++)
+  {
+    uint8_t channel = stm32_pwm_get_mapped_channel(i, pv->ch_remap);
+
+    /* Pass if channel not configured */
+    if (!(pv->config_mask & bit(channel)))
+      continue;
+    /* Stop channel */
+    do { uint32_t register _reg = endian_le32(cpu_mem_read_32(( ((((pv->addr)))) + (STM32_TIMER_CCER_ADDR) ))); STM32_TIMER_CCER_CCE_SET( channel, (_reg), 1 ); cpu_mem_write_32( ( ((((pv->addr)))) + (STM32_TIMER_CCER_ADDR) ), endian_le32(_reg) ); } while (0);
+  }
+  /* Clear config mask */
+  pv->config_mask = 0;
+  /* Stop counter */
+  do { uint32_t register _reg = endian_le32(cpu_mem_read_32(( ((((pv->addr)))) + (STM32_TIMER_CR1_ADDR) ))); STM32_TIMER_CR1_CEN_SET( (_reg), 0 ); cpu_mem_write_32( ( ((((pv->addr)))) + (STM32_TIMER_CR1_ADDR) ), endian_le32(_reg) ); } while (0);
+  pv->started = false;
+  return 0;
 }
 
 /************************************************************************/
@@ -358,6 +343,10 @@ static DEV_INIT(stm32_pwm_init)
 
   dev->drv_pv = pv;
 
+  /* Get channel remapping */
+  if (device_get_param_uint(dev, "remap", &pv->ch_remap) != 0)
+    pv->ch_remap = 0;
+
   return 0;
 
 err_mem:
@@ -384,17 +373,11 @@ static DEV_USE(stm32_pwm_use)
   switch (op)
     {
     case DEV_USE_START:
-      return stm32_pwm_start_stop(accessor->dev, accessor->number, 1);
+      return stm32_pwm_start(accessor->dev);
 
     case DEV_USE_STOP:
-      return stm32_pwm_start_stop(accessor->dev, accessor->number, 0);
+      return stm32_pwm_stop(accessor->dev);
 
-    case DEV_USE_GET_ACCESSOR:
-      if (accessor->number >= STM32_PWM_CHANNEL_MAX)
-        return -ENOTSUP;
-    case DEV_USE_LAST_NUMBER:
-      accessor->number = STM32_PWM_CHANNEL_MAX - 1;
-      return 0;
     default:
       return dev_use_generic(param, op);
     }
