@@ -466,6 +466,8 @@ static error_t efr32_calc_power(dev_rfpacket_pwr_t pwr_dbm, uint32_t *p_sgpac_va
   } else {
     pa_idx = 7;
   }
+  // Convert pwr_dbm from 1/8th to 1/10th dbm
+  pwr_dbm = pwr_dbm * 10 / 8;
   // Calc pa curve value
   pa_curve_value = efr32_tx_pa_curves[pa_idx].slope * pwr_dbm + efr32_tx_pa_curves[pa_idx].offset;
   // Calc raw and value rounding
