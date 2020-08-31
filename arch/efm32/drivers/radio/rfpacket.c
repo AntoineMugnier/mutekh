@@ -23,6 +23,7 @@
 #include <stdbool.h>
 #include "common.h"
 #include "protimer.h"
+#include "power_curves.h"
 #include <device/class/iomux.h>
 
 /* LBT parameters */
@@ -44,38 +45,15 @@
 // Power calculation values
 #define EFR32_POW_STRIPE_MAX_VAL  32
 #define EFR32_POW_MIN_DBM        -176 // 0.125 dbm unit (-22dbm)
-#define EFR32_POW_MAX_DBM         128 // 0.125 dbm unit (16dbm)
+#define EFR32_POW_MAX_DBM         160 // 0.125 dbm unit (20dbm)
 #define EFR32_POW_MIN_RAW         1
 #define EFR32_POW_MAX_RAW         248
-#define EFR32_POW_THRES_0         121 // 15.125 dbm
-#define EFR32_POW_THRES_1         99 // 12.25 dbm
-#define EFR32_POW_THRES_2         63 // 7.875 dbm
-#define EFR32_POW_THRES_3         31 // 3.875 dbm
-#define EFR32_POW_THRES_4        -2 // -0.25 dbm
-#define EFR32_POW_THRES_5        -31 // -3.875 dbm
-#define EFR32_POW_THRES_6        -72 // -9 dbm
+
 
 enum efr32_rac_irq_type {
   EFR32_RAC_IRQ_TIMEOUT,
   EFR32_RAC_IRQ_TXRX,
 };
-
-typedef struct _efr32_pa_curve {
-    uint16_t slope;
-    int32_t offset;
-} efr32_pa_curve_t;
-
-static const efr32_pa_curve_t efr32_tx_pa_curves[] = {
-    { 11336, -1171644 },
-    { 4783, -378994 },
-    { 1165, -22748 },
-    { 588, 13485 },
-    { 380, 19712 },
-    { 240, 19146 },
-    { 138, 15607 },
-    { 39, 8239 },
-};
-
 
 DRIVER_PV(struct radio_efr32_rfp_ctx_s {
   struct radio_efr32_ctx_s pv;
@@ -440,6 +418,7 @@ static error_t efr32_calc_power(dev_rfpacket_pwr_t pwr_dbm, uint32_t *p_sgpac_va
   uint8_t pa_idx = 0;
   int64_t pa_curve_value;
   uint32_t pwr_raw = 0;
+  const struct _efr32_pa_curve_s *efr32_pa_curves = NULL;
   // Limit intput power value
   if (pwr_dbm < EFR32_POW_MIN_DBM) {
     pwr_dbm = EFR32_POW_MIN_DBM;
@@ -449,27 +428,18 @@ static error_t efr32_calc_power(dev_rfpacket_pwr_t pwr_dbm, uint32_t *p_sgpac_va
     logk_trace("Power requested too high, setting value to %d", pwr_dbm);
   }
   // Get pa curve index
-  if (pwr_dbm > EFR32_POW_THRES_0) {
-    pa_idx = 0;
-  } else if (pwr_dbm > EFR32_POW_THRES_1) {
-    pa_idx = 1;
-  } else if (pwr_dbm > EFR32_POW_THRES_2) {
-    pa_idx = 2;
-  } else if (pwr_dbm > EFR32_POW_THRES_3) {
-    pa_idx = 3;
-  } else if (pwr_dbm > EFR32_POW_THRES_4) {
-    pa_idx = 4;
-  } else if (pwr_dbm > EFR32_POW_THRES_5) {
-    pa_idx = 5;
-  } else if (pwr_dbm > EFR32_POW_THRES_6) {
-    pa_idx = 6;
-  } else {
-    pa_idx = 7;
+  for (int16_t idx = efr32_radio_sg_pa_data.data_size - 1; idx > 0; idx--) {
+    efr32_pa_curves = &efr32_radio_sg_pa_data.data[idx];
+
+    if (pwr_dbm < efr32_pa_curves->max_pwr_dbm) {
+      break;
+    }
   }
+  assert(efr32_pa_curves);
   // Convert pwr_dbm from 1/8th to 1/10th dbm
   pwr_dbm = pwr_dbm * 10 / 8;
   // Calc pa curve value
-  pa_curve_value = efr32_tx_pa_curves[pa_idx].slope * pwr_dbm + efr32_tx_pa_curves[pa_idx].offset;
+  pa_curve_value = efr32_pa_curves[pa_idx].slope * pwr_dbm + efr32_pa_curves[pa_idx].offset;
   // Calc raw and value rounding
   pwr_raw = (pa_curve_value + 500) / 1000;
   // Limit value
