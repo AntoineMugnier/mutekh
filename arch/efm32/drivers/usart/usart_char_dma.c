@@ -105,8 +105,10 @@ static void efm32_usart_char_cfg_apply(struct device_s *dev)
 {
   struct efm32_usart_context_s	*pv = dev->drv_pv;
 
+#ifdef CONFIG_DEVICE_CLOCK_VARFREQ
   pv->clkdiv = endian_le32(efm32_usart_char_bauds(dev));
   cpu_mem_write_32(pv->addr + EFM32_USART_CLKDIV_ADDR, pv->clkdiv);
+#endif
 
   uint32_t frame = 0;
 
@@ -365,6 +367,9 @@ static KROUTINE_EXEC(efm32_usart_dma_process_next_write)
 
   assert(rq);
 
+  dev_char_rq_pop(&pv->write_q);
+  dev_char_rq_done(rq);
+
   /* Process next request */
   efm32_usart_start_tx(pv->usart);
 
@@ -380,14 +385,6 @@ static void efm32_usart_tx_dma_end(struct efm32_usart_context_s *pv, error_t err
   crq->data += crq->size;
   crq->size = 0;
   crq->error = err;
-
-  dev_char_rq_pop(&pv->write_q);
-  dev_char_rq_done(crq);
-
-  crq = dev_char_rq_head(&pv->write_q);
-
-  if (dev_rq_queue_isempty(&pv->write_q))
-    return;
 
   /* We can not restart DMA core in DMA callback */
   kroutine_exec(&pv->write_kr);
