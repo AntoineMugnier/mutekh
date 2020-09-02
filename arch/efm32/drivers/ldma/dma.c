@@ -330,6 +330,9 @@ static error_t efm32_dma_ping_pong_setup(struct efm32_dma_context_s *pv,
   if (!(rq->type & _DEV_DMA_DST_REG) && !(rq->type & _DEV_DMA_SRC_REG))
     return -EINVAL;
 
+  if (rq->desc_count_m1 + 1 > pv->list.free)
+    return 0;
+
   struct efm32_dma_descriptor_s *dlist = pv->desc + pv->list.head;
   struct efm32_dma_chan_state_s * state = pv->chan + chan;
 
@@ -383,6 +386,9 @@ static error_t efm32_dma_list_setup(struct efm32_dma_context_s *pv,
   uint32_t addr = pv->addr + EFR32_LDMA_CH_CFG_ADDR(chan);
   uint32_t x = (uint32_t)dlist;
 
+  if (rq->desc_count_m1 + 1 > pv->list.free)
+    return 0;
+
   cpu_mem_write_32(addr + 0, 0);
   cpu_mem_write_32(addr + 4, 0);
   cpu_mem_write_32(addr + 0x14, endian_le32(x));
@@ -433,9 +439,6 @@ static error_t efm32_dma_process(struct efm32_dma_context_s *pv, struct dev_dma_
   if (rq->desc_count_m1 + 1 > CONFIG_DRIVER_EFR32_DMA_LINKED_LIST_SIZE ||
       rq->desc->src.mem.size + 1 > 4096)
     return -EINVAL;
-
-  if (rq->desc_count_m1 + 1 > pv->list.free)
-    return 0;
 
   uint8_t chan_msk = rq->chan_mask & pv->free_channel_mask;
 
