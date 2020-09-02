@@ -84,9 +84,7 @@ DRIVER_PV(struct efm32_usart_context_s
   struct dev_freq_s             timer_freq;
   struct dev_clock_sink_ep_s    clk_ep[3];
   struct dev_uart_config_s      cfg;
-#ifdef CONFIG_DEVICE_CLOCK_VARFREQ
   uint32_t                      clkdiv;
-#endif
   struct dev_freq_s             freq;
 });
 
@@ -105,10 +103,8 @@ static void efm32_usart_char_cfg_apply(struct device_s *dev)
 {
   struct efm32_usart_context_s	*pv = dev->drv_pv;
 
-#ifdef CONFIG_DEVICE_CLOCK_VARFREQ
   pv->clkdiv = endian_le32(efm32_usart_char_bauds(dev));
   cpu_mem_write_32(pv->addr + EFM32_USART_CLKDIV_ADDR, pv->clkdiv);
-#endif
 
   uint32_t frame = 0;
 
