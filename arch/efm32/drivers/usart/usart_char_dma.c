@@ -179,6 +179,7 @@ static void efm32_usart_try_write(struct device_s *dev)
 
   cpu_mem_write_32(pv->addr + EFM32_USART_IFC_ADDR,
                    endian_le32(EFM32_USART_IFC_TXC));
+  cpu_mem_write_32(pv->addr + EFM32_USART_IEN_ADDR, EFM32_USART_IEN_TXC);
 
   while ((rq = dev_char_rq_head(&pv->write_q)))
     {
@@ -455,6 +456,11 @@ static void efm32_usart_start_tx(struct device_s *dev)
 
   if (rq->type == DEV_CHAR_WRITE)
     {
+      /* interrupt disabled */
+      uint32_t i = cpu_mem_read_32(pv->addr + EFM32_USART_IEN_ADDR);
+      i &= ~EFM32_USART_IEN_TXC;
+      cpu_mem_write_32(pv->addr + EFM32_USART_IEN_ADDR, endian_le32(i));
+
       efm32_usart_usart_start_tx_dma(pv);
       return;
     }
@@ -832,7 +838,6 @@ static DEV_INIT(efm32_usart_char_init)
 
   /* enable irqs */
   cpu_mem_write_32(pv->addr + EFM32_USART_IFC_ADDR, endian_le32(EFM32_USART_IFC_MASK));
-  cpu_mem_write_32(pv->addr + EFM32_USART_IEN_ADDR, EFM32_USART_IEN_TXC);
 
   /* configure */
   cpu_mem_write_32(pv->addr + EFM32_USART_CTRL_ADDR, endian_le32(EFM32_USART_CTRL_OVS(X4)));
