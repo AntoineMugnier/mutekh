@@ -75,6 +75,7 @@ DRIVER_PV(struct radio_efr32_rfp_ctx_s {
   // Timeout kroutine
   struct kroutine_s kr;
   // Config values
+  uint32_t curr_freq;
   uint32_t curr_drate;
 });
 
@@ -83,8 +84,8 @@ STRUCT_COMPOSE(radio_efr32_rfp_ctx_s, pv);
 
 static void efr32_rfp_timer_irq(struct device_s *dev);
 static error_t efr32_radio_get_time(struct dev_rfpacket_ctx_s *gpv, dev_timer_value_t *value);
-static error_t efr32_calc_power(dev_rfpacket_pwr_t pwr_dbm, uint32_t *p_sgpac_val, uint32_t *p_pac_val);
-static error_t efr32_set_tx_power(struct dev_rfpacket_rq_s *rq);
+static error_t efr32_calc_power(dev_rfpacket_pwr_t pwr_dbm, uint32_t freq, uint32_t *p_sgpac_val, uint32_t *p_pac_val);
+static error_t efr32_set_tx_power(struct radio_efr32_rfp_ctx_s *ctx, struct dev_rfpacket_rq_s *rq);
 static inline void  efr32_rfp_set_status_timeout(struct radio_efr32_rfp_ctx_s *ctx, enum dev_rfpacket_status_s status);
 static void efr32_rfp_req_timeout(struct radio_efr32_rfp_ctx_s *ctx);
 static inline void  efr32_rfp_set_status_done(struct radio_efr32_rfp_ctx_s *ctx, enum dev_rfpacket_status_s status);
@@ -414,11 +415,11 @@ static error_t efr32_radio_timer_cancel(struct radio_efr32_rfp_ctx_s *ctx, struc
 
 /**************************** RFPACKET PART ********************************/
 
-static error_t efr32_calc_power(dev_rfpacket_pwr_t pwr_dbm, uint32_t *p_sgpac_val, uint32_t *p_pac_val) {
-  uint8_t pa_idx = 0;
+static error_t efr32_calc_power(dev_rfpacket_pwr_t pwr_dbm, uint32_t freq, uint32_t *p_sgpac_val, uint32_t *p_pac_val) {
   int64_t pa_curve_value;
   uint32_t pwr_raw = 0;
-  const struct _efr32_pa_curve_s *efr32_pa_curves = NULL;
+  const struct _efr32_pa_data_s *efr32_pa_data = NULL;
+  const struct _efr32_pa_curve_s *efr32_pa_curve = NULL;
   // Limit intput power value
   if (pwr_dbm < EFR32_POW_MIN_DBM) {
     pwr_dbm = EFR32_POW_MIN_DBM;
@@ -427,19 +428,26 @@ static error_t efr32_calc_power(dev_rfpacket_pwr_t pwr_dbm, uint32_t *p_sgpac_va
     pwr_dbm = EFR32_POW_MAX_DBM;
     logk_trace("Power requested too high, setting value to %d", pwr_dbm);
   }
+  // Get pa curves
+  if (freq > 1000000000) {
+    efr32_pa_data = &efr32_radio_2g4_pa_data;
+  } else {
+    efr32_pa_data = &efr32_radio_sg_pa_data;
+  }
+  assert(efr32_pa_data);
   // Get pa curve index
-  for (int16_t idx = efr32_radio_sg_pa_data.data_size - 1; idx > 0; idx--) {
-    efr32_pa_curves = &efr32_radio_sg_pa_data.data[idx];
+  for (int16_t idx = efr32_pa_data->data_size - 1; idx > 0; idx--) {
+    efr32_pa_curve = &efr32_pa_data->data[idx];
 
-    if (pwr_dbm < efr32_pa_curves->max_pwr_dbm) {
+    if (pwr_dbm < efr32_pa_curve->max_pwr_dbm) {
       break;
     }
   }
-  assert(efr32_pa_curves);
+  assert(efr32_pa_curve);
   // Convert pwr_dbm from 1/8th to 1/10th dbm
   pwr_dbm = pwr_dbm * 10 / 8;
   // Calc pa curve value
-  pa_curve_value = efr32_pa_curves[pa_idx].slope * pwr_dbm + efr32_pa_curves[pa_idx].offset;
+  pa_curve_value = efr32_pa_curve->slope * pwr_dbm + efr32_pa_curve->offset;
   // Calc raw and value rounding
   pwr_raw = (pa_curve_value + 500) / 1000;
   // Limit value
@@ -459,10 +467,10 @@ static error_t efr32_calc_power(dev_rfpacket_pwr_t pwr_dbm, uint32_t *p_sgpac_va
   return 0;
 }
 
-static error_t efr32_set_tx_power(struct dev_rfpacket_rq_s *rq) {
+static error_t efr32_set_tx_power(struct radio_efr32_rfp_ctx_s *ctx, struct dev_rfpacket_rq_s *rq) {
   uint32_t sg_pac_reg, pac_reg;
 
-  error_t err = efr32_calc_power(rq->tx_pwr, &sg_pac_reg, &pac_reg);
+  error_t err = efr32_calc_power(rq->tx_pwr, ctx->curr_freq, &sg_pac_reg, &pac_reg);
 
   if (err != 0) {
     return err;
@@ -494,6 +502,8 @@ static error_t efr32_build_gfsk_rf_config(struct radio_efr32_rfp_ctx_s *ctx, str
   cpu_mem_write_32(EFR32_SYNTH_ADDR + EFR32_SYNTH_CHSP_ADDR, (uint32_t)chsp);
   // Calc time byte
   ctx->gctx.time_byte = efr32_radio_calc_time(ctx, common->drate);
+  // Note config values
+  ctx->curr_freq = common->frequency;
   ctx->curr_drate = common->drate;
   return 0;
 }
@@ -653,6 +663,7 @@ static error_t efr32_build_static_rf_config(struct radio_efr32_rfp_ctx_s *ctx, s
   efr32_send_radio_config(cfg->config_size, cfg->config_data);
   // Note info
   //printk("RF CONFIG: %d, %d, %P\n", cfg->drate, cfg->config_size, cfg->config_data, cfg->config_size);
+  ctx->curr_freq = cfg->frequency;
   ctx->curr_drate = cfg->drate;
   // Calc time constants
   ctx->gctx.time_byte = efr32_radio_calc_time(ctx, cfg->drate);
@@ -669,6 +680,7 @@ static error_t efr32_build_extern_rf_config(struct radio_efr32_rfp_ctx_s *ctx, s
   efr32_send_radio_config(cfg->config_size, cfg->config_data);
   // Note info
   //printk("RF CONFIG: %d, %d, %P\n", cfg->drate, cfg->config_size, cfg->config_data, cfg->config_size);
+  ctx->curr_freq = cfg->frequency;
   ctx->curr_drate = cfg->drate;
   // Calc time constants
   ctx->gctx.time_byte = efr32_radio_calc_time(ctx, cfg->drate);
@@ -1244,7 +1256,7 @@ static void efr32_radio_tx(struct dev_rfpacket_ctx_s *gpv, struct dev_rfpacket_r
   // Set channel
   cpu_mem_write_32(EFR32_SYNTH_ADDR + EFR32_SYNTH_CHCTRL_ADDR, rq->channel);
   // Set power
-  efr32_set_tx_power(rq);
+  efr32_set_tx_power(ctx, rq);
   // Enable TX
   switch (rq->type) {
     case DEV_RFPACKET_RQ_TX:

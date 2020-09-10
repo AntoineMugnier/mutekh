@@ -1,16 +1,16 @@
 /*
     This file is part of MutekH.
-    
+
     MutekH is free software; you can redistribute it and/or modify it
     under the terms of the GNU Lesser General Public License as
     published by the Free Software Foundation; version 2.1 of the
     License.
-    
+
     MutekH is distributed in the hope that it will be useful, but
     WITHOUT ANY WARRANTY; without even the implied warranty of
     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
     Lesser General Public License for more details.
-    
+
     You should have received a copy of the GNU Lesser General Public
     License along with MutekH; if not, write to the Free Software
     Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
@@ -86,7 +86,7 @@ void efm32_board_init()
 
   while (cpu_mem_read_32(EFM32_EMU_ADDR + EFR32_EMU_DCDCSYNC_ADDR) & 1);
 
-  x = cpu_mem_read_32(EFM32_EMU_ADDR + EFR32_EMU_DCDCCTRL_ADDR);  
+  x = cpu_mem_read_32(EFM32_EMU_ADDR + EFR32_EMU_DCDCCTRL_ADDR);
   EFR32_EMU_DCDCCTRL_DCDCMODE_SETVAL(x, 1);
   cpu_mem_write_32(EFM32_EMU_ADDR + EFR32_EMU_DCDCCTRL_ADDR, x);
 
@@ -128,7 +128,7 @@ void efm32_board_init()
   EFM32_GPIO_MODEL_MODE_SET(4, x, PUSHPULL);
   EFM32_GPIO_MODEL_MODE_SET(5, x, PUSHPULL);
   cpu_mem_write_32(EFM32_GPIO_ADDR + EFM32_GPIO_MODEL_ADDR(5), x);
-  
+
   x = EFM32_GPIO_DOUT_DOUT(4) | EFM32_GPIO_DOUT_DOUT(5);
   cpu_mem_write_32(EFM32_GPIO_ADDR + EFM32_GPIO_DOUT_ADDR(5) + 0x06000000, x);
 
@@ -142,7 +142,7 @@ void efm32_board_init()
      (CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_XG14)
   cpu_mem_write_32(EFM32_CMU_ADDR + EFM32_CMU_HFRADIOALTCLKEN0_ADDR, EFM32_CMU_HFRADIOALTCLKEN0_MASK);
  #endif
-#endif 
+#endif
 
 }
 
@@ -323,8 +323,9 @@ DEV_DECLARE_STATIC(usart_dev, "spi", 0, efm32_usart_spi_drv,
 
 #if defined(CONFIG_DRIVER_EFR32_SIGFOX)
 
-static const uint32_t efr32_rf_sigfox_cfg[] = 
-  0x64, // Datarate
+static const uint32_t efr32_rf_sigfox_cfg[] =
+  0x338F915B, // Frequency
+  0x9600, // Datarate
   0x9C, // Config size
   0x40083008, 0x100ac3f,
   0x4008300c, 0x42801,

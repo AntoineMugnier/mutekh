@@ -72,9 +72,9 @@
                                    EFR32_FRC_IF_TXABORTED  |      \
                                    EFR32_FRC_IF_TXAFTERFRAMEDONE)
 
-#define EFR32_SEQ_DEADLINE_ADDR 0x21001F00 
+#define EFR32_SEQ_DEADLINE_ADDR 0x21001F00
 #define EFR32_RADIO_SEQ_RAM_ADDR 0x21000000
-#define EFR32_SEQ_STACK_POINTER_ADDR 0x21001F80 
+#define EFR32_SEQ_STACK_POINTER_ADDR 0x21001F80
 
 #define EFR32_RADIO_IRQ_COUNT 9
 #define EFR32_RADIO_CLK_EP_COUNT 7
@@ -84,6 +84,7 @@ extern const unsigned char seqcode[];
 extern const size_t seqcode_size;
 
 struct radio_efr32_rf_cfg_s {
+  uint32_t frequency;
   uint32_t drate;
   uint32_t config_size;
   uint32_t config_data[];

@@ -60,10 +60,10 @@ static struct _efr32_pa_data_s efr32_radio_sg_pa_data = {
     _sg_vbat,
 };
 
-// static struct _efr32_pa_data_s efr32_radio_2g4_pa_data = {
-//     ARRAY_SIZE(_2g4_vbat),
-//     _2g4_vbat,
-// };
+static struct _efr32_pa_data_s efr32_radio_2g4_pa_data = {
+    ARRAY_SIZE(_2g4_vbat),
+    _2g4_vbat,
+};
 
 #else
 
@@ -72,9 +72,9 @@ static struct _efr32_pa_data_s efr32_radio_sg_pa_data = {
     _sg_dcdc,
 };
 
-// static struct _efr32_pa_data_s efr32_radio_2g4_pa_data = {
-//     ARRAY_SIZE(_2g4_dcdc),
-//     _2g4_dcdc,
-// };
+static struct _efr32_pa_data_s efr32_radio_2g4_pa_data = {
+    ARRAY_SIZE(_2g4_dcdc),
+    _2g4_dcdc,
+};
 
 #endif
