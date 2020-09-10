@@ -930,19 +930,16 @@ static void efr32_rfp_start_tx_lbt(struct radio_efr32_rfp_ctx_s *ctx, struct dev
       EFR32_PROTIMER_TXCTRL_TXSETEVENT(1, LBTSUCCESS);
   cpu_mem_write_32(EFR32_PROTIMER_ADDR + EFR32_PROTIMER_TXCTRL_ADDR, x);
 
-  if (rq->rf_cfg->mod == DEV_RFPACKET_GFSK) {
-    const struct dev_rfpacket_rf_cfg_fsk_s * c = const_dev_rfpacket_rf_cfg_fsk_s_cast(rq->rf_cfg);
-     uint32_t drate = c->common.drate;
+  // Calc nbsym
+  uint32_t drate = ctx->curr_drate;
+  uint32_t nbsym = (EFR32_ETSI_LBT_TIME * drate)/1000000;
+  nbsym = bit_ctz(pow2_up(nbsym));
+  assert(nbsym < 15);
 
-    uint32_t nbsym = (EFR32_ETSI_LBT_TIME * drate)/1000000;
-    nbsym = bit_ctz(pow2_up(nbsym));
-
-    // Configure rssi period
-    assert(nbsym < 15);
-    x = cpu_mem_read_32(EFR32_AGC_ADDR + EFR32_AGC_CTRL1_ADDR);
-    EFR32_AGC_CTRL1_RSSIPERIOD_SET(x, nbsym);
-    cpu_mem_write_32(EFR32_AGC_ADDR + EFR32_AGC_CTRL1_ADDR, x);
-  }
+  // Configure rssi period
+  x = cpu_mem_read_32(EFR32_AGC_ADDR + EFR32_AGC_CTRL1_ADDR);
+  EFR32_AGC_CTRL1_RSSIPERIOD_SET(x, nbsym);
+  cpu_mem_write_32(EFR32_AGC_ADDR + EFR32_AGC_CTRL1_ADDR, x);
 
   // Configure AGC
   x = cpu_mem_read_32(EFR32_AGC_ADDR + EFR32_AGC_CTRL0_ADDR);
