@@ -179,6 +179,7 @@ static bool_t scanner_ctx_radio_params(struct nrf5x_ble_context_s *context,
   params->crc_init = BLE_ADVERTISE_CRCINIT;
   params->tx_power = 0;
   params->rx_rssi = 0;
+  params->whitening = 1;
 
   switch (scan->state) {
   case SCAN_IND:

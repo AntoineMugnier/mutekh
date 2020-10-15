@@ -617,6 +617,7 @@ bool_t slave_ctx_radio_params(struct nrf5x_ble_context_s *context,
   params->tx_power = 0;
   params->mode = (slave->event_packet_count & 1) ? MODE_TX : MODE_RX;
   params->rx_rssi = 0;
+  params->whitening = 1;
 
   return !(slave->event_rx_count - slave->event_crc_error < 1 && slave->latency_permitted)
     || slave->tx_queue_count

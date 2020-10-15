@@ -527,6 +527,7 @@ bool_t master_ctx_radio_params(struct nrf5x_ble_context_s *context,
   params->tx_power = 0;
   params->mode = (master->event_packet_count & 1) ? MODE_RX : MODE_TX;
   params->rx_rssi = 0;
+  params->whitening = 1;
 
   return master->event_packet_count < 2
     || master->tx_queue_count

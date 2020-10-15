@@ -150,6 +150,7 @@ static bool_t advertiser_ctx_radio_params(struct nrf5x_ble_context_s *context,
   params->crc_init = BLE_ADVERTISE_CRCINIT;
   params->tx_power = 0;
   params->rx_rssi = 0;
+  params->whitening = 1;
 
   switch (adv->state) {
   case ADV_IND:

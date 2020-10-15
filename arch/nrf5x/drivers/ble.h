@@ -132,6 +132,7 @@ struct nrf5x_ble_params_s
   uint8_t channel;
   int16_t tx_power;
   enum nrf5x_ble_transfer_e mode;
+  bool_t whitening;
   bool_t rx_rssi;
 };
 

@@ -301,7 +301,8 @@ void nrf5x_ble_config_init(const struct nrf5x_ble_params_s *params)
               | (packet_max_size << NRF_RADIO_PCNF1_MAXLEN_OFFSET)
               | (3 << NRF_RADIO_PCNF1_BALEN_OFFSET)
               | NRF_RADIO_PCNF1_ENDIAN_LITTLE
-              | NRF_RADIO_PCNF1_WHITEEN_ENABLED);
+              | (params->whitening ? NRF_RADIO_PCNF1_WHITEEN_ENABLED : 0)
+              );
 
   nrf_reg_set(BLE_RADIO_ADDR, NRF_RADIO_BASE0, params->access << 8);
   nrf_reg_set(BLE_RADIO_ADDR, NRF_RADIO_PREFIX0, params->access >> 24);
