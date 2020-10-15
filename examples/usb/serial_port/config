@@ -35,6 +35,10 @@ CONFIG_DEVICE_VALIO_UART_CONFIG
   CONFIG_DRIVER_NRF5X_PRINTK undefined
 %end
 
+%subsection nrf5x-vregh-33
+  CONFIG_NRF5X_VREGH 33
+%end
+
 %subsection printk-rtt
   CONFIG_DRIVER_RTT_PRINTK
 %end
