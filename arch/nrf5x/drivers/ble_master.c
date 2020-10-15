@@ -76,7 +76,7 @@ struct nrf5x_ble_master_s
 
   uint8_t empty[2];
 
-  enum ble_phy_mode_e phy:8;
+  enum ble_phy_mode_e phy;
   bool_t established : 1;
   bool_t peer_md : 1;
   bool_t event_done : 1;

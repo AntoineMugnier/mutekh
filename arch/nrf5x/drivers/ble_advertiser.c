@@ -63,6 +63,7 @@ struct nrf5x_ble_advertiser_s
 
   enum ble_phy_mode_e phy;
   enum adv_state_e state;
+  uint8_t tx_power;
   uint8_t channel;
 
   uint8_t ad[62];
@@ -149,7 +150,7 @@ static bool_t advertiser_ctx_radio_params(struct nrf5x_ble_context_s *context,
   params->channel = adv->channel;
   params->access = BLE_ADVERTISE_AA;
   params->crc_init = BLE_ADVERTISE_CRCINIT;
-  params->tx_power = 0;
+  params->tx_power = adv->tx_power;
   params->rx_rssi = 0;
   params->whitening = 1;
   params->phy = adv->phy;
@@ -359,7 +360,8 @@ error_t adv_param_update(struct net_layer_s *layer, const struct ble_advertiser_
 
   if (!nrf5x_ble_phy_is_supported(params->phy))
     return -ENOTSUP;
-  
+
+  adv->tx_power = nrf5x_ble_tx_power_normalize(params->tx_power);
   adv->phy = params->phy;
   if (params->connectable)
     ble_adv_ind_set(adv->adv_packet, &params->local_addr);

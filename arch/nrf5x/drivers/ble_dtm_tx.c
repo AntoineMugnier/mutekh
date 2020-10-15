@@ -49,7 +49,7 @@ struct nrf5x_ble_dtm_tx_s
 
   uint32_t interval_tk;
   uint32_t delay_max_tk;
-  uint16_t tx_power;
+  uint8_t tx_power;
   int8_t channel;
   enum ble_phy_mode_e phy;
   uint8_t pdu[256];
@@ -229,7 +229,7 @@ error_t dtm_tx_param_update(struct net_layer_s *layer, const struct ble_dtm_tx_p
   ble_dtm_pdu_fill(params->pattern, dtm->pdu, size);
 
   dtm->phy = params->phy;
-  dtm->tx_power = params->tx_power;
+  dtm->tx_power = nrf5x_ble_tx_power_normalize(params->tx_power);
   dtm->interval_tk = params->interval_ms * 32768 / 1000;
   dtm->delay_max_tk = pow2_m1_up(params->delay_max_ms * 32768 / 1000);
   dtm->channel_map = params->channel_map;

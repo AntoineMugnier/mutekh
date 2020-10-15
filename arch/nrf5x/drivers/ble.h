@@ -49,6 +49,15 @@ struct net_scheduler_s;
 # endif
 #endif
 
+#define NRF5X_BLE_PHY_1M
+#if CONFIG_NRF5X_MODEL >= 52000
+#define NRF5X_BLE_PHY_2M
+#if CONFIG_NRF5X_MODEL == 52833 || CONFIG_NRF5X_MODEL == 52840
+#define NRF5X_BLE_PHY_LR
+#endif
+#endif
+
+
 #if CONFIG_NRF5X_MODEL <= 51999
 # define RADIO_RAMPUP_US      140
 # define RADIO_IRQ_LATENCY_US 8
@@ -131,7 +140,7 @@ struct nrf5x_ble_params_s
   uint32_t access;
   uint32_t crc_init;
   uint8_t channel;
-  int16_t tx_power;
+  uint8_t tx_power; // As per the register, use nrf5x_ble_tx_power_normalize()
   enum nrf5x_ble_transfer_e mode;
   enum ble_phy_mode_e phy;
   bool_t whitening;
@@ -355,21 +364,24 @@ error_t nrf5x_ble_dtm_tx_create(struct net_scheduler_s *scheduler,
                                 const struct net_layer_delegate_vtable_s *delegate_vtable,
                                 struct net_layer_s **layer);
 
-static
-ALWAYS_INLINE
+uint8_t nrf5x_ble_tx_power_normalize(int16_t power);
+
+inline
 bool_t nrf5x_ble_phy_is_supported(enum ble_phy_mode_e mode)
 {
   switch (mode) {
+#if defined(NRF5X_BLE_PHY_1M)
   case BLE_PHY_1M:
     return 1;
-#if CONFIG_NRF5X_MODEL >= 52000
+#endif
+#if defined(NRF5X_BLE_PHY_2M)
   case BLE_PHY_2M:
     return 1;
-#if CONFIG_NRF5X_MODEL == 52833 || CONFIG_NRF5X_MODEL == 52840
+#endif
+#if defined(NRF5X_BLE_PHY_LR)
   case BLE_PHY_CODED8:
   case BLE_PHY_CODED2:
     return 1;
-#endif
 #endif
   default:
     return 0;
