@@ -57,10 +57,10 @@ void nrf5x_init(void)
 #if CONFIG_NRF5X_MODEL >= 52000 && \
     CONFIG_NRF5X_MODEL < 53000
 
-
   uintptr_t nvmc = NRF_PERIPHERAL_ADDR(NRF5X_NVMC);
   nrf_reg_set(nvmc, NRF_NVMC_ICACHECNF, NRF_NVMC_ICACHECNF_CACHEEN_ENABLED);
 
+#if CONFIG_NRF5X_MODEL == 52832
   if (nrf_build_tag() < NRF52832_ENGB) {
     // FTPAN 32
     uintptr_t demcr = 0xe000edfc;
@@ -77,12 +77,14 @@ void nrf5x_init(void)
   // CLOCK: Calibration values are not correctly loaded from FICR at reset
   cpu_mem_write_32(0x4000053C, (cpu_mem_read_32(0x10000244) & 0x0000E000) >> 13);
 
+  // PAN-108
+  cpu_mem_write_32(0x40000ee4, cpu_mem_read_32(0x10000258));
+#endif
+
   // FTPAN 36
   nrf_event_clear(NRF_PERIPHERAL_ADDR(NRF5X_CLOCK), NRF_CLOCK_DONE);
   nrf_event_clear(NRF_PERIPHERAL_ADDR(NRF5X_CLOCK), NRF_CLOCK_CTTO);
-
-  // PAN-108
-  cpu_mem_write_32(0x40000ee4, cpu_mem_read_32(0x10000258));
+  nrf_reg_set(NRF_PERIPHERAL_ADDR(NRF5X_CLOCK), NRF_CLOCK_CTIV, 0);
 #endif
 }
 
