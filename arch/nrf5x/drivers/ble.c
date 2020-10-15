@@ -112,15 +112,19 @@ static DEV_NET_LAYER_CREATE(nrf5x_ble_layer_create)
   struct nrf5x_ble_private_s *pv = dev->drv_pv;
 
   switch (type) {
-#if defined(CONFIG_BLE_CENTRAL)
+#if defined(CONFIG_BLE_MASTER)
   case BLE_NET_LAYER_MASTER:
     return nrf5x_ble_master_create(scheduler, pv, params, delegate, delegate_vtable, layer);
+#endif
+#if defined(CONFIG_BLE_SCANNER)
   case BLE_NET_LAYER_SCANNER:
     return nrf5x_ble_scanner_create(scheduler, pv, params, delegate, delegate_vtable, layer);
 #endif
-#if defined(CONFIG_BLE_PERIPHERAL)
+#if defined(CONFIG_BLE_ADVERTISER)
   case BLE_NET_LAYER_ADV:
     return nrf5x_ble_advertiser_create(scheduler, pv, params, delegate, delegate_vtable, layer);
+#endif
+#if defined(CONFIG_BLE_SLAVE)
   case BLE_NET_LAYER_SLAVE:
     return nrf5x_ble_slave_create(scheduler, pv, params, delegate, delegate_vtable, layer);
 #endif
@@ -145,11 +149,16 @@ static DEV_NET_GET_INFO(nrf5x_ble_get_info)
 {
   memset(info, 0, sizeof(*info));
   info->implemented_layers = 0
-#if defined(CONFIG_BLE_CENTRAL)
+#if defined(CONFIG_BLE_MASTER)
     | (1 << BLE_NET_LAYER_MASTER)
 #endif
-#if defined(CONFIG_BLE_PERIPHERAL)
+#if defined(CONFIG_BLE_SCANNER)
+    | (1 << BLE_NET_LAYER_SCANNER)
+#endif
+#if defined(CONFIG_BLE_ADVERTISER)
     | (1 << BLE_NET_LAYER_ADV)
+#endif
+#if defined(CONFIG_BLE_SLAVE)
     | (1 << BLE_NET_LAYER_SLAVE)
 #endif
     ;

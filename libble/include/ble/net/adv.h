@@ -66,6 +66,7 @@ struct ble_advertiser_param_s
   bool_t connectable;
   const void *ad;
   size_t ad_len;
+  enum ble_phy_mode_e phy;
 };
 
 struct ble_advertiser_handler_s

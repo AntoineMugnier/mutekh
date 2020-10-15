@@ -14,6 +14,7 @@ CONFIG_BLE_SECURITY_DB
 CONFIG_APP_START
 
 %inherit ble-peripheral
+%inherit ble-beacon
 
 %include arch/arch.build
 %include scripts/options.build
