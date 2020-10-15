@@ -42,12 +42,18 @@ CONFIG_LOAD_ROM_RO_SIZE 65536
   CONFIG_LIBC_FORMATTER undefined
 %end
 
+%subsection nrf5x-bv1prodtester
+  CONFIG_DRIVER_NRF52_USBD
+  CONFIG_DRIVER_NRF5X_CLOCK
+%end
+
 %subsection printk-*
   %subsection printk-rtt
     CONFIG_DRIVER_RTT_PRINTK
   %end
 
   %subsection printk-uart
+    CONFIG_DRIVER_NRF5X_PRINTK
     CONFIG_DRIVER_EFM32_USART_PRINTK
   %else
     CONFIG_DRIVER_EFM32_USART_PRINTK undefined
