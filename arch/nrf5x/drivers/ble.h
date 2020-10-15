@@ -345,5 +345,11 @@ error_t nrf5x_ble_slave_create(struct net_scheduler_s *scheduler,
                                void *delegate,
                                const struct net_layer_delegate_vtable_s *delegate_vtable,
                                struct net_layer_s **layer);
+error_t nrf5x_ble_dtm_tx_create(struct net_scheduler_s *scheduler,
+                                struct nrf5x_ble_private_s *priv,
+                                const void *params_,
+                                void *delegate,
+                                const struct net_layer_delegate_vtable_s *delegate_vtable,
+                                struct net_layer_s **layer);
 
 #endif

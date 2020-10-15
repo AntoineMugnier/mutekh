@@ -29,4 +29,5 @@ objs-$(CONFIG_BLE_ADVERTISER) += ble_advertiser.o
 objs-$(CONFIG_BLE_SLAVE) += ble_slave.o
 objs-$(CONFIG_BLE_SCANNER) += ble_scanner.o
 objs-$(CONFIG_BLE_MASTER) += ble_master.o
+objs-$(CONFIG_BLE_DTM_TX) += ble_dtm_tx.o
 endif

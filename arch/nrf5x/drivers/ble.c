@@ -128,6 +128,10 @@ static DEV_NET_LAYER_CREATE(nrf5x_ble_layer_create)
   case BLE_NET_LAYER_SLAVE:
     return nrf5x_ble_slave_create(scheduler, pv, params, delegate, delegate_vtable, layer);
 #endif
+#if defined(CONFIG_BLE_DTM_TX)
+  case BLE_NET_LAYER_DTM_TX:
+    return nrf5x_ble_dtm_tx_create(scheduler, pv, params, delegate, delegate_vtable, layer);
+#endif
   default:
     return -ENOTSUP;
   }
@@ -160,6 +164,9 @@ static DEV_NET_GET_INFO(nrf5x_ble_get_info)
 #endif
 #if defined(CONFIG_BLE_SLAVE)
     | (1 << BLE_NET_LAYER_SLAVE)
+#endif
+#if defined(CONFIG_BLE_DTM_TX)
+    | (1 << BLE_NET_LAYER_DTM_TX)
 #endif
     ;
   info->prefix_size = 1;
