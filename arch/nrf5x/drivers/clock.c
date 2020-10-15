@@ -879,6 +879,10 @@ static DEV_INIT(nrf5x_clock_init)
                      | bit(NRF_CLOCK_LFCLKSTARTED)
                      );
 
+#if CONFIG_NRF5X_MODEL == 52840
+  nrf_reg_set(CLOCK_ADDR, NRF_CLOCK_HFXODEBOUNCE, 0x80);
+#endif
+
 #if LFRC_CAL
   nrf_it_disable_mask(TEMP_ADDR, -1);
   nrf_it_enable(TEMP_ADDR, NRF_TEMP_DATARDY);
