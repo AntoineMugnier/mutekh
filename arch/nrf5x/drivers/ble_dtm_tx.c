@@ -51,6 +51,7 @@ struct nrf5x_ble_dtm_tx_s
   uint32_t delay_max_tk;
   uint16_t tx_power;
   int8_t channel;
+  enum ble_phy_mode_e phy;
   uint8_t pdu[256];
 };
 
@@ -124,6 +125,7 @@ bool_t dtm_tx_ctx_radio_params(struct nrf5x_ble_context_s *context,
   params->mode = MODE_TX;
   params->whitening = 0;
   params->rx_rssi = 0;
+  params->phy = dtm->phy;
 
   return 1;
 }
@@ -183,7 +185,7 @@ error_t nrf5x_ble_dtm_tx_create(struct net_scheduler_s *scheduler,
 {
   const struct ble_dtm_tx_param_s *params = params_;
 
-  if (params->phy != BLE_PHY_1M)
+  if (!nrf5x_ble_phy_is_supported(params->phy))
     return -ENOTSUP;
 
   struct nrf5x_ble_dtm_tx_s *dtm = mem_alloc(sizeof(*dtm), mem_scope_sys);
@@ -226,6 +228,7 @@ error_t dtm_tx_param_update(struct net_layer_s *layer, const struct ble_dtm_tx_p
 
   ble_dtm_pdu_fill(params->pattern, dtm->pdu, size);
 
+  dtm->phy = params->phy;
   dtm->tx_power = params->tx_power;
   dtm->interval_tk = params->interval_ms * 32768 / 1000;
   dtm->delay_max_tk = pow2_m1_up(params->delay_max_ms * 32768 / 1000);

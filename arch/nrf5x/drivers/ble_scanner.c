@@ -67,6 +67,7 @@ struct nrf5x_ble_scanner_s
   uint8_t channel;
 
   enum ble_scanner_policy_e default_policy;
+  enum ble_phy_mode_e phy;
 
   size_t target_count;
   struct ble_scanner_target_s target[BLE_SCANNER_TARGET_MAXCOUNT];
@@ -174,6 +175,7 @@ static bool_t scanner_ctx_radio_params(struct nrf5x_ble_context_s *context,
   if (scan->conn_ts)
     return 0;
 
+  params->phy = scan->phy;
   params->channel = scan->channel;
   params->access = BLE_ADVERTISE_AA;
   params->crc_init = BLE_ADVERTISE_CRCINIT;
@@ -390,8 +392,8 @@ error_t nrf5x_ble_scanner_create(struct net_scheduler_s *scheduler,
   struct nrf5x_ble_scanner_s *scan = mem_alloc(sizeof(*scan), mem_scope_sys);
   error_t err;
 
-  if (params->phy != BLE_PHY_1M)
-    return -EINVAL;
+  if (!nrf5x_ble_phy_is_supported(params->phy))
+    return -ENOTSUP;
 
   if (!scan)
     return -ENOMEM;
@@ -432,9 +434,10 @@ error_t scan_param_update(struct net_layer_s *layer, const struct ble_scanner_pa
 {
   struct nrf5x_ble_scanner_s *scan = nrf5x_ble_scanner_s_from_layer(layer);
 
-  if (params->phy != BLE_PHY_1M)
+  if (!nrf5x_ble_phy_is_supported(params->phy))
     return -ENOTSUP;
   
+  scan->phy = params->phy;
   scan->interval_tk = params->interval_ms * 32768 / 1000;
   scan->duration_tk = params->duration_ms * 32768 / 1000;
   scan->default_policy = params->default_policy;

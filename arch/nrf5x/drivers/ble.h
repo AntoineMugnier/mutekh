@@ -27,6 +27,7 @@
 
 #include <ble/protocol/address.h>
 #include <ble/protocol/advertise.h>
+#include <ble/protocol/radio.h>
 
 #include <arch/nrf5x/ids.h>
 #include <arch/nrf5x/ppi.h>
@@ -132,6 +133,7 @@ struct nrf5x_ble_params_s
   uint8_t channel;
   int16_t tx_power;
   enum nrf5x_ble_transfer_e mode;
+  enum ble_phy_mode_e phy;
   bool_t whitening;
   bool_t rx_rssi;
 };
@@ -352,5 +354,26 @@ error_t nrf5x_ble_dtm_tx_create(struct net_scheduler_s *scheduler,
                                 void *delegate,
                                 const struct net_layer_delegate_vtable_s *delegate_vtable,
                                 struct net_layer_s **layer);
+
+static
+ALWAYS_INLINE
+bool_t nrf5x_ble_phy_is_supported(enum ble_phy_mode_e mode)
+{
+  switch (mode) {
+  case BLE_PHY_1M:
+    return 1;
+#if CONFIG_NRF5X_MODEL >= 52000
+  case BLE_PHY_2M:
+    return 1;
+#if CONFIG_NRF5X_MODEL == 52833 || CONFIG_NRF5X_MODEL == 52840
+  case BLE_PHY_CODED8:
+  case BLE_PHY_CODED2:
+    return 1;
+#endif
+#endif
+  default:
+    return 0;
+  }
+}
 
 #endif

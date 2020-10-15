@@ -88,6 +88,7 @@ struct nrf5x_ble_slave_s
 
   uint8_t empty[2];
 
+  enum ble_phy_mode_e phy:8;
   bool_t established : 1;
   bool_t peer_md : 1;
   bool_t latency_permitted : 1;
@@ -254,7 +255,7 @@ error_t nrf5x_ble_slave_create(struct net_scheduler_s *scheduler,
   const struct ble_phy_params_s *params = params_;
   struct device_timer_s self_as_timer;
 
-  if (params->phy != BLE_PHY_1M)
+  if (!nrf5x_ble_phy_is_supported(params->phy))
     return -ENOTSUP;
 
   slave = mem_alloc(sizeof(*slave), mem_scope_sys);
@@ -291,6 +292,7 @@ error_t nrf5x_ble_slave_create(struct net_scheduler_s *scheduler,
 
   assert(CONFIG_BLE_PACKET_SIZE - 1 >= 33);
 
+  slave->phy = params->phy;
   slave->layer.context.prefix_size = 1;
   // Default MTU: header (2), l2cap (4), att (23), mic (4)
   // May be negociated with packet length extension.
@@ -611,6 +613,7 @@ bool_t slave_ctx_radio_params(struct nrf5x_ble_context_s *context,
   if (slave->event_done || slave->event_crc_error > 2)
     return 0;
 
+  params->phy = slave->phy;
   params->access = slave->access_address;
   params->crc_init = slave->crc_init;
   params->channel = slave->event_channel;

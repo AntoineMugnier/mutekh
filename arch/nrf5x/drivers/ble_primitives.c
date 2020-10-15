@@ -295,6 +295,12 @@ void nrf5x_ble_config_init(const struct nrf5x_ble_params_s *params)
 {
   // Packet available space, except header and decryption prefix
   size_t packet_max_size = CONFIG_BLE_PACKET_SIZE - 3;
+  uint32_t mod = 0
+    | (NRF_RADIO_MODE_BLE_1MBIT << (BLE_PHY_1M * 4))
+    | (NRF_RADIO_MODE_BLE_2MBIT << (BLE_PHY_2M * 4))
+    | (NRF_RADIO_MODE_BLE_LR125K << (BLE_PHY_CODED8 * 4))
+    | (NRF_RADIO_MODE_BLE_LR500K << (BLE_PHY_CODED2 * 4))
+    ;
 
   nrf_reg_set(BLE_RADIO_ADDR, NRF_RADIO_TXPOWER, params->tx_power / 8);
   nrf_reg_set(BLE_RADIO_ADDR, NRF_RADIO_PCNF1, 0
@@ -309,6 +315,9 @@ void nrf5x_ble_config_init(const struct nrf5x_ble_params_s *params)
   nrf_reg_set(BLE_RADIO_ADDR, NRF_RADIO_TXADDRESS, 0);
   nrf_reg_set(BLE_RADIO_ADDR, NRF_RADIO_RXADDRESSES, 1 << 0);
   nrf_reg_set(BLE_RADIO_ADDR, NRF_RADIO_CRCINIT, params->crc_init);
+  nrf_reg_set(BLE_RADIO_ADDR, NRF_RADIO_MODE,
+              0xf & (mod >> (4 * params->phy))
+              );
 
   nrf5x_ble_radio_channel_set(params);
 }
