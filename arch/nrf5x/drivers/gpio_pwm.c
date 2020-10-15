@@ -18,6 +18,8 @@
     Copyright (c) Nicolas Pouillon <nipo@ssji.net>, 2015
 */
 
+#define LOGK_MODULE_ID "npwm"
+
 #include <hexo/types.h>
 #include <hexo/endian.h>
 #include <hexo/iospace.h>
@@ -85,7 +87,6 @@ static DEV_REQUEST_DELAYED_FUNC(nrf5x_gpio_pwm_setup)
   struct nrf5x_gpio_pwm_context_s *pv = dev->drv_pv;
   bool_t freq_changed = 0;
   uint32_t duty_changed = 0;
-  const struct dev_pwm_config_s *config = rq->cfg;
 
   if (!rq->chan_mask)
     return dev_request_delayed_end(&pv->queue, rq_);
@@ -96,12 +97,20 @@ static DEV_REQUEST_DELAYED_FUNC(nrf5x_gpio_pwm_setup)
     if (!((rq->chan_mask >> i) & 1))
       continue;
 
-    const struct dev_pwm_config_s *cfg = config++;
+    const struct dev_pwm_config_s *cfg = rq->cfg + i;
+
+    logk_debug("PWM config %d update f=%d/%d, duty=%d/%d, pol=%d\n",
+               i, (int)cfg->freq.num, (int)cfg->freq.denom,
+               (int)cfg->duty.num, (int)cfg->duty.denom,
+               cfg->pol);
 
     if (rq->mask & DEV_PWM_MASK_FREQ) {
       if (freq_changed) {
         if (memcmp(&pv->freq, &cfg->freq, sizeof(cfg->freq))) {
-          logk_error("Multiple channels with different freqs\n");
+          logk_error("Multiple channels with different freqs: [%d]: %d/%d %P %P\n",
+                     i, (int)cfg->freq.num, (int)cfg->freq.denom,
+                     &pv->freq, sizeof(pv->freq),
+                     &cfg->freq, sizeof(cfg->freq));
           rq->error = -EINVAL;
           return dev_request_delayed_end(&pv->queue, rq_);
         }
@@ -177,8 +186,8 @@ static DEV_REQUEST_DELAYED_FUNC(nrf5x_gpio_pwm_setup)
       | (initval ? NRF_GPIOTE_CONFIG_OUTINIT_HIGH : NRF_GPIOTE_CONFIG_OUTINIT_LOW)
       | (initval ? NRF_GPIOTE_CONFIG_POLARITY_LOTOHI : NRF_GPIOTE_CONFIG_POLARITY_HITOLO);
 
-    logk_debug("PWM config %d: %08x changes at %04d (%05d*%04d/%05d)\n",
-           i, config,
+    logk_debug("PWM config %d changes at %04d (%05d*%04d/%05d)\n",
+           i,
            pv->channel[i].toggle_tk,
            pv->period_tk, pv->channel[i].duty.num, pv->channel[i].duty.denom);
   }
