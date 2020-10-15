@@ -50,6 +50,7 @@
 #include <net/task.h>
 #include <net/layer.h>
 
+#include <ble/protocol/radio.h>
 #include <ble/protocol/address.h>
 #include <ble/protocol/advertise.h>
 
@@ -84,7 +85,7 @@ struct ble_advertiser_delegate_vtable_s
 
   /** Return whether advertising should continue */
   bool_t (*connection_requested)(void *delegate, struct net_layer_s *layer,
-                                 const struct ble_adv_connect_s *conn,
+                                 const struct ble_adv_connect_s *params,
                                  dev_timer_value_t anchor);
 };
 

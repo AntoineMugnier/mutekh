@@ -75,6 +75,7 @@ static const struct ble_peripheral_handler_s peri_handler =
 };
 
 static const struct ble_peripheral_params_s peri_params = {
+  .phy = BLE_PHY_1M,
   .adv_interval_ms = 50,
 };
 

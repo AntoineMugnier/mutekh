@@ -199,6 +199,7 @@ error_t fluke_central_init(struct fluke_central_s *fc,
   
   memset(fc, 0, sizeof(*fc));
 
+  fc->central_params.phy = BLE_PHY_1M;
   fc->central_params.scan_interval_ms = 800;
   fc->central_params.scan_duration_ms = 500;
   fc->central_params.conn.interval_min = 24;

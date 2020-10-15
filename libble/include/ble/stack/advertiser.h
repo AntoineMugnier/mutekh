@@ -37,6 +37,7 @@
 
 #include <ble/protocol/address.h>
 #include <ble/protocol/advertise.h>
+#include <ble/protocol/radio.h>
 #include <ble/protocol/gap.h>
 
 #include <ble/gatt/db.h>

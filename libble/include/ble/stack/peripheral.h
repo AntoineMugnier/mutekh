@@ -34,6 +34,7 @@
 #include <ble/net/scanner.h>
 #include <ble/net/scan_filter.h>
 #include <ble/protocol/address.h>
+#include <ble/protocol/radio.h>
 #include <ble/stack/connection.h>
 
 struct ble_peripheral_handler_s;
@@ -105,6 +106,7 @@ STRUCT_COMPOSE(ble_peripheral_handler_s, base);
  */
 struct ble_peripheral_params_s
 {
+  enum ble_phy_mode_e phy;
   /** Interval in milliseconds between two advertising events. */
   uint32_t adv_interval_ms;
 };

@@ -385,8 +385,12 @@ error_t nrf5x_ble_scanner_create(struct net_scheduler_s *scheduler,
                               const struct net_layer_delegate_vtable_s *delegate_vtable_,
                               struct net_layer_s **layer)
 {
+  const struct ble_scanner_param_s *params = params_;
   struct nrf5x_ble_scanner_s *scan = mem_alloc(sizeof(*scan), mem_scope_sys);
   error_t err;
+
+  if (params->phy != BLE_PHY_1M)
+    return -EINVAL;
 
   if (!scan)
     return -ENOMEM;
@@ -406,7 +410,7 @@ error_t nrf5x_ble_scanner_create(struct net_scheduler_s *scheduler,
   scan->last_start = 0;
   scan->channel = 37;
 
-  scan_param_update(&scan->layer, params_);
+  scan_param_update(&scan->layer, params);
 
   scanner_schedule(scan);
 
@@ -427,6 +431,9 @@ error_t scan_param_update(struct net_layer_s *layer, const struct ble_scanner_pa
 {
   struct nrf5x_ble_scanner_s *scan = nrf5x_ble_scanner_s_from_layer(layer);
 
+  if (params->phy != BLE_PHY_1M)
+    return -ENOTSUP;
+  
   scan->interval_tk = params->interval_ms * 32768 / 1000;
   scan->duration_tk = params->duration_ms * 32768 / 1000;
   scan->default_policy = params->default_policy;

@@ -242,6 +242,7 @@ static KROUTINE_EXEC(app_timeout_handle)
 }
 
 static const struct ble_peripheral_params_s peri_params = {
+  .phy = BLE_PHY_1M,
   .adv_interval_ms = 50,
 };
 

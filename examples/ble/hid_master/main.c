@@ -352,6 +352,7 @@ static CONTEXT_ENTRY(main)
   struct app_s *app = mem_alloc(sizeof(*app), mem_scope_sys);
   error_t err;
   struct ble_central_params_s central_params = {
+    .phy = BLE_PHY_1M,
     .scan_interval_ms = 200,
     .scan_duration_ms = 190,
     .conn.interval_min = 8,

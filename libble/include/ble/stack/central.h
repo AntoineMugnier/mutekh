@@ -110,6 +110,7 @@ STRUCT_COMPOSE(ble_central_handler_s, base);
  */
 struct ble_central_params_s
 {
+  enum ble_phy_mode_e phy;
   /** Time between two scan window starts */
   uint32_t scan_interval_ms;
   /** Time to scan for */

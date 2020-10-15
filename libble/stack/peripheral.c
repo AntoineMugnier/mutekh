@@ -123,6 +123,11 @@ bool_t peri_connection_requested(void *delegate, struct net_layer_s *layer,
   error_t err;
   const struct ble_gap_preferred_conn_params_s *wanted_timing;
   size_t size;
+  struct ble_phy_params_s phy_params;
+
+  phy_params.connect_packet_timestamp = anchor;
+  phy_params.phy = peri->params.phy;
+  phy_params.conn_req = *conn;
 
   logk_debug("Connection request from "BLE_ADDR_FMT"...", BLE_ADDR_ARG(&conn->master));
 
@@ -174,7 +179,7 @@ bool_t peri_connection_requested(void *delegate, struct net_layer_s *layer,
   err = ble_stack_connection_create(&peri->conn, peri->context,
                                     &peri->handler->base,
                                     &peri_conn_handler,
-                                    0, conn, wanted_timing, anchor);
+                                    0, &phy_params, wanted_timing);
 
   if (!err) {
     net_layer_refdec(peri->adv);
@@ -204,6 +209,7 @@ static error_t adv_start(struct ble_peripheral_s *peri)
 
   logk_debug("Peripheral advertising starting");
 
+  params.phy = peri->params.phy;
   params.local_addr = peri->addr;
   params.interval_ms = peri->params.adv_interval_ms;
   params.delay_max_ms = peri->params.adv_interval_ms / 16;

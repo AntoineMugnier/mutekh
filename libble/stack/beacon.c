@@ -53,6 +53,7 @@ static
 void ble_beacon_config_apply(struct ble_beacon_adv_config_s *adv_config,
                              const struct ble_beacon_config_s *config)
 {
+  adv_config->adv_params.phy = config->phy;
   adv_config->adv_params.local_addr = config->local_addr;
   adv_config->adv_params.interval_ms = config->interval_ms;
   adv_config->adv_params.delay_max_ms = config->interval_ms / 10;

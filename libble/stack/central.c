@@ -141,6 +141,11 @@ bool_t ctr_connection_requested(void *delegate, struct net_layer_s *layer,
 {
   struct ble_central_s *ctr = delegate;
   error_t err;
+  struct ble_phy_params_s phy_params;
+
+  phy_params.connect_packet_timestamp = anchor;
+  phy_params.phy = ctr->params.phy;
+  phy_params.conn_req = *conn;
 
   logk_trace("Connection request from "BLE_ADDR_FMT"...", BLE_ADDR_ARG(&conn->master));
 
@@ -161,8 +166,8 @@ bool_t ctr_connection_requested(void *delegate, struct net_layer_s *layer,
   err = ble_stack_connection_create(&ctr->conn, ctr->context,
                                     &ctr->handler->base,
                                     &ctr_conn_handler,
-                                    1, conn,
-                                    &ctr->conn_params, anchor);
+                                    1, &phy_params,
+                                    &ctr->conn_params);
 
   if (!err) {
     net_layer_refdec(ctr->scan);
@@ -257,6 +262,7 @@ error_t ble_central_init(
 {
   memset(ctr, 0, sizeof(*ctr));
 
+  ctr->params.phy = params->phy;
   ctr->params.interval_ms = params->scan_interval_ms;
   ctr->params.duration_ms = params->scan_duration_ms;
   ctr->params.target_count = 0;

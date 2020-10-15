@@ -28,7 +28,7 @@ error_t led_init(struct led_s *led, uint8_t pin, bool_t polarity)
 
   device_start(&led->timer.base);
 
-  dev_timer_rq_init_sched_switch(&led->timer_rq, led_delay_done);
+  dev_timer_rq_init(&led->timer_rq, led_delay_done);
 
   led->polarity = polarity;
   led->pin = pin;

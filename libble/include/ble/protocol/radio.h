@@ -43,4 +43,11 @@
 
 uint16_t ble_channel_freq_mhz(uint8_t chan);
 
+enum ble_phy_mode_e {
+  BLE_PHY_1M,
+  BLE_PHY_2M,
+  BLE_PHY_CODED2,
+  BLE_PHY_CODED8,
+};
+
 #endif

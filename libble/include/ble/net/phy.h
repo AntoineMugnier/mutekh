@@ -35,7 +35,7 @@
 #include <net/layer.h>
 #include <ble/protocol/error.h>
 #include <ble/protocol/data.h>
-#include <ble/protocol/advertise.h>
+#include <ble/protocol/radio.h>
 
 #include <ble/util/channel_mapper.h>
 #include <ble/util/timing_mapper.h>
@@ -56,6 +56,7 @@ STRUCT_COMPOSE(ble_phy_delegate_vtable_s, base);
 struct ble_phy_params_s
 {
   struct ble_adv_connect_s conn_req;
+  enum ble_phy_mode_e phy;
   dev_timer_value_t connect_packet_timestamp;
 };
 

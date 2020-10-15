@@ -106,6 +106,7 @@ static void config_load(struct app_s *app)
   }
 #endif
 
+  app->beacon_config.config.phy = BLE_PHY_1M;
   memcpy(&app->beacon_config.config.group_uuid,
          BLE_UUID_P(0x431a3f31, 0x6c68, 0x45e8, 0x9e4c, 0xfcb992494632ULL), 16);
   app->beacon_config.config.major = 42;
@@ -165,7 +166,14 @@ static const struct beacon_config_handler_s config_handler = {
 };
 
 static const struct ble_peripheral_params_s peri_params = {
+  .phy = BLE_PHY_1M,
   .adv_interval_ms = 1000,
+};
+
+static const struct persist_config persist_config = {
+  .dev_addr = CONFIG_LOAD_ROM_RO_SIZE - 4096,
+  .dev_size = 4096,
+  .page_size = 2048,
 };
 
 static CONTEXT_ENTRY(main)
@@ -178,7 +186,7 @@ static CONTEXT_ENTRY(main)
 
   memset(app, 0, sizeof(*app));
 
-  err = ble_stack_context_init(&app->context, "/ble", "/rtc1", "/rng", "/aes", "/nvmc");
+  err = ble_stack_context_init(&app->context, "/ble", "/rtc1", "/rng", "/aes", &persist_config);
   ensure(!err && "stack context failed");
 
   ble_stack_context_local_address_get(&app->context, &addr);

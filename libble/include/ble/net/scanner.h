@@ -25,6 +25,7 @@
 #include <net/task.h>
 #include <net/layer.h>
 
+#include <ble/protocol/radio.h>
 #include <ble/protocol/address.h>
 #include <ble/protocol/advertise.h>
 #include <ble/protocol/gap.h>
@@ -60,6 +61,7 @@ struct ble_scanner_param_s
 
   uint32_t access_address;
   uint32_t crc_init;
+  enum ble_phy_mode_e phy;
 
   struct ble_gap_preferred_conn_params_s timing;
 };

@@ -20,6 +20,7 @@
 
 #include <hexo/bit.h>
 
+#include <ble/protocol/radio.h>
 #include <ble/protocol/advertise.h>
 #include <ble/net/adv.h>
 
@@ -116,13 +117,13 @@ static void advertiser_ctx_event_closed(struct nrf5x_ble_context_s *context,
   //printk("%s %d %p\n", __FUNCTION__, status, adv->conn_packet);
 
   if (adv->conn_packet) {
-    struct ble_adv_connect_s conn;
-    error_t err = ble_adv_connect_parse(adv->conn_packet, &conn);
+    struct ble_adv_connect_s cp;
+    error_t err = ble_adv_connect_parse(adv->conn_packet, &cp);
 
     if (!err)
       reschedule = vtable->connection_requested(
           adv->layer.delegate, &adv->layer,
-          &conn, adv->conn_ts);
+          &cp, adv->conn_ts);
 
     buffer_refdec(adv->conn_packet);
     adv->conn_packet = NULL;
@@ -148,6 +149,7 @@ static bool_t advertiser_ctx_radio_params(struct nrf5x_ble_context_s *context,
   params->access = BLE_ADVERTISE_AA;
   params->crc_init = BLE_ADVERTISE_CRCINIT;
   params->tx_power = 0;
+  params->rx_rssi = 0;
 
   switch (adv->state) {
   case ADV_IND:
@@ -352,6 +354,9 @@ error_t adv_param_update(struct net_layer_s *layer, const struct ble_advertiser_
   const uint8_t *ad = params->ad;
   const uint8_t *end = params->ad + params->ad_len;
 
+  if (params->phy != BLE_PHY_1M)
+    return -ENOTSUP;
+  
   if (params->connectable)
     ble_adv_ind_set(adv->adv_packet, &params->local_addr);
   else

@@ -32,6 +32,7 @@
 #include <hexo/error.h>
 #include <ble/uuid.h>
 #include <ble/protocol/address.h>
+#include <ble/protocol/radio.h>
 
 struct net_layer_s;
 struct ble_stack_context_s;
@@ -41,6 +42,7 @@ struct ble_stack_context_s;
  */
 struct ble_beacon_config_s
 {
+  enum ble_phy_mode_e phy;
   /** Device address the beacon uses */
   struct ble_addr_s local_addr;
   /** Beacon group */

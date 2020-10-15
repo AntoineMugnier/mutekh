@@ -219,6 +219,9 @@ error_t nrf5x_ble_master_create(struct net_scheduler_s *scheduler,
   const struct ble_phy_params_s *params = params_;
   struct device_timer_s self_as_timer;
 
+  if (params->phy != BLE_PHY_1M)
+    return -ENOTSUP;
+  
   master = mem_alloc(sizeof(*master), mem_scope_sys);
   if (!master)
     return -ENOMEM;
