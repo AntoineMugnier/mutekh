@@ -18,6 +18,9 @@
     Copyright Nicolas Pouillon <nipo@ssji.net> (c) 2015
 */
 
+#define LOGK_MODULE_ID "nadv"
+
+#include <mutek/printk.h>
 #include <hexo/bit.h>
 
 #include <ble/protocol/radio.h>
@@ -29,8 +32,6 @@
 #include <net/task.h>
 
 #include "ble.h"
-
-#define dprintk(...) do{}while(0)
 
 static
 error_t adv_param_update(struct net_layer_s *layer, const struct ble_advertiser_param_s *params);
@@ -320,7 +321,7 @@ error_t nrf5x_ble_advertiser_create(struct net_scheduler_s *scheduler,
 
   memset(adv, 0, sizeof(*adv));
 
-  dprintk("Advertiser init start\n");
+  logk_trace("Advertiser init start\n");
 
   err = net_layer_init(&adv->layer, &ble_advertiser_layer_handler.base, scheduler, delegate, delegate_vtable);
   if (err)
@@ -339,7 +340,7 @@ error_t nrf5x_ble_advertiser_create(struct net_scheduler_s *scheduler,
 
   advertiser_schedule(adv);
 
-  dprintk("Advertiser init done\n");
+  logk_trace("Advertiser init done\n");
 
   *layer = &adv->layer;
 
@@ -403,13 +404,13 @@ error_t adv_param_update(struct net_layer_s *layer, const struct ble_advertiser_
   if (!adv->delay_max_tk)
     adv->delay_max_tk = 3;
 
-  dprintk("ADV interval: %d, delay_max: %d\n", adv->interval_tk, adv->delay_max_tk);
-  dprintk("ADV packet: %P\n",
-         adv->adv_packet->data + adv->adv_packet->begin,
-         adv->adv_packet->end - adv->adv_packet->begin);
-  dprintk("Scan RSP packet: %P\n",
-         adv->scan_response->data + adv->scan_response->begin,
-         adv->scan_response->end - adv->scan_response->begin);
+  logk_debug("ADV interval: %d, delay_max: %d\n", adv->interval_tk, adv->delay_max_tk);
+  logk_debug("ADV packet: %P\n",
+             adv->adv_packet->data + adv->adv_packet->begin,
+             adv->adv_packet->end - adv->adv_packet->begin);
+  logk_debug("Scan RSP packet: %P\n",
+             adv->scan_response->data + adv->scan_response->begin,
+             adv->scan_response->end - adv->scan_response->begin);
 
   return 0;
 }
