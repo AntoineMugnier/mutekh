@@ -217,6 +217,7 @@ static error_t adv_start(struct ble_peripheral_s *peri)
     params.delay_max_ms = 1;
   params.connectable = 1;
   params.ad = ad;
+  params.tx_power = 0;
   ble_stack_context_ad_collect(peri->context, ad, sizeof(ad), &params.ad_len);
 
   err = DEVICE_OP(&peri->context->ble, layer_create,

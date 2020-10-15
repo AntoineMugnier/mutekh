@@ -47,6 +47,8 @@ struct ble_beacon_config_s
   struct ble_addr_s local_addr;
   /** Beacon group */
   struct ble_uuid_s group_uuid;
+  /** TX power in 0.125 dBm steps */
+  int16_t tx_power;
   /** Indicative RSSI measured one meter apart from beacon */
   int8_t one_meter_rssi;
   /** Major/minor */

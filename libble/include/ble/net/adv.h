@@ -63,6 +63,7 @@ struct ble_advertiser_param_s
 {
   uint32_t interval_ms;
   uint32_t delay_max_ms;
+  int16_t tx_power; // In 0.125 dBm steps (1/8)
   struct ble_addr_s local_addr;
   bool_t connectable;
   const void *ad;

@@ -112,6 +112,7 @@ static void config_load(struct app_s *app)
   app->beacon_config.config.major = 42;
   app->beacon_config.config.minor = 1;
   app->beacon_config.config.one_meter_rssi = -65;
+  app->beacon_config.config.tx_power = 0;
   app->beacon_config.config.interval_ms = 900;
 }
 
