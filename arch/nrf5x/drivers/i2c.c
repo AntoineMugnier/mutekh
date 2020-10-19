@@ -355,33 +355,32 @@ static void nrf5x_i2c_ip_enable(struct nrf5x_i2c_priv_s *pv)
 
 static void nrf5x_i2c_ip_reset(struct nrf5x_i2c_priv_s *pv)
 {
-  if (!pv->enabled)
-    return;
+  if (pv->enabled) {
+    pv->enabled = 0;
 
-  pv->enabled = 0;
+    uint8_t scl = pv->pin[0];
+    uint8_t sda = pv->pin[1];
 
-  uint8_t scl = pv->pin[0];
-  uint8_t sda = pv->pin[1];
-
-  nrf_event_clear(pv->addr, NRF_I2C_ERROR);
-  nrf_reg_set(pv->addr, NRF_I2C_ENABLE, NRF_I2C_ENABLE_DISABLED);
-  nrf_reg_set(pv->addr, NRF_I2C_POWER, 0);
-  for (uint16_t i = 0; i < 32; ++i)
-    asm volatile("");
-
-  nrf_reg_set(NRF5X_GPIO_ADDR, NRF_GPIO_OUTSET, bit(sda));
-  nrf_reg_set(NRF5X_GPIO_ADDR, NRF_GPIO_OUTSET, bit(scl));
-  for (uint16_t i = 0; i < 8; ++i)
-    asm volatile("");
-
-  uint32_t mask = bit(scl) | bit(sda);
-  for (uint8_t i = 0; i < 18 && (nrf_reg_get(NRF5X_GPIO_ADDR, NRF_GPIO_IN) & mask) != mask; ++i) {
-    nrf_reg_set(NRF5X_GPIO_ADDR, NRF_GPIO_OUTCLR, bit(scl));
-    for (uint16_t j = 0; j < 8; ++j)
+    nrf_event_clear(pv->addr, NRF_I2C_ERROR);
+    nrf_reg_set(pv->addr, NRF_I2C_ENABLE, NRF_I2C_ENABLE_DISABLED);
+    nrf_reg_set(pv->addr, NRF_I2C_POWER, 0);
+    for (uint16_t i = 0; i < 32; ++i)
       asm volatile("");
+
+    nrf_reg_set(NRF5X_GPIO_ADDR, NRF_GPIO_OUTSET, bit(sda));
     nrf_reg_set(NRF5X_GPIO_ADDR, NRF_GPIO_OUTSET, bit(scl));
-    for (uint16_t j = 0; j < 8; ++j)
+    for (uint16_t i = 0; i < 8; ++i)
       asm volatile("");
+
+    uint32_t mask = bit(scl) | bit(sda);
+    for (uint8_t i = 0; i < 18 && (nrf_reg_get(NRF5X_GPIO_ADDR, NRF_GPIO_IN) & mask) != mask; ++i) {
+      nrf_reg_set(NRF5X_GPIO_ADDR, NRF_GPIO_OUTCLR, bit(scl));
+      for (uint16_t j = 0; j < 8; ++j)
+        asm volatile("");
+      nrf_reg_set(NRF5X_GPIO_ADDR, NRF_GPIO_OUTSET, bit(scl));
+      for (uint16_t j = 0; j < 8; ++j)
+        asm volatile("");
+    }
   }
 
   nrf5x_i2c_ip_enable(pv);
