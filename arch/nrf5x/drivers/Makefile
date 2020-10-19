@@ -12,6 +12,7 @@ objs-$(CONFIG_DRIVER_NRF5X_PRINTK) += printk.o
 objs-$(CONFIG_DRIVER_NRF5X_SPI) += spi.o
 objs-$(CONFIG_DRIVER_NRF52_SPIM) += spim.o
 objs-$(CONFIG_DRIVER_NRF5X_I2C) += i2c.o
+objs-$(CONFIG_DRIVER_NRF5X_I2C_SLAVE) += i2c_slave.o
 objs-$(CONFIG_DRIVER_NRF5X_RTC) += rtc.o
 objs-$(CONFIG_DRIVER_NRF5X_NVMC) += nvmc.o
 objs-$(CONFIG_DRIVER_NRF5X_TIMER) += timer.o

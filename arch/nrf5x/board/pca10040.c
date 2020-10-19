@@ -80,6 +80,18 @@ DEV_DECLARE_STATIC(uart_dev, "uart0", 0, nrf5x_uart_drv,
 
 #endif
 
+#if defined(CONFIG_DRIVER_NRF5X_I2C_SLAVE)
+
+DEV_DECLARE_STATIC(i2cs_dev, "i2cs0", 0, nrf5x_i2c_slave_drv,
+                   NRF_STATIC_RES_PERIPHERAL_MEM(NRF5X_TWIS1),
+                   DEV_STATIC_RES_DEV_ICU("/cpu"),
+                   DEV_STATIC_RES_IRQ(0, NRF5X_TWIS1, DEV_IRQ_SENSE_HIGH_LEVEL, 0, 1),
+                   DEV_STATIC_RES_DEV_IOMUX("/gpio"),
+                   DEV_STATIC_RES_IOMUX(",sda", 0, 24, 0, 0),
+                   DEV_STATIC_RES_IOMUX(",scl", 0, 25, 0, 0)
+                   );
+
+#endif
 
 #if !defined(CONFIG_NRF5X_BOARD_LAYOUT_NAME) \
   && defined(CONFIG_DRIVER_NRF5X_GPIO) \
