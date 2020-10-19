@@ -20,7 +20,7 @@ struct ctx_s
   struct dev_i2c_slave_rq_s data_rq;
   enum slave_state_e state;
   uint16_t addr;
-  uint8_t data[16];
+  uint8_t data[18];
   uint8_t memory[16384];
 };
 
@@ -49,7 +49,7 @@ void data_rq_enqueue(struct ctx_s *ctx)
   case SLAVE_ADDR_RX:
     ctx->data_rq.type = DEV_I2C_SLAVE_RECEIVE;
     ctx->data_rq.transfer.data = ctx->data;
-    ctx->data_rq.transfer.size = sizeof(ctx->addr);
+    ctx->data_rq.transfer.size = sizeof(ctx->data);
     ctx->data_rq.transfer.end_ack = 1;
 
     logk_trace("Pushing address RX");
@@ -123,11 +123,13 @@ static
 KROUTINE_EXEC(data_done)
 {
   struct ctx_s *ctx = KROUTINE_CONTAINER(kr, *ctx, data_rq.base.kr);
+  size_t size;
+  uint8_t *data;
 
   logk_trace("%s", __func__);
 
   if (ctx->data_rq.error) {
-    logk_trace("Request ended in error %d", ctx->data_rq.error);
+    logk_trace("Data request ended in error %d", ctx->data_rq.error);
 
     ctx->state = SLAVE_IDLE;
     return;
@@ -138,23 +140,35 @@ KROUTINE_EXEC(data_done)
     return;
 
   case SLAVE_ADDR_RX:
-    ctx->addr = endian_be16_na_load(ctx->data);
+    size = ctx->data_rq.transfer.data - ctx->data;
+    data = ctx->data;
+
+    logk_debug("Address received: %P", data, size);
+
+    if (size < sizeof(ctx->addr))
+      return;
+
+    ctx->addr = endian_be16_na_load(data);
     logk_debug("Address received: %04x", ctx->addr);
     ctx->state = SLAVE_DATA_RX;
-    data_rq_enqueue(ctx);
-    return;
 
-  case SLAVE_DATA_RX: {
-    size_t size = ctx->data_rq.transfer.data - ctx->data;
+    size -= sizeof(ctx->addr);
+    data += sizeof(ctx->addr);
+    goto data_rx;
 
-    logk_debug("Rx data @%04x: %P", ctx->addr, ctx->data, size);
+  case SLAVE_DATA_RX:
+    size = ctx->data_rq.transfer.data - ctx->data;
+    data = ctx->data;
+
+  data_rx: {
+    logk_debug("Rx data @%04x: %P", ctx->addr, data, size);
 
     size_t s1 = __MIN(sizeof(ctx->memory) - ctx->addr, size);
     size_t s2 = size - s1;
 
-    memcpy(ctx->memory + ctx->addr, ctx->data, s1);
+    memcpy(ctx->memory + ctx->addr, data, s1);
     if (s2)
-      memcpy(ctx->memory, ctx->data + s1, s2);
+      memcpy(ctx->memory, data + s1, s2);
 
     ctx->addr += size;
     if (ctx->addr >= sizeof(ctx->memory))
