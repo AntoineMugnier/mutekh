@@ -108,6 +108,9 @@ enum dev_rfpacket_modulation_e
   /** Lora modulation
       @see dev_rfpacket_rf_cfg_lora_s */
   DEV_RFPACKET_LORA,
+  /** Sigfox modulation
+      @see dev_rfpacket_rf_cfg_sigfox_s */
+  DEV_RFPACKET_SIGFOX,
 };
 
 /** This stores RF and modulation configuration. This may be inherited

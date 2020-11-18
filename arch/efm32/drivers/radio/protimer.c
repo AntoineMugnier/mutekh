@@ -165,4 +165,8 @@ void efr32_protimer_init(struct efr32_protimer_s *pv)
 #if EFR32_PROTIMER_HW_WIDTH < 64
   pv->swvalue = 0;
 #endif
+
+#ifdef CONFIG_DEVICE_CLOCK_GATING
+  dev_clock_sink_gate(&pv->clk_ep, DEV_CLOCK_EP_POWER);
+#endif
 }

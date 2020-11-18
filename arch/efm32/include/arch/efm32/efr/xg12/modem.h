@@ -4,7 +4,7 @@
 
 /*
    bfgen -o cdefs cdefs_use_reg_mask=1 cdefs_use_field_shift=1                 \
-     cdefs_sfx_field_shift=_IDX
+     cdefs_use_field_setval=1 cdefs_sfx_field_shift=_IDX
 */
 
 #ifndef _EFR32_MODEM_BFGEN_DEFS_
@@ -15,6 +15,7 @@
   #define EFR32_MODEM_STATUS_DEMODSTATE_IDX        0
   #define EFR32_MODEM_STATUS_DEMODSTATE(v)         ((EFR32_MODEM_STATUS_DEMODSTATE_##v) << 0)
   #define EFR32_MODEM_STATUS_DEMODSTATE_SET(x, v)  do { (x) = (((x) & ~0x7) | ((EFR32_MODEM_STATUS_DEMODSTATE_##v) << 0)); } while(0)
+  #define EFR32_MODEM_STATUS_DEMODSTATE_SETVAL(x, v) do { (x) = (((x) & ~0x7) | ((v) << 0)); } while(0)
   #define EFR32_MODEM_STATUS_DEMODSTATE_GET(x)     (((x) >> 0) & 0x7)
 /**  */
     #define EFR32_MODEM_STATUS_DEMODSTATE_OFF        0x00000000
@@ -108,6 +109,7 @@
   #define EFR32_MODEM_MIXCTRL_MODE_IDX             0
   #define EFR32_MODEM_MIXCTRL_MODE(v)              ((EFR32_MODEM_MIXCTRL_MODE_##v) << 0)
   #define EFR32_MODEM_MIXCTRL_MODE_SET(x, v)       do { (x) = (((x) & ~0xf) | ((EFR32_MODEM_MIXCTRL_MODE_##v) << 0)); } while(0)
+  #define EFR32_MODEM_MIXCTRL_MODE_SETVAL(x, v)    do { (x) = (((x) & ~0xf) | ((v) << 0)); } while(0)
   #define EFR32_MODEM_MIXCTRL_MODE_GET(x)          (((x) >> 0) & 0xf)
 /**  */
     #define EFR32_MODEM_MIXCTRL_MODE_NORMAL          0x00000000
@@ -123,6 +125,7 @@
   #define EFR32_MODEM_CTRL0_MAPFSK_IDX             1
   #define EFR32_MODEM_CTRL0_MAPFSK(v)              ((EFR32_MODEM_CTRL0_MAPFSK_##v) << 1)
   #define EFR32_MODEM_CTRL0_MAPFSK_SET(x, v)       do { (x) = (((x) & ~0xe) | ((EFR32_MODEM_CTRL0_MAPFSK_##v) << 1)); } while(0)
+  #define EFR32_MODEM_CTRL0_MAPFSK_SETVAL(x, v)    do { (x) = (((x) & ~0xe) | ((v) << 1)); } while(0)
   #define EFR32_MODEM_CTRL0_MAPFSK_GET(x)          (((x) >> 1) & 0x7)
 /**  */
     #define EFR32_MODEM_CTRL0_MAPFSK_MAP0            0x00000000
@@ -143,6 +146,7 @@
   #define EFR32_MODEM_CTRL0_CODING_IDX             4
   #define EFR32_MODEM_CTRL0_CODING(v)              ((EFR32_MODEM_CTRL0_CODING_##v) << 4)
   #define EFR32_MODEM_CTRL0_CODING_SET(x, v)       do { (x) = (((x) & ~0x30) | ((EFR32_MODEM_CTRL0_CODING_##v) << 4)); } while(0)
+  #define EFR32_MODEM_CTRL0_CODING_SETVAL(x, v)    do { (x) = (((x) & ~0x30) | ((v) << 4)); } while(0)
   #define EFR32_MODEM_CTRL0_CODING_GET(x)          (((x) >> 4) & 0x3)
 /**  */
     #define EFR32_MODEM_CTRL0_CODING_NRZ             0x00000000
@@ -155,6 +159,7 @@
   #define EFR32_MODEM_CTRL0_MODFORMAT_IDX          6
   #define EFR32_MODEM_CTRL0_MODFORMAT(v)           ((EFR32_MODEM_CTRL0_MODFORMAT_##v) << 6)
   #define EFR32_MODEM_CTRL0_MODFORMAT_SET(x, v)    do { (x) = (((x) & ~0x1c0) | ((EFR32_MODEM_CTRL0_MODFORMAT_##v) << 6)); } while(0)
+  #define EFR32_MODEM_CTRL0_MODFORMAT_SETVAL(x, v) do { (x) = (((x) & ~0x1c0) | ((v) << 6)); } while(0)
   #define EFR32_MODEM_CTRL0_MODFORMAT_GET(x)       (((x) >> 6) & 0x7)
 /**  */
     #define EFR32_MODEM_CTRL0_MODFORMAT_FSK2         0x00000000
@@ -181,6 +186,7 @@
   #define EFR32_MODEM_CTRL0_DSSSSHIFTS_IDX         16
   #define EFR32_MODEM_CTRL0_DSSSSHIFTS(v)          ((EFR32_MODEM_CTRL0_DSSSSHIFTS_##v) << 16)
   #define EFR32_MODEM_CTRL0_DSSSSHIFTS_SET(x, v)   do { (x) = (((x) & ~0x70000) | ((EFR32_MODEM_CTRL0_DSSSSHIFTS_##v) << 16)); } while(0)
+  #define EFR32_MODEM_CTRL0_DSSSSHIFTS_SETVAL(x, v) do { (x) = (((x) & ~0x70000) | ((v) << 16)); } while(0)
   #define EFR32_MODEM_CTRL0_DSSSSHIFTS_GET(x)      (((x) >> 16) & 0x7)
 /**  */
     #define EFR32_MODEM_CTRL0_DSSSSHIFTS_NOSHIFT     0x00000000
@@ -197,6 +203,7 @@
   #define EFR32_MODEM_CTRL0_DSSSDOUBLE_IDX         19
   #define EFR32_MODEM_CTRL0_DSSSDOUBLE(v)          ((EFR32_MODEM_CTRL0_DSSSDOUBLE_##v) << 19)
   #define EFR32_MODEM_CTRL0_DSSSDOUBLE_SET(x, v)   do { (x) = (((x) & ~0x180000) | ((EFR32_MODEM_CTRL0_DSSSDOUBLE_##v) << 19)); } while(0)
+  #define EFR32_MODEM_CTRL0_DSSSDOUBLE_SETVAL(x, v) do { (x) = (((x) & ~0x180000) | ((v) << 19)); } while(0)
   #define EFR32_MODEM_CTRL0_DSSSDOUBLE_GET(x)      (((x) >> 19) & 0x3)
 /**  */
     #define EFR32_MODEM_CTRL0_DSSSDOUBLE_DIS         0x00000000
@@ -209,6 +216,7 @@
   #define EFR32_MODEM_CTRL0_DIFFENCMODE_IDX        22
   #define EFR32_MODEM_CTRL0_DIFFENCMODE(v)         ((EFR32_MODEM_CTRL0_DIFFENCMODE_##v) << 22)
   #define EFR32_MODEM_CTRL0_DIFFENCMODE_SET(x, v)  do { (x) = (((x) & ~0x1c00000) | ((EFR32_MODEM_CTRL0_DIFFENCMODE_##v) << 22)); } while(0)
+  #define EFR32_MODEM_CTRL0_DIFFENCMODE_SETVAL(x, v) do { (x) = (((x) & ~0x1c00000) | ((v) << 22)); } while(0)
   #define EFR32_MODEM_CTRL0_DIFFENCMODE_GET(x)     (((x) >> 22) & 0x7)
 /**  */
     #define EFR32_MODEM_CTRL0_DIFFENCMODE_DIS        0x00000000
@@ -223,6 +231,7 @@
   #define EFR32_MODEM_CTRL0_SHAPING_IDX            25
   #define EFR32_MODEM_CTRL0_SHAPING(v)             ((EFR32_MODEM_CTRL0_SHAPING_##v) << 25)
   #define EFR32_MODEM_CTRL0_SHAPING_SET(x, v)      do { (x) = (((x) & ~0x6000000) | ((EFR32_MODEM_CTRL0_SHAPING_##v) << 25)); } while(0)
+  #define EFR32_MODEM_CTRL0_SHAPING_SETVAL(x, v)   do { (x) = (((x) & ~0x6000000) | ((v) << 25)); } while(0)
   #define EFR32_MODEM_CTRL0_SHAPING_GET(x)         (((x) >> 25) & 0x3)
 /**  */
     #define EFR32_MODEM_CTRL0_SHAPING_DISABLED       0x00000000
@@ -235,6 +244,7 @@
   #define EFR32_MODEM_CTRL0_DEMODRAWDATASEL_IDX    27
   #define EFR32_MODEM_CTRL0_DEMODRAWDATASEL(v)     ((EFR32_MODEM_CTRL0_DEMODRAWDATASEL_##v) << 27)
   #define EFR32_MODEM_CTRL0_DEMODRAWDATASEL_SET(x, v) do { (x) = (((x) & ~0x38000000) | ((EFR32_MODEM_CTRL0_DEMODRAWDATASEL_##v) << 27)); } while(0)
+  #define EFR32_MODEM_CTRL0_DEMODRAWDATASEL_SETVAL(x, v) do { (x) = (((x) & ~0x38000000) | ((v) << 27)); } while(0)
   #define EFR32_MODEM_CTRL0_DEMODRAWDATASEL_GET(x) (((x) >> 27) & 0x7)
 /**  */
     #define EFR32_MODEM_CTRL0_DEMODRAWDATASEL_DIS    0x00000000
@@ -255,6 +265,7 @@
   #define EFR32_MODEM_CTRL0_FRAMEDETDEL_IDX        30
   #define EFR32_MODEM_CTRL0_FRAMEDETDEL(v)         ((EFR32_MODEM_CTRL0_FRAMEDETDEL_##v) << 30)
   #define EFR32_MODEM_CTRL0_FRAMEDETDEL_SET(x, v)  do { (x) = (((x) & ~0xc0000000) | ((EFR32_MODEM_CTRL0_FRAMEDETDEL_##v) << 30)); } while(0)
+  #define EFR32_MODEM_CTRL0_FRAMEDETDEL_SETVAL(x, v) do { (x) = (((x) & ~0xc0000000) | ((v) << 30)); } while(0)
   #define EFR32_MODEM_CTRL0_FRAMEDETDEL_GET(x)     (((x) >> 30) & 0x3)
 /**  */
     #define EFR32_MODEM_CTRL0_FRAMEDETDEL_DEL0       0x00000000
@@ -289,6 +300,7 @@
   #define EFR32_MODEM_CTRL1_COMPMODE_IDX           14
   #define EFR32_MODEM_CTRL1_COMPMODE(v)            ((EFR32_MODEM_CTRL1_COMPMODE_##v) << 14)
   #define EFR32_MODEM_CTRL1_COMPMODE_SET(x, v)     do { (x) = (((x) & ~0xc000) | ((EFR32_MODEM_CTRL1_COMPMODE_##v) << 14)); } while(0)
+  #define EFR32_MODEM_CTRL1_COMPMODE_SETVAL(x, v)  do { (x) = (((x) & ~0xc000) | ((v) << 14)); } while(0)
   #define EFR32_MODEM_CTRL1_COMPMODE_GET(x)        (((x) >> 14) & 0x3)
 /**  */
     #define EFR32_MODEM_CTRL1_COMPMODE_DIS           0x00000000
@@ -305,6 +317,7 @@
   #define EFR32_MODEM_CTRL1_PHASEDEMOD_IDX         20
   #define EFR32_MODEM_CTRL1_PHASEDEMOD(v)          ((EFR32_MODEM_CTRL1_PHASEDEMOD_##v) << 20)
   #define EFR32_MODEM_CTRL1_PHASEDEMOD_SET(x, v)   do { (x) = (((x) & ~0x300000) | ((EFR32_MODEM_CTRL1_PHASEDEMOD_##v) << 20)); } while(0)
+  #define EFR32_MODEM_CTRL1_PHASEDEMOD_SETVAL(x, v) do { (x) = (((x) & ~0x300000) | ((v) << 20)); } while(0)
   #define EFR32_MODEM_CTRL1_PHASEDEMOD_GET(x)      (((x) >> 20) & 0x3)
 /**  */
     #define EFR32_MODEM_CTRL1_PHASEDEMOD_BDD         0x00000000
@@ -336,6 +349,7 @@
   #define EFR32_MODEM_CTRL2_TXPINMODE_IDX          10
   #define EFR32_MODEM_CTRL2_TXPINMODE(v)           ((EFR32_MODEM_CTRL2_TXPINMODE_##v) << 10)
   #define EFR32_MODEM_CTRL2_TXPINMODE_SET(x, v)    do { (x) = (((x) & ~0xc00) | ((EFR32_MODEM_CTRL2_TXPINMODE_##v) << 10)); } while(0)
+  #define EFR32_MODEM_CTRL2_TXPINMODE_SETVAL(x, v) do { (x) = (((x) & ~0xc00) | ((v) << 10)); } while(0)
   #define EFR32_MODEM_CTRL2_TXPINMODE_GET(x)       (((x) >> 10) & 0x3)
 /**  */
     #define EFR32_MODEM_CTRL2_TXPINMODE_OFF          0x00000000
@@ -348,6 +362,7 @@
   #define EFR32_MODEM_CTRL2_DATAFILTER_IDX         12
   #define EFR32_MODEM_CTRL2_DATAFILTER(v)          ((EFR32_MODEM_CTRL2_DATAFILTER_##v) << 12)
   #define EFR32_MODEM_CTRL2_DATAFILTER_SET(x, v)   do { (x) = (((x) & ~0x7000) | ((EFR32_MODEM_CTRL2_DATAFILTER_##v) << 12)); } while(0)
+  #define EFR32_MODEM_CTRL2_DATAFILTER_SETVAL(x, v) do { (x) = (((x) & ~0x7000) | ((v) << 12)); } while(0)
   #define EFR32_MODEM_CTRL2_DATAFILTER_GET(x)      (((x) >> 12) & 0x7)
 /**  */
     #define EFR32_MODEM_CTRL2_DATAFILTER_DISABLED    0x00000000
@@ -384,6 +399,7 @@
   #define EFR32_MODEM_CTRL2_RATESELMODE_IDX        27
   #define EFR32_MODEM_CTRL2_RATESELMODE(v)         ((EFR32_MODEM_CTRL2_RATESELMODE_##v) << 27)
   #define EFR32_MODEM_CTRL2_RATESELMODE_SET(x, v)  do { (x) = (((x) & ~0x18000000) | ((EFR32_MODEM_CTRL2_RATESELMODE_##v) << 27)); } while(0)
+  #define EFR32_MODEM_CTRL2_RATESELMODE_SETVAL(x, v) do { (x) = (((x) & ~0x18000000) | ((v) << 27)); } while(0)
   #define EFR32_MODEM_CTRL2_RATESELMODE_GET(x)     (((x) >> 27) & 0x3)
 /**  */
     #define EFR32_MODEM_CTRL2_RATESELMODE_NOCHANGE   0x00000000
@@ -398,6 +414,7 @@
   #define EFR32_MODEM_CTRL2_DMASEL_IDX             30
   #define EFR32_MODEM_CTRL2_DMASEL(v)              ((EFR32_MODEM_CTRL2_DMASEL_##v) << 30)
   #define EFR32_MODEM_CTRL2_DMASEL_SET(x, v)       do { (x) = (((x) & ~0xc0000000) | ((EFR32_MODEM_CTRL2_DMASEL_##v) << 30)); } while(0)
+  #define EFR32_MODEM_CTRL2_DMASEL_SETVAL(x, v)    do { (x) = (((x) & ~0xc0000000) | ((v) << 30)); } while(0)
   #define EFR32_MODEM_CTRL2_DMASEL_GET(x)          (((x) >> 30) & 0x3)
 /**  */
     #define EFR32_MODEM_CTRL2_DMASEL_SOFT            0x00000000
@@ -415,6 +432,7 @@
   #define EFR32_MODEM_CTRL3_PRSDINSEL_IDX          1
   #define EFR32_MODEM_CTRL3_PRSDINSEL(v)           ((EFR32_MODEM_CTRL3_PRSDINSEL_##v) << 1)
   #define EFR32_MODEM_CTRL3_PRSDINSEL_SET(x, v)    do { (x) = (((x) & ~0x1e) | ((EFR32_MODEM_CTRL3_PRSDINSEL_##v) << 1)); } while(0)
+  #define EFR32_MODEM_CTRL3_PRSDINSEL_SETVAL(x, v) do { (x) = (((x) & ~0x1e) | ((v) << 1)); } while(0)
   #define EFR32_MODEM_CTRL3_PRSDINSEL_GET(x)       (((x) >> 1) & 0xf)
 /**  */
     #define EFR32_MODEM_CTRL3_PRSDINSEL_PRSCH0       0x00000000
@@ -445,6 +463,7 @@
   #define EFR32_MODEM_CTRL3_ANTDIVMODE_IDX         8
   #define EFR32_MODEM_CTRL3_ANTDIVMODE(v)          ((EFR32_MODEM_CTRL3_ANTDIVMODE_##v) << 8)
   #define EFR32_MODEM_CTRL3_ANTDIVMODE_SET(x, v)   do { (x) = (((x) & ~0x700) | ((EFR32_MODEM_CTRL3_ANTDIVMODE_##v) << 8)); } while(0)
+  #define EFR32_MODEM_CTRL3_ANTDIVMODE_SETVAL(x, v) do { (x) = (((x) & ~0x700) | ((v) << 8)); } while(0)
   #define EFR32_MODEM_CTRL3_ANTDIVMODE_GET(x)      (((x) >> 8) & 0x7)
 /**  */
     #define EFR32_MODEM_CTRL3_ANTDIVMODE_ANTENNA0    0x00000000
@@ -461,6 +480,7 @@
   #define EFR32_MODEM_CTRL3_TSAMPMODE_IDX          12
   #define EFR32_MODEM_CTRL3_TSAMPMODE(v)           ((EFR32_MODEM_CTRL3_TSAMPMODE_##v) << 12)
   #define EFR32_MODEM_CTRL3_TSAMPMODE_SET(x, v)    do { (x) = (((x) & ~0x3000) | ((EFR32_MODEM_CTRL3_TSAMPMODE_##v) << 12)); } while(0)
+  #define EFR32_MODEM_CTRL3_TSAMPMODE_SETVAL(x, v) do { (x) = (((x) & ~0x3000) | ((v) << 12)); } while(0)
   #define EFR32_MODEM_CTRL3_TSAMPMODE_GET(x)       (((x) >> 12) & 0x3)
 /**  */
     #define EFR32_MODEM_CTRL3_TSAMPMODE_OFF          0x00000000
@@ -506,6 +526,7 @@
   #define EFR32_MODEM_CTRL4_ADCSATLEVEL_IDX        23
   #define EFR32_MODEM_CTRL4_ADCSATLEVEL(v)         ((EFR32_MODEM_CTRL4_ADCSATLEVEL_##v) << 23)
   #define EFR32_MODEM_CTRL4_ADCSATLEVEL_SET(x, v)  do { (x) = (((x) & ~0x3800000) | ((EFR32_MODEM_CTRL4_ADCSATLEVEL_##v) << 23)); } while(0)
+  #define EFR32_MODEM_CTRL4_ADCSATLEVEL_SETVAL(x, v) do { (x) = (((x) & ~0x3800000) | ((v) << 23)); } while(0)
   #define EFR32_MODEM_CTRL4_ADCSATLEVEL_GET(x)     (((x) >> 23) & 0x7)
 /**  */
     #define EFR32_MODEM_CTRL4_ADCSATLEVEL_CONS1      0x00000000
@@ -539,6 +560,7 @@
   #define EFR32_MODEM_CTRL5_BRCALMODE_IDX          2
   #define EFR32_MODEM_CTRL5_BRCALMODE(v)           ((EFR32_MODEM_CTRL5_BRCALMODE_##v) << 2)
   #define EFR32_MODEM_CTRL5_BRCALMODE_SET(x, v)    do { (x) = (((x) & ~0xc) | ((EFR32_MODEM_CTRL5_BRCALMODE_##v) << 2)); } while(0)
+  #define EFR32_MODEM_CTRL5_BRCALMODE_SETVAL(x, v) do { (x) = (((x) & ~0xc) | ((v) << 2)); } while(0)
   #define EFR32_MODEM_CTRL5_BRCALMODE_GET(x)       (((x) >> 2) & 0x3)
 /**  */
     #define EFR32_MODEM_CTRL5_BRCALMODE_PEAK         0x00000000
@@ -602,6 +624,7 @@
   #define EFR32_MODEM_CTRL6_ARW_IDX                15
   #define EFR32_MODEM_CTRL6_ARW(v)                 ((EFR32_MODEM_CTRL6_ARW_##v) << 15)
   #define EFR32_MODEM_CTRL6_ARW_SET(x, v)          do { (x) = (((x) & ~0x18000) | ((EFR32_MODEM_CTRL6_ARW_##v) << 15)); } while(0)
+  #define EFR32_MODEM_CTRL6_ARW_SETVAL(x, v)       do { (x) = (((x) & ~0x18000) | ((v) << 15)); } while(0)
   #define EFR32_MODEM_CTRL6_ARW_GET(x)             (((x) >> 15) & 0x3)
 /**  */
     #define EFR32_MODEM_CTRL6_ARW_SMALLWND           0x00000000
@@ -657,6 +680,7 @@
   #define EFR32_MODEM_CF_DEC0_IDX                  0
   #define EFR32_MODEM_CF_DEC0(v)                   ((EFR32_MODEM_CF_DEC0_##v) << 0)
   #define EFR32_MODEM_CF_DEC0_SET(x, v)            do { (x) = (((x) & ~0x7) | ((EFR32_MODEM_CF_DEC0_##v) << 0)); } while(0)
+  #define EFR32_MODEM_CF_DEC0_SETVAL(x, v)         do { (x) = (((x) & ~0x7) | ((v) << 0)); } while(0)
   #define EFR32_MODEM_CF_DEC0_GET(x)               (((x) >> 0) & 0x7)
 /**  */
     #define EFR32_MODEM_CF_DEC0_DF3                  0x00000000
@@ -679,6 +703,7 @@
   #define EFR32_MODEM_CF_CFOSR_IDX                 23
   #define EFR32_MODEM_CF_CFOSR(v)                  ((EFR32_MODEM_CF_CFOSR_##v) << 23)
   #define EFR32_MODEM_CF_CFOSR_SET(x, v)           do { (x) = (((x) & ~0x3800000) | ((EFR32_MODEM_CF_CFOSR_##v) << 23)); } while(0)
+  #define EFR32_MODEM_CF_CFOSR_SETVAL(x, v)        do { (x) = (((x) & ~0x3800000) | ((v) << 23)); } while(0)
   #define EFR32_MODEM_CF_CFOSR_GET(x)              (((x) >> 23) & 0x7)
 /**  */
     #define EFR32_MODEM_CF_CFOSR_CF7                 0x00000000
@@ -695,6 +720,7 @@
   #define EFR32_MODEM_CF_DEC1GAIN_IDX              26
   #define EFR32_MODEM_CF_DEC1GAIN(v)               ((EFR32_MODEM_CF_DEC1GAIN_##v) << 26)
   #define EFR32_MODEM_CF_DEC1GAIN_SET(x, v)        do { (x) = (((x) & ~0xc000000) | ((EFR32_MODEM_CF_DEC1GAIN_##v) << 26)); } while(0)
+  #define EFR32_MODEM_CF_DEC1GAIN_SETVAL(x, v)     do { (x) = (((x) & ~0xc000000) | ((v) << 26)); } while(0)
   #define EFR32_MODEM_CF_DEC1GAIN_GET(x)           (((x) >> 26) & 0x3)
 /**  */
     #define EFR32_MODEM_CF_DEC1GAIN_ADD0             0x00000000
@@ -709,12 +735,17 @@
 
 #define EFR32_MODEM_PRE_ADDR                         0x0000005c
 #define EFR32_MODEM_PRE_MASK                         0xffff1fff
-/** Preambule pattern length @multiple */
+/** Preambule pattern @multiple */
   #define EFR32_MODEM_PRE_BASE_IDX                 0
-  #define EFR32_MODEM_PRE_BASE(v)                  ((v) << 0)
-  #define EFR32_MODEM_PRE_BASE_SET(x, v)           do { (x) = (((x) & ~0xf) | ((v) << 0)); } while(0)
+  #define EFR32_MODEM_PRE_BASE(v)                  ((EFR32_MODEM_PRE_BASE_##v) << 0)
+  #define EFR32_MODEM_PRE_BASE_SET(x, v)           do { (x) = (((x) & ~0xf) | ((EFR32_MODEM_PRE_BASE_##v) << 0)); } while(0)
+  #define EFR32_MODEM_PRE_BASE_SETVAL(x, v)        do { (x) = (((x) & ~0xf) | ((v) << 0)); } while(0)
   #define EFR32_MODEM_PRE_BASE_GET(x)              (((x) >> 0) & 0xf)
-/** Preambule base pattern @multiple */
+/**  */
+    #define EFR32_MODEM_PRE_BASE_10                  0x00000001
+/**  */
+    #define EFR32_MODEM_PRE_BASE_01                  0x00000002
+/** Preambule pattern length minus 1 @multiple */
   #define EFR32_MODEM_PRE_BASEBITS_IDX             4
   #define EFR32_MODEM_PRE_BASEBITS(v)              ((v) << 4)
   #define EFR32_MODEM_PRE_BASEBITS_SET(x, v)       do { (x) = (((x) & ~0x30) | ((v) << 4)); } while(0)
@@ -786,6 +817,7 @@
   #define EFR32_MODEM_TIMING_FASTRESYNC_IDX        30
   #define EFR32_MODEM_TIMING_FASTRESYNC(v)         ((EFR32_MODEM_TIMING_FASTRESYNC_##v) << 30)
   #define EFR32_MODEM_TIMING_FASTRESYNC_SET(x, v)  do { (x) = (((x) & ~0xc0000000) | ((EFR32_MODEM_TIMING_FASTRESYNC_##v) << 30)); } while(0)
+  #define EFR32_MODEM_TIMING_FASTRESYNC_SETVAL(x, v) do { (x) = (((x) & ~0xc0000000) | ((v) << 30)); } while(0)
   #define EFR32_MODEM_TIMING_FASTRESYNC_GET(x)     (((x) >> 30) & 0x3)
 /**  */
     #define EFR32_MODEM_TIMING_FASTRESYNC_DIS        0x00000000
@@ -833,6 +865,7 @@
   #define EFR32_MODEM_AFC_AFCRXMODE_IDX            10
   #define EFR32_MODEM_AFC_AFCRXMODE(v)             ((EFR32_MODEM_AFC_AFCRXMODE_##v) << 10)
   #define EFR32_MODEM_AFC_AFCRXMODE_SET(x, v)      do { (x) = (((x) & ~0x1c00) | ((EFR32_MODEM_AFC_AFCRXMODE_##v) << 10)); } while(0)
+  #define EFR32_MODEM_AFC_AFCRXMODE_SETVAL(x, v)   do { (x) = (((x) & ~0x1c00) | ((v) << 10)); } while(0)
   #define EFR32_MODEM_AFC_AFCRXMODE_GET(x)         (((x) >> 10) & 0x7)
 /**  */
     #define EFR32_MODEM_AFC_AFCRXMODE_DIS            0x00000000
@@ -851,6 +884,7 @@
   #define EFR32_MODEM_AFC_AFCTXMODE_IDX            13
   #define EFR32_MODEM_AFC_AFCTXMODE(v)             ((EFR32_MODEM_AFC_AFCTXMODE_##v) << 13)
   #define EFR32_MODEM_AFC_AFCTXMODE_SET(x, v)      do { (x) = (((x) & ~0x6000) | ((EFR32_MODEM_AFC_AFCTXMODE_##v) << 13)); } while(0)
+  #define EFR32_MODEM_AFC_AFCTXMODE_SETVAL(x, v)   do { (x) = (((x) & ~0x6000) | ((v) << 13)); } while(0)
   #define EFR32_MODEM_AFC_AFCTXMODE_GET(x)         (((x) >> 13) & 0x3)
 /**  */
     #define EFR32_MODEM_AFC_AFCTXMODE_DIS            0x00000000
@@ -1159,6 +1193,7 @@
   #define EFR32_MODEM_DCCOMP_DCLIMIT_IDX           7
   #define EFR32_MODEM_DCCOMP_DCLIMIT(v)            ((EFR32_MODEM_DCCOMP_DCLIMIT_##v) << 7)
   #define EFR32_MODEM_DCCOMP_DCLIMIT_SET(x, v)     do { (x) = (((x) & ~0x180) | ((EFR32_MODEM_DCCOMP_DCLIMIT_##v) << 7)); } while(0)
+  #define EFR32_MODEM_DCCOMP_DCLIMIT_SETVAL(x, v)  do { (x) = (((x) & ~0x180) | ((v) << 7)); } while(0)
   #define EFR32_MODEM_DCCOMP_DCLIMIT_GET(x)        (((x) >> 7) & 0x3)
 /**  */
     #define EFR32_MODEM_DCCOMP_DCLIMIT_FULLSCALE     0x00000000
@@ -1277,6 +1312,7 @@
   #define EFR32_MODEM_DSATHD1_POWRELTHD_IDX        16
   #define EFR32_MODEM_DSATHD1_POWRELTHD(v)         ((EFR32_MODEM_DSATHD1_POWRELTHD_##v) << 16)
   #define EFR32_MODEM_DSATHD1_POWRELTHD_SET(x, v)  do { (x) = (((x) & ~0x30000) | ((EFR32_MODEM_DSATHD1_POWRELTHD_##v) << 16)); } while(0)
+  #define EFR32_MODEM_DSATHD1_POWRELTHD_SETVAL(x, v) do { (x) = (((x) & ~0x30000) | ((v) << 16)); } while(0)
   #define EFR32_MODEM_DSATHD1_POWRELTHD_GET(x)     (((x) >> 16) & 0x3)
 /**  */
     #define EFR32_MODEM_DSATHD1_POWRELTHD_DISABLED   0x00000000
@@ -1312,6 +1348,7 @@
   #define EFR32_MODEM_DSACTRL_DSAMODE_IDX          0
   #define EFR32_MODEM_DSACTRL_DSAMODE(v)           ((EFR32_MODEM_DSACTRL_DSAMODE_##v) << 0)
   #define EFR32_MODEM_DSACTRL_DSAMODE_SET(x, v)    do { (x) = (((x) & ~0x3) | ((EFR32_MODEM_DSACTRL_DSAMODE_##v) << 0)); } while(0)
+  #define EFR32_MODEM_DSACTRL_DSAMODE_SETVAL(x, v) do { (x) = (((x) & ~0x3) | ((v) << 0)); } while(0)
   #define EFR32_MODEM_DSACTRL_DSAMODE_GET(x)       (((x) >> 0) & 0x3)
 /**  */
     #define EFR32_MODEM_DSACTRL_DSAMODE_DISABLED     0x00000000
@@ -1419,6 +1456,7 @@
   #define EFR32_MODEM_VTTRACK_FREQTRACKMODE_IDX    0
   #define EFR32_MODEM_VTTRACK_FREQTRACKMODE(v)     ((EFR32_MODEM_VTTRACK_FREQTRACKMODE_##v) << 0)
   #define EFR32_MODEM_VTTRACK_FREQTRACKMODE_SET(x, v) do { (x) = (((x) & ~0x3) | ((EFR32_MODEM_VTTRACK_FREQTRACKMODE_##v) << 0)); } while(0)
+  #define EFR32_MODEM_VTTRACK_FREQTRACKMODE_SETVAL(x, v) do { (x) = (((x) & ~0x3) | ((v) << 0)); } while(0)
   #define EFR32_MODEM_VTTRACK_FREQTRACKMODE_GET(x) (((x) >> 0) & 0x3)
 /**  */
     #define EFR32_MODEM_VTTRACK_FREQTRACKMODE_DISABLED 0x00000000
@@ -1443,6 +1481,7 @@
   #define EFR32_MODEM_VTTRACK_TIMGEAR_IDX          16
   #define EFR32_MODEM_VTTRACK_TIMGEAR(v)           ((EFR32_MODEM_VTTRACK_TIMGEAR_##v) << 16)
   #define EFR32_MODEM_VTTRACK_TIMGEAR_SET(x, v)    do { (x) = (((x) & ~0x30000) | ((EFR32_MODEM_VTTRACK_TIMGEAR_##v) << 16)); } while(0)
+  #define EFR32_MODEM_VTTRACK_TIMGEAR_SETVAL(x, v) do { (x) = (((x) & ~0x30000) | ((v) << 16)); } while(0)
   #define EFR32_MODEM_VTTRACK_TIMGEAR_GET(x)       (((x) >> 16) & 0x3)
 /**  */
     #define EFR32_MODEM_VTTRACK_TIMGEAR_GEAR0        0x00000000

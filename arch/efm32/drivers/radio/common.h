@@ -46,6 +46,7 @@
 #include <arch/efm32/cmu.h>
 #include <arch/efm32/emu.h>
 #include <arch/efm32/prs.h>
+#include <arch/efm32/rtc.h>
 
 #include <arch/efm32/efr/frc.h>
 #include <arch/efm32/efr/rac.h>
@@ -67,12 +68,6 @@
 
 #endif
 
-#define EFR32_RX_IRQ_FRC_MSK      (EFR32_FRC_IF_RXDONE     |      \
-                                   EFR32_FRC_IF_RXOF       |      \
-                                   EFR32_FRC_IF_RXABORTED  |      \
-                                   EFR32_FRC_IF_BLOCKERROR |      \
-                                   EFR32_FRC_IF_FRAMEERROR)
-
 #define EFR32_TX_IRQ_FRC_MSK      (EFR32_FRC_IF_TXDONE     |      \
                                    EFR32_FRC_IF_TXUF       |      \
                                    EFR32_FRC_IF_TXABORTED  |      \
@@ -81,8 +76,13 @@
 #define EFR32_SEQ_DEADLINE_ADDR 0x21001F00 
 #define EFR32_RADIO_SEQ_RAM_ADDR 0x21000000
 #define EFR32_SEQ_STACK_POINTER_ADDR 0x21001F80 
-
-#define EFR32_RADIO_IRQ_COUNT 9
+#ifdef CONFIG_DRIVER_EFM32_RFPACKET_RTCC
+  #define EFR32_RADIO_IRQ_COUNT 10
+  #define EFR32_RADIO_CLK_EP_COUNT 10
+#else
+  #define EFR32_RADIO_IRQ_COUNT 9
+  #define EFR32_RADIO_CLK_EP_COUNT 7
+#endif
 #define EFR32_RADIO_HFXO_CLK 38400000L
 
 extern const unsigned char seqcode[];
@@ -94,6 +94,9 @@ struct radio_efr32_ctx_s
   struct device_s               *dev;
 
   struct dev_irq_src_s          irq_ep[EFR32_RADIO_IRQ_COUNT];
+  /* Clock Endpoint */
+  struct device_cmu_s           clock;
+  struct dev_clock_sink_ep_s    clk_ep[EFR32_RADIO_CLK_EP_COUNT];
   struct dev_freq_s             freq;
   dev_timer_value_t             deadline;
 
@@ -113,8 +116,11 @@ void efr32_radio_dump_registers(struct radio_efr32_ctx_s *pv);
 void efr32_radio_dump_range(struct radio_efr32_ctx_s *pv, char * str, uintptr_t start, size_t size);
 void efr32_radio_debug_port(struct radio_efr32_ctx_s *pv, uint8_t val);
 void efr32_radio_debug_init(struct radio_efr32_ctx_s *pv);
-
+void debug_toggle_pin();
 void efr32_radio_seq_init(struct radio_efr32_ctx_s *pv, const uint8_t *seq, size_t count);
+void set_cw();
+void set_pn9();
+void stoptx();
 
 
 #endif /* !COMMON_H_ */
