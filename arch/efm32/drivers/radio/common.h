@@ -46,6 +46,7 @@
 #include <arch/efm32/cmu.h>
 #include <arch/efm32/emu.h>
 #include <arch/efm32/prs.h>
+#include <arch/efm32/rtc.h>
 
 #include <arch/efm32/efr/frc.h>
 #include <arch/efm32/efr/rac.h>
@@ -76,8 +77,14 @@
 #define EFR32_RADIO_SEQ_RAM_ADDR 0x21000000
 #define EFR32_SEQ_STACK_POINTER_ADDR 0x21001F80
 
-#define EFR32_RADIO_IRQ_COUNT 9
-#define EFR32_RADIO_CLK_EP_COUNT 7
+#ifdef CONFIG_DRIVER_EFM32_RFPACKET_RTCC
+  #define EFR32_RADIO_IRQ_COUNT 10
+  #define EFR32_RADIO_CLK_EP_COUNT 10
+#else
+  #define EFR32_RADIO_IRQ_COUNT 9
+  #define EFR32_RADIO_CLK_EP_COUNT 7
+#endif
+
 #define EFR32_RADIO_HFXO_CLK 38400000L
 
 extern const unsigned char seqcode[];

@@ -829,7 +829,36 @@ static void efr32_rfp_cfg_protimer_dbg(struct radio_efr32_rfp_ctx_s *ctx) {
 
 
 
+#ifdef CONFIG_DRIVER_EFM32_RFPACKET_RTCC
+static void efr32_rfp_schedule_next_wup(struct radio_efr32_rfp_ctx_s *ctx) {
+  uint32_t x = cpu_mem_read_32(EFM32_RTCC_ADDR + EFM32_RTCC_CNT_ADDR);
+  cpu_mem_write_32(EFM32_RTCC_ADDR + EFM32_RTCC_CC_CCV_ADDR(1), 10000 + x);
+  cpu_mem_write_32(EFM32_RTCC_ADDR + EFM32_RTCC_CC_CCV_ADDR(2), 10000 + 5000 + x);
+#ifdef CONFIG_DRIVER_EFR32_RFPACKET_SLEEP
+  // Stop all clock exept for RTCC
+  for (uint8_t i = 0; i < EFR32_RADIO_CLK_EP_COUNT - 1; i++)
+    dev_clock_sink_gate(&ctx->pv.clk_ep[i], DEV_CLOCK_EP_POWER);
+  ctx->sleep = true;
+#endif
+}
 
+static void efr32_rfp_start_rx_ldc(struct radio_efr32_rfp_ctx_s *ctx) {
+  cpu_mem_write_32(EFM32_RTCC_ADDR + EFM32_RTCC_CC_CTRL_ADDR(1), EFM32_RTCC_CC_CTRL_MODE_SHIFT_VAL(OUTPUTCOMPARE));
+  cpu_mem_write_32(EFM32_RTCC_ADDR + EFM32_RTCC_CC_CTRL_ADDR(2), EFM32_RTCC_CC_CTRL_MODE_SHIFT_VAL(OUTPUTCOMPARE));
+  cpu_mem_write_32(EFM32_RTCC_ADDR + EFM32_RTCC_IFC_ADDR, endian_le32(EFM32_RTCC_IFC_MASK));
+  cpu_mem_write_32(EFM32_RTCC_ADDR + EFM32_RTCC_IEN_ADDR, EFM32_RTCC_IEN_CC(2) | EFM32_RTCC_IEN_CC(1));
+  efr32_rfp_schedule_next_wup(ctx);
+  // Start Counter
+  cpu_mem_write_32(EFM32_RTCC_ADDR + EFM32_RTCC_CTRL_ADDR, endian_le32(EFM32_RTCC_CTRL_ENABLE));
+}
+
+static KROUTINE_EXEC(efr32_rfp_ldc) {
+  struct radio_efr32_ctx_s *pv = radio_efr32_ctx_s_from_kr(kr);
+  struct radio_efr32_rfp_ctx_s *ctx = radio_efr32_rfp_ctx_s_from_pv(pv);
+
+  efr32_rfp_schedule_next_wup(ctx);
+}
+#endif
 
 static inline void  efr32_rfp_set_status_timeout(struct radio_efr32_rfp_ctx_s *ctx, enum dev_rfpacket_status_s status) {
   ctx->timeout_status = status;
@@ -1204,10 +1233,14 @@ static void efr32_radio_rx(struct dev_rfpacket_ctx_s *gpv, struct dev_rfpacket_r
           return;
       }
     case DEV_RFPACKET_RQ_RX_CONT:
+#ifdef CONFIG_DRIVER_EFM32_RFPACKET_RTCC
+      efr32_rfp_start_rx_ldc(ctx);
+#else
       // Enable RX
       x = cpu_mem_read_32(EFR32_RAC_ADDR + EFR32_RAC_RXENSRCEN_ADDR);
       x |= 0x2;
       cpu_mem_write_32(EFR32_RAC_ADDR + EFR32_RAC_RXENSRCEN_ADDR, x);
+#endif
     break;
 
     case DEV_RFPACKET_RQ_RX:
@@ -1415,6 +1448,33 @@ static DEV_IRQ_SRC_PROCESS(efr32_radio_irq) {
       // Clear irq
       cpu_mem_write_32(EFR32_FRC_ADDR + EFR32_FRC_IFC_ADDR, irq);
     break;
+
+#ifdef CONFIG_DRIVER_EFM32_RFPACKET_RTCC
+    case 9:
+      irq = cpu_mem_read_32(EFM32_RTCC_ADDR + EFM32_RTCC_IF_ADDR);
+      irq &= cpu_mem_read_32(EFM32_RTCC_ADDR + EFM32_RTCC_IEN_ADDR);
+      cpu_mem_write_32(EFM32_RTCC_ADDR + EFM32_RTCC_IFC_ADDR, endian_le32(EFM32_RTCC_IFC_MASK));
+      if (irq & EFM32_RTCC_IEN_CC(1)) {
+#ifdef CONFIG_DRIVER_EFR32_RFPACKET_SLEEP
+        // Wakeup radio if sleeping
+        if (ctx->sleep) {
+          for (uint8_t i = 0; i < EFR32_RADIO_CLK_EP_COUNT -1; i++) {
+            dev_clock_sink_gate(&ctx->pv.clk_ep[i], DEV_CLOCK_EP_POWER_CLOCK);
+          }
+          ctx->sleep = false;
+        }
+#endif
+        uint32_t x = cpu_mem_read_32(EFR32_RAC_ADDR + EFR32_RAC_RXENSRCEN_ADDR);
+        x |= 0x2;
+        cpu_mem_write_32(EFR32_RAC_ADDR + EFR32_RAC_RXENSRCEN_ADDR, x);
+      } else if (irq & EFM32_RTCC_IEN_CC(2)) {
+         cpu_mem_write_32(EFR32_RAC_ADDR + EFR32_RAC_RXENSRCEN_ADDR, 0);
+         cpu_mem_write_32(EFR32_RAC_ADDR + EFR32_RAC_CMD_ADDR, EFR32_RAC_CMD_RXDIS);
+         kroutine_init_deferred(&ctx->pv.kr, &efr32_rfp_ldc);
+         kroutine_exec(&ctx->pv.kr);
+      }
+      break;
+#endif
 
     default:
       UNREACHABLE();
