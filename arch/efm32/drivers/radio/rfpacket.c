@@ -829,7 +829,7 @@ static void efr32_rfp_cfg_protimer_dbg(struct radio_efr32_rfp_ctx_s *ctx) {
 
 
 
-#ifdef CONFIG_DRIVER_EFM32_RFPACKET_RTCC
+#ifdef CONFIG_DRIVER_EFR32_RFPACKET_LDC
 static void efr32_rfp_schedule_next_wup(struct radio_efr32_rfp_ctx_s *ctx) {
   uint32_t x = cpu_mem_read_32(EFM32_RTCC_ADDR + EFM32_RTCC_CNT_ADDR);
   cpu_mem_write_32(EFM32_RTCC_ADDR + EFM32_RTCC_CC_CCV_ADDR(1), 10000 + x);
@@ -1103,7 +1103,7 @@ static void efr32_rfp_rx_irq(struct radio_efr32_rfp_ctx_s *ctx, uint32_t irq) {
   uintptr_t p = dev_rfpacket_alloc(&ctx->gctx);
 
   if (p == 0) {
-    // Filed to allocate, flush RX fifo
+    // Failed to allocate, flush RX fifo
     cpu_mem_write_32(EFR32_BUFC_ADDR + EFR32_BUFC_CMD_ADDR(1), EFR32_BUFC_CMD_CLEAR);
     cpu_mem_write_32(EFR32_BUFC_ADDR + EFR32_BUFC_CMD_ADDR(2), EFR32_BUFC_CMD_CLEAR);
     efr32_radio_printk("alloc err\n");
@@ -1233,7 +1233,7 @@ static void efr32_radio_rx(struct dev_rfpacket_ctx_s *gpv, struct dev_rfpacket_r
           return;
       }
     case DEV_RFPACKET_RQ_RX_CONT:
-#ifdef CONFIG_DRIVER_EFM32_RFPACKET_RTCC
+#ifdef CONFIG_DRIVER_EFR32_RFPACKET_LDC
       efr32_rfp_start_rx_ldc(ctx);
 #else
       // Enable RX
@@ -1449,7 +1449,7 @@ static DEV_IRQ_SRC_PROCESS(efr32_radio_irq) {
       cpu_mem_write_32(EFR32_FRC_ADDR + EFR32_FRC_IFC_ADDR, irq);
     break;
 
-#ifdef CONFIG_DRIVER_EFM32_RFPACKET_RTCC
+#ifdef CONFIG_DRIVER_EFR32_RFPACKET_LDC
     case 9:
       irq = cpu_mem_read_32(EFM32_RTCC_ADDR + EFM32_RTCC_IF_ADDR);
       irq &= cpu_mem_read_32(EFM32_RTCC_ADDR + EFM32_RTCC_IEN_ADDR);
@@ -1596,8 +1596,12 @@ static DEV_INIT(efr32_radio_init) {
   efr32_protimer_start_counter(&pv->pti);
 #ifdef CONFIG_DRIVER_EFR32_DEBUG
   efr32_rfp_cfg_rac_dbg(ctx);
-  efr32_radio_debug_port(pv, 0x0);
   efr32_radio_debug_init(pv);
+  efr32_radio_debug_port(pv, 0x0);
+#endif
+#ifdef CONFIG_DRIVER_EFR32_RFPACKET_SLEEP
+  // Check CMU clock is used
+  ensure(!device_get_accessor_by_path(&pv->clock.base, NULL, "recmu*", DRIVER_CLASS_CMU));
 #endif
   // Note pvdata and interface into generic context
   ctx->gctx.pvdata = ctx;

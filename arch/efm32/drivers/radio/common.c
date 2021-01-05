@@ -70,8 +70,6 @@ void efr32_radio_print_debug(char *p, struct radio_efr32_ctx_s *pv)
   }
 }
 
-#endif
-
 void debug_toggle_pin(void)
 {
 #if CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_XG12
@@ -80,6 +78,8 @@ void debug_toggle_pin(void)
 #elif CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_XG14
   uint32_t o = 5;
   uint32_t i = 3;
+#else
+  #error
 #endif
   cpu_mem_write_32(0x4000a018 + o * 0x30, (1 << i));
 }
@@ -117,12 +117,15 @@ void efr32_radio_debug_port(struct radio_efr32_ctx_s *pv, uint8_t val)
   cpu_mem_write_32(a, x | (0x44444 << 12));
 
   a = 0x4000a000 + 0xC + 5 * 0x30;
+#else
+  #error
 #endif
 
   x = (cpu_mem_read_32(a) & ~(msk << bitidx)) | ((val & msk) << bitidx);
 
   cpu_mem_write_32(a, x);
 }
+#endif
 
 void efr32_radio_seq_init(struct radio_efr32_ctx_s *pv, const uint8_t *seq, size_t count)
 {

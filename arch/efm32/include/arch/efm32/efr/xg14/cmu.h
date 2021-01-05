@@ -2180,5 +2180,41 @@
   #define EFM32_CMU_DPLLOFFSET_MINCOARSE_SET(x, v) do { (x) = (((x) & ~0x7f00000) | ((v) << 20)); } while(0)
   #define EFM32_CMU_DPLLOFFSET_MINCOARSE_GET(x)    (((x) >> 20) & 0x7f)
 
+#define EFM32_CMU_LFRCLKSEL_ADDR                     0x00000204
+#define EFM32_CMU_LFRCLKSEL_MASK                     0x00000007
+  #define EFM32_CMU_LFRCLKSEL_LFR_SHIFT            0
+  #define EFM32_CMU_LFRCLKSEL_LFR(v)               ((EFM32_CMU_LFRCLKSEL_LFR_##v) << 0)
+  #define EFM32_CMU_LFRCLKSEL_LFR_SET(x, v)        do { (x) = (((x) & ~0x7) | ((EFM32_CMU_LFRCLKSEL_LFR_##v) << 0)); } while(0)
+  #define EFM32_CMU_LFRCLKSEL_LFR_SETVAL(x, v)     do { (x) = (((x) & ~0x7) | ((v) << 0)); } while(0)
+  #define EFM32_CMU_LFRCLKSEL_LFR_GET(x)           (((x) >> 0) & 0x7)
+/**  */
+    #define EFM32_CMU_LFRCLKSEL_LFR_DISABLED         0x00000000
+/**  */
+    #define EFM32_CMU_LFRCLKSEL_LFR_LFRCO            0x00000001
+/**  */
+    #define EFM32_CMU_LFRCLKSEL_LFR_LFXO             0x00000002
+/**  */
+    #define EFM32_CMU_LFRCLKSEL_LFR_ULFRCO           0x00000004
+
+#define EFM32_CMU_LFRCLKEN0_ADDR                     0x00000214
+#define EFM32_CMU_LFRCLKEN0_MASK                     0x00000001
+  #define EFM32_CMU_LFRCLKEN0_PRORTC               0x00000001
+  #define EFM32_CMU_LFRCLKEN0_PRORTC_SHIFT         0
+  #define EFM32_CMU_LFRCLKEN0_PRORTC_SET(x, v)     do { (x) = (((x) & ~0x1) | ((v) << 0)); } while(0)
+
+#define EFM32_CMU_LFRPRESC0_ADDR                     0x0000021c
+#define EFM32_CMU_LFRPRESC0_MASK                     0x00000003
+  #define EFM32_CMU_LFRPRESC0_PRORTC_SHIFT         0
+  #define EFM32_CMU_LFRPRESC0_PRORTC(v)            ((EFM32_CMU_LFRPRESC0_PRORTC_##v) << 0)
+  #define EFM32_CMU_LFRPRESC0_PRORTC_SET(x, v)     do { (x) = (((x) & ~0x3) | ((EFM32_CMU_LFRPRESC0_PRORTC_##v) << 0)); } while(0)
+  #define EFM32_CMU_LFRPRESC0_PRORTC_SETVAL(x, v)  do { (x) = (((x) & ~0x3) | ((v) << 0)); } while(0)
+  #define EFM32_CMU_LFRPRESC0_PRORTC_GET(x)        (((x) >> 0) & 0x3)
+/**  */
+    #define EFM32_CMU_LFRPRESC0_PRORTC_DIV1          0x00000000
+/**  */
+    #define EFM32_CMU_LFRPRESC0_PRORTC_DIV2          0x00000001
+/**  */
+    #define EFM32_CMU_LFRPRESC0_PRORTC_DIV4          0x00000002
+
 #endif
 

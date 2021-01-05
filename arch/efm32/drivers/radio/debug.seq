@@ -69,7 +69,6 @@ _reset_addr:
         cst32            r1, DEBUG_RAM_ADDR + 4
         jmp              _store_word
 
-#else
   #define GPIO_LOG(N)                 \
        cst32            r4, N;        \
        call             _gpio       
@@ -101,6 +100,8 @@ _gpio:          // write R4 to gpio
         and              r4, r0
         rol              r4, 4 
         or               r4, r2
+#else
+  #error
 #endif
 
         st               [r1], r4          
@@ -125,7 +126,8 @@ _ttg_led:        // toggle led pin
 #elif CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_XG14
 #endif
         ret
-//  #define GPIO_LOG(N)               
+#else
+  #define GPIO_LOG(N)               
   #define PRINT_PC()
   #define STORE_REG(R)
   #define STACK_TEST(N)
