@@ -142,7 +142,6 @@ void efm32_board_init(void)
   x = cpu_mem_read_32(EFM32_CMU_ADDR + EFM32_CMU_HFCLKSTATUS_ADDR);
   assert(EFM32_CMU_HFCLKSTATUS_SELECTED_GET(x) == EFM32_CMU_HFCLKSTATUS_SELECTED_HFXO);
 
-#ifndef CONFIG_DEVICE_CLOCK_GATING
   /* Set PA5 high for enabling VCOM for USART0 */
   x = cpu_mem_read_32(EFM32_GPIO_ADDR + EFM32_GPIO_MODEL_ADDR(0));
   EFM32_GPIO_MODEL_MODE_SET(5, x, PUSHPULL);
@@ -150,8 +149,8 @@ void efm32_board_init(void)
 
   x = EFM32_GPIO_DOUT_DOUT(5);
   cpu_mem_write_32(EFM32_GPIO_ADDR + EFM32_GPIO_DOUT_ADDR(0) + 0x06000000, x);
-
-
+  
+#ifndef CONFIG_DEVICE_CLOCK_GATING
   /* Switch leds on */
   x = cpu_mem_read_32(EFM32_GPIO_ADDR + EFM32_GPIO_MODEL_ADDR(5));
   EFM32_GPIO_MODEL_MODE_SET(4, x, PUSHPULL);
