@@ -165,34 +165,6 @@ DEV_DECLARE_STATIC(dma_dev, "dma", 0, efm32_dma_drv,
 
 #if defined(CONFIG_DRIVER_EFM32_USART_SPI)
 
-DEV_DECLARE_STATIC(usart0_dev, "spi0", 0, efm32_usart_spi_drv,
-
-                   DEV_STATIC_RES_MEM(0x4000c000, 0x4000c400),
-# ifdef CONFIG_DEVICE_CLOCK
-                   DEV_STATIC_RES_CLK_SRC("/recmu", EFM32_CLOCK_USART0, 0),
-# else
-                   DEV_STATIC_RES_FREQ(14000000, 1),
-# endif
-
-                   DEV_STATIC_RES_DEV_ICU("/cpu"),
-                   DEV_STATIC_RES_IRQ(0, EFM32_IRQ_USART0_RX, DEV_IRQ_SENSE_RISING_EDGE, 0, 1),
-
-#if defined(CONFIG_DRIVER_EFM32_DMA)
-                   DEV_STATIC_RES_DEV_PARAM("dma", "/dma"),
-                   DEV_STATIC_RES_DMA((1 << 0), EFM32_DMA_SOURCE_USART0),
-                   DEV_STATIC_RES_DMA((1 << 1), EFM32_DMA_SOURCE_USART0),
-#endif
-
-                   DEV_STATIC_RES_DEV_IOMUX("/gpio"),
-                   DEV_STATIC_RES_IOMUX("clk",  EFM32_LOC0, EFM32_PE12, 0, 0),
-                   DEV_STATIC_RES_IOMUX("miso", EFM32_LOC1, EFM32_PE7, 0, 0),
-                   DEV_STATIC_RES_IOMUX("mosi", EFM32_LOC1, EFM32_PE6, 0, 0),
-
-#ifdef CONFIG_DRIVER_EFM32_RTC
-                   DEV_STATIC_RES_DEV_TIMER("/rtc")
-#endif
-                   );
-
 DEV_DECLARE_STATIC(usart1_dev, "spi1", 0, efm32_usart_spi_drv,
 
                    DEV_STATIC_RES_MEM(0x4000c400, 0x4000c800),
