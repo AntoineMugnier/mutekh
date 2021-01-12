@@ -1319,6 +1319,7 @@ static void efr32_radio_cancel_rxc(struct dev_rfpacket_ctx_s *gpv) {
 static bool_t efr32_radio_wakeup(struct dev_rfpacket_ctx_s *gpv) {
 #ifdef CONFIG_DRIVER_EFR32_RFPACKET_SLEEP
   struct radio_efr32_rfp_ctx_s *ctx = gpv->pvdata;
+  struct radio_efr32_ctx_s *pv = &ctx->pv;
   // Wakeup radio if sleeping
   if (ctx->sleep) {
     for (uint8_t i = 0; i < EFR32_RADIO_CLK_EP_COUNT; i++) {
@@ -1336,6 +1337,7 @@ static bool_t efr32_radio_wakeup(struct dev_rfpacket_ctx_s *gpv) {
 static bool_t efr32_radio_sleep(struct dev_rfpacket_ctx_s *gpv) {
 #ifdef CONFIG_DRIVER_EFR32_RFPACKET_SLEEP
   struct radio_efr32_rfp_ctx_s *ctx = gpv->pvdata;
+  struct radio_efr32_ctx_s *pv = &ctx->pv;
   // Put radio to sleep if awake
   if (!ctx->sleep) {
     for (uint8_t i = 0; i < EFR32_RADIO_CLK_EP_COUNT; i++) {
@@ -1530,7 +1532,7 @@ static DEV_INIT(efr32_radio_init) {
     goto err_clk;
   }
   for (uint8_t i = 0; i < EFR32_RADIO_CLK_EP_COUNT; i++) {
-    if (dev_drv_clock_init(dev, &pv->clk_ep[i], i + 1, DEV_CLOCK_EP_POWER_CLOCK | DEV_CLOCK_EP_GATING_SYNC, NULL)) {
+    if (dev_drv_clock_init(dev, &pv->clk_ep[i], i, DEV_CLOCK_EP_POWER_CLOCK | DEV_CLOCK_EP_GATING_SYNC, NULL)) {
       goto err_clk;
     }
   }
@@ -1598,10 +1600,6 @@ static DEV_INIT(efr32_radio_init) {
   efr32_rfp_cfg_rac_dbg(ctx);
   efr32_radio_debug_init(pv);
   efr32_radio_debug_port(pv, 0x0);
-#endif
-#ifdef CONFIG_DRIVER_EFR32_RFPACKET_SLEEP
-  // Check CMU clock is used
-  ensure(!device_get_accessor_by_path(&pv->clock.base, NULL, "recmu*", DRIVER_CLASS_CMU));
 #endif
   // Note pvdata and interface into generic context
   ctx->gctx.pvdata = ctx;
