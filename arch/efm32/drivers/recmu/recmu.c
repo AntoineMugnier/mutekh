@@ -52,6 +52,15 @@ typedef UINT_FIT_TYPE(1ULL << (EFM32_CLOCK_count - 1)) efm32_clock_mask_t;
   ((EFM32_CLK_MASK(EFM32_CLOCK_HFPERCLK_last - EFM32_CLOCK_HFPERCLK_first + 1) - 1) \
    << EFM32_CLOCK_HFPERCLK_first)
 
+#define EFM32_CLOCK_LFACLK_CHILDMASK \
+  ((EFM32_CLK_MASK(EFM32_CLOCK_LFACLK_last - EFM32_CLOCK_LFACLK_first + 1) - 1) \
+   << EFM32_CLOCK_LFACLK_first)
+
+#define EFM32_CLOCK_LFBCLK_CHILDMASK \
+  ((EFM32_CLK_MASK(EFM32_CLOCK_LFBCLK_last - EFM32_CLOCK_LFBCLK_first + 1) - 1) \
+   << EFM32_CLOCK_LFBCLK_first)
+
+#if SERIE1
 #define EFM32_CLOCK_HFBUSCLK_CHILDMASK \
   ((EFM32_CLK_MASK(EFM32_CLOCK_HFBUSCLK_last - EFM32_CLOCK_HFBUSCLK_first + 1) - 1) \
    << EFM32_CLOCK_HFBUSCLK_first)
@@ -64,14 +73,6 @@ typedef UINT_FIT_TYPE(1ULL << (EFM32_CLOCK_count - 1)) efm32_clock_mask_t;
   ((EFM32_CLK_MASK(EFM32_CLOCK_HFRADIOALTCLK_last - EFM32_CLOCK_HFRADIOALTCLK_first + 1) - 1) \
    << EFM32_CLOCK_HFRADIOALTCLK_first)
 
-#define EFM32_CLOCK_LFACLK_CHILDMASK \
-  ((EFM32_CLK_MASK(EFM32_CLOCK_LFACLK_last - EFM32_CLOCK_LFACLK_first + 1) - 1) \
-   << EFM32_CLOCK_LFACLK_first)
-
-#define EFM32_CLOCK_LFBCLK_CHILDMASK \
-  ((EFM32_CLK_MASK(EFM32_CLOCK_LFBCLK_last - EFM32_CLOCK_LFBCLK_first + 1) - 1) \
-   << EFM32_CLOCK_LFBCLK_first)
-
 #define EFM32_CLOCK_LFECLK_CHILDMASK \
   ((EFM32_CLK_MASK(EFM32_CLOCK_LFECLK_last - EFM32_CLOCK_LFECLK_first + 1) - 1) \
    << EFM32_CLOCK_LFECLK_first)
@@ -79,13 +80,16 @@ typedef UINT_FIT_TYPE(1ULL << (EFM32_CLOCK_count - 1)) efm32_clock_mask_t;
 #define EFM32_CLOCK_LFRCLK_CHILDMASK \
   ((EFM32_CLK_MASK(EFM32_CLOCK_LFRCLK_last - EFM32_CLOCK_LFRCLK_first + 1) - 1) \
    << EFM32_CLOCK_LFRCLK_first)
+#endif
 
 static const efm32_clock_mask_t efm32_clock_em1_mask =
   ((EFM32_CLOCK_HFCORECLK_CHILDMASK |
-    EFM32_CLOCK_HFPERCLK_CHILDMASK  |
+#if SERIE1
     EFM32_CLOCK_HFBUSCLK_CHILDMASK  |
     EFM32_CLOCK_HFRADIOCLK_CHILDMASK |
-    EFM32_CLOCK_HFRADIOALTCLK_CHILDMASK)
+    EFM32_CLOCK_HFRADIOALTCLK_CHILDMASK |
+#endif
+    EFM32_CLOCK_HFPERCLK_CHILDMASK)
    & ~(
 #ifdef CONFIG_DRIVER_EFM32_GPIO
        /* allow em2+ when gpio clock is enabled. Disabling HFPERCLK
@@ -97,12 +101,8 @@ static const efm32_clock_mask_t efm32_clock_em1_mask =
 
   /* EFM32_CLOCK_HFCORECLK and EFM32_CLOCK_HFCLK always enabled */
 static const efm32_clock_mask_t efm32_clock_alwayson_mask = 
-#if SERIE1
-  EFM32_CLK_MASK(EFM32_CLOCK_HFCLK) |
-#else
-  EFM32_CLK_MASK(EFM32_CLOCK_HFDIVCLK) |
-#endif
-  EFM32_CLK_MASK(EFM32_CLOCK_HFCORECLK) | EFM32_CLK_MASK(EFM32_CLOCK_CPU)
+  EFM32_CLK_MASK(EFM32_CLOCK_HFCLK) | EFM32_CLK_MASK(EFM32_CLOCK_HFCORECLK) |
+  EFM32_CLK_MASK(EFM32_CLOCK_CPU)
 
 #ifdef CONFIG_MUTEK_PRINTK
 # ifdef CONFIG_DRIVER_EFM32_LEUART_PRINTK
@@ -741,13 +741,14 @@ efm32_recmu_get_node_freq(struct efm32_recmu_private_s *pv,
     case EFM32_CLOCK_LFBCLK:
       node = pv->lfbclk_parent;
       break;
+#if SERIE1
     case EFM32_CLOCK_LFECLK:
       node = pv->lfeclk_parent;
       break;
     case EFM32_CLOCK_LFRCLK:
       node = pv->lfrclk_parent;
       break;
-
+#endif
     default:
       break;
     }
@@ -755,11 +756,13 @@ efm32_recmu_get_node_freq(struct efm32_recmu_private_s *pv,
   /* compute frequency of root nodes */
   switch (node)
     {
+#if SERIE1
     case EFM32_CLOCK_HFRCODIV2:
       if (efm32_recmu_get_node_freq(pv, freq, NULL, EFM32_CLOCK_HFRCO))
         return -EINVAL;
       div = 2;
       break;
+#endif
     case EFM32_CLOCK_LE:
       if (efm32_recmu_get_node_freq(pv, freq, NULL, EFM32_CLOCK_HFCORECLK))
         return -EINVAL;
@@ -1832,11 +1835,12 @@ static DEV_CMU_COMMIT(efm32_recmu_commit)
                   endian_le32(pv->r_lfapresc0));
   cpu_mem_write_32(EFM32_CMU_ADDR + EFM32_CMU_LFBPRESC0_ADDR,
                   endian_le32(pv->r_lfbpresc0));
+#if SERIE1
   cpu_mem_write_32(EFM32_CMU_ADDR + EFM32_CMU_LFEPRESC0_ADDR,
                   endian_le32(pv->r_lfepresc0));
   cpu_mem_write_32(EFM32_CMU_ADDR + EFM32_CMU_LFRPRESC0_ADDR,
                   endian_le32(pv->r_lfrpresc0));
-
+#endif
 #if SERIE1
   cpu_mem_write_32(EFM32_CMU_ADDR + EFM32_CMU_HFCLKSEL_ADDR,
                   endian_le32(pv->r_hfclksel));
