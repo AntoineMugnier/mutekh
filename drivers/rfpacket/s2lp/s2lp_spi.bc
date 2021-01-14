@@ -191,36 +191,6 @@
         end
 .endfunc
 
-#ifdef CONFIG_DRIVER_RFPACKET_S2LP_SLEEP
-.func s2lp_entry_ready
-        .export s2lp_entry_ready
-        .clobber %1, %2 cmd, %3, %4
-        // Check state
-        call16                 %s2lp_update_status:link, s2lp_update_status
-        cst8                   %s2lp_check_state:state, S2LP_STATE0_STATE_OFFSET(S2LP_STATE_SLEEP)
-        call16                 %s2lp_check_state:link,  s2lp_check_state
-        // Send ready command (S2LP_CMD_HEADER_BYTE, S2LP_CMD_READY)
-        cst16                  %cmd,            0x6280, 0
-        pack32le               %cmd,            1,      2
-        spi_wr                 %cmd,            2,      CS_PULSE
-        end
-.endfunc
-
-.func s2lp_entry_sleep
-        .export s2lp_entry_sleep
-        .clobber %1, %2 cmd, %3, %4
-        // Check state
-        call16                 %s2lp_update_status:link, s2lp_update_status
-        cst8                   %s2lp_check_state:state, S2LP_STATE0_STATE_OFFSET(S2LP_STATE_READY)
-        call16                 %s2lp_check_state:link,  s2lp_check_state
-        // Send sleep command (S2LP_CMD_HEADER_BYTE, S2LP_CMD_SLEEP)
-        cst16                  %cmd,            0x6480, 0
-        pack32le               %cmd,            1,      2
-        spi_wr                 %cmd,            2,      CS_PULSE
-        end
-.endfunc
-#endif
-
 // Entry point to configure the transceiver
 .func s2lp_entry_config
         .export s2lp_entry_config
