@@ -69,7 +69,7 @@
 #define PAYLOAD_LENGTH_SIZE 1
 // Assuming the slave use the same tx preamble length as the master
 #define PCKT_SIZE(size) (pkcfg.tx_pb_len + pkcfg.sw_len + 1 + 8 * ((size) + CRC_SIZE + PAYLOAD_LENGTH_SIZE))
-#define PCKT_TIME(size) (((uint64_t)PCKT_SIZE(size) * 1000 * pv.msec) / rfcfg.base.drate)
+#define PCKT_TIME(size) (((uint64_t)PCKT_SIZE(size) * 1000 * pv.msec) / rfcfg.common.drate)
 
 // --- Private Types ---
 enum _test_rflbt_state {
@@ -154,12 +154,12 @@ static void test_rflbt_process(void);
 static const struct dev_rfpacket_pk_cfg_basic_s pkcfg = {
     .base = {
         .format = DEV_RFPACKET_FMT_SLPC,
-        .encoding = DEV_RFPACKET_CLEAR,
         .cache = {
             .id = 0,
             .dirty = 0
         },
     },
+    .encoding = DEV_RFPACKET_CLEAR,
     .crc = 0x8005,
     .crc_seed = 0xffff,
     .sw_value = 0xabba,
@@ -177,6 +177,8 @@ static const struct dev_rfpacket_rf_cfg_fsk_s rfcfg = {
             .id = 0,
             .dirty = 0
         },
+    },
+    .common = {
         .drate = 38400,
         .jam_rssi = (-90) << 3,
         .frequency = 865056875,

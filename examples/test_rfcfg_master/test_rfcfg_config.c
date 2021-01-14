@@ -7,12 +7,12 @@
 static struct dev_rfpacket_pk_cfg_basic_s basic_pkcfg = {
     .base = {
         .format = DEV_RFPACKET_FMT_SLPC,
-        .encoding = DEV_RFPACKET_CLEAR,
         .cache = {
             .id = 0,
             .dirty = 0
         },
     },
+    .encoding = DEV_RFPACKET_CLEAR,
     .crc = 0x8005,
     .crc_seed = 0xffff,
     .sw_value = 0xabba,
@@ -31,6 +31,8 @@ static struct dev_rfpacket_rf_cfg_fsk_s fsk_rfcfg = {
             .id = 0,
             .dirty = 0
         },
+    },
+    .common = {
         .drate = 38400,
         .jam_rssi = (-90) << 3,
         .frequency = 865056875 - 20000,
@@ -55,6 +57,8 @@ static struct dev_rfpacket_rf_cfg_ask_s ask_rfcfg = {
             .id = 0,
             .dirty = 0
         },
+    },
+    .common = {
         .drate = 38400,
         .jam_rssi = (-90) << 3,
         .frequency = 865056875 - 20000,
@@ -133,6 +137,36 @@ static void print_slave_rfcfg(const struct dev_rfpacket_rf_cfg_s *rfcfg) {
         printk("Unknown config struct\n");
         pv.slave_cfg = NULL;
     }
+}
+
+static struct dev_rfpacket_rf_cfg_std_s *get_std_cfg(struct dev_rfpacket_rf_cfg_s *rf_cfg) {
+  const struct dev_rfpacket_rf_cfg_fsk_s *cfsk = NULL;
+  const struct dev_rfpacket_rf_cfg_ask_s *cask = NULL;
+  const struct dev_rfpacket_rf_cfg_lora_s *clora = NULL;
+  const struct dev_rfpacket_rf_cfg_std_s *common = NULL;
+
+  switch (rf_cfg->mod) {
+    case DEV_RFPACKET_GFSK:
+    case DEV_RFPACKET_FSK:
+      cfsk = const_dev_rfpacket_rf_cfg_fsk_s_cast(rf_cfg);
+      common = &cfsk->common;
+    break;
+
+    case DEV_RFPACKET_ASK:
+      cask = const_dev_rfpacket_rf_cfg_ask_s_cast(rf_cfg);
+      common = &cask->common;
+    break;
+
+    case DEV_RFPACKET_LORA:
+      clora = const_dev_rfpacket_rf_cfg_lora_s_cast(rf_cfg);
+      common = &clora->common;
+    break;
+
+    default:
+      return NULL;
+    break;
+  }
+  return (struct dev_rfpacket_rf_cfg_std_s *)common;
 }
 
 // static void print_slave_pkcfg(const struct dev_rfpacket_pk_cfg_s *pkcfg) {
@@ -216,7 +250,8 @@ static void drate_set_cfg(struct dev_rfpacket_rq_s *rq) {
     dev_timer_value_t t;
     DEVICE_OP(pv.timer, get_value, &t, 0);
     struct dev_rfpacket_rf_cfg_s *rfcfg = (struct dev_rfpacket_rf_cfg_s *)rq->rf_cfg;
-    rfcfg->drate = rand_64_range_r(&t, TEST_RFCFG_DRATE_MIN, TEST_RFCFG_DRATE_MAX);
+    struct dev_rfpacket_rf_cfg_std_s *common = get_std_cfg(rfcfg);
+    common->drate = rand_64_range_r(&t, TEST_RFCFG_DRATE_MIN, TEST_RFCFG_DRATE_MAX);
     //printk("Drate value: %d\n", rq->rf_cfg->drate);
     // Indicate that there is rfcfg change
     pv.new_rfcfg = rfcfg;
@@ -230,7 +265,8 @@ static void chan_space_set_cfg(struct dev_rfpacket_rq_s *rq) {
     dev_timer_value_t t;
     DEVICE_OP(pv.timer, get_value, &t, 0);
     struct dev_rfpacket_rf_cfg_s *rfcfg = (struct dev_rfpacket_rf_cfg_s *)rq->rf_cfg;
-    rfcfg->chan_spacing = rand_64_range_r(&t, TEST_RFCFG_CHSPACE_MIN/10, TEST_RFCFG_CHSPACE_MAX/10) * 10; 
+    struct dev_rfpacket_rf_cfg_std_s *common = get_std_cfg(rfcfg);
+    common->chan_spacing = rand_64_range_r(&t, TEST_RFCFG_CHSPACE_MIN/10, TEST_RFCFG_CHSPACE_MAX/10) * 10; 
     //printk("channel space value: %d\n", rfcfg->chan_spacing);
     // Indicate that there is rfcfg change
     pv.new_rfcfg = rfcfg;
@@ -244,7 +280,8 @@ static void freq400_set_cfg(struct dev_rfpacket_rq_s *rq) {
     dev_timer_value_t t;
     DEVICE_OP(pv.timer, get_value, &t, 0);
     struct dev_rfpacket_rf_cfg_s *rfcfg = (struct dev_rfpacket_rf_cfg_s *)rq->rf_cfg;
-    rfcfg->frequency = rand_64_range_r(&t, TEST_RFCFG_FREQ400_MIN, TEST_RFCFG_FREQ400_MAX); 
+    struct dev_rfpacket_rf_cfg_std_s *common = get_std_cfg(rfcfg);
+    common->frequency = rand_64_range_r(&t, TEST_RFCFG_FREQ400_MIN, TEST_RFCFG_FREQ400_MAX); 
     //printk("frequency400 value: %d\n", rfcfg->frequency);
     // Indicate that there is rfcfg change
     pv.new_rfcfg = rfcfg;
@@ -258,7 +295,8 @@ static void freq800_set_cfg(struct dev_rfpacket_rq_s *rq) {
     dev_timer_value_t t;
     DEVICE_OP(pv.timer, get_value, &t, 0);
     struct dev_rfpacket_rf_cfg_s *rfcfg = (struct dev_rfpacket_rf_cfg_s *)rq->rf_cfg;
-    rfcfg->frequency = rand_64_range_r(&t, TEST_RFCFG_FREQ800_MIN, TEST_RFCFG_FREQ800_MAX); 
+    struct dev_rfpacket_rf_cfg_std_s *common = get_std_cfg(rfcfg);
+    common->frequency = rand_64_range_r(&t, TEST_RFCFG_FREQ800_MIN, TEST_RFCFG_FREQ800_MAX); 
     //printk("frequency800 value: %d\n", rfcfg->frequency);
     // Indicate that there is rfcfg change
     pv.new_rfcfg = rfcfg;
@@ -269,7 +307,8 @@ static void freq800_set_cfg(struct dev_rfpacket_rq_s *rq) {
 
 static void fix_freq_set_cfg(struct dev_rfpacket_rq_s *rq) {
     struct dev_rfpacket_rf_cfg_s *rfcfg = (struct dev_rfpacket_rf_cfg_s *)rq->rf_cfg;
-    rfcfg->frequency = 865056875;
+    struct dev_rfpacket_rf_cfg_std_s *common = get_std_cfg(rfcfg);
+    common->frequency = 865056875;
     pv.new_rfcfg = rfcfg;
     pv.new_pkcfg = NULL;
     // Set slave buffer
