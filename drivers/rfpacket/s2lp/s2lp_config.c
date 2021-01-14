@@ -800,12 +800,16 @@ static error_t s2lp_build_dynamic_pk_config(struct s2lp_ctx_s *pv, struct dev_rf
   uint8_t *pWutPresc = &pv->pk_cfg_array[27];
   uint8_t *pWutCount = &pv->pk_cfg_array[28];
 
+  // TODO Use fast rx timer + timer reload ?
   // Calc ldc timing values
   assert(pv->curr_drate != 0);
+  // Time byte in us
   dev_timer_delay_t time_byte = 8000000 / pv->curr_drate;
-  uint32_t ldc_wut = (cbasic->rx_pb_len / 8 - 1) * time_byte;
-  ldc_wut = (ldc_wut > 100) ? (ldc_wut - 100) : (ldc_wut);
-  uint32_t ldc_rxt = (cbasic->rx_pb_len + cbasic->sw_len + 1) / 8 * time_byte;
+  uint32_t time_preamb = (cbasic->rx_pb_len / 8 - 1) * time_byte;
+  uint32_t time_rx = 2 * (cbasic->sw_len + 1) / 8 * time_byte; // Double length as edge case margin
+
+  uint32_t ldc_wut = time_preamb;
+  uint32_t ldc_rxt = time_rx;
   //printk("LDC wake up timer: %d, LDC rx timeout: %d\n", ldc_wut, ldc_rxt);
 
   s2lp_find_wut_params(ldc_wut, pWutCount, pWutPresc, &mult);
@@ -1115,7 +1119,7 @@ uint32_t s2lp_config_get_freq(const struct dev_rfpacket_rf_cfg_s *cfg, uint8_t c
     pArray[21] = 0x08; // PROTOCOL0
     pArray[25] = 0x01; // TIMER5
     pArray[26] = 0x00; // TIMER4
-    pArray[27] = 0x01; // TIMER
+    pArray[27] = 0x01; // TIMER3
     pArray[28] = 0x00; // TIMER2
   }
 #endif
