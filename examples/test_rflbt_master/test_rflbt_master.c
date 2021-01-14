@@ -677,8 +677,8 @@ static void test_rflbt_process(void) {
 void app_start(void) {
     printk("*** START OF TEST ***\n");
     // Retrieve devices
-    ensure(!device_get_accessor_by_path(&pv.rf_dev.base, NULL, "efr32_radio", DRIVER_CLASS_RFPACKET));
-    ensure(!device_get_accessor_by_path(&pv.timer_dev.base,  NULL, "efr32_radio", DRIVER_CLASS_TIMER));
+    ensure(!device_get_accessor_by_path(&pv.rf_dev.base, NULL, "rfpacket0", DRIVER_CLASS_RFPACKET));
+    ensure(!device_get_accessor_by_path(&pv.timer_dev.base,  NULL, "rfpacket0", DRIVER_CLASS_TIMER));
     ensure(!device_get_accessor_by_path(&pv.gpio_dev.base,  NULL, "gpio", DRIVER_CLASS_GPIO));
     // Set timer reference
     dev_timer_init_sec(&pv.timer_dev, &pv.msec, 0, 1, 1000);
