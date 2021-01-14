@@ -42,6 +42,8 @@
                                    EFR32_FRC_IF_BLOCKERROR |      \
                                    EFR32_FRC_IF_FRAMEERROR)
 
+#define EFR32_RX_PB_THRESHOLD 0x14
+
 // Power calculation values
 #define EFR32_POW_STRIPE_MAX_VAL  32
 #define EFR32_POW_MIN_DBM        -176 // 0.125 dbm unit (-22dbm)
@@ -835,10 +837,27 @@ static void efr32_rfp_cfg_protimer_dbg(struct radio_efr32_rfp_ctx_s *ctx) {
 
 
 #ifdef CONFIG_DRIVER_EFR32_RFPACKET_LDC
+static void efr32_rfp_calc_ldc(struct radio_efr32_rfp_ctx_s *ctx, uint32_t *p_rx_start, uint32_t *p_rx_end) {
+  // Time bit in ns
+  uint32_t time_bit = 1000000000 / ctx->curr_drate;
+  uint32_t time_preamb = ctx->curr_rx_pb_len * time_bit;
+  uint32_t time_rx = 2 * EFR32_RX_PB_THRESHOLD * time_bit; // Double length as edge case margin
+  assert(time_preamb > time_rx);
+  uint32_t time_sleep = time_preamb - time_rx;
+  // Convert in 30us step with rounding
+  *p_rx_start = (time_sleep + 15000) / 30000;
+  *p_rx_end = (time_preamb + 15000) / 30000;
+  //printk("ldc values: rx start %d rx end %d\n", *p_rx_start, *p_rx_end);
+}
+
 static void efr32_rfp_schedule_next_wup(struct radio_efr32_rfp_ctx_s *ctx) {
+  uint32_t rx_start = 0;
+  uint32_t rx_end = 0;
+  efr32_rfp_calc_ldc(ctx, &rx_start, &rx_end);
+
   uint32_t x = cpu_mem_read_32(EFM32_RTCC_ADDR + EFM32_RTCC_CNT_ADDR);
-  cpu_mem_write_32(EFM32_RTCC_ADDR + EFM32_RTCC_CC_CCV_ADDR(1), 10000 + x);
-  cpu_mem_write_32(EFM32_RTCC_ADDR + EFM32_RTCC_CC_CCV_ADDR(2), 10000 + 5000 + x);
+  cpu_mem_write_32(EFM32_RTCC_ADDR + EFM32_RTCC_CC_CCV_ADDR(1), rx_start + x);
+  cpu_mem_write_32(EFM32_RTCC_ADDR + EFM32_RTCC_CC_CCV_ADDR(2), rx_end + x);
 #ifdef CONFIG_DRIVER_EFR32_RFPACKET_SLEEP
   // Stop all clock exept for RTCC
   for (uint8_t i = 0; i < EFR32_RADIO_CLK_EP_COUNT - 1; i++)
