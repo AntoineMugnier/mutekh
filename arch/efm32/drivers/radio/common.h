@@ -98,6 +98,7 @@ struct radio_efr32_rf_cfg_s {
 };
 
 struct radio_efr32_pk_cfg_s {
+  uint32_t rx_preamb_len;
   uint32_t config_size;
   uint32_t config_data[];
 };

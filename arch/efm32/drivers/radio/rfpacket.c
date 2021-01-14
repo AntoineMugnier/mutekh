@@ -75,6 +75,7 @@ DRIVER_PV(struct radio_efr32_rfp_ctx_s {
   // Timeout kroutine
   struct kroutine_s kr;
   // Config values
+  uint32_t curr_rx_pb_len;
   uint32_t curr_freq;
   uint32_t curr_drate;
 });
@@ -623,6 +624,8 @@ static error_t efr32_build_slpc_pkt_config(struct radio_efr32_rfp_ctx_s *ctx, st
   }
   cpu_mem_write_32(EFR32_CRC_ADDR + EFR32_CRC_POLY_ADDR, x);
   cpu_mem_write_32(EFR32_CRC_ADDR + EFR32_CRC_INIT_ADDR, EFR32_CRC_INIT_INIT(cfg->crc_seed));
+  // Note current config value
+  ctx->curr_rx_pb_len = cfg->rx_pb_len;
   return 0;
 }
 #endif
@@ -720,6 +723,7 @@ static error_t efr32_build_static_pk_config(struct radio_efr32_rfp_ctx_s *ctx, s
   // Send config
   efr32_send_radio_config(cfg->config_size, cfg->config_data);
   // Note info
+  ctx->curr_rx_pb_len = cfg->rx_preamb_len;
   //printk("PK CONFIG: %d, %P\n", cfg->config_size, cfg->config_data, cfg->config_size);
   return 0;
 }
@@ -733,6 +737,7 @@ static error_t efr32_build_extern_pk_config(struct radio_efr32_rfp_ctx_s *ctx, s
   // Send config
   efr32_send_radio_config(cfg->config_size, cfg->config_data);
   // Note info
+  ctx->curr_rx_pb_len = cfg->rx_preamb_len;
   //printk("PK CONFIG: %d, %P\n", cfg->config_size, cfg->config_data, cfg->config_size);
   return 0;
 }

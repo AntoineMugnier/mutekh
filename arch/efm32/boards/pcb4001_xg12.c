@@ -513,6 +513,7 @@ static const uint32_t efr32_rf_sigfox_cfg[] =
 }
 
 static const uint32_t efr32_pk_sigfox_cfg[] = {
+  0x10, // Rx preamb length
   0x12, // Config size
   0x40080010, 0x6f,
   0x4008002c, 0x80,
