@@ -1509,10 +1509,23 @@ static DEV_IRQ_SRC_PROCESS(efr32_radio_irq) {
         x |= 0x2;
         cpu_mem_write_32(EFR32_RAC_ADDR + EFR32_RAC_RXENSRCEN_ADDR, x);
       } else if (irq & EFM32_RTCC_IEN_CC(2)) {
-         cpu_mem_write_32(EFR32_RAC_ADDR + EFR32_RAC_RXENSRCEN_ADDR, 0);
-         cpu_mem_write_32(EFR32_RAC_ADDR + EFR32_RAC_CMD_ADDR, EFR32_RAC_CMD_RXDIS);
-         kroutine_init_deferred(&ctx->pv.kr, &efr32_rfp_ldc);
-         kroutine_exec(&ctx->pv.kr);
+        // Get rac state and modem status
+        uint32_t rac_state = endian_le32(cpu_mem_read_32(EFR32_RAC_ADDR + EFR32_RAC_STATUS_ADDR));
+        rac_state = EFR32_RAC_STATUS_STATE_GET(rac_state);
+        uint32_t modem_status = cpu_mem_read_32(EFR32_MODEM_ADDR + EFR32_MODEM_IF_ADDR);
+        // Don't stop rx if rx incoming or preambule detected
+        if ((rac_state != EFR32_RAC_STATUS_STATE_RXFRAME) && ((modem_status & EFR32_MODEM_IF_RXPREDET) == 0))  {
+          // Disable Rx
+          cpu_mem_write_32(EFR32_RAC_ADDR + EFR32_RAC_RXENSRCEN_ADDR, 0);
+          cpu_mem_write_32(EFR32_RAC_ADDR + EFR32_RAC_CMD_ADDR, EFR32_RAC_CMD_RXDIS);
+          kroutine_init_deferred(&ctx->pv.kr, &efr32_rfp_ldc);
+          kroutine_exec(&ctx->pv.kr);
+        } else {
+          // FIXME need to make sure rx event happen to revive rxc
+          // TODO keep synchro
+          // Clear predet modem irq
+          cpu_mem_write_32(EFR32_MODEM_ADDR + EFR32_MODEM_IFC_ADDR, EFR32_MODEM_IF_RXPREDET);
+        }
       }
       break;
 #endif
