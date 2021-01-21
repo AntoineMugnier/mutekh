@@ -81,6 +81,7 @@ DRIVER_PV(struct radio_efr32_rfp_ctx_s {
   uint32_t curr_rx_pb_len;
   uint32_t curr_freq;
   uint32_t curr_drate;
+  int32_t synth_ratio;
 #ifdef CONFIG_DRIVER_EFR32_RFPACKET_LDC
   // LDC values
   uint32_t ldc_rx_start;
@@ -94,6 +95,7 @@ STRUCT_COMPOSE(radio_efr32_rfp_ctx_s, pv);
 
 static void efr32_rfp_timer_irq(struct device_s *dev);
 static error_t efr32_radio_get_time(struct dev_rfpacket_ctx_s *gpv, dev_timer_value_t *value);
+static int32_t efr32_calc_synth_ratio(uint32_t freq);
 static error_t efr32_calc_power(dev_rfpacket_pwr_t pwr_dbm, uint32_t freq, uint32_t *p_sgpac_val, uint32_t *p_pac_val);
 static error_t efr32_set_tx_power(struct radio_efr32_rfp_ctx_s *ctx, struct dev_rfpacket_rq_s *rq);
 static inline void  efr32_rfp_set_status_timeout(struct radio_efr32_rfp_ctx_s *ctx, enum dev_rfpacket_status_s status);
@@ -424,6 +426,22 @@ static error_t efr32_radio_timer_cancel(struct radio_efr32_rfp_ctx_s *ctx, struc
 
 
 /**************************** RFPACKET PART ********************************/
+// Returned synth ratio as 1/128th
+static int32_t efr32_calc_synth_ratio(uint32_t freq) {
+  if (freq > 1000000000) {
+    return 9344;
+  } else if (freq > 779000000) {
+    return 3072;
+  } else if (freq > 584000000) {
+    return 2342;
+  } else if (freq > 358000000) {
+    return 1562;
+  } else if (freq > 191000000) {
+    return 934;
+  } else {
+    return 589;
+  }
+}
 
 static error_t efr32_calc_power(dev_rfpacket_pwr_t pwr_dbm, uint32_t freq, uint32_t *p_sgpac_val, uint32_t *p_pac_val) {
   int64_t pa_curve_value;
@@ -1078,7 +1096,9 @@ static int16_t efr32_rfp_get_rssi(struct radio_efr32_rfp_ctx_s *ctx, uintptr_t a
 static void efr32_rfp_read_packet(struct radio_efr32_rfp_ctx_s *ctx) {
   struct dev_rfpacket_rx_s *rx = ctx->gctx.rxrq;
   uint8_t *p = (uint8_t *)rx->buf;
-
+  // Read freq offset
+  int16_t offset = (int16_t)cpu_mem_read_32(EFR32_MODEM_ADDR + EFR32_MODEM_AFCADJRX_ADDR);
+  rx->frequency = ctx->curr_freq + (ctx->synth_ratio * offset) / 128;
   rx->snr = 0;
   rx->carrier = 0;
   // Read packet
@@ -1216,6 +1236,8 @@ static error_t efr32_radio_check_config(struct dev_rfpacket_ctx_s *gpv, struct d
   }
   // Calc params if config changed
   if (config_changed) {
+  // Update synth ratio
+  ctx->synth_ratio = efr32_calc_synth_ratio(ctx->curr_freq);
 #ifdef CONFIG_DRIVER_EFR32_RFPACKET_LDC
   // Update ldc values
     efr32_rfp_calc_ldc(ctx);
@@ -1497,7 +1519,7 @@ static DEV_IRQ_SRC_PROCESS(efr32_radio_irq) {
       // Start Rx event
       if (irq & EFM32_RTCC_IEN_CC(1)) {
 #ifdef CONFIG_DRIVER_EFR32_RFPACKET_SLEEP
-        // Wakeup radio if sleeping
+        // Wakeup clocks if sleeping
         if (ctx->sleep) {
           for (uint8_t i = 0; i < EFR32_RADIO_CLK_EP_COUNT -1; i++) {
             dev_clock_sink_gate(&ctx->pv.clk_ep[i], DEV_CLOCK_EP_POWER_CLOCK);
@@ -1505,9 +1527,11 @@ static DEV_IRQ_SRC_PROCESS(efr32_radio_irq) {
           ctx->sleep = false;
         }
 #endif
+        // Enable rx
         uint32_t x = cpu_mem_read_32(EFR32_RAC_ADDR + EFR32_RAC_RXENSRCEN_ADDR);
         x |= 0x2;
         cpu_mem_write_32(EFR32_RAC_ADDR + EFR32_RAC_RXENSRCEN_ADDR, x);
+      // End rx event
       } else if (irq & EFM32_RTCC_IEN_CC(2)) {
         // Get rac state and modem status
         uint32_t rac_state = endian_le32(cpu_mem_read_32(EFR32_RAC_ADDR + EFR32_RAC_STATUS_ADDR));
@@ -1649,8 +1673,8 @@ static DEV_INIT(efr32_radio_init) {
   dev->start_count |= 1;
   efr32_protimer_start_counter(&pv->pti);
 #ifdef CONFIG_DRIVER_EFR32_DEBUG
-  efr32_rfp_cfg_rac_dbg(ctx);
-  efr32_radio_debug_init(pv);
+  //efr32_rfp_cfg_rac_dbg(ctx);
+  //efr32_radio_debug_init(pv);
   efr32_radio_debug_port(pv, 0x0);
 #endif
   // Note pvdata and interface into generic context
@@ -1733,7 +1757,7 @@ static error_t efr32_rfp_fsk_init(struct radio_efr32_rfp_ctx_s *ctx) {
     0x000C6078UL, 0x11A0071BUL,
     /*    607C */ 0x00000000UL,
     /*    6080 */ 0x003B0373UL,
-    /*    6084 */ 0x00000000UL,
+    /*    6084 */ 0x019591F9UL, // AFC_LOCK_AT_PREAMBLE_DETECT
     /*    6088 */ 0x00000000UL,
     /*    608C */ 0x22140A04UL,
     /*    6090 */ 0x4F4A4132UL,
