@@ -42,7 +42,8 @@
                                    EFR32_FRC_IF_BLOCKERROR |      \
                                    EFR32_FRC_IF_FRAMEERROR)
 
-#define EFR32_RX_PB_THRESHOLD 0x14
+#define EFR32_RXWARM_NS 1250000 // Measure empirically
+#define EFR32_RX_THRESH 0x10 // Abritrary value
 
 // Power calculation values
 #define EFR32_POW_STRIPE_MAX_VAL  32
@@ -51,7 +52,7 @@
 #define EFR32_POW_MIN_RAW         1
 #define EFR32_POW_MAX_RAW         248
 
-
+// Rac irq types
 enum efr32_rac_irq_type {
   EFR32_RAC_IRQ_TIMEOUT,
   EFR32_RAC_IRQ_TXRX,
@@ -80,6 +81,12 @@ DRIVER_PV(struct radio_efr32_rfp_ctx_s {
   uint32_t curr_rx_pb_len;
   uint32_t curr_freq;
   uint32_t curr_drate;
+#ifdef CONFIG_DRIVER_EFR32_RFPACKET_LDC
+  // LDC values
+  uint32_t ldc_rx_start;
+  uint32_t ldc_rx_end;
+  dev_timer_value_t ldc_last_end; // TODO: use to keep synchro
+#endif
 });
 
 STRUCT_COMPOSE(radio_efr32_rfp_ctx_s, kr);
@@ -837,29 +844,25 @@ static void efr32_rfp_cfg_protimer_dbg(struct radio_efr32_rfp_ctx_s *ctx) {
 
 
 #ifdef CONFIG_DRIVER_EFR32_RFPACKET_LDC
-static void efr32_rfp_calc_ldc(struct radio_efr32_rfp_ctx_s *ctx, uint32_t *p_rx_start, uint32_t *p_rx_end) {
+static void efr32_rfp_calc_ldc(struct radio_efr32_rfp_ctx_s *ctx) {
   // Time bit in ns
   uint32_t time_bit = 1000000000 / ctx->curr_drate;
-  uint32_t time_preamb = ctx->curr_rx_pb_len * time_bit;
-  uint32_t time_rx = 2 * EFR32_RX_PB_THRESHOLD * time_bit; // Double length as edge case margin
+  uint32_t time_preamb = (ctx->curr_rx_pb_len - 32) * time_bit; // Remove some bits as margin of error
+  uint32_t time_rx = EFR32_RX_THRESH * time_bit + EFR32_RXWARM_NS;
   assert(time_preamb > time_rx);
   uint32_t time_sleep = time_preamb - time_rx;
   // Convert in 30us step with rounding
-  *p_rx_start = (time_sleep + 15000) / 30000;
-  *p_rx_end = (time_preamb + 15000) / 30000;
-  //printk("ldc values: rx start %d rx end %d\n", *p_rx_start, *p_rx_end);
+  ctx->ldc_rx_start = (time_sleep + 15000) / 30000;
+  ctx->ldc_rx_end = (time_preamb + 15000) / 30000;
+  printk("values: rx start %d rx end %d\n", ctx->ldc_rx_start, ctx->ldc_rx_end);
 }
 
 static void efr32_rfp_schedule_next_wup(struct radio_efr32_rfp_ctx_s *ctx) {
-  uint32_t rx_start = 0;
-  uint32_t rx_end = 0;
-  efr32_rfp_calc_ldc(ctx, &rx_start, &rx_end);
-
   uint32_t x = cpu_mem_read_32(EFM32_RTCC_ADDR + EFM32_RTCC_CNT_ADDR);
-  cpu_mem_write_32(EFM32_RTCC_ADDR + EFM32_RTCC_CC_CCV_ADDR(1), rx_start + x);
-  cpu_mem_write_32(EFM32_RTCC_ADDR + EFM32_RTCC_CC_CCV_ADDR(2), rx_end + x);
+  cpu_mem_write_32(EFM32_RTCC_ADDR + EFM32_RTCC_CC_CCV_ADDR(1), ctx->ldc_rx_start + x);
+  cpu_mem_write_32(EFM32_RTCC_ADDR + EFM32_RTCC_CC_CCV_ADDR(2), ctx->ldc_rx_end + x);
 #ifdef CONFIG_DRIVER_EFR32_RFPACKET_SLEEP
-  // Stop all clock exept for RTCC
+  // Stop all clock except for RTCC
   for (uint8_t i = 0; i < EFR32_RADIO_CLK_EP_COUNT - 1; i++)
     dev_clock_sink_gate(&ctx->pv.clk_ep[i], DEV_CLOCK_EP_POWER);
   ctx->sleep = true;
@@ -1189,6 +1192,7 @@ static void efr32_rfp_rac_irq(struct radio_efr32_rfp_ctx_s *ctx) {
 static error_t efr32_radio_check_config(struct dev_rfpacket_ctx_s *gpv, struct dev_rfpacket_rq_s *rq) {
   struct radio_efr32_rfp_ctx_s *ctx = gpv->pvdata;
   error_t err;
+  bool config_changed = false;
 
   if ((rq->rf_cfg != ctx->rf_cfg) || rq->rf_cfg->cache.dirty) {
     err = efr32_build_rf_config(ctx, rq);
@@ -1198,6 +1202,7 @@ static error_t efr32_radio_check_config(struct dev_rfpacket_ctx_s *gpv, struct d
     // Update rf cfg values
     ((struct dev_rfpacket_rf_cfg_s *)rq->rf_cfg)->cache.dirty = 0;
     ctx->rf_cfg = rq->rf_cfg;
+    config_changed = true;
   }
   if ((rq->pk_cfg != ctx->pk_cfg) || rq->pk_cfg->cache.dirty) {
     err = efr32_build_pkt_config(ctx, rq);
@@ -1207,6 +1212,14 @@ static error_t efr32_radio_check_config(struct dev_rfpacket_ctx_s *gpv, struct d
     // Update pk cfg values
     ((struct dev_rfpacket_pk_cfg_s *)rq->pk_cfg)->cache.dirty = 0;
     ctx->pk_cfg = rq->pk_cfg;
+    config_changed = true;
+  }
+  // Calc params if config changed
+  if (config_changed) {
+#ifdef CONFIG_DRIVER_EFR32_RFPACKET_LDC
+  // Update ldc values
+    efr32_rfp_calc_ldc(ctx);
+#endif
   }
   return 0;
 }
@@ -1477,9 +1490,11 @@ static DEV_IRQ_SRC_PROCESS(efr32_radio_irq) {
 
 #ifdef CONFIG_DRIVER_EFR32_RFPACKET_LDC
     case 9:
+      // Read rtcc irq reg
       irq = cpu_mem_read_32(EFM32_RTCC_ADDR + EFM32_RTCC_IF_ADDR);
       irq &= cpu_mem_read_32(EFM32_RTCC_ADDR + EFM32_RTCC_IEN_ADDR);
       cpu_mem_write_32(EFM32_RTCC_ADDR + EFM32_RTCC_IFC_ADDR, endian_le32(EFM32_RTCC_IFC_MASK));
+      // Start Rx event
       if (irq & EFM32_RTCC_IEN_CC(1)) {
 #ifdef CONFIG_DRIVER_EFR32_RFPACKET_SLEEP
         // Wakeup radio if sleeping
