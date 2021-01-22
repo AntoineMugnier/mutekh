@@ -1571,10 +1571,11 @@ static DEV_IRQ_SRC_PROCESS(efr32_radio_irq) {
           kroutine_init_deferred(&ctx->pv.kr, &efr32_rfp_ldc);
           kroutine_exec(&ctx->pv.kr);
         } else {
-          // FIXME need to make sure rx event happen to revive rxc
-          // TODO keep synchro
           // Clear predet modem irq
           cpu_mem_write_32(EFR32_MODEM_ADDR + EFR32_MODEM_IFC_ADDR, EFR32_MODEM_IF_RXPREDET);
+          // Set-up another event in case rx fail
+          uint32_t curr_time = efr32_rfp_get_ldc_time();
+          cpu_mem_write_32(EFM32_RTCC_ADDR + EFM32_RTCC_CC_CCV_ADDR(2), curr_time + ctx->ldc_rx_end);
         }
       }
       break;
