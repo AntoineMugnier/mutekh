@@ -42,8 +42,9 @@
                                    EFR32_FRC_IF_BLOCKERROR |      \
                                    EFR32_FRC_IF_FRAMEERROR)
 
-#define EFR32_RXWARM_NS 1250000 // Measure empirically
-#define EFR32_RX_THRESH 0x10 // Abritrary value
+#define EFR32_LDC_TX_RESTART_NS 5000000 // Time before restarting rx after tx
+#define EFR32_LDC_RX_START_NS 980000 // Measured empirically, 80µs rx warm, 900µs rx off
+#define EFR32_LDC_RX_THRESH 0x24 // Number of symbols to detect preambule (Abritrary value)
 
 // Power calculation values
 #define EFR32_POW_STRIPE_MAX_VAL  32
@@ -86,7 +87,6 @@ DRIVER_PV(struct radio_efr32_rfp_ctx_s {
   // LDC values
   uint32_t ldc_rx_start;
   uint32_t ldc_rx_end;
-  dev_timer_value_t ldc_last_end; // TODO: use to keep synchro
 #endif
 });
 
@@ -862,11 +862,15 @@ static void efr32_rfp_cfg_protimer_dbg(struct radio_efr32_rfp_ctx_s *ctx) {
 
 
 #ifdef CONFIG_DRIVER_EFR32_RFPACKET_LDC
+static uint32_t efr32_rfp_get_ldc_time(void) {
+  return cpu_mem_read_32(EFM32_RTCC_ADDR + EFM32_RTCC_CNT_ADDR);
+}
+
 static void efr32_rfp_calc_ldc(struct radio_efr32_rfp_ctx_s *ctx) {
   // Time bit in ns
   uint32_t time_bit = 1000000000 / ctx->curr_drate;
   uint32_t time_preamb = (ctx->curr_rx_pb_len - 32) * time_bit; // Remove some bits as margin of error
-  uint32_t time_rx = EFR32_RX_THRESH * time_bit + EFR32_RXWARM_NS;
+  uint32_t time_rx = EFR32_LDC_RX_THRESH * time_bit + EFR32_LDC_RX_START_NS;
   assert(time_preamb > time_rx);
   uint32_t time_sleep = time_preamb - time_rx;
   // Convert in 30us step with rounding
@@ -875,10 +879,12 @@ static void efr32_rfp_calc_ldc(struct radio_efr32_rfp_ctx_s *ctx) {
   printk("values: rx start %d rx end %d\n", ctx->ldc_rx_start, ctx->ldc_rx_end);
 }
 
-static void efr32_rfp_schedule_next_wup(struct radio_efr32_rfp_ctx_s *ctx) {
-  uint32_t x = cpu_mem_read_32(EFM32_RTCC_ADDR + EFM32_RTCC_CNT_ADDR);
-  cpu_mem_write_32(EFM32_RTCC_ADDR + EFM32_RTCC_CC_CCV_ADDR(1), ctx->ldc_rx_start + x);
-  cpu_mem_write_32(EFM32_RTCC_ADDR + EFM32_RTCC_CC_CCV_ADDR(2), ctx->ldc_rx_end + x);
+static void efr32_rfp_schedule_next_wup(struct radio_efr32_rfp_ctx_s *ctx, uint32_t rx_start, uint32_t rx_end) {
+  // Get current time
+  uint32_t curr_time = efr32_rfp_get_ldc_time();
+  // Set reg values
+  cpu_mem_write_32(EFM32_RTCC_ADDR + EFM32_RTCC_CC_CCV_ADDR(1), curr_time + ctx->ldc_rx_start);
+  cpu_mem_write_32(EFM32_RTCC_ADDR + EFM32_RTCC_CC_CCV_ADDR(2), curr_time + ctx->ldc_rx_end);
 #ifdef CONFIG_DRIVER_EFR32_RFPACKET_SLEEP
   // Stop all clock except for RTCC
   for (uint8_t i = 0; i < EFR32_RADIO_CLK_EP_COUNT - 1; i++)
@@ -887,12 +893,25 @@ static void efr32_rfp_schedule_next_wup(struct radio_efr32_rfp_ctx_s *ctx) {
 #endif
 }
 
+static void efr32_rfp_set_wup(struct radio_efr32_rfp_ctx_s *ctx) {
+  uint32_t rx_start, rx_end;
+  // Get current time
+  uint32_t curr_time = efr32_rfp_get_ldc_time();
+  // Calc start and end time
+  rx_start = curr_time + EFR32_LDC_TX_RESTART_NS;
+  rx_end = curr_time + EFR32_LDC_TX_RESTART_NS + ctx->ldc_rx_end - ctx->ldc_rx_start;
+  // Schedule new wup
+  efr32_rfp_schedule_next_wup(ctx, rx_start, rx_end);
+}
+
 static void efr32_rfp_start_rx_ldc(struct radio_efr32_rfp_ctx_s *ctx) {
+  // Set rtcc config
   cpu_mem_write_32(EFM32_RTCC_ADDR + EFM32_RTCC_CC_CTRL_ADDR(1), EFM32_RTCC_CC_CTRL_MODE_SHIFT_VAL(OUTPUTCOMPARE));
   cpu_mem_write_32(EFM32_RTCC_ADDR + EFM32_RTCC_CC_CTRL_ADDR(2), EFM32_RTCC_CC_CTRL_MODE_SHIFT_VAL(OUTPUTCOMPARE));
   cpu_mem_write_32(EFM32_RTCC_ADDR + EFM32_RTCC_IFC_ADDR, endian_le32(EFM32_RTCC_IFC_MASK));
   cpu_mem_write_32(EFM32_RTCC_ADDR + EFM32_RTCC_IEN_ADDR, EFM32_RTCC_IEN_CC(2) | EFM32_RTCC_IEN_CC(1));
-  efr32_rfp_schedule_next_wup(ctx);
+  // Config ldc timer irq
+  efr32_rfp_set_wup(ctx);
   // Start Counter
   cpu_mem_write_32(EFM32_RTCC_ADDR + EFM32_RTCC_CTRL_ADDR, endian_le32(EFM32_RTCC_CTRL_ENABLE));
 }
@@ -901,7 +920,13 @@ static KROUTINE_EXEC(efr32_rfp_ldc) {
   struct radio_efr32_ctx_s *pv = radio_efr32_ctx_s_from_kr(kr);
   struct radio_efr32_rfp_ctx_s *ctx = radio_efr32_rfp_ctx_s_from_pv(pv);
 
-  efr32_rfp_schedule_next_wup(ctx);
+  // Get current time
+  uint32_t curr_time = efr32_rfp_get_ldc_time();
+  // Set values
+  uint32_t rx_start = curr_time + ctx->ldc_rx_start;
+  uint32_t rx_end = curr_time + ctx->ldc_rx_end;
+  // Schedule new wup
+  efr32_rfp_schedule_next_wup(ctx, rx_start, rx_end);
 }
 #endif
 
@@ -1542,6 +1567,7 @@ static DEV_IRQ_SRC_PROCESS(efr32_radio_irq) {
           // Disable Rx
           cpu_mem_write_32(EFR32_RAC_ADDR + EFR32_RAC_RXENSRCEN_ADDR, 0);
           cpu_mem_write_32(EFR32_RAC_ADDR + EFR32_RAC_CMD_ADDR, EFR32_RAC_CMD_RXDIS);
+          // Call end ldc kroutine
           kroutine_init_deferred(&ctx->pv.kr, &efr32_rfp_ldc);
           kroutine_exec(&ctx->pv.kr);
         } else {
