@@ -43,7 +43,7 @@
                                    EFR32_FRC_IF_FRAMEERROR)
 
 #define EFR32_LDC_TX_RESTART_NS 5000000 // Time before restarting rx after tx
-#define EFR32_LDC_RX_START_NS 980000 // Measured empirically, 80µs rx warm, 900µs rx off
+#define EFR32_LDC_RX_START_NS 960000 // Measured empirically, 80µs rx warm, 880µs rx off
 #define EFR32_LDC_RX_THRESH 0x24 // Number of symbols to detect preambule (Abritrary value)
 
 // Power calculation values
@@ -869,7 +869,7 @@ static uint32_t efr32_rfp_get_ldc_time(void) {
 static void efr32_rfp_calc_ldc(struct radio_efr32_rfp_ctx_s *ctx) {
   // Time bit in ns
   uint32_t time_bit = 1000000000 / ctx->curr_drate;
-  uint32_t time_preamb = (ctx->curr_rx_pb_len - 32) * time_bit; // Remove some bits as margin of error
+  uint32_t time_preamb = (ctx->curr_rx_pb_len) * time_bit;
   uint32_t time_rx = EFR32_LDC_RX_THRESH * time_bit + EFR32_LDC_RX_START_NS;
   assert(time_preamb > time_rx);
   uint32_t time_sleep = time_preamb - time_rx;
