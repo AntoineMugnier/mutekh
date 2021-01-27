@@ -43,7 +43,7 @@
                                    EFR32_FRC_IF_FRAMEERROR)
 
 #define EFR32_LDC_TX_RESTART_NS 5000000 // Time before restarting rx after tx
-#define EFR32_LDC_RX_START_NS 960000 // Measured empirically, 80µs rx warm, 880µs rx off
+#define EFR32_LDC_RX_START_NS 920000 // Measured empirically, 80µs rx warm, 880µs rx off (200µs sink gate, 630µs hfxo)
 #define EFR32_LDC_RX_THRESH 0x24 // Number of symbols to detect preambule (Abritrary value)
 
 // Power calculation values
@@ -1546,7 +1546,7 @@ static DEV_IRQ_SRC_PROCESS(efr32_radio_irq) {
 #ifdef CONFIG_DRIVER_EFR32_RFPACKET_SLEEP
         // Wakeup clocks if sleeping
         if (ctx->sleep) {
-          for (uint8_t i = 0; i < EFR32_RADIO_CLK_EP_COUNT -1; i++) {
+          for (uint8_t i = 0; i < EFR32_RADIO_CLK_EP_COUNT - 2; i++) {
             dev_clock_sink_gate(&ctx->pv.clk_ep[i], DEV_CLOCK_EP_POWER_CLOCK);
           }
           ctx->sleep = false;
