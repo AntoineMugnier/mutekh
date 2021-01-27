@@ -1784,7 +1784,11 @@ static error_t efr32_rfp_fsk_init(struct radio_efr32_rfp_ctx_s *ctx) {
     0x000C6078UL, 0x11A0071BUL,
     /*    607C */ 0x00000000UL,
     /*    6080 */ 0x003B0373UL,
+#ifdef CONFIG_DRIVER_EFR32_RFPACKET_LDC
     /*    6084 */ 0x019591F9UL, // AFC_LOCK_AT_PREAMBLE_DETECT
+#else
+                  0x00000000UL,
+#endif
     /*    6088 */ 0x00000000UL,
     /*    608C */ 0x22140A04UL,
     /*    6090 */ 0x4F4A4132UL,
