@@ -876,7 +876,7 @@ static void efr32_rfp_calc_ldc(struct radio_efr32_rfp_ctx_s *ctx) {
   // Convert in 30us step with rounding
   ctx->ldc_rx_start = (time_sleep + 15000) / 30000;
   ctx->ldc_rx_end = (time_preamb + 15000) / 30000;
-  printk("values: rx start %d rx end %d\n", ctx->ldc_rx_start, ctx->ldc_rx_end);
+  //printk("values: rx start %d rx end %d\n", ctx->ldc_rx_start, ctx->ldc_rx_end);
 }
 
 static void efr32_rfp_schedule_next_wup(struct radio_efr32_rfp_ctx_s *ctx, uint32_t rx_start, uint32_t rx_end) {
@@ -910,6 +910,8 @@ static void efr32_rfp_start_rx_ldc(struct radio_efr32_rfp_ctx_s *ctx) {
   cpu_mem_write_32(EFM32_RTCC_ADDR + EFM32_RTCC_CC_CTRL_ADDR(2), EFM32_RTCC_CC_CTRL_MODE_SHIFT_VAL(OUTPUTCOMPARE));
   cpu_mem_write_32(EFM32_RTCC_ADDR + EFM32_RTCC_IFC_ADDR, endian_le32(EFM32_RTCC_IFC_MASK));
   cpu_mem_write_32(EFM32_RTCC_ADDR + EFM32_RTCC_IEN_ADDR, EFM32_RTCC_IEN_CC(2) | EFM32_RTCC_IEN_CC(1));
+  // Set AFC
+  cpu_mem_write_32(EFR32_MODEM_ADDR + EFR32_MODEM_AFC_ADDR, 0x019591F9);
   // Config ldc timer irq
   efr32_rfp_set_wup(ctx);
   // Start Counter
@@ -1390,6 +1392,9 @@ static void efr32_radio_tx(struct dev_rfpacket_ctx_s *gpv, struct dev_rfpacket_r
 static void efr32_radio_cancel_rxc(struct dev_rfpacket_ctx_s *gpv) {
   struct radio_efr32_rfp_ctx_s *ctx = gpv->pvdata;
   efr32_radio_printk("rxc canceled\n");
+#ifdef CONFIG_DRIVER_EFR32_RFPACKET_LDC
+  cpu_mem_write_32(EFR32_MODEM_ADDR + EFR32_MODEM_AFC_ADDR, 0x00000000);
+#endif
   if (efr32_rfp_disable(ctx)) {
     // Disable already done, call req done
     efr32_rfp_req_done_direct(ctx, DEV_RFPACKET_STATUS_MISC);
@@ -1784,11 +1789,7 @@ static error_t efr32_rfp_fsk_init(struct radio_efr32_rfp_ctx_s *ctx) {
     0x000C6078UL, 0x11A0071BUL,
     /*    607C */ 0x00000000UL,
     /*    6080 */ 0x003B0373UL,
-#ifdef CONFIG_DRIVER_EFR32_RFPACKET_LDC
-    /*    6084 */ 0x019591F9UL, // AFC_LOCK_AT_PREAMBLE_DETECT
-#else
-                  0x00000000UL,
-#endif
+    /*    6084 */ 0x00000000UL,
     /*    6088 */ 0x00000000UL,
     /*    608C */ 0x22140A04UL,
     /*    6090 */ 0x4F4A4132UL,
