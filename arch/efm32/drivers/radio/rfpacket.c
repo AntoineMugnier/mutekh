@@ -1567,8 +1567,10 @@ static DEV_IRQ_SRC_PROCESS(efr32_radio_irq) {
         uint32_t rac_state = endian_le32(cpu_mem_read_32(EFR32_RAC_ADDR + EFR32_RAC_STATUS_ADDR));
         rac_state = EFR32_RAC_STATUS_STATE_GET(rac_state);
         uint32_t modem_status = cpu_mem_read_32(EFR32_MODEM_ADDR + EFR32_MODEM_IF_ADDR);
+        // Ignore if tx
+        if ((rac_state == EFR32_RAC_STATUS_STATE_TX) || (rac_state == EFR32_RAC_STATUS_STATE_TXWARM))  {
         // Don't stop rx if rx incoming or preambule detected
-        if ((rac_state != EFR32_RAC_STATUS_STATE_RXFRAME) && ((modem_status & EFR32_MODEM_IF_RXPREDET) == 0))  {
+        } else if ((rac_state != EFR32_RAC_STATUS_STATE_RXFRAME) && ((modem_status & EFR32_MODEM_IF_RXPREDET) == 0))  {
           // Disable Rx
           cpu_mem_write_32(EFR32_RAC_ADDR + EFR32_RAC_RXENSRCEN_ADDR, 0);
           cpu_mem_write_32(EFR32_RAC_ADDR + EFR32_RAC_CMD_ADDR, EFR32_RAC_CMD_RXDIS);
