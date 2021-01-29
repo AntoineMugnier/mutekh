@@ -1436,6 +1436,7 @@ static void efr32_radio_cancel_rxc(struct dev_rfpacket_ctx_s *gpv) {
   struct radio_efr32_rfp_ctx_s *ctx = gpv->pvdata;
   efr32_radio_printk("rxc canceled\n");
 #ifdef CONFIG_DRIVER_EFR32_RFPACKET_LDC
+  // Deactivate AFC
   cpu_mem_write_32(EFR32_MODEM_ADDR + EFR32_MODEM_AFC_ADDR, 0x00000000);
 #endif
   if (efr32_rfp_disable(ctx)) {
