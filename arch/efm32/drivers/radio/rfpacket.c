@@ -43,7 +43,7 @@
                                    EFR32_FRC_IF_FRAMEERROR)
 
 #define EFR32_LDC_TX_RESTART_NS 5000000 // Time before restarting rx after tx
-#define EFR32_LDC_RX_START_NS 920000 // Measured empirically, 80µs rx warm, 880µs rx off (200µs sink gate, 630µs hfxo)
+#define EFR32_LDC_RX_START_NS 760000 // Measured empirically, 80µs rx warm, 880µs rx off (25µs/sink gate, 452µs hfxo)
 #define EFR32_LDC_RX_THRESH 0x24 // Number of symbols to detect preambule (Abritrary value)
 
 // Power calculation values
@@ -1909,6 +1909,9 @@ static error_t efr32_rfp_fsk_init(struct radio_efr32_rfp_ctx_s *ctx) {
   cpu_mem_write_32(EFR32_AGC_ADDR + EFR32_AGC_ATTENCODE1_ADDR, 0x6543210);
   cpu_mem_write_32(EFR32_AGC_ADDR + EFR32_AGC_ATTENCODE2_ADDR, 0x18b52507);
   cpu_mem_write_32(EFR32_AGC_ADDR + EFR32_AGC_ATTENCODE3_ADDR, 0x25183dcd);
+
+  // Reduce HFXO boot-up time
+  cpu_mem_write_32(EFM32_CMU_ADDR + EFM32_CMU_HFXOTIMEOUTCTRL_ADDR, 0x2a047);
 
   return 0;
 }
