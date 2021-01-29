@@ -887,8 +887,9 @@ static void efr32_rfp_schedule_next_wup(struct radio_efr32_rfp_ctx_s *ctx, uint3
   cpu_mem_write_32(EFM32_RTCC_ADDR + EFM32_RTCC_CC_CCV_ADDR(2), curr_time + ctx->ldc_rx_end);
 #ifdef CONFIG_DRIVER_EFR32_RFPACKET_SLEEP
   // Stop all clock except for RTCC
-  for (uint8_t i = 0; i < EFR32_RADIO_CLK_EP_COUNT - 1; i++)
+  for (uint8_t i = 0; i < EFR32_RADIO_CLK_EP_COUNT - 1; i++) {
     dev_clock_sink_gate(&ctx->pv.clk_ep[i], DEV_CLOCK_EP_POWER);
+  }
   ctx->sleep = true;
 #endif
 }
@@ -929,6 +930,48 @@ static KROUTINE_EXEC(efr32_rfp_ldc) {
   uint32_t rx_end = curr_time + ctx->ldc_rx_end;
   // Schedule new wup
   efr32_rfp_schedule_next_wup(ctx, rx_start, rx_end);
+}
+
+static void efr32_rfp_ldc_irq(struct radio_efr32_rfp_ctx_s *ctx, uint32_t irq) {
+  // Start Rx event
+  if (irq & EFM32_RTCC_IEN_CC(1)) {
+#ifdef CONFIG_DRIVER_EFR32_RFPACKET_SLEEP
+    // Wakeup clocks if sleeping
+    if (ctx->sleep) {
+      for (uint8_t i = 0; i < EFR32_RADIO_CLK_EP_COUNT - 2; i++) {
+        dev_clock_sink_gate(&ctx->pv.clk_ep[i], DEV_CLOCK_EP_POWER_CLOCK);
+      }
+      ctx->sleep = false;
+    }
+#endif
+    // Enable rx
+    uint32_t x = cpu_mem_read_32(EFR32_RAC_ADDR + EFR32_RAC_RXENSRCEN_ADDR);
+    x |= 0x2;
+    cpu_mem_write_32(EFR32_RAC_ADDR + EFR32_RAC_RXENSRCEN_ADDR, x);
+  // End rx event
+  } else if (irq & EFM32_RTCC_IEN_CC(2)) {
+    // Get rac state and modem status
+    uint32_t rac_state = endian_le32(cpu_mem_read_32(EFR32_RAC_ADDR + EFR32_RAC_STATUS_ADDR));
+    rac_state = EFR32_RAC_STATUS_STATE_GET(rac_state);
+    uint32_t modem_status = cpu_mem_read_32(EFR32_MODEM_ADDR + EFR32_MODEM_IF_ADDR);
+    // Ignore if tx
+    if ((rac_state == EFR32_RAC_STATUS_STATE_TX) || (rac_state == EFR32_RAC_STATUS_STATE_TXWARM))  {
+    // Don't stop rx if rx incoming or preambule detected
+    } else if ((rac_state != EFR32_RAC_STATUS_STATE_RXFRAME) && ((modem_status & EFR32_MODEM_IF_RXPREDET) == 0))  {
+      // Disable Rx
+      cpu_mem_write_32(EFR32_RAC_ADDR + EFR32_RAC_RXENSRCEN_ADDR, 0);
+      cpu_mem_write_32(EFR32_RAC_ADDR + EFR32_RAC_CMD_ADDR, EFR32_RAC_CMD_RXDIS);
+      // Call end ldc kroutine
+      kroutine_init_deferred(&ctx->pv.kr, &efr32_rfp_ldc);
+      kroutine_exec(&ctx->pv.kr);
+    } else {
+      // Clear predet modem irq
+      cpu_mem_write_32(EFR32_MODEM_ADDR + EFR32_MODEM_IFC_ADDR, EFR32_MODEM_IF_RXPREDET);
+      // Set-up another event in case rx fail
+      uint32_t curr_time = efr32_rfp_get_ldc_time();
+      cpu_mem_write_32(EFM32_RTCC_ADDR + EFM32_RTCC_CC_CCV_ADDR(2), curr_time + ctx->ldc_rx_end);
+    }
+  }
 }
 #endif
 
@@ -1545,46 +1588,11 @@ static DEV_IRQ_SRC_PROCESS(efr32_radio_irq) {
       // Read rtcc irq reg
       irq = cpu_mem_read_32(EFM32_RTCC_ADDR + EFM32_RTCC_IF_ADDR);
       irq &= cpu_mem_read_32(EFM32_RTCC_ADDR + EFM32_RTCC_IEN_ADDR);
+      efr32_radio_printk("rtcc irq: 0x%x\n", irq);
+      // Clear irq
       cpu_mem_write_32(EFM32_RTCC_ADDR + EFM32_RTCC_IFC_ADDR, endian_le32(EFM32_RTCC_IFC_MASK));
-      // Start Rx event
-      if (irq & EFM32_RTCC_IEN_CC(1)) {
-#ifdef CONFIG_DRIVER_EFR32_RFPACKET_SLEEP
-        // Wakeup clocks if sleeping
-        if (ctx->sleep) {
-          for (uint8_t i = 0; i < EFR32_RADIO_CLK_EP_COUNT - 2; i++) {
-            dev_clock_sink_gate(&ctx->pv.clk_ep[i], DEV_CLOCK_EP_POWER_CLOCK);
-          }
-          ctx->sleep = false;
-        }
-#endif
-        // Enable rx
-        uint32_t x = cpu_mem_read_32(EFR32_RAC_ADDR + EFR32_RAC_RXENSRCEN_ADDR);
-        x |= 0x2;
-        cpu_mem_write_32(EFR32_RAC_ADDR + EFR32_RAC_RXENSRCEN_ADDR, x);
-      // End rx event
-      } else if (irq & EFM32_RTCC_IEN_CC(2)) {
-        // Get rac state and modem status
-        uint32_t rac_state = endian_le32(cpu_mem_read_32(EFR32_RAC_ADDR + EFR32_RAC_STATUS_ADDR));
-        rac_state = EFR32_RAC_STATUS_STATE_GET(rac_state);
-        uint32_t modem_status = cpu_mem_read_32(EFR32_MODEM_ADDR + EFR32_MODEM_IF_ADDR);
-        // Ignore if tx
-        if ((rac_state == EFR32_RAC_STATUS_STATE_TX) || (rac_state == EFR32_RAC_STATUS_STATE_TXWARM))  {
-        // Don't stop rx if rx incoming or preambule detected
-        } else if ((rac_state != EFR32_RAC_STATUS_STATE_RXFRAME) && ((modem_status & EFR32_MODEM_IF_RXPREDET) == 0))  {
-          // Disable Rx
-          cpu_mem_write_32(EFR32_RAC_ADDR + EFR32_RAC_RXENSRCEN_ADDR, 0);
-          cpu_mem_write_32(EFR32_RAC_ADDR + EFR32_RAC_CMD_ADDR, EFR32_RAC_CMD_RXDIS);
-          // Call end ldc kroutine
-          kroutine_init_deferred(&ctx->pv.kr, &efr32_rfp_ldc);
-          kroutine_exec(&ctx->pv.kr);
-        } else {
-          // Clear predet modem irq
-          cpu_mem_write_32(EFR32_MODEM_ADDR + EFR32_MODEM_IFC_ADDR, EFR32_MODEM_IF_RXPREDET);
-          // Set-up another event in case rx fail
-          uint32_t curr_time = efr32_rfp_get_ldc_time();
-          cpu_mem_write_32(EFM32_RTCC_ADDR + EFM32_RTCC_CC_CCV_ADDR(2), curr_time + ctx->ldc_rx_end);
-        }
-      }
+      // Process irq
+      efr32_rfp_ldc_irq(ctx, irq);
       break;
 #endif
 
