@@ -42,6 +42,7 @@
                                    EFR32_FRC_IF_BLOCKERROR |      \
                                    EFR32_FRC_IF_FRAMEERROR)
 
+// LDC values
 #define EFR32_LDC_TX_RESTART_NS 5000000 // Time before restarting rx after tx
 #define EFR32_LDC_RX_START_NS 760000 // Measured empirically, 80µs rx warm, 880µs rx off (25µs/sink gate, 452µs hfxo)
 #define EFR32_LDC_RX_THRESH 0x24 // Number of symbols to detect preambule (Abritrary value)
@@ -58,6 +59,7 @@ enum efr32_rac_irq_type {
   EFR32_RAC_IRQ_TIMEOUT,
   EFR32_RAC_IRQ_TXRX,
 };
+
 
 DRIVER_PV(struct radio_efr32_rfp_ctx_s {
   struct radio_efr32_ctx_s pv;
@@ -87,6 +89,7 @@ DRIVER_PV(struct radio_efr32_rfp_ctx_s {
   // LDC values
   uint32_t ldc_rx_start;
   uint32_t ldc_rx_end;
+  bool ldc_canceled;
 #endif
 });
 
@@ -906,6 +909,8 @@ static void efr32_rfp_set_wup(struct radio_efr32_rfp_ctx_s *ctx) {
 }
 
 static void efr32_rfp_start_rx_ldc(struct radio_efr32_rfp_ctx_s *ctx) {
+  // Clear flag
+  ctx->ldc_canceled = false;
   // Set rtcc config
   cpu_mem_write_32(EFM32_RTCC_ADDR + EFM32_RTCC_CC_CTRL_ADDR(1), EFM32_RTCC_CC_CTRL_MODE_SHIFT_VAL(OUTPUTCOMPARE));
   cpu_mem_write_32(EFM32_RTCC_ADDR + EFM32_RTCC_CC_CTRL_ADDR(2), EFM32_RTCC_CC_CTRL_MODE_SHIFT_VAL(OUTPUTCOMPARE));
@@ -923,13 +928,15 @@ static KROUTINE_EXEC(efr32_rfp_ldc) {
   struct radio_efr32_ctx_s *pv = radio_efr32_ctx_s_from_kr(kr);
   struct radio_efr32_rfp_ctx_s *ctx = radio_efr32_rfp_ctx_s_from_pv(pv);
 
-  // Get current time
-  uint32_t curr_time = efr32_rfp_get_ldc_time();
-  // Set values
-  uint32_t rx_start = curr_time + ctx->ldc_rx_start;
-  uint32_t rx_end = curr_time + ctx->ldc_rx_end;
-  // Schedule new wup
-  efr32_rfp_schedule_next_wup(ctx, rx_start, rx_end);
+  if (!ctx->ldc_canceled) {
+    // Get current time
+    uint32_t curr_time = efr32_rfp_get_ldc_time();
+    // Set values
+    uint32_t rx_start = curr_time + ctx->ldc_rx_start;
+    uint32_t rx_end = curr_time + ctx->ldc_rx_end;
+    // Schedule new wup
+    efr32_rfp_schedule_next_wup(ctx, rx_start, rx_end);
+  }
 }
 
 static void efr32_rfp_ldc_irq(struct radio_efr32_rfp_ctx_s *ctx, uint32_t irq) {
@@ -1436,6 +1443,10 @@ static void efr32_radio_cancel_rxc(struct dev_rfpacket_ctx_s *gpv) {
   struct radio_efr32_rfp_ctx_s *ctx = gpv->pvdata;
   efr32_radio_printk("rxc canceled\n");
 #ifdef CONFIG_DRIVER_EFR32_RFPACKET_LDC
+  // Stop rtcc
+  cpu_mem_write_32(EFM32_RTCC_ADDR + EFM32_RTCC_CTRL_ADDR, 0);
+  // Flag cancel
+  ctx->ldc_canceled = true;
   // Deactivate AFC
   cpu_mem_write_32(EFR32_MODEM_ADDR + EFR32_MODEM_AFC_ADDR, 0x00000000);
 #endif
