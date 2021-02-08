@@ -45,8 +45,8 @@
 #define ARMV7M_SYST_CVR_ADDR                         0xe000e018
   #define ARMV7M_SYST_CVR_CURRENT_SHIFT            0
   #define ARMV7M_SYST_CVR_CURRENT(v)               ((v) << 0)
-  #define ARMV7M_SYST_CVR_CURRENT_SET(x, v)        do { (x) = (((x) & ~0xffffffff) | ((v) << 0)); } while(0)
-  #define ARMV7M_SYST_CVR_CURRENT_GET(x)           (((x) >> 0) & 0xffffffff)
+  #define ARMV7M_SYST_CVR_CURRENT_SET(x, v)        do { (x) = (((x) & ~0xffffff) | ((v) << 0)); } while(0)
+  #define ARMV7M_SYST_CVR_CURRENT_GET(x)           (((x) >> 0) & 0xffffff)
 
 #define ARMV7M_SYST_CALIB_ADDR                       0xe000e01c
   #define ARMV7M_SYST_CALIB_TENMS_SHIFT            0
