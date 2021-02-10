@@ -42,6 +42,10 @@
                                    EFR32_FRC_IF_BLOCKERROR |      \
                                    EFR32_FRC_IF_FRAMEERROR)
 
+// Baudrate calc values
+#define EFR32_BR_MAX_DEN 0x7f80 // Found empirically through simplicity studio
+#define EFR32_BR_MAX_NUM 0xff
+
 // LDC values
 #define EFR32_LDC_TX_RESTART_NS 5000000 // Time before restarting rx after tx
 #define EFR32_LDC_RX_START_NS 760000 // Measured empirically, 80µs rx warm, 880µs rx off (25µs/sink gate, 452µs hfxo)
@@ -514,6 +518,23 @@ static error_t efr32_set_tx_power(struct radio_efr32_rfp_ctx_s *ctx, struct dev_
 
 
 #ifndef CONFIG_DEVICE_RFPACKET_STATIC_RF_CONFIG
+static uint32_t efr32_build_baudrate(uint32_t br) {
+  uint32_t rnum = 0, rden = 0;
+  // Formula for Tx baudrate: Br = (ModemFreq * txbrnum)/(8 * txbrden)
+  // Calc ratio with rounding
+  uint64_t rratio =  (EFR32_RADIO_HFXO_CLK + 4 * br) / (8 * br);
+  // Determine numerator within dynamic
+  if (rratio * EFR32_BR_MAX_NUM > EFR32_BR_MAX_DEN) {
+      rnum = EFR32_BR_MAX_DEN / rratio;
+  } else {
+      rnum = EFR32_BR_MAX_NUM;
+  }
+  // Deduce denominator from numerator
+  rden = rratio * rnum;
+  printk("Radio baudrate: %d 0x%x\n", br, (EFR32_MODEM_TXBR_TXBRNUM(rnum) | EFR32_MODEM_TXBR_TXBRDEN(rden)));
+  return (EFR32_MODEM_TXBR_TXBRNUM(rnum) | EFR32_MODEM_TXBR_TXBRDEN(rden));
+}
+
 static error_t efr32_build_gfsk_rf_config(struct radio_efr32_rfp_ctx_s *ctx, struct dev_rfpacket_rq_s *rq) {
   const struct dev_rfpacket_rf_cfg_fsk_s *cfsk = const_dev_rfpacket_rf_cfg_fsk_s_cast(rq->rf_cfg);
   const struct dev_rfpacket_rf_cfg_std_s *common = &cfsk->common;
@@ -531,6 +552,9 @@ static error_t efr32_build_gfsk_rf_config(struct radio_efr32_rfp_ctx_s *ctx, str
   uint64_t chsp = ((uint64_t)(common->chan_spacing) * div) << 19;
   chsp /= EFR32_RADIO_HFXO_CLK;
   cpu_mem_write_32(EFR32_SYNTH_ADDR + EFR32_SYNTH_CHSP_ADDR, (uint32_t)chsp);
+  // Configure baudrate
+  uint32_t br = efr32_build_baudrate(common->drate);
+  cpu_mem_write_32(EFR32_MODEM_ADDR + EFR32_MODEM_TXBR_ADDR, br);
   // Calc time byte
   ctx->gctx.time_byte = efr32_radio_calc_time(ctx, common->drate);
   // Note config values
