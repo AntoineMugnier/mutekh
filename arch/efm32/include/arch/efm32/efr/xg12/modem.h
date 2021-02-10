@@ -648,15 +648,15 @@
 #define EFR32_MODEM_TXBR_ADDR                        0x00000050
 #define EFR32_MODEM_TXBR_MASK                        0x00ffffff
 /** Tx baudrate numerator. Br = (ModemFreq * txbrnum)/(8 * txbrden) @multiple */
-  #define EFR32_MODEM_TXBR_TXBRNUM_IDX             0
-  #define EFR32_MODEM_TXBR_TXBRNUM(v)              ((v) << 0)
-  #define EFR32_MODEM_TXBR_TXBRNUM_SET(x, v)       do { (x) = (((x) & ~0xffff) | ((v) << 0)); } while(0)
-  #define EFR32_MODEM_TXBR_TXBRNUM_GET(x)          (((x) >> 0) & 0xffff)
+  #define EFR32_MODEM_TXBR_TXBRDEN_IDX             0
+  #define EFR32_MODEM_TXBR_TXBRDEN(v)              ((v) << 0)
+  #define EFR32_MODEM_TXBR_TXBRDEN_SET(x, v)       do { (x) = (((x) & ~0xffff) | ((v) << 0)); } while(0)
+  #define EFR32_MODEM_TXBR_TXBRDEN_GET(x)          (((x) >> 0) & 0xffff)
 /** Tx baudrate denominator @multiple */
-  #define EFR32_MODEM_TXBR_TXBRDEN_IDX             16
-  #define EFR32_MODEM_TXBR_TXBRDEN(v)              ((v) << 16)
-  #define EFR32_MODEM_TXBR_TXBRDEN_SET(x, v)       do { (x) = (((x) & ~0xff0000) | ((v) << 16)); } while(0)
-  #define EFR32_MODEM_TXBR_TXBRDEN_GET(x)          (((x) >> 16) & 0xff)
+  #define EFR32_MODEM_TXBR_TXBRNUM_IDX             16
+  #define EFR32_MODEM_TXBR_TXBRNUM(v)              ((v) << 16)
+  #define EFR32_MODEM_TXBR_TXBRNUM_SET(x, v)       do { (x) = (((x) & ~0xff0000) | ((v) << 16)); } while(0)
+  #define EFR32_MODEM_TXBR_TXBRNUM_GET(x)          (((x) >> 16) & 0xff)
 
 #define EFR32_MODEM_RXBR_ADDR                        0x00000054
 #define EFR32_MODEM_RXBR_MASK                        0x00001fff
