@@ -511,7 +511,7 @@ static error_t efr32_set_tx_power(struct radio_efr32_rfp_ctx_s *ctx, struct dev_
     return err;
   }
   // Write power value
-  cpu_mem_write_32(EFR32_RAC_ADDR + EFR32_RAC_PACTRL0_ADDR, pac_reg);
+  //cpu_mem_write_32(EFR32_RAC_ADDR + EFR32_RAC_PACTRL0_ADDR, pac_reg); // Bootloader crc bug
   cpu_mem_write_32(EFR32_RAC_ADDR + EFR32_RAC_SGPACTRL0_ADDR, sg_pac_reg);
   return 0;
 }
