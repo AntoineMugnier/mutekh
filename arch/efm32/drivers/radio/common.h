@@ -85,8 +85,6 @@
   #define EFR32_RADIO_CLK_EP_COUNT 8
 #endif
 
-#define EFR32_RADIO_HFXO_CLK 38400000L
-
 extern const unsigned char seqcode[];
 extern const size_t seqcode_size;
 
