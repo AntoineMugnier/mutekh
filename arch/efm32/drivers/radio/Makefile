@@ -1,7 +1,7 @@
 
 objs = common.o protimer.o sequencer.o
 
-objs-$(CONFIG_DRIVER_EFR32_RFPACKET) += rfpacket.o
+objs-$(CONFIG_DRIVER_EFR32_RFPACKET) += rfpacket.o radio_config.o
 objs-$(CONFIG_DRIVER_EFR32_BLE_ADVERTISE) += ble_advertise.o
 
 $(LOCAL_OBJ_DIR)/%.o: $(LOCAL_SRC_DIR)/%.seq $(OBJ_DIR)/config.h
