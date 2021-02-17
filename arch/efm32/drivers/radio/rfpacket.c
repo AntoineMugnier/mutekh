@@ -1283,6 +1283,14 @@ static DEV_INIT(efr32_radio_init) {
   ctx->gctx.drv = &efr32_radio_itfc;
   // Init generic context
   dev_rfpacket_init(&ctx->gctx);
+
+  // Get local cristal error
+  struct dev_freq_s osc;
+  if (device_get_res_freq(dev, &osc, 0) == 0)
+    ctx->osc_ppb = dev_freq_acc_ppb(&osc);
+  else
+    ctx->osc_ppb = 20000; // TODO token config ?
+
   // Indicate that we finished init
   efr32_radio_printk("init end\n");
   efr32_rfp_req_done_direct(ctx, DEV_RFPACKET_STATUS_MISC);
