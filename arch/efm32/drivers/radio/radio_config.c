@@ -25,8 +25,17 @@
 #include "power_curves.h"
 
 // Baudrate calc values
-#define EFR32_BR_MAX_DEN 0x8000 // Found empirically through simplicity studio
-#define EFR32_BR_MAX_NUM 0xff
+#define EFR32_TXBR_MAX_DEN 0x8000 // Found empirically through simplicity studio
+#define EFR32_TXBR_MAX_NUM 0xff
+#define EFR32_RXBR_MAX_DEN 0x1f
+#define EFR32_RXBR_MAX_NUM 0x1f
+#define EFR32_RXBR_MAX_INT 0x7
+
+// Modindex values
+#define EFR32_MAX_MODINDEX_M 31
+#define EFR32_MAX_FREQGAIN_M 7
+#define EFR32_MODINDEX_OFFSET 8
+#define EFR32_FREQGAIN_OFFSET 8
 
 // Power calculation values
 #define EFR32_POW_STRIPE_MAX_VAL  32
@@ -34,6 +43,17 @@
 #define EFR32_POW_MAX_DBM         160 // 0.125 dbm unit (20dbm)
 #define EFR32_POW_MIN_RAW         1
 #define EFR32_POW_MAX_RAW         248
+
+// Rx modem struct
+struct efr32_rxmodem_s {
+  uint32_t dec0;
+  uint32_t dec1;
+  uint32_t dec2;
+  uint32_t cfosr;
+  uint32_t rxbr_reg;
+  uint32_t fc;
+};
+
 
 static void efr32_send_radio_config(uint32_t cfg_size, uint32_t *p_cfg);
 static dev_timer_delay_t efr32_radio_calc_time(struct radio_efr32_rfp_ctx_s *ctx, uint32_t drate);
@@ -44,7 +64,6 @@ static error_t efr32_build_static_pk_config(struct radio_efr32_rfp_ctx_s *ctx, s
 static error_t efr32_build_extern_pk_config(struct radio_efr32_rfp_ctx_s *ctx, struct dev_rfpacket_rq_s *rq);
 
 #ifndef CONFIG_DEVICE_RFPACKET_STATIC_RF_CONFIG
-static uint32_t efr32_build_baudrate(uint32_t br);
 static error_t efr32_build_gfsk_rf_config(struct radio_efr32_rfp_ctx_s *ctx, struct dev_rfpacket_rq_s *rq);
 #endif
 
@@ -131,47 +150,561 @@ static error_t efr32_calc_power(dev_rfpacket_pwr_t pwr_dbm, uint32_t freq, uint3
 }
 
 #ifndef CONFIG_DEVICE_RFPACKET_STATIC_RF_CONFIG
-static uint32_t efr32_build_baudrate(uint32_t br) {
+static uint32_t efr32_build_txbaudrate(uint32_t br) {
   uint32_t num = 0, den = 0;
   // Formula for Tx baudrate: Br = (ModemFreq * txbrnum)/(8 * txbrden)
   // Calc (reverse) ratio with rounding
   uint64_t ratio =  (CONFIG_DRIVER_EFR32_RADIO_HFXO_CLK + 4 * br) / (8 * br);
   // Set denominator
-  den = ratio * EFR32_BR_MAX_NUM;
+  den = ratio * EFR32_TXBR_MAX_NUM;
   // Check if denominator is within dynamic to set numerator
-  if (den > EFR32_BR_MAX_DEN) {
-      num = EFR32_BR_MAX_DEN / ratio;
+  if (den > EFR32_TXBR_MAX_DEN) {
+      num = EFR32_TXBR_MAX_DEN / ratio;
       den = ratio * num;
   } else {
-      num = EFR32_BR_MAX_NUM;
+      num = EFR32_TXBR_MAX_NUM;
   }
   //printk("Radio baudrate: %d 0x%x\n", br, (EFR32_MODEM_TXBR_TXBRNUM(rnum) | EFR32_MODEM_TXBR_TXBRDEN(rden)));
   return (EFR32_MODEM_TXBR_TXBRNUM(num) | EFR32_MODEM_TXBR_TXBRDEN(den));
-  // TODO rx baudrate (not simple !)
+}
+
+static uint64_t efr32_get_dec0_bw(uint32_t val, uint64_t fxo) {
+        // Returns maximum bandwidth for a given decimation value for DEC0
+        if (val == 3)
+            return fxo / 20;
+        else if (val == 4)
+            return 69 * fxo / 1000;
+        else
+            return 3 * fxo / 250;
+}
+
+static uint32_t efr32_ceil(uint32_t x, uint32_t y) {
+    return (x / y + (x % y != 0));
+}
+
+// Calc register value from baudrate and other parameters
+static uint32_t efr32_build_rxbaudrate(uint32_t baudrate, uint32_t dec0, uint32_t dec1, uint32_t dec2) {
+  uint64_t fracnum = CONFIG_DRIVER_EFR32_RADIO_HFXO_CLK;
+  uint64_t fracden = dec0 * dec1 * dec2 * baudrate * 2;
+  uint32_t rxbrnum = 0, rxbrden = 0, rxbrint = 0;
+  uint32_t best_error = ~0;
+
+  // Return min value if ratio too low
+  if (fracden >= 31 * fracnum) {
+    return (EFR32_MODEM_RXBR_RXBRNUM(1) | EFR32_MODEM_RXBR_RXBRDEN(31) | EFR32_MODEM_RXBR_RXBRINT(0));
+  }
+  // Get integer part
+  rxbrint = fracnum / fracden;
+  // Limit to max value
+  if (rxbrint > EFR32_RXBR_MAX_INT)
+    rxbrint = EFR32_RXBR_MAX_INT;
+  // Remove integer part
+  fracnum -= rxbrint * fracden;
+  // Look for best values
+  for (uint32_t tmpden = EFR32_RXBR_MAX_DEN; tmpden > 0; tmpden--) {
+    uint32_t tmpnum = tmpden * fracnum / fracden;
+
+    if (tmpnum > EFR32_RXBR_MAX_NUM)
+      continue;
+
+    // Check error
+    uint32_t error = abs(fracnum * tmpden - fracden * tmpnum);
+    if (error < best_error) {
+      best_error = error;
+      rxbrnum = tmpnum;
+      rxbrden = tmpden;
+    }
+  }
+  return (EFR32_MODEM_RXBR_RXBRNUM(rxbrnum) | EFR32_MODEM_RXBR_RXBRDEN(rxbrden) | EFR32_MODEM_RXBR_RXBRINT(rxbrint));
+}
+
+static uint64_t efr32_calc_cost(uint64_t bw, uint32_t rxbw, uint32_t osr,
+                                uint32_t baudrate, uint64_t curr_br, uint64_t fc) {
+  // Cost function used to find optimal settigs for DEC0, DEC1, DEC2, CFOSR, RXBRNUM, RXBRDEN
+  uint64_t bw_error, range_error, rate_error, fc_cost;
+
+  // Calc bw error
+  if (bw > rxbw)
+    bw_error = 100 * (bw - rxbw) / rxbw;
+  else
+    bw_error = 500 * (rxbw - bw) / rxbw;
+
+  // Calc range_error as the distance to 5 or 8 if we are outside this range
+  if (osr < 4)
+    range_error = 200;
+  else if (osr < 5)
+    range_error = 1;
+  else if (osr <= 7)
+    range_error = 0;
+  else
+    range_error = 200;
+
+  // Calc baudrate error
+  rate_error = 1000 * (abs(curr_br - baudrate)) / curr_br;
+
+  // if the baudrate is not within 0.1% penalize this setting by 1e9
+  if (rate_error > 1)
+    rate_error += 1000000000;
+  else if (rate_error > 0)
+    rate_error += 100;
+
+  if (fc < 250000)
+    fc_cost = 1000000000;
+  else
+    fc_cost = 0;
+
+  return bw_error + range_error + rate_error + fc_cost;
+}
+
+static uint64_t efr32_calc_if_freq(uint64_t fxo, uint32_t dec0, uint32_t cfosr) {
+    return fxo / (dec0 * cfosr);
+}
+
+static uint64_t efr32_calc_real_bw(uint64_t fxo, uint32_t decmult) {
+  // Calc with rounding
+  return (263 * fxo + decmult * 500 ) / (decmult * 1000);
+}
+
+static uint32_t efr32_calc_osr(uint32_t brint, uint32_t brnum, uint32_t brden) {
+  // Calc with rounding
+  return ((2 * (brint * brden + brnum) + brden / 2) / brden);
+}
+
+static uint64_t efr32_calc_real_br(uint64_t fxo, uint32_t decmult, uint32_t brint, uint32_t brnum, uint32_t brden) {
+  uint64_t curr_br_den = decmult * 2 * (brint * brden + brnum);
+  uint64_t curr_br_num = fxo * brden;
+  return (curr_br_num / curr_br_den);
+}
+
+static void efr32_build_rxmodem(uint32_t baudrate, uint32_t rxbw, struct efr32_rxmodem_s *cfg) {
+  // want to minimize this so start with big number
+  uint64_t best_cost = ~0, best_fc = 0;
+  uint32_t best_dec0 = 0, best_dec1 = 0, best_dec2 = 0,
+           best_cfosr = 0, best_rxbr_reg = 0;
+  uint64_t fxo = CONFIG_DRIVER_EFR32_RADIO_HFXO_CLK;
+
+  // loop over all possible DEC0, DEC1, and CFOSR values
+  uint32_t dec0_list[] = {3, 4, 8};
+  uint32_t cfosr_list[] = {32, 16, 12, 8, 7};
+  for (uint32_t d0_idx = 0; d0_idx < ARRAY_SIZE(dec0_list); d0_idx++) {
+    uint32_t dec0 = dec0_list[d0_idx];
+
+    for (uint32_t dec1 = 16384; dec1 > 0; dec1--) {
+
+      for (uint32_t cfosr_idx = 0; cfosr_idx < ARRAY_SIZE(cfosr_list); cfosr_idx++) {
+        uint32_t cfosr = cfosr_list[cfosr_idx];
+        // given dec0 and dec1 calculate bandwidth we actually get
+        uint64_t curr_bw = efr32_calc_real_bw(fxo, dec0 * dec1);
+
+        // unless we are at the largest BW possible skip the rest if bw is less
+        // than 95% of carson bw or 82% of carson bw for 2.4GHz band
+        uint32_t carson_scale;
+        if (curr_bw > 2000000)
+          carson_scale = 82;
+        else
+          carson_scale = 95;
+
+        // if bw less than a scaled version of the carson bw throw away this combination
+        // unless we are using the widest possible bw setting we have on the chip
+        // dec0 = 4 actually results in wider bw than dec0 = 3 due to the wider bw
+        // decimation filter it has.
+        if ((curr_bw < carson_scale * rxbw / 100) && !(dec1 == 1 && (dec0 == 3 || dec0 == 4)))
+          continue;
+
+        // Calculate IF frequency
+        uint64_t fc = efr32_calc_if_freq(fxo, dec0, cfosr);
+
+        // make sure the IF frequency we choose puts the lower edge
+        // of the band above 107KHz which is the lower cutoff of the ADC filter
+        if ((fc < 250000) || (fc - curr_bw / 2 < 107000))
+          continue;
+
+        // make sure the upper end of the spectrum is within limits of the filters
+        uint64_t dec0_bw = efr32_get_dec0_bw(dec0, fxo);
+
+        if ((fc + curr_bw / 2) > dec0_bw)
+          continue;
+
+        // calculate corresponding DEC2 values
+        uint32_t dec2_start, dec2_end;
+
+        // for extreme bandwidth PHYs e.g. OOK PHYs where bandwidth is much larger
+        // than the carson bandwidth we want to try large OSR values
+        // the limit for the else part is br = bw / 0.263*OSR*dec2 = bw/0.263*5*64 = bw/84
+        if (rxbw > 84 * baudrate) {
+          dec2_start = fxo / (15 * dec0 * dec1 * baudrate); // floor
+          dec2_end = efr32_ceil(fxo, 5 * dec0 * dec1 * baudrate); // ceil
+        } else {
+          // for normal PHYs we stick with OSR of 5
+          // we have two possible values for DEC2 given DEC0 and DEC1 so we loop
+          // over those values below
+          dec2_start = fxo / (5 * dec0 * dec1 * baudrate); // floor
+          dec2_end = dec2_start + 1;
+        }
+
+        // 0 is not a valid value for DEC2 so only try 1 if we end up with 0
+        if (dec2_start == 0) {
+          dec2_start = 1;
+          dec2_end = 1;
+        }
+
+        // max value for DEC2 is 63
+        if (dec2_end > 63)
+            dec2_end = 63;
+
+        for (uint32_t dec2 = dec2_start; dec2 < dec2_end + 1; dec2++) {
+          // get best RXBR values for given divider ratios
+          uint32_t rxbr_reg = efr32_build_rxbaudrate(dec0, dec1, dec2, baudrate);
+          uint32_t rxbrint = EFR32_MODEM_RXBR_RXBRINT_GET(rxbr_reg);
+          uint32_t rxbrnum = EFR32_MODEM_RXBR_RXBRNUM_GET(rxbr_reg);
+          uint32_t rxbrden = EFR32_MODEM_RXBR_RXBRDEN_GET(rxbr_reg);
+
+          // calculate baudrate we get with these settings
+          uint64_t curr_br = efr32_calc_real_br(fxo, dec0*dec1*dec2, rxbrint, rxbrnum, rxbrden);
+
+          // calculate oversampling rate for given combination with rounding
+          uint32_t osr = efr32_calc_osr(rxbrint, rxbrnum, rxbrden);
+
+          // calculate cost function based on over-sampling-rate, bw, and rx bit rate
+          uint64_t cost = efr32_calc_cost(curr_bw, rxbw, osr, baudrate, curr_br, fc);
+
+          // printk("Cost: %d %d %d %d %lld %d %d %d %lld %lld %lld\n",
+          //    dec0, dec1, dec2, cfosr, curr_bw, osr, curr_br, fc, cost);
+
+          // record necessary info if we found a better combination than we had
+          // prefer larger decimation in dec0 if the cost is the same
+          if (cost < best_cost || (cost == best_cost && dec0 > dec1 && fc == best_fc)) {
+              // printk("Cost: %d %d %d %d %lld %d %lld %lld %lld\n",
+              //    dec0, dec1, cfosr, dec2, curr_bw, osr, curr_br, fc, cost);
+            best_cost = cost;
+            best_dec0 = dec0;
+            best_dec1 = dec1;
+            best_dec2 = dec2;
+            best_cfosr = cfosr;
+            best_rxbr_reg = rxbr_reg;
+            best_fc = fc;
+          }
+        }
+      }
+    }
+  }
+  // Store best combination in variables to be written to registers in other functions
+  cfg->dec0 = best_dec0;
+  cfg->dec1 = best_dec1;
+  cfg->dec2 = best_dec2;
+  cfg->cfosr = best_cfosr;
+  cfg->rxbr_reg = best_rxbr_reg;
+  cfg->fc = best_fc;
+}
+
+static uint32_t efr32_calc_cfreg(struct efr32_rxmodem_s *cfg, uint32_t rxbw) {
+  uint32_t cfreg_val = cpu_mem_read_32(EFR32_MODEM_ADDR + EFR32_MODEM_CF_ADDR);
+  uint64_t fxo = CONFIG_DRIVER_EFR32_RADIO_HFXO_CLK;
+
+  // Set dec0
+  switch (cfg->dec0) {
+    case 3:
+      EFR32_MODEM_CF_DEC0_SET(cfreg_val, DF3);
+    break;
+
+    case 4:
+      if (rxbw > 100 * fxo / 2703)
+        EFR32_MODEM_CF_DEC0_SET(cfreg_val, DF4WIDE);
+      else
+        EFR32_MODEM_CF_DEC0_SET(cfreg_val, DF4NARROW);
+    break;
+
+    case 8:
+      if (rxbw > fxo / 200)
+        EFR32_MODEM_CF_DEC0_SET(cfreg_val, DF8WIDE);
+      else
+        EFR32_MODEM_CF_DEC0_SET(cfreg_val, DF8NARROW);
+    break;
+
+    default:
+      UNREACHABLE();
+  }
+
+  // Set dec1 and dec2
+  EFR32_MODEM_CF_DEC1_SET(cfreg_val, cfg->dec1 - 1);
+  EFR32_MODEM_CF_DEC2_SET(cfreg_val, cfg->dec2 - 1);
+
+  // Set cfosr
+  switch (cfg->cfosr) {
+    case 7:
+      EFR32_MODEM_CF_CFOSR_SET(cfreg_val, CF7);
+    break;
+
+    case 8:
+      EFR32_MODEM_CF_CFOSR_SET(cfreg_val, CF8);
+    break;
+
+    case 12:
+      EFR32_MODEM_CF_CFOSR_SET(cfreg_val, CF12);
+    break;
+
+    case 16:
+      EFR32_MODEM_CF_CFOSR_SET(cfreg_val, CF16);
+    break;
+
+    case 32:
+      EFR32_MODEM_CF_CFOSR_SET(cfreg_val, CF32);
+    break;
+
+    default:
+      UNREACHABLE();
+  }
+  // Set dec1 gain
+  uint64_t real_bw = efr32_calc_real_bw(fxo, cfg->dec0 * cfg->dec1);
+  if (real_bw < 500)
+    EFR32_MODEM_CF_DEC1GAIN_SET(cfreg_val, ADD12);
+  else if (real_bw < 2000)
+    EFR32_MODEM_CF_DEC1GAIN_SET(cfreg_val, ADD6);
+  else
+    EFR32_MODEM_CF_DEC1GAIN_SET(cfreg_val, ADD0);
+
+  return cfreg_val;
+}
+
+static uint32_t efr32_calc_lodiv(uint32_t reg) {
+  uint32_t divA = (reg & 0x1C0) >> 6;
+  uint32_t divB = (reg & 0x38) >> 3;
+  uint32_t divC = reg & 0x7;
+
+  if (divA == 0) {
+      divA = 1;
+  }
+  if (divB == 0) {
+      divB = 1;
+  }
+  if (divC == 0){
+      divC = 1;
+  }
+  return divA * divB * divC;
+}
+static uint32_t efr32_calc_synth_res(void) {
+    // Get lodiv
+    uint32_t lodiv = efr32_calc_lodiv(cpu_mem_read_32(EFR32_SYNTH_ADDR + EFR32_SYNTH_DIVCTRL_ADDR));
+    // Calc gain with rounding
+    return (CONFIG_DRIVER_EFR32_RADIO_HFXO_CLK + ((lodiv * 524288) / 2)) / (lodiv * 524288);
+}
+
+static uint32_t efr32_calc_interp_gain(uint32_t txbrden) {
+  // Return correct fraction with rounding
+  if (txbrden < 256)
+    return txbrden;
+  else if (txbrden < 512)
+    return (txbrden + 1) / 2;
+  else if (txbrden < 1024)
+    return (txbrden + 2) / 4;
+  else if (txbrden < 2048)
+    return (txbrden + 4) / 8;
+  else if (txbrden < 4096)
+    return (txbrden + 8) / 16;
+  else if (txbrden < 8192)
+    return (txbrden + 16) / 32;
+  else if (txbrden < 16384)
+    return (txbrden + 32) / 64;
+  else
+    return (txbrden + 64) / 128;
+}
+
+static uint64_t efr32_calc_shape_filter_gain(uint32_t crtl0, uint32_t shap0, uint32_t shap1, uint32_t shap2) {
+  // Get mode and coeff from regs
+  uint8_t mode = EFR32_MODEM_CTRL0_SHAPING_GET(crtl0);
+
+  uint8_t c0, c1, c2, c3, c4, c5, c6, c7, c8;
+  c0 = EFR32_MODEM_SHAPING0_COEFF0_GET(shap0);
+  c1 = EFR32_MODEM_SHAPING0_COEFF1_GET(shap0);
+  c2 = EFR32_MODEM_SHAPING0_COEFF2_GET(shap0);
+  c3 = EFR32_MODEM_SHAPING0_COEFF3_GET(shap0);
+
+  c4 = EFR32_MODEM_SHAPING1_COEFF4_GET(shap1);
+  c5 = EFR32_MODEM_SHAPING1_COEFF5_GET(shap1);
+  c6 = EFR32_MODEM_SHAPING1_COEFF6_GET(shap1);
+  c7 = EFR32_MODEM_SHAPING1_COEFF7_GET(shap1);
+
+  c8 = EFR32_MODEM_SHAPING2_COEFF8_GET(shap2);
+
+  if (mode == 0)
+    return 127;
+  else if (mode == 1)
+    return __MAX(__MAX(__MAX(c0+c8+c0, c1+c7),__MAX(c2+c6, c3+c5)), c4+c4);
+  else if (mode == 2)
+    return __MAX(__MAX(c0+c7, c1+c6),__MAX(c2+c5, c3+c4));
+  else
+    return __MAX(__MAX(__MAX(c0, c1),__MAX(c2, c3)),__MAX(__MAX(c4, c5),__MAX(c6, c7)));
+}
+
+static void efr32_frac2exp(uint32_t max_m, uint64_t frac, uint32_t *pM, int32_t *pE){
+  // Trivial case
+  if (frac <= max_m) {
+    *pM = frac;
+    *pE = 0;
+    return;
+  } else {
+    // Get msb
+    uint32_t msb = 31 - __builtin_clz(frac);
+    // Get max mantissa value msb
+    uint32_t max_msb = 31 - __builtin_clz(max_m);
+    // Get mantissa at resolution step with rounding
+    uint32_t tmp = (frac + (1 << (msb - (max_msb + 1)))) / (1 << (msb - max_msb));
+    // Check if overflow
+    if (tmp > max_m) {
+      *pM = tmp - max_m;
+      *pE = msb + 1;
+    // Regular case
+    } else {
+      *pM = tmp;
+      *pE = msb - max_msb;
+    }
+  }
+}
+
+static uint64_t efr32_calc_fsk_modindex(uint32_t txbr) {
+  uint32_t synth_res = efr32_calc_synth_res();
+  uint64_t interp_gain = (uint64_t)efr32_calc_interp_gain(EFR32_MODEM_TXBR_TXBRDEN(txbr));
+  uint32_t ctrl0 = cpu_mem_read_32(EFR32_MODEM_ADDR + EFR32_MODEM_CTRL0_ADDR);
+  uint32_t shap0 = cpu_mem_read_32(EFR32_MODEM_ADDR + EFR32_MODEM_SHAPING0_ADDR);
+  uint32_t shap1 = cpu_mem_read_32(EFR32_MODEM_ADDR + EFR32_MODEM_SHAPING1_ADDR);
+  uint32_t shap2 = cpu_mem_read_32(EFR32_MODEM_ADDR + EFR32_MODEM_SHAPING2_ADDR);
+  uint32_t filter_gain = efr32_calc_shape_filter_gain(ctrl0, shap0, shap1, shap2);
+
+  // Return value as fixed point
+  return (16 * (uint64_t)(CONFIG_DRIVER_EFR32_RADIO_HFXO_CLK) << EFR32_MODINDEX_OFFSET)
+      / (synth_res * filter_gain * interp_gain);
+}
+
+static uint32_t efr32_calc_fsk_freqgain(uint32_t freqdev, uint8_t symbol_nb, uint32_t decmult) {
+  assert(freqdev);
+  uint32_t freq_gain = 0;
+  uint64_t fxo = CONFIG_DRIVER_EFR32_RADIO_HFXO_CLK;
+
+  switch (symbol_nb) {
+    case 2:
+      freq_gain = (fxo << EFR32_FREQGAIN_OFFSET) / (4 * freqdev * decmult);
+    break;
+
+    case 4:
+      freq_gain = (fxo << EFR32_FREQGAIN_OFFSET) / (8 * freqdev * decmult);
+    break;
+
+    default:
+      UNREACHABLE();
+  }
+  // Return value as fixed point
+  return freq_gain;
+}
+
+static uint32_t efr32_calc_modindex_reg_value(uint64_t modindex, uint32_t freq_gain) {
+  // Convert fractional modindex into m * 2^e format
+  uint32_t mi_m, fg_m;
+  int32_t mi_e, fg_e;
+  efr32_frac2exp(EFR32_MAX_MODINDEX_M, modindex, &mi_m, &mi_e);
+  // Correct exponent
+  mi_e -= EFR32_MODINDEX_OFFSET;
+  // Correct negative value
+  if (mi_e < 0)
+    mi_e += 32;
+  // Limit value
+  if (mi_e > 31)
+    mi_e = 31;
+  // Convert fractional freq_gain in m * 2^(2-e) format
+  efr32_frac2exp(EFR32_MAX_FREQGAIN_M, freq_gain, &fg_m, &fg_e);
+  // Correct exponent
+  fg_e -= EFR32_FREQGAIN_OFFSET;
+  fg_e = 2 - fg_e;
+  // Check exp value
+  if (fg_e > 7) {
+    printk("exponent overflow\n");
+  }
+  return (EFR32_MODEM_MODINDEX_MODINDEXM(mi_m) | EFR32_MODEM_MODINDEX_MODINDEXE(mi_e)
+            | EFR32_MODEM_MODINDEX_FREQGAINE(fg_e) | EFR32_MODEM_MODINDEX_FREQGAINM(fg_m));
+}
+
+static uint32_t efr32_calc_freq_err(uint32_t ext_freq_err, uint64_t freq, uint16_t osc_ppb) {
+  uint64_t loc_freq_err = freq * osc_ppb / 1000000000;
+  return (ext_freq_err + loc_freq_err);
+}
+
+static uint32_t efr32_calc_rxbw(uint32_t br, uint32_t freqdev, uint32_t freq_err) {
+/* calculate carson's rule bandwidth: baudrate + 2 * max frequency deviation
+        max frequency deviation can be due desired FSK deviation but also due to
+        frequency offset in crystal frequencies.*/
+  return (br + 2 * (freqdev) + freq_err);
+}
+
+static void efr32_debug_conf(uint32_t dec0, uint32_t dec1, uint32_t dec2, uint32_t cfosr,
+         uint32_t brint, uint32_t brnum, uint32_t brden, uint32_t baudrate, uint32_t fdev,
+         uint32_t ext_freq_err, uint32_t rf_freq) {
+
+  uint64_t fxo = CONFIG_DRIVER_EFR32_RADIO_HFXO_CLK;
+
+  uint32_t freq_err = efr32_calc_freq_err(ext_freq_err, rf_freq, fxo);
+  uint32_t rxbw = efr32_calc_rxbw(baudrate, fdev, freq_err);
+  uint64_t curr_bw = efr32_calc_real_bw(fxo, dec0 * dec1);
+  uint64_t fc = efr32_calc_if_freq(fxo, dec0, cfosr);
+  uint64_t curr_br = efr32_calc_real_br(fxo, dec0*dec1*dec2, brint, brnum, brden);
+  uint32_t osr = efr32_calc_osr(brint, brnum, brden);
+  uint64_t cost = efr32_calc_cost(curr_bw, rxbw, osr, baudrate, curr_br, fc);
+  printk("Dbg: %lld %d %lld %lld %lld\n", curr_bw, osr, curr_br, fc, cost);
 }
 
 static error_t efr32_build_gfsk_rf_config(struct radio_efr32_rfp_ctx_s *ctx, struct dev_rfpacket_rq_s *rq) {
   const struct dev_rfpacket_rf_cfg_fsk_s *cfsk = const_dev_rfpacket_rf_cfg_fsk_s_cast(rq->rf_cfg);
   const struct dev_rfpacket_rf_cfg_std_s *common = &cfsk->common;
+  struct efr32_rxmodem_s cfg;
 
   // Init config
   efr32_rfp_fsk_init(ctx);
+
   // Build config
   uint32_t div = cpu_mem_read_32(EFR32_SYNTH_ADDR + EFR32_SYNTH_DIVCTRL_ADDR);
   div = EFR32_SYNTH_DIVCTRL_LODIVFREQCTRL_GET(div);
+
   // Configure frequency
   uint64_t f = ((uint64_t)(common->frequency) * div) << 19;
   f /= CONFIG_DRIVER_EFR32_RADIO_HFXO_CLK;
   cpu_mem_write_32(EFR32_SYNTH_ADDR + EFR32_SYNTH_FREQ_ADDR, (uint32_t)f);
+
   // Configure channel spacing
   uint64_t chsp = ((uint64_t)(common->chan_spacing) * div) << 19;
   chsp /= CONFIG_DRIVER_EFR32_RADIO_HFXO_CLK;
   cpu_mem_write_32(EFR32_SYNTH_ADDR + EFR32_SYNTH_CHSP_ADDR, (uint32_t)chsp);
-  // Configure baudrate
-  uint32_t br = efr32_build_baudrate(common->drate);
-  cpu_mem_write_32(EFR32_MODEM_ADDR + EFR32_MODEM_TXBR_ADDR, br);
+
+  // Configure tx baudrate
+  uint32_t txbr = efr32_build_txbaudrate(common->drate);
+  cpu_mem_write_32(EFR32_MODEM_ADDR + EFR32_MODEM_TXBR_ADDR, txbr);
+
+  // Calc rxbw
+  uint32_t freq_err = efr32_calc_freq_err(common->freq_err, common->frequency, CONFIG_DRIVER_EFR32_RADIO_OSC_PPB);
+  uint32_t rxbw = efr32_calc_rxbw(common->drate, cfsk->deviation, freq_err);
+
+  //printk("Rxbw: %d %d\n", freq_err, rxbw);
+
+  // Configure rx modem (rx baudrate...)
+  efr32_build_rxmodem(common->drate, rxbw, &cfg);
+  uint32_t cf_reg = efr32_calc_cfreg(&cfg, rxbw);
+  //cpu_mem_write_32(EFR32_MODEM_ADDR + EFR32_MODEM_RXBR_ADDR, cfg.rxbr_reg);
+  //cpu_mem_write_32(EFR32_MODEM_ADDR + EFR32_MODEM_CF_ADDR, cf_reg);
+
+  // printk("Rxmodem: %d %d %d %d %d %x %x\n", cfg.dec0, cfg.dec1, cfg.dec2,
+  //        cfg.cfosr, cfg.fc, cfg.rxbr_reg, cf_reg);
+
+  //efr32_debug_conf(3, 42, 1, 7, 3, 1, 2, 300000, 19200, 0, 865056875);
+
+  // Configure fdev
+  uint64_t modindex = efr32_calc_fsk_modindex(txbr);
+  uint32_t decmult = cfg.dec0 * cfg.dec1 * cfg.dec2;
+  uint32_t freqgain = efr32_calc_fsk_freqgain(cfsk->deviation, cfsk->symbols, decmult);
+  uint32_t mi_reg = efr32_calc_modindex_reg_value(modindex, freqgain);
+  //cpu_mem_write_32(EFR32_MODEM_ADDR + EFR32_MODEM_MODINDEX_ADDR, mi_reg);
+
+  //printk("fdev: %lld %d %x\n", modindex, freqgain, mi_reg);
+
   // Calc time byte
   ctx->gctx.time_byte = efr32_radio_calc_time(ctx, common->drate);
+
   // Note config values
   ctx->curr_freq = common->frequency;
   ctx->curr_drate = common->drate;
