@@ -57,8 +57,6 @@ struct radio_efr32_rfp_ctx_s {
   uint32_t curr_freq;
   uint32_t curr_drate;
   int32_t synth_ratio;
-  // local cristal error
-  uint16_t osc_ppb;
 #ifdef CONFIG_DRIVER_EFR32_RFPACKET_LDC
   // LDC values
   uint32_t ldc_rx_start;
