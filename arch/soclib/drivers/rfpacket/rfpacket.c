@@ -68,6 +68,7 @@ DRIVER_PV(struct rfp_soclib_ctx_s
   struct dev_irq_src_s          irq_ep;
   struct dev_freq_s             timer_freq;
   int16_t                       curr_chan;
+  uint32_t                      curr_freq;
   /* Control struct */
   struct dev_rfpacket_ctx_s gctx;
   const struct dev_rfpacket_pk_cfg_s  *pk_cfg;
@@ -279,7 +280,6 @@ static error_t soclib_rfp_get_time(struct dev_rfpacket_ctx_s *gpv, dev_timer_val
 
 static inline dev_timer_value_t soclib_rfp_get_timestamp(struct rfp_soclib_ctx_s *pv)
 {
-  soclib_rfp_printk("drv: timestamp \n");
   dev_timer_value_t v = endian_le32(cpu_mem_read_32(pv->addr + SOCLIB_TRANSCEIVER_TIMESTAMP_MSB_ADDR));
   v <<= 32;
   return (v | endian_le32(cpu_mem_read_32(pv->addr + SOCLIB_TRANSCEIVER_TIMESTAMP_LSB_ADDR)));
@@ -312,6 +312,7 @@ static void soclib_rfp_read_packet(struct rfp_soclib_ctx_s *pv)
   soclib_rfp_printk("drv: RX size %d\n", rx->size);
 
   /* Set rx info */
+  rx->frequency = pv->curr_freq;
   rx->rssi = endian_le32(cpu_mem_read_32(pv->addr + SOCLIB_TRANSCEIVER_RSSI_ADDR));
   rx->snr = endian_le32(cpu_mem_read_32(pv->addr + SOCLIB_TRANSCEIVER_SNR_ADDR));
   rx->carrier = endian_le32(cpu_mem_read_32(pv->addr + SOCLIB_TRANSCEIVER_CARRIER_ADDR));
@@ -371,6 +372,7 @@ static error_t soclib_rfp_dynamic_rf_config(struct rfp_soclib_ctx_s *pv, struct 
   /* Get common parameters */
   assert(common);
   uint32_t frequency = common->frequency + common->chan_spacing * rq->channel;
+  pv->curr_freq = frequency;
   uint32_t rx_bw = common->rx_bw;
 
   /* Set specific parameters */
