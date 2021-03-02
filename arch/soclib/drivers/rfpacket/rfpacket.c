@@ -92,7 +92,8 @@ static inline dev_timer_value_t soclib_rfp_get_timestamp(struct rfp_soclib_ctx_s
 static inline void soclib_rfp_set_status(struct rfp_soclib_ctx_s *pv, enum dev_rfpacket_status_s status);
 static void soclib_rfp_req_done(struct rfp_soclib_ctx_s *pv);
 static void soclib_rfp_read_packet(struct rfp_soclib_ctx_s *pv);
-static void soclib_rfp_cancel_done(struct rfp_soclib_ctx_s *pv);
+static inline void soclib_rfp_disable(uintptr_t addr);
+static void soclib_rfp_disable_done(struct rfp_soclib_ctx_s *pv);
 
 static error_t soclib_rfp_dynamic_rf_config(struct rfp_soclib_ctx_s *pv, struct dev_rfpacket_rq_s *rq);
 static error_t soclib_rfp_dynamic_pk_config(struct rfp_soclib_ctx_s *pv, struct dev_rfpacket_rq_s *rq);
@@ -323,7 +324,7 @@ static void soclib_rfp_read_packet(struct rfp_soclib_ctx_s *pv)
 
   /* End request */
   soclib_rfp_set_status(pv, DEV_RFPACKET_STATUS_RX_DONE);
-  soclib_rfp_req_done(pv);
+  soclib_rfp_disable(pv->addr);
 }
 
 static KROUTINE_EXEC(soclib_rfp_rx_kr)
@@ -332,9 +333,15 @@ static KROUTINE_EXEC(soclib_rfp_rx_kr)
   soclib_rfp_read_packet(pv);
 }
 
-static void soclib_rfp_cancel_done(struct rfp_soclib_ctx_s *pv)
+static inline void soclib_rfp_disable(uintptr_t addr)
 {
-  soclib_rfp_set_status(pv, DEV_RFPACKET_STATUS_MISC);
+  /* Make sure to fill status before calling this*/
+  cpu_mem_write_32(addr + SOCLIB_TRANSCEIVER_CTRL_ADDR, endian_le32(SOCLIB_TRANSCEIVER_CTRL_CANCEL));
+}
+
+
+static void soclib_rfp_disable_done(struct rfp_soclib_ctx_s *pv)
+{
   soclib_rfp_req_done(pv);
 }
 
@@ -480,7 +487,12 @@ static void soclib_rfp_tx_irq(struct rfp_soclib_ctx_s *pv, uint32_t irq)
 {
   /* Packet sent */
   if (irq & SOCLIB_TRANSCEIVER_IRQ_STATUS_TX_DONE)
+  {
     soclib_rfp_set_status(pv, DEV_RFPACKET_STATUS_TX_DONE);
+
+    /* End request */
+    soclib_rfp_req_done(pv);
+  }
   /* Tx error */
   else
     {
@@ -499,10 +511,10 @@ static void soclib_rfp_tx_irq(struct rfp_soclib_ctx_s *pv, uint32_t irq)
         soclib_rfp_set_status(pv, DEV_RFPACKET_STATUS_OTHER_ERR);
       else
         UNREACHABLE();
-    }
 
-  /* End request */
-  soclib_rfp_req_done(pv);
+    /* End request */
+    soclib_rfp_disable(pv->addr);
+    }
 }
 
 static void soclib_rfp_rx_irq(struct rfp_soclib_ctx_s *pv, uint32_t irq)
@@ -528,7 +540,7 @@ static void soclib_rfp_rx_irq(struct rfp_soclib_ctx_s *pv, uint32_t irq)
 
           /* End request */
           soclib_rfp_set_status(pv, DEV_RFPACKET_STATUS_OTHER_ERR);
-          soclib_rfp_req_done(pv);
+          soclib_rfp_disable(pv->addr);
           return;
         }
 
@@ -561,7 +573,7 @@ static void soclib_rfp_rx_irq(struct rfp_soclib_ctx_s *pv, uint32_t irq)
         UNREACHABLE();
 
       /* End request */
-      soclib_rfp_req_done(pv);
+      soclib_rfp_disable(pv->addr);
     }
 }
 
@@ -715,7 +727,8 @@ static void soclib_rfp_cancel_rxc(struct dev_rfpacket_ctx_s *gpv)
   struct rfp_soclib_ctx_s *pv = gpv->pvdata;
 
   /* Start cancel, wait for irq */
-  cpu_mem_write_32(pv->addr + SOCLIB_TRANSCEIVER_CTRL_ADDR, endian_le32(SOCLIB_TRANSCEIVER_CTRL_CANCEL));
+  soclib_rfp_set_status(pv, DEV_RFPACKET_STATUS_MISC);
+  soclib_rfp_disable(pv->addr);
 }
 
 static bool_t soclib_rfp_wakeup(struct dev_rfpacket_ctx_s *gpv)
@@ -756,9 +769,10 @@ static DEV_IRQ_SRC_PROCESS(rfpacket_soclib_irq)
   while(1)
     {
        uint32_t irq = endian_le32(cpu_mem_read_32(pv->addr + SOCLIB_TRANSCEIVER_IRQ_STATUS_ADDR));
-       irq &= endian_le32(cpu_mem_read_32(pv->addr + SOCLIB_TRANSCEIVER_IEN_ADDR));
 
        soclib_rfp_printk("drv: irq: 0x%x\n", irq);
+
+       irq &= endian_le32(cpu_mem_read_32(pv->addr + SOCLIB_TRANSCEIVER_IEN_ADDR));
 
        if (!irq)
          break;
@@ -767,7 +781,7 @@ static DEV_IRQ_SRC_PROCESS(rfpacket_soclib_irq)
           soclib_rfp_timer_process_queue(pv);
 
        if (irq & SOCLIB_TRANSCEIVER_IRQ_STATUS_CANCEL)
-         soclib_rfp_cancel_done(pv);
+         soclib_rfp_disable_done(pv);
 
        if (irq & SOCLIB_TRANSCEIVER_RX_IRQ_MASK)
          soclib_rfp_rx_irq(pv, irq);
