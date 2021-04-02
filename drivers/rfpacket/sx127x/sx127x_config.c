@@ -367,10 +367,12 @@ static error_t sx127x_build_reg_pkt_config(struct sx127x_private_s * __restrict_
 
   sw = sw >> 3;
 
+  uint16_t pb_len_byte = pk_cfg->tx_pb_len / 8;
+
   *pk++ = 3 + sw;
   *pk++ = SX1276_REG_PREAMBLEMSB | 0x80;
-  *pk++ = pk_cfg->tx_pb_len >> 8;
-  *pk++ = pk_cfg->tx_pb_len;
+  *pk++ = pb_len_byte >> 8;
+  *pk++ = pb_len_byte;
 
   uint8_t sc = (pk_cfg->pb_pattern & 2) ? SX1276_SYNCCONFIG_PREAMBLEPOLARITY_AA : SX1276_SYNCCONFIG_PREAMBLEPOLARITY_55;
 
