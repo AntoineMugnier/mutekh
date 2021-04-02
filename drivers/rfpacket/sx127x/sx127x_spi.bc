@@ -90,17 +90,17 @@
 
 .func sx127x_entry_irq
         .export sx127x_entry_irq
-        .clobber %0, %5, %6, %7, %8, %9, %10, %12 
+        .clobber %0, %5, %6, %7, %8, %9, %10, %12
         call8                   %sx127x_check_irq:link,          sx127x_check_irq
         end
 .endfunc
 
 .func sx127x_check_irq
         .input %12 link
-        .clobber %0 buffer, %5 tmp, %6 irq1 len, %7 irq2, %8, %9, %10, %12
+        .clobber %0 buffer, %5 tmp status, %6 irq1 len, %7 irq2, %8, %9, %10, %12
         /* Update icount field */
-        cst32                   %STATUS,         0,   0
-        ld8e                    %STATUS,         %R_CTX_PV,      _offsetof(sx127x_private_s, icount, 1)
+        //cst32                   %STATUS,         0,   0
+        //ld8e                    %STATUS,         %R_CTX_PV,      _offsetof(sx127x_private_s, icount, 1)
         spi_gpioget             SX127X_DIO0,     %tmp
         tst32s                  %tmp,            0
           jmp8                  __sx127x_process_irq
@@ -124,12 +124,12 @@ __sx127x_process_irq:
           jmp8                  __irq_rx_flag
         end
 __irq_rx_flag:
-        /* Retrieve first word from fifo which contains payload lenght */
+        /* Retrieve first word from fifo which contains payload length */
         cst8                    %tmp,            SX1276_REG_FIFO
         pack16le                %tmp,            1,      2
         spi_swp                 %tmp,            %tmp,   2,      CS_PULSE
         unpack8                 %tmp,            2
-        st8e                    %len,            %R_CTX_PV,      _offsetof(sx127x_private_s, size, 1)
+        st16e                   %len,            %R_CTX_PV,   _offsetof(sx127x_private_s, gctx.size, 2)
        /* Try to allocate buffer */
         gaddr                   %tmp,            sx127x_alloc
         mov                     %0,              %R_CTX_PV
@@ -138,20 +138,29 @@ __irq_rx_flag:
         eq0                     %buffer
           jmp8                  __rx_alloc_error
         /* Read Fifo */
-        ld8e                    %len,            %R_CTX_PV,      _offsetof(sx127x_private_s, size, 1)
+        ld16e                   %len,            %R_CTX_PV,      _offsetof(sx127x_private_s, gctx.size, 2)
         cst8                    %tmp,            SX1276_REG_FIFO
         pack8                   %tmp,            1
         spi_wr                  %tmp,            1,             CS_START
         spi_rdm                 %buffer,         %len,          CS_END
+        // Set bc status
+        cst8                    %status,         SX127X_BC_STATUS_RX_DONE
+        st8e                    %status,         %R_CTX_PV,   _offsetof(sx127x_private_s, bc_status, 1)
+        end
 __irq_tx_flag:
+        // Set bc status
+        cst8                    %status,         SX127X_BC_STATUS_TX_DONE
+        st8e                    %status,         %R_CTX_PV,   _offsetof(sx127x_private_s, bc_status, 1)
         end
 __rx_alloc_error:
         jmp8                    sx127x_error
 .endfunc
 
 .func sx127x_error
-        .clobber %8, %9, %10, %12
-        bit32s                  %STATUS,                STATUS_OTHER_ERR
+        .clobber %0 status, %8, %9, %10, %12
+        // Set bc status
+        cst8                    %status,         SX127X_BC_STATUS_OTHER_ERR
+        st8e                    %status,         %R_CTX_PV,   _offsetof(sx127x_private_s, bc_status, 1)
         jmp8                    sx127x_entry_standby
 .endfunc
 
@@ -163,8 +172,8 @@ __rx_alloc_error:
         /* Clean irq status */
         cst32                   %tmp,            STATUS_INFO_MSK, 0
         and32                   %STATUS,         %tmp
-        ld8e                    %tmp,            %R_CTX_PV,      _offsetof(sx127x_private_s, icount, 1)
-        or32                    %STATUS,         %tmp
+        // ld8e                    %tmp,            %R_CTX_PV,      _offsetof(sx127x_private_s, icount, 1)
+        // or32                    %STATUS,         %tmp
         end
 .endfunc
 
@@ -173,7 +182,7 @@ __rx_alloc_error:
         .clobber %6 tmp, %7 data, %8 len
     /* Update frequency */
         mov                     %data,           %R_CTX_PV
-        cst16                   %tmp,            _offsetof(sx127x_private_s, cfg.freq),  0
+        cst16                   %tmp,            _offsetof(sx127x_private_s, cfg_regs.freq),  0
         add                     %data,           %tmp
         cst8                    %tmp,            SX1276_REG_FRFMSB | 0x80
         pack8                   %tmp,            1
@@ -195,7 +204,7 @@ __rx_alloc_error:
         .input %8 mode, %12 link
         .clobber %9 tmp, %10 cfg irq1
         cst8                    %tmp,            SX1276_REG_OPMODE | 0x80
-        ld8e                    %cfg,            %R_CTX_PV,   _offsetof(sx127x_private_s, cfg.mode, 1)
+        ld8e                    %cfg,            %R_CTX_PV,   _offsetof(sx127x_private_s, cfg_regs.mode, 1)
         or32                    %cfg,            %mode
         pack8                   %tmp,            2
         spi_wr                  %tmp,            2,     CS_PULSE
@@ -204,8 +213,8 @@ __rx_alloc_error:
 
 .func sx127x_entry_rx
         .export sx127x_entry_rx
-        .input %0 deadline, %1 lifetime, %2 cmd
-        .clobber %0, %5, %6 tmp, %7 data, %8, %9, %10, %11, %12
+        .input %2 cmd
+        .clobber %0 deadline timeout status, %5, %6 tmp, %7 data, %8, %9, %10, %11, %12
     /* Set sync word size */
         mov                     %data,        %cmd
         cst8                    %tmp,         (SX1276_REG_SYNCCONFIG | 0x80)
@@ -215,13 +224,17 @@ __rx_alloc_error:
         tst32s                  %cmd,         bitpos(CMD_FREQ_CHANGE)
           call8                 %config_freq:link,  config_freq
     /* Wait for deadline if any */
+        mov                     %deadline,     %R_CTX_PV
+        add8                    %deadline,     _offsetof(sx127x_private_s, gctx.deadline, 8)
         spi_yield_deadline      %deadline
     /* Start RX */
 __retry_rx:
         cst8                    %sx127x_mode_set:mode,  SX1276_OPMODE_RECEIVER
         call8                   %sx127x_mode_set:link,  sx127x_mode_set
     /* Stay in RX until lifetime is up */
-        spi_yieldc_deadline     %lifetime
+        mov                     %timeout,      %R_CTX_PV
+        add8                    %timeout,      _offsetof(sx127x_private_s, gctx.timeout, 8)
+        spi_yieldc_deadline     %timeout
           jmp8                  __rx_timeout
     /* An interrupt has been raised */
         call8                   %sx127x_check_irq:link,  sx127x_check_irq
@@ -229,13 +242,16 @@ __retry_rx:
         call8                   %test_rx_on_going:link,  test_rx_on_going
         jmp8                    __retry_rx
 __rx_timeout:
+        // Set bc status
+        cst8                    %status,         SX127X_BC_STATUS_RX_TIMEOUT
+        st8e                    %status,         %R_CTX_PV,   _offsetof(sx127x_private_s, bc_status, 1)
         jmp8                    sx127x_entry_cancel
 .endfunc
 
 .func sx127x_entry_rx_cont
         .export sx127x_entry_rx_cont
-        .input %0 cmd, %1 timeout
-        .clobber %0 chan, %5, %6 tmp, %7 data, %8, %9, %10, %11, %12
+        .input %0 cmd
+        .clobber %0 chan, %1 timeout, %5, %6 tmp, %7 data, %8, %9, %10, %11, %12
     /* Set sync word size */
         mov                     %data,        %cmd
         cst8                    %tmp,         (SX1276_REG_SYNCCONFIG | 0x80)
@@ -244,6 +260,8 @@ __rx_timeout:
     /* Test if frequency must be changed */
         tst32s                  %cmd,         bitpos(CMD_FREQ_CHANGE)
           call8                 %config_freq:link,  config_freq
+    /* Set channel scanning delay */
+        ld32e                   %timeout,     %R_CTX_PV,   _offsetof(sx127x_private_s, tpbrx, 4)
     /* Start RX */
         cst8                    %sx127x_mode_set:mode,  SX1276_OPMODE_RECEIVER
         call8                   %sx127x_mode_set:link,  sx127x_mode_set
@@ -254,7 +272,7 @@ __rx_timeout:
         call8                   %test_rx_on_going:link, test_rx_on_going
         end
 __rx_hopping_loop:
-   /* Set channel scanning delay */
+   /* Wait channel scanning delay */
         spi_delay               %timeout
    /* Wait scanning delay */
         spi_yieldc
@@ -264,15 +282,14 @@ __rx_check_status:
    /* Test if packet is being received */
         call8                   %test_rx_on_going:link,  test_rx_on_going
    /* Check if a cancel is pending before scanning next channel */
-        ld8e                    %tmp,            %R_CTX_PV,      _offsetof(sx127x_private_s, cancel, 1)
-        tst32s                  %tmp,            0
+        ld8e                   %tmp,            %R_CTX_PV,   _offsetof(sx127x_private_s, flags, 1)
+        tst32c                 %tmp,            bitpos(SX127X_FLAGS_RX_CONTINOUS)
           jmp8                    sx127x_entry_cancel
    /* Stop receiver */
         cst8                    %sx127x_mode_set:mode,  SX1276_OPMODE_STANDBY
         call8                   %sx127x_mode_set:link,  sx127x_mode_set
    /* Compute next frequency */
         gaddr                   %tmp,               sx127x_next_hopping_freq
-        mov                     %0,                 %R_CTX_PV
         ccall                   %tmp
         call8                   %config_freq:link,  config_freq
    /* Restart Rx on next channel */
@@ -331,23 +348,37 @@ __no_rx_ongoing:
         ret                     %link
 .endfunc
 
+.func sx127x_entry_retry_tx_fair
+        .input %2 cmd
+        .export sx127x_entry_retry_tx_fair
+        .clobber %3, %4, %5, %6, %7, %8, %9, %10, %12
+        /* Jump to main function */
+        jmp8                    sx127x_main_tx_fair
+.endfunc
+
 .func sx127x_entry_tx_fair
         .export sx127x_entry_tx_fair
-        .input %0 len
-        .input %1 buffer
         .input %2 cmd
-        .input %3 deadline
-        .input %4 timeout
-        .input %5 rssith
-        .clobber %3 mean, %5 period, %6 tmp, %7 data, %8, %9, %10, %11, %12
+        .clobber %3 deadline, %4, %5, %6, %7, %8, %9, %10, %11, %12
         /* Init TX */
         call8                   %process_tx_cmd:link,    process_tx_cmd
-        /* Rssi period */
+        /* Wait deadline before TX */
+        mov                     %deadline,    %R_CTX_PV
+        add8                    %deadline,    _offsetof(sx127x_private_s, gctx.deadline, 8)
+        spi_yield_deadline      %deadline
+        /* Jump to main function */
+        jmp8                    sx127x_main_tx_fair
+.endfunc
+
+.func sx127x_main_tx_fair
+        .input %2 cmd
+        .clobber %3 mean status, %4 timeout, %5 period, %6 rssith, %7 data, %8, %9, %10, %12
+        /* Set Rssi period */
         ld32e                   %period,      %R_CTX_PV,   _offsetof(sx127x_private_s, delay_1ms, 4)
         shi32l                  %period,      1
-        /* Wait deadline before TX */
-        spi_yield_deadline      %deadline
         /* Test if timeout date is reached */
+        mov                     %timeout,     %R_CTX_PV
+        add8                    %timeout,     _offsetof(sx127x_private_s, gctx.timeout, 8)
         spi_deadline            %timeout
         spi_elapsed
           jmp8                  __tx_fail
@@ -362,8 +393,9 @@ __retry_tx_fair:
         spi_yield_delay         %period
         call8                   %sx127x_read_rssi:link,  sx127x_read_rssi
         add                     %mean,        %data
+        ld8e                    %rssith,      %R_CTX_PV,   _offsetof(sx127x_private_s, cfg_regs.rssi_th, 2)
         lt                      %rssith,      %mean
-        /* RSSI mean is less than RSSI threshold */ 
+        /* RSSI mean is less than RSSI threshold */
           jmp8                  sx127x_start_tx
         /* Test if timeout date is reached */
         spi_deadline            %timeout
@@ -371,30 +403,33 @@ __retry_tx_fair:
           jmp8                  __tx_fail
         jmp8                    __retry_tx_fair
 __tx_fail:
+        // Set bc status
+        cst8                    %status,         SX127X_BC_STATUS_TX_TIMEOUT
+        st8e                    %status,         %R_CTX_PV,   _offsetof(sx127x_private_s, bc_status, 1)
         jmp16                   sx127x_entry_standby
 .endfunc
 
 .func sx127x_entry_tx
         .export sx127x_entry_tx
-        .input %0 len
-        .input %1 buffer
         .input %2 cmd
-        .input %3 deadline
-        .clobber %0, %5, %6 tmp, %7 data, %8, %9, %10, %11, %12
-        call8                   %process_tx_cmd:link,    process_tx_cmd 
+        .clobber %0, %1, %3 deadline, %5, %6 tmp, %7 data, %8, %9, %10, %11, %12
+        call8                   %process_tx_cmd:link,    process_tx_cmd
         /* Wait deadline before TX */
+        mov                     %deadline,    %R_CTX_PV
+        add8                    %deadline,    _offsetof(sx127x_private_s, gctx.deadline, 8)
         spi_yield_deadline      %deadline
         jmp8                    sx127x_start_tx
 .endfunc
 
 .func sx127x_start_tx
-        .input %0 len
-        .input %1 buffer
         .input %2 cmd
-        .clobber %0, %5, %6 tmp, %7 data, %8, %9, %10, %12
+        .clobber %0 len, %1 buffer, %5, %6 tmp, %7 data, %8, %9, %10, %12
         /* Start TX */
         cst8                    %sx127x_mode_set:mode,  SX1276_OPMODE_TRANSMITTER
-        call8                   %sx127x_mode_set:link,  sx127x_mode_set
+        call16                   %sx127x_mode_set:link,  sx127x_mode_set
+        /* Write data values */
+        ld16e                   %len,         %R_CTX_PV,  _offsetof(sx127x_private_s, gctx.size, 2)
+        ld32e                   %buffer,      %R_CTX_PV,  _offsetof(sx127x_private_s, gctx.buffer, 4)
         /* Write Fifo */
         cst8                    %tmp,         SX1276_REG_FIFO | 0x80
         tst32c                  %cmd,         bitpos(CMD_IO_MODE)
@@ -420,7 +455,7 @@ __tx_fail:
 #ifdef CONFIG_DRIVER_RFPACKET_SX127X_RAW_MODE
 .func sx127x_entry_rx_raw
         .export sx127x_entry_rx_raw
-        .input %0 cmd 
+        .input %0 cmd
         .clobber %6 tmp, %7 data, %8, %9, %10, %12
     /* Change frequency is needed */
         tst32s                  %cmd,               bitpos(CMD_FREQ_CHANGE)

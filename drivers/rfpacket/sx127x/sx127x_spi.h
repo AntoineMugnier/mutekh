@@ -2,27 +2,20 @@
 #include <mutek/printk.h>
 #include <mutek/bytecode.h>
 
-#include <hexo/iospace.h>
-
 #include <device/resources.h>
 #include <device/device.h>
 #include <device/driver.h>
 #include <device/irq.h>
 
 #include <string.h>
+#include <stdbool.h>
 
 #include <device/class/spi.h>
-#include <device/class/dma.h>
-#include <device/class/timer.h>
 #include <device/class/gpio.h>
 #include <device/class/rfpacket.h>
-#include <device/class/iomux.h>
-#include <device/class/bitbang.h>
+#include <device/class/crypto.h>
 
 #include "sx1276_regs_fsk.h"
-
-//#define CONFIG_DRIVER_RFPACKET_SX127X_DEBUG
-//#define SX127X_PRINT_REGS
 
 #define SX127X_PIN_COUNT 3
 #define SX127X_IO_RST  0
@@ -56,39 +49,29 @@
 
 #define SX127X_RSSI_OFFSET SX1276_RSSICONFIG_OFFSET_P_00_DB
 
-BC_CCALL_FUNCTION(sx127x_alloc);
-BC_CCALL_FUNCTION(sx127x_next_hopping_freq);
+// Fifo values
+#define SX127X_FIFO_SIZE 64
 
-enum sx127x_state_e
+// lora
+struct sx127x_lora_config_s
 {
-  SX127X_STATE_INITIALISING,
-  SX127X_STATE_IDLE,
-  SX127X_STATE_SLEEP,
-  SX127X_STATE_CONFIG,
-  SX127X_STATE_CONFIG_RXC_PENDING_STOP,
-  SX127X_STATE_RX,      /* 5 */
-  /* Rx continous.*/
-  SX127X_STATE_RXC,
-  /* Rx continuous on multiple channels */
-  SX127X_STATE_RX_SCANNING,
-  /* A stop rx continous is pending */  
-  SX127X_STATE_RXC_PENDING_STOP,
-  /* Rx continous is stopping */  
-  SX127X_STATE_RXC_STOP, 
-  SX127X_STATE_TX,
-  SX127X_STATE_TX_FAIR,
-#ifdef CONFIG_DRIVER_RFPACKET_SX127X_RAW_MODE
-  SX127X_STATE_RXC_RAW_ALLOC,                           /* 12 */
-  SX127X_STATE_RXC_RAW,
-  SX127X_STATE_RXC_RAW_PENDING_STOP,
-  SX127X_STATE_RXC_RAW_STOP,
-  SX127X_STATE_RX_RAW_ALLOC,                       
-  SX127X_STATE_RX_RAW,                                 /* 17 */
-  SX127X_STATE_RX_RAW_PENDING_STOP,                               
-  SX127X_STATE_RX_RAW_STOP,
-  SX127X_STATE_TX_RAW,
-  SX127X_STATE_TX_RAW_DONE,
-#endif
+  union
+    {
+      struct
+        {
+          /* Modem configuration */
+          uint8_t modemcfg[3];
+          /* Sync word value */
+          uint8_t sw;
+          /* Preamble length */
+          uint8_t pl;
+          /* Inverted I/Q */
+          uint8_t iq;
+
+          uint8_t __padding[2];
+        };
+      uint8_t data[8];
+    };
 };
 
 struct sx127x_freq_coeff_s
@@ -117,16 +100,13 @@ struct sx127x_config_s
   dev_rfpacket_pwr_t rssi_th;
 };
 
-#include <device/clock.h>
-
 struct sx127x_private_s
 {
-  dev_timer_value_t timeout;
-  dev_timer_value_t deadline;
-  dev_timer_value_t timestamp;
 
-  struct device_s                    *dev;
-  /* base 5 ms time */
+  // Generic rfpacket context struct
+  struct dev_rfpacket_ctx_s gctx;
+
+  /* base 1 ms time */
   dev_timer_delay_t                  delay_1ms;
   /* Bit time in us */
   dev_timer_delay_t                  timebit;
@@ -136,79 +116,145 @@ struct sx127x_private_s
   dev_timer_delay_t                  tpbrx;
 
   uint16_t                           osc_ppb;
-  /* Interrupt count */
-  uint8_t                            icount;
-  uint8_t                            cancel;
-  /* Size of last received packet */
-  uint8_t                            size;
-  /* Internal state */
-  enum sx127x_state_e                state;
+
+  /* Configuration register */
+  struct sx127x_config_s             cfg_regs;
+  uint8_t                            cfg_offset;
+
+  /* Packet infos from bytecode (rssi, snr) */
+  uintptr_t                          bc_pkt_infos;
+
   /* SPI controller */
   struct device_spi_ctrl_s           spi;
   struct dev_spi_ctrl_bytecode_rq_s  spi_rq;
-  /* SX127x gpio mapping */
-  gpio_id_t                          pin_map[SX127X_PIN_COUNT];
-  /* SX127x interrupts. */
-  struct dev_irq_src_s               src_ep[2];
-  /* TX/RX request queue */
-  dev_request_queue_root_t           queue;
-  /* RX continuous request */
-  struct dev_rfpacket_rq_s *         rx_cont;
-  struct dev_rfpacket_rq_s *         next_rx_cont;
-  struct dev_rfpacket_rx_s *         rxrq;   
-
-  struct kroutine_s                  kr;
-  bool_t                             bcrun;
-  uint32_t                           bc_status;
-
-#ifdef SX127X_PRINT_REGS
-  uint8_t                            *dump;
-#endif
-  struct sx127x_config_s             cfg;
-
-  const struct dev_rfpacket_rf_cfg_s *rf_cfg;
-  const struct dev_rfpacket_pk_cfg_s *pk_cfg;
 
   /* SPI timer */
   struct device_timer_s *            timer;
-  struct dev_timer_rq_s              trq;
 
-  struct device_bitbang_s            bitbang;
-  struct dev_bitbang_rq_s            brq;
-#ifdef CONFIG_DRIVER_RFPACKET_SX127X_STATS
-  struct dev_rfpacket_stats_s stats;
+  /* SX127x gpio mapping */
+  gpio_id_t                          pin_map[3];
+
+  /* SX127x interrupts. */
+  struct dev_irq_src_s               src_ep[2];
+
+#if defined(CONFIG_DRIVER_CRYPTO_SX127X_RNG)
+  /* RNG crypto request */
+  struct dev_crypto_rq_s *           crypto_rq;
 #endif
-};
 
-STRUCT_COMPOSE(sx127x_private_s, kr);
-STRUCT_COMPOSE(sx127x_private_s, trq);
-STRUCT_COMPOSE(sx127x_private_s, brq);
+  struct device_s *dev;
+
+  // Driver flags/status
+  uint8_t flags;
+  uint8_t bc_status;
+  // Config structs
+  const struct dev_rfpacket_rf_cfg_s *rf_cfg;
+  const struct dev_rfpacket_pk_cfg_s *pk_cfg;
+};
 
 DRIVER_PV(struct sx127x_private_s);
 
+// Config functions
+error_t sx127x_build_config(struct sx127x_private_s * pv);
+bool sx127x_config_check_fairtx_valid(const struct dev_rfpacket_rf_cfg_s *rfcfg);
+void sx127x_config_freq(struct sx127x_private_s *pv, uint32_t channel);
+
+// Flags
+#define SX127X_FLAGS_RX_CONTINOUS 0x01 // rx continous is active
+#define SX127X_FLAGS_RXC_INFINITE 0x02 // rx continous has no lifetime
+#define SX127X_FLAGS_RX_TX_OK     0x04 // rx during tx_lbt is possible
+#define SX127X_FLAGS_TX_POWER_OK  0x08 // tx power don't need to be configured
+#define SX127X_FLAGS_RF_CONFIG_OK 0x10 // rf config don't need to be configured
+#define SX127X_FLAGS_PK_CONFIG_OK 0x20 // packet config don't need to be configured
+#define SX127X_FLAGS_TX_LBT       0x40 // current tx request is tx_lbt
+
+// Byte code status values (dev_rfpacket_status_s mirror)
+#define SX127X_BC_STATUS_RX_DONE 0
+#define SX127X_BC_STATUS_TX_DONE 1
+#define SX127X_BC_STATUS_RX_TIMEOUT 2
+#define SX127X_BC_STATUS_TX_TIMEOUT 3
+#define SX127X_BC_STATUS_CRC_ERR 4
+#define SX127X_BC_STATUS_JAMMING_ERR 5
+#define SX127X_BC_STATUS_OTHER_ERR 6
+#define SX127X_BC_STATUS_MISC 7
 
 
 
 
+#define SX127X_MODE_SLEEP	                      0x00
+#define SX127X_MODE_STANDBY	                    0x01
+#define SX127X_MODE_TX                          0x03
+#define SX127X_MODE_RX_CONT                     0x05
+#define SX127X_MODE_RX                          0x06
+#define SX127X_MODE_LORA                        0x80
 
+#define SX127X_IRQ_LORA_RX_TIMEOUT              0x80
+#define SX127X_IRQ_LORA_RX_DONE                 0x40
+#define SX127X_IRQ_LORA_CRC_ERROR               0x20
+#define SX127X_IRQ_LORA_VALID_HEADER            0x10
+#define SX127X_IRQ_LORA_TX_DONE                 0x08
+#define SX127X_IRQ_LORA_CAD_DONE                0x04
+#define SX127X_IRQ_LORA_FHSS_CHANGE             0x02
+#define SX127X_IRQ_LORA_CAD_DETECTED            0x01
 
+#define SX127X_IRQ_LORA_DIS_IRQMASK             0xff
+#define SX127X_IRQ_LORA_RX_IRQMASK              0xbf
+#define SX127X_IRQ_LORA_RX_CONT_IRQMASK         0xbf
+#define SX127X_IRQ_LORA_TX_IRQMASK              0xf7
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+#define RLR_FIFO                                0x00
+#define RLR_OPMODE                              0x01
+#define RLR_FRFMSB                              0x06
+#define RLR_FRFMID                              0x07
+#define RLR_FRFLSB                              0x08
+#define RLR_PACONFIG                            0x09
+#define RLR_PARAMP                              0x0A
+#define RLR_OCP                                 0x0B
+#define RLR_LNA                                 0x0C
+#define RLR_FIFOADDRPTR                         0x0D
+#define RLR_FIFOTXBASEADDR                      0x0E
+#define RLR_FIFORXBASEADDR                      0x0F
+#define RLR_FIFORXCURRENTADDR                   0x10
+#define RLR_IRQFLAGSMASK                        0x11
+#define RLR_IRQFLAGS                            0x12
+#define RLR_RXNBBYTES                           0x13
+#define RLR_RXHEADERCNTVALUEMSB                 0x14
+#define RLR_RXHEADERCNTVALUELSB                 0x15
+#define RLR_RXPACKETCNTVALUEMSB                 0x16
+#define RLR_RXPACKETCNTVALUELSB                 0x17
+#define RLR_MODEMSTAT                           0x18
+#define RLR_PKTSNRVALUE                         0x19
+#define RLR_PKTRSSIVALUE                        0x1A
+#define RLR_RSSIVALUE                           0x1B
+#define RLR_HOPCHANNEL                          0x1C
+#define RLR_MODEMCONFIG1                        0x1D
+#define RLR_MODEMCONFIG2                        0x1E
+#define RLR_SYMBTIMEOUTLSB                      0x1F
+#define RLR_PREAMBLEMSB                         0x20
+#define RLR_PREAMBLELSB                         0x21
+#define RLR_PAYLOADLENGTH                       0x22
+#define RLR_PAYLOADMAXLENGTH                    0x23
+#define RLR_HOPPERIOD                           0x24
+#define RLR_FIFORXBYTEADDR                      0x25
+#define RLR_MODEMCONFIG3                        0x26
+#define RLR_FEIMSB                              0x28
+#define RLR_FEIMID                              0x29
+#define RLR_FEILSB                              0x2A
+#define RLR_RSSIWIDEBAND                        0x2C
+#define RLR_DETECTOPTIMIZE                      0x31
+#define RLR_INVERTIQ                            0x33
+#define RLR_DETECTIONTHRESHOLD                  0x37
+#define RLR_SYNCWORD                            0x39
+#define RLR_DIOMAPPING1                         0x40
+#define RLR_DIOMAPPING2                         0x41
+#define RLR_VERSION                             0x42
+#define RLR_PLLHOP                              0x44
+#define RLR_TCXO                                0x4B
+#define RLR_PADAC                               0x4D
+#define RLR_FORMERTEMP                          0x5B
+#define RLR_BITRATEFRAC                         0x5D
+#define RLR_AGCREF                              0x61
+#define RLR_AGCTHRESH1                          0x62
+#define RLR_AGCTHRESH2                          0x63
+#define RLR_AGCTHRESH3                          0x64
+#define RLR_PLL                                 0x70
