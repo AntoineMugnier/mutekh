@@ -17,10 +17,10 @@
 
 #include "sx1276_regs_fsk.h"
 
-#define SX127X_PIN_COUNT 3
 #define SX127X_IO_RST  0
-#define SX127X_DIO0    1
-#define SX127X_DIO4    2
+#define SX127X_IO_DIO0 1
+#define SX127X_IO_DIO3 2
+#define SX127X_IO_DIO4 3
 
 #define STATUS          15
 #define R_CTX_PV        14
@@ -108,6 +108,7 @@ struct sx127x_private_s
 
   /* base 1 ms time */
   dev_timer_delay_t                  delay_1ms;
+  dev_timer_delay_t                  delay_5ms;
   /* Bit time in us */
   dev_timer_delay_t                  timebit;
   /* Time before RX stop in us */
@@ -120,6 +121,11 @@ struct sx127x_private_s
   /* Configuration register */
   struct sx127x_config_s             cfg_regs;
   uint8_t                            cfg_offset;
+#ifdef CONFIG_DRIVER_RFPACKET_SX127X_MOD_LORA
+  struct sx127x_lora_config_s        lora_cfg;
+  uint8_t                            lora_freq[4];
+  dev_timer_delay_t                  lora_timeout;
+#endif
 
   /* Packet infos from bytecode (rssi, snr) */
   uintptr_t                          bc_pkt_infos;
@@ -158,6 +164,9 @@ DRIVER_PV(struct sx127x_private_s);
 error_t sx127x_build_config(struct sx127x_private_s * pv);
 bool sx127x_config_check_fairtx_valid(const struct dev_rfpacket_rf_cfg_s *rfcfg);
 void sx127x_config_freq(struct sx127x_private_s *pv, uint32_t channel);
+#ifdef CONFIG_DRIVER_RFPACKET_SX127X_MOD_LORA
+void sx127x_lora_inverted_iq(struct sx127x_private_s *pv, struct dev_rfpacket_rq_s *rq);
+#endif
 
 // Flags
 #define SX127X_FLAGS_RX_CONTINOUS 0x01 // rx continous is active
@@ -177,7 +186,9 @@ void sx127x_config_freq(struct sx127x_private_s *pv, uint32_t channel);
 #define SX127X_BC_STATUS_JAMMING_ERR 5
 #define SX127X_BC_STATUS_OTHER_ERR 6
 #define SX127X_BC_STATUS_MISC 7
-
+#if defined(CONFIG_DRIVER_CRYPTO_SX127X_RNG)
+# define SX127X_BC_STATUS_RNG 8
+#endif
 
 
 

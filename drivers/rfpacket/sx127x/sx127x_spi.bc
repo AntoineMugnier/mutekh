@@ -101,7 +101,7 @@
         /* Update icount field */
         //cst32                   %STATUS,         0,   0
         //ld8e                    %STATUS,         %R_CTX_PV,      _offsetof(sx127x_private_s, icount, 1)
-        spi_gpioget             SX127X_DIO0,     %tmp
+        spi_gpioget             SX127X_IO_DIO0,     %tmp
         tst32s                  %tmp,            0
           jmp8                  __sx127x_process_irq
         ret                     %link
@@ -200,6 +200,7 @@ __rx_alloc_error:
         jmp8                    sx127x_entry_standby
 .endfunc
 
+
 .func sx127x_mode_set
         .input %8 mode, %12 link
         .clobber %9 tmp, %10 cfg irq1
@@ -245,7 +246,10 @@ __rx_timeout:
         // Set bc status
         cst8                    %status,         SX127X_BC_STATUS_RX_TIMEOUT
         st8e                    %status,         %R_CTX_PV,   _offsetof(sx127x_private_s, bc_status, 1)
-        jmp8                    sx127x_entry_cancel
+        /* Test if packet is being received */
+        call8                   %test_rx_on_going:link, test_rx_on_going
+        jmp8                    sx127x_entry_standby
+
 .endfunc
 
 .func sx127x_entry_rx_cont
@@ -301,7 +305,7 @@ __rx_check_status:
 .func test_rx_on_going
         .input %11 link
         .clobber %0, %5, %6 tmp, %7, %8, %9, %10, %12
-        spi_gpioget             SX127X_DIO4,  %tmp
+        spi_gpioget             SX127X_IO_DIO4,  %tmp
    /* Test if a valid preamble has been received */
         tst32c                  %tmp,            0
           jmp8                  __no_rx_ongoing

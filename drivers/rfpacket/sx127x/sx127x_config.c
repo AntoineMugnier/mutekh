@@ -55,10 +55,96 @@ static const struct sx127x_config_bw_s sx127x_config_bw_tbl[] =
     { 2 * 250000, 0x01 },
 };
 
+#ifdef CONFIG_DRIVER_RFPACKET_SX127X_MOD_LORA
 
+static const struct sx127x_config_bw_s sx127x_lora_config_bw[] =
+{
+  {   7800, 0x0 },
+  {  10400, 0x1 },
+  {  15600, 0x2 },
+  {  20800, 0x3 },
+  {  31250, 0x4 },
+  {  41700, 0x5 },
+  {  62500, 0x6 },
+  { 125000, 0x7 },
+  { 250000, 0x8 },
+  { 500000, 0x9 },
+};
 
 
 // Private functions
+
+static error_t sx127x_lora_config_pk(struct sx127x_private_s *pv, struct dev_rfpacket_rq_s *rq)
+{
+  const struct dev_rfpacket_pk_cfg_lora_s *cfg =
+    const_dev_rfpacket_pk_cfg_lora_s_cast(rq->pk_cfg);
+
+  uint8_t *modemcfg1 = &pv->lora_cfg.modemcfg[0];
+  uint8_t *modemcfg2 = &pv->lora_cfg.modemcfg[1];
+
+  /* Start updating the configuration. */
+  pv->lora_cfg.sw = cfg->sw_value;
+  pv->lora_cfg.pl = cfg->pb_len;
+
+  *modemcfg1 &= 0xf0;
+  *modemcfg2 &= 0xfb;
+
+  if (!cfg->header)
+    *modemcfg1 |= 0x1;
+
+  *modemcfg1 |= (cfg->crate & 0x7) << 1;
+
+  if (cfg->crc)
+    *modemcfg2 |= 0x4;
+
+  return 0;
+}
+
+static error_t sx127x_lora_config_rf(struct sx127x_private_s *pv, struct dev_rfpacket_rq_s *rq)
+{
+  const struct dev_rfpacket_rf_cfg_lora_s *cfg =
+    const_dev_rfpacket_rf_cfg_lora_s_cast(rq->rf_cfg);
+
+  uint8_t bw = 0;
+  uint_fast8_t i;
+
+  uint8_t *modemcfg1 = &pv->lora_cfg.modemcfg[0];
+  uint8_t *modemcfg2 = &pv->lora_cfg.modemcfg[1];
+  uint8_t *modemcfg3 = &pv->lora_cfg.modemcfg[2];
+
+  for (i = 0; i < ARRAY_SIZE(sx127x_lora_config_bw); ++i)
+  {
+      if (sx127x_lora_config_bw[i].bw == cfg->common.rx_bw)
+        bw = sx127x_lora_config_bw[i].bits;
+  }
+
+  *modemcfg1 &= 0x0f;
+  *modemcfg2 &= 0x07; /* force TX continuous to zero */
+  *modemcfg3  = 0;
+
+  *modemcfg1 |= (bw & 0xf) << 4;
+  *modemcfg2 |= (cfg->spreading & 0xf) << 4;
+
+  /* If the symbol duration is more than 16ms, than low data rate optimization
+   * must be enabled. */
+  uint8_t const ts = (uint16_t)(1 << cfg->spreading) * 1000 / cfg->common.rx_bw;
+
+  if (ts >= 16)
+    *modemcfg3 |= 0x8;
+
+  // CONFIG FREQ
+  int32_t  const freq_offset = rq->channel * cfg->common.chan_spacing;
+  uint64_t const freq = (int64_t)cfg->common.frequency + freq_offset;
+
+  /* Truncate to lowest 32 bits */
+  uint32_t frf = (freq << 19) / CONFIG_DRIVER_RFPACKET_SX127X_FREQ_XO;
+  endian_be32_na_store(pv->lora_freq, frf << 8);
+
+  return 0;
+}
+
+#endif
+
 
 static uint8_t* sx127x_config_get_cfg_buff(struct sx127x_private_s *pv)
 {
@@ -328,6 +414,12 @@ static error_t sx127x_build_rf_config(struct sx127x_private_s *pv,
     case DEV_RFPACKET_FSK:
     case DEV_RFPACKET_ASK:
       return sx127x_build_dynamic_rf_config(pv, rq);
+
+#ifdef CONFIG_DRIVER_RFPACKET_SX127X_MOD_LORA
+    case DEV_RFPACKET_LORA:
+      return sx127x_lora_config_rf(pv, rq);
+#endif
+
 #endif
 
     default:
@@ -524,6 +616,12 @@ static error_t sx127x_build_pk_config(struct sx127x_private_s *pv,
 #ifndef CONFIG_DEVICE_RFPACKET_STATIC_PKT_CONFIG
     case DEV_RFPACKET_FMT_SLPC:
       return sx127x_build_dynamic_pk_config(pv, rq);
+
+#ifdef CONFIG_DRIVER_RFPACKET_SX127X_MOD_LORA
+    case DEV_RFPACKET_FMT_LORA:
+      return sx127x_lora_config_pk(pv, rq);
+#endif
+
 #endif
 
     default:
@@ -598,3 +696,31 @@ void sx127x_config_freq(struct sx127x_private_s *pv, uint32_t channel)
 {
   sx127x_config_freq_update(pv, channel);
 }
+
+#ifdef CONFIG_DRIVER_RFPACKET_SX127X_MOD_LORA
+void sx127x_lora_inverted_iq(struct sx127x_private_s *pv, struct dev_rfpacket_rq_s *rq)
+{
+  const struct dev_rfpacket_rf_cfg_s *rfcfg = rq->rf_cfg;
+
+  if (rfcfg->mod != DEV_RFPACKET_LORA)
+    return;
+
+  const struct dev_rfpacket_rf_cfg_lora_s *cfg =
+    const_dev_rfpacket_rf_cfg_lora_s_cast(rq->rf_cfg);
+
+    switch (rq->type)
+    {
+    case DEV_RFPACKET_RQ_RX:
+    case DEV_RFPACKET_RQ_RX_CONT:
+      pv->lora_cfg.iq = cfg->iq_inverted ? 0x67 : 0x27;
+      break;
+
+    case DEV_RFPACKET_RQ_TX:
+      pv->lora_cfg.iq = cfg->iq_inverted ? 0x26 : 0x27;
+      break;
+
+    default:
+      UNREACHABLE();
+    }
+}
+#endif

@@ -55,7 +55,7 @@ static const struct dev_rfpacket_driver_interface_s sx127x_itfc = {
 
 /* ******************************** RNG **************************************/
 
-#if defined(CONFIG_DRIVER_CRYPTO_SX127X_RNG)
+#if defined(CONFIG_DRIVER_CRYPTO_SX127X_RNG) && defined(CONFIG_DRIVER_RFPACKET_SX127X_MOD_LORA)
 
 static DEV_CRYPTO_INFO(sx127x_crypto_info)
 {
@@ -72,8 +72,6 @@ static void sx127x_crypto_rng_end(struct device_s * dev)
 {
   struct sx127x_private_s * pv = dev->drv_pv;
   struct dev_crypto_rq_s *  rq = pv->crypto_rq;
-
-  pv->done &= ~SX127X_RNG_MASK;
 
   if (rq->op & DEV_CRYPTO_FINALIZE)
     memcpy(rq->out, rq->ctx->state_data,
@@ -305,6 +303,9 @@ static error_t sx127x_check_config(struct dev_rfpacket_ctx_s *gpv,
       pv->flags |= SX127X_FLAGS_RX_TX_OK;
 
   }
+  #ifdef CONFIG_DRIVER_RFPACKET_SX127X_MOD_LORA
+    sx127x_lora_inverted_iq(pv, rq);
+  #endif
   // Set configuration flags
   pv->flags &= ~SX127X_FLAGS_RF_CONFIG_OK;
   pv->flags &= ~SX127X_FLAGS_PK_CONFIG_OK;
@@ -436,7 +437,6 @@ static void sx127x_cancel_rxc(struct dev_rfpacket_ctx_s *gpv)
   pv->flags &= ~SX127X_FLAGS_RX_CONTINOUS;
   // Wakeup periodic rssi sampling
   dev_spi_bytecode_wakeup(&pv->spi, srq);
-  //dev_spi_bytecode_start(&pv->spi, &pv->spi_rq, &sx127x_entry_cancel, 0);
 }
 
 // Transceiver is sleeping when this function is called
@@ -571,7 +571,7 @@ static KROUTINE_EXEC(sx127x_spi_rq_done)
   }
 
 #if defined(CONFIG_DRIVER_CRYPTO_SX127X_RNG)
-  if ((pv->crypto_rq != NULL) && (pv->bc_status == SX127X_RNG_MASK))
+  if ((pv->crypto_rq != NULL) && (pv->bc_status == SX127X_BC_STATUS_RNG))
     {
       sx127x_crypto_rng_end(dev);
       goto end;
@@ -678,9 +678,9 @@ static DEV_INIT(sx127x_init)
                                 &pv->spi, &gpio, &pv->timer))
     goto err_mem;
 
-  // Init timer (1 ms base time)
-  // FIXME 5ms for lora
+  // Init timer
   dev_timer_init_sec(pv->timer, &pv->delay_1ms, 0, 1, 1000);
+  dev_timer_init_sec(pv->timer, &pv->delay_5ms, 0, 5, 1000);
 
   // Start timer
   if (device_start(&pv->timer->base))
@@ -691,10 +691,10 @@ static DEV_INIT(sx127x_init)
   pv->dev = dev;
 
   // Init GPIO stuff
-  static const gpio_width_t pin_wmap[3] = {1, 1, 1};
+  static const gpio_width_t pin_wmap[4] = {1, 1, 1, 1};
 
   // FIXME lora dio3
-  if (device_gpio_setup(gpio, dev, ">rst:1 <dio0:1 <dio4:1", pv->pin_map, NULL))
+  if (device_gpio_setup(gpio, dev, ">rst:1 <dio0:1 <dio3:1 <dio4:1", pv->pin_map, NULL))
     goto err_timer;
 
   srq->gpio_map = pv->pin_map;
@@ -717,7 +717,6 @@ static DEV_INIT(sx127x_init)
     goto err_timer;
 
   /* Disable DIO4 as irq */
-  // FIXME not on lora
   device_irq_src_disable(&pv->src_ep[1]);
 
   // Init generic context

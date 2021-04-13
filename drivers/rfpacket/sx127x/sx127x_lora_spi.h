@@ -212,7 +212,7 @@ struct sx127x_private_s
 
 DRIVER_PV(struct sx127x_private_s);
 
-#define SX127X_MODE_SLEEP	                    0x00
+#define SX127X_MODE_SLEEP	                      0x00
 #define SX127X_MODE_STANDBY	                    0x01
 #define SX127X_MODE_TX                          0x03
 #define SX127X_MODE_RX_CONT                     0x05
