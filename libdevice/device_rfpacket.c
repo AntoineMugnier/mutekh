@@ -814,8 +814,9 @@ void dev_rfpacket_config_notsup(struct dev_rfpacket_ctx_s *pv, struct dev_rfpack
 config_depend(CONFIG_DEVICE_RFPACKET)
 bool_t dev_rfpacket_can_rxtx(struct dev_rfpacket_ctx_s *pv, struct dev_rfpacket_rq_s *rq) {
     struct dev_rfpacket_rq_s *rx_cont = dev_rfpacket_rq_head(&pv->rx_cont_queue);
-    // Check if possible to rx while txlbt (rq config and rx_cont config are the same)
-    if (rx_cont && (rq->rf_cfg == rx_cont->rf_cfg) && (rq->pk_cfg == rx_cont->pk_cfg)) {
+    // Check if possible to rx while txlbt (rq and rx_cont configs and channels are the same)
+    if (rx_cont && (rq->rf_cfg == rx_cont->rf_cfg) && (rq->pk_cfg == rx_cont->pk_cfg)
+        && (rq->channel == rx_cont->channel)) {
       return true;
     }
     return false;
