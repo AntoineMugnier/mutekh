@@ -80,7 +80,7 @@ static void test_rflbt_send_ack(bool islbt);
 static void test_rflbt_send_td(void);
 
 // --- Private Variables ---
-static const struct dev_rfpacket_pk_cfg_basic_s pkcfg = {
+static struct dev_rfpacket_pk_cfg_basic_s pkcfg = {
     .base = {
         .format = DEV_RFPACKET_FMT_SLPC,
         .cache = {
@@ -99,7 +99,7 @@ static const struct dev_rfpacket_pk_cfg_basic_s pkcfg = {
     .rx_pb_len = 16,
 };
 
-static const struct dev_rfpacket_rf_cfg_fsk_s rfcfg = {
+static struct dev_rfpacket_rf_cfg_fsk_s rfcfg = {
     .base = {
         .mod = DEV_RFPACKET_GFSK,
         .cache = {
