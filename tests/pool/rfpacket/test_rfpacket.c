@@ -48,8 +48,8 @@
 
 #define RFP_TEST_RQ_NUMBER 2
 #define MAX_PACKET_SIZE 256
-#define RFP_TEST_TIMER_PATH    "rfpacket0"
-#define RFP_TEST_DEVICE_0_PATH "rfpacket0"
+#define RFP_TEST_TIMER_PATH    "rfpacket*"
+#define RFP_TEST_DEVICE_0_PATH "rfpacket*"
 
 #define TEST_BASE_TIME_US 1000
 
@@ -62,7 +62,7 @@
 #warning RFP_TEST_RX_CONTINOUS can not be defined when only one request in use
 #endif
 
-static const struct dev_rfpacket_pk_cfg_basic_s pkcfg = {
+static struct dev_rfpacket_pk_cfg_basic_s pkcfg = {
     .base = {
         .format = DEV_RFPACKET_FMT_SLPC,
         .cache = {
@@ -81,7 +81,7 @@ static const struct dev_rfpacket_pk_cfg_basic_s pkcfg = {
     .rx_pb_len = 16,
 };
 
-static const struct dev_rfpacket_rf_cfg_fsk_s rfcfg = {
+static struct dev_rfpacket_rf_cfg_fsk_s rfcfg = {
  .base = {
      .mod = DEV_RFPACKET_GFSK,
      .cache = {
