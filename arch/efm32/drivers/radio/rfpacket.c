@@ -951,6 +951,7 @@ static void efr32_radio_tx(struct dev_rfpacket_ctx_s *gpv, struct dev_rfpacket_r
     // Restart tx lbt
     efr32_rfp_start_tx_lbt(ctx, rq);
     // TODO LBT FEATURES (no rx, lbt norm)
+    return;
   }
   // Clear buffer
   cpu_mem_write_32(EFR32_BUFC_ADDR + EFR32_BUFC_CMD_ADDR(0), EFR32_BUFC_CMD_CLEAR);
@@ -1081,7 +1082,6 @@ static DEV_RFPACKET_CANCEL(efr32_radio_cancel) {
   struct radio_efr32_rfp_ctx_s *ctx = dev->drv_pv;
   error_t err = 0;
 
-  efr32_radio_printk("cancel");
   assert(rq);
 
   LOCK_SPIN_IRQ(&dev->lock);
