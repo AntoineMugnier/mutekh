@@ -30,7 +30,7 @@
 # include <device/resource/uart.h>
 # include <device/class/i2c.h>
 #endif
-
+#include <assert.h>
 #include <hexo/iospace.h>
 #include <arch/efm32/irq.h>
 #include <arch/efm32/pin.h>
@@ -93,20 +93,20 @@ void efm32_board_init_dcdc(void)
 
   x = EFR32_EMU_DCDCCTRL_DCDCMODE(LOWPOWER) |
       EFR32_EMU_DCDCCTRL_DCDCMODEEM23 |
-      EFR32_EMU_DCDCCTRL_DCDCMODEEM4;  
+      EFR32_EMU_DCDCCTRL_DCDCMODEEM4;
   cpu_mem_write_32(EFM32_EMU_ADDR + EFR32_EMU_DCDCCTRL_ADDR, x);
 
 
   x = EFR32_EMU_DCDCMISCCTRL_PFETCNT(3) |
       EFR32_EMU_DCDCMISCCTRL_NFETCNT(3) |
-      EFR32_EMU_DCDCMISCCTRL_LNFORCECCM | 
+      EFR32_EMU_DCDCMISCCTRL_LNFORCECCM |
       EFR32_EMU_DCDCMISCCTRL_LPCMPHYSDIS |
       EFR32_EMU_DCDCMISCCTRL_LPCMPHYSHI |
       EFR32_EMU_DCDCMISCCTRL_LNFORCECCM |
       EFR32_EMU_DCDCMISCCTRL_LPCLIMILIMSEL(1) |
       EFR32_EMU_DCDCMISCCTRL_LNCLIMILIMSEL(7) |
       EFR32_EMU_DCDCMISCCTRL_LPCMPBIASEM234H(BIAS0);
- 
+
   cpu_mem_write_32(EFM32_EMU_ADDR + EFR32_EMU_DCDCMISCCTRL_ADDR, x);
 }
 
@@ -118,7 +118,7 @@ void efm32_board_init(void)
 
   /* Enable GPIO clock */
 
-  
+
   x = EFM32_CMU_HFBUSCLKEN0_GPIO;
   cpu_mem_write_32(EFM32_CMU_ADDR + EFM32_CMU_HFBUSCLKEN0_ADDR, x);
 
@@ -149,14 +149,14 @@ void efm32_board_init(void)
 
   x = EFM32_GPIO_DOUT_DOUT(5);
   cpu_mem_write_32(EFM32_GPIO_ADDR + EFM32_GPIO_DOUT_ADDR(0) + 0x06000000, x);
-  
+
 #ifndef CONFIG_DEVICE_CLOCK_GATING
   /* Switch leds on */
   x = cpu_mem_read_32(EFM32_GPIO_ADDR + EFM32_GPIO_MODEL_ADDR(5));
   EFM32_GPIO_MODEL_MODE_SET(4, x, PUSHPULL);
   EFM32_GPIO_MODEL_MODE_SET(5, x, PUSHPULL);
   cpu_mem_write_32(EFM32_GPIO_ADDR + EFM32_GPIO_MODEL_ADDR(5), x);
-  
+
   x = EFM32_GPIO_DOUT_DOUT(4) | EFM32_GPIO_DOUT_DOUT(5);
   cpu_mem_write_32(EFM32_GPIO_ADDR + EFM32_GPIO_DOUT_ADDR(5) + 0x06000000, x);
 #endif
@@ -175,7 +175,7 @@ void efm32_board_init(void)
   x |= EFM32_CMU_HFXOCTRL_AUTOSTARTRDYSELRAC;
   cpu_mem_write_32(EFM32_CMU_ADDR + EFM32_CMU_HFXOCTRL_ADDR, x);
 
-#endif 
+#endif
 
 }
 
@@ -255,8 +255,10 @@ DEV_DECLARE_STATIC(leuart0_dev, "leuart0", 0, efm32_leuart_drv,
                    DEV_STATIC_RES_DEV_IOMUX("/gpio"),
                    DEV_STATIC_RES_IOMUX("tx",  EFM32_LOC2, EFM32_PA2, 0, 0),
                    DEV_STATIC_RES_IOMUX("rx",  EFM32_LOC2, EFM32_PA3, 0, 0),
+                   //DEV_STATIC_RES_IOMUX("rx", EFM32_LOC0, EFM32_PA1, 0, 0),
+                   //DEV_STATIC_RES_IOMUX("tx", EFM32_LOC0, EFM32_PA0, 0, 0),
 
-                  DEV_STATIC_RES_UART(9600, 8, 0, 0, 0)
+                   DEV_STATIC_RES_UART(9600, 8, 0, 0, 0)
                    );
 
 #endif
@@ -542,7 +544,7 @@ DEV_DECLARE_STATIC(radio_dev, "rfpacket0", 0, efr32_radio_drv,
                   DEV_STATIC_RES_CLK_SRC("/recmu", EFM32_CLOCK_PRS, 8),
                   DEV_STATIC_RES_CLK_SRC("/recmu", EFM32_CLOCK_RTCC, 9),
               # endif
-                  
+
               # else
                   DEV_STATIC_RES_FREQ(HFXO_FREQ, 1),
               #endif
