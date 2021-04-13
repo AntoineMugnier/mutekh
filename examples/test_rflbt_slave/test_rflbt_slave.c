@@ -45,7 +45,7 @@
 #define GIVE_TD_CMD 'd'
 #define ACK_RSP 'k'
 
-#define SYNC_TIME (((pkcfg.tx_pb_len + pkcfg.sw_len + 1) * pv.msec * 1000) / rfcfg.base.drate)
+#define SYNC_TIME (((pkcfg.tx_pb_len + pkcfg.sw_len + 1) * pv.msec * 1000) / rfcfg.common.drate)
 
 // --- Private Types ---
 enum _test_rflbt_state {
@@ -83,12 +83,12 @@ static void test_rflbt_send_td(void);
 static const struct dev_rfpacket_pk_cfg_basic_s pkcfg = {
     .base = {
         .format = DEV_RFPACKET_FMT_SLPC,
-        .encoding = DEV_RFPACKET_CLEAR,
         .cache = {
             .id = 0,
             .dirty = 0
         },
     },
+    .encoding = DEV_RFPACKET_CLEAR,
     .crc = 0x8005,
     .crc_seed = 0xffff,
     .sw_value = 0xabba,
@@ -106,9 +106,11 @@ static const struct dev_rfpacket_rf_cfg_fsk_s rfcfg = {
             .id = 0,
             .dirty = 0
         },
+    },
+    .common = {
         .drate = 38400,
         .jam_rssi = (-90) << 3,
-        .frequency = 865027875,
+        .frequency = 865056875,
         .chan_spacing = 93750,
         .rx_bw = 0,
         .freq_err = 868 * 20 /* ppm */,
@@ -286,8 +288,8 @@ static void test_rflbt_send_td(void) {
 void app_start(void) {
     printk("Init started.\n");
     // Retrieve devices
-    ensure(!device_get_accessor_by_path(&pv.rf_dev.base, NULL, "rfpacket0", DRIVER_CLASS_RFPACKET));
-    ensure(!device_get_accessor_by_path(&pv.timer_dev.base,  NULL, "rfpacket0", DRIVER_CLASS_TIMER));
+    ensure(!device_get_accessor_by_path(&pv.rf_dev.base, NULL, "rfpacket*", DRIVER_CLASS_RFPACKET));
+    ensure(!device_get_accessor_by_path(&pv.timer_dev.base,  NULL, "rfpacket*", DRIVER_CLASS_TIMER));
     // Set timer reference
     dev_timer_init_sec(&pv.timer_dev, &pv.msec, 0, 1, 1000);
     // Init module
