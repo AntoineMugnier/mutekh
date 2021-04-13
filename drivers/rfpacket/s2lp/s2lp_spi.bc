@@ -42,7 +42,6 @@
         tst32c                 %tmp,            bitpos(S2LP_FLAGS_RX_CONTINOUS)
             end
         // Set channel
-
         call16                 %s2lp_set_chan:link,    s2lp_set_chan
         // Check state
         cst8                   %s2lp_check_state:state, S2LP_STATE0_STATE_OFFSET(S2LP_STATE_READY)
@@ -598,7 +597,7 @@
 .func s2lp_start_rx
         .input %4 link
         .clobber %2 cmd
-         // Set rx command (S2LP_CMD_HEADER_BYTE, S2LP_CMD_RX)
+        // Set rx command (S2LP_CMD_HEADER_BYTE, S2LP_CMD_RX)
         cst16                  %cmd,            0x6180,   0
         pack16le               %cmd,            1,        2
         // Send command
@@ -949,7 +948,7 @@
 .func s2lp_abort
         .input %4 link
         .input %1 mask // flush fifo mask, must NOT be 0 for status update
-        .clobber %1 delay, %2 cmd tmp, %3 state 
+        .clobber %1 delay, %2 cmd tmp, %3 state
         // Init %2
         cst8                   %2,               0
         // Check mask value

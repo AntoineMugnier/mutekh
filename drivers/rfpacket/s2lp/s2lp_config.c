@@ -928,7 +928,7 @@ static error_t s2lp_build_rf_config(struct s2lp_ctx_s *pv, struct dev_rfpacket_r
       return s2lp_build_extern_rf_config(pv, rq);
 
     default:
-      return -ENOTSUP;    
+      return -ENOTSUP;
   }
 }
 
@@ -1004,7 +1004,7 @@ uint8_t s2lp_build_pwr(struct s2lp_ctx_s *pv, int16_t pwr) {
     reg_pwr = 1;
   } else {
     // Reg = 29 - 2 * dbm value
-    reg_pwr = (uint8_t)((int32_t)29 - (pwr / 4)); // 0.5 dbm res, power value is truncated 
+    reg_pwr = (uint8_t)((int32_t)29 - (pwr / 4)); // 0.5 dbm res, power value is truncated
   }
   return reg_pwr;
 }
@@ -1146,7 +1146,7 @@ const uint8_t s2lp_config[] = {
   0x4, S2LP_WRITE_REG_BYTE, S2LP_ANT_SELECT_CONF_ADDR, (S2LP_ANT_DEF_VAL), 0x00,
 #else
   // Activate CS_Blanking (interfere with CSMA)
-  0x4, S2LP_WRITE_REG_BYTE, S2LP_ANT_SELECT_CONF_ADDR, (S2LP_ANT_DEF_VAL | S2LP_ANT_CS_BLANKING_REGMASK), 0x00,  
+  0x4, S2LP_WRITE_REG_BYTE, S2LP_ANT_SELECT_CONF_ADDR, (S2LP_ANT_DEF_VAL | S2LP_ANT_CS_BLANKING_REGMASK), 0x00,
 #endif
   // Dig div config
   0x4, S2LP_WRITE_REG_BYTE, S2LP_XO_RCO_CONF1_ADDR, S2LP_RCO_CONF1_VAL, S2LP_RCO_CONF0_VAL,
