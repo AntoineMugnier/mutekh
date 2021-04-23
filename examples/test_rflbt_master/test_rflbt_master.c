@@ -181,7 +181,7 @@ static struct dev_rfpacket_rf_cfg_fsk_s rfcfg = {
     .common = {
         .drate = 38400,
         .jam_rssi = (-90) << 3,
-        .frequency = 865056875,
+        .frequency = 865046875,
         .chan_spacing = 93750,
         .rx_bw = 0,
         .freq_err = 868 * 20 /* ppm */,
@@ -251,7 +251,7 @@ static KROUTINE_EXEC(test_rflbt_rx_pckt_cb) {
             test_rflbt_mean_add(pv.reply_time);
             pv.packet_ok = true;
             if (pv.state == STATE_SYNC) {
-                pv.state = STATE_TEST_ACK;
+                pv.state = STATE_TEST_LBT_CLR; // STATE_TEST_ACK;
                 pv.test_counter = TEST_LOOP_NB;
             }
             //printk("Received ack.\n");
@@ -355,10 +355,10 @@ static void test_rflbt_wait(uint32_t wait_time) {
 
 static void test_rflbt_button(void) {
     struct dev_gpio_rq_s *grq = &pv.grq_struct;
-    grq->io_first = EFM32_PF6;
-    grq->io_last = EFM32_PF6;
-    // grq->io_first = EFM32_PB10;
-    // grq->io_last = EFM32_PB10;
+    //grq->io_first = EFM32_PF6;
+    //grq->io_last = EFM32_PF6;
+    grq->io_first = EFM32_PB10;
+    grq->io_last = EFM32_PB10;
     grq->type = DEV_GPIO_UNTIL;
     grq->until.mask = dev_gpio_mask1;
     pv.gpio_data[0] = 0x1;
@@ -664,6 +664,7 @@ static void test_rflbt_process(void) {
 
         case STATE_TEST_END:
             test_rflbt_button();
+            //test_rflbt_wait(2 * WAIT_PERIOD_MS);
         break;
 
         default:
@@ -677,9 +678,9 @@ static void test_rflbt_process(void) {
 void app_start(void) {
     printk("*** START OF TEST ***\n");
     // Retrieve devices
-    ensure(!device_get_accessor_by_path(&pv.rf_dev.base, NULL, "rfpacket0", DRIVER_CLASS_RFPACKET));
-    ensure(!device_get_accessor_by_path(&pv.timer_dev.base,  NULL, "rfpacket0", DRIVER_CLASS_TIMER));
-    ensure(!device_get_accessor_by_path(&pv.gpio_dev.base,  NULL, "gpio", DRIVER_CLASS_GPIO));
+    ensure(!device_get_accessor_by_path(&pv.rf_dev.base, NULL, "rfpacket*", DRIVER_CLASS_RFPACKET));
+    ensure(!device_get_accessor_by_path(&pv.timer_dev.base,  NULL, "rfpacket*", DRIVER_CLASS_TIMER));
+    //ensure(!device_get_accessor_by_path(&pv.gpio_dev.base,  NULL, "gpio", DRIVER_CLASS_GPIO));
     // Set timer reference
     dev_timer_init_sec(&pv.timer_dev, &pv.msec, 0, 1, 1000);
     printk("Msec: %d\n", pv.msec);
@@ -688,8 +689,8 @@ void app_start(void) {
         pv.dist_buf[idx*10] = 0x55;
     }
     // Init button
-    DEVICE_OP(&pv.gpio_dev, set_mode, EFM32_PF6, EFM32_PF6, dev_gpio_mask1, DEV_PIN_INPUT_PULLUP);
-    //DEVICE_OP(&pv.gpio_dev, set_mode, EFM32_PB10, EFM32_PB10, dev_gpio_mask1, DEV_PIN_INPUT_PULLUP);
+    //DEVICE_OP(&pv.gpio_dev, set_mode, EFM32_PF6, EFM32_PF6, dev_gpio_mask1, DEV_PIN_INPUT_PULLUP);
+    DEVICE_OP(&pv.gpio_dev, set_mode, EFM32_PB10, EFM32_PB10, dev_gpio_mask1, DEV_PIN_INPUT_PULLUP);
     // Init module
     test_rflbt_baserq(&pv.rq_struct);
     test_rflbt_baserq(&pv.rq_disturb);
