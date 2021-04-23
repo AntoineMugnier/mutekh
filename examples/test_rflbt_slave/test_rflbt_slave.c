@@ -48,12 +48,14 @@
 #define SYNC_TIME (((pkcfg.tx_pb_len + pkcfg.sw_len + 1) * pv.msec * 1000) / rfcfg.common.drate)
 
 // --- Private Types ---
-enum _test_rflbt_state {
+enum _test_rflbt_state
+{
     TEST_IDLE,
     TEST_ACK,
 };
 
-typedef struct _test_rflbt_info {
+typedef struct _test_rflbt_info
+{
     uint8_t state;
     bool calc_td;
     uint8_t tx_buf[4];
@@ -80,10 +82,13 @@ static void test_rflbt_send_ack(bool islbt);
 static void test_rflbt_send_td(void);
 
 // --- Private Variables ---
-static struct dev_rfpacket_pk_cfg_basic_s pkcfg = {
-    .base = {
+static struct dev_rfpacket_pk_cfg_basic_s pkcfg =
+{
+    .base =
+    {
         .format = DEV_RFPACKET_FMT_SLPC,
-        .cache = {
+        .cache =
+        {
             .id = 0,
             .dirty = 0
         },
@@ -99,15 +104,19 @@ static struct dev_rfpacket_pk_cfg_basic_s pkcfg = {
     .rx_pb_len = 16,
 };
 
-static struct dev_rfpacket_rf_cfg_fsk_s rfcfg = {
-    .base = {
+static struct dev_rfpacket_rf_cfg_fsk_s rfcfg =
+{
+    .base =
+    {
         .mod = DEV_RFPACKET_GFSK,
-        .cache = {
+        .cache =
+        {
             .id = 0,
             .dirty = 0
         },
     },
-    .common = {
+    .common =
+    {
         .drate = 38400,
         .jam_rssi = (-90) << 3,
         .frequency = 865056875,
@@ -115,7 +124,8 @@ static struct dev_rfpacket_rf_cfg_fsk_s rfcfg = {
         .rx_bw = 0,
         .freq_err = 868 * 20 /* ppm */,
     },
-    .fairtx = {
+    .fairtx =
+    {
         .mode = DEV_RFPACKET_LBT,
         .lbt.rssi = (-95) << 3,
         .lbt.duration = 5000, /** us */
@@ -130,22 +140,26 @@ static test_rflbt_info_t pv;
 
 // *** Private Functions ***
 
-static KROUTINE_EXEC(test_rflbt_rx_cont_pckt_cb) {
+static KROUTINE_EXEC(test_rflbt_rx_cont_pckt_cb)
+{
     struct dev_rfpacket_rx_s *rx = dev_rfpacket_rx_s_from_kr(kr);
 
-    if (!rx->error) {
+    if (!rx->error)
+    {
         uint8_t *pBuff = (uint8_t *)rx->buf;
         //printk("Received on chan %d - %P\n", rx->channel, pBuff, rx->size);
         test_rflbt_process_rx(pBuff);
-    } else {
-        //printk("Rx packet failed with error %d\n", rx->error);
     }
+    else
+        printk("Rx packet failed with error %d\n", rx->error);
+
 }
 
-static struct dev_rfpacket_rx_s *test_rflbt_rx_cont_alloc(struct dev_rfpacket_rq_s *rq, size_t size) {
-    if (size > MAX_PACKET_SIZE) {
+static struct dev_rfpacket_rx_s *test_rflbt_rx_cont_alloc(struct dev_rfpacket_rq_s *rq, size_t size)
+{
+    if (size > MAX_PACKET_SIZE)
         return NULL;
-    }
+
     struct dev_rfpacket_rx_s *rx = &pv.rx_struct;
     rx->buf = pv.rx_buf;
     kroutine_init_deferred(&rx->kr, &test_rflbt_rx_cont_pckt_cb);
@@ -153,30 +167,39 @@ static struct dev_rfpacket_rx_s *test_rflbt_rx_cont_alloc(struct dev_rfpacket_rq
     return rx;
 }
 
-static KROUTINE_EXEC(test_rflbt_rx_cont_cb) {
+static KROUTINE_EXEC(test_rflbt_rx_cont_cb)
+{
     struct dev_rfpacket_rq_s *rq = dev_rfpacket_rq_from_kr(kr);
 
-    if (rq->error == -ENOTSUP) {
+    if (rq->error == -ENOTSUP)
         printk("Bad RX configuration\n");
-    } else if (rq->error ==  -EBUSY) {
+
+    else if (rq->error ==  -EBUSY)
         printk("Jamming.\n");
-    }
+
     test_rflbt_rx_cont();
 }
 
-static KROUTINE_EXEC(test_rflbt_tx_cb) {
+static KROUTINE_EXEC(test_rflbt_tx_cb)
+{
     struct dev_rfpacket_rq_s *rq = dev_rfpacket_rq_from_kr(kr);
 
-    if (rq->error == -ENOTSUP) {
+    if (rq->error == -ENOTSUP)
         printk("Bad TX configuration\n");
-    } else if ((rq->error == -ETIMEDOUT) || (rq->error == -EAGAIN) || (rq->error == -EBUSY)) {
+
+    else if ((rq->error == -ETIMEDOUT) || (rq->error == -EAGAIN) || (rq->error == -EBUSY))
+    {
         printk("Channel was busy (err %d). Retrying\n", rq->error);
         test_rflbt_send_ack(true);
-    } else if (!rq->error) {
-        if (pv.calc_td) {
+    }
+    else if (!rq->error)
+    {
+        if (pv.calc_td)
+        {
             // Time dead calculation
             pv.td_val = rq->tx_lbt_td;
-            if (pv.td_val > SYNC_TIME) {
+            if (pv.td_val > SYNC_TIME)
+            {
                 // Correction for preamble + sync word
                 pv.td_val -= SYNC_TIME;
             }
@@ -184,19 +207,22 @@ static KROUTINE_EXEC(test_rflbt_tx_cb) {
             pv.mean_count++;
             pv.calc_td = false;
         }
-    } else {
-        printk("Error during tx: %d\n", rq->error);
     }
+    else
+        printk("Error during tx: %d\n", rq->error);
+
 }
 
-static void test_rflbt_baserq(struct dev_rfpacket_rq_s *rq) {
+static void test_rflbt_baserq(struct dev_rfpacket_rq_s *rq)
+{
     rq->err_group = 0;
     rq->anchor = DEV_RFPACKET_TIMESTAMP_START;
     rq->pk_cfg = &pkcfg.base;
     rq->rf_cfg = &rfcfg.base;
 }
 
-static void test_rflbt_rx_cont(void) {
+static void test_rflbt_rx_cont(void)
+{
     struct dev_rfpacket_rq_s *rq = &pv.rq_cont;
     rq->type = DEV_RFPACKET_RQ_RX_CONT;
     rq->deadline = 0;
@@ -206,19 +232,22 @@ static void test_rflbt_rx_cont(void) {
     DEVICE_OP(&pv.rf_dev, request, rq, NULL);
 }
 
-static void test_rflbt_cancel_rx_cont(void) {
+static void test_rflbt_cancel_rx_cont(void)
+{
     struct dev_rfpacket_rq_s *rq = &pv.rq_cont;
     DEVICE_OP(&pv.rf_dev, cancel, rq);
 }
 
-static void test_rflbt_process_rx(uint8_t *pBuff) {
+static void test_rflbt_process_rx(uint8_t *pBuff)
+{
     char command = (char)pBuff[0];
 
     // dev_timer_value_t timeval;
     // DEVICE_OP(&pv.timer_dev, get_value, &timeval, 0);
     // printk("[_app] [%d] Received cmd: %c\n", (uint32_t)timeval, command);
 
-    switch (command) {
+    switch (command)
+    {
         case NEXT_CMD:
             //printk("Received next command.\n");
             test_rflbt_send_ack(false);
@@ -247,7 +276,8 @@ static void test_rflbt_process_rx(uint8_t *pBuff) {
     }
 }
 
-static void test_rflbt_send_ack(bool islbt) {
+static void test_rflbt_send_ack(bool islbt)
+{
     struct dev_rfpacket_rq_s *rq = &pv.rq_struct;
     rq->channel = TX_CHANNEL;
     rq->type = (islbt) ? DEV_RFPACKET_RQ_TX_FAIR : DEV_RFPACKET_RQ_TX;
@@ -264,7 +294,8 @@ static void test_rflbt_send_ack(bool islbt) {
     DEVICE_OP(&pv.rf_dev, request, rq, NULL);
 }
 
-static void test_rflbt_send_td(void) {
+static void test_rflbt_send_td(void)
+{
     struct dev_rfpacket_rq_s *rq = &pv.rq_struct;
     rq->channel = TX_CHANNEL;
     rq->type = DEV_RFPACKET_RQ_TX;
@@ -273,9 +304,9 @@ static void test_rflbt_send_td(void) {
     // Set data and size
     uint32_t mean_val = (pv.mean_td/pv.mean_count) * MASTER_MS_TICK_NB / pv.msec;
     //printk("TD: %d ms", mean_val);
-    for (uint8_t idx = 0; idx < sizeof(mean_val); idx++) {
+    for (uint8_t idx = 0; idx < sizeof(mean_val); idx++)
         pv.tx_buf[idx] = (uint8_t)(mean_val >> (8*idx));
-    }
+
     rq->tx_size = sizeof(pv.tx_buf);
     rq->tx_buf = pv.tx_buf;
     rq->tx_pwr = 64;
@@ -285,7 +316,8 @@ static void test_rflbt_send_td(void) {
 
 // *** Public Functions ***
 
-void app_start(void) {
+void app_start(void)
+{
     printk("Init started.\n");
     // Retrieve devices
     ensure(!device_get_accessor_by_path(&pv.rf_dev.base, NULL, "rfpacket*", DRIVER_CLASS_RFPACKET));

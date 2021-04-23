@@ -27,7 +27,8 @@
 #define TEST_RFCFG_ACK_RSP 'k'
 
 // --- Private Types ---
-enum _test_rfcfg_state {
+enum _test_rfcfg_state
+{
     TEST_RFCFG_STATE_START,
     TEST_RFCFG_WAIT_TX_CFG,
     TEST_RFCFG_TX,
@@ -39,7 +40,8 @@ enum _test_rfcfg_state {
     TEST_RFCFG_WAIT_BUTTON,
 };
 
-typedef struct _test_rfcfg_info {
+typedef struct _test_rfcfg_info
+{
     uint8_t state;
     uint8_t channel;
     bool packet_ok;
@@ -81,60 +83,72 @@ static test_rfcfg_info_t pv;
 
 // *** Private Functions ***
 
-static KROUTINE_EXEC(test_rfcfg_rx_pckt_cb) {
+static KROUTINE_EXEC(test_rfcfg_rx_pckt_cb)
+{
     struct dev_rfpacket_rx_s *rx = dev_rfpacket_rx_s_from_kr(kr);
 
-    if (rx->error == 0) {
+    if (rx->error == 0)
+    {
         uint8_t *pBuff = (uint8_t *)rx->buf;
-        if (*(char *)pBuff == TEST_RFCFG_ACK_RSP) {
+        if (*(char *)pBuff == TEST_RFCFG_ACK_RSP)
+        {
             pv.packet_ok = true;
             //printk("Received slave ack\n");
-        } else {
-            printk("Received bad packet\n");
         }
-    } else {
-        printk("Rx packet error: %d\n", rx->error);
+        else
+            printk("Received bad packet\n");
+
     }
+    else
+        printk("Rx packet error: %d\n", rx->error);
+
 }
 
-static KROUTINE_EXEC(test_rfcfg_tx_cb) {
+static KROUTINE_EXEC(test_rfcfg_tx_cb)
+{
     struct dev_rfpacket_rq_s *rq = dev_rfpacket_rq_from_kr(kr);
 
-    if (rq->error == -ENOTSUP) {
+    if (rq->error == -ENOTSUP)
         printk("Bad TX configuration\n");
-    }
-    if (rq->error == -ETIMEDOUT) {
+
+    if (rq->error == -ETIMEDOUT)
         printk("TX timeout\n");
-    }
+
     test_rfcfg_process();
 }
 
-static KROUTINE_EXEC(test_rfcfg_wait_cb) {
+static KROUTINE_EXEC(test_rfcfg_wait_cb)
+{
     test_rfcfg_process();
 }
 
-static KROUTINE_EXEC(test_rfcfg_button_cb) {
+static KROUTINE_EXEC(test_rfcfg_button_cb)
+{
     printk(" *** Button pressed - Restarting test ***\n");
     test_rfcfg_init_process();
     test_rfcfg_wait(TEST_RFCFG_WAIT_MS);
 }
 
-static void test_rfcfg_wait(uint32_t wait_time) {
+static void test_rfcfg_wait(uint32_t wait_time)
+{
     struct dev_timer_rq_s *trq = &pv.trq_struct;
     trq->delay = wait_time * pv.msec;
     trq->rev = 0;
     dev_timer_rq_init(trq, test_rfcfg_wait_cb);
     error_t err = DEVICE_OP(&pv.timer_dev, request, trq);
 
-    if (err == -ETIMEDOUT) {
+    if (err == -ETIMEDOUT)
+    {
         printk("Warning: Timer timeout\n");
         kroutine_exec(&trq->base.kr);
-    } else if (err) {
-        printk("Error: Timer failed: %d\n", err);
     }
+    else if (err)
+        printk("Error: Timer failed: %d\n", err);
+
 }
 
-static void test_rfcfg_button(void) {
+static void test_rfcfg_button(void)
+{
     struct dev_gpio_rq_s *grq = &pv.grq_struct;
     //grq->io_first = EFM32_PF6;
     //grq->io_last = EFM32_PF6;
@@ -148,7 +162,8 @@ static void test_rfcfg_button(void) {
     DEVICE_OP(&pv.gpio_dev, request, grq);
 }
 
-static void test_rfcfg_baserq(struct dev_rfpacket_rq_s *rq) {
+static void test_rfcfg_baserq(struct dev_rfpacket_rq_s *rq)
+{
     rq->err_group = 0;
     rq->anchor = DEV_RFPACKET_TIMESTAMP_END;
     rq->pk_cfg = def_pkcfg;
@@ -158,10 +173,11 @@ static void test_rfcfg_baserq(struct dev_rfpacket_rq_s *rq) {
     rq->lifetime = 0;
 }
 
-static struct dev_rfpacket_rx_s *test_rfcfg_rx_alloc(struct dev_rfpacket_rq_s *rq, size_t size) {
-    if (size > TEST_RFCFG_RX_BUF_SIZE) {
+static struct dev_rfpacket_rx_s *test_rfcfg_rx_alloc(struct dev_rfpacket_rq_s *rq, size_t size)
+{
+    if (size > TEST_RFCFG_RX_BUF_SIZE)
         return NULL;
-    }
+
     struct dev_rfpacket_rx_s *rx = &pv.rx_struct;
     rx->buf = pv.rx_buf;
     kroutine_init_deferred(&rx->kr, &test_rfcfg_rx_pckt_cb);
@@ -169,7 +185,8 @@ static struct dev_rfpacket_rx_s *test_rfcfg_rx_alloc(struct dev_rfpacket_rq_s *r
     return rx;
 }
 
-static void test_rfcfg_send(uint8_t *pBuf, uint32_t buf_size) {
+static void test_rfcfg_send(uint8_t *pBuf, uint32_t buf_size)
+{
     struct dev_rfpacket_rq_s *rq = &pv.rq_struct;
     rq->type = DEV_RFPACKET_RQ_TX;
     rq->tx_pwr = 64; // in 0.125dbm
@@ -180,27 +197,32 @@ static void test_rfcfg_send(uint8_t *pBuf, uint32_t buf_size) {
     DEVICE_OP(&pv.rf_dev, request, rq, NULL);
 }
 
-static void test_rfcfg_send_ack_cmd(void) {
+static void test_rfcfg_send_ack_cmd(void)
+{
     pv.cmd_buf[0] = TEST_RFCFG_ACK_CMD;
     test_rfcfg_send((uint8_t *)&pv.cmd_buf, sizeof(pv.cmd_buf));
 }
 
-static void test_rfcfg_init_process(void) {
+static void test_rfcfg_init_process(void)
+{
     pv.state = TEST_RFCFG_STATE_START;
     pv.test_idx = 0;
     pv.test_counter = p_test_rfcfg_array[pv.test_idx].count - 1;
 }
 
 #ifdef TEST_RFCFG_SLAVE_EXCHANGE
-static KROUTINE_EXEC(test_rfcfg_rx_cb) {
+static KROUTINE_EXEC(test_rfcfg_rx_cb)
+{
     struct dev_rfpacket_rq_s *rq = dev_rfpacket_rq_from_kr(kr);
 
-    if (rq->error == -ENOTSUP) {
+    if (rq->error == -ENOTSUP)
         printk("Bad RX configuration\n");
-    } else if (rq->error) {
+
+    else if (rq->error)
         printk("RX error: %d\n", rq->error);
-    }
-    if(!pv.packet_ok) {
+
+    if(!pv.packet_ok)
+    {
         printk("Error: slave didn't respond !\n");
         //pv.state = TEST_RFCFG_WAIT_BUTTON;
     }
@@ -208,7 +230,8 @@ static KROUTINE_EXEC(test_rfcfg_rx_cb) {
     test_rfcfg_process();
 }
 
-static void test_rfcfg_receive(uint32_t ttl) {
+static void test_rfcfg_receive(uint32_t ttl)
+{
     struct dev_rfpacket_rq_s *rq = &pv.rq_struct;
     rq->type = DEV_RFPACKET_RQ_RX;
     rq->lifetime = ttl * pv.msec;
@@ -217,31 +240,38 @@ static void test_rfcfg_receive(uint32_t ttl) {
     DEVICE_OP(&pv.rf_dev, request, rq, NULL);
 }
 
-static void test_rfcfg_send_chan(void) {
+static void test_rfcfg_send_chan(void)
+{
     pv.cmd_buf[0] = TEST_RFCFG_CHAN_CMD;
     pv.cmd_buf[1] = pv.channel;
     test_rfcfg_send((uint8_t *)&pv.cmd_buf, sizeof(pv.cmd_buf));
 }
 
-static uint8_t test_rfcfg_new_chan(struct device_timer_s *timer, uint8_t old_chan) {
+static uint8_t test_rfcfg_new_chan(struct device_timer_s *timer, uint8_t old_chan)
+{
     dev_timer_value_t t;
     uint8_t new_chan;
     DEVICE_OP(timer, get_value, &t, 0);
-    do {
+    do
+    {
         new_chan = (uint8_t)rand_64_range_r(&t, TEST_RFCFG_MIN_CHAN, TEST_RFCFG_MAX_CHAN);
     } while (old_chan == new_chan);
+
     return new_chan;
 }
 #endif
 
-static void test_rfcfg_process(void) {
-    switch (pv.state) {
+static void test_rfcfg_process(void)
+{
+    switch (pv.state)
+    {
         default:
         case TEST_RFCFG_STATE_START:
             // Start current test
             p_test_rfcfg_array[pv.test_idx].chg_cfg(&pv.rq_struct);
         #ifdef TEST_RFCFG_SLAVE_EXCHANGE
-        {   // Send config to slave
+
+       {   // Send config to slave
             //printk("Sending configuration to slave\n");
             uint8_t *slave_cfg;
             uint8_t slave_cfg_size;
@@ -272,7 +302,7 @@ static void test_rfcfg_process(void) {
         #ifdef TEST_RFCFG_SLAVE_EXCHANGE
             pv.state = TEST_RFCFG_WAIT_ACK;
         #else
-            pv.state = TEST_RFCFG_STATE_END;       
+            pv.state = TEST_RFCFG_STATE_END;
         #endif
         break;
 
@@ -283,9 +313,11 @@ static void test_rfcfg_process(void) {
             test_rfcfg_tx_end();
             test_rfcfg_receive(TEST_RFCFG_RX_TIME_MS);
             pv.chan_hop_counter = p_test_rfcfg_array[pv.test_idx].chan_hop_count;
-            if (pv.chan_hop_counter == 0)  {
+            if (pv.chan_hop_counter == 0)
                 pv.state = TEST_RFCFG_STATE_END;
-            } else {
+
+            else
+            {
                 pv.chan_hop_counter--;
                 pv.state = TEST_RFCFG_CHAN_HOP_SEND_CHAN;
             }
@@ -314,12 +346,14 @@ static void test_rfcfg_process(void) {
             //printk("Waiting slave channel ack\n");
             // Wait in rx for ack
             test_rfcfg_receive(TEST_RFCFG_RX_TIME_MS);
-            if (pv.chan_hop_counter > 0) {
+            if (pv.chan_hop_counter > 0)
+            {
                 pv.chan_hop_counter--;
                 pv.state = TEST_RFCFG_CHAN_HOP_SEND_CHAN;
-            } else {
-                pv.state = TEST_RFCFG_STATE_END;
             }
+            else
+                pv.state = TEST_RFCFG_STATE_END;
+
         break;
         #endif
 
@@ -327,18 +361,24 @@ static void test_rfcfg_process(void) {
             #ifndef TEST_RFCFG_SLAVE_EXCHANGE
                 test_rfcfg_tx_end();
             #endif
-            if (pv.test_counter > 0) {
+            if (pv.test_counter > 0)
+            {
                 pv.test_counter--;
                 pv.state = TEST_RFCFG_STATE_START;
                 test_rfcfg_wait(TEST_RFCFG_TEST_STEP_TIME_MS);
-            } else {
+            }
+            else
+            {
                 test_rfcfg_test_end(pv.test_idx);
                 pv.test_idx++;
-                if (pv.test_idx < test_rfcfg_array_size) {
+                if (pv.test_idx < test_rfcfg_array_size)
+                {
                     pv.test_counter = p_test_rfcfg_array[pv.test_idx].count - 1;
                     pv.state = TEST_RFCFG_STATE_START;
                     test_rfcfg_wait(TEST_RFCFG_WAIT_MS);
-                } else {
+                }
+                else
+                {
                     pv.state = TEST_RFCFG_WAIT_BUTTON;
                     test_rfcfg_wait(TEST_RFCFG_WAIT_MS);
                 }
@@ -354,7 +394,8 @@ static void test_rfcfg_process(void) {
 
 // *** Public Functions ***
 
-void app_start(void) {
+void app_start(void)
+{
     printk("*** START OF TEST ***\n");
     // Retrieve devices
     ensure(!device_get_accessor_by_path(&pv.rf_dev.base, NULL, "rfpacket0", DRIVER_CLASS_RFPACKET));

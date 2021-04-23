@@ -47,7 +47,8 @@
 
 // --- Private Types ---
 
-typedef struct _rfpacket_info {
+typedef struct _rfpacket_info 
+{
     uint8_t rx_buf[RFPACKET_RX_BUF_SIZE];
     uint8_t gpio_data[4];
     uint32_t frequency;
@@ -80,15 +81,19 @@ static void rfpacket_process(void);
 */
 
 // Regular config
-static struct dev_rfpacket_rf_cfg_fsk_s reg_rfcfg = {
-    .base = {
+static struct dev_rfpacket_rf_cfg_fsk_s reg_rfcfg = 
+{
+    .base = 
+    {
         .mod = DEV_RFPACKET_GFSK,
-        .cache = {
+        .cache = 
+        {
             .id = 0,
             .dirty = 0
         },
     },
-    .common = {
+    .common = 
+    {
         .drate = 38400,
         .jam_rssi = (-90) << 3,
         .frequency = 865046875 - 3000,
@@ -96,7 +101,8 @@ static struct dev_rfpacket_rf_cfg_fsk_s reg_rfcfg = {
         .rx_bw = 0,
         .freq_err = 868 * 20 /* ppm */,
     },
-    .fairtx = {
+    .fairtx = 
+    {
         .mode = DEV_RFPACKET_LBT,
         .lbt.rssi = (-90) << 3,
         .lbt.duration = 5000, /** us */
@@ -105,10 +111,13 @@ static struct dev_rfpacket_rf_cfg_fsk_s reg_rfcfg = {
     .symbols = 2,
 };
 
-static struct dev_rfpacket_pk_cfg_basic_s reg_pkcfg = {
-    .base = {
+static struct dev_rfpacket_pk_cfg_basic_s reg_pkcfg = 
+{
+    .base = 
+    {
         .format = DEV_RFPACKET_FMT_SLPC,
-        .cache = {
+        .cache = 
+        {
             .id = 0,
             .dirty = 0
         },
@@ -125,10 +134,13 @@ static struct dev_rfpacket_pk_cfg_basic_s reg_pkcfg = {
 };
 
 // Static rf config (see dev_nucleo_s2lp.c)
-static struct dev_rfpacket_rf_cfg_static_s static_rfcfg = {
-    .base = {
+static struct dev_rfpacket_rf_cfg_static_s static_rfcfg = 
+{
+    .base = 
+    {
         .mod = DEV_RFPACKET_MOD_STATIC,
-        .cache = {
+        .cache = 
+        {
             .id = 0,
             .dirty = 0
         },
@@ -137,16 +149,20 @@ static struct dev_rfpacket_rf_cfg_static_s static_rfcfg = {
 };
 
 // Extern rf config
-static const uint8_t ext_rfcfg_array[] = {
+static const uint8_t ext_rfcfg_array[] = 
+{
   0x00, 0x96, 0x00, 0x00, 0x42, 0x42, 0x19, 0x03, 0x00, 0x18, 0x38, 0x0a,
   0x00, 0x0c, 0x3d, 0x00, 0x92, 0xa7, 0xa7, 0x03, 0x93, 0x33, 0x06, 0x00,
   0x62, 0x07, 0x01, 0x8a, 0xd0, 0x06, 0x00, 0x05, 0x02, 0x29, 0xa0, 0xca,
 };
 
-static struct dev_rfpacket_rf_cfg_extern_s extern_rfcfg = {
-    .base = {
+static struct dev_rfpacket_rf_cfg_extern_s extern_rfcfg = 
+{
+    .base = 
+    {
         .mod = DEV_RFPACKET_MOD_EXTERN,
-        .cache = {
+        .cache = 
+        {
             .id = 0,
             .dirty = 0
         },
@@ -155,10 +171,13 @@ static struct dev_rfpacket_rf_cfg_extern_s extern_rfcfg = {
 };
 
 // Static pk config (see dev_nucleo_s2lp.c)
-static struct dev_rfpacket_pk_cfg_static_s static_pkcfg = {
-    .base = {
+static struct dev_rfpacket_pk_cfg_static_s static_pkcfg = 
+{
+    .base = 
+    {
         .format = DEV_RFPACKET_FMT_STATIC,
-        .cache = {
+        .cache = 
+        {
             .id = 0,
             .dirty = 0
         },
@@ -167,16 +186,20 @@ static struct dev_rfpacket_pk_cfg_static_s static_pkcfg = {
 };
 
 // Extern pk config
-static const uint8_t ext_pkcfg_array[] = {
+static const uint8_t ext_pkcfg_array[] = 
+{
   0x03, 0x40, 0x19, 0x08, 0x00, 0x2b, 0x40, 0x20, 0x00, 0x01, 0x01, 0x40,
   0x06, 0x00, 0x33, 0x00, 0x00, 0x34, 0x12, 0x05, 0x00, 0x39, 0x40, 0x03,
   0x08, 0x06, 0x00, 0x46, 0x01, 0x00, 0x01, 0x00,
 };
 
-static struct dev_rfpacket_pk_cfg_extern_s extern_pkcfg = {
-    .base = {
+static struct dev_rfpacket_pk_cfg_extern_s extern_pkcfg = 
+{
+    .base = 
+    {
         .format = DEV_RFPACKET_FMT_EXTERN,
-        .cache = {
+        .cache = 
+        {
             .id = 0,
             .dirty = 0
         },
@@ -190,73 +213,90 @@ static rfpacket_info_t pv;
 
 // *** Private Functions ***
 
-static KROUTINE_EXEC(rfpacket_rx_pckt_cb) {
+static KROUTINE_EXEC(rfpacket_rx_pckt_cb) 
+{
     struct dev_rfpacket_rx_s *rx = dev_rfpacket_rx_s_from_kr(kr);
 
-    if (rx->error == 0) {
+    if (rx->error == 0) 
+    {
         pv.size = rx->size;
         pv.frequency = rx->frequency;
         uint8_t *pBuff = (uint8_t *)rx->buf;
         printk("Received on freq %d, chan %d - %P\n", rx->frequency,
               rx->channel, pBuff, rx->size);
-    } else {
-        printk("Rx packet error: %d\n", rx->error);
     }
+    else 
+        printk("Rx packet error: %d\n", rx->error);
+
 }
 
-static KROUTINE_EXEC(rfpacket_rx_cb) {
+static KROUTINE_EXEC(rfpacket_rx_cb) 
+{
     struct dev_rfpacket_rq_s *rq = dev_rfpacket_rq_from_kr(kr);
 
-    if (rq->error == -ENOTSUP) {
+    if (rq->error == -ENOTSUP) 
+    {
         printk("Bad RX configuration\n");
         abort();
-    } else if (rq->error ==  -EBUSY) {
-        printk("Jamming.\n");
-    } else if (rq->error) {
-        printk("Error during rxc: %d\n", rq->error);
     }
+    else if (rq->error ==  -EBUSY) 
+        printk("Jamming.\n");
+
+    else if (rq->error) 
+        printk("Error during rxc: %d\n", rq->error);
+
     rfpacket_rxc();
 }
 
-static KROUTINE_EXEC(rfpacket_tx_cb) {
+static KROUTINE_EXEC(rfpacket_tx_cb) 
+{
     struct dev_rfpacket_rq_s *rq = dev_rfpacket_rq_from_kr(kr);
 
-    if (rq->error == -ENOTSUP) {
+    if (rq->error == -ENOTSUP) 
         printk("Bad TX configuration\n");
-    } else if (rq->error == -ETIMEDOUT) {
+
+    else if (rq->error == -ETIMEDOUT) 
         printk("TX timeout\n");
-    } else if (rq->error) {
+
+    else if (rq->error) 
         printk("Error during tx: %d\n", rq->error);
-    } else {
+
+    else 
         rfpacket_button();
-    }
+
 }
 
-static KROUTINE_EXEC(rfpacket_button_cb) {
+static KROUTINE_EXEC(rfpacket_button_cb) 
+{
     printk(" *** Button pressed - Restarting test ***\n");
     rfpacket_wait(RFPACKET_WAIT_MS);
 }
 
-static KROUTINE_EXEC(rfpacket_wait_cb) {
+static KROUTINE_EXEC(rfpacket_wait_cb) 
+{
     rfpacket_process();
 
 }
-static void rfpacket_wait(uint32_t wait_time) {
+static void rfpacket_wait(uint32_t wait_time) 
+{
     struct dev_timer_rq_s *trq = &pv.trq_struct;
     trq->delay = wait_time * pv.msec;
     trq->rev = 0;
     dev_timer_rq_init(trq, rfpacket_wait_cb);
     error_t err = DEVICE_OP(&pv.timer_dev, request, trq);
 
-    if (err == -ETIMEDOUT) {
+    if (err == -ETIMEDOUT) 
+    {
         printk("Warning: Timer timeout\n");
         kroutine_exec(&trq->base.kr);
-    } else if (err) {
-        printk("Error: Timer failed: %d\n", err);
     }
+    else if (err) 
+        printk("Error: Timer failed: %d\n", err);
+
 }
 
-static void rfpacket_button(void) {
+static void rfpacket_button(void) 
+{
     struct dev_gpio_rq_s *grq = &pv.grq_struct;
     grq->io_first = EFM32_PB10;
     grq->io_last = EFM32_PB10;
@@ -268,7 +308,8 @@ static void rfpacket_button(void) {
     DEVICE_OP(&pv.gpio_dev, request, grq);
 }
 
-static void rfpacket_baserq(struct dev_rfpacket_rq_s *rq) {
+static void rfpacket_baserq(struct dev_rfpacket_rq_s *rq) 
+{
     rq->err_group = 0;
     rq->anchor = DEV_RFPACKET_TIMESTAMP_END;
 
@@ -288,10 +329,11 @@ static void rfpacket_baserq(struct dev_rfpacket_rq_s *rq) {
 }
 
 static struct dev_rfpacket_rx_s *rfpacket_rx_alloc(struct dev_rfpacket_rq_s *rq,
-                                                   size_t size) {
-    if (size > RFPACKET_RX_BUF_SIZE) {
+                                                   size_t size) 
+                                                   {
+    if (size > RFPACKET_RX_BUF_SIZE) 
         return NULL;
-    }
+
     struct dev_rfpacket_rx_s *rx = &pv.rx_struct;
     rx->buf = pv.rx_buf;
     kroutine_init_deferred(&rx->kr, &rfpacket_rx_pckt_cb);
@@ -299,7 +341,8 @@ static struct dev_rfpacket_rx_s *rfpacket_rx_alloc(struct dev_rfpacket_rq_s *rq,
     return rx;
 }
 
-static void rfpacket_rxc(void) {
+static void rfpacket_rxc(void) 
+{
     struct dev_rfpacket_rq_s *rq = &pv.rq_cont;
     rq->rx_alloc = &rfpacket_rx_alloc;
     rq->type = DEV_RFPACKET_RQ_RX_CONT;
@@ -307,7 +350,8 @@ static void rfpacket_rxc(void) {
     DEVICE_OP(&pv.rf_dev, request, rq, NULL);
 }
 
-static bool rfpacket_send(const uint8_t *pBuf, uint16_t buf_size) {
+static bool rfpacket_send(const uint8_t *pBuf, uint16_t buf_size) 
+{
     // Send packet
     struct dev_rfpacket_rq_s *rq = &pv.rq_struct;
     rq->type = DEV_RFPACKET_RQ_TX;
@@ -322,14 +366,16 @@ static bool rfpacket_send(const uint8_t *pBuf, uint16_t buf_size) {
     return true;
 }
 
-static void rfpacket_process(void) {
+static void rfpacket_process(void) 
+{
     static char cmd[] ="abcd";
     rfpacket_send((uint8_t *)cmd, sizeof(cmd));
 }
 
 // *** Public Functions ***
 
-void app_start(void) {
+void app_start(void) 
+{
     printk("*** START OF TEST ***\n");
     // Retrieve devices
     ensure(!device_get_accessor_by_path(&pv.rf_dev.base, NULL, "rfpacket*", DRIVER_CLASS_RFPACKET));
