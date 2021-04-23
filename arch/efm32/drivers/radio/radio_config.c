@@ -666,6 +666,7 @@ static error_t efr32_build_gfsk_rf_config(struct radio_efr32_rfp_ctx_s *ctx, str
   uint64_t f = ((uint64_t)(common->frequency) * div) << 19;
   f /= CONFIG_DRIVER_EFR32_RADIO_HFXO_CLK;
   cpu_mem_write_32(EFR32_SYNTH_ADDR + EFR32_SYNTH_FREQ_ADDR, (uint32_t)f);
+  //printk("Freq: 0x%llx\n", f);
 
   // Configure channel spacing
   uint64_t chsp = ((uint64_t)(common->chan_spacing) * div) << 19;
@@ -674,7 +675,7 @@ static error_t efr32_build_gfsk_rf_config(struct radio_efr32_rfp_ctx_s *ctx, str
 
   // Configure tx baudrate
   uint32_t txbr = efr32_build_txbaudrate(common->drate);
-  cpu_mem_write_32(EFR32_MODEM_ADDR + EFR32_MODEM_TXBR_ADDR, txbr);
+  //cpu_mem_write_32(EFR32_MODEM_ADDR + EFR32_MODEM_TXBR_ADDR, txbr);
 
   // Calc rxbw
   uint32_t freq_err = efr32_calc_freq_err(common->freq_err, common->frequency, CONFIG_DRIVER_EFR32_RADIO_OSC_PPB);
@@ -944,6 +945,7 @@ error_t efr32_set_tx_power(struct radio_efr32_rfp_ctx_s *ctx, struct dev_rfpacke
   // Write power value
   //cpu_mem_write_32(EFR32_RAC_ADDR + EFR32_RAC_PACTRL0_ADDR, pac_reg); // Bootloader crc bug
   cpu_mem_write_32(EFR32_RAC_ADDR + EFR32_RAC_SGPACTRL0_ADDR, sg_pac_reg);
+  //printk("Pwr: %x\n", sg_pac_reg);
   return 0;
 }
 
@@ -1036,16 +1038,17 @@ error_t efr32_rfp_fsk_init(struct radio_efr32_rfp_ctx_s *ctx) {
     /*    6028 */ 0x03000000UL,
     /*    602C */ 0x00000000UL,
     /*    6030 */ 0x00000000UL,
-    0x00066050UL, 0x00FF7C83UL, // Baudrate TX
-    /*    6054 */ 0x00000F73UL, // Baudrate RX
-    /*    6058 */ 0x00000160UL,
-    /*    605C */ 0x00140011UL,
-    /*    6060 */ 0x000075E3UL,
+
+    0x00066050UL, 0x00FF7C83UL, // og Baudrate TX
+    /*    6054 */ 0x00000C41UL, // og Baudrate RX
+    /*    6058 */ 0x00000102UL,
+    /*    605C */ 0x00200012UL,
+    /*    6060 */ 0x00002C48UL,
     /*    6064 */ 0x00000000UL,
-    0x000C6078UL, 0x11A0071BUL,
+    0x000C6078UL, 0x08E0081FUL,
     /*    607C */ 0x00000000UL,
-    /*    6080 */ 0x003B0373UL,
-    //0x002d03b9UL, // FDEV tx rx
+    /*    6080 */ 0x003B0373UL, // og fdev
+
     /*    6084 */ 0x00000000UL,
     /*    6088 */ 0x00000000UL,
     /*    608C */ 0x22140A04UL,
@@ -1055,14 +1058,14 @@ error_t efr32_rfp_fsk_init(struct radio_efr32_rfp_ctx_s *ctx) {
     /*    609C */ 0x00000000UL,
     /*    60A0 */ 0x00000000UL,
     /*    60A4 */ 0x00000000UL,
-    0x000760E4UL, 0x04000080UL,
+    0x000760E4UL, 0x8C5D087FUL,
     /*    60E8 */ 0x00000000UL,
     /*    60EC */ 0x07830464UL,
     /*    60F0 */ 0x3AC81388UL,
     /*    60F4 */ 0x000A209CUL,
     /*    60F8 */ 0x00206100UL,
     /*    60FC */ 0x123556B7UL,
-    0x00036104UL, 0x00108000UL,
+    0x00036104UL, 0x0010AAAAUL,
     /*    6108 */ 0x29043020UL,
     /*    610C */ 0x0040BB88UL,
     0x00016120UL, 0x00000000UL,
@@ -1076,7 +1079,7 @@ error_t efr32_rfp_fsk_init(struct radio_efr32_rfp_ctx_s *ctx) {
     /*    614C */ 0x00000001UL,
     0x00077014UL, 0x000270FEUL,
     /*    7018 */ 0x00000300UL,
-    /*    701C */ 0x834A0060UL,
+    /*    701C */ 0x830A0060UL,
     /*    7020 */ 0x00000000UL,
     /*    7024 */ 0x00000082UL,
     /*    7028 */ 0x00000000UL,
