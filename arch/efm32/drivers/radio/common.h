@@ -88,14 +88,16 @@
 extern const unsigned char seqcode[];
 extern const size_t seqcode_size;
 
-struct radio_efr32_rf_cfg_s {
+struct radio_efr32_rf_cfg_s
+{
   uint32_t frequency;
   uint32_t drate;
   uint32_t config_size;
   uint32_t config_data[];
 };
 
-struct radio_efr32_pk_cfg_s {
+struct radio_efr32_pk_cfg_s
+{
   uint32_t rx_preamb_len;
   uint32_t config_size;
   uint32_t config_data[];

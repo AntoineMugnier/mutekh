@@ -45,7 +45,8 @@
 #define EFR32_POW_MAX_RAW         248
 
 // Rx modem struct
-struct efr32_rxmodem_s {
+struct efr32_rxmodem_s
+{
   uint32_t dec0;
   uint32_t dec1;
   uint32_t dec2;
@@ -73,9 +74,11 @@ static error_t efr32_build_slpc_pkt_config(struct radio_efr32_rfp_ctx_s *ctx, st
 
 // *** PRIVATE FUNCTIONS ***
 
-static void efr32_send_radio_config(uint32_t cfg_size, uint32_t *p_cfg) {
+static void efr32_send_radio_config(uint32_t cfg_size, uint32_t *p_cfg)
+{
   // Parse config table (addr, data) pairs
-  for (uint32_t i = 0; i < cfg_size - 1; i += 2) {
+  for (uint32_t i = 0; i < cfg_size - 1; i += 2)
+  {
     // Retrieve data
     uint32_t addr = p_cfg[i];
     uint32_t data = p_cfg[i+1];
@@ -85,7 +88,8 @@ static void efr32_send_radio_config(uint32_t cfg_size, uint32_t *p_cfg) {
   }
 }
 
-static dev_timer_delay_t efr32_radio_calc_time(struct radio_efr32_rfp_ctx_s *ctx, uint32_t drate) {
+static dev_timer_delay_t efr32_radio_calc_time(struct radio_efr32_rfp_ctx_s *ctx, uint32_t drate)
+{
   struct radio_efr32_ctx_s *pv = &ctx->pv;
   uint64_t result, num, denom;
 
@@ -97,33 +101,42 @@ static dev_timer_delay_t efr32_radio_calc_time(struct radio_efr32_rfp_ctx_s *ctx
   return tb;
 }
 
-static error_t efr32_calc_power(dev_rfpacket_pwr_t pwr_dbm, uint32_t freq, uint32_t *p_sgpac_val, uint32_t *p_pac_val) {
+static error_t efr32_calc_power(dev_rfpacket_pwr_t pwr_dbm, uint32_t freq,
+                                uint32_t *p_sgpac_val, uint32_t *p_pac_val)
+{
   int64_t pa_curve_value;
   uint32_t pwr_raw = 0;
   const struct _efr32_pa_data_s *efr32_pa_data = NULL;
   const struct _efr32_pa_curve_s *efr32_pa_curve = NULL;
+
   // Limit intput power value
-  if (pwr_dbm < EFR32_POW_MIN_DBM) {
+  if (pwr_dbm < EFR32_POW_MIN_DBM)
+  {
     pwr_dbm = EFR32_POW_MIN_DBM;
     logk_trace("Power requested too low, setting value to %d", pwr_dbm);
-  } else if (pwr_dbm > EFR32_POW_MAX_DBM) {
+  }
+  else if (pwr_dbm > EFR32_POW_MAX_DBM)
+  {
     pwr_dbm = EFR32_POW_MAX_DBM;
     logk_trace("Power requested too high, setting value to %d", pwr_dbm);
   }
+
   // Get pa curves
-  if (freq > 1000000000) {
+  if (freq > 1000000000)
     efr32_pa_data = &efr32_radio_2g4_pa_data;
-  } else {
+
+  else
     efr32_pa_data = &efr32_radio_sg_pa_data;
-  }
+
   assert(efr32_pa_data);
+
   // Get pa curve index
-  for (int16_t idx = efr32_pa_data->data_size - 1; idx > 0; idx--) {
+  for (int16_t idx = efr32_pa_data->data_size - 1; idx > 0; idx--)
+  {
     efr32_pa_curve = &efr32_pa_data->data[idx];
 
-    if (pwr_dbm < efr32_pa_curve->max_pwr_dbm) {
+    if (pwr_dbm < efr32_pa_curve->max_pwr_dbm)
       break;
-    }
   }
   assert(efr32_pa_curve);
   // Convert pwr_dbm from 1/8th to 1/10th dbm
@@ -132,12 +145,14 @@ static error_t efr32_calc_power(dev_rfpacket_pwr_t pwr_dbm, uint32_t freq, uint3
   pa_curve_value = efr32_pa_curve->slope * pwr_dbm + efr32_pa_curve->offset;
   // Calc raw and value rounding
   pwr_raw = (pa_curve_value + 500) / 1000;
+
   // Limit value
-  if (pwr_raw < EFR32_POW_MIN_RAW) {
+  if (pwr_raw < EFR32_POW_MIN_RAW)
     pwr_raw = EFR32_POW_MIN_RAW;
-  } else if (pwr_raw > EFR32_POW_MAX_RAW) {
+
+  else if (pwr_raw > EFR32_POW_MAX_RAW)
     pwr_raw = EFR32_POW_MAX_RAW;
-  }
+
   // Calc reg value based on raw
   uint8_t stripe = pwr_raw % EFR32_POW_STRIPE_MAX_VAL;
   uint8_t slice_cascode = (bit(pwr_raw / EFR32_POW_STRIPE_MAX_VAL + 1) - 1);
@@ -150,58 +165,68 @@ static error_t efr32_calc_power(dev_rfpacket_pwr_t pwr_dbm, uint32_t freq, uint3
 }
 
 #ifndef CONFIG_DEVICE_RFPACKET_STATIC_RF_CONFIG
-static uint32_t efr32_build_txbaudrate(uint32_t br) {
+static uint32_t efr32_build_txbaudrate(uint32_t br)
+{
   uint32_t num = 0, den = 0;
   // Formula for Tx baudrate: Br = (ModemFreq * txbrnum)/(8 * txbrden)
   // Calc (reverse) ratio with rounding
   uint64_t ratio =  (CONFIG_DRIVER_EFR32_RADIO_HFXO_CLK + 4 * br) / (8 * br);
   // Set denominator
   den = ratio * EFR32_TXBR_MAX_NUM;
+
   // Check if denominator is within dynamic to set numerator
-  if (den > EFR32_TXBR_MAX_DEN) {
+  if (den > EFR32_TXBR_MAX_DEN)
+  {
       num = EFR32_TXBR_MAX_DEN / ratio;
       den = ratio * num;
-  } else {
-      num = EFR32_TXBR_MAX_NUM;
   }
+  else
+      num = EFR32_TXBR_MAX_NUM;
+
   //printk("Radio baudrate: %d 0x%x\n", br, (EFR32_MODEM_TXBR_TXBRNUM(rnum) | EFR32_MODEM_TXBR_TXBRDEN(rden)));
   return (EFR32_MODEM_TXBR_TXBRNUM(num) | EFR32_MODEM_TXBR_TXBRDEN(den));
 }
 
-static uint64_t efr32_get_dec0_bw(uint32_t val, uint64_t fxo) {
-        // Returns maximum bandwidth for a given decimation value for DEC0
-        if (val == 3)
-            return fxo / 20;
-        else if (val == 4)
-            return 69 * fxo / 1000;
-        else
-            return 3 * fxo / 250;
+static uint64_t efr32_get_dec0_bw(uint32_t val, uint64_t fxo)
+{
+  // Returns maximum bandwidth for a given decimation value for DEC0
+  if (val == 3)
+      return fxo / 20;
+  else if (val == 4)
+      return 69 * fxo / 1000;
+  else
+      return 3 * fxo / 250;
 }
 
-static uint32_t efr32_ceil(uint32_t x, uint32_t y) {
-    return (x / y + (x % y != 0));
+static uint32_t efr32_ceil(uint32_t x, uint32_t y)
+{
+  return (x / y + (x % y != 0));
 }
 
 // Calc register value from baudrate and other parameters
-static uint32_t efr32_build_rxbaudrate(uint32_t baudrate, uint32_t dec0, uint32_t dec1, uint32_t dec2) {
+static uint32_t efr32_build_rxbaudrate(uint32_t baudrate, uint32_t dec0, uint32_t dec1, uint32_t dec2)
+{
   uint64_t fracnum = CONFIG_DRIVER_EFR32_RADIO_HFXO_CLK;
   uint64_t fracden = dec0 * dec1 * dec2 * baudrate * 2;
   uint32_t rxbrnum = 0, rxbrden = 0, rxbrint = 0;
   uint32_t best_error = ~0;
 
   // Return min value if ratio too low
-  if (fracden >= 31 * fracnum) {
+  if (fracden >= 31 * fracnum)
     return (EFR32_MODEM_RXBR_RXBRNUM(1) | EFR32_MODEM_RXBR_RXBRDEN(31) | EFR32_MODEM_RXBR_RXBRINT(0));
-  }
+
   // Get integer part
   rxbrint = fracnum / fracden;
+
   // Limit to max value
   if (rxbrint > EFR32_RXBR_MAX_INT)
     rxbrint = EFR32_RXBR_MAX_INT;
   // Remove integer part
   fracnum -= rxbrint * fracden;
+
   // Look for best values
-  for (uint32_t tmpden = EFR32_RXBR_MAX_DEN; tmpden > 0; tmpden--) {
+  for (uint32_t tmpden = EFR32_RXBR_MAX_DEN; tmpden > 0; tmpden--)
+  {
     uint32_t tmpnum = tmpden * fracnum / fracden;
 
     if (tmpnum > EFR32_RXBR_MAX_NUM)
@@ -209,17 +234,20 @@ static uint32_t efr32_build_rxbaudrate(uint32_t baudrate, uint32_t dec0, uint32_
 
     // Check error
     uint32_t error = abs(fracnum * tmpden - fracden * tmpnum);
-    if (error < best_error) {
+    if (error < best_error)
+    {
       best_error = error;
       rxbrnum = tmpnum;
       rxbrden = tmpden;
     }
   }
-  return (EFR32_MODEM_RXBR_RXBRNUM(rxbrnum) | EFR32_MODEM_RXBR_RXBRDEN(rxbrden) | EFR32_MODEM_RXBR_RXBRINT(rxbrint));
+  return (EFR32_MODEM_RXBR_RXBRNUM(rxbrnum) | EFR32_MODEM_RXBR_RXBRDEN(rxbrden)
+          | EFR32_MODEM_RXBR_RXBRINT(rxbrint));
 }
 
 static uint64_t efr32_calc_cost(uint64_t bw, uint32_t rxbw, uint32_t osr,
-                                uint32_t baudrate, uint64_t curr_br, uint64_t fc) {
+                                uint32_t baudrate, uint64_t curr_br, uint64_t fc)
+{
   // Cost function used to find optimal settigs for DEC0, DEC1, DEC2, CFOSR, RXBRNUM, RXBRDEN
   uint64_t bw_error, range_error, rate_error, fc_cost;
 
@@ -256,27 +284,33 @@ static uint64_t efr32_calc_cost(uint64_t bw, uint32_t rxbw, uint32_t osr,
   return bw_error + range_error + rate_error + fc_cost;
 }
 
-static uint64_t efr32_calc_if_freq(uint64_t fxo, uint32_t dec0, uint32_t cfosr) {
-    return fxo / (dec0 * cfosr);
+static uint64_t efr32_calc_if_freq(uint64_t fxo, uint32_t dec0, uint32_t cfosr)
+{
+  return fxo / (dec0 * cfosr);
 }
 
-static uint64_t efr32_calc_real_bw(uint64_t fxo, uint32_t decmult) {
+static uint64_t efr32_calc_real_bw(uint64_t fxo, uint32_t decmult)
+{
   // Calc with rounding
   return (263 * fxo + decmult * 500 ) / (decmult * 1000);
 }
 
-static uint32_t efr32_calc_osr(uint32_t brint, uint32_t brnum, uint32_t brden) {
+static uint32_t efr32_calc_osr(uint32_t brint, uint32_t brnum, uint32_t brden)
+{
   // Calc with rounding
   return ((2 * (brint * brden + brnum) + brden / 2) / brden);
 }
 
-static uint64_t efr32_calc_real_br(uint64_t fxo, uint32_t decmult, uint32_t brint, uint32_t brnum, uint32_t brden) {
+static uint64_t efr32_calc_real_br(uint64_t fxo, uint32_t decmult, uint32_t brint,
+                                   uint32_t brnum, uint32_t brden)
+{
   uint64_t curr_br_den = decmult * 2 * (brint * brden + brnum);
   uint64_t curr_br_num = fxo * brden;
   return (curr_br_num / curr_br_den);
 }
 
-static void efr32_build_rxmodem(uint32_t baudrate, uint32_t rxbw, struct efr32_rxmodem_s *cfg) {
+static void efr32_build_rxmodem(uint32_t baudrate, uint32_t rxbw, struct efr32_rxmodem_s *cfg)
+{
   // want to minimize this so start with big number
   uint64_t best_cost = ~0, best_fc = 0;
   uint32_t best_dec0 = 0, best_dec1 = 0, best_dec2 = 0,
@@ -286,12 +320,16 @@ static void efr32_build_rxmodem(uint32_t baudrate, uint32_t rxbw, struct efr32_r
   // loop over all possible DEC0, DEC1, and CFOSR values
   uint32_t dec0_list[] = {3, 4, 8};
   uint32_t cfosr_list[] = {32, 16, 12, 8, 7};
-  for (uint32_t d0_idx = 0; d0_idx < ARRAY_SIZE(dec0_list); d0_idx++) {
+
+  for (uint32_t d0_idx = 0; d0_idx < ARRAY_SIZE(dec0_list); d0_idx++)
+  {
     uint32_t dec0 = dec0_list[d0_idx];
 
-    for (uint32_t dec1 = 16384; dec1 > 0; dec1--) {
+    for (uint32_t dec1 = 16384; dec1 > 0; dec1--)
+    {
 
-      for (uint32_t cfosr_idx = 0; cfosr_idx < ARRAY_SIZE(cfosr_list); cfosr_idx++) {
+      for (uint32_t cfosr_idx = 0; cfosr_idx < ARRAY_SIZE(cfosr_list); cfosr_idx++)
+      {
         uint32_t cfosr = cfosr_list[cfosr_idx];
         // given dec0 and dec1 calculate bandwidth we actually get
         uint64_t curr_bw = efr32_calc_real_bw(fxo, dec0 * dec1);
@@ -331,10 +369,13 @@ static void efr32_build_rxmodem(uint32_t baudrate, uint32_t rxbw, struct efr32_r
         // for extreme bandwidth PHYs e.g. OOK PHYs where bandwidth is much larger
         // than the carson bandwidth we want to try large OSR values
         // the limit for the else part is br = bw / 0.263*OSR*dec2 = bw/0.263*5*64 = bw/84
-        if (rxbw > 84 * baudrate) {
+        if (rxbw > 84 * baudrate)
+        {
           dec2_start = fxo / (15 * dec0 * dec1 * baudrate); // floor
           dec2_end = efr32_ceil(fxo, 5 * dec0 * dec1 * baudrate); // ceil
-        } else {
+        }
+        else
+        {
           // for normal PHYs we stick with OSR of 5
           // we have two possible values for DEC2 given DEC0 and DEC1 so we loop
           // over those values below
@@ -343,7 +384,8 @@ static void efr32_build_rxmodem(uint32_t baudrate, uint32_t rxbw, struct efr32_r
         }
 
         // 0 is not a valid value for DEC2 so only try 1 if we end up with 0
-        if (dec2_start == 0) {
+        if (dec2_start == 0)
+        {
           dec2_start = 1;
           dec2_end = 1;
         }
@@ -352,7 +394,8 @@ static void efr32_build_rxmodem(uint32_t baudrate, uint32_t rxbw, struct efr32_r
         if (dec2_end > 63)
             dec2_end = 63;
 
-        for (uint32_t dec2 = dec2_start; dec2 < dec2_end + 1; dec2++) {
+        for (uint32_t dec2 = dec2_start; dec2 < dec2_end + 1; dec2++)
+        {
           // get best RXBR values for given divider ratios
           uint32_t rxbr_reg = efr32_build_rxbaudrate(dec0, dec1, dec2, baudrate);
           uint32_t rxbrint = EFR32_MODEM_RXBR_RXBRINT_GET(rxbr_reg);
@@ -373,9 +416,10 @@ static void efr32_build_rxmodem(uint32_t baudrate, uint32_t rxbw, struct efr32_r
 
           // record necessary info if we found a better combination than we had
           // prefer larger decimation in dec0 if the cost is the same
-          if (cost < best_cost || (cost == best_cost && dec0 > dec1 && fc == best_fc)) {
-              // printk("Cost: %d %d %d %d %lld %d %lld %lld %lld\n",
-              //    dec0, dec1, cfosr, dec2, curr_bw, osr, curr_br, fc, cost);
+          if (cost < best_cost || (cost == best_cost && dec0 > dec1 && fc == best_fc))
+          {
+            // printk("Cost: %d %d %d %d %lld %d %lld %lld %lld\n",
+            //    dec0, dec1, cfosr, dec2, curr_bw, osr, curr_br, fc, cost);
             best_cost = cost;
             best_dec0 = dec0;
             best_dec1 = dec1;
@@ -397,12 +441,14 @@ static void efr32_build_rxmodem(uint32_t baudrate, uint32_t rxbw, struct efr32_r
   cfg->fc = best_fc;
 }
 
-static uint32_t efr32_calc_cfreg(struct efr32_rxmodem_s *cfg, uint32_t rxbw) {
+static uint32_t efr32_calc_cfreg(struct efr32_rxmodem_s *cfg, uint32_t rxbw)
+{
   uint32_t cfreg_val = cpu_mem_read_32(EFR32_MODEM_ADDR + EFR32_MODEM_CF_ADDR);
   uint64_t fxo = CONFIG_DRIVER_EFR32_RADIO_HFXO_CLK;
 
   // Set dec0
-  switch (cfg->dec0) {
+  switch (cfg->dec0)
+  {
     case 3:
       EFR32_MODEM_CF_DEC0_SET(cfreg_val, DF3);
     break;
@@ -430,7 +476,8 @@ static uint32_t efr32_calc_cfreg(struct efr32_rxmodem_s *cfg, uint32_t rxbw) {
   EFR32_MODEM_CF_DEC2_SET(cfreg_val, cfg->dec2 - 1);
 
   // Set cfosr
-  switch (cfg->cfosr) {
+  switch (cfg->cfosr)
+  {
     case 7:
       EFR32_MODEM_CF_CFOSR_SET(cfreg_val, CF7);
     break;
@@ -466,30 +513,34 @@ static uint32_t efr32_calc_cfreg(struct efr32_rxmodem_s *cfg, uint32_t rxbw) {
   return cfreg_val;
 }
 
-static uint32_t efr32_calc_lodiv(uint32_t reg) {
+static uint32_t efr32_calc_lodiv(uint32_t reg)
+{
   uint32_t divA = (reg & 0x1C0) >> 6;
   uint32_t divB = (reg & 0x38) >> 3;
   uint32_t divC = reg & 0x7;
 
-  if (divA == 0) {
+  if (divA == 0)
       divA = 1;
-  }
-  if (divB == 0) {
+
+  if (divB == 0)
       divB = 1;
-  }
-  if (divC == 0){
+
+  if (divC == 0)
       divC = 1;
-  }
+
   return divA * divB * divC;
 }
-static uint32_t efr32_calc_synth_res(void) {
-    // Get lodiv
-    uint32_t lodiv = efr32_calc_lodiv(cpu_mem_read_32(EFR32_SYNTH_ADDR + EFR32_SYNTH_DIVCTRL_ADDR));
-    // Calc gain with rounding
-    return (CONFIG_DRIVER_EFR32_RADIO_HFXO_CLK + ((lodiv * 524288) / 2)) / (lodiv * 524288);
+
+static uint32_t efr32_calc_synth_res(void)
+{
+  // Get lodiv
+  uint32_t lodiv = efr32_calc_lodiv(cpu_mem_read_32(EFR32_SYNTH_ADDR + EFR32_SYNTH_DIVCTRL_ADDR));
+  // Calc gain with rounding
+  return (CONFIG_DRIVER_EFR32_RADIO_HFXO_CLK + ((lodiv * 524288) / 2)) / (lodiv * 524288);
 }
 
-static uint32_t efr32_calc_interp_gain(uint32_t txbrden) {
+static uint32_t efr32_calc_interp_gain(uint32_t txbrden)
+{
   // Return correct fraction with rounding
   if (txbrden < 256)
     return txbrden;
@@ -509,7 +560,8 @@ static uint32_t efr32_calc_interp_gain(uint32_t txbrden) {
     return (txbrden + 64) / 128;
 }
 
-static uint64_t efr32_calc_shape_filter_gain(uint32_t crtl0, uint32_t shap0, uint32_t shap1, uint32_t shap2) {
+static uint64_t efr32_calc_shape_filter_gain(uint32_t crtl0, uint32_t shap0, uint32_t shap1, uint32_t shap2)
+{
   // Get mode and coeff from regs
   uint8_t mode = EFR32_MODEM_CTRL0_SHAPING_GET(crtl0);
 
@@ -536,13 +588,17 @@ static uint64_t efr32_calc_shape_filter_gain(uint32_t crtl0, uint32_t shap0, uin
     return __MAX(__MAX(__MAX(c0, c1),__MAX(c2, c3)),__MAX(__MAX(c4, c5),__MAX(c6, c7)));
 }
 
-static void efr32_frac2exp(uint32_t max_m, uint64_t frac, uint32_t *pM, int32_t *pE){
+static void efr32_frac2exp(uint32_t max_m, uint64_t frac, uint32_t *pM, int32_t *pE)
+{
   // Trivial case
-  if (frac <= max_m) {
+  if (frac <= max_m)
+  {
     *pM = frac;
     *pE = 0;
     return;
-  } else {
+  }
+  else
+  {
     // Get msb
     uint32_t msb = 31 - __builtin_clz(frac);
     // Get max mantissa value msb
@@ -550,18 +606,22 @@ static void efr32_frac2exp(uint32_t max_m, uint64_t frac, uint32_t *pM, int32_t 
     // Get mantissa at resolution step with rounding
     uint32_t tmp = (frac + (1 << (msb - (max_msb + 1)))) / (1 << (msb - max_msb));
     // Check if overflow
-    if (tmp > max_m) {
+    if (tmp > max_m)
+    {
       *pM = tmp - max_m;
       *pE = msb + 1;
     // Regular case
-    } else {
+    }
+    else
+    {
       *pM = tmp;
       *pE = msb - max_msb;
     }
   }
 }
 
-static uint64_t efr32_calc_fsk_modindex(uint32_t txbr) {
+static uint64_t efr32_calc_fsk_modindex(uint32_t txbr)
+{
   uint32_t synth_res = efr32_calc_synth_res();
   uint64_t interp_gain = (uint64_t)efr32_calc_interp_gain(EFR32_MODEM_TXBR_TXBRDEN(txbr));
   uint32_t ctrl0 = cpu_mem_read_32(EFR32_MODEM_ADDR + EFR32_MODEM_CTRL0_ADDR);
@@ -575,12 +635,14 @@ static uint64_t efr32_calc_fsk_modindex(uint32_t txbr) {
       / (synth_res * filter_gain * interp_gain);
 }
 
-static uint32_t efr32_calc_fsk_freqgain(uint32_t freqdev, uint8_t symbol_nb, uint32_t decmult) {
+static uint32_t efr32_calc_fsk_freqgain(uint32_t freqdev, uint8_t symbol_nb, uint32_t decmult)
+{
   assert(freqdev);
   uint32_t freq_gain = 0;
   uint64_t fxo = CONFIG_DRIVER_EFR32_RADIO_HFXO_CLK;
 
-  switch (symbol_nb) {
+  switch (symbol_nb)
+  {
     case 2:
       freq_gain = (fxo << EFR32_FREQGAIN_OFFSET) / (4 * freqdev * decmult);
     break;
@@ -596,38 +658,44 @@ static uint32_t efr32_calc_fsk_freqgain(uint32_t freqdev, uint8_t symbol_nb, uin
   return freq_gain;
 }
 
-static uint32_t efr32_calc_modindex_reg_value(uint64_t modindex, uint32_t freq_gain) {
+static uint32_t efr32_calc_modindex_reg_value(uint64_t modindex, uint32_t freq_gain)
+{
   // Convert fractional modindex into m * 2^e format
   uint32_t mi_m, fg_m;
   int32_t mi_e, fg_e;
   efr32_frac2exp(EFR32_MAX_MODINDEX_M, modindex, &mi_m, &mi_e);
   // Correct exponent
   mi_e -= EFR32_MODINDEX_OFFSET;
+
   // Correct negative value
   if (mi_e < 0)
     mi_e += 32;
   // Limit value
   if (mi_e > 31)
     mi_e = 31;
+
   // Convert fractional freq_gain in m * 2^(2-e) format
   efr32_frac2exp(EFR32_MAX_FREQGAIN_M, freq_gain, &fg_m, &fg_e);
   // Correct exponent
   fg_e -= EFR32_FREQGAIN_OFFSET;
   fg_e = 2 - fg_e;
+
   // Check exp value
-  if (fg_e > 7) {
+  if (fg_e > 7)
     printk("exponent overflow\n");
-  }
+
   return (EFR32_MODEM_MODINDEX_MODINDEXM(mi_m) | EFR32_MODEM_MODINDEX_MODINDEXE(mi_e)
             | EFR32_MODEM_MODINDEX_FREQGAINE(fg_e) | EFR32_MODEM_MODINDEX_FREQGAINM(fg_m));
 }
 
-static uint32_t efr32_calc_freq_err(uint32_t ext_freq_err, uint64_t freq, uint16_t osc_ppb) {
+static uint32_t efr32_calc_freq_err(uint32_t ext_freq_err, uint64_t freq, uint16_t osc_ppb)
+{
   uint64_t loc_freq_err = freq * osc_ppb / 1000000000;
   return (ext_freq_err + loc_freq_err);
 }
 
-static uint32_t efr32_calc_rxbw(uint32_t br, uint32_t freqdev, uint32_t freq_err) {
+static uint32_t efr32_calc_rxbw(uint32_t br, uint32_t freqdev, uint32_t freq_err)
+{
 /* calculate carson's rule bandwidth: baudrate + 2 * max frequency deviation
         max frequency deviation can be due desired FSK deviation but also due to
         frequency offset in crystal frequencies.*/
@@ -636,7 +704,8 @@ static uint32_t efr32_calc_rxbw(uint32_t br, uint32_t freqdev, uint32_t freq_err
 
 static void efr32_debug_conf(uint32_t dec0, uint32_t dec1, uint32_t dec2, uint32_t cfosr,
          uint32_t brint, uint32_t brnum, uint32_t brden, uint32_t baudrate, uint32_t fdev,
-         uint32_t ext_freq_err, uint32_t rf_freq) {
+         uint32_t ext_freq_err, uint32_t rf_freq)
+         {
 
   uint64_t fxo = CONFIG_DRIVER_EFR32_RADIO_HFXO_CLK;
 
@@ -650,7 +719,8 @@ static void efr32_debug_conf(uint32_t dec0, uint32_t dec1, uint32_t dec2, uint32
   printk("Dbg: %lld %d %lld %lld %lld\n", curr_bw, osr, curr_br, fc, cost);
 }
 
-static error_t efr32_build_gfsk_rf_config(struct radio_efr32_rfp_ctx_s *ctx, struct dev_rfpacket_rq_s *rq) {
+static error_t efr32_build_gfsk_rf_config(struct radio_efr32_rfp_ctx_s *ctx, struct dev_rfpacket_rq_s *rq)
+{
   const struct dev_rfpacket_rf_cfg_fsk_s *cfsk = const_dev_rfpacket_rf_cfg_fsk_s_cast(rq->rf_cfg);
   const struct dev_rfpacket_rf_cfg_std_s *common = &cfsk->common;
   struct efr32_rxmodem_s cfg;
@@ -714,7 +784,8 @@ static error_t efr32_build_gfsk_rf_config(struct radio_efr32_rfp_ctx_s *ctx, str
 #endif
 
 #ifndef CONFIG_DEVICE_RFPACKET_STATIC_PKT_CONFIG
-static error_t efr32_build_slpc_pkt_config(struct radio_efr32_rfp_ctx_s *ctx, struct dev_rfpacket_rq_s *rq) {
+static error_t efr32_build_slpc_pkt_config(struct radio_efr32_rfp_ctx_s *ctx, struct dev_rfpacket_rq_s *rq)
+{
   const struct dev_rfpacket_pk_cfg_basic_s *cfg = const_dev_rfpacket_pk_cfg_basic_s_cast(rq->pk_cfg);
 
   cpu_mem_write_32(EFR32_FRC_ADDR + EFR32_FRC_RXCTRL_ADDR, EFR32_FRC_RXCTRL_BUFRESTOREFRAMEERROR |
@@ -751,9 +822,9 @@ static error_t efr32_build_slpc_pkt_config(struct radio_efr32_rfp_ctx_s *ctx, st
 
   // Configure Sync Word
   uint8_t sw = cfg->sw_len + 1;
-  if ((sw >> 5) || (sw % 4)) {
+  if ((sw >> 5) || (sw % 4))
     return -ENOTSUP;
-  }
+
   x = EFR32_MODEM_CTRL1_SYNCBITS(cfg->sw_len);
   cpu_mem_write_32(EFR32_MODEM_ADDR + EFR32_MODEM_CTRL1_ADDR, x);
 
@@ -767,20 +838,22 @@ static error_t efr32_build_slpc_pkt_config(struct radio_efr32_rfp_ctx_s *ctx, st
 
   cpu_mem_write_32(EFR32_MODEM_ADDR + EFR32_MODEM_SYNC0_ADDR, x);
   // Configure Preamble
-  if ((cfg->pb_pattern_len + 1) >> 4) {
+  if ((cfg->pb_pattern_len + 1) >> 4)
     return -ENOTSUP;
-  }
+
   x = EFR32_MODEM_PRE_BASEBITS(cfg->pb_pattern_len);
   uint32_t msk = (1 << (cfg->pb_pattern_len + 1)) - 1;
   uint32_t preamble = cfg->pb_pattern & msk;
 
-  if (preamble == (0xAAAAAAAA & msk)) {
+  if (preamble == (0xAAAAAAAA & msk))
     EFR32_MODEM_PRE_BASE_SET(x, 10); // TYPE 1010
-  } else if (preamble == (0x55555555 & msk)) {
+
+  else if (preamble == (0x55555555 & msk))
     EFR32_MODEM_PRE_BASE_SET(x, 01); // TYPE 0101
-  } else {
+
+  else
     return -ENOTSUP;
-  }
+
   EFR32_MODEM_PRE_TXBASES_SET(x, cfg->tx_pb_len/(cfg->pb_pattern_len + 1));
   cpu_mem_write_32(EFR32_MODEM_ADDR + EFR32_MODEM_PRE_ADDR, x);
   // Configure CRC
@@ -790,7 +863,8 @@ static error_t efr32_build_slpc_pkt_config(struct radio_efr32_rfp_ctx_s *ctx, st
 
   uint32_t w;
 
-  switch (cfg->crc) {
+  switch (cfg->crc)
+  {
     case 0:
     case 0x07:
       w = EFR32_CRC_CTRL_CRCWIDTH_CRCWIDTH8;
@@ -820,7 +894,8 @@ static error_t efr32_build_slpc_pkt_config(struct radio_efr32_rfp_ctx_s *ctx, st
   uint32_t v = cfg->crc;
   x = 0;
 
-  for (uint8_t i = 0; i < ((w + 1) << 3); i++) {
+  for (uint8_t i = 0; i < ((w + 1) << 3); i++)
+  {
       x <<= 1;
       x = v & 1 ? x | 1 : x;
       v >>= 1;
@@ -833,24 +908,27 @@ static error_t efr32_build_slpc_pkt_config(struct radio_efr32_rfp_ctx_s *ctx, st
 }
 #endif
 
-static error_t efr32_build_static_rf_config(struct radio_efr32_rfp_ctx_s *ctx, struct dev_rfpacket_rq_s *rq) {
+static error_t efr32_build_static_rf_config(struct radio_efr32_rfp_ctx_s *ctx, struct dev_rfpacket_rq_s *rq)
+{
   const struct dev_rfpacket_rf_cfg_static_s *cstatic = const_dev_rfpacket_rf_cfg_static_s_cast(rq->rf_cfg);
   struct radio_efr32_rf_cfg_s *cfg = NULL;
 
   // Retrieve config
   error_t err = device_get_param_blob(ctx->pv.dev, cstatic->cfg_name, 0, (const void **)&cfg);
-  if (err != 0) {
+  if (err != 0)
+  {
     logk_trace("Couldn't retrieve rf param blob.");
     return err;
   }
   assert(cfg);
   // Raise sigfox flag if needed
 #ifdef CONFIG_DRIVER_EFR32_SIGFOX
-  if (strcmp(cstatic->cfg_name, "rf_sigfox") == 0) {
+  if (strcmp(cstatic->cfg_name, "rf_sigfox") == 0)
     ctx->isSigfox = true;
-  } else {
+
+  else
     ctx->isSigfox = false;
-  }
+
 #endif
   // Send config
   efr32_send_radio_config(cfg->config_size, cfg->config_data);
@@ -863,7 +941,8 @@ static error_t efr32_build_static_rf_config(struct radio_efr32_rfp_ctx_s *ctx, s
   return 0;
 }
 
-static error_t efr32_build_extern_rf_config(struct radio_efr32_rfp_ctx_s *ctx, struct dev_rfpacket_rq_s *rq) {
+static error_t efr32_build_extern_rf_config(struct radio_efr32_rfp_ctx_s *ctx, struct dev_rfpacket_rq_s *rq)
+{
   const struct dev_rfpacket_rf_cfg_extern_s *cextern = const_dev_rfpacket_rf_cfg_extern_s_cast(rq->rf_cfg);
 
   // Retrieve config
@@ -880,13 +959,15 @@ static error_t efr32_build_extern_rf_config(struct radio_efr32_rfp_ctx_s *ctx, s
   return 0;
 }
 
-static error_t efr32_build_static_pk_config(struct radio_efr32_rfp_ctx_s *ctx, struct dev_rfpacket_rq_s *rq) {
+static error_t efr32_build_static_pk_config(struct radio_efr32_rfp_ctx_s *ctx, struct dev_rfpacket_rq_s *rq)
+{
   const struct dev_rfpacket_pk_cfg_static_s *cstatic = const_dev_rfpacket_pk_cfg_static_s_cast(rq->pk_cfg);
   struct radio_efr32_pk_cfg_s *cfg = NULL;
 
   // Retrieve config
   error_t err = device_get_param_blob(ctx->pv.dev, cstatic->cfg_name, 0, (const void **)&cfg);
-  if (err != 0) {
+  if (err != 0)
+  {
     logk_trace("Couldn't retrieve rf param blob.");
     return err;
   }
@@ -899,7 +980,8 @@ static error_t efr32_build_static_pk_config(struct radio_efr32_rfp_ctx_s *ctx, s
   return 0;
 }
 
-static error_t efr32_build_extern_pk_config(struct radio_efr32_rfp_ctx_s *ctx, struct dev_rfpacket_rq_s *rq) {
+static error_t efr32_build_extern_pk_config(struct radio_efr32_rfp_ctx_s *ctx, struct dev_rfpacket_rq_s *rq)
+{
   const struct dev_rfpacket_pk_cfg_extern_s *cextern = const_dev_rfpacket_pk_cfg_extern_s_cast(rq->pk_cfg);
 
   // Retrieve config
@@ -917,31 +999,37 @@ static error_t efr32_build_extern_pk_config(struct radio_efr32_rfp_ctx_s *ctx, s
 
 // *** PUBLIC FUNCTIONS ***
 
-int32_t efr32_calc_synth_ratio(uint32_t freq) {
+int32_t efr32_calc_synth_ratio(uint32_t freq)
+{
 // Returned synth ratio as 1/128th
-  if (freq > 1000000000) {
+  if (freq > 1000000000)
     return 9344;
-  } else if (freq > 779000000) {
+
+  else if (freq > 779000000)
     return 3072;
-  } else if (freq > 584000000) {
+
+  else if (freq > 584000000)
     return 2342;
-  } else if (freq > 358000000) {
+
+  else if (freq > 358000000)
     return 1562;
-  } else if (freq > 191000000) {
+
+  else if (freq > 191000000)
     return 934;
-  } else {
+
+  else
     return 589;
-  }
 }
 
-error_t efr32_set_tx_power(struct radio_efr32_rfp_ctx_s *ctx, struct dev_rfpacket_rq_s *rq) {
+error_t efr32_set_tx_power(struct radio_efr32_rfp_ctx_s *ctx, struct dev_rfpacket_rq_s *rq)
+{
   uint32_t sg_pac_reg, pac_reg;
 
   error_t err = efr32_calc_power(rq->tx_pwr, ctx->curr_freq, &sg_pac_reg, &pac_reg);
 
-  if (err != 0) {
+  if (err != 0)
     return err;
-  }
+
   // Write power value
   //cpu_mem_write_32(EFR32_RAC_ADDR + EFR32_RAC_PACTRL0_ADDR, pac_reg); // Bootloader crc bug
   cpu_mem_write_32(EFR32_RAC_ADDR + EFR32_RAC_SGPACTRL0_ADDR, sg_pac_reg);
@@ -949,25 +1037,28 @@ error_t efr32_set_tx_power(struct radio_efr32_rfp_ctx_s *ctx, struct dev_rfpacke
   return 0;
 }
 
-void efr32_rfp_set_cca_threshold(struct radio_efr32_rfp_ctx_s *ctx, struct dev_rfpacket_rq_s *rq) {
+void efr32_rfp_set_cca_threshold(struct radio_efr32_rfp_ctx_s *ctx, struct dev_rfpacket_rq_s *rq)
+{
   const struct dev_rfpacket_rf_cfg_fsk_s * c = const_dev_rfpacket_rf_cfg_fsk_s_cast(rq->rf_cfg);
   int16_t r = c->fairtx.lbt.rssi >> 3;
   int8_t v = (r & 0x7F) | (r < 0 ? 0x80 : 0);
 
   // Saturate rssi threshold
-  if (r < -128) {
+  if (r < -128)
     v = -128;
-  }
-  if (r > 127) {
+
+  if (r > 127)
     v = 127;
-  }
+
   uint32_t x = cpu_mem_read_32(EFR32_AGC_ADDR + EFR32_AGC_CTRL1_ADDR);
   EFR32_AGC_CTRL1_CCATHRSH_SET(x, v & 0xFF);
   cpu_mem_write_32(EFR32_AGC_ADDR + EFR32_AGC_CTRL1_ADDR, x);
 }
 
-error_t efr32_build_rf_config(struct radio_efr32_rfp_ctx_s *ctx, struct dev_rfpacket_rq_s *rq) {
-  switch (rq->rf_cfg->mod) {
+error_t efr32_build_rf_config(struct radio_efr32_rfp_ctx_s *ctx, struct dev_rfpacket_rq_s *rq)
+{
+  switch (rq->rf_cfg->mod)
+  {
 #ifndef CONFIG_DEVICE_RFPACKET_STATIC_RF_CONFIG
     case DEV_RFPACKET_GFSK:
       return efr32_build_gfsk_rf_config(ctx, rq);
@@ -984,8 +1075,10 @@ error_t efr32_build_rf_config(struct radio_efr32_rfp_ctx_s *ctx, struct dev_rfpa
   }
 }
 
-error_t efr32_build_pkt_config(struct radio_efr32_rfp_ctx_s *ctx, struct dev_rfpacket_rq_s *rq) {
-  switch (rq->pk_cfg->format) {
+error_t efr32_build_pkt_config(struct radio_efr32_rfp_ctx_s *ctx, struct dev_rfpacket_rq_s *rq)
+{
+  switch (rq->pk_cfg->format)
+  {
 #ifndef CONFIG_DEVICE_RFPACKET_STATIC_PKT_CONFIG
     case DEV_RFPACKET_FMT_SLPC:
       return efr32_build_slpc_pkt_config(ctx, rq);
@@ -1003,11 +1096,14 @@ error_t efr32_build_pkt_config(struct radio_efr32_rfp_ctx_s *ctx, struct dev_rfp
 }
 
 #ifndef CONFIG_DEVICE_RFPACKET_STATIC_RF_CONFIG
-error_t efr32_rfp_fsk_init(struct radio_efr32_rfp_ctx_s *ctx) {
-  uint32_t base[2] = {EFR32_FRC_ADDR, EFR32_RADIO_SEQ_RAM_ADDR};
+error_t efr32_rfp_fsk_init(struct radio_efr32_rfp_ctx_s *ctx)
+{
+  uint32_t base[2] =
+  {EFR32_FRC_ADDR, EFR32_RADIO_SEQ_RAM_ADDR};
   uint16_t i = 0;
 
-  const uint32_t generated[] = {
+  const uint32_t generated[] =
+  {
     0x00013008UL, 0x0100AC13UL,
     0x00023030UL, 0x00104000UL,
     /*    3034 */ 0x00000003UL,
@@ -1091,18 +1187,21 @@ error_t efr32_rfp_fsk_init(struct radio_efr32_rfp_ctx_s *ctx) {
     /*    7078 */ 0x006D8480UL,
     0xFFFFFFFFUL,
   };
-  while(1) {
+
+  while(1)
+  {
     uint32_t v0 = generated[i];
 
-    if (v0 == 0xFFFFFFFF) {
+    if (v0 == 0xFFFFFFFF)
       break;
-    }
+
     uint32_t offset = (v0 >> 24) & 0xFF;
     uint32_t count = (v0 >> 16) & 0xFF;
     uint32_t idx = 0;
     assert(offset< 2);
 
-    while(count--) {
+    while(count--)
+    {
       uint32_t addr = (v0 & 0xFFFF) + idx;
       addr |= base[offset];
       uint32_t v1 = generated[i + 1];

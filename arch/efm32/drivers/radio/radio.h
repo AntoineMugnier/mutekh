@@ -28,12 +28,14 @@
 #define EFR32_RADIO_RFP_BUFFER_SIZE 256
 
 // Rac irq types
-enum efr32_rac_irq_type {
+enum efr32_rac_irq_type
+{
   EFR32_RAC_IRQ_TIMEOUT,
   EFR32_RAC_IRQ_TXRX,
 };
 
-struct radio_efr32_rfp_ctx_s {
+struct radio_efr32_rfp_ctx_s
+{
   struct radio_efr32_ctx_s pv;
   uint8_t sg_buffer[EFR32_RADIO_RFP_BUFFER_SIZE];
   bool_t sleep;

@@ -1,16 +1,38 @@
+/*
+   This file is part of MutekH.
 
-struct _efr32_pa_curve_s {
+   MutekH is free software; you can redistribute it and/or modify it
+   under the terms of the GNU Lesser General Public License as
+   published by the Free Software Foundation; version 2.1 of the
+   License.
+
+   MutekH is distributed in the hope that it will be useful, but
+   WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+   Lesser General Public License for more details.
+
+   You should have received a copy of the GNU Lesser General Public
+   License along with MutekH; if not, write to the Free Software
+   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+   02110-1301 USA.
+
+ */
+
+struct _efr32_pa_curve_s
+{
     int16_t max_pwr_dbm;
     uint16_t slope;
     int32_t offset;
 };
 
-struct _efr32_pa_data_s {
+struct _efr32_pa_data_s
+{
     uint8_t data_size;
     const struct _efr32_pa_curve_s *data;
 };
 
-static const struct _efr32_pa_curve_s _2g4_vbat[] = {
+static const struct _efr32_pa_curve_s _2g4_vbat[] =
+{
     { 160, 2776, -300026 },
     { 126, 1335, -73192 },
     { 94, 772, -7179 },
@@ -21,7 +43,8 @@ static const struct _efr32_pa_curve_s _2g4_vbat[] = {
     { -74, 40, 10519 }
 };
 
-static const struct _efr32_pa_curve_s _2g4_dcdc[] = {
+static const struct _efr32_pa_curve_s _2g4_dcdc[] =
+{
     { 128, 4306, -391604 },
     { 94, 1435, -52495 },
     { 63, 610, 13579 },
@@ -31,7 +54,8 @@ static const struct _efr32_pa_curve_s _2g4_dcdc[] = {
     { -74, 37, 10371 }
 };
 
-static const struct _efr32_pa_curve_s _sg_vbat[] = {
+static const struct _efr32_pa_curve_s _sg_vbat[] =
+{
     { 160, 2757, -319913 },
     { 127, 1173, -64900 },
     { 94, 694, -8378 },
@@ -42,7 +66,8 @@ static const struct _efr32_pa_curve_s _sg_vbat[] = {
     { -70, 34, 9064 }
 };
 
-static const struct _efr32_pa_curve_s _sg_dcdc[] = {
+static const struct _efr32_pa_curve_s _sg_dcdc[] =
+{
     { 128, 9069, -1171644 },
     { 121, 3826, -378994 },
     { 99, 932, -22748 },
@@ -55,24 +80,28 @@ static const struct _efr32_pa_curve_s _sg_dcdc[] = {
 
 #ifdef CONFIG_DRIVER_EFR32_RADIO_VBAT
 
-static struct _efr32_pa_data_s efr32_radio_sg_pa_data = {
+static struct _efr32_pa_data_s efr32_radio_sg_pa_data =
+{
     ARRAY_SIZE(_sg_vbat),
     _sg_vbat,
 };
 
-static struct _efr32_pa_data_s efr32_radio_2g4_pa_data = {
+static struct _efr32_pa_data_s efr32_radio_2g4_pa_data =
+{
     ARRAY_SIZE(_2g4_vbat),
     _2g4_vbat,
 };
 
 #else
 
-static struct _efr32_pa_data_s efr32_radio_sg_pa_data = {
+static struct _efr32_pa_data_s efr32_radio_sg_pa_data =
+{
     ARRAY_SIZE(_sg_dcdc),
     _sg_dcdc,
 };
 
-static struct _efr32_pa_data_s efr32_radio_2g4_pa_data = {
+static struct _efr32_pa_data_s efr32_radio_2g4_pa_data =
+{
     ARRAY_SIZE(_2g4_dcdc),
     _2g4_dcdc,
 };
