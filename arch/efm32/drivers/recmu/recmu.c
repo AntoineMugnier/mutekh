@@ -655,7 +655,7 @@ static DEV_CMU_CONFIG_OSC(efm32_recmu_config_osc)
           return -ENOTSUP;
         }
       pv->r_auxhfrcoctrl = (band << EFM32_CMU_AUXHFRCOCTRL_BAND_SHIFT) |
-        cpu_mem_read_8(/* device information page */ 0xfe081d4 + band);
+        cpu_mem_read_8(/* device information page */ 0xfe081d4 + (band ^ 3));
 #ifdef CONFIG_DEVICE_CLOCK_VARFREQ
       pv->chg_mask |= EFM32_CLK_MASK(node_id);
 #endif
