@@ -595,10 +595,20 @@ static DEV_INIT(nrf5x_gpio_init)
 #endif
 
 
-  for (uint8_t pin = 0; pin < CONFIG_NRF5X_GPIO_COUNT; ++pin)
+  for (uint8_t pin = 0; pin < CONFIG_NRF5X_GPIO_COUNT; ++pin) {
+#if defined(CONFIG_CPU_ARM32M_TRACE)
+    // Dont touch trace pins
+    if (pin == 32)
+      continue;
+# if CONFIG_CPU_ARM32M_TRACE_PARALLEL > 0
+    if (pin == 12 || pin == 11 || pin == (32+9) || pin == 7)
+      continue;
+# endif
+#endif
     nrf_reg_set(GPIO_ADDR, NRF_GPIO_PIN_CNF(pin), 0
                 | NRF_GPIO_PIN_CNF_DIR_INPUT
                 | NRF_GPIO_PIN_CNF_INPUT_DISCONNECT);
+  }
 
   return 0;
 

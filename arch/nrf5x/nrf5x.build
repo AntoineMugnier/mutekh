@@ -25,6 +25,8 @@
 %section nrf5x-*-*-*
   %types architecture
 
+  CONFIG_CPU_ARM32M_TRACE_CLKIN_RATE 32000000
+
   %subsection arch_drv
     CONFIG_DRIVER_NRF5X_CLOCK
     CONFIG_DRIVER_NRF5X_GPIO
