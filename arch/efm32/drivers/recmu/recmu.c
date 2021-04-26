@@ -1122,7 +1122,7 @@ static void efm32_recmu_clock_dep(struct efm32_recmu_private_s *pv,
       efm32_clock_mask_t en = m & mask;
       efm32_clock_mask_t dis = m & ~mask;
       uint32_t cmd = 0;
-#ifdef EFM32_CLOCK_AUXHFRCO
+#if defined(EFM32_CLOCK_AUXHFRCO) && !defined(CONFIG_CPU_ARM32M_TRACE)
       EFM32_CMU_OSCENCMD_AUXHFRCOEN_SET(cmd,  (en  >> EFM32_CLOCK_AUXHFRCO) & 1);
       EFM32_CMU_OSCENCMD_AUXHFRCODIS_SET(cmd, (dis >> EFM32_CLOCK_AUXHFRCO) & 1);
 #endif
@@ -1170,8 +1170,10 @@ static DEV_CMU_COMMIT(efm32_recmu_commit)
                   endian_le32(pv->r_hfrcoctrl));
   cpu_mem_write_32(EFM32_CMU_ADDR + EFM32_CMU_LFRCOCTRL_ADDR,
                   endian_le32(pv->r_lfrcoctrl));
+#if !defined(CONFIG_CPU_ARM32M_TRACE)
   cpu_mem_write_32(EFM32_CMU_ADDR + EFM32_CMU_AUXHFRCOCTRL_ADDR,
                   endian_le32(pv->r_auxhfrcoctrl));
+#endif
 
     /* lf clocks use the config mux for gating, register will be
        updated in efm32_recmu_clock_dep. */

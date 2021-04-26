@@ -204,6 +204,12 @@
    you disable the pin. This way, the debugger will have time to halt the device
    after a reset before the pin is disabled. @multiple */
   #define EFM32_GPIO_ROUTE_SWDIOPEN                  0x00000002
+  #define EFM32_GPIO_ROUTE_SWOPEN                    0x00000004
+  #define EFM32_GPIO_ROUTE_TCLKPEN                   0x00001000
+  #define EFM32_GPIO_ROUTE_TD0PEN                    0x00002000
+  #define EFM32_GPIO_ROUTE_TD1PEN                    0x00004000
+  #define EFM32_GPIO_ROUTE_TD2PEN                    0x00008000
+  #define EFM32_GPIO_ROUTE_TD3PEN                    0x00010000
 
 #define EFM32_GPIO_INSENSE_ADDR                      0x00000124
 #define EFM32_GPIO_INSENSE_MASK                      0x00000003

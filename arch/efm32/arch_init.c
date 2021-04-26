@@ -25,9 +25,11 @@
 #include <string.h>
 
 #include <hexo/iospace.h>
+#include <hexo/endian.h>
 #include <arch/efm32/gpio.h>
 #include <arch/efm32/cmu.h>
 #include <arch/efm32/devaddr.h>
+#include <arch/efm32/pin.h>
 
 #ifndef CONFIG_DEVICE_CLOCK
 
@@ -75,7 +77,116 @@ void efm32_clock_enable()
   cpu_mem_write_32(EFM32_CMU_ADDR + EFM32_CMU_OSCENCMD_ADDR, EFM32_CMU_OSCENCMD_LFRCOEN);
   while (!(cpu_mem_read_32(EFM32_CMU_ADDR + EFM32_CMU_STATUS_ADDR) & EFM32_CMU_STATUS_LFRCORDY))
     ;
-}
 
+}
 #endif
 
+#if defined(CONFIG_CPU_ARM32M_TRACE)
+static void gpio_out_en(uint8_t port)
+{
+  uint32_t x, b = EFM32_GPIO_ADDR;
+
+  /* TX route */
+  uint32_t bank = port / 16;
+  uint32_t pin = port % 8;
+  uint32_t h = (port >> 1) & 4;
+
+  x = cpu_mem_read_32(b + EFM32_GPIO_MODEL_ADDR(bank) + h);
+  EFM32_GPIO_MODEL_MODE_SET(pin, x, PUSHPULL);
+  cpu_mem_write_32(b + EFM32_GPIO_MODEL_ADDR(bank) + h, x);
+}
+
+void efm32_trace_init(void)
+{
+# if (CONFIG_EFM32_FAMILY == EFM32_FAMILY_LEOPARD) \
+  || (CONFIG_EFM32_FAMILY == EFM32_FAMILY_WONDER) \
+  || (CONFIG_EFM32_FAMILY == EFM32_FAMILY_GIANT) \
+  || (CONFIG_EFM32_FAMILY == EFM32_FAMILY_ZERO)
+  uint32_t x, b = EFM32_CMU_ADDR;
+
+  cpu_mem_write_32(b + EFM32_CMU_LOCK_ADDR, EFM32_CMU_LOCK_LOCKKEY_UNLOCK);
+
+  x = cpu_mem_read_32(b + EFM32_CMU_HFPERCLKDIV_ADDR);
+  x |= EFM32_CMU_HFPERCLKDIV_HFPERCLKEN;
+  cpu_mem_write_32(b + EFM32_CMU_HFPERCLKDIV_ADDR, x);
+
+  x = cpu_mem_read_32(b + EFM32_CMU_HFPERCLKEN0_ADDR);
+  x |= EFM32_CMU_HFPERCLKEN0_GPIO;
+  cpu_mem_write_32(b + EFM32_CMU_HFPERCLKEN0_ADDR, x);
+
+  cpu_mem_write_32(EFM32_CMU_ADDR + EFM32_CMU_OSCENCMD_ADDR, EFM32_CMU_OSCENCMD_AUXHFRCODIS);
+
+  uint32_t band = 0;
+  switch (CONFIG_EFM32_TRACE_AUXHFCO_FREQ)
+    {
+    case 1000000:
+      band = EFM32_CMU_AUXHFRCOCTRL_BAND_1MHZ;
+      break;
+    case 7000000:
+      band = EFM32_CMU_AUXHFRCOCTRL_BAND_7MHZ;
+      break;
+    case 11000000:
+      band = EFM32_CMU_AUXHFRCOCTRL_BAND_11MHZ;
+      break;
+    case 14000000:
+      band = EFM32_CMU_AUXHFRCOCTRL_BAND_14MHZ;
+      break;
+    case 21000000:
+    default:
+      band = EFM32_CMU_AUXHFRCOCTRL_BAND_21MHZ;
+      break;
+#  if (CONFIG_EFM32_FAMILY == EFM32_FAMILY_LEOPARD)      \
+   || (CONFIG_EFM32_FAMILY == EFM32_FAMILY_WONDER)       \
+   || (CONFIG_EFM32_FAMILY == EFM32_FAMILY_GIANT)
+    case 28000000:
+      band = EFM32_CMU_AUXHFRCOCTRL_BAND_28MHZ;
+      break;
+#  endif
+    }
+
+  cpu_mem_write_32(EFM32_CMU_ADDR + EFM32_CMU_AUXHFRCOCTRL_ADDR,
+                   (band << EFM32_CMU_AUXHFRCOCTRL_BAND_SHIFT) |
+                   cpu_mem_read_8(/* device information page */ 0xfe081d4 + (band ^ 3)));
+
+  cpu_mem_write_32(EFM32_CMU_ADDR + EFM32_CMU_OSCENCMD_ADDR, EFM32_CMU_OSCENCMD_AUXHFRCOEN);
+  while (!(cpu_mem_read_32(EFM32_CMU_ADDR + EFM32_CMU_STATUS_ADDR) & EFM32_CMU_STATUS_AUXHFRCORDY))
+    ;
+
+  uint32_t gpio_route = endian_le32(cpu_mem_read_32(EFM32_GPIO_ADDR + EFM32_GPIO_ROUTE_ADDR));
+
+#  if CONFIG_CPU_ARM32M_TRACE_PARALLEL == 0
+  gpio_route |= EFM32_GPIO_ROUTE_SWOPEN;
+  gpio_out_en(EFM32_PF2);
+#  elif CONFIG_CPU_ARM32M_TRACE_PARALLEL == 1
+  gpio_route |= EFM32_GPIO_ROUTE_TD0PEN;
+  gpio_route |= EFM32_GPIO_ROUTE_TCLKPEN;
+  gpio_out_en(EFM32_PD7);
+  gpio_out_en(EFM32_PD6);
+#  elif CONFIG_CPU_ARM32M_TRACE_PARALLEL == 2
+  gpio_route |= EFM32_GPIO_ROUTE_TD0PEN;
+  gpio_route |= EFM32_GPIO_ROUTE_TD1PEN;
+  gpio_route |= EFM32_GPIO_ROUTE_TCLKPEN;
+  gpio_out_en(EFM32_PD7);
+  gpio_out_en(EFM32_PD6);
+  gpio_out_en(EFM32_PD3);
+#  elif CONFIG_CPU_ARM32M_TRACE_PARALLEL == 4
+  gpio_route |= EFM32_GPIO_ROUTE_TD0PEN;
+  gpio_route |= EFM32_GPIO_ROUTE_TD1PEN;
+  gpio_route |= EFM32_GPIO_ROUTE_TD2PEN;
+  gpio_route |= EFM32_GPIO_ROUTE_TD3PEN;
+  gpio_route |= EFM32_GPIO_ROUTE_TCLKPEN;
+  gpio_out_en(EFM32_PD7);
+  gpio_out_en(EFM32_PD6);
+  gpio_out_en(EFM32_PD3);
+  gpio_out_en(EFM32_PD4);
+  gpio_out_en(EFM32_PD5);
+#  else
+#   error Unsupported trace configuration
+#  endif
+
+  cpu_mem_write_32(EFM32_GPIO_ADDR + EFM32_GPIO_ROUTE_ADDR, endian_le32(gpio_route));
+# else
+#  error Unsupported chip
+# endif
+}
+#endif
