@@ -1019,8 +1019,9 @@ static bool_t efr32_radio_wakeup(struct dev_rfpacket_ctx_s *gpv) {
     }
     ctx->sleep = false;
   }
-  return true;
   efr32_rfp_req_done_direct(ctx, DEV_RFPACKET_STATUS_MISC);
+  return true;
+
 #else
   return false;
 #endif
