@@ -135,15 +135,28 @@ void nrf5x_init(void)
 #endif
 }
 
-#if CONFIG_NRF5X_MODEL == 52840
+#if CONFIG_NRF5X_MODEL >= 52000
 
 __attribute__((section(".uicr")))
 const uint32_t uicr[0x400] = {
   [0 ... 0x3ff] = 0xffffffff,
-# ifdef CONFIG_NRF5X_VREGH
-  [0x304/4] = (CONFIG_NRF5X_VREGH / 3) - 6,
+# if (CONFIG_NRF5X_MODEL == 52832 || CONFIG_NRF5X_MODEL == 52840) && !defined(CONFIG_DRIVER_NRF5X_NFC)
+  [0x20c/4] = 0,
 # endif  
+# if CONFIG_NRF5X_MODEL == 52840 && defined(CONFIG_NRF5X_VREGH)
+  [0x304/4] = (CONFIG_NRF5X_VREGH / 3) - 6,
+# endif
+# if defined(CONFIG_NRF52_RESET_PIN)
+#  if CONFIG_NRF5X_MODEL == 52840 || CONFIG_NRF5X_MODEL == 52820 || CONFIG_NRF5X_MODEL == 52833
+  [0x200/4] = 0x7fffff12,
+  [0x204/4] = 0x7fffff12,
+#  elif CONFIG_NRF5X_MODEL == 52810 || CONFIG_NRF5X_MODEL == 52832
+  [0x200/4] = 0x7fffff15,
+  [0x204/4] = 0x7fffff15,
+#  else
+#   error Not supported
+#  endif
+# endif
 };
 
 #endif
-
