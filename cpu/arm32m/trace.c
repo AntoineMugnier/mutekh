@@ -98,7 +98,7 @@ void arm32m_coresight_init(void)
 
 #if defined(CONFIG_CPU_ARM32M_ITM)
   cpu_mem_write_32(ITM_LAR_ADDR, ITM_LAR_ACCESS_ENABLE);
-  cpu_mem_write_32(ITM_TPR_ADDR, ITM_TPR_PRIVMASK(0));
+  cpu_mem_write_32(ITM_TPR_ADDR, ITM_TPR_PRIVMASK(0xf));
   cpu_mem_write_32(ITM_TCR_ADDR, 0);
 #endif
 
@@ -129,6 +129,7 @@ void arm32m_coresight_init(void)
 # if defined(CONFIG_CPU_ARM32M_DWT)
     | ITM_TCR_DWTENA // Mandatory for sync
 # endif
+    | ITM_TCR_SWOENA
     | ITM_TCR_ITMENA
 # if defined(CONFIG_CPU_ARM32M_DWT_SYNC)
     | ITM_TCR_SYNCENA // Mandatory for sync
