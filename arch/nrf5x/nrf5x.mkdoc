@@ -241,6 +241,21 @@ hardware features.  Most development boards are supported as well.
 
 @end section
 
+@section tP {Cortex Trace support}
+
+  @section {Configuration}
+
+    Cortex trace may be enabled by setting CONFIG_CPU_ARM32M_TRACE.
+    This is enough to enable related pins according to
+    CONFIG_CPU_ARM32M_TRACE_PARALLEL.
+
+    A generic build setting @tt printk-swo is a build shortcut to
+    enable all necessary build tokens.
+
+  @end section
+
+@end section
+
 @section tP {Implementation notes}
 
   @section {Device register access}
