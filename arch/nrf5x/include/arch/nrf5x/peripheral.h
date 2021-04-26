@@ -81,7 +81,7 @@
 ALWAYS_INLINE
 void nrf_task_trigger(uintptr_t base, uint8_t task)
 {
-  uintptr_t addr = base | NRF_TASK | (task << 2);
+  uintptr_t addr = base + NRF_TASK + (task << 2);
   cpu_mem_write_32(addr, 1);
 }
 
@@ -92,7 +92,7 @@ void nrf_task_trigger(uintptr_t base, uint8_t task)
 ALWAYS_INLINE
 bool_t nrf_it_is_enabled(uintptr_t base, uint8_t it)
 {
-  uintptr_t addr = base | NRF_INTENSET;
+  uintptr_t addr = base + NRF_INTENSET;
   return bit_get(cpu_mem_read_32(addr), it);
 }
 
@@ -103,7 +103,7 @@ bool_t nrf_it_is_enabled(uintptr_t base, uint8_t it)
 ALWAYS_INLINE
 void nrf_it_set_mask(uintptr_t base, uint32_t mask)
 {
-  uintptr_t addr = base | NRF_INTEN;
+  uintptr_t addr = base + NRF_INTEN;
   cpu_mem_write_32(addr, mask);
 }
 
@@ -117,7 +117,7 @@ void nrf_it_enable_mask(uintptr_t base, uint32_t mask)
   if (__builtin_constant_p(mask) && mask == 0)
     return;
 
-  uintptr_t addr = base | NRF_INTENSET;
+  uintptr_t addr = base + NRF_INTENSET;
   cpu_mem_write_32(addr, mask);
 }
 
@@ -144,7 +144,7 @@ void nrf_it_disable_mask(uintptr_t base, uint32_t mask)
   if (__builtin_constant_p(mask) && mask == (uint32_t)-1) {
     nrf_it_set_mask(base, 0);
   } else {
-    uintptr_t addr = base | NRF_INTENCLR;
+    uintptr_t addr = base + NRF_INTENCLR;
     cpu_mem_write_32(addr, mask);
   }
 }
@@ -166,7 +166,7 @@ void nrf_it_disable(uintptr_t base, uint8_t it)
 ALWAYS_INLINE
 bool_t nrf_evt_is_enabled(uintptr_t base, uint8_t evt)
 {
-  uintptr_t addr = base | NRF_EVTENSET;
+  uintptr_t addr = base + NRF_EVTENSET;
   return bit_get(cpu_mem_read_32(addr), evt);
 }
 
@@ -177,7 +177,7 @@ bool_t nrf_evt_is_enabled(uintptr_t base, uint8_t evt)
 ALWAYS_INLINE
 void nrf_evt_enable_mask(uintptr_t base, uint32_t mask)
 {
-  uintptr_t addr = base | NRF_EVTENSET;
+  uintptr_t addr = base + NRF_EVTENSET;
   cpu_mem_write_32(addr, mask);
 }
 
@@ -198,7 +198,7 @@ void nrf_evt_enable(uintptr_t base, uint8_t evt)
 ALWAYS_INLINE
 void nrf_evt_disable_mask(uintptr_t base, uint32_t mask)
 {
-    uintptr_t addr = base | NRF_EVTENCLR;
+    uintptr_t addr = base + NRF_EVTENCLR;
     cpu_mem_write_32(addr, mask);
 }
 
@@ -241,7 +241,7 @@ void nrf_reg_set(uintptr_t base, uint16_t id, uint32_t data)
 ALWAYS_INLINE
 uint32_t nrf_short_get(uintptr_t base)
 {
-    uintptr_t addr = base | NRF_SHORT;
+    uintptr_t addr = base + NRF_SHORT;
     return cpu_mem_read_32(addr);
 }
 
@@ -252,7 +252,7 @@ uint32_t nrf_short_get(uintptr_t base)
 ALWAYS_INLINE
 void nrf_short_set(uintptr_t base, uint32_t shorts)
 {
-    uintptr_t addr = base | NRF_SHORT;
+    uintptr_t addr = base + NRF_SHORT;
     cpu_mem_write_32(addr, shorts);
 }
 
@@ -263,7 +263,7 @@ void nrf_short_set(uintptr_t base, uint32_t shorts)
 ALWAYS_INLINE
 void nrf_short_enable_mask(uintptr_t base, uint32_t mask)
 {
-    uintptr_t addr = base | NRF_SHORT;
+    uintptr_t addr = base + NRF_SHORT;
     cpu_mem_write_32(addr, mask | cpu_mem_read_32(addr));
 }
 
@@ -284,7 +284,7 @@ void nrf_short_enable(uintptr_t base, uint8_t id)
 ALWAYS_INLINE
 bool_t nrf_short_is_enabled(uintptr_t base, uint8_t id)
 {
-    uintptr_t addr = base | NRF_SHORT;
+    uintptr_t addr = base + NRF_SHORT;
     return bit_get(cpu_mem_read_32(addr), id);
 }
 
@@ -301,7 +301,7 @@ void nrf_short_disable_mask(uintptr_t base, uint32_t mask)
   if (__builtin_constant_p(mask) && mask == (uint32_t)-1) {
     nrf_short_set(base, 0);
   } else {
-    uintptr_t addr = base | NRF_SHORT;
+    uintptr_t addr = base + NRF_SHORT;
     cpu_mem_write_32(addr, ~mask & cpu_mem_read_32(addr));
   }
 }
@@ -323,7 +323,7 @@ void nrf_short_disable(uintptr_t base, uint8_t id)
 ALWAYS_INLINE
 uint32_t nrf_event_check(uintptr_t base, uint8_t event)
 {
-    uintptr_t addr = base | NRF_EVENT | (event << 2);
+    uintptr_t addr = base + NRF_EVENT + (event << 2);
     return cpu_mem_read_32(addr);
 }
 
@@ -334,7 +334,7 @@ uint32_t nrf_event_check(uintptr_t base, uint8_t event)
 ALWAYS_INLINE
 void nrf_event_clear(uintptr_t base, uint8_t event)
 {
-    uintptr_t addr = base | NRF_EVENT | (event << 2);
+    uintptr_t addr = base + NRF_EVENT + (event << 2);
     cpu_mem_write_32(addr, 0);
 }
 
