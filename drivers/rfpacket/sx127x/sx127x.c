@@ -32,6 +32,7 @@ static uint32_t sx127x_set_tx_cmd(struct sx127x_private_s *pv, struct dev_rfpack
 static uint32_t sx127x_set_rx_cmd(struct sx127x_private_s *pv, struct dev_rfpacket_rq_s *rq);
 BC_CCALL_FUNCTION(sx127x_alloc);
 BC_CCALL_FUNCTION(sx127x_next_hopping_freq);
+
 // Lib device rfpacket interface functions
 error_t sx127x_get_time(struct dev_rfpacket_ctx_s *gpv, dev_timer_value_t *value);
 static error_t sx127x_check_config(struct dev_rfpacket_ctx_s *gpv, struct dev_rfpacket_rq_s *rq);
@@ -42,7 +43,8 @@ static bool_t sx127x_wakeup(struct dev_rfpacket_ctx_s *gpv);
 static bool_t sx127x_sleep(struct dev_rfpacket_ctx_s *gpv);
 static void sx127x_idle(struct dev_rfpacket_ctx_s *gpv);
 
-static const struct dev_rfpacket_driver_interface_s sx127x_itfc = {
+static const struct dev_rfpacket_driver_interface_s sx127x_itfc =
+{
   sx127x_get_time,
   sx127x_check_config,
   sx127x_rx,
@@ -185,11 +187,13 @@ static void sx127x_send_config(struct sx127x_private_s *pv) {
   // assert(false);
 }
 
-static inline void sx127x_fill_status(struct sx127x_private_s *pv) {
+static inline void sx127x_fill_status(struct sx127x_private_s *pv)
+{
   pv->gctx.status = pv->bc_status;
 }
 
-static void sx127x_fill_rx_info(struct sx127x_private_s *pv, struct dev_rfpacket_rx_s *rx) {
+static void sx127x_fill_rx_info(struct sx127x_private_s *pv, struct dev_rfpacket_rx_s *rx)
+{
   if (rx == NULL) {
     return;
   }
@@ -198,7 +202,9 @@ static void sx127x_fill_rx_info(struct sx127x_private_s *pv, struct dev_rfpacket
   rx->frequency = 0;
 }
 
-static void sx127x_bytecode_start(struct sx127x_private_s *pv, const void *e, uint16_t mask, ...) {
+static void sx127x_bytecode_start(struct sx127x_private_s *pv, const void *e,
+                                  uint16_t mask, ...)
+{
   struct dev_spi_ctrl_bytecode_rq_s *srq = &pv->spi_rq;
 
   va_list ap;
@@ -209,7 +215,8 @@ static void sx127x_bytecode_start(struct sx127x_private_s *pv, const void *e, ui
   va_end(ap);
 }
 
-static void sx127x_clean(struct device_s *dev) {
+static void sx127x_clean(struct device_s *dev)
+{
   struct sx127x_private_s *pv = dev->drv_pv;
 
   device_irq_source_unlink(dev, pv->src_ep, 1);
@@ -306,6 +313,7 @@ static error_t sx127x_check_config(struct dev_rfpacket_ctx_s *gpv,
   #ifdef CONFIG_DRIVER_RFPACKET_SX127X_MOD_LORA
     sx127x_lora_inverted_iq(pv, rq);
   #endif
+
   // Set configuration flags
   pv->flags &= ~SX127X_FLAGS_RF_CONFIG_OK;
   pv->flags &= ~SX127X_FLAGS_PK_CONFIG_OK;
@@ -518,12 +526,13 @@ static DEV_RFPACKET_REQUEST(sx127x_rfp_request)
   va_list vl;
   va_start(vl, accessor);
 
-  while(1) {
+  while(1)
+  {
     struct dev_rfpacket_rq_s *rq = va_arg(vl, struct dev_rfpacket_rq_s *);
 
-    if (rq == NULL) {
+    if (rq == NULL)
       break;
-    }
+
     rq->error = 0;
     dev_rfpacket_request(&pv->gctx, rq);
   }
@@ -557,14 +566,18 @@ static KROUTINE_EXEC(sx127x_spi_rq_done)
 
   if (dev_rfpacket_init_done(&pv->gctx)) {
     assert(!srq->error);
-  } else {
-    if (srq->error) {
+  else
+  {
+    if (srq->error)
+    {
       // Couldn't initialize
       logk_trace("failed initialization");
       sx127x_clean(dev);
       device_async_init_done(dev, -EIO);
       goto end;
-    } else {
+    }
+    else
+    {
       logk_trace("init done");
       device_async_init_done(dev, 0);
     }
@@ -578,11 +591,12 @@ static KROUTINE_EXEC(sx127x_spi_rq_done)
     }
 #endif
 
-  if (pv->bc_status == DEV_RFPACKET_STATUS_RX_DONE) {
+  if (pv->bc_status == DEV_RFPACKET_STATUS_RX_DONE)
     sx127x_fill_rx_info(pv, pv->gctx.rxrq);
-  }
+
   sx127x_fill_status(pv);
   dev_rfpacket_req_done(&pv->gctx);
+
 end:
   LOCK_RELEASE_IRQ(&dev->lock);
 }
@@ -693,7 +707,6 @@ static DEV_INIT(sx127x_init)
   // Init GPIO stuff
   static const gpio_width_t pin_wmap[4] = {1, 1, 1, 1};
 
-  // FIXME lora dio3
   if (device_gpio_setup(gpio, dev, ">rst:1 <dio0:1 <dio3:1 <dio4:1", pv->pin_map, NULL))
     goto err_timer;
 

@@ -175,10 +175,13 @@ static inline void sx127x_config_freq_update(struct sx127x_private_s *pv, uint32
   pv->cfg_regs.channel = channel;
 }
 
-static inline void sx127x_config_coeff_freq_update(struct sx127x_private_s *pv, const struct dev_rfpacket_rf_cfg_std_s *rf_cfg, uint32_t channel)
+static inline void sx127x_config_coeff_freq_update(struct sx127x_private_s *pv,
+                const struct dev_rfpacket_rf_cfg_std_s *rf_cfg, uint32_t channel)
 {
-  pv->cfg_regs.coeff.freq = ((uint64_t)rf_cfg->frequency << (19 + 15)) / CONFIG_DRIVER_RFPACKET_SX127X_FREQ_XO;
-  pv->cfg_regs.coeff.chan = ((uint64_t)rf_cfg->chan_spacing << (19 + 15)) / CONFIG_DRIVER_RFPACKET_SX127X_FREQ_XO;
+  pv->cfg_regs.coeff.freq = ((uint64_t)rf_cfg->frequency << (19 + 15))
+                            / CONFIG_DRIVER_RFPACKET_SX127X_FREQ_XO;
+  pv->cfg_regs.coeff.chan = ((uint64_t)rf_cfg->chan_spacing << (19 + 15))
+                            / CONFIG_DRIVER_RFPACKET_SX127X_FREQ_XO;
 
   sx127x_config_freq_update(pv, channel);
 }
@@ -362,7 +365,8 @@ static error_t sx127x_build_dynamic_rf_config(struct sx127x_private_s *pv,
   const struct dev_rfpacket_rf_cfg_fsk_s *cfsk = NULL;
   const struct dev_rfpacket_rf_cfg_ask_s *cask = NULL;
 
-  switch (rfcfg->mod) {
+  switch (rfcfg->mod)
+  {
     case DEV_RFPACKET_GFSK:
     case DEV_RFPACKET_FSK:
       sx127x_build_fsk_config(pv, rq);
@@ -408,7 +412,8 @@ static error_t sx127x_build_rf_config(struct sx127x_private_s *pv,
 
   logk_trace("RF configuration");
 
-  switch (cfg->mod) {
+  switch (cfg->mod)
+  {
 #ifndef CONFIG_DEVICE_RFPACKET_STATIC_RF_CONFIG
     case DEV_RFPACKET_GFSK:
     case DEV_RFPACKET_FSK:
@@ -439,7 +444,6 @@ static error_t sx127x_build_reg_pkt_config(struct sx127x_private_s * __restrict_
   const struct dev_rfpacket_pk_cfg_basic_s *pk_cfg = const_dev_rfpacket_pk_cfg_basic_s_cast(rq->pk_cfg);
 
   /* Fifo threshold */
-
   *pk++ = 1;
   *pk++ = SX1276_REG_FIFOTHRESH | 0x80;
   *pk++ = 0x80 | 0x3F;
@@ -466,7 +470,8 @@ static error_t sx127x_build_reg_pkt_config(struct sx127x_private_s * __restrict_
   *pk++ = pb_len_byte >> 8;
   *pk++ = pb_len_byte;
 
-  uint8_t sc = (pk_cfg->pb_pattern & 2) ? SX1276_SYNCCONFIG_PREAMBLEPOLARITY_AA : SX1276_SYNCCONFIG_PREAMBLEPOLARITY_55;
+  uint8_t sc = (pk_cfg->pb_pattern & 2) ?
+     SX1276_SYNCCONFIG_PREAMBLEPOLARITY_AA : SX1276_SYNCCONFIG_PREAMBLEPOLARITY_55;
 
   /* Store in private data for IO homecontrol mode */
   pv->cfg_regs.sync = sc | SX1276_SYNCCONFIG_SYNC_ON | (sw - 1);
@@ -510,12 +515,10 @@ static error_t sx127x_build_reg_pkt_config(struct sx127x_private_s * __restrict_
   *pk++ = SX1276_PREAMBLEDETECT_DETECTOR_ON | ((rx_pb_len - 1) << 5) | 0xA;
 
   /* Packet config mode */
-
   *pk++ = 3;
   *pk++ = SX1276_REG_PACKETCONFIG1 | 0x80;
 
-  if (pk_cfg->crc_seed != 0xffff &&
-      !(pk_cfg->crc_seed == 0 && !pk_cfg->crc))
+  if (pk_cfg->crc_seed != 0xffff && !(pk_cfg->crc_seed == 0 && !pk_cfg->crc))
     return -ENOTSUP;
 
   uint8_t cfg = 0;
@@ -581,7 +584,8 @@ static error_t sx127x_build_dynamic_pk_config(struct sx127x_private_s *pv,
 {
   const struct dev_rfpacket_pk_cfg_s *pkcfg = rq->pk_cfg;
 
-  switch (pkcfg->format) {
+  switch (pkcfg->format)
+  {
     case DEV_RFPACKET_FMT_IO:
     case DEV_RFPACKET_FMT_SLPC:
       sx127x_build_reg_pkt_config(pv, rq);
@@ -612,7 +616,8 @@ static error_t sx127x_build_pk_config(struct sx127x_private_s *pv,
 
   logk_trace("PKT configuration");
 
-  switch (cfg->format) {
+  switch (cfg->format)
+  {
 #ifndef CONFIG_DEVICE_RFPACKET_STATIC_PKT_CONFIG
     case DEV_RFPACKET_FMT_SLPC:
       return sx127x_build_dynamic_pk_config(pv, rq);
@@ -670,20 +675,21 @@ bool sx127x_config_check_fairtx_valid(const struct dev_rfpacket_rf_cfg_s *rfcfg)
   const struct dev_rfpacket_rf_cfg_fsk_s *cfsk;
   const struct dev_rfpacket_rf_cfg_ask_s *cask;
 
-  switch (rfcfg->mod) {
+  switch (rfcfg->mod)
+  {
     case DEV_RFPACKET_GFSK:
     case DEV_RFPACKET_FSK:
       cfsk = const_dev_rfpacket_rf_cfg_fsk_s_cast(rfcfg);
-      if (cfsk->fairtx.mode == DEV_RFPACKET_NO_FAIRTX) {
+      if (cfsk->fairtx.mode == DEV_RFPACKET_NO_FAIRTX)
         return false;
-      }
+
     break;
 
     case DEV_RFPACKET_ASK:
       cask = const_dev_rfpacket_rf_cfg_ask_s_cast(rfcfg);
-      if (cask->fairtx.mode == DEV_RFPACKET_NO_FAIRTX) {
+      if (cask->fairtx.mode == DEV_RFPACKET_NO_FAIRTX)
         return false;
-      }
+
     break;
 
     default:
