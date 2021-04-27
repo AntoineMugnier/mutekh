@@ -126,7 +126,8 @@ static error_t s2lp_build_pk_config(struct s2lp_ctx_s *pv, struct dev_rfpacket_r
 
 
 // Private functions
-static void s2lp_config_calc_time_consts(struct s2lp_ctx_s *pv, uint32_t drate) {
+static void s2lp_config_calc_time_consts(struct s2lp_ctx_s *pv, uint32_t drate)
+{
   assert(drate != 0);
   // Calc time byte in us
   dev_timer_delay_t tb = 8000000 / drate;
@@ -138,10 +139,12 @@ static void s2lp_config_calc_time_consts(struct s2lp_ctx_s *pv, uint32_t drate) 
 
 #ifndef CONFIG_DEVICE_RFPACKET_STATIC_RF_CONFIG
 
-static uint32_t s2lp_calc_datarate(uint32_t freq_xo, uint16_t cM, uint8_t cE) {
+static uint32_t s2lp_calc_datarate(uint32_t freq_xo, uint16_t cM, uint8_t cE)
+{
   uint64_t dr;
 
-  if(cE == 0) {
+  if(cE == 0)
+  {
     dr = ((uint64_t)freq_xo * cM);
     return (uint32_t)(dr >> 32);
   }
@@ -149,28 +152,34 @@ static uint32_t s2lp_calc_datarate(uint32_t freq_xo, uint16_t cM, uint8_t cE) {
   return (uint32_t)(dr >> (33 - cE));
 }
 
-static void s2lp_find_datarate_params(uint32_t freq_xo, uint32_t datarate, uint16_t* pcM, uint8_t* pcE) {
+static void s2lp_find_datarate_params(uint32_t freq_xo, uint32_t datarate,
+                                      uint16_t* pcM, uint8_t* pcE)
+{
   uint32_t datarateTmp;
   uint8_t uDrE;
   uint64_t tgt1, tgt2, tgt;
 
-  if (CONFIG_DRIVER_RFPACKET_S2LP_FREQ_XO > S2LP_DIV_X0_THRESH) {
+  if (CONFIG_DRIVER_RFPACKET_S2LP_FREQ_XO > S2LP_DIV_X0_THRESH)
     freq_xo /= 2;
-  }
+
   // Search exponent value
-  for (uDrE = 0; uDrE < 12; uDrE++) {
+  for (uDrE = 0; uDrE < 12; uDrE++)
+  {
     datarateTmp = s2lp_calc_datarate(freq_xo, 0xFFFF, uDrE);
-    if (datarate <= datarateTmp) {
+    if (datarate <= datarateTmp)
       break;
-    }
+
   }
   (*pcE) = (uint8_t)uDrE;
-  if (uDrE == 0) {
+  if (uDrE == 0)
+  {
     tgt = ((uint64_t)datarate) << 32;
     (*pcM) = (uint16_t)(tgt / freq_xo);
     tgt1 = (uint64_t)freq_xo * (*pcM);
     tgt2 = (uint64_t)freq_xo * ((*pcM) + 1);
-  } else {
+  }
+  else
+  {
     tgt = ((uint64_t)datarate) << (33 - uDrE);
     (*pcM) = (uint16_t)((tgt / freq_xo) - 65536);
     tgt1 = (uint64_t)freq_xo * ((*pcM) + 65536);
@@ -179,33 +188,40 @@ static void s2lp_find_datarate_params(uint32_t freq_xo, uint32_t datarate, uint1
   (*pcM) = ((tgt2 - tgt) < (tgt - tgt1)) ? ((*pcM) + 1) : (*pcM);
 }
 
-static uint32_t s2lp_calc_freqdev(uint32_t freq_xo, uint8_t cM, uint8_t cE) {
-  if (cE == 0) {
+static uint32_t s2lp_calc_freqdev(uint32_t freq_xo, uint8_t cM, uint8_t cE)
+{
+  if (cE == 0)
     return (uint32_t)(((uint64_t)freq_xo * cM) >> 22);
-  }
+
   return (uint32_t)(((uint64_t)freq_xo * (256 + cM)) >> (23 - cE));
 }
 
-static void s2lp_find_freqdev_params(uint32_t freq_xo, uint32_t freqdev, uint8_t* pcM, uint8_t* pcE) {
+static void s2lp_find_freqdev_params(uint32_t freq_xo, uint32_t freqdev,
+                                     uint8_t* pcM, uint8_t* pcE)
+{
   uint8_t uFDevE;
   uint32_t freqdevTmp;
   uint64_t tgt1, tgt2, tgt;
 
   // Search the exponent of the frequency deviation value
-  for (uFDevE = 0; uFDevE < 12; uFDevE++) {
+  for (uFDevE = 0; uFDevE < 12; uFDevE++)
+  {
     freqdevTmp = s2lp_calc_freqdev(freq_xo, 255, uFDevE);
-    if (freqdev < freqdevTmp) {
+    if (freqdev < freqdevTmp)
       break;
-    }
+
   }
   (*pcE) = (uint8_t)uFDevE;
 
-  if (uFDevE == 0) {
+  if (uFDevE == 0)
+  {
     tgt = ((uint64_t)freqdev) << 22;
     (*pcM) = (uint32_t)(tgt / freq_xo);
     tgt1 = (uint64_t)freq_xo * (*pcM);
     tgt2 = (uint64_t)freq_xo * ((*pcM) + 1);
-  } else {
+  }
+  else
+  {
     tgt = ((uint64_t)freqdev) << (23 - uFDevE);
     (*pcM) = (uint32_t)(tgt / freq_xo) - 256;
     tgt1 = (uint64_t)freq_xo * ((*pcM) + 256);
@@ -214,39 +230,50 @@ static void s2lp_find_freqdev_params(uint32_t freq_xo, uint32_t freqdev, uint8_t
   (*pcM) = ((tgt2 - tgt) < (tgt - tgt1)) ? ((*pcM) + 1) : (*pcM);
 }
 
-static uint8_t s2lp_calc_chan_spacing(uint32_t freq_xo, uint32_t channel_space) {
+static uint8_t s2lp_calc_chan_spacing(uint32_t freq_xo, uint32_t channel_space)
+{
   return (uint32_t)(((uint64_t)channel_space) << 15) / freq_xo;
 }
 
-static void s2lp_find_channel_params(uint32_t freq_xo, uint32_t chan_bw, uint8_t* pcM, uint8_t* pcE) {
+static void s2lp_find_channel_params(uint32_t freq_xo, uint32_t chan_bw,
+                                     uint8_t* pcM, uint8_t* pcE)
+{
   int8_t i, i_tmp;
   int32_t chfltCalculation[3];
 
-  if (CONFIG_DRIVER_RFPACKET_S2LP_FREQ_XO > S2LP_DIV_X0_THRESH) {
+  if (CONFIG_DRIVER_RFPACKET_S2LP_FREQ_XO > S2LP_DIV_X0_THRESH)
     freq_xo /= 2;
-  }
+
   // Search the channel filter bandwidth table index
-  for (i = 0; i < 90; i++) {
-    if (chan_bw >= (uint32_t)(((uint64_t)s2lp_chan_bw_table[i] * freq_xo) / 260000)) {
+  for (i = 0; i < 90; i++)
+  {
+    if (chan_bw >= (uint32_t)(((uint64_t)s2lp_chan_bw_table[i] * freq_xo) / 260000))
       break;
-    }
+
   }
-  if (i != 0) {
+  if (i != 0)
+  {
     // Finds the index value with best approximation in i-1, i and i+1 elements
     i_tmp = i;
 
-    for (uint8_t j = 0; j < 3; j++) {
-      if (((i_tmp + j - 1) >= 0) && ((i_tmp + j - 1) <= 89)) {
+    for (uint8_t j = 0; j < 3; j++)
+    {
+      if (((i_tmp + j - 1) >= 0) && ((i_tmp + j - 1) <= 89))
+      {
         chfltCalculation[j] =
-          (int32_t)chan_bw - (int32_t)(((uint64_t)s2lp_chan_bw_table[i_tmp + j - 1] * freq_xo) / 260000);
-      } else {
-        chfltCalculation[j] = 0x7FFFFFFF;
+          (int32_t)chan_bw - (int32_t)(((uint64_t)s2lp_chan_bw_table[i_tmp + j - 1]
+                * freq_xo) / 260000);
       }
+      else
+        chfltCalculation[j] = 0x7FFFFFFF;
+
     }
     uint32_t chfltDelta = 0xFFFFFFFF;
 
-    for (uint8_t j = 0; j < 3; j++) {
-      if (__ABS(chfltCalculation[j]) < chfltDelta) {
+    for (uint8_t j = 0; j < 3; j++)
+    {
+      if (__ABS(chfltCalculation[j]) < chfltDelta)
+      {
         chfltDelta = __ABS(chfltCalculation[j]);
         i = i_tmp + j - 1;
       }
@@ -256,14 +283,16 @@ static void s2lp_find_channel_params(uint32_t freq_xo, uint32_t chan_bw, uint8_t
   (*pcM) = (uint8_t)(i % 9);
 }
 
-static uint32_t s2lp_calc_synth(uint32_t freq_xo, uint32_t frequency, uint8_t refdiv) {
+static uint32_t s2lp_calc_synth(uint32_t freq_xo, uint32_t frequency, uint8_t refdiv)
+{
   uint8_t band;
 
-  if (S2LP_FREQ_BAND_HIGH(frequency)) {
+  if (S2LP_FREQ_BAND_HIGH(frequency))
     band = S2LP_HIGH_BAND_FACTOR;
-  } else {
+
+  else
     band = S2LP_MIDDLE_BAND_FACTOR;
-  }
+
   uint64_t tgt1,tgt2,tgt;
   uint32_t synth;
 
@@ -275,40 +304,52 @@ static uint32_t s2lp_calc_synth(uint32_t freq_xo, uint32_t frequency, uint8_t re
   return synth;
 }
 
-static void s2lp_find_charge_pump_params(uint32_t freq_xo, uint32_t freq, uint8_t refdiv, uint8_t* cp_isel, uint8_t* pfd_split) {
+static void s2lp_find_charge_pump_params(uint32_t freq_xo, uint32_t freq,
+                      uint8_t refdiv, uint8_t* cp_isel, uint8_t* pfd_split)
+{
   uint32_t vcofreq, lFRef;
   uint8_t band;
 
-  if (S2LP_FREQ_BAND_HIGH(freq)) {
+  if (S2LP_FREQ_BAND_HIGH(freq))
     band = S2LP_HIGH_BAND_FACTOR;
-  } else {
+  else
     band = S2LP_MIDDLE_BAND_FACTOR;
-  }
+
   // Calculate VCO frequency
   vcofreq = freq * band;
   // Calculate reference frequency clock
   lFRef = freq_xo / refdiv;
   // Set correct charge pump word
-  if (vcofreq >= S2LP_VCO_CENTER_FREQ) {
-    if (lFRef > S2LP_DIV_X0_THRESH) {
+  if (vcofreq >= S2LP_VCO_CENTER_FREQ)
+  {
+    if (lFRef > S2LP_DIV_X0_THRESH)
+    {
       *cp_isel = 0x02;
       *pfd_split = 0;
-    } else {
+    }
+    else
+    {
       *cp_isel = 0x01;
       *pfd_split = 1;
     }
-  } else {
-    if (lFRef > S2LP_DIV_X0_THRESH) {
+  }
+  else
+  {
+    if (lFRef > S2LP_DIV_X0_THRESH)
+    {
       *cp_isel = 0x03;
       *pfd_split = 0;
-    } else {
+    }
+    else
+    {
       *cp_isel = 0x02;
       *pfd_split = 1;
     }
   }
 }
 
-static error_t s2lp_build_dynamic_rf_config(struct s2lp_ctx_s *pv, struct dev_rfpacket_rq_s *rq) {
+static error_t s2lp_build_dynamic_rf_config(struct s2lp_ctx_s *pv, struct dev_rfpacket_rq_s *rq)
+{
   const struct dev_rfpacket_rf_cfg_s *cfg = rq->rf_cfg;
 
   // Retrieve data struct
@@ -317,7 +358,8 @@ static error_t s2lp_build_dynamic_rf_config(struct s2lp_ctx_s *pv, struct dev_rf
   const struct dev_rfpacket_rf_cfg_fsk_s *cfsk = NULL;
   const struct dev_rfpacket_rf_cfg_ask_s *cask = NULL;
 
-  switch (cfg->mod) {
+  switch (cfg->mod)
+  {
     case DEV_RFPACKET_GFSK:
     case DEV_RFPACKET_FSK:
       cfsk = const_dev_rfpacket_rf_cfg_fsk_s_cast(cfg);
@@ -343,21 +385,22 @@ static error_t s2lp_build_dynamic_rf_config(struct s2lp_ctx_s *pv, struct dev_rf
   uint32_t freq_xo = CONFIG_DRIVER_RFPACKET_S2LP_FREQ_XO;
   uint8_t *pXoConf1 = &pv->rf_cfg_array[32];
 
-  if (freq_xo > S2LP_DIV_X0_THRESH) {
+  if (freq_xo > S2LP_DIV_X0_THRESH)
     *pXoConf1 |= S2LP_XO1_PD_CLKDIV_REGMASK;
-  }
+
 
   // Configure RSSI_threshold
   int16_t rssi_th = 0;
   int16_t jam_rssi = common->jam_rssi >> 3;
   uint8_t *pRssiThr = &pv->rf_cfg_array[3];
 
-  if (fairtx && (fairtx->mode == DEV_RFPACKET_LBT)) {
+  if (fairtx && (fairtx->mode == DEV_RFPACKET_LBT))
     rssi_th = fairtx->lbt.rssi >> 3;
-  } else {
+  else
     rssi_th = jam_rssi;
-  }
-  if ((rssi_th > S2LP_MAX_RSSI_VALUE) || (jam_rssi > S2LP_MAX_RSSI_VALUE)) {
+
+  if ((rssi_th > S2LP_MAX_RSSI_VALUE) || (jam_rssi > S2LP_MAX_RSSI_VALUE))
+  {
     logk_trace("RSSI value too big");
     return -ENOTSUP;
   }
@@ -366,7 +409,8 @@ static error_t s2lp_build_dynamic_rf_config(struct s2lp_ctx_s *pv, struct dev_rf
   *pRssiThr = S2LP_SET_RSSI(rssi_th);
 
   // Configure data rate
-  if ((common->drate < S2LP_MINIMUM_DATARATE) || (common->drate > S2LP_MAXIMUM_DATARATE)) {
+  if ((common->drate < S2LP_MINIMUM_DATARATE) || (common->drate > S2LP_MAXIMUM_DATARATE))
+  {
     logk_trace("Datarate is out of bounds");
     return -ENOTSUP;
   }
@@ -385,9 +429,11 @@ static error_t s2lp_build_dynamic_rf_config(struct s2lp_ctx_s *pv, struct dev_rf
   // Configure modulation
   uint8_t *pModType = &pv->rf_cfg_array[11];
 
-  switch (cfg->mod) {
+  switch (cfg->mod)
+  {
     case DEV_RFPACKET_GFSK:
-      switch (cfsk->symbols) {
+      switch (cfsk->symbols)
+      {
         case 2:
           *pModType &= ~S2LP_MOD2_MOD_TYPE_REGMASK;
 #ifdef CONFIG_DRIVER_RFPACKET_S2LP_GFSK_BT_FILTER_1
@@ -414,7 +460,8 @@ static error_t s2lp_build_dynamic_rf_config(struct s2lp_ctx_s *pv, struct dev_rf
     break;
 
     case DEV_RFPACKET_FSK:
-      switch (cfsk->symbols) {
+      switch (cfsk->symbols)
+      {
         case 2:
           *pModType &= ~S2LP_MOD2_MOD_TYPE_REGMASK;
           *pModType |= S2LP_MOD_2FSK;
@@ -433,7 +480,8 @@ static error_t s2lp_build_dynamic_rf_config(struct s2lp_ctx_s *pv, struct dev_rf
     break;
 
     case DEV_RFPACKET_ASK:
-      switch (cask->symbols) {
+      switch (cask->symbols)
+      {
         case 2:
           *pModType &= ~S2LP_MOD2_MOD_TYPE_REGMASK;
           *pModType |= S2LP_MOD_ASK_OOK;
@@ -455,11 +503,14 @@ static error_t s2lp_build_dynamic_rf_config(struct s2lp_ctx_s *pv, struct dev_rf
   }
 
   // Configure frequency deviation
-  if (cfsk != NULL) {
+  if (cfsk != NULL)
+  {
     uint8_t *pFdevExponent = &pv->rf_cfg_array[12];
     uint8_t *pFdevMantissa = &pv->rf_cfg_array[13];
     uint8_t fdev_mantissa, fdev_exponent;
-    if (!S2LP_VALID_FREQ_DEV(cfsk->deviation, CONFIG_DRIVER_RFPACKET_S2LP_FREQ_XO)) {
+
+    if (!S2LP_VALID_FREQ_DEV(cfsk->deviation, CONFIG_DRIVER_RFPACKET_S2LP_FREQ_XO))
+    {
       logk_trace("Freq deviation out of bounds");
       return -ENOTSUP;
     }
@@ -473,7 +524,8 @@ static error_t s2lp_build_dynamic_rf_config(struct s2lp_ctx_s *pv, struct dev_rf
   uint8_t *pChanSpacing = &pv->rf_cfg_array[7];
   uint8_t chan_mantissa, chan_exponent;
 
-  if (!S2LP_VALID_CH_BW(common->chan_spacing, freq_xo)) {
+  if (!S2LP_VALID_CH_BW(common->chan_spacing, freq_xo))
+  {
     logk_trace("Chan spacing out of bounds");
     return -ENOTSUP;
   }
@@ -486,7 +538,8 @@ static error_t s2lp_build_dynamic_rf_config(struct s2lp_ctx_s *pv, struct dev_rf
   uint8_t *pPacfg1 = &pv->rf_cfg_array[19];
   uint8_t *pPacfg0 = &pv->rf_cfg_array[20];
 
-  switch (cfg->mod) {
+  switch (cfg->mod)
+  {
     case DEV_RFPACKET_GFSK:
     case DEV_RFPACKET_FSK:
       *pPapow0 &= ~S2LP_DIG_SMOOTH_EN_REGMASK;
@@ -504,18 +557,18 @@ static error_t s2lp_build_dynamic_rf_config(struct s2lp_ctx_s *pv, struct dev_rf
   // Configure power filter
   *pPacfg0 &= ~S2LP_PA_FC_REGMASK;
 
-  if (common->drate < 16000) {
+  if (common->drate < 16000)
     *pPacfg0 |= 0x00;
-  } else if (common->drate < 32000) {
+  else if (common->drate < 32000)
     *pPacfg0 |= 0x01;
-  } else if (common->drate < 62500) {
+  else if (common->drate < 62500)
     *pPacfg0 |= 0x02;
-  } else {
+  else
     *pPacfg0 |= 0x03;
-  }
 
   // Configure frequency
-  if (!S2LP_VALID_FREQ(common->frequency)) {
+  if (!S2LP_VALID_FREQ(common->frequency))
+  {
     logk_trace("Frequency out of bounds");
     return -ENOTSUP;
   }
@@ -528,11 +581,10 @@ static error_t s2lp_build_dynamic_rf_config(struct s2lp_ctx_s *pv, struct dev_rf
   uint8_t *pSyntCfg2 = &pv->rf_cfg_array[21];
   s2lp_find_charge_pump_params(freq_xo, common->frequency, SLP_REF_DIV_VAL, &cp_isel, &pfd_split);
 
-  if (S2LP_FREQ_BAND_HIGH(common->frequency)) {
+  if (S2LP_FREQ_BAND_HIGH(common->frequency))
     bs = 0;
-  } else {
+  else
     bs = 1;
-  }
 
   *pSynt3 = (((uint8_t)(synth >> 24)) & S2LP_SYNT_27_24_REGMASK) | (cp_isel << 5) | (bs << 4);
   *pSynt2 = (uint8_t)(synth >> 16);
@@ -556,15 +608,16 @@ static error_t s2lp_build_dynamic_rf_config(struct s2lp_ctx_s *pv, struct dev_rf
 
 #ifdef CONFIG_DRIVER_RFPACKET_S2LP_LDC
 
-static void s2lp_find_wut_params(uint32_t timeval, uint8_t* pCount , uint8_t* pPresc, uint8_t* pMult) {
+static void s2lp_find_wut_params(uint32_t timeval, uint8_t* pCount , uint8_t* pPresc, uint8_t* pMult)
+{
   uint32_t n;
   uint8_t i;
 
   // Calc multiplier value
-  for(i = 0; i < 4; i++) {
-    if(timeval < (((uint32_t)((uint64_t)1000000 * 65536 / S2LP_FREQ_RCO)) << i)) {
+  for(i = 0; i < 4; i++)
+  {
+    if(timeval < (((uint32_t)((uint64_t)1000000 * 65536 / S2LP_FREQ_RCO)) << i))
       break;
-    }
   }
   (*pMult) = i;
   /* N cycles in the time base of the timer:
@@ -574,7 +627,8 @@ static void s2lp_find_wut_params(uint32_t timeval, uint8_t* pCount , uint8_t* pP
   n = (uint32_t)((uint64_t)timeval * (S2LP_FREQ_RCO >> i) / 1000000);
 
   // Check if possible to reach that target with prescaler and counter of S2LP
-  if(n / 0xFF > 0xFD) {
+  if(n / 0xFF > 0xFD)
+  {
     // If not return the maximum possible value
     (*pCount) = 0xFF;
     (*pPresc) = 0xFF;
@@ -585,20 +639,20 @@ static void s2lp_find_wut_params(uint32_t timeval, uint8_t* pCount , uint8_t* pP
   (*pCount) = n / (*pPresc);
   // Decrement prescaler and counter according to the logic of this timer in S2LP
   (*pPresc)--;
-  if((*pCount) > 1) {
+
+  if((*pCount) > 1)
     (*pCount)--;
-  } else {
+  else
     (*pCount) = 1;
-  }
 }
 
-static void s2lp_find_rxt_params(uint32_t freq_xo, uint32_t timeval , uint8_t* pCount , uint8_t* pPresc) {
+static void s2lp_find_rxt_params(uint32_t freq_xo, uint32_t timeval , uint8_t* pCount , uint8_t* pPresc)
+{
   uint32_t n;
   uint64_t tgt,tgt1,tgt2;
 
-  if (CONFIG_DRIVER_RFPACKET_S2LP_FREQ_XO > S2LP_DIV_X0_THRESH) {
+  if (CONFIG_DRIVER_RFPACKET_S2LP_FREQ_XO > S2LP_DIV_X0_THRESH)
     freq_xo /= 2;
-  }
 
   /* N cycles in the time base of the timer:
      - clock of the timer is freq_xo/1210
@@ -612,7 +666,8 @@ static void s2lp_find_rxt_params(uint32_t freq_xo, uint32_t timeval , uint8_t* p
   n = ((tgt2 - tgt) < (tgt - tgt1)) ? (n + 1) : (n);
 
   // Check if possible to reach that target with prescaler and counter of S2LP
-  if(n / 0xFF > 0xFD) {
+  if(n / 0xFF > 0xFD)
+  {
     // If not return the maximum possible value
     (*pCount) = 0xFF;
     (*pPresc) = 0xFF;
@@ -623,19 +678,21 @@ static void s2lp_find_rxt_params(uint32_t freq_xo, uint32_t timeval , uint8_t* p
   (*pCount) = n / (*pPresc);
   // Decrement prescaler and counter according to the logic of this timer in S2LP
   (*pPresc)--;
-  if((*pCount) == 0) {
+
+  if((*pCount) == 0)
     (*pCount) = 1;
-  }
 }
 #endif
 
-static error_t s2lp_build_dynamic_pk_config(struct s2lp_ctx_s *pv, struct dev_rfpacket_rq_s *rq) {
+static error_t s2lp_build_dynamic_pk_config(struct s2lp_ctx_s *pv, struct dev_rfpacket_rq_s *rq)
+{
   const struct dev_rfpacket_pk_cfg_s *cfg = rq->pk_cfg;
 
   // Retrieve data struct
   const struct dev_rfpacket_pk_cfg_basic_s *cbasic = NULL;
 
-  switch (cfg->format) {
+  switch (cfg->format)
+  {
     case DEV_RFPACKET_FMT_SLPC:
       cbasic = const_dev_rfpacket_pk_cfg_basic_s_cast(cfg);
     break;
@@ -648,7 +705,8 @@ static error_t s2lp_build_dynamic_pk_config(struct s2lp_ctx_s *pv, struct dev_rf
   // Configure encoding
   uint8_t *pPcktCtrl2 = &pv->pk_cfg_array[7];
 
-  switch (cbasic->encoding) {
+  switch (cbasic->encoding)
+  {
     default:
     case DEV_RFPACKET_CLEAR:
       *pPcktCtrl2 &= ~S2LP_PCKTCTRL2_MANCHESTER_EN_REGMASK;
@@ -666,7 +724,8 @@ static error_t s2lp_build_dynamic_pk_config(struct s2lp_ctx_s *pv, struct dev_rf
   uint8_t sync_len = cbasic->sw_len + 1;
   uint8_t sync_byte_nb = (sync_len % 8 == 0) ? sync_len / 8 : sync_len / 8 + 1;
 
-  if (sync_byte_nb > 4) {
+  if (sync_byte_nb > 4)
+  {
     logk_trace("Sync word too big");
     return -ENOTSUP;
   }
@@ -674,7 +733,8 @@ static error_t s2lp_build_dynamic_pk_config(struct s2lp_ctx_s *pv, struct dev_rf
   *pSync_len &= ~S2LP_PCKTCTRL6_SYNC_LEN_REGMASK;
   *pSync_len |= S2LP_PCKTCTRL6_SYNC_LEN_OFFSET(sync_len);
   // Set sync value
-  for (uint8_t idx = 0; idx < sync_byte_nb; idx++) {
+  for (uint8_t idx = 0; idx < sync_byte_nb; idx++)
+  {
     // Get sync byte address (sync0 first)
     uint8_t *pSync = &pv->pk_cfg_array[15 - idx];
     // Set sync byte (msb first)
@@ -684,11 +744,13 @@ static error_t s2lp_build_dynamic_pk_config(struct s2lp_ctx_s *pv, struct dev_rf
   // Configure Preamble pattern
   uint8_t *pPbMode = &pv->pk_cfg_array[6];
 
-  if (cbasic->pb_pattern_len > 0x3) {
+  if (cbasic->pb_pattern_len > 0x3)
+  {
     logk_trace("Preamble pattern too big");
     return -ENOTSUP;
   }
-  switch (cbasic->pb_pattern) {
+  switch (cbasic->pb_pattern)
+  {
     case 0x1:
     case 0x5:
     case 0x7:
@@ -724,7 +786,8 @@ static error_t s2lp_build_dynamic_pk_config(struct s2lp_ctx_s *pv, struct dev_rf
   uint8_t *pPbLen_msb = &pv->pk_cfg_array[3];
   uint8_t *pPbLen_lsb = &pv->pk_cfg_array[4];
 
-  if ((cbasic->tx_pb_len > 2046) || (cbasic->tx_pb_len % 2 == 1)) {
+  if ((cbasic->tx_pb_len > 2046) || (cbasic->tx_pb_len % 2 == 1))
+  {
     logk_trace("Preamble too big or odd");
     return -ENOTSUP;
   }
@@ -733,15 +796,16 @@ static error_t s2lp_build_dynamic_pk_config(struct s2lp_ctx_s *pv, struct dev_rf
   // Clear msb
   *pPbLen_msb &= ~S2LP_PCKTCTRL6_PREAMBLE_LEN_REGMASK;
   // Note msb only if needed
-  if (pb_pair_nb > 255) {
+  if (pb_pair_nb > 255)
     *pPbLen_msb |= pb_pair_nb >> 8;
-  }
+
   *pPbLen_lsb = (uint8_t)pb_pair_nb;
 
   // Configure CRC
   uint8_t *pCrcMode = &pv->pk_cfg_array[8];
 
-  switch (cbasic->crc_seed) {
+  switch (cbasic->crc_seed)
+  {
     case 0xff:
     case 0xffff:
     case 0xffffffff:
@@ -752,7 +816,8 @@ static error_t s2lp_build_dynamic_pk_config(struct s2lp_ctx_s *pv, struct dev_rf
       return -ENOTSUP;
     break;
   }
-  switch (cbasic->crc) {
+  switch (cbasic->crc)
+  {
     case 0:
       *pCrcMode &= ~S2LP_PCKTCTRL1_CRC_MODE_REGMASK;
     break;
@@ -832,19 +897,22 @@ static error_t s2lp_build_dynamic_pk_config(struct s2lp_ctx_s *pv, struct dev_rf
 }
 #endif
 
-static error_t s2lp_build_static_rf_config(struct s2lp_ctx_s *pv, struct dev_rfpacket_rq_s *rq) {
+static error_t s2lp_build_static_rf_config(struct s2lp_ctx_s *pv, struct dev_rfpacket_rq_s *rq)
+{
   const struct dev_rfpacket_rf_cfg_static_s *cstatic = const_dev_rfpacket_rf_cfg_static_s_cast(rq->rf_cfg);
   struct s2lp_rf_cfg_s *cfg = NULL;
 
   // Retrieve config
   error_t err = device_get_param_blob(pv->dev, cstatic->cfg_name, 0, (const void **)&cfg);
-  if (err != 0) {
+  if (err != 0)
+  {
     logk_trace("Couldn't retrieve rf param blob.");
     return err;
   }
   assert(cfg);
   // Calc time constants
   s2lp_config_calc_time_consts(pv, cfg->drate);
+
   // Note info
   //printk("RF CONFIG: %d, %d, %d, %d, %P\n", cfg->drate, cfg->jam_rssi, cfg->lbt_rssi, cfg->config_size, cfg->config_data, cfg->config_size);
   pv->jam_rssi = cfg->jam_rssi;
@@ -855,7 +923,8 @@ static error_t s2lp_build_static_rf_config(struct s2lp_ctx_s *pv, struct dev_rfp
   return 0;
 }
 
-static error_t s2lp_build_extern_rf_config(struct s2lp_ctx_s *pv, struct dev_rfpacket_rq_s *rq) {
+static error_t s2lp_build_extern_rf_config(struct s2lp_ctx_s *pv, struct dev_rfpacket_rq_s *rq)
+{
   const struct dev_rfpacket_rf_cfg_extern_s *cextern = const_dev_rfpacket_rf_cfg_extern_s_cast(rq->rf_cfg);
 
   // Retrieve config
@@ -863,6 +932,7 @@ static error_t s2lp_build_extern_rf_config(struct s2lp_ctx_s *pv, struct dev_rfp
   assert(cfg);
   // Calc time constants
   s2lp_config_calc_time_consts(pv, cfg->drate);
+
   // Note info
   //printk("RF CONFIG: %d, %d, %d, %d, %P\n", cfg->drate, cfg->jam_rssi, cfg->lbt_rssi, cfg->config_size, cfg->config_data, cfg->config_size);
   pv->jam_rssi = cfg->jam_rssi;
@@ -873,17 +943,20 @@ static error_t s2lp_build_extern_rf_config(struct s2lp_ctx_s *pv, struct dev_rfp
   return 0;
 }
 
-static error_t s2lp_build_static_pk_config(struct s2lp_ctx_s *pv, struct dev_rfpacket_rq_s *rq) {
+static error_t s2lp_build_static_pk_config(struct s2lp_ctx_s *pv, struct dev_rfpacket_rq_s *rq)
+{
   const struct dev_rfpacket_pk_cfg_static_s *cstatic = const_dev_rfpacket_pk_cfg_static_s_cast(rq->pk_cfg);
   struct s2lp_pk_cfg_s *cfg = NULL;
 
   // Retrieve config
   error_t err = device_get_param_blob(pv->dev, cstatic->cfg_name, 0, (const void **)&cfg);
-  if (err != 0) {
+  if (err != 0)
+  {
     logk_trace("Couldn't retrieve pk param blob.");
     return err;
   }
   assert(cfg);
+
   // Note info
   //printk("PK CONFIG: 0x%02x, 0x%02x, %d, %P\n", cfg->prot1, cfg->prot2, cfg->config_size, cfg->config_data, cfg->config_size);
   pv->curr_prot1 = cfg->prot1;
@@ -893,12 +966,14 @@ static error_t s2lp_build_static_pk_config(struct s2lp_ctx_s *pv, struct dev_rfp
   return 0;
 }
 
-static error_t s2lp_build_extern_pk_config(struct s2lp_ctx_s *pv, struct dev_rfpacket_rq_s *rq) {
+static error_t s2lp_build_extern_pk_config(struct s2lp_ctx_s *pv, struct dev_rfpacket_rq_s *rq)
+{
   const struct dev_rfpacket_pk_cfg_extern_s *cextern = const_dev_rfpacket_pk_cfg_extern_s_cast(rq->pk_cfg);
 
   // Retrieve config
   struct s2lp_pk_cfg_s *cfg = cextern->p_cfg;
   assert(cfg);
+
   // Note info
   //printk("PK CONFIG: 0x%02x, 0x%02x, %d, %P\n", cfg->prot1, cfg->prot2, cfg->config_size, cfg->config_data, cfg->config_size);
   pv->curr_prot1 = cfg->prot1;
@@ -908,12 +983,14 @@ static error_t s2lp_build_extern_pk_config(struct s2lp_ctx_s *pv, struct dev_rfp
   return 0;
 }
 
-static error_t s2lp_build_rf_config(struct s2lp_ctx_s *pv, struct dev_rfpacket_rq_s *rq) {
+static error_t s2lp_build_rf_config(struct s2lp_ctx_s *pv, struct dev_rfpacket_rq_s *rq)
+{
   const struct dev_rfpacket_rf_cfg_s *cfg = rq->rf_cfg;
 
   logk_trace("RF configuration");
 
-  switch (cfg->mod) {
+  switch (cfg->mod)
+  {
 #ifndef CONFIG_DEVICE_RFPACKET_STATIC_RF_CONFIG
     case DEV_RFPACKET_GFSK:
     case DEV_RFPACKET_FSK:
@@ -932,12 +1009,14 @@ static error_t s2lp_build_rf_config(struct s2lp_ctx_s *pv, struct dev_rfpacket_r
   }
 }
 
-static error_t s2lp_build_pk_config(struct s2lp_ctx_s *pv, struct dev_rfpacket_rq_s *rq) {
+static error_t s2lp_build_pk_config(struct s2lp_ctx_s *pv, struct dev_rfpacket_rq_s *rq)
+{
   const struct dev_rfpacket_pk_cfg_s *cfg = rq->pk_cfg;
 
   logk_trace("PKT configuration");
 
-  switch (cfg->format) {
+  switch (cfg->format)
+  {
 #ifndef CONFIG_DEVICE_RFPACKET_STATIC_PKT_CONFIG
     case DEV_RFPACKET_FMT_SLPC:
       return s2lp_build_dynamic_pk_config(pv, rq);
@@ -957,24 +1036,27 @@ static error_t s2lp_build_pk_config(struct s2lp_ctx_s *pv, struct dev_rfpacket_r
 
 // Public functions
 
-error_t s2lp_build_config(struct s2lp_ctx_s *pv) {
+error_t s2lp_build_config(struct s2lp_ctx_s *pv)
+{
   error_t err = 0;
   struct dev_rfpacket_rq_s *rq = pv->gctx.rq;
 
-  if ((pv->flags & S2LP_FLAGS_RF_CONFIG_OK) == 0) {
+  if ((pv->flags & S2LP_FLAGS_RF_CONFIG_OK) == 0)
+  {
     err = s2lp_build_rf_config(pv, rq);
-    if (err != 0) {
+    if (err != 0)
       return err;
-    }
+
     // Update rf cfg values
     ((struct dev_rfpacket_rf_cfg_s *)rq->rf_cfg)->cache.dirty = 0;
     pv->rf_cfg = rq->rf_cfg;
   }
-  if ((pv->flags & S2LP_FLAGS_PK_CONFIG_OK) == 0) {
+  if ((pv->flags & S2LP_FLAGS_PK_CONFIG_OK) == 0)
+  {
     err = s2lp_build_pk_config(pv, rq);
-    if (err != 0) {
+    if (err != 0)
       return err;
-    }
+
     // Update pk cfg values
     ((struct dev_rfpacket_pk_cfg_s *)rq->pk_cfg)->cache.dirty = 0;
     pv->pk_cfg = rq->pk_cfg;
@@ -982,51 +1064,56 @@ error_t s2lp_build_config(struct s2lp_ctx_s *pv) {
   return 0;
 }
 
-uint8_t s2lp_build_pwr(struct s2lp_ctx_s *pv, int16_t pwr) {
+uint8_t s2lp_build_pwr(struct s2lp_ctx_s *pv, int16_t pwr)
+{
   uint8_t reg_pwr = 0;
 
   // Check if power valid
-  if (!S2LP_VALID_TX_POWER(pwr)) {
+  if (!S2LP_VALID_TX_POWER(pwr))
+  {
     logk_trace("Unsupported power level requested");
     return 0;
   }
   // Check if power need to be configured
   pv->flags &= ~S2LP_FLAGS_TX_POWER_OK;
 
-  if (pv->pwr == pwr) {
+  if (pv->pwr == pwr)
+  {
     pv->flags |= S2LP_FLAGS_TX_POWER_OK;
     return 0;
   }
   // Set new power value
   pv->pwr = pwr;
-  // Calc power reg value
-  if (pwr >= (S2LP_MAX_PA_VALUE * 8)) {
+
+  // Calc power reg value, reg = 29 - 2 * dbm value
+  if (pwr >= (S2LP_MAX_PA_VALUE * 8))
     reg_pwr = 1;
-  } else {
-    // Reg = 29 - 2 * dbm value
+  else
     reg_pwr = (uint8_t)((int32_t)29 - (pwr / 4)); // 0.5 dbm res, power value is truncated
-  }
+
   return reg_pwr;
 }
 
-bool s2lp_config_check_fairtx_valid(const struct dev_rfpacket_rf_cfg_s *rfcfg) {
+bool s2lp_config_check_fairtx_valid(const struct dev_rfpacket_rf_cfg_s *rfcfg)
+{
   const struct dev_rfpacket_rf_cfg_fsk_s *cfsk;
   const struct dev_rfpacket_rf_cfg_ask_s *cask;
 
-  switch (rfcfg->mod) {
+  switch (rfcfg->mod)
+  {
     case DEV_RFPACKET_GFSK:
     case DEV_RFPACKET_FSK:
       cfsk = const_dev_rfpacket_rf_cfg_fsk_s_cast(rfcfg);
-      if (cfsk->fairtx.mode == DEV_RFPACKET_NO_FAIRTX) {
+      if (cfsk->fairtx.mode == DEV_RFPACKET_NO_FAIRTX)
         return false;
-      }
+
     break;
 
     case DEV_RFPACKET_ASK:
       cask = const_dev_rfpacket_rf_cfg_ask_s_cast(rfcfg);
-      if (cask->fairtx.mode == DEV_RFPACKET_NO_FAIRTX) {
+      if (cask->fairtx.mode == DEV_RFPACKET_NO_FAIRTX)
         return false;
-      }
+
     break;
 
     default:
@@ -1035,12 +1122,14 @@ bool s2lp_config_check_fairtx_valid(const struct dev_rfpacket_rf_cfg_s *rfcfg) {
   return true;
 }
 
-uint32_t s2lp_config_get_freq(const struct dev_rfpacket_rf_cfg_s *cfg, uint8_t chan) {
+uint32_t s2lp_config_get_freq(const struct dev_rfpacket_rf_cfg_s *cfg, uint8_t chan)
+{
   const struct dev_rfpacket_rf_cfg_std_s *common = NULL;
   const struct dev_rfpacket_rf_cfg_fsk_s *cfsk = NULL;
   const struct dev_rfpacket_rf_cfg_ask_s *cask = NULL;
 
-  switch (cfg->mod) {
+  switch (cfg->mod)
+  {
     case DEV_RFPACKET_GFSK:
     case DEV_RFPACKET_FSK:
       cfsk = const_dev_rfpacket_rf_cfg_fsk_s_cast(cfg);
@@ -1055,14 +1144,15 @@ uint32_t s2lp_config_get_freq(const struct dev_rfpacket_rf_cfg_s *cfg, uint8_t c
     default:
     break;
   }
-  if (common != NULL) {
+  if (common != NULL)
     return common->frequency + chan * common->chan_spacing;
-  }
+
   return 0;
 }
 
 #ifndef CONFIG_DEVICE_RFPACKET_STATIC_RF_CONFIG
-  void s2lp_init_rf_cfg_array(uint8_t *pArray, uint16_t array_size) {
+  void s2lp_init_rf_cfg_array(uint8_t *pArray, uint16_t array_size)
+  {
     // Check size
     assert(array_size == S2LP_RF_CFG_ARRAY_SIZE);
     // Reset memory
@@ -1092,7 +1182,8 @@ uint32_t s2lp_config_get_freq(const struct dev_rfpacket_rf_cfg_s *cfg, uint8_t c
 #endif
 
 #ifndef CONFIG_DEVICE_RFPACKET_STATIC_PKT_CONFIG
-  void s2lp_init_pk_cfg_array(uint8_t *pArray, uint16_t array_size) {
+  void s2lp_init_pk_cfg_array(uint8_t *pArray, uint16_t array_size)
+  {
     // Check size
     assert(array_size == S2LP_PK_CFG_ARRAY_SIZE);
     // Reset memory

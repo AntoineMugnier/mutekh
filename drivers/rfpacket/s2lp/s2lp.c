@@ -24,7 +24,8 @@
 #include "s2lp_config.h"
 #include "s2lp_spi.o.h"
 
-static const struct dev_spi_ctrl_config_s spi_cfg = {
+static const struct dev_spi_ctrl_config_s spi_cfg =
+{
   .ck_mode = DEV_SPI_CK_MODE_0,
   .bit_order = DEV_SPI_MSB_FIRST,
   .miso_pol = DEV_SPI_ACTIVE_HIGH,
@@ -51,7 +52,8 @@ static bool_t s2lp_wakeup(struct dev_rfpacket_ctx_s *gpv);
 static bool_t s2lp_sleep(struct dev_rfpacket_ctx_s *gpv);
 static void s2lp_idle(struct dev_rfpacket_ctx_s *gpv);
 
-static const struct dev_rfpacket_driver_interface_s s2lp_itfc = {
+static const struct dev_rfpacket_driver_interface_s s2lp_itfc =
+{
   s2lp_get_time,
   s2lp_check_config,
   s2lp_rx,
@@ -64,63 +66,74 @@ static const struct dev_rfpacket_driver_interface_s s2lp_itfc = {
 
 /**************************** TIMER PART ********************************/
 
-static DEV_TIMER_CANCEL(s2lp_timer_cancel) {
+static DEV_TIMER_CANCEL(s2lp_timer_cancel)
+{
   struct device_s *dev = accessor->dev;
   struct s2lp_ctx_s *pv = dev->drv_pv;
   return DEVICE_OP(pv->timer, cancel, rq);
 }
 
-static DEV_TIMER_REQUEST(s2lp_timer_request) {
+static DEV_TIMER_REQUEST(s2lp_timer_request)
+{
   struct device_s *dev = accessor->dev;
   struct s2lp_ctx_s *pv = dev->drv_pv;
   return DEVICE_OP(pv->timer, request, rq);
 }
 
-static DEV_TIMER_GET_VALUE(s2lp_timer_get_value) {
+static DEV_TIMER_GET_VALUE(s2lp_timer_get_value)
+{
   struct device_s *dev = accessor->dev;
   struct s2lp_ctx_s *pv = dev->drv_pv;
   return DEVICE_OP(pv->timer, get_value, value, rev);
 }
 
-static DEV_TIMER_CONFIG(s2lp_timer_config) {
+static DEV_TIMER_CONFIG(s2lp_timer_config)
+{
   struct device_s *dev = accessor->dev;
   struct s2lp_ctx_s *pv = dev->drv_pv;
   return DEVICE_OP(pv->timer, config, cfg, res);
 }
 
-error_t s2lp_get_time(struct dev_rfpacket_ctx_s *gpv, dev_timer_value_t *value) {
+error_t s2lp_get_time(struct dev_rfpacket_ctx_s *gpv, dev_timer_value_t *value)
+{
   struct s2lp_ctx_s *pv = gpv->pvdata;
   return DEVICE_OP(pv->timer, get_value, value, 0);
 }
 
 /**************************** RFPACKET PART ********************************/
 
-static void s2lp_send_config(struct s2lp_ctx_s *pv) {
+static void s2lp_send_config(struct s2lp_ctx_s *pv)
+{
   logk_trace("Send config to device");
 
   s2lp_bytecode_start(pv, &s2lp_entry_config,
     S2LP_ENTRY_CONFIG_BCARGS(pv->curr_rf_cfg_data, pv->curr_pk_cfg_data));
 }
 
-static dev_timer_delay_t s2lp_calc_lbt_rand_time(dev_timer_value_t timebase, dev_timer_value_t curr_time) {
+static dev_timer_delay_t s2lp_calc_lbt_rand_time(dev_timer_value_t timebase,
+                                                 dev_timer_value_t curr_time)
+{
   uint8_t mult = rand_64_range_r(&curr_time, 0, S2LP_LBT_RAND_TIME_MAX_MULT);
   return timebase * (mult + S2LP_LBT_BASE_TIME_MULT);
 }
 
-static inline void s2lp_fill_status(struct s2lp_ctx_s *pv) {
+static inline void s2lp_fill_status(struct s2lp_ctx_s *pv)
+{
   pv->gctx.status = pv->bc_status;
 }
 
-static void s2lp_fill_rx_info(struct s2lp_ctx_s *pv, struct dev_rfpacket_rx_s *rx) {
-  if (rx == NULL) {
+static void s2lp_fill_rx_info(struct s2lp_ctx_s *pv, struct dev_rfpacket_rx_s *rx)
+{
+  if (rx == NULL)
     return;
-  }
+
   rx->carrier = S2LP_GET_RSSI(pv->carrier) << 3;
   rx->rssi = S2LP_GET_RSSI(pv->avg_rssi) << 3;
   rx->frequency = pv->frequency + pv->afc_offset;
 }
 
-static void s2lp_bytecode_start(struct s2lp_ctx_s *pv, const void *e, uint16_t mask, ...) {
+static void s2lp_bytecode_start(struct s2lp_ctx_s *pv, const void *e, uint16_t mask, ...)
+{
   struct dev_spi_ctrl_bytecode_rq_s *srq = &pv->spi_rq;
 
   va_list ap;
@@ -131,7 +144,8 @@ static void s2lp_bytecode_start(struct s2lp_ctx_s *pv, const void *e, uint16_t m
   va_end(ap);
 }
 
-static void s2lp_clean(struct device_s *dev) {
+static void s2lp_clean(struct device_s *dev)
+{
   struct s2lp_ctx_s *pv = dev->drv_pv;
 
   device_irq_source_unlink(dev, pv->src_ep, 1);
@@ -145,63 +159,68 @@ static void s2lp_clean(struct device_s *dev) {
 
 
 
-static error_t s2lp_check_config(struct dev_rfpacket_ctx_s *gpv, struct dev_rfpacket_rq_s *rq) {
+static error_t s2lp_check_config(struct dev_rfpacket_ctx_s *gpv, struct dev_rfpacket_rq_s *rq)
+{
   struct s2lp_ctx_s *pv = gpv->pvdata;
   const struct dev_rfpacket_rf_cfg_s *rfcfg = rq->rf_cfg;
   const struct dev_rfpacket_pk_cfg_s *pkcfg = rq->pk_cfg;
   bool_t conf_ok = true;
 
-  if (rq->type == DEV_RFPACKET_RQ_TX_FAIR) {
+  if (rq->type == DEV_RFPACKET_RQ_TX_FAIR)
+  {
     // Check that fair tx mode is set when request of type DEV_RFPACKET_RQ_TX_FAIR is used
-    if (!s2lp_config_check_fairtx_valid(rfcfg)) {
+    if (!s2lp_config_check_fairtx_valid(rfcfg))
       return -ENOTSUP;
-    }
+
     // Set rx_tx flags
     pv->flags &= ~S2LP_FLAGS_RX_TX_OK;
     // Test if RX is allowed during TX
-    if (dev_rfpacket_can_rxtx(&pv->gctx, rq)) {
+    if (dev_rfpacket_can_rxtx(&pv->gctx, rq))
       pv->flags |= S2LP_FLAGS_RX_TX_OK;
-    }
+
   }
   // Set configuration flags
   pv->flags &= ~S2LP_FLAGS_RF_CONFIG_OK;
   pv->flags &= ~S2LP_FLAGS_PK_CONFIG_OK;
 
-  if ((pkcfg == pv->pk_cfg) && !pkcfg->cache.dirty) {
+  if ((pkcfg == pv->pk_cfg) && !pkcfg->cache.dirty)
     pv->flags |= S2LP_FLAGS_PK_CONFIG_OK;
-  } else {
+  else
     conf_ok = false;
-  }
-  if ((rfcfg == pv->rf_cfg) && !rfcfg->cache.dirty) {
+
+  if ((rfcfg == pv->rf_cfg) && !rfcfg->cache.dirty)
     pv->flags |= S2LP_FLAGS_RF_CONFIG_OK;
-  } else {
+  else
     conf_ok = false;
-  }
+
   // Check if conf changed
-  if (conf_ok) {
+  if (conf_ok)
     return 0;
-  }
+
   // Build conf
   error_t err = s2lp_build_config(pv);
 
-  if (err != 0) {
+  if (err != 0)
     return err;
-  }
+
   // Send conf
   s2lp_send_config(pv);
   return -EAGAIN;
 }
 
-static void s2lp_rx(struct dev_rfpacket_ctx_s *gpv, struct dev_rfpacket_rq_s *rq, bool_t isRetry) {
+static void s2lp_rx(struct dev_rfpacket_ctx_s *gpv, struct dev_rfpacket_rq_s *rq, bool_t isRetry)
+{
   struct s2lp_ctx_s *pv = gpv->pvdata;
   struct dev_rfpacket_rf_cfg_s *cfg = (struct dev_rfpacket_rf_cfg_s *)rq->rf_cfg;
   uint32_t freq = s2lp_config_get_freq(cfg, rq->channel);
 
-  if (isRetry) {
+  if (isRetry)
+  {
     s2lp_bytecode_start(pv, &s2lp_entry_rx, S2LP_ENTRY_RX_BCARGS(rq->channel));
     return;
   }
-  switch (rq->type) {
+  switch (rq->type)
+  {
     case DEV_RFPACKET_RQ_RX:
       pv->frequency = freq;
       s2lp_bytecode_start(pv, &s2lp_entry_rx, S2LP_ENTRY_RX_BCARGS(rq->channel));
@@ -209,14 +228,15 @@ static void s2lp_rx(struct dev_rfpacket_ctx_s *gpv, struct dev_rfpacket_rq_s *rq
 
     case DEV_RFPACKET_RQ_RX_TIMEOUT:
     case DEV_RFPACKET_RQ_RX_CONT:
-      if (rq->type == DEV_RFPACKET_RQ_RX_TIMEOUT) {
+      if (rq->type == DEV_RFPACKET_RQ_RX_TIMEOUT)
         pv->flags &= ~S2LP_FLAGS_RXC_INFINITE;
-      } else {
+
+      else
         pv->flags |= S2LP_FLAGS_RXC_INFINITE;
-      }
-      if (pv->frequency != freq) {
+
+      if (pv->frequency != freq)
           pv->frequency = freq;
-      }
+
       // Reset rssi average value
       pv->avg_rssi = S2LP_SET_RSSI(S2LP_RSSI_AVG_DEF_VAL);
       pv->flags |= S2LP_FLAGS_RX_CONTINOUS;
@@ -233,18 +253,22 @@ static void s2lp_rx(struct dev_rfpacket_ctx_s *gpv, struct dev_rfpacket_rq_s *rq
   }
 }
 
-static void s2lp_tx(struct dev_rfpacket_ctx_s *gpv, struct dev_rfpacket_rq_s *rq, bool_t isRetry) {
+static void s2lp_tx(struct dev_rfpacket_ctx_s *gpv, struct dev_rfpacket_rq_s *rq, bool_t isRetry)
+{
   struct s2lp_ctx_s *pv = gpv->pvdata;
   uint8_t pwr;
   dev_timer_value_t t;
 
-  if (isRetry) {
-    switch (rq->type) {
+  if (isRetry)
+  {
+    switch (rq->type)
+    {
       case DEV_RFPACKET_RQ_TX_FAIR:
         // Take into account previous fifo fill
-        if (pv->gctx.size < S2LP_FIFO_SIZE) {
+        if (pv->gctx.size < S2LP_FIFO_SIZE)
           pv->gctx.size = 0;
-        } else {
+        else
+        {
           pv->gctx.size -= S2LP_FIFO_SIZE - 1;
           pv->gctx.buffer += S2LP_FIFO_SIZE - 1;
         }
@@ -256,11 +280,15 @@ static void s2lp_tx(struct dev_rfpacket_ctx_s *gpv, struct dev_rfpacket_rq_s *rq
         UNREACHABLE();
       break;
     }
-  } else {
-    switch (rq->type) {
+  }
+  else
+  {
+    switch (rq->type)
+    {
       case DEV_RFPACKET_RQ_TX_FAIR:
         // Get time value
         DEVICE_OP(pv->timer, get_value, &t, 0);
+
         // Init lbt info
         pv->lbt_state = S2LP_LBT_STATE_FREE;
         pv->lbt_rand_time = s2lp_calc_lbt_rand_time(pv->bt, t);
@@ -282,7 +310,8 @@ static void s2lp_tx(struct dev_rfpacket_ctx_s *gpv, struct dev_rfpacket_rq_s *rq
   }
 }
 
-static void s2lp_cancel_rxc(struct dev_rfpacket_ctx_s *gpv) {
+static void s2lp_cancel_rxc(struct dev_rfpacket_ctx_s *gpv)
+{
   struct s2lp_ctx_s *pv = gpv->pvdata;
   struct dev_spi_ctrl_bytecode_rq_s *srq = &pv->spi_rq;
 
@@ -292,7 +321,8 @@ static void s2lp_cancel_rxc(struct dev_rfpacket_ctx_s *gpv) {
 }
 
 // Transceiver is sleeping when this function is called
-static bool_t s2lp_wakeup(struct dev_rfpacket_ctx_s *gpv) {
+static bool_t s2lp_wakeup(struct dev_rfpacket_ctx_s *gpv)
+{
 #ifdef CONFIG_DRIVER_RFPACKET_S2LP_SLEEP
   struct s2lp_ctx_s *pv = gpv->pvdata;
   s2lp_bytecode_start(pv, &s2lp_entry_ready, 0, 0);
@@ -302,7 +332,8 @@ static bool_t s2lp_wakeup(struct dev_rfpacket_ctx_s *gpv) {
 #endif
 }
 
-static bool_t s2lp_sleep(struct dev_rfpacket_ctx_s *gpv) {
+static bool_t s2lp_sleep(struct dev_rfpacket_ctx_s *gpv)
+{
 #ifdef CONFIG_DRIVER_RFPACKET_S2LP_SLEEP
   struct s2lp_ctx_s *pv = gpv->pvdata;
   s2lp_bytecode_start(pv, &s2lp_entry_sleep, 0, 0);
@@ -312,7 +343,8 @@ static bool_t s2lp_sleep(struct dev_rfpacket_ctx_s *gpv) {
 #endif
 }
 
-static void s2lp_idle(struct dev_rfpacket_ctx_s *gpv) {
+static void s2lp_idle(struct dev_rfpacket_ctx_s *gpv)
+{
 #ifdef CONFIG_DRIVER_RFPACKET_S2LP_SLEEP
   struct s2lp_ctx_s *pv = gpv->pvdata;
   // Delayed clock disable
@@ -323,7 +355,8 @@ static void s2lp_idle(struct dev_rfpacket_ctx_s *gpv) {
 
 
 
-BC_CCALL_FUNCTION(s2lp_alloc) {
+BC_CCALL_FUNCTION(s2lp_alloc)
+{
   struct s2lp_ctx_s *pv = (struct s2lp_ctx_s *)bc_get_reg(ctx, S2LP_CTX_PV);
   logk_trace("RX alloc %d", pv->gctx.size);
   uintptr_t p = 0;
@@ -335,7 +368,8 @@ BC_CCALL_FUNCTION(s2lp_alloc) {
   return p;
 }
 
-static DEV_RFPACKET_REQUEST(s2lp_rfp_request) {
+static DEV_RFPACKET_REQUEST(s2lp_rfp_request)
+{
   struct device_s *dev = accessor->dev;
   struct s2lp_ctx_s *pv = dev->drv_pv;
 
@@ -344,19 +378,21 @@ static DEV_RFPACKET_REQUEST(s2lp_rfp_request) {
   va_list vl;
   va_start(vl, accessor);
 
-  while(1) {
+  while(1)
+  {
     struct dev_rfpacket_rq_s *rq = va_arg(vl, struct dev_rfpacket_rq_s *);
 
-    if (rq == NULL) {
+    if (rq == NULL)
       break;
-    }
+
     rq->error = 0;
     dev_rfpacket_request(&pv->gctx, rq);
   }
   LOCK_RELEASE_IRQ(&dev->lock);
 }
 
-static DEV_RFPACKET_CANCEL(s2lp_rfp_cancel) {
+static DEV_RFPACKET_CANCEL(s2lp_rfp_cancel)
+{
   struct device_s *dev = accessor->dev;
   struct s2lp_ctx_s *pv = dev->drv_pv;
   error_t err = 0;
@@ -371,7 +407,8 @@ static DEV_RFPACKET_CANCEL(s2lp_rfp_cancel) {
   return err;
 }
 
-static KROUTINE_EXEC(s2lp_spi_rq_done) {
+static KROUTINE_EXEC(s2lp_spi_rq_done)
+{
   struct dev_spi_ctrl_bytecode_rq_s *srq = KROUTINE_CONTAINER(kr, *srq, base.base.kr);
   struct device_s *dev = srq->pvdata;
   struct s2lp_ctx_s *pv = dev->drv_pv;
@@ -379,30 +416,37 @@ static KROUTINE_EXEC(s2lp_spi_rq_done) {
   LOCK_SPIN_IRQ(&dev->lock);
   logk_trace("spi req done 0x%x", pv->bc_status);
 
-  if (dev_rfpacket_init_done(&pv->gctx)) {
+  if (dev_rfpacket_init_done(&pv->gctx))
     assert(!srq->error);
-  } else {
-    if (srq->error) {
+  else
+  {
+    if (srq->error)
+    {
       // Couldn't initialize
       logk_trace("failed initialization");
       s2lp_clean(dev);
       device_async_init_done(dev, -EIO);
       goto end;
-    } else {
+    }
+    else
+    {
       logk_trace("init done");
       device_async_init_done(dev, 0);
     }
   }
-  if (pv->bc_status == DEV_RFPACKET_STATUS_RX_DONE) {
+
+  if (pv->bc_status == DEV_RFPACKET_STATUS_RX_DONE)
     s2lp_fill_rx_info(pv, pv->gctx.rxrq);
-  }
+
   s2lp_fill_status(pv);
   dev_rfpacket_req_done(&pv->gctx);
+
 end:
   LOCK_RELEASE_IRQ(&dev->lock);
 }
 
-static DEV_IRQ_SRC_PROCESS(s2lp_irq_source_process) {
+static DEV_IRQ_SRC_PROCESS(s2lp_irq_source_process)
+{
   struct device_s *dev = ep->base.dev;
   struct s2lp_ctx_s *pv = dev->drv_pv;
   struct dev_spi_ctrl_bytecode_rq_s *srq = &pv->spi_rq;
@@ -415,14 +459,16 @@ static DEV_IRQ_SRC_PROCESS(s2lp_irq_source_process) {
   lock_release(&dev->lock);
 }
 
-static DEV_USE(s2lp_use) {
+static DEV_USE(s2lp_use)
+{
   struct device_s *dev = param;
   struct s2lp_ctx_s *pv = dev->drv_pv;
 
   return dev_rfpacket_use(param, op, &pv->gctx);
 }
 
-static DEV_RFPACKET_STATS(s2lp_rfp_stats) {
+static DEV_RFPACKET_STATS(s2lp_rfp_stats)
+{
 #ifdef CONFIG_DEVICE_RFPACKET_STATISTICS
   struct device_s *dev = accessor->dev;
   struct s2lp_ctx_s *pv = dev->drv_pv;
@@ -442,13 +488,14 @@ DRIVER_DECLARE(s2lp_drv, 0, "ST Micro s2lp transceiver", s2lp,
 
 DRIVER_REGISTER(s2lp_drv);
 
-static DEV_INIT(s2lp_init) {
+static DEV_INIT(s2lp_init)
+{
   // Init memory
   struct s2lp_ctx_s *pv = mem_alloc(sizeof (*pv), (mem_scope_sys));
 
-  if (!pv){
+  if (!pv)
     return -ENOMEM;
-  }
+
   memset(pv, 0, sizeof(*pv));
   dev->drv_pv = pv;
 
@@ -466,24 +513,24 @@ static DEV_INIT(s2lp_init) {
   struct dev_spi_ctrl_bytecode_rq_s *srq = &pv->spi_rq;
   struct device_gpio_s *gpio;
 
-  if (dev_drv_spi_bytecode_init(dev, srq, &s2lp_bytecode, &spi_cfg, &pv->spi, &gpio, &pv->timer)) {
+  if (dev_drv_spi_bytecode_init(dev, srq, &s2lp_bytecode, &spi_cfg, &pv->spi, &gpio, &pv->timer))
     goto err_mem;
-  }
+
   // Base 500 us time
   dev_timer_init_sec(pv->timer, &pv->bt, 0, S2LP_BASE_TIME, 1000000);
   // Start timer
-  if (device_start(&pv->timer->base)) {
+  if (device_start(&pv->timer->base))
     goto err_srq;
-  }
+
   srq->pvdata = dev;
   pv->dev = dev;
 
   // Init GPIO stuff
   static const gpio_width_t pin_wmap[] = {1, 1};
 
-  if (device_gpio_setup(gpio, dev, ">sdn:1 <nirq:1", pv->pin_map, NULL)) {
+  if (device_gpio_setup(gpio, dev, ">sdn:1 <nirq:1", pv->pin_map, NULL))
     goto err_timer;
-  }
+
   srq->gpio_map = pv->pin_map;
   srq->gpio_wmap = pin_wmap;
 
@@ -492,9 +539,9 @@ static DEV_INIT(s2lp_init) {
 
   // Init irq
   device_irq_source_init(dev, pv->src_ep, 1, &s2lp_irq_source_process);
-  if (device_irq_source_link(dev, pv->src_ep, 1, 0x3)) {
+  if (device_irq_source_link(dev, pv->src_ep, 1, 0x3))
     goto err_timer;
-  }
+
   // Note pvdata and interface into generic context
   pv->gctx.pvdata = pv;
   pv->gctx.drv = &s2lp_itfc;
@@ -515,12 +562,13 @@ static DEV_INIT(s2lp_init) {
   return -1;
 }
 
-static DEV_CLEANUP(s2lp_cleanup) {
+static DEV_CLEANUP(s2lp_cleanup)
+{
   struct s2lp_ctx_s *pv = dev->drv_pv;
   error_t err = dev_rfpacket_clean_check(&pv->gctx);
 
-  if (!err) {
+  if (!err)
     s2lp_clean(dev);
-  }
+
   return err;
 }
