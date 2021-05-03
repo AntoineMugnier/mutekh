@@ -21,6 +21,9 @@
 
 #include "sx127x_spi.h"
 #include "sx127x_spi.o.h"
+#ifdef CONFIG_DRIVER_RFPACKET_SX127X_MOD_LORA
+#include "sx127x_lora_spi.o.h"
+#endif
 
 // Misc functions
 static void sx127x_send_config(struct sx127x_private_s *pv);
@@ -28,8 +31,6 @@ static inline void sx127x_fill_status(struct sx127x_private_s *pv);
 static void sx127x_fill_rx_info(struct sx127x_private_s *pv, struct dev_rfpacket_rx_s *rx);
 static void sx127x_bytecode_start(struct sx127x_private_s *pv, const void *e, uint16_t mask, ...);
 static void sx127x_clean(struct device_s *dev);
-static uint32_t sx127x_set_tx_cmd(struct sx127x_private_s *pv, struct dev_rfpacket_rq_s *rq);
-static uint32_t sx127x_set_rx_cmd(struct sx127x_private_s *pv, struct dev_rfpacket_rq_s *rq);
 BC_CCALL_FUNCTION(sx127x_alloc);
 BC_CCALL_FUNCTION(sx127x_next_hopping_freq);
 
@@ -179,9 +180,12 @@ error_t sx127x_get_time(struct dev_rfpacket_ctx_s *gpv, dev_timer_value_t *value
 static void sx127x_send_config(struct sx127x_private_s *pv) {
   logk_trace("Send config to device");
 
+#ifdef CONFIG_DRIVER_RFPACKET_SX127X_MOD_LORA
+  sx127x_bytecode_start(pv, &sx127x_entry_lora_config, 0);
+#else
   sx127x_bytecode_start(pv, &sx127x_entry_config,
     SX127X_ENTRY_CONFIG_BCARGS(pv->cfg_regs.cfg));
-
+#endif
   // printk("Debug config size; %d\n %P\n", pv->cfg_offset, pv->cfg_regs.cfg, pv->cfg_offset/2);
   // printk("%P\n", pv->cfg_regs.cfg + pv->cfg_offset/2, pv->cfg_offset/2+1);
   // assert(false);
@@ -229,6 +233,7 @@ static void sx127x_clean(struct device_s *dev)
   mem_free(pv);
 }
 
+#ifndef CONFIG_DRIVER_RFPACKET_SX127X_MOD_LORA
 static uint32_t sx127x_set_tx_cmd(struct sx127x_private_s *pv, struct dev_rfpacket_rq_s *rq)
 {
   uint32_t cmd = pv->cfg_regs.sync;
@@ -285,7 +290,7 @@ static uint32_t sx127x_set_rx_cmd(struct sx127x_private_s *pv, struct dev_rfpack
 
   return cmd;
 }
-
+#endif
 
 
 
@@ -347,6 +352,27 @@ static void sx127x_rx(struct dev_rfpacket_ctx_s *gpv,
                       struct dev_rfpacket_rq_s *rq, bool_t isRetry)
 {
   struct sx127x_private_s *pv = gpv->pvdata;
+
+#ifdef CONFIG_DRIVER_RFPACKET_SX127X_MOD_LORA
+
+  switch (rq->type)
+  {
+    case DEV_RFPACKET_RQ_RX:
+      sx127x_bytecode_start(pv, &sx127x_entry_lora_rx, 0);
+    break;
+
+    case DEV_RFPACKET_RQ_RX_TIMEOUT:
+    case DEV_RFPACKET_RQ_RX_CONT:
+      pv->flags |= SX127X_FLAGS_RX_CONTINOUS;
+      sx127x_bytecode_start(pv, &sx127x_entry_lora_rx_cont, 0);
+    break;
+
+    default:
+      UNREACHABLE();
+    break;
+  }
+
+#else
   uint32_t cmd = sx127x_set_rx_cmd(pv, rq);
 
   if (isRetry)
@@ -380,12 +406,18 @@ static void sx127x_rx(struct dev_rfpacket_ctx_s *gpv,
       UNREACHABLE();
     break;
   }
+#endif
 }
 
 static void sx127x_tx(struct dev_rfpacket_ctx_s *gpv,
                       struct dev_rfpacket_rq_s *rq, bool_t isRetry)
 {
   struct sx127x_private_s *pv = gpv->pvdata;
+
+#ifdef CONFIG_DRIVER_RFPACKET_SX127X_MOD_LORA
+  sx127x_bytecode_start(pv, &sx127x_entry_lora_tx, 0);
+
+#else
   dev_timer_value_t t;
   uint32_t cmd = sx127x_set_tx_cmd(pv, rq);
 
@@ -435,6 +467,7 @@ static void sx127x_tx(struct dev_rfpacket_ctx_s *gpv,
       break;
     }
   }
+#endif
 }
 
 static void sx127x_cancel_rxc(struct dev_rfpacket_ctx_s *gpv)
@@ -564,7 +597,7 @@ static KROUTINE_EXEC(sx127x_spi_rq_done)
   LOCK_SPIN_IRQ(&dev->lock);
   logk_trace("spi req done 0x%x", pv->bc_status);
 
-  if (dev_rfpacket_init_done(&pv->gctx)) {
+  if (dev_rfpacket_init_done(&pv->gctx))
     assert(!srq->error);
   else
   {
@@ -739,7 +772,11 @@ static DEV_INIT(sx127x_init)
 
   // Start bytecode
   bc_set_reg(&srq->vm, R_CTX_PV, (uintptr_t)pv);
+#ifdef CONFIG_DRIVER_RFPACKET_SX127X_MOD_LORA
+  sx127x_bytecode_start(pv, &sx127x_lora_entry_reset, 0);
+#else
   sx127x_bytecode_start(pv, &sx127x_entry_reset, 0);
+#endif
 
   // Init cache
 #if CONFIG_DRIVER_RFPACKET_SX127X_CACHE_SIZE > 0
