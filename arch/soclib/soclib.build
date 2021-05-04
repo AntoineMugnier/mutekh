@@ -34,14 +34,14 @@
 
   %subsection soclib-arm
     %types cpu
-  
+
     CONFIG_CPU_ARM32_SOCLIB
     %set BUILD_NAME soclib-arm
   %end
 
   %subsection soclib-armbe
     %types cpu
-  
+
     CONFIG_CPU_ARM32_SOCLIB
     CONFIG_CPU_ARM32_BIG_BE8
     %set BUILD_NAME soclib-armbe
@@ -49,7 +49,7 @@
 
   %subsection soclib-ppc
     %types cpu
-  
+
     CONFIG_CPU_PPC_SOCLIB
     %set BUILD_NAME soclib-ppc
   %end
@@ -63,7 +63,7 @@
 
   %subsection soclib-sparc
     %types cpu
-  
+
     CONFIG_CPU_SPARC_SOCLIB
     %set BUILD_NAME soclib-sparc
 
@@ -74,7 +74,7 @@
 
   %subsection soclib-lm32
     %types cpu
-  
+
     CONFIG_CPU_LM32_SOCLIB
     %set BUILD_NAME soclib-lm32
   %end
@@ -118,6 +118,7 @@
     CONFIG_DRIVER_SOCLIB_XICU
     CONFIG_DRIVER_SOCLIB_TIMER
     CONFIG_DRIVER_ENST_RTTIMER
+    CONFIG_DRIVER_SOCLIB_RFPACKET
 #    CONFIG_DRIVER_SOCLIB_ETHERNET
     CONFIG_DRIVER_SOCLIB_BLOCK_DEVICE
     CONFIG_DRIVER_SOCLIB_SPI
