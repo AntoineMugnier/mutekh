@@ -70,7 +70,8 @@ DRIVER_PV(struct stm32_pwm_private_s
 
 });
 
-static uint8_t stm32_pwm_get_mapped_channel(uint8_t channel, uint32_t ch_remap) {
+static uint8_t stm32_pwm_get_mapped_channel(uint8_t channel, uint32_t ch_remap)
+{
   if (ch_remap == 0)
     return channel;
   else

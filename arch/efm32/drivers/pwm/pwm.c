@@ -64,14 +64,16 @@ DRIVER_PV(struct efm32_pwm_private_s
   struct dev_clock_sink_ep_s clk_ep;
 });
 
-static uint8_t efm32_pwm_get_mapped_channel(uint8_t channel, uint32_t ch_remap) {
+static uint8_t efm32_pwm_get_mapped_channel(uint8_t channel, uint32_t ch_remap)
+{
   if (ch_remap == 0)
     return channel;
   else
     return LUT_8_4_GET(channel, ch_remap);
 }
 
-static error_t efm32_pwm_validate_parameter(const struct device_pwm_s *pdev, const struct dev_pwm_config_s *cfg)
+static error_t efm32_pwm_validate_parameter(const struct device_pwm_s *pdev,
+                                            const struct dev_pwm_config_s *cfg)
 {
   struct efm32_pwm_private_s *pv  = pdev->dev->drv_pv;
 
@@ -99,8 +101,8 @@ static error_t efm32_pwm_freq(struct device_s *dev)
 
   uint8_t div = msb ? 1 + bit_msb_index(msb) : 0;
 
-  if (div > 10)
   /* Frequency can not be achieved */
+  if (div > 10)
     return -ERANGE;
 
   scale = scale / (1 << div);

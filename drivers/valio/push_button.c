@@ -440,12 +440,12 @@ static KROUTINE_EXEC(push_button_event)
   struct push_button_context_s *pv  = dev->drv_pv;
   bool restart_grq = false;
 
-/* Check for gpio error */
-if (grq->error != 0)
-{
-  logk_trace("gpio error %d\n", grq->error);
-  return;
-}
+  /* Check for gpio error */
+  if (grq->error != 0)
+  {
+    logk_trace("gpio error %d\n", grq->error);
+    return;
+  }
 
   /* Update gpio value */
   pv->current_state = !pv->current_state;
@@ -478,7 +478,8 @@ if (grq->error != 0)
 
 /***************************************** request */
 
-static bool push_button_accept_delayed_rq(struct push_button_context_s *pv, struct dev_valio_rq_s *rq)
+static bool push_button_accept_delayed_rq(struct push_button_context_s *pv,
+                                          struct dev_valio_rq_s *rq)
 {
   struct valio_button_update_s *data = (struct valio_button_update_s *)rq->data;
 
@@ -502,7 +503,8 @@ static bool push_button_accept_rq(struct push_button_context_s *pv, struct dev_v
   struct dev_valio_rq_s *prev_rq = dev_valio_rq_head(&pv->queue);
   rq->error = 0;
 
-  switch (rq->type) {
+  switch (rq->type)
+  {
     case DEVICE_VALIO_WRITE:
       rq->error = -ENOTSUP;
       break;
@@ -594,7 +596,6 @@ static DEV_VALIO_REQUEST(push_button_request)
 static DEV_INIT(push_button_init)
 {
   struct push_button_context_s *pv;
-
 
   /* allocate driver private context. */
   pv = mem_alloc(sizeof(*pv), (mem_scope_sys));
