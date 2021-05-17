@@ -417,33 +417,38 @@ static inline void rfpacket_error(struct dev_rfpacket_ctx_s *pv);
 static error_t rfpacket_check_config(struct dev_rfpacket_ctx_s *pv, struct dev_rfpacket_rq_s *rq);
 static void rfpacket_idle(struct dev_rfpacket_ctx_s *pv);
 
-static inline void rfpacket_set_state(struct dev_rfpacket_ctx_s *pv, enum dev_rfpacket_state_s state) {
+static inline void rfpacket_set_state(struct dev_rfpacket_ctx_s *pv, enum dev_rfpacket_state_s state)
+{
   logk_trace("state %d", state);
   pv->state = state;
 }
 
 // Transceiver is sleeping when this function is called
-static inline void rfpacket_check_wakeup(struct dev_rfpacket_ctx_s *pv) {
+static inline void rfpacket_check_wakeup(struct dev_rfpacket_ctx_s *pv)
+{
   bool_t empty = (dev_rq_queue_isempty(&pv->queue) && dev_rq_queue_isempty(&pv->rx_cont_queue));
 
-  if (!empty) {
-    if (pv->drv->wakeup(pv)) {
+  if (!empty)
+  {
+    if (pv->drv->wakeup(pv))
       rfpacket_set_state(pv, DEV_RFPACKET_STATE_AWAKING);
-    } else {
+    else
       UNREACHABLE();
-    }
-  } else {
-    logk_trace("sleeping");
   }
+  else
+    logk_trace("sleeping");
+
 }
 
-static inline void rfpacket_process_group(struct dev_rfpacket_ctx_s *pv, bool_t group) {
-  while (1) {
+static inline void rfpacket_process_group(struct dev_rfpacket_ctx_s *pv, bool_t group)
+{
+  while (1)
+  {
     struct dev_rfpacket_rq_s *rq = dev_rfpacket_rq_head(&pv->queue);
 
-    if (!rq || rq->err_group != group) {
+    if (!rq || rq->err_group != group)
       break;
-    }
+
     assert((rq->type != DEV_RFPACKET_RQ_RX_CONT) && (rq->type != DEV_RFPACKET_RQ_RX_TIMEOUT));
     rq->error = -ECANCELED;
     rq->base.drvdata = NULL;
@@ -452,54 +457,60 @@ static inline void rfpacket_process_group(struct dev_rfpacket_ctx_s *pv, bool_t 
   }
 }
 
-static inline void rfpacket_end_txrq(struct dev_rfpacket_ctx_s *pv) {
+static inline void rfpacket_end_txrq(struct dev_rfpacket_ctx_s *pv)
+{
   struct dev_rfpacket_rq_s *rq = dev_rfpacket_rq_head(&pv->queue);
 
 #ifdef CONFIG_DEVICE_RFPACKET_STATISTICS
   pv->stats.tx_count++;
 #endif
   rq->tx_timestamp = pv->timestamp;
-  if (rq->anchor == DEV_RFPACKET_TIMESTAMP_START) {
+  if (rq->anchor == DEV_RFPACKET_TIMESTAMP_START)
     rq->tx_timestamp -= rq->tx_size * pv->time_byte;
-  }
-  if (rq->type == DEV_RFPACKET_RQ_TX_FAIR) {
+
+  if (rq->type == DEV_RFPACKET_RQ_TX_FAIR)
     rq->tx_lbt_td = pv->timestamp - (rq->tx_size * pv->time_byte) - pv->lbt_timestamp;
-  }
+
 }
 
-static inline void rfpacket_end_rxrq(struct dev_rfpacket_ctx_s *pv) {
+static inline void rfpacket_end_rxrq(struct dev_rfpacket_ctx_s *pv)
+{
   struct dev_rfpacket_rx_s *rx = pv->rxrq;
   error_t err = 0;
 
-  if (rx == NULL) {
+  if (rx == NULL)
     return;
-  }
-  if (pv->status == DEV_RFPACKET_STATUS_CRC_ERR) {
+
+  if (pv->status == DEV_RFPACKET_STATUS_CRC_ERR)
     err = -EBADDATA;
-  } else if (pv->status == DEV_RFPACKET_STATUS_OTHER_ERR) {
+  else if (pv->status == DEV_RFPACKET_STATUS_OTHER_ERR)
     err = -EIO;
-  }
+
 #ifdef CONFIG_DEVICE_RFPACKET_STATISTICS
   pv->stats.rx_count++;
-  if (err) {
+  if (err)
     pv->stats.rx_err_count++;
-  }
+
 #endif
-  if (!err) {
+  if (!err)
+  {
     // Calculate timestamp
     rx->timestamp = pv->timestamp - (rx->timestamp * rx->size);
-  } else {
-    rx->size = 0;
   }
+  else
+    rx->size = 0;
+
   rx->error = err;
   kroutine_exec(&rx->kr);
   pv->rxrq = NULL;
 }
 
-static void rfpacket_end_rxc(struct dev_rfpacket_ctx_s *pv, error_t err) {
+static void rfpacket_end_rxc(struct dev_rfpacket_ctx_s *pv, error_t err)
+{
   struct dev_rfpacket_rq_s *rq = dev_rfpacket_rq_head(&pv->rx_cont_queue);
 
-  switch (pv->state) {
+  switch (pv->state)
+  {
     case DEV_RFPACKET_STATE_RXC:
     case DEV_RFPACKET_STATE_CONFIG_RXC:
     case DEV_RFPACKET_STATE_TX_LBT:
@@ -518,7 +529,8 @@ static void rfpacket_end_rxc(struct dev_rfpacket_ctx_s *pv, error_t err) {
   }
 }
 
-static void rfpacket_end_rq(struct dev_rfpacket_ctx_s *pv, error_t err) {
+static void rfpacket_end_rq(struct dev_rfpacket_ctx_s *pv, error_t err)
+{
   struct dev_rfpacket_rq_s *rq = dev_rfpacket_rq_head(&pv->queue);
 
   assert(rq && (rq->type != DEV_RFPACKET_RQ_RX_CONT) && (rq->type != DEV_RFPACKET_RQ_RX_TIMEOUT));
@@ -528,17 +540,17 @@ static void rfpacket_end_rq(struct dev_rfpacket_ctx_s *pv, error_t err) {
   dev_rfpacket_rq_done(rq);
   pv->rq_flags = 0;
 
-  if (rq->error) {
+  if (rq->error)
     rfpacket_process_group(pv, rq->err_group);
-  }
-  switch (pv->state) {
+
+  switch (pv->state)
+  {
     case DEV_RFPACKET_STATE_TX_LBT:
       // Check if we need to end rxc
-      if (pv->rxc_flags & (bit(RFPACKET_FLAG_CANCELED) | bit(RFPACKET_FLAG_TIMEOUT))) {
+      if (pv->rxc_flags & (bit(RFPACKET_FLAG_CANCELED) | bit(RFPACKET_FLAG_TIMEOUT)))
         rfpacket_end_rxc(pv, 0);
-      } else {
+      else
         rfpacket_idle(pv);
-      }
     break;
 
     default:
@@ -547,19 +559,22 @@ static void rfpacket_end_rq(struct dev_rfpacket_ctx_s *pv, error_t err) {
   }
 }
 
-static inline void rfpacket_start_rx(struct dev_rfpacket_ctx_s *pv, struct dev_rfpacket_rq_s *rq) {
+static inline void rfpacket_start_rx(struct dev_rfpacket_ctx_s *pv, struct dev_rfpacket_rq_s *rq)
+{
   assert(rq && (pv->state == DEV_RFPACKET_STATE_READY));
   pv->rq = rq;
   // Get timer value
   dev_timer_value_t t;
   pv->drv->get_time(pv, &t);
 
-  switch (rq->type) {
+  switch (rq->type)
+  {
     case DEV_RFPACKET_RQ_RX:
       pv->deadline = rq->deadline ? rq->deadline : t;
       pv->timeout = pv->deadline + rq->lifetime;
       logk_trace("R");
-      if (t >= pv->timeout) {
+      if (t >= pv->timeout)
+      {
         // Timeout date is already reached
         return rfpacket_end_rq(pv, -ETIMEDOUT);
       }
@@ -583,7 +598,8 @@ static inline void rfpacket_start_rx(struct dev_rfpacket_ctx_s *pv, struct dev_r
   pv->drv->rx(pv, rq, false);
 }
 
-static inline void rfpacket_retry_rx(struct dev_rfpacket_ctx_s *pv) {
+static inline void rfpacket_retry_rx(struct dev_rfpacket_ctx_s *pv)
+{
   struct dev_rfpacket_rq_s * rq = dev_rfpacket_rq_head(&pv->queue);
   assert(pv->state == DEV_RFPACKET_STATE_RX);
   assert(rq && (rq->type == DEV_RFPACKET_RQ_RX));
@@ -593,7 +609,8 @@ static inline void rfpacket_retry_rx(struct dev_rfpacket_ctx_s *pv) {
   dev_timer_value_t t;
   pv->drv->get_time(pv, &t);
   // Check for timeout
-  if (t >= pv->timeout) {
+  if (t >= pv->timeout)
+  {
     rfpacket_end_rq(pv, 0);
     return;
   }
@@ -601,7 +618,8 @@ static inline void rfpacket_retry_rx(struct dev_rfpacket_ctx_s *pv) {
   pv->drv->rx(pv, rq, true);
 }
 
-static inline void rfpacket_start_tx(struct dev_rfpacket_ctx_s *pv, struct dev_rfpacket_rq_s *rq) {
+static inline void rfpacket_start_tx(struct dev_rfpacket_ctx_s *pv, struct dev_rfpacket_rq_s *rq)
+{
   assert(rq && (rq->tx_size < DEV_RFPACKET_MAX_PACKET_SIZE));
   assert(pv->state == DEV_RFPACKET_STATE_READY);
   pv->rq = rq;
@@ -613,11 +631,13 @@ static inline void rfpacket_start_tx(struct dev_rfpacket_ctx_s *pv, struct dev_r
   // Set deadline
   pv->deadline = rq->deadline ? rq->deadline : t;
 
-  switch (rq->type) {
+  switch (rq->type)
+  {
     case DEV_RFPACKET_RQ_TX_FAIR:
       pv->timeout = pv->deadline + rq->lifetime;
       logk_trace("TF");
-      if (t >= pv->timeout) {
+      if (t >= pv->timeout)
+      {
         // Timeout date is already reached
         return rfpacket_end_rq(pv, -ETIMEDOUT);
       }
@@ -640,7 +660,8 @@ static inline void rfpacket_start_tx(struct dev_rfpacket_ctx_s *pv, struct dev_r
 }
 
 // TX with LBT has been interrupted
-static inline void rfpacket_retry_tx(struct dev_rfpacket_ctx_s *pv, bool_t restart) {
+static inline void rfpacket_retry_tx(struct dev_rfpacket_ctx_s *pv, bool_t restart)
+{
   struct dev_rfpacket_rq_s *rq = dev_rfpacket_rq_head(&pv->queue);
   assert(rq && rq->type == DEV_RFPACKET_RQ_TX_FAIR);
 
@@ -648,20 +669,27 @@ static inline void rfpacket_retry_tx(struct dev_rfpacket_ctx_s *pv, bool_t resta
   pv->size = rq->tx_size;
   pv->buffer = (uint8_t *)rq->tx_buf;
 
-  switch (pv->state) {
-    case DEV_RFPACKET_STATE_TX_LBT: {
+  switch (pv->state)
+  {
+    case DEV_RFPACKET_STATE_TX_LBT:
+    {
       // Get time value
       dev_timer_value_t t;
       pv->drv->get_time(pv, &t);
-      if (t >= pv->timeout) {
+
+      if (t >= pv->timeout)
+      {
         // Timeout date is already reached
         rfpacket_end_rq(pv, -ETIMEDOUT);
         return;
       }
-      if (restart) {
+      if (restart)
+      {
         // TX has been interrupted by an error
         pv->drv->tx(pv, rq, false);
-      } else {
+      }
+      else
+      {
         // TX has been interrupted by a received packet
         pv->drv->tx(pv, rq, true);
       }
@@ -674,12 +702,14 @@ static inline void rfpacket_retry_tx(struct dev_rfpacket_ctx_s *pv, bool_t resta
 }
 
 // Transceiver is idle when this function is called
-static inline void rfpacket_error(struct dev_rfpacket_ctx_s *pv) {
+static inline void rfpacket_error(struct dev_rfpacket_ctx_s *pv)
+{
   logk_trace("error %d", pv->state);
   // Terminate allocated rx request
   rfpacket_end_rxrq(pv);
 
-  switch (pv->state) {
+  switch (pv->state)
+  {
     case DEV_RFPACKET_STATE_TX:
       rfpacket_end_rq(pv, -EIO);
     break;
@@ -702,15 +732,20 @@ static inline void rfpacket_error(struct dev_rfpacket_ctx_s *pv) {
   }
 }
 
-static error_t rfpacket_check_config(struct dev_rfpacket_ctx_s *pv, struct dev_rfpacket_rq_s *rq) {
-  switch (rq->type) {
-    case DEV_RFPACKET_RQ_RX_TIMEOUT: {
+static error_t rfpacket_check_config(struct dev_rfpacket_ctx_s *pv, struct dev_rfpacket_rq_s *rq)
+{
+  switch (rq->type)
+  {
+    case DEV_RFPACKET_RQ_RX_TIMEOUT:
+    {
       // Set state to pass assert in case of timeout
       rfpacket_set_state(pv, DEV_RFPACKET_STATE_CONFIG_RXC);
       // Get time value
       dev_timer_value_t t;
       pv->drv->get_time(pv, &t);
-      if (t >= rq->deadline) {
+
+      if (t >= rq->deadline)
+      {
         // Timeout date is already reached
         return -ETIMEDOUT;
       }
@@ -728,19 +763,24 @@ static error_t rfpacket_check_config(struct dev_rfpacket_ctx_s *pv, struct dev_r
 }
 
 // Transceiver is idle
-static void rfpacket_idle(struct dev_rfpacket_ctx_s *pv) {
+static void rfpacket_idle(struct dev_rfpacket_ctx_s *pv)
+{
   struct dev_rfpacket_rq_s *rq = dev_rfpacket_rq_head(&pv->queue);
   rfpacket_set_state(pv, DEV_RFPACKET_STATE_READY);
 
-  if (!rq) {
+  if (!rq)
+  {
     // No request, check for rxc
     rq = dev_rfpacket_rq_head(&pv->rx_cont_queue);
   }
-  if (!rq) {
+  if (!rq)
+  {
     // No request to do
     pv->drv->idle(pv);
     return;
-  } else {
+  }
+  else
+  {
     // Clear pause flag as we're restarting rxc
     BIT_CLEAR(pv->rxc_flags, RFPACKET_FLAG_PAUSED);
   }
@@ -748,7 +788,8 @@ static void rfpacket_idle(struct dev_rfpacket_ctx_s *pv) {
   logk_trace("idle %d", rq->type);
 
   // Check transceiver configuration
-  switch (rfpacket_check_config(pv, rq)) {
+  switch (rfpacket_check_config(pv, rq))
+  {
     case -EAGAIN:
       // Configuration is being applied
       return;
@@ -769,7 +810,8 @@ static void rfpacket_idle(struct dev_rfpacket_ctx_s *pv) {
       rfpacket_set_state(pv, DEV_RFPACKET_STATE_READY);
     break;
   }
-  switch (rq->type) {
+  switch (rq->type)
+  {
     case DEV_RFPACKET_RQ_TX_FAIR:
       pv->lbt_timestamp = 0;
     case DEV_RFPACKET_RQ_TX:
@@ -791,15 +833,18 @@ static void rfpacket_idle(struct dev_rfpacket_ctx_s *pv) {
 
 
 config_depend(CONFIG_DEVICE_RFPACKET)
-bool_t dev_rfpacket_init_done(struct dev_rfpacket_ctx_s *pv) {
+bool_t dev_rfpacket_init_done(struct dev_rfpacket_ctx_s *pv)
+{
   return (pv->state != DEV_RFPACKET_STATE_INITIALIZING);
 }
 
 config_depend(CONFIG_DEVICE_RFPACKET)
-void dev_rfpacket_config_notsup(struct dev_rfpacket_ctx_s *pv, struct dev_rfpacket_rq_s *rq) {
+void dev_rfpacket_config_notsup(struct dev_rfpacket_ctx_s *pv, struct dev_rfpacket_rq_s *rq)
+{
   logk_trace("Unsupported configuration.");
 
-  switch (rq->type) {
+  switch (rq->type)
+  {
     case DEV_RFPACKET_RQ_RX_CONT:
     case DEV_RFPACKET_RQ_RX_TIMEOUT:
       rfpacket_end_rxc(pv, -ENOTSUP);
@@ -812,29 +857,33 @@ void dev_rfpacket_config_notsup(struct dev_rfpacket_ctx_s *pv, struct dev_rfpack
 }
 
 config_depend(CONFIG_DEVICE_RFPACKET)
-bool_t dev_rfpacket_can_rxtx(struct dev_rfpacket_ctx_s *pv, struct dev_rfpacket_rq_s *rq) {
-    struct dev_rfpacket_rq_s *rx_cont = dev_rfpacket_rq_head(&pv->rx_cont_queue);
-    // Check if possible to rx while txlbt (rq and rx_cont configs and channels are the same)
-    if (rx_cont && (rq->rf_cfg == rx_cont->rf_cfg) && (rq->pk_cfg == rx_cont->pk_cfg)
-        && (rq->channel == rx_cont->channel)) {
-      return true;
-    }
-    return false;
-}
+bool_t dev_rfpacket_can_rxtx(struct dev_rfpacket_ctx_s *pv, struct dev_rfpacket_rq_s *rq)
+{
+  struct dev_rfpacket_rq_s *rx_cont = dev_rfpacket_rq_head(&pv->rx_cont_queue);
+  // Check if possible to rx while txlbt (rq and rx_cont configs and channels are the same)
+  if (rx_cont && (rq->rf_cfg == rx_cont->rf_cfg) && (rq->pk_cfg == rx_cont->pk_cfg)
+      && (rq->channel == rx_cont->channel))
+    return true;
 
-config_depend(CONFIG_DEVICE_RFPACKET)
-bool_t dev_rfpacket_is_packet_incoming(struct dev_rfpacket_ctx_s *pv) {
-  if (pv->rq_flags & bit(RFPACKET_FLAG_PENDING_RX)) {
-    return true;
-  } else if (pv->rxc_flags & bit(RFPACKET_FLAG_PENDING_RX)) {
-    return true;
-  }
   return false;
 }
 
 config_depend(CONFIG_DEVICE_RFPACKET)
-void dev_rfpacket_packet_incoming(struct dev_rfpacket_ctx_s *pv) {
-  switch (pv->state) {
+bool_t dev_rfpacket_is_packet_incoming(struct dev_rfpacket_ctx_s *pv)
+{
+  if (pv->rq_flags & bit(RFPACKET_FLAG_PENDING_RX))
+    return true;
+  else if (pv->rxc_flags & bit(RFPACKET_FLAG_PENDING_RX))
+    return true;
+
+  return false;
+}
+
+config_depend(CONFIG_DEVICE_RFPACKET)
+void dev_rfpacket_packet_incoming(struct dev_rfpacket_ctx_s *pv)
+{
+  switch (pv->state)
+  {
     case DEV_RFPACKET_STATE_RX:
     case DEV_RFPACKET_STATE_TX_LBT:
       BIT_SET(pv->rq_flags, RFPACKET_FLAG_PENDING_RX);
@@ -851,15 +900,16 @@ void dev_rfpacket_packet_incoming(struct dev_rfpacket_ctx_s *pv) {
 }
 
 config_depend(CONFIG_DEVICE_RFPACKET)
-void dev_rfpacket_rxtx_timeout(struct dev_rfpacket_ctx_s *pv) {
-  switch (pv->state) {
+void dev_rfpacket_rxtx_timeout(struct dev_rfpacket_ctx_s *pv)
+{
+  switch (pv->state)
+  {
     case DEV_RFPACKET_STATE_RX:
     case DEV_RFPACKET_STATE_TX_LBT:
-      if (pv->rq_flags & bit(RFPACKET_FLAG_PENDING_RX)) {
+      if (pv->rq_flags & bit(RFPACKET_FLAG_PENDING_RX))
         BIT_SET(pv->rq_flags, RFPACKET_FLAG_TIMEOUT);
-      } else {
+      else
         dev_rfpacket_req_done(pv);
-      }
     break;
 
     default:
@@ -869,21 +919,25 @@ void dev_rfpacket_rxtx_timeout(struct dev_rfpacket_ctx_s *pv) {
 }
 
 config_depend(CONFIG_DEVICE_RFPACKET)
-void dev_rfpacket_rxc_timeout(struct dev_rfpacket_ctx_s *pv) {
+void dev_rfpacket_rxc_timeout(struct dev_rfpacket_ctx_s *pv)
+{
   struct dev_rfpacket_rq_s *rqc = dev_rfpacket_rq_head(&pv->rx_cont_queue);
   dev_timer_value_t t;
 
-  if (rqc) {
+  if (rqc)
+  {
     // Check if timeout is not from previous request
     pv->drv->get_time(pv, &t);
-    if (rqc->deadline > t) {
+    if (rqc->deadline > t)
       return;
-    }
-    switch (pv->state) {
+
+    switch (pv->state)
+    {
       case DEV_RFPACKET_STATE_RXC:
-        if (pv->rxc_flags & bit(RFPACKET_FLAG_PENDING_RX)) {
+        if (pv->rxc_flags & bit(RFPACKET_FLAG_PENDING_RX))
           BIT_SET(pv->rxc_flags, RFPACKET_FLAG_TIMEOUT);
-        } else {
+        else
+        {
           BIT_SET(pv->rxc_flags, RFPACKET_FLAG_TIMEOUT);
           pv->drv->cancel_rxc(pv);
         }
@@ -901,27 +955,33 @@ void dev_rfpacket_rxc_timeout(struct dev_rfpacket_ctx_s *pv) {
 }
 
 config_depend(CONFIG_DEVICE_RFPACKET)
-void dev_rfpacket_request(struct dev_rfpacket_ctx_s *pv, struct dev_rfpacket_rq_s *rq) {
+void dev_rfpacket_request(struct dev_rfpacket_ctx_s *pv, struct dev_rfpacket_rq_s *rq)
+{
   rq->error = 0;
   logk_trace("req %d", rq->type);
 
-  switch (rq->type) {
+  switch (rq->type)
+  {
     case DEV_RFPACKET_RQ_RX_TIMEOUT:
-      if (rq->lifetime != 0) {
+      if (rq->lifetime != 0)
+      {
         dev_timer_value_t t;
         pv->drv->get_time(pv, &t);
         rq->deadline = t + rq->lifetime;
       }
     case DEV_RFPACKET_RQ_RX_CONT:
-      if (rq->type == DEV_RFPACKET_RQ_RX_CONT) {
+      if (rq->type == DEV_RFPACKET_RQ_RX_CONT)
         rq->deadline = -1;
-      }
+
       // Check if rxcont queue empty
-      if (dev_rq_queue_isempty(&pv->rx_cont_queue)) {
+      if (dev_rq_queue_isempty(&pv->rx_cont_queue))
+      {
         // Note pvdata
         rq->base.drvdata = pv;
+
         // Check current state
-        switch (pv->state) {
+        switch (pv->state)
+        {
           case DEV_RFPACKET_STATE_READY:
             dev_rfpacket_rq_insert(&pv->rx_cont_queue, rq);
             rfpacket_idle(pv);
@@ -929,11 +989,12 @@ void dev_rfpacket_request(struct dev_rfpacket_ctx_s *pv, struct dev_rfpacket_rq_
 
           case DEV_RFPACKET_STATE_SLEEP:
             assert(dev_rq_queue_isempty(&pv->rx_cont_queue));
-            if (pv->drv->wakeup(pv)) {
+            if (pv->drv->wakeup(pv))
               rfpacket_set_state(pv, DEV_RFPACKET_STATE_AWAKING);
-            } else {
+
+            else
               UNREACHABLE();
-            }
+
           case DEV_RFPACKET_STATE_ENTER_SLEEP:
           case DEV_RFPACKET_STATE_AWAKING:
           case DEV_RFPACKET_STATE_CONFIG:
@@ -951,7 +1012,9 @@ void dev_rfpacket_request(struct dev_rfpacket_ctx_s *pv, struct dev_rfpacket_rq_
             UNREACHABLE();
           break;
         }
-      } else {
+      }
+      else
+      {
         // Return -EBUSY, only one rxc at a time
         rq->error = -EBUSY;
         dev_rfpacket_rq_done(rq);
@@ -960,19 +1023,22 @@ void dev_rfpacket_request(struct dev_rfpacket_ctx_s *pv, struct dev_rfpacket_rq_
 
     case DEV_RFPACKET_RQ_RX:
     case DEV_RFPACKET_RQ_TX_FAIR:
-    case DEV_RFPACKET_RQ_TX: {
+    case DEV_RFPACKET_RQ_TX:
+    {
       bool_t empty = dev_rq_queue_isempty(&pv->queue);
       dev_rfpacket_rq_pushback(&pv->queue, rq);
       rq->base.drvdata = pv;
 
-      if (!empty) {
+      if (!empty)
         break;
-      }
-      switch (pv->state) {
+
+      switch (pv->state)
+      {
         case DEV_RFPACKET_STATE_RXC:
           assert(!dev_rq_queue_isempty(&pv->rx_cont_queue));
           assert(rq->deadline == 0);
-          if (!(pv->rxc_flags & bit(RFPACKET_FLAG_PENDING_RX))) {
+          if (!(pv->rxc_flags & bit(RFPACKET_FLAG_PENDING_RX)))
+          {
             BIT_SET(pv->rxc_flags, RFPACKET_FLAG_PAUSED);
             pv->drv->cancel_rxc(pv);
           }
@@ -983,11 +1049,12 @@ void dev_rfpacket_request(struct dev_rfpacket_ctx_s *pv, struct dev_rfpacket_rq_
         break;
 
         case DEV_RFPACKET_STATE_SLEEP:
-          if (pv->drv->wakeup(pv)) {
+          if (pv->drv->wakeup(pv))
             rfpacket_set_state(pv, DEV_RFPACKET_STATE_AWAKING);
-          } else {
+
+          else
             UNREACHABLE();
-          }
+
         case DEV_RFPACKET_STATE_ENTER_SLEEP:
         case DEV_RFPACKET_STATE_INITIALIZING:
         default:
@@ -998,19 +1065,23 @@ void dev_rfpacket_request(struct dev_rfpacket_ctx_s *pv, struct dev_rfpacket_rq_
 }
 
 config_depend(CONFIG_DEVICE_RFPACKET)
-error_t dev_rfpacket_cancel(struct dev_rfpacket_ctx_s *pv, struct dev_rfpacket_rq_s *rq) {
+error_t dev_rfpacket_cancel(struct dev_rfpacket_ctx_s *pv, struct dev_rfpacket_rq_s *rq)
+{
   struct dev_rfpacket_rq_s *hrq = dev_rfpacket_rq_head(&pv->queue);
   struct dev_rfpacket_rq_s *hrqcont = dev_rfpacket_rq_head(&pv->rx_cont_queue);
   error_t err = -EBUSY;
 
   logk_trace("cancel %d", rq->type);
-  if (rq == hrqcont) {
-    switch (pv->state) {
+
+  if (rq == hrqcont)
+  {
+    switch (pv->state)
+    {
       case DEV_RFPACKET_STATE_RXC:
         // Check if not pending rx
-        if (!(pv->rxc_flags & (bit(RFPACKET_FLAG_PENDING_RX) | bit(RFPACKET_FLAG_PAUSED)))) {
+        if (!(pv->rxc_flags & (bit(RFPACKET_FLAG_PENDING_RX) | bit(RFPACKET_FLAG_PAUSED))))
           pv->drv->cancel_rxc(pv);
-        }
+
       case DEV_RFPACKET_STATE_CONFIG_RXC:
       case DEV_RFPACKET_STATE_TX_LBT:
         // Set rxc request as canceled
@@ -1023,11 +1094,14 @@ error_t dev_rfpacket_cancel(struct dev_rfpacket_ctx_s *pv, struct dev_rfpacket_r
         dev_rfpacket_rq_remove(&pv->rx_cont_queue, rq);
       break;
     }
-  } else if ((rq->base.drvdata == pv) && (rq != hrq)) {
+  }
+  else if ((rq->base.drvdata == pv) && (rq != hrq))
+  {
     // Request is in queue and is not being processed
     err = 0;
     rq->base.drvdata = NULL;
-    switch (rq->type) {
+    switch (rq->type)
+    {
       case DEV_RFPACKET_RQ_TX:
       case DEV_RFPACKET_RQ_TX_FAIR:
       case DEV_RFPACKET_RQ_RX:
@@ -1044,10 +1118,12 @@ error_t dev_rfpacket_cancel(struct dev_rfpacket_ctx_s *pv, struct dev_rfpacket_r
 }
 
 config_depend(CONFIG_DEVICE_RFPACKET)
-uintptr_t dev_rfpacket_alloc(struct dev_rfpacket_ctx_s *pv) {
+uintptr_t dev_rfpacket_alloc(struct dev_rfpacket_ctx_s *pv)
+{
   struct dev_rfpacket_rq_s *rq;
 
-  switch (pv->state) {
+  switch (pv->state)
+  {
     case DEV_RFPACKET_STATE_RX:
       rq = dev_rfpacket_rq_head(&pv->queue);
     break;
@@ -1061,22 +1137,26 @@ uintptr_t dev_rfpacket_alloc(struct dev_rfpacket_ctx_s *pv) {
       UNREACHABLE();
     break;
   }
-  if (rq == NULL) {
+  if (rq == NULL)
+  {
     logk_trace("alloc req null");
     return 0;
   }
   struct dev_rfpacket_rx_s *rx = rq->rx_alloc(rq, pv->size);
-  if (rx == NULL) {
+
+  if (rx == NULL)
+  {
     logk_trace("alloc rx null");
     return 0;
   }
   rx->channel = rq->channel;
+
   // Note anchor status for end rxrq function
-  if (rq->anchor == DEV_RFPACKET_TIMESTAMP_START) {
+  if (rq->anchor == DEV_RFPACKET_TIMESTAMP_START)
     rx->timestamp = pv->time_byte;
-  } else {
+  else
     rx->timestamp = 0;
-  }
+
   pv->rxrq = rx;
   pv->buffer = (uint8_t*)rx->buf;
 
@@ -1086,13 +1166,17 @@ uintptr_t dev_rfpacket_alloc(struct dev_rfpacket_ctx_s *pv) {
 }
 
 config_depend(CONFIG_DEVICE_RFPACKET)
-void dev_rfpacket_req_done(struct dev_rfpacket_ctx_s *pv) {
-  if (pv->status == DEV_RFPACKET_STATUS_OTHER_ERR) {
+void dev_rfpacket_req_done(struct dev_rfpacket_ctx_s *pv)
+{
+  if (pv->status == DEV_RFPACKET_STATUS_OTHER_ERR)
+  {
       rfpacket_error(pv);
       return;
   }
   logk_trace("req done %d", pv->state);
-  switch (pv->state) {
+
+  switch (pv->state)
+  {
     case DEV_RFPACKET_STATE_ENTER_SLEEP:
       rfpacket_set_state(pv, DEV_RFPACKET_STATE_SLEEP);
       rfpacket_check_wakeup(pv);
@@ -1104,11 +1188,10 @@ void dev_rfpacket_req_done(struct dev_rfpacket_ctx_s *pv) {
     break;
 
     case DEV_RFPACKET_STATE_CONFIG_RXC:
-      if (pv->rxc_flags & bit(RFPACKET_FLAG_CANCELED)) {
+      if (pv->rxc_flags & bit(RFPACKET_FLAG_CANCELED))
         rfpacket_end_rxc(pv, 0);
-      } else {
+      else
         rfpacket_idle(pv);
-      }
     break;
 
     case DEV_RFPACKET_STATE_INITIALIZING:
@@ -1117,36 +1200,47 @@ void dev_rfpacket_req_done(struct dev_rfpacket_ctx_s *pv) {
     break;
 
     case DEV_RFPACKET_STATE_RX:
-      if (pv->status == DEV_RFPACKET_STATUS_RX_TIMEOUT) {
+      if (pv->status == DEV_RFPACKET_STATUS_RX_TIMEOUT)
+      {
         rfpacket_end_rxrq(pv);
         rfpacket_end_rq(pv, 0);
-      } else {
+      }
+      else
+      {
         // Check for weird cases
         assert((pv->status != DEV_RFPACKET_STATUS_TX_DONE) && (pv->status != DEV_RFPACKET_STATUS_TX_TIMEOUT));
         // Rx related event
         BIT_CLEAR(pv->rq_flags, RFPACKET_FLAG_PENDING_RX);
         rfpacket_end_rxrq(pv);
+
         // Check if timeout occurred while receiving packet
-        if (pv->rq_flags & bit(RFPACKET_FLAG_TIMEOUT)) {
+        if (pv->rq_flags & bit(RFPACKET_FLAG_TIMEOUT))
           rfpacket_end_rq(pv, -ETIMEDOUT);
-        } else {
+        else
           rfpacket_retry_rx(pv);
-        }
+
       }
     break;
 
     case DEV_RFPACKET_STATE_RXC:
-      if (pv->status == DEV_RFPACKET_STATUS_JAMMING_ERR) {
+      if (pv->status == DEV_RFPACKET_STATUS_JAMMING_ERR)
+      {
         logk_trace("jammed");
         assert(pv->rxrq == NULL);
         rfpacket_end_rxc(pv, -EBUSY);
-      } else if (pv->rxc_flags & (bit(RFPACKET_FLAG_CANCELED) | bit(RFPACKET_FLAG_TIMEOUT))) {
+      }
+      else if (pv->rxc_flags & (bit(RFPACKET_FLAG_CANCELED) | bit(RFPACKET_FLAG_TIMEOUT)))
+      {
         rfpacket_end_rxrq(pv);
         rfpacket_end_rxc(pv, 0);
-      } else if (pv->status == DEV_RFPACKET_STATUS_RX_TIMEOUT) {
+      }
+      else if (pv->status == DEV_RFPACKET_STATUS_RX_TIMEOUT)
+      {
         rfpacket_end_rxrq(pv);
         rfpacket_end_rxc(pv, 0);
-      } else {
+      }
+      else
+      {
         // Check for weird cases
         assert((pv->status != DEV_RFPACKET_STATUS_TX_DONE) && (pv->status != DEV_RFPACKET_STATUS_TX_TIMEOUT));
         // Rx related event or cancel rxc
@@ -1157,28 +1251,36 @@ void dev_rfpacket_req_done(struct dev_rfpacket_ctx_s *pv) {
     break;
 
     case DEV_RFPACKET_STATE_TX_LBT:
-      if (pv->status == DEV_RFPACKET_STATUS_TX_TIMEOUT) {
+      if (pv->status == DEV_RFPACKET_STATUS_TX_TIMEOUT)
+      {
 #ifdef CONFIG_DEVICE_RFPACKET_STATISTICS
         pv->stats.tx_err_count++;
 #endif
         rfpacket_end_rq(pv, -ETIMEDOUT);
-      } else if (pv->status == DEV_RFPACKET_STATUS_TX_DONE) {
+      }
+      else if (pv->status == DEV_RFPACKET_STATUS_TX_DONE)
+      {
         // Packet has been transmitted
         rfpacket_end_txrq(pv);
         rfpacket_end_rq(pv, 0);
-      } else {
+      }
+      else
+      {
         // Rx related event
         BIT_CLEAR(pv->rq_flags, RFPACKET_FLAG_PENDING_RX);
         rfpacket_end_rxrq(pv);
+
         // Check if timeout occurred while receiving packet
-        if (pv->rq_flags & bit(RFPACKET_FLAG_TIMEOUT)) {
+        if (pv->rq_flags & bit(RFPACKET_FLAG_TIMEOUT))
+        {
 #ifdef CONFIG_DEVICE_RFPACKET_STATISTICS
           pv->stats.tx_err_count++;
 #endif
           rfpacket_end_rq(pv, -ETIMEDOUT);
-        } else {
-          rfpacket_retry_tx(pv, false);
         }
+        else
+          rfpacket_retry_tx(pv, false);
+
       }
     break;
 
@@ -1198,16 +1300,20 @@ void dev_rfpacket_req_done(struct dev_rfpacket_ctx_s *pv) {
 }
 
 config_depend(CONFIG_DEVICE_RFPACKET)
-error_t dev_rfpacket_use(void *param, enum dev_use_op_e op, struct dev_rfpacket_ctx_s *pv) {
-  switch (op) {
+error_t dev_rfpacket_use(void *param, enum dev_use_op_e op, struct dev_rfpacket_ctx_s *pv)
+{
+  switch (op)
+  {
 #ifdef CONFIG_DEVICE_SLEEP
     case DEV_USE_SLEEP:
-      switch (pv->state) {
+      switch (pv->state)
+      {
         case DEV_RFPACKET_STATE_READY:
           logk_trace("sleep");
-          if (pv->drv->sleep(pv)) {
+
+          if (pv->drv->sleep(pv))
             rfpacket_set_state(pv, DEV_RFPACKET_STATE_ENTER_SLEEP);
-          }
+
           break;
 
         default:
@@ -1221,7 +1327,8 @@ error_t dev_rfpacket_use(void *param, enum dev_use_op_e op, struct dev_rfpacket_
 }
 
 config_depend(CONFIG_DEVICE_RFPACKET)
-void dev_rfpacket_init(struct dev_rfpacket_ctx_s *pv) {
+void dev_rfpacket_init(struct dev_rfpacket_ctx_s *pv)
+{
   // State init
   rfpacket_set_state(pv, DEV_RFPACKET_STATE_INITIALIZING);
   // Queue init
@@ -1232,8 +1339,10 @@ void dev_rfpacket_init(struct dev_rfpacket_ctx_s *pv) {
 }
 
 config_depend(CONFIG_DEVICE_RFPACKET)
-error_t dev_rfpacket_clean_check(struct dev_rfpacket_ctx_s *pv) {
-  switch (pv->state) {
+error_t dev_rfpacket_clean_check(struct dev_rfpacket_ctx_s *pv)
+{
+  switch (pv->state)
+  {
     case DEV_RFPACKET_STATE_SLEEP:
     case DEV_RFPACKET_STATE_READY:
       assert(dev_rq_queue_isempty(&pv->queue));
@@ -1246,7 +1355,8 @@ error_t dev_rfpacket_clean_check(struct dev_rfpacket_ctx_s *pv) {
 }
 
 config_depend(CONFIG_DEVICE_RFPACKET)
-void dev_rfpacket_clean(struct dev_rfpacket_ctx_s *pv) {
+void dev_rfpacket_clean(struct dev_rfpacket_ctx_s *pv)
+{
   dev_rq_queue_destroy(&pv->queue);
   dev_rq_queue_destroy(&pv->rx_cont_queue);
 }
