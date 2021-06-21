@@ -320,7 +320,6 @@ DRIVER_PV(struct si446x_ctx_s);
 #define CONFIG_DRIVER_RFPACKET_CLK_SOURCE
 
 #define GET_SI446X_XO_BYTE(x) ((CONFIG_DRIVER_RFPACKET_SI446X_FREQ_XO >> (x*8)) & 0xFF)
-#define SI446X_X0_TUNE_VALUE 0x30
 
 extern const uint8_t si446x_config[];
 
