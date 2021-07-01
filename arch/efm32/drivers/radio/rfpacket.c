@@ -583,8 +583,8 @@ static void efr32_rfp_ldc_irq(struct radio_efr32_rfp_ctx_s *ctx, uint32_t irq)
     uint32_t modem_status = cpu_mem_read_32(EFR32_MODEM_ADDR + EFR32_MODEM_IF_ADDR);
     // Ignore if tx
     if ((rac_state == EFR32_RAC_STATUS_STATE_TX) || (rac_state == EFR32_RAC_STATUS_STATE_TXWARM))
-    // Don't stop rx if rx incoming or preambule detected
-
+      return;
+    // Stop rx if no rx incoming or preambule detected
     else if ((rac_state != EFR32_RAC_STATUS_STATE_RXFRAME)
               && ((modem_status & EFR32_MODEM_IF_RXPREDET) == 0))
     {
