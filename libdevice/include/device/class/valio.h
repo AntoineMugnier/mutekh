@@ -239,7 +239,7 @@ DEV_REQUEST_INHERIT(valio); DEV_REQUEST_QUEUE_OPS(valio);
 /** @This enqueues a request.
 
    The kroutine of the request may be executed from within this
-   function. Please read @xref {Nested device request completion}. 
+   function. Please read @xref {Nested device request completion}.
 
    @xsee {Purpose} @see dev_valio_request_type_e
 */

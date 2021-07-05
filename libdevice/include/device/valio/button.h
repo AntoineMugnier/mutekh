@@ -44,15 +44,24 @@ enum valio_button_att {
     VALIO_BUTTON_TOGGLE = CONFIG_DEVICE_VALIO_BUTTON_ATTRIBUTE_FIRST,
     VALIO_BUTTON_PUSH,
     VALIO_BUTTON_RELEASE,
+    VALIO_BUTTON_REPEAT_PUSH,
+    VALIO_BUTTON_DELAYED_PUSH,
 };
 
-/* Return structure for @tt DEVICE_VALIO_WAIT_EVENT request type */ 
+typedef void (*valio_push_button_event_t)(struct dev_valio_rq_s *rq);
+
+/* Return structure for @tt DEVICE_VALIO_WAIT_EVENT request type */
 struct valio_button_update_s
 {
-  uint16_t timestamp;
+  bool isActive; // Active flag for delayed event
+  valio_push_button_event_t pb_event; // Callback for sustain event
+  union {
+    uint32_t delay; // delay value for repeat/delayed push event
+    uint32_t timestamp; // event timestamp
+  };
 };
 
-/* Return structure for @tt DEVICE_VALIO_READ request type */ 
+/* Return structure for @tt DEVICE_VALIO_READ request type */
 struct valio_button_read_s
 {
   bool_t state;

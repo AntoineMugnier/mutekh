@@ -497,7 +497,7 @@ DEV_VALIO_REQUEST(stm32_usart_valio_request)
   if (rq->type != DEVICE_VALIO_WRITE
       || rq->attribute != VALIO_UART_CONFIG) {
     rq->error = -ENOTSUP;
-    dev_valio_rq_done(req);
+    dev_valio_rq_done(rq);
   }
 
   struct dev_uart_config_s *cfg = rq->data;
@@ -525,7 +525,7 @@ DEV_VALIO_REQUEST(stm32_usart_valio_request)
     printk("uart: configuration left unchanged.\n");
 #endif
 
-  dev_valio_rq_done(req);
+  dev_valio_rq_done(rq);
 }
 
 #define stm32_usart_valio_cancel (dev_valio_cancel_t*)dev_driver_notsup_fcn
