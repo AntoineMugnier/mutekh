@@ -709,6 +709,11 @@ error_t dev_i2c_bytecode_start(struct device_i2c_ctrl_s *ctrl,
                                struct dev_i2c_ctrl_bytecode_rq_s *rq,
                                const void *pc, uint16_t mask, ...);
 
+config_depend(CONFIG_DEVICE_I2C_BYTECODE)
+error_t dev_i2c_bytecode_start_va(struct device_i2c_ctrl_s *ctrl,
+                               struct dev_i2c_ctrl_bytecode_rq_s *rq,
+                               const void *pc, uint16_t mask, va_list ap);
+
 /** @This initializes a I2C bytecode request. */
 config_depend_alwaysinline(CONFIG_DEVICE_I2C_BYTECODE,
 void dev_i2c_bytecode_init(struct dev_i2c_ctrl_bytecode_rq_s *rq),

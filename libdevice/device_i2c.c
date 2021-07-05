@@ -603,7 +603,6 @@ void dev_i2c_transaction_start(struct device_i2c_ctrl_s *ctrl,
 
 # ifdef CONFIG_DEVICE_I2C_BYTECODE
 
-static
 error_t dev_i2c_bytecode_start_va(struct device_i2c_ctrl_s *ctrl,
                                struct dev_i2c_ctrl_bytecode_rq_s *rq,
                                const void *pc, uint16_t mask, va_list ap)
