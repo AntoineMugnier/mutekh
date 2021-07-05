@@ -172,6 +172,7 @@ error_t mutek_shell_start(const struct device_char_s *c, const char *term,
     @see #TERMUI_CON_OPT_SHELL_BUFFER_GET_ENTRY */
 struct shell_opt_buffer_s
 {
+#ifdef CONFIG_MUTEK_SHELL
   /** pointer to storage */
   void *addr;
   /** size storage */
@@ -179,14 +180,17 @@ struct shell_opt_buffer_s
   /** this is set when the @ref shell_buffer_drop function must be
       called on cleanup. */
   uintptr_t buffered:1;
+#endif
 };
 
 /** @internal @see #TERMUI_CON_OPT_SHELL_BUFFER_GET_ENTRY */
 struct shell_opt_buffer_desc_s
 {
+#ifdef CONFIG_MUTEK_SHELL
   struct termui_con_opts_s opt;
   const void *type;
   uint16_t offset;
+#endif
 };
 
 /** @This calls @ref shell_buffer_new only if the @ref

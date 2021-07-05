@@ -20,8 +20,8 @@
 #include <device/device.h>
 #include <device/class/net.h>
 
-#include "gatt_client.h"
 #include <ble/profile/fluke/measurement.h>
+#include <ble/profile/fluke/client.h>
 #include <ble/profile/fluke/central.h>
 
 static void client_destroyed(void *delegate, struct net_layer_s *layer)
@@ -199,6 +199,7 @@ error_t fluke_central_init(struct fluke_central_s *fc,
   
   memset(fc, 0, sizeof(*fc));
 
+  fc->central_params.phy = BLE_PHY_1M;
   fc->central_params.scan_interval_ms = 800;
   fc->central_params.scan_duration_ms = 500;
   fc->central_params.conn.interval_min = 24;

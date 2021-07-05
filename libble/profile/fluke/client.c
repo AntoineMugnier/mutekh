@@ -25,8 +25,8 @@
 
 #include <ble/net/generic.h>
 
-#include "gatt_client.h"
 #include <ble/profile/fluke/measurement.h>
+#include <ble/profile/fluke/client.h>
 
 #define FLUKE_GATT_CLIENT_CHAR_MAX 4
 

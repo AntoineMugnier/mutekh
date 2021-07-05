@@ -191,35 +191,31 @@ error_t ble_stack_connection_create(struct ble_stack_connection_s *conn,
                                     const struct ble_stack_connection_handler_s *chandler,
                                     const struct ble_stack_context_handler_s *handler,
                                     bool_t is_master,
-                                    const struct ble_adv_connect_s *conn_params,
-                                    const struct ble_gap_preferred_conn_params_s *wanted_timing,
-                                    dev_timer_value_t anchor)
+                                    const struct ble_phy_params_s *phy_params,
+                                    const struct ble_gap_preferred_conn_params_s *wanted_timing)
 {
   error_t err;
   struct net_layer_s *phy, *l2cap, *signalling, *att, *gatt, *gap, *link, *llcp;
   uint16_t cid;
-  struct ble_phy_params_s phy_params;
 
 #if defined(CONFIG_BLE_CRYPTO)
   struct net_layer_s *sm;
 #endif
 
   conn->is_master = is_master;
-  phy_params.connect_packet_timestamp = anchor;
-  phy_params.conn_req = *conn_params;
 #if defined(CONFIG_BLE_CRYPTO)
   ble_security_db_load(&context->security_db,
-                       is_master ? &conn_params->slave : &conn_params->master,
+                       is_master ? &phy_params->conn_req.slave : &phy_params->conn_req.master,
                        &conn->peer);
 #else
   ble_peer_init(&conn->peer, NULL,
-                is_master ? &conn_params->slave : &conn_params->master);
+                is_master ? &phy_params->conn_req.slave : &phy_params->conn_req.master);
 #endif
 
   err = DEVICE_OP(&context->ble, layer_create,
                   &context->scheduler,
                   is_master ? BLE_NET_LAYER_MASTER : BLE_NET_LAYER_SLAVE,
-                  &phy_params,
+                  phy_params,
                   conn, &conn_phy_vtable.base,
                   &phy);
   if (err) {
@@ -263,16 +259,16 @@ error_t ble_stack_connection_create(struct ble_stack_connection_s *conn,
     .rng = &context->rng,
     .peer = &conn->peer,
 #endif
-    .conn_timing = conn_params->timing,
+    .conn_timing = phy_params->conn_req.timing,
   };
 
   if (wanted_timing) {
     llcp_params.wanted_timing = *wanted_timing;
   } else {
-    llcp_params.wanted_timing.interval_min = conn_params->timing.interval;
-    llcp_params.wanted_timing.interval_max = conn_params->timing.interval;
-    llcp_params.wanted_timing.latency = conn_params->timing.latency;
-    llcp_params.wanted_timing.timeout = conn_params->timing.timeout;
+    llcp_params.wanted_timing.interval_min = phy_params->conn_req.timing.interval;
+    llcp_params.wanted_timing.interval_max = phy_params->conn_req.timing.interval;
+    llcp_params.wanted_timing.latency = phy_params->conn_req.timing.latency;
+    llcp_params.wanted_timing.timeout = phy_params->conn_req.timing.timeout;
   }
 
   err = ble_llcp_create(&context->scheduler, &llcp_params, conn, &conn_llcp_vtable.base, &llcp);
@@ -296,9 +292,9 @@ error_t ble_stack_connection_create(struct ble_stack_connection_s *conn,
   };
 
   if (is_master)
-    sm_params.local_addr = conn_params->master;
+    sm_params.local_addr = phy_params->conn_req.master;
   else
-    sm_params.local_addr = conn_params->slave;
+    sm_params.local_addr = phy_params->conn_req.slave;
     
   err = ble_sm_create(&context->scheduler, &sm_params, conn, &conn_sm_vtable.base, &sm);
   if (err) {
@@ -406,7 +402,7 @@ error_t ble_stack_connection_create(struct ble_stack_connection_s *conn,
     conn->phy = phy;
     conn->llcp = llcp;
     conn->att = att;
-    conn->connection_tk = anchor;
+    conn->connection_tk = phy_params->connect_packet_timestamp;
     conn->chandler = chandler;
     conn->handler = handler;
     conn_state_update(conn);

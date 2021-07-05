@@ -45,7 +45,7 @@ enum nrf5x_flash_bank
 
 struct nrf5x_nvmc_private_s
 {
-  struct dev_mem_flash_op_info_s flash_info
+  struct dev_mem_flash_op_info_s flash_info;
 };
 
 DRIVER_PV(struct nrf5x_nvmc_private_s);
@@ -109,7 +109,7 @@ static DEV_MEM_INFO(nrf5x_nvmc_info)
 static DEV_MEM_REQUEST(nrf5x_nvmc_request)
 {
   struct device_s *dev = accessor->dev;
-  struct nrf5x_nvmc_context_s *pv = dev->drv_pv;
+  struct nrf5x_nvmc_private_s *pv = dev->drv_pv;
   static const struct dev_mem_flash_op_info_s uicr_info = {
     .base = NRF_UICR_BASE,
     .end = NRF_UICR_BASE + 128,
@@ -158,7 +158,7 @@ static DEV_USE(nrf5x_nvmc_use)
 
 static DEV_INIT(nrf5x_nvmc_init)
 {
-  struct nrf5x_nvmc_context_s	*pv;
+  struct nrf5x_nvmc_private_s	*pv;
 
   uintptr_t addr;
   error_t err = device_res_get_uint(dev, DEV_RES_MEM, 0, &addr, NULL);
@@ -187,7 +187,7 @@ static DEV_INIT(nrf5x_nvmc_init)
 
 static DEV_CLEANUP(nrf5x_nvmc_cleanup)
 {
-  struct nrf5x_nvmc_context_s *pv = dev->drv_pv;
+  struct nrf5x_nvmc_private_s *pv = dev->drv_pv;
 
   mem_free(pv);
 

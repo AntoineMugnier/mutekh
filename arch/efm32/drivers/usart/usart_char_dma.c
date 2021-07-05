@@ -84,9 +84,7 @@ DRIVER_PV(struct efm32_usart_context_s
   struct dev_freq_s             timer_freq;
   struct dev_clock_sink_ep_s    clk_ep[3];
   struct dev_uart_config_s      cfg;
-#ifdef CONFIG_DEVICE_CLOCK_VARFREQ
   uint32_t                      clkdiv;
-#endif
   struct dev_freq_s             freq;
 });
 
@@ -177,6 +175,7 @@ static void efm32_usart_try_write(struct device_s *dev)
 
   cpu_mem_write_32(pv->addr + EFM32_USART_IFC_ADDR,
                    endian_le32(EFM32_USART_IFC_TXC));
+  cpu_mem_write_32(pv->addr + EFM32_USART_IEN_ADDR, EFM32_USART_IEN_TXC);
 
   while ((rq = dev_char_rq_head(&pv->write_q)))
     {
@@ -365,6 +364,9 @@ static KROUTINE_EXEC(efm32_usart_dma_process_next_write)
 
   assert(rq);
 
+  dev_char_rq_pop(&pv->write_q);
+  dev_char_rq_done(rq);
+
   /* Process next request */
   efm32_usart_start_tx(pv->usart);
 
@@ -380,14 +382,6 @@ static void efm32_usart_tx_dma_end(struct efm32_usart_context_s *pv, error_t err
   crq->data += crq->size;
   crq->size = 0;
   crq->error = err;
-
-  dev_char_rq_pop(&pv->write_q);
-  dev_char_rq_done(crq);
-
-  crq = dev_char_rq_head(&pv->write_q);
-
-  if (dev_rq_queue_isempty(&pv->write_q))
-    return;
 
   /* We can not restart DMA core in DMA callback */
   kroutine_exec(&pv->write_kr);
@@ -458,6 +452,11 @@ static void efm32_usart_start_tx(struct device_s *dev)
 
   if (rq->type == DEV_CHAR_WRITE)
     {
+      /* interrupt disabled */
+      uint32_t i = cpu_mem_read_32(pv->addr + EFM32_USART_IEN_ADDR);
+      i &= ~EFM32_USART_IEN_TXC;
+      cpu_mem_write_32(pv->addr + EFM32_USART_IEN_ADDR, endian_le32(i));
+
       efm32_usart_usart_start_tx_dma(pv);
       return;
     }
@@ -835,7 +834,6 @@ static DEV_INIT(efm32_usart_char_init)
 
   /* enable irqs */
   cpu_mem_write_32(pv->addr + EFM32_USART_IFC_ADDR, endian_le32(EFM32_USART_IFC_MASK));
-  cpu_mem_write_32(pv->addr + EFM32_USART_IEN_ADDR, EFM32_USART_IEN_TXC);
 
   /* configure */
   cpu_mem_write_32(pv->addr + EFM32_USART_CTRL_ADDR, endian_le32(EFM32_USART_CTRL_OVS(X4)));

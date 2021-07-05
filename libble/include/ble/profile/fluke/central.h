@@ -2,7 +2,6 @@
 #define BLE_PROFILE_FLUKE_CENTRAL_H_
 
 #include <ble/stack/central.h>
-
 #include <ble/profile/fluke/measurement.h>
 
 struct fluke_central_s;

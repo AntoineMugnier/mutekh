@@ -31,11 +31,21 @@ CONFIG_COMPILE_OPTIMIZE s
 %section nrf5x-ble-radio
   CONFIG_DRIVER_NRF5X_BLE_RADIO
 
+%section ble-dtm
+  CONFIG_NET
+  CONFIG_BLE
+  CONFIG_BLE_DTM_TX
+
 %section ble-peripheral
   CONFIG_NET
   CONFIG_BLE
   CONFIG_BLE_PERIPHERAL
   CONFIG_BLE_GATTDB_INCLUDE
+
+%section ble-beacon
+  CONFIG_NET
+  CONFIG_BLE
+  CONFIG_BLE_BEACON
 
 %section ble-central
   CONFIG_NET

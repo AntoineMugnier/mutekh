@@ -53,6 +53,7 @@ enum nrf5x_clock_register {
     NRF_CLOCK_TRACECONFIG = 87,
 #if CONFIG_NRF5X_MODEL == 52840
     NRF_CLOCK_LFRCMODE = 109,
+    NRF_CLOCK_HFXODEBOUNCE = 74,
 #endif
 };
 

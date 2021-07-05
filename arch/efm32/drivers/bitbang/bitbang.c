@@ -70,6 +70,8 @@ DRIVER_PV(struct efm32_bitbang_ctx_s
   struct dev_freq_s                freq;
   struct dev_freq_s                sfreq;
   bool_t                           pending;
+  /* A transfer is on-going */
+  bool_t                           running;
 });
 
 STRUCT_COMPOSE(efm32_bitbang_ctx_s, dma_rq);
@@ -100,9 +102,10 @@ static void bitbang_process_next(struct efm32_bitbang_ctx_s *pv)
 
   pv->pending = 0;
 
-  if (rq == NULL)
+  if (rq == NULL || pv->running)
     return;
-
+  
+  pv->running = 1;
   efm32_bitbang_freq(pv);
 
   switch(rq->type)
@@ -114,6 +117,7 @@ static void bitbang_process_next(struct efm32_bitbang_ctx_s *pv)
         efm32_bitbang_ctx_start_tx(pv, rq);
         break; 
       default:
+        pv->running = 0;
         rq->error = -ENOTSUP;
         rq->base.drvdata = NULL;
         dev_bitbang_rq_pop(&pv->queue);
@@ -143,17 +147,18 @@ static void efm32_bitbang_end_wr_rq(struct efm32_bitbang_ctx_s *pv)
   rq->error = 0;
   rq->base.drvdata = NULL;
 
+  pv->running = 0;
   /* End current request */
   dev_bitbang_rq_pop(&pv->queue);
   dev_bitbang_rq_done(rq);
 
   /* Process next request */
   kroutine_exec(&pv->kr);
-end:
+
   LOCK_RELEASE_IRQ(&pv->dev->lock);
 }
 
-static DEV_DMA_CALLBACK(sx127x_bitbang_tx_dma_done)
+static DEV_DMA_CALLBACK(bitbang_tx_dma_done)
 {
   assert(err == 0);
 
@@ -183,11 +188,13 @@ static void efm32_bitbang_end_rd_rq(struct efm32_bitbang_ctx_s *pv, error_t err,
   rq->error = err;
   rq->base.drvdata = NULL;
 
+  pv->running = 0;
+
   dev_bitbang_rq_pop(&pv->queue);
   dev_bitbang_rq_done(rq);
 }
 
-static DEV_DMA_CALLBACK(sx127x_bitbang_rx_dma_done)
+static DEV_DMA_CALLBACK(bitbang_rx_dma_done)
 {
   assert(err == 0);
 
@@ -277,7 +284,7 @@ static void efm32_bitbang_ctx_start_rx(struct efm32_bitbang_ctx_s *pv, struct de
   drq->dev_link.src = pv->dma_rx_link;
   drq->type = DEV_DMA_REG_MEM;
   drq->desc_count_m1 = 1;
-  drq->f_done = sx127x_bitbang_rx_dma_done;
+  drq->f_done = bitbang_rx_dma_done;
 
   ensure(DEVICE_OP(&pv->dma, request, drq, NULL) == 0);
 }
@@ -309,7 +316,7 @@ static void efm32_bitbang_ctx_start_tx(struct efm32_bitbang_ctx_s *pv, struct de
   drq->dev_link.dst = pv->dma_tx_link;
   drq->type = DEV_DMA_MEM_REG;
   drq->desc_count_m1 = 1;
-  drq->f_done = sx127x_bitbang_tx_dma_done;
+  drq->f_done = bitbang_tx_dma_done;
 
   struct dev_dma_desc_s *desc = &pv->dma_desc[0];
 
@@ -334,7 +341,6 @@ static void efm32_bitbang_ctx_start_tx(struct efm32_bitbang_ctx_s *pv, struct de
   desc->dst.reg.burst = 1;
 
   /* Start DMA request */
-
   ensure(DEVICE_OP(&pv->dma, request, drq, NULL) == 0);
 
   cpu_mem_write_32(pv->addr + EFM32_TIMER_CMD_ADDR, endian_le32(EFM32_TIMER_CMD_START));

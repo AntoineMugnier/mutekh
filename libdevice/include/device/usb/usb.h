@@ -30,6 +30,7 @@
 #define __USB_H__
 
 #include <hexo/endian.h>
+#include <hexo/enum.h>
 
 enum usb_configuration_parameter_e
 {
@@ -129,6 +130,8 @@ enum usb_device_misc_multi_protocol_e
   USB_DEV_MISC_MULTI_PROTO_IAD  = 0x01,
   USB_DEV_MISC_MULTI_PROTO_WAMP = 0x02,
 };
+
+ENUM_DESCRIPTOR(dev_usbdev_state_e, strip:DEV_USBDEV_, upper);
 
 enum dev_usbdev_state_e
 {

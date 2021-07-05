@@ -112,17 +112,25 @@ static DEV_NET_LAYER_CREATE(nrf5x_ble_layer_create)
   struct nrf5x_ble_private_s *pv = dev->drv_pv;
 
   switch (type) {
-#if defined(CONFIG_BLE_CENTRAL)
+#if defined(CONFIG_BLE_MASTER)
   case BLE_NET_LAYER_MASTER:
     return nrf5x_ble_master_create(scheduler, pv, params, delegate, delegate_vtable, layer);
+#endif
+#if defined(CONFIG_BLE_SCANNER)
   case BLE_NET_LAYER_SCANNER:
     return nrf5x_ble_scanner_create(scheduler, pv, params, delegate, delegate_vtable, layer);
 #endif
-#if defined(CONFIG_BLE_PERIPHERAL)
+#if defined(CONFIG_BLE_ADVERTISER)
   case BLE_NET_LAYER_ADV:
     return nrf5x_ble_advertiser_create(scheduler, pv, params, delegate, delegate_vtable, layer);
+#endif
+#if defined(CONFIG_BLE_SLAVE)
   case BLE_NET_LAYER_SLAVE:
     return nrf5x_ble_slave_create(scheduler, pv, params, delegate, delegate_vtable, layer);
+#endif
+#if defined(CONFIG_BLE_DTM_TX)
+  case BLE_NET_LAYER_DTM_TX:
+    return nrf5x_ble_dtm_tx_create(scheduler, pv, params, delegate, delegate_vtable, layer);
 #endif
   default:
     return -ENOTSUP;
@@ -145,12 +153,20 @@ static DEV_NET_GET_INFO(nrf5x_ble_get_info)
 {
   memset(info, 0, sizeof(*info));
   info->implemented_layers = 0
-#if defined(CONFIG_BLE_CENTRAL)
+#if defined(CONFIG_BLE_MASTER)
     | (1 << BLE_NET_LAYER_MASTER)
 #endif
-#if defined(CONFIG_BLE_PERIPHERAL)
+#if defined(CONFIG_BLE_SCANNER)
+    | (1 << BLE_NET_LAYER_SCANNER)
+#endif
+#if defined(CONFIG_BLE_ADVERTISER)
     | (1 << BLE_NET_LAYER_ADV)
+#endif
+#if defined(CONFIG_BLE_SLAVE)
     | (1 << BLE_NET_LAYER_SLAVE)
+#endif
+#if defined(CONFIG_BLE_DTM_TX)
+    | (1 << BLE_NET_LAYER_DTM_TX)
 #endif
     ;
   info->prefix_size = 1;
@@ -387,10 +403,15 @@ static void nrf5x_ble_event_close(struct nrf5x_ble_private_s *pv,
   assert(ctx);
 
   pv->current = NULL;
-  nrf5x_ble_context_list_remove(&pv->context_list, ctx);
+
+  if (ctx->scheduled) {
+    nrf5x_ble_context_list_remove(&pv->context_list, ctx);
+    ctx->scheduled = 0;
+  }
 
   ctx->status = status;
   nrf5x_ble_context_list_pushback(&pv->closed_list, ctx);
+  ctx->closing = 1;
 
   kroutine_exec(&pv->closer);
 }
@@ -401,6 +422,7 @@ static KROUTINE_EXEC(nrf5x_ble_closer_kr)
   struct nrf5x_ble_context_s *ctx;
   
   while ((ctx = nrf5x_ble_context_list_pop(&pv->closed_list))) {
+    ctx->closing = 0;
     ctx->handler->event_closed(ctx, ctx->status);
 
     nrf5x_ble_backlog_dump(ctx);
@@ -667,6 +689,13 @@ static
 void _ble_context_unschedule(struct nrf5x_ble_private_s *pv,
     struct nrf5x_ble_context_s *ctx)
 {
+  if (ctx->closing) {
+    ctx->closing = 0;
+    nrf5x_ble_context_list_remove(&pv->closed_list, ctx);
+    ctx->handler->event_closed(ctx, ctx->status);
+    return;
+  }
+
   if (!ctx->scheduled)
     return;
 

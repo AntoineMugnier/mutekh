@@ -29,6 +29,7 @@
 
 #if (__GNUC__ * 100 + __GNUC_MINOR__) >= 406
 /* prevent gcc optimizer from generating recursive calls to memset, memcpy... */
+# pragma GCC push_options
 # pragma GCC optimize ("no-tree-loop-distribute-patterns")
 #endif
 
@@ -620,6 +621,10 @@ void memxor(void *dest_, const void *a_, const void *b_, size_t size)
   for (size_t i = 0; i < size; ++i)
     dest[i] = a[i] ^ b[i];
 }
+
+#if (__GNUC__ * 100 + __GNUC_MINOR__) >= 406
+# pragma GCC pop_options
+#endif
 
 extern inline uint32_t fnv1a_32_update(uint32_t f, uint8_t x);
 extern inline uint64_t fnv1a_32(const void *data, size_t len);

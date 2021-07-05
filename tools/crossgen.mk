@@ -104,16 +104,16 @@ mpc_VER=0.9
 sed_VER=4.2
 
 # GNU Debugger
-gdb_VER_mipsel  = 7.8.2
-gdb_VER_powerpc = 7.8.2
-gdb_VER_arm     = 7.8.2
-gdb_VER_i686    = 7.8.2
-gdb_VER_x86_64  = 7.8.2
-gdb_VER_nios2   = 7.8.2
-gdb_VER_sparc   = 7.8.2
-gdb_VER_lm32    = 7.8.2
-gdb_VER_microblaze = 7.8.2
-gdb_VER_m68k   = 7.8.2
+gdb_VER_mipsel  = 8.3
+gdb_VER_powerpc = 8.3
+gdb_VER_arm     = 8.3
+gdb_VER_i686    = 8.3
+gdb_VER_x86_64  = 8.3
+gdb_VER_nios2   = 8.3
+gdb_VER_sparc   = 8.3
+gdb_VER_lm32    = 8.3
+gdb_VER_microblaze = 8.3
+gdb_VER_m68k   = 8.3
 gdb_VER_avr32   = 6.7.1
 
 gdb_VER=$(gdb_VER_$(TARGET))

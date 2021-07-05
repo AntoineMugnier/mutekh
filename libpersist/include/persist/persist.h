@@ -337,8 +337,6 @@ persist_wait_inc(struct persist_context_s *ctx,
 
   *counter = rq.counter;
 
-  *counter = rq.counter;
-
   return rq.error;
 });
 

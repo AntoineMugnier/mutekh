@@ -1,0 +1,1 @@
+objs = app.o

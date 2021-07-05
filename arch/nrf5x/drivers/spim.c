@@ -18,6 +18,8 @@
   Copyright (c) Nicolas Pouillon <nipo@ssji.net>, 2015
 */
 
+#define LOGK_MODULE_ID "spim"
+
 #include <hexo/types.h>
 #include <hexo/endian.h>
 #include <hexo/iospace.h>

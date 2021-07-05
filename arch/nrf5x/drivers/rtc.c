@@ -18,6 +18,8 @@
   Copyright (c) Nicolas Pouillon <nipo@ssji.net>, 2014
 */
 
+#define LOGK_MODULE_ID "nrtc"
+
 #include <hexo/types.h>
 #include <hexo/endian.h>
 #include <hexo/iospace.h>
@@ -73,6 +75,9 @@ static void nrf5x_rtc_start(struct device_s *dev)
 
 #if defined(CONFIG_DEVICE_CLOCK)
   ensure(!dev_clock_sink_gate(&pv->clock_sink, DEV_CLOCK_EP_CLOCK));
+#endif
+#if CONFIG_NRF5X_MODEL == 52840
+  nrf_reg_set(pv->addr, NRF_RTC_PRESCALER, 0);
 #endif
   nrf_task_trigger(pv->addr, NRF_RTC_START);
   nrf_it_enable(pv->addr, NRF_RTC_OVERFLW);

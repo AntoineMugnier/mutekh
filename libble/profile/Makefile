@@ -1,1 +1,2 @@
 subdirs-$(CONFIG_BLE_PROFILE_FLUKE_CENTRAL) += fluke
+subdirs-$(CONFIG_BLE_PROFILE_HID_CLIENT) += hid

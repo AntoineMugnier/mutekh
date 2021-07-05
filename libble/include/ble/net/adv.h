@@ -50,6 +50,7 @@
 #include <net/task.h>
 #include <net/layer.h>
 
+#include <ble/protocol/radio.h>
 #include <ble/protocol/address.h>
 #include <ble/protocol/advertise.h>
 
@@ -62,10 +63,12 @@ struct ble_advertiser_param_s
 {
   uint32_t interval_ms;
   uint32_t delay_max_ms;
+  int16_t tx_power; // In 0.125 dBm steps (1/8)
   struct ble_addr_s local_addr;
   bool_t connectable;
   const void *ad;
   size_t ad_len;
+  enum ble_phy_mode_e phy;
 };
 
 struct ble_advertiser_handler_s
@@ -83,7 +86,7 @@ struct ble_advertiser_delegate_vtable_s
 
   /** Return whether advertising should continue */
   bool_t (*connection_requested)(void *delegate, struct net_layer_s *layer,
-                                 const struct ble_adv_connect_s *conn,
+                                 const struct ble_adv_connect_s *params,
                                  dev_timer_value_t anchor);
 };
 

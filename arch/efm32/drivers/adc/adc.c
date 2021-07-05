@@ -332,6 +332,9 @@ DEV_CLEANUP(efm32_adc_cleanup)
 {
   struct efm32_adc_private_s * pv = dev->drv_pv;
 
+  if (!dev_rq_queue_isempty(&pv->queue))
+    return -EBUSY;
+
   dev_drv_clock_cleanup(dev, &pv->clk_ep);
   device_irq_source_unlink(dev, pv->src_ep, 1);
   mem_free(pv);

@@ -124,12 +124,6 @@ void nrf5x_ble_radio_init(void)
                   cpu_mem_read_32(NRF_FICR_OVERRIDE(BLE_1MBIT, i)));
   }
 
-  nrf_reg_set(BLE_RADIO_ADDR, NRF_RADIO_MODE, NRF_RADIO_MODE_BLE_1MBIT);
-
-  nrf_reg_set(BLE_RADIO_ADDR, NRF_RADIO_PCNF0, 0
-              | (8 << NRF_RADIO_PCNF0_LFLEN_OFFSET)
-              | (1 << NRF_RADIO_PCNF0_S0LEN_OFFSET));
-
   nrf_reg_set(BLE_RADIO_ADDR, NRF_RADIO_TXPOWER, 0);
   nrf_reg_set(BLE_RADIO_ADDR, NRF_RADIO_CRCPOLY, 0x100065B);
   nrf_reg_set(BLE_RADIO_ADDR, NRF_RADIO_CRCCNF, 0
@@ -294,23 +288,62 @@ void nrf5x_ble_radio_channel_set(
 void nrf5x_ble_config_init(const struct nrf5x_ble_params_s *params)
 {
   // Packet available space, except header and decryption prefix
-  size_t packet_max_size = CONFIG_BLE_PACKET_SIZE - 3;
+  size_t packet_max_size = params->mode == MODE_RX ? CONFIG_BLE_PACKET_SIZE - 3 : 255;
+  uint32_t pcnf0 = 0
+    | (8 << NRF_RADIO_PCNF0_LFLEN_OFFSET)
+    | (1 << NRF_RADIO_PCNF0_S0LEN_OFFSET)
+    ;
+  uint8_t radio_mode = NRF_RADIO_MODE_BLE_1MBIT;
+
+  switch (params->phy) {
+#if defined(NRF5X_BLE_PHY_2M)
+  case BLE_PHY_2M:
+    radio_mode = NRF_RADIO_MODE_BLE_2MBIT;
+    pcnf0 |= NRF_RADIO_PCNF0_PLEN_16;
+    break;
+#endif
+#if defined(NRF5X_BLE_PHY_LR)
+  case BLE_PHY_CODED8:
+    radio_mode = NRF_RADIO_MODE_BLE_LR125K;
+    pcnf0 |= NRF_RADIO_PCNF0_PLEN_LR;
+    pcnf0 |= NRF_RADIO_PCNF0_CILEN(2);
+    pcnf0 |= NRF_RADIO_PCNF0_TERMLEN(3);
+    break;
+  case BLE_PHY_CODED2:
+    radio_mode = NRF_RADIO_MODE_BLE_LR500K;
+    pcnf0 |= NRF_RADIO_PCNF0_PLEN_LR;
+    pcnf0 |= NRF_RADIO_PCNF0_CILEN(2);
+    pcnf0 |= NRF_RADIO_PCNF0_TERMLEN(3);
+    break;
+#endif
+  default:
+  case BLE_PHY_1M:
+    radio_mode = NRF_RADIO_MODE_BLE_1MBIT;
+    pcnf0 |= NRF_RADIO_PCNF0_PLEN_8;
+    break;
+  }
 
   nrf_reg_set(BLE_RADIO_ADDR, NRF_RADIO_TXPOWER, params->tx_power / 8);
+  nrf_reg_set(BLE_RADIO_ADDR, NRF_RADIO_PCNF0, pcnf0);
   nrf_reg_set(BLE_RADIO_ADDR, NRF_RADIO_PCNF1, 0
               | (packet_max_size << NRF_RADIO_PCNF1_MAXLEN_OFFSET)
               | (3 << NRF_RADIO_PCNF1_BALEN_OFFSET)
               | NRF_RADIO_PCNF1_ENDIAN_LITTLE
-              | NRF_RADIO_PCNF1_WHITEEN_ENABLED);
+              | (params->whitening ? NRF_RADIO_PCNF1_WHITEEN_ENABLED : 0)
+              );
 
   nrf_reg_set(BLE_RADIO_ADDR, NRF_RADIO_BASE0, params->access << 8);
   nrf_reg_set(BLE_RADIO_ADDR, NRF_RADIO_PREFIX0, params->access >> 24);
   nrf_reg_set(BLE_RADIO_ADDR, NRF_RADIO_TXADDRESS, 0);
   nrf_reg_set(BLE_RADIO_ADDR, NRF_RADIO_RXADDRESSES, 1 << 0);
   nrf_reg_set(BLE_RADIO_ADDR, NRF_RADIO_CRCINIT, params->crc_init);
+  nrf_reg_set(BLE_RADIO_ADDR, NRF_RADIO_MODE, radio_mode);
 
   nrf5x_ble_radio_channel_set(params);
 }
+
+extern inline
+bool_t nrf5x_ble_phy_is_supported(enum ble_phy_mode_e mode);
 
 bool_t nrf5x_ble_pipelined_setup(struct nrf5x_ble_private_s *pv)
 {
@@ -535,4 +568,41 @@ void nrf5x_ble_addr_get(struct ble_addr_s *addr)
   memcpy(addr->addr, (void*)NRF_FICR_DEVICEADDR(0), 6);
   if (addr->type == BLE_ADDR_RANDOM)
     ble_addr_random_type_set(addr, BLE_ADDR_RANDOM_STATIC);
+}
+
+uint8_t nrf5x_ble_tx_power_normalize(int16_t power)
+{
+#if CONFIG_NRF5X_MODEL == 52833 || CONFIG_NRF5X_MODEL == 52840
+  if (power >= 8 * 8)
+    return 8;
+  if (power >= 7 * 8)
+    return 7;
+  if (power >= 6 * 8)
+    return 6;
+  if (power >= 5 * 8)
+    return 5;
+#endif
+  if (power >= 4 * 8)
+    return 4;
+#if CONFIG_NRF5X_MODEL >= 52000
+  if (power >= 3 * 8)
+    return 3;
+#endif
+#if CONFIG_NRF5X_MODEL == 52833 || CONFIG_NRF5X_MODEL == 52840
+  if (power >= 2 * 8)
+    return 2;
+#endif
+  if (power >= 0 * 8)
+    return 0;
+  if (power >= -4 * 8)
+    return 0xfc;
+  if (power >= -8 * 8)
+    return 0xf8;
+  if (power >= -12 * 8)
+    return 0xf4;
+  if (power >= -16 * 8)
+    return 0xf0;
+  if (power >= -20 * 8)
+    return 0xec;
+  return 0xd8;
 }

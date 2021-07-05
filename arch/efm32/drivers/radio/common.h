@@ -112,7 +112,7 @@ struct radio_efr32_ctx_s
   struct dev_freq_s             freq;
   uint8_t                       rx_length_buffer[64];
   uint32_t*                     pdbg;
-  // Used for memory copy
+  /* Used for memory copy */
   struct kroutine_s             kr;
   struct efr32_protimer_s       pti;
 };

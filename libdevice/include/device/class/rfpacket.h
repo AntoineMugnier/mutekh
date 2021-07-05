@@ -155,7 +155,7 @@ struct dev_rfpacket_rf_cfg_std_s
       The frequency error contribution on the receiver side due to the
       local oscillator (@em {abs(actual rx freq - expected freq)})
       should be added by the driver and not included here. */
-  uint32_t                      freq_err; 
+  uint32_t                      freq_err;
 };
 
 STRUCT_DESCRIPTOR(dev_rfpacket_rf_cfg_std_s);

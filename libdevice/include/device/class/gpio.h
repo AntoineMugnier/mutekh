@@ -271,7 +271,7 @@ struct dev_gpio_rq_s
       uint8_t                     *data;
     } input;
 
-    /** @see DEV_GPIO_WAIT */
+    /** @see DEV_GPIO_UNTIL */
     struct {
       /** This specifies which input bits are tested against the
           current @tt data value. */

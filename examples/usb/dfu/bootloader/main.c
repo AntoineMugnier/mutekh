@@ -4,7 +4,16 @@
 #include <mutek/startup.h>
 #include <hexo/context.h>
 #include <device/class/gpio.h>
-#include <arch/efm32/pin.h>
+#if defined(CONFIG_ARCH_EFM32)
+# include <arch/efm32/pin.h>
+# define PIN_BUTTON PB10
+# define PIN_LED PE2
+# define LED_ACT 1
+#elif defined(CONFIG_ARCH_NRF5X)
+# define PIN_BUTTON 11
+# define PIN_LED 13
+# define LED_ACT 0
+#endif
 
 #include "usb.h"
 
@@ -39,14 +48,14 @@ void app_start(void)
     return;
   }
 
-  dev_gpio_mode(&gpio, EFM32_PB10, DEV_PIN_INPUT_PULLUP);
-  bool_t pressed = !dev_gpio_input(&gpio, EFM32_PB10, NULL);
+  dev_gpio_mode(&gpio, PIN_BUTTON, DEV_PIN_INPUT_PULLUP);
+  bool_t pressed = !dev_gpio_input(&gpio, PIN_BUTTON, NULL);
 
   if (!pressed)
     jump_to_firmware();
 
-  dev_gpio_mode(&gpio, EFM32_PE2, DEV_PIN_OPENSOURCE);
-  dev_gpio_out(&gpio, EFM32_PE2, 1);
+  dev_gpio_mode(&gpio, PIN_LED, DEV_PIN_PUSHPULL);
+  dev_gpio_out(&gpio, PIN_LED, LED_ACT);
     
   usb_dev_init("DFU");
 

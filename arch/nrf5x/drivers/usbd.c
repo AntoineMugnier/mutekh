@@ -24,6 +24,7 @@
 #define ERRATA_166
 #define ERRATA_171
 #define ERRATA_187
+#define ERRATA_199
 
 #include <mutek/mem_alloc.h>
 #include <mutek/printk.h>
@@ -154,6 +155,9 @@ static void nrf5x_usbd_tx(struct nrf5x_usb_private_s *pv,
   pv->tx_running |= bit(tr->ep);
 
   dma_start(pv, USBD_TASKS_STARTEPIN_ADDR(tr->ep), USBD_INTEN_ENDEPIN_SHIFT(tr->ep));
+#ifdef ERRATA_199
+  *(volatile uint32_t *)0x40027c1c = 0x00000082;
+#endif
 
   kroutine_exec(&pv->irq_handler);
 }
@@ -177,6 +181,9 @@ static void nrf5x_usbd_rx_dma(struct nrf5x_usb_private_s *pv,
   pv->dma_rx_running |= bit(tr->ep);
 
   dma_start(pv, USBD_TASKS_STARTEPOUT_ADDR(tr->ep), USBD_INTEN_ENDEPOUT_SHIFT(tr->ep));
+#ifdef ERRATA_199
+  *(volatile uint32_t *)0x40027c1c = 0x00000082;
+#endif
 }
 
 static void nrf5x_usbd_rx_prepare(struct nrf5x_usb_private_s *pv,
@@ -223,7 +230,7 @@ static DEV_USBDEV_REQUEST(nrf5x_usb_transfer)
 
   if (tr->ep == 0 && pv->event) {
     err = -EIO;
-    logk_trace("request returned event");
+    logk_trace("request returned event %N", pv->event, ENUM_DESC_DEV_USBDEV_EVENT_E);
     tr->event = pv->event;
     pv->event = 0;
     goto end;
@@ -231,7 +238,8 @@ static DEV_USBDEV_REQUEST(nrf5x_usb_transfer)
 
   bool_t in = dev_usbdev_get_transfer_dir(tr) == USB_DEVICE_TO_HOST;
 
-  logk_trace("Transfer rq type %d on %s/EP%d", tr->type, in ? "IN" : "OUT", tr->ep);
+  logk_trace("Transfer rq type %N on %s/EP%d", tr->type, ENUM_DESC_DEV_USBDEV_RQ_TYPE_E,
+             in ? "IN" : "OUT", tr->ep);
 
   assert(pv->tr[tr->ep][in] == NULL);
 
@@ -265,9 +273,11 @@ static DEV_USBDEV_REQUEST(nrf5x_usb_transfer)
   case DEV_USBDEV_CTRL_STATUS_OUT:
     logk_trace("STATUS out");
 
-    nrf_short_enable_mask(pv->addr, 0
-                          | USBD_SHORTS_ENDEPOUT0_EP0STATUS
-                          );
+    if (pv->data_rx_pending & bit(0))
+      nrf_short_enable_mask(pv->addr, USBD_SHORTS_EP0DATADONE_EP0STATUS);
+    else
+      cpu_mem_write_32(pv->addr + USBD_TASKS_EP0STATUS_ADDR, 1);
+
     return 0;
 
   case DEV_USBDEV_CTRL_STATUS_IN:
@@ -446,6 +456,9 @@ static void nrf5x_usbd_event(struct device_s *dev, uint8_t event)
 {
   struct nrf5x_usb_private_s *pv = dev->drv_pv;
 
+  logk_trace("event, %N -> %N",
+             pv->event, ENUM_DESC_DEV_USBDEV_EVENT_E,
+             event, ENUM_DESC_DEV_USBDEV_EVENT_E);
   switch (event) {
   case USBDEV_EVENT_DISCONNECT:
     if (!pv->connected)
@@ -912,7 +925,10 @@ static KROUTINE_EXEC(nrf5x_usbd_irq_handler)
       nrf5x_usbd_rx_dma(pv, pv->tr[0][0]);
     } else if((pv->tx_running & bit(0)) && pv->tr[0][1]) {
       struct dev_usbdev_rq_s *tr = pv->tr[0][1];
-
+#ifdef ERRARA_199
+      *(volatile uint32_t *)0x40027C1C = 0x00000000;
+#endif
+      
       pv->tx_running &= ~bit(0);
 
       size_t mps = pv->mps[0][1];
@@ -965,6 +981,10 @@ static KROUTINE_EXEC(nrf5x_usbd_irq_handler)
          && pv->tr[i][1]
          && (epdatastatus & bit(i))) {
         struct dev_usbdev_rq_s *tr = pv->tr[i][1];
+
+#ifdef ERRARA_199
+      *(volatile uint32_t *)0x40027C1C = 0x00000000;
+#endif
 
         pv->tx_running &= ~bit(i);
 

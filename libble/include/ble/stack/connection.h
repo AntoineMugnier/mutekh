@@ -35,6 +35,7 @@
 #if defined(CONFIG_BLE_CRYPTO)
 # include <ble/protocol/sm.h>
 #endif
+#include <ble/net/phy.h>
 
 struct net_layer_s;
 struct ble_stack_context_s;
@@ -86,16 +87,13 @@ struct ble_stack_connection_s
   bool_t is_master;
 };
 
-struct ble_adv_connect_s;
-
 error_t ble_stack_connection_create(struct ble_stack_connection_s *conn,
                                     struct ble_stack_context_s *context,
                                     const struct ble_stack_connection_handler_s *chandler,
                                     const struct ble_stack_context_handler_s *handler,
                                     bool_t is_master,
-                                    const struct ble_adv_connect_s *conn_params,
-                                    const struct ble_gap_preferred_conn_params_s *wanted_timing,
-                                    dev_timer_value_t anchor);
+                                    const struct ble_phy_params_s *phy_params,
+                                    const struct ble_gap_preferred_conn_params_s *wanted_timing);
 
 #if defined(CONFIG_BLE_CRYPTO)
 

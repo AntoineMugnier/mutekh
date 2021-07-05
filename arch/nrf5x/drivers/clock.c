@@ -132,11 +132,13 @@ static bool_t nrf5x_clock_lf_is_running(uint_fast8_t type)
 
 static void nrf5x_clock_lfclk_start(void)
 {
+  logk_trace("LFCLK start");
   nrf_task_trigger(CLOCK_ADDR, NRF_CLOCK_LFCLKSTART);
 }
 
 static void nrf5x_clock_lfclk_stop(void)
 {
+  logk_trace("LFCLK stop");
   nrf_task_trigger(CLOCK_ADDR, NRF_CLOCK_LFCLKSTOP);
 }
 
@@ -629,6 +631,7 @@ static DEV_CMU_COMMIT(nrf5x_clock_commit)
     while (nrf5x_clock_lfclk_is_running())
       ;
   }
+  logk_trace("lfclk src %x %d", pv->lf_src, pv->lf_ulp);
   nrf_reg_set(CLOCK_ADDR, NRF_CLOCK_LFCLKSRC, pv->lf_src);
 #if LFRC_CAL
   pv->cal_en = pv->cal_en_next;
@@ -701,6 +704,7 @@ static DEV_CLOCK_SRC_SETUP(nrf5x_clock_ep_setup)
     switch (id) {
     case NRF_CLOCK_SRC_LFCLK: {
       bool_t cken = !!(param->flags & DEV_CLOCK_EP_CLOCK);
+      logk_trace("lfclk gating gate %d current %d", cken, pv->lfclk_required);
       if (cken != pv->lfclk_required) {
 
         pv->lfclk_required = cken;
@@ -710,6 +714,7 @@ static DEV_CLOCK_SRC_SETUP(nrf5x_clock_ep_setup)
           if (param->flags & DEV_CLOCK_EP_GATING_SYNC) {
             while (!nrf_event_check(CLOCK_ADDR, NRF_CLOCK_LFCLKSTARTED))
               ;
+            logk_trace("lfclk stat %x", nrf_reg_get(CLOCK_ADDR, NRF_CLOCK_LFCLKSTAT));
             nrf_event_clear(CLOCK_ADDR, NRF_CLOCK_LFCLKSTARTED);
           } else {
             return -EAGAIN;
@@ -873,6 +878,10 @@ static DEV_INIT(nrf5x_clock_init)
                      | bit(NRF_CLOCK_HFCLKSTARTED)
                      | bit(NRF_CLOCK_LFCLKSTARTED)
                      );
+
+#if CONFIG_NRF5X_MODEL == 52840
+  nrf_reg_set(CLOCK_ADDR, NRF_CLOCK_HFXODEBOUNCE, 0x80);
+#endif
 
 #if LFRC_CAL
   nrf_it_disable_mask(TEMP_ADDR, -1);

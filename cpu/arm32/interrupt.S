@@ -203,7 +203,7 @@ FUNC_START(.text, arm_exc_common_asm)
     mov    r1,  sp
     /* switch to FIQ because it has many shadow regs */
     msr    cpsr_c, #(ARM_PSR_IRQ_DIS | ARM_PSR_FIQ_DIS | ARM_PSR_MODE_FIQ)
-    mov    sp,  r1          /* import our stack pointer from SUPER */
+    and    sp,  r1, #~7      /* import our stack pointer from SUPER and align */
 
     /* passed to arm_context_jumpto_fast / arm_except_preempt */
     mov    r11, r3
@@ -232,6 +232,7 @@ FUNC_START(.text, arm_exc_common_asm)
 
     /* fifth arg on stack */
     ldr     r2, [r3, #CPU_ARM_CONTEXT_GPR(13)]
+    sub     sp, #4   /* keep alignment */
     push    {r2}
 
     /* second arg is pc */
@@ -241,7 +242,7 @@ FUNC_START(.text, arm_exc_common_asm)
     mov     r2, #0
 
     blx    r12
-    add    sp, #4
+    add    sp, #8
 
 #if defined(CONFIG_HEXO_CONTEXT_PREEMPT)
     b      arm_except_preempt
@@ -296,9 +297,9 @@ FUNC_START(.text, arm_exc_irq)
     /* get stack pointer */
 # ifndef CONFIG_HEXO_INTERRUPT_STACK
     msr    cpsr_c, #(ARM_PSR_IRQ_DIS | ARM_PSR_FIQ_DIS | ARM_PSR_MODE_SUPER)
-    mov    r0,  r13
+    mov    r0,  sp
     msr    cpsr_c, #(ARM_PSR_IRQ_DIS | ARM_PSR_FIQ_DIS | ARM_PSR_MODE_FIQ)
-    mov    r13,  r0
+    and    sp, r0, #~7      /* import our stack pointer from SUPER and align */
 # endif
 
     /* clear preempt handler */

@@ -38,6 +38,7 @@ enum ble_net_layer_id_e {
   BLE_NET_LAYER_MASTER,
   BLE_NET_LAYER_SLAVE,
   BLE_NET_LAYER_SNIFFER,
+  BLE_NET_LAYER_DTM_TX,
 };
 
 #endif

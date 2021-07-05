@@ -64,12 +64,8 @@ struct memory_allocator_header_s
 #endif
 };
 
-static const size_t mem_hdr_size = sizeof (struct memory_allocator_header_s);
-
 #ifdef CONFIG_MUTEK_MEMALLOC_CRC
 static const size_t mem_hdr_size_no_crc = sizeof (struct memory_allocator_header_s) - sizeof (uint32_t);
-#else
-static const size_t mem_hdr_size_no_crc = sizeof (struct memory_allocator_header_s);
 #endif
 
 static const size_t mem_hdr_size_align = pow2_m1_up((sizeof (struct memory_allocator_header_s) - 1) |
@@ -1114,6 +1110,25 @@ error_t memory_allocator_stats(struct memory_allocator_region_s *region,
   return -ENOTSUP;
 #endif
 }
+
+#ifdef CONFIG_MUTEK_PRINTK
+void memory_allocator_dumpk(struct memory_allocator_region_s *region)
+{
+  GCT_FOREACH(block_list, &region->block_root, item,
+  {
+    if (header_is_endblock(item))
+      {
+        printk(" END\n");
+      }
+    else
+      {
+        logk(" %c at %p: %zu bytes",
+               header_is_alloc(item) ? 'A' : 'F',
+               item, header_get_size(&region->block_root, item));
+      }
+  });
+}
+#endif
 
 #ifdef CONFIG_MUTEK_SHELL
 

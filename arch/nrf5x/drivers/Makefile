@@ -25,6 +25,9 @@ objs-$(CONFIG_DRIVER_NRF52_USBD) += usbd.o
 
 ifeq ($(CONFIG_DRIVER_NRF5X_BLE), defined)
 objs += ble.o ble_primitives.o
-objs-$(CONFIG_BLE_PERIPHERAL) += ble_advertiser.o ble_slave.o
-objs-$(CONFIG_BLE_CENTRAL) += ble_scanner.o ble_master.o
+objs-$(CONFIG_BLE_ADVERTISER) += ble_advertiser.o
+objs-$(CONFIG_BLE_SLAVE) += ble_slave.o
+objs-$(CONFIG_BLE_SCANNER) += ble_scanner.o
+objs-$(CONFIG_BLE_MASTER) += ble_master.o
+objs-$(CONFIG_BLE_DTM_TX) += ble_dtm_tx.o
 endif

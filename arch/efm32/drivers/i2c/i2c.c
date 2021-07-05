@@ -360,14 +360,7 @@ static DEV_USE(efm32_i2c_use)
       struct dev_clock_sink_ep_s *sink = chg->sink;
       struct device_s *dev = sink->dev;
       struct efm32_i2c_private_s *pv = dev->drv_pv;
-# ifdef CONFIG_DEVICE_CLOCK_GATING
-      dev_clock_sink_gate(&pv->clk_ep, DEV_CLOCK_EP_POWER_CLOCK);
-# endif
-     efm32_i2c_update_rate(pv, &chg->freq);
-# ifdef CONFIG_DEVICE_CLOCK_GATING
-      if (dev->start_count == 0)
-        dev_clock_sink_gate(&pv->clk_ep, DEV_CLOCK_EP_POWER);
-# endif
+      efm32_i2c_update_rate(pv, &chg->freq);
       return 0;
     }
 #endif

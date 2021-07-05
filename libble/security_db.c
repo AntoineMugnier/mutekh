@@ -195,6 +195,7 @@ error_t ble_security_db_init(struct ble_security_db_s *db,
 
 #if defined(CONFIG_BLE_SECURITY_DB)
   const void *tmp;
+  uint64_t ctr = 0;
   err = persist_wait_read(&db->persist, &security_db_pk_blob, 0, &tmp);
   if (!err) {
     memcpy(db->pk, tmp, 16);
@@ -212,7 +213,7 @@ error_t ble_security_db_init(struct ble_security_db_s *db,
 
   err = persist_wait_read(&db->persist, &security_db_device_counter, 0, &tmp);
   if (err)
-    persist_wait_inc(&db->persist, &security_db_device_counter, 0);
+    persist_wait_inc(&db->persist, &security_db_device_counter, 0, &ctr);
 
   err = ble_security_db_key_get(db, 0, KEY_HANDLE_IRK, db->irk);
   if (err)
@@ -599,17 +600,8 @@ error_t ble_peer_lookup_id(struct ble_security_db_s *db,
 error_t ble_security_db_next_id(struct ble_security_db_s *db,
                                 uint64_t *value)
 {
-  error_t err;
-
   logk_trace("%s wait inc", __FUNCTION__);
 
-  err = persist_wait_inc(&db->persist, &security_db_device_counter, 0);
-  if (err)
-    return err;
-
-  logk_trace("%s read", __FUNCTION__);
-
-  return persist_wait_counter_read(&db->persist, &security_db_device_counter,
-                                   0, value);
+  return persist_wait_inc(&db->persist, &security_db_device_counter, 0, value);
 }
 #endif

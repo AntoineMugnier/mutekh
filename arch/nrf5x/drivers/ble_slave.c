@@ -63,6 +63,7 @@ struct nrf5x_ble_slave_s
   struct buffer_s *rx_buffer;
 
   dev_timer_value_t anchor;
+  net_task_queue_root_t tx_pending;
 
   uint32_t access_address;
   uint32_t crc_init;
@@ -87,6 +88,7 @@ struct nrf5x_ble_slave_s
 
   uint8_t empty[2];
 
+  enum ble_phy_mode_e phy;
   bool_t established : 1;
   bool_t peer_md : 1;
   bool_t latency_permitted : 1;
@@ -253,6 +255,9 @@ error_t nrf5x_ble_slave_create(struct net_scheduler_s *scheduler,
   const struct ble_phy_params_s *params = params_;
   struct device_timer_s self_as_timer;
 
+  if (!nrf5x_ble_phy_is_supported(params->phy))
+    return -ENOTSUP;
+
   slave = mem_alloc(sizeof(*slave), mem_scope_sys);
   if (!slave)
     return -ENOMEM;
@@ -287,6 +292,7 @@ error_t nrf5x_ble_slave_create(struct net_scheduler_s *scheduler,
 
   assert(CONFIG_BLE_PACKET_SIZE - 1 >= 33);
 
+  slave->phy = params->phy;
   slave->layer.context.prefix_size = 1;
   // Default MTU: header (2), l2cap (4), att (23), mic (4)
   // May be negociated with packet length extension.
@@ -307,6 +313,7 @@ error_t nrf5x_ble_slave_create(struct net_scheduler_s *scheduler,
   slave->flow_update.task.destroy_func = nrf5x_ble_slave_flow_updated;
   slave->stuck_events_left = 6;
 
+  net_task_queue_init(&slave->tx_pending);
   buffer_queue_init(&slave->tx_queue);
   slave->tx_queue_count = 0;
 
@@ -338,9 +345,19 @@ void slave_layer_destroyed(struct net_layer_s *layer)
 
   dprintk("%s\n", __FUNCTION__);
 
+  while (slave->tx_queue_count < 8) {
+    struct net_task_s *task = net_task_queue_pop(&slave->tx_pending);
+
+    if (!task)
+      break;
+
+    net_task_destroy(task);
+  }
+
   if (slave->rx_buffer)
     buffer_refdec(slave->rx_buffer);
   buffer_queue_destroy(&slave->tx_queue);
+  net_task_queue_destroy(&slave->tx_pending);
   nrf5x_ble_context_cleanup(&slave->context);
   ble_channel_mapper_cleanup(&slave->channel_mapper);
   ble_timing_mapper_cleanup(&slave->timing);
@@ -399,6 +416,7 @@ void slave_layer_task_handle(struct net_layer_s *layer,
                              struct net_task_s *task)
 {
   struct nrf5x_ble_slave_s *slave = nrf5x_ble_slave_s_from_layer(layer);
+  bool_t kept = 0;
 
   dprintk("%s in %p %p -> %p", __FUNCTION__, slave, task->source, task->target);
 
@@ -416,11 +434,21 @@ void slave_layer_task_handle(struct net_layer_s *layer,
       slave->close_after_flush = 1;
 
     CPU_INTERRUPT_SAVESTATE_DISABLE;
-    buffer_queue_pushback(&slave->tx_queue, task->packet.buffer);
-    slave->tx_queue_count++;
+
+    if (slave->tx_queue_count > 8) {
+      net_task_queue_pushback(&slave->tx_pending, task);
+      kept = 1;
+    } else {
+      buffer_queue_pushback(&slave->tx_queue, task->packet.buffer);
+      slave->tx_queue_count++;
+    }
     CPU_INTERRUPT_RESTORESTATE;
 
     slave_schedule(slave);
+    if (kept) {
+      // Dont destroy task
+      return;
+    }
     break;
 
   case NET_TASK_QUERY:
@@ -507,6 +535,17 @@ void slave_ctx_event_closed(struct nrf5x_ble_context_s *context,
 
   assert(slave->tx_queue_count == buffer_queue_count(&slave->tx_queue));
 
+  while (slave->tx_queue_count < 8) {
+    struct net_task_s *task = net_task_queue_pop(&slave->tx_pending);
+
+    if (!task)
+      break;
+
+    buffer_queue_pushback(&slave->tx_queue, task->packet.buffer);
+    slave->tx_queue_count++;
+    net_task_destroy(task);
+  }
+  
   if (slave->event_packet_count && !slave->event_acked_count)
     slave->stuck_events_left--;
   if (slave->stuck_events_left == 0)
@@ -574,12 +613,14 @@ bool_t slave_ctx_radio_params(struct nrf5x_ble_context_s *context,
   if (slave->event_done || slave->event_crc_error > 2)
     return 0;
 
+  params->phy = slave->phy;
   params->access = slave->access_address;
   params->crc_init = slave->crc_init;
   params->channel = slave->event_channel;
   params->tx_power = 0;
   params->mode = (slave->event_packet_count & 1) ? MODE_TX : MODE_RX;
   params->rx_rssi = 0;
+  params->whitening = 1;
 
   return !(slave->event_rx_count - slave->event_crc_error < 1 && slave->latency_permitted)
     || slave->tx_queue_count
@@ -639,7 +680,7 @@ uint8_t *slave_ctx_payload_get(struct nrf5x_ble_context_s *context,
     // Lie about MD: also tell we have more data to send when only one
     // packet is in queue, this way, master acknowledges early, and we
     // can apply slave latency on subsequent event.
-    md = slave->tx_queue_count && slave->rx_buffer;
+    md = (slave->tx_queue_count && slave->rx_buffer) || !net_task_queue_isempty(&slave->tx_pending);
   }
 
   data[0] = (data[0] & 0x3)

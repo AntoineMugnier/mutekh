@@ -463,7 +463,7 @@ static DEV_USE(nrf5x_i2c_use)
     struct device_s *dev = param;
     struct nrf5x_i2c_priv_s *pv = dev->drv_pv;
 
-    if (dev->start_count || pv->current)
+    if (dev->start_count || pv->current || pv->started)
       return -EAGAIN;
 
     nrf5x_i2c_ip_disable(pv);
