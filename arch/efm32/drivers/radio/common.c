@@ -27,24 +27,6 @@
 #define EFR32_RADIO_DEBUG_SIZE 0x1000
 #define EFR32_RADIO_DEBUG_ADDR (CONFIG_LOAD_ROM_RW_ADDR + 0x40000 - EFR32_RADIO_DEBUG_SIZE)
 
-void efr32_radio_debug_port(struct radio_efr32_ctx_s *pv, uint8_t val)
-{
-  uint32_t x, a;
-
-  uint8_t bitidx = 0;
-  uint8_t bitcnt = 4;
-
-  assert(val < 16);
-
-  uint32_t msk = (1 << bitcnt) - 1;
-
-  a = 0x4000a000 + 0xC + 1 * 0x30;
-
-  x = (cpu_mem_read_32(a) & ~(msk << bitidx)) | ((val & msk) << bitidx);
-
-  cpu_mem_write_32(a, x);
-}
-
 void efr32_radio_debug_init(struct radio_efr32_ctx_s *pv)
 {
   uint32_t * p = EFR32_RADIO_DEBUG_ADDR;
@@ -54,15 +36,6 @@ void efr32_radio_debug_init(struct radio_efr32_ctx_s *pv)
   p[0] = EFR32_RADIO_DEBUG_ADDR;
   uint32_t *base = EFR32_RADIO_DEBUG_ADDR;
   pv->pdbg = base + 1;
-
-  /* Set PB6 to PB9 in output */
-  uintptr_t a = 0x4000a004 + 1 * 0x30;
-  uint32_t x = cpu_mem_read_32(a);
-  cpu_mem_write_32(a, x | (0x44 << 24));
-
-  a = 0x4000a008 + 1 * 0x30;
-  x = cpu_mem_read_32(a);
-  cpu_mem_write_32(a, x | 0x44);
 
   efr32_radio_debug_port(pv, 0xF); 
 }
@@ -97,8 +70,64 @@ void efr32_radio_print_debug(char *p, struct radio_efr32_ctx_s *pv)
   }
 }
 
+
+void debug_toggle_pin()
+{
+#if CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_XG12
+  uint32_t o = 2;
+  uint32_t i = 4;
+#elif CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_XG14
+  uint32_t o = 5;
+  uint32_t i = 3;
+#else
+  #error
+#endif
+  cpu_mem_write_32(0x4000a018 + o * 0x30, (1 << i));
+}
+
+void efr32_radio_debug_port(struct radio_efr32_ctx_s *pv, uint8_t val)
+{
+  uint8_t bitidx = 0;
+  uint8_t bitcnt = 4;
+
+  assert(val < 16);
+
+  uint32_t msk = (1 << bitcnt) - 1;
+
+#if CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_XG12
+  /* Set PC4 to output */
+  uintptr_t a = 0x4000a004 + 2 * 0x30;
+  uint32_t x = cpu_mem_read_32(a);
+  cpu_mem_write_32(a, x | (0x4 << 16));
+
+  /* Set PB6 to PB9 in output */
+  a = 0x4000a004 + 1 * 0x30;
+  x = cpu_mem_read_32(a);
+  cpu_mem_write_32(a, x | (0x44 << 24));
+
+  a = 0x4000a008 + 1 * 0x30;
+  x = cpu_mem_read_32(a);
+  cpu_mem_write_32(a, x | 0x44);
+
+  a = 0x4000a000 + 0xC + 1 * 0x30;
+
+#elif CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_XG14
+  /* Set PF3 to PF7 in output */
+  uintptr_t a = 0x4000a004 + 5 * 0x30;
+  uint32_t x = cpu_mem_read_32(a);
+  cpu_mem_write_32(a, x | (0x44444 << 12));
+
+  a = 0x4000a000 + 0xC + 5 * 0x30;
+#else
+  #error
 #endif
 
+  x = (cpu_mem_read_32(a) & ~(msk << bitidx)) | ((val & msk) << bitidx);
+
+  cpu_mem_write_32(a, x);
+}
+
+#endif
 void efr32_radio_seq_init(struct radio_efr32_ctx_s *pv, const uint8_t *seq, size_t count)
 {
   assert(count < 0xFF6C);
@@ -122,4 +151,68 @@ void efr32_radio_seq_init(struct radio_efr32_ctx_s *pv, const uint8_t *seq, size
   memset((uint8_t *)(p + 0x1F00), 0, 0x100);
 }
 
+void set_cw()
+{
+  uint32_t x = cpu_mem_read_32(EFR32_RAC_ADDR + EFR32_RAC_LPFCTRL_ADDR);
+  EFR32_RAC_LPFCTRL_LPFBWTX_SET(x, 0);
+  cpu_mem_write_32(EFR32_RAC_ADDR + EFR32_RAC_LPFCTRL_ADDR, x);
 
+  x = cpu_mem_read_32(EFR32_MODEM_ADDR + EFR32_MODEM_CTRL0_ADDR);
+  uint8_t mod = EFR32_MODEM_CTRL0_MODFORMAT_GET(x);  
+
+  if (mod == EFR32_MODEM_CTRL0_MODFORMAT_DBPSK)
+    {
+      EFR32_MODEM_CTRL0_MODFORMAT_SET(x, BPSK);
+      cpu_mem_write_32(EFR32_MODEM_ADDR + EFR32_MODEM_CTRL0_ADDR, x);
+    }
+  else
+    cpu_mem_write_32(EFR32_MODEM_ADDR + EFR32_MODEM_MODINDEX_ADDR, 0);
+
+  x = cpu_mem_read_32(EFR32_MODEM_ADDR + EFR32_MODEM_PRE_ADDR);
+  EFR32_MODEM_PRE_TXBASES_SET(x, 0xFFFF);
+  EFR32_MODEM_PRE_BASE_SETVAL(x, 0xF);
+  EFR32_MODEM_PRE_BASEBITS_SET(x, 0);
+  cpu_mem_write_32(EFR32_MODEM_ADDR + EFR32_MODEM_PRE_ADDR, x);
+
+  cpu_mem_write_32(EFR32_FRC_ADDR + EFR32_FRC_DFLCTRL_ADDR, EFR32_FRC_DFLCTRL_DFLMODE_INFINITE);
+
+  x = cpu_mem_read_32(EFR32_FRC_ADDR + EFR32_FRC_CTRL_ADDR);
+  x |= EFR32_FRC_CTRL_RANDOMTX;
+  cpu_mem_write_32(EFR32_FRC_ADDR + EFR32_FRC_CTRL_ADDR, x);
+
+  cpu_mem_write_32(EFR32_RAC_ADDR + EFR32_RAC_CMD_ADDR, EFR32_RAC_CMD_TXEN);
+}
+
+void stoptx()
+{
+  /* Stop Tx */
+  cpu_mem_write_32(EFR32_RAC_ADDR + EFR32_RAC_CMD_ADDR, EFR32_RAC_CMD_TXDIS);
+}
+
+void set_pn9()
+{
+  uint32_t x = cpu_mem_read_32(EFR32_FRC_ADDR + EFR32_FRC_FCD_ADDR(0));
+  x &= ~EFR32_FRC_FCD_SKIPWHITE;
+  cpu_mem_write_32(EFR32_FRC_ADDR + EFR32_FRC_FCD_ADDR(0), x);
+
+  x = cpu_mem_read_32(EFR32_FRC_ADDR + EFR32_FRC_FCD_ADDR(1));
+  x &= ~EFR32_FRC_FCD_SKIPWHITE;
+  cpu_mem_write_32(EFR32_FRC_ADDR + EFR32_FRC_FCD_ADDR(1), x);
+
+  cpu_mem_write_32(EFR32_FRC_ADDR + EFR32_FRC_FECCTRL_ADDR, EFR32_FRC_FECCTRL_BLOCKWHITEMODE_WHITE);
+
+  x = EFR32_FRC_WHITECTRL_SHROUTPUTSEL(0);
+  EFR32_FRC_WHITECTRL_XORFEEDBACK_SET(x, XOR);
+  EFR32_FRC_WHITECTRL_FEEDBACKSEL_SET(x, BIT4);
+  cpu_mem_write_32(EFR32_FRC_ADDR + EFR32_FRC_WHITECTRL_ADDR, x);
+
+  cpu_mem_write_32(EFR32_FRC_ADDR + EFR32_FRC_WHITEPOLY_ADDR, 0x100);
+  cpu_mem_write_32(EFR32_FRC_ADDR + EFR32_FRC_WHITEINIT_ADDR, 0x138);
+  cpu_mem_write_32(EFR32_FRC_ADDR + EFR32_FRC_DFLCTRL_ADDR, EFR32_FRC_DFLCTRL_DFLMODE(INFINITE));
+
+  x = cpu_mem_read_32(EFR32_FRC_ADDR + EFR32_FRC_CTRL_ADDR);
+  x |= EFR32_FRC_CTRL_RANDOMTX;
+  cpu_mem_write_32(EFR32_FRC_ADDR + EFR32_FRC_CTRL_ADDR, x);
+
+  cpu_mem_write_32(EFR32_RAC_ADDR + EFR32_RAC_CMD_ADDR, EFR32_RAC_CMD_TXEN);
+}

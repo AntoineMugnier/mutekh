@@ -28,6 +28,12 @@
 
 #define EFR32_RADIO_BUFFER_SIZE 4096
 
+#define EFR32_RX_IRQ_FRC_MSK      (EFR32_FRC_IF_RXDONE     |      \
+                                   EFR32_FRC_IF_RXOF       |      \
+                                   EFR32_FRC_IF_ABORTED    |      \
+                                   EFR32_FRC_IF_BLOCKERROR |      \
+                                   EFR32_FRC_IF_FRAMEERROR)
+
 enum efr32_radio_ble_state
 {
   EFR32_RADIO_STATE_IDLE,
@@ -557,29 +563,13 @@ static error_t efr32_radio_reset(struct radio_efr32_ble_ctx_s *ctx)
 
   cpu_mem_write_32(EFR32_RAC_ADDR + EFR32_RAC_RFENCTRL0_ADDR, EFR32_RAC_RFENCTRL0_CASCODEDIS |
                                                         EFR32_RAC_RFENCTRL0_STRIPESLICEDIS);
+  
+  /* Power Amplifier */
 
-  cpu_mem_write_32(EFR32_RAC_ADDR + EFR32_RAC_PACTRL0_ADDR, EFR32_RAC_PACTRL0__2P4RFVDDSEL |
-                                                      EFR32_RAC_PACTRL0_CASCODE(EN2SLICES) |
-                                                      EFR32_RAC_PACTRL0_SLICE(EN2SLICES) |
-                                                      EFR32_RAC_PACTRL0_STRIPE(28) |
-                                                      EFR32_RAC_PACTRL0_DACGLITCHCTRL);
-
-  cpu_mem_write_32(EFR32_RAC_ADDR + EFR32_RAC_PAPKDCTRL_ADDR, EFR32_RAC_PAPKDCTRL_VTHSEL(23) |
-                                                        EFR32_RAC_PAPKDCTRL_CAPSEL(3) |
-                                                        EFR32_RAC_PAPKDCTRL_I2VCM(1) |
-                                                        EFR32_RAC_PAPKDCTRL_PKDBIASTH(4));
-
-  cpu_mem_write_32(EFR32_RAC_ADDR + EFR32_RAC_PABIASCTRL0_ADDR, EFR32_RAC_PABIASCTRL0_LDOBIAS |
-                                                          EFR32_RAC_PABIASCTRL0_PABIAS(1) |
-                                                          EFR32_RAC_PABIASCTRL0_BUF0BIAS(2) |
-                                                          EFR32_RAC_PABIASCTRL0_BUF12BIAS(1) |
-                                                          EFR32_RAC_PABIASCTRL0_TXPOWER);
-
-  cpu_mem_write_32(EFR32_RAC_ADDR + EFR32_RAC_PABIASCTRL1_ADDR, EFR32_RAC_PABIASCTRL1_VLDO(5) |
-                                                          EFR32_RAC_PABIASCTRL1_VLDOFB(2) |
-                                                          EFR32_RAC_PABIASCTRL1_VCASCODEHV(5) |
-                                                          EFR32_RAC_PABIASCTRL1_VCASCODELV(4) |
-                                                          EFR32_RAC_PABIASCTRL1__2P4VDDPATHRESHOLD(2));
+  cpu_mem_write_32(EFR32_RAC_ADDR + EFR32_RAC_PACTRL0_ADDR, 0x5f3fffdc);
+  cpu_mem_write_32(EFR32_RAC_ADDR + EFR32_RAC_PAPKDCTRL_ADDR, 0x104d701);
+  cpu_mem_write_32(EFR32_RAC_ADDR + EFR32_RAC_PABIASCTRL0_ADDR, 0x400485);
+  cpu_mem_write_32(EFR32_RAC_ADDR + EFR32_RAC_PABIASCTRL1_ADDR, 0x24525);
 
   cpu_mem_write_32(EFR32_RAC_ADDR + EFR32_RAC_RFBIASCTRL_ADDR, EFR32_RAC_RFBIASCTRL_LDOVREF(4) |
                                                          EFR32_RAC_RFBIASCTRL_LDOAMPCURR(3));
@@ -893,7 +883,7 @@ static error_t efr32_radio_reset(struct radio_efr32_ble_ctx_s *ctx)
   efr32_radio_set_state(ctx, EFR32_RADIO_STATE_IDLE);
 
   kroutine_init_deferred(&pv->kr, &efr32_radio_kr_op);
-  
+
   return 0;
 }
 
