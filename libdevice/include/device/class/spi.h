@@ -61,7 +61,7 @@
    processed once the bus becomes idle. This allows sharing a SPI bus
    between multiple slave device drivers and the application.
 
-   Two types of requests can be scheduled concrrently: single
+   Two types of requests can be scheduled concurrently: single
    transaction requests and bytecode based requests. Both are covered
    in the following sections.
 

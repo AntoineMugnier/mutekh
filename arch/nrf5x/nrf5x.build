@@ -9,6 +9,9 @@
 %section nrf51?22-??ac
   %inherit nrf5x-51822-256-32
 
+%section nrf52820-??aa
+  %inherit nrf5x-52820-256-32
+
 %section nrf52832-??aa
   %inherit nrf5x-52832-512-64
 
@@ -24,6 +27,8 @@
 
 %section nrf5x-*-*-*
   %types architecture
+
+  CONFIG_CPU_ARM32M_TRACE_CLKIN_RATE 32000000
 
   %subsection arch_drv
     CONFIG_DRIVER_NRF5X_CLOCK
@@ -121,6 +126,18 @@
     CONFIG_NRF5X_GPIO_COUNT 32
   %end
 
+  %subsection nrf5x-52820-*-*
+    %types family
+    %set BUILD_NAME nrf52820
+
+    CONFIG_NRF5X_MODEL 52820
+    CONFIG_CPU_ARM32M_CORTEXM4
+    CONFIG_CPU_ARM32M_TIMER_SYSTICK
+    CONFIG_CPU_ARM32M_CLOCK undefined
+    CONFIG_CPU_ARM32M_M_IRQ_COUNT 37
+    CONFIG_NRF5X_GPIO_COUNT 30
+  %end
+
   %subsection nrf5x-52840-*-*
     %types family
     %set BUILD_NAME nrf52840
@@ -200,7 +217,18 @@
     CONFIG_DRIVER_RTT_PRINTK
     CONFIG_MUTEK_PRINTK_HEXDUMP
   %end
-  
+
+  %subsection printk-swo
+    CONFIG_DRIVER_NRF5X_PRINTK undefined
+
+    CONFIG_CPU_ARM32M_TRACE
+    CONFIG_CPU_ARM32M_TRACE_RATE 1000000
+    CONFIG_CPU_ARM32M_CORESIGHT
+    CONFIG_CPU_ARM32M_ITM
+    CONFIG_CPU_ARM32M_ITM_PRINTK
+    CONFIG_CPU_ARM32M_TRACE_PARALLEL 0
+  %end
+
   %subsection shell-rtt
     CONFIG_DRIVER_CHAR_RTT
     CONFIG_DRIVER_CHAR_RTT_RX_BUFFER_SIZE 128

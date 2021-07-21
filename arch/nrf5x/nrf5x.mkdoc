@@ -165,9 +165,9 @@ hardware features.  Most development boards are supported as well.
       stack implementation;
     @item @tt WDT: Watchdog is not a kernel feature;
     @item @tt QDEC: MutekH has no such device definition yet,
-    @item @tt nRF52 UARTE, SPIM, TWIE blocks with EasyDMA,
+    @item @tt nRF52 TWIE block with EasyDMA,
     @item @tt nRF52 NFC tag interface,
-    @item @tt nRF52 I2S and PDM audio interfaces.
+    @item @tt nRF52 I2S audio interfaces.
   @end list
 @end section
 
@@ -223,11 +223,35 @@ hardware features.  Most development boards are supported as well.
     basic layout, with some GPIOs going out of the board on PCB side.
   @end section
 
+  @section {nRF52-DK}
+    PCA10056 is successor of nRF51-DK with a nRF52840.
+  @end section
+
+  @section {nRF52-Dongle}
+    PCA10059 is successor of nRF51-Dongle with a nRF52840. It has no
+    on-board debugger.
+  @end section
+
   @section {Seeed Studio Tiny BLE}
     @url {Tiny BLE} {http://www.seeedstudio.com/wiki/Tiny_BLE} is a
     board designed by Seeed Studio.  It contains a RGB Led, a MPU6050
     6-axis accelerometer + gyroscope, and a button.  All peripherals
     are supported in MutekH.
+  @end section
+
+@end section
+
+@section tP {Cortex Trace support}
+
+  @section {Configuration}
+
+    Cortex trace may be enabled by setting CONFIG_CPU_ARM32M_TRACE.
+    This is enough to enable related pins according to
+    CONFIG_CPU_ARM32M_TRACE_PARALLEL.
+
+    A generic build setting @tt printk-swo is a build shortcut to
+    enable all necessary build tokens.
+
   @end section
 
 @end section

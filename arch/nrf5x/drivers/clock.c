@@ -39,6 +39,10 @@
 #include <arch/nrf5x/temp.h>
 #include <arch/nrf5x/power.h>
 
+#if CONFIG_NRF5X_MODEL == 52840
+#define HAS_LFRC_ULP
+#endif
+
 #define CLOCK_ADDR NRF_PERIPHERAL_ADDR(NRF5X_CLOCK)
 #define POWER_ADDR NRF_PERIPHERAL_ADDR(NRF5X_POWER)
 #define TEMP_ADDR NRF_PERIPHERAL_ADDR(NRF5X_TEMP)
@@ -49,6 +53,7 @@
 # define HFRC_FREQ DEV_FREQ(16000000, 1, 2, 24) // 1%
 #else
 # define HFRC_FREQ DEV_FREQ(64000000, 1, 7, 24) // 1.5%
+#define HAS_HFOSC_64M
 #endif
 #define LFRC_FREQ DEV_FREQ(32768, 1, 2, 25) // 2%
 #define LFRC_ULP_FREQ DEV_FREQ(32768, 1, 0, 22) // 2000ppm
@@ -110,7 +115,7 @@ static bool_t nrf5x_is_usb_vbus_present(void)
 }
 #endif
 
-#if CONFIG_NRF5X_MODEL == 52840
+#if defined(HAS_LFRC_ULP)
 static bool_t nrf5x_clock_lfrc_is_ulp(void)
 {
   return nrf_reg_get(CLOCK_ADDR, NRF_CLOCK_LFRCMODE)
@@ -184,7 +189,7 @@ static DEV_CMU_NODE_INFO(nrf5x_clock_node_info)
     [NRF_CLOCK_SRC_USB_VBUS]  = "USB Vbus",
     [NRF_CLOCK_SRC_USB_REG]  = "USB Reg",
 #endif
-#if CONFIG_NRF5X_MODEL == 52840
+#if defined(HAS_LFRC_ULP)
     [NRF_CLOCK_OSC_LFRC_ULP] = "LFRC/LP",
 #endif
     [NRF_CLOCK_OSC_LFRC] = "LFRC",
@@ -217,7 +222,7 @@ static DEV_CMU_NODE_INFO(nrf5x_clock_node_info)
       break;
 
     case NRF_CLOCK_LF_SRC_RC:
-#if CONFIG_NRF5X_MODEL == 52840
+#if defined(HAS_LFRC_ULP)
       if (nrf5x_clock_lfrc_is_ulp())
         info->parent_id = NRF_CLOCK_OSC_LFRC_ULP;
       else
@@ -267,7 +272,7 @@ static DEV_CMU_NODE_INFO(nrf5x_clock_node_info)
     break;
 #endif
 
-#if CONFIG_NRF5X_MODEL == 52840
+#if defined(HAS_LFRC_ULP)
   case NRF_CLOCK_OSC_LFRC_ULP:
     info->freq = LFRC_ULP_FREQ;
     info->running = nrf5x_clock_lf_is_running(NRF_CLOCK_LF_SRC_RC) && nrf5x_clock_lfrc_is_ulp();
@@ -471,7 +476,7 @@ static DEV_IRQ_SRC_PROCESS(nrf5x_clock_irq)
       break;
 
     case NRF_CLOCK_LF_SRC_RC:
-#if CONFIG_NRF5X_MODEL == 52840
+#if defined(HAS_LFRC_ULP)
       if (nrf5x_clock_lfrc_is_ulp())
         lfclk_notif.freq = LFRC_ULP_FREQ;
       else
@@ -522,7 +527,7 @@ static DEV_CMU_CONFIG_MUX(nrf5x_clock_config_mux)
       pv->lf_src = NRF_CLOCK_LF_SRC_XTAL;
       return 0;
 
-#if CONFIG_NRF5X_MODEL == 52840
+#if defined(HAS_LFRC_ULP)
     case NRF_CLOCK_OSC_LFRC_ULP:
       pv->lf_ulp = 1;
       pv->lf_src = NRF_CLOCK_LF_SRC_RC;
@@ -530,7 +535,7 @@ static DEV_CMU_CONFIG_MUX(nrf5x_clock_config_mux)
 #endif
 
     case NRF_CLOCK_OSC_LFRC:
-#if CONFIG_NRF5X_MODEL == 52840
+#if defined(HAS_LFRC_ULP)
       pv->lf_ulp = 0;
 #endif
       pv->lf_src = NRF_CLOCK_LF_SRC_RC;
@@ -573,7 +578,7 @@ static DEV_CMU_CONFIG_OSC(nrf5x_clock_config_osc)
     pv->lfxo_freq = *freq;
     return 0;
 
-#if CONFIG_NRF5X_MODEL == 52840
+#if defined(HAS_LFRC_ULP)
   case NRF_CLOCK_OSC_LFRC_ULP:
     return 0;
 #endif
@@ -588,7 +593,7 @@ static DEV_CMU_CONFIG_OSC(nrf5x_clock_config_osc)
 
   case NRF_CLOCK_OSC_HFXO:
     if ((
-#if CONFIG_NRF5X_MODEL <= 51999
+#if !defined(HAS_HFOSC_64M)
          freq->num != 16000000 &&
 #endif
          freq->num != 32000000) || freq->denom != 1)
@@ -598,7 +603,7 @@ static DEV_CMU_CONFIG_OSC(nrf5x_clock_config_osc)
 
   case NRF_CLOCK_OSC_HFRC:
     if ((
-#if CONFIG_NRF5X_MODEL == 52840
+#if defined(HAS_HFOSC_64M)
          freq->num != 64000000
 #else
          freq->num != 16000000
@@ -639,7 +644,7 @@ static DEV_CMU_COMMIT(nrf5x_clock_commit)
   if (pv->lfclk_required && !nrf5x_clock_lfclk_is_running())
     nrf5x_clock_lfclk_start();
 
-#if CONFIG_NRF5X_MODEL == 52840
+#if defined(HAS_LFRC_ULP)
   nrf_reg_set(CLOCK_ADDR, NRF_CLOCK_LFRCMODE, pv->lf_ulp ? NRF_CLOCK_LFRCMODE_MODE_ULP : 0);
 #endif
 
@@ -650,7 +655,7 @@ static DEV_CMU_COMMIT(nrf5x_clock_commit)
       ;
   }
 
-#if CONFIG_NRF5X_MODEL <= 51999
+#if !defined(HAS_HFOSC_64M)
   nrf_reg_set(CLOCK_ADDR, NRF_CLOCK_XTALFREQ,
               pv->hfxo_freq.num == 16000000
               ? NRF_CLOCK_XTALFREQ_16MHZ

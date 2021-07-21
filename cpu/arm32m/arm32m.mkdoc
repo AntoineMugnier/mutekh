@@ -1,4 +1,101 @@
-
 @moduledef {ARM 32 bit microcontroller} {Processors}
+
+ARM32-M processors, a.k.a Cortex-M processor support.
+
+@section tPU {Cortex Trace support}
+
+  CPU initialization code support Cortex-M trace through ITM/DWT/TPIU.
+
+  ITM is user-facing instrumentation cell. It allows the running
+  software to output trace events (mostly messages) through trace
+  infrastructure.
+
+  DWT is CPU-tied trace logic. It allows to issue CPU event traces
+  (data load/stores, PC events, exceptions, etc.).  DWT is also able
+  to issue periodic messages for timstamping and synchronization.
+
+  TPIU is a formatter/multiplexer cell. It may be optionally
+  enabled/disabled. It is responsible for multiplexiing streams from
+  ITM, DWT and other sources. It is mandatory if more than one source
+  is enabled.
+
+  Traces can be outputted on either:
+  @list
+    @item SWO (Serial Wire Output), which is a self-clocked signal,
+          either manchester or UART-like.
+    @item A parallel trace bus, including a clock and 1, 2 or 4 DDR
+          data signals.
+    @item ETB (Embedded Trace Buffer), a dedicated RAM buffer that
+          can be read either from usual debugger interface (JTAG/SWD)
+          or platform CPUs. This is usually only available in SMP
+          setups.
+  @end list
+
+  In most architectures, enabling the trace infrastructure requires
+  Mem-AP DBGEN to be set, therefore it requires an initialized debugger
+  session.
+
+  @section {Architecture-specific environment}
+  
+    All the trace logic is clocked through a TRACECLKIN (Trace clock
+    input), provided by the SoC.  Enabling this clock properly is
+    implementation dependant.
+
+    Trace pins are usually shared/muxed with other SoC
+    peripherals. Setting up pin muxing is implementation dependant.
+
+  @end section
+
+  @section {Configuration}
+
+    Currently, only ITM output may be automatically enabled. It
+    requires the following configuration tokens:
+
+    @list
+      @item CONFIG_CPU_ARM32M_CORESIGHT and CONFIG_CPU_ARM32M_TRACE
+            to enable trace
+      @item CONFIG_CPU_ARM32M_TRACE_PARALLEL, set to 0 (swo),
+            1, 2, or 4 (parallel with clock)
+      @item CONFIG_CPU_ARM32M_ITM and CONFIG_CPU_ARM32M_ITM_PRINTK
+            to get printk output in ITM flow
+      @item CONFIG_CPU_ARM32M_TRACE_RATE to set SWO baud rate
+    @end list
+
+    Other architecture-specific tokens may be needed. See related
+    architecture support documentation and configuration tokens.
+
+  @end section
+
+  @section {Decoding stream}
+
+    @url {https://github.com/orbcode/orbuculum} {Orbuculum} project is
+    a good start. For a basic setup where an UART is used with
+    UART-compatible SWO output, one may use following MutekH configuration:
+
+    @code R
+    CONFIG_CPU_ARM32M_TRACE
+    CONFIG_CPU_ARM32M_TRACE_RATE 1000000
+    CONFIG_CPU_ARM32M_CORESIGHT
+    CONFIG_CPU_ARM32M_ITM
+    CONFIG_CPU_ARM32M_ITM_PRINTK
+    CONFIG_CPU_ARM32M_TRACE_PARALLEL 0
+    @end code
+
+    Matching orbuculum instance, responsible for reading SWO data from
+    UART:
+
+    @code R
+    $ orbuculum -P -v3 -a 1000000 -f /dev/ttyUSB0 -n
+    @end code
+
+    Matching orbuculum dumper helper connecting to orbuculum:
+
+    @code R
+    $ orbcat -c 0,'%c'
+    @end code
+
+  @end section
+
+@end section
 
 @end moduledef

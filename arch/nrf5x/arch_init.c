@@ -85,18 +85,78 @@ void nrf5x_init(void)
   nrf_event_clear(NRF_PERIPHERAL_ADDR(NRF5X_CLOCK), NRF_CLOCK_DONE);
   nrf_event_clear(NRF_PERIPHERAL_ADDR(NRF5X_CLOCK), NRF_CLOCK_CTTO);
   nrf_reg_set(NRF_PERIPHERAL_ADDR(NRF5X_CLOCK), NRF_CLOCK_CTIV, 0);
+
+# if defined(CONFIG_CPU_ARM32M_TRACE)
+  nrf_reg_set(NRF_PERIPHERAL_ADDR(NRF5X_CLOCK), NRF_CLOCK_TRACECONFIG, 0
+#  if CONFIG_CPU_ARM32M_TRACE_CLKIN_RATE == 32000000
+              | NRF_CLOCK_TRACECONFIG_TRACEPORTSPEED_32MHZ
+#  elif CONFIG_CPU_ARM32M_TRACE_CLKIN_RATE == 16000000
+              | NRF_CLOCK_TRACECONFIG_TRACEPORTSPEED_16MHZ
+#  elif CONFIG_CPU_ARM32M_TRACE_CLKIN_RATE == 8000000
+              | NRF_CLOCK_TRACECONFIG_TRACEPORTSPEED_8MHZ
+#  elif CONFIG_CPU_ARM32M_TRACE_CLKIN_RATE == 4000000
+              | NRF_CLOCK_TRACECONFIG_TRACEPORTSPEED_4MHZ
+#  else
+#   error Unsupported CLKIN rate
+#  endif
+#  if CONFIG_CPU_ARM32M_TRACE_PARALLEL == 0
+              | NRF_CLOCK_TRACECONFIG_TRACEMUX_SERIAL
+#  else
+              | NRF_CLOCK_TRACECONFIG_TRACEMUX_PARALLEL
+#  endif
+              );
+
+  // P1.00 is TRACEDATA0 / SWO
+  nrf_reg_set(NRF5X_GPIO_ADDR, NRF_GPIO_PIN_CNF(32+0), 0
+              | NRF_GPIO_PIN_CNF_DIR_OUTPUT
+              | NRF_GPIO_PIN_CNF_DRIVE_S0S1);
+
+#  if CONFIG_CPU_ARM32M_TRACE_PARALLEL > 0
+  // P0.12 is TRACEDATA1
+  nrf_reg_set(NRF5X_GPIO_ADDR, NRF_GPIO_PIN_CNF(12), 0
+              | NRF_GPIO_PIN_CNF_DIR_OUTPUT
+              | NRF_GPIO_PIN_CNF_DRIVE_S0S1);
+  // P0.11 is TRACEDATA2
+  nrf_reg_set(NRF5X_GPIO_ADDR, NRF_GPIO_PIN_CNF(11), 0
+              | NRF_GPIO_PIN_CNF_DIR_OUTPUT
+              | NRF_GPIO_PIN_CNF_DRIVE_S0S1);
+  // P1.09 is TRACEDATA3
+  nrf_reg_set(NRF5X_GPIO_ADDR, NRF_GPIO_PIN_CNF(32+9), 0
+              | NRF_GPIO_PIN_CNF_DIR_OUTPUT
+              | NRF_GPIO_PIN_CNF_DRIVE_S0S1);
+  // P0.07 is TRACECLK
+  nrf_reg_set(NRF5X_GPIO_ADDR, NRF_GPIO_PIN_CNF(7), 0
+              | NRF_GPIO_PIN_CNF_DIR_OUTPUT
+              | NRF_GPIO_PIN_CNF_DRIVE_S0S1);
+#  endif
+# else
+  nrf_reg_set(NRF_PERIPHERAL_ADDR(NRF5X_CLOCK), NRF_CLOCK_TRACECONFIG, 0);
+# endif
 #endif
 }
 
-#if CONFIG_NRF5X_MODEL == 52840
+#if CONFIG_NRF5X_MODEL >= 52000
 
 __attribute__((section(".uicr")))
 const uint32_t uicr[0x400] = {
   [0 ... 0x3ff] = 0xffffffff,
-# ifdef CONFIG_NRF5X_VREGH
-  [0x304/4] = (CONFIG_NRF5X_VREGH / 3) - 6,
+# if (CONFIG_NRF5X_MODEL == 52832 || CONFIG_NRF5X_MODEL == 52840) && !defined(CONFIG_DRIVER_NRF5X_NFC)
+  [0x20c/4] = 0,
 # endif  
+# if CONFIG_NRF5X_MODEL == 52840 && defined(CONFIG_NRF5X_VREGH)
+  [0x304/4] = (CONFIG_NRF5X_VREGH / 3) - 6,
+# endif
+# if defined(CONFIG_NRF52_RESET_PIN)
+#  if CONFIG_NRF5X_MODEL == 52840 || CONFIG_NRF5X_MODEL == 52820 || CONFIG_NRF5X_MODEL == 52833
+  [0x200/4] = 0x7fffff12,
+  [0x204/4] = 0x7fffff12,
+#  elif CONFIG_NRF5X_MODEL == 52810 || CONFIG_NRF5X_MODEL == 52832
+  [0x200/4] = 0x7fffff15,
+  [0x204/4] = 0x7fffff15,
+#  else
+#   error Not supported
+#  endif
+# endif
 };
 
 #endif
-

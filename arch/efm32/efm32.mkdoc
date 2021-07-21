@@ -1,4 +1,20 @@
 
 @moduledef {Silabs EFM32} {Platforms}
 
+@section tP {Cortex Trace support}
+
+  @section {Configuration}
+
+    Cortex trace may be enabled by setting CONFIG_CPU_ARM32M_TRACE.
+    This is enough to enable related pins according to
+    CONFIG_CPU_ARM32M_TRACE_PARALLEL.
+
+    User may tweak CONFIG_EFM32_TRACE_AUXHFCO_FREQ to a non-default
+    value if needed. AUXHFRCO is clocking trace logic and cannot be
+    disabled from clock driver for trace-enabled builds.
+
+  @end section
+
+@end section
+
 @end moduledef

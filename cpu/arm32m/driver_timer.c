@@ -260,15 +260,23 @@ error_t arm_timer_systick_use(const struct device_accessor_s *accessor,
         err = -ENOTSUP;
       else if (op == DEV_USE_START)
         {
+# if defined(CONFIG_CPU_ARM32M_DWT)
+          pv->dwt_cycnt_start++;
+# else
           if (pv->dwt_cycnt_start++ == 0)
             cpu_mem_write_32(ARM_M_DWT_CTRL_ADDR,
               ctrl | ARM_M_DWT_CTRL_CYCCNTENA);
+# endif
         }
       else
         {
+# if defined(CONFIG_CPU_ARM32M_DWT)
+          pv->dwt_cycnt_start--;
+# else
           if (--pv->dwt_cycnt_start == 0)
             cpu_mem_write_32(ARM_M_DWT_CTRL_ADDR,
               ctrl & ~ARM_M_DWT_CTRL_CYCCNTENA);
+# endif
         }
       break;
     }

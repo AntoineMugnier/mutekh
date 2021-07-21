@@ -1029,7 +1029,7 @@ static DEV_CMU_CONFIG_OSC(efm32_recmu_config_osc)
           return -ENOTSUP;
         }
       pv->r_auxhfrcoctrl = (band << EFM32_CMU_AUXHFRCOCTRL_BAND_SHIFT) |
-        cpu_mem_read_8(/* device information page */ 0xfe081d4 + band);
+        cpu_mem_read_8(/* device information page */ 0xfe081d4 + (band ^ 3));
 #endif
 #ifdef CONFIG_DEVICE_CLOCK_VARFREQ
       pv->chg_mask |= EFM32_CLK_MASK(node_id);
@@ -1758,7 +1758,7 @@ static void efm32_recmu_clock_dep(struct efm32_recmu_private_s *pv,
       efm32_clock_mask_t en = m & mask;
       efm32_clock_mask_t dis = m & ~mask;
       uint32_t cmd = 0;
-#ifdef EFM32_CLOCK_AUXHFRCO
+#if defined(EFM32_CLOCK_AUXHFRCO) && !defined(CONFIG_CPU_ARM32M_TRACE)
       EFM32_CMU_OSCENCMD_AUXHFRCOEN_SET(cmd,  (en  >> EFM32_CLOCK_AUXHFRCO) & 1);
       EFM32_CMU_OSCENCMD_AUXHFRCODIS_SET(cmd, (dis >> EFM32_CLOCK_AUXHFRCO) & 1);
 #endif
@@ -1817,8 +1817,10 @@ static DEV_CMU_COMMIT(efm32_recmu_commit)
                   endian_le32(pv->r_hfrcoctrl));
   cpu_mem_write_32(EFM32_CMU_ADDR + EFM32_CMU_LFRCOCTRL_ADDR,
                   endian_le32(pv->r_lfrcoctrl));
+#if !defined(CONFIG_CPU_ARM32M_TRACE)
   cpu_mem_write_32(EFM32_CMU_ADDR + EFM32_CMU_AUXHFRCOCTRL_ADDR,
                   endian_le32(pv->r_auxhfrcoctrl));
+#endif
 
 #if SERIE1
   pv->lfaclksel = pv->r_lfaclksel;

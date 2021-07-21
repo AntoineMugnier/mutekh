@@ -25,7 +25,7 @@
   @index {I2C slave controller} {Device classes}
   @csee DRIVER_CLASS_I2C_SLAVE
 
-  This class handles implementing an I2C slave device.
+  This class handles an I2C slave device.
 
   @section {I2C slave driver API}
 

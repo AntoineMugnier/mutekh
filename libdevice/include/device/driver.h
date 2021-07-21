@@ -71,6 +71,7 @@ enum driver_class_e
   DRIVER_CLASS_SMI,
   DRIVER_CLASS_PHY,
   DRIVER_CLASS_BITBANG,
+  DRIVER_CLASS_ONEWIRE,
 
   /* Custom driver class IDs should be registered in @ref
       #CONFIG_DEVICE_CUSTOM_CLASS_COUNT enum config token.

@@ -244,7 +244,8 @@ FUNC_START(.text, cpu_context_set)
 	add     r1,     r0,     r1
         mov     r13,    r1
 
-#ifdef CONFIG_CPU_ARM32M_MPU_STACK_GUARD
+#if defined(CONFIG_CPU_ARM32M_MPU_STACK_GUARD) && \
+    defined(CONFIG_HEXO_CONTEXT)
 	mov     r1,     r0
         bl      cpu_context_stack_guard_
 #endif

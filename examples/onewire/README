@@ -1,0 +1,4 @@
+This example has been developped on PCA10059, the nRF52 dongle. It
+expects connecting 1-Wire DQ bus line on pins P1.10 and P1.13.  P1.10
+implements the io, while P1.13 is supplying strong parasitic power
+between slots.
