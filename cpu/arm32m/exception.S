@@ -125,11 +125,6 @@ FUNC_START(.text, arm_exc_irq)
         blx     r1
 
 # ifdef CONFIG_HEXO_CONTEXT_PREEMPT
-        /* context registers save array from tls */
-        mrs     r1,     psp
-        ldr     r2,     = arm_context_regs /* skip r0 - r3 */ + 16
-        add     r1,     r2
-
         b       arm_exc_preempt
 # else
         /* return */
@@ -287,8 +282,6 @@ FUNC_START(.text, arm_exc_fault)
         str     r3,     [sp, #20]
 
 # ifdef CONFIG_HEXO_CONTEXT_PREEMPT
-        /* context registers save array from tls */
-        adds    r1,     #16  /* skip r0 - r3 */
         b       arm_exc_preempt
 # else
         /* return */
@@ -346,7 +339,6 @@ FUNC_START(.text, arm_exc_svcall)
         str     r3,     [sp, #20]
 
 # ifdef CONFIG_HEXO_CONTEXT_PREEMPT
-        add     r1,     #16  /* skip r0 - r3 */
         b       arm_exc_preempt
 # else
         /* return */
@@ -359,7 +351,7 @@ FUNC_END(arm_exc_svcall)
 /********************************************************** restore with preempt */
 
 #ifdef CONFIG_HEXO_CONTEXT_PREEMPT
-FUNC_START(.text, arm_exc_preempt)        /* args: r1 = &arm_context_regs + 16 */
+FUNC_START(.text, arm_exc_preempt)
 
         /* check if a preempt handler has been registered */
         ldr     r2,     = cpu_preempt_handler
@@ -368,13 +360,16 @@ FUNC_START(.text, arm_exc_preempt)        /* args: r1 = &arm_context_regs + 16 *
         beq     2f
 
         /* call preempt handler */
-        push    {r1}
         blx     r0
-        pop     {r1}
 
         /* got pointer to context to switch to ? */
         tst     r0,     r0
         beq     1f
+
+        /* context registers save array from tls */
+        mrs     r1,     psp
+        ldr     r2,     = arm_context_regs /* skip r0 - r3 */ + CPU_ARM_CONTEXT_R4
+        add     r1,     r2
 
         /* save r4 - r11 */
         stmia   r1!,    {r4,r5,r6,r7}
@@ -424,10 +419,3 @@ FUNC_START(.text, arm_exc_preempt)        /* args: r1 = &arm_context_regs + 16 *
 FUNC_END(arm_exc_preempt)
 #endif
 
-// Local Variables:
-// tab-width: 4;
-// c-basic-offset: 4;
-// indent-tabs-mode: nil;
-// End:
-//
-// vim: filetype=cpp:expandtab:shiftwidth=4:tabstop=4:softtabstop=4
