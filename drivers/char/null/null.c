@@ -25,12 +25,13 @@
 #include <hexo/types.h>
 #include <device/device.h>
 #include <device/driver.h>
+#include <device/resources.h>
 
 DRIVER_PV(struct {});
 
 #define dev_null_cancel (dev_char_cancel_t*)&dev_driver_notsup_fcn
 
-static DEV_CHAR_REQUEST(dev_null_request)
+DEV_CHAR_REQUEST(dev_null_request)
 {
   switch (rq->type)
     {
@@ -56,12 +57,12 @@ static DEV_CHAR_REQUEST(dev_null_request)
   dev_char_rq_done(rq);
 }
 
-static DEV_INIT(dev_null_init)
+DEV_INIT(dev_null_init)
 {
   return 0;
 }
 
-static DEV_CLEANUP(dev_null_cleanup)
+DEV_CLEANUP(dev_null_cleanup)
 {
   return 0;
 }
@@ -73,3 +74,5 @@ DRIVER_DECLARE(dev_null_drv, 0, "dev-null", dev_null,
 
 DRIVER_REGISTER(dev_null_drv);
 
+DEV_DECLARE_STATIC(char_null_dev, "char-null", 0, dev_null_drv,
+                   );
