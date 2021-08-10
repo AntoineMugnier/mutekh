@@ -212,14 +212,14 @@ static DEV_VALIO_REQUEST(pcf8563_request)
       || (rq->type != DEVICE_VALIO_READ
           && rq->type != DEVICE_VALIO_WRITE)) {
     rq->error = -ENOTSUP;
-    dev_valio_rq_done(req);
+    dev_valio_rq_done(rq);
     return;
   }
 
   LOCK_SPIN_IRQ_SCOPED(&dev->lock);
   bool_t was_empty = dev_rq_queue_isempty(&pv->queue);
 
-  dev_valio_rq_pushback(&pv->queue, req);
+  dev_valio_rq_pushback(&pv->queue, rq);
 
   if (was_empty)
     pcf8563_request_run(dev, pv);
@@ -231,10 +231,10 @@ static DEV_VALIO_CANCEL(pcf8563_cancel)
   struct pcf8563_priv_s *pv = dev->drv_pv;
   
   LOCK_SPIN_IRQ_SCOPED(&dev->lock);
-  if (req == dev_valio_rq_head(&pv->queue))
+  if (rq == dev_valio_rq_head(&pv->queue))
     return -EBUSY;
 
-  dev_valio_rq_remove(&pv->queue, req);
+  dev_valio_rq_remove(&pv->queue, rq);
 
   return 0;
 }
