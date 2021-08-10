@@ -18,6 +18,9 @@
 %section nrf52832-??ab
   %inherit nrf5x-52832-256-32
 
+%section nrf52820-??ac
+  %inherit nrf5x-52820-256-32
+
 %section nrf52840-??aa
   %inherit nrf5x-52840-1024-256
 
@@ -112,6 +115,19 @@
     CONFIG_CPU_ARM32M_CLOCK undefined
     CONFIG_CPU_ARM32M_M_IRQ_COUNT 31
     CONFIG_NRF5X_GPIO_COUNT 31
+  %end
+
+  %subsection nrf5x-52820-*-*
+    %types family
+    %set BUILD_NAME nrf52820
+
+    CONFIG_NRF5X_MODEL 52820
+    CONFIG_CPU_ARM32M_CORTEXM4
+    CONFIG_CPU_ARM32M_TIMER_SYSTICK
+    CONFIG_CPU_ARM32M_CLOCK undefined
+    CONFIG_CPU_ARM32M_M_IRQ_COUNT 32
+    # Actually lie about this, controller is 32-bit version
+    CONFIG_NRF5X_GPIO_COUNT 32
   %end
 
   %subsection nrf5x-52832-*-*
