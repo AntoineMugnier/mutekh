@@ -500,6 +500,8 @@ static DEV_IOMUX_SETUP(nrf5x_gpio_iomux_setup)
   if (nrf5x_gpio_mode(dir, &nrf_mode))
     return -ENOTSUP;
 
+  logk_debug("IOMUX pin %d, nrf mode: %x", io_id, nrf_mode);
+
   nrf_reg_set(GPIO_ADDR, NRF_GPIO_PIN_CNF(io_id), nrf_mode);
 
   return 0;
