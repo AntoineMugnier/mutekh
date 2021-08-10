@@ -19,12 +19,15 @@
     Copyright Sebastien Cerdan <sebcerdan@gmail.com> (c) 2017
 */
 
+#define LOGK_MODULE_ID "ecdu"
+
 #include <hexo/types.h>
 #include <hexo/endian.h>
 #include <hexo/iospace.h>
 #include <hexo/interrupt.h>
 
 #include <mutek/mem_alloc.h>
+#include <mutek/printk.h>
 
 #include <device/device.h>
 #include <device/resources.h>
@@ -96,7 +99,8 @@ STRUCT_COMPOSE(efm32_usart_context_s, dma_rd_rq)
 static uint32_t efm32_usart_char_bauds(struct device_s *dev)
 {
   struct efm32_usart_context_s	*pv = dev->drv_pv;
-  return (256 * pv->freq.num) / (4 * pv->cfg.baudrate * pv->freq.denom) - 256;
+  return (256 * pv->freq.num)
+    / (4 * pv->cfg.baudrate * pv->freq.denom) - 256;
 }
 
 static void efm32_usart_char_cfg_apply(struct device_s *dev)
@@ -144,6 +148,8 @@ static void efm32_usart_entry_low_power(struct device_s *dev)
 {
   struct efm32_usart_context_s	*pv = dev->drv_pv;
 
+  return;
+  
    if (dev->start_count == 0 && pv->dma_started)
      {
        /* End DMA read operation */
@@ -749,6 +755,7 @@ static error_t efm32_usart_timeout_init(struct efm32_usart_context_s *pv,
 static DEV_INIT(efm32_usart_char_init)
 {
   struct efm32_usart_context_s	*pv;
+  error_t err;
 
   pv = mem_alloc(sizeof(*pv), (mem_scope_sys));
   dev->drv_pv = pv;
@@ -758,14 +765,18 @@ static DEV_INIT(efm32_usart_char_init)
 
   memset(pv, 0, sizeof(*pv));
 
-  if (device_res_get_uint(dev, DEV_RES_MEM, 0, &pv->addr, NULL))
+  err = device_res_get_uint(dev, DEV_RES_MEM, 0, &pv->addr, NULL);
+  if (err)
     goto err_mem;
 
   /* setup pinmux */
   iomux_io_id_t pin[2];
   iomux_demux_t loc[2];
-  if (device_iomux_setup(dev, "<rx? >tx?", loc, pin, NULL))
+  err = device_iomux_setup(dev, "<rx? >tx?", loc, pin, NULL);
+  if (err) {
+    logk_error("Bad pins");
     goto err_mem;
+  }
 
 #if (CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_XG1) ||\
     (CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_XG12)
@@ -782,8 +793,11 @@ static DEV_INIT(efm32_usart_char_init)
       enable |= EFM32_USART_ROUTEPEN_TXPEN;
       EFM32_USART_ROUTELOC0_TXLOC_SETVAL(route, loc[1]);
     }
-  if (enable == 0)
+  if (enable == 0) {
+    err = -EINVAL;
+    logk_error("Bad pin routing");
     goto err_mem;
+  }
 
 #elif CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFM
   uint32_t route = 0;
@@ -794,8 +808,11 @@ static DEV_INIT(efm32_usart_char_init)
 
   EFM32_USART_ROUTE_LOCATION_SETVAL(route, loc[0] != IOMUX_INVALID_DEMUX ? loc[0] : loc[1]);
 
-  if (route == 0)
+  if (route == 0) {
+    err = -EINVAL;
+    logk_error("Bad pin routing");
     goto err_mem;
+  }
 #else
 # error
 #endif
@@ -804,9 +821,12 @@ static DEV_INIT(efm32_usart_char_init)
   dev_rq_queue_init(&pv->read_q);
   dev_rq_queue_init(&pv->write_q);
 
-  if (dev_drv_clock_init(dev, &pv->clk_ep[0], 0, DEV_CLOCK_EP_FREQ_NOTIFY |
-                     DEV_CLOCK_EP_POWER_CLOCK | DEV_CLOCK_EP_GATING_SYNC, &pv->freq))
+  err = dev_drv_clock_init(dev, &pv->clk_ep[0], 0, DEV_CLOCK_EP_FREQ_NOTIFY |
+                           DEV_CLOCK_EP_POWER_CLOCK | DEV_CLOCK_EP_GATING_SYNC, &pv->freq);
+  if (err) {
+    logk_error("Bad clock config");
     goto err_irq;
+  }
 
   /* wait for current TX to complete */
   if (cpu_mem_read_32(pv->addr + EFM32_USART_STATUS_ADDR)
@@ -855,33 +875,57 @@ static DEV_INIT(efm32_usart_char_init)
   cpu_mem_write_32(pv->addr + EFM32_USART_CMD_ADDR,
                    endian_le32(EFM32_USART_CMD_TXEN | EFM32_USART_CMD_RXBLOCKDIS));
 
-  if (device_res_get_uint(dev, DEV_RES_MEM, 1, &pv->timer_addr, NULL))
-    {
-      pv->timer_addr = 0;
-      goto err_irq;
-    }
+  err = device_res_get_uint(dev, DEV_RES_MEM, 1, &pv->timer_addr, NULL);
+  if (err) {
+    pv->timer_addr = 0;
+    logk_error("No timer");
+    goto err_irq;
+  }
 
-  if (dev_drv_clock_init(dev, &pv->clk_ep[1], 1, DEV_CLOCK_EP_POWER_CLOCK | DEV_CLOCK_EP_GATING_SYNC, &pv->timer_freq))
+  err = dev_drv_clock_init(dev, &pv->clk_ep[1], 1, DEV_CLOCK_EP_POWER_CLOCK | DEV_CLOCK_EP_GATING_SYNC, &pv->timer_freq);
+  if (err) {
+    logk_error("Unable to gate clock ep 1");
     goto err_irq;
-  if (dev_drv_clock_init(dev, &pv->clk_ep[2], 2, DEV_CLOCK_EP_POWER_CLOCK | DEV_CLOCK_EP_GATING_SYNC, NULL))
+  }
+
+  err = dev_drv_clock_init(dev, &pv->clk_ep[2], 2, DEV_CLOCK_EP_POWER_CLOCK | DEV_CLOCK_EP_GATING_SYNC, NULL);
+  if (err) {
+    logk_error("Unable to gate clock ep 2");
     goto err_irq;
+  }
 
   pv->wptr = pv->rptr = pv->rx_buffer;
   pv->dma_started = 0;
   pv->err = 0;
 
-  if (efm32_usart_timeout_init(pv, pin[0]))
+  err = efm32_usart_timeout_init(pv, pin[0]);
+  if (err) {
+    logk_error("Unable to setup timeout");
     goto err_irq;
+  }
 
   uint32_t read_link, write_link;
   uint32_t read_mask, write_mask;
 
   pv->usart = dev;
 
-  if (device_res_get_dma(dev, 0, &read_mask, &read_link) ||
-      device_res_get_dma(dev, 1, &write_mask, &write_link) ||
-      device_get_param_dev_accessor(dev, "dma", &pv->dma.base, DRIVER_CLASS_DMA))
+  err = device_res_get_dma(dev, 0, &read_mask, &read_link);
+  if (err) {
+    logk_error("Unable to get DMA read link");
     goto err_irq;
+  }
+  
+  err = device_res_get_dma(dev, 1, &write_mask, &write_link);
+  if (err) {
+    logk_error("Unable to get DMA write link");
+    goto err_irq;
+  }
+
+  err = device_get_param_dev_accessor(dev, "dma", &pv->dma.base, DRIVER_CLASS_DMA);
+  if (err) {
+    logk_error("Unable to get DMA");
+    goto err_irq;
+  }
 
   struct dev_dma_rq_s *rq = &pv->dma_rd_rq;
   struct dev_dma_desc_s *desc = pv->dma_rd_desc;
@@ -931,8 +975,11 @@ static DEV_INIT(efm32_usart_char_init)
   /* init irq endpoints */
   device_irq_source_init(dev, pv->irq_ep, 2, &efm32_usart_irq);
 
-  if (device_irq_source_link(dev, pv->irq_ep, 2, -1))
+  err = device_irq_source_link(dev, pv->irq_ep, 2, -1);
+  if (err) {
+    logk_error("Unable to setup IRQ");
     goto err_fifo;
+  }
 
 #ifdef CONFIG_DEVICE_CLOCK_GATING
   dev_clock_sink_gate(&pv->clk_ep[0], DEV_CLOCK_EP_POWER);
@@ -947,7 +994,7 @@ static DEV_INIT(efm32_usart_char_init)
   dev_rq_queue_destroy(&pv->write_q);
  err_mem:
   mem_free(pv);
-  return -1;
+  return err;
 }
 
 static DEV_CLEANUP(efm32_usart_char_cleanup)
