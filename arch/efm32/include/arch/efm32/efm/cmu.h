@@ -264,7 +264,7 @@
   #define EFM32_CMU_AUXHFRCOCTRL_TUNNING(v)        ((v) << 0)
   #define EFM32_CMU_AUXHFRCOCTRL_TUNNING_SET(x, v) do { (x) = (((x) & ~0xff) | ((v) << 0)); } while(0)
   #define EFM32_CMU_AUXHFRCOCTRL_TUNNING_GET(x)    (((x) >> 0) & 0xff)
-# if (CONFIG_EFM32_FAMILY == EFM32_FAMILY_LEOPARD) || (CONFIG_EFM32_FAMILY == EFM32_FAMILY_WONDER) || (CONFIG_EFM32_FAMILY == EFM32_FAMILY_GIANT) || (CONFIG_EFM32_FAMILY == EFM32_FAMILY_ZERO)
+# if (CONFIG_EFM32_FAMILY == EFM32_FAMILY_LEOPARD) || (CONFIG_EFM32_FAMILY == EFM32_FAMILY_WONDER) || (CONFIG_EFM32_FAMILY == EFM32_FAMILY_GIANT) || (CONFIG_EFM32_FAMILY == EFM32_FAMILY_ZERO) || (CONFIG_EFM32_FAMILY == EFM32_FAMILY_TINY)
 /** Write this field to set the frequency band in which the HFRCO is to operate.
    When changing this setting there will be no glitches on the AUXHFRCO output,
    hence it is safe to change this setting even while the system is running on
@@ -301,7 +301,7 @@
     #define EFM32_CMU_CALCTRL_UPSEL_HFRCO            0x00000002
     #define EFM32_CMU_CALCTRL_UPSEL_LFRCO            0x00000003
     #define EFM32_CMU_CALCTRL_UPSEL_AUXHFRCO         0x00000004
-# if (CONFIG_EFM32_FAMILY == EFM32_FAMILY_LEOPARD) || (CONFIG_EFM32_FAMILY == EFM32_FAMILY_WONDER) || (CONFIG_EFM32_FAMILY == EFM32_FAMILY_GIANT) || (CONFIG_EFM32_FAMILY == EFM32_FAMILY_ZERO)
+# if (CONFIG_EFM32_FAMILY == EFM32_FAMILY_LEOPARD) || (CONFIG_EFM32_FAMILY == EFM32_FAMILY_WONDER) || (CONFIG_EFM32_FAMILY == EFM32_FAMILY_GIANT) || (CONFIG_EFM32_FAMILY == EFM32_FAMILY_ZERO) || (CONFIG_EFM32_FAMILY == EFM32_FAMILY_TINY)
 /** Selects clock source for the calibration down-counter. @multiple */
   #define EFM32_CMU_CALCTRL_DOWNSEL_SHIFT          3
   #define EFM32_CMU_CALCTRL_DOWNSEL(v)             ((EFM32_CMU_CALCTRL_DOWNSEL_##v) << 3)
@@ -399,7 +399,7 @@
   #define EFM32_CMU_CMD_CALSTART                   0x00000008
   #define EFM32_CMU_CMD_CALSTART_SHIFT             3
   #define EFM32_CMU_CMD_CALSTART_SET(x, v)         do { (x) = (((x) & ~0x8) | ((v) << 3)); } while(0)
-# if (CONFIG_EFM32_FAMILY == EFM32_FAMILY_LEOPARD) || (CONFIG_EFM32_FAMILY == EFM32_FAMILY_WONDER) || (CONFIG_EFM32_FAMILY == EFM32_FAMILY_GIANT) || (CONFIG_EFM32_FAMILY == EFM32_FAMILY_ZERO)
+# if (CONFIG_EFM32_FAMILY == EFM32_FAMILY_LEOPARD) || (CONFIG_EFM32_FAMILY == EFM32_FAMILY_WONDER) || (CONFIG_EFM32_FAMILY == EFM32_FAMILY_GIANT) || (CONFIG_EFM32_FAMILY == EFM32_FAMILY_ZERO) || (CONFIG_EFM32_FAMILY == EFM32_FAMILY_TINY)
 /** Stops the calibration counters. @multiple */
   #define EFM32_CMU_CMD_CALSTOP                    0x00000010
   #define EFM32_CMU_CMD_CALSTOP_SHIFT              4
@@ -440,7 +440,7 @@
     #define EFM32_CMU_LFCLKSEL_LFB_LFRCO             0x00000001
     #define EFM32_CMU_LFCLKSEL_LFB_LFXO              0x00000002
     #define EFM32_CMU_LFCLKSEL_LFB_HFCORECLKLEDIV2   0x00000003
-# if (CONFIG_EFM32_FAMILY == EFM32_FAMILY_LEOPARD) || (CONFIG_EFM32_FAMILY == EFM32_FAMILY_WONDER) || (CONFIG_EFM32_FAMILY == EFM32_FAMILY_GIANT) || (CONFIG_EFM32_FAMILY == EFM32_FAMILY_ZERO)
+# if (CONFIG_EFM32_FAMILY == EFM32_FAMILY_LEOPARD) || (CONFIG_EFM32_FAMILY == EFM32_FAMILY_WONDER) || (CONFIG_EFM32_FAMILY == EFM32_FAMILY_GIANT) || (CONFIG_EFM32_FAMILY == EFM32_FAMILY_ZERO) || (CONFIG_EFM32_FAMILY == EFM32_FAMILY_TINY)
 /** This bit redefines the meaning of the LFA field. @multiple */
   #define EFM32_CMU_LFCLKSEL_LFAE_SHIFT            16
   #define EFM32_CMU_LFCLKSEL_LFAE(v)               ((EFM32_CMU_LFCLKSEL_LFAE_##v) << 16)
@@ -562,7 +562,7 @@
   #define EFM32_CMU_IF_CALRDY                      0x00000020
   #define EFM32_CMU_IF_CALRDY_SHIFT                5
   #define EFM32_CMU_IF_CALRDY_SET(x, v)            do { (x) = (((x) & ~0x20) | ((v) << 5)); } while(0)
-# if (CONFIG_EFM32_FAMILY == EFM32_FAMILY_LEOPARD) || (CONFIG_EFM32_FAMILY == EFM32_FAMILY_WONDER) || (CONFIG_EFM32_FAMILY == EFM32_FAMILY_GIANT) || (CONFIG_EFM32_FAMILY == EFM32_FAMILY_ZERO)
+# if (CONFIG_EFM32_FAMILY == EFM32_FAMILY_LEOPARD) || (CONFIG_EFM32_FAMILY == EFM32_FAMILY_WONDER) || (CONFIG_EFM32_FAMILY == EFM32_FAMILY_GIANT) || (CONFIG_EFM32_FAMILY == EFM32_FAMILY_ZERO) || (CONFIG_EFM32_FAMILY == EFM32_FAMILY_TINY)
 /** Set when calibration overflow has occurred @multiple */
   #define EFM32_CMU_IF_CALOF                       0x00000040
   #define EFM32_CMU_IF_CALOF_SHIFT                 6
@@ -602,7 +602,7 @@
   #define EFM32_CMU_IFS_CALRDY                     0x00000020
   #define EFM32_CMU_IFS_CALRDY_SHIFT               5
   #define EFM32_CMU_IFS_CALRDY_SET(x, v)           do { (x) = (((x) & ~0x20) | ((v) << 5)); } while(0)
-# if (CONFIG_EFM32_FAMILY == EFM32_FAMILY_LEOPARD) || (CONFIG_EFM32_FAMILY == EFM32_FAMILY_WONDER) || (CONFIG_EFM32_FAMILY == EFM32_FAMILY_GIANT) || (CONFIG_EFM32_FAMILY == EFM32_FAMILY_ZERO)
+# if (CONFIG_EFM32_FAMILY == EFM32_FAMILY_LEOPARD) || (CONFIG_EFM32_FAMILY == EFM32_FAMILY_WONDER) || (CONFIG_EFM32_FAMILY == EFM32_FAMILY_GIANT) || (CONFIG_EFM32_FAMILY == EFM32_FAMILY_ZERO) || (CONFIG_EFM32_FAMILY == EFM32_FAMILY_TINY)
 /** Write to 1 to set the Calibration Overflow Interrupt Flag. @multiple */
   #define EFM32_CMU_IFS_CALOF                      0x00000040
   #define EFM32_CMU_IFS_CALOF_SHIFT                6
@@ -642,7 +642,7 @@
   #define EFM32_CMU_IFC_CALRDY                     0x00000020
   #define EFM32_CMU_IFC_CALRDY_SHIFT               5
   #define EFM32_CMU_IFC_CALRDY_SET(x, v)           do { (x) = (((x) & ~0x20) | ((v) << 5)); } while(0)
-# if (CONFIG_EFM32_FAMILY == EFM32_FAMILY_LEOPARD) || (CONFIG_EFM32_FAMILY == EFM32_FAMILY_WONDER) || (CONFIG_EFM32_FAMILY == EFM32_FAMILY_GIANT) || (CONFIG_EFM32_FAMILY == EFM32_FAMILY_ZERO)
+# if (CONFIG_EFM32_FAMILY == EFM32_FAMILY_LEOPARD) || (CONFIG_EFM32_FAMILY == EFM32_FAMILY_WONDER) || (CONFIG_EFM32_FAMILY == EFM32_FAMILY_GIANT) || (CONFIG_EFM32_FAMILY == EFM32_FAMILY_ZERO) || (CONFIG_EFM32_FAMILY == EFM32_FAMILY_TINY)
 /** Write to 1 to clear the Calibration Overflow Interrupt Flag. @multiple */
   #define EFM32_CMU_IFC_CALOF                      0x00000040
   #define EFM32_CMU_IFC_CALOF_SHIFT                6
@@ -681,7 +681,7 @@
   #define EFM32_CMU_IEN_CALRDY                     0x00000020
   #define EFM32_CMU_IEN_CALRDY_SHIFT               5
   #define EFM32_CMU_IEN_CALRDY_SET(x, v)           do { (x) = (((x) & ~0x20) | ((v) << 5)); } while(0)
-# if (CONFIG_EFM32_FAMILY == EFM32_FAMILY_LEOPARD) || (CONFIG_EFM32_FAMILY == EFM32_FAMILY_WONDER) || (CONFIG_EFM32_FAMILY == EFM32_FAMILY_GIANT) || (CONFIG_EFM32_FAMILY == EFM32_FAMILY_ZERO)
+# if (CONFIG_EFM32_FAMILY == EFM32_FAMILY_LEOPARD) || (CONFIG_EFM32_FAMILY == EFM32_FAMILY_WONDER) || (CONFIG_EFM32_FAMILY == EFM32_FAMILY_GIANT) || (CONFIG_EFM32_FAMILY == EFM32_FAMILY_ZERO) || (CONFIG_EFM32_FAMILY == EFM32_FAMILY_TINY)
 /** Set to enable the Calibration Overflow Interrupt. @multiple */
   #define EFM32_CMU_IEN_CALOF                      0x00000040
   #define EFM32_CMU_IEN_CALOF_SHIFT                6
@@ -716,7 +716,7 @@
   #define EFM32_CMU_HFCORECLKEN0_EBI_SET(x, v)     do { (x) = (((x) & ~0x8) | ((v) << 3)); } while(0)
 # endif
 
-# if (CONFIG_EFM32_FAMILY == EFM32_FAMILY_ZERO)
+# if (CONFIG_EFM32_FAMILY == EFM32_FAMILY_ZERO) || (CONFIG_EFM32_FAMILY == EFM32_FAMILY_TINY)
 #define EFM32_CMU_HFCORECLKEN0_ADDR                  0x00000040
 #define EFM32_CMU_HFCORECLKEN0_MASK                  0x00000007
 /** Set to enable the clock for AES. @multiple */
@@ -874,6 +874,59 @@
   #define EFM32_CMU_HFPERCLKEN0_I2C0_SET(x, v)     do { (x) = (((x) & ~0x800) | ((v) << 11)); } while(0)
 # endif
 
+# if (CONFIG_EFM32_FAMILY == EFM32_FAMILY_TINY)
+#define EFM32_CMU_HFPERCLKEN0_ADDR                   0x00000044
+#define EFM32_CMU_HFPERCLKEN0_MASK                   0x0000fdff
+/** Set to enable the clock for ACMP0. @multiple */
+  #define EFM32_CMU_HFPERCLKEN0_ACMP0             0x00000001
+  #define EFM32_CMU_HFPERCLKEN0_ACMP0_SHIFT       0
+  #define EFM32_CMU_HFPERCLKEN0_ACMP0_SET(x, v)   do { (x) = (((x) & ~0x1) | ((v) << 0)); } while(0)
+/** Set to enable the clock for ACMP1. @multiple */
+  #define EFM32_CMU_HFPERCLKEN0_ACMP1             0x00000002
+  #define EFM32_CMU_HFPERCLKEN0_ACMP1_SHIFT       1
+  #define EFM32_CMU_HFPERCLKEN0_ACMP1_SET(x, v)   do { (x) = (((x) & ~0x2) | ((v) << 1)); } while(0)
+/** Set to enable the clock for USART0. @multiple */
+  #define EFM32_CMU_HFPERCLKEN0_USART0             0x00000004
+  #define EFM32_CMU_HFPERCLKEN0_USART0_SHIFT       2
+  #define EFM32_CMU_HFPERCLKEN0_USART0_SET(x, v)   do { (x) = (((x) & ~0x4) | ((v) << 2)); } while(0)
+/** Set to enable the clock for USART1. @multiple */
+  #define EFM32_CMU_HFPERCLKEN0_USART1              0x00000008
+  #define EFM32_CMU_HFPERCLKEN0_USART1_SHIFT        3
+  #define EFM32_CMU_HFPERCLKEN0_USART1_SET(x, v)    do { (x) = (((x) & ~0x8) | ((v) << 3)); } while(0)
+/** Set to enable the clock for TIMER0. @multiple */
+  #define EFM32_CMU_HFPERCLKEN0_TIMER0             0x00000010
+  #define EFM32_CMU_HFPERCLKEN0_TIMER0_SHIFT       4
+  #define EFM32_CMU_HFPERCLKEN0_TIMER0_SET(x, v)   do { (x) = (((x) & ~0x10) | ((v) << 4)); } while(0)
+/** Set to enable the clock for TIMER1. @multiple */
+  #define EFM32_CMU_HFPERCLKEN0_TIMER1             0x00000020
+  #define EFM32_CMU_HFPERCLKEN0_TIMER1_SHIFT       5
+  #define EFM32_CMU_HFPERCLKEN0_TIMER1_SET(x, v)   do { (x) = (((x) & ~0x20) | ((v) << 5)); } while(0)
+/** Set to enable the clock for GPIO. @multiple */
+  #define EFM32_CMU_HFPERCLKEN0_GPIO             0x00000040
+  #define EFM32_CMU_HFPERCLKEN0_GPIO_SHIFT       6
+  #define EFM32_CMU_HFPERCLKEN0_GPIO_SET(x, v)   do { (x) = (((x) & ~0x40) | ((v) << 6)); } while(0)
+/** Set to enable the clock for VCMP. @multiple */
+  #define EFM32_CMU_HFPERCLKEN0_VCMP              0x00000080
+  #define EFM32_CMU_HFPERCLKEN0_VCMP_SHIFT        7
+  #define EFM32_CMU_HFPERCLKEN0_VCMP_SET(x, v)    do { (x) = (((x) & ~0x80) | ((v) << 7)); } while(0)
+/** Set to enable the clock for PRS. @multiple */
+  #define EFM32_CMU_HFPERCLKEN0_PRS              0x00000100
+  #define EFM32_CMU_HFPERCLKEN0_PRS_SHIFT        8
+  #define EFM32_CMU_HFPERCLKEN0_PRS_SET(x, v)    do { (x) = (((x) & ~0x100) | ((v) << 8)); } while(0)
+/** Set to enable the clock for ADC0. @multiple */
+  #define EFM32_CMU_HFPERCLKEN0_ADC0                0x00000200
+  #define EFM32_CMU_HFPERCLKEN0_ADC0_SHIFT          9
+  #define EFM32_CMU_HFPERCLKEN0_ADC0_SET(x, v)      do { (x) = (((x) & ~0x200) | ((v) << 9)); } while(0)
+/** Set to enable the clock for DAC0. @multiple */
+  #define EFM32_CMU_HFPERCLKEN0_DAC0                0x00000400
+  #define EFM32_CMU_HFPERCLKEN0_DAC0_SHIFT          10
+  #define EFM32_CMU_HFPERCLKEN0_DAC0_SET(x, v)      do { (x) = (((x) & ~0x400) | ((v) << 10)); } while(0)
+/** Set to enable the clock for I2C0. @multiple */
+  #define EFM32_CMU_HFPERCLKEN0_I2C0               0x00000800
+  #define EFM32_CMU_HFPERCLKEN0_I2C0_SHIFT         11
+  #define EFM32_CMU_HFPERCLKEN0_I2C0_SET(x, v)     do { (x) = (((x) & ~0x800) | ((v) << 11)); } while(0)
+# endif
+
 # if (CONFIG_EFM32_FAMILY == EFM32_FAMILY_LEOPARD) || (CONFIG_EFM32_FAMILY == EFM32_FAMILY_WONDER) || (CONFIG_EFM32_FAMILY == EFM32_FAMILY_GIANT)
 #define EFM32_CMU_HFPERCLKEN0_ADDR                   0x00000044
 #define EFM32_CMU_HFPERCLKEN0_MASK                   0x0003ffff
@@ -1016,6 +1069,27 @@
   #define EFM32_CMU_LFACLKEN0_LCD_SET(x, v)        do { (x) = (((x) & ~0x4) | ((v) << 2)); } while(0)
 # endif
 
+# if (CONFIG_EFM32_FAMILY == EFM32_FAMILY_TINY)
+#define EFM32_CMU_LFACLKEN0_ADDR                     0x00000058
+#define EFM32_CMU_LFACLKEN0_MASK                     0x00000007
+/** Set to enable the clock for LESENSE. @multiple */
+  #define EFM32_CMU_LFACLKEN0_LESENSE                  0x00000001
+  #define EFM32_CMU_LFACLKEN0_LESENSE_SHIFT            0
+  #define EFM32_CMU_LFACLKEN0_LESENSE_SET(x, v)        do { (x) = (((x) & ~0x1) | ((v) << 0)); } while(0)
+/** Set to enable the clock for RTC. @multiple */
+  #define EFM32_CMU_LFACLKEN0_RTC             0x00000002
+  #define EFM32_CMU_LFACLKEN0_RTC_SHIFT       1
+  #define EFM32_CMU_LFACLKEN0_RTC_SET(x, v)   do { (x) = (((x) & ~0x2) | ((v) << 1)); } while(0)
+/** Set to enable the clock for LETIMER0. @multiple */
+  #define EFM32_CMU_LFACLKEN0_LETIMER0                  0x00000004
+  #define EFM32_CMU_LFACLKEN0_LETIMER0_SHIFT            2
+  #define EFM32_CMU_LFACLKEN0_LETIMER0_SET(x, v)        do { (x) = (((x) & ~0x4) | ((v) << 2)); } while(0)
+/** Set to enable the clock for LCD. @multiple */
+  #define EFM32_CMU_LFACLKEN0_LCD                  0x00000008
+  #define EFM32_CMU_LFACLKEN0_LCD_SHIFT            3
+  #define EFM32_CMU_LFACLKEN0_LCD_SET(x, v)        do { (x) = (((x) & ~0x8) | ((v) << 3)); } while(0)
+# endif
+
 # if (CONFIG_EFM32_FAMILY == EFM32_FAMILY_ZERO)
 #define EFM32_CMU_LFACLKEN0_ADDR                     0x00000058
 #define EFM32_CMU_LFACLKEN0_MASK                     0x00000001
@@ -1046,7 +1120,7 @@
   #define EFM32_CMU_LFACLKEN0_LCD_SET(x, v)        do { (x) = (((x) & ~0x8) | ((v) << 3)); } while(0)
 # endif
 
-# if (CONFIG_EFM32_FAMILY == EFM32_FAMILY_ZERO)
+# if (CONFIG_EFM32_FAMILY == EFM32_FAMILY_ZERO) || (CONFIG_EFM32_FAMILY == EFM32_FAMILY_TINY)
 #define EFM32_CMU_LFBCLKEN0_ADDR                     0x00000060
 #define EFM32_CMU_LFBCLKEN0_MASK                     0x00000001
 /** Set to enable the clock for LEUART0. @multiple */
@@ -1154,7 +1228,7 @@
     #define EFM32_CMU_LFAPRESC0_RTC_DIV32768         0x0000000f
 # endif
 
-# if (CONFIG_EFM32_FAMILY == EFM32_FAMILY_LEOPARD) || (CONFIG_EFM32_FAMILY == EFM32_FAMILY_WONDER) || (CONFIG_EFM32_FAMILY == EFM32_FAMILY_GIANT)
+# if (CONFIG_EFM32_FAMILY == EFM32_FAMILY_LEOPARD) || (CONFIG_EFM32_FAMILY == EFM32_FAMILY_WONDER) || (CONFIG_EFM32_FAMILY == EFM32_FAMILY_GIANT) || (CONFIG_EFM32_FAMILY == EFM32_FAMILY_TINY)
 #define EFM32_CMU_LFAPRESC0_ADDR                     0x00000068
 #define EFM32_CMU_LFAPRESC0_MASK                     0x00007ff3
 /** Configure Low Energy Interface prescaler @multiple */
@@ -1223,7 +1297,7 @@
     #define EFM32_CMU_LFAPRESC0_LCD_DIV128           0x00000003
 # endif
 
-# if (CONFIG_EFM32_FAMILY == EFM32_FAMILY_ZERO)
+# if (CONFIG_EFM32_FAMILY == EFM32_FAMILY_ZERO) || (CONFIG_EFM32_FAMILY == EFM32_FAMILY_TINY)
 #define EFM32_CMU_LFBPRESC0_ADDR                     0x00000070
 #define EFM32_CMU_LFBPRESC0_MASK                     0x00000003
 /** Configure LEUART0 prescaler @multiple */
@@ -1304,7 +1378,7 @@
     #define EFM32_CMU_PCNTCTRL_PCNT2CLKSEL_PCNT2S0   0x00000001
 # endif
 
-# if (CONFIG_EFM32_FAMILY == EFM32_FAMILY_GECKO) || (CONFIG_EFM32_FAMILY == EFM32_FAMILY_LEOPARD) || (CONFIG_EFM32_FAMILY == EFM32_FAMILY_WONDER) || (CONFIG_EFM32_FAMILY == EFM32_FAMILY_GIANT)
+# if (CONFIG_EFM32_FAMILY == EFM32_FAMILY_GECKO) || (CONFIG_EFM32_FAMILY == EFM32_FAMILY_LEOPARD) || (CONFIG_EFM32_FAMILY == EFM32_FAMILY_WONDER) || (CONFIG_EFM32_FAMILY == EFM32_FAMILY_GIANT) || (CONFIG_EFM32_FAMILY == EFM32_FAMILY_TINY)
 #define EFM32_CMU_LCDCTRL_ADDR                       0x0000007c
 #define EFM32_CMU_LCDCTRL_MASK                       0x0000007f
 /** These bits controls the framerate according to this formula: LFACLKLCD =
@@ -1352,7 +1426,7 @@
   #define EFM32_CMU_ROUTE_LOCATION_GET(x)          (((x) >> 2) & 0x1)
     #define EFM32_CMU_ROUTE_LOCATION_LOC0            0x00000000
 # endif
-# if (CONFIG_EFM32_FAMILY == EFM32_FAMILY_ZERO) || (CONFIG_EFM32_FAMILY == EFM32_FAMILY_LEOPARD) || (CONFIG_EFM32_FAMILY == EFM32_FAMILY_WONDER) || (CONFIG_EFM32_FAMILY == EFM32_FAMILY_GIANT)
+# if (CONFIG_EFM32_FAMILY == EFM32_FAMILY_ZERO) || (CONFIG_EFM32_FAMILY == EFM32_FAMILY_LEOPARD) || (CONFIG_EFM32_FAMILY == EFM32_FAMILY_WONDER) || (CONFIG_EFM32_FAMILY == EFM32_FAMILY_GIANT) || (CONFIG_EFM32_FAMILY == EFM32_FAMILY_TINY)
 /** Decides the location of the CMU I/O pins. @multiple */
   #define EFM32_CMU_ROUTE_LOCATION_SHIFT           2
   #define EFM32_CMU_ROUTE_LOCATION(v)              ((EFM32_CMU_ROUTE_LOCATION_##v) << 2)
