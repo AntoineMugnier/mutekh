@@ -57,6 +57,13 @@ struct printk_backend_s
 
 GCT_CONTAINER_TYPES      (printk_backend, struct printk_backend_s *, list_entry);
 
+#ifdef CONFIG_MUTEK_PRINTK_FATAL_ABORT
+__attribute__((noreturn))
+void printk_fatal_abort(void);
+#else
+#define printk_fatal_abort() do {} while(0)
+#endif
+
 /** @This registers a printk backend */
 config_depend(CONFIG_MUTEK_PRINTK)
 void printk_register(struct printk_backend_s *s, printk_handler_t *handler);
@@ -178,6 +185,18 @@ ssize_t logk_(const char *format, ...);
 # define writek(...)
 
 #endif
+
+/** @multiple @This sends a line to the printk backends with the @ref
+    LOGK_LEVEL_ERROR level, then aborts if #CONFIG_MUTEK_PRINTK_FATAL_ABORT
+    is set */
+# define vlogk_fatal(format, ap)   do {         \
+    vlogk_error(format, ap);                    \
+    printk_fatal_abort();                       \
+  } while(0)
+# define logk_fatal(format...)   do {           \
+    logk_error(format);                         \
+    printk_fatal_abort();                       \
+  } while(0)
 
 #define PRINTK_RET(val, ...)			\
 do {						\
