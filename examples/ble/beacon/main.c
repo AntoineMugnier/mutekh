@@ -1,3 +1,5 @@
+#define LOGK_MODULE_ID "becn"
+
 #include <stdlib.h>
 
 #include <mutek/thread.h>
@@ -81,7 +83,7 @@ void peri_connection_closed(struct ble_stack_connection_s *conn, uint8_t reason)
 
 static void config_save(struct app_s *app)
 {
-#if defined(CONFIG_DEVICE_PERSIST)
+#if defined(CONFIG_PERSIST)
   persist_wait_write(&app->persist,
                      &beacon_config_blob,
                      0, &app->beacon_config.config);
@@ -92,7 +94,7 @@ static void config_save(struct app_s *app)
 
 static void config_load(struct app_s *app)
 {
-#if defined(CONFIG_DEVICE_PERSIST)
+#if defined(CONFIG_PERSIST)
   error_t err;
   const struct ble_beacon_config_s *config;
 
@@ -121,7 +123,7 @@ void peri_state_changed(struct ble_peripheral_s *peri, enum ble_peripheral_state
 {
   struct app_s *app = app_s_from_peripheral(peri);
 
-#if defined(CONFIG_DEVICE_PERSIST)
+#if defined(CONFIG_PERSIST)
   if (app->config_changed) {
     config_save(app);
   }
@@ -171,11 +173,6 @@ static const struct ble_peripheral_params_s peri_params = {
   .adv_interval_ms = 1000,
 };
 
-static const struct persist_config persist_config = {
-  .dev_addr = CONFIG_LOAD_ROM_RO_SIZE - 4096,
-  .dev_size = 4096,
-  .page_size = 2048,
-};
 
 static CONTEXT_ENTRY(main)
 {
@@ -187,16 +184,18 @@ static CONTEXT_ENTRY(main)
 
   memset(app, 0, sizeof(*app));
 
-  err = ble_stack_context_init(&app->context, "/ble", "/rtc1", "/rng", "/aes", &persist_config);
+#if defined(CONFIG_PERSIST)
+  persist_context_init(&app->persist,
+                       CONFIG_LOAD_ROM_RO_SIZE - 4096,
+                       4096,
+                       2048);
+#endif
+
+  err = ble_stack_context_init(&app->context, "/ble", "/rtc1", "/rng", "/aes", &app->persist);
   ensure(!err && "stack context failed");
 
   ble_stack_context_local_address_get(&app->context, &addr);
   printk("BLE address: "BLE_ADDR_FMT"\n", BLE_ADDR_ARG(&addr));
-
-#if defined(CONFIG_DEVICE_PERSIST)
-  err = device_get_accessor_by_path(&app->persist.base, NULL, "/nvmc", DRIVER_CLASS_PERSIST);
-  ensure(!err && "persist device not found");
-#endif
 
   err = ble_peripheral_init(&app->peripheral, &peri_params, &peri_handler, &app->context);
   ensure(!err && "peripheral init failed");
@@ -223,8 +222,9 @@ static CONTEXT_ENTRY(main)
                           | BLE_PERIPHERAL_CONNECTABLE);
 
   config_load(app);
-  ble_stack_context_address_non_resolvable_generate(
-         &app->context, &app->beacon_config.config.local_addr);
+  ble_stack_context_address_non_resolvable_generate(&app->context,
+                                                    &app->beacon_config.config.local_addr);
+
 
   err = ble_beacon_create(&app->context, &app->beacon_config.config, &app->beaconer);
   ensure(!err && "beaconer create failed");

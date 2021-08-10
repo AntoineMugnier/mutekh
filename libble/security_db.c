@@ -152,7 +152,7 @@ void peer_subscribed_load(struct ble_security_db_s *db,
 {
   const void *data;
 
-  if (persist_wait_read(&db->persist, &security_db_subscribed_blob,
+  if (persist_wait_read(db->persist, &security_db_subscribed_blob,
                         offset, &data) == 0) {
     memcpy(peer->subscriptions, data, sizeof(peer->subscriptions));
   } else {
@@ -164,13 +164,13 @@ error_t peer_subscribed_save(struct ble_security_db_s *db,
                              const struct ble_peer_s *peer,
                              uint8_t offset)
 {
-  return persist_wait_write(&db->persist, &security_db_subscribed_blob,
+  return persist_wait_write(db->persist, &security_db_subscribed_blob,
                             offset, peer->subscriptions);
 }
 #endif
 
 error_t ble_security_db_init(struct ble_security_db_s *db,
-                             const struct persist_config *persist,
+                             struct persist_context_s *persist,
                              const char *aes,
                              struct dev_rng_s *rng)
 {
@@ -178,14 +178,7 @@ error_t ble_security_db_init(struct ble_security_db_s *db,
 
   memset(db, 0, sizeof(*db));
 
-#if defined(CONFIG_BLE_SECURITY_DB)
-  logk_trace("prst init addr %08x, size %zu, page size %zu",
-             persist->dev_addr, persist->dev_size, persist->page_size);
-  persist_context_init(&db->persist,
-                       persist->dev_addr,
-                       persist->dev_size,
-                       persist->page_size);
-#endif
+  db->persist = persist;
 
   err = device_get_accessor_by_path(&db->aes.base, NULL, aes, DRIVER_CLASS_CRYPTO);
   if (err)
@@ -196,7 +189,7 @@ error_t ble_security_db_init(struct ble_security_db_s *db,
 #if defined(CONFIG_BLE_SECURITY_DB)
   const void *tmp;
   uint64_t ctr = 0;
-  err = persist_wait_read(&db->persist, &security_db_pk_blob, 0, &tmp);
+  err = persist_wait_read(db->persist, &security_db_pk_blob, 0, &tmp);
   if (!err) {
     memcpy(db->pk, tmp, 16);
     logk_debug("Loaded device private key: %P", db->pk, 16);
@@ -207,13 +200,13 @@ error_t ble_security_db_init(struct ble_security_db_s *db,
 
     logk_debug("Created device private key: %P", db->pk, 16);
 
-    persist_wait_write(&db->persist, &security_db_pk_blob, 0, db->pk);
+    persist_wait_write(db->persist, &security_db_pk_blob, 0, db->pk);
     // We can still run until reboot if key fails to write...
   }
 
-  err = persist_wait_read(&db->persist, &security_db_device_counter, 0, &tmp);
+  err = persist_wait_read(db->persist, &security_db_device_counter, 0, &tmp);
   if (err)
-    persist_wait_inc(&db->persist, &security_db_device_counter, 0, &ctr);
+    persist_wait_inc(db->persist, &security_db_device_counter, 0, &ctr);
 
   err = ble_security_db_key_get(db, 0, KEY_HANDLE_IRK, db->irk);
   if (err)
@@ -223,7 +216,7 @@ error_t ble_security_db_init(struct ble_security_db_s *db,
 
   for (uint8_t i = 0; i < CONFIG_BLE_SECURITY_DB_MAX; ++i) {
     const struct ble_security_db_entry_s *entry;
-    err = persist_wait_read(&db->persist,
+    err = persist_wait_read(db->persist,
                             &security_db_entry_blob,
                             i,
                             (const void**)&entry);
@@ -238,8 +231,8 @@ error_t ble_security_db_init(struct ble_security_db_s *db,
       for (uint8_t j = 0; j < i; ++j) {
         if (db->paired_id[i] == db->paired_id[j]) {
           db->paired_id[i] = 0;
-          persist_wait_remove(&db->persist, &security_db_entry_blob, i);
-          persist_wait_remove(&db->persist, &security_db_subscribed_blob, i);
+          persist_wait_remove(db->persist, &security_db_entry_blob, i);
+          persist_wait_remove(db->persist, &security_db_subscribed_blob, i);
           goto next;
         }
       }
@@ -268,7 +261,7 @@ error_t ble_security_db_init(struct ble_security_db_s *db,
   device_put_accessor(&db->aes.base);
  put_persist:
 #if defined(CONFIG_BLE_SECURITY_DB)
-  //device_put_accessor(&db->persist.base);
+  //device_put_accessor(db->persist.base);
 #endif
   return err;
 }
@@ -276,7 +269,7 @@ error_t ble_security_db_init(struct ble_security_db_s *db,
 void ble_security_db_cleanup(struct ble_security_db_s *db)
 {
 #if defined(CONFIG_BLE_SECURITY_DB)
-  //device_put_accessor(&db->persist.base);
+  //device_put_accessor(db->persist.base);
 #endif
   device_put_accessor(&db->aes.base);
 }
@@ -304,7 +297,7 @@ error_t ble_security_db_peer_reconnect_addr_set(struct ble_security_db_s *db,
     return -ENOENT;
 
   const struct ble_security_db_entry_s *entry;
-  error_t err = persist_wait_read(&db->persist,
+  error_t err = persist_wait_read(db->persist,
                                   &security_db_entry_blob,
                                   slot,
                                   (const void**)&entry);
@@ -343,7 +336,7 @@ bool_t ble_security_db_contains(struct ble_security_db_s *db,
     if (db->paired_id[i] == 0)
       continue;
 
-    err = persist_wait_read(&db->persist,
+    err = persist_wait_read(db->persist,
                             &security_db_entry_blob,
                             i,
                             (const void**)&entry);
@@ -405,7 +398,7 @@ error_t ble_security_db_load(struct ble_security_db_s *db,
     if (db->paired_id[i] == 0)
       continue;
 
-    err = persist_wait_read(&db->persist,
+    err = persist_wait_read(db->persist,
                             &security_db_entry_blob,
                             i,
                             (const void**)&entry);
@@ -505,7 +498,7 @@ error_t ble_security_db_save(struct ble_security_db_s *db,
   logk_trace("SecDB: Saving peer %lld slot %d: %P...",
              peer->id, index, &entry, sizeof(entry));
 
-  err = persist_wait_write(&db->persist, &security_db_entry_blob, index, &entry);
+  err = persist_wait_write(db->persist, &security_db_entry_blob, index, &entry);
   peer_subscribed_save(db, peer, index);
 
   logk_trace(" %d", err);
@@ -533,7 +526,7 @@ error_t ble_security_db_remove(struct ble_security_db_s *db,
 
  remove:
   db->paired_id[index] = 0;
-  return persist_wait_remove(&db->persist, &security_db_entry_blob, index);
+  return persist_wait_remove(db->persist, &security_db_entry_blob, index);
 }
 
 /**
@@ -546,7 +539,7 @@ void ble_security_db_clear(struct ble_security_db_s *db)
       continue;
 
     db->paired_id[i] = 0;
-    persist_wait_remove(&db->persist, &security_db_entry_blob, i);
+    persist_wait_remove(db->persist, &security_db_entry_blob, i);
   }
 }
 
@@ -576,7 +569,7 @@ error_t ble_peer_lookup_id(struct ble_security_db_s *db,
     if (db->paired_id[i] != did)
       continue;
 
-    err = persist_wait_read(&db->persist,
+    err = persist_wait_read(db->persist,
                             &security_db_entry_blob,
                             i,
                             (const void**)&entry);
@@ -602,6 +595,6 @@ error_t ble_security_db_next_id(struct ble_security_db_s *db,
 {
   logk_trace("%s wait inc", __FUNCTION__);
 
-  return persist_wait_inc(&db->persist, &security_db_device_counter, 0, value);
+  return persist_wait_inc(db->persist, &security_db_device_counter, 0, value);
 }
 #endif

@@ -68,6 +68,7 @@ struct ble_stack_context_s
 };
 
 struct persist_config;
+struct persist_context_s;
 
 /**
    @this initializes a stack context from relevant device paths.
@@ -77,7 +78,7 @@ error_t ble_stack_context_init(struct ble_stack_context_s *ctx,
                                const char *rtc_name,
                                const char *rng_name,
                                const char *sec_name,
-                               const struct persist_config *persist);
+                               struct persist_context_s *persist);
 
 /**
    @this releases all stack context resources.
