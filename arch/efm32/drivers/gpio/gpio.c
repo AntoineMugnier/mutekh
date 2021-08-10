@@ -26,6 +26,7 @@
 #include <hexo/bit.h>
 
 #include <mutek/mem_alloc.h>
+#include <mutek/printk.h>
 #include <arch/efm32/gpio.h>
 #include <arch/efm32/devaddr.h>
 
@@ -782,8 +783,10 @@ static DEV_INIT(efm32_gpio_init)
   assert(device_res_get_uint(dev, DEV_RES_MEM, 0, &addr, NULL) == 0 &&
          EFM32_GPIO_ADDR == addr);
 
-  if (dev_drv_clock_init(dev, &pv->clk_ep, 0, DEV_CLOCK_EP_POWER_CLOCK | DEV_CLOCK_EP_GATING_SYNC, NULL))
+  if (dev_drv_clock_init(dev, &pv->clk_ep, 0, DEV_CLOCK_EP_POWER_CLOCK | DEV_CLOCK_EP_GATING_SYNC, NULL)) {
+    logk_fatal("Bad clock init");
     goto err_mem;
+  }
 
   cpu_mem_write_32(EFM32_GPIO_ADDR + EFM32_GPIO_IEN_ADDR, 0);
   cpu_mem_write_32(EFM32_GPIO_ADDR + EFM32_GPIO_IFC_ADDR, 0xffffffff);
@@ -796,8 +799,10 @@ static DEV_INIT(efm32_gpio_init)
   device_irq_source_init(dev, pv->src, GPIO_SRC_IRQ_COUNT,
                     &efm32_gpio_source_process);
 
-  if (device_irq_source_link(dev, pv->src, GPIO_SRC_IRQ_COUNT, -1))
+  if (device_irq_source_link(dev, pv->src, GPIO_SRC_IRQ_COUNT, -1)) {
+    logk_fatal("Bad IRQ init");
     goto err_clk;
+  }
 #endif
 
 #ifdef CONFIG_DRIVER_EFM32_GPIO_ICU
