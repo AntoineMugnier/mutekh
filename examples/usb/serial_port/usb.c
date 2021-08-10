@@ -8,6 +8,7 @@
 #include <device/class/char.h>
 #include <device/class/icu.h>
 #include <device/class/iomux.h>
+#include <device/class/dma.h>
 #include <device/class/cmu.h>
 #include <device/resource/uart.h>
 
@@ -35,13 +36,32 @@ DEV_DECLARE_STATIC(acm0, "acm0", 0, usbdev_acm_drv,
 
 #if defined(CONFIG_ARCH_EFM32)
 DEV_DECLARE_STATIC(
-  serial0_dev, "serial0", 0, efm32_usart_drv,
+  serial0_dev, "serial0", 0,
+#if defined(CONFIG_DRIVER_EFM32_USART_CHAR_DMA)
+  efm32_usart_dma_drv,
+#else
+  efm32_usart_drv,
+#endif
   DEV_STATIC_RES_MEM(0x4000c400, 0x4000c800),
   DEV_STATIC_RES_CLK_SRC("/recmu", EFM32_CLOCK_USART1, 0),
   
   DEV_STATIC_RES_DEV_ICU("/cpu"),
   DEV_STATIC_RES_IRQ(0, EFM32_IRQ_USART1_RX, DEV_IRQ_SENSE_RISING_EDGE, 0, 1),
-  DEV_STATIC_RES_IRQ(1, EFM32_IRQ_USART1_TX, DEV_IRQ_SENSE_RISING_EDGE, 0, 1),
+
+#if defined(CONFIG_DRIVER_EFM32_USART_CHAR_DMA)
+    DEV_STATIC_RES_DEV_PARAM("dma", "/dma"),
+    /* Read channel must have higher priority than write channel */
+    DEV_STATIC_RES_DMA((1 << 0), (EFM32_DMA_SOURCE_USART1)),
+    DEV_STATIC_RES_DMA((1 << 1), (EFM32_DMA_SOURCE_USART1)),
+
+    /* Timer 2 for RX timeout */
+    DEV_STATIC_RES_MEM(0x40010800, 0x40010C00),
+    DEV_STATIC_RES_IRQ(1, EFM32_IRQ_TIMER2, DEV_IRQ_SENSE_RISING_EDGE, 0, 1),
+    DEV_STATIC_RES_CLK_SRC("/recmu", EFM32_CLOCK_TIMER2, 1),
+    DEV_STATIC_RES_CLK_SRC("/recmu", EFM32_CLOCK_PRS, 2),
+#else
+    DEV_STATIC_RES_IRQ(1, EFM32_IRQ_USART1_TX, DEV_IRQ_SENSE_RISING_EDGE, 0, 1),
+#endif
   
   DEV_STATIC_RES_DEV_IOMUX("/gpio"),
   DEV_STATIC_RES_IOMUX("rx", EFM32_LOC1, EFM32_PD1, 0, 0),
