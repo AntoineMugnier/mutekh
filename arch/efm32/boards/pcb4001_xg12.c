@@ -461,3 +461,29 @@ DEV_DECLARE_STATIC(radio_dev, "rfpacket", 0, efr32_radio_drv,
                    );
 #endif
 
+#if defined(CONFIG_DRIVER_EFM32_USART_CHAR)
+
+DEV_DECLARE_STATIC(uart3_dev, "usart3", 0, efm32_usart_drv,
+                   DEV_STATIC_RES_MEM(0x40010C00, 0x40011000),
+                   DEV_STATIC_RES_FREQ(HFXO_FREQ, 1),
+
+                   DEV_STATIC_RES_DEV_ICU("/cpu"),
+                   DEV_STATIC_RES_IRQ(0, EFM32_IRQ_USART3_RX, DEV_IRQ_SENSE_RISING_EDGE, 0, 1),
+                   DEV_STATIC_RES_IRQ(1, EFM32_IRQ_USART3_TX, DEV_IRQ_SENSE_RISING_EDGE, 0, 1),
+
+#if defined(CONFIG_DRIVER_EFM32_USART_CHAR_DMA)
+                   /* wtimer 0 for RX timeout */
+                   DEV_STATIC_RES_MEM(0x4001a000, 0x4001a400),
+                   DEV_STATIC_RES_IRQ(2, EFM32_IRQ_WTIMER0, DEV_IRQ_SENSE_RISING_EDGE, 0, 1),
+
+                   DEV_STATIC_RES_DEV_PARAM("dma", "/dma"),
+                   DEV_STATIC_RES_DMA((1 << 3), (EFM32_DMA_SOURCE_USART3 | (EFM32_DMA_SIGNAL_USART3RXDATAV << 8))),
+                   DEV_STATIC_RES_DMA((1 << 4), (EFM32_DMA_SOURCE_USART3 | (EFM32_DMA_SIGNAL_USART3TXBL << 8))),
+#endif
+                   DEV_STATIC_RES_DEV_IOMUX("/gpio"),
+                   DEV_STATIC_RES_IOMUX("rx", EFM32_LOC2, EFM32_PD11, 0, 0),
+                   DEV_STATIC_RES_IOMUX("tx", EFM32_LOC4, EFM32_PD12, 0, 0),
+                   DEV_STATIC_RES_UART(3906250, 8, 0, 0, 0)
+                   );
+#endif
+

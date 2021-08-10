@@ -179,8 +179,9 @@ DEV_DECLARE_STATIC(usart1_dev, "spi1", 0, efm32_usart_spi_drv,
 
 #if defined(CONFIG_DRIVER_EFM32_DMA)
                    DEV_STATIC_RES_DEV_PARAM("dma", "/dma"),
-                   DEV_STATIC_RES_DMA((1 << 0), EFM32_DMA_SOURCE_USART1),
-                   DEV_STATIC_RES_DMA((1 << 1), EFM32_DMA_SOURCE_USART1),
+                   /* Read channel must have higher priority than write channel */
+                   DEV_STATIC_RES_DMA((1 << 1), (EFM32_DMA_SOURCE_USART1 | (EFM32_DMA_SIGNAL_USART1RXDATAV << 8))),
+                   DEV_STATIC_RES_DMA((1 << 2), (EFM32_DMA_SOURCE_USART1 | (EFM32_DMA_SIGNAL_USART1TXEMPTY << 8))),
 #endif
 
                    DEV_STATIC_RES_DEV_IOMUX("/gpio"),
