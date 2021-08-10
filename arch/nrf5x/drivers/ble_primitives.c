@@ -326,7 +326,7 @@ void nrf5x_ble_config_init(const struct nrf5x_ble_params_s *params)
     break;
   }
 
-  nrf_reg_set(BLE_RADIO_ADDR, NRF_RADIO_TXPOWER, params->tx_power / 8);
+  nrf_reg_set(BLE_RADIO_ADDR, NRF_RADIO_TXPOWER, params->tx_power);
   nrf_reg_set(BLE_RADIO_ADDR, NRF_RADIO_PCNF0, pcnf0);
   nrf_reg_set(BLE_RADIO_ADDR, NRF_RADIO_PCNF1, 0
               | (packet_max_size << NRF_RADIO_PCNF1_MAXLEN_OFFSET)
