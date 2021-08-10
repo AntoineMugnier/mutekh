@@ -64,7 +64,7 @@ struct net_scheduler_s;
 # define RADIO_RX_CHAIN_DELAY_US 3
 # define RADIO_TX_CHAIN_DELAY_US 1
 #elif CONFIG_NRF5X_MODEL == 52840
-# define RADIO_RAMPUP_US      40
+# define RADIO_RAMPUP_US      44
 # define RADIO_IRQ_LATENCY_US 2
 # define RADIO_RX_CHAIN_DELAY_US 6
 # define RADIO_TX_CHAIN_DELAY_US 6
