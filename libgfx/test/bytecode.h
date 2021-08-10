@@ -157,7 +157,7 @@ bc_init(struct bc_context_s *ctx,
 */
 void bc_init_sandbox(struct bc_context_s *ctx, const struct bc_descriptor_s *desc,
                      void *data_base, uint_fast8_t data_addr_bits,
-                     uint_fast16_t max_cycles);
+                     uint_fast32_t max_cycles);
 
 void *
 bc_translate_addr(struct bc_context_s *ctx,

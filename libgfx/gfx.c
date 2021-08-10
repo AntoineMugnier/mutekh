@@ -366,7 +366,7 @@ gfx_draw_tile_string(const struct gfx_surface_s * __restrict__ s,
 
   while (size--)
     {
-      uint8_t *c = *str++;
+      uint8_t c = *str++;
       gfx_draw_tile(s, t, c, x, y, center);
       x += xd;
       y += yd;

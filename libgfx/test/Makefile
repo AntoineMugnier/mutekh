@@ -10,10 +10,10 @@ all: test_tile.out test_circle.out test_line.out test_rect.out test_arc.out test
 	perl backslash.pl $< $@
 
 %.out: %.bc bc_custom_gfx.pm $(TSRC:.t=.h) $(HSRC)
-	cpp -I ../include $< | perl $(MUTEKH)scripts/decl_filter.pl | perl $(MUTEKH)scripts/bc_asm.pl -w 2 -b blob -p . -o $@
+	gcc -x c -o - -E -I ../include $< | perl $(MUTEKH)scripts/decl_filter.pl | perl $(MUTEKH)scripts/bc_asm.pl -w 2 -b blob -p . -o $@
 
 test: test.c $(CSRC) $(TSRC:.t=.h) $(HSRC)
-	gcc -Wall -Wsign-compare -include bytecode.h -I ../include -ggdb -O test.c $(CSRC) -lSDL -o test
+	gcc -Wall -Wsign-compare -include bytecode.h -I ../include -ggdb -O test.c $(CSRC) $(shell pkg-config --cflags --libs sdl) -o test
 
 clean:
 	rm -f *.out *.out.adr test $(TSRC:.t=.h)
