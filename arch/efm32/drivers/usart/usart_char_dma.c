@@ -774,7 +774,7 @@ static DEV_INIT(efm32_usart_char_init)
   iomux_demux_t loc[2];
   err = device_iomux_setup(dev, "<rx? >tx?", loc, pin, NULL);
   if (err) {
-    logk_error("Bad pins");
+    logk_fatal("Bad pins");
     goto err_mem;
   }
 
@@ -795,7 +795,7 @@ static DEV_INIT(efm32_usart_char_init)
     }
   if (enable == 0) {
     err = -EINVAL;
-    logk_error("Bad pin routing");
+    logk_fatal("Bad pin routing");
     goto err_mem;
   }
 
@@ -810,7 +810,7 @@ static DEV_INIT(efm32_usart_char_init)
 
   if (route == 0) {
     err = -EINVAL;
-    logk_error("Bad pin routing");
+    logk_fatal("Bad pin routing");
     goto err_mem;
   }
 #else
@@ -824,7 +824,7 @@ static DEV_INIT(efm32_usart_char_init)
   err = dev_drv_clock_init(dev, &pv->clk_ep[0], 0, DEV_CLOCK_EP_FREQ_NOTIFY |
                            DEV_CLOCK_EP_POWER_CLOCK | DEV_CLOCK_EP_GATING_SYNC, &pv->freq);
   if (err) {
-    logk_error("Bad clock config");
+    logk_fatal("Bad clock config");
     goto err_irq;
   }
 
@@ -878,19 +878,19 @@ static DEV_INIT(efm32_usart_char_init)
   err = device_res_get_uint(dev, DEV_RES_MEM, 1, &pv->timer_addr, NULL);
   if (err) {
     pv->timer_addr = 0;
-    logk_error("No timer");
+    logk_fatal("No timer");
     goto err_irq;
   }
 
   err = dev_drv_clock_init(dev, &pv->clk_ep[1], 1, DEV_CLOCK_EP_POWER_CLOCK | DEV_CLOCK_EP_GATING_SYNC, &pv->timer_freq);
   if (err) {
-    logk_error("Unable to gate clock ep 1");
+    logk_fatal("Unable to gate clock ep 1");
     goto err_irq;
   }
 
   err = dev_drv_clock_init(dev, &pv->clk_ep[2], 2, DEV_CLOCK_EP_POWER_CLOCK | DEV_CLOCK_EP_GATING_SYNC, NULL);
   if (err) {
-    logk_error("Unable to gate clock ep 2");
+    logk_fatal("Unable to gate clock ep 2");
     goto err_irq;
   }
 
@@ -900,7 +900,7 @@ static DEV_INIT(efm32_usart_char_init)
 
   err = efm32_usart_timeout_init(pv, pin[0]);
   if (err) {
-    logk_error("Unable to setup timeout");
+    logk_fatal("Unable to setup timeout");
     goto err_irq;
   }
 
@@ -911,19 +911,19 @@ static DEV_INIT(efm32_usart_char_init)
 
   err = device_res_get_dma(dev, 0, &read_mask, &read_link);
   if (err) {
-    logk_error("Unable to get DMA read link");
+    logk_fatal("Unable to get DMA read link");
     goto err_irq;
   }
   
   err = device_res_get_dma(dev, 1, &write_mask, &write_link);
   if (err) {
-    logk_error("Unable to get DMA write link");
+    logk_fatal("Unable to get DMA write link");
     goto err_irq;
   }
 
   err = device_get_param_dev_accessor(dev, "dma", &pv->dma.base, DRIVER_CLASS_DMA);
   if (err) {
-    logk_error("Unable to get DMA");
+    logk_fatal("Unable to get DMA");
     goto err_irq;
   }
 
@@ -977,7 +977,7 @@ static DEV_INIT(efm32_usart_char_init)
 
   err = device_irq_source_link(dev, pv->irq_ep, 2, -1);
   if (err) {
-    logk_error("Unable to setup IRQ");
+    logk_fatal("Unable to setup IRQ");
     goto err_fifo;
   }
 
