@@ -415,17 +415,23 @@ DEV_INIT(efm32_i2c_init)
 #else
   err = device_get_res_freq(dev, &freq, 0);
 #endif
-  if (err)
+  if (err) {
+    logk_fatal("Bad clock init");
     goto err_mem;
+  }
 
   /* retreive the device base address from device tree. */
   err = device_res_get_uint(dev, DEV_RES_MEM, 0, &pv->addr, NULL);
-  if(err)
+  if(err) {
+    logk_fatal("Bad register zone");
     goto err_clk;
+  }
 
   err = dev_drv_i2c_ctrl_context_init(dev, &pv->i2c_ctrl_ctx);
-  if (err)
+  if (err) {
+    logk_fatal("Context init failure");
     goto err_queue;
+  }
 
   /* Reset Device by disabling controller (bus idle timeout has not effect). */
   cpu_mem_write_32(pv->addr + EFM32_I2C_CTRL_ADDR, 0);
@@ -443,8 +449,10 @@ DEV_INIT(efm32_i2c_init)
   /* setup pinmux */
   iomux_demux_t loc[2];
   err = device_iomux_setup(dev, ",scl ,sda", loc, NULL, NULL);
-  if (err)
+  if (err) {
+    logk_fatal("Pin init failure");
     goto err_queue;
+  }
 
 #if (CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_XG1) ||\
     (CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_XG12)
@@ -463,6 +471,7 @@ DEV_INIT(efm32_i2c_init)
     }
 
   if (enable == 0) {
+    logk_fatal("Pin enable failure");
     err = -EINVAL;
     goto err_queue;
   }
@@ -479,12 +488,16 @@ DEV_INIT(efm32_i2c_init)
 
   device_irq_source_init(dev, &pv->irq_ep, 1, &efm32_i2c_irq);
   err = device_irq_source_link(dev, &pv->irq_ep, 1, -1);
-  if (err)
+  if (err) {
+    logk_fatal("IRQ enable failure");
     goto err_queue;
+  }
 
   err = device_res_get_uint(dev, DEV_RES_I2C_BITRATE, 0, &pv->bitrate, NULL);
-  if(err)
+  if(err) {
+    logk_fatal("No defined bitrate");
     goto err_link;
+  }
 
   efm32_i2c_update_rate(pv, &freq);
 
