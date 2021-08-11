@@ -821,6 +821,7 @@ extern TERMUI_CON_GROUP_DECL(dev_shell_char_group);
 extern TERMUI_CON_GROUP_DECL(dev_shell_enum_group);
 extern TERMUI_CON_GROUP_DECL(dev_shell_uart_group);
 extern TERMUI_CON_GROUP_DECL(dev_shell_hwclock_group);
+extern TERMUI_CON_GROUP_DECL(dev_shell_led_group);
 extern TERMUI_CON_GROUP_DECL(dev_shell_ms_group);
 extern TERMUI_CON_GROUP_DECL(dev_shell_smi_group);
 
@@ -889,6 +890,9 @@ static TERMUI_CON_GROUP_DECL(dev_shell_subgroup) =
 #endif
 #if defined(CONFIG_DEVICE_VALIO_HWCLOCK)
   TERMUI_CON_GROUP_ENTRY(dev_shell_hwclock_group, "hwclock")
+#endif
+#if defined(CONFIG_DEVICE_VALIO_LED)
+  TERMUI_CON_GROUP_ENTRY(dev_shell_led_group, "led")
 #endif
 #if defined(CONFIG_DEVICE_VALIO_MOTION_SENSOR)
   TERMUI_CON_GROUP_ENTRY(dev_shell_ms_group, "motion")
