@@ -65,8 +65,7 @@ static DEV_MEM_INFO(i2c_eeprom_info)
     memset(info, 0, sizeof(*info));
   
     info->type = DEV_MEM_FLASH;
-    info->flags = DEV_MEM_WRITABLE
-        | DEV_MEM_PARTIAL_WRITE
+    info->flags = DEV_MEM_PARTIAL_WRITE
         | DEV_MEM_PARTIAL_READ
         | DEV_MEM_CROSS_READ;
 
@@ -96,7 +95,6 @@ static void i2c_eeprom_request_run(
 static KROUTINE_EXEC(i2c_eeprom_done)
 {
     struct i2c_eeprom_priv_s *pv;
-    struct dev_request_s *drq;
     struct dev_mem_rq_s *rq, *done = NULL;
     struct device_s *dev;
 
@@ -105,8 +103,7 @@ static KROUTINE_EXEC(i2c_eeprom_done)
 
     LOCK_SPIN_IRQ(&dev->lock);
 
-    drq = dev_request_queue_head(&pv->queue);
-    rq = dev_mem_rq_s_cast(drq);
+    rq = dev_mem_rq_head(&pv->queue);
 
     if (pv->i2c_req.error) {
         // Write ACK polling
@@ -128,21 +125,10 @@ static KROUTINE_EXEC(i2c_eeprom_done)
         break;
 
     case DEV_MEM_OP_PAGE_WRITE:
-        pv->last_was_write = 1;
     case DEV_MEM_OP_PAGE_READ:
-        rq->addr += 1 << pv->page_size_l2;
-        rq->size -= 1 << pv->page_size_l2;
-
-        if (!rq->size) {
-            done = rq;
-            break;
-        }
-
-        pv->page++;
-        if (pv->page >> rq->sc_log2) {
-            pv->sc++;
-            pv->page = 0;
-        }
+        rq->error = -ENOTSUP;
+        done = rq;
+        goto out;
     }
 
   out:
@@ -173,7 +159,7 @@ static void i2c_rq_run(
 
     dev_i2c_ctrl_rq_init(&pv->i2c_req.base, i2c_eeprom_done);
 
-    pv->i2c_req.base.saddr = pv->saddr + (rq->addr >> (pv->addr_size * 8));
+    pv->i2c_req.base.saddr = pv->saddr + (rq->partial.addr >> (pv->addr_size * 8));
     pv->i2c_req.pvdata = dev;
     pv->i2c_req.transfer = pv->i2c_transfer;
 
@@ -183,47 +169,33 @@ static void i2c_rq_run(
     pv->i2c_transfer[0].type = DEV_I2C_CTRL_TRANSACTION_WRITE;
 
     if (pv->addr_size == 1) {
-        pv->addr[0] = rq->addr;
+        pv->addr[0] = rq->partial.addr;
     } else {
-        endian_be16_na_store(pv->addr, rq->addr);
+        endian_be16_na_store(pv->addr, rq->partial.addr);
     }
 
     switch ((uint16_t)rq->type) {
     case DEV_MEM_OP_PARTIAL_READ:
-        pv->i2c_transfer[1].data = rq->data;
-        pv->i2c_transfer[1].size = rq->size;
+        pv->i2c_transfer[1].data = rq->partial.data;
+        pv->i2c_transfer[1].size = rq->partial.size;
         pv->i2c_transfer[1].type = DEV_I2C_CTRL_TRANSACTION_READ;
 
         dprintk("%s partial read @%x, size: %d\n", __FUNCTION__,
-                (uint32_t)rq->addr, rq->data);
+                (uint32_t)rq->partial.addr, rq->partial.data);
         break;
 
     case DEV_MEM_OP_PARTIAL_WRITE:
-        pv->i2c_transfer[1].data = rq->data;
-        pv->i2c_transfer[1].size = rq->size;
+        pv->i2c_transfer[1].data = rq->partial.data;
+        pv->i2c_transfer[1].size = rq->partial.size;
         pv->i2c_transfer[1].type = DEV_I2C_CTRL_TRANSACTION_WRITE;
 
         dprintk("%s partial write @%x, size: %d\n", __FUNCTION__,
-                (uint32_t)rq->addr, rq->data);
+                (uint32_t)rq->partial.addr, rq->partial.data);
         break;
 
     case DEV_MEM_OP_PAGE_READ:
-        pv->i2c_transfer[1].type = DEV_I2C_CTRL_TRANSACTION_READ;
-
-        dprintk("%s page read @%x\n", __FUNCTION__, (uint32_t)rq->addr);
-        goto page;
-
     case DEV_MEM_OP_PAGE_WRITE:
-        pv->i2c_transfer[1].type = DEV_I2C_CTRL_TRANSACTION_WRITE;
-
-        dprintk("%s page write @%x\n", __FUNCTION__, (uint32_t)rq->addr);
-
-    page:
-        pv->i2c_transfer[1].data
-            = rq->sc_data[pv->sc]
-            + (pv->page << pv->page_size_l2);
-        pv->i2c_transfer[1].size = 1 << pv->page_size_l2;
-        break;
+      UNREACHABLE();
     }
     
     dev_i2c_transaction_start(&pv->bus, &pv->i2c_req);
@@ -236,25 +208,19 @@ static DEV_MEM_REQUEST(i2c_eeprom_request)
 
     LOCK_SPIN_IRQ(&dev->lock);
 
-    if (rq->type & DEV_MEM_OP_PAGE_ERASE) {
-        rq->error = -ENOTSUP;
-        goto out;
-    }
+    logk("rq %x", rq->type);
 
     // Drop side requests
     rq->type &= DEV_MEM_OP_PARTIAL_READ
-        | DEV_MEM_OP_PARTIAL_READ
-        | DEV_MEM_OP_PAGE_READ
-        | DEV_MEM_OP_PAGE_WRITE;
-    
-    if (!rq->type) {
-        rq->error = -ENOTSUP;
-        goto out;
-    }
+        | DEV_MEM_OP_PARTIAL_WRITE;
 
-    // More than one request bit at a time
-    if (rq->type & (rq->type - 1)) {
-        rq->error = -EINVAL;
+    switch (rq->type) {
+    case DEV_MEM_OP_PARTIAL_READ:
+    case DEV_MEM_OP_PARTIAL_WRITE:
+      break;
+
+    default:
+        rq->error = -ENOTSUP;
         goto out;
     }
 
