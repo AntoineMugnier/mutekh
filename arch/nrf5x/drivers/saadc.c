@@ -18,6 +18,8 @@
     Copyright Nicolas Pouillon <nipo@ssji.net> (c) 2015
 */
 
+#define LOGK_MODULE_ID "sadc"
+
 #include <mutek/mem_alloc.h>
 #include <mutek/kroutine.h>
 #include <mutek/printk.h>
@@ -64,7 +66,7 @@ static DEV_IRQ_SRC_PROCESS(nrf5x_saadc_irq)
   if (rq && nrf_event_check(SAADC_ADDR, NRF_SAADC_DONE)) {
     nrf_event_clear(SAADC_ADDR, NRF_SAADC_DONE);
 
-    logk_trace("SAADC done\n");
+    logk_trace("SAADC done");
 
     nrf_task_trigger(SAADC_ADDR, NRF_SAADC_STOP);
   
@@ -121,7 +123,7 @@ static DEV_VALIO_REQUEST(nrf5x_saadc_request)
 
   rq->error = 0;
 
-  logk_trace("%s %d %d %02x\n", __FUNCTION__, rq->type, rq->attribute, group->mask);
+  logk_trace("%s %d %d %02x", __FUNCTION__, rq->type, rq->attribute, group->mask);
 
   if (!group->mask)
     goto notsup;
@@ -180,7 +182,7 @@ static DEV_INIT(nrf5x_saadc_init)
     return err;
 
   for (size_t i = 0; i < 8; ++i)
-    printk("ch%d pin %d config %03x\n", i, pin[i], config[i]);
+    logk_debug("ch%d pin %d config %03x", i, pin[i], config[i]);
 
   while (pin_count < 8) {
     if (pin[pin_count] == IOMUX_INVALID_ID)
@@ -205,7 +207,7 @@ static DEV_INIT(nrf5x_saadc_init)
     else
       return -EINVAL;
 
-    printk("Pin %d, ain %d, config %03x\n", i, ain, config[i]);
+    logk_debug("Pin %d, ain %d, config %03x", i, ain, config[i]);
 
     nrf_reg_set(SAADC_ADDR, NRF_SAADC_CH_CONFIG(i), NRF52_SAADC_PIN_CONFIG_EXTRACT(config[i]));
     nrf_reg_set(SAADC_ADDR, NRF_SAADC_CH_PSELP(i), ain);
