@@ -2069,7 +2069,11 @@ sub read_build_config
 	}
 
 	if ($line =~ /^\s* %inherit \s+ (.*?) \s*$/x) {
-            $$section .= ":$1";
+            if ($$section eq "") {
+                $$section = "$1";
+            } else {
+                $$section .= ":$1";
+            }
 	    next;
 	}
 
