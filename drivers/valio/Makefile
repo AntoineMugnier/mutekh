@@ -1,4 +1,4 @@
-subdirs = sx1509_kbd
+subdirs = sx1509_kbd led
 
 objs-$(CONFIG_DRIVER_PUSH_BUTTON) += push_button.o
 objs-$(CONFIG_DRIVER_MTCH6102) += mtch6102.o
@@ -16,8 +16,4 @@ subdirs-$(CONFIG_DRIVER_HTS221) += hts221
 subdirs-$(CONFIG_DRIVER_SI2071) += si2071
 subdirs-$(CONFIG_DRIVER_MAX44009) += max44009
 subdirs-$(CONFIG_DRIVER_LPS25HB) += lps25hb
-subdirs-$(CONFIG_DRIVER_IS31FL3194) += is31fl3194
 subdirs-$(CONFIG_DRIVER_KXTJ3) += kxtj3
-subdirs-$(CONFIG_DRIVER_RGB24_GPIO) += rgb24_gpio
-subdirs-$(CONFIG_DRIVER_RGB3_GPIO) += rgb3_gpio
-subdirs-$(CONFIG_DRIVER_RGB24_PWM) += rgb24_pwm
