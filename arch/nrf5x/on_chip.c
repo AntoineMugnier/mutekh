@@ -23,6 +23,7 @@
 #include <device/class/iomux.h>
 #include <device/class/cmu.h>
 #include <device/class/crypto.h>
+#include <device/class/timer.h>
 #include <arch/nrf5x/peripheral.h>
 #include <arch/nrf5x/ids.h>
 #include <arch/nrf5x/gpiote.h>
@@ -67,6 +68,17 @@ DEV_DECLARE_STATIC(rtc1, "rtc1", 0, nrf5x_rtc_drv,
 # else
                    DEV_STATIC_RES_FREQ_ACC(32768, 1, 2, 25),
 # endif
+                   );
+
+#endif
+
+#if defined(CONFIG_DRIVER_NRF5X_TEMP)
+
+DEV_DECLARE_STATIC(temp_dev, "temp", 0, nrf5x_temp_drv,
+                   NRF_STATIC_RES_PERIPHERAL_MEM(NRF5X_TEMP),
+                   DEV_STATIC_RES_DEV_ICU("/cpu"),
+                   DEV_STATIC_RES_IRQ(0, NRF5X_TEMP, DEV_IRQ_SENSE_HIGH_LEVEL, 0, 1),
+                   DEV_STATIC_RES_DEV_TIMER("/rtc* /timer*"),
                    );
 
 #endif
