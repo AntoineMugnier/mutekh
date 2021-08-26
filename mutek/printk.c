@@ -184,3 +184,13 @@ void hexdumpk(uintptr_t address, const void *data, size_t len)
 
 #endif
 
+#ifdef CONFIG_MUTEK_PRINTK_FATAL_ABORT
+
+__attribute__((noreturn))
+void printk_fatal_abort(void)
+{
+  logk_error("Fatal error reached");
+  abort();
+}
+
+#endif
