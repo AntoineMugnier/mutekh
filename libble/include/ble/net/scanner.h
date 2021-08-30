@@ -59,8 +59,10 @@ struct ble_scanner_param_s
   struct ble_scanner_target_s target[BLE_SCANNER_TARGET_MAXCOUNT];
   uint8_t default_policy;
 
+  uint64_t channel_map;
   uint32_t access_address;
   uint32_t crc_init;
+  uint8_t hop;
   enum ble_phy_mode_e phy;
 
   struct ble_gap_preferred_conn_params_s timing;
