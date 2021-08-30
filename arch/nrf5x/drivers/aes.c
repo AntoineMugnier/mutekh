@@ -18,6 +18,8 @@
     Copyright Nicolas Pouillon <nipo@ssji.net> (c) 2015
 */
 
+#define LOGK_MODULE_ID "naes"
+
 #include <mutek/mem_alloc.h>
 #include <mutek/kroutine.h>
 #include <string.h>
@@ -573,12 +575,10 @@ static error_t nrf5x_aes_ccm_sw_decrypt(struct nrf5x_aes_private_s *pv,
   if (endian_le32_na_load(rq->in + 2 + len) == mic)
     return 0;
 
-#if 0
-  printk("MIC Status failed, expected %08x, got %08x:\n",
+  logk_trace("MIC Status failed, expected %08x, got %08x:",
          endian_le32_na_load(rq->in + 2 + len), mic);
-  printk(" In:  %P\n", rq->in, rq->in[1] + 6);
-  printk(" Out: %P\n", rq->out, rq->out[1] + 2);
-#endif
+  logk_trace(" In:  %P", rq->in, rq->in[1] + 6);
+  logk_trace(" Out: %P", rq->out, rq->out[1] + 2);
 
   return -EINVAL;
 }
@@ -636,7 +636,7 @@ static DEV_IRQ_SRC_PROCESS(nrf5x_aes_irq)
     if (nrf_event_check(CCM_ADDR, NRF_CCM_ERROR)) {
       nrf_event_clear(CCM_ADDR, NRF_CCM_ERROR);
 
-      printk("CCM bus conflict, restarting\n");
+      logk_trace("CCM bus conflict, restarting");
       nrf_event_clear(CCM_ADDR, NRF_CCM_ENDCRYPT);
       nrf_task_trigger(CCM_ADDR, NRF_CCM_KSGEN);
 
@@ -647,7 +647,7 @@ static DEV_IRQ_SRC_PROCESS(nrf5x_aes_irq)
       nrf_event_clear(CCM_ADDR, NRF_CCM_ENDCRYPT);
 
       if (!pv->current) {
-        printk("Spurious CCM IRQ\n");
+        logk_trace("Spurious CCM IRQ");
         continue;
       }
 
@@ -660,7 +660,7 @@ static DEV_IRQ_SRC_PROCESS(nrf5x_aes_irq)
           && ((nrf_reg_get(CCM_ADDR, NRF_CCM_MODE) & NRF_CCM_MODE_MASK)
               == NRF_CCM_MODE_DECRYPTION_FASTEST)) {
 
-        printk("Fast CCM decrypt failed, starting again in slow mode\n");
+        logk_trace("Fast CCM decrypt failed, starting again in slow mode");
         nrf_reg_set(CCM_ADDR, NRF_CCM_MODE,
                     (nrf_reg_get(CCM_ADDR, NRF_CCM_MODE) & ~NRF_CCM_MODE_MASK)
                     | NRF_CCM_MODE_DECRYPTION);
@@ -686,13 +686,11 @@ static DEV_IRQ_SRC_PROCESS(nrf5x_aes_irq)
 
       if (nrf_reg_get(CCM_ADDR, NRF_CCM_MICSTATUS) == NRF_CCM_MICSTATUS_FAILED) {
         if (rq->op & DEV_CRYPTO_INVERSE) {
-#if 1
-          printk("MIC Status failed:\n");
-          printk(" In:  %P\n", rq->in, rq->in[1] + 2);
-          printk(" Out: %P\n", rq->out, rq->out[1] + 2);
-          printk(" Ctx: %P\n", state, sizeof(*state));
-          printk(" Scr: %P\n", pv->scratch, sizeof(pv->scratch));
-#endif  
+          logk_error("MIC Status failed:");
+          logk_error(" In:  %P", rq->in, rq->in[1] + 2);
+          logk_error(" Out: %P", rq->out, rq->out[1] + 2);
+          logk_error(" Ctx: %P", state, sizeof(*state));
+          logk_error(" Scr: %P", pv->scratch, sizeof(pv->scratch));
           rq->error = -EINVAL;
         } else {
           rq->error = 0;
