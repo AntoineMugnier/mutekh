@@ -53,7 +53,7 @@ struct ble_l2cap_s
   const struct ble_l2cap_handler_s *handler;
   struct net_layer_s *att;
   struct net_layer_s *sm;
-  struct net_layer_s *signalling;
+  struct net_layer_s *signaling;
 };
 
 STRUCT_COMPOSE(ble_l2cap_s, layer);
@@ -98,7 +98,7 @@ void ble_l2cap_task_handle(struct net_layer_s *layer,
       break;
 
     case BLE_L2CAP_CID_SIGNALLING:
-      target = l2cap->signalling;
+      target = l2cap->signaling;
       break;
     }
 
@@ -160,7 +160,7 @@ error_t ble_l2cap_bound(struct net_layer_s *layer,
     return 0;
 
   case BLE_L2CAP_CID_SIGNALLING:
-    l2cap->signalling = child;
+    l2cap->signaling = child;
     return 0;
   }
 
@@ -179,8 +179,8 @@ void ble_l2cap_unbound(struct net_layer_s *layer,
   if (child == l2cap->att)
     l2cap->att = NULL;
 
-  if (child == l2cap->signalling)
-    l2cap->signalling = NULL;
+  if (child == l2cap->signaling)
+    l2cap->signaling = NULL;
 }
 
 static
@@ -224,7 +224,7 @@ error_t ble_l2cap_create(struct net_scheduler_s *scheduler,
 
   l2cap->sm = NULL;
   l2cap->att = NULL;
-  l2cap->signalling = NULL;
+  l2cap->signaling = NULL;
 
   if (err)
     mem_free(l2cap);

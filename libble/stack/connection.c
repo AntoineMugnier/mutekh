@@ -195,7 +195,7 @@ error_t ble_stack_connection_create(struct ble_stack_connection_s *conn,
                                     const struct ble_gap_preferred_conn_params_s *wanted_timing)
 {
   error_t err;
-  struct net_layer_s *phy, *l2cap, *signalling, *att, *gatt, *gap, *link, *llcp;
+  struct net_layer_s *phy, *l2cap, *signaling, *att, *gatt, *gap, *link, *llcp;
   uint16_t cid;
 
 #if defined(CONFIG_BLE_CRYPTO)
@@ -341,27 +341,27 @@ error_t ble_stack_connection_create(struct ble_stack_connection_s *conn,
     goto out_gatt;
   }
 
-  err = ble_signalling_create(&context->scheduler, NULL, NULL, &signalling);
+  err = ble_signaling_create(&context->scheduler, NULL, NULL, &signaling);
   if (err) {
-    logk_error("error while creating signalling: %d", err);
+    logk_error("error while creating signaling: %d", err);
     goto out_gatt;
   }
 
   cid = BLE_L2CAP_CID_SIGNALLING;
-  err = net_layer_bind(l2cap, &cid, signalling);
+  err = net_layer_bind(l2cap, &cid, signaling);
   if (err) {
-    logk_error("error while binding signalling to l2cap: %d", err);
-    goto out_signalling;
+    logk_error("error while binding signaling to l2cap: %d", err);
+    goto out_signaling;
   }
 
   struct ble_gap_params_s gap_params = {
     .db = &context->gattdb,
-    .sig = signalling,
+    .sig = signaling,
   };
   err = ble_gap_create(&context->scheduler, &gap_params, NULL, NULL, &gap);
   if (err) {
     logk_error("error while creating gap: %d", err);
-    goto out_signalling;
+    goto out_signaling;
   }
 
   cid = BLE_LLCP_CHILD_GAP;
@@ -375,8 +375,8 @@ error_t ble_stack_connection_create(struct ble_stack_connection_s *conn,
 
  out_gap:
   net_layer_refdec(gap);
- out_signalling:
-  net_layer_refdec(signalling);
+ out_signaling:
+  net_layer_refdec(signaling);
  out_gatt:
   net_layer_refdec(gatt);
  out_att:
