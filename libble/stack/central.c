@@ -189,7 +189,7 @@ static error_t scan_start(struct ble_central_s *ctr)
   }
 
   if (ctr->scan) {
-    logk_error("Cannot scan: has scan");
+    logk_error("Scan already active %p", ctr->scan);
     return 0;
   }
 
