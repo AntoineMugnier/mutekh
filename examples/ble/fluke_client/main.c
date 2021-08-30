@@ -21,7 +21,7 @@ struct app_s {
   struct fluke_central_s fluke;
 };
 
-STRUCT_COMPOSE(fluke_central_s, context);
+STRUCT_COMPOSE(app_s, context);
 STRUCT_COMPOSE(app_s, fluke);
 
 static
