@@ -296,6 +296,18 @@ static void ctr_scan_destroyed(void *delegate, struct net_layer_s *layer)
   ctr_state_update(ctr);
 }
 
+static void ctr_scan_filter_destroyed(void *delegate, struct net_layer_s *layer)
+{
+  struct ble_central_s *ctr = delegate;
+
+  logk_debug("Scan filter layer %p ctr->scan_filter %p destroyed", layer, ctr->scan_filter);
+  
+  if (layer == ctr->scan_filter)
+    ctr->scan_filter = NULL;
+  
+  ctr_state_update(ctr);
+}
+
 static const struct ble_scanner_delegate_vtable_s ctr_scan_vtable =
 {
   .base.release = ctr_scan_destroyed,
@@ -345,7 +357,7 @@ enum ble_scan_filter_policy_e central_device_updated(void *delegate, struct net_
 
 static const struct ble_scan_filter_delegate_vtable_s central_scan_filter_vtable =
 {
-  .base.release = ctr_scan_destroyed,
+  .base.release = ctr_scan_filter_destroyed,
   .device_updated = central_device_updated,
 };
 
