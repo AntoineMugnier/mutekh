@@ -39,7 +39,7 @@ ssize_t vfs_node_get_name(struct vfs_node_s *node,
 
 void vfs_node_name_set(struct vfs_node_s *node, const char *name, size_t size)
 {
-    assert(vfs_node_is_dandling(node));
+    assert(vfs_node_is_dangling(node));
 
     if (name && size)
         vfs_name_mangle(name, size, node->name);
@@ -127,7 +127,7 @@ struct vfs_node_s *vfs_node_get_parent(struct vfs_node_s *node)
 
     CPU_INTERRUPT_SAVESTATE_DISABLE;
     lock_spin(&node->parent_lock);
-	if (!vfs_node_is_dandling(node))
+	if (!vfs_node_is_dangling(node))
         parent = vfs_node_refinc(node->parent);
     lock_release(&node->parent_lock);
     CPU_INTERRUPT_RESTORESTATE;
@@ -143,7 +143,7 @@ vfs_node_parent_nolock_unset(struct vfs_node_s *node)
     CPU_INTERRUPT_SAVESTATE_DISABLE;
     lock_spin(&node->parent_lock);
 
-	if (!vfs_node_is_dandling(node)) {
+	if (!vfs_node_is_dangling(node)) {
         struct vfs_node_s *parent = node->parent;
         vfs_dir_remove(&parent->children, node);
         node->parent = NULL;
@@ -236,7 +236,7 @@ vfs_node_parent_nolock_set(struct vfs_node_s *node, struct vfs_node_s *parent)
     CPU_INTERRUPT_SAVESTATE_DISABLE;
     lock_spin(&node->parent_lock);
 
-	assert(vfs_node_is_dandling(node));
+	assert(vfs_node_is_dangling(node));
     node->parent = vfs_node_refinc(parent);
     vfs_dir_push(&parent->children, node);
 
@@ -368,7 +368,7 @@ error_t vfs_node_lookup(struct vfs_node_s *parent,
 	vfs_printk("<lookup \"%s\"/%d parent: %p [%s]... ", name, namelen, parent, parent->name);
 
 	/* Dandling nodes are valid, but no lookup is authorized on them... */
-    if (vfs_node_is_dandling(parent))
+    if (vfs_node_is_dangling(parent))
 		return -EINVAL;
 
 	vfs_node_dirlock(parent);
@@ -459,7 +459,7 @@ error_t vfs_node_link(struct vfs_node_s *node,
     if (target->fs != node->fs)
         return -ENOTSUP;
 
-    if (vfs_node_is_dandling(target))
+    if (vfs_node_is_dangling(target))
         return -ENOTSUP;
 
     if (target->fs->flag_ro)
@@ -512,7 +512,7 @@ error_t vfs_node_move(struct vfs_node_s *node,
     if (parent->fs != node->fs)
         return -ENOTSUP;
 
-    if (vfs_node_is_dandling(parent))
+    if (vfs_node_is_dangling(parent))
         return -ENOTSUP;
 
     if (parent->fs->flag_ro)

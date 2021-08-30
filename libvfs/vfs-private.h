@@ -31,7 +31,7 @@
 #include <vfs/node.h>
 
 static inline
-bool_t vfs_node_is_dandling(struct vfs_node_s *node)
+bool_t vfs_node_is_dangling(struct vfs_node_s *node)
 {
     return node->parent == NULL;
 }
