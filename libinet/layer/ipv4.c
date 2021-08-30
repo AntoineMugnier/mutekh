@@ -169,7 +169,7 @@ void inet_ipv4_task_handle(struct net_layer_s *layer,
 }
 
 static
-void inet_ipv4_dandling(struct net_layer_s *layer)
+void inet_ipv4_dangling(struct net_layer_s *layer)
 {
   struct inet_ipv4_s *ipv4 = inet_ipv4_s_from_layer(layer);
 
@@ -208,7 +208,7 @@ void inet_ipv4_unbound(struct net_layer_s *layer,
 static const struct net_layer_handler_s ipv4_handler = {
   .destroyed = inet_ipv4_destroyed,
   .task_handle = inet_ipv4_task_handle,
-  .dandling = inet_ipv4_dandling,
+  .dangling = inet_ipv4_dangling,
   .bound = inet_ipv4_bound,
   .unbound = inet_ipv4_unbound,
 };

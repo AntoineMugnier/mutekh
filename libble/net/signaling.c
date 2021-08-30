@@ -193,7 +193,7 @@ void ble_sig_task_handle(struct net_layer_s *layer,
 }
 
 static
-void ble_sig_dandling(struct net_layer_s *layer)
+void ble_sig_dangling(struct net_layer_s *layer)
 {
   struct ble_signaling_s *sig = ble_signaling_s_from_layer(layer);
 
@@ -206,7 +206,7 @@ void ble_sig_dandling(struct net_layer_s *layer)
 static const struct net_layer_handler_s sig_handler = {
   .destroyed = ble_sig_destroyed,
   .task_handle = ble_sig_task_handle,
-  .dandling = ble_sig_dandling,
+  .dangling = ble_sig_dangling,
 };
 
 error_t ble_signaling_create(struct net_scheduler_s *scheduler,

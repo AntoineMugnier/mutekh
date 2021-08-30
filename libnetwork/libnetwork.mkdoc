@@ -115,7 +115,7 @@
     code may drop its references on children layers once they got
     bound.  This way if the only reference owner is the parent layer,
     once parent layer gets destroyed, children will implicitly and
-    automatically get dandling and destroyed.
+    automatically get dangling and destroyed.
 
     Delegate is an opaque object handling layer events.  A pointer and
     a vtable must be provided on layer creation.  Delegate are
@@ -139,14 +139,14 @@
     
     A task takes references on its @tt source and @tt destination
     layers.  As such, a task is guaranteed to be delivered without
-    dandling pointers.  But in order to avoid dandling layers taking
+    dangling pointers.  But in order to avoid dangling layers taking
     references to themselves through tasks, some deletion
-    opportunities are taken when a layer gets dandling (i.e. when its
+    opportunities are taken when a layer gets dangling (i.e. when its
     parent disappears). To get most of deletion done, tasks in queue
-    in the scheduler that reference dandling layer as source or
+    in the scheduler that reference dangling layer as source or
     destination get cancelled. In order to cancel tasks that are not
-    in queue yet, @ref {net_layer_handler_s::dandling} {layer's
-    dandling} method is called.
+    in queue yet, @ref {net_layer_handler_s::dangling} {layer's
+    dangling} method is called.
     
   @end section
 
@@ -225,10 +225,10 @@
   any time the context of the parent changes.  This is mostly useful
   for ajusting context addresses and packet's prefix and mtu sizes.
 
-  @ref {net_layer_handler_s::dandling} is called when layer gets
+  @ref {net_layer_handler_s::dangling} is called when layer gets
   unbound from its parent.  When called, layer may or may not be
   expecting soon destruction, for instance, layer may be bound again
-  to another layer.  Implementer must take care of not mixing dandling
+  to another layer.  Implementer must take care of not mixing dangling
   and destruction events.
 
 @end section

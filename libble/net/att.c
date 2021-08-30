@@ -316,7 +316,7 @@ void ble_att_unbound(struct net_layer_s *layer,
     att->client = NULL;
 }
 
-static void ble_att_dandling(struct net_layer_s *layer)
+static void ble_att_dangling(struct net_layer_s *layer)
 {
   struct ble_att_s *att = ble_att_s_from_layer(layer);
 
@@ -341,7 +341,7 @@ static const struct net_layer_handler_s att_handler = {
   .task_handle = ble_att_task_handle,
   .bound = ble_att_bound,
   .unbound = ble_att_unbound,
-  .dandling = ble_att_dandling,
+  .dangling = ble_att_dangling,
   .child_context_adjust = ble_att_child_context_adjust,
 };
 
