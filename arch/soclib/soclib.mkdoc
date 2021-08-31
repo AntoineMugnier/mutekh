@@ -1,5 +1,141 @@
 
 @moduledef {SoCLib based platforms} {Platforms}
 
+  @section{Building SystemCASS}
+
+    Building SoCLib requires @url{https://www-soc.lip6.fr/trac/systemcass/wiki/SVNrepository}{SystemCASS}, a SystemC replacement that can be used as a hardware description language. Checkout SystemCASS from @tt{svn}:
+
+    @code R
+svn co https://www.soclib.fr/svn/systemcass/sources
+    @end code
+
+    Install @tt{automake} and @tt{libtool}, then go into the SystemCASS directory and configure it:
+
+    @code R
+cd sources
+./bootstrap
+mkdir objdir
+cd objdir
+../configure
+    @end code
+
+    By default, the SystemCASS libraries and header files are installed in @tt{/usr/local}. You can optionally specify the installation directory for SystemCASS with the @tt{--prefix} switch:
+
+    @code R
+mkdir ~/bin/systemcass
+export SYSTEMCASS=~/bin/systemcass
+../configure --prefix=SYSTEMCASS
+    @end code
+
+    Export the following variable:
+
+    @code R
+export CXX=g++
+    @end code
+
+Then install SystemCASS (root access is needed if SystemCASS was configured without @tt{--prefix}):
+
+    @code R
+make install
+    @end code
+
+This step may fail for recent compilers with the following error:
+
+    @code R
+../../src/entity.cc: In function 'std::ostream& sc_core::operator<<(std::ostream&, const equi_t&)':
+../../src/entity.cc:466:16: error: use of an operand of type 'bool' in 'operator++' is forbidden in C++17
+  466 |         o << ((nb++) ? " = " : "") << ity;
+      |                ^~
+make[1]: *** [Makefile:672: libsystemc_la-entity.lo] Error 1
+    @end code
+
+If this is the case, edit the file @tt{sources/src/entity.cc} and replace the line
+
+    @code R
+o << ((nb++) ? " = " : "") << ity;
+    @end code
+
+with
+
+    @code R
+o << ((nb) ? " = " : "") << ity;
+nb = !nb;
+    @end code
+
+  @end section
+
+  @section{Building SoCLib}
+  The next step is to compile SoCLib for MutekH. Clone the repository:
+
+    @code R
+hg clone https://code.ssji.net/hg/diaxen/soclib-ng/
+    @end code
+
+  Add the SoCLib @tt{utils/bin} directory to the path environment variable:
+
+    @code R
+export PATH=$PATH:/path/to/soclib-ng/utils/bin
+    @end code
+
+  Export the SystemCASS binary directory and proceed to build the MutekH kernel tutorial. If SystemCASS was installed by default to @tt{/usr/local}, export @tt{SYSTEMC} as being @tt{/usr/local}:
+
+    @code R
+export SYSTEMC=/usr/local
+    @end code
+
+  If SystemCASS was configured with @tt{--prefix}, export @tt{SYSTEMC} with the prefix value. Following the above example:
+
+    @code R
+export SYSTEMC=~/bin/systemcass
+    @end code
+
+  Before building the MutekH kernel tutorial, you need to edit a configuration file if you are bulding for 64-bit platforms. Assuming you are building for GNU/Linux, edit @tt{soclib-ng/utils/lib/python/soclib_cc/config/built-in.conf} and change the line
+
+    @code R
+("x86_64*linux*",        'linux64'    ),
+    @end code
+
+to
+
+    @code R
+("x86_64*linux*",        'linux'    ),
+    @end code
+
+  Add @tt{lib-linux} to the shared library path. If SystemCASS was installed by default in @tt{/usr/local}:
+
+    @code R
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib-linux
+    @end code
+
+  If @tt{--prefix} was used for configuring SystemCASS, following the above example:
+
+    @code R
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:~/bin/systemcass/lib-linux
+    @end code
+
+  Now build the MutekH kernel tutorial from a Python environment where the Python version is 2.7:
+
+    @code R
+cd soclib-ng/platform/mutekh_kernel_tutorial
+make
+    @end code
+
+  This generates the executable @tt{system.x}. In order to start the simulation, you need a MutekH image. For example, here is how to generate one for ARM:
+
+    @code R
+cd /path/to/mutekh
+make CONF=examples/hello/config BUILD=soclib-arm:pf-tutorial:shell
+    @end code
+
+  Now run the simulation as follows:
+
+    @code R
+/path/to/soclib-ng/platform/mutekh_kernel_tutorial/system.x arm:1 hello-soclib-arm.out
+    @end code
+
+  Note that SoCLib requires @tt xterm to be installed.
+
+  @end section
+
 @end moduledef
 
