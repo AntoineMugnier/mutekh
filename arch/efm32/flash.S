@@ -186,8 +186,11 @@ FUNC_START(.text, flash_page_write)
 	str	r5,	[r3, #EFM32_MSC_WRITECMD_ADDR]
 2:
 	/* set data */
-        LOAD_WORD r4,   r1,     r5
-	str	r4,	[r3, #EFM32_MSC_WDATA_ADDR]
+        LOAD_WORD r7,   r0,     r5 // current value
+        LOAD_WORD r4,   r1,     r5 // new value
+        mvns    r5,     r7
+        orrs    r5,     r4
+	str	r5,	[r3, #EFM32_MSC_WDATA_ADDR]
 
 	/* write once */
 	movs	r5,	#EFM32_MSC_WRITECMD_WRITEONCE
