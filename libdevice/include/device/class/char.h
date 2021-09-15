@@ -108,7 +108,7 @@ enum dev_char_rq_type_e
       not terminate until at least one byte of data has been read. */
   DEV_CHAR_READ_PARTIAL = _DEV_CHAR_PARTIAL,
   /** Write data to the device. If no error occur, the request does
-      not terminate until at least on byte of data has been written. */
+      not terminate until at least one byte of data has been written. */
   DEV_CHAR_WRITE_PARTIAL = _DEV_CHAR_WRITE | _DEV_CHAR_PARTIAL,
   /** This is equivalent to @ref DEV_CHAR_WRITE_PARTIAL, forcing flush
       of output data. On devices where data are always transmitted sent
